@@ -1,0 +1,26 @@
+# Sauvegardes locales (solo + multi-manager, voir server/store.js) — jamais
+# commitées : ce sont des données de partie réelles (la carrière solo
+# d'Antony, la vraie ligue de test à 10 managers), pas du code, et elles
+# n'ont pas leur place dans l'historique Git. En ligne (Render), elles ne
+# sont de toute façon plus écrites ici du tout — voir server/store.js et
+# server/README.md ("Persistance en ligne (Render + Upstash Redis)").
+server/data/
+
+# Fichier temporaire d'écriture atomique (voir store.save/saveMultiLeague :
+# fichier .tmp-<pid>-<timestamp> écrit puis renommé) — ne devrait jamais
+# survivre à un process qui se termine normalement, mais un arrêt brutal
+# peut en laisser un derrière lui.
+*.tmp-*
+
+# Dépendances installées (npm install / node_modules) — régénérées depuis
+# package.json, jamais commitées.
+node_modules/
+
+# Logs divers.
+*.log
+
+# Artefact de test local (voir la racine du projet).
+last_run.json
+
+# Dossier de fichiers en attente de suppression manuelle par l'utilisateur (pas du code).
+_to_delete/

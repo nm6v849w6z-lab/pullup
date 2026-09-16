@@ -1,0 +1,489 @@
+// =====================================================================
+// MATCH EN DIRECT — retour utilisateur (2026-09) : "il faut que le match se
+// joue tout seul à 19h par exemple / si je me connecte à 19h30 je dois
+// reprendre le match là où il en est (pas depuis le début)" + "le match doit
+// durer autour d'1h30, c'est comme ça sur BuzzerBeater" + "on met une vraie
+// mi-temps et une vraie pause après Q1 et Q3 / temps mort pour ajouter un
+// peu de piquant" + "je ne dois pas avoir la possibilité d'avancer le live
+// plus vite comme actuellement sur la version test" + (plus tardif) "les
+// secondes sont très longues, 1 seconde dans le jeu est plus longue qu'une
+// vraie seconde" + (2026-09, multi-manager) "jusqu'à 10 vrais managers
+// humains dans une ligue partagée à la fois".
+//
+// Généralisation multi-manager : à l'origine, UN SEUL match en direct
+// possible par journée (celui du club du joueur, toujours à l'index 0,
+// stocké dans league.liveMatch). Avec plusieurs managers humains, PLUSIEURS
+// matchs de la même journée peuvent chacun impliquer au moins un côté humain,
+// EN MÊME TEMPS — chacun doit pouvoir regarder LE SIEN, peu importe ce qui se
+// passe dans les autres. Voir League.liveMatches (engine.js) : une entrée par
+// match diffusé, indexée par liveMatchKey(round, home, away). Un match
+// CPU-vs-CPU n'a JAMAIS d'entrée ici (voir ensureLiveMatchStarted) : il
+// continue de se résoudre instantanément comme avant (simulateOrForfeit).
+//
+// Chaque match diffusé est simulé EN UNE FOIS, dès l'heure programmée (voir
+// server/calendar.js), avec le moteur complet (Engine.MatchEngine) : le
+// résultat est donc déterminé dès cet instant-là, mais ÉTALÉ dans le temps
+// réel — chaque événement se voit attribuer un horaire réel de diffusion
+// (`airAt`), au rythme des secondes de jeu qu'il représente (voir
+// SECONDS_SCALE_MS plus bas : jamais plus d'une seconde réelle par seconde de
+// jeu écoulée), avec de vraies pauses (mi-temps, quart-temps, temps morts)
+// insérées dans le calendrier de diffusion — MATCH_BROADCAST_DURATION_MS
+// (voir calendar.js) ne sert plus qu'à borner le délai de sécurité avant
+// résolution automatique en l'absence du/des manager(s), plus à fixer la
+// durée réelle de la diffusion elle-même. Un navigateur, en se connectant à
+// n'importe quel moment, peut donc reconstituer exactement où en est SA
+// diffusion SANS jamais pouvoir l'accélérer.
+//
+// Simulation CANONIQUE : dans this.liveMatches, "A" désigne TOUJOURS l'équipe
+// À DOMICILE, "B" TOUJOURS l'équipe À L'EXTÉRIEUR (MatchEngine n'a aucune
+// notion d'avantage du terrain liée à l'ordre de ses arguments — le choix
+// domicile/extérieur ne sert qu'à repérer les deux camps de façon stable,
+// indépendante du spectateur). Chaque manager humain qui regarde reçoit une
+// vue PERSONNALISÉE (voir viewLiveMatchForTeam plus bas) où "A" désigne
+// TOUJOURS SA PROPRE équipe (boxScoreA = la sienne, events tagués team:"A" =
+// les siens) — exactement la forme que le navigateur attendait déjà à
+// l'époque solo (league.liveMatch, jamais league.liveMatches) : AUCUN
+// changement d'affichage côté client, juste une résolution par appelant au
+// lieu d'une resolution globale unique.
+//
+// Module Node uniquement (pas de UMD/navigateur) : c'est le SERVEUR qui
+// calcule et stocke une fois pour toutes le calendrier de diffusion — le
+// navigateur ne fait que le consommer (voir serializeLeague/leagueFromSave
+// dans engine.js, qui transportent le liveMatch résolu pour lui tel quel,
+// comme n'importe quelle autre donnée JSON de la sauvegarde).
+// =====================================================================
+const { MATCH_BROADCAST_DURATION_MS } = require("./calendar.js");
+
+// Pauses "spectacle" (retour utilisateur : "une vraie mi-temps et une vraie
+// pause après Q1 et Q3 / temps mort pour ajouter un peu de piquant") —
+// purement narratives : elles espacent la diffusion dans le temps réel, mais
+// ne changent RIEN au déroulé du match lui-même (score, événements) déjà
+// entièrement déterminé par Engine.MatchEngine.
+const HALFTIME_BREAK_MS = 10 * 60 * 1000; // pause après le 2e quart-temps
+const QUARTER_BREAK_MS = 4 * 60 * 1000; // pause après le 1er et le 3e quart-temps
+const OVERTIME_BREAK_MS = 2 * 60 * 1000; // courte pause avant chaque prolongation
+const TIMEOUT_BREAK_MS = 60 * 1000; // temps mort "piquant", quelques-uns par quart-temps
+const TIMEOUTS_PER_QUARTER = 2;
+
+// Rythme du jeu proprement dit (hors pauses) — retour utilisateur (2026-09) :
+// "les secondes sont très longues, 1 seconde dans le jeu est plus longue
+// qu'une vraie seconde". Le rythme est DIRECTEMENT proportionnel aux secondes
+// de jeu réellement écoulées entre deux événements consécutifs : 1 seconde de
+// jeu ne dure jamais plus qu'une seconde réelle.
+const SECONDS_SCALE_MS = 1000; // 1 seconde de jeu = 1 seconde réelle (jamais plus)
+// Plancher réel pour un événement qui ne fait avancer le chrono d'AUCUNE
+// seconde de jeu (annonces groupées au même chrono : entre-deux, marqueur de
+// quart-temps, faute suivie de ses lancers francs...) — sans ce plancher
+// elles s'enchaîneraient instantanément, illisibles dans le fil de texte.
+const MIN_EVENT_GAP_MS = 400;
+
+function clockSecondsFromStr(clockStr) {
+  const [m, s] = clockStr.split(":").map(Number);
+  return m * 60 + s;
+}
+
+// Durée de la pause qui suit la fin du quart-temps `q` (donné par
+// ev.quarter), ou 0 s'il n'y en a pas (fin du match). `hasNext` indique s'il
+// y a bien un quart-temps/une prolongation suivante à diffuser (sinon,
+// inutile d'ajouter une pause après le tout dernier quart-temps joué).
+function breakAfterQuarter(q, hasNext) {
+  if (!hasNext) return 0;
+  if (q === 1) return QUARTER_BREAK_MS;
+  if (q === 2) return HALFTIME_BREAK_MS;
+  if (q === 3) return QUARTER_BREAK_MS;
+  return OVERTIME_BREAK_MS; // entre deux prolongations (q >= 4)
+}
+
+// Étale une liste d'événements DÉJÀ ENTIÈREMENT DÉTERMINÉE (voir
+// MatchEngine.simulate) dans le temps réel, à partir de `kickoffAt` : ajoute
+// `airAt` (horaire réel absolu, epoch ms) à chaque événement, et renvoie la
+// liste des pauses (mi-temps, quarts-temps, temps morts) avec leur propre
+// horaire de départ. Pur et déterministe : mêmes événements + même
+// kickoffAt => toujours le même calendrier de diffusion (aucun Math.random
+// ici).
+function schedulePlayback(events, kickoffAt) {
+  if (!events.length) {
+    return { events: [], pauses: [], totalDurationMs: 0 };
+  }
+
+  const quartersInOrder = [];
+  events.forEach(ev => { if (!quartersInOrder.includes(ev.quarter)) quartersInOrder.push(ev.quarter); });
+
+  const scheduled = [];
+  const pauses = [];
+  let cursor = 0; // décalage (ms) depuis kickoffAt
+
+  quartersInOrder.forEach((q, qi) => {
+    const quarterEvents = events.filter(ev => ev.quarter === q);
+    const hasNextQuarter = qi < quartersInOrder.length - 1;
+    // Répartit les TIMEOUTS_PER_QUARTER temps morts à peu près régulièrement
+    // dans ce quart-temps (jamais sur le tout premier ou le tout dernier
+    // événement, pour ne pas les coller à une pause de quart-temps voisine).
+    const timeoutAfterIndex = new Set();
+    for (let t = 1; t <= TIMEOUTS_PER_QUARTER; t++) {
+      const pos = Math.round((t / (TIMEOUTS_PER_QUARTER + 1)) * (quarterEvents.length - 1));
+      if (pos > 0 && pos < quarterEvents.length - 1) timeoutAfterIndex.add(pos);
+    }
+
+    quarterEvents.forEach((ev, idxInQuarter) => {
+      scheduled.push({ ...ev, airAt: kickoffAt + cursor });
+
+      const nextInQuarter = quarterEvents[idxInQuarter + 1];
+      const deltaSec = nextInQuarter
+        ? Math.max(0, clockSecondsFromStr(ev.clock) - clockSecondsFromStr(nextInQuarter.clock))
+        : 0;
+      const gapMs = Math.max(MIN_EVENT_GAP_MS, deltaSec * SECONDS_SCALE_MS);
+      cursor += gapMs;
+
+      if (timeoutAfterIndex.has(idxInQuarter)) {
+        pauses.push({ kind: "timeout", label: "⏱️ Temps mort", airAt: kickoffAt + cursor, durationMs: TIMEOUT_BREAK_MS });
+        cursor += TIMEOUT_BREAK_MS;
+      }
+    });
+
+    const brk = breakAfterQuarter(q, hasNextQuarter);
+    if (brk > 0) {
+      pauses.push({
+        kind: q === 2 ? "halftime" : "quarter-break",
+        label: q === 2 ? "🏀 Mi-temps" : "Pause entre les quarts-temps",
+        airAt: kickoffAt + cursor,
+        durationMs: brk,
+      });
+      cursor += brk;
+    }
+  });
+
+  return { events: scheduled, pauses, totalDurationMs: cursor };
+}
+
+// Clé stable d'un match dans league.liveMatches — une journée (round) donnée
+// ne joue jamais deux fois le même duel home/away, donc ce triplet suffit.
+function liveMatchKey(round, homeIdx, awayIdx) {
+  return `${round}:${homeIdx}:${awayIdx}`;
+}
+
+// Équivalent pour un match de COUPE (voir League.cup côté engine.js) —
+// préfixé "cup:" pour ne JAMAIS collisionner avec une clé de championnat
+// (celles-ci commencent toujours par un simple chiffre, voir liveMatchKey
+// ci-dessus) : les deux cohabitent librement dans le même league.liveMatches
+// (voir viewLiveMatchForTeam plus bas, qui cherche par home/awayIdx sans se
+// soucier du format de la clé). `cupRoundIndex` = round.index (voir
+// generateCupBracket/buildNextCupRound), PAS le round de championnat.
+function cupLiveMatchKey(cupRoundIndex, homeIdx, awayIdx) {
+  return `cup:${cupRoundIndex}:${homeIdx}:${awayIdx}`;
+}
+
+function POSITIONS_MISSING(team) {
+  return !team.hasValidLineup();
+}
+
+// Calcule (une seule fois) le match en direct home vs away pour `round` :
+// simule le match complet avec le moteur complet, OU un forfait si l'une des
+// deux équipes ne peut pas aligner un cinq de départ complet (voir
+// rosterCannotFieldLineup côté navigateur / simulateOrForfeit côté moteur) —
+// dans ce cas, rien à diffuser en direct, juste le résultat immédiat.
+// Convention CANONIQUE (voir en-tête de fichier) : "A" = domicile, "B" =
+// extérieur, TOUJOURS — la vue personnalisée par spectateur se fait à part
+// (voir viewLiveMatchForTeam). `competition` ("championship" par défaut, ou
+// "cup" — voir ensureCupLiveMatchStarted) : purement informatif, transporté
+// tel quel dans l'entrée renvoyée pour que l'affichage sache distinguer un
+// direct de championnat d'un direct de coupe — ne change rien au calcul.
+function computeLiveMatch(Engine, league, round, homeIdx, awayIdx, kickoffAt, competition = "championship") {
+  const home = league.teams[homeIdx];
+  const away = league.teams[awayIdx];
+
+  const homeCannotField = POSITIONS_MISSING(home);
+  const awayCannotField = POSITIONS_MISSING(away);
+
+  if (homeCannotField || awayCannotField) {
+    let homeScore, awayScore;
+    if (homeCannotField && awayCannotField) {
+      homeScore = 0;
+      awayScore = 0;
+    } else if (homeCannotField) {
+      homeScore = 0;
+      awayScore = Engine.FORFEIT_SCORE;
+    } else {
+      homeScore = Engine.FORFEIT_SCORE;
+      awayScore = 0;
+    }
+    return {
+      round, kickoffAt, homeIdx, awayIdx, competition,
+      forfeit: true,
+      finalScore: { home: homeScore, away: awayScore },
+      events: [], pauses: [], totalDurationMs: 0,
+      boxScoreA: [], boxScoreB: [],
+    };
+  }
+
+  const engine = new Engine.MatchEngine(home, away);
+  const result = engine.simulate();
+  const { events, pauses, totalDurationMs } = schedulePlayback(result.events, kickoffAt);
+
+  return {
+    round, kickoffAt, homeIdx, awayIdx, competition,
+    forfeit: false,
+    finalScore: { home: result.finalScore.A, away: result.finalScore.B },
+    events, pauses, totalDurationMs,
+    boxScoreA: result.boxScoreA, boxScoreB: result.boxScoreB,
+  };
+}
+
+// Point d'entrée appelé à chaque requête (voir server/index.js, AVANT
+// catchUpLeague) : pour la journée en cours de LA LIGUE (plus "du club du
+// joueur" — voir generalisation en en-tête de fichier), démarre la diffusion
+// de CHAQUE match impliquant au moins un côté humain et pas déjà démarré.
+// Idempotent (ne redémarre jamais un match déjà dans league.liveMatches) —
+// ne fait rien tant que l'heure programmée de la journée n'est pas atteinte.
+// Renvoie la liste des clés NOUVELLEMENT démarrées (vide si rien de neuf) —
+// c'est à l'appelant (voir tick() côté server/index.js) de décider si ça
+// suffit à justifier une sauvegarde immédiate.
+function ensureLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueRound) {
+  if (typeof league.calendarStartAt !== "number") return [];
+  if (league.playoffs || league.isRegularSeasonDone()) return [];
+  const round = league.round;
+  const kickoffAt = scheduledTimeForLeagueRound(league, round);
+  if (now < kickoffAt) return [];
+
+  if (!league.liveMatches) league.liveMatches = {};
+  const startedKeys = [];
+
+  league.matchesForRound(round).forEach(m => {
+    const home = league.teams[m.home];
+    const away = league.teams[m.away];
+    if (!home.isHuman && !away.isHuman) return; // CPU-vs-CPU : jamais de diffusion en direct
+    const key = liveMatchKey(round, m.home, m.away);
+    if (league.liveMatches[key]) return; // déjà démarrée (idempotent)
+    // Applique un plan d'ordres préparé à l'avance pour CETTE journée (voir
+    // Team.applyPlannedTacticsForRound dans engine.js), pour CHAQUE côté
+    // humain impliqué (un adversaire CPU n'a pas de plan à appliquer) — juste
+    // avant que computeLiveMatch ne lise les champs "en direct" : le calcul
+    // de la diffusion elle-même est déjà figé une fois pour toutes ici, donc
+    // c'est le tout dernier moment où ce plan peut encore compter.
+    if (home.isHuman) home.applyPlannedTacticsForRound(round);
+    if (away.isHuman) away.applyPlannedTacticsForRound(round);
+    league.liveMatches[key] = computeLiveMatch(Engine, league, round, m.home, m.away, kickoffAt);
+    startedKeys.push(key);
+  });
+
+  return startedKeys;
+}
+
+// Équivalent de ensureLiveMatchStarted, mais pour le tour de COUPE
+// actuellement en attente (voir League.pendingCupRound côté engine.js) —
+// démarre la diffusion de chaque match RÉEL (jamais un bye, déjà résolu à sa
+// création, voir generateCupBracket) impliquant au moins un côté humain, dès
+// que le créneau de 15h de son jour est atteint. `scheduledTimeForLeagueCupRound`
+// injecté comme `scheduledTimeForLeagueRound` l'est pour ensureLiveMatchStarted
+// (voir server/calendar.js) — même raison (résolution du rythme propre à
+// CETTE ligue). Aucun plan d'ordres préparé à l'avance appliqué ici
+// (contrairement au championnat, voir Team.applyPlannedTacticsForRound) : ce
+// mécanisme est keyé par NUMÉRO DE JOURNÉE DE CHAMPIONNAT — le réutiliser
+// avec un numéro de tour de coupe lirait/consommerait le plan d'une journée
+// de championnat sans rapport ; un match de coupe se joue donc avec les
+// ordres COURANTS de l'équipe, exactement comme un match jamais préparé à
+// l'avance.
+function ensureCupLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueCupRound) {
+  if (typeof league.calendarStartAt !== "number") return [];
+  const round = league.pendingCupRound ? league.pendingCupRound() : null;
+  if (!round) return [];
+  const kickoffAt = scheduledTimeForLeagueCupRound(league, round.dayIndex);
+  if (now < kickoffAt) return [];
+
+  if (!league.liveMatches) league.liveMatches = {};
+  const startedKeys = [];
+
+  round.matches.forEach(m => {
+    if (m.bye || m.away == null) return; // bye : déjà résolu, aucune diffusion
+    const home = league.teams[m.home];
+    const away = league.teams[m.away];
+    if (!home.isHuman && !away.isHuman) return; // CPU-vs-CPU : jamais de diffusion en direct
+    const key = cupLiveMatchKey(round.index, m.home, m.away);
+    if (league.liveMatches[key]) return; // déjà démarrée (idempotent)
+    league.liveMatches[key] = computeLiveMatch(Engine, league, round.index, m.home, m.away, kickoffAt, "cup");
+    startedKeys.push(key);
+  });
+
+  return startedKeys;
+}
+
+// Résout définitivement TOUT le tour de coupe actuellement en attente (voir
+// League.pendingCupRound) — même principe que finalizeRound ci-dessous, côté
+// coupe : les matchs déjà diffusés en direct sont finalisés avec leur score
+// DÉJÀ déterminé (jamais un second tirage), les autres (CPU-vs-CPU, ou un
+// match humain jamais démarré en direct — rattrapage) sont simulés
+// MAINTENANT. Les byes (déjà résolus à la création du tour, voir
+// generateCupBracket) sont simplement ignorés ici. Fait avancer la coupe
+// d'un tour (voir League.advanceCup — engendre le tour suivant, ou couronne
+// le champion si c'était la finale) une fois tous les matchs réels du tour
+// enregistrés. Renvoie `null` si aucun tour n'était en attente (no-op).
+function finalizeCupRound(Engine, league) {
+  const { simulateOrForfeit } = Engine;
+  const round = league.pendingCupRound();
+  if (!round) return null;
+
+  round.matches.forEach((m, matchIndex) => {
+    if (m.bye || m.away == null) return; // déjà résolu à la création
+    const home = league.teams[m.home];
+    const away = league.teams[m.away];
+    const key = cupLiveMatchKey(round.index, m.home, m.away);
+    const live = league.liveMatches && league.liveMatches[key];
+
+    let scoreHome, scoreAway, forfeit;
+    if (live) {
+      scoreHome = live.finalScore.home;
+      scoreAway = live.finalScore.away;
+      forfeit = live.forfeit;
+      delete league.liveMatches[key];
+    } else {
+      const sim = simulateOrForfeit(home, away);
+      scoreHome = sim.scoreHome;
+      scoreAway = sim.scoreAway;
+      forfeit = sim.forfeit;
+    }
+    league.recordCupMatchResult(matchIndex, scoreHome, scoreAway, forfeit);
+  });
+
+  const cupRoundIndex = round.index;
+  const cupRoundName = round.name;
+  const dayIndex = round.dayIndex;
+  league.advanceCup();
+  return { type: "cup-match", cupRoundIndex, cupRoundName, dayIndex, matches: round.matches };
+}
+
+// Résout définitivement TOUTE la journée `round` — remplace à la fois
+// l'ancien finalizeLiveMatch (un seul match, déjà diffusé) et l'ancien
+// simulateRoundHeadless côté autoSim.js (le reste de la journée) : les
+// matchs déjà diffusés en direct (voir league.liveMatches) sont finalisés
+// avec leur score DÉJÀ déterminé (jamais un second tirage) ; tous les autres
+// matchs de cette journée (CPU-vs-CPU, ou un match humain qui n'a jamais été
+// démarré en direct — ex. plusieurs semaines rattrapées d'un coup après une
+// longue absence, voir catchUpLeague) sont simulés MAINTENANT
+// (simulateOrForfeit), exactement comme un manager absent au coup d'envoi.
+// Fait progresser `league.round` une fois la journée entière réglée (voir
+// League.advanceRound) — un round n'avance donc qu'une fois TOUS ses matchs
+// réglés, humains compris, quel que soit leur nombre. Renvoie un événement
+// `{ type: "match", round, userResults: [...] }` — UNE entrée par équipe
+// HUMAINE impliquée dans la journée (voir Team.isHuman), pas seulement celle
+// de "l'index 0" comme avant ; c'est à l'appelant (voir server/index.js) de
+// filtrer/personnaliser ces événements pour UN destinataire précis avant de
+// les renvoyer par l'API.
+function finalizeRound(Engine, league, round) {
+  const { simulateOrForfeit } = Engine;
+  const matches = league.matchesForRound(round);
+  const userResults = [];
+
+  matches.forEach(m => {
+    const home = league.teams[m.home];
+    const away = league.teams[m.away];
+    const key = liveMatchKey(round, m.home, m.away);
+    const live = league.liveMatches && league.liveMatches[key];
+
+    let scoreHome, scoreAway, forfeit;
+    if (live) {
+      scoreHome = live.finalScore.home;
+      scoreAway = live.finalScore.away;
+      forfeit = live.forfeit;
+      delete league.liveMatches[key];
+    } else {
+      // Jamais démarré en direct (CPU-vs-CPU, ou journée rattrapée d'un
+      // coup — voir commentaire ci-dessus) : applique d'abord un plan
+      // d'ordres préparé à l'avance pour CHAQUE côté humain impliqué (voir
+      // Team.applyPlannedTacticsForRound), sinon un manager absent qui avait
+      // préparé sa semaine verrait quand même ses ordres du moment (voire
+      // ceux par défaut) appliqués à sa place.
+      if (home.isHuman) home.applyPlannedTacticsForRound(round);
+      if (away.isHuman) away.applyPlannedTacticsForRound(round);
+      const sim = simulateOrForfeit(home, away);
+      scoreHome = sim.scoreHome;
+      scoreAway = sim.scoreAway;
+      forfeit = sim.forfeit;
+    }
+
+    league.recordResult(round, m.home, m.away, scoreHome, scoreAway);
+
+    if (home.isHuman) {
+      const won = scoreHome > scoreAway;
+      const moraleDelta = home.applyMoraleForResult(won, scoreHome - scoreAway, away.name);
+      const attendanceInfo = home.simulateHomeAttendance(away.name);
+      userResults.push({
+        teamIdx: m.home, round, isHome: true, opponent: away.name, opponentIdx: m.away,
+        scoreUser: scoreHome, scoreOpponent: scoreAway, won, forfeit, moraleDelta, attendanceInfo,
+      });
+    }
+    if (away.isHuman) {
+      const won = scoreAway > scoreHome;
+      const moraleDelta = away.applyMoraleForResult(won, scoreAway - scoreHome, home.name);
+      userResults.push({
+        teamIdx: m.away, round, isHome: false, opponent: home.name, opponentIdx: m.home,
+        scoreUser: scoreAway, scoreOpponent: scoreHome, won, forfeit, moraleDelta, attendanceInfo: null,
+      });
+    }
+  });
+
+  league.advanceRound();
+  return { type: "match", round, userResults };
+}
+
+// Vue PERSONNALISÉE du match en direct de `teamIndex`, si son équipe en a un
+// en cours cette journée (voir league.liveMatches) — sinon `null`. Reprend
+// EXACTEMENT la forme historique d'un league.liveMatch solo ({round,
+// kickoffAt, isHome, opponentIdx, forfeit, finalScore, events, pauses,
+// totalDurationMs, boxScoreA, boxScoreB}, "A" = TOUJOURS l'équipe du
+// spectateur) : le navigateur n'a besoin d'AUCUN changement pour continuer à
+// l'afficher — voir server/index.js, qui appelle cette fonction pour
+// remplir league.liveMatch (le champ de confort, jamais league.liveMatches
+// au pluriel) juste avant de répondre à CE destinataire précis. Un match
+// canonique est toujours stocké "A = domicile" (voir computeLiveMatch) :
+// pour un spectateur à l'extérieur, on doit donc échanger A<->B dans les
+// événements/box-scores AVANT de les renvoyer — jamais re-simuler.
+function viewLiveMatchForTeam(league, teamIndex) {
+  if (!league.liveMatches) return null;
+  const entry = Object.values(league.liveMatches).find(
+    m => m.homeIdx === teamIndex || m.awayIdx === teamIndex
+  );
+  if (!entry) return null;
+
+  const isHome = entry.homeIdx === teamIndex;
+  const opponentIdx = isHome ? entry.awayIdx : entry.homeIdx;
+
+  // `competition` ("championship"/"cup", voir computeLiveMatch) : absent
+  // pour une entrée d'avant ce champ (rétro-compatible) — "championship" par
+  // défaut, comme c'était implicitement le cas.
+  const competition = entry.competition || "championship";
+
+  if (isHome) {
+    return {
+      round: entry.round, kickoffAt: entry.kickoffAt, isHome: true, opponentIdx, competition,
+      forfeit: entry.forfeit, finalScore: entry.finalScore,
+      events: entry.events, pauses: entry.pauses, totalDurationMs: entry.totalDurationMs,
+      boxScoreA: entry.boxScoreA, boxScoreB: entry.boxScoreB,
+    };
+  }
+
+  // Spectateur à l'extérieur : échange A<->B partout où ça compte (mais
+  // JAMAIS finalScore, qui est déjà absolu en repère home/away — voir
+  // liveMatchScoreAB côté navigateur, qui s'appuie déjà sur `isHome` pour le
+  // relire correctement quel que soit le camp du spectateur).
+  const swapTeamLabel = (label) => (label === "A" ? "B" : label === "B" ? "A" : label);
+  const events = entry.events.map(ev => ({
+    ...ev,
+    ...(ev.team !== undefined ? { team: swapTeamLabel(ev.team) } : null),
+    ...(ev.possession !== undefined ? { possession: swapTeamLabel(ev.possession) } : null),
+  }));
+
+  return {
+    round: entry.round, kickoffAt: entry.kickoffAt, isHome: false, opponentIdx, competition,
+    forfeit: entry.forfeit, finalScore: entry.finalScore,
+    events, pauses: entry.pauses, totalDurationMs: entry.totalDurationMs,
+    boxScoreA: entry.boxScoreB, boxScoreB: entry.boxScoreA,
+  };
+}
+
+module.exports = {
+  HALFTIME_BREAK_MS, QUARTER_BREAK_MS, OVERTIME_BREAK_MS, TIMEOUT_BREAK_MS, TIMEOUTS_PER_QUARTER,
+  SECONDS_SCALE_MS, MIN_EVENT_GAP_MS,
+  schedulePlayback, liveMatchKey, computeLiveMatch, ensureLiveMatchStarted, finalizeRound, viewLiveMatchForTeam,
+  // Coupe (voir le bloc dédié plus haut) :
+  cupLiveMatchKey, ensureCupLiveMatchStarted, finalizeCupRound,
+};

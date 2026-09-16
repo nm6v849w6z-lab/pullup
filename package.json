@@ -1,0 +1,12 @@
+{
+  "name": "basket-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jeu de gestion de basket-ball dans le navigateur, calendrier réel et diffusion en direct.",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}

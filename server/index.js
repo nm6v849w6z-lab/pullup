@@ -1,0 +1,743 @@
+// =====================================================================
+// SERVEUR — retour utilisateur (2026-09) : "jusqu'à 10 vrais managers
+// humains dans une ligue partagée à la fois, le reste comblé par des
+// adversaires CPU" (le reste de la pyramide n'est pas simulé). Portée de
+// CETTE étape : l'architecture multi-manager elle-même (identité par jeton
+// privé, ligue partagée, diffusions en direct simultanées) — PAS le nouveau
+// calendrier à horaires fixes ni une vraie compétition de Coupe (une étape
+// suivante, une fois celle-ci posée).
+//
+// DEUX modes, choisis PAR REQUÊTE, uniquement par la présence d'un jeton
+// `X-TipIn-Token` (voir getManagerToken/resolvePlayerContext plus bas) :
+//   - AUCUN jeton : comportement HISTORIQUE inchangé — un seul manager
+//     humain (teams[0]) dans server/data/league.json (voir
+//     store.defaultSavePath), EXACTEMENT comme avant ce chantier. C'est la
+//     carrière solo réelle d'Antony (jamais touchée par ce travail) et
+//     c'est aussi ce que continue d'exercer toute la suite de tests
+//     existante (aucune ne parle de jeton) — zéro régression par
+//     construction : ces requêtes ne passent JAMAIS par le nouveau code
+//     multi-manager.
+//   - Un jeton : ligue PARTAGÉE (server/data/multi-league.json, voir
+//     store.defaultMultiLeaguePath), l'équipe résolue via
+//     store.resolveManagerTeam — 404 si aucune ligue partagée n'existe
+//     encore (voir /api/admin/new-multi-league), 401 si le jeton ne
+//     correspond à personne.
+// Les DEUX modes partagent tout le reste (buildStateSnapshot, tick,
+// actions.js, server/liveMatch.js/autoSim.js) : ce n'est PAS une deuxième
+// implémentation parallèle, juste un aiguillage sur QUEL fichier de
+// sauvegarde et QUEL index d'équipe une requête donnée doit utiliser — voir
+// resolvePlayerContext. C'est ce même aiguillage qui garantit qu'aucune
+// route ne peut jamais faire fuiter ou écraser les données de l'AUTRE mode.
+//
+// Aucune dépendance externe (Express, etc.) : juste `http`, le module
+// natif de Node, pour rester simple à auditer et à faire tourner n'importe
+// où sans étape d'installation.
+// =====================================================================
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const { URL } = require("url");
+const store = require("./store.js");
+const AutoSim = require("./autoSim.js");
+const Calendar = require("./calendar.js");
+const LiveMatch = require("./liveMatch.js");
+const { scheduledTimeForLeagueRound } = Calendar;
+const actions = require("./actions.js");
+
+// MODE ACCÉLÉRÉ (tests/démo) — voir le commentaire détaillé dans
+// server/calendar.js. Activé en lançant le serveur avec la variable
+// d'environnement BASKET_FAST_CALENDAR=1 ; jamais activé par défaut, ne
+// s'applique qu'aux NOUVELLES ligues générées à partir de maintenant
+// (nouvelle carrière solo, ou nouvelle ligue multi-manager via l'API admin)
+// — une ligue déjà en cours garde le rythme qu'elle a déjà.
+if (process.env.BASKET_FAST_CALENDAR === "1") {
+  Calendar.setFastTestMode(true);
+}
+
+const DEFAULT_PORT = process.env.PORT || 4000;
+const MAX_BODY_BYTES = 1024 * 1024; // 1 Mo — largement suffisant pour une feuille de match/des tactiques, évite un corps de requête sans fin d'écrouler le serveur.
+
+// La page elle-même : servie depuis ICI, et relue à chaque requête (pas de
+// cache) — reste vrai quel que soit le mode (solo ou multi-manager) ni la
+// présence d'un `?m=<jeton>` dans l'URL : la route "/" ne dépend jamais de
+// la query string (voir moteurbasket3.html, qui lit `location.search`
+// lui-même une fois chargé), donc aucun changement de routage ici.
+const HTML_PATH = path.join(__dirname, "..", "moteurbasket3.html");
+
+function serveIndexHtml(res) {
+  let html;
+  try {
+    html = fs.readFileSync(HTML_PATH, "utf-8");
+  } catch (e) {
+    sendJson(res, 500, { error: `Impossible de lire moteurbasket3.html : ${e.message}` });
+    return;
+  }
+  const body = Buffer.from(html, "utf-8");
+  res.writeHead(200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": body.length,
+  });
+  res.end(body);
+}
+
+// Lit et parse le corps JSON d'une requête POST. Rejette (via l'erreur) un
+// corps trop volumineux ou du JSON invalide plutôt que de planter le
+// serveur — chaque route appelante décide ensuite du code HTTP à renvoyer.
+function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > MAX_BODY_BYTES) {
+        reject(new Error("Corps de requête trop volumineux."));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      if (!chunks.length) { resolve({}); return; }
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString("utf-8")));
+      } catch (e) {
+        reject(new Error("JSON invalide."));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+function sendJson(res, statusCode, payload) {
+  const body = JSON.stringify(payload);
+  res.writeHead(statusCode, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": Buffer.byteLength(body),
+  });
+  res.end(body);
+}
+
+// ---------------------------------------------------------------------
+// Identité manager (voir en-tête de fichier) — le jeton privé voyage dans un
+// en-tête HTTP dédié (X-TipIn-Token) plutôt que dans l'URL de chaque requête
+// : le lien privé lui-même (`?m=<jeton>`) ne sert qu'à faire entrer CE
+// jeton dans le navigateur une première fois (voir moteurbasket3.html, qui
+// le persiste ensuite en localStorage et l'attache à chaque fetch()).
+// ---------------------------------------------------------------------
+function getManagerToken(req) {
+  const header = req.headers["x-tipin-token"];
+  if (typeof header === "string" && header.trim()) return header.trim();
+  return null;
+}
+
+// Résout, pour CETTE requête, {ok:true, league, teamIndex, isMulti,
+// savePath} ou {ok:false, status, error} — le point d'entrée UNIQUE par
+// lequel TOUTES les routes joueur (/api/state, /api/save, /api/lineup, ...)
+// déterminent sur quelle ligue et quelle équipe agir. Voir le grand
+// commentaire en tête de fichier pour le détail des deux modes.
+// `async` (voir server/store.js — load/save/loadMultiLeague/saveMultiLeague
+// sont désormais toutes des fonctions asynchrones, pour offrir la MÊME
+// interface qu'on écrive sur disque localement ou sur Redis/Upstash en
+// ligne) : tous les appelants ci-dessous `await`ent déjà cette fonction.
+async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
+  const token = getManagerToken(req);
+  if (!token) {
+    const state = await store.loadOrCreate(legacySavePath, now);
+    return { ok: true, league: state.league, teamIndex: 0, isMulti: false, savePath: legacySavePath };
+  }
+  const multi = await store.loadMultiLeague(multiSavePath);
+  if (!multi) {
+    return { ok: false, status: 404, error: "Aucune ligue multi-manager n'existe encore (voir /api/admin/new-multi-league)." };
+  }
+  const resolved = store.resolveManagerTeam(multi.league, token);
+  if (!resolved) {
+    return { ok: false, status: 401, error: "Jeton de manager inconnu ou invalide." };
+  }
+  return { ok: true, league: multi.league, teamIndex: resolved.teamIndex, isMulti: true, savePath: multiSavePath };
+}
+
+// `async` — voir resolvePlayerContext juste au-dessus, même raison.
+async function persistContext(ctx) {
+  if (ctx.isMulti) {
+    await store.saveMultiLeague(ctx.league, ctx.savePath);
+    return;
+  }
+  // Confort historique (mode solo UNIQUEMENT) : contrairement au mode
+  // multi-manager (où stocker un `liveMatch` résolu pour UN destinataire sur
+  // l'objet ligue PARTAGÉ serait ambigu — lequel des N managers ?), le solo
+  // n'a jamais qu'UN SEUL match en direct pertinent (teams[0]) — on le
+  // reflète aussi sur l'objet ligue persisté (pas seulement dans la réponse
+  // HTTP, voir /api/save), pour rester fidèle à la forme historique de
+  // server/data/league.json que d'anciens outils/tests peuvent inspecter
+  // directement.
+  ctx.league.liveMatch = LiveMatch.viewLiveMatchForTeam(ctx.league, 0);
+  await store.save(ctx.league.teams[0], ctx.league, ctx.savePath);
+}
+
+// Rattrape la ligue jusqu'à `now` (matchs dus, entraînement hebdomadaire,
+// marché...) — voir server/autoSim.js:catchUpLeague — et démarre toute
+// diffusion en direct due (voir server/autoSim.js:ensureLiveMatch). C'est le
+// point de passage obligé de chaque requête joueur : on ne compte pas sur un
+// cron qui tournerait en permanence, on rattrape à chaque accès. Ne persiste
+// PAS lui-même (voir `changed` dans le résultat) — c'est à l'appelant de
+// décider, puisqu'il connaît le bon fichier/la bonne forme de sauvegarde
+// pour CE contexte (solo ou multi-manager, voir persistContext).
+function tick(league, now) {
+  const startedKeys = AutoSim.ensureLiveMatch(league, now);
+  const events = AutoSim.catchUpLeague(league, now);
+  return { events, changed: events.length > 0 || startedKeys.length > 0 };
+}
+
+// Ramène les événements "bruts" de catchUpLeague (potentiellement plusieurs
+// équipes HUMAINES concernées par un même match/une même semaine
+// d'entraînement, voir server/liveMatch.js:finalizeRound et
+// server/autoSim.js) à la forme HISTORIQUE, PERSONNELLE, qu'un manager donné
+// attend ({type:"match", round, userResult} / {type:"training", week,
+// result} — un seul résultat, le SIEN) : c'est exactement la forme que
+// moteurbasket3.html sait déjà afficher (voir showCatchupSummaryIfAny), zéro
+// changement requis côté navigateur pour ce point précis. Un match/une
+// semaine qui ne concerne pas du tout `teamIndex` est simplement omis de SON
+// récapitulatif (mais reste bien résolu pour tout le monde par ailleurs).
+function personalizeEventsForTeam(events, teamIndex) {
+  const out = [];
+  events.forEach(ev => {
+    if (ev.type === "match") {
+      const mine = (ev.userResults || []).find(r => r.teamIdx === teamIndex);
+      if (mine) {
+        const { teamIdx, ...userResult } = mine;
+        out.push({ type: "match", round: ev.round, userResult });
+      }
+    } else if (ev.type === "training") {
+      const mine = (ev.results || []).find(r => r.teamIdx === teamIndex);
+      if (mine) {
+        // `ev.week` (calendrier classique, une fois par semaine réelle) OU
+        // `ev.day` (calendrier ancré quotidien, une fois par jour civil —
+        // voir catchUpDailyAnchored côté server/autoSim.js) : JAMAIS les
+        // deux à la fois, selon le rythme de LA ligue qui a émis l'événement
+        // — transporté tel quel, à charge pour l'affichage (voir
+        // showCatchupSummaryIfAny côté moteurbasket3.html) de choisir le bon
+        // libellé ("semaine" vs "jour").
+        const out_ev = { type: "training", result: mine.result };
+        if (typeof ev.week === "number") out_ev.week = ev.week;
+        if (typeof ev.day === "number") out_ev.day = ev.day;
+        out.push(out_ev);
+      }
+    } else {
+      out.push(ev); // "season-end" etc. : global, identique pour tout le monde
+    }
+  });
+  return out;
+}
+
+// Résumé JSON lisible de l'état courant, PERSONNALISÉ pour `teamIndex` — pas
+// la sauvegarde brute (bien trop volumineuse/interne), juste de quoi
+// afficher un tableau de bord : classement, prochain match programmé,
+// budget, semaine d'entraînement en cours.
+function buildStateSnapshot(league, teamIndex, now) {
+  const team = league.teams[teamIndex];
+  const standings = league.standings();
+  const userRow = standings.find(r => r.idx === teamIndex);
+  const nextRound = league.isRegularSeasonDone() ? null : league.round;
+  const nextMatch = nextRound == null ? null : league.matchesForRound(nextRound).find(m => m.home === teamIndex || m.away === teamIndex);
+
+  const openListings = (league.transferListings || []).filter(l => l.status === "open");
+  // Résolu depuis league.liveMatches (voir server/liveMatch.js), jamais lu
+  // directement : c'est CE calcul qui garantit qu'un manager ne voit jamais
+  // que SA PROPRE diffusion, jamais celle d'un autre.
+  const myLive = LiveMatch.viewLiveMatchForTeam(league, teamIndex);
+
+  return {
+    now,
+    myTeamIndex: teamIndex,
+    team: {
+      name: team.name,
+      week: team.week,
+      // Droit d'administration de ligue (voir Team.isAdmin, engine.js) :
+      // exposé ICI pour que le navigateur sache s'il doit afficher l'action
+      // "Réinitialiser la ligue" (voir POST /api/reset-multi-league) — sans
+      // ce champ, seule la sauvegarde complète (GET /api/save) le porterait,
+      // qu'on ne veut pas devoir charger juste pour savoir si ce bouton doit
+      // apparaître.
+      isAdmin: !!team.isAdmin,
+      budget: team.budget,
+      fanMorale: Math.round(team.fanMorale),
+      trainingSkill: team.trainingSkill,
+      trainingPositions: team.trainingPositions,
+      offensivePriorities: team.offensivePriorities,
+      defense: team.defense,
+      rhythm: team.rhythm,
+      lineup: team.lineup,
+      hasValidLineup: team.hasValidLineup(),
+      playersCount: team.players.length,
+      players: team.players.map(p => ({
+        id: p.id, name: p.name, position: p.position, age: p.age,
+        height: p.height, attrs: p.attrs, salary: p.salary,
+      })),
+    },
+    league: {
+      divisionLevel: league.divisionLevel,
+      round: league.round,
+      totalRounds: league.totalRounds,
+      regularSeasonDone: league.isRegularSeasonDone(),
+      playoffs: league.playoffs,
+      relegationBarrage: league.relegationBarrage,
+      calendarStartAt: league.calendarStartAt,
+      lastAutoTrainedWeek: league.lastAutoTrainedWeek,
+      // Rythme de calendrier figé pour CETTE ligue (voir "MODE ACCÉLÉRÉ"
+      // dans server/calendar.js) : `null` = calendrier classique. Purement
+      // informatif ici — le navigateur lit calendarWeekMs/
+      // calendarSlotOffsetsMs directement depuis la sauvegarde complète
+      // (voir GET /api/save, store.serialize(Multi)League).
+      calendarWeekMs: league.calendarWeekMs,
+      calendarSlotOffsetsMs: league.calendarSlotOffsetsMs,
+      standings,
+      userStanding: userRow || null,
+      nextMatch: nextMatch
+        ? {
+            round: nextRound,
+            isHome: nextMatch.home === teamIndex,
+            opponent: league.teams[nextMatch.home === teamIndex ? nextMatch.away : nextMatch.home].name,
+            scheduledAt: league.calendarStartAt != null ? scheduledTimeForLeagueRound(league, nextRound) : null,
+          }
+        : null,
+      // Diffusion en direct en cours de CE manager (voir server/liveMatch.js)
+      // — juste de quoi savoir SANS charger la sauvegarde complète si SON
+      // match est actuellement en train de se jouer ; le détail (chaque
+      // événement + son horaire) reste dans GET /api/save.
+      liveMatch: myLive ? { round: myLive.round, kickoffAt: myLive.kickoffAt, forfeit: myLive.forfeit } : null,
+    },
+    market: {
+      listings: openListings.map(l => ({
+        id: l.id,
+        playerId: l.playerId,
+        playerName: (league.playerById ? league.playerById(l.playerId) : null)?.name || null,
+        sellerIdx: l.sellerIdx,
+        sellerName: league.teams[l.sellerIdx].name,
+        isMine: l.sellerIdx === teamIndex,
+        startPrice: l.startPrice,
+        currentBid: l.currentBid,
+        currentBidderIsMe: l.currentBidderIdx === teamIndex,
+        closesAt: l.closesAt,
+      })),
+    },
+  };
+}
+
+// Points d'entrée "action" — chacun reçoit (team, teamIndex, league, body,
+// now) et renvoie { ok: true, ... } ou { ok: false, error } (voir
+// actions.js). Un seul chemin de traitement générique ci-dessous pour
+// toutes : résout le contexte joueur (voir resolvePlayerContext — solo OU
+// multi-manager, selon le jeton), valide le corps JSON, applique l'action si
+// elle est acceptée, sauvegarde, renvoie l'instantané à jour.
+//
+// Salle/prix des billets/boutique des supporters (retour utilisateur,
+// 2026-09, veille du premier vrai test à 10 managers) : ces trois écrans
+// mutaient jusqu'ici `teamA` en local puis appelaient saveMyTeam() — devenu
+// un no-op dès qu'un jeton manager est actif (voir /api/save-raw plus bas),
+// donc ces achats étaient silencieusement perdus au prochain chargement en
+// mode multi-manager. upgradeArena/setTicketPrices/upgradeFanShop
+// reproduisent EXACTEMENT la même logique de validation/coût que
+// Team.upgradeArena/setTicketPrice/upgradeFanShop côté moteur (voir
+// actions.js) — ce ne sont pas de nouvelles règles, juste le même calcul
+// déplacé côté serveur pour qu'il persiste réellement.
+const ACTION_ROUTES = {
+  "/api/lineup": actions.setLineup,
+  "/api/tactics": actions.setTactics,
+  "/api/training": actions.setTraining,
+  "/api/plan": actions.setPlan,
+  "/api/market/list": actions.listPlayer,
+  "/api/market/bid": actions.bidOnListing,
+  "/api/market/coach-bid": actions.bidOnCoachListing,
+  "/api/arena": actions.upgradeArena,
+  "/api/ticket-prices": actions.setTicketPrices,
+  "/api/fan-shop": actions.upgradeFanShop,
+  "/api/staff/fire-trainer": actions.fireTrainer,
+  // Marché des analystes vidéo + séance vidéo (voir server/actions.js et
+  // League.analystListings/runVideoSession côté moteur) — mêmes conventions
+  // de nommage que les routes entraîneur ci-dessus.
+  "/api/market/analyst-bid": actions.bidOnAnalystListing,
+  "/api/staff/fire-analyst": actions.fireVideoAnalyst,
+  "/api/staff/video-session": actions.runVideoSession,
+  // Académie de jeunes (recruteur + centre de formation + pipeline privé de
+  // prospects, voir server/actions.js et Team.recruiter/youthCandidates/
+  // youthPlayers/trainingCenterLevel/pendingYouthDecisions côté moteur) —
+  // mêmes conventions de nommage que les routes entraîneur/analyste
+  // ci-dessus pour le marché du recruteur ; nouvelles routes /api/youth/* et
+  // /api/training-center pour ce qui n'a pas d'équivalent staff-market.
+  "/api/market/recruiter-bid": actions.bidOnRecruiterListing,
+  "/api/staff/fire-recruiter": actions.fireRecruiter,
+  "/api/training-center": actions.upgradeTrainingCenter,
+  "/api/youth/sign": actions.signYouthCandidate,
+  "/api/youth/decline": actions.declineYouthCandidate,
+  "/api/youth/promote": actions.promoteYouthPlayer,
+  "/api/youth/release": actions.releaseYouthPlayer,
+};
+
+// ---------------------------------------------------------------------
+// ADMIN — bootstrap/reset de la ligue PARTAGÉE (retour utilisateur, 2026-09 :
+// jusqu'à 10 vrais managers). Protégé par un secret partagé lu depuis
+// l'environnement (BASKET_ADMIN_TOKEN, comparé à l'en-tête X-Admin-Token) —
+// jamais ouvert par défaut : si la variable n'est PAS définie, TOUTE requête
+// admin est refusée, quel que soit l'en-tête envoyé. API seulement pour
+// l'instant (pas d'écran dédié côté navigateur) : Antony est technique,
+// c'est suffisant pour cette étape.
+// ---------------------------------------------------------------------
+function isAdminAuthorized(req) {
+  const expected = process.env.BASKET_ADMIN_TOKEN;
+  if (!expected) return false;
+  const got = req.headers["x-admin-token"];
+  return typeof got === "string" && got === expected;
+}
+
+function validateManagerTeamNames(raw) {
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 10) {
+    return { error: "'teamNames' doit être un tableau de 1 à 10 noms de club." };
+  }
+  const names = raw.map(n => (typeof n === "string" ? n.trim() : ""));
+  if (names.some(n => !n)) return { error: "Chaque nom de club doit être une chaîne non vide." };
+  if (new Set(names).size !== names.length) return { error: "Les noms de club doivent être uniques." };
+  return { value: names };
+}
+
+// `adminTeamName` optionnel du corps de /api/admin/new-multi-league et
+// /api/admin/reset-multi-league (voir store.createMultiManagerCareer) : s'il
+// est fourni, DOIT correspondre à l'un des noms déjà validés dans
+// `names` (sinon 400 — jamais un admin silencieusement absent ou mal
+// assigné). Absent/`null` : `{ value: undefined }`, laissé à
+// store.createMultiManagerCareer de retomber sur `teamNames[0]`.
+function validateAdminTeamName(raw, names) {
+  if (raw === undefined || raw === null) return { value: undefined };
+  if (typeof raw !== "string" || !raw.trim()) {
+    return { error: "'adminTeamName' doit être une chaîne non vide si fourni." };
+  }
+  const trimmed = raw.trim();
+  if (!names.includes(trimmed)) {
+    return { error: "'adminTeamName' doit correspondre à l'un des noms de 'teamNames'." };
+  }
+  return { value: trimmed };
+}
+
+// Origine publique (protocole + hôte) à partir de laquelle construire un
+// lien privé complet (`<origine>/?m=<jeton>`) — lue depuis les en-têtes de
+// LA REQUÊTE qui a appelé l'API admin (Host, X-Forwarded-Proto si derrière
+// un proxy) : ce serveur ne connaît pas lui-même sa propre adresse publique.
+function originFor(req) {
+  const proto = (req.headers["x-forwarded-proto"] || "http").split(",")[0].trim();
+  const host = req.headers.host || `localhost:${DEFAULT_PORT}`;
+  return `${proto}://${host}`;
+}
+
+function managerLinksFor(league, req) {
+  const origin = originFor(req);
+  return league.teams
+    .map((t, teamIndex) => ({ t, teamIndex }))
+    .filter(x => x.t.isHuman)
+    .map(({ t, teamIndex }) => ({ teamIndex, name: t.name, token: t.managerLinkToken, link: `${origin}/?m=${t.managerLinkToken}` }));
+}
+
+// Logique de réinitialisation PARTAGÉE entre les deux routes de reset (voir
+// POST /api/admin/reset-multi-league — secret X-Admin-Token brut, pour un
+// appel direct en API — et POST /api/reset-multi-league — jeton manager
+// X-TipIn-Token + Team.isAdmin, pour l'action en un clic dans l'app, voir
+// moteurbasket3.html) : UNE SEULE implémentation plutôt que deux copies qui
+// risqueraient de diverger (voir le commentaire sur serializeTeam/
+// teamFromSave dans engine.js pour pourquoi ça compte ici aussi).
+// `adminTeamNameInput` : déjà validé par l'appelant (voir
+// validateAdminTeamName) — si absent, retombe sur l'admin de la ligue
+// PRÉCÉDENTE (identifié par nom de club, comme managerLinkToken un peu plus
+// bas) si ce nom existe encore dans `teamNames`, sinon sur `teamNames[0]`
+// (voir store.createMultiManagerCareer).
+async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSavePath, now, req }) {
+  const previous = await store.loadMultiLeague(multiSavePath);
+  let adminTeamName = adminTeamNameInput;
+  if (!adminTeamName && previous) {
+    const prevAdmin = previous.league.teams.find(t => t.isHuman && t.isAdmin);
+    if (prevAdmin && teamNames.includes(prevAdmin.name)) adminTeamName = prevAdmin.name;
+  }
+  const created = store.createMultiManagerCareer(teamNames, now, adminTeamName);
+  // Préserve le jeton privé de chaque manager déjà connu (identifié par nom
+  // de club) d'une saison à l'autre — voir le commentaire historique sur
+  // cette route plus bas pour le détail du retour utilisateur derrière ce
+  // choix.
+  if (previous) {
+    const prevTokenByName = new Map();
+    previous.league.teams.forEach(t => { if (t.isHuman && t.managerLinkToken) prevTokenByName.set(t.name, t.managerLinkToken); });
+    created.league.teams.forEach(t => {
+      if (t.isHuman && prevTokenByName.has(t.name)) t.managerLinkToken = prevTokenByName.get(t.name);
+    });
+  }
+  await store.saveMultiLeague(created.league, multiSavePath);
+  return { ok: true, managers: managerLinksFor(created.league, req) };
+}
+
+// Fabrique le handler HTTP. `savePath`/`multiSavePath` et `nowFn`
+// injectables — indispensable pour tester ce serveur sans dépendre du vrai
+// disque/de la vraie horloge (voir server/index_test.js).
+function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, multiSavePath = store.defaultMultiLeaguePath()) {
+  return async function handler(req, res) {
+    try {
+      let route;
+      try {
+        route = new URL(req.url, "http://localhost");
+      } catch (e) {
+        sendJson(res, 400, { error: "URL invalide" });
+        return;
+      }
+
+      // Sert la page elle-même — avant même de calculer `now` ou de toucher
+      // à une sauvegarde, exactement comme /api/health : ouvrir la page ne
+      // devrait jamais, à lui seul, créer une carrière. La query string
+      // (`?m=<jeton>`) ne change rien ici : c'est purement une affaire
+      // client (voir moteurbasket3.html).
+      if (route.pathname === "/" && req.method === "GET") {
+        serveIndexHtml(res);
+        return;
+      }
+
+      const now = nowFn();
+
+      // Simple sonde de vie : ne touche à AUCUNE sauvegarde (ni lecture ni
+      // création) — sinon un load-balancer/orchestrateur qui ping
+      // /api/health en boucle créerait une carrière neuve pour rien avant
+      // même qu'un manager n'ait joué.
+      if (route.pathname === "/api/health") {
+        sendJson(res, 200, { ok: true, now });
+        return;
+      }
+
+      // ---------------------------------------------------------------
+      // ADMIN — voir le bloc dédié plus haut. Totalement indépendant du
+      // jeton manager (X-TipIn-Token) : ces deux routes n'agissent JAMAIS
+      // sur la sauvegarde solo, uniquement sur la ligue multi-manager.
+      // ---------------------------------------------------------------
+      if (route.pathname === "/api/admin/new-multi-league" && req.method === "POST") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        if (await store.loadMultiLeague(multiSavePath)) {
+          sendJson(res, 409, { ok: false, error: "Une ligue multi-manager existe déjà — utilisez /api/admin/reset-multi-league pour en repartir." });
+          return;
+        }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const names = validateManagerTeamNames(body && body.teamNames);
+        if (names.error) { sendJson(res, 400, { ok: false, error: names.error }); return; }
+        const adminName = validateAdminTeamName(body && body.adminTeamName, names.value);
+        if (adminName.error) { sendJson(res, 400, { ok: false, error: adminName.error }); return; }
+        const created = store.createMultiManagerCareer(names.value, now, adminName.value);
+        await store.saveMultiLeague(created.league, multiSavePath);
+        sendJson(res, 200, { ok: true, managers: managerLinksFor(created.league, req) });
+        return;
+      }
+
+      // Reset ADMIN (secret X-Admin-Token brut) — retour utilisateur implicite
+      // sur la préservation des jetons manager d'une saison à l'autre (pas
+      // envie de redistribuer 10 nouveaux liens si le même groupe continue) :
+      // voir le grand commentaire sur performMultiLeagueReset ci-dessus, qui
+      // porte maintenant aussi cette logique.
+      if (route.pathname === "/api/admin/reset-multi-league" && req.method === "POST") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const names = validateManagerTeamNames(body && body.teamNames);
+        if (names.error) { sendJson(res, 400, { ok: false, error: names.error }); return; }
+        const adminName = validateAdminTeamName(body && body.adminTeamName, names.value);
+        if (adminName.error) { sendJson(res, 400, { ok: false, error: adminName.error }); return; }
+        const result = await performMultiLeagueReset({ teamNames: names.value, adminTeamNameInput: adminName.value, multiSavePath, now, req });
+        sendJson(res, 200, result);
+        return;
+      }
+
+      // Reset EN UN CLIC depuis l'app (Phase B, 2026-09 : "Antony veut pouvoir
+      // réinitialiser la ligue lui-même, sans le secret BASKET_ADMIN_TOKEN
+      // brut") — authentifié par le jeton manager de l'APPELANT
+      // (X-TipIn-Token, voir resolveManagerTeam), pas par X-Admin-Token :
+      // réservé au SEUL manager qui porte Team.isAdmin (voir
+      // store.createMultiManagerCareer/moteurbasket3.html). Reconduit
+      // exactement le même groupe de managers que la ligue courante (aucun
+      // 'teamNames' à fournir : pas question de faire saisir 10 noms de club
+      // à Antony pour un simple bouton "réinitialiser") et la même logique de
+      // reset que la route admin ci-dessus, via performMultiLeagueReset.
+      if (route.pathname === "/api/reset-multi-league" && req.method === "POST") {
+        const token = getManagerToken(req);
+        if (!token) { sendJson(res, 401, { ok: false, error: "Jeton manager manquant (X-TipIn-Token)." }); return; }
+        const multi = await store.loadMultiLeague(multiSavePath);
+        if (!multi) { sendJson(res, 404, { ok: false, error: "Aucune ligue multi-manager n'existe encore." }); return; }
+        const resolved = store.resolveManagerTeam(multi.league, token);
+        if (!resolved) { sendJson(res, 401, { ok: false, error: "Jeton manager inconnu ou invalide." }); return; }
+        if (!resolved.team.isAdmin) {
+          sendJson(res, 403, { ok: false, error: "Seul le manager administrateur de la ligue peut la réinitialiser." });
+          return;
+        }
+        const teamNames = multi.league.teams.filter(t => t.isHuman).map(t => t.name);
+        const result = await performMultiLeagueReset({ teamNames, adminTeamNameInput: resolved.team.name, multiSavePath, now, req });
+        sendJson(res, 200, result);
+        return;
+      }
+
+      // ---------------------------------------------------------------
+      // ROUTES JOUEUR — solo OU multi-manager selon la présence d'un jeton
+      // (voir resolvePlayerContext, en tête de fichier).
+      // ---------------------------------------------------------------
+
+      if (route.pathname === "/api/state" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
+        const { events, changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        sendJson(res, 200, { ...buildStateSnapshot(ctx.league, ctx.teamIndex, now), events: personalizeEventsForTeam(events, ctx.teamIndex) });
+        return;
+      }
+
+      // Sauvegarde complète (même forme que store.serialize(Multi)League) —
+      // c'est ce dont le navigateur a besoin pour reconstruire de VRAIS
+      // objets Team/League (via teamFromSave/leagueFromSave) et continuer à
+      // utiliser tel quel tout son code d'affichage existant, plutôt que le
+      // résumé allégé de buildStateSnapshot ci-dessus (pensé pour un tableau
+      // de bord, pas pour être re-désérialisé). `myTeamIndex` (nouveau) dit
+      // au navigateur QUELLE équipe, parmi league.teams, est la SIENNE —
+      // plus jamais forcément teams[0] une fois plusieurs managers humains
+      // en jeu (voir moteurbasket3.html). `league.liveMatch` est résolu ICI
+      // pour CE destinataire précis (voir LiveMatch.viewLiveMatchForTeam) —
+      // `league.liveMatches` (le pluriel, TOUTES les diffusions en cours,
+      // potentiellement celles d'AUTRES managers) n'est jamais exposé par
+      // cette route.
+      if (route.pathname === "/api/save" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        const payload = ctx.isMulti
+          ? store.serializeMultiLeague(ctx.league)
+          : store.serialize(ctx.league.teams[0], ctx.league);
+        payload.myTeamIndex = ctx.teamIndex;
+        payload.league.liveMatch = LiveMatch.viewLiveMatchForTeam(ctx.league, ctx.teamIndex);
+        delete payload.league.liveMatches;
+        sendJson(res, 200, payload);
+        return;
+      }
+
+      // Remplace INTÉGRALEMENT la sauvegarde SOLO par celle envoyée par le
+      // client — filet de secours temporaire pour ce qui n'a pas encore son
+      // propre point d'entrée validé (staff, salle, budget, vente de
+      // joueur...), voir README.md "Prochaines étapes". SUPPRIMÉ pour une
+      // ligue PARTAGÉE (retour explicite, 2026-09) : n'importe quel appelant
+      // pourrait sinon écraser l'état de TOUS les autres managers — toute
+      // requête porteuse d'un jeton manager est donc refusée ici, quel que
+      // soit son contenu ; SANS jeton, le comportement reste EXACTEMENT
+      // celui d'avant (carrière solo, jamais concernée par le risque
+      // ci-dessus).
+      if (route.pathname === "/api/save-raw" && req.method === "POST") {
+        if (getManagerToken(req)) {
+          sendJson(res, 410, {
+            ok: false,
+            error: "Supprimé pour une ligue partagée : utilisez les points d'entrée dédiés (/api/lineup, /api/tactics, /api/training, /api/market/...).",
+          });
+          return;
+        }
+        let body;
+        try {
+          body = await readJsonBody(req);
+        } catch (e) {
+          sendJson(res, 400, { ok: false, error: e.message });
+          return;
+        }
+        let restored;
+        try {
+          if (!body || typeof body !== "object" || !body.team || !body.league) {
+            throw new Error("'team' et 'league' sont requis.");
+          }
+          restored = store.deserialize(body);
+        } catch (e) {
+          sendJson(res, 400, { ok: false, error: `Sauvegarde invalide : ${e.message}` });
+          return;
+        }
+        await store.save(restored.team, restored.league, savePath);
+        sendJson(res, 200, { ok: true, state: buildStateSnapshot(restored.league, 0, now) });
+        return;
+      }
+
+      // Réinitialise la carrière SOLO (voir resetCareer() côté navigateur) :
+      // remplace la sauvegarde solo par une toute nouvelle. Pour une ligue
+      // PARTAGÉE, seul l'organisateur peut la réinitialiser (voir
+      // /api/admin/reset-multi-league) — une requête porteuse d'un jeton
+      // manager est donc refusée ici plutôt que de silencieusement
+      // réinitialiser la carrière solo (qui n'a rien à voir avec elle).
+      if (route.pathname === "/api/new-career" && req.method === "POST") {
+        if (getManagerToken(req)) {
+          sendJson(res, 403, { ok: false, error: "Seul l'organisateur peut réinitialiser une ligue partagée (voir /api/admin/reset-multi-league)." });
+          return;
+        }
+        const created = store.createNewCareer(now);
+        await store.save(created.team, created.league, savePath);
+        sendJson(res, 200, store.serialize(created.team, created.league));
+        return;
+      }
+
+      if (route.pathname === "/api/simulate-tick" && req.method === "POST") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
+        const { events, changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        sendJson(res, 200, { events: personalizeEventsForTeam(events, ctx.teamIndex), state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
+        return;
+      }
+
+      const actionFn = req.method === "POST" ? ACTION_ROUTES[route.pathname] : null;
+      if (actionFn) {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+
+        let body;
+        try {
+          body = await readJsonBody(req);
+        } catch (e) {
+          sendJson(res, 400, { ok: false, error: e.message });
+          return;
+        }
+
+        const result = actionFn(ctx.league.teams[ctx.teamIndex], ctx.teamIndex, ctx.league, body, now);
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+
+        // Une action peut changer ce que le calendrier réel va appliquer
+        // (nouvel entraînement, nouvelle feuille de match...) — pas besoin
+        // de rattraper ici (rien n'est dû tant que now ne dépasse pas
+        // l'échéance suivante), mais on sauvegarde immédiatement pour ne
+        // rien perdre si le process redémarre avant le prochain accès.
+        await persistContext(ctx);
+        sendJson(res, 200, { ...result, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
+        return;
+      }
+
+      sendJson(res, 404, { error: "Route inconnue", path: route.pathname });
+    } catch (e) {
+      sendJson(res, 500, { error: `Erreur serveur inattendue : ${e.message}` });
+    }
+  };
+}
+
+function startServer(port = DEFAULT_PORT, savePath = store.defaultSavePath(), multiSavePath = store.defaultMultiLeaguePath()) {
+  const server = http.createServer(createHandler(savePath, Date.now, multiSavePath));
+  server.listen(port, () => {
+    console.log(`Serveur basket (calendrier réel) démarré sur http://localhost:${port}`);
+    console.log(`Sauvegarde solo : ${savePath}`);
+    console.log(`Sauvegarde multi-manager : ${multiSavePath}`);
+    if (!process.env.BASKET_ADMIN_TOKEN) {
+      console.log("BASKET_ADMIN_TOKEN non défini : les routes /api/admin/* sont désactivées (toute requête sera refusée).");
+    }
+    if (Calendar.isFastTestModeEnabled()) {
+      console.log("MODE ACCÉLÉRÉ (TEST) ACTIVÉ (BASKET_FAST_CALENDAR=1) : un match toutes les 5h, entraînement + semaine économique tous les 2 matchs — les nouvelles carrières/ligues démarrées à partir de maintenant en profitent ; une ligue déjà en cours garde son rythme actuel.");
+    }
+  });
+  return server;
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = {
+  createHandler, buildStateSnapshot, tick, startServer,
+  personalizeEventsForTeam, resolvePlayerContext, getManagerToken,
+};
