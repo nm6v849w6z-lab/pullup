@@ -66,10 +66,13 @@ console.log("\nBloc 'analyste en poste' après embauche :", analystCurrentInfo &
 if (!analystCurrentInfo || !analystCurrentInfo.textContent.includes("niveau 3")) {
   throw new Error("❌ Après embauche, le panneau devrait afficher l'analyste en poste (niveau 3).");
 }
-if (!analystCurrentInfo.textContent.includes("révèle 3/10")) {
-  throw new Error("❌ Le panneau devrait afficher le nombre de caractéristiques révélées par séance (niveau 3 -> 3/10, voir ANALYST_REVEAL_COUNT_BY_LEVEL).");
+// Retour utilisateur (2026-09) : le nombre de caractéristiques révélées par
+// séance ("Caractéristiques révélées") ne doit plus être affiché sur
+// l'onglet Staff, ici ni sur le marché aux enchères (voir renderAnalystListings).
+if (analystCurrentInfo.textContent.includes("révèle")) {
+  throw new Error("❌ Le panneau ne devrait plus afficher le nombre de caractéristiques révélées par séance (masqué sur demande utilisateur).");
 }
-console.log("✅ Le panneau analyste affiche bien le niveau et le nombre de caractéristiques révélées par séance.");
+console.log("✅ Le panneau analyste affiche bien le niveau, sans le nombre de caractéristiques révélées par séance (masqué sur demande utilisateur).");
 
 // ---------------------------------------------------------------------
 // Partie 2 : écran Classement — lignes adverses cliquables, propre ligne

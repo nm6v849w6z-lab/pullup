@@ -57,6 +57,40 @@ if (process.env.BASKET_FAST_CALENDAR === "1") {
 const DEFAULT_PORT = process.env.PORT || 4000;
 const MAX_BODY_BYTES = 1024 * 1024; // 1 Mo — largement suffisant pour une feuille de match/des tactiques, évite un corps de requête sans fin d'écrouler le serveur.
 
+// ---------------------------------------------------------------------
+// Assets statiques (visuels de la Salle, voir arenaImageUrl côté HTML) :
+// jusqu'ici le serveur ne servait QUE la page elle-même et des routes JSON,
+// aucun fichier statique — un simple dossier server/../assets, servi par
+// une route dédiée plutôt qu'un module externe (retour utilisateur 2026-09,
+// "récupère les visuels là pour les intégrer" : remplacement du dessin SVG
+// de la salle par de vraies images). Liste blanche d'extensions + résolution
+// realpath vérifiée sous ASSETS_DIR (pas juste un .. dans l'URL bloqué :
+// aussi les liens symboliques) pour empêcher toute traversée de
+// répertoire — donc AUCUNE dépendance à express.static, juste `fs`/`path`.
+// ---------------------------------------------------------------------
+const ASSETS_DIR = path.join(__dirname, "..", "assets");
+const ASSET_CONTENT_TYPES = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp" };
+
+function serveAsset(res, pathname) {
+  const relative = pathname.replace(/^\/assets\//, "");
+  const contentType = ASSET_CONTENT_TYPES[path.extname(relative).toLowerCase()];
+  if (!contentType) { sendJson(res, 404, { error: "Type de fichier non servi" }); return; }
+  const resolved = path.resolve(ASSETS_DIR, relative);
+  // path.relative ne remonte jamais hors d'ASSETS_DIR pour un chemin sain ;
+  // "traite/.." reste malgré tout un chemin relatif qui commence par ".."
+  // une fois sorti — c'est exactement ce qu'on rejette ici.
+  if (path.relative(ASSETS_DIR, resolved).startsWith("..")) { sendJson(res, 403, { error: "Chemin invalide" }); return; }
+  fs.readFile(resolved, (err, data) => {
+    if (err) { sendJson(res, 404, { error: "Fichier introuvable" }); return; }
+    res.writeHead(200, {
+      "Content-Type": contentType,
+      "Content-Length": data.length,
+      "Cache-Control": "public, max-age=86400",
+    });
+    res.end(data);
+  });
+}
+
 // La page elle-même : servie depuis ICI, et relue à chaque requête (pas de
 // cache) — reste vrai quel que soit le mode (solo ou multi-manager) ni la
 // présence d'un `?m=<jeton>` dans l'URL : la route "/" ne dépend jamais de
@@ -351,6 +385,11 @@ const ACTION_ROUTES = {
   "/api/arena": actions.upgradeArena,
   "/api/ticket-prices": actions.setTicketPrices,
   "/api/fan-shop": actions.upgradeFanShop,
+  // Autres infrastructures du club (station TV, salle de musculation, espace
+  // bien-être — voir CLUB_FACILITIES côté moteur et actions.upgradeFacility)
+  // : UNE seule route, `body.facility` choisit laquelle, comme côté
+  // actions.js.
+  "/api/facility": actions.upgradeFacility,
   "/api/staff/fire-trainer": actions.fireTrainer,
   // Marché des analystes vidéo + séance vidéo (voir server/actions.js et
   // League.analystListings/runVideoSession côté moteur) — mêmes conventions
@@ -494,6 +533,14 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Assets statiques (visuels de la Salle) — voir serveAsset plus haut ;
+      // avant `now`/toute sauvegarde, exactement comme "/", puisque charger
+      // une image n'a aucune raison de toucher à une carrière.
+      if (route.pathname.startsWith("/assets/") && req.method === "GET") {
+        serveAsset(res, route.pathname);
+        return;
+      }
+
       const now = nowFn();
 
       // Simple sonde de vie : ne touche à AUCUNE sauvegarde (ni lecture ni
@@ -513,7 +560,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       if (route.pathname === "/api/admin/new-multi-league" && req.method === "POST") {
         if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
         if (await store.loadMultiLeague(multiSavePath)) {
-          sendJson(res, 409, { ok: false, error: "Une ligue multi-manager existe déjà — utilisez /api/admin/reset-multi-league pour en repartir." });
+          sendJson(res, 409, { ok: false, error: "Une ligue multi-manager existe déjà, utilisez /api/admin/reset-multi-league pour en repartir." });
           return;
         }
         let body;

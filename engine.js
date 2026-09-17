@@ -58,6 +58,160 @@ const RHYTHMS = {
   "Rapide": { possessionsPerQuarter: 49, fatigueMult: 1.18,tovMult: 1.08 },
 };
 
+// ---------------------------------------------------------------------
+// TACTIQUE CONFIRMÉE (retour utilisateur, 2026-09 — inspiré de BuzzerBeater,
+// sélecteur "Rookie / Vétéran / AllStar") : six réglages tactiques
+// supplémentaires, réservés au niveau tactique "confirmée" (voir
+// Team.tacticalTier). RÈGLE DE SÉCURITÉ ABSOLUE, non négociable : chaque
+// réglage a une valeur "standard" (voir les défauts posés dans
+// Team.constructor) dont l'effet sur la formule est un delta de ZÉRO — un
+// coach qui ne touche jamais à ces champs (tactique "débutant", ou une
+// sauvegarde antérieure à cette fonctionnalité, voir les `?? "..."` de
+// secours dans applyPlannedTacticsForRound) obtient un match RIGOUREUSEMENT
+// IDENTIQUE à avant cette fonctionnalité. `tacticalTier` lui-même ne sert
+// QU'À décider quels réglages afficher côté interface plus tard : le moteur
+// applique toujours exactement la même formule, il lit juste les champs —
+// délibérément AUCUN `if (tier === "confirmée")` dans playPossession.
+// ---------------------------------------------------------------------
+
+// Défense sur écrans — n'a d'effet que sur les possessions où "Pick & Roll"
+// fait partie des priorités offensives adverses (pondéré par son poids dans
+// la liste des priorités, voir screenDefenseWeight() dans playPossession).
+// "Aucune consigne" = comportement actuel (aucun mécanisme d'écran modélisé
+// avant cette fonctionnalité) = delta zéro partout — nommé ainsi plutôt que
+// "Standard" (retour utilisateur : un nom de "schéma" à côté de vrais noms
+// comme Au-dessus/Switch/Prise à deux prêtait à confusion, alors que c'est
+// littéralement l'absence de consigne spécifique du coach sur les écrans).
+// NOTE d'échelle : rollOpennessMod/shooterOpennessMod/mismatchVarianceMod/
+// insideMismatchMod (ici et dans CLOSEOUT_STYLES) s'ajoutent DIRECTEMENT à
+// `openness`/`mismatch`, une échelle "brute" de quelques points (le mismatch
+// taille/agilité existant vaut déjà couramment 2 à 5) — PAS la même échelle
+// fractionnaire (0 à ~0.1) que insideDef/perimDef/tovMod/assistOpenMod, qui
+// eux se multiplient par defStat (~60-70) avant de compter. Ne jamais copier
+// un ordre de grandeur de l'un vers l'autre sans repasser par simulate.js.
+const SCREEN_DEFENSES = {
+  "Aucune consigne": { ballCreationMod: 0,    rollOpennessMod: 0 },
+  "Au-dessus":    { ballCreationMod: -.05, rollOpennessMod: 18 },
+  "En-dessous":   { ballCreationMod: -.08, rollOpennessMod: -7, shooterOpennessMod: 14 },
+  "Switch":       { mismatchVarianceMod: 1.3 },
+  "Prise à deux": { ballCreationMod: -.16, tovMod: .03, assistOpenMod: .10 },
+};
+
+// Aide défensive — "Moyenne" = comportement actuel (delta zéro). Faible :
+// plus de pénétration (insideDef en baisse) mais tireurs plus étroitement
+// gardés (perimDef en hausse, moins de tirs ouverts) ; Forte : l'inverse
+// (meilleure protection du panier, mais plus de tirs à 3 points ouverts) —
+// exactement le compromis décrit par l'utilisateur.
+const HELP_DEFENSE_LEVELS = {
+  "Faible":  { insideDef: -.045, perimDef: .035 },
+  "Moyenne": { insideDef: 0,     perimDef: 0 },
+  "Forte":   { insideDef: .045,  perimDef: -.035 },
+};
+
+// Surveiller — jusqu'à 3 affectations { position, focus } sur Team.watchAssignments
+// (tableau vide par défaut = comportement actuel inchangé). Chaque focus
+// donne un bonus défensif CIBLÉ sur l'action correspondante, avec une petite
+// contrepartie ailleurs (attention détournée = un peu de fatigue en plus
+// pour le défenseur dédié, ou un peu plus de risque en pariant sur l'interception).
+// Retour utilisateur (2026-09) : denyThree et denyPassingLanes retirés de la
+// liste des focus proposés (redondants avec harassOutsideShot/denyEntry,
+// gardés) — les entrées WATCH_FOCUS_EFFECTS correspondantes sont supprimées
+// ci-dessous ; toute affectation existante avec l'un de ces deux focus (une
+// ancienne sauvegarde) devient simplement inerte (voir la garde `if (!eff)
+// continue` dans applyDefenseEffects/resolveShotOutcome plus bas), jamais un
+// crash.
+// NOTE d'échelle (bug calibrage corrigé, retour utilisateur "ce n'est pas
+// assez" + validation croisée avec simulate.js) : extraFatigueMod s'ajoute
+// DIRECTEMENT à Player.fatigue (échelle 0-100), possession par possession,
+// SANS plafond autre que le clamp 0-100 — il doit donc rester du même ordre
+// de grandeur que le gain de fatigue "naturel" d'une possession normale
+// (~0.5 à 1.5, voir applyFatigue), jamais un gros forfait genre 7-12 : un
+// défenseur ciblé qui joue presque toutes les possessions verrait sinon sa
+// fatigue saturer à 100 en quelques possessions à peine, ce qui DÉTRUIT son
+// eff() bien plus que le bonus de défBoost ne l'améliore et INVERSE l'effet
+// voulu (mesuré : defBoost plus haut => FG% adverse plus haut, backwards).
+const WATCH_FOCUS_EFFECTS = {
+  denyPostUp:         { insideDefBonus: .09, extraFatigueMod: 2 },
+  // Colle sur les drives : meilleur contest sur les tirs pris en pénétrant
+  // (inside/mid), mais le tireur se retrouve plus souvent seul au tir à 3
+  // (le défenseur reste collé sur la ligne de drive plutôt que de fermer la
+  // ligne à 3pts) — inverse exact du compromis de harassOutsideShot.
+  // NB : denyDrive se déclenche sur TOUS les tirs à 2 pts (inside + mid, pas
+  // seulement inside comme denyPostUp) donc à fréquence quasi double — la
+  // contrepartie fatigue est réduite d'autant pour rester proportionnée sur
+  // un match complet (validé : fg2% adverse en baisse nette après ajustement).
+  denyDrive:          { insideMidDefBonus: .07, perimOpenPenalty: .05, extraFatigueMod: 1.4 },
+  // Gêne le tir à 3pts ET la mi-distance — plus de terrain à couvrir, donc
+  // plus de fatigue.
+  harassOutsideShot:  { perimDefBonusWide: .07, extraFatigueMod: 3.5 },
+  // Boxe-out prioritaire sur CE joueur au rebond : réduit son poids
+  // individuel dans le tirage du rebond offensif et donne un petit bonus
+  // d'équipe au rebond défensif, au prix d'un peu de défBoost en moins
+  // ailleurs (l'attention dédiée au boxout coûte un peu de aide ailleurs).
+  // NOTE d'échelle : offRebWeightPenalty est un multiplicateur appliqué à la
+  // contribution du joueur ciblé (eff("rebound")+height/20, déjà à l'échelle
+  // brute ~15-90) — mais defRebTeamBonus s'ajoute DIRECTEMENT à la somme
+  // offReb/defReb de toute l'équipe, qui tourne typiquement autour de
+  // 250-450 (5 joueurs) : il lui faut donc sa propre échelle "brute" (~15-25,
+  // l'ordre de grandeur d'une bonne moitié de joueur), jamais une fraction
+  // (0-1) comme les modificateurs multiplicatifs.
+  reboundPriority:    { offRebWeightPenalty: .5, defRebTeamBonus: 18, defBoostPenalty: .02 },
+  // Face-guard : empêche carrément ce joueur de recevoir la balle facilement
+  // (tov et coût de défBoost élevés tous les deux).
+  denyEntry:          { tovBonus: .05, defBoostPenalty: .035 },
+};
+const MAX_WATCH_ASSIGNMENTS = 3;
+
+// Gestion du post-up — s'applique aux tirs en zone "inside" uniquement.
+// "Classique" = comportement actuel (delta zéro).
+const POST_DEFENSES = {
+  "Classique":              { insideDef: 0,    tovMod: 0,    assistOpenMod: 0,    foulMod: 0 },
+  "Pousser vers le fond":   { insideDef: .05,  tovMod: 0,    assistOpenMod: -.03, foulMod: .015 },
+  "Pousser vers le centre": { insideDef: .025, tovMod: 0,    assistOpenMod: .05,  foulMod: 0 },
+  "Prise à deux":           { insideDef: .11,  tovMod: .05,  assistOpenMod: .08,  foulMod: 0 },
+};
+
+// Close-out — "Contrôlé" = comportement actuel (delta zéro). Agressif :
+// meilleur contest sur les tirs extérieurs (mid/3pts) réellement pris, mais
+// avantage offensif accru sur les tirs à l'intérieur — le risque de
+// pénétration/dribble derrière une fermeture trop appuyée, décrit par
+// l'utilisateur.
+const CLOSEOUT_STYLES = {
+  "Contrôlé": { perimDefMod: 0,   insideMismatchMod: 0 },
+  "Agressif": { perimDefMod: .05, insideMismatchMod: 5 },
+};
+
+// Rebond offensif — "Normal" = comportement actuel (delta zéro). Agressif :
+// plus de rebonds offensifs captés (offRebWeightMod positif), mais si le
+// rebond est malgré tout perdu, la défense qui récupère bénéficie d'un
+// petit bonus de transition sur SA possession suivante (repli plus lent —
+// contrepartie explicitement demandée par l'utilisateur, "risque de prendre
+// des contre-attaques"). Prudent : l'inverse, moins de rebonds offensifs
+// mais jamais de bonus de transition donné à l'adversaire.
+const OFF_REBOUND_STYLES = {
+  "Prudent":  { offRebWeightMod: -.22, transitionRisk: 0 },
+  "Normal":   { offRebWeightMod: 0,    transitionRisk: 0 },
+  "Agressif": { offRebWeightMod: .28,  transitionRisk: .40 },
+};
+
+// Gestion de fin de match (retour utilisateur, 2026-09 — "lever le pied" en
+// cas de gros écart, gérer le "money time" à ±5 pts ; nommé ainsi plutôt que
+// "gestion du rythme" pour ne pas se confondre avec Team.rhythm/RHYTHMS, le
+// réglage de tempo Lent/Normal/Rapide qui existe déjà) : comportement
+// AUTOMATIQUE (pas un choix par possession), donc volontairement PAS
+// rattaché au tier tactique — dispo aux deux niveaux. "Standard" = comportement actuel
+// inchangé : les mécanismes déjà existants de faute intentionnelle et de
+// ralentissement du chrono en fin de match (voir playPossession/simulate)
+// restent les SEULS effets de money-time. "Adaptatif" ajoute un vrai
+// "garbage time" dès qu'un écart de 10+ points existe à partir du Q3
+// (moins de hero-ball côté équipe qui mène large, un peu plus d'imprécision
+// des deux côtés), et accentue légèrement le rythme des ~5 dernières
+// minutes de match quand l'écart repasse sous les 5 points.
+const ENDGAME_MANAGEMENT = {
+  "Standard":  { blowoutThreshold: null, blowoutHeroMod: 0,    blowoutTovMod: 0,    closeGameTempoMod: 0 },
+  "Adaptatif": { blowoutThreshold: 10,   blowoutHeroMod: -.35, blowoutTovMod: .015, closeGameTempoMod: .10 },
+};
+
 // Probabilité de base de blessure, par joueur sur le terrain et par possession
 // (modulée par la fatigue dans applyFatigue). Calibré pour rester rare — voir
 // rapport de calibrage : cible ~1 match sur 6-8 avec au moins une blessure.
@@ -119,20 +273,20 @@ function say(templates, vars) {
 const PHRASES = {
   madeShot: {
     three: [
-      "🏀 {shooter} plante le tir à 3 points ({quality}) — {team}.",
-      "🎯 {shooter} trouve le fond des filets de loin ({quality}) — {team}.",
-      "💥 {shooter} allume la mèche à 3 points ({quality}) — {team}.",
-      "🔥 {shooter} envoie une banderille à 3 points ({quality}) — {team}.",
+      "🏀 {shooter} plante le tir à 3 points ({quality}) pour {team}.",
+      "🎯 {shooter} trouve le fond des filets de loin ({quality}) pour {team}.",
+      "💥 {shooter} allume la mèche à 3 points ({quality}) pour {team}.",
+      "🔥 {shooter} envoie une banderille à 3 points ({quality}) pour {team}.",
     ],
     mid: [
-      "🏀 {shooter} marque en mi-distance ({quality}) — {team}.",
-      "🎯 {shooter} ajuste son tir à mi-distance ({quality}) — {team}.",
-      "🏀 {shooter} déclenche et marque à mi-distance ({quality}) — {team}.",
+      "🏀 {shooter} marque en mi-distance ({quality}) pour {team}.",
+      "🎯 {shooter} ajuste son tir à mi-distance ({quality}) pour {team}.",
+      "🏀 {shooter} déclenche et marque à mi-distance ({quality}) pour {team}.",
     ],
     inside: [
-      "🏀 {shooter} marque près du panier ({quality}) — {team}.",
-      "💪 {shooter} s'impose sous le cercle ({quality}) — {team}.",
-      "🏀 {shooter} conclut au contact près du panier ({quality}) — {team}.",
+      "🏀 {shooter} marque près du panier ({quality}) pour {team}.",
+      "💪 {shooter} s'impose sous le cercle ({quality}) pour {team}.",
+      "🏀 {shooter} conclut au contact près du panier ({quality}) pour {team}.",
     ],
   },
   andOne: [
@@ -488,6 +642,20 @@ const TRAINING_PROGRAMS = {
 function positionEfficiencyForProgram(programKey, position) {
   const program = TRAINING_PROGRAMS[programKey];
   if (!program) return 100;
+  // Défense polyvalente : cas particulier (retour utilisateur : "100% AS,
+  // 90% AR ou AF, 80% M ou Pivot"). La moyenne défense extérieure/intérieure
+  // ci-dessous donnerait une égalité à 4 postes sur 5 (Arrière, Ailier
+  // shooteur, Ailier fort et Pivot tous à 85%, seul le Meneur en dessous) :
+  // pas assez lisible pour choisir un poste. On récompense à la place le
+  // poste le plus polyvalent au centre du spectre (Ailier shooteur, à
+  // mi-chemin entre extérieur et intérieur), avec la même pente de -10% par
+  // poste d'écart que positionEfficiencyForSkill ci-dessus, mais symétrique
+  // vers les deux extrêmes (Meneur et Pivot, également désavantagés).
+  if (programKey === "allroundDef") {
+    const center = POSITIONS.indexOf("Ailier shooteur");
+    const dist = Math.abs(POSITIONS.indexOf(position) - center);
+    return clamp(100 - dist * 10, 1, 100);
+  }
   let sum = 0, totalW = 0;
   program.attrs.forEach(({ attr, weight }) => {
     sum += positionEfficiencyForSkill(attr, position) * weight;
@@ -904,6 +1072,66 @@ function fanShopInfo(level) {
 }
 
 // ---------------------------------------------------------------------
+// Autres infrastructures du club (retour utilisateur, 2026-09 : "il faudrait
+// [...] mettre les autres améliorations [...] station tv [...] salle de
+// soin, SPA, salle de musculation") — même principe qu'ARENA_LEVELS/
+// FAN_SHOP_LEVELS/TRAINING_CENTER_LEVELS ci-dessus (investissement UNIQUE, un
+// palier à la fois, jamais remboursable), regroupées ici sous une structure
+// commune (CLUB_FACILITIES) plutôt que dupliquées trois fois. Chaque
+// infrastructure n'apporte qu'UN effet ciblé et simple, sur un registre
+// différent de la salle/boutique/centre de formation existants (inchangés) :
+//   - Station TV : revenu hebdomadaire fixe supplémentaire (comme la
+//     boutique des supporters), payé dans Team.trainWeek.
+//   - Salle de musculation : réduit le risque de blessure en match (voir
+//     MatchEngine.applyFatigue, injuryRiskMult).
+//   - Espace bien-être (spa + salle de soin réunis en UNE seule
+//     infrastructure, les deux idées du retour utilisateur étant redondantes)
+//     : réduit l'accumulation de fatigue en match (voir MatchEngine.
+//     applyFatigue, fatigueMult) — joueurs plus frais en fin de match.
+// 4 paliers chacune (retour utilisateur explicite : "il faut 4 niveaux
+// (rien, pas cher, moyen cher, cher)"), le niveau 0 valant toujours "rien
+// construit, aucun effet".
+// ---------------------------------------------------------------------
+const CLUB_FACILITIES = {
+  tvStation: {
+    name: "Station TV",
+    icon: "📺",
+    levels: [
+      { level: 0, name: "Aucune station TV", cost: 0, weeklyRevenue: 0 },
+      { level: 1, name: "Studio local", cost: 60000, weeklyRevenue: 1100 },
+      { level: 2, name: "Chaîne régionale", cost: 170000, weeklyRevenue: 3000 },
+      { level: 3, name: "Chaîne du club", cost: 400000, weeklyRevenue: 7000 },
+    ],
+  },
+  gym: {
+    name: "Salle de musculation",
+    icon: "🏋️",
+    levels: [
+      { level: 0, name: "Aucune salle de musculation", cost: 0, injuryRiskMult: 1 },
+      { level: 1, name: "Salle basique", cost: 45000, injuryRiskMult: 0.90 },
+      { level: 2, name: "Salle équipée", cost: 130000, injuryRiskMult: 0.78 },
+      { level: 3, name: "Salle haut de gamme", cost: 300000, injuryRiskMult: 0.65 },
+    ],
+  },
+  wellness: {
+    name: "Espace bien-être (spa et soins)",
+    icon: "💆",
+    levels: [
+      { level: 0, name: "Aucun espace bien-être", cost: 0, fatigueMult: 1 },
+      { level: 1, name: "Espace détente", cost: 45000, fatigueMult: 0.93 },
+      { level: 2, name: "Spa du club", cost: 130000, fatigueMult: 0.85 },
+      { level: 3, name: "Centre de récupération", cost: 300000, fatigueMult: 0.75 },
+    ],
+  },
+};
+
+function facilityInfo(key, level) {
+  const cfg = CLUB_FACILITIES[key];
+  if (!cfg) return null;
+  return cfg.levels.find(l => l.level === level) || cfg.levels[0];
+}
+
+// ---------------------------------------------------------------------
 // Humeur des supporters (0 à 100, neutre à 50 au départ) : des supporters
 // contents viennent plus facilement aux matchs (voir attendanceBaseForMorale,
 // qui remplace l'ancienne base fixe de remplissage) ET tolèrent des prix de
@@ -1048,6 +1276,15 @@ class Player {
     // recours. `salePrice` reste `null` tant que le joueur n'est pas listé.
     this.forSale = false;
     this.salePrice = null;
+
+    // Journal des matchs de la saison (retour utilisateur, 2026-09 : stats
+    // de la Ligue + MVP de la dernière journée + pages joueur avec
+    // "match par match + une moyenne") : une entrée par match RÉELLEMENT
+    // joué (secondsPlayed > 0), jamais pour un forfait — voir
+    // recordMatchStatsForTeam ci-dessous, seul point d'écriture. Remis à
+    // zéro au passage de SAISON (voir Team.trainWeek), pas de semaine en
+    // semaine : les stats affichées couvrent la saison EN COURS.
+    this.matchLog = [];
   }
 
   // Applique une semaine d'entraînement. `attrWeights` est une map
@@ -1189,6 +1426,25 @@ class Team {
     this.offensivePriorities = ["Équilibrée", "Pick & Roll", "Jeu en mouvement"];
     this.defense = "Homme à homme";
     this.rhythm = "Normal";
+
+    // Tactique confirmée (retour utilisateur, 2026-09 — voir le grand
+    // commentaire au-dessus de SCREEN_DEFENSES) : "tacticalTier" ne
+    // sert qu'à choisir quels réglages proposer côté interface — TOUS
+    // les champs ci-dessous existent déjà pour une équipe "débutant", à
+    // leur valeur standard, pour que le moteur n'ait jamais besoin de
+    // tester le tier lui-même. Ne JAMAIS changer une de ces valeurs par
+    // défaut sans revérifier qu'elle reste un delta de zéro dans les
+    // tables SCREEN_DEFENSES/HELP_DEFENSE_LEVELS/POST_DEFENSES/
+    // CLOSEOUT_STYLES/OFF_REBOUND_STYLES/ENDGAME_MANAGEMENT ci-dessus.
+    this.tacticalTier = "débutant"; // "débutant" | "confirmée"
+    this.screenDefense = "Aucune consigne"; // clé de SCREEN_DEFENSES
+    this.helpDefense = "Moyenne";           // clé de HELP_DEFENSE_LEVELS
+    this.watchAssignments = [];             // jusqu'à 3 × { position, focus } — voir WATCH_FOCUS_EFFECTS
+    this.postDefense = "Classique";         // clé de POST_DEFENSES
+    this.closeoutStyle = "Contrôlé";        // clé de CLOSEOUT_STYLES
+    this.offRebStyle = "Normal";            // clé de OFF_REBOUND_STYLES
+    this.endgameManagement = "Standard";    // clé de ENDGAME_MANAGEMENT — indépendant du tier
+
     this.maintainDespiteFouls = new Set();
     // Plans d'ordres préparés À L'AVANCE pour une journée future (retour
     // utilisateur, 2026-09 : "sur buzzerbeater on peut faire pour tous les
@@ -1327,6 +1583,11 @@ class Team {
     this.ticketPrices = {};
     SEAT_CATEGORIES.forEach(cat => { this.ticketPrices[cat.key] = cat.defaultPrice; });
     this.fanShopLevel = 0;
+    // Autres infrastructures (voir CLUB_FACILITIES ci-dessus) : un niveau par
+    // clé, 0 = rien construit — toujours un objet complet (jamais nul/absent),
+    // pour que facilityInjuryRiskMult()/facilityFatigueMult() n'aient jamais
+    // à gérer un cas manquant.
+    this.facilityLevels = { tvStation: 0, gym: 0, wellness: 0 };
     this.transactions = [];
 
     // Humeur des supporters (voir attendanceBaseForMorale / moraleForgiveness
@@ -1539,6 +1800,45 @@ class Team {
     this.recordTransaction(`Boutique des supporters : ${next.name}`, -next.cost);
     this.fanShopLevel = next.level;
     return true;
+  }
+
+  nextFacilityLevel(key) {
+    const cfg = CLUB_FACILITIES[key];
+    if (!cfg) return null;
+    const cur = (this.facilityLevels && this.facilityLevels[key]) || 0;
+    return cfg.levels.find(l => l.level === cur + 1) || null;
+  }
+
+  // Achète (ou améliore) une infrastructure d'UN palier — même contrat que
+  // upgradeArena/upgradeFanShop/upgradeTrainingCenter ci-dessus (un palier à
+  // la fois, vérifié par le budget, coût unique prélevé immédiatement).
+  upgradeFacility(key) {
+    const cfg = CLUB_FACILITIES[key];
+    if (!cfg) return false;
+    const next = this.nextFacilityLevel(key);
+    if (!next || this.budget < next.cost) return false;
+    this.recordTransaction(`${cfg.name} : ${next.name}`, -next.cost);
+    if (!this.facilityLevels) this.facilityLevels = { tvStation: 0, gym: 0, wellness: 0 };
+    this.facilityLevels[key] = next.level;
+    return true;
+  }
+
+  // Multiplicateur de risque de blessure en match (voir MatchEngine.
+  // applyFatigue) — palier ACTUEL de la salle de musculation, 1 = aucun
+  // effet (aucune salle construite).
+  facilityInjuryRiskMult() {
+    const level = (this.facilityLevels && this.facilityLevels.gym) || 0;
+    const info = facilityInfo("gym", level);
+    return info ? info.injuryRiskMult : 1;
+  }
+
+  // Multiplicateur d'accumulation de fatigue en match (voir MatchEngine.
+  // applyFatigue) — palier ACTUEL de l'espace bien-être, 1 = aucun effet
+  // (aucun espace bien-être construit).
+  facilityFatigueMult() {
+    const level = (this.facilityLevels && this.facilityLevels.wellness) || 0;
+    const info = facilityInfo("wellness", level);
+    return info ? info.fatigueMult : 1;
   }
 
   // Dilution du rendement selon le nombre de postes couverts cette semaine.
@@ -1965,6 +2265,18 @@ class Team {
       this.recordTransaction(`Droits TV (${divisionInfo(divisionLevel).name})`, tvRightsRevenue);
     }
 
+    // Station TV (voir CLUB_FACILITIES) : revenu hebdomadaire FIXE
+    // supplémentaire, exactement comme la boutique des supporters ci-dessus
+    // — la salle de musculation et l'espace bien-être n'agissent qu'EN MATCH
+    // (voir MatchEngine.applyFatigue), rien à encaisser ici pour elles.
+    let tvStationRevenue = 0;
+    const tvStationLevel = (this.facilityLevels && this.facilityLevels.tvStation) || 0;
+    if (tvStationLevel > 0) {
+      const tvStationTier = facilityInfo("tvStation", tvStationLevel);
+      tvStationRevenue = tvStationTier.weeklyRevenue;
+      this.recordTransaction(`Recettes station TV (${tvStationTier.name})`, tvStationRevenue);
+    }
+
     // Humeur des supporters : dérive lente et indépendante des résultats,
     // selon le confort tarifaire MOYEN des 3 catégories de place — des prix
     // durablement trop élevés agacent les supporters semaine après semaine,
@@ -2013,6 +2325,13 @@ class Team {
       this.players.forEach(p => { p.age += 1; });
       salaryChanges = this.recalculateSalaries();
 
+      // Journal de matchs (voir Player.matchLog/recordMatchStatsForTeam) :
+      // remis à zéro au passage de SAISON, comme l'âge/le salaire ci-dessus
+      // — les stats affichées (Ligue/pages joueur) couvrent la saison EN
+      // COURS, jamais un mélange de plusieurs saisons aux numéros de
+      // journée qui se chevauchent.
+      this.players.forEach(p => { p.matchLog = []; });
+
       // Académie de jeunes : les stagiaires vieillissent au même rythme que
       // l'effectif pro (une année d'âge par saison — voir plus haut).
       (this.youthPlayers || []).forEach(p => { p.age += 1; });
@@ -2051,7 +2370,7 @@ class Team {
 
     return {
       players: report, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid,
-      playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, moraleDrift, salaryChanges,
+      playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, tvStationRevenue, moraleDrift, salaryChanges,
       fanMorale: this.fanMorale, budget: this.budget, trainerMult,
       deficitAlert, forcedFireSale, deficitWeeks: this.deficitWeeks,
     };
@@ -2188,6 +2507,17 @@ class Team {
       offensivePriorities: [...this.offensivePriorities],
       defense: this.defense,
       rhythm: this.rhythm,
+      // Tactique confirmée — voir Team.constructor. Copie des valeurs EN
+      // DIRECT actuelles (jamais de référence partagée, notamment pour le
+      // tableau watchAssignments).
+      tacticalTier: this.tacticalTier,
+      screenDefense: this.screenDefense,
+      helpDefense: this.helpDefense,
+      watchAssignments: this.watchAssignments.map(a => ({ ...a })),
+      postDefense: this.postDefense,
+      closeoutStyle: this.closeoutStyle,
+      offRebStyle: this.offRebStyle,
+      endgameManagement: this.endgameManagement,
       lineup: {
         starters: { ...this.lineup.starters },
         backupPositions: Object.fromEntries(
@@ -2237,6 +2567,20 @@ class Team {
     this.offensivePriorities = [...plan.offensivePriorities];
     this.defense = plan.defense;
     this.rhythm = plan.rhythm;
+    // Tactique confirmée — voir Team.constructor. `?? <standard>` de secours
+    // pour un plan préparé AVANT cette fonctionnalité (plannedTactics stocké
+    // dans une sauvegarde plus ancienne) : sans ce filet, ces champs
+    // resteraient `undefined` après application du plan, ce qui casserait la
+    // règle "rien de fait => standard" pour un coach qui avait juste préparé
+    // sa journée à l'avance avant la sortie de cette fonctionnalité.
+    this.tacticalTier = plan.tacticalTier ?? "débutant";
+    this.screenDefense = plan.screenDefense ?? "Aucune consigne";
+    this.helpDefense = plan.helpDefense ?? "Moyenne";
+    this.watchAssignments = (plan.watchAssignments ?? []).map(a => ({ ...a }));
+    this.postDefense = plan.postDefense ?? "Classique";
+    this.closeoutStyle = plan.closeoutStyle ?? "Contrôlé";
+    this.offRebStyle = plan.offRebStyle ?? "Normal";
+    this.endgameManagement = plan.endgameManagement ?? "Standard";
     this.lineup = {
       starters: { ...plan.lineup.starters },
       backupPositions: Object.fromEntries(
@@ -2826,6 +3170,39 @@ function buildNextCupRound(prevRound, winners) {
 // matériellement disputer le match. Renvoie { scoreHome, scoreAway, forfeit }
 // où `forfeit` vaut "home" | "away" | "both" | null (null = match normal,
 // vraiment simulé par MatchEngine).
+// Enregistre les stats de CE match dans le journal de chaque joueur ayant
+// réellement joué (secondsPlayed > 0) — alimente les stats de saison / MVP
+// de la dernière journée (onglet Ligue) et les pages joueur ("match par
+// match + une moyenne", onglet Effectif). Un SEUL point d'écriture pour
+// TOUT match réellement simulé (championnat OU coupe, diffusé en direct OU
+// résolu directement par simulateOrForfeit) : voir server/liveMatch.js —
+// finalizeRound/finalizeCupRound l'appellent juste après avoir déterminé
+// scoreHome/scoreAway/forfeit, pour les DEUX équipes, et JAMAIS pour un
+// forfait (qui n'a jamais appelé MatchEngine.simulate(), donc p.stats/
+// p.secondsPlayed restent ceux — périmés — du match précédent de ce joueur).
+function recordMatchStatsForTeam(team, round, competition) {
+  team.players.forEach(p => {
+    if (p.secondsPlayed > 0) {
+      if (!Array.isArray(p.matchLog)) p.matchLog = [];
+      p.matchLog.push({
+        // `week` = team.week AU MOMENT de ce match (avant tout trainWeek()
+        // suivant qui l'incrémenterait) — même sémantique que
+        // Team.recordTransaction/recordMoraleEvent (voir leur `week: this.week`
+        // plus haut), pour pouvoir regrouper les matchs par semaine
+        // d'entraînement (onglet 📈 Stats hebdo) sans dépendre des formules du
+        // calendrier (classique/accéléré/ancré quotidien) : `team.week` est
+        // déjà correct dans TOUS les modes, contrairement à un round/2.
+        round, competition, week: team.week,
+        min: Math.max(1, Math.round(p.secondsPlayed / 60)),
+        pts: p.stats.pts || 0, reb: p.stats.reb || 0, oreb: p.stats.oreb || 0, dreb: p.stats.dreb || 0,
+        ast: p.stats.ast || 0, stl: p.stats.stl || 0, blk: p.stats.blk || 0, tov: p.stats.tov || 0, pf: p.stats.pf || 0,
+        fgm2: p.stats.fgm2 || 0, fga2: p.stats.fga2 || 0, fgm3: p.stats.fgm3 || 0, fga3: p.stats.fga3 || 0,
+        ftm: p.stats.ftm || 0, fta: p.stats.fta || 0,
+      });
+    }
+  });
+}
+
 function simulateOrForfeit(teamHome, teamAway) {
   const homeOk = teamHome.hasValidLineup();
   const awayOk = teamAway.hasValidLineup();
@@ -4346,6 +4723,11 @@ function serializePlayerRecord(p) {
     secondsPlayed: p.secondsPlayed,
     secondsPlayedByPosition: { ...p.secondsPlayedByPosition },
     id: p.id,
+    // Journal des matchs de la saison (voir Player.matchLog/
+    // recordMatchStatsForTeam) : DOIT survivre au rechargement, sinon les
+    // stats de saison/MVP (onglet Ligue) et les pages joueur repartiraient
+    // de zéro à chaque redémarrage du serveur.
+    matchLog: Array.isArray(p.matchLog) ? p.matchLog.map(m => ({ ...m })) : [],
   };
 }
 
@@ -4357,6 +4739,20 @@ function serializeTeam(team) {
     offensivePriorities: team.offensivePriorities,
     defense: team.defense,
     rhythm: team.rhythm,
+    // Tactique confirmée (voir Team.constructor/SCREEN_DEFENSES et
+    // consorts) — DOIT survivre au rechargement comme le reste des ordres.
+    // Aucun souci de compatibilité arrière à la LECTURE : teamFromSave
+    // n'écrase les défauts posés par `new Team(...)` que si le champ est
+    // présent (voir plus bas), donc une sauvegarde d'avant cette
+    // fonctionnalité retombe simplement sur les valeurs standard.
+    tacticalTier: team.tacticalTier,
+    screenDefense: team.screenDefense,
+    helpDefense: team.helpDefense,
+    watchAssignments: (team.watchAssignments || []).map(a => ({ ...a })),
+    postDefense: team.postDefense,
+    closeoutStyle: team.closeoutStyle,
+    offRebStyle: team.offRebStyle,
+    endgameManagement: team.endgameManagement,
     trainingSkill: team.trainingSkill,
     trainingPositions: [...team.trainingPositions],
     trainer: team.trainer ? { ...team.trainer } : null,
@@ -4372,6 +4768,10 @@ function serializeTeam(team) {
     arenaLevel: team.arenaLevel,
     ticketPrices: { ...team.ticketPrices },
     fanShopLevel: team.fanShopLevel,
+    // Autres infrastructures (voir CLUB_FACILITIES/Team.facilityLevels
+    // ci-dessus) : {tvStation:0, gym:0, wellness:0} par défaut si absent
+    // (équipe créée avant cette fonctionnalité).
+    facilityLevels: { ...(team.facilityLevels || { tvStation: 0, gym: 0, wellness: 0 }) },
     transactions: team.transactions,
     fanMorale: team.fanMorale,
     moraleHistory: team.moraleHistory,
@@ -4445,6 +4845,10 @@ function playerFromSave(pdata) {
   // recharge la page.
   if (typeof pdata.forSale === "boolean") p.forSale = pdata.forSale;
   if (typeof pdata.salePrice === "number") p.salePrice = pdata.salePrice;
+  // Journal des matchs de la saison (voir serializePlayerRecord ci-dessus) :
+  // absent = sauvegarde d'avant cette fonctionnalité, on garde `[]` (déjà
+  // posé par le constructeur Player) plutôt que de crasher.
+  if (Array.isArray(pdata.matchLog)) p.matchLog = pdata.matchLog.map(m => ({ ...m }));
   return p;
 }
 
@@ -4466,6 +4870,17 @@ function teamFromSave(data) {
   if (data.offensivePriorities) team.offensivePriorities = data.offensivePriorities;
   if (data.defense) team.defense = data.defense;
   if (data.rhythm) team.rhythm = data.rhythm;
+  // Tactique confirmée — absente = sauvegarde d'avant cette fonctionnalité,
+  // on garde les valeurs standard déjà posées par `new Team(...)` ci-dessus
+  // (voir le commentaire de sécurité dans Team.constructor).
+  if (data.tacticalTier) team.tacticalTier = data.tacticalTier;
+  if (data.screenDefense) team.screenDefense = data.screenDefense;
+  if (data.helpDefense) team.helpDefense = data.helpDefense;
+  if (Array.isArray(data.watchAssignments)) team.watchAssignments = data.watchAssignments.map(a => ({ ...a }));
+  if (data.postDefense) team.postDefense = data.postDefense;
+  if (data.closeoutStyle) team.closeoutStyle = data.closeoutStyle;
+  if (data.offRebStyle) team.offRebStyle = data.offRebStyle;
+  if (data.endgameManagement) team.endgameManagement = data.endgameManagement;
   team.trainingSkill = data.trainingSkill || null;
   team.trainingPositions = Array.isArray(data.trainingPositions) ? data.trainingPositions : [];
   if (data.trainer && TRAINER_LEVELS.includes(data.trainer.level)) {
@@ -4547,6 +4962,20 @@ function teamFromSave(data) {
     team.ticketPrices.gradins = data.ticketPrice;
   }
   if (FAN_SHOP_LEVELS.some(f => f.level === data.fanShopLevel)) team.fanShopLevel = data.fanShopLevel;
+  // Autres infrastructures (voir CLUB_FACILITIES/serializeTeam ci-dessus) :
+  // absente = sauvegarde d'avant cette fonctionnalité, on garde
+  // {tvStation:0, gym:0, wellness:0} déjà posé par le constructeur Team
+  // (aucun effet, comme au tout premier lancement). Chaque niveau est
+  // revalidé individuellement contre sa propre grille de paliers, jamais
+  // recopié tel quel.
+  if (data.facilityLevels && typeof data.facilityLevels === "object") {
+    Object.keys(CLUB_FACILITIES).forEach(key => {
+      const lvl = data.facilityLevels[key];
+      if (CLUB_FACILITIES[key].levels.some(l => l.level === lvl)) {
+        team.facilityLevels[key] = lvl;
+      }
+    });
+  }
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
@@ -4815,6 +5244,37 @@ class MatchEngine {
     const onCourtOff = offTeam.onCourtPlayers();
     const onCourtDef = defTeam.onCourtPlayers();
 
+    // --- Tactique confirmée (voir le grand commentaire au-dessus de
+    // SCREEN_DEFENSES, plus haut dans ce fichier) : lookup une fois par
+    // possession, toujours avec un repli neutre (`|| SCREEN_DEFENSES["Aucune
+    // consigne"]` etc.) au cas où une valeur invalide/obsolète traînerait
+    // quelque part — jamais de crash, jamais d'effet, comme si le réglage
+    // n'était simplement pas défini.
+    const screen = SCREEN_DEFENSES[defTeam.screenDefense] || SCREEN_DEFENSES["Aucune consigne"];
+    const help = HELP_DEFENSE_LEVELS[defTeam.helpDefense] || HELP_DEFENSE_LEVELS.Moyenne;
+    const postD = POST_DEFENSES[defTeam.postDefense] || POST_DEFENSES.Classique;
+    const closeout = CLOSEOUT_STYLES[defTeam.closeoutStyle] || CLOSEOUT_STYLES.Contrôlé;
+    const endgameMgmt = ENDGAME_MANAGEMENT[offTeam.endgameManagement] || ENDGAME_MANAGEMENT.Standard;
+    // Poids du Pick & Roll dans les priorités offensives actuelles (une
+    // priorité parmi N => 1/N, absent => 0) : la défense sur écrans n'a
+    // d'effet que sur cette fraction des possessions, proportionnellement à
+    // combien le Pick & Roll est réellement au coeur du plan offensif.
+    const prWeight = offTeam.offensivePriorities.includes("Pick & Roll")
+      ? 1 / offTeam.offensivePriorities.length : 0;
+    // Garbage time (gestion de fin de match "Adaptatif" — retour utilisateur,
+    // "on lève le pied" à partir de ±10 pts) : "Standard" a
+    // blowoutThreshold=null, donc inBlowout est TOUJOURS false pour une
+    // équipe qui n'a pas activé "Adaptatif" — comportement actuel inchangé.
+    const inBlowout = endgameMgmt.blowoutThreshold != null && quarter >= 3 && Math.abs(scoreDiff) >= endgameMgmt.blowoutThreshold;
+
+    // --- Rebond offensif agressif du côté adverse la possession précédente
+    // (voir plus bas dans le bloc rebond) : contre-attaque, défense pas
+    // encore replacée — consommé une seule fois (le flag est retiré dès
+    // lecture), donc sans effet pour une équipe qui n'utilise jamais le
+    // style "Agressif" (transitionRisk = 0, le flag n'est jamais posé).
+    const transitionBoost = !!offTeam._transitionBoost;
+    if (transitionBoost) delete offTeam._transitionBoost;
+
     // --- Money time : faute intentionnelle de l'équipe menée, en défense ---
     // Dans la dernière minute environ, une équipe menée d'un écart rattrapable
     // a intérêt à stopper le chrono plutôt que de laisser filer une possession.
@@ -4836,6 +5296,33 @@ class MatchEngine {
     const pressure = onCourtDef.reduce((s, p) => s + p.eff("defOutside"), 0) / 5;
     let tovChance = 0.12 + offense.tov + defense.pressure + (pressure - ballHandler.eff("dribble")) / 400;
     tovChance *= rhythmOff.tovMult;
+    // Défense sur écrans "Prise à deux" (double sur le porteur au screen,
+    // pondéré par prWeight — voir plus haut) et garbage time "Adaptatif"
+    // (imprécision des deux côtés en fin de match déséquilibrée) : ajoutés
+    // avant le clamp, comme le reste des composantes de tovChance. "Standard"
+    // partout => ces deux termes valent 0, tovChance inchangé.
+    tovChance += (screen.tovMod || 0) * prWeight;
+    if (inBlowout) tovChance += endgameMgmt.blowoutTovMod;
+    // Surveiller "couper les entrées de balle" (face-guard, voir
+    // WATCH_FOCUS_EFFECTS) : bonus de tov CIBLÉ si le porteur actuel occupe
+    // le poste surveillé ; watchGamblePenalty ci-dessous porte la
+    // contrepartie (un peu de défBoost en moins plus bas dans la fonction),
+    // tableau vide par défaut = aucun effet.
+    // "reboundPriority" porte aussi une taxe de défBoost permanente (le
+    // défenseur dédié au boxout aide un peu moins ailleurs) — appliquée ici,
+    // possession par possession, même les possessions qui ne finissent pas
+    // par un rebond (voir watchGamblePenalty juste en dessous).
+    let watchGamblePenalty = 0;
+    for (const w of (defTeam.watchAssignments || []).slice(0, MAX_WATCH_ASSIGNMENTS)) {
+      const eff = WATCH_FOCUS_EFFECTS[w.focus];
+      if (!eff) continue;
+      if (w.focus === "denyEntry") {
+        watchGamblePenalty += eff.defBoostPenalty || 0;
+        if (w.position === ballHandler.matchPosition) tovChance += eff.tovBonus || 0;
+      } else if (w.focus === "reboundPriority") {
+        watchGamblePenalty += eff.defBoostPenalty || 0;
+      }
+    }
     tovChance = clamp(tovChance, 0.03, 0.35);
 
     if (Math.random() < tovChance) {
@@ -4859,41 +5346,158 @@ class MatchEngine {
     const statForZone = { inside: "inside", mid: "midRange", three: "threePoint" }[zone];
 
     // --- Hero ball : en money time, le meilleur joueur prend plus de tirs ---
+    // "Standard" => heroMult = 1.7 pile dans la fenêtre clutch, comportement
+    // actuel inchangé.
     const clutch = quarter >= 4 && clock <= 120 && Math.abs(scoreDiff) <= 8;
     const star = this.starPlayer(offTeam);
+    const heroMult = clutch ? 1.7 : 1;
+    // Gestion de fin de match "Adaptatif" : en garbage time (écart >= seuil, dès
+    // le Q3), l'équipe qui mène (ou est menée) large ne force plus autant
+    // le jeu sur sa star — MULTIPLICATEUR SÉPARÉ du hero-ball clutch
+    // ci-dessus (les deux fenêtres, |écart|<=8 pour le clutch et |écart|>=10
+    // pour le blowout, sont mutuellement exclusives par construction, donc
+    // jamais cumulées). Borné pour ne jamais tomber sous 0.3 (la star reste
+    // un joueur normal, jamais activement évitée). "Standard" =>
+    // blowoutThreshold=null => inBlowout toujours faux => blowoutHeroMult=1,
+    // comportement actuel inchangé.
+    const blowoutHeroMult = inBlowout ? Math.max(1 + endgameMgmt.blowoutHeroMod, 0.3) : 1;
     const shooter = weightedPick(onCourtOff, p =>
-      Math.pow(p.eff(statForZone), 2.1) * (clutch && star && p.id === star.id ? 1.7 : 1)
+      Math.pow(p.eff(statForZone), 2.1) * (star && p.id === star.id ? heroMult * blowoutHeroMult : 1)
     );
     const defender = this.matchupDefender(defTeam, shooter, zone);
 
     const creators = onCourtOff.filter(p => p.id !== shooter.id);
     const creator = creators.length ? weightedPick(creators, p => p.eff("pass")) : null;
 
-    const creation = (shooter.eff("dribble") + shooter.eff("agility") + (creator ? creator.eff("pass") * 0.8 : 0)) / (creator ? 2.8 : 2);
+    let creation = (shooter.eff("dribble") + shooter.eff("agility") + (creator ? creator.eff("pass") * 0.8 : 0)) / (creator ? 2.8 : 2);
+    // Défense sur écrans : n'affecte que la fraction de possessions
+    // "Pick & Roll" (prWeight) — gêne (ou pas) la création du porteur selon
+    // le choix du coach défenseur. "Aucune consigne" => ballCreationMod = 0.
+    creation *= 1 + (screen.ballCreationMod || 0) * prWeight;
+
     const defStat = zone === "inside" ? defender.eff("defInside") : defender.eff("defOutside");
     let defBoost = zone === "inside" ? defense.insideDef : defense.perimDef;
     if (defense.shutdownStar && star && shooter.id === star.id) defBoost += 0.12;
 
+    // --- Aide défensive (Faible/Moyenne/Forte) : déplace le curseur
+    // intérieur/extérieur — "Moyenne" = delta zéro, comportement actuel. ---
+    defBoost += zone === "inside" ? help.insideDef : help.perimDef;
+    // --- Gestion du post-up, uniquement en zone "inside" — "Classique" =
+    // delta zéro. ---
+    if (zone === "inside") defBoost += postD.insideDef;
+    // --- Close-out, uniquement en zone extérieure (mid/3pts) — "Contrôlé"
+    // = delta zéro. ---
+    if (zone !== "inside") defBoost += closeout.perimDefMod;
+    // --- Surveiller : contrepartie de "couper les entrées de balle"/
+    // "priorité au rebond" (voir plus haut où le bonus de tov ciblé est
+    // appliqué) — un peu de défBoost en moins sur TOUTE la possession tant
+    // que l'affectation existe, prix générique du pari schématique. Tableau
+    // vide par défaut => 0. ---
+    defBoost -= watchGamblePenalty;
+
     // --- Effet de matchup : taille en intérieur, agilité en extérieur/pénétration ---
-    const mismatch = zone === "inside"
+    let mismatch = zone === "inside"
       ? (shooter.height - defender.height) * 0.22
       : (shooter.eff("agility") - defender.eff("agility")) * 0.11;
+    // --- Close-out agressif : meilleur contest extérieur ci-dessus, mais
+    // avantage offensif accru à l'intérieur (le risque de pénétration
+    // derrière une fermeture trop appuyée) — "Contrôlé" = delta zéro. ---
+    if (zone === "inside") mismatch += closeout.insideMismatchMod || 0;
+    // --- Défense sur écrans "Switch" : n'élimine pas d'avantage moyen mais
+    // ajoute de la variance (mismatch de taille/agilité aléatoire selon qui
+    // se retrouve switché sur qui) — terme centré sur 0, donc sans biais
+    // systématique. "Aucune consigne" => mismatchVarianceMod = 0. ---
+    if (screen.mismatchVarianceMod) mismatch += screen.mismatchVarianceMod * prWeight * rand(-15, 15);
 
-    const openness = (creation - defStat * (1 + defBoost)) / 2 + mismatch + rand(-12, 12);
+    // --- Défense sur écrans "Au-dessus"/"En-dessous" : le porteur est gêné
+    // (ballCreationMod, déjà appliqué plus haut) mais ça ouvre différemment
+    // le jeu selon où le shooteur finit par tirer — le rouleur profite d'un
+    // panier ouvert en zone "inside" (rollOpennessMod), le tireur extérieur
+    // profite d'un tir plus ouvert derrière un défenseur passé dessous
+    // (shooterOpennessMod). Les deux pondérés par prWeight — "Aucune consigne" => 0.
+
+    // --- Surveiller : bonus défensif ciblé si le tireur occupe le poste
+    // sous surveillance avec le bon focus, contrepartie en fatigue
+    // supplémentaire pour le défenseur dédié (sauf denyDrive, dont la
+    // contrepartie est l'ouverture accrue sur le 3pts — voir plus bas). ---
+    for (const w of (defTeam.watchAssignments || []).slice(0, MAX_WATCH_ASSIGNMENTS)) {
+      if (w.position !== shooter.matchPosition) continue;
+      const eff = WATCH_FOCUS_EFFECTS[w.focus];
+      if (!eff) continue;
+      if (w.focus === "denyPostUp" && zone === "inside") {
+        defBoost += eff.insideDefBonus || 0;
+        defender.fatigue = clamp(defender.fatigue + (eff.extraFatigueMod || 0), 0, 100);
+      } else if (w.focus === "denyDrive") {
+        // Colle sur les drives : meilleur contest en pénétration (inside/mid),
+        // mais le défenseur reste sur la ligne de drive plutôt que de fermer
+        // la ligne à 3pts — inverse exact du compromis de harassOutsideShot.
+        if (zone !== "three") {
+          defBoost += eff.insideMidDefBonus || 0;
+          defender.fatigue = clamp(defender.fatigue + (eff.extraFatigueMod || 0), 0, 100);
+        } else {
+          defBoost -= eff.perimOpenPenalty || 0;
+        }
+      } else if (w.focus === "harassOutsideShot" && zone !== "inside") {
+        defBoost += eff.perimDefBonusWide || 0;
+        defender.fatigue = clamp(defender.fatigue + (eff.extraFatigueMod || 0), 0, 100);
+      }
+    }
+
+    // --- Rebond offensif agressif de la possession précédente : contre-
+    // attaque, défense pas replacée — bonus d'ouverture ponctuel, consommé
+    // une seule fois (voir transitionBoost plus haut). ---
+    const transitionOpenness = transitionBoost ? 14 : 0;
+
+    const screenOpennessBonus = zone === "inside"
+      ? (screen.rollOpennessMod || 0) * prWeight
+      : (screen.shooterOpennessMod || 0) * prWeight;
+
+    const openness = (creation - defStat * (1 + defBoost)) / 2 + mismatch + transitionOpenness + screenOpennessBonus + rand(-12, 12);
     let quality, qualityMod;
     if (openness > 8) { quality = "ouvert"; qualityMod = 0.08; }
     else if (openness > -10) { quality = "contesté"; qualityMod = 0; }
     else { quality = "très contesté"; qualityMod = -0.10; }
 
     const assistCandidate = creator;
+    // --- Bonus d'assist ciblé : écran "Prise à deux" (kick-out après double
+    // sur le porteur, pondéré par prWeight) et gestion du post-up (kick-out
+    // après double/déplacement en zone "inside" uniquement) — "Aucune
+    // consigne"/"Classique" => 0 dans les deux cas. Consommé plus bas, au moment du
+    // test d'assist existant. ---
+    const assistOpenBonus = (screen.assistOpenMod || 0) * prWeight + (zone === "inside" ? (postD.assistOpenMod || 0) : 0);
 
-    const foulDrawBase = (zone === "inside" ? 0.10 : 0.03) + (offense.drawFoul || 0) + shooter.aggressiveness / 900;
+    const foulDrawBase = (zone === "inside" ? 0.10 : 0.03) + (offense.drawFoul || 0) + shooter.aggressiveness / 900
+      + (zone === "inside" ? (postD.foulMod || 0) : 0);
     const shootingFoul = Math.random() < clamp(foulDrawBase - defBoost, 0.01, 0.35);
 
     const base = { inside: 0.50, mid: 0.40, three: 0.335 }[zone];
     const effStat = shooter.eff(statForZone);
     let prob = base + (effStat - 60) * 0.0048 + qualityMod;
-    prob = clamp(prob, 0.10, 0.75);
+    // Frein anti-blowout de base (retour utilisateur : "on a un peu trop vite
+    // de gros blowout") — même deux équipes RIGOUREUSEMENT de même niveau
+    // rejouées des milliers de fois produisaient déjà ~28% d'écarts ≥20 pts
+    // et ~11% ≥30 pts (repères NBA : ~15% et ~3-4%), et ce n'était PAS un
+    // effet des nouvelles options tactiques ni du banc d'essai — mesuré
+    // identique avec effectif fixe rejoué (pas de régénération). Diagnostic :
+    // resserrer le bruit de la formule d'ouverture (rand(-12,12)) ou rendre
+    // le choix du tireur/défenseur déterministe ne change quasiment rien
+    // (le second aggrave même la variance, en concentrant tous les tirs sur
+    // un seul joueur) — la variance vient simplement du volume de tirages
+    // aléatoires indépendants (~200 tirs/pertes/rebonds/LF par match), pas
+    // d'un seul terme isolé. Le levier qui fonctionne : une légère poussée
+    // de probabilité en fonction de l'écart au score ACTUEL (scoreDiff,
+    // perspective de l'attaque) — l'équipe menée reprend un peu de
+    // "présence" au tir, l'équipe qui mène en perd un peu, sans jamais
+    // annuler un vrai écart de niveau (validé : 1.3 vs 0.7 reste un blowout
+    // net de ~50 pts en moyenne, 0.65 vs 0.82 garde un écart net de ~17 pts
+    // — seul l'EXCÈS de variance entre équipes ÉGALES est réduit : ~28%/11%
+    // d'écarts ≥20/≥30 pts tombent à ~16%/3%, sans toucher FG%/score moyen).
+    // Cumulatif avec ENDGAME_MANAGEMENT "Adaptatif" (qui reste un renfort
+    // optionnel par-dessus ce plancher, inchangé) — "Standard" n'annule PAS
+    // ce terme, volontairement : ce n'est pas un réglage tactique, c'est un
+    // ajustement de calibrage du moteur lui-même.
+    const marginDamp = clamp(-scoreDiff / 500, -0.06, 0.06);
+    prob = clamp(prob + marginDamp, 0.10, 0.75);
 
     const made = Math.random() < prob;
     const points = zone === "three" ? 3 : 2;
@@ -4905,7 +5509,7 @@ class MatchEngine {
     if (made) {
       shooter.stats.pts += points;
       if (zone === "three") shooter.stats.fgm3++; else shooter.stats.fgm2++;
-      if (assistCandidate && quality === "ouvert" && Math.random() < 0.65 + offense.assist) {
+      if (assistCandidate && quality === "ouvert" && Math.random() < 0.65 + offense.assist + assistOpenBonus) {
         assistCandidate.stats.ast++;
       }
       this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, possession: this.teamKey(offTeam) });
@@ -4924,9 +5528,38 @@ class MatchEngine {
         return { possessionOffense: false, scored: true };
       }
 
-      const offReb = onCourtOff.reduce((s, p) => s + p.eff("rebound") + p.height / 20, 0);
-      const defReb = onCourtDef.reduce((s, p) => s + p.eff("rebound") * 1.35 + p.height / 20, 0);
+      // --- Rebond offensif (Prudent/Normal/Agressif) : "Normal" = delta
+      // zéro, comportement actuel inchangé. ---
+      const offRebStyle = OFF_REBOUND_STYLES[offTeam.offRebStyle] || OFF_REBOUND_STYLES.Normal;
+      let offReb = onCourtOff.reduce((s, p) => s + p.eff("rebound") + p.height / 20, 0) * (1 + (offRebStyle.offRebWeightMod || 0));
+      let defReb = onCourtDef.reduce((s, p) => s + p.eff("rebound") * 1.35 + p.height / 20, 0);
+      // --- Surveiller "priorité au rebond" : boxout ciblé sur le joueur du
+      // poste surveillé — réduit sa contribution à l'effort de rebond
+      // offensif de son équipe (individualEff*offRebWeightPenalty en moins
+      // du total offReb) et donne un petit bonus d'équipe au rebond défensif
+      // (defRebTeamBonus, en points absolus — même échelle que les sommes
+      // offReb/defReb ci-dessus, qui tournent typiquement autour de 60-90).
+      // Tableau vide par défaut => aucun effet. ---
+      for (const w of (defTeam.watchAssignments || []).slice(0, MAX_WATCH_ASSIGNMENTS)) {
+        if (w.focus !== "reboundPriority") continue;
+        const eff = WATCH_FOCUS_EFFECTS.reboundPriority;
+        const target = onCourtOff.find(p => p.matchPosition === w.position);
+        if (target) offReb -= (target.eff("rebound") + target.height / 20) * (eff.offRebWeightPenalty || 0);
+        defReb += eff.defRebTeamBonus || 0;
+      }
+      offReb = Math.max(offReb, 1);
       const offensiveRebound = Math.random() < offReb / (offReb + defReb);
+
+      // --- Contrepartie du style "Agressif" (retour utilisateur, "risque
+      // de prendre des contre-attaques") : si le rebond offensif est
+      // finalement manqué, la défense qui récupère hérite d'un bonus de
+      // transition sur SA PROCHAINE possession (voir transitionBoost en
+      // tête de fonction) — jamais posé pour "Normal"/"Prudent"
+      // (transitionRisk = 0), donc sans effet pour qui ne joue pas agressif
+      // au rebond offensif. ---
+      if (!offensiveRebound && offRebStyle.transitionRisk && Math.random() < offRebStyle.transitionRisk) {
+        defTeam._transitionBoost = true;
+      }
 
       const rebounder = weightedPick(
         offensiveRebound ? onCourtOff : onCourtDef,
@@ -4946,17 +5579,25 @@ class MatchEngine {
 
   applyFatigue(team, rhythmKey, seconds, quarter, clock, events) {
     const mult = RHYTHMS[rhythmKey].fatigueMult;
+    // Espace bien-être (voir Team.facilityFatigueMult/CLUB_FACILITIES) :
+    // réduit l'accumulation de fatigue EN MATCH, 1 = aucun effet (aucun
+    // espace bien-être construit) — n'agit jamais sur la récupération au
+    // repos plus bas, seulement sur le rythme d'accumulation pendant le jeu.
+    const wellnessMult = team.facilityFatigueMult ? team.facilityFatigueMult() : 1;
     team.onCourtPlayers().forEach(p => {
-      p.fatigue = clamp(p.fatigue + (seconds / 24) * mult, 0, 100);
+      p.fatigue = clamp(p.fatigue + (seconds / 24) * mult * wellnessMult, 0, 100);
       p.secondsPlayed += seconds;
       if (p.matchPosition) {
         p.secondsPlayedByPosition[p.matchPosition] = (p.secondsPlayedByPosition[p.matchPosition] || 0) + seconds;
       }
 
-      // --- Blessures --- (rare, plus probable si le joueur est fatigué)
+      // --- Blessures --- (rare, plus probable si le joueur est fatigué,
+      // atténuée par la salle de musculation — voir
+      // Team.facilityInjuryRiskMult/CLUB_FACILITIES, 1 = aucun effet)
       if (!p.injured) {
         const fatigueFactor = 0.25 + 0.75 * (p.fatigue / 100);
-        const injuryChance = BASE_INJURY_RATE * (seconds / 12) * fatigueFactor;
+        const injuryRiskMult = team.facilityInjuryRiskMult ? team.facilityInjuryRiskMult() : 1;
+        const injuryChance = BASE_INJURY_RATE * (seconds / 12) * fatigueFactor * injuryRiskMult;
         if (Math.random() < injuryChance) {
           p.injured = true;
           p.onCourt = false;
@@ -4989,7 +5630,7 @@ class MatchEngine {
     // boucle plus bas (qui loggue le même marqueur pour Q2/Q3/Q4 et les
     // prolongations) saute cette première itération pour ne pas le
     // dupliquer (voir `if (q > 1)` plus bas).
-    this.log(events, 1, QUARTER_SECONDS, `— Début du 1er quart-temps —`, { type: "quarterStart" });
+    this.log(events, 1, QUARTER_SECONDS, `Début du 1er quart-temps`, { type: "quarterStart" });
 
     // Retour utilisateur : "à 10:00 du Q1, ça doit être dit, l'entre-deux
     // est remporté par ..." — jusqu'ici `possessionTeam` (qui a la balle en
@@ -5016,7 +5657,7 @@ class MatchEngine {
       // Le marqueur du 1er quart-temps est déjà loggué plus haut, AVANT
       // l'entre-deux (voir commentaire ci-dessus) — ne pas le dupliquer ici.
       if (q > 1) {
-        this.log(events, q, clock, `— Début ${isOvertime ? "de la" : "du"} ${label} —`, { type: "quarterStart" });
+        this.log(events, q, clock, `Début ${isOvertime ? "de la" : "du"} ${label}`, { type: "quarterStart" });
       }
       const startScoreA = score.A, startScoreB = score.B;
 
@@ -5037,6 +5678,19 @@ class MatchEngine {
         // au chrono AVANT cette possession, donc sur `clock` non décrémenté)
         const offIsMilkingClock = q >= 4 && clock <= 150 && scoreDiff > 0 && scoreDiff <= 12;
         if (offIsMilkingClock) possessionLength = Math.max(possessionLength, rand(18, 24));
+
+        // --- Gestion de fin de match "Adaptatif" (retour utilisateur, 2026-09 —
+        // "en fin de match si écart de moins de 5 points on calme le jeu ou
+        // on accélère") : dans les 5 dernières minutes d'un match serré
+        // (écart < 5, quel que soit le sens), un peu plus d'urgence dans le
+        // tempo des DEUX équipes — sauf quand l'équipe en possession fait
+        // déjà tourner le chrono (offIsMilkingClock, qui reste prioritaire :
+        // une équipe qui mène de peu protège son avance avant de chercher à
+        // accélérer). "Standard" (comportement actuel) => aucun effet.
+        const endgameMgmtOff = ENDGAME_MANAGEMENT[offTeam.endgameManagement] || ENDGAME_MANAGEMENT.Standard;
+        const closeGame = endgameMgmtOff.closeGameTempoMod > 0 && q >= 4 && clock <= 300 && Math.abs(scoreDiff) < 5;
+        if (closeGame && !offIsMilkingClock) possessionLength *= (1 - endgameMgmtOff.closeGameTempoMod);
+
         possessionLength = Math.min(possessionLength, clock);
 
         // Retour utilisateur : "on ne peut pas avoir un tir marqué à 10:00,
@@ -5076,7 +5730,7 @@ class MatchEngine {
 
       quarterScores.A[q - 1] = score.A - startScoreA;
       quarterScores.B[q - 1] = score.B - startScoreB;
-      this.log(events, q, 0, `— Fin ${isOvertime ? "de la" : "du"} ${label} : ${this.teamA.name} ${score.A} - ${score.B} ${this.teamB.name} —`, { type: "quarterEnd" });
+      this.log(events, q, 0, `Fin ${isOvertime ? "de la" : "du"} ${label} : ${this.teamA.name} ${score.A} - ${score.B} ${this.teamB.name}`, { type: "quarterEnd" });
 
       if (q >= 4 && score.A !== score.B) break;
       if (q >= 14) {
@@ -5128,15 +5782,22 @@ return {
   TRANSFER_CPU_CHECK_INTERVAL_MS, TRANSFER_CPU_LIST_CHANCE, TRANSFER_CPU_BID_CHANCE,
   COACH_AUCTION_DURATION_MS, COACH_MARKET_MIN_OPEN_LISTINGS, COACH_MARKET_GENERATE_CHECK_INTERVAL_MS, COACH_CPU_BID_CHANCE,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor,
-  FORFEIT_SCORE, simulateOrForfeit,
+  FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam,
   ARENA_LEVELS, arenaInfo, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel,
+  CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,
   POSITION_ATTR_PROFILE, ATTR_CATEGORY_WEIGHT, weightedRatingForPosition, levelCoefficientFor,
   CARD_POSITION_BIAS, inferPosition, SALARY_PEAK_BONUS_THRESHOLD, SALARY_PEAK_BONUS_FACTOR, SALARY_PEAK_BONUS_MAX, peakBonusFor,
   trainerWeeklySalary,
   OFFENSE_PROFILES, DEFENSES, RHYTHMS,
+  // Tactique confirmée (voir le grand commentaire au-dessus de
+  // SCREEN_DEFENSES) : exportées pour que l'UI (test bench / futur écran
+  // "Ordres") puisse lister les options disponibles directement depuis ces
+  // tables plutôt que de dupliquer les noms en dur.
+  SCREEN_DEFENSES, HELP_DEFENSE_LEVELS, WATCH_FOCUS_EFFECTS, MAX_WATCH_ASSIGNMENTS,
+  POST_DEFENSES, CLOSEOUT_STYLES, OFF_REBOUND_STYLES, ENDGAME_MANAGEMENT,
   clamp, rand, pick, weightedPick,
   Player, Team, MatchEngine,
   heightForPosition, generateAttrsForPosition, generateRawYouthAttrs, generatePlayer, generateTeam,

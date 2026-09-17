@@ -128,10 +128,10 @@ function fireVisible(doc, win) {
   const scoreA = parseInt(doc.getElementById("scoreA").textContent, 10);
   const scoreB = parseInt(doc.getElementById("scoreB").textContent, 10);
   console.log("Après la fin de la fenêtre de diffusion (retour sur l'onglet) — statut :", statusAfter, "| score :", scoreA, "-", scoreB);
-  if (statusAfter !== "Terminé" && statusAfter !== "Terminé — forfait") {
+  if (statusAfter !== "Terminé" && statusAfter !== "Terminé (forfait)") {
     throw new Error("❌ Le retour sur l'onglet après la fin de la diffusion devrait afficher le match comme terminé.");
   }
-  if (!(scoreA >= 0 && scoreB >= 0 && (scoreA > 0 || scoreB > 0 || statusAfter === "Terminé — forfait"))) {
+  if (!(scoreA >= 0 && scoreB >= 0 && (scoreA > 0 || scoreB > 0 || statusAfter === "Terminé (forfait)"))) {
     throw new Error(`❌ Un score final valide devrait être affiché, obtenu ${scoreA}-${scoreB}.`);
   }
   console.log("✅ Le retour sur l'onglet après la fin de la diffusion finalise automatiquement l'affichage (score final), sans rechargement manuel.");

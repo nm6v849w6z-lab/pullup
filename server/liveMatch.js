@@ -318,7 +318,7 @@ function ensureCupLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueCu
 // le champion si c'était la finale) une fois tous les matchs réels du tour
 // enregistrés. Renvoie `null` si aucun tour n'était en attente (no-op).
 function finalizeCupRound(Engine, league) {
-  const { simulateOrForfeit } = Engine;
+  const { simulateOrForfeit, recordMatchStatsForTeam } = Engine;
   const round = league.pendingCupRound();
   if (!round) return null;
 
@@ -340,6 +340,13 @@ function finalizeCupRound(Engine, league) {
       scoreHome = sim.scoreHome;
       scoreAway = sim.scoreAway;
       forfeit = sim.forfeit;
+    }
+    // Journal de matchs (voir finalizeRound ci-dessus pour le même principe
+    // côté championnat) : un match de coupe compte aussi pour les stats de
+    // saison des joueurs impliqués.
+    if (!forfeit) {
+      recordMatchStatsForTeam(home, round.index, "cup");
+      recordMatchStatsForTeam(away, round.index, "cup");
     }
     league.recordCupMatchResult(matchIndex, scoreHome, scoreAway, forfeit);
   });
@@ -369,7 +376,7 @@ function finalizeCupRound(Engine, league) {
 // filtrer/personnaliser ces événements pour UN destinataire précis avant de
 // les renvoyer par l'API.
 function finalizeRound(Engine, league, round) {
-  const { simulateOrForfeit } = Engine;
+  const { simulateOrForfeit, recordMatchStatsForTeam } = Engine;
   const matches = league.matchesForRound(round);
   const userResults = [];
 
@@ -398,6 +405,16 @@ function finalizeRound(Engine, league, round) {
       scoreHome = sim.scoreHome;
       scoreAway = sim.scoreAway;
       forfeit = sim.forfeit;
+    }
+
+    // Journal de matchs (voir Player.matchLog/recordMatchStatsForTeam côté
+    // moteur) : alimente les stats de saison/MVP de la dernière journée
+    // (onglet Ligue) et les pages joueur — JAMAIS pour un forfait (aucune
+    // simulation réelle n'a eu lieu, p.stats/p.secondsPlayed restent ceux du
+    // match précédent de chaque joueur).
+    if (!forfeit) {
+      recordMatchStatsForTeam(home, round, "championship");
+      recordMatchStatsForTeam(away, round, "championship");
     }
 
     league.recordResult(round, m.home, m.away, scoreHome, scoreAway);

@@ -27,7 +27,13 @@ const Engine = require("../engine.js");
 
 const {
   POSITIONS, OFFENSE_PROFILES, DEFENSES, RHYTHMS,
-  TRAINING_PROGRAMS, SEAT_CATEGORIES,
+  TRAINING_PROGRAMS, SEAT_CATEGORIES, CLUB_FACILITIES,
+  // Tactique confirmée (voir engine.js, grand commentaire au-dessus de
+  // SCREEN_DEFENSES) : mêmes tables que côté moteur/UI, réutilisées ici
+  // pour valider les réglages envoyés par le client plutôt que de dupliquer
+  // les listes de noms valides en dur.
+  SCREEN_DEFENSES, HELP_DEFENSE_LEVELS, WATCH_FOCUS_EFFECTS, MAX_WATCH_ASSIGNMENTS,
+  POST_DEFENSES, CLOSEOUT_STYLES, OFF_REBOUND_STYLES, ENDGAME_MANAGEMENT,
 } = Engine;
 
 const MAX_OFFENSIVE_PRIORITIES = 3;
@@ -69,6 +75,66 @@ function validateDefense(raw) {
 function validateRhythm(raw) {
   if (!RHYTHMS[raw]) return { ok: false, error: `Rythme inconnu : ${raw}.` };
   return { ok: true, value: raw };
+}
+
+// ---------------------------------------------------------------------
+// Tactique confirmée (voir engine.js/Team.constructor) : validateurs des
+// sept réglages supplémentaires, factorisés ici de la même façon que
+// validateOffensivePriorities/validateDefense/validateRhythm ci-dessus —
+// partagés par setTactics (ordres en direct) et setPlan (préparation à
+// l'avance) pour ne jamais laisser les deux chemins diverger.
+// ---------------------------------------------------------------------
+function validateTacticalTier(raw) {
+  if (raw !== "débutant" && raw !== "confirmée") return { ok: false, error: `Niveau tactique inconnu : ${raw}.` };
+  return { ok: true, value: raw };
+}
+
+function validateScreenDefense(raw) {
+  if (!SCREEN_DEFENSES[raw]) return { ok: false, error: `Défense sur écrans inconnue : ${raw}.` };
+  return { ok: true, value: raw };
+}
+
+function validateHelpDefense(raw) {
+  if (!HELP_DEFENSE_LEVELS[raw]) return { ok: false, error: `Aide défensive inconnue : ${raw}.` };
+  return { ok: true, value: raw };
+}
+
+function validatePostDefense(raw) {
+  if (!POST_DEFENSES[raw]) return { ok: false, error: `Gestion du post-up inconnue : ${raw}.` };
+  return { ok: true, value: raw };
+}
+
+function validateCloseoutStyle(raw) {
+  if (!CLOSEOUT_STYLES[raw]) return { ok: false, error: `Style de close-out inconnu : ${raw}.` };
+  return { ok: true, value: raw };
+}
+
+function validateOffRebStyle(raw) {
+  if (!OFF_REBOUND_STYLES[raw]) return { ok: false, error: `Style de rebond offensif inconnu : ${raw}.` };
+  return { ok: true, value: raw };
+}
+
+function validateEndgameManagement(raw) {
+  if (!ENDGAME_MANAGEMENT[raw]) return { ok: false, error: `Gestion de fin de match inconnue : ${raw}.` };
+  return { ok: true, value: raw };
+}
+
+// Jusqu'à MAX_WATCH_ASSIGNMENTS affectations { position, focus } — chaque
+// position doit être un poste connu, chaque focus une clé connue de
+// WATCH_FOCUS_EFFECTS. Tableau vide accepté (= aucune affectation).
+function validateWatchAssignments(raw) {
+  if (!Array.isArray(raw)) return { ok: false, error: "watchAssignments doit être un tableau." };
+  if (raw.length > MAX_WATCH_ASSIGNMENTS) {
+    return { ok: false, error: `Au maximum ${MAX_WATCH_ASSIGNMENTS} affectations "Surveiller".` };
+  }
+  const value = [];
+  for (const w of raw) {
+    if (!w || typeof w !== "object" || !POSITIONS.includes(w.position) || !WATCH_FOCUS_EFFECTS[w.focus]) {
+      return { ok: false, error: `Affectation "Surveiller" invalide : ${JSON.stringify(w)}.` };
+    }
+    value.push({ position: w.position, focus: w.focus });
+  }
+  return { ok: true, value };
 }
 
 // Valide un corps { starters, backupPositions } CONTRE l'effectif de `team`
@@ -138,7 +204,55 @@ function setTactics(team, teamIndex, league, body) {
     if (!v.ok) return fail(v.error);
     team.rhythm = v.value;
   }
-  return { ok: true, offensivePriorities: team.offensivePriorities, defense: team.defense, rhythm: team.rhythm };
+  // Tactique confirmée (voir Team.constructor/SCREEN_DEFENSES et consorts
+  // côté moteur) — mêmes champs, appliqués un par un exactement comme les
+  // trois réglages historiques ci-dessus.
+  if (body.tacticalTier !== undefined) {
+    const v = validateTacticalTier(body.tacticalTier);
+    if (!v.ok) return fail(v.error);
+    team.tacticalTier = v.value;
+  }
+  if (body.screenDefense !== undefined) {
+    const v = validateScreenDefense(body.screenDefense);
+    if (!v.ok) return fail(v.error);
+    team.screenDefense = v.value;
+  }
+  if (body.helpDefense !== undefined) {
+    const v = validateHelpDefense(body.helpDefense);
+    if (!v.ok) return fail(v.error);
+    team.helpDefense = v.value;
+  }
+  if (body.watchAssignments !== undefined) {
+    const v = validateWatchAssignments(body.watchAssignments);
+    if (!v.ok) return fail(v.error);
+    team.watchAssignments = v.value;
+  }
+  if (body.postDefense !== undefined) {
+    const v = validatePostDefense(body.postDefense);
+    if (!v.ok) return fail(v.error);
+    team.postDefense = v.value;
+  }
+  if (body.closeoutStyle !== undefined) {
+    const v = validateCloseoutStyle(body.closeoutStyle);
+    if (!v.ok) return fail(v.error);
+    team.closeoutStyle = v.value;
+  }
+  if (body.offRebStyle !== undefined) {
+    const v = validateOffRebStyle(body.offRebStyle);
+    if (!v.ok) return fail(v.error);
+    team.offRebStyle = v.value;
+  }
+  if (body.endgameManagement !== undefined) {
+    const v = validateEndgameManagement(body.endgameManagement);
+    if (!v.ok) return fail(v.error);
+    team.endgameManagement = v.value;
+  }
+  return {
+    ok: true, offensivePriorities: team.offensivePriorities, defense: team.defense, rhythm: team.rhythm,
+    tacticalTier: team.tacticalTier, screenDefense: team.screenDefense, helpDefense: team.helpDefense,
+    watchAssignments: team.watchAssignments, postDefense: team.postDefense, closeoutStyle: team.closeoutStyle,
+    offRebStyle: team.offRebStyle, endgameManagement: team.endgameManagement,
+  };
 }
 
 // Une journée valide pour une PRÉPARATION À L'AVANCE (voir setPlan plus bas) :
@@ -204,7 +318,50 @@ function setPlan(team, teamIndex, league, body) {
     if (!v.ok) return fail(v.error);
     patch.lineup = v.value;
   }
-  if (Object.keys(patch).length === 0) return fail("'patch' ne contient aucun champ reconnu (offensivePriorities/defense/rhythm/lineup).");
+  // Tactique confirmée — mêmes champs/validateurs que setTactics ci-dessus,
+  // pour qu'un plan préparé à l'avance puisse porter les mêmes réglages que
+  // les ordres en direct.
+  if (patchBody.tacticalTier !== undefined) {
+    const v = validateTacticalTier(patchBody.tacticalTier);
+    if (!v.ok) return fail(v.error);
+    patch.tacticalTier = v.value;
+  }
+  if (patchBody.screenDefense !== undefined) {
+    const v = validateScreenDefense(patchBody.screenDefense);
+    if (!v.ok) return fail(v.error);
+    patch.screenDefense = v.value;
+  }
+  if (patchBody.helpDefense !== undefined) {
+    const v = validateHelpDefense(patchBody.helpDefense);
+    if (!v.ok) return fail(v.error);
+    patch.helpDefense = v.value;
+  }
+  if (patchBody.watchAssignments !== undefined) {
+    const v = validateWatchAssignments(patchBody.watchAssignments);
+    if (!v.ok) return fail(v.error);
+    patch.watchAssignments = v.value;
+  }
+  if (patchBody.postDefense !== undefined) {
+    const v = validatePostDefense(patchBody.postDefense);
+    if (!v.ok) return fail(v.error);
+    patch.postDefense = v.value;
+  }
+  if (patchBody.closeoutStyle !== undefined) {
+    const v = validateCloseoutStyle(patchBody.closeoutStyle);
+    if (!v.ok) return fail(v.error);
+    patch.closeoutStyle = v.value;
+  }
+  if (patchBody.offRebStyle !== undefined) {
+    const v = validateOffRebStyle(patchBody.offRebStyle);
+    if (!v.ok) return fail(v.error);
+    patch.offRebStyle = v.value;
+  }
+  if (patchBody.endgameManagement !== undefined) {
+    const v = validateEndgameManagement(patchBody.endgameManagement);
+    if (!v.ok) return fail(v.error);
+    patch.endgameManagement = v.value;
+  }
+  if (Object.keys(patch).length === 0) return fail("'patch' ne contient aucun champ reconnu (offensivePriorities/defense/rhythm/lineup/tacticalTier/screenDefense/helpDefense/watchAssignments/postDefense/closeoutStyle/offRebStyle/endgameManagement).");
   const plan = team.stagePlanForRound(round, patch);
   return { ok: true, round, plan };
 }
@@ -430,6 +587,26 @@ function upgradeTrainingCenter(team, teamIndex, league, body, now) {
   return { ok: true, trainingCenterLevel: team.trainingCenterLevel, budget: team.budget };
 }
 
+// Autres infrastructures du club (station TV, salle de musculation, espace
+// bien-être — voir CLUB_FACILITIES/Team.upgradeFacility côté moteur) : même
+// forme que upgradeArena/upgradeFanShop/upgradeTrainingCenter ci-dessus (un
+// palier à la fois, vérifié par le budget), sauf qu'une SEULE fonction sert
+// les trois infrastructures — `body.facility` choisit laquelle (clé de
+// CLUB_FACILITIES), au lieu de dupliquer trois fois ce même petit bloc.
+function upgradeFacility(team, teamIndex, league, body, now) {
+  const key = body && body.facility;
+  const cfg = CLUB_FACILITIES[key];
+  if (!cfg) return fail("Infrastructure inconnue.");
+  const next = team.nextFacilityLevel(key);
+  if (!next) return fail(`${cfg.name} déjà au niveau maximum.`);
+  if (team.budget < next.cost) {
+    return fail(`Budget insuffisant pour ${cfg.name} (coût ${next.cost}, budget actuel ${team.budget}).`);
+  }
+  const applied = team.upgradeFacility(key);
+  if (!applied) return fail(`Achat de ${cfg.name} refusé.`);
+  return { ok: true, facilityLevels: { ...team.facilityLevels }, budget: team.budget };
+}
+
 // Académie de jeunes : signer un candidat en attente (voir
 // Team.signYouthCandidate) — déplace vers l'effectif jeunes (youthPlayers,
 // plafonné à MAX_YOUTH_ROSTER_SIZE), fixe le salaire de stagiaire.
@@ -503,7 +680,7 @@ function runVideoSession(team, teamIndex, league, body, now) {
     const reasons = {
       "no-analyst": "Aucun analyste vidéo sous contrat.",
       "already-scouted": "Cette équipe a déjà été scoutée cette saison.",
-      "cooldown": "Une séance vidéo a déjà été utilisée aujourd'hui — réessayez demain.",
+      "cooldown": "Une séance vidéo a déjà été utilisée aujourd'hui, réessayez demain.",
       "invalid-opponent": "Adversaire invalide.",
       "invalid-team": "Équipe invalide.",
     };
@@ -520,4 +697,7 @@ module.exports = {
   // prospects, voir engine.js) :
   bidOnRecruiterListing, fireRecruiter, upgradeTrainingCenter,
   signYouthCandidate, declineYouthCandidate, promoteYouthPlayer, releaseYouthPlayer,
+  // Autres infrastructures du club (station TV, salle de musculation, espace
+  // bien-être — voir CLUB_FACILITIES côté moteur) :
+  upgradeFacility,
 };

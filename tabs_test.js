@@ -1,8 +1,8 @@
 // Vérifie la navigation par onglets (Club/Ligue/Coupe/Calendrier/Matchs
 // amicaux/Économie/Salle/Staff/Humeur des supporters/📋 Ordres, et
-// Effectif/Stats hebdo/Entraînement/Draft et supervision), la Salle avec ses
-// catégories de places à prix indépendants, la boutique des supporters
-// (revenu hebdomadaire fixe), et l'onglet Effectif (consultation des
+// Effectif/Stats hebdo/Entraînement), la Salle avec ses catégories de
+// places à prix indépendants, la boutique des supporters (revenu
+// hebdomadaire fixe), et l'onglet Effectif (consultation des
 // caractéristiques, distinct de l'onglet Ordres qui sert à composer la
 // feuille de match) — y compris l'accès direct aux Ordres depuis le Calendrier.
 const fs = require("fs");
@@ -25,7 +25,7 @@ function clickTab(key) {
 function visiblePageId() {
   const ids = ["prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
     "clubSection", "staffSection", "economieSection", "salleSection", "calendrierSection", "coupeSection",
-    "effectifSection", "humeurSection", "placeholderSection"];
+    "effectifSection", "humeurSection", "placeholderSection", "statsHebdoSection"];
   return ids.find(id => !doc.getElementById(id).classList.contains("hidden"));
 }
 
@@ -39,13 +39,12 @@ const ordresBtnActive = [...doc.querySelectorAll(".tab-btn")].find(b => b.datase
 console.log(`${ordresBtnActive ? "✅" : "❌"} L'onglet "📋 Ordres" est actif par défaut.`);
 if (!ordresBtnActive) throw new Error("❌ L'onglet Ordres devrait être actif par défaut.");
 
-// --- Chaque onglet affiche bien SA page (et une seule) — vérifie les 14 onglets. ---
+// --- Chaque onglet affiche bien SA page (et une seule) — vérifie les 13 onglets. ---
 const TAB_TO_PAGE = {
   club: "clubSection", ligue: "standingsSection", coupe: "coupeSection",
   calendrier: "calendrierSection", amicaux: "placeholderSection", economie: "economieSection",
   salle: "salleSection", staff: "staffSection", humeur: "humeurSection", ordres: "prepSection",
-  effectif: "effectifSection", statshebdo: "placeholderSection", entrainement: "trainingSection",
-  draft: "placeholderSection",
+  effectif: "effectifSection", statshebdo: "statsHebdoSection", entrainement: "trainingSection",
 };
 let allTabsOk = true;
 Object.entries(TAB_TO_PAGE).forEach(([tab, expectedPage]) => {
@@ -56,7 +55,7 @@ Object.entries(TAB_TO_PAGE).forEach(([tab, expectedPage]) => {
   console.log(`${ok ? "✅" : "❌"} Onglet "${tab}" → page "${shown}" (attendu "${expectedPage}").`);
 });
 if (!allTabsOk) throw new Error("❌ Au moins un onglet n'affiche pas la bonne page.");
-console.log("\n✅ Les 14 onglets affichent chacun leur propre page.");
+console.log("\n✅ Les 13 onglets affichent chacun leur propre page.");
 
 // --- Onglet Effectif : table des caractéristiques (lecture seule), PAS la
 // feuille de match / les tactiques (qui vivent maintenant dans "Ordres"). ---
@@ -114,22 +113,38 @@ if (saved.team.ticketPrices.loge !== 90) throw new Error("❌ Le prix des loges 
 if (saved.team.ticketPrices.gradins === 90) throw new Error("❌ Changer le prix des loges ne devrait pas affecter le prix des gradins (catégories indépendantes).");
 console.log("✅ Chaque catégorie de places a un prix indépendant, et c'est bien persisté.");
 
-// --- Agrandissement de la salle : toujours fonctionnel avec les catégories. ---
+// --- Agrandissement de la salle : toujours fonctionnel avec les catégories
+// (retour utilisateur, 2026-09 : "on voit le cout de l'évolution et on
+// valide si ok", puis "je ne veux voir que l'état actuel [...] une petite
+// flèche sur la brique pour upgrader" — la carte n'affiche plus que l'état
+// ACTUEL de la salle, seule sa flèche ⬆ (.facility-upgrade-arrow) ouvre la
+// confirmation, voir showUpgradeConfirm ; l'achat ne se fait qu'après le
+// clic sur "Valider"). ---
 const levelBefore = saved.team.arenaLevel;
-const upgradeCard = doc.querySelector("#arenaCurrentPanel .staff-hire-card");
-upgradeCard.click();
+const upgradeArrow = doc.querySelector("#arenaCurrentPanel .facility-upgrade-arrow");
+if (!upgradeArrow) throw new Error("❌ La carte de la salle devrait avoir une flèche d'amélioration (.facility-upgrade-arrow).");
+upgradeArrow.click();
+const arenaConfirmDialog = doc.getElementById("upgradeConfirmOverlay");
+if (!arenaConfirmDialog) throw new Error("❌ Cliquer sur la flèche d'agrandissement de la salle devrait ouvrir une confirmation avant l'achat.");
+doc.getElementById("upgradeConfirmValidate").click();
 await flush(dom);
 saved = readRawSave(savePath);
 console.log("\nNiveau de salle :", levelBefore, "→", saved.team.arenaLevel);
 if (saved.team.arenaLevel !== levelBefore + 1) throw new Error("❌ L'agrandissement de la salle ne s'est pas comporté comme attendu.");
-console.log("✅ L'agrandissement de la salle fonctionne toujours avec le système de catégories.");
+console.log("✅ L'agrandissement de la salle passe par une confirmation puis fonctionne toujours avec le système de catégories.");
 
 // --- Boutique des supporters : achat UNIQUE, puis revenu hebdomadaire fixe
-// payé pendant l'entraînement (indépendant de la fréquentation des matchs). ---
-const shopCardBefore = doc.querySelector("#fanShopPanel .staff-hire-card");
+// payé pendant l'entraînement (indépendant de la fréquentation des matchs).
+// Même confirmation avant achat que l'agrandissement de la salle ci-dessus,
+// déclenchée par la flèche de la carte (pas la carte entière). ---
+const shopCardBefore = doc.querySelector("#otherFacilitiesPanel [data-fan-shop-card]");
 if (!shopCardBefore) throw new Error("❌ Aucune carte d'achat de boutique des supporters trouvée.");
 const budgetBeforeShop = saved.team.budget;
-shopCardBefore.click();
+const shopArrow = shopCardBefore.querySelector(".facility-upgrade-arrow");
+if (!shopArrow) throw new Error("❌ La carte de la boutique des supporters devrait avoir une flèche d'amélioration.");
+shopArrow.click();
+if (!doc.getElementById("upgradeConfirmOverlay")) throw new Error("❌ Cliquer sur la flèche de la boutique des supporters devrait ouvrir une confirmation avant l'achat.");
+doc.getElementById("upgradeConfirmValidate").click();
 await flush(dom);
 saved = readRawSave(savePath);
 console.log("\nNiveau de boutique après achat :", saved.team.fanShopLevel, "| budget avant :", budgetBeforeShop, "| après :", saved.team.budget);

@@ -402,9 +402,9 @@ console.log("✅ L'onglet Marché ne duplique plus le tableau de mise en vente (
 
 // La liste des enchères en cours doit maintenant afficher cette annonce
 // comme "Votre annonce" (pas de bouton d'enchère sur son propre joueur).
-const myRow = [...doc.querySelectorAll("#marketListings tbody tr")].find(tr => tr.textContent.includes("Votre annonce"));
-console.log("Ligne 'Votre annonce' visible dans les enchères en cours :", !!myRow);
-if (!myRow) throw new Error("❌ L'annonce du club du joueur devrait apparaître dans 'Enchères en cours' avec la mention 'Votre annonce'.");
+const myCard = [...doc.querySelectorAll("#marketListings .market-card")].find(c => c.textContent.includes("Votre annonce"));
+console.log("Carte 'Votre annonce' visible dans les enchères en cours :", !!myCard);
+if (!myCard) throw new Error("❌ L'annonce du club du joueur devrait apparaître dans 'Enchères en cours' avec la mention 'Votre annonce'.");
 console.log("✅ Sa propre annonce est visible dans les enchères en cours, sans bouton pour enchérir dessus.");
 
 // --- Tentative d'enchère invalide (trop basse) sur une annonce injectée
@@ -430,12 +430,36 @@ clickTab2("marche");
 // (myListing, club du joueur) ET celle injectée pour un AUTRE club
 // (listing 999001, équipe 3) — les deux doivent apparaître ensemble dans
 // "Enchères en cours". ---
-const marketRows = [...doc2.querySelectorAll("#marketListings tbody tr")];
-console.log(`\nOnglet Marché — lignes visibles : ${marketRows.length} (attendu au moins 2 : la vôtre + celle d'un adversaire)`);
-if (marketRows.length < 2) throw new Error("❌ Le Marché devrait afficher au moins 2 annonces ouvertes (la vôtre et celle d'un adversaire), pas seulement vos joueurs.");
-if (!marketRows.some(tr => tr.textContent.includes("Votre annonce"))) throw new Error("❌ Votre propre annonce devrait toujours apparaître dans le Marché.");
-if (!marketRows.some(tr => tr.querySelector('[data-bid-listing="999001"]'))) throw new Error("❌ L'annonce d'un AUTRE club devrait apparaître dans le Marché, pas seulement les vôtres.");
+const marketCards = [...doc2.querySelectorAll("#marketListings .market-card")];
+console.log(`\nOnglet Marché — cartes visibles : ${marketCards.length} (attendu au moins 2 : la vôtre + celle d'un adversaire)`);
+if (marketCards.length < 2) throw new Error("❌ Le Marché devrait afficher au moins 2 annonces ouvertes (la vôtre et celle d'un adversaire), pas seulement vos joueurs.");
+if (!marketCards.some(c => c.textContent.includes("Votre annonce"))) throw new Error("❌ Votre propre annonce devrait toujours apparaître dans le Marché.");
+if (!marketCards.some(c => c.querySelector('[data-bid-listing="999001"]'))) throw new Error("❌ L'annonce d'un AUTRE club devrait apparaître dans le Marché, pas seulement les vôtres.");
 console.log("✅ Le Marché affiche bien toutes les enchères en cours de la ligue — les vôtres ET celles des adversaires, pas 'mes joueurs uniquement'.");
+
+// --- Retour utilisateur (2026-09, 2 passes) : "il faut pouvoir voir le
+// bouton enchérir sans scroller vers la droite [...] le bouton enchérir à
+// droite à côté du prix était mieux [...] mais il ne faut pas qu'on ait
+// besoin de scroller sur le coté. il faut que tout s'affiche d'une bloc".
+// Le Marché n'est plus un tableau large (donc plus de défilement horizontal
+// possible du tout, voir le commentaire CSS de .market-cards), et le bouton
+// Enchérir est de nouveau à côté du prix/enchère actuelle (.market-card-bid),
+// pas juste après le nom du joueur. ---
+if (doc2.querySelector("#marketListings table")) {
+  throw new Error("❌ Le Marché ne devrait plus utiliser de tableau (source du défilement horizontal), une carte par annonce désormais.");
+}
+if (doc2.querySelector("#marketListings .table-scroll")) {
+  throw new Error("❌ Le Marché ne devrait plus avoir de conteneur à défilement horizontal (.table-scroll).");
+}
+const cardWithBidBtn = marketCards.find(c => c.querySelector('[data-bid-listing="999001"]'));
+const bidZone = cardWithBidBtn.querySelector(".market-card-bid");
+if (!bidZone || !bidZone.querySelector('[data-bid-listing="999001"]')) {
+  throw new Error("❌ Le bouton 'Enchérir' devrait se trouver à côté du prix/enchère actuelle (.market-card-bid), pas ailleurs sur la carte.");
+}
+if (!bidZone.querySelector(".market-card-price")) {
+  throw new Error("❌ La même zone (.market-card-bid) devrait regrouper le prix/enchère actuelle ET le bouton Enchérir, côte à côte.");
+}
+console.log("✅ Le Marché n'utilise plus de tableau (aucun défilement horizontal possible), et le bouton Enchérir est bien à côté du prix.");
 
 if (!doc2.querySelector(`[data-bid-listing="999001"]`)) throw new Error("❌ Un bouton 'Enchérir' devrait exister pour l'annonce injectée (pas la vôtre).");
 doc2.getElementById("bid_999001").value = "1"; // délibérément trop bas

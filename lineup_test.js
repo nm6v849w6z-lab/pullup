@@ -97,8 +97,12 @@ const appearsAsBackupSomewhere = tableRows().some(r =>
 console.log(`\n${!appearsAsBackupSomewhere ? "✅" : "❌"} Le titulaire Pivot (${pivotStarterName}) n'apparaît dans aucune liste de remplaçants.`);
 if (appearsAsBackupSomewhere) throw new Error("❌ Un titulaire ne devrait jamais apparaître comme option de remplaçant.");
 
-const reservesText = doc.querySelector(".lineup-reserves").textContent;
-console.log("Ligne réservistes :", reservesText);
+// Retour utilisateur (2026-09) : le message générique "Tous les joueurs sont
+// soit titulaires, soit remplaçants sur au moins un poste" a été retiré —
+// la ligne "Réservistes" n'existe plus du tout dans le DOM quand il n'y a
+// aucun réserviste (voir buildLineupPanel), seulement quand reserves.length > 0.
+const reservesLineEl = doc.querySelector(".lineup-reserves");
+console.log("Ligne réservistes présente :", !!reservesLineEl, reservesLineEl ? `(" ${reservesLineEl.textContent}")` : "(aucun réserviste, ligne absente)");
 
 // --- Persistance : sauvegarde puis rechargement dans une nouvelle session
 // (même serveur, qui relit son fichier sur disque). ---

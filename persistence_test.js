@@ -34,7 +34,11 @@ let win1 = dom1.window;
 
 console.log("Avant tout match :", doc1.getElementById("weekIndicator").textContent);
 
-doc1.getElementById("goToTrainingBtn").click();
+// Le bouton "🏋️ Semaine d'entraînement" affiché sous le direct (fin de
+// match) a été retiré (retour utilisateur, 2026-09 : "enleve le bouton
+// semaine d'entrainement sous le live") ; l'onglet latéral "Entraînement"
+// reste la façon d'accéder à cet écran.
+win1.eval("TAB_HANDLERS.entrainement();");
 
 // Recrute un entraîneur niveau 4 (staff) avant d'entraîner : aucun effet sur
 // les matchs, mais doit accélérer la progression et coûter un salaire
@@ -149,7 +153,7 @@ const expectedJournee = `Journée ${ROUNDS + 1}/18`;
 const journeeOk = doc2.getElementById("matchupContext").textContent.startsWith(expectedJournee);
 console.log(`${journeeOk ? "✅" : "❌"} Calendrier persisté : la journée ${ROUNDS + 1} est bien proposée au rechargement.`);
 
-doc2.getElementById("goToTrainingBtn").click();
+win2.eval("TAB_HANDLERS.entrainement();");
 const skillOk = doc2.getElementById("trainingSkillSelect").value === "inside";
 const posOk = doc2.getElementById("trainingPositionsSelect").value.split("|").length === 2;
 console.log(`${skillOk ? "✅" : "❌"} Compétence entraînée persistée : "${doc2.getElementById("trainingSkillSelect").value}"`);
