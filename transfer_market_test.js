@@ -400,12 +400,17 @@ await flush(dom);
 if (doc.getElementById("marketListMyPlayers")) throw new Error("❌ L'onglet Marché ne devrait plus contenir de tableau 'Mon effectif' séparé — la mise aux enchères se fait depuis l'Effectif.");
 console.log("✅ L'onglet Marché ne duplique plus le tableau de mise en vente (déplacé vers l'Effectif).");
 
-// La liste des enchères en cours doit maintenant afficher cette annonce
-// comme "Votre annonce" (pas de bouton d'enchère sur son propre joueur).
-const myCard = [...doc.querySelectorAll("#marketListings .market-card")].find(c => c.textContent.includes("Votre annonce"));
-console.log("Carte 'Votre annonce' visible dans les enchères en cours :", !!myCard);
-if (!myCard) throw new Error("❌ L'annonce du club du joueur devrait apparaître dans 'Enchères en cours' avec la mention 'Votre annonce'.");
-console.log("✅ Sa propre annonce est visible dans les enchères en cours, sans bouton pour enchérir dessus.");
+// La liste des enchères en cours doit afficher cette annonce (repérée via
+// "Vendeur : Vous" dans les méta-infos), sans bouton d'enchère sur son
+// propre joueur. Retour utilisateur (2026-09) : "ne mets pas Votre annonce
+// quand c'est mon joueur, c'est moche". Ce texte a été retiré (déjà
+// indiqué par "Vendeur : Vous"), donc la carte ne doit PLUS le contenir.
+const myCard = [...doc.querySelectorAll("#marketListings .market-card")].find(c => c.textContent.includes("Vendeur : Vous"));
+console.log("Carte de ma propre annonce visible dans les enchères en cours :", !!myCard);
+if (!myCard) throw new Error("❌ L'annonce du club du joueur devrait apparaître dans 'Enchères en cours' (Vendeur : Vous).");
+if (myCard.textContent.includes("Votre annonce")) throw new Error("❌ La carte ne devrait plus afficher 'Votre annonce', déjà indiqué par 'Vendeur : Vous' (retour utilisateur : \"c'est moche\").");
+if (myCard.querySelector("[data-bid-listing]")) throw new Error("❌ Aucun bouton d'enchère ne devrait apparaître sur sa propre annonce.");
+console.log("✅ Sa propre annonce est visible dans les enchères en cours, sans le texte redondant 'Votre annonce' et sans bouton pour enchérir dessus.");
 
 // --- Tentative d'enchère invalide (trop basse) sur une annonce injectée
 // directement dans la sauvegarde, pour un scénario contrôlé. ---
@@ -433,7 +438,7 @@ clickTab2("marche");
 const marketCards = [...doc2.querySelectorAll("#marketListings .market-card")];
 console.log(`\nOnglet Marché — cartes visibles : ${marketCards.length} (attendu au moins 2 : la vôtre + celle d'un adversaire)`);
 if (marketCards.length < 2) throw new Error("❌ Le Marché devrait afficher au moins 2 annonces ouvertes (la vôtre et celle d'un adversaire), pas seulement vos joueurs.");
-if (!marketCards.some(c => c.textContent.includes("Votre annonce"))) throw new Error("❌ Votre propre annonce devrait toujours apparaître dans le Marché.");
+if (!marketCards.some(c => c.textContent.includes("Vendeur : Vous"))) throw new Error("❌ Votre propre annonce devrait toujours apparaître dans le Marché.");
 if (!marketCards.some(c => c.querySelector('[data-bid-listing="999001"]'))) throw new Error("❌ L'annonce d'un AUTRE club devrait apparaître dans le Marché, pas seulement les vôtres.");
 console.log("✅ Le Marché affiche bien toutes les enchères en cours de la ligue — les vôtres ET celles des adversaires, pas 'mes joueurs uniquement'.");
 
@@ -481,6 +486,15 @@ let saved2 = readRawSave(savePath);
 const injectedListing = saved2.league.transferListings.find(l => l.id === 999001);
 if (injectedListing.currentBid !== 50000 || injectedListing.currentBidderIdx !== 0) throw new Error("❌ L'enchère valide devrait être enregistrée avec le bon montant et le bon enchérisseur.");
 console.log("✅ Une enchère valide est bien enregistrée et persistée.");
+
+// Retour utilisateur (2026-09) : "pas besoin de mettre vous et vous êtes en
+// tête, ça fait redites". Maintenant qu'on est en tête sur cette annonce,
+// la carte doit afficher "Vous êtes en tête" (dans .market-card-action) SANS
+// dupliquer l'info via un "(vous)" dans le prix (.market-card-price).
+const leadingCard = [...doc2.querySelectorAll("#marketListings .market-card")].find(c => c.getAttribute("data-listing-id") === "999001");
+if (!leadingCard || !leadingCard.textContent.includes("Vous êtes en tête")) throw new Error("❌ La carte de l'annonce où l'on est en tête devrait afficher 'Vous êtes en tête'.");
+if (leadingCard.querySelector(".market-card-price").textContent.includes("(vous)")) throw new Error("❌ Le prix ne devrait plus afficher '(vous)' en plus de 'Vous êtes en tête' juste en dessous, c'est redondant.");
+console.log("✅ 'Vous êtes en tête' s'affiche sans le suffixe redondant '(vous)' sur le prix.");
 
 // --- Résolution différée dans le temps : on avance artificiellement
 // l'échéance dans le passé (comme si 3 jours réels s'étaient écoulés),

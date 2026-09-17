@@ -401,7 +401,13 @@
      les mêmes jetons de couleur/rayon que le reste de l'app (--panel,
      --line-soft, --amber, --ok...) plutôt qu'un nouveau langage visuel. ---- */
   .cup-bracket{display:flex; gap:16px; overflow-x:auto; padding-bottom:10px; margin-bottom:12px;}
-  .cup-round{display:flex; flex-direction:column; gap:14px; min-width:190px; flex:0 0 auto;}
+  /* justify-content:space-around, PAS gap fixe : avec l'ordre calculé par
+     cupDisplayOrder (voir plus haut, groupé par paire), cette distribution
+     égale suffit à elle seule à centrer chaque brique d'un tour entre les
+     deux qui l'alimentent au tour précédent (colonnes de même hauteur,
+     étirées par le flex row parent .cup-bracket), aucun calcul de position
+     en pixels nécessaire. */
+  .cup-round{display:flex; flex-direction:column; justify-content:space-around; min-width:190px; flex:0 0 auto;}
   .cup-round-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); text-align:center;}
   .cup-match{background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:8px 10px; font-size:12.5px;}
   .cup-match.cup-match-tbd{border-style:dashed; opacity:.65;}
@@ -634,9 +640,19 @@
      carte visuelle passe avant les achats. */
   .arena-row{display:grid; grid-template-columns:minmax(320px, 1.6fr) minmax(220px, 1fr); gap:16px; align-items:start;}
   @media(max-width:900px){ .arena-row{grid-template-columns:1fr;} }
-  .arena-purchases{display:flex; flex-direction:column; gap:4px;}
+  .arena-purchases{display:flex; flex-direction:column; gap:8px;}
   .arena-purchases .staff-hire-grid--single{grid-template-columns:1fr;}
   .arena-purchases .staff-hire-card{text-align:left;}
+  /* Retour utilisateur (2026-09) : "joue sur la taille des 6 briques en haut
+     à droite pour que ça fasse la meme épaisseur que le gros bloc de gauche
+     avec l'image du stade". .arena-row garde align-items:start (chaque
+     colonne garde sa propre hauteur), donc les 6 briques de droite (la carte
+     salle + les 5 cartes de .facilities-grid ci-dessous) sont agrandies
+     directement plutôt que d'ajouter du vide entre elles, pour que la
+     colonne entière se rapproche de la hauteur de l'image de la salle
+     (max-height 480px, voir .arena-visual-wrap img). */
+  .arena-purchases .facility-card{padding:14px 14px; min-height:56px;}
+  .arena-purchases .facilities-grid{gap:8px;}
 
   /* ---- Stats de la ligue / MVP de la dernière journée (onglet Ligue) ---- */
   .league-stats-panel{margin-top:18px; padding:14px 16px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);}
@@ -772,6 +788,15 @@
   .upgrade-confirm-cancel-btn{background:transparent; color:var(--ink-dim); border:1px solid var(--line);}
   .upgrade-confirm-validate-btn{background:var(--ok); color:#fff; border:1px solid var(--ok);}
   .upgrade-confirm-validate-btn:disabled{opacity:.5; cursor:not-allowed;}
+  /* Feuille de stats d'un match passé (onglet Calendrier, voir
+     showMatchBoxscore) : même overlay que .upgrade-confirm-overlay, mais une
+     boîte plus large pour accueillir la table .boxscore (déjà stylée plus
+     haut pour le match en direct) et défilante en cas de très petit écran. */
+  .match-boxscore-box{max-width:640px; max-height:85vh; overflow-y:auto;}
+  .calendar-score-btn{
+    background:transparent; border:none; padding:0; margin:0; font:inherit; color:inherit;
+    cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px;
+  }
   .facility-max-badge{
     display:inline-block; padding:3px 10px; border-radius:999px;
     border:1px solid var(--amber); color:var(--amber); font-size:11px; font-weight:800;
@@ -837,6 +862,14 @@
   .gain-line-total{padding:9px 14px; font-size:13.5px; border-top:2px solid var(--line); margin-top:2px;}
   .gain-line-total.gain-up{color:var(--ok);}
   .gain-line-total.gain-down{color:var(--danger);}
+  /* Retour utilisateur (2026-09) : "quand un joueur est en vente, s'il y a
+     enchère, il faut qu'apparaisse le montant dans une ligne transaction".
+     Enchère EN COURS sur un de mes joueurs (pas encore encaissée, l'enchère
+     peut encore monter ou le joueur peut ne pas partir si personne ne
+     surenchérit d'ici la clôture), couleur neutre (ni gain-up ni gain-down)
+     pour ne pas la confondre avec une transaction réellement réglée. Voir
+     renderEconomieSection. */
+  .gain-line.gain-pending{color:var(--amber);}
   .gain-note{padding:7px 14px; font-size:12px; color:var(--ink-faint); border-bottom:1px solid var(--line-soft);}
   .gain-note:last-child{border-bottom:none;}
 </style>
@@ -9972,23 +10005,106 @@ function finishPlayback() {
   syncTopbarLiveStrip();
 }
 
-function renderBoxScore(side) {
-  document.querySelectorAll(".bs-tab").forEach(b => b.classList.toggle("active", b.dataset.team === side));
-  const rows = side === "A" ? matchResult.boxScoreA : matchResult.boxScoreB;
-  const cols = [
-    ["min", "MIN"], ["pts", "PTS"], ["reb", "REB"], ["ast", "PD"], ["stl", "INT"],
-    ["blk", "CTR"], ["tov", "PDB"], ["pf", "FTS"],
-  ];
+// Factorisé hors de renderBoxScore (match en direct) pour être réutilisé par
+// showMatchBoxscore ci-dessous (feuille de stats d'un match PASSÉ, ouverte
+// depuis l'onglet Calendrier) : même table, mêmes colonnes, peu importe la
+// provenance des lignes (buildBoxScore côté moteur pendant un match en
+// direct, ou reconstituées depuis Player.matchLog pour un match déjà joué).
+const BOXSCORE_COLS = [
+  ["min", "MIN"], ["pts", "PTS"], ["reb", "REB"], ["ast", "PD"], ["stl", "INT"],
+  ["blk", "CTR"], ["tov", "PDB"], ["pf", "FTS"],
+];
+function boxscoreTableHtml(rows) {
   let html = "<table class='boxscore'><thead><tr><th>Joueur</th><th>Poste</th>";
-  cols.forEach(c => html += `<th>${c[1]}</th>`);
+  BOXSCORE_COLS.forEach(c => html += `<th>${c[1]}</th>`);
   html += "<th>2PTS</th><th>3PTS</th><th>LF</th></tr></thead><tbody>";
   rows.forEach(p => {
     html += `<tr><td>${escapeHtml(p.name)}</td><td>${POS_SHORT[p.position]}</td>`;
-    cols.forEach(c => html += `<td>${p[c[0]]}</td>`);
+    BOXSCORE_COLS.forEach(c => html += `<td>${p[c[0]]}</td>`);
     html += `<td>${p.fgm2}/${p.fga2}</td><td>${p.fgm3}/${p.fga3}</td><td>${p.ftm}/${p.fta}</td></tr>`;
   });
   html += "</tbody></table>";
-  document.getElementById("boxscoreHolder").innerHTML = html;
+  return html;
+}
+
+function renderBoxScore(side) {
+  document.querySelectorAll(".bs-tab").forEach(b => b.classList.toggle("active", b.dataset.team === side));
+  const rows = side === "A" ? matchResult.boxScoreA : matchResult.boxScoreB;
+  document.getElementById("boxscoreHolder").innerHTML = boxscoreTableHtml(rows);
+}
+
+// ---------------------------------------------------------------------
+// Feuille de stats d'un match déjà joué, ouverte depuis l'onglet Calendrier
+// (retour utilisateur, 2026-09 : "quand un match est fini, je dois pouvoir
+// cliquer sur le score pour voir le boxscore"). Voir renderCalendrierSection
+// plus bas pour le score rendu en bouton cliquable. AUCUNE nouvelle donnée
+// persistée : on reconstitue les lignes depuis Player.matchLog (déjà
+// alimenté pour CHAQUE match réellement simulé par recordMatchStatsForTeam,
+// voir engine.js), en filtrant sur {round, competition}. Même mécanisme
+// déjà utilisé par renderLeagueStatsPanel/renderStatsHebdoSection, jamais de
+// nouveau champ de sauvegarde pour ça. Limite connue : un joueur qui a
+// depuis quitté le club (vendu/libéré) n'apparaît plus dans team.players,
+// donc sa ligne manque dans cette reconstitution. matchLog reste attaché à
+// l'objet joueur, pas à l'équipe, mais cette modale ne parcourt que
+// l'effectif ACTUEL de chaque équipe.
+function boxscoreRowsFromMatchLog(team, round, competition) {
+  return team.players
+    .map(p => {
+      const entry = (p.matchLog || []).find(e => e.round === round && e.competition === competition);
+      if (!entry) return null;
+      return {
+        name: p.name, position: p.position, min: entry.min,
+        pts: entry.pts, reb: entry.reb, ast: entry.ast, stl: entry.stl, blk: entry.blk, tov: entry.tov, pf: entry.pf,
+        fgm2: entry.fgm2, fga2: entry.fga2, fgm3: entry.fgm3, fga3: entry.fga3, ftm: entry.ftm, fta: entry.fta,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.min - a.min);
+}
+
+let matchBoxscoreState = null; // { rowsHome, rowsAway, nameHome, nameAway }, pour le bascule d'onglet.
+
+function closeMatchBoxscore() {
+  const existing = document.getElementById("matchBoxscoreOverlay");
+  if (existing) existing.remove();
+  matchBoxscoreState = null;
+}
+
+function renderMatchBoxscoreTab(side) {
+  if (!matchBoxscoreState) return;
+  document.querySelectorAll("#matchBoxscoreOverlay .bs-tab").forEach(b => b.classList.toggle("active", b.dataset.team === side));
+  const rows = side === "A" ? matchBoxscoreState.rowsHome : matchBoxscoreState.rowsAway;
+  document.getElementById("matchBoxscoreHolder").innerHTML = rows.length
+    ? boxscoreTableHtml(rows)
+    : "<p class='training-empty'>Aucune statistique disponible pour cette équipe sur ce match (joueurs partis depuis).</p>";
+}
+
+function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
+  closeMatchBoxscore();
+  const homeTeam = league.teams[homeIdx];
+  const awayTeam = league.teams[awayIdx];
+  matchBoxscoreState = {
+    rowsHome: boxscoreRowsFromMatchLog(homeTeam, round, competition),
+    rowsAway: boxscoreRowsFromMatchLog(awayTeam, round, competition),
+    nameHome: homeTeam.name, nameAway: awayTeam.name,
+  };
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay match-boxscore-overlay";
+  overlay.id = "matchBoxscoreOverlay";
+  overlay.innerHTML = `<div class="upgrade-confirm-box match-boxscore-box">` +
+    `<h3>Feuille de statistiques</h3>` +
+    `<div class="boxscore-toggle">` +
+    `<button type="button" class="bs-tab active" data-team="A">${escapeHtml(homeTeam.name)}</button>` +
+    `<button type="button" class="bs-tab" data-team="B">${escapeHtml(awayTeam.name)}</button>` +
+    `</div>` +
+    `<div id="matchBoxscoreHolder"></div>` +
+    `<button type="button" class="upgrade-confirm-cancel-btn" id="matchBoxscoreCloseBtn" style="margin-top:14px; width:100%;">Fermer</button>` +
+    `</div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeMatchBoxscore(); });
+  document.getElementById("matchBoxscoreCloseBtn").addEventListener("click", closeMatchBoxscore);
+  overlay.querySelectorAll(".bs-tab").forEach(b => b.addEventListener("click", () => renderMatchBoxscoreTab(b.dataset.team)));
+  renderMatchBoxscoreTab("A");
 }
 
 // ---------------------------------------------------------------------
@@ -10928,13 +11044,20 @@ function renderMarketListings() {
     if (!player) return; // sécurité (ne devrait pas arriver)
     const seller = league.teams[l.sellerIdx];
     const isMine = l.sellerIdx === myTeamIndex;
+    // Retour utilisateur (2026-09) : "pas besoin de mettre vous et vous êtes
+    // en tête, ça fait redites". Le statut "en tête" vit désormais SEUL
+    // dans actionCell juste en dessous, currentLabel n'affiche plus que le
+    // montant brut (plus de suffixe "(vous)" ici).
     const currentLabel = l.currentBid
-      ? `${formatMoney(l.currentBid)}${l.currentBidderIdx === myTeamIndex ? " (vous)" : ""}`
+      ? formatMoney(l.currentBid)
       : `Aucune (départ ${formatMoney(l.startPrice)})`;
     const minBid = minNextBidFor(l);
     let actionCell;
     if (isMine) {
-      actionCell = `<span class="sub">Votre annonce</span>`;
+      // Retour utilisateur (2026-09) : "ne mets pas Votre annonce quand
+      // c'est mon joueur, c'est moche". Déjà indiqué par "Vendeur : Vous"
+      // dans market-card-meta juste au-dessus, inutile de le répéter ici.
+      actionCell = "";
     } else if (l.currentBidderIdx === myTeamIndex) {
       actionCell = `<span class="sub">Vous êtes en tête</span>`;
     } else {
@@ -11024,11 +11147,21 @@ function renderCalendrierSection() {
     const result = league.results.find(res => res.round === r && (res.home === myTeamIndex || res.away === myTeamIndex));
     let scoreText = "–";
     let cls = "";
+    let boxscore = null;
     if (result) {
       const myScore = result.home === myTeamIndex ? result.scoreHome : result.scoreAway;
       const oppScore = result.home === myTeamIndex ? result.scoreAway : result.scoreHome;
       scoreText = `${myScore} - ${oppScore}`;
       cls = myScore > oppScore ? "result-win" : myScore < oppScore ? "result-loss" : "";
+      // Retour utilisateur (2026-09) : "quand un match est fini, je dois
+      // pouvoir cliquer sur le score pour voir le boxscore". league.results
+      // ne distingue pas un forfait d'un match réellement joué (voir
+      // League.recordResult côté moteur), donc on tente toujours d'afficher
+      // le boxscore ; showMatchBoxscore retombe proprement sur "aucune
+      // statistique disponible" pour un forfait (qui n'a jamais appelé
+      // MatchEngine.simulate(), donc jamais alimenté Player.matchLog, voir
+      // recordMatchStatsForTeam côté moteur).
+      boxscore = { round: r, competition: "championship", homeIdx: result.home, awayIdx: result.away };
     }
     const isNext = r === league.round && !result;
     const isUpcoming = !result; // toute journée pas encore jouée, pas seulement le prochain match
@@ -11041,7 +11174,7 @@ function renderCalendrierSection() {
       : isUpcoming ? `<button class="calendar-order-btn" data-tab="ordres" data-round="${r}">📋 Ordres</button>` : "";
     rows.push({
       competition: "champ", label: `Journée ${r + 1}`, opponent: oppName,
-      location: isHome ? "Domicile" : "Extérieur", scoreText,
+      location: isHome ? "Domicile" : "Extérieur", scoreText, boxscore,
       cls: [isNext ? "me" : "", cls].filter(Boolean).join(" "),
       actionCell, scheduledAt: scheduledTimeForChampionshipRound(r), fallbackOrder: r * 2,
     });
@@ -11070,17 +11203,19 @@ function renderCalendrierSection() {
       const oppName = league.teams[isHomeCup ? m.away : m.home].name;
       let scoreText = "–";
       let cls = "";
+      let boxscore = null;
       if (m.resolved) {
         const myScore = isHomeCup ? m.scoreHome : m.scoreAway;
         const oppScore = isHomeCup ? m.scoreAway : m.scoreHome;
         scoreText = `${myScore} - ${oppScore}`;
         cls = myScore > oppScore ? "result-win" : myScore < oppScore ? "result-loss" : "";
+        boxscore = { round: round.index, competition: "cup", homeIdx: m.home, awayIdx: m.away };
       }
       const isCupLive = !!(league.liveMatch && league.liveMatch.competition === "cup" && league.liveMatch.round === round.index);
       const actionCell = isCupLive ? `<button class="calendar-order-btn calendar-live-btn" data-tab="live">🔴 Voir le direct</button>` : "";
       rows.push({
         competition: "cup", label, opponent: oppName, location: isHomeCup ? "Domicile" : "Extérieur",
-        scoreText, cls, actionCell, scheduledAt, fallbackOrder,
+        scoreText, boxscore, cls, actionCell, scheduledAt, fallbackOrder,
       });
     });
   }
@@ -11102,8 +11237,15 @@ function renderCalendrierSection() {
       ? `${escapeHtml(formatDateTimeFr(row.scheduledAt))}<div class="sub">${escapeHtml(row.label)}</div>`
       : `–<div class="sub">${escapeHtml(row.label)}</div>`;
     const compLabel = row.competition === "cup" ? "🏆 Coupe" : "🏀 Championnat";
+    // Retour utilisateur (2026-09) : "quand un match est fini, je dois
+    // pouvoir cliquer sur le score pour voir le boxscore". Voir
+    // showMatchBoxscore/le gestionnaire de clic délégué juste après cette
+    // fonction.
+    const scoreCell = row.boxscore
+      ? `<button type="button" class="calendar-score-btn" data-boxscore-round="${row.boxscore.round}" data-boxscore-competition="${row.boxscore.competition}" data-boxscore-home="${row.boxscore.homeIdx}" data-boxscore-away="${row.boxscore.awayIdx}">${row.scoreText}</button>`
+      : row.scoreText;
     html += `<tr class="${row.cls}"><td>${dateCell}</td><td>${compLabel}</td>` +
-      `<td>${escapeHtml(row.opponent)}</td><td>${escapeHtml(row.location)}</td><td>${row.scoreText}</td><td>${row.actionCell}</td></tr>`;
+      `<td>${escapeHtml(row.opponent)}</td><td>${escapeHtml(row.location)}</td><td>${scoreCell}</td><td>${row.actionCell}</td></tr>`;
   });
   html += "</tbody></table>";
 
@@ -11113,6 +11255,15 @@ function renderCalendrierSection() {
 
   holder.innerHTML = html;
 }
+
+document.getElementById("calendrierContent").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-boxscore-round]");
+  if (!btn) return;
+  showMatchBoxscore(
+    Number(btn.dataset.boxscoreRound), btn.dataset.boxscoreCompetition,
+    Number(btn.dataset.boxscoreHome), Number(btn.dataset.boxscoreAway),
+  );
+});
 
 // ---------------------------------------------------------------------
 // Coupe (retour utilisateur, 2026-09 — "une vraie compétition de Coupe", en
@@ -11156,6 +11307,50 @@ function cupMatchCardHtml(m) {
     `</div>`;
 }
 
+// Retour utilisateur (2026-09) : "réorganise les briques du tableau en
+// fonction des tours pour que ce soit cohérent et plus beau visuellement.
+// les briques quart de finale devraient être au milieu de briques 8e. il
+// faut reorganiser les briques de gauche pour que vindicta et venomous
+// soient en haut et match avec le quart vindicta vs venomous". L'ordre
+// naturel de `round.matches` (côté moteur) n'a aucune raison de refléter
+// visuellement quel duel du tour suivant vient de quels duels du tour
+// précédent (les appariements de chaque tour sont tirés au sort à
+// l'avancement de la Coupe, voir buildNextCupRound/"no player choice
+// involved in matchups" côté moteur) : on part donc du DERNIER tour déjà
+// engendré (le plus figé) comme référence, et on remonte les tours
+// précédents en réordonnant chacun pour que ses duels apparaissent groupés
+// par paire dans le MÊME ordre que le tour suivant qu'ils alimentent (le
+// vainqueur de chaque duel précédent est forcément connu : un tour n'est
+// engendré qu'une fois le précédent ENTIÈREMENT résolu, voir
+// League.advanceCup). Le rendu CSS (.cup-round { justify-content:
+// space-around }) fait le reste : avec cet ordre, chaque brique d'un tour
+// se retrouve visuellement centrée entre les deux briques du tour précédent
+// qui l'alimentent, sans calcul de position en JS.
+function cupDisplayOrder(cup) {
+  const rounds = cup.rounds || [];
+  const order = new Array(CUP_STAGE_NAMES.length).fill(null);
+  if (!rounds.length) return order;
+  const lastIdx = rounds.length - 1;
+  order[lastIdx] = rounds[lastIdx].matches.slice();
+  for (let r = lastIdx; r >= 1; r--) {
+    const laterMatches = order[r];
+    const earlierRound = rounds[r - 1];
+    if (!laterMatches || !earlierRound) { order[r - 1] = earlierRound ? earlierRound.matches.slice() : null; continue; }
+    const earlierMatches = earlierRound.matches.slice();
+    const used = new Set();
+    const findSource = teamIdx => teamIdx == null ? null : earlierMatches.find(em => !used.has(em) && em.winner === teamIdx);
+    const newOrder = [];
+    laterMatches.forEach(lm => {
+      [findSource(lm.home), findSource(lm.away)].forEach(src => {
+        if (src) { newOrder.push(src); used.add(src); }
+      });
+    });
+    earlierMatches.forEach(em => { if (!used.has(em)) newOrder.push(em); }); // sécurité : ne devrait rien laisser derrière
+    order[r - 1] = newOrder;
+  }
+  return order;
+}
+
 function renderCoupeSection() {
   const holder = document.getElementById("coupeContent");
   if (!league.cup) {
@@ -11168,13 +11363,14 @@ function renderCoupeSection() {
     const isMe = cup.champion === myTeamIndex;
     html += `<div class="cup-champion-banner">🏆 Champion de la Coupe : ${escapeHtml(league.teams[cup.champion].name)}${isMe ? " (c'est vous !)" : ""}</div>`;
   }
+  const displayOrder = cupDisplayOrder(cup);
   html += "<div class='cup-bracket'>";
   CUP_STAGE_NAMES.forEach((stageName, stageIdx) => {
-    const round = cup.rounds[stageIdx] || null;
+    const matches = displayOrder[stageIdx];
     html += `<div class="cup-round"><div class="cup-round-title">${escapeHtml(CUP_STAGE_LABELS[stageName])}</div>`;
     const matchCount = CUP_STAGE_MATCH_COUNT[stageName];
     for (let i = 0; i < matchCount; i++) {
-      html += cupMatchCardHtml(round ? round.matches[i] : null);
+      html += cupMatchCardHtml(matches ? matches[i] : null);
     }
     html += "</div>";
   });
@@ -11257,11 +11453,25 @@ function renderEconomieSection() {
 
   const list = document.getElementById("economieTransactions");
   const transactions = teamA.transactions || [];
-  if (!transactions.length) {
+  // Retour utilisateur (2026-09) : "quand un joueur est en vente, s'il y a
+  // enchère, il faut qu'apparaisse le montant dans une ligne transaction".
+  // Mes propres annonces (transferListings, marché des transferts) avec une
+  // enchère en cours, PAS encore réglées (voir League.placeBid/le règlement
+  // à la clôture côté moteur, qui crédite via recordTransaction séparément :
+  // ces lignes-ci disparaîtront et seront remplacées par une vraie ligne
+  // "Vente de ... (enchères)" une fois l'enchère effectivement close).
+  const pendingBids = (league ? league.transferListings : [])
+    .filter(l => l.status === "open" && l.sellerIdx === myTeamIndex && l.currentBid);
+  if (!transactions.length && !pendingBids.length) {
     list.innerHTML = "<p class='training-empty'>Aucune transaction enregistrée pour l'instant. Jouez un match à domicile ou validez une semaine d'entraînement.</p>";
     return;
   }
   let html = "<div class='training-report-list'>";
+  pendingBids.forEach(l => {
+    const player = league.playerById(l.playerId);
+    const name = player ? player.name : "un joueur";
+    html += `<div class="gain-line gain-pending">Enchère en cours sur ${escapeHtml(name)} : ${formatMoney(l.currentBid)} (pas encore réglée)</div>`;
+  });
   transactions.forEach(t => {
     const up = t.amount >= 0;
     html += `<div class="gain-line ${up ? "gain-up" : "gain-down"}">Semaine ${t.week}, ${escapeHtml(t.label)} : ${up ? "+" : ""}${formatMoney(t.amount)}</div>`;
@@ -11362,51 +11572,58 @@ document.getElementById("academiePendingBanner").addEventListener("click", (e) =
 });
 
 // Centre de formation (voir TRAINING_CENTER_LEVELS/Team.trainingCenterLevel/
-// upgradeTrainingCenter/nextTrainingCenterLevel côté moteur) — même
-// structure que la carte d'agrandissement de la Salle (renderSalleSection
-// plus haut), en plus simple (pas de rendu visuel dédié, pas de catégories
-// de prix) : un palier à la fois, coût affiché, effet = multiplicateur de
-// progression automatique de tout l'effectif jeunes (voir
-// Team.growYouthPlayers/trainingCenterGrowthMultiplier).
+// upgradeTrainingCenter/nextTrainingCenterLevel côté moteur). Retour
+// utilisateur (2026-09) : "je ne veux plus qu'une brique en haut avec le
+// niveau actuel de l'académie + une fleche sur le cote [...] il faut alors
+// un pop up qui s'ouvre pour dire le niveau, le prix [...] comme pour les
+// autres infrastructures". Même carte état-actuel + flèche d'amélioration
+// (buildUpgradeArrow/showUpgradeConfirm) que les infrastructures de l'onglet
+// Salle (arène, boutique, CLUB_FACILITIES, et le raccourci Centre de
+// formation qui s'y trouve déjà, voir renderSalleSection), à la place de
+// l'ancienne carte cliquable qui achetait IMMÉDIATEMENT sans confirmation.
 function renderTrainingCenterPanel() {
   const holder = document.getElementById("trainingCenterCurrentPanel");
   holder.innerHTML = "";
   const info = trainingCenterInfo(teamA.trainingCenterLevel);
-
-  const box = document.createElement("div");
-  box.className = "staff-current";
-  const infoDiv = document.createElement("div");
-  infoDiv.className = "staff-current-info";
-  infoDiv.innerHTML = `${escapeHtml(info.name)} · niveau ${info.level}` +
-    `<span class="staff-current-meta">Budget club : ${formatMoney(teamA.budget)}</span>`;
-  box.appendChild(infoDiv);
-  holder.appendChild(box);
-
   const next = teamA.nextTrainingCenterLevel();
+
   const grid = document.createElement("div");
-  grid.className = "staff-hire-grid";
+  grid.className = "facilities-grid";
+  const card = document.createElement("div");
+  card.className = "staff-hire-card facility-card";
+  // Pas de titre "Centre de formation" répété ici : le h2 de la section
+  // juste au-dessus (voir le HTML statique) le dit déjà.
+  const cardBody = document.createElement("div");
+  cardBody.className = "facility-card-body facility-card-center";
+  cardBody.innerHTML = `<div class="price">${escapeHtml(info.name)}</div>` +
+    `<div class="bonus">Niveau ${info.level}</div>`;
+  card.appendChild(cardBody);
+  const actionLine = document.createElement("div");
+  actionLine.className = "facility-card-action";
   if (next) {
-    const affordable = teamA.budget >= next.upgradeCost;
-    const card = document.createElement("div");
-    card.className = "staff-hire-card";
-    card.style.opacity = affordable ? "1" : "0.5";
-    card.innerHTML = `<div class="price">${escapeHtml(next.name)}</div>` +
-      `<div class="staff-current-meta" style="margin-top:6px;">${formatMoney(next.upgradeCost)}</div>`;
-    card.addEventListener("click", () => {
-      if (teamA.upgradeTrainingCenter()) {
-        saveMyTeam();
-        syncTrainingCenterUpgradeToServer();
-        renderTrainingCenterPanel();
-      }
-    });
-    grid.appendChild(card);
-    holder.appendChild(grid);
+    actionLine.appendChild(buildUpgradeArrow({
+      title: `Améliorer le centre de formation : ${next.name}`,
+      icon: "🏫",
+      beforeLabel: info.name,
+      afterLabel: next.name,
+      effectLabel: "Progression des jeunes",
+      effectBefore: `x${info.growthMultiplier}`,
+      effectAfter: `x${next.growthMultiplier}`,
+      cost: next.upgradeCost,
+      onConfirm: () => {
+        if (teamA.upgradeTrainingCenter()) {
+          saveMyTeam();
+          syncTrainingCenterUpgradeToServer();
+          renderTrainingCenterPanel();
+        }
+      },
+    }));
   } else {
-    const p = document.createElement("p");
-    p.className = "staff-none";
-    p.textContent = "Centre de formation déjà au niveau maximum.";
-    holder.appendChild(p);
+    actionLine.innerHTML = `<span class="facility-max-badge">Max</span>`;
   }
+  card.appendChild(actionLine);
+  grid.appendChild(card);
+  holder.appendChild(grid);
 }
 
 // Effectif jeunes déjà signé (voir Team.youthPlayers, plafonné à

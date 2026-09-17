@@ -25,32 +25,41 @@ console.log("Palier du Centre de formation d'une nouvelle carrière :", training
 if (trainingCenterLevel !== 1) throw new Error("❌ Une nouvelle carrière devrait démarrer avec le Centre de formation au palier de base (1), obtenu : " + trainingCenterLevel);
 console.log("✅ Le Centre de formation démarre bien au palier de base par défaut.");
 
-// --- Palier actuel : nom/niveau visibles, multiplicateur numérique masqué ---
+// --- Palier actuel : nom/niveau visibles, multiplicateur numérique masqué.
+// Retour utilisateur (2026-09, suite) : "je ne veux plus qu'une brique en
+// haut avec le niveau actuel de l'académie + une fleche sur le cote [...]
+// comme pour les autres infrastructures". renderTrainingCenterPanel est
+// passé à une seule carte .facility-card + buildUpgradeArrow/
+// showUpgradeConfirm (même système que Salle), à la place de l'ancienne
+// carte cliquable à achat immédiat. ---
 const currentPanelText = doc.getElementById("trainingCenterCurrentPanel").textContent;
 console.log("\nPanneau du palier actuel :", currentPanelText.replace(/\s+/g, " ").trim());
-if (!currentPanelText.includes("Terrain arrière") || !currentPanelText.includes("niveau 1")) {
+if (!currentPanelText.includes("Terrain arrière") || !currentPanelText.includes("Niveau 1")) {
   throw new Error("❌ Le panneau du palier actuel devrait toujours afficher le nom et le niveau du Centre de formation.");
 }
 if (/×\s*\d/.test(currentPanelText) || currentPanelText.includes("progression automatique")) {
-  throw new Error("❌ Le multiplicateur de progression par palier ne devrait plus être affiché sur le palier actuel (masqué sur demande utilisateur), obtenu : " + currentPanelText);
+  throw new Error("❌ Le multiplicateur de progression par palier ne devrait plus être affiché sur la carte au premier coup d'œil (masqué sur demande utilisateur), obtenu : " + currentPanelText);
 }
-console.log("✅ Le palier actuel affiche bien son nom/niveau, sans le multiplicateur de progression.");
+console.log("✅ La carte du palier actuel affiche bien son nom/niveau, sans le multiplicateur de progression visible au premier coup d'œil.");
 
-// --- Prochain palier (carte d'achat) : nom/coût visibles, multiplicateur masqué ---
-const nextCardText = doc.querySelector("#trainingCenterCurrentPanel + .staff-hire-grid, #academieSection .staff-hire-grid")
-  ? doc.querySelector(".staff-hire-grid").textContent
-  : "";
-console.log("\nCarte du prochain palier :", nextCardText.replace(/\s+/g, " ").trim());
-if (!nextCardText.includes("Centre régional")) {
-  throw new Error("❌ La carte du prochain palier devrait afficher son nom ('Centre régional').");
-}
-if (!nextCardText.includes("80")) {
-  throw new Error("❌ La carte du prochain palier devrait toujours afficher son coût.");
-}
-if (/×\s*\d/.test(nextCardText) || nextCardText.includes("Progression")) {
-  throw new Error("❌ Le multiplicateur de progression du prochain palier ne devrait plus être affiché (masqué sur demande utilisateur), obtenu : " + nextCardText);
-}
-console.log("✅ La carte du prochain palier affiche bien son nom/coût, sans le multiplicateur de progression.");
+// --- Prochain palier : uniquement via la flèche d'amélioration (popup de
+// confirmation), même endroit que pour la Salle (arène, boutique,
+// CLUB_FACILITIES), où le détail complet (dont le multiplicateur de
+// progression) n'apparaît QUE dans cette popup ouverte volontairement avant
+// achat, jamais sur la carte elle-même. ---
+const tcArrow = doc.querySelector("#trainingCenterCurrentPanel .facility-upgrade-arrow");
+if (!tcArrow) throw new Error("❌ Une flèche d'amélioration devrait être présente sur la carte du Centre de formation.");
+tcArrow.click();
+const overlay = doc.getElementById("upgradeConfirmOverlay");
+if (!overlay) throw new Error("❌ Cliquer sur la flèche devrait ouvrir la confirmation d'amélioration.");
+const overlayText = overlay.textContent;
+console.log("\nConfirmation d'amélioration :", overlayText.replace(/\s+/g, " ").trim());
+if (!overlayText.includes("Centre régional")) throw new Error("❌ La confirmation devrait afficher le nom du prochain palier ('Centre régional').");
+if (!overlayText.includes("80")) throw new Error("❌ La confirmation devrait afficher le coût du prochain palier.");
+doc.getElementById("upgradeConfirmCancel").click();
+if (doc.getElementById("upgradeConfirmOverlay")) throw new Error("❌ 'Annuler' devrait fermer la confirmation sans rien acheter.");
+if (win.eval("teamA.trainingCenterLevel") !== 1) throw new Error("❌ Annuler ne devrait pas avoir amélioré le Centre de formation.");
+console.log("✅ Le prochain palier (nom, coût, effet) n'apparaît que dans la confirmation ouverte via la flèche, jamais sur la carte elle-même.");
 
 await flush(dom);
 dom.window.close();
