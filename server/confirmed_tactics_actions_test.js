@@ -127,7 +127,7 @@ function freshTeamAndLeague() {
     },
   });
   if (!res.ok) throw new Error(`❌ Un patch "confirmée" valide sur une journée future devrait être accepté : ${res.error}`);
-  const plan = team.plannedTactics[futureRound];
+  const plan = team.getPlanForRound(futureRound);
   console.log("Plan (journée future) après setPlan :", {
     tacticalTier: plan.tacticalTier, screenDefense: plan.screenDefense, watchAssignments: plan.watchAssignments,
   });

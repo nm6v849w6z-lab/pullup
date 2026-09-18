@@ -133,8 +133,8 @@ function freshTeamAndLeague() {
     patch: { offensivePriorities: ["Jeu extérieur", "Jeu en mouvement", "Équilibrée"], defense: "Zone press", rhythm: "Rapide" },
   });
   if (!res.ok) throw new Error(`❌ Un plan valide pour une journée future devrait être accepté : ${res.error}`);
-  if (!team.plannedTactics[futureRound]) throw new Error("❌ Le plan aurait dû être enregistré dans team.plannedTactics.");
-  if (team.plannedTactics[futureRound].defense !== "Zone press") throw new Error("❌ Le champ 'defense' du plan n'a pas été appliqué correctement.");
+  if (!team.hasPlanForRound(futureRound)) throw new Error("❌ Le plan aurait dû être enregistré dans team.plannedTactics.");
+  if (team.getPlanForRound(futureRound).defense !== "Zone press") throw new Error("❌ Le champ 'defense' du plan n'a pas été appliqué correctement.");
   // Les ordres EN DIRECT ne doivent JAMAIS être touchés par un plan (c'est
   // tout l'intérêt de stagePlanForRound plutôt que de muter team directement).
   if (team.defense === "Zone press" && futureRound !== league.round) {
@@ -145,18 +145,18 @@ function freshTeamAndLeague() {
 
   // Patch PARTIEL : la seconde modification ne touche que le champ fourni,
   // fusionne avec le plan déjà en place (voir Team.stagePlanForRound).
-  const rhythmBefore = team.plannedTactics[futureRound].rhythm;
+  const rhythmBefore = team.getPlanForRound(futureRound).rhythm;
   const partial = actions.setPlan(team, 0, league, { round: futureRound, patch: { defense: "Homme à homme" } });
   if (!partial.ok) throw new Error("❌ Un patch partiel (juste la défense) devrait être accepté.");
-  if (team.plannedTactics[futureRound].rhythm !== rhythmBefore) throw new Error("❌ Un patch partiel ne devrait pas toucher aux champs non fournis (rythme) du plan déjà en place.");
-  if (team.plannedTactics[futureRound].defense !== "Homme à homme") throw new Error("❌ Le patch partiel aurait dû mettre à jour la défense.");
+  if (team.getPlanForRound(futureRound).rhythm !== rhythmBefore) throw new Error("❌ Un patch partiel ne devrait pas toucher aux champs non fournis (rythme) du plan déjà en place.");
+  if (team.getPlanForRound(futureRound).defense !== "Homme à homme") throw new Error("❌ Le patch partiel aurait dû mettre à jour la défense.");
   console.log("✅ setPlan fusionne un patch partiel avec le plan déjà en place pour cette journée (ne remplace jamais tout le plan).");
 
   // Rejet : tactiques invalides dans le patch (même validation que setTactics) -> rien ne change.
-  const planBefore = JSON.stringify(team.plannedTactics[futureRound]);
+  const planBefore = JSON.stringify(team.getPlanForRound(futureRound));
   const badTactics = actions.setPlan(team, 0, league, { round: futureRound, patch: { defense: "Zone imaginaire" } });
   if (badTactics.ok) throw new Error("❌ Une défense inconnue dans le patch d'un plan devrait être rejetée.");
-  if (JSON.stringify(team.plannedTactics[futureRound]) !== planBefore) throw new Error("❌ Un patch rejeté ne devrait RIEN muter du plan déjà en place.");
+  if (JSON.stringify(team.getPlanForRound(futureRound)) !== planBefore) throw new Error("❌ Un patch rejeté ne devrait RIEN muter du plan déjà en place.");
   console.log("✅ setPlan rejette un patch de tactiques invalide sans rien muter (mêmes règles que setTactics).");
 
   // Rejet : lineup invalide dans le patch (même validation que setLineup).
@@ -412,10 +412,10 @@ function freshTeamAndLeague() {
   const futureRound = league.schedule.findIndex(matches => matches.some(m => m.home === teamIndex || m.away === teamIndex));
   const planRes = actions.setPlan(team, teamIndex, league, { round: futureRound, patch: { defense: "Zone press" } });
   if (!planRes.ok) throw new Error(`❌ setPlan à un teamIndex non nul devrait fonctionner : ${planRes.error}`);
-  if (!team.plannedTactics[futureRound] || team.plannedTactics[futureRound].defense !== "Zone press") {
+  if (!team.hasPlanForRound(futureRound) || team.getPlanForRound(futureRound).defense !== "Zone press") {
     throw new Error("❌ setPlan devrait enregistrer le plan sur CETTE équipe (teamIndex=1), pas sur l'équipe 0.");
   }
-  if (league.teams[0].plannedTactics[futureRound]) throw new Error("❌ setPlan à teamIndex=1 ne devrait pas avoir touché le plan de l'équipe 0.");
+  if (league.teams[0].hasPlanForRound(futureRound)) throw new Error("❌ setPlan à teamIndex=1 ne devrait pas avoir touché le plan de l'équipe 0.");
   console.log("✅ setPlan fonctionne correctement pour un teamIndex non nul (1), isolé de l'équipe 0.");
 
   team.hireTrainer(2, 3000);

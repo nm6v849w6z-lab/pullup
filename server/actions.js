@@ -247,11 +247,25 @@ function setTactics(team, teamIndex, league, body) {
     if (!v.ok) return fail(v.error);
     team.endgameManagement = v.value;
   }
+  // Badge "Modifier vos ordres" (retour utilisateur, 2026-09, voir
+  // Team.ordresValidatedRound côté moteur) : signal purement cosmétique,
+  // envoyé UNIQUEMENT par le bouton explicite "✅ Valider les ordres" (jamais
+  // par l'autosave-par-changement, qui appelle ce même endpoint à chaque
+  // réglage modifié, voir syncTacticsToServer côté navigateur), donc
+  // volontairement optionnel et sans effet sur le reste de cette fonction.
+  // `isValidFutureRoundForTeam` (plus bas dans ce fichier) accepte aussi bien
+  // la journée immédiate qu'une journée future : la seule chose qui compte
+  // ici est "un match pas encore joué existe bien pour cette équipe à cette
+  // journée", jamais une lecture qui déciderait quoi que ce soit côté moteur.
+  if (body.markOrdresValidated === true && isValidFutureRoundForTeam(league, teamIndex, body.round)) {
+    team.ordresValidatedRound = body.round;
+  }
   return {
     ok: true, offensivePriorities: team.offensivePriorities, defense: team.defense, rhythm: team.rhythm,
     tacticalTier: team.tacticalTier, screenDefense: team.screenDefense, helpDefense: team.helpDefense,
     watchAssignments: team.watchAssignments, postDefense: team.postDefense, closeoutStyle: team.closeoutStyle,
     offRebStyle: team.offRebStyle, endgameManagement: team.endgameManagement,
+    ordresValidatedRound: team.ordresValidatedRound,
   };
 }
 
@@ -270,6 +284,23 @@ function isValidFutureRoundForTeam(league, teamIndex, round) {
   return !alreadyPlayed;
 }
 
+// Équivalent, côté COUPE, de isValidFutureRoundForTeam ci-dessus (correctif
+// 2026-09, retour utilisateur : "il faut pouvoir donner ses ordres pour
+// chaque match [...] pour la Coupe") : un `round` valide pour une
+// préparation à l'avance de Coupe est le tour ACTUELLEMENT en attente
+// (League.pendingCupRound — les tours suivants n'existent pas encore, voir
+// buildNextCupRound côté moteur, engendrés seulement une fois ce tour-ci
+// résolu), pour lequel cette équipe a un match réel (jamais un bye, déjà
+// résolu à la création du tour) pas encore résolu.
+function isValidFutureCupRoundForTeam(league, teamIndex, round) {
+  if (!Number.isInteger(round) || !league.pendingCupRound) return false;
+  const pending = league.pendingCupRound();
+  if (!pending || pending.index !== round) return false;
+  const match = pending.matches.find(m => (m.home === teamIndex || m.away === teamIndex) && !m.bye);
+  if (!match) return false;
+  return !match.resolved;
+}
+
 // Préparation à l'avance des ordres d'une journée FUTURE (retour utilisateur,
 // 2026-09 : "sur buzzerbeater on peut faire pour tous les matchs de la
 // saison [...] pratique de pouvoir préparer sa semaine en avance") — c'est
@@ -282,18 +313,29 @@ function isValidFutureRoundForTeam(league, teamIndex, round) {
 // vu par l'auto-simulation du serveur au moment programmé du match (voir
 // server/autoSim.js/liveMatch.js -> Team.applyPlannedTacticsForRound).
 //
-// body: { round: <entier>, patch: { offensivePriorities?, defense?, rhythm?,
-// lineup?: { starters, backupPositions } } } — mêmes champs, au même format,
-// que setTactics/setLineup ci-dessus (un patch PARTIEL est accepté, comme le
-// panneau Ordres qui envoie un champ à la fois à chaque changement) ; réutilise
-// les MÊMES validateurs pour ne jamais laisser les deux chemins diverger, puis
-// applique via Team.stagePlanForRound (voir engine.js) qui porte déjà toute la
-// logique de fusion avec le plan déjà en place pour cette journée.
+// body: { round: <entier>, competition?: "championship"|"cup", patch: {
+// offensivePriorities?, defense?, rhythm?, lineup?: { starters,
+// backupPositions } } } — mêmes champs, au même format, que setTactics/
+// setLineup ci-dessus (un patch PARTIEL est accepté, comme le panneau Ordres
+// qui envoie un champ à la fois à chaque changement) ; réutilise les MÊMES
+// validateurs pour ne jamais laisser les deux chemins diverger, puis
+// applique via Team.stagePlanForRound (voir engine.js) qui porte déjà toute
+// la logique de fusion avec le plan déjà en place pour cette journée/ce tour.
+// `competition` (correctif 2026-09, retour utilisateur : "il faut pouvoir
+// donner ses ordres pour chaque match [...] pour la Coupe") : omis ou toute
+// valeur autre que "cup" retombe sur "championship" (comportement
+// historique) — voir Team.plannedTactics/planKey côté moteur pour la clé
+// composite qui évite qu'un tour de Coupe et une journée de championnat
+// portant le même numéro ne s'écrasent l'un l'autre.
 function setPlan(team, teamIndex, league, body) {
   if (!body || typeof body !== "object") return fail("Plan invalide.");
   const round = body.round;
-  if (!isValidFutureRoundForTeam(league, teamIndex, round)) {
-    return fail(`Journée invalide pour une préparation à l'avance : ${JSON.stringify(round)}.`);
+  const competition = body.competition === "cup" ? "cup" : "championship";
+  const validRound = competition === "cup"
+    ? isValidFutureCupRoundForTeam(league, teamIndex, round)
+    : isValidFutureRoundForTeam(league, teamIndex, round);
+  if (!validRound) {
+    return fail(`Journée invalide pour une préparation à l'avance (${competition}) : ${JSON.stringify(round)}.`);
   }
   const patchBody = body.patch;
   if (!patchBody || typeof patchBody !== "object") return fail("'patch' est requis.");
@@ -362,8 +404,8 @@ function setPlan(team, teamIndex, league, body) {
     patch.endgameManagement = v.value;
   }
   if (Object.keys(patch).length === 0) return fail("'patch' ne contient aucun champ reconnu (offensivePriorities/defense/rhythm/lineup/tacticalTier/screenDefense/helpDefense/watchAssignments/postDefense/closeoutStyle/offRebStyle/endgameManagement).");
-  const plan = team.stagePlanForRound(round, patch);
-  return { ok: true, round, plan };
+  const plan = team.stagePlanForRound(round, patch, competition);
+  return { ok: true, round, competition, plan };
 }
 
 // Entraînement : une compétence (ou null pour arrêter) + les postes couverts

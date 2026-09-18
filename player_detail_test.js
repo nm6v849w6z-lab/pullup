@@ -122,11 +122,11 @@ if (!standingsVisibleAfterBack || !ligueTabActiveAfterBack) {
 // verrouillées tant que non révélées par une séance vidéo, mais les stats
 // de matchs restent visibles (déjà publiques via les classements ci-dessus).
 // ---------------------------------------------------------------------
-const opponentRow = doc2.querySelector("#standingsContent [data-scout-idx]");
-if (!opponentRow) throw new Error("❌ (setup) au moins une ligne adverse devrait être cliquable pour le scoutisme.");
+const opponentRow = doc2.querySelector("#standingsContent [data-team-idx]");
+if (!opponentRow) throw new Error("❌ (setup) au moins un nom d'équipe adverse devrait être cliquable pour ouvrir sa fiche équipe.");
 opponentRow.click();
-const opponentPlayerLink = doc2.querySelector("#scoutingPanel .player-link");
-if (!opponentPlayerLink) throw new Error("❌ (setup) le panneau de scoutisme devrait afficher des liens joueur cliquables.");
+const opponentPlayerLink = doc2.querySelector("#teamDetailContent .player-link");
+if (!opponentPlayerLink) throw new Error("❌ (setup) la fiche équipe adverse devrait afficher des liens joueur cliquables.");
 const oppName = opponentPlayerLink.textContent;
 opponentPlayerLink.click();
 

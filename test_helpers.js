@@ -31,17 +31,32 @@ function tmpSavePath() {
   return path.join(fs.mkdtempSync(path.join(os.tmpdir(), "basket-client-test-")), "league.json");
 }
 
+// Même chose que tmpSavePath ci-dessus, mais pour la ligue MULTI-MANAGER
+// (voir server/store.js:defaultMultiLeaguePath), correctif 2026-09 (voir
+// cup_ordres_planning_test.js, premier test de ce fichier à en avoir besoin) :
+// SANS ce chemin temporaire dédié, `startTestServer` retombait sur
+// store.defaultMultiLeaguePath() (server/data/multi-league.json, le VRAI
+// fichier de la ligue de production) dès qu'un test touchait ne serait-ce
+// qu'une route multi-manager, même précaution que server/index_test.js
+// (tmpMultiSavePath), déjà adoptée là-bas pour la même raison.
+function tmpMultiSavePath() {
+  return path.join(fs.mkdtempSync(path.join(os.tmpdir(), "basket-client-test-multi-")), "multi-league.json");
+}
+
 // Démarre un vrai serveur HTTP (server/index.js) sur un port éphémère.
 // `nowFn` est injectable (comme côté serveur, voir server/index_test.js)
 // pour les scénarios qui ont besoin de contrôler "maintenant" côté serveur ;
 // par défaut Date.now (le cas normal, le calendrier réel avance avec le
-// vrai temps).
-function startTestServer(nowFn = Date.now, savePath = tmpSavePath()) {
+// vrai temps). `multiSavePath` (nouveau, voir tmpMultiSavePath ci-dessus) :
+// toujours un fichier temporaire ISOLÉ par défaut, jamais le vrai fichier de
+// la ligue partagée de production, même pour un test qui ne s'en sert jamais
+// (mode solo, la grande majorité des tests existants).
+function startTestServer(nowFn = Date.now, savePath = tmpSavePath(), multiSavePath = tmpMultiSavePath()) {
   return new Promise((resolve) => {
-    const server = http.createServer(createHandler(savePath, nowFn));
+    const server = http.createServer(createHandler(savePath, nowFn, multiSavePath));
     server.listen(0, "127.0.0.1", () => {
       const { port } = server.address();
-      resolve({ server, savePath, baseUrl: `http://127.0.0.1:${port}/` });
+      resolve({ server, savePath, multiSavePath, baseUrl: `http://127.0.0.1:${port}/` });
     });
   });
 }
@@ -151,6 +166,6 @@ function patchDateNow(window, getFakeNow) {
 }
 
 module.exports = {
-  tmpSavePath, startTestServer, openGame, flush, readRawSave, writeRawSave,
+  tmpSavePath, tmpMultiSavePath, startTestServer, openGame, flush, readRawSave, writeRawSave,
   calendarStartAtForRoundsDone, fastForwardCalendar, patchDateNow,
 };

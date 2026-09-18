@@ -70,7 +70,10 @@ console.log("✅ La journée en direct est bien sautée au profit de la prochain
 // sélecteur (pour information) mais non sélectionnable.
 const roundSelect = doc.querySelector("#ordresRoundSelector select");
 if (roundSelect) {
-  const liveOption = [...roundSelect.options].find(o => Number(o.value) === liveRoundAtLoad);
+  // Valeur composite "competition:round" (voir Team.planKey côté moteur,
+  // correctif 2026-09 permettant aussi de planifier des tours de Coupe) :
+  // ce test ne couvre qu'un direct de championnat, donc "championship:<round>".
+  const liveOption = [...roundSelect.options].find(o => o.value === `championship:${liveRoundAtLoad}`);
   if (!liveOption) throw new Error("❌ La journée en direct devrait rester listée dans le sélecteur (pour information).");
   if (!liveOption.disabled) throw new Error("❌ La journée en direct ne devrait pas être sélectionnable dans le sélecteur (déjà verrouillée).");
   console.log("✅ La journée en direct reste visible dans le sélecteur mais n'est pas sélectionnable.");

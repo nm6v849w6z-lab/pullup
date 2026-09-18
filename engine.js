@@ -809,13 +809,20 @@ const TV_RIGHTS_WEEKLY_BY_LEVEL = {
 // 1€)") — voir League.listPlayerForSale / placeBid / refreshMarket plus bas.
 // Système D'ENCHÈRES (pas de vente à prix fixe, retour utilisateur : "systeme
 // d'enchere sur 3 jours c'est bien") : chaque joueur listé part aux enchères
-// pour TRANSFER_AUCTION_DURATION_MS — en temps RÉEL (Date.now()), pas en
+// pour TRANSFER_AUCTION_DURATION_MS, en temps RÉEL (Date.now()), pas en
 // semaines de jeu, à la façon d'un jeu persistant comme BuzzerBeater, même si
 // ce club se joue par ailleurs en simulation instantanée. Incrément minimum
 // entre deux enchères successives (retour utilisateur : "minimum de 1K à
 // mettre pour enchérir ou 20%") : le plus grand des deux.
+// Retour utilisateur (2026-09) : "pour le moment, il faudrait que les
+// durées pour les enchères joueurs et staff soient de seulement 1 jour au
+// lieu de 3" : raccourci à 1 jour ("pour le moment", donc pas forcément
+// définitif). COACH_AUCTION_DURATION_MS (plus bas) suit automatiquement
+// (même durée, voir son propre commentaire), donc ce seul changement couvre
+// aussi bien le marché des transferts que celui du staff (entraîneur,
+// analyste vidéo, recruteur).
 // ---------------------------------------------------------------------
-const TRANSFER_AUCTION_DURATION_MS = 3 * 24 * 60 * 60 * 1000; // 3 jours réels
+const TRANSFER_AUCTION_DURATION_MS = 1 * 24 * 60 * 60 * 1000; // 1 jour réel
 const TRANSFER_MIN_INCREMENT_FLAT = 1000;
 const TRANSFER_MIN_INCREMENT_PCT = 0.20;
 // Rythme auquel les équipes adverses (CPU) "consultent" le marché — pas à
@@ -1383,6 +1390,16 @@ class Player {
     return {
       pts: 0, reb: 0, oreb: 0, dreb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0,
       fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0,
+      // paintAtt/paintMade (retour utilisateur, 2026-09, "rapport de scouting" :
+      // tendances chiffrées d'un adversaire, coïncidant avec de vrais leviers
+      // tactiques déjà en jeu). Sous-ensemble de fga2/fgm2 ne comptant QUE les
+      // tirs pris en zone "inside" (raquette/poste), fga2/fgm2 eux-mêmes
+      // INCHANGÉS (toujours inside+mid confondus) : ajout strictement additif,
+      // aucun comportement de simulation existant ne change. Sert à calculer,
+      // côté UI, la part des tirs pris dans la raquette (utile pour distinguer
+      // un adversaire tourné vers l'intérieur d'un adversaire de périmètre),
+      // voir computeScoutingTendencies dans moteurbasket3.html.
+      paintAtt: 0, paintMade: 0,
     };
   }
 
@@ -1411,6 +1428,22 @@ class Player {
     const fatigueFactor = 1 - (this.fatigue / 100) * 0.35;   // jusqu'à -35%
     return clamp(base * formFactor * fatigueFactor, 1, 130);
   }
+}
+
+// ---------------------------------------------------------------------
+// Clé composite pour Team.plannedTactics (voir le constructeur ci-dessous) :
+// "{compétition}:{journée}" plutôt qu'un simple numéro de journée. Retour
+// utilisateur (2026-09) : "il faut pouvoir donner ses ordres pour chaque
+// match. Plus tard on ajoutera les matchs internationaux, il faudra aussi
+// pouvoir le faire" — un tour de Coupe et une journée de championnat sont
+// numérotés CHACUN à partir de 0 (CUP_STAGE_NAMES/round.index côté Coupe,
+// totalement indépendant du round 0-17 du championnat) : sans cette clé
+// composite, planifier les deux à la fois pour le même numéro les ferait
+// s'écraser l'un l'autre dans le même objet plannedTactics. `competition`
+// omis équivaut à "championship" (comportement historique, avant que la
+// Coupe n'ait elle-même de planification à l'avance).
+function planKey(round, competition) {
+  return `${competition || "championship"}:${round}`;
 }
 
 // ---------------------------------------------------------------------
@@ -1449,17 +1482,24 @@ class Team {
     // Plans d'ordres préparés À L'AVANCE pour une journée future (retour
     // utilisateur, 2026-09 : "sur buzzerbeater on peut faire pour tous les
     // matchs de la saison, [...] pratique de pouvoir préparer sa semaine en
-    // avance") — clé = numéro de journée (round), valeur = un instantané
-    // complet des ordres {offensivePriorities, defense, rhythm, lineup}. Les
+    // avance"), valeur = un instantané complet des ordres
+    // {offensivePriorities, defense, rhythm, lineup, ...}. Clé = planKey(round,
+    // competition) ci-dessus ("championship:<round>" ou "cup:<round>"),
+    // PAS un simple numéro de journée (correctif 2026-09, retour
+    // utilisateur : "il faut pouvoir donner ses ordres pour chaque match" —
+    // championnat et Coupe numérotent chacun leurs journées/tours à partir
+    // de 0, une clé composite évite qu'ils s'écrasent l'un l'autre). Les
     // champs "en direct" (this.offensivePriorities/defense/rhythm/lineup
     // ci-dessus) restent la SEULE source lue au moment de simuler la
     // PROCHAINE journée à résoudre ; un plan stocké ici n'est appliqué à ces
     // champs qu'au moment où SA journée devient celle qu'on résout (voir
-    // applyPlannedTacticsForRound, appelé depuis server/autoSim.js et
-    // server/liveMatch.js) — jusque-là, préparer une journée future ne
-    // change rien au match immédiat. Vide par défaut : aucune journée
-    // future préparée, comportement strictement identique à avant cette
-    // fonctionnalité tant qu'elle n'est pas utilisée.
+    // applyPlannedTacticsForRound, appelé depuis server/liveMatch.js) —
+    // jusque-là, préparer une journée future ne change rien au match
+    // immédiat. Vide par défaut : aucune journée future préparée,
+    // comportement strictement identique à avant cette fonctionnalité tant
+    // qu'elle n'est pas utilisée. Migration des sauvegardes plus anciennes
+    // (clé = bare round number, forcément championnat à l'époque) vers ce
+    // nouveau format : voir teamFromSave plus bas.
     this.plannedTactics = {};
 
     this.week = 1; // semaine d'entraînement courante (pas de calendrier complet pour l'instant)
@@ -1507,6 +1547,19 @@ class Team {
     // par jour", même esprit que "training/economy once per day").
     this.scoutedAttrs = {};
     this.lastVideoSessionAt = null;
+
+    // Retour utilisateur (2026-09) : "quand les ordres ont été validés, il
+    // faudrait [...] que le bouton donnez vos ordres deviennent : Modifier
+    // vos ordres". Numéro de journée (league round) pour laquelle CE club a
+    // explicitement cliqué "✅ Valider les ordres" en dernier (voir
+    // validateOrdres/markOrdresValidated côté navigateur), distinct de
+    // "des ordres existent" (toujours vrai, ce sont les ordres EN DIRECT,
+    // voir Team.offensivePriorities et consorts) : sert uniquement à ce
+    // badge d'interface, jamais lu par la simulation elle-même. `null` tant
+    // qu'aucune validation explicite n'a eu lieu ; redevient "obsolète" tout
+    // seul dès que la journée courante avance (comparé à currentMatch.round
+    // côté navigateur), sans logique de remise à zéro dédiée nécessaire.
+    this.ordresValidatedRound = null;
 
     // Recruteur — TROISIÈME rôle de staff (retour utilisateur, 2026-09 :
     // académie de jeunes), même forme que l'entraîneur/l'analyste vidéo
@@ -1595,6 +1648,15 @@ class Team {
     // confort tarifaire — voir applyMoraleForResult et trainWeek.
     this.fanMorale = 50;
     this.moraleHistory = [];
+
+    // Affluence des derniers matchs à domicile (retour utilisateur, 2026-09 :
+    // "sur l'onglet salle, il n'y a tjrs pas l'affluence des matchs
+    // précédents (jusqu'à 10 matchs)") : même principe que moraleHistory
+    // ci-dessus (unshift + plafond), mais plafonné à 10 plutôt que 40 (demande
+    // explicite), alimenté par simulateHomeAttendance plus bas, un seul appel
+    // par match à DOMICILE (jamais à l'extérieur, l'affluence de la salle
+    // adverse n'est pas suivie ici).
+    this.attendanceHistory = [];
 
     // Semaines CONSÉCUTIVES où le budget est resté sous DEFICIT_ALERT_THRESHOLD
     // (voir trainWeek) — remis à zéro dès que le budget repasse au-dessus.
@@ -1784,6 +1846,24 @@ class Team {
       return { key: cat.key, name: cat.name, rate, capacity, attendance, revenue };
     });
     this.recordTransaction(`Billetterie vs ${opponentName} (${totalAttendance} spect.)`, totalRevenue);
+    // Historique d'affluence (voir attendanceHistory ci-dessus) : même
+    // rythme que recordTransaction/recordMoraleEvent (unshift + plafond),
+    // pour afficher "jusqu'à 10 matchs" sur l'onglet Salle sans redemander
+    // au moteur de reconstituer cet historique à partir des transactions
+    // (qui mélangent billetterie et tout le reste, et ne gardent que 40
+    // entrées au total, pas 40 matchs à domicile).
+    this.attendanceHistory = this.attendanceHistory || [];
+    const totalCapacity = SEAT_CATEGORIES.reduce((s, cat) => s + this.categoryCapacity(cat.key), 0);
+    // Détail catégorie de place par catégorie de place (retour utilisateur,
+    // 2026-09, sur l'historique lui-même une fois affiché : "sur l'affluence,
+    // c'est bien, mais je mettrai le détail catégorie de place par catégorie
+    // place") : réutilise le `breakdown` déjà calculé ci-dessus plutôt que de
+    // le recalculer, allégé aux seuls champs affichés (name/attendance/
+    // capacity), `rate` et `revenue` par catégorie étant redondants avec
+    // attendance/capacity et le total déjà stocké juste au-dessus.
+    const categoryBreakdown = breakdown.map(b => ({ key: b.key, name: b.name, attendance: b.attendance, capacity: b.capacity }));
+    this.attendanceHistory.unshift({ week: this.week, opponentName, attendance: totalAttendance, revenue: Math.round(totalRevenue), capacity: totalCapacity, breakdown: categoryBreakdown });
+    if (this.attendanceHistory.length > 10) this.attendanceHistory.length = 10;
     return { attendance: totalAttendance, revenue: totalRevenue, breakdown };
   }
 
@@ -2527,33 +2607,47 @@ class Team {
     };
   }
 
-  // Le plan déjà préparé pour `round`, ou (à défaut) un instantané des
-  // ordres en direct actuels — simple lecture, ne crée PAS d'entrée dans
-  // plannedTactics (utilisé côté navigateur pour préremplir l'écran
-  // "Ordres" d'une journée future pas encore préparée, avec les réglages
-  // actuels comme point de départ raisonnable).
-  getPlanForRound(round) {
-    return this.plannedTactics[round] || this.snapshotTactics();
+  // Le plan déjà préparé pour `round`/`competition` (voir planKey), ou (à
+  // défaut) un instantané des ordres en direct actuels — simple lecture, ne
+  // crée PAS d'entrée dans plannedTactics (utilisé côté navigateur pour
+  // préremplir l'écran "Ordres" d'une journée future pas encore préparée,
+  // avec les réglages actuels comme point de départ raisonnable).
+  // `competition` omis = "championship" (comportement historique).
+  getPlanForRound(round, competition) {
+    return this.plannedTactics[planKey(round, competition)] || this.snapshotTactics();
   }
 
-  // Enregistre/complète le plan de `round` : la première modification pour
-  // cette journée part des ordres en direct actuels (snapshotTactics),
-  // les suivantes fusionnent juste le(s) champ(s) modifié(s) (patch
-  // partiel, ex. {defense: "Zone"}) par-dessus le plan déjà en place.
-  stagePlanForRound(round, patch) {
-    this.plannedTactics[round] = Object.assign(this.plannedTactics[round] || this.snapshotTactics(), patch);
-    return this.plannedTactics[round];
+  // Enregistre/complète le plan de `round`/`competition` : la première
+  // modification pour cette journée part des ordres en direct actuels
+  // (snapshotTactics), les suivantes fusionnent juste le(s) champ(s)
+  // modifié(s) (patch partiel, ex. {defense: "Zone"}) par-dessus le plan
+  // déjà en place.
+  stagePlanForRound(round, patch, competition) {
+    const key = planKey(round, competition);
+    this.plannedTactics[key] = Object.assign(this.plannedTactics[key] || this.snapshotTactics(), patch);
+    return this.plannedTactics[key];
   }
 
-  // Retire le plan préparé pour `round` (ex. "revenir aux ordres actuels")
-  // — sans effet sur les ordres en direct ni sur les autres journées.
-  clearPlanForRound(round) {
-    delete this.plannedTactics[round];
+  // Existence pure d'un plan préparé pour `round`/`competition` (contrairement
+  // à getPlanForRound, qui retombe toujours sur un instantané des ordres en
+  // direct si rien n'est préparé) — utilisé côté navigateur pour
+  // l'indicateur "(préparé) ●" sans avoir à connaître le format de la clé
+  // composite (voir planKey) depuis l'UI.
+  hasPlanForRound(round, competition) {
+    return !!this.plannedTactics[planKey(round, competition)];
   }
 
-  // Point d'entrée appelé juste AVANT de simuler `round` (voir
-  // server/liveMatch.js finalizeRound/ensureLiveMatchStarted) : si un plan
-  // a été préparé pour cette journée, il
+  // Retire le plan préparé pour `round`/`competition` (ex. "revenir aux
+  // ordres actuels") — sans effet sur les ordres en direct ni sur les
+  // autres journées/tours.
+  clearPlanForRound(round, competition) {
+    delete this.plannedTactics[planKey(round, competition)];
+  }
+
+  // Point d'entrée appelé juste AVANT de simuler `round`/`competition` (voir
+  // server/liveMatch.js finalizeRound/ensureLiveMatchStarted côté
+  // championnat, finalizeCupRound/ensureCupLiveMatchStarted côté Coupe) : si
+  // un plan a été préparé pour cette journée, il
   // devient les ordres EN DIRECT (deep clone, jamais de référence
   // partagée) puis le plan est "consommé" (supprimé de plannedTactics) —
   // une fois utilisé pour résoudre son match, il n'est plus une
@@ -2561,8 +2655,9 @@ class Team {
   // le manager l'avait réglé directement cette semaine-là. Sans plan
   // préparé pour cette journée : no-op complet, les ordres en direct ne
   // sont pas touchés (comportement inchangé pour qui ne planifie jamais).
-  applyPlannedTacticsForRound(round) {
-    const plan = this.plannedTactics[round];
+  applyPlannedTacticsForRound(round, competition) {
+    const key = planKey(round, competition);
+    const plan = this.plannedTactics[key];
     if (!plan) return;
     this.offensivePriorities = [...plan.offensivePriorities];
     this.defense = plan.defense;
@@ -2587,7 +2682,7 @@ class Team {
         Object.entries(plan.lineup.backupPositions).map(([id, positions]) => [id, [...positions]])
       ),
     };
-    delete this.plannedTactics[round];
+    delete this.plannedTactics[key];
   }
 
   // Le remplaçant DÉJÀ désigné (via toggleBackupPosition) pour un poste
@@ -3198,6 +3293,10 @@ function recordMatchStatsForTeam(team, round, competition) {
         ast: p.stats.ast || 0, stl: p.stats.stl || 0, blk: p.stats.blk || 0, tov: p.stats.tov || 0, pf: p.stats.pf || 0,
         fgm2: p.stats.fgm2 || 0, fga2: p.stats.fga2 || 0, fgm3: p.stats.fgm3 || 0, fga3: p.stats.fga3 || 0,
         ftm: p.stats.ftm || 0, fta: p.stats.fta || 0,
+        // Voir emptyStats() : sous-ensemble de fga2/fgm2, uniquement les tirs
+        // en zone "inside". `|| 0` de rigueur pour tout matchLog déjà persisté
+        // avant cette fonctionnalité (jamais lu par du code plus ancien).
+        paintAtt: p.stats.paintAtt || 0, paintMade: p.stats.paintMade || 0,
       });
     }
   });
@@ -4710,6 +4809,18 @@ function serializePlayerRecord(p) {
   return {
     name: p.name, position: p.position, height: p.height, age: p.age,
     attrs: { ...p.attrs }, potential: p.potential, salary: p.salary,
+    // `effectivePosition` (voir Player.constructor/levelCoefficientFor) :
+    // DOIT être sauvegardé au même rythme que `salary` juste au-dessus
+    // (retour utilisateur, 2026-09 : "le poste est fixé en début de saison
+    // selon les caracs et il ne doit ensuite plus bouger [...] corrigé
+    // seulement lors de l'intersaison"), sans ce champ, playerFromSave
+    // restaurait bien `salary` mais PAS `effectivePosition`, qui repartait
+    // alors du constructeur Player, lequel le recalcule TOUJOURS d'après les
+    // attributs ACTUELS (voir plus bas) : un simple rechargement de page en
+    // cours de saison (après quelques gains d'entraînement) suffisait à
+    // faire "changer de poste" l'étiquette/l'infobulle du salaire affichées,
+    // alors que le salaire réellement payé restait, lui, correctement figé.
+    effectivePosition: p.effectivePosition,
     _trainProgress: { ...p._trainProgress },
     aggressiveness: p.aggressiveness, form: p.form,
     forSale: p.forSale, salePrice: p.salePrice,
@@ -4722,6 +4833,19 @@ function serializePlayerRecord(p) {
     // lui seul, effacer le mérite du dernier match joué.
     secondsPlayed: p.secondsPlayed,
     secondsPlayedByPosition: { ...p.secondsPlayedByPosition },
+    // Retour utilisateur (2026-09) : "le match 3 n'affiche aucune stats
+    // hormis les minutes [...] généralisé à d'autres équipes et autres
+    // joueurs". Cause : p.stats n'était JAMAIS sauvegardé alors que
+    // p.secondsPlayed l'est déjà (voir commentaire ci-dessus). Un
+    // redémarrage serveur survenant entre le coup d'envoi d'un match EN
+    // DIRECT (qui remplit p.stats/p.secondsPlayed via MatchEngine.simulate,
+    // voir computeLiveMatch) et sa finalisation (qui lit CES MÊMES champs,
+    // voir recordMatchStatsForTeam) faisait perdre p.stats au rechargement
+    // (reparti de emptyStats() via le constructeur Player) sans toucher
+    // p.secondsPlayed (restauré ci-dessous) : d'où des entrées de
+    // matchLog avec des minutes correctes mais toutes les autres stats à
+    // zéro. Même rythme de persistance que secondsPlayed ci-dessus.
+    stats: { ...p.stats },
     id: p.id,
     // Journal des matchs de la saison (voir Player.matchLog/
     // recordMatchStatsForTeam) : DOIT survivre au rechargement, sinon les
@@ -4764,6 +4888,9 @@ function serializeTeam(team) {
     videoAnalyst: team.videoAnalyst ? { ...team.videoAnalyst } : null,
     scoutedAttrs: team.scoutedAttrs || {},
     lastVideoSessionAt: typeof team.lastVideoSessionAt === "number" ? team.lastVideoSessionAt : null,
+    // Badge "Modifier vos ordres" (voir Team.ordresValidatedRound ci-dessus) :
+    // même raison de persister que lastVideoSessionAt juste au-dessus.
+    ordresValidatedRound: typeof team.ordresValidatedRound === "number" ? team.ordresValidatedRound : null,
     budget: team.budget,
     arenaLevel: team.arenaLevel,
     ticketPrices: { ...team.ticketPrices },
@@ -4775,6 +4902,11 @@ function serializeTeam(team) {
     transactions: team.transactions,
     fanMorale: team.fanMorale,
     moraleHistory: team.moraleHistory,
+    // Historique d'affluence (voir Team.attendanceHistory/simulateHomeAttendance
+    // ci-dessus) : même rythme de persistance que moraleHistory/transactions
+    // juste au-dessus, sinon l'historique affiché sur l'onglet Salle
+    // disparaîtrait à chaque rechargement de page.
+    attendanceHistory: team.attendanceHistory,
     deficitWeeks: team.deficitWeeks,
     // Identité manager (voir Team.isHuman/managerLinkToken ci-dessus) :
     // `false`/`null` pour une équipe CPU (comportement historique implicite,
@@ -4832,6 +4964,16 @@ function playerFromSave(pdata) {
   // rechargement, ce qui romprait ce rythme (un simple rechargement de page
   // ferait alors bouger le salaire).
   p.salary = typeof pdata.salary === "number" ? pdata.salary : p.salary;
+  // `effectivePosition` : même repli que `salary` juste au-dessus, pour la
+  // même raison (voir le commentaire de serializePlayerRecord), sans ça, le
+  // constructeur Player appelé par `new Player(...)` ci-dessus l'aurait déjà
+  // écrasé avec une valeur recalculée d'après les attributs ACTUELS (pas
+  // ceux du dernier passage de saison), rompant le même rythme que `salary`.
+  // Absent (sauvegarde d'avant ce correctif) : on garde la valeur du
+  // constructeur, qui se corrigera d'elle-même au prochain vrai passage de
+  // saison (Team.recalculateSalaries), comme n'importe quel champ manquant
+  // d'une ancienne sauvegarde.
+  p.effectivePosition = pdata.effectivePosition || p.effectivePosition;
   if (pdata._trainProgress) p._trainProgress = { ...pdata._trainProgress };
   if (typeof pdata.form === "number") p.form = pdata.form;
   if (pdata.id) p.id = pdata.id;
@@ -4840,6 +4982,10 @@ function playerFromSave(pdata) {
   // rechargement de page).
   if (typeof pdata.secondsPlayed === "number") p.secondsPlayed = pdata.secondsPlayed;
   if (pdata.secondsPlayedByPosition) p.secondsPlayedByPosition = { ...pdata.secondsPlayedByPosition };
+  // Stats du dernier match (voir serializePlayerRecord ci-dessus pour le
+  // bug que ça corrige) : absent = sauvegarde d'avant cette correction, on
+  // garde emptyStats() (déjà posé par le constructeur Player).
+  if (pdata.stats && typeof pdata.stats === "object") p.stats = { ...p.emptyStats(), ...pdata.stats };
   // Mise en vente forcée (voir DEFICIT_ALERT_THRESHOLD) : doit survivre au
   // rechargement, sinon la contrainte de faillite disparaîtrait dès qu'on
   // recharge la page.
@@ -4946,6 +5092,7 @@ function teamFromSave(data) {
   // scouté, comme au tout premier lancement.
   team.scoutedAttrs = data.scoutedAttrs && typeof data.scoutedAttrs === "object" ? data.scoutedAttrs : {};
   team.lastVideoSessionAt = typeof data.lastVideoSessionAt === "number" ? data.lastVideoSessionAt : null;
+  team.ordresValidatedRound = typeof data.ordresValidatedRound === "number" ? data.ordresValidatedRound : null;
   if (typeof data.budget === "number") team.budget = data.budget;
   if (typeof data.deficitWeeks === "number") team.deficitWeeks = data.deficitWeeks;
   if (ARENA_LEVELS.some(a => a.level === data.arenaLevel)) team.arenaLevel = data.arenaLevel;
@@ -4979,6 +5126,9 @@ function teamFromSave(data) {
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
+  // Historique d'affluence (voir serializeTeam ci-dessus) : absent = sauvegarde
+  // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
+  team.attendanceHistory = Array.isArray(data.attendanceHistory) ? data.attendanceHistory : [];
   // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
   // sur plusieurs postes) ; si absente (ancienne sauvegarde) ou invalide, la
   // feuille auto-assignée par défaut du constructeur reste en place.
@@ -5008,7 +5158,22 @@ function teamFromSave(data) {
   // absent = sauvegarde d'avant cette fonctionnalité, {} par défaut
   // (constructeur) reste en place — aucune journée future préparée.
   if (data.plannedTactics && typeof data.plannedTactics === "object") {
-    team.plannedTactics = data.plannedTactics;
+    // Migration (correctif 2026-09, voir planKey/Team.constructor) : une
+    // sauvegarde antérieure à la clé composite "{compétition}:{journée}"
+    // stockait plannedTactics avec une clé = simple numéro de journée de
+    // championnat (Coupe n'avait alors AUCUNE planification à l'avance,
+    // donc une telle clé ne pouvait être QUE du championnat). Une clé déjà
+    // au nouveau format ("championship:3", "cup:1"...) est laissée telle
+    // quelle ; seule une clé purement numérique ("3") est réécrite en
+    // "championship:3", faute de quoi getPlanForRound/stagePlanForRound/
+    // applyPlannedTacticsForRound (qui ne savent plus lire que le nouveau
+    // format) ne la retrouveraient plus jamais.
+    const migrated = {};
+    Object.entries(data.plannedTactics).forEach(([key, plan]) => {
+      const migratedKey = /^\d+$/.test(key) ? `championship:${key}` : key;
+      migrated[migratedKey] = plan;
+    });
+    team.plannedTactics = migrated;
   }
   return team;
 }
@@ -5503,12 +5668,14 @@ class MatchEngine {
     const points = zone === "three" ? 3 : 2;
 
     if (zone === "three") { shooter.stats.fga3++; } else { shooter.stats.fga2++; }
+    if (zone === "inside") shooter.stats.paintAtt++;
 
     const shotLabel = zone === "three" ? "three" : zone === "mid" ? "mid" : "inside";
 
     if (made) {
       shooter.stats.pts += points;
       if (zone === "three") shooter.stats.fgm3++; else shooter.stats.fgm2++;
+      if (zone === "inside") shooter.stats.paintMade++;
       if (assistCandidate && quality === "ouvert" && Math.random() < 0.65 + offense.assist + assistOpenBonus) {
         assistCandidate.stats.ast++;
       }
@@ -5817,6 +5984,12 @@ return {
   dailyAnchoredScheduledTimeForChampionshipRound, dailyAnchoredScheduledTimeForCupRound,
   // Coupe (voir le bloc dédié au-dessus de generateCupBracket) :
   CUP_BRACKET_SIZE, CUP_STAGE_NAMES, generateCupBracket, buildNextCupRound, shuffleIndices,
+  // Clé composite de Team.plannedTactics (voir le grand commentaire dédié
+  // au-dessus) : exportée pour planned_tactics_test.js (partie MOTEUR pure),
+  // qui a besoin de construire la même clé que Team.getPlanForRound et
+  // consorts pour vérifier des accès directs (ex. round-trip de
+  // sérialisation), plutôt que de dupliquer cette formule dans le test.
+  planKey,
   serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave,
   DIVISIONS, MAX_DIVISION_LEVEL, divisionInfo,
 };

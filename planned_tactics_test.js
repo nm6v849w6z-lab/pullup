@@ -7,7 +7,7 @@
 // serveur/de l'UI : voir server/planned_tactics_test.js pour le câblage
 // des deux chemins de simulation (autoSim/liveMatch).
 const E = require("./engine.js");
-const { generateStartingRoster, serializeTeam, teamFromSave, POSITIONS } = E;
+const { generateStartingRoster, serializeTeam, teamFromSave, POSITIONS, planKey } = E;
 
 function freshTeam() {
   return generateStartingRoster("Plan Test");
@@ -24,7 +24,7 @@ function freshTeam() {
   team.rhythm = "Rapide";
 
   team.stagePlanForRound(5, { rhythm: "Lent" });
-  const plan = team.plannedTactics[5];
+  const plan = team.getPlanForRound(5);
   console.log("Plan journée 5 après 1er patch partiel :", JSON.stringify({
     offensivePriorities: plan.offensivePriorities, defense: plan.defense, rhythm: plan.rhythm,
   }));
@@ -45,7 +45,7 @@ function freshTeam() {
   team.defense = "Homme à homme";
   team.stagePlanForRound(3, { defense: "Zone" });
   team.stagePlanForRound(3, { rhythm: "Rapide" });
-  const plan = team.plannedTactics[3];
+  const plan = team.getPlanForRound(3);
   console.log("Plan journée 3 après 2 patchs successifs :", JSON.stringify({ defense: plan.defense, rhythm: plan.rhythm }));
   if (plan.defense !== "Zone") throw new Error("❌ Le premier patch (defense: 'Zone') aurait dû être conservé après le second.");
   if (plan.rhythm !== "Rapide") throw new Error("❌ Le second patch (rhythm: 'Rapide') aurait dû s'appliquer.");
@@ -63,7 +63,7 @@ function freshTeam() {
   team.offensivePriorities = ["Équilibrée", "Pick & Roll", "Jeu en mouvement"];
   team.stagePlanForRound(2, {});
   team.offensivePriorities.push("Poste bas"); // mutation de l'array en direct
-  const plan = team.plannedTactics[2];
+  const plan = team.getPlanForRound(2);
   console.log("Priorités du plan après mutation de l'array en direct :", plan.offensivePriorities.length, "(attendu 3, pas 4)");
   if (plan.offensivePriorities.length !== 3) throw new Error("❌ Le plan stocké ne doit PAS partager la référence de l'array en direct (deep clone attendu).");
   console.log("✅ snapshotTactics/stagePlanForRound clonent bien (pas de référence partagée).");
@@ -77,9 +77,9 @@ function freshTeam() {
   const team = freshTeam();
   team.rhythm = "Lent";
   const plan = team.getPlanForRound(9);
-  console.log("getPlanForRound(9) sans plan préparé — rhythm :", plan.rhythm, "| entrée créée :", Object.prototype.hasOwnProperty.call(team.plannedTactics, 9));
+  console.log("getPlanForRound(9) sans plan préparé — rhythm :", plan.rhythm, "| entrée créée :", team.hasPlanForRound(9));
   if (plan.rhythm !== "Lent") throw new Error("❌ Sans plan préparé, getPlanForRound devrait renvoyer un instantané des ordres en direct actuels.");
-  if (Object.prototype.hasOwnProperty.call(team.plannedTactics, 9)) throw new Error("❌ getPlanForRound ne doit PAS créer d'entrée dans plannedTactics (lecture seule).");
+  if (team.hasPlanForRound(9)) throw new Error("❌ getPlanForRound ne doit PAS créer d'entrée dans plannedTactics (lecture seule).");
   console.log("✅ getPlanForRound : lecture seule, pré-remplit avec les ordres en direct actuels sans rien écrire.");
 
   team.stagePlanForRound(9, { rhythm: "Rapide" });
@@ -97,9 +97,9 @@ function freshTeam() {
   team.stagePlanForRound(1, { defense: "Zone" });
   team.stagePlanForRound(2, { defense: "Zone" });
   team.clearPlanForRound(1);
-  console.log("Après clearPlanForRound(1) — journée 1 présente :", Object.prototype.hasOwnProperty.call(team.plannedTactics, 1), "| journée 2 présente :", Object.prototype.hasOwnProperty.call(team.plannedTactics, 2));
-  if (team.plannedTactics[1]) throw new Error("❌ clearPlanForRound(1) aurait dû supprimer le plan de la journée 1.");
-  if (!team.plannedTactics[2]) throw new Error("❌ clearPlanForRound(1) n'aurait pas dû affecter le plan de la journée 2.");
+  console.log("Après clearPlanForRound(1) — journée 1 présente :", team.hasPlanForRound(1), "| journée 2 présente :", team.hasPlanForRound(2));
+  if (team.hasPlanForRound(1)) throw new Error("❌ clearPlanForRound(1) aurait dû supprimer le plan de la journée 1.");
+  if (!team.hasPlanForRound(2)) throw new Error("❌ clearPlanForRound(1) n'aurait pas dû affecter le plan de la journée 2.");
   console.log("✅ clearPlanForRound cible bien uniquement la journée demandée.");
 }
 
@@ -118,18 +118,20 @@ function freshTeam() {
   team.stagePlanForRound(4, { defense: "Zone", rhythm: "Rapide" });
   // Modifie aussi la feuille de match DANS le plan (via le proxy réel
   // Team.setStarter appliqué au plan, comme le fera l'UI plus tard) :
-  const plan = team.plannedTactics[4];
+  // getPlanForRound(4) renvoie ICI la référence RÉELLEMENT stockée dans
+  // plannedTactics (un plan existe déjà pour cette journée, voir son
+  // commentaire), donc muter `plan` en place suffit, sans réaffectation.
+  const plan = team.getPlanForRound(4);
   if (otherMeneur) {
     E.Team.prototype.setStarter.call(plan, "Meneur", otherMeneur.id);
-    team.plannedTactics[4] = plan;
   }
 
   team.applyPlannedTacticsForRound(4);
-  console.log("Après applyPlannedTacticsForRound(4) — defense:", team.defense, "| rhythm:", team.rhythm, "| plan consommé :", !team.plannedTactics[4]);
+  console.log("Après applyPlannedTacticsForRound(4) — defense:", team.defense, "| rhythm:", team.rhythm, "| plan consommé :", !team.hasPlanForRound(4));
   if (team.defense !== "Zone") throw new Error("❌ applyPlannedTacticsForRound aurait dû écraser 'defense' en direct avec la valeur planifiée.");
   if (team.rhythm !== "Rapide") throw new Error("❌ applyPlannedTacticsForRound aurait dû écraser 'rhythm' en direct avec la valeur planifiée.");
   if (otherMeneur && team.lineup.starters["Meneur"] !== otherMeneur.id) throw new Error("❌ applyPlannedTacticsForRound aurait dû écraser la feuille de match en direct avec celle planifiée.");
-  if (team.plannedTactics[4]) throw new Error("❌ Le plan de la journée 4 aurait dû être consommé (supprimé) après application.");
+  if (team.hasPlanForRound(4)) throw new Error("❌ Le plan de la journée 4 aurait dû être consommé (supprimé) après application.");
   console.log("✅ applyPlannedTacticsForRound applique le plan aux ordres en direct puis le consomme.");
 }
 
@@ -157,13 +159,17 @@ function freshTeam() {
   team.stagePlanForRound(6, { defense: "Zone" });
   team.stagePlanForRound(11, { rhythm: "Lent" });
   const data = serializeTeam(team);
+  // serializeTeam copie plannedTactics tel quel (voir engine.js) : les clés
+  // restent la forme composite "championship:<round>" (voir Team.planKey).
+  const key6 = planKey(6);
+  const key11 = planKey(11);
   console.log("plannedTactics sérialisé — journées présentes :", Object.keys(data.plannedTactics));
-  if (!data.plannedTactics[6] || !data.plannedTactics[11]) throw new Error("❌ serializeTeam devrait inclure les plans préparés (journées 6 et 11).");
+  if (!data.plannedTactics[key6] || !data.plannedTactics[key11]) throw new Error("❌ serializeTeam devrait inclure les plans préparés (journées 6 et 11).");
 
   const reloaded = teamFromSave(JSON.parse(JSON.stringify(data)));
-  console.log("Après round-trip save/load — journée 6 defense :", reloaded.plannedTactics[6] && reloaded.plannedTactics[6].defense, "| journée 11 rhythm :", reloaded.plannedTactics[11] && reloaded.plannedTactics[11].rhythm);
-  if (!reloaded.plannedTactics[6] || reloaded.plannedTactics[6].defense !== "Zone") throw new Error("❌ Le plan de la journée 6 ne survit pas au round-trip save/load.");
-  if (!reloaded.plannedTactics[11] || reloaded.plannedTactics[11].rhythm !== "Lent") throw new Error("❌ Le plan de la journée 11 ne survit pas au round-trip save/load.");
+  console.log("Après round-trip save/load — journée 6 defense :", reloaded.plannedTactics[key6] && reloaded.plannedTactics[key6].defense, "| journée 11 rhythm :", reloaded.plannedTactics[key11] && reloaded.plannedTactics[key11].rhythm);
+  if (!reloaded.plannedTactics[key6] || reloaded.plannedTactics[key6].defense !== "Zone") throw new Error("❌ Le plan de la journée 6 ne survit pas au round-trip save/load.");
+  if (!reloaded.plannedTactics[key11] || reloaded.plannedTactics[key11].rhythm !== "Lent") throw new Error("❌ Le plan de la journée 11 ne survit pas au round-trip save/load.");
   console.log("✅ plannedTactics survit à un round-trip serializeTeam/teamFromSave.");
 }
 

@@ -276,13 +276,14 @@ function ensureLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueRound
 // que le créneau de 15h de son jour est atteint. `scheduledTimeForLeagueCupRound`
 // injecté comme `scheduledTimeForLeagueRound` l'est pour ensureLiveMatchStarted
 // (voir server/calendar.js) — même raison (résolution du rythme propre à
-// CETTE ligue). Aucun plan d'ordres préparé à l'avance appliqué ici
-// (contrairement au championnat, voir Team.applyPlannedTacticsForRound) : ce
-// mécanisme est keyé par NUMÉRO DE JOURNÉE DE CHAMPIONNAT — le réutiliser
-// avec un numéro de tour de coupe lirait/consommerait le plan d'une journée
-// de championnat sans rapport ; un match de coupe se joue donc avec les
-// ordres COURANTS de l'équipe, exactement comme un match jamais préparé à
-// l'avance.
+// CETTE ligue). Applique désormais un plan d'ordres préparé à l'avance pour
+// CE tour de Coupe (correctif 2026-09, voir Team.applyPlannedTacticsForRound
+// côté moteur : plannedTactics est maintenant keyé "{compétition}:{tour}",
+// donc un plan de Coupe ne peut plus collisionner avec un plan de
+// championnat portant le même numéro) — jusque-là, aucun mécanisme de
+// planification n'existait pour la Coupe : un match de coupe se jouait
+// TOUJOURS avec les ordres courants de l'équipe, jamais un plan préparé à
+// l'avance, quoi que le manager ait réglé sur l'écran Ordres pour ce tour.
 function ensureCupLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueCupRound) {
   if (typeof league.calendarStartAt !== "number") return [];
   const round = league.pendingCupRound ? league.pendingCupRound() : null;
@@ -300,6 +301,11 @@ function ensureCupLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueCu
     if (!home.isHuman && !away.isHuman) return; // CPU-vs-CPU : jamais de diffusion en direct
     const key = cupLiveMatchKey(round.index, m.home, m.away);
     if (league.liveMatches[key]) return; // déjà démarrée (idempotent)
+    // Voir le commentaire de ensureLiveMatchStarted (championnat) pour le
+    // même mécanisme : appliqué juste avant que computeLiveMatch ne lise
+    // les champs "en direct", tout dernier moment où ce plan peut compter.
+    if (home.isHuman) home.applyPlannedTacticsForRound(round.index, "cup");
+    if (away.isHuman) away.applyPlannedTacticsForRound(round.index, "cup");
     league.liveMatches[key] = computeLiveMatch(Engine, league, round.index, m.home, m.away, kickoffAt, "cup");
     startedKeys.push(key);
   });
@@ -336,6 +342,15 @@ function finalizeCupRound(Engine, league) {
       forfeit = live.forfeit;
       delete league.liveMatches[key];
     } else {
+      // Jamais démarré en direct (CPU-vs-CPU, ou tour rattrapé d'un coup) :
+      // applique d'abord un plan d'ordres préparé à l'avance pour CHAQUE
+      // côté humain impliqué (voir finalizeRound ci-dessus pour le même
+      // principe côté championnat, et Team.applyPlannedTacticsForRound côté
+      // moteur), sinon un manager absent qui avait préparé ce tour de Coupe
+      // verrait quand même ses ordres du moment (voire ceux par défaut)
+      // appliqués à sa place.
+      if (home.isHuman) home.applyPlannedTacticsForRound(round.index, "cup");
+      if (away.isHuman) away.applyPlannedTacticsForRound(round.index, "cup");
       const sim = simulateOrForfeit(home, away);
       scoreHome = sim.scoreHome;
       scoreAway = sim.scoreAway;

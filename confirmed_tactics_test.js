@@ -325,7 +325,7 @@ if (!futureConfirmeeBtn) throw new Error("❌ Le panneau de préparation d'une j
 futureConfirmeeBtn.dispatchEvent(new win3.Event("click", { bubbles: true }));
 
 const liveTierAfter = win3.eval("teamA.tacticalTier");
-const plannedTier = win3.eval(`teamA.plannedTactics[${futureRound}] && teamA.plannedTactics[${futureRound}].tacticalTier`);
+const plannedTier = win3.eval(`teamA.getPlanForRound(${futureRound}).tacticalTier`);
 console.log(`\nAprès bascule 'Confirmée' sur la journée future ${futureRound} — teamA.tacticalTier avant/après :`, liveTierBefore, "/", liveTierAfter, "| tacticalTier planifié :", plannedTier);
 if (liveTierAfter !== liveTierBefore) throw new Error("❌ Éditer le niveau tactique d'une journée FUTURE ne devrait jamais changer les ordres en direct (teamA.tacticalTier).");
 if (plannedTier !== "confirmée") throw new Error("❌ Le changement aurait dû être enregistré dans le plan de cette journée future.");
@@ -333,8 +333,12 @@ console.log("✅ Préparer une journée future avec le niveau tactique 'confirm�
 
 await flush(dom3);
 const savedPlan = readRawSave(savePath);
-console.log("Plan sauvegardé pour la journée future", futureRound, "— tacticalTier :", savedPlan.team.plannedTactics[futureRound] && savedPlan.team.plannedTactics[futureRound].tacticalTier);
-if (!savedPlan.team.plannedTactics[futureRound] || savedPlan.team.plannedTactics[futureRound].tacticalTier !== "confirmée") {
+// Clé composite "championship:<round>" (voir Team.planKey côté moteur) dans
+// la sauvegarde brute JSON : cette journée future est une journée de
+// championnat (le seul cas couvert par ce test).
+const savedPlanKey = `championship:${futureRound}`;
+console.log("Plan sauvegardé pour la journée future", futureRound, "— tacticalTier :", savedPlan.team.plannedTactics[savedPlanKey] && savedPlan.team.plannedTactics[savedPlanKey].tacticalTier);
+if (!savedPlan.team.plannedTactics[savedPlanKey] || savedPlan.team.plannedTactics[savedPlanKey].tacticalTier !== "confirmée") {
   throw new Error("❌ Le tacticalTier planifié pour la journée future devrait être présent dans la sauvegarde brute.");
 }
 console.log("✅ Le niveau tactique planifié pour une journée future est bien persisté côté serveur.");

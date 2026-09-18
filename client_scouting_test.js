@@ -5,10 +5,13 @@
 // en faisant une séance vidéo de l'adversaire". Le MOTEUR lui-même
 // (League.runVideoSession/analystListings) est déjà couvert en détail par
 // analyst_market_test.js — ce fichier-ci vérifie la couche UI : l'onglet
-// Staff (section analyste), le panneau de scoutisme sur l'écran Classement
-// (lignes cliquables, colonnes verrouillées/révélées), le bouton de séance
-// vidéo, et la persistance de bout en bout à travers un rechargement complet
-// de la page (nouvelle session JSDOM, comme persistence_test.js).
+// Staff (section analyste), la fiche équipe adverse ouverte depuis le
+// Classement (retour utilisateur, 2026-09 : "il faudrait de vrais pages
+// équipes et pas seulement une fenêtre qui s'ouvre en dessous", voir
+// showTeamDetail/renderTeamDetail, colonnes verrouillées/révélées), le
+// bouton de séance vidéo, et la persistance de bout en bout à travers un
+// rechargement complet de la page (nouvelle session JSDOM, comme
+// persistence_test.js).
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
@@ -75,8 +78,8 @@ if (analystCurrentInfo.textContent.includes("révèle")) {
 console.log("✅ Le panneau analyste affiche bien le niveau, sans le nombre de caractéristiques révélées par séance (masqué sur demande utilisateur).");
 
 // ---------------------------------------------------------------------
-// Partie 2 : écran Classement — lignes adverses cliquables, propre ligne
-// non cliquable.
+// Partie 2 : écran Classement — noms d'équipes adverses cliquables (liens
+// vers la fiche équipe), propre ligne non cliquable (texte brut).
 // ---------------------------------------------------------------------
 clickTab("ligue");
 const rows = [...doc.querySelectorAll("#standingsContent table.standings-table tbody tr")];
@@ -84,26 +87,40 @@ console.log("\nLignes du classement :", rows.length, "(attendu 10)");
 if (rows.length !== 10) throw new Error("❌ Le classement devrait lister les 10 équipes.");
 const myRow = rows.find(r => r.classList.contains("me"));
 if (!myRow) throw new Error("❌ (setup) une ligne devrait porter la classe 'me' (le club du joueur).");
-if (myRow.dataset.scoutIdx !== undefined) throw new Error("❌ La ligne du club du joueur ne devrait PAS être cliquable pour le scoutisme (data-scout-idx absent).");
+if (myRow.querySelector("[data-team-idx]")) throw new Error("❌ La ligne du club du joueur ne devrait PAS être un lien vers une fiche équipe.");
 const opponentRows = rows.filter(r => r !== myRow);
-const allOpponentsScoutable = opponentRows.every(r => r.classList.contains("scoutable-row") && r.dataset.scoutIdx !== undefined);
-console.log(`${allOpponentsScoutable ? "✅" : "❌"} Toutes les lignes adverses (${opponentRows.length}) sont marquées cliquables (data-scout-idx).`);
-if (!allOpponentsScoutable) throw new Error("❌ Toutes les lignes adverses devraient être cliquables pour le scoutisme.");
+const allOpponentsLinked = opponentRows.every(r => r.querySelector("[data-team-idx]"));
+console.log(`${allOpponentsLinked ? "✅" : "❌"} Toutes les lignes adverses (${opponentRows.length}) ont un nom d'équipe cliquable (data-team-idx).`);
+if (!allOpponentsLinked) throw new Error("❌ Tous les noms d'équipe adverses devraient être des liens vers leur fiche équipe.");
 
 // ---------------------------------------------------------------------
-// Partie 3 : ouverture du panneau de scoutisme — baseline TOUJOURS visible
-// (nom/poste/taille/salaire), caractéristiques verrouillées ("🔒") tant
-// qu'aucune séance vidéo n'a eu lieu pour CET adversaire, même si un
-// analyste est sous contrat (la révélation reste une action délibérée, pas
-// automatique juste parce qu'on a un analyste).
+// Partie 3 : ouverture de la fiche équipe adverse (retour utilisateur,
+// 2026-09 : "de vrais pages équipes et pas seulement une fenêtre qui s'ouvre
+// en dessous") : baseline TOUJOURS visible (nom/poste/taille/salaire),
+// caractéristiques verrouillées ("🔒") tant qu'aucune séance vidéo n'a eu
+// lieu pour CET adversaire, même si un analyste est sous contrat (la
+// révélation reste une action délibérée, pas automatique juste parce qu'on a
+// un analyste).
 // ---------------------------------------------------------------------
-const opponentRow = opponentRows[0];
-const opponentIdx = Number(opponentRow.dataset.scoutIdx);
-opponentRow.click();
-const scoutingPanel = doc.getElementById("scoutingPanel");
+const opponentLink = opponentRows[0].querySelector("[data-team-idx]");
+const opponentIdx = Number(opponentLink.dataset.teamIdx);
+opponentLink.click();
+const teamDetailVisible = !doc.getElementById("teamDetailSection").classList.contains("hidden");
+console.log("\nFiche équipe ouverte (page dédiée, pas un panneau en dessous) :", teamDetailVisible);
+if (!teamDetailVisible) throw new Error("❌ Cliquer sur le nom d'une équipe adverse devrait ouvrir une vraie page (teamDetailSection), pas rester sur le Classement.");
+const scoutingPanel = doc.getElementById("teamDetailContent");
 const scoutingTable = scoutingPanel.querySelector("table.roster-table");
-console.log("\nPanneau de scoutisme ouvert :", !!scoutingTable);
-if (!scoutingTable) throw new Error("❌ Cliquer sur une ligne adverse devrait ouvrir un panneau de scoutisme avec un tableau de joueurs.");
+console.log("Tableau de joueurs présent :", !!scoutingTable);
+if (!scoutingTable) throw new Error("❌ La fiche équipe adverse devrait afficher un tableau de joueurs.");
+
+// "← Retour" doit ramener vers le Classement (l'origine mémorisée), pas un
+// écran par défaut arbitraire.
+doc.getElementById("closeTeamDetailBtn").click();
+const backOnStandings = !doc.getElementById("standingsSection").classList.contains("hidden");
+console.log("Retour vers le Classement après \"← Retour\" :", backOnStandings);
+if (!backOnStandings) throw new Error("❌ \"← Retour\" depuis la fiche équipe devrait ramener vers l'écran d'origine (Classement).");
+opponentLink.click(); // rouvre la fiche pour la suite du test
+console.log("✅ La fiche équipe adverse s'ouvre comme une vraie page dédiée, et \"← Retour\" ramène bien vers son origine.");
 const headerTexts = [...scoutingTable.querySelectorAll("thead th")].map(th => th.textContent);
 console.log("Colonnes :", headerTexts);
 ["Nom", "Poste", "Taille", "Salaire/sem."].forEach(col => {
@@ -140,8 +157,8 @@ if (!sessionResult.ok) throw new Error(`❌ La séance vidéo devrait réussir :
 // utilisateur : jamais 10/10 même au meilleur niveau — au niveau 3, 3/10
 // seulement).
 if (sessionResult.revealed.length !== 3) throw new Error(`❌ Niveau 3 devrait révéler 3 caractéristiques, obtenu ${sessionResult.revealed.length}.`);
-win.renderScoutingPanel();
-const lockedAfter = doc.getElementById("scoutingPanel").querySelectorAll(".attr-locked").length;
+win.renderTeamDetail(opponentIdx);
+const lockedAfter = doc.getElementById("teamDetailContent").querySelectorAll(".attr-locked").length;
 console.log("Cellules verrouillées après la séance :", lockedAfter, "(attendu : réduites de 3 × nb de joueurs)");
 if (lockedAfter !== (opponentRosterSize * ATTRS.length) - (opponentRosterSize * 3)) {
   throw new Error(`❌ Après la séance, exactement 3 caractéristiques par joueur devraient être déverrouillées, obtenu ${lockedAfter} cellules verrouillées restantes.`);
@@ -153,11 +170,11 @@ console.log("✅ Une séance vidéo réussie révèle bien le bon nombre de cara
 // rouvrir le panneau sur CE MÊME adversaire doit afficher le bouton
 // désactivé avec une raison PERMANENTE ("déjà scoutée cette saison"),
 // clairement distincte du message de cooldown quotidien ci-dessous.
-win.renderScoutingPanel();
+win.renderTeamDetail(opponentIdx);
 const sessionBtnAfter = doc.getElementById("runVideoSessionBtn");
 console.log("\nBouton de séance vidéo après scoutage de cet adversaire :", sessionBtnAfter);
 if (sessionBtnAfter) throw new Error("❌ Après avoir scouté cet adversaire, le bouton actif ne devrait plus être présent (remplacé par un message désactivé).");
-const scoutingActionsText = doc.querySelector("#scoutingPanel .scouting-actions").textContent;
+const scoutingActionsText = doc.querySelector("#teamDetailContent .scouting-actions").textContent;
 console.log("Message affiché (adversaire déjà scouté) :", scoutingActionsText);
 if (!scoutingActionsText.includes("scoutée")) throw new Error("❌ Le panneau devrait expliquer que CET adversaire a déjà été scouté cette saison (raison permanente).");
 if (scoutingActionsText.includes("déjà utilisée aujourd'hui") || scoutingActionsText.includes("revenez demain")) {

@@ -298,7 +298,17 @@ function withMockedRandom(value, fn) {
   const someListing = lg.coachListings.find(l => l.status === "open");
   someListing.status = "closed";
   someListing.result = "unsold";
-  const later = now + COACH_MARKET_GENERATE_CHECK_INTERVAL_MS + 100;
+  // Retour utilisateur (2026-09) : durée des enchères raccourcie à 1 jour
+  // (voir COACH_AUCTION_DURATION_MS/TRANSFER_AUCTION_DURATION_MS), désormais
+  // ÉGALE à COACH_MARKET_GENERATE_CHECK_INTERVAL_MS (qui, lui, n'a pas
+  // changé). Attendre littéralement COACH_MARKET_GENERATE_CHECK_INTERVAL_MS
+  // de temps réel ferait donc AUSSI expirer les autres candidats encore
+  // ouverts (leur closesAt tombe exactement au même instant), ce qui n'est
+  // plus le scénario isolé voulu ici. On débloque directement le throttle de
+  // génération (sans avancer le temps réel jusqu'à croiser closesAt) pour
+  // isoler la reconstitution du plancher de toute expiration naturelle.
+  lg.lastCoachGenerationCheckAt = now - COACH_MARKET_GENERATE_CHECK_INTERVAL_MS - 1;
+  const later = now + 1;
   lg.refreshCoachMarket(later);
   const openAfterRefill = lg.coachListings.filter(l => l.status === "open").length;
   console.log(`Après résolution d'un candidat puis nouveau refresh : ${openAfterRefill} candidat(s) ouvert(s) (attendu au moins ${COACH_MARKET_MIN_OPEN_LISTINGS})`);

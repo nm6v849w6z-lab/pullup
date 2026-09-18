@@ -6,7 +6,7 @@
 // puis figé jusqu'au passage de saison suivant, masse salariale payée chaque
 // semaine (entraînement ou pas), affichage Effectif/Économie, persistance.
 const fs = require("fs");
-const { startTestServer, openGame, flush, readRawSave, fastForwardCalendar } = require("./test_helpers.js");
+const { startTestServer, openGame, flush, readRawSave, writeRawSave, fastForwardCalendar } = require("./test_helpers.js");
 const E = require("./engine.js");
 const { salaryForOverall, levelCoefficientFor, Player } = E;
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
@@ -207,7 +207,9 @@ console.log("✅ La masse salariale est bien débitée et journalisée chaque se
 // --- Persistance : le salaire de chaque joueur survit à un rechargement
 // (même serveur), et ne se recalcule PAS tout seul d'après les attributs
 // actuels (sinon un simple rechargement ferait bouger les salaires en
-// dehors du rythme "une fois par saison"). ---
+// dehors du rythme "une fois par saison"). Le poste effectif (voir
+// `effectivePosition`, qui détermine ce salaire) doit lui aussi persister
+// au même rythme, exactement comme le salaire lui-même. ---
 win.close();
 const dom2 = await openGame(html, baseUrl);
 const win2 = dom2.window;
@@ -215,11 +217,77 @@ const reloaded = readRawSave(savePath);
 const salariesMatch = reloaded.team.players.every((p, i) => p.salary === saved.team.players[i].salary);
 console.log("\nSalaires identiques avant/après rechargement :", salariesMatch);
 if (!salariesMatch) throw new Error("❌ Les salaires devraient survivre au rechargement sans se recalculer tout seuls.");
-console.log("✅ Les salaires persistent au rechargement, figés jusqu'au prochain passage de saison.");
+const positionsMatch = reloaded.team.players.every((p, i) => p.effectivePosition === saved.team.players[i].effectivePosition);
+console.log("Postes effectifs identiques avant/après rechargement :", positionsMatch);
+if (!positionsMatch) throw new Error("❌ Le poste effectif devrait survivre au rechargement sans se recalculer tout seul (même rythme que le salaire).");
+console.log("✅ Les salaires et postes effectifs persistent au rechargement, figés jusqu'au prochain passage de saison.");
 await flush(dom2);
 win2.close();
+
+// --- Régression (retour utilisateur, 2026-09) : "sur le salaire. c'est
+// écrit pour un joueur qui est arrière mais qui devrait passer pivot que son
+// salaire est mieux valorisé comme pivot donc c'est ça qui est pris en
+// compte. ce n'est pas normal. le poste est fixé en début de saison selon
+// les caracs et il ne doit ensuite plus bouger. si un joueur est arrière en
+// début de saison, peu importe ses ups pendant la saison, son salaire ne
+// doit pas bouger, il doit être corrigé seulement lors de l'intersaison."
+//
+// On simule ici exactement ce scénario, de façon déterministe (les postes
+// figés/salaires imposés ci-dessous, pas ceux d'un joueur généré au hasard,
+// pour ne pas dépendre de la génération aléatoire de l'effectif de test) :
+// un joueur sauvegardé avec un poste effectif/salaire déjà figés (typé
+// Arrière) subit, EN COURS DE SAISON, des gains d'entraînement qui le
+// feraient basculer Pivot si son poste effectif était recalculé à chaud
+// (voir `pivotLikeAttrs` en tête de fichier). On modifie donc directement
+// ses attributs dans la sauvegarde brute, SANS toucher aux champs
+// `effectivePosition`/`salary` déjà sauvegardés (ce qu'un simple gain
+// d'entraînement en jeu ferait aussi : seuls les attrs bougent, jamais ces
+// deux champs directement). Un rechargement de page ne doit alors PAS faire
+// bouger ces deux champs : ils doivent rester figés à leur valeur d'avant
+// la mutation, jusqu'au prochain vrai passage de saison
+// (Team.recalculateSalaries).
+{
+  const pivotLikeAttrs = {
+    midRange: 20, threePoint: 15, inside: 88, pass: 18, rebound: 86,
+    block: 78, dribble: 15, agility: 22, defOutside: 18, defInside: 84,
+  };
+  // Confirme d'abord que la mutation est bien pertinente pour un joueur de
+  // carte Arrière : appliquée à froid, elle ferait ressortir Pivot (sinon le
+  // test ne prouverait rien).
+  const freshlyRecomputed = levelCoefficientFor(pivotLikeAttrs, "Arrière");
+  console.log("\nPoste que ces attributs donneraient s'ils étaient recalculés à chaud (carte Arrière) :", freshlyRecomputed.position);
+  if (freshlyRecomputed.position === "Arrière") {
+    throw new Error("❌ Le profil d'attributs choisi pour la régression devrait produire un poste différent d'Arrière, sinon le test ne prouve rien.");
+  }
+
+  const regressionSave = readRawSave(savePath);
+  const target = regressionSave.team.players[0];
+  target.position = "Arrière";
+  target.effectivePosition = "Arrière";
+  const frozenPosition = "Arrière";
+  const frozenSalary = target.salary;
+  console.log("Joueur ciblé pour la régression, poste de carte et poste effectif figés à :", frozenPosition, "| salaire figé :", frozenSalary, "€/sem.");
+
+  target.attrs = { ...pivotLikeAttrs };
+  writeRawSave(savePath, regressionSave);
+
+  const dom3 = await openGame(html, baseUrl);
+  const win3 = dom3.window;
+  const afterMutationReload = win3.eval("teamA.players[0]");
+  console.log("Après mutation des attributs + rechargement, poste effectif :", afterMutationReload.effectivePosition, "| salaire :", afterMutationReload.salary, "€/sem.");
+  if (afterMutationReload.effectivePosition !== frozenPosition) {
+    throw new Error("❌ Le poste effectif ne devrait pas bouger en cours de saison même si les attributs changent (obtenu : " + afterMutationReload.effectivePosition + ", attendu : " + frozenPosition + ").");
+  }
+  if (afterMutationReload.salary !== frozenSalary) {
+    throw new Error("❌ Le salaire ne devrait pas bouger en cours de saison même si les attributs changent (obtenu : " + afterMutationReload.salary + ", attendu : " + frozenSalary + ").");
+  }
+  console.log("✅ Poste effectif et salaire restent figés en cours de saison malgré des gains d'entraînement, conformément au retour utilisateur (correction seulement à l'intersaison).");
+  await flush(dom3);
+  win3.close();
+}
+
 server.close();
 
-console.log("\n✅ Grille salariale des joueurs vérifiée : formule exponentielle cohérente, salaire visible (Effectif/Économie), masse salariale payée chaque semaine, persistance.");
+console.log("\n✅ Grille salariale des joueurs vérifiée : formule exponentielle cohérente, salaire visible (Effectif/Économie), masse salariale payée chaque semaine, persistance, poste effectif figé jusqu'à l'intersaison.");
 
 })().catch(e => { console.error(e); process.exit(1); });

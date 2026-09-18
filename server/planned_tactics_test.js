@@ -38,11 +38,11 @@ const T0 = Date.UTC(2026, 8, 7);
 
   finalizeRound(league, round);
 
-  console.log("Après finalizeRound(round) avec un plan préparé — defense:", team.defense, "| rhythm:", team.rhythm, "| plan consommé :", !team.plannedTactics[round], "| plan futur intact :", !!team.plannedTactics[round + 2]);
+  console.log("Après finalizeRound(round) avec un plan préparé — defense:", team.defense, "| rhythm:", team.rhythm, "| plan consommé :", !team.hasPlanForRound(round), "| plan futur intact :", team.hasPlanForRound(round + 2));
   if (team.defense !== "Zone press") throw new Error(`❌ finalizeRound aurait dû appliquer la defense planifiée ('Zone'), obtenu '${team.defense}'.`);
   if (team.rhythm !== "Lent") throw new Error(`❌ finalizeRound aurait dû appliquer le rythme planifié ('Lent'), obtenu '${team.rhythm}'.`);
-  if (team.plannedTactics[round]) throw new Error("❌ Le plan de la journée résolue aurait dû être consommé (supprimé) par finalizeRound.");
-  if (!team.plannedTactics[round + 2]) throw new Error("❌ Un plan préparé pour une AUTRE journée (future) ne devrait pas être touché par la résolution de celle-ci.");
+  if (team.hasPlanForRound(round)) throw new Error("❌ Le plan de la journée résolue aurait dû être consommé (supprimé) par finalizeRound.");
+  if (!team.hasPlanForRound(round + 2)) throw new Error("❌ Un plan préparé pour une AUTRE journée (future) ne devrait pas être touché par la résolution de celle-ci.");
   console.log("✅ finalizeRound applique le plan de SA journée avant de simuler, et le consomme — les autres journées planifiées restent intactes.");
 }
 
@@ -83,14 +83,14 @@ const T0 = Date.UTC(2026, 8, 7);
   if (!backupMeneur) throw new Error("❌ Effectif de test invalide : il faut au moins 2 Meneurs pour ce scénario.");
 
   team.stagePlanForRound(round, {});
-  E.Team.prototype.setStarter.call(team.plannedTactics[round], "Meneur", backupMeneur.id);
+  E.Team.prototype.setStarter.call(team.getPlanForRound(round), "Meneur", backupMeneur.id);
 
   const before = team.lineup.starters["Meneur"];
   const result = ensureLiveMatchStarted(E, league, kickoffAt, scheduledTimeForLeagueRound);
 
-  console.log("Après ensureLiveMatchStarted avec un plan de feuille de match préparé — titulaire Meneur avant:", before, "| après:", team.lineup.starters["Meneur"], "| attendu:", backupMeneur.id, "| plan consommé:", !team.plannedTactics[round], "| clés démarrées:", result.length);
+  console.log("Après ensureLiveMatchStarted avec un plan de feuille de match préparé — titulaire Meneur avant:", before, "| après:", team.lineup.starters["Meneur"], "| attendu:", backupMeneur.id, "| plan consommé:", !team.hasPlanForRound(round), "| clés démarrées:", result.length);
   if (team.lineup.starters["Meneur"] !== backupMeneur.id) throw new Error("❌ ensureLiveMatchStarted aurait dû appliquer la feuille de match planifiée AVANT de calculer le match en direct.");
-  if (team.plannedTactics[round]) throw new Error("❌ Le plan de la journée en cours de diffusion aurait dû être consommé par ensureLiveMatchStarted.");
+  if (team.hasPlanForRound(round)) throw new Error("❌ Le plan de la journée en cours de diffusion aurait dû être consommé par ensureLiveMatchStarted.");
   if (!result.length) throw new Error("❌ ensureLiveMatchStarted aurait dû calculer et démarrer le match en direct (kickoffAt atteint).");
   console.log("✅ ensureLiveMatchStarted applique le plan de la journée en cours de diffusion AVANT de calculer le match, puis le consomme.");
 }

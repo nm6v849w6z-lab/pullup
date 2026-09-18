@@ -82,10 +82,19 @@ defSel.value = otherDefenseOption.value;
 defSel.dispatchEvent(new win.Event("change"));
 
 const liveDefenseAfter = win.eval("teamA.defense");
-const plannedDefense = win.eval(`teamA.plannedTactics[${targetRound}] && teamA.plannedTactics[${targetRound}].defense`);
-console.log(`\nAprès changement de défense sur la journée ${targetRound + 1} — defense EN DIRECT avant/après :`, liveDefenseBefore, "/", liveDefenseAfter, "| defense planifiée pour cette journée :", plannedDefense);
+// Team.plannedTactics est désormais indexé par une clé composite
+// "competition:round" (voir Team.planKey côté moteur, correctif 2026-09
+// permettant aussi de planifier des tours de Coupe) plutôt que par un simple
+// numéro de journée : on passe par hasPlanForRound/getPlanForRound (l'API
+// publique voulue pour ça, voir leur commentaire côté moteur) plutôt que
+// d'indexer directement plannedTactics, pour ne pas dépendre du format exact
+// de la clé depuis ce test.
+const hasPlanForTarget = win.eval(`teamA.hasPlanForRound(${targetRound})`);
+const plannedDefense = win.eval(`teamA.getPlanForRound(${targetRound}).defense`);
+console.log(`\nAprès changement de défense sur la journée ${targetRound + 1} — defense EN DIRECT avant/après :`, liveDefenseBefore, "/", liveDefenseAfter, "| plan présent pour cette journée :", hasPlanForTarget, "| defense planifiée :", plannedDefense);
 if (liveDefenseAfter !== liveDefenseBefore) throw new Error("❌ Éditer les ordres d'une journée FUTURE ne devrait JAMAIS changer les ordres en direct (teamA.defense).");
-if (plannedDefense !== otherDefenseOption.value) throw new Error("❌ Le changement aurait dû être enregistré dans le plan de cette journée (teamA.plannedTactics[round].defense).");
+if (!hasPlanForTarget) throw new Error("❌ Le changement aurait dû créer un plan pour cette journée (teamA.hasPlanForRound(round)).");
+if (plannedDefense !== otherDefenseOption.value) throw new Error("❌ Le changement aurait dû être enregistré dans le plan de cette journée (teamA.getPlanForRound(round).defense).");
 console.log("✅ Éditer une journée future modifie uniquement son plan, jamais les ordres en direct.");
 
 // Le repère "(préparé) ●" doit maintenant apparaître sur l'option de cette
@@ -107,7 +116,7 @@ immediateDefSel.dispatchEvent(new win.Event("change"));
 const liveDefenseAfterImmediateEdit = win.eval("teamA.defense");
 console.log(`\nAprès changement de défense sur le round immédiat (0) — defense EN DIRECT :`, liveDefenseAfterImmediateEdit, "(attendu :", immediateOtherOption.value, ")");
 if (liveDefenseAfterImmediateEdit !== immediateOtherOption.value) throw new Error("❌ Éditer le round immédiat (prochain match) devrait modifier teamA.defense directement, comme avant cette fonctionnalité.");
-const noPlanForImmediate = win.eval("!teamA.plannedTactics[0]");
+const noPlanForImmediate = win.eval("!teamA.hasPlanForRound(0)");
 console.log("Aucun plan créé pour le round immédiat (0) :", noPlanForImmediate);
 if (!noPlanForImmediate) throw new Error("❌ Le round immédiat ne doit jamais passer par plannedTactics (il EST les ordres en direct).");
 console.log("✅ Le round immédiat reste câblé sur les ordres en direct, exactement comme avant cette fonctionnalité.");
@@ -118,8 +127,12 @@ console.log("✅ Le round immédiat reste câblé sur les ordres en direct, exac
 // ---------------------------------------------------------------------
 await flush(dom);
 const saved = readRawSave(savePath);
-console.log("\nPlan sauvegardé pour la journée", targetRound, ":", saved.team.plannedTactics[targetRound]);
-if (!saved.team.plannedTactics || !saved.team.plannedTactics[targetRound] || saved.team.plannedTactics[targetRound].defense !== otherDefenseOption.value) {
+// Clé composite "championship:<round>" (voir Team.planKey côté moteur) dans
+// la sauvegarde brute JSON, puisque cette journée est une journée de
+// championnat (le seul cas que ce test couvre).
+const savedPlanKey = `championship:${targetRound}`;
+console.log("\nPlan sauvegardé pour la journée", targetRound, ":", saved.team.plannedTactics[savedPlanKey]);
+if (!saved.team.plannedTactics || !saved.team.plannedTactics[savedPlanKey] || saved.team.plannedTactics[savedPlanKey].defense !== otherDefenseOption.value) {
   throw new Error("❌ Le plan de la journée future devrait être présent dans la sauvegarde brute.");
 }
 win.close();
@@ -127,7 +140,7 @@ win.close();
 const dom2 = await openGame(html, baseUrl);
 const doc2 = dom2.window.document;
 const win2 = dom2.window;
-const reloadedPlan = win2.eval(`teamA.plannedTactics[${targetRound}] && teamA.plannedTactics[${targetRound}].defense`);
+const reloadedPlan = win2.eval(`teamA.getPlanForRound(${targetRound}).defense`);
 console.log("Après rechargement — defense planifiée pour la journée", targetRound, ":", reloadedPlan);
 if (reloadedPlan !== otherDefenseOption.value) throw new Error("❌ Le plan de la journée future ne survit pas au rechargement.");
 console.log("✅ Le plan d'une journée future survit à un rechargement complet de la page.");
@@ -154,7 +167,7 @@ const dom3 = await openGame(html, baseUrl);
 await flush(dom3); // laisse le temps au rattrapage déclenché par GET /api/state d'être bien persisté
 const savedAfterSim = readRawSave(savePath);
 const roundResolved = savedAfterSim.league.round > targetRound;
-const planConsumed = !savedAfterSim.team.plannedTactics || !savedAfterSim.team.plannedTactics[targetRound];
+const planConsumed = !savedAfterSim.team.plannedTactics || !savedAfterSim.team.plannedTactics[savedPlanKey];
 console.log(`\nAprès rattrapage jusqu'à la journée ${targetRound} — league.round:`, savedAfterSim.league.round, "(> ", targetRound, "?)", "| plan de la journée", targetRound, "consommé :", planConsumed);
 if (!roundResolved) throw new Error(`❌ La journée ${targetRound} devrait avoir été résolue par le rattrapage automatique.`);
 if (!planConsumed) throw new Error("❌ Une fois sa journée réellement simulée, le plan préparé à l'avance devrait avoir été consommé (supprimé).");
