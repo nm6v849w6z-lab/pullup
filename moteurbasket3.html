@@ -755,6 +755,14 @@
   .arena-purchases{display:flex; flex-direction:column; gap:8px;}
   .arena-purchases .staff-hire-grid--single{grid-template-columns:1fr;}
   .arena-purchases .staff-hire-card{text-align:left;}
+  /* Retour utilisateur (2026-09) : "la brique centre de formation devrait
+     aussi prendre toute la largeur" (page Académie de jeunes, voir
+     renderTrainingCenterPanel) : même correctif que .arena-purchases
+     ci-dessus (colonne unique étirée sur 1fr au lieu de se limiter à
+     max-content), mais scopé à #trainingCenterCurrentPanel puisque cette
+     carte n'est pas dans .arena-purchases (elle est sur une page différente
+     de la Salle). */
+  #trainingCenterCurrentPanel .staff-hire-grid--single{grid-template-columns:1fr;}
   /* Retour utilisateur (2026-09) : "joue sur la taille des 6 briques en haut
      à droite pour que ça fasse la meme épaisseur que le gros bloc de gauche
      avec l'image du stade". .arena-row garde align-items:start (chaque
