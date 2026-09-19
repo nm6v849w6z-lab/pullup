@@ -1502,6 +1502,17 @@ class Team {
     this.offRebStyle = "Normal";            // clé de OFF_REBOUND_STYLES
     this.endgameManagement = "Standard";    // clé de ENDGAME_MANAGEMENT — indépendant du tier
 
+    // Tutoriel d'accueil (retour utilisateur, 2026-09 : "on est d'accord
+    // qu'on ne peut le faire qu'une fois ? quand il a été fait le bouton
+    // dans le guide doit s'enlever") : purement côté client
+    // (moteurbasket3.html), jamais lu par le moteur de simulation, mais
+    // DOIT quand même exister ici : c'est CE fichier (mirroir exact, voir
+    // l'en-tête du fichier) qui reconstruit team côté serveur à chaque
+    // sauvegarde (server/store.js -> teamFromSave/serializeTeam plus bas),
+    // donc un champ absent d'ici est silencieusement perdu à chaque
+    // aller-retour serveur, même s'il existe côté client.
+    this.onboardingTourCompleted = false;
+
     this.maintainDespiteFouls = new Set();
     // Plans d'ordres préparés À L'AVANCE pour une journée future (retour
     // utilisateur, 2026-09 : "sur buzzerbeater on peut faire pour tous les
@@ -5046,6 +5057,10 @@ function serializeTeam(team) {
     closeoutStyle: team.closeoutStyle,
     offRebStyle: team.offRebStyle,
     endgameManagement: team.endgameManagement,
+    // Tutoriel d'accueil (voir Team.constructor plus haut) : DOIT survivre
+    // au rechargement, sinon le bouton de l'onglet Guide reviendrait à
+    // chaque redémarrage du serveur.
+    onboardingTourCompleted: !!team.onboardingTourCompleted,
     trainingSkill: team.trainingSkill,
     trainingPositions: [...team.trainingPositions],
     trainer: team.trainer ? { ...team.trainer } : null,
@@ -5213,6 +5228,9 @@ function teamFromSave(data) {
   if (data.closeoutStyle) team.closeoutStyle = data.closeoutStyle;
   if (data.offRebStyle) team.offRebStyle = data.offRebStyle;
   if (data.endgameManagement) team.endgameManagement = data.endgameManagement;
+  // Tutoriel d'accueil, absente = sauvegarde d'avant cette fonctionnalité,
+  // on garde `false` (déjà la valeur posée par le constructeur Team).
+  team.onboardingTourCompleted = !!data.onboardingTourCompleted;
   team.trainingSkill = data.trainingSkill || null;
   team.trainingPositions = Array.isArray(data.trainingPositions) ? data.trainingPositions : [];
   if (data.trainer && TRAINER_LEVELS.includes(data.trainer.level)) {

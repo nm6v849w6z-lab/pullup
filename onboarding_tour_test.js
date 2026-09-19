@@ -125,8 +125,64 @@ if (realTier === "débutant" && !confirmedBlockAfter.classList.contains("hidden"
 }
 console.log("✅ Le mode tactique réel de l'équipe n'a pas été modifié par le tutoriel (juste révélé temporairement pour l'expliquer).");
 
+// --- Retour utilisateur (2026-09) : "on est d'accord qu'on ne peut le
+// faire qu'une fois ? quand il a été fait le bouton dans le guide doit
+// s'enlever" : une fois le tutoriel terminé, le bouton disparaît
+// immédiatement (déjà vérifié en visitant Ordres ci-dessus, revisite Guide
+// pour re-vérifier), ET l'état survit à un rechargement de page (persisté
+// via saveMyTeam). ---
+[...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "guide").click();
+const launchBtnAfter = doc.getElementById("tourLaunchBtn");
+if (!launchBtnAfter || !launchBtnAfter.classList.contains("hidden")) {
+  throw new Error("❌ Le bouton de lancement du tutoriel devrait être masqué après un tutoriel terminé.");
+}
+console.log("✅ Le bouton de lancement disparaît bien de l'onglet Guide une fois le tutoriel terminé.");
+
 await flush(dom);
 await dom.window.close();
+
+// Rouvre une "nouvelle session" sur le MÊME serveur (donc la MÊME
+// sauvegarde) : le bouton doit rester masqué après un rechargement complet
+// de la page, pas seulement en mémoire pour cette session de navigateur.
+const domReload = await openGame(html, baseUrl);
+const docReload = domReload.window.document;
+[...docReload.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "guide").click();
+const launchBtnReload = docReload.getElementById("tourLaunchBtn");
+if (!launchBtnReload || !launchBtnReload.classList.contains("hidden")) {
+  throw new Error("❌ BUG : après un rechargement de page, le bouton de lancement du tutoriel devrait rester masqué (état non persisté ?).");
+}
+console.log("✅ L'état \"tutoriel terminé\" survit bien à un rechargement de page (persisté côté serveur).");
+await flush(domReload);
+await domReload.window.close();
+
+// --- Passer le tutoriel (sans aller au bout) doit AUSSI le marquer comme
+// fait, sur une carrière fraîche séparée : sinon "Passer" permettrait de
+// relancer le tutoriel plus tard et de re-gagner les primes des thèmes déjà
+// vus avant l'abandon. ---
+console.log("\n--- Test : \"Passer\" marque aussi le tutoriel comme fait ---");
+const { server: server2, baseUrl: baseUrl2 } = await startTestServer();
+const dom2 = await openGame(html, baseUrl2);
+const doc2 = dom2.window.document;
+const win2 = dom2.window;
+[...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "guide").click();
+doc2.getElementById("tourLaunchBtn").click();
+doc2.getElementById("tourNextBtn").dispatchEvent(new win2.Event("click", { bubbles: true })); // avance un peu avant d'abandonner
+const skipBtn2 = doc2.querySelector("#tourSkipBtn");
+if (!skipBtn2) throw new Error("❌ (setup) bouton Passer introuvable.");
+skipBtn2.dispatchEvent(new win2.Event("click", { bubbles: true }));
+if (!win2.eval("teamA.onboardingTourCompleted")) {
+  throw new Error("❌ Passer le tutoriel devrait aussi le marquer comme fait (team.onboardingTourCompleted).");
+}
+[...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "guide").click();
+const launchBtnAfterSkip = doc2.getElementById("tourLaunchBtn");
+if (!launchBtnAfterSkip || !launchBtnAfterSkip.classList.contains("hidden")) {
+  throw new Error("❌ Le bouton de lancement devrait aussi être masqué après un \"Passer\", pas seulement après être allé au bout.");
+}
+console.log("✅ \"Passer\" marque bien le tutoriel comme fait, bouton masqué en conséquence.");
+await flush(dom2);
+await dom2.window.close();
+server2.close();
+
 server.close();
 console.log("\n🏁 Tous les tests onboarding_tour_test.js sont passés.");
 
