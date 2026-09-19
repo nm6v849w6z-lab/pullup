@@ -1392,6 +1392,12 @@
   <div id="academieSection" class="hidden">
     <div class="section">
       <h2>🧒 Académie de jeunes</h2>
+      <!-- Retour utilisateur (2026-09) : "le haut [de cette page] est
+           affreusement vide : on a une toute petite brique et c'est tout.
+           il faut trouver du contenu à ajouter" : palmarès du club (voir
+           Team.academyGraduates/renderAcademyGraduatesStat), juste sous le
+           titre de la page, avant même la bannière de décision 18 ans. -->
+      <div id="academyGraduatesHolder"></div>
       <div id="academiePendingBanner"></div>
     </div>
     <div class="section">
@@ -3281,6 +3287,15 @@ class Team {
     // indéfiniment une place de l'effectif jeunes).
     this.pendingYouthDecisions = [];
 
+    // Palmarès du club (retour utilisateur, 2026-09, sur l'onglet Académie
+    // de jeunes : "il faut trouver du contenu à ajouter", le haut de la
+    // page jugé "affreusement vide") : nombre total de jeunes formés par
+    // l'académie et promus en pro au fil de l'histoire du club (voir
+    // Team.promoteYouthPlayer, seul point d'incrément). Jamais décrémenté,
+    // même si le joueur est ensuite vendu, libéré ou prend sa retraite : un
+    // compteur historique, pas un effectif courant.
+    this.academyGraduates = 0;
+
     this.budget = CLUB_STARTING_BUDGET;
 
     // Salle (voir ARENA_LEVELS) + un prix de billet par catégorie de place
@@ -3776,6 +3791,11 @@ class Team {
     this.pendingYouthDecisions = (this.pendingYouthDecisions || []).filter(id => id !== playerId);
     player.salary = salaryForOverall(player.overall());
     this.players.push(player);
+    // Palmarès du club (voir this.academyGraduates au constructeur) : cette
+    // promotion EST l'évènement qui compte pour ce compteur, incrémenté
+    // uniquement ici (jamais à la signature du candidat, ni pendant la
+    // croissance automatique tant qu'il n'a pas encore 18 ans).
+    this.academyGraduates = (this.academyGraduates || 0) + 1;
     // Rejoint le banc plutôt qu'un titulaire (même convention que l'achat
     // d'un joueur sur le marché des transferts, voir League._resolveListing)
     // pour ne jamais déloger un titulaire déjà choisi manuellement — sauf
@@ -6383,6 +6403,10 @@ function serializeTeam(team) {
     // Centre de formation (voir Team.trainingCenterLevel ci-dessus) :
     // démarre à 1 par défaut (constructeur Team), comme arenaLevel.
     trainingCenterLevel: team.trainingCenterLevel || 1,
+    // Palmarès du club (voir Team.academyGraduates/promoteYouthPlayer
+    // ci-dessus) : DOIT survivre au rechargement comme le reste, sinon ce
+    // compteur historique repartirait de zéro à chaque redémarrage serveur.
+    academyGraduates: team.academyGraduates || 0,
     // Décisions manager en attente pour un jeune de 18 ans (voir
     // Team.pendingYouthDecisions ci-dessus) : simple tableau d'id de
     // joueurs, DOIT survivre au rechargement (sinon un manager perdrait la
@@ -6523,6 +6547,10 @@ function teamFromSave(data) {
   if (TRAINING_CENTER_LEVELS.some(t => t.level === data.trainingCenterLevel)) {
     team.trainingCenterLevel = data.trainingCenterLevel;
   }
+  // Palmarès du club (voir Team.academyGraduates ci-dessus) : une
+  // sauvegarde d'avant cette fonctionnalité retombe proprement sur 0 (déjà
+  // la valeur posée par le constructeur Team), jamais undefined/NaN.
+  team.academyGraduates = typeof data.academyGraduates === "number" ? data.academyGraduates : 0;
   team.pendingYouthDecisions = Array.isArray(data.pendingYouthDecisions) ? [...data.pendingYouthDecisions] : [];
   // Scoutisme (voir Team.scoutedAttrs/lastVideoSessionAt ci-dessus) :
   // `{}`/`null` par défaut (déjà la valeur posée par le constructeur Team)
@@ -12534,10 +12562,29 @@ function renderEconomieSection() {
 // sont pas signés).
 // ---------------------------------------------------------------------
 function renderAcademieSection() {
+  renderAcademyGraduatesStat();
   renderAcademiePendingBanner();
   renderTrainingCenterPanel();
   renderYouthRoster();
   renderYouthCandidates();
+}
+
+// Palmarès du club (voir Team.academyGraduates/promoteYouthPlayer côté
+// moteur, retour utilisateur 2026-09 cité plus haut sur le HTML statique) :
+// nombre total de jeunes formés par l'académie et promus en pro au fil de
+// l'histoire du club, jamais remis à zéro (même style de mise en avant que
+// .mvp-callout sur l'onglet Ligue, réutilisé tel quel). 0/1/pluriel gérés
+// séparément pour ne jamais afficher "0 jeunes" ou "1 jeunes".
+function renderAcademyGraduatesStat() {
+  const holder = document.getElementById("academyGraduatesHolder");
+  if (!holder) return;
+  const n = teamA.academyGraduates || 0;
+  const text = n === 0
+    ? "Aucun jeune formé par l'académie n'a encore rejoint l'effectif pro."
+    : n === 1
+      ? "1 jeune formé par l'académie a rejoint l'effectif pro depuis la création du club."
+      : `${n} jeunes formés par l'académie ont rejoint l'effectif pro depuis la création du club.`;
+  holder.innerHTML = `<div class="mvp-callout"><h4>🎓 Palmarès du club</h4><p>${text}</p></div>`;
 }
 
 function academieFeedback(message, ok) {
@@ -12620,15 +12667,36 @@ function renderTrainingCenterPanel() {
   const next = teamA.nextTrainingCenterLevel();
 
   const grid = document.createElement("div");
-  grid.className = "facilities-grid";
+  // Retour utilisateur (2026-09) : carte élargie avec plus de contenu (voir
+  // plus bas), .facilities-grid (repeat(auto-fill, minmax(150px, 1fr)))
+  // était pensée pour PLUSIEURS cartes côte à côte (Salle) : avec une seule
+  // carte ici, les colonnes vides générées par auto-fill se partageaient
+  // quand même l'espace, l'écrasant à ~150px et faisant mal empiler le
+  // nouveau texte. .staff-hire-grid--single (déjà utilisé par la carte de
+  // la salle, voir renderSalleSection) dimensionne sa colonne unique au
+  // contenu (grid-template-columns:max-content) au lieu de l'écraser.
+  grid.className = "staff-hire-grid staff-hire-grid--single";
   const card = document.createElement("div");
   card.className = "staff-hire-card facility-card";
   // Pas de titre "Centre de formation" répété ici : le h2 de la section
   // juste au-dessus (voir le HTML statique) le dit déjà.
   const cardBody = document.createElement("div");
   cardBody.className = "facility-card-body facility-card-center";
-  cardBody.innerHTML = `<div class="price">${escapeHtml(info.name)}</div>` +
-    `<div class="bonus">Niveau ${info.level}</div>`;
+  // Retour utilisateur (2026-09) : "le haut [de l'onglet Académie de
+  // jeunes] est affreusement vide : on a une toute petite brique et c'est
+  // tout. il faut trouver du contenu à ajouter" : la carte affichait
+  // seulement le nom/niveau du palier actuel (voir buildUpgradeArrow pour
+  // le détail avant/après, réservé au clic sur la flèche). Elle montre
+  // désormais aussi, en clair, l'effet concret du palier actuel
+  // (multiplicateur de progression) et un aperçu du palier suivant
+  // (coût + multiplicateur) sans avoir à cliquer sur la flèche pour le
+  // découvrir.
+  let cardBodyHtml = `<div class="price">${escapeHtml(info.name)}</div>` +
+    `<div class="bonus">Niveau ${info.level} · Progression des jeunes : x${info.growthMultiplier}</div>`;
+  if (next) {
+    cardBodyHtml += `<div class="staff-current-meta" style="margin-top:6px;">Niveau suivant : ${escapeHtml(next.name)} (${formatMoney(next.upgradeCost)}) → progression x${next.growthMultiplier}</div>`;
+  }
+  cardBody.innerHTML = cardBodyHtml;
   card.appendChild(cardBody);
   const actionLine = document.createElement("div");
   actionLine.className = "facility-card-action";

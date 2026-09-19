@@ -1625,6 +1625,15 @@ class Team {
     // indéfiniment une place de l'effectif jeunes).
     this.pendingYouthDecisions = [];
 
+    // Palmarès du club (retour utilisateur, 2026-09, sur l'onglet Académie
+    // de jeunes : "il faut trouver du contenu à ajouter", le haut de la
+    // page jugé "affreusement vide") : nombre total de jeunes formés par
+    // l'académie et promus en pro au fil de l'histoire du club (voir
+    // Team.promoteYouthPlayer, seul point d'incrément). Jamais décrémenté,
+    // même si le joueur est ensuite vendu, libéré ou prend sa retraite : un
+    // compteur historique, pas un effectif courant.
+    this.academyGraduates = 0;
+
     this.budget = CLUB_STARTING_BUDGET;
 
     // Salle (voir ARENA_LEVELS) + un prix de billet par catégorie de place
@@ -2143,6 +2152,11 @@ class Team {
     this.pendingYouthDecisions = (this.pendingYouthDecisions || []).filter(id => id !== playerId);
     player.salary = salaryForOverall(player.overall());
     this.players.push(player);
+    // Palmarès du club (voir this.academyGraduates au constructeur) : cette
+    // promotion EST l'évènement qui compte pour ce compteur, incrémenté
+    // uniquement ici (jamais à la signature du candidat, ni pendant la
+    // croissance automatique tant qu'il n'a pas encore 18 ans).
+    this.academyGraduates = (this.academyGraduates || 0) + 1;
     // Rejoint le banc plutôt qu'un titulaire (même convention que l'achat
     // d'un joueur sur le marché des transferts, voir League._resolveListing)
     // pour ne jamais déloger un titulaire déjà choisi manuellement — sauf
@@ -4956,6 +4970,10 @@ function serializeTeam(team) {
     // Centre de formation (voir Team.trainingCenterLevel ci-dessus) :
     // démarre à 1 par défaut (constructeur Team), comme arenaLevel.
     trainingCenterLevel: team.trainingCenterLevel || 1,
+    // Palmarès du club (voir Team.academyGraduates/promoteYouthPlayer
+    // ci-dessus) : DOIT survivre au rechargement comme le reste, sinon ce
+    // compteur historique repartirait de zéro à chaque redémarrage serveur.
+    academyGraduates: team.academyGraduates || 0,
     // Décisions manager en attente pour un jeune de 18 ans (voir
     // Team.pendingYouthDecisions ci-dessus) : simple tableau d'id de
     // joueurs, DOIT survivre au rechargement (sinon un manager perdrait la
@@ -5100,6 +5118,10 @@ function teamFromSave(data) {
   if (TRAINING_CENTER_LEVELS.some(t => t.level === data.trainingCenterLevel)) {
     team.trainingCenterLevel = data.trainingCenterLevel;
   }
+  // Palmarès du club (voir Team.academyGraduates ci-dessus) : une
+  // sauvegarde d'avant cette fonctionnalité retombe proprement sur 0 (déjà
+  // la valeur posée par le constructeur Team), jamais undefined/NaN.
+  team.academyGraduates = typeof data.academyGraduates === "number" ? data.academyGraduates : 0;
   team.pendingYouthDecisions = Array.isArray(data.pendingYouthDecisions) ? [...data.pendingYouthDecisions] : [];
   // Scoutisme (voir Team.scoutedAttrs/lastVideoSessionAt ci-dessus) :
   // `{}`/`null` par défaut (déjà la valeur posée par le constructeur Team)
