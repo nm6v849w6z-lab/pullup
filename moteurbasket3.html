@@ -15,6 +15,20 @@
   }
   *{box-sizing:border-box;}
   input[type="range"]{accent-color:var(--amber); width:100%;}
+  /* Retour utilisateur (2026-09) : "selon qu'on soit sur une page où on peut
+     scroller ou non, la barre du haut bouge un peu vers la gauche ou la
+     droite [...] ça evite un petit mouvement desagreable du haut quand on
+     change de page". Cause : .app-shell/.main-col n'ont pas de hauteur figée
+     (voir leurs commentaires plus bas), c'est donc le DOCUMENT lui-même
+     (html/body) qui défile une fois le contenu plus haut que la fenêtre. Sans
+     ça, la barre de défilement du navigateur apparaît/disparaît selon la
+     page, ce qui change la largeur RÉELLEMENT disponible pour .app-shell et
+     décale tout son contenu (topbar comprise) de la largeur de cette barre.
+     scrollbar-gutter:stable réserve cet espace en permanence, que la page
+     défile ou non, pour que rien ne bouge jamais en changeant de page.
+     `both-edges` inutile ici : une seule colonne de contenu, pas de
+     scroll horizontal à compenser des deux côtés. */
+  html{scrollbar-gutter:stable;}
   body{
     margin:0; background:var(--bg); color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
@@ -1885,6 +1899,9 @@
         <h3>Effectif &amp; feuille de match</h3>
         <p class="training-intro">Caractéristiques de tous les joueurs du club (0 à 99), et colonne <b>Marché</b> pour mettre un joueur aux enchères au prix de votre choix (voir l'onglet <b>Marché</b> pour suivre les enchères en cours, les vôtres et celles des adversaires). Pour composer la feuille de match et donner les ordres avant le prochain match, direction l'onglet <b>Ordres</b>.</p>
         <p class="training-intro" style="margin-top:10px;">Les salaires (masse salariale visible sur l'onglet <b>Économie</b>) sont recalculés au début de chaque nouvelle saison, d'après le niveau de chaque joueur AU POSTE où ses caractéristiques le valorisent le mieux. Vous pouvez vendre l'intégralité de votre effectif si vous le souhaitez, mais un match sans assez de joueurs pour composer un cinq de départ est perdu par forfait (20-0).</p>
+        <p class="training-intro" style="margin-top:10px;"><b>10 caractéristiques (0 à 99)</b> : Tir à mi-distance, Tir à 3 points, Jeu intérieur, Passe, Rebond, Contre, Dribble, Agilité, Défense extérieure, Défense intérieure. Sur chacune, plus le chiffre est élevé, mieux c'est, sans exception. La petite barre colorée sous chaque valeur donne le niveau en un coup d'œil (gris en dessous de 45, jaune de 45 à 64, vert de 65 à 79, violet à partir de 80), et cliquer sur l'en-tête d'une colonne trie tout l'effectif dessus, pratique pour comparer par exemple tous vos meneurs sur la Passe.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Quelles caractéristiques comptent selon le poste</b> : Meneur (Passe, Dribble, Agilité), Arrière (Tir à 3 points, Tir à mi-distance), Ailier shooteur (Tir à 3 points, Défense extérieure), Ailier fort (Jeu intérieur, Rebond, Défense intérieure), Pivot (Jeu intérieur, Rebond, Contre, Défense intérieure). Pour juger si un joueur est bon À SON POSTE, comparez-le aux autres sur CES caractéristiques-là plutôt que sur l'ensemble des dix. Sur la feuille de match (onglet <b>Ordres</b>), chaque joueur proposé comme remplaçant apparaît aussi avec un niveau global entre parenthèses (moyenne simple des dix caractéristiques), pratique pour trancher vite entre deux joueurs au même poste.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Potentiel</b> : un nom de palier (10 paliers, de Débutant à Générationnel), jamais le chiffre exact. Il indique la marge de progression ENCORE POSSIBLE au-dessus du niveau actuel du joueur, pas sa qualité du moment : un jeune joueur encore faible mais à fort potentiel peut, bien entraîné (onglet <b>Entraînement</b>), dépasser largement un joueur déjà bon mais dont le potentiel est presque atteint. Survolez le nom du palier pour voir son rang exact (1 à 10).</p>
       </div>
 
       <div class="guide-entry">
@@ -2984,11 +3001,21 @@ function ticketPriceComfortFactor(price, categoryKey) {
 // fréquentation des matchs — un revenu récurrent indépendant de la
 // billetterie.
 // ---------------------------------------------------------------------
+// Revenus recalibrés 2026-09 (retour utilisateur : "il faudrait revoir les
+// revenus hebdomadaires supplémentaires procurés par les infrastructures, ce
+// n'est pas suffisant, ça fait environ 54 semaines pour rentabiliser [...]
+// faut pas oublier que c'est un jeu et que ça doit aller vite" puis "une
+// vingtaine de semaines serait plus raisonnable") : chaque palier, coût
+// INCRÉMENTAL par rapport au précédent, se rentabilise maintenant en environ
+// 20 semaines (weeklyRevenue = revenu TOTAL à ce palier, donc le gain apporté
+// par un palier = weeklyRevenue - weeklyRevenue du palier précédent), contre
+// 45 à 58 semaines avant recalibrage. Coûts inchangés, seuls les revenus
+// montent.
 const FAN_SHOP_LEVELS = [
   { level: 0, name: "Aucune boutique", cost: 0, weeklyRevenue: 0 },
-  { level: 1, name: "Stand souvenirs", cost: 40000, weeklyRevenue: 900 },
-  { level: 2, name: "Boutique du club", cost: 120000, weeklyRevenue: 2600 },
-  { level: 3, name: "Boutique officielle", cost: 300000, weeklyRevenue: 6500 },
+  { level: 1, name: "Stand souvenirs", cost: 40000, weeklyRevenue: 2000 },
+  { level: 2, name: "Boutique du club", cost: 120000, weeklyRevenue: 6000 },
+  { level: 3, name: "Boutique officielle", cost: 300000, weeklyRevenue: 15000 },
 ];
 
 function fanShopInfo(level) {
@@ -3021,10 +3048,13 @@ const CLUB_FACILITIES = {
     name: "Station TV",
     icon: "",
     levels: [
+      // Revenus recalibrés 2026-09 pour une rentabilisation d'environ 20
+      // semaines par palier (coût incrémental / gain incrémental) : voir le
+      // commentaire de FAN_SHOP_LEVELS plus haut pour le détail du calcul.
       { level: 0, name: "Aucune station TV", cost: 0, weeklyRevenue: 0 },
-      { level: 1, name: "Studio local", cost: 60000, weeklyRevenue: 1100 },
-      { level: 2, name: "Chaîne régionale", cost: 170000, weeklyRevenue: 3000 },
-      { level: 3, name: "Chaîne du club", cost: 400000, weeklyRevenue: 7000 },
+      { level: 1, name: "Studio local", cost: 60000, weeklyRevenue: 3000 },
+      { level: 2, name: "Chaîne régionale", cost: 170000, weeklyRevenue: 8500 },
+      { level: 3, name: "Chaîne du club", cost: 400000, weeklyRevenue: 20000 },
     ],
   },
   gym: {
@@ -12287,7 +12317,16 @@ function renderAnalystListings() {
     const minBid = minNextBidFor(l);
     let actionCell;
     if (l.currentBidderIdx === myTeamIndex) {
-      actionCell = `<span class="sub">Vous êtes en tête</span>`;
+      // Retour utilisateur (2026-09) : "ce serait bien qu'on puisse se
+      // surenchérir sur soi-même, parce qu'on peut se tromper et cliquer
+      // trop vite, alors que l'on voulait mettre un montant fixe plus
+      // élevé". Même formulaire d'enchère que pour un adversaire (côté
+      // moteur, League.placeAnalystBid ne bloque déjà que "own-listing",
+      // jamais "déjà en tête") plutôt que le simple statut figé d'avant, qui
+      // empêchait de se corriger une fois en tête.
+      actionCell = `<span class="sub">Vous êtes en tête</span><br>` +
+        `<input type="number" class="market-price-input" id="analystBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
+        `<button class="secondary" data-analyst-bid-listing="${l.id}">Augmenter mon enchère</button>`;
     } else {
       actionCell = `<input type="number" class="market-price-input" id="analystBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
         `<button class="secondary" data-analyst-bid-listing="${l.id}">Enchérir</button>`;
@@ -12391,7 +12430,12 @@ function renderRecruiterListings() {
     const minBid = minNextBidFor(l);
     let actionCell;
     if (l.currentBidderIdx === myTeamIndex) {
-      actionCell = `<span class="sub">Vous êtes en tête</span>`;
+      // Retour utilisateur (2026-09) : pouvoir se surenchérir soi-même en
+      // cas de clic trop rapide sur un montant trop bas, voir le même
+      // commentaire dans renderAnalystListings ci-dessus.
+      actionCell = `<span class="sub">Vous êtes en tête</span><br>` +
+        `<input type="number" class="market-price-input" id="recruiterBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
+        `<button class="secondary" data-recruiter-bid-listing="${l.id}">Augmenter mon enchère</button>`;
     } else {
       actionCell = `<input type="number" class="market-price-input" id="recruiterBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
         `<button class="secondary" data-recruiter-bid-listing="${l.id}">Enchérir</button>`;
@@ -12448,7 +12492,12 @@ function renderCoachListings() {
     const minBid = minNextBidFor(l);
     let actionCell;
     if (l.currentBidderIdx === myTeamIndex) {
-      actionCell = `<span class="sub">Vous êtes en tête</span>`;
+      // Retour utilisateur (2026-09) : pouvoir se surenchérir soi-même en
+      // cas de clic trop rapide sur un montant trop bas, voir le même
+      // commentaire dans renderAnalystListings plus haut.
+      actionCell = `<span class="sub">Vous êtes en tête</span><br>` +
+        `<input type="number" class="market-price-input" id="coachBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
+        `<button class="secondary" data-coach-bid-listing="${l.id}">Augmenter mon enchère</button>`;
     } else {
       actionCell = `<input type="number" class="market-price-input" id="coachBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
         `<button class="secondary" data-coach-bid-listing="${l.id}">Enchérir</button>`;
@@ -13010,7 +13059,12 @@ function renderEffectifSection() {
     // Potentiel : uniquement le NOM du palier (voir potentialTierLabel), le
     // chiffre exact (p.potential, 1-99) reste caché — retour utilisateur :
     // "il faudrait afficher juste le nom du potentiel, pas le niveau exact".
-    const potentialCell = `<span class="potential-tier">${escapeHtml(potentialTierLabel(p.potential))}</span>`;
+    // Au survol, un `title` révèle quand même le PALIER (1 à 10, voir
+    // potentialTierIndex) — retour utilisateur (2026-09) : "on pourrait
+    // aussi avoir un petit chiffre qui s'affiche quand on passe sur le
+    // potentiel d'un joueur pro" — jamais le chiffre exact 1-99 lui-même,
+    // seulement lequel des 10 paliers, cohérent avec le nom déjà affiché.
+    const potentialCell = `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(p.potential)}/10">${escapeHtml(potentialTierLabel(p.potential))}</span>`;
     html += `<tr class="${isStarter ? "me" : ""}"><td>${playerLinkHtml(myTeamIndex, p.id, p.name)}${forSaleCell}</td><td>${posCell}</td>` +
       `<td>${p.age}</td><td>${p.height} cm</td><td>${potentialCell}</td>` +
       `<td title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
@@ -13166,12 +13220,19 @@ function renderMarketListings() {
       // dans market-card-meta juste au-dessus, inutile de le répéter ici.
       actionCell = "";
     } else if (l.currentBidderIdx === myTeamIndex) {
-      actionCell = `<span class="sub">Vous êtes en tête</span>`;
+      // Retour utilisateur (2026-09) : pouvoir se surenchérir soi-même en
+      // cas de clic trop rapide sur un montant trop bas, voir le même
+      // commentaire dans renderAnalystListings plus haut.
+      actionCell = `<span class="sub">Vous êtes en tête</span><br>` +
+        `<input type="number" class="market-price-input" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
+        `<button class="secondary" data-bid-listing="${l.id}">Augmenter mon enchère</button>`;
     } else {
       actionCell = `<input type="number" class="market-price-input" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
         `<button class="secondary" data-bid-listing="${l.id}">Enchérir</button>`;
     }
-    const potentialCell = `<span class="potential-tier">${escapeHtml(potentialTierLabel(player.potential))}</span>`;
+    // Même info au survol que dans l'effectif (voir renderEffectifSection) :
+    // le palier 1-10, jamais le chiffre exact 1-99.
+    const potentialCell = `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span>`;
     const attrChips = ATTRS.map(a => `<div class="market-attr-chip"><span class="market-attr-label">${ATTR_SHORT[a]}</span>${attrCellHtml(player.attrs[a])}</div>`).join("");
     html += `<div class="market-card" data-listing-id="${l.id}">` +
       `<div class="market-card-head">` +

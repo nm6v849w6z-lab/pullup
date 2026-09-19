@@ -1078,11 +1078,21 @@ function ticketPriceComfortFactor(price, categoryKey) {
 // fréquentation des matchs — un revenu récurrent indépendant de la
 // billetterie.
 // ---------------------------------------------------------------------
+// Revenus recalibrés 2026-09 (retour utilisateur : "il faudrait revoir les
+// revenus hebdomadaires supplémentaires procurés par les infrastructures, ce
+// n'est pas suffisant, ça fait environ 54 semaines pour rentabiliser [...]
+// faut pas oublier que c'est un jeu et que ça doit aller vite" puis "une
+// vingtaine de semaines serait plus raisonnable") : chaque palier, coût
+// INCRÉMENTAL par rapport au précédent, se rentabilise maintenant en environ
+// 20 semaines (weeklyRevenue = revenu TOTAL à ce palier, donc le gain apporté
+// par un palier = weeklyRevenue - weeklyRevenue du palier précédent), contre
+// 45 à 58 semaines avant recalibrage. Coûts inchangés, seuls les revenus
+// montent.
 const FAN_SHOP_LEVELS = [
   { level: 0, name: "Aucune boutique", cost: 0, weeklyRevenue: 0 },
-  { level: 1, name: "Stand souvenirs", cost: 40000, weeklyRevenue: 900 },
-  { level: 2, name: "Boutique du club", cost: 120000, weeklyRevenue: 2600 },
-  { level: 3, name: "Boutique officielle", cost: 300000, weeklyRevenue: 6500 },
+  { level: 1, name: "Stand souvenirs", cost: 40000, weeklyRevenue: 2000 },
+  { level: 2, name: "Boutique du club", cost: 120000, weeklyRevenue: 6000 },
+  { level: 3, name: "Boutique officielle", cost: 300000, weeklyRevenue: 15000 },
 ];
 
 function fanShopInfo(level) {
@@ -1115,10 +1125,13 @@ const CLUB_FACILITIES = {
     name: "Station TV",
     icon: "",
     levels: [
+      // Revenus recalibrés 2026-09 pour une rentabilisation d'environ 20
+      // semaines par palier (coût incrémental / gain incrémental) : voir le
+      // commentaire de FAN_SHOP_LEVELS plus haut pour le détail du calcul.
       { level: 0, name: "Aucune station TV", cost: 0, weeklyRevenue: 0 },
-      { level: 1, name: "Studio local", cost: 60000, weeklyRevenue: 1100 },
-      { level: 2, name: "Chaîne régionale", cost: 170000, weeklyRevenue: 3000 },
-      { level: 3, name: "Chaîne du club", cost: 400000, weeklyRevenue: 7000 },
+      { level: 1, name: "Studio local", cost: 60000, weeklyRevenue: 3000 },
+      { level: 2, name: "Chaîne régionale", cost: 170000, weeklyRevenue: 8500 },
+      { level: 3, name: "Chaîne du club", cost: 400000, weeklyRevenue: 20000 },
     ],
   },
   gym: {
