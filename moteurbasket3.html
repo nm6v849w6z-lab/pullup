@@ -1007,8 +1007,38 @@
     background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
     max-height:420px; overflow-y:auto;
   }
+  /* Retour utilisateur (2026-09) : "au dessus de ces temps de jeu, il
+     faudrait ajouter un historique des ups et downs de la derniere semaine
+     d'entrainement" (voir Team.lastTrainingReport/renderLastTrainingReport).
+     Même famille visuelle que .training-list ci-dessus (scroll interne de
+     secours si le bilan est long), avec un titre propre au lieu de
+     réutiliser .training-config déjà pris par la configuration de la
+     semaine EN COURS juste en dessous. */
+  .last-training-report{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    margin-bottom:14px; max-height:320px; overflow-y:auto;
+  }
+  .last-training-report h4{
+    margin:0; padding:10px 14px; font-size:13px; color:var(--ink-dim);
+    border-bottom:1px solid var(--line-soft);
+  }
+  /* Retour utilisateur (2026-09) : "il y a un probleme d'alignement, regarde
+     la ligne de quentin lopez, c'est décalé avec le reste" : la 3e colonne
+     (.tr-status, le badge de droite) était en `auto`, or CHAQUE ligne est
+     son PROPRE conteneur grid (display:grid posé sur .training-row, pas un
+     seul grid partagé par toute la liste), donc l'`auto` se calculait
+     indépendamment ligne par ligne, sur le texte du badge de CETTE
+     ligne-là. Un texte de badge plus court (ex. "✓ Jeu intérieur" sans son
+     "(100%)", masqué au-delà de 90%, voir buildTrainingRow) rétrécissait sa
+     propre 3e colonne, ce qui élargissait d'autant la 1re colonne (1fr,
+     élastique) juste à côté, décalant la colonne du milieu (minutes,
+     170px fixe) par rapport aux lignes voisines. Largeur fixe (assez large
+     pour le plus long texte de badge possible, "Défense polyvalente (0%,
+     n'a pas joué)") au lieu de `auto` : les 3 colonnes ont désormais
+     exactement la même largeur sur toutes les lignes, quel que soit le
+     texte du badge. */
   .training-row{
-    display:grid; grid-template-columns:1fr 170px auto; gap:14px; align-items:center;
+    display:grid; grid-template-columns:1fr 170px 230px; gap:14px; align-items:center;
     padding:10px 14px; border-bottom:1px solid var(--line-soft);
   }
   .training-row:last-child{border-bottom:none;}
@@ -1326,6 +1356,14 @@
   <div id="trainingSection" class="hidden">
     <div class="section">
       <h2 id="trainingTitle">🏋️ Semaine d'entraînement</h2>
+
+      <!-- Retour utilisateur (2026-09) : "au dessus de ces temps de jeu, il
+           faudrait ajouter un historique des ups et downs de la derniere
+           semaine d'entrainement" : bilan de la DERNIÈRE semaine déjà
+           résolue (voir Team.lastTrainingReport/renderLastTrainingReport),
+           avant la configuration de la semaine EN COURS ci-dessous. Vide
+           (aucun contenu) tant qu'aucune semaine n'a encore été jouée. -->
+      <div id="lastTrainingReportHolder"></div>
 
       <div class="training-config">
         <div class="field-label">Compétence entraînée cette semaine</div>
@@ -2537,8 +2575,15 @@ const COACH_AUCTION_DURATION_MS = TRANSFER_AUCTION_DURATION_MS; // même durée 
 // ouverts aux enchères, pour qu'il y ait toujours quelque chose à acheter
 // (contrairement au marché des transferts, où de nouvelles annonces CPU ne
 // sont que probables — ici personne ne "vend" spontanément, donc sans ce
-// plancher le marché pourrait rester vide).
-const COACH_MARKET_MIN_OPEN_LISTINGS = 2;
+// plancher le marché pourrait rester vide). Relevé de 2 à 6 (retour
+// utilisateur, 2026-09 : "générer plus de staff pour la période de test à
+// 10 joueurs") : partagé par les 3 marchés de staff (entraîneurs,
+// analystes, recruteurs, voir refreshMarket/refreshAnalystMarket/
+// refreshRecruiterMarket), 2 candidats ouverts en permanence suffisaient
+// pour une poignée de managers mais affamait/faisait s'affronter en
+// permanence les 10 managers humains de la ligue de test sur trop peu de
+// choix à la fois.
+const COACH_MARKET_MIN_OPEN_LISTINGS = 6;
 const COACH_MARKET_GENERATE_CHECK_INTERVAL_MS = TRANSFER_CPU_CHECK_INTERVAL_MS;
 const COACH_CPU_BID_CHANCE = TRANSFER_CPU_BID_CHANCE;
 
@@ -3206,6 +3251,17 @@ class Team {
     this.plannedTactics = {};
 
     this.week = 1; // semaine d'entraînement courante (pas de calendrier complet pour l'instant)
+    // Retour utilisateur (2026-09) : "au dessus de ces temps de jeu, il
+    // faudrait ajouter un historique des ups et downs de la derniere
+    // semaine d'entrainement" : dernier rapport renvoyé par trainWeek()
+    // ci-dessous, conservé pour un réaffichage persistant sur l'onglet
+    // Entraînement (voir renderLastTrainingReport côté client). Ce même
+    // rapport n'était jusqu'ici affiché qu'UNE fois, de façon éphémère,
+    // dans le récapitulatif "Pendant votre absence" (voir
+    // trainingReportHtml/showCatchupSummaryIfAny, pendingEvents jamais
+    // sauvegardé). `null` tant qu'aucune semaine d'entraînement n'a encore
+    // été jouée.
+    this.lastTrainingReport = null;
     // Entraînement hebdomadaire à la BuzzerBeater : UNE compétence pour tout
     // le club, appliquée à un ensemble de postes (1 à 5). Ce n'est pas un
     // choix joueur par joueur : chaque joueur profite (ou pas) de la semaine
@@ -4159,12 +4215,18 @@ class Team {
     // qui ne passe pas encore ce second paramètre.
     if (now != null) this.refreshYouthCandidates(now);
 
-    return {
+    const result = {
       players: report, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid,
       playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, tvStationRevenue, moraleDrift, salaryChanges,
       fanMorale: this.fanMorale, budget: this.budget, trainerMult,
       deficitAlert, forcedFireSale, deficitWeeks: this.deficitWeeks,
     };
+    // Conservé pour un réaffichage persistant (voir this.lastTrainingReport
+    // au constructeur), ÉCRASE le rapport de la semaine précédente, un
+    // seul conservé à la fois ("la derniere semaine", pas un historique
+    // multi-semaines).
+    this.lastTrainingReport = result;
+    return result;
   }
 
   // Réévalue le salaire de chaque joueur d'après son coefficient de niveau
@@ -6387,6 +6449,28 @@ function serializePlayerRecord(p) {
   };
 }
 
+// Copie du rapport hebdomadaire d'entraînement (voir Team.lastTrainingReport/
+// trainWeek) réellement ciblée sur ses deux niveaux d'imbrication
+// (`players`, un dictionnaire id -> objet, dont `gains` est lui-même un
+// tableau) plutôt qu'un JSON.parse(JSON.stringify(...)) générique, même
+// style de copie explicite que le reste de ce fichier (voir
+// youthCandidates/academyGraduatesHistory ci-dessus), jamais la même
+// référence que l'objet vivant renvoyé par trainWeek(), pour qu'une
+// sauvegarde reste un instantané figé. `null` inchangé (aucune semaine
+// d'entraînement jouée pour l'instant, ou sauvegarde d'avant cette
+// fonctionnalité).
+function cloneTrainingReport(report) {
+  if (!report) return null;
+  const players = {};
+  Object.entries(report.players || {}).forEach(([id, p]) => {
+    players[id] = { ...p, gains: (p.gains || []).map(g => ({ ...g })) };
+  });
+  return {
+    ...report, players,
+    salaryChanges: (report.salaryChanges || []).map(c => ({ ...c })),
+  };
+}
+
 function serializeTeam(team) {
   return {
     version: 1,
@@ -6470,6 +6554,11 @@ function serializeTeam(team) {
     // logique de persistance que youthCandidates/youthPlayers ci-dessus
     // (copie superficielle de chaque entrée, DOIT survivre au rechargement).
     academyGraduatesHistory: (team.academyGraduatesHistory || []).map(h => ({ ...h })),
+    // Dernier rapport hebdomadaire d'entraînement (voir
+    // Team.lastTrainingReport/trainWeek ci-dessus) : DOIT survivre au
+    // rechargement comme le reste, sinon le bilan affiché sur l'onglet
+    // Entraînement redeviendrait vide à chaque redémarrage du serveur.
+    lastTrainingReport: cloneTrainingReport(team.lastTrainingReport),
     // Décisions manager en attente pour un jeune de 18 ans (voir
     // Team.pendingYouthDecisions ci-dessus) : simple tableau d'id de
     // joueurs, DOIT survivre au rechargement (sinon un manager perdrait la
@@ -6621,6 +6710,12 @@ function teamFromSave(data) {
   team.academyGraduatesHistory = Array.isArray(data.academyGraduatesHistory)
     ? data.academyGraduatesHistory.map(h => ({ ...h }))
     : [];
+  // Dernier rapport hebdomadaire d'entraînement (voir
+  // Team.lastTrainingReport ci-dessus) : `null` par défaut (déjà la valeur
+  // posée par le constructeur Team) pour une sauvegarde d'avant cette
+  // fonctionnalité, ou tant qu'aucune semaine d'entraînement n'a encore
+  // été jouée.
+  team.lastTrainingReport = cloneTrainingReport(data.lastTrainingReport);
   team.pendingYouthDecisions = Array.isArray(data.pendingYouthDecisions) ? [...data.pendingYouthDecisions] : [];
   // Scoutisme (voir Team.scoutedAttrs/lastVideoSessionAt ci-dessus) :
   // `{}`/`null` par défaut (déjà la valeur posée par le constructeur Team)
@@ -11197,8 +11292,31 @@ function trainingRulesHtml() {
   return `Chaque semaine, le club choisit <b>une seule compétence</b> à travailler et les postes concernés : ce n'est pas un choix joueur par joueur. Un joueur en profite s'il occupe l'un des postes choisis, proportionnellement au temps qu'il a joué au dernier match (${fullMin} minutes jouées = 100% de l'entraînement, ${halfMin} minutes = 50%, etc., repère provisoire tant qu'il n'y a qu'un seul match par cycle d'entraînement ; il passera à 40 minutes réparties sur 3 matchs/semaine une fois le calendrier de saison en place) ; s'il n'a pas joué au bon poste cette semaine, aucune caractéristique ne progresse (seul le déclin lié à l'âge continue de s'appliquer normalement). Le poste (plus ou moins naturel pour la compétence) et le gabarit (un grand progresse plus vite en jeu intérieur/rebond/contre, un petit en dribble/agilité/tir extérieur/passe) influencent aussi la vitesse de progression. Étendre l'entraînement à plus de postes forme plus de joueurs mais dilue le rendement de tous. Le staff (entraîneur) se gère depuis l'onglet <b>Staff</b>.`;
 }
 
+// Retour utilisateur (2026-09) : "au dessus de ces temps de jeu, il
+// faudrait ajouter un historique des ups et downs de la derniere semaine
+// d'entrainement" : réaffiche le DERNIER rapport hebdomadaire déjà résolu
+// (Team.lastTrainingReport, alimenté par trainWeek), avec exactement le
+// même détail (gains/pertes caractéristique par caractéristique, salaires,
+// recettes...) que trainingReportHtml produisait déjà une seule fois, de
+// façon éphémère, dans le récapitulatif "Pendant votre absence" (voir
+// showCatchupSummaryIfAny), réutilisée telle quelle ici, pas dupliquée.
+// `teamA.week - 1` : trainWeek incrémente déjà this.week avant de renvoyer
+// son rapport (voir Team.trainWeek), donc au moment où ce rapport est
+// affiché, teamA.week désigne déjà la semaine SUIVANTE (celle en cours de
+// configuration juste en dessous).
+function renderLastTrainingReport() {
+  const holder = document.getElementById("lastTrainingReportHolder");
+  if (!holder) return;
+  const report = teamA.lastTrainingReport;
+  if (!report) { holder.innerHTML = ""; return; }
+  holder.innerHTML = `<div class="last-training-report">` +
+    `<h4>📋 Bilan de la semaine dernière (semaine ${teamA.week - 1})</h4>` +
+    `${trainingReportHtml(report)}</div>`;
+}
+
 function showTrainingSection() {
   document.getElementById("trainingTitle").textContent = `🏋️ Semaine d'entraînement : semaine ${teamA.week}`;
+  renderLastTrainingReport();
   populateTrainingSkillSelect();
   renderTrainingPositionsSelect();
   renderTrainingList();

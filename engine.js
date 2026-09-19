@@ -857,8 +857,15 @@ const COACH_AUCTION_DURATION_MS = TRANSFER_AUCTION_DURATION_MS; // même durée 
 // ouverts aux enchères, pour qu'il y ait toujours quelque chose à acheter
 // (contrairement au marché des transferts, où de nouvelles annonces CPU ne
 // sont que probables — ici personne ne "vend" spontanément, donc sans ce
-// plancher le marché pourrait rester vide).
-const COACH_MARKET_MIN_OPEN_LISTINGS = 2;
+// plancher le marché pourrait rester vide). Relevé de 2 à 6 (retour
+// utilisateur, 2026-09 : "générer plus de staff pour la période de test à
+// 10 joueurs") : partagé par les 3 marchés de staff (entraîneurs,
+// analystes, recruteurs, voir refreshMarket/refreshAnalystMarket/
+// refreshRecruiterMarket), 2 candidats ouverts en permanence suffisaient
+// pour une poignée de managers mais affamait/faisait s'affronter en
+// permanence les 10 managers humains de la ligue de test sur trop peu de
+// choix à la fois.
+const COACH_MARKET_MIN_OPEN_LISTINGS = 6;
 const COACH_MARKET_GENERATE_CHECK_INTERVAL_MS = TRANSFER_CPU_CHECK_INTERVAL_MS;
 const COACH_CPU_BID_CHANCE = TRANSFER_CPU_BID_CHANCE;
 
@@ -1503,6 +1510,17 @@ class Team {
     this.plannedTactics = {};
 
     this.week = 1; // semaine d'entraînement courante (pas de calendrier complet pour l'instant)
+    // Retour utilisateur (2026-09) : "au dessus de ces temps de jeu, il
+    // faudrait ajouter un historique des ups et downs de la derniere
+    // semaine d'entrainement" : dernier rapport renvoyé par trainWeek()
+    // ci-dessous, conservé pour un réaffichage persistant sur l'onglet
+    // Entraînement (voir renderLastTrainingReport côté client). Ce même
+    // rapport n'était jusqu'ici affiché qu'UNE fois, de façon éphémère,
+    // dans le récapitulatif "Pendant votre absence" (voir
+    // trainingReportHtml/showCatchupSummaryIfAny, pendingEvents jamais
+    // sauvegardé). `null` tant qu'aucune semaine d'entraînement n'a encore
+    // été jouée.
+    this.lastTrainingReport = null;
     // Entraînement hebdomadaire à la BuzzerBeater : UNE compétence pour tout
     // le club, appliquée à un ensemble de postes (1 à 5). Ce n'est pas un
     // choix joueur par joueur : chaque joueur profite (ou pas) de la semaine
@@ -2485,12 +2503,18 @@ class Team {
     // qui ne passe pas encore ce second paramètre.
     if (now != null) this.refreshYouthCandidates(now);
 
-    return {
+    const result = {
       players: report, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid,
       playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, tvStationRevenue, moraleDrift, salaryChanges,
       fanMorale: this.fanMorale, budget: this.budget, trainerMult,
       deficitAlert, forcedFireSale, deficitWeeks: this.deficitWeeks,
     };
+    // Conservé pour un réaffichage persistant (voir this.lastTrainingReport
+    // au constructeur), ÉCRASE le rapport de la semaine précédente, un
+    // seul conservé à la fois ("la derniere semaine", pas un historique
+    // multi-semaines).
+    this.lastTrainingReport = result;
+    return result;
   }
 
   // Réévalue le salaire de chaque joueur d'après son coefficient de niveau
@@ -4907,6 +4931,28 @@ function serializePlayerRecord(p) {
   };
 }
 
+// Copie du rapport hebdomadaire d'entraînement (voir Team.lastTrainingReport/
+// trainWeek) réellement ciblée sur ses deux niveaux d'imbrication
+// (`players`, un dictionnaire id -> objet, dont `gains` est lui-même un
+// tableau) plutôt qu'un JSON.parse(JSON.stringify(...)) générique, même
+// style de copie explicite que le reste de ce fichier (voir
+// youthCandidates/academyGraduatesHistory ci-dessus), jamais la même
+// référence que l'objet vivant renvoyé par trainWeek(), pour qu'une
+// sauvegarde reste un instantané figé. `null` inchangé (aucune semaine
+// d'entraînement jouée pour l'instant, ou sauvegarde d'avant cette
+// fonctionnalité).
+function cloneTrainingReport(report) {
+  if (!report) return null;
+  const players = {};
+  Object.entries(report.players || {}).forEach(([id, p]) => {
+    players[id] = { ...p, gains: (p.gains || []).map(g => ({ ...g })) };
+  });
+  return {
+    ...report, players,
+    salaryChanges: (report.salaryChanges || []).map(c => ({ ...c })),
+  };
+}
+
 function serializeTeam(team) {
   return {
     version: 1,
@@ -5002,6 +5048,11 @@ function serializeTeam(team) {
     // logique de persistance que youthCandidates/youthPlayers ci-dessus
     // (copie superficielle de chaque entrée, DOIT survivre au rechargement).
     academyGraduatesHistory: (team.academyGraduatesHistory || []).map(h => ({ ...h })),
+    // Dernier rapport hebdomadaire d'entraînement (voir
+    // Team.lastTrainingReport/trainWeek ci-dessus) : DOIT survivre au
+    // rechargement comme le reste, sinon le bilan affiché sur l'onglet
+    // Entraînement redeviendrait vide à chaque redémarrage du serveur.
+    lastTrainingReport: cloneTrainingReport(team.lastTrainingReport),
     // Décisions manager en attente pour un jeune de 18 ans (voir
     // Team.pendingYouthDecisions ci-dessus) : simple tableau d'id de
     // joueurs, DOIT survivre au rechargement (sinon un manager perdrait la
@@ -5157,6 +5208,12 @@ function teamFromSave(data) {
   team.academyGraduatesHistory = Array.isArray(data.academyGraduatesHistory)
     ? data.academyGraduatesHistory.map(h => ({ ...h }))
     : [];
+  // Dernier rapport hebdomadaire d'entraînement (voir
+  // Team.lastTrainingReport ci-dessus) : `null` par défaut (déjà la valeur
+  // posée par le constructeur Team) pour une sauvegarde d'avant cette
+  // fonctionnalité, ou tant qu'aucune semaine d'entraînement n'a encore
+  // été jouée.
+  team.lastTrainingReport = cloneTrainingReport(data.lastTrainingReport);
   team.pendingYouthDecisions = Array.isArray(data.pendingYouthDecisions) ? [...data.pendingYouthDecisions] : [];
   // Scoutisme (voir Team.scoutedAttrs/lastVideoSessionAt ci-dessus) :
   // `{}`/`null` par défaut (déjà la valeur posée par le constructeur Team)
