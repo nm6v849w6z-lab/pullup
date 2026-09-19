@@ -1299,12 +1299,13 @@
          heure) déjà affichées par #ordresRoundDateTime juste au-dessus (voir
          renderOrdresRoundDateTime), pour n'importe quelle journée
          sélectionnée y compris un tour de Coupe. Retiré. -->
-    <!-- Retour utilisateur (2026-09) : "il faudrait [...] que lorsque l'on
-         arrive sur la page ordre, on voit les derniers évènements (achat de
-         tel joueur, tel coach, tel up à l'entrainement...)" — voir
-         renderOrdresRecentEvents, appelée par renderPrep. Vide (et absent du
-         flux, voir renderOrdresRecentEvents) quand il n'y a rien à montrer. -->
-    <div id="ordresRecentEventsHolder"></div>
+    <!-- Retour utilisateur (2026-09) : un panneau "Derniers événements" avait
+         été ajouté ici (demandé, puis son contenu corrigé pour ne plus
+         montrer de données financières), avant que l'utilisateur ne demande
+         explicitement son retrait complet de cette page : "tjrs rien à faire
+         là. n'essaie pas de copier qqch d'une autre page. juste enleve le" —
+         retiré. Ce panneau reste sur le tableau de bord (voir
+         renderClubSection), qui n'a jamais été concerné par cette demande. -->
     <div class="prep-grid" id="prepGrid"></div>
     <div class="ordres-validate-row">
       <button type="button" class="ordres-validate-btn" id="ordresValidateBtn">Valider les ordres</button>
@@ -8918,36 +8919,25 @@ let selectedOrdresRound = null;
 // league.liveMatch existe, Coupe y compris).
 let selectedOrdresCompetition = "championship";
 
-// Retour utilisateur (2026-09) : "il faudrait [...] que lorsque l'on arrive
-// sur la page ordre, on voit les derniers évènements (achat de tel joueur,
-// tel coach, tel up à l'entrainement... à compléter)", PUIS (2026-09,
-// pointant la même liste que celle du tableau de bord avant sa propre
-// correction) : "enleve ça tout de suite de la page ordre, c'est des donnees
-// financiere. rien à voir" — ce panneau utilise donc désormais EXACTEMENT le
-// même contenu que le tableau de bord (dashboardNewsInnerHtml, voir plus
-// bas : résultats des derniers matchs, transferts de joueurs, recrutement de
-// staff, progressions à l'entraînement — jamais les achats d'infrastructure/
-// salaires/recettes, déjà visibles sur l'onglet Économie). Les deux panneaux
-// sont redevenus partagés, cette fois-ci volontairement identiques plutôt que
-// par accident de refactor.
-function renderOrdresRecentEvents() {
-  const holder = document.getElementById("ordresRecentEventsHolder");
-  if (!holder) return;
-  const html = dashboardNewsInnerHtml();
-  holder.innerHTML = html ? `<div class="section ordres-recent-events"><h3>Derniers événements</h3><div class="training-report-list">${html}</div></div>` : "";
-}
-
-// Contenu partagé par les panneaux "Derniers événements" du tableau de bord
-// (6e .stat-card de #clubStatsGrid, voir renderClubSection) ET de la page
-// Ordres (renderOrdresRecentEvents ci-dessus). Retour utilisateur (2026-09,
-// sur le tableau de bord d'abord, puis exactement le même reproche sur la
-// page Ordres) : "ne parle pas que des évènements financiers, c'est sur la
+// Contenu du panneau "Derniers événements" du tableau de bord (6e
+// .stat-card de #clubStatsGrid, voir renderClubSection). Retour utilisateur
+// (2026-09) : "ne parle pas que des évènements financiers, c'est sur la
 // page économie qu'on voit ça. mets plutôt les dernières news (victoire
 // contre..., progression, arrivée du joueur... etc)" — jamais d'achats
 // d'infrastructure/salaires/recettes (déjà tout visible sur l'onglet
 // Économie), à la place le résultat des derniers matchs (victoire/défaite),
 // les transferts de joueurs (achat/vente, sans le reste des transactions),
 // le recrutement de staff, et les progressions à l'entraînement.
+//
+// Ce même contenu avait un temps été dupliqué sur la page Ordres
+// (renderOrdresRecentEvents, avec son propre #ordresRecentEventsHolder),
+// d'abord pour reprendre la même correction ("enleve ça [...] de la page
+// ordre, c'est des donnees financiere"), puis l'utilisateur a demandé le
+// retrait complet du panneau sur cette page plutôt que la correction de son
+// contenu : "tjrs rien à faire là. n'essaie pas de copier qqch d'une autre
+// page. juste enleve le" — renderOrdresRecentEvents et son appel dans
+// renderPrep ont été supprimés ; dashboardNewsInnerHtml ne sert donc plus
+// qu'au tableau de bord.
 const DASHBOARD_NEWS_MAX_RESULTS = 3;
 const DASHBOARD_NEWS_MAX_TRANSFERS = 3;
 const DASHBOARD_NEWS_MAX_TRAINING_GAINS = 3;
@@ -9051,7 +9041,6 @@ function renderPrep() {
   selectedOrdresCompetition = def ? def.competition : "championship";
   renderOrdresRoundSelector();
   renderOrdresRoundDateTime();
-  renderOrdresRecentEvents();
   renderOrdresGrid();
   startCountdown();
   updateTopbar();
