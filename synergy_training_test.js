@@ -23,10 +23,22 @@ function totalGrowthOver(weeks, setup) {
   // joueur activement entraîné, en pleine progression).
   p.age = 24;
   setup(team, p);
+  // Player.trainingSecondsPlayedByPosition est désormais remis à {} par
+  // Team.trainWeek une fois consommé (calendrier ancré quotidien, cumul sur
+  // les matchs du jour puis remise à zéro, voir engine.js) : `setup`
+  // ci-dessus ne l'affecte qu'une seule fois, donc sans ce ré-arrosage à
+  // chaque semaine simulée, seule la 1re des `weeks` itérations trouverait
+  // un joueur ayant "joué" (les suivantes retomberaient à 0% d'assiduité).
+  // On rejoue simplement, avant chaque semaine, ce que `setup` a affecté une
+  // fois pour toutes, plutôt que de faire dépendre le test d'un vrai
+  // enchaînement de matchs simulés (hors sujet ici, seule la progression
+  // relative des caractéristiques entraînées/synergie compte).
+  const trainedSecondsSnapshot = { ...p.trainingSecondsPlayedByPosition };
   const totals = {};
   ATTRS.forEach(a => totals[a] = 0);
   for (let w = 0; w < weeks; w++) {
     const before = { ...p.attrs };
+    p.trainingSecondsPlayedByPosition = { ...trainedSecondsSnapshot };
     team.trainWeek(1);
     ATTRS.forEach(a => totals[a] += (p.attrs[a] - before[a]));
   }
@@ -43,7 +55,7 @@ function totalGrowthOver(weeks, setup) {
     p.potential = 70;
     team.trainingSkill = "defOutside";
     team.trainingPositions = [p.position];
-    p.secondsPlayedByPosition = { [p.position]: 3000 };
+    p.trainingSecondsPlayedByPosition = { [p.position]: 3000 };
   });
   console.log("Cas 1 (départs égaux) — defOutside:", totals.defOutside, "defInside:", totals.defInside, "agility:", totals.agility);
   if (!(totals.defOutside > totals.defInside)) {
@@ -76,7 +88,7 @@ function totalGrowthOver(weeks, setup) {
     p.attrs.agility = 10;
     team.trainingSkill = "defOutside";
     team.trainingPositions = [p.position];
-    p.secondsPlayedByPosition = { [p.position]: 3000 };
+    p.trainingSecondsPlayedByPosition = { [p.position]: 3000 };
   });
   console.log("Cas 2 (defOutside déjà développé, synergies très en retard) — defOutside:", totals.defOutside, "defInside:", totals.defInside, "agility:", totals.agility);
   if (!(totals.defOutside >= totals.defInside)) {
@@ -111,7 +123,7 @@ function totalGrowthOver(weeks, setup) {
       p.attrs.agility = 10;
       team.trainingSkill = "defOutside";
       team.trainingPositions = [p.position];
-      p.secondsPlayedByPosition = { [p.position]: 3000 };
+      p.trainingSecondsPlayedByPosition = { [p.position]: 3000 };
     });
     sumOut += totals.defOutside; sumIn += totals.defInside; sumAgi += totals.agility;
     if (totals.defOutside < totals.defInside || totals.defOutside < totals.agility) failures++;

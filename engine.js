@@ -482,15 +482,19 @@ const TRAINING_SYNERGY = {
   defInside: ["defOutside", "block"],
 };
 
-// Cible réelle une fois le calendrier de saison en place : ~40 minutes
-// jouées au poste entraîné, réparties sur les 3 matchs qui comptent pour
-// l'entraînement chaque semaine (2 championnat + 1 coupe/amical). En
-// attendant ce calendrier (un seul match par cycle d'entraînement pour
-// l'instant, donc phase de test), la référence "100%" est ramenée à un seul
-// match — 30 minutes (retour utilisateur, 2026-09 : relevé de 13 à 30
-// minutes). Proportionnel et continu (pas de seuil couperet) : 15 min ≈ 50%,
-// 30 min = 100%, jouer un peu compte toujours un peu.
-const TRAINING_FULL_MATCH_SECONDS = 1800; // 30 min — proxy le temps du test, remplacé par 3 matchs/40 min plus tard
+// Temps CUMULÉ, au poste entraîné, sur les matchs du cycle d'entraînement en
+// cours pour valoir 100% (voir Player.trainingSecondsPlayedByPosition/
+// Team.trainablySecondsFor). Calendrier ancré quotidien désormais en place
+// (jusqu'à 3 matchs par jour civil : 2 championnat + 1 coupe/amical
+// éventuel), donc le cumul porte réellement sur ces 3 matchs, pas plus sur
+// le seul dernier match comme avant. Retour utilisateur, 2026-09, une fois
+// ce calendrier réel en place : "un joueur doit jouer 30 min au poste
+// déterminé sur sa semaine pour prendre l'entrainement", 30 minutes
+// cumulées, valeur reprise telle quelle (pas les ~40 minutes envisagées
+// avant ce calendrier réel). Proportionnel et continu (pas de seuil
+// couperet) : 15 min ≈ 50%, 30 min = 100%, jouer un peu compte toujours un
+// peu.
+const TRAINING_FULL_MATCH_SECONDS = 1800; // 30 min, cumulées sur les matchs du jour
 
 function attendanceFactorForSeconds(seconds) {
   return clamp(seconds / TRAINING_FULL_MATCH_SECONDS, 0, 1);
@@ -1276,12 +1280,22 @@ class Player {
     this.matchPosition = null;
     this.secondsPlayed = 0;
     // Temps de jeu de CE match, ventilé par poste RÉELLEMENT joué (clé =
-    // matchPosition au moment où le temps est comptabilisé). Un remplaçant
-    // polyvalent peut couvrir plusieurs postes dans le même match (voir
-    // Team.lineup) : c'est cette ventilation, et non le poste "de carte" du
-    // joueur (this.position), qui doit servir à l'entraînement — voir
-    // Team.trainablySecondsFor.
+    // matchPosition au moment où le temps est comptabilisé). Alimente le
+    // journal de match (Player.matchLog, voir recordMatchStatsForTeam) et
+    // les box-scores, PAS l'entraînement depuis le calendrier ancré
+    // quotidien (voir trainingSecondsPlayedByPosition ci-dessous), remis à
+    // zéro à CHAQUE match (voir resetForMatch), donc ne reflète jamais plus
+    // que le dernier match joué.
     this.secondsPlayedByPosition = {};
+    // Temps de jeu ventilé par poste, CUMULÉ sur tous les matchs du cycle
+    // d'entraînement en cours (retour utilisateur, 2026-09 : "la semaine est
+    // en fait une journée avec 3 matchs [...] un joueur doit jouer 30 min au
+    // poste déterminé sur sa semaine pour prendre l'entrainement"). PAS
+    // remis à zéro par resetForMatch (contrairement à secondsPlayedByPosition
+    // ci-dessus) : accumulé match après match par applyFatigue, jusqu'à ce
+    // que Team.trainWeek le consomme et le remette à zéro. Seul champ lu par
+    // Team.trainablySecondsFor pour décider de l'entraînement.
+    this.trainingSecondsPlayedByPosition = {};
     this.stats = this.emptyStats();
 
     // Mise en vente forcée en cas de déficit économique prolongé (voir
@@ -1419,6 +1433,9 @@ class Player {
     this.matchPosition = null;
     this.secondsPlayed = 0;
     this.secondsPlayedByPosition = {};
+    // trainingSecondsPlayedByPosition N'EST PAS remis à zéro ici, à dessein
+    // (voir son commentaire au constructeur) : il doit survivre aux DEUX
+    // autres matchs du jour, jusqu'à ce que Team.trainWeek le consomme.
     this.stats = this.emptyStats();
   }
 
@@ -1960,18 +1977,24 @@ class Team {
     return TRAINING_DILUTION_BY_POSITION_COUNT[this.trainingPositions.length] || 0;
   }
 
-  // Temps RÉELLEMENT joué par ce joueur, au dernier match, aux poste(s)
-  // couverts par l'entraînement de la semaine (this.trainingPositions) —
-  // PAS son temps de jeu total, ni son poste "de carte" (this.position) : un
-  // remplaçant polyvalent peut avoir été aligné sur un poste différent du
-  // sien (voir Team.lineup et Player.matchPosition), auquel cas c'est le
-  // temps passé À CE poste précis qui doit compter pour son entraînement, où
-  // qu'il joue habituellement. Renvoie { byPosition, total } (secondes).
+  // Temps RÉELLEMENT joué par ce joueur, CUMULÉ sur tous les matchs du cycle
+  // d'entraînement en cours (calendrier ancré quotidien : jusqu'à 3 matchs
+  // par jour civil, championnat + coupe éventuelle, voir
+  // Player.trainingSecondsPlayedByPosition, retour utilisateur, 2026-09 :
+  // "la semaine est en fait une journée avec 3 matchs [...] un joueur doit
+  // jouer 30 min au poste déterminé sur sa semaine pour prendre
+  // l'entrainement"), aux poste(s) couverts par l'entraînement de la
+  // semaine (this.trainingPositions). PAS son temps de jeu total, ni son
+  // poste "de carte" (this.position) : un remplaçant polyvalent peut avoir
+  // été aligné sur un poste différent du sien (voir Team.lineup et
+  // Player.matchPosition), auquel cas c'est le temps passé À CE poste
+  // précis qui doit compter pour son entraînement, où qu'il joue
+  // habituellement. Renvoie { byPosition, total } (secondes).
   trainablySecondsFor(player) {
     const byPosition = {};
     let total = 0;
     (this.trainingPositions || []).forEach(pos => {
-      const s = (player.secondsPlayedByPosition && player.secondsPlayedByPosition[pos]) || 0;
+      const s = (player.trainingSecondsPlayedByPosition && player.trainingSecondsPlayedByPosition[pos]) || 0;
       if (s > 0) { byPosition[pos] = s; total += s; }
     });
     return { byPosition, total };
@@ -2313,6 +2336,15 @@ class Team {
         positionEfficiency, heightMultiplier,
         secondsPlayed: trainedSeconds,
       };
+      // Retour utilisateur, 2026-09 : "quand la maj est passée, les
+      // compteurs de temps de jeu sur la page entrainement doivent être
+      // remis à 0 et on doit voir les effets du dernier entrainement". Le
+      // temps cumulé de ce cycle vient d'être consommé ci-dessus (via
+      // trainablySecondsFor/report), donc repart à zéro pour le prochain
+      // cycle. `trainedSeconds`/`report[p.id]` gardent leur propre copie
+      // (déjà affectés plus haut), donc cette remise à zéro n'efface rien
+      // du rapport qui vient d'être construit.
+      p.trainingSecondsPlayedByPosition = {};
     });
 
     // Académie de jeunes : progression AUTOMATIQUE des jeunes déjà signés
@@ -4901,14 +4933,21 @@ function serializePlayerRecord(p) {
     aggressiveness: p.aggressiveness, form: p.form,
     forSale: p.forSale, salePrice: p.salePrice,
     // Temps de jeu du DERNIER match, ventilé par poste (voir
-    // Player.secondsPlayedByPosition/Team.trainablySecondsFor) : SANS ces
-    // deux champs, l'entraînement d'un joueur retombe à 0% dès qu'on
-    // recharge la page entre un match joué et la validation de
-    // l'entraînement (retour utilisateur : "mes joueurs ne progressent pas
-    // avec l'entrainement") — un rechargement de page ne devrait jamais, à
-    // lui seul, effacer le mérite du dernier match joué.
+    // Player.secondsPlayedByPosition) : sans ces deux champs, un
+    // redémarrage/rechargement entre un match joué et le prochain effacerait
+    // le détail du dernier match (matchLog, box-score) — un rechargement de
+    // page ne devrait jamais, à lui seul, effacer le mérite du dernier match
+    // joué (retour utilisateur d'origine : "mes joueurs ne progressent pas
+    // avec l'entrainement").
     secondsPlayed: p.secondsPlayed,
     secondsPlayedByPosition: { ...p.secondsPlayedByPosition },
+    // Même raison, mais pour Player.trainingSecondsPlayedByPosition (voir son
+    // commentaire au constructeur) : SEUL champ désormais lu par
+    // Team.trainablySecondsFor, cumulé sur tout un cycle d'entraînement
+    // (jusqu'à 3 matchs, calendrier ancré quotidien). Sans lui, un
+    // rechargement entre deux des trois matchs du jour effacerait la part
+    // déjà accumulée.
+    trainingSecondsPlayedByPosition: { ...p.trainingSecondsPlayedByPosition },
     // Retour utilisateur (2026-09) : "le match 3 n'affiche aucune stats
     // hormis les minutes [...] généralisé à d'autres équipes et autres
     // joueurs". Cause : p.stats n'était JAMAIS sauvegardé alors que
@@ -5089,11 +5128,14 @@ function playerFromSave(pdata) {
   if (pdata._trainProgress) p._trainProgress = { ...pdata._trainProgress };
   if (typeof pdata.form === "number") p.form = pdata.form;
   if (pdata.id) p.id = pdata.id;
-  // Temps de jeu du dernier match (voir serializeTeam ci-dessus pour
-  // pourquoi c'est indispensable à la reprise de l'entraînement après un
-  // rechargement de page).
+  // Temps de jeu du dernier match (voir serializePlayerRecord ci-dessus pour
+  // pourquoi c'est indispensable, matchLog/box-score).
   if (typeof pdata.secondsPlayed === "number") p.secondsPlayed = pdata.secondsPlayed;
   if (pdata.secondsPlayedByPosition) p.secondsPlayedByPosition = { ...pdata.secondsPlayedByPosition };
+  // Temps de jeu CUMULÉ du cycle d'entraînement en cours (voir
+  // serializePlayerRecord ci-dessus) : absent = sauvegarde d'avant ce champ,
+  // on laisse alors le {} du constructeur (aucun cumul à restaurer).
+  if (pdata.trainingSecondsPlayedByPosition) p.trainingSecondsPlayedByPosition = { ...pdata.trainingSecondsPlayedByPosition };
   // Stats du dernier match (voir serializePlayerRecord ci-dessus pour le
   // bug que ça corrige) : absent = sauvegarde d'avant cette correction, on
   // garde emptyStats() (déjà posé par le constructeur Player).
@@ -5885,6 +5927,11 @@ class MatchEngine {
       p.secondsPlayed += seconds;
       if (p.matchPosition) {
         p.secondsPlayedByPosition[p.matchPosition] = (p.secondsPlayedByPosition[p.matchPosition] || 0) + seconds;
+        // Même ventilation, mais CUMULÉE sur tous les matchs du cycle
+        // d'entraînement (voir Player.trainingSecondsPlayedByPosition) :
+        // jamais remise à zéro par resetForMatch, contrairement à la ligne
+        // ci-dessus.
+        p.trainingSecondsPlayedByPosition[p.matchPosition] = (p.trainingSecondsPlayedByPosition[p.matchPosition] || 0) + seconds;
       }
 
       // --- Blessures --- (rare, plus probable si le joueur est fatigué,
