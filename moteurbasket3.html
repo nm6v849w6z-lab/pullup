@@ -13032,14 +13032,18 @@ function renderSalleSection() {
     // autres infrastructures ci-dessus/ci-dessous, plutôt qu'un simple
     // raccourci vers l'onglet Académie (celui-ci reste inchangé, voir
     // renderTrainingCenterPanel plus bas, ce n'est pas dupliqué ici). Texte
-    // centré (peu de contenu sur cette carte) via .facility-card-center.
+    // désormais aligné à gauche comme les 4 autres cartes de cette grille
+    // (retour utilisateur, 2026-09 : "le texte centre de formation [...] est
+    // centré alors que les autres sont à gauche. harmonise (jaime mieux à
+    // gauche)") : .facility-card-center retiré, c'était la seule des 5
+    // cartes à l'utiliser.
     const tcInfo = trainingCenterInfo(teamA.trainingCenterLevel);
     const nextTc = teamA.nextTrainingCenterLevel();
     const tcCard = document.createElement("div");
     tcCard.className = "staff-hire-card facility-card";
     tcCard.dataset.trainingCenterCard = "1";
     const tcCardBody = document.createElement("div");
-    tcCardBody.className = "facility-card-body facility-card-center";
+    tcCardBody.className = "facility-card-body";
     tcCardBody.innerHTML = `<div class="facility-card-icon">🏫</div><div class="price">Centre de formation</div>` +
       `<div class="bonus">${escapeHtml(tcInfo.name)}</div>`;
     tcCard.appendChild(tcCardBody);
