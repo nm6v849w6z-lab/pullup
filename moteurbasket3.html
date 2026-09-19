@@ -12347,7 +12347,6 @@ function renderEffectifSection() {
       ATTRS.map(a => `<td>${attrCellHtml(p.attrs[a])}</td>`).join("") + `<td>${marketCell}</td></tr>`;
   });
   html += "</tbody></table></div>";
-  html += `<p class="lineup-reserves">Titulaires actuels surlignés. Le salaire pondère les caractéristiques selon le poste le plus favorable au joueur (« → » indique un poste effectif différent du poste de carte) : les spécialités comptent plus que la moyenne. Le potentiel affiché n'est qu'une estimation par palier, le niveau exact reste caché, à révéler par l'entraînement.</p>`;
   holder.innerHTML = html;
 }
 
