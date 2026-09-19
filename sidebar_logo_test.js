@@ -5,9 +5,12 @@
 // - en sidebar déployée (comportement par défaut), c'est bien le logo (image
 //   PNG en data URI, fond rendu transparent et rogné au plus près du
 //   contenu) qui doit être visible, pas l'ancien repère emoji/texte ;
-// - le rail réduit (sous 900px, voir la media query dédiée) doit garder son
-//   repli sur l'emoji 🏀 : le logo complet, une fois écrasé dans ~48px de
-//   large, deviendrait illisible.
+// - retour utilisateur (2026-09) : "enlève les emoji sur le menu de gauche
+//   aussi" a retiré les emojis .sidebar-icon des boutons de navigation, ce
+//   qui a aussi supprimé le rail réduit à 60px sous 900px (il ne montrait
+//   QUE ces emojis, devenus vides sans eux) : la sidebar garde désormais sa
+//   largeur et son logo complet à toutes les tailles d'écran, plus de repli
+//   sur l'emoji 🏀 nulle part.
 // JSDOM ne calcule pas de vraie mise en page (voir le même repère déjà
 // rencontré dans team_detail_page_test.js/salle_arena_purchases_height_test.js)
 // donc ce test vérifie le MARQUAGE (présence de l'image, forme de sa
@@ -41,39 +44,31 @@ console.log(`✅ .brand-logo-img est bien présent, avec une image PNG intégré
 const mark = brand.querySelector(".brand-mark");
 const name = brand.querySelector(".brand-name");
 if (!mark || mark.textContent.trim() !== "🏀") {
-  throw new Error("❌ L'ancien repère .brand-mark (🏀) devrait rester dans le DOM, en repli pour le rail réduit sous 900px.");
+  throw new Error("❌ L'ancien repère .brand-mark (🏀) devrait rester dans le DOM (repli CSS historique, même s'il n'est plus jamais affiché, voir le commentaire dédié).");
 }
 if (!name || name.textContent.trim() !== "Pull Up") {
-  throw new Error("❌ L'ancien texte .brand-name (\"Pull Up\") devrait rester dans le DOM (masqué par CSS en sidebar déployée, voir le commentaire dédié).");
+  throw new Error("❌ L'ancien texte .brand-name (\"Pull Up\") devrait rester dans le DOM (masqué par CSS, le logo image porte déjà le texte).");
 }
-console.log("✅ L'ancien repère emoji + texte reste bien présent dans le DOM (repli CSS pour le rail réduit).");
+console.log("✅ L'ancien repère emoji + texte reste bien présent dans le DOM (inerte, plus jamais affiché).");
 
-// La CSS elle-même : le logo image doit être caché sous 900px (repli emoji),
-// et l'emoji/texte doivent être cachés par défaut (sidebar déployée), voir
-// les règles .sidebar-brand .brand-mark/.brand-name/.brand-logo-img et la
-// media query @media(max-width:900px).
+// La CSS elle-même : l'emoji/texte doivent être cachés en permanence (plus
+// de repli sous 900px depuis le retrait du rail réduit, voir plus haut) et
+// le logo image ne doit JAMAIS être cité dans une règle display:none, à
+// aucune taille d'écran.
 const styleBlock = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n");
 if (!/\.sidebar-brand \.brand-mark\{[^}]*display:none;\}/.test(styleBlock)) {
-  throw new Error("❌ .sidebar-brand .brand-mark devrait être display:none par défaut (repli emoji réservé au rail réduit).");
+  throw new Error("❌ .sidebar-brand .brand-mark devrait être display:none par défaut (repère historique, inerte).");
 }
 if (!/\.sidebar-brand \.brand-name\{[^}]*display:none;\}/.test(styleBlock)) {
   throw new Error("❌ .sidebar-brand .brand-name devrait être display:none par défaut (le logo image porte déjà le texte \"Pull Up\").");
 }
-// Repère le bon bloc @media(max-width:900px) (il y en a plusieurs dans la
-// feuille de style, pour d'autres composants) via la règle qui réduit la
-// sidebar elle-même, unique à ce bloc-là, plutôt qu'un appariement fragile
-// des accolades sur tout le bloc (qui contient lui-même beaucoup de règles).
-const sidebarNarrowMarker = ".sidebar{width:60px; flex-basis:60px";
-const markerIdx = styleBlock.indexOf(sidebarNarrowMarker);
-if (markerIdx === -1) throw new Error("❌ (setup) Règle de réduction de la sidebar sous 900px introuvable.");
-const narrowBlock = styleBlock.slice(markerIdx, markerIdx + 800);
-if (!/\.sidebar-brand \.brand-logo-img\{[^}]*display:none;\}/.test(narrowBlock)) {
-  throw new Error("❌ Sous 900px, .brand-logo-img devrait repasser à display:none (logo complet illisible une fois écrasé dans le rail réduit).");
+if (/\.sidebar-brand \.brand-logo-img\{[^}]*display:none;\}/.test(styleBlock)) {
+  throw new Error("❌ .brand-logo-img ne devrait plus jamais être caché (plus de rail réduit sous 900px depuis le retrait des emojis du menu, voir sidebar_no_emoji_test.js).");
 }
-if (!/\.sidebar-brand \.brand-mark\{[^}]*display:inline;\}/.test(narrowBlock)) {
-  throw new Error("❌ Sous 900px, .brand-mark (🏀) devrait redevenir visible (display:inline) en repli.");
+if (/\.sidebar-brand \.brand-mark\{[^}]*display:inline;\}/.test(styleBlock)) {
+  throw new Error("❌ .brand-mark (🏀) ne devrait plus jamais redevenir visible (plus de repli rail réduit).");
 }
-console.log("✅ La CSS bascule bien entre le logo complet (sidebar déployée) et l'emoji seul (rail réduit sous 900px).");
+console.log("✅ Le logo complet reste affiché à toutes les tailles d'écran, plus aucun repli sur l'emoji du logo.");
 
 await flush(dom);
 await dom.window.close();

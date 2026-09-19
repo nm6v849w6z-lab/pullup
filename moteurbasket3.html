@@ -310,6 +310,16 @@
   table.boxscore th{color:var(--ink-faint); font-weight:700; text-transform:uppercase; font-size:10px;}
   table.boxscore td:first-child, table.boxscore th:first-child{text-align:left; padding-left:12px;}
   table.boxscore tbody tr:hover{background:var(--panel-2);}
+  /* Retour utilisateur (2026-09) : "ça manque d'un petit total sur les
+     différentes du box score et d'un mvp du match" (feuille de statistiques
+     d'un match, voir boxscoreTableHtml) : ligne de totaux en bas de tableau
+     (chiffres cumulés, pas de bordure de survol comme les lignes joueur), et
+     ligne du MVP du match légèrement mise en avant (même teinte ambre que
+     .mvp-callout ailleurs dans l'appli, pour rester cohérent). */
+  table.boxscore tbody tr.boxscore-totals{font-weight:700; border-top:2px solid var(--line);}
+  table.boxscore tbody tr.boxscore-totals:hover{background:transparent;}
+  table.boxscore tbody tr.boxscore-mvp-row{background:rgba(240, 162, 60, .12);}
+  .match-mvp-callout{margin-bottom:10px;}
   .section{margin-top:26px;}
   .locked-note{text-align:center; font-size:12px; color:var(--ink-faint); margin-top:-10px; margin-bottom:20px;}
   .lock-warning{text-align:center; font-size:12px; color:#e2694f; margin:-6px 0 8px; min-height:1em;}
@@ -550,7 +560,11 @@
   }
   .tab-btn.sidebar-link:hover{background:var(--panel-2); color:var(--ink);}
   .tab-btn.sidebar-link.active{background:rgba(240,162,60,.14); color:var(--amber); border-color:rgba(240,162,60,.35); font-weight:700;}
-  .sidebar-icon{font-size:15px; width:20px; flex:0 0 20px; text-align:center;}
+  /* Retour utilisateur (2026-09) : "enlève les emoji sur le menu de
+     gauche aussi" : .sidebar-icon (span emoji devant chaque libellé) est
+     retiré des boutons .sidebar-link ci-dessous, la règle CSS associée
+     n'a donc plus d'utilité et est retirée avec (voir aussi le correctif
+     du rail réduit sous 900px, plus bas dans cette feuille de style). */
   .sidebar-label{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   /* .sidebar-live-link / .live-tab-dot retirés avec le bouton Live de la
      sidebar (voir plus haut, "le bouton live en haut à gauche ne sert à
@@ -615,16 +629,19 @@
   .topbar-live-strip .tls-clock{color:var(--ink-dim); font-variant-numeric:tabular-nums; font-size:12px;}
   .content-scroll{padding:24px 28px 60px; flex:1; min-width:0;}
   @media(max-width:900px){
-    .sidebar{width:60px; flex-basis:60px; padding:14px 6px;}
-    .sidebar-label, .sidebar-section-label, .sidebar-brand .brand-name{display:none;}
-    .sidebar-brand{justify-content:center;}
-    /* Rail réduit : le logo complet (texte + pictogramme) deviendrait
-       illisible écrasé dans ~48px de large, voir le commentaire sur
-       .brand-logo-img ci-dessus, repli sur l'ancien repère seul. */
-    .sidebar-brand .brand-logo-img{display:none;}
-    .sidebar-brand .brand-mark{display:inline;}
-    .tab-btn.sidebar-link{justify-content:center; padding:10px 0;}
-    .sidebar-icon{width:auto; flex:none;}
+    /* Retour utilisateur (2026-09) : "enlève les emoji sur le menu de
+       gauche aussi" (voir la suppression des .sidebar-icon plus haut, dans
+       les boutons .sidebar-link). Le rail réduit à 60px utilisé ici sous
+       900px ne montrait QUE l'emoji (le libellé texte était masqué via
+       .sidebar-label{display:none}, ancienne règle retirée) : sans emoji,
+       ces boutons seraient devenus complètement vides et illisibles. La
+       sidebar garde donc désormais sa largeur et ses libellés texte
+       normaux à toutes les tailles d'écran, plutôt que de se réduire à un
+       rail devenu sans repère visuel ; le logo complet (repli
+       texte+pictogramme sur .brand-mark seul, utile uniquement pour un
+       rail étroit) n'a donc plus besoin d'être remplacé ici non plus.
+       .sidebar-brand .brand-name reste masqué par sa propre règle par
+       défaut (voir plus haut), sans rapport avec ce correctif. */
     .topbar{padding:12px 16px;}
     .content-scroll{padding:18px 16px 48px;}
     /* En dessous de 900px, la recherche passe sur sa propre ligne pleine
@@ -1205,27 +1222,27 @@
          rapide au direct depuis les autres pages. -->
     <div class="sidebar-section">
       <div class="sidebar-section-label">Club</div>
-      <button class="tab-btn sidebar-link" data-tab="club" id="tabClubName"><span class="sidebar-icon">🏠</span><span class="sidebar-label">Tableau de bord</span></button>
-      <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-icon">🏆</span><span class="sidebar-label">Ligue</span></button>
-      <button class="tab-btn sidebar-link" data-tab="coupe"><span class="sidebar-icon">🏅</span><span class="sidebar-label">Coupe</span></button>
-      <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-icon">📅</span><span class="sidebar-label">Calendrier</span></button>
-      <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-icon">🤝</span><span class="sidebar-label">Matchs amicaux</span></button>
+      <button class="tab-btn sidebar-link" data-tab="club" id="tabClubName"><span class="sidebar-label">Tableau de bord</span></button>
+      <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-label">Ligue</span></button>
+      <button class="tab-btn sidebar-link" data-tab="coupe"><span class="sidebar-label">Coupe</span></button>
+      <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-label">Calendrier</span></button>
+      <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-label">Matchs amicaux</span></button>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Gestion</div>
-      <button class="tab-btn sidebar-link" data-tab="effectif"><span class="sidebar-icon">👥</span><span class="sidebar-label">Effectif</span></button>
-      <button class="tab-btn sidebar-link active" data-tab="ordres" id="tabOrdres"><span class="sidebar-icon">📋</span><span class="sidebar-label">Ordres</span></button>
-      <button class="tab-btn sidebar-link" data-tab="entrainement"><span class="sidebar-icon">🏋️</span><span class="sidebar-label">Entraînement</span></button>
-      <button class="tab-btn sidebar-link" data-tab="marche"><span class="sidebar-icon">🏷️</span><span class="sidebar-label">Marché</span></button>
-      <button class="tab-btn sidebar-link" data-tab="staff"><span class="sidebar-icon">🧑‍💼</span><span class="sidebar-label">Staff</span></button>
-      <button class="tab-btn sidebar-link" data-tab="academie"><span class="sidebar-icon">🧒</span><span class="sidebar-label">Académie de jeunes</span></button>
+      <button class="tab-btn sidebar-link" data-tab="effectif"><span class="sidebar-label">Effectif</span></button>
+      <button class="tab-btn sidebar-link active" data-tab="ordres" id="tabOrdres"><span class="sidebar-label">Ordres</span></button>
+      <button class="tab-btn sidebar-link" data-tab="entrainement"><span class="sidebar-label">Entraînement</span></button>
+      <button class="tab-btn sidebar-link" data-tab="marche"><span class="sidebar-label">Marché</span></button>
+      <button class="tab-btn sidebar-link" data-tab="staff"><span class="sidebar-label">Staff</span></button>
+      <button class="tab-btn sidebar-link" data-tab="academie"><span class="sidebar-label">Académie de jeunes</span></button>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Club &amp; finances</div>
-      <button class="tab-btn sidebar-link" data-tab="economie"><span class="sidebar-icon">💰</span><span class="sidebar-label">Économie</span></button>
-      <button class="tab-btn sidebar-link" data-tab="salle"><span class="sidebar-icon">🏟️</span><span class="sidebar-label">Salle</span></button>
-      <button class="tab-btn sidebar-link" data-tab="humeur"><span class="sidebar-icon">😊</span><span class="sidebar-label">Humeur des supporters</span></button>
-      <button class="tab-btn sidebar-link" data-tab="statshebdo"><span class="sidebar-icon">📈</span><span class="sidebar-label">Stats hebdo</span></button>
+      <button class="tab-btn sidebar-link" data-tab="economie"><span class="sidebar-label">Économie</span></button>
+      <button class="tab-btn sidebar-link" data-tab="salle"><span class="sidebar-label">Salle</span></button>
+      <button class="tab-btn sidebar-link" data-tab="humeur"><span class="sidebar-label">Humeur des supporters</span></button>
+      <button class="tab-btn sidebar-link" data-tab="statshebdo"><span class="sidebar-label">Stats hebdo</span></button>
     </div>
     <!-- Guide : regroupe tous les textes d'explication des mécaniques du jeu
          retirés des onglets individuels (retour utilisateur 2026-09 :
@@ -1233,7 +1250,7 @@
          Guide [...] en bas des autres dans la colonne de gauche") — épinglé
          en bas de la sidebar via margin-top:auto (voir .sidebar-section-bottom). -->
     <div class="sidebar-section sidebar-section-bottom">
-      <button class="tab-btn sidebar-link" data-tab="guide"><span class="sidebar-icon">📖</span><span class="sidebar-label">Guide</span></button>
+      <button class="tab-btn sidebar-link" data-tab="guide"><span class="sidebar-label">Guide</span></button>
     </div>
   </nav>
   <div class="main-col">
@@ -1428,6 +1445,7 @@
 
     <div class="section" id="boxscoreSection" style="display:none">
       <h2>Feuille de statistiques</h2>
+      <div id="boxscoreMvpHolder"></div>
       <div class="boxscore-toggle">
         <button class="bs-tab active" data-team="A">Lyon</button>
         <button class="bs-tab" data-team="B">Paris</button>
@@ -11795,23 +11813,72 @@ const BOXSCORE_COLS = [
   ["min", "MIN"], ["pts", "PTS"], ["reb", "REB"], ["ast", "PD"], ["stl", "INT"],
   ["blk", "CTR"], ["tov", "PDB"], ["pf", "FTS"],
 ];
-function boxscoreTableHtml(rows) {
+// Retour utilisateur (2026-09) : "ça manque d'un petit total sur les
+// différentes du box score et d'un mvp du match". `mvpRow` (optionnel) est
+// la ligne (référence directe à un élément de `rows`, voir boxscoreMatchMvp
+// ci-dessous) à mettre en avant (étoile devant le nom + léger surlignage,
+// voir CSS .boxscore-mvp-row) ; comparaison par référence d'objet, pas par
+// nom (deux joueurs de clubs différents pourraient théoriquement porter le
+// même nom, le générateur de noms n'en garantit pas l'unicité).
+function boxscoreTableHtml(rows, mvpRow) {
   let html = "<table class='boxscore'><thead><tr><th>Joueur</th><th>Poste</th>";
   BOXSCORE_COLS.forEach(c => html += `<th>${c[1]}</th>`);
   html += "<th>2PTS</th><th>3PTS</th><th>LF</th></tr></thead><tbody>";
+  const totals = { fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
+  BOXSCORE_COLS.forEach(c => { totals[c[0]] = 0; });
   rows.forEach(p => {
-    html += `<tr><td>${escapeHtml(p.name)}</td><td>${POS_SHORT[p.position]}</td>`;
-    BOXSCORE_COLS.forEach(c => html += `<td>${p[c[0]]}</td>`);
+    const isMvp = !!(mvpRow && p === mvpRow);
+    html += `<tr${isMvp ? ' class="boxscore-mvp-row"' : ""}><td>${isMvp ? "★ " : ""}${escapeHtml(p.name)}</td><td>${POS_SHORT[p.position]}</td>`;
+    BOXSCORE_COLS.forEach(c => { html += `<td>${p[c[0]]}</td>`; totals[c[0]] += p[c[0]] || 0; });
     html += `<td>${p.fgm2}/${p.fga2}</td><td>${p.fgm3}/${p.fga3}</td><td>${p.ftm}/${p.fta}</td></tr>`;
+    totals.fgm2 += p.fgm2 || 0; totals.fga2 += p.fga2 || 0;
+    totals.fgm3 += p.fgm3 || 0; totals.fga3 += p.fga3 || 0;
+    totals.ftm += p.ftm || 0; totals.fta += p.fta || 0;
   });
+  if (rows.length) {
+    html += `<tr class="boxscore-totals"><td>Total</td><td></td>`;
+    BOXSCORE_COLS.forEach(c => html += `<td>${totals[c[0]]}</td>`);
+    html += `<td>${totals.fgm2}/${totals.fga2}</td><td>${totals.fgm3}/${totals.fga3}</td><td>${totals.ftm}/${totals.fta}</td></tr>`;
+  }
   html += "</tbody></table>";
   return html;
+}
+
+// MVP du match (retour utilisateur, 2026-09), toutes équipes confondues (pas
+// un MVP par équipe) : reprend statEvaluation (même formule que le MVP de la
+// journée, voir computeLastMatchdayMvp/renderLeagueStatsPanel) pour rester
+// cohérent avec le reste de l'appli. Les lignes de box score (buildBoxScore
+// côté moteur, ou boxscoreRowsFromMatchLog pour un match déjà joué) ont déjà
+// tous les champs qu'attend statEvaluation (pts/reb/ast/stl/blk/tov/pf/
+// fgm2/fga2/fgm3/fga3/ftm/fta). Renvoie null si les deux équipes n'ont
+// aucune ligne (ex. forfait des deux côtés, cas théorique).
+function boxscoreMatchMvp(rowsA, rowsB) {
+  let best = null;
+  [...rowsA, ...rowsB].forEach(row => {
+    const evalScore = statEvaluation(row);
+    if (!best || evalScore > best.evalScore) best = { row, evalScore };
+  });
+  return best;
+}
+
+function matchMvpCalloutHtml(mvp) {
+  const r = mvp.row;
+  const bits = [`${r.pts} pts`, `${r.reb} reb`, `${r.ast} pas`, `${r.stl || 0} int`, `${r.blk || 0} ctr`];
+  if (r.tov) bits.push(`${r.tov} bp`);
+  bits.push(`${r.fgm2 || 0}/${r.fga2 || 0} à 2pts`, `${r.fgm3 || 0}/${r.fga3 || 0} à 3pts`);
+  if (r.fta) bits.push(`${r.ftm || 0}/${r.fta || 0} LF`);
+  bits.push(`évaluation ${mvp.evalScore}`);
+  return `<div class="mvp-callout match-mvp-callout"><h4>MVP du match</h4>` +
+    `<p><b>${escapeHtml(r.name)}</b> : ${bits.join(", ")}</p></div>`;
 }
 
 function renderBoxScore(side) {
   document.querySelectorAll(".bs-tab").forEach(b => b.classList.toggle("active", b.dataset.team === side));
   const rows = side === "A" ? matchResult.boxScoreA : matchResult.boxScoreB;
-  document.getElementById("boxscoreHolder").innerHTML = boxscoreTableHtml(rows);
+  const mvp = boxscoreMatchMvp(matchResult.boxScoreA, matchResult.boxScoreB);
+  const mvpHolder = document.getElementById("boxscoreMvpHolder");
+  if (mvpHolder) mvpHolder.innerHTML = mvp ? matchMvpCalloutHtml(mvp) : "";
+  document.getElementById("boxscoreHolder").innerHTML = boxscoreTableHtml(rows, mvp ? mvp.row : null);
 }
 
 // ---------------------------------------------------------------------
@@ -11855,8 +11922,11 @@ function renderMatchBoxscoreTab(side) {
   if (!matchBoxscoreState) return;
   document.querySelectorAll("#matchBoxscoreOverlay .bs-tab").forEach(b => b.classList.toggle("active", b.dataset.team === side));
   const rows = side === "A" ? matchBoxscoreState.rowsHome : matchBoxscoreState.rowsAway;
+  const mvp = boxscoreMatchMvp(matchBoxscoreState.rowsHome, matchBoxscoreState.rowsAway);
+  const mvpHolder = document.getElementById("matchBoxscoreMvpHolder");
+  if (mvpHolder) mvpHolder.innerHTML = mvp ? matchMvpCalloutHtml(mvp) : "";
   document.getElementById("matchBoxscoreHolder").innerHTML = rows.length
-    ? boxscoreTableHtml(rows)
+    ? boxscoreTableHtml(rows, mvp ? mvp.row : null)
     : "<p class='training-empty'>Aucune statistique disponible pour cette équipe sur ce match (joueurs partis depuis).</p>";
 }
 
@@ -11874,6 +11944,7 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
   overlay.id = "matchBoxscoreOverlay";
   overlay.innerHTML = `<div class="upgrade-confirm-box match-boxscore-box">` +
     `<h3>Feuille de statistiques</h3>` +
+    `<div id="matchBoxscoreMvpHolder"></div>` +
     `<div class="boxscore-toggle">` +
     `<button type="button" class="bs-tab active" data-team="A">${escapeHtml(homeTeam.name)}</button>` +
     `<button type="button" class="bs-tab" data-team="B">${escapeHtml(awayTeam.name)}</button>` +
