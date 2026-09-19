@@ -8,7 +8,9 @@
 // redirection vers le direct), la journée présélectionnée saute
 // automatiquement la journée en direct (déjà verrouillée côté serveur,
 // non modifiable) au profit de la prochaine journée réellement éditable, et
-// l'onglet "Live" séparé reste accessible pour revenir suivre le match.
+// le mini bandeau Live du topbar reste accessible pour revenir suivre le
+// match (retour utilisateur, 2026-09 : l'onglet Live séparé de la sidebar,
+// lui, a depuis été retiré, redondant avec ce bandeau, voir goToLiveTab).
 const fs = require("fs");
 const { startTestServer, openGame, flush, patchDateNow } = require("./test_helpers.js");
 const { scheduledTimeForRound, MATCH_BROADCAST_DURATION_MS } = require("./server/calendar.js");
@@ -91,16 +93,18 @@ if (defenseAfter !== defenseBefore) {
 console.log("✅ Les ordres en direct de teamA restent inchangés après ouverture de l'écran sur la journée présélectionnée.");
 
 // ---------------------------------------------------------------------
-// L'onglet "Live" séparé reste accessible pour revenir suivre le direct.
+// Le mini bandeau Live du topbar reste accessible pour revenir suivre le
+// direct (retour utilisateur, 2026-09 : l'onglet Live séparé de la sidebar
+// a été retiré depuis, redondant avec ce bandeau).
 // ---------------------------------------------------------------------
-const liveTabHidden = doc.getElementById("tabLive").classList.contains("hidden");
-if (liveTabHidden) throw new Error("❌ L'onglet Live devrait rester visible dans la sidebar pendant que le direct est en cours, même en étant sur Ordres.");
-console.log("✅ L'onglet Live reste visible dans la sidebar pendant qu'on prépare Ordres.");
+const liveStripHidden = doc.getElementById("topbarLiveStrip").classList.contains("hidden");
+if (liveStripHidden) throw new Error("❌ Le mini bandeau Live du topbar devrait rester visible pendant que le direct est en cours, même en étant sur Ordres.");
+console.log("✅ Le mini bandeau Live du topbar reste visible pendant qu'on prépare Ordres.");
 
 win.eval("goToLiveTab();");
 const liveVisibleAfterGoBack = !doc.getElementById("liveSection").classList.contains("hidden");
 if (!liveVisibleAfterGoBack) throw new Error("❌ Revenir sur l'onglet Live depuis Ordres devrait réafficher le direct en cours.");
-console.log("✅ On peut toujours revenir suivre le direct via l'onglet Live séparé depuis Ordres.");
+console.log("✅ On peut toujours revenir suivre le direct via le bandeau Live du topbar depuis Ordres.");
 
 await flush(dom);
 await dom.window.close();
