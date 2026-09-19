@@ -847,6 +847,9 @@
   .academy-graduates-list{list-style:none; margin:0; padding:0; font-size:13.5px; color:var(--ink);}
   .academy-graduates-list li{padding:2px 0;}
   .academy-graduate-position{color:var(--ink-faint); font-size:12px;}
+  /* Retour utilisateur (2026-09) : "ajoute la date à laquelle le joueur est
+     passé pro" (voir h.promotedAt/formatDateFr ci-dessus). */
+  .academy-graduate-date{color:var(--ink-faint); font-size:12px;}
   /* 3 colonnes fixes (retour utilisateur, 2026-09 : "mets plutot les
      classements de stats sur 3 colonnes plutot que 4 comme là, comme ça on a
      pas de trou") : avec 6 catégories (LEAGUE_STAT_CATEGORIES) et
@@ -3822,7 +3825,12 @@ class Team {
   // devenir un joueur normal, comme n'importe qui acheté sur le marché des
   // transferts). Renvoie { ok: true, player } ou { ok: false, reason } —
   // reasons : "not-found", "roster-full" (effectif pro déjà au plafond).
-  promoteYouthPlayer(playerId) {
+  // `now` (ms, comme Date.now()) : DOIT être passé explicitement par
+  // l'appelant (retour utilisateur, 2026-09 : "ajoute la date à laquelle le
+  // joueur est passé pro"), jamais de Date.now() implicite ici, même
+  // convention que refreshMarket(now)/refreshRecruiterMarket(now) etc.
+  // ci-dessus, pour rester testable de façon déterministe.
+  promoteYouthPlayer(playerId, now) {
     const idx = (this.youthPlayers || []).findIndex(p => p.id === playerId);
     if (idx === -1) return { ok: false, reason: "not-found" };
     if (this.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
@@ -3839,8 +3847,12 @@ class Team {
     // au constructeur) : même évènement que le compteur ci-dessus, mais
     // garde le nom/poste de CHAQUE jeune promu au lieu de se limiter à un
     // total, pour l'affichage détaillé côté renderAcademyGraduatesStat.
+    // promotedAt : date de cette promotion (voir le paramètre `now`
+    // ci-dessus), une entrée d'historique restaurée d'une sauvegarde
+    // d'avant ce champ n'en a pas (undefined), affichée sans date plutôt
+    // qu'avec une date inventée.
     (this.academyGraduatesHistory = this.academyGraduatesHistory || []).push({
-      name: player.name, position: player.position,
+      name: player.name, position: player.position, promotedAt: now,
     });
     // Rejoint le banc plutôt qu'un titulaire (même convention que l'achat
     // d'un joueur sur le marché des transferts, voir League._resolveListing)
@@ -9143,6 +9155,16 @@ function formatDateTimeFr(ts) {
   });
 }
 
+// Date SEULE (sans heure ni jour de semaine, contrairement à
+// formatDateTimeFr ci-dessus, pensé pour un coup d'envoi de match) : utilisée
+// pour la date de promotion d'un jeune de l'académie (voir
+// Team.academyGraduatesHistory/renderAcademyGraduatesStat).
+function formatDateFr(ts) {
+  return new Date(ts).toLocaleDateString("fr-FR", {
+    day: "numeric", month: "long", year: "numeric",
+  });
+}
+
 let countdownTimer = null;
 
 // Affiche et actualise (chaque seconde) le compte à rebours jusqu'au coup
@@ -12647,8 +12669,14 @@ function renderAcademyGraduatesStat() {
       `<p>Aucun jeune formé par l'académie n'a encore rejoint l'effectif pro.</p></div>`;
     return;
   }
+  // Retour utilisateur (2026-09) : "ajoute la date à laquelle le joueur est
+  // passé pro" (h.promotedAt, voir Team.promoteYouthPlayer) : absente pour
+  // une entrée restaurée d'avant ce champ (sauvegarde plus ancienne que
+  // cette fonctionnalité), affichée sans date plutôt qu'avec une date
+  // inventée (voir teamFromSave, aucune valeur de repli sur promotedAt).
   const items = history.map(h =>
-    `<li>${escapeHtml(h.name)}${h.position ? ` <span class="academy-graduate-position">(${escapeHtml(h.position)})</span>` : ""}</li>`
+    `<li>${escapeHtml(h.name)}${h.position ? ` <span class="academy-graduate-position">(${escapeHtml(h.position)})</span>` : ""}` +
+    `${typeof h.promotedAt === "number" ? `<span class="academy-graduate-date"> · ${formatDateFr(h.promotedAt)}</span>` : ""}</li>`
   ).join("");
   holder.innerHTML = `<div class="mvp-callout"><h4>🎓 Historique du centre de formation</h4>` +
     `<ul class="academy-graduates-list">${items}</ul></div>`;
@@ -12697,7 +12725,7 @@ document.getElementById("academiePendingBanner").addEventListener("click", (e) =
   const releaseBtn = e.target.closest("[data-release-youth]");
   if (promoteBtn) {
     const id = Number(promoteBtn.dataset.promoteYouth);
-    const result = teamA.promoteYouthPlayer(id);
+    const result = teamA.promoteYouthPlayer(id, Date.now());
     if (result.ok) {
       saveMyTeam();
       syncPromoteYouthPlayerToServer(id);

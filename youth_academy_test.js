@@ -540,7 +540,12 @@ function withMockedRandom(value, fn) {
   team.pendingYouthDecisions = [youngster.id];
   const rosterBefore = team.players.length;
 
-  const res = team.promoteYouthPlayer(youngster.id);
+  // Retour utilisateur (2026-09) : "ajoute la date à laquelle le joueur est
+  // passé pro", `now` explicite (pas Date.now() implicite dans la
+  // méthode, voir Team.promoteYouthPlayer), fixé ici pour une assertion
+  // déterministe sur academyGraduatesHistory[].promotedAt.
+  const promoteTime = Date.UTC(2026, 8, 19, 10, 0);
+  const res = team.promoteYouthPlayer(youngster.id, promoteTime);
   console.log(`\nPromotion — ok : ${res.ok}, salaire attribué : ${res.player && res.player.salary} (attendu salaryForOverall(overall) = ${salaryForOverall(youngster.overall())})`);
   if (!res.ok) throw new Error("❌ Promouvoir un jeune de 18 ans en attente de décision devrait réussir.");
   if (team.youthPlayers.some(p => p.id === youngster.id)) throw new Error("❌ Le jeune promu devrait quitter youthPlayers.");
@@ -549,6 +554,19 @@ function withMockedRandom(value, fn) {
   if (team.pendingYouthDecisions.includes(youngster.id)) throw new Error("❌ La décision devrait être retirée de pendingYouthDecisions une fois tranchée.");
   if (res.player.salary !== salaryForOverall(res.player.overall())) throw new Error("❌ Le salaire d'un jeune promu devrait être recalculé à sa vraie valeur de marché (salaryForOverall), pas rester au tarif de stagiaire.");
   console.log("✅ Promouvoir un jeune de 18 ans le déplace vers l'effectif pro, avec un salaire recalculé à sa vraie valeur de marché.");
+
+  const histEntry = (team.academyGraduatesHistory || []).find(h => h.name === youngster.name);
+  console.log(`Entrée d'historique académie : nom ${histEntry && histEntry.name}, poste ${histEntry && histEntry.position}, promotedAt ${histEntry && histEntry.promotedAt} (attendu ${promoteTime})`);
+  if (!histEntry) throw new Error("❌ La promotion devrait ajouter une entrée dans academyGraduatesHistory.");
+  if (histEntry.position !== youngster.position) throw new Error(`❌ L'entrée d'historique devrait porter le poste du joueur, obtenu "${histEntry.position}".`);
+  if (histEntry.promotedAt !== promoteTime) throw new Error(`❌ L'entrée d'historique devrait porter exactement le \`now\` passé à promoteYouthPlayer, obtenu ${histEntry.promotedAt} au lieu de ${promoteTime}.`);
+  console.log("✅ La promotion ajoute bien une entrée d'historique (nom, poste, date de promotion = `now` passé explicitement).");
+
+  const restored = teamFromSave(serializeTeam(team));
+  const restoredEntry = (restored.academyGraduatesHistory || []).find(h => h.name === youngster.name);
+  console.log(`Après aller-retour de sauvegarde, entrée retrouvée : ${!!restoredEntry}, promotedAt : ${restoredEntry && restoredEntry.promotedAt}`);
+  if (!restoredEntry || restoredEntry.promotedAt !== promoteTime) throw new Error("❌ academyGraduatesHistory (nom, poste, promotedAt) devrait survivre à un aller-retour de sauvegarde.");
+  console.log("✅ academyGraduatesHistory (avec la date de promotion) survit bien à un aller-retour de sauvegarde.");
 }
 {
   // Correctif 2026-09 : après promotion, le joueur redevient un pro NORMAL
@@ -562,7 +580,7 @@ function withMockedRandom(value, fn) {
   prodigy.potential = 85; // potentiel réel élevé (palier "🔥 Superstar", max 89), jamais exploité tant qu'il restait à l'académie
   team.youthPlayers = [prodigy];
   team.pendingYouthDecisions = [prodigy.id];
-  const promoteRes = team.promoteYouthPlayer(prodigy.id);
+  const promoteRes = team.promoteYouthPlayer(prodigy.id, Date.now());
   if (!promoteRes.ok) throw new Error("❌ (setup) la promotion devrait réussir ici.");
 
   const attrWeights = {}; ATTRS.forEach(a => attrWeights[a] = 1); // entraînement pro classique, à fond sur toutes les caracs
@@ -589,7 +607,7 @@ function withMockedRandom(value, fn) {
   const attrs = {}; ATTRS.forEach(a => attrs[a] = 60);
   const youngster = new Player({ name: "Sans place", position: "Meneur", height: 190, age: 18, attrs, aggressiveness: 50 });
   team.youthPlayers = [youngster];
-  const res = team.promoteYouthPlayer(youngster.id);
+  const res = team.promoteYouthPlayer(youngster.id, Date.now());
   console.log(`\nPromotion à effectif pro plein (${team.players.length}/${MAX_ROSTER_SIZE}) :`, res);
   if (res.ok !== false || res.reason !== "roster-full") throw new Error("❌ Promouvoir alors que l'effectif pro est déjà à MAX_ROSTER_SIZE devrait échouer avec reason 'roster-full'.");
   if (!team.youthPlayers.some(p => p.id === youngster.id)) throw new Error("❌ Un jeune refusé pour effectif pro plein devrait rester dans youthPlayers.");

@@ -688,7 +688,11 @@ function promoteYouthPlayer(team, teamIndex, league, body, now) {
     return fail("playerId requis.");
   }
   const playerId = typeof body.playerId === "string" && /^-?\d+$/.test(body.playerId) ? Number(body.playerId) : body.playerId;
-  const result = team.promoteYouthPlayer(playerId);
+  // `now`, déjà reçu explicitement en paramètre ci-dessus (voir l'appelant),
+  // transmis tel quel : c'est lui qui date l'entrée d'historique ajoutée par
+  // Team.promoteYouthPlayer (retour utilisateur, 2026-09 : "ajoute la date à
+  // laquelle le joueur est passé pro").
+  const result = team.promoteYouthPlayer(playerId, now);
   if (!result.ok) {
     const reasons = {
       "not-found": "Jeune introuvable dans l'académie.",

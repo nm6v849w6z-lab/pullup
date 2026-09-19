@@ -2151,7 +2151,12 @@ class Team {
   // devenir un joueur normal, comme n'importe qui acheté sur le marché des
   // transferts). Renvoie { ok: true, player } ou { ok: false, reason } —
   // reasons : "not-found", "roster-full" (effectif pro déjà au plafond).
-  promoteYouthPlayer(playerId) {
+  // `now` (ms, comme Date.now()) : DOIT être passé explicitement par
+  // l'appelant (retour utilisateur, 2026-09 : "ajoute la date à laquelle le
+  // joueur est passé pro"), jamais de Date.now() implicite ici, même
+  // convention que refreshMarket(now)/refreshRecruiterMarket(now) etc.
+  // ci-dessus, pour rester testable de façon déterministe.
+  promoteYouthPlayer(playerId, now) {
     const idx = (this.youthPlayers || []).findIndex(p => p.id === playerId);
     if (idx === -1) return { ok: false, reason: "not-found" };
     if (this.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
@@ -2168,9 +2173,12 @@ class Team {
     // au constructeur) : même évènement que le compteur ci-dessus, mais
     // garde le nom/poste de CHAQUE jeune promu au lieu de se limiter à un
     // total, pour l'affichage détaillé côté client
-    // (renderAcademyGraduatesStat, moteurbasket3.html).
+    // (renderAcademyGraduatesStat, moteurbasket3.html). promotedAt : date
+    // de cette promotion (voir le paramètre `now` ci-dessus), une entrée
+    // restaurée d'une sauvegarde d'avant ce champ n'en a pas (undefined),
+    // affichée sans date plutôt qu'avec une date inventée.
     (this.academyGraduatesHistory = this.academyGraduatesHistory || []).push({
-      name: player.name, position: player.position,
+      name: player.name, position: player.position, promotedAt: now,
     });
     // Rejoint le banc plutôt qu'un titulaire (même convention que l'achat
     // d'un joueur sur le marché des transferts, voir League._resolveListing)
