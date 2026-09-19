@@ -874,6 +874,19 @@
      (overflow-y) si jamais ça ne suffit toujours pas. */
   .arena-purchases .facilities-grid{gap:8px; grid-template-columns:repeat(auto-fill, minmax(105px, 1fr));}
   #arenaPurchasesCol{overflow-y:auto;}
+  /* Retour utilisateur (2026-09) : "comme on a enlevé les emojis, les
+     briques droites sont un peu petite maintenant. essaie que ce soit
+     aligné avec la brique avec l'image de la salle à gauche" — la colonne de
+     droite est désormais étirée pile à la hauteur de l'image (voir
+     syncArenaPurchasesHeight, qui pose #arenaPurchasesCol.style.height au
+     lieu d'un simple max-height) ; #otherFacilitiesPanel (flex:1, seul
+     élément de la colonne à pouvoir grandir — #arenaCurrentPanel juste
+     au-dessus garde sa hauteur naturelle) et .facilities-grid en son sein
+     (flex:1 + align-content:stretch) redistribuent l'espace libéré entre les
+     cartes d'infrastructure pour qu'elles grandissent au lieu de laisser un
+     vide sous la colonne. */
+  #otherFacilitiesPanel{display:flex; flex-direction:column; flex:1; min-height:0;}
+  #otherFacilitiesPanel .facilities-grid{flex:1; align-content:stretch;}
 
   /* ---- Stats de la ligue / MVP de la dernière journée (onglet Ligue) ---- */
   .league-stats-panel{margin-top:18px; padding:14px 16px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);}
@@ -1449,6 +1462,7 @@
       <p class="matchup-context" id="clubMatchupContext"></p>
       <div id="clubDeficitBanner"></div>
       <div class="stat-grid" id="clubStatsGrid"></div>
+      <div id="clubRecentEventsHolder"></div>
     </div>
   </div>
 
@@ -8923,9 +8937,14 @@ const ROUTINE_TRANSACTION_LABEL_PREFIXES = [
 const ORDRES_RECENT_EVENTS_MAX_TRANSACTIONS = 5;
 const ORDRES_RECENT_EVENTS_MAX_TRAINING_GAINS = 5;
 
-function renderOrdresRecentEvents() {
-  const holder = document.getElementById("ordresRecentEventsHolder");
-  if (!holder) return;
+// Contenu partagé entre le panneau "Derniers événements" de la page Ordres
+// (ordresRecentEventsHolder) et celui de la page Tableau de bord
+// (clubRecentEventsHolder, ajouté suite au retour utilisateur (2026-09) :
+// "il faut sur la page tableau de bord que l'on puisse voir les derniers
+// évènements: achat de tel joueur, tel coach, tel up à l'entrainemetn...").
+// Retourne le HTML intérieur (lignes de gains), ou "" s'il n'y a rien à
+// montrer — c'est à l'appelant de décider comment envelopper/masquer.
+function recentEventsInnerHtml() {
   let html = "";
 
   const notableTransactions = (teamA.transactions || [])
@@ -8962,7 +8981,21 @@ function renderOrdresRecentEvents() {
     }
   }
 
+  return html;
+}
+
+function renderOrdresRecentEvents() {
+  const holder = document.getElementById("ordresRecentEventsHolder");
+  if (!holder) return;
+  const html = recentEventsInnerHtml();
   holder.innerHTML = html ? `<div class="section ordres-recent-events"><h3>Derniers événements</h3><div class="training-report-list">${html}</div></div>` : "";
+}
+
+function renderClubRecentEvents() {
+  const holder = document.getElementById("clubRecentEventsHolder");
+  if (!holder) return;
+  const html = recentEventsInnerHtml();
+  holder.innerHTML = html ? `<div class="section club-recent-events"><h3>Derniers événements</h3><div class="training-report-list">${html}</div></div>` : "";
 }
 
 function renderPrep() {
@@ -12519,6 +12552,8 @@ function renderClubSection() {
   moraleLink.innerHTML = `<button class="secondary" data-tab="humeur">Voir le détail</button>`;
   moraleCard.appendChild(moraleLink);
   grid.appendChild(moraleCard);
+
+  renderClubRecentEvents();
 }
 
 // ---------------------------------------------------------------------
@@ -13753,10 +13788,20 @@ function buildUpgradeArrow(confirmOpts) {
 
 // Retour utilisateur (2026-09) : "je souhaite que les briques de droite
 // n'aillent pas plus bas que la brique de gauche. ce sera plus beau
-// visuellement" (onglet Salle). Mesure la hauteur réellement affichée de
-// #arenaVisualCard (variable selon le format de chaque image de salle et la
-// largeur d'écran, donc impossible à fixer en dur en CSS) et la reporte
-// comme max-height sur #arenaPurchasesCol, avec défilement interne si le
+// visuellement" (onglet Salle), puis (suite à la suppression des emojis
+// des briques, 2026-09) : "les briques droites sont un peu petite
+// maintenant. essaie que ce soit aligné avec la brique avec l'image de la
+// salle à gauche" — sans leurs emojis, les 5 cartes "Autres infrastructures"
+// sont devenues plus basses, laissant un vide sous la colonne de droite. On
+// ne se contente donc plus de PLAFONNER la hauteur (max-height, ce qui
+// laissait ce vide), on l'IMPOSE (height) : la colonne de droite est étirée
+// pour occuper exactement la même hauteur que l'image de gauche, et
+// #otherFacilitiesPanel/.facilities-grid (voir CSS, flex:1 + align-content
+// stretch) redistribue cet espace supplémentaire entre les cartes
+// d'infrastructure pour qu'elles grandissent plutôt que de laisser un vide.
+// Mesure la hauteur réellement affichée de #arenaVisualCard (variable selon
+// le format de chaque image de salle et la largeur d'écran, donc impossible
+// à fixer en dur en CSS), défilement interne conservé en secours si le
 // contenu de droite ne tient toujours pas (voir #arenaPurchasesCol en CSS).
 // Appelée depuis renderSalleSection, à la fois immédiatement et au
 // chargement de l'image (voir plus bas dans cette même fonction).
@@ -13765,7 +13810,7 @@ function syncArenaPurchasesHeight() {
   const purchasesCol = document.getElementById("arenaPurchasesCol");
   if (!visualCard || !purchasesCol) return;
   const h = visualCard.getBoundingClientRect().height;
-  if (h > 0) purchasesCol.style.maxHeight = `${Math.round(h)}px`;
+  if (h > 0) purchasesCol.style.height = `${Math.round(h)}px`;
 }
 // Écouteur UNIQUE au niveau window (pas un par appel de renderSalleSection,
 // pour ne pas en empiler à chaque passage sur l'onglet) : redimensionner la
@@ -13778,6 +13823,63 @@ window.addEventListener("resize", () => {
   const salleEl = document.getElementById("salleSection");
   if (salleEl && !salleEl.classList.contains("hidden")) syncArenaPurchasesHeight();
 });
+
+// Retour utilisateur (2026-09) : "le texte sous le type de salle doit
+// correspondre à l'influence réelle dans la salle : ~5 564 spectateurs en
+// moyenne (~70% de remplissage) alors que j'ai un seul match avec Gradins
+// populaires : 1 692 (62%) · Tribune couverte : 990 (66%) · Loges VIP : 533
+// (71%)" — le texte sous "Petit gymnase" affichait jusqu'ici une estimation
+// PROJETÉE (Team.projectedAttendanceRate, calculée à partir de l'humeur des
+// supporters/du confort tarifaire, jamais mise à jour par les matchs
+// réellement joués), sans rapport avec l'affluence RÉELLE déjà visible plus
+// bas sur cette même page (voir teamA.attendanceHistory/
+// renderAttendanceHistory). On calcule donc ici la moyenne réelle à partir
+// de cet historique (jusqu'à 10 derniers matchs à domicile, même source),
+// avec le même détail par catégorie de place que renderAttendanceHistory,
+// pour que les deux se recoupent. La capacité utilisée pour le taux de
+// remplissage est celle de CHAQUE match dans l'historique (elle peut
+// différer de la capacité actuelle si la salle a été agrandie entre-temps),
+// sommée puis divisée, pas la capacité actuelle seule. Repli sur
+// l'estimation projetée UNIQUEMENT si aucun match à domicile n'a encore été
+// joué (l'historique est alors vide, il n'y a rien de réel à mesurer).
+function arenaAttendanceSummaryHtml(info, projectedRate) {
+  const history = teamA.attendanceHistory || [];
+  if (!history.length) {
+    return `~${Math.round(info.capacity * projectedRate).toLocaleString("fr-FR")} spectateurs en moyenne estimés (~${Math.round(projectedRate * 100)}% de remplissage) — aucun match à domicile joué pour l'instant.`;
+  }
+
+  let totalAttendance = 0, totalCapacity = 0;
+  const byCategory = {};
+  SEAT_CATEGORIES.forEach(cat => { byCategory[cat.key] = { name: cat.name, attendance: 0, capacity: 0 }; });
+  history.forEach(entry => {
+    totalAttendance += entry.attendance || 0;
+    totalCapacity += entry.capacity || 0;
+    (entry.breakdown || []).forEach(b => {
+      if (byCategory[b.key]) {
+        byCategory[b.key].attendance += b.attendance || 0;
+        byCategory[b.key].capacity += b.capacity || 0;
+      }
+    });
+  });
+
+  const avgAttendance = Math.round(totalAttendance / history.length);
+  const avgRate = totalCapacity > 0 ? totalAttendance / totalCapacity : 0;
+  let html = `~${avgAttendance.toLocaleString("fr-FR")} spectateurs en moyenne (~${Math.round(avgRate * 100)}% de remplissage)`;
+
+  const breakdown = SEAT_CATEGORIES
+    .map(cat => {
+      const c = byCategory[cat.key];
+      if (!c.capacity) return null;
+      const avg = Math.round(c.attendance / history.length);
+      const catRate = Math.round((c.attendance / c.capacity) * 100);
+      return `${escapeHtml(c.name)} : ${avg.toLocaleString("fr-FR")} (${catRate}%)`;
+    })
+    .filter(Boolean);
+  if (breakdown.length) {
+    html += `<div class="attendance-breakdown">${breakdown.join(" · ")}</div>`;
+  }
+  return html;
+}
 
 function renderSalleSection() {
   const visualHolder = document.getElementById("arenaVisualCard");
@@ -13820,7 +13922,7 @@ function renderSalleSection() {
   arenaCardBody.className = "facility-card-body";
   arenaCardBody.innerHTML = `<div class="price">${escapeHtml(info.name)}</div>` +
     `<div class="bonus">${info.capacity.toLocaleString("fr-FR")} places</div>` +
-    `<div class="staff-current-meta" style="margin-top:6px;">~${Math.round(info.capacity * rate).toLocaleString("fr-FR")} spectateurs en moyenne (~${Math.round(rate * 100)}% de remplissage)</div>`;
+    `<div class="staff-current-meta" style="margin-top:6px;">${arenaAttendanceSummaryHtml(info, rate)}</div>`;
   arenaCard.appendChild(arenaCardBody);
   const arenaActionLine = document.createElement("div");
   arenaActionLine.className = "facility-card-action";

@@ -3,13 +3,23 @@
 // plus beau visuellement" (onglet Salle, .arena-row : carte visuelle de la
 // salle à gauche, carte d'état actuel + "Autres infrastructures" à droite).
 //
+// Suite au retour utilisateur (2026-09, après la suppression des emojis des
+// briques) : "les briques droites sont un peu petite maintenant. essaie que
+// ce soit aligné avec la brique avec l'image de la salle à gauche" —
+// syncArenaPurchasesHeight impose désormais une height (pas seulement un
+// plafond max-height) sur #arenaPurchasesCol, pour que la colonne de droite
+// s'étire pile à la hauteur de la carte de gauche (le CSS,
+// #otherFacilitiesPanel/.facilities-grid en flex:1 + align-content:stretch,
+// redistribue ensuite cet espace entre les cartes d'infrastructure plutôt
+// que de laisser un vide en dessous).
+//
 // Le vrai rendu (image de la salle, nombre de lignes de cartes selon le
 // nombre d'infrastructures construites) dépend de la mise en page réelle du
 // navigateur, que JSDOM ne calcule pas (getBoundingClientRect renvoie
 // toujours des zéros ici, voir plus bas). Ce test vérifie donc directement
 // le mécanisme JS qui garantit l'alignement (syncArenaPurchasesHeight,
 // appelée depuis renderSalleSection et depuis un écouteur "resize" sur
-// window) : #arenaPurchasesCol reçoit bien une max-height calquée sur la
+// window) : #arenaPurchasesCol reçoit bien une height calquée sur la
 // hauteur RÉELLEMENT mesurée de la carte de gauche (#arenaVisualCard
 // .arena-card), pas une valeur figée. L'alignement visuel lui-même (3
 // colonnes pour la grille de droite, défilement interne si ça ne suffit
@@ -53,11 +63,11 @@ win.Element.prototype.getBoundingClientRect = function () {
 clickTab("salle");
 const purchasesCol = doc.getElementById("arenaPurchasesCol");
 if (!purchasesCol) throw new Error("❌ (setup) #arenaPurchasesCol introuvable : id manquant sur .arena-purchases ?");
-console.log("max-height après premier rendu de l'onglet Salle :", purchasesCol.style.maxHeight, `(attendu ${mockedLeftHeight}px)`);
-if (purchasesCol.style.maxHeight !== `${mockedLeftHeight}px`) {
-  throw new Error(`❌ BUG NON CORRIGÉ : #arenaPurchasesCol devrait recevoir max-height:${mockedLeftHeight}px (hauteur mesurée de la carte de gauche), obtenu "${purchasesCol.style.maxHeight}".`);
+console.log("height après premier rendu de l'onglet Salle :", purchasesCol.style.height, `(attendu ${mockedLeftHeight}px)`);
+if (purchasesCol.style.height !== `${mockedLeftHeight}px`) {
+  throw new Error(`❌ BUG NON CORRIGÉ : #arenaPurchasesCol devrait recevoir height:${mockedLeftHeight}px (hauteur mesurée de la carte de gauche), obtenu "${purchasesCol.style.height}".`);
 }
-console.log("✅ La colonne de droite reçoit bien une max-height calquée sur la hauteur réelle de la carte de gauche.");
+console.log("✅ La colonne de droite reçoit bien une height calquée sur la hauteur réelle de la carte de gauche.");
 
 // ---------------------------------------------------------------------
 // Partie 2 : re-rendre avec une hauteur de gauche différente (simule un
@@ -66,11 +76,11 @@ console.log("✅ La colonne de droite reçoit bien une max-height calquée sur l
 // ---------------------------------------------------------------------
 mockedLeftHeight = 520;
 win.renderSalleSection();
-console.log("\nmax-height après un second rendu (hauteur de gauche changée à 520) :", purchasesCol.style.maxHeight);
-if (purchasesCol.style.maxHeight !== "520px") {
-  throw new Error(`❌ Un nouveau rendu de l'onglet Salle devrait remesurer et mettre à jour max-height, obtenu "${purchasesCol.style.maxHeight}" au lieu de "520px".`);
+console.log("\nheight après un second rendu (hauteur de gauche changée à 520) :", purchasesCol.style.height);
+if (purchasesCol.style.height !== "520px") {
+  throw new Error(`❌ Un nouveau rendu de l'onglet Salle devrait remesurer et mettre à jour height, obtenu "${purchasesCol.style.height}" au lieu de "520px".`);
 }
-console.log("✅ Un nouveau rendu remesure bien et met à jour la max-height.");
+console.log("✅ Un nouveau rendu remesure bien et met à jour la height.");
 
 // ---------------------------------------------------------------------
 // Partie 3 : l'écouteur "resize" sur window (voir juste après
@@ -81,19 +91,19 @@ console.log("✅ Un nouveau rendu remesure bien et met à jour la max-height.");
 // ---------------------------------------------------------------------
 mockedLeftHeight = 410;
 win.dispatchEvent(new win.Event("resize"));
-console.log("\nmax-height après un évènement resize, onglet Salle toujours affiché :", purchasesCol.style.maxHeight);
-if (purchasesCol.style.maxHeight !== "410px") {
-  throw new Error(`❌ BUG NON CORRIGÉ : redimensionner la fenêtre pendant que l'onglet Salle est affiché devrait remesurer et mettre à jour max-height, obtenu "${purchasesCol.style.maxHeight}" au lieu de "410px".`);
+console.log("\nheight après un évènement resize, onglet Salle toujours affiché :", purchasesCol.style.height);
+if (purchasesCol.style.height !== "410px") {
+  throw new Error(`❌ BUG NON CORRIGÉ : redimensionner la fenêtre pendant que l'onglet Salle est affiché devrait remesurer et mettre à jour height, obtenu "${purchasesCol.style.height}" au lieu de "410px".`);
 }
 console.log("✅ Redimensionner la fenêtre pendant que l'onglet Salle est affiché remesure bien la colonne de droite.");
 
 clickTab("effectif"); // quitte l'onglet Salle
-const maxHeightBeforeIgnoredResize = purchasesCol.style.maxHeight;
+const heightBeforeIgnoredResize = purchasesCol.style.height;
 mockedLeftHeight = 999;
 win.dispatchEvent(new win.Event("resize"));
-console.log("\nmax-height après un resize alors qu'on a quitté l'onglet Salle :", purchasesCol.style.maxHeight, "(attendu inchangé, ni 999px)");
-if (purchasesCol.style.maxHeight !== maxHeightBeforeIgnoredResize) {
-  throw new Error(`❌ Redimensionner la fenêtre depuis un AUTRE onglet ne devrait pas toucher #arenaPurchasesCol (onglet Salle non affiché), obtenu "${purchasesCol.style.maxHeight}" au lieu de "${maxHeightBeforeIgnoredResize}".`);
+console.log("\nheight après un resize alors qu'on a quitté l'onglet Salle :", purchasesCol.style.height, "(attendu inchangé, ni 999px)");
+if (purchasesCol.style.height !== heightBeforeIgnoredResize) {
+  throw new Error(`❌ Redimensionner la fenêtre depuis un AUTRE onglet ne devrait pas toucher #arenaPurchasesCol (onglet Salle non affiché), obtenu "${purchasesCol.style.height}" au lieu de "${heightBeforeIgnoredResize}".`);
 }
 console.log("✅ Un resize depuis un autre onglet ne modifie pas la colonne de droite de la Salle (pas affichée).");
 
