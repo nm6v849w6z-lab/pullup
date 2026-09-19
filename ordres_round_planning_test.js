@@ -63,9 +63,18 @@ console.log("Option sélectionnée dans le menu déroulant :", selectedOption &&
 if (!selectedOption || !selectedOption.textContent.includes(`J${targetRound + 1}`)) {
   throw new Error(`❌ L'option du menu déroulant pour la journée ${targetRound} devrait être sélectionnée.`);
 }
-const noteVisible = !doc.getElementById("ordresPlanNote").classList.contains("hidden");
-console.log("Bandeau \"Préparation à l'avance\" visible :", noteVisible);
-if (!noteVisible) throw new Error("❌ Le bandeau de préparation à l'avance devrait être visible pour une journée future.");
+// Le bandeau #ordresPlanNote (qui redisait, avec une phrase d'explication en
+// plus, les mêmes infos que #ordresRoundDateTime) a été retiré (retour
+// utilisateur 2026-09 : "page ordre enleve ce texte : 📋 Préparation à
+// l'avance [...]"). On vérifie à la place que #ordresRoundDateTime affiche
+// bien l'adversaire de LA JOURNÉE FUTURE sélectionnée (pas celui de
+// currentMatch), ce qui est le signal que l'écran est bien en mode
+// préparation à l'avance pour cette journée-là.
+const targetOpp = win.eval(`league.teams[league.schedule[${targetRound}].find(m => m.home === myTeamIndex || m.away === myTeamIndex).home === myTeamIndex ? league.schedule[${targetRound}].find(m => m.home === myTeamIndex || m.away === myTeamIndex).away : league.schedule[${targetRound}].find(m => m.home === myTeamIndex || m.away === myTeamIndex).home].name`);
+const roundDateTimeText = doc.getElementById("ordresRoundDateTime").textContent;
+console.log("Bandeau jour/heure pour la journée future :", roundDateTimeText, "(attendu adversaire :", targetOpp + ")");
+const noteVisible = roundDateTimeText.includes(targetOpp);
+if (!noteVisible) throw new Error(`❌ #ordresRoundDateTime devrait afficher l'adversaire de la journée future ${targetRound} (${targetOpp}), obtenu "${roundDateTimeText}".`);
 console.log(`✅ Le bouton Ordres de la journée ${targetRound + 1} ouvre bien CETTE journée-là (correctif du bug rapporté).`);
 
 // ---------------------------------------------------------------------

@@ -181,7 +181,6 @@
      n'existe plus).*/
   .ordres-round-selector{max-width:420px; margin:0 auto 14px; padding:0 8px;}
   .ordres-round-selector select{font-weight:700; text-align:center; cursor:pointer;}
-  .ordres-plan-note{max-width:640px; margin:0 auto 16px; padding:10px 16px; border-radius:10px; border:1px solid var(--amber); background:rgba(240,162,60,.08); color:var(--ink); font-size:13px; text-align:center;}
   /* Retour utilisateur (2026-09) : "une fois que les ordres sont terminés,
      il faudrait un bouton valider en bas pour bien valider. sinon on ne peut
      pas être sur que ça a bien enregistré" — confirmation EXPLICITE en plus
@@ -1131,7 +1130,14 @@
          selectOrdresRound). -->
     <p class="ordres-round-datetime" id="ordresRoundDateTime"></p>
     <div class="ordres-round-selector hidden" id="ordresRoundSelector"></div>
-    <p class="ordres-plan-note hidden" id="ordresPlanNote"></p>
+    <!-- Retour utilisateur (2026-09) : "page ordre enleve ce texte : 📋
+         Préparation à l'avance, [...] Ces ordres seront appliqués
+         automatiquement au moment de ce match [...]" : ce bandeau
+         (#ordresPlanNote) redisait, avec une phrase d'explication en plus,
+         exactement les mêmes infos (adversaire, domicile/extérieur, jour et
+         heure) déjà affichées par #ordresRoundDateTime juste au-dessus (voir
+         renderOrdresRoundDateTime), pour n'importe quelle journée
+         sélectionnée y compris un tour de Coupe. Retiré. -->
     <div class="prep-grid" id="prepGrid"></div>
     <div class="ordres-validate-row">
       <button type="button" class="ordres-validate-btn" id="ordresValidateBtn">✅ Valider les ordres</button>
@@ -8746,8 +8752,22 @@ function planProxyForRound(round, competition) {
 // cette distinction invisible pour le panneau lui-même.
 function renderOrdresGrid() {
   const grid = document.getElementById("prepGrid");
-  const noteEl = document.getElementById("ordresPlanNote");
   grid.innerHTML = "";
+  // Retour utilisateur (2026-09) : "ça me met ✅ Ordres enregistrés. [...] je
+  // n'ai pas appuyé sur valider les ordres" — #ordresValidateFeedback n'était
+  // JAMAIS effacé (voir validateOrdres, seul endroit qui l'écrit), donc le
+  // message de confirmation d'un clic sur "Valider les ordres" pour UNE
+  // journée restait affiché tel quel après avoir changé de journée dans le
+  // sélecteur (voir selectOrdresRound) ou quitté puis rouvert l'écran Ordres
+  // (renderPrep) : on croyait alors, à tort, que la journée actuellement
+  // affichée venait juste d'être validée. Effacé à chaque (re)rendu de la
+  // grille, avant que l'utilisateur n'ait éventuellement re-cliqué sur
+  // "Valider les ordres" pour CETTE journée précise.
+  const feedbackEl = document.getElementById("ordresValidateFeedback");
+  if (feedbackEl) {
+    feedbackEl.textContent = "";
+    feedbackEl.className = "ordres-validate-feedback";
+  }
   const round = selectedOrdresRound != null ? selectedOrdresRound : (currentMatch ? currentMatch.round : null);
   const competition = selectedOrdresCompetition || "championship";
   // currentMatch est TOUJOURS un match de championnat (voir le commentaire de
@@ -8757,7 +8777,6 @@ function renderOrdresGrid() {
   const isImmediate = competition === "championship" && (!currentMatch || round === currentMatch.round);
 
   if (isImmediate) {
-    if (noteEl) noteEl.classList.add("hidden");
     // Retour utilisateur (2026-09) : "je ne dois pas pouvoir choisir la
     // tactique et compo de l'adversaire, ça ne doit pas apparaitre" — le
     // panneau adverse (tactiques cliquables sans effet + compo en lecture
@@ -8767,28 +8786,14 @@ function renderOrdresGrid() {
     return;
   }
 
-  // Adversaire de la journée/tour en préparation : championnat (league.schedule)
-  // ou Coupe (league.cup.rounds, voir upcomingRoundsForOrders/league.pendingCupRound
-  // côté moteur) selon `competition`.
-  let isHome, opp, noteLabel;
-  if (competition === "cup") {
-    const cupRound = league.cup && league.cup.rounds.find(rd => rd.index === round);
-    const m = cupRound && cupRound.matches.find(x => x.home === myTeamIndex || x.away === myTeamIndex);
-    isHome = m ? m.home === myTeamIndex : true;
-    opp = m ? league.teams[isHome ? m.away : m.home] : null;
-    noteLabel = `📋 Préparation à l'avance, ${cupStageLabelForRoundIndex(round)} de Coupe : `;
-  } else {
-    const m = league.schedule[round].find(x => x.home === myTeamIndex || x.away === myTeamIndex);
-    isHome = m.home === myTeamIndex;
-    opp = league.teams[isHome ? m.away : m.home];
-    noteLabel = `📋 Préparation à l'avance, Journée ${round + 1}/${league.totalRounds} : `;
-  }
-  if (noteEl) {
-    noteEl.classList.remove("hidden");
-    noteEl.textContent = noteLabel +
-      (opp ? (isHome ? `${teamA.name} reçoit ${opp.name}` : `${teamA.name} se déplace à ${opp.name}`) : `${teamA.name}`) +
-      `. Ces ordres seront appliqués automatiquement au moment de ce match (ils remplacent alors les ordres en direct de l'époque).`;
-  }
+  // Retour utilisateur (2026-09) : "page ordre enleve ce texte : 📋
+  // Préparation à l'avance, [...] Ces ordres seront appliqués
+  // automatiquement au moment de ce match [...]" : le bandeau #ordresPlanNote
+  // qui vivait ici redisait, avec une phrase d'explication en plus, les mêmes
+  // infos (adversaire, domicile/extérieur, jour et heure) déjà affichées par
+  // #ordresRoundDateTime juste au-dessus (voir renderOrdresRoundDateTime),
+  // pour n'importe quelle journée sélectionnée y compris un tour de Coupe.
+  // Retiré ; isHome/opp/noteLabel ne servaient qu'à construire ce texte.
   const proxy = planProxyForRound(round, competition);
   const commit = () => {
     const patch = {

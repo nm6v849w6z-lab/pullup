@@ -170,9 +170,16 @@ console.log(`B2) Après clic sur le bouton Ordres de Coupe, journée sélectionn
 if (selectedRound !== round0.index || selectedCompetition !== "cup") {
   throw new Error(`❌ Le clic aurait dû sélectionner round=${round0.index}/competition="cup", obtenu round=${selectedRound}/competition=${JSON.stringify(selectedCompetition)}.`);
 }
-const noteText = doc.getElementById("ordresPlanNote").textContent;
-console.log("Bandeau de préparation à l'avance :", noteText);
-if (!noteText.includes("Coupe")) throw new Error("❌ Le bandeau de préparation à l'avance devrait mentionner la Coupe pour un tour de Coupe.");
+// #ordresPlanNote (qui redisait "Préparation à l'avance, <tour> de Coupe")
+// a été retiré (retour utilisateur, 2026-09 : "page ordre enleve ce texte :
+// 📋 Préparation à l'avance [...]") : on vérifie à la place que le menu
+// déroulant (#ordresRoundSelector) affiche bien le libellé du TOUR DE
+// COUPE (ex. "Demies"), pas un numéro de journée de championnat, pour ce
+// round0 sélectionné.
+const selectedOptionText = win.eval('document.querySelector("#ordresRoundSelector select") ? document.querySelector("#ordresRoundSelector select").selectedOptions[0].textContent : ""');
+const cupLabel = win.eval(`cupStageLabelForRoundIndex(${round0.index})`);
+console.log("Option sélectionnée du menu déroulant pour ce tour de Coupe :", selectedOptionText, "| libellé attendu :", cupLabel);
+if (!selectedOptionText.includes(cupLabel)) throw new Error(`❌ Le menu déroulant devrait afficher le libellé du tour de Coupe (${cupLabel}) pour ce tour, obtenu "${selectedOptionText}".`);
 console.log("✅ Le bouton Ordres de Coupe ouvre bien CE tour de Coupe (pas le prochain match de championnat).");
 
 // ---------------------------------------------------------------------

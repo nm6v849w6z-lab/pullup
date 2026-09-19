@@ -90,6 +90,34 @@ if (!calBtnAfter.classList.contains("calendar-order-btn-validated")) {
 }
 console.log("✅ Le bouton calendrier affiche bien 'Modifier vos ordres' avec une couleur différente après validation.");
 
+// ---------------------------------------------------------------------
+// Partie 2bis : retour utilisateur (2026-09) : "ça me met ✅ Ordres
+// enregistrés. [...] je n'ai pas appuyé sur valider les ordres" :
+// #ordresValidateFeedback (voir validateOrdres) n'était jamais effacé, donc
+// ce message de confirmation, posé ci-dessus pour la journée immédiate,
+// restait affiché tel quel après être passé à une AUTRE journée dans le
+// sélecteur (voir renderOrdresGrid), laissant croire à tort que cette autre
+// journée venait, elle aussi, d'être validée alors qu'elle ne l'a jamais
+// été.
+// ---------------------------------------------------------------------
+// (déjà sur l'onglet Ordres depuis la Partie 2, pas de TAB_HANDLERS.ordres()
+// ici : goToOrdresTab -> renderPrep -> renderOrdresGrid effacerait
+// justement le message qu'on veut observer avant tout changement de
+// journée, voir le correctif ci-dessus.)
+const feedbackAfterValidate = doc.getElementById("ordresValidateFeedback").textContent;
+console.log(`\nMessage de confirmation juste après validation : "${feedbackAfterValidate}"`);
+if (!feedbackAfterValidate.includes("enregistrés")) {
+  throw new Error(`❌ (setup) Le message de confirmation devrait être affiché juste après le clic sur Valider, obtenu "${feedbackAfterValidate}".`);
+}
+const otherRound = immediateRound < 17 ? immediateRound + 1 : immediateRound - 1;
+win.eval(`selectOrdresRound(${otherRound}, "championship")`);
+const feedbackAfterSwitch = doc.getElementById("ordresValidateFeedback").textContent;
+console.log(`Message de confirmation après avoir changé pour la journée ${otherRound} sans la valider : "${feedbackAfterSwitch}"`);
+if (feedbackAfterSwitch.includes("enregistrés")) {
+  throw new Error(`❌ BUG NON CORRIGÉ : le message "Ordres enregistrés" de la journée ${immediateRound} reste affiché après être passé à la journée ${otherRound}, laissant croire à tort que celle-ci vient d'être validée.`);
+}
+console.log(`✅ Le message de confirmation de la journée ${immediateRound} est bien effacé en passant à la journée ${otherRound} sans la valider.`);
+
 await flush(dom);
 await dom.window.close();
 
