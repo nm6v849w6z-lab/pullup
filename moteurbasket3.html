@@ -14001,6 +14001,21 @@ function arenaAttendanceSummaryHtml(info, projectedRate) {
   if (breakdown.length) {
     html += `<div class="attendance-breakdown">${breakdown.join(" · ")}</div>`;
   }
+
+  // Retour utilisateur (2026-09) : "ici le 64% de remplissage correspond au
+  // gymnase avant agrandissement, il faudrait le noter pour que ce ne soit
+  // pas faux" — la moyenne ci-dessus reste calculée sur la capacité RÉELLE de
+  // chaque match (correcte historiquement, voir le commentaire au-dessus de
+  // la fonction), mais si au moins un des matchs de l'historique a été joué
+  // sous une capacité différente de celle affichée juste au-dessus (info.name/
+  // info.capacity, la salle ACTUELLE), la moyenne mélange donc un ancien et un
+  // nouveau palier de salle : on le signale explicitement plutôt que de
+  // laisser croire que ce pourcentage reflète la salle actuelle.
+  const hasOldCapacityMatch = history.some(entry => entry.capacity && entry.capacity !== info.capacity);
+  if (hasOldCapacityMatch) {
+    html += `<div class="attendance-breakdown">Inclut des matchs joués avant un changement de capacité de la salle — cette moyenne ne reflète pas encore la capacité actuelle (${info.capacity.toLocaleString("fr-FR")} places).</div>`;
+  }
+
   return html;
 }
 
