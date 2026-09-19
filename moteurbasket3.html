@@ -764,6 +764,38 @@
      colonne entière se rapproche de la hauteur de l'image de la salle
      (max-height 480px, voir .arena-visual-wrap img). */
   .arena-purchases .facility-card{padding:12px 12px; min-height:56px;}
+  /* Retour utilisateur (2026-09) : "les 6 briques en haut à droite ne vont
+     pas [...] il ne faut qu'il y ait un scroll à cet endroit [...] mettre
+     différemment ton emoji et réduire un peu la taille du texte de
+     l'infrastructure. par contre grossi un peu la taille du texte 'petit
+     gymnase'" : les 5 cartes de .facilities-grid (jamais la carte salle
+     elle-même, voir #arenaCurrentPanel .price plus bas pour son cas
+     inverse) sont resserrées pour tenir plus facilement sans déclencher le
+     défilement interne de secours ci-dessous : padding/hauteur minimale
+     réduits (cette règle, plus spécifique que .arena-purchases .facility-card
+     juste au-dessus grâce à .facilities-grid dans le sélecteur, l'emporte
+     pour ces 5 cartes uniquement), et taille de texte réduite pour
+     .price/.bonus/.facility-card-icon ci-dessous (voir aussi
+     .facility-card-icon, l'emoji est désormais sur sa propre ligne au lieu
+     d'être collé au texte du nom, voir renderSalleSection). */
+  .arena-purchases .facilities-grid .facility-card{padding:8px 8px; min-height:44px;}
+  .arena-purchases .facilities-grid .price{font-size:10.5px;}
+  .arena-purchases .facilities-grid .bonus{font-size:9.5px;}
+  /* Emoji de chaque carte d'infrastructure : sur sa propre ligne (plutôt que
+     préfixé au texte du nom dans .price, voir le retour utilisateur
+     ci-dessus), plus grand que le texte du nom pour rester repérable
+     malgré la réduction de .price ci-dessus. */
+  .facility-card-icon{font-size:16px; line-height:1; margin-bottom:2px;}
+  .arena-purchases .facilities-grid .facility-card-icon{font-size:15px;}
+  /* Titre de la carte salle (#arenaCurrentPanel, ex. "🏟️ Petit gymnase") :
+     seule carte de la colonne à garder son emoji collé au texte (retour
+     utilisateur ci-dessus ne visait que les 5 cartes d'infrastructure), et
+     seule à voir son texte AGRANDI plutôt que réduit — c'est la carte la
+     plus importante de la colonne (voir le retour utilisateur plus haut sur
+     .arena-row : "le carré du gymnase plus grand que le reste pour montrer
+     que c'est le plus important"), qui partageait jusqu'ici la même taille
+     de texte que les 5 cartes secondaires via .staff-hire-card .price. */
+  #arenaCurrentPanel .price{font-size:15px;}
   /* Retour utilisateur (2026-09) : "les briques de droite n'aillent pas plus
      bas que la brique de gauche" : une fois plusieurs infrastructures
      construites, chaque carte affiche une 2e ligne (bonus/effet en cours,
@@ -13008,7 +13040,7 @@ function renderSalleSection() {
     tcCard.dataset.trainingCenterCard = "1";
     const tcCardBody = document.createElement("div");
     tcCardBody.className = "facility-card-body facility-card-center";
-    tcCardBody.innerHTML = `<div class="price">🏫 Centre de formation</div>` +
+    tcCardBody.innerHTML = `<div class="facility-card-icon">🏫</div><div class="price">Centre de formation</div>` +
       `<div class="bonus">${escapeHtml(tcInfo.name)}</div>`;
     tcCard.appendChild(tcCardBody);
     const tcActionLine = document.createElement("div");
@@ -13051,7 +13083,7 @@ function renderSalleSection() {
     shopCard.dataset.fanShopCard = "1";
     const shopCardBody = document.createElement("div");
     shopCardBody.className = "facility-card-body";
-    shopCardBody.innerHTML = `<div class="price">🛍️ ${escapeHtml(shopInfo.name)}</div>` +
+    shopCardBody.innerHTML = `<div class="facility-card-icon">🛍️</div><div class="price">${escapeHtml(shopInfo.name)}</div>` +
       (shopInfo.weeklyRevenue > 0 ? `<div class="bonus">+${formatMoney(shopInfo.weeklyRevenue)}/semaine</div>` : "");
     shopCard.appendChild(shopCardBody);
     const shopActionLine = document.createElement("div");
@@ -13104,7 +13136,7 @@ function renderSalleSection() {
       }
       const cardBody = document.createElement("div");
       cardBody.className = "facility-card-body";
-      cardBody.innerHTML = `<div class="price">${cfg.icon} ${escapeHtml(curInfo.name)}</div>` +
+      cardBody.innerHTML = `<div class="facility-card-icon">${cfg.icon}</div><div class="price">${escapeHtml(curInfo.name)}</div>` +
         (curEffectLine ? `<div class="bonus">${curEffectLine}</div>` : "");
       card.appendChild(cardBody);
       const actionLine = document.createElement("div");
