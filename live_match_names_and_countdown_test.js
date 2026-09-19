@@ -105,14 +105,25 @@ if (!prepVisibleAfterDelay) throw new Error("❌ BUG NON CORRIGÉ : après quelq
 if (liveVisibleAfterDelay) throw new Error("❌ BUG NON CORRIGÉ : après quelques secondes sur Ordres pendant un direct en cours, la page a sauté toute seule vers le direct.");
 console.log("✅ La page reste bien sur Ordres après quelques secondes, aucun saut involontaire vers le direct.");
 
-// Le compte à rebours ne doit rien afficher dans ce cas (rien à attendre
-// pour currentMatch, déjà en direct) plutôt qu'un texte trompeur.
-const countdownText = doc.getElementById("matchCountdown").textContent;
-console.log("Texte du compte à rebours :", JSON.stringify(countdownText));
-if (countdownText.includes("Coup d'envoi")) {
-  throw new Error(`❌ Le compte à rebours ne devrait plus afficher de texte de coup d'envoi pour un match déjà en direct, obtenu : "${countdownText}".`);
+// Le bandeau de compte à rebours texte (#matchCountdown) a été retiré de
+// l'écran Ordres (retour utilisateur, 2026-09 : "enlève tout ce texte en
+// haut [...] les infos se contredisent sinon", voir
+// renderOrdresRoundDateTime/startCountdown dans moteurbasket3.html) : à la
+// place, on vérifie que le nouveau bandeau (#ordresRoundDateTime) affiche
+// bien la date/heure de la journée SÉLECTIONNÉE (future, pas celle en
+// direct) — exactement le risque de contradiction visé par ce retour
+// utilisateur — et jamais un texte de compte à rebours.
+const dateTimeText = doc.getElementById("ordresRoundDateTime").textContent;
+console.log("Texte affiché pour la journée sélectionnée :", JSON.stringify(dateTimeText));
+if (dateTimeText.includes("Coup d'envoi")) {
+  throw new Error(`❌ Le bandeau ne devrait plus afficher de texte de compte à rebours, obtenu : "${dateTimeText}".`);
 }
-console.log("✅ Le compte à rebours n'affiche plus de texte trompeur pour un match déjà en direct.");
+const expectedSelectedDateTime = win.eval(`formatDateTimeFr(scheduledTimeForChampionshipRound(${selectedRound}))`);
+console.log("Date/heure attendue pour la journée sélectionnée :", expectedSelectedDateTime);
+if (!dateTimeText.includes(expectedSelectedDateTime)) {
+  throw new Error(`❌ Le bandeau devrait afficher la date/heure de la journée sélectionnée ("${expectedSelectedDateTime}"), obtenu : "${dateTimeText}".`);
+}
+console.log("✅ Le bandeau affiche la date/heure de la journée sélectionnée (future), jamais de texte trompeur lié au direct en cours.");
 
 // L'onglet Live séparé reste la façon normale de revenir suivre le direct
 // (déjà couvert par ordres_during_live_test.js, revérifié ici en contexte).

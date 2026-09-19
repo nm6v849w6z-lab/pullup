@@ -15,8 +15,13 @@ const { server, savePath, baseUrl } = await startTestServer();
 const dom1 = await openGame(html, baseUrl);
 const doc1 = dom1.window.document;
 
-console.log("Contexte initial :", doc1.getElementById("matchupContext").textContent);
-if (!doc1.getElementById("matchupContext").textContent.startsWith("Journée 1/18")) {
+// #matchupContext (écran Ordres) a été retiré du bandeau du haut (retour
+// utilisateur, 2026-09 : "enlève tout ce texte en haut [...] les infos se
+// contredisent sinon", voir renderOrdresRoundDateTime dans
+// moteurbasket3.html) : on vérifie directement le round sous-jacent plutôt
+// que ce texte qui n'existe plus.
+console.log("Round initial (0-indexé) :", dom1.window.eval("currentMatch.round"));
+if (dom1.window.eval("currentMatch.round") !== 0) {
   throw new Error("❌ Le calendrier ne démarre pas à la journée 1/18.");
 }
 
@@ -105,13 +110,16 @@ console.log(`${allPlayed18 && standingsRows.length === 10 ? "✅" : "❌"} Les 1
 doc2.getElementById("newSeasonBtn").click();
 const backToPrep = !doc2.getElementById("prepSection").classList.contains("hidden") &&
   doc2.getElementById("seasonEndSection").classList.contains("hidden");
-const newSeasonCtx = doc2.getElementById("matchupContext").textContent;
-console.log("\nContexte après 'Nouvelle saison' :", newSeasonCtx);
+console.log("\nRound après 'Nouvelle saison' (0-indexé) :", dom2.window.eval("currentMatch.round"));
 console.log(`${backToPrep ? "✅" : "❌"} Retour à l'écran de préparation.`);
-console.log(`${newSeasonCtx.startsWith("Journée 1/18") ? "✅" : "❌"} Le calendrier de la nouvelle saison redémarre à la journée 1/18.`);
+// Même remarque que plus haut : #matchupContext n'existe plus depuis le
+// retrait du bandeau du haut de l'écran Ordres (2026-09), on vérifie le
+// round sous-jacent.
+const newSeasonRoundOk = dom2.window.eval("currentMatch.round") === 0;
+console.log(`${newSeasonRoundOk ? "✅" : "❌"} Le calendrier de la nouvelle saison redémarre à la journée 1/18.`);
 
 if (!standingsVisible || !prepHiddenNow || rowsBefore !== 10 || !catchupVisible || !roundsOk || !seasonEndVisible ||
-    !hasChampion || !hasPlayoffs || !allPlayed18 || !backToPrep || !newSeasonCtx.startsWith("Journée 1/18")) {
+    !hasChampion || !hasPlayoffs || !allPlayed18 || !backToPrep || !newSeasonRoundOk) {
   process.exit(1);
 }
 

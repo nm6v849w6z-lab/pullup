@@ -162,8 +162,12 @@ console.log("✅ L'achat de la boutique des supporters débite le budget une foi
 // l'entraînement automatique de fin de semaine) ET une éventuelle recette de
 // billetterie si l'une des deux journées est à domicile.
 clickTab("ordres");
-const ctxBeforeWeek = doc.getElementById("matchupContext").textContent;
-const isHomeMatch = ctxBeforeWeek.includes("reçoit");
+// Le bandeau textuel "Journée X : mon club reçoit/se déplace à ..." a été
+// retiré de l'écran Ordres (retour utilisateur, 2026-09, voir
+// renderOrdresRoundDateTime dans moteurbasket3.html) : on lit directement
+// currentMatch.isHome plutôt que de chercher "reçoit" dans un texte qui n'y
+// est plus affiché.
+const isHomeMatch = win.eval("currentMatch.isHome");
 const budgetBeforeWeek = saved.team.budget;
 await flush(dom);
 win.close();

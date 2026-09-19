@@ -25,6 +25,16 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
 function clickTab(doc, key) { [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click(); }
 async function realDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
+// Le bandeau "DIVISION I : 1 CHAMPIONNAT" de l'écran Ordres (#divisionBadge)
+// a été retiré (retour utilisateur, 2026-09 : "enlève tout ce texte en haut
+// [...] les infos se contredisent sinon", voir renderOrdresRoundDateTime
+// dans moteurbasket3.html) ; on relit directement le même calcul que
+// renderClubSection (le badge équivalent, toujours affiché sur le tableau de
+// bord, #clubDivisionBadge) plutôt qu'un texte qui n'existe plus sur cet
+// écran-ci.
+function divisionBadgeText(win) {
+  return win.eval('(function(){ var info = divisionInfo(league.divisionLevel || MAX_DIVISION_LEVEL); return info.name + " : " + info.leagueCount + " championnat" + (info.leagueCount > 1 ? "s" : ""); })()');
+}
 
 (async () => {
 
@@ -43,7 +53,7 @@ clickTab(doc, "ordres");
 const initialWarning = doc.getElementById("lockWarning").textContent.trim();
 console.log("Avertissement au tout premier lancement :", initialWarning || "(aucun — prêt à jouer)");
 if (initialWarning) throw new Error("❌ Une toute nouvelle carrière devrait démarrer avec une feuille de match et des tactiques valides : " + initialWarning);
-const divisionBadge = doc.getElementById("divisionBadge").textContent;
+const divisionBadge = divisionBadgeText(win);
 console.log("Division de départ :", divisionBadge);
 if (!divisionBadge.startsWith("Division I ")) throw new Error("❌ Une nouvelle carrière devrait démarrer en Division I.");
 
@@ -81,28 +91,32 @@ if (saved.team.trainingSkill !== "threePoint") throw new Error("❌ Le programme
 console.log("✅ Les réglages à l'avance (tactiques, entraînement) sont bien pris en compte et persistés sans action immédiate.");
 
 // ---------------------------------------------------------------------
-// 3. Compte à rebours jusqu'au coup d'envoi (tâche #21) : le texte affiché
-// suit le temps qui passe tout seul, puis bascule de lui-même sur le direct
-// à l'heure programmée — sans que le test ne déclenche quoi que ce soit
-// manuellement (contrairement à visibility_refresh_test.js, qui couvre le
-// cas d'un onglet resté en arrière-plan).
+// 3. Minuteur interne jusqu'au coup d'envoi (tâche #21) : bascule de
+// lui-même sur le direct à l'heure programmée, sans que le test ne déclenche
+// quoi que ce soit manuellement (contrairement à visibility_refresh_test.js,
+// qui couvre le cas d'un onglet resté en arrière-plan). Le texte de compte à
+// rebours visible ("Coup d'envoi dans Xh") a été retiré de l'écran Ordres
+// (retour utilisateur, 2026-09 : "enlève tout ce texte en haut [...] les
+// infos se contredisent sinon", voir startCountdown/renderOrdresRoundDateTime
+// dans moteurbasket3.html) : seul l'effet de bord (bascule automatique)
+// subsiste désormais, c'est lui qu'on vérifie ci-dessous.
 // ---------------------------------------------------------------------
 clickTab(doc, "ordres");
 const scheduledAt = scheduledTimeForRound(saved.league.calendarStartAt, saved.league.round);
 console.log("\nCoup d'envoi programmé :", new Date(scheduledAt).toISOString());
 
 clock.now = scheduledAt - 3 * 60 * 60 * 1000; // 3h avant le coup d'envoi
-await realDelay(1100); // laisse le tick (1/seconde réelle) du compte à rebours se déclencher au moins une fois
-let countdownText = doc.getElementById("matchCountdown").textContent;
-console.log("Compte à rebours à J-3h :", countdownText);
-if (!countdownText.includes("3 h")) throw new Error(`❌ Le compte à rebours devrait afficher environ 3h restantes : "${countdownText}"`);
+await realDelay(1100); // laisse le tick (1/seconde réelle) du minuteur interne se déclencher au moins une fois
+const stillOnPrepAt3h = !doc.getElementById("prepSection").classList.contains("hidden");
+console.log("Toujours sur l'écran Ordres à J-3h (pas de bascule prématurée) :", stillOnPrepAt3h);
+if (!stillOnPrepAt3h) throw new Error("❌ La page n'aurait pas dû basculer sur le direct 3h avant le coup d'envoi.");
 
 clock.now = scheduledAt + 500; // coup d'envoi atteint
 await realDelay(1100);
 const liveVisibleAuto = !doc.getElementById("liveSection").classList.contains("hidden");
 console.log("Bascule automatique sur le direct au coup d'envoi (sans action du joueur) :", liveVisibleAuto);
-if (!liveVisibleAuto) throw new Error("❌ Le compte à rebours aurait dû basculer tout seul sur le direct à l'heure programmée.");
-console.log("✅ Le compte à rebours bascule tout seul sur le direct au coup d'envoi.");
+if (!liveVisibleAuto) throw new Error("❌ Le minuteur interne aurait dû basculer tout seul sur le direct à l'heure programmée.");
+console.log("✅ Le minuteur interne bascule tout seul sur le direct au coup d'envoi, même sans texte de compte à rebours visible.");
 
 // ---------------------------------------------------------------------
 // 4. Reconnexion EN COURS de diffusion (retour utilisateur : "si je me

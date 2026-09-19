@@ -32,7 +32,11 @@ let dom1 = await openGame(html, baseUrl);
 let doc1 = dom1.window.document;
 let win1 = dom1.window;
 
-console.log("Avant tout match :", doc1.getElementById("weekIndicator").textContent);
+// #weekIndicator (écran Ordres) a été retiré du bandeau du haut (retour
+// utilisateur, 2026-09, voir renderOrdresRoundDateTime dans
+// moteurbasket3.html) ; on lit directement teamA.week, la même valeur qu'il
+// affichait.
+console.log("Avant tout match, semaine :", win1.eval("teamA.week"));
 
 // Le bouton "🏋️ Semaine d'entraînement" affiché sous le direct (fin de
 // match) a été retiré (retour utilisateur, 2026-09 : "enleve le bouton
@@ -144,14 +148,16 @@ const doc2 = dom2.window.document;
 const win2 = dom2.window;
 
 console.log("\n--- Après rechargement (nouvelle session) ---");
-const expectedWeek = `Semaine ${savedTeam.week}`;
-const weekOk = doc2.getElementById("weekIndicator").textContent === expectedWeek;
-console.log(`${weekOk ? "✅" : "❌"} Semaine persistée : attendu "${expectedWeek}", obtenu "${doc2.getElementById("weekIndicator").textContent}"`);
+// #weekIndicator et #matchupContext (écran Ordres) ont été retirés du
+// bandeau du haut (retour utilisateur, 2026-09 : "enlève tout ce texte en
+// haut [...] les infos se contredisent sinon", voir renderOrdresRoundDateTime
+// dans moteurbasket3.html) : on vérifie directement l'état sous-jacent
+// (teamA.week, currentMatch.round) plutôt que ce texte qui n'existe plus.
+const weekOk = win2.eval("teamA.week") === savedTeam.week;
+console.log(`${weekOk ? "✅" : "❌"} Semaine persistée : attendu ${savedTeam.week}, obtenu ${win2.eval("teamA.week")}`);
 
-console.log("Contexte de match après rechargement :", doc2.getElementById("matchupContext").textContent);
-const expectedJournee = `Journée ${ROUNDS + 1}/18`;
-const journeeOk = doc2.getElementById("matchupContext").textContent.startsWith(expectedJournee);
-console.log(`${journeeOk ? "✅" : "❌"} Calendrier persisté : la journée ${ROUNDS + 1} est bien proposée au rechargement.`);
+const journeeOk = win2.eval("currentMatch.round") === ROUNDS;
+console.log(`${journeeOk ? "✅" : "❌"} Calendrier persisté : la journée ${ROUNDS + 1} est bien proposée au rechargement (currentMatch.round = ${win2.eval("currentMatch.round")}).`);
 
 win2.eval("TAB_HANDLERS.entrainement();");
 const skillOk = doc2.getElementById("trainingSkillSelect").value === "inside";

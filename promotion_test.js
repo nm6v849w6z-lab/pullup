@@ -12,6 +12,17 @@ const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, fastForwardCalendar } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
+// Le bandeau "DIVISION I : 1 CHAMPIONNAT" de l'écran Ordres (#divisionBadge)
+// a été retiré (retour utilisateur, 2026-09 : "enlève tout ce texte en haut
+// [...] les infos se contredisent sinon", voir renderOrdresRoundDateTime
+// dans moteurbasket3.html) ; on relit directement le même calcul que
+// renderClubSection (le badge équivalent, toujours affiché sur le tableau de
+// bord, #clubDivisionBadge) plutôt qu'un texte qui n'existe plus sur cet
+// écran-ci.
+function divisionBadgeText(win) {
+  return win.eval('(function(){ var info = divisionInfo(league.divisionLevel || MAX_DIVISION_LEVEL); return info.name + " : " + info.leagueCount + " championnat" + (info.leagueCount > 1 ? "s" : ""); })()');
+}
+
 (async () => {
 
 const { server, savePath, baseUrl } = await startTestServer();
@@ -21,7 +32,7 @@ let win = dom.window;
 
 // --- Nouvelle carrière : doit démarrer le plus haut possible (Division I),
 // puisqu'un club "pas encore attribué" prend la place la plus haute libre. ---
-const badgeAtStart = doc.getElementById("divisionBadge").textContent;
+const badgeAtStart = divisionBadgeText(win);
 console.log("Badge division au départ :", badgeAtStart);
 if (!badgeAtStart.startsWith("Division I ")) {
   throw new Error("❌ Une nouvelle carrière devrait démarrer en Division I (le plus haut possible) : " + badgeAtStart);
@@ -100,7 +111,7 @@ const expectedToLevel = expectedOutcome === "promoted" ? fromLevel - 1 : expecte
 console.log(`\nNiveau de division : ${fromLevel} → ${toLevel} (attendu ${expectedToLevel})`);
 if (toLevel !== expectedToLevel) throw new Error(`❌ Le niveau de division de la nouvelle saison est incohérent : ${toLevel}, attendu ${expectedToLevel}.`);
 
-const badgeAfter = doc.getElementById("divisionBadge").textContent;
+const badgeAfter = divisionBadgeText(win);
 console.log("Badge division après 'Nouvelle saison' :", badgeAfter);
 
 // --- Persistance : rechargement complet de la page (même serveur). ---
@@ -108,7 +119,7 @@ win.close();
 const dom2 = await openGame(html, baseUrl);
 const doc2 = dom2.window.document;
 const win2 = dom2.window;
-const badgeReloaded = doc2.getElementById("divisionBadge").textContent;
+const badgeReloaded = divisionBadgeText(win2);
 console.log("Badge division après rechargement :", badgeReloaded);
 const persistedOk = badgeReloaded === badgeAfter;
 console.log(`${persistedOk ? "✅" : "❌"} Le niveau de division survit au rechargement complet de la page.`);

@@ -3448,13 +3448,28 @@ class League {
   isRegularSeasonDone() { return this.round >= this.totalRounds; }
   matchesForRound(r) { return this.schedule[r] || []; }
 
-  // Premier match à venir pour le club du joueur (index 0) à partir de la
-  // journée courante. Renvoie null une fois la saison régulière terminée.
-  nextUserMatch() {
+  // Premier match à venir pour l'équipe `teamIdx` (index 0 par défaut,
+  // comportement historique solo) à partir de la journée courante. Renvoie
+  // null une fois la saison régulière terminée.
+  // Correctif (généralisation multi-manager, 2026-09, retour utilisateur :
+  // "probleme équipe qui joue contre elle même ? normalement l'adversaire
+  // est gotham knight") : cette méthode cherchait encore, sans condition,
+  // le match de `teams[0]` (comportement historique solo, où le club du
+  // joueur est TOUJOURS à cet index), jamais celui du manager qui consulte
+  // réellement l'écran (myTeamIndex côté navigateur, voir
+  // enterNextMatchOrShowSeasonEnd). Pour tout manager d'une ligue partagée
+  // dont l'équipe n'est PAS à l'index 0, le "prochain match" affiché était
+  // donc celui de teams[0] : round correct par coïncidence (calendrier
+  // sans exempt, tout le monde avance au même rythme), mais adversaire et
+  // domicile/extérieur erronés, jusqu'à parfois afficher l'équipe du
+  // manager elle-même comme son propre adversaire (si teams[0] jouait
+  // justement contre lui ce tour-ci). Se réduit exactement au comportement
+  // historique en solo, où myTeamIndex vaut toujours 0.
+  nextUserMatch(teamIdx = 0) {
     for (let r = this.round; r < this.totalRounds; r++) {
-      const m = this.schedule[r].find(x => x.home === 0 || x.away === 0);
+      const m = this.schedule[r].find(x => x.home === teamIdx || x.away === teamIdx);
       if (m) {
-        const isHome = m.home === 0;
+        const isHome = m.home === teamIdx;
         return { round: r, isHome, opponent: isHome ? m.away : m.home };
       }
     }
