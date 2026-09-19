@@ -139,6 +139,12 @@ if (lockedCells !== opponentRosterSize * ATTRS.length) {
 }
 console.log("✅ Le panneau de scoutisme affiche toujours nom/poste/taille/salaire, et verrouille (au lieu d'omettre) les caractéristiques non révélées.");
 
+// Retour utilisateur (2026-09) : "il faudrait ajouter des boutons sur la
+// page d'une équipe (effectif [...] analyse de l'équipe)" — le bouton de
+// séance vidéo vit désormais sous le sous-onglet "Analyse d'équipe" de la
+// fiche équipe (voir teamDetailAnalyseHtml), plus sous "Effectif" (par
+// défaut à l'ouverture, voir showTeamDetail).
+doc.querySelector('[data-team-detail-subview="analyse"]').click();
 const sessionBtn = doc.getElementById("runVideoSessionBtn");
 console.log("\nBouton 'Faire une séance vidéo' présent et actif :", !!sessionBtn && !sessionBtn.disabled);
 if (!sessionBtn || sessionBtn.disabled) throw new Error("❌ Avec un analyste sous contrat et aucune séance utilisée aujourd'hui, le bouton devrait être actif.");
@@ -157,6 +163,10 @@ if (!sessionResult.ok) throw new Error(`❌ La séance vidéo devrait réussir :
 // utilisateur : jamais 10/10 même au meilleur niveau — au niveau 3, 3/10
 // seulement).
 if (sessionResult.revealed.length !== 3) throw new Error(`❌ Niveau 3 devrait révéler 3 caractéristiques, obtenu ${sessionResult.revealed.length}.`);
+// Les cellules verrouillées vivent sous le sous-onglet "Effectif" (voir
+// teamDetailEffectifHtml), pas "Analyse" où on se trouve depuis le clic
+// plus haut : bascule explicitement dessus avant de les compter.
+win.eval("teamDetailSubView = 'effectif';");
 win.renderTeamDetail(opponentIdx);
 const lockedAfter = doc.getElementById("teamDetailContent").querySelectorAll(".attr-locked").length;
 console.log("Cellules verrouillées après la séance :", lockedAfter, "(attendu : réduites de 3 × nb de joueurs)");
@@ -170,6 +180,9 @@ console.log("✅ Une séance vidéo réussie révèle bien le bon nombre de cara
 // rouvrir le panneau sur CE MÊME adversaire doit afficher le bouton
 // désactivé avec une raison PERMANENTE ("déjà scoutée cette saison"),
 // clairement distincte du message de cooldown quotidien ci-dessous.
+// Le bouton/message de scoutisme vit sous "Analyse d'équipe" (voir plus
+// haut) : rebascule dessus avant de le relire.
+win.eval("teamDetailSubView = 'analyse';");
 win.renderTeamDetail(opponentIdx);
 const sessionBtnAfter = doc.getElementById("runVideoSessionBtn");
 console.log("\nBouton de séance vidéo après scoutage de cet adversaire :", sessionBtnAfter);

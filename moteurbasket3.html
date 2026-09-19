@@ -1269,7 +1269,7 @@
          selectOrdresRound). -->
     <p class="ordres-round-datetime" id="ordresRoundDateTime"></p>
     <div class="ordres-round-selector hidden" id="ordresRoundSelector"></div>
-    <!-- Retour utilisateur (2026-09) : "page ordre enleve ce texte : 
+    <!-- Retour utilisateur (2026-09) : "page ordre enleve ce texte :
          Préparation à l'avance, [...] Ces ordres seront appliqués
          automatiquement au moment de ce match [...]" : ce bandeau
          (#ordresPlanNote) redisait, avec une phrase d'explication en plus,
@@ -1277,6 +1277,12 @@
          heure) déjà affichées par #ordresRoundDateTime juste au-dessus (voir
          renderOrdresRoundDateTime), pour n'importe quelle journée
          sélectionnée y compris un tour de Coupe. Retiré. -->
+    <!-- Retour utilisateur (2026-09) : "il faudrait [...] que lorsque l'on
+         arrive sur la page ordre, on voit les derniers évènements (achat de
+         tel joueur, tel coach, tel up à l'entrainement...)" — voir
+         renderOrdresRecentEvents, appelée par renderPrep. Vide (et absent du
+         flux, voir renderOrdresRecentEvents) quand il n'y a rien à montrer. -->
+    <div id="ordresRecentEventsHolder"></div>
     <div class="prep-grid" id="prepGrid"></div>
     <div class="ordres-validate-row">
       <button type="button" class="ordres-validate-btn" id="ordresValidateBtn">Valider les ordres</button>
@@ -1929,7 +1935,7 @@ const WATCH_FOCUS_LABELS = {
   denyDrive: "Coller sur les pénétrations",
   harassOutsideShot: "Harceler le tir extérieur",
   reboundPriority: "Priorité au rebond",
-  denyEntry: "Empêcher les entrées de balle",
+  denyEntry: "Couper du ballon",
 };
 
 const POST_DEFENSES = {
@@ -8660,7 +8666,19 @@ async function resetCareer() {
 // fin de saison) : c'est le point d'entrée unique appelé au chargement de la
 // page et après chaque retour au fil du jeu (voir loadMyTeam/
 // refreshFromServerAndReenter/goToOrdresTab).
-function enterNextMatchOrShowSeasonEnd() {
+//
+// `opts.landOnDashboard` (retour utilisateur, 2026-09 : "quand on ouvre le
+// jeu, on doit arriver sur la page tableau de bord et pas ordres") : passé
+// UNIQUEMENT par le tout premier chargement de la page (voir
+// window.__gameReady plus bas) — si rien d'urgent ne réclame l'écran (pas de
+// récapitulatif d'absence, pas de direct en cours), atterrit sur le tableau
+// de bord du club (onglet "club") plutôt que sur Ordres. Les autres points
+// d'entrée (reprise après un direct, bouton "Continuer" du récapitulatif
+// d'absence, nouvelle saison, réinitialisation de carrière) gardent leur
+// comportement historique (retour direct sur Ordres) : seule l'OUVERTURE du
+// jeu était visée par ce retour utilisateur.
+function enterNextMatchOrShowSeasonEnd(opts) {
+  const landOnDashboard = !!(opts && opts.landOnDashboard);
   updateLiveTabVisibility();
   syncTopbarLiveStrip();
   if (pendingEvents.length) {
@@ -8688,8 +8706,14 @@ function enterNextMatchOrShowSeasonEnd() {
   currentMatch = next;
   teamB = league.teams[next.opponent];
   renderPrep();
-  showPage("prepSection");
-  setActiveTab("ordres");
+  if (landOnDashboard) {
+    renderClubSection();
+    showPage("clubSection");
+    setActiveTab("club");
+  } else {
+    showPage("prepSection");
+    setActiveTab("ordres");
+  }
   return true;
 }
 
@@ -8872,6 +8896,75 @@ let selectedOrdresRound = null;
 // league.liveMatch existe, Coupe y compris).
 let selectedOrdresCompetition = "championship";
 
+// Retour utilisateur (2026-09) : "il faudrait [...] que lorsque l'on arrive
+// sur la page ordre, on voit les derniers évènements (achat de tel joueur,
+// tel coach, tel up à l'entrainement... à compléter)". Un aperçu condensé
+// (PAS le journal complet — déjà consultable ailleurs : onglet Économie pour
+// toutes les transactions, onglet Entraînement pour le détail complet de la
+// dernière semaine), limité aux évènements les plus notables :
+//   - Transactions "notables" (achats/ventes de joueurs, investissements
+//     dans les infrastructures) — teamA.transactions, EN EXCLUANT les lignes
+//     purement récurrentes chaque semaine (salaires, recettes fixes), déjà
+//     assez visibles chaque semaine sans avoir besoin d'un rappel ici.
+//   - Recrutement de staff (entraîneur/analyste vidéo/recruteur) : repéré
+//     via weeksEmployed === 0 plutôt qu'une transaction (voir
+//     coach_market_test.js, "AUCUNE transaction ne devrait être journalisée
+//     pour l'acquisition elle-même, le coût est le salaire hebdomadaire qui
+//     grimpe, pas un achat comptant" — comportement volontaire, pas
+//     changé ici).
+//   - Progressions marquantes de la dernière semaine d'entraînement
+//     (teamA.lastTrainingReport), triées par ampleur du changement,
+//     plafonnées pour rester un simple aperçu.
+const ROUTINE_TRANSACTION_LABEL_PREFIXES = [
+  "Salaire du staff", "Salaires des joueurs", "Salaires du centre de formation",
+  "Recettes boutique des supporters", "Droits TV", "Recettes station TV",
+  "Billetterie vs",
+];
+const ORDRES_RECENT_EVENTS_MAX_TRANSACTIONS = 5;
+const ORDRES_RECENT_EVENTS_MAX_TRAINING_GAINS = 5;
+
+function renderOrdresRecentEvents() {
+  const holder = document.getElementById("ordresRecentEventsHolder");
+  if (!holder) return;
+  let html = "";
+
+  const notableTransactions = (teamA.transactions || [])
+    .filter(t => !ROUTINE_TRANSACTION_LABEL_PREFIXES.some(prefix => t.label.startsWith(prefix)))
+    .slice(0, ORDRES_RECENT_EVENTS_MAX_TRANSACTIONS);
+  notableTransactions.forEach(t => {
+    const up = t.amount >= 0;
+    html += `<div class="gain-line ${up ? "gain-up" : "gain-down"}">Semaine ${t.week}, ${escapeHtml(t.label)} : ${up ? "+" : ""}${formatMoney(t.amount)}</div>`;
+  });
+
+  [
+    { role: teamA.trainer, label: "Entraîneur" },
+    { role: teamA.videoAnalyst, label: "Analyste vidéo" },
+    { role: teamA.recruiter, label: "Recruteur" },
+  ].forEach(({ role, label }) => {
+    if (role && role.weeksEmployed === 0) {
+      html += `<div class="gain-line gain-up">${escapeHtml(label)} recruté cette semaine : niveau ${role.level} (salaire de départ ${formatMoney(role.baseSalary)}/sem.).</div>`;
+    }
+  });
+
+  const report = teamA.lastTrainingReport;
+  if (report) {
+    const allGains = [];
+    Object.values(report.players).forEach(e => {
+      e.gains.forEach(g => allGains.push({ name: e.name, attr: g.attr, before: g.before, after: g.after }));
+    });
+    allGains.sort((a, b) => Math.abs(b.after - b.before) - Math.abs(a.after - a.before));
+    allGains.slice(0, ORDRES_RECENT_EVENTS_MAX_TRAINING_GAINS).forEach(g => {
+      const up = g.after > g.before;
+      html += `<div class="gain-line ${up ? "gain-up" : "gain-down"}">${escapeHtml(g.name)} : ${TRAINING_LABELS[g.attr]} ${g.before} → ${g.after} ${up ? "↑" : "↓"}</div>`;
+    });
+    if (allGains.length > ORDRES_RECENT_EVENTS_MAX_TRAINING_GAINS) {
+      html += `<div class="gain-note">+${allGains.length - ORDRES_RECENT_EVENTS_MAX_TRAINING_GAINS} autres changements à l'entraînement la semaine dernière, voir l'onglet Entraînement.</div>`;
+    }
+  }
+
+  holder.innerHTML = html ? `<div class="section ordres-recent-events"><h3>Derniers événements</h3><div class="training-report-list">${html}</div></div>` : "";
+}
+
 function renderPrep() {
   document.getElementById("nameA").textContent = teamA.name;
   document.getElementById("nameB").textContent = teamB.name;
@@ -8883,6 +8976,7 @@ function renderPrep() {
   selectedOrdresCompetition = def ? def.competition : "championship";
   renderOrdresRoundSelector();
   renderOrdresRoundDateTime();
+  renderOrdresRecentEvents();
   renderOrdresGrid();
   startCountdown();
   updateTopbar();
@@ -9851,6 +9945,12 @@ function teamLinkHtml(teamIdx, displayName) {
 
 let teamDetailIdx = null; // équipe actuellement affichée sur la fiche équipe
 let teamDetailOrigin = null; // { pageId, tabKey } — où revenir avec "← Retour"
+// Retour utilisateur (2026-09) : "il faudrait ajouter des boutons sur la page
+// d'une équipe (effectif avec les stats en dessous des joueurs, calendrier,
+// analyse de l'équipe)" — trois sous-onglets à l'intérieur de la fiche
+// équipe (voir teamDetailSubNavHtml/renderTeamDetail ci-dessous), state gardé
+// au niveau module comme teamDetailIdx juste au-dessus.
+let teamDetailSubView = "effectif"; // "effectif" | "calendrier" | "analyse"
 
 function showTeamDetail(teamIdx) {
   // Même garde que showPlayerDetail : ne mémorise pas teamDetailSection
@@ -9861,6 +9961,7 @@ function showTeamDetail(teamIdx) {
     teamDetailOrigin = { pageId: currentVisiblePageId(), tabKey: activeTabBtn ? activeTabBtn.dataset.tab : null };
   }
   teamDetailIdx = teamIdx;
+  teamDetailSubView = "effectif"; // repart toujours sur l'Effectif à l'ouverture (même équipe ou pas)
   renderTeamDetail(teamIdx);
   showPage("teamDetailSection");
 }
@@ -9882,27 +9983,56 @@ document.addEventListener("click", (e) => {
   showTeamDetail(Number(link.dataset.teamIdx));
 });
 
-// Contenu de la fiche équipe : pour un ADVERSAIRE, reprend EXACTEMENT
-// l'ancien panneau de scoutisme (nom/poste/taille/salaire TOUJOURS
-// affichés — le moteur ne les cache jamais, voir engine.js — et
-// caractéristiques verrouillées/révélées via teamA.scoutedAttrs), plus le
-// rapport tactique. Pour SA PROPRE équipe (pas de lien vers soi-même
-// actuellement, mais gardé pour rester robuste), pas de mécanisme de
-// scoutisme : l'effectif est déjà entièrement visible (onglet Effectif).
-function renderTeamDetail(teamIdx) {
-  const nameHeader = document.getElementById("teamDetailName");
-  const holder = document.getElementById("teamDetailContent");
-  const team = league.teams[teamIdx];
-  if (!team) {
-    nameHeader.textContent = "Fiche équipe";
-    holder.innerHTML = "<p class='training-empty'>Cette équipe n'existe plus.</p>";
-    return;
-  }
-  nameHeader.textContent = `${team.name}`;
-  const isOwnTeam = teamIdx === myTeamIndex;
+// Sous-navigation de la fiche équipe (réutilise le style pastille de
+// .boxscore-toggle/.bs-tab, déjà utilisé pour l'onglet Domicile/Extérieur de
+// la feuille de stats, plutôt que d'inventer une nouvelle classe).
+function teamDetailSubNavHtml() {
+  const tabs = [
+    { key: "effectif", label: "Effectif" },
+    { key: "calendrier", label: "Calendrier" },
+    { key: "analyse", label: "Analyse d'équipe" },
+  ];
+  return `<div class="boxscore-toggle team-detail-subnav">` +
+    tabs.map(t => `<button type="button" class="bs-tab${teamDetailSubView === t.key ? " active" : ""}" data-team-detail-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
+    `</div>`;
+}
+document.getElementById("teamDetailContent").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-team-detail-subview]");
+  if (!btn) return;
+  teamDetailSubView = btn.dataset.teamDetailSubview;
+  renderTeamDetail(teamDetailIdx);
+});
+// Même mécanisme que renderCalendrierSection (bouton de score cliquable →
+// showMatchBoxscore) : nécessaire ici aussi puisque le sous-onglet
+// "Calendrier" de la fiche équipe (teamCalendarTableHtml) construit les
+// mêmes boutons `data-boxscore-round`.
+document.getElementById("teamDetailContent").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-boxscore-round]");
+  if (!btn) return;
+  showMatchBoxscore(
+    Number(btn.dataset.boxscoreRound), btn.dataset.boxscoreCompetition,
+    Number(btn.dataset.boxscoreHome), Number(btn.dataset.boxscoreAway),
+  );
+});
 
-  let html = "";
+// Sous-onglet "Effectif" de la fiche équipe : nom/poste/taille/salaire
+// TOUJOURS affichés (le moteur ne les cache jamais, voir engine.js) et
+// caractéristiques verrouillées/révélées via teamA.scoutedAttrs pour un
+// adversaire (identique à l'ancien contenu unique de renderTeamDetail),
+// jamais verrouillées pour sa PROPRE équipe. Retour utilisateur (2026-09) :
+// "je dois pouvoir voir les stats des joueurs [...] effectif avec les stats
+// en dessous des joueurs" — ajoute désormais un tableau de statistiques de
+// saison sous le tableau des caractéristiques (voir teamSeasonStatsTableHtml),
+// pour N'IMPORTE QUELLE équipe : ce sont des statistiques de matchs RÉELLEMENT
+// joués (Player.matchLog), jamais verrouillées par le scoutisme (qui ne
+// concerne que les caractéristiques cachées, pas le résultat des matchs déjà
+// disputés — déjà consultable match par match via le boxscore, voir
+// showMatchBoxscore).
+function teamDetailEffectifHtml(teamIdx) {
+  const team = league.teams[teamIdx];
+  const isOwnTeam = teamIdx === myTeamIndex;
   const sorted = [...team.players].sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall());
+  let html = "";
 
   if (isOwnTeam) {
     html += "<p class='training-intro'>Votre équipe : toutes les caractéristiques sont déjà visibles ici, comme sur l'onglet Effectif.</p>";
@@ -9915,12 +10045,170 @@ function renderTeamDetail(teamIdx) {
       html += "</tr>";
     });
     html += "</tbody></table></div>";
-    holder.innerHTML = html;
-    return;
+  } else {
+    const alreadyScoutedList = (teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || [];
+    const revealedSet = new Set(alreadyScoutedList);
+    html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
+      "<th>Nom</th><th>Poste</th><th>Taille</th><th>Salaire/sem.</th>" +
+      ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") + "</tr></thead><tbody>";
+    sorted.forEach(p => {
+      html += `<tr><td>${playerLinkHtml(teamIdx, p.id, p.name)}</td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
+      ATTRS.forEach(a => {
+        html += revealedSet.has(a)
+          ? `<td>${attrCellHtml(p.attrs[a])}</td>`
+          : `<td><div class="attr-cell attr-locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique"></div></td>`;
+      });
+      html += "</tr>";
+    });
+    html += "</tbody></table></div>";
   }
 
+  html += "<h3 class='field-label'>Statistiques de la saison</h3>";
+  html += teamSeasonStatsTableHtml(teamIdx);
+  return html;
+}
+
+// Agrège Player.matchLog de tout l'effectif ACTUEL en une ligne de moyennes
+// par joueur (mêmes champs/même calcul que renderPlayerDetail plus haut,
+// juste une ligne par joueur au lieu d'un seul joueur) — inspiré du tableau
+// "Statistiques des Joueurs" d'un autre manager de basket en ligne fourni en
+// référence par le joueur. Triée par points/match (repère rapide le plus
+// lisible), du plus fort au moins fort.
+function teamSeasonStatsTableHtml(teamIdx) {
+  const team = league.teams[teamIdx];
+  const rowsData = team.players
+    .map(p => {
+      const log = p.matchLog || [];
+      if (!log.length) return null;
+      const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
+      log.forEach(m => { Object.keys(sum).forEach(k => { sum[k] += m[k] || 0; }); });
+      return { player: p, gp: log.length, sum };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (b.sum.pts / b.gp) - (a.sum.pts / a.gp));
+  if (!rowsData.length) {
+    return "<p class='training-empty'>Aucun match joué cette saison pour l'instant.</p>";
+  }
+  const pct = (made, att) => att > 0 ? `${Math.round((made / att) * 100)}%` : "–";
+  let html = "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
+    "<th>Nom</th><th>Poste</th><th>Matchs</th><th>Min</th><th>Pts</th><th>Reb</th><th>Pas</th><th>Int</th><th>Ctr</th><th>Perte</th><th>Faute</th>" +
+    "<th>2 pts</th><th>3 pts</th><th>LF</th></tr></thead><tbody>";
+  rowsData.forEach(({ player: p, gp, sum }) => {
+    html += `<tr><td>${playerLinkHtml(teamIdx, p.id, p.name)}</td><td>${POS_SHORT[p.position]}</td><td>${gp}</td>` +
+      `<td>${(sum.min / gp).toFixed(1)}</td><td>${(sum.pts / gp).toFixed(1)}</td><td>${(sum.reb / gp).toFixed(1)}</td>` +
+      `<td>${(sum.ast / gp).toFixed(1)}</td><td>${(sum.stl / gp).toFixed(1)}</td><td>${(sum.blk / gp).toFixed(1)}</td>` +
+      `<td>${(sum.tov / gp).toFixed(1)}</td><td>${(sum.pf / gp).toFixed(1)}</td>` +
+      `<td>${sum.fgm2}/${sum.fga2} (${pct(sum.fgm2, sum.fga2)})</td>` +
+      `<td>${sum.fgm3}/${sum.fga3} (${pct(sum.fgm3, sum.fga3)})</td>` +
+      `<td>${sum.ftm}/${sum.fta} (${pct(sum.ftm, sum.fta)})</td></tr>`;
+  });
+  html += "</tbody></table></div>";
+  return html;
+}
+
+// Sous-onglet "Calendrier" de la fiche équipe : retour utilisateur (2026-09) :
+// "il faut aussi que je puisse voir le calendrier et consulter le box score
+// des matchs de la dite équipe quand je suis sur sa page". Même construction
+// que renderCalendrierSection (tri chronologique championnat + coupe
+// fusionnés, score cliquable → showMatchBoxscore) mais généralisée à un
+// `teamIdx` quelconque au lieu de myTeamIndex, et SANS colonne d'action
+// (donner ses ordres n'a de sens que pour sa PROPRE équipe, déjà couvert par
+// l'onglet Calendrier principal).
+function teamCalendarTableHtml(teamIdx) {
+  const rows = [];
+  for (let r = 0; r < league.totalRounds; r++) {
+    const m = league.schedule[r].find(x => x.home === teamIdx || x.away === teamIdx);
+    if (!m) continue;
+    const isHome = m.home === teamIdx;
+    const oppIdx = isHome ? m.away : m.home;
+    const oppName = league.teams[oppIdx].name;
+    const result = league.results.find(res => res.round === r && (res.home === teamIdx || res.away === teamIdx));
+    let scoreText = "–";
+    let cls = "";
+    let boxscore = null;
+    if (result) {
+      const myScore = result.home === teamIdx ? result.scoreHome : result.scoreAway;
+      const oppScore = result.home === teamIdx ? result.scoreAway : result.scoreHome;
+      scoreText = `${myScore} - ${oppScore}`;
+      cls = myScore > oppScore ? "result-win" : myScore < oppScore ? "result-loss" : "";
+      boxscore = { round: r, competition: "championship", homeIdx: result.home, awayIdx: result.away };
+    }
+    rows.push({
+      competition: "champ", label: `Journée ${r + 1}`, opponent: oppName, opponentIdx: oppIdx,
+      location: isHome ? "Domicile" : "Extérieur", scoreText, boxscore, cls,
+      scheduledAt: scheduledTimeForChampionshipRound(r), fallbackOrder: r * 2,
+    });
+  }
+  if (league.cup) {
+    league.cup.rounds.forEach(round => {
+      const m = round.matches.find(x => x.home === teamIdx || x.away === teamIdx);
+      if (!m) return;
+      const label = CUP_STAGE_LABELS[round.name] || round.name;
+      const scheduledAt = scheduledTimeForCupRound(round.dayIndex);
+      const fallbackOrder = round.index * 2 + 1;
+      if (m.bye) {
+        rows.push({
+          competition: "cup", label, opponent: "Exempt, qualifié(e) directement", opponentIdx: null,
+          location: "", scoreText: "", boxscore: null, cls: "", scheduledAt, fallbackOrder,
+        });
+        return;
+      }
+      const isHomeCup = m.home === teamIdx;
+      const oppIdxCup = isHomeCup ? m.away : m.home;
+      const oppName = league.teams[oppIdxCup].name;
+      let scoreText = "–";
+      let cls = "";
+      let boxscore = null;
+      if (m.resolved) {
+        const myScore = isHomeCup ? m.scoreHome : m.scoreAway;
+        const oppScore = isHomeCup ? m.scoreAway : m.scoreHome;
+        scoreText = `${myScore} - ${oppScore}`;
+        cls = myScore > oppScore ? "result-win" : myScore < oppScore ? "result-loss" : "";
+        boxscore = { round: round.index, competition: "cup", homeIdx: m.home, awayIdx: m.away };
+      }
+      rows.push({
+        competition: "cup", label, opponent: oppName, opponentIdx: oppIdxCup,
+        location: isHomeCup ? "Domicile" : "Extérieur", scoreText, boxscore, cls, scheduledAt, fallbackOrder,
+      });
+    });
+  }
+  rows.sort((a, b) => {
+    if (a.scheduledAt != null && b.scheduledAt != null) return a.scheduledAt - b.scheduledAt;
+    if (a.scheduledAt != null) return -1;
+    if (b.scheduledAt != null) return 1;
+    return a.fallbackOrder - b.fallbackOrder;
+  });
+  if (!rows.length) return "<p class='training-empty'>Calendrier indisponible pour cette équipe.</p>";
+  let html = "<div class='table-scroll'><table class='standings-table calendar-table'><thead><tr>" +
+    "<th>Date</th><th>Compétition</th><th>Adversaire</th><th>Lieu</th><th>Score</th></tr></thead><tbody>";
+  rows.forEach(row => {
+    const dateCell = row.scheduledAt != null
+      ? `${escapeHtml(formatDateTimeFr(row.scheduledAt))}<div class="sub">${escapeHtml(row.label)}</div>`
+      : `–<div class="sub">${escapeHtml(row.label)}</div>`;
+    const compLabel = row.competition === "cup" ? "Coupe" : "Championnat";
+    const scoreCell = row.boxscore
+      ? `<button type="button" class="calendar-score-btn" data-boxscore-round="${row.boxscore.round}" data-boxscore-competition="${row.boxscore.competition}" data-boxscore-home="${row.boxscore.homeIdx}" data-boxscore-away="${row.boxscore.awayIdx}">${row.scoreText}</button>`
+      : row.scoreText;
+    const opponentCell = row.opponentIdx != null ? teamLinkHtml(row.opponentIdx, row.opponent) : escapeHtml(row.opponent);
+    html += `<tr class="${row.cls}"><td>${dateCell}</td><td>${compLabel}</td><td>${opponentCell}</td><td>${escapeHtml(row.location)}</td><td>${scoreCell}</td></tr>`;
+  });
+  html += "</tbody></table></div>";
+  return html;
+}
+
+// Sous-onglet "Analyse d'équipe" de la fiche équipe : le mécanisme de
+// scoutisme (bouton "Faire une séance vidéo" + verrouillage/révélation des
+// caractéristiques, EXTRAIT tel quel de l'ancien contenu unique de
+// renderTeamDetail) pour un adversaire, suivi du rapport tactique
+// (tacticalReportHtml, jamais verrouillé — calculé depuis Player.matchLog,
+// pas depuis les caractéristiques cachées). Pour sa PROPRE équipe, "scouter"
+// n'a pas de sens (déjà tout visible) : seul le rapport tactique reste utile.
+function teamDetailAnalyseHtml(teamIdx) {
+  const team = league.teams[teamIdx];
+  const isOwnTeam = teamIdx === myTeamIndex;
+  if (isOwnTeam) return tacticalReportHtml(team);
+
   const alreadyScoutedList = (teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || [];
-  const revealedSet = new Set(alreadyScoutedList);
   const alreadyScouted = alreadyScoutedList.length > 0;
   const hasAnalyst = !!teamA.videoAnalyst;
   const now = Date.now();
@@ -9953,23 +10241,37 @@ function renderTeamDetail(teamIdx) {
   } else {
     buttonHtml = `<button class="secondary" id="runVideoSessionBtn" data-opponent-idx="${teamIdx}">Faire une séance vidéo (révèle ${revealCount}/${ATTRS.length} caractéristiques, niveau ${analystLevel})</button>`;
   }
-  html += `<div class="scouting-actions">${buttonHtml}</div>`;
+  let html = `<div class="scouting-actions">${buttonHtml}</div>`;
   html += `<div id="scoutingFeedback"></div>`;
-
-  html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-    "<th>Nom</th><th>Poste</th><th>Taille</th><th>Salaire/sem.</th>" +
-    ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") + "</tr></thead><tbody>";
-  sorted.forEach(p => {
-    html += `<tr><td>${playerLinkHtml(teamIdx, p.id, p.name)}</td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
-    ATTRS.forEach(a => {
-      html += revealedSet.has(a)
-        ? `<td>${attrCellHtml(p.attrs[a])}</td>`
-        : `<td><div class="attr-cell attr-locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique"></div></td>`;
-    });
-    html += "</tr>";
-  });
-  html += "</tbody></table></div>";
   html += tacticalReportHtml(team);
+  return html;
+}
+
+// Contenu de la fiche équipe (retour utilisateur, 2026-09 : "quand on clique
+// sur une équipe, je dois pouvoir voir les stats des joueurs [...] il faut
+// aussi que je puisse voir le calendrier et consulter le box score des
+// matchs [...] ajouter des boutons sur la page d'une équipe") : répartie
+// entre trois sous-onglets (voir teamDetailSubNavHtml/teamDetailSubView),
+// chacun sa propre fonction de rendu ci-dessus.
+function renderTeamDetail(teamIdx) {
+  const nameHeader = document.getElementById("teamDetailName");
+  const holder = document.getElementById("teamDetailContent");
+  const team = league.teams[teamIdx];
+  if (!team) {
+    nameHeader.textContent = "Fiche équipe";
+    holder.innerHTML = "<p class='training-empty'>Cette équipe n'existe plus.</p>";
+    return;
+  }
+  nameHeader.textContent = `${team.name}`;
+
+  let html = teamDetailSubNavHtml();
+  if (teamDetailSubView === "calendrier") {
+    html += teamCalendarTableHtml(teamIdx);
+  } else if (teamDetailSubView === "analyse") {
+    html += teamDetailAnalyseHtml(teamIdx);
+  } else {
+    html += teamDetailEffectifHtml(teamIdx);
+  }
   holder.innerHTML = html;
 }
 
@@ -14332,7 +14634,7 @@ window.__gameReady = (async () => {
   // (comportement inchangé), et n'est plus jamais écrasée une fois remplie
   // par enterLiveMatch().
   resetQuarterBars();
-  enterNextMatchOrShowSeasonEnd();
+  enterNextMatchOrShowSeasonEnd({ landOnDashboard: true });
 })();
 </script>
 </body>

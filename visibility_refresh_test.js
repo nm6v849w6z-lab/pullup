@@ -48,6 +48,15 @@ function fireVisible(doc, win) {
   const doc = dom.window.document;
   const win = dom.window;
 
+  // Retour utilisateur (2026-09) : "quand on ouvre le jeu, on doit arriver
+  // sur la page tableau de bord et pas ordres" — l'ouverture du jeu n'atterrit
+  // plus sur l'écran de préparation par défaut (voir tabs_test.js), donc ce
+  // scénario (écran de préparation resté affiché en arrière-plan) part
+  // maintenant d'une navigation EXPLICITE vers Ordres, comme le ferait un
+  // joueur qui a consulté cet onglet avant que l'écran ne passe en
+  // arrière-plan.
+  win.eval("TAB_HANDLERS.ordres();");
+
   await flush(dom);
   const saved = readRawSave(savePath);
   const scheduledAt = scheduledTimeForRound(saved.league.calendarStartAt, saved.league.round);
@@ -99,6 +108,12 @@ function fireVisible(doc, win) {
   const dom = await openGame(html, baseUrl);
   const doc = dom.window.document;
   const win = dom.window;
+
+  // Voir le commentaire équivalent de la Partie 1 : l'ouverture du jeu
+  // n'atterrit plus sur Ordres par défaut, navigation explicite requise pour
+  // que le premier `fireVisible` ci-dessous (juste après le coup d'envoi)
+  // parte bien de l'écran de préparation.
+  win.eval("TAB_HANDLERS.ordres();");
 
   await flush(dom);
   const saved = readRawSave(savePath);

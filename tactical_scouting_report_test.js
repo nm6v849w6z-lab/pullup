@@ -40,6 +40,12 @@ const myRow = rows.find(r => r.classList.contains("me"));
 const opponentRow = rows.find(r => r !== myRow);
 const opponentIdx = Number(opponentRow.querySelector("[data-team-idx]").dataset.teamIdx);
 opponentRow.querySelector("[data-team-idx]").click();
+// Retour utilisateur (2026-09) : "il faudrait ajouter des boutons sur la
+// page d'une équipe (effectif [...] analyse de l'équipe)" — le rapport
+// tactique vit désormais sous le sous-onglet "Analyse d'équipe" de la fiche
+// équipe (voir teamDetailAnalyseHtml), plus sous "Effectif" (par défaut à
+// l'ouverture, voir showTeamDetail).
+doc.querySelector('[data-team-detail-subview="analyse"]').click();
 
 const reportBefore = doc.querySelector("#teamDetailContent .tactical-report");
 console.log("Rapport tactique présent (avant tout match) :", !!reportBefore);
@@ -110,6 +116,7 @@ console.log("\nAttendu (calcul indépendant) :", expected);
 const oppRow2 = [...doc2.querySelectorAll("#standingsContent table.standings-table tbody tr")]
   .find(r => r.querySelector("[data-team-idx]") && Number(r.querySelector("[data-team-idx]").dataset.teamIdx) === opponentIdx);
 oppRow2.querySelector("[data-team-idx]").click();
+doc2.querySelector('[data-team-detail-subview="analyse"]').click();
 
 const oppTeamLive = win2.eval(`league.teams[${opponentIdx}]`);
 const tendencies = win2.computeScoutingTendencies(oppTeamLive);

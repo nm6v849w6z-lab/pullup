@@ -29,15 +29,17 @@ function visiblePageId() {
   return ids.find(id => !doc.getElementById(id).classList.contains("hidden"));
 }
 
-// --- Par défaut : l'onglet "📋 Ordres" (feuille de match + tactiques) est
-// actif — l'ancien comportement par défaut (avant l'ajout des onglets) est
-// préservé, seul le NOM de l'onglet a changé (Effectif sert maintenant à
-// consulter les caractéristiques des joueurs, pas à donner les ordres). ---
+// --- Par défaut : retour utilisateur (2026-09) : "quand on ouvre le jeu, on
+// doit arriver sur la page tableau de bord et pas ordres" — voir
+// enterNextMatchOrShowSeasonEnd({ landOnDashboard: true }), appelé
+// uniquement par le tout premier chargement de la page (window.__gameReady).
+// L'onglet "club" (tableau de bord) est donc désormais actif à l'ouverture,
+// pas "📋 Ordres". ---
 console.log("Page visible au chargement :", visiblePageId());
-if (visiblePageId() !== "prepSection") throw new Error("❌ La page par défaut devrait rester la préparation du match (Ordres).");
-const ordresBtnActive = [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").classList.contains("active");
-console.log(`${ordresBtnActive ? "✅" : "❌"} L'onglet "📋 Ordres" est actif par défaut.`);
-if (!ordresBtnActive) throw new Error("❌ L'onglet Ordres devrait être actif par défaut.");
+if (visiblePageId() !== "clubSection") throw new Error("❌ La page par défaut à l'ouverture devrait être le tableau de bord (club).");
+const clubBtnActive = [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "club").classList.contains("active");
+console.log(`${clubBtnActive ? "✅" : "❌"} L'onglet "Club" (tableau de bord) est actif par défaut.`);
+if (!clubBtnActive) throw new Error("❌ L'onglet Club devrait être actif par défaut.");
 
 // --- Chaque onglet affiche bien SA page (et une seule) — vérifie les 13 onglets. ---
 const TAB_TO_PAGE = {
