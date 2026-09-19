@@ -643,6 +643,15 @@
   .stat-card .sub{font-size:12px; color:var(--ink-dim); margin-top:4px; line-height:1.5;}
   .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;}
   @media(max-width:680px){.stat-grid{grid-template-columns:1fr;}}
+  /* Retour utilisateur (2026-09) : la carte "Derniers événements" du tableau
+     de bord (6e .stat-card de #clubStatsGrid, voir renderClubSection) imbrique
+     .training-report-list/.gain-line (normalement une liste à part entière,
+     avec son propre fond/bordure — voir plus bas) à l'intérieur d'une
+     .stat-card qui a déjà les siens : sans ce correctif on se retrouve avec
+     une bordure dans la bordure. Seule cette carte a besoin du correctif,
+     scopé à #clubStatsGrid plutôt qu'à .training-report-list globalement. */
+  #clubStatsGrid .training-report-list{background:none; border:none; padding:0; margin-top:2px;}
+  #clubStatsGrid .gain-line{padding:5px 0; font-size:12.5px;}
   .quick-links{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
   .table-scroll{overflow-x:auto; margin-bottom:16px;}
   table.roster-table{width:100%; border-collapse:collapse; font-size:11.5px; background:var(--panel); border-radius:var(--radius); overflow:hidden;}
@@ -1462,7 +1471,6 @@
       <p class="matchup-context" id="clubMatchupContext"></p>
       <div id="clubDeficitBanner"></div>
       <div class="stat-grid" id="clubStatsGrid"></div>
-      <div id="clubRecentEventsHolder"></div>
     </div>
   </div>
 
@@ -8937,11 +8945,14 @@ const ROUTINE_TRANSACTION_LABEL_PREFIXES = [
 const ORDRES_RECENT_EVENTS_MAX_TRANSACTIONS = 5;
 const ORDRES_RECENT_EVENTS_MAX_TRAINING_GAINS = 5;
 
-// Contenu partagé entre le panneau "Derniers événements" de la page Ordres
-// (ordresRecentEventsHolder) et celui de la page Tableau de bord
-// (clubRecentEventsHolder, ajouté suite au retour utilisateur (2026-09) :
-// "il faut sur la page tableau de bord que l'on puisse voir les derniers
-// évènements: achat de tel joueur, tel coach, tel up à l'entrainemetn...").
+// Contenu du panneau "Derniers événements" de la page Ordres
+// (ordresRecentEventsHolder). Le tableau de bord avait initialement le même
+// contenu (retour utilisateur, 2026-09 : "il faut sur la page tableau de
+// bord que l'on puisse voir les derniers évènements..."), mais utilise
+// désormais son propre contenu, dashboardNewsInnerHtml plus bas (retour
+// utilisateur suivant, une fois affiché : "ne parle pas que des évènements
+// financiers [...] mets plutôt les dernières news") — les deux ne sont plus
+// partagés depuis ce second retour.
 // Retourne le HTML intérieur (lignes de gains), ou "" s'il n'y a rien à
 // montrer — c'est à l'appelant de décider comment envelopper/masquer.
 function recentEventsInnerHtml() {
@@ -8991,11 +9002,109 @@ function renderOrdresRecentEvents() {
   holder.innerHTML = html ? `<div class="section ordres-recent-events"><h3>Derniers événements</h3><div class="training-report-list">${html}</div></div>` : "";
 }
 
-function renderClubRecentEvents() {
-  const holder = document.getElementById("clubRecentEventsHolder");
-  if (!holder) return;
-  const html = recentEventsInnerHtml();
-  holder.innerHTML = html ? `<div class="section club-recent-events"><h3>Derniers événements</h3><div class="training-report-list">${html}</div></div>` : "";
+// Retour utilisateur (2026-09), sur le panneau ci-dessus une fois affiché sur
+// le tableau de bord : "les évènements doivent être pris dans une 6e brique à
+// droite [...] ne parle pas que des évènements financiers, c'est sur la page
+// économie qu'on voit ça. mets plutôt les dernières news (victoire contre...,
+// progression, arrivée du joueur... etc)" — le tableau de bord a donc son
+// PROPRE contenu (dashboardNewsInnerHtml), volontairement différent de
+// recentEventsInnerHtml ci-dessus (qui reste tel quel pour la page Ordres,
+// pas concernée par ce retour) : plus d'achats d'infrastructure/salaires/
+// recettes (déjà tout visible sur l'onglet Économie), à la place le résultat
+// des derniers matchs (victoire/défaite), et les transferts de joueurs
+// (achat/vente, sans le reste des transactions). Recrutement de staff et
+// progressions à l'entraînement restent, ce sont bien des "news" club et pas
+// des données déjà dupliquées ailleurs sous cette forme.
+const DASHBOARD_NEWS_MAX_RESULTS = 3;
+const DASHBOARD_NEWS_MAX_TRANSFERS = 3;
+const DASHBOARD_NEWS_MAX_TRAINING_GAINS = 3;
+
+// Derniers résultats (championnat + coupe) d'une équipe, plus récent
+// d'abord : même logique de fusion/tri que teamCalendarTableHtml (par
+// scheduledAt, avec repli sur l'ordre de journée/tour), mais filtrée aux
+// seuls matchs déjà joués et limitée à maxCount, pour un aperçu "news" plutôt
+// qu'un calendrier complet.
+function teamRecentMatchResultsHtml(teamIdx, maxCount) {
+  const rows = [];
+  for (let r = 0; r < league.totalRounds; r++) {
+    const m = league.schedule[r].find(x => x.home === teamIdx || x.away === teamIdx);
+    if (!m) continue;
+    const result = league.results.find(res => res.round === r && (res.home === teamIdx || res.away === teamIdx));
+    if (!result) continue;
+    const isHome = result.home === teamIdx;
+    const oppIdx = isHome ? result.away : result.home;
+    const myScore = isHome ? result.scoreHome : result.scoreAway;
+    const oppScore = isHome ? result.scoreAway : result.scoreHome;
+    rows.push({
+      win: myScore > oppScore, myScore, oppScore, oppName: league.teams[oppIdx].name,
+      label: `Journée ${r + 1}`, scheduledAt: scheduledTimeForChampionshipRound(r), order: r * 2,
+    });
+  }
+  if (league.cup) {
+    league.cup.rounds.forEach(round => {
+      const m = round.matches.find(x => x.home === teamIdx || x.away === teamIdx);
+      if (!m || m.bye || !m.resolved) return;
+      const isHomeCup = m.home === teamIdx;
+      const oppIdxCup = isHomeCup ? m.away : m.home;
+      const myScore = isHomeCup ? m.scoreHome : m.scoreAway;
+      const oppScore = isHomeCup ? m.scoreAway : m.scoreHome;
+      rows.push({
+        win: myScore > oppScore, myScore, oppScore, oppName: league.teams[oppIdxCup].name,
+        label: `Coupe, ${CUP_STAGE_LABELS[round.name] || round.name}`,
+        scheduledAt: scheduledTimeForCupRound(round.dayIndex), order: round.index * 2 + 1,
+      });
+    });
+  }
+  rows.sort((a, b) => {
+    if (a.scheduledAt != null && b.scheduledAt != null) return b.scheduledAt - a.scheduledAt;
+    if (a.scheduledAt != null) return -1;
+    if (b.scheduledAt != null) return 1;
+    return b.order - a.order;
+  });
+  return rows.slice(0, maxCount).map(row => {
+    const cls = row.win ? "gain-up" : "gain-down";
+    const verb = row.win ? "Victoire" : "Défaite";
+    return `<div class="gain-line ${cls}">${verb} ${row.myScore}-${row.oppScore} vs ${escapeHtml(row.oppName)} (${escapeHtml(row.label)})</div>`;
+  }).join("");
+}
+
+function dashboardNewsInnerHtml() {
+  let html = "";
+
+  html += teamRecentMatchResultsHtml(myTeamIndex, DASHBOARD_NEWS_MAX_RESULTS);
+
+  const transferLines = (teamA.transactions || [])
+    .filter(t => /^(Achat|Vente) de /.test(t.label))
+    .slice(0, DASHBOARD_NEWS_MAX_TRANSFERS);
+  transferLines.forEach(t => {
+    const up = t.amount >= 0;
+    html += `<div class="gain-line ${up ? "gain-up" : "gain-down"}">Semaine ${t.week}, ${escapeHtml(t.label)} : ${up ? "+" : ""}${formatMoney(t.amount)}</div>`;
+  });
+
+  [
+    { role: teamA.trainer, label: "Entraîneur" },
+    { role: teamA.videoAnalyst, label: "Analyste vidéo" },
+    { role: teamA.recruiter, label: "Recruteur" },
+  ].forEach(({ role, label }) => {
+    if (role && role.weeksEmployed === 0) {
+      html += `<div class="gain-line gain-up">${escapeHtml(label)} recruté cette semaine : niveau ${role.level} (salaire de départ ${formatMoney(role.baseSalary)}/sem.).</div>`;
+    }
+  });
+
+  const report = teamA.lastTrainingReport;
+  if (report) {
+    const allGains = [];
+    Object.values(report.players).forEach(e => {
+      e.gains.forEach(g => allGains.push({ name: e.name, attr: g.attr, before: g.before, after: g.after }));
+    });
+    allGains.sort((a, b) => Math.abs(b.after - b.before) - Math.abs(a.after - a.before));
+    allGains.slice(0, DASHBOARD_NEWS_MAX_TRAINING_GAINS).forEach(g => {
+      const up = g.after > g.before;
+      html += `<div class="gain-line ${up ? "gain-up" : "gain-down"}">${escapeHtml(g.name)} : ${TRAINING_LABELS[g.attr]} ${g.before} → ${g.after} ${up ? "↑" : "↓"}</div>`;
+    });
+  }
+
+  return html;
 }
 
 function renderPrep() {
@@ -12553,7 +12662,21 @@ function renderClubSection() {
   moraleCard.appendChild(moraleLink);
   grid.appendChild(moraleCard);
 
-  renderClubRecentEvents();
+  // Retour utilisateur (2026-09) : "les évènements doivent être pris dans une
+  // 6e brique à droite" — une 6e .stat-card comme les autres plutôt qu'une
+  // section à part sous la grille : avec .stat-grid en 2 colonnes et 5 cartes
+  // ci-dessus (2 rangées pleines + Supporters seule en 3e rangée), cette 6e
+  // carte tombe naturellement à droite de Supporters, sans CSS spécifique à
+  // ajouter. Voir dashboardNewsInnerHtml plus haut pour le contenu (actualités
+  // du club, pas les transactions déjà visibles sur l'onglet Économie).
+  const newsInner = dashboardNewsInnerHtml();
+  const newsCard = document.createElement("div");
+  newsCard.className = "stat-card";
+  newsCard.innerHTML = `<h3>Derniers événements</h3>` +
+    (newsInner
+      ? `<div class="training-report-list">${newsInner}</div>`
+      : `<div class="sub">Rien à signaler pour l'instant.</div>`);
+  grid.appendChild(newsCard);
 }
 
 // ---------------------------------------------------------------------
