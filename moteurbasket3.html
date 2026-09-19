@@ -1147,7 +1147,12 @@
       <button class="secondary" id="regenBtn">📊 Classement</button>
     </div>
     <p class="lock-warning" id="lockWarning"></p>
-    <p class="locked-note">La feuille de match et les tactiques s'enregistrent automatiquement : le match se jouera tout seul à l'heure indiquée ci-dessus. Connectez-vous à ce moment-là pour le suivre en direct.</p>
+    <!-- Retour utilisateur (2026-09) : "La feuille de match et les tactiques
+         s'enregistrent automatiquement [...] enleve sur la page ordre" :
+         texte statique retiré (aucune logique JS ne le pilotait, voir
+         .locked-note ci-dessus toujours utilisée par #attendanceNote/
+         #moraleNote ailleurs dans ce fichier, donc la RÈGLE CSS est
+         conservée, seul CET élément-ci disparaît). -->
     <p class="reset-career"><a href="#" id="resetCareerLink">Réinitialiser ma carrière</a></p>
   </div>
 
