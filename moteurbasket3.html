@@ -885,15 +885,21 @@
   #arenaPurchasesCol{overflow-y:auto;}
   /* Retour utilisateur (2026-09) : "comme on a enlevé les emojis, les
      briques droites sont un peu petite maintenant. essaie que ce soit
-     aligné avec la brique avec l'image de la salle à gauche" — la colonne de
-     droite est désormais étirée pile à la hauteur de l'image (voir
-     syncArenaPurchasesHeight, qui pose #arenaPurchasesCol.style.height au
-     lieu d'un simple max-height) ; #otherFacilitiesPanel (flex:1, seul
-     élément de la colonne à pouvoir grandir — #arenaCurrentPanel juste
-     au-dessus garde sa hauteur naturelle) et .facilities-grid en son sein
-     (flex:1 + align-content:stretch) redistribuent l'espace libéré entre les
-     cartes d'infrastructure pour qu'elles grandissent au lieu de laisser un
-     vide sous la colonne. */
+     aligné avec la brique avec l'image de la salle à gauche". La colonne de
+     droite vise la hauteur de l'image (voir syncArenaPurchasesHeight, qui
+     pose #arenaPurchasesCol.style.minHeight) ; #otherFacilitiesPanel
+     (flex:1, seul élément de la colonne à pouvoir grandir, #arenaCurrentPanel
+     juste au-dessus garde sa hauteur naturelle) et .facilities-grid en son
+     sein (flex:1 + align-content:stretch) redistribuent l'espace libéré entre
+     les cartes d'infrastructure pour qu'elles grandissent au lieu de laisser
+     un vide sous la colonne. Retour utilisateur suivant (2026-09) : "les
+     briques de droite sont désormais plus grande que la brique de gauche (il
+     faut scroller)" : un height fixe comprimait un contenu de droite devenu
+     plus haut que l'image (ex. l'avertissement de changement de capacité,
+     voir buildAttendanceBreakdown). minHeight règle un plancher sans
+     empêcher la colonne de grandir au-delà quand son propre contenu en a
+     besoin ; overflow-y:auto ci-dessus reste un filet de sécurité, plus
+     nécessaire qu'en dernier recours désormais. */
   #otherFacilitiesPanel{display:flex; flex-direction:column; flex:1; min-height:0;}
   #otherFacilitiesPanel .facilities-grid{flex:1; align-content:stretch;}
 
@@ -5245,13 +5251,45 @@ class League {
   // son propre adversaire (si teams[0] jouait justement contre lui ce
   // tour-ci). Se réduit exactement au comportement historique en solo, où
   // myTeamIndex vaut toujours 0.
+  // Correctif (ligue multi-manager, 2026-09, retour utilisateur : "le bug
+  // d'absence de texte [...] sur la page ordre, apparait quand on clique sur
+  // ordres (la première fois qu'on va sur la page), si on choisit qqch dans
+  // le menu déroulant, ça apparait, et si on remet le match qu'on avait au
+  // départ via le menu deroulant, ça reapparait aussi") : cette boucle
+  // partait de `this.round` (le round GLOBAL de la ligue) et renvoyait le
+  // premier round à partir de là où `teamIdx` a un match programmé, SANS
+  // jamais vérifier s'il avait déjà été joué. En solo (un seul match humain
+  // par round), `this.round` avance dès que CE match est résolu, donc ça ne
+  // posait jamais de problème. En ligue multi-manager, `this.round` n'avance
+  // QUE quand TOUS les matchs du round sont résolus (voir
+  // League.isRegularSeasonDone/server/autoSim.js) — si le match de `teamIdx`
+  // se termine (diffusion en direct achevée) alors que D'AUTRES matchs du
+  // même round sont encore en cours ailleurs dans la ligue, `this.round`
+  // reste sur ce round déjà joué pour `teamIdx`, et cette méthode le
+  // renvoyait quand même comme "prochain match" (déjà dans this.results,
+  // jamais vérifié). currentMatch (côté navigateur, voir
+  // enterNextMatchOrShowSeasonEnd) pointait alors sur un round déjà résolu,
+  // absent de upcomingRoundsForOrders() (qui, lui, exclut bien les rounds
+  // déjà joués via league.results) : defaultOrdresRound() présélectionnait
+  // ce round fantôme, le menu déroulant retombait alors sur son option par
+  // défaut du navigateur (aucune <option> ne correspondant), mais le
+  // bandeau #ordresRoundDateTime, lui, cherchait toujours l'ancien round et
+  // ne trouvait rien — d'où un bandeau vide malgré un menu déroulant qui
+  // semblait pourtant afficher une sélection valide. Choisir N'IMPORTE QUELLE
+  // option du menu (même celle déjà affichée) appelle selectOrdresRound()
+  // avec la VRAIE valeur de cette <option>, qui corrige `selectedOrdresRound`
+  // au passage — d'où le bandeau qui "réapparaît" en rechoisissant le même
+  // match. Corrigé en sautant, comme upcomingRoundsForOrders(), tout round
+  // déjà résolu pour `teamIdx` d'après `this.results`, plutôt que de
+  // supposer que `this.round` (global) reflète déjà son propre état.
   nextUserMatch(teamIdx = 0) {
     for (let r = this.round; r < this.totalRounds; r++) {
       const m = this.schedule[r].find(x => x.home === teamIdx || x.away === teamIdx);
-      if (m) {
-        const isHome = m.home === teamIdx;
-        return { round: r, isHome, opponent: isHome ? m.away : m.home };
-      }
+      if (!m) continue;
+      const alreadyPlayed = this.results.some(res => res.round === r && (res.home === teamIdx || res.away === teamIdx));
+      if (alreadyPlayed) continue;
+      const isHome = m.home === teamIdx;
+      return { round: r, isHome, opponent: isHome ? m.away : m.home };
     }
     return null;
   }
@@ -13891,18 +13929,24 @@ function buildUpgradeArrow(confirmOpts) {
 // visuellement" (onglet Salle), puis (suite à la suppression des emojis
 // des briques, 2026-09) : "les briques droites sont un peu petite
 // maintenant. essaie que ce soit aligné avec la brique avec l'image de la
-// salle à gauche" — sans leurs emojis, les 5 cartes "Autres infrastructures"
+// salle à gauche". Sans leurs emojis, les 5 cartes "Autres infrastructures"
 // sont devenues plus basses, laissant un vide sous la colonne de droite. On
 // ne se contente donc plus de PLAFONNER la hauteur (max-height, ce qui
-// laissait ce vide), on l'IMPOSE (height) : la colonne de droite est étirée
-// pour occuper exactement la même hauteur que l'image de gauche, et
-// #otherFacilitiesPanel/.facilities-grid (voir CSS, flex:1 + align-content
-// stretch) redistribue cet espace supplémentaire entre les cartes
-// d'infrastructure pour qu'elles grandissent plutôt que de laisser un vide.
+// laissait ce vide) : la colonne de droite VISE la même hauteur que l'image
+// de gauche, et #otherFacilitiesPanel/.facilities-grid (voir CSS, flex:1 +
+// align-content stretch) redistribue cet espace supplémentaire entre les
+// cartes d'infrastructure pour qu'elles grandissent plutôt que de laisser un
+// vide. Retour utilisateur suivant (2026-09) : "les briques de droite sont
+// désormais plus grande que la brique de gauche (il faut scroller)" : une
+// hauteur FIXE (style.height) comprimait un contenu de droite devenu plus
+// haut que l'image (ex. l'avertissement de changement de capacité) et
+// forçait un défilement interne. On pose donc un PLANCHER (style.minHeight)
+// plutôt qu'une valeur fixe : la colonne s'aligne sur l'image quand son
+// contenu tient, mais peut grandir au-delà si besoin, sans scroll.
 // Mesure la hauteur réellement affichée de #arenaVisualCard (variable selon
 // le format de chaque image de salle et la largeur d'écran, donc impossible
-// à fixer en dur en CSS), défilement interne conservé en secours si le
-// contenu de droite ne tient toujours pas (voir #arenaPurchasesCol en CSS).
+// à fixer en dur en CSS) ; #arenaPurchasesCol garde overflow-y:auto en
+// filet de sécurité si un cas extrême ne tenait toujours pas.
 // Appelée depuis renderSalleSection, à la fois immédiatement et au
 // chargement de l'image (voir plus bas dans cette même fonction).
 function syncArenaPurchasesHeight() {
@@ -13910,7 +13954,15 @@ function syncArenaPurchasesHeight() {
   const purchasesCol = document.getElementById("arenaPurchasesCol");
   if (!visualCard || !purchasesCol) return;
   const h = visualCard.getBoundingClientRect().height;
-  if (h > 0) purchasesCol.style.height = `${Math.round(h)}px`;
+  // Retour utilisateur (2026-09) : "les briques de droite sont désormais plus
+  // grande que la brique de gauche (il faut scroller)". Avec .style.height
+  // (valeur fixe), un contenu de droite plus haut que l'image (ex. le texte
+  // d'avertissement sur le changement de capacité, voir buildAttendanceBreakdown
+  // un peu plus haut dans ce fichier) était comprimé dans cette hauteur fixe
+  // puis nécessitait un défilement interne. minHeight règle un PLANCHER
+  // (aligné avec l'image quand le contenu tient) sans empêcher la colonne de
+  // grandir naturellement au-delà si son propre contenu en a besoin.
+  if (h > 0) purchasesCol.style.minHeight = `${Math.round(h)}px`;
 }
 // Écouteur UNIQUE au niveau window (pas un par appel de renderSalleSection,
 // pour ne pas en empiler à chaque passage sur l'onglet) : redimensionner la
@@ -13990,7 +14042,7 @@ function arenaAttendanceSummaryHtml(info, projectedRate) {
   // laisser croire que ce pourcentage reflète la salle actuelle.
   const hasOldCapacityMatch = history.some(entry => entry.capacity && entry.capacity !== info.capacity);
   if (hasOldCapacityMatch) {
-    html += `<div class="attendance-breakdown">Inclut des matchs joués avant un changement de capacité de la salle — cette moyenne ne reflète pas encore la capacité actuelle (${info.capacity.toLocaleString("fr-FR")} places).</div>`;
+    html += `<div class="attendance-breakdown">Capacité modifiée depuis (désormais ${info.capacity.toLocaleString("fr-FR")} places).</div>`;
   }
 
   return html;

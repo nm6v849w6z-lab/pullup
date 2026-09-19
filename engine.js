@@ -3558,13 +3558,45 @@ class League {
   // manager elle-même comme son propre adversaire (si teams[0] jouait
   // justement contre lui ce tour-ci). Se réduit exactement au comportement
   // historique en solo, où myTeamIndex vaut toujours 0.
+  // Correctif (ligue multi-manager, 2026-09, retour utilisateur : "le bug
+  // d'absence de texte [...] sur la page ordre, apparait quand on clique sur
+  // ordres (la première fois qu'on va sur la page), si on choisit qqch dans
+  // le menu déroulant, ça apparait, et si on remet le match qu'on avait au
+  // départ via le menu deroulant, ça reapparait aussi") : cette boucle
+  // partait de `this.round` (le round GLOBAL de la ligue) et renvoyait le
+  // premier round à partir de là où `teamIdx` a un match programmé, SANS
+  // jamais vérifier s'il avait déjà été joué. En solo (un seul match humain
+  // par round), `this.round` avance dès que CE match est résolu, donc ça ne
+  // posait jamais de problème. En ligue multi-manager, `this.round` n'avance
+  // QUE quand TOUS les matchs du round sont résolus (voir
+  // League.isRegularSeasonDone/server/autoSim.js) — si le match de `teamIdx`
+  // se termine (diffusion en direct achevée) alors que D'AUTRES matchs du
+  // même round sont encore en cours ailleurs dans la ligue, `this.round`
+  // reste sur ce round déjà joué pour `teamIdx`, et cette méthode le
+  // renvoyait quand même comme "prochain match" (déjà dans this.results,
+  // jamais vérifié). currentMatch (côté navigateur, voir
+  // enterNextMatchOrShowSeasonEnd) pointait alors sur un round déjà résolu,
+  // absent de upcomingRoundsForOrders() (qui, lui, exclut bien les rounds
+  // déjà joués via league.results) : defaultOrdresRound() présélectionnait
+  // ce round fantôme, le menu déroulant retombait alors sur son option par
+  // défaut du navigateur (aucune <option> ne correspondant), mais le
+  // bandeau #ordresRoundDateTime, lui, cherchait toujours l'ancien round et
+  // ne trouvait rien — d'où un bandeau vide malgré un menu déroulant qui
+  // semblait pourtant afficher une sélection valide. Choisir N'IMPORTE QUELLE
+  // option du menu (même celle déjà affichée) appelle selectOrdresRound()
+  // avec la VRAIE valeur de cette <option>, qui corrige `selectedOrdresRound`
+  // au passage — d'où le bandeau qui "réapparaît" en rechoisissant le même
+  // match. Corrigé en sautant, comme upcomingRoundsForOrders(), tout round
+  // déjà résolu pour `teamIdx` d'après `this.results`, plutôt que de
+  // supposer que `this.round` (global) reflète déjà son propre état.
   nextUserMatch(teamIdx = 0) {
     for (let r = this.round; r < this.totalRounds; r++) {
       const m = this.schedule[r].find(x => x.home === teamIdx || x.away === teamIdx);
-      if (m) {
-        const isHome = m.home === teamIdx;
-        return { round: r, isHome, opponent: isHome ? m.away : m.home };
-      }
+      if (!m) continue;
+      const alreadyPlayed = this.results.some(res => res.round === r && (res.home === teamIdx || res.away === teamIdx));
+      if (alreadyPlayed) continue;
+      const isHome = m.home === teamIdx;
+      return { round: r, isHome, opponent: isHome ? m.away : m.home };
     }
     return null;
   }
