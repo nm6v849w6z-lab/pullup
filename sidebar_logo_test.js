@@ -63,12 +63,30 @@ if (!/\.sidebar-brand \.brand-name\{[^}]*display:none;\}/.test(styleBlock)) {
   throw new Error("❌ .sidebar-brand .brand-name devrait être display:none par défaut (le logo image porte déjà le texte \"Pull Up\").");
 }
 if (/\.sidebar-brand \.brand-logo-img\{[^}]*display:none;\}/.test(styleBlock)) {
-  throw new Error("❌ .brand-logo-img ne devrait plus jamais être caché (plus de rail réduit sous 900px depuis le retrait des emojis du menu, voir sidebar_no_emoji_test.js).");
+  throw new Error("❌ .brand-logo-img ne devrait plus jamais être caché (plus de rail réduit sous 900px depuis le retrait des emojis du menu).");
 }
 if (/\.sidebar-brand \.brand-mark\{[^}]*display:inline;\}/.test(styleBlock)) {
   throw new Error("❌ .brand-mark (🏀) ne devrait plus jamais redevenir visible (plus de repli rail réduit).");
 }
 console.log("✅ Le logo complet reste affiché à toutes les tailles d'écran, plus aucun repli sur l'emoji du logo.");
+
+// Retour utilisateur (2026-09) : "le logo ne se bloque tjrs pas sur le
+// côté" : .sidebar défile en interne (overflow-y:auto) dès que la liste de
+// boutons dépasse 100vh, et .sidebar-brand (le logo) faisait partie de ce
+// contenu défilant au lieu de rester ancré en haut. Vérifie que
+// .sidebar-brand est bien épinglé (position:sticky, calé en haut de son
+// ancêtre défilant .sidebar) avec un fond opaque pour ne pas laisser
+// transparaître les boutons qui remontent dessous.
+const sidebarBrandRuleMatch = styleBlock.match(/\.sidebar-brand\{([^}]*)\}/);
+if (!sidebarBrandRuleMatch) throw new Error("❌ (setup) Règle .sidebar-brand introuvable dans la feuille de style.");
+const sidebarBrandRule = sidebarBrandRuleMatch[1];
+if (!/position:sticky/.test(sidebarBrandRule) || !/top:0/.test(sidebarBrandRule)) {
+  throw new Error(`❌ BUG NON CORRIGÉ : .sidebar-brand devrait être position:sticky; top:0 pour rester visible pendant le défilement interne de la sidebar, règle actuelle : "${sidebarBrandRule}".`);
+}
+if (!/background:var\(--panel\)/.test(sidebarBrandRule)) {
+  throw new Error(`❌ .sidebar-brand devrait avoir un fond opaque (background:var(--panel), identique à .sidebar) pour masquer les boutons qui défilent dessous une fois épinglé, règle actuelle : "${sidebarBrandRule}".`);
+}
+console.log("✅ .sidebar-brand (le logo) est bien épinglé en haut de la sidebar pendant son défilement interne.");
 
 await flush(dom);
 await dom.window.close();

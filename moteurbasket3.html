@@ -519,18 +519,26 @@
   .sidebar-brand{
     display:flex; align-items:center; justify-content:center; gap:9px; padding:2px 8px 14px;
     border-bottom:1px solid var(--line-soft); margin-bottom:2px;
+    /* Retour utilisateur (2026-09) : "le logo ne se bloque tjrs pas sur le
+       côté" — .sidebar a son propre défilement interne (overflow-y:auto,
+       voir la règle .sidebar ci-dessus) dès que la liste de boutons dépasse
+       100vh (plus probable depuis le retrait du rail réduit sous 900px, la
+       sidebar affichant maintenant tous ses libellés à toute taille d'écran,
+       voir plus bas). Sans ancrage propre, .sidebar-brand faisait partie du
+       contenu défilant et disparaissait donc en haut avec le reste au lieu
+       de rester visible. position:sticky (calé sur .sidebar, son plus proche
+       ancêtre défilant) plus un fond opaque (identique à .sidebar) pour que
+       les boutons qui remontent en dessous ne transparaissent pas.  */
+    position:sticky; top:0; z-index:1; background:var(--panel);
   }
-  /* `display:none` par défaut : l'emoji ne sert plus que de repli pour le
-     rail réduit sous 900px (voir la media query plus bas), depuis
+  /* `display:none` par défaut, et en permanence désormais : ancien repère
+     emoji + texte, qui ne servait que de repli pour le rail réduit sous
+     900px (retiré, voir le correctif "enlève les emoji sur le menu de
+     gauche aussi" plus bas dans cette feuille de style) depuis
      l'intégration du logo fourni par l'utilisateur (.brand-logo-img
-     ci-dessous) en sidebar déployée. */
+     ci-dessous) en sidebar déployée. Resté dans le DOM/CSS pour ne pas
+     casser sidebar_logo_test.js, mais plus jamais affiché. */
   .sidebar-brand .brand-mark{font-size:22px; line-height:1; display:none;}
-  /* Même repli : le texte "Pull Up" séparé n'est plus affiché en sidebar
-     déployée puisque le logo fourni par l'utilisateur porte déjà son propre
-     lettrage "Pull Up" (voir .brand-logo-img), évite de le doubler. Reste
-     affiché tel quel en rail réduit UNIQUEMENT via le repli emoji ci-dessus
-     (jamais les deux en même temps, voir la media query : brand-name y est
-     de toute façon déjà masquée, comportement inchangé de ce côté-là). */
   .sidebar-brand .brand-name{font-size:19px; font-weight:800; letter-spacing:-.01em; color:var(--ink); display:none;}
   /* Logo fourni par l'utilisateur (2026-09, remplacé une troisième fois par
      une nouvelle version "Hoop Manager" : "utilise ce logo en fait") : fond
@@ -538,10 +546,8 @@
      des pixels de bord pour éviter tout liseré, voir le script de traitement)
      puis rogné au plus près du contenu, avant d'être intégré ici en data URI
      (fichier unique, pas d'asset externe à charger). Affiché à la place de
-     .brand-mark/.brand-name en sidebar déployée ; l'ancien repère emoji reste
-     utilisé pour le rail réduit en dessous de 900px (voir la media query plus
-     bas) où le logo complet, bien trop large, deviendrait illisible une fois
-     écrasé dans ~48px de large. Taille et centrage (retour utilisateur : "mets
+     .brand-mark/.brand-name à toute taille d'écran (plus de repli rail
+     réduit, voir plus haut). Taille et centrage (retour utilisateur : "mets
      le un peu plus gros et centre le plus dans la cassette de gauche") :
      hauteur portée de 34 à 46px et .sidebar-brand centré horizontalement (voir
      justify-content:center ci-dessus) plutôt que collé à gauche. */
