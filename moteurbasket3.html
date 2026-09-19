@@ -1207,6 +1207,78 @@
      ailleurs dans l'app. */
   .gain-line.attendance-line{padding-bottom:4px;}
   .attendance-breakdown{margin-top:3px; font-size:11px; color:var(--ink-faint);}
+
+  /* -------------------------------------------------------------------
+     Tutoriel d'accueil (retour utilisateur, 2026-09 : aperçu jetable
+     d'abord discuté en HTML séparé, "mets le sur la vraie maquette du jeu
+     et on regarde comment ça rend", cette fois posé directement dans le
+     jeu réel : ouvre vraiment les pages Ordres/Salle/Académie de jeunes
+     via TAB_HANDLERS et éclaire un vrai élément de la page à la fois, voir
+     TOUR_STEPS/startRealTour tout en bas de ce fichier). Même gabarit
+     visuel (voile + halo box-shadow sur l'élément ciblé + bulle) que
+     l'aperçu jetable précédent. z-index élevé (600+) : au-dessus de tout
+     le reste de l'appli (le plus haut existant avant ce bloc était 500,
+     voir #upgradeConfirmOverlay). Récompense affichée UNIQUEMENT sur la
+     dernière étape de chaque thème, mais PAS ENCORE créditée au budget
+     réel du club (juste montrée dans le récapitulatif du tutoriel) : voir
+     le commentaire au-dessus de TOUR_STEPS pour la raison. -->
+  .tour-scrim{position:fixed; inset:0; z-index:600;}
+  .tour-target{
+    position:relative; z-index:601;
+    box-shadow:0 0 0 4px var(--amber), 0 0 0 9999px rgba(6,10,16,.75);
+    border-radius:8px;
+  }
+  .tab-btn.tour-target{background:var(--panel-2); color:var(--ink);}
+  .tour-callout{
+    position:fixed; z-index:602; width:300px; background:var(--panel); border:1px solid var(--amber);
+    border-radius:var(--radius); padding:16px 18px; box-shadow:0 12px 32px rgba(0,0,0,.4);
+    max-height:calc(100vh - 32px); overflow-y:auto;
+  }
+  .tour-callout.wide{width:360px;}
+  .tour-callout .tour-step-label{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--amber); font-weight:800; margin:0 0 6px;}
+  .tour-callout h3{margin:0 0 8px; font-size:15px;}
+  .tour-callout p{margin:0; font-size:13px; color:var(--ink-dim); line-height:1.5;}
+  .tour-tip{
+    display:flex; gap:8px; margin-top:10px; padding:8px 10px; background:var(--panel-2);
+    border-radius:8px; font-size:12px; color:var(--ink-dim); line-height:1.45;
+  }
+  .tour-tip b{color:var(--ink); font-weight:800; flex:0 0 auto;}
+  .tour-reward{
+    display:inline-flex; align-items:center; gap:6px; margin-top:12px; padding:6px 10px;
+    background:rgba(51,180,161,.12); border:1px solid rgba(51,180,161,.4); border-radius:999px;
+    color:var(--ok); font-weight:800; font-size:12.5px;
+  }
+  .tour-actions{display:flex; align-items:center; justify-content:space-between; margin-top:16px;}
+  .tour-dots{display:flex; gap:4px; flex-wrap:wrap; max-width:130px;}
+  .tour-dot{width:5px; height:5px; border-radius:50%; background:var(--line); flex:0 0 auto;}
+  .tour-dot.done{background:var(--ok);}
+  .tour-dot.current{background:var(--amber);}
+  .tour-btns{display:flex; gap:8px;}
+  .tour-btn{border:none; border-radius:8px; padding:8px 14px; font-weight:800; font-size:12.5px; cursor:pointer; font-family:inherit;}
+  .tour-btn.primary{background:var(--amber); color:var(--amber-ink);}
+  .tour-btn.ghost{background:transparent; color:var(--ink-faint);}
+  .tour-skip{position:absolute; top:12px; right:14px; background:none; border:none; color:var(--ink-faint); font-size:12px; cursor:pointer; text-decoration:underline;}
+  .tour-center-overlay{position:fixed; inset:0; background:rgba(6,10,16,.72); z-index:610; display:flex; align-items:center; justify-content:center; padding:16px;}
+  .tour-center-box{width:100%; max-width:400px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:26px; text-align:center; position:relative;}
+  .tour-center-box .tour-emoji{font-size:34px; margin-bottom:10px;}
+  .tour-center-box h2{margin:0 0 10px; font-size:19px;}
+  .tour-center-box p{margin:0 0 4px; font-size:13.5px; color:var(--ink-dim); line-height:1.55;}
+  .tour-recap{margin-top:16px; text-align:left; background:var(--panel-2); border-radius:8px; padding:12px 14px; max-height:220px; overflow-y:auto;}
+  .tour-recap-row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-dim); padding:4px 0; border-bottom:1px solid var(--line-soft);}
+  .tour-recap-row:last-of-type{border-bottom:none;}
+  .tour-recap-row b{color:var(--ok); font-weight:800;}
+  .tour-total{margin-top:12px; padding:12px; background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.35); border-radius:8px; color:var(--amber); font-weight:800; font-size:15px;}
+  .tour-center-box .tour-btn{margin-top:18px; width:100%; padding:11px;}
+  .tour-toast{
+    position:fixed; top:20px; left:50%; transform:translate(-50%,-16px); z-index:620;
+    background:var(--ok); color:#04241f; font-weight:800; font-size:13px; padding:9px 16px;
+    border-radius:999px; opacity:0; transition:opacity .25s, transform .25s; pointer-events:none;
+  }
+  .tour-toast.show{opacity:1; transform:translate(-50%,0);}
+  .tour-launch-btn{
+    display:inline-block; margin-top:12px; background:var(--amber); color:var(--amber-ink); border:none;
+    padding:9px 16px; border-radius:999px; font-weight:800; font-size:12.5px; cursor:pointer; font-family:inherit;
+  }
 </style>
 </head>
 <body>
@@ -1799,6 +1871,15 @@
     <div class="section">
       <h2>Guide</h2>
       <p class="training-intro">Comment fonctionnent les différentes mécaniques du club, regroupées ici pour ne pas encombrer chaque onglet.</p>
+      <!-- Retour utilisateur (2026-09) : "mets le sur la vraie maquette du
+           jeu et on regarde comment ça rend" : lance le tutoriel d'accueil
+           directement sur les vraies pages du jeu (voir startRealTour tout
+           en bas de ce fichier). Placé ici plutôt que déclenché
+           automatiquement à l'ouverture du jeu : la mise en scène finale
+           (premier lancement, récompenses réellement créditées) reste à
+           décider, ce bouton sert pour l'instant à voir le rendu et le
+           revoir à volonté. -->
+      <button type="button" class="tour-launch-btn" id="tourLaunchBtn">Lancer le tutoriel d'accueil (aperçu)</button>
 
       <div class="guide-entry">
         <h3>Effectif &amp; feuille de match</h3>
@@ -10847,6 +10928,11 @@ function buildTeamPanel(team, side, opts = {}) {
   leftCol.appendChild(makeLabel("3 priorités offensives"));
   const tGrid = document.createElement("div");
   tGrid.className = "tactic-grid";
+  // id stable (retour utilisateur, 2026-09 : tutoriel d'accueil qui ouvre
+  // vraiment cette page et éclaire chaque élément un par un, voir
+  // TOUR_STEPS/startRealTour plus bas) : identifie ce bloc sans dépendre
+  // d'une classe CSS qui pourrait un jour être réutilisée ailleurs.
+  if (side === "a") tGrid.id = "ordresOffTacticsGrid";
   OFF_TACTICS_LIST.forEach(t => {
     const chip = document.createElement("label");
     chip.className = "tactic-chip" + (team.offensivePriorities.includes(t) ? " checked" : "");
@@ -10881,6 +10967,7 @@ function buildTeamPanel(team, side, opts = {}) {
 
   leftCol.appendChild(makeLabel("Défense"));
   const defSel = document.createElement("select");
+  if (side === "a") defSel.id = "ordresDefenseSelect"; // voir commentaire id sur tGrid plus haut
   DEF_LIST.forEach(d => {
     const o = document.createElement("option");
     o.value = d; o.textContent = d; if (d === team.defense) o.selected = true;
@@ -10896,6 +10983,7 @@ function buildTeamPanel(team, side, opts = {}) {
 
   leftCol.appendChild(makeLabel("Rythme"));
   const rhSel = document.createElement("select");
+  if (side === "a") rhSel.id = "ordresRhythmSelect"; // voir commentaire id sur tGrid plus haut
   RHYTHM_LIST.forEach(r => {
     const o = document.createElement("option");
     o.value = r; o.textContent = r; if (r === team.rhythm) o.selected = true;
@@ -10946,10 +11034,12 @@ function buildTeamPanel(team, side, opts = {}) {
     return sel;
   };
 
-  addTacticSelect("Gestion de fin de match", ENDGAME_MANAGEMENT_LIST, "endgameManagement");
+  const endgameSel = addTacticSelect("Gestion de fin de match", ENDGAME_MANAGEMENT_LIST, "endgameManagement");
+  if (side === "a") endgameSel.id = "ordresEndgameSelect"; // voir commentaire id sur tGrid plus haut
 
   const tierRow = document.createElement("div");
   tierRow.className = "tier-toggle";
+  if (side === "a") tierRow.id = "ordresTierToggle"; // voir commentaire id sur tGrid plus haut
   const tierBtnDebutant = document.createElement("button");
   tierBtnDebutant.type = "button";
   tierBtnDebutant.className = "tier-toggle-btn" + (team.tacticalTier === "débutant" ? " active" : "");
@@ -10976,6 +11066,7 @@ function buildTeamPanel(team, side, opts = {}) {
 
   const confirmedBlock = document.createElement("div");
   confirmedBlock.className = "tactic-confirmee-block" + (team.tacticalTier === "confirmée" ? "" : " hidden");
+  if (side === "a") confirmedBlock.id = "ordresConfirmedBlock"; // voir commentaire id sur tGrid plus haut
   leftCol.appendChild(confirmedBlock);
 
   // Même gabarit que addTacticSelect ci-dessus, mais ajoute au conteneur
@@ -11006,11 +11097,20 @@ function buildTeamPanel(team, side, opts = {}) {
     return sel;
   };
 
-  addTacticSelectIn(confirmedBlock, "Défense sur écrans", SCREEN_DEFENSE_LIST, "screenDefense");
-  addTacticSelectIn(confirmedBlock, "Aide défensive", HELP_DEFENSE_LIST, "helpDefense");
-  addTacticSelectIn(confirmedBlock, "Gestion du post-up", POST_DEFENSE_LIST, "postDefense");
-  addTacticSelectIn(confirmedBlock, "Close-out", CLOSEOUT_STYLE_LIST, "closeoutStyle");
-  addTacticSelectIn(confirmedBlock, "Rebond offensif", OFF_REBOUND_STYLE_LIST, "offRebStyle");
+  const screenSel = addTacticSelectIn(confirmedBlock, "Défense sur écrans", SCREEN_DEFENSE_LIST, "screenDefense");
+  const helpSel = addTacticSelectIn(confirmedBlock, "Aide défensive", HELP_DEFENSE_LIST, "helpDefense");
+  const postSel = addTacticSelectIn(confirmedBlock, "Gestion du post-up", POST_DEFENSE_LIST, "postDefense");
+  const closeoutSel = addTacticSelectIn(confirmedBlock, "Close-out", CLOSEOUT_STYLE_LIST, "closeoutStyle");
+  const offRebSel = addTacticSelectIn(confirmedBlock, "Rebond offensif", OFF_REBOUND_STYLE_LIST, "offRebStyle");
+  // ids stables (voir commentaire id sur tGrid plus haut) : un par réglage,
+  // pour que le tutoriel éclaire chacun individuellement.
+  if (side === "a") {
+    screenSel.id = "ordresScreenDefenseSelect";
+    helpSel.id = "ordresHelpDefenseSelect";
+    postSel.id = "ordresPostDefenseSelect";
+    closeoutSel.id = "ordresCloseoutSelect";
+    offRebSel.id = "ordresOffRebSelect";
+  }
 
   // --- Surveiller : jusqu'à MAX_WATCH_ASSIGNMENTS affectations {position,
   // focus}, chacune sur sa propre ligne (poste + focus), avec une option
@@ -11019,6 +11119,7 @@ function buildTeamPanel(team, side, opts = {}) {
   confirmedBlock.appendChild(makeLabel("Surveiller (joueurs adverses ciblés)"));
   const watchWrap = document.createElement("div");
   watchWrap.className = "watch-assignments";
+  if (side === "a") watchWrap.id = "ordresWatchAssignments"; // voir commentaire id sur tGrid plus haut
   const renderWatchRows = () => {
     watchWrap.innerHTML = "";
     for (let i = 0; i < MAX_WATCH_ASSIGNMENTS; i++) {
@@ -11071,6 +11172,7 @@ function buildTeamPanel(team, side, opts = {}) {
   confirmedBlock.appendChild(watchWrap);
 
   const hint = document.createElement("div");
+  if (side === "a") hint.id = "ordresLineupEditor"; // voir commentaire id sur tGrid plus haut
   if (editable) {
     hint.className = "lineup-editor";
     renderLineupEditor(team, hint, { onDirty });
@@ -14736,6 +14838,365 @@ const TAB_HANDLERS = {
   statshebdo: showStatsHebdoSection,
   entrainement: showTrainingSection,
 };
+
+// ---------------------------------------------------------------------
+// Tutoriel d'accueil (retour utilisateur, 2026-09) : après plusieurs
+// itérations sur un aperçu HTML jetable séparé (dupliquant la mise en page
+// du jeu), "mets le sur la vraie maquette du jeu et on regarde comment ça
+// rend" : posé ici directement sur les VRAIES pages, ouvertes via les mêmes
+// TAB_HANDLERS que la sidebar, avec un vrai élément de chaque page éclairé
+// un par un (voir les id ajoutés dans buildTeamPanel, et les id déjà
+// existants #academyGraduatesHolder etc. pour l'Académie de jeunes). Encore
+// un aperçu de rendu à ce stade : les récompenses ci-dessous s'affichent
+// dans le récapitulatif du tutoriel (toast + écran de fin) mais ne sont PAS
+// créditées au vrai budget du club (team.budget) ni synchronisées au
+// serveur, tant que le contenu et le déclenchement définitifs (premier
+// lancement automatique ? bouton permanent ?) n'ont pas été validés.
+// Déclenché pour l'instant par #tourLaunchBtn (onglet Guide), jamais
+// automatiquement.
+// ---------------------------------------------------------------------
+const TOUR_STEPS = [
+  {
+    kind: "center", emoji: "🏀",
+    title: "Bienvenue sur Hoop Manager !",
+    text: "Un tour du club avant de prendre les commandes, page par page. Une prime à chaque thème terminé. Vous pouvez passer le tutoriel à tout moment depuis le lien en haut de chaque bulle.",
+  },
+
+  {
+    kind: "spotlight", topic: "Effectif", page: "dashboard",
+    target: '.tab-btn.sidebar-link[data-tab="effectif"]', pos: "right",
+    title: "Votre effectif",
+    text: "Le roster complet du club : poste, attributs (physique, adresse, défense...), forme du jour et historique de matchs pour chaque joueur.",
+    tip: "Un joueur peut couvrir plusieurs postes en tant que remplaçant, pratique en cas de blessure ou de suspension.",
+    reward: 15000,
+  },
+
+  { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresRoundDateTime",
+    title: "Pour quel match ?",
+    text: "En haut de la page, le prochain match auquel s'appliquent les ordres réglés ci-dessous. Si plusieurs journées sont à venir, un menu déroulant apparaît juste ici pour préparer une AUTRE journée à l'avance.",
+    tip: "Une journée déjà préparée à l'avance affiche un petit indicateur ● dans ce menu.",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresLineupEditor", wide: true,
+    title: "La feuille de match",
+    text: "Placez vos 5 titulaires directement sur le terrain, un par poste. Complétez vos remplaçants dans le tableau juste en dessous, un même remplaçant peut couvrir plusieurs postes à la fois.",
+    tip: "Sans cinq titulaires complet aligné, le match est perdu par forfait (20-0) : vérifiez toujours vos disponibilités avant la date du match.",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresOffTacticsGrid", wide: true,
+    title: "Priorités offensives",
+    text: "Choisissez jusqu'à 3 systèmes offensifs parmi 10 (Pick & Roll, Transition rapide, Post-up, Isolation...). Chacun modifie la répartition des tirs tentés (intérieur/mi-distance/3 points), les pertes de balle et le rythme.",
+    tip: "Deux priorités complémentaires (par exemple Pick & Roll + Transition rapide) se combinent ; trois priorités trop opposées peuvent se neutraliser.",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresDefenseSelect",
+    title: "Défense",
+    text: "Un seul système parmi 5 : Homme à homme (neutre), Zone press (pression sur les extérieurs adverses, fatigue importante), Box and one (cible le meilleur joueur adverse), Zone extérieure et Zone intérieure (renforcent un secteur du terrain au détriment de l'autre).",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresRhythmSelect",
+    title: "Rythme",
+    text: "Lent, Normal ou Rapide : fixe le nombre de possessions jouées, donc le nombre d'occasions de marquer de chaque côté.",
+    tip: "Un rythme rapide crée plus d'occasions des deux côtés, mais fatigue davantage votre effectif au fil du match.",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresEndgameSelect",
+    title: "Gestion de fin de match",
+    text: "Ce réglage est toujours visible, quel que soit votre niveau tactique. En Adaptatif, l'équipe qui mène large lève le pied dès le 3e quart-temps, et le rythme s'accélère légèrement dans les 5 dernières minutes d'un match serré.",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresTierToggle",
+    title: "Débutant ou confirmée",
+    text: "Ce bouton ne change RIEN au moteur du match : il choisit juste combien de réglages tactiques s'affichent à l'écran. Une équipe restée en Débutant joue avec des valeurs standards, exactement comme si elle avait activé le mode confirmée sans rien changer.",
+    tip: "Passez en Confirmée dès que vous voulez affiner un point précis (par exemple neutraliser le pivot adverse) : les réglages suivants apparaissent alors.",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresScreenDefenseSelect",
+    title: "Défense sur écrans",
+    text: "Comment vos joueurs réagissent sur un écran adverse : passer au-dessus, passer en-dessous, switcher, ou prendre à deux le porteur de balle.",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresHelpDefenseSelect",
+    title: "Aide défensive",
+    text: "Faible laisse plus de pénétrations mais garde les tireurs plus serrés à l'extérieur. Forte protège mieux le panier, mais laisse plus de tirs à 3 points ouverts.",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresPostDefenseSelect",
+    title: "Gestion du post-up",
+    text: "S'applique aux tirs pris dos au panier : pousser le porteur vers le fond ou vers le centre, ou prendre à deux (plus de pertes de balle provoquées, mais aussi plus de fautes).",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresCloseoutSelect",
+    title: "Close-out",
+    text: "Contrôlé est le réglage neutre. Agressif conteste mieux les tirs extérieurs réellement pris, au prix d'un désavantage accru si le tireur pénètre plutôt derrière une fermeture trop appuyée.",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresOffRebSelect",
+    title: "Rebond offensif",
+    text: "Prudent limite les rebonds offensifs tentés, sans jamais donner de bonus de transition à l'adversaire en cas d'échec. Agressif en capte davantage, mais un échec laisse la défense adverse repartir plus vite en contre-attaque.",
+  },
+  { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresWatchAssignments", wide: true,
+    title: "Surveiller un joueur adverse",
+    text: "Jusqu'à 3 affectations poste + focus (empêcher le post-up, coller sur les pénétrations, harceler le tir extérieur, priorité au rebond, couper du ballon). Chaque focus donne un bonus défensif ciblé, avec une petite contrepartie ailleurs pour le défenseur concerné.",
+    tip: "Réservez ces créneaux aux vraies menaces adverses (meilleur marqueur, pivot dominant) plutôt qu'à toute l'équipe : l'effet est ciblé, pas collectif.",
+    reward: 50000,
+  },
+
+  { kind: "spotlight", topic: "Entraînement", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="entrainement"]', pos: "right",
+    title: "Entraînement hebdomadaire",
+    text: "Chaque semaine, choisissez un programme (tir à 3 points, rebond, défense extérieure...) et un ou plusieurs postes à qui l'appliquer. Cibler un seul poste donne le plein rendement ; l'étendre à toute l'équipe touche plus de joueurs mais dilue l'effet.",
+    tip: "Un joueur qui n'a pas assez joué cette semaine progresse moins, même avec le bon programme : gardez un œil sur son temps de jeu cumulé.",
+    reward: 20000,
+  },
+  { kind: "spotlight", topic: "Marché", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="marche"]', pos: "right",
+    title: "Le marché des transferts",
+    text: "Recrutez des joueurs libres ou mettez les vôtres aux enchères. Chaque enchère dure un temps limité, et les autres clubs peuvent surenchérir jusqu'au bout.",
+    tip: "Une enchère gagnée s'ajoute immédiatement à votre masse salariale : vérifiez votre budget avant de vous engager.",
+    reward: 25000,
+  },
+  { kind: "spotlight", topic: "Staff", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="staff"]', pos: "right",
+    title: "Constituez votre staff",
+    text: "Entraîneur, analyste vidéo, recruteur : chacun a 5 niveaux, avec un coût et un effet croissants. L'analyste vidéo révèle par exemple certaines caractéristiques cachées des joueurs adverses avant un match.",
+    tip: "Un bon entraîneur accélère durablement la progression de tout l'effectif à l'entraînement, pas seulement d'un joueur.",
+    reward: 20000,
+  },
+
+  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#academyGraduatesHolder",
+    title: "Historique du centre de formation",
+    text: "La liste des jeunes formés dans votre académie qui sont ensuite passés pro : un aperçu de ce que votre filière de formation a déjà produit pour le club.",
+  },
+  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#academiePendingBanner",
+    title: "La décision à 18 ans",
+    text: "À ses 18 ans, un jeune de l'académie doit être soit promu dans l'effectif pro, soit libéré définitivement. Sans décision avant la saison suivante, il est automatiquement libéré.",
+    tip: "Le vrai potentiel d'un jeune reste caché derrière une estimation à 3 paliers jusqu'à sa promotion : la décision comporte donc une part de pari.",
+  },
+  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#trainingCenterCurrentPanel",
+    title: "Le centre de formation",
+    text: "Le même Centre de formation que dans l'onglet Salle, mais géré directement ici : agrandissable palier par palier, il accélère la progression automatique de tous vos jeunes tant qu'ils ont moins de 18 ans.",
+  },
+  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#youthRosterHolder",
+    title: "Effectif jeunes",
+    text: "15 places maximum. Un jeune signé progresse automatiquement chaque jour, sans match ni choix d'entraînement de votre part, tant qu'il n'a pas 18 ans.",
+  },
+  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#youthCandidatesHolder",
+    title: "Prospects du recruteur",
+    text: "Un recruteur (onglet Staff) fait remonter des prospects de 15 à 17 ans : jusqu'à 5 propositions en attente à la fois, chacune expire si elle reste trop longtemps sans réponse.",
+    tip: "Chaque prospect signé rejoint directement l'académie : pas d'enchère ni de négociation, contrairement au marché des transferts.",
+    reward: 40000,
+  },
+
+  { kind: "spotlight", topic: "Économie", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="economie"]', pos: "right",
+    title: "Suivez vos finances",
+    text: "Billetterie, droits TV et sponsors d'un côté ; salaires des joueurs et du staff de l'autre. Un déficit qui dure finit par pénaliser le club.",
+    tip: "Le prix des billets se règle depuis l'onglet Salle, pas ici : ajustez-le pour équilibrer affluence et recettes.",
+    reward: 15000,
+  },
+
+  { kind: "spotlight", topic: "Salle", page: "salle", target: "#arenaVisualCard",
+    title: "Votre salle actuelle",
+    text: "L'image de votre salle actuelle. Une salle plus grande accueille plus de spectateurs à chaque match à domicile, donc plus de recettes de billetterie.",
+  },
+  { kind: "spotlight", topic: "Salle", page: "salle", target: "#arenaCurrentPanel",
+    title: "Palier et agrandissement",
+    text: "Le nom et la capacité de votre salle actuelle, avec une flèche pour l'agrandir au palier suivant quand vous en avez les moyens (8 paliers en tout, du Petit gymnase à l'Arena nationale).",
+  },
+  { kind: "spotlight", topic: "Salle", page: "salle", target: "#seatCategoriesHolder", wide: true,
+    title: "Prix des billets",
+    text: "Trois catégories de places (gradins, tribune, loges), chacune avec son propre prix. Un prix plus élevé rapporte plus par spectateur, mais peut réduire l'affluence si les supporters jugent que ça ne vaut pas le coup.",
+    tip: "Ajustez catégorie par catégorie plutôt qu'en bloc : les loges tolèrent des hausses plus fortes que les gradins.",
+  },
+  { kind: "spotlight", topic: "Salle", page: "salle", target: '[data-facility-card="gym"]',
+    title: "Salle de musculation",
+    text: "Réduit le risque de blessure de vos joueurs. Plusieurs paliers payants au-delà du niveau de base, chacun un cran plus efficace que le précédent.",
+  },
+  { kind: "spotlight", topic: "Salle", page: "salle", target: '[data-facility-card="wellness"]',
+    title: "Espace bien-être",
+    text: "Réduit la fatigue accumulée par vos joueurs au fil des matchs et des entraînements. Même principe que la salle de musculation : plusieurs paliers payants.",
+  },
+  { kind: "spotlight", topic: "Salle", page: "salle", target: '[data-facility-card="tvStation"]',
+    title: "Station TV",
+    text: "Un revenu hebdomadaire fixe une fois construite, qui augmente à chaque palier. Un investissement unique qui rapporte ensuite semaine après semaine.",
+  },
+  { kind: "spotlight", topic: "Salle", page: "salle", target: "[data-training-center-card]",
+    title: "Centre de formation",
+    text: "Accélère la progression de tous vos jeunes de l'académie tant qu'ils ont moins de 18 ans. Se gère ici, mais le détail de votre académie (effectif jeunes, prospects) vit dans son propre onglet.",
+  },
+  { kind: "spotlight", topic: "Salle", page: "salle", target: "[data-fan-shop-card]",
+    title: "Boutique des supporters",
+    text: "Un revenu hebdomadaire fixe une fois construite, qui augmente à chaque palier, comme la Station TV.",
+    tip: "Ces infrastructures se financent chacune indépendamment : inutile d'attendre d'avoir fini d'en payer une pour commencer la suivante si le budget suit.",
+    reward: 15000,
+  },
+
+  { kind: "center", emoji: "🏆", final: true,
+    title: "Prêt à jouer !",
+    text: "Le club est entre vos mains. Bonne saison, coach.",
+  },
+];
+
+const TOUR_PAGE_KEY_TO_TAB = { dashboard: "club", ordres: "ordres", salle: "salle", academie: "academie" };
+let tourStepIdx = 0;
+let tourEarnedRewards = []; // { title, reward }, remis à zéro à chaque lancement
+let tourRootEl = null, tourToastEl = null;
+
+function tourFmtEuro(n) { return n.toLocaleString("fr-FR") + " €"; }
+function tourTotalReward() { return tourEarnedRewards.reduce((sum, r) => sum + r.reward, 0); }
+
+function tourShowToast(text) {
+  tourToastEl.textContent = text;
+  tourToastEl.classList.add("show");
+  setTimeout(() => tourToastEl.classList.remove("show"), 1400);
+}
+
+function tourClearSpotlight() {
+  document.querySelectorAll(".tour-target").forEach(el => el.classList.remove("tour-target"));
+}
+
+// Ouvre vraiment la page correspondante (mêmes gestionnaires que la
+// sidebar, voir TAB_HANDLERS) plutôt qu'une maquette : Ordres/Salle/
+// Académie de jeunes se comportent exactement comme si le joueur avait
+// cliqué dans le menu. Avant de quitter Ordres, restaure le bloc
+// "tactique confirmée" à son VRAI état (voir reveal sur TOUR_STEPS
+// ci-dessus) : le tutoriel le révèle temporairement pour l'expliquer sans
+// jamais toucher team.tacticalTier ni resynchroniser quoi que ce soit au
+// serveur, donc rien à annuler côté données, juste l'affichage.
+function tourShowPage(pageKey) {
+  const key = pageKey || "dashboard";
+  const confirmedBlock = document.getElementById("ordresConfirmedBlock");
+  if (confirmedBlock && teamA.tacticalTier !== "confirmée") confirmedBlock.classList.add("hidden");
+  const tabKey = TOUR_PAGE_KEY_TO_TAB[key];
+  if (TAB_HANDLERS[tabKey]) TAB_HANDLERS[tabKey]();
+}
+
+// Même logique de positionnement que l'aperçu jetable précédent, avec le
+// correctif apporté suite au retour utilisateur "l'étape 11 se met trop bas
+// sur l'écran, et après je peux plus avancer le tuto" : scrollIntoView
+// AVANT de mesurer, puis un clamp vertical final appliqué aux deux
+// branches (sidebar et élément de page), pour que la bulle (et son bouton
+// Suivant) reste TOUJOURS dans l'écran visible, quelle que soit la hauteur
+// de la page réelle (la colonne "tactique confirmée" de l'onglet Ordres
+// est maintenant longue).
+function tourPositionCallout(callout, targetEl) {
+  if (targetEl.scrollIntoView) targetEl.scrollIntoView({ block: "center", inline: "nearest" });
+  const rect = targetEl.getBoundingClientRect();
+  const calloutRect = callout.getBoundingClientRect();
+  const isSidebarBtn = !!targetEl.closest(".sidebar");
+  let top, left;
+  if (isSidebarBtn) {
+    left = rect.right + 16;
+    top = rect.top - 10;
+  } else {
+    left = rect.left;
+    top = rect.bottom + 14;
+    if (top + calloutRect.height > window.innerHeight - 16) {
+      top = rect.top - calloutRect.height - 14;
+    }
+  }
+  left = Math.min(Math.max(16, left), window.innerWidth - calloutRect.width - 16);
+  top = Math.min(Math.max(16, top), window.innerHeight - calloutRect.height - 16);
+  callout.style.left = left + "px";
+  callout.style.top = top + "px";
+}
+
+function tourRender() {
+  tourClearSpotlight();
+  tourRootEl.innerHTML = "";
+  const step = TOUR_STEPS[tourStepIdx];
+  const spotlightSteps = TOUR_STEPS.filter(s => s.kind === "spotlight");
+
+  if (step.kind === "center") {
+    tourShowPage("dashboard");
+    const overlay = document.createElement("div");
+    overlay.className = "tour-center-overlay";
+    const recapHtml = step.final
+      ? `<div class="tour-recap">${tourEarnedRewards.map(r => `<div class="tour-recap-row"><span>${r.title}</span><b>+ ${tourFmtEuro(r.reward)}</b></div>`).join("")}</div>
+         <div class="tour-total">Prime totale gagnée : ${tourFmtEuro(tourTotalReward())}</div>`
+      : "";
+    overlay.innerHTML = `
+      <div class="tour-center-box">
+        ${!step.final ? `<button class="tour-skip" id="tourSkipBtn">Passer le tutoriel</button>` : ""}
+        <div class="tour-emoji">${step.emoji}</div>
+        <h2>${step.title}</h2>
+        <p>${step.text}</p>
+        ${recapHtml}
+        <button class="tour-btn primary" id="tourNextBtn">${step.final ? "Commencer à jouer" : "C'est parti"}</button>
+      </div>`;
+    tourRootEl.appendChild(overlay);
+  } else {
+    tourShowPage(step.page);
+    if (step.reveal) {
+      const block = document.getElementById(step.reveal);
+      if (block) block.classList.remove("hidden");
+    }
+
+    const scrim = document.createElement("div");
+    scrim.className = "tour-scrim";
+    tourRootEl.appendChild(scrim);
+
+    const targetEl = document.querySelector(step.target);
+    if (!targetEl) { tourNext(); return; } // page pas encore prête (rendu async) : n'arrête pas le tutoriel pour autant
+    targetEl.classList.add("tour-target");
+
+    const callout = document.createElement("div");
+    callout.className = "tour-callout" + (step.wide ? " wide" : "");
+    const dotsHtml = spotlightSteps.map(s => {
+      const realIdx = TOUR_STEPS.indexOf(s);
+      const cls = realIdx < tourStepIdx ? "done" : (realIdx === tourStepIdx ? "current" : "");
+      return `<span class="tour-dot ${cls}"></span>`;
+    }).join("");
+    callout.innerHTML = `
+      <button class="tour-skip" id="tourSkipBtn">Passer</button>
+      <div class="tour-step-label">${step.topic} · étape ${spotlightSteps.indexOf(step) + 1} / ${spotlightSteps.length}</div>
+      <h3>${step.title}</h3>
+      <p>${step.text}</p>
+      ${step.tip ? `<div class="tour-tip"><b>Astuce</b><span>${step.tip}</span></div>` : ""}
+      ${step.reward ? `<div class="tour-reward">+ ${tourFmtEuro(step.reward)} à la validation</div>` : ""}
+      <div class="tour-actions">
+        <div class="tour-dots">${dotsHtml}</div>
+        <div class="tour-btns">
+          <button class="tour-btn ghost" id="tourPrevBtn" ${tourStepIdx === 1 ? "disabled style='visibility:hidden'" : ""}>Précédent</button>
+          <button class="tour-btn primary" id="tourNextBtn">Suivant</button>
+        </div>
+      </div>`;
+    tourRootEl.appendChild(callout);
+    tourPositionCallout(callout, targetEl);
+  }
+
+  const skipBtn = document.getElementById("tourSkipBtn");
+  if (skipBtn) skipBtn.addEventListener("click", tourEndTour);
+  const prevBtn = document.getElementById("tourPrevBtn");
+  if (prevBtn) prevBtn.addEventListener("click", () => { tourStepIdx--; tourRender(); });
+  document.getElementById("tourNextBtn").addEventListener("click", tourNext);
+}
+
+function tourNext() {
+  const step = TOUR_STEPS[tourStepIdx];
+  if (step.kind === "spotlight" && step.reward) {
+    tourEarnedRewards.push({ title: step.topic, reward: step.reward });
+    tourShowToast(`+ ${tourFmtEuro(step.reward)}, merci d'avoir exploré ${step.topic} !`);
+  }
+  if (step.final) { tourEndTour(); return; }
+  tourStepIdx++;
+  tourRender();
+}
+
+function tourEndTour() {
+  tourClearSpotlight();
+  tourShowPage("dashboard");
+  if (tourRootEl) tourRootEl.innerHTML = "";
+}
+
+// Point d'entrée (#tourLaunchBtn, onglet Guide) : crée le conteneur du
+// tutoriel s'il n'existe pas encore (jamais laissé dans le DOM en dehors
+// d'un tutoriel en cours) et repart toujours de la première étape.
+function startRealTour() {
+  if (!tourRootEl) {
+    tourRootEl = document.createElement("div");
+    tourRootEl.id = "tourRoot";
+    document.body.appendChild(tourRootEl);
+  }
+  if (!tourToastEl) {
+    tourToastEl = document.createElement("div");
+    tourToastEl.className = "tour-toast";
+    tourToastEl.id = "tourToast";
+    document.body.appendChild(tourToastEl);
+  }
+  tourStepIdx = 0;
+  tourEarnedRewards = [];
+  tourRender();
+}
+
+const tourLaunchBtn = document.getElementById("tourLaunchBtn");
+if (tourLaunchBtn) tourLaunchBtn.addEventListener("click", startRealTour);
 
 // ---------------------------------------------------------------------
 // Événements UI
