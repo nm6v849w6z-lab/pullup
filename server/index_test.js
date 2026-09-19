@@ -490,8 +490,13 @@ async function main() {
       // Fait avancer le temps de plusieurs jours pour que la coupe progresse
       // réellement (au moins un tour résolu) avant un nouveau reset — sans
       // ça, "la coupe est de nouveau fraîche après reset" serait un test
-      // vide (elle l'était déjà avant).
-      now += 3 * DAY_MS + MATCH_BROADCAST_DURATION_MS;
+      // vide (elle l'était déjà avant). 9 jours de marge (pas 3) : le jour 0
+      // est désormais ancré sur le prochain MERCREDI (retour utilisateur,
+      // 2026-09, voir dailyAnchoredCalendarStartAt dans server/calendar.js),
+      // donc jusqu'à 7 jours peuvent s'écouler avant même le tout premier
+      // match, contre 1 jour au plus avec l'ancien ancrage "aujourd'hui ou
+      // demain".
+      now += 9 * DAY_MS + MATCH_BROADCAST_DURATION_MS;
       await request(server, "GET", "/api/state", undefined, { "X-TipIn-Token": managerA.token });
       const saveMidCup = await request(server, "GET", "/api/save", undefined, { "X-TipIn-Token": managerA.token });
       if (saveMidCup.body.league.cup.rounds.length < 2 && saveMidCup.body.league.cup.champion === null) {
@@ -596,9 +601,10 @@ async function main() {
         console.log("✅ POST /api/reset-multi-league avec le jeton d'un manager non-admin (Lyon B7b) répond 403 — la ligue n'est pas touchée.");
 
         // Fait avancer le temps pour que la coupe progresse réellement avant
-        // le reset (même prérequis que le test admin historique) — sinon
-        // "coupe fraîche après reset" serait un test vide.
-        now += 3 * DAY_MS + MATCH_BROADCAST_DURATION_MS;
+        // le reset (même prérequis que le test admin historique, même marge
+        // de 9 jours pour la même raison : jour 0 ancré sur le prochain
+        // mercredi) : sinon "coupe fraîche après reset" serait un test vide.
+        now += 9 * DAY_MS + MATCH_BROADCAST_DURATION_MS;
         await request(server7b, "GET", "/api/state", undefined, { "X-TipIn-Token": adminManager7b.token });
         const saveMidCup7b = await request(server7b, "GET", "/api/save", undefined, { "X-TipIn-Token": adminManager7b.token });
         if (saveMidCup7b.body.league.cup.rounds.length < 2 && saveMidCup7b.body.league.cup.champion === null) {

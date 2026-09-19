@@ -95,22 +95,37 @@ const HOUR_MS = 60 * 60 * 1000;
 }
 
 // ---------------------------------------------------------------------
-// 4) dailyAnchoredCalendarStartAt : ancre sur le jour 0 à 10h Paris, ou le
-//    lendemain si 10h est déjà passé ce jour-là (même esprit que
-//    anchoredCalendarStartAt pour le calendrier classique).
+// 4) dailyAnchoredCalendarStartAt : ancre le jour 0 sur le prochain MERCREDI
+//    à 10h Paris (retour utilisateur, 2026-09, réinitialisation d'une ligue
+//    multi-manager : "il faut que les matchs commencent à partir de
+//    mercredi, ça laissera le temps à tout le monde pour prendre ses marques
+//    et faire des emplettes") : le mercredi du jour même si créé avant 10h
+//    ce jour-là, sinon le mercredi suivant (jamais un autre jour de semaine).
+//    2026-09-16 est un mercredi, 2026-09-17 un jeudi, 2026-09-23 le mercredi
+//    suivant.
 // ---------------------------------------------------------------------
 {
-  const beforeTenAm = parisEpochForLocalTime(2026, 9, 16, 8); // 8h Paris, avant le créneau
-  const start1 = dailyAnchoredCalendarStartAt(beforeTenAm);
+  const monday = parisEpochForLocalTime(2026, 9, 14, 8); // lundi, avant le mercredi
+  const start1 = dailyAnchoredCalendarStartAt(monday);
   if (start1 !== parisEpochForLocalTime(2026, 9, 16, 10)) {
-    throw new Error("❌ Créé avant 10h, le jour 0 devrait être AUJOURD'HUI à 10h Paris.");
+    throw new Error("❌ Créé un lundi, le jour 0 devrait être le MERCREDI de la même semaine à 10h Paris.");
   }
-  const afterTenAm = parisEpochForLocalTime(2026, 9, 16, 14); // 14h Paris, après le créneau
-  const start2 = dailyAnchoredCalendarStartAt(afterTenAm);
-  if (start2 !== parisEpochForLocalTime(2026, 9, 17, 10)) {
-    throw new Error("❌ Créé après 10h, le jour 0 devrait basculer sur LE LENDEMAIN à 10h Paris (le tout premier match doit rester à venir).");
+  const wednesdayBeforeTenAm = parisEpochForLocalTime(2026, 9, 16, 8); // mercredi, 8h Paris, avant le créneau
+  const start2 = dailyAnchoredCalendarStartAt(wednesdayBeforeTenAm);
+  if (start2 !== parisEpochForLocalTime(2026, 9, 16, 10)) {
+    throw new Error("❌ Créé un mercredi avant 10h, le jour 0 devrait être CE MERCREDI à 10h Paris.");
   }
-  console.log("✅ dailyAnchoredCalendarStartAt ancre bien le jour 0 sur 10h Paris, en basculant au lendemain si 10h est déjà passé.");
+  const wednesdayAfterTenAm = parisEpochForLocalTime(2026, 9, 16, 14); // mercredi, 14h Paris, après le créneau
+  const start3 = dailyAnchoredCalendarStartAt(wednesdayAfterTenAm);
+  if (start3 !== parisEpochForLocalTime(2026, 9, 23, 10)) {
+    throw new Error("❌ Créé un mercredi après 10h, le jour 0 devrait basculer sur le MERCREDI SUIVANT à 10h Paris (jamais le jeudi).");
+  }
+  const thursday = parisEpochForLocalTime(2026, 9, 17, 9); // jeudi, le lendemain du mercredi ci-dessus
+  const start4 = dailyAnchoredCalendarStartAt(thursday);
+  if (start4 !== parisEpochForLocalTime(2026, 9, 23, 10)) {
+    throw new Error("❌ Créé un jeudi, le jour 0 devrait être le MERCREDI de la semaine suivante à 10h Paris.");
+  }
+  console.log("✅ dailyAnchoredCalendarStartAt ancre bien le jour 0 sur le prochain mercredi à 10h Paris, en basculant à la semaine suivante si ce mercredi est déjà passé.");
 }
 
 // ---------------------------------------------------------------------
@@ -150,6 +165,22 @@ const HOUR_MS = 60 * 60 * 1000;
       if (serverTime !== clientTime) {
         throw new Error(`❌ dailyAnchoredScheduledTimeForCupRound(dayIndex=${dayIndex}) diverge : serveur=${serverTime}, navigateur (engine.js)=${clientTime}.`);
       }
+    }
+  });
+  // Même garde-fou pour dailyAnchoredCalendarStartAt lui-même (l'ancrage sur
+  // le mercredi), à divers instants `now` de la semaine, à cheval sur les
+  // deux bascules DST.
+  const nows = [
+    parisEpochForLocalTime(2026, 9, 14, 8),  // lundi, hors DST
+    parisEpochForLocalTime(2026, 9, 16, 14), // mercredi après 10h, hors DST
+    parisEpochForLocalTime(2026, 10, 24, 9), // veille de la bascule d'hiver
+    parisEpochForLocalTime(2026, 3, 28, 9),  // veille de la bascule d'été
+  ];
+  nows.forEach(now => {
+    const serverStart = dailyAnchoredCalendarStartAt(now);
+    const clientStart = Engine.dailyAnchoredCalendarStartAt(now);
+    if (serverStart !== clientStart) {
+      throw new Error(`❌ dailyAnchoredCalendarStartAt(now=${now}) diverge : serveur=${serverStart}, navigateur (engine.js)=${clientStart}.`);
     }
   });
   console.log("✅ La copie côté navigateur (engine.js) du calendrier ancré quotidien est identique à server/calendar.js, y compris à cheval sur les deux bascules DST (mars/octobre 2026).");

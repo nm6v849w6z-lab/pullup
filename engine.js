@@ -4755,6 +4755,14 @@ const CALENDAR_PARIS_TIME_ZONE = "Europe/Paris";
 const CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS = [10, 19];
 const CALENDAR_DAILY_ANCHORED_CUP_HOUR = 15;
 
+// Jour civil visé pour le "jour 0" (voir dailyAnchoredCalendarStartAt plus
+// bas), convention Date#getUTCDay (0 = dimanche ... 6 = samedi) : copie de la
+// même constante côté serveur (server/calendar.js), retour utilisateur,
+// 2026-09, à la réinitialisation d'une ligue multi-manager, "il faut que les
+// matchs commencent à partir de mercredi, ça laissera le temps à tout le
+// monde pour prendre ses marques et faire des emplettes".
+const CALENDAR_DAILY_ANCHORED_FIRST_MATCH_WEEKDAY = 3; // mercredi
+
 function parisUtcOffsetMs(utcMs) {
   const parts = parisLocalDateParts(utcMs);
   const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
@@ -4807,12 +4815,30 @@ function dailyAnchoredCalendarConfig() {
   return { dailyAnchored: true };
 }
 
+// Nombre de jours civils entre `dateParts` et le prochain jour tombant sur
+// `targetWeekday` (convention Date#getUTCDay, 0 = dimanche ... 6 = samedi) :
+// 0 si `dateParts` est déjà ce jour-là, sinon 1 à 6. Copie de la même
+// fonction côté serveur (server/calendar.js).
+function daysUntilParisWeekday(dateParts, targetWeekday) {
+  const currentWeekday = new Date(Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day)).getUTCDay();
+  return (targetWeekday - currentWeekday + 7) % 7;
+}
+
+// Instant réel (epoch ms) du tout premier créneau ("jour 0", 10h à Paris) :
+// ancré sur le prochain CALENDAR_DAILY_ANCHORED_FIRST_MATCH_WEEKDAY (mercredi)
+// à compter du jour de création `now`, création comprise si elle tombe déjà
+// un mercredi avant 10h. Si ce mercredi est aujourd'hui mais que 10h est déjà
+// passé, bascule sur le mercredi SUIVANT (+7 jours) plutôt que le lendemain
+// (jeudi) : le rythme reste toujours "championnat à partir d'un mercredi".
+// Copie de la même fonction côté serveur (server/calendar.js).
 function dailyAnchoredCalendarStartAt(now) {
   const today = parisLocalDateParts(now);
-  const firstSlot = parisEpochForLocalTime(today.year, today.month, today.day, CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[0]);
+  const daysAhead = daysUntilParisWeekday(today, CALENDAR_DAILY_ANCHORED_FIRST_MATCH_WEEKDAY);
+  const nextWednesday = daysAhead > 0 ? addParisCalendarDays(today, daysAhead) : today;
+  const firstSlot = parisEpochForLocalTime(nextWednesday.year, nextWednesday.month, nextWednesday.day, CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[0]);
   if (firstSlot > now) return firstSlot;
-  const tomorrow = addParisCalendarDays(today, 1);
-  return parisEpochForLocalTime(tomorrow.year, tomorrow.month, tomorrow.day, CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[0]);
+  const followingWednesday = addParisCalendarDays(today, daysAhead + 7);
+  return parisEpochForLocalTime(followingWednesday.year, followingWednesday.month, followingWednesday.day, CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[0]);
 }
 
 function dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour) {

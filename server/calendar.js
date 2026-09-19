@@ -237,7 +237,16 @@ const PARIS_TIME_ZONE = "Europe/Paris";
 // inexistantes (contrairement à une heure comme 2h30 lors du passage à
 // l'heure d'été, qui n'existe tout simplement pas ce jour-là).
 const DAILY_ANCHORED_CHAMPIONSHIP_HOURS = [10, 19]; // 10h puis 19h, championnat
-const DAILY_ANCHORED_CUP_HOUR = 15; // 15h, coupe (seulement les jours où un tour est dû — voir dailyAnchoredScheduledTimeForCupRound)
+const DAILY_ANCHORED_CUP_HOUR = 15; // 15h, coupe (seulement les jours où un tour est dû, voir dailyAnchoredScheduledTimeForCupRound)
+
+// Jour civil visé pour le "jour 0" (voir dailyAnchoredCalendarStartAt
+// ci-dessous), convention Date#getUTCDay (0 = dimanche ... 6 = samedi) :
+// retour utilisateur, 2026-09, à la réinitialisation d'une ligue
+// multi-manager, "il faut que les matchs commencent à partir de mercredi, ça
+// laissera le temps à tout le monde pour prendre ses marques et faire des
+// emplettes" (composer son effectif, passer par le marché des transferts
+// avant le tout premier match).
+const DAILY_ANCHORED_FIRST_MATCH_WEEKDAY = 3; // mercredi
 
 // Décalage Paris/UTC (en ms, +1h ou +2h selon la saison) à l'instant `utcMs`
 // — calculé en formatant `utcMs` dans le fuseau Europe/Paris puis en
@@ -308,17 +317,29 @@ function dailyAnchoredCalendarConfig() {
   return { dailyAnchored: true };
 }
 
-// Instant réel (epoch ms) du tout premier créneau ("jour 0", 10h à Paris) —
-// ancré sur le jour de création `now`, sauf si 10h est déjà passé ce
-// jour-là, auquel cas bascule sur le lendemain (comme anchoredCalendarStartAt
-// plus haut, pour que le tout premier match reste à venir plutôt que déjà
-// écoulé dès la création).
+// Nombre de jours civils entre `dateParts` et le prochain jour tombant sur
+// `targetWeekday` (convention Date#getUTCDay, 0 = dimanche ... 6 = samedi) :
+// 0 si `dateParts` est déjà ce jour-là, sinon 1 à 6.
+function daysUntilParisWeekday(dateParts, targetWeekday) {
+  const currentWeekday = new Date(Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day)).getUTCDay();
+  return (targetWeekday - currentWeekday + 7) % 7;
+}
+
+// Instant réel (epoch ms) du tout premier créneau ("jour 0", 10h à Paris) :
+// ancré sur le prochain DAILY_ANCHORED_FIRST_MATCH_WEEKDAY (mercredi) à
+// compter du jour de création `now`, création comprise si elle tombe déjà un
+// mercredi avant 10h. Si ce mercredi est aujourd'hui mais que 10h est déjà
+// passé, bascule sur le mercredi SUIVANT (+7 jours) plutôt que le lendemain
+// (jeudi) : le rythme reste toujours "championnat à partir d'un mercredi",
+// jamais un jour de semaine arbitraire dépendant de l'heure de création.
 function dailyAnchoredCalendarStartAt(now) {
   const today = parisLocalDateParts(now);
-  const firstSlot = parisEpochForLocalTime(today.year, today.month, today.day, DAILY_ANCHORED_CHAMPIONSHIP_HOURS[0]);
+  const daysAhead = daysUntilParisWeekday(today, DAILY_ANCHORED_FIRST_MATCH_WEEKDAY);
+  const nextWednesday = daysAhead > 0 ? addParisCalendarDays(today, daysAhead) : today;
+  const firstSlot = parisEpochForLocalTime(nextWednesday.year, nextWednesday.month, nextWednesday.day, DAILY_ANCHORED_CHAMPIONSHIP_HOURS[0]);
   if (firstSlot > now) return firstSlot;
-  const tomorrow = addParisCalendarDays(today, 1);
-  return parisEpochForLocalTime(tomorrow.year, tomorrow.month, tomorrow.day, DAILY_ANCHORED_CHAMPIONSHIP_HOURS[0]);
+  const followingWednesday = addParisCalendarDays(today, daysAhead + 7);
+  return parisEpochForLocalTime(followingWednesday.year, followingWednesday.month, followingWednesday.day, DAILY_ANCHORED_CHAMPIONSHIP_HOURS[0]);
 }
 
 // Instant réel (epoch ms) du créneau à l'heure civile `hour` (10/15/19) du
@@ -367,7 +388,9 @@ return {
   setFastTestMode, isFastTestModeEnabled, getDefaultCalendarConfig,
   // Calendrier ancré quotidien (voir bloc dédié ci-dessus) :
   PARIS_TIME_ZONE, DAILY_ANCHORED_CHAMPIONSHIP_HOURS, DAILY_ANCHORED_CUP_HOUR,
+  DAILY_ANCHORED_FIRST_MATCH_WEEKDAY,
   parisUtcOffsetMs, parisLocalDateParts, addParisCalendarDays, parisEpochForLocalTime,
+  daysUntilParisWeekday,
   dailyAnchoredCalendarConfig, dailyAnchoredCalendarStartAt,
   dailyAnchoredScheduledTimeForSlot,
   dailyAnchoredDayIndexForChampionshipRound, dailyAnchoredSlotIndexForChampionshipRound,
