@@ -1633,6 +1633,13 @@ class Team {
     // même si le joueur est ensuite vendu, libéré ou prend sa retraite : un
     // compteur historique, pas un effectif courant.
     this.academyGraduates = 0;
+    // Retour utilisateur (2026-09) : "l'historique du centre de formation,
+    // c'est les joueurs qui étaient dans le centre de formation et qui sont
+    // passés pro" : liste (pas juste un compteur) des jeunes promus, dans
+    // l'ordre chronologique, affichée par renderAcademyGraduatesStat (côté
+    // client) à la place du simple total ci-dessus. Chaque entrée est un
+    // instantané figé au moment de la promotion (nom, poste).
+    this.academyGraduatesHistory = [];
 
     this.budget = CLUB_STARTING_BUDGET;
 
@@ -2157,6 +2164,14 @@ class Team {
     // uniquement ici (jamais à la signature du candidat, ni pendant la
     // croissance automatique tant qu'il n'a pas encore 18 ans).
     this.academyGraduates = (this.academyGraduates || 0) + 1;
+    // Historique du centre de formation (voir this.academyGraduatesHistory
+    // au constructeur) : même évènement que le compteur ci-dessus, mais
+    // garde le nom/poste de CHAQUE jeune promu au lieu de se limiter à un
+    // total, pour l'affichage détaillé côté client
+    // (renderAcademyGraduatesStat, moteurbasket3.html).
+    (this.academyGraduatesHistory = this.academyGraduatesHistory || []).push({
+      name: player.name, position: player.position,
+    });
     // Rejoint le banc plutôt qu'un titulaire (même convention que l'achat
     // d'un joueur sur le marché des transferts, voir League._resolveListing)
     // pour ne jamais déloger un titulaire déjà choisi manuellement — sauf
@@ -4974,6 +4989,11 @@ function serializeTeam(team) {
     // ci-dessus) : DOIT survivre au rechargement comme le reste, sinon ce
     // compteur historique repartirait de zéro à chaque redémarrage serveur.
     academyGraduates: team.academyGraduates || 0,
+    // Historique du centre de formation (voir
+    // Team.academyGraduatesHistory/promoteYouthPlayer ci-dessus) : même
+    // logique de persistance que youthCandidates/youthPlayers ci-dessus
+    // (copie superficielle de chaque entrée, DOIT survivre au rechargement).
+    academyGraduatesHistory: (team.academyGraduatesHistory || []).map(h => ({ ...h })),
     // Décisions manager en attente pour un jeune de 18 ans (voir
     // Team.pendingYouthDecisions ci-dessus) : simple tableau d'id de
     // joueurs, DOIT survivre au rechargement (sinon un manager perdrait la
@@ -5122,6 +5142,13 @@ function teamFromSave(data) {
   // sauvegarde d'avant cette fonctionnalité retombe proprement sur 0 (déjà
   // la valeur posée par le constructeur Team), jamais undefined/NaN.
   team.academyGraduates = typeof data.academyGraduates === "number" ? data.academyGraduates : 0;
+  // Historique du centre de formation (voir Team.academyGraduatesHistory
+  // ci-dessus) : `[]` par défaut pour une sauvegarde d'avant cette
+  // fonctionnalité (déjà la valeur posée par le constructeur Team), jamais
+  // undefined.
+  team.academyGraduatesHistory = Array.isArray(data.academyGraduatesHistory)
+    ? data.academyGraduatesHistory.map(h => ({ ...h }))
+    : [];
   team.pendingYouthDecisions = Array.isArray(data.pendingYouthDecisions) ? [...data.pendingYouthDecisions] : [];
   // Scoutisme (voir Team.scoutedAttrs/lastVideoSessionAt ci-dessus) :
   // `{}`/`null` par défaut (déjà la valeur posée par le constructeur Team)

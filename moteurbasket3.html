@@ -830,6 +830,23 @@
   .mvp-callout{background:var(--panel-2); border:1px solid var(--amber); border-radius:var(--radius); padding:12px 14px; margin-bottom:14px;}
   .mvp-callout h4{color:var(--amber); text-transform:none; letter-spacing:0; font-size:13px; margin:0 0 6px;}
   .mvp-callout p{margin:0; font-size:13.5px; color:var(--ink);}
+  /* Retour utilisateur (2026-09) : "centre le dans la brique pour que ce
+     soit harmonieux avec la brique du dessous" (bandeau "🎓 Historique du
+     centre de formation" de la page Académie de jeunes, voir
+     renderAcademyGraduatesStat) : .mvp-callout est réutilisé tel quel (voir
+     plus haut, partagé avec le MVP de la journée sur l'onglet Ligue, aligné
+     à gauche là-bas et laissé inchangé), donc ce centrage est scopé à
+     #academyGraduatesHolder plutôt que sur .mvp-callout lui-même, pour
+     matcher la carte Centre de formation juste en dessous
+     (facility-card-center, elle aussi centrée). */
+  #academyGraduatesHolder .mvp-callout{text-align:center;}
+  /* Liste des jeunes promus (voir Team.academyGraduatesHistory/
+     renderAcademyGraduatesStat) : puces retirées (une liste à puces
+     centrée est disgracieuse, les puces ne s'alignent pas avec le texte
+     centré au-dessus/dessous), une ligne par jeune. */
+  .academy-graduates-list{list-style:none; margin:0; padding:0; font-size:13.5px; color:var(--ink);}
+  .academy-graduates-list li{padding:2px 0;}
+  .academy-graduate-position{color:var(--ink-faint); font-size:12px;}
   /* 3 colonnes fixes (retour utilisateur, 2026-09 : "mets plutot les
      classements de stats sur 3 colonnes plutot que 4 comme là, comme ça on a
      pas de trou") : avec 6 catégories (LEAGUE_STAT_CATEGORIES) et
@@ -1402,9 +1419,13 @@
       <h2>🧒 Académie de jeunes</h2>
       <!-- Retour utilisateur (2026-09) : "le haut [de cette page] est
            affreusement vide : on a une toute petite brique et c'est tout.
-           il faut trouver du contenu à ajouter" : palmarès du club (voir
-           Team.academyGraduates/renderAcademyGraduatesStat), juste sous le
-           titre de la page, avant même la bannière de décision 18 ans. -->
+           il faut trouver du contenu à ajouter" puis "l'historique du
+           centre de formation, c'est les joueurs qui étaient dans le
+           centre de formation et qui sont passés pro" : historique des
+           jeunes promus (voir
+           Team.academyGraduatesHistory/renderAcademyGraduatesStat), juste
+           sous le titre de la page, avant même la bannière de décision
+           18 ans. -->
       <div id="academyGraduatesHolder"></div>
       <div id="academiePendingBanner"></div>
     </div>
@@ -3303,6 +3324,16 @@ class Team {
     // même si le joueur est ensuite vendu, libéré ou prend sa retraite : un
     // compteur historique, pas un effectif courant.
     this.academyGraduates = 0;
+    // Retour utilisateur (2026-09) : "l'historique du centre de formation,
+    // c'est les joueurs qui étaient dans le centre de formation et qui sont
+    // passés pro" : liste (pas juste un compteur) des jeunes promus, dans
+    // l'ordre chronologique, affichée par renderAcademyGraduatesStat à la
+    // place du simple total ci-dessus. Chaque entrée est un instantané figé
+    // au moment de la promotion (nom, poste) : ne change plus après coup
+    // même si le joueur est ensuite renommé/vendu/libéré (aucun champ de ce
+    // genre n'existe actuellement, mais par cohérence avec le principe d'un
+    // historique).
+    this.academyGraduatesHistory = [];
 
     this.budget = CLUB_STARTING_BUDGET;
 
@@ -3804,6 +3835,13 @@ class Team {
     // uniquement ici (jamais à la signature du candidat, ni pendant la
     // croissance automatique tant qu'il n'a pas encore 18 ans).
     this.academyGraduates = (this.academyGraduates || 0) + 1;
+    // Historique du centre de formation (voir this.academyGraduatesHistory
+    // au constructeur) : même évènement que le compteur ci-dessus, mais
+    // garde le nom/poste de CHAQUE jeune promu au lieu de se limiter à un
+    // total, pour l'affichage détaillé côté renderAcademyGraduatesStat.
+    (this.academyGraduatesHistory = this.academyGraduatesHistory || []).push({
+      name: player.name, position: player.position,
+    });
     // Rejoint le banc plutôt qu'un titulaire (même convention que l'achat
     // d'un joueur sur le marché des transferts, voir League._resolveListing)
     // pour ne jamais déloger un titulaire déjà choisi manuellement — sauf
@@ -6415,6 +6453,11 @@ function serializeTeam(team) {
     // ci-dessus) : DOIT survivre au rechargement comme le reste, sinon ce
     // compteur historique repartirait de zéro à chaque redémarrage serveur.
     academyGraduates: team.academyGraduates || 0,
+    // Historique du centre de formation (voir
+    // Team.academyGraduatesHistory/promoteYouthPlayer ci-dessus) : même
+    // logique de persistance que youthCandidates/youthPlayers ci-dessus
+    // (copie superficielle de chaque entrée, DOIT survivre au rechargement).
+    academyGraduatesHistory: (team.academyGraduatesHistory || []).map(h => ({ ...h })),
     // Décisions manager en attente pour un jeune de 18 ans (voir
     // Team.pendingYouthDecisions ci-dessus) : simple tableau d'id de
     // joueurs, DOIT survivre au rechargement (sinon un manager perdrait la
@@ -6559,6 +6602,13 @@ function teamFromSave(data) {
   // sauvegarde d'avant cette fonctionnalité retombe proprement sur 0 (déjà
   // la valeur posée par le constructeur Team), jamais undefined/NaN.
   team.academyGraduates = typeof data.academyGraduates === "number" ? data.academyGraduates : 0;
+  // Historique du centre de formation (voir Team.academyGraduatesHistory
+  // ci-dessus) : `[]` par défaut pour une sauvegarde d'avant cette
+  // fonctionnalité (déjà la valeur posée par le constructeur Team), jamais
+  // undefined.
+  team.academyGraduatesHistory = Array.isArray(data.academyGraduatesHistory)
+    ? data.academyGraduatesHistory.map(h => ({ ...h }))
+    : [];
   team.pendingYouthDecisions = Array.isArray(data.pendingYouthDecisions) ? [...data.pendingYouthDecisions] : [];
   // Scoutisme (voir Team.scoutedAttrs/lastVideoSessionAt ci-dessus) :
   // `{}`/`null` par défaut (déjà la valeur posée par le constructeur Team)
@@ -12577,22 +12627,31 @@ function renderAcademieSection() {
   renderYouthCandidates();
 }
 
-// Palmarès du club (voir Team.academyGraduates/promoteYouthPlayer côté
-// moteur, retour utilisateur 2026-09 cité plus haut sur le HTML statique) :
-// nombre total de jeunes formés par l'académie et promus en pro au fil de
-// l'histoire du club, jamais remis à zéro (même style de mise en avant que
-// .mvp-callout sur l'onglet Ligue, réutilisé tel quel). 0/1/pluriel gérés
-// séparément pour ne jamais afficher "0 jeunes" ou "1 jeunes".
+// Historique du centre de formation (voir
+// Team.academyGraduatesHistory/promoteYouthPlayer côté moteur, retour
+// utilisateur 2026-09 : "l'historique du centre de formation, c'est les
+// joueurs qui étaient dans le centre de formation et qui sont passés pro",
+// précision après un premier essai qui n'affichait qu'un simple compteur
+// au lieu de la vraie liste demandée) : la liste, dans l'ordre où ils ont
+// été promus, des jeunes formés par l'académie ayant rejoint l'effectif
+// pro au fil de l'histoire du club (jamais retirée de la liste, même si le
+// joueur est ensuite vendu/libéré/prend sa retraite — un historique, pas
+// l'effectif courant). Même style de mise en avant que .mvp-callout sur
+// l'onglet Ligue, réutilisé tel quel.
 function renderAcademyGraduatesStat() {
   const holder = document.getElementById("academyGraduatesHolder");
   if (!holder) return;
-  const n = teamA.academyGraduates || 0;
-  const text = n === 0
-    ? "Aucun jeune formé par l'académie n'a encore rejoint l'effectif pro."
-    : n === 1
-      ? "1 jeune formé par l'académie a rejoint l'effectif pro depuis la création du club."
-      : `${n} jeunes formés par l'académie ont rejoint l'effectif pro depuis la création du club.`;
-  holder.innerHTML = `<div class="mvp-callout"><h4>🎓 Palmarès du club</h4><p>${text}</p></div>`;
+  const history = teamA.academyGraduatesHistory || [];
+  if (history.length === 0) {
+    holder.innerHTML = `<div class="mvp-callout"><h4>🎓 Historique du centre de formation</h4>` +
+      `<p>Aucun jeune formé par l'académie n'a encore rejoint l'effectif pro.</p></div>`;
+    return;
+  }
+  const items = history.map(h =>
+    `<li>${escapeHtml(h.name)}${h.position ? ` <span class="academy-graduate-position">(${escapeHtml(h.position)})</span>` : ""}</li>`
+  ).join("");
+  holder.innerHTML = `<div class="mvp-callout"><h4>🎓 Historique du centre de formation</h4>` +
+    `<ul class="academy-graduates-list">${items}</ul></div>`;
 }
 
 function academieFeedback(message, ok) {
