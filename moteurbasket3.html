@@ -9550,30 +9550,41 @@ let countdownTimer = null;
 // coup d'envoi de currentMatch est atteint (retour utilisateur d'origine :
 // "il faut que le match se joue tout seul à 19h par exemple") — donc le
 // minuteur tourne toujours, sans plus rien écrire dans le DOM.
+// Bug corrigé (retour utilisateur, 2026-09 : "quand je suis sur la page
+// donner vos ordres et qu'un match en live se déroule, au bout de quelques
+// secondes, la page saute et je vais sur le live sans le vouloir") :
+// scheduledTimeForCurrentMatch() ne connaît que currentMatch.round (le TOUT
+// prochain match), jamais la journée réellement AFFICHÉE (selectedOrdresRound,
+// voir defaultOrdresRound/renderOrdresGrid). Si currentMatch.round est DÉJÀ
+// en direct, defaultOrdresRound() a délibérément basculé l'écran sur une
+// AUTRE journée future à préparer (voir son commentaire : "la page ordres
+// doit être accessible même quand un match se joue"), mais le coup d'envoi de
+// currentMatch.round est alors nécessairement déjà passé — sans cette garde,
+// ça forcerait un retour au direct même en train de préparer une AUTRE
+// journée à l'avance. N'a de sens QUE tant que currentMatch n'est pas encore
+// en direct : dès qu'il l'est, plus rien à attendre ni à forcer, le direct
+// reste accessible manuellement via l'onglet Live (déjà visible, voir
+// updateLiveTabVisibility), même vérification que le `liveNow` de
+// defaultOrdresRound.
+//
+// Extrait en fonction à part (retour utilisateur, 2026-09, deuxième vague :
+// "on a tjrs un problème, des fois sans rien faire on va sur live (moins
+// souvent qu'avant quand même)") : startCountdown() était le SEUL endroit
+// corrigé, mais le gestionnaire "visibilitychange" plus bas (résynchronise
+// l'écran quand l'onglet du navigateur redevient visible après avoir été en
+// arrière-plan) souffrait EXACTEMENT du même bug, avec le même
+// scheduledTimeForCurrentMatch() non gardé — d'où un saut vers le direct plus
+// rare (seulement en revenant sur l'onglet du navigateur, pas à chaque tick
+// du compte à rebours) mais toujours présent. Les deux appellent maintenant
+// cette même garde.
+function currentMatchAlreadyLive() {
+  return !!(currentMatch && league && league.liveMatch &&
+    !liveMatchHasEnded(league.liveMatch) && league.liveMatch.round === currentMatch.round);
+}
+
 function startCountdown() {
   clearInterval(countdownTimer);
-  // Bug corrigé (retour utilisateur, 2026-09 : "quand je suis sur la page
-  // donner vos ordres et qu'un match en live se déroule, au bout de quelques
-  // secondes, la page saute et je vais sur le live sans le vouloir") :
-  // scheduledTimeForCurrentMatch() ne connaît que currentMatch.round (le
-  // TOUT prochain match), jamais la journée réellement AFFICHÉE
-  // (selectedOrdresRound, voir defaultOrdresRound/renderOrdresGrid). Si
-  // currentMatch.round est DÉJÀ en direct, defaultOrdresRound() a
-  // délibérément basculé l'écran sur une AUTRE journée future à préparer
-  // (voir son commentaire : "la page ordres doit être accessible même quand
-  // un match se joue"), mais le coup d'envoi de currentMatch.round est alors
-  // nécessairement déjà passé, donc `remaining <= 0` se déclenchait tout de
-  // suite (après le premier tick(), d'où le délai de "quelques secondes" le
-  // temps du fetch de refreshFromServerAndReenter), forçant un retour au
-  // direct même en train de préparer une AUTRE journée à l'avance. Ce
-  // minuteur n'a de sens QUE tant que currentMatch n'est pas encore en
-  // direct : dès qu'il l'est, plus rien à attendre ni à forcer ici, le
-  // direct reste accessible manuellement via l'onglet Live (déjà visible,
-  // voir updateLiveTabVisibility), même vérification que le `liveNow` de
-  // defaultOrdresRound.
-  const liveNow = currentMatch && league && league.liveMatch &&
-    !liveMatchHasEnded(league.liveMatch) && league.liveMatch.round === currentMatch.round;
-  if (liveNow) return;
+  if (currentMatchAlreadyLive()) return;
   const scheduledAt = scheduledTimeForCurrentMatch();
   if (!scheduledAt) return;
 
@@ -11559,8 +11570,24 @@ function enterLiveMatch(liveMatch, opts) {
 }
 
 function applyTimelineItem(item) {
-  if (item.kind === "event") applyEvent(item.payload);
-  else showPauseBanner(item.payload);
+  if (item.kind === "event") {
+    applyEvent(item.payload);
+    return;
+  }
+  showPauseBanner(item.payload);
+  // Retour utilisateur (2026-09) : "dans les commentaires du match, quand il
+  // y a un temps mort [...] il faudrait aussi que ça soit mis dans le
+  // texte. temps mort demandé par ...." — jusqu'ici un temps mort n'était
+  // visible que via la banderole temporaire ci-dessus (disparaît après sa
+  // durée), jamais dans le fil de commentaires (#feed), qui lui reste
+  // consultable pendant tout le match. Uniquement les temps morts (jamais
+  // mi-temps/pause de quart-temps : jamais demandé par l'utilisateur, et déjà
+  // clairement marqués par les repères "Fin du quart-temps"/"Début du..."
+  // dans le fil). Appelé INCONDITIONNELLEMENT (contrairement à
+  // showPauseBanner, qui se tait si la pause est déjà entièrement écoulée au
+  // moment de la reprise) : le fil de commentaires est un historique
+  // persistant, un temps mort déjà passé doit quand même y apparaître.
+  if (item.payload.kind === "timeout") appendPauseFeedItem(item.payload);
 }
 
 // N'affiche la banderole de pause QUE si elle est encore en cours (une pause
@@ -11573,6 +11600,20 @@ function showPauseBanner(pause) {
   el.textContent = pause.label;
   el.classList.remove("hidden");
   liveTimers.push(setTimeout(() => el.classList.add("hidden"), remaining));
+}
+
+// Ligne de commentaire pour un temps mort (voir applyTimelineItem) — même
+// texte que la banderole (déjà attribué à l'équipe qui le demande côté
+// serveur, voir server/liveMatch.js:schedulePlayback), affichée comme un
+// repère centré, au même style que les marqueurs de début/fin de quart-temps
+// (voir appendFeedItem ci-dessous).
+function appendPauseFeedItem(pause) {
+  const feed = document.getElementById("feed");
+  const row = document.createElement("div");
+  row.className = "feed-item header";
+  row.innerHTML = `<span>${escapeHtml(pause.label)}</span>`;
+  feed.appendChild(row);
+  feed.scrollTop = feed.scrollHeight;
 }
 
 function applyEvent(ev) {
@@ -11617,12 +11658,26 @@ function applyEvent(ev) {
   syncTopbarLiveStrip();
 }
 
+// Retour utilisateur (2026-09) : "petit probleme sur l'affichage du score
+// des quart temps. c'est inversé. je pense que tu n'as pas fait le
+// correctif de l'histoire domicile/extérieur où le manager était tjrs à
+// gauche" — quarterDiffText formate l'écart d'un quart-temps dans le MÊME
+// ordre domicile-puis-extérieur que le bandeau de score principal (voir
+// .score-row.my-team-away et enterLiveMatch juste au-dessus), au lieu de
+// toujours "mon équipe (A) d'abord" comme avant ce correctif : A/B restent
+// "mon équipe"/"adversaire" en interne (voir le commentaire tout en haut du
+// fichier), seul l'ORDRE D'AFFICHAGE du texte suit currentLiveMatch.isHome.
+function quarterDiffText(diffA, diffB) {
+  const isHomeMatch = !!(currentLiveMatch && currentLiveMatch.isHome);
+  return isHomeMatch ? `${diffA}–${diffB}` : `${diffB}–${diffA}`;
+}
+
 function fillQuarterBar(q, currentScore) {
   const el = document.getElementById("qv" + q);
   if (!el) return;
   const diffA = currentScore.A - lastBoundaryScore.A;
   const diffB = currentScore.B - lastBoundaryScore.B;
-  el.textContent = `${diffA}–${diffB}`;
+  el.textContent = quarterDiffText(diffA, diffB);
   lastBoundaryScore = { A: currentScore.A, B: currentScore.B };
 }
 
@@ -11638,7 +11693,7 @@ function updateLiveQuarterBar(q, currentScore) {
   if (!el) return;
   const diffA = currentScore.A - lastBoundaryScore.A;
   const diffB = currentScore.B - lastBoundaryScore.B;
-  el.textContent = `${diffA}–${diffB}`;
+  el.textContent = quarterDiffText(diffA, diffB);
 }
 
 function appendFeedItem(ev) {
@@ -14747,12 +14802,24 @@ document.addEventListener("click", (e) => {
 // mêmes. Resynchronisé ici immédiatement via enterLiveMatch(...,
 // {keepCurrentPage:true}), qui rejoue tout l'historique déjà connu SANS
 // changer de page (mêmes garanties que les deux cas ci-dessus).
+//
+// Bug corrigé (retour utilisateur, 2026-09 : "on a tjrs un problème, des
+// fois sans rien faire on va sur live (moins souvent qu'avant quand même)") :
+// cette première branche souffrait du même bug que startCountdown() avant
+// son propre correctif (voir currentMatchAlreadyLive ci-dessus) — sur
+// l'écran Ordres en train de préparer une AUTRE journée future (parce que
+// currentMatch.round est déjà en direct, voir defaultOrdresRound),
+// scheduledAt (celui de currentMatch, PAS de la journée affichée) est déjà
+// dépassé, donc revenir sur l'onglet du navigateur après l'avoir quitté
+// (visibilitychange) forçait un saut vers le direct — sans même attendre le
+// tick du compte à rebours, d'où un bug plus rare qu'avant ce fichier mais
+// toujours là. Même garde qu'ajoutée à startCountdown.
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
   const prepSection = document.getElementById("prepSection");
   const liveSection = document.getElementById("liveSection");
   const scheduledAt = scheduledTimeForCurrentMatch();
-  if (prepSection && !prepSection.classList.contains("hidden") && scheduledAt && Date.now() >= scheduledAt) {
+  if (prepSection && !prepSection.classList.contains("hidden") && scheduledAt && Date.now() >= scheduledAt && !currentMatchAlreadyLive()) {
     refreshFromServerAndReenter();
   } else if (liveSection && !liveSection.classList.contains("hidden") && currentLiveMatch && !currentLiveMatch.forfeit && liveMatchHasEnded(currentLiveMatch)) {
     enterLiveMatch(currentLiveMatch); // rejoue tout ce qui reste (rien, désormais) et affiche l'issue finale sans animation

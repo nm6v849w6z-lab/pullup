@@ -101,7 +101,20 @@ function breakAfterQuarter(q, hasNext) {
 // horaire de départ. Pur et déterministe : mêmes événements + même
 // kickoffAt => toujours le même calendrier de diffusion (aucun Math.random
 // ici).
-function schedulePlayback(events, kickoffAt) {
+// `homeName`/`awayName` (retour utilisateur, 2026-09 : "dans les commentaires
+// du match, quand il y a un temps mort [...] il faudrait aussi que ça soit
+// mis dans le texte. temps mort demandé par ....") — permettent d'attribuer
+// chaque temps mort à une équipe ("⏱️ Temps mort demandé par {équipe}") au
+// lieu du texte générique d'avant. Toujours PUR/déterministe (voir le
+// commentaire de schedulePlayback plus haut, "aucun Math.random ici") :
+// l'équipe qui demande le temps mort est celle qui est MENÉE au score à cet
+// instant précis (comportement réaliste — on prend un temps mort pour
+// stopper une série adverse) ; à égalité, alterne entre domicile et
+// extérieur selon le numéro du temps mort dans le quart-temps (1er, 2e...),
+// jamais aléatoire. Par défaut ("Domicile"/"Extérieur") pour les appelants
+// qui ne connaissent pas encore les noms (anciens tests) — computeLiveMatch,
+// le seul appelant réel, passe toujours les vrais noms d'équipe.
+function schedulePlayback(events, kickoffAt, homeName = "Domicile", awayName = "Extérieur") {
   if (!events.length) {
     return { events: [], pauses: [], totalDurationMs: 0 };
   }
@@ -119,10 +132,12 @@ function schedulePlayback(events, kickoffAt) {
     // Répartit les TIMEOUTS_PER_QUARTER temps morts à peu près régulièrement
     // dans ce quart-temps (jamais sur le tout premier ou le tout dernier
     // événement, pour ne pas les coller à une pause de quart-temps voisine).
-    const timeoutAfterIndex = new Set();
+    // Map idxInQuarter -> son numéro d'ordre (1er/2e temps mort du
+    // quart-temps), utilisé ci-dessous pour l'alternance à égalité.
+    const timeoutOrdinalByIndex = new Map();
     for (let t = 1; t <= TIMEOUTS_PER_QUARTER; t++) {
       const pos = Math.round((t / (TIMEOUTS_PER_QUARTER + 1)) * (quarterEvents.length - 1));
-      if (pos > 0 && pos < quarterEvents.length - 1) timeoutAfterIndex.add(pos);
+      if (pos > 0 && pos < quarterEvents.length - 1) timeoutOrdinalByIndex.set(pos, t);
     }
 
     quarterEvents.forEach((ev, idxInQuarter) => {
@@ -135,8 +150,19 @@ function schedulePlayback(events, kickoffAt) {
       const gapMs = Math.max(MIN_EVENT_GAP_MS, deltaSec * SECONDS_SCALE_MS);
       cursor += gapMs;
 
-      if (timeoutAfterIndex.has(idxInQuarter)) {
-        pauses.push({ kind: "timeout", label: "⏱️ Temps mort", airAt: kickoffAt + cursor, durationMs: TIMEOUT_BREAK_MS });
+      if (timeoutOrdinalByIndex.has(idxInQuarter)) {
+        const scoreNow = ev.score || { A: 0, B: 0 };
+        const ordinal = timeoutOrdinalByIndex.get(idxInQuarter);
+        let callingTeam;
+        if (scoreNow.A < scoreNow.B) callingTeam = "home";
+        else if (scoreNow.A > scoreNow.B) callingTeam = "away";
+        else callingTeam = (ordinal % 2 === 1) ? "home" : "away";
+        const callingTeamName = callingTeam === "home" ? homeName : awayName;
+        pauses.push({
+          kind: "timeout", team: callingTeam,
+          label: `⏱️ Temps mort demandé par ${callingTeamName}`,
+          airAt: kickoffAt + cursor, durationMs: TIMEOUT_BREAK_MS,
+        });
         cursor += TIMEOUT_BREAK_MS;
       }
     });
@@ -218,7 +244,7 @@ function computeLiveMatch(Engine, league, round, homeIdx, awayIdx, kickoffAt, co
 
   const engine = new Engine.MatchEngine(home, away);
   const result = engine.simulate();
-  const { events, pauses, totalDurationMs } = schedulePlayback(result.events, kickoffAt);
+  const { events, pauses, totalDurationMs } = schedulePlayback(result.events, kickoffAt, home.name, away.name);
 
   return {
     round, kickoffAt, homeIdx, awayIdx, competition,
