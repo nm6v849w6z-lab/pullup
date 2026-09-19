@@ -497,11 +497,28 @@ function viewLiveMatchForTeam(league, teamIndex) {
   // JAMAIS finalScore, qui est déjà absolu en repère home/away — voir
   // liveMatchScoreAB côté navigateur, qui s'appuie déjà sur `isHome` pour le
   // relire correctement quel que soit le camp du spectateur).
+  //
+  // BUG corrigé (retour utilisateur, 2026-09 : "il y a un pb d'affichage,
+  // bc dia est à l'exterieur [...] j'ai l'impression que tu mets
+  // systematique l'équipe qui est sur sa session à gauche dans le live") :
+  // `ev.score` (le score A/B COURANT à cet instant précis du match, voir
+  // MatchEngine.log) n'était PAS échangé ici, alors que `ev.team`/
+  // `ev.possession` l'étaient déjà. Résultat pour un spectateur à
+  // l'extérieur : le tableau de score et les cases par quart-temps (remplis
+  // en direct à partir de `ev.score`, voir applyEvent/fillQuarterBar côté
+  // navigateur) restaient en repère domicile/extérieur BRUT, alors que le
+  // nom de son équipe restait affiché du côté "A" (repère "ma propre
+  // équipe" attendu partout ailleurs). Un match à l'extérieur affichait
+  // donc son propre score à la place de celui de l'adversaire, et
+  // inversement, pendant toute la diffusion (le score final, lui, restait
+  // correct : voir liveMatchScoreAB, déjà basé sur `isHome`, pas sur ce
+  // repère événement par événement).
   const swapTeamLabel = (label) => (label === "A" ? "B" : label === "B" ? "A" : label);
   const events = entry.events.map(ev => ({
     ...ev,
     ...(ev.team !== undefined ? { team: swapTeamLabel(ev.team) } : null),
     ...(ev.possession !== undefined ? { possession: swapTeamLabel(ev.possession) } : null),
+    ...(ev.score !== undefined ? { score: { A: ev.score.B, B: ev.score.A } } : null),
   }));
 
   return {
