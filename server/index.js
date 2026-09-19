@@ -410,6 +410,10 @@ const ACTION_ROUTES = {
   "/api/youth/decline": actions.declineYouthCandidate,
   "/api/youth/promote": actions.promoteYouthPlayer,
   "/api/youth/release": actions.releaseYouthPlayer,
+  // Médias : interviews d'après-match en attente (voir Team.pendingInterviews
+  // côté moteur et server/actions.js).
+  "/api/media/interview": actions.respondToInterview,
+  "/api/media/interview-skip": actions.skipInterview,
 };
 
 // ---------------------------------------------------------------------

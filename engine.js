@@ -1189,6 +1189,30 @@ function moraleLabel(morale) {
 }
 
 // ---------------------------------------------------------------------
+// MÉDIAS : interviews d'après-match (voir Team.pendingInterviews/
+// applyMoraleForResult/resolveInterview/skipInterview). Trois tons, chacun
+// avec un vrai compromis plutôt qu'un simple "mieux/moins bien" :
+//   - Agressif : amplifie le résultat. Le gain le plus élevé en cas de
+//     victoire (jouer les gros bras après un succès plaît aux supporters),
+//     mais aussi la pénalité la plus lourde en cas de défaite (l'arrogance
+//     après une défaite les agace davantage).
+//   - Mesuré : petit effet sûr, toujours dans le sens du résultat, sans
+//     risque particulier. Le choix "par défaut" pour qui ne veut pas y
+//     réfléchir.
+//   - Humble : gain plafonné bas en cas de victoire (pas de vantardise), mais
+//     seul ton qui tourne une défaite en effet NET POSITIF (`loss` > 0) : les
+//     supporters pardonnent plus volontiers un coach qui reconnaît ses torts.
+// `win`/`loss` s'ajoutent au delta DÉJÀ appliqué par applyMoraleForResult au
+// moment du match lui-même (le résultat sportif reste toujours le facteur
+// dominant, ceci n'est qu'un petit supplément de personnalité). Ignorer
+// l'interview (Team.skipInterview) reste toujours l'option à effet nul.
+const INTERVIEW_TONES = {
+  "Agressif": { win: 3,   loss: -3 },
+  "Mesuré":   { win: 1,   loss: -1 },
+  "Humble":   { win: 0.5, loss: 1 },
+};
+
+// ---------------------------------------------------------------------
 // GRILLE SALARIALE DES JOUEURS — le salaire hebdomadaire d'un joueur dépend
 // UNIQUEMENT de son niveau actuel (overall, voir Player.overall), fixé à sa
 // création puis RECALCULÉ UNE FOIS PAR SAISON (même cadence que le
@@ -1724,6 +1748,20 @@ class Team {
     this.fanMorale = 50;
     this.moraleHistory = [];
 
+    // Médias : interviews d'après-match en attente d'un ton de réponse
+    // (retour utilisateur, 2026-09 : "Interview d'après match qui pourrait
+    // influencer sur les supporters et les joueurs [...] une petite
+    // interaction à choix multiples [...] qui influence légèrement le moral
+    // ou l'humeur des supporters. Peu coûteux à développer, et cela ajoute
+    // de la personnalité") : un tableau, alimenté par applyMoraleForResult
+    // ci-dessous à CHAQUE match humain, vidé au fur et à mesure par
+    // resolveInterview/skipInterview (voir INTERVIEW_TONES plus bas), même
+    // esprit de file d'attente que pendingYouthDecisions plus haut, jamais
+    // bloquant pour la simulation elle-même. V1 volontairement resserrée :
+    // seul fanMorale bouge pour l'instant, pas encore Player.form (prévu
+    // pour une itération suivante une fois cette mécanique éprouvée).
+    this.pendingInterviews = [];
+
     // Affluence des derniers matchs à domicile (retour utilisateur, 2026-09 :
     // "sur l'onglet salle, il n'y a tjrs pas l'affluence des matchs
     // précédents (jusqu'à 10 matchs)") : même principe que moraleHistory
@@ -1790,12 +1828,51 @@ class Team {
   // Effet des résultats sportifs sur l'humeur : une victoire nette (gros
   // écart) enthousiasme un peu plus qu'une victoire courte, une défaite
   // sévère agace un peu plus qu'une défaite courte. Appelé à chaque match
-  // (domicile ou extérieur).
-  applyMoraleForResult(won, scoreDiff, opponentName) {
+  // (domicile ou extérieur). `round` (optionnel, championnat uniquement pour
+  // l'instant) : quand fourni, met aussi en attente une interview
+  // d'après-match (voir pendingInterviews/INTERVIEW_TONES), omis (undefined)
+  // pour tout appel qui ne concerne pas un vrai match de championnat déjà
+  // programmé (aucun test existant ne le passait avant cet ajout, donc aucune
+  // interview n'y est mise en attente, comportement inchangé pour eux).
+  applyMoraleForResult(won, scoreDiff, opponentName, round) {
     const margin = clamp(Math.abs(scoreDiff) / 40, 0, 1);
     const delta = won ? rand(3, 6) + margin * 1.5 : -(rand(2, 5) + margin * 1.5);
     this.recordMoraleEvent(won ? `Victoire contre ${opponentName}` : `Défaite contre ${opponentName}`, delta);
+    if (typeof round === "number") {
+      this.pendingInterviews = this.pendingInterviews || [];
+      this.pendingInterviews.push({ id: uid(), round, opponentName, won, scoreDiff });
+    }
     return delta;
+  }
+
+  // Résout une interview en attente avec le ton choisi par le manager (voir
+  // INTERVIEW_TONES) : ajoute un delta d'humeur, dans le sens du résultat
+  // ORIGINAL du match concerné (jamais l'inverse), puis retire l'entrée de la
+  // file. Renvoie { ok: true, delta } ou null (id introuvable/déjà traité, ou
+  // ton inconnu), jamais d'exception, comme le reste des méthodes
+  // "résoudre une file d'attente" de cette classe (voir promoteYouthPlayer).
+  resolveInterview(id, tone) {
+    this.pendingInterviews = this.pendingInterviews || [];
+    const idx = this.pendingInterviews.findIndex(i => i.id === id);
+    if (idx === -1) return null;
+    const toneCfg = INTERVIEW_TONES[tone];
+    if (!toneCfg) return null;
+    const entry = this.pendingInterviews[idx];
+    const delta = entry.won ? toneCfg.win : toneCfg.loss;
+    const resultLabel = entry.won ? "la victoire" : "la défaite";
+    this.recordMoraleEvent(`Interview (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, delta);
+    this.pendingInterviews.splice(idx, 1);
+    return { ok: true, delta };
+  }
+
+  // Ignore une interview en attente ("pas de commentaire") : aucun effet sur
+  // l'humeur, retire simplement l'entrée de la file. Renvoie true si une
+  // entrée correspondante a bien été trouvée et retirée.
+  skipInterview(id) {
+    this.pendingInterviews = this.pendingInterviews || [];
+    const before = this.pendingInterviews.length;
+    this.pendingInterviews = this.pendingInterviews.filter(i => i.id !== id);
+    return this.pendingInterviews.length !== before;
   }
 
   // Vend un joueur LISTÉ (voir Player.forSale/salePrice) : liquidation
@@ -5125,6 +5202,11 @@ function serializeTeam(team) {
     transactions: team.transactions,
     fanMorale: team.fanMorale,
     moraleHistory: team.moraleHistory,
+    // Interviews en attente (voir Team.pendingInterviews/applyMoraleForResult) :
+    // même forme de persistance que pendingYouthDecisions plus bas, simple
+    // copie superficielle de chaque entrée (objets plats, jamais de
+    // référence partagée avec team.pendingInterviews lui-même).
+    pendingInterviews: Array.isArray(team.pendingInterviews) ? team.pendingInterviews.map(i => ({ ...i })) : [],
     // Historique d'affluence (voir Team.attendanceHistory/simulateHomeAttendance
     // ci-dessus) : même rythme de persistance que moraleHistory/transactions
     // juste au-dessus, sinon l'historique affiché sur l'onglet Salle
@@ -5386,6 +5468,9 @@ function teamFromSave(data) {
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
+  // Interviews en attente (voir serializeTeam ci-dessus) : absent = sauvegarde
+  // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
+  team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
   // Historique d'affluence (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
   team.attendanceHistory = Array.isArray(data.attendanceHistory) ? data.attendanceHistory : [];
@@ -6216,7 +6301,7 @@ return {
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam,
   ARENA_LEVELS, arenaInfo, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
-  FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel,
+  FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel, INTERVIEW_TONES,
   CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,

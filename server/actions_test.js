@@ -708,6 +708,83 @@ function freshTeamAndLeague() {
 }
 
 // ---------------------------------------------------------------------
+// respondToInterview / skipInterview — Médias : interview d'après-match
+// (voir Team.pendingInterviews/applyMoraleForResult/resolveInterview/
+// skipInterview côté moteur, INTERVIEW_TONES). Un match humain avec un
+// `round` numérique met en attente une interview ; le manager choisit un
+// ton (delta selon victoire/défaite) ou l'ignore (effet nul).
+{
+  const { team, league } = freshTeamAndLeague();
+
+  const toneNames = Object.keys(E.INTERVIEW_TONES);
+  if (toneNames.length !== 3) throw new Error("❌ INTERVIEW_TONES devrait exposer exactement 3 tons.");
+  console.log("✅ INTERVIEW_TONES expose les 3 tons attendus.");
+
+  // Un appel SANS `round` (ex. simulations hors championnat) ne met rien en
+  // attente : comportement historique inchangé.
+  team.applyMoraleForResult(true, 12, "Adversaire test");
+  if (team.pendingInterviews.length !== 0) throw new Error("❌ applyMoraleForResult sans `round` ne devrait jamais mettre d'interview en attente.");
+  console.log("✅ applyMoraleForResult sans `round` ne met aucune interview en attente.");
+
+  // Victoire au round 3 : une interview est mise en attente.
+  team.applyMoraleForResult(true, 12, "Adversaire test", 3);
+  if (team.pendingInterviews.length !== 1) throw new Error("❌ applyMoraleForResult avec `round` devrait mettre une interview en attente.");
+  const winInterview = team.pendingInterviews[0];
+  if (winInterview.round !== 3 || winInterview.won !== true) throw new Error("❌ L'interview en attente devrait porter le round et le résultat du match.");
+
+  const moraleBeforeWin = team.fanMorale;
+  const aggroWinRes = actions.respondToInterview(team, 0, league, { id: winInterview.id, tone: "Agressif" }, T0);
+  if (!aggroWinRes.ok || aggroWinRes.delta !== E.INTERVIEW_TONES["Agressif"].win) throw new Error(`❌ respondToInterview (Agressif, victoire) devrait renvoyer le delta de victoire agressive : ${JSON.stringify(aggroWinRes)}`);
+  if (team.fanMorale <= moraleBeforeWin) throw new Error("❌ Une interview agressive après une victoire devrait augmenter l'humeur des supporters.");
+  if (team.pendingInterviews.length !== 0) throw new Error("❌ respondToInterview devrait retirer l'interview traitée de la file.");
+  console.log("✅ respondToInterview (Agressif, victoire) applique le bon delta et vide la file.");
+
+  // Même id rejoué : introuvable (déjà traitée).
+  const alreadyDone = actions.respondToInterview(team, 0, league, { id: winInterview.id, tone: "Mesuré" }, T0);
+  if (alreadyDone.ok) throw new Error("❌ Répondre deux fois à la même interview devrait être rejeté.");
+  console.log("✅ respondToInterview rejette une interview déjà traitée.");
+
+  // Ton inconnu.
+  team.applyMoraleForResult(false, 8, "Adversaire test", 4);
+  const lossInterview = team.pendingInterviews[team.pendingInterviews.length - 1];
+  const unknownTone = actions.respondToInterview(team, 0, league, { id: lossInterview.id, tone: "Sarcastique" }, T0);
+  if (unknownTone.ok) throw new Error("❌ Un ton inconnu devrait être rejeté.");
+  console.log("✅ respondToInterview rejette un ton inconnu.");
+
+  // Défaite, ton Humble : le SEUL cas où une défaite produit un effet NET
+  // POSITIF sur l'humeur (voir le commentaire d'INTERVIEW_TONES).
+  const moraleBeforeLoss = team.fanMorale;
+  const humbleLossRes = actions.respondToInterview(team, 0, league, { id: lossInterview.id, tone: "Humble" }, T0);
+  if (!humbleLossRes.ok || humbleLossRes.delta !== E.INTERVIEW_TONES["Humble"].loss) throw new Error(`❌ respondToInterview (Humble, défaite) devrait renvoyer le delta correspondant : ${JSON.stringify(humbleLossRes)}`);
+  if (team.fanMorale <= moraleBeforeLoss) throw new Error("❌ Une interview humble après une défaite devrait quand même augmenter l'humeur des supporters (le seul cas positif après une défaite).");
+  console.log("✅ respondToInterview (Humble, défaite) produit bien un effet net positif sur l'humeur.");
+
+  // skipInterview : effet nul, retire simplement l'entrée de la file.
+  team.applyMoraleForResult(true, 5, "Adversaire test", 5);
+  const skipTarget = team.pendingInterviews[team.pendingInterviews.length - 1];
+  const moraleBeforeSkip = team.fanMorale;
+  const skipRes = actions.skipInterview(team, 0, league, { id: skipTarget.id }, T0);
+  if (!skipRes.ok) throw new Error(`❌ skipInterview devrait accepter un id valide : ${skipRes.error}`);
+  if (team.fanMorale !== moraleBeforeSkip) throw new Error("❌ skipInterview ne devrait avoir aucun effet sur l'humeur des supporters.");
+  if (team.pendingInterviews.some(i => i.id === skipTarget.id)) throw new Error("❌ skipInterview devrait retirer l'entrée de la file.");
+  console.log("✅ skipInterview retire l'interview de la file, sans effet sur l'humeur.");
+
+  const unknownSkip = actions.skipInterview(team, 0, league, { id: "id-qui-n-existe-pas" }, T0);
+  if (unknownSkip.ok) throw new Error("❌ skipInterview devrait rejeter un id inconnu.");
+  console.log("✅ skipInterview rejette un id inconnu.");
+
+  // Round-trip serializeTeam/teamFromSave : pendingInterviews doit survivre
+  // à une sauvegarde/rechargement (convention établie pour tout champ Team).
+  team.applyMoraleForResult(true, 9, "Adversaire test", 6);
+  const beforeCount = team.pendingInterviews.length;
+  const saved = E.serializeTeam(team);
+  const reloaded = E.teamFromSave(saved);
+  if (reloaded.pendingInterviews.length !== beforeCount) throw new Error("❌ pendingInterviews devrait survivre à un round-trip serializeTeam/teamFromSave.");
+  if (reloaded.pendingInterviews[0].id !== team.pendingInterviews[0].id) throw new Error("❌ Le contenu de pendingInterviews devrait être préservé par le round-trip.");
+  console.log("✅ pendingInterviews survit à un round-trip serializeTeam/teamFromSave.");
+}
+
+// ---------------------------------------------------------------------
 // teamIndex non nul (multi-manager) — mêmes six nouvelles actions
 // (recruteur, Centre de formation, académie de jeunes) exercées sur
 // teamIndex=1, même vérification d'isolement que le reste du fichier.
@@ -757,6 +834,13 @@ function freshTeamAndLeague() {
   const multiRelease = actions.releaseYouthPlayer(multiTeam, multiTeamIndex, multiLeague, { playerId: multiCandidate2.id }, T0);
   if (!multiRelease.ok || multiTeam.youthPlayers.some(p => p.id === multiCandidate2.id)) throw new Error("❌ releaseYouthPlayer à un teamIndex non nul devrait s'appliquer à CETTE équipe.");
   console.log("✅ releaseYouthPlayer fonctionne correctement pour un teamIndex non nul (1).");
+
+  multiTeam.applyMoraleForResult(true, 10, "Adversaire test", 7);
+  const multiInterview = multiTeam.pendingInterviews[multiTeam.pendingInterviews.length - 1];
+  const multiInterviewRes = actions.respondToInterview(multiTeam, multiTeamIndex, multiLeague, { id: multiInterview.id, tone: "Mesuré" }, T0);
+  if (!multiInterviewRes.ok || multiTeam.pendingInterviews.some(i => i.id === multiInterview.id)) throw new Error("❌ respondToInterview à un teamIndex non nul devrait s'appliquer à CETTE équipe.");
+  if (multiLeague.teams[0].pendingInterviews.some(i => i.id === multiInterview.id)) throw new Error("❌ respondToInterview à teamIndex=1 ne devrait pas avoir touché l'équipe 0.");
+  console.log("✅ respondToInterview fonctionne correctement pour un teamIndex non nul (1), isolé de l'équipe 0.");
 }
 
-console.log("\n✅ Actions du manager (server/actions.js) vérifiées : feuille de match, tactiques, entraînement, marché, salle, prix des billets, boutique des supporters, recruteur, Centre de formation et académie de jeunes — préparables à l'avance, validées avant application, et correctement scopées à un teamIndex explicite (0 comme non nul, voir la ligue multi-manager).");
+console.log("\n✅ Actions du manager (server/actions.js) vérifiées : feuille de match, tactiques, entraînement, marché, salle, prix des billets, boutique des supporters, recruteur, Centre de formation, académie de jeunes et Médias (interviews d'après-match) : préparables à l'avance, validées avant application, et correctement scopées à un teamIndex explicite (0 comme non nul, voir la ligue multi-manager).");

@@ -232,6 +232,12 @@
   .catchup-item p{margin:4px 0;}
   .catchup-item .sub{color:var(--ink-faint); font-size:12px;}
 
+  /* Médias : widget d'interview d'après-match affiché dans l'écran de
+     rattrapage (catchupSection), voir interviewWidgetHtml. */
+  .interview-widget{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
+  .interview-tone-btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;}
+  .interview-tone-btns button{padding:6px 12px; font-size:13px;}
+
   .playback-controls{display:flex; align-items:center; justify-content:center; gap:10px; margin:0 0 16px; flex-wrap:wrap;}
   .live-realtime-note{text-align:center; font-size:12px; color:var(--ink-faint); margin:0;}
   .pause-banner{max-width:420px; margin:0 auto 16px; padding:12px 18px; border-radius:12px; border:1px solid var(--amber); background:rgba(230,178,60,.1); text-align:center; font-weight:700; color:var(--amber);}
@@ -3142,6 +3148,16 @@ function moraleLabel(morale) {
   return "En colère";
 }
 
+// MÉDIAS : interviews d'après-match (voir Team.pendingInterviews/
+// applyMoraleForResult/resolveInterview/skipInterview plus bas). Copie de la
+// même table côté serveur (engine.js) : voir son commentaire pour le détail
+// des trois tons et de leurs compromis.
+const INTERVIEW_TONES = {
+  "Agressif": { win: 3,   loss: -3 },
+  "Mesuré":   { win: 1,   loss: -1 },
+  "Humble":   { win: 0.5, loss: 1 },
+};
+
 // ---------------------------------------------------------------------
 // GRILLE SALARIALE DES JOUEURS — le salaire hebdomadaire d'un joueur dépend
 // UNIQUEMENT de son niveau actuel (overall, voir Player.overall), fixé à sa
@@ -3662,6 +3678,11 @@ class Team {
     this.fanMorale = 50;
     this.moraleHistory = [];
 
+    // Interviews en attente (voir engine.js, miroir identique) : alimenté
+    // par applyMoraleForResult plus bas, vidé par resolveInterview/
+    // skipInterview.
+    this.pendingInterviews = [];
+
     // Affluence des derniers matchs à domicile (voir engine.js, miroir
     // identique) : plafonné à 10 (demande explicite), alimenté par
     // simulateHomeAttendance plus bas.
@@ -3716,12 +3737,40 @@ class Team {
   // Effet des résultats sportifs sur l'humeur : une victoire nette (gros
   // écart) enthousiasme un peu plus qu'une victoire courte, une défaite
   // sévère agace un peu plus qu'une défaite courte. Appelé à chaque match
-  // (domicile ou extérieur).
-  applyMoraleForResult(won, scoreDiff, opponentName) {
+  // (domicile ou extérieur). `round` (optionnel) : voir engine.js, miroir
+  // identique, met aussi en attente une interview d'après-match.
+  applyMoraleForResult(won, scoreDiff, opponentName, round) {
     const margin = clamp(Math.abs(scoreDiff) / 40, 0, 1);
     const delta = won ? rand(3, 6) + margin * 1.5 : -(rand(2, 5) + margin * 1.5);
     this.recordMoraleEvent(won ? `Victoire contre ${opponentName}` : `Défaite contre ${opponentName}`, delta);
+    if (typeof round === "number") {
+      this.pendingInterviews = this.pendingInterviews || [];
+      this.pendingInterviews.push({ id: uid(), round, opponentName, won, scoreDiff });
+    }
     return delta;
+  }
+
+  // Résout une interview en attente (voir engine.js, miroir identique).
+  resolveInterview(id, tone) {
+    this.pendingInterviews = this.pendingInterviews || [];
+    const idx = this.pendingInterviews.findIndex(i => i.id === id);
+    if (idx === -1) return null;
+    const toneCfg = INTERVIEW_TONES[tone];
+    if (!toneCfg) return null;
+    const entry = this.pendingInterviews[idx];
+    const delta = entry.won ? toneCfg.win : toneCfg.loss;
+    const resultLabel = entry.won ? "la victoire" : "la défaite";
+    this.recordMoraleEvent(`Interview (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, delta);
+    this.pendingInterviews.splice(idx, 1);
+    return { ok: true, delta };
+  }
+
+  // Ignore une interview en attente (voir engine.js, miroir identique).
+  skipInterview(id) {
+    this.pendingInterviews = this.pendingInterviews || [];
+    const before = this.pendingInterviews.length;
+    this.pendingInterviews = this.pendingInterviews.filter(i => i.id !== id);
+    return this.pendingInterviews.length !== before;
   }
 
   // Vend un joueur LISTÉ (voir Player.forSale/salePrice) : liquidation
@@ -6814,6 +6863,8 @@ function serializeTeam(team) {
     transactions: team.transactions,
     fanMorale: team.fanMorale,
     moraleHistory: team.moraleHistory,
+    // Interviews en attente (voir engine.js, miroir identique).
+    pendingInterviews: Array.isArray(team.pendingInterviews) ? team.pendingInterviews.map(i => ({ ...i })) : [],
     // Historique d'affluence (voir engine.js, miroir identique).
     attendanceHistory: team.attendanceHistory,
     deficitWeeks: team.deficitWeeks,
@@ -7065,6 +7116,7 @@ function teamFromSave(data) {
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
+  team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
   // Historique d'affluence (voir engine.js, miroir identique).
   team.attendanceHistory = Array.isArray(data.attendanceHistory) ? data.attendanceHistory : [];
   // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
@@ -7968,6 +8020,12 @@ function fetchApi(input, init) {
 // au joueur : consommés par enterNextMatchOrShowSeasonEnd() via un petit
 // écran récapitulatif ("Pendant votre absence…") avant de passer à la suite.
 let pendingEvents = [];
+// Interviews proposées sur l'écran "Pendant votre absence…" actuellement
+// affiché (voir showCatchupSummaryIfAny/catchupContinueBtn plus bas) : les
+// id encore dans cette liste au moment de cliquer "Continuer" sont
+// considérés "pas de commentaire" (Team.skipInterview, effet nul) : comme
+// ça, une interview jamais traitée ne reste jamais en attente indéfiniment.
+let catchupInterviewIdsShown = [];
 // Diffusion en direct actuellement affichée (voir league.liveMatch côté
 // serveur) : les horaires réels (`airAt`) de chaque événement restant à
 // diffuser sont utilisés pour programmer setTimeout — jamais un rythme fixe
@@ -8603,6 +8661,32 @@ function syncReleaseYouthPlayerToServer(playerId) {
   }
 }
 
+// Médias : interview d'après-match (voir Team.pendingInterviews/
+// resolveInterview/skipInterview, et showCatchupSummaryIfAny plus bas pour
+// l'écran qui les propose) : mêmes conventions fire-and-forget que les
+// fonctions sync*ToServer ci-dessus.
+function syncInterviewToServer(id, tone) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/media/interview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, tone }) })
+      .then(res => { if (!res.ok) console.warn("Réponse à l'interview refusée côté serveur.", res.status); })
+      .catch(e => console.warn("Interview : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Interview : serveur indisponible :", e);
+  }
+}
+
+function syncSkipInterviewToServer(id) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/media/interview-skip", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+      .then(res => { if (!res.ok) console.warn("Passage de l'interview refusé côté serveur.", res.status); })
+      .catch(e => console.warn("Interview : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Interview : serveur indisponible :", e);
+  }
+}
+
 // Séance vidéo (voir renderTeamDetail plus bas) : à la différence des
 // fonctions sync*ToServer ci-dessus (fire-and-forget), c'est une action
 // DÉLIBÉRÉE du manager avec une vraie conséquence (des caractéristiques
@@ -8929,6 +9013,33 @@ function enterNextMatchOrShowSeasonEnd(opts) {
   return true;
 }
 
+// Médias : widget d'interview affiché sous un résultat de match sur l'écran
+// "Pendant votre absence…" ci-dessous (voir Team.pendingInterviews/
+// resolveInterview/skipInterview). Trois tons + une option "sans
+// commentaire" (effet nul, voir catchupContinueBtn plus bas pour le cas où
+// le manager ne répond à aucun des deux).
+function interviewWidgetHtml(entry) {
+  const toneButtons = Object.keys(INTERVIEW_TONES).map(tone =>
+    `<button class="secondary" data-interview-tone="${entry.id}:${escapeHtml(tone)}">${escapeHtml(tone)}</button>`
+  ).join(" ");
+  return `<div class="interview-widget" id="interviewWidget_${entry.id}">` +
+    `<p class="sub">Un journaliste vous demande une réaction sur ce résultat.</p>` +
+    `<div class="interview-tone-btns">${toneButtons} <button class="secondary" data-interview-skip="${entry.id}">Sans commentaire</button></div>` +
+    `</div>`;
+}
+
+// Remplace le widget par une courte confirmation, une fois l'interview
+// traitée (choisie ou ignorée) : `resolved` est le résultat de
+// Team.resolveInterview ({ok, delta}) ou null pour un "sans commentaire".
+function refreshCatchupAfterInterview(interviewId, resolved) {
+  const widget = document.getElementById(`interviewWidget_${interviewId}`);
+  if (!widget) return;
+  const msg = resolved && resolved.ok
+    ? `Réaction envoyée. Humeur des supporters ${resolved.delta >= 0 ? "+" : ""}${Math.round(resolved.delta * 10) / 10} (désormais ${Math.round(teamA.fanMorale)}/100, ${moraleLabel(teamA.fanMorale)}).`
+    : "Sans commentaire.";
+  widget.outerHTML = `<p class="sub">${escapeHtml(msg)}</p>`;
+}
+
 // Affiche le récapitulatif "Pendant votre absence…" pour tout ce que le
 // serveur a joué automatiquement depuis la dernière connexion (voir
 // pendingEvents/loadMyTeam, GET /api/state) : match(s) du club du joueur,
@@ -8941,6 +9052,10 @@ function enterNextMatchOrShowSeasonEnd(opts) {
 function showCatchupSummaryIfAny() {
   const events = pendingEvents;
   pendingEvents = [];
+  // Réinitialisée à chaque nouvel écran : voir catchupContinueBtn plus bas,
+  // qui règle en "sans commentaire" toute interview encore dans cette liste
+  // au moment de quitter l'écran (jamais laissée en attente indéfiniment).
+  catchupInterviewIdsShown = [];
   let html = "";
   events.forEach(ev => {
     if (ev.type === "match" && ev.userResult) {
@@ -8954,7 +9069,17 @@ function showCatchupSummaryIfAny() {
         html += `<p>${r.attendanceInfo.attendance.toLocaleString("fr-FR")} spectateurs, recette de ${formatMoney(r.attendanceInfo.revenue)}.</p>`;
       }
       const sign = r.moraleDelta >= 0 ? "+" : "";
-      html += `<p>Humeur des supporters : ${sign}${Math.round(r.moraleDelta * 10) / 10} (désormais ${Math.round(teamA.fanMorale)}/100, ${moraleLabel(teamA.fanMorale)}).</p></div>`;
+      html += `<p>Humeur des supporters : ${sign}${Math.round(r.moraleDelta * 10) / 10} (désormais ${Math.round(teamA.fanMorale)}/100, ${moraleLabel(teamA.fanMorale)}).</p>`;
+      // Médias (voir interviewWidgetHtml ci-dessus) : au plus une interview
+      // en attente par journée de championnat (un seul match humain par
+      // round), retrouvée dans Team.pendingInterviews par son round plutôt
+      // que transportée séparément dans l'événement lui-même.
+      const interviewEntry = (teamA.pendingInterviews || []).find(i => i.round === r.round);
+      if (interviewEntry) {
+        catchupInterviewIdsShown.push(interviewEntry.id);
+        html += interviewWidgetHtml(interviewEntry);
+      }
+      html += `</div>`;
     } else if (ev.type === "training") {
       // `ev.day` (calendrier ancré quotidien, ligue multi-manager — voir
       // server/autoSim.js:catchUpDailyAnchored) OU `ev.week` (calendrier
@@ -15423,7 +15548,47 @@ document.getElementById("topbarOrdersBtn").addEventListener("click", goToOrdresT
   });
 }
 
+// Médias (voir interviewWidgetHtml/refreshCatchupAfterInterview plus haut) :
+// délégation sur catchupContent pour les boutons de ton d'interview et le
+// bouton "Sans commentaire", widgets injectés dynamiquement à chaque appel
+// de showCatchupSummaryIfAny.
+const catchupContentEl = document.getElementById("catchupContent");
+if (catchupContentEl) {
+  catchupContentEl.addEventListener("click", (e) => {
+    const toneBtn = e.target.closest("[data-interview-tone]");
+    const skipBtn = e.target.closest("[data-interview-skip]");
+    if (toneBtn) {
+      const [idStr, tone] = toneBtn.dataset.interviewTone.split(":");
+      const id = Number(idStr);
+      const result = teamA.resolveInterview(id, tone);
+      saveMyTeam();
+      if (result && result.ok) syncInterviewToServer(id, tone);
+      catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== id);
+      refreshCatchupAfterInterview(id, result);
+    } else if (skipBtn) {
+      const id = Number(skipBtn.dataset.interviewSkip);
+      teamA.skipInterview(id);
+      saveMyTeam();
+      syncSkipInterviewToServer(id);
+      catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== id);
+      refreshCatchupAfterInterview(id, null);
+    }
+  });
+}
+
 document.getElementById("catchupContinueBtn").addEventListener("click", () => {
+  // Toute interview encore non répondue au moment de cliquer "Continuer" est
+  // considérée "sans commentaire" : on la retire silencieusement de la file
+  // (effet nul sur le moral), pour ne jamais bloquer la progression du
+  // manager qui ne souhaite pas réagir.
+  if (catchupInterviewIdsShown.length) {
+    catchupInterviewIdsShown.forEach(id => {
+      teamA.skipInterview(id);
+      syncSkipInterviewToServer(id);
+    });
+    catchupInterviewIdsShown = [];
+    saveMyTeam();
+  }
   enterNextMatchOrShowSeasonEnd();
 });
 

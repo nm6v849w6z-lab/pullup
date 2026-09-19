@@ -462,7 +462,11 @@ function finalizeRound(Engine, league, round) {
 
     if (home.isHuman) {
       const won = scoreHome > scoreAway;
-      const moraleDelta = home.applyMoraleForResult(won, scoreHome - scoreAway, away.name);
+      // `round` en 4e argument (voir Team.applyMoraleForResult/
+      // pendingInterviews côté moteur) : met aussi en attente une interview
+      // d'après-match pour CE résultat, résolue plus tard côté navigateur
+      // (voir /api/media/interview, server/actions.js).
+      const moraleDelta = home.applyMoraleForResult(won, scoreHome - scoreAway, away.name, round);
       const attendanceInfo = home.simulateHomeAttendance(away.name);
       userResults.push({
         teamIdx: m.home, round, isHome: true, opponent: away.name, opponentIdx: m.away,
@@ -471,7 +475,7 @@ function finalizeRound(Engine, league, round) {
     }
     if (away.isHuman) {
       const won = scoreAway > scoreHome;
-      const moraleDelta = away.applyMoraleForResult(won, scoreAway - scoreHome, home.name);
+      const moraleDelta = away.applyMoraleForResult(won, scoreAway - scoreHome, home.name, round);
       userResults.push({
         teamIdx: m.away, round, isHome: false, opponent: home.name, opponentIdx: m.home,
         scoreUser: scoreAway, scoreOpponent: scoreHome, won, forfeit, moraleDelta, attendanceInfo: null,
