@@ -8920,101 +8920,34 @@ let selectedOrdresCompetition = "championship";
 
 // Retour utilisateur (2026-09) : "il faudrait [...] que lorsque l'on arrive
 // sur la page ordre, on voit les derniers évènements (achat de tel joueur,
-// tel coach, tel up à l'entrainement... à compléter)". Un aperçu condensé
-// (PAS le journal complet — déjà consultable ailleurs : onglet Économie pour
-// toutes les transactions, onglet Entraînement pour le détail complet de la
-// dernière semaine), limité aux évènements les plus notables :
-//   - Transactions "notables" (achats/ventes de joueurs, investissements
-//     dans les infrastructures) — teamA.transactions, EN EXCLUANT les lignes
-//     purement récurrentes chaque semaine (salaires, recettes fixes), déjà
-//     assez visibles chaque semaine sans avoir besoin d'un rappel ici.
-//   - Recrutement de staff (entraîneur/analyste vidéo/recruteur) : repéré
-//     via weeksEmployed === 0 plutôt qu'une transaction (voir
-//     coach_market_test.js, "AUCUNE transaction ne devrait être journalisée
-//     pour l'acquisition elle-même, le coût est le salaire hebdomadaire qui
-//     grimpe, pas un achat comptant" — comportement volontaire, pas
-//     changé ici).
-//   - Progressions marquantes de la dernière semaine d'entraînement
-//     (teamA.lastTrainingReport), triées par ampleur du changement,
-//     plafonnées pour rester un simple aperçu.
-const ROUTINE_TRANSACTION_LABEL_PREFIXES = [
-  "Salaire du staff", "Salaires des joueurs", "Salaires du centre de formation",
-  "Recettes boutique des supporters", "Droits TV", "Recettes station TV",
-  "Billetterie vs",
-];
-const ORDRES_RECENT_EVENTS_MAX_TRANSACTIONS = 5;
-const ORDRES_RECENT_EVENTS_MAX_TRAINING_GAINS = 5;
-
-// Contenu du panneau "Derniers événements" de la page Ordres
-// (ordresRecentEventsHolder). Le tableau de bord avait initialement le même
-// contenu (retour utilisateur, 2026-09 : "il faut sur la page tableau de
-// bord que l'on puisse voir les derniers évènements..."), mais utilise
-// désormais son propre contenu, dashboardNewsInnerHtml plus bas (retour
-// utilisateur suivant, une fois affiché : "ne parle pas que des évènements
-// financiers [...] mets plutôt les dernières news") — les deux ne sont plus
-// partagés depuis ce second retour.
-// Retourne le HTML intérieur (lignes de gains), ou "" s'il n'y a rien à
-// montrer — c'est à l'appelant de décider comment envelopper/masquer.
-function recentEventsInnerHtml() {
-  let html = "";
-
-  const notableTransactions = (teamA.transactions || [])
-    .filter(t => !ROUTINE_TRANSACTION_LABEL_PREFIXES.some(prefix => t.label.startsWith(prefix)))
-    .slice(0, ORDRES_RECENT_EVENTS_MAX_TRANSACTIONS);
-  notableTransactions.forEach(t => {
-    const up = t.amount >= 0;
-    html += `<div class="gain-line ${up ? "gain-up" : "gain-down"}">Semaine ${t.week}, ${escapeHtml(t.label)} : ${up ? "+" : ""}${formatMoney(t.amount)}</div>`;
-  });
-
-  [
-    { role: teamA.trainer, label: "Entraîneur" },
-    { role: teamA.videoAnalyst, label: "Analyste vidéo" },
-    { role: teamA.recruiter, label: "Recruteur" },
-  ].forEach(({ role, label }) => {
-    if (role && role.weeksEmployed === 0) {
-      html += `<div class="gain-line gain-up">${escapeHtml(label)} recruté cette semaine : niveau ${role.level} (salaire de départ ${formatMoney(role.baseSalary)}/sem.).</div>`;
-    }
-  });
-
-  const report = teamA.lastTrainingReport;
-  if (report) {
-    const allGains = [];
-    Object.values(report.players).forEach(e => {
-      e.gains.forEach(g => allGains.push({ name: e.name, attr: g.attr, before: g.before, after: g.after }));
-    });
-    allGains.sort((a, b) => Math.abs(b.after - b.before) - Math.abs(a.after - a.before));
-    allGains.slice(0, ORDRES_RECENT_EVENTS_MAX_TRAINING_GAINS).forEach(g => {
-      const up = g.after > g.before;
-      html += `<div class="gain-line ${up ? "gain-up" : "gain-down"}">${escapeHtml(g.name)} : ${TRAINING_LABELS[g.attr]} ${g.before} → ${g.after} ${up ? "↑" : "↓"}</div>`;
-    });
-    if (allGains.length > ORDRES_RECENT_EVENTS_MAX_TRAINING_GAINS) {
-      html += `<div class="gain-note">+${allGains.length - ORDRES_RECENT_EVENTS_MAX_TRAINING_GAINS} autres changements à l'entraînement la semaine dernière, voir l'onglet Entraînement.</div>`;
-    }
-  }
-
-  return html;
-}
-
+// tel coach, tel up à l'entrainement... à compléter)", PUIS (2026-09,
+// pointant la même liste que celle du tableau de bord avant sa propre
+// correction) : "enleve ça tout de suite de la page ordre, c'est des donnees
+// financiere. rien à voir" — ce panneau utilise donc désormais EXACTEMENT le
+// même contenu que le tableau de bord (dashboardNewsInnerHtml, voir plus
+// bas : résultats des derniers matchs, transferts de joueurs, recrutement de
+// staff, progressions à l'entraînement — jamais les achats d'infrastructure/
+// salaires/recettes, déjà visibles sur l'onglet Économie). Les deux panneaux
+// sont redevenus partagés, cette fois-ci volontairement identiques plutôt que
+// par accident de refactor.
 function renderOrdresRecentEvents() {
   const holder = document.getElementById("ordresRecentEventsHolder");
   if (!holder) return;
-  const html = recentEventsInnerHtml();
+  const html = dashboardNewsInnerHtml();
   holder.innerHTML = html ? `<div class="section ordres-recent-events"><h3>Derniers événements</h3><div class="training-report-list">${html}</div></div>` : "";
 }
 
-// Retour utilisateur (2026-09), sur le panneau ci-dessus une fois affiché sur
-// le tableau de bord : "les évènements doivent être pris dans une 6e brique à
-// droite [...] ne parle pas que des évènements financiers, c'est sur la page
-// économie qu'on voit ça. mets plutôt les dernières news (victoire contre...,
-// progression, arrivée du joueur... etc)" — le tableau de bord a donc son
-// PROPRE contenu (dashboardNewsInnerHtml), volontairement différent de
-// recentEventsInnerHtml ci-dessus (qui reste tel quel pour la page Ordres,
-// pas concernée par ce retour) : plus d'achats d'infrastructure/salaires/
-// recettes (déjà tout visible sur l'onglet Économie), à la place le résultat
-// des derniers matchs (victoire/défaite), et les transferts de joueurs
-// (achat/vente, sans le reste des transactions). Recrutement de staff et
-// progressions à l'entraînement restent, ce sont bien des "news" club et pas
-// des données déjà dupliquées ailleurs sous cette forme.
+// Contenu partagé par les panneaux "Derniers événements" du tableau de bord
+// (6e .stat-card de #clubStatsGrid, voir renderClubSection) ET de la page
+// Ordres (renderOrdresRecentEvents ci-dessus). Retour utilisateur (2026-09,
+// sur le tableau de bord d'abord, puis exactement le même reproche sur la
+// page Ordres) : "ne parle pas que des évènements financiers, c'est sur la
+// page économie qu'on voit ça. mets plutôt les dernières news (victoire
+// contre..., progression, arrivée du joueur... etc)" — jamais d'achats
+// d'infrastructure/salaires/recettes (déjà tout visible sur l'onglet
+// Économie), à la place le résultat des derniers matchs (victoire/défaite),
+// les transferts de joueurs (achat/vente, sans le reste des transactions),
+// le recrutement de staff, et les progressions à l'entraînement.
 const DASHBOARD_NEWS_MAX_RESULTS = 3;
 const DASHBOARD_NEWS_MAX_TRANSFERS = 3;
 const DASHBOARD_NEWS_MAX_TRAINING_GAINS = 3;
