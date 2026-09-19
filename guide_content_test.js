@@ -24,13 +24,16 @@ const entries = [...doc.querySelectorAll("#guideSection .guide-entry")];
 const headings = entries.map(e => e.querySelector("h3").textContent);
 console.log("Entrées du Guide :", headings.join(" | "));
 
+// Retour utilisateur (2026-09) : "enlève tous les emojis qu'il y a dans le
+// jeu, sauf ceux dans le menu de gauche et celui qui clignote" : ces titres
+// de section du Guide n'ont plus de préfixe emoji.
 const expectedNewHeadings = [
-  "📋 Ordres et tactiques",
-  "🧒 Académie de jeunes",
-  "📅 Calendrier et 🏆 Coupe",
-  "📊 Ligue",
-  "📈 Stats hebdo",
-  "🔎 Scoutisme",
+  "Ordres et tactiques",
+  "Académie de jeunes",
+  "Calendrier et Coupe",
+  "Ligue",
+  "Stats hebdo",
+  "Scoutisme",
 ];
 const missing = expectedNewHeadings.filter(h => !headings.includes(h));
 console.log(`${missing.length === 0 ? "✅" : "❌"} Toutes les nouvelles entrées attendues sont présentes.`, missing.length ? `Manquantes : ${missing.join(", ")}` : "");
@@ -39,7 +42,7 @@ if (missing.length) throw new Error("❌ Entrées de guide manquantes : " + miss
 // --- Le contenu tactique cite bien les vraies options du jeu (pas un
 // texte générique déconnecté des listes réelles OFF_TACTICS_LIST/DEF_LIST/
 // RHYTHM_LIST), pour rester exact si ces listes changent un jour. ---
-const tacticsEntry = entries.find(e => e.querySelector("h3").textContent === "📋 Ordres et tactiques");
+const tacticsEntry = entries.find(e => e.querySelector("h3").textContent === "Ordres et tactiques");
 const tacticsText = tacticsEntry.textContent;
 const win = dom.window;
 const offTactics = win.eval("OFF_TACTICS_LIST");

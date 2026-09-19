@@ -144,7 +144,7 @@ function withMockedRandom(value, fn) {
   // Exemple concret (voir POTENTIAL_TIERS : max 59 -> tier 6, max 69 -> tier
   // 7) : potentiel 62 tombe dans le palier "⭐ Star" (max 69) -> tier 7 ->
   // "Grand espoir" (tier 6-8).
-  if (potentialTierIndex(62) !== 7) throw new Error(`❌ potentialTierIndex(62) devrait être 7 (palier "⭐ Star", max 69), obtenu ${potentialTierIndex(62)}.`);
+  if (potentialTierIndex(62) !== 7) throw new Error(`❌ potentialTierIndex(62) devrait être 7 (palier "Star", max 69), obtenu ${potentialTierIndex(62)}.`);
   console.log("✅ youthProspectLabel regroupe bien les 10 paliers en 3 bandes (Espoir/Grand espoir/Prodige), à la frontière exacte des seuils 49/50 et 79/80.");
 }
 {
@@ -595,7 +595,7 @@ function withMockedRandom(value, fn) {
   // Et l'affichage bascule vers le palier fin normal (potentialTierLabel),
   // plus le label grossier à 3 bandes de l'académie.
   console.log("Label affiché pour ce pro (potentiel 85) :", potentialTierLabel(prodigy.potential), "(plus youthProspectLabel, réservé à l'académie)");
-  if (potentialTierLabel(prodigy.potential) !== "🔥 Superstar") throw new Error(`❌ Un pro de potentiel 85 devrait afficher le palier fin normal "🔥 Superstar" (potentialTierLabel), obtenu "${potentialTierLabel(prodigy.potential)}".`);
+  if (potentialTierLabel(prodigy.potential) !== "Superstar") throw new Error(`❌ Un pro de potentiel 85 devrait afficher le palier fin normal "Superstar" (potentialTierLabel), obtenu "${potentialTierLabel(prodigy.potential)}".`);
 }
 {
   // Effectif pro déjà au plafond (MAX_ROSTER_SIZE) : promotion refusée,

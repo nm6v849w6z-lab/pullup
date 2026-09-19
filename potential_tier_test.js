@@ -20,10 +20,10 @@ const { potentialTierLabel, POTENTIAL_TIERS } = E;
     [30, "Solide"], [39, "Solide"],
     [40, "Starter"], [49, "Starter"],
     [50, "Très bon joueur"], [59, "Très bon joueur"],
-    [60, "⭐ Star"], [69, "⭐ Star"],
-    [70, "⭐⭐ All-Star"], [79, "⭐⭐ All-Star"],
-    [80, "🔥 Superstar"], [89, "🔥 Superstar"],
-    [90, "👑 Générationnel"], [99, "👑 Générationnel"],
+    [60, "Star"], [69, "Star"],
+    [70, "All-Star"], [79, "All-Star"],
+    [80, "Superstar"], [89, "Superstar"],
+    [90, "Générationnel"], [99, "Générationnel"],
   ];
   expected.forEach(([potential, label]) => {
     const got = potentialTierLabel(potential);
@@ -89,5 +89,5 @@ const { potentialTierLabel, POTENTIAL_TIERS } = E;
   win.close();
   server.close();
 
-  console.log("\n✅ Le potentiel des joueurs est désormais affiché dans l'onglet Effectif sous forme de palier nommé (ex. \"⭐⭐ All-Star\") — jamais le niveau exact caché.");
+  console.log("\n✅ Le potentiel des joueurs est désormais affiché dans l'onglet Effectif sous forme de palier nommé (ex. \"All-Star\") — jamais le niveau exact caché.");
 })().catch(e => { console.error(e); process.exit(1); });

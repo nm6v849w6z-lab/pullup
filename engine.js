@@ -273,68 +273,68 @@ function say(templates, vars) {
 const PHRASES = {
   madeShot: {
     three: [
-      "🏀 {shooter} plante le tir à 3 points ({quality}) pour {team}.",
-      "🎯 {shooter} trouve le fond des filets de loin ({quality}) pour {team}.",
-      "💥 {shooter} allume la mèche à 3 points ({quality}) pour {team}.",
-      "🔥 {shooter} envoie une banderille à 3 points ({quality}) pour {team}.",
+      "{shooter} plante le tir à 3 points ({quality}) pour {team}.",
+      "{shooter} trouve le fond des filets de loin ({quality}) pour {team}.",
+      "{shooter} allume la mèche à 3 points ({quality}) pour {team}.",
+      "{shooter} envoie une banderille à 3 points ({quality}) pour {team}.",
     ],
     mid: [
-      "🏀 {shooter} marque en mi-distance ({quality}) pour {team}.",
-      "🎯 {shooter} ajuste son tir à mi-distance ({quality}) pour {team}.",
-      "🏀 {shooter} déclenche et marque à mi-distance ({quality}) pour {team}.",
+      "{shooter} marque en mi-distance ({quality}) pour {team}.",
+      "{shooter} ajuste son tir à mi-distance ({quality}) pour {team}.",
+      "{shooter} déclenche et marque à mi-distance ({quality}) pour {team}.",
     ],
     inside: [
-      "🏀 {shooter} marque près du panier ({quality}) pour {team}.",
-      "💪 {shooter} s'impose sous le cercle ({quality}) pour {team}.",
-      "🏀 {shooter} conclut au contact près du panier ({quality}) pour {team}.",
+      "{shooter} marque près du panier ({quality}) pour {team}.",
+      "{shooter} s'impose sous le cercle ({quality}) pour {team}.",
+      "{shooter} conclut au contact près du panier ({quality}) pour {team}.",
     ],
   },
   andOne: [
-    "➕ Faute de {defender}, panier compte + lancer additionnel.",
-    "➕ {shooter} marque et provoque la faute de {defender} !",
+    "Faute de {defender}, panier compte + lancer additionnel.",
+    "{shooter} marque et provoque la faute de {defender} !",
   ],
   missedFoul: [
-    "🚫 Faute de {defender} sur le tir de {shooter}.",
-    "🚫 {defender} accroche {shooter} sur son tir.",
+    "Faute de {defender} sur le tir de {shooter}.",
+    "{defender} accroche {shooter} sur son tir.",
   ],
   turnoverSteal: [
-    "⚡ {stealer} intercepte ! Perte de balle de {ballHandler}.",
-    "⚡ {stealer} vole le ballon à {ballHandler} !",
-    "⚡ Interception de {stealer} sur {ballHandler}.",
+    "{stealer} intercepte ! Perte de balle de {ballHandler}.",
+    "{stealer} vole le ballon à {ballHandler} !",
+    "Interception de {stealer} sur {ballHandler}.",
   ],
   turnoverPlain: [
-    "❌ Perte de balle de {ballHandler} ({team}).",
-    "❌ {ballHandler} perd le ballon ({team}).",
-    "❌ Mauvaise passe de {ballHandler} ({team}), balle perdue.",
+    "Perte de balle de {ballHandler} ({team}).",
+    "{ballHandler} perd le ballon ({team}).",
+    "Mauvaise passe de {ballHandler} ({team}), balle perdue.",
   ],
   reboundOff: [
-    "↩️ Tir manqué de {shooter}. Rebond offensif de {rebounder}.",
-    "↩️ {shooter} manque son tir, {rebounder} suit et récupère en attaque.",
+    "Tir manqué de {shooter}. Rebond offensif de {rebounder}.",
+    "{shooter} manque son tir, {rebounder} suit et récupère en attaque.",
   ],
   reboundDef: [
-    "↩️ Tir manqué de {shooter}. Rebond défensif de {rebounder}.",
-    "↩️ {shooter} manque, {rebounder} capte le rebond défensif.",
+    "Tir manqué de {shooter}. Rebond défensif de {rebounder}.",
+    "{shooter} manque, {rebounder} capte le rebond défensif.",
   ],
   freeThrows: [
-    "🎯 {shooter} {made}/{n} aux lancers francs.",
+    "{shooter} {made}/{n} aux lancers francs.",
   ],
   foulOut: [
-    "❌ {player} ({team}) est exclu pour 5 fautes.",
+    "{player} ({team}) est exclu pour 5 fautes.",
   ],
   substitution: [
-    "🔄 {replacement} remplace {player} ({team}).",
-    "🔄 {player} sort, {replacement} entre en jeu ({team}).",
+    "{replacement} remplace {player} ({team}).",
+    "{player} sort, {replacement} entre en jeu ({team}).",
   ],
   injury: [
-    "🩹 {player} se blesse et doit quitter le match ({team}).",
-    "🩹 Blessure pour {player} ({team}) : sortie immédiate.",
+    "{player} se blesse et doit quitter le match ({team}).",
+    "Blessure pour {player} ({team}) : sortie immédiate.",
   ],
   shortHanded: [
-    "⚠️ {team} n'a plus de remplaçant disponible et doit jouer en infériorité numérique.",
+    "{team} n'a plus de remplaçant disponible et doit jouer en infériorité numérique.",
   ],
   intentionalFoul: [
-    "🕐 Faute intentionnelle de {defender} ({team}) pour arrêter le chrono.",
-    "🕐 {team} envoie {shooter} sur la ligne : faute volontaire en fin de match.",
+    "Faute intentionnelle de {defender} ({team}) pour arrêter le chrono.",
+    "{team} envoie {shooter} sur la ligne : faute volontaire en fin de match.",
   ],
   clockMilking: [
     "⏳ {team} fait tourner le ballon pour dérouler le chrono.",
@@ -384,10 +384,10 @@ const POTENTIAL_TIERS = [
   { max: 39, label: "Solide" },
   { max: 49, label: "Starter" },
   { max: 59, label: "Très bon joueur" },
-  { max: 69, label: "⭐ Star" },
-  { max: 79, label: "⭐⭐ All-Star" },
-  { max: 89, label: "🔥 Superstar" },
-  { max: 99, label: "👑 Générationnel" },
+  { max: 69, label: "Star" },
+  { max: 79, label: "All-Star" },
+  { max: 89, label: "Superstar" },
+  { max: 99, label: "Générationnel" },
 ];
 
 function potentialTierLabel(potential) {
@@ -1113,7 +1113,7 @@ function fanShopInfo(level) {
 const CLUB_FACILITIES = {
   tvStation: {
     name: "Station TV",
-    icon: "📺",
+    icon: "",
     levels: [
       { level: 0, name: "Aucune station TV", cost: 0, weeklyRevenue: 0 },
       { level: 1, name: "Studio local", cost: 60000, weeklyRevenue: 1100 },
@@ -1123,7 +1123,7 @@ const CLUB_FACILITIES = {
   },
   gym: {
     name: "Salle de musculation",
-    icon: "🏋️",
+    icon: "",
     levels: [
       { level: 0, name: "Aucune salle de musculation", cost: 0, injuryRiskMult: 1 },
       { level: 1, name: "Salle basique", cost: 45000, injuryRiskMult: 0.90 },
@@ -1133,7 +1133,7 @@ const CLUB_FACILITIES = {
   },
   wellness: {
     name: "Espace bien-être (spa et soins)",
-    icon: "💆",
+    icon: "",
     levels: [
       { level: 0, name: "Aucun espace bien-être", cost: 0, fatigueMult: 1 },
       { level: 1, name: "Espace détente", cost: 45000, fatigueMult: 0.93 },
@@ -5983,7 +5983,7 @@ class MatchEngine {
     // utilisateur : "on ne sait pas qui a la balle" — voir
     // updateLiveClockTick côté client).
     const tipOffWinner = possessionTeam === "A" ? this.teamA : this.teamB;
-    this.log(events, 1, QUARTER_SECONDS, `🏀 L'entre-deux est remporté par ${tipOffWinner.name}.`, { type: "tipoff", team: this.teamKey(tipOffWinner), possession: this.teamKey(tipOffWinner) });
+    this.log(events, 1, QUARTER_SECONDS, `L'entre-deux est remporté par ${tipOffWinner.name}.`, { type: "tipoff", team: this.teamKey(tipOffWinner), possession: this.teamKey(tipOffWinner) });
 
     // Un match de basket ne peut pas finir sur une égalité : au-delà du 4e
     // quart-temps, on enchaîne des prolongations de 5 minutes (règle

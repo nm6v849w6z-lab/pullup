@@ -37,7 +37,7 @@ if (initialOrdresValidated !== null) {
 
 const topbarBtn = doc.getElementById("topbarOrdersBtn");
 console.log("Bouton topbar avant validation :", JSON.stringify(topbarBtn.textContent), topbarBtn.className);
-if (topbarBtn.textContent !== "📋 Donnez vos ordres") {
+if (topbarBtn.textContent !== "Donnez vos ordres") {
   throw new Error(`❌ Le bouton topbar devrait afficher le texte par défaut avant validation, obtenu "${topbarBtn.textContent}".`);
 }
 if (topbarBtn.classList.contains("topbar-cta-validated")) {
@@ -48,7 +48,7 @@ console.log("✅ Le bouton topbar affiche bien l'état par défaut avant validat
 const calBtnBefore = win.eval("(() => { renderCalendrierSection(); return true; })()") && calendarBtnForRound(doc, immediateRound);
 if (!calBtnBefore) throw new Error("❌ (setup) Le bouton Ordres de la journée immédiate devrait être présent dans le calendrier.");
 console.log("Bouton calendrier avant validation :", JSON.stringify(calBtnBefore.textContent), calBtnBefore.className);
-if (calBtnBefore.textContent !== "📋 Ordres") {
+if (calBtnBefore.textContent !== "Ordres") {
   throw new Error(`❌ Le bouton calendrier devrait afficher le texte par défaut avant validation, obtenu "${calBtnBefore.textContent}".`);
 }
 if (calBtnBefore.classList.contains("calendar-order-btn-validated")) {
@@ -71,7 +71,7 @@ if (validatedRound !== immediateRound) {
 console.log("✅ teamA.ordresValidatedRound est bien renseigné après le clic sur Valider les ordres.");
 
 console.log("Bouton topbar après validation :", JSON.stringify(topbarBtn.textContent), topbarBtn.className);
-if (topbarBtn.textContent !== "✅ Modifier vos ordres") {
+if (topbarBtn.textContent !== "Modifier vos ordres") {
   throw new Error(`❌ BUG NON CORRIGÉ : le bouton topbar devrait afficher "Modifier vos ordres" après validation, obtenu "${topbarBtn.textContent}".`);
 }
 if (!topbarBtn.classList.contains("topbar-cta-validated")) {
@@ -82,7 +82,7 @@ console.log("✅ Le bouton topbar affiche bien 'Modifier vos ordres' avec une co
 win.eval("renderCalendrierSection();");
 const calBtnAfter = calendarBtnForRound(doc, immediateRound);
 console.log("Bouton calendrier après validation :", JSON.stringify(calBtnAfter.textContent), calBtnAfter.className);
-if (calBtnAfter.textContent !== "✅ Modifier vos ordres") {
+if (calBtnAfter.textContent !== "Modifier vos ordres") {
   throw new Error(`❌ BUG NON CORRIGÉ : le bouton calendrier devrait afficher "Modifier vos ordres" après validation, obtenu "${calBtnAfter.textContent}".`);
 }
 if (!calBtnAfter.classList.contains("calendar-order-btn-validated")) {
@@ -138,7 +138,7 @@ console.log("✅ teamA.ordresValidatedRound survit bien à un rechargement de se
 
 win.eval("TAB_HANDLERS.ordres();");
 const topbarBtnReloaded = doc.getElementById("topbarOrdersBtn");
-if (topbarBtnReloaded.textContent !== "✅ Modifier vos ordres") {
+if (topbarBtnReloaded.textContent !== "Modifier vos ordres") {
   throw new Error(`❌ Le bouton topbar devrait rester sur "Modifier vos ordres" après rechargement, obtenu "${topbarBtnReloaded.textContent}".`);
 }
 console.log("✅ Le bouton topbar reflète bien l'état persisté après rechargement.");

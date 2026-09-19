@@ -80,8 +80,12 @@ if (cupScheduledAt == null) throw new Error("❌ (setup) scheduledTimeForCupRoun
 const rows = [...doc2.querySelectorAll("#calendrierContent table.calendar-table tbody tr")];
 console.log("Nombre de lignes du calendrier fusionné :", rows.length);
 
-const cupRowIdx = rows.findIndex(r => r.textContent.includes("🏆 Coupe"));
-if (cupRowIdx === -1) throw new Error("❌ Le tour de coupe du club du joueur devrait apparaître dans la même feuille que le championnat (une ligne '🏆 Coupe').");
+// Retour utilisateur (2026-09) : "enlève tous les emojis qu'il y a dans le
+// jeu, sauf ceux dans le menu de gauche et celui qui clignote" : le badge
+// de compétition ("Coupe"/"Championnat", voir compLabel côté navigateur)
+// n'affiche plus l'emoji 🏆 en préfixe.
+const cupRowIdx = rows.findIndex(r => r.textContent.includes("Coupe"));
+if (cupRowIdx === -1) throw new Error("❌ Le tour de coupe du club du joueur devrait apparaître dans la même feuille que le championnat (une ligne 'Coupe').");
 const cupRow = rows[cupRowIdx];
 console.log("Ligne de coupe trouvée :", cupRow.textContent.replace(/\s+/g, " ").trim());
 if (!cupRow.textContent.includes("Huitièmes")) throw new Error("❌ La ligne de coupe devrait afficher le nom du tour ('Huitièmes').");
