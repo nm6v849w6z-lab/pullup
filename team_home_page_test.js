@@ -271,6 +271,58 @@ if (!apercuJerseySvgAfter || apercuJerseySvgAfter.getAttribute("aria-label").inc
 console.log("✅ Repasser en club gratuit masque bien le motif personnalisé (sans le perdre) sur l'Aperçu.");
 
 // ---------------------------------------------------------------------
+// Partie 5ter : combinaison de 2 couleurs pour les motifs "rayures"/
+// "degrade" (retour utilisateur, 2026-09 : "ajoute un peu plus de couleur
+// pour le mode payant, et mets le choix de 2 couleurs [...] mets plus de
+// choix"). Club encore gratuit à ce stade (repassé à false juste au-dessus),
+// jerseyPattern déjà "degrade" (conservé, juste ignoré au rendu).
+// ---------------------------------------------------------------------
+win.renderClubIdentityPanel();
+if (doc.querySelector("#clubIdentityPanel [data-jersey-twotone]")) {
+  throw new Error("❌ Le sélecteur de combinaison de couleurs ne devrait PAS être proposé à un club gratuit.");
+}
+console.log("✅ Le sélecteur de combinaison de couleurs est bien masqué pour un club gratuit.");
+
+doc.getElementById("clubTogglePayingBtn").click();
+const twoToneSets = win.eval("JERSEY_TWO_TONE_SETS");
+const twoToneKeys = Object.keys(twoToneSets);
+console.log("Combinaisons de couleurs disponibles :", twoToneKeys.length, "(mets plus de choix)");
+if (twoToneKeys.length < 8) throw new Error(`❌ JERSEY_TWO_TONE_SETS devrait exposer au moins 8 combinaisons, obtenu ${twoToneKeys.length}.`);
+const chosenTwoToneKey = twoToneKeys[2];
+const twoToneBtn = doc.querySelector(`[data-jersey-twotone="${chosenTwoToneKey}"]`);
+if (!twoToneBtn) throw new Error("❌ (setup) Le sélecteur de combinaison de couleurs devrait apparaître une fois le club payant avec un motif \"degrade\".");
+twoToneBtn.click();
+console.log("teamA.jerseyTwoTone après clic :", win.eval("teamA.jerseyTwoTone"));
+if (win.eval("teamA.jerseyTwoTone") !== chosenTwoToneKey) throw new Error("❌ Cliquer sur une combinaison de couleurs devrait mettre à jour teamA.jerseyTwoTone.");
+if (!doc.querySelector(`[data-jersey-twotone="${chosenTwoToneKey}"]`).classList.contains("active")) {
+  throw new Error("❌ Le bouton de combinaison actif devrait porter la classe \"active\" après le clic.");
+}
+console.log("✅ Le choix de combinaison de couleurs est bien appliqué et reflété visuellement (club payant).");
+
+win.showTeamDetail(myIdx);
+const apercuTwoToneSvg = doc.querySelector("#teamDetailContent .jersey-mockup svg");
+const expectedColors = twoToneSets[chosenTwoToneKey];
+const svgMarkup = apercuTwoToneSvg ? apercuTwoToneSvg.outerHTML : "";
+const usesExactColors = apercuTwoToneSvg && expectedColors.every(c => svgMarkup.includes(c));
+console.log("Le maillot de l'Aperçu utilise les 2 couleurs exactes de la combinaison choisie :", usesExactColors);
+if (!usesExactColors) {
+  throw new Error("❌ Le maillot affiché sur l'Aperçu devrait utiliser les 2 couleurs exactes de la combinaison choisie (dégradé), pas une nuance calculée.");
+}
+console.log("✅ La combinaison de 2 couleurs personnalisée apparaît bien sur l'Aperçu d'un club payant.");
+
+// Même principe que le logo/motif ci-dessus : repasser en gratuit ne doit
+// PAS effacer la combinaison choisie, juste l'ignorer au rendu (le motif
+// lui-même retombe déjà sur "uni", donc twoTone n'a de toute façon plus
+// d'effet visible tant que le club n'est pas repassé payant).
+win.eval("teamA.setPaying(false);");
+win.renderClubIdentityPanel();
+if (doc.querySelector("#clubIdentityPanel [data-jersey-twotone]")) {
+  throw new Error("❌ Un club redevenu gratuit ne devrait plus proposer le sélecteur de combinaison de couleurs.");
+}
+if (win.eval("teamA.jerseyTwoTone") !== chosenTwoToneKey) throw new Error("❌ Repasser en club gratuit ne devrait pas effacer teamA.jerseyTwoTone.");
+console.log("✅ Repasser en club gratuit masque bien le sélecteur de combinaison de couleurs (sans perdre le choix).");
+
+// ---------------------------------------------------------------------
 // Partie 6 : délai de réponse de 2h à une interview, côté écran de
 // rattrapage : une interview jamais traitée après 2h disparaît, sans
 // blocage ni action requise du manager (retour utilisateur : "il faut les

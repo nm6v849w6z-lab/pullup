@@ -97,6 +97,16 @@ async function flush(dom) {
   await dom.window.__lastSave;
 }
 
+// Attend que le dernier clic "Suivant" du tutoriel d'accueil (voir
+// window.__lastTourNext dans tourNext, moteurbasket3.html) ait fini de
+// traiter la prime éventuelle de l'étape (round-trip serveur en ligue
+// partagée, voir performTutorialRewardClaim) avant de relire team.budget/
+// tutorialRewardsClaimed, même précaution que flush() ci-dessus pour
+// saveMyTeam().
+async function flushTourNext(dom) {
+  await dom.window.__lastTourNext;
+}
+
 // Lecture/écriture BRUTES du fichier de sauvegarde (même forme que
 // store.serialize : {version, team, league}) — pour les scénarios qui ont
 // besoin d'inspecter ou de manipuler directement la sauvegarde entre deux
@@ -166,6 +176,6 @@ function patchDateNow(window, getFakeNow) {
 }
 
 module.exports = {
-  tmpSavePath, tmpMultiSavePath, startTestServer, openGame, flush, readRawSave, writeRawSave,
+  tmpSavePath, tmpMultiSavePath, startTestServer, openGame, flush, flushTourNext, readRawSave, writeRawSave,
   calendarStartAtForRoundsDone, fastForwardCalendar, patchDateNow,
 };

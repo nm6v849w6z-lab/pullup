@@ -216,8 +216,28 @@ async function persistContext(ctx) {
 // PAS lui-même (voir `changed` dans le résultat) — c'est à l'appelant de
 // décider, puisqu'il connaît le bon fichier/la bonne forme de sauvegarde
 // pour CE contexte (solo ou multi-manager, voir persistContext).
+//
+// BUG corrigé (2026-09, retour utilisateur Discord : "Sur la page staff,
+// reset des enchères et du temps à chaque refresh de la page") : `changed`
+// se basait UNIQUEMENT sur `events`/`startedKeys`/`prunedAny`, mais
+// catchUpLeague appelle aussi INCONDITIONNELLEMENT (à chaque tick, voir son
+// commentaire) League.refreshMarket/refreshCoachMarket/refreshAnalystMarket
+// (et refreshRecruiterMarket depuis ce même correctif), qui GÉNÈRENT de
+// nouveaux candidats, font enchérir les CPU et résolvent les enchères
+// échues, sans jamais pousser quoi que ce soit dans `events`. Résultat :
+// une requête en lecture seule (/api/state, /api/save) qui ne faisait QUE
+// rafraîchir un marché de staff (le cas le plus courant) voyait `changed`
+// rester `false`, donc jamais persistée : le prochain chargement de page
+// repartait du MÊME fichier non modifié et régénérait un tout AUTRE lot de
+// candidats/enchères/échéances, qui semblait donc "se réinitialiser" à
+// chaque refresh alors que le serveur avait bien calculé quelque chose,
+// juste jamais sauvegardé. Ces 3 (4) rafraîchissements de marché tournant
+// SANS EXCEPTION à chaque appel de catchUpLeague, la seule persistance
+// fiable est de toujours considérer la ligue comme modifiée après un tick :
+// coûte une écriture disque de plus par requête (fichier JSON minuscule),
+// largement acceptable pour la correction que ça garantit.
 function tick(league, now) {
-  const startedKeys = AutoSim.ensureLiveMatch(league, now);
+  AutoSim.ensureLiveMatch(league, now);
   const events = AutoSim.catchUpLeague(league, now);
   // Médias : purge toute interview en attente depuis plus de 2h, pour
   // TOUTES les équipes humaines de la ligue (voir Team.pruneExpiredInterviews/
@@ -225,9 +245,13 @@ function tick(league, now) {
   // indépendant du navigateur (qui purge déjà côté client, voir
   // showCatchupSummaryIfAny), pour un manager qui n'ouvrirait plus jamais
   // l'écran de rattrapage mais continuerait d'appeler d'autres routes.
-  let prunedAny = false;
-  league.teams.forEach(t => { if (t.isHuman && t.pruneExpiredInterviews(now) > 0) prunedAny = true; });
-  return { events, changed: events.length > 0 || startedKeys.length > 0 || prunedAny };
+  league.teams.forEach(t => { if (t.isHuman) t.pruneExpiredInterviews(now); });
+  // `changed` : toujours `true` (voir le grand commentaire ci-dessus) —
+  // ensureLiveMatch/catchUpLeague/pruneExpiredInterviews tournent tous les
+  // trois SANS CONDITION à chaque appel et peuvent chacun muter `league`
+  // sans que ça se voie dans `events`, donc plus aucune façon bon marché de
+  // savoir avec certitude que RIEN n'a changé.
+  return { events, changed: true };
 }
 
 // Ramène les événements "bruts" de catchUpLeague (potentiellement plusieurs
@@ -424,8 +448,13 @@ const ACTION_ROUTES = {
   "/api/media/interview-skip": actions.skipInterview,
   "/api/club/set-jersey": actions.setTeamJersey,
   "/api/club/set-jersey-pattern": actions.setTeamJerseyPattern,
+  "/api/club/set-jersey-two-tone": actions.setTeamJerseyTwoTone,
   "/api/club/set-logo": actions.setTeamLogo,
   "/api/club/set-paying": actions.setTeamPaying,
+  // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/
+  // claimTutorialReward et server/actions.js) :
+  "/api/club/onboarding-tour-completed": actions.setOnboardingTourCompleted,
+  "/api/club/claim-tutorial-reward": actions.claimTutorialReward,
 };
 
 // ---------------------------------------------------------------------

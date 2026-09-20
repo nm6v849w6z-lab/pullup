@@ -1320,6 +1320,53 @@ const JERSEY_SHAPES = ["A", "B"];
 // (jerseySvgHtml) : ces clés ne servent qu'à valider/persister le choix.
 const JERSEY_PATTERNS = ["uni", "rayures", "degrade"];
 
+// Combinaisons de 2 couleurs pour les motifs "rayures"/"degrade", réservées
+// aux clubs payants (retour utilisateur, 2026-09 : "ajoute un peu plus de
+// couleur pour le mode payant, et mets le choix de 2 couleurs [blanc rouge,
+// blanc noir, blanc bleu, bleu et rouge, violet et jaune...] mets plus de
+// choix") : une palette CURATÉE de paires plutôt que 2 sélecteurs de couleur
+// libres, pour garantir un rendu toujours cohérent (voir jerseySvgHtml côté
+// moteurbasket3.html, seul endroit qui dessine réellement ces couleurs).
+// Indépendant de JERSEY_COLORS/jerseyColor, qui reste utilisé pour le motif
+// "uni" (voir Team.setJerseyTwoTone plus bas, même garde-fou `isPaying` que
+// setJerseyPattern) : jamais effacé en repassant gratuit, juste ignoré au
+// rendu (voir effectiveJerseyTwoTone côté client).
+const JERSEY_TWO_TONE_SETS = {
+  blanc_rouge:   ["#f2f2f0", "#d6473f"],
+  blanc_noir:    ["#f2f2f0", "#20242c"],
+  blanc_bleu:    ["#f2f2f0", "#3b6fd6"],
+  bleu_rouge:    ["#3b6fd6", "#d6473f"],
+  violet_jaune:  ["#8659d6", "#e8c93f"],
+  vert_blanc:    ["#3fae62", "#f2f2f0"],
+  orange_noir:   ["#e08a2e", "#20242c"],
+  rouge_noir:    ["#d6473f", "#20242c"],
+  jaune_noir:    ["#e8c93f", "#20242c"],
+  bordeaux_or:   ["#7a2b3a", "#e8c93f"],
+};
+
+// Primes du tutoriel d'accueil (retour utilisateur, 2026-09 : "Mets les
+// vrais primes sur le tutoriel") : montant crédité au VRAI budget du club
+// (voir Team.claimTutorialReward plus bas) la première fois que chaque thème
+// est terminé dans le tutoriel (voir TOUR_STEPS côté moteurbasket3.html,
+// seul endroit qui décide QUAND proposer chaque prime ; ce tableau-ci reste
+// la seule source de vérité sur COMBIEN chaque thème rapporte, mirroré à
+// l'identique côté client pour que l'affichage "+ X € à la validation" du
+// tutoriel ne puisse jamais diverger du montant réellement crédité). Un
+// thème absent d'ici, ou déjà présent dans Team.tutorialRewardsClaimed, ne
+// rapporte plus rien (voir claimTutorialReward) : protège contre un joueur
+// qui recommencerait le tutoriel (bouton "Passer" ou abandon avant la fin)
+// pour retoucher une prime déjà gagnée sur un thème déjà vu.
+const TOUR_REWARD_BY_TOPIC = {
+  "Effectif": 15000,
+  "Ordres": 50000,
+  "Entraînement": 20000,
+  "Marché": 25000,
+  "Staff": 20000,
+  "Académie de jeunes": 40000,
+  "Économie": 15000,
+  "Salle": 15000,
+};
+
 // Taille maximale d'un logo personnalisé encodé en data URL (retour
 // utilisateur : image chargée par un club payant) : ~300 Ko d'image binaire
 // gonflent à environ 400 000 caractères une fois encodés en base64, une
@@ -1679,14 +1726,26 @@ class Team {
 
     // Tutoriel d'accueil (retour utilisateur, 2026-09 : "on est d'accord
     // qu'on ne peut le faire qu'une fois ? quand il a été fait le bouton
-    // dans le guide doit s'enlever") : purement côté client
-    // (moteurbasket3.html), jamais lu par le moteur de simulation, mais
-    // DOIT quand même exister ici : c'est CE fichier (mirroir exact, voir
-    // l'en-tête du fichier) qui reconstruit team côté serveur à chaque
-    // sauvegarde (server/store.js -> teamFromSave/serializeTeam plus bas),
-    // donc un champ absent d'ici est silencieusement perdu à chaque
-    // aller-retour serveur, même s'il existe côté client.
+    // dans le guide doit s'enlever") : jamais lu par le moteur de
+    // simulation lui-même, mais DOIT quand même exister ici : c'est CE
+    // fichier (mirroir exact, voir l'en-tête du fichier) qui reconstruit
+    // team côté serveur à chaque sauvegarde (server/store.js ->
+    // teamFromSave/serializeTeam plus bas), donc un champ absent d'ici est
+    // silencieusement perdu à chaque aller-retour serveur, même s'il existe
+    // côté client. Voir server/actions.js:setOnboardingTourCompleted pour
+    // l'écriture côté serveur en ligue partagée (où saveMyTeam() ne peut
+    // pas persister ce champ, voir moteurbasket3.html).
     this.onboardingTourCompleted = false;
+
+    // Primes du tutoriel déjà créditées (retour utilisateur, 2026-09 :
+    // "Mets les vrais primes sur le tutoriel") : liste des clés `topic` de
+    // TOUR_REWARD_BY_TOPIC déjà payées à CE club, une fois pour toutes,
+    // quel que soit le nombre de fois où le tutoriel est relancé ou
+    // abandonné en cours de route (voir claimTutorialReward plus bas) :
+    // sans ce ledger, redémarrer le tutoriel après l'avoir quitté avant la
+    // fin (onboardingTourCompleted encore à `false`) permettrait de
+    // retoucher indéfiniment les primes des thèmes déjà vus.
+    this.tutorialRewardsClaimed = [];
 
     this.maintainDespiteFouls = new Set();
     // Plans d'ordres préparés À L'AVANCE pour une journée future (retour
@@ -1923,6 +1982,14 @@ class Team {
     // JERSEY_PATTERNS/setJerseyPattern, même garde-fou "isPaying" que
     // customLogoDataUrl ci-dessus.
     this.jerseyPattern = JERSEY_PATTERNS[0];
+    // Combinaison de 2 couleurs pour les motifs "rayures"/"degrade" (retour
+    // utilisateur : "mets le choix de 2 couleurs [...] mets plus de choix")
+    // : voir JERSEY_TWO_TONE_SETS/setJerseyTwoTone, même garde-fou
+    // "isPaying" que jerseyPattern ci-dessus. Une valeur par défaut est
+    // toujours définie (même pour un club gratuit qui ne la voit jamais au
+    // rendu) pour ne jamais avoir à distinguer "pas encore choisi" de
+    // "choisi mais ignoré".
+    this.jerseyTwoTone = Object.keys(JERSEY_TWO_TONE_SETS)[0];
 
     // Date de création et trophées (retour utilisateur, 2026-09 : "on
     // pourrait ajouter les petites infos comme date de création, renommée et
@@ -2115,6 +2182,24 @@ class Team {
     return { ok: true };
   }
 
+  // Combinaison de 2 couleurs pour les motifs "rayures"/"degrade" (retour
+  // utilisateur : "ajoute un peu plus de couleur pour le mode payant, et
+  // mets le choix de 2 couleurs [...] mets plus de choix") : réservée à un
+  // club `isPaying`, sans exception (contrairement à setJerseyPattern
+  // ci-dessus, il n'y a pas d'équivalent "uni" neutre ici : une combinaison
+  // de 2 couleurs n'a de sens que pour un motif payant). Jamais effacée en
+  // repassant gratuit (voir setPaying) : seul le RENDU l'ignore tant que le
+  // club n'est pas payant (voir effectiveJerseyTwoTone côté
+  // moteurbasket3.html), même principe que jerseyPattern.
+  setJerseyTwoTone(key) {
+    if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
+    if (!this.isPaying) {
+      return { ok: false, error: "Passez en club payant pour choisir une combinaison de couleurs." };
+    }
+    this.jerseyTwoTone = key;
+    return { ok: true };
+  }
+
   // Logo personnalisé (retour utilisateur : "pour les équipes qui paient,
   // elles doivent pouvoir charger leur propre image") : réservé aux clubs
   // `isPaying` (voir setPaying ci-dessous), `dataUrl` = null retire le logo
@@ -2149,6 +2234,43 @@ class Team {
   setPaying(isPaying) {
     this.isPaying = !!isPaying;
     return { ok: true };
+  }
+
+  // Marque le tutoriel d'accueil comme terminé (retour utilisateur,
+  // 2026-09 : "on est d'accord qu'on ne peut le faire qu'une fois ? [...]
+  // le bouton dans le guide doit s'enlever") : à sens unique (jamais remis
+  // à `false`), déclenché aussi bien en allant jusqu'au bout du tutoriel
+  // qu'en le passant (voir tourEndTour côté moteurbasket3.html). Existe
+  // désormais aussi côté serveur (server/actions.js) pour la ligue
+  // partagée, où saveMyTeam() (seul point d'écriture jusqu'ici, solo
+  // uniquement) ne peut pas persister ce champ : sans ce point d'entrée
+  // dédié, le bouton "Lancer le tutoriel" réapparaissait à chaque
+  // rechargement de page pour un manager de ligue partagée, malgré le
+  // tutoriel déjà terminé.
+  markOnboardingTourCompleted() {
+    this.onboardingTourCompleted = true;
+    return { ok: true };
+  }
+
+  // Crédite la prime d'un thème du tutoriel d'accueil terminé (retour
+  // utilisateur, 2026-09 : "Mets les vrais primes sur le tutoriel") : voir
+  // TOUR_REWARD_BY_TOPIC plus haut pour le montant par thème et
+  // Team.tutorialRewardsClaimed pour la protection anti-doublon. Idempotent
+  // à dessein (`alreadyClaimed: true, amount: 0` plutôt qu'une erreur) : le
+  // tutoriel côté client appelle ce point d'entrée à chaque fois qu'un
+  // thème à prime est terminé, y compris si le joueur relance le tutoriel
+  // après l'avoir déjà fini une première fois (ex. via les outils de
+  // développement) : jamais une double dépense pour le club.
+  claimTutorialReward(topic) {
+    const amount = TOUR_REWARD_BY_TOPIC[topic];
+    if (!amount) return { ok: false, error: "Thème de tutoriel inconnu." };
+    this.tutorialRewardsClaimed = this.tutorialRewardsClaimed || [];
+    if (this.tutorialRewardsClaimed.includes(topic)) {
+      return { ok: true, alreadyClaimed: true, amount: 0, budget: this.budget };
+    }
+    this.tutorialRewardsClaimed.push(topic);
+    this.recordTransaction(`Tutoriel d'accueil : ${topic}`, amount);
+    return { ok: true, alreadyClaimed: false, amount, budget: this.budget };
   }
 
   // Vend un joueur LISTÉ (voir Player.forSale/salePrice) : liquidation
@@ -5502,6 +5624,11 @@ function serializeTeam(team) {
     // au rechargement, sinon le bouton de l'onglet Guide reviendrait à
     // chaque redémarrage du serveur.
     onboardingTourCompleted: !!team.onboardingTourCompleted,
+    // Primes du tutoriel déjà créditées (voir Team.tutorialRewardsClaimed/
+    // claimTutorialReward plus haut) : DOIT survivre au rechargement, sinon
+    // un thème déjà payé redeviendrait payable à chaque redémarrage du
+    // serveur.
+    tutorialRewardsClaimed: [...(team.tutorialRewardsClaimed || [])],
     trainingSkill: team.trainingSkill,
     trainingPositions: [...team.trainingPositions],
     trainer: team.trainer ? { ...team.trainer } : null,
@@ -5539,6 +5666,7 @@ function serializeTeam(team) {
     jerseyShape: team.jerseyShape,
     jerseyColor: team.jerseyColor,
     jerseyPattern: team.jerseyPattern,
+    jerseyTwoTone: team.jerseyTwoTone,
     // Fiche club (voir Team.foundedYear/trophies, generateFoundedYear/
     // MAX_TEAM_TROPHIES/League.recordTrophy plus haut) : copie superficielle
     // de chaque trophée, même précaution que pendingInterviews ci-dessus.
@@ -5689,6 +5817,12 @@ function teamFromSave(data) {
   // Tutoriel d'accueil, absente = sauvegarde d'avant cette fonctionnalité,
   // on garde `false` (déjà la valeur posée par le constructeur Team).
   team.onboardingTourCompleted = !!data.onboardingTourCompleted;
+  // Primes du tutoriel déjà créditées, absente = sauvegarde d'avant cette
+  // fonctionnalité, on garde `[]` (déjà la valeur posée par le
+  // constructeur Team) : ne recrédite RIEN rétroactivement pour un
+  // tutoriel déjà terminé avant ce correctif (2026-09, retour utilisateur
+  // "Mets les vrais primes sur le tutoriel").
+  team.tutorialRewardsClaimed = Array.isArray(data.tutorialRewardsClaimed) ? data.tutorialRewardsClaimed : [];
   team.trainingSkill = data.trainingSkill || null;
   team.trainingPositions = Array.isArray(data.trainingPositions) ? data.trainingPositions : [];
   if (data.trainer && TRAINER_LEVELS.includes(data.trainer.level)) {
@@ -5818,6 +5952,7 @@ function teamFromSave(data) {
   if (JERSEY_SHAPES.includes(data.jerseyShape)) team.jerseyShape = data.jerseyShape;
   if (JERSEY_COLORS[data.jerseyColor]) team.jerseyColor = data.jerseyColor;
   if (JERSEY_PATTERNS.includes(data.jerseyPattern)) team.jerseyPattern = data.jerseyPattern;
+  if (JERSEY_TWO_TONE_SETS[data.jerseyTwoTone]) team.jerseyTwoTone = data.jerseyTwoTone;
   // Fiche club (voir serializeTeam ci-dessus) : absent = sauvegarde d'avant
   // cette fonctionnalité, on garde les valeurs par défaut déjà posées par le
   // constructeur (foundedYear tiré à l'instant, trophies vide) plutôt que
@@ -6655,7 +6790,8 @@ return {
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam,
   ARENA_LEVELS, arenaInfo, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel, INTERVIEW_TONES, INTERVIEW_QUOTES,
-  INTERVIEW_RESPONSE_DEADLINE_MS, JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, MAX_TEAM_LOGO_DATA_URL_LENGTH,
+  INTERVIEW_RESPONSE_DEADLINE_MS, JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, JERSEY_TWO_TONE_SETS, MAX_TEAM_LOGO_DATA_URL_LENGTH,
+  TOUR_REWARD_BY_TOPIC,
   MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars,
   CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,

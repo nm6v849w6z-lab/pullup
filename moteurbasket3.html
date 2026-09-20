@@ -289,6 +289,17 @@
   .jersey-pattern-picker{display:flex; gap:14px; flex-wrap:wrap;}
   .jersey-pattern-btn{display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 14px; border-radius:var(--radius); border:2px solid var(--line); background:var(--panel); cursor:pointer; font-size:12px; color:var(--ink-faint);}
   .jersey-pattern-btn.active{border-color:var(--amber); color:var(--ink);}
+  /* Combinaison de 2 couleurs pour les motifs "rayures"/"degrade", réservée
+     aux clubs payants (retour utilisateur, 2026-09 : "ajoute un peu plus de
+     couleur pour le mode payant, et mets le choix de 2 couleurs [...] mets
+     plus de choix") : même principe que .jersey-color-swatch ci-dessus,
+     mais un dégradé diagonal à 2 tons plutôt qu'une couleur pleine, pour
+     montrer les 2 couleurs de la combinaison d'un coup d'œil sur le rond.
+     Voir renderClubIdentityPanel (rempli via style="background:..." inline,
+     une couleur par club, jamais dans le CSS lui-même). */
+  .jersey-twotone-picker{display:flex; gap:10px; flex-wrap:wrap;}
+  .jersey-twotone-swatch{width:30px; height:30px; border-radius:50%; border:2px solid var(--line); cursor:pointer;}
+  .jersey-twotone-swatch.active{border-color:var(--ink);}
   .club-paying-row{margin-top:16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
   .club-paying-note{color:var(--ink-faint); font-size:11px;}
 
@@ -1966,9 +1977,14 @@
            directement sur les vraies pages du jeu (voir startRealTour tout
            en bas de ce fichier). Placé ici plutôt que déclenché
            automatiquement à l'ouverture du jeu : la mise en scène finale
-           (premier lancement, récompenses réellement créditées) reste à
+           (premier lancement automatique ? bouton permanent ?) reste à
            décider, ce bouton sert pour l'instant à voir le rendu et le
-           revoir à volonté. -->
+           revoir à volonté (une seule fois par club, voir
+           Team.onboardingTourCompleted). Les primes, elles, SONT réellement
+           créditées depuis le correctif "Mets les vrais primes sur le
+           tutoriel" (voir performTutorialRewardClaim/tourNext) : seul le
+           déclenchement du tutoriel reste à l'étape "aperçu", pas son
+           contenu économique. -->
       <button type="button" class="tour-launch-btn" id="tourLaunchBtn">Lancer le tutoriel d'accueil (aperçu)</button>
 
       <div class="guide-entry">
@@ -3295,6 +3311,39 @@ const JERSEY_PATTERNS = ["uni", "rayures", "degrade"];
 // Libellés affichés du sélecteur de motif (tableau de bord) : purement côté
 // client, jamais persisté (la clé JERSEY_PATTERNS suffit côté sauvegarde).
 const JERSEY_PATTERN_LABELS = { uni: "Uni", rayures: "Rayures", degrade: "Dégradé" };
+// Combinaisons de 2 couleurs pour les motifs "rayures"/"degrade", réservées
+// aux clubs payants (voir engine.js pour le commentaire détaillé, retour
+// utilisateur : "ajoute un peu plus de couleur pour le mode payant, et mets
+// le choix de 2 couleurs [...] mets plus de choix"). Copie exacte des clés
+// ET des couleurs côté serveur (contrairement à JERSEY_PATTERN_LABELS
+// ci-dessus, ces hex sont bien utilisés au rendu, voir jerseySvgHtml plus
+// bas), même précaution que JERSEY_COLORS ci-dessus.
+const JERSEY_TWO_TONE_SETS = {
+  blanc_rouge:   ["#f2f2f0", "#d6473f"],
+  blanc_noir:    ["#f2f2f0", "#20242c"],
+  blanc_bleu:    ["#f2f2f0", "#3b6fd6"],
+  bleu_rouge:    ["#3b6fd6", "#d6473f"],
+  violet_jaune:  ["#8659d6", "#e8c93f"],
+  vert_blanc:    ["#3fae62", "#f2f2f0"],
+  orange_noir:   ["#e08a2e", "#20242c"],
+  rouge_noir:    ["#d6473f", "#20242c"],
+  jaune_noir:    ["#e8c93f", "#20242c"],
+  bordeaux_or:   ["#7a2b3a", "#e8c93f"],
+};
+// Libellés affichés du sélecteur de combinaison (tableau de bord) : purement
+// côté client, même principe que JERSEY_PATTERN_LABELS ci-dessus.
+const JERSEY_TWO_TONE_LABELS = {
+  blanc_rouge: "Blanc et rouge",
+  blanc_noir: "Blanc et noir",
+  blanc_bleu: "Blanc et bleu",
+  bleu_rouge: "Bleu et rouge",
+  violet_jaune: "Violet et jaune",
+  vert_blanc: "Vert et blanc",
+  orange_noir: "Orange et noir",
+  rouge_noir: "Rouge et noir",
+  jaune_noir: "Jaune et noir",
+  bordeaux_or: "Bordeaux et or",
+};
 const MAX_TEAM_LOGO_DATA_URL_LENGTH = 400000;
 
 // Copie côté client des mêmes constantes engine.js (voir son commentaire) :
@@ -3627,10 +3676,17 @@ class Team {
     // qu'on ne peut le faire qu'une fois ? quand il a été fait le bouton
     // dans le guide doit s'enlever") : à sens unique, jamais remis à false
     // une fois passé à true (voir tourEndTour, tout en bas de ce fichier).
-    // Purement client (jamais lu par le moteur), mais DOIT survivre au
-    // rechargement comme le reste de l'état du club, voir serializeTeam/
-    // teamFromSave ci-dessous.
+    // DOIT survivre au rechargement comme le reste de l'état du club, voir
+    // serializeTeam/teamFromSave ci-dessous.
     this.onboardingTourCompleted = false;
+
+    // Primes du tutoriel déjà créditées (retour utilisateur, 2026-09 :
+    // "Mets les vrais primes sur le tutoriel") : liste des clés `topic` de
+    // TOUR_REWARD_BY_TOPIC déjà payées à ce club, une fois pour toutes (voir
+    // Team.claimTutorialReward plus bas) : sans ce ledger, redémarrer le
+    // tutoriel après l'avoir quitté avant la fin permettrait de retoucher
+    // indéfiniment les primes des thèmes déjà vus.
+    this.tutorialRewardsClaimed = [];
 
     this.maintainDespiteFouls = new Set();
     // Plans d'ordres préparés À L'AVANCE pour une journée future (retour
@@ -3835,6 +3891,7 @@ class Team {
     this.jerseyShape = JERSEY_SHAPES[0];
     this.jerseyColor = Object.keys(JERSEY_COLORS)[0];
     this.jerseyPattern = JERSEY_PATTERNS[0];
+    this.jerseyTwoTone = Object.keys(JERSEY_TWO_TONE_SETS)[0];
 
     // Fiche club : date de création et trophées (voir engine.js, miroir
     // identique). "renommée" : voir computeClubReputationStars plus haut,
@@ -3970,6 +4027,17 @@ class Team {
     return { ok: true };
   }
 
+  // Combinaison de 2 couleurs pour les motifs "rayures"/"degrade" (voir
+  // engine.js, miroir identique).
+  setJerseyTwoTone(key) {
+    if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
+    if (!this.isPaying) {
+      return { ok: false, error: "Passez en club payant pour choisir une combinaison de couleurs." };
+    }
+    this.jerseyTwoTone = key;
+    return { ok: true };
+  }
+
   // Logo personnalisé, réservé aux clubs payants (voir engine.js, miroir
   // identique).
   setCustomLogo(dataUrl) {
@@ -3994,6 +4062,30 @@ class Team {
   setPaying(isPaying) {
     this.isPaying = !!isPaying;
     return { ok: true };
+  }
+
+  // Marque le tutoriel d'accueil comme terminé (voir engine.js, miroir
+  // identique) : à sens unique, déclenché en allant jusqu'au bout du
+  // tutoriel comme en le passant (voir tourEndTour plus bas).
+  markOnboardingTourCompleted() {
+    this.onboardingTourCompleted = true;
+    return { ok: true };
+  }
+
+  // Crédite la prime d'un thème du tutoriel d'accueil terminé (voir
+  // engine.js, miroir identique, pour le commentaire détaillé) : idempotent
+  // à dessein, voir TOUR_REWARD_BY_TOPIC plus haut pour le montant par
+  // thème.
+  claimTutorialReward(topic) {
+    const amount = TOUR_REWARD_BY_TOPIC[topic];
+    if (!amount) return { ok: false, error: "Thème de tutoriel inconnu." };
+    this.tutorialRewardsClaimed = this.tutorialRewardsClaimed || [];
+    if (this.tutorialRewardsClaimed.includes(topic)) {
+      return { ok: true, alreadyClaimed: true, amount: 0, budget: this.budget };
+    }
+    this.tutorialRewardsClaimed.push(topic);
+    this.recordTransaction(`Tutoriel d'accueil : ${topic}`, amount);
+    return { ok: true, alreadyClaimed: false, amount, budget: this.budget };
   }
 
   // Vend un joueur LISTÉ (voir Player.forSale/salePrice) : liquidation
@@ -7092,6 +7184,10 @@ function serializeTeam(team) {
     // rechargement, sinon le bouton de l'onglet Guide reviendrait à chaque
     // fois qu'on relance le serveur.
     onboardingTourCompleted: !!team.onboardingTourCompleted,
+    // Primes du tutoriel déjà créditées (voir Team.tutorialRewardsClaimed/
+    // claimTutorialReward) : DOIT survivre au rechargement, sinon un thème
+    // déjà payé redeviendrait payable à chaque rechargement de page.
+    tutorialRewardsClaimed: [...(team.tutorialRewardsClaimed || [])],
     trainingSkill: team.trainingSkill,
     trainingPositions: [...team.trainingPositions],
     trainer: team.trainer ? { ...team.trainer } : null,
@@ -7123,6 +7219,7 @@ function serializeTeam(team) {
     jerseyShape: team.jerseyShape,
     jerseyColor: team.jerseyColor,
     jerseyPattern: team.jerseyPattern,
+    jerseyTwoTone: team.jerseyTwoTone,
     // Fiche club (voir engine.js, miroir identique).
     foundedYear: team.foundedYear,
     trophies: Array.isArray(team.trophies) ? team.trophies.map(t => ({ ...t })) : [],
@@ -7261,6 +7358,12 @@ function teamFromSave(data) {
   // Tutoriel d'accueil, absente = sauvegarde d'avant cette fonctionnalité,
   // on garde `false` (déjà la valeur posée par le constructeur Team).
   team.onboardingTourCompleted = !!data.onboardingTourCompleted;
+  // Primes du tutoriel déjà créditées, absente = sauvegarde d'avant ce
+  // correctif, on garde `[]` (déjà la valeur posée par le constructeur
+  // Team) : ne recrédite RIEN rétroactivement pour un tutoriel déjà
+  // terminé avant le correctif (2026-09, retour utilisateur "Mets les
+  // vrais primes sur le tutoriel").
+  team.tutorialRewardsClaimed = Array.isArray(data.tutorialRewardsClaimed) ? data.tutorialRewardsClaimed : [];
   team.trainingSkill = data.trainingSkill || null;
   team.trainingPositions = Array.isArray(data.trainingPositions) ? data.trainingPositions : [];
   if (data.trainer && TRAINER_LEVELS.includes(data.trainer.level)) {
@@ -7384,6 +7487,7 @@ function teamFromSave(data) {
   if (JERSEY_SHAPES.includes(data.jerseyShape)) team.jerseyShape = data.jerseyShape;
   if (JERSEY_COLORS[data.jerseyColor]) team.jerseyColor = data.jerseyColor;
   if (JERSEY_PATTERNS.includes(data.jerseyPattern)) team.jerseyPattern = data.jerseyPattern;
+  if (JERSEY_TWO_TONE_SETS[data.jerseyTwoTone]) team.jerseyTwoTone = data.jerseyTwoTone;
   // Fiche club (voir engine.js, miroir identique).
   if (typeof data.foundedYear === "number") team.foundedYear = data.foundedYear;
   if (Array.isArray(data.trophies)) team.trophies = data.trophies.map(t => ({ ...t }));
@@ -8985,6 +9089,20 @@ function syncJerseyPatternToServer(pattern) {
   }
 }
 
+// Combinaison de 2 couleurs du maillot (retour utilisateur : "mets le choix
+// de 2 couleurs") : même convention fire-and-forget que syncJerseyToServer/
+// syncJerseyPatternToServer ci-dessus.
+function syncJerseyTwoToneToServer(key) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/club/set-jersey-two-tone", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) })
+      .then(res => { if (!res.ok) console.warn("Changement de couleurs de maillot refusé côté serveur.", res.status); })
+      .catch(e => console.warn("Couleurs de maillot : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Couleurs de maillot : serveur indisponible :", e);
+  }
+}
+
 function syncLogoToServer(dataUrl) {
   if (!managerToken) return;
   try {
@@ -9004,6 +9122,64 @@ function syncPayingToServer(isPaying) {
       .catch(e => console.warn("Statut club : serveur indisponible :", e));
   } catch (e) {
     console.warn("Statut club : serveur indisponible :", e);
+  }
+}
+
+// Tutoriel d'accueil terminé (voir tourEndTour plus bas) : même convention
+// fire-and-forget que syncPayingToServer ci-dessus — juste un drapeau, pas
+// d'argent en jeu ici (voir performTutorialRewardClaim plus bas pour les
+// primes, qui elles sont AWAITED). Nécessaire pour la ligue partagée, où
+// saveMyTeam() (seul appel fait jusqu'ici par tourEndTour) ne persiste
+// rien : sans ça, le bouton "Lancer le tutoriel" reviendrait à chaque
+// rechargement de page pour un manager de ligue partagée, malgré le
+// tutoriel déjà terminé.
+function syncOnboardingTourCompletedToServer() {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/club/onboarding-tour-completed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
+      .then(res => { if (!res.ok) console.warn("Fin de tutoriel refusée côté serveur.", res.status); })
+      .catch(e => console.warn("Fin de tutoriel : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Fin de tutoriel : serveur indisponible :", e);
+  }
+}
+
+// Prime d'un thème du tutoriel d'accueil terminé (retour utilisateur,
+// 2026-09 : "Mets les vrais primes sur le tutoriel") : AWAITED, comme
+// runVideoSessionOnServer/performVideoSession juste en dessous, et pour la
+// même raison : de l'argent RÉEL est en jeu, pas un simple affichage (voir
+// tourEndTour ci-dessus pour la différence avec le drapeau
+// onboardingTourCompleted, lui fire-and-forget). Solo (managerToken null) :
+// Team.claimTutorialReward mutate directement teamA, déjà autoritaire en
+// solo, saveMyTeam() persiste ensuite. Ligue partagée : round-trip serveur
+// (server/actions.js:claimTutorialReward, MÊMES règles d'idempotence que
+// côté moteur, voir Team.tutorialRewardsClaimed) : le serveur reste la
+// seule source de vérité sur le montant réellement crédité (`amount`) et
+// sur si ce thème a déjà été payé avant (`alreadyClaimed`), jamais le
+// client : protège contre un joueur qui recommencerait le tutoriel après
+// l'avoir abandonné en cours de route pour retoucher une prime déjà gagnée.
+async function performTutorialRewardClaim(topic) {
+  if (!managerToken) {
+    const result = teamA.claimTutorialReward(topic);
+    saveMyTeam();
+    return result;
+  }
+  try {
+    const res = await fetchApi("/api/club/claim-tutorial-reward", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || data.ok === false) {
+      return { ok: false, error: (data && data.error) || `Erreur serveur (${res.status}).` };
+    }
+    if (typeof data.budget === "number") teamA.budget = data.budget;
+    teamA.tutorialRewardsClaimed = teamA.tutorialRewardsClaimed || [];
+    if (!teamA.tutorialRewardsClaimed.includes(topic)) teamA.tutorialRewardsClaimed.push(topic);
+    return data;
+  } catch (e) {
+    return { ok: false, error: "Serveur indisponible." };
   }
 }
 
@@ -10238,13 +10414,26 @@ function startCountdown() {
 // du jeu normalement : le direct qui vient de démarrer (league.liveMatch),
 // ou un rattrapage déjà résolu entretemps si la page est restée ouverte plus
 // longtemps que prévu (pendingEvents) — enterNextMatchOrShowSeasonEnd() gère
-// les deux cas. `justWatchedRound`, si fourni, retire du récapitulatif
-// d'absence le résultat de CETTE journée précise : elle vient d'être suivie
-// en direct à l'instant (voir goToOrdresTab) — inutile de la remontrer
-// aussitôt dans "Pendant votre absence" (seuls d'éventuels AUTRES
-// événements survenus entretemps, comme l'entraînement hebdomadaire, y
-// restent affichés).
-async function refreshFromServerAndReenter(justWatchedRound, justWatchedCompetition) {
+// les deux cas, sauf si `desiredOrdresRound` est fourni (voir plus bas).
+// `justWatchedRound`, si fourni, retire du récapitulatif d'absence le
+// résultat de CETTE journée précise : elle vient d'être suivie en direct à
+// l'instant (voir goToOrdresTab) — inutile de la remontrer aussitôt dans
+// "Pendant votre absence" (seuls d'éventuels AUTRES événements survenus
+// entretemps, comme l'entraînement hebdomadaire, y restent affichés).
+//
+// `desiredOrdresRound`/`desiredOrdresCompetition` : bug corrigé (retour
+// utilisateur Discord, Diablue, 2026-09 : "Sur la page calendrier, le
+// bouton ordre ne pas qu'a modifier vos ordres qu'après un refresh complet
+// de la page") : quand goToOrdresTab(round, competition) redirige ici parce
+// qu'un direct différent vient de se terminer (voir la branche
+// liveMatchHasEnded ci-dessous), la journée demandée par le joueur était
+// jusqu'ici purement et simplement oubliée : enterNextMatchOrShowSeasonEnd()
+// atterrissait toujours sur le prochain match par défaut, jamais sur celle
+// cliquée, tant qu'un rechargement complet de la page ne repartait pas
+// directement de zéro. Quand ces deux paramètres sont fournis, on rejoue
+// goToOrdresTab avec la journée originellement demandée une fois l'état
+// serveur à jour, au lieu du repli générique.
+async function refreshFromServerAndReenter(justWatchedRound, justWatchedCompetition, desiredOrdresRound, desiredOrdresCompetition) {
   const loaded = await loadMyTeam();
   // Serveur injoignable : rien à faire de plus ici (pas de nouvelle
   // tentative automatique) — un rechargement manuel de la page suffira une
@@ -10267,7 +10456,11 @@ async function refreshFromServerAndReenter(justWatchedRound, justWatchedCompetit
     }
   }
   renderStaffPanel();
-  enterNextMatchOrShowSeasonEnd();
+  if (typeof desiredOrdresRound === "number") {
+    goToOrdresTab(desiredOrdresRound, desiredOrdresCompetition);
+  } else {
+    enterNextMatchOrShowSeasonEnd();
+  }
 }
 
 // Une équipe ne peut matériellement PAS aligner les 5 postes de sa feuille
@@ -11029,15 +11222,27 @@ let jerseySvgUid = 0;
 // fonction-ci reste purement un pinceau, elle ne connaît PAS Team.isPaying,
 // c'est à l'appelant de lui donner le bon motif). `colorKey` doit être une
 // clé de JERSEY_COLORS ; une clé inconnue retombe sur la première couleur de
-// la palette plutôt que de casser le rendu.
-function jerseySvgHtml(shape, colorKey, size, variant, pattern) {
+// la palette plutôt que de casser le rendu. `twoTone` (retour utilisateur,
+// 2026-09 : "ajoute un peu plus de couleur pour le mode payant, et mets le
+// choix de 2 couleurs [...] mets plus de choix") : une paire [couleur1,
+// couleur2] optionnelle (voir JERSEY_TWO_TONE_SETS/effectiveJerseyTwoTone),
+// prioritaire sur `colorKey` pour les motifs "rayures"/"degrade" UNIQUEMENT
+// (le motif "uni" reste toujours dessiné avec `colorKey` seul, les 2
+// systèmes sont indépendants) : sans elle, ces 2 motifs retombent sur
+// l'ancien rendu (une seule couleur + nuance calculée via shadeHexColor),
+// ce qui garde cette fonction utilisable même pour un aperçu sans
+// combinaison choisie.
+function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone) {
   const color = JERSEY_COLORS[colorKey] || Object.values(JERSEY_COLORS)[0];
   const s = size || 72;
   const isAway = variant === "away";
   const patternKey = JERSEY_PATTERNS.includes(pattern) ? pattern : JERSEY_PATTERNS[0];
+  const usesTwoTone = (patternKey === "rayures" || patternKey === "degrade") && Array.isArray(twoTone) && twoTone.length === 2;
+  const primary = usesTwoTone ? twoTone[0] : color;
+  const secondary = usesTwoTone ? twoTone[1] : null;
   const uid = `jersey${jerseySvgUid++}`;
-  const bodyFill = isAway ? "#eef2f7" : color;
-  const trimColor = isAway ? color : "rgba(255,255,255,.85)";
+  const bodyFill = isAway ? "#eef2f7" : primary;
+  const trimColor = isAway ? primary : "rgba(255,255,255,.85)";
   const panelColor = isAway ? "rgba(0,0,0,.10)" : "rgba(255,255,255,.24)";
   // Emmanchures larges et échancrées (coupe débardeur), jamais de manche qui
   // dépasse du buste : seule la ligne du col change entre les deux formes.
@@ -11047,8 +11252,8 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern) {
   let defs = "";
   let mainFill = bodyFill;
   if (patternKey === "degrade") {
-    const from = isAway ? "#ffffff" : shadeHexColor(color, 0.35);
-    const to = isAway ? color : shadeHexColor(color, -0.35);
+    const from = isAway ? "#ffffff" : (usesTwoTone ? primary : shadeHexColor(color, 0.35));
+    const to = isAway ? primary : (usesTwoTone ? secondary : shadeHexColor(color, -0.35));
     defs += `<linearGradient id="${uid}-grad" x1="0" y1="0" x2="0" y2="1">` +
       `<stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient>`;
     mainFill = `url(#${uid}-grad)`;
@@ -11056,7 +11261,7 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern) {
 
   let body = `<path d="${outline}" fill="${mainFill}" stroke="rgba(0,0,0,.28)" stroke-width="1.5"/>`;
   if (patternKey === "rayures") {
-    const stripeColor = isAway ? color : "rgba(255,255,255,.55)";
+    const stripeColor = isAway ? primary : (usesTwoTone ? secondary : "rgba(255,255,255,.55)");
     defs += `<clipPath id="${uid}-clip"><path d="${outline}"/></clipPath>`;
     let stripes = "";
     for (let x = 16; x < 90; x += 14) stripes += `<rect x="${x}" y="0" width="7" height="100" fill="${stripeColor}"/>`;
@@ -11081,6 +11286,15 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern) {
 // est refait à CHAQUE rendu.
 function effectiveJerseyPattern(team) {
   return team.isPaying ? team.jerseyPattern : JERSEY_PATTERNS[0];
+}
+
+// Combinaison de 2 couleurs réellement affichée pour un club (retour
+// utilisateur : "mets le choix de 2 couleurs") : même principe
+// qu'effectiveJerseyPattern ci-dessus, `null` pour un club gratuit (le
+// motif effectif retombe alors sur "uni" de toute façon, qui n'utilise
+// jamais `twoTone` dans jerseySvgHtml, mais autant rester explicite ici).
+function effectiveJerseyTwoTone(team) {
+  return team.isPaying ? (JERSEY_TWO_TONE_SETS[team.jerseyTwoTone] || null) : null;
 }
 
 // Logo type d'un club gratuit (retour utilisateur : "le logo de l'équipe
@@ -11273,9 +11487,10 @@ function teamDetailApercuHtml(teamIdx) {
   html += `<div class="team-apercu-grid">`;
 
   const jerseyPattern = effectiveJerseyPattern(team);
+  const jerseyTwoTone = effectiveJerseyTwoTone(team);
   html += `<div class="stat-card"><h3>Maillots</h3><div class="jersey-mockups">` +
-    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 84, "home", jerseyPattern)}<p class="sub">Domicile</p></div>` +
-    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 84, "away", jerseyPattern)}<p class="sub">Extérieur</p></div>` +
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 84, "home", jerseyPattern, jerseyTwoTone)}<p class="sub">Domicile</p></div>` +
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 84, "away", jerseyPattern, jerseyTwoTone)}<p class="sub">Extérieur</p></div>` +
     `</div></div>`;
 
   html += `<div class="stat-card"><h3>Derniers résultats</h3>${formStreakHtml(teamIdx)}</div>`;
@@ -13753,11 +13968,12 @@ function renderClubIdentityPanel() {
   html += `</div>`;
 
   const dashboardJerseyPattern = effectiveJerseyPattern(teamA);
+  const dashboardJerseyTwoTone = effectiveJerseyTwoTone(teamA);
   html += `<div class="club-identity-jersey">`;
   html += `<p class="field-label" style="margin:0 0 6px">Forme du maillot</p>`;
   html += `<div class="jersey-shape-picker">` + JERSEY_SHAPES.map(shape =>
     `<button type="button" class="jersey-shape-btn${teamA.jerseyShape === shape ? " active" : ""}" data-jersey-shape="${shape}">` +
-    `${jerseySvgHtml(shape, teamA.jerseyColor, 56, "home", dashboardJerseyPattern)}<span>${shape === "B" ? "Col en V" : "Col rond"}</span></button>`
+    `${jerseySvgHtml(shape, teamA.jerseyColor, 56, "home", dashboardJerseyPattern, dashboardJerseyTwoTone)}<span>${shape === "B" ? "Col en V" : "Col rond"}</span></button>`
   ).join("") + `</div>`;
   html += `<p class="field-label" style="margin:12px 0 6px">Couleur du maillot</p>`;
   html += `<div class="jersey-color-picker">` + Object.keys(JERSEY_COLORS).map(key =>
@@ -13767,10 +13983,25 @@ function renderClubIdentityPanel() {
   if (teamA.isPaying) {
     html += `<div class="jersey-pattern-picker">` + JERSEY_PATTERNS.map(pattern =>
       `<button type="button" class="jersey-pattern-btn${teamA.jerseyPattern === pattern ? " active" : ""}" data-jersey-pattern="${pattern}">` +
-      `${jerseySvgHtml(teamA.jerseyShape, teamA.jerseyColor, 56, "home", pattern)}<span>${JERSEY_PATTERN_LABELS[pattern]}</span></button>`
+      `${jerseySvgHtml(teamA.jerseyShape, teamA.jerseyColor, 56, "home", pattern, dashboardJerseyTwoTone)}<span>${JERSEY_PATTERN_LABELS[pattern]}</span></button>`
     ).join("") + `</div>`;
+    // Combinaison de 2 couleurs (retour utilisateur : "ajoute un peu plus de
+    // couleur pour le mode payant, et mets le choix de 2 couleurs [...] mets
+    // plus de choix") : uniquement utile pour "rayures"/"degrade" (voir
+    // jerseySvgHtml, "uni" ignore toujours `twoTone`), donc affichée
+    // seulement quand un de ces 2 motifs est actif, juste sous le
+    // sélecteur de motif.
+    if (dashboardJerseyPattern !== JERSEY_PATTERNS[0]) {
+      html += `<p class="field-label" style="margin:12px 0 6px">Couleurs du motif</p>`;
+      html += `<div class="jersey-twotone-picker">` + Object.keys(JERSEY_TWO_TONE_SETS).map(key => {
+        const [c1, c2] = JERSEY_TWO_TONE_SETS[key];
+        return `<button type="button" class="jersey-twotone-swatch${teamA.jerseyTwoTone === key ? " active" : ""}" ` +
+          `data-jersey-twotone="${key}" style="background:linear-gradient(135deg, ${c1} 0 50%, ${c2} 50% 100%)" ` +
+          `title="${JERSEY_TWO_TONE_LABELS[key]}" aria-label="Couleurs ${JERSEY_TWO_TONE_LABELS[key]}"></button>`;
+      }).join("") + `</div>`;
+    }
   } else {
-    html += `<p class="sub">Motif uni (club gratuit). Passez en club payant pour un motif personnalisé (rayures, dégradé...).</p>`;
+    html += `<p class="sub">Motif uni (club gratuit). Passez en club payant pour un motif personnalisé (rayures, dégradé...) et plus de couleurs.</p>`;
   }
   html += `</div>`;
   html += `</div>`;
@@ -13823,6 +14054,7 @@ if (clubIdentityPanelEl) {
     const shapeBtn = e.target.closest("[data-jersey-shape]");
     const colorBtn = e.target.closest("[data-jersey-color]");
     const patternBtn = e.target.closest("[data-jersey-pattern]");
+    const twoToneBtn = e.target.closest("[data-jersey-twotone]");
     const resetLogoBtn = e.target.closest("#clubLogoResetBtn");
     const togglePayingBtn = e.target.closest("#clubTogglePayingBtn");
     if (shapeBtn) {
@@ -13831,6 +14063,8 @@ if (clubIdentityPanelEl) {
       teamA.setJersey(teamA.jerseyShape, colorBtn.dataset.jerseyColor);
     } else if (patternBtn) {
       teamA.setJerseyPattern(patternBtn.dataset.jerseyPattern);
+    } else if (twoToneBtn) {
+      teamA.setJerseyTwoTone(twoToneBtn.dataset.jerseyTwotone);
     } else if (resetLogoBtn) {
       teamA.setCustomLogo(null);
     } else if (togglePayingBtn) {
@@ -13841,6 +14075,7 @@ if (clubIdentityPanelEl) {
     saveMyTeam();
     if (shapeBtn || colorBtn) syncJerseyToServer(teamA.jerseyShape, teamA.jerseyColor);
     if (patternBtn) syncJerseyPatternToServer(teamA.jerseyPattern);
+    if (twoToneBtn) syncJerseyTwoToneToServer(teamA.jerseyTwoTone);
     if (resetLogoBtn) syncLogoToServer(null);
     if (togglePayingBtn) syncPayingToServer(teamA.isPaying);
     renderClubIdentityPanel();
@@ -15857,15 +16092,32 @@ const TAB_HANDLERS = {
 // rend" : posé ici directement sur les VRAIES pages, ouvertes via les mêmes
 // TAB_HANDLERS que la sidebar, avec un vrai élément de chaque page éclairé
 // un par un (voir les id ajoutés dans buildTeamPanel, et les id déjà
-// existants #academyGraduatesHolder etc. pour l'Académie de jeunes). Encore
-// un aperçu de rendu à ce stade : les récompenses ci-dessous s'affichent
-// dans le récapitulatif du tutoriel (toast + écran de fin) mais ne sont PAS
-// créditées au vrai budget du club (team.budget) ni synchronisées au
-// serveur, tant que le contenu et le déclenchement définitifs (premier
-// lancement automatique ? bouton permanent ?) n'ont pas été validés.
+// existants #academyGraduatesHolder etc. pour l'Académie de jeunes).
 // Déclenché pour l'instant par #tourLaunchBtn (onglet Guide), jamais
-// automatiquement.
+// automatiquement — le contenu/déclenchement définitifs (premier lancement
+// automatique ? bouton permanent ?) n'ont pas encore été validés, d'où le
+// "(aperçu)" du libellé du bouton, mais les primes ci-dessous SONT bien
+// réelles depuis le correctif 2026-09 (retour utilisateur : "Mets les vrais
+// primes sur le tutoriel") : voir performTutorialRewardClaim/tourNext plus
+// bas, qui créditent réellement team.budget (solo) ou passent par le
+// serveur (ligue partagée, voir server/actions.js:claimTutorialReward) au
+// lieu de se contenter d'un affichage.
 // ---------------------------------------------------------------------
+// Montant par thème (voir Team.claimTutorialReward côté moteur pour la
+// version faisant foi et la protection anti-doublon) : copie EXACTE de
+// engine.js:TOUR_REWARD_BY_TOPIC, mêmes clés que `topic` ci-dessous, pour
+// que l'affichage "+ X € à la validation" ne puisse jamais raconter un
+// montant différent de celui réellement crédité côté serveur.
+const TOUR_REWARD_BY_TOPIC = {
+  "Effectif": 15000,
+  "Ordres": 50000,
+  "Entraînement": 20000,
+  "Marché": 25000,
+  "Staff": 20000,
+  "Académie de jeunes": 40000,
+  "Économie": 15000,
+  "Salle": 15000,
+};
 const TOUR_STEPS = [
   {
     kind: "center", emoji: "🏀",
@@ -15879,7 +16131,7 @@ const TOUR_STEPS = [
     title: "Votre effectif",
     text: "Le roster complet du club : poste, attributs (physique, adresse, défense...), forme du jour et historique de matchs pour chaque joueur.",
     tip: "Un joueur peut couvrir plusieurs postes en tant que remplaçant, pratique en cas de blessure ou de suspension.",
-    reward: 15000,
+    reward: TOUR_REWARD_BY_TOPIC["Effectif"],
   },
 
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresRoundDateTime",
@@ -15939,26 +16191,26 @@ const TOUR_STEPS = [
     title: "Surveiller un joueur adverse",
     text: "Jusqu'à 3 affectations poste + focus (empêcher le post-up, coller sur les pénétrations, harceler le tir extérieur, priorité au rebond, couper du ballon). Chaque focus donne un bonus défensif ciblé, avec une petite contrepartie ailleurs pour le défenseur concerné.",
     tip: "Réservez ces créneaux aux vraies menaces adverses (meilleur marqueur, pivot dominant) plutôt qu'à toute l'équipe : l'effet est ciblé, pas collectif.",
-    reward: 50000,
+    reward: TOUR_REWARD_BY_TOPIC["Ordres"],
   },
 
   { kind: "spotlight", topic: "Entraînement", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="entrainement"]', pos: "right",
     title: "Entraînement hebdomadaire",
     text: "Chaque semaine, choisissez un programme (tir à 3 points, rebond, défense extérieure...) et un ou plusieurs postes à qui l'appliquer. Cibler un seul poste donne le plein rendement ; l'étendre à toute l'équipe touche plus de joueurs mais dilue l'effet.",
     tip: "Un joueur qui n'a pas assez joué cette semaine progresse moins, même avec le bon programme : gardez un œil sur son temps de jeu cumulé.",
-    reward: 20000,
+    reward: TOUR_REWARD_BY_TOPIC["Entraînement"],
   },
   { kind: "spotlight", topic: "Marché", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="marche"]', pos: "right",
     title: "Le marché des transferts",
     text: "Recrutez des joueurs libres ou mettez les vôtres aux enchères. Chaque enchère dure un temps limité, et les autres clubs peuvent surenchérir jusqu'au bout.",
     tip: "Une enchère gagnée s'ajoute immédiatement à votre masse salariale : vérifiez votre budget avant de vous engager.",
-    reward: 25000,
+    reward: TOUR_REWARD_BY_TOPIC["Marché"],
   },
   { kind: "spotlight", topic: "Staff", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="staff"]', pos: "right",
     title: "Constituez votre staff",
     text: "Entraîneur, analyste vidéo, recruteur : chacun a 5 niveaux, avec un coût et un effet croissants. L'analyste vidéo révèle par exemple certaines caractéristiques cachées des joueurs adverses avant un match.",
     tip: "Un bon entraîneur accélère durablement la progression de tout l'effectif à l'entraînement, pas seulement d'un joueur.",
-    reward: 20000,
+    reward: TOUR_REWARD_BY_TOPIC["Staff"],
   },
 
   { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#academyGraduatesHolder",
@@ -15982,14 +16234,14 @@ const TOUR_STEPS = [
     title: "Prospects du recruteur",
     text: "Un recruteur (onglet Staff) fait remonter des prospects de 15 à 17 ans : jusqu'à 5 propositions en attente à la fois, chacune expire si elle reste trop longtemps sans réponse.",
     tip: "Chaque prospect signé rejoint directement l'académie : pas d'enchère ni de négociation, contrairement au marché des transferts.",
-    reward: 40000,
+    reward: TOUR_REWARD_BY_TOPIC["Académie de jeunes"],
   },
 
   { kind: "spotlight", topic: "Économie", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="economie"]', pos: "right",
     title: "Suivez vos finances",
     text: "Billetterie, droits TV et sponsors d'un côté ; salaires des joueurs et du staff de l'autre. Un déficit qui dure finit par pénaliser le club.",
     tip: "Le prix des billets se règle depuis l'onglet Salle, pas ici : ajustez-le pour équilibrer affluence et recettes.",
-    reward: 15000,
+    reward: TOUR_REWARD_BY_TOPIC["Économie"],
   },
 
   { kind: "spotlight", topic: "Salle", page: "salle", target: "#arenaVisualCard",
@@ -16025,7 +16277,7 @@ const TOUR_STEPS = [
     title: "Boutique des supporters",
     text: "Un revenu hebdomadaire fixe une fois construite, qui augmente à chaque palier, comme la Station TV.",
     tip: "Ces infrastructures se financent chacune indépendamment : inutile d'attendre d'avoir fini d'en payer une pour commencer la suivante si le budget suit.",
-    reward: 15000,
+    reward: TOUR_REWARD_BY_TOPIC["Salle"],
   },
 
   { kind: "center", emoji: "🏆", final: true,
@@ -16166,14 +16418,37 @@ function tourRender() {
   if (skipBtn) skipBtn.addEventListener("click", tourEndTour);
   const prevBtn = document.getElementById("tourPrevBtn");
   if (prevBtn) prevBtn.addEventListener("click", () => { tourStepIdx--; tourRender(); });
-  document.getElementById("tourNextBtn").addEventListener("click", tourNext);
+  // `window.__lastTourNext` expose la promesse de CET appel (voir
+  // window.__lastSave dans saveMyTeam pour le même mécanisme) : purement
+  // pour les tests automatisés, qui doivent pouvoir attendre qu'une prime
+  // ait bien été traitée (round-trip serveur en ligue partagée) avant de
+  // relire l'état, plutôt que d'espérer un délai arbitraire. Sans effet en
+  // usage normal.
+  document.getElementById("tourNextBtn").addEventListener("click", () => { window.__lastTourNext = tourNext(); });
 }
 
-function tourNext() {
+// Async depuis le correctif "Mets les vrais primes sur le tutoriel" (voir
+// performTutorialRewardClaim plus haut, AWAITED en ligue partagée) : un
+// thème à prime attend la confirmation (locale en solo, réseau sinon) avant
+// d'afficher le toast et d'ajouter la ligne au récapitulatif, pour ne
+// jamais promettre un montant qui n'a pas réellement été crédité
+// (`alreadyClaimed`/`amount: 0` si ce thème avait déjà été payé lors d'un
+// tutoriel précédent, ex. abandonné puis relancé). Le bouton "Suivant" est
+// brièvement désactivé le temps de l'appel pour éviter un double-clic
+// pendant le round-trip serveur (sans conséquence réelle grâce à
+// l'idempotence côté serveur, juste pour éviter un aller-retour réseau
+// inutile).
+async function tourNext() {
   const step = TOUR_STEPS[tourStepIdx];
   if (step.kind === "spotlight" && step.reward) {
-    tourEarnedRewards.push({ title: step.topic, reward: step.reward });
-    tourShowToast(`+ ${tourFmtEuro(step.reward)}, merci d'avoir exploré ${step.topic} !`);
+    const nextBtn = document.getElementById("tourNextBtn");
+    if (nextBtn) nextBtn.disabled = true;
+    const result = await performTutorialRewardClaim(step.topic);
+    if (nextBtn) nextBtn.disabled = false;
+    if (result.ok && !result.alreadyClaimed && result.amount) {
+      tourEarnedRewards.push({ title: step.topic, reward: result.amount });
+      tourShowToast(`+ ${tourFmtEuro(result.amount)}, merci d'avoir exploré ${step.topic} !`);
+    }
   }
   if (step.final) { tourEndTour(); return; }
   tourStepIdx++;
@@ -16190,11 +16465,16 @@ function tourEndTour() {
   // allant jusqu'au bout OU en le passant (#tourSkipBtn) : sinon "Passer"
   // laisserait le bouton revenir et permettrait de recommencer plus tard
   // pour re-toucher des primes déjà gagnées sur les thèmes déjà vus avant
-  // le skip. saveMyTeam() persiste immédiatement (pas d'attente du prochain
-  // changement d'ordres/entraînement...), sinon un rechargement de page
-  // avant toute autre action ferait réapparaître le bouton.
-  teamA.onboardingTourCompleted = true;
+  // le skip (voir Team.tutorialRewardsClaimed, qui protège aussi contre ça
+  // indépendamment de ce drapeau). saveMyTeam() (solo) et
+  // syncOnboardingTourCompletedToServer() (ligue partagée) persistent
+  // chacun immédiatement, un seul des deux faisant réellement quelque
+  // chose selon le mode (voir leurs commentaires respectifs) : sinon un
+  // rechargement de page avant toute autre action ferait réapparaître le
+  // bouton.
+  teamA.markOnboardingTourCompleted();
   saveMyTeam();
+  syncOnboardingTourCompletedToServer();
   const tourBtn = document.getElementById("tourLaunchBtn");
   if (tourBtn) tourBtn.classList.add("hidden");
 }
@@ -16288,7 +16568,7 @@ function goToOrdresTab(round, competition) {
   // toute façon plus modifiable) ; l'onglet "Live" séparé (goToLiveTab) sert
   // à suivre le match en cours.
   if (league && league.liveMatch && liveMatchHasEnded(league.liveMatch)) {
-    refreshFromServerAndReenter(league.liveMatch.round, league.liveMatch.competition);
+    refreshFromServerAndReenter(league.liveMatch.round, league.liveMatch.competition, round, competition);
     return;
   }
   showPage("prepSection");

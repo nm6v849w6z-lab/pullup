@@ -824,13 +824,15 @@ function freshTeamAndLeague() {
 }
 
 // ---------------------------------------------------------------------
-// setTeamJersey / setTeamJerseyPattern / setTeamLogo / setTeamPaying :
-// Identité du club (retour utilisateur : "le logo de l'équipe doit être
-// type dès lors que l'équipe ne paie pas [...] pour les équipes qui paient,
-// elles doivent pouvoir charger leur propre image [...] une équipe gratuite
-// doit pouvoir choisir uniquement entre 2 formes de maillot et 5 couleurs" ;
-// puis, sur la refonte de l'Aperçu : "Pour le mode payant ajoute des
-// maillots avec des dessins particuliers (rayure, degrade...)").
+// setTeamJersey / setTeamJerseyPattern / setTeamJerseyTwoTone / setTeamLogo /
+// setTeamPaying : Identité du club (retour utilisateur : "le logo de
+// l'équipe doit être type dès lors que l'équipe ne paie pas [...] pour les
+// équipes qui paient, elles doivent pouvoir charger leur propre image [...]
+// une équipe gratuite doit pouvoir choisir uniquement entre 2 formes de
+// maillot et 5 couleurs" ; puis, sur la refonte de l'Aperçu : "Pour le mode
+// payant ajoute des maillots avec des dessins particuliers (rayure,
+// degrade...)" ; puis : "ajoute un peu plus de couleur pour le mode payant,
+// et mets le choix de 2 couleurs [...] mets plus de choix").
 // ---------------------------------------------------------------------
 {
   const { team, league } = freshTeamAndLeague();
@@ -905,6 +907,45 @@ function freshTeamAndLeague() {
   actions.setTeamPaying(team, 0, league, { isPaying: false }, T0);
   if (team.jerseyPattern !== "degrade") throw new Error("❌ Repasser en club gratuit ne devrait pas effacer jerseyPattern (conservé pour une réactivation future).");
   console.log("✅ Repasser en club gratuit conserve le motif de maillot déjà choisi (juste ignoré au rendu).");
+
+  // Combinaison de 2 couleurs (retour utilisateur, 2026-09 : "ajoute un peu
+  // plus de couleur pour le mode payant, et mets le choix de 2 couleurs
+  // [...] mets plus de choix") : club encore gratuit à ce stade (bascule
+  // ci-dessus repassée à false), même patron que jerseyPattern ci-dessus,
+  // SAUF qu'il n'y a pas d'équivalent "uni" toujours accepté : une
+  // combinaison de 2 couleurs est réservée à un club payant, sans
+  // exception.
+  if (Object.keys(E.JERSEY_TWO_TONE_SETS).length < 8) {
+    throw new Error(`❌ JERSEY_TWO_TONE_SETS devrait exposer au moins 8 combinaisons ("mets plus de choix"), obtenu ${Object.keys(E.JERSEY_TWO_TONE_SETS).length}.`);
+  }
+  for (const key of Object.keys(E.JERSEY_TWO_TONE_SETS)) {
+    const pair = E.JERSEY_TWO_TONE_SETS[key];
+    if (!Array.isArray(pair) || pair.length !== 2) throw new Error(`❌ JERSEY_TWO_TONE_SETS.${key} devrait être une paire de 2 couleurs.`);
+  }
+  console.log("✅ JERSEY_TWO_TONE_SETS expose bien une palette étoffée de combinaisons de 2 couleurs valides.");
+
+  const someTwoTone = Object.keys(E.JERSEY_TWO_TONE_SETS)[0];
+  const twoToneRejected = actions.setTeamJerseyTwoTone(team, 0, league, { key: someTwoTone }, T0);
+  if (twoToneRejected.ok) throw new Error("❌ setTeamJerseyTwoTone devrait refuser une combinaison de couleurs pour un club gratuit.");
+  console.log("✅ setTeamJerseyTwoTone refuse une combinaison de couleurs pour un club gratuit.");
+
+  actions.setTeamPaying(team, 0, league, { isPaying: true }, T0);
+  const otherTwoTone = Object.keys(E.JERSEY_TWO_TONE_SETS)[1];
+  const twoToneAccepted = actions.setTeamJerseyTwoTone(team, 0, league, { key: otherTwoTone }, T0);
+  if (!twoToneAccepted.ok || team.jerseyTwoTone !== otherTwoTone) throw new Error(`❌ setTeamJerseyTwoTone devrait accepter une combinaison valide pour un club payant : ${JSON.stringify(twoToneAccepted)}`);
+  console.log("✅ setTeamJerseyTwoTone accepte une combinaison de couleurs pour un club payant.");
+
+  const badTwoTone = actions.setTeamJerseyTwoTone(team, 0, league, { key: "arc-en-ciel" }, T0);
+  if (badTwoTone.ok) throw new Error("❌ setTeamJerseyTwoTone devrait rejeter une combinaison inconnue.");
+  console.log("✅ setTeamJerseyTwoTone rejette une combinaison de couleurs inconnue.");
+
+  // Même principe que le logo personnalisé/motif de maillot ci-dessus :
+  // repasser en gratuit ne doit PAS effacer la combinaison choisie, juste
+  // l'ignorer au rendu (voir effectiveJerseyTwoTone côté
+  // moteurbasket3.html, non exercé ici).
+  actions.setTeamPaying(team, 0, league, { isPaying: false }, T0);
+  if (team.jerseyTwoTone !== otherTwoTone) throw new Error("❌ Repasser en club gratuit ne devrait pas effacer jerseyTwoTone (conservé pour une réactivation future).");
+  console.log("✅ Repasser en club gratuit conserve la combinaison de couleurs déjà choisie (juste ignorée au rendu).");
 }
 
 // ---------------------------------------------------------------------

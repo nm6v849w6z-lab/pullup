@@ -115,6 +115,16 @@ function catchUpLeague(league, now) {
   // logique/raison que refreshCoachMarket ci-dessus — DEUXIÈME marché de
   // staff, tout aussi indépendant du calendrier de championnat.
   league.refreshAnalystMarket(now);
+  // Marché des recruteurs (voir League.refreshRecruiterMarket) : TROISIÈME
+  // marché de staff, ajouté après coup côté moteur (voir engine.js) mais
+  // OUBLIÉ ici jusqu'à ce correctif (2026-09, retour utilisateur Discord :
+  // "Sur la page staff, reset des enchères et du temps à chaque refresh de
+  // la page") : sans cet appel, league.recruiterListings n'était JAMAIS
+  // rafraîchi côté serveur : seul le navigateur le faisait localement (voir
+  // TAB_HANDLERS.staff côté moteurbasket3.html), sur un état jamais renvoyé
+  // au serveur (saveMyTeam() est un no-op en ligue partagée), donc reparti
+  // de zéro à CHAQUE ouverture de l'onglet Staff ou rechargement de page.
+  league.refreshRecruiterMarket(now);
 
   if (league.isRegularSeasonDone() && !league.playoffs) {
     league.runPlayoffs();

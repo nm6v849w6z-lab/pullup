@@ -773,6 +773,17 @@ function setTeamJerseyPattern(team, teamIndex, league, body, now) {
   return { ok: true, jerseyPattern: team.jerseyPattern };
 }
 
+// Combinaison de 2 couleurs de maillot (retour utilisateur, 2026-09 : "ajoute
+// un peu plus de couleur pour le mode payant, et mets le choix de 2
+// couleurs [...] mets plus de choix") : même patron que setTeamJerseyPattern
+// ci-dessus.
+function setTeamJerseyTwoTone(team, teamIndex, league, body, now) {
+  if (!body || typeof body.key !== "string") return fail("'key' est requis.");
+  const result = team.setJerseyTwoTone(body.key);
+  if (!result.ok) return fail(result.error);
+  return { ok: true, jerseyTwoTone: team.jerseyTwoTone };
+}
+
 function setTeamLogo(team, teamIndex, league, body, now) {
   if (!body || !("dataUrl" in body)) return fail("'dataUrl' requis (ou null pour retirer le logo personnalisé).");
   const result = team.setCustomLogo(body.dataUrl === null ? null : body.dataUrl);
@@ -789,6 +800,36 @@ function setTeamPaying(team, teamIndex, league, body, now) {
   if (!body || typeof body.isPaying !== "boolean") return fail("'isPaying' (booléen) requis.");
   team.setPaying(body.isPaying);
   return { ok: true, isPaying: team.isPaying };
+}
+
+// Tutoriel d'accueil (retour utilisateur, 2026-09 : "on est d'accord qu'on
+// ne peut le faire qu'une fois ? [...] le bouton dans le guide doit
+// s'enlever") : nécessaire côté serveur pour la ligue partagée, où
+// saveMyTeam() (seul point d'écriture jusqu'ici, solo uniquement) ne peut
+// pas persister ce champ (voir moteurbasket3.html:saveMyTeam) : sans ce
+// point d'entrée, le bouton "Lancer le tutoriel" réapparaissait à chaque
+// rechargement de page pour un manager de ligue partagée.
+function setOnboardingTourCompleted(team, teamIndex, league, body, now) {
+  team.markOnboardingTourCompleted();
+  return { ok: true, onboardingTourCompleted: team.onboardingTourCompleted };
+}
+
+// Prime d'un thème du tutoriel d'accueil terminé (retour utilisateur,
+// 2026-09 : "Mets les vrais primes sur le tutoriel") : voir
+// Team.claimTutorialReward côté moteur pour le montant par thème
+// (TOUR_REWARD_BY_TOPIC) et la protection anti-doublon
+// (tutorialRewardsClaimed) : cette fonction-ci ne fait que valider la FORME
+// du corps de requête avant de déléguer la décision, même patron que le
+// reste de ce fichier. Le serveur reste la seule source de vérité sur le
+// montant réellement crédité (`amount`) : le client (voir performTutorialRewardClaim
+// côté moteurbasket3.html) n'envoie jamais de montant, seulement le `topic`.
+function claimTutorialReward(team, teamIndex, league, body, now) {
+  if (!body || typeof body.topic !== "string" || !body.topic) {
+    return fail("'topic' requis.");
+  }
+  const result = team.claimTutorialReward(body.topic);
+  if (!result.ok) return fail(result.error || "Thème de tutoriel inconnu.");
+  return { ok: true, amount: result.amount, alreadyClaimed: result.alreadyClaimed, budget: team.budget };
 }
 
 function runVideoSession(team, teamIndex, league, body, now) {
@@ -825,5 +866,8 @@ module.exports = {
   // Médias : interviews d'après-match (voir Team.pendingInterviews côté
   // moteur) :
   respondToInterview, skipInterview,
-  setTeamJersey, setTeamJerseyPattern, setTeamLogo, setTeamPaying,
+  setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone, setTeamLogo, setTeamPaying,
+  // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/
+  // claimTutorialReward) :
+  setOnboardingTourCompleted, claimTutorialReward,
 };

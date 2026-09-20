@@ -425,4 +425,27 @@ const T0 = Date.UTC(2026, 8, 7); // un lundi arbitraire, fixe pour tout le fichi
   console.log("✅ L'entraînement quotidien ne se déclenche jamais deux fois pour le même jour civil, même sur un second rattrapage qui retombe dans la même fenêtre.");
 }
 
+// ---------------------------------------------------------------------
+// Marché des recruteurs (retour utilisateur Discord, 2026-09 : "Sur la page
+// staff, reset des enchères et du temps à chaque refresh de la page") :
+// league.refreshRecruiterMarket(now) avait été OUBLIÉ dans catchUpLeague
+// (contrairement à refreshMarket/refreshCoachMarket/refreshAnalystMarket,
+// déjà appelés depuis longtemps) : league.recruiterListings n'était donc
+// JAMAIS rafraîchi côté serveur, seulement côté navigateur (localement,
+// jamais persisté en ligue partagée), d'où des enchères/échéances
+// entièrement régénérées à chaque page rechargée. Vérifie que catchUpLeague
+// peuple bien recruiterListings, exactement comme il le fait déjà pour
+// coachListings (voir COACH_MARKET_MIN_OPEN_LISTINGS, seuil partagé par les
+// 2 marchés).
+{
+  const { league } = freshLeague(T0);
+  if (league.recruiterListings.length !== 0) throw new Error("❌ (setup) recruiterListings devrait être vide avant le premier catchUpLeague.");
+  catchUpLeague(league, T0);
+  console.log("Annonces de recruteurs ouvertes après catchUpLeague :", league.recruiterListings.filter(l => l.status === "open").length);
+  if (league.recruiterListings.filter(l => l.status === "open").length < 1) {
+    throw new Error("❌ RÉGRESSION : catchUpLeague devrait peupler league.recruiterListings (voir League.refreshRecruiterMarket), sinon le marché des recruteurs reste vide côté serveur et se régénère à chaque rechargement de page côté navigateur.");
+  }
+  console.log("✅ catchUpLeague rafraîchit bien league.recruiterListings (même mécanique que coachListings/analystListings), plus jamais oublié.");
+}
+
 console.log("\n✅ Rattrapage automatique (server/autoSim.js) : la ligue avance toute seule au fil du temps réel — journées de championnat, entraînement hebdomadaire, marché, fin de saison, diffusion en direct reprenable et forfait en cas d'effectif incomplet — sans qu'aucun clic ne soit nécessaire.");
