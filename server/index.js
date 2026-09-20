@@ -219,7 +219,15 @@ async function persistContext(ctx) {
 function tick(league, now) {
   const startedKeys = AutoSim.ensureLiveMatch(league, now);
   const events = AutoSim.catchUpLeague(league, now);
-  return { events, changed: events.length > 0 || startedKeys.length > 0 };
+  // Médias : purge toute interview en attente depuis plus de 2h, pour
+  // TOUTES les équipes humaines de la ligue (voir Team.pruneExpiredInterviews/
+  // INTERVIEW_RESPONSE_DEADLINE_MS côté moteur) : filet de sécurité
+  // indépendant du navigateur (qui purge déjà côté client, voir
+  // showCatchupSummaryIfAny), pour un manager qui n'ouvrirait plus jamais
+  // l'écran de rattrapage mais continuerait d'appeler d'autres routes.
+  let prunedAny = false;
+  league.teams.forEach(t => { if (t.isHuman && t.pruneExpiredInterviews(now) > 0) prunedAny = true; });
+  return { events, changed: events.length > 0 || startedKeys.length > 0 || prunedAny };
 }
 
 // Ramène les événements "bruts" de catchUpLeague (potentiellement plusieurs
@@ -414,6 +422,10 @@ const ACTION_ROUTES = {
   // côté moteur et server/actions.js).
   "/api/media/interview": actions.respondToInterview,
   "/api/media/interview-skip": actions.skipInterview,
+  "/api/club/set-jersey": actions.setTeamJersey,
+  "/api/club/set-jersey-pattern": actions.setTeamJerseyPattern,
+  "/api/club/set-logo": actions.setTeamLogo,
+  "/api/club/set-paying": actions.setTeamPaying,
 };
 
 // ---------------------------------------------------------------------

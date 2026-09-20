@@ -729,8 +729,8 @@ function respondToInterview(team, teamIndex, league, body, now) {
   if (typeof body.tone !== "string" || !INTERVIEW_TONES[body.tone]) {
     return fail(`Ton inconnu, attendu parmi : ${Object.keys(INTERVIEW_TONES).join(", ")}.`);
   }
-  const result = team.resolveInterview(id, body.tone);
-  if (!result || !result.ok) return fail("Interview introuvable (déjà traitée ?).");
+  const result = team.resolveInterview(id, body.tone, now);
+  if (!result || !result.ok) return fail("Interview introuvable (déjà traitée, ou délai de 2h dépassé).");
   return { ok: true, delta: result.delta, fanMorale: team.fanMorale };
 }
 
@@ -739,9 +739,56 @@ function skipInterview(team, teamIndex, league, body, now) {
     return fail("id requis.");
   }
   const id = typeof body.id === "string" && /^-?\d+$/.test(body.id) ? Number(body.id) : body.id;
-  const removed = team.skipInterview(id);
+  const removed = team.skipInterview(id, now);
   if (!removed) return fail("Interview introuvable (déjà traitée ?).");
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------
+// IDENTITÉ DU CLUB : logo et maillots (retour utilisateur, 2026-09 : "une
+// petite page d'accueil pour les autres équipes [...] le logo et les
+// maillots doivent pouvoir être modifiés dans le tableau de bord"). Voir
+// Team.setJersey/setCustomLogo/setPaying côté moteur pour la validation de
+// fond (ces fonctions-ci ne font que vérifier la FORME du corps de requête
+// avant de leur déléguer la décision, même patron que le reste de ce
+// fichier).
+// ---------------------------------------------------------------------
+function setTeamJersey(team, teamIndex, league, body, now) {
+  if (!body || typeof body.shape !== "string" || typeof body.color !== "string") {
+    return fail("'shape' et 'color' sont requis.");
+  }
+  const result = team.setJersey(body.shape, body.color);
+  if (!result.ok) return fail(result.error);
+  return { ok: true, jerseyShape: team.jerseyShape, jerseyColor: team.jerseyColor };
+}
+
+// Motif de maillot (retour utilisateur, 2026-09 : "Pour le mode payant
+// ajoute des maillots avec des dessins particuliers (rayure, degrade...)") :
+// voir Team.setJerseyPattern pour la validation de fond (réservé aux clubs
+// `isPaying`, sauf retour à "uni" toujours autorisé).
+function setTeamJerseyPattern(team, teamIndex, league, body, now) {
+  if (!body || typeof body.pattern !== "string") return fail("'pattern' est requis.");
+  const result = team.setJerseyPattern(body.pattern);
+  if (!result.ok) return fail(result.error);
+  return { ok: true, jerseyPattern: team.jerseyPattern };
+}
+
+function setTeamLogo(team, teamIndex, league, body, now) {
+  if (!body || !("dataUrl" in body)) return fail("'dataUrl' requis (ou null pour retirer le logo personnalisé).");
+  const result = team.setCustomLogo(body.dataUrl === null ? null : body.dataUrl);
+  if (!result.ok) return fail(result.error);
+  return { ok: true };
+}
+
+// Interrupteur manuel "club payant" (voir le grand commentaire sur
+// JERSEY_COLORS dans engine.js : aucun vrai système de paiement pour
+// l'instant). Volontairement AUCUNE restriction ici sur qui peut se
+// l'accorder : ce n'est qu'un statut de démonstration en attendant un vrai
+// système de paiement, pas un droit à protéger.
+function setTeamPaying(team, teamIndex, league, body, now) {
+  if (!body || typeof body.isPaying !== "boolean") return fail("'isPaying' (booléen) requis.");
+  team.setPaying(body.isPaying);
+  return { ok: true, isPaying: team.isPaying };
 }
 
 function runVideoSession(team, teamIndex, league, body, now) {
@@ -778,4 +825,5 @@ module.exports = {
   // Médias : interviews d'après-match (voir Team.pendingInterviews côté
   // moteur) :
   respondToInterview, skipInterview,
+  setTeamJersey, setTeamJerseyPattern, setTeamLogo, setTeamPaying,
 };

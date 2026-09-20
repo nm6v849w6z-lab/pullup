@@ -238,6 +238,60 @@
   .interview-tone-btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;}
   .interview-tone-btns button{padding:6px 12px; font-size:13px;}
 
+  /* Fiche équipe, sous-onglet "Aperçu" (retour utilisateur : "une petite
+     page d'accueil pour les autres équipes" ; puis, la v1 jugée "très cheap"
+     et pas raccord avec le reste de l'app, référence Football Manager
+     fournie : "on pourrait ajouter les petites infos comme date de
+     création, renommée et trophée du club") : refonte inspirée d'un profil
+     de club (blason + barre d'infos + kits + palmarès), en réutilisant les
+     briques déjà en place ailleurs (.stat-card/.stat-grid) plutôt que d'en
+     inventer de nouvelles, voir teamDetailApercuHtml. */
+  .team-apercu-top{display:flex; gap:18px; align-items:center; flex-wrap:wrap; margin-bottom:8px;}
+  .team-apercu-crest{flex-shrink:0;}
+  .team-apercu-name{margin:0 0 8px; font-size:22px;}
+  .team-apercu-infobar{display:flex; gap:10px; flex-wrap:wrap;}
+  .infobar-item{background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:5px 14px; font-size:12px; color:var(--ink-dim); display:inline-flex; gap:6px; align-items:center;}
+  .infobar-item .infobar-value{color:var(--ink); font-weight:700;}
+  .infobar-item .stars{color:var(--amber); letter-spacing:1px;}
+  .team-apercu-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px;}
+  .team-apercu-grid .stat-card.span-2{grid-column:1 / -1;}
+  @media(max-width:680px){.team-apercu-grid{grid-template-columns:1fr;}}
+  .team-logo-img{border-radius:50%; object-fit:cover; display:block;}
+  .jersey-mockups{display:flex; gap:20px;}
+  .jersey-mockup{display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;}
+  .jersey-mockup .sub{margin:0; font-size:12px;}
+  .form-streak{display:flex; gap:6px;}
+  .form-badge{display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; font-weight:700; font-size:13px; color:#fff;}
+  .form-badge.form-win{background:var(--ok);}
+  .form-badge.form-loss{background:var(--danger);}
+  .trophy-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;}
+  .trophy-item{display:flex; align-items:center; gap:8px; font-size:13px;}
+  .trophy-item .trophy-year{color:var(--ink-faint); font-size:11px; margin-left:auto;}
+
+  /* Identité du club : logo et maillots, tableau de bord (retour
+     utilisateur : "le logo et les maillots doivent pouvoir être modifiés
+     dans le tableau de bord"), voir renderClubIdentityPanel. */
+  .club-identity-panel{margin-top:18px; padding-top:18px; border-top:1px solid var(--line);}
+  .club-identity-grid{display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;}
+  .club-identity-logo{display:flex; flex-direction:column; align-items:center; gap:8px; min-width:140px;}
+  .club-logo-preview{display:flex;}
+  .club-logo-upload-btn{cursor:pointer; display:inline-block;}
+  .club-identity-jersey{flex:1; min-width:220px;}
+  .jersey-shape-picker{display:flex; gap:14px;}
+  .jersey-shape-btn{display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 14px; border-radius:var(--radius); border:2px solid var(--line); background:var(--panel); cursor:pointer; font-size:12px; color:var(--ink-faint);}
+  .jersey-shape-btn.active{border-color:var(--amber); color:var(--ink);}
+  .jersey-color-picker{display:flex; gap:10px;}
+  .jersey-color-swatch{width:30px; height:30px; border-radius:50%; border:2px solid transparent; cursor:pointer;}
+  .jersey-color-swatch.active{border-color:var(--ink);}
+  /* Motif de maillot, réservé aux clubs payants (retour utilisateur :
+     "ajoute des maillots avec des dessins particuliers"), mêmes règles que
+     .jersey-shape-picker/.jersey-shape-btn ci-dessus. */
+  .jersey-pattern-picker{display:flex; gap:14px; flex-wrap:wrap;}
+  .jersey-pattern-btn{display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 14px; border-radius:var(--radius); border:2px solid var(--line); background:var(--panel); cursor:pointer; font-size:12px; color:var(--ink-faint);}
+  .jersey-pattern-btn.active{border-color:var(--amber); color:var(--ink);}
+  .club-paying-row{margin-top:16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .club-paying-note{color:var(--ink-faint); font-size:11px;}
+
   .playback-controls{display:flex; align-items:center; justify-content:center; gap:10px; margin:0 0 16px; flex-wrap:wrap;}
   .live-realtime-note{text-align:center; font-size:12px; color:var(--ink-faint); margin:0;}
   .pause-banner{max-width:420px; margin:0 auto 16px; padding:12px 18px; border-radius:12px; border:1px solid var(--amber); background:rgba(230,178,60,.1); text-align:center; font-weight:700; color:var(--amber);}
@@ -1227,6 +1281,18 @@
      ailleurs dans l'app. */
   .gain-line.attendance-line{padding-bottom:4px;}
   .attendance-breakdown{margin-top:3px; font-size:11px; color:var(--ink-faint);}
+  /* Retour utilisateur (2026-09) : "dans la partie interview, mets plutôt ce
+     que le coach vraiment dit et ne mets pas combien ça a impacté l'humeur
+     des supporters/joueurs, ça ne sert à rien" : recentInterviewsHtml affiche
+     désormais une citation du coach à la place du delta chiffré. Le delta
+     reste visible sur l'écran "Humeur des supporters" dédié, inchangé. */
+  .interview-quote-list{display:flex; flex-direction:column; gap:8px;}
+  .interview-quote{
+    margin:0; padding:10px 14px; background:var(--panel-2); border:1px solid var(--line);
+    border-left:3px solid var(--teamA); border-radius:var(--radius);
+    font-size:13px; font-style:italic; color:var(--ink); line-height:1.45;
+  }
+  .interview-quote footer.sub{margin-top:5px; font-style:normal; color:var(--ink-faint); font-size:11px;}
 
   /* -------------------------------------------------------------------
      Tutoriel d'accueil (retour utilisateur, 2026-09 : aperçu jetable
@@ -1594,6 +1660,10 @@
       <p class="matchup-context" id="clubMatchupContext"></p>
       <div id="clubDeficitBanner"></div>
       <div class="stat-grid" id="clubStatsGrid"></div>
+      <!-- Identité du club : logo et maillots (retour utilisateur, 2026-09 :
+           "le logo et les maillots doivent pouvoir être modifiés dans le
+           tableau de bord"), voir renderClubIdentityPanel. -->
+      <div class="section club-identity-panel" id="clubIdentityPanel"></div>
     </div>
   </div>
 
@@ -3158,6 +3228,82 @@ const INTERVIEW_TONES = {
   "Humble":   { win: 0.5, loss: 1 },
 };
 
+// Copie côté client de la même table engine.js (voir son commentaire) :
+// citations tirées au sort par ton/résultat, affichées sur la page "Aperçu"
+// à la place du delta d'humeur (retour utilisateur : "mets plutôt ce que le
+// coach vraiment dit et ne mets pas combien ça a impacté l'humeur").
+const INTERVIEW_QUOTES = {
+  "Agressif": {
+    win: [
+      "On savait qu'on allait les dominer, {opponent} n'a jamais eu sa chance ce soir.",
+      "C'est simple, on est l'équipe la plus forte du moment, {opponent} l'a appris à ses dépens.",
+      "On voulait leur montrer qui commande, mission accomplie face à {opponent}.",
+    ],
+    loss: [
+      "L'arbitrage nous a clairement desservis contre {opponent}, mais on ne changera rien à notre façon de jouer.",
+      "{opponent} a eu de la réussite ce soir, la prochaine fois ça se passera autrement.",
+      "On n'a rien à se reprocher, on reste l'équipe la plus forte de cette division.",
+    ],
+  },
+  "Mesuré": {
+    win: [
+      "Une victoire méritée face à {opponent}, l'équipe a fait un match sérieux du début à la fin.",
+      "On savait que ce serait difficile contre {opponent}, je suis content du visage montré ce soir.",
+      "Match solide dans l'ensemble, on prend les trois points face à {opponent} et on passe à la suite.",
+    ],
+    loss: [
+      "Défaite frustrante contre {opponent}, on va analyser les erreurs et rebondir dès la semaine prochaine.",
+      "{opponent} a été meilleur que nous ce soir, on doit progresser sur certains points précis.",
+      "On retient le positif malgré la défaite face à {opponent}, le travail continue à l'entraînement.",
+    ],
+  },
+  "Humble": {
+    win: [
+      "On a eu un peu de réussite ce soir face à {opponent}, l'équipe a bien répondu présente.",
+      "Je félicite mes joueurs pour cette victoire, mais {opponent} nous a posé beaucoup de problèmes.",
+      "Une belle victoire collective contre {opponent}, chacun a fait sa part, rien de plus.",
+    ],
+    loss: [
+      "La défaite est entièrement de ma responsabilité ce soir, {opponent} méritait de gagner.",
+      "On doit faire notre autocritique après cette rencontre face à {opponent}.",
+      "Félicitations à {opponent}, ils ont été meilleurs que nous sur tous les points ce soir.",
+    ],
+  },
+};
+
+// Copie côté client de la même constante engine.js (voir son commentaire) :
+// délai de 2h pour répondre à une interview en attente, sinon purgée sans
+// effet (Team.pruneExpiredInterviews).
+const INTERVIEW_RESPONSE_DEADLINE_MS = 2 * 60 * 60 * 1000;
+
+// Identité du club : logo et maillots (voir engine.js pour le commentaire
+// détaillé). Copie exacte de la palette/des formes côté serveur : les
+// mêmes clés doivent rester valides des deux côtés, ou une sauvegarde
+// deviendrait incohérente en changeant de côté (solo vs multi-manager).
+const JERSEY_COLORS = {
+  rouge:  "#d6473f",
+  bleu:   "#3b6fd6",
+  vert:   "#3fae62",
+  violet: "#8659d6",
+  orange: "#e08a2e",
+};
+const JERSEY_SHAPES = ["A", "B"];
+// Motifs de maillot réservés aux clubs payants (voir engine.js pour le
+// commentaire détaillé, retour utilisateur : "Pour le mode payant ajoute
+// des maillots avec des dessins particuliers (rayure, degrade...)").
+const JERSEY_PATTERNS = ["uni", "rayures", "degrade"];
+// Libellés affichés du sélecteur de motif (tableau de bord) : purement côté
+// client, jamais persisté (la clé JERSEY_PATTERNS suffit côté sauvegarde).
+const JERSEY_PATTERN_LABELS = { uni: "Uni", rayures: "Rayures", degrade: "Dégradé" };
+const MAX_TEAM_LOGO_DATA_URL_LENGTH = 400000;
+
+// Copie côté client des mêmes constantes engine.js (voir son commentaire) :
+// date de création du club et plafond du nombre de trophées conservés.
+function generateFoundedYear(now = Date.now()) {
+  return new Date(now).getFullYear() - Math.round(rand(5, 90));
+}
+const MAX_TEAM_TROPHIES = 30;
+
 // ---------------------------------------------------------------------
 // GRILLE SALARIALE DES JOUEURS — le salaire hebdomadaire d'un joueur dépend
 // UNIQUEMENT de son niveau actuel (overall, voir Player.overall), fixé à sa
@@ -3683,6 +3829,19 @@ class Team {
     // skipInterview.
     this.pendingInterviews = [];
 
+    // Identité du club : logo et maillots (voir engine.js, miroir identique).
+    this.isPaying = false;
+    this.customLogoDataUrl = null;
+    this.jerseyShape = JERSEY_SHAPES[0];
+    this.jerseyColor = Object.keys(JERSEY_COLORS)[0];
+    this.jerseyPattern = JERSEY_PATTERNS[0];
+
+    // Fiche club : date de création et trophées (voir engine.js, miroir
+    // identique). "renommée" : voir computeClubReputationStars plus haut,
+    // pas de champ ici (recalculée à l'affichage).
+    this.foundedYear = generateFoundedYear();
+    this.trophies = [];
+
     // Affluence des derniers matchs à domicile (voir engine.js, miroir
     // identique) : plafonné à 10 (demande explicite), alimenté par
     // simulateHomeAttendance plus bas.
@@ -3726,10 +3885,10 @@ class Team {
   // Humeur des supporters : toute variation passe par ici, seule source de
   // vérité pour fanMorale ET le journal affiché sur l'écran "Humeur des
   // supporters" (les 40 événements les plus récents).
-  recordMoraleEvent(label, delta) {
+  recordMoraleEvent(label, delta, extra = {}) {
     this.moraleHistory = this.moraleHistory || [];
     const rounded = Math.round(delta * 10) / 10;
-    this.moraleHistory.unshift({ week: this.week, label, delta: rounded });
+    this.moraleHistory.unshift({ week: this.week, label, delta: rounded, ...extra });
     if (this.moraleHistory.length > 40) this.moraleHistory.length = 40;
     this.fanMorale = clamp(this.fanMorale + delta, 0, 100);
   }
@@ -3738,20 +3897,36 @@ class Team {
   // écart) enthousiasme un peu plus qu'une victoire courte, une défaite
   // sévère agace un peu plus qu'une défaite courte. Appelé à chaque match
   // (domicile ou extérieur). `round` (optionnel) : voir engine.js, miroir
-  // identique, met aussi en attente une interview d'après-match.
-  applyMoraleForResult(won, scoreDiff, opponentName, round) {
+  // identique, met aussi en attente une interview d'après-match, avec `at`
+  // (horodatage réel, point de départ du délai de 2h) posé par défaut à
+  // Date.now().
+  applyMoraleForResult(won, scoreDiff, opponentName, round, now = Date.now()) {
+    this.pruneExpiredInterviews(now);
     const margin = clamp(Math.abs(scoreDiff) / 40, 0, 1);
     const delta = won ? rand(3, 6) + margin * 1.5 : -(rand(2, 5) + margin * 1.5);
     this.recordMoraleEvent(won ? `Victoire contre ${opponentName}` : `Défaite contre ${opponentName}`, delta);
     if (typeof round === "number") {
       this.pendingInterviews = this.pendingInterviews || [];
-      this.pendingInterviews.push({ id: uid(), round, opponentName, won, scoreDiff });
+      this.pendingInterviews.push({ id: uid(), round, opponentName, won, scoreDiff, at: now });
     }
     return delta;
   }
 
-  // Résout une interview en attente (voir engine.js, miroir identique).
-  resolveInterview(id, tone) {
+  // Purge silencieuse des interviews expirées (voir engine.js, miroir
+  // identique) : plus de 2h en attente = "sans commentaire" implicite, sans
+  // effet sur l'humeur.
+  pruneExpiredInterviews(now = Date.now()) {
+    this.pendingInterviews = this.pendingInterviews || [];
+    const before = this.pendingInterviews.length;
+    this.pendingInterviews = this.pendingInterviews.filter(i => (now - i.at) < INTERVIEW_RESPONSE_DEADLINE_MS);
+    return before - this.pendingInterviews.length;
+  }
+
+  // Résout une interview en attente (voir engine.js, miroir identique) :
+  // tire aussi une citation (voir INTERVIEW_QUOTES plus haut), affichée sur
+  // la page "Aperçu" à la place du delta.
+  resolveInterview(id, tone, now = Date.now()) {
+    this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
     const idx = this.pendingInterviews.findIndex(i => i.id === id);
     if (idx === -1) return null;
@@ -3760,17 +3935,65 @@ class Team {
     const entry = this.pendingInterviews[idx];
     const delta = entry.won ? toneCfg.win : toneCfg.loss;
     const resultLabel = entry.won ? "la victoire" : "la défaite";
-    this.recordMoraleEvent(`Interview (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, delta);
+    const quoteTemplates = INTERVIEW_QUOTES[tone][entry.won ? "win" : "loss"];
+    const quote = pick(quoteTemplates).replace("{opponent}", entry.opponentName);
+    this.recordMoraleEvent(`Interview (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, delta, { quote });
     this.pendingInterviews.splice(idx, 1);
     return { ok: true, delta };
   }
 
   // Ignore une interview en attente (voir engine.js, miroir identique).
-  skipInterview(id) {
+  skipInterview(id, now = Date.now()) {
+    this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
     const before = this.pendingInterviews.length;
     this.pendingInterviews = this.pendingInterviews.filter(i => i.id !== id);
     return this.pendingInterviews.length !== before;
+  }
+
+  // Choix de maillot (voir engine.js, miroir identique).
+  setJersey(shape, color) {
+    if (!JERSEY_SHAPES.includes(shape)) return { ok: false, error: "Forme de maillot inconnue." };
+    if (!JERSEY_COLORS[color]) return { ok: false, error: "Couleur de maillot inconnue." };
+    this.jerseyShape = shape;
+    this.jerseyColor = color;
+    return { ok: true };
+  }
+
+  // Motif de maillot (voir engine.js, miroir identique).
+  setJerseyPattern(pattern) {
+    if (!JERSEY_PATTERNS.includes(pattern)) return { ok: false, error: "Motif de maillot inconnu." };
+    if (pattern !== JERSEY_PATTERNS[0] && !this.isPaying) {
+      return { ok: false, error: "Passez en club payant pour un motif de maillot personnalisé." };
+    }
+    this.jerseyPattern = pattern;
+    return { ok: true };
+  }
+
+  // Logo personnalisé, réservé aux clubs payants (voir engine.js, miroir
+  // identique).
+  setCustomLogo(dataUrl) {
+    if (!this.isPaying) return { ok: false, error: "Passez en club payant pour charger un logo personnalisé." };
+    if (dataUrl === null) {
+      this.customLogoDataUrl = null;
+      return { ok: true };
+    }
+    if (typeof dataUrl !== "string" || !/^data:image\/(png|jpe?g|webp);base64,/.test(dataUrl)) {
+      return { ok: false, error: "Image invalide (formats acceptés : PNG, JPEG, WebP)." };
+    }
+    if (dataUrl.length > MAX_TEAM_LOGO_DATA_URL_LENGTH) {
+      return { ok: false, error: "Image trop lourde." };
+    }
+    this.customLogoDataUrl = dataUrl;
+    return { ok: true };
+  }
+
+  // Statut "club payant" (voir engine.js, miroir identique) : simple
+  // interrupteur manuel pour l'instant, en attendant un vrai système de
+  // paiement.
+  setPaying(isPaying) {
+    this.isPaying = !!isPaying;
+    return { ok: true };
   }
 
   // Vend un joueur LISTÉ (voir Player.forSale/salePrice) : liquidation
@@ -5203,6 +5426,19 @@ function divisionInfo(level) {
   return DIVISIONS.find(d => d.level === level) || DIVISIONS[DIVISIONS.length - 1];
 }
 
+// Copie côté client de la même fonction engine.js (voir son commentaire) :
+// "renommée" du club, 1 à 5 étoiles, recalculée à l'affichage.
+function computeClubReputationStars(team, divisionLevel, now = Date.now()) {
+  const trophyCount = (team.trophies || []).length;
+  const clubAgeYears = new Date(now).getFullYear() - (team.foundedYear || new Date(now).getFullYear());
+  const divisionBonus = (MAX_DIVISION_LEVEL - (divisionLevel || MAX_DIVISION_LEVEL)) / (MAX_DIVISION_LEVEL - 1);
+  const score = 1
+    + Math.min(3, Math.floor(trophyCount / 2))
+    + Math.min(2, Math.floor(Math.max(0, clubAgeYears) / 25))
+    + divisionBonus * 2;
+  return clamp(Math.round(score), 1, 5);
+}
+
 // Calendrier aller-retour par la "méthode du cercle" : une équipe reste
 // fixe, les (n-1) autres tournent autour d'elle à chaque journée. n doit
 // être pair (10 ici, donc jamais de journée de repos à gérer). Renvoie un
@@ -5571,16 +5807,31 @@ class League {
     m.winner = scoreAway > scoreHome ? m.away : m.home;
     m.resolved = true;
   }
-  advanceCup() {
+  advanceCup(now = Date.now()) {
     const round = this.pendingCupRound();
     if (!round) return;
     round.resolved = true;
     const winners = round.matches.map(m => m.winner);
     if (round.name === CUP_STAGE_NAMES[CUP_STAGE_NAMES.length - 1]) {
       this.cup.champion = winners[0];
+      this.recordTrophy(winners[0], "cup", now);
     } else {
       this.cup.rounds.push(buildNextCupRound(round, winners));
     }
+  }
+
+  // Trophée du club (voir engine.js, miroir identique) : hook partagé par
+  // advanceCup ci-dessus et runPlayoffs plus bas.
+  recordTrophy(teamIdx, type, now = Date.now()) {
+    const team = this.teams[teamIdx];
+    if (!team) return;
+    const info = divisionInfo(this.divisionLevel);
+    const label = type === "cup"
+      ? `Vainqueur de la Coupe (${info.name})`
+      : `Champion (${info.name})`;
+    team.trophies = team.trophies || [];
+    team.trophies.unshift({ at: now, type, divisionLevel: this.divisionLevel || null, label });
+    if (team.trophies.length > MAX_TEAM_TROPHIES) team.trophies.length = MAX_TEAM_TROPHIES;
   }
 
   // Phase finale : les 4 premiers du classement, demi-finales (1er-4e,
@@ -5589,7 +5840,7 @@ class League {
   // d'écran de match dédié aux play-offs, qu'ils concernent le club du
   // joueur ou non — voir Team.trainWeek/League pour une future itération
   // interactive.
-  runPlayoffs() {
+  runPlayoffs(now = Date.now()) {
     const seeds = this.standings().slice(0, 4).map(s => s.idx);
     const playSeries = (idxA, idxB) => {
       let winsA = 0, winsB = 0;
@@ -5610,6 +5861,7 @@ class League {
     const semi2 = playSeries(seeds[1], seeds[2]);
     const final = playSeries(semi1.winner, semi2.winner);
     this.playoffs = { seeds, semi1, semi2, final, champion: final.winner };
+    this.recordTrophy(final.winner, "championship", now);
     return this.playoffs;
   }
 
@@ -6865,6 +7117,15 @@ function serializeTeam(team) {
     moraleHistory: team.moraleHistory,
     // Interviews en attente (voir engine.js, miroir identique).
     pendingInterviews: Array.isArray(team.pendingInterviews) ? team.pendingInterviews.map(i => ({ ...i })) : [],
+    // Identité du club (voir engine.js, miroir identique).
+    isPaying: !!team.isPaying,
+    customLogoDataUrl: team.customLogoDataUrl || null,
+    jerseyShape: team.jerseyShape,
+    jerseyColor: team.jerseyColor,
+    jerseyPattern: team.jerseyPattern,
+    // Fiche club (voir engine.js, miroir identique).
+    foundedYear: team.foundedYear,
+    trophies: Array.isArray(team.trophies) ? team.trophies.map(t => ({ ...t })) : [],
     // Historique d'affluence (voir engine.js, miroir identique).
     attendanceHistory: team.attendanceHistory,
     deficitWeeks: team.deficitWeeks,
@@ -7117,6 +7378,15 @@ function teamFromSave(data) {
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
+  // Identité du club (voir engine.js, miroir identique).
+  team.isPaying = !!data.isPaying;
+  team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
+  if (JERSEY_SHAPES.includes(data.jerseyShape)) team.jerseyShape = data.jerseyShape;
+  if (JERSEY_COLORS[data.jerseyColor]) team.jerseyColor = data.jerseyColor;
+  if (JERSEY_PATTERNS.includes(data.jerseyPattern)) team.jerseyPattern = data.jerseyPattern;
+  // Fiche club (voir engine.js, miroir identique).
+  if (typeof data.foundedYear === "number") team.foundedYear = data.foundedYear;
+  if (Array.isArray(data.trophies)) team.trophies = data.trophies.map(t => ({ ...t }));
   // Historique d'affluence (voir engine.js, miroir identique).
   team.attendanceHistory = Array.isArray(data.attendanceHistory) ? data.attendanceHistory : [];
   // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
@@ -8684,6 +8954,56 @@ function syncSkipInterviewToServer(id) {
       .catch(e => console.warn("Interview : serveur indisponible :", e));
   } catch (e) {
     console.warn("Interview : serveur indisponible :", e);
+  }
+}
+
+// Identité du club : logo et maillots (voir renderClubIdentitéPanel/
+// Team.setJersey/setCustomLogo/setPaying plus bas), mêmes conventions
+// fire-and-forget que les fonctions sync*ToServer ci-dessus.
+function syncJerseyToServer(shape, color) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/club/set-jersey", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shape, color }) })
+      .then(res => { if (!res.ok) console.warn("Changement de maillot refusé côté serveur.", res.status); })
+      .catch(e => console.warn("Maillot : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Maillot : serveur indisponible :", e);
+  }
+}
+
+// Motif de maillot (retour utilisateur : "Pour le mode payant ajoute des
+// maillots avec des dessins particuliers (rayure, degrade...)"), même
+// convention fire-and-forget que syncJerseyToServer ci-dessus.
+function syncJerseyPatternToServer(pattern) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/club/set-jersey-pattern", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pattern }) })
+      .then(res => { if (!res.ok) console.warn("Changement de motif de maillot refusé côté serveur.", res.status); })
+      .catch(e => console.warn("Motif de maillot : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Motif de maillot : serveur indisponible :", e);
+  }
+}
+
+function syncLogoToServer(dataUrl) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/club/set-logo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dataUrl }) })
+      .then(res => { if (!res.ok) console.warn("Changement de logo refusé côté serveur.", res.status); })
+      .catch(e => console.warn("Logo : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Logo : serveur indisponible :", e);
+  }
+}
+
+function syncPayingToServer(isPaying) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/club/set-paying", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isPaying }) })
+      .then(res => { if (!res.ok) console.warn("Changement de statut club refusé côté serveur.", res.status); })
+      .catch(e => console.warn("Statut club : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Statut club : serveur indisponible :", e);
   }
 }
 
@@ -10338,8 +10658,15 @@ let teamDetailOrigin = null; // { pageId, tabKey } — où revenir avec "← Ret
 // d'une équipe (effectif avec les stats en dessous des joueurs, calendrier,
 // analyse de l'équipe)" — trois sous-onglets à l'intérieur de la fiche
 // équipe (voir teamDetailSubNavHtml/renderTeamDetail ci-dessous), state gardé
-// au niveau module comme teamDetailIdx juste au-dessus.
-let teamDetailSubView = "effectif"; // "effectif" | "calendrier" | "analyse"
+// au niveau module comme teamDetailIdx juste au-dessus. Sous-onglet "Aperçu"
+// ajouté ensuite (retour utilisateur : "une petite page d'accueil pour les
+// autres équipes [...] quand on clique sur le nom d'une équipe, on doit
+// pouvoir voir le logo de l'équipe, la couleur de ses maillots, les derniers
+// résultats [...] joueur en forme du moment [...] et les derniers interviews
+// du coach"), placé EN PREMIER et devenu l'onglet par défaut à l'ouverture
+// (voir showTeamDetail ci-dessous) : c'est littéralement la "page d'accueil"
+// demandée.
+let teamDetailSubView = "apercu"; // "apercu" | "effectif" | "calendrier" | "analyse"
 
 function showTeamDetail(teamIdx) {
   // Même garde que showPlayerDetail : ne mémorise pas teamDetailSection
@@ -10350,7 +10677,7 @@ function showTeamDetail(teamIdx) {
     teamDetailOrigin = { pageId: currentVisiblePageId(), tabKey: activeTabBtn ? activeTabBtn.dataset.tab : null };
   }
   teamDetailIdx = teamIdx;
-  teamDetailSubView = "effectif"; // repart toujours sur l'Effectif à l'ouverture (même équipe ou pas)
+  teamDetailSubView = "apercu"; // repart toujours sur l'Aperçu à l'ouverture (même équipe ou pas)
   renderTeamDetail(teamIdx);
   showPage("teamDetailSection");
 }
@@ -10377,6 +10704,7 @@ document.addEventListener("click", (e) => {
 // la feuille de stats, plutôt que d'inventer une nouvelle classe).
 function teamDetailSubNavHtml() {
   const tabs = [
+    { key: "apercu", label: "Aperçu" },
     { key: "effectif", label: "Effectif" },
     { key: "calendrier", label: "Calendrier" },
     { key: "analyse", label: "Analyse d'équipe" },
@@ -10636,11 +10964,341 @@ function teamDetailAnalyseHtml(teamIdx) {
   return html;
 }
 
+// ---------------------------------------------------------------------
+// Sous-onglet "Aperçu" de la fiche équipe (retour utilisateur, 2026-09 :
+// "une petite page d'accueil pour les autres équipes [...] quand on clique
+// sur le nom d'une équipe, on doit pouvoir voir le logo de l'équipe, la
+// couleur de ses maillots, les derniers résultats (un truc avec VVVDV
+// serait pas mal), joueur en forme du moment dans l'équipe et les derniers
+// interviews du coach") : logo + maillot, forme récente, joueur du moment,
+// dernières interviews. Rendu client PUR (comme teamSeasonStatsTableHtml/
+// tacticalReportHtml plus haut) : rien ici n'est simulé par le moteur, tout
+// dérive de données déjà persistées (Team.jerseyShape/jerseyColor/
+// isPaying/customLogoDataUrl, Player.matchLog, Team.moraleHistory).
+// ---------------------------------------------------------------------
+
+// Deux ou trois lettres représentatives du nom du club, pour le centre du
+// logo type (voir defaultTeamLogoSvg) : initiales des deux premiers mots
+// s'il y en a plusieurs ("Lyon Élite" → "LÉ"), sinon les 3 premières lettres
+// du nom unique ("Vertige" → "VER").
+function teamAbbrev(name) {
+  const words = (name || "").trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return (words[0] || "?").slice(0, 3).toUpperCase();
+}
+
+// Éclaircit (percent > 0) ou assombrit (percent < 0) une couleur hex vers le
+// blanc/noir, pour le motif "degrade" ci-dessous (voir jerseySvgHtml).
+// Purement un utilitaire de rendu, jamais persisté ni simulé.
+function shadeHexColor(hex, percent) {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const target = percent > 0 ? 255 : 0;
+  const p = Math.min(1, Math.abs(percent));
+  const shadeChannel = (v) => Math.round(v + (target - v) * p);
+  const r = shadeChannel((num >> 16) & 0xff);
+  const g = shadeChannel((num >> 8) & 0xff);
+  const b = shadeChannel(num & 0xff);
+  return `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+// Compteur d'identifiants SVG uniques (voir jerseySvgHtml : plusieurs
+// maillots avec un dégradé/motif rayé peuvent être affichés en même temps
+// sur la même page, ex. le sélecteur du tableau de bord + la palette de
+// démonstration : sans id unique par appel, leurs <clipPath>/<linearGradient>
+// se marcheraient dessus). Ne repart jamais à zéro : un id déjà utilisé
+// n'est donc jamais réattribué à un autre maillot tant que la page vit.
+let jerseySvgUid = 0;
+
+// Silhouette de maillot (retour utilisateur : "une équipe gratuite doit
+// pouvoir choisir uniquement entre 2 formes de maillot et 5 couleurs" ; puis,
+// après un premier jet à manches : "Il n'y a pas de manches sur les maillots
+// au basket. Ca fait très cheap comme page" ; puis, sur le mode payant :
+// "ajoute des maillots avec des dessins particuliers (rayure, degrade...)")
+// : SILHOUETTE DÉBARDEUR pour les deux formes (aucune manche, échancrure
+// large aux emmanchures), purement du SVG généré (aucun poids de sauvegarde
+// quelle que soit la forme/couleur/variante/motif choisie). "A" = col rond.
+// "B" = col en V, avec bandes latérales contrastantes (comme un vrai
+// maillot de basket à empiècements). `variant` ("home" par défaut, ou
+// "away") distingue le maillot Domicile (couleur pleine) du maillot
+// Extérieur (fond clair, liseré et bandes couleur club) : voir
+// teamDetailApercuHtml, qui affiche les deux côte à côte (retour
+// utilisateur, référence Football Manager fournie : "maillots [...] montrés
+// Domicile/Extérieur"). `pattern` (une clé de JERSEY_PATTERNS, "uni" par
+// défaut) réservé aux clubs payants : voir effectiveJerseyPattern, qui
+// retombe sur "uni" tant que le club appelant n'est pas `isPaying` (cette
+// fonction-ci reste purement un pinceau, elle ne connaît PAS Team.isPaying,
+// c'est à l'appelant de lui donner le bon motif). `colorKey` doit être une
+// clé de JERSEY_COLORS ; une clé inconnue retombe sur la première couleur de
+// la palette plutôt que de casser le rendu.
+function jerseySvgHtml(shape, colorKey, size, variant, pattern) {
+  const color = JERSEY_COLORS[colorKey] || Object.values(JERSEY_COLORS)[0];
+  const s = size || 72;
+  const isAway = variant === "away";
+  const patternKey = JERSEY_PATTERNS.includes(pattern) ? pattern : JERSEY_PATTERNS[0];
+  const uid = `jersey${jerseySvgUid++}`;
+  const bodyFill = isAway ? "#eef2f7" : color;
+  const trimColor = isAway ? color : "rgba(255,255,255,.85)";
+  const panelColor = isAway ? "rgba(0,0,0,.10)" : "rgba(255,255,255,.24)";
+  // Emmanchures larges et échancrées (coupe débardeur), jamais de manche qui
+  // dépasse du buste : seule la ligne du col change entre les deux formes.
+  const neckPath = shape === "B" ? "L 50 22 L 60 8" : "Q 50 20 60 8";
+  const outline = `M 40 8 ${neckPath} L 78 24 L 86 30 L 84 90 L 16 90 L 14 30 L 22 24 Z`;
+
+  let defs = "";
+  let mainFill = bodyFill;
+  if (patternKey === "degrade") {
+    const from = isAway ? "#ffffff" : shadeHexColor(color, 0.35);
+    const to = isAway ? color : shadeHexColor(color, -0.35);
+    defs += `<linearGradient id="${uid}-grad" x1="0" y1="0" x2="0" y2="1">` +
+      `<stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient>`;
+    mainFill = `url(#${uid}-grad)`;
+  }
+
+  let body = `<path d="${outline}" fill="${mainFill}" stroke="rgba(0,0,0,.28)" stroke-width="1.5"/>`;
+  if (patternKey === "rayures") {
+    const stripeColor = isAway ? color : "rgba(255,255,255,.55)";
+    defs += `<clipPath id="${uid}-clip"><path d="${outline}"/></clipPath>`;
+    let stripes = "";
+    for (let x = 16; x < 90; x += 14) stripes += `<rect x="${x}" y="0" width="7" height="100" fill="${stripeColor}"/>`;
+    body += `<g clip-path="url(#${uid}-clip)">${stripes}</g>`;
+  }
+  body += `<path d="M 22 24 L 14 30 M 78 24 L 86 30 M 40 8 ${neckPath}" fill="none" stroke="${trimColor}" stroke-width="2.5" stroke-linecap="round"/>`;
+  if (shape === "B") {
+    body += `<path d="M 86 30 L 84 90 L 74 90 L 76 32 Z" fill="${panelColor}"/>`;
+    body += `<path d="M 14 30 L 16 90 L 26 90 L 24 32 Z" fill="${panelColor}"/>`;
+  }
+  const shapeLabel = shape === "B" ? "col en V à bandes" : "col rond";
+  const patternLabel = patternKey === "uni" ? "" : `, ${JERSEY_PATTERN_LABELS[patternKey].toLowerCase()}`;
+  return `<svg viewBox="0 0 100 100" width="${s}" height="${s}" role="img" aria-label="Maillot ${isAway ? "extérieur" : "domicile"} ${shapeLabel}${patternLabel}">` +
+    (defs ? `<defs>${defs}</defs>` : "") + body + `</svg>`;
+}
+
+// Motif de maillot réellement affiché pour un club (retour utilisateur :
+// "Pour le mode payant ajoute des maillots avec des dessins particuliers")
+// : SEULEMENT s'il est payant, même principe que teamLogoHtml pour le logo
+// personnalisé ci-dessous (jamais l'inverse, jamais besoin que
+// jerseyPattern soit effacé pour ça, voir Team.setPaying) puisque ce choix
+// est refait à CHAQUE rendu.
+function effectiveJerseyPattern(team) {
+  return team.isPaying ? team.jerseyPattern : JERSEY_PATTERNS[0];
+}
+
+// Logo type d'un club gratuit (retour utilisateur : "le logo de l'équipe
+// doit être type dès lors que l'équipe ne paie pas (faut un ballon par
+// exemple avec le nom de l'équipe dedans, un truc pas trop moche quand
+// même)") : un ballon de basket (couleur/coutures classiques) avec les
+// initiales du club au centre, l'anneau extérieur repris de la couleur de
+// maillot choisie pour que chaque club gratuit reste visuellement distinct
+// malgré un gabarit commun. Entièrement généré (pas une image stockée) :
+// se met donc à jour tout seul si le nom ou la couleur de maillot change,
+// jamais besoin de le régénérer/sauvegarder à part.
+function defaultTeamLogoSvg(team, size) {
+  const s = size || 80;
+  const accent = JERSEY_COLORS[team.jerseyColor] || Object.values(JERSEY_COLORS)[0];
+  const abbrev = teamAbbrev(team.name);
+  return `<svg viewBox="0 0 120 120" width="${s}" height="${s}" role="img" aria-label="Logo de ${escapeHtml(team.name)}">` +
+    `<circle cx="60" cy="60" r="55" fill="#d97b35" stroke="${accent}" stroke-width="5"/>` +
+    `<path d="M60 5 V115 M5 60 H115" stroke="#2b1a0e" stroke-width="3" fill="none"/>` +
+    `<path d="M60 5 C 30 32, 30 88, 60 115" stroke="#2b1a0e" stroke-width="3" fill="none"/>` +
+    `<path d="M60 5 C 90 32, 90 88, 60 115" stroke="#2b1a0e" stroke-width="3" fill="none"/>` +
+    `<circle cx="60" cy="60" r="32" fill="rgba(255,255,255,.92)"/>` +
+    `<text x="60" y="70" text-anchor="middle" font-size="26" font-weight="800" fill="#2b1a0e">${escapeHtml(abbrev)}</text>` +
+    `</svg>`;
+}
+
+// Logo effectivement affiché pour un club : son image personnalisée
+// UNIQUEMENT s'il est payant (retour utilisateur : "le logo de l'équipe
+// doit être type dès lors que l'équipe ne paie pas") : jamais l'inverse, et
+// jamais besoin que customLogoDataUrl soit effacé pour ça (voir
+// Team.setPaying) puisque ce choix est refait à CHAQUE rendu.
+function teamLogoHtml(team, size) {
+  const s = size || 80;
+  if (team.isPaying && team.customLogoDataUrl) {
+    return `<img class="team-logo-img" src="${team.customLogoDataUrl}" alt="Logo de ${escapeHtml(team.name)}" width="${s}" height="${s}">`;
+  }
+  return defaultTeamLogoSvg(team, s);
+}
+
+// Les `n` derniers résultats RÉELLEMENT joués d'une équipe (championnat +
+// coupe fusionnés, même tri chronologique que teamCalendarTableHtml
+// ci-dessus, matchs exempts de coupe exclus) : { won, opponent }, du plus
+// ANCIEN au plus RÉCENT (le badge le plus à droite est donc le dernier
+// match joué).
+function recentFormForTeam(teamIdx, n) {
+  const rows = [];
+  for (let r = 0; r < league.totalRounds; r++) {
+    const m = league.schedule[r].find(x => x.home === teamIdx || x.away === teamIdx);
+    if (!m) continue;
+    const result = league.results.find(res => res.round === r && (res.home === teamIdx || res.away === teamIdx));
+    if (!result) continue;
+    const isHome = result.home === teamIdx;
+    const myScore = isHome ? result.scoreHome : result.scoreAway;
+    const oppScore = isHome ? result.scoreAway : result.scoreHome;
+    const oppIdx = isHome ? result.away : result.home;
+    rows.push({
+      won: myScore > oppScore, opponent: league.teams[oppIdx] ? league.teams[oppIdx].name : "?",
+      scheduledAt: scheduledTimeForChampionshipRound(r), order: r * 2,
+    });
+  }
+  if (league.cup) {
+    league.cup.rounds.forEach(round => {
+      const m = round.matches.find(x => x.home === teamIdx || x.away === teamIdx);
+      if (!m || m.bye || !m.resolved) return;
+      const isHome = m.home === teamIdx;
+      const myScore = isHome ? m.scoreHome : m.scoreAway;
+      const oppScore = isHome ? m.scoreAway : m.scoreHome;
+      const oppIdx = isHome ? m.away : m.home;
+      rows.push({
+        won: myScore > oppScore, opponent: league.teams[oppIdx] ? league.teams[oppIdx].name : "?",
+        scheduledAt: scheduledTimeForCupRound(round.dayIndex), order: round.index * 2 + 1,
+      });
+    });
+  }
+  rows.sort((a, b) => {
+    if (a.scheduledAt != null && b.scheduledAt != null) return a.scheduledAt - b.scheduledAt;
+    if (a.scheduledAt != null) return -1;
+    if (b.scheduledAt != null) return 1;
+    return a.order - b.order;
+  });
+  return rows.slice(-n);
+}
+
+// Retour utilisateur : "les derniers résultats (un truc avec VVVDV serait
+// pas mal)" : une pastille V/D par match, dans l'ordre chronologique
+// (voir recentFormForTeam ci-dessus).
+function formStreakHtml(teamIdx) {
+  const rows = recentFormForTeam(teamIdx, 5);
+  if (!rows.length) return "<p class='training-empty'>Aucun match joué pour l'instant.</p>";
+  return `<div class="form-streak">` + rows.map(r =>
+    `<span class="form-badge ${r.won ? "form-win" : "form-loss"}" title="${r.won ? "Victoire" : "Défaite"} contre ${escapeHtml(r.opponent)}">${r.won ? "V" : "D"}</span>`
+  ).join("") + `</div>`;
+}
+
+// Joueur en forme du moment (retour utilisateur : "joueur en forme du
+// moment dans l'équipe") : celui avec la meilleure moyenne d'efficacité
+// (points + rebonds + passes - pertes de balle) sur ses 3 DERNIERS matchs
+// réellement joués (Player.matchLog, rempli en ordre chronologique par
+// recordMatchStatsForTeam côté moteur, donc les 3 dernières entrées via
+// slice(-3)) : jamais Player.form (statique, jamais mis à jour, voir son
+// commentaire dans engine.js, prévu pour une itération future distincte).
+// Un joueur sans le moindre match joué n'est simplement jamais candidat.
+function hotPlayerForTeam(teamIdx) {
+  const team = league.teams[teamIdx];
+  let best = null;
+  team.players.forEach(p => {
+    const log = p.matchLog || [];
+    if (!log.length) return;
+    const recent = log.slice(-3);
+    const avg = recent.reduce((sum, m) => sum + (m.pts || 0) + (m.reb || 0) + (m.ast || 0) - (m.tov || 0), 0) / recent.length;
+    if (!best || avg > best.avg) best = { player: p, avg, gamesCount: recent.length };
+  });
+  return best;
+}
+
+// Retour utilisateur : "les derniers interviews du coach" ; puis, sur le
+// premier jet qui affichait le delta d'humeur en plus du ton choisi : "mets
+// plutôt ce que le coach vraiment dit et ne mets pas combien ça a impacté
+// l'humeur des supporters/joueurs. Ca ne sert à rien" : filtre
+// Team.moraleHistory sur les seules entrées posées par Team.resolveInterview
+// (préfixe "Interview (", voir son commentaire dans engine.js) ET pourvues
+// d'une citation (`quote`, absente sur une éventuelle entrée d'avant cette
+// fonctionnalité, dégradation silencieuse plutôt que d'afficher un texte
+// creux), les 3 plus récentes (moraleHistory est déjà trié du plus récent au
+// plus ancien, voir recordMoraleEvent). Le delta chiffré reste visible sur
+// l'écran "Humeur des supporters" dédié (renderHumeurSection, son propre
+// journal détaillé) : seule cette page "Aperçu" n'en affiche plus rien.
+function recentInterviewsHtml(teamIdx) {
+  const team = league.teams[teamIdx];
+  const entries = (team.moraleHistory || []).filter(e => e.label.startsWith("Interview (") && e.quote).slice(0, 3);
+  if (!entries.length) return "<p class='training-empty'>Aucune interview pour l'instant.</p>";
+  return `<div class="interview-quote-list">` + entries.map(e =>
+    `<blockquote class="interview-quote">« ${escapeHtml(e.quote)} »<footer class="sub">Semaine ${e.week}</footer></blockquote>`
+  ).join("") + `</div>`;
+}
+
+// "Renommée" du club (voir engine.js:computeClubReputationStars pour le
+// calcul) : rendue en étoiles, même convention déjà utilisée ailleurs dans
+// l'app pour un niveau de staff (voir .stars, entraîneur/analyste/recruteur)
+// plutôt que d'inventer un nouveau style de jauge.
+function reputationStarsHtml(stars) {
+  return `<span class="stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</span>`;
+}
+
+// Palmarès du club (retour utilisateur : "trophée du club") : alimenté par
+// League.recordTrophy (voir engine.js), déjà trié du plus récent au plus
+// ancien (trophies.unshift). Un club dont l'historique n'a encore croisé
+// aucun titre affiche un palmarès vierge, comme l'exemple Football Manager
+// fourni par l'utilisateur en référence.
+function trophiesHtml(teamIdx) {
+  const team = league.teams[teamIdx];
+  const trophies = team.trophies || [];
+  if (!trophies.length) return `<p class="training-empty">Palmarès encore vierge.</p>`;
+  return `<ul class="trophy-list">` + trophies.slice(0, 8).map(t =>
+    `<li class="trophy-item">🏆 ${escapeHtml(t.label)}<span class="trophy-year">${new Date(t.at).getFullYear()}</span></li>`
+  ).join("") + `</ul>`;
+}
+
+// Contenu du sous-onglet "Aperçu" d'une fiche équipe (retour utilisateur,
+// 2026-09 : "une petite page d'accueil pour les autres équipes [...] le
+// logo de l'équipe [...] la couleur de ses maillots, les derniers résultats
+// [...] joueur en forme du moment [...] et les derniers interviews du
+// coach" ; puis, sur la v1 : "Il n'y a pas de manches sur les maillots au
+// basket. Ca fait très cheap comme page. Ca ne va pas avec le reste [...]
+// Regarde le visuel fm. [...] date de création, renommée et trophée du
+// club"). Refonte reprenant l'esprit du visuel Football Manager fourni :
+// blason + nom + barre d'infos en haut, puis une grille de cartes
+// (.team-apercu-grid, mêmes briques .stat-card que le reste de l'app, voir
+// son commentaire CSS) pour les maillots, la forme du moment, le joueur en
+// forme, le palmarès et les interviews.
+function teamDetailApercuHtml(teamIdx) {
+  const team = league.teams[teamIdx];
+  const isOwnTeam = teamIdx === myTeamIndex;
+  const stars = computeClubReputationStars(team, league.divisionLevel);
+
+  let html = `<div class="team-apercu-top">`;
+  html += `<div class="team-apercu-crest">${teamLogoHtml(team, 88)}</div>`;
+  html += `<div>`;
+  html += `<h2 class="team-apercu-name">${escapeHtml(team.name)}</h2>`;
+  html += `<div class="team-apercu-infobar">`;
+  html += `<span class="infobar-item">Division <span class="infobar-value">${escapeHtml(divisionInfo(league.divisionLevel).name)}</span></span>`;
+  html += `<span class="infobar-item">Fondé en <span class="infobar-value">${team.foundedYear}</span></span>`;
+  html += `<span class="infobar-item">Renommée ${reputationStarsHtml(stars)}</span>`;
+  html += `</div>`;
+  html += `</div>`;
+  html += `</div>`;
+  if (isOwnTeam) {
+    html += `<p class="sub">Logo et maillot modifiables depuis le tableau de bord (onglet <b>Club</b>).</p>`;
+  }
+
+  html += `<div class="team-apercu-grid">`;
+
+  const jerseyPattern = effectiveJerseyPattern(team);
+  html += `<div class="stat-card"><h3>Maillots</h3><div class="jersey-mockups">` +
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 84, "home", jerseyPattern)}<p class="sub">Domicile</p></div>` +
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 84, "away", jerseyPattern)}<p class="sub">Extérieur</p></div>` +
+    `</div></div>`;
+
+  html += `<div class="stat-card"><h3>Derniers résultats</h3>${formStreakHtml(teamIdx)}</div>`;
+
+  const hot = hotPlayerForTeam(teamIdx);
+  html += `<div class="stat-card"><h3>Joueur en forme du moment</h3>` + (hot
+    ? `<p class="sub">${playerLinkHtml(teamIdx, hot.player.id, hot.player.name)} (${POS_SHORT[hot.player.position]}) : ${hot.avg.toFixed(1)} d'efficacité moyenne (points + rebonds + passes - pertes) sur ${hot.gamesCount === 1 ? "son dernier match" : `ses ${hot.gamesCount} derniers matchs`}.</p>`
+    : `<p class="training-empty">Pas encore assez de matchs joués pour dégager un joueur en forme.</p>`) +
+    `</div>`;
+
+  html += `<div class="stat-card"><h3>Palmarès</h3>${trophiesHtml(teamIdx)}</div>`;
+
+  html += `<div class="stat-card span-2"><h3>Dernières interviews du coach</h3>${recentInterviewsHtml(teamIdx)}</div>`;
+
+  html += `</div>`;
+  return html;
+}
+
 // Contenu de la fiche équipe (retour utilisateur, 2026-09 : "quand on clique
 // sur une équipe, je dois pouvoir voir les stats des joueurs [...] il faut
 // aussi que je puisse voir le calendrier et consulter le box score des
 // matchs [...] ajouter des boutons sur la page d'une équipe") : répartie
-// entre trois sous-onglets (voir teamDetailSubNavHtml/teamDetailSubView),
+// entre quatre sous-onglets (voir teamDetailSubNavHtml/teamDetailSubView),
 // chacun sa propre fonction de rendu ci-dessus.
 function renderTeamDetail(teamIdx) {
   const nameHeader = document.getElementById("teamDetailName");
@@ -10658,8 +11316,10 @@ function renderTeamDetail(teamIdx) {
     html += teamCalendarTableHtml(teamIdx);
   } else if (teamDetailSubView === "analyse") {
     html += teamDetailAnalyseHtml(teamIdx);
-  } else {
+  } else if (teamDetailSubView === "effectif") {
     html += teamDetailEffectifHtml(teamIdx);
+  } else {
+    html += teamDetailApercuHtml(teamIdx);
   }
   holder.innerHTML = html;
 }
@@ -13061,6 +13721,149 @@ function renderClubSection() {
       ? `<div class="training-report-list">${newsInner}</div>`
       : `<div class="sub">Rien à signaler pour l'instant.</div>`);
   grid.appendChild(newsCard);
+
+  renderClubIdentityPanel();
+}
+
+// ---------------------------------------------------------------------
+// Identité du club : logo et maillots (retour utilisateur, 2026-09 : "le
+// logo et les maillots doivent pouvoir être modifiés dans le tableau de
+// bord"), affiché en bas du tableau de bord (voir clubIdentityPanel dans le
+// HTML). Un logo personnalisé n'est proposé (bouton de chargement) que pour
+// un club `isPaying` (voir teamA.setCustomLogo/le grand commentaire sur
+// JERSEY_COLORS dans engine.js) ; un club gratuit voit son logo type et un
+// message expliquant pourquoi le chargement est indisponible.
+// ---------------------------------------------------------------------
+function renderClubIdentityPanel() {
+  const holder = document.getElementById("clubIdentityPanel");
+  if (!holder) return;
+  let html = `<h3 class="field-label">Identité du club</h3>`;
+  html += `<div class="club-identity-grid">`;
+  html += `<div class="club-identity-logo">`;
+  html += `<div class="club-logo-preview">${teamLogoHtml(teamA, 96)}</div>`;
+  if (teamA.isPaying) {
+    html += `<label class="secondary club-logo-upload-btn">Changer le logo` +
+      `<input type="file" accept="image/png,image/jpeg,image/webp" id="clubLogoFileInput" style="display:none"></label>`;
+    if (teamA.customLogoDataUrl) {
+      html += `<button type="button" class="secondary" id="clubLogoResetBtn">Revenir au logo type</button>`;
+    }
+  } else {
+    html += `<p class="sub">Logo automatique (club gratuit). Passez en club payant pour charger votre propre image.</p>`;
+  }
+  html += `</div>`;
+
+  const dashboardJerseyPattern = effectiveJerseyPattern(teamA);
+  html += `<div class="club-identity-jersey">`;
+  html += `<p class="field-label" style="margin:0 0 6px">Forme du maillot</p>`;
+  html += `<div class="jersey-shape-picker">` + JERSEY_SHAPES.map(shape =>
+    `<button type="button" class="jersey-shape-btn${teamA.jerseyShape === shape ? " active" : ""}" data-jersey-shape="${shape}">` +
+    `${jerseySvgHtml(shape, teamA.jerseyColor, 56, "home", dashboardJerseyPattern)}<span>${shape === "B" ? "Col en V" : "Col rond"}</span></button>`
+  ).join("") + `</div>`;
+  html += `<p class="field-label" style="margin:12px 0 6px">Couleur du maillot</p>`;
+  html += `<div class="jersey-color-picker">` + Object.keys(JERSEY_COLORS).map(key =>
+    `<button type="button" class="jersey-color-swatch${teamA.jerseyColor === key ? " active" : ""}" data-jersey-color="${key}" style="background:${JERSEY_COLORS[key]}" title="${key}" aria-label="Couleur ${key}"></button>`
+  ).join("") + `</div>`;
+  html += `<p class="field-label" style="margin:12px 0 6px">Motif du maillot</p>`;
+  if (teamA.isPaying) {
+    html += `<div class="jersey-pattern-picker">` + JERSEY_PATTERNS.map(pattern =>
+      `<button type="button" class="jersey-pattern-btn${teamA.jerseyPattern === pattern ? " active" : ""}" data-jersey-pattern="${pattern}">` +
+      `${jerseySvgHtml(teamA.jerseyShape, teamA.jerseyColor, 56, "home", pattern)}<span>${JERSEY_PATTERN_LABELS[pattern]}</span></button>`
+    ).join("") + `</div>`;
+  } else {
+    html += `<p class="sub">Motif uni (club gratuit). Passez en club payant pour un motif personnalisé (rayures, dégradé...).</p>`;
+  }
+  html += `</div>`;
+  html += `</div>`;
+
+  html += `<p class="sub club-paying-row">Statut du club : <b>${teamA.isPaying ? "Payant" : "Gratuit"}</b> ` +
+    `<button type="button" class="secondary" id="clubTogglePayingBtn">${teamA.isPaying ? "Repasser en gratuit" : "Passer en payant"}</button> ` +
+    `<span class="club-paying-note">(interrupteur manuel temporaire, en attendant un vrai système de paiement)</span></p>`;
+  html += `<div id="clubIdentityFeedback"></div>`;
+  holder.innerHTML = html;
+}
+
+// Redimensionne/compresse une image chargée par l'utilisateur (retour
+// utilisateur : "pour les équipes qui paient, elles doivent pouvoir charger
+// leur propre image") avant de l'encoder en data URL, pour ne jamais
+// gonfler la sauvegarde avec une photo grand format non redimensionnée :
+// contenue dans un carré `maxSize`×`maxSize` (aspect ratio préservé),
+// toujours réexportée en PNG (gère aussi bien un fond transparent qu'une
+// photo). Utilise Image()/canvas plutôt qu'une bibliothèque externe, jamais
+// besoin de plus pour un simple logo de club.
+function resizeImageFileToDataUrl(file, maxSize) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Lecture du fichier impossible."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Image invalide."));
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Écouteurs de l'identité du club : attachés UNE FOIS sur le conteneur
+// statique (jamais recréé, seul son innerHTML change à chaque
+// renderClubIdentityPanel), même patron que catchupContentEl plus haut.
+const clubIdentityPanelEl = document.getElementById("clubIdentityPanel");
+if (clubIdentityPanelEl) {
+  clubIdentityPanelEl.addEventListener("click", (e) => {
+    const shapeBtn = e.target.closest("[data-jersey-shape]");
+    const colorBtn = e.target.closest("[data-jersey-color]");
+    const patternBtn = e.target.closest("[data-jersey-pattern]");
+    const resetLogoBtn = e.target.closest("#clubLogoResetBtn");
+    const togglePayingBtn = e.target.closest("#clubTogglePayingBtn");
+    if (shapeBtn) {
+      teamA.setJersey(shapeBtn.dataset.jerseyShape, teamA.jerseyColor);
+    } else if (colorBtn) {
+      teamA.setJersey(teamA.jerseyShape, colorBtn.dataset.jerseyColor);
+    } else if (patternBtn) {
+      teamA.setJerseyPattern(patternBtn.dataset.jerseyPattern);
+    } else if (resetLogoBtn) {
+      teamA.setCustomLogo(null);
+    } else if (togglePayingBtn) {
+      teamA.setPaying(!teamA.isPaying);
+    } else {
+      return;
+    }
+    saveMyTeam();
+    if (shapeBtn || colorBtn) syncJerseyToServer(teamA.jerseyShape, teamA.jerseyColor);
+    if (patternBtn) syncJerseyPatternToServer(teamA.jerseyPattern);
+    if (resetLogoBtn) syncLogoToServer(null);
+    if (togglePayingBtn) syncPayingToServer(teamA.isPaying);
+    renderClubIdentityPanel();
+  });
+
+  clubIdentityPanelEl.addEventListener("change", async (e) => {
+    const input = e.target.closest("#clubLogoFileInput");
+    if (!input || !input.files || !input.files[0]) return;
+    const feedback = document.getElementById("clubIdentityFeedback");
+    try {
+      const dataUrl = await resizeImageFileToDataUrl(input.files[0], 256);
+      const result = teamA.setCustomLogo(dataUrl);
+      if (!result.ok) {
+        if (feedback) feedback.innerHTML = `<p class="sub" style="color:var(--danger)">${escapeHtml(result.error)}</p>`;
+        return;
+      }
+      saveMyTeam();
+      syncLogoToServer(dataUrl);
+      renderClubIdentityPanel();
+    } catch (err) {
+      if (feedback) feedback.innerHTML = `<p class="sub" style="color:var(--danger)">Impossible de charger cette image.</p>`;
+    }
+  });
 }
 
 // ---------------------------------------------------------------------

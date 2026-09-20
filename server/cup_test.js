@@ -182,6 +182,18 @@ function freshMultiLeague(now = T0, names = ["Lyon Cup", "Marseille Cup"]) {
   }
   if (league.pendingCupRound() !== null) throw new Error("❌ Une fois le champion connu, pendingCupRound() devrait renvoyer null (plus aucun tour dû).");
   console.log(`✅ Une coupe complète se joue intégralement jusqu'au champion (index ${league.cup.champion}) en exactement 4 tours (2, 4, 2 puis 1 vrai(s) match(s)), sans tour supplémentaire une fois la finale résolue.`);
+
+  // Trophée du club (retour utilisateur, page "Aperçu" : "trophée du club") :
+  // advanceCup doit enregistrer un trophée "cup" pour le vainqueur, via
+  // League.recordTrophy, dès la finale résolue.
+  const championTrophies = league.teams[league.cup.champion].trophies;
+  if (!Array.isArray(championTrophies) || championTrophies.length !== 1 || championTrophies[0].type !== "cup") {
+    throw new Error(`❌ Le vainqueur de la Coupe devrait avoir exactement 1 trophée de type "cup" dans son palmarès, obtenu ${JSON.stringify(championTrophies)}.`);
+  }
+  if (!championTrophies[0].label.includes("Coupe")) {
+    throw new Error(`❌ Le libellé du trophée de Coupe devrait mentionner "Coupe", obtenu "${championTrophies[0].label}".`);
+  }
+  console.log("✅ Le vainqueur de la Coupe reçoit bien un trophée dans son palmarès (Team.trophies).");
 }
 
 // ---------------------------------------------------------------------

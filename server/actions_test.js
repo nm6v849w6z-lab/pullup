@@ -708,7 +708,7 @@ function freshTeamAndLeague() {
 }
 
 // ---------------------------------------------------------------------
-// respondToInterview / skipInterview — Médias : interview d'après-match
+// respondToInterview / skipInterview : Médias, interview d'après-match
 // (voir Team.pendingInterviews/applyMoraleForResult/resolveInterview/
 // skipInterview côté moteur, INTERVIEW_TONES). Un match humain avec un
 // `round` numérique met en attente une interview ; le manager choisit un
@@ -782,6 +782,129 @@ function freshTeamAndLeague() {
   if (reloaded.pendingInterviews.length !== beforeCount) throw new Error("❌ pendingInterviews devrait survivre à un round-trip serializeTeam/teamFromSave.");
   if (reloaded.pendingInterviews[0].id !== team.pendingInterviews[0].id) throw new Error("❌ Le contenu de pendingInterviews devrait être préservé par le round-trip.");
   console.log("✅ pendingInterviews survit à un round-trip serializeTeam/teamFromSave.");
+}
+
+// ---------------------------------------------------------------------
+// Délai de réponse de 2h à une interview (retour utilisateur : "il faut les
+// faire dans les 2h après le match, sinon c'est par défaut sans impact") :
+// voir Team.pruneExpiredInterviews/INTERVIEW_RESPONSE_DEADLINE_MS côté
+// moteur.
+// ---------------------------------------------------------------------
+{
+  const { team, league } = freshTeamAndLeague();
+  const T_MATCH = Date.UTC(2026, 8, 10, 12, 0, 0);
+
+  team.applyMoraleForResult(true, 10, "Adversaire test", 3, T_MATCH);
+  const interview = team.pendingInterviews[0];
+
+  // Juste avant l'échéance (1h59) : toujours répondable.
+  const justBefore = T_MATCH + (2 * 60 * 60 * 1000) - 60000;
+  const okRes = actions.respondToInterview(team, 0, league, { id: interview.id, tone: "Mesuré" }, justBefore);
+  if (!okRes.ok) throw new Error(`❌ Une interview répondue avant l'échéance de 2h devrait être acceptée : ${okRes.error}`);
+  console.log("✅ Une interview répondue juste avant l'échéance de 2h est acceptée.");
+
+  // Après l'échéance : la file est purgée SANS effet sur l'humeur, comme un
+  // "sans commentaire" implicite.
+  team.applyMoraleForResult(false, 6, "Adversaire test", 4, T_MATCH);
+  const lateInterview = team.pendingInterviews[team.pendingInterviews.length - 1];
+  const afterDeadline = T_MATCH + (2 * 60 * 60 * 1000) + 1000;
+  const moraleBeforeLate = team.fanMorale;
+  const lateRes = actions.respondToInterview(team, 0, league, { id: lateInterview.id, tone: "Agressif" }, afterDeadline);
+  if (lateRes.ok) throw new Error("❌ Répondre après le délai de 2h devrait être rejeté (interview déjà purgée).");
+  if (team.fanMorale !== moraleBeforeLate) throw new Error("❌ Une interview expirée ne devrait avoir aucun effet sur l'humeur, même en tentant d'y répondre trop tard.");
+  if (team.pendingInterviews.some(i => i.id === lateInterview.id)) throw new Error("❌ Une interview expirée devrait avoir été purgée de la file.");
+  console.log("✅ Une interview non traitée après 2h est purgée automatiquement, sans effet sur l'humeur.");
+
+  // pruneExpiredInterviews appelé directement, plusieurs entrées à la fois.
+  team.applyMoraleForResult(true, 5, "Adversaire test", 5, T_MATCH);
+  team.applyMoraleForResult(true, 5, "Adversaire test", 6, T_MATCH);
+  const removedCount = team.pruneExpiredInterviews(afterDeadline);
+  if (removedCount !== 2) throw new Error(`❌ pruneExpiredInterviews aurait dû retirer 2 entrées expirées, en a retiré ${removedCount}.`);
+  console.log("✅ pruneExpiredInterviews retire bien toutes les entrées expirées d'un coup.");
+}
+
+// ---------------------------------------------------------------------
+// setTeamJersey / setTeamJerseyPattern / setTeamLogo / setTeamPaying :
+// Identité du club (retour utilisateur : "le logo de l'équipe doit être
+// type dès lors que l'équipe ne paie pas [...] pour les équipes qui paient,
+// elles doivent pouvoir charger leur propre image [...] une équipe gratuite
+// doit pouvoir choisir uniquement entre 2 formes de maillot et 5 couleurs" ;
+// puis, sur la refonte de l'Aperçu : "Pour le mode payant ajoute des
+// maillots avec des dessins particuliers (rayure, degrade...)").
+// ---------------------------------------------------------------------
+{
+  const { team, league } = freshTeamAndLeague();
+
+  if (Object.keys(E.JERSEY_COLORS).length !== 5) throw new Error("❌ JERSEY_COLORS devrait exposer exactement 5 couleurs.");
+  if (E.JERSEY_SHAPES.length !== 2) throw new Error("❌ JERSEY_SHAPES devrait exposer exactement 2 formes.");
+  console.log("✅ JERSEY_COLORS/JERSEY_SHAPES exposent bien 5 couleurs et 2 formes.");
+
+  const someColor = Object.keys(E.JERSEY_COLORS)[2];
+  const jerseyRes = actions.setTeamJersey(team, 0, league, { shape: E.JERSEY_SHAPES[1], color: someColor }, T0);
+  if (!jerseyRes.ok || team.jerseyShape !== E.JERSEY_SHAPES[1] || team.jerseyColor !== someColor) throw new Error(`❌ setTeamJersey devrait appliquer forme/couleur valides : ${JSON.stringify(jerseyRes)}`);
+  console.log("✅ setTeamJersey applique une forme/couleur valides.");
+
+  const badShape = actions.setTeamJersey(team, 0, league, { shape: "Z", color: someColor }, T0);
+  if (badShape.ok) throw new Error("❌ setTeamJersey devrait rejeter une forme inconnue.");
+  const badColor = actions.setTeamJersey(team, 0, league, { shape: "A", color: "fluo" }, T0);
+  if (badColor.ok) throw new Error("❌ setTeamJersey devrait rejeter une couleur inconnue.");
+  console.log("✅ setTeamJersey rejette une forme ou une couleur inconnue.");
+
+  // Logo personnalisé : refusé tant que le club n'est pas payant.
+  const tinyPngDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+  const logoRejected = actions.setTeamLogo(team, 0, league, { dataUrl: tinyPngDataUrl }, T0);
+  if (logoRejected.ok) throw new Error("❌ setTeamLogo devrait être refusé pour un club gratuit (isPaying=false).");
+  console.log("✅ setTeamLogo refuse un logo personnalisé pour un club gratuit.");
+
+  const payingRes = actions.setTeamPaying(team, 0, league, { isPaying: true }, T0);
+  if (!payingRes.ok || !team.isPaying) throw new Error("❌ setTeamPaying(true) devrait passer le club en payant.");
+  console.log("✅ setTeamPaying bascule bien le statut du club.");
+
+  const logoAccepted = actions.setTeamLogo(team, 0, league, { dataUrl: tinyPngDataUrl }, T0);
+  if (!logoAccepted.ok || team.customLogoDataUrl !== tinyPngDataUrl) throw new Error(`❌ setTeamLogo devrait accepter une image valide pour un club payant : ${JSON.stringify(logoAccepted)}`);
+  console.log("✅ setTeamLogo accepte un logo personnalisé pour un club payant.");
+
+  const badLogo = actions.setTeamLogo(team, 0, league, { dataUrl: "not-an-image" }, T0);
+  if (badLogo.ok) throw new Error("❌ setTeamLogo devrait rejeter une donnée qui n'est pas une image encodée valide.");
+  console.log("✅ setTeamLogo rejette une donnée invalide.");
+
+  // Repasser en gratuit NE DOIT PAS effacer le logo déjà chargé (retour au
+  // logo type se fait au RENDU, jamais en perdant la donnée elle-même).
+  actions.setTeamPaying(team, 0, league, { isPaying: false }, T0);
+  if (team.customLogoDataUrl !== tinyPngDataUrl) throw new Error("❌ Repasser en club gratuit ne devrait pas effacer customLogoDataUrl (conservé pour une réactivation future).");
+  console.log("✅ Repasser en club gratuit conserve le logo personnalisé déjà chargé (juste ignoré au rendu).");
+
+  // Motif de maillot (retour utilisateur, sur la refonte de l'Aperçu :
+  // "Pour le mode payant ajoute des maillots avec des dessins particuliers
+  // (rayure, degrade...)") : club encore gratuit à ce stade (bascule
+  // ci-dessus repassée à false) : un motif personnalisé doit être refusé,
+  // "uni" doit toujours être accepté.
+  if (E.JERSEY_PATTERNS.length !== 3 || E.JERSEY_PATTERNS[0] !== "uni") {
+    throw new Error(`❌ JERSEY_PATTERNS devrait exposer exactement 3 motifs, "uni" en premier, obtenu ${JSON.stringify(E.JERSEY_PATTERNS)}.`);
+  }
+  const patternRejected = actions.setTeamJerseyPattern(team, 0, league, { pattern: "rayures" }, T0);
+  if (patternRejected.ok) throw new Error("❌ setTeamJerseyPattern devrait refuser un motif personnalisé pour un club gratuit.");
+  console.log("✅ setTeamJerseyPattern refuse un motif personnalisé pour un club gratuit.");
+
+  const uniAllowedWhileFree = actions.setTeamJerseyPattern(team, 0, league, { pattern: "uni" }, T0);
+  if (!uniAllowedWhileFree.ok) throw new Error("❌ setTeamJerseyPattern devrait toujours accepter \"uni\", même pour un club gratuit.");
+  console.log("✅ setTeamJerseyPattern accepte toujours \"uni\", même pour un club gratuit.");
+
+  actions.setTeamPaying(team, 0, league, { isPaying: true }, T0);
+  const patternAccepted = actions.setTeamJerseyPattern(team, 0, league, { pattern: "degrade" }, T0);
+  if (!patternAccepted.ok || team.jerseyPattern !== "degrade") throw new Error(`❌ setTeamJerseyPattern devrait accepter un motif personnalisé pour un club payant : ${JSON.stringify(patternAccepted)}`);
+  console.log("✅ setTeamJerseyPattern accepte un motif personnalisé pour un club payant.");
+
+  const badPattern = actions.setTeamJerseyPattern(team, 0, league, { pattern: "carreaux" }, T0);
+  if (badPattern.ok) throw new Error("❌ setTeamJerseyPattern devrait rejeter un motif inconnu.");
+  console.log("✅ setTeamJerseyPattern rejette un motif inconnu.");
+
+  // Même principe que le logo personnalisé : repasser en gratuit ne doit
+  // PAS effacer le motif choisi, juste l'ignorer au rendu (voir
+  // effectiveJerseyPattern côté moteurbasket3.html, non exercé ici).
+  actions.setTeamPaying(team, 0, league, { isPaying: false }, T0);
+  if (team.jerseyPattern !== "degrade") throw new Error("❌ Repasser en club gratuit ne devrait pas effacer jerseyPattern (conservé pour une réactivation future).");
+  console.log("✅ Repasser en club gratuit conserve le motif de maillot déjà choisi (juste ignoré au rendu).");
 }
 
 // ---------------------------------------------------------------------

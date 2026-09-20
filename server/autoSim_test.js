@@ -149,6 +149,15 @@ const T0 = Date.UTC(2026, 8, 7); // un lundi arbitraire, fixe pour tout le fichi
   if (!league.relegationBarrage) throw new Error("❌ Le barrage de relégation devrait être calculé une fois la saison régulière terminée.");
   console.log(`✅ Rattrapage d'une longue absence : ${matchEvents.length} journées + ${trainingEvents.length} semaines d'entraînement + fin de saison (play-offs/barrage) calculés automatiquement.`);
 
+  // Trophée du club (retour utilisateur, page "Aperçu" : "trophée du club") :
+  // runPlayoffs doit enregistrer un trophée "championship" pour le champion,
+  // via League.recordTrophy, dès la finale des play-offs résolue.
+  const champTrophies = league.teams[league.playoffs.champion].trophies;
+  if (!Array.isArray(champTrophies) || champTrophies.length !== 1 || champTrophies[0].type !== "championship") {
+    throw new Error(`❌ Le champion des play-offs devrait avoir exactement 1 trophée de type "championship" dans son palmarès, obtenu ${JSON.stringify(champTrophies)}.`);
+  }
+  console.log("✅ Le champion des play-offs reçoit bien un trophée dans son palmarès (Team.trophies).");
+
   // Un appel supplémentaire, encore plus tard : ne doit RIEN refaire (la
   // saison réelle est terminée, une nouvelle saison reste un choix manuel).
   const moreEvents = catchUpLeague(league, farFuture + 10 * WEEK_MS);

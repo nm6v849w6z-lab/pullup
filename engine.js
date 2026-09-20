@@ -1212,6 +1212,144 @@ const INTERVIEW_TONES = {
   "Humble":   { win: 0.5, loss: 1 },
 };
 
+// Citations affichées sur la page "Aperçu" du club (retour utilisateur,
+// 2026-09 : "mets plutôt ce que le coach vraiment dit et ne mets pas
+// combien ça a impacté l'humeur des supporters/joueurs. Ca ne sert à rien")
+// : une phrase tirée au sort (voir Team.resolveInterview) selon le ton
+// choisi ET le résultat du match, `{opponent}` remplacé par le nom de
+// l'adversaire. Choisie et figée à la résolution de l'interview (jamais
+// retirée au sort à nouveau à l'affichage), voir moraleHistory[].quote.
+// L'effet chiffré sur l'humeur (INTERVIEW_TONES ci-dessus) continue
+// d'exister pour la simulation et reste visible sur l'écran "Humeur des
+// supporters" (son propre journal détaillé) : seule la page "Aperçu", trop
+// orientée coulisses pour un simple aperçu du club, n'affiche plus que la
+// citation.
+const INTERVIEW_QUOTES = {
+  "Agressif": {
+    win: [
+      "On savait qu'on allait les dominer, {opponent} n'a jamais eu sa chance ce soir.",
+      "C'est simple, on est l'équipe la plus forte du moment, {opponent} l'a appris à ses dépens.",
+      "On voulait leur montrer qui commande, mission accomplie face à {opponent}.",
+    ],
+    loss: [
+      "L'arbitrage nous a clairement desservis contre {opponent}, mais on ne changera rien à notre façon de jouer.",
+      "{opponent} a eu de la réussite ce soir, la prochaine fois ça se passera autrement.",
+      "On n'a rien à se reprocher, on reste l'équipe la plus forte de cette division.",
+    ],
+  },
+  "Mesuré": {
+    win: [
+      "Une victoire méritée face à {opponent}, l'équipe a fait un match sérieux du début à la fin.",
+      "On savait que ce serait difficile contre {opponent}, je suis content du visage montré ce soir.",
+      "Match solide dans l'ensemble, on prend les trois points face à {opponent} et on passe à la suite.",
+    ],
+    loss: [
+      "Défaite frustrante contre {opponent}, on va analyser les erreurs et rebondir dès la semaine prochaine.",
+      "{opponent} a été meilleur que nous ce soir, on doit progresser sur certains points précis.",
+      "On retient le positif malgré la défaite face à {opponent}, le travail continue à l'entraînement.",
+    ],
+  },
+  "Humble": {
+    win: [
+      "On a eu un peu de réussite ce soir face à {opponent}, l'équipe a bien répondu présente.",
+      "Je félicite mes joueurs pour cette victoire, mais {opponent} nous a posé beaucoup de problèmes.",
+      "Une belle victoire collective contre {opponent}, chacun a fait sa part, rien de plus.",
+    ],
+    loss: [
+      "La défaite est entièrement de ma responsabilité ce soir, {opponent} méritait de gagner.",
+      "On doit faire notre autocritique après cette rencontre face à {opponent}.",
+      "Félicitations à {opponent}, ils ont été meilleurs que nous sur tous les points ce soir.",
+    ],
+  },
+};
+
+// Délai de réponse à une interview en attente (retour utilisateur, 2026-09 :
+// "pour les interviews, il faut les faire dans les 2h après le match, sinon
+// c'est par défaut sans impact") : passé ce délai depuis sa mise en attente
+// (Team.pendingInterviews[].at, horodatage réel posé par
+// applyMoraleForResult), une interview est silencieusement retirée de la
+// file par Team.pruneExpiredInterviews, sans aucun effet sur l'humeur, comme
+// un "sans commentaire" implicite. Toujours en TEMPS RÉEL (Date.now()),
+// jamais lié au calendrier simulé de la ligue : c'est une fenêtre pour le
+// MANAGER, pas pour le club.
+const INTERVIEW_RESPONSE_DEADLINE_MS = 2 * 60 * 60 * 1000;
+
+// ---------------------------------------------------------------------
+// IDENTITÉ DU CLUB : logo et maillots (retour utilisateur, 2026-09 : "une
+// petite page d'accueil pour les autres équipes [...] le logo de l'équipe
+// doit être type dès lors que l'équipe ne paie pas [...] pour les équipes
+// qui paient, elles doivent pouvoir charger leur propre image [...] une
+// équipe gratuite doit pouvoir choisir uniquement entre 2 formes de maillot
+// et 5 couleurs"). Aucun vrai système de paiement n'existe encore dans le
+// jeu : `Team.isPaying` est pour l'instant un simple interrupteur manuel
+// (voir Team.setPaying/actions.js:setTeamPaying), la logique et l'interface
+// sont prêtes pour un futur système de paiement réel sans rien changer ici.
+// ---------------------------------------------------------------------
+
+// Palette fermée de 5 couleurs de maillot pour une équipe gratuite (clé
+// stable persistée dans Team.jerseyColor, valeur = code couleur utilisé par
+// le rendu SVG côté client). Une équipe payante reste soumise à la MÊME
+// palette pour l'instant (seul le logo personnalisé distingue les deux
+// niveaux, voir Team.setCustomLogo) : rien dans la demande n'élargit le
+// choix de maillot pour les clubs payants.
+const JERSEY_COLORS = {
+  rouge:  "#d6473f",
+  bleu:   "#3b6fd6",
+  vert:   "#3fae62",
+  violet: "#8659d6",
+  orange: "#e08a2e",
+};
+
+// Deux formes de maillot seulement (retour utilisateur explicite) : "A"
+// (débardeur, col rond) et "B" (débardeur, col en V à bandes latérales).
+// Toujours SANS manche (retour utilisateur : "Il n'y a pas de manches sur
+// les maillots au basket"). Les silhouettes SVG elles-mêmes sont dessinées
+// côté client (jerseySvgHtml, purement visuel, jamais simulé par le
+// moteur) ; ces clés ne servent qu'à valider/persister le choix du manager.
+const JERSEY_SHAPES = ["A", "B"];
+
+// Motifs de maillot réservés aux clubs payants (retour utilisateur,
+// 2026-09, après la refonte de la page "Aperçu" : "Pour le mode payant
+// ajoute des maillots avec des dessins particuliers (rayure, degrade...)")
+// : "uni" (identique à un club gratuit) reste toujours disponible ;
+// "rayures"/"degrade" ne peuvent être choisis que par un club `isPaying`
+// (voir Team.setJerseyPattern plus bas), même principe que
+// customLogoDataUrl (jamais effacé en repassant gratuit, juste ignoré au
+// rendu, voir effectiveJerseyPattern côté moteurbasket3.html). Le dessin
+// réel de chaque motif est purement visuel, dessiné côté client
+// (jerseySvgHtml) : ces clés ne servent qu'à valider/persister le choix.
+const JERSEY_PATTERNS = ["uni", "rayures", "degrade"];
+
+// Taille maximale d'un logo personnalisé encodé en data URL (retour
+// utilisateur : image chargée par un club payant) : ~300 Ko d'image binaire
+// gonflent à environ 400 000 caractères une fois encodés en base64, une
+// limite raisonnable pour rester embarqué dans la sauvegarde JSON sans trop
+// l'alourdir (le client redimensionne déjà l'image avant envoi, voir
+// resizeImageFileToDataUrl côté moteurbasket3.html, donc cette limite n'est
+// quasiment jamais atteinte en pratique, juste un garde-fou serveur).
+const MAX_TEAM_LOGO_DATA_URL_LENGTH = 400000;
+
+// Fiche club : date de création et trophées (retour utilisateur, 2026-09,
+// après avoir vu la page "Aperçu" v1 : "on pourrait ajouter les petites
+// infos comme date de création, renommée et trophée du club"). `foundedYear`
+// est une année civile RÉELLE tirée une seule fois à la création du club
+// (voir Team.foundedYear plus bas, généré dans le constructeur puis figé par
+// le va-et-vient serializeTeam/teamFromSave, même principe que
+// Player.name/height générés une fois pour toutes). Fourchette large (5 à 90
+// ans avant aujourd'hui) pour couvrir aussi bien un jeune club qu'une
+// institution centenaire, à l'image de l'exemple Football Manager fourni par
+// l'utilisateur (un club au palmarès encore vierge).
+function generateFoundedYear(now = Date.now()) {
+  return new Date(now).getFullYear() - Math.round(rand(5, 90));
+}
+
+// Plafond du nombre de trophées conservés dans Team.trophies (voir
+// League.recordTrophy plus bas) : même esprit de garde-fou que
+// Team.moraleHistory (plafonné à 40) ou Team.attendanceHistory (plafonné à
+// 10), large ici (30) car un trophée est un événement rare, jamais autant
+// de bruit qu'un historique de moral.
+const MAX_TEAM_TROPHIES = 30;
+
 // ---------------------------------------------------------------------
 // GRILLE SALARIALE DES JOUEURS — le salaire hebdomadaire d'un joueur dépend
 // UNIQUEMENT de son niveau actuel (overall, voir Player.overall), fixé à sa
@@ -1762,6 +1900,41 @@ class Team {
     // pour une itération suivante une fois cette mécanique éprouvée).
     this.pendingInterviews = [];
 
+    // Identité du club : logo et maillots (retour utilisateur, 2026-09 :
+    // "une petite page d'accueil pour les autres équipes [...] le logo de
+    // l'équipe doit être type dès lors que l'équipe ne paie pas [...] pour
+    // les équipes qui paient, elles doivent pouvoir charger leur propre
+    // image [...] une équipe gratuite doit pouvoir choisir uniquement entre
+    // 2 formes de maillot et 5 couleurs [...] le logo et les maillots
+    // doivent pouvoir être modifiés dans le tableau de bord"). Voir
+    // JERSEY_COLORS/JERSEY_SHAPES/MAX_TEAM_LOGO_DATA_URL_LENGTH plus haut et
+    // setJersey/setCustomLogo/setPaying plus bas. `isPaying` : pas de vrai
+    // système de paiement pour l'instant, interrupteur manuel en attendant.
+    // `customLogoDataUrl` : ignoré au RENDU dès que `isPaying` est faux
+    // (jamais effacé pour autant, voir setPaying) plutôt qu'un logo type
+    // toujours régénéré depuis le nom/la couleur de maillot du club, sans
+    // rien stocker (voir teamLogoHtml côté moteurbasket3.html).
+    this.isPaying = false;
+    this.customLogoDataUrl = null;
+    this.jerseyShape = JERSEY_SHAPES[0];
+    this.jerseyColor = Object.keys(JERSEY_COLORS)[0];
+    // Motif de maillot (retour utilisateur : "ajoute des maillots avec des
+    // dessins particuliers (rayure, degrade...)" pour le mode payant) : voir
+    // JERSEY_PATTERNS/setJerseyPattern, même garde-fou "isPaying" que
+    // customLogoDataUrl ci-dessus.
+    this.jerseyPattern = JERSEY_PATTERNS[0];
+
+    // Date de création et trophées (retour utilisateur, 2026-09 : "on
+    // pourrait ajouter les petites infos comme date de création, renommée et
+    // trophée du club" en regardant la page "Aperçu"). `foundedYear` : voir
+    // generateFoundedYear plus haut, tiré une seule fois puis figé par
+    // serializeTeam/teamFromSave. `trophies` : alimenté par
+    // League.recordTrophy (voir advanceCup/runPlayoffs plus bas), jamais
+    // écrit ailleurs. La "renommée" n'a PAS de champ ici : voir
+    // computeClubReputationStars plus haut, recalculée à l'affichage.
+    this.foundedYear = generateFoundedYear();
+    this.trophies = [];
+
     // Affluence des derniers matchs à domicile (retour utilisateur, 2026-09 :
     // "sur l'onglet salle, il n'y a tjrs pas l'affluence des matchs
     // précédents (jusqu'à 10 matchs)") : même principe que moraleHistory
@@ -1816,11 +1989,15 @@ class Team {
 
   // Humeur des supporters : toute variation passe par ici, seule source de
   // vérité pour fanMorale ET le journal affiché sur l'écran "Humeur des
-  // supporters" (les 40 événements les plus récents).
-  recordMoraleEvent(label, delta) {
+  // supporters" (les 40 événements les plus récents). `extra` (optionnel) :
+  // champs supplémentaires fusionnés dans l'entrée du journal, sans toucher
+  // à fanMorale ni au calcul du delta, uniquement pour de l'information
+  // d'affichage propre à certains appelants (voir resolveInterview
+  // ci-dessous, qui y ajoute `quote`).
+  recordMoraleEvent(label, delta, extra = {}) {
     this.moraleHistory = this.moraleHistory || [];
     const rounded = Math.round(delta * 10) / 10;
-    this.moraleHistory.unshift({ week: this.week, label, delta: rounded });
+    this.moraleHistory.unshift({ week: this.week, label, delta: rounded, ...extra });
     if (this.moraleHistory.length > 40) this.moraleHistory.length = 40;
     this.fanMorale = clamp(this.fanMorale + delta, 0, 100);
   }
@@ -1834,24 +2011,53 @@ class Team {
   // pour tout appel qui ne concerne pas un vrai match de championnat déjà
   // programmé (aucun test existant ne le passait avant cet ajout, donc aucune
   // interview n'y est mise en attente, comportement inchangé pour eux).
-  applyMoraleForResult(won, scoreDiff, opponentName, round) {
+  // `now` (optionnel, horodatage réel en millisecondes) : posé sur l'entrée
+  // comme `at`, point de départ du délai de 2h (voir
+  // INTERVIEW_RESPONSE_DEADLINE_MS/pruneExpiredInterviews) ; par défaut
+  // Date.now(), le vrai moment où ce résultat est traité, jamais une date du
+  // calendrier simulé de la ligue (voir le commentaire sur
+  // INTERVIEW_RESPONSE_DEADLINE_MS plus haut).
+  applyMoraleForResult(won, scoreDiff, opponentName, round, now = Date.now()) {
+    this.pruneExpiredInterviews(now);
     const margin = clamp(Math.abs(scoreDiff) / 40, 0, 1);
     const delta = won ? rand(3, 6) + margin * 1.5 : -(rand(2, 5) + margin * 1.5);
     this.recordMoraleEvent(won ? `Victoire contre ${opponentName}` : `Défaite contre ${opponentName}`, delta);
     if (typeof round === "number") {
       this.pendingInterviews = this.pendingInterviews || [];
-      this.pendingInterviews.push({ id: uid(), round, opponentName, won, scoreDiff });
+      this.pendingInterviews.push({ id: uid(), round, opponentName, won, scoreDiff, at: now });
     }
     return delta;
+  }
+
+  // Retire silencieusement, sans le moindre effet sur l'humeur, toute
+  // interview en attente depuis plus de INTERVIEW_RESPONSE_DEADLINE_MS
+  // (retour utilisateur : "il faut les faire dans les 2h après le match,
+  // sinon c'est par défaut sans impact") : un "sans commentaire" implicite
+  // pour le manager qui n'a jamais répondu. Appelée systématiquement au
+  // début de applyMoraleForResult/resolveInterview/skipInterview (housekeeping
+  // automatique, jamais besoin d'un appel dédié) ET côté serveur à chaque
+  // requête joueur (voir server/index.js:tick), pour que la file reste
+  // propre même si le manager ne déclenche plus jamais aucune de ces trois
+  // méthodes. Renvoie le nombre d'entrées retirées.
+  pruneExpiredInterviews(now = Date.now()) {
+    this.pendingInterviews = this.pendingInterviews || [];
+    const before = this.pendingInterviews.length;
+    this.pendingInterviews = this.pendingInterviews.filter(i => (now - i.at) < INTERVIEW_RESPONSE_DEADLINE_MS);
+    return before - this.pendingInterviews.length;
   }
 
   // Résout une interview en attente avec le ton choisi par le manager (voir
   // INTERVIEW_TONES) : ajoute un delta d'humeur, dans le sens du résultat
   // ORIGINAL du match concerné (jamais l'inverse), puis retire l'entrée de la
-  // file. Renvoie { ok: true, delta } ou null (id introuvable/déjà traité, ou
-  // ton inconnu), jamais d'exception, comme le reste des méthodes
-  // "résoudre une file d'attente" de cette classe (voir promoteYouthPlayer).
-  resolveInterview(id, tone) {
+  // file. Renvoie { ok: true, delta } ou null (id introuvable/déjà traité,
+  // expiré depuis plus de 2h, ou ton inconnu), jamais d'exception, comme le
+  // reste des méthodes "résoudre une file d'attente" de cette classe (voir
+  // promoteYouthPlayer). Tire aussi une citation (voir INTERVIEW_QUOTES) et
+  // la fige dans le journal via `recordMoraleEvent(..., { quote })` : c'est
+  // elle, pas le delta, qu'affiche désormais la page "Aperçu" (retour
+  // utilisateur : "mets plutôt ce que le coach vraiment dit").
+  resolveInterview(id, tone, now = Date.now()) {
+    this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
     const idx = this.pendingInterviews.findIndex(i => i.id === id);
     if (idx === -1) return null;
@@ -1860,19 +2066,89 @@ class Team {
     const entry = this.pendingInterviews[idx];
     const delta = entry.won ? toneCfg.win : toneCfg.loss;
     const resultLabel = entry.won ? "la victoire" : "la défaite";
-    this.recordMoraleEvent(`Interview (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, delta);
+    const quoteTemplates = INTERVIEW_QUOTES[tone][entry.won ? "win" : "loss"];
+    const quote = pick(quoteTemplates).replace("{opponent}", entry.opponentName);
+    this.recordMoraleEvent(`Interview (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, delta, { quote });
     this.pendingInterviews.splice(idx, 1);
     return { ok: true, delta };
   }
 
   // Ignore une interview en attente ("pas de commentaire") : aucun effet sur
   // l'humeur, retire simplement l'entrée de la file. Renvoie true si une
-  // entrée correspondante a bien été trouvée et retirée.
-  skipInterview(id) {
+  // entrée correspondante a bien été trouvée et retirée (false si déjà
+  // traitée, ou déjà expirée et retirée par pruneExpiredInterviews ci-dessus).
+  skipInterview(id, now = Date.now()) {
+    this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
     const before = this.pendingInterviews.length;
     this.pendingInterviews = this.pendingInterviews.filter(i => i.id !== id);
     return this.pendingInterviews.length !== before;
+  }
+
+  // Choix de maillot d'un club (retour utilisateur : "une équipe gratuite
+  // doit pouvoir choisir uniquement entre 2 formes de maillot et 5
+  // couleurs [...] les maillots doivent pouvoir être modifiés dans le
+  // tableau de bord") : validé contre JERSEY_SHAPES/JERSEY_COLORS, jamais
+  // stocké sans validation. Même palette pour un club payant (voir le
+  // commentaire sur JERSEY_COLORS plus haut).
+  setJersey(shape, color) {
+    if (!JERSEY_SHAPES.includes(shape)) return { ok: false, error: "Forme de maillot inconnue." };
+    if (!JERSEY_COLORS[color]) return { ok: false, error: "Couleur de maillot inconnue." };
+    this.jerseyShape = shape;
+    this.jerseyColor = color;
+    return { ok: true };
+  }
+
+  // Motif de maillot (retour utilisateur : "Pour le mode payant ajoute des
+  // maillots avec des dessins particuliers (rayure, degrade...)") : "uni"
+  // (retour au maillot standard) toujours autorisé, un motif personnalisé
+  // (JERSEY_PATTERNS[1+]) réservé à un club `isPaying`, même garde-fou que
+  // setCustomLogo ci-dessous. Jamais effacé en repassant gratuit (voir
+  // setPaying) : seul le RENDU l'ignore tant que le club n'est pas payant
+  // (voir effectiveJerseyPattern côté moteurbasket3.html).
+  setJerseyPattern(pattern) {
+    if (!JERSEY_PATTERNS.includes(pattern)) return { ok: false, error: "Motif de maillot inconnu." };
+    if (pattern !== JERSEY_PATTERNS[0] && !this.isPaying) {
+      return { ok: false, error: "Passez en club payant pour un motif de maillot personnalisé." };
+    }
+    this.jerseyPattern = pattern;
+    return { ok: true };
+  }
+
+  // Logo personnalisé (retour utilisateur : "pour les équipes qui paient,
+  // elles doivent pouvoir charger leur propre image") : réservé aux clubs
+  // `isPaying` (voir setPaying ci-dessous), `dataUrl` = null retire le logo
+  // personnalisé (retour au logo type). Validation minimale du format
+  // (image PNG/JPEG/WebP encodée en data URL) et de la taille (voir
+  // MAX_TEAM_LOGO_DATA_URL_LENGTH) : le vrai redimensionnement/compression a
+  // déjà eu lieu côté client avant l'envoi (voir resizeImageFileToDataUrl
+  // dans moteurbasket3.html), ceci n'est qu'un garde-fou serveur.
+  setCustomLogo(dataUrl) {
+    if (!this.isPaying) return { ok: false, error: "Passez en club payant pour charger un logo personnalisé." };
+    if (dataUrl === null) {
+      this.customLogoDataUrl = null;
+      return { ok: true };
+    }
+    if (typeof dataUrl !== "string" || !/^data:image\/(png|jpe?g|webp);base64,/.test(dataUrl)) {
+      return { ok: false, error: "Image invalide (formats acceptés : PNG, JPEG, WebP)." };
+    }
+    if (dataUrl.length > MAX_TEAM_LOGO_DATA_URL_LENGTH) {
+      return { ok: false, error: "Image trop lourde." };
+    }
+    this.customLogoDataUrl = dataUrl;
+    return { ok: true };
+  }
+
+  // Statut "club payant" (voir le grand commentaire sur JERSEY_COLORS plus
+  // haut) : simple interrupteur manuel pour l'instant, aucun vrai système de
+  // paiement derrière. Ne PAS effacer customLogoDataUrl en repassant à
+  // `false` : un club qui redevient payant plus tard retrouve directement
+  // son logo précédent, jamais besoin de le recharger (voir teamLogoHtml
+  // côté moteurbasket3.html, qui ignore déjà customLogoDataUrl tant
+  // qu'isPaying est faux, sans avoir besoin que ce champ soit vidé ici).
+  setPaying(isPaying) {
+    this.isPaying = !!isPaying;
+    return { ok: true };
   }
 
   // Vend un joueur LISTÉ (voir Player.forSale/salePrice) : liquidation
@@ -3320,6 +3596,30 @@ function divisionInfo(level) {
   return DIVISIONS.find(d => d.level === level) || DIVISIONS[DIVISIONS.length - 1];
 }
 
+// "Renommée" du club (retour utilisateur, 2026-09 : "on pourrait ajouter les
+// petites infos comme [...] renommée [...] du club") : DÉLIBÉRÉMENT non
+// persistée (contrairement à foundedYear/trophies) : recalculée à chaque
+// affichage à partir de trois ingrédients déjà connus (niveau de division
+// actuel, nombre de trophées, ancienneté du club), plutôt que d'inventer un
+// quatrième champ sauvegardé à faire évoluer/dériver dans le temps (aucune
+// mécanique de jeu ne dépend encore de la renommée elle-même, seulement son
+// AFFICHAGE façon "étoiles", voir le visuel Football Manager de référence).
+// 1 à 5 étoiles : +1 base, jusqu'à +3 pour les trophées (1 étoile tous les 2
+// trophées), jusqu'à +2 pour l'ancienneté (1 étoile tous les 25 ans), et un
+// bonus qui grandit à mesure que le niveau de division baisse (Division I la
+// plus prestigieuse). Purement cosmétique, ne modifie jamais rien côté
+// simulation.
+function computeClubReputationStars(team, divisionLevel, now = Date.now()) {
+  const trophyCount = (team.trophies || []).length;
+  const clubAgeYears = new Date(now).getFullYear() - (team.foundedYear || new Date(now).getFullYear());
+  const divisionBonus = (MAX_DIVISION_LEVEL - (divisionLevel || MAX_DIVISION_LEVEL)) / (MAX_DIVISION_LEVEL - 1);
+  const score = 1
+    + Math.min(3, Math.floor(trophyCount / 2))
+    + Math.min(2, Math.floor(Math.max(0, clubAgeYears) / 25))
+    + divisionBonus * 2;
+  return clamp(Math.round(score), 1, 5);
+}
+
 // Calendrier aller-retour par la "méthode du cercle" : une équipe reste
 // fixe, les (n-1) autres tournent autour d'elle à chaque journée. n doit
 // être pair (10 ici, donc jamais de journée de repos à gérer). Renvoie un
@@ -3826,16 +4126,40 @@ class League {
   // les vainqueurs (voir buildNextCupRound) — jamais les deux à la fois.
   // No-op silencieux si aucun tour n'est en attente (ligue sans coupe, ou
   // coupe déjà terminée).
-  advanceCup() {
+  advanceCup(now = Date.now()) {
     const round = this.pendingCupRound();
     if (!round) return;
     round.resolved = true;
     const winners = round.matches.map(m => m.winner);
     if (round.name === CUP_STAGE_NAMES[CUP_STAGE_NAMES.length - 1]) {
       this.cup.champion = winners[0];
+      this.recordTrophy(winners[0], "cup", now);
     } else {
       this.cup.rounds.push(buildNextCupRound(round, winners));
     }
+  }
+
+  // Trophée du club (retour utilisateur, voir le grand commentaire sur
+  // generateFoundedYear/MAX_TEAM_TROPHIES plus haut) : hook UNIQUE partagé
+  // par les deux couronnes d'une saison, coupe (voir advanceCup ci-dessus) et
+  // championnat (voir runPlayoffs plus bas), pour ne pas dupliquer la même
+  // construction de libellé aux deux endroits. `now` par défaut à Date.now()
+  // (temps RÉEL, jamais le calendrier simulé) : un trophée est un souvenir
+  // daté pour l'affichage, pas une donnée lue par le moteur de simulation.
+  // Fonctionne identiquement en solo (seule teamA survit d'une saison à
+  // l'autre, voir startNewSeason côté moteurbasket3.html — les trophées des
+  // adversaires régénérés sont perdus avec eux, sans conséquence) et en
+  // ligue multi-manager (toutes les équipes persistent).
+  recordTrophy(teamIdx, type, now = Date.now()) {
+    const team = this.teams[teamIdx];
+    if (!team) return;
+    const info = divisionInfo(this.divisionLevel);
+    const label = type === "cup"
+      ? `Vainqueur de la Coupe (${info.name})`
+      : `Champion (${info.name})`;
+    team.trophies = team.trophies || [];
+    team.trophies.unshift({ at: now, type, divisionLevel: this.divisionLevel || null, label });
+    if (team.trophies.length > MAX_TEAM_TROPHIES) team.trophies.length = MAX_TEAM_TROPHIES;
   }
 
   // Phase finale : les 4 premiers du classement, demi-finales (1er-4e,
@@ -3844,7 +4168,7 @@ class League {
   // d'écran de match dédié aux play-offs, qu'ils concernent le club du
   // joueur ou non — voir Team.trainWeek/League pour une future itération
   // interactive.
-  runPlayoffs() {
+  runPlayoffs(now = Date.now()) {
     const seeds = this.standings().slice(0, 4).map(s => s.idx);
     const playSeries = (idxA, idxB) => {
       let winsA = 0, winsB = 0;
@@ -3865,6 +4189,7 @@ class League {
     const semi2 = playSeries(seeds[1], seeds[2]);
     const final = playSeries(semi1.winner, semi2.winner);
     this.playoffs = { seeds, semi1, semi2, final, champion: final.winner };
+    this.recordTrophy(final.winner, "championship", now);
     return this.playoffs;
   }
 
@@ -5207,6 +5532,18 @@ function serializeTeam(team) {
     // copie superficielle de chaque entrée (objets plats, jamais de
     // référence partagée avec team.pendingInterviews lui-même).
     pendingInterviews: Array.isArray(team.pendingInterviews) ? team.pendingInterviews.map(i => ({ ...i })) : [],
+    // Identité du club (voir Team.isPaying/customLogoDataUrl/jerseyShape/
+    // jerseyColor, JERSEY_COLORS/JERSEY_SHAPES plus haut).
+    isPaying: !!team.isPaying,
+    customLogoDataUrl: team.customLogoDataUrl || null,
+    jerseyShape: team.jerseyShape,
+    jerseyColor: team.jerseyColor,
+    jerseyPattern: team.jerseyPattern,
+    // Fiche club (voir Team.foundedYear/trophies, generateFoundedYear/
+    // MAX_TEAM_TROPHIES/League.recordTrophy plus haut) : copie superficielle
+    // de chaque trophée, même précaution que pendingInterviews ci-dessus.
+    foundedYear: team.foundedYear,
+    trophies: Array.isArray(team.trophies) ? team.trophies.map(t => ({ ...t })) : [],
     // Historique d'affluence (voir Team.attendanceHistory/simulateHomeAttendance
     // ci-dessus) : même rythme de persistance que moraleHistory/transactions
     // juste au-dessus, sinon l'historique affiché sur l'onglet Salle
@@ -5471,6 +5808,22 @@ function teamFromSave(data) {
   // Interviews en attente (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
+  // Identité du club (voir serializeTeam ci-dessus) : absent = sauvegarde
+  // d'avant cette fonctionnalité, on garde les valeurs par défaut déjà
+  // posées par le constructeur (logo type, forme/couleur de maillot par
+  // défaut, club gratuit) plutôt que d'accepter n'importe quelle valeur
+  // brute non validée venant de la sauvegarde.
+  team.isPaying = !!data.isPaying;
+  team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
+  if (JERSEY_SHAPES.includes(data.jerseyShape)) team.jerseyShape = data.jerseyShape;
+  if (JERSEY_COLORS[data.jerseyColor]) team.jerseyColor = data.jerseyColor;
+  if (JERSEY_PATTERNS.includes(data.jerseyPattern)) team.jerseyPattern = data.jerseyPattern;
+  // Fiche club (voir serializeTeam ci-dessus) : absent = sauvegarde d'avant
+  // cette fonctionnalité, on garde les valeurs par défaut déjà posées par le
+  // constructeur (foundedYear tiré à l'instant, trophies vide) plutôt que
+  // d'accepter une valeur brute non validée.
+  if (typeof data.foundedYear === "number") team.foundedYear = data.foundedYear;
+  if (Array.isArray(data.trophies)) team.trophies = data.trophies.map(t => ({ ...t }));
   // Historique d'affluence (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
   team.attendanceHistory = Array.isArray(data.attendanceHistory) ? data.attendanceHistory : [];
@@ -6301,7 +6654,9 @@ return {
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam,
   ARENA_LEVELS, arenaInfo, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
-  FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel, INTERVIEW_TONES,
+  FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel, INTERVIEW_TONES, INTERVIEW_QUOTES,
+  INTERVIEW_RESPONSE_DEADLINE_MS, JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, MAX_TEAM_LOGO_DATA_URL_LENGTH,
+  MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars,
   CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,
