@@ -127,7 +127,14 @@ function catchUpLeague(league, now) {
   league.refreshRecruiterMarket(now);
 
   if (league.isRegularSeasonDone() && !league.playoffs) {
-    league.runPlayoffs();
+    league.runPlayoffs(now);
+    // Interview de jalon "demi-finale de PO" (retour utilisateur, 2026-09,
+    // voir le grand commentaire de League.queuePlayoffSemiInterviews côté
+    // moteur) : DOIT être appelée juste après runPlayoffs() ci-dessus, tant
+    // que league.playoffs.semiPlayerIds reflète encore les DEMI-finales,
+    // rien d'autre ne s'exécute entre les deux qui pourrait invalider cet
+    // instantané.
+    league.queuePlayoffSemiInterviews(now);
     league.runRelegationBarrage();
     events.push({ type: "season-end" });
   }
@@ -151,7 +158,7 @@ function catchUpClassic(league, now, events) {
     // journée qu'il aurait manquée.
     if (dueAt + MATCH_BROADCAST_DURATION_MS > now) break; // pas encore due (ou encore en cours de diffusion)
 
-    events.push(finalizeRound(Engine, league, round));
+    events.push(finalizeRound(Engine, league, round, now));
 
     if (isLastRoundOfRealWeek(round)) {
       const weekIndex = realWeekIndexForRound(round);
@@ -205,7 +212,7 @@ function catchUpDailyAnchored(league, now, events) {
       // fenêtre de diffusion en direct avant de résoudre "en coulisses".
       if (champDueAt + MATCH_BROADCAST_DURATION_MS > now) break;
       const round = league.round;
-      events.push(finalizeRound(Engine, league, round));
+      events.push(finalizeRound(Engine, league, round, now));
 
       // Entraînement + économie : une fois par JOUR CIVIL, juste après le
       // DERNIER créneau de championnat du jour (19h — voir
@@ -261,7 +268,7 @@ function ensureLiveMatch(league, now) {
 
 return {
   catchUpLeague, ensureLiveMatch,
-  finalizeRound: (league, round) => finalizeRound(Engine, league, round),
+  finalizeRound: (league, round, now) => finalizeRound(Engine, league, round, now),
   finalizeCupRound: (league) => finalizeCupRound(Engine, league),
 };
 

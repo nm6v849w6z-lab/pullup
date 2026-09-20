@@ -730,8 +730,14 @@ function respondToInterview(team, teamIndex, league, body, now) {
     return fail(`Ton inconnu, attendu parmi : ${Object.keys(INTERVIEW_TONES).join(", ")}.`);
   }
   const result = team.resolveInterview(id, body.tone, now);
-  if (!result || !result.ok) return fail("Interview introuvable (déjà traitée, ou délai de 2h dépassé).");
-  return { ok: true, delta: result.delta, fanMorale: team.fanMorale };
+  // "délai dépassé" générique (retour utilisateur, 2026-09 : les interviews
+  // de jalon (mi-saison/fin de saison régulière/demi-finale de PO)
+  // utilisent désormais un délai de 3 jours plutôt que 2h, voir
+  // MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS côté moteur) : ce message ne
+  // peut plus annoncer une durée fixe sans risquer d'être faux selon le type
+  // d'interview concerné.
+  if (!result || !result.ok) return fail("Interview introuvable (déjà traitée, ou délai de réponse dépassé).");
+  return { ok: true, delta: result.delta, fanMorale: team.fanMorale, formDelta: result.formDelta };
 }
 
 function skipInterview(team, teamIndex, league, body, now) {

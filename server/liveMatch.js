@@ -350,7 +350,7 @@ function ensureCupLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueCu
 // le champion si c'était la finale) une fois tous les matchs réels du tour
 // enregistrés. Renvoie `null` si aucun tour n'était en attente (no-op).
 function finalizeCupRound(Engine, league) {
-  const { simulateOrForfeit, recordMatchStatsForTeam } = Engine;
+  const { simulateOrForfeit, recordMatchStatsAndAwardMvp } = Engine;
   const round = league.pendingCupRound();
   if (!round) return null;
 
@@ -384,10 +384,12 @@ function finalizeCupRound(Engine, league) {
     }
     // Journal de matchs (voir finalizeRound ci-dessus pour le même principe
     // côté championnat) : un match de coupe compte aussi pour les stats de
-    // saison des joueurs impliqués.
+    // saison des joueurs impliqués, ET pour le MVP automatique du match
+    // (retour utilisateur, 2026-09 : "le mvp du match se fait interviewer à
+    // chaque fois" — chaque match réellement simulé, coupe comprise, voir
+    // recordMatchStatsAndAwardMvp/awardMatchMvp côté moteur).
     if (!forfeit) {
-      recordMatchStatsForTeam(home, round.index, "cup");
-      recordMatchStatsForTeam(away, round.index, "cup");
+      recordMatchStatsAndAwardMvp(home, away, round.index, "cup");
     }
     league.recordCupMatchResult(matchIndex, scoreHome, scoreAway, forfeit);
   });
@@ -416,10 +418,33 @@ function finalizeCupRound(Engine, league) {
 // de "l'index 0" comme avant ; c'est à l'appelant (voir server/index.js) de
 // filtrer/personnaliser ces événements pour UN destinataire précis avant de
 // les renvoyer par l'API.
-function finalizeRound(Engine, league, round) {
-  const { simulateOrForfeit, recordMatchStatsForTeam } = Engine;
+// `now` (retour utilisateur, 2026-09, bug révélé par un test qui simule le
+// temps plutôt que d'attendre en réel, voir post_match_interview_button_test.js) :
+// horodatage réel transmis explicitement jusqu'à Team.applyMoraleForResult
+// (voir son commentaire), point de départ du délai de 2h avant qu'une
+// interview d'après-match ne s'auto-purge (INTERVIEW_RESPONSE_DEADLINE_MS/
+// pruneExpiredInterviews). Sans lui, applyMoraleForResult retombait sur son
+// propre `Date.now()` par défaut, DIFFÉRENT du `now` déjà reçu ici par
+// autoSim.js:catchUpClassic/catchUpDailyAnchored (et donc du `now` que
+// server/index.js:tick réutilise juste après pour purger les interviews
+// expirées) : sans conséquence en production (les deux valent alors
+// littéralement le même Date.now() réel, à la milliseconde près), mais
+// l'interview créée ici pouvait se retrouver purgée AUSSITÔT créée dès que
+// ces deux horloges divergent (tout environnement qui simule le temps
+// plutôt que d'attendre en réel, comme les tests). Optionnel (défaut
+// Date.now()) uniquement pour ne pas casser les quelques appels directs
+// existants (tests) qui ne le passent pas encore.
+function finalizeRound(Engine, league, round, now = Date.now()) {
+  const { simulateOrForfeit, recordMatchStatsAndAwardMvp, milestoneTypeForRound } = Engine;
   const matches = league.matchesForRound(round);
   const userResults = [];
+  // Interview de jalon (retour utilisateur, 2026-09 : "elle doit avoir lieu
+  // après le match de la mi saison de championnat [...] et [...] après la
+  // fin de la saison régulière", voir Engine.milestoneTypeForRound/
+  // MILESTONE_INTERVIEW_TYPES) : au plus un des deux types pour CETTE
+  // journée, `null` le reste du temps (comportement inchangé). Jamais pour
+  // la Coupe (round.index n'a aucun sens vis-à-vis de league.totalRounds).
+  const milestone = milestoneTypeForRound(round, league.totalRounds);
 
   matches.forEach(m => {
     const home = league.teams[m.home];
@@ -454,8 +479,7 @@ function finalizeRound(Engine, league, round) {
     // simulation réelle n'a eu lieu, p.stats/p.secondsPlayed restent ceux du
     // match précédent de chaque joueur).
     if (!forfeit) {
-      recordMatchStatsForTeam(home, round, "championship");
-      recordMatchStatsForTeam(away, round, "championship");
+      recordMatchStatsAndAwardMvp(home, away, round, "championship", now);
     }
 
     league.recordResult(round, m.home, m.away, scoreHome, scoreAway);
@@ -465,8 +489,12 @@ function finalizeRound(Engine, league, round) {
       // `round` en 4e argument (voir Team.applyMoraleForResult/
       // pendingInterviews côté moteur) : met aussi en attente une interview
       // d'après-match pour CE résultat, résolue plus tard côté navigateur
-      // (voir /api/media/interview, server/actions.js).
-      const moraleDelta = home.applyMoraleForResult(won, scoreHome - scoreAway, away.name, round);
+      // (voir /api/media/interview, server/actions.js). `now` en 5e
+      // argument (voir le commentaire de finalizeRound ci-dessus). `milestone`
+      // en 6e argument (voir plus haut) : bascule cette interview sur le
+      // système "étoffé" (délai de 3 jours, effet sur Player.form) pour les
+      // deux journées concernées, sans rien changer les autres jours.
+      const moraleDelta = home.applyMoraleForResult(won, scoreHome - scoreAway, away.name, round, now, milestone);
       const attendanceInfo = home.simulateHomeAttendance(away.name);
       userResults.push({
         teamIdx: m.home, round, isHome: true, opponent: away.name, opponentIdx: m.away,
@@ -475,7 +503,7 @@ function finalizeRound(Engine, league, round) {
     }
     if (away.isHuman) {
       const won = scoreAway > scoreHome;
-      const moraleDelta = away.applyMoraleForResult(won, scoreAway - scoreHome, home.name, round);
+      const moraleDelta = away.applyMoraleForResult(won, scoreAway - scoreHome, home.name, round, now, milestone);
       userResults.push({
         teamIdx: m.away, round, isHome: false, opponent: home.name, opponentIdx: m.home,
         scoreUser: scoreAway, scoreOpponent: scoreHome, won, forfeit, moraleDelta, attendanceInfo: null,

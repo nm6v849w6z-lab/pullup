@@ -854,6 +854,10 @@
   /* Retour utilisateur (2026-09) : "Modifier vos ordres" une fois les ordres
      déjà donnés pour cette journée (voir renderCalendrierSection). */
   .calendar-order-btn.calendar-order-btn-validated{border-color:var(--ok); color:var(--ok); font-weight:700;}
+  /* Retour utilisateur (2026-09) : "dans le calendrier à la place de voir
+     le live (quand le match est terminé) mettre un bouton 'interview
+     d'après match'" (voir renderCalendrierSection/openPostMatchInterview). */
+  .calendar-order-btn.calendar-interview-btn{border-color:var(--ok); color:var(--ok); font-weight:700;}
   /* Calendrier fusionné championnat + coupe (retour utilisateur, 2026-09 :
      "date/heure [...] fusionner la coupe dans la même feuille") : sous la
      date/heure programmée, un sous-titre discret ("Journée 3", "Huitièmes"). */
@@ -1627,6 +1631,13 @@
       </div>
       <div id="boxscoreHolder"></div>
     </div>
+
+    <!-- Interview d'après-match accessible directement depuis le direct
+         (retour utilisateur, 2026-09 : "il faudrait que l'interview du
+         match s'affiche [...] si on est sur la page live [...] via un
+         bouton"), rempli par renderLiveInterviewCta/openPostMatchInterview
+         plus bas : vide tant que le match est encore en cours. -->
+    <div class="section" id="liveInterviewPanel"></div>
   </div>
 
   <div id="trainingSection" class="hidden">
@@ -1657,6 +1668,7 @@
     <div class="section">
       <h2>Fin de saison</h2>
       <div id="seasonEndContent"></div>
+      <div id="seasonEndInterviewPanel"></div>
       <div class="actions">
         <button class="primary" id="newSeasonBtn">Démarrer une nouvelle saison</button>
       </div>
@@ -3292,6 +3304,80 @@ const INTERVIEW_QUOTES = {
 // effet (Team.pruneExpiredInterviews).
 const INTERVIEW_RESPONSE_DEADLINE_MS = 2 * 60 * 60 * 1000;
 
+// Copie côté client des constantes engine.js pour les interviews de jalon
+// (mi-saison/fin de saison régulière/demi-finale de PO, retour utilisateur
+// 2026-09) et le MVP automatique du match : voir le grand commentaire de
+// MILESTONE_INTERVIEW_TYPES/MVP_ATTR_BONUS côté moteur pour le détail :
+// mêmes valeurs, mêmes clés, ne JAMAIS laisser diverger d'un côté à l'autre.
+const MILESTONE_INTERVIEW_TYPES = {
+  "mi-saison": { label: "Interview de mi-saison" },
+  "fin-saison-reguliere": { label: "Bilan de fin de saison régulière" },
+  "demi-finale-po": { label: "Interview d'après demi-finale de play-offs" },
+};
+
+function midSeasonRound(totalRounds) {
+  return Math.floor(totalRounds / 2);
+}
+
+function milestoneTypeForRound(round, totalRounds) {
+  if (round === midSeasonRound(totalRounds)) return "mi-saison";
+  if (round === totalRounds - 1) return "fin-saison-reguliere";
+  return null;
+}
+
+const MILESTONE_INTERVIEW_TONES = {
+  "Agressif": { fanWin: 7,   fanLoss: -7, formWin: 4, formLoss: -4 },
+  "Mesuré":   { fanWin: 3,   fanLoss: -3, formWin: 2, formLoss: -2 },
+  "Humble":   { fanWin: 1.5, fanLoss: 3,  formWin: 1, formLoss: 2 },
+};
+
+const MILESTONE_INTERVIEW_QUOTES = {
+  "mi-saison": {
+    "Agressif": {
+      win: ["On passe le cap de la mi-saison sur la meilleure dynamique possible, et {opponent} vient encore de le confirmer : personne ne veut vraiment nous affronter en ce moment."],
+      loss: ["Cette défaite contre {opponent} ne change rien à nos ambitions pour la seconde moitié de saison, on reste le favori de cette division."],
+    },
+    "Mesuré": {
+      win: ["À mi-parcours, cette victoire contre {opponent} confirme qu'on est sur la bonne trajectoire, il reste encore la moitié de la saison pour la confirmer."],
+      loss: ["Cette défaite contre {opponent} arrive à un moment charnière de la saison, on va en tirer les leçons avant d'attaquer la seconde moitié du calendrier."],
+    },
+    "Humble": {
+      win: ["On a fait la moitié du chemin avec cette victoire contre {opponent}, mais rien n'est acquis, il reste encore beaucoup de travail avant la fin de saison."],
+      loss: ["Cette défaite contre {opponent} à mi-saison est une bonne piqûre de rappel, on doit rester humbles et travailler encore plus dur pour la suite."],
+    },
+  },
+  "fin-saison-reguliere": {
+    "Agressif": {
+      win: ["On termine la saison régulière sur cette victoire contre {opponent}, et on aborde les échéances qui arrivent avec la plus grande confiance qui soit."],
+      loss: ["Cette dernière défaite de saison régulière contre {opponent} n'entache en rien notre saison, on sait qu'on est prêts pour la suite."],
+    },
+    "Mesuré": {
+      win: ["Une belle manière de clore la saison régulière face à {opponent}, l'équipe a montré tout au long de l'année qu'elle méritait sa place."],
+      loss: ["On termine la saison régulière sur une défaite décevante contre {opponent}, mais le bilan global de l'année reste ce qui compte le plus."],
+    },
+    "Humble": {
+      win: ["Cette victoire pour clore la saison régulière contre {opponent} appartient à tout le groupe, staff compris, ça n'a pas toujours été facile cette année."],
+      loss: ["Cette défaite contre {opponent} pour terminer la saison régulière nous rappelle qu'il reste encore des choses à corriger avant la suite."],
+    },
+  },
+  "demi-finale-po": {
+    "Agressif": {
+      win: ["On envoie un message clair à toute la ligue en éliminant {opponent} en demi-finale, la prochaine étape ne nous fait absolument pas peur."],
+      loss: ["Éliminés par {opponent} en demi-finale, difficile à avaler, mais cette équipe reviendra encore plus forte la saison prochaine."],
+    },
+    "Mesuré": {
+      win: ["Une qualification méritée contre {opponent} en demi-finale, l'équipe a fait preuve d'un sérieux remarquable dans ce moment de pression."],
+      loss: ["Cette élimination en demi-finale contre {opponent} est frustrante après une belle saison, on va analyser calmement ce qui a manqué."],
+    },
+    "Humble": {
+      win: ["Cette qualification face à {opponent} en demi-finale doit beaucoup à la réussite autant qu'au mérite, on reste concentrés sur la suite sans s'enflammer."],
+      loss: ["{opponent} méritait sa qualification en demi-finale, on doit accepter cette élimination avec humilité et en tirer les bons enseignements."],
+    },
+  },
+};
+
+const MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS = 3 * 24 * 60 * 60 * 1000;
+
 // Identité du club : logo et maillots (voir engine.js pour le commentaire
 // détaillé). Copie exacte de la palette/des formes côté serveur : les
 // mêmes clés doivent rester valides des deux côtés, ou une sauvegarde
@@ -3450,6 +3536,15 @@ class Player {
     this.attrs = attrs; // {midRange, threePoint, inside, pass, rebound, block, dribble, agility, defOutside, defInside}
     this.aggressiveness = aggressiveness; // caractéristique cachée 1-100
     this.form = clamp(Math.round(rand(55, 90)), 1, 100);
+
+    // Bonus temporaire de MVP (copie côté client, voir Player.pendingMatchBoost
+    // côté engine.js pour le commentaire détaillé) : lu par eff() ci-dessous,
+    // jamais overall(). Toujours 0 côté client en pratique (le MVP n'est
+    // élu que côté serveur, voir awardMatchMvp) sauf juste après un
+    // rechargement d'état (loadMyTeam) : le champ existe quand même ici pour
+    // que le round-trip serializePlayerRecord/playerFromSave reste identique
+    // des deux côtés.
+    this.pendingMatchBoost = 0;
 
     // Potentiel GLOBAL (un seul plafond, échelle "overall" 1-99), fixé une
     // fois pour toutes à la génération du joueur — représente son talent
@@ -3653,9 +3748,9 @@ class Player {
       a.block + a.dribble + a.agility + a.defOutside + a.defInside) / 10;
   }
 
-  // Statistique effective en jeu = base * forme * fatigue
+  // Statistique effective en jeu = (base + bonus MVP éventuel) * forme * fatigue
   eff(stat) {
-    const base = this.attrs[stat];
+    const base = this.attrs[stat] + (this.pendingMatchBoost || 0);
     const formFactor = 0.85 + (this.form / 100) * 0.30;      // 0.85 → 1.15
     const fatigueFactor = 1 - (this.fatigue / 100) * 0.35;   // jusqu'à -35%
     return clamp(base * formFactor * fatigueFactor, 1, 130);
@@ -3919,6 +4014,11 @@ class Team {
     // skipInterview.
     this.pendingInterviews = [];
 
+    // MVP automatique du dernier match (voir engine.js, miroir identique) :
+    // posé pour les deux équipes par awardMatchMvp côté serveur, affiché sur
+    // le tableau de bord.
+    this.lastMatchMvp = null;
+
     // Identité du club : logo et maillots (voir engine.js, miroir identique).
     this.isPaying = false;
     this.customLogoDataUrl = null;
@@ -3991,41 +4091,73 @@ class Team {
   // identique, met aussi en attente une interview d'après-match, avec `at`
   // (horodatage réel, point de départ du délai de 2h) posé par défaut à
   // Date.now().
-  applyMoraleForResult(won, scoreDiff, opponentName, round, now = Date.now()) {
+  // `milestone`/`explicitPlayerIds` (voir engine.js, miroir identique) :
+  // bascule l'interview mise en attente sur le système "étoffé" (mi-saison/
+  // fin de saison régulière/demi-finale de PO).
+  applyMoraleForResult(won, scoreDiff, opponentName, round, now = Date.now(), milestone = null, explicitPlayerIds = null) {
     this.pruneExpiredInterviews(now);
     const margin = clamp(Math.abs(scoreDiff) / 40, 0, 1);
     const delta = won ? rand(3, 6) + margin * 1.5 : -(rand(2, 5) + margin * 1.5);
     this.recordMoraleEvent(won ? `Victoire contre ${opponentName}` : `Défaite contre ${opponentName}`, delta);
-    if (typeof round === "number") {
+    if (typeof round === "number" || milestone) {
       this.pendingInterviews = this.pendingInterviews || [];
-      this.pendingInterviews.push({ id: uid(), round, opponentName, won, scoreDiff, at: now });
+      const entry = { id: uid(), round, opponentName, won, scoreDiff, at: now };
+      if (milestone) {
+        entry.milestone = milestone;
+        entry.playerIds = explicitPlayerIds || this.players.filter(p => p.secondsPlayed > 0).map(p => p.id);
+      }
+      this.pendingInterviews.push(entry);
     }
     return delta;
   }
 
   // Purge silencieuse des interviews expirées (voir engine.js, miroir
-  // identique) : plus de 2h en attente = "sans commentaire" implicite, sans
-  // effet sur l'humeur.
+  // identique) : délai normal de 2h, ou 3 jours pour une interview de jalon
+  // (`entry.milestone`).
   pruneExpiredInterviews(now = Date.now()) {
     this.pendingInterviews = this.pendingInterviews || [];
     const before = this.pendingInterviews.length;
-    this.pendingInterviews = this.pendingInterviews.filter(i => (now - i.at) < INTERVIEW_RESPONSE_DEADLINE_MS);
+    this.pendingInterviews = this.pendingInterviews.filter(i => {
+      const deadline = i.milestone ? MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS : INTERVIEW_RESPONSE_DEADLINE_MS;
+      return (now - i.at) < deadline;
+    });
     return before - this.pendingInterviews.length;
   }
 
   // Résout une interview en attente (voir engine.js, miroir identique) :
-  // tire aussi une citation (voir INTERVIEW_QUOTES plus haut), affichée sur
-  // la page "Aperçu" à la place du delta.
+  // tire aussi une citation (voir INTERVIEW_QUOTES/MILESTONE_INTERVIEW_QUOTES
+  // plus haut), affichée sur la page "Aperçu" à la place du delta. Une
+  // interview de jalon (`entry.milestone`) applique en plus un delta à
+  // Player.form pour chaque joueur de `entry.playerIds`.
   resolveInterview(id, tone, now = Date.now()) {
     this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
     const idx = this.pendingInterviews.findIndex(i => i.id === id);
     if (idx === -1) return null;
+    const entry = this.pendingInterviews[idx];
+    const resultLabel = entry.won ? "la victoire" : "la défaite";
+    if (entry.milestone) {
+      const toneCfg = MILESTONE_INTERVIEW_TONES[tone];
+      if (!toneCfg) return null;
+      const fanDelta = entry.won ? toneCfg.fanWin : toneCfg.fanLoss;
+      const formDelta = entry.won ? toneCfg.formWin : toneCfg.formLoss;
+      const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
+      const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
+      const quoteTemplates = (MILESTONE_INTERVIEW_QUOTES[entry.milestone] || {})[tone];
+      const quote = quoteTemplates
+        ? pick(quoteTemplates[entry.won ? "win" : "loss"]).replace("{opponent}", entry.opponentName)
+        : "";
+      this.recordMoraleEvent(`${milestoneLabel} (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, fanDelta, { quote, milestone: entry.milestone });
+      (entry.playerIds || []).forEach(pid => {
+        const p = this.players.find(pl => pl.id === pid);
+        if (p) p.form = clamp(Math.round(p.form + formDelta), 1, 100);
+      });
+      this.pendingInterviews.splice(idx, 1);
+      return { ok: true, delta: fanDelta, formDelta };
+    }
     const toneCfg = INTERVIEW_TONES[tone];
     if (!toneCfg) return null;
-    const entry = this.pendingInterviews[idx];
     const delta = entry.won ? toneCfg.win : toneCfg.loss;
-    const resultLabel = entry.won ? "la victoire" : "la défaite";
     const quoteTemplates = INTERVIEW_QUOTES[tone][entry.won ? "win" : "loss"];
     const quote = pick(quoteTemplates).replace("{opponent}", entry.opponentName);
     this.recordMoraleEvent(`Interview (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, delta, { quote });
@@ -5984,11 +6116,45 @@ class League {
       return { idxA, idxB, games, winner: winsA === 2 ? idxA : idxB };
     };
     const semi1 = playSeries(seeds[0], seeds[3]);
+    // Instantané des joueurs de CETTE demi-finale (voir engine.js, miroir
+    // identique) : la finale ci-dessous resimule les deux finalistes et
+    // écraserait secondsPlayed avant que queuePlayoffSemiInterviews ne
+    // puisse le lire.
+    const semiPlayerIds = {};
+    [semi1.idxA, semi1.idxB].forEach(idx => {
+      semiPlayerIds[idx] = this.teams[idx].players.filter(p => p.secondsPlayed > 0).map(p => p.id);
+    });
     const semi2 = playSeries(seeds[1], seeds[2]);
+    [semi2.idxA, semi2.idxB].forEach(idx => {
+      semiPlayerIds[idx] = this.teams[idx].players.filter(p => p.secondsPlayed > 0).map(p => p.id);
+    });
     const final = playSeries(semi1.winner, semi2.winner);
-    this.playoffs = { seeds, semi1, semi2, final, champion: final.winner };
+    this.playoffs = { seeds, semi1, semi2, final, champion: final.winner, semiPlayerIds };
     this.recordTrophy(final.winner, "championship", now);
     return this.playoffs;
+  }
+
+  // Interview de jalon "demi-finale de PO" (voir engine.js, miroir
+  // identique) : à appeler juste après runPlayoffs().
+  queuePlayoffSemiInterviews(now = Date.now()) {
+    if (!this.playoffs) return;
+    const { semi1, semi2, semiPlayerIds } = this.playoffs;
+    [semi1, semi2].forEach(series => {
+      [series.idxA, series.idxB].forEach(idx => {
+        const team = this.teams[idx];
+        if (!team || !team.isHuman) return;
+        const opponentIdx = idx === series.idxA ? series.idxB : series.idxA;
+        const opponent = this.teams[opponentIdx];
+        const won = series.winner === idx;
+        const lastGame = series.games[series.games.length - 1];
+        const isHomeLastGame = lastGame.home === idx;
+        const scoreDiff = isHomeLastGame
+          ? lastGame.scoreHome - lastGame.scoreAway
+          : lastGame.scoreAway - lastGame.scoreHome;
+        const explicitPlayerIds = (semiPlayerIds && semiPlayerIds[idx]) || [];
+        team.applyMoraleForResult(won, scoreDiff, opponent ? opponent.name : "l'adversaire", null, now, "demi-finale-po", explicitPlayerIds);
+      });
+    });
   }
 
   // Barrage de relégation : le 7e et le 8e de la saison régulière
@@ -7171,6 +7337,9 @@ function serializePlayerRecord(p) {
     // stats de saison/MVP (onglet Ligue) et les pages joueur repartiraient
     // de zéro à chaque redémarrage du serveur.
     matchLog: Array.isArray(p.matchLog) ? p.matchLog.map(m => ({ ...m })) : [],
+    // Bonus temporaire de MVP (voir engine.js, miroir identique) : DOIT
+    // survivre au rechargement, sinon le bonus promis disparaîtrait.
+    pendingMatchBoost: p.pendingMatchBoost || 0,
   };
 }
 
@@ -7247,6 +7416,8 @@ function serializeTeam(team) {
     moraleHistory: team.moraleHistory,
     // Interviews en attente (voir engine.js, miroir identique).
     pendingInterviews: Array.isArray(team.pendingInterviews) ? team.pendingInterviews.map(i => ({ ...i })) : [],
+    // MVP automatique du dernier match (voir engine.js, miroir identique).
+    lastMatchMvp: team.lastMatchMvp ? { ...team.lastMatchMvp } : null,
     // Identité du club (voir engine.js, miroir identique).
     isPaying: !!team.isPaying,
     customLogoDataUrl: team.customLogoDataUrl || null,
@@ -7361,6 +7532,9 @@ function playerFromSave(pdata) {
   // absent = sauvegarde d'avant cette fonctionnalité, on garde `[]` (déjà
   // posé par le constructeur Player) plutôt que de crasher.
   if (Array.isArray(pdata.matchLog)) p.matchLog = pdata.matchLog.map(m => ({ ...m }));
+  // Bonus temporaire de MVP (voir serializePlayerRecord ci-dessus) : absent
+  // = sauvegarde d'avant cette fonctionnalité, on garde 0.
+  if (typeof pdata.pendingMatchBoost === "number") p.pendingMatchBoost = pdata.pendingMatchBoost;
   return p;
 }
 
@@ -7515,6 +7689,7 @@ function teamFromSave(data) {
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
+  team.lastMatchMvp = data.lastMatchMvp && typeof data.lastMatchMvp === "object" ? { ...data.lastMatchMvp } : null;
   // Identité du club (voir engine.js, miroir identique).
   team.isPaying = !!data.isPaying;
   team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
@@ -9523,7 +9698,15 @@ function enterNextMatchOrShowSeasonEnd(opts) {
   }
   const next = league.nextUserMatch(myTeamIndex);
   if (!next) {
-    if (!league.playoffs) league.runPlayoffs();
+    if (!league.playoffs) {
+      league.runPlayoffs();
+      // Interview de jalon "demi-finale de PO" (retour utilisateur, 2026-09,
+      // voir League.queuePlayoffSemiInterviews) : repli défensif pour ce
+      // chemin rarement emprunté en pratique (voir le commentaire de
+      // runPlayoffs — le serveur a normalement déjà tout calculé pendant le
+      // rattrapage, voir server/autoSim.js).
+      league.queuePlayoffSemiInterviews();
+    }
     if (!league.relegationBarrage) league.runRelegationBarrage();
     saveMyTeam();
     showSeasonEnd();
@@ -9547,27 +9730,144 @@ function enterNextMatchOrShowSeasonEnd(opts) {
 // "Pendant votre absence…" ci-dessous (voir Team.pendingInterviews/
 // resolveInterview/skipInterview). Trois tons + une option "sans
 // commentaire" (effet nul, voir catchupContinueBtn plus bas pour le cas où
-// le manager ne répond à aucun des deux).
+// le manager ne répond à aucun des deux). `entry.milestone` (retour
+// utilisateur, 2026-09 : mi-saison/fin de saison régulière/demi-finale de
+// PO, voir MILESTONE_INTERVIEW_TYPES) : mêmes noms de ton (Agressif/Mesuré/
+// Humble), seule l'intro change pour prévenir des deux effets (supporters
+// ET joueurs) et du délai de 3 jours.
 function interviewWidgetHtml(entry) {
   const toneButtons = Object.keys(INTERVIEW_TONES).map(tone =>
     `<button class="secondary" data-interview-tone="${entry.id}:${escapeHtml(tone)}">${escapeHtml(tone)}</button>`
   ).join(" ");
-  return `<div class="interview-widget" id="interviewWidget_${entry.id}">` +
-    `<p class="sub">Un journaliste vous demande une réaction sur ce résultat.</p>` +
+  const milestoneInfo = entry.milestone ? MILESTONE_INTERVIEW_TYPES[entry.milestone] : null;
+  const intro = milestoneInfo
+    ? `<p class="sub"><b>${escapeHtml(milestoneInfo.label)}</b> : un journaliste vous demande une réaction plus approfondie sur ce moment clé de la saison. Votre réponse influencera aussi bien l'humeur des supporters que celle des joueurs ayant disputé ce match, réponse possible sous 3 jours.</p>`
+    : `<p class="sub">Un journaliste vous demande une réaction sur ce résultat.</p>`;
+  return `<div class="interview-widget${milestoneInfo ? " interview-widget-milestone" : ""}" id="interviewWidget_${entry.id}">` +
+    intro +
     `<div class="interview-tone-btns">${toneButtons} <button class="secondary" data-interview-skip="${entry.id}">Sans commentaire</button></div>` +
     `</div>`;
 }
 
 // Remplace le widget par une courte confirmation, une fois l'interview
 // traitée (choisie ou ignorée) : `resolved` est le résultat de
-// Team.resolveInterview ({ok, delta}) ou null pour un "sans commentaire".
+// Team.resolveInterview ({ok, delta, formDelta?}) ou null pour un "sans
+// commentaire". `formDelta` (interview de jalon uniquement, voir
+// interviewWidgetHtml ci-dessus) : mentionné en plus du delta d'humeur des
+// supporters quand présent.
 function refreshCatchupAfterInterview(interviewId, resolved) {
   const widget = document.getElementById(`interviewWidget_${interviewId}`);
   if (!widget) return;
-  const msg = resolved && resolved.ok
-    ? `Réaction envoyée. Humeur des supporters ${resolved.delta >= 0 ? "+" : ""}${Math.round(resolved.delta * 10) / 10} (désormais ${Math.round(teamA.fanMorale)}/100, ${moraleLabel(teamA.fanMorale)}).`
-    : "Sans commentaire.";
+  let msg;
+  if (resolved && resolved.ok) {
+    const sign = resolved.delta >= 0 ? "+" : "";
+    msg = `Réaction envoyée. Humeur des supporters ${sign}${Math.round(resolved.delta * 10) / 10} (désormais ${Math.round(teamA.fanMorale)}/100, ${moraleLabel(teamA.fanMorale)}).`;
+    if (typeof resolved.formDelta === "number") {
+      const fsign = resolved.formDelta >= 0 ? "+" : "";
+      msg += ` Forme des joueurs concernés ${fsign}${resolved.formDelta}.`;
+    }
+  } else {
+    msg = "Sans commentaire.";
+  }
   widget.outerHTML = `<p class="sub">${escapeHtml(msg)}</p>`;
+}
+
+// ---------------------------------------------------------------------
+// Interview d'après-match accessible directement depuis le direct et le
+// calendrier (retour utilisateur, 2026-09 : "il faudrait que l'interview du
+// match s'affiche si on est sur la page live [...] via un bouton [...] et
+// dans le calendrier [...] mettre un bouton 'interview d'après match'").
+//
+// Jusqu'ici, la SEULE façon de répondre à une interview était l'écran
+// "Pendant votre absence…" (showCatchupSummaryIfAny) — or
+// refreshFromServerAndReenter retire justement l'événement de la journée
+// qu'on vient de suivre en direct de ce récapitulatif (pour ne pas le
+// remontrer inutilement une fois qu'on l'a déjà vu se dérouler), ce qui a
+// pour effet de bord de faire disparaître l'interview qui lui est
+// attachée SANS QUE LE JOUEUR N'AIT JAMAIS PU Y RÉPONDRE : exactement le
+// trou que ces boutons comblent, en donnant un accès explicite à la même
+// interview (Team.pendingInterviews), plutôt que de changer ce filtre
+// existant (dont le but — ne pas raconter deux fois le même match — reste
+// valable pour le SCORE, seule l'interview posait problème).
+//
+// L'interview est créée côté SERVEUR (voir Team.applyMoraleForResult,
+// appelé depuis server/liveMatch.js) dès que la journée est officiellement
+// résolue, elle-même déclenchée par server/index.js:tick à CHAQUE requête —
+// elle n'existe donc pas forcément encore côté client tant qu'aucune
+// requête n'a eu lieu depuis la fin de la diffusion (purement locale
+// jusque-là, voir enterLiveMatch/finishPlayback) : openPostMatchInterview
+// commence donc TOUJOURS par un aller-retour serveur (loadMyTeam) avant de
+// chercher l'entrée.
+// ---------------------------------------------------------------------
+
+// Rend le widget d'interview (ou un message de repli si aucune n'est en
+// attente pour cette journée, ex. délai de 2h déjà dépassé) dans le
+// conteneur donné, suivi d'un bouton "Continuer" qui reprend le fil normal
+// du jeu (enterNextMatchOrShowSeasonEnd) — même convention que
+// catchupContinueBtn plus bas : toute interview encore non répondue à cet
+// instant est silencieusement traitée comme "sans commentaire" plutôt que
+// de bloquer la progression. resolveInterview/skipInterview retirent déjà
+// l'entrée de teamA.pendingInterviews : sa seule PRÉSENCE encore là au
+// moment du clic suffit à savoir qu'elle n'a pas été traitée, inutile de
+// suivre un état "résolu" séparé.
+function renderInterviewPanelInto(panelEl, round) {
+  if (!panelEl) return;
+  const entry = (teamA.pendingInterviews || []).find(i => i.round === round);
+  const body = entry
+    ? interviewWidgetHtml(entry)
+    : `<p class="sub">Aucune interview en attente pour ce match (déjà traitée, ou délai de 2h dépassé).</p>`;
+  panelEl.innerHTML = body + `<button type="button" class="secondary post-interview-continue-btn" style="margin-top:10px">Continuer</button>`;
+  const continueBtn = panelEl.querySelector(".post-interview-continue-btn");
+  if (continueBtn) {
+    continueBtn.addEventListener("click", () => {
+      if (entry && (teamA.pendingInterviews || []).some(i => i.id === entry.id)) {
+        teamA.skipInterview(entry.id);
+        syncSkipInterviewToServer(entry.id);
+        saveMyTeam();
+      }
+      enterNextMatchOrShowSeasonEnd();
+    });
+  }
+}
+
+// Point d'entrée commun des deux boutons "Interview d'après match" (Live et
+// Calendrier, voir leurs commentaires respectifs) : rafraîchit l'état
+// depuis le serveur (fait naître l'entrée côté teamA.pendingInterviews si
+// ce n'est pas déjà fait, voir le grand commentaire ci-dessus), puis
+// affiche le widget dans `panelId`. `refreshCalendar` (le Calendrier
+// seulement) : le tableau doit être régénéré une fois le score officiel
+// connu (la ligne concernée change d'action, voir renderCalendrierSection),
+// ce qui RECRÉE le conteneur du panneau — sa référence n'est donc relue
+// qu'APRÈS ce re-rendu, jamais avant.
+async function openPostMatchInterview(panelId, round, competition, refreshCalendar) {
+  let panelEl = document.getElementById(panelId);
+  if (panelEl) panelEl.innerHTML = "<p class=\"sub\">Chargement de l'interview…</p>";
+  const loaded = await loadMyTeam();
+  if (!loaded) {
+    panelEl = document.getElementById(panelId);
+    if (panelEl) panelEl.innerHTML = "<p class=\"sub\" style=\"color:var(--danger)\">Serveur injoignable, réessayez plus tard.</p>";
+    return;
+  }
+  teamA = loaded.team;
+  league = loaded.league;
+  pendingEvents = loaded.events || [];
+  // Même filtre que refreshFromServerAndReenter (voir son commentaire) :
+  // cette journée vient d'être traitée ICI, inutile de la remontrer dans
+  // "Pendant votre absence" quand le joueur reprendra le fil normalement
+  // (voir le bouton "Continuer" de renderInterviewPanelInto ci-dessus). La
+  // branche "cup" ne sert jamais en pratique (aucune interview de Coupe,
+  // voir le grand commentaire ci-dessus) : gardée pour rester correcte si
+  // ce bouton était un jour réutilisé ailleurs.
+  if (competition === "cup") {
+    pendingEvents = pendingEvents.filter(ev => !(ev.type === "cup-match" && ev.cupRoundIndex === round));
+  } else {
+    pendingEvents = pendingEvents.filter(ev => !(ev.type === "match" && ev.round === round));
+  }
+  updateLiveTabVisibility();
+  syncTopbarLiveStrip();
+  if (refreshCalendar) renderCalendrierSection();
+  panelEl = document.getElementById(panelId);
+  renderInterviewPanelInto(panelEl, round);
 }
 
 // Affiche le récapitulatif "Pendant votre absence…" pour tout ce que le
@@ -9633,6 +9933,17 @@ function showCatchupSummaryIfAny() {
       }
     } else if (ev.type === "season-end") {
       html += `<div class="catchup-item"><h3>Fin de la saison régulière</h3><p class="sub">Les play-offs et le barrage de relégation ont été calculés, direction l'écran de fin de saison.</p></div>`;
+      // Interview de jalon "demi-finale de PO" (retour utilisateur, 2026-09,
+      // voir MILESTONE_INTERVIEW_TYPES/League.queuePlayoffSemiInterviews) :
+      // aucune journée de calendrier ne lui correspond (entry.round === null,
+      // voir son commentaire côté moteur), retrouvée ici par `milestone`
+      // plutôt que par round, contrairement à l'interview du bloc "match"
+      // ci-dessus.
+      const semiInterview = (teamA.pendingInterviews || []).find(i => i.milestone === "demi-finale-po");
+      if (semiInterview) {
+        catchupInterviewIdsShown.push(semiInterview.id);
+        html += `<div class="catchup-item">${interviewWidgetHtml(semiInterview)}</div>`;
+      }
     }
   });
   document.getElementById("catchupContent").innerHTML = html || "<p class='sub'>Rien à signaler.</p>";
@@ -11987,6 +12298,20 @@ function renderSeasonEnd() {
   }
 
   document.getElementById("seasonEndContent").innerHTML = html;
+
+  // Interview de jalon "demi-finale de PO" (retour utilisateur, 2026-09,
+  // voir MILESTONE_INTERVIEW_TYPES) : repli défensif pour le cas rare où cet
+  // écran est atteint SANS être passé par le récapitulatif "Pendant votre
+  // absence" (voir son propre panneau côté showCatchupSummaryIfAny, le
+  // chemin normal) — ex. le repli client d'enterNextMatchOrShowSeasonEnd,
+  // quand aucun pendingEvents n'existait à afficher. Retrouvée par
+  // `milestone` plutôt que par round, comme son équivalent côté
+  // showCatchupSummaryIfAny.
+  const seasonEndInterviewPanel = document.getElementById("seasonEndInterviewPanel");
+  if (seasonEndInterviewPanel) {
+    const semiInterview = (teamA.pendingInterviews || []).find(i => i.milestone === "demi-finale-po");
+    seasonEndInterviewPanel.innerHTML = semiInterview ? interviewWidgetHtml(semiInterview) : "";
+  }
 }
 
 // Repart sur une saison neuve : même club/effectif (progression, staff,
@@ -12811,6 +13136,11 @@ function enterLiveMatch(liveMatch, opts) {
     b.textContent = b.dataset.team === "A" ? teamA.name : teamB.name;
   });
   document.getElementById("boxscoreSection").style.display = "none";
+  // Panneau d'interview du match PRÉCÉDENT (voir renderLiveInterviewCta/
+  // openPostMatchInterview) : vidé ici comme le reste de l'écran, jamais
+  // laissé affiché sur le nouveau direct qui démarre.
+  const liveInterviewPanelEl = document.getElementById("liveInterviewPanel");
+  if (liveInterviewPanelEl) liveInterviewPanelEl.innerHTML = "";
   document.getElementById("feed").innerHTML = "";
   resetQuarterBars();
   document.getElementById("scoreA").textContent = "0";
@@ -12837,6 +13167,12 @@ function enterLiveMatch(liveMatch, opts) {
     document.getElementById("boxscoreSection").style.display = "block";
     renderBoxScore("A");
     syncTopbarLiveStrip();
+    // Un forfait aussi met en attente une interview d'après-match côté
+    // moteur (Team.applyMoraleForResult y est appelé sans condition sur
+    // `forfeit`, voir server/liveMatch.js) : même bouton que pour un match
+    // réellement diffusé (voir renderLiveInterviewCta plus bas), simplement
+    // affiché tout de suite puisqu'il n'y a ici aucune diffusion à attendre.
+    renderLiveInterviewCta();
     return;
   }
 
@@ -13043,6 +13379,28 @@ function finishPlayback() {
   document.getElementById("boxscoreSection").style.display = "block";
   renderBoxScore("A");
   syncTopbarLiveStrip();
+  // Retour utilisateur (2026-09) : "il faudrait que l'interview du match
+  // s'affiche si on est sur la page live [...] via un bouton" : proposé dès
+  // que la diffusion locale se termine, sans attendre un retour sur le
+  // Calendrier (voir renderLiveInterviewCta/openPostMatchInterview).
+  renderLiveInterviewCta();
+}
+
+// Bouton "Faire l'interview d'après match" affiché une fois la diffusion
+// terminée (voir finishPlayback/le repli forfait dans enterLiveMatch ci-
+// dessus) : jamais pour un match de Coupe (aucune interview n'existe pour
+// cette compétition, voir le grand commentaire sur openPostMatchInterview
+// plus haut). currentLiveMatch reste renseigné jusqu'au prochain
+// enterLiveMatch (voir son tout début, qui vide ce panneau) : toujours
+// valide au moment où ce bouton peut être cliqué.
+function renderLiveInterviewCta() {
+  const panel = document.getElementById("liveInterviewPanel");
+  if (!panel) return;
+  if (!currentLiveMatch || currentLiveMatch.competition === "cup") {
+    panel.innerHTML = "";
+    return;
+  }
+  panel.innerHTML = `<button type="button" class="secondary" id="liveInterviewCtaBtn">🎙️ Faire l'interview d'après match</button>`;
 }
 
 // Factorisé hors de renderBoxScore (match en direct) pour être réutilisé par
@@ -13093,15 +13451,33 @@ function boxscoreTableHtml(rows, mvpRow) {
 // tous les champs qu'attend statEvaluation (pts/reb/ast/stl/blk/tov/pf/
 // fgm2/fga2/fgm3/fga3/ftm/fta). Renvoie null si les deux équipes n'ont
 // aucune ligne (ex. forfait des deux côtés, cas théorique).
+// `rowsA`/`rowsB` peuvent porter `isMvp` (retour utilisateur, 2026-09 : voir
+// boxscoreRowsFromMatchLog ci-dessous, un match déjà FINALISÉ côté serveur,
+// voir awardMatchMvp côté moteur) : dans ce cas, cette ligne fait
+// AUTORITÉ : on ne recalcule pas un éventuel MVP différent en cas d'égalité
+// d'évaluation (statEvaluation reste déterministe, mais ne pas dépendre de
+// cette propriété plus que nécessaire). Sans ligne `isMvp` (direct encore en
+// cours, voir renderBoxScore/matchResult.boxScoreA/B, pas encore finalisé
+// côté serveur), repli sur le calcul habituel.
 function boxscoreMatchMvp(rowsA, rowsB) {
+  const all = [...rowsA, ...rowsB];
+  const persisted = all.find(row => row.isMvp);
+  if (persisted) return { row: persisted, evalScore: statEvaluation(persisted) };
   let best = null;
-  [...rowsA, ...rowsB].forEach(row => {
+  all.forEach(row => {
     const evalScore = statEvaluation(row);
     if (!best || evalScore > best.evalScore) best = { row, evalScore };
   });
   return best;
 }
 
+// `r.mvpQuote` (retour utilisateur, 2026-09 : "mettre ses citations sur
+// [...] le box score du match fini", voir awardMatchMvp côté moteur,
+// Player.matchLog[].mvpQuote) : présent uniquement pour un match déjà
+// FINALISÉ (voir boxscoreRowsFromMatchLog ci-dessous), jamais pendant un
+// direct encore en cours (matchResult.boxScoreA/B, voir renderBoxScore —
+// MVP recalculé à la volée côté client, pas encore élu/cité côté serveur à
+// ce stade), auquel cas ce paragraphe est simplement omis.
 function matchMvpCalloutHtml(mvp) {
   const r = mvp.row;
   const bits = [`${r.pts} pts`, `${r.reb} reb`, `${r.ast} pas`, `${r.stl || 0} int`, `${r.blk || 0} ctr`];
@@ -13110,7 +13486,8 @@ function matchMvpCalloutHtml(mvp) {
   if (r.fta) bits.push(`${r.ftm || 0}/${r.fta || 0} LF`);
   bits.push(`évaluation ${mvp.evalScore}`);
   return `<div class="mvp-callout match-mvp-callout"><h4>MVP du match</h4>` +
-    `<p><b>${escapeHtml(r.name)}</b> : ${bits.join(", ")}</p></div>`;
+    `<p><b>${escapeHtml(r.name)}</b> : ${bits.join(", ")}</p></div>` +
+    (r.mvpQuote ? `<p class="sub">« ${escapeHtml(r.mvpQuote)} »</p>` : "");
 }
 
 function renderBoxScore(side) {
@@ -13145,6 +13522,10 @@ function boxscoreRowsFromMatchLog(team, round, competition) {
         name: p.name, position: p.position, min: entry.min,
         pts: entry.pts, reb: entry.reb, ast: entry.ast, stl: entry.stl, blk: entry.blk, tov: entry.tov, pf: entry.pf,
         fgm2: entry.fgm2, fga2: entry.fga2, fgm3: entry.fgm3, fga3: entry.fga3, ftm: entry.ftm, fta: entry.fta,
+        // MVP automatique du match (retour utilisateur, 2026-09 : voir
+        // awardMatchMvp côté moteur) : `undefined` pour tout le monde sauf le
+        // joueur élu, propagé jusqu'à boxscoreMatchMvp/matchMvpCalloutHtml.
+        isMvp: entry.isMvp || false, mvpQuote: entry.mvpQuote || null,
       };
     })
     .filter(Boolean)
@@ -14024,6 +14405,21 @@ function renderClubSection() {
       : `<div class="sub">Rien à signaler pour l'instant.</div>`);
   grid.appendChild(newsCard);
 
+  // MVP automatique du dernier match (retour utilisateur, 2026-09 : "il faut
+  // mettre ses citations sur la page tableau de bord [...] et sur le box
+  // score du match fini", voir Team.lastMatchMvp/awardMatchMvp côté
+  // moteur). Peut appartenir à l'équipe adverse (voir son commentaire) : le
+  // nom du club du MVP est donc toujours précisé, pas seulement le sien.
+  if (teamA.lastMatchMvp) {
+    const mvp = teamA.lastMatchMvp;
+    const mvpCard = document.createElement("div");
+    mvpCard.className = "stat-card";
+    mvpCard.innerHTML = `<h3>MVP du dernier match</h3><div class="big">${escapeHtml(mvp.playerName)}</div>` +
+      `<div class="sub">${escapeHtml(mvp.teamName)} · évaluation ${mvp.evalScore}</div>` +
+      `<p class="sub">« ${escapeHtml(mvp.quote)} »</p>`;
+    grid.appendChild(mvpCard);
+  }
+
   renderClubIdentityPanel();
 }
 
@@ -14587,6 +14983,16 @@ function renderCalendrierSection() {
     // direct" (onglet Live) plutôt que "Ordres" — retour utilisateur : "sur
     // l'onglet calendrier si on veut revoir le live".
     const isCurrentlyLive = !!(league.liveMatch && league.liveMatch.competition !== "cup" && league.liveMatch.round === r);
+    // Retour utilisateur (2026-09) : "dans le calendrier à la place de voir
+    // le live (quand le match est terminé comme ici) mettre un bouton
+    // 'interview d'après match'" : la fenêtre de diffusion peut être
+    // entièrement écoulée (liveMatchHasEnded) SANS que league.liveMatch ne
+    // soit encore reparti à null localement (ça n'arrive qu'au prochain
+    // aller-retour serveur, voir openPostMatchInterview) : "Voir le direct"
+    // n'a alors plus de sens (il n'y a plus rien à regarder), remplacé par
+    // l'accès direct à l'interview plutôt que de laisser le joueur cliquer
+    // dans le vide.
+    const liveHasEnded = isCurrentlyLive && liveMatchHasEnded(league.liveMatch);
     // Retour utilisateur (2026-09) : "dans le calendrier [...] que le bouton
     // donnez vos ordres deviennent : Modifier vos ordres (et que la couleur
     // soit différente)". La journée immédiate utilise
@@ -14617,7 +15023,9 @@ function renderCalendrierSection() {
       ? teamA.ordresValidatedRound === r
       : teamA.hasPlanForRound(r);
     const actionCell = isCurrentlyLive
-      ? `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>`
+      ? (liveHasEnded
+          ? `<button type="button" class="calendar-order-btn calendar-interview-btn" data-live-interview-round="${r}">Interview d'après match</button>`
+          : `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>`)
       : isUpcoming
         ? `<button class="calendar-order-btn${alreadyOrdered ? " calendar-order-btn-validated" : ""}" data-tab="ordres" data-round="${r}" data-competition="championship">${alreadyOrdered ? "Modifier vos ordres" : "Ordres"}</button>`
         : "";
@@ -14693,7 +15101,14 @@ function renderCalendrierSection() {
     return a.fallbackOrder - b.fallbackOrder;
   });
 
-  let html = "<table class='standings-table calendar-table'><thead><tr>" +
+  // Panneau d'interview d'après-match (voir data-live-interview-round
+  // ci-dessus/openPostMatchInterview) : vide tant qu'aucun bouton "Interview
+  // d'après match" n'a été cliqué, recréé (donc réinitialisé) à chaque appel
+  // de renderCalendrierSection : sans effet de bord tant qu'on reste sur cet
+  // onglet, cette fonction n'étant appelée qu'en y ENTRANT (voir
+  // TAB_HANDLERS.calendrier), jamais par un rafraîchissement périodique.
+  let html = `<div id="calendrierInterviewPanel"></div>` +
+    "<table class='standings-table calendar-table'><thead><tr>" +
     "<th>Date</th><th>Compétition</th><th>Adversaire</th><th>Lieu</th><th>Score</th><th></th></tr></thead><tbody>";
   rows.forEach(row => {
     const dateCell = row.scheduledAt != null
@@ -14726,12 +15141,22 @@ function renderCalendrierSection() {
 }
 
 document.getElementById("calendrierContent").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-boxscore-round]");
-  if (!btn) return;
-  showMatchBoxscore(
-    Number(btn.dataset.boxscoreRound), btn.dataset.boxscoreCompetition,
-    Number(btn.dataset.boxscoreHome), Number(btn.dataset.boxscoreAway),
-  );
+  const boxscoreBtn = e.target.closest("[data-boxscore-round]");
+  if (boxscoreBtn) {
+    showMatchBoxscore(
+      Number(boxscoreBtn.dataset.boxscoreRound), boxscoreBtn.dataset.boxscoreCompetition,
+      Number(boxscoreBtn.dataset.boxscoreHome), Number(boxscoreBtn.dataset.boxscoreAway),
+    );
+    return;
+  }
+  // Bouton "Interview d'après match" (voir renderCalendrierSection/
+  // openPostMatchInterview) : toujours championnat (interviews sans
+  // équivalent Coupe, voir Team.pendingInterviews/applyMoraleForResult, qui
+  // n'est jamais appelé pour un match de Coupe).
+  const interviewBtn = e.target.closest("[data-live-interview-round]");
+  if (interviewBtn) {
+    openPostMatchInterview("calendrierInterviewPanel", Number(interviewBtn.dataset.liveInterviewRound), "championship", true);
+  }
 });
 
 // ---------------------------------------------------------------------
@@ -16719,32 +17144,49 @@ document.getElementById("topbarOrdersBtn").addEventListener("click", goToOrdresT
 }
 
 // Médias (voir interviewWidgetHtml/refreshCatchupAfterInterview plus haut) :
-// délégation sur catchupContent pour les boutons de ton d'interview et le
-// bouton "Sans commentaire", widgets injectés dynamiquement à chaque appel
-// de showCatchupSummaryIfAny.
-const catchupContentEl = document.getElementById("catchupContent");
-if (catchupContentEl) {
-  catchupContentEl.addEventListener("click", (e) => {
-    const toneBtn = e.target.closest("[data-interview-tone]");
-    const skipBtn = e.target.closest("[data-interview-skip]");
-    if (toneBtn) {
-      const [idStr, tone] = toneBtn.dataset.interviewTone.split(":");
-      const id = Number(idStr);
-      const result = teamA.resolveInterview(id, tone);
-      saveMyTeam();
-      if (result && result.ok) syncInterviewToServer(id, tone);
-      catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== id);
-      refreshCatchupAfterInterview(id, result);
-    } else if (skipBtn) {
-      const id = Number(skipBtn.dataset.interviewSkip);
-      teamA.skipInterview(id);
-      saveMyTeam();
-      syncSkipInterviewToServer(id);
-      catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== id);
-      refreshCatchupAfterInterview(id, null);
-    }
-  });
-}
+// VRAIE délégation sur document, même patron que la barre d'onglets
+// [data-tab] plus bas — pas seulement sur catchupContent, le même widget
+// pouvant désormais aussi apparaître sur le direct et le calendrier (voir
+// openPostMatchInterview) : un seul gestionnaire couvre les trois. `id`
+// reste unique tous panneaux confondus (Team.pendingInterviews n'a jamais
+// qu'UNE seule entrée par journée, peu importe où son widget est affiché),
+// refreshCatchupAfterInterview le retrouve par son id DOM peu importe son
+// conteneur. `catchupInterviewIdsShown.filter(...)` reste un no-op inoffensif
+// pour un id qui n'y était pas (widget affiché hors de l'écran de
+// rattrapage) : pas besoin de distinguer la provenance ici.
+document.addEventListener("click", (e) => {
+  const toneBtn = e.target.closest("[data-interview-tone]");
+  const skipBtn = e.target.closest("[data-interview-skip]");
+  if (toneBtn) {
+    const [idStr, tone] = toneBtn.dataset.interviewTone.split(":");
+    const id = Number(idStr);
+    const result = teamA.resolveInterview(id, tone);
+    saveMyTeam();
+    if (result && result.ok) syncInterviewToServer(id, tone);
+    catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== id);
+    refreshCatchupAfterInterview(id, result);
+  } else if (skipBtn) {
+    const id = Number(skipBtn.dataset.interviewSkip);
+    teamA.skipInterview(id);
+    saveMyTeam();
+    syncSkipInterviewToServer(id);
+    catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== id);
+    refreshCatchupAfterInterview(id, null);
+  }
+});
+
+// Boutons "Faire l'interview d'après match" (direct, voir
+// renderLiveInterviewCta) et "Interview d'après match" (calendrier, voir
+// renderCalendrierSection) : le second est déjà géré par sa propre
+// délégation scopée sur #calendrierContent (voir plus haut) ; seul le
+// premier, recréé dynamiquement sur #liveInterviewPanel, a besoin d'une
+// délégation ici.
+document.addEventListener("click", (e) => {
+  const liveInterviewBtn = e.target.closest("#liveInterviewCtaBtn");
+  if (liveInterviewBtn && currentLiveMatch) {
+    openPostMatchInterview("liveInterviewPanel", currentLiveMatch.round, currentLiveMatch.competition, false);
+  }
+});
 
 document.getElementById("catchupContinueBtn").addEventListener("click", () => {
   // Toute interview encore non répondue au moment de cliquer "Continuer" est

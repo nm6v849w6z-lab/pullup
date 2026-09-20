@@ -1275,6 +1275,185 @@ const INTERVIEW_QUOTES = {
 const INTERVIEW_RESPONSE_DEADLINE_MS = 2 * 60 * 60 * 1000;
 
 // ---------------------------------------------------------------------
+// INTERVIEWS DE MI-SAISON / FIN DE SAISON RÉGULIÈRE / DEMI-FINALE DE PO
+// (retour utilisateur, 2026-09 : "elle doit avoir lieu après le match de la
+// mi saison de championnat, une autre après la fin de la saison régulière,
+// et une autre après la demi finale de PO [...] une interview un peu
+// étoffée [...] Ca peut jouer sur les supporters et sur les joueurs [...]
+// On a 3 jours pour faire l'interview sinon c'est neutre sur le moral") :
+// une variante plus marquée de l'interview d'après-match normale
+// (INTERVIEW_TONES/INTERVIEW_QUOTES ci-dessus), réservée à trois moments
+// clés de la saison, avec trois différences : un délai de réponse de 3
+// jours réels (au lieu de 2h, voir MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS
+// plus bas), un effet chiffré plus élevé sur l'humeur des SUPPORTERS
+// (MILESTONE_INTERVIEW_TONES.fanWin/fanLoss), et surtout un tout premier
+// effet sur la forme des JOUEURS ayant disputé ce match précis
+// (MILESTONE_INTERVIEW_TONES.formWin/formLoss, voir Team.resolveInterview)
+// — Player.form n'avait jamais été muté par aucun système avant ceci,
+// exactement l'itération "une itération suivante" annoncée par le
+// commentaire de Team.pendingInterviews plus haut. Réutilise la MÊME file
+// d'attente (Team.pendingInterviews) et les MÊMES noms de ton
+// (Agressif/Mesuré/Humble) que le système normal — seule une entrée
+// portant `milestone` (voir applyMoraleForResult) bascule sur ces tables-ci
+// plutôt que sur INTERVIEW_TONES/INTERVIEW_QUOTES, tout le reste de la
+// tuyauterie (widget, résolution, "sans commentaire", purge après délai)
+// est partagé sans dupliquer aucun code.
+// ---------------------------------------------------------------------
+
+// Trois moments déclenchés côté serveur (voir Engine.milestoneTypeForRound
+// pour les deux premiers, League.queuePlayoffSemiInterviews pour le
+// troisième) : uniquement des ÉTIQUETTES d'affichage ici, la mécanique elle-
+// même (tons/citations/deltas) est dans MILESTONE_INTERVIEW_TONES/
+// MILESTONE_INTERVIEW_QUOTES juste en dessous.
+const MILESTONE_INTERVIEW_TYPES = {
+  "mi-saison": { label: "Interview de mi-saison" },
+  "fin-saison-reguliere": { label: "Bilan de fin de saison régulière" },
+  "demi-finale-po": { label: "Interview d'après demi-finale de play-offs" },
+};
+
+// Journée de mi-saison : aucune notion de "mi-saison" n'existait avant ce
+// retour utilisateur, milieu ARRONDI PAR LE BAS du calendrier round-robin
+// (toujours 18 journées 0-indexées pour une ligue à 10 équipes, identique
+// entre calendrier classique et ancré quotidien, voir League.totalRounds) —
+// donne la journée 9 (10e journée sur 18), le point le plus proche du milieu
+// réel de la saison régulière. Factorisée ici plutôt que recopiée à chaque
+// appelant, pour qu'un futur changement de taille de ligue ne fasse diverger
+// qu'un seul endroit.
+function midSeasonRound(totalRounds) {
+  return Math.floor(totalRounds / 2);
+}
+
+// Type de jalon (ou `null`, cas normal) pour une journée de CHAMPIONNAT
+// donnée — jamais pour la Coupe (aucun calendrier "mi-saison"/"fin de
+// saison régulière" n'a de sens là-bas, voir le tableau à élimination direct
+// CUP_STAGE_LABELS). Utilisé par finalizeRound (server/liveMatch.js) pour
+// savoir quel type passer à Team.applyMoraleForResult.
+function milestoneTypeForRound(round, totalRounds) {
+  if (round === midSeasonRound(totalRounds)) return "mi-saison";
+  if (round === totalRounds - 1) return "fin-saison-reguliere";
+  return null;
+}
+
+// Mêmes trois tons que INTERVIEW_TONES, même logique de compromis pour
+// chacun (voir son commentaire), mais DEUX deltas distincts désormais :
+// `fanWin`/`fanLoss` (humeur des supporters, ÉCHELLE COMPARABLE à
+// INTERVIEW_TONES mais plus marquée, moment plus important) et
+// `formWin`/`formLoss` (Player.form, échelle 1-100 comme fanMorale — voir
+// Team.resolveInterview, appliqué à CHAQUE joueur ayant disputé ce match
+// précis, jamais tout l'effectif).
+const MILESTONE_INTERVIEW_TONES = {
+  "Agressif": { fanWin: 7,   fanLoss: -7, formWin: 4, formLoss: -4 },
+  "Mesuré":   { fanWin: 3,   fanLoss: -3, formWin: 2, formLoss: -2 },
+  "Humble":   { fanWin: 1.5, fanLoss: 3,  formWin: 1, formLoss: 2 },
+};
+
+// Citations "étoffées" (retour utilisateur : "une interview un peu
+// étoffée"), une par {type de jalon, ton, résultat} : plus longues et plus
+// ancrées dans le moment de la saison que INTERVIEW_QUOTES, mêmes clés de
+// ton et `{opponent}` remplacé de la même façon (voir Team.resolveInterview).
+const MILESTONE_INTERVIEW_QUOTES = {
+  "mi-saison": {
+    "Agressif": {
+      win: ["On passe le cap de la mi-saison sur la meilleure dynamique possible, et {opponent} vient encore de le confirmer : personne ne veut vraiment nous affronter en ce moment."],
+      loss: ["Cette défaite contre {opponent} ne change rien à nos ambitions pour la seconde moitié de saison, on reste le favori de cette division."],
+    },
+    "Mesuré": {
+      win: ["À mi-parcours, cette victoire contre {opponent} confirme qu'on est sur la bonne trajectoire, il reste encore la moitié de la saison pour la confirmer."],
+      loss: ["Cette défaite contre {opponent} arrive à un moment charnière de la saison, on va en tirer les leçons avant d'attaquer la seconde moitié du calendrier."],
+    },
+    "Humble": {
+      win: ["On a fait la moitié du chemin avec cette victoire contre {opponent}, mais rien n'est acquis, il reste encore beaucoup de travail avant la fin de saison."],
+      loss: ["Cette défaite contre {opponent} à mi-saison est une bonne piqûre de rappel, on doit rester humbles et travailler encore plus dur pour la suite."],
+    },
+  },
+  "fin-saison-reguliere": {
+    "Agressif": {
+      win: ["On termine la saison régulière sur cette victoire contre {opponent}, et on aborde les échéances qui arrivent avec la plus grande confiance qui soit."],
+      loss: ["Cette dernière défaite de saison régulière contre {opponent} n'entache en rien notre saison, on sait qu'on est prêts pour la suite."],
+    },
+    "Mesuré": {
+      win: ["Une belle manière de clore la saison régulière face à {opponent}, l'équipe a montré tout au long de l'année qu'elle méritait sa place."],
+      loss: ["On termine la saison régulière sur une défaite décevante contre {opponent}, mais le bilan global de l'année reste ce qui compte le plus."],
+    },
+    "Humble": {
+      win: ["Cette victoire pour clore la saison régulière contre {opponent} appartient à tout le groupe, staff compris, ça n'a pas toujours été facile cette année."],
+      loss: ["Cette défaite contre {opponent} pour terminer la saison régulière nous rappelle qu'il reste encore des choses à corriger avant la suite."],
+    },
+  },
+  "demi-finale-po": {
+    "Agressif": {
+      win: ["On envoie un message clair à toute la ligue en éliminant {opponent} en demi-finale, la prochaine étape ne nous fait absolument pas peur."],
+      loss: ["Éliminés par {opponent} en demi-finale, difficile à avaler, mais cette équipe reviendra encore plus forte la saison prochaine."],
+    },
+    "Mesuré": {
+      win: ["Une qualification méritée contre {opponent} en demi-finale, l'équipe a fait preuve d'un sérieux remarquable dans ce moment de pression."],
+      loss: ["Cette élimination en demi-finale contre {opponent} est frustrante après une belle saison, on va analyser calmement ce qui a manqué."],
+    },
+    "Humble": {
+      win: ["Cette qualification face à {opponent} en demi-finale doit beaucoup à la réussite autant qu'au mérite, on reste concentrés sur la suite sans s'enflammer."],
+      loss: ["{opponent} méritait sa qualification en demi-finale, on doit accepter cette élimination avec humilité et en tirer les bons enseignements."],
+    },
+  },
+};
+
+// Délai de réponse à une interview de jalon (retour utilisateur, 2026-09 :
+// "On a 3 jours pour faire l'interview sinon c'est neutre sur le moral") :
+// même mécanique que INTERVIEW_RESPONSE_DEADLINE_MS ci-dessus (temps RÉEL,
+// jamais le calendrier simulé, voir Team.pruneExpiredInterviews qui choisit
+// entre les deux délais selon `entry.milestone`), simplement trois fois plus
+// long — moment plus important de la saison, le manager mérite plus de
+// temps pour y réagir. Même idiome que TRANSFER_AUCTION_DURATION_MS
+// (délai réel exprimé en millisecondes) déjà utilisé ailleurs dans ce
+// fichier pour ce genre de fenêtre de plusieurs jours.
+const MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS = 3 * 24 * 60 * 60 * 1000;
+
+// ---------------------------------------------------------------------
+// MVP AUTOMATIQUE DU MATCH (retour utilisateur, 2026-09 : "le mvp du match
+// se fait interviewer à chaque fois. Il n'y a aucune action c'est
+// automatique [...] mettre ses citations sur la page tableau de bord et sur
+// le box score du match fini [...] un petit bonus pour le match (+2 sur
+// toutes ses caracs)") : contrairement aux interviews ci-dessus, AUCUN choix
+// du manager, calculée et figée côté serveur au moment même où le match est
+// enregistré (voir awardMatchMvp, appelée juste après recordMatchStatsForTeam
+// dans server/liveMatch.js), pour CHAQUE match réellement simulé (championnat
+// ET coupe). `statEvaluation` reprend EXACTEMENT la même formule "à la
+// française" (PIR) que moteurbasket3.html utilisait déjà côté client pour un
+// affichage purement éphémère (jamais persisté) — centralisée ici pour que
+// le MVP soit désormais calculé UNE SEULE FOIS, de façon autoritaire, et que
+// sa citation puisse survivre à un rechargement de page.
+// ---------------------------------------------------------------------
+function statEvaluation(s) {
+  return (s.pts || 0) + (s.reb || 0) + (s.ast || 0) + (s.stl || 0) + (s.blk || 0)
+    - (((s.fga2 || 0) - (s.fgm2 || 0)) + ((s.fga3 || 0) - (s.fgm3 || 0)) + ((s.fta || 0) - (s.ftm || 0)))
+    - (s.tov || 0) - (s.pf || 0);
+}
+
+// Bonus temporaire accordé au MVP pour son PROCHAIN match réellement joué
+// (voir Player.pendingMatchBoost/eff()) : +2 sur chaque caractéristique lue
+// en match, un supplément volontairement modeste (à titre de comparaison,
+// un écart type d'attribut entre deux joueurs de la ligue est très
+// largement supérieur à 2, et INTERVIEW_TONES plus haut va déjà jusqu'à ±3
+// sur l'humeur des supporters pour une simple interview) — une petite
+// étincelle de confiance après une belle performance, jamais de quoi
+// transformer un joueur moyen en titulaire irremplaçable à lui seul.
+const MVP_ATTR_BONUS = 2;
+
+// Citations du MVP (retour utilisateur : "aucune action, c'est
+// automatique") : contrairement à INTERVIEW_QUOTES/MILESTONE_INTERVIEW_QUOTES,
+// aucun ton ni résultat (gagné/perdu) ne les distingue puisqu'il n'y a
+// aucun choix à faire : une seule liste, tirée au sort (voir awardMatchMvp),
+// volontairement écrite pour rester valable que l'équipe du MVP ait gagné
+// ou perdu ce soir-là (jamais de mention explicite du résultat du match).
+const MVP_QUOTES = [
+  "Ce soir, tout est rentré naturellement, mes coéquipiers m'ont trouvé aux bons endroits toute la rencontre.",
+  "Je n'ai fait que suivre le plan de jeu, le collectif m'a mis dans les meilleures conditions possibles.",
+  "J'étais dans un bon soir, ça arrive, l'important c'est de rester régulier sur la durée d'une saison.",
+  "Le travail à l'entraînement toute la semaine a payé ce soir, je suis content d'avoir pu répondre présent.",
+  "Ce genre de match, ça se prépare mentalement dès le réveil, j'étais focus du début à la fin.",
+  "Je dois beaucoup à mes coéquipiers ce soir, ce sont eux qui m'ont donné les munitions pour performer.",
+];
+
+// ---------------------------------------------------------------------
 // IDENTITÉ DU CLUB : logo et maillots (retour utilisateur, 2026-09 : "une
 // petite page d'accueil pour les autres équipes [...] le logo de l'équipe
 // doit être type dès lors que l'équipe ne paie pas [...] pour les équipes
@@ -1492,6 +1671,18 @@ class Player {
     this.aggressiveness = aggressiveness; // caractéristique cachée 1-100
     this.form = clamp(Math.round(rand(55, 90)), 1, 100);
 
+    // Bonus temporaire de MVP (retour utilisateur, 2026-09 : "le mvp d'un
+    // match doit avoir un petit bonus pour le match [...] +2 sur toutes ses
+    // caracs") : posé par awardMatchMvp, lu en direct par eff() ci-dessous
+    // (jamais overall(), volontairement, pour ne pas gonfler la note/le
+    // salaire affiché d'un joueur pour une seule bonne performance), effacé
+    // par recordMatchStatsForTeam dès qu'il a servi pour le tout PROCHAIN
+    // match réellement joué par ce joueur (secondsPlayed > 0) — un seul
+    // match "boosté", jamais plus. PAS remis à zéro par resetForMatch
+    // ci-dessous (à dessein : il doit survivre jusqu'au prochain match
+    // réellement joué, même si ce joueur reste sur le banc entre-temps).
+    this.pendingMatchBoost = 0;
+
     // Potentiel GLOBAL (un seul plafond, échelle "overall" 1-99), fixé une
     // fois pour toutes à la génération du joueur — représente son talent
     // brut, pas encore révélé. Dépasser son potentiel n'empêche pas de
@@ -1698,9 +1889,9 @@ class Player {
       a.block + a.dribble + a.agility + a.defOutside + a.defInside) / 10;
   }
 
-  // Statistique effective en jeu = base * forme * fatigue
+  // Statistique effective en jeu = (base + bonus MVP éventuel) * forme * fatigue
   eff(stat) {
-    const base = this.attrs[stat];
+    const base = this.attrs[stat] + (this.pendingMatchBoost || 0);
     const formFactor = 0.85 + (this.form / 100) * 0.30;      // 0.85 → 1.15
     const fatigueFactor = 1 - (this.fatigue / 100) * 0.35;   // jusqu'à -35%
     return clamp(base * formFactor * fatigueFactor, 1, 130);
@@ -1986,9 +2177,22 @@ class Team {
     // resolveInterview/skipInterview (voir INTERVIEW_TONES plus bas), même
     // esprit de file d'attente que pendingYouthDecisions plus haut, jamais
     // bloquant pour la simulation elle-même. V1 volontairement resserrée :
-    // seul fanMorale bouge pour l'instant, pas encore Player.form (prévu
-    // pour une itération suivante une fois cette mécanique éprouvée).
+    // seul fanMorale bouge pour l'instant, pas encore Player.form. Itération
+    // suivante désormais en place (retour utilisateur, 2026-09) : voir
+    // MILESTONE_INTERVIEW_TONES plus bas, qui fait bouger Player.form pour
+    // les trois moments clés de la saison, sans rien changer au système
+    // normal ci-dessus (toujours fanMorale seul) pour les autres journées.
     this.pendingInterviews = [];
+
+    // MVP automatique du dernier match joué par ce club (retour utilisateur,
+    // 2026-09 : "mettre ses citations sur la page tableau de bord [...] et
+    // sur le box score du match fini") : posé pour les DEUX équipes (celle
+    // du MVP et son adversaire) par awardMatchMvp (voir server/liveMatch.js),
+    // que le MVP appartienne à ce club ou à l'adversaire : un club n'a sinon
+    // aucun moyen de savoir qui a été élu MVP de son dernier match si ce
+    // n'était pas l'un de ses propres joueurs. `null` tant qu'aucun match
+    // n'a encore été joué.
+    this.lastMatchMvp = null;
 
     // Identité du club : logo et maillots (retour utilisateur, 2026-09 :
     // "une petite page d'accueil pour les autres équipes [...] le logo de
@@ -2115,14 +2319,43 @@ class Team {
   // Date.now(), le vrai moment où ce résultat est traité, jamais une date du
   // calendrier simulé de la ligue (voir le commentaire sur
   // INTERVIEW_RESPONSE_DEADLINE_MS plus haut).
-  applyMoraleForResult(won, scoreDiff, opponentName, round, now = Date.now()) {
+  // `milestone` (optionnel, retour utilisateur 2026-09 : "elle doit avoir
+  // lieu après le match de la mi saison [...] fin de la saison régulière
+  // [...] demi finale de PO") : une des clés de MILESTONE_INTERVIEW_TYPES,
+  // fait basculer l'interview mise en attente ci-dessous sur le système
+  // "étoffé" (délai de 3 jours, tons/citations plus marqués, effet sur
+  // Player.form — voir pruneExpiredInterviews/resolveInterview), SANS rien
+  // changer au delta de fanMorale immédiat calculé juste en dessous (le
+  // résultat sportif du jour reste toujours traité pareil, milestone ou
+  // non) : seule l'INTERVIEW qui en découle change de nature.
+  // `explicitPlayerIds` (optionnel) : par défaut (`null`), les joueurs
+  // affectés par une interview de jalon (voir `milestone` ci-dessous) sont
+  // déduits de secondsPlayed > 0 AU MOMENT de cet appel — correct pour la
+  // mi-saison/fin de saison régulière (appelé juste après le match
+  // concerné, rien d'autre ne s'est simulé entre-temps). NE MARCHE PAS pour
+  // la demi-finale de play-offs : la finale se simule juste après dans le
+  // même runPlayoffs(), et écrase secondsPlayed des deux finalistes avant
+  // que queuePlayoffSemiInterviews n'ait la moindre chance de le lire, voir
+  // League.runPlayoffs/queuePlayoffSemiInterviews, qui passent ici un
+  // instantané figé AU MOMENT de la demi-finale plutôt que de compter sur
+  // ce repli automatique.
+  applyMoraleForResult(won, scoreDiff, opponentName, round, now = Date.now(), milestone = null, explicitPlayerIds = null) {
     this.pruneExpiredInterviews(now);
     const margin = clamp(Math.abs(scoreDiff) / 40, 0, 1);
     const delta = won ? rand(3, 6) + margin * 1.5 : -(rand(2, 5) + margin * 1.5);
     this.recordMoraleEvent(won ? `Victoire contre ${opponentName}` : `Défaite contre ${opponentName}`, delta);
-    if (typeof round === "number") {
+    if (typeof round === "number" || milestone) {
       this.pendingInterviews = this.pendingInterviews || [];
-      this.pendingInterviews.push({ id: uid(), round, opponentName, won, scoreDiff, at: now });
+      const entry = { id: uid(), round, opponentName, won, scoreDiff, at: now };
+      if (milestone) {
+        entry.milestone = milestone;
+        // Joueurs affectés par l'effet sur Player.form à la résolution (voir
+        // resolveInterview) : voir le commentaire d'explicitPlayerIds
+        // au-dessus pour pourquoi un repli automatique ne suffit pas
+        // toujours.
+        entry.playerIds = explicitPlayerIds || this.players.filter(p => p.secondsPlayed > 0).map(p => p.id);
+      }
+      this.pendingInterviews.push(entry);
     }
     return delta;
   }
@@ -2140,7 +2373,13 @@ class Team {
   pruneExpiredInterviews(now = Date.now()) {
     this.pendingInterviews = this.pendingInterviews || [];
     const before = this.pendingInterviews.length;
-    this.pendingInterviews = this.pendingInterviews.filter(i => (now - i.at) < INTERVIEW_RESPONSE_DEADLINE_MS);
+    // `entry.milestone` (voir applyMoraleForResult/MILESTONE_INTERVIEW_
+    // RESPONSE_DEADLINE_MS plus haut) : délai de réponse de 3 jours au lieu
+    // de 2h, seule différence de traitement ici entre les deux systèmes.
+    this.pendingInterviews = this.pendingInterviews.filter(i => {
+      const deadline = i.milestone ? MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS : INTERVIEW_RESPONSE_DEADLINE_MS;
+      return (now - i.at) < deadline;
+    });
     return before - this.pendingInterviews.length;
   }
 
@@ -2159,11 +2398,35 @@ class Team {
     this.pendingInterviews = this.pendingInterviews || [];
     const idx = this.pendingInterviews.findIndex(i => i.id === id);
     if (idx === -1) return null;
+    const entry = this.pendingInterviews[idx];
+    const resultLabel = entry.won ? "la victoire" : "la défaite";
+    // Interview de jalon (voir applyMoraleForResult/MILESTONE_INTERVIEW_
+    // TONES plus haut) : tables de tons/citations dédiées, ET effet sur
+    // Player.form des joueurs ayant disputé ce match précis (entry.playerIds),
+    // en plus du delta sur fanMorale — jamais le cas pour une interview
+    // normale ci-dessous.
+    if (entry.milestone) {
+      const toneCfg = MILESTONE_INTERVIEW_TONES[tone];
+      if (!toneCfg) return null;
+      const fanDelta = entry.won ? toneCfg.fanWin : toneCfg.fanLoss;
+      const formDelta = entry.won ? toneCfg.formWin : toneCfg.formLoss;
+      const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
+      const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
+      const quoteTemplates = (MILESTONE_INTERVIEW_QUOTES[entry.milestone] || {})[tone];
+      const quote = quoteTemplates
+        ? pick(quoteTemplates[entry.won ? "win" : "loss"]).replace("{opponent}", entry.opponentName)
+        : "";
+      this.recordMoraleEvent(`${milestoneLabel} (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, fanDelta, { quote, milestone: entry.milestone });
+      (entry.playerIds || []).forEach(pid => {
+        const p = this.players.find(pl => pl.id === pid);
+        if (p) p.form = clamp(Math.round(p.form + formDelta), 1, 100);
+      });
+      this.pendingInterviews.splice(idx, 1);
+      return { ok: true, delta: fanDelta, formDelta };
+    }
     const toneCfg = INTERVIEW_TONES[tone];
     if (!toneCfg) return null;
-    const entry = this.pendingInterviews[idx];
     const delta = entry.won ? toneCfg.win : toneCfg.loss;
-    const resultLabel = entry.won ? "la victoire" : "la défaite";
     const quoteTemplates = INTERVIEW_QUOTES[tone][entry.won ? "win" : "loss"];
     const quote = pick(quoteTemplates).replace("{opponent}", entry.opponentName);
     this.recordMoraleEvent(`Interview (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, delta, { quote });
@@ -3925,6 +4188,14 @@ function buildNextCupRound(prevRound, winners) {
 function recordMatchStatsForTeam(team, round, competition) {
   team.players.forEach(p => {
     if (p.secondsPlayed > 0) {
+      // Bonus temporaire de MVP consommé (voir Player.pendingMatchBoost/eff()
+      // /MVP_ATTR_BONUS/awardMatchMvp) : ce joueur vient justement de
+      // disputer un match (p.stats/p.secondsPlayed au-dessus en témoignent),
+      // donc un bonus en attente a déjà fait effet PENDANT MatchEngine.
+      // simulate() (eff() le lit en direct) — on l'efface maintenant pour
+      // qu'il ne s'applique pas une deuxième fois au match suivant. Un seul
+      // match "boosté" par élection au MVP, jamais plus.
+      if (p.pendingMatchBoost) p.pendingMatchBoost = 0;
       if (!Array.isArray(p.matchLog)) p.matchLog = [];
       p.matchLog.push({
         // `week` = team.week AU MOMENT de ce match (avant tout trainWeek()
@@ -3947,6 +4218,60 @@ function recordMatchStatsForTeam(team, round, competition) {
       });
     }
   });
+}
+
+// MVP automatique du match (retour utilisateur, 2026-09, voir le grand
+// commentaire de MVP_ATTR_BONUS/MVP_QUOTES plus haut) : meilleure évaluation
+// PIR (statEvaluation) toutes équipes confondues, parmi les joueurs ayant
+// réellement joué CE match (secondsPlayed > 0, exactement le même filtre que
+// recordMatchStatsForTeam ci-dessus, qui DOIT avoir déjà été appelée pour
+// `home` ET `away` avant cet appel — sinon `matchLog` n'a pas encore la
+// nouvelle entrée à marquer). Fige la citation sur l'entrée matchLog du
+// joueur élu (isMvp/mvpQuote, lue par boxscoreRowsFromMatchLog côté client
+// pour le box score d'un match déjà joué) et pose Team.lastMatchMvp pour LES
+// DEUX équipes (le MVP peut appartenir à l'une ou l'autre, voir son
+// commentaire au constructeur), affiché sur le tableau de bord. Accorde
+// aussi le bonus temporaire (voir Player.pendingMatchBoost/MVP_ATTR_BONUS).
+// Ne fait rien (renvoie `null`) si aucun joueur n'a joué des deux côtés (cas
+// théorique d'un double forfait, qui n'appelle jamais cette fonction en
+// pratique — voir finalizeRound/finalizeCupRound, `if (!forfeit)`).
+function awardMatchMvp(home, away, round, competition, now = Date.now()) {
+  const rows = [];
+  [home, away].forEach(team => {
+    team.players.forEach(p => {
+      if (p.secondsPlayed > 0) rows.push({ team, player: p, evalScore: statEvaluation(p.stats) });
+    });
+  });
+  if (!rows.length) return null;
+  let best = rows[0];
+  rows.forEach(r => { if (r.evalScore > best.evalScore) best = r; });
+  const { team: mvpTeam, player: p, evalScore } = best;
+  const quote = pick(MVP_QUOTES);
+  const lastEntry = Array.isArray(p.matchLog) ? p.matchLog[p.matchLog.length - 1] : null;
+  if (lastEntry && lastEntry.round === round && lastEntry.competition === competition) {
+    lastEntry.isMvp = true;
+    lastEntry.mvpQuote = quote;
+  }
+  p.pendingMatchBoost = MVP_ATTR_BONUS;
+  const mvpInfo = {
+    playerName: p.name, teamName: mvpTeam.name, quote,
+    evalScore: Math.round(evalScore * 10) / 10, round, competition, at: now,
+  };
+  home.lastMatchMvp = mvpInfo;
+  away.lastMatchMvp = mvpInfo;
+  return mvpInfo;
+}
+
+// Combine recordMatchStatsForTeam (les DEUX équipes) et awardMatchMvp en un
+// seul point d'appel (retour utilisateur, voir le commentaire d'awardMatchMvp
+// ci-dessus pour pourquoi l'ordre importe) : remplace les deux appels
+// séparés à recordMatchStatsForTeam qu'utilisaient jusqu'ici finalizeRound/
+// finalizeCupRound (server/liveMatch.js), pour qu'aucun futur appelant ne
+// puisse oublier d'accorder le MVP après avoir enregistré les stats.
+function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now()) {
+  recordMatchStatsForTeam(home, round, competition);
+  recordMatchStatsForTeam(away, round, competition);
+  return awardMatchMvp(home, away, round, competition, now);
 }
 
 function simulateOrForfeit(teamHome, teamAway) {
@@ -4339,11 +4664,61 @@ class League {
       return { idxA, idxB, games, winner: winsA === 2 ? idxA : idxB };
     };
     const semi1 = playSeries(seeds[0], seeds[3]);
+    // Instantané des joueurs ayant disputé CETTE demi-finale, capturé
+    // IMMÉDIATEMENT après semi1/semi2 — voir le commentaire
+    // d'explicitPlayerIds sur Team.applyMoraleForResult : la finale
+    // ci-dessous va resimuler (donc réécrire secondsPlayed) les deux
+    // équipes qui s'y qualifient, un repli automatique lu plus tard serait
+    // donc faux pour elles.
+    const semiPlayerIds = {};
+    [semi1.idxA, semi1.idxB].forEach(idx => {
+      semiPlayerIds[idx] = this.teams[idx].players.filter(p => p.secondsPlayed > 0).map(p => p.id);
+    });
     const semi2 = playSeries(seeds[1], seeds[2]);
+    [semi2.idxA, semi2.idxB].forEach(idx => {
+      semiPlayerIds[idx] = this.teams[idx].players.filter(p => p.secondsPlayed > 0).map(p => p.id);
+    });
     const final = playSeries(semi1.winner, semi2.winner);
-    this.playoffs = { seeds, semi1, semi2, final, champion: final.winner };
+    this.playoffs = { seeds, semi1, semi2, final, champion: final.winner, semiPlayerIds };
     this.recordTrophy(final.winner, "championship", now);
     return this.playoffs;
+  }
+
+  // Interview de jalon "demi-finale de PO" (retour utilisateur, 2026-09,
+  // voir le grand commentaire de MILESTONE_INTERVIEW_TYPES plus haut) : à
+  // appeler juste après runPlayoffs() (voir server/autoSim.js et le repli
+  // client d'enterNextMatchOrShowSeasonEnd), pour CHAQUE équipe humaine
+  // ayant disputé une demi-finale (semi1 ET semi2), qu'elle l'ait gagnée ou
+  // perdue. Compromis assumé (voir le commentaire de runPlayoffs
+  // ci-dessus) : semi1/semi2/final sont résolus SYNCHRONEMENT en un seul
+  // appel (pas encore d'écran dédié aux play-offs), donc cette interview est
+  // mise en attente au même instant que la finale — mais son CONTENU ne
+  // porte que sur le résultat de la demi-finale de l'équipe concernée
+  // (jamais sur la finale), exactement le moment que ce retour utilisateur
+  // demande. `round` volontairement `null` (aucune journée de calendrier ne
+  // correspond à une demi-finale) : cette interview n'est donc jamais
+  // retrouvée par round (contrairement aux deux autres jalons), uniquement
+  // par `milestone === "demi-finale-po"` (voir showCatchupSummaryIfAny/
+  // showSeasonEnd côté navigateur).
+  queuePlayoffSemiInterviews(now = Date.now()) {
+    if (!this.playoffs) return;
+    const { semi1, semi2, semiPlayerIds } = this.playoffs;
+    [semi1, semi2].forEach(series => {
+      [series.idxA, series.idxB].forEach(idx => {
+        const team = this.teams[idx];
+        if (!team || !team.isHuman) return;
+        const opponentIdx = idx === series.idxA ? series.idxB : series.idxA;
+        const opponent = this.teams[opponentIdx];
+        const won = series.winner === idx;
+        const lastGame = series.games[series.games.length - 1];
+        const isHomeLastGame = lastGame.home === idx;
+        const scoreDiff = isHomeLastGame
+          ? lastGame.scoreHome - lastGame.scoreAway
+          : lastGame.scoreAway - lastGame.scoreHome;
+        const explicitPlayerIds = (semiPlayerIds && semiPlayerIds[idx]) || [];
+        team.applyMoraleForResult(won, scoreDiff, opponent ? opponent.name : "l'adversaire", null, now, "demi-finale-po", explicitPlayerIds);
+      });
+    });
   }
 
   // Barrage de relégation : le 7e et le 8e de la saison régulière
@@ -5602,8 +5977,15 @@ function serializePlayerRecord(p) {
     // Journal des matchs de la saison (voir Player.matchLog/
     // recordMatchStatsForTeam) : DOIT survivre au rechargement, sinon les
     // stats de saison/MVP (onglet Ligue) et les pages joueur repartiraient
-    // de zéro à chaque redémarrage du serveur.
+    // de zéro à chaque redémarrage du serveur. Chaque entrée peut désormais
+    // porter isMvp/mvpQuote (voir awardMatchMvp) : déjà inclus par ce spread
+    // superficiel, aucun champ à lister explicitement.
     matchLog: Array.isArray(p.matchLog) ? p.matchLog.map(m => ({ ...m })) : [],
+    // Bonus temporaire de MVP (voir Player.pendingMatchBoost/MVP_ATTR_BONUS/
+    // awardMatchMvp) : DOIT survivre au rechargement, sinon un redémarrage
+    // serveur entre l'élection au MVP et le prochain match de ce joueur lui
+    // ferait perdre le bonus promis.
+    pendingMatchBoost: p.pendingMatchBoost || 0,
   };
 }
 
@@ -5690,6 +6072,10 @@ function serializeTeam(team) {
     // copie superficielle de chaque entrée (objets plats, jamais de
     // référence partagée avec team.pendingInterviews lui-même).
     pendingInterviews: Array.isArray(team.pendingInterviews) ? team.pendingInterviews.map(i => ({ ...i })) : [],
+    // MVP automatique du dernier match (voir Team.lastMatchMvp/awardMatchMvp
+    // ci-dessus) : DOIT survivre au rechargement, sinon la citation affichée
+    // sur le tableau de bord disparaîtrait à chaque redémarrage du serveur.
+    lastMatchMvp: team.lastMatchMvp ? { ...team.lastMatchMvp } : null,
     // Identité du club (voir Team.isPaying/customLogoDataUrl/jerseyShape/
     // jerseyColor, JERSEY_COLORS/JERSEY_SHAPES plus haut).
     isPaying: !!team.isPaying,
@@ -5813,6 +6199,10 @@ function playerFromSave(pdata) {
   // absent = sauvegarde d'avant cette fonctionnalité, on garde `[]` (déjà
   // posé par le constructeur Player) plutôt que de crasher.
   if (Array.isArray(pdata.matchLog)) p.matchLog = pdata.matchLog.map(m => ({ ...m }));
+  // Bonus temporaire de MVP (voir serializePlayerRecord ci-dessus) : absent
+  // = sauvegarde d'avant cette fonctionnalité, on garde 0 (déjà posé par le
+  // constructeur Player).
+  if (typeof pdata.pendingMatchBoost === "number") p.pendingMatchBoost = pdata.pendingMatchBoost;
   return p;
 }
 
@@ -5973,6 +6363,10 @@ function teamFromSave(data) {
   // Interviews en attente (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
+  // MVP automatique du dernier match (voir serializeTeam ci-dessus) : absent
+  // = sauvegarde d'avant cette fonctionnalité, on garde `null` (déjà posé
+  // par le constructeur).
+  team.lastMatchMvp = data.lastMatchMvp && typeof data.lastMatchMvp === "object" ? { ...data.lastMatchMvp } : null;
   // Identité du club (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde les valeurs par défaut déjà
   // posées par le constructeur (logo type, forme/couleur de maillot par
@@ -6818,10 +7212,15 @@ return {
   TRANSFER_CPU_CHECK_INTERVAL_MS, TRANSFER_CPU_LIST_CHANCE, TRANSFER_CPU_BID_CHANCE,
   COACH_AUCTION_DURATION_MS, COACH_MARKET_MIN_OPEN_LISTINGS, COACH_MARKET_GENERATE_CHECK_INTERVAL_MS, COACH_CPU_BID_CHANCE,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor,
-  FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam,
+  FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
   ARENA_LEVELS, arenaInfo, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel, INTERVIEW_TONES, INTERVIEW_QUOTES,
   INTERVIEW_RESPONSE_DEADLINE_MS, JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, JERSEY_TWO_TONE_SETS, MAX_TEAM_LOGO_DATA_URL_LENGTH,
+  // Interviews de jalon + MVP automatique (retour utilisateur, 2026-09 : voir
+  // le grand commentaire au-dessus de MILESTONE_INTERVIEW_TYPES/MVP_ATTR_BONUS).
+  MILESTONE_INTERVIEW_TYPES, MILESTONE_INTERVIEW_TONES, MILESTONE_INTERVIEW_QUOTES,
+  MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS, midSeasonRound, milestoneTypeForRound,
+  statEvaluation, MVP_ATTR_BONUS, MVP_QUOTES,
   TOUR_REWARD_BY_TOPIC,
   MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars,
   CLUB_FACILITIES, facilityInfo,
