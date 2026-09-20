@@ -1286,18 +1286,25 @@ const INTERVIEW_RESPONSE_DEADLINE_MS = 2 * 60 * 60 * 1000;
 // sont prêtes pour un futur système de paiement réel sans rien changer ici.
 // ---------------------------------------------------------------------
 
-// Palette fermée de 5 couleurs de maillot pour une équipe gratuite (clé
+// Palette fermée de 8 couleurs de maillot pour une équipe gratuite (clé
 // stable persistée dans Team.jerseyColor, valeur = code couleur utilisé par
 // le rendu SVG côté client). Une équipe payante reste soumise à la MÊME
 // palette pour l'instant (seul le logo personnalisé distingue les deux
 // niveaux, voir Team.setCustomLogo) : rien dans la demande n'élargit le
-// choix de maillot pour les clubs payants.
+// choix de maillot pour les clubs payants. noir/blanc/jaune ajoutés (retour
+// utilisateur, 2026-09 : "mets plus de choix [...] il manque jaune [...]
+// noir, blanc"), mêmes codes couleur que dans JERSEY_TWO_TONE_SETS plus bas
+// pour rester visuellement cohérent entre un maillot "uni" et un motif à 2
+// couleurs.
 const JERSEY_COLORS = {
   rouge:  "#d6473f",
   bleu:   "#3b6fd6",
   vert:   "#3fae62",
   violet: "#8659d6",
   orange: "#e08a2e",
+  noir:   "#20242c",
+  blanc:  "#f2f2f0",
+  jaune:  "#e8c93f",
 };
 
 // Deux formes de maillot seulement (retour utilisateur explicite) : "A"
@@ -1310,38 +1317,59 @@ const JERSEY_SHAPES = ["A", "B"];
 
 // Motifs de maillot réservés aux clubs payants (retour utilisateur,
 // 2026-09, après la refonte de la page "Aperçu" : "Pour le mode payant
-// ajoute des maillots avec des dessins particuliers (rayure, degrade...)")
-// : "uni" (identique à un club gratuit) reste toujours disponible ;
-// "rayures"/"degrade" ne peuvent être choisis que par un club `isPaying`
-// (voir Team.setJerseyPattern plus bas), même principe que
-// customLogoDataUrl (jamais effacé en repassant gratuit, juste ignoré au
-// rendu, voir effectiveJerseyPattern côté moteurbasket3.html). Le dessin
-// réel de chaque motif est purement visuel, dessiné côté client
-// (jerseySvgHtml) : ces clés ne servent qu'à valider/persister le choix.
-const JERSEY_PATTERNS = ["uni", "rayures", "degrade"];
+// ajoute des maillots avec des dessins particuliers (rayure, degrade...)",
+// puis, sur la refonte du panneau d'identité : "quelques correctifs à faire
+// pour le mode payant [...] choix 2: motif du maillot (uni, rayure,
+// dégradé, 2 bandes de couleur sur les côtés...)") : "uni" (identique à un
+// club gratuit) reste toujours disponible ; "rayures"/"degrade"/"bandes" ne
+// peuvent être choisis que par un club `isPaying` (voir
+// Team.setJerseyPattern plus bas), même principe que customLogoDataUrl
+// (jamais effacé en repassant gratuit, juste ignoré au rendu, voir
+// effectiveJerseyPattern côté moteurbasket3.html). Le dessin réel de chaque
+// motif est purement visuel, dessiné côté client (jerseySvgHtml) : ces clés
+// ne servent qu'à valider/persister le choix.
+const JERSEY_PATTERNS = ["uni", "rayures", "degrade", "bandes"];
 
-// Combinaisons de 2 couleurs pour les motifs "rayures"/"degrade", réservées
-// aux clubs payants (retour utilisateur, 2026-09 : "ajoute un peu plus de
-// couleur pour le mode payant, et mets le choix de 2 couleurs [blanc rouge,
-// blanc noir, blanc bleu, bleu et rouge, violet et jaune...] mets plus de
-// choix") : une palette CURATÉE de paires plutôt que 2 sélecteurs de couleur
-// libres, pour garantir un rendu toujours cohérent (voir jerseySvgHtml côté
-// moteurbasket3.html, seul endroit qui dessine réellement ces couleurs).
-// Indépendant de JERSEY_COLORS/jerseyColor, qui reste utilisé pour le motif
-// "uni" (voir Team.setJerseyTwoTone plus bas, même garde-fou `isPaying` que
-// setJerseyPattern) : jamais effacé en repassant gratuit, juste ignoré au
-// rendu (voir effectiveJerseyTwoTone côté client).
+// Combinaisons de 2 couleurs pour les motifs "rayures"/"degrade"/"bandes",
+// réservées aux clubs payants (retour utilisateur, 2026-09 : "ajoute un peu
+// plus de couleur pour le mode payant, et mets le choix de 2 couleurs
+// [blanc rouge, blanc noir, blanc bleu, bleu et rouge, violet et jaune...]
+// mets plus de choix", puis : "mets plus de choix. il faut pouvoir choisir
+// noir et blanc, ou blanc et noir, idem pour les autres couleurs, il manque
+// jaune, jaune et bleu, bleu et jaune, noir, blanc") : une palette CURATÉE
+// de paires plutôt que 2 sélecteurs de couleur libres, pour garantir un
+// rendu toujours cohérent (voir jerseySvgHtml côté moteurbasket3.html, seul
+// endroit qui dessine réellement ces couleurs). Chaque combinaison existe
+// maintenant dans les 2 sens (le motif "rayures"/"bandes" n'est pas
+// symétrique : la première couleur domine visuellement, voir jerseySvgHtml)
+// : "blanc et rouge" et "rouge et blanc" sont 2 choix distincts, pas un
+// seul. Indépendant de JERSEY_COLORS/jerseyColor, qui reste utilisé pour le
+// motif "uni" (voir Team.setJerseyTwoTone plus bas, même garde-fou
+// `isPaying` que setJerseyPattern) : jamais effacé en repassant gratuit,
+// juste ignoré au rendu (voir effectiveJerseyTwoTone côté client).
 const JERSEY_TWO_TONE_SETS = {
   blanc_rouge:   ["#f2f2f0", "#d6473f"],
+  rouge_blanc:   ["#d6473f", "#f2f2f0"],
   blanc_noir:    ["#f2f2f0", "#20242c"],
+  noir_blanc:    ["#20242c", "#f2f2f0"],
   blanc_bleu:    ["#f2f2f0", "#3b6fd6"],
+  bleu_blanc:    ["#3b6fd6", "#f2f2f0"],
   bleu_rouge:    ["#3b6fd6", "#d6473f"],
+  rouge_bleu:    ["#d6473f", "#3b6fd6"],
   violet_jaune:  ["#8659d6", "#e8c93f"],
+  jaune_violet:  ["#e8c93f", "#8659d6"],
   vert_blanc:    ["#3fae62", "#f2f2f0"],
+  blanc_vert:    ["#f2f2f0", "#3fae62"],
   orange_noir:   ["#e08a2e", "#20242c"],
+  noir_orange:   ["#20242c", "#e08a2e"],
   rouge_noir:    ["#d6473f", "#20242c"],
+  noir_rouge:    ["#20242c", "#d6473f"],
   jaune_noir:    ["#e8c93f", "#20242c"],
+  noir_jaune:    ["#20242c", "#e8c93f"],
   bordeaux_or:   ["#7a2b3a", "#e8c93f"],
+  or_bordeaux:   ["#e8c93f", "#7a2b3a"],
+  jaune_bleu:    ["#e8c93f", "#3b6fd6"],
+  bleu_jaune:    ["#3b6fd6", "#e8c93f"],
 };
 
 // Primes du tutoriel d'accueil (retour utilisateur, 2026-09 : "Mets les

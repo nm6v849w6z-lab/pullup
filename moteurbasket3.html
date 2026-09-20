@@ -3296,53 +3296,86 @@ const INTERVIEW_RESPONSE_DEADLINE_MS = 2 * 60 * 60 * 1000;
 // détaillé). Copie exacte de la palette/des formes côté serveur : les
 // mêmes clés doivent rester valides des deux côtés, ou une sauvegarde
 // deviendrait incohérente en changeant de côté (solo vs multi-manager).
+// noir/blanc/jaune ajoutés (retour utilisateur, 2026-09 : "mets plus de
+// choix [...] il manque jaune [...] noir, blanc"), voir engine.js pour le
+// commentaire détaillé.
 const JERSEY_COLORS = {
   rouge:  "#d6473f",
   bleu:   "#3b6fd6",
   vert:   "#3fae62",
   violet: "#8659d6",
   orange: "#e08a2e",
+  noir:   "#20242c",
+  blanc:  "#f2f2f0",
+  jaune:  "#e8c93f",
 };
 const JERSEY_SHAPES = ["A", "B"];
 // Motifs de maillot réservés aux clubs payants (voir engine.js pour le
 // commentaire détaillé, retour utilisateur : "Pour le mode payant ajoute
-// des maillots avec des dessins particuliers (rayure, degrade...)").
-const JERSEY_PATTERNS = ["uni", "rayures", "degrade"];
+// des maillots avec des dessins particuliers (rayure, degrade...)", puis
+// "2 bandes de couleur sur les côtés").
+const JERSEY_PATTERNS = ["uni", "rayures", "degrade", "bandes"];
 // Libellés affichés du sélecteur de motif (tableau de bord) : purement côté
 // client, jamais persisté (la clé JERSEY_PATTERNS suffit côté sauvegarde).
-const JERSEY_PATTERN_LABELS = { uni: "Uni", rayures: "Rayures", degrade: "Dégradé" };
-// Combinaisons de 2 couleurs pour les motifs "rayures"/"degrade", réservées
-// aux clubs payants (voir engine.js pour le commentaire détaillé, retour
-// utilisateur : "ajoute un peu plus de couleur pour le mode payant, et mets
-// le choix de 2 couleurs [...] mets plus de choix"). Copie exacte des clés
-// ET des couleurs côté serveur (contrairement à JERSEY_PATTERN_LABELS
-// ci-dessus, ces hex sont bien utilisés au rendu, voir jerseySvgHtml plus
-// bas), même précaution que JERSEY_COLORS ci-dessus.
+const JERSEY_PATTERN_LABELS = { uni: "Uni", rayures: "Rayures", degrade: "Dégradé", bandes: "Bandes sur les côtés" };
+// Combinaisons de 2 couleurs pour les motifs "rayures"/"degrade"/"bandes",
+// réservées aux clubs payants (voir engine.js pour le commentaire détaillé,
+// retour utilisateur : "ajoute un peu plus de couleur pour le mode payant,
+// et mets le choix de 2 couleurs [...] mets plus de choix", puis "il faut
+// pouvoir choisir noir et blanc, ou blanc et noir, idem pour les autres
+// couleurs, il manque jaune, jaune et bleu, bleu et jaune, noir, blanc").
+// Copie exacte des clés ET des couleurs côté serveur (contrairement à
+// JERSEY_PATTERN_LABELS ci-dessus, ces hex sont bien utilisés au rendu, voir
+// jerseySvgHtml plus bas), même précaution que JERSEY_COLORS ci-dessus.
 const JERSEY_TWO_TONE_SETS = {
   blanc_rouge:   ["#f2f2f0", "#d6473f"],
+  rouge_blanc:   ["#d6473f", "#f2f2f0"],
   blanc_noir:    ["#f2f2f0", "#20242c"],
+  noir_blanc:    ["#20242c", "#f2f2f0"],
   blanc_bleu:    ["#f2f2f0", "#3b6fd6"],
+  bleu_blanc:    ["#3b6fd6", "#f2f2f0"],
   bleu_rouge:    ["#3b6fd6", "#d6473f"],
+  rouge_bleu:    ["#d6473f", "#3b6fd6"],
   violet_jaune:  ["#8659d6", "#e8c93f"],
+  jaune_violet:  ["#e8c93f", "#8659d6"],
   vert_blanc:    ["#3fae62", "#f2f2f0"],
+  blanc_vert:    ["#f2f2f0", "#3fae62"],
   orange_noir:   ["#e08a2e", "#20242c"],
+  noir_orange:   ["#20242c", "#e08a2e"],
   rouge_noir:    ["#d6473f", "#20242c"],
+  noir_rouge:    ["#20242c", "#d6473f"],
   jaune_noir:    ["#e8c93f", "#20242c"],
+  noir_jaune:    ["#20242c", "#e8c93f"],
   bordeaux_or:   ["#7a2b3a", "#e8c93f"],
+  or_bordeaux:   ["#e8c93f", "#7a2b3a"],
+  jaune_bleu:    ["#e8c93f", "#3b6fd6"],
+  bleu_jaune:    ["#3b6fd6", "#e8c93f"],
 };
 // Libellés affichés du sélecteur de combinaison (tableau de bord) : purement
 // côté client, même principe que JERSEY_PATTERN_LABELS ci-dessus.
 const JERSEY_TWO_TONE_LABELS = {
   blanc_rouge: "Blanc et rouge",
+  rouge_blanc: "Rouge et blanc",
   blanc_noir: "Blanc et noir",
+  noir_blanc: "Noir et blanc",
   blanc_bleu: "Blanc et bleu",
+  bleu_blanc: "Bleu et blanc",
   bleu_rouge: "Bleu et rouge",
+  rouge_bleu: "Rouge et bleu",
   violet_jaune: "Violet et jaune",
+  jaune_violet: "Jaune et violet",
   vert_blanc: "Vert et blanc",
+  blanc_vert: "Blanc et vert",
   orange_noir: "Orange et noir",
+  noir_orange: "Noir et orange",
   rouge_noir: "Rouge et noir",
+  noir_rouge: "Noir et rouge",
   jaune_noir: "Jaune et noir",
+  noir_jaune: "Noir et jaune",
   bordeaux_or: "Bordeaux et or",
+  or_bordeaux: "Or et bordeaux",
+  jaune_bleu: "Jaune et bleu",
+  bleu_jaune: "Bleu et jaune",
 };
 const MAX_TEAM_LOGO_DATA_URL_LENGTH = 400000;
 
@@ -11248,7 +11281,8 @@ let jerseySvgUid = 0;
 // pouvoir choisir uniquement entre 2 formes de maillot et 5 couleurs" ; puis,
 // après un premier jet à manches : "Il n'y a pas de manches sur les maillots
 // au basket. Ca fait très cheap comme page" ; puis, sur le mode payant :
-// "ajoute des maillots avec des dessins particuliers (rayure, degrade...)")
+// "ajoute des maillots avec des dessins particuliers (rayure, degrade...)",
+// puis "2 bandes de couleur sur les côtés")
 // : SILHOUETTE DÉBARDEUR pour les deux formes (aucune manche, échancrure
 // large aux emmanchures), purement du SVG généré (aucun poids de sauvegarde
 // quelle que soit la forme/couleur/variante/motif choisie). "A" = col rond.
@@ -11268,9 +11302,9 @@ let jerseySvgUid = 0;
 // 2026-09 : "ajoute un peu plus de couleur pour le mode payant, et mets le
 // choix de 2 couleurs [...] mets plus de choix") : une paire [couleur1,
 // couleur2] optionnelle (voir JERSEY_TWO_TONE_SETS/effectiveJerseyTwoTone),
-// prioritaire sur `colorKey` pour les motifs "rayures"/"degrade" UNIQUEMENT
-// (le motif "uni" reste toujours dessiné avec `colorKey` seul, les 2
-// systèmes sont indépendants) : sans elle, ces 2 motifs retombent sur
+// prioritaire sur `colorKey` pour les motifs "rayures"/"degrade"/"bandes"
+// UNIQUEMENT (le motif "uni" reste toujours dessiné avec `colorKey` seul,
+// les 2 systèmes sont indépendants) : sans elle, ces motifs retombent sur
 // l'ancien rendu (une seule couleur + nuance calculée via shadeHexColor),
 // ce qui garde cette fonction utilisable même pour un aperçu sans
 // combinaison choisie.
@@ -11279,7 +11313,7 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone) {
   const s = size || 72;
   const isAway = variant === "away";
   const patternKey = JERSEY_PATTERNS.includes(pattern) ? pattern : JERSEY_PATTERNS[0];
-  const usesTwoTone = (patternKey === "rayures" || patternKey === "degrade") && Array.isArray(twoTone) && twoTone.length === 2;
+  const usesTwoTone = (patternKey === "rayures" || patternKey === "degrade" || patternKey === "bandes") && Array.isArray(twoTone) && twoTone.length === 2;
   const primary = usesTwoTone ? twoTone[0] : color;
   const secondary = usesTwoTone ? twoTone[1] : null;
   const uid = `jersey${jerseySvgUid++}`;
@@ -11308,6 +11342,17 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone) {
     let stripes = "";
     for (let x = 16; x < 90; x += 14) stripes += `<rect x="${x}" y="0" width="7" height="100" fill="${stripeColor}"/>`;
     body += `<g clip-path="url(#${uid}-clip)">${stripes}</g>`;
+  }
+  // Motif "bandes" (retour utilisateur, 2026-09 : "2 bandes de couleur sur
+  // les côtés") : deux larges bandes verticales, une de chaque côté du
+  // buste, plutôt que les fines rayures répétées ci-dessus sur toute la
+  // largeur ; même mécanique de clip-path que "rayures" pour rester dans la
+  // silhouette du maillot quelle que soit la forme choisie.
+  if (patternKey === "bandes") {
+    const bandColor = isAway ? primary : (usesTwoTone ? secondary : "rgba(255,255,255,.55)");
+    defs += `<clipPath id="${uid}-clip"><path d="${outline}"/></clipPath>`;
+    const bands = `<rect x="18" y="0" width="13" height="100" fill="${bandColor}"/><rect x="69" y="0" width="13" height="100" fill="${bandColor}"/>`;
+    body += `<g clip-path="url(#${uid}-clip)">${bands}</g>`;
   }
   body += `<path d="M 22 24 L 14 30 M 78 24 L 86 30 M 40 8 ${neckPath}" fill="none" stroke="${trimColor}" stroke-width="2.5" stroke-linecap="round"/>`;
   if (shape === "B") {
@@ -14029,9 +14074,9 @@ function renderClubIdentityPanel() {
     ).join("") + `</div>`;
     // Combinaison de 2 couleurs (retour utilisateur : "ajoute un peu plus de
     // couleur pour le mode payant, et mets le choix de 2 couleurs [...] mets
-    // plus de choix") : uniquement utile pour "rayures"/"degrade" (voir
-    // jerseySvgHtml, "uni" ignore toujours `twoTone`), donc affichée
-    // seulement quand un de ces 2 motifs est actif, juste sous le
+    // plus de choix") : uniquement utile pour "rayures"/"degrade"/"bandes"
+    // (voir jerseySvgHtml, "uni" ignore toujours `twoTone`), donc affichée
+    // seulement quand un de ces motifs est actif, juste sous le
     // sélecteur de motif.
     if (dashboardJerseyPattern !== JERSEY_PATTERNS[0]) {
       html += `<p class="field-label" style="margin:12px 0 6px">Couleurs du motif</p>`;
@@ -14043,7 +14088,7 @@ function renderClubIdentityPanel() {
       }).join("") + `</div>`;
     }
   } else {
-    html += `<p class="sub">Motif uni (club gratuit). Passez en club payant pour un motif personnalisé (rayures, dégradé...) et plus de couleurs.</p>`;
+    html += `<p class="sub">Motif uni (club gratuit). Passez en club payant pour un motif personnalisé (rayures, dégradé, bandes sur les côtés...) et plus de couleurs.</p>`;
   }
   html += `</div>`;
   html += `</div>`;

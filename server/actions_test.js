@@ -837,9 +837,11 @@ function freshTeamAndLeague() {
 {
   const { team, league } = freshTeamAndLeague();
 
-  if (Object.keys(E.JERSEY_COLORS).length !== 5) throw new Error("❌ JERSEY_COLORS devrait exposer exactement 5 couleurs.");
+  // 8 couleurs (retour utilisateur, 2026-09 : "mets plus de choix [...] il
+  // manque jaune [...] noir, blanc") : les 5 d'origine + noir/blanc/jaune.
+  if (Object.keys(E.JERSEY_COLORS).length !== 8) throw new Error("❌ JERSEY_COLORS devrait exposer exactement 8 couleurs.");
   if (E.JERSEY_SHAPES.length !== 2) throw new Error("❌ JERSEY_SHAPES devrait exposer exactement 2 formes.");
-  console.log("✅ JERSEY_COLORS/JERSEY_SHAPES exposent bien 5 couleurs et 2 formes.");
+  console.log("✅ JERSEY_COLORS/JERSEY_SHAPES exposent bien 8 couleurs et 2 formes.");
 
   const someColor = Object.keys(E.JERSEY_COLORS)[2];
   const jerseyRes = actions.setTeamJersey(team, 0, league, { shape: E.JERSEY_SHAPES[1], color: someColor }, T0);
@@ -881,8 +883,10 @@ function freshTeamAndLeague() {
   // (rayure, degrade...)") : club encore gratuit à ce stade (bascule
   // ci-dessus repassée à false) : un motif personnalisé doit être refusé,
   // "uni" doit toujours être accepté.
-  if (E.JERSEY_PATTERNS.length !== 3 || E.JERSEY_PATTERNS[0] !== "uni") {
-    throw new Error(`❌ JERSEY_PATTERNS devrait exposer exactement 3 motifs, "uni" en premier, obtenu ${JSON.stringify(E.JERSEY_PATTERNS)}.`);
+  // 4 motifs (retour utilisateur, 2026-09 : "2 bandes de couleur sur les
+  // côtés" ajouté à uni/rayures/degrade).
+  if (E.JERSEY_PATTERNS.length !== 4 || E.JERSEY_PATTERNS[0] !== "uni") {
+    throw new Error(`❌ JERSEY_PATTERNS devrait exposer exactement 4 motifs, "uni" en premier, obtenu ${JSON.stringify(E.JERSEY_PATTERNS)}.`);
   }
   const patternRejected = actions.setTeamJerseyPattern(team, 0, league, { pattern: "rayures" }, T0);
   if (patternRejected.ok) throw new Error("❌ setTeamJerseyPattern devrait refuser un motif personnalisé pour un club gratuit.");
