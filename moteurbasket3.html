@@ -10194,6 +10194,20 @@ async function validateOrdres() {
       teamA.ordresValidatedRound = round;
       saveMyTeam();
       updateTopbar();
+    } else {
+      // Bug corrigé (retour utilisateur, 2026-09, voir le commentaire
+      // jumeau plus bas dans la branche ligue partagée) : cliquer "Valider
+      // les ordres" pour une journée future SANS avoir modifié le moindre
+      // champ avant (le formulaire part déjà rempli par snapshotTactics(),
+      // voir getPlanForRound) ne déclenche jamais commit()/onDirty, le seul
+      // endroit qui appelait stagePlanForRound jusqu'ici : "Ordres
+      // enregistrés." s'affichait donc à tort, sans que rien ne soit
+      // réellement enregistré (même le round IMMÉDIAT a son propre
+      // traitement ci-dessus, cette journée future n'en avait aucun). On
+      // fige et persiste explicitement ce que le formulaire affiche déjà,
+      // exactement ce que la confirmation prétend avoir fait.
+      teamA.stagePlanForRound(round, teamA.getPlanForRound(round, competition), competition);
+      saveMyTeam();
     }
     setFeedback("Ordres enregistrés.", "ok");
     // Retour utilisateur (2026-09 : "obligé encore de refresh complet la
@@ -10248,38 +10262,49 @@ async function validateOrdres() {
       updateTopbar();
     } else {
       const plan = teamA.getPlanForRound(round, competition);
+      const patch = {
+        offensivePriorities: plan.offensivePriorities,
+        defense: plan.defense,
+        rhythm: plan.rhythm,
+        tacticalTier: plan.tacticalTier,
+        screenDefense: plan.screenDefense,
+        helpDefense: plan.helpDefense,
+        watchAssignments: plan.watchAssignments,
+        postDefense: plan.postDefense,
+        closeoutStyle: plan.closeoutStyle,
+        offRebStyle: plan.offRebStyle,
+        endgameManagement: plan.endgameManagement,
+        lineup: plan.lineup,
+      };
       const planRes = await fetchApi("/api/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          round,
-          competition,
-          patch: {
-            offensivePriorities: plan.offensivePriorities,
-            defense: plan.defense,
-            rhythm: plan.rhythm,
-            tacticalTier: plan.tacticalTier,
-            screenDefense: plan.screenDefense,
-            helpDefense: plan.helpDefense,
-            watchAssignments: plan.watchAssignments,
-            postDefense: plan.postDefense,
-            closeoutStyle: plan.closeoutStyle,
-            offRebStyle: plan.offRebStyle,
-            endgameManagement: plan.endgameManagement,
-            lineup: plan.lineup,
-          },
-        }),
+        body: JSON.stringify({ round, competition, patch }),
       });
       if (!planRes.ok) {
         const body = await planRes.json().catch(() => null);
         throw new Error((body && body.error) || `Erreur serveur (${planRes.status}).`);
       }
+      // Bug corrigé (retour utilisateur, 2026-09 : "j'ai fait la compo [...]
+      // ça ne met pas à jour le bouton [...] si je refresh [...] c'est
+      // bon") : cliquer "Valider les ordres" SANS avoir modifié le moindre
+      // champ avant (le formulaire part déjà rempli par snapshotTactics(),
+      // voir getPlanForRound) n'avait jamais déclenché commit()/onDirty, le
+      // seul endroit qui appelait stagePlanForRound jusqu'ici. Le plan
+      // partait donc bien vers le serveur et y était bien persisté (d'où le
+      // badge correct après un rechargement complet, qui relit l'état
+      // serveur), mais teamA.plannedTactics restait localement vide, donc
+      // hasPlanForRound(round) et le badge "Modifier vos ordres" du
+      // calendrier restaient faux jusqu'au prochain rechargement. Un succès
+      // serveur confirmé doit toujours se refléter localement, qu'un champ
+      // ait été modifié ou non avant de valider.
+      teamA.stagePlanForRound(round, patch, competition);
     }
     setFeedback("Ordres enregistrés.", "ok");
     // Retour utilisateur (2026-09, voir le commentaire jumeau dans la
     // branche solo ci-dessus) : ne ramène à la page Calendrier QU'après un
     // succès confirmé par le serveur (jamais depuis le bloc catch
-    // ci-dessous, ni pendant "Enregistrement en cours…") — un échec doit
+    // ci-dessous, ni pendant "Enregistrement en cours…") : un échec doit
     // rester visible sur l'écran Ordres, pas être masqué par une navigation.
     TAB_HANDLERS.calendrier();
   } catch (e) {
