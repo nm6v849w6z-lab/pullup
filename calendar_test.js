@@ -60,10 +60,15 @@ console.log("✅ Le calendrier permet de donner ses ordres pour n'importe quel m
 await flush(dom1);
 dom1.window.close();
 
-// --- Longue absence couvrant toute la saison régulière : les 18 journées
-// sont dues d'un coup (voir fastForwardCalendar/catchUpLeague) — une seule
-// requête au serveur (l'ouverture de la page) rattrape tout.
-fastForwardCalendar(savePath, 18);
+// --- Longue absence couvrant toute la saison régulière (et, avec la marge
+// ci-dessous, les play-offs qui suivent) : les 18 journées sont dues d'un
+// coup (voir fastForwardCalendar/catchUpLeague) — une seule requête au
+// serveur (l'ouverture de la page) rattrape tout. 18 journées de saison
+// régulière + marge de 6 journées pour les play-offs (2 demi-finales + 1
+// finale, chacune au meilleur des 3, jouées sur plusieurs jours réels
+// distincts, voir la directive utilisateur "les play offs doivent être
+// comme les matchs de saisons régulières, avec un live").
+fastForwardCalendar(savePath, 24);
 const dom2 = await openGame(html, baseUrl);
 const doc2 = dom2.window.document;
 

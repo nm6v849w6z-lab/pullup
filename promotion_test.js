@@ -52,14 +52,21 @@ console.log(`${zonesVisible ? "✅" : "❌"} Zones de promotion/barrage/relégat
 if (!zonesVisible) throw new Error("❌ Les zones de promotion/barrage/relégation devraient être visibles dans le classement.");
 doc.getElementById("closeStandingsBtn").click();
 
-// --- Joue toute la saison régulière (18 journées) : depuis le passage au
-// calendrier réel (tâche #21), plus de clic "Verrouiller & simuler" journée
-// par journée — une longue absence couvrant toute la saison fait tout
-// rattraper d'un coup côté serveur (voir fastForwardCalendar/catchUpLeague),
-// comme calendar_test.js.
+// --- Joue toute la saison régulière (18 journées) PLUS les play-offs (au
+// plus 6 tours supplémentaires : 2 demi-finales + 1 finale, chacune best-of-
+// 3, voir League.startPlayoffsIfNeeded) : depuis le passage au calendrier
+// réel (tâche #21), plus de clic "Verrouiller & simuler" journée par
+// journée — une longue absence couvrant toute la saison (régulière ET
+// play-offs, retour utilisateur 2026-09 : les play-offs se jouent
+// maintenant match par match, en direct, sur plusieurs jours réels, comme la
+// saison régulière) fait tout rattraper d'un coup côté serveur (voir
+// fastForwardCalendar/catchUpLeague/catchUpPlayoffs), comme calendar_test.js.
+// 24 (18 + 6) : large marge de sécurité, les play-offs se terminant presque
+// toujours bien avant leurs 6 tours réservés (une série peut se plier en 2
+// matchs sur les 3 possibles).
 await flush(dom);
 win.close();
-fastForwardCalendar(savePath, 18);
+fastForwardCalendar(savePath, 24);
 dom = await openGame(html, baseUrl);
 doc = dom.window.document;
 win = dom.window;

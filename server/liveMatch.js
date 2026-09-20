@@ -266,6 +266,10 @@ function computeLiveMatch(Engine, league, round, homeIdx, awayIdx, kickoffAt, co
 // suffit à justifier une sauvegarde immédiate.
 function ensureLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueRound) {
   if (typeof league.calendarStartAt !== "number") return [];
+  // `league.playoffs` : posé dès la fin de la saison régulière (voir
+  // League.startPlayoffsIfNeeded), donc AVANT le moindre match de play-offs
+  // joué : plus rien à diffuser ici côté championnat une fois ce champ posé
+  // (voir ensurePlayoffLiveMatchStarted plus bas pour son propre calendrier).
   if (league.playoffs || league.isRegularSeasonDone()) return [];
   const round = league.round;
   const kickoffAt = scheduledTimeForLeagueRound(league, round);
@@ -399,6 +403,150 @@ function finalizeCupRound(Engine, league) {
   const dayIndex = round.dayIndex;
   league.advanceCup();
   return { type: "cup-match", cupRoundIndex, cupRoundName, dayIndex, matches: round.matches };
+}
+
+// =====================================================================
+// PLAY-OFFS : retour utilisateur (2026-09) : "les play offs doivent être
+// comme les matchs de saisons régulières, avec un live [...] sur plusieurs
+// jours réels (et pas tout simulés d'un coup)". Même principe que le bloc
+// Coupe ci-dessus (un tour à la fois, diffusé en direct, résolu au rythme du
+// calendrier réel) mais appliqué à League.playoffs (voir engine.js, séries
+// best-of-3 plutôt qu'élimination directe) plutôt qu'à League.cup. `round`
+// ici est TOUJOURS league.playoffs.round (jamais league.round, qui reste
+// figé à totalRounds une fois la saison régulière terminée, voir
+// League.startPlayoffsIfNeeded). Reprend liveMatchKey (championnat) telle
+// quelle, jamais un nouveau préfixe : un tour de play-offs a toujours
+// round >= totalRounds, un tour de championnat toujours round < totalRounds,
+// donc aucune collision possible dans league.liveMatches. `competition`
+// posé à "championship" (comme League.runPlayoffsInstantly côté moteur),
+// jamais un nouveau tag "playoff" : un match de play-offs se comporte alors,
+// pour tout le reste de l'affichage (préparation, direct, box-score, MVP,
+// historique de stats), exactement comme un match de championnat ordinaire,
+// seul son `round` (>= totalRounds) le distingue.
+// =====================================================================
+
+// Équivalent de ensureCupLiveMatchStarted, mais pour le tour de PLAY-OFFS
+// actuellement en attente (voir League.playoffMatchesForRound/playoffs.round
+// côté engine.js) : démarre la diffusion de chaque match RÉEL impliquant au
+// moins un côté humain, dès que le créneau réel de CE tour est atteint.
+function ensurePlayoffLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueRound) {
+  if (typeof league.calendarStartAt !== "number") return [];
+  if (!league.playoffs || league.playoffs.champion != null) return [];
+  const round = league.playoffs.round;
+  const matches = league.playoffMatchesForRound(round);
+  if (!matches.length) return [];
+  const kickoffAt = scheduledTimeForLeagueRound(league, round);
+  if (now < kickoffAt) return [];
+
+  if (!league.liveMatches) league.liveMatches = {};
+  const startedKeys = [];
+
+  matches.forEach(m => {
+    const home = league.teams[m.home];
+    const away = league.teams[m.away];
+    if (!home.isHuman && !away.isHuman) return; // CPU-vs-CPU : jamais de diffusion en direct
+    const key = liveMatchKey(round, m.home, m.away);
+    if (league.liveMatches[key]) return; // déjà démarrée (idempotent)
+    // Voir le commentaire de ensureLiveMatchStarted (championnat) pour le
+    // même mécanisme : appliqué juste avant que computeLiveMatch ne lise les
+    // champs "en direct", tout dernier moment où ce plan peut encore compter.
+    // Tag "championship" (jamais un tag "playoff" séparé, voir le grand
+    // commentaire en tête de ce bloc) : un plan de journée de play-offs se
+    // prépare donc depuis le même écran Ordres qu'un plan de championnat
+    // ordinaire, sans rien y changer (voir Team.plannedTactics/planKey côté
+    // moteur, upcomingRoundsForOrders côté navigateur).
+    if (home.isHuman) home.applyPlannedTacticsForRound(round, "championship");
+    if (away.isHuman) away.applyPlannedTacticsForRound(round, "championship");
+    league.liveMatches[key] = computeLiveMatch(Engine, league, round, m.home, m.away, kickoffAt, "championship");
+    startedKeys.push(key);
+  });
+
+  return startedKeys;
+}
+
+// Résout définitivement TOUT le tour de play-offs actuellement en attente
+// (voir League.playoffs.round) : même principe que finalizeCupRound
+// ci-dessus, mais chaque match résolu fait progresser une SÉRIE best-of-3
+// (voir League.recordPlayoffGameResult côté moteur) au lieu d'un bracket à
+// élimination directe. Fait avancer playoffs.round d'un cran une fois tous
+// les matchs dus ce tour-ci réglés (voir League.playoffMatchesForRound,
+// jamais vide tant que le champion n'est pas connu). Renvoie `null` si aucun
+// tour n'était en attente (pas de play-offs en cours, ou déjà terminés).
+function finalizePlayoffRound(Engine, league, now = Date.now()) {
+  const { simulateOrForfeit, recordMatchStatsAndAwardMvp } = Engine;
+  if (!league.playoffs || league.playoffs.champion != null) return null;
+  const round = league.playoffs.round;
+  const matches = league.playoffMatchesForRound(round);
+  if (!matches.length) return null;
+
+  const userResults = [];
+
+  matches.forEach(m => {
+    const home = league.teams[m.home];
+    const away = league.teams[m.away];
+    const key = liveMatchKey(round, m.home, m.away);
+    const live = league.liveMatches && league.liveMatches[key];
+
+    let scoreHome, scoreAway, forfeit;
+    if (live) {
+      scoreHome = live.finalScore.home;
+      scoreAway = live.finalScore.away;
+      forfeit = live.forfeit;
+      delete league.liveMatches[key];
+    } else {
+      // Jamais démarré en direct (CPU-vs-CPU, ou tour rattrapé d'un coup) :
+      // voir le même principe côté finalizeCupRound ci-dessus. Tag
+      // "championship" (voir le même choix, et pourquoi, dans
+      // ensurePlayoffLiveMatchStarted plus haut).
+      if (home.isHuman) home.applyPlannedTacticsForRound(round, "championship");
+      if (away.isHuman) away.applyPlannedTacticsForRound(round, "championship");
+      const sim = simulateOrForfeit(home, away);
+      scoreHome = sim.scoreHome;
+      scoreAway = sim.scoreAway;
+      forfeit = sim.forfeit;
+    }
+
+    // Journal de matchs (voir le même principe côté finalizeRound ci-dessous)
+    // : un match de play-offs compte aussi pour les stats de saison des
+    // joueurs impliqués, ET pour le MVP automatique du match. `competition`
+    // "championship" (voir le grand commentaire en tête de ce bloc) : jamais
+    // un tag "playoff" séparé ici.
+    if (!forfeit) {
+      recordMatchStatsAndAwardMvp(home, away, round, "championship", now);
+    }
+
+    league.recordPlayoffGameResult(m.seriesId, m.home, m.away, scoreHome, scoreAway, now);
+
+    // `seriesResolved` (lu APRÈS recordPlayoffGameResult, une fois la série
+    // éventuellement close) : dit si CE match précis vient de décider la
+    // série de `m.seriesId` (2 victoires atteintes). Voir
+    // moteurbasket3.html:showCatchupSummaryIfAny, qui n'attache l'interview
+    // de jalon "demi-finale-po" qu'au match qui a RÉELLEMENT décidé la
+    // demi-finale, jamais au premier match encore en cours de la série.
+    const series = m.seriesId === "semi0" ? league.playoffs.series[0]
+      : m.seriesId === "semi1" ? league.playoffs.series[1]
+      : null; // jamais pour la finale (pas d'interview de jalon associée)
+    const seriesResolved = !!(series && series.resolved);
+
+    if (home.isHuman) {
+      userResults.push({
+        teamIdx: m.home, round, isHome: true, opponent: away.name, opponentIdx: m.away,
+        scoreUser: scoreHome, scoreOpponent: scoreAway, won: scoreHome > scoreAway, forfeit,
+        seriesId: m.seriesId, seriesResolved,
+      });
+    }
+    if (away.isHuman) {
+      userResults.push({
+        teamIdx: m.away, round, isHome: false, opponent: home.name, opponentIdx: m.home,
+        scoreUser: scoreAway, scoreOpponent: scoreHome, won: scoreAway > scoreHome, forfeit,
+        seriesId: m.seriesId, seriesResolved,
+      });
+    }
+  });
+
+  league.playoffs.round += 1;
+  const seasonEnded = league.playoffs.champion != null;
+  return { type: "playoff-match", round, userResults, seasonEnded };
 }
 
 // Résout définitivement TOUTE la journée `round` — remplace à la fois
@@ -593,4 +741,6 @@ module.exports = {
   schedulePlayback, liveMatchKey, computeLiveMatch, ensureLiveMatchStarted, finalizeRound, viewLiveMatchForTeam,
   // Coupe (voir le bloc dédié plus haut) :
   cupLiveMatchKey, ensureCupLiveMatchStarted, finalizeCupRound,
+  // Play-offs (voir le bloc dédié plus haut) :
+  ensurePlayoffLiveMatchStarted, finalizePlayoffRound,
 };

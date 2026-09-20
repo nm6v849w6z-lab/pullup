@@ -4641,84 +4641,200 @@ class League {
   }
 
   // Phase finale : les 4 premiers du classement, demi-finales (1er-4e,
-  // 2e-3e) puis finale, chaque tour en deux matchs gagnants. Simulée
-  // intégralement d'un coup pour l'instant (v1 du calendrier) : pas encore
-  // d'écran de match dédié aux play-offs, qu'ils concernent le club du
-  // joueur ou non — voir Team.trainWeek/League pour une future itération
-  // interactive.
-  runPlayoffs(now = Date.now()) {
+  // 2e-3e) puis finale, chaque tour en deux matchs gagnants. Retour
+  // utilisateur (2026-09) : "les play offs doivent être comme les matchs de
+  // saisons régulières, avec un live [...] sur plusieurs jours réels (et pas
+  // tout simulés d'un coup)" : chaque MATCH de play-offs est donc résolu un
+  // par un, à son propre tour de calendrier (voir playoffs.round plus bas),
+  // exactement comme un match de championnat (voir server/liveMatch.js
+  // ensurePlayoffLiveMatchStarted/finalizePlayoffRound, server/autoSim.js).
+  // `startPlayoffsIfNeeded` ne fait QUE poser l'état initial (tirage au sort
+  // des têtes de série, les deux demi-finales encore vides) ; c'est
+  // recordPlayoffGameResult ci-dessous qui fait progresser chaque série
+  // match par match. No-op si les play-offs existent déjà, ou si la saison
+  // régulière n'est pas terminée.
+  startPlayoffsIfNeeded(now = Date.now()) {
+    if (this.playoffs || !this.isRegularSeasonDone()) return this.playoffs;
     const seeds = this.standings().slice(0, 4).map(s => s.idx);
-    const playSeries = (idxA, idxB) => {
-      let winsA = 0, winsB = 0;
-      const games = [];
-      while (winsA < 2 && winsB < 2) {
-        const aHome = games.length % 2 === 0;
-        const home = aHome ? idxA : idxB, away = aHome ? idxB : idxA;
-        const result = simulateOrForfeit(this.teams[home], this.teams[away]);
-        const scoreHome = result.scoreHome, scoreAway = result.scoreAway;
-        const aScore = aHome ? scoreHome : scoreAway;
-        const bScore = aHome ? scoreAway : scoreHome;
-        if (aScore > bScore) winsA++; else winsB++;
-        games.push({ home, away, scoreHome, scoreAway });
-      }
-      return { idxA, idxB, games, winner: winsA === 2 ? idxA : idxB };
+    const makeSeries = (idxA, idxB) => ({
+      idxA, idxB, games: [], winsA: 0, winsB: 0, winner: null, resolved: false,
+    });
+    this.playoffs = {
+      seeds,
+      // Continuation de l'index de journée du championnat (voir
+      // League.round/totalRounds) : le premier match de play-offs tombe
+      // donc, sans le moindre changement à scheduledTimeForLeagueRound
+      // (calendrier classique comme ancré quotidien), au tout prochain
+      // créneau réel après le dernier match de saison régulière. Compteur
+      // SÉPARÉ de this.round (qui reste figé à totalRounds une fois la
+      // saison régulière terminée) pour ne jamais perturber
+      // matchesForRound/nextUserMatch, qui ne connaissent que le
+      // championnat.
+      round: this.totalRounds,
+      series: [makeSeries(seeds[0], seeds[3]), makeSeries(seeds[1], seeds[2])],
+      finalSeries: null,
+      champion: null,
+      // Instantané des joueurs ayant disputé la demi-finale de CHAQUE
+      // équipe (voir _queuePlayoffSemiInterview ci-dessous), keyed par idx
+      // d'équipe : alimenté série par série, au moment précis où elle se
+      // termine, jamais en bloc à la fin comme l'ancienne v1 synchrone.
+      semiPlayerIds: {},
     };
-    const semi1 = playSeries(seeds[0], seeds[3]);
-    // Instantané des joueurs ayant disputé CETTE demi-finale, capturé
-    // IMMÉDIATEMENT après semi1/semi2 — voir le commentaire
-    // d'explicitPlayerIds sur Team.applyMoraleForResult : la finale
-    // ci-dessous va resimuler (donc réécrire secondsPlayed) les deux
-    // équipes qui s'y qualifient, un repli automatique lu plus tard serait
-    // donc faux pour elles.
-    const semiPlayerIds = {};
-    [semi1.idxA, semi1.idxB].forEach(idx => {
-      semiPlayerIds[idx] = this.teams[idx].players.filter(p => p.secondsPlayed > 0).map(p => p.id);
-    });
-    const semi2 = playSeries(seeds[1], seeds[2]);
-    [semi2.idxA, semi2.idxB].forEach(idx => {
-      semiPlayerIds[idx] = this.teams[idx].players.filter(p => p.secondsPlayed > 0).map(p => p.id);
-    });
-    const final = playSeries(semi1.winner, semi2.winner);
-    this.playoffs = { seeds, semi1, semi2, final, champion: final.winner, semiPlayerIds };
-    this.recordTrophy(final.winner, "championship", now);
     return this.playoffs;
   }
 
+  // Paires à jouer POUR CE TOUR de play-offs (en pratique toujours appelé
+  // avec playoffs.round lui-même, voir server/liveMatch.js) : au plus une
+  // par demi-finale encore vivante tant que la finale n'est pas encore
+  // constituée, sinon la seule paire de la finale. Ne renvoie un tableau
+  // vide QUE une fois le champion connu (voir isPlayoffsDone) : tant que les
+  // play-offs sont en cours, il y a toujours au moins une série vivante à ce
+  // tour (au plus 3 tours par série, voir recordPlayoffGameResult, donc
+  // jamais de tour "creux").
+  playoffMatchesForRound(round) {
+    const po = this.playoffs;
+    if (!po || po.champion != null || round !== po.round) return [];
+    const out = [];
+    const addIfLive = (series, seriesId) => {
+      if (!series || series.resolved) return;
+      const gameIndex = series.games.length;
+      const aHome = gameIndex % 2 === 0; // alternance stricte, tête de série à domicile au match 1
+      const home = aHome ? series.idxA : series.idxB;
+      const away = aHome ? series.idxB : series.idxA;
+      out.push({ home, away, seriesId, gameIndex });
+    };
+    if (!po.finalSeries) {
+      addIfLive(po.series[0], "semi0");
+      addIfLive(po.series[1], "semi1");
+    } else {
+      addIfLive(po.finalSeries, "final");
+    }
+    return out;
+  }
+
+  // true une fois la finale jouée (champion connu) : c'est CE flag, et non
+  // plus la simple existence de league.playoffs (posée dès
+  // startPlayoffsIfNeeded, avant le moindre match joué), qui signale la
+  // vraie fin de la saison côté server/autoSim.js et navigateur.
+  isPlayoffsDone() {
+    return !!(this.playoffs && this.playoffs.champion != null);
+  }
+
+  // Enregistre le résultat d'UN match de play-offs (identifié par
+  // `seriesId`, voir playoffMatchesForRound) : fait progresser la série
+  // correspondante, la clôt à 2 victoires, puis soit prépare la finale (les
+  // deux demies terminées), soit couronne le champion (finale terminée).
+  // Voir server/liveMatch.js:finalizePlayoffRound (chemin normal, un match à
+  // la fois, en direct) et League.runPlayoffsInstantly (tests/repli) pour
+  // les deux seuls appelants.
+  recordPlayoffGameResult(seriesId, home, away, scoreHome, scoreAway, now = Date.now()) {
+    const po = this.playoffs;
+    if (!po) return;
+    const series = seriesId === "semi0" ? po.series[0]
+      : seriesId === "semi1" ? po.series[1]
+      : po.finalSeries;
+    if (!series || series.resolved) return;
+    series.games.push({ home, away, scoreHome, scoreAway });
+    const aWon = home === series.idxA ? scoreHome > scoreAway : scoreAway > scoreHome;
+    if (aWon) series.winsA++; else series.winsB++;
+    if (series.winsA < 2 && series.winsB < 2) return; // série pas encore décidée
+    series.resolved = true;
+    series.winner = series.winsA === 2 ? series.idxA : series.idxB;
+    if (seriesId === "final") {
+      po.champion = series.winner;
+      this.recordTrophy(series.winner, "championship", now);
+      return;
+    }
+    // Demi-finale décidée : interview de jalon (voir _queuePlayoffSemiInterview
+    // ci-dessous) pour CETTE série, capturée IMMÉDIATEMENT (donc jamais
+    // écrasée par une future série, contrairement à l'ancien compromis
+    // synchrone) puis, si les DEUX demies sont désormais résolues,
+    // constitution de la finale.
+    this._queuePlayoffSemiInterview(series, now);
+    if (po.series[0].resolved && po.series[1].resolved && !po.finalSeries) {
+      po.finalSeries = {
+        idxA: po.series[0].winner, idxB: po.series[1].winner,
+        games: [], winsA: 0, winsB: 0, winner: null, resolved: false,
+      };
+    }
+  }
+
   // Interview de jalon "demi-finale de PO" (retour utilisateur, 2026-09,
-  // voir le grand commentaire de MILESTONE_INTERVIEW_TYPES plus haut) : à
-  // appeler juste après runPlayoffs() (voir server/autoSim.js et le repli
-  // client d'enterNextMatchOrShowSeasonEnd), pour CHAQUE équipe humaine
-  // ayant disputé une demi-finale (semi1 ET semi2), qu'elle l'ait gagnée ou
-  // perdue. Compromis assumé (voir le commentaire de runPlayoffs
-  // ci-dessus) : semi1/semi2/final sont résolus SYNCHRONEMENT en un seul
-  // appel (pas encore d'écran dédié aux play-offs), donc cette interview est
-  // mise en attente au même instant que la finale — mais son CONTENU ne
-  // porte que sur le résultat de la demi-finale de l'équipe concernée
-  // (jamais sur la finale), exactement le moment que ce retour utilisateur
-  // demande. `round` volontairement `null` (aucune journée de calendrier ne
-  // correspond à une demi-finale) : cette interview n'est donc jamais
-  // retrouvée par round (contrairement aux deux autres jalons), uniquement
-  // par `milestone === "demi-finale-po"` (voir showCatchupSummaryIfAny/
-  // showSeasonEnd côté navigateur).
-  queuePlayoffSemiInterviews(now = Date.now()) {
-    if (!this.playoffs) return;
-    const { semi1, semi2, semiPlayerIds } = this.playoffs;
-    [semi1, semi2].forEach(series => {
-      [series.idxA, series.idxB].forEach(idx => {
-        const team = this.teams[idx];
-        if (!team || !team.isHuman) return;
-        const opponentIdx = idx === series.idxA ? series.idxB : series.idxA;
-        const opponent = this.teams[opponentIdx];
-        const won = series.winner === idx;
-        const lastGame = series.games[series.games.length - 1];
-        const isHomeLastGame = lastGame.home === idx;
-        const scoreDiff = isHomeLastGame
-          ? lastGame.scoreHome - lastGame.scoreAway
-          : lastGame.scoreAway - lastGame.scoreHome;
-        const explicitPlayerIds = (semiPlayerIds && semiPlayerIds[idx]) || [];
-        team.applyMoraleForResult(won, scoreDiff, opponent ? opponent.name : "l'adversaire", null, now, "demi-finale-po", explicitPlayerIds);
-      });
+  // voir le grand commentaire de MILESTONE_INTERVIEW_TYPES plus haut) pour
+  // CHAQUE équipe humaine de `series` (qu'elle ait gagné ou perdu) : appelée
+  // par recordPlayoffGameResult dès que cette série se termine, jamais en
+  // bloc après coup comme l'ancienne v1 synchrone. `round` volontairement
+  // `null` (aucune journée de calendrier ne correspond à une demi-finale à
+  // proprement parler, elle s'étale sur plusieurs) : cette interview n'est
+  // donc jamais retrouvée par round (contrairement aux deux autres jalons),
+  // uniquement par `milestone === "demi-finale-po"` (voir
+  // showCatchupSummaryIfAny/showSeasonEnd côté navigateur).
+  _queuePlayoffSemiInterview(series, now) {
+    [series.idxA, series.idxB].forEach(idx => {
+      const team = this.teams[idx];
+      // Instantané des joueurs ayant disputé CETTE demi-finale, capturé
+      // MAINTENANT (avant qu'une autre série, y compris la finale, ne
+      // resimule ces mêmes joueurs et n'écrase leur secondsPlayed) : voir
+      // playoffs.semiPlayerIds, lu par le résumé de fin de saison côté
+      // navigateur.
+      const playerIds = team ? team.players.filter(p => p.secondsPlayed > 0).map(p => p.id) : [];
+      this.playoffs.semiPlayerIds[idx] = playerIds;
+      if (!team || !team.isHuman) return;
+      const opponentIdx = idx === series.idxA ? series.idxB : series.idxA;
+      const opponent = this.teams[opponentIdx];
+      const won = series.winner === idx;
+      const lastGame = series.games[series.games.length - 1];
+      const isHomeLastGame = lastGame.home === idx;
+      const scoreDiff = isHomeLastGame
+        ? lastGame.scoreHome - lastGame.scoreAway
+        : lastGame.scoreAway - lastGame.scoreHome;
+      team.applyMoraleForResult(won, scoreDiff, opponent ? opponent.name : "l'adversaire", null, now, "demi-finale-po", playerIds);
     });
+  }
+
+  // Prochain match de play-offs de `teamIdx` (index 0 par défaut) au tour
+  // COURANT (playoffs.round) : équivalent de nextUserMatch, mais pour la
+  // phase finale. `null` si les play-offs n'existent pas encore, sont déjà
+  // terminés, ou si `teamIdx` n'est engagé dans AUCUNE série vivante ce
+  // tour-ci (éliminé, ou pas qualifié) : contrairement à nextUserMatch, ne
+  // cherche jamais au-delà du tour courant, puisqu'un tour de play-offs
+  // n'avance que lorsque TOUTES ses séries vivantes ont joué (voir
+  // finalizePlayoffRound côté server/liveMatch.js) : il n'y a donc jamais de
+  // tour "déjà joué" à sauter.
+  nextUserPlayoffMatch(teamIdx = 0) {
+    const po = this.playoffs;
+    if (!po || po.champion != null) return null;
+    const m = this.playoffMatchesForRound(po.round).find(x => x.home === teamIdx || x.away === teamIdx);
+    if (!m) return null;
+    const isHome = m.home === teamIdx;
+    return { round: po.round, isHome, opponent: isHome ? m.away : m.home, seriesId: m.seriesId };
+  }
+
+  // Résout les play-offs entièrement, tour par tour, en simulant chaque
+  // match (jamais de diffusion en direct) : utilisé par les tests, et par le
+  // repli défensif côté navigateur (voir enterNextMatchOrShowSeasonEnd) pour
+  // le cas rare où l'écran de fin de saison est atteint sans être passé par
+  // le rattrapage serveur normal (voir server/autoSim.js:catchUpLeague, le
+  // chemin RÉEL, un match à la fois/en direct, qui n'appelle jamais cette
+  // méthode). `competition` posé à "championship" comme pour un match de
+  // championnat classique (voir le même choix côté finalizePlayoffRound) :
+  // les stats/MVP/box-score des play-offs vivent dans le même flux que la
+  // saison régulière, seul `round` (>= totalRounds) les distingue.
+  runPlayoffsInstantly(now = Date.now()) {
+    this.startPlayoffsIfNeeded(now);
+    while (this.playoffs && this.playoffs.champion == null) {
+      const round = this.playoffs.round;
+      const matches = this.playoffMatchesForRound(round);
+      matches.forEach(m => {
+        const result = simulateOrForfeit(this.teams[m.home], this.teams[m.away]);
+        if (!result.forfeit) {
+          recordMatchStatsAndAwardMvp(this.teams[m.home], this.teams[m.away], round, "championship", now);
+        }
+        this.recordPlayoffGameResult(m.seriesId, m.home, m.away, result.scoreHome, result.scoreAway, now);
+      });
+      this.playoffs.round += 1;
+    }
+    return this.playoffs;
   }
 
   // Barrage de relégation : le 7e et le 8e de la saison régulière

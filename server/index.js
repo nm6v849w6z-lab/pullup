@@ -273,6 +273,25 @@ function personalizeEventsForTeam(events, teamIndex) {
         const { teamIdx, ...userResult } = mine;
         out.push({ type: "match", round: ev.round, userResult });
       }
+    } else if (ev.type === "playoff-match") {
+      // Même principe que "match" ci-dessus (voir LiveMatch.finalizePlayoffRound
+      // côté server/liveMatch.js, retour utilisateur 2026-09 : les play-offs
+      // se jouent maintenant match par match, en direct, comme la saison
+      // régulière) : un match de play-offs qui ne concerne pas `teamIndex`
+      // (CPU-vs-CPU, ou deux AUTRES managers humains) est simplement omis de
+      // SON récapitulatif. `seasonEnded` (true seulement pour le match de la
+      // finale qui couronne le champion) transporté tel quel : c'est ce qui
+      // dit au navigateur d'enchaîner sur l'événement "season-end" séparé,
+      // émis juste après par server/autoSim.js:catchUpPlayoffs.
+      // `userResult.seriesResolved` (voir LiveMatch.finalizePlayoffRound) :
+      // transporté tel quel, ce n'est PAS un champ global comme
+      // `seasonEnded` (chaque équipe humaine peut voir SA série se décider à
+      // un tour différent de celle d'un autre manager).
+      const mine = (ev.userResults || []).find(r => r.teamIdx === teamIndex);
+      if (mine) {
+        const { teamIdx, ...userResult } = mine;
+        out.push({ type: "playoff-match", round: ev.round, userResult, seasonEnded: !!ev.seasonEnded });
+      }
     } else if (ev.type === "training") {
       const mine = (ev.results || []).find(r => r.teamIdx === teamIndex);
       if (mine) {
@@ -346,6 +365,13 @@ function buildStateSnapshot(league, teamIndex, now) {
       totalRounds: league.totalRounds,
       regularSeasonDone: league.isRegularSeasonDone(),
       playoffs: league.playoffs,
+      // Confort d'affichage (voir League.isPlayoffsDone côté moteur) :
+      // `league.playoffs` existe dès la fin de la saison régulière (voir
+      // League.startPlayoffsIfNeeded), avant le moindre match de play-offs
+      // joué. C'est CE champ, pas la simple présence de `playoffs`
+      // ci-dessus, qui dit si la saison est VRAIMENT terminée (champion
+      // connu, écran de fin de saison accessible).
+      playoffsDone: league.isPlayoffsDone(),
       relegationBarrage: league.relegationBarrage,
       calendarStartAt: league.calendarStartAt,
       lastAutoTrainedWeek: league.lastAutoTrainedWeek,

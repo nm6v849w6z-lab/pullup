@@ -196,7 +196,10 @@ if (!prepVisibleAfterMatch1) throw new Error("❌ Après la journée 0, l'écran
 
 await flush(dom);
 win.close();
-fastForwardCalendar(savePath, 18, clock.now);
+// 18 journées de saison régulière restantes + marge de 6 journées pour les
+// play-offs (2 demi-finales + 1 finale, chacune au meilleur des 3, jouées
+// sur plusieurs jours réels distincts, voir la directive utilisateur).
+fastForwardCalendar(savePath, 24, clock.now);
 dom = await openGame(html, baseUrl);
 doc = dom.window.document;
 win = dom.window;

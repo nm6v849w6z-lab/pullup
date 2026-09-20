@@ -205,31 +205,51 @@ function freshTeamAndLeague(name) {
 }
 
 // ---------------------------------------------------------------------
-// Interview de jalon "demi-finale de PO" : round=null (pas de journée de
-// calendrier associée), retrouvée par `milestone` uniquement, playerIds
-// figés au moment de la demi (pas de la finale). Teste directement
-// League.queuePlayoffSemiInterviews sur un `league.playoffs` construit à la
-// main, pour ne pas dépendre du tirage au sort du classement/seeding, voir
-// le test d'intégration juste après pour le vrai runPlayoffs().
+// Interview de jalon "demi-finale de PO" (retour utilisateur, 2026-09 :
+// les play-offs se jouent maintenant match par match, en direct, sur
+// plusieurs jours réels, voir League.recordPlayoffGameResult/
+// startPlayoffsIfNeeded) : round=null (pas de journée de calendrier
+// associée), retrouvée par `milestone` uniquement, playerIds figés au
+// moment où la série se termine (pas de la finale), jamais mise en attente
+// tant que la série est encore ouverte. Teste directement
+// League.recordPlayoffGameResult sur un `league.playoffs` construit à la
+// main, pour ne pas dépendre du tirage au sort du classement/seeding : voir
+// le test d'intégration juste après pour un vrai déroulé de play-offs.
 // ---------------------------------------------------------------------
 {
   const { team: humanTeam, league } = freshTeamAndLeague("SemiFinalisteHumain");
   const opp = league.teams[1];
-  simulateOrForfeit(humanTeam, opp);
-  const semiPlayerIds = { 0: humanTeam.players.filter(p => p.secondsPlayed > 0).map(p => p.id) };
+  simulateOrForfeit(humanTeam, opp); // fait jouer les deux rosters, pour que secondsPlayed soit déjà renseigné avant l'instantané
   league.playoffs = {
-    semi1: { idxA: 0, idxB: 1, winner: 0, games: [{ home: 0, away: 1, scoreHome: 88, scoreAway: 74 }] },
-    semi2: { idxA: 2, idxB: 3, winner: 3, games: [{ home: 3, away: 2, scoreHome: 60, scoreAway: 55 }] },
-    semiPlayerIds,
+    seeds: [0, 1, 2, 3],
+    round: 99, // arbitraire ici, jamais lu par recordPlayoffGameResult
+    series: [
+      { idxA: 0, idxB: 1, games: [], winsA: 0, winsB: 0, winner: null, resolved: false },
+      { idxA: 2, idxB: 3, games: [{ home: 3, away: 2, scoreHome: 60, scoreAway: 55 }], winsA: 0, winsB: 1, winner: null, resolved: false },
+    ],
+    finalSeries: null,
+    champion: null,
+    semiPlayerIds: {},
   };
-  league.queuePlayoffSemiInterviews(T0);
+
+  // 1re manche de la demi-finale 1 (idx0 gagne à domicile, 1-0) : ne décide
+  // rien encore, aucune interview ne doit apparaître.
+  league.recordPlayoffGameResult("semi0", 0, 1, 70, 60, T0);
+  if (humanTeam.pendingInterviews.some(i => i.milestone === "demi-finale-po")) {
+    throw new Error("❌ Aucune interview de demi-finale ne devrait être mise en attente tant que la série n'est pas décidée (1 victoire sur 2).");
+  }
+  console.log("✅ recordPlayoffGameResult ne met PAS en attente d'interview de demi-finale tant que la série est encore ouverte.");
+
+  // Manche décisive (idx0 gagne à l'extérieur, 2-0) : la série se termine
+  // MAINTENANT, l'interview doit être mise en attente à cet instant précis.
+  league.recordPlayoffGameResult("semi0", 1, 0, 74, 88, T0);
   const semiEntry = humanTeam.pendingInterviews.find(i => i.milestone === "demi-finale-po");
-  if (!semiEntry) throw new Error("❌ queuePlayoffSemiInterviews devrait mettre en attente une interview pour l'équipe humaine qualifiée en demi-finale.");
+  if (!semiEntry) throw new Error("❌ recordPlayoffGameResult devrait mettre en attente une interview pour l'équipe humaine qualifiée dès que sa demi-finale est décidée.");
   if (semiEntry.round !== null) throw new Error(`❌ Une interview de demi-finale de PO devrait porter round=null (aucune journée de calendrier), obtenu ${semiEntry.round}.`);
-  if (!semiEntry.won) throw new Error("❌ L'équipe humaine (idxA du semi1, winner=0) devrait avoir `won=true`.");
+  if (!semiEntry.won) throw new Error("❌ L'équipe humaine (idxA de la série, winner=0) devrait avoir `won=true`.");
   if (semiEntry.scoreDiff !== 88 - 74) throw new Error(`❌ scoreDiff incorrect, obtenu ${semiEntry.scoreDiff}.`);
-  if (!Array.isArray(semiEntry.playerIds) || !semiEntry.playerIds.length) throw new Error("❌ playerIds de l'interview de demi-finale devrait reprendre l'instantané semiPlayerIds fourni.");
-  console.log("✅ queuePlayoffSemiInterviews met bien en attente une interview de jalon 'demi-finale de PO' (round=null, playerIds figés à la demi) pour l'équipe humaine qualifiée.");
+  if (!Array.isArray(semiEntry.playerIds) || !semiEntry.playerIds.length) throw new Error("❌ playerIds de l'interview de demi-finale devrait reprendre l'instantané des joueurs ayant joué.");
+  console.log("✅ recordPlayoffGameResult met bien en attente une interview de jalon 'demi-finale de PO' (round=null, playerIds figés à la demi) dès que la série se décide.");
 
   const res = league.teams[0].resolveInterview(semiEntry.id, "Mesuré", T0);
   if (!res || !res.ok || typeof res.formDelta !== "number") throw new Error("❌ L'interview de demi-finale de PO devrait se résoudre comme n'importe quelle interview de jalon (effet supporters + joueurs).");
@@ -237,20 +257,31 @@ function freshTeamAndLeague(name) {
 }
 
 // ---------------------------------------------------------------------
-// Intégration : un vrai League.runPlayoffs() attache bien semiPlayerIds
-// pour les 4 demi-finalistes (peu importe qui ils sont), et
-// queuePlayoffSemiInterviews ne plante jamais derrière, qu'une équipe
-// humaine se soit qualifiée ou non.
+// Intégration : un vrai déroulé de play-offs (League.runPlayoffsInstantly,
+// tour par tour comme le ferait server/autoSim.js:catchUpPlayoffs mais sans
+// diffusion en direct) attache bien semiPlayerIds pour les 4
+// demi-finalistes (peu importe qui ils sont) et ne plante jamais, qu'une
+// équipe humaine se soit qualifiée ou non.
 // ---------------------------------------------------------------------
 {
   const { league } = freshTeamAndLeague("RealPlayoffIntegration");
-  const playoffs = league.runPlayoffs(T0);
-  if (!playoffs.semiPlayerIds) throw new Error("❌ runPlayoffs() devrait attacher un instantané semiPlayerIds.");
-  [playoffs.semi1.idxA, playoffs.semi1.idxB, playoffs.semi2.idxA, playoffs.semi2.idxB].forEach(idx => {
+  // Saute directement à "saison régulière terminée" (aucun résultat réel ne
+  // compte ici, seul le déroulé des play-offs eux-mêmes est testé) : voir
+  // League.isRegularSeasonDone/startPlayoffsIfNeeded, qui exigent désormais
+  // que la saison régulière soit VRAIMENT finie avant de démarrer les
+  // play-offs (retour utilisateur, 2026-09), contrairement à l'ancienne
+  // League.runPlayoffs() qui pouvait être appelée à tout moment.
+  league.round = league.totalRounds;
+  const playoffs = league.runPlayoffsInstantly(T0);
+  if (playoffs.champion == null) throw new Error("❌ runPlayoffsInstantly() devrait décider un champion.");
+  if (!playoffs.semiPlayerIds) throw new Error("❌ runPlayoffsInstantly() devrait attacher un instantané semiPlayerIds.");
+  const [s0, s1] = playoffs.series;
+  [s0.idxA, s0.idxB, s1.idxA, s1.idxB].forEach(idx => {
     if (!Array.isArray(playoffs.semiPlayerIds[idx])) throw new Error(`❌ semiPlayerIds devrait contenir une entrée pour le demi-finaliste idx=${idx}.`);
   });
-  league.queuePlayoffSemiInterviews(T0); // ne doit jamais lancer d'exception
-  console.log("✅ Un vrai League.runPlayoffs() attache bien semiPlayerIds pour les 4 demi-finalistes ; queuePlayoffSemiInterviews s'exécute ensuite sans erreur.");
+  if (!s0.resolved || !s1.resolved) throw new Error("❌ Les deux demi-finales devraient être résolues une fois les play-offs terminés.");
+  if (!playoffs.finalSeries || !playoffs.finalSeries.resolved) throw new Error("❌ La finale devrait être résolue une fois les play-offs terminés.");
+  console.log("✅ Un vrai déroulé de League.runPlayoffsInstantly() attache bien semiPlayerIds pour les 4 demi-finalistes, sans jamais lancer d'exception.");
 }
 
 console.log("\n🏁 Tous les tests milestone_interview_and_mvp_test.js sont passés.");

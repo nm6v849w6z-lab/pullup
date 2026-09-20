@@ -39,7 +39,10 @@ const {
   dailyAnchoredDayIndexForChampionshipRound, dailyAnchoredSlotIndexForChampionshipRound,
   DAILY_ANCHORED_CHAMPIONSHIP_HOURS,
 } = Calendar;
-const { ensureLiveMatchStarted, ensureCupLiveMatchStarted, finalizeRound, finalizeCupRound } = LiveMatch;
+const {
+  ensureLiveMatchStarted, ensureCupLiveMatchStarted, finalizeRound, finalizeCupRound,
+  ensurePlayoffLiveMatchStarted, finalizePlayoffRound,
+} = LiveMatch;
 // Dernier créneau de championnat du jour (19h — voir DAILY_ANCHORED_CHAMPIONSHIP_HOURS
 // dans server/calendar.js) : c'est APRÈS celui-ci que se déclenche
 // l'entraînement + l'économie quotidiens (voir catchUpDailyAnchored ci-dessous
@@ -54,10 +57,11 @@ const LAST_DAILY_CHAMPIONSHIP_SLOT_INDEX = DAILY_ANCHORED_CHAMPIONSHIP_HOURS.len
 // fois par semaine réelle, après le 2e match de la semaine, POUR CHAQUE
 // équipe humaine — voir Team.isHuman), rafraîchissement du marché des
 // transferts (enchères réelles de 3 jours, indépendantes du calendrier de
-// championnat), et calcul des play-offs/barrage de relégation dès que la
-// saison régulière est terminée. Peut rattraper PLUSIEURS semaines d'un coup
-// (manager absent un moment) — chaque itération de la boucle ne traite
-// qu'UNE journée à la fois, dans l'ordre chronologique.
+// championnat), et matchs de play-offs (voir catchUpPlayoffs plus bas) une
+// fois la saison régulière terminée. Peut rattraper PLUSIEURS semaines d'un
+// coup (manager absent un moment) : chaque itération de chaque boucle ne
+// traite qu'UNE journée (ou UN match de play-offs) à la fois, dans l'ordre
+// chronologique.
 //
 // N'appelle PAS elle-même ensureLiveMatchStarted (voir server/liveMatch.js)
 // — c'est fait AVANT, une fois par requête, dans server/index.js — mais SI
@@ -80,10 +84,15 @@ function catchUpLeague(league, now) {
     // ce n'est pas une erreur, juste un no-op.
     return events;
   }
-  if (league.playoffs) {
-    // Saison réelle déjà arrivée à son terme (play-offs déjà calculés) :
-    // on attend un nouveau départ de saison (voir l'API admin
-    // new-multi-league/reset-multi-league), voir le commentaire ci-dessus.
+  if (league.isPlayoffsDone()) {
+    // Saison réelle déjà arrivée à son terme (champion de play-offs connu,
+    // voir League.isPlayoffsDone) : on attend un nouveau départ de saison
+    // (voir l'API admin new-multi-league/reset-multi-league), voir le
+    // commentaire ci-dessus. Contrairement à l'ancienne v1 synchrone, la
+    // simple EXISTENCE de league.playoffs (posée dès la fin de la saison
+    // régulière, voir League.startPlayoffsIfNeeded) ne suffit plus à
+    // arrêter ce rattrapage : les play-offs eux-mêmes doivent encore être
+    // rattrapés match par match, voir catchUpPlayoffs plus bas.
     return events;
   }
 
@@ -126,20 +135,56 @@ function catchUpLeague(league, now) {
   // de zéro à CHAQUE ouverture de l'onglet Staff ou rechargement de page.
   league.refreshRecruiterMarket(now);
 
-  if (league.isRegularSeasonDone() && !league.playoffs) {
-    league.runPlayoffs(now);
-    // Interview de jalon "demi-finale de PO" (retour utilisateur, 2026-09,
-    // voir le grand commentaire de League.queuePlayoffSemiInterviews côté
-    // moteur) : DOIT être appelée juste après runPlayoffs() ci-dessus, tant
-    // que league.playoffs.semiPlayerIds reflète encore les DEMI-finales,
-    // rien d'autre ne s'exécute entre les deux qui pourrait invalider cet
-    // instantané.
-    league.queuePlayoffSemiInterviews(now);
-    league.runRelegationBarrage();
-    events.push({ type: "season-end" });
-  }
+  catchUpPlayoffs(league, now, events);
 
   return events;
+}
+
+// Rattrapage des PLAY-OFFS (retour utilisateur, 2026-09 : "les play offs
+// doivent être comme les matchs de saisons régulières, avec un live [...]
+// sur plusieurs jours réels") : une fois la saison régulière terminée, les
+// démarre (League.startPlayoffsIfNeeded, tirage au sort des têtes de série)
+// puis rattrape CHAQUE match de play-offs dû, un par un, exactement comme
+// catchUpClassic/catchUpDailyAnchored ci-dessus le font pour le championnat
+// (même garde-fou MATCH_BROADCAST_DURATION_MS, même délégation à
+// LiveMatch.finalizePlayoffRound pour reprendre le score d'un match déjà
+// diffusé en direct plutôt que d'en resimuler un second). Émet
+// `{type:"regular-season-end"}` une fois, à la transition saison régulière
+// -> play-offs (barrage de relégation compris à ce moment-là, indépendant du
+// résultat des play-offs, voir League.runRelegationBarrage), puis, plus tard
+// (parfois plusieurs jours réels après), `{type:"season-end"}` une fois le
+// champion connu. Appelée par catchUpLeague APRÈS catchUpClassic/
+// catchUpDailyAnchored (jamais avant : la toute dernière journée de
+// championnat doit d'abord être réglée pour que le classement final/les
+// têtes de série soient corrects).
+function catchUpPlayoffs(league, now, events) {
+  if (!league.isRegularSeasonDone()) return;
+  if (!league.playoffs) {
+    league.startPlayoffsIfNeeded(now);
+    // Barrage de relégation (7e vs 8e de la saison régulière) : indépendant
+    // du résultat des play-offs (voir League.runRelegationBarrage/
+    // divisionOutcomeForUserTeam côté moteur), donc résolu ici, tout de
+    // suite, plutôt que d'attendre que la finale de play-offs (parfois
+    // plusieurs jours réels plus tard) soit jouée.
+    if (!league.relegationBarrage) league.runRelegationBarrage();
+    events.push({ type: "regular-season-end" });
+  }
+
+  while (!league.isPlayoffsDone()) {
+    const round = league.playoffs.round;
+    const dueAt = scheduledTimeForLeagueRound(league, round);
+    // Même garde-fou que catchUpClassic/catchUpDailyAnchored : laisse
+    // d'abord passer la fenêtre de diffusion en direct avant de résoudre
+    // "en coulisses".
+    if (dueAt + MATCH_BROADCAST_DURATION_MS > now) break;
+    const ev = finalizePlayoffRound(Engine, league, now);
+    if (!ev) break; // garde-fou défensif, ne devrait jamais arriver ici
+    events.push(ev);
+  }
+
+  if (league.isPlayoffsDone()) {
+    events.push({ type: "season-end" });
+  }
 }
 
 // Boucle CLASSIQUE (calendrier hebdomadaire, carrière solo historique — voir
@@ -257,19 +302,25 @@ function catchUpDailyAnchored(league, now, events) {
 // en a un et que son créneau (15h) est atteint (voir
 // LiveMatch.ensureCupLiveMatchStarted) — no-op pour toute ligue sans coupe
 // (league.cup absent, carrière solo ou ligue multi-manager au calendrier
-// classique). Les deux jeux de clés (championnat/coupe, voir
-// LiveMatch.liveMatchKey/cupLiveMatchKey) cohabitent sans collision dans le
-// même league.liveMatches.
+// classique). Démarre ENFIN la diffusion en direct du tour de play-offs en
+// attente, s'il y en a un (voir LiveMatch.ensurePlayoffLiveMatchStarted) :
+// no-op tant que la saison régulière n'est pas terminée, ou une fois le
+// champion connu. Les trois jeux de clés (championnat/coupe/play-offs, voir
+// LiveMatch.liveMatchKey/cupLiveMatchKey, les play-offs réutilisant
+// liveMatchKey sans collision possible, voir son commentaire) cohabitent
+// sans collision dans le même league.liveMatches.
 function ensureLiveMatch(league, now) {
   const championshipKeys = ensureLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueRound);
   const cupKeys = league.cup ? ensureCupLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueCupRound) : [];
-  return [...championshipKeys, ...cupKeys];
+  const playoffKeys = league.playoffs ? ensurePlayoffLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueRound) : [];
+  return [...championshipKeys, ...cupKeys, ...playoffKeys];
 }
 
 return {
   catchUpLeague, ensureLiveMatch,
   finalizeRound: (league, round, now) => finalizeRound(Engine, league, round, now),
   finalizeCupRound: (league) => finalizeCupRound(Engine, league),
+  finalizePlayoffRound: (league, now) => finalizePlayoffRound(Engine, league, now),
 };
 
 });
