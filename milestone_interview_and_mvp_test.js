@@ -1,15 +1,23 @@
 // Vérifie les deux nouveaux systèmes d'interview demandés (retour
 // utilisateur, 2026-09) :
 //
-// 1) Interviews de JALON (mi-saison / fin de saison régulière / demi-finale
-//    de play-offs) : "il faut une interview un peu étoffée qui doit être
-//    fait à ce moment là. Ca peut jouer sur les supporters et sur les
-//    joueurs [...] On a 3 jours pour faire l'interview sinon c'est neutre
-//    sur le moral", voir engine.js : MILESTONE_INTERVIEW_TYPES/
-//    MILESTONE_INTERVIEW_TONES/MILESTONE_INTERVIEW_QUOTES/
-//    MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS, Team.applyMoraleForResult/
-//    pruneExpiredInterviews/resolveInterview, milestoneTypeForRound/
-//    midSeasonRound, League.runPlayoffs/queuePlayoffSemiInterviews.
+// 1) Interviews de JALON (début de saison / mi-saison / fin de saison
+//    régulière / demi-finale de play-offs / finale de play-offs) : "il faut
+//    une interview un peu étoffée qui doit être fait à ce moment là. Ca peut
+//    jouer sur les supporters et sur les joueurs [...] On a 3 jours pour
+//    faire l'interview sinon c'est neutre sur le moral", voir engine.js :
+//    MILESTONE_INTERVIEW_TYPES/MILESTONE_INTERVIEW_TONES/
+//    MILESTONE_INTERVIEW_QUOTES/MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS,
+//    Team.applyMoraleForResult/pruneExpiredInterviews/resolveInterview,
+//    milestoneTypeForRound/midSeasonRound, League._queuePlayoffSeriesInterview
+//    (demi-finales ET finale).
+//
+//    L'ancien système d'interview "classique" (une interview possible après
+//    CHAQUE match, délai de 2h) a depuis été retiré intégralement (retour
+//    utilisateur, 2026-09 : "on enlève ça") : Team.applyMoraleForResult ne
+//    met désormais JAMAIS d'interview en attente sans `milestone` explicite,
+//    quel que soit `round`. Voir plus bas le test qui couvre ce
+//    non-comportement.
 //
 // 2) MVP AUTOMATIQUE du match : "le mvp du match se fait interviewer à
 //    chaque fois. Il n'y a aucune action c'est automatique [...] mettre ses
@@ -47,11 +55,12 @@ function freshTeamAndLeague(name) {
   const { league } = freshTeamAndLeague();
   if (league.totalRounds !== 18) throw new Error(`❌ (setup) attendu 18 journées, obtenu ${league.totalRounds}.`);
   if (midSeasonRound(league.totalRounds) !== 9) throw new Error(`❌ midSeasonRound(18) devrait valoir 9, obtenu ${midSeasonRound(league.totalRounds)}.`);
+  if (milestoneTypeForRound(0, league.totalRounds) !== "debut-saison") throw new Error("❌ La journée 0 devrait être détectée comme début de saison.");
   if (milestoneTypeForRound(9, league.totalRounds) !== "mi-saison") throw new Error("❌ La journée 9 devrait être détectée comme mi-saison.");
   if (milestoneTypeForRound(17, league.totalRounds) !== "fin-saison-reguliere") throw new Error("❌ La dernière journée (17) devrait être détectée comme fin de saison régulière.");
-  if (milestoneTypeForRound(0, league.totalRounds) !== null) throw new Error("❌ La journée 0 ne devrait déclencher aucun jalon.");
+  if (milestoneTypeForRound(1, league.totalRounds) !== null) throw new Error("❌ La journée 1 (juste après le début de saison) ne devrait déclencher aucun jalon.");
   if (milestoneTypeForRound(8, league.totalRounds) !== null) throw new Error("❌ La journée 8 (juste avant la mi-saison) ne devrait déclencher aucun jalon.");
-  console.log("✅ milestoneTypeForRound/midSeasonRound identifient correctement les journées 9 (mi-saison) et 17 (fin de saison régulière), aucune autre.");
+  console.log("✅ milestoneTypeForRound/midSeasonRound identifient correctement les journées 0 (début de saison), 9 (mi-saison) et 17 (fin de saison régulière), aucune autre.");
 }
 
 // ---------------------------------------------------------------------
@@ -101,23 +110,49 @@ function freshTeamAndLeague(name) {
 }
 
 // ---------------------------------------------------------------------
-// Le système d'interview NORMAL (sans jalon) reste inchangé : délai de 2h,
-// aucun effet sur Player.form.
+// L'ancien système d'interview CLASSIQUE (une interview possible après
+// chaque match de championnat) a été entièrement retiré (retour
+// utilisateur, 2026-09 : "on enlève ça") : un match SANS jalon associé ne
+// doit plus jamais mettre d'interview en attente, quel que soit `round`.
+// fanMorale continue en revanche d'évoluer immédiatement à chaque match
+// (comportement inchangé, seule la file d'interviews change).
 // ---------------------------------------------------------------------
 {
   const { team, league } = freshTeamAndLeague();
   const opp = league.teams[1];
   simulateOrForfeit(team, opp);
-  const formsBefore = team.players.map(p => p.form);
+  const fanBefore = team.fanMorale;
   team.applyMoraleForResult(true, 10, opp.name, 3, T0);
-  const entry = team.pendingInterviews.find(i => i.round === 3);
-  if (entry.milestone) throw new Error("❌ Une journée normale (round 3) ne devrait jamais porter `milestone`.");
-  const res = team.resolveInterview(entry.id, "Mesuré", T0);
-  if (!res.ok) throw new Error("❌ resolveInterview (interview normale) devrait réussir.");
-  if (typeof res.formDelta === "number") throw new Error("❌ Une interview NORMALE ne devrait jamais renvoyer formDelta.");
-  const formsAfter = team.players.map(p => p.form);
-  if (JSON.stringify(formsBefore) !== JSON.stringify(formsAfter)) throw new Error("❌ Une interview normale ne devrait jamais modifier Player.form.");
-  console.log("✅ Le système d'interview normal (journées sans jalon) reste inchangé : aucun effet sur Player.form.");
+  if (team.pendingInterviews.some(i => i.round === 3)) {
+    throw new Error("❌ Une journée normale (round 3, sans `milestone`) ne devrait plus jamais mettre d'interview en attente.");
+  }
+  if (team.fanMorale === fanBefore) throw new Error("❌ fanMorale devrait quand même évoluer immédiatement à chaque match, jalon ou non.");
+  console.log("✅ Un match sans jalon associé n'ouvre plus aucune interview (ancien système classique bien retiré), fanMorale évolue toujours immédiatement.");
+}
+
+// ---------------------------------------------------------------------
+// Les 5 jalons attendus sont bien tous déclarés, avec au moins une citation
+// pour chaque ton et chaque issue (victoire/défaite) : "ça ferait 5
+// interview max" (retour utilisateur, 2026-09).
+// ---------------------------------------------------------------------
+{
+  const { MILESTONE_INTERVIEW_TYPES, MILESTONE_INTERVIEW_TONES, MILESTONE_INTERVIEW_QUOTES } = Engine;
+  const expectedMilestones = ["debut-saison", "mi-saison", "fin-saison-reguliere", "demi-finale-po", "finale-po"];
+  const actualMilestones = Object.keys(MILESTONE_INTERVIEW_TYPES);
+  if (actualMilestones.length !== 5 || expectedMilestones.some(m => !actualMilestones.includes(m))) {
+    throw new Error(`❌ MILESTONE_INTERVIEW_TYPES devrait exposer exactement 5 jalons (${expectedMilestones.join(", ")}), obtenu ${actualMilestones.join(", ")}.`);
+  }
+  expectedMilestones.forEach(milestone => {
+    Object.keys(MILESTONE_INTERVIEW_TONES).forEach(tone => {
+      ["win", "loss"].forEach(outcome => {
+        const quotes = MILESTONE_INTERVIEW_QUOTES[milestone] && MILESTONE_INTERVIEW_QUOTES[milestone][tone] && MILESTONE_INTERVIEW_QUOTES[milestone][tone][outcome];
+        if (!Array.isArray(quotes) || !quotes.length) {
+          throw new Error(`❌ MILESTONE_INTERVIEW_QUOTES["${milestone}"]["${tone}"]["${outcome}"] devrait contenir au moins une citation.`);
+        }
+      });
+    });
+  });
+  console.log("✅ Les 5 jalons attendus (début de saison, mi-saison, fin de saison régulière, demi-finale de PO, finale de PO) sont bien déclarés, chacun avec des citations pour les 3 tons et les 2 issues.");
 }
 
 // ---------------------------------------------------------------------
@@ -254,6 +289,30 @@ function freshTeamAndLeague(name) {
   const res = league.teams[0].resolveInterview(semiEntry.id, "Mesuré", T0);
   if (!res || !res.ok || typeof res.formDelta !== "number") throw new Error("❌ L'interview de demi-finale de PO devrait se résoudre comme n'importe quelle interview de jalon (effet supporters + joueurs).");
   console.log("✅ L'interview de demi-finale de PO se résout bien avec le même système que les deux autres jalons (effet supporters + joueurs).");
+
+  // ---------------------------------------------------------------------
+  // Interview de jalon "finale de PO" (retour utilisateur, 2026-09 : "on
+  // peut ajouter un interview post finale de PO, en cas de victoire ou
+  // défaite"). Même mécanique que la demi-finale ci-dessus, via la même
+  // League._queuePlayoffSeriesInterview, mais SANS snapshot (dernier match
+  // de la saison, rien ne resimule ces joueurs après). Complète la série
+  // gagnée par l'équipe humaine à l'instant : elle affronte l'autre demi
+  // en finale.
+  // ---------------------------------------------------------------------
+  league.playoffs.finalSeries = { idxA: 0, idxB: 2, games: [], winsA: 0, winsB: 0, winner: null, resolved: false };
+  league.recordPlayoffGameResult("final", 0, 2, 80, 70, T0);
+  if (humanTeam.pendingInterviews.some(i => i.milestone === "finale-po")) {
+    throw new Error("❌ Aucune interview de finale ne devrait être mise en attente tant que la série n'est pas décidée (1 victoire sur 2).");
+  }
+  league.recordPlayoffGameResult("final", 2, 0, 65, 90, T0);
+  const finalEntry = humanTeam.pendingInterviews.find(i => i.milestone === "finale-po");
+  if (!finalEntry) throw new Error("❌ recordPlayoffGameResult devrait mettre en attente une interview 'finale-po' pour l'équipe humaine dès que la finale est décidée.");
+  if (finalEntry.round !== null) throw new Error(`❌ Une interview de finale de PO devrait porter round=null, obtenu ${finalEntry.round}.`);
+  if (!finalEntry.won) throw new Error("❌ L'équipe humaine (idxA de la finale, winner=0) devrait avoir `won=true`.");
+  if (league.playoffs.champion !== 0) throw new Error("❌ League.playoffs.champion devrait être l'équipe humaine (idx 0) qui a gagné la finale.");
+  const finalRes = league.teams[0].resolveInterview(finalEntry.id, "Agressif", T0);
+  if (!finalRes || !finalRes.ok || typeof finalRes.formDelta !== "number") throw new Error("❌ L'interview de finale de PO devrait se résoudre comme n'importe quelle interview de jalon.");
+  console.log("✅ recordPlayoffGameResult met bien en attente puis résout une interview de jalon 'finale-po' (victoire ou défaite) dès que la finale se décide, avec champion posé sur League.playoffs.");
 }
 
 // ---------------------------------------------------------------------
@@ -282,6 +341,23 @@ function freshTeamAndLeague(name) {
   if (!s0.resolved || !s1.resolved) throw new Error("❌ Les deux demi-finales devraient être résolues une fois les play-offs terminés.");
   if (!playoffs.finalSeries || !playoffs.finalSeries.resolved) throw new Error("❌ La finale devrait être résolue une fois les play-offs terminés.");
   console.log("✅ Un vrai déroulé de League.runPlayoffsInstantly() attache bien semiPlayerIds pour les 4 demi-finalistes, sans jamais lancer d'exception.");
+
+  // Si l'équipe humaine a atteint la finale (aléatoire selon la simulation),
+  // elle doit avoir une interview 'finale-po' en attente ; si elle s'est
+  // arrêtée en demie, une interview 'demi-finale-po'. Dans tous les cas au
+  // moins une entrée de jalon de play-offs doit exister pour elle, preuve
+  // que _queuePlayoffSeriesInterview (renommée depuis
+  // _queuePlayoffSemiInterview) fonctionne bien de bout en bout via le vrai
+  // déroulé, demies ET finale confondues.
+  const humanIdx = league.teams.findIndex(t => t.isHuman);
+  if (humanIdx === -1) throw new Error("❌ (setup) une équipe humaine devrait exister dans cette ligue.");
+  const humanTeam2 = league.teams[humanIdx];
+  const reachedFinal = playoffs.finalSeries.idxA === humanIdx || playoffs.finalSeries.idxB === humanIdx;
+  const expectedMilestone = reachedFinal ? "finale-po" : "demi-finale-po";
+  if (!humanTeam2.pendingInterviews.some(i => i.milestone === expectedMilestone)) {
+    throw new Error(`❌ L'équipe humaine (${reachedFinal ? "finaliste" : "éliminée en demie"}) devrait avoir une interview '${expectedMilestone}' en attente après un vrai déroulé de play-offs.`);
+  }
+  console.log(`✅ L'équipe humaine a bien une interview de jalon '${expectedMilestone}' en attente après un vrai déroulé de play-offs (${reachedFinal ? "allée jusqu'en finale" : "éliminée en demie"}).`);
 }
 
 console.log("\n🏁 Tous les tests milestone_interview_and_mvp_test.js sont passés.");

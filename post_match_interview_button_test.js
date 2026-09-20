@@ -1,24 +1,32 @@
-// Vérifie le retour utilisateur (2026-09) : "il faudrait que l'interview du
-// match s'affiche si on est connecté [...] si on est sur la page live sur le
-// live via un bouton (faire l'interview d'après match) et dans le
-// calendrier à la place de voir le live (quand le match est terminé comme
-// ici) mettre un bouton 'interview d'après match'".
+// L'ancien système d'interview "classique" (une interview possible après
+// CHAQUE match, avec un bouton dédié sur le direct ET sur le calendrier) a
+// été retiré (retour utilisateur, 2026-09 : "on enlève ça"). Ce fichier
+// testait exactement ces deux boutons (#liveInterviewCtaBtn,
+// .calendar-interview-btn) : entièrement réécrit pour couvrir à la place les
+// DEUX nouveaux points d'entrée choisis par l'utilisateur pour les
+// interviews de JALON qui subsistent ("l'interview de jalon doit se faire
+// via l'écran pendant votre absence et via le tableau de bord") :
 //
-// Jusqu'ici, la SEULE façon de répondre à une interview était l'écran
-// "Pendant votre absence…", qui ne s'affiche que lors d'un rechargement
-// après le fait, et qui ignore explicitement la journée qu'on vient de
-// suivre en direct (voir refreshFromServerAndReenter) : un manager resté
-// connecté pendant tout le direct ne voyait donc jamais son interview.
-// Couvre les DEUX nouveaux points d'entrée : le bouton "Faire l'interview
-// d'après match" sur l'écran de direct lui-même une fois la diffusion
-// terminée, et le bouton "Interview d'après match" du Calendrier, qui
-// remplace "Voir le direct" une fois la fenêtre de diffusion écoulée côté
-// client (même si league.liveMatch n'a pas encore été rattrapé par le
-// serveur, exactement le cas capturé par l'utilisateur en capture d'écran).
+// 1) L'écran "Pendant votre absence" (showCatchupSummaryIfAny), pour un
+//    manager qui a manqué la diffusion en direct entière : déjà son
+//    comportement historique pour les journées SANS jalon, inchangé ici.
+//
+// 2) Le panneau d'interview du tableau de bord (#clubInterviewPanel,
+//    renderClubInterviewPanel), AJOUTÉ pour couvrir le trou laissé par le
+//    retrait des boutons direct/calendrier : un manager resté connecté
+//    pendant TOUTE la diffusion d'un match portant un jalon (ex. journée 0,
+//    "début de saison") ne voit jamais son interview via "Pendant votre
+//    absence" (voir refreshFromServerAndReenter, qui filtre explicitement la
+//    journée qu'on vient de suivre en direct de la liste des événements à
+//    rattraper). Sans ce panneau, l'interview resterait inaccessible
+//    jusqu'à expiration silencieuse au bout de 3 jours, une régression par
+//    rapport à l'ancien bouton "Faire l'interview d'après match" du direct.
 const fs = require("fs");
 const { startTestServer, openGame, flush, patchDateNow } = require("./test_helpers.js");
 const { scheduledTimeForRound, MATCH_BROADCAST_DURATION_MS } = require("./server/calendar.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+
+function clickTab(doc, key) { [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click(); }
 
 (async () => {
 
@@ -33,110 +41,162 @@ const scheduledAt = scheduledTimeForRound(saved.league.calendarStartAt, saved.le
 await dom.window.close();
 
 // ---------------------------------------------------------------------
-// Partie 1 : bouton "Faire l'interview d'après match" sur le direct
-// lui-même, une fois la diffusion locale terminée (finishPlayback, ici
-// appelé directement plutôt que d'attendre son setTimeout en temps réel).
+// Partie 1 : manager absent pendant TOUTE la diffusion de la journée 0
+// (jamais suivie en direct). La journée 0 porte toujours le jalon "début
+// de saison" (voir Engine.milestoneTypeForRound). L'interview de jalon doit
+// apparaître dans le récapitulatif "Pendant votre absence", exactement
+// comme n'importe quel autre événement manqué.
 // ---------------------------------------------------------------------
-clock.now = scheduledAt + Math.round(MATCH_BROADCAST_DURATION_MS / 2);
+clock.now = scheduledAt + MATCH_BROADCAST_DURATION_MS + 5000;
 dom = await openGame(html, baseUrl, (window) => patchDateNow(window, () => clock.now));
 let doc = dom.window.document;
 let win = dom.window;
+await flush(dom);
 
-const liveRound1 = win.eval("league.liveMatch.round");
-if (typeof liveRound1 !== "number") throw new Error("❌ (setup) un direct devrait être en cours après reconnexion en pleine diffusion.");
+const catchupVisible = !doc.getElementById("catchupSection").classList.contains("hidden");
+console.log("Récapitulatif \"Pendant votre absence\" affiché après une absence couvrant toute la journée 0 :", catchupVisible);
+if (!catchupVisible) throw new Error("❌ (setup) Le récapitulatif d'absence devrait s'afficher après avoir manqué toute la diffusion de la journée 0.");
 
-clock.now = scheduledAt + MATCH_BROADCAST_DURATION_MS + 5000;
-win.eval("finishPlayback();");
+const pendingBefore = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'debut-saison')");
+console.log("Interview de jalon \"début de saison\" en attente côté teamA :", pendingBefore);
+if (!pendingBefore) throw new Error("❌ (setup) Une interview de jalon \"début de saison\" devrait être en attente après le tout premier match de la saison.");
 
-const liveInterviewBtnBefore = doc.querySelector("#liveInterviewPanel #liveInterviewCtaBtn");
-console.log("Bouton \"Faire l'interview d'après match\" affiché sur le direct après la fin de la diffusion :", !!liveInterviewBtnBefore);
-if (!liveInterviewBtnBefore) throw new Error("❌ BUG NON CORRIGÉ : le bouton d'interview devrait apparaître sur le direct une fois la diffusion terminée.");
-console.log("✅ Le bouton d'interview apparaît bien sur le direct une fois la diffusion terminée.");
+const catchupWidget = doc.querySelector("#catchupContent .interview-widget");
+console.log("Widget d'interview affiché dans le récapitulatif d'absence :", !!catchupWidget);
+if (!catchupWidget) throw new Error("❌ Le récapitulatif \"Pendant votre absence\" devrait afficher le widget de l'interview de jalon \"début de saison\" de la journée 0.");
+console.log("✅ L'interview de jalon \"début de saison\" s'affiche bien dans le récapitulatif \"Pendant votre absence\".");
 
-liveInterviewBtnBefore.click();
+const toneBtn = catchupWidget.querySelector("[data-interview-tone]");
+if (!toneBtn) throw new Error("❌ (setup) Le widget devrait proposer au moins un bouton de ton.");
+toneBtn.click();
 await new Promise(r => setTimeout(r, 300));
 await flush(dom);
 
-const liveWidget = doc.querySelector("#liveInterviewPanel .interview-widget");
-console.log("Widget d'interview affiché sur le direct après clic :", !!liveWidget);
-if (!liveWidget) throw new Error("❌ BUG NON CORRIGÉ : cliquer sur le bouton devrait afficher le widget d'interview directement sur le direct.");
-console.log("✅ Le widget d'interview s'affiche bien directement sur le direct après le clic.");
+const pendingAfterResolve = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'debut-saison')");
+console.log("Interview encore en attente après réponse depuis le récapitulatif d'absence :", pendingAfterResolve);
+if (pendingAfterResolve) throw new Error("❌ Répondre à l'interview depuis le récapitulatif d'absence devrait la retirer de teamA.pendingInterviews.");
+console.log("✅ Répondre à l'interview de jalon depuis le récapitulatif \"Pendant votre absence\" la retire bien de la file d'attente.");
 
-const toneBtn = liveWidget.querySelector("[data-interview-tone]");
-if (!toneBtn) throw new Error("❌ (setup) Le widget devrait proposer au moins un bouton de ton.");
-toneBtn.click();
-const pendingAfterResolve = win.eval(`teamA.pendingInterviews.some(i => i.round === ${liveRound1})`);
-console.log("Interview encore en attente après réponse :", pendingAfterResolve);
-if (pendingAfterResolve) throw new Error("❌ L'interview devrait être retirée de teamA.pendingInterviews une fois répondue.");
-console.log("✅ Répondre à l'interview depuis le direct la retire bien de la file d'attente.");
-
-const continueBtn = doc.querySelector("#liveInterviewPanel .post-interview-continue-btn");
-if (!continueBtn) throw new Error("❌ (setup) Le bouton \"Continuer\" devrait rester affiché après réponse.");
-continueBtn.click();
+const catchupContinueBtn = doc.getElementById("catchupContinueBtn");
+catchupContinueBtn.click();
 await flush(dom);
-const liveSectionHiddenAfterContinue = doc.getElementById("liveSection").classList.contains("hidden");
-console.log("Écran direct masqué après \"Continuer\" :", liveSectionHiddenAfterContinue);
-if (!liveSectionHiddenAfterContinue) throw new Error("❌ \"Continuer\" devrait quitter l'écran de direct (match désormais résolu côté serveur).");
-console.log("✅ \"Continuer\" fait bien reprendre le fil normal du jeu après l'interview.");
+const catchupHiddenAfterContinue = doc.getElementById("catchupSection").classList.contains("hidden");
+console.log("Récapitulatif d'absence masqué après \"Continuer\" :", catchupHiddenAfterContinue);
+if (!catchupHiddenAfterContinue) throw new Error("❌ \"Continuer\" devrait quitter l'écran de récapitulatif d'absence.");
+console.log("✅ \"Continuer\" fait bien reprendre le fil normal du jeu après le récapitulatif d'absence.");
 
 await flush(dom);
 await dom.window.close();
 
 // ---------------------------------------------------------------------
-// Partie 2 : bouton "Interview d'après match" sur le Calendrier, à la place
-// de "Voir le direct", pour un match dont la fenêtre de diffusion est déjà
-// entièrement écoulée MAIS resté stale côté client (aucune requête réseau
-// entre-temps) : exactement le scénario rapporté ("le calendrier affiche
-// toujours 'Voir le direct' [...] alors que le match est fini").
+// Partie 2 : manager resté connecté pendant TOUTE la diffusion d'une
+// journée portant un jalon (mi-saison, journée 9 ici, atteinte en
+// rattrapant les journées 1 à 8 sans les suivre en direct). Une fois la
+// diffusion terminée (finishPlayback), l'interview est déjà en attente
+// côté SERVEUR mais teamA (côté navigateur) ne le sait pas encore tant
+// qu'aucun aller-retour serveur n'a eu lieu (voir refreshFromServerAndReenter),
+// exactement le trou qui rendait l'ancien bouton du direct nécessaire.
+// Vérifie que le nouveau panneau du tableau de bord (#clubInterviewPanel)
+// comble bien ce trou, sans repasser par un bouton dédié au direct.
 // ---------------------------------------------------------------------
-// La Partie 1 a fait avancer la ligue au-delà de la journée 0 (via
-// "Continuer") : round/horaire programmé recalculés depuis l'état serveur
-// ACTUEL plutôt que de réutiliser `scheduledAt`/round 0, périmés.
 const savedAfterPart1 = JSON.parse(fs.readFileSync(savePath, "utf-8"));
-const scheduledAt2 = scheduledTimeForRound(savedAfterPart1.league.calendarStartAt, savedAfterPart1.league.round);
+// Avance directement jusqu'à la journée 9 (mi-saison) côté serveur, en
+// rattrapant chaque journée intermédiaire SANS jamais suivre son direct
+// (comme n'importe quel manager occasionnel) : ouvre puis referme
+// immédiatement une session bien après la fin de la fenêtre de diffusion de
+// chaque journée, jusqu'à atteindre la journée voulue.
+let round = savedAfterPart1.league.round;
+while (round < 9) {
+  const savedNow = JSON.parse(fs.readFileSync(savePath, "utf-8"));
+  const at = scheduledTimeForRound(savedNow.league.calendarStartAt, savedNow.league.round);
+  clock.now = at + MATCH_BROADCAST_DURATION_MS + 5000;
+  const d = await openGame(html, baseUrl, (window) => patchDateNow(window, () => clock.now));
+  await flush(d);
+  // Consomme immédiatement le récapitulatif d'absence de cette journée (clic
+  // sur "Continuer") : sans ça, ses événements resteraient en attente et
+  // referaient surface plus tard, faussant la vérification de la Partie 2
+  // (qui veut isoler le SEUL cas d'une journée suivie en direct jusqu'au
+  // bout, journée 9, sans aucun autre événement en attente autour).
+  const dc = d.window.document;
+  if (!dc.getElementById("catchupSection").classList.contains("hidden")) {
+    dc.getElementById("catchupContinueBtn").click();
+    await flush(d);
+  }
+  await d.window.close();
+  const after = JSON.parse(fs.readFileSync(savePath, "utf-8"));
+  round = after.league.round;
+}
+console.log("\nJournée atteinte après rattrapage des journées précédentes :", round);
+if (round !== 9) throw new Error(`❌ (setup) devrait avoir atteint la journée 9 (mi-saison), obtenu ${round}.`);
 
-clock.now = scheduledAt2 + Math.round(MATCH_BROADCAST_DURATION_MS / 2);
+const savedAtRound9 = JSON.parse(fs.readFileSync(savePath, "utf-8"));
+const scheduledAt9 = scheduledTimeForRound(savedAtRound9.league.calendarStartAt, savedAtRound9.league.round);
+clock.now = scheduledAt9 + Math.round(MATCH_BROADCAST_DURATION_MS / 2);
 dom = await openGame(html, baseUrl, (window) => patchDateNow(window, () => clock.now));
 doc = dom.window.document;
 win = dom.window;
 
-const liveRound2 = win.eval("league.liveMatch.round");
-if (typeof liveRound2 !== "number") throw new Error("❌ (setup) un direct devrait être en cours après reconnexion en pleine diffusion.");
+const liveRound = win.eval("league.liveMatch.round");
+if (liveRound !== 9) throw new Error(`❌ (setup) un direct devrait être en cours pour la journée 9, obtenu ${liveRound}.`);
 
-// La fenêtre de diffusion s'écoule sans qu'aucune requête réseau n'ait
-// lieu entre-temps (league.liveMatch reste stale côté client).
-clock.now = scheduledAt2 + MATCH_BROADCAST_DURATION_MS + 5000;
-win.eval("TAB_HANDLERS.calendrier();");
+clock.now = scheduledAt9 + MATCH_BROADCAST_DURATION_MS + 5000;
+win.eval("finishPlayback();");
 
-const calBtn = doc.querySelector(`.calendar-order-btn[data-live-interview-round="${liveRound2}"]`);
-console.log("Bouton du calendrier pour la journée en direct périmée :", calBtn && calBtn.textContent, calBtn && calBtn.className);
-if (!calBtn || calBtn.textContent !== "Interview d'après match") {
-  throw new Error(`❌ BUG NON CORRIGÉ : le calendrier devrait afficher "Interview d'après match" (pas "Voir le direct") une fois la diffusion terminée, obtenu ${calBtn ? `"${calBtn.textContent}"` : "aucun bouton"}.`);
-}
-if (!calBtn.classList.contains("calendar-interview-btn")) throw new Error("❌ Le bouton devrait porter la classe de style dédiée à l'interview.");
-console.log("✅ Le calendrier affiche bien \"Interview d'après match\" à la place de \"Voir le direct\" une fois la diffusion terminée.");
+const noInterviewYetOnClient = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'mi-saison')");
+console.log("Interview de mi-saison déjà connue de teamA juste après finishPlayback (avant tout aller-retour serveur) :", noInterviewYetOnClient);
+if (noInterviewYetOnClient) throw new Error("❌ (setup) teamA ne devrait pas encore connaître l'interview de mi-saison juste après finishPlayback, avant tout rafraîchissement depuis le serveur.");
 
-calBtn.click();
+// Retour sur l'onglet Ordres : détecte que la diffusion est terminée et va
+// chercher l'issue officielle (et donc l'interview de jalon en attente)
+// auprès du serveur (voir goToOrdresTab/refreshFromServerAndReenter),
+// exactement ce qui se produit normalement en reprenant le fil du jeu.
+clickTab(doc, "ordres");
 await new Promise(r => setTimeout(r, 300));
 await flush(dom);
 
-const calWidget = doc.querySelector("#calendrierInterviewPanel .interview-widget");
-console.log("Widget d'interview affiché sur le calendrier après clic :", !!calWidget);
-if (!calWidget) throw new Error("❌ BUG NON CORRIGÉ : cliquer sur le bouton devrait afficher le widget d'interview directement sur le calendrier.");
-console.log("✅ Le widget d'interview s'affiche bien directement sur le calendrier après le clic.");
+const interviewKnownAfterRefresh = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'mi-saison')");
+console.log("Interview de mi-saison connue de teamA après retour sur Ordres (rafraîchissement serveur) :", interviewKnownAfterRefresh);
+if (!interviewKnownAfterRefresh) throw new Error("❌ (setup) L'interview de mi-saison devrait être connue de teamA après le rafraîchissement déclenché par le retour sur Ordres.");
 
-const scoreCellAfter = [...doc.querySelectorAll("#calendrierContent .calendar-score-btn")]
-  .find(b => Number(b.dataset.boxscoreRound) === liveRound2);
-console.log("Score désormais affiché et cliquable pour cette journée :", scoreCellAfter && scoreCellAfter.textContent);
-if (!scoreCellAfter) throw new Error("❌ Le score de la journée devrait être connu (et cliquable) une fois le match résolu côté serveur suite au clic.");
-console.log("✅ Le tableau du calendrier reflète bien le résultat officiel une fois l'interview ouverte.");
+// La journée 9 vient d'être suivie EN DIRECT : son événement "match" est
+// filtré de pendingEvents (voir refreshFromServerAndReenter), donc son
+// interview de jalon n'apparaît PAS dans le récapitulatif "Pendant votre
+// absence", même si ce récapitulatif s'affiche encore pour d'autres
+// événements en attente (ex. l'entraînement hebdomadaire de cette même
+// semaine, sans rapport). Seul le tableau de bord peut encore donner accès
+// à cette interview précise.
+const interviewInCatchupAfterLive = !!doc.querySelector("#catchupContent .interview-widget");
+console.log("Widget d'interview présent dans le récapitulatif d'absence après un direct suivi jusqu'au bout :", interviewInCatchupAfterLive);
+if (interviewInCatchupAfterLive) throw new Error("❌ (setup) L'interview de la journée suivie en direct ne devrait PAS apparaître dans le récapitulatif \"Pendant votre absence\" (son événement \"match\" est filtré, voir refreshFromServerAndReenter).");
+if (!doc.getElementById("catchupSection").classList.contains("hidden")) {
+  doc.getElementById("catchupContinueBtn").click();
+  await flush(dom);
+}
 
-const skipBtn = calWidget.querySelector("[data-interview-skip]");
+clickTab(doc, "club");
+const dashboardWidget = doc.querySelector("#clubInterviewPanel .interview-widget");
+console.log("Widget d'interview affiché sur le tableau de bord :", !!dashboardWidget);
+if (!dashboardWidget) throw new Error("❌ BUG : le panneau du tableau de bord (#clubInterviewPanel) devrait afficher l'interview de jalon manquée par le direct.");
+console.log("✅ Le panneau du tableau de bord affiche bien l'interview de jalon pour une journée suivie en direct jusqu'au bout.");
+
+const skipBtn = dashboardWidget.querySelector("[data-interview-skip]");
 if (!skipBtn) throw new Error("❌ (setup) Le widget devrait proposer \"Sans commentaire\".");
 skipBtn.click();
-const pendingAfterSkip = win.eval(`teamA.pendingInterviews.some(i => i.round === ${liveRound2})`);
-if (pendingAfterSkip) throw new Error("❌ \"Sans commentaire\" devrait retirer l'interview de la file d'attente.");
-console.log("✅ \"Sans commentaire\" depuis le calendrier retire bien l'interview de la file d'attente.");
+await new Promise(r => setTimeout(r, 300));
+await flush(dom);
+
+const pendingAfterSkip = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'mi-saison')");
+console.log("Interview de mi-saison encore en attente après \"Sans commentaire\" depuis le tableau de bord :", pendingAfterSkip);
+if (pendingAfterSkip) throw new Error("❌ \"Sans commentaire\" depuis le tableau de bord devrait retirer l'interview de la file d'attente.");
+console.log("✅ \"Sans commentaire\" depuis le panneau du tableau de bord retire bien l'interview de la file d'attente.");
+
+const panelConfirmationAfterSkip = doc.getElementById("clubInterviewPanel").textContent.trim();
+const widgetGoneFromPanel = !doc.querySelector("#clubInterviewPanel .interview-widget");
+console.log("Confirmation affichée sur le panneau du tableau de bord après réponse :", panelConfirmationAfterSkip);
+if (!widgetGoneFromPanel || !panelConfirmationAfterSkip.includes("Sans commentaire")) {
+  throw new Error(`❌ Le panneau du tableau de bord devrait remplacer le widget par une confirmation "Sans commentaire" une fois l'interview traitée (voir refreshCatchupAfterInterview), obtenu : "${panelConfirmationAfterSkip}".`);
+}
+console.log("✅ Le panneau du tableau de bord remplace bien le widget par une confirmation une fois l'interview traitée.");
 
 await flush(dom);
 await dom.window.close();

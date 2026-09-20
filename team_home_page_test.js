@@ -142,7 +142,7 @@ console.log("✅ Le joueur en forme du moment est bien désigné à partir de se
 // ---------------------------------------------------------------------
 win.eval(`
   (function() {
-    teamA.applyMoraleForResult(true, 10, "Adversaire test", 3);
+    teamA.applyMoraleForResult(true, 10, "Adversaire test", 3, Date.now(), "mi-saison");
     const id = teamA.pendingInterviews[teamA.pendingInterviews.length - 1].id;
     teamA.resolveInterview(id, "Mesuré");
   })();
@@ -323,27 +323,33 @@ if (win.eval("teamA.jerseyTwoTone") !== chosenTwoToneKey) throw new Error("❌ R
 console.log("✅ Repasser en club gratuit masque bien le sélecteur de combinaison de couleurs (sans perdre le choix).");
 
 // ---------------------------------------------------------------------
-// Partie 6 : délai de réponse de 2h à une interview, côté écran de
-// rattrapage : une interview jamais traitée après 2h disparaît, sans
-// blocage ni action requise du manager (retour utilisateur : "il faut les
-// faire dans les 2h après le match, sinon c'est par défaut sans impact").
+// Partie 6 : délai de réponse de 3 jours à une interview de JALON, côté
+// écran de rattrapage : une interview jamais traitée après ce délai
+// disparaît, sans blocage ni action requise du manager (retour
+// utilisateur : "On a 3 jours pour faire l'interview sinon c'est neutre sur
+// le moral"). Le système d'interview classique après CHAQUE match (délai de
+// 2h) a depuis été retiré intégralement (retour utilisateur, 2026-09 : "on
+// enlève ça") : seules les interviews de JALON (milestone explicite)
+// existent encore, voir milestone_interview_and_mvp_test.js pour leur
+// couverture dédiée.
 // ---------------------------------------------------------------------
 let fakeNow = Date.now();
 patchDateNow(win, () => fakeNow);
 win.eval(`
   (function() {
-    teamA.applyMoraleForResult(true, 10, "Adversaire test", 9, Date.now());
+    teamA.applyMoraleForResult(true, 10, "Adversaire test", 9, Date.now(), "fin-saison-reguliere");
   })();
 `);
 const pendingBefore = win.eval("teamA.pendingInterviews.length");
 console.log("Interviews en attente juste après le match :", pendingBefore);
-if (pendingBefore < 1) throw new Error("❌ (setup) Une interview devrait être en attente juste après le match.");
-fakeNow += (2 * 60 * 60 * 1000) + 1000; // 2h01 plus tard
+if (pendingBefore < 1) throw new Error("❌ (setup) Une interview de jalon devrait être en attente juste après le match.");
+const deadlineMs = win.eval("MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS");
+fakeNow += deadlineMs + 1000; // juste après l'échéance de 3 jours
 win.eval("teamA.pruneExpiredInterviews(Date.now());");
 const pendingAfter = win.eval("teamA.pendingInterviews.length");
-console.log("Interviews en attente après 2h01 :", pendingAfter);
-if (pendingAfter !== 0) throw new Error("❌ Une interview non traitée après 2h devrait avoir été purgée automatiquement.");
-console.log("✅ Une interview non traitée après 2h disparaît bien de la file, sans effet sur l'humeur.");
+console.log("Interviews en attente après l'échéance de 3 jours :", pendingAfter);
+if (pendingAfter !== 0) throw new Error("❌ Une interview de jalon non traitée après 3 jours devrait avoir été purgée automatiquement.");
+console.log("✅ Une interview de jalon non traitée après 3 jours disparaît bien de la file, sans effet sur l'humeur.");
 
 // ---------------------------------------------------------------------
 // Partie 7 : fiche club, date de création + renommée + trophées (retour

@@ -84,7 +84,19 @@ if (!listing) throw new Error("❌ (setup) La mise en vente du joueur de test a 
 
 clickTab("marche");
 win.renderMarcheSection();
-const marketCard = doc.querySelector(`.market-card[data-listing-id="${listing.id}"]`);
+// Désambiguïsation par le joueur mis en vente (`data-player-id`), pas
+// seulement par `data-listing-id` : ce test crée son annonce directement
+// sur `league` côté client (même optimisme que le vrai bouton "Mettre aux
+// enchères", voir listBtn plus haut dans moteurbasket3.html), dont le
+// compteur `uid()` est indépendant de celui du serveur qui a déjà généré
+// les annonces CPU automatiques (refreshMarket). Les deux compteurs
+// démarrent chacun à 1 et ne se coordonnent jamais : une collision d'id
+// entre une annonce CPU authentique et celle-ci est donc possible (bug
+// d'architecture préexistant, indépendant du présent test), auquel cas
+// `[data-listing-id="X"]` seul matcherait DEUX cartes différentes et
+// `querySelector` pourrait retourner celle de la mauvaise annonce.
+const matchingCards = [...doc.querySelectorAll(`.market-card[data-listing-id="${listing.id}"]`)];
+const marketCard = matchingCards.find(c => c.querySelector(`[data-player-id="${listedPlayer.id}"]`));
 if (!marketCard) throw new Error("❌ (setup) Le marché devrait afficher la carte du joueur mis en vente.");
 const sellerLink = marketCard.querySelector(".market-card-meta [data-team-idx]");
 console.log("\nLien vers l'équipe vendeuse trouvé sur la carte du marché :", !!sellerLink);
@@ -102,7 +114,11 @@ console.log("✅ Le nom de l'équipe vendeuse est bien cliquable sur le Marché,
 doc.getElementById("closeTeamDetailBtn").click();
 clickTab("marche");
 win.renderMarcheSection();
-const playerLink = doc.querySelector(`.market-card[data-listing-id="${listing.id}"] .market-card-name [data-player-id]`);
+// Même désambiguïsation qu'au-dessus (collision possible sur
+// data-listing-id) : cherche directement par data-player-id, sans jamais
+// dépendre de quelle carte "market-card" portant cet id `querySelector`
+// choisirait en cas de collision.
+const playerLink = doc.querySelector(`.market-card-name [data-player-id="${listedPlayer.id}"]`);
 if (!playerLink) throw new Error("❌ (setup) Le nom du joueur mis en vente devrait être cliquable.");
 playerLink.click();
 const attrCells = [...doc.querySelectorAll("#playerDetailContent table.roster-table")[0].querySelectorAll("tbody td")];

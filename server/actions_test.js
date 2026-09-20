@@ -708,33 +708,42 @@ function freshTeamAndLeague() {
 }
 
 // ---------------------------------------------------------------------
-// respondToInterview / skipInterview : Médias, interview d'après-match
-// (voir Team.pendingInterviews/applyMoraleForResult/resolveInterview/
-// skipInterview côté moteur, INTERVIEW_TONES). Un match humain avec un
-// `round` numérique met en attente une interview ; le manager choisit un
-// ton (delta selon victoire/défaite) ou l'ignore (effet nul).
+// respondToInterview / skipInterview : Médias, interview DE JALON (voir
+// Team.pendingInterviews/applyMoraleForResult/resolveInterview/
+// skipInterview côté moteur, MILESTONE_INTERVIEW_TONES). Retour utilisateur,
+// 2026-09 : l'interview classique d'après CHAQUE match a été retirée ("on
+// enlève ça") ; seul un `milestone` (un des 5 moments clés de la saison, voir
+// MILESTONE_INTERVIEW_TYPES) met désormais une interview en attente, jamais
+// `round` seul. Le manager choisit un ton (delta selon victoire/défaite,
+// plus un effet sur la forme des joueurs ayant disputé ce match) ou
+// l'ignore (effet nul).
 {
   const { team, league } = freshTeamAndLeague();
 
-  const toneNames = Object.keys(E.INTERVIEW_TONES);
-  if (toneNames.length !== 3) throw new Error("❌ INTERVIEW_TONES devrait exposer exactement 3 tons.");
-  console.log("✅ INTERVIEW_TONES expose les 3 tons attendus.");
+  const toneNames = Object.keys(E.MILESTONE_INTERVIEW_TONES);
+  if (toneNames.length !== 3) throw new Error("❌ MILESTONE_INTERVIEW_TONES devrait exposer exactement 3 tons.");
+  console.log("✅ MILESTONE_INTERVIEW_TONES expose les 3 tons attendus.");
 
-  // Un appel SANS `round` (ex. simulations hors championnat) ne met rien en
-  // attente : comportement historique inchangé.
+  // Un appel SANS `milestone` (même avec un `round` numérique, ex. un match
+  // de championnat ordinaire) ne met plus rien en attente depuis le retrait
+  // de l'interview classique.
   team.applyMoraleForResult(true, 12, "Adversaire test");
-  if (team.pendingInterviews.length !== 0) throw new Error("❌ applyMoraleForResult sans `round` ne devrait jamais mettre d'interview en attente.");
-  console.log("✅ applyMoraleForResult sans `round` ne met aucune interview en attente.");
-
-  // Victoire au round 3 : une interview est mise en attente.
+  if (team.pendingInterviews.length !== 0) throw new Error("❌ applyMoraleForResult sans `milestone` ne devrait jamais mettre d'interview en attente.");
   team.applyMoraleForResult(true, 12, "Adversaire test", 3);
-  if (team.pendingInterviews.length !== 1) throw new Error("❌ applyMoraleForResult avec `round` devrait mettre une interview en attente.");
+  if (team.pendingInterviews.length !== 0) throw new Error("❌ applyMoraleForResult avec `round` mais SANS `milestone` ne devrait plus mettre d'interview en attente (interview classique retirée).");
+  console.log("✅ applyMoraleForResult sans `milestone` ne met jamais d'interview en attente, même avec un `round` numérique.");
+
+  // Victoire au round 3, mi-saison : une interview de jalon est mise en
+  // attente.
+  team.applyMoraleForResult(true, 12, "Adversaire test", 3, T0, "mi-saison");
+  if (team.pendingInterviews.length !== 1) throw new Error("❌ applyMoraleForResult avec `milestone` devrait mettre une interview en attente.");
   const winInterview = team.pendingInterviews[0];
-  if (winInterview.round !== 3 || winInterview.won !== true) throw new Error("❌ L'interview en attente devrait porter le round et le résultat du match.");
+  if (winInterview.round !== 3 || winInterview.won !== true || winInterview.milestone !== "mi-saison") throw new Error("❌ L'interview en attente devrait porter le round, le résultat du match et le milestone.");
 
   const moraleBeforeWin = team.fanMorale;
   const aggroWinRes = actions.respondToInterview(team, 0, league, { id: winInterview.id, tone: "Agressif" }, T0);
-  if (!aggroWinRes.ok || aggroWinRes.delta !== E.INTERVIEW_TONES["Agressif"].win) throw new Error(`❌ respondToInterview (Agressif, victoire) devrait renvoyer le delta de victoire agressive : ${JSON.stringify(aggroWinRes)}`);
+  if (!aggroWinRes.ok || aggroWinRes.delta !== E.MILESTONE_INTERVIEW_TONES["Agressif"].fanWin) throw new Error(`❌ respondToInterview (Agressif, victoire) devrait renvoyer le delta de victoire agressive : ${JSON.stringify(aggroWinRes)}`);
+  if (aggroWinRes.formDelta !== E.MILESTONE_INTERVIEW_TONES["Agressif"].formWin) throw new Error(`❌ respondToInterview (Agressif, victoire) devrait aussi renvoyer le delta de forme : ${JSON.stringify(aggroWinRes)}`);
   if (team.fanMorale <= moraleBeforeWin) throw new Error("❌ Une interview agressive après une victoire devrait augmenter l'humeur des supporters.");
   if (team.pendingInterviews.length !== 0) throw new Error("❌ respondToInterview devrait retirer l'interview traitée de la file.");
   console.log("✅ respondToInterview (Agressif, victoire) applique le bon delta et vide la file.");
@@ -745,22 +754,22 @@ function freshTeamAndLeague() {
   console.log("✅ respondToInterview rejette une interview déjà traitée.");
 
   // Ton inconnu.
-  team.applyMoraleForResult(false, 8, "Adversaire test", 4);
+  team.applyMoraleForResult(false, 8, "Adversaire test", 4, T0, "fin-saison-reguliere");
   const lossInterview = team.pendingInterviews[team.pendingInterviews.length - 1];
   const unknownTone = actions.respondToInterview(team, 0, league, { id: lossInterview.id, tone: "Sarcastique" }, T0);
   if (unknownTone.ok) throw new Error("❌ Un ton inconnu devrait être rejeté.");
   console.log("✅ respondToInterview rejette un ton inconnu.");
 
   // Défaite, ton Humble : le SEUL cas où une défaite produit un effet NET
-  // POSITIF sur l'humeur (voir le commentaire d'INTERVIEW_TONES).
+  // POSITIF sur l'humeur (voir le commentaire de MILESTONE_INTERVIEW_TONES).
   const moraleBeforeLoss = team.fanMorale;
   const humbleLossRes = actions.respondToInterview(team, 0, league, { id: lossInterview.id, tone: "Humble" }, T0);
-  if (!humbleLossRes.ok || humbleLossRes.delta !== E.INTERVIEW_TONES["Humble"].loss) throw new Error(`❌ respondToInterview (Humble, défaite) devrait renvoyer le delta correspondant : ${JSON.stringify(humbleLossRes)}`);
+  if (!humbleLossRes.ok || humbleLossRes.delta !== E.MILESTONE_INTERVIEW_TONES["Humble"].fanLoss) throw new Error(`❌ respondToInterview (Humble, défaite) devrait renvoyer le delta correspondant : ${JSON.stringify(humbleLossRes)}`);
   if (team.fanMorale <= moraleBeforeLoss) throw new Error("❌ Une interview humble après une défaite devrait quand même augmenter l'humeur des supporters (le seul cas positif après une défaite).");
   console.log("✅ respondToInterview (Humble, défaite) produit bien un effet net positif sur l'humeur.");
 
   // skipInterview : effet nul, retire simplement l'entrée de la file.
-  team.applyMoraleForResult(true, 5, "Adversaire test", 5);
+  team.applyMoraleForResult(true, 5, "Adversaire test", null, T0, "demi-finale-po");
   const skipTarget = team.pendingInterviews[team.pendingInterviews.length - 1];
   const moraleBeforeSkip = team.fanMorale;
   const skipRes = actions.skipInterview(team, 0, league, { id: skipTarget.id }, T0);
@@ -775,7 +784,7 @@ function freshTeamAndLeague() {
 
   // Round-trip serializeTeam/teamFromSave : pendingInterviews doit survivre
   // à une sauvegarde/rechargement (convention établie pour tout champ Team).
-  team.applyMoraleForResult(true, 9, "Adversaire test", 6);
+  team.applyMoraleForResult(true, 9, "Adversaire test", 0, T0, "debut-saison");
   const beforeCount = team.pendingInterviews.length;
   const saved = E.serializeTeam(team);
   const reloaded = E.teamFromSave(saved);
@@ -785,39 +794,40 @@ function freshTeamAndLeague() {
 }
 
 // ---------------------------------------------------------------------
-// Délai de réponse de 2h à une interview (retour utilisateur : "il faut les
-// faire dans les 2h après le match, sinon c'est par défaut sans impact") :
-// voir Team.pruneExpiredInterviews/INTERVIEW_RESPONSE_DEADLINE_MS côté
-// moteur.
+// Délai de réponse de 3 jours à une interview de jalon (retour utilisateur :
+// "on a 3 jours pour faire l'interview sinon c'est neutre sur le moral") :
+// voir Team.pruneExpiredInterviews/MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS
+// côté moteur.
 // ---------------------------------------------------------------------
 {
   const { team, league } = freshTeamAndLeague();
   const T_MATCH = Date.UTC(2026, 8, 10, 12, 0, 0);
+  const DEADLINE_MS = E.MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS;
 
-  team.applyMoraleForResult(true, 10, "Adversaire test", 3, T_MATCH);
+  team.applyMoraleForResult(true, 10, "Adversaire test", 3, T_MATCH, "mi-saison");
   const interview = team.pendingInterviews[0];
 
-  // Juste avant l'échéance (1h59) : toujours répondable.
-  const justBefore = T_MATCH + (2 * 60 * 60 * 1000) - 60000;
+  // Juste avant l'échéance : toujours répondable.
+  const justBefore = T_MATCH + DEADLINE_MS - 60000;
   const okRes = actions.respondToInterview(team, 0, league, { id: interview.id, tone: "Mesuré" }, justBefore);
-  if (!okRes.ok) throw new Error(`❌ Une interview répondue avant l'échéance de 2h devrait être acceptée : ${okRes.error}`);
-  console.log("✅ Une interview répondue juste avant l'échéance de 2h est acceptée.");
+  if (!okRes.ok) throw new Error(`❌ Une interview répondue avant l'échéance de 3 jours devrait être acceptée : ${okRes.error}`);
+  console.log("✅ Une interview répondue juste avant l'échéance de 3 jours est acceptée.");
 
   // Après l'échéance : la file est purgée SANS effet sur l'humeur, comme un
   // "sans commentaire" implicite.
-  team.applyMoraleForResult(false, 6, "Adversaire test", 4, T_MATCH);
+  team.applyMoraleForResult(false, 6, "Adversaire test", 17, T_MATCH, "fin-saison-reguliere");
   const lateInterview = team.pendingInterviews[team.pendingInterviews.length - 1];
-  const afterDeadline = T_MATCH + (2 * 60 * 60 * 1000) + 1000;
+  const afterDeadline = T_MATCH + DEADLINE_MS + 1000;
   const moraleBeforeLate = team.fanMorale;
   const lateRes = actions.respondToInterview(team, 0, league, { id: lateInterview.id, tone: "Agressif" }, afterDeadline);
-  if (lateRes.ok) throw new Error("❌ Répondre après le délai de 2h devrait être rejeté (interview déjà purgée).");
+  if (lateRes.ok) throw new Error("❌ Répondre après le délai de 3 jours devrait être rejeté (interview déjà purgée).");
   if (team.fanMorale !== moraleBeforeLate) throw new Error("❌ Une interview expirée ne devrait avoir aucun effet sur l'humeur, même en tentant d'y répondre trop tard.");
   if (team.pendingInterviews.some(i => i.id === lateInterview.id)) throw new Error("❌ Une interview expirée devrait avoir été purgée de la file.");
-  console.log("✅ Une interview non traitée après 2h est purgée automatiquement, sans effet sur l'humeur.");
+  console.log("✅ Une interview non traitée après 3 jours est purgée automatiquement, sans effet sur l'humeur.");
 
   // pruneExpiredInterviews appelé directement, plusieurs entrées à la fois.
-  team.applyMoraleForResult(true, 5, "Adversaire test", 5, T_MATCH);
-  team.applyMoraleForResult(true, 5, "Adversaire test", 6, T_MATCH);
+  team.applyMoraleForResult(true, 5, "Adversaire test", 0, T_MATCH, "debut-saison");
+  team.applyMoraleForResult(true, 5, "Adversaire test", null, T_MATCH, "demi-finale-po");
   const removedCount = team.pruneExpiredInterviews(afterDeadline);
   if (removedCount !== 2) throw new Error(`❌ pruneExpiredInterviews aurait dû retirer 2 entrées expirées, en a retiré ${removedCount}.`);
   console.log("✅ pruneExpiredInterviews retire bien toutes les entrées expirées d'un coup.");
@@ -1003,7 +1013,7 @@ function freshTeamAndLeague() {
   if (!multiRelease.ok || multiTeam.youthPlayers.some(p => p.id === multiCandidate2.id)) throw new Error("❌ releaseYouthPlayer à un teamIndex non nul devrait s'appliquer à CETTE équipe.");
   console.log("✅ releaseYouthPlayer fonctionne correctement pour un teamIndex non nul (1).");
 
-  multiTeam.applyMoraleForResult(true, 10, "Adversaire test", 7);
+  multiTeam.applyMoraleForResult(true, 10, "Adversaire test", null, T0, "mi-saison");
   const multiInterview = multiTeam.pendingInterviews[multiTeam.pendingInterviews.length - 1];
   const multiInterviewRes = actions.respondToInterview(multiTeam, multiTeamIndex, multiLeague, { id: multiInterview.id, tone: "Mesuré" }, T0);
   if (!multiInterviewRes.ok || multiTeam.pendingInterviews.some(i => i.id === multiInterview.id)) throw new Error("❌ respondToInterview à un teamIndex non nul devrait s'appliquer à CETTE équipe.");

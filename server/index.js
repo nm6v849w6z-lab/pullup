@@ -239,12 +239,13 @@ async function persistContext(ctx) {
 function tick(league, now) {
   AutoSim.ensureLiveMatch(league, now);
   const events = AutoSim.catchUpLeague(league, now);
-  // Médias : purge toute interview en attente depuis plus de 2h, pour
-  // TOUTES les équipes humaines de la ligue (voir Team.pruneExpiredInterviews/
-  // INTERVIEW_RESPONSE_DEADLINE_MS côté moteur) : filet de sécurité
-  // indépendant du navigateur (qui purge déjà côté client, voir
-  // showCatchupSummaryIfAny), pour un manager qui n'ouvrirait plus jamais
-  // l'écran de rattrapage mais continuerait d'appeler d'autres routes.
+  // Médias : purge toute interview de jalon en attente depuis plus de 3
+  // jours, pour TOUTES les équipes humaines de la ligue (voir
+  // Team.pruneExpiredInterviews/MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS
+  // côté moteur) : filet de sécurité indépendant du navigateur (qui purge
+  // déjà côté client, voir showCatchupSummaryIfAny), pour un manager qui
+  // n'ouvrirait plus jamais l'écran de rattrapage mais continuerait
+  // d'appeler d'autres routes.
   league.teams.forEach(t => { if (t.isHuman) t.pruneExpiredInterviews(now); });
   // `changed` : toujours `true` (voir le grand commentaire ci-dessus) —
   // ensureLiveMatch/catchUpLeague/pruneExpiredInterviews tournent tous les

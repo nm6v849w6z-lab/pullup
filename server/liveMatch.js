@@ -521,11 +521,14 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
     // éventuellement close) : dit si CE match précis vient de décider la
     // série de `m.seriesId` (2 victoires atteintes). Voir
     // moteurbasket3.html:showCatchupSummaryIfAny, qui n'attache l'interview
-    // de jalon "demi-finale-po" qu'au match qui a RÉELLEMENT décidé la
-    // demi-finale, jamais au premier match encore en cours de la série.
+    // de jalon "demi-finale-po"/"finale-po" qu'au match qui a RÉELLEMENT
+    // décidé la série, jamais au premier match encore en cours. La finale a
+    // désormais aussi sa propre interview de jalon (retour utilisateur,
+    // 2026-09 : "interview post finale de PO, en cas de victoire ou
+    // défaite"), donc `finalSeries` compte tout autant ici que les demies.
     const series = m.seriesId === "semi0" ? league.playoffs.series[0]
       : m.seriesId === "semi1" ? league.playoffs.series[1]
-      : null; // jamais pour la finale (pas d'interview de jalon associée)
+      : league.playoffs.finalSeries;
     const seriesResolved = !!(series && series.resolved);
 
     if (home.isHuman) {
@@ -567,10 +570,10 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
 // filtrer/personnaliser ces événements pour UN destinataire précis avant de
 // les renvoyer par l'API.
 // `now` (retour utilisateur, 2026-09, bug révélé par un test qui simule le
-// temps plutôt que d'attendre en réel, voir post_match_interview_button_test.js) :
-// horodatage réel transmis explicitement jusqu'à Team.applyMoraleForResult
-// (voir son commentaire), point de départ du délai de 2h avant qu'une
-// interview d'après-match ne s'auto-purge (INTERVIEW_RESPONSE_DEADLINE_MS/
+// temps plutôt que d'attendre en réel) : horodatage réel transmis
+// explicitement jusqu'à Team.applyMoraleForResult (voir son commentaire),
+// point de départ du délai de 3 jours avant qu'une interview de jalon ne
+// s'auto-purge (MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS/
 // pruneExpiredInterviews). Sans lui, applyMoraleForResult retombait sur son
 // propre `Date.now()` par défaut, DIFFÉRENT du `now` déjà reçu ici par
 // autoSim.js:catchUpClassic/catchUpDailyAnchored (et donc du `now` que
@@ -588,10 +591,10 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
   const userResults = [];
   // Interview de jalon (retour utilisateur, 2026-09 : "elle doit avoir lieu
   // après le match de la mi saison de championnat [...] et [...] après la
-  // fin de la saison régulière", voir Engine.milestoneTypeForRound/
-  // MILESTONE_INTERVIEW_TYPES) : au plus un des deux types pour CETTE
-  // journée, `null` le reste du temps (comportement inchangé). Jamais pour
-  // la Coupe (round.index n'a aucun sens vis-à-vis de league.totalRounds).
+  // fin de la saison régulière [...] idem pour le début de saison", voir
+  // Engine.milestoneTypeForRound/MILESTONE_INTERVIEW_TYPES) : au plus un des
+  // trois types pour CETTE journée, `null` le reste du temps. Jamais pour la
+  // Coupe (round.index n'a aucun sens vis-à-vis de league.totalRounds).
   const milestone = milestoneTypeForRound(round, league.totalRounds);
 
   matches.forEach(m => {
@@ -634,14 +637,14 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
 
     if (home.isHuman) {
       const won = scoreHome > scoreAway;
-      // `round` en 4e argument (voir Team.applyMoraleForResult/
-      // pendingInterviews côté moteur) : met aussi en attente une interview
-      // d'après-match pour CE résultat, résolue plus tard côté navigateur
-      // (voir /api/media/interview, server/actions.js). `now` en 5e
-      // argument (voir le commentaire de finalizeRound ci-dessus). `milestone`
-      // en 6e argument (voir plus haut) : bascule cette interview sur le
-      // système "étoffé" (délai de 3 jours, effet sur Player.form) pour les
-      // deux journées concernées, sans rien changer les autres jours.
+      // `round` en 4e argument (voir Team.applyMoraleForResult côté moteur).
+      // `now` en 5e argument (voir le commentaire de finalizeRound
+      // ci-dessus). `milestone` en 6e argument (voir plus haut) : SEUL ce
+      // paramètre met en attente une interview pour CE résultat (résolue
+      // plus tard côté navigateur, voir /api/media/interview,
+      // server/actions.js), pour les trois journées concernées, jamais pour
+      // un match de championnat ordinaire (retour utilisateur, 2026-09 :
+      // interview classique d'après CHAQUE match retirée).
       const moraleDelta = home.applyMoraleForResult(won, scoreHome - scoreAway, away.name, round, now, milestone);
       const attendanceInfo = home.simulateHomeAttendance(away.name);
       userResults.push({

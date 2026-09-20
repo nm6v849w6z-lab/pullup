@@ -34,7 +34,12 @@ const {
   // les listes de noms valides en dur.
   SCREEN_DEFENSES, HELP_DEFENSE_LEVELS, WATCH_FOCUS_EFFECTS, MAX_WATCH_ASSIGNMENTS,
   POST_DEFENSES, CLOSEOUT_STYLES, OFF_REBOUND_STYLES, ENDGAME_MANAGEMENT,
-  INTERVIEW_TONES,
+  // Interviews de jalon (retour utilisateur, 2026-09 : l'interview classique
+  // d'après-match a été retirée, seules les interviews de jalon subsistent,
+  // voir le grand commentaire au-dessus de MILESTONE_INTERVIEW_TYPES côté
+  // moteur) : mêmes tons (Agressif/Mesuré/Humble) que l'ancien système,
+  // réutilisés ici pour valider le ton envoyé par le client.
+  MILESTONE_INTERVIEW_TONES,
 } = Engine;
 
 const MAX_OFFENSIVE_PRIORITIES = 3;
@@ -717,17 +722,18 @@ function releaseYouthPlayer(team, teamIndex, league, body, now) {
 }
 
 // ---------------------------------------------------------------------
-// MÉDIAS : interviews d'après-match en attente (voir Team.pendingInterviews/
-// resolveInterview/skipInterview/INTERVIEW_TONES côté moteur), même esprit
-// de file d'attente que signYouthCandidate/declineYouthCandidate plus haut.
+// MÉDIAS : interviews de jalon en attente (voir Team.pendingInterviews/
+// resolveInterview/skipInterview/MILESTONE_INTERVIEW_TONES côté moteur),
+// même esprit de file d'attente que signYouthCandidate/declineYouthCandidate
+// plus haut.
 // ---------------------------------------------------------------------
 function respondToInterview(team, teamIndex, league, body, now) {
   if (!body || (typeof body.id !== "number" && typeof body.id !== "string") || body.id === "") {
     return fail("id requis.");
   }
   const id = typeof body.id === "string" && /^-?\d+$/.test(body.id) ? Number(body.id) : body.id;
-  if (typeof body.tone !== "string" || !INTERVIEW_TONES[body.tone]) {
-    return fail(`Ton inconnu, attendu parmi : ${Object.keys(INTERVIEW_TONES).join(", ")}.`);
+  if (typeof body.tone !== "string" || !MILESTONE_INTERVIEW_TONES[body.tone]) {
+    return fail(`Ton inconnu, attendu parmi : ${Object.keys(MILESTONE_INTERVIEW_TONES).join(", ")}.`);
   }
   const result = team.resolveInterview(id, body.tone, now);
   // "délai dépassé" générique (retour utilisateur, 2026-09 : les interviews
