@@ -1379,15 +1379,18 @@ const MAX_TEAM_LOGO_DATA_URL_LENGTH = 400000;
 // Fiche club : date de création et trophées (retour utilisateur, 2026-09,
 // après avoir vu la page "Aperçu" v1 : "on pourrait ajouter les petites
 // infos comme date de création, renommée et trophée du club"). `foundedYear`
-// est une année civile RÉELLE tirée une seule fois à la création du club
-// (voir Team.foundedYear plus bas, généré dans le constructeur puis figé par
-// le va-et-vient serializeTeam/teamFromSave, même principe que
-// Player.name/height générés une fois pour toutes). Fourchette large (5 à 90
-// ans avant aujourd'hui) pour couvrir aussi bien un jeune club qu'une
-// institution centenaire, à l'image de l'exemple Football Manager fourni par
-// l'utilisateur (un club au palmarès encore vierge).
+// est l'année RÉELLE de création du club dans le jeu (retour utilisateur,
+// même sujet : "mets l'année de création de l'équipe dans le jeu"), tirée
+// une seule fois à la création du club (voir Team.foundedYear plus bas,
+// généré dans le constructeur puis figé par le va-et-vient
+// serializeTeam/teamFromSave, même principe que Player.name/height générés
+// une fois pour toutes). Volontairement PAS d'ancienneté fictive (un club
+// tout juste créé n'a par définition aucun passé) : voir
+// computeClubReputationStars plus bas, où l'ancienneté ne joue donc aucun
+// rôle pour un club fraîchement créé, seuls les trophées gagnés et le
+// niveau de division comptent.
 function generateFoundedYear(now = Date.now()) {
-  return new Date(now).getFullYear() - Math.round(rand(5, 90));
+  return new Date(now).getFullYear();
 }
 
 // Plafond du nombre de trophées conservés dans Team.trophies (voir

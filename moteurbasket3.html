@@ -3347,9 +3347,10 @@ const JERSEY_TWO_TONE_LABELS = {
 const MAX_TEAM_LOGO_DATA_URL_LENGTH = 400000;
 
 // Copie côté client des mêmes constantes engine.js (voir son commentaire) :
-// date de création du club et plafond du nombre de trophées conservés.
+// date de création du club (année RÉELLE de création dans le jeu, sans
+// ancienneté fictive) et plafond du nombre de trophées conservés.
 function generateFoundedYear(now = Date.now()) {
-  return new Date(now).getFullYear() - Math.round(rand(5, 90));
+  return new Date(now).getFullYear();
 }
 const MAX_TEAM_TROPHIES = 30;
 
@@ -10195,6 +10196,16 @@ async function validateOrdres() {
       updateTopbar();
     }
     setFeedback("Ordres enregistrés.", "ok");
+    // Retour utilisateur (2026-09 : "obligé encore de refresh complet la
+    // page sinon ça ne se modifie pas [...] il faudrait qu'une fois qu'on
+    // ait validé les ordres, on revienne sur la page calendrier directement
+    // avec le bouton modifier vos ordres qui apparaisse sur le match") :
+    // renderCalendrierSection() recalcule déjà correctement le badge à
+    // chaque affichage (voir son commentaire), le vrai manque était de n'y
+    // ramener PERSONNE après validation. On y retourne directement plutôt
+    // que de laisser le manager sur l'écran Ordres se demander si ça a
+    // fonctionné, ou pire, recharger toute la page pour vérifier.
+    TAB_HANDLERS.calendrier();
     return;
   }
 
@@ -10265,6 +10276,12 @@ async function validateOrdres() {
       }
     }
     setFeedback("Ordres enregistrés.", "ok");
+    // Retour utilisateur (2026-09, voir le commentaire jumeau dans la
+    // branche solo ci-dessus) : ne ramène à la page Calendrier QU'après un
+    // succès confirmé par le serveur (jamais depuis le bloc catch
+    // ci-dessous, ni pendant "Enregistrement en cours…") — un échec doit
+    // rester visible sur l'écran Ordres, pas être masqué par une navigation.
+    TAB_HANDLERS.calendrier();
   } catch (e) {
     setFeedback(`Échec de l'enregistrement : ${e.message || e}`, "error");
   } finally {
