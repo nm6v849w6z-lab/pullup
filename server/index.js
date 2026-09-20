@@ -665,6 +665,42 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Crédit administratif ponctuel (retour utilisateur, 2026-09 : Ariane a
+      // terminé le tutoriel d'accueil AVANT le correctif "Mets les vrais
+      // primes sur le tutoriel", voir engine.js:Team.claimTutorialReward) :
+      // la prime totale n'a donc jamais été créditée, et
+      // onboardingTourCompleted déjà à `true` l'empêche de relancer le
+      // tutoriel pour la toucher normalement. Route générique de rattrapage
+      // manuel (montant/motif libres) plutôt qu'un correctif à usage unique
+      // codé en dur : réutilisable pour toute situation similaire à
+      // l'avenir (retard de version, erreur de support...). Passe par
+      // Team.recordTransaction, donc apparaît normalement dans le journal
+      // "Économie" du club concerné. Même authentification que les deux
+      // routes admin ci-dessus (X-Admin-Token) ; agit UNIQUEMENT sur la
+      // ligue PARTAGÉE, jamais sur une carrière solo.
+      if (route.pathname === "/api/admin/credit-team" && req.method === "POST") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        const multi = await store.loadMultiLeague(multiSavePath);
+        if (!multi) { sendJson(res, 404, { ok: false, error: "Aucune ligue multi-manager n'existe encore." }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        if (!body || typeof body.teamName !== "string" || !body.teamName.trim()) {
+          sendJson(res, 400, { ok: false, error: "'teamName' (chaîne non vide) requis." });
+          return;
+        }
+        if (typeof body.amount !== "number" || !Number.isFinite(body.amount) || body.amount === 0) {
+          sendJson(res, 400, { ok: false, error: "'amount' (nombre non nul, positif ou négatif) requis." });
+          return;
+        }
+        const team = multi.league.teams.find(t => t.name === body.teamName.trim());
+        if (!team) { sendJson(res, 404, { ok: false, error: `Aucune équipe nommée "${body.teamName}" dans la ligue partagée.` }); return; }
+        const label = typeof body.label === "string" && body.label.trim() ? body.label.trim() : "Ajustement manuel (support)";
+        team.recordTransaction(label, body.amount);
+        await store.saveMultiLeague(multi.league, multiSavePath);
+        sendJson(res, 200, { ok: true, teamName: team.name, amount: body.amount, budget: team.budget });
+        return;
+      }
+
       // ---------------------------------------------------------------
       // ROUTES JOUEUR — solo OU multi-manager selon la présence d'un jeton
       // (voir resolvePlayerContext, en tête de fichier).
