@@ -1921,17 +1921,23 @@ function conditionLossForMinutes(minutesPlayed) {
 // majorité restent mineures (quelques jours), une minorité seulement
 // immobilise pour plusieurs semaines, à l'image d'un vrai championnat -
 // jamais l'inverse, dans le même esprit que BASE_INJURY_RATE plus haut
-// (rester rare et, ici, rarement grave).
+// (rester rare et, ici, rarement grave). Retour utilisateur, 2026-09 :
+// "essaie de ne pas faire plus que 4 semaines et une blessure au genou ça
+// doit être 3 à 5% max des cas" - plafond global à 28 jours (Blessure au
+// genou : 35 -> 28) et poids de la Blessure au genou ramené de 10% à 4%
+// (weight 10 -> 4 sur un total de 100), les 6 points retirés reversés à
+// Contusion (40 -> 44) et Entorse à la cheville (30 -> 32) au prorata de
+// leur poids d'origine.
 const INJURY_TYPES = [
-  { label: "Contusion",             minDays: 2,  maxDays: 5,  weight: 40 },
-  { label: "Entorse à la cheville", minDays: 5,  maxDays: 12, weight: 30 },
+  { label: "Contusion",             minDays: 2,  maxDays: 5,  weight: 44 },
+  { label: "Entorse à la cheville", minDays: 5,  maxDays: 12, weight: 32 },
   { label: "Blessure musculaire",   minDays: 8,  maxDays: 18, weight: 20 },
-  { label: "Blessure au genou",     minDays: 15, maxDays: 35, weight: 10 },
+  { label: "Blessure au genou",     minDays: 15, maxDays: 28, weight: 4 },
 ];
 
 // Tire un type de blessure et sa durée (voir INJURY_TYPES ci-dessus),
 // appelé UNE SEULE FOIS au moment où une blessure survient (voir
-// MatchEngine.applyFatigue) — jamais recalculé ensuite, la durée reste
+// MatchEngine.applyFatigue), jamais recalculé ensuite, la durée reste
 // fixe jusqu'à son terme (injuryUntil).
 function rollInjury(now = Date.now()) {
   const type = weightedPick(INJURY_TYPES, t => t.weight);

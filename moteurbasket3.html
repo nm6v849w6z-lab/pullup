@@ -563,6 +563,14 @@
   .forsale-badge{display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; font-size:10.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; background:rgba(226,105,79,.18); color:var(--danger); vertical-align:middle;}
   .sell-btn{margin-left:8px; padding:2px 9px; font-size:11px; border-radius:999px; border:1px solid var(--danger); background:transparent; color:var(--danger); cursor:pointer;}
   .market-price-input{width:100px; padding:3px 6px; border-radius:6px; border:1px solid var(--panel-2); background:var(--panel); color:inherit; font-size:12.5px;}
+  /* Retour utilisateur, 2026-09 : "centre le 'vous êtes en tête' par rapport
+     au bouton augmenter son enchère" - sans ce conteneur, le texte "Vous êtes
+     en tête" restait aligné à gauche de la cellule tandis que le champ de
+     prix et le bouton, eux, se retrouvaient visuellement décalés vers la
+     droite : les deux lignes n'étaient pas centrées l'une par rapport à
+     l'autre. Utilisé dans les 4 marchés aux enchères (transferts, entraîneur,
+     recruteur, analyste vidéo) quand l'utilisateur est déjà en tête. */
+  .bid-leading-cell{display:block; text-align:center;}
   /* Forme physique (voir CONDITION_STATES/conditionBadgeHtml) : un badge par
      état affiché, jamais le chiffre exact (retour utilisateur : "la valeur
      réelle reste précise, mais l'interface affiche l'état correspondant").
@@ -1163,6 +1171,14 @@
   .staff-hire-card .stars{color:var(--amber); font-size:13px; display:block; margin-bottom:4px;}
   .staff-hire-card .price{font-size:12px; font-weight:700; color:var(--ink);}
   .staff-hire-card .bonus{font-size:11px; color:var(--ok); margin-top:2px;}
+  /* Nom de la catégorie d'infrastructure (ex. "Salle de musculation"),
+     au-dessus du nom du palier actuel (ex. "Salle basique") lui-même en
+     .price ci-dessus : retour utilisateur, 2026-09 : "remets des titres pour
+     la salle de musculation, centre de récupération, boutique officielle et
+     studio local, on ne sait pas ce que c'est quand on lit 'salle basique'" -
+     avant cet ajout, seul le nom du palier actuel était affiché sur la carte,
+     jamais la catégorie à laquelle il appartient. */
+  .facility-card-category{font-size:10px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.02em; margin-bottom:2px; display:block;}
 
   /* ---- Salle : petite carte visuelle de l'arène ----
      Retour utilisateur (2026-09) : "sur la page salle, ce serait sympa si
@@ -3829,11 +3845,14 @@ function motivationLabel(form) {
 // d'un match à l'autre, en jours RÉELS (CONDITION_DAY_MS), et empêchent le
 // joueur d'être aligné tant qu'ils ne sont pas écoulés (voir
 // isCurrentlyInjured/Player.matchInjuryLocked/Team.resetForMatch plus bas).
+// Retour utilisateur, 2026-09 : "essaie de ne pas faire plus que 4 semaines
+// et une blessure au genou ça doit être 3 à 5% max des cas" (voir engine.js,
+// miroir identique).
 const INJURY_TYPES = [
-  { label: "Contusion",             minDays: 2,  maxDays: 5,  weight: 40 },
-  { label: "Entorse à la cheville", minDays: 5,  maxDays: 12, weight: 30 },
+  { label: "Contusion",             minDays: 2,  maxDays: 5,  weight: 44 },
+  { label: "Entorse à la cheville", minDays: 5,  maxDays: 12, weight: 32 },
   { label: "Blessure musculaire",   minDays: 8,  maxDays: 18, weight: 20 },
-  { label: "Blessure au genou",     minDays: 15, maxDays: 35, weight: 10 },
+  { label: "Blessure au genou",     minDays: 15, maxDays: 28, weight: 4 },
 ];
 
 function rollInjury(now = Date.now()) {
@@ -11998,6 +12017,40 @@ function hidePlayerDetail() {
 }
 document.getElementById("closePlayerDetailBtn").addEventListener("click", hidePlayerDetail);
 
+function playerDetailMarketFeedback(message, ok) {
+  const el = document.getElementById("playerDetailMarketFeedback");
+  if (el) el.innerHTML = message ? `<div class="gain-line ${ok ? "gain-up" : "gain-down"}">${escapeHtml(message)}</div>` : "";
+}
+
+// Écouteur délégué UNIQUE sur le conteneur statique #playerDetailContent
+// (jamais recréé, seul son innerHTML change à chaque renderPlayerDetail),
+// même patron que l'écouteur de #rosterContent (voir listBtn plus bas dans
+// ce fichier) pour le bouton "Mettre aux enchères" ajouté ci-dessus dans
+// renderPlayerDetail.
+document.getElementById("playerDetailContent").addEventListener("click", (e) => {
+  const listBtn = e.target.closest("[data-list-player-detail]");
+  if (!listBtn) return;
+  const id = Number(listBtn.dataset.listPlayerDetail);
+  const input = document.getElementById("playerDetailListPrice");
+  const raw = input ? input.value.trim() : "";
+  if (!raw || !(Number(raw) > 0)) {
+    playerDetailMarketFeedback("Indiquez un prix de départ (en €) avant de mettre ce joueur aux enchères.", false);
+    return;
+  }
+  const price = Math.max(1, Math.round(Number(raw)));
+  const player = teamA.players.find(p => p.id === id);
+  const playerName = player ? player.name : "Ce joueur";
+  const listing = league.listPlayerForSale(myTeamIndex, id, price, Date.now());
+  const message = listing
+    ? `${playerName} mis aux enchères pour ${formatMoney(price)}, clôture dans 3 jours. Suivez l'enchère dans l'onglet Marché.`
+    : "Impossible de mettre ce joueur aux enchères (déjà listé ?).";
+  const ok = Boolean(listing);
+  saveMyTeam();
+  if (ok) syncMarketListToServer(id, price);
+  renderPlayerDetail(myTeamIndex, id);
+  playerDetailMarketFeedback(message, ok);
+});
+
 // Écouteur délégué UNIQUE (sur tout le document) plutôt qu'un par
 // emplacement d'affichage — les liens joueur apparaissent dans plusieurs
 // panneaux reconstruits indépendamment (Effectif, stats de la ligue,
@@ -12096,6 +12149,25 @@ function renderPlayerDetail(teamIdx, playerId) {
   // qui ne porte que sur les caractéristiques ci-dessous).
   if (isOwnTeam) html += `<p class="training-intro">Motivation : ${motivationBadgeHtml(player)}</p>`;
   if (onMarket) html += `<p class="sub">Ce joueur est actuellement aux enchères sur le marché des transferts, ses caractéristiques sont donc visibles.</p>`;
+
+  // Mettre aux enchères directement depuis la fiche joueur (retour
+  // utilisateur, 2026-09 : "ajoute les éléments pour pouvoir mettre aux
+  // enchères un joueur directement sur la page du joueur") : jusqu'ici seul
+  // l'onglet Effectif (colonne Marché, voir renderEffectifSection) permettait
+  // de lister un joueur ; même mécanique ici (league.listPlayerForSale, prix
+  // libre choisi par le manager, pas de valeur pré-remplie, même raison que
+  // dans l'Effectif : "il faut pouvoir mettre le prix qu'on veut"), réservée
+  // à SON PROPRE effectif comme la Motivation ci-dessus (impossible de
+  // mettre aux enchères le joueur d'un adversaire depuis sa fiche).
+  if (isOwnTeam) {
+    if (onMarket) {
+      html += `<p class="training-intro"><span class="market-listed-badge">Aux enchères</span> Suivez l'enchère dans l'onglet <b>Marché</b>.</p>`;
+    } else {
+      html += `<p class="training-intro"><input type="number" class="market-price-input" id="playerDetailListPrice" placeholder="Prix (€)" min="1" step="100"> ` +
+        `<button type="button" class="secondary" data-list-player-detail="${player.id}">Mettre aux enchères</button></p>`;
+    }
+    html += `<div id="playerDetailMarketFeedback"></div>`;
+  }
 
   // Caractéristiques : toujours visibles pour son propre effectif ou pour un
   // joueur sur le marché (onMarket, voir ci-dessus), sinon verrouillées/
@@ -14794,9 +14866,9 @@ function renderAnalystListings() {
       // moteur, League.placeAnalystBid ne bloque déjà que "own-listing",
       // jamais "déjà en tête") plutôt que le simple statut figé d'avant, qui
       // empêchait de se corriger une fois en tête.
-      actionCell = `<span class="sub">Vous êtes en tête</span><br>` +
+      actionCell = `<div class="bid-leading-cell"><span class="sub">Vous êtes en tête</span><br>` +
         `<input type="number" class="market-price-input" id="analystBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-analyst-bid-listing="${l.id}">Augmenter mon enchère</button>`;
+        `<button class="secondary" data-analyst-bid-listing="${l.id}">Augmenter mon enchère</button></div>`;
     } else {
       actionCell = `<input type="number" class="market-price-input" id="analystBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
         `<button class="secondary" data-analyst-bid-listing="${l.id}">Enchérir</button>`;
@@ -14903,9 +14975,9 @@ function renderRecruiterListings() {
       // Retour utilisateur (2026-09) : pouvoir se surenchérir soi-même en
       // cas de clic trop rapide sur un montant trop bas, voir le même
       // commentaire dans renderAnalystListings ci-dessus.
-      actionCell = `<span class="sub">Vous êtes en tête</span><br>` +
+      actionCell = `<div class="bid-leading-cell"><span class="sub">Vous êtes en tête</span><br>` +
         `<input type="number" class="market-price-input" id="recruiterBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-recruiter-bid-listing="${l.id}">Augmenter mon enchère</button>`;
+        `<button class="secondary" data-recruiter-bid-listing="${l.id}">Augmenter mon enchère</button></div>`;
     } else {
       actionCell = `<input type="number" class="market-price-input" id="recruiterBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
         `<button class="secondary" data-recruiter-bid-listing="${l.id}">Enchérir</button>`;
@@ -14965,9 +15037,9 @@ function renderCoachListings() {
       // Retour utilisateur (2026-09) : pouvoir se surenchérir soi-même en
       // cas de clic trop rapide sur un montant trop bas, voir le même
       // commentaire dans renderAnalystListings plus haut.
-      actionCell = `<span class="sub">Vous êtes en tête</span><br>` +
+      actionCell = `<div class="bid-leading-cell"><span class="sub">Vous êtes en tête</span><br>` +
         `<input type="number" class="market-price-input" id="coachBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-coach-bid-listing="${l.id}">Augmenter mon enchère</button>`;
+        `<button class="secondary" data-coach-bid-listing="${l.id}">Augmenter mon enchère</button></div>`;
     } else {
       actionCell = `<input type="number" class="market-price-input" id="coachBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
         `<button class="secondary" data-coach-bid-listing="${l.id}">Enchérir</button>`;
@@ -15979,9 +16051,9 @@ function renderMarketListings() {
       // Retour utilisateur (2026-09) : pouvoir se surenchérir soi-même en
       // cas de clic trop rapide sur un montant trop bas, voir le même
       // commentaire dans renderAnalystListings plus haut.
-      actionCell = `<span class="sub">Vous êtes en tête</span><br>` +
+      actionCell = `<div class="bid-leading-cell"><span class="sub">Vous êtes en tête</span><br>` +
         `<input type="number" class="market-price-input" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-bid-listing="${l.id}">Augmenter mon enchère</button>`;
+        `<button class="secondary" data-bid-listing="${l.id}">Augmenter mon enchère</button></div>`;
     } else {
       actionCell = `<input type="number" class="market-price-input" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
         `<button class="secondary" data-bid-listing="${l.id}">Enchérir</button>`;
@@ -17185,8 +17257,14 @@ function renderSalleSection() {
     tcCard.dataset.trainingCenterCard = "1";
     const tcCardBody = document.createElement("div");
     tcCardBody.className = "facility-card-body";
-    tcCardBody.innerHTML = `<div class="facility-card-icon"></div><div class="price">Centre de formation</div>` +
-      `<div class="bonus">${escapeHtml(tcInfo.name)}</div>`;
+    // Mêmes couleurs que les 4 autres cartes ci-dessous (retour utilisateur,
+    // 2026-09 : "mets centre de formation en gris comme les autres, et
+    // terrain arrière en blanc") : catégorie fixe en gris/petit (.facility-
+    // card-category) au-dessus du nom du palier actuel en blanc/gras (.price)
+    // — avant cet ajustement, "Centre de formation" ressortait en blanc/gras
+    // (.price) et le nom du palier en vert (.bonus), l'inverse des autres.
+    tcCardBody.innerHTML = `<div class="facility-card-icon"></div><div class="facility-card-category">Centre de formation</div>` +
+      `<div class="price">${escapeHtml(tcInfo.name)}</div>`;
     tcCard.appendChild(tcCardBody);
     const tcActionLine = document.createElement("div");
     tcActionLine.className = "facility-card-action";
@@ -17228,7 +17306,7 @@ function renderSalleSection() {
     shopCard.dataset.fanShopCard = "1";
     const shopCardBody = document.createElement("div");
     shopCardBody.className = "facility-card-body";
-    shopCardBody.innerHTML = `<div class="facility-card-icon"></div><div class="price">${escapeHtml(shopInfo.name)}</div>` +
+    shopCardBody.innerHTML = `<div class="facility-card-icon"></div><div class="facility-card-category">Boutique des supporters</div><div class="price">${escapeHtml(shopInfo.name)}</div>` +
       (shopInfo.weeklyRevenue > 0 ? `<div class="bonus">+${formatMoney(shopInfo.weeklyRevenue)}/semaine</div>` : "");
     shopCard.appendChild(shopCardBody);
     const shopActionLine = document.createElement("div");
@@ -17279,9 +17357,15 @@ function renderSalleSection() {
           curEffectLine = `Fatigue en match : -${Math.round((1 - curInfo.fatigueMult) * 100)}%`;
         }
       }
+      // Nom de catégorie affiché au-dessus du nom du palier actuel (voir
+      // .facility-card-category ci-dessus) : raccourci pour l'espace
+      // bien-être (son cfg.name complet, "Espace bien-être (spa et soins)",
+      // est le libellé technique utilisé ailleurs, mais trop long pour tenir
+      // sur cette petite carte).
+      const categoryLabel = key === "wellness" ? "Espace bien-être" : cfg.name;
       const cardBody = document.createElement("div");
       cardBody.className = "facility-card-body";
-      cardBody.innerHTML = `<div class="facility-card-icon">${cfg.icon}</div><div class="price">${escapeHtml(curInfo.name)}</div>` +
+      cardBody.innerHTML = `<div class="facility-card-icon">${cfg.icon}</div><div class="facility-card-category">${escapeHtml(categoryLabel)}</div><div class="price">${escapeHtml(curInfo.name)}</div>` +
         (curEffectLine ? `<div class="bonus">${curEffectLine}</div>` : "");
       card.appendChild(cardBody);
       const actionLine = document.createElement("div");
