@@ -1235,6 +1235,39 @@ const MILESTONE_INTERVIEW_TYPES = {
   "finale-po": { label: "Interview d'après la finale des play-offs" },
 };
 
+// Vraies questions de journaliste posées à CHAQUE interview de jalon (retour
+// utilisateur, 2026-09 : "mets un vrai pop up pour l'interview [...] mets 2/3
+// questions quand même, et pose des vraies questions, c'est pas ouf quand
+// même là (comment voyez-vous cette saison ? quels sont vos objectifs ?...)")
+// : deux questions par jalon, indépendantes du ton choisi (seule la RÉPONSE
+// change selon le ton, voir MILESTONE_INTERVIEW_QUOTES juste en dessous, dont
+// chaque entrée porte désormais un tableau de deux réponses, une par
+// question, dans le même ordre que ce tableau). Remplace l'ancien système
+// (un seul bloc de texte générique + boutons de ton sans vraie question
+// posée), jugé trop pauvre par le manager.
+const MILESTONE_INTERVIEW_QUESTIONS = {
+  "debut-saison": [
+    "Comment abordez-vous cette nouvelle saison ?",
+    "Quels sont vos objectifs pour les mois à venir ?",
+  ],
+  "mi-saison": [
+    "Quel bilan tirez-vous de cette première moitié de saison ?",
+    "Qu'est-ce qui doit changer pour la seconde moitié ?",
+  ],
+  "fin-saison-reguliere": [
+    "Comment jugez-vous le parcours de votre équipe en saison régulière ?",
+    "Dans quel état d'esprit abordez-vous la suite ?",
+  ],
+  "demi-finale-po": [
+    "Que retenez-vous de cette demi-finale ?",
+    "Comment préparez-vous la suite des play-offs ?",
+  ],
+  "finale-po": [
+    "Quel sentiment domine au sortir de cette finale ?",
+    "Qu'est-ce que ce résultat représente pour le club ?",
+  ],
+};
+
 // Journée de mi-saison : aucune notion de "mi-saison" n'existait avant ce
 // retour utilisateur, milieu ARRONDI PAR LE BAS du calendrier round-robin
 // (toujours 18 journées 0-indexées pour une ligue à 10 équipes, identique
@@ -1273,76 +1306,174 @@ const MILESTONE_INTERVIEW_TONES = {
 
 // Citations "étoffées" (retour utilisateur : "une interview un peu
 // étoffée"), une par {type de jalon, ton, résultat} : `{opponent}` remplacé
-// par le nom de l'adversaire (voir Team.resolveInterview).
+// par le nom de l'adversaire (voir Team.resolveInterview). Correctif 2026-09
+// (retour utilisateur : voir MILESTONE_INTERVIEW_QUESTIONS ci-dessus) : chaque
+// entrée `win`/`loss` porte désormais DEUX réponses au lieu d'une seule,
+// dans le même ordre que les deux questions de MILESTONE_INTERVIEW_QUESTIONS
+// pour ce jalon (index 0 = réponse à la 1re question, index 1 = réponse à la
+// 2e). La 1re réponse reprend la citation d'origine (réaction au résultat du
+// match), la 2e (nouvelle) répond à la question tournée vers la suite
+// (objectifs/ajustements/état d'esprit), toujours dans l'esprit du ton
+// choisi.
 const MILESTONE_INTERVIEW_QUOTES = {
   "debut-saison": {
     "Agressif": {
-      win: ["On lance la saison avec cette victoire contre {opponent}, et on ne compte surtout pas s'arrêter là."],
-      loss: ["Cette défaite d'entrée face à {opponent} ne veut rien dire, on reste l'équipe à battre cette saison."],
+      win: [
+        "On lance la saison avec cette victoire contre {opponent}, et on ne compte surtout pas s'arrêter là.",
+        "L'objectif ne change pas d'un pouce : jouer les premiers rôles et viser le titre de division, rien de moins.",
+      ],
+      loss: [
+        "Cette défaite d'entrée face à {opponent} ne veut rien dire, on reste l'équipe à battre cette saison.",
+        "Nos objectifs restent exactement les mêmes qu'avant ce match : jouer le titre de division jusqu'au bout.",
+      ],
     },
     "Mesuré": {
-      win: ["Une bonne entame de saison avec cette victoire contre {opponent}, il reste encore beaucoup de travail mais c'est encourageant."],
-      loss: ["Cette défaite pour commencer la saison contre {opponent} ne doit pas être dramatisée, il reste toute la saison pour corriger le tir."],
+      win: [
+        "Une bonne entame de saison avec cette victoire contre {opponent}, il reste encore beaucoup de travail mais c'est encourageant.",
+        "L'objectif reste de construire une équipe solide match après match, sans se fixer de chiffre précis pour l'instant.",
+      ],
+      loss: [
+        "Cette défaite pour commencer la saison contre {opponent} ne doit pas être dramatisée, il reste toute la saison pour corriger le tir.",
+        "L'objectif reste inchangé : progresser semaine après semaine et être compétitifs sur la durée de la saison.",
+      ],
     },
     "Humble": {
-      win: ["On prend cette victoire d'entrée contre {opponent} avec humilité, la saison ne fait que commencer et tout reste à prouver."],
-      loss: ["Cette défaite pour débuter la saison face à {opponent} nous remet les pieds sur terre, on va travailler dur pour la suite."],
+      win: [
+        "On prend cette victoire d'entrée contre {opponent} avec humilité, la saison ne fait que commencer et tout reste à prouver.",
+        "On ne se fixe pas d'objectif chiffré, on veut juste progresser ensemble, une victoire ne change rien à cette philosophie.",
+      ],
+      loss: [
+        "Cette défaite pour débuter la saison face à {opponent} nous remet les pieds sur terre, on va travailler dur pour la suite.",
+        "On garde les pieds sur terre, l'objectif reste de progresser ensemble match après match, sans pression particulière.",
+      ],
     },
   },
   "mi-saison": {
     "Agressif": {
-      win: ["On passe le cap de la mi-saison sur la meilleure dynamique possible, et {opponent} vient encore de le confirmer : personne ne veut vraiment nous affronter en ce moment."],
-      loss: ["Cette défaite contre {opponent} ne change rien à nos ambitions pour la seconde moitié de saison, on reste le favori de cette division."],
+      win: [
+        "On passe le cap de la mi-saison sur la meilleure dynamique possible, et {opponent} vient encore de le confirmer : personne ne veut vraiment nous affronter en ce moment.",
+        "Pour la seconde moitié, on ne change rien : on continue sur cette lancée et on vise le plus haut possible.",
+      ],
+      loss: [
+        "Cette défaite contre {opponent} ne change rien à nos ambitions pour la seconde moitié de saison, on reste le favori de cette division.",
+        "Rien à changer sur le fond, on garde la même ambition pour la seconde moitié de saison.",
+      ],
     },
     "Mesuré": {
-      win: ["À mi-parcours, cette victoire contre {opponent} confirme qu'on est sur la bonne trajectoire, il reste encore la moitié de la saison pour la confirmer."],
-      loss: ["Cette défaite contre {opponent} arrive à un moment charnière de la saison, on va en tirer les leçons avant d'attaquer la seconde moitié du calendrier."],
+      win: [
+        "À mi-parcours, cette victoire contre {opponent} confirme qu'on est sur la bonne trajectoire, il reste encore la moitié de la saison pour la confirmer.",
+        "On va continuer à travailler dans la continuité, avec quelques ajustements tactiques pour la seconde moitié.",
+      ],
+      loss: [
+        "Cette défaite contre {opponent} arrive à un moment charnière de la saison, on va en tirer les leçons avant d'attaquer la seconde moitié du calendrier.",
+        "On va revoir certains détails à l'entraînement pour repartir sur de meilleures bases en seconde moitié de saison.",
+      ],
     },
     "Humble": {
-      win: ["On a fait la moitié du chemin avec cette victoire contre {opponent}, mais rien n'est acquis, il reste encore beaucoup de travail avant la fin de saison."],
-      loss: ["Cette défaite contre {opponent} à mi-saison est une bonne piqûre de rappel, on doit rester humbles et travailler encore plus dur pour la suite."],
+      win: [
+        "On a fait la moitié du chemin avec cette victoire contre {opponent}, mais rien n'est acquis, il reste encore beaucoup de travail avant la fin de saison.",
+        "On va continuer à travailler humblement, rien n'est jamais acquis dans ce championnat.",
+      ],
+      loss: [
+        "Cette défaite contre {opponent} à mi-saison est une bonne piqûre de rappel, on doit rester humbles et travailler encore plus dur pour la suite.",
+        "On doit se remettre en question collectivement et travailler encore plus dur pour la seconde moitié de saison.",
+      ],
     },
   },
   "fin-saison-reguliere": {
     "Agressif": {
-      win: ["On termine la saison régulière sur cette victoire contre {opponent}, et on aborde les échéances qui arrivent avec la plus grande confiance qui soit."],
-      loss: ["Cette dernière défaite de saison régulière contre {opponent} n'entache en rien notre saison, on sait qu'on est prêts pour la suite."],
+      win: [
+        "On termine la saison régulière sur cette victoire contre {opponent}, et on aborde les échéances qui arrivent avec la plus grande confiance qui soit.",
+        "On aborde la suite avec la certitude d'avoir le niveau pour aller loin, sans aucune pression particulière.",
+      ],
+      loss: [
+        "Cette dernière défaite de saison régulière contre {opponent} n'entache en rien notre saison, on sait qu'on est prêts pour la suite.",
+        "On aborde la suite avec la même confiance, cette fin de saison régulière ne change rien à nos ambitions.",
+      ],
     },
     "Mesuré": {
-      win: ["Une belle manière de clore la saison régulière face à {opponent}, l'équipe a montré tout au long de l'année qu'elle méritait sa place."],
-      loss: ["On termine la saison régulière sur une défaite décevante contre {opponent}, mais le bilan global de l'année reste ce qui compte le plus."],
+      win: [
+        "Une belle manière de clore la saison régulière face à {opponent}, l'équipe a montré tout au long de l'année qu'elle méritait sa place.",
+        "On aborde la suite sereinement, en essayant de garder cette dynamique le plus longtemps possible.",
+      ],
+      loss: [
+        "On termine la saison régulière sur une défaite décevante contre {opponent}, mais le bilan global de l'année reste ce qui compte le plus.",
+        "On aborde la suite avec l'envie de corriger ce qui n'a pas fonctionné ces dernières semaines.",
+      ],
     },
     "Humble": {
-      win: ["Cette victoire pour clore la saison régulière contre {opponent} appartient à tout le groupe, staff compris, ça n'a pas toujours été facile cette année."],
-      loss: ["Cette défaite contre {opponent} pour terminer la saison régulière nous rappelle qu'il reste encore des choses à corriger avant la suite."],
+      win: [
+        "Cette victoire pour clore la saison régulière contre {opponent} appartient à tout le groupe, staff compris, ça n'a pas toujours été facile cette année.",
+        "On aborde la suite avec humilité, chaque adversaire mérite le plus grand respect à ce stade de la saison.",
+      ],
+      loss: [
+        "Cette défaite contre {opponent} pour terminer la saison régulière nous rappelle qu'il reste encore des choses à corriger avant la suite.",
+        "On aborde la suite en sachant qu'il reste beaucoup de travail, on ne change rien à notre état d'esprit.",
+      ],
     },
   },
   "demi-finale-po": {
     "Agressif": {
-      win: ["On envoie un message clair à toute la ligue en éliminant {opponent} en demi-finale, la prochaine étape ne nous fait absolument pas peur."],
-      loss: ["Éliminés par {opponent} en demi-finale, difficile à avaler, mais cette équipe reviendra encore plus forte la saison prochaine."],
+      win: [
+        "On envoie un message clair à toute la ligue en éliminant {opponent} en demi-finale, la prochaine étape ne nous fait absolument pas peur.",
+        "On prépare la suite avec la même confiance, on n'a pas fait tout ce chemin pour s'arrêter en si bon chemin.",
+      ],
+      loss: [
+        "Éliminés par {opponent} en demi-finale, difficile à avaler, mais cette équipe reviendra encore plus forte la saison prochaine.",
+        "On tire un trait sur cette élimination et on prépare déjà la revanche pour la saison prochaine, sans complexe.",
+      ],
     },
     "Mesuré": {
-      win: ["Une qualification méritée contre {opponent} en demi-finale, l'équipe a fait preuve d'un sérieux remarquable dans ce moment de pression."],
-      loss: ["Cette élimination en demi-finale contre {opponent} est frustrante après une belle saison, on va analyser calmement ce qui a manqué."],
+      win: [
+        "Une qualification méritée contre {opponent} en demi-finale, l'équipe a fait preuve d'un sérieux remarquable dans ce moment de pression.",
+        "On va préparer la suite avec sérieux, sans s'enflammer, il reste encore une marche à franchir.",
+      ],
+      loss: [
+        "Cette élimination en demi-finale contre {opponent} est frustrante après une belle saison, on va analyser calmement ce qui a manqué.",
+        "On va analyser calmement cette élimination et en tirer les enseignements pour progresser encore.",
+      ],
     },
     "Humble": {
-      win: ["Cette qualification face à {opponent} en demi-finale doit beaucoup à la réussite autant qu'au mérite, on reste concentrés sur la suite sans s'enflammer."],
-      loss: ["{opponent} méritait sa qualification en demi-finale, on doit accepter cette élimination avec humilité et en tirer les bons enseignements."],
+      win: [
+        "Cette qualification face à {opponent} en demi-finale doit beaucoup à la réussite autant qu'au mérite, on reste concentrés sur la suite sans s'enflammer.",
+        "On va préparer la suite pas à pas, sans se projeter trop vite sur la suite.",
+      ],
+      loss: [
+        "{opponent} méritait sa qualification en demi-finale, on doit accepter cette élimination avec humilité et en tirer les bons enseignements.",
+        "On accepte cette élimination avec humilité et on va travailler encore plus dur pour revenir plus forts.",
+      ],
     },
   },
   "finale-po": {
     "Agressif": {
-      win: ["On savait qu'on était la meilleure équipe de la division, ce titre face à {opponent} en finale ne fait que le confirmer."],
-      loss: ["Cette défaite en finale contre {opponent} est difficile à digérer, mais on reviendra chercher ce titre la saison prochaine, sans exception."],
+      win: [
+        "On savait qu'on était la meilleure équipe de la division, ce titre face à {opponent} en finale ne fait que le confirmer.",
+        "Ce titre représente une nouvelle étape pour ce club, et on compte bien ne pas s'arrêter là la saison prochaine.",
+      ],
+      loss: [
+        "Cette défaite en finale contre {opponent} est difficile à digérer, mais on reviendra chercher ce titre la saison prochaine, sans exception.",
+        "Cette défaite ne représente rien de plus qu'un contretemps, ce club reviendra chercher ce titre très vite.",
+      ],
     },
     "Mesuré": {
-      win: ["Ce titre de champion face à {opponent} en finale récompense tout le travail accompli cette saison, une immense fierté pour tout le club."],
-      loss: ["Cette défaite en finale contre {opponent} est une déception, mais atteindre la finale reste une très belle saison pour ce groupe."],
+      win: [
+        "Ce titre de champion face à {opponent} en finale récompense tout le travail accompli cette saison, une immense fierté pour tout le club.",
+        "Ce titre représente une immense fierté pour tout le club, du staff aux joueurs en passant par les supporters.",
+      ],
+      loss: [
+        "Cette défaite en finale contre {opponent} est une déception, mais atteindre la finale reste une très belle saison pour ce groupe.",
+        "Cette défaite en finale reste une bonne saison pour ce club, on va essayer de franchir ce dernier palier la saison prochaine.",
+      ],
     },
     "Humble": {
-      win: ["Ce titre face à {opponent} appartient à tout le club, des joueurs jusqu'au dernier membre du staff, on ne l'oubliera jamais."],
-      loss: ["{opponent} méritait ce titre ce soir, on doit rester humbles et repartir plus forts la saison prochaine."],
+      win: [
+        "Ce titre face à {opponent} appartient à tout le club, des joueurs jusqu'au dernier membre du staff, on ne l'oubliera jamais.",
+        "Ce titre appartient à tout le monde au club, on va rester humbles et continuer à travailler comme si de rien n'était.",
+      ],
+      loss: [
+        "{opponent} méritait ce titre ce soir, on doit rester humbles et repartir plus forts la saison prochaine.",
+        "Cette défaite en finale fait partie du sport, on va rester humbles et repartir travailler dès la saison prochaine.",
+      ],
     },
   },
 };
@@ -1354,6 +1485,23 @@ const MILESTONE_INTERVIEW_QUOTES = {
 // millisecondes) déjà utilisé ailleurs dans ce fichier pour ce genre de
 // fenêtre de plusieurs jours.
 const MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS = 3 * 24 * 60 * 60 * 1000;
+
+// Construit le transcript complet {question, answer}[] d'une interview de
+// jalon pour un ton donné (voir MILESTONE_INTERVIEW_QUESTIONS/
+// MILESTONE_INTERVIEW_QUOTES ci-dessus) : factorisé ici plutôt que dans
+// Team.resolveInterview pour que le client puisse aussi s'en servir en
+// PRÉVISUALISATION (avant validation, pour montrer les 2 réponses selon le
+// ton survolé dans le popup d'interview) sans dupliquer cette logique de
+// zip questions/réponses côté navigateur. Renvoie toujours un tableau (vide
+// si `milestone`/`tone` inconnu), jamais d'exception.
+function interviewTranscriptFor(milestone, tone, won, opponentName) {
+  const questions = MILESTONE_INTERVIEW_QUESTIONS[milestone] || [];
+  const answers = ((MILESTONE_INTERVIEW_QUOTES[milestone] || {})[tone] || {})[won ? "win" : "loss"] || [];
+  return questions.map((question, i) => ({
+    question,
+    answer: (answers[i] || "").replace("{opponent}", opponentName),
+  }));
+}
 
 // ---------------------------------------------------------------------
 // MVP AUTOMATIQUE DU MATCH (retour utilisateur, 2026-09 : "le mvp du match
@@ -2332,16 +2480,20 @@ class Team {
   // supporters ET un delta de forme pour les joueurs ayant disputé ce match
   // précis (entry.playerIds), dans le sens du résultat ORIGINAL du match
   // concerné (jamais l'inverse), puis retire l'entrée de la file. Renvoie
-  // { ok: true, delta, formDelta } ou null (id introuvable/déjà traité,
-  // expiré depuis plus de 3 jours, ton inconnu, ou entrée sans `milestone` -
-  // résidu d'une sauvegarde antérieure au retrait de l'interview classique,
-  // voir pruneExpiredInterviews), jamais d'exception, comme le reste des
-  // méthodes "résoudre une file d'attente" de cette classe (voir
-  // promoteYouthPlayer). Tire aussi une citation (voir
-  // MILESTONE_INTERVIEW_QUOTES) et la fige dans le journal via
-  // `recordMoraleEvent(..., { quote })` : c'est elle, pas le delta, qu'affiche
-  // désormais la page "Aperçu" (retour utilisateur : "mets plutôt ce que le
-  // coach vraiment dit").
+  // { ok: true, delta, formDelta, quotes } ou null (id introuvable/déjà
+  // traité, expiré depuis plus de 3 jours, ton inconnu, ou entrée sans
+  // `milestone` - résidu d'une sauvegarde antérieure au retrait de
+  // l'interview classique, voir pruneExpiredInterviews), jamais d'exception,
+  // comme le reste des méthodes "résoudre une file d'attente" de cette
+  // classe (voir promoteYouthPlayer). Construit aussi le transcript complet
+  // {question, answer}[] (voir interviewTranscriptFor/
+  // MILESTONE_INTERVIEW_QUESTIONS ci-dessus, correctif 2026-09 : retour
+  // utilisateur "mets 2/3 questions quand même, et pose des vraies
+  // questions") et le fige dans le journal via `recordMoraleEvent(...,
+  // { quotes, quote })` : `quote` (les réponses mises bout à bout) reste
+  // affiché tel quel sur la page "Aperçu" (retour utilisateur : "mets
+  // plutôt ce que le coach vraiment dit"), `quotes` porte le détail
+  // question par question pour un affichage plus riche (popup d'interview).
   resolveInterview(id, tone, now = Date.now()) {
     this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
@@ -2356,17 +2508,15 @@ class Team {
     const formDelta = entry.won ? toneCfg.formWin : toneCfg.formLoss;
     const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
     const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
-    const quoteTemplates = (MILESTONE_INTERVIEW_QUOTES[entry.milestone] || {})[tone];
-    const quote = quoteTemplates
-      ? pick(quoteTemplates[entry.won ? "win" : "loss"]).replace("{opponent}", entry.opponentName)
-      : "";
-    this.recordMoraleEvent(`${milestoneLabel} (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, fanDelta, { quote, milestone: entry.milestone });
+    const quotes = interviewTranscriptFor(entry.milestone, tone, entry.won, entry.opponentName);
+    const quote = quotes.map(q => q.answer).filter(Boolean).join(" ");
+    this.recordMoraleEvent(`${milestoneLabel} (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, fanDelta, { quote, quotes, milestone: entry.milestone });
     (entry.playerIds || []).forEach(pid => {
       const p = this.players.find(pl => pl.id === pid);
       if (p) p.form = clamp(Math.round(p.form + formDelta), 1, 100);
     });
     this.pendingInterviews.splice(idx, 1);
-    return { ok: true, delta: fanDelta, formDelta };
+    return { ok: true, delta: fanDelta, formDelta, quotes };
   }
 
   // Ignore une interview en attente ("pas de commentaire") : aucun effet sur
@@ -3791,25 +3941,58 @@ function levelCoefficientFor(attrs, cardPosition) {
   return { position, coefficient };
 }
 
+// Génère un profil d'attributs "brut" dans la fourchette [lo,hi] (avant tier),
+// rien de développé, tout reste à révéler par l'entraînement, mais
+// désormais LÉGÈREMENT orienté vers `position` (voir POSITION_ATTR_PROFILE) :
+// une caractéristique "forte" pour ce poste tire vers le haut de la
+// fourchette, une "faible" vers le bas, une "de base" reste répartie sur
+// toute son étendue. Correctif 2026-09 (retour utilisateur : "corrige pour
+// que le poste reflète les caractéristiques dès le départ") : avant ça,
+// generateRawYouthAttrs tirait les 10 caractéristiques uniformément dans
+// [lo,hi] SANS AUCUN rapport avec le poste qu'on venait de lui assigner :
+// un Pivot pouvait ainsi démarrer avec un profil qui n'avait jamais eu la
+// moindre chance de ressembler à un Pivot (voir Player.effectivePosition/
+// levelCoefficientFor, qui pouvaient alors s'écarter du poste de carte dès
+// la toute première saison, sans qu'aucune caractéristique n'ait bougé).
+// L'écart reste volontairement modeste (25% de la fourchette totale de
+// chaque côté, jamais les vraies bornes 55-92/15-45 de generateAttrsForPosition
+// utilisées pour un adulte confirmé) : un jeune n'a encore RIEN prouvé, ce
+// n'est qu'un léger a priori cohérent avec son étiquette de poste, qui laisse
+// toute leur place à l'entraînement et au hasard (voir CARD_POSITION_BIAS/
+// inferPosition, qui garde volontairement une vraie marge d'erreur possible
+// malgré ce biais : un profil VRAIMENT atypique peut toujours, plus rarement
+// qu'avant, faire pencher le poste effectif d'un autre côté).
+function generateRawAttrsInRange(position, lo, hi, tier) {
+  const span = hi - lo;
+  const generators = {
+    base: () => clamp(Math.round(rand(lo, hi) * tier), 1, 99),
+    strong: () => clamp(Math.round(rand(lo + span * 0.25, hi) * tier), 1, 99),
+    weak: () => clamp(Math.round(rand(lo, hi - span * 0.25) * tier), 1, 99),
+  };
+  const profile = POSITION_ATTR_PROFILE[position] || {};
+  const attrs = {};
+  ATTRS.forEach(a => attrs[a] = generators[profile[a] || "base"]());
+  return attrs;
+}
+
 // Un jeune joueur (prospect brut, pas encore de vraie draft/génération de
 // nouveaux joueurs pour l'instant) démarre bas sur TOUTES ses caractéristiques
-// (10-50, sans distinction de poste — recalibré 2026-09, retour utilisateur :
-// "sur les joueurs de départ, on ne devrait pas avoir plus de 50 sur une
-// caractéristique / donc entre 10 et 50 sur les caracs / idem pour les
-// joueurs draftés de 18/19 ans") : son potentiel caché, lui, peut être
-// élevé — tout reste à révéler par l'entraînement.
+// (10-50, recalibré 2026-09, retour utilisateur : "sur les joueurs de
+// départ, on ne devrait pas avoir plus de 50 sur une caractéristique / donc
+// entre 10 et 50 sur les caracs / idem pour les joueurs draftés de 18/19
+// ans"), désormais orienté vers `position` (voir generateRawAttrsInRange
+// ci-dessus) : son potentiel caché, lui, peut être élevé, tout reste à
+// révéler par l'entraînement.
 const YOUNG_PROSPECT_MAX_AGE = 21;
-function generateRawYouthAttrs(tier) {
-  const attrs = {};
-  ATTRS.forEach(a => attrs[a] = clamp(Math.round(rand(10, 50) * tier), 1, 99));
-  return attrs;
+function generateRawYouthAttrs(tier, position) {
+  return generateRawAttrsInRange(position, 10, 50, tier);
 }
 
 function generatePlayer(position, tier) {
   const name = `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`;
   const age = Math.round(rand(18, 33));
   const attrs = age <= YOUNG_PROSPECT_MAX_AGE
-    ? generateRawYouthAttrs(tier)
+    ? generateRawYouthAttrs(tier, position)
     : generateAttrsForPosition(position, tier);
   return new Player({
     name,
@@ -3847,7 +4030,7 @@ function generateRookiePlayer(position) {
     position,
     height: heightForPosition(position),
     age,
-    attrs: generateRawYouthAttrs(1),
+    attrs: generateRawYouthAttrs(1, position),
     aggressiveness: Math.round(rand(15, 95)),
   });
 }
@@ -3871,12 +4054,15 @@ function generateYouthCandidate(now, recruiterLevel) {
   const position = pick(POSITIONS);
   const age = pick([15, 16, 17]);
   const tier = YOUTH_QUALITY_TIER_BY_LEVEL[recruiterLevel] || 1;
-  // Attributs ACTUELS, chacun 10-30 (avant tier) — VOLONTAIREMENT visibles
+  // Attributs ACTUELS, chacun 10-30 (avant tier), VOLONTAIREMENT visibles
   // tels quels dans l'UI dès la proposition (contraste délibéré avec le
   // scoutisme adverse, où c'est l'inverse : les attributs sont cachés, pas le
   // potentiel) : voir le commentaire sur Team.youthCandidates au constructeur.
-  const attrs = {};
-  ATTRS.forEach(a => attrs[a] = clamp(Math.round(rand(10, 30) * tier), 1, 99));
+  // Légèrement orienté vers `position` depuis 2026-09 (même correctif que
+  // generateRawYouthAttrs, voir generateRawAttrsInRange) : avant ça, le poste
+  // tiré au sort (pick(POSITIONS) ci-dessus) n'avait aucun rapport avec les
+  // attributs générés.
+  const attrs = generateRawAttrsInRange(position, 10, 30, tier);
   // "Outil brut" : 1 ou 2 attributs (jamais plus) reçoivent un tirage plus
   // haut (31-40 avant tier) pour représenter un talent déjà repéré par le
   // recruteur — voir YOUTH_STANDOUT_CHANCE_BY_LEVEL.
@@ -7278,6 +7464,7 @@ return {
   // Interviews de jalon + MVP automatique (retour utilisateur, 2026-09 : voir
   // le grand commentaire au-dessus de MILESTONE_INTERVIEW_TYPES/MVP_ATTR_BONUS).
   MILESTONE_INTERVIEW_TYPES, MILESTONE_INTERVIEW_TONES, MILESTONE_INTERVIEW_QUOTES,
+  MILESTONE_INTERVIEW_QUESTIONS, interviewTranscriptFor,
   MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS, midSeasonRound, milestoneTypeForRound,
   statEvaluation, MVP_ATTR_BONUS, MVP_QUOTES,
   TOUR_REWARD_BY_TOPIC,
@@ -7297,7 +7484,7 @@ return {
   POST_DEFENSES, CLOSEOUT_STYLES, OFF_REBOUND_STYLES, ENDGAME_MANAGEMENT,
   clamp, rand, pick, weightedPick,
   Player, Team, MatchEngine,
-  heightForPosition, generateAttrsForPosition, generateRawYouthAttrs, generatePlayer, generateTeam,
+  heightForPosition, generateAttrsForPosition, generateRawYouthAttrs, generateRawAttrsInRange, generatePlayer, generateTeam,
   generateRookiePlayer, generateStartingRoster,
   potentialHeadroom, growthFactorForAge, declineFactorForAge, YOUNG_PROSPECT_MAX_AGE, SEASON_LENGTH_WEEKS,
   POTENTIAL_TIERS, potentialTierLabel, potentialTierIndex,

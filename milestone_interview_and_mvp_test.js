@@ -38,6 +38,10 @@ const {
   milestoneTypeForRound, midSeasonRound, statEvaluation,
   MVP_ATTR_BONUS, MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS,
   serializeTeam, teamFromSave,
+  // Correctif 2026-09 (retour utilisateur : "mets un vrai pop up pour
+  // l'interview [...] mets 2/3 questions quand même, et pose des vraies
+  // questions") : voir la toute dernière partie de ce fichier.
+  MILESTONE_INTERVIEW_QUESTIONS, interviewTranscriptFor,
 } = Engine;
 
 const T0 = Date.UTC(2026, 8, 7);
@@ -153,6 +157,86 @@ function freshTeamAndLeague(name) {
     });
   });
   console.log("✅ Les 5 jalons attendus (début de saison, mi-saison, fin de saison régulière, demi-finale de PO, finale de PO) sont bien déclarés, chacun avec des citations pour les 3 tons et les 2 issues.");
+}
+
+// ---------------------------------------------------------------------
+// Correctif 2026-09 (retour utilisateur : "mets un vrai pop up pour
+// l'interview qu'on peut passer et faire en retournant dans le tableau de
+// bord [...] mets 2/3 questions quand même, et pose des vraies questions,
+// c'est pas ouf quand même là") : chaque jalon porte désormais 2 VRAIES
+// questions de journaliste (MILESTONE_INTERVIEW_QUESTIONS), et
+// MILESTONE_INTERVIEW_QUOTES porte EXACTEMENT autant de réponses que de
+// questions pour ce jalon (une réponse par question, dans le même ordre),
+// pour chaque {ton, issue}. interviewTranscriptFor zippe les deux en un
+// transcript {question, answer}[], et Team.resolveInterview l'expose via
+// `quotes` sur son résultat.
+// ---------------------------------------------------------------------
+{
+  const expectedMilestones = ["debut-saison", "mi-saison", "fin-saison-reguliere", "demi-finale-po", "finale-po"];
+  const { MILESTONE_INTERVIEW_TONES, MILESTONE_INTERVIEW_QUOTES } = Engine;
+  expectedMilestones.forEach(milestone => {
+    const questions = MILESTONE_INTERVIEW_QUESTIONS[milestone];
+    console.log(`\nQuestions pour "${milestone}" :`, questions);
+    if (!Array.isArray(questions) || questions.length < 2) {
+      throw new Error(`❌ MILESTONE_INTERVIEW_QUESTIONS["${milestone}"] devrait contenir au moins 2 vraies questions, obtenu ${questions && questions.length}.`);
+    }
+    if (questions.some(q => typeof q !== "string" || q.trim().length < 5)) {
+      throw new Error(`❌ MILESTONE_INTERVIEW_QUESTIONS["${milestone}"] devrait contenir de VRAIES questions (chaînes non triviales), pas des placeholders.`);
+    }
+    Object.keys(MILESTONE_INTERVIEW_TONES).forEach(tone => {
+      ["win", "loss"].forEach(outcome => {
+        const answers = MILESTONE_INTERVIEW_QUOTES[milestone][tone][outcome];
+        if (answers.length !== questions.length) {
+          throw new Error(`❌ MILESTONE_INTERVIEW_QUOTES["${milestone}"]["${tone}"]["${outcome}"] devrait porter exactement une réponse par question (${questions.length} attendues), obtenu ${answers.length}.`);
+        }
+      });
+    });
+  });
+  console.log("✅ Chaque jalon porte au moins 2 vraies questions (MILESTONE_INTERVIEW_QUESTIONS), avec exactement autant de réponses par {ton, issue} dans MILESTONE_INTERVIEW_QUOTES.");
+}
+{
+  // interviewTranscriptFor : zippe questions/réponses, remplace {opponent},
+  // ne plante jamais sur un jalon/ton inconnu (tableau vide plutôt qu'une
+  // exception, même contrat que le reste des méthodes "résoudre" de ce
+  // fichier).
+  const transcript = interviewTranscriptFor("debut-saison", "Agressif", true, "Rennes");
+  console.log("\nTranscript début de saison / Agressif / victoire :", transcript);
+  if (!Array.isArray(transcript) || transcript.length !== MILESTONE_INTERVIEW_QUESTIONS["debut-saison"].length) {
+    throw new Error("❌ interviewTranscriptFor devrait renvoyer exactement un {question, answer} par question du jalon.");
+  }
+  transcript.forEach((qa, i) => {
+    if (qa.question !== MILESTONE_INTERVIEW_QUESTIONS["debut-saison"][i]) throw new Error(`❌ La question ${i} du transcript devrait correspondre à MILESTONE_INTERVIEW_QUESTIONS dans le même ordre.`);
+    if (!qa.answer || qa.answer.includes("{opponent}")) throw new Error(`❌ La réponse ${i} devrait être non vide et avoir remplacé {opponent} par le vrai nom de l'adversaire.`);
+  });
+  if (!transcript.some(qa => qa.answer.includes("Rennes"))) throw new Error("❌ Au moins une réponse (la première, réaction au résultat) devrait mentionner l'adversaire par son nom.");
+  console.log("✅ interviewTranscriptFor construit bien le transcript complet, questions dans l'ordre, {opponent} remplacé.");
+
+  const emptyTranscript = interviewTranscriptFor("milestone-inconnu", "Agressif", true, "Rennes");
+  if (!Array.isArray(emptyTranscript) || emptyTranscript.length !== 0) throw new Error("❌ interviewTranscriptFor devrait renvoyer un tableau vide (jamais d'exception) pour un jalon inconnu.");
+  console.log("✅ interviewTranscriptFor ne plante jamais sur un jalon inconnu (tableau vide).");
+}
+{
+  // Team.resolveInterview expose désormais `quotes` (le transcript complet)
+  // en plus de `delta`/`formDelta`, et `quote` (dans moraleHistory) devient
+  // les réponses mises bout à bout plutôt qu'une seule phrase.
+  const { team, league } = freshTeamAndLeague();
+  const opp = league.teams[1];
+  simulateOrForfeit(team, opp);
+  team.applyMoraleForResult(true, 15, opp.name, 0, T0, "debut-saison");
+  const entry = team.pendingInterviews.find(i => i.milestone === "debut-saison");
+  const res = team.resolveInterview(entry.id, "Mesuré", T0);
+  console.log("\nrésultat resolveInterview (quotes) :", res && res.quotes);
+  if (!res || !Array.isArray(res.quotes) || res.quotes.length !== MILESTONE_INTERVIEW_QUESTIONS["debut-saison"].length) {
+    throw new Error("❌ Team.resolveInterview devrait exposer `quotes`, le transcript complet {question, answer}[] du jalon résolu.");
+  }
+  const histEntry = team.moraleHistory.find(e => e.milestone === "debut-saison");
+  if (!histEntry || !Array.isArray(histEntry.quotes) || histEntry.quotes.length !== res.quotes.length) {
+    throw new Error("❌ moraleHistory devrait porter le même `quotes` (transcript complet) que le résultat de resolveInterview.");
+  }
+  if (!histEntry.quote || histEntry.quote !== res.quotes.map(q => q.answer).join(" ")) {
+    throw new Error("❌ moraleHistory.quote devrait rester les réponses mises bout à bout (compatibilité avec recentInterviewsHtml côté client).");
+  }
+  console.log("✅ Team.resolveInterview expose bien `quotes` (transcript complet), fixé à l'identique dans moraleHistory, `quote` restant les réponses concaténées.");
 }
 
 // ---------------------------------------------------------------------

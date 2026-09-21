@@ -232,11 +232,34 @@
   .catchup-item p{margin:4px 0;}
   .catchup-item .sub{color:var(--ink-faint); font-size:12px;}
 
-  /* Médias : widget d'interview d'après-match affiché dans l'écran de
-     rattrapage (catchupSection), voir interviewWidgetHtml. */
+  /* Médias : bouton compact "Faire l'interview de <jalon>" (retour
+     utilisateur, 2026-09 : "mets un vrai pop up pour l'interview qu'on peut
+     passer et faire en retournant dans le tableau de bord, si on veut le
+     faire plus tard"), affiché dans l'écran de rattrapage (catchupSection),
+     le tableau de bord (#clubInterviewPanel) et l'écran de fin de saison,
+     voir interviewWidgetHtml. Le vrai contenu (questions/réponses/tons) vit
+     dans le popup, voir .interview-modal-box plus bas. */
   .interview-widget{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
-  .interview-tone-btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;}
-  .interview-tone-btns button{padding:6px 12px; font-size:13px;}
+  .interview-open-btn{font-weight:800;}
+
+  /* Popup d'interview de jalon (voir showInterviewModal) : même patron que
+     .upgrade-confirm-overlay/.upgrade-confirm-box (dimming + boîte centrée),
+     une boîte un peu plus large pour accueillir 2 questions/réponses et le
+     sélecteur de ton. */
+  .interview-modal-box{max-width:480px;}
+  .interview-modal-box h3{margin-bottom:4px;}
+  .interview-modal-intro{color:var(--ink-dim); font-size:13px; margin:0 0 14px;}
+  .interview-modal-qa{margin-bottom:12px;}
+  .interview-modal-question{font-weight:800; font-size:13px; margin:0 0 4px; color:var(--ink);}
+  .interview-modal-answer{margin:0; font-size:13px; color:var(--ink-dim); font-style:italic;}
+  .interview-modal-tones{display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 4px;}
+  .interview-modal-tone-btn{padding:6px 12px; font-size:13px;}
+  .interview-modal-tone-btn.active{border-color:var(--amber); color:var(--ink); background:rgba(240,162,60,.15); font-weight:800;}
+  .interview-modal-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;}
+  .interview-modal-actions button{flex:1; padding:10px; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; min-width:100px;}
+  .interview-modal-later-btn{background:transparent; color:var(--ink-dim); border:1px solid var(--line);}
+  .interview-modal-skip-btn{background:transparent; color:var(--ink-dim); border:1px solid var(--line);}
+  .interview-modal-validate-btn{background:var(--ok); color:#fff; border:1px solid var(--ok);}
 
   /* Fiche équipe, sous-onglet "Aperçu" (retour utilisateur : "une petite
      page d'accueil pour les autres équipes" ; puis, la v1 jugée "très cheap"
@@ -3264,6 +3287,30 @@ const MILESTONE_INTERVIEW_TYPES = {
   "finale-po": { label: "Interview d'après la finale des play-offs" },
 };
 
+// Vraies questions de journaliste (voir engine.js, miroir identique).
+const MILESTONE_INTERVIEW_QUESTIONS = {
+  "debut-saison": [
+    "Comment abordez-vous cette nouvelle saison ?",
+    "Quels sont vos objectifs pour les mois à venir ?",
+  ],
+  "mi-saison": [
+    "Quel bilan tirez-vous de cette première moitié de saison ?",
+    "Qu'est-ce qui doit changer pour la seconde moitié ?",
+  ],
+  "fin-saison-reguliere": [
+    "Comment jugez-vous le parcours de votre équipe en saison régulière ?",
+    "Dans quel état d'esprit abordez-vous la suite ?",
+  ],
+  "demi-finale-po": [
+    "Que retenez-vous de cette demi-finale ?",
+    "Comment préparez-vous la suite des play-offs ?",
+  ],
+  "finale-po": [
+    "Quel sentiment domine au sortir de cette finale ?",
+    "Qu'est-ce que ce résultat représente pour le club ?",
+  ],
+};
+
 function midSeasonRound(totalRounds) {
   return Math.floor(totalRounds / 2);
 }
@@ -3284,77 +3331,177 @@ const MILESTONE_INTERVIEW_TONES = {
 const MILESTONE_INTERVIEW_QUOTES = {
   "debut-saison": {
     "Agressif": {
-      win: ["On lance la saison avec cette victoire contre {opponent}, et on ne compte surtout pas s'arrêter là."],
-      loss: ["Cette défaite d'entrée face à {opponent} ne veut rien dire, on reste l'équipe à battre cette saison."],
+      win: [
+        "On lance la saison avec cette victoire contre {opponent}, et on ne compte surtout pas s'arrêter là.",
+        "L'objectif ne change pas d'un pouce : jouer les premiers rôles et viser le titre de division, rien de moins.",
+      ],
+      loss: [
+        "Cette défaite d'entrée face à {opponent} ne veut rien dire, on reste l'équipe à battre cette saison.",
+        "Nos objectifs restent exactement les mêmes qu'avant ce match : jouer le titre de division jusqu'au bout.",
+      ],
     },
     "Mesuré": {
-      win: ["Une bonne entame de saison avec cette victoire contre {opponent}, il reste encore beaucoup de travail mais c'est encourageant."],
-      loss: ["Cette défaite pour commencer la saison contre {opponent} ne doit pas être dramatisée, il reste toute la saison pour corriger le tir."],
+      win: [
+        "Une bonne entame de saison avec cette victoire contre {opponent}, il reste encore beaucoup de travail mais c'est encourageant.",
+        "L'objectif reste de construire une équipe solide match après match, sans se fixer de chiffre précis pour l'instant.",
+      ],
+      loss: [
+        "Cette défaite pour commencer la saison contre {opponent} ne doit pas être dramatisée, il reste toute la saison pour corriger le tir.",
+        "L'objectif reste inchangé : progresser semaine après semaine et être compétitifs sur la durée de la saison.",
+      ],
     },
     "Humble": {
-      win: ["On prend cette victoire d'entrée contre {opponent} avec humilité, la saison ne fait que commencer et tout reste à prouver."],
-      loss: ["Cette défaite pour débuter la saison face à {opponent} nous remet les pieds sur terre, on va travailler dur pour la suite."],
+      win: [
+        "On prend cette victoire d'entrée contre {opponent} avec humilité, la saison ne fait que commencer et tout reste à prouver.",
+        "On ne se fixe pas d'objectif chiffré, on veut juste progresser ensemble, une victoire ne change rien à cette philosophie.",
+      ],
+      loss: [
+        "Cette défaite pour débuter la saison face à {opponent} nous remet les pieds sur terre, on va travailler dur pour la suite.",
+        "On garde les pieds sur terre, l'objectif reste de progresser ensemble match après match, sans pression particulière.",
+      ],
     },
   },
   "mi-saison": {
     "Agressif": {
-      win: ["On passe le cap de la mi-saison sur la meilleure dynamique possible, et {opponent} vient encore de le confirmer : personne ne veut vraiment nous affronter en ce moment."],
-      loss: ["Cette défaite contre {opponent} ne change rien à nos ambitions pour la seconde moitié de saison, on reste le favori de cette division."],
+      win: [
+        "On passe le cap de la mi-saison sur la meilleure dynamique possible, et {opponent} vient encore de le confirmer : personne ne veut vraiment nous affronter en ce moment.",
+        "Pour la seconde moitié, on ne change rien : on continue sur cette lancée et on vise le plus haut possible.",
+      ],
+      loss: [
+        "Cette défaite contre {opponent} ne change rien à nos ambitions pour la seconde moitié de saison, on reste le favori de cette division.",
+        "Rien à changer sur le fond, on garde la même ambition pour la seconde moitié de saison.",
+      ],
     },
     "Mesuré": {
-      win: ["À mi-parcours, cette victoire contre {opponent} confirme qu'on est sur la bonne trajectoire, il reste encore la moitié de la saison pour la confirmer."],
-      loss: ["Cette défaite contre {opponent} arrive à un moment charnière de la saison, on va en tirer les leçons avant d'attaquer la seconde moitié du calendrier."],
+      win: [
+        "À mi-parcours, cette victoire contre {opponent} confirme qu'on est sur la bonne trajectoire, il reste encore la moitié de la saison pour la confirmer.",
+        "On va continuer à travailler dans la continuité, avec quelques ajustements tactiques pour la seconde moitié.",
+      ],
+      loss: [
+        "Cette défaite contre {opponent} arrive à un moment charnière de la saison, on va en tirer les leçons avant d'attaquer la seconde moitié du calendrier.",
+        "On va revoir certains détails à l'entraînement pour repartir sur de meilleures bases en seconde moitié de saison.",
+      ],
     },
     "Humble": {
-      win: ["On a fait la moitié du chemin avec cette victoire contre {opponent}, mais rien n'est acquis, il reste encore beaucoup de travail avant la fin de saison."],
-      loss: ["Cette défaite contre {opponent} à mi-saison est une bonne piqûre de rappel, on doit rester humbles et travailler encore plus dur pour la suite."],
+      win: [
+        "On a fait la moitié du chemin avec cette victoire contre {opponent}, mais rien n'est acquis, il reste encore beaucoup de travail avant la fin de saison.",
+        "On va continuer à travailler humblement, rien n'est jamais acquis dans ce championnat.",
+      ],
+      loss: [
+        "Cette défaite contre {opponent} à mi-saison est une bonne piqûre de rappel, on doit rester humbles et travailler encore plus dur pour la suite.",
+        "On doit se remettre en question collectivement et travailler encore plus dur pour la seconde moitié de saison.",
+      ],
     },
   },
   "fin-saison-reguliere": {
     "Agressif": {
-      win: ["On termine la saison régulière sur cette victoire contre {opponent}, et on aborde les échéances qui arrivent avec la plus grande confiance qui soit."],
-      loss: ["Cette dernière défaite de saison régulière contre {opponent} n'entache en rien notre saison, on sait qu'on est prêts pour la suite."],
+      win: [
+        "On termine la saison régulière sur cette victoire contre {opponent}, et on aborde les échéances qui arrivent avec la plus grande confiance qui soit.",
+        "On aborde la suite avec la certitude d'avoir le niveau pour aller loin, sans aucune pression particulière.",
+      ],
+      loss: [
+        "Cette dernière défaite de saison régulière contre {opponent} n'entache en rien notre saison, on sait qu'on est prêts pour la suite.",
+        "On aborde la suite avec la même confiance, cette fin de saison régulière ne change rien à nos ambitions.",
+      ],
     },
     "Mesuré": {
-      win: ["Une belle manière de clore la saison régulière face à {opponent}, l'équipe a montré tout au long de l'année qu'elle méritait sa place."],
-      loss: ["On termine la saison régulière sur une défaite décevante contre {opponent}, mais le bilan global de l'année reste ce qui compte le plus."],
+      win: [
+        "Une belle manière de clore la saison régulière face à {opponent}, l'équipe a montré tout au long de l'année qu'elle méritait sa place.",
+        "On aborde la suite sereinement, en essayant de garder cette dynamique le plus longtemps possible.",
+      ],
+      loss: [
+        "On termine la saison régulière sur une défaite décevante contre {opponent}, mais le bilan global de l'année reste ce qui compte le plus.",
+        "On aborde la suite avec l'envie de corriger ce qui n'a pas fonctionné ces dernières semaines.",
+      ],
     },
     "Humble": {
-      win: ["Cette victoire pour clore la saison régulière contre {opponent} appartient à tout le groupe, staff compris, ça n'a pas toujours été facile cette année."],
-      loss: ["Cette défaite contre {opponent} pour terminer la saison régulière nous rappelle qu'il reste encore des choses à corriger avant la suite."],
+      win: [
+        "Cette victoire pour clore la saison régulière contre {opponent} appartient à tout le groupe, staff compris, ça n'a pas toujours été facile cette année.",
+        "On aborde la suite avec humilité, chaque adversaire mérite le plus grand respect à ce stade de la saison.",
+      ],
+      loss: [
+        "Cette défaite contre {opponent} pour terminer la saison régulière nous rappelle qu'il reste encore des choses à corriger avant la suite.",
+        "On aborde la suite en sachant qu'il reste beaucoup de travail, on ne change rien à notre état d'esprit.",
+      ],
     },
   },
   "demi-finale-po": {
     "Agressif": {
-      win: ["On envoie un message clair à toute la ligue en éliminant {opponent} en demi-finale, la prochaine étape ne nous fait absolument pas peur."],
-      loss: ["Éliminés par {opponent} en demi-finale, difficile à avaler, mais cette équipe reviendra encore plus forte la saison prochaine."],
+      win: [
+        "On envoie un message clair à toute la ligue en éliminant {opponent} en demi-finale, la prochaine étape ne nous fait absolument pas peur.",
+        "On prépare la suite avec la même confiance, on n'a pas fait tout ce chemin pour s'arrêter en si bon chemin.",
+      ],
+      loss: [
+        "Éliminés par {opponent} en demi-finale, difficile à avaler, mais cette équipe reviendra encore plus forte la saison prochaine.",
+        "On tire un trait sur cette élimination et on prépare déjà la revanche pour la saison prochaine, sans complexe.",
+      ],
     },
     "Mesuré": {
-      win: ["Une qualification méritée contre {opponent} en demi-finale, l'équipe a fait preuve d'un sérieux remarquable dans ce moment de pression."],
-      loss: ["Cette élimination en demi-finale contre {opponent} est frustrante après une belle saison, on va analyser calmement ce qui a manqué."],
+      win: [
+        "Une qualification méritée contre {opponent} en demi-finale, l'équipe a fait preuve d'un sérieux remarquable dans ce moment de pression.",
+        "On va préparer la suite avec sérieux, sans s'enflammer, il reste encore une marche à franchir.",
+      ],
+      loss: [
+        "Cette élimination en demi-finale contre {opponent} est frustrante après une belle saison, on va analyser calmement ce qui a manqué.",
+        "On va analyser calmement cette élimination et en tirer les enseignements pour progresser encore.",
+      ],
     },
     "Humble": {
-      win: ["Cette qualification face à {opponent} en demi-finale doit beaucoup à la réussite autant qu'au mérite, on reste concentrés sur la suite sans s'enflammer."],
-      loss: ["{opponent} méritait sa qualification en demi-finale, on doit accepter cette élimination avec humilité et en tirer les bons enseignements."],
+      win: [
+        "Cette qualification face à {opponent} en demi-finale doit beaucoup à la réussite autant qu'au mérite, on reste concentrés sur la suite sans s'enflammer.",
+        "On va préparer la suite pas à pas, sans se projeter trop vite sur la suite.",
+      ],
+      loss: [
+        "{opponent} méritait sa qualification en demi-finale, on doit accepter cette élimination avec humilité et en tirer les bons enseignements.",
+        "On accepte cette élimination avec humilité et on va travailler encore plus dur pour revenir plus forts.",
+      ],
     },
   },
   "finale-po": {
     "Agressif": {
-      win: ["On savait qu'on était la meilleure équipe de la division, ce titre face à {opponent} en finale ne fait que le confirmer."],
-      loss: ["Cette défaite en finale contre {opponent} est difficile à digérer, mais on reviendra chercher ce titre la saison prochaine, sans exception."],
+      win: [
+        "On savait qu'on était la meilleure équipe de la division, ce titre face à {opponent} en finale ne fait que le confirmer.",
+        "Ce titre représente une nouvelle étape pour ce club, et on compte bien ne pas s'arrêter là la saison prochaine.",
+      ],
+      loss: [
+        "Cette défaite en finale contre {opponent} est difficile à digérer, mais on reviendra chercher ce titre la saison prochaine, sans exception.",
+        "Cette défaite ne représente rien de plus qu'un contretemps, ce club reviendra chercher ce titre très vite.",
+      ],
     },
     "Mesuré": {
-      win: ["Ce titre de champion face à {opponent} en finale récompense tout le travail accompli cette saison, une immense fierté pour tout le club."],
-      loss: ["Cette défaite en finale contre {opponent} est une déception, mais atteindre la finale reste une très belle saison pour ce groupe."],
+      win: [
+        "Ce titre de champion face à {opponent} en finale récompense tout le travail accompli cette saison, une immense fierté pour tout le club.",
+        "Ce titre représente une immense fierté pour tout le club, du staff aux joueurs en passant par les supporters.",
+      ],
+      loss: [
+        "Cette défaite en finale contre {opponent} est une déception, mais atteindre la finale reste une très belle saison pour ce groupe.",
+        "Cette défaite en finale reste une bonne saison pour ce club, on va essayer de franchir ce dernier palier la saison prochaine.",
+      ],
     },
     "Humble": {
-      win: ["Ce titre face à {opponent} appartient à tout le club, des joueurs jusqu'au dernier membre du staff, on ne l'oubliera jamais."],
-      loss: ["{opponent} méritait ce titre ce soir, on doit rester humbles et repartir plus forts la saison prochaine."],
+      win: [
+        "Ce titre face à {opponent} appartient à tout le club, des joueurs jusqu'au dernier membre du staff, on ne l'oubliera jamais.",
+        "Ce titre appartient à tout le monde au club, on va rester humbles et continuer à travailler comme si de rien n'était.",
+      ],
+      loss: [
+        "{opponent} méritait ce titre ce soir, on doit rester humbles et repartir plus forts la saison prochaine.",
+        "Cette défaite en finale fait partie du sport, on va rester humbles et repartir travailler dès la saison prochaine.",
+      ],
     },
   },
 };
 
 const MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS = 3 * 24 * 60 * 60 * 1000;
+
+// (voir engine.js, miroir identique)
+function interviewTranscriptFor(milestone, tone, won, opponentName) {
+  const questions = MILESTONE_INTERVIEW_QUESTIONS[milestone] || [];
+  const answers = ((MILESTONE_INTERVIEW_QUOTES[milestone] || {})[tone] || {})[won ? "win" : "loss"] || [];
+  return questions.map((question, i) => ({
+    question,
+    answer: (answers[i] || "").replace("{opponent}", opponentName),
+  }));
+}
 
 // Identité du club : logo et maillots (voir engine.js pour le commentaire
 // détaillé). Copie exacte de la palette/des formes côté serveur : les
@@ -4102,9 +4249,10 @@ class Team {
   }
 
   // Résout une interview de jalon en attente (voir engine.js, miroir
-  // identique) : tire aussi une citation (voir MILESTONE_INTERVIEW_QUOTES
-  // plus haut), affichée sur la page "Aperçu" à la place du delta, et
-  // applique un delta à Player.form pour chaque joueur de `entry.playerIds`.
+  // identique) : construit aussi le transcript complet {question, answer}[]
+  // (voir interviewTranscriptFor/MILESTONE_INTERVIEW_QUESTIONS plus haut),
+  // affiché sur la page "Aperçu" à la place du delta, et applique un delta à
+  // Player.form pour chaque joueur de `entry.playerIds`.
   resolveInterview(id, tone, now = Date.now()) {
     this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
@@ -4119,17 +4267,15 @@ class Team {
     const formDelta = entry.won ? toneCfg.formWin : toneCfg.formLoss;
     const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
     const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
-    const quoteTemplates = (MILESTONE_INTERVIEW_QUOTES[entry.milestone] || {})[tone];
-    const quote = quoteTemplates
-      ? pick(quoteTemplates[entry.won ? "win" : "loss"]).replace("{opponent}", entry.opponentName)
-      : "";
-    this.recordMoraleEvent(`${milestoneLabel} (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, fanDelta, { quote, milestone: entry.milestone });
+    const quotes = interviewTranscriptFor(entry.milestone, tone, entry.won, entry.opponentName);
+    const quote = quotes.map(q => q.answer).filter(Boolean).join(" ");
+    this.recordMoraleEvent(`${milestoneLabel} (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, fanDelta, { quote, quotes, milestone: entry.milestone });
     (entry.playerIds || []).forEach(pid => {
       const p = this.players.find(pl => pl.id === pid);
       if (p) p.form = clamp(Math.round(p.form + formDelta), 1, 100);
     });
     this.pendingInterviews.splice(idx, 1);
-    return { ok: true, delta: fanDelta, formDelta };
+    return { ok: true, delta: fanDelta, formDelta, quotes };
   }
 
   // Ignore une interview en attente (voir engine.js, miroir identique).
@@ -5495,25 +5641,60 @@ function levelCoefficientFor(attrs, cardPosition) {
   return { position, coefficient };
 }
 
+// Génère un profil d'attributs "brut" dans la fourchette [lo,hi] (avant tier),
+// rien de développé, tout reste à révéler par l'entraînement, mais
+// désormais LÉGÈREMENT orienté vers `position` (voir POSITION_ATTR_PROFILE) :
+// une caractéristique "forte" pour ce poste tire vers le haut de la
+// fourchette, une "faible" vers le bas, une "de base" reste répartie sur
+// toute son étendue. Correctif 2026-09 (retour utilisateur : "corrige pour
+// que le poste reflète les caractéristiques dès le départ") : avant ça,
+// generateRawYouthAttrs tirait les 10 caractéristiques uniformément dans
+// [lo,hi] SANS AUCUN rapport avec le poste qu'on venait de lui assigner :
+// un Pivot pouvait ainsi démarrer avec un profil qui n'avait jamais eu la
+// moindre chance de ressembler à un Pivot (voir Player.effectivePosition/
+// levelCoefficientFor, qui pouvaient alors s'écarter du poste de carte dès
+// la toute première saison, sans qu'aucune caractéristique n'ait bougé).
+// L'écart reste volontairement modeste (25% de la fourchette totale de
+// chaque côté, jamais les vraies bornes 55-92/15-45 de generateAttrsForPosition
+// utilisées pour un adulte confirmé) : un jeune n'a encore RIEN prouvé, ce
+// n'est qu'un léger a priori cohérent avec son étiquette de poste, qui laisse
+// toute leur place à l'entraînement et au hasard (voir CARD_POSITION_BIAS/
+// inferPosition, qui garde volontairement une vraie marge d'erreur possible
+// malgré ce biais : un profil VRAIMENT atypique peut toujours, plus rarement
+// qu'avant, faire pencher le poste effectif d'un autre côté).
+// (voir engine.js, miroir identique)
+function generateRawAttrsInRange(position, lo, hi, tier) {
+  const span = hi - lo;
+  const generators = {
+    base: () => clamp(Math.round(rand(lo, hi) * tier), 1, 99),
+    strong: () => clamp(Math.round(rand(lo + span * 0.25, hi) * tier), 1, 99),
+    weak: () => clamp(Math.round(rand(lo, hi - span * 0.25) * tier), 1, 99),
+  };
+  const profile = POSITION_ATTR_PROFILE[position] || {};
+  const attrs = {};
+  ATTRS.forEach(a => attrs[a] = generators[profile[a] || "base"]());
+  return attrs;
+}
+
 // Un jeune joueur (prospect brut, pas encore de vraie draft/génération de
 // nouveaux joueurs pour l'instant) démarre bas sur TOUTES ses caractéristiques
-// (10-50, sans distinction de poste — recalibré 2026-09, retour utilisateur :
-// "sur les joueurs de départ, on ne devrait pas avoir plus de 50 sur une
-// caractéristique / donc entre 10 et 50 sur les caracs / idem pour les
-// joueurs draftés de 18/19 ans") : son potentiel caché, lui, peut être
-// élevé — tout reste à révéler par l'entraînement.
+// (10-50, recalibré 2026-09, retour utilisateur : "sur les joueurs de
+// départ, on ne devrait pas avoir plus de 50 sur une caractéristique / donc
+// entre 10 et 50 sur les caracs / idem pour les joueurs draftés de 18/19
+// ans"), désormais orienté vers `position` (voir generateRawAttrsInRange
+// ci-dessus) : son potentiel caché, lui, peut être élevé, tout reste à
+// révéler par l'entraînement.
+// (voir engine.js, miroir identique)
 const YOUNG_PROSPECT_MAX_AGE = 21;
-function generateRawYouthAttrs(tier) {
-  const attrs = {};
-  ATTRS.forEach(a => attrs[a] = clamp(Math.round(rand(10, 50) * tier), 1, 99));
-  return attrs;
+function generateRawYouthAttrs(tier, position) {
+  return generateRawAttrsInRange(position, 10, 50, tier);
 }
 
 function generatePlayer(position, tier) {
   const name = `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`;
   const age = Math.round(rand(18, 33));
   const attrs = age <= YOUNG_PROSPECT_MAX_AGE
-    ? generateRawYouthAttrs(tier)
+    ? generateRawYouthAttrs(tier, position)
     : generateAttrsForPosition(position, tier);
   return new Player({
     name,
@@ -5551,7 +5732,7 @@ function generateRookiePlayer(position) {
     position,
     height: heightForPosition(position),
     age,
-    attrs: generateRawYouthAttrs(1),
+    attrs: generateRawYouthAttrs(1, position),
     aggressiveness: Math.round(rand(15, 95)),
   });
 }
@@ -5575,12 +5756,16 @@ function generateYouthCandidate(now, recruiterLevel) {
   const position = pick(POSITIONS);
   const age = pick([15, 16, 17]);
   const tier = YOUTH_QUALITY_TIER_BY_LEVEL[recruiterLevel] || 1;
-  // Attributs ACTUELS, chacun 10-30 (avant tier) — VOLONTAIREMENT visibles
+  // Attributs ACTUELS, chacun 10-30 (avant tier), VOLONTAIREMENT visibles
   // tels quels dans l'UI dès la proposition (contraste délibéré avec le
   // scoutisme adverse, où c'est l'inverse : les attributs sont cachés, pas le
   // potentiel) : voir le commentaire sur Team.youthCandidates au constructeur.
-  const attrs = {};
-  ATTRS.forEach(a => attrs[a] = clamp(Math.round(rand(10, 30) * tier), 1, 99));
+  // Légèrement orienté vers `position` depuis 2026-09 (même correctif que
+  // generateRawYouthAttrs, voir generateRawAttrsInRange) : avant ça, le poste
+  // tiré au sort (pick(POSITIONS) ci-dessus) n'avait aucun rapport avec les
+  // attributs générés.
+  // (voir engine.js, miroir identique)
+  const attrs = generateRawAttrsInRange(position, 10, 30, tier);
   // "Outil brut" : 1 ou 2 attributs (jamais plus) reçoivent un tirage plus
   // haut (31-40 avant tier) pour représenter un talent déjà repéré par le
   // recruteur — voir YOUTH_STANDOUT_CHANCE_BY_LEVEL.
@@ -9791,37 +9976,44 @@ function enterNextMatchOrShowSeasonEnd(opts) {
   return false;
 }
 
-// Médias : widget d'interview de jalon (voir Team.pendingInterviews/
-// resolveInterview/skipInterview), affiché sur l'écran "Pendant votre
-// absence…", l'écran de fin de saison, et le tableau de bord (retour
-// utilisateur, 2026-09 : "l'interview de jalon doit se faire via l'écran
-// pendant votre absence et via le tableau de bord") — toujours la même
-// entrée quel que soit l'endroit où elle s'affiche, voir
-// Team.pendingInterviews. Trois tons + une option "sans commentaire" (effet
-// nul, voir catchupContinueBtn plus bas pour le cas où le manager ne répond
-// à aucun des deux). `entry.milestone` (voir MILESTONE_INTERVIEW_TYPES) :
-// toujours présent depuis le retrait de l'interview classique d'après
+// Médias : déclencheur compact d'interview de jalon (voir
+// Team.pendingInterviews/resolveInterview/skipInterview), affiché sur
+// l'écran "Pendant votre absence…", l'écran de fin de saison, et le tableau
+// de bord (retour utilisateur, 2026-09 : "l'interview de jalon doit se
+// faire via l'écran pendant votre absence et via le tableau de bord") :
+// toujours la même entrée quel que soit l'endroit où elle s'affiche, voir
+// Team.pendingInterviews. Correctif 2026-09 (retour utilisateur : "mets un
+// vrai pop up pour l'interview qu'on peut passer et faire en retournant
+// dans le tableau de bord, si on veut le faire plus tard [...] mets 2/3
+// questions quand même, et pose des vraies questions") : remplace l'ancien
+// bloc inline (un seul texte générique + boutons de ton directement dans la
+// page) par un simple bouton qui ouvre le vrai popup (voir
+// showInterviewModal plus bas), où vivent désormais les vraies questions,
+// les réponses par ton et le choix "Sans commentaire". `data-interview-
+// trigger` (en plus de l'id DOM, conservé pour compatibilité) permet de
+// retrouver TOUTES les occurrences de ce déclencheur (dashboard ET écran de
+// rattrapage peuvent en théorie être présents en même temps dans le DOM) et
+// de les mettre à jour ensemble une fois l'interview traitée, voir
+// finishInterviewTrigger. `entry.milestone` (voir MILESTONE_INTERVIEW_TYPES)
+// : toujours présent depuis le retrait de l'interview classique d'après
 // CHAQUE match (retour utilisateur, 2026-09 : "on enlève ça").
 function interviewWidgetHtml(entry) {
-  const toneButtons = Object.keys(MILESTONE_INTERVIEW_TONES).map(tone =>
-    `<button class="secondary" data-interview-tone="${entry.id}:${escapeHtml(tone)}">${escapeHtml(tone)}</button>`
-  ).join(" ");
   const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
   const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
-  const intro = `<p class="sub"><b>${escapeHtml(milestoneLabel)}</b> : un journaliste vous demande une réaction plus approfondie sur ce moment clé de la saison. Votre réponse influencera aussi bien l'humeur des supporters que celle des joueurs ayant disputé ce match, réponse possible sous 3 jours.</p>`;
-  return `<div class="interview-widget interview-widget-milestone" id="interviewWidget_${entry.id}">` +
-    intro +
-    `<div class="interview-tone-btns">${toneButtons} <button class="secondary" data-interview-skip="${entry.id}">Sans commentaire</button></div>` +
+  return `<div class="interview-widget interview-widget-milestone" id="interviewWidget_${entry.id}" data-interview-trigger="${entry.id}">` +
+    `<p class="sub">Un journaliste attend votre réaction sur ce moment clé de la saison. Réponse possible sous 3 jours.</p>` +
+    `<button type="button" class="secondary interview-open-btn" data-interview-open="${entry.id}">🎙️ Faire l'interview : ${escapeHtml(milestoneLabel)}</button>` +
     `</div>`;
 }
 
-// Remplace le widget par une courte confirmation, une fois l'interview
-// traitée (choisie ou ignorée) : `resolved` est le résultat de
-// Team.resolveInterview ({ok, delta, formDelta}) ou null pour un "sans
-// commentaire".
-function refreshCatchupAfterInterview(interviewId, resolved) {
-  const widget = document.getElementById(`interviewWidget_${interviewId}`);
-  if (!widget) return;
+// Remplace TOUTES les occurrences du déclencheur (voir data-interview-
+// trigger ci-dessus) par une courte confirmation, une fois l'interview
+// traitée (répondue via le popup ou ignorée) : `resolved` est le résultat de
+// Team.resolveInterview ({ok, delta, formDelta, quotes}) ou null pour un
+// "sans commentaire".
+function finishInterviewTrigger(interviewId, resolved) {
+  const widgets = document.querySelectorAll(`[data-interview-trigger="${interviewId}"]`);
+  if (!widgets.length) return;
   let msg;
   if (resolved && resolved.ok) {
     const sign = resolved.delta >= 0 ? "+" : "";
@@ -9833,7 +10025,113 @@ function refreshCatchupAfterInterview(interviewId, resolved) {
   } else {
     msg = "Sans commentaire.";
   }
-  widget.outerHTML = `<p class="sub">${escapeHtml(msg)}</p>`;
+  // Ne rappelle PAS renderClubInterviewPanel() ici : comme au plus une seule
+  // interview de jalon est en attente à la fois, la retirer de la file ne
+  // laisse rien d'autre à afficher, et un re-rendu du panneau effacerait la
+  // confirmation qu'on vient juste d'y poser (panel.innerHTML = "" quand
+  // pendingInterviews ne contient plus rien).
+  widgets.forEach(widget => { widget.outerHTML = `<p class="sub">${escapeHtml(msg)}</p>`; });
+}
+
+// Alias conservé pour compatibilité de nom avec le reste du fichier/les
+// tests existants qui pourraient encore le référencer (voir
+// finishInterviewTrigger pour l'implémentation réelle depuis le correctif
+// 2026-09 ci-dessus).
+function refreshCatchupAfterInterview(interviewId, resolved) {
+  finishInterviewTrigger(interviewId, resolved);
+}
+
+// ---------------------------------------------------------------------
+// Popup d'interview de jalon (retour utilisateur, 2026-09 : "mets un vrai
+// pop up pour l'interview qu'on peut passer et faire en retournant dans le
+// tableau de bord, si on veut le faire plus tard. il faut mettre un petit
+// bouton --> faire l'interview de début de saison/mi saison/fin de saison
+// régulière/demi finale/finale... mets 2/3 quetions quand même, et pose des
+// vraies questions") : même patron que showUpgradeConfirm (overlay +
+// boîte créés dynamiquement, fermeture au clic sur le fond). Affiche les 2
+// vraies questions du jalon (MILESTONE_INTERVIEW_QUESTIONS) avec un aperçu
+// des réponses qui se met à jour EN DIRECT selon le ton survolé
+// (interviewTranscriptFor, calculé côté client, sans toucher au moteur tant
+// que "Valider" n'a pas été cliqué) : le manager peut ainsi comparer les 3
+// tons avant de choisir. Trois issues possibles : "Valider cette interview"
+// (résout avec le ton actuellement sélectionné), "Sans commentaire" (résout
+// à effet nul, comme avant), ou "Plus tard"/clic sur le fond (ferme le
+// popup SANS RIEN résoudre : l'interview reste en attente, reprenable via
+// le même petit bouton, que ce soit depuis le tableau de bord ou en
+// revenant sur l'écran qui l'a déclenché, tant que le délai de 3 jours
+// n'est pas dépassé).
+// ---------------------------------------------------------------------
+function closeInterviewModal() {
+  const existing = document.getElementById("interviewModalOverlay");
+  if (existing) existing.remove();
+}
+
+function showInterviewModal(entry) {
+  closeInterviewModal();
+  const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
+  const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
+  const tones = Object.keys(MILESTONE_INTERVIEW_TONES);
+  let selectedTone = "Mesuré";
+
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay interview-modal-overlay";
+  overlay.id = "interviewModalOverlay";
+
+  function qaHtml(tone) {
+    const transcript = interviewTranscriptFor(entry.milestone, tone, entry.won, entry.opponentName);
+    return transcript.map(qa =>
+      `<div class="interview-modal-qa"><p class="interview-modal-question">${escapeHtml(qa.question)}</p>` +
+      `<p class="interview-modal-answer">« ${escapeHtml(qa.answer)} »</p></div>`
+    ).join("");
+  }
+
+  function toneButtonsHtml() {
+    return tones.map(tone =>
+      `<button type="button" class="secondary interview-modal-tone-btn${tone === selectedTone ? " active" : ""}" data-interview-preview-tone="${escapeHtml(tone)}">${escapeHtml(tone)}</button>`
+    ).join("");
+  }
+
+  overlay.innerHTML = `<div class="upgrade-confirm-box interview-modal-box">` +
+    `<h3>🎙️ ${escapeHtml(milestoneLabel)}</h3>` +
+    `<p class="interview-modal-intro">Un journaliste vous demande une réaction sur ce moment clé de la saison. Votre réponse influencera aussi bien l'humeur des supporters que la forme des joueurs ayant disputé ce match.</p>` +
+    `<div id="interviewModalQa">${qaHtml(selectedTone)}</div>` +
+    `<div class="interview-modal-tones" id="interviewModalTones">${toneButtonsHtml()}</div>` +
+    `<div class="interview-modal-actions">` +
+    `<button type="button" class="interview-modal-later-btn" id="interviewModalLater">Plus tard</button>` +
+    `<button type="button" class="interview-modal-skip-btn" id="interviewModalSkip">Sans commentaire</button>` +
+    `<button type="button" class="interview-modal-validate-btn" id="interviewModalValidate">Valider</button>` +
+    `</div></div>`;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) { closeInterviewModal(); return; }
+    // Délégation sur l'overlay (plutôt qu'un listener par bouton de ton) :
+    // toneButtonsHtml()/qaHtml() régénèrent ces boutons à chaque changement
+    // de ton (voir plus bas), la délégation évite d'avoir à ré-attacher un
+    // listener à chaque bouton fraîchement recréé.
+    const toneBtn = e.target.closest("[data-interview-preview-tone]");
+    if (!toneBtn) return;
+    selectedTone = toneBtn.dataset.interviewPreviewTone;
+    document.getElementById("interviewModalQa").innerHTML = qaHtml(selectedTone);
+    document.getElementById("interviewModalTones").innerHTML = toneButtonsHtml();
+  });
+  document.getElementById("interviewModalLater").addEventListener("click", closeInterviewModal);
+  document.getElementById("interviewModalSkip").addEventListener("click", () => {
+    teamA.skipInterview(entry.id);
+    saveMyTeam();
+    syncSkipInterviewToServer(entry.id);
+    catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== entry.id);
+    closeInterviewModal();
+    finishInterviewTrigger(entry.id, null);
+  });
+  document.getElementById("interviewModalValidate").addEventListener("click", () => {
+    const result = teamA.resolveInterview(entry.id, selectedTone);
+    saveMyTeam();
+    if (result && result.ok) syncInterviewToServer(entry.id, selectedTone);
+    catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== entry.id);
+    closeInterviewModal();
+    finishInterviewTrigger(entry.id, result);
+  });
 }
 
 // Affiche le récapitulatif "Pendant votre absence…" pour tout ce que le
@@ -17184,52 +17482,38 @@ document.getElementById("topbarOrdersBtn").addEventListener("click", goToOrdresT
   });
 }
 
-// Médias (voir interviewWidgetHtml/refreshCatchupAfterInterview plus haut) :
-// VRAIE délégation sur document, même patron que la barre d'onglets
-// [data-tab] plus bas — pas seulement sur catchupContent, le même widget
-// pouvant aussi apparaître sur l'écran de fin de saison et le tableau de
-// bord (voir renderSeasonEnd/renderClubInterviewPanel) : un seul
-// gestionnaire couvre tous les panneaux. `id` reste unique tous panneaux
-// confondus (Team.pendingInterviews n'a jamais qu'UNE seule entrée de
-// jalon en attente à la fois), refreshCatchupAfterInterview le retrouve
-// par son id DOM peu importe son conteneur. `catchupInterviewIdsShown.
-// filter(...)` reste un no-op inoffensif pour un id qui n'y était pas
-// (widget affiché hors de l'écran de rattrapage) : pas besoin de
-// distinguer la provenance ici.
+// Médias (voir interviewWidgetHtml/showInterviewModal plus haut) : VRAIE
+// délégation sur document, même patron que la barre d'onglets [data-tab]
+// plus bas (pas seulement sur catchupContent) : le même bouton pouvant aussi
+// apparaître sur l'écran de fin de saison et le tableau de bord (voir
+// renderSeasonEnd/renderClubInterviewPanel) : un seul gestionnaire couvre
+// tous les panneaux. `id` reste unique tous panneaux confondus
+// (Team.pendingInterviews n'a jamais qu'UNE seule entrée de jalon en
+// attente à la fois) : un clic sur N'IMPORTE LEQUEL des boutons affichés
+// pour cet id ouvre le même popup (voir showInterviewModal), qui porte
+// désormais tout le choix du ton/questions/validation (retiré d'ici,
+// correctif 2026-09).
 document.addEventListener("click", (e) => {
-  const toneBtn = e.target.closest("[data-interview-tone]");
-  const skipBtn = e.target.closest("[data-interview-skip]");
-  if (toneBtn) {
-    const [idStr, tone] = toneBtn.dataset.interviewTone.split(":");
-    const id = Number(idStr);
-    const result = teamA.resolveInterview(id, tone);
-    saveMyTeam();
-    if (result && result.ok) syncInterviewToServer(id, tone);
-    catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== id);
-    refreshCatchupAfterInterview(id, result);
-  } else if (skipBtn) {
-    const id = Number(skipBtn.dataset.interviewSkip);
-    teamA.skipInterview(id);
-    saveMyTeam();
-    syncSkipInterviewToServer(id);
-    catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== id);
-    refreshCatchupAfterInterview(id, null);
-  }
+  const openBtn = e.target.closest("[data-interview-open]");
+  if (!openBtn) return;
+  const id = Number(openBtn.dataset.interviewOpen);
+  const entry = (teamA.pendingInterviews || []).find(i => i.id === id);
+  if (entry) showInterviewModal(entry);
 });
 
 document.getElementById("catchupContinueBtn").addEventListener("click", () => {
-  // Toute interview encore non répondue au moment de cliquer "Continuer" est
-  // considérée "sans commentaire" : on la retire silencieusement de la file
-  // (effet nul sur le moral), pour ne jamais bloquer la progression du
-  // manager qui ne souhaite pas réagir.
-  if (catchupInterviewIdsShown.length) {
-    catchupInterviewIdsShown.forEach(id => {
-      teamA.skipInterview(id);
-      syncSkipInterviewToServer(id);
-    });
-    catchupInterviewIdsShown = [];
-    saveMyTeam();
-  }
+  // Correctif 2026-09 (retour utilisateur : "mets un vrai pop up pour
+  // l'interview qu'on peut passer et faire en retournant dans le tableau de
+  // bord, si on veut le faire plus tard") : quitter l'écran de rattrapage
+  // sans avoir répondu ne résout plus JAMAIS l'interview en "sans
+  // commentaire" à sa place, elle reste simplement en attente (reprenable
+  // via le même petit bouton sur le tableau de bord, tant que le délai de 3
+  // jours n'est pas dépassé, voir MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS/
+  // pruneExpiredInterviews). `catchupInterviewIdsShown` ne sert donc plus
+  // qu'à savoir quels boutons étaient affichés sur CET écran, pour ne
+  // toucher qu'eux (les autres pourraient venir d'un autre panneau encore
+  // affiché ailleurs).
+  catchupInterviewIdsShown = [];
   enterNextMatchOrShowSeasonEnd();
 });
 

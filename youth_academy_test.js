@@ -19,6 +19,9 @@ const {
   MAX_ROSTER_SIZE, SEASON_LENGTH_WEEKS, salaryForOverall, potentialHeadroom, ATTRS,
   POTENTIAL_TIERS, potentialTierLabel, potentialTierIndex, youthProspectLabel,
   Player, Team,
+  // Correctif 2026-09 (retour utilisateur : "corrige pour que le poste
+  // reflète les caractéristiques dès le départ") : voir Partie 13.
+  generateRookiePlayer, generateRawAttrsInRange, POSITION_ATTR_PROFILE, POSITIONS,
 } = E;
 
 function freshLeague(budget = 5000000) {
@@ -742,6 +745,89 @@ function withMockedRandom(value, fn) {
   if (!Array.isArray(teamBack.pendingYouthDecisions) || teamBack.pendingYouthDecisions.length !== 0) throw new Error("❌ Sans pendingYouthDecisions sauvegardé, la valeur par défaut devrait être un tableau vide.");
   if (!Array.isArray(lgBack.recruiterListings) || lgBack.recruiterListings.length !== 0) throw new Error("❌ Sans recruiterListings sauvegardé, la valeur par défaut devrait être un tableau vide.");
   console.log("✅ Une ancienne sauvegarde (d'avant l'académie de jeunes) reste chargeable, avec des valeurs par défaut sûres pour tous les nouveaux champs.");
+}
+
+// ---------------------------------------------------------------------
+// Partie 13 : correctif 2026-09 (retour utilisateur : "corrige pour que le
+// poste reflète les caractéristiques dès le départ") : generateRawAttrsInRange
+// (et donc generateRookiePlayer/generateStartingRoster, generateYouthCandidate,
+// et generatePlayer pour un jeune prospect ≤ YOUNG_PROSPECT_MAX_AGE) doit
+// désormais générer des attributs LÉGÈREMENT orientés vers le poste demandé,
+// alors qu'avant ce correctif ils étaient tirés uniformément, sans AUCUN
+// rapport avec le poste assigné (voir le grand commentaire au-dessus de
+// generateRawAttrsInRange dans engine.js).
+// ---------------------------------------------------------------------
+{
+  // generateRawAttrsInRange directement : sur un grand nombre de tirages,
+  // la moyenne des caractéristiques "strong" du poste devrait dépasser
+  // nettement celle des caractéristiques "weak", pour CHAQUE poste.
+  const N = 400;
+  POSITIONS.forEach(position => {
+    const profile = POSITION_ATTR_PROFILE[position];
+    const strongAttrs = ATTRS.filter(a => profile[a] === "strong");
+    const weakAttrs = ATTRS.filter(a => profile[a] === "weak");
+    const samples = Array.from({ length: N }, () => generateRawAttrsInRange(position, 10, 50, 1));
+    const avgStrong = average(samples.flatMap(s => strongAttrs.map(a => s[a])));
+    const avgWeak = average(samples.flatMap(s => weakAttrs.map(a => s[a])));
+    console.log(`\n${position} (N=${N}), moyenne caracs "strong" : ${avgStrong.toFixed(1)} | "weak" : ${avgWeak.toFixed(1)}`);
+    if (avgStrong <= avgWeak) throw new Error(`❌ Pour ${position}, la moyenne des caractéristiques "strong" (${avgStrong.toFixed(1)}) devrait dépasser celle des "weak" (${avgWeak.toFixed(1)}).`);
+    // Toujours dans la fourchette [10,50] (le correctif biaise DANS la
+    // fourchette existante, ne la déplace jamais, voir Partie 1 pour les
+    // bornes déjà vérifiées côté generateYouthCandidate).
+    samples.forEach(s => ATTRS.forEach(a => {
+      if (s[a] < 10 || s[a] > 50) throw new Error(`❌ generateRawAttrsInRange(${position}, 10, 50, 1) devrait toujours rester dans [10,50], obtenu ${s[a]} sur ${a}.`);
+    }));
+  });
+  console.log("✅ generateRawAttrsInRange oriente bien chaque poste vers ses caractéristiques \"strong\" (POSITION_ATTR_PROFILE), sans jamais sortir de la fourchette [lo,hi].");
+
+  function average(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
+}
+{
+  // generateRookiePlayer(position) (utilisé par generateStartingRoster pour
+  // le roster de départ) : même vérification, de bout en bout via de vrais
+  // Player générés, pas juste la fonction d'attributs brute.
+  const position = "Pivot";
+  const profile = POSITION_ATTR_PROFILE[position];
+  const strongAttrs = ATTRS.filter(a => profile[a] === "strong"); // inside, rebound, block, defInside
+  const weakAttrs = ATTRS.filter(a => profile[a] === "weak"); // midRange, threePoint, pass, dribble, agility, defOutside
+  const N = 300;
+  const rookies = Array.from({ length: N }, () => generateRookiePlayer(position));
+  const avgStrong = average(rookies.flatMap(p => strongAttrs.map(a => p.attrs[a])));
+  const avgWeak = average(rookies.flatMap(p => weakAttrs.map(a => p.attrs[a])));
+  console.log(`\ngenerateRookiePlayer("${position}") (N=${N}), moyenne "strong" : ${avgStrong.toFixed(1)} | "weak" : ${avgWeak.toFixed(1)}`);
+  if (avgStrong <= avgWeak) throw new Error(`❌ Un rookie généré pour ${position} devrait avoir des caractéristiques "strong" en moyenne plus hautes que ses "weak" (correctif 2026-09).`);
+  if (rookies.some(p => p.position !== position)) throw new Error("❌ generateRookiePlayer devrait toujours fixer Player.position au poste demandé (inchangé par ce correctif).");
+  console.log("✅ generateRookiePlayer produit bien des joueurs dont les attributs sont cohérents avec le poste de départ (Player.position).");
+
+  function average(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
+}
+{
+  // generateYouthCandidate(now, recruiterLevel) : le poste est tiré au sort
+  // (pick(POSITIONS)) AVANT la génération des attributs, donc regroupé par
+  // poste tiré plutôt que fixé en paramètre, même vérification, avec un N
+  // plus grand pour amortir le bruit du poste aléatoire ET du bonus "outil
+  // brut" (qui ne touche jamais plus de 2 attributs, voir Partie 1).
+  const now = Date.now();
+  const N = 4000;
+  const byPosition = {};
+  POSITIONS.forEach(p => byPosition[p] = { strong: [], weak: [] });
+  for (let i = 0; i < N; i++) {
+    const c = generateYouthCandidate(now, 1);
+    const profile = POSITION_ATTR_PROFILE[c.position];
+    ATTRS.forEach(a => {
+      if (profile[a] === "strong") byPosition[c.position].strong.push(c.attrs[a]);
+      else if (profile[a] === "weak") byPosition[c.position].weak.push(c.attrs[a]);
+    });
+  }
+  POSITIONS.forEach(position => {
+    const avgStrong = average(byPosition[position].strong);
+    const avgWeak = average(byPosition[position].weak);
+    console.log(`generateYouthCandidate, candidats "${position}" (n≈${byPosition[position].strong.length / 4}), moyenne "strong" : ${avgStrong.toFixed(1)} | "weak" : ${avgWeak.toFixed(1)}`);
+    if (avgStrong <= avgWeak) throw new Error(`❌ Les candidats de l'académie tirés au poste ${position} devraient avoir des caractéristiques "strong" en moyenne plus hautes que leurs "weak" (correctif 2026-09).`);
+  });
+  console.log("✅ generateYouthCandidate oriente lui aussi ses attributs vers le poste tiré au sort, poste par poste.");
+
+  function average(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
 }
 
 console.log("\n🏁 Tous les tests de l'académie de jeunes sont passés.");

@@ -21,6 +21,16 @@
 //    rattraper). Sans ce panneau, l'interview resterait inaccessible
 //    jusqu'à expiration silencieuse au bout de 3 jours, une régression par
 //    rapport à l'ancien bouton "Faire l'interview d'après match" du direct.
+//
+// Correctif 2026-09 (retour utilisateur : "mets un vrai pop up pour
+// l'interview qu'on peut passer et faire en retournant dans le tableau de
+// bord, si on veut le faire plus tard") : dans les deux cas ci-dessus, le
+// widget n'affiche plus qu'un bouton compact qui ouvre un vrai popup
+// (showInterviewModal), où vivent désormais les 2 vraies questions, la
+// prévisualisation par ton et le choix final (Valider/Sans commentaire/Plus
+// tard). Ce fichier vérifie aussi que "Plus tard" (ou quitter l'écran de
+// rattrapage sans répondre) NE résout PLUS jamais l'interview à la place du
+// manager : elle reste en attente, reprenable via ce même bouton.
 const fs = require("fs");
 const { startTestServer, openGame, flush, patchDateNow } = require("./test_helpers.js");
 const { scheduledTimeForRound, MATCH_BROADCAST_DURATION_MS } = require("./server/calendar.js");
@@ -66,20 +76,44 @@ console.log("Widget d'interview affiché dans le récapitulatif d'absence :", !!
 if (!catchupWidget) throw new Error("❌ Le récapitulatif \"Pendant votre absence\" devrait afficher le widget de l'interview de jalon \"début de saison\" de la journée 0.");
 console.log("✅ L'interview de jalon \"début de saison\" s'affiche bien dans le récapitulatif \"Pendant votre absence\".");
 
-const toneBtn = catchupWidget.querySelector("[data-interview-tone]");
-if (!toneBtn) throw new Error("❌ (setup) Le widget devrait proposer au moins un bouton de ton.");
+// ---------------------------------------------------------------------
+// Correctif 2026-09 (retour utilisateur : "mets un vrai pop up pour
+// l'interview qu'on peut passer et faire en retournant dans le tableau de
+// bord, si on veut le faire plus tard") : quitter l'écran de rattrapage
+// SANS avoir répondu ("Continuer" directement) ne doit plus jamais résoudre
+// l'interview à la place du manager (ancien comportement, "sans commentaire"
+// automatique) : elle doit rester en attente, reprenable ensuite depuis le
+// tableau de bord.
+// ---------------------------------------------------------------------
+const catchupContinueBtn = doc.getElementById("catchupContinueBtn");
+catchupContinueBtn.click();
+await flush(dom);
+const pendingAfterContinueWithoutAnswering = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'debut-saison')");
+console.log("\nInterview encore en attente après \"Continuer\" SANS y avoir répondu :", pendingAfterContinueWithoutAnswering);
+if (!pendingAfterContinueWithoutAnswering) throw new Error("❌ Quitter le récapitulatif d'absence sans répondre ne devrait plus résoudre l'interview automatiquement (\"sans commentaire\" silencieux) : elle devrait rester en attente.");
+console.log("✅ \"Continuer\" sans avoir répondu laisse bien l'interview en attente (reprenable plus tard), au lieu de la résoudre silencieusement en \"sans commentaire\".");
+
+// Reprise "en retournant dans le tableau de bord" (retour utilisateur, voir
+// plus haut) : le petit bouton du panneau du tableau de bord doit donner
+// accès à cette même interview, toujours en attente.
+clickTab(doc, "club");
+const dashboardWidgetPart1 = doc.querySelector("#clubInterviewPanel [data-interview-open]");
+if (!dashboardWidgetPart1) throw new Error("❌ Le tableau de bord devrait permettre de reprendre l'interview de début de saison laissée en attente.");
+dashboardWidgetPart1.click();
+const toneBtn = doc.querySelector("#interviewModalOverlay [data-interview-preview-tone]");
+if (!toneBtn) throw new Error("❌ (setup) Le popup d'interview devrait proposer au moins un bouton de ton.");
 toneBtn.click();
+const validateBtn = doc.getElementById("interviewModalValidate");
+if (!validateBtn) throw new Error("❌ (setup) Le popup d'interview devrait proposer un bouton \"Valider\".");
+validateBtn.click();
 await new Promise(r => setTimeout(r, 300));
 await flush(dom);
 
 const pendingAfterResolve = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'debut-saison')");
-console.log("Interview encore en attente après réponse depuis le récapitulatif d'absence :", pendingAfterResolve);
-if (pendingAfterResolve) throw new Error("❌ Répondre à l'interview depuis le récapitulatif d'absence devrait la retirer de teamA.pendingInterviews.");
-console.log("✅ Répondre à l'interview de jalon depuis le récapitulatif \"Pendant votre absence\" la retire bien de la file d'attente.");
+console.log("Interview encore en attente après réponse depuis le tableau de bord :", pendingAfterResolve);
+if (pendingAfterResolve) throw new Error("❌ Répondre à l'interview depuis le tableau de bord devrait la retirer de teamA.pendingInterviews.");
+console.log("✅ Répondre à l'interview de jalon depuis le tableau de bord (après l'avoir laissée en attente) la retire bien de la file d'attente.");
 
-const catchupContinueBtn = doc.getElementById("catchupContinueBtn");
-catchupContinueBtn.click();
-await flush(dom);
 const catchupHiddenAfterContinue = doc.getElementById("catchupSection").classList.contains("hidden");
 console.log("Récapitulatif d'absence masqué après \"Continuer\" :", catchupHiddenAfterContinue);
 if (!catchupHiddenAfterContinue) throw new Error("❌ \"Continuer\" devrait quitter l'écran de récapitulatif d'absence.");
@@ -179,8 +213,31 @@ console.log("Widget d'interview affiché sur le tableau de bord :", !!dashboardW
 if (!dashboardWidget) throw new Error("❌ BUG : le panneau du tableau de bord (#clubInterviewPanel) devrait afficher l'interview de jalon manquée par le direct.");
 console.log("✅ Le panneau du tableau de bord affiche bien l'interview de jalon pour une journée suivie en direct jusqu'au bout.");
 
-const skipBtn = dashboardWidget.querySelector("[data-interview-skip]");
-if (!skipBtn) throw new Error("❌ (setup) Le widget devrait proposer \"Sans commentaire\".");
+// ---------------------------------------------------------------------
+// Correctif 2026-09 (retour utilisateur : "mets un vrai pop up pour
+// l'interview qu'on peut passer et faire en retournant dans le tableau de
+// bord, si on veut le faire plus tard") : "Plus tard" ferme le popup SANS
+// rien résoudre, l'interview doit rester en attente et le bouton doit
+// rester disponible pour la reprendre.
+// ---------------------------------------------------------------------
+dashboardWidget.querySelector("[data-interview-open]").click();
+const laterBtn = doc.getElementById("interviewModalLater");
+if (!laterBtn) throw new Error("❌ (setup) Le popup d'interview devrait proposer \"Plus tard\".");
+laterBtn.click();
+const modalGoneAfterLater = !doc.getElementById("interviewModalOverlay");
+const pendingAfterLater = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'mi-saison')");
+const widgetStillThereAfterLater = !!doc.querySelector("#clubInterviewPanel [data-interview-open]");
+console.log(`\n"Plus tard" : popup fermé=${modalGoneAfterLater} | interview toujours en attente=${pendingAfterLater} | bouton toujours affiché=${widgetStillThereAfterLater}`);
+if (!modalGoneAfterLater) throw new Error("❌ \"Plus tard\" devrait fermer le popup.");
+if (!pendingAfterLater) throw new Error("❌ \"Plus tard\" ne devrait RIEN résoudre : l'interview devrait rester en attente (reprenable plus tard).");
+if (!widgetStillThereAfterLater) throw new Error("❌ \"Plus tard\" ne devrait pas faire disparaître le bouton \"Faire l'interview\" du tableau de bord (l'interview reste à faire).");
+console.log("✅ \"Plus tard\" ferme le popup sans rien résoudre : l'interview reste en attente, reprenable via le même bouton.");
+
+// Correctif 2026-09 (voir plus haut) : "Sans commentaire" vit désormais dans
+// le popup, ouvert via le bouton du widget.
+dashboardWidget.querySelector("[data-interview-open]").click();
+const skipBtn = doc.getElementById("interviewModalSkip");
+if (!skipBtn) throw new Error("❌ (setup) Le popup d'interview devrait proposer \"Sans commentaire\".");
 skipBtn.click();
 await new Promise(r => setTimeout(r, 300));
 await flush(dom);
