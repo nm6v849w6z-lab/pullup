@@ -121,8 +121,11 @@ win.renderMarcheSection();
 const playerLink = doc.querySelector(`.market-card-name [data-player-id="${listedPlayer.id}"]`);
 if (!playerLink) throw new Error("❌ (setup) Le nom du joueur mis en vente devrait être cliquable.");
 playerLink.click();
-const attrCells = [...doc.querySelectorAll("#playerDetailContent table.roster-table")[0].querySelectorAll("tbody td")];
-const lockedOnPlayerPage = attrCells.filter(td => td.querySelector(".attr-locked")).length;
+// Depuis la nouvelle fiche joueur (retour utilisateur, 2026-09, maquette
+// "Adama Kovac") : les Caractéristiques sont affichées en grille
+// (.player-attr-grid), plus en table.roster-table, voir renderPlayerDetail.
+const attrCells = [...doc.querySelectorAll("#playerDetailContent .player-attr-grid .attr-cell")];
+const lockedOnPlayerPage = attrCells.filter(cell => cell.classList.contains("attr-locked")).length;
 console.log(`\nCellules verrouillées sur la fiche complète d'un joueur EN VENTE : ${lockedOnPlayerPage} (attendu 0, comme sur la carte du marché)`);
 if (lockedOnPlayerPage !== 0) {
   throw new Error(`❌ BUG NON CORRIGÉ : les caractéristiques d'un joueur mis en vente devraient être déverrouillées sur sa fiche complète (comme sur le marché), obtenu ${lockedOnPlayerPage} cellules verrouillées.`);

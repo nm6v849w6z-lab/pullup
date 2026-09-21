@@ -119,7 +119,12 @@ const firstRowText = matchRows[0].textContent;
 if (!firstRowText.includes(`Journée ${independent.latest.round + 1}`) || !firstRowText.includes(String(independent.latest.pts))) {
   throw new Error(`❌ La 1ère ligne affichée (${firstRowText.replace(/\s+/g, " ")}) devrait correspondre à la journée la plus récente du matchLog brut (journée ${independent.latest.round + 1}, ${independent.latest.pts} pts).`);
 }
-const avgPtsShown = doc2.querySelectorAll("#playerDetailContent table.roster-table")[1].querySelector("tbody tr td:nth-child(2)").textContent;
+// Index 0 (et non plus 1) depuis que les Caractéristiques (retour
+// utilisateur, 2026-09, nouvelle fiche joueur façon "Adama Kovac") sont
+// affichées en grille (.player-attr-grid) plutôt qu'en table.roster-table :
+// il ne reste donc que 2 table.roster-table sur la fiche (Moyennes de la
+// saison, puis Match par match), voir renderPlayerDetail.
+const avgPtsShown = doc2.querySelectorAll("#playerDetailContent table.roster-table")[0].querySelector("tbody tr td:nth-child(2)").textContent;
 const expectedAvg = (independent.totalPts / independent.gp).toFixed(1);
 console.log("Moyenne de points affichée :", avgPtsShown, "| attendue (calcul indépendant) :", expectedAvg);
 if (avgPtsShown !== expectedAvg) throw new Error(`❌ La moyenne de points affichée (${avgPtsShown}) ne correspond pas au calcul indépendant (${expectedAvg}).`);

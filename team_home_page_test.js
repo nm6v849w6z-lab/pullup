@@ -165,6 +165,14 @@ console.log("✅ Les interviews résolues apparaissent bien sur l'Aperçu, sous 
 // statut payant, logo personnalisé.
 // ---------------------------------------------------------------------
 clickTab("club");
+// Retour utilisateur (2026-09) : "je rajouterai une petite brique à coté de
+// dernier évènement avec un petit bouton changer l'identité [...] via une
+// petite fenetre qui s ouvre" : le panneau "Identité du club" (et son
+// #clubIdentityPanel) ne vit plus en permanence sur le tableau de bord,
+// seulement dans cette fenêtre modale une fois ouverte (voir
+// showClubIdentityModal). Reste ouverte pour tout le reste de cette partie
+// du test, donc un seul appel suffit ici.
+win.showClubIdentityModal();
 const shapeBBtn = doc.querySelector('[data-jersey-shape="B"]');
 if (!shapeBBtn) throw new Error("❌ (setup) Bouton de forme de maillot \"B\" introuvable sur le tableau de bord.");
 shapeBBtn.click();

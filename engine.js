@@ -557,7 +557,13 @@ const TRAINING_HOME_POSITION = {
   block: "Pivot",
   dribble: "Meneur",
   agility: "Meneur",
-  defOutside: "Arrière",
+  // Retour utilisateur (2026-09) : "c'est le meneur qui doit avoir 100% pas
+  // l'arrière (l'arrière c'est 90%)" pour la défense extérieure : le Meneur
+  // (poste le plus mobile/petit, voir TRAINING_HEIGHT_AFFINITY) est le poste
+  // de prédilection (100%), l'Arrière (poste voisin sur la ligne Meneur-
+  // Arrière-Ailier shooteur-Ailier fort-Pivot, -10% par poste d'écart) suit
+  // à 90%.
+  defOutside: "Meneur",
   defInside: "Pivot",
 };
 

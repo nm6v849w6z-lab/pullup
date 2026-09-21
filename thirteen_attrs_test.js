@@ -314,7 +314,11 @@ async function testRosterTableShowsNewColumns() {
     const firstPlayerLink = doc.querySelector("#rosterContent .player-link");
     if (!firstPlayerLink) throw new Error("❌ (setup) l'Effectif devrait afficher au moins un lien joueur cliquable.");
     firstPlayerLink.click();
-    const attrHeaders = [...doc.querySelectorAll("#playerDetailContent table.roster-table th")].map(th => th.textContent.trim());
+    // Depuis la nouvelle fiche joueur (retour utilisateur, 2026-09, maquette
+    // "Adama Kovac") : les Caractéristiques sont affichées en grille
+    // (.player-attr-grid, un .player-attr-name par caractéristique), plus en
+    // table.roster-table à en-têtes <th>, voir renderPlayerDetail.
+    const attrHeaders = [...doc.querySelectorAll("#playerDetailContent .player-attr-grid .player-attr-name")].map(el => el.textContent.trim());
     console.log("En-têtes de caractéristiques sur la fiche joueur :", attrHeaders.join(", "));
     ["MENT", "END", "LF"].forEach(short => {
       if (!attrHeaders.includes(short)) throw new Error(`❌ La colonne "${short}" (Mental/Endurance/Lancer franc) devrait apparaître sur la fiche joueur.`);

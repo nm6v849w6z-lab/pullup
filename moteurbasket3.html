@@ -39,6 +39,18 @@
      WIDE_PAGE_IDS/showPage — toute la largeur du contenu plutôt que le
      gabarit "lecture" à 960px, pour tenir sans scroll horizontal. */
   .wrap.wrap-wide{max-width:none;}
+  /* Fiche joueur (retour utilisateur, 2026-09 : "il faudrait trouver un
+     moyen de boucher le grand trou à droite") : sur un écran large, le
+     contenu de la fiche joueur (ligne de chips, grille de caractéristiques
+     plafonnée à 420px, points forts/faibles) est bien plus étroit que le
+     gabarit "lecture" à 960px, ce qui laissait un grand vide à droite du
+     contenu réel à l'intérieur même de .wrap (en plus de la marge extérieure
+     déjà symétrique de .wrap). Voir NARROW_PAGE_IDS/showPage : un gabarit
+     plus étroit, propre à cette page, plutôt que d'agrandir artificiellement
+     le contenu pour remplir les 960px (la maquette validée par l'utilisateur
+     reste à 2 colonnes, pas question d'en ajouter une 3e juste pour "faire
+     de la place"). */
+  .wrap.wrap-narrow{max-width:700px;}
   .eyebrow{
     font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint);
     margin:0 0 6px;
@@ -966,6 +978,36 @@
   .attr-cell.attr-mid .attr-bar-fill{background:var(--ink-dim);}
   .attr-cell.attr-lo .attr-val{color:var(--ink-faint);}
   .attr-cell.attr-lo .attr-bar-fill{background:var(--danger);}
+  /* Nouvelle fiche joueur (retour utilisateur, 2026-09, exemple fourni pour
+     "Adama Kovac") : grille à 2 colonnes pour les 13 caractéristiques (voir
+     renderPlayerDetail) plutôt que l'ancien tableau à une seule ligne
+     scrollable horizontalement, grid-auto-flow ligne par ligne sur l'ordre
+     de ATTRS (engine.js) reproduit exactement le groupement demandé
+     (MI-D/3PTS, INT/PASSE, ...) sans logique de pairage dédiée. */
+  .player-attr-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px 20px; margin-bottom:16px; max-width:420px;}
+  .player-attr-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .player-attr-name{font-size:11px; font-weight:700; letter-spacing:.03em; color:var(--ink-faint); flex-shrink:0;}
+  .player-attr-row .attr-cell{flex:1; max-width:110px;}
+  /* Citation de vestiaire (retour utilisateur, 2026-09, "💬 «...»" dans la
+     maquette) : purement dérivée du Rôle/de la Motivation déjà calculés,
+     jamais une nouvelle donnée sauvegardée (voir playerRoleQuote). */
+  .player-quote{font-size:13px; font-style:italic; color:var(--ink-dim); margin:0 0 16px; padding-left:2px;}
+  /* Retour utilisateur (2026-09) : "Potentiel/Forme physique/Motivation/
+     Rôle [...] mais tout ça l'un à côté de l'autre" : une seule ligne de
+     chips plutôt qu'un paragraphe par info (voir renderPlayerDetail). */
+  .player-stats-row{display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; margin:0 0 16px; font-size:13px; color:var(--ink-dim);}
+  .player-stat-item{display:flex; align-items:center; gap:5px; white-space:nowrap;}
+  .player-stat-item b{font-weight:700; color:var(--ink-faint); font-size:11px; text-transform:uppercase; letter-spacing:.03em;}
+  .player-sw-columns{display:flex; flex-wrap:wrap; gap:20px; margin-bottom:16px;}
+  /* max-width ajouté (retour utilisateur, 2026-09, "grand trou à droite") :
+     flex:1 seul faisait grandir Points forts/Points faibles pour occuper
+     tout .wrap, créant un vide au milieu entre les deux listes (courtes)
+     dès que .wrap dépassait leur largeur naturelle, plafonné pour qu'elles
+     restent compactes l'une à côté de l'autre, tout en gardant flex:1 1 160px
+     pour qu'elles puissent encore s'étirer un minimum sur un écran étroit. */
+  .player-sw-col{flex:1 1 160px; min-width:160px; max-width:220px;}
+  .player-sw-col h4{margin:0 0 6px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); font-weight:700;}
+  .player-sw-col ul{margin:0; padding-left:18px; font-size:13px; color:var(--ink-dim); line-height:1.6;}
   .seat-category-card{margin-bottom:14px; padding:14px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);}
   .seat-category-card h4{margin:0 0 6px; font-size:13px; color:var(--ink);}
   .calendar-order-btn{background:transparent; border:1px solid var(--amber); color:var(--amber); font-size:11px; padding:5px 10px; border-radius:999px; cursor:pointer;}
@@ -1326,6 +1368,18 @@
      boîte plus large pour accueillir la table .boxscore (déjà stylée plus
      haut pour le match en direct) et défilante en cas de très petit écran. */
   .match-boxscore-box{max-width:640px; max-height:85vh; overflow-y:auto;}
+  /* Modale "Identité du club" (retour utilisateur, 2026-09 : "je rajouterai
+     une petite brique à coté de dernier évènement avec un petit bouton
+     changer l'identité [...] via une petite fenetre qui s ouvre"), voir
+     showClubIdentityModal : même overlay que .upgrade-confirm-overlay, boîte
+     de la même largeur que .match-boxscore-box ci-dessus (logo + 2 maillots
+     + sélecteurs, un contenu comparable en encombrement à une feuille de
+     stats), avec son propre défilement interne pour le petit écran. */
+  .club-identity-modal-box{max-width:640px; max-height:85vh; overflow-y:auto;}
+  /* Petit aperçu du logo sur la carte "teaser" du tableau de bord (voir
+     renderClubSection) : juste le logo, pas le bouton "Changer le
+     logo"/l'upload (réservés au panneau complet, dans la modale). */
+  .club-identity-teaser-logo{display:flex; margin:6px 0 8px;}
   .calendar-score-btn{
     background:transparent; border:none; padding:0; margin:0; font:inherit; color:inherit;
     cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px;
@@ -1911,8 +1965,15 @@
       <div class="stat-grid" id="clubStatsGrid"></div>
       <!-- Identité du club : logo et maillots (retour utilisateur, 2026-09 :
            "le logo et les maillots doivent pouvoir être modifiés dans le
-           tableau de bord"), voir renderClubIdentityPanel. -->
-      <div class="section club-identity-panel" id="clubIdentityPanel"></div>
+           tableau de bord", puis, 2026-09 : "je rajouterai une petite brique
+           à coté de dernier évènement avec un petit bouton changer
+           l'identité où l'on verra tout ce qu'il y a en bas sur la page
+           actuellement via une petite fenetre qui s ouvre") : ce panneau
+           complet (logo, maillots domicile/extérieur, statut payant) ne vit
+           plus en permanence ici, en bas de page, mais dans une fenêtre
+           modale ouverte à la demande (voir showClubIdentityModal), depuis
+           la petite carte "Identité du club" ajoutée à #clubStatsGrid juste
+           à côté de "Derniers événements" (voir renderClubSection). -->
     </div>
   </div>
 
@@ -2223,7 +2284,6 @@
   <div id="guideSection" class="hidden">
     <div class="section">
       <h2>Guide</h2>
-      <p class="training-intro">Comment fonctionnent les différentes mécaniques du club, regroupées ici pour ne pas encombrer chaque onglet.</p>
       <!-- Retour utilisateur (2026-09) : "mets le sur la vraie maquette du
            jeu et on regarde comment ça rend" : lance le tutoriel d'accueil
            directement sur les vraies pages du jeu (voir startRealTour tout
@@ -2816,7 +2876,10 @@ const TRAINING_HOME_POSITION = {
   block: "Pivot",
   dribble: "Meneur",
   agility: "Meneur",
-  defOutside: "Arrière",
+  // Retour utilisateur (2026-09) : "c'est le meneur qui doit avoir 100% pas
+  // l'arrière (l'arrière c'est 90%)" pour la défense extérieure. Voir
+  // engine.js, miroir identique.
+  defOutside: "Meneur",
   defInside: "Pivot",
 };
 
@@ -9998,6 +10061,150 @@ function attrCellHtml(value) {
   return `<div class="attr-cell ${tier}"><span class="attr-val">${value}</span><div class="attr-bar-track"><div class="attr-bar-fill" style="width:${pct}%"></div></div></div>`;
 }
 
+// Rôle dans la feuille de match ACTUELLE (retour utilisateur, 2026-09,
+// nouvelle fiche joueur façon "Adama Kovac") : purement dérivé de
+// Team.lineup (voir starterPosition/lineup.backupPositions), aucune
+// nouvelle donnée sauvegardée. Visible pour N'IMPORTE QUEL joueur, y
+// compris un adversaire (même principe que Forme physique dans
+// renderPlayerDetail, contrairement à la Motivation réservée à
+// isOwnTeam) : qui démarre/qui est sur le banc d'une équipe adverse est
+// une information de composition, pas un talent caché par le scoutisme.
+function playerRoleLabel(team, player) {
+  if (!team.lineup) return "Réserviste";
+  if (team.starterPosition(player.id)) return "Titulaire";
+  const backups = (team.lineup.backupPositions && team.lineup.backupPositions[player.id]) || [];
+  return backups.length ? "Joueur de rotation" : "Réserviste";
+}
+
+// Un joueur mérite-t-il mieux que son rôle actuel ? Même comparaison que
+// Team.trainWeek pour la frustration de banc (voir BENCH_FRUSTRATION_*
+// plus haut dans engine.js) : meilleure note (weightedRatingForPosition)
+// que le titulaire en place à son poste, mais lui-même pas titulaire.
+// Utilisé uniquement pour choisir le TON de la citation ci-dessous, jamais
+// pour recalculer une quelconque donnée persistée.
+function playerDeservesBetterRole(team, player) {
+  if (!team.lineup) return false;
+  const pos = player.position;
+  const starterId = team.lineup.starters ? team.lineup.starters[pos] : null;
+  if (!starterId || starterId === player.id) return false;
+  const starter = team.players.find(p => p.id === starterId);
+  if (!starter) return false;
+  return weightedRatingForPosition(player.attrs, pos) > weightedRatingForPosition(starter.attrs, pos);
+}
+
+// Citation "💬" de la fiche joueur (retour utilisateur, 2026-09, maquette
+// "Kovac est satisfait de son rôle actuel dans l'équipe.") : reflète le
+// Rôle (playerRoleLabel) croisé avec playerDeservesBetterRole ci-dessus,
+// jamais une nouvelle jauge de moral séparée de la Motivation existante
+// (retour utilisateur explicite : "n'appelle pas ça moral mais
+// motivation, garde le terme"). Choix déterministe par joueur (hash de
+// son id) parmi plusieurs variantes : stable d'un rendu à l'autre, jamais
+// une citation qui change au hasard à chaque clic sur la fiche.
+const PLAYER_ROLE_QUOTES = {
+  starter: [
+    "{name} apprécie la confiance du coach en le titularisant.",
+    "{name} se sent à sa place dans le cinq de départ.",
+  ],
+  contentRotation: [
+    "{name} est satisfait de son rôle actuel dans l'équipe.",
+    "{name} accepte bien son statut de joueur de rotation.",
+  ],
+  frustratedRotation: [
+    "{name} ne comprend pas pourquoi il ne joue pas plus, vu son niveau actuel.",
+    "{name} espère obtenir davantage de temps de jeu prochainement.",
+  ],
+  contentReserve: [
+    "{name} travaille dur à l'entraînement en attendant sa chance.",
+  ],
+  frustratedReserve: [
+    "{name} digère mal de ne jamais avoir sa chance, malgré son niveau.",
+  ],
+};
+function playerRoleQuote(team, player, role) {
+  const deserves = playerDeservesBetterRole(team, player);
+  let key;
+  if (role === "Titulaire") key = "starter";
+  else if (role === "Joueur de rotation") key = deserves ? "frustratedRotation" : "contentRotation";
+  else key = deserves ? "frustratedReserve" : "contentReserve";
+  const list = PLAYER_ROLE_QUOTES[key];
+  let hash = 0;
+  for (let i = 0; i < player.id.length; i++) hash = (hash * 31 + player.id.charCodeAt(i)) >>> 0;
+  return list[hash % list.length].replace("{name}", player.name);
+}
+
+// Points forts / points faibles (retour utilisateur, 2026-09, maquette
+// "Adama Kovac") : les caractéristiques les mieux/moins bien notées PARMI
+// CELLES DÉJÀ VISIBLES sur cette fiche (`visibleAttrs`, voir son appelant
+// dans renderPlayerDetail : son propre effectif, un joueur sur le marché,
+// ou les caractéristiques déjà débloquées par le scoutisme pour un
+// adversaire) : jamais calculé sur une caractéristique encore verrouillée,
+// ça reviendrait à révéler de l'information de scoutisme par la bande.
+// Classement purement RELATIF au joueur lui-même (pas de seuil absolu) :
+// même principe que le reste du jeu (paliers de potentiel, de forme...),
+// un manager veut voir où un joueur excelle/pêche PAR RAPPORT À LUI-MÊME.
+const PLAYER_STRENGTHS_WEAKNESSES_COUNT = 3;
+function playerStrengthsAndWeaknesses(player, visibleAttrs) {
+  const entries = visibleAttrs.map(a => ({ attr: a, value: player.attrs[a] }));
+  entries.sort((a, b) => b.value - a.value);
+  const strengths = entries.slice(0, PLAYER_STRENGTHS_WEAKNESSES_COUNT);
+  const weakCount = Math.min(PLAYER_STRENGTHS_WEAKNESSES_COUNT, Math.max(0, entries.length - strengths.length));
+  const weaknesses = weakCount > 0 ? entries.slice(-weakCount).reverse() : [];
+  return { strengths, weaknesses };
+}
+
+// Tactique(s) offensive(s) de prédilection (retour utilisateur, 2026-09 :
+// "ça pourrait être pas mal si tu mettais sur quel tactique le joueur peut
+// être bon") : même principe que POSITION_ATTR_PROFILE/
+// weightedRatingForPosition plus haut (aptitude de poste), mais appliqué
+// cette fois aux 10 styles offensifs réels (OFFENSE_PROFILES) plutôt
+// qu'aux 5 postes : "strong"/"weak" par tactique, "base" implicite pour
+// tout le reste (voir ATTR_CATEGORY_WEIGHT, réutilisé tel quel). Fonction
+// dédiée plutôt qu'une généralisation de weightedRatingForPosition
+// (celle-ci existe aussi dans engine.js pour le salaire/poste effectif,
+// un besoin bien réel de simulation, jamais à toucher pour un simple
+// affichage) : ceci est une caractéristique PUREMENT client (comme
+// playerRoleLabel/playerStrengthsAndWeaknesses ci-dessus), aucune
+// incidence sur le salaire ni la génération de joueurs.
+// Seules les caractéristiques OFFENSIVES/de jeu comptent ici (jamais
+// rebound/block/defOutside/defInside, qui ne disent rien de l'aptitude
+// d'un joueur à UN SYSTÈME OFFENSIF donné) : voir TACTICAL_ATTRS.
+const TACTICAL_ATTRS = ["inside", "midRange", "threePoint", "pass", "dribble", "agility", "endurance", "mental", "freeThrow"];
+const TACTIC_ATTR_CATEGORY_WEIGHT = { strong: 1.5, base: 1.0, weak: 0.5 };
+// "Équilibrée" volontairement absente (aucune spécialisation à mettre en
+// avant, c'est la tactique par défaut, "sans parti pris" par définition) :
+// bestTacticsForPlayer ci-dessous ne classe donc que les 9 tactiques
+// réellement typées.
+const TACTIC_ATTR_PROFILE = {
+  "Jeu intérieur":      { inside: "strong", threePoint: "weak" },
+  "Jeu extérieur":       { threePoint: "strong", inside: "weak" },
+  "Jeu en pénétration":  { dribble: "strong", inside: "strong", freeThrow: "strong", threePoint: "weak" },
+  "Pick & Roll":         { pass: "strong", dribble: "strong" },
+  "Post-up":             { inside: "strong", dribble: "weak", threePoint: "weak" },
+  "Isolation":           { dribble: "strong", midRange: "strong", pass: "weak" },
+  "Jeu en mouvement":    { pass: "strong", threePoint: "strong", dribble: "weak" },
+  "Transition rapide":   { agility: "strong", endurance: "strong", dribble: "strong", midRange: "weak" },
+  "Tirs rapides":        { threePoint: "strong", agility: "strong", inside: "weak" },
+};
+function tacticalFitScore(attrs, tacticKey) {
+  const profile = TACTIC_ATTR_PROFILE[tacticKey] || {};
+  let sum = 0, totalW = 0;
+  TACTICAL_ATTRS.forEach(a => {
+    const w = TACTIC_ATTR_CATEGORY_WEIGHT[profile[a] || "base"];
+    sum += attrs[a] * w;
+    totalW += w;
+  });
+  return totalW ? sum / totalW : 0;
+}
+// Les 2 tactiques où le joueur note le mieux (voir tacticalFitScore) :
+// `maxCount` volontairement petit, ce n'est pas un classement complet des
+// 9 tactiques mais un repère rapide ("dans quoi ce joueur excelle").
+function bestTacticsForPlayer(player, maxCount = 2) {
+  return Object.keys(TACTIC_ATTR_PROFILE)
+    .map(tactic => ({ tactic, score: tacticalFitScore(player.attrs, tactic) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxCount);
+}
+
 // Position (en %) de chaque poste sur le schéma de terrain de la feuille de
 // match — demi-terrain À LA VERTICALE, panier en HAUT (Pivot proche du
 // cercle, Meneur en bas près de la ligne à 3 points/tête de raquette,
@@ -11185,13 +11392,25 @@ const PAGE_IDS = [
 // unique, plus pour les deux colonnes côte à côte sans les tasser.
 const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection"]);
 
+// Pages dont le contenu réel est nettement plus étroit que le gabarit
+// "lecture" à 960px (retour utilisateur, 2026-09 : "il faudrait trouver un
+// moyen de boucher le grand trou à droite", sur la fiche joueur à large
+// largeur d'écran), voir .wrap.wrap-narrow en CSS. Pas l'inverse de
+// WIDE_PAGE_IDS (une page peut n'être dans aucun des deux, et garder le
+// gabarit 960px par défaut) : seule la fiche joueur a été signalée jusqu'ici,
+// pas question d'en rétrécir d'autres sans un retour utilisateur dessus.
+const NARROW_PAGE_IDS = new Set(["playerDetailSection"]);
+
 function showPage(id) {
   PAGE_IDS.forEach(pid => {
     const el = document.getElementById(pid);
     if (el) el.classList.toggle("hidden", pid !== id);
   });
   const wrapEl = document.querySelector(".wrap");
-  if (wrapEl) wrapEl.classList.toggle("wrap-wide", WIDE_PAGE_IDS.has(id));
+  if (wrapEl) {
+    wrapEl.classList.toggle("wrap-wide", WIDE_PAGE_IDS.has(id));
+    wrapEl.classList.toggle("wrap-narrow", NARROW_PAGE_IDS.has(id));
+  }
 }
 
 function setActiveTab(key) {
@@ -13049,44 +13268,80 @@ function renderPlayerDetail(teamIdx, playerId) {
   // dessus.
   const onMarket = (league.transferListings || []).some(l => l.status === "open" && l.playerId === player.id);
 
+  // Caractéristiques déjà visibles sur cette fiche (son propre effectif, un
+  // joueur sur le marché, ou celles déjà débloquées par le scoutisme pour
+  // un adversaire, voir teamA.scoutedAttrs) : calculé ICI (avant même
+  // l'entête) plutôt que juste avant la grille de caractéristiques plus bas,
+  // pour pouvoir aussi gater la Tactique de prédilection (voir plus bas,
+  // juste après Rôle) sur la même règle, sans dupliquer la logique de
+  // verrouillage à deux endroits différents de cette fonction.
+  const revealedSet = (isOwnTeam || onMarket) ? null : new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
+  const visibleAttrs = ATTRS.filter(a => isOwnTeam || onMarket || revealedSet.has(a));
+
   let html = `<p class="training-intro">${escapeHtml(team.name)} · ${POS_SHORT[player.position]} · ${player.height} cm · ${player.age} ans` +
     (isOwnTeam ? ` · ${formatMoney(player.salary)}/sem.` : "") + `</p>`;
+  // Potentiel/Forme physique/Motivation/Rôle : retour utilisateur (2026-09)
+  // "mais tout ça l'un à côté de l'autre" : une seule ligne de chips
+  // (.player-stats-row) plutôt qu'un paragraphe par info, chaque chip
+  // gardant sa propre condition de visibilité (Potentiel/Motivation réservés
+  // à SON PROPRE effectif, jamais affichés sur le marché ni pour un
+  // adversaire, contrairement à Forme physique/Rôle, toujours visibles, des
+  // états observables de l'extérieur plutôt que des talents cachés par le
+  // scoutisme).
+  const statChips = [];
   // Potentiel : réapparu ici après la refonte de l'onglet Effectif (retour
   // utilisateur, 2026-09 : "on verra toutes les carac des joueurs en
-  // cliquant sur la page du joueur"), qui a retiré cette colonne du tableau —
-  // sans cette ligne, l'information aurait purement disparu du jeu. Réservé à
-  // SON PROPRE effectif comme la Motivation plus bas (jamais affiché sur le
-  // marché ni pour un adversaire dans l'ancien tableau Effectif non plus, ce
-  // n'était jamais une information de scoutisme comme les caractéristiques).
+  // cliquant sur la page du joueur"), qui a retiré cette colonne du tableau :
+  // sans cette ligne, l'information aurait purement disparu du jeu.
   // Uniquement le NOM du palier (voir potentialTierLabel), le chiffre exact
   // (1-99) reste caché ; le `title` révèle quand même le PALIER (1 à 10, voir
   // potentialTierIndex), même principe qu'avant dans le tableau Effectif.
-  // Placé AVANT la forme physique (retour utilisateur, 2026-09 : "met le
-  // potentiel au dessus de la forme physique").
   if (isOwnTeam) {
-    html += `<p class="training-intro">Potentiel : <span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></p>`;
+    statChips.push(`<span class="player-stat-item"><b>Potentiel</b> <span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></span>`);
   }
   // Forme physique (voir CONDITION_STATES/conditionBadgeHtml plus haut) :
-  // toujours visible (jamais verrouillée par le scoutisme, contrairement aux
-  // caractéristiques ci-dessous) — c'est un état de forme, pas un talent
-  // révélé progressivement.
-  html += `<p class="training-intro">Forme physique : ${conditionBadgeHtml(player, Date.now(), team.conditionRecoveryPerDay())}</p>`;
-  // Blessure PERSISTANTE (voir injuryCrossHtml/isCurrentlyInjured plus haut) :
-  // visible pour n'importe quel joueur, même règle que la forme physique
-  // juste au-dessus (un état observable de l'extérieur, pas un talent cache
-  // par le scoutisme) — utile pour juger un adversaire avant un match tout
-  // autant que pour son propre effectif.
-  const detailCross = injuryCrossHtml(player);
-  if (detailCross) html += `<p class="training-intro">${detailCross} Blessé : ${escapeHtml(player.injuryType || "Blessure")}, ${injuryDaysRemaining(player)} jour${injuryDaysRemaining(player) > 1 ? "s" : ""} restant${injuryDaysRemaining(player) > 1 ? "s" : ""}</p>`;
+  // jamais verrouillée par le scoutisme, contrairement aux caractéristiques
+  // ci-dessous : c'est un état de forme, pas un talent révélé progressivement.
+  statChips.push(`<span class="player-stat-item"><b>Forme physique</b> ${conditionBadgeHtml(player, Date.now(), team.conditionRecoveryPerDay())}</span>`);
   // Motivation (voir Player.form/motivationBadgeHtml plus haut, retour
   // utilisateur, 2026-09 : "La motivation du joueur n'apparaît pas ?") :
-  // réservée à SON PROPRE effectif, même principe que le salaire ci-dessus
-  // (isOwnTeam) — contrairement à la forme physique juste au-dessus
-  // (observable de l'extérieur), la confiance d'un joueur alimentée par les
-  // interviews du coach est une information interne au club, jamais
-  // affichée pour un adversaire (ni même déverrouillable via le scoutisme,
-  // qui ne porte que sur les caractéristiques ci-dessous).
-  if (isOwnTeam) html += `<p class="training-intro">Motivation : ${motivationBadgeHtml(player)}</p>`;
+  // contrairement à la forme physique juste au-dessus (observable de
+  // l'extérieur), la confiance d'un joueur alimentée par les interviews du
+  // coach est une information interne au club, jamais affichée pour un
+  // adversaire (ni même déverrouillable via le scoutisme, qui ne porte que
+  // sur les caractéristiques ci-dessous).
+  if (isOwnTeam) statChips.push(`<span class="player-stat-item"><b>Motivation</b> ${motivationBadgeHtml(player)}</span>`);
+  // Rôle (voir playerRoleLabel plus haut, retour utilisateur, 2026-09,
+  // nouvelle fiche joueur) : toujours visible, y compris pour un
+  // adversaire, même principe que la Forme physique ci-dessus (qui
+  // démarre/qui est sur le banc est une information de composition
+  // observable, pas un talent caché par le scoutisme).
+  const roleLabel = playerRoleLabel(team, player);
+  statChips.push(`<span class="player-stat-item"><b>Rôle</b> ${escapeHtml(roleLabel)}</span>`);
+  html += `<div class="player-stats-row">${statChips.join("")}</div>`;
+  // Blessure PERSISTANTE (voir injuryCrossHtml/isCurrentlyInjured plus haut) :
+  // visible pour n'importe quel joueur, même règle que la forme physique
+  // ci-dessus (un état observable de l'extérieur, pas un talent caché par le
+  // scoutisme) : utile pour juger un adversaire avant un match tout autant
+  // que pour son propre effectif.
+  const detailCross = injuryCrossHtml(player);
+  if (detailCross) html += `<p class="training-intro">${detailCross} Blessé : ${escapeHtml(player.injuryType || "Blessure")}, ${injuryDaysRemaining(player)} jour${injuryDaysRemaining(player) > 1 ? "s" : ""} restant${injuryDaysRemaining(player) > 1 ? "s" : ""}</p>`;
+  // Tactique de prédilection (voir bestTacticsForPlayer/TACTIC_ATTR_PROFILE
+  // plus haut, retour utilisateur, 2026-09 : "ça pourrait être pas mal si tu
+  // mettais sur quel tactique le joueur peut être bon") : exige la TOTALITÉ
+  // des caractéristiques offensives (TACTICAL_ATTRS) déjà visibles sur
+  // cette fiche (`visibleAttrs`, calculé tout en haut) : un calcul partiel
+  // sur un adversaire à peine scouté donnerait un classement trompeur,
+  // plutôt que de l'omettre proprement en attendant d'en savoir plus.
+  if (TACTICAL_ATTRS.every(a => visibleAttrs.includes(a))) {
+    const bestTactics = bestTacticsForPlayer(player);
+    html += `<p class="training-intro">Tactique de prédilection : ${bestTactics.map(t => escapeHtml(t.tactic)).join(", ")}</p>`;
+  }
+  // Citation de vestiaire (voir playerRoleQuote plus haut) : dérivée du
+  // Rôle ci-dessus, jamais une nouvelle jauge de moral (retour
+  // utilisateur explicite : "n'appelle pas ça moral mais motivation,
+  // garde le terme").
+  html += `<p class="player-quote">💬 « ${escapeHtml(playerRoleQuote(team, player, roleLabel))} »</p>`;
   // Demande de transfert (voir Player.transferRequestActive/
   // discussTransferRequest côté moteur, retour utilisateur 2026-09 : "un
   // joueur très frustré [...] peut demander son transfert dans la presse
@@ -13137,14 +13392,38 @@ function renderPlayerDetail(teamIdx, playerId) {
   // révélées exactement comme le panneau de scoutisme (teamA.scoutedAttrs) :
   // jamais un accès complet aux caractéristiques adverses juste parce qu'on
   // est passé par la fiche joueur plutôt que le panneau de scoutisme.
-  const revealedSet = (isOwnTeam || onMarket) ? null : new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
+  // (`revealedSet`/`visibleAttrs` déjà calculés tout en haut de cette
+  // fonction, voir leur commentaire.)
+  // Grille à 2 colonnes (retour utilisateur, 2026-09, maquette "Adama
+  // Kovac") : remplace l'ancien tableau à une seule ligne, voir le grand
+  // commentaire CSS de .player-attr-grid, le groupement par paires
+  // (MI-D/3PTS, INT/PASSE, ...) tombe naturellement de l'ordre d'ATTRS
+  // (engine.js) avec grid-auto-flow ligne par ligne, aucun pairage
+  // manuel nécessaire.
   html += "<h3 class='field-label'>Caractéristiques</h3>";
-  html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-    ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") + "</tr></thead><tbody><tr>" +
-    ATTRS.map(a => {
-      if (isOwnTeam || onMarket || revealedSet.has(a)) return `<td>${attrCellHtml(player.attrs[a])}</td>`;
-      return `<td><div class="attr-cell attr-locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique"></div></td>`;
-    }).join("") + "</tr></tbody></table></div>";
+  html += "<div class='player-attr-grid'>" + ATTRS.map(a => {
+    const cell = (isOwnTeam || onMarket || revealedSet.has(a))
+      ? attrCellHtml(player.attrs[a])
+      : `<div class="attr-cell attr-locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique"></div>`;
+    return `<div class="player-attr-row"><span class="player-attr-name">${ATTR_SHORT[a]}</span>${cell}</div>`;
+  }).join("") + "</div>";
+
+  // Points forts / points faibles (voir playerStrengthsAndWeaknesses plus
+  // haut) : uniquement à partir des caractéristiques déjà visibles
+  // ci-dessus, jamais un classement calculé sur du scoutisme non débloqué.
+  const { strengths, weaknesses } = playerStrengthsAndWeaknesses(player, visibleAttrs);
+  if (strengths.length) {
+    html += "<div class='player-sw-columns'>";
+    html += "<div class='player-sw-col'><h4>Points forts</h4><ul>" +
+      strengths.map(e => `<li>${escapeHtml(TRAINING_LABELS[e.attr] || ATTR_SHORT[e.attr])}</li>`).join("") + "</ul></div>";
+    if (weaknesses.length) {
+      html += "<div class='player-sw-col'><h4>Points faibles</h4><ul>" +
+        weaknesses.map(e => `<li>${escapeHtml(TRAINING_LABELS[e.attr] || ATTR_SHORT[e.attr])}</li>`).join("") + "</ul></div>";
+    }
+    html += "</div>";
+  } else {
+    html += "<p class='training-empty'>Pas encore assez de caractéristiques révélées pour dégager des points forts/faibles (faites une séance vidéo pour en débloquer).</p>";
+  }
 
   // Moyennes + match par match de la saison en cours (championnat ET coupe
   // confondus dans les moyennes — le détail match par match, lui, distingue
@@ -16711,6 +16990,27 @@ function renderClubSection() {
       : `<div class="sub">Rien à signaler pour l'instant.</div>`);
   grid.appendChild(newsCard);
 
+  // Identité du club : logo et maillots (retour utilisateur, 2026-09 : "je
+  // rajouterai une petite brique à coté de dernier évènement avec un petit
+  // bouton changer l'identité où l'on verra tout ce qu'il y a en bas sur la
+  // page actuellement via une petite fenetre qui s ouvre. cela ferait plus
+  // propre") : une simple carte "teaser" (aperçu du logo actuel) ici, à côté
+  // de "Derniers événements" ci-dessus (7e carte de la grille à 2 colonnes,
+  // elle tombe donc naturellement dans la colonne vide à sa droite, même
+  // logique que le commentaire "6e brique à droite" plus haut) ; le panneau
+  // complet (maillots, statut payant...) ne s'ouvre qu'à la demande, dans
+  // une fenêtre modale (voir showClubIdentityModal/renderClubIdentityPanel).
+  const identityCard = document.createElement("div");
+  identityCard.className = "stat-card";
+  identityCard.innerHTML = `<h3>Identité du club</h3>` +
+    `<div class="club-identity-teaser-logo">${teamLogoHtml(teamA, 40)}</div>` +
+    `<div class="sub">Logo, maillots domicile et extérieur.</div>`;
+  const identityLink = document.createElement("div");
+  identityLink.className = "quick-links";
+  identityLink.innerHTML = `<button type="button" class="secondary" id="clubIdentityOpenBtn">Changer l'identité</button>`;
+  identityCard.appendChild(identityLink);
+  grid.appendChild(identityCard);
+
   // MVP automatique du dernier match (retour utilisateur, 2026-09 : "il faut
   // mettre ses citations sur la page tableau de bord [...] et sur le box
   // score du match fini", voir Team.lastMatchMvp/awardMatchMvp côté
@@ -16725,15 +17025,18 @@ function renderClubSection() {
       `<p class="sub">« ${escapeHtml(mvp.quote)} »</p>`;
     grid.appendChild(mvpCard);
   }
-
-  renderClubIdentityPanel();
 }
 
 // ---------------------------------------------------------------------
 // Identité du club : logo et maillots (retour utilisateur, 2026-09 : "le
 // logo et les maillots doivent pouvoir être modifiés dans le tableau de
-// bord"), affiché en bas du tableau de bord (voir clubIdentityPanel dans le
-// HTML). Un logo personnalisé n'est proposé (bouton de chargement) que pour
+// bord", puis "je rajouterai une petite brique à coté de dernier évènement
+// avec un petit bouton changer l'identité [...] via une petite fenetre qui
+// s ouvre") : ce panneau ne se rend plus qu'à l'intérieur de la fenêtre
+// modale ouverte par showClubIdentityModal (voir plus bas), jamais au
+// chargement du tableau de bord : #clubIdentityPanel n'existe donc dans le
+// DOM que pendant que la modale est ouverte.
+// Un logo personnalisé n'est proposé (bouton de chargement) que pour
 // un club `isPaying` (voir teamA.setCustomLogo/le grand commentaire sur
 // JERSEY_COLORS dans engine.js) ; un club gratuit voit son logo type et un
 // message expliquant pourquoi le chargement est indisponible.
@@ -16875,76 +17178,111 @@ function resizeImageFileToDataUrl(file, maxSize) {
   });
 }
 
-// Écouteurs de l'identité du club : attachés UNE FOIS sur le conteneur
-// statique (jamais recréé, seul son innerHTML change à chaque
-// renderClubIdentityPanel), même patron que catchupContentEl plus haut.
-const clubIdentityPanelEl = document.getElementById("clubIdentityPanel");
-if (clubIdentityPanelEl) {
-  clubIdentityPanelEl.addEventListener("click", (e) => {
-    const shapeBtn = e.target.closest("[data-jersey-shape]");
-    const colorBtn = e.target.closest("[data-jersey-color]");
-    const patternBtn = e.target.closest("[data-jersey-pattern]");
-    const twoToneBtn = e.target.closest("[data-jersey-twotone]");
-    // Maillot extérieur (voir la section "Maillot extérieur" de
-    // renderClubIdentityPanel ci-dessus) : attributs data-away-jersey-*
-    // distincts, jamais confondus avec les sélecteurs domicile ci-dessus.
-    const awayColorBtn = e.target.closest("[data-away-jersey-color]");
-    const awayPatternBtn = e.target.closest("[data-away-jersey-pattern]");
-    const awayTwoToneBtn = e.target.closest("[data-away-jersey-twotone]");
-    const resetLogoBtn = e.target.closest("#clubLogoResetBtn");
-    const togglePayingBtn = e.target.closest("#clubTogglePayingBtn");
-    if (shapeBtn) {
-      teamA.setJersey(shapeBtn.dataset.jerseyShape, teamA.jerseyColor);
-    } else if (colorBtn) {
-      teamA.setJersey(teamA.jerseyShape, colorBtn.dataset.jerseyColor);
-    } else if (patternBtn) {
-      teamA.setJerseyPattern(patternBtn.dataset.jerseyPattern);
-    } else if (twoToneBtn) {
-      teamA.setJerseyTwoTone(twoToneBtn.dataset.jerseyTwotone);
-    } else if (awayColorBtn) {
-      teamA.setAwayJerseyColor(awayColorBtn.dataset.awayJerseyColor);
-    } else if (awayPatternBtn) {
-      teamA.setAwayJerseyPattern(awayPatternBtn.dataset.awayJerseyPattern);
-    } else if (awayTwoToneBtn) {
-      teamA.setAwayJerseyTwoTone(awayTwoToneBtn.dataset.awayJerseyTwotone);
-    } else if (resetLogoBtn) {
-      teamA.setCustomLogo(null);
-    } else if (togglePayingBtn) {
-      teamA.setPaying(!teamA.isPaying);
-    } else {
+// Fenêtre modale "Identité du club" (retour utilisateur, 2026-09 : "je
+// rajouterai une petite brique à coté de dernier évènement avec un petit
+// bouton changer l'identité où l'on verra tout ce qu'il y a en bas sur la
+// page actuellement via une petite fenetre qui s ouvre. cela ferait plus
+// propre") : même patron que showMatchBoxscore/showUpgradeConfirm
+// (overlay+boîte recréés à chaque ouverture, voir .upgrade-confirm-overlay/
+// .upgrade-confirm-box en CSS), plutôt qu'un panneau statique en bas de
+// page. #clubIdentityPanel (rempli par renderClubIdentityPanel) vit donc
+// désormais À L'INTÉRIEUR de cette boîte, recréé à chaque ouverture.
+function closeClubIdentityModal() {
+  const existing = document.getElementById("clubIdentityModalOverlay");
+  if (existing) existing.remove();
+}
+
+function showClubIdentityModal() {
+  closeClubIdentityModal();
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay club-identity-modal-overlay";
+  overlay.id = "clubIdentityModalOverlay";
+  overlay.innerHTML = `<div class="upgrade-confirm-box club-identity-modal-box">` +
+    `<div class="section club-identity-panel" id="clubIdentityPanel"></div>` +
+    `<button type="button" class="upgrade-confirm-cancel-btn" id="clubIdentityModalCloseBtn" style="margin-top:14px; width:100%;">Fermer</button>` +
+    `</div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeClubIdentityModal(); });
+  document.getElementById("clubIdentityModalCloseBtn").addEventListener("click", closeClubIdentityModal);
+  renderClubIdentityPanel();
+}
+
+// Bouton "Changer l'identité" de la petite carte du tableau de bord (voir
+// renderClubSection) : VRAIE délégation sur document (même patron que
+// [data-tab] plus bas dans ce fichier) plutôt qu'un attachement direct, la
+// carte étant recréée à chaque renderClubSection.
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#clubIdentityOpenBtn")) showClubIdentityModal();
+});
+
+// Écouteurs de l'identité du club : délégués sur document plutôt
+// qu'attachés à #clubIdentityPanel directement, celui-ci n'existant plus
+// dans le DOM que pendant que la modale ci-dessus est ouverte (recréé à
+// chaque showClubIdentityModal, contrairement à l'ancien panneau statique).
+document.addEventListener("click", (e) => {
+  const shapeBtn = e.target.closest("#clubIdentityPanel [data-jersey-shape]");
+  const colorBtn = e.target.closest("#clubIdentityPanel [data-jersey-color]");
+  const patternBtn = e.target.closest("#clubIdentityPanel [data-jersey-pattern]");
+  const twoToneBtn = e.target.closest("#clubIdentityPanel [data-jersey-twotone]");
+  // Maillot extérieur (voir la section "Maillot extérieur" de
+  // renderClubIdentityPanel ci-dessus) : attributs data-away-jersey-*
+  // distincts, jamais confondus avec les sélecteurs domicile ci-dessus.
+  const awayColorBtn = e.target.closest("#clubIdentityPanel [data-away-jersey-color]");
+  const awayPatternBtn = e.target.closest("#clubIdentityPanel [data-away-jersey-pattern]");
+  const awayTwoToneBtn = e.target.closest("#clubIdentityPanel [data-away-jersey-twotone]");
+  const resetLogoBtn = e.target.closest("#clubLogoResetBtn");
+  const togglePayingBtn = e.target.closest("#clubTogglePayingBtn");
+  if (shapeBtn) {
+    teamA.setJersey(shapeBtn.dataset.jerseyShape, teamA.jerseyColor);
+  } else if (colorBtn) {
+    teamA.setJersey(teamA.jerseyShape, colorBtn.dataset.jerseyColor);
+  } else if (patternBtn) {
+    teamA.setJerseyPattern(patternBtn.dataset.jerseyPattern);
+  } else if (twoToneBtn) {
+    teamA.setJerseyTwoTone(twoToneBtn.dataset.jerseyTwotone);
+  } else if (awayColorBtn) {
+    teamA.setAwayJerseyColor(awayColorBtn.dataset.awayJerseyColor);
+  } else if (awayPatternBtn) {
+    teamA.setAwayJerseyPattern(awayPatternBtn.dataset.awayJerseyPattern);
+  } else if (awayTwoToneBtn) {
+    teamA.setAwayJerseyTwoTone(awayTwoToneBtn.dataset.awayJerseyTwotone);
+  } else if (resetLogoBtn) {
+    teamA.setCustomLogo(null);
+  } else if (togglePayingBtn) {
+    teamA.setPaying(!teamA.isPaying);
+  } else {
+    return;
+  }
+  saveMyTeam();
+  if (shapeBtn || colorBtn) syncJerseyToServer(teamA.jerseyShape, teamA.jerseyColor);
+  if (patternBtn) syncJerseyPatternToServer(teamA.jerseyPattern);
+  if (twoToneBtn) syncJerseyTwoToneToServer(teamA.jerseyTwoTone);
+  if (awayColorBtn) syncAwayJerseyColorToServer(teamA.awayJerseyColor);
+  if (awayPatternBtn) syncAwayJerseyPatternToServer(teamA.awayJerseyPattern);
+  if (awayTwoToneBtn) syncAwayJerseyTwoToneToServer(teamA.awayJerseyTwoTone);
+  if (resetLogoBtn) syncLogoToServer(null);
+  if (togglePayingBtn) syncPayingToServer(teamA.isPaying);
+  renderClubIdentityPanel();
+});
+
+document.addEventListener("change", async (e) => {
+  const input = e.target.closest("#clubLogoFileInput");
+  if (!input || !input.files || !input.files[0]) return;
+  const feedback = document.getElementById("clubIdentityFeedback");
+  try {
+    const dataUrl = await resizeImageFileToDataUrl(input.files[0], 256);
+    const result = teamA.setCustomLogo(dataUrl);
+    if (!result.ok) {
+      if (feedback) feedback.innerHTML = `<p class="sub" style="color:var(--danger)">${escapeHtml(result.error)}</p>`;
       return;
     }
     saveMyTeam();
-    if (shapeBtn || colorBtn) syncJerseyToServer(teamA.jerseyShape, teamA.jerseyColor);
-    if (patternBtn) syncJerseyPatternToServer(teamA.jerseyPattern);
-    if (twoToneBtn) syncJerseyTwoToneToServer(teamA.jerseyTwoTone);
-    if (awayColorBtn) syncAwayJerseyColorToServer(teamA.awayJerseyColor);
-    if (awayPatternBtn) syncAwayJerseyPatternToServer(teamA.awayJerseyPattern);
-    if (awayTwoToneBtn) syncAwayJerseyTwoToneToServer(teamA.awayJerseyTwoTone);
-    if (resetLogoBtn) syncLogoToServer(null);
-    if (togglePayingBtn) syncPayingToServer(teamA.isPaying);
+    syncLogoToServer(dataUrl);
     renderClubIdentityPanel();
-  });
-
-  clubIdentityPanelEl.addEventListener("change", async (e) => {
-    const input = e.target.closest("#clubLogoFileInput");
-    if (!input || !input.files || !input.files[0]) return;
-    const feedback = document.getElementById("clubIdentityFeedback");
-    try {
-      const dataUrl = await resizeImageFileToDataUrl(input.files[0], 256);
-      const result = teamA.setCustomLogo(dataUrl);
-      if (!result.ok) {
-        if (feedback) feedback.innerHTML = `<p class="sub" style="color:var(--danger)">${escapeHtml(result.error)}</p>`;
-        return;
-      }
-      saveMyTeam();
-      syncLogoToServer(dataUrl);
-      renderClubIdentityPanel();
-    } catch (err) {
-      if (feedback) feedback.innerHTML = `<p class="sub" style="color:var(--danger)">Impossible de charger cette image.</p>`;
-    }
-  });
-}
+  } catch (err) {
+    if (feedback) feedback.innerHTML = `<p class="sub" style="color:var(--danger)">Impossible de charger cette image.</p>`;
+  }
+});
 
 // ---------------------------------------------------------------------
 // Effectif — caractéristiques (0-99) de tous les joueurs du club. Vue de
@@ -16969,6 +17307,31 @@ if (clubIdentityPanelEl) {
 // historique). Colonnes non-Nom/Poste : premier clic = du plus fort au moins
 // fort (dir -1), plus utile pour des caractéristiques que l'inverse.
 let rosterSortState = { key: null, dir: 1 };
+
+// Deux sous-onglets sur l'onglet Effectif (retour utilisateur, 2026-09 :
+// "sur l'onglet effectif, il faudrait deux sous onglets : l'onglet actuel +
+// un onglet où on voit les caracs des joueurs comme si on consulte la page
+// d'un adversaire (avec les carac bien évidemment)", puis, sur le nom du
+// premier sous-onglet : "j'aime pas le terme liste") : "Général" est le
+// tableau trié existant ci-dessus (sans les caractéristiques, retiré du
+// tableau principal, voir le commentaire de ROSTER_SORT_COLUMNS juste
+// au-dessus) ; "Caractéristiques" reprend EXACTEMENT le même tableau que la
+// branche "propre équipe" de teamDetailEffectifHtml (nom/poste/taille/
+// salaire + les 13 ATTRS), jamais verrouillé (c'est toujours SA PROPRE
+// équipe ici, jamais un adversaire scouté). Même patron que
+// teamDetailSubView (état gardé au niveau module, pas réinitialisé au
+// re-rendu).
+let effectifSubView = "general"; // "general" | "caracteristiques"
+
+function effectifSubNavHtml() {
+  const tabs = [
+    { key: "general", label: "Général" },
+    { key: "caracteristiques", label: "Caractéristiques" },
+  ];
+  return `<div class="boxscore-toggle effectif-subnav">` +
+    tabs.map(t => `<button type="button" class="bs-tab${effectifSubView === t.key ? " active" : ""}" data-effectif-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
+    `</div>`;
+}
 
 // Refonte de l'onglet Effectif (retour utilisateur, 2026-09 : "On va
 // commencer à avoir pas mal de carac et tout ne rentrera pas sur l'écran
@@ -17059,12 +17422,36 @@ function renderEffectifSection() {
     sorted = [...teamA.players].sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall());
   }
   const listedIds = new Set((league.transferListings || []).filter(l => l.status === "open").map(l => l.playerId));
+
+  // Sous-onglet "Caractéristiques" (retour utilisateur, 2026-09 : "sur
+  // l'onglet effectif, il faudrait deux sous onglets [...] un onglet où on
+  // voit les caracs des joueurs comme si on consulte la page d'un
+  // adversaire (avec les carac bien évidemment)") : même tableau que la
+  // branche "propre équipe" de teamDetailEffectifHtml (voir son commentaire),
+  // sans les statistiques de saison qui ont déjà leur propre onglet dédié
+  // ("Stats hebdo"). Retourne ici, jamais mélangé avec le tableau "Général"
+  // ci-dessous (colonnes trop différentes pour un seul tableau).
+  if (effectifSubView === "caracteristiques") {
+    let attrsHtml = effectifSubNavHtml();
+    attrsHtml += "<div class='table-scroll roster-table-frozen'><table class='roster-table'><thead><tr>" +
+      "<th>Nom</th><th>Poste</th><th>Taille</th><th>Salaire/sem.</th>" +
+      ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") + "</tr></thead><tbody>";
+    sorted.forEach(p => {
+      attrsHtml += `<tr><td>${playerLinkHtml(myTeamIndex, p.id, p.name)}</td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
+      ATTRS.forEach(a => { attrsHtml += `<td>${attrCellHtml(p.attrs[a])}</td>`; });
+      attrsHtml += "</tr>";
+    });
+    attrsHtml += "</tbody></table></div>";
+    holder.innerHTML = attrsHtml;
+    return;
+  }
+
   // Le texte explicatif (recalcul des salaires, avertissement forfait) et la
   // masse salariale (déjà affichée sur l'onglet Économie) ont été retirés
   // d'ici — retour utilisateur : "enlève les [textes d'aide] des onglets" —
   // voir l'onglet 📖 Guide (renderGuideSection) pour le détail.
   const now = Date.now();
-  let html = `<div id="rosterMarketFeedback"></div>`;
+  let html = effectifSubNavHtml() + `<div id="rosterMarketFeedback"></div>`;
   // .roster-table-frozen (voir son commentaire CSS) : en-tête figée au
   // scroll, propre à cet onglet.
   html += "<div class='table-scroll roster-table-frozen'><table class='roster-table'><thead><tr>" +
@@ -17137,6 +17524,17 @@ function sellRosterPlayer(playerId) {
   renderEffectifSection();
 }
 document.getElementById("rosterContent").addEventListener("click", (e) => {
+  // Sous-onglets "Général"/"Caractéristiques" (voir effectifSubView/
+  // effectifSubNavHtml) : même patron délégué que le reste de cet écouteur,
+  // vérifié EN PREMIER pour ne jamais tomber dans les branches ci-dessous
+  // (aucun chevauchement possible avec [data-sort]/[data-sell-player]/
+  // [data-list-player], mais autant rester explicite sur l'ordre).
+  const subViewBtn = e.target.closest("[data-effectif-subview]");
+  if (subViewBtn) {
+    effectifSubView = subViewBtn.dataset.effectifSubview;
+    renderEffectifSection();
+    return;
+  }
   // Tri par en-tête cliquée (voir rosterSortState/ROSTER_SORT_COLUMNS) :
   // même colonne re-cliquée = inverse le sens, colonne différente = repart
   // du sens par défaut de cette colonne (voir rosterSortState, plus fort au
