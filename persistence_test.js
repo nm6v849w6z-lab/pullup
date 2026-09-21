@@ -68,6 +68,11 @@ console.log("Options de postes proposées pour 'Jeu intérieur' :", [...posSel.o
 console.log("Postes sélectionnés par défaut :", posSel.value);
 console.log("Note de dilution :", doc1.getElementById("trainingDilutionNote").textContent);
 
+// Retour utilisateur (2026-09) : la liste (voir renderTrainingList) ne
+// montre désormais QUE les joueurs ayant déjà du temps de jeu cumulé sur le
+// poste entraîné — à ce stade (semaine 1, avant tout match), elle est donc
+// normalement VIDE ("introuvable"/0 ci-dessous, pas un bug) ; les lignes
+// n'apparaîtront qu'une fois des matchs joués, vérifié plus loin.
 let rows = [...doc1.querySelectorAll(".training-row")];
 const pivotRow = rows.find(r => r.querySelector(".tr-name").textContent.includes(" P "));
 console.log("\nLigne d'un Pivot (poste concerné) :", pivotRow ? pivotRow.textContent.replace(/\s+/g, " ") : "introuvable");
@@ -168,9 +173,18 @@ console.log(`${posOk ? "✅" : "❌"} Postes entraînés persistés : "${doc2.ge
 // Le poste vit désormais dans son propre badge .tr-pos-badge (habillage FM
 // de l'écran Entraînement), plus dans le texte de .tr-meta — voir
 // buildTrainingRow.
+// Retour utilisateur (2026-09) : "en dessous les joueurs (en ne mettant que
+// les joueurs qui ont pris du temps de jeu et qui seront entrainés [...]
+// dès 1min de jeu sur le poste)" : la liste (voir renderTrainingList) ne
+// montre plus QUE les joueurs ayant du temps de jeu cumulé sur le(s)
+// poste(s) entraîné(s) cette journée. secondsPlayed n'est pas persisté
+// entre sessions (remis à 0 à chaque rechargement, avant le prochain
+// match) : la liste doit donc être VIDE juste après un rechargement,
+// avant qu'un match n'ait été rejoué.
 const reloadedRows = [...doc2.querySelectorAll(".training-row")];
-const reloadedPivotRow = reloadedRows.find(r => r.querySelector(".tr-pos-badge").textContent === "P");
-console.log("Statut d'un pivot après rechargement :", reloadedPivotRow.querySelector(".tr-status").textContent, "(secondsPlayed non persisté entre sessions, remis à 0 -> normal que ce ne soit plus 'assez joué' avant le prochain match)");
+const reloadedPivotRow = reloadedRows.find(r => r.querySelector(".tr-pos-badge") && r.querySelector(".tr-pos-badge").textContent === "P");
+const listEmptyOk = reloadedRows.length === 0 && !!doc2.querySelector("#trainingList .training-empty");
+console.log(`${listEmptyOk ? "✅" : "❌"} Liste d'entraînement vide juste après rechargement (secondsPlayed remis à 0, aucun joueur n'a "assez joué" avant le prochain match) : ${reloadedRows.length} ligne(s), pivot trouvé : ${!!reloadedPivotRow}.`);
 
 const staffText = doc2.getElementById("staffCurrent").textContent.replace(/\s+/g, " ");
 const budgetText = doc2.getElementById("staffBudget").textContent;
@@ -185,7 +199,7 @@ await flush(dom2);
 win2.close();
 server.close();
 
-if (!weekOk || !journeeOk || !skillOk || !posOk || !staffOk || !budgetOk) process.exit(1);
+if (!weekOk || !journeeOk || !skillOk || !posOk || !staffOk || !budgetOk || !listEmptyOk) process.exit(1);
 console.log("\n✅ Persistance vérifiée : semaine, calendrier/journée, compétence entraînée, postes concernés, staff et budget survivent à un rechargement complet de la page.");
 
 })().catch(e => { console.error(e); process.exit(1); });

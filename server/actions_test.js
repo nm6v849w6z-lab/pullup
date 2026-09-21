@@ -105,10 +105,85 @@ function freshTeamAndLeague() {
   if (dup.ok) throw new Error("❌ Un poste dupliqué dans trainingPositions devrait être rejeté.");
   console.log("✅ setTraining rejette un poste d'entraînement dupliqué.");
 
+  // Retour utilisateur (2026-09, "enleve l'entrainement aucune (entrainement
+  // général uniquement)") : il n'existe plus de valeur "aucun entraînement",
+  // un poste doit toujours être travaillé, donc trainingSkill:null est
+  // désormais rejeté plutôt qu'accepté.
   const stop = actions.setTraining(team, 0, league, { trainingSkill: null });
-  if (!stop.ok) throw new Error("❌ trainingSkill: null (arrêter l'entraînement) devrait être accepté.");
-  if (team.trainingSkill !== null) throw new Error("❌ trainingSkill devrait être remis à null.");
-  console.log("✅ setTraining accepte trainingSkill:null pour arrêter l'entraînement.");
+  if (stop.ok) throw new Error("❌ trainingSkill:null devrait être rejeté (il n'y a plus d'entraînement \"aucune\").");
+  console.log("✅ setTraining rejette trainingSkill:null (l'entraînement individuel est toujours actif).");
+
+  // Entraînement collectif (retour utilisateur, 2026-09, voir Team.
+  // collectiveTraining côté moteur) : réglage SÉPARÉ transmis dans le même
+  // appel setTraining.
+  const collective = actions.setTraining(team, 0, league, { collectiveTraining: "tactique" });
+  if (!collective.ok || team.collectiveTraining !== "tactique") {
+    throw new Error("❌ setTraining devrait accepter collectiveTraining:\"tactique\".");
+  }
+  console.log("✅ setTraining applique un focus collectif valide (\"tactique\").");
+
+  const collectiveUnknown = actions.setTraining(team, 0, league, { collectiveTraining: "n'importe quoi" });
+  if (collectiveUnknown.ok) throw new Error("❌ Un focus collectif inconnu devrait être rejeté.");
+  console.log("✅ setTraining rejette un focus collectif inconnu.");
+
+  const collectiveStop = actions.setTraining(team, 0, league, { collectiveTraining: null });
+  if (!collectiveStop.ok || team.collectiveTraining !== null) {
+    throw new Error("❌ collectiveTraining:null (revenir à \"aucun\") devrait être accepté.");
+  }
+  console.log("✅ setTraining accepte collectiveTraining:null pour revenir à \"aucun\".");
+
+  // Tactique précisément travaillée (retour utilisateur, 2026-09 : "il faut
+  // effectivement choisir ce qui est bossé comme tactique", puis "je pense
+  // qu'il faut pouvoir choisir uniquement une seule chose... un seul aspect
+  // et pas tous les aspects") : Team.trainedTactics est désormais un
+  // instantané À UN SEUL ASPECT { category, value } (et non plus un
+  // instantané partiel multi-catégories).
+  const trainedValid = actions.setTraining(team, 0, league, {
+    trainedTactics: { category: "offense", value: "Pick & Roll" },
+  });
+  if (!trainedValid.ok) throw new Error(`❌ Un trainedTactics { category, value } valide devrait être accepté : ${trainedValid.error}`);
+  if (!team.trainedTactics || team.trainedTactics.category !== "offense" || team.trainedTactics.value !== "Pick & Roll") {
+    throw new Error("❌ trainedTactics n'a pas été appliqué correctement.");
+  }
+  console.log("✅ setTraining applique un trainedTactics { category: \"offense\", value } valide.");
+
+  const trainedDefense = actions.setTraining(team, 0, league, { trainedTactics: { category: "defense", value: "Zone extérieure" } });
+  if (!trainedDefense.ok || team.trainedTactics.category !== "defense" || team.trainedTactics.value !== "Zone extérieure") {
+    throw new Error("❌ trainedTactics { category: \"defense\", value } devrait être accepté et remplacer l'aspect précédent.");
+  }
+  console.log("✅ setTraining applique un trainedTactics { category: \"defense\", value } valide (remplace l'aspect précédent).");
+
+  const trainedRhythm = actions.setTraining(team, 0, league, { trainedTactics: { category: "rhythm", value: "Rapide" } });
+  if (!trainedRhythm.ok || team.trainedTactics.category !== "rhythm" || team.trainedTactics.value !== "Rapide") {
+    throw new Error("❌ trainedTactics { category: \"rhythm\", value } devrait être accepté.");
+  }
+  console.log("✅ setTraining applique un trainedTactics { category: \"rhythm\", value } valide.");
+
+  const trainedBadCategory = actions.setTraining(team, 0, league, { trainedTactics: { category: "n'importe quoi", value: "Rapide" } });
+  if (trainedBadCategory.ok) throw new Error("❌ Une trainedTactics.category inconnue devrait être rejetée.");
+  console.log("✅ setTraining rejette une trainedTactics.category inconnue.");
+
+  const trainedBadOffenseValue = actions.setTraining(team, 0, league, { trainedTactics: { category: "offense", value: "Ça n'existe pas" } });
+  if (trainedBadOffenseValue.ok) throw new Error("❌ Une priorité offensive inconnue dans trainedTactics.value devrait être rejetée.");
+  console.log("✅ setTraining rejette une priorité offensive inconnue dans trainedTactics.value.");
+
+  const trainedBadDefenseValue = actions.setTraining(team, 0, league, { trainedTactics: { category: "defense", value: "Ça n'existe pas" } });
+  if (trainedBadDefenseValue.ok) throw new Error("❌ Une défense inconnue dans trainedTactics.value devrait être rejetée.");
+  console.log("✅ setTraining rejette une défense inconnue dans trainedTactics.value.");
+
+  const trainedBadRhythmValue = actions.setTraining(team, 0, league, { trainedTactics: { category: "rhythm", value: "Ça n'existe pas" } });
+  if (trainedBadRhythmValue.ok) throw new Error("❌ Un rythme inconnu dans trainedTactics.value devrait être rejeté.");
+  console.log("✅ setTraining rejette un rythme inconnu dans trainedTactics.value.");
+
+  const trainedBadShape = actions.setTraining(team, 0, league, { trainedTactics: { value: "Rapide" } });
+  if (trainedBadShape.ok) throw new Error("❌ Un trainedTactics sans category devrait être rejeté.");
+  console.log("✅ setTraining rejette un trainedTactics sans category.");
+
+  const trainedClear = actions.setTraining(team, 0, league, { trainedTactics: null });
+  if (!trainedClear.ok || team.trainedTactics !== null) {
+    throw new Error("❌ trainedTactics:null (revenir à \"rien de précis\") devrait être accepté.");
+  }
+  console.log("✅ setTraining accepte trainedTactics:null pour l'effacer.");
 }
 
 // ---------------------------------------------------------------------
@@ -794,6 +869,60 @@ function freshTeamAndLeague() {
 }
 
 // ---------------------------------------------------------------------
+// discussTransferRequest : Médias, demande de transfert dans la presse
+// (retour utilisateur, 2026-09 : "un joueur très frustré [...] peut demander
+// son transfert dans la presse [...] ouvrir la discussion avec lui pour le
+// remotiver [...] ou le vendre sont les deux possibilités"). Voir
+// Team.discussTransferRequest/updateTransferRequests côté moteur, testés en
+// détail dans transfer_request_test.js ; ce test-ci couvre uniquement la
+// validation de forme et le passage de résultat propres à cette action
+// serveur (même patron que promoteYouthPlayer/releaseYouthPlayer plus haut).
+{
+  const { team, league } = freshTeamAndLeague();
+  const p = team.players[0];
+
+  // playerId manquant.
+  const missingId = actions.discussTransferRequest(team, 0, league, {}, T0);
+  if (missingId.ok) throw new Error("❌ discussTransferRequest devrait rejeter un body sans playerId.");
+  console.log("✅ discussTransferRequest rejette un body sans playerId.");
+
+  // playerId inconnu.
+  const unknownId = actions.discussTransferRequest(team, 0, league, { playerId: "id-qui-n-existe-pas" }, T0);
+  if (unknownId.ok) throw new Error("❌ discussTransferRequest devrait rejeter un playerId inconnu.");
+  console.log("✅ discussTransferRequest rejette un playerId inconnu.");
+
+  // Joueur connu mais sans demande de transfert active.
+  p.transferRequestActive = false;
+  const notRequesting = actions.discussTransferRequest(team, 0, league, { playerId: p.id }, T0);
+  if (notRequesting.ok) throw new Error("❌ discussTransferRequest devrait rejeter un joueur qui n'a pas demandé son transfert.");
+  console.log("✅ discussTransferRequest rejette un joueur qui n'a pas demandé son transfert.");
+
+  // Demande active, succès forcé (Math.random stubbé) : forme boostée, forme
+  // avant/après renvoyées.
+  p.form = 10;
+  for (let i = 0; i < E.TRANSFER_REQUEST_WEEKS_THRESHOLD; i++) team.updateTransferRequests(T0);
+  if (!p.transferRequestActive) throw new Error("❌ (setup) la demande devrait être active avant ce test.");
+
+  const realRandom = Math.random;
+  Math.random = () => 0;
+  let successRes;
+  try {
+    successRes = actions.discussTransferRequest(team, 0, league, { playerId: p.id }, T0);
+  } finally {
+    Math.random = realRandom;
+  }
+  if (!successRes.ok || !successRes.success) throw new Error(`❌ discussTransferRequest devrait accepter une demande active et réussir avec Math.random stubbé à 0 : ${JSON.stringify(successRes)}`);
+  if (successRes.formBefore !== 10 || successRes.formAfter !== p.form) throw new Error(`❌ discussTransferRequest devrait renvoyer formBefore/formAfter cohérents avec le joueur : ${JSON.stringify(successRes)}`);
+  if (p.transferRequestActive) throw new Error("❌ Un succès devrait refermer la demande de transfert.");
+  console.log(`✅ discussTransferRequest, succès : ${JSON.stringify({ formBefore: successRes.formBefore, formAfter: successRes.formAfter })}, demande refermée.`);
+
+  // Rejouée juste après : plus de demande active, donc rejetée.
+  const alreadyResolved = actions.discussTransferRequest(team, 0, league, { playerId: p.id }, T0);
+  if (alreadyResolved.ok) throw new Error("❌ discussTransferRequest rejouée après succès devrait être rejetée (plus de demande active).");
+  console.log("✅ discussTransferRequest rejette une demande déjà résolue.");
+}
+
+// ---------------------------------------------------------------------
 // Délai de réponse de 3 jours à une interview de jalon (retour utilisateur :
 // "on a 3 jours pour faire l'interview sinon c'est neutre sur le moral") :
 // voir Team.pruneExpiredInterviews/MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS
@@ -1094,6 +1223,22 @@ function freshTeamAndLeague() {
   if (!multiInterviewRes.ok || multiTeam.pendingInterviews.some(i => i.id === multiInterview.id)) throw new Error("❌ respondToInterview à un teamIndex non nul devrait s'appliquer à CETTE équipe.");
   if (multiLeague.teams[0].pendingInterviews.some(i => i.id === multiInterview.id)) throw new Error("❌ respondToInterview à teamIndex=1 ne devrait pas avoir touché l'équipe 0.");
   console.log("✅ respondToInterview fonctionne correctement pour un teamIndex non nul (1), isolé de l'équipe 0.");
+
+  const multiTransferPlayer = multiTeam.players[0];
+  multiTransferPlayer.form = 10;
+  for (let i = 0; i < E.TRANSFER_REQUEST_WEEKS_THRESHOLD; i++) multiTeam.updateTransferRequests(T0);
+  if (!multiTransferPlayer.transferRequestActive) throw new Error("❌ (setup) la demande de transfert devrait être active avant ce test.");
+  const realRandomMulti = Math.random;
+  Math.random = () => 0;
+  let multiDiscussRes;
+  try {
+    multiDiscussRes = actions.discussTransferRequest(multiTeam, multiTeamIndex, multiLeague, { playerId: multiTransferPlayer.id }, T0);
+  } finally {
+    Math.random = realRandomMulti;
+  }
+  if (!multiDiscussRes.ok || !multiDiscussRes.success) throw new Error(`❌ discussTransferRequest à un teamIndex non nul devrait s'appliquer à CETTE équipe et réussir avec Math.random stubbé à 0 : ${JSON.stringify(multiDiscussRes)}`);
+  if (multiTransferPlayer.transferRequestActive) throw new Error("❌ discussTransferRequest à un teamIndex non nul devrait bien refermer la demande sur CETTE équipe.");
+  console.log("✅ discussTransferRequest fonctionne correctement pour un teamIndex non nul (1).");
 }
 
-console.log("\n✅ Actions du manager (server/actions.js) vérifiées : feuille de match, tactiques, entraînement, marché, salle, prix des billets, boutique des supporters, recruteur, Centre de formation, académie de jeunes et Médias (interviews d'après-match) : préparables à l'avance, validées avant application, et correctement scopées à un teamIndex explicite (0 comme non nul, voir la ligue multi-manager).");
+console.log("\n✅ Actions du manager (server/actions.js) vérifiées : feuille de match, tactiques, entraînement, marché, salle, prix des billets, boutique des supporters, recruteur, Centre de formation, académie de jeunes et Médias (interviews d'après-match, demandes de transfert) : préparables à l'avance, validées avant application, et correctement scopées à un teamIndex explicite (0 comme non nul, voir la ligue multi-manager).");

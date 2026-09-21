@@ -249,10 +249,11 @@
   .interview-modal-box{max-width:480px;}
   .interview-modal-box h3{margin-bottom:4px;}
   .interview-modal-intro{color:var(--ink-dim); font-size:13px; margin:0 0 14px;}
-  .interview-modal-qa{margin-bottom:12px;}
+  .interview-modal-qa{margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--line);}
+  .interview-modal-qa:last-of-type{border-bottom:none; padding-bottom:0;}
   .interview-modal-question{font-weight:800; font-size:13px; margin:0 0 4px; color:var(--ink);}
   .interview-modal-answer{margin:0; font-size:13px; color:var(--ink-dim); font-style:italic;}
-  .interview-modal-tones{display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 4px;}
+  .interview-modal-tones{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 0;}
   .interview-modal-tone-btn{padding:6px 12px; font-size:13px;}
   .interview-modal-tone-btn.active{border-color:var(--amber); color:var(--ink); background:rgba(240,162,60,.15); font-weight:800;}
   .interview-modal-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;}
@@ -557,6 +558,13 @@
   .season-division-outcome.relegated{color:var(--danger); background:rgba(226,105,79,.12);}
   .season-division-outcome.stay{color:var(--ink-dim); background:var(--panel-2);}
   .season-bonus{text-align:center; font-size:15px; font-weight:700; color:var(--amber); margin:-8px 0 18px;}
+  /* Verdict de l'objectif de saison du conseil d'administration (voir
+     seasonObjectiveVerdict/SEASON_OBJECTIVE_TIERS) : même patron que
+     .season-division-outcome ci-dessus. */
+  .season-objective-verdict{text-align:center; font-size:14px; font-weight:600; margin:6px 0 18px; padding:10px; border-radius:var(--radius);}
+  .season-objective-verdict.missed{color:var(--danger); background:rgba(226,105,79,.12);}
+  .season-objective-verdict.met{color:var(--ink-dim); background:var(--panel-2);}
+  .season-objective-verdict.exceeded{color:var(--ok); background:rgba(51,180,161,.12);}
   .deficit-banner{border-radius:var(--radius); padding:12px 16px; margin:0 0 16px; font-size:13.5px; line-height:1.5;}
   .deficit-banner.warn{background:rgba(226,105,79,.12); color:var(--danger); border:1px solid rgba(226,105,79,.3);}
   .deficit-banner.critical{background:rgba(226,105,79,.22); color:var(--danger); border:1px solid var(--danger); font-weight:700;}
@@ -579,17 +587,25 @@
   .condition-badge{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.02em; white-space:nowrap;}
   .condition-badge.cond-great{background:rgba(63,174,98,.16); color:var(--ok);}
   .condition-badge.cond-good{background:rgba(63,174,98,.10); color:var(--ok);}
-  .condition-badge.cond-mid{background:rgba(224,168,74,.18); color:var(--amber-ink,#8a5a00);}
+  .condition-badge.cond-mid{background:rgba(224,168,74,.18); color:var(--amber);}
   .condition-badge.cond-low{background:rgba(226,105,79,.14); color:var(--danger);}
   .condition-badge.cond-critical{background:rgba(226,105,79,.24); color:var(--danger); font-weight:800;}
   /* Motivation du joueur (Player.form, voir motivationBadgeHtml) : même
      habillage que .condition-badge ci-dessus (même langage visuel), sur la
      fiche joueur uniquement (retour utilisateur, 2026-09 : "La motivation du
-     joueur n'apparaît pas ?"). */
+     joueur n'apparaît pas ?"). Correctif 2026-09 (retour utilisateur : "dans
+     les motivations, rend ça un peu plus lisible") : le palier "mid" (ex.
+     "Neutre") utilisait par erreur --amber-ink (brun quasi noir, pensé pour
+     du texte SUR un bouton plein --amber, jamais sur ce fond sombre
+     translucide) — quasi illisible sur le thème sombre. --amber tout court,
+     comme les autres paliers utilisent déjà --ok/--danger en texte sur leur
+     propre fond translucide (même logique, cohérente cette fois). Même
+     correctif appliqué à .condition-badge.cond-mid ci-dessus et
+     .market-listed-badge plus bas, touchés par exactement le même bug. */
   .motivation-badge{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.02em; white-space:nowrap;}
   .motivation-badge.motiv-great{background:rgba(63,174,98,.16); color:var(--ok);}
   .motivation-badge.motiv-good{background:rgba(63,174,98,.10); color:var(--ok);}
-  .motivation-badge.motiv-mid{background:rgba(224,168,74,.18); color:var(--amber-ink,#8a5a00);}
+  .motivation-badge.motiv-mid{background:rgba(224,168,74,.18); color:var(--amber);}
   .motivation-badge.motiv-low{background:rgba(226,105,79,.14); color:var(--danger);}
   .motivation-badge.motiv-critical{background:rgba(226,105,79,.24); color:var(--danger); font-weight:800;}
   /* Badge "Aux enchères" de la colonne Marché (onglet Effectif, voir
@@ -610,7 +626,7 @@
   .market-listed-badge{
     display:inline-block; padding:12px 18px; border-radius:999px; font-size:11px; font-weight:700;
     letter-spacing:.03em; text-transform:uppercase; border:1px solid transparent;
-    background:rgba(224,168,74,.18); color:var(--amber-ink,#8a5a00);
+    background:rgba(224,168,74,.18); color:var(--amber);
   }
   .sell-btn:hover{background:var(--danger); color:#fff;}
   .division-badge{text-align:center; font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); margin:-10px 0 4px;}
@@ -888,6 +904,11 @@
      déclarée après dans la feuille de style, elle gagne à spécificité égale. */
   table.roster-table tbody tr.injured{background:rgba(226,105,79,.12); color:var(--danger);}
   .injury-cross{display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; margin-left:6px; border-radius:50%; background:var(--danger); color:#fff; font-size:11px; font-weight:800; line-height:1; cursor:help; vertical-align:middle;}
+  /* Demande de transfert (voir transferRequestBadgeHtml) : même gabarit que
+     .injury-cross ci-dessus, en ambre plutôt qu'en rouge (un avertissement,
+     pas une urgence). */
+  .transfer-request-badge{display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; margin-left:6px; border-radius:50%; background:var(--amber); color:#111; font-size:11px; font-weight:800; line-height:1; cursor:help; vertical-align:middle;}
+  .transfer-request-notice{padding:8px 10px; border-radius:8px; background:rgba(224,168,74,.12); border:1px solid rgba(224,168,74,.35); font-style:italic;}
   /* Évaluation : un petit carré par match parmi les 5 derniers (retour
      utilisateur, 2026-09 : "une petite évaluation sous forme de carré des 5
      derniers match [...] 1 petit carré ou rectangle par match"), du rouge
@@ -964,6 +985,31 @@
   .morale-gauge-fill{height:100%; border-radius:999px; transition:width .3s;}
   .eff-position{color:var(--amber); font-size:11px; font-weight:600;}
   .potential-tier{white-space:nowrap; font-size:12.5px; font-weight:600; color:var(--ink-dim);}
+
+  /* Alchimie d'équipe sur l'Effectif (retour utilisateur, 2026-09 : "voir le
+     niveau d'alchimie sur la page effectif [...] une petite jauge plus ou
+     moins remplie qui change de couleur") : même jauge que .morale-gauge
+     (réutilisée telle quelle, seuils/couleurs identiques via
+     moraleGaugeColor), en version compacte et plus étroite pour tenir sous
+     le titre plutôt que sur toute la largeur de la page. */
+  .roster-chemistry-gauge-wrap{max-width:320px; margin:10px 0 16px;}
+  .roster-chemistry-gauge-label{display:flex; justify-content:space-between; align-items:baseline; font-size:12px; color:var(--ink-dim); margin-bottom:4px;}
+  .roster-chemistry-gauge-label b{font-weight:800;}
+  .roster-chemistry-gauge{height:10px;}
+  /* Aperçu d'alchimie sur la page Ordres (voir #ordresChemistryGaugeWrap et
+     renderOrdresChemistryGauge) : même jauge compacte que ci-dessus, plus un
+     court avertissement quand la tactique actuellement sélectionnée diffère
+     du dernier match réellement joué. */
+  .ordres-chemistry-warning{font-size:11px; color:var(--amber); margin:6px 0 0;}
+  /* Retour utilisateur (2026-09, capture d'écran) : "centre la jauge par
+     rapport au rectangle en dessous avec les choix tactiques" : la jauge
+     compacte (.roster-chemistry-gauge-wrap, max-width 320px) restait collée
+     à gauche alors que le panneau tactique (#prepGrid) en dessous occupe
+     toute la largeur ; centrée horizontalement dans #prepSection pour
+     retomber au-dessus du milieu de ce panneau. Ne touche pas la jauge
+     jumelle de la page Effectif (#rosterChemistryGaugeFill), qui garde son
+     alignement à gauche sous le titre.*/
+  #ordresChemistryGaugeWrap{margin-left:auto; margin-right:auto;}
 
   /* ---- Entraînement ---- */
   .training-intro{font-size:13px; color:var(--ink-dim); line-height:1.5; margin:0 0 16px;}
@@ -1295,6 +1341,20 @@
     border-radius:var(--radius);
   }
   .training-config select{margin-bottom:10px;}
+  /* Retour utilisateur (2026-09) : "il faudrait trouver un nom sympa pour
+     cet entrainement" (l'entraînement individuel existant) puis "je
+     souhaite mettre en place maintenant l'entrainement collectif" : les 2
+     panneaux .training-config (individuel/collectif) ont désormais chacun
+     un petit titre pour les distinguer clairement l'un de l'autre. */
+  .training-config-title{font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-dim); margin:0 0 10px;}
+  .collective-training-config{margin-top:14px;}
+  /* Retour utilisateur (2026-09) : "il faut effectivement choisir ce qui est
+     bossé comme tactique si c'est ce qui est choisi" : sous-panneau affiché
+     uniquement quand l'entraînement collectif = "tactique" (voir
+     renderTrainedTacticsPicker), même gabarit visuel que les réglages
+     tactiques de la page Ordres (.tactic-grid/.tactic-chip réutilisés). */
+  .trained-tactics-picker{margin-top:10px; padding-top:10px; border-top:1px solid var(--line-soft);}
+  .trained-tactics-picker select{margin-bottom:10px;}
   .training-dilution-note{font-size:12px; color:var(--ink-dim); margin-top:2px;}
   .training-dilution-note b{color:var(--amber);}
   .training-list{
@@ -1618,6 +1678,21 @@
          selectOrdresRound). -->
     <p class="ordres-round-datetime" id="ordresRoundDateTime"></p>
     <div class="ordres-round-selector hidden" id="ordresRoundSelector"></div>
+    <!-- Retour utilisateur (2026-09) : "ajoute une petite jauge de l'alchimie
+         sur la page ordre (en dessous du menu déroulant) en faisant évoluer
+         la jauge si la tactique est trop changée" : même jauge compacte que
+         la page Effectif (#rosterChemistryGaugeFill), mais avec un aperçu EN
+         DIRECT de l'impact d'un changement de tactique par rapport au
+         dernier match réellement joué (voir Team.checkTacticsChemistry côté
+         moteur, et renderOrdresChemistryGauge plus bas) : ce malus ne
+         s'applique réellement qu'au prochain match simulé, jamais pendant la
+         simple préparation ici, donc teamA.chemistry n'est JAMAIS modifiée
+         par ce composant, seul l'aperçu affiché en tient compte. -->
+    <div class="roster-chemistry-gauge-wrap" id="ordresChemistryGaugeWrap">
+      <div class="roster-chemistry-gauge-label"><span>Alchimie d'équipe</span><b id="ordresChemistryValue"></b></div>
+      <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresChemistryGaugeFill"></div></div>
+      <p class="ordres-chemistry-warning hidden" id="ordresChemistryWarning"></p>
+    </div>
     <!-- Retour utilisateur (2026-09) : "page ordre enleve ce texte :
          Préparation à l'avance, [...] Ces ordres seront appliqués
          automatiquement au moment de ce match [...]" : ce bandeau
@@ -1772,14 +1847,39 @@
       <div id="lastTrainingReportHolder"></div>
 
       <div class="training-config">
+        <h3 class="training-config-title">Entraînement individuel</h3>
         <div class="field-label">Compétence entraînée cette semaine</div>
         <select id="trainingSkillSelect"></select>
         <div class="field-label">Postes concernés</div>
         <select id="trainingPositionsSelect"></select>
         <div class="training-dilution-note" id="trainingDilutionNote"></div>
       </div>
+      <!-- Retour utilisateur (2026-09) : "en dessous les joueurs (en ne
+           mettant que les joueurs qui ont pris du temps de jeu et qui
+           seront entrainés [...] et ensuite tu mets l'entrainement
+           collectif" : ordre voulu = individuel, puis la liste des joueurs
+           entraînés, puis l'entraînement collectif tout en bas (voir
+           renderTrainingList pour le filtre "au moins 1min de jeu sur le
+           poste entraîné"). -->
       <div id="trainingSummary"></div>
       <div class="training-list" id="trainingList"></div>
+      <!-- Retour utilisateur (2026-09) : "je souhaite mettre en place
+           maintenant l'entrainement collectif [...] soit bosser une
+           nouvelle tactique [...] soit bosser la récupération" : réglage
+           SÉPARÉ de l'entraînement individuel ci-dessus (voir Team.
+           collectiveTraining), les deux tournent en même temps. -->
+      <div class="training-config collective-training-config" id="collectiveTrainingConfig">
+        <h3 class="training-config-title">Entraînement collectif</h3>
+        <div class="field-label">Focus collectif cette semaine</div>
+        <select id="collectiveTrainingSelect"></select>
+        <div class="training-dilution-note" id="collectiveTrainingNote"></div>
+        <!-- Retour utilisateur (2026-09) : "il faut effectivement choisir ce
+             qui est bossé comme tactique si c'est ce qui est choisi (exemple
+             zone extérieure)" : sous-panneau affiché UNIQUEMENT quand
+             collectiveTraining === "tactique" (voir
+             renderTrainedTacticsPicker), écrit dans Team.trainedTactics. -->
+        <div id="trainedTacticsPicker" class="trained-tactics-picker hidden"></div>
+      </div>
     </div>
   </div>
 
@@ -2014,6 +2114,15 @@
   <div id="effectifSection" class="hidden">
     <div class="section">
       <h2>Effectif</h2>
+      <!-- Alchimie d'équipe (retour utilisateur, 2026-09 : "voir le niveau
+           d'alchimie sur la page effectif [...] juste en dessous ou à côté
+           du titre avec une petite jauge") : voir renderEffectifSection pour
+           le remplissage (largeur + couleur), même mécanique que la jauge de
+           l'onglet Humeur des supporters (#moraleGaugeFill). -->
+      <div class="roster-chemistry-gauge-wrap">
+        <div class="roster-chemistry-gauge-label"><span>Alchimie d'équipe</span><b id="rosterChemistryValue"></b></div>
+        <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="rosterChemistryGaugeFill"></div></div>
+      </div>
       <div id="rosterContent"></div>
     </div>
   </div>
@@ -2077,6 +2186,11 @@
           <div class="big" id="moraleForgivenessEffect"></div>
           <div class="sub">Marge avant que le prix du billet ne commence à faire fuir du monde.</div>
         </div>
+        <div class="stat-card">
+          <h3>Objectif du conseil d'administration</h3>
+          <div class="big" id="seasonObjectiveValue"></div>
+          <div class="sub">Fixé en début de saison d'après le niveau des équipes du championnat. Un objectif manqué à l'issue de la saison coûte cher en humeur des supporters, le dépasser en rapporte.</div>
+        </div>
       </div>
       <h3 class="field-label">Événements récents</h3>
       <div id="moraleHistoryContent"></div>
@@ -2138,7 +2252,7 @@
       <div class="guide-entry">
         <h3>Forme physique, motivation, évaluation et blessures</h3>
         <p class="training-intro"><b>Forme physique</b> (colonne <b>Forme</b> de l'Effectif, et sur chaque fiche joueur) : un état sur 5 paliers, du plus frais au plus fatigué : Pas de fatigue (90-100, aucun malus), Légèrement fatigué (75-89, malus quasi nul), Fatigué (60-74, petit malus), Très fatigué (40-59, gros malus) et Épuisé (0-39, gros malus et risque de blessure nettement accru). Elle baisse après chaque match selon le temps de jeu (environ -3 pour 5 minutes jouées, jusqu'à environ -25 pour 40 minutes) et remonte de 15 points par jour de repos sans match, plafonnée à 100. Totalement indépendante de l'entraînement : s'entraîner ne la fait pas baisser, et une forme basse ne bloque aucune séance.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Motivation</b> (colonne <b>Motivation</b> de l'Effectif, et sur la fiche de votre propre joueur) : la confiance du joueur, alimentée par vos interviews d'après-match (onglet <b>Humeur des supporters</b>) plutôt que par la fatigue. Un ton Agressif en interview rapporte gros en cas de victoire mais coûte cher en cas de défaite ; un ton Humble rapporte moins mais amortit mieux les défaites.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Motivation</b> (colonne <b>Motivation</b> de l'Effectif, et sur la fiche de votre propre joueur) : la confiance du joueur, jamais liée à la fatigue. Alimentée par vos interviews, mais plus après chaque match : elles ne se déclenchent plus qu'à cinq moments clés de la saison (onglet <b>Humeur des supporters</b>) : début de saison, mi-saison, fin de saison régulière, demi-finale puis finale des play-offs. Chaque interview pose deux vraies questions, avec un ton à choisir pour chacune parmi Agressif, Mesuré ou Humble : Agressif amplifie le résultat (meilleur gain en cas de victoire, pire perte en cas de défaite), Mesuré reste un effet sûr et modéré, Humble plafonne le gain en cas de victoire mais est le seul ton qui tourne une défaite en effet net positif. Toute l'équipe voit sa motivation évoluer, pas seulement les joueurs ayant disputé le dernier match : une interview de jalon porte sur toute une période de la saison, elle est entendue par l'ensemble de l'effectif. Ignorer l'interview (possible pendant 3 jours réels avant qu'elle n'expire) n'a aucun effet. Le temps de jeu compte aussi : un remplaçant qui ne joue quasiment jamais perd un peu de motivation chaque semaine, nettement plus s'il note mieux que le titulaire actuellement aligné à son poste (il "mériterait" clairement de jouer), un titulaire ou un joueur blessé n'étant eux jamais concernés.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Évaluation</b> (colonne <b>Évaluation</b> de l'Effectif) : un petit carré par match parmi les 5 derniers joués, du rouge (mauvais match) au vert (excellent match), calculé sur la performance réelle du joueur (points, rebonds, passes, interceptions et contres, moins les tirs manqués, pertes de balle et fautes). Survolez un carré pour voir le score exact et la journée concernée. Un joueur qui n'a pas encore disputé 5 matchs affiche des cases vides pour les matchs manquants.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Blessures</b> : rares (l'écrasante majorité des matchs se jouent sans aucune blessure), mais nettement plus probables pour un joueur fatigué ou en petite forme physique qu'un joueur frais. Un joueur blessé quitte immédiatement le terrain pour le reste du match en cours, mais aussi pour tous les matchs suivants tant qu'il n'est pas rétabli : la blessure dure de quelques jours réels (une simple contusion) à plusieurs semaines (une blessure au genou), selon sa gravité. Sur l'Effectif, un joueur actuellement blessé apparaît avec une petite croix rouge devant son nom et toute sa ligne teintée de rouge ; survolez la croix pour voir le type de blessure et le nombre de jours restants avant son retour. Un titulaire encore blessé au moment d'un match est automatiquement remplacé par son remplaçant désigné (ou laisse l'équipe jouer en infériorité si aucun n'est disponible). La Salle de musculation (onglet <b>Salle</b>) réduit le risque qu'une blessure survienne, mais pas sa durée une fois qu'elle a eu lieu.</p>
       </div>
@@ -2157,7 +2271,7 @@
 
       <div class="guide-entry">
         <h3>Entraînement</h3>
-        <p class="training-intro" id="guideTrainingIntro"></p>
+        <div id="guideTrainingIntro"></div>
       </div>
 
       <div class="guide-entry">
@@ -2183,6 +2297,12 @@
       <div class="guide-entry">
         <h3>Ligue</h3>
         <p class="training-intro">Le classement se départage par victoires puis par différence de points marqués/encaissés. Sous le classement, un panneau récapitule le MVP de la dernière journée jouée et les meilleurs de la ligue dans plusieurs catégories statistiques (points, rebonds, passes, interceptions, contres, évaluation globale), toutes équipes confondues. Cliquez sur le nom de n'importe quel joueur, ici comme dans l'Effectif ou le scoutisme, pour ouvrir sa fiche : caractéristiques, moyennes de la saison et détail match par match.</p>
+      </div>
+
+      <div class="guide-entry">
+        <h3>Humeur des supporters</h3>
+        <p class="training-intro">L'humeur des supporters (onglet dédié) influence le remplissage de base de votre salle et la tolérance au prix du billet. Elle évolue avec vos résultats en match et vos choix de ton lors des interviews de jalon (voir <b>Motivation</b> plus haut, le même mécanisme fait bouger les deux à la fois).</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Objectif de saison</b> : en début de saison, le conseil d'administration fixe un objectif de classement (Maintien, Milieu de tableau, Qualification en play-offs, Finale des play-offs ou Titre de champion), d'autant plus ambitieux que votre effectif est fort par rapport aux 9 autres équipes du championnat. Le verdict tombe à l'issue de la saison, une fois la saison régulière, le barrage de relégation et les play-offs entièrement joués : le dépasser (par exemple atteindre le titre alors que seul le maintien était demandé) réjouit les supporters, le manquer (terminer relégué alors qu'une finale était espérée) les agace, d'autant plus fort que l'écart entre l'objectif et le résultat réel est grand. Retrouvez l'objectif en cours sur l'onglet <b>Humeur des supporters</b>, et le verdict complet sur l'écran de fin de saison. Un signal intermédiaire, plus modeste, tombe aussi à la mi-saison : il compare votre classement provisoire du moment à l'objectif fixé, pour prévenir (ou rassurer) les supporters bien avant le verdict final.</p>
       </div>
 
       <div class="guide-entry">
@@ -2669,6 +2789,15 @@ function attendanceFactorForSeconds(seconds) {
   return clamp(seconds / TRAINING_FULL_MATCH_SECONDS, 0, 1);
 }
 
+// Retour utilisateur (2026-09) : "il faut que la motivation soit aussi
+// impactée par le temps de jeu, un joueur qui cire le banc doit être
+// malheureux (surtout si c'est censé etre un titu dans l'équipe où il est)",
+// voir le grand commentaire d'engine.js sur ces mêmes constantes
+// (Team.applyBenchFrustration).
+const BENCH_FRUSTRATION_MAX_SECONDS = TRAINING_FULL_MATCH_SECONDS * 0.25; // ~7.5 min cumulées
+const BENCH_FRUSTRATION_BASE_MALUS = 0.6; // points de Player.form perdus par semaine
+const BENCH_FRUSTRATION_DESERVING_MULT = 3; // multiplicateur si meilleur que le titulaire à son poste
+
 // ---------------------------------------------------------------------
 // Entraînement à la BuzzerBeater : à la manière du vrai jeu, l'entraînement
 // n'est PAS choisi joueur par joueur. Le club choisit UNE compétence pour la
@@ -2798,6 +2927,11 @@ const TRAINING_PROGRAMS = {
   agility:    makeTrainingProgram("Agilité", ["agility"]),
   defOutside: makeTrainingProgram("Défense extérieure", ["defOutside"]),
   defInside:  makeTrainingProgram("Défense intérieure", ["defInside"]),
+  // Retour utilisateur (2026-09) : "Ajoute les entrainements lancer franc et
+  // endurance", les deux caractéristiques existaient déjà dans ATTRS mais
+  // n'étaient pas encore entraînables via un programme dédié.
+  freeThrow:  makeTrainingProgram("Lancer franc", ["freeThrow"]),
+  endurance:  makeTrainingProgram("Endurance", ["endurance"]),
   // -- Programmes composites (plusieurs caractéristiques liées, rendement
   // dilué par caractéristique — voir WEIGHT_BY_PROGRAM_SIZE) --
   outsideShot: makeTrainingProgram("Tir extérieur", ["midRange", "threePoint"]),
@@ -3423,10 +3557,14 @@ const MILESTONE_INTERVIEW_TYPES = {
 };
 
 // Vraies questions de journaliste (voir engine.js, miroir identique).
+// Correctif 2026-09 (retour utilisateur : "la première interview [...] ne
+// doit pas porter sur le resultat du premier match mais sur la saison à
+// venir (objectif, joueur sur qui on compte...)") : questions "debut-saison"
+// tournées vers l'avenir.
 const MILESTONE_INTERVIEW_QUESTIONS = {
   "debut-saison": [
-    "Comment abordez-vous cette nouvelle saison ?",
-    "Quels sont vos objectifs pour les mois à venir ?",
+    "Quels sont vos objectifs pour cette saison ?",
+    "Sur quel joueur comptez-vous particulièrement cette saison ?",
   ],
   "mi-saison": [
     "Quel bilan tirez-vous de cette première moitié de saison ?",
@@ -3450,8 +3588,10 @@ function midSeasonRound(totalRounds) {
   return Math.floor(totalRounds / 2);
 }
 
+// Correctif 2026-09 : la journée 0 ne déclenche plus rien ici, voir
+// engine.js pour le commentaire détaillé (interview "debut-saison" posée
+// avant le premier match désormais, voir Team.queueSeasonPreviewInterview).
 function milestoneTypeForRound(round, totalRounds) {
-  if (round === 0) return "debut-saison";
   if (round === midSeasonRound(totalRounds)) return "mi-saison";
   if (round === totalRounds - 1) return "fin-saison-reguliere";
   return null;
@@ -3465,36 +3605,41 @@ const MILESTONE_INTERVIEW_TONES = {
   "Humble":   { fanWin: 1.5, fanLoss: 3,  formWin: 1, formLoss: 2,  chemistryWin: 2,  chemistryLoss: 1 },
 };
 
+// Correctif 2026-09 : "debut-saison" est désormais mise en attente AVANT le
+// premier match (won toujours true, opponentName toujours null, {player}
+// remplacé au lieu de {opponent}), voir engine.js pour le commentaire
+// détaillé. Les entrées `loss` ne sont jamais lues, conservées identiques à
+// `win` pour la forme des données.
 const MILESTONE_INTERVIEW_QUOTES = {
   "debut-saison": {
     "Agressif": {
       win: [
-        "On lance la saison avec cette victoire contre {opponent}, et on ne compte surtout pas s'arrêter là.",
-        "L'objectif ne change pas d'un pouce : jouer les premiers rôles et viser le titre de division, rien de moins.",
+        "L'objectif est clair pour cette saison : on vise le haut de tableau, on ne se fixe aucune limite.",
+        "On compte énormément sur {player} pour tirer l'équipe vers le haut, c'est un joueur fait pour ce genre de responsabilités.",
       ],
       loss: [
-        "Cette défaite d'entrée face à {opponent} ne veut rien dire, on reste l'équipe à battre cette saison.",
-        "Nos objectifs restent exactement les mêmes qu'avant ce match : jouer le titre de division jusqu'au bout.",
+        "L'objectif est clair pour cette saison : on vise le haut de tableau, on ne se fixe aucune limite.",
+        "On compte énormément sur {player} pour tirer l'équipe vers le haut, c'est un joueur fait pour ce genre de responsabilités.",
       ],
     },
     "Mesuré": {
       win: [
-        "Une bonne entame de saison avec cette victoire contre {opponent}, il reste encore beaucoup de travail mais c'est encourageant.",
-        "L'objectif reste de construire une équipe solide match après match, sans se fixer de chiffre précis pour l'instant.",
+        "L'objectif est de construire une équipe solide et de rester compétitifs sur la durée de la saison, sans se fixer de chiffre précis pour l'instant.",
+        "{player} aura un rôle important cette saison, on compte sur sa régularité pour porter le collectif.",
       ],
       loss: [
-        "Cette défaite pour commencer la saison contre {opponent} ne doit pas être dramatisée, il reste toute la saison pour corriger le tir.",
-        "L'objectif reste inchangé : progresser semaine après semaine et être compétitifs sur la durée de la saison.",
+        "L'objectif est de construire une équipe solide et de rester compétitifs sur la durée de la saison, sans se fixer de chiffre précis pour l'instant.",
+        "{player} aura un rôle important cette saison, on compte sur sa régularité pour porter le collectif.",
       ],
     },
     "Humble": {
       win: [
-        "On prend cette victoire d'entrée contre {opponent} avec humilité, la saison ne fait que commencer et tout reste à prouver.",
-        "On ne se fixe pas d'objectif chiffré, on veut juste progresser ensemble, une victoire ne change rien à cette philosophie.",
+        "On ne se fixe pas d'objectif chiffré, l'idée est de progresser ensemble match après match, en restant les pieds sur terre.",
+        "Toute l'équipe devra apporter sa pierre à l'édifice, mais {player} aura un rôle important à jouer pour nous aider à progresser.",
       ],
       loss: [
-        "Cette défaite pour débuter la saison face à {opponent} nous remet les pieds sur terre, on va travailler dur pour la suite.",
-        "On garde les pieds sur terre, l'objectif reste de progresser ensemble match après match, sans pression particulière.",
+        "On ne se fixe pas d'objectif chiffré, l'idée est de progresser ensemble match après match, en restant les pieds sur terre.",
+        "Toute l'équipe devra apporter sa pierre à l'édifice, mais {player} aura un rôle important à jouer pour nous aider à progresser.",
       ],
     },
   },
@@ -3630,14 +3775,21 @@ const MILESTONE_INTERVIEW_QUOTES = {
 
 const MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS = 3 * 24 * 60 * 60 * 1000;
 
-// (voir engine.js, miroir identique)
-function interviewTranscriptFor(milestone, tone, won, opponentName) {
+// (voir engine.js, miroir identique) : `tones` soit un tableau (un ton par
+// question), soit une chaîne unique (compatibilité ascendante). `playerName`
+// remplace {player} (jalon "debut-saison"), `opponentName` remplace
+// {opponent} (les 4 autres jalons).
+function interviewTranscriptFor(milestone, tones, won, opponentName, playerName) {
   const questions = MILESTONE_INTERVIEW_QUESTIONS[milestone] || [];
-  const answers = ((MILESTONE_INTERVIEW_QUOTES[milestone] || {})[tone] || {})[won ? "win" : "loss"] || [];
-  return questions.map((question, i) => ({
-    question,
-    answer: (answers[i] || "").replace("{opponent}", opponentName),
-  }));
+  const toneList = Array.isArray(tones) ? tones : questions.map(() => tones);
+  return questions.map((question, i) => {
+    const tone = toneList[i] !== undefined ? toneList[i] : toneList[0];
+    const answers = ((MILESTONE_INTERVIEW_QUOTES[milestone] || {})[tone] || {})[won ? "win" : "loss"] || [];
+    let answer = answers[i] || "";
+    if (opponentName) answer = answer.replace("{opponent}", opponentName);
+    if (playerName) answer = answer.replace("{player}", playerName);
+    return { question, answer };
+  });
 }
 
 // Identité du club : logo et maillots (voir engine.js pour le commentaire
@@ -3816,11 +3968,16 @@ function conditionStateFor(condition) {
   return CONDITION_STATES.find(s => condition >= s.min) || CONDITION_STATES[CONDITION_STATES.length - 1];
 }
 const CONDITION_DAY_MS = 24 * 60 * 60 * 1000;
-const CONDITION_RECOVERY_PER_DAY = 15;
-function currentCondition(player, now = Date.now()) {
+// Retour utilisateur (2026-09, entraînement collectif) : base 10/jour
+// (au lieu de 15), remonte à CONDITION_RECOVERY_PER_DAY_TRAINED (15) pour un
+// club dont le focus collectif est "recuperation" (voir Team.
+// conditionRecoveryPerDay). Mirroir exact d'engine.js.
+const CONDITION_RECOVERY_PER_DAY = 10;
+const CONDITION_RECOVERY_PER_DAY_TRAINED = 15;
+function currentCondition(player, now = Date.now(), recoveryPerDay = CONDITION_RECOVERY_PER_DAY) {
   const daysRested = Math.floor((now - (player.conditionUpdatedAt || now)) / CONDITION_DAY_MS);
   if (daysRested <= 0) return player.condition;
-  return clamp(player.condition + daysRested * CONDITION_RECOVERY_PER_DAY, 0, 100);
+  return clamp(player.condition + daysRested * recoveryPerDay, 0, 100);
 }
 function conditionLossForMinutes(minutesPlayed) {
   if (minutesPlayed <= 0) return 0;
@@ -3837,6 +3994,28 @@ function motivationLabel(form) {
   if (form >= 45) return "Neutre";
   if (form >= 25) return "Peu motivé";
   return "Démotivé";
+}
+
+// Plancher de motivation neutre lors d'un vrai changement de club (voir
+// engine.js, miroir identique, grand commentaire au-dessus de
+// TRANSFER_NEW_CLUB_MOTIVATION_FLOOR).
+const TRANSFER_NEW_CLUB_MOTIVATION_FLOOR = 55;
+
+// Demande de transfert (voir engine.js, miroir identique, grand commentaire
+// au-dessus de TRANSFER_REQUEST_MOTIVATION_THRESHOLD).
+const TRANSFER_REQUEST_MOTIVATION_THRESHOLD = 20;
+const TRANSFER_REQUEST_WEEKS_THRESHOLD = 3;
+const TRANSFER_REQUEST_DISCUSS_BASE_CHANCE = 0.35;
+const TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS = 0.3;
+const TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST = 25;
+const TRANSFER_REQUEST_QUOTES = [
+  "\"Je ne me sens plus utile ici, il est temps d'envisager un nouveau projet\", confie {player} à la presse.",
+  "\"Ça fait des semaines que je suis sur le banc sans la moindre explication, je demande à partir\", lâche {player}.",
+  "\"J'ai besoin de retrouver du temps de jeu ailleurs\", déclare {player}, visiblement lassé de la situation.",
+  "\"Le club connaît ma position, je souhaite être transféré au plus vite\", affirme {player}.",
+];
+function transferRequestQuoteFor(playerName) {
+  return pick(TRANSFER_REQUEST_QUOTES).replace("{player}", playerName);
 }
 
 // Blessures : durée d'indisponibilité RÉELLE et PERSISTANTE (voir engine.js,
@@ -3983,6 +4162,12 @@ class Player {
     // zéro au passage de SAISON (voir Team.trainWeek), pas de semaine en
     // semaine : les stats affichées couvrent la saison EN COURS.
     this.matchLog = [];
+
+    // Demande de transfert (voir engine.js, miroir identique, grand
+    // commentaire au-dessus de TRANSFER_REQUEST_MOTIVATION_THRESHOLD).
+    this.weeksAtLowMotivation = 0;
+    this.transferRequestActive = false;
+    this.transferRequestQuote = null;
   }
 
   // Applique une semaine d'entraînement. `attrWeights` est une map
@@ -4085,10 +4270,12 @@ class Player {
       // de fga2/fgm2 pour les tirs en zone "inside" uniquement, ajout
       // strictement additif.
       paintAtt: 0, paintMade: 0,
+      // +/- : voir engine.js (miroir identique, MatchEngine.applyPlusMinusForPoints).
+      plusMinus: 0,
     };
   }
 
-  resetForMatch(now = Date.now()) {
+  resetForMatch(now = Date.now(), recoveryPerDay = CONDITION_RECOVERY_PER_DAY) {
     this.fatigue = 0;
     this.fouls = 0;
     this.disqualified = false;
@@ -4105,7 +4292,7 @@ class Player {
     // autres matchs du jour, jusqu'à ce que Team.trainWeek le consomme.
     this.stats = this.emptyStats();
     // Forme physique (voir engine.js, miroir identique).
-    this.matchCondition = currentCondition(this, now);
+    this.matchCondition = currentCondition(this, now, recoveryPerDay);
   }
 
   // Moyenne des 13 caractéristiques (voir le grand commentaire au-dessus
@@ -4153,9 +4340,60 @@ function planKey(round, competition) {
 // commentaire complet au-dessus de CHEMISTRY_ROSTER_CHANGE_MAX_RANK).
 const CHEMISTRY_ROSTER_CHANGE_MAX_RANK = 12;
 const CHEMISTRY_ROSTER_CHANGE_BASE = 8;
-const CHEMISTRY_TACTICS_CHANGE_PENALTY = 2;
+// Malus tactique PROPORTIONNEL (retour utilisateur, 2026-09, voir le grand
+// commentaire d'engine.js au-dessus de ces mêmes constantes) : 1 point par
+// priorité offensive changée (0 à 3, comparées en ensemble), la défense
+// pèse 2, le rythme 1, maximum cumulé 6 si tout change. Atténué CATÉGORIE
+// PAR CATÉGORIE quand la valeur réellement jouée correspond à Team.
+// trainedTactics (voir Team.collectiveTraining/tacticsChangePenalty),
+// d'autant plus fort qu'il y a de jours de repos banqués (voir
+// CHEMISTRY_TACTICS_TRAINED_FACTOR ci-dessous/daysTrainedForTarget).
+const CHEMISTRY_TACTICS_OFFENSE_PENALTY = 1;
+const CHEMISTRY_TACTICS_DEFENSE_PENALTY = 2;
+const CHEMISTRY_TACTICS_RHYTHM_PENALTY = 1;
+// Base de la puissance CHEMISTRY_TACTICS_TRAINED_FACTOR ** (jours banqués),
+// voir le grand commentaire d'engine.js au-dessus de cette même constante.
+const CHEMISTRY_TACTICS_TRAINED_FACTOR = 0.5;
 function chemistryRosterImportance(rank) {
   return clamp(1 - (rank - 1) / (CHEMISTRY_ROSTER_CHANGE_MAX_RANK - 1), 0, 1);
+}
+// Miroir exact de tacticsEqual côté engine.js.
+function tacticsEqual(a, b) {
+  if (!a || !b) return a === b;
+  if (a.defense !== b.defense || a.rhythm !== b.rhythm) return false;
+  if (a.offense.length !== b.offense.length) return false;
+  const setA = new Set(a.offense);
+  return b.offense.every(t => setA.has(t));
+}
+// Entier comparable identifiant un jour civil à Paris — miroir exact de
+// parisCalendarDayIndex côté engine.js (voir son grand commentaire).
+function parisCalendarDayIndex(ms) {
+  const p = parisLocalDateParts(ms);
+  return Date.UTC(p.year, p.month - 1, p.day);
+}
+// Malus BRUT entre deux instantanés tactiques {offense, defense, rhythm} :
+// fonction PURE, miroir exact de tacticsChangePenalty côté engine.js,
+// partagée par Team.checkTacticsChemistry et par l'aperçu en direct de la
+// page Ordres (renderOrdresChemistryGauge). `trained` : UN SEUL aspect
+// ({ category, value }), voir Team.trainedTactics.
+function tacticsChangePenalty(prev, current, trained, trainedFactor = CHEMISTRY_TACTICS_TRAINED_FACTOR) {
+  if (!prev) return 0;
+  const prevOffense = new Set(prev.offense);
+  let penalty = 0;
+  current.offense.forEach(t => {
+    if (prevOffense.has(t)) return;
+    const factor = trained && trained.category === "offense" && trained.value === t ? trainedFactor : 1;
+    penalty += CHEMISTRY_TACTICS_OFFENSE_PENALTY * factor;
+  });
+  if (prev.defense !== current.defense) {
+    const factor = trained && trained.category === "defense" && trained.value === current.defense ? trainedFactor : 1;
+    penalty += CHEMISTRY_TACTICS_DEFENSE_PENALTY * factor;
+  }
+  if (prev.rhythm !== current.rhythm) {
+    const factor = trained && trained.category === "rhythm" && trained.value === current.rhythm ? trainedFactor : 1;
+    penalty += CHEMISTRY_TACTICS_RHYTHM_PENALTY * factor;
+  }
+  return penalty;
 }
 function rosterRankOf(players, playerId) {
   const sorted = [...players].sort((a, b) => b.overall() - a.overall());
@@ -4254,8 +4492,36 @@ class Team {
     // le club, appliquée à un ensemble de postes (1 à 5). Ce n'est pas un
     // choix joueur par joueur : chaque joueur profite (ou pas) de la semaine
     // selon son propre poste et selon s'il a assez joué au dernier match.
-    this.trainingSkill = null;      // une clé de ATTRS, ou null = pas de focus cette semaine
+    // Retour utilisateur (2026-09) : "enleve l'entrainement aucune
+    // (entrainement général uniquement)" — plus d'option "pas de focus cette
+    // semaine" (voir populateTrainingSkillSelect/engine.js, miroir
+    // identique) : une compétence est TOUJOURS sélectionnée, "Lancer franc"
+    // (freeThrow) par défaut pour une toute nouvelle équipe.
+    this.trainingSkill = "freeThrow"; // une clé de TRAINING_PROGRAMS, jamais null
     this.trainingPositions = [];    // 1, 2, 3 ou 5 postes parmi POSITIONS
+
+    // Entraînement collectif (retour utilisateur, 2026-09, voir engine.js) :
+    // SÉPARÉ de trainingSkill ci-dessus, les deux tournent en même temps.
+    // null | "tactique" | "recuperation".
+    this.collectiveTraining = null;
+    // Tactique précisément travaillée à l'entraînement (voir engine.js,
+    // miroir identique) : pertinent UNIQUEMENT si collectiveTraining ===
+    // "tactique". UN SEUL aspect (retour utilisateur, 2026-09 : "un seul
+    // aspect et pas tous les aspects") : null | { category: "offense" |
+    // "defense" | "rhythm", value: string }.
+    this.trainedTactics = null;
+    // Historique quotidien de l'entraînement collectif DEPUIS LE DERNIER
+    // MATCH (voir engine.js, miroir identique) : [{ dayIndex,
+    // collectiveTraining, trainedTactics }], reconduit automatiquement d'un
+    // jour à l'autre, jamais effacé par un jour "récupération" intercalé.
+    this.collectiveTrainingLog = [];
+    // Jour civil (voir parisCalendarDayIndex) du DERNIER match réellement
+    // joué (voir engine.js, miroir identique) : `null` tant qu'aucun match
+    // n'a encore été joué.
+    this.tacticsCycleStartDayIndex = null;
+    // Identité tactique "établie" (voir engine.js, miroir identique) :
+    // n'avance que quand une même tactique est jouée 2 fois DE SUITE.
+    this.establishedTacticsSnapshot = null;
 
     // Staff : l'entraîneur n'a d'effet QUE sur la vitesse d'entraînement
     // (jamais sur les matchs). Pas d'entraîneur par défaut.
@@ -4406,6 +4672,11 @@ class Team {
     this.fanMorale = 50;
     this.moraleHistory = [];
 
+    // Objectif de saison du conseil d'administration (voir engine.js,
+    // miroir identique, grand commentaire au-dessus de
+    // SEASON_OBJECTIVE_TIERS).
+    this.seasonObjective = null;
+
     // Alchimie d'équipe (voir engine.js, miroir identique).
     this.chemistry = 50;
     this.lastTacticsSnapshotForChemistry = null;
@@ -4534,33 +4805,73 @@ class Team {
   // identique) : construit aussi le transcript complet {question, answer}[]
   // (voir interviewTranscriptFor/MILESTONE_INTERVIEW_QUESTIONS plus haut),
   // affiché sur la page "Aperçu" à la place du delta, et applique un delta à
-  // Player.form pour chaque joueur de `entry.playerIds`.
-  resolveInterview(id, tone, now = Date.now()) {
+  // Player.form pour TOUT L'EFFECTIF (correctif 2026-09, retour
+  // utilisateur : "tous les joueurs doivent être impactés par les
+  // interviews, les interviews sont sur des périodes de la saison et pas
+  // uniquement un match", pas seulement `entry.playerIds`, qui ne sert plus
+  // qu'à savoir qui a réellement joué le match ayant déclenché le jalon).
+  // `tones` : tableau (un ton par question) ou chaîne unique (compatibilité ascendante),
+  // moyenné sur les tons choisis (voir engine.js pour le commentaire
+  // détaillé). `entry.opponentName` peut être `null` ("debut-saison"
+  // d'avant-saison, voir queueSeasonPreviewInterview).
+  resolveInterview(id, tones, now = Date.now()) {
     this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
     const idx = this.pendingInterviews.findIndex(i => i.id === id);
     if (idx === -1) return null;
     const entry = this.pendingInterviews[idx];
     if (!entry.milestone) { this.pendingInterviews.splice(idx, 1); return null; }
-    const resultLabel = entry.won ? "la victoire" : "la défaite";
-    const toneCfg = MILESTONE_INTERVIEW_TONES[tone];
-    if (!toneCfg) return null;
-    const fanDelta = entry.won ? toneCfg.fanWin : toneCfg.fanLoss;
-    const formDelta = entry.won ? toneCfg.formWin : toneCfg.formLoss;
+    const questionCount = (MILESTONE_INTERVIEW_QUESTIONS[entry.milestone] || []).length || 2;
+    const toneList = Array.isArray(tones) ? tones : Array(questionCount).fill(tones);
+    if (!toneList.length || toneList.some(t => !MILESTONE_INTERVIEW_TONES[t])) return null;
+    const toneConfigs = toneList.map(t => MILESTONE_INTERVIEW_TONES[t]);
+    const avgOf = key => toneConfigs.reduce((sum, cfg) => sum + cfg[key], 0) / toneConfigs.length;
+    const fanDelta = avgOf(entry.won ? "fanWin" : "fanLoss");
+    const formDelta = avgOf(entry.won ? "formWin" : "formLoss");
     // Alchimie d'équipe (voir engine.js, miroir identique).
-    const chemistryDelta = entry.won ? toneCfg.chemistryWin : toneCfg.chemistryLoss;
+    const chemistryDelta = avgOf(entry.won ? "chemistryWin" : "chemistryLoss");
     const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
     const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
-    const quotes = interviewTranscriptFor(entry.milestone, tone, entry.won, entry.opponentName);
+    const quotes = interviewTranscriptFor(entry.milestone, toneList, entry.won, entry.opponentName, entry.playerName);
     const quote = quotes.map(q => q.answer).filter(Boolean).join(" ");
-    this.recordMoraleEvent(`${milestoneLabel} (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, fanDelta, { quote, quotes, milestone: entry.milestone });
-    (entry.playerIds || []).forEach(pid => {
-      const p = this.players.find(pl => pl.id === pid);
-      if (p) p.form = clamp(Math.round(p.form + formDelta), 1, 100);
-    });
+    const toneLabel = toneList.every(t => t === toneList[0]) ? toneList[0].toLowerCase() : toneList.map(t => t.toLowerCase()).join("/");
+    const label = entry.opponentName
+      ? `${milestoneLabel} (ton ${toneLabel}) après ${entry.won ? "la victoire" : "la défaite"} contre ${entry.opponentName}`
+      : `${milestoneLabel} (ton ${toneLabel})`;
+    this.recordMoraleEvent(label, fanDelta, { quote, quotes, milestone: entry.milestone });
+    // TOUT l'effectif (pas seulement entry.playerIds, voir le commentaire de
+    // cette méthode plus haut) : une interview de jalon porte sur toute une
+    // période de la saison, jamais sur le seul match qui l'a déclenchée.
+    this.players.forEach(p => { p.form = clamp(Math.round(p.form + formDelta), 1, 100); });
     this.applyChemistryDelta(chemistryDelta);
     this.pendingInterviews.splice(idx, 1);
     return { ok: true, delta: fanDelta, formDelta, chemistryDelta, quotes };
+  }
+
+  // Interview d'avant-saison (voir engine.js, miroir identique, correctif
+  // 2026-09 : "la première interview doit pouvoir se faire avant le début de
+  // saison [...] joueur sur qui on compte") : mise en attente dès la
+  // création de la ligue (voir buildLeagueWithHumanTeams plus bas), `won`
+  // toujours true, `opponentName` toujours null, `playerName` = le joueur le
+  // mieux noté de l'effectif à son poste.
+  queueSeasonPreviewInterview(now = Date.now()) {
+    this.pruneExpiredInterviews(now);
+    this.pendingInterviews = this.pendingInterviews || [];
+    if (!this.players.length) return null;
+    let keyPlayer = this.players[0];
+    let bestRating = -Infinity;
+    this.players.forEach(p => {
+      const rating = weightedRatingForPosition(p.attrs, p.position);
+      if (rating > bestRating) { bestRating = rating; keyPlayer = p; }
+    });
+    const entry = {
+      id: uid(), round: null, opponentName: null, won: true, scoreDiff: null, at: now,
+      milestone: "debut-saison",
+      playerIds: this.players.map(p => p.id),
+      playerName: keyPlayer.name,
+    };
+    this.pendingInterviews.push(entry);
+    return entry;
   }
 
   // Voir engine.js, miroir identique (alchimie d'équipe).
@@ -4572,20 +4883,80 @@ class Team {
     return 0.94 + (this.chemistry / 100) * 0.12;
   }
 
-  checkTacticsChemistry() {
+  // Historique quotidien de l'entraînement collectif — voir engine.js,
+  // miroir identique (Team.syncCollectiveTrainingLog) pour le grand
+  // commentaire complet.
+  syncCollectiveTrainingLog(now = Date.now()) {
+    const todayIndex = parisCalendarDayIndex(now);
+    if (!Array.isArray(this.collectiveTrainingLog)) this.collectiveTrainingLog = [];
+    const log = this.collectiveTrainingLog;
+    const snapshotEntry = (dayIndex, collectiveTraining, trainedTactics) => ({
+      dayIndex,
+      collectiveTraining,
+      trainedTactics: trainedTactics ? { category: trainedTactics.category, value: trainedTactics.value } : null,
+    });
+    const last = log.length ? log[log.length - 1] : null;
+    if (last && last.dayIndex === todayIndex) {
+      log[log.length - 1] = snapshotEntry(todayIndex, this.collectiveTraining, this.trainedTactics);
+    } else {
+      if (last) {
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        for (let cursor = last.dayIndex + ONE_DAY_MS; cursor < todayIndex; cursor += ONE_DAY_MS) {
+          log.push(snapshotEntry(cursor, last.collectiveTraining, last.trainedTactics));
+        }
+      }
+      log.push(snapshotEntry(todayIndex, this.collectiveTraining, this.trainedTactics));
+    }
+    if (this.tacticsCycleStartDayIndex != null) {
+      this.collectiveTrainingLog = this.collectiveTrainingLog.filter(e => e.dayIndex > this.tacticsCycleStartDayIndex);
+    }
+  }
+
+  // Voir engine.js, miroir identique (Team.daysTrainedForTarget).
+  daysTrainedForTarget(target) {
+    if (!target || !Array.isArray(this.collectiveTrainingLog)) return 0;
+    const cycleStart = this.tacticsCycleStartDayIndex;
+    return this.collectiveTrainingLog.filter(e => {
+      if (cycleStart != null && e.dayIndex <= cycleStart) return false;
+      return e.collectiveTraining === "tactique" && e.trainedTactics
+        && e.trainedTactics.category === target.category && e.trainedTactics.value === target.value;
+    }).length;
+  }
+
+  // Voir engine.js, miroir identique (Team.checkTacticsChemistry) pour le
+  // grand commentaire complet (référence de cohésion = identité établie ou
+  // dernier match joué, atténuation composée selon les jours banqués).
+  checkTacticsChemistry(now = Date.now()) {
     const current = {
       offense: [...this.offensivePriorities],
       defense: this.defense,
       rhythm: this.rhythm,
     };
-    const prev = this.lastTacticsSnapshotForChemistry;
-    if (prev) {
-      const changed = prev.defense !== current.defense
-        || prev.rhythm !== current.rhythm
-        || prev.offense.join("|") !== current.offense.join("|");
-      if (changed) this.applyChemistryDelta(-CHEMISTRY_TACTICS_CHANGE_PENALTY);
+    const lastPlayed = this.lastTacticsSnapshotForChemistry;
+    const established = this.establishedTacticsSnapshot;
+    let referenceForPenalty = lastPlayed;
+    if (established && tacticsEqual(current, established) && !tacticsEqual(current, lastPlayed)) {
+      referenceForPenalty = established;
+    }
+
+    const target = this.trainedTactics;
+    const daysTrained = target ? this.daysTrainedForTarget(target) : 0;
+    const trainedFactor = Math.pow(CHEMISTRY_TACTICS_TRAINED_FACTOR, daysTrained);
+    const penalty = tacticsChangePenalty(referenceForPenalty, current, target, trainedFactor);
+    if (penalty > 0) this.applyChemistryDelta(-penalty);
+
+    if (!established || tacticsEqual(current, lastPlayed)) {
+      this.establishedTacticsSnapshot = current;
     }
     this.lastTacticsSnapshotForChemistry = current;
+    this.tacticsCycleStartDayIndex = parisCalendarDayIndex(now);
+  }
+
+  // Taux de récupération de forme physique quotidien (voir engine.js, miroir
+  // identique) : CONDITION_RECOVERY_PER_DAY_TRAINED si collectiveTraining
+  // === "recuperation", sinon CONDITION_RECOVERY_PER_DAY.
+  conditionRecoveryPerDay() {
+    return this.collectiveTraining === "recuperation" ? CONDITION_RECOVERY_PER_DAY_TRAINED : CONDITION_RECOVERY_PER_DAY;
   }
 
   // Ignore une interview en attente (voir engine.js, miroir identique).
@@ -4686,6 +5057,16 @@ class Team {
   // tutoriel comme en le passant (voir tourEndTour plus bas).
   markOnboardingTourCompleted() {
     this.onboardingTourCompleted = true;
+    return { ok: true };
+  }
+
+  // Réinitialise UNIQUEMENT ce drapeau (voir engine.js, miroir identique,
+  // pour le commentaire détaillé) : jamais appelé côté client (aucun bouton
+  // joueur), seulement par la route admin /api/admin/reset-onboarding-tour
+  // côté serveur - mirroré ici uniquement pour respecter la convention
+  // engine.js/moteurbasket3.html du reste de la classe Team.
+  resetOnboardingTour() {
+    this.onboardingTourCompleted = false;
     return { ok: true };
   }
 
@@ -5174,12 +5555,80 @@ class Team {
   // Team ne connaît pas lui-même sa position dans la pyramide. Omis (ou
   // `null`/`undefined`) : aucun revenu de droits TV cette semaine-là (utile
   // pour un Team utilisé sans ligue, comme dans les tests directs du moteur).
+  // Voir le grand commentaire de BENCH_FRUSTRATION_MAX_SECONDS plus haut :
+  // érode Player.form pour tout non-titulaire n'ayant quasiment pas joué
+  // cette semaine, plus sévèrement s'il note mieux que le titulaire
+  // actuellement aligné à son poste. Appelée par trainWeek ci-dessous, mais
+  // gardée comme méthode séparée pour rester testable indépendamment.
+  applyBenchFrustration(now = Date.now()) {
+    const starters = (this.lineup && this.lineup.starters) || {};
+    const starterIds = new Set(Object.values(starters).filter(Boolean));
+    this.players.forEach(p => {
+      if (starterIds.has(p.id)) return; // titulaire : jamais concerné
+      if (isCurrentlyInjured(p, now)) return; // ne pas jouer n'est alors pas un choix
+      const secondsThisWeek = Object.values(p.trainingSecondsPlayedByPosition || {})
+        .reduce((sum, s) => sum + s, 0);
+      if (secondsThisWeek > BENCH_FRUSTRATION_MAX_SECONDS) return; // a quand même tourné un peu
+      const ownRating = weightedRatingForPosition(p.attrs, p.position);
+      const starterId = starters[p.position];
+      const starter = starterId ? this.players.find(x => x.id === starterId) : null;
+      const deservesToStart = !!starter && ownRating > weightedRatingForPosition(starter.attrs, p.position);
+      const malus = BENCH_FRUSTRATION_BASE_MALUS * (deservesToStart ? BENCH_FRUSTRATION_DESERVING_MULT : 1);
+      p.form = clamp(Math.round(p.form - malus), 1, 100);
+    });
+  }
+
+  // Demande de transfert (voir engine.js, miroir identique, grand
+  // commentaire au-dessus de TRANSFER_REQUEST_MOTIVATION_THRESHOLD).
+  updateTransferRequests(now = Date.now()) {
+    this.players.forEach(p => {
+      if (p.form <= TRANSFER_REQUEST_MOTIVATION_THRESHOLD) {
+        p.weeksAtLowMotivation = (p.weeksAtLowMotivation || 0) + 1;
+        if (!p.transferRequestActive && p.weeksAtLowMotivation >= TRANSFER_REQUEST_WEEKS_THRESHOLD) {
+          p.transferRequestActive = true;
+          p.transferRequestQuote = transferRequestQuoteFor(p.name);
+          this.recordMoraleEvent(`${p.name} demande son transfert dans la presse`, 0, { transferRequestPlayerId: p.id });
+        }
+      } else {
+        p.weeksAtLowMotivation = 0;
+        if (p.transferRequestActive) {
+          p.transferRequestActive = false;
+          p.transferRequestQuote = null;
+        }
+      }
+    });
+  }
+
+  // Action "discuter" du manager (voir engine.js, miroir identique).
+  discussTransferRequest(playerId, now = Date.now()) {
+    const p = this.players.find(pl => pl.id === playerId);
+    if (!p) return { ok: false, reason: "not-found" };
+    if (!p.transferRequestActive) return { ok: false, reason: "not-requesting" };
+    const chance = TRANSFER_REQUEST_DISCUSS_BASE_CHANCE + (p.attrs.mental / 100) * TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS;
+    const success = Math.random() < chance;
+    const formBefore = p.form;
+    if (success) {
+      p.form = clamp(Math.round(p.form + TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST), 1, 100);
+      p.weeksAtLowMotivation = 0;
+      p.transferRequestActive = false;
+      p.transferRequestQuote = null;
+      this.recordMoraleEvent(`Discussion réussie avec ${p.name}, la demande de transfert est retirée`, 0, { transferRequestPlayerId: p.id });
+    }
+    return { ok: true, success, formBefore, formAfter: p.form };
+  }
+
   trainWeek(divisionLevel, now) {
     const skill = this.trainingSkill; // clé de TRAINING_PROGRAMS, ou null
     const program = skill ? TRAINING_PROGRAMS[skill] : null;
     const dilution = this.trainingDilution();
     const trainerMult = this.trainerBonusMultiplier();
     const report = {};
+
+    // AVANT la remise à zéro de trainingSecondsPlayedByPosition ci-dessous
+    // (dans la boucle qui suit) : applyBenchFrustration a besoin du temps de
+    // jeu de CETTE semaine qui s'achève, pas de la semaine suivante.
+    this.applyBenchFrustration(now);
+    this.updateTransferRequests(now);
 
     this.players.forEach(p => {
       // Le focus se base sur le temps RÉELLEMENT joué aux poste(s) entraînés
@@ -5775,8 +6224,10 @@ class Team {
   resetForMatch(now = Date.now()) {
     // Alchimie d'équipe (voir engine.js, miroir identique).
     const chemistryFactor = this.chemistryFactor();
+    // Récupération de forme physique (voir engine.js, miroir identique).
+    const recoveryPerDay = this.conditionRecoveryPerDay();
     this.players.forEach(p => {
-      p.resetForMatch(now);
+      p.resetForMatch(now, recoveryPerDay);
       p.matchChemistryFactor = chemistryFactor;
     });
     POSITIONS.forEach(pos => {
@@ -6949,6 +7400,12 @@ class League {
     if (buyer.isHuman) buyer.recordTransaction(`Achat de ${player.name} (enchères)`, -amount);
     if (seller.isHuman) seller.recordTransaction(`Vente de ${player.name} (enchères)`, amount);
     buyer.players.push(player);
+    // Voir engine.js, miroir identique, grand commentaire au-dessus de
+    // TRANSFER_NEW_CLUB_MOTIVATION_FLOOR.
+    if (player.form < TRANSFER_NEW_CLUB_MOTIVATION_FLOOR) player.form = TRANSFER_NEW_CLUB_MOTIVATION_FLOOR;
+    player.weeksAtLowMotivation = 0;
+    player.transferRequestActive = false;
+    player.transferRequestQuote = null;
     if (!buyer.isHuman) buyer.autoAssignLineup();
     // Alchimie d'équipe (voir engine.js, miroir identique).
     const buyerImportance = chemistryRosterImportance(rosterRankOf(buyer.players, player.id));
@@ -7612,6 +8069,120 @@ function seasonEndBonusFor(outcome) {
   return null;
 }
 
+// Objectif de saison du conseil d'administration (voir engine.js, miroir
+// identique, grand commentaire au-dessus de SEASON_OBJECTIVE_TIERS).
+const SEASON_OBJECTIVE_TIERS = { "maintien": 1, "milieu-tableau": 2, "playoffs": 3, "finale": 4, "titre": 5 };
+const SEASON_OBJECTIVE_LABELS = {
+  "maintien": "Maintien",
+  "milieu-tableau": "Milieu de tableau",
+  "playoffs": "Qualification en play-offs",
+  "finale": "Finale des play-offs",
+  "titre": "Titre de champion",
+};
+const SEASON_ACHIEVEMENT_LABELS = {
+  0: "une relégation",
+  1: "un maintien tout juste assuré",
+  2: "une saison milieu de tableau",
+  3: "une élimination en demi-finale des play-offs",
+  4: "une finale des play-offs perdue",
+  5: "le titre de champion",
+};
+const SEASON_OBJECTIVE_MISS_MALUS_PER_TIER = 6;
+const SEASON_OBJECTIVE_EXCEED_BONUS_PER_TIER = 4;
+const SEASON_OBJECTIVE_MET_BONUS = 3;
+
+function assignSeasonObjectives(league) {
+  const tierKeysStrongToWeak = ["titre", "finale", "playoffs", "milieu-tableau", "maintien"];
+  const ranked = league.teams
+    .map((t, idx) => ({ idx, avg: t.averageOverall() }))
+    .sort((a, b) => b.avg - a.avg);
+  ranked.forEach((entry, rankIdx) => {
+    const tierIndex = Math.min(tierKeysStrongToWeak.length - 1, Math.floor(rankIdx / 2));
+    league.teams[entry.idx].seasonObjective = tierKeysStrongToWeak[tierIndex];
+  });
+}
+
+function seasonAchievementTier(league, teamIdx) {
+  if (!league.playoffs || league.playoffs.champion == null) return null;
+  if (league.relegatedTeamIndexes().includes(teamIdx)) return 0;
+  const po = league.playoffs;
+  if (po.champion === teamIdx) return 5;
+  if (po.finalSeries && po.finalSeries.resolved && (po.finalSeries.idxA === teamIdx || po.finalSeries.idxB === teamIdx)) return 4;
+  for (const series of po.series) {
+    if (series.resolved && (series.idxA === teamIdx || series.idxB === teamIdx) && series.winner !== teamIdx) return 3;
+  }
+  const rank = league.standings().findIndex(s => s.idx === teamIdx) + 1; // 1-10
+  return rank <= 6 ? 2 : 1;
+}
+
+// Fonction PURE (voir engine.js, miroir identique) : utilisée à la fois pour
+// l'affichage (renderSeasonEnd/renderHumeurSection, en lecture seule) et
+// pour l'application réelle (startNewSeason, qui appelle ensuite
+// teamA.recordMoraleEvent(verdict.label, verdict.delta)).
+function seasonObjectiveVerdict(league, teamIdx) {
+  const team = league.teams[teamIdx];
+  if (!team || !team.seasonObjective) return null;
+  const achievedTier = seasonAchievementTier(league, teamIdx);
+  if (achievedTier == null) return null;
+  const objective = team.seasonObjective;
+  const objectiveTier = SEASON_OBJECTIVE_TIERS[objective];
+  const gap = objectiveTier - achievedTier;
+  const delta = gap > 0
+    ? -SEASON_OBJECTIVE_MISS_MALUS_PER_TIER * gap
+    : SEASON_OBJECTIVE_MET_BONUS + SEASON_OBJECTIVE_EXCEED_BONUS_PER_TIER * (-gap);
+  const achievedLabel = SEASON_ACHIEVEMENT_LABELS[achievedTier];
+  const objectiveLabel = SEASON_OBJECTIVE_LABELS[objective];
+  const label = gap > 0
+    ? `Objectif de la saison manqué (${objectiveLabel}) : l'équipe termine avec ${achievedLabel}. Les supporters sont déçus.`
+    : gap === 0
+      ? `Objectif de la saison rempli (${objectiveLabel}) : l'équipe termine avec ${achievedLabel}, exactement ce qui était demandé.`
+      : `Objectif de la saison largement dépassé (${objectiveLabel} espéré) : l'équipe termine avec ${achievedLabel} ! Les supporters sont aux anges.`;
+  return { objective, objectiveTier, achievedTier, achievedLabel, gap, delta, label };
+}
+
+// Signal de MI-SAISON pour le même objectif (voir engine.js, miroir
+// identique) : constantes + currentStandingsPaceObjective +
+// seasonObjectiveMidSeasonSignal, appliquées côté serveur pour CHAQUE équipe
+// humaine (voir server/liveMatch.js:finalizeRound), transportées tel quel
+// jusqu'ici via userResult.seasonObjectiveSignal (voir
+// showCatchupSummaryIfAny) ; miroir présent ici pour rester cohérent avec le
+// reste du moteur, même si l'application réelle ne se fait jamais côté
+// navigateur pour ce signal précis (contrairement au verdict de fin de
+// saison, appliqué par startNewSeason plus bas).
+const SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER = 3;
+const SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER = 2;
+const SEASON_OBJECTIVE_MIDSEASON_MET_BONUS = 1;
+
+function currentStandingsPaceObjective(league, teamIdx) {
+  const tierKeysStrongToWeak = ["titre", "finale", "playoffs", "milieu-tableau", "maintien"];
+  const rank = league.standings().findIndex(s => s.idx === teamIdx) + 1;
+  if (rank <= 0) return null;
+  const tierIndex = Math.min(tierKeysStrongToWeak.length - 1, Math.floor((rank - 1) / 2));
+  return tierKeysStrongToWeak[tierIndex];
+}
+
+function seasonObjectiveMidSeasonSignal(league, teamIdx) {
+  const team = league.teams[teamIdx];
+  if (!team || !team.seasonObjective) return null;
+  const paceObjective = currentStandingsPaceObjective(league, teamIdx);
+  if (!paceObjective) return null;
+  const objective = team.seasonObjective;
+  const objectiveTier = SEASON_OBJECTIVE_TIERS[objective];
+  const paceTier = SEASON_OBJECTIVE_TIERS[paceObjective];
+  const gap = objectiveTier - paceTier;
+  const delta = gap > 0
+    ? -SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER * gap
+    : SEASON_OBJECTIVE_MIDSEASON_MET_BONUS + SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER * (-gap);
+  const objectiveLabel = SEASON_OBJECTIVE_LABELS[objective];
+  const paceLabel = SEASON_OBJECTIVE_LABELS[paceObjective];
+  const label = gap > 0
+    ? `Mi-saison : le rythme actuel (${paceLabel}) est en dessous de l'objectif (${objectiveLabel}). Les supporters s'inquiètent déjà.`
+    : gap === 0
+      ? `Mi-saison : le rythme actuel colle exactement à l'objectif (${objectiveLabel}). Les supporters restent confiants.`
+      : `Mi-saison : le rythme actuel (${paceLabel}) dépasse largement l'objectif (${objectiveLabel} espéré). Les supporters sont optimistes.`;
+  return { objective, objectiveTier, paceObjective, paceTier, gap, delta, label };
+}
+
 // Génère une ligue complète : le club du joueur (déjà créé) + 9 adversaires
 // neufs, de force à peu près comparable (légère variation aléatoire). Sans
 // niveau de division précisé, on démarre le plus haut possible dans la
@@ -7815,6 +8386,14 @@ function buildLeagueWithHumanTeams(humanTeams, divisionLevel, now, calendarConfi
     return t;
   });
   const league = new League([...humanTeams, ...opponents]);
+  // Interview d'avant-saison (voir engine.js, miroir identique) : couvre
+  // uniformément nouvelle carrière solo, nouvelle saison solo (startNewSeason)
+  // et création de ligue partagée, tous appelants de cette fonction.
+  humanTeams.forEach(team => team.queueSeasonPreviewInterview(now));
+  // Objectif de saison du conseil d'administration (voir engine.js, miroir
+  // identique) : posé une fois toutes les équipes présentes dans
+  // league.teams, seul moment où l'on peut comparer leur niveau.
+  assignSeasonObjectives(league);
   league.divisionLevel = info.level;
   // Le calendrier réel d'une nouvelle saison démarre maintenant (voir
   // League.calendarStartAt ci-dessus, et server/calendar.js pour le détail
@@ -7934,6 +8513,10 @@ function serializePlayerRecord(p) {
     // Bonus temporaire de MVP (voir engine.js, miroir identique) : DOIT
     // survivre au rechargement, sinon le bonus promis disparaîtrait.
     pendingMatchBoost: p.pendingMatchBoost || 0,
+    // Demande de transfert (voir engine.js, miroir identique).
+    weeksAtLowMotivation: p.weeksAtLowMotivation || 0,
+    transferRequestActive: !!p.transferRequestActive,
+    transferRequestQuote: p.transferRequestQuote ?? null,
   };
 }
 
@@ -8008,11 +8591,38 @@ function serializeTeam(team) {
     transactions: team.transactions,
     fanMorale: team.fanMorale,
     moraleHistory: team.moraleHistory,
+    // Objectif de saison du conseil d'administration (voir engine.js,
+    // miroir identique).
+    seasonObjective: team.seasonObjective || null,
     // Alchimie d'équipe (voir engine.js, miroir identique).
     chemistry: team.chemistry,
     lastTacticsSnapshotForChemistry: team.lastTacticsSnapshotForChemistry
       ? { ...team.lastTacticsSnapshotForChemistry, offense: [...team.lastTacticsSnapshotForChemistry.offense] }
       : null,
+    // Identité tactique établie (voir engine.js, miroir identique).
+    establishedTacticsSnapshot: team.establishedTacticsSnapshot
+      ? { ...team.establishedTacticsSnapshot, offense: [...team.establishedTacticsSnapshot.offense] }
+      : null,
+    // Entraînement collectif (voir engine.js, miroir identique).
+    collectiveTraining: team.collectiveTraining || null,
+    // Tactique précisément travaillée à l'entraînement (voir engine.js,
+    // miroir identique) : même raisonnement, DOIT survivre au rechargement.
+    // Un seul aspect ({ category, value }).
+    trainedTactics: team.trainedTactics
+      ? { category: team.trainedTactics.category, value: team.trainedTactics.value }
+      : null,
+    // Historique quotidien de l'entraînement collectif (voir engine.js,
+    // miroir identique) : même raisonnement, DOIT survivre au rechargement.
+    collectiveTrainingLog: Array.isArray(team.collectiveTrainingLog)
+      ? team.collectiveTrainingLog.map(e => ({
+        dayIndex: e.dayIndex,
+        collectiveTraining: e.collectiveTraining || null,
+        trainedTactics: e.trainedTactics ? { category: e.trainedTactics.category, value: e.trainedTactics.value } : null,
+      }))
+      : [],
+    // Jour civil du dernier match réellement joué (voir engine.js, miroir
+    // identique).
+    tacticsCycleStartDayIndex: typeof team.tacticsCycleStartDayIndex === "number" ? team.tacticsCycleStartDayIndex : null,
     // Interviews en attente (voir engine.js, miroir identique).
     pendingInterviews: Array.isArray(team.pendingInterviews) ? team.pendingInterviews.map(i => ({ ...i })) : [],
     // MVP automatique du dernier match (voir engine.js, miroir identique).
@@ -8163,6 +8773,12 @@ function playerFromSave(pdata) {
   // Bonus temporaire de MVP (voir serializePlayerRecord ci-dessus) : absent
   // = sauvegarde d'avant cette fonctionnalité, on garde 0.
   if (typeof pdata.pendingMatchBoost === "number") p.pendingMatchBoost = pdata.pendingMatchBoost;
+  // Demande de transfert (voir serializePlayerRecord ci-dessus) : absent =
+  // sauvegarde d'avant cette fonctionnalité, on garde les valeurs neutres
+  // déjà posées par le constructeur Player.
+  if (typeof pdata.weeksAtLowMotivation === "number") p.weeksAtLowMotivation = pdata.weeksAtLowMotivation;
+  if (typeof pdata.transferRequestActive === "boolean") p.transferRequestActive = pdata.transferRequestActive;
+  if (typeof pdata.transferRequestQuote === "string") p.transferRequestQuote = pdata.transferRequestQuote;
   return p;
 }
 
@@ -8200,7 +8816,9 @@ function teamFromSave(data) {
   // terminé avant le correctif (2026-09, retour utilisateur "Mets les
   // vrais primes sur le tutoriel").
   team.tutorialRewardsClaimed = Array.isArray(data.tutorialRewardsClaimed) ? data.tutorialRewardsClaimed : [];
-  team.trainingSkill = data.trainingSkill || null;
+  // Retour utilisateur (2026-09) : "enleve l'entrainement aucune" — voir
+  // engine.js, miroir identique.
+  team.trainingSkill = (data.trainingSkill && TRAINING_PROGRAMS[data.trainingSkill]) ? data.trainingSkill : "freeThrow";
   team.trainingPositions = Array.isArray(data.trainingPositions) ? data.trainingPositions : [];
   if (data.trainer && TRAINER_LEVELS.includes(data.trainer.level)) {
     // baseSalary préservé explicitement (bug corrigé 2026-09 : il était
@@ -8316,6 +8934,9 @@ function teamFromSave(data) {
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
+  // Objectif de saison du conseil d'administration (voir engine.js, miroir
+  // identique).
+  if (typeof data.seasonObjective === "string") team.seasonObjective = data.seasonObjective;
   // Alchimie d'équipe (voir engine.js, miroir identique).
   if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, 0, 100);
   if (data.lastTacticsSnapshotForChemistry && Array.isArray(data.lastTacticsSnapshotForChemistry.offense)) {
@@ -8325,6 +8946,49 @@ function teamFromSave(data) {
       rhythm: data.lastTacticsSnapshotForChemistry.rhythm,
     };
   }
+  // Identité tactique établie (voir engine.js, miroir identique). Absent =
+  // sauvegarde d'avant cette fonctionnalité : on reprend lastTacticsSnapshotForChemistry
+  // ci-dessus quand il existe, sinon `null` (déjà posé par le constructeur).
+  if (data.establishedTacticsSnapshot && Array.isArray(data.establishedTacticsSnapshot.offense)) {
+    team.establishedTacticsSnapshot = {
+      offense: [...data.establishedTacticsSnapshot.offense],
+      defense: data.establishedTacticsSnapshot.defense,
+      rhythm: data.establishedTacticsSnapshot.rhythm,
+    };
+  } else if (team.lastTacticsSnapshotForChemistry) {
+    team.establishedTacticsSnapshot = {
+      offense: [...team.lastTacticsSnapshotForChemistry.offense],
+      defense: team.lastTacticsSnapshotForChemistry.defense,
+      rhythm: team.lastTacticsSnapshotForChemistry.rhythm,
+    };
+  }
+  team.collectiveTraining = data.collectiveTraining === "tactique" || data.collectiveTraining === "recuperation"
+    ? data.collectiveTraining
+    : null;
+  // Tactique précisément travaillée à l'entraînement (voir engine.js, miroir
+  // identique) : UN SEUL aspect ({ category, value }). Absent/format
+  // précédent = sauvegarde d'avant ce correctif, on garde null (déjà posé
+  // par le constructeur).
+  team.trainedTactics = (data.trainedTactics && typeof data.trainedTactics === "object"
+    && ["offense", "defense", "rhythm"].includes(data.trainedTactics.category)
+    && typeof data.trainedTactics.value === "string")
+    ? { category: data.trainedTactics.category, value: data.trainedTactics.value }
+    : null;
+  // Historique quotidien de l'entraînement collectif (voir engine.js, miroir
+  // identique). Absent = sauvegarde d'avant cette fonctionnalité, on garde
+  // [] (déjà posé par le constructeur).
+  team.collectiveTrainingLog = Array.isArray(data.collectiveTrainingLog)
+    ? data.collectiveTrainingLog
+      .filter(e => e && typeof e.dayIndex === "number")
+      .map(e => ({
+        dayIndex: e.dayIndex,
+        collectiveTraining: e.collectiveTraining === "tactique" || e.collectiveTraining === "recuperation" ? e.collectiveTraining : null,
+        trainedTactics: (e.trainedTactics && ["offense", "defense", "rhythm"].includes(e.trainedTactics.category) && typeof e.trainedTactics.value === "string")
+          ? { category: e.trainedTactics.category, value: e.trainedTactics.value }
+          : null,
+      }))
+    : [];
+  team.tacticsCycleStartDayIndex = typeof data.tacticsCycleStartDayIndex === "number" ? data.tacticsCycleStartDayIndex : null;
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
   team.lastMatchMvp = data.lastMatchMvp && typeof data.lastMatchMvp === "object" ? { ...data.lastMatchMvp } : null;
   // Identité du club (voir engine.js, miroir identique).
@@ -8535,6 +9199,14 @@ class MatchEngine {
     return team === this.teamA ? "A" : "B";
   }
 
+  // +/- : voir engine.js (miroir identique).
+  applyPlusMinusForPoints(scoringTeam, points) {
+    if (!points) return;
+    const otherTeam = scoringTeam === this.teamA ? this.teamB : this.teamA;
+    scoringTeam.onCourtPlayers().forEach(p => { p.stats.plusMinus = (p.stats.plusMinus || 0) + points; });
+    otherTeam.onCourtPlayers().forEach(p => { p.stats.plusMinus = (p.stats.plusMinus || 0) - points; });
+  }
+
   starPlayer(team) {
     return team.onCourtPlayers().slice().sort((a, b) => b.overall() - a.overall())[0];
   }
@@ -8609,7 +9281,10 @@ class MatchEngine {
       shooter.stats.fta++;
       if (Math.random() < ftPct) { made++; shooter.stats.ftm++; shooter.stats.pts++; }
     }
-    if (made > 0) this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), possession: this.teamKey(team) });
+    if (made > 0) {
+      this.applyPlusMinusForPoints(team, made);
+      this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), possession: this.teamKey(team) });
+    }
     return made;
   }
 
@@ -8869,6 +9544,7 @@ class MatchEngine {
       // remet le compteur à zéro, quelle que soit sa longueur de série.
       shooter.consecutiveMisses = 0;
       shooter.stats.pts += points;
+      this.applyPlusMinusForPoints(offTeam, points);
       if (zone === "three") shooter.stats.fgm3++; else shooter.stats.fgm2++;
       if (zone === "inside") shooter.stats.paintMade++;
       if (assistCandidate && quality === "ouvert" && Math.random() < 0.65 + offense.assist + assistOpenBonus) {
@@ -9178,8 +9854,8 @@ const ATTR_SHORT = {
 // (retour utilisateur, 2026-09 : "maintenant que le contenu de la page
 // effectif est moins dense, mets les textes en entier") qui a fait de la
 // place en déplaçant les caractéristiques vers la fiche joueur.
-function conditionBadgeHtml(player, now = Date.now()) {
-  const value = currentCondition(player, now);
+function conditionBadgeHtml(player, now = Date.now(), recoveryPerDay = CONDITION_RECOVERY_PER_DAY) {
+  const value = currentCondition(player, now, recoveryPerDay);
   const state = conditionStateFor(value);
   const tier = value >= 90 ? "cond-great" : value >= 75 ? "cond-good" : value >= 60 ? "cond-mid" : value >= 40 ? "cond-low" : "cond-critical";
   return `<span class="condition-badge ${tier}" title="Forme physique : ${state.label} (${value}/100)">${escapeHtml(state.label)}</span>`;
@@ -9215,6 +9891,21 @@ function injuryCrossHtml(player, now = Date.now()) {
   const days = injuryDaysRemaining(player, now);
   const daysLabel = days <= 1 ? "encore 1 jour" : `encore ${days} jours`;
   return `<span class="injury-cross" title="${escapeHtml(player.injuryType || "Blessure")}, ${daysLabel}">+</span>`;
+}
+
+// Petite pastille "!" "Demande son transfert" (voir Player.
+// transferRequestActive/transferRequestQuote côté moteur, retour
+// utilisateur 2026-09 : "un joueur très frustré [...] peut demander son
+// transfert dans la presse") : même principe que injuryCrossHtml juste
+// au-dessus (`null` si pas concerné, sinon une petite pastille avec le
+// détail dans le `title`, réutilisée par renderEffectifSection ET
+// renderPlayerDetail), mais réservée à SON PROPRE effectif (comme la
+// Motivation dont elle dépend directement) : jamais affichée pour un
+// adversaire, ni sur le marché des transferts.
+function transferRequestBadgeHtml(player) {
+  if (!player.transferRequestActive) return null;
+  const quote = player.transferRequestQuote || `${player.name} demande son transfert.`;
+  return `<span class="transfer-request-badge" title="${escapeHtml(quote)}">!</span>`;
 }
 
 // 5 petits carrés d'évaluation (retour utilisateur, 2026-09 : "une petite
@@ -9832,7 +10523,12 @@ function syncTrainingToServer() {
     fetchApi("/api/training", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trainingSkill: teamA.trainingSkill, trainingPositions: teamA.trainingPositions }),
+      body: JSON.stringify({
+        trainingSkill: teamA.trainingSkill,
+        trainingPositions: teamA.trainingPositions,
+        collectiveTraining: teamA.collectiveTraining,
+        trainedTactics: teamA.trainedTactics,
+      }),
     })
       .then(res => { if (!res.ok) console.warn("Réglage d'entraînement refusé côté serveur.", res.status); })
       .catch(e => console.warn("Entraînement : serveur indisponible :", e));
@@ -10036,10 +10732,14 @@ function syncReleaseYouthPlayerToServer(playerId) {
 // resolveInterview/skipInterview, et showCatchupSummaryIfAny plus bas pour
 // l'écran qui les propose) : mêmes conventions fire-and-forget que les
 // fonctions sync*ToServer ci-dessus.
-function syncInterviewToServer(id, tone) {
+// Correctif 2026-09 (retour utilisateur : "la possibilité de choisir le ton
+// pour chacune [des questions]") : `tones` (tableau, un ton par question)
+// envoyé sous cette clé au serveur, voir server/actions.js:respondToInterview
+// qui accepte aussi `tone` (chaîne unique) en compatibilité ascendante.
+function syncInterviewToServer(id, tones) {
   if (!managerToken) return;
   try {
-    fetchApi("/api/media/interview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, tone }) })
+    fetchApi("/api/media/interview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, tones }) })
       .then(res => { if (!res.ok) console.warn("Réponse à l'interview refusée côté serveur.", res.status); })
       .catch(e => console.warn("Interview : serveur indisponible :", e));
   } catch (e) {
@@ -10669,36 +11369,43 @@ function closeInterviewModal() {
   if (existing) existing.remove();
 }
 
+// Correctif 2026-09 (retour utilisateur : "tu as mis plus de question avec
+// la possibilité de choisir le ton pour chacune d'entre elle et pas
+// uniquement un ton pour toutes les questions ?") : chaque question a
+// désormais son PROPRE sélecteur de ton (`selectedTones[i]`), plutôt qu'un
+// unique ton partagé pour toute l'interview — l'aperçu de CHAQUE réponse se
+// met à jour en direct selon le ton choisi pour SA question, les autres
+// restant inchangées.
 function showInterviewModal(entry) {
   closeInterviewModal();
   const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
   const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
   const tones = Object.keys(MILESTONE_INTERVIEW_TONES);
-  let selectedTone = "Mesuré";
+  const questionCount = (MILESTONE_INTERVIEW_QUESTIONS[entry.milestone] || []).length || 2;
+  let selectedTones = Array(questionCount).fill("Mesuré");
 
   const overlay = document.createElement("div");
   overlay.className = "upgrade-confirm-overlay interview-modal-overlay";
   overlay.id = "interviewModalOverlay";
 
-  function qaHtml(tone) {
-    const transcript = interviewTranscriptFor(entry.milestone, tone, entry.won, entry.opponentName);
-    return transcript.map(qa =>
-      `<div class="interview-modal-qa"><p class="interview-modal-question">${escapeHtml(qa.question)}</p>` +
-      `<p class="interview-modal-answer">« ${escapeHtml(qa.answer)} »</p></div>`
-    ).join("");
-  }
-
-  function toneButtonsHtml() {
-    return tones.map(tone =>
-      `<button type="button" class="secondary interview-modal-tone-btn${tone === selectedTone ? " active" : ""}" data-interview-preview-tone="${escapeHtml(tone)}">${escapeHtml(tone)}</button>`
-    ).join("");
+  function qaHtml() {
+    const transcript = interviewTranscriptFor(entry.milestone, selectedTones, entry.won, entry.opponentName, entry.playerName);
+    return transcript.map((qa, i) => {
+      const toneButtons = tones.map(tone =>
+        `<button type="button" class="secondary interview-modal-tone-btn${tone === selectedTones[i] ? " active" : ""}" data-interview-preview-q="${i}" data-interview-preview-tone="${escapeHtml(tone)}">${escapeHtml(tone)}</button>`
+      ).join("");
+      return `<div class="interview-modal-qa">` +
+        `<p class="interview-modal-question">${escapeHtml(qa.question)}</p>` +
+        `<p class="interview-modal-answer">« ${escapeHtml(qa.answer)} »</p>` +
+        `<div class="interview-modal-tones" data-interview-tones-for="${i}">${toneButtons}</div>` +
+        `</div>`;
+    }).join("");
   }
 
   overlay.innerHTML = `<div class="upgrade-confirm-box interview-modal-box">` +
     `<h3>🎙️ ${escapeHtml(milestoneLabel)}</h3>` +
-    `<p class="interview-modal-intro">Un journaliste vous demande une réaction sur ce moment clé de la saison. Votre réponse influencera aussi bien l'humeur des supporters que la forme des joueurs ayant disputé ce match.</p>` +
-    `<div id="interviewModalQa">${qaHtml(selectedTone)}</div>` +
-    `<div class="interview-modal-tones" id="interviewModalTones">${toneButtonsHtml()}</div>` +
+    `<p class="interview-modal-intro">Un journaliste vous demande une réaction sur ce moment clé de la saison. Choisissez le ton de chaque réponse séparément : votre réponse influencera aussi bien l'humeur des supporters que la forme des joueurs concernés.</p>` +
+    `<div id="interviewModalQa">${qaHtml()}</div>` +
     `<div class="interview-modal-actions">` +
     `<button type="button" class="interview-modal-later-btn" id="interviewModalLater">Plus tard</button>` +
     `<button type="button" class="interview-modal-skip-btn" id="interviewModalSkip">Sans commentaire</button>` +
@@ -10709,14 +11416,14 @@ function showInterviewModal(entry) {
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) { closeInterviewModal(); return; }
     // Délégation sur l'overlay (plutôt qu'un listener par bouton de ton) :
-    // toneButtonsHtml()/qaHtml() régénèrent ces boutons à chaque changement
-    // de ton (voir plus bas), la délégation évite d'avoir à ré-attacher un
-    // listener à chaque bouton fraîchement recréé.
+    // qaHtml() régénère tous ces boutons à chaque changement de ton (voir
+    // plus bas), la délégation évite d'avoir à ré-attacher un listener à
+    // chaque bouton fraîchement recréé.
     const toneBtn = e.target.closest("[data-interview-preview-tone]");
     if (!toneBtn) return;
-    selectedTone = toneBtn.dataset.interviewPreviewTone;
-    document.getElementById("interviewModalQa").innerHTML = qaHtml(selectedTone);
-    document.getElementById("interviewModalTones").innerHTML = toneButtonsHtml();
+    const qIndex = Number(toneBtn.dataset.interviewPreviewQ);
+    selectedTones[qIndex] = toneBtn.dataset.interviewPreviewTone;
+    document.getElementById("interviewModalQa").innerHTML = qaHtml();
   });
   document.getElementById("interviewModalLater").addEventListener("click", closeInterviewModal);
   document.getElementById("interviewModalSkip").addEventListener("click", () => {
@@ -10728,9 +11435,9 @@ function showInterviewModal(entry) {
     finishInterviewTrigger(entry.id, null);
   });
   document.getElementById("interviewModalValidate").addEventListener("click", () => {
-    const result = teamA.resolveInterview(entry.id, selectedTone);
+    const result = teamA.resolveInterview(entry.id, selectedTones);
     saveMyTeam();
-    if (result && result.ok) syncInterviewToServer(entry.id, selectedTone);
+    if (result && result.ok) syncInterviewToServer(entry.id, selectedTones);
     catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== entry.id);
     closeInterviewModal();
     finishInterviewTrigger(entry.id, result);
@@ -10767,6 +11474,19 @@ function showCatchupSummaryIfAny() {
       }
       const sign = r.moraleDelta >= 0 ? "+" : "";
       html += `<p>Humeur des supporters : ${sign}${Math.round(r.moraleDelta * 10) / 10} (désormais ${Math.round(teamA.fanMorale)}/100, ${moraleLabel(teamA.fanMorale)}).</p>`;
+      // Signal de mi-saison de l'objectif du CA (voir
+      // Engine.seasonObjectiveMidSeasonSignal côté moteur,
+      // server/liveMatch.js:finalizeRound qui l'applique et le transporte
+      // ici via userResult.seasonObjectiveSignal) : présent uniquement à LA
+      // journée de mi-saison (au plus une fois par saison), déjà appliqué à
+      // teamA.fanMorale côté serveur avant que ce récapitulatif ne
+      // s'affiche, simplement annoncé ici comme le reste des événements de
+      // la journée.
+      if (r.seasonObjectiveSignal) {
+        const sig = r.seasonObjectiveSignal;
+        const sigSign = sig.delta >= 0 ? "+" : "";
+        html += `<p>${escapeHtml(sig.label)} (${sigSign}${Math.round(sig.delta * 10) / 10}).</p>`;
+      }
       // Médias (voir interviewWidgetHtml ci-dessus) : au plus une interview
       // en attente par journée de championnat (un seul match humain par
       // round), retrouvée dans Team.pendingInterviews par son round plutôt
@@ -10892,7 +11612,16 @@ function updateTopbar() {
   const weekEl = document.getElementById("topbarWeek");
   if (oppEl && weekEl) {
     if (currentMatch && teamB) {
-      oppEl.textContent = currentMatch.isHome ? `vs ${teamB.name}` : `@ ${teamB.name}`;
+      // Nom du prochain adversaire cliquable (retour utilisateur, 2026-09 :
+      // "il faut que le nom de cette équipe soit cliquable aussi", même
+      // esprit que le nom de son propre club juste au-dessus, voir
+      // teamLinkHtml/showTeamDetail) : seul le NOM est cliquable, pas le
+      // préfixe "vs "/"@ ". `currentMatch.opponent` porte l'index de
+      // l'adversaire dans league.teams dans les trois chemins qui posent
+      // currentMatch (live, prochain match de championnat, prochain match
+      // de play-offs — voir enterNextMatchOrShowSeasonEnd).
+      const prefix = currentMatch.isHome ? "vs " : "@ ";
+      oppEl.innerHTML = `${escapeHtml(prefix)}${teamLinkHtml(currentMatch.opponent, teamB.name)}`;
       // Play-offs (voir currentMatch.seriesId, posé uniquement par
       // League.nextUserPlayoffMatch) : `currentMatch.round` continue au-delà
       // de league.totalRounds (voir League.startPlayoffsIfNeeded), "Journée
@@ -11327,6 +12056,61 @@ function planProxyForRound(round, competition) {
 // journée future (via planProxyForRound + Team.stagePlanForRound à chaque
 // changement) — voir buildTeamPanel pour le contrat opts.onDirty qui rend
 // cette distinction invisible pour le panneau lui-même.
+// Aperçu en direct de l'impact d'un changement de tactique sur l'alchimie
+// (retour utilisateur, 2026-09 : voir le commentaire HTML de
+// #ordresChemistryGaugeWrap ci-dessus) : reproduit EXACTEMENT le calcul de
+// Team.checkTacticsChemistry côté moteur (référence = identité établie ou
+// dernier match, tacticsChangePenalty PROPORTIONNEL, atténuation composée
+// selon les jours de repos déjà banqués, voir daysTrainedForTarget), mais
+// SANS jamais appeler applyChemistryDelta/muter tacticsCycleStartDayIndex :
+// la vraie valeur de teamA.chemistry ne change qu'au prochain match simulé
+// (recordMatchStatsForTeam -> checkTacticsChemistry), jamais pendant la
+// simple préparation ici. `tacticsSource` est teamA elle-même (ordres en
+// direct) ou le proxy de plan d'une journée future (voir renderOrdresGrid) :
+// les deux portent les mêmes champs offensivePriorities/defense/rhythm.
+function renderOrdresChemistryGauge(tacticsSource) {
+  const valueEl = document.getElementById("ordresChemistryValue");
+  const fillEl = document.getElementById("ordresChemistryGaugeFill");
+  const warnEl = document.getElementById("ordresChemistryWarning");
+  if (!valueEl || !fillEl) return;
+  const chemistry = teamA.chemistry;
+  const lastPlayed = teamA.lastTacticsSnapshotForChemistry;
+  const established = teamA.establishedTacticsSnapshot;
+  const source = tacticsSource || teamA;
+  const current = { offense: [...(source.offensivePriorities || [])], defense: source.defense, rhythm: source.rhythm };
+  let referenceForPenalty = lastPlayed;
+  if (established && tacticsEqual(current, established) && !tacticsEqual(current, lastPlayed)) {
+    referenceForPenalty = established;
+  }
+  const target = teamA.trainedTactics;
+  const daysTrained = target ? teamA.daysTrainedForTarget(target) : 0;
+  const trainedFactor = Math.pow(CHEMISTRY_TACTICS_TRAINED_FACTOR, daysTrained);
+  const penalty = tacticsChangePenalty(referenceForPenalty, current, target, trainedFactor);
+  const fullPenalty = daysTrained > 0 ? tacticsChangePenalty(referenceForPenalty, current, null) : penalty;
+  const preview = clamp(chemistry - penalty, 0, 100);
+  const color = moraleGaugeColor(preview);
+  valueEl.textContent = `${Math.round(preview)}/100 · ${chemistryLabel(preview)}`;
+  valueEl.style.color = color;
+  fillEl.style.width = `${Math.round(preview)}%`;
+  fillEl.style.background = color;
+  if (warnEl) {
+    if (penalty > 0) {
+      const roundedPenalty = Math.round(penalty * 100) / 100;
+      const trainedNote = penalty < fullPenalty
+        ? ` (déjà atténué par ${daysTrained} jour${daysTrained > 1 ? "s" : ""} d'entraînement collectif sur la partie entraînée)`
+        : "";
+      warnEl.textContent = `Tactique changée depuis le dernier match : -${roundedPenalty}${trainedNote} si ces ordres sont joués tels quels.`;
+      warnEl.classList.remove("hidden");
+    } else if (established && tacticsEqual(current, established) && !tacticsEqual(current, lastPlayed)) {
+      warnEl.textContent = "Retour à votre tactique établie : aucun malus d'alchimie.";
+      warnEl.classList.remove("hidden");
+    } else {
+      warnEl.textContent = "";
+      warnEl.classList.add("hidden");
+    }
+  }
+}
+
 function renderOrdresGrid() {
   const grid = document.getElementById("prepGrid");
   grid.innerHTML = "";
@@ -11358,8 +12142,11 @@ function renderOrdresGrid() {
     // tactique et compo de l'adversaire, ça ne doit pas apparaitre" — le
     // panneau adverse (tactiques cliquables sans effet + compo en lecture
     // seule) est supprimé, seul le panneau de MON équipe reste affiché.
-    grid.appendChild(buildTeamPanel(teamA, "a"));
+    grid.appendChild(buildTeamPanel(teamA, "a", {
+      onDirty: () => { updateLockAvailability(); saveMyTeam(); renderOrdresChemistryGauge(teamA); }
+    }));
     updateLockAvailability();
+    renderOrdresChemistryGauge(teamA);
     return;
   }
 
@@ -11399,8 +12186,10 @@ function renderOrdresGrid() {
     // programmé du match. Voir server/actions.js:setPlan + /api/plan.
     syncPlanToServer(round, patch, competition);
     renderOrdresRoundSelector(); // pour faire apparaître/rester le ● "déjà préparé"
+    renderOrdresChemistryGauge(proxy);
   };
   grid.appendChild(buildTeamPanel(proxy, "a", { onDirty: commit }));
+  renderOrdresChemistryGauge(proxy);
 }
 
 // Bouton "✅ Valider les ordres" (retour utilisateur, 2026-09 : "une fois que
@@ -11938,8 +12727,20 @@ function renderLeagueStatsPanel() {
     bits.push(`${e.fgm2 || 0}/${e.fga2 || 0} à 2pts`, `${e.fgm3 || 0}/${e.fga3 || 0} à 3pts`);
     if (e.fta) bits.push(`${e.ftm || 0}/${e.fta || 0} LF`);
     bits.push(`évaluation ${mvp.evalScore}`);
+    // Retour utilisateur (2026-09) : "rajoute sa petite citation d'interview
+    // (qu'on a déjà parce qu'il est logiquement aussi mvp de son match)" :
+    // le MVP de la journée a forcément la meilleure évaluation de TOUTE la
+    // ligue ce jour-là (voir computeLastMatchdayMvp), donc aussi la
+    // meilleure de son propre match : awardMatchMvp lui a donc déjà posé
+    // isMvp/mvpQuote sur cette même entrée matchLog (voir
+    // matchMvpCalloutHtml, même mécanique côté box score du match fini).
+    // Simplement absent pour un match encore en direct au moment du rendu
+    // (mvpQuote pas encore élu côté serveur), auquel cas ce paragraphe est
+    // omis comme là-bas.
     html += `<div class="mvp-callout"><h4>MVP de la journée ${e.round + 1}</h4>` +
-      `<p><b>${playerLinkHtml(mvp.teamIdx, mvp.player.id, mvp.player.name)}</b> (${escapeHtml(mvp.team.name)}) : ${bits.join(", ")}</p></div>`;
+      `<p><b>${playerLinkHtml(mvp.teamIdx, mvp.player.id, mvp.player.name)}</b> (${escapeHtml(mvp.team.name)}) : ${bits.join(", ")}</p>` +
+      (e.mvpQuote ? `<p class="sub">« ${escapeHtml(e.mvpQuote)} »</p>` : "") +
+      `</div>`;
   } else {
     html += `<div class="mvp-callout"><h4>MVP de la dernière journée</h4>` +
       `<p class="sub">Aucune journée de championnat jouée pour l'instant.</p></div>`;
@@ -12022,12 +12823,82 @@ function playerDetailMarketFeedback(message, ok) {
   if (el) el.innerHTML = message ? `<div class="gain-line ${ok ? "gain-up" : "gain-down"}">${escapeHtml(message)}</div>` : "";
 }
 
+function playerDetailTransferRequestFeedback(message, ok) {
+  const el = document.getElementById("playerDetailTransferRequestFeedback");
+  if (el) el.innerHTML = message ? `<div class="gain-line ${ok ? "gain-up" : "gain-down"}">${escapeHtml(message)}</div>` : "";
+}
+
+// Action "discuter" (voir Team.discussTransferRequest côté moteur, retour
+// utilisateur 2026-09 : "ouvrir la discussion avec lui pour le remotiver
+// (ne marche pas à chaque fois)") : contrairement aux autres actions de
+// cette fiche (voir listBtn plus bas), le RÉSULTAT est tiré au sort
+// (Math.random() côté discussTransferRequest) : résoudre localement PUIS
+// synchroniser au serveur, comme le fait le reste de ce fichier, ferait
+// tourner DEUX tirages indépendants (client et serveur), qui pourraient ne
+// pas tomber d'accord. Ici, on attend donc la réponse du serveur et on
+// applique EXACTEMENT son verdict au joueur local, jamais un nouveau tirage
+// côté client. Sans serveur joignable (pas de jeton manager, ou requête en
+// échec) : repli sur une résolution 100% locale (Team.discussTransferRequest
+// directement), pour que l'action reste utilisable en solo/hors-ligne.
+async function discussTransferRequestAction(playerId) {
+  const player = teamA.players.find(p => p.id === playerId);
+  if (!player) return;
+  const applyLocalResolution = () => {
+    const result = teamA.discussTransferRequest(playerId, Date.now());
+    if (!result.ok) return null;
+    return result;
+  };
+  let result = null;
+  if (managerToken) {
+    try {
+      const res = await fetchApi("/api/media/transfer-request-discuss", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          player.form = data.formAfter;
+          player.weeksAtLowMotivation = 0;
+          player.transferRequestActive = false;
+          player.transferRequestQuote = null;
+        }
+        result = data;
+      } else {
+        console.warn("Discussion refusée côté serveur, résolution locale de secours.", res.status);
+        result = applyLocalResolution();
+      }
+    } catch (e) {
+      console.warn("Discuter avec le joueur : serveur indisponible, résolution locale de secours :", e);
+      result = applyLocalResolution();
+    }
+  } else {
+    result = applyLocalResolution();
+  }
+  if (!result) {
+    playerDetailTransferRequestFeedback("Impossible de discuter avec ce joueur pour l'instant.", false);
+    return;
+  }
+  saveMyTeam();
+  renderPlayerDetail(myTeamIndex, playerId);
+  const message = result.success
+    ? `${player.name} se sent entendu et retrouve sa motivation, la demande de transfert est retirée.`
+    : `${player.name} n'est pas convaincu, la discussion n'a rien changé pour l'instant.`;
+  playerDetailTransferRequestFeedback(message, result.success);
+}
+
 // Écouteur délégué UNIQUE sur le conteneur statique #playerDetailContent
 // (jamais recréé, seul son innerHTML change à chaque renderPlayerDetail),
 // même patron que l'écouteur de #rosterContent (voir listBtn plus bas dans
 // ce fichier) pour le bouton "Mettre aux enchères" ajouté ci-dessus dans
 // renderPlayerDetail.
 document.getElementById("playerDetailContent").addEventListener("click", (e) => {
+  const discussBtn = e.target.closest("[data-discuss-transfer-request]");
+  if (discussBtn) {
+    discussTransferRequestAction(Number(discussBtn.dataset.discussTransferRequest));
+    return;
+  }
   const listBtn = e.target.closest("[data-list-player-detail]");
   if (!listBtn) return;
   const id = Number(listBtn.dataset.listPlayerDetail);
@@ -12114,11 +12985,26 @@ function renderPlayerDetail(teamIdx, playerId) {
 
   let html = `<p class="training-intro">${escapeHtml(team.name)} · ${POS_SHORT[player.position]} · ${player.height} cm · ${player.age} ans` +
     (isOwnTeam ? ` · ${formatMoney(player.salary)}/sem.` : "") + `</p>`;
+  // Potentiel : réapparu ici après la refonte de l'onglet Effectif (retour
+  // utilisateur, 2026-09 : "on verra toutes les carac des joueurs en
+  // cliquant sur la page du joueur"), qui a retiré cette colonne du tableau —
+  // sans cette ligne, l'information aurait purement disparu du jeu. Réservé à
+  // SON PROPRE effectif comme la Motivation plus bas (jamais affiché sur le
+  // marché ni pour un adversaire dans l'ancien tableau Effectif non plus, ce
+  // n'était jamais une information de scoutisme comme les caractéristiques).
+  // Uniquement le NOM du palier (voir potentialTierLabel), le chiffre exact
+  // (1-99) reste caché ; le `title` révèle quand même le PALIER (1 à 10, voir
+  // potentialTierIndex), même principe qu'avant dans le tableau Effectif.
+  // Placé AVANT la forme physique (retour utilisateur, 2026-09 : "met le
+  // potentiel au dessus de la forme physique").
+  if (isOwnTeam) {
+    html += `<p class="training-intro">Potentiel : <span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></p>`;
+  }
   // Forme physique (voir CONDITION_STATES/conditionBadgeHtml plus haut) :
   // toujours visible (jamais verrouillée par le scoutisme, contrairement aux
   // caractéristiques ci-dessous) — c'est un état de forme, pas un talent
   // révélé progressivement.
-  html += `<p class="training-intro">Forme physique : ${conditionBadgeHtml(player)}</p>`;
+  html += `<p class="training-intro">Forme physique : ${conditionBadgeHtml(player, Date.now(), team.conditionRecoveryPerDay())}</p>`;
   // Blessure PERSISTANTE (voir injuryCrossHtml/isCurrentlyInjured plus haut) :
   // visible pour n'importe quel joueur, même règle que la forme physique
   // juste au-dessus (un état observable de l'extérieur, pas un talent cache
@@ -12126,19 +13012,6 @@ function renderPlayerDetail(teamIdx, playerId) {
   // autant que pour son propre effectif.
   const detailCross = injuryCrossHtml(player);
   if (detailCross) html += `<p class="training-intro">${detailCross} Blessé : ${escapeHtml(player.injuryType || "Blessure")}, ${injuryDaysRemaining(player)} jour${injuryDaysRemaining(player) > 1 ? "s" : ""} restant${injuryDaysRemaining(player) > 1 ? "s" : ""}</p>`;
-  // Potentiel : réapparu ici après la refonte de l'onglet Effectif (retour
-  // utilisateur, 2026-09 : "on verra toutes les carac des joueurs en
-  // cliquant sur la page du joueur"), qui a retiré cette colonne du tableau —
-  // sans cette ligne, l'information aurait purement disparu du jeu. Réservé à
-  // SON PROPRE effectif comme la Motivation ci-dessous (jamais affiché sur le
-  // marché ni pour un adversaire dans l'ancien tableau Effectif non plus, ce
-  // n'était jamais une information de scoutisme comme les caractéristiques).
-  // Uniquement le NOM du palier (voir potentialTierLabel), le chiffre exact
-  // (1-99) reste caché ; le `title` révèle quand même le PALIER (1 à 10, voir
-  // potentialTierIndex), même principe qu'avant dans le tableau Effectif.
-  if (isOwnTeam) {
-    html += `<p class="training-intro">Potentiel : <span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></p>`;
-  }
   // Motivation (voir Player.form/motivationBadgeHtml plus haut, retour
   // utilisateur, 2026-09 : "La motivation du joueur n'apparaît pas ?") :
   // réservée à SON PROPRE effectif, même principe que le salaire ci-dessus
@@ -12148,6 +13021,30 @@ function renderPlayerDetail(teamIdx, playerId) {
   // affichée pour un adversaire (ni même déverrouillable via le scoutisme,
   // qui ne porte que sur les caractéristiques ci-dessous).
   if (isOwnTeam) html += `<p class="training-intro">Motivation : ${motivationBadgeHtml(player)}</p>`;
+  // Demande de transfert (voir Player.transferRequestActive/
+  // discussTransferRequest côté moteur, retour utilisateur 2026-09 : "un
+  // joueur très frustré [...] peut demander son transfert dans la presse
+  // [...] ouvrir la discussion avec lui pour le remotiver (ne marche pas à
+  // chaque fois) ou le vendre sont les deux possibilités") : réservée à SON
+  // PROPRE effectif, même raison que la Motivation juste au-dessus. "Vendre"
+  // pointe simplement vers la mise aux enchères déjà proposée plus bas sur
+  // cette même fiche, aucun bouton dédié nécessaire.
+  //
+  // Le conteneur de retour (#playerDetailTransferRequestFeedback) est rendu
+  // dès que isOwnTeam, PAS seulement si player.transferRequestActive, même
+  // convention que #playerDetailMarketFeedback plus bas (onMarket) : une
+  // discussion réussie éteint transferRequestActive juste avant que
+  // discussTransferRequestAction ne rappelle renderPlayerDetail, donc le
+  // bloc notice+bouton disparaît AVANT que le message "discussion réussie"
+  // ne soit posé, si son conteneur était logé DANS ce même bloc conditionné
+  // par transferRequestActive, il disparaîtrait avec lui et le message ne
+  // s'afficherait jamais, exactement le cas "succès silencieux" à éviter.
+  if (isOwnTeam && player.transferRequestActive) {
+    html += `<p class="training-intro transfer-request-notice">${escapeHtml(player.transferRequestQuote || `${player.name} demande son transfert.`)}</p>`;
+    html += `<p class="training-intro"><button type="button" class="secondary" data-discuss-transfer-request="${player.id}">Discuter avec le joueur</button> ` +
+      `<span class="sub">(ne fonctionne pas à chaque fois ; vous pouvez aussi le vendre ci-dessous)</span></p>`;
+  }
+  if (isOwnTeam) html += `<div id="playerDetailTransferRequestFeedback"></div>`;
   if (onMarket) html += `<p class="sub">Ce joueur est actuellement aux enchères sur le marché des transferts, ses caractéristiques sont donc visibles.</p>`;
 
   // Mettre aux enchères directement depuis la fiche joueur (retour
@@ -13401,6 +14298,17 @@ function renderSeasonEnd() {
     html += `<p class="season-bonus">${escapeHtml(bonus.label)} : +${formatMoney(bonus.amount)}</p>`;
   }
 
+  // Verdict de l'objectif de saison du conseil d'administration (voir le
+  // grand commentaire de SEASON_OBJECTIVE_TIERS côté moteur) : fonction
+  // PURE, purement en lecture ici (même patron que seasonEndBonusFor
+  // juste au-dessus) : l'impact réel sur l'humeur des supporters n'est
+  // appliqué qu'au clic sur "Nouvelle saison" (voir startNewSeason).
+  const objectiveVerdict = seasonObjectiveVerdict(league, 0);
+  if (objectiveVerdict) {
+    const cls = objectiveVerdict.gap > 0 ? "missed" : objectiveVerdict.gap === 0 ? "met" : "exceeded";
+    html += `<p class="season-objective-verdict ${cls}">${escapeHtml(objectiveVerdict.label)}</p>`;
+  }
+
   document.getElementById("seasonEndContent").innerHTML = html;
   if (newSeasonBtn) newSeasonBtn.classList.remove("hidden");
 
@@ -13433,6 +14341,16 @@ function startNewSeason() {
   // encore la saison qui vient de se terminer.
   const bonus = seasonEndBonusFor(outcome);
   if (bonus) teamA.recordTransaction(bonus.label, bonus.amount);
+  // Verdict de l'objectif de saison du conseil d'administration (voir le
+  // grand commentaire de SEASON_OBJECTIVE_TIERS côté moteur, déjà annoncé en
+  // lecture seule sur l'écran de fin de saison, voir renderSeasonEnd) :
+  // appliqué ICI pour la même raison que la prime juste au-dessus, AVANT de
+  // régénérer la ligue (`league` doit encore être celle de la saison qui
+  // vient de se terminer, seasonObjective de teamA sera de toute façon
+  // réassigné pour la nouvelle saison par assignSeasonObjectives, voir
+  // generateLeague -> buildLeagueWithHumanTeams juste plus bas).
+  const objectiveVerdict = seasonObjectiveVerdict(league, 0);
+  if (objectiveVerdict) teamA.recordMoraleEvent(objectiveVerdict.label, objectiveVerdict.delta);
   // Hérite du rythme de calendrier de la saison qui vient de se terminer
   // (classique, ou accéléré si la carrière tournait déjà en mode accéléré —
   // voir League.calendarWeekMs/calendarSlotOffsetsMs) : une nouvelle saison
@@ -14486,6 +15404,13 @@ const BOXSCORE_COLS = [
   ["min", "MIN"], ["pts", "PTS"], ["reb", "REB"], ["ast", "PD"], ["stl", "INT"],
   ["blk", "CTR"], ["tov", "PDB"], ["pf", "FTS"],
 ];
+// Signe explicite pour le +/- (retour utilisateur : colonne "+/-" au sens
+// basket habituel) : "+12"/"-5"/"0", jamais juste "12" ou "-5" seul pour un
+// score positif qui se lirait comme une simple statistique de comptage.
+function formatPlusMinus(n) {
+  const v = Math.round(n || 0);
+  return v > 0 ? `+${v}` : `${v}`;
+}
 // Retour utilisateur (2026-09) : "ça manque d'un petit total sur les
 // différentes du box score et d'un mvp du match". `mvpRow` (optionnel) est
 // la ligne (référence directe à un élément de `rows`, voir boxscoreMatchMvp
@@ -14496,14 +15421,25 @@ const BOXSCORE_COLS = [
 function boxscoreTableHtml(rows, mvpRow) {
   let html = "<table class='boxscore'><thead><tr><th>Joueur</th><th>Poste</th>";
   BOXSCORE_COLS.forEach(c => html += `<th>${c[1]}</th>`);
-  html += "<th>2PTS</th><th>3PTS</th><th>LF</th></tr></thead><tbody>";
+  // Évaluation (retour utilisateur, 2026-09 : "ajoute les colonnes de stats :
+  // évaluation et +/- [...] dans les box score (match terminé et aussi sur
+  // les live)") : même formule PIR que le MVP du match (statEvaluation),
+  // calculée à la volée pour chaque ligne plutôt que stockée (déjà toutes
+  // les stats brutes nécessaires, en direct comme pour un match déjà joué,
+  // voir statEvaluation/boxscoreMatchMvp). +/- (voir
+  // MatchEngine.applyPlusMinusForPoints côté moteur, déjà présent sur les
+  // lignes en direct — buildBoxScore, spread de p.stats — et sur celles
+  // d'un match déjà joué, voir boxscoreRowsFromMatchLog plus bas) placée
+  // tout à droite, après ÉVAL (retour utilisateur : "mets le +/- tout à
+  // droite des stats [...] après l'évaluation").
+  html += "<th>2PTS</th><th>3PTS</th><th>LF</th><th>ÉVAL</th><th>+/-</th></tr></thead><tbody>";
   const totals = { fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
   BOXSCORE_COLS.forEach(c => { totals[c[0]] = 0; });
   rows.forEach(p => {
     const isMvp = !!(mvpRow && p === mvpRow);
     html += `<tr${isMvp ? ' class="boxscore-mvp-row"' : ""}><td>${isMvp ? "★ " : ""}${escapeHtml(p.name)}</td><td>${POS_SHORT[p.position]}</td>`;
-    BOXSCORE_COLS.forEach(c => { html += `<td>${p[c[0]]}</td>`; totals[c[0]] += p[c[0]] || 0; });
-    html += `<td>${p.fgm2}/${p.fga2}</td><td>${p.fgm3}/${p.fga3}</td><td>${p.ftm}/${p.fta}</td></tr>`;
+    BOXSCORE_COLS.forEach(c => { const val = p[c[0]] || 0; html += `<td>${val}</td>`; totals[c[0]] += val; });
+    html += `<td>${p.fgm2}/${p.fga2}</td><td>${p.fgm3}/${p.fga3}</td><td>${p.ftm}/${p.fta}</td><td>${statEvaluation(p)}</td><td>${formatPlusMinus(p.plusMinus)}</td></tr>`;
     totals.fgm2 += p.fgm2 || 0; totals.fga2 += p.fga2 || 0;
     totals.fgm3 += p.fgm3 || 0; totals.fga3 += p.fga3 || 0;
     totals.ftm += p.ftm || 0; totals.fta += p.fta || 0;
@@ -14511,7 +15447,11 @@ function boxscoreTableHtml(rows, mvpRow) {
   if (rows.length) {
     html += `<tr class="boxscore-totals"><td>Total</td><td></td>`;
     BOXSCORE_COLS.forEach(c => html += `<td>${totals[c[0]]}</td>`);
-    html += `<td>${totals.fgm2}/${totals.fga2}</td><td>${totals.fgm3}/${totals.fga3}</td><td>${totals.ftm}/${totals.fta}</td></tr>`;
+    // ÉVAL et +/- volontairement laissées vides sur la ligne de total (voir
+    // plus haut, leur commentaire d'origine) : la somme des évaluations/+/-
+    // individuels d'un effectif n'a pas de lecture utile pour le manager,
+    // contrairement à un vrai total de rebonds/passes/etc.
+    html += `<td>${totals.fgm2}/${totals.fga2}</td><td>${totals.fgm3}/${totals.fga3}</td><td>${totals.ftm}/${totals.fta}</td><td></td><td></td></tr>`;
   }
   html += "</tbody></table>";
   return html;
@@ -14596,6 +15536,10 @@ function boxscoreRowsFromMatchLog(team, round, competition) {
         name: p.name, position: p.position, min: entry.min,
         pts: entry.pts, reb: entry.reb, ast: entry.ast, stl: entry.stl, blk: entry.blk, tov: entry.tov, pf: entry.pf,
         fgm2: entry.fgm2, fga2: entry.fga2, fgm3: entry.fgm3, fga3: entry.fga3, ftm: entry.ftm, fta: entry.fta,
+        // +/- (voir MatchEngine.applyPlusMinusForPoints/recordMatchStatsForTeam
+        // côté moteur). `|| 0` pour tout matchLog persisté avant cette
+        // fonctionnalité (jamais renseigné).
+        plusMinus: entry.plusMinus || 0,
         // MVP automatique du match (retour utilisateur, 2026-09 : voir
         // awardMatchMvp côté moteur) : `undefined` pour tout le monde sauf le
         // joueur élu, propagé jusqu'à boxscoreMatchMvp/matchMvpCalloutHtml.
@@ -14688,7 +15632,13 @@ function coachRulesHtml() {
 function trainingRulesHtml() {
   const fullMin = Math.round(TRAINING_FULL_MATCH_SECONDS / 60);
   const halfMin = Math.round(TRAINING_FULL_MATCH_SECONDS / 120);
-  return `Chaque jour, le club choisit <b>une seule compétence</b> à travailler et les postes concernés : ce n'est pas un choix joueur par joueur. Un joueur en profite s'il occupe l'un des postes choisis, proportionnellement au temps qu'il a joué à ce poste, CUMULÉ sur tous les matchs de la journée (jusqu'à 3 : 2 de championnat, 10h et 19h, plus 1 de coupe à 15h les jours où un tour est dû), pas seulement le dernier (${fullMin} minutes cumulées = 100% de l'entraînement, ${halfMin} minutes = 50%, etc.) ; s'il n'a pas joué au bon poste ce jour-là, aucune caractéristique ne progresse (seul le déclin lié à l'âge continue de s'appliquer normalement). L'entraînement se déclenche automatiquement juste après le dernier match du jour (19h) : c'est à ce moment-là que les compteurs de temps de jeu de cet onglet repartent à 0 pour la journée suivante. Le poste (plus ou moins naturel pour la compétence) et le gabarit (un grand progresse plus vite en jeu intérieur/rebond/contre, un petit en dribble/agilité/tir extérieur/passe) influencent aussi la vitesse de progression. Étendre l'entraînement à plus de postes forme plus de joueurs mais dilue le rendement de tous. Le staff (entraîneur) se gère depuis l'onglet <b>Staff</b>.`;
+  const individual = `Chaque jour, le club choisit <b>une seule compétence</b> à travailler et les postes concernés : ce n'est pas un choix joueur par joueur. Un joueur en profite s'il occupe l'un des postes choisis, proportionnellement au temps qu'il a joué à ce poste, CUMULÉ sur tous les matchs de la journée (jusqu'à 3 : 2 de championnat, 10h et 19h, plus 1 de coupe à 15h les jours où un tour est dû), pas seulement le dernier (${fullMin} minutes cumulées = 100% de l'entraînement, ${halfMin} minutes = 50%, etc.) ; s'il n'a pas joué au bon poste ce jour-là, aucune caractéristique ne progresse (seul le déclin lié à l'âge continue de s'appliquer normalement). L'entraînement se déclenche automatiquement juste après le dernier match du jour (19h) : c'est à ce moment-là que les compteurs de temps de jeu de cet onglet repartent à 0 pour la journée suivante. Le poste (plus ou moins naturel pour la compétence) et le gabarit (un grand progresse plus vite en jeu intérieur/rebond/contre, un petit en dribble/agilité/tir extérieur/passe) influencent aussi la vitesse de progression. Étendre l'entraînement à plus de postes forme plus de joueurs mais dilue le rendement de tous. Le staff (entraîneur) se gère depuis l'onglet <b>Staff</b>.`;
+  // Retour utilisateur (2026-09) : "enleve ça, c'est pour le guide" (le
+  // détail du focus collectif était auparavant affiché directement sous le
+  // sélecteur de l'onglet Entraînement) + "ne mets pas de chiffre dans le
+  // guide par contre" : explication volontairement sans aucun chiffre ici.
+  const collective = `En plus de l'entraînement individuel ci-dessus, le club peut aussi consacrer un <b>focus collectif</b> chaque jour : soit préparer une nouvelle tactique, soit privilégier la récupération physique de l'équipe. <b>Préparer une tactique</b> : un seul aspect précis à la fois, une priorité offensive, une défense OU un rythme (jamais plusieurs en même temps), à choisir parmi tout ce qui peut être réglé sur l'onglet <b>Ordres</b>. Plus l'équipe enchaîne de jours de repos à s'entraîner sur ce même aspect avant le prochain match, moins ce changement pénalise l'alchimie d'équipe s'il est effectivement joué en match ; tout autre changement de dernière minute, non entraîné, reste pénalisé normalement. <b>Récupération</b> : accélère la remontée de la forme physique de l'équipe les jours sans match.`;
+  return `<p class="training-intro">${individual}</p><p class="training-intro" style="margin-top:10px;">${collective}</p>`;
 }
 
 // Retour utilisateur (2026-09) : "au dessus de ces temps de jeu, il
@@ -14719,8 +15669,150 @@ function showTrainingSection() {
   populateTrainingSkillSelect();
   renderTrainingPositionsSelect();
   renderTrainingList();
+  populateCollectiveTrainingSelect();
   showPage("trainingSection");
   setActiveTab("entrainement");
+}
+
+// Entraînement collectif (retour utilisateur, 2026-09, voir Team.
+// collectiveTraining côté moteur) : réglage à 3 options (aucun/tactique/
+// récupération), séparé de l'entraînement individuel ci-dessus mais dans le
+// même onglet Entraînement — même gabarit select+onchange+sync que
+// populateTrainingSkillSelect, en plus simple (pas de second select "postes
+// concernés" à faire dépendre du choix).
+// Retour utilisateur (2026-09) : "enleve ça, c'est pour le guide", le détail
+// de ces deux focus (tactique/récupération) n'est plus affiché ici, ce
+// niveau d'explication vit désormais dans l'onglet Guide (voir
+// trainingRulesHtml, section "Entraînement").
+const COLLECTIVE_TRAINING_NOTES = {
+  "": "Aucun focus collectif cette semaine : ni la mise en place d'une nouvelle tactique en match, ni la récupération physique quotidienne n'en profitent particulièrement.",
+  "tactique": "",
+  "recuperation": "",
+};
+function populateCollectiveTrainingSelect() {
+  const sel = document.getElementById("collectiveTrainingSelect");
+  if (!sel) return;
+  sel.innerHTML = "";
+  const options = [
+    { value: "", label: "Aucun" },
+    { value: "tactique", label: "Travailler une nouvelle tactique" },
+    { value: "recuperation", label: "Travailler la récupération" },
+  ];
+  options.forEach(opt => {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.label;
+    sel.appendChild(o);
+  });
+  sel.value = teamA.collectiveTraining || "";
+  const noteEl = document.getElementById("collectiveTrainingNote");
+  if (noteEl) noteEl.innerHTML = COLLECTIVE_TRAINING_NOTES[sel.value] || "";
+  sel.onchange = () => {
+    teamA.collectiveTraining = sel.value || null;
+    if (noteEl) noteEl.innerHTML = COLLECTIVE_TRAINING_NOTES[sel.value] || "";
+    // Retour utilisateur (2026-09) : "si le vendredi on fait entrainement
+    // récup [...] on doit quand même avoir le malus divisé par deux du
+    // mercredi et par deux encore une fois le jeudi", teamA.trainedTactics
+    // n'est PLUS effacé quand on quitte "tactique" : il doit survivre à un
+    // détour par "récupération" (ou "aucun") pour que les jours déjà
+    // banqués restent utilisables au prochain match, ET pour retrouver son
+    // choix précédent si on repasse sur "tactique" plus tard.
+    renderTrainedTacticsPicker();
+    saveMyTeam();
+    syncTrainingToServer();
+  };
+  renderTrainedTacticsPicker();
+}
+
+// Options du sélecteur unique de tactique précisément entraînée : une seule
+// entrée par priorité offensive/défense/rythme, regroupées par catégorie,
+// valeur "category:value" (voir renderTrainedTacticsPicker ci-dessous).
+function trainedTacticsSelectOptions() {
+  const groups = [
+    { label: "Priorité offensive", category: "offense", values: OFF_TACTICS_LIST },
+    { label: "Défense", category: "defense", values: DEF_LIST },
+    { label: "Rythme", category: "rhythm", values: RHYTHM_LIST },
+  ];
+  return groups;
+}
+
+// Sous-panneau de choix précis de la tactique entraînée (retour utilisateur,
+// 2026-09 : "il faut effectivement choisir ce qui est bossé comme tactique
+// si c'est ce qui est choisi (exemple zone extérieure)", puis "sachant que
+// tu n'as qu'un jour pour faire cet entrainement [...] un seul aspect et pas
+// tous les aspects") — visible UNIQUEMENT quand collectiveTraining ===
+// "tactique" (voir populateCollectiveTrainingSelect ci-dessus). Écrit dans
+// Team.trainedTactics = { category: "offense"|"defense"|"rhythm", value:
+// string } : UN SEUL aspect à la fois (voir tacticsChangePenalty/
+// checkTacticsChemistry, qui ne réduisent le malus QUE pour cette catégorie
+// précise). Affiche aussi, à titre indicatif, le nombre de jours déjà
+// banqués sur ce choix depuis le dernier match (voir
+// Team.daysTrainedForTarget) pour que le manager comprenne pourquoi
+// l'atténuation grandit d'un jour de repos à l'autre.
+function renderTrainedTacticsPicker() {
+  const holder = document.getElementById("trainedTacticsPicker");
+  if (!holder) return;
+  if (teamA.collectiveTraining !== "tactique") {
+    holder.classList.add("hidden");
+    holder.innerHTML = "";
+    return;
+  }
+  holder.classList.remove("hidden");
+  holder.innerHTML = "";
+
+  const label = document.createElement("div");
+  label.className = "field-label";
+  label.textContent = "Aspect précisément travaillé (un seul à la fois)";
+  holder.appendChild(label);
+
+  const sel = document.createElement("select");
+  sel.id = "trainedTacticSelect";
+  const noneOpt = document.createElement("option");
+  noneOpt.value = "";
+  noneOpt.textContent = "Rien de précis";
+  sel.appendChild(noneOpt);
+  trainedTacticsSelectOptions().forEach(group => {
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = group.label;
+    group.values.forEach(v => {
+      const o = document.createElement("option");
+      o.value = `${group.category}:${v}`;
+      o.textContent = v;
+      optgroup.appendChild(o);
+    });
+    sel.appendChild(optgroup);
+  });
+  const trained = teamA.trainedTactics;
+  sel.value = trained ? `${trained.category}:${trained.value}` : "";
+  holder.appendChild(sel);
+
+  const progressNote = document.createElement("div");
+  progressNote.className = "training-dilution-note";
+  holder.appendChild(progressNote);
+
+  // Retour utilisateur (2026-09) : "enleve ça aussi", plus de message
+  // quand 0 jour n'est encore banqué, seule la progression réelle (au moins
+  // 1 jour banqué) reste affichée ici.
+  function renderProgressNote() {
+    const days = teamA.trainedTactics ? teamA.daysTrainedForTarget(teamA.trainedTactics) : 0;
+    progressNote.textContent = days > 0
+      ? `${days} jour${days > 1 ? "s" : ""} de repos déjà banqué${days > 1 ? "s" : ""} sur ce choix depuis le dernier match (atténuation ×${Math.pow(CHEMISTRY_TACTICS_TRAINED_FACTOR, days).toFixed(3)}).`
+      : "";
+  }
+  renderProgressNote();
+
+  sel.onchange = () => {
+    if (!sel.value) {
+      teamA.trainedTactics = null;
+    } else {
+      const sepIdx = sel.value.indexOf(":");
+      teamA.trainedTactics = { category: sel.value.slice(0, sepIdx), value: sel.value.slice(sepIdx + 1) };
+    }
+    renderProgressNote();
+    saveMyTeam();
+    syncTrainingToServer();
+    renderOrdresChemistryGauge();
+  };
 }
 
 function formatMoney(n) {
@@ -15075,13 +16167,14 @@ document.getElementById("staffHireGrid").addEventListener("click", (e) => {
   renderStaffPanel();
 });
 
+// Retour utilisateur (2026-09) : "enleve l'entrainement aucune (entrainement
+// général uniquement)" — il n'existe plus d'option "pas de focus cette
+// semaine" : une compétence est TOUJOURS sélectionnée (voir Team.trainingSkill,
+// engine.js, miroir identique, défaut "Lancer franc" pour une toute nouvelle
+// équipe).
 function populateTrainingSkillSelect() {
   const sel = document.getElementById("trainingSkillSelect");
   sel.innerHTML = "";
-  const noneOpt = document.createElement("option");
-  noneOpt.value = "";
-  noneOpt.textContent = "Aucune (entraînement général uniquement)";
-  sel.appendChild(noneOpt);
 
   // Deux groupes : les programmes "purs" (une seule caractéristique, plein
   // rendement) et les programmes composites (plusieurs caractéristiques
@@ -15102,13 +16195,13 @@ function populateTrainingSkillSelect() {
   sel.appendChild(pureGroup);
   sel.appendChild(compositeGroup);
 
-  sel.value = teamA.trainingSkill || "";
+  sel.value = teamA.trainingSkill || "freeThrow";
   sel.onchange = () => {
-    teamA.trainingSkill = sel.value || null;
+    teamA.trainingSkill = sel.value || "freeThrow";
     // Repart d'une sélection de poste par défaut cohérente (le poste le plus
     // naturel pour cette compétence) plutôt que de garder d'anciens postes
     // qui n'ont plus de sens pour la nouvelle compétence choisie.
-    teamA.trainingPositions = teamA.trainingSkill ? [rankedPositionsForProgram(teamA.trainingSkill)[0]] : [];
+    teamA.trainingPositions = [rankedPositionsForProgram(teamA.trainingSkill)[0]];
     saveMyTeam();
     syncTrainingToServer();
     renderTrainingPositionsSelect();
@@ -15177,12 +16270,29 @@ function updateDilutionNote() {
     : `${n} poste couvert cette semaine, rendement plein, aucune dilution.`;
 }
 
+// Retour utilisateur (2026-09) : "en dessous les joueurs (en ne mettant que
+// les joueurs qui ont pris du temps de jeu et qui seront entrainés (dès
+// 1min de jeu sur le poste), ça s'implifiera l'affichage comme ça" — filtre
+// sur teamA.trainingPreviewFor(p).trainedSeconds (cumulé sur tous les
+// matchs du jour, sur le(s) poste(s) actuellement sélectionné(s) pour
+// l'entraînement individuel, voir Team.trainablySecondsFor), pas sur le
+// poste "de carte" du joueur : un joueur qui n'a pas du tout joué au poste
+// entraîné aujourd'hui n'apparaît plus dans cette liste.
+const TRAINING_LIST_MIN_SECONDS = 60;
 function renderTrainingList() {
   const holder = document.getElementById("trainingList");
   holder.innerHTML = "";
   // Les plus jeunes (plus de marge de progression) d'abord, pour attirer l'œil.
-  const sorted = [...teamA.players].sort((a, b) => a.age - b.age);
-  sorted.forEach(p => holder.appendChild(buildTrainingRow(p)));
+  const sorted = [...teamA.players].sort((a, b) => a.age - b.age)
+    .filter(p => teamA.trainingPreviewFor(p).trainedSeconds >= TRAINING_LIST_MIN_SECONDS);
+  if (sorted.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "training-empty";
+    empty.textContent = "Aucun joueur n'a encore joué au(x) poste(s) entraîné(s) cette semaine.";
+    holder.appendChild(empty);
+  } else {
+    sorted.forEach(p => holder.appendChild(buildTrainingRow(p)));
+  }
   renderTrainingSummary();
 }
 
@@ -15462,9 +16572,27 @@ function renderClubSection() {
 
   const staffCard = document.createElement("div");
   staffCard.className = "stat-card";
-  staffCard.innerHTML = teamA.trainer
-    ? `<h3>Staff</h3><div class="big">Niveau ${teamA.trainer.level}</div><div class="sub">En poste depuis ${teamA.trainer.weeksEmployed} semaine(s).</div>`
-    : `<h3>Staff</h3><div class="big">Aucun</div><div class="sub">Pas d'entraîneur sous contrat.</div>`;
+  // Retour utilisateur (2026-09, avec capture d'écran) : "il faudrait que tu
+  // mettes la liste des stats ici, pas seulement niveau 5, on sait meme pas
+  // qui est niveau 5" : cette carte ne montrait QUE le niveau de
+  // l'entraîneur (this.trainer), sans même le nommer, et ignorait
+  // complètement les deux autres rôles de staff apparus depuis (analyste
+  // vidéo, recruteur, voir renderAnalystPanel/renderRecruiterPanel) : un
+  // simple "Niveau 5" ne dit pas DE QUI il s'agit dès qu'il y a plus d'un
+  // poste pourvu. Remplacé par la liste des 3 postes, chacun avec son
+  // niveau ou "non recruté".
+  const staffRoles = [
+    { key: "trainer", label: "Entraîneur" },
+    { key: "videoAnalyst", label: "Analyste vidéo" },
+    { key: "recruiter", label: "Recruteur" },
+  ];
+  const staffHiredCount = staffRoles.filter(r => teamA[r.key]).length;
+  const staffLines = staffRoles.map(r => {
+    const role = teamA[r.key];
+    return role ? `${r.label} : niveau ${role.level}` : `${r.label} : non recruté`;
+  }).join("<br>");
+  staffCard.innerHTML = `<h3>Staff</h3><div class="big">${staffHiredCount}/${staffRoles.length} postes pourvus</div>` +
+    `<div class="sub">${staffLines}</div>`;
   const staffLink = document.createElement("div");
   staffLink.className = "quick-links";
   staffLink.innerHTML = `<button class="secondary" data-tab="staff">Gérer le staff</button>`;
@@ -15800,7 +16928,7 @@ function rosterSortValue(p, key) {
     // Forme physique : trié sur la valeur courante rattrapée (voir
     // currentCondition), pas sur p.condition brut, pour rester cohérent
     // avec ce que la colonne affiche réellement (voir conditionBadgeHtml).
-    case "condition": return currentCondition(p);
+    case "condition": return currentCondition(p, Date.now(), teamA.conditionRecoveryPerDay());
     // Motivation : Player.form n'a pas d'équivalent de currentCondition (voir
     // motivationBadgeHtml), donc lu directement.
     case "motivation": return p.form;
@@ -15825,6 +16953,23 @@ function rosterHeaderCellHtml(key, label) {
 }
 
 function renderEffectifSection() {
+  // Alchimie d'équipe (retour utilisateur, 2026-09 : voir le commentaire de
+  // .roster-chemistry-gauge-wrap ci-dessus dans le HTML) : même mécanique de
+  // remplissage/couleur que renderHumeurSection (#moraleGaugeFill), sur la
+  // jauge compacte sous le titre de cet onglet.
+  const chemistry = teamA.chemistry;
+  const chemColor = moraleGaugeColor(chemistry);
+  const chemValueEl = document.getElementById("rosterChemistryValue");
+  if (chemValueEl) {
+    chemValueEl.textContent = `${Math.round(chemistry)}/100 · ${chemistryLabel(chemistry)}`;
+    chemValueEl.style.color = chemColor;
+  }
+  const chemFill = document.getElementById("rosterChemistryGaugeFill");
+  if (chemFill) {
+    chemFill.style.width = `${Math.round(chemistry)}%`;
+    chemFill.style.background = chemColor;
+  }
+
   const holder = document.getElementById("rosterContent");
   let sorted;
   if (rosterSortState.key) {
@@ -15889,11 +17034,12 @@ function renderEffectifSection() {
     // l'emporte sur tr.me si un titulaire encore blessé n'a pas été remplacé
     // dans la feuille de match (voir la déclaration CSS de tr.injured).
     const cross = injuryCrossHtml(p, now);
+    const transferBadge = transferRequestBadgeHtml(p);
     const rowClass = cross ? "injured" : (isStarter ? "me" : "");
-    html += `<tr class="${rowClass}"><td>${playerLinkHtml(myTeamIndex, p.id, p.name)}${cross || ""}${forSaleCell}</td><td>${posCell}</td>` +
+    html += `<tr class="${rowClass}"><td>${playerLinkHtml(myTeamIndex, p.id, p.name)}${cross || ""}${transferBadge || ""}${forSaleCell}</td><td>${posCell}</td>` +
       `<td>${p.age}</td><td>${p.height} cm</td>` +
       `<td title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
-      `<td>${conditionBadgeHtml(p, now)}</td>` +
+      `<td>${conditionBadgeHtml(p, now, teamA.conditionRecoveryPerDay())}</td>` +
       `<td>${motivationBadgeHtml(p)}</td>` +
       `<td>${evaluationSquaresHtml(p)}</td>` +
       `<td>${marketCell}</td></tr>`;
@@ -17549,6 +18695,15 @@ function renderHumeurSection() {
   document.getElementById("moraleAttendanceEffect").textContent = `${attendanceBase}%`;
   const forgiveness = Math.round((moraleForgiveness(morale) - 1) * 100);
   document.getElementById("moraleForgivenessEffect").textContent = `${forgiveness >= 0 ? "+" : ""}${forgiveness}%`;
+
+  // Objectif de saison du conseil d'administration (voir le grand
+  // commentaire au-dessus de SEASON_OBJECTIVE_TIERS côté moteur) : simple
+  // rappel de l'ambition fixée en début de saison tant que celle-ci n'est
+  // pas terminée (le verdict lui-même, une fois calculable, est affiché sur
+  // l'écran de fin de saison, voir renderSeasonEnd).
+  document.getElementById("seasonObjectiveValue").textContent = teamA.seasonObjective
+    ? SEASON_OBJECTIVE_LABELS[teamA.seasonObjective] || teamA.seasonObjective
+    : "Pas encore fixé";
 
   const holder = document.getElementById("moraleHistoryContent");
   const history = teamA.moraleHistory || [];

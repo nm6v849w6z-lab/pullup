@@ -59,12 +59,18 @@ function freshTeamAndLeague(name) {
   const { league } = freshTeamAndLeague();
   if (league.totalRounds !== 18) throw new Error(`❌ (setup) attendu 18 journées, obtenu ${league.totalRounds}.`);
   if (midSeasonRound(league.totalRounds) !== 9) throw new Error(`❌ midSeasonRound(18) devrait valoir 9, obtenu ${midSeasonRound(league.totalRounds)}.`);
-  if (milestoneTypeForRound(0, league.totalRounds) !== "debut-saison") throw new Error("❌ La journée 0 devrait être détectée comme début de saison.");
+  // Correctif 2026-09 (retour utilisateur : "la première interview doit
+  // pouvoir se faire avant le début de saison et ne doit pas porter sur le
+  // resultat du premier match") : la journée 0 ne déclenche PLUS aucun
+  // jalon ici (l'interview "début de saison" est désormais mise en attente
+  // avant même la création du calendrier, voir Team.queueSeasonPreviewInterview
+  // plus bas).
+  if (milestoneTypeForRound(0, league.totalRounds) !== null) throw new Error("❌ La journée 0 ne devrait plus déclencher aucun jalon (voir queueSeasonPreviewInterview).");
   if (milestoneTypeForRound(9, league.totalRounds) !== "mi-saison") throw new Error("❌ La journée 9 devrait être détectée comme mi-saison.");
   if (milestoneTypeForRound(17, league.totalRounds) !== "fin-saison-reguliere") throw new Error("❌ La dernière journée (17) devrait être détectée comme fin de saison régulière.");
-  if (milestoneTypeForRound(1, league.totalRounds) !== null) throw new Error("❌ La journée 1 (juste après le début de saison) ne devrait déclencher aucun jalon.");
+  if (milestoneTypeForRound(1, league.totalRounds) !== null) throw new Error("❌ La journée 1 ne devrait déclencher aucun jalon.");
   if (milestoneTypeForRound(8, league.totalRounds) !== null) throw new Error("❌ La journée 8 (juste avant la mi-saison) ne devrait déclencher aucun jalon.");
-  console.log("✅ milestoneTypeForRound/midSeasonRound identifient correctement les journées 0 (début de saison), 9 (mi-saison) et 17 (fin de saison régulière), aucune autre.");
+  console.log("✅ milestoneTypeForRound/midSeasonRound identifient correctement les journées 9 (mi-saison) et 17 (fin de saison régulière), plus AUCUNE autre (journée 0 comprise, voir queueSeasonPreviewInterview).");
 }
 
 // ---------------------------------------------------------------------
@@ -97,20 +103,34 @@ function freshTeamAndLeague(name) {
   console.log("✅ Le délai de réponse d'une interview de jalon est bien de 3 jours (pas 2h comme l'interview normale).");
 
   // Résolution : effet sur fanMorale ET Player.form (jamais le cas pour une
-  // interview normale).
+  // interview normale). Correctif 2026-09 (retour utilisateur : "tous les
+  // joueurs doivent être impactés par les interviews, les interviews sont
+  // sur des périodes de la saison et pas uniquement un match") : TOUT
+  // l'effectif est concerné, pas seulement entry.playerIds (les joueurs
+  // ayant réellement disputé le match qui a déclenché ce jalon), vérifié
+  // ci-dessous avec un joueur qui n'a PAS joué ce match précis.
   team.applyMoraleForResult(true, 15, opp.name, 9, T0, "mi-saison");
   const entry2 = team.pendingInterviews.find(i => i.milestone === "mi-saison");
-  const targetPlayer = team.players.find(p => p.id === entry2.playerIds[0]);
-  const formBefore = targetPlayer.form;
+  const playedPlayer = team.players.find(p => p.id === entry2.playerIds[0]);
+  const benchedPlayer = team.players.find(p => !entry2.playerIds.includes(p.id));
+  if (!benchedPlayer) throw new Error("❌ (setup) au moins un joueur ne devrait PAS avoir joué ce match simulé (effectif de 15, 5 titulaires).");
+  const formBefore = playedPlayer.form;
+  const benchedFormBefore = benchedPlayer.form;
   const fanBefore = team.fanMorale;
   const res = team.resolveInterview(entry2.id, "Agressif", T0);
   if (!res || !res.ok) throw new Error("❌ resolveInterview devrait accepter un ton valide pour une interview de jalon.");
   if (typeof res.formDelta !== "number") throw new Error("❌ Le résultat de resolveInterview pour une interview de jalon devrait inclure formDelta.");
   if (team.fanMorale === fanBefore) throw new Error("❌ fanMorale devrait avoir changé après résolution.");
-  const formAfter = team.players.find(p => p.id === targetPlayer.id).form;
+  const formAfter = team.players.find(p => p.id === playedPlayer.id).form;
   if (formAfter === formBefore) throw new Error("❌ Player.form du joueur concerné devrait avoir changé après résolution d'une interview de jalon (ton Agressif, victoire).");
   if (formAfter <= formBefore) throw new Error(`❌ Ton Agressif + victoire devrait AUGMENTER la forme, obtenu ${formBefore} → ${formAfter}.`);
   console.log(`✅ Résoudre une interview de jalon (ton Agressif, victoire) augmente bien la forme du joueur concerné (${formBefore} → ${formAfter}) en plus de l'humeur des supporters.`);
+
+  const benchedFormAfter = team.players.find(p => p.id === benchedPlayer.id).form;
+  if (benchedFormAfter <= benchedFormBefore) {
+    throw new Error(`❌ Un joueur n'ayant PAS disputé ce match précis devrait quand même voir sa motivation augmenter (interview de jalon = toute une période, pas un seul match) : obtenu ${benchedFormBefore} → ${benchedFormAfter}.`);
+  }
+  console.log(`✅ Un joueur n'ayant pas disputé le match qui a déclenché ce jalon voit quand même sa motivation évoluer (${benchedFormBefore} → ${benchedFormAfter}) : l'interview porte sur toute la période, pas sur ce seul match.`);
 }
 
 // ---------------------------------------------------------------------
@@ -195,40 +215,67 @@ function freshTeamAndLeague(name) {
   console.log("✅ Chaque jalon porte au moins 2 vraies questions (MILESTONE_INTERVIEW_QUESTIONS), avec exactement autant de réponses par {ton, issue} dans MILESTONE_INTERVIEW_QUOTES.");
 }
 {
-  // interviewTranscriptFor : zippe questions/réponses, remplace {opponent},
-  // ne plante jamais sur un jalon/ton inconnu (tableau vide plutôt qu'une
-  // exception, même contrat que le reste des méthodes "résoudre" de ce
-  // fichier).
-  const transcript = interviewTranscriptFor("debut-saison", "Agressif", true, "Rennes");
-  console.log("\nTranscript début de saison / Agressif / victoire :", transcript);
-  if (!Array.isArray(transcript) || transcript.length !== MILESTONE_INTERVIEW_QUESTIONS["debut-saison"].length) {
+  // interviewTranscriptFor : zippe questions/réponses, remplace {opponent}
+  // (jalon "mi-saison", toujours lié à un adversaire), ne plante jamais sur
+  // un jalon/ton inconnu (tableau vide plutôt qu'une exception, même
+  // contrat que le reste des méthodes "résoudre" de ce fichier). Accepte
+  // aussi bien un tableau de tons (un par question, correctif 2026-09,
+  // retour utilisateur : "la possibilité de choisir le ton pour chacune
+  // [des questions]") qu'une chaîne unique (compatibilité ascendante).
+  const transcript = interviewTranscriptFor("mi-saison", ["Agressif", "Mesuré"], true, "Rennes");
+  console.log("\nTranscript mi-saison / [Agressif, Mesuré] / victoire :", transcript);
+  if (!Array.isArray(transcript) || transcript.length !== MILESTONE_INTERVIEW_QUESTIONS["mi-saison"].length) {
     throw new Error("❌ interviewTranscriptFor devrait renvoyer exactement un {question, answer} par question du jalon.");
   }
   transcript.forEach((qa, i) => {
-    if (qa.question !== MILESTONE_INTERVIEW_QUESTIONS["debut-saison"][i]) throw new Error(`❌ La question ${i} du transcript devrait correspondre à MILESTONE_INTERVIEW_QUESTIONS dans le même ordre.`);
+    if (qa.question !== MILESTONE_INTERVIEW_QUESTIONS["mi-saison"][i]) throw new Error(`❌ La question ${i} du transcript devrait correspondre à MILESTONE_INTERVIEW_QUESTIONS dans le même ordre.`);
     if (!qa.answer || qa.answer.includes("{opponent}")) throw new Error(`❌ La réponse ${i} devrait être non vide et avoir remplacé {opponent} par le vrai nom de l'adversaire.`);
   });
-  if (!transcript.some(qa => qa.answer.includes("Rennes"))) throw new Error("❌ Au moins une réponse (la première, réaction au résultat) devrait mentionner l'adversaire par son nom.");
-  console.log("✅ interviewTranscriptFor construit bien le transcript complet, questions dans l'ordre, {opponent} remplacé.");
+  if (!transcript.some(qa => qa.answer.includes("Rennes"))) throw new Error("❌ Au moins une réponse devrait mentionner l'adversaire par son nom.");
+  // Un tableau de tons DIFFÉRENTS par question doit bien piocher la bonne
+  // réponse ("Agressif" pour la question 0, "Mesuré" pour la question 1),
+  // pas le même ton répété pour toutes les questions.
+  const aggroOnlyQ0 = interviewTranscriptFor("mi-saison", "Agressif", true, "Rennes")[0].answer;
+  const mesureOnlyQ1 = interviewTranscriptFor("mi-saison", "Mesuré", true, "Rennes")[1].answer;
+  if (transcript[0].answer !== aggroOnlyQ0) throw new Error("❌ La question 0 devrait utiliser le ton 'Agressif' du tableau (index 0).");
+  if (transcript[1].answer !== mesureOnlyQ1) throw new Error("❌ La question 1 devrait utiliser le ton 'Mesuré' du tableau (index 1), pas le ton de la question 0.");
+  console.log("✅ interviewTranscriptFor accepte bien un ton PAR question (tableau), chacune piochant sa propre réponse selon son propre ton.");
 
   const emptyTranscript = interviewTranscriptFor("milestone-inconnu", "Agressif", true, "Rennes");
   if (!Array.isArray(emptyTranscript) || emptyTranscript.length !== 0) throw new Error("❌ interviewTranscriptFor devrait renvoyer un tableau vide (jamais d'exception) pour un jalon inconnu.");
   console.log("✅ interviewTranscriptFor ne plante jamais sur un jalon inconnu (tableau vide).");
 }
 {
-  // Team.resolveInterview expose désormais `quotes` (le transcript complet)
-  // en plus de `delta`/`formDelta`, et `quote` (dans moraleHistory) devient
-  // les réponses mises bout à bout plutôt qu'une seule phrase.
-  const { team, league } = freshTeamAndLeague();
-  const opp = league.teams[1];
-  simulateOrForfeit(team, opp);
-  team.applyMoraleForResult(true, 15, opp.name, 0, T0, "debut-saison");
+  // Interview "début de saison" (correctif 2026-09, retour utilisateur : "la
+  // première interview doit pouvoir se faire avant le début de saison et ne
+  // doit pas porter sur le resultat du premier match mais sur la saison à
+  // venir (objectif, joueur sur qui on compte...)") : mise en attente par
+  // Team.queueSeasonPreviewInterview, AVANT tout match (jamais via
+  // applyMoraleForResult), sans adversaire ni résultat, avec `playerName` =
+  // le joueur le mieux noté de l'effectif à son poste.
+  const { team } = freshTeamAndLeague();
+  // freshTeamAndLeague() appelle déjà generateLeague, qui met en attente
+  // cette interview automatiquement (voir buildLeagueWithHumanTeams) :
+  // aucun match ne doit avoir été joué pour qu'elle existe.
   const entry = team.pendingInterviews.find(i => i.milestone === "debut-saison");
+  if (!entry) throw new Error("❌ Une interview 'début de saison' devrait déjà être en attente dès generateLeague(), avant le moindre match.");
+  if (entry.round !== null || entry.opponentName !== null) {
+    throw new Error(`❌ L'interview 'début de saison' ne devrait porter ni round ni opponentName (aucun match concerné), obtenu round=${entry.round}, opponentName=${entry.opponentName}.`);
+  }
+  if (!entry.won) throw new Error("❌ L'interview 'début de saison' devrait toujours porter won=true (cadrage positif, aucun résultat à commenter).");
+  if (!entry.playerName || typeof entry.playerName !== "string") throw new Error("❌ L'interview 'début de saison' devrait porter playerName (le joueur le mieux noté de l'effectif).");
+  if (!Array.isArray(entry.playerIds) || entry.playerIds.length !== team.players.length) {
+    throw new Error("❌ L'interview 'début de saison' devrait concerner TOUT l'effectif (discours de rentrée), pas seulement des joueurs ayant joué.");
+  }
+  console.log(`✅ Team.queueSeasonPreviewInterview met bien en attente l'interview 'début de saison' dès la création de la ligue (playerName="${entry.playerName}"), sans round ni adversaire.`);
+
   const res = team.resolveInterview(entry.id, "Mesuré", T0);
-  console.log("\nrésultat resolveInterview (quotes) :", res && res.quotes);
+  console.log("\nrésultat resolveInterview 'début de saison' (quotes) :", res && res.quotes);
   if (!res || !Array.isArray(res.quotes) || res.quotes.length !== MILESTONE_INTERVIEW_QUESTIONS["debut-saison"].length) {
     throw new Error("❌ Team.resolveInterview devrait exposer `quotes`, le transcript complet {question, answer}[] du jalon résolu.");
   }
+  if (!res.quotes.some(qa => qa.answer.includes(entry.playerName))) throw new Error("❌ Au moins une réponse devrait mentionner le joueur clé (playerName) par son nom.");
+  if (res.quotes.some(qa => /victoire|défaite/i.test(qa.answer))) throw new Error("❌ Aucune réponse 'début de saison' ne devrait mentionner un résultat de match.");
   const histEntry = team.moraleHistory.find(e => e.milestone === "debut-saison");
   if (!histEntry || !Array.isArray(histEntry.quotes) || histEntry.quotes.length !== res.quotes.length) {
     throw new Error("❌ moraleHistory devrait porter le même `quotes` (transcript complet) que le résultat de resolveInterview.");
@@ -236,7 +283,41 @@ function freshTeamAndLeague(name) {
   if (!histEntry.quote || histEntry.quote !== res.quotes.map(q => q.answer).join(" ")) {
     throw new Error("❌ moraleHistory.quote devrait rester les réponses mises bout à bout (compatibilité avec recentInterviewsHtml côté client).");
   }
-  console.log("✅ Team.resolveInterview expose bien `quotes` (transcript complet), fixé à l'identique dans moraleHistory, `quote` restant les réponses concaténées.");
+  console.log("✅ Team.resolveInterview résout bien l'interview 'début de saison' (objectifs/joueur clé, playerName substitué), `quotes` fixé à l'identique dans moraleHistory.");
+}
+{
+  // Correctif 2026-09 (retour utilisateur : "la possibilité de choisir le
+  // ton pour chacune [des questions]") : resolveInterview accepte un TABLEAU
+  // de tons (un par question), et MOYENNE les deltas des tons choisis.
+  const { team, league } = freshTeamAndLeague();
+  const opp = league.teams[1];
+  simulateOrForfeit(team, opp);
+  team.applyMoraleForResult(true, 15, opp.name, 9, T0, "mi-saison");
+  const entry = team.pendingInterviews.find(i => i.milestone === "mi-saison");
+  const fanBefore = team.fanMorale;
+  const res = team.resolveInterview(entry.id, ["Agressif", "Humble"], T0);
+  if (!res || !res.ok) throw new Error("❌ resolveInterview devrait accepter un TABLEAU de tons (un par question).");
+  const expectedFan = (Engine.MILESTONE_INTERVIEW_TONES["Agressif"].fanWin + Engine.MILESTONE_INTERVIEW_TONES["Humble"].fanWin) / 2;
+  if (Math.abs(res.delta - expectedFan) > 1e-9) {
+    throw new Error(`❌ Avec des tons différents par question, le delta d'humeur devrait être la MOYENNE des deux tons (${expectedFan}), obtenu ${res.delta}.`);
+  }
+  if (team.fanMorale === fanBefore) throw new Error("❌ fanMorale devrait avoir changé après résolution.");
+  console.log(`✅ resolveInterview avec des tons différents par question (Agressif/Humble) applique bien la MOYENNE des deltas (${expectedFan}) plutôt qu'un seul ton pour toute l'interview.`);
+
+  // Compatibilité ascendante : une chaîne unique reste acceptée, appliquée à
+  // toutes les questions (comportement identique à l'ancien système à ton
+  // unique, jamais de régression pour les appelants existants, voir
+  // server/actions.js:respondToInterview).
+  const { team: team2, league: league2 } = freshTeamAndLeague();
+  const opp2 = league2.teams[1];
+  simulateOrForfeit(team2, opp2);
+  team2.applyMoraleForResult(true, 15, opp2.name, 9, T0, "mi-saison");
+  const entry2 = team2.pendingInterviews.find(i => i.milestone === "mi-saison");
+  const res2 = team2.resolveInterview(entry2.id, "Agressif", T0);
+  if (!res2 || !res2.ok || res2.delta !== Engine.MILESTONE_INTERVIEW_TONES["Agressif"].fanWin) {
+    throw new Error(`❌ Une chaîne unique en compatibilité ascendante devrait s'appliquer identiquement à toutes les questions (delta ${Engine.MILESTONE_INTERVIEW_TONES["Agressif"].fanWin}), obtenu ${res2 && res2.delta}.`);
+  }
+  console.log("✅ resolveInterview reste rétro-compatible avec une chaîne de ton unique (appliquée à toutes les questions).");
 }
 
 // ---------------------------------------------------------------------

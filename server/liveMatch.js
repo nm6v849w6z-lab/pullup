@@ -586,7 +586,7 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
 // Date.now()) uniquement pour ne pas casser les quelques appels directs
 // existants (tests) qui ne le passent pas encore.
 function finalizeRound(Engine, league, round, now = Date.now()) {
-  const { simulateOrForfeit, recordMatchStatsAndAwardMvp, milestoneTypeForRound } = Engine;
+  const { simulateOrForfeit, recordMatchStatsAndAwardMvp, milestoneTypeForRound, seasonObjectiveMidSeasonSignal } = Engine;
   const matches = league.matchesForRound(round);
   const userResults = [];
   // Interview de jalon (retour utilisateur, 2026-09 : "elle doit avoir lieu
@@ -661,6 +661,30 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
       });
     }
   });
+
+  // Signal de mi-saison de l'objectif du CA (retour utilisateur, 2026-09 :
+  // "Ajoute un signal à la mi saison", voir le grand commentaire de
+  // Engine.seasonObjectiveMidSeasonSignal côté moteur) : appliqué APRÈS la
+  // boucle ci-dessus (jamais dedans) pour que League.standings() reflète
+  // déjà TOUS les résultats de cette journée (y compris les matchs traités
+  // plus tôt dans la même boucle) avant de calculer le rang provisoire de
+  // chaque équipe, plutôt qu'un classement partiellement à jour selon
+  // l'ordre des matchs. Automatique et immédiat (pas d'interview à
+  // résoudre, contrairement au jalon "mi-saison" classique ci-dessus, qui
+  // reste par ailleurs inchangé) : une équipe humaine peut ainsi recevoir
+  // à la fois l'interview de mi-saison (résultat du match) ET ce signal
+  // séparé (objectif de saison), les deux à la même journée mais sans
+  // rapport l'un avec l'autre. Pour CHAQUE équipe humaine concernée par
+  // cette journée (solo comme multi-manager, voir Team.isHuman plus haut),
+  // jamais pour une équipe CPU.
+  if (milestone === "mi-saison") {
+    userResults.forEach(r => {
+      const signal = seasonObjectiveMidSeasonSignal(league, r.teamIdx);
+      if (!signal) return;
+      league.teams[r.teamIdx].recordMoraleEvent(signal.label, signal.delta);
+      r.seasonObjectiveSignal = signal;
+    });
+  }
 
   league.advanceRound();
   return { type: "match", round, userResults };

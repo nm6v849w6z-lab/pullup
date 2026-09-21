@@ -14,23 +14,30 @@
 // 2) Le panneau d'interview du tableau de bord (#clubInterviewPanel,
 //    renderClubInterviewPanel), AJOUTÉ pour couvrir le trou laissé par le
 //    retrait des boutons direct/calendrier : un manager resté connecté
-//    pendant TOUTE la diffusion d'un match portant un jalon (ex. journée 0,
-//    "début de saison") ne voit jamais son interview via "Pendant votre
-//    absence" (voir refreshFromServerAndReenter, qui filtre explicitement la
-//    journée qu'on vient de suivre en direct de la liste des événements à
-//    rattraper). Sans ce panneau, l'interview resterait inaccessible
-//    jusqu'à expiration silencieuse au bout de 3 jours, une régression par
-//    rapport à l'ancien bouton "Faire l'interview d'après match" du direct.
+//    pendant TOUTE la diffusion d'un match portant un jalon (ex. journée 9,
+//    "mi-saison") ne voit jamais son interview via "Pendant votre absence"
+//    (voir refreshFromServerAndReenter, qui filtre explicitement la journée
+//    qu'on vient de suivre en direct de la liste des événements à
+//    rattraper). Sans ce panneau, l'interview resterait inaccessible jusqu'à
+//    expiration silencieuse au bout de 3 jours, une régression par rapport à
+//    l'ancien bouton "Faire l'interview d'après match" du direct. Ce panneau
+//    est aussi le SEUL point d'entrée de l'interview "début de saison"
+//    (correctif 2026-09, voir Partie 1 plus bas) : depuis qu'elle est mise
+//    en attente AVANT le premier match plutôt qu'après son résultat
+//    (round=null), elle ne peut plus jamais apparaître dans "Pendant votre
+//    absence", qui ne retrouve les interviews de jalon que par round de
+//    match.
 //
 // Correctif 2026-09 (retour utilisateur : "mets un vrai pop up pour
 // l'interview qu'on peut passer et faire en retournant dans le tableau de
 // bord, si on veut le faire plus tard") : dans les deux cas ci-dessus, le
 // widget n'affiche plus qu'un bouton compact qui ouvre un vrai popup
-// (showInterviewModal), où vivent désormais les 2 vraies questions, la
-// prévisualisation par ton et le choix final (Valider/Sans commentaire/Plus
-// tard). Ce fichier vérifie aussi que "Plus tard" (ou quitter l'écran de
-// rattrapage sans répondre) NE résout PLUS jamais l'interview à la place du
-// manager : elle reste en attente, reprenable via ce même bouton.
+// (showInterviewModal), où vivent désormais les vraies questions, la
+// prévisualisation par ton (INDÉPENDANTE pour chaque question depuis un
+// second correctif 2026-09, voir Partie 1) et le choix final (Valider/Sans
+// commentaire/Plus tard). Ce fichier vérifie aussi que "Plus tard" NE résout
+// PLUS jamais l'interview à la place du manager : elle reste en attente,
+// reprenable via ce même bouton.
 const fs = require("fs");
 const { startTestServer, openGame, flush, patchDateNow } = require("./test_helpers.js");
 const { scheduledTimeForRound, MATCH_BROADCAST_DURATION_MS } = require("./server/calendar.js");
@@ -46,78 +53,65 @@ let dom = await openGame(html, baseUrl);
 patchDateNow(dom.window, () => clock.now);
 await flush(dom);
 
-const saved = JSON.parse(fs.readFileSync(savePath, "utf-8"));
-const scheduledAt = scheduledTimeForRound(saved.league.calendarStartAt, saved.league.round);
 await dom.window.close();
 
 // ---------------------------------------------------------------------
-// Partie 1 : manager absent pendant TOUTE la diffusion de la journée 0
-// (jamais suivie en direct). La journée 0 porte toujours le jalon "début
-// de saison" (voir Engine.milestoneTypeForRound). L'interview de jalon doit
-// apparaître dans le récapitulatif "Pendant votre absence", exactement
-// comme n'importe quel autre événement manqué.
+// Partie 1 : interview de jalon "début de saison" (correctif 2026-09,
+// retour utilisateur : "la première interview doit pouvoir se faire avant
+// le début de saison et ne doit pas porter sur le resultat du premier match
+// mais sur la saison à venir (objectif, joueur sur qui on compte...)") :
+// mise en attente dès la CRÉATION de la ligue (voir
+// Team.queueSeasonPreviewInterview/buildLeagueWithHumanTeams), donc déjà là
+// AVANT que la journée 0 ne soit jouée — contrairement à l'ancien
+// comportement (jalon posé APRÈS le résultat de la journée 0). N'étant liée
+// à AUCUNE journée (round=null), elle n'apparaît jamais dans le
+// récapitulatif "Pendant votre absence" (qui ne retrouve les interviews de
+// jalon que par round de match, voir showCatchupSummaryIfAny) : seul le
+// panneau du tableau de bord (#clubInterviewPanel) y donne accès, dès
+// l'ouverture d'une toute nouvelle sauvegarde.
 // ---------------------------------------------------------------------
-clock.now = scheduledAt + MATCH_BROADCAST_DURATION_MS + 5000;
 dom = await openGame(html, baseUrl, (window) => patchDateNow(window, () => clock.now));
 let doc = dom.window.document;
 let win = dom.window;
 await flush(dom);
 
-const catchupVisible = !doc.getElementById("catchupSection").classList.contains("hidden");
-console.log("Récapitulatif \"Pendant votre absence\" affiché après une absence couvrant toute la journée 0 :", catchupVisible);
-if (!catchupVisible) throw new Error("❌ (setup) Le récapitulatif d'absence devrait s'afficher après avoir manqué toute la diffusion de la journée 0.");
+const seasonPreviewPending = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'debut-saison' && i.round === null)");
+console.log("Interview de jalon \"début de saison\" déjà en attente dès l'ouverture d'une nouvelle sauvegarde (avant tout match) :", seasonPreviewPending);
+if (!seasonPreviewPending) throw new Error("❌ Une interview \"début de saison\" (round=null) devrait déjà être en attente dès la création de la ligue, avant le moindre match.");
+console.log("✅ L'interview de jalon \"début de saison\" est bien mise en attente dès la création de la ligue, avant que la journée 0 ne soit jouée.");
 
-const pendingBefore = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'debut-saison')");
-console.log("Interview de jalon \"début de saison\" en attente côté teamA :", pendingBefore);
-if (!pendingBefore) throw new Error("❌ (setup) Une interview de jalon \"début de saison\" devrait être en attente après le tout premier match de la saison.");
-
-const catchupWidget = doc.querySelector("#catchupContent .interview-widget");
-console.log("Widget d'interview affiché dans le récapitulatif d'absence :", !!catchupWidget);
-if (!catchupWidget) throw new Error("❌ Le récapitulatif \"Pendant votre absence\" devrait afficher le widget de l'interview de jalon \"début de saison\" de la journée 0.");
-console.log("✅ L'interview de jalon \"début de saison\" s'affiche bien dans le récapitulatif \"Pendant votre absence\".");
-
-// ---------------------------------------------------------------------
-// Correctif 2026-09 (retour utilisateur : "mets un vrai pop up pour
-// l'interview qu'on peut passer et faire en retournant dans le tableau de
-// bord, si on veut le faire plus tard") : quitter l'écran de rattrapage
-// SANS avoir répondu ("Continuer" directement) ne doit plus jamais résoudre
-// l'interview à la place du manager (ancien comportement, "sans commentaire"
-// automatique) : elle doit rester en attente, reprenable ensuite depuis le
-// tableau de bord.
-// ---------------------------------------------------------------------
-const catchupContinueBtn = doc.getElementById("catchupContinueBtn");
-catchupContinueBtn.click();
-await flush(dom);
-const pendingAfterContinueWithoutAnswering = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'debut-saison')");
-console.log("\nInterview encore en attente après \"Continuer\" SANS y avoir répondu :", pendingAfterContinueWithoutAnswering);
-if (!pendingAfterContinueWithoutAnswering) throw new Error("❌ Quitter le récapitulatif d'absence sans répondre ne devrait plus résoudre l'interview automatiquement (\"sans commentaire\" silencieux) : elle devrait rester en attente.");
-console.log("✅ \"Continuer\" sans avoir répondu laisse bien l'interview en attente (reprenable plus tard), au lieu de la résoudre silencieusement en \"sans commentaire\".");
-
-// Reprise "en retournant dans le tableau de bord" (retour utilisateur, voir
-// plus haut) : le petit bouton du panneau du tableau de bord doit donner
-// accès à cette même interview, toujours en attente.
 clickTab(doc, "club");
-const dashboardWidgetPart1 = doc.querySelector("#clubInterviewPanel [data-interview-open]");
-if (!dashboardWidgetPart1) throw new Error("❌ Le tableau de bord devrait permettre de reprendre l'interview de début de saison laissée en attente.");
-dashboardWidgetPart1.click();
-const toneBtn = doc.querySelector("#interviewModalOverlay [data-interview-preview-tone]");
-if (!toneBtn) throw new Error("❌ (setup) Le popup d'interview devrait proposer au moins un bouton de ton.");
-toneBtn.click();
-const validateBtn = doc.getElementById("interviewModalValidate");
-if (!validateBtn) throw new Error("❌ (setup) Le popup d'interview devrait proposer un bouton \"Valider\".");
-validateBtn.click();
+const dashboardWidgetSeasonPreview = doc.querySelector("#clubInterviewPanel [data-interview-open]");
+if (!dashboardWidgetSeasonPreview) throw new Error("❌ Le tableau de bord devrait donner accès à l'interview \"début de saison\" avant même le premier match.");
+dashboardWidgetSeasonPreview.click();
+
+// Correctif 2026-09 (retour utilisateur : "tu as mis plus de question avec
+// la possibilité de choisir le ton pour chacune d'entre elle et pas
+// uniquement un ton pour toutes les questions ?") : au moins DEUX groupes de
+// boutons de ton distincts (un par question), pas un seul partagé pour
+// toute l'interview.
+const toneGroups = new Set([...doc.querySelectorAll("#interviewModalOverlay [data-interview-preview-tone]")].map(b => b.dataset.interviewPreviewQ));
+console.log("Groupes de boutons de ton distincts dans le popup (un par question) :", [...toneGroups]);
+if (toneGroups.size < 2) throw new Error(`❌ Le popup devrait proposer un sélecteur de ton PAR question (au moins 2 groupes), obtenu ${toneGroups.size}.`);
+console.log("✅ Le popup propose bien un sélecteur de ton indépendant pour chaque question.");
+
+// Le contenu ne doit plus jamais mentionner de résultat de match : cette
+// interview porte sur la saison à venir (objectifs, joueur sur qui compter).
+const modalText = doc.getElementById("interviewModalOverlay").textContent;
+if (/victoire|défaite/i.test(modalText)) throw new Error(`❌ L'interview "début de saison" ne devrait plus mentionner de résultat de match, obtenu : "${modalText}".`);
+console.log("✅ Le contenu de l'interview \"début de saison\" ne mentionne plus aucun résultat de match (objectifs/joueur clé uniquement).");
+
+const toneBtnPart1 = doc.querySelector("#interviewModalOverlay [data-interview-preview-tone]");
+toneBtnPart1.click();
+const validateBtnPart1 = doc.getElementById("interviewModalValidate");
+validateBtnPart1.click();
 await new Promise(r => setTimeout(r, 300));
 await flush(dom);
 
-const pendingAfterResolve = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'debut-saison')");
-console.log("Interview encore en attente après réponse depuis le tableau de bord :", pendingAfterResolve);
-if (pendingAfterResolve) throw new Error("❌ Répondre à l'interview depuis le tableau de bord devrait la retirer de teamA.pendingInterviews.");
-console.log("✅ Répondre à l'interview de jalon depuis le tableau de bord (après l'avoir laissée en attente) la retire bien de la file d'attente.");
-
-const catchupHiddenAfterContinue = doc.getElementById("catchupSection").classList.contains("hidden");
-console.log("Récapitulatif d'absence masqué après \"Continuer\" :", catchupHiddenAfterContinue);
-if (!catchupHiddenAfterContinue) throw new Error("❌ \"Continuer\" devrait quitter l'écran de récapitulatif d'absence.");
-console.log("✅ \"Continuer\" fait bien reprendre le fil normal du jeu après le récapitulatif d'absence.");
+const seasonPreviewResolved = !win.eval("teamA.pendingInterviews.some(i => i.milestone === 'debut-saison')");
+console.log("Interview \"début de saison\" retirée de la file après réponse depuis le tableau de bord :", seasonPreviewResolved);
+if (!seasonPreviewResolved) throw new Error("❌ Répondre à l'interview \"début de saison\" depuis le tableau de bord devrait la retirer de la file d'attente.");
+console.log("✅ L'interview de jalon \"début de saison\" se résout normalement depuis le tableau de bord, avant même que la journée 0 ne soit jouée.");
 
 await flush(dom);
 await dom.window.close();

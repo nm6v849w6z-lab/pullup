@@ -521,6 +521,25 @@ function attendanceFactorForSeconds(seconds) {
 }
 
 // ---------------------------------------------------------------------
+// Retour utilisateur (2026-09) : "il faut que la motivation soit aussi
+// impactée par le temps de jeu, un joueur qui cire le banc doit être
+// malheureux (surtout si c'est censé etre un titu dans l'équipe où il est)"
+// : érosion hebdomadaire de Player.form (voir Team.applyBenchFrustration,
+// appelée depuis Team.trainWeek, au même rythme que le reste de
+// l'entraînement) pour tout joueur qui n'est PAS titulaire (Team.
+// lineup.starters) et qui n'a quasiment pas joué cette semaine (seuil bas,
+// pas un simple "n'est pas titulaire" : un remplaçant qui tourne
+// régulièrement n'est pas concerné, seul celui qui ne joue quasiment jamais
+// l'est). Un joueur actuellement blessé n'est jamais concerné (ne pas jouer
+// n'est alors pas un choix du coach). Multiplicateur plus sévère quand ce
+// joueur note MIEUX (weightedRatingForPosition) que le titulaire
+// actuellement aligné à son poste : c'est spécifiquement lui qui "devrait"
+// être titulaire dans cette équipe.
+const BENCH_FRUSTRATION_MAX_SECONDS = TRAINING_FULL_MATCH_SECONDS * 0.25; // ~7.5 min cumulées
+const BENCH_FRUSTRATION_BASE_MALUS = 0.6; // points de Player.form perdus par semaine
+const BENCH_FRUSTRATION_DESERVING_MULT = 3; // multiplicateur si meilleur que le titulaire à son poste
+
+// ---------------------------------------------------------------------
 // Entraînement à la BuzzerBeater : à la manière du vrai jeu, l'entraînement
 // n'est PAS choisi joueur par joueur. Le club choisit UNE compétence pour la
 // semaine, puis combien de postes elle couvre (1, 2, 3 ou 5 = toute
@@ -649,6 +668,12 @@ const TRAINING_PROGRAMS = {
   agility:    makeTrainingProgram("Agilité", ["agility"]),
   defOutside: makeTrainingProgram("Défense extérieure", ["defOutside"]),
   defInside:  makeTrainingProgram("Défense intérieure", ["defInside"]),
+  // Retour utilisateur (2026-09) : "Ajoute les entrainements lancer franc et
+  // endurance", les deux caractéristiques existaient déjà dans ATTRS (voir
+  // le grand commentaire au-dessus d'ATTRS) mais n'étaient pas encore
+  // entraînables via un programme dédié.
+  freeThrow:  makeTrainingProgram("Lancer franc", ["freeThrow"]),
+  endurance:  makeTrainingProgram("Endurance", ["endurance"]),
   // -- Programmes composites (plusieurs caractéristiques liées, rendement
   // dilué par caractéristique — voir WEIGHT_BY_PROGRAM_SIZE) --
   outsideShot: makeTrainingProgram("Tir extérieur", ["midRange", "threePoint"]),
@@ -1259,16 +1284,27 @@ const MILESTONE_INTERVIEW_TYPES = {
 // utilisateur, 2026-09 : "mets un vrai pop up pour l'interview [...] mets 2/3
 // questions quand même, et pose des vraies questions, c'est pas ouf quand
 // même là (comment voyez-vous cette saison ? quels sont vos objectifs ?...)")
-// : deux questions par jalon, indépendantes du ton choisi (seule la RÉPONSE
-// change selon le ton, voir MILESTONE_INTERVIEW_QUOTES juste en dessous, dont
-// chaque entrée porte désormais un tableau de deux réponses, une par
-// question, dans le même ordre que ce tableau). Remplace l'ancien système
-// (un seul bloc de texte générique + boutons de ton sans vraie question
-// posée), jugé trop pauvre par le manager.
+// : deux questions par jalon. Correctif 2026-09 (retour utilisateur : "la
+// possibilité de choisir le ton pour chacune [des questions] et pas
+// uniquement un ton pour toutes les questions") : le ton se choisit
+// désormais INDÉPENDAMMENT pour chaque question (voir
+// Team.resolveInterview/interviewTranscriptFor, qui acceptent un TABLEAU de
+// tons, un par question, dans le même ordre que ce tableau ; une chaîne
+// unique reste acceptée en compatibilité ascendante et s'applique alors aux
+// deux questions). MILESTONE_INTERVIEW_QUOTES juste en dessous porte
+// toujours un tableau de deux réponses par {ton, issue}, une par question.
+// Remplace l'ancien système (un seul bloc de texte générique + boutons de
+// ton sans vraie question posée), jugé trop pauvre par le manager.
+// Correctif 2026-09 (retour utilisateur : "la première interview [...] ne
+// doit pas porter sur le resultat du premier match mais sur la saison à
+// venir (objectif, joueur sur qui on compte...)") : les deux questions de
+// "debut-saison" sont désormais tournées vers l'AVENIR (aucun match n'a
+// encore été joué quand cette interview est mise en attente, voir
+// Team.queueSeasonPreviewInterview) plutôt que vers un résultat.
 const MILESTONE_INTERVIEW_QUESTIONS = {
   "debut-saison": [
-    "Comment abordez-vous cette nouvelle saison ?",
-    "Quels sont vos objectifs pour les mois à venir ?",
+    "Quels sont vos objectifs pour cette saison ?",
+    "Sur quel joueur comptez-vous particulièrement cette saison ?",
   ],
   "mi-saison": [
     "Quel bilan tirez-vous de cette première moitié de saison ?",
@@ -1305,8 +1341,15 @@ function midSeasonRound(totalRounds) {
 // saison régulière" n'a de sens là-bas, voir le tableau à élimination direct
 // CUP_STAGE_LABELS). Utilisé par finalizeRound (server/liveMatch.js) pour
 // savoir quel type passer à Team.applyMoraleForResult.
+// Correctif 2026-09 (retour utilisateur : "la première interview doit
+// pouvoir se faire avant le début de saison et ne doit pas porter sur le
+// resultat du premier match mais sur la saison à venir") : la journée 0 ne
+// déclenche plus RIEN ici (elle redevient une journée de championnat comme
+// une autre) — l'interview "début de saison" est désormais mise en attente
+// AVANT le premier match, dès la création de la ligue (voir
+// Team.queueSeasonPreviewInterview/buildLeagueWithHumanTeams), donc plus
+// jamais liée au résultat d'un match précis.
 function milestoneTypeForRound(round, totalRounds) {
-  if (round === 0) return "debut-saison";
   if (round === midSeasonRound(totalRounds)) return "mi-saison";
   if (round === totalRounds - 1) return "fin-saison-reguliere";
   return null;
@@ -1315,16 +1358,22 @@ function milestoneTypeForRound(round, totalRounds) {
 // Trois tons (Agressif/Mesuré/Humble, voir le grand commentaire plus haut),
 // avec DEUX deltas chacun : `fanWin`/`fanLoss` (humeur des supporters,
 // échelle plus marquée qu'un match ordinaire, moment plus important) et
-// `formWin`/`formLoss` (Player.form, échelle 1-100 comme fanMorale — voir
-// Team.resolveInterview, appliqué à CHAQUE joueur ayant disputé ce match
-// précis, jamais tout l'effectif).
+// `formWin`/`formLoss` (Player.form, échelle 1-100 comme fanMorale). Correctif
+// 2026-09 (retour utilisateur : "tous les joueurs doivent être impactés par
+// les interviews, les interviews sont sur des périodes de la saison et pas
+// uniquement un match") : appliqué par Team.resolveInterview à TOUT
+// l'effectif, jamais aux seuls joueurs ayant disputé LE match qui a
+// déclenché le jalon, une interview de jalon porte sur une PÉRIODE entière
+// (la première moitié de saison, toute la saison régulière...), pas sur un
+// seul match, donc tout le monde l'entend et en est affecté, joueur du soir
+// ou pas.
 // `chemistryWin`/`chemistryLoss` (retour utilisateur, 2026-09 : "l'alchimie
 // du groupe [...] peut être impactée par le coach lors de ses interviews",
 // voir le grand commentaire de CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus bas) :
-// Team.chemistry, appliqué par Team.resolveInterview à TOUTE l'équipe
-// (contrairement à formWin/formLoss ci-dessus, réservé aux joueurs ayant
-// disputé CE match précis) — la cohésion du vestiaire dépend du discours du
-// coach dans son ensemble, pas seulement de qui a joué. Un ton "Agressif"
+// Team.chemistry, appliqué par Team.resolveInterview à TOUTE l'équipe, tout
+// comme formWin/formLoss ci-dessus désormais, la cohésion du vestiaire
+// dépend du discours du coach dans son ensemble, pas seulement de qui a
+// joué. Un ton "Agressif"
 // coûte toujours un peu de cohésion (l'égo individuel prime sur le
 // collectif), pire encore après une défaite (chercher des excuses divise le
 // vestiaire) ; un ton "Humble" (crédit aux coéquipiers, responsabilité
@@ -1350,35 +1399,48 @@ const MILESTONE_INTERVIEW_TONES = {
 // (objectifs/ajustements/état d'esprit), toujours dans l'esprit du ton
 // choisi.
 const MILESTONE_INTERVIEW_QUOTES = {
+  // Correctif 2026-09 (retour utilisateur : "la première interview [...] ne
+  // doit pas porter sur le resultat du premier match mais sur la saison à
+  // venir (objectif, joueur sur qui on compte...)") : mise en attente AVANT
+  // le premier match (voir Team.queueSeasonPreviewInterview), donc toujours
+  // résolue avec `won: true` (aucun résultat à commenter, cadrage positif/
+  // plein d'espoir de rentrée). `{player}` (voir interviewTranscriptFor) est
+  // remplacé par le joueur le mieux noté à son poste de l'effectif
+  // (weightedRatingForPosition), jamais `{opponent}` (aucun adversaire
+  // concerné). Les entrées `loss` ci-dessous ne sont normalement jamais
+  // lues (won toujours vrai pour ce jalon précis) : conservées identiques à
+  // `win` uniquement pour respecter la même forme de données que les autres
+  // jalons (voir le test qui vérifie que chaque {jalon, ton, issue} porte
+  // bien une réponse par question).
   "debut-saison": {
     "Agressif": {
       win: [
-        "On lance la saison avec cette victoire contre {opponent}, et on ne compte surtout pas s'arrêter là.",
-        "L'objectif ne change pas d'un pouce : jouer les premiers rôles et viser le titre de division, rien de moins.",
+        "L'objectif est clair pour cette saison : on vise le haut de tableau, on ne se fixe aucune limite.",
+        "On compte énormément sur {player} pour tirer l'équipe vers le haut, c'est un joueur fait pour ce genre de responsabilités.",
       ],
       loss: [
-        "Cette défaite d'entrée face à {opponent} ne veut rien dire, on reste l'équipe à battre cette saison.",
-        "Nos objectifs restent exactement les mêmes qu'avant ce match : jouer le titre de division jusqu'au bout.",
+        "L'objectif est clair pour cette saison : on vise le haut de tableau, on ne se fixe aucune limite.",
+        "On compte énormément sur {player} pour tirer l'équipe vers le haut, c'est un joueur fait pour ce genre de responsabilités.",
       ],
     },
     "Mesuré": {
       win: [
-        "Une bonne entame de saison avec cette victoire contre {opponent}, il reste encore beaucoup de travail mais c'est encourageant.",
-        "L'objectif reste de construire une équipe solide match après match, sans se fixer de chiffre précis pour l'instant.",
+        "L'objectif est de construire une équipe solide et de rester compétitifs sur la durée de la saison, sans se fixer de chiffre précis pour l'instant.",
+        "{player} aura un rôle important cette saison, on compte sur sa régularité pour porter le collectif.",
       ],
       loss: [
-        "Cette défaite pour commencer la saison contre {opponent} ne doit pas être dramatisée, il reste toute la saison pour corriger le tir.",
-        "L'objectif reste inchangé : progresser semaine après semaine et être compétitifs sur la durée de la saison.",
+        "L'objectif est de construire une équipe solide et de rester compétitifs sur la durée de la saison, sans se fixer de chiffre précis pour l'instant.",
+        "{player} aura un rôle important cette saison, on compte sur sa régularité pour porter le collectif.",
       ],
     },
     "Humble": {
       win: [
-        "On prend cette victoire d'entrée contre {opponent} avec humilité, la saison ne fait que commencer et tout reste à prouver.",
-        "On ne se fixe pas d'objectif chiffré, on veut juste progresser ensemble, une victoire ne change rien à cette philosophie.",
+        "On ne se fixe pas d'objectif chiffré, l'idée est de progresser ensemble match après match, en restant les pieds sur terre.",
+        "Toute l'équipe devra apporter sa pierre à l'édifice, mais {player} aura un rôle important à jouer pour nous aider à progresser.",
       ],
       loss: [
-        "Cette défaite pour débuter la saison face à {opponent} nous remet les pieds sur terre, on va travailler dur pour la suite.",
-        "On garde les pieds sur terre, l'objectif reste de progresser ensemble match après match, sans pression particulière.",
+        "On ne se fixe pas d'objectif chiffré, l'idée est de progresser ensemble match après match, en restant les pieds sur terre.",
+        "Toute l'équipe devra apporter sa pierre à l'édifice, mais {player} aura un rôle important à jouer pour nous aider à progresser.",
       ],
     },
   },
@@ -1521,20 +1583,32 @@ const MILESTONE_INTERVIEW_QUOTES = {
 const MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS = 3 * 24 * 60 * 60 * 1000;
 
 // Construit le transcript complet {question, answer}[] d'une interview de
-// jalon pour un ton donné (voir MILESTONE_INTERVIEW_QUESTIONS/
-// MILESTONE_INTERVIEW_QUOTES ci-dessus) : factorisé ici plutôt que dans
-// Team.resolveInterview pour que le client puisse aussi s'en servir en
-// PRÉVISUALISATION (avant validation, pour montrer les 2 réponses selon le
-// ton survolé dans le popup d'interview) sans dupliquer cette logique de
-// zip questions/réponses côté navigateur. Renvoie toujours un tableau (vide
-// si `milestone`/`tone` inconnu), jamais d'exception.
-function interviewTranscriptFor(milestone, tone, won, opponentName) {
+// jalon (voir MILESTONE_INTERVIEW_QUESTIONS/MILESTONE_INTERVIEW_QUOTES
+// ci-dessus) : factorisé ici plutôt que dans Team.resolveInterview pour que
+// le client puisse aussi s'en servir en PRÉVISUALISATION (avant validation,
+// pour montrer la réponse selon le ton survolé dans le popup d'interview)
+// sans dupliquer cette logique de zip questions/réponses côté navigateur.
+// `tones` (retour utilisateur, 2026-09 : "la possibilité de choisir le ton
+// pour chacune [des questions] et pas uniquement un ton pour toutes les
+// questions") : soit un TABLEAU (un ton par question, dans le même ordre que
+// MILESTONE_INTERVIEW_QUESTIONS), soit une simple chaîne (compatibilité
+// ascendante, appliquée alors à toutes les questions). `playerName`
+// (optionnel) : remplace `{player}` dans la réponse (voir
+// MILESTONE_INTERVIEW_QUOTES["debut-saison"]), tout comme `opponentName`
+// remplace `{opponent}` pour les autres jalons. Renvoie toujours un tableau
+// (vide si `milestone` inconnu, ou réponse vide si un `tone` demandé est
+// inconnu pour telle question), jamais d'exception.
+function interviewTranscriptFor(milestone, tones, won, opponentName, playerName) {
   const questions = MILESTONE_INTERVIEW_QUESTIONS[milestone] || [];
-  const answers = ((MILESTONE_INTERVIEW_QUOTES[milestone] || {})[tone] || {})[won ? "win" : "loss"] || [];
-  return questions.map((question, i) => ({
-    question,
-    answer: (answers[i] || "").replace("{opponent}", opponentName),
-  }));
+  const toneList = Array.isArray(tones) ? tones : questions.map(() => tones);
+  return questions.map((question, i) => {
+    const tone = toneList[i] !== undefined ? toneList[i] : toneList[0];
+    const answers = ((MILESTONE_INTERVIEW_QUOTES[milestone] || {})[tone] || {})[won ? "win" : "loss"] || [];
+    let answer = answers[i] || "";
+    if (opponentName) answer = answer.replace("{opponent}", opponentName);
+    if (playerName) answer = answer.replace("{player}", playerName);
+    return { question, answer };
+  });
 }
 
 // ---------------------------------------------------------------------
@@ -1873,21 +1947,36 @@ function conditionStateFor(condition) {
 // suit le temps réel qui passe pour le MANAGER, pas le rythme des journées
 // de championnat (un club peut très bien ne jouer qu'un match par semaine).
 const CONDITION_DAY_MS = 24 * 60 * 60 * 1000;
-const CONDITION_RECOVERY_PER_DAY = 15;
+// Retour utilisateur (2026-09, entraînement collectif) : "bosser la
+// récupération +15 sur un jour sans match avec l'entraînement récupération
+// sinon c'est seulement +10" — la récupération passive de base baisse de
+// l'ancien 15/jour à 10/jour pour TOUTE équipe (rééquilibrage assumé, voir
+// Team.collectiveTraining), et remonte à CONDITION_RECOVERY_PER_DAY_TRAINED
+// (15/jour, la valeur historique) uniquement pour un club dont le focus
+// collectif de la semaine est "recuperation" (voir Team.
+// conditionRecoveryPerDay ci-dessous).
+const CONDITION_RECOVERY_PER_DAY = 10;
+const CONDITION_RECOVERY_PER_DAY_TRAINED = 15;
 
 // Valeur ACTUELLE de la forme d'un joueur, jours de repos écoulés depuis
 // Player.conditionUpdatedAt déjà rattrapés (retour utilisateur : "+15
-// points de forme par jour de repos, avec un plafond à 100"). Fonction PURE
-// (ne modifie rien), même principe que computeClubReputationStars
-// (recalculée à l'affichage plutôt que stockée en continu). La vraie mise à
-// jour PERSISTÉE de Player.condition/conditionUpdatedAt n'a lieu qu'aux
-// moments où elle compte réellement : au coup d'envoi d'un match (snapshot,
-// voir Player.resetForMatch) puis juste après (perte selon les minutes
-// jouées, voir recordMatchStatsForTeam plus bas).
-function currentCondition(player, now = Date.now()) {
+// points de forme par jour de repos, avec un plafond à 100", désormais
+// CONDITION_RECOVERY_PER_DAY par défaut, voir son commentaire ci-dessus).
+// Fonction PURE (ne modifie rien), même principe que
+// computeClubReputationStars (recalculée à l'affichage plutôt que stockée en
+// continu). `recoveryPerDay` : taux à appliquer, laissé au choix de
+// l'appelant (voir Team.conditionRecoveryPerDay(), qui tient compte de
+// Team.collectiveTraining), défaut CONDITION_RECOVERY_PER_DAY quand
+// l'appelant n'a pas connaissance de l'équipe (ex. tests directs sur un
+// joueur isolé). La vraie mise à jour PERSISTÉE de Player.condition/
+// conditionUpdatedAt n'a lieu qu'aux moments où elle compte réellement : au
+// coup d'envoi d'un match (snapshot, voir Player.resetForMatch) puis juste
+// après (perte selon les minutes jouées, voir recordMatchStatsForTeam plus
+// bas).
+function currentCondition(player, now = Date.now(), recoveryPerDay = CONDITION_RECOVERY_PER_DAY) {
   const daysRested = Math.floor((now - (player.conditionUpdatedAt || now)) / CONDITION_DAY_MS);
   if (daysRested <= 0) return player.condition;
-  return clamp(player.condition + daysRested * CONDITION_RECOVERY_PER_DAY, 0, 100);
+  return clamp(player.condition + daysRested * recoveryPerDay, 0, 100);
 }
 
 // Perte de forme après un match, selon les minutes jouées (retour
@@ -1978,6 +2067,60 @@ function motivationLabel(form) {
   if (form >= 45) return "Neutre";
   if (form >= 25) return "Peu motivé";
   return "Démotivé";
+}
+
+// Retour utilisateur (2026-09) : "le changement de club [...] il faudrait
+// que la motivation remonte à un niveau neutre. Il change de club donc il
+// devrait être plus motivé." Voir League._resolveListing plus bas (SEUL
+// chemin qui déplace vraiment un joueur d'un effectif vers un autre,
+// contrairement à Team.promoteYouthPlayer qui reste dans le MÊME club) :
+// un transfert abouti relève la motivation du joueur ACHETÉ jusqu'à ce
+// plancher si elle était plus basse, jamais une baisse pour un joueur déjà
+// motivé chez son ancien club (un nouveau projet ne devrait jamais rendre
+// quelqu'un MOINS motivé), et referme au passage toute demande de transfert
+// active (voir TRANSFER_REQUEST_MOTIVATION_THRESHOLD plus bas) puisqu'elle
+// visait le club qu'il vient justement de quitter. Contrairement à
+// Player.condition, jamais touché par un transfert (voir le commentaire de
+// son constructeur plus haut) : la forme physique est indépendante du
+// club, la motivation, elle, est éminemment contextuelle.
+const TRANSFER_NEW_CLUB_MOTIVATION_FLOOR = 55; // milieu de la fourchette "Neutre" (45-64)
+
+// ---------------------------------------------------------------------
+// Retour utilisateur (2026-09) : "un joueur très frustré (motivation proche
+// de 0 depuis 3 semaines) peut demander son transfert dans la presse. Ne
+// rien faire laisse sa motivation proche de 0, ouvrir la discussion avec
+// lui pour le remotiver (ne marche pas à chaque fois) ou le vendre sont les
+// deux possibilités." Voir Player.weeksAtLowMotivation/transferRequestActive
+// (constructeur), Team.updateTransferRequests (appelée chaque semaine par
+// Team.trainWeek, même rythme que applyBenchFrustration) et
+// Team.discussTransferRequest (l'action "discuter" du manager, chance de
+// succès liée au Mental du joueur : un Mental élevé encaisse mieux et se
+// laisse plus facilement convaincre, même thème que son effet en match, voir
+// le grand commentaire d'ATTRS). "Vendre" n'a besoin d'aucun nouveau
+// mécanisme : c'est le marché des transferts déjà en place (Player.forSale/
+// Team.sellPlayer/League.listPlayerForSale).
+// ---------------------------------------------------------------------
+const TRANSFER_REQUEST_MOTIVATION_THRESHOLD = 20; // "motivation proche de 0" (Démotivé commence à 25)
+const TRANSFER_REQUEST_WEEKS_THRESHOLD = 3; // "depuis 3 semaines"
+const TRANSFER_REQUEST_DISCUSS_BASE_CHANCE = 0.35;
+const TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS = 0.3; // jusqu'à +0.3 pour un Mental à 100 (chance totale 0.35 à 0.65)
+const TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST = 25;
+
+// Citations de presse (retour utilisateur : "demande son transfert dans la
+// presse"), une piochée à chaque nouvelle demande (voir
+// Team.updateTransferRequests) et figée sur le joueur (Player.
+// transferRequestQuote) jusqu'à résolution : même esprit que MVP_QUOTES/
+// MILESTONE_INTERVIEW_QUOTES plus haut, `{player}` remplacé par le nom du
+// joueur (voir transferRequestQuoteFor).
+const TRANSFER_REQUEST_QUOTES = [
+  "\"Je ne me sens plus utile ici, il est temps d'envisager un nouveau projet\", confie {player} à la presse.",
+  "\"Ça fait des semaines que je suis sur le banc sans la moindre explication, je demande à partir\", lâche {player}.",
+  "\"J'ai besoin de retrouver du temps de jeu ailleurs\", déclare {player}, visiblement lassé de la situation.",
+  "\"Le club connaît ma position, je souhaite être transféré au plus vite\", affirme {player}.",
+];
+
+function transferRequestQuoteFor(playerName) {
+  return pick(TRANSFER_REQUEST_QUOTES).replace("{player}", playerName);
 }
 
 class Player {
@@ -2105,6 +2248,24 @@ class Player {
     // zéro au passage de SAISON (voir Team.trainWeek), pas de semaine en
     // semaine : les stats affichées couvrent la saison EN COURS.
     this.matchLog = [];
+
+    // Demande de transfert (voir le grand commentaire au-dessus de
+    // TRANSFER_REQUEST_MOTIVATION_THRESHOLD) : `weeksAtLowMotivation` compte
+    // les semaines CONSÉCUTIVES (voir Team.updateTransferRequests, appelée
+    // chaque semaine) où ce joueur est resté sous le seuil de motivation
+    // "proche de 0", remis à 0 dès qu'il repasse au-dessus (peu importe la
+    // cause : discussion réussie, ou simplement une bonne interview de
+    // jalon). `transferRequestActive` bascule à `true` une fois ce compteur
+    // au seuil (3 semaines), et le reste jusqu'à ce que la motivation
+    // remonte (voir updateTransferRequests) ou qu'une discussion réussisse
+    // (voir Team.discussTransferRequest), jamais résolu par la simple vente
+    // du joueur, qui le retire de l'effectif de toute façon.
+    // `transferRequestQuote` : citation de presse figée au moment où la
+    // demande démarre (voir transferRequestQuoteFor), affichée telle quelle
+    // tant que `transferRequestActive` reste vrai.
+    this.weeksAtLowMotivation = 0;
+    this.transferRequestActive = false;
+    this.transferRequestQuote = null;
   }
 
   // Applique une semaine d'entraînement. `attrWeights` est une map
@@ -2213,10 +2374,17 @@ class Player {
       // un adversaire tourné vers l'intérieur d'un adversaire de périmètre),
       // voir computeScoutingTendencies dans moteurbasket3.html.
       paintAtt: 0, paintMade: 0,
+      // +/- (retour utilisateur, 2026-09 : "ajouté les colonnes de stats :
+      // évaluation et +/- [...] dans les box score (match terminé et aussi
+      // sur les live)") : différentiel de points marqués/encaissés pendant
+      // que CE joueur était sur le terrain, voir
+      // MatchEngine.applyPlusMinusForPoints (mis à jour à CHAQUE panier/
+      // lancer franc marqué, jamais recalculé après coup).
+      plusMinus: 0,
     };
   }
 
-  resetForMatch(now = Date.now()) {
+  resetForMatch(now = Date.now(), recoveryPerDay = CONDITION_RECOVERY_PER_DAY) {
     this.fatigue = 0;
     this.fouls = 0;
     this.disqualified = false;
@@ -2241,8 +2409,11 @@ class Player {
     // recalculé possession par possession (contrairement à fatigue, qui
     // évolue EN DIRECT). La perte liée à CE match n'est appliquée qu'ensuite,
     // une fois les minutes réellement jouées connues (voir
-    // recordMatchStatsForTeam).
-    this.matchCondition = currentCondition(this, now);
+    // recordMatchStatsForTeam). `recoveryPerDay` : taux du CLUB (voir
+    // Team.conditionRecoveryPerDay/collectiveTraining), transmis par
+    // Team.resetForMatch ci-dessous, défaut CONDITION_RECOVERY_PER_DAY pour
+    // un appel direct sans équipe (tests).
+    this.matchCondition = currentCondition(this, now, recoveryPerDay);
   }
 
   // Moyenne des 13 caractéristiques (voir le grand commentaire au-dessus
@@ -2317,10 +2488,18 @@ function planKey(round, competition) {
 //      brassant son effectif), pondéré par l'importance du joueur parti/
 //      arrivé dans l'effectif.
 //   3) Changements de tactique trop fréquents (voir Team.checkTacticsChemistry
-//      ci-dessous, appliqué à chaque match réellement joué) : petit malus
-//      fixe si l'identité tactique de fond (attaque prioritaire/défense/
-//      rythme) diffère du dernier match, aucun effet si elle est restée la
-//      même.
+//      ci-dessous, appliqué à chaque match réellement joué) : malus
+//      PROPORTIONNEL à ce qui change réellement dans l'identité tactique de
+//      fond (attaque prioritaire/défense/rythme) par rapport au dernier
+//      match, aucun effet si elle est restée la même (retour utilisateur,
+//      2026-09 : "si je passe de pick and roll + pénétration + transition à
+//      pick and roll + pénétration + jeu intérieur, je perds combien
+//      d'alchimie ?" : la réponse ne doit plus être "pareil que si j'avais
+//      tout changé"). Atténué de moitié quand l'entraînement collectif de la
+//      semaine porte sur "tactique" (voir Team.collectiveTraining plus bas,
+//      et CHEMISTRY_TACTICS_TRAINED_FACTOR) : travailler la nouvelle
+//      tactique à l'entraînement rend sa mise en place en match moins
+//      coûteuse pour la cohésion, sans jamais l'annuler complètement.
 // Lu par Team.chemistryFactor() (voir Player.eff()/Team.resetForMatch plus
 // bas) pour un effet MODESTE sur la performance de TOUTE l'équipe (jamais
 // aussi marqué que la forme physique ou la fatigue d'UN seul joueur) : la
@@ -2328,7 +2507,84 @@ function planKey(round, competition) {
 // particulier.
 const CHEMISTRY_ROSTER_CHANGE_MAX_RANK = 12; // "le 12 homme" (retour utilisateur, littéral)
 const CHEMISTRY_ROSTER_CHANGE_BASE = 8; // malus max, pour le tout meilleur joueur de l'effectif
-const CHEMISTRY_TACTICS_CHANGE_PENALTY = 2; // "un petit impact" (retour utilisateur)
+// Décomposition du malus tactique (retour utilisateur, 2026-09) : un point
+// par priorité offensive qui change (0 à 3, comparées en ENSEMBLE, pas en
+// ordre : permuter l'ordre de 3 priorités identiques ne coûte rien), la
+// défense pèse plus qu'une priorité isolée (changer de schéma défensif est
+// un vrai changement d'identité), le rythme un peu moins. Maximum cumulé si
+// TOUT change à la fois (3 priorités + défense + rythme) : 3+2+1 = 6, du
+// même ordre de grandeur qu'un changement d'effectif (CHEMISTRY_ROSTER_
+// CHANGE_BASE = 8 pour le tout meilleur joueur de l'effectif), plutôt que
+// l'ancien malus fixe de 2 quel que soit l'ampleur du changement.
+const CHEMISTRY_TACTICS_OFFENSE_PENALTY = 1; // par priorité offensive changée (0 à 3)
+const CHEMISTRY_TACTICS_DEFENSE_PENALTY = 2;
+const CHEMISTRY_TACTICS_RHYTHM_PENALTY = 1;
+// Retour utilisateur (2026-09) : "je pense qu'il faut [...] diviser à chaque
+// fois par 2 le malus sur la tactique bossée par jour d'entrainement sur la
+// tactique", n'est plus une atténuation fixe appliquée en bloc dès que
+// l'entraînement collectif porte sur "tactique", mais la base d'une
+// puissance : CHEMISTRY_TACTICS_TRAINED_FACTOR ** (nombre de jours de repos
+// passés à travailler PRÉCISÉMENT la catégorie qui a changé, voir
+// Team.daysTrainedForTarget/collectiveTrainingLog), 0 jour banqué = ×1 (pas
+// encore d'atténuation), 1 jour = ×0.5, 2 jours = ×0.25, 3 jours = ×0.125...
+// Ne s'annule jamais exactement (asymptote vers 0), mais peut s'en approcher
+// beaucoup avec suffisamment de jours de préparation.
+const CHEMISTRY_TACTICS_TRAINED_FACTOR = 0.5;
+
+// Deux instantanés tactiques {offense, defense, rhythm} représentent-ils
+// EXACTEMENT la même chose ? Les priorités offensives sont comparées en
+// ENSEMBLE (Set), pas en ordre — voir tacticsChangePenalty ci-dessous pour
+// la même convention. `a`/`b` peuvent être `null` (pas encore de match de
+// référence) : deux `null` sont considérés égaux, un `null` et un instantané
+// réel jamais égaux.
+function tacticsEqual(a, b) {
+  if (!a || !b) return a === b;
+  if (a.defense !== b.defense || a.rhythm !== b.rhythm) return false;
+  if (a.offense.length !== b.offense.length) return false;
+  const setA = new Set(a.offense);
+  return b.offense.every(t => setA.has(t));
+}
+
+// Malus entre deux instantanés tactiques {offense, defense, rhythm} :
+// fonction PURE partagée par Team.checkTacticsChemistry (moteur, applique
+// réellement le malus après un match) et par l'aperçu en direct de la page
+// Ordres côté client (renderOrdresChemistryGauge, ne fait QUE prévisualiser,
+// n'appelle jamais applyChemistryDelta) : les deux doivent toujours calculer
+// exactement le même nombre. `prev` peut être `null` (pas encore de match de
+// référence), renvoie alors 0, jamais de malus au tout premier match.
+// Les 3 priorités offensives sont comparées en ENSEMBLE (Set), pas en ordre :
+// { "A", "B", "C" } -> { "C", "A", "B" } ne compte pour aucun changement.
+// `trained` (optionnel, voir Team.trainedTactics) : UN SEUL aspect
+// précisément travaillé à l'entraînement collectif (retour utilisateur,
+// 2026-09 : "il faut effectivement choisir ce qui est bossé comme tactique
+// [...] un seul aspect et pas tous les aspects") — `{ category, value }`,
+// jamais plusieurs catégories à la fois. `trainedFactor` (voir
+// CHEMISTRY_TACTICS_TRAINED_FACTOR ci-dessus, calculé par l'appelant selon
+// le nombre de jours banqués) ne s'applique JAMAIS au malus dans son
+// ensemble, mais UNIQUEMENT à la catégorie de `trained`, et seulement quand
+// la valeur RÉELLEMENT jouée (`current`) correspond EXACTEMENT à ce qui a
+// été travaillé : passer d'une défense à une autre que celle travaillée à
+// l'entraînement paie donc le plein tarif sur la défense, même si `trained`
+// porte sur la défense.
+function tacticsChangePenalty(prev, current, trained, trainedFactor = CHEMISTRY_TACTICS_TRAINED_FACTOR) {
+  if (!prev) return 0;
+  const prevOffense = new Set(prev.offense);
+  let penalty = 0;
+  current.offense.forEach(t => {
+    if (prevOffense.has(t)) return;
+    const factor = trained && trained.category === "offense" && trained.value === t ? trainedFactor : 1;
+    penalty += CHEMISTRY_TACTICS_OFFENSE_PENALTY * factor;
+  });
+  if (prev.defense !== current.defense) {
+    const factor = trained && trained.category === "defense" && trained.value === current.defense ? trainedFactor : 1;
+    penalty += CHEMISTRY_TACTICS_DEFENSE_PENALTY * factor;
+  }
+  if (prev.rhythm !== current.rhythm) {
+    const factor = trained && trained.category === "rhythm" && trained.value === current.rhythm ? trainedFactor : 1;
+    penalty += CHEMISTRY_TACTICS_RHYTHM_PENALTY * factor;
+  }
+  return penalty;
+}
 
 // Poids d'un changement de joueur selon son RANG dans l'effectif (1 = tout
 // meilleur joueur au sens overall(), voir rosterRankOf ci-dessous) :
@@ -2458,8 +2714,76 @@ class Team {
     // le club, appliquée à un ensemble de postes (1 à 5). Ce n'est pas un
     // choix joueur par joueur : chaque joueur profite (ou pas) de la semaine
     // selon son propre poste et selon s'il a assez joué au dernier match.
-    this.trainingSkill = null;      // une clé de ATTRS, ou null = pas de focus cette semaine
+    // Retour utilisateur (2026-09) : "enleve l'entrainement aucune
+    // (entrainement général uniquement)" — il n'existe plus d'option "pas de
+    // focus cette semaine" (voir populateTrainingSkillSelect côté client,
+    // qui ne propose plus cette option, et setTraining côté serveur, qui
+    // n'accepte plus `null`) : une compétence est TOUJOURS sélectionnée, par
+    // défaut "Lancer franc" (freeThrow) pour une toute nouvelle équipe.
+    this.trainingSkill = "freeThrow"; // une clé de TRAINING_PROGRAMS, jamais null
     this.trainingPositions = [];    // 1, 2, 3 ou 5 postes parmi POSITIONS
+
+    // Entraînement collectif (retour utilisateur, 2026-09 : "je souhaite
+    // mettre en place maintenant l'entrainement collectif [...] soit bosser
+    // une nouvelle tactique [...] soit bosser la récupération") : un réglage
+    // SÉPARÉ de trainingSkill ci-dessus, les deux tournent EN MÊME TEMPS
+    // (l'un porte sur les caractéristiques individuelles d'un groupe de
+    // postes, l'autre sur le collectif de toute l'équipe). `null` = aucun
+    // focus collectif cette semaine (comportement par défaut, inchangé pour
+    // les parties déjà en cours). "tactique" : atténue le malus d'alchimie
+    // d'un changement de tactique (voir Team.trainedTactics/
+    // CHEMISTRY_TACTICS_TRAINED_FACTOR/checkTacticsChemistry). "recuperation" :
+    // porte la récupération de forme physique quotidienne à CONDITION_
+    // RECOVERY_PER_DAY_TRAINED au lieu de CONDITION_RECOVERY_PER_DAY (voir
+    // conditionRecoveryPerDay ci-dessous/currentCondition plus haut).
+    this.collectiveTraining = null; // null | "tactique" | "recuperation"
+
+    // Tactique précisément travaillée à l'entraînement (retour utilisateur,
+    // 2026-09 : "il faut effectivement choisir ce qui est bossé comme
+    // tactique si c'est ce qui est choisi (exemple zone extérieure)", puis
+    // "sachant que tu n'as qu'un jour pour faire cet entrainement [...] un
+    // seul aspect et pas tous les aspects") : UN SEUL aspect précis à la
+    // fois (jamais plusieurs catégories en même temps comme dans une
+    // première version de cette fonctionnalité) — pertinent UNIQUEMENT
+    // quand collectiveTraining === "tactique", ignoré sinon. `category`
+    // désigne QUELLE des 3 catégories comparées par checkTacticsChemistry/
+    // tacticsChangePenalty est travaillée, `value` LA valeur précise de
+    // cette catégorie (une priorité offensive pour "offense", un nom de
+    // défense pour "defense", un rythme pour "rhythm") — voir
+    // tacticsChangePenalty plus bas pour le détail de l'appariement.
+    this.trainedTactics = null; // null | { category: "offense"|"defense"|"rhythm", value: string }
+
+    // Historique quotidien de l'entraînement collectif DEPUIS LE DERNIER
+    // MATCH (retour utilisateur, 2026-09 : "si tu as 3 jours de repos, tu
+    // divises à chaque fois par 2 le malus [...] par jour d'entrainement sur
+    // la tactique [...] si le vendredi on fait entrainement récup [...] on
+    // doit quand même avoir le malus divisé par deux du mercredi et par deux
+    // encore une fois le jeudi") : UNE entrée par jour civil (voir
+    // Team.syncCollectiveTrainingLog/parisCalendarDayIndex plus bas),
+    // reconduite automatiquement d'un jour à l'autre si rien ne change,
+    // JAMAIS effacée par un jour "récupération" intercalé (seul un vrai
+    // match remet ce compteur à zéro, voir tacticsCycleStartDayIndex
+    // ci-dessous) — permet de compter, au moment d'un match, combien de
+    // jours de repos ont précisément porté sur LA MÊME tactique que celle
+    // effectivement jouée ce jour-là (voir Team.daysTrainedForTarget).
+    this.collectiveTrainingLog = []; // [{ dayIndex, collectiveTraining, trainedTactics }]
+    // Jour civil (voir parisCalendarDayIndex) du DERNIER match réellement
+    // joué : sert de repère pour ignorer tout jour de collectiveTrainingLog
+    // antérieur (ou identique) à ce match — "depuis le dernier match"
+    // s'applique littéralement, jamais un historique plus ancien. `null`
+    // tant qu'aucun match n'a encore été joué.
+    this.tacticsCycleStartDayIndex = null;
+
+    // Identité tactique "établie" du club (retour utilisateur, 2026-09 : "si
+    // je joue toute la saison sur une tactique, je change pour un seul
+    // match, et je reviens à ma tactique, j'ai un malus [...] ça ne devrait
+    // pas être le cas") : DIFFÉRENT de lastTacticsSnapshotForChemistry
+    // ci-dessous (qui suit le tout DERNIER match, quel qu'il soit) — celui-ci
+    // ne bouge QUE quand une même tactique est jouée 2 fois DE SUITE (un vrai
+    // changement durable, pas un aller-retour ponctuel), voir
+    // checkTacticsChemistry pour le détail. `null` tant qu'aucun match n'a
+    // encore été joué.
+    this.establishedTacticsSnapshot = null;
 
     // Staff : l'entraîneur n'a d'effet QUE sur la vitesse d'entraînement
     // (jamais sur les matchs). Pas d'entraîneur par défaut.
@@ -2615,6 +2939,14 @@ class Team {
     // confort tarifaire — voir applyMoraleForResult et trainWeek.
     this.fanMorale = 50;
     this.moraleHistory = [];
+
+    // Objectif de saison fixé par le conseil d'administration (retour
+    // utilisateur, 2026-09, voir le grand commentaire au-dessus de
+    // SEASON_OBJECTIVE_TIERS plus bas) : `null` tant qu'aucune ligue n'a
+    // encore été générée pour ce club (assignSeasonObjectives, appelée par
+    // buildLeagueWithHumanTeams, le pose dès la création/régénération de la
+    // ligue), une des 5 clés de SEASON_OBJECTIVE_TIERS une fois posé.
+    this.seasonObjective = null;
 
     // Alchimie d'équipe (voir le grand commentaire au-dessus de
     // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : neutre au départ, comme
@@ -2860,52 +3192,112 @@ class Team {
     return before - this.pendingInterviews.length;
   }
 
-  // Résout une interview de jalon en attente avec le ton choisi par le
-  // manager (voir MILESTONE_INTERVIEW_TONES) : ajoute un delta d'humeur des
-  // supporters ET un delta de forme pour les joueurs ayant disputé ce match
-  // précis (entry.playerIds), dans le sens du résultat ORIGINAL du match
-  // concerné (jamais l'inverse), puis retire l'entrée de la file. Renvoie
-  // { ok: true, delta, formDelta, quotes } ou null (id introuvable/déjà
-  // traité, expiré depuis plus de 3 jours, ton inconnu, ou entrée sans
-  // `milestone` - résidu d'une sauvegarde antérieure au retrait de
-  // l'interview classique, voir pruneExpiredInterviews), jamais d'exception,
-  // comme le reste des méthodes "résoudre une file d'attente" de cette
-  // classe (voir promoteYouthPlayer). Construit aussi le transcript complet
+  // Résout une interview de jalon en attente avec le(s) ton(s) choisi(s) par
+  // le manager (voir MILESTONE_INTERVIEW_TONES) : ajoute un delta d'humeur
+  // des supporters ET un delta de forme pour TOUT L'EFFECTIF (correctif
+  // 2026-09, retour utilisateur : "tous les joueurs doivent être impactés
+  // par les interviews, les interviews sont sur des périodes de la saison
+  // et pas uniquement un match", voir MILESTONE_INTERVIEW_TONES plus haut ;
+  // `entry.playerIds`, figé à la mise en attente, ne sert donc plus qu'à
+  // savoir qui a RÉELLEMENT joué le match ayant déclenché le jalon, plus à
+  // scoper l'effet), dans le sens du résultat ORIGINAL du match concerné
+  // (jamais l'inverse), puis retire l'entrée de la file. `tones` (correctif
+  // 2026-09, retour utilisateur : "la possibilité de choisir le ton pour
+  // chacune [des questions] et pas uniquement un ton pour toutes les
+  // questions") : soit un TABLEAU (un ton par question), soit une chaîne
+  // unique (compatibilité ascendante, appliquée à toutes les questions) —
+  // voir interviewTranscriptFor pour le même contrat. Quand plusieurs tons
+  // différents sont choisis, les deltas de CHAQUE ton sont MOYENNÉS (plutôt
+  // que sommés) pour garder une magnitude globale comparable à l'ancien
+  // système à ton unique. Renvoie { ok: true, delta, formDelta,
+  // chemistryDelta, quotes } ou null (id introuvable/déjà traité, expiré
+  // depuis plus de 3 jours, un ton inconnu, ou entrée sans `milestone` -
+  // résidu d'une sauvegarde antérieure au retrait de l'interview classique,
+  // voir pruneExpiredInterviews), jamais d'exception, comme le reste des
+  // méthodes "résoudre une file d'attente" de cette classe (voir
+  // promoteYouthPlayer). Construit aussi le transcript complet
   // {question, answer}[] (voir interviewTranscriptFor/
-  // MILESTONE_INTERVIEW_QUESTIONS ci-dessus, correctif 2026-09 : retour
-  // utilisateur "mets 2/3 questions quand même, et pose des vraies
-  // questions") et le fige dans le journal via `recordMoraleEvent(...,
-  // { quotes, quote })` : `quote` (les réponses mises bout à bout) reste
-  // affiché tel quel sur la page "Aperçu" (retour utilisateur : "mets
-  // plutôt ce que le coach vraiment dit"), `quotes` porte le détail
-  // question par question pour un affichage plus riche (popup d'interview).
-  resolveInterview(id, tone, now = Date.now()) {
+  // MILESTONE_INTERVIEW_QUESTIONS ci-dessus) et le fige dans le journal via
+  // `recordMoraleEvent(..., { quotes, quote })` : `quote` (les réponses
+  // mises bout à bout) reste affiché tel quel sur la page "Aperçu" (retour
+  // utilisateur : "mets plutôt ce que le coach vraiment dit"), `quotes`
+  // porte le détail question par question pour un affichage plus riche
+  // (popup d'interview). `entry.opponentName` peut être `null` (interview
+  // "debut-saison" d'avant-saison, voir queueSeasonPreviewInterview
+  // ci-dessous, sans adversaire ni résultat concerné) : le libellé du
+  // journal s'adapte alors pour ne mentionner ni victoire/défaite ni
+  // adversaire.
+  resolveInterview(id, tones, now = Date.now()) {
     this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
     const idx = this.pendingInterviews.findIndex(i => i.id === id);
     if (idx === -1) return null;
     const entry = this.pendingInterviews[idx];
     if (!entry.milestone) { this.pendingInterviews.splice(idx, 1); return null; }
-    const resultLabel = entry.won ? "la victoire" : "la défaite";
-    const toneCfg = MILESTONE_INTERVIEW_TONES[tone];
-    if (!toneCfg) return null;
-    const fanDelta = entry.won ? toneCfg.fanWin : toneCfg.fanLoss;
-    const formDelta = entry.won ? toneCfg.formWin : toneCfg.formLoss;
+    const questionCount = (MILESTONE_INTERVIEW_QUESTIONS[entry.milestone] || []).length || 2;
+    const toneList = Array.isArray(tones) ? tones : Array(questionCount).fill(tones);
+    if (!toneList.length || toneList.some(t => !MILESTONE_INTERVIEW_TONES[t])) return null;
+    const toneConfigs = toneList.map(t => MILESTONE_INTERVIEW_TONES[t]);
+    const avgOf = key => toneConfigs.reduce((sum, cfg) => sum + cfg[key], 0) / toneConfigs.length;
+    const fanDelta = avgOf(entry.won ? "fanWin" : "fanLoss");
+    const formDelta = avgOf(entry.won ? "formWin" : "formLoss");
     // Alchimie d'équipe (voir MILESTONE_INTERVIEW_TONES.chemistryWin/
     // chemistryLoss ci-dessus) : levier 1 des 3 (retour utilisateur).
-    const chemistryDelta = entry.won ? toneCfg.chemistryWin : toneCfg.chemistryLoss;
+    const chemistryDelta = avgOf(entry.won ? "chemistryWin" : "chemistryLoss");
     const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
     const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
-    const quotes = interviewTranscriptFor(entry.milestone, tone, entry.won, entry.opponentName);
+    const quotes = interviewTranscriptFor(entry.milestone, toneList, entry.won, entry.opponentName, entry.playerName);
     const quote = quotes.map(q => q.answer).filter(Boolean).join(" ");
-    this.recordMoraleEvent(`${milestoneLabel} (ton ${tone.toLowerCase()}) après ${resultLabel} contre ${entry.opponentName}`, fanDelta, { quote, quotes, milestone: entry.milestone });
-    (entry.playerIds || []).forEach(pid => {
-      const p = this.players.find(pl => pl.id === pid);
-      if (p) p.form = clamp(Math.round(p.form + formDelta), 1, 100);
-    });
+    const toneLabel = toneList.every(t => t === toneList[0]) ? toneList[0].toLowerCase() : toneList.map(t => t.toLowerCase()).join("/");
+    const label = entry.opponentName
+      ? `${milestoneLabel} (ton ${toneLabel}) après ${entry.won ? "la victoire" : "la défaite"} contre ${entry.opponentName}`
+      : `${milestoneLabel} (ton ${toneLabel})`;
+    this.recordMoraleEvent(label, fanDelta, { quote, quotes, milestone: entry.milestone });
+    // TOUT l'effectif (pas seulement entry.playerIds, voir le commentaire de
+    // cette méthode plus haut) : une interview de jalon porte sur toute une
+    // période de la saison, jamais sur le seul match qui l'a déclenchée.
+    this.players.forEach(p => { p.form = clamp(Math.round(p.form + formDelta), 1, 100); });
     this.applyChemistryDelta(chemistryDelta);
     this.pendingInterviews.splice(idx, 1);
     return { ok: true, delta: fanDelta, formDelta, chemistryDelta, quotes };
+  }
+
+  // Interview d'AVANT-saison (correctif 2026-09, retour utilisateur : "la
+  // première interview doit pouvoir se faire avant le début de saison et ne
+  // doit pas porter sur le resultat du premier match mais sur la saison à
+  // venir (objectif, joueur sur qui on compte...)") : remplace l'ancien
+  // déclenchement (jalon "debut-saison" posé après le résultat de la
+  // journée 0, voir l'ancien milestoneTypeForRound) par une mise en attente
+  // dès la CRÉATION de la ligue, avant le moindre match joué (voir
+  // Engine.buildLeagueWithHumanTeams, seul appelant). Contenu tourné vers
+  // l'AVENIR plutôt qu'un résultat qui n'existe pas encore : `won` toujours
+  // à `true` (cadrage positif/plein d'espoir, aucune variante "défaite" ne
+  // sera jamais lue pour ce jalon précis, voir
+  // MILESTONE_INTERVIEW_QUOTES["debut-saison"]), `opponentName` à `null`
+  // (aucun match concerné), `playerIds` = tout l'effectif (discours de
+  // rentrée adressé au groupe entier, pas seulement à ceux qui auront joué
+  // un match qui n'a pas encore eu lieu). `playerName` : le joueur le mieux
+  // noté de l'effectif à son poste (weightedRatingForPosition), substitué à
+  // `{player}` dans les citations (voir interviewTranscriptFor). Ne fait
+  // rien (renvoie `null`) si l'effectif est vide.
+  queueSeasonPreviewInterview(now = Date.now()) {
+    this.pruneExpiredInterviews(now);
+    this.pendingInterviews = this.pendingInterviews || [];
+    if (!this.players.length) return null;
+    let keyPlayer = this.players[0];
+    let bestRating = -Infinity;
+    this.players.forEach(p => {
+      const rating = weightedRatingForPosition(p.attrs, p.position);
+      if (rating > bestRating) { bestRating = rating; keyPlayer = p; }
+    });
+    const entry = {
+      id: uid(), round: null, opponentName: null, won: true, scoreDiff: null, at: now,
+      milestone: "debut-saison",
+      playerIds: this.players.map(p => p.id),
+      playerName: keyPlayer.name,
+    };
+    this.pendingInterviews.push(entry);
+    return entry;
   }
 
   // Applique un delta à Team.chemistry, toujours borné à [0, 100] (voir le
@@ -2926,32 +3318,159 @@ class Team {
     return 0.94 + (this.chemistry / 100) * 0.12;
   }
 
-  // Détecte un changement de tactique par rapport au DERNIER match
-  // RÉELLEMENT joué (retour utilisateur : "changer trop régulièrement de
-  // tactique doit aussi avoir un petit impact", levier 3 des 3) : compare
-  // uniquement l'identité tactique de FOND (attaque prioritaire, défense,
-  // rythme), volontairement PAS les réglages fins (aide défensive, style de
+  // Historique quotidien de l'entraînement collectif (voir
+  // Team.collectiveTrainingLog dans le constructeur pour le détail complet
+  // de ce que ça représente et pourquoi) : à appeler à chaque fois qu'on a
+  // l'occasion d'observer l'écoulement du temps réel pour CE club (voir
+  // server/index.js:tick, appelé à CHAQUE requête joueur, et setTraining,
+  // appelé à chaque changement de réglage) — jamais dépendant d'une boucle
+  // qui avancerait "un jour à la fois" (ce jeu n'en a pas), donc comble
+  // rétroactivement tout jour manqué depuis la dernière synchro en
+  // reconduisant la config qui était alors active (voir la boucle
+  // ci-dessous), plutôt que de perdre ces jours silencieusement.
+  syncCollectiveTrainingLog(now = Date.now()) {
+    const todayIndex = parisCalendarDayIndex(now);
+    if (!Array.isArray(this.collectiveTrainingLog)) this.collectiveTrainingLog = [];
+    const log = this.collectiveTrainingLog;
+    const snapshotEntry = (dayIndex, collectiveTraining, trainedTactics) => ({
+      dayIndex,
+      collectiveTraining,
+      trainedTactics: trainedTactics ? { category: trainedTactics.category, value: trainedTactics.value } : null,
+    });
+    const last = log.length ? log[log.length - 1] : null;
+    if (last && last.dayIndex === todayIndex) {
+      // Même jour civil : dernier réglage du jour qui compte (l'utilisateur
+      // peut changer d'avis plusieurs fois dans la même journée) — remplace
+      // l'entrée existante plutôt que d'en empiler une deuxième.
+      log[log.length - 1] = snapshotEntry(todayIndex, this.collectiveTraining, this.trainedTactics);
+    } else {
+      if (last) {
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        for (let cursor = last.dayIndex + ONE_DAY_MS; cursor < todayIndex; cursor += ONE_DAY_MS) {
+          // Comble un jour manqué (absence, gros rattrapage groupé...) avec
+          // la config qui était active à ce moment-là (celle de la DERNIÈRE
+          // entrée connue), jamais la config actuelle qui pourrait venir
+          // tout juste de changer pour AUJOURD'HUI seulement.
+          log.push(snapshotEntry(cursor, last.collectiveTraining, last.trainedTactics));
+        }
+      }
+      log.push(snapshotEntry(todayIndex, this.collectiveTraining, this.trainedTactics));
+    }
+    // Purge tout jour antérieur (ou identique) au début du cycle actuel
+    // (dernier match RÉELLEMENT joué, voir tacticsCycleStartDayIndex/
+    // checkTacticsChemistry ci-dessous) : "depuis le dernier match"
+    // s'applique littéralement, et ça évite une historique illimitée.
+    if (this.tacticsCycleStartDayIndex != null) {
+      this.collectiveTrainingLog = this.collectiveTrainingLog.filter(e => e.dayIndex > this.tacticsCycleStartDayIndex);
+    }
+  }
+
+  // Nombre de jours (depuis le dernier match, voir tacticsCycleStartDayIndex)
+  // où l'entraînement collectif a porté EXACTEMENT sur `target` ({ category,
+  // value }, voir Team.trainedTactics), utilisé par checkTacticsChemistry
+  // pour calculer l'atténuation composée du malus (voir
+  // CHEMISTRY_TACTICS_TRAINED_FACTOR). Un jour "récupération" (ou tout autre
+  // focus) intercalé ne compte simplement pas, mais n'efface pas non plus
+  // les jours déjà banqués (retour utilisateur, 2026-09 : "si le vendredi on
+  // fait entrainement récup [...] on doit quand même avoir le malus divisé
+  // par deux du mercredi et par deux encore une fois le jeudi").
+  daysTrainedForTarget(target) {
+    if (!target || !Array.isArray(this.collectiveTrainingLog)) return 0;
+    const cycleStart = this.tacticsCycleStartDayIndex;
+    return this.collectiveTrainingLog.filter(e => {
+      if (cycleStart != null && e.dayIndex <= cycleStart) return false;
+      return e.collectiveTraining === "tactique" && e.trainedTactics
+        && e.trainedTactics.category === target.category && e.trainedTactics.value === target.value;
+    }).length;
+  }
+
+  // Détecte un changement de tactique par rapport à la RÉFÉRENCE de
+  // cohésion (retour utilisateur : "changer trop régulièrement de tactique
+  // doit aussi avoir un petit impact", levier 3 des 3) : compare uniquement
+  // l'identité tactique de FOND (attaque prioritaire, défense, rythme),
+  // volontairement PAS les réglages fins (aide défensive, style de
   // contre-attaque, marquage individuel...) — on ne pénalise qu'un vrai
   // changement de plan de jeu, pas un simple ajustement. Appelée à chaque
   // match réellement simulé (voir recordMatchStatsForTeam), jamais pendant
   // la planification à l'avance (stagePlanForRound), qui ne représente
-  // encore qu'une intention et non un ordre réellement donné. `null` posé
+  // encore qu'une intention et non un ordre réellement donné.
+  //
+  // La RÉFÉRENCE n'est pas toujours lastTacticsSnapshotForChemistry (le tout
+  // dernier match, quel qu'il soit) : retour utilisateur, 2026-09 — "si je
+  // joue toute la saison sur une tactique, je change pour un seul match, et
+  // je reviens à ma tactique, j'ai un malus [...] ça ne devrait pas être le
+  // cas". Si la tactique actuelle correspond EXACTEMENT à l'identité établie
+  // (establishedTacticsSnapshot, voir le constructeur) ET diffère de ce qui
+  // vient d'être joué au match précédent (un vrai aller-retour, pas "on
+  // continue comme avant"), on compare à cette identité établie à la place :
+  // le malus tombe alors à 0 (revenir chez soi ne coûte rien). `null` posé
   // par le constructeur = pas encore de match de référence : aucun malus au
   // tout premier match de la saison.
-  checkTacticsChemistry() {
+  checkTacticsChemistry(now = Date.now()) {
     const current = {
       offense: [...this.offensivePriorities],
       defense: this.defense,
       rhythm: this.rhythm,
     };
-    const prev = this.lastTacticsSnapshotForChemistry;
-    if (prev) {
-      const changed = prev.defense !== current.defense
-        || prev.rhythm !== current.rhythm
-        || prev.offense.join("|") !== current.offense.join("|");
-      if (changed) this.applyChemistryDelta(-CHEMISTRY_TACTICS_CHANGE_PENALTY);
+    const lastPlayed = this.lastTacticsSnapshotForChemistry;
+    const established = this.establishedTacticsSnapshot;
+    let referenceForPenalty = lastPlayed;
+    if (established && tacticsEqual(current, established) && !tacticsEqual(current, lastPlayed)) {
+      referenceForPenalty = established;
+    }
+
+    // Entraînement collectif "tactique" (retour utilisateur, 2026-09 : "soit
+    // bosser une nouvelle tactique ; ce qui permet d'éviter de trop
+    // dégrader l'alchimie quand on la met en place en match [...] il faut
+    // effectivement choisir ce qui est bossé comme tactique [...] un seul
+    // aspect et pas tous les aspects") : UN SEUL aspect précis (voir
+    // Team.trainedTactics), atténué CATÉGORIE PAR CATÉGORIE (jamais le malus
+    // dans son ensemble), et d'autant plus fort que ça fait de jours de
+    // repos consécutifs que cet aspect précis est travaillé (voir
+    // daysTrainedForTarget/CHEMISTRY_TACTICS_TRAINED_FACTOR). Lu
+    // directement sur `this.trainedTactics`, PAS conditionné à
+    // `collectiveTraining === "tactique"` À CET INSTANT PRÉCIS (retour
+    // utilisateur, 2026-09 : "si le vendredi on fait entrainement récup
+    // [...] on doit quand même avoir le malus divisé par deux du mercredi et
+    // par deux encore une fois le jeudi") — le focus du jour du MATCH lui-même
+    // ne compte de toute façon jamais comme un jour d'entraînement (voir
+    // tacticsCycleStartDayIndex), donc peu importe s'il a entre-temps changé ;
+    // seul le nombre de jours RÉELLEMENT banqués dans collectiveTrainingLog
+    // (voir daysTrainedForTarget) détermine l'atténuation.
+    const target = this.trainedTactics;
+    const daysTrained = target ? this.daysTrainedForTarget(target) : 0;
+    const trainedFactor = Math.pow(CHEMISTRY_TACTICS_TRAINED_FACTOR, daysTrained);
+    const penalty = tacticsChangePenalty(referenceForPenalty, current, target, trainedFactor);
+    if (penalty > 0) this.applyChemistryDelta(-penalty);
+
+    // Identité établie (voir le grand commentaire ci-dessus) : n'avance que
+    // quand la MÊME tactique vient d'être jouée 2 fois de suite (current ==
+    // lastPlayed, avant écrasement ci-dessous) — un vrai changement durable,
+    // jamais un simple aller-retour ponctuel — ou au tout premier match
+    // (established encore `null`).
+    if (!established || tacticsEqual(current, lastPlayed)) {
+      this.establishedTacticsSnapshot = current;
     }
     this.lastTacticsSnapshotForChemistry = current;
+
+    // Ce match consomme tout le crédit accumulé dans collectiveTrainingLog
+    // (voir daysTrainedForTarget ci-dessus) : nouveau cycle à partir de
+    // MAINTENANT, les prochains jours de repos recommencent à zéro (voir le
+    // filtre `dayIndex > tacticsCycleStartDayIndex` dans syncCollectiveTrainingLog/
+    // daysTrainedForTarget).
+    this.tacticsCycleStartDayIndex = parisCalendarDayIndex(now);
+  }
+
+  // Taux de récupération de forme physique quotidien de ce club (retour
+  // utilisateur, 2026-09, voir Team.collectiveTraining/CONDITION_RECOVERY_
+  // PER_DAY_TRAINED plus haut) : CONDITION_RECOVERY_PER_DAY_TRAINED (15/jour,
+  // la valeur historique) si le focus collectif de la semaine est
+  // "recuperation", sinon CONDITION_RECOVERY_PER_DAY (10/jour, le nouveau
+  // défaut). Lu par Team.resetForMatch/recordMatchStatsForTeam (voir plus
+  // bas) et par l'affichage de la forme physique côté client
+  // (currentCondition).
+  conditionRecoveryPerDay() {
+    return this.collectiveTraining === "recuperation" ? CONDITION_RECOVERY_PER_DAY_TRAINED : CONDITION_RECOVERY_PER_DAY;
   }
 
   // Ignore une interview en attente ("pas de commentaire") : aucun effet sur
@@ -3104,6 +3623,26 @@ class Team {
   // tutoriel déjà terminé.
   markOnboardingTourCompleted() {
     this.onboardingTourCompleted = true;
+    return { ok: true };
+  }
+
+  // Réinitialise UNIQUEMENT le drapeau ci-dessus, jamais accessible au
+  // joueur lui-même (aucune route publique, voir server/index.js :
+  // /api/admin/reset-onboarding-tour, même authentification X-Admin-Token
+  // que /api/admin/credit-team) : bouche-trou déjà bricolé une première
+  // fois à la main pour Ariane (voir le commentaire de /api/admin/
+  // credit-team) faute d'un vrai outil - onboardingTourCompleted étant à
+  // sens unique par design (voir markOnboardingTourCompleted ci-dessus),
+  // rien côté joueur ne permet de relancer le tutoriel une fois terminé ou
+  // passé, ce qui bloque définitivement quiconque s'y retrouve coincé par
+  // erreur (retour utilisateur Discord, 2026-09, "Skyzer10" : le bouton a
+  // disparu après un aller-retour dans le tutoriel). Ne touche JAMAIS
+  // Team.tutorialRewardsClaimed : les primes déjà réellement créditées
+  // restent acquises (protection anti-double-dépense inchangée, voir
+  // claimTutorialReward ci-dessous) - seul le PARCOURS peut être refait, pas
+  // l'argent regagné.
+  resetOnboardingTour() {
+    this.onboardingTourCompleted = false;
     return { ok: true };
   }
 
@@ -3611,12 +4150,105 @@ class Team {
   // Team ne connaît pas lui-même sa position dans la pyramide. Omis (ou
   // `null`/`undefined`) : aucun revenu de droits TV cette semaine-là (utile
   // pour un Team utilisé sans ligue, comme dans les tests directs du moteur).
+  // Voir le grand commentaire de BENCH_FRUSTRATION_MAX_SECONDS plus haut :
+  // érode Player.form pour tout non-titulaire n'ayant quasiment pas joué
+  // cette semaine, plus sévèrement s'il note mieux que le titulaire
+  // actuellement aligné à son poste. Appelée par trainWeek ci-dessous, mais
+  // gardée comme méthode séparée pour rester testable indépendamment.
+  applyBenchFrustration(now = Date.now()) {
+    const starters = (this.lineup && this.lineup.starters) || {};
+    const starterIds = new Set(Object.values(starters).filter(Boolean));
+    this.players.forEach(p => {
+      if (starterIds.has(p.id)) return; // titulaire : jamais concerné
+      if (isCurrentlyInjured(p, now)) return; // ne pas jouer n'est alors pas un choix
+      const secondsThisWeek = Object.values(p.trainingSecondsPlayedByPosition || {})
+        .reduce((sum, s) => sum + s, 0);
+      if (secondsThisWeek > BENCH_FRUSTRATION_MAX_SECONDS) return; // a quand même tourné un peu
+      const ownRating = weightedRatingForPosition(p.attrs, p.position);
+      const starterId = starters[p.position];
+      const starter = starterId ? this.players.find(x => x.id === starterId) : null;
+      const deservesToStart = !!starter && ownRating > weightedRatingForPosition(starter.attrs, p.position);
+      const malus = BENCH_FRUSTRATION_BASE_MALUS * (deservesToStart ? BENCH_FRUSTRATION_DESERVING_MULT : 1);
+      p.form = clamp(Math.round(p.form - malus), 1, 100);
+    });
+  }
+
+  // Voir le grand commentaire de TRANSFER_REQUEST_MOTIVATION_THRESHOLD plus
+  // haut : fait avancer, chaque semaine, le compteur de semaines
+  // consécutives sous le seuil de motivation "proche de 0" pour chaque
+  // joueur, et déclenche une demande de transfert une fois ce compteur au
+  // seuil. Une motivation qui remonte au-dessus du seuil (discussion
+  // réussie, bonne interview de jalon, ou tout simplement le temps de jeu
+  // qui revient) remet le compteur à 0 ET referme une demande déjà active :
+  // un joueur qui n'est plus malheureux n'a plus de raison de demander son
+  // transfert. Appelée par trainWeek ci-dessous, mais gardée comme méthode
+  // séparée pour rester testable indépendamment (même convention que
+  // applyBenchFrustration juste au-dessus).
+  updateTransferRequests(now = Date.now()) {
+    this.players.forEach(p => {
+      if (p.form <= TRANSFER_REQUEST_MOTIVATION_THRESHOLD) {
+        p.weeksAtLowMotivation = (p.weeksAtLowMotivation || 0) + 1;
+        if (!p.transferRequestActive && p.weeksAtLowMotivation >= TRANSFER_REQUEST_WEEKS_THRESHOLD) {
+          p.transferRequestActive = true;
+          p.transferRequestQuote = transferRequestQuoteFor(p.name);
+          this.recordMoraleEvent(`${p.name} demande son transfert dans la presse`, 0, { transferRequestPlayerId: p.id });
+        }
+      } else {
+        p.weeksAtLowMotivation = 0;
+        if (p.transferRequestActive) {
+          p.transferRequestActive = false;
+          p.transferRequestQuote = null;
+        }
+      }
+    });
+  }
+
+  // Action "discuter" du manager avec un joueur qui a demandé son transfert
+  // (voir le grand commentaire de TRANSFER_REQUEST_MOTIVATION_THRESHOLD plus
+  // haut) : chance de succès partant de TRANSFER_REQUEST_DISCUSS_BASE_CHANCE,
+  // augmentée jusqu'à TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS de plus pour un
+  // Mental à 100 (un joueur mentalement fort se laisse plus facilement
+  // convaincre, voir ATTRS). Un succès remotive franchement le joueur (+
+  // TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST sur sa forme, ce qui
+  // repasse largement le seuil et referme donc la demande) et journalise
+  // l'issue positive ; un échec ne change RIEN (la demande reste active, le
+  // manager peut retenter plus tard, ou vendre le joueur) — "ne marche pas à
+  // chaque fois". Renvoie { ok: true, success, formBefore, formAfter } ou
+  // { ok: false, reason } (joueur introuvable, ou n'ayant PAS demandé son
+  // transfert), jamais d'exception, même convention que les autres méthodes
+  // "action du manager" de cette classe (voir resolveInterview/sellPlayer).
+  discussTransferRequest(playerId, now = Date.now()) {
+    const p = this.players.find(pl => pl.id === playerId);
+    if (!p) return { ok: false, reason: "not-found" };
+    if (!p.transferRequestActive) return { ok: false, reason: "not-requesting" };
+    const chance = TRANSFER_REQUEST_DISCUSS_BASE_CHANCE + (p.attrs.mental / 100) * TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS;
+    const success = Math.random() < chance;
+    const formBefore = p.form;
+    if (success) {
+      p.form = clamp(Math.round(p.form + TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST), 1, 100);
+      p.weeksAtLowMotivation = 0;
+      p.transferRequestActive = false;
+      p.transferRequestQuote = null;
+      this.recordMoraleEvent(`Discussion réussie avec ${p.name}, la demande de transfert est retirée`, 0, { transferRequestPlayerId: p.id });
+    }
+    return { ok: true, success, formBefore, formAfter: p.form };
+  }
+
   trainWeek(divisionLevel, now) {
     const skill = this.trainingSkill; // clé de TRAINING_PROGRAMS, ou null
     const program = skill ? TRAINING_PROGRAMS[skill] : null;
     const dilution = this.trainingDilution();
     const trainerMult = this.trainerBonusMultiplier();
     const report = {};
+
+    // AVANT la remise à zéro de trainingSecondsPlayedByPosition ci-dessous
+    // (dans la boucle qui suit) : applyBenchFrustration a besoin du temps de
+    // jeu de CETTE semaine qui s'achève, pas de la semaine suivante.
+    this.applyBenchFrustration(now);
+    // APRÈS applyBenchFrustration : se base sur Player.form déjà à jour de
+    // cette semaine (malus du banc inclus) pour décider qui franchit le
+    // seuil de motivation "proche de 0".
+    this.updateTransferRequests(now);
 
     this.players.forEach(p => {
       // Le focus se base sur le temps RÉELLEMENT joué aux poste(s) entraînés
@@ -4219,8 +4851,13 @@ class Team {
     // Player.resetForMatch) — c'est un multiplicateur d'ÉQUIPE, mais lu
     // individuellement par Player.eff() pendant le match.
     const chemistryFactor = this.chemistryFactor();
+    // Récupération de forme physique (retour utilisateur, 2026-09, voir
+    // Team.conditionRecoveryPerDay/collectiveTraining) : taux du CLUB,
+    // calculé UNE FOIS ici puis transmis à chaque joueur, plutôt que
+    // recalculé joueur par joueur (identique pour tout l'effectif).
+    const recoveryPerDay = this.conditionRecoveryPerDay();
     this.players.forEach(p => {
-      p.resetForMatch(now);
+      p.resetForMatch(now, recoveryPerDay);
       p.matchChemistryFactor = chemistryFactor;
     });
     POSITIONS.forEach(pos => {
@@ -4823,7 +5460,7 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now()) {
   // Alchimie d'équipe (voir Team.checkTacticsChemistry, levier 3 des 3) :
   // une seule fois par match RÉELLEMENT joué (pas par joueur), compare la
   // tactique de ce match à celle du précédent.
-  if (team.checkTacticsChemistry) team.checkTacticsChemistry();
+  if (team.checkTacticsChemistry) team.checkTacticsChemistry(now);
   team.players.forEach(p => {
     if (p.secondsPlayed > 0) {
       // Forme physique (voir CONDITION_STATES/conditionLossForMinutes plus
@@ -4836,7 +5473,7 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now()) {
       // tests qui l'appellent directement sur un joueur déjà mis en jeu à
       // la main). `conditionUpdatedAt` posé à `now` : la prochaine
       // récupération (voir currentCondition) repartira de CE match.
-      const baseCondition = p.matchCondition ?? currentCondition(p, now);
+      const baseCondition = p.matchCondition ?? currentCondition(p, now, team.conditionRecoveryPerDay());
       p.condition = clamp(Math.round(baseCondition - conditionLossForMinutes(p.secondsPlayed / 60)), 0, 100);
       p.conditionUpdatedAt = now;
       // Bonus temporaire de MVP consommé (voir Player.pendingMatchBoost/eff()
@@ -4866,6 +5503,10 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now()) {
         // en zone "inside". `|| 0` de rigueur pour tout matchLog déjà persisté
         // avant cette fonctionnalité (jamais lu par du code plus ancien).
         paintAtt: p.stats.paintAtt || 0, paintMade: p.stats.paintMade || 0,
+        // +/- (voir MatchEngine.applyPlusMinusForPoints/emptyStats plus haut) :
+        // figé ici pour survivre à la remise à zéro de p.stats au prochain
+        // match (resetForMatch), tout comme le reste de cette entrée.
+        plusMinus: p.stats.plusMinus || 0,
       });
     }
   });
@@ -5706,6 +6347,14 @@ class League {
     if (buyer.isHuman) buyer.recordTransaction(`Achat de ${player.name} (enchères)`, -amount);
     if (seller.isHuman) seller.recordTransaction(`Vente de ${player.name} (enchères)`, amount);
     buyer.players.push(player);
+    // Voir le grand commentaire de TRANSFER_NEW_CLUB_MOTIVATION_FLOOR plus
+    // haut : un vrai changement de club (ce transfert-ci) relève la
+    // motivation jusqu'à ce plancher si besoin, referme toute demande de
+    // transfert active (elle visait l'ancien club), jamais l'inverse.
+    if (player.form < TRANSFER_NEW_CLUB_MOTIVATION_FLOOR) player.form = TRANSFER_NEW_CLUB_MOTIVATION_FLOOR;
+    player.weeksAtLowMotivation = 0;
+    player.transferRequestActive = false;
+    player.transferRequestQuote = null;
     if (!buyer.isHuman) buyer.autoAssignLineup();
     // Alchimie d'équipe (suite) : le rang du joueur DANS L'EFFECTIF
     // ACHETEUR, calculé APRÈS le push() ci-dessus (il y figure désormais).
@@ -6373,6 +7022,211 @@ function seasonEndBonusFor(outcome) {
   return null;
 }
 
+// ---------------------------------------------------------------------
+// Objectif de saison du conseil d'administration (retour utilisateur,
+// 2026-09) : "En début de saison, le conseil d'administration doit donner
+// un objectif de classement (maintien, milieu de tableau, PO, finale,
+// titre). [...] Si l'objectif n'est pas respecté pendant la saison, cela
+// impact l'humeur des supporters. Une équipe qui est dernière alors qu'elle
+// devait jouer la finale, doit voir ses supporters mécontents. L'objectif
+// du CA doit être posé sur base du niveau des différentes équipes du
+// championnat."
+//
+// Conception : `assignSeasonObjectives` (appelée par
+// buildLeagueWithHumanTeams, donc pour toute nouvelle carrière ET chaque
+// nouvelle saison, humaine ou CPU) classe les 10 équipes de la ligue par
+// force pré-saison (Team.averageOverall) et découpe ce classement en 5
+// paliers de 2 équipes, du plus faible (Team.seasonObjective = "maintien")
+// au plus fort ("titre") : c'est la lecture la plus directe de "posé sur
+// base du niveau des différentes équipes du championnat". `seasonObjective`
+// reste figé tout le reste de la saison (jamais recalculé en cours de
+// route), et le verdict n'est établi qu'une fois la saison ENTIÈREMENT
+// terminée (saison régulière + barrage de relégation + play-offs jusqu'au
+// champion, voir seasonAchievementTier) : c'est à ce moment-là,
+// symétriquement à League.divisionOutcomeForUserTeam/seasonEndBonusFor déjà
+// résolus au même endroit (voir startNewSeason côté moteurbasket3.html),
+// que seasonObjectiveVerdict compare l'ambition de départ au résultat réel
+// et calcule l'impact sur l'humeur des supporters (Team.recordMoraleEvent),
+// exactement l'exemple donné : une équipe attendue en finale qui termine
+// reléguée doit voir ses supporters mécontents.
+const SEASON_OBJECTIVE_TIERS = { "maintien": 1, "milieu-tableau": 2, "playoffs": 3, "finale": 4, "titre": 5 };
+const SEASON_OBJECTIVE_LABELS = {
+  "maintien": "Maintien",
+  "milieu-tableau": "Milieu de tableau",
+  "playoffs": "Qualification en play-offs",
+  "finale": "Finale des play-offs",
+  "titre": "Titre de champion",
+};
+// Ce que l'équipe a RÉELLEMENT obtenu à l'issue de la saison, sur la même
+// échelle ordinale que SEASON_OBJECTIVE_TIERS (0 = pire que le pire
+// objectif possible, la relégation, jamais elle-même une aspiration) : voir
+// seasonAchievementTier pour le calcul.
+const SEASON_ACHIEVEMENT_LABELS = {
+  0: "une relégation",
+  1: "un maintien tout juste assuré",
+  2: "une saison milieu de tableau",
+  3: "une élimination en demi-finale des play-offs",
+  4: "une finale des play-offs perdue",
+  5: "le titre de champion",
+};
+// Barème de l'impact sur l'humeur des supporters (voir
+// Team.recordMoraleEvent), fonction de l'écart entre le palier visé
+// (SEASON_OBJECTIVE_TIERS) et le palier réellement atteint
+// (seasonAchievementTier) : un objectif manqué coûte plus cher, par palier
+// d'écart, qu'un objectif dépassé n'en rapporte (les supporters sont plus
+// sévères face à un échec qu'indulgents face à une bonne surprise, même
+// logique que MILESTONE_INTERVIEW_TONES fanWin/fanLoss). Un objectif
+// exactement atteint (écart nul) rapporte un petit bonus : le mérite d'avoir
+// fait ce qui était demandé, ni plus ni moins.
+const SEASON_OBJECTIVE_MISS_MALUS_PER_TIER = 6;
+const SEASON_OBJECTIVE_EXCEED_BONUS_PER_TIER = 4;
+const SEASON_OBJECTIVE_MET_BONUS = 3;
+
+// Classe les 10 équipes de `league` par force pré-saison (Team.
+// averageOverall décroissant) et assigne à CHACUNE (pas seulement l'équipe
+// du joueur : voir la généralisation multi-manager déjà en place ailleurs
+// dans ce fichier) l'un des 5 paliers de SEASON_OBJECTIVE_TIERS, par
+// tranches de 2 (rangs 1-2 -> "titre", ..., rangs 9-10 -> "maintien").
+// Appelée une seule fois, à la création/régénération de la ligue (voir
+// buildLeagueWithHumanTeams, seul appelant), jamais recalculée en cours de
+// saison.
+function assignSeasonObjectives(league) {
+  const tierKeysStrongToWeak = ["titre", "finale", "playoffs", "milieu-tableau", "maintien"];
+  const ranked = league.teams
+    .map((t, idx) => ({ idx, avg: t.averageOverall() }))
+    .sort((a, b) => b.avg - a.avg);
+  ranked.forEach((entry, rankIdx) => {
+    const tierIndex = Math.min(tierKeysStrongToWeak.length - 1, Math.floor(rankIdx / 2));
+    league.teams[entry.idx].seasonObjective = tierKeysStrongToWeak[tierIndex];
+  });
+}
+
+// Ce que l'équipe `teamIdx` a RÉELLEMENT obtenu à l'issue de la saison,
+// 0 à 5 sur la même échelle que SEASON_OBJECTIVE_TIERS (voir
+// SEASON_ACHIEVEMENT_LABELS pour le libellé de chaque valeur) : la
+// relégation prime sur tout le reste (0, même pour une équipe par ailleurs
+// allée loin en Coupe ou bien classée avant le barrage), sinon le parcours
+// en play-offs (champion 5, finaliste 4, éliminé en demi-finale 3), sinon
+// le classement de saison régulière (rang 5-6 -> 2 "milieu de tableau",
+// rang 7-8 -> 1 "maintien", ces deux-là ayant nécessairement évité la
+// relégation pour arriver jusqu'ici, voir la garde tout en haut). `null` si
+// la saison n'est pas encore ENTIÈREMENT terminée (pas de play-offs, ou
+// champion pas encore connu, voir League.isPlayoffsDone) : appeler cette
+// fonction plus tôt donnerait un verdict prématuré et faux.
+function seasonAchievementTier(league, teamIdx) {
+  if (!league.playoffs || league.playoffs.champion == null) return null;
+  if (league.relegatedTeamIndexes().includes(teamIdx)) return 0;
+  const po = league.playoffs;
+  if (po.champion === teamIdx) return 5;
+  if (po.finalSeries && po.finalSeries.resolved && (po.finalSeries.idxA === teamIdx || po.finalSeries.idxB === teamIdx)) return 4;
+  for (const series of po.series) {
+    if (series.resolved && (series.idxA === teamIdx || series.idxB === teamIdx) && series.winner !== teamIdx) return 3;
+  }
+  const rank = league.standings().findIndex(s => s.idx === teamIdx) + 1; // 1-10
+  return rank <= 6 ? 2 : 1;
+}
+
+// Verdict complet de fin de saison pour `teamIdx` (objectif du CA vs
+// résultat réel, voir le grand commentaire de SEASON_OBJECTIVE_TIERS
+// au-dessus) : fonction PURE (aucune mutation, contrairement à
+// Team.recordMoraleEvent), utilisée à la fois pour l'AFFICHAGE (voir
+// renderSeasonEnd/renderHumeurSection côté moteurbasket3.html, appelée à
+// chaque rendu, purement en lecture) et pour l'APPLICATION réelle (voir
+// startNewSeason côté moteurbasket3.html, qui appelle ENSUITE
+// Team.recordMoraleEvent(verdict.label, verdict.delta) avec le résultat),
+// même patron que seasonEndBonusFor/Team.recordTransaction juste au-dessus.
+// Renvoie `null` si l'équipe n'a pas encore d'objectif assigné, ou si la
+// saison n'est pas encore terminée (voir seasonAchievementTier).
+function seasonObjectiveVerdict(league, teamIdx) {
+  const team = league.teams[teamIdx];
+  if (!team || !team.seasonObjective) return null;
+  const achievedTier = seasonAchievementTier(league, teamIdx);
+  if (achievedTier == null) return null;
+  const objective = team.seasonObjective;
+  const objectiveTier = SEASON_OBJECTIVE_TIERS[objective];
+  const gap = objectiveTier - achievedTier; // > 0 = objectif manqué, <= 0 = atteint ou dépassé
+  const delta = gap > 0
+    ? -SEASON_OBJECTIVE_MISS_MALUS_PER_TIER * gap
+    : SEASON_OBJECTIVE_MET_BONUS + SEASON_OBJECTIVE_EXCEED_BONUS_PER_TIER * (-gap);
+  const achievedLabel = SEASON_ACHIEVEMENT_LABELS[achievedTier];
+  const objectiveLabel = SEASON_OBJECTIVE_LABELS[objective];
+  const label = gap > 0
+    ? `Objectif de la saison manqué (${objectiveLabel}) : l'équipe termine avec ${achievedLabel}. Les supporters sont déçus.`
+    : gap === 0
+      ? `Objectif de la saison rempli (${objectiveLabel}) : l'équipe termine avec ${achievedLabel}, exactement ce qui était demandé.`
+      : `Objectif de la saison largement dépassé (${objectiveLabel} espéré) : l'équipe termine avec ${achievedLabel} ! Les supporters sont aux anges.`;
+  return { objective, objectiveTier, achievedTier, achievedLabel, gap, delta, label };
+}
+
+// ---------------------------------------------------------------------
+// Signal de MI-SAISON pour l'objectif du conseil d'administration (retour
+// utilisateur, 2026-09, en complément du verdict de fin de saison ci-dessus :
+// "Ajoute un signal à la mi saison ouais ça serait pas mal") : contrairement
+// à seasonObjectiveVerdict, aucun résultat définitif n'existe encore à la
+// mi-saison (round = midSeasonRound, voir milestoneTypeForRound plus haut) :
+// ni classement final, ni barrage de relégation, ni play-offs. On se
+// contente donc de comparer le classement PROVISOIRE actuel
+// (League.standings(), à cet instant précis de la saison régulière) à
+// l'objectif du CA (Team.seasonObjective), avec EXACTEMENT le même découpage
+// par tranches de 2 équipes que assignSeasonObjectives (rangs 1-2 -> "titre",
+// ..., rangs 9-10 -> "maintien") : réutilise ainsi la même échelle
+// (SEASON_OBJECTIVE_TIERS/SEASON_OBJECTIVE_LABELS) plutôt que d'inventer de
+// nouveaux seuils arbitraires à mi-parcours. Impact sur l'humeur des
+// supporters volontairement plus modeste qu'un verdict de fin de saison
+// (voir les constantes MIDSEASON_* ci-dessous, environ moitié moindres) :
+// un simple avertissement/encouragement à mi-parcours plutôt qu'un second
+// jugement aussi sévère que le verdict final, qui reste la vraie sanction/
+// récompense (évite de compter deux fois le même écart).
+const SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER = 3;
+const SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER = 2;
+const SEASON_OBJECTIVE_MIDSEASON_MET_BONUS = 1;
+
+// Palier de classement ACTUEL (une des clés de SEASON_OBJECTIVE_TIERS) pour
+// `teamIdx`, d'après son rang dans League.standings() À CET INSTANT (donc
+// utilisable EN COURS de saison régulière, contrairement à
+// seasonAchievementTier qui exige la saison entièrement terminée) : même
+// découpage par tranches de 2 que assignSeasonObjectives (rangs 1-2 ->
+// "titre", ..., rangs 9-10 -> "maintien"). `null` si `teamIdx` est introuvable
+// dans le classement (garde défensive, ne devrait jamais arriver en pratique).
+function currentStandingsPaceObjective(league, teamIdx) {
+  const tierKeysStrongToWeak = ["titre", "finale", "playoffs", "milieu-tableau", "maintien"];
+  const rank = league.standings().findIndex(s => s.idx === teamIdx) + 1; // 1-10, 0 si absent
+  if (rank <= 0) return null;
+  const tierIndex = Math.min(tierKeysStrongToWeak.length - 1, Math.floor((rank - 1) / 2));
+  return tierKeysStrongToWeak[tierIndex];
+}
+
+// Signal de mi-saison complet pour `teamIdx` (objectif du CA vs classement
+// PROVISOIRE actuel) : même forme que seasonObjectiveVerdict ci-dessus
+// (fonction PURE, aucune mutation), à appliquer par l'appelant via
+// Team.recordMoraleEvent(signal.label, signal.delta), voir
+// server/liveMatch.js:finalizeRound, seul appelant en production, qui
+// l'applique pour CHAQUE équipe humaine impliquée dans la journée de
+// mi-saison (solo comme multi-manager). Renvoie `null` si l'équipe n'a pas
+// encore d'objectif assigné, ou si son rang est introuvable dans le
+// classement (voir currentStandingsPaceObjective).
+function seasonObjectiveMidSeasonSignal(league, teamIdx) {
+  const team = league.teams[teamIdx];
+  if (!team || !team.seasonObjective) return null;
+  const paceObjective = currentStandingsPaceObjective(league, teamIdx);
+  if (!paceObjective) return null;
+  const objective = team.seasonObjective;
+  const objectiveTier = SEASON_OBJECTIVE_TIERS[objective];
+  const paceTier = SEASON_OBJECTIVE_TIERS[paceObjective];
+  const gap = objectiveTier - paceTier; // > 0 = en dessous de l'objectif, <= 0 = sur la bonne voie ou au-dessus
+  const delta = gap > 0
+    ? -SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER * gap
+    : SEASON_OBJECTIVE_MIDSEASON_MET_BONUS + SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER * (-gap);
+  const objectiveLabel = SEASON_OBJECTIVE_LABELS[objective];
+  const paceLabel = SEASON_OBJECTIVE_LABELS[paceObjective];
+  const label = gap > 0
+    ? `Mi-saison : le rythme actuel (${paceLabel}) est en dessous de l'objectif (${objectiveLabel}). Les supporters s'inquiètent déjà.`
+    : gap === 0
+      ? `Mi-saison : le rythme actuel colle exactement à l'objectif (${objectiveLabel}). Les supporters restent confiants.`
+      : `Mi-saison : le rythme actuel (${paceLabel}) dépasse largement l'objectif (${objectiveLabel} espéré). Les supporters sont optimistes.`;
+  return { objective, objectiveTier, paceObjective, paceTier, gap, delta, label };
+}
+
 // Génère une ligue complète : le club du joueur (déjà créé) + 9 adversaires
 // neufs, de force à peu près comparable (légère variation aléatoire). Sans
 // niveau de division précisé, on démarre le plus haut possible dans la
@@ -6530,6 +7384,19 @@ function sameParisCalendarDay(aMs, bMs) {
   return a.year === b.year && a.month === b.month && a.day === b.day;
 }
 
+// Entier COMPARABLE/TRIABLE identifiant un jour civil à Paris (retour
+// utilisateur, 2026-09, voir Team.collectiveTrainingLog/syncCollectiveTrainingLog/
+// tacticsCycleStartDayIndex plus haut) : minuit UTC du triplet
+// année/mois/jour Paris de `ms` — PAS un vrai instant réel (ignore
+// volontairement l'heure locale/le décalage horaire), juste une clé stable
+// et strictement croissante d'un jour civil au suivant (toujours exactement
+// 24h = 86 400 000 ms d'écart, même autour d'un changement d'heure Paris,
+// puisqu'aucune vraie conversion de fuseau n'entre plus en jeu à ce stade).
+function parisCalendarDayIndex(ms) {
+  const p = parisLocalDateParts(ms);
+  return Date.UTC(p.year, p.month - 1, p.day);
+}
+
 function parisEpochForLocalTime(year, month, day, hour, minute = 0, second = 0) {
   let guess = Date.UTC(year, month - 1, day, hour, minute, second);
   for (let i = 0; i < 4; i++) {
@@ -6626,6 +7493,19 @@ function buildLeagueWithHumanTeams(humanTeams, divisionLevel, now, calendarConfi
     return t;
   });
   const league = new League([...humanTeams, ...opponents]);
+  // Interview d'avant-saison (correctif 2026-09, voir le grand commentaire
+  // de Team.queueSeasonPreviewInterview) : posée ici plutôt que dans
+  // generateLeague/generateMultiManagerLeague séparément pour couvrir
+  // UNIFORMÉMENT les trois chemins qui passent par ce point commun (nouvelle
+  // carrière solo, nouvelle saison solo via startNewSeason, ET création
+  // d'une ligue partagée à plusieurs managers).
+  humanTeams.forEach(team => team.queueSeasonPreviewInterview(now));
+  // Objectif de saison du conseil d'administration (voir le grand
+  // commentaire au-dessus de SEASON_OBJECTIVE_TIERS) : posé ici pour la
+  // même raison que l'interview d'avant-saison juste au-dessus, une fois
+  // TOUTES les équipes (humaines ET CPU) présentes dans `league.teams`,
+  // seul moment où l'on peut comparer leur niveau les unes aux autres.
+  assignSeasonObjectives(league);
   league.divisionLevel = info.level;
   // Le calendrier réel d'une nouvelle saison démarre maintenant (voir
   // League.calendarStartAt ci-dessus, et server/calendar.js pour le détail
@@ -6786,6 +7666,13 @@ function serializePlayerRecord(p) {
     // serveur entre l'élection au MVP et le prochain match de ce joueur lui
     // ferait perdre le bonus promis.
     pendingMatchBoost: p.pendingMatchBoost || 0,
+    // Demande de transfert (voir le grand commentaire de
+    // TRANSFER_REQUEST_MOTIVATION_THRESHOLD) : DOIT survivre au
+    // rechargement, sinon un simple redémarrage "réconcilierait" à tort un
+    // joueur qui a publiquement demandé son transfert.
+    weeksAtLowMotivation: p.weeksAtLowMotivation || 0,
+    transferRequestActive: !!p.transferRequestActive,
+    transferRequestQuote: p.transferRequestQuote ?? null,
   };
 }
 
@@ -6867,6 +7754,11 @@ function serializeTeam(team) {
     transactions: team.transactions,
     fanMorale: team.fanMorale,
     moraleHistory: team.moraleHistory,
+    // Objectif de saison du conseil d'administration (voir le grand
+    // commentaire au-dessus de SEASON_OBJECTIVE_TIERS) : `null` par défaut,
+    // une sauvegarde d'avant cette fonctionnalité n'en a simplement pas
+    // encore (voir teamFromSave plus bas).
+    seasonObjective: team.seasonObjective || null,
     // Alchimie d'équipe (voir le grand commentaire de
     // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : chemistry, plus le
     // dernier instantané tactique utilisé pour détecter un changement au
@@ -6877,6 +7769,41 @@ function serializeTeam(team) {
     lastTacticsSnapshotForChemistry: team.lastTacticsSnapshotForChemistry
       ? { ...team.lastTacticsSnapshotForChemistry, offense: [...team.lastTacticsSnapshotForChemistry.offense] }
       : null,
+    // Identité tactique établie (voir Team.establishedTacticsSnapshot/
+    // checkTacticsChemistry) : même raisonnement que lastTacticsSnapshotForChemistry
+    // ci-dessus, DOIT survivre au rechargement, sinon un aller-retour de
+    // tactique redeviendrait à tort payant après chaque redémarrage serveur.
+    establishedTacticsSnapshot: team.establishedTacticsSnapshot
+      ? { ...team.establishedTacticsSnapshot, offense: [...team.establishedTacticsSnapshot.offense] }
+      : null,
+    // Entraînement collectif (voir Team.collectiveTraining ci-dessus) : DOIT
+    // survivre au rechargement, comme trainingSkill/trainingPositions plus
+    // haut, sinon le focus collectif de la semaine reviendrait à "aucun" à
+    // chaque redémarrage du serveur.
+    collectiveTraining: team.collectiveTraining || null,
+    // Tactique précisément travaillée à l'entraînement (voir Team.
+    // trainedTactics ci-dessus) : même raisonnement, DOIT survivre au
+    // rechargement. Un seul aspect ({ category, value }).
+    trainedTactics: team.trainedTactics
+      ? { category: team.trainedTactics.category, value: team.trainedTactics.value }
+      : null,
+    // Historique quotidien de l'entraînement collectif (voir
+    // Team.collectiveTrainingLog/syncCollectiveTrainingLog ci-dessus) : DOIT
+    // survivre au rechargement, sinon les jours déjà banqués vers
+    // l'atténuation du prochain changement de tactique seraient perdus à
+    // chaque redémarrage serveur (copie superficielle de chaque entrée,
+    // jamais de référence partagée).
+    collectiveTrainingLog: Array.isArray(team.collectiveTrainingLog)
+      ? team.collectiveTrainingLog.map(e => ({
+        dayIndex: e.dayIndex,
+        collectiveTraining: e.collectiveTraining || null,
+        trainedTactics: e.trainedTactics ? { category: e.trainedTactics.category, value: e.trainedTactics.value } : null,
+      }))
+      : [],
+    // Jour civil du dernier match réellement joué (voir
+    // Team.tacticsCycleStartDayIndex ci-dessus) : DOIT survivre au
+    // rechargement, même raisonnement que collectiveTrainingLog ci-dessus.
+    tacticsCycleStartDayIndex: typeof team.tacticsCycleStartDayIndex === "number" ? team.tacticsCycleStartDayIndex : null,
     // Interviews en attente (voir Team.pendingInterviews/applyMoraleForResult) :
     // même forme de persistance que pendingYouthDecisions plus bas, simple
     // copie superficielle de chaque entrée (objets plats, jamais de
@@ -7051,6 +7978,12 @@ function playerFromSave(pdata) {
   // = sauvegarde d'avant cette fonctionnalité, on garde 0 (déjà posé par le
   // constructeur Player).
   if (typeof pdata.pendingMatchBoost === "number") p.pendingMatchBoost = pdata.pendingMatchBoost;
+  // Demande de transfert (voir serializePlayerRecord ci-dessus) : absent =
+  // sauvegarde d'avant cette fonctionnalité, on garde les valeurs neutres
+  // déjà posées par le constructeur Player (aucune demande en cours).
+  if (typeof pdata.weeksAtLowMotivation === "number") p.weeksAtLowMotivation = pdata.weeksAtLowMotivation;
+  if (typeof pdata.transferRequestActive === "boolean") p.transferRequestActive = pdata.transferRequestActive;
+  if (typeof pdata.transferRequestQuote === "string") p.transferRequestQuote = pdata.transferRequestQuote;
   return p;
 }
 
@@ -7092,7 +8025,14 @@ function teamFromSave(data) {
   // tutoriel déjà terminé avant ce correctif (2026-09, retour utilisateur
   // "Mets les vrais primes sur le tutoriel").
   team.tutorialRewardsClaimed = Array.isArray(data.tutorialRewardsClaimed) ? data.tutorialRewardsClaimed : [];
-  team.trainingSkill = data.trainingSkill || null;
+  // Retour utilisateur (2026-09) : "enleve l'entrainement aucune" — plus
+  // aucune sauvegarde ne doit se retrouver avec trainingSkill à `null`
+  // (ancienne option "Aucune", ou simplement absente d'une sauvegarde
+  // d'avant cette fonctionnalité) : on retombe alors sur le nouveau défaut
+  // "Lancer franc" (freeThrow), comme pour une toute nouvelle équipe (voir
+  // le constructeur), plutôt que de perpétuer une valeur qui n'est plus
+  // sélectionnable depuis l'écran Entraînement.
+  team.trainingSkill = (data.trainingSkill && TRAINING_PROGRAMS[data.trainingSkill]) ? data.trainingSkill : "freeThrow";
   team.trainingPositions = Array.isArray(data.trainingPositions) ? data.trainingPositions : [];
   if (data.trainer && TRAINER_LEVELS.includes(data.trainer.level)) {
     // baseSalary préservé explicitement (bug corrigé 2026-09 : il était
@@ -7208,6 +8148,10 @@ function teamFromSave(data) {
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
+  // Objectif de saison du conseil d'administration (voir serializeTeam
+  // ci-dessus) : `null` par défaut (constructeur), une sauvegarde d'avant
+  // cette fonctionnalité n'en a simplement pas encore.
+  if (typeof data.seasonObjective === "string") team.seasonObjective = data.seasonObjective;
   // Alchimie d'équipe (voir serializeTeam ci-dessus). Absent (sauvegarde
   // d'avant cette fonctionnalité) : on garde les valeurs déjà posées par le
   // constructeur (chemistry neutre à 50, aucun instantané tactique de
@@ -7220,6 +8164,61 @@ function teamFromSave(data) {
       rhythm: data.lastTacticsSnapshotForChemistry.rhythm,
     };
   }
+  // Identité tactique établie (voir serializeTeam ci-dessus/
+  // Team.establishedTacticsSnapshot). Absent (sauvegarde d'avant cette
+  // fonctionnalité) : on reprend lastTacticsSnapshotForChemistry ci-dessus
+  // quand il existe (une carrière déjà en cours part du principe que sa
+  // tactique la plus récente est déjà son identité établie), sinon `null`
+  // (déjà posé par le constructeur).
+  if (data.establishedTacticsSnapshot && Array.isArray(data.establishedTacticsSnapshot.offense)) {
+    team.establishedTacticsSnapshot = {
+      offense: [...data.establishedTacticsSnapshot.offense],
+      defense: data.establishedTacticsSnapshot.defense,
+      rhythm: data.establishedTacticsSnapshot.rhythm,
+    };
+  } else if (team.lastTacticsSnapshotForChemistry) {
+    team.establishedTacticsSnapshot = {
+      offense: [...team.lastTacticsSnapshotForChemistry.offense],
+      defense: team.lastTacticsSnapshotForChemistry.defense,
+      rhythm: team.lastTacticsSnapshotForChemistry.rhythm,
+    };
+  }
+  // Entraînement collectif (voir serializeTeam ci-dessus). Absent (sauvegarde
+  // d'avant cette fonctionnalité) : on garde null (déjà posé par le
+  // constructeur, aucun focus collectif).
+  team.collectiveTraining = data.collectiveTraining === "tactique" || data.collectiveTraining === "recuperation"
+    ? data.collectiveTraining
+    : null;
+  // Tactique précisément travaillée à l'entraînement (voir serializeTeam
+  // ci-dessus) : UN SEUL aspect ({ category, value }) depuis ce correctif
+  // (2026-09, retour utilisateur : "un seul aspect et pas tous les aspects")
+  // — une ancienne sauvegarde au format précédent ({ offense, defense,
+  // rhythm }) n'est plus reconnue comme valide (pas de `category`/`value`)
+  // et retombe donc sur `null`, exactement comme une sauvegarde d'avant
+  // cette fonctionnalité (déjà posé par le constructeur) : rien de cassé,
+  // juste rien de précis à ré-entraîner tant que le manager n'a pas refait
+  // son choix depuis la nouvelle interface.
+  team.trainedTactics = (data.trainedTactics && typeof data.trainedTactics === "object"
+    && ["offense", "defense", "rhythm"].includes(data.trainedTactics.category)
+    && typeof data.trainedTactics.value === "string")
+    ? { category: data.trainedTactics.category, value: data.trainedTactics.value }
+    : null;
+  // Historique quotidien de l'entraînement collectif (voir serializeTeam
+  // ci-dessus/Team.collectiveTrainingLog). Absent = sauvegarde d'avant cette
+  // fonctionnalité, on garde [] (déjà posé par le constructeur) : aucun jour
+  // encore banqué, comme une toute nouvelle équipe.
+  team.collectiveTrainingLog = Array.isArray(data.collectiveTrainingLog)
+    ? data.collectiveTrainingLog
+      .filter(e => e && typeof e.dayIndex === "number")
+      .map(e => ({
+        dayIndex: e.dayIndex,
+        collectiveTraining: e.collectiveTraining === "tactique" || e.collectiveTraining === "recuperation" ? e.collectiveTraining : null,
+        trainedTactics: (e.trainedTactics && ["offense", "defense", "rhythm"].includes(e.trainedTactics.category) && typeof e.trainedTactics.value === "string")
+          ? { category: e.trainedTactics.category, value: e.trainedTactics.value }
+          : null,
+      }))
+    : [];
+  team.tacticsCycleStartDayIndex = typeof data.tacticsCycleStartDayIndex === "number" ? data.tacticsCycleStartDayIndex : null;
   // Interviews en attente (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
@@ -7468,6 +8467,21 @@ class MatchEngine {
     return team === this.teamA ? "A" : "B";
   }
 
+  // +/- (retour utilisateur, 2026-09 : "ajouté les colonnes de stats :
+  // évaluation et +/- dans les box score (match terminé et aussi sur les
+  // live)") : appelée à CHAQUE point marqué (panier ou lancer franc, voir
+  // playPossession/freeThrows plus bas, jamais recalculée a posteriori) —
+  // applique `+points` aux joueurs SUR LE TERRAIN de l'équipe qui vient de
+  // marquer et `-points` à ceux de l'équipe adverse à cet instant précis
+  // (définition standard du +/- : différentiel de points pendant le temps de
+  // jeu d'un joueur), jamais aux joueurs sur le banc à ce moment-là.
+  applyPlusMinusForPoints(scoringTeam, points) {
+    if (!points) return;
+    const otherTeam = scoringTeam === this.teamA ? this.teamB : this.teamA;
+    scoringTeam.onCourtPlayers().forEach(p => { p.stats.plusMinus = (p.stats.plusMinus || 0) + points; });
+    otherTeam.onCourtPlayers().forEach(p => { p.stats.plusMinus = (p.stats.plusMinus || 0) - points; });
+  }
+
   starPlayer(team) {
     return team.onCourtPlayers().slice().sort((a, b) => b.overall() - a.overall())[0];
   }
@@ -7542,7 +8556,10 @@ class MatchEngine {
       shooter.stats.fta++;
       if (Math.random() < ftPct) { made++; shooter.stats.ftm++; shooter.stats.pts++; }
     }
-    if (made > 0) this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), possession: this.teamKey(team) });
+    if (made > 0) {
+      this.applyPlusMinusForPoints(team, made);
+      this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), possession: this.teamKey(team) });
+    }
     return made;
   }
 
@@ -7841,6 +8858,7 @@ class MatchEngine {
       // remet le compteur à zéro, quelle que soit sa longueur de série.
       shooter.consecutiveMisses = 0;
       shooter.stats.pts += points;
+      this.applyPlusMinusForPoints(offTeam, points);
       if (zone === "three") shooter.stats.fgm3++; else shooter.stats.fgm2++;
       if (zone === "inside") shooter.stats.paintMade++;
       if (assistCandidate && quality === "ouvert" && Math.random() < 0.65 + offense.assist + assistOpenBonus) {
@@ -8151,6 +9169,15 @@ return {
   TRAINING_CENTER_LEVELS, trainingCenterInfo,
   STARTUP_SUBSIDY_AMOUNT, STARTUP_SUBSIDY_WEEKS,
   PROMOTION_BONUS_BY_LEVEL, PROMOTION_BONUS_FLOOR, CHAMPION_BONUS_DIVISION_I, seasonEndBonusFor,
+  // Objectif de saison du conseil d'administration (voir le grand
+  // commentaire au-dessus de SEASON_OBJECTIVE_TIERS) :
+  SEASON_OBJECTIVE_TIERS, SEASON_OBJECTIVE_LABELS, SEASON_ACHIEVEMENT_LABELS,
+  SEASON_OBJECTIVE_MISS_MALUS_PER_TIER, SEASON_OBJECTIVE_EXCEED_BONUS_PER_TIER, SEASON_OBJECTIVE_MET_BONUS,
+  assignSeasonObjectives, seasonAchievementTier, seasonObjectiveVerdict,
+  // Signal de mi-saison du même objectif (voir le grand commentaire
+  // au-dessus de seasonObjectiveMidSeasonSignal) :
+  SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER, SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER,
+  SEASON_OBJECTIVE_MIDSEASON_MET_BONUS, currentStandingsPaceObjective, seasonObjectiveMidSeasonSignal,
   DEFICIT_ALERT_THRESHOLD, DEFICIT_GRACE_WEEKS,
   TV_RIGHTS_WEEKLY_BY_LEVEL,
   TRANSFER_AUCTION_DURATION_MS, TRANSFER_MIN_INCREMENT_FLAT, TRANSFER_MIN_INCREMENT_PCT,
@@ -8171,15 +9198,28 @@ return {
   MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars,
   // Forme physique (voir le grand commentaire au-dessus de CONDITION_STATES) :
   CONDITION_STATES, conditionStateFor, currentCondition, conditionLossForMinutes,
-  CONDITION_DAY_MS, CONDITION_RECOVERY_PER_DAY,
+  CONDITION_DAY_MS, CONDITION_RECOVERY_PER_DAY, CONDITION_RECOVERY_PER_DAY_TRAINED,
   // Blessures persistantes (voir le grand commentaire au-dessus d'INJURY_TYPES) :
   INJURY_TYPES, rollInjury, isCurrentlyInjured, injuryDaysRemaining,
   // Motivation du joueur (voir le commentaire de motivationLabel au-dessus
   // de "class Player") :
   motivationLabel,
+  // Motivation remontée à un plancher neutre lors d'un vrai changement de
+  // club (voir le grand commentaire au-dessus de TRANSFER_NEW_CLUB_MOTIVATION_FLOOR) :
+  TRANSFER_NEW_CLUB_MOTIVATION_FLOOR,
+  // Frustration du banc (voir le grand commentaire au-dessus de
+  // BENCH_FRUSTRATION_MAX_SECONDS) :
+  BENCH_FRUSTRATION_MAX_SECONDS, BENCH_FRUSTRATION_BASE_MALUS, BENCH_FRUSTRATION_DESERVING_MULT,
+  // Demande de transfert (voir le grand commentaire au-dessus de
+  // TRANSFER_REQUEST_MOTIVATION_THRESHOLD) :
+  TRANSFER_REQUEST_MOTIVATION_THRESHOLD, TRANSFER_REQUEST_WEEKS_THRESHOLD,
+  TRANSFER_REQUEST_DISCUSS_BASE_CHANCE, TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS,
+  TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST, TRANSFER_REQUEST_QUOTES, transferRequestQuoteFor,
   // Alchimie d'équipe (voir le grand commentaire au-dessus de
   // CHEMISTRY_ROSTER_CHANGE_MAX_RANK) :
-  CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE, CHEMISTRY_TACTICS_CHANGE_PENALTY,
+  CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE,
+  CHEMISTRY_TACTICS_OFFENSE_PENALTY, CHEMISTRY_TACTICS_DEFENSE_PENALTY, CHEMISTRY_TACTICS_RHYTHM_PENALTY,
+  CHEMISTRY_TACTICS_TRAINED_FACTOR, tacticsChangePenalty, tacticsEqual, parisCalendarDayIndex,
   chemistryRosterImportance, rosterRankOf, chemistryLabel,
   CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,

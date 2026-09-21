@@ -420,9 +420,13 @@ function setPlan(team, teamIndex, league, body) {
 // effet à la fin de la semaine réelle en cours (voir autoSim.js) — pas
 // besoin de cliquer "Valider la semaine", ce réglage RESTE actif tant qu'il
 // n'est pas changé.
-function setTraining(team, teamIndex, league, body) {
+function setTraining(team, teamIndex, league, body, now = Date.now()) {
   if (!body || typeof body !== "object") return fail("Réglage d'entraînement invalide.");
-  if (body.trainingSkill !== null && body.trainingSkill !== undefined && !TRAINING_PROGRAMS[body.trainingSkill]) {
+  // Retour utilisateur (2026-09) : "enleve l'entrainement aucune
+  // (entrainement général uniquement)" — une compétence d'entraînement
+  // individuel est TOUJOURS requise désormais, `null` n'est plus une valeur
+  // acceptée (contrairement à avant ce correctif).
+  if (body.trainingSkill !== undefined && !TRAINING_PROGRAMS[body.trainingSkill]) {
     return fail(`Compétence d'entraînement inconnue : ${body.trainingSkill}.`);
   }
   if (body.trainingPositions !== undefined) {
@@ -436,9 +440,63 @@ function setTraining(team, teamIndex, league, body) {
       return fail("Un même poste ne peut pas être sélectionné deux fois pour l'entraînement.");
     }
   }
+  // Entraînement collectif (retour utilisateur, 2026-09, voir Team.
+  // collectiveTraining côté moteur) : réglage SÉPARÉ de trainingSkill/
+  // trainingPositions ci-dessus, transmis dans le même appel pour éviter un
+  // aller-retour réseau supplémentaire depuis la page Entraînement.
+  if (body.collectiveTraining !== null && body.collectiveTraining !== undefined
+    && body.collectiveTraining !== "tactique" && body.collectiveTraining !== "recuperation") {
+    return fail(`Entraînement collectif inconnu : ${body.collectiveTraining}.`);
+  }
+  // Tactique précisément travaillée à l'entraînement (retour utilisateur,
+  // 2026-09, voir Team.trainedTactics côté moteur) : UN SEUL aspect à la
+  // fois depuis ce correctif ("un seul aspect et pas tous les aspects") —
+  // { category, value }, category parmi offense/defense/rhythm, value une
+  // priorité offensive/défense/rythme CONNUE pour cette catégorie.
+  let trainedTacticsValue;
+  if (body.trainedTactics !== undefined) {
+    const raw = body.trainedTactics;
+    if (raw === null) {
+      trainedTacticsValue = null;
+    } else {
+      if (typeof raw !== "object" || !raw) return fail("trainedTactics invalide.");
+      const { category, value } = raw;
+      if (!["offense", "defense", "rhythm"].includes(category)) {
+        return fail(`trainedTactics.category invalide (attendu offense/defense/rhythm) : ${category}.`);
+      }
+      if (typeof value !== "string") return fail("trainedTactics.value doit être une chaîne.");
+      if (category === "offense" && !OFFENSE_PROFILES[value]) {
+        return fail(`Priorité offensive inconnue dans trainedTactics.value : ${value}.`);
+      }
+      if (category === "defense" && !DEFENSES[value]) {
+        return fail(`Défense inconnue dans trainedTactics.value : ${value}.`);
+      }
+      if (category === "rhythm" && !RHYTHMS[value]) {
+        return fail(`Rythme inconnu dans trainedTactics.value : ${value}.`);
+      }
+      trainedTacticsValue = { category, value };
+    }
+  }
+  // Historique quotidien de l'entraînement collectif (voir Team.
+  // syncCollectiveTrainingLog côté moteur) : comble d'abord tout jour
+  // manqué depuis la dernière synchro avec la config ENCORE ACTUELLE (avant
+  // mutation ci-dessous), puis, une fois la nouvelle config appliquée,
+  // enregistre AUJOURD'HUI avec elle, sinon un changement de tactique
+  // entraînée EN COURS DE JOURNÉE écraserait à tort le jour en cours avec
+  // une config qui n'a été active qu'une partie de la journée.
+  if (team.syncCollectiveTrainingLog) team.syncCollectiveTrainingLog(now);
   if (body.trainingSkill !== undefined) team.trainingSkill = body.trainingSkill;
   if (body.trainingPositions !== undefined) team.trainingPositions = [...body.trainingPositions];
-  return { ok: true, trainingSkill: team.trainingSkill, trainingPositions: team.trainingPositions };
+  if (body.collectiveTraining !== undefined) team.collectiveTraining = body.collectiveTraining || null;
+  if (body.trainedTactics !== undefined) team.trainedTactics = trainedTacticsValue;
+  if (team.syncCollectiveTrainingLog) team.syncCollectiveTrainingLog(now);
+  return {
+    ok: true,
+    trainingSkill: team.trainingSkill,
+    trainingPositions: team.trainingPositions,
+    collectiveTraining: team.collectiveTraining,
+    trainedTactics: team.trainedTactics,
+  };
 }
 
 // Marché : mettre un de ses joueurs aux enchères, à un prix choisi (voir
@@ -727,15 +785,24 @@ function releaseYouthPlayer(team, teamIndex, league, body, now) {
 // même esprit de file d'attente que signYouthCandidate/declineYouthCandidate
 // plus haut.
 // ---------------------------------------------------------------------
+// Correctif 2026-09 (retour utilisateur : "tu as mis plus de question avec
+// la possibilité de choisir le ton pour chacune d'entre elle et pas
+// uniquement un ton pour toutes les questions ?") : `body.tones` (tableau,
+// un ton par question, voir Team.resolveInterview/interviewTranscriptFor
+// côté moteur) est désormais le format normal envoyé par le client ;
+// `body.tone` (chaîne unique, ancien format, appliquée aux deux questions)
+// reste accepté en compatibilité ascendante.
 function respondToInterview(team, teamIndex, league, body, now) {
   if (!body || (typeof body.id !== "number" && typeof body.id !== "string") || body.id === "") {
     return fail("id requis.");
   }
   const id = typeof body.id === "string" && /^-?\d+$/.test(body.id) ? Number(body.id) : body.id;
-  if (typeof body.tone !== "string" || !MILESTONE_INTERVIEW_TONES[body.tone]) {
+  let tones = body.tones !== undefined ? body.tones : body.tone;
+  const toneList = Array.isArray(tones) ? tones : [tones];
+  if (!toneList.length || toneList.some(t => typeof t !== "string" || !MILESTONE_INTERVIEW_TONES[t])) {
     return fail(`Ton inconnu, attendu parmi : ${Object.keys(MILESTONE_INTERVIEW_TONES).join(", ")}.`);
   }
-  const result = team.resolveInterview(id, body.tone, now);
+  const result = team.resolveInterview(id, tones, now);
   // "délai dépassé" générique (retour utilisateur, 2026-09 : les interviews
   // de jalon (mi-saison/fin de saison régulière/demi-finale de PO)
   // utilisent désormais un délai de 3 jours plutôt que 2h, voir
@@ -754,6 +821,29 @@ function skipInterview(team, teamIndex, league, body, now) {
   const removed = team.skipInterview(id, now);
   if (!removed) return fail("Interview introuvable (déjà traitée ?).");
   return { ok: true };
+}
+
+// Demande de transfert (retour utilisateur, 2026-09 : "un joueur très
+// frustré [...] peut demander son transfert dans la presse [...] ouvrir la
+// discussion avec lui pour le remotiver", voir le grand commentaire au-
+// dessus de TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur) : action
+// "discuter", chance de succès non garantie (voir Team.
+// discussTransferRequest). Vendre le joueur concerné n'a besoin d'aucune
+// action dédiée : c'est déjà listPlayer ci-dessus (marché des transferts).
+function discussTransferRequest(team, teamIndex, league, body, now) {
+  if (!body || (typeof body.playerId !== "number" && typeof body.playerId !== "string") || body.playerId === "") {
+    return fail("playerId requis.");
+  }
+  const playerId = typeof body.playerId === "string" && /^-?\d+$/.test(body.playerId) ? Number(body.playerId) : body.playerId;
+  const result = team.discussTransferRequest(playerId, now);
+  if (!result.ok) {
+    const reasons = {
+      "not-found": "Joueur introuvable dans cet effectif.",
+      "not-requesting": "Ce joueur n'a pas demandé son transfert.",
+    };
+    return fail(reasons[result.reason] || "Discussion refusée.");
+  }
+  return { ok: true, success: result.success, formBefore: result.formBefore, formAfter: result.formAfter };
 }
 
 // ---------------------------------------------------------------------
@@ -908,6 +998,9 @@ module.exports = {
   // Médias : interviews d'après-match (voir Team.pendingInterviews côté
   // moteur) :
   respondToInterview, skipInterview,
+  // Demande de transfert (voir le grand commentaire au-dessus de
+  // TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur) :
+  discussTransferRequest,
   setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
   setTeamAwayJersey, setTeamAwayJerseyPattern, setTeamAwayJerseyTwoTone,
   setTeamLogo, setTeamPaying,

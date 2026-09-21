@@ -247,6 +247,15 @@ function tick(league, now) {
   // n'ouvrirait plus jamais l'écran de rattrapage mais continuerait
   // d'appeler d'autres routes.
   league.teams.forEach(t => { if (t.isHuman) t.pruneExpiredInterviews(now); });
+  // Entraînement collectif : fait avancer le journal jour par jour
+  // (Team.collectiveTrainingLog, voir Team.syncCollectiveTrainingLog côté
+  // moteur) pour TOUTES les équipes humaines, à chaque passage ici, tout
+  // comme pruneExpiredInterviews ci-dessus. C'est nécessaire car les jours
+  // de repos entre deux matchs doivent s'accumuler avec le simple écoulement
+  // du temps réel, même si le manager ne retouche jamais la page
+  // entraînement (sinon un manager qui règle "tactique" une fois puis
+  // n'ouvre plus jamais cette page ne banquerait jamais aucun jour).
+  league.teams.forEach(t => { if (t.isHuman && t.syncCollectiveTrainingLog) t.syncCollectiveTrainingLog(now); });
   // `changed` : toujours `true` (voir le grand commentaire ci-dessus) —
   // ensureLiveMatch/catchUpLeague/pruneExpiredInterviews tournent tous les
   // trois SANS CONDITION à chaque appel et peuvent chacun muter `league`
@@ -473,6 +482,9 @@ const ACTION_ROUTES = {
   // côté moteur et server/actions.js).
   "/api/media/interview": actions.respondToInterview,
   "/api/media/interview-skip": actions.skipInterview,
+  // Demande de transfert (voir server/actions.js et le grand commentaire
+  // au-dessus de TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur).
+  "/api/media/transfer-request-discuss": actions.discussTransferRequest,
   "/api/club/set-jersey": actions.setTeamJersey,
   "/api/club/set-jersey-pattern": actions.setTeamJerseyPattern,
   "/api/club/set-jersey-two-tone": actions.setTeamJerseyTwoTone,
@@ -731,6 +743,42 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         team.recordTransaction(label, body.amount);
         await store.saveMultiLeague(multi.league, multiSavePath);
         sendJson(res, 200, { ok: true, teamName: team.name, amount: body.amount, budget: team.budget });
+        return;
+      }
+
+      // Réinitialisation administrative de "onboardingTourCompleted" (retour
+      // utilisateur Discord, 2026-09 : "Skyzer10" bloqué hors du tutoriel
+      // après un aller-retour dedans, plus aucun accès au bouton "Lancer le
+      // tutoriel" dans le Guide) : ce drapeau est à SENS UNIQUE par design
+      // (voir Team.markOnboardingTourCompleted, engine.js) - jusqu'ici, le
+      // seul recours en cas de blocage était un bricolage manuel via
+      // /api/admin/credit-team ci-dessus (voir son commentaire, déjà utilisé
+      // une première fois pour Ariane), qui ne fait que compenser en argent
+      // sans jamais redonner l'accès réel au tutoriel. Route générique de
+      // rattrapage (voir Team.resetOnboardingTour, engine.js) plutôt qu'un
+      // correctif ponctuel, pour ne plus avoir à rejouer ce bricolage à
+      // chaque nouveau cas similaire. Ne touche JAMAIS
+      // Team.tutorialRewardsClaimed : les primes déjà réellement créditées
+      // restent acquises, seul le parcours peut être refait, jamais l'argent
+      // regagné (protection anti-double-dépense inchangée côté
+      // claimTutorialReward). Même authentification (X-Admin-Token) et même
+      // portée (ligue PARTAGÉE uniquement, jamais la carrière solo) que
+      // /api/admin/credit-team ci-dessus.
+      if (route.pathname === "/api/admin/reset-onboarding-tour" && req.method === "POST") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        const multi = await store.loadMultiLeague(multiSavePath);
+        if (!multi) { sendJson(res, 404, { ok: false, error: "Aucune ligue multi-manager n'existe encore." }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        if (!body || typeof body.teamName !== "string" || !body.teamName.trim()) {
+          sendJson(res, 400, { ok: false, error: "'teamName' (chaîne non vide) requis." });
+          return;
+        }
+        const team = multi.league.teams.find(t => t.name === body.teamName.trim());
+        if (!team) { sendJson(res, 404, { ok: false, error: `Aucune équipe nommée "${body.teamName}" dans la ligue partagée.` }); return; }
+        team.resetOnboardingTour();
+        await store.saveMultiLeague(multi.league, multiSavePath);
+        sendJson(res, 200, { ok: true, teamName: team.name, onboardingTourCompleted: team.onboardingTourCompleted });
         return;
       }
 
