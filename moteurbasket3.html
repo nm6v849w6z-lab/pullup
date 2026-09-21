@@ -4156,6 +4156,8 @@ class Team {
     // identique). "renommée" : voir computeClubReputationStars plus haut,
     // pas de champ ici (recalculée à l'affichage).
     this.foundedYear = generateFoundedYear();
+    // Marqueur de migration (voir engine.js, miroir identique).
+    this.foundedYearRealDate = true;
     this.trophies = [];
 
     // Affluence des derniers matchs à domicile (voir engine.js, miroir
@@ -7652,6 +7654,8 @@ function serializeTeam(team) {
     jerseyTwoTone: team.jerseyTwoTone,
     // Fiche club (voir engine.js, miroir identique).
     foundedYear: team.foundedYear,
+    // Marqueur de migration (voir engine.js, miroir identique).
+    foundedYearRealDate: team.foundedYearRealDate !== false,
     trophies: Array.isArray(team.trophies) ? team.trophies.map(t => ({ ...t })) : [],
     // Historique d'affluence (voir engine.js, miroir identique).
     attendanceHistory: team.attendanceHistory,
@@ -7924,6 +7928,12 @@ function teamFromSave(data) {
   if (JERSEY_TWO_TONE_SETS[data.jerseyTwoTone]) team.jerseyTwoTone = data.jerseyTwoTone;
   // Fiche club (voir engine.js, miroir identique).
   if (typeof data.foundedYear === "number") team.foundedYear = data.foundedYear;
+  // Migration ponctuelle des anciennes dates aléatoires (voir engine.js,
+  // miroir identique).
+  if (!data.foundedYearRealDate) {
+    team.foundedYear = generateFoundedYear();
+  }
+  team.foundedYearRealDate = true;
   if (Array.isArray(data.trophies)) team.trophies = data.trophies.map(t => ({ ...t }));
   // Historique d'affluence (voir engine.js, miroir identique).
   team.attendanceHistory = Array.isArray(data.attendanceHistory) ? data.attendanceHistory : [];

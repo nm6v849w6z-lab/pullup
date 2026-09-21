@@ -2330,6 +2330,14 @@ class Team {
     // écrit ailleurs. La "renommée" n'a PAS de champ ici : voir
     // computeClubReputationStars plus haut, recalculée à l'affichage.
     this.foundedYear = generateFoundedYear();
+    // Marqueur de migration (retour utilisateur, 2026-09 : "on a tjrs des
+    // dates de création random") : distingue un foundedYear posé par la
+    // logique RÉELLE actuelle (voir generateFoundedYear plus haut) d'un
+    // foundedYear hérité de l'ancienne logique aléatoire (5 à 90 ans avant
+    // aujourd'hui, avant le commit "Annee de fondation du club reelle").
+    // Toujours vrai pour un club neuf ; voir teamFromSave plus bas pour la
+    // migration ponctuelle des sauvegardes antérieures à ce marqueur.
+    this.foundedYearRealDate = true;
     this.trophies = [];
 
     // Affluence des derniers matchs à domicile (retour utilisateur, 2026-09 :
@@ -6333,6 +6341,10 @@ function serializeTeam(team) {
     // MAX_TEAM_TROPHIES/League.recordTrophy plus haut) : copie superficielle
     // de chaque trophée, même précaution que pendingInterviews ci-dessus.
     foundedYear: team.foundedYear,
+    // Marqueur de migration (voir Team constructeur plus haut) : persisté
+    // pour que teamFromSave sache si ce foundedYear vient déjà de la logique
+    // réelle actuelle ou doit encore être migré.
+    foundedYearRealDate: team.foundedYearRealDate !== false,
     trophies: Array.isArray(team.trophies) ? team.trophies.map(t => ({ ...t })) : [],
     // Historique d'affluence (voir Team.attendanceHistory/simulateHomeAttendance
     // ci-dessus) : même rythme de persistance que moraleHistory/transactions
@@ -6628,6 +6640,20 @@ function teamFromSave(data) {
   // constructeur (foundedYear tiré à l'instant, trophies vide) plutôt que
   // d'accepter une valeur brute non validée.
   if (typeof data.foundedYear === "number") team.foundedYear = data.foundedYear;
+  // Migration ponctuelle (retour utilisateur, 2026-09 : "on a tjrs des
+  // dates de création random") : une sauvegarde sans le marqueur
+  // `foundedYearRealDate` vient forcément d'avant le passage à une date de
+  // fondation réelle (voir generateFoundedYear/commit "Annee de fondation
+  // du club reelle" plus haut), donc son foundedYear est l'ancien âge
+  // fictif tiré au hasard (5 à 90 ans). On "re-fonde" le club une seule
+  // fois à la date réelle du jour, exactement comme un club fraîchement
+  // créé, puis on pose le marqueur pour ne plus jamais y retoucher ensuite
+  // (foundedYear reste figé pour de bon à partir de là, même principe que
+  // Player.name/height).
+  if (!data.foundedYearRealDate) {
+    team.foundedYear = generateFoundedYear();
+  }
+  team.foundedYearRealDate = true;
   if (Array.isArray(data.trophies)) team.trophies = data.trophies.map(t => ({ ...t }));
   // Historique d'affluence (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
