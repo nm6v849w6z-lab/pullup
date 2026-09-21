@@ -586,7 +586,11 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
 // Date.now()) uniquement pour ne pas casser les quelques appels directs
 // existants (tests) qui ne le passent pas encore.
 function finalizeRound(Engine, league, round, now = Date.now()) {
-  const { simulateOrForfeit, recordMatchStatsAndAwardMvp, milestoneTypeForRound, seasonObjectiveMidSeasonSignal } = Engine;
+  const {
+    simulateOrForfeit, recordMatchStatsAndAwardMvp, milestoneTypeForRound,
+    seasonObjectiveMidSeasonSignal, seasonObjectiveEndOfRegularSeasonSignal,
+    seasonObjectiveVerdict,
+  } = Engine;
   const matches = league.matchesForRound(round);
   const userResults = [];
   // Interview de jalon (retour utilisateur, 2026-09 : "elle doit avoir lieu
@@ -662,24 +666,61 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
     }
   });
 
-  // Signal de mi-saison de l'objectif du CA (retour utilisateur, 2026-09 :
-  // "Ajoute un signal à la mi saison", voir le grand commentaire de
-  // Engine.seasonObjectiveMidSeasonSignal côté moteur) : appliqué APRÈS la
+  // Signal INTERMÉDIAIRE de l'objectif du CA (retour utilisateur, 2026-09 :
+  // "Ajoute un signal à la mi saison", puis "Juste après la saison
+  // régulière (avant PO et barrage) aussi" ; voir le grand commentaire de
+  // Engine.computeSeasonObjectivePaceSignal côté moteur) : appliqué APRÈS la
   // boucle ci-dessus (jamais dedans) pour que League.standings() reflète
   // déjà TOUS les résultats de cette journée (y compris les matchs traités
   // plus tôt dans la même boucle) avant de calculer le rang provisoire de
   // chaque équipe, plutôt qu'un classement partiellement à jour selon
-  // l'ordre des matchs. Automatique et immédiat (pas d'interview à
-  // résoudre, contrairement au jalon "mi-saison" classique ci-dessus, qui
-  // reste par ailleurs inchangé) : une équipe humaine peut ainsi recevoir
-  // à la fois l'interview de mi-saison (résultat du match) ET ce signal
-  // séparé (objectif de saison), les deux à la même journée mais sans
-  // rapport l'un avec l'autre. Pour CHAQUE équipe humaine concernée par
-  // cette journée (solo comme multi-manager, voir Team.isHuman plus haut),
-  // jamais pour une équipe CPU.
-  if (milestone === "mi-saison") {
+  // l'ordre des matchs. Pour le jalon "fin-saison-reguliere" précisément,
+  // ce placement APRÈS la boucle (mais dans CETTE fonction, avant
+  // league.advanceRound()) garantit aussi qu'on est bien AVANT
+  // League.startPlayoffsIfNeeded/runRelegationBarrage (voir
+  // server/autoSim.js:catchUpPlayoffs, qui n'appelle ces deux méthodes
+  // qu'APRÈS que finalizeRound soit revenue pour la dernière journée) :
+  // League.standings() y reflète donc le classement définitif de la saison
+  // régulière, mais ni le barrage ni les play-offs n'ont encore eu lieu,
+  // exactement le moment demandé. Automatique et immédiat (pas d'interview
+  // à résoudre, contrairement aux jalons "mi-saison"/"fin-saison-reguliere"
+  // classiques ci-dessus, qui restent par ailleurs inchangés) : une équipe
+  // humaine peut ainsi recevoir à la fois l'interview de jalon (résultat du
+  // match) ET ce signal séparé (objectif de saison), les deux à la même
+  // journée mais sans rapport l'un avec l'autre. Pour CHAQUE équipe humaine
+  // concernée par cette journée (solo comme multi-manager, voir
+  // Team.isHuman plus haut), jamais pour une équipe CPU.
+  const paceSignalFn = milestone === "mi-saison" ? seasonObjectiveMidSeasonSignal
+    : milestone === "fin-saison-reguliere" ? seasonObjectiveEndOfRegularSeasonSignal
+    : null;
+  if (paceSignalFn) {
     userResults.forEach(r => {
-      const signal = seasonObjectiveMidSeasonSignal(league, r.teamIdx);
+      // Retour utilisateur (2026-09) : "pour les équipes de milieu de
+      // classement (ni PO ni barrage) et celles qui descendent tout de
+      // suite, il ne faut pas qu'un signal et pas deux [...] la fin de la
+      // saison régulière correspond à la fin de la saison pour ces
+      // équipes là" : pour CES équipes précisément (rang 5-6 ou 9-10, voir
+      // Engine.seasonAchievementTier qui leur donne désormais un palier
+      // définitif dès ce point, sans attendre play-offs/barrage),
+      // `seasonObjectiveVerdict` renvoie déjà le VRAI verdict de fin de
+      // saison ici même : on l'applique directement à la place du simple
+      // aperçu provisoire, jamais les deux. `Team.
+      // seasonObjectiveVerdictSettled` (voir son commentaire côté moteur)
+      // empêche qu'il soit réappliqué une seconde fois plus tard (voir
+      // startNewSeason côté navigateur). Pour toute autre équipe humaine
+      // (rang 1-4 ou 7-8, sort encore à décider), rien ne change : simple
+      // aperçu provisoire ici, vrai verdict plus tard une fois leur saison
+      // réellement terminée.
+      if (milestone === "fin-saison-reguliere") {
+        const settledVerdict = seasonObjectiveVerdict(league, r.teamIdx);
+        if (settledVerdict) {
+          league.teams[r.teamIdx].recordMoraleEvent(settledVerdict.label, settledVerdict.delta);
+          league.teams[r.teamIdx].seasonObjectiveVerdictSettled = true;
+          r.seasonObjectiveSignal = settledVerdict;
+          return;
+        }
+      }
+      const signal = paceSignalFn(league, r.teamIdx);
       if (!signal) return;
       league.teams[r.teamIdx].recordMoraleEvent(signal.label, signal.delta);
       r.seasonObjectiveSignal = signal;

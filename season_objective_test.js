@@ -106,8 +106,23 @@ function playFullSeason(lg) {
   lg.round = lg.totalRounds;
   lg.runRelegationBarrage();
   lg.startPlayoffsIfNeeded();
-  if (seasonAchievementTier(lg, 0) !== null) throw new Error("❌ Devrait renvoyer null tant que les play-offs ne sont pas terminés (champion inconnu).");
-  console.log("✅ seasonAchievementTier renvoie null tant que la saison n'est pas entièrement terminée.");
+  // Retour utilisateur (2026-09, ultérieur) : "il ne faut pas qu'un signal
+  // et pas deux [...] la fin de la saison régulière correspond à la fin de
+  // la saison pour ces équipes là" : SEULE une équipe dont le sort dépend
+  // encore des play-offs (une des 4 têtes de série ci-dessous, rang 1-4) ou
+  // du barrage (rang 7-8) reste `null` à ce stade désormais, contrairement à
+  // une équipe de rang 5-6/9-10, dont le palier est maintenant définitif dès
+  // la fin de la saison régulière (voir
+  // season_objective_locked_at_endreg_test.js pour la couverture dédiée de
+  // ce cas). On vérifie donc ici sur une équipe GARANTIE encore en lice
+  // (tête de série de play-offs), pas nécessairement l'équipe idx0 du
+  // joueur (dont le rang final, ici imprévisible, peut tomber dans l'un ou
+  // l'autre cas).
+  const stillUndecided = lg.playoffs.seeds[0];
+  if (seasonAchievementTier(lg, stillUndecided) !== null) {
+    throw new Error(`❌ Une équipe encore en lice pour les play-offs (idx ${stillUndecided}) devrait rester null tant que le champion n'est pas connu.`);
+  }
+  console.log("✅ seasonAchievementTier renvoie null pour une équipe encore en lice pour les play-offs, tant qu'ils ne sont pas terminés.");
 })();
 
 // ---------------------------------------------------------------------

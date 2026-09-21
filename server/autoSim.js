@@ -43,6 +43,7 @@ const {
   ensureLiveMatchStarted, ensureCupLiveMatchStarted, finalizeRound, finalizeCupRound,
   ensurePlayoffLiveMatchStarted, finalizePlayoffRound,
 } = LiveMatch;
+const { seasonObjectiveSurprisePlayoffsBonus } = Engine;
 // Dernier créneau de championnat du jour (19h — voir DAILY_ANCHORED_CHAMPIONSHIP_HOURS
 // dans server/calendar.js) : c'est APRÈS celui-ci que se déclenche
 // l'entraînement + l'économie quotidiens (voir catchUpDailyAnchored ci-dessous
@@ -167,6 +168,24 @@ function catchUpPlayoffs(league, now, events) {
     // suite, plutôt que d'attendre que la finale de play-offs (parfois
     // plusieurs jours réels plus tard) soit jouée.
     if (!league.relegationBarrage) league.runRelegationBarrage();
+    // Bonus de qualification surprise en play-offs (retour utilisateur,
+    // 2026-09 : "une équipe qui est en PO alors que le CA ne visait que le
+    // milieu de tableau/maintien doit avoir un petit surplus des
+    // supporters [...] au moment des PO pas à la fin de la saison" ; voir
+    // engine.js:seasonObjectiveSurprisePlayoffsBonus) : ce bloc `if
+    // (!league.playoffs)` ne s'exécute qu'UNE SEULE fois par saison (garde
+    // déjà en place pour l'événement "regular-season-end" ci-dessous),
+    // donc pas besoin d'un drapeau "déjà réglé" séparé comme pour le
+    // verdict d'objectif de saison. Pour CHAQUE équipe humaine parmi les 4
+    // têtes de série tout juste tirées au sort (league.playoffs.seeds),
+    // jamais pour une équipe CPU.
+    league.playoffs.seeds.forEach(teamIdx => {
+      const team = league.teams[teamIdx];
+      if (!team.isHuman) return;
+      const bonus = seasonObjectiveSurprisePlayoffsBonus(league, teamIdx);
+      if (!bonus) return;
+      team.recordMoraleEvent(bonus.label, bonus.delta);
+    });
     events.push({ type: "regular-season-end" });
   }
 

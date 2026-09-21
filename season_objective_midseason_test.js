@@ -142,7 +142,7 @@ function fabricateStrictStandingsOrder(lg) {
     const ev = finalizeRound(Engine, lg, r, Date.now());
     const mine = ev.userResults.find(u => u.teamIdx === 0);
     if (mine && mine.seasonObjectiveSignal) {
-      throw new Error(`❌ Le signal de mi-saison ne devrait apparaître qu'à la journée ${mid}, pas à la journée ${r}.`);
+      throw new Error(`❌ Aucun signal d'objectif de saison ne devrait apparaître avant la journée ${mid} (mi-saison), vu à la journée ${r}.`);
     }
   }
 
@@ -180,10 +180,17 @@ function fabricateStrictStandingsOrder(lg) {
     throw new Error(`❌ Le delta journalisé (${historyAfter[0].delta}) devrait correspondre à celui du signal (${mineAtMid.seasonObjectiveSignal.delta}).`);
   }
 
+  // Après la mi-saison, le signal de MI-SAISON précisément ne doit plus
+  // jamais réapparaître (retour utilisateur, 2026-09 : "Juste après la
+  // saison régulière (avant PO et barrage) aussi" a depuis ajouté un
+  // SECOND signal, distinct, attendu lui à la toute dernière journée, voir
+  // season_objective_endreg_test.js pour sa couverture dédiée, on ne
+  // vérifie donc ici que l'ABSENCE spécifique du signal de mi-saison,
+  // jamais l'absence de tout signal).
   for (let r = mid + 1; r < lg.totalRounds; r++) {
     const ev = finalizeRound(Engine, lg, r, Date.now());
     const mine = ev.userResults.find(u => u.teamIdx === 0);
-    if (mine && mine.seasonObjectiveSignal) {
+    if (mine && mine.seasonObjectiveSignal && mine.seasonObjectiveSignal.label.startsWith("Mi-saison")) {
       throw new Error(`❌ Le signal de mi-saison ne devrait plus jamais réapparaître après la journée ${mid} (vu à nouveau à la journée ${r}).`);
     }
   }

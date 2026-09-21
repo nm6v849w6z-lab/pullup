@@ -2947,6 +2947,19 @@ class Team {
     // buildLeagueWithHumanTeams, le pose dès la création/régénération de la
     // ligue), une des 5 clés de SEASON_OBJECTIVE_TIERS une fois posé.
     this.seasonObjective = null;
+    // Retour utilisateur (2026-09) : "pour les équipes de milieu de
+    // classement (ni PO ni barrage) et celles qui descendent tout de
+    // suite, il ne faut pas qu'un signal et pas deux [...] la fin de la
+    // saison régulière correspond à la fin de la saison pour ces équipes
+    // là" : ces équipes reçoivent leur VRAI verdict de saison (voir
+    // seasonObjectiveVerdict) dès la fin de la saison régulière (voir
+    // server/liveMatch.js:finalizeRound), jamais un second signal plus
+    // tard. Ce drapeau évite qu'il soit réappliqué une seconde fois côté
+    // navigateur (voir startNewSeason) une fois la ligue entière terminée,
+    // pour les équipes qui, elles, n'avaient reçu qu'un simple aperçu
+    // provisoire à ce moment-là (play-offs/barrage encore à jouer).
+    // Remis à `false` par assignSeasonObjectives à chaque nouvelle saison.
+    this.seasonObjectiveVerdictSettled = false;
 
     // Alchimie d'équipe (voir le grand commentaire au-dessus de
     // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : neutre au départ, comme
@@ -7098,6 +7111,9 @@ function assignSeasonObjectives(league) {
   ranked.forEach((entry, rankIdx) => {
     const tierIndex = Math.min(tierKeysStrongToWeak.length - 1, Math.floor(rankIdx / 2));
     league.teams[entry.idx].seasonObjective = tierKeysStrongToWeak[tierIndex];
+    // Nouvelle saison, nouveau verdict à venir (voir Team.
+    // seasonObjectiveVerdictSettled plus haut).
+    league.teams[entry.idx].seasonObjectiveVerdictSettled = false;
   });
 }
 
@@ -7109,11 +7125,28 @@ function assignSeasonObjectives(league) {
 // en play-offs (champion 5, finaliste 4, éliminé en demi-finale 3), sinon
 // le classement de saison régulière (rang 5-6 -> 2 "milieu de tableau",
 // rang 7-8 -> 1 "maintien", ces deux-là ayant nécessairement évité la
-// relégation pour arriver jusqu'ici, voir la garde tout en haut). `null` si
-// la saison n'est pas encore ENTIÈREMENT terminée (pas de play-offs, ou
-// champion pas encore connu, voir League.isPlayoffsDone) : appeler cette
-// fonction plus tôt donnerait un verdict prématuré et faux.
+// relégation pour arriver jusqu'ici, voir la garde tout en haut).
+// Retour utilisateur (2026-09) : "pour les équipes de milieu de classement
+// (ni PO ni barrage) et celles qui descendent tout de suite [...] la fin de
+// la saison régulière correspond à la fin de la saison pour ces équipes
+// là" : un rang 5-6 (jamais en play-offs ni au barrage) ou 9-10 (relégation
+// AUTOMATIQUE, voir relegatedTeamIndexes : le barrage ne concerne que les
+// rangs 7-8, jamais 9-10) a donc un palier définitif dès que le classement
+// de saison régulière est figé (League.round a atteint son dernier round,
+// il y reste ensuite figé pour de bon, jamais ré-avancé par les play-offs
+// ni le barrage, voir le commentaire de League.startPlayoffsIfNeeded),
+// SANS attendre que les play-offs et le barrage des AUTRES équipes de la
+// ligue se terminent à leur tour. Pour toute autre équipe (rang 1-4 en lice
+// pour les play-offs, rang 7-8 au barrage), `null` tant que la saison n'est
+// pas ENTIÈREMENT terminée (pas de play-offs, ou champion pas encore connu,
+// voir League.isPlayoffsDone) : appeler cette fonction plus tôt pour
+// celles-ci donnerait un verdict prématuré et faux.
 function seasonAchievementTier(league, teamIdx) {
+  if (league.round >= league.totalRounds - 1) {
+    const lockedRank = league.standings().findIndex(s => s.idx === teamIdx) + 1; // 1-10, 0 si absent
+    if (lockedRank === 9 || lockedRank === 10) return 0;
+    if (lockedRank === 5 || lockedRank === 6) return 2;
+  }
   if (!league.playoffs || league.playoffs.champion == null) return null;
   if (league.relegatedTeamIndexes().includes(teamIdx)) return 0;
   const po = league.playoffs;
@@ -7159,27 +7192,37 @@ function seasonObjectiveVerdict(league, teamIdx) {
 }
 
 // ---------------------------------------------------------------------
-// Signal de MI-SAISON pour l'objectif du conseil d'administration (retour
-// utilisateur, 2026-09, en complément du verdict de fin de saison ci-dessus :
-// "Ajoute un signal à la mi saison ouais ça serait pas mal") : contrairement
-// à seasonObjectiveVerdict, aucun résultat définitif n'existe encore à la
-// mi-saison (round = midSeasonRound, voir milestoneTypeForRound plus haut) :
-// ni classement final, ni barrage de relégation, ni play-offs. On se
-// contente donc de comparer le classement PROVISOIRE actuel
-// (League.standings(), à cet instant précis de la saison régulière) à
-// l'objectif du CA (Team.seasonObjective), avec EXACTEMENT le même découpage
-// par tranches de 2 équipes que assignSeasonObjectives (rangs 1-2 -> "titre",
-// ..., rangs 9-10 -> "maintien") : réutilise ainsi la même échelle
+// Signaux INTERMÉDIAIRES pour l'objectif du conseil d'administration (retour
+// utilisateur, 2026-09, en complément du verdict de fin de saison ci-dessus).
+// D'abord la mi-saison ("Ajoute un signal à la mi saison ouais ça serait pas
+// mal"), puis un second, juste après la saison régulière ("Juste après la
+// saison régulière (avant PO et barrage) aussi") : contrairement à
+// seasonObjectiveVerdict, aucun résultat DÉFINITIF n'existe encore à aucun
+// de ces deux moments (ni barrage de relégation, ni play-offs, la mi-saison
+// n'ayant en plus même pas la saison régulière complète) : on se contente
+// donc de comparer le classement PROVISOIRE actuel (League.standings(), à
+// cet instant précis) à l'objectif du CA (Team.seasonObjective), avec
+// EXACTEMENT le même découpage par tranches de 2 équipes que
+// assignSeasonObjectives (rangs 1-2 -> "titre", ..., rangs 9-10 ->
+// "maintien") : réutilise ainsi la même échelle
 // (SEASON_OBJECTIVE_TIERS/SEASON_OBJECTIVE_LABELS) plutôt que d'inventer de
-// nouveaux seuils arbitraires à mi-parcours. Impact sur l'humeur des
-// supporters volontairement plus modeste qu'un verdict de fin de saison
-// (voir les constantes MIDSEASON_* ci-dessous, environ moitié moindres) :
-// un simple avertissement/encouragement à mi-parcours plutôt qu'un second
-// jugement aussi sévère que le verdict final, qui reste la vraie sanction/
-// récompense (évite de compter deux fois le même écart).
+// nouveaux seuils arbitraires à chaque étape intermédiaire.
+//
+// Les deux signaux partagent EXACTEMENT le même calcul (voir
+// computeSeasonObjectivePaceSignal ci-dessous), seuls le barème et le
+// libellé diffèrent, par ordre de fiabilité CROISSANTE (jamais autant que le
+// verdict final, qui reste la vraie sanction/récompense, pour éviter de
+// compter deux fois le même écart) : la mi-saison est la moins fiable
+// (saison régulière encore à moitié jouée), la fin de saison régulière la
+// plus fiable des deux (classement définitif de la phase régulière, mais
+// barrage/play-offs encore à venir, susceptibles de faire encore bouger le
+// palier réellement atteint).
 const SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER = 3;
 const SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER = 2;
 const SEASON_OBJECTIVE_MIDSEASON_MET_BONUS = 1;
+const SEASON_OBJECTIVE_ENDREG_MISS_MALUS_PER_TIER = 4;
+const SEASON_OBJECTIVE_ENDREG_EXCEED_BONUS_PER_TIER = 3;
+const SEASON_OBJECTIVE_ENDREG_MET_BONUS = 2;
 
 // Palier de classement ACTUEL (une des clés de SEASON_OBJECTIVE_TIERS) pour
 // `teamIdx`, d'après son rang dans League.standings() À CET INSTANT (donc
@@ -7196,16 +7239,15 @@ function currentStandingsPaceObjective(league, teamIdx) {
   return tierKeysStrongToWeak[tierIndex];
 }
 
-// Signal de mi-saison complet pour `teamIdx` (objectif du CA vs classement
-// PROVISOIRE actuel) : même forme que seasonObjectiveVerdict ci-dessus
-// (fonction PURE, aucune mutation), à appliquer par l'appelant via
-// Team.recordMoraleEvent(signal.label, signal.delta), voir
-// server/liveMatch.js:finalizeRound, seul appelant en production, qui
-// l'applique pour CHAQUE équipe humaine impliquée dans la journée de
-// mi-saison (solo comme multi-manager). Renvoie `null` si l'équipe n'a pas
-// encore d'objectif assigné, ou si son rang est introuvable dans le
-// classement (voir currentStandingsPaceObjective).
-function seasonObjectiveMidSeasonSignal(league, teamIdx) {
+// Calcul COMMUN aux deux signaux intermédiaires (objectif du CA vs
+// classement PROVISOIRE actuel) : même forme que seasonObjectiveVerdict
+// ci-dessus (fonction PURE, aucune mutation), factorisée ici pour que
+// seasonObjectiveMidSeasonSignal/seasonObjectiveEndOfRegularSeasonSignal
+// n'aient chacune qu'à lui passer leur propre barème (voir les constantes
+// MIDSEASON_*/ENDREG_* plus haut) et le préfixe de leur libellé. Renvoie
+// `null` si l'équipe n'a pas encore d'objectif assigné, ou si son rang est
+// introuvable dans le classement (voir currentStandingsPaceObjective).
+function computeSeasonObjectivePaceSignal(league, teamIdx, missMalusPerTier, exceedBonusPerTier, metBonus, stagePrefix) {
   const team = league.teams[teamIdx];
   if (!team || !team.seasonObjective) return null;
   const paceObjective = currentStandingsPaceObjective(league, teamIdx);
@@ -7215,16 +7257,76 @@ function seasonObjectiveMidSeasonSignal(league, teamIdx) {
   const paceTier = SEASON_OBJECTIVE_TIERS[paceObjective];
   const gap = objectiveTier - paceTier; // > 0 = en dessous de l'objectif, <= 0 = sur la bonne voie ou au-dessus
   const delta = gap > 0
-    ? -SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER * gap
-    : SEASON_OBJECTIVE_MIDSEASON_MET_BONUS + SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER * (-gap);
+    ? -missMalusPerTier * gap
+    : metBonus + exceedBonusPerTier * (-gap);
   const objectiveLabel = SEASON_OBJECTIVE_LABELS[objective];
   const paceLabel = SEASON_OBJECTIVE_LABELS[paceObjective];
   const label = gap > 0
-    ? `Mi-saison : le rythme actuel (${paceLabel}) est en dessous de l'objectif (${objectiveLabel}). Les supporters s'inquiètent déjà.`
+    ? `${stagePrefix} : le rythme actuel (${paceLabel}) est en dessous de l'objectif (${objectiveLabel}). Les supporters s'inquiètent déjà.`
     : gap === 0
-      ? `Mi-saison : le rythme actuel colle exactement à l'objectif (${objectiveLabel}). Les supporters restent confiants.`
-      : `Mi-saison : le rythme actuel (${paceLabel}) dépasse largement l'objectif (${objectiveLabel} espéré). Les supporters sont optimistes.`;
+      ? `${stagePrefix} : le rythme actuel colle exactement à l'objectif (${objectiveLabel}). Les supporters restent confiants.`
+      : `${stagePrefix} : le rythme actuel (${paceLabel}) dépasse largement l'objectif (${objectiveLabel} espéré). Les supporters sont optimistes.`;
   return { objective, objectiveTier, paceObjective, paceTier, gap, delta, label };
+}
+
+// Signal de mi-saison (voir server/liveMatch.js:finalizeRound, seul
+// appelant en production, qui l'applique via
+// Team.recordMoraleEvent(signal.label, signal.delta) pour CHAQUE équipe
+// humaine impliquée dans la journée de mi-saison, solo comme multi-manager).
+function seasonObjectiveMidSeasonSignal(league, teamIdx) {
+  return computeSeasonObjectivePaceSignal(league, teamIdx,
+    SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER, SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER,
+    SEASON_OBJECTIVE_MIDSEASON_MET_BONUS, "Mi-saison");
+}
+
+// Signal de FIN DE SAISON RÉGULIÈRE (retour utilisateur, 2026-09 : "Juste
+// après la saison régulière (avant PO et barrage) aussi") : même mécanique
+// que le signal de mi-saison ci-dessus, appelé au moment du jalon
+// "fin-saison-reguliere" (voir milestoneTypeForRound, round = totalRounds -
+// 1), donc AVANT League.startPlayoffsIfNeeded/runRelegationBarrage (voir
+// server/autoSim.js:catchUpPlayoffs, appelée seulement APRÈS que la
+// dernière journée de championnat a été réglée) : League.standings() reflète
+// ici le classement DÉFINITIF de la saison régulière, plus fiable qu'à la
+// mi-saison, mais encore susceptible de changer une fois le barrage et les
+// play-offs joués (d'où un barème plus franc que la mi-saison, voir
+// ENDREG_* plus haut, mais toujours strictement en retrait du verdict final).
+function seasonObjectiveEndOfRegularSeasonSignal(league, teamIdx) {
+  return computeSeasonObjectivePaceSignal(league, teamIdx,
+    SEASON_OBJECTIVE_ENDREG_MISS_MALUS_PER_TIER, SEASON_OBJECTIVE_ENDREG_EXCEED_BONUS_PER_TIER,
+    SEASON_OBJECTIVE_ENDREG_MET_BONUS, "Fin de saison régulière");
+}
+
+// ---------------------------------------------------------------------
+// Bonus de qualification SURPRISE en play-offs (retour utilisateur, 2026-09,
+// ultérieur aux deux signaux ci-dessus : "une équipe qui est en PO alors que
+// le CA ne visait que le milieu de tableau/maintien doit avoir un petit
+// surplus des supporters pour les PO" puis, en précision, "elle doit avoir
+// un petit bonus au moment des PO pas à la fin de la saison") : DISTINCT du
+// signal de fin de saison régulière ci-dessus (qui compare déjà objectif et
+// rythme provisoire, avec un barème par écart de palier, voir
+// computeSeasonObjectivePaceSignal) et du verdict final (seasonObjectiveVerdict
+// plus haut) : un troisième événement, à un troisième moment (le tout début
+// des play-offs, voir server/autoSim.js:catchUpPlayoffs, League.
+// startPlayoffsIfNeeded), un montant FIXE et modeste (jamais calculé par
+// écart de palier comme les deux autres, sciemment "petit" comme demandé),
+// réservé aux deux objectifs les plus modestes (maintien/milieu-tableau,
+// palier 1-2) : une équipe déjà censée jouer les play-offs ou mieux n'a rien
+// de "surprise" à se qualifier, ce bonus ne la concerne donc jamais.
+const SEASON_OBJECTIVE_SURPRISE_PLAYOFFS_BONUS = 5;
+
+// `null` si l'équipe n'a pas d'objectif assigné, si son objectif n'est pas
+// l'un des deux plus modestes (maintien/milieu-tableau), ou si elle ne fait
+// pas partie des 4 têtes de série de play-offs (League.playoffs.seeds, posé
+// par startPlayoffsIfNeeded) : jamais recalculable a posteriori dans une
+// saison sans play-offs pour elle, contrairement aux deux signaux ci-dessus.
+function seasonObjectiveSurprisePlayoffsBonus(league, teamIdx) {
+  const team = league.teams[teamIdx];
+  if (!team || !team.seasonObjective) return null;
+  if (team.seasonObjective !== "maintien" && team.seasonObjective !== "milieu-tableau") return null;
+  if (!league.playoffs || !Array.isArray(league.playoffs.seeds) || !league.playoffs.seeds.includes(teamIdx)) return null;
+  const objectiveLabel = SEASON_OBJECTIVE_LABELS[team.seasonObjective];
+  const label = `Qualification surprise en play-offs : personne ne l'attendait vu l'objectif de départ (${objectiveLabel}), les supporters sont agréablement surpris.`;
+  return { label, delta: SEASON_OBJECTIVE_SURPRISE_PLAYOFFS_BONUS };
 }
 
 // Génère une ligue complète : le club du joueur (déjà créé) + 9 adversaires
@@ -7759,6 +7861,11 @@ function serializeTeam(team) {
     // une sauvegarde d'avant cette fonctionnalité n'en a simplement pas
     // encore (voir teamFromSave plus bas).
     seasonObjective: team.seasonObjective || null,
+    // Voir Team.seasonObjectiveVerdictSettled plus haut (retour utilisateur,
+    // 2026-09, "il ne faut pas qu'un signal et pas deux") : `false` par
+    // défaut, une sauvegarde d'avant cette fonctionnalité n'en a simplement
+    // pas encore (voir teamFromSave plus bas).
+    seasonObjectiveVerdictSettled: !!team.seasonObjectiveVerdictSettled,
     // Alchimie d'équipe (voir le grand commentaire de
     // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : chemistry, plus le
     // dernier instantané tactique utilisé pour détecter un changement au
@@ -8152,6 +8259,10 @@ function teamFromSave(data) {
   // ci-dessus) : `null` par défaut (constructeur), une sauvegarde d'avant
   // cette fonctionnalité n'en a simplement pas encore.
   if (typeof data.seasonObjective === "string") team.seasonObjective = data.seasonObjective;
+  // Voir serializeTeam ci-dessus/Team.seasonObjectiveVerdictSettled plus
+  // haut. Absent (sauvegarde d'avant cette fonctionnalité) : on garde la
+  // valeur déjà posée par le constructeur (false).
+  team.seasonObjectiveVerdictSettled = !!data.seasonObjectiveVerdictSettled;
   // Alchimie d'équipe (voir serializeTeam ci-dessus). Absent (sauvegarde
   // d'avant cette fonctionnalité) : on garde les valeurs déjà posées par le
   // constructeur (chemistry neutre à 50, aucun instantané tactique de
@@ -9174,10 +9285,14 @@ return {
   SEASON_OBJECTIVE_TIERS, SEASON_OBJECTIVE_LABELS, SEASON_ACHIEVEMENT_LABELS,
   SEASON_OBJECTIVE_MISS_MALUS_PER_TIER, SEASON_OBJECTIVE_EXCEED_BONUS_PER_TIER, SEASON_OBJECTIVE_MET_BONUS,
   assignSeasonObjectives, seasonAchievementTier, seasonObjectiveVerdict,
-  // Signal de mi-saison du même objectif (voir le grand commentaire
-  // au-dessus de seasonObjectiveMidSeasonSignal) :
+  // Signaux intermédiaires du même objectif, mi-saison et fin de saison
+  // régulière (voir le grand commentaire au-dessus de
+  // computeSeasonObjectivePaceSignal) :
   SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER, SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER,
-  SEASON_OBJECTIVE_MIDSEASON_MET_BONUS, currentStandingsPaceObjective, seasonObjectiveMidSeasonSignal,
+  SEASON_OBJECTIVE_MIDSEASON_MET_BONUS, SEASON_OBJECTIVE_ENDREG_MISS_MALUS_PER_TIER,
+  SEASON_OBJECTIVE_ENDREG_EXCEED_BONUS_PER_TIER, SEASON_OBJECTIVE_ENDREG_MET_BONUS,
+  currentStandingsPaceObjective, seasonObjectiveMidSeasonSignal, seasonObjectiveEndOfRegularSeasonSignal,
+  SEASON_OBJECTIVE_SURPRISE_PLAYOFFS_BONUS, seasonObjectiveSurprisePlayoffsBonus,
   DEFICIT_ALERT_THRESHOLD, DEFICIT_GRACE_WEEKS,
   TV_RIGHTS_WEEKLY_BY_LEVEL,
   TRANSFER_AUCTION_DURATION_MS, TRANSFER_MIN_INCREMENT_FLAT, TRANSFER_MIN_INCREMENT_PCT,

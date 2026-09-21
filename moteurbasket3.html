@@ -2302,7 +2302,7 @@
       <div class="guide-entry">
         <h3>Humeur des supporters</h3>
         <p class="training-intro">L'humeur des supporters (onglet dédié) influence le remplissage de base de votre salle et la tolérance au prix du billet. Elle évolue avec vos résultats en match et vos choix de ton lors des interviews de jalon (voir <b>Motivation</b> plus haut, le même mécanisme fait bouger les deux à la fois).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Objectif de saison</b> : en début de saison, le conseil d'administration fixe un objectif de classement (Maintien, Milieu de tableau, Qualification en play-offs, Finale des play-offs ou Titre de champion), d'autant plus ambitieux que votre effectif est fort par rapport aux 9 autres équipes du championnat. Le verdict tombe à l'issue de la saison, une fois la saison régulière, le barrage de relégation et les play-offs entièrement joués : le dépasser (par exemple atteindre le titre alors que seul le maintien était demandé) réjouit les supporters, le manquer (terminer relégué alors qu'une finale était espérée) les agace, d'autant plus fort que l'écart entre l'objectif et le résultat réel est grand. Retrouvez l'objectif en cours sur l'onglet <b>Humeur des supporters</b>, et le verdict complet sur l'écran de fin de saison. Un signal intermédiaire, plus modeste, tombe aussi à la mi-saison : il compare votre classement provisoire du moment à l'objectif fixé, pour prévenir (ou rassurer) les supporters bien avant le verdict final.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Objectif de saison</b> : en début de saison, le conseil d'administration fixe un objectif de classement (Maintien, Milieu de tableau, Qualification en play-offs, Finale des play-offs ou Titre de champion), d'autant plus ambitieux que votre effectif est fort par rapport aux 9 autres équipes du championnat. Le verdict tombe à l'issue de la saison, une fois la saison régulière, le barrage de relégation et les play-offs entièrement joués : le dépasser (par exemple atteindre le titre alors que seul le maintien était demandé) réjouit les supporters, le manquer (terminer relégué alors qu'une finale était espérée) les agace, d'autant plus fort que l'écart entre l'objectif et le résultat réel est grand. Retrouvez l'objectif en cours sur l'onglet <b>Humeur des supporters</b>, et le verdict complet sur l'écran de fin de saison. Deux signaux intermédiaires, plus modestes que le verdict final, tombent aussi en cours de route : un premier à la mi-saison, un second juste après la fin de la saison régulière (avant le barrage de relégation et les play-offs). Chacun compare votre classement provisoire du moment à l'objectif fixé, pour prévenir (ou rassurer) les supporters bien avant le verdict final ; le second, basé sur un classement de saison régulière définitif, pèse un peu plus lourd que le premier.</p>
       </div>
 
       <div class="guide-entry">
@@ -4676,6 +4676,9 @@ class Team {
     // miroir identique, grand commentaire au-dessus de
     // SEASON_OBJECTIVE_TIERS).
     this.seasonObjective = null;
+    // Voir engine.js, miroir identique (retour utilisateur, 2026-09, "il ne
+    // faut pas qu'un signal et pas deux").
+    this.seasonObjectiveVerdictSettled = false;
 
     // Alchimie d'équipe (voir engine.js, miroir identique).
     this.chemistry = 50;
@@ -8099,10 +8102,21 @@ function assignSeasonObjectives(league) {
   ranked.forEach((entry, rankIdx) => {
     const tierIndex = Math.min(tierKeysStrongToWeak.length - 1, Math.floor(rankIdx / 2));
     league.teams[entry.idx].seasonObjective = tierKeysStrongToWeak[tierIndex];
+    league.teams[entry.idx].seasonObjectiveVerdictSettled = false;
   });
 }
 
+// Voir engine.js, miroir identique (retour utilisateur, 2026-09, "il ne
+// faut pas qu'un signal et pas deux [...] la fin de la saison régulière
+// correspond à la fin de la saison pour ces équipes là") : un rang 5-6 ou
+// 9-10 a un palier définitif dès la fin de la saison régulière (League.round
+// figé à son dernier round), sans attendre play-offs/barrage.
 function seasonAchievementTier(league, teamIdx) {
+  if (league.round >= league.totalRounds - 1) {
+    const lockedRank = league.standings().findIndex(s => s.idx === teamIdx) + 1;
+    if (lockedRank === 9 || lockedRank === 10) return 0;
+    if (lockedRank === 5 || lockedRank === 6) return 2;
+  }
   if (!league.playoffs || league.playoffs.champion == null) return null;
   if (league.relegatedTeamIndexes().includes(teamIdx)) return 0;
   const po = league.playoffs;
@@ -8140,18 +8154,23 @@ function seasonObjectiveVerdict(league, teamIdx) {
   return { objective, objectiveTier, achievedTier, achievedLabel, gap, delta, label };
 }
 
-// Signal de MI-SAISON pour le même objectif (voir engine.js, miroir
-// identique) : constantes + currentStandingsPaceObjective +
-// seasonObjectiveMidSeasonSignal, appliquées côté serveur pour CHAQUE équipe
-// humaine (voir server/liveMatch.js:finalizeRound), transportées tel quel
-// jusqu'ici via userResult.seasonObjectiveSignal (voir
-// showCatchupSummaryIfAny) ; miroir présent ici pour rester cohérent avec le
-// reste du moteur, même si l'application réelle ne se fait jamais côté
-// navigateur pour ce signal précis (contrairement au verdict de fin de
-// saison, appliqué par startNewSeason plus bas).
+// Signaux INTERMÉDIAIRES pour le même objectif, mi-saison et fin de saison
+// régulière (voir engine.js, miroir identique) : constantes +
+// currentStandingsPaceObjective + computeSeasonObjectivePaceSignal +
+// seasonObjectiveMidSeasonSignal/seasonObjectiveEndOfRegularSeasonSignal,
+// appliquées côté serveur pour CHAQUE équipe humaine (voir
+// server/liveMatch.js:finalizeRound), transportées tel quel jusqu'ici via
+// userResult.seasonObjectiveSignal (voir showCatchupSummaryIfAny) ; miroir
+// présent ici pour rester cohérent avec le reste du moteur, même si
+// l'application réelle ne se fait jamais côté navigateur pour ces signaux
+// précis (contrairement au verdict de fin de saison, appliqué par
+// startNewSeason plus bas).
 const SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER = 3;
 const SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER = 2;
 const SEASON_OBJECTIVE_MIDSEASON_MET_BONUS = 1;
+const SEASON_OBJECTIVE_ENDREG_MISS_MALUS_PER_TIER = 4;
+const SEASON_OBJECTIVE_ENDREG_EXCEED_BONUS_PER_TIER = 3;
+const SEASON_OBJECTIVE_ENDREG_MET_BONUS = 2;
 
 function currentStandingsPaceObjective(league, teamIdx) {
   const tierKeysStrongToWeak = ["titre", "finale", "playoffs", "milieu-tableau", "maintien"];
@@ -8161,7 +8180,7 @@ function currentStandingsPaceObjective(league, teamIdx) {
   return tierKeysStrongToWeak[tierIndex];
 }
 
-function seasonObjectiveMidSeasonSignal(league, teamIdx) {
+function computeSeasonObjectivePaceSignal(league, teamIdx, missMalusPerTier, exceedBonusPerTier, metBonus, stagePrefix) {
   const team = league.teams[teamIdx];
   if (!team || !team.seasonObjective) return null;
   const paceObjective = currentStandingsPaceObjective(league, teamIdx);
@@ -8171,16 +8190,43 @@ function seasonObjectiveMidSeasonSignal(league, teamIdx) {
   const paceTier = SEASON_OBJECTIVE_TIERS[paceObjective];
   const gap = objectiveTier - paceTier;
   const delta = gap > 0
-    ? -SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER * gap
-    : SEASON_OBJECTIVE_MIDSEASON_MET_BONUS + SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER * (-gap);
+    ? -missMalusPerTier * gap
+    : metBonus + exceedBonusPerTier * (-gap);
   const objectiveLabel = SEASON_OBJECTIVE_LABELS[objective];
   const paceLabel = SEASON_OBJECTIVE_LABELS[paceObjective];
   const label = gap > 0
-    ? `Mi-saison : le rythme actuel (${paceLabel}) est en dessous de l'objectif (${objectiveLabel}). Les supporters s'inquiètent déjà.`
+    ? `${stagePrefix} : le rythme actuel (${paceLabel}) est en dessous de l'objectif (${objectiveLabel}). Les supporters s'inquiètent déjà.`
     : gap === 0
-      ? `Mi-saison : le rythme actuel colle exactement à l'objectif (${objectiveLabel}). Les supporters restent confiants.`
-      : `Mi-saison : le rythme actuel (${paceLabel}) dépasse largement l'objectif (${objectiveLabel} espéré). Les supporters sont optimistes.`;
+      ? `${stagePrefix} : le rythme actuel colle exactement à l'objectif (${objectiveLabel}). Les supporters restent confiants.`
+      : `${stagePrefix} : le rythme actuel (${paceLabel}) dépasse largement l'objectif (${objectiveLabel} espéré). Les supporters sont optimistes.`;
   return { objective, objectiveTier, paceObjective, paceTier, gap, delta, label };
+}
+
+function seasonObjectiveMidSeasonSignal(league, teamIdx) {
+  return computeSeasonObjectivePaceSignal(league, teamIdx,
+    SEASON_OBJECTIVE_MIDSEASON_MISS_MALUS_PER_TIER, SEASON_OBJECTIVE_MIDSEASON_EXCEED_BONUS_PER_TIER,
+    SEASON_OBJECTIVE_MIDSEASON_MET_BONUS, "Mi-saison");
+}
+
+function seasonObjectiveEndOfRegularSeasonSignal(league, teamIdx) {
+  return computeSeasonObjectivePaceSignal(league, teamIdx,
+    SEASON_OBJECTIVE_ENDREG_MISS_MALUS_PER_TIER, SEASON_OBJECTIVE_ENDREG_EXCEED_BONUS_PER_TIER,
+    SEASON_OBJECTIVE_ENDREG_MET_BONUS, "Fin de saison régulière");
+}
+
+// Voir engine.js, miroir identique (retour utilisateur, 2026-09 : "une
+// équipe qui est en PO alors que le CA ne visait que le milieu de
+// tableau/maintien doit avoir un petit surplus des supporters [...] au
+// moment des PO pas à la fin de la saison").
+const SEASON_OBJECTIVE_SURPRISE_PLAYOFFS_BONUS = 5;
+function seasonObjectiveSurprisePlayoffsBonus(league, teamIdx) {
+  const team = league.teams[teamIdx];
+  if (!team || !team.seasonObjective) return null;
+  if (team.seasonObjective !== "maintien" && team.seasonObjective !== "milieu-tableau") return null;
+  if (!league.playoffs || !Array.isArray(league.playoffs.seeds) || !league.playoffs.seeds.includes(teamIdx)) return null;
+  const objectiveLabel = SEASON_OBJECTIVE_LABELS[team.seasonObjective];
+  const label = `Qualification surprise en play-offs : personne ne l'attendait vu l'objectif de départ (${objectiveLabel}), les supporters sont agréablement surpris.`;
+  return { label, delta: SEASON_OBJECTIVE_SURPRISE_PLAYOFFS_BONUS };
 }
 
 // Génère une ligue complète : le club du joueur (déjà créé) + 9 adversaires
@@ -8594,6 +8640,8 @@ function serializeTeam(team) {
     // Objectif de saison du conseil d'administration (voir engine.js,
     // miroir identique).
     seasonObjective: team.seasonObjective || null,
+    // Voir engine.js, miroir identique.
+    seasonObjectiveVerdictSettled: !!team.seasonObjectiveVerdictSettled,
     // Alchimie d'équipe (voir engine.js, miroir identique).
     chemistry: team.chemistry,
     lastTacticsSnapshotForChemistry: team.lastTacticsSnapshotForChemistry
@@ -8937,6 +8985,8 @@ function teamFromSave(data) {
   // Objectif de saison du conseil d'administration (voir engine.js, miroir
   // identique).
   if (typeof data.seasonObjective === "string") team.seasonObjective = data.seasonObjective;
+  // Voir engine.js, miroir identique.
+  team.seasonObjectiveVerdictSettled = !!data.seasonObjectiveVerdictSettled;
   // Alchimie d'équipe (voir engine.js, miroir identique).
   if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, 0, 100);
   if (data.lastTacticsSnapshotForChemistry && Array.isArray(data.lastTacticsSnapshotForChemistry.offense)) {
@@ -11245,7 +11295,22 @@ function enterNextMatchOrShowSeasonEnd(opts) {
   // un live [...] sur plusieurs jours réels"). Repli défensif seulement
   // (voir League.startPlayoffsIfNeeded) : le serveur les démarre normalement
   // pendant le rattrapage (voir server/autoSim.js:catchUpPlayoffs).
-  if (!league.playoffs) league.startPlayoffsIfNeeded();
+  if (!league.playoffs) {
+    league.startPlayoffsIfNeeded();
+    // Bonus de qualification surprise en play-offs (voir engine.js/
+    // server/autoSim.js:catchUpPlayoffs, miroir identique de ce même repli
+    // défensif) : ne s'exécute qu'UNE SEULE fois par saison, comme
+    // startPlayoffsIfNeeded juste au-dessus.
+    if (league.playoffs) {
+      league.playoffs.seeds.forEach(teamIdx => {
+        const team = league.teams[teamIdx];
+        if (!team.isHuman) return;
+        const bonus = seasonObjectiveSurprisePlayoffsBonus(league, teamIdx);
+        if (!bonus) return;
+        team.recordMoraleEvent(bonus.label, bonus.delta);
+      });
+    }
+  }
 
   if (league.playoffs && league.playoffs.champion == null) {
     // Play-offs en cours (pas encore de champion) : même chemin que pour un
@@ -11474,14 +11539,15 @@ function showCatchupSummaryIfAny() {
       }
       const sign = r.moraleDelta >= 0 ? "+" : "";
       html += `<p>Humeur des supporters : ${sign}${Math.round(r.moraleDelta * 10) / 10} (désormais ${Math.round(teamA.fanMorale)}/100, ${moraleLabel(teamA.fanMorale)}).</p>`;
-      // Signal de mi-saison de l'objectif du CA (voir
-      // Engine.seasonObjectiveMidSeasonSignal côté moteur,
-      // server/liveMatch.js:finalizeRound qui l'applique et le transporte
-      // ici via userResult.seasonObjectiveSignal) : présent uniquement à LA
-      // journée de mi-saison (au plus une fois par saison), déjà appliqué à
-      // teamA.fanMorale côté serveur avant que ce récapitulatif ne
-      // s'affiche, simplement annoncé ici comme le reste des événements de
-      // la journée.
+      // Signal INTERMÉDIAIRE de l'objectif du CA, mi-saison OU fin de
+      // saison régulière (voir Engine.computeSeasonObjectivePaceSignal côté
+      // moteur, server/liveMatch.js:finalizeRound qui l'applique et le
+      // transporte ici via userResult.seasonObjectiveSignal) : présent
+      // uniquement à CES DEUX journées précises (au plus une fois chacune
+      // par saison), déjà appliqué à teamA.fanMorale côté serveur avant que
+      // ce récapitulatif ne s'affiche, simplement annoncé ici comme le
+      // reste des événements de la journée (le libellé lui-même précise de
+      // quel moment il s'agit, voir computeSeasonObjectivePaceSignal).
       if (r.seasonObjectiveSignal) {
         const sig = r.seasonObjectiveSignal;
         const sigSign = sig.delta >= 0 ? "+" : "";
@@ -14349,8 +14415,18 @@ function startNewSeason() {
   // vient de se terminer, seasonObjective de teamA sera de toute façon
   // réassigné pour la nouvelle saison par assignSeasonObjectives, voir
   // generateLeague -> buildLeagueWithHumanTeams juste plus bas).
+  // Retour utilisateur (2026-09) : "il ne faut pas qu'un signal et pas
+  // deux [...] la fin de la saison régulière correspond à la fin de la
+  // saison pour ces équipes là" : une équipe de milieu de tableau ou
+  // reléguée directement (voir server/liveMatch.js:finalizeRound côté
+  // serveur, seul appelant réel en pratique) a déjà reçu CE MÊME verdict
+  // dès la fin de la saison régulière (Team.seasonObjectiveVerdictSettled)
+  // : ne jamais le réappliquer une seconde fois ici.
   const objectiveVerdict = seasonObjectiveVerdict(league, 0);
-  if (objectiveVerdict) teamA.recordMoraleEvent(objectiveVerdict.label, objectiveVerdict.delta);
+  if (objectiveVerdict && !teamA.seasonObjectiveVerdictSettled) {
+    teamA.recordMoraleEvent(objectiveVerdict.label, objectiveVerdict.delta);
+    teamA.seasonObjectiveVerdictSettled = true;
+  }
   // Hérite du rythme de calendrier de la saison qui vient de se terminer
   // (classique, ou accéléré si la carrière tournait déjà en mode accéléré —
   // voir League.calendarWeekMs/calendarSlotOffsetsMs) : une nouvelle saison
@@ -18983,6 +19059,39 @@ const TOUR_STEPS = [
     title: "Votre effectif",
     text: "Le roster complet du club : poste, attributs (physique, adresse, défense...), forme du jour et historique de matchs pour chaque joueur.",
     tip: "Un joueur peut couvrir plusieurs postes en tant que remplaçant, pratique en cas de blessure ou de suspension.",
+  },
+  // Forme physique/Motivation/Alchimie (retour utilisateur, 2026-09 :
+  // "dans le tutoriel, il faut rajouter les nouveautés (ambiance, forme,
+  // motivation, alchimie...)") : trois nouvelles étapes, sur la VRAIE page
+  // Effectif cette fois (page: "effectif", contrairement à l'étape
+  // ci-dessus qui ne fait que pointer le lien de la barre latérale), qui
+  // spotlightent les colonnes/jauge réelles (voir rosterHeaderCellHtml pour
+  // data-sort="condition"/"motivation", .roster-chemistry-gauge-wrap pour
+  // la jauge d'alchimie). La prime du thème "Effectif" est déplacée ICI, sur
+  // la DERNIÈRE étape du groupe (même convention que tous les autres thèmes
+  // à plusieurs étapes, voir "Ordres" plus bas) : montant inchangé, prime
+  // totale du tutoriel toujours 200 000 € (retour utilisateur antérieur :
+  // "il faut que le tuto permette de gagne 200K en tout").
+  {
+    kind: "spotlight", topic: "Effectif", page: "effectif",
+    target: 'th[data-sort="condition"]',
+    title: "Forme physique",
+    text: "5 paliers, du plus frais (90-100) au plus épuisé (0-39, risque de blessure nettement accru). Baisse après chaque match selon le temps de jeu, remonte de 15 points par jour de repos sans match. Totalement indépendante de l'entraînement.",
+    tip: "Une forme basse ne bloque aucune séance d'entraînement, mais pénalise nettement la performance en match.",
+  },
+  {
+    kind: "spotlight", topic: "Effectif", page: "effectif",
+    target: 'th[data-sort="motivation"]',
+    title: "Motivation",
+    text: "La confiance du joueur, jamais liée à la fatigue. Alimentée par le ton choisi lors des interviews de jalon (voir l'onglet Humeur des supporters) : Agressif amplifie le résultat, Mesuré reste modéré, Humble limite la casse en cas de défaite.",
+    tip: "Un remplaçant qui ne joue quasiment jamais perd un peu de motivation chaque semaine, surtout s'il mériterait clairement de jouer.",
+  },
+  {
+    kind: "spotlight", topic: "Effectif", page: "effectif",
+    target: ".roster-chemistry-gauge-wrap",
+    title: "Alchimie d'équipe",
+    text: "Une jauge collective, distincte de la forme/motivation individuelles, qui ne bouge que par 3 leviers précis, jamais de dérive naturelle dans le temps : le ton choisi en interview de jalon (voir l'onglet Humeur des supporters), les changements d'effectif au marché des transferts (toujours un malus, plus fort pour un joueur important) et les changements de tactique trop fréquents en match, atténuables en les travaillant à l'entraînement collectif.",
+    tip: "Une alchimie élevée profite à TOUTE l'équipe sur le terrain, un levier collectif à ne pas négliger face à un effectif individuellement plus fort mais moins soudé.",
     reward: TOUR_REWARD_BY_TOPIC["Effectif"],
   },
 
@@ -19050,6 +19159,23 @@ const TOUR_STEPS = [
     title: "Entraînement hebdomadaire",
     text: "Chaque semaine, choisissez un programme (tir à 3 points, rebond, défense extérieure...) et un ou plusieurs postes à qui l'appliquer. Cibler un seul poste donne le plein rendement ; l'étendre à toute l'équipe touche plus de joueurs mais dilue l'effet.",
     tip: "Un joueur qui n'a pas assez joué cette semaine progresse moins, même avec le bon programme : gardez un œil sur son temps de jeu cumulé.",
+  },
+  // Entraînement collectif (retour utilisateur, 2026-09 : "entrainement
+  // collectif aussi") : quatrième étape ajoutée au groupe "nouveautés" du
+  // tutoriel, sur la VRAIE page Entraînement (page: "entrainement", voir
+  // TOUR_PAGE_KEY_TO_TAB plus bas) cette fois, contrairement à l'étape
+  // ci-dessus qui ne fait que pointer le lien de la barre latérale.
+  // Spotlight le vrai bloc #collectiveTrainingConfig (voir
+  // populateCollectiveTrainingSelect). Prime du thème "Entraînement"
+  // déplacée ICI, sur la DERNIÈRE étape du groupe (même convention que
+  // "Effectif" plus haut) : montant inchangé, prime totale du tutoriel
+  // toujours 200 000 €.
+  {
+    kind: "spotlight", topic: "Entraînement", page: "entrainement",
+    target: "#collectiveTrainingConfig",
+    title: "Entraînement collectif",
+    text: "Un réglage séparé de l'entraînement individuel ci-dessus, les deux tournent en même temps : travailler une nouvelle tactique atténue le malus d'alchimie d'un changement de tactique en match (divisé par 2 par jour banqué), travailler la récupération accélère le retour de forme physique des joueurs qui ne jouent pas ce jour-là.",
+    tip: "Le crédit de jours banqués reste utilisable même si vous repassez sur \"Aucun\" ou changez de focus entre-temps : pas besoin de s'y tenir sans interruption.",
     reward: TOUR_REWARD_BY_TOPIC["Entraînement"],
   },
   { kind: "spotlight", topic: "Marché", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="marche"]', pos: "right",
@@ -19087,6 +19213,29 @@ const TOUR_STEPS = [
     text: "Un recruteur (onglet Staff) fait remonter des prospects de 15 à 17 ans : jusqu'à 5 propositions en attente à la fois, chacune expire si elle reste trop longtemps sans réponse.",
     tip: "Chaque prospect signé rejoint directement l'académie : pas d'enchère ni de négociation, contrairement au marché des transferts.",
     reward: TOUR_REWARD_BY_TOPIC["Académie de jeunes"],
+  },
+
+  // Nouveau thème "Humeur des supporters" (retour utilisateur, 2026-09 :
+  // "dans le tutoriel, il faut rajouter les nouveautés (ambiance, forme,
+  // motivation, alchimie...)") : 3 étapes sur la VRAIE page Humeur (page:
+  // "humeur", voir TOUR_PAGE_KEY_TO_TAB plus bas), SANS prime (absent de
+  // TOUR_REWARD_BY_TOPIC, comme "Salle" au moment de sa création avant
+  // qu'elle en gagne une) : la prime totale du tutoriel reste exactement
+  // 200 000 € (retour utilisateur antérieur), et ce thème n'y ajoute rien.
+  { kind: "spotlight", topic: "Humeur des supporters", page: "humeur", target: "#moraleValue",
+    title: "L'ambiance du club",
+    text: "Une jauge de 0 à 100, neutre à 50 en début de carrière. Elle bouge à chaque résultat de match, selon le prix du billet pratiqué, le ton choisi en interview de jalon, et une demande de transfert d'un joueur (jusqu'à son issue).",
+    tip: "Une ambiance dégradée réduit l'affluence en salle ET la tolérance des supporters à un billet cher : les deux stat-cards juste en dessous détaillent l'effet exact du niveau actuel.",
+  },
+  { kind: "spotlight", topic: "Humeur des supporters", page: "humeur", target: "#seasonObjectiveValue",
+    title: "L'objectif de saison",
+    text: "Fixé par le conseil d'administration en tout début de saison, d'après le niveau de votre effectif face au reste du championnat. Deux signaux intermédiaires (mi-saison, puis juste après la fin de la saison régulière) réagissent déjà à votre rythme actuel, avant le verdict final, plus marqué, une fois la saison bouclée.",
+    tip: "Un signal intermédiaire pèse volontairement moins lourd que le verdict final : de quoi ajuster le tir sans paniquer sur un simple passage à vide.",
+  },
+  { kind: "spotlight", topic: "Humeur des supporters", page: "humeur", target: "#moraleHistoryContent",
+    title: "Le journal des événements",
+    text: "Chaque variation d'ambiance est journalisée ici avec son motif exact : résultat de match, prix du billet, interview de jalon, demande de transfert, signal ou verdict d'objectif de saison.",
+    tip: "En cas de chute brutale d'ambiance, c'est le premier endroit à consulter pour comprendre pourquoi.",
   },
 
   { kind: "spotlight", topic: "Économie", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="economie"]', pos: "right",
@@ -19138,7 +19287,7 @@ const TOUR_STEPS = [
   },
 ];
 
-const TOUR_PAGE_KEY_TO_TAB = { dashboard: "club", ordres: "ordres", salle: "salle", academie: "academie" };
+const TOUR_PAGE_KEY_TO_TAB = { dashboard: "club", ordres: "ordres", salle: "salle", academie: "academie", effectif: "effectif", humeur: "humeur", entrainement: "entrainement" };
 let tourStepIdx = 0;
 let tourEarnedRewards = []; // { title, reward }, remis à zéro à chaque lancement
 let tourRootEl = null, tourToastEl = null;
