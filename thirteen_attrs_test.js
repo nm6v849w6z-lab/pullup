@@ -283,6 +283,16 @@ const T0 = Date.now();
 // 8) Affichage : l'onglet Effectif liste bien les 3 nouvelles colonnes
 //    (MENT/END/LF, voir ATTR_SHORT), avec des valeurs affichées.
 // ---------------------------------------------------------------------
+// Depuis la refonte de l'onglet Effectif (retour utilisateur, 2026-09 : "on
+// va commencer à avoir pas mal de carac et tout ne rentrera pas sur l'écran
+// [...] on verra toutes les carac des joueurs en cliquant sur la page du
+// joueur"), les 13 caractéristiques (dont MENT/END/LF, ajoutées par CE
+// fichier) ne sont plus des colonnes du tableau Effectif lui-même : elles ne
+// sont plus consultables que sur la fiche joueur (renderPlayerDetail, voir
+// player_detail_test.js pour la couverture complète de cette page). Ce test
+// vérifie donc l'INVERSE de sa version d'origine : MENT/END/LF absents de
+// l'en-tête Effectif, mais bien présents sur la fiche joueur ouverte depuis
+// cet onglet.
 async function testRosterTableShowsNewColumns() {
   const html = fs.readFileSync("moteurbasket3.html", "utf-8");
   const { server, baseUrl } = await startTestServer();
@@ -293,15 +303,23 @@ async function testRosterTableShowsNewColumns() {
     if (!btn) throw new Error("❌ Onglet Effectif introuvable.");
     btn.click();
     const rosterTable = doc.querySelector("#rosterContent table.roster-table");
-    if (!rosterTable) throw new Error("❌ L'onglet Effectif devrait afficher un tableau des caractéristiques.");
+    if (!rosterTable) throw new Error("❌ L'onglet Effectif devrait afficher un tableau.");
     const headers = [...rosterTable.querySelectorAll("th")].map(th => th.textContent.trim());
     console.log("En-têtes de colonnes de l'Effectif :", headers.join(", "));
     ["MENT", "END", "LF"].forEach(short => {
-      if (!headers.includes(short)) throw new Error(`❌ La colonne "${short}" (Mental/Endurance/Lancer franc) devrait apparaître dans l'en-tête du tableau Effectif.`);
+      if (headers.some(h => h.startsWith(short))) throw new Error(`❌ La colonne "${short}" (Mental/Endurance/Lancer franc) ne devrait plus apparaître dans l'en-tête du tableau Effectif (déplacée vers la fiche joueur).`);
     });
-    const firstRowCells = rosterTable.querySelectorAll("tbody tr:first-child td").length;
-    console.log(`Première ligne du tableau Effectif : ${firstRowCells} cellules.`);
-    console.log("✅ L'onglet Effectif affiche bien les 3 nouvelles colonnes (MENT/END/LF) en plus des 10 d'origine.");
+    console.log("✅ Le tableau Effectif n'affiche plus les 13 colonnes de caractéristiques (déplacées vers la fiche joueur).");
+
+    const firstPlayerLink = doc.querySelector("#rosterContent .player-link");
+    if (!firstPlayerLink) throw new Error("❌ (setup) l'Effectif devrait afficher au moins un lien joueur cliquable.");
+    firstPlayerLink.click();
+    const attrHeaders = [...doc.querySelectorAll("#playerDetailContent table.roster-table th")].map(th => th.textContent.trim());
+    console.log("En-têtes de caractéristiques sur la fiche joueur :", attrHeaders.join(", "));
+    ["MENT", "END", "LF"].forEach(short => {
+      if (!attrHeaders.includes(short)) throw new Error(`❌ La colonne "${short}" (Mental/Endurance/Lancer franc) devrait apparaître sur la fiche joueur.`);
+    });
+    console.log("✅ La fiche joueur affiche bien les 3 nouvelles colonnes (MENT/END/LF) en plus des 10 d'origine.");
     dom.window.close();
   } finally {
     server.close();

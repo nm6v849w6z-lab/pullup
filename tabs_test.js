@@ -59,20 +59,25 @@ Object.entries(TAB_TO_PAGE).forEach(([tab, expectedPage]) => {
 if (!allTabsOk) throw new Error("❌ Au moins un onglet n'affiche pas la bonne page.");
 console.log("\n✅ Les 13 onglets affichent chacun leur propre page.");
 
-// --- Onglet Effectif : table des caractéristiques (lecture seule), PAS la
-// feuille de match / les tactiques (qui vivent maintenant dans "Ordres"). ---
+// --- Onglet Effectif : table de synthèse (lecture seule), PAS la feuille de
+// match / les tactiques (qui vivent maintenant dans "Ordres"). Depuis la
+// refonte de l'onglet Effectif (retour utilisateur, 2026-09 : "on verra
+// toutes les carac des joueurs en cliquant sur la page du joueur"), les
+// caractéristiques (ex. "3PTS") ne sont plus des colonnes ICI - voir
+// thirteen_attrs_test.js pour la couverture de leur nouvel emplacement (la
+// fiche joueur). ---
 clickTab("effectif");
 const rosterTable = doc.querySelector("#rosterContent table.roster-table");
-if (!rosterTable) throw new Error("❌ L'onglet Effectif devrait afficher un tableau des caractéristiques des joueurs.");
+if (!rosterTable) throw new Error("❌ L'onglet Effectif devrait afficher un tableau de synthèse des joueurs.");
 const rosterRows = rosterTable.querySelectorAll("tbody tr").length;
 console.log(`\nOnglet Effectif : ${rosterRows} joueurs listés (attendu 15).`);
 if (rosterRows !== 15) throw new Error("❌ L'onglet Effectif devrait lister les 15 joueurs du club : " + rosterRows);
 const hasPrepGridInEffectif = !!doc.querySelector("#effectifSection #prepGrid");
 console.log(`${!hasPrepGridInEffectif ? "✅" : "❌"} L'onglet Effectif ne contient pas la feuille de match (composée désormais dans Ordres).`);
 if (hasPrepGridInEffectif) throw new Error("❌ La feuille de match ne devrait plus apparaître dans l'onglet Effectif.");
-const hasThreePointHeader = [...rosterTable.querySelectorAll("th")].some(th => th.textContent === "3PTS");
-if (!hasThreePointHeader) throw new Error("❌ Le tableau de l'effectif devrait inclure une colonne pour chaque caractéristique (ex. 3PTS).");
-console.log("✅ Le tableau des caractéristiques est bien affiché, avec une colonne par caractéristique.");
+const hasEvaluationHeader = [...rosterTable.querySelectorAll("th")].some(th => th.textContent.startsWith("Évaluation"));
+if (!hasEvaluationHeader) throw new Error("❌ Le tableau de l'effectif devrait inclure une colonne Évaluation (5 derniers matchs).");
+console.log("✅ Le tableau de synthèse de l'effectif est bien affiché, avec sa colonne Évaluation.");
 
 // --- L'onglet Ordres, lui, contient bien la feuille de match + le compte à
 // rebours jusqu'au coup d'envoi (le comportement historique de prepSection,

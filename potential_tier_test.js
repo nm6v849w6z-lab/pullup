@@ -41,8 +41,13 @@ const { potentialTierLabel, POTENTIAL_TIERS } = E;
 }
 
 // ---------------------------------------------------------------------
-// Partie 2 : affichage dans l'onglet Effectif — le NOM du palier apparaît
-// pour chaque joueur, mais jamais le chiffre exact caché.
+// Partie 2 : affichage sur la fiche joueur — le NOM du palier apparaît, mais
+// jamais le chiffre exact caché. Depuis la refonte de l'onglet Effectif
+// (retour utilisateur, 2026-09 : "on verra toutes les carac des joueurs en
+// cliquant sur la page du joueur"), le Potentiel n'est plus une colonne du
+// tableau Effectif lui-même : il a été réajouté sur renderPlayerDetail pour
+// ne pas perdre cette information (voir moteurbasket3.html, juste après la
+// ligne Motivation), donc c'est là qu'on le vérifie maintenant.
 // ---------------------------------------------------------------------
 (async () => {
   const html = fs.readFileSync("moteurbasket3.html", "utf-8");
@@ -55,39 +60,43 @@ const { potentialTierLabel, POTENTIAL_TIERS } = E;
 
   const rosterTable = doc.querySelector("#rosterContent table");
   if (!rosterTable) throw new Error("❌ Tableau de l'effectif introuvable.");
-  const headerCells = [...rosterTable.querySelectorAll("thead th")].map(th => th.textContent.trim());
-  if (!headerCells.includes("Potentiel")) throw new Error(`❌ Colonne "Potentiel" absente de l'en-tête (${headerCells.join(", ")}).`);
-
-  const potentialColIndex = headerCells.indexOf("Potentiel");
+  if ([...rosterTable.querySelectorAll("thead th")].some(th => th.textContent.trim() === "Potentiel")) {
+    throw new Error("❌ Le tableau Effectif ne devrait plus afficher de colonne \"Potentiel\" (déplacée vers la fiche joueur).");
+  }
   await flush(dom);
   const teamPlayers = readRawSave(savePath).team.players;
   const rows = [...rosterTable.querySelectorAll("tbody tr")];
   if (rows.length !== teamPlayers.length) throw new Error(`❌ ${teamPlayers.length} joueurs attendus dans le tableau, obtenu ${rows.length} lignes.`);
+  console.log(`✅ Le tableau Effectif (${rows.length} joueurs) n'affiche plus de colonne Potentiel.`);
 
   const allLabels = new Set(POTENTIAL_TIERS.map(t => t.label));
-  rows.forEach((row, i) => {
-    const cellText = row.children[potentialColIndex].textContent.trim();
-    if (!allLabels.has(cellText)) {
-      throw new Error(`❌ La cellule Potentiel de la ligne ${i} ("${cellText}") ne correspond à aucun nom de palier connu.`);
-    }
-  });
-  console.log(`✅ La colonne "Potentiel" affiche bien un nom de palier reconnu pour chacun des ${rows.length} joueurs.`);
+  const firstPlayerLink = doc.querySelector("#rosterContent .player-link");
+  if (!firstPlayerLink) throw new Error("❌ (setup) l'Effectif devrait afficher au moins un lien joueur cliquable.");
+  firstPlayerLink.click();
+  const playerId = Number(firstPlayerLink.dataset.playerId);
+  const player = teamPlayers.find(p => p.id === playerId);
+  const potentialEl = doc.querySelector("#playerDetailContent .potential-tier");
+  if (!potentialEl) throw new Error("❌ La fiche joueur devrait afficher un élément \".potential-tier\" (ligne Potentiel).");
+  const shownLabel = potentialEl.textContent.trim();
+  if (!allLabels.has(shownLabel)) {
+    throw new Error(`❌ Le potentiel affiché sur la fiche joueur ("${shownLabel}") ne correspond à aucun nom de palier connu.`);
+  }
+  const expectedLabel = potentialTierLabel(player.potential);
+  if (shownLabel !== expectedLabel) {
+    throw new Error(`❌ Le potentiel affiché ("${shownLabel}") devrait correspondre au palier réel du joueur ("${expectedLabel}", potential=${player.potential}).`);
+  }
+  console.log(`✅ La fiche joueur affiche bien le nom du palier de potentiel ("${shownLabel}"), cohérent avec le potentiel réel du joueur.`);
 
-  // Le chiffre exact (p.potential) ne doit apparaître NULLE PART dans le HTML
-  // rendu de l'effectif (ni en texte visible, ni en attribut) — seul le nom
-  // du palier est exposé, jamais le niveau caché lui-même.
-  const rosterHtml = doc.getElementById("rosterContent").innerHTML;
-  const exposedNumbers = teamPlayers.filter(p => rosterHtml.includes(`>${p.potential}<`) || rosterHtml.includes(`"${p.potential}"`));
-  // (Un faux positif serait possible si le chiffre du potentiel coïncide par
-  // hasard avec l'âge, la taille ou une caractéristique affichée par ailleurs
-  // — ce test se limite donc à vérifier qu'aucun attribut/texte n'affiche
-  // EXACTEMENT p.potential associé au marqueur "Potentiel" lui-même, ce que
-  // la vérification ci-dessus sur potentialColIndex couvre déjà de façon
-  // stricte : chaque cellule Potentiel ne contient qu'un nom de palier connu,
-  // jamais un chiffre.)
-  console.log("✅ Chaque cellule de la colonne Potentiel ne contient qu'un nom de palier — jamais le chiffre caché.");
+  // Le chiffre exact (p.potential) ne doit apparaître NULLE PART dans le
+  // texte visible de cet élément - seul le nom du palier y est exposé,
+  // jamais le niveau caché lui-même (le `title`, une infobulle, n'est pas du
+  // texte visible et révèle volontairement le PALIER 1-10, pas p.potential).
+  if (shownLabel.includes(String(player.potential))) {
+    throw new Error("❌ La ligne Potentiel de la fiche joueur ne devrait jamais afficher le chiffre exact caché.");
+  }
+  console.log("✅ La ligne Potentiel de la fiche joueur ne contient que le nom du palier, jamais le chiffre caché.");
   win.close();
   server.close();
 
-  console.log("\n✅ Le potentiel des joueurs est désormais affiché dans l'onglet Effectif sous forme de palier nommé (ex. \"All-Star\") — jamais le niveau exact caché.");
+  console.log("\n✅ Le potentiel des joueurs est affiché sur la fiche joueur sous forme de palier nommé (ex. \"All-Star\"), jamais le niveau exact caché.");
 })().catch(e => { console.error(e); process.exit(1); });

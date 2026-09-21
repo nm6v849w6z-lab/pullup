@@ -102,7 +102,12 @@ win.eval(`
 `);
 const roundCols = [...doc.querySelectorAll("#coupeContent .cup-round")];
 if (roundCols.length !== 4) throw new Error("❌ 4 colonnes attendues (huitièmes/quarts/demies/finale), obtenu : " + roundCols.length);
-const huitiemesNames = [...roundCols[0].querySelectorAll(".cup-match-team span:first-child")].map(s => s.textContent);
+// `> :first-child` plutôt que `span:first-child` (retour utilisateur,
+// 2026-09 : "rends cliquable le nom de sa propre équipe [...] la page coupe
+// (fais le pour les autres équipes aussi en coupe)") : le nom d'équipe est
+// désormais un bouton .team-link cliquable, plus un simple span (le "tbd"
+// placeholder "À déterminer" reste, lui, un span, voir cupMatchCardHtml).
+const huitiemesNames = [...roundCols[0].querySelectorAll(".cup-match-team > :first-child")].map(s => s.textContent);
 console.log("\nOrdre affiché des 8e de finale :", huitiemesNames);
 // Les 2 premiers duels (4 premiers noms = moitié haute de la colonne, en
 // face du quart Vindicta vs Venomous en tête de la colonne suivante)
@@ -119,7 +124,7 @@ if (!topGroup.includes("Vindicta") || !topGroup.includes("Venomous")) {
 if (huitiemesNames[2] !== "Devil May Care" || huitiemesNames[3] !== "Venomous") {
   throw new Error("❌ Le duel de Venomous (Devil May Care vs Venomous, dispersé en position 2 dans la fixture d'origine) devrait être remonté en 2e position, juste après celui de Vindicta, obtenu : " + JSON.stringify(huitiemesNames));
 }
-const quartsNames = [...roundCols[1].querySelectorAll(".cup-match-team span:first-child")].map(s => s.textContent);
+const quartsNames = [...roundCols[1].querySelectorAll(".cup-match-team > :first-child")].map(s => s.textContent);
 console.log("Ordre affiché des quarts :", quartsNames);
 if (quartsNames[0] !== "Vindicta" || quartsNames[1] !== "Venomous") {
   throw new Error("❌ Le quart 'Vindicta vs Venomous' devrait rester en tête de la colonne des quarts, obtenu : " + JSON.stringify(quartsNames));

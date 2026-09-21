@@ -78,8 +78,10 @@ if (analystCurrentInfo.textContent.includes("révèle")) {
 console.log("✅ Le panneau analyste affiche bien le niveau, sans le nombre de caractéristiques révélées par séance (masqué sur demande utilisateur).");
 
 // ---------------------------------------------------------------------
-// Partie 2 : écran Classement — noms d'équipes adverses cliquables (liens
-// vers la fiche équipe), propre ligne non cliquable (texte brut).
+// Partie 2 : écran Classement — noms d'équipes cliquables (liens vers la
+// fiche équipe), y compris sa PROPRE ligne (retour utilisateur, 2026-09 :
+// "rends cliquable le nom de sa propre équipe [...] dans le classement" -
+// avant ce correctif, seules les lignes adverses étaient cliquables).
 // ---------------------------------------------------------------------
 clickTab("ligue");
 const rows = [...doc.querySelectorAll("#standingsContent table.standings-table tbody tr")];
@@ -87,7 +89,7 @@ console.log("\nLignes du classement :", rows.length, "(attendu 10)");
 if (rows.length !== 10) throw new Error("❌ Le classement devrait lister les 10 équipes.");
 const myRow = rows.find(r => r.classList.contains("me"));
 if (!myRow) throw new Error("❌ (setup) une ligne devrait porter la classe 'me' (le club du joueur).");
-if (myRow.querySelector("[data-team-idx]")) throw new Error("❌ La ligne du club du joueur ne devrait PAS être un lien vers une fiche équipe.");
+if (!myRow.querySelector("[data-team-idx]")) throw new Error("❌ La ligne du club du joueur devrait, elle aussi, être un lien vers sa fiche équipe.");
 const opponentRows = rows.filter(r => r !== myRow);
 const allOpponentsLinked = opponentRows.every(r => r.querySelector("[data-team-idx]"));
 console.log(`${allOpponentsLinked ? "✅" : "❌"} Toutes les lignes adverses (${opponentRows.length}) ont un nom d'équipe cliquable (data-team-idx).`);
@@ -108,6 +110,10 @@ opponentLink.click();
 const teamDetailVisible = !doc.getElementById("teamDetailSection").classList.contains("hidden");
 console.log("\nFiche équipe ouverte (page dédiée, pas un panneau en dessous) :", teamDetailVisible);
 if (!teamDetailVisible) throw new Error("❌ Cliquer sur le nom d'une équipe adverse devrait ouvrir une vraie page (teamDetailSection), pas rester sur le Classement.");
+// L'onglet par défaut à l'ouverture est désormais "Aperçu" (retour
+// utilisateur : "une petite page d'accueil pour les autres équipes", voir
+// showTeamDetail) : le tableau de joueurs, lui, vit sous "Effectif".
+doc.querySelector('[data-team-detail-subview="effectif"]').click();
 const scoutingPanel = doc.getElementById("teamDetailContent");
 const scoutingTable = scoutingPanel.querySelector("table.roster-table");
 console.log("Tableau de joueurs présent :", !!scoutingTable);

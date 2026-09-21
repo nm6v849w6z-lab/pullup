@@ -1558,6 +1558,27 @@ function statEvaluation(s) {
     - (s.tov || 0) - (s.pf || 0);
 }
 
+// Seuils de statEvaluation (PIR) pour les 5 nuances vert -> rouge de la
+// page Effectif (retour utilisateur, 2026-09 : "une petite évaluation sous
+// forme de carré des 5 derniers match, plus ou moins réussi plus ou moins
+// vert ou plus ou moins rouge"). Calibrés empiriquement (script jetable
+// pir_calibration.js, 1500 matchs simulés, ~28600 lignes de box-score
+// réelles) : statEvaluation n'est PAS normalisée entre 0 et 100 (voir son
+// commentaire plus haut), donc sans ce calibrage un même score aurait été
+// interprété au hasard. Les 4 seuils ci-dessous sont les bornes hautes des
+// tiers 0 à 3 (arrondies depuis les quintiles observés p20=0, p40=3,
+// p60=6-7, p80=13) ; PIR_TIER_COLORS va du rouge (pire) au vert (meilleur),
+// dans le même esprit que --danger/--ok définis côté CSS.
+const PIR_TIER_THRESHOLDS = [0, 3, 7, 13];
+const PIR_TIER_COLORS = ["#e2694f", "#e2a24f", "#d9c24f", "#8fc25f", "#33b4a1"];
+
+function pirTier(score) {
+  for (let i = 0; i < PIR_TIER_THRESHOLDS.length; i++) {
+    if (score <= PIR_TIER_THRESHOLDS[i]) return i;
+  }
+  return PIR_TIER_THRESHOLDS.length;
+}
+
 // Bonus temporaire accordé au MVP pour son PROCHAIN match réellement joué
 // (voir Player.pendingMatchBoost/eff()) : +2 sur chaque caractéristique lue
 // en match, un supplément volontairement modeste (à titre de comparaison,
@@ -1884,6 +1905,58 @@ function conditionLossForMinutes(minutesPlayed) {
   return Math.round(loss);
 }
 
+// Blessures : durée d'indisponibilité RÉELLE et PERSISTANTE (retour
+// utilisateur, 2026-09 : "en passant sur la croix on verra la blessure et
+// la durée"), contrairement à Player.injured (indicateur transitoire,
+// remis à false à CHAQUE match, voir Player.resetForMatch/MatchEngine.
+// applyFatigue, sert seulement à sortir le joueur du match EN COURS), ces
+// deux champs (Player.injuryType/injuryUntil) survivent d'un match à
+// l'autre, en jours RÉELS (même logique que CONDITION_DAY_MS ci-dessus :
+// le temps qui passe pour le manager, pas le rythme du calendrier de
+// championnat), et empêchent le joueur d'être aligné tant qu'ils ne sont
+// pas écoulés (voir isCurrentlyInjured/Player.matchInjuryLocked/
+// Team.resetForMatch/Team.backupsForSlot plus bas).
+//
+// Le TYPE (weightedPick) est tiré vers les blessures légères : la grande
+// majorité restent mineures (quelques jours), une minorité seulement
+// immobilise pour plusieurs semaines, à l'image d'un vrai championnat -
+// jamais l'inverse, dans le même esprit que BASE_INJURY_RATE plus haut
+// (rester rare et, ici, rarement grave).
+const INJURY_TYPES = [
+  { label: "Contusion",             minDays: 2,  maxDays: 5,  weight: 40 },
+  { label: "Entorse à la cheville", minDays: 5,  maxDays: 12, weight: 30 },
+  { label: "Blessure musculaire",   minDays: 8,  maxDays: 18, weight: 20 },
+  { label: "Blessure au genou",     minDays: 15, maxDays: 35, weight: 10 },
+];
+
+// Tire un type de blessure et sa durée (voir INJURY_TYPES ci-dessus),
+// appelé UNE SEULE FOIS au moment où une blessure survient (voir
+// MatchEngine.applyFatigue) — jamais recalculé ensuite, la durée reste
+// fixe jusqu'à son terme (injuryUntil).
+function rollInjury(now = Date.now()) {
+  const type = weightedPick(INJURY_TYPES, t => t.weight);
+  const days = Math.round(rand(type.minDays, type.maxDays));
+  return { injuryType: type.label, injuryUntil: now + days * CONDITION_DAY_MS };
+}
+
+// Le joueur est-il ENCORE indisponible à cause d'une blessure persistante
+// (voir rollInjury ci-dessus) ? Fonction PURE, même principe que
+// currentCondition plus haut : ne modifie rien, recalculée à la demande à
+// partir de injuryUntil plutôt que d'un compteur décrémenté en continu.
+function isCurrentlyInjured(player, now = Date.now()) {
+  return typeof player.injuryUntil === "number" && now < player.injuryUntil;
+}
+
+// Nombre de jours ENCORE à courir avant la fin de la blessure (arrondi au
+// jour supérieur : un joueur blessé "aujourd'hui" pour 3 jours doit encore
+// afficher "3 jours" et non "2", tant qu'il reste ne serait-ce qu'une
+// fraction du dernier jour) — utilisé par l'infobulle de la croix rouge
+// (voir renderEffectifSection). 0 si le joueur n'est pas/plus blessé.
+function injuryDaysRemaining(player, now = Date.now()) {
+  if (!isCurrentlyInjured(player, now)) return 0;
+  return Math.ceil((player.injuryUntil - now) / CONDITION_DAY_MS);
+}
+
 // État affiché pour Player.form (voir son commentaire au constructeur juste
 // en dessous, retour utilisateur, 2026-09 : "La motivation du joueur n'
 // apparaît pas ?") : mêmes seuils que moraleLabel/chemistryLabel plus haut
@@ -1920,6 +1993,14 @@ class Player {
     // départ pour la récupération (voir currentCondition).
     this.condition = clamp(Math.round(rand(80, 100)), 0, 100);
     this.conditionUpdatedAt = Date.now();
+
+    // Blessure PERSISTANTE en cours, le cas échéant (voir INJURY_TYPES/
+    // rollInjury/isCurrentlyInjured plus haut) : `null` = pas blessé. Un
+    // joueur qui rejoint l'effectif n'a par définition aucune blessure en
+    // cours. Contrairement à `injured` (état de match ci-dessous, remis à
+    // false à CHAQUE match), ces deux champs survivent d'un match à l'autre.
+    this.injuryType = null;
+    this.injuryUntil = null;
 
     // Bonus temporaire de MVP (retour utilisateur, 2026-09 : "le mvp d'un
     // match doit avoir un petit bonus pour le match [...] +2 sur toutes ses
@@ -1967,6 +2048,12 @@ class Player {
     this.disqualified = false;
     this.injured = false;
     this.onCourt = false;
+    // Blessure PERSISTANTE encore en cours à l'entrée de CE match (voir
+    // isCurrentlyInjured/injuryUntil plus haut) : snapshot pris UNE FOIS au
+    // coup d'envoi (comme matchCondition), jamais recalculé pendant le match
+    // — Team.resetForMatch s'en sert pour ne PAS aligner ce joueur (voir son
+    // commentaire), et Team.backupsForSlot pour l'exclure du banc disponible.
+    this.matchInjuryLocked = false;
     // Série de ratés/pertes de balle d'affilée EN MATCH (voir "mental" au-dessus
     // d'ATTRS) : incrémentée sur un tir manqué ou une perte de balle, remise à
     // 0 sur un tir réussi (voir playPossession) - alimente le malus de "tilt"
@@ -2129,6 +2216,11 @@ class Player {
     this.disqualified = false;
     this.injured = false;
     this.onCourt = false;
+    // Blessure PERSISTANTE (voir son commentaire au constructeur, et
+    // isCurrentlyInjured plus haut) : snapshot pris ICI, une fois par match,
+    // à partir de injuryUntil (qui, lui, n'est jamais remis à zéro ici -
+    // seule l'échéance du temps réel qui passe le fait expirer).
+    this.matchInjuryLocked = isCurrentlyInjured(this, now);
     this.consecutiveMisses = 0;
     this.matchPosition = null;
     this.secondsPlayed = 0;
@@ -4127,7 +4219,20 @@ class Team {
     });
     POSITIONS.forEach(pos => {
       const id = this.lineup.starters[pos];
-      const p = id && this.players.find(x => x.id === id);
+      let p = id && this.players.find(x => x.id === id);
+      // Blessure PERSISTANTE encore en cours à l'entrée du match (voir
+      // Player.matchInjuryLocked, posé juste au-dessus par p.resetForMatch) :
+      // le titulaire désigné ne peut pas être aligné. On essaie
+      // automatiquement le remplaçant désigné pour CE poste, exactement
+      // comme s'il se blessait à la mise en jeu (même filet que le
+      // "mustLeave" en cours de match, voir backupsForSlot ci-dessous et
+      // MatchEngine.substituteIfNeeded plus bas) — jamais de forfait pour
+      // cette seule raison tant qu'un remplaçant existe ; sinon (banc
+      // épuisé), le poste reste vacant et l'équipe joue en infériorité,
+      // comme une sortie en cours de match sans remplaçant disponible.
+      if (p && p.matchInjuryLocked) {
+        p = this.backupsForSlot(pos)[0] || null;
+      }
       if (p) { p.onCourt = true; p.matchPosition = pos; }
     });
   }
@@ -4140,11 +4245,14 @@ class Team {
   // occupait dans ce match — voir p.matchPosition), triés du plus frais au
   // plus fatigué. Un même joueur peut apparaître comme remplaçant pour
   // plusieurs postes ; une fois entré sur le terrain (onCourt=true) il n'est
-  // plus disponible pour les autres postes qu'il couvre aussi.
+  // plus disponible pour les autres postes qu'il couvre aussi. `matchInjuryLocked`
+  // (voir son commentaire plus haut) exclut aussi un remplaçant encore sous
+  // le coup d'une blessure persistante, pas seulement `injured` (transitoire,
+  // blessé PENDANT ce match précis).
   backupsForSlot(pos) {
     return this.players.filter(p =>
       (this.lineup.backupPositions[p.id] || []).includes(pos) &&
-      !p.onCourt && !p.disqualified && !p.injured
+      !p.onCourt && !p.disqualified && !p.injured && !p.matchInjuryLocked
     ).sort((a, b) => a.fatigue - b.fatigue);
   }
 
@@ -6622,6 +6730,13 @@ function serializePlayerRecord(p) {
     // trop, au prochain chargement (calculée depuis "maintenant" au lieu du
     // dernier vrai point de mise à jour).
     condition: p.condition, conditionUpdatedAt: p.conditionUpdatedAt,
+    // Blessure PERSISTANTE (voir INJURY_TYPES/rollInjury/isCurrentlyInjured
+    // plus haut) : DOIT survivre au rechargement, sinon un simple
+    // redémarrage suffirait à "guérir" instantanément un joueur, contraire
+    // au principe même d'une indisponibilité qui dure plusieurs jours
+    // réels. `null` par défaut (pas blessé) — jamais omis, contrairement à
+    // `injured` (état de match transitoire, jamais sérialisé).
+    injuryType: p.injuryType ?? null, injuryUntil: p.injuryUntil ?? null,
     forSale: p.forSale, salePrice: p.salePrice,
     // Temps de jeu du DERNIER match, ventilé par poste (voir
     // Player.secondsPlayedByPosition) : sans ces deux champs, un
@@ -6898,6 +7013,12 @@ function playerFromSave(pdata) {
   // même principe que les autres champs manquants ci-dessous.
   if (typeof pdata.condition === "number") p.condition = pdata.condition;
   if (typeof pdata.conditionUpdatedAt === "number") p.conditionUpdatedAt = pdata.conditionUpdatedAt;
+  // Blessure PERSISTANTE (voir serializePlayerRecord ci-dessus). Absent
+  // (ancienne sauvegarde d'avant cette fonctionnalité) : on garde `null`
+  // déjà posé par le constructeur (joueur pas blessé), même principe que
+  // les autres champs manquants ci-dessous.
+  if (typeof pdata.injuryType === "string") p.injuryType = pdata.injuryType;
+  if (typeof pdata.injuryUntil === "number") p.injuryUntil = pdata.injuryUntil;
   if (pdata.id) p.id = pdata.id;
   // Temps de jeu du dernier match (voir serializePlayerRecord ci-dessus pour
   // pourquoi c'est indispensable, matchLog/box-score).
@@ -7834,6 +7955,15 @@ class MatchEngine {
         if (Math.random() < injuryChance) {
           p.injured = true;
           p.onCourt = false;
+          // Tire le type et la durée RÉELLE d'indisponibilité (voir
+          // INJURY_TYPES/rollInjury plus haut) : PERSISTANT, contrairement à
+          // `injured` juste au-dessus (remis à false au prochain match).
+          // `this.matchNow` posé par simulate() ci-dessus ; repli sur
+          // Date.now() dans le cas (jamais rencontré en pratique) où
+          // applyFatigue serait appelée hors de simulate().
+          const rolled = rollInjury(this.matchNow ?? Date.now());
+          p.injuryType = rolled.injuryType;
+          p.injuryUntil = rolled.injuryUntil;
           this.log(events, quarter, clock, say(PHRASES.injury, { player: p.name, team: team.name }), { type: "injury", team: this.teamKey(team) });
         }
       }
@@ -7847,6 +7977,12 @@ class MatchEngine {
   }
 
   simulate(now = Date.now()) {
+    // Conservé sur l'instance (plutôt que reponduit dans la signature de
+    // chaque méthode appelée depuis ici) : quelques mécanismes ponctuels ont
+    // besoin de "maintenant" en dehors de resetForMatch (voir rollInjury
+    // dans applyFatigue plus bas) sans pour autant vouloir threader `now` à
+    // travers toute la chaîne d'appels existante.
+    this.matchNow = now;
     this.teamA.resetForMatch(now);
     this.teamB.resetForMatch(now);
     const events = [];
@@ -8024,12 +8160,14 @@ return {
   MILESTONE_INTERVIEW_TYPES, MILESTONE_INTERVIEW_TONES, MILESTONE_INTERVIEW_QUOTES,
   MILESTONE_INTERVIEW_QUESTIONS, interviewTranscriptFor,
   MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS, midSeasonRound, milestoneTypeForRound,
-  statEvaluation, MVP_ATTR_BONUS, MVP_QUOTES,
+  statEvaluation, PIR_TIER_THRESHOLDS, PIR_TIER_COLORS, pirTier, MVP_ATTR_BONUS, MVP_QUOTES,
   TOUR_REWARD_BY_TOPIC,
   MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars,
   // Forme physique (voir le grand commentaire au-dessus de CONDITION_STATES) :
   CONDITION_STATES, conditionStateFor, currentCondition, conditionLossForMinutes,
   CONDITION_DAY_MS, CONDITION_RECOVERY_PER_DAY,
+  // Blessures persistantes (voir le grand commentaire au-dessus d'INJURY_TYPES) :
+  INJURY_TYPES, rollInjury, isCurrentlyInjured, injuryDaysRemaining,
   // Motivation du joueur (voir le commentaire de motivationLabel au-dessus
   // de "class Player") :
   motivationLabel,
