@@ -7,15 +7,26 @@
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, writeRawSave, fastForwardCalendar } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+// ATTRS repris directement d'engine.js (13 caractéristiques désormais, voir
+// le grand commentaire au-dessus d'ATTRS dans engine.js) plutôt que dupliqué
+// en dur ici : la simulation de l'écart de niveau (INFLATE ci-dessous) et sa
+// mesure (avgOverall) doivent porter sur EXACTEMENT le même ensemble de
+// caractéristiques que Player.overall()/Team.trainWeekCPU en interne, sinon
+// ce test mesurerait un écart "à 10 caractéristiques" alors que le rattrapage
+// CPU référence désormais un overallGap à 13 caractéristiques (dilué par
+// Mental/Endurance/Lancer franc, non liés à un poste donc non spécifiquement
+// boostés par l'inflation ci-dessous) — écart de mesure qui ferait
+// artificiellement échouer ce test sans aucune régression réelle du
+// rattrapage.
+const { ATTRS } = require("./engine.js");
 
 function avgOverall(teamData) {
   return teamData.players.reduce((s, p) => {
     const a = p.attrs;
-    return s + (a.midRange + a.threePoint + a.inside + a.pass + a.rebound + a.block + a.dribble + a.agility + a.defOutside + a.defInside) / 10;
+    return s + ATTRS.reduce((sum, k) => sum + a[k], 0) / ATTRS.length;
   }, 0) / teamData.players.length;
 }
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-const ATTRS = ["midRange", "threePoint", "inside", "pass", "rebound", "block", "dribble", "agility", "defOutside", "defInside"];
 
 (async () => {
 

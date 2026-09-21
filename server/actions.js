@@ -796,6 +796,36 @@ function setTeamJerseyTwoTone(team, teamIndex, league, body, now) {
   return { ok: true, jerseyTwoTone: team.jerseyTwoTone };
 }
 
+// Maillot extérieur (retour utilisateur, 2026-09 : "sur les maillots, il y
+// a un problème, c'est qu'on ne peut choisir que les maillots domiciles, il
+// faudrait changer ça" puis "Travaille sur les maillots extérieurs
+// également") : même patron que setTeamJersey/setTeamJerseyPattern/
+// setTeamJerseyTwoTone ci-dessus, sur Team.setAwayJerseyColor/
+// setAwayJerseyPattern/setAwayJerseyTwoTone (validation de fond côté
+// engine.js). Pas de forme séparée : le maillot extérieur partage
+// Team.jerseyShape avec le maillot domicile (un club n'a qu'une seule coupe
+// de maillot).
+function setTeamAwayJersey(team, teamIndex, league, body, now) {
+  if (!body || typeof body.color !== "string") return fail("'color' est requis.");
+  const result = team.setAwayJerseyColor(body.color);
+  if (!result.ok) return fail(result.error);
+  return { ok: true, awayJerseyColor: team.awayJerseyColor };
+}
+
+function setTeamAwayJerseyPattern(team, teamIndex, league, body, now) {
+  if (!body || typeof body.pattern !== "string") return fail("'pattern' est requis.");
+  const result = team.setAwayJerseyPattern(body.pattern);
+  if (!result.ok) return fail(result.error);
+  return { ok: true, awayJerseyPattern: team.awayJerseyPattern };
+}
+
+function setTeamAwayJerseyTwoTone(team, teamIndex, league, body, now) {
+  if (!body || typeof body.key !== "string") return fail("'key' est requis.");
+  const result = team.setAwayJerseyTwoTone(body.key);
+  if (!result.ok) return fail(result.error);
+  return { ok: true, awayJerseyTwoTone: team.awayJerseyTwoTone };
+}
+
 function setTeamLogo(team, teamIndex, league, body, now) {
   if (!body || !("dataUrl" in body)) return fail("'dataUrl' requis (ou null pour retirer le logo personnalisé).");
   const result = team.setCustomLogo(body.dataUrl === null ? null : body.dataUrl);
@@ -878,7 +908,9 @@ module.exports = {
   // Médias : interviews d'après-match (voir Team.pendingInterviews côté
   // moteur) :
   respondToInterview, skipInterview,
-  setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone, setTeamLogo, setTeamPaying,
+  setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
+  setTeamAwayJersey, setTeamAwayJerseyPattern, setTeamAwayJerseyTwoTone,
+  setTeamLogo, setTeamPaying,
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/
   // claimTutorialReward) :
   setOnboardingTourCompleted, claimTutorialReward,

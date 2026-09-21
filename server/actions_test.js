@@ -963,6 +963,81 @@ function freshTeamAndLeague() {
 }
 
 // ---------------------------------------------------------------------
+// setTeamAwayJersey / setTeamAwayJerseyPattern / setTeamAwayJerseyTwoTone :
+// maillot EXTÉRIEUR (retour utilisateur, 2026-09 : "sur les maillots, il y
+// a un problème, c'est qu'on ne peut choisir que les maillots domiciles, il
+// faudrait changer ça" puis "Travaille sur les maillots extérieurs
+// également") : même comportement/mêmes garde-fous que setTeamJersey/
+// setTeamJerseyPattern/setTeamJerseyTwoTone ci-dessus, sur des champs
+// indépendants (Team.awayJerseyColor/awayJerseyPattern/awayJerseyTwoTone).
+// ---------------------------------------------------------------------
+{
+  const { team, league } = freshTeamAndLeague();
+
+  // Couleur par défaut à la création : contraste avec la couleur domicile
+  // (voir defaultAwayJerseyColor, engine.js), jamais la même couleur.
+  if (team.awayJerseyColor === team.jerseyColor) {
+    throw new Error("❌ La couleur de maillot extérieur par défaut ne devrait jamais être identique à la couleur domicile.");
+  }
+  console.log(`✅ Couleur de maillot extérieur par défaut (${team.awayJerseyColor}) distincte de la couleur domicile (${team.jerseyColor}).`);
+
+  // La forme (jerseyShape) reste PARTAGÉE avec le maillot domicile, pas de
+  // champ awayJerseyShape séparé.
+  const shapeRes = actions.setTeamJersey(team, 0, league, { shape: E.JERSEY_SHAPES[1], color: team.jerseyColor }, T0);
+  if (!shapeRes.ok || team.jerseyShape !== E.JERSEY_SHAPES[1]) throw new Error("❌ (setup) setTeamJersey devrait appliquer la nouvelle forme.");
+  console.log("✅ Le maillot extérieur n'a pas de forme propre : jerseyShape reste bien partagé.");
+
+  const someAwayColor = Object.keys(E.JERSEY_COLORS)[3];
+  const awayJerseyRes = actions.setTeamAwayJersey(team, 0, league, { color: someAwayColor }, T0);
+  if (!awayJerseyRes.ok || team.awayJerseyColor !== someAwayColor) throw new Error(`❌ setTeamAwayJersey devrait appliquer une couleur valide : ${JSON.stringify(awayJerseyRes)}`);
+  console.log("✅ setTeamAwayJersey applique une couleur valide.");
+
+  const badAwayColor = actions.setTeamAwayJersey(team, 0, league, { color: "fluo" }, T0);
+  if (badAwayColor.ok) throw new Error("❌ setTeamAwayJersey devrait rejeter une couleur inconnue.");
+  console.log("✅ setTeamAwayJersey rejette une couleur inconnue.");
+
+  const awayPatternRejected = actions.setTeamAwayJerseyPattern(team, 0, league, { pattern: "rayures" }, T0);
+  if (awayPatternRejected.ok) throw new Error("❌ setTeamAwayJerseyPattern devrait refuser un motif personnalisé pour un club gratuit.");
+  console.log("✅ setTeamAwayJerseyPattern refuse un motif personnalisé pour un club gratuit.");
+
+  const awayUniAllowedWhileFree = actions.setTeamAwayJerseyPattern(team, 0, league, { pattern: "uni" }, T0);
+  if (!awayUniAllowedWhileFree.ok) throw new Error("❌ setTeamAwayJerseyPattern devrait toujours accepter \"uni\", même pour un club gratuit.");
+  console.log("✅ setTeamAwayJerseyPattern accepte toujours \"uni\", même pour un club gratuit.");
+
+  actions.setTeamPaying(team, 0, league, { isPaying: true }, T0);
+  const awayPatternAccepted = actions.setTeamAwayJerseyPattern(team, 0, league, { pattern: "bandes" }, T0);
+  if (!awayPatternAccepted.ok || team.awayJerseyPattern !== "bandes") throw new Error(`❌ setTeamAwayJerseyPattern devrait accepter un motif personnalisé pour un club payant : ${JSON.stringify(awayPatternAccepted)}`);
+  console.log("✅ setTeamAwayJerseyPattern accepte un motif personnalisé pour un club payant.");
+
+  const badAwayPattern = actions.setTeamAwayJerseyPattern(team, 0, league, { pattern: "carreaux" }, T0);
+  if (badAwayPattern.ok) throw new Error("❌ setTeamAwayJerseyPattern devrait rejeter un motif inconnu.");
+  console.log("✅ setTeamAwayJerseyPattern rejette un motif inconnu.");
+
+  const someAwayTwoTone = Object.keys(E.JERSEY_TWO_TONE_SETS)[2];
+  const awayTwoToneAccepted = actions.setTeamAwayJerseyTwoTone(team, 0, league, { key: someAwayTwoTone }, T0);
+  if (!awayTwoToneAccepted.ok || team.awayJerseyTwoTone !== someAwayTwoTone) throw new Error(`❌ setTeamAwayJerseyTwoTone devrait accepter une combinaison valide pour un club payant : ${JSON.stringify(awayTwoToneAccepted)}`);
+  console.log("✅ setTeamAwayJerseyTwoTone accepte une combinaison de couleurs pour un club payant.");
+
+  const badAwayTwoTone = actions.setTeamAwayJerseyTwoTone(team, 0, league, { key: "arc-en-ciel" }, T0);
+  if (badAwayTwoTone.ok) throw new Error("❌ setTeamAwayJerseyTwoTone devrait rejeter une combinaison inconnue.");
+  console.log("✅ setTeamAwayJerseyTwoTone rejette une combinaison de couleurs inconnue.");
+
+  // Repasser en gratuit ne doit PAS effacer le motif/la combinaison du
+  // maillot extérieur, même principe que le maillot domicile.
+  actions.setTeamPaying(team, 0, league, { isPaying: false }, T0);
+  if (team.awayJerseyPattern !== "bandes") throw new Error("❌ Repasser en club gratuit ne devrait pas effacer awayJerseyPattern (conservé pour une réactivation future).");
+  if (team.awayJerseyTwoTone !== someAwayTwoTone) throw new Error("❌ Repasser en club gratuit ne devrait pas effacer awayJerseyTwoTone (conservé pour une réactivation future).");
+  console.log("✅ Repasser en club gratuit conserve le motif/la combinaison du maillot extérieur déjà choisis (juste ignorés au rendu).");
+
+  // Le maillot domicile reste totalement indépendant du maillot extérieur
+  // tout du long (aucune des actions ci-dessus n'a dû y toucher).
+  if (team.jerseyColor === undefined || team.jerseyColor === someAwayColor) {
+    throw new Error("❌ Modifier le maillot extérieur ne devrait jamais affecter jerseyColor (maillot domicile).");
+  }
+  console.log("✅ Le maillot domicile reste indépendant du maillot extérieur.");
+}
+
+// ---------------------------------------------------------------------
 // teamIndex non nul (multi-manager) — mêmes six nouvelles actions
 // (recruteur, Centre de formation, académie de jeunes) exercées sur
 // teamIndex=1, même vérification d'isolement que le reste du fichier.

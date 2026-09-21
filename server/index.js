@@ -476,6 +476,12 @@ const ACTION_ROUTES = {
   "/api/club/set-jersey": actions.setTeamJersey,
   "/api/club/set-jersey-pattern": actions.setTeamJerseyPattern,
   "/api/club/set-jersey-two-tone": actions.setTeamJerseyTwoTone,
+  // Maillot extérieur (voir actions.js, miroir identique des routes
+  // domicile ci-dessus, retour utilisateur, 2026-09 : "Travaille sur les
+  // maillots extérieurs également").
+  "/api/club/set-away-jersey": actions.setTeamAwayJersey,
+  "/api/club/set-away-jersey-pattern": actions.setTeamAwayJerseyPattern,
+  "/api/club/set-away-jersey-two-tone": actions.setTeamAwayJerseyTwoTone,
   "/api/club/set-logo": actions.setTeamLogo,
   "/api/club/set-paying": actions.setTeamPaying,
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/

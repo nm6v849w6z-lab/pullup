@@ -323,6 +323,10 @@
   .jersey-twotone-picker{display:flex; gap:10px; flex-wrap:wrap;}
   .jersey-twotone-swatch{width:30px; height:30px; border-radius:50%; border:2px solid var(--line); cursor:pointer;}
   .jersey-twotone-swatch.active{border-color:var(--ink);}
+  /* Maillot extérieur (retour utilisateur, 2026-09 : "Travaille sur les
+     maillots extérieurs également") : même rangée que le maillot domicile
+     ci-dessus (.club-identity-grid), juste un peu d'espace au-dessus. */
+  .club-identity-grid-away{margin-top:24px;}
   .club-paying-row{margin-top:16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
   .club-paying-note{color:var(--ink-faint); font-size:11px;}
 
@@ -543,6 +547,27 @@
   .forsale-badge{display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; font-size:10.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; background:rgba(226,105,79,.18); color:var(--danger); vertical-align:middle;}
   .sell-btn{margin-left:8px; padding:2px 9px; font-size:11px; border-radius:999px; border:1px solid var(--danger); background:transparent; color:var(--danger); cursor:pointer;}
   .market-price-input{width:100px; padding:3px 6px; border-radius:6px; border:1px solid var(--panel-2); background:var(--panel); color:inherit; font-size:12.5px;}
+  /* Forme physique (voir CONDITION_STATES/conditionBadgeHtml) : un badge par
+     état affiché, jamais le chiffre exact (retour utilisateur : "la valeur
+     réelle reste précise, mais l'interface affiche l'état correspondant").
+     Mêmes teintes que le reste (--ok/--amber/--danger), pas de dégradé
+     spécifique inventé pour l'occasion. */
+  .condition-badge{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.02em; white-space:nowrap;}
+  .condition-badge.cond-great{background:rgba(63,174,98,.16); color:var(--ok);}
+  .condition-badge.cond-good{background:rgba(63,174,98,.10); color:var(--ok);}
+  .condition-badge.cond-mid{background:rgba(224,168,74,.18); color:var(--amber-ink,#8a5a00);}
+  .condition-badge.cond-low{background:rgba(226,105,79,.14); color:var(--danger);}
+  .condition-badge.cond-critical{background:rgba(226,105,79,.24); color:var(--danger); font-weight:800;}
+  /* Motivation du joueur (Player.form, voir motivationBadgeHtml) : même
+     habillage que .condition-badge ci-dessus (même langage visuel), sur la
+     fiche joueur uniquement (retour utilisateur, 2026-09 : "La motivation du
+     joueur n'apparaît pas ?"). */
+  .motivation-badge{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.02em; white-space:nowrap;}
+  .motivation-badge.motiv-great{background:rgba(63,174,98,.16); color:var(--ok);}
+  .motivation-badge.motiv-good{background:rgba(63,174,98,.10); color:var(--ok);}
+  .motivation-badge.motiv-mid{background:rgba(224,168,74,.18); color:var(--amber-ink,#8a5a00);}
+  .motivation-badge.motiv-low{background:rgba(226,105,79,.14); color:var(--danger);}
+  .motivation-badge.motiv-critical{background:rgba(226,105,79,.24); color:var(--danger); font-weight:800;}
   /* Badge "Aux enchères" de la colonne Marché (onglet Effectif, voir
      renderEffectifSection) : padding vertical calqué sur button.secondary
      (12px 18px, voir plus haut) plutôt que sur .forsale-badge (1px 7px,
@@ -2023,9 +2048,17 @@
         <h3>Effectif &amp; feuille de match</h3>
         <p class="training-intro">Caractéristiques de tous les joueurs du club (0 à 99), et colonne <b>Marché</b> pour mettre un joueur aux enchères au prix de votre choix (voir l'onglet <b>Marché</b> pour suivre les enchères en cours, les vôtres et celles des adversaires). Pour composer la feuille de match et donner les ordres avant le prochain match, direction l'onglet <b>Ordres</b>.</p>
         <p class="training-intro" style="margin-top:10px;">Les salaires (masse salariale visible sur l'onglet <b>Économie</b>) sont recalculés au début de chaque nouvelle saison, d'après le niveau de chaque joueur AU POSTE où ses caractéristiques le valorisent le mieux. Vous pouvez vendre l'intégralité de votre effectif si vous le souhaitez, mais un match sans assez de joueurs pour composer un cinq de départ est perdu par forfait (20-0).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>10 caractéristiques (0 à 99)</b> : Tir à mi-distance, Tir à 3 points, Jeu intérieur, Passe, Rebond, Contre, Dribble, Agilité, Défense extérieure, Défense intérieure. Sur chacune, plus le chiffre est élevé, mieux c'est, sans exception. La petite barre colorée sous chaque valeur donne le niveau en un coup d'œil (gris en dessous de 45, jaune de 45 à 64, vert de 65 à 79, violet à partir de 80), et cliquer sur l'en-tête d'une colonne trie tout l'effectif dessus, pratique pour comparer par exemple tous vos meneurs sur la Passe.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Quelles caractéristiques comptent selon le poste</b> : Meneur (Passe, Dribble, Agilité), Arrière (Tir à 3 points, Tir à mi-distance), Ailier shooteur (Tir à 3 points, Défense extérieure), Ailier fort (Jeu intérieur, Rebond, Défense intérieure), Pivot (Jeu intérieur, Rebond, Contre, Défense intérieure). Pour juger si un joueur est bon À SON POSTE, comparez-le aux autres sur CES caractéristiques-là plutôt que sur l'ensemble des dix. Sur la feuille de match (onglet <b>Ordres</b>), chaque joueur proposé comme remplaçant apparaît aussi avec un niveau global entre parenthèses (moyenne simple des dix caractéristiques), pratique pour trancher vite entre deux joueurs au même poste.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>13 caractéristiques (0 à 99)</b> : Tir à mi-distance, Tir à 3 points, Jeu intérieur, Passe, Rebond, Contre, Dribble, Agilité, Défense extérieure, Défense intérieure, Mental, Endurance et Lancer franc. Sur chacune, plus le chiffre est élevé, mieux c'est, sans exception. La petite barre colorée sous chaque valeur donne le niveau en un coup d'œil (gris en dessous de 45, jaune de 45 à 64, vert de 65 à 79, violet à partir de 80), et cliquer sur l'en-tête d'une colonne trie tout l'effectif dessus, pratique pour comparer par exemple tous vos meneurs sur la Passe.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Quelles caractéristiques comptent selon le poste</b> : Meneur (Passe, Dribble, Agilité), Arrière (Tir à 3 points, Tir à mi-distance), Ailier shooteur (Tir à 3 points, Défense extérieure), Ailier fort (Jeu intérieur, Rebond, Défense intérieure), Pivot (Jeu intérieur, Rebond, Contre, Défense intérieure). Mental, Endurance et Lancer franc ne sont liées à aucun poste en particulier : ce sont des qualités générales, aussi utiles à un Meneur qu'à un Pivot. Pour juger si un joueur est bon À SON POSTE, comparez-le aux autres sur les caractéristiques propres à ce poste plutôt que sur l'ensemble des treize. Sur la feuille de match (onglet <b>Ordres</b>), chaque joueur proposé comme remplaçant apparaît aussi avec un niveau global entre parenthèses (moyenne simple des treize caractéristiques), pratique pour trancher vite entre deux joueurs au même poste.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Mental, Endurance et Lancer franc</b> : en plus de compter dans le niveau global comme les 10 autres, chacune alimente un mécanisme de match dédié. Le <b>Mental</b> améliore (ou dégrade) la réussite au tir dans le money time (dernières minutes d'un match serré), et limite les dégâts d'une mauvaise série de tirs manqués ou de pertes de balle consécutives, un Mental élevé permettant d'encaisser une série sans s'enfoncer. L'<b>Endurance</b> ralentit l'accumulation de fatigue EN MATCH propre à ce joueur, comme un Espace bien-être personnel (voir <b>Salle</b>). Le <b>Lancer franc</b> détermine directement la réussite aux lancers francs, indépendamment du tir à mi-distance.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Potentiel</b> : un nom de palier (10 paliers, de Débutant à Générationnel), jamais le chiffre exact. Il indique la marge de progression ENCORE POSSIBLE au-dessus du niveau actuel du joueur, pas sa qualité du moment : un jeune joueur encore faible mais à fort potentiel peut, bien entraîné (onglet <b>Entraînement</b>), dépasser largement un joueur déjà bon mais dont le potentiel est presque atteint. Survolez le nom du palier pour voir son rang exact (1 à 10).</p>
+      </div>
+
+      <div class="guide-entry">
+        <h3>Forme physique, motivation et blessures</h3>
+        <p class="training-intro"><b>Forme physique</b> (colonne <b>Forme</b> de l'Effectif, et sur chaque fiche joueur) : un état sur 5 paliers, du plus frais au plus fatigué : Pas de fatigue (90-100, aucun malus), Légèrement fatigué (75-89, malus quasi nul), Fatigué (60-74, petit malus), Très fatigué (40-59, gros malus) et Épuisé (0-39, gros malus et risque de blessure nettement accru). Elle baisse après chaque match selon le temps de jeu (environ -3 pour 5 minutes jouées, jusqu'à environ -25 pour 40 minutes) et remonte de 15 points par jour de repos sans match, plafonnée à 100. Totalement indépendante de l'entraînement : s'entraîner ne la fait pas baisser, et une forme basse ne bloque aucune séance.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Motivation</b> (fiche joueur, votre effectif uniquement) : la confiance du joueur, alimentée par vos interviews d'après-match (onglet <b>Humeur des supporters</b>) plutôt que par la fatigue. Un ton Agressif en interview rapporte gros en cas de victoire mais coûte cher en cas de défaite ; un ton Humble rapporte moins mais amortit mieux les défaites.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Blessures</b> : rares (l'écrasante majorité des matchs se jouent sans aucune blessure), mais nettement plus probables pour un joueur fatigué ou en petite forme physique qu'un joueur frais. Un joueur blessé quitte immédiatement le terrain pour le reste du match en cours ; la Salle de musculation (onglet <b>Salle</b>) réduit ce risque à mesure qu'elle est agrandie.</p>
       </div>
 
       <div class="guide-entry">
@@ -2118,9 +2151,26 @@
 
 const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
 
+// 3 caractéristiques ajoutées (retour utilisateur, 2026-09 : "il faudrait
+// ajouter les lignes de carac suivantes : Mental [...] Endurance [...]
+// Lancer Franc") : mêmes citoyens à part entière que les 10 d'origine
+// (comptent dans Player.overall()/le potentiel/le salaire, s'entraînent
+// normalement, POSITION_ATTR_PROFILE plus bas les traite en "base" pour
+// tous les postes faute de biais réel), mais chacune alimente en plus un
+// mécanisme de match dédié plutôt qu'un simple malus/bonus générique :
+// - "mental" : fin de match serrée (voir le bonus clutch dans
+//   MatchEngine, autour de "clutch" dans playPossession) ET capacité à
+//   encaisser une série de ratés/pertes de balle sans s'enfoncer (voir
+//   Player.consecutiveMisses/le malus de "tilt" dans playPossession).
+// - "endurance" : vitesse d'accumulation de la fatigue EN MATCH pour CE
+//   joueur (voir enduranceMult dans MatchEngine.applyFatigue), version
+//   individuelle de l'effet de l'Espace bien-être du club.
+// - "freeThrow" : réussite aux lancers francs (voir MatchEngine.freeThrows),
+//   qui utilisait jusqu'ici le tir à mi-distance comme simple approximation.
 const ATTRS = [
   "midRange", "threePoint", "inside", "pass", "rebound",
-  "block", "dribble", "agility", "defOutside", "defInside"
+  "block", "dribble", "agility", "defOutside", "defInside",
+  "mental", "endurance", "freeThrow"
 ];
 
 const TRAINING_LABELS = {
@@ -2134,6 +2184,9 @@ const TRAINING_LABELS = {
   agility: "Agilité",
   defOutside: "Défense extérieure",
   defInside: "Défense intérieure",
+  mental: "Mental",
+  endurance: "Endurance",
+  freeThrow: "Lancer franc",
 };
 
 const OFFENSE_PROFILES = {
@@ -3322,10 +3375,12 @@ function milestoneTypeForRound(round, totalRounds) {
   return null;
 }
 
+// Voir engine.js, miroir identique (chemistryWin/chemistryLoss : alchimie
+// d'équipe).
 const MILESTONE_INTERVIEW_TONES = {
-  "Agressif": { fanWin: 7,   fanLoss: -7, formWin: 4, formLoss: -4 },
-  "Mesuré":   { fanWin: 3,   fanLoss: -3, formWin: 2, formLoss: -2 },
-  "Humble":   { fanWin: 1.5, fanLoss: 3,  formWin: 1, formLoss: 2 },
+  "Agressif": { fanWin: 7,   fanLoss: -7, formWin: 4, formLoss: -4, chemistryWin: -1, chemistryLoss: -2 },
+  "Mesuré":   { fanWin: 3,   fanLoss: -3, formWin: 2, formLoss: -2, chemistryWin: 1,  chemistryLoss: 0 },
+  "Humble":   { fanWin: 1.5, fanLoss: 3,  formWin: 1, formLoss: 2,  chemistryWin: 2,  chemistryLoss: 1 },
 };
 
 const MILESTONE_INTERVIEW_QUOTES = {
@@ -3520,6 +3575,19 @@ const JERSEY_COLORS = {
   blanc:  "#f2f2f0",
   jaune:  "#e8c93f",
 };
+// Couleur de maillot extérieur par défaut (voir engine.js pour le
+// commentaire détaillé, miroir identique).
+function jerseyColorLuminance(colorKey) {
+  const hex = JERSEY_COLORS[colorKey];
+  if (!hex) return 0;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+function defaultAwayJerseyColor(homeColorKey) {
+  return jerseyColorLuminance(homeColorKey) > 0.6 ? "noir" : "blanc";
+}
 const JERSEY_SHAPES = ["A", "B"];
 // Motifs de maillot réservés aux clubs payants (voir engine.js pour le
 // commentaire détaillé, retour utilisateur : "Pour le mode payant ajoute
@@ -3651,6 +3719,44 @@ function salaryForOverall(overall) {
   return Math.max(SALARY_MIN, Math.round(raw));
 }
 
+// Forme physique (voir engine.js, miroir identique) : champ séparé de
+// Player.form (confiance/interviews) et de Player.fatigue (énergie EN
+// MATCH, remise à 0 à chaque match) — celle-ci survit d'un match à l'autre,
+// sur plusieurs jours réels.
+const CONDITION_STATES = [
+  { min: 90, label: "Pas de fatigue",     perfFactor: 1.00, injuryMult: 1.0 },
+  { min: 75, label: "Légèrement fatigué", perfFactor: 0.97, injuryMult: 1.05 },
+  { min: 60, label: "Fatigué",            perfFactor: 0.90, injuryMult: 1.20 },
+  { min: 40, label: "Très fatigué",       perfFactor: 0.75, injuryMult: 1.45 },
+  { min: 0,  label: "Épuisé",             perfFactor: 0.55, injuryMult: 1.80 },
+];
+function conditionStateFor(condition) {
+  return CONDITION_STATES.find(s => condition >= s.min) || CONDITION_STATES[CONDITION_STATES.length - 1];
+}
+const CONDITION_DAY_MS = 24 * 60 * 60 * 1000;
+const CONDITION_RECOVERY_PER_DAY = 15;
+function currentCondition(player, now = Date.now()) {
+  const daysRested = Math.floor((now - (player.conditionUpdatedAt || now)) / CONDITION_DAY_MS);
+  if (daysRested <= 0) return player.condition;
+  return clamp(player.condition + daysRested * CONDITION_RECOVERY_PER_DAY, 0, 100);
+}
+function conditionLossForMinutes(minutesPlayed) {
+  if (minutesPlayed <= 0) return 0;
+  const loss = minutesPlayed <= 30
+    ? minutesPlayed * 0.6
+    : 30 * 0.6 + (minutesPlayed - 30) * 0.7;
+  return Math.round(loss);
+}
+
+// Motivation du joueur (voir engine.js, miroir identique).
+function motivationLabel(form) {
+  if (form >= 85) return "Très motivé";
+  if (form >= 65) return "Motivé";
+  if (form >= 45) return "Neutre";
+  if (form >= 25) return "Peu motivé";
+  return "Démotivé";
+}
+
 class Player {
   constructor({ name, position, height, age, attrs, aggressiveness }) {
     this.id = uid();
@@ -3661,6 +3767,10 @@ class Player {
     this.attrs = attrs; // {midRange, threePoint, inside, pass, rebound, block, dribble, agility, defOutside, defInside}
     this.aggressiveness = aggressiveness; // caractéristique cachée 1-100
     this.form = clamp(Math.round(rand(55, 90)), 1, 100);
+
+    // Forme physique (voir engine.js, miroir identique).
+    this.condition = clamp(Math.round(rand(80, 100)), 0, 100);
+    this.conditionUpdatedAt = Date.now();
 
     // Bonus temporaire de MVP (copie côté client, voir Player.pendingMatchBoost
     // côté engine.js pour le commentaire détaillé) : lu par eff() ci-dessous,
@@ -3705,6 +3815,11 @@ class Player {
     this.disqualified = false;
     this.injured = false;
     this.onCourt = false;
+    // Série de ratés/pertes de balle d'affilée EN MATCH (voir "mental" au-dessus
+    // d'ATTRS) : incrémentée sur un tir manqué ou une perte de balle, remise à
+    // 0 sur un tir réussi (voir playPossession) - alimente le malus de "tilt"
+    // qui s'aggrave ou s'atténue selon Player.attrs.mental.
+    this.consecutiveMisses = 0;
     // Poste occupé DANS CE MATCH (peut différer de this.position si le
     // joueur est aligné comme remplaçant sur un autre poste que le sien —
     // voir Team.lineup). Fixé à l'entrée sur le terrain (titulaire ou
@@ -3852,12 +3967,13 @@ class Player {
     };
   }
 
-  resetForMatch() {
+  resetForMatch(now = Date.now()) {
     this.fatigue = 0;
     this.fouls = 0;
     this.disqualified = false;
     this.injured = false;
     this.onCourt = false;
+    this.consecutiveMisses = 0;
     this.matchPosition = null;
     this.secondsPlayed = 0;
     this.secondsPlayedByPosition = {};
@@ -3865,20 +3981,32 @@ class Player {
     // (voir son commentaire au constructeur) : il doit survivre aux DEUX
     // autres matchs du jour, jusqu'à ce que Team.trainWeek le consomme.
     this.stats = this.emptyStats();
+    // Forme physique (voir engine.js, miroir identique).
+    this.matchCondition = currentCondition(this, now);
   }
 
+  // Moyenne des 13 caractéristiques (voir le grand commentaire au-dessus
+  // d'ATTRS) : "mental"/"endurance"/"freeThrow" comptent ici exactement
+  // comme les 10 d'origine, mêmes citoyens à part entière (contrairement à
+  // aggressiveness, caractéristique cachée volontairement EXCLUE d'overall,
+  // voir le constructeur plus haut).
   overall() {
     const a = this.attrs;
     return (a.midRange + a.threePoint + a.inside + a.pass + a.rebound +
-      a.block + a.dribble + a.agility + a.defOutside + a.defInside) / 10;
+      a.block + a.dribble + a.agility + a.defOutside + a.defInside +
+      a.mental + a.endurance + a.freeThrow) / 13;
   }
 
-  // Statistique effective en jeu = (base + bonus MVP éventuel) * forme * fatigue
+  // Statistique effective en jeu = (base + bonus MVP éventuel) * forme * fatigue * forme physique * alchimie d'équipe
   eff(stat) {
     const base = this.attrs[stat] + (this.pendingMatchBoost || 0);
     const formFactor = 0.85 + (this.form / 100) * 0.30;      // 0.85 → 1.15
     const fatigueFactor = 1 - (this.fatigue / 100) * 0.35;   // jusqu'à -35%
-    return clamp(base * formFactor * fatigueFactor, 1, 130);
+    // Forme physique (voir engine.js, miroir identique).
+    const conditionFactor = conditionStateFor(this.matchCondition ?? this.condition).perfFactor;
+    // Alchimie d'équipe (voir engine.js, miroir identique).
+    const chemistryFactor = this.matchChemistryFactor ?? 1;
+    return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor, 1, 130);
   }
 }
 
@@ -3896,6 +4024,27 @@ class Player {
 // Coupe n'ait elle-même de planification à l'avance).
 function planKey(round, competition) {
   return `${competition || "championship"}:${round}`;
+}
+
+// Alchimie d'équipe (voir engine.js, miroir identique pour le grand
+// commentaire complet au-dessus de CHEMISTRY_ROSTER_CHANGE_MAX_RANK).
+const CHEMISTRY_ROSTER_CHANGE_MAX_RANK = 12;
+const CHEMISTRY_ROSTER_CHANGE_BASE = 8;
+const CHEMISTRY_TACTICS_CHANGE_PENALTY = 2;
+function chemistryRosterImportance(rank) {
+  return clamp(1 - (rank - 1) / (CHEMISTRY_ROSTER_CHANGE_MAX_RANK - 1), 0, 1);
+}
+function rosterRankOf(players, playerId) {
+  const sorted = [...players].sort((a, b) => b.overall() - a.overall());
+  const idx = sorted.findIndex(p => p.id === playerId);
+  return idx === -1 ? sorted.length + 1 : idx + 1;
+}
+function chemistryLabel(chemistry) {
+  if (chemistry >= 85) return "Alchimie parfaite";
+  if (chemistry >= 65) return "Bonne cohésion";
+  if (chemistry >= 45) return "Cohésion correcte";
+  if (chemistry >= 25) return "Tensions dans le groupe";
+  return "Vestiaire fracturé";
 }
 
 // ---------------------------------------------------------------------
@@ -4134,6 +4283,10 @@ class Team {
     this.fanMorale = 50;
     this.moraleHistory = [];
 
+    // Alchimie d'équipe (voir engine.js, miroir identique).
+    this.chemistry = 50;
+    this.lastTacticsSnapshotForChemistry = null;
+
     // Interviews en attente (voir engine.js, miroir identique) : alimenté
     // par applyMoraleForResult plus bas, vidé par resolveInterview/
     // skipInterview.
@@ -4151,6 +4304,10 @@ class Team {
     this.jerseyColor = Object.keys(JERSEY_COLORS)[0];
     this.jerseyPattern = JERSEY_PATTERNS[0];
     this.jerseyTwoTone = Object.keys(JERSEY_TWO_TONE_SETS)[0];
+    // Maillot extérieur (voir engine.js, miroir identique).
+    this.awayJerseyColor = defaultAwayJerseyColor(this.jerseyColor);
+    this.awayJerseyPattern = JERSEY_PATTERNS[0];
+    this.awayJerseyTwoTone = Object.keys(JERSEY_TWO_TONE_SETS)[0];
 
     // Fiche club : date de création et trophées (voir engine.js, miroir
     // identique). "renommée" : voir computeClubReputationStars plus haut,
@@ -4267,6 +4424,8 @@ class Team {
     if (!toneCfg) return null;
     const fanDelta = entry.won ? toneCfg.fanWin : toneCfg.fanLoss;
     const formDelta = entry.won ? toneCfg.formWin : toneCfg.formLoss;
+    // Alchimie d'équipe (voir engine.js, miroir identique).
+    const chemistryDelta = entry.won ? toneCfg.chemistryWin : toneCfg.chemistryLoss;
     const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
     const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
     const quotes = interviewTranscriptFor(entry.milestone, tone, entry.won, entry.opponentName);
@@ -4276,8 +4435,34 @@ class Team {
       const p = this.players.find(pl => pl.id === pid);
       if (p) p.form = clamp(Math.round(p.form + formDelta), 1, 100);
     });
+    this.applyChemistryDelta(chemistryDelta);
     this.pendingInterviews.splice(idx, 1);
-    return { ok: true, delta: fanDelta, formDelta, quotes };
+    return { ok: true, delta: fanDelta, formDelta, chemistryDelta, quotes };
+  }
+
+  // Voir engine.js, miroir identique (alchimie d'équipe).
+  applyChemistryDelta(delta) {
+    this.chemistry = clamp(this.chemistry + delta, 0, 100);
+  }
+
+  chemistryFactor() {
+    return 0.94 + (this.chemistry / 100) * 0.12;
+  }
+
+  checkTacticsChemistry() {
+    const current = {
+      offense: [...this.offensivePriorities],
+      defense: this.defense,
+      rhythm: this.rhythm,
+    };
+    const prev = this.lastTacticsSnapshotForChemistry;
+    if (prev) {
+      const changed = prev.defense !== current.defense
+        || prev.rhythm !== current.rhythm
+        || prev.offense.join("|") !== current.offense.join("|");
+      if (changed) this.applyChemistryDelta(-CHEMISTRY_TACTICS_CHANGE_PENALTY);
+    }
+    this.lastTacticsSnapshotForChemistry = current;
   }
 
   // Ignore une interview en attente (voir engine.js, miroir identique).
@@ -4316,6 +4501,34 @@ class Team {
       return { ok: false, error: "Passez en club payant pour choisir une combinaison de couleurs." };
     }
     this.jerseyTwoTone = key;
+    return { ok: true };
+  }
+
+  // Couleur du maillot extérieur (voir engine.js, miroir identique).
+  setAwayJerseyColor(color) {
+    if (!JERSEY_COLORS[color]) return { ok: false, error: "Couleur de maillot inconnue." };
+    this.awayJerseyColor = color;
+    return { ok: true };
+  }
+
+  // Motif du maillot extérieur (voir engine.js, miroir identique).
+  setAwayJerseyPattern(pattern) {
+    if (!JERSEY_PATTERNS.includes(pattern)) return { ok: false, error: "Motif de maillot inconnu." };
+    if (pattern !== JERSEY_PATTERNS[0] && !this.isPaying) {
+      return { ok: false, error: "Passez en club payant pour un motif de maillot personnalisé." };
+    }
+    this.awayJerseyPattern = pattern;
+    return { ok: true };
+  }
+
+  // Combinaison de 2 couleurs du maillot extérieur (voir engine.js, miroir
+  // identique).
+  setAwayJerseyTwoTone(key) {
+    if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
+    if (!this.isPaying) {
+      return { ok: false, error: "Passez en club payant pour choisir une combinaison de couleurs." };
+    }
+    this.awayJerseyTwoTone = key;
     return { ok: true };
   }
 
@@ -4384,7 +4597,10 @@ class Team {
   sellPlayer(playerId) {
     const idx = this.players.findIndex(p => p.id === playerId);
     if (idx === -1 || !this.players[idx].forSale) return false;
+    // Alchimie d'équipe (voir engine.js, miroir identique).
+    const departureImportance = chemistryRosterImportance(rosterRankOf(this.players, playerId));
     const [p] = this.players.splice(idx, 1);
+    this.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * departureImportance);
     this.recordTransaction(`Vente de ${p.name}`, p.salePrice || 0);
     // Retour utilisateur (2026-09) : "en cas d'indisponibilité pour vente
     // d'un joueur, qui avait été mis dans la composition, il doit être
@@ -5433,8 +5649,13 @@ class Team {
     return this.missingStarterPositions().length === 0;
   }
 
-  resetForMatch() {
-    this.players.forEach(p => p.resetForMatch());
+  resetForMatch(now = Date.now()) {
+    // Alchimie d'équipe (voir engine.js, miroir identique).
+    const chemistryFactor = this.chemistryFactor();
+    this.players.forEach(p => {
+      p.resetForMatch(now);
+      p.matchChemistryFactor = chemistryFactor;
+    });
     POSITIONS.forEach(pos => {
       const id = this.lineup.starters[pos];
       const p = id && this.players.find(x => x.id === id);
@@ -5501,6 +5722,13 @@ function heightForPosition(position) {
 // levelCoefficientFor plus bas) : les deux doivent s'accorder sur ce qui
 // définit chaque poste, sinon la génération et la grille salariale
 // raconteraient chacune une histoire différente du même joueur.
+// "mental"/"endurance"/"freeThrow" (voir leur commentaire au-dessus de
+// ATTRS) N'APPARAISSENT PAS ci-dessous, à dessein : ce sont des qualités
+// générales, pas propres à un poste (un Pivot encaisse aussi bien une
+// mauvaise série qu'un Meneur), donc elles retombent sur "base" pour
+// TOUS les postes via le filet `profile[a] || "base"` déjà en place plus
+// bas (generateAttrsForPosition/weightedRatingForPosition) plutôt que de
+// dupliquer "base" dans chacune des 5 entrées ci-dessous.
 const POSITION_ATTR_PROFILE = {
   "Meneur": { pass: "strong", dribble: "strong", agility: "strong", threePoint: "base",
     defOutside: "base", midRange: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak" },
@@ -5948,11 +6176,11 @@ function buildNextCupRound(prevRound, winners) {
   return { index: prevRound.index + 1, name: cupNextStageName(prevRound.name), dayIndex: prevRound.dayIndex + 1, matches, resolved: false };
 }
 
-function simulateOrForfeit(teamHome, teamAway) {
+function simulateOrForfeit(teamHome, teamAway, now = Date.now()) {
   const homeOk = teamHome.hasValidLineup();
   const awayOk = teamAway.hasValidLineup();
   if (homeOk && awayOk) {
-    const result = new MatchEngine(teamHome, teamAway).simulate();
+    const result = new MatchEngine(teamHome, teamAway).simulate(now);
     return { scoreHome: result.finalScore.A, scoreAway: result.finalScore.B, forfeit: null };
   }
   if (!homeOk && !awayOk) return { scoreHome: 0, scoreAway: 0, forfeit: "both" };
@@ -6567,6 +6795,8 @@ class League {
     }
     const idx = seller.players.findIndex(p => p.id === listing.playerId);
     if (idx === -1) { listing.result = "player-missing"; return; }
+    // Alchimie d'équipe (voir engine.js, miroir identique).
+    const sellerImportance = chemistryRosterImportance(rosterRankOf(seller.players, listing.playerId));
     const [player] = seller.players.splice(idx, 1);
     // Retour utilisateur (2026-09) : "en cas d'indisponibilité pour vente
     // d'un joueur, qui avait été mis dans la composition, il doit être
@@ -6591,6 +6821,10 @@ class League {
     if (seller.isHuman) seller.recordTransaction(`Vente de ${player.name} (enchères)`, amount);
     buyer.players.push(player);
     if (!buyer.isHuman) buyer.autoAssignLineup();
+    // Alchimie d'équipe (voir engine.js, miroir identique).
+    const buyerImportance = chemistryRosterImportance(rosterRankOf(buyer.players, player.id));
+    seller.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * sellerImportance);
+    buyer.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * buyerImportance);
     listing.result = "sold";
     listing.finalPrice = amount;
   }
@@ -7536,6 +7770,8 @@ function serializePlayerRecord(p) {
     effectivePosition: p.effectivePosition,
     _trainProgress: { ...p._trainProgress },
     aggressiveness: p.aggressiveness, form: p.form,
+    // Forme physique (voir engine.js, miroir identique).
+    condition: p.condition, conditionUpdatedAt: p.conditionUpdatedAt,
     forSale: p.forSale, salePrice: p.salePrice,
     // Temps de jeu du DERNIER match, ventilé par poste (voir
     // Player.secondsPlayedByPosition) : sans ces deux champs, un
@@ -7641,6 +7877,11 @@ function serializeTeam(team) {
     transactions: team.transactions,
     fanMorale: team.fanMorale,
     moraleHistory: team.moraleHistory,
+    // Alchimie d'équipe (voir engine.js, miroir identique).
+    chemistry: team.chemistry,
+    lastTacticsSnapshotForChemistry: team.lastTacticsSnapshotForChemistry
+      ? { ...team.lastTacticsSnapshotForChemistry, offense: [...team.lastTacticsSnapshotForChemistry.offense] }
+      : null,
     // Interviews en attente (voir engine.js, miroir identique).
     pendingInterviews: Array.isArray(team.pendingInterviews) ? team.pendingInterviews.map(i => ({ ...i })) : [],
     // MVP automatique du dernier match (voir engine.js, miroir identique).
@@ -7652,6 +7893,10 @@ function serializeTeam(team) {
     jerseyColor: team.jerseyColor,
     jerseyPattern: team.jerseyPattern,
     jerseyTwoTone: team.jerseyTwoTone,
+    // Maillot extérieur (voir engine.js, miroir identique).
+    awayJerseyColor: team.awayJerseyColor,
+    awayJerseyPattern: team.awayJerseyPattern,
+    awayJerseyTwoTone: team.awayJerseyTwoTone,
     // Fiche club (voir engine.js, miroir identique).
     foundedYear: team.foundedYear,
     // Marqueur de migration (voir engine.js, miroir identique).
@@ -7717,6 +7962,23 @@ function playerFromSave(pdata) {
     name: pdata.name, position: pdata.position, height: pdata.height,
     age: pdata.age, attrs: { ...pdata.attrs }, aggressiveness: pdata.aggressiveness,
   });
+  // Migration : sauvegardes d'avant l'ajout de mental/endurance/freeThrow aux
+  // ATTRS (voir le grand commentaire au-dessus d'ATTRS) - ces 3 caractéristiques
+  // manquent alors totalement dans pdata.attrs, ce qui rendrait overall() (et
+  // tout ce qui en dépend : potentiel, salaire, entraînement) NaN. On les
+  // dérive de la moyenne des 10 caractéristiques d'origine du joueur (avec un
+  // léger bruit aléatoire pour éviter que tous les joueurs migrés se
+  // retrouvent avec exactement la même valeur), plutôt qu'une constante fixe,
+  // pour éviter un saut brutal d'overall/salaire au premier chargement après
+  // mise à jour.
+  const legacyAttrKeys = ["midRange", "threePoint", "inside", "pass", "rebound", "block", "dribble", "agility", "defOutside", "defInside"];
+  const missingNewAttrs = ["mental", "endurance", "freeThrow"].filter(k => typeof p.attrs[k] !== "number");
+  if (missingNewAttrs.length) {
+    const legacyAvg = legacyAttrKeys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / legacyAttrKeys.length;
+    missingNewAttrs.forEach(k => {
+      p.attrs[k] = clamp(Math.round(legacyAvg + (Math.random() * 10 - 5)), 1, 99);
+    });
+  }
   // Le potentiel est fixé une fois pour toutes à la création du joueur : on
   // écrase celui généré par défaut avec celui sauvegardé (sinon il serait
   // recalculé aléatoirement à chaque chargement, ce qui n'aurait aucun sens).
@@ -7739,6 +8001,9 @@ function playerFromSave(pdata) {
   p.effectivePosition = pdata.effectivePosition || p.effectivePosition;
   if (pdata._trainProgress) p._trainProgress = { ...pdata._trainProgress };
   if (typeof pdata.form === "number") p.form = pdata.form;
+  // Forme physique (voir engine.js, miroir identique).
+  if (typeof pdata.condition === "number") p.condition = pdata.condition;
+  if (typeof pdata.conditionUpdatedAt === "number") p.conditionUpdatedAt = pdata.conditionUpdatedAt;
   if (pdata.id) p.id = pdata.id;
   // Temps de jeu du dernier match (voir serializePlayerRecord ci-dessus pour
   // pourquoi c'est indispensable, matchLog/box-score).
@@ -7917,6 +8182,15 @@ function teamFromSave(data) {
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
+  // Alchimie d'équipe (voir engine.js, miroir identique).
+  if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, 0, 100);
+  if (data.lastTacticsSnapshotForChemistry && Array.isArray(data.lastTacticsSnapshotForChemistry.offense)) {
+    team.lastTacticsSnapshotForChemistry = {
+      offense: [...data.lastTacticsSnapshotForChemistry.offense],
+      defense: data.lastTacticsSnapshotForChemistry.defense,
+      rhythm: data.lastTacticsSnapshotForChemistry.rhythm,
+    };
+  }
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
   team.lastMatchMvp = data.lastMatchMvp && typeof data.lastMatchMvp === "object" ? { ...data.lastMatchMvp } : null;
   // Identité du club (voir engine.js, miroir identique).
@@ -7926,6 +8200,10 @@ function teamFromSave(data) {
   if (JERSEY_COLORS[data.jerseyColor]) team.jerseyColor = data.jerseyColor;
   if (JERSEY_PATTERNS.includes(data.jerseyPattern)) team.jerseyPattern = data.jerseyPattern;
   if (JERSEY_TWO_TONE_SETS[data.jerseyTwoTone]) team.jerseyTwoTone = data.jerseyTwoTone;
+  // Maillot extérieur (voir engine.js, miroir identique).
+  if (JERSEY_COLORS[data.awayJerseyColor]) team.awayJerseyColor = data.awayJerseyColor;
+  if (JERSEY_PATTERNS.includes(data.awayJerseyPattern)) team.awayJerseyPattern = data.awayJerseyPattern;
+  if (JERSEY_TWO_TONE_SETS[data.awayJerseyTwoTone]) team.awayJerseyTwoTone = data.awayJerseyTwoTone;
   // Fiche club (voir engine.js, miroir identique).
   if (typeof data.foundedYear === "number") team.foundedYear = data.foundedYear;
   // Migration ponctuelle des anciennes dates aléatoires (voir engine.js,
@@ -8185,7 +8463,13 @@ class MatchEngine {
   }
 
   freeThrows(shooter, n, events, quarter, clock, team) {
-    const ftPct = clamp(0.69 + (shooter.eff("midRange") - 50) / 300, 0.55, 0.92);
+    // Utilise désormais l'attribut dédié "freeThrow" (voir le grand
+    // commentaire au-dessus d'ATTRS) au lieu de l'ancien proxy sur midRange :
+    // un lanceur médiocre (freeThrow bas) et un bon shooteur mi-distance
+    // peuvent maintenant diverger, comme dans la réalité. Plage plus large
+    // que l'ancienne (50 à 93 % contre 55 à 92) pour que l'attribut se sente
+    // réellement discriminant sur la ligne des lancers francs.
+    const ftPct = clamp(0.50 + (shooter.eff("freeThrow") / 100) * 0.42, 0.50, 0.93);
     let made = 0;
     for (let i = 0; i < n; i++) {
       shooter.stats.fta++;
@@ -8280,6 +8564,10 @@ class MatchEngine {
 
     if (Math.random() < tovChance) {
       ballHandler.stats.tov++;
+      // Mental / tilt (voir consecutiveMisses et le grand commentaire
+      // au-dessus d'ATTRS) : une perte de balle compte comme un raté pour la
+      // série qui alimente le malus de tilt du prochain tir.
+      ballHandler.consecutiveMisses++;
       const stealer = weightedPick(onCourtDef, p => p.eff("agility") + p.eff("defOutside"));
       if (Math.random() < 0.55) {
         stealer.stats.stl++;
@@ -8418,7 +8706,21 @@ class MatchEngine {
     // "Standard" n'annule PAS ce terme, volontairement : ce n'est pas un
     // réglage tactique, c'est un ajustement de calibrage du moteur lui-même.
     const marginDamp = clamp(-scoreDiff / 500, -0.06, 0.06);
-    prob = clamp(prob + marginDamp, 0.10, 0.75);
+    // Mental (voir le grand commentaire au-dessus d'ATTRS) : deux effets
+    // additifs indépendants, appliqués avant le clamp final ci-dessous.
+    // 1) Boost clutch : actif uniquement dans la fenêtre "clutch" existante
+    //    (voir heroMult plus haut, ±8 pts, Q4, 2 dernières minutes) - un
+    //    mental élevé transforme un tir serré en fin de match, un mental bas
+    //    le fait douter. Pivot à 50 (valeur moyenne) => aucun effet pour un
+    //    joueur "moyen", jusqu'à environ ±6 pts de % pour un mental extrême.
+    const mentalClutchBoost = clutch ? (shooter.attrs.mental - 50) * 0.0012 : 0;
+    // 2) Malus de "tilt" : après 3 ratés/pertes de balle d'affilée (voir
+    //    consecutiveMisses, mis à jour plus bas et incrémenté aussi sur
+    //    perte de balle) - un mental élevé (>=70) annule totalement le
+    //    malus, un mental bas peut aller jusqu'à -9 pts de %.
+    const tiltPenalty = shooter.consecutiveMisses >= 3
+      ? clamp((70 - shooter.attrs.mental) * 0.0015, 0, 0.09) : 0;
+    prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty, 0.10, 0.75);
 
     const made = Math.random() < prob;
     const points = zone === "three" ? 3 : 2;
@@ -8429,6 +8731,9 @@ class MatchEngine {
     const shotLabel = zone === "three" ? "three" : zone === "mid" ? "mid" : "inside";
 
     if (made) {
+      // Mental / tilt (voir consecutiveMisses plus haut) : un tir réussi
+      // remet le compteur à zéro, quelle que soit sa longueur de série.
+      shooter.consecutiveMisses = 0;
       shooter.stats.pts += points;
       if (zone === "three") shooter.stats.fgm3++; else shooter.stats.fgm2++;
       if (zone === "inside") shooter.stats.paintMade++;
@@ -8444,6 +8749,10 @@ class MatchEngine {
       }
       return { possessionOffense: false, scored: true };
     } else {
+      // Mental / tilt (voir plus haut) : un tir raté incrémente le compteur,
+      // même s'il est suivi de lancers francs (contre-attribué par le malus
+      // de "tilt" au prochain tir).
+      shooter.consecutiveMisses++;
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
         this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, possession: this.teamKey(offTeam) });
@@ -8500,7 +8809,16 @@ class MatchEngine {
     // repos plus bas, seulement sur le rythme d'accumulation pendant le jeu.
     const wellnessMult = team.facilityFatigueMult ? team.facilityFatigueMult() : 1;
     team.onCourtPlayers().forEach(p => {
-      p.fatigue = clamp(p.fatigue + (seconds / 24) * mult * wellnessMult, 0, 100);
+      // Endurance (voir le grand commentaire au-dessus d'ATTRS) : version
+      // INDIVIDUELLE de l'effet "espace bien-être" ci-dessus, réduit
+      // l'accumulation de fatigue EN MATCH propre à CE joueur uniquement -
+      // pivot à 50 (valeur moyenne) pour que le comportement d'un joueur
+      // "moyen" reste identique à avant l'ajout de cet attribut. N'agit
+      // jamais sur la récupération sur le banc (ligne plus bas) ni sur la
+      // forme physique jour après jour (currentCondition) : uniquement sur
+      // le rythme d'accumulation pendant le jeu, comme demandé.
+      const enduranceMult = 1.25 - (p.attrs.endurance / 100) * 0.5;
+      p.fatigue = clamp(p.fatigue + (seconds / 24) * mult * wellnessMult * enduranceMult, 0, 100);
       p.secondsPlayed += seconds;
       if (p.matchPosition) {
         p.secondsPlayedByPosition[p.matchPosition] = (p.secondsPlayedByPosition[p.matchPosition] || 0) + seconds;
@@ -8517,7 +8835,9 @@ class MatchEngine {
       if (!p.injured) {
         const fatigueFactor = 0.25 + 0.75 * (p.fatigue / 100);
         const injuryRiskMult = team.facilityInjuryRiskMult ? team.facilityInjuryRiskMult() : 1;
-        const injuryChance = BASE_INJURY_RATE * (seconds / 12) * fatigueFactor * injuryRiskMult;
+        // Forme physique (voir engine.js, miroir identique).
+        const conditionInjuryMult = conditionStateFor(p.matchCondition ?? p.condition).injuryMult;
+        const injuryChance = BASE_INJURY_RATE * (seconds / 12) * fatigueFactor * injuryRiskMult * conditionInjuryMult;
         if (Math.random() < injuryChance) {
           p.injured = true;
           p.onCourt = false;
@@ -8533,9 +8853,9 @@ class MatchEngine {
     });
   }
 
-  simulate() {
-    this.teamA.resetForMatch();
-    this.teamB.resetForMatch();
+  simulate(now = Date.now()) {
+    this.teamA.resetForMatch(now);
+    this.teamB.resetForMatch(now);
     const events = [];
     const quarterScores = { A: [0, 0, 0, 0], B: [0, 0, 0, 0] };
     let score = { A: 0, B: 0 };
@@ -8689,12 +9009,68 @@ const POS_SHORT = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ai
 const ATTR_SHORT = {
   midRange: "MI-D", threePoint: "3PTS", inside: "INT", pass: "PASSE", rebound: "REB",
   block: "CTR", dribble: "DRIB", agility: "AGI", defOutside: "DEF EXT", defInside: "DEF INT",
+  // 3 caractéristiques ajoutées (voir le grand commentaire au-dessus d'ATTRS,
+  // engine.js) : libellés volontairement très courts (comme "MI-D"/"CTR"
+  // ci-dessus) pour limiter l'impact sur la largeur du tableau Effectif.
+  mental: "MENT", endurance: "END", freeThrow: "LF",
 };
 
 // Cellule d'attribut façon manager (retour utilisateur : "façon football ou
 // basketball manager [...] ça fait très immersif") : la valeur (0-99, voir
 // ATTRS) ET une mini-barre colorée par palier — jamais juste un chiffre nu,
 // pour repérer les forces d'un joueur en un coup d'œil (voir renderEffectifSection).
+// Libellés courts du badge "Forme physique", pour la colonne du tableau
+// Effectif UNIQUEMENT (retour utilisateur, 2026-09 : "tout rentre sur la
+// page sans avoir à scroller ?") : à 18 colonnes (7 de base + 10
+// caractéristiques + Marché), le libellé complet le plus long ("Légèrement
+// fatigué") à lui seul faisait déborder le tableau sur un écran d'ordinateur
+// portable courant (1440px de large : ~44px de dépassement). Purement une
+// question d'AFFICHAGE dans cette colonne précise, jamais persisté (même
+// principe que JERSEY_PATTERN_LABELS plus haut) : le libellé complet reste
+// affiché tel quel partout ailleurs (fiche joueur, `title` au survol ici).
+const CONDITION_SHORT_LABELS = {
+  "Pas de fatigue": "Frais",
+  "Légèrement fatigué": "Léger",
+  "Fatigué": "Fatigué",
+  "Très fatigué": "Très fat.",
+  "Épuisé": "Épuisé",
+};
+
+// Badge "Forme physique" (voir CONDITION_STATES/currentCondition plus haut) :
+// recalcule TOUJOURS la valeur courante (jours de repos rattrapés) à
+// l'affichage plutôt que de lire Player.condition brut, même principe que
+// computeClubReputationStars — sinon la forme affichée resterait figée sur
+// sa valeur du dernier match jusqu'au prochain, sans refléter le repos pris
+// entre-temps. N'affiche que l'ÉTAT (retour utilisateur), le chiffre exact
+// reste dans le `title` (infobulle au survol) pour qui veut le détail.
+// `compact` (voir CONDITION_SHORT_LABELS ci-dessus) : réservé à la colonne
+// du tableau Effectif (renderEffectifSection), toujours `false` ailleurs
+// (fiche joueur) pour garder le libellé complet là où la place ne manque
+// pas ; le `title` garde le libellé complet dans les deux cas.
+function conditionBadgeHtml(player, now = Date.now(), compact = false) {
+  const value = currentCondition(player, now);
+  const state = conditionStateFor(value);
+  const tier = value >= 90 ? "cond-great" : value >= 75 ? "cond-good" : value >= 60 ? "cond-mid" : value >= 40 ? "cond-low" : "cond-critical";
+  const displayLabel = compact ? (CONDITION_SHORT_LABELS[state.label] || state.label) : state.label;
+  return `<span class="condition-badge ${tier}" title="Forme physique : ${state.label} (${value}/100)">${escapeHtml(displayLabel)}</span>`;
+}
+
+// Badge "Motivation" (voir Player.form/motivationLabel plus haut, retour
+// utilisateur, 2026-09 : "La motivation du joueur n'apparaît pas ?") :
+// affiché UNIQUEMENT sur la fiche joueur (voir renderPlayerDetail), jamais
+// dans le tableau Effectif (déjà limite en largeur, voir le grand
+// commentaire de CONDITION_SHORT_LABELS ci-dessus) — décision explicite de
+// l'utilisateur. Même principe que conditionBadgeHtml (état affiché,
+// chiffre exact dans le `title`), mais Player.form n'a pas d'équivalent de
+// currentCondition (pas de récupération différée dans le temps : mis à jour
+// directement à chaque interview résolue, voir Team.resolveInterview), donc
+// pas de paramètre `now` ici.
+function motivationBadgeHtml(player) {
+  const value = player.form;
+  const tier = value >= 85 ? "motiv-great" : value >= 65 ? "motiv-good" : value >= 45 ? "motiv-mid" : value >= 25 ? "motiv-low" : "motiv-critical";
+  return `<span class="motivation-badge ${tier}" title="Motivation : ${value}/100">${escapeHtml(motivationLabel(value))}</span>`;
+}
+
 function attrCellHtml(value) {
   const pct = Math.max(0, Math.min(100, value));
   let tier = "attr-lo";
@@ -9544,6 +9920,43 @@ function syncJerseyTwoToneToServer(key) {
       .catch(e => console.warn("Couleurs de maillot : serveur indisponible :", e));
   } catch (e) {
     console.warn("Couleurs de maillot : serveur indisponible :", e);
+  }
+}
+
+// Maillot extérieur (voir Team.setAwayJerseyColor/setAwayJerseyPattern/
+// setAwayJerseyTwoTone, engine.js) : mêmes conventions fire-and-forget que
+// syncJerseyToServer/syncJerseyPatternToServer/syncJerseyTwoToneToServer
+// ci-dessus, sur les routes /api/club/set-away-jersey-*.
+function syncAwayJerseyColorToServer(color) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/club/set-away-jersey", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ color }) })
+      .then(res => { if (!res.ok) console.warn("Changement de maillot extérieur refusé côté serveur.", res.status); })
+      .catch(e => console.warn("Maillot extérieur : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Maillot extérieur : serveur indisponible :", e);
+  }
+}
+
+function syncAwayJerseyPatternToServer(pattern) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/club/set-away-jersey-pattern", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pattern }) })
+      .then(res => { if (!res.ok) console.warn("Changement de motif de maillot extérieur refusé côté serveur.", res.status); })
+      .catch(e => console.warn("Motif de maillot extérieur : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Motif de maillot extérieur : serveur indisponible :", e);
+  }
+}
+
+function syncAwayJerseyTwoToneToServer(key) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/club/set-away-jersey-two-tone", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) })
+      .then(res => { if (!res.ok) console.warn("Changement de couleurs de maillot extérieur refusé côté serveur.", res.status); })
+      .catch(e => console.warn("Couleurs de maillot extérieur : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Couleurs de maillot extérieur : serveur indisponible :", e);
   }
 }
 
@@ -11470,6 +11883,20 @@ function renderPlayerDetail(teamIdx, playerId) {
 
   let html = `<p class="training-intro">${escapeHtml(team.name)} · ${POS_SHORT[player.position]} · ${player.height} cm · ${player.age} ans` +
     (isOwnTeam ? ` · ${formatMoney(player.salary)}/sem.` : "") + `</p>`;
+  // Forme physique (voir CONDITION_STATES/conditionBadgeHtml plus haut) :
+  // toujours visible (jamais verrouillée par le scoutisme, contrairement aux
+  // caractéristiques ci-dessous) — c'est un état de forme, pas un talent
+  // révélé progressivement.
+  html += `<p class="training-intro">Forme physique : ${conditionBadgeHtml(player)}</p>`;
+  // Motivation (voir Player.form/motivationBadgeHtml plus haut, retour
+  // utilisateur, 2026-09 : "La motivation du joueur n'apparaît pas ?") :
+  // réservée à SON PROPRE effectif, même principe que le salaire ci-dessus
+  // (isOwnTeam) — contrairement à la forme physique juste au-dessus
+  // (observable de l'extérieur), la confiance d'un joueur alimentée par les
+  // interviews du coach est une information interne au club, jamais
+  // affichée pour un adversaire (ni même déverrouillable via le scoutisme,
+  // qui ne porte que sur les caractéristiques ci-dessous).
+  if (isOwnTeam) html += `<p class="training-intro">Motivation : ${motivationBadgeHtml(player)}</p>`;
   if (onMarket) html += `<p class="sub">Ce joueur est actuellement aux enchères sur le marché des transferts, ses caractéristiques sont donc visibles.</p>`;
 
   // Caractéristiques : toujours visibles pour son propre effectif ou pour un
@@ -11942,6 +12369,17 @@ let jerseySvgUid = 0;
 // l'ancien rendu (une seule couleur + nuance calculée via shadeHexColor),
 // ce qui garde cette fonction utilisable même pour un aperçu sans
 // combinaison choisie.
+//
+// `variant` ("home"/"away") ne sert plus qu'au libellé aria-label ci-dessous
+// (retour utilisateur, 2026-09 : "sur les maillots, il y a un problème,
+// c'est qu'on ne peut choisir que les maillots domiciles, il faudrait
+// changer ça" puis "Travaille sur les maillots extérieurs également") :
+// avant, le rendu du maillot extérieur était entièrement DÉRIVÉ (couleurs
+// inversées/éclaircies) à partir de la seule couleur domicile ; maintenant
+// chaque maillot (domicile ET extérieur) a sa propre couleur/motif/
+// combinaison stockée (voir Team.jerseyColor vs Team.awayJerseyColor et
+// consorts, engine.js), donc l'appelant passe déjà les bonnes valeurs pour
+// le maillot voulu et cette fonction n'a plus besoin de rien dériver.
 function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone) {
   const color = JERSEY_COLORS[colorKey] || Object.values(JERSEY_COLORS)[0];
   const s = size || 72;
@@ -11951,9 +12389,9 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone) {
   const primary = usesTwoTone ? twoTone[0] : color;
   const secondary = usesTwoTone ? twoTone[1] : null;
   const uid = `jersey${jerseySvgUid++}`;
-  const bodyFill = isAway ? "#eef2f7" : primary;
-  const trimColor = isAway ? primary : "rgba(255,255,255,.85)";
-  const panelColor = isAway ? "rgba(0,0,0,.10)" : "rgba(255,255,255,.24)";
+  const bodyFill = primary;
+  const trimColor = "rgba(255,255,255,.85)";
+  const panelColor = "rgba(255,255,255,.24)";
   // Emmanchures larges et échancrées (coupe débardeur), jamais de manche qui
   // dépasse du buste : seule la ligne du col change entre les deux formes.
   const neckPath = shape === "B" ? "L 50 22 L 60 8" : "Q 50 20 60 8";
@@ -11962,8 +12400,8 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone) {
   let defs = "";
   let mainFill = bodyFill;
   if (patternKey === "degrade") {
-    const from = isAway ? "#ffffff" : (usesTwoTone ? primary : shadeHexColor(color, 0.35));
-    const to = isAway ? primary : (usesTwoTone ? secondary : shadeHexColor(color, -0.35));
+    const from = usesTwoTone ? primary : shadeHexColor(color, 0.35);
+    const to = usesTwoTone ? secondary : shadeHexColor(color, -0.35);
     defs += `<linearGradient id="${uid}-grad" x1="0" y1="0" x2="0" y2="1">` +
       `<stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient>`;
     mainFill = `url(#${uid}-grad)`;
@@ -11971,7 +12409,7 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone) {
 
   let body = `<path d="${outline}" fill="${mainFill}" stroke="rgba(0,0,0,.28)" stroke-width="1.5"/>`;
   if (patternKey === "rayures") {
-    const stripeColor = isAway ? primary : (usesTwoTone ? secondary : "rgba(255,255,255,.55)");
+    const stripeColor = usesTwoTone ? secondary : "rgba(255,255,255,.55)";
     defs += `<clipPath id="${uid}-clip"><path d="${outline}"/></clipPath>`;
     let stripes = "";
     for (let x = 16; x < 90; x += 14) stripes += `<rect x="${x}" y="0" width="7" height="100" fill="${stripeColor}"/>`;
@@ -11983,7 +12421,7 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone) {
   // largeur ; même mécanique de clip-path que "rayures" pour rester dans la
   // silhouette du maillot quelle que soit la forme choisie.
   if (patternKey === "bandes") {
-    const bandColor = isAway ? primary : (usesTwoTone ? secondary : "rgba(255,255,255,.55)");
+    const bandColor = usesTwoTone ? secondary : "rgba(255,255,255,.55)";
     defs += `<clipPath id="${uid}-clip"><path d="${outline}"/></clipPath>`;
     const bands = `<rect x="18" y="0" width="13" height="100" fill="${bandColor}"/><rect x="69" y="0" width="13" height="100" fill="${bandColor}"/>`;
     body += `<g clip-path="url(#${uid}-clip)">${bands}</g>`;
@@ -12016,6 +12454,16 @@ function effectiveJerseyPattern(team) {
 // jamais `twoTone` dans jerseySvgHtml, mais autant rester explicite ici).
 function effectiveJerseyTwoTone(team) {
   return team.isPaying ? (JERSEY_TWO_TONE_SETS[team.jerseyTwoTone] || null) : null;
+}
+
+// Motif/combinaison réellement affichés pour le maillot EXTÉRIEUR d'un club
+// (voir effectiveJerseyPattern/effectiveJerseyTwoTone ci-dessus, même
+// principe, sur Team.awayJerseyPattern/awayJerseyTwoTone).
+function effectiveAwayJerseyPattern(team) {
+  return team.isPaying ? team.awayJerseyPattern : JERSEY_PATTERNS[0];
+}
+function effectiveAwayJerseyTwoTone(team) {
+  return team.isPaying ? (JERSEY_TWO_TONE_SETS[team.awayJerseyTwoTone] || null) : null;
 }
 
 // Logo type d'un club gratuit (retour utilisateur : "le logo de l'équipe
@@ -12215,9 +12663,16 @@ function teamDetailApercuHtml(teamIdx) {
 
   const jerseyPattern = effectiveJerseyPattern(team);
   const jerseyTwoTone = effectiveJerseyTwoTone(team);
+  // Maillot extérieur : couleur/motif/combinaison propres (voir
+  // Team.awayJerseyColor et consorts, engine.js), plus dérivés du maillot
+  // domicile (correctif, retour utilisateur, 2026-09 : "on ne peut choisir
+  // que les maillots domiciles [...] Travaille sur les maillots extérieurs
+  // également").
+  const awayJerseyPattern = effectiveAwayJerseyPattern(team);
+  const awayJerseyTwoTone = effectiveAwayJerseyTwoTone(team);
   html += `<div class="stat-card"><h3>Maillots</h3><div class="jersey-mockups">` +
     `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 84, "home", jerseyPattern, jerseyTwoTone)}<p class="sub">Domicile</p></div>` +
-    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 84, "away", jerseyPattern, jerseyTwoTone)}<p class="sub">Extérieur</p></div>` +
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.awayJerseyColor, 84, "away", awayJerseyPattern, awayJerseyTwoTone)}<p class="sub">Extérieur</p></div>` +
     `</div></div>`;
 
   html += `<div class="stat-card"><h3>Derniers résultats</h3>${formStreakHtml(teamIdx)}</div>`;
@@ -14756,6 +15211,16 @@ function renderClubSection() {
   moraleCard.appendChild(moraleLink);
   grid.appendChild(moraleCard);
 
+  // Alchimie d'équipe (retour utilisateur, voir le grand commentaire de
+  // CHEMISTRY_ROSTER_CHANGE_MAX_RANK côté engine.js) : même format de carte
+  // que "Supporters" ci-dessus (même jauge de couleur, moraleGaugeColor
+  // réutilisée telle quelle, les seuils étant identiques).
+  const chemistryCard = document.createElement("div");
+  chemistryCard.className = "stat-card";
+  chemistryCard.innerHTML = `<h3>Alchimie</h3><div class="big" style="color:${moraleGaugeColor(teamA.chemistry)}">${Math.round(teamA.chemistry)}/100</div>` +
+    `<div class="sub">${escapeHtml(chemistryLabel(teamA.chemistry))}.</div>`;
+  grid.appendChild(chemistryCard);
+
   // Retour utilisateur (2026-09) : "les évènements doivent être pris dans une
   // 6e brique à droite" — une 6e .stat-card comme les autres plutôt qu'une
   // section à part sous la grille : avec .stat-grid en 2 colonnes et 5 cartes
@@ -14856,6 +15321,43 @@ function renderClubIdentityPanel() {
   html += `</div>`;
   html += `</div>`;
 
+  // Maillot extérieur (retour utilisateur, 2026-09 : "sur les maillots, il y
+  // a un problème, c'est qu'on ne peut choisir que les maillots domiciles,
+  // il faudrait changer ça" puis "Travaille sur les maillots extérieurs
+  // également") : même forme que le maillot domicile ci-dessus (un seul
+  // sélecteur de forme partagé, voir Team.jerseyShape), mais couleur/motif/
+  // combinaison propres (voir Team.awayJerseyColor et consorts, engine.js).
+  const dashboardAwayJerseyPattern = effectiveAwayJerseyPattern(teamA);
+  const dashboardAwayJerseyTwoTone = effectiveAwayJerseyTwoTone(teamA);
+  html += `<div class="club-identity-grid club-identity-grid-away">`;
+  html += `<div class="club-identity-jersey">`;
+  html += `<p class="field-label" style="margin:0 0 6px">Maillot extérieur</p>`;
+  html += `<p class="field-label" style="margin:0 0 6px">Couleur du maillot extérieur</p>`;
+  html += `<div class="jersey-color-picker">` + Object.keys(JERSEY_COLORS).map(key =>
+    `<button type="button" class="jersey-color-swatch${teamA.awayJerseyColor === key ? " active" : ""}" data-away-jersey-color="${key}" style="background:${JERSEY_COLORS[key]}" title="${key}" aria-label="Couleur ${key}"></button>`
+  ).join("") + `</div>`;
+  html += `<p class="field-label" style="margin:12px 0 6px">Motif du maillot extérieur</p>`;
+  if (teamA.isPaying) {
+    html += `<div class="jersey-pattern-picker">` + JERSEY_PATTERNS.map(pattern =>
+      `<button type="button" class="jersey-pattern-btn${teamA.awayJerseyPattern === pattern ? " active" : ""}" data-away-jersey-pattern="${pattern}">` +
+      `${jerseySvgHtml(teamA.jerseyShape, teamA.awayJerseyColor, 56, "away", pattern, dashboardAwayJerseyTwoTone)}<span>${JERSEY_PATTERN_LABELS[pattern]}</span></button>`
+    ).join("") + `</div>`;
+    if (dashboardAwayJerseyPattern !== JERSEY_PATTERNS[0]) {
+      html += `<p class="field-label" style="margin:12px 0 6px">Couleurs du motif (extérieur)</p>`;
+      html += `<div class="jersey-twotone-picker">` + Object.keys(JERSEY_TWO_TONE_SETS).map(key => {
+        const [c1, c2] = JERSEY_TWO_TONE_SETS[key];
+        return `<button type="button" class="jersey-twotone-swatch${teamA.awayJerseyTwoTone === key ? " active" : ""}" ` +
+          `data-away-jersey-twotone="${key}" style="background:linear-gradient(135deg, ${c1} 0 50%, ${c2} 50% 100%)" ` +
+          `title="${JERSEY_TWO_TONE_LABELS[key]}" aria-label="Couleurs ${JERSEY_TWO_TONE_LABELS[key]}"></button>`;
+      }).join("") + `</div>`;
+    }
+  } else {
+    html += `<p class="sub">Motif uni (club gratuit). Passez en club payant pour un motif personnalisé (rayures, dégradé, bandes sur les côtés...) et plus de couleurs.</p>`;
+  }
+  html += `</div>`;
+  html += `<div class="jersey-mockup">${jerseySvgHtml(teamA.jerseyShape, teamA.awayJerseyColor, 84, "away", dashboardAwayJerseyPattern, dashboardAwayJerseyTwoTone)}<p class="sub">Aperçu extérieur</p></div>`;
+  html += `</div>`;
+
   html += `<p class="sub club-paying-row">Statut du club : <b>${teamA.isPaying ? "Payant" : "Gratuit"}</b> ` +
     `<button type="button" class="secondary" id="clubTogglePayingBtn">${teamA.isPaying ? "Repasser en gratuit" : "Passer en payant"}</button> ` +
     `<span class="club-paying-note">(interrupteur manuel temporaire, en attendant un vrai système de paiement)</span></p>`;
@@ -14905,6 +15407,12 @@ if (clubIdentityPanelEl) {
     const colorBtn = e.target.closest("[data-jersey-color]");
     const patternBtn = e.target.closest("[data-jersey-pattern]");
     const twoToneBtn = e.target.closest("[data-jersey-twotone]");
+    // Maillot extérieur (voir la section "Maillot extérieur" de
+    // renderClubIdentityPanel ci-dessus) : attributs data-away-jersey-*
+    // distincts, jamais confondus avec les sélecteurs domicile ci-dessus.
+    const awayColorBtn = e.target.closest("[data-away-jersey-color]");
+    const awayPatternBtn = e.target.closest("[data-away-jersey-pattern]");
+    const awayTwoToneBtn = e.target.closest("[data-away-jersey-twotone]");
     const resetLogoBtn = e.target.closest("#clubLogoResetBtn");
     const togglePayingBtn = e.target.closest("#clubTogglePayingBtn");
     if (shapeBtn) {
@@ -14915,6 +15423,12 @@ if (clubIdentityPanelEl) {
       teamA.setJerseyPattern(patternBtn.dataset.jerseyPattern);
     } else if (twoToneBtn) {
       teamA.setJerseyTwoTone(twoToneBtn.dataset.jerseyTwotone);
+    } else if (awayColorBtn) {
+      teamA.setAwayJerseyColor(awayColorBtn.dataset.awayJerseyColor);
+    } else if (awayPatternBtn) {
+      teamA.setAwayJerseyPattern(awayPatternBtn.dataset.awayJerseyPattern);
+    } else if (awayTwoToneBtn) {
+      teamA.setAwayJerseyTwoTone(awayTwoToneBtn.dataset.awayJerseyTwotone);
     } else if (resetLogoBtn) {
       teamA.setCustomLogo(null);
     } else if (togglePayingBtn) {
@@ -14926,6 +15440,9 @@ if (clubIdentityPanelEl) {
     if (shapeBtn || colorBtn) syncJerseyToServer(teamA.jerseyShape, teamA.jerseyColor);
     if (patternBtn) syncJerseyPatternToServer(teamA.jerseyPattern);
     if (twoToneBtn) syncJerseyTwoToneToServer(teamA.jerseyTwoTone);
+    if (awayColorBtn) syncAwayJerseyColorToServer(teamA.awayJerseyColor);
+    if (awayPatternBtn) syncAwayJerseyPatternToServer(teamA.awayJerseyPattern);
+    if (awayTwoToneBtn) syncAwayJerseyTwoToneToServer(teamA.awayJerseyTwoTone);
     if (resetLogoBtn) syncLogoToServer(null);
     if (togglePayingBtn) syncPayingToServer(teamA.isPaying);
     renderClubIdentityPanel();
@@ -14982,6 +15499,8 @@ const ROSTER_SORT_COLUMNS = [
   { key: "height", label: "Taille" },
   { key: "potential", label: "Potentiel" },
   { key: "salary", label: "Salaire/sem." },
+  // Forme physique (voir CONDITION_STATES/conditionBadgeHtml plus haut).
+  { key: "condition", label: "Forme" },
 ];
 
 function rosterSortValue(p, key) {
@@ -14996,6 +15515,10 @@ function rosterSortValue(p, key) {
     // deux joueurs du même palier.
     case "potential": return p.potential;
     case "salary": return p.salary;
+    // Forme physique : trié sur la valeur courante rattrapée (voir
+    // currentCondition), pas sur p.condition brut, pour rester cohérent
+    // avec ce que la colonne affiche réellement (voir conditionBadgeHtml).
+    case "condition": return currentCondition(p);
     // Toute autre clé = une des 10 caractéristiques (ATTRS), voir
     // renderEffectifSection ci-dessous.
     default: return p.attrs[key];
@@ -15081,6 +15604,7 @@ function renderEffectifSection() {
     html += `<tr class="${isStarter ? "me" : ""}"><td>${playerLinkHtml(myTeamIndex, p.id, p.name)}${forSaleCell}</td><td>${posCell}</td>` +
       `<td>${p.age}</td><td>${p.height} cm</td><td>${potentialCell}</td>` +
       `<td title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
+      `<td>${conditionBadgeHtml(p, Date.now(), true)}</td>` +
       ATTRS.map(a => `<td>${attrCellHtml(p.attrs[a])}</td>`).join("") + `<td>${marketCell}</td></tr>`;
   });
   html += "</tbody></table></div>";

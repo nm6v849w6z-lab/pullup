@@ -42,6 +42,22 @@ if (!doc1.getElementById("playerDetailContent").textContent.includes("Aucun matc
 }
 console.log("✅ Fiche joueur ouverte depuis l'Effectif : caractéristiques en clair, message d'attente propre sans historique de matchs.");
 
+// ---------------------------------------------------------------------
+// Motivation (Player.form, voir motivationBadgeHtml, retour utilisateur,
+// 2026-09 : "La motivation du joueur n'apparaît pas ?") : visible sur SA
+// PROPRE fiche joueur, avec le bon libellé d'état pour la valeur réelle.
+// ---------------------------------------------------------------------
+const ownPlayerId = Number(firstPlayerLink.dataset.playerId);
+const ownPlayerForm = dom1.window.eval(`teamA.players.find(p => p.id === ${ownPlayerId}).form`);
+const expectedMotivationLabel = dom1.window.eval(`motivationLabel(${ownPlayerForm})`);
+const motivationBadge1 = doc1.querySelector("#playerDetailContent .motivation-badge");
+console.log("Motivation affichée pour son propre joueur :", motivationBadge1 && motivationBadge1.textContent, "(attendu", expectedMotivationLabel, ", form réel =", ownPlayerForm, ")");
+if (!motivationBadge1) throw new Error("❌ La fiche de son propre joueur devrait afficher un badge de motivation.");
+if (motivationBadge1.textContent !== expectedMotivationLabel) {
+  throw new Error(`❌ Le badge de motivation devrait afficher "${expectedMotivationLabel}" pour form=${ownPlayerForm}, obtenu "${motivationBadge1.textContent}".`);
+}
+console.log("✅ La motivation de son propre joueur est bien affichée sur sa fiche, avec le bon libellé d'état.");
+
 doc1.getElementById("closePlayerDetailBtn").click();
 const backToEffectif = !doc1.getElementById("effectifSection").classList.contains("hidden") &&
   doc1.getElementById("tabEffectif") && doc1.getElementById("tabEffectif").classList.contains("active");
@@ -136,6 +152,16 @@ if (lockedCells !== ATTRS_LENGTH_FALLBACK(win2)) {
   throw new Error(`❌ Sans séance vidéo faite sur cet adversaire, TOUTES ses caractéristiques devraient rester verrouillées sur sa fiche, obtenu ${lockedCells} verrouillées.`);
 }
 console.log("✅ Les caractéristiques d'un adversaire non scouté restent verrouillées sur sa fiche joueur, exactement comme sur le panneau de scoutisme.");
+
+// Motivation : jamais affichée pour un joueur adverse (voir le commentaire
+// d'isOwnTeam dans renderPlayerDetail), contrairement à la forme physique
+// juste au-dessus qui, elle, reste toujours visible.
+const motivationBadgeOpponent = doc2.querySelector("#playerDetailContent .motivation-badge");
+const conditionBadgeOpponent = doc2.querySelector("#playerDetailContent .condition-badge");
+console.log("Badge de motivation affiché pour un adversaire :", !!motivationBadgeOpponent, "(attendu false) | badge de forme physique :", !!conditionBadgeOpponent, "(attendu true)");
+if (motivationBadgeOpponent) throw new Error("❌ La motivation d'un joueur adverse ne devrait JAMAIS être affichée (information interne au club).");
+if (!conditionBadgeOpponent) throw new Error("❌ La forme physique, elle, devrait rester visible même pour un joueur adverse.");
+console.log("✅ La motivation reste privée à son propre effectif, sans affecter la forme physique (toujours publique).");
 
 function ATTRS_LENGTH_FALLBACK(w) { return w.eval("ATTRS.length"); }
 

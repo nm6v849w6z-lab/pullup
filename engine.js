@@ -13,9 +13,26 @@
 
 const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
 
+// 3 caractéristiques ajoutées (retour utilisateur, 2026-09 : "il faudrait
+// ajouter les lignes de carac suivantes : Mental [...] Endurance [...]
+// Lancer Franc") : mêmes citoyens à part entière que les 10 d'origine
+// (comptent dans Player.overall()/le potentiel/le salaire, s'entraînent
+// normalement, POSITION_ATTR_PROFILE plus bas les traite en "base" pour
+// tous les postes faute de biais réel), mais chacune alimente en plus un
+// mécanisme de match dédié plutôt qu'un simple malus/bonus générique :
+// - "mental" : fin de match serrée (voir le bonus clutch dans
+//   MatchEngine, autour de "clutch" dans playPossession) ET capacité à
+//   encaisser une série de ratés/pertes de balle sans s'enfoncer (voir
+//   Player.consecutiveMisses/le malus de "tilt" dans playPossession).
+// - "endurance" : vitesse d'accumulation de la fatigue EN MATCH pour CE
+//   joueur (voir enduranceMult dans MatchEngine.applyFatigue), version
+//   individuelle de l'effet de l'Espace bien-être du club.
+// - "freeThrow" : réussite aux lancers francs (voir MatchEngine.freeThrows),
+//   qui utilisait jusqu'ici le tir à mi-distance comme simple approximation.
 const ATTRS = [
   "midRange", "threePoint", "inside", "pass", "rebound",
-  "block", "dribble", "agility", "defOutside", "defInside"
+  "block", "dribble", "agility", "defOutside", "defInside",
+  "mental", "endurance", "freeThrow"
 ];
 
 const TRAINING_LABELS = {
@@ -29,6 +46,9 @@ const TRAINING_LABELS = {
   agility: "Agilité",
   defOutside: "Défense extérieure",
   defInside: "Défense intérieure",
+  mental: "Mental",
+  endurance: "Endurance",
+  freeThrow: "Lancer franc",
 };
 
 const OFFENSE_PROFILES = {
@@ -1298,10 +1318,24 @@ function milestoneTypeForRound(round, totalRounds) {
 // `formWin`/`formLoss` (Player.form, échelle 1-100 comme fanMorale — voir
 // Team.resolveInterview, appliqué à CHAQUE joueur ayant disputé ce match
 // précis, jamais tout l'effectif).
+// `chemistryWin`/`chemistryLoss` (retour utilisateur, 2026-09 : "l'alchimie
+// du groupe [...] peut être impactée par le coach lors de ses interviews",
+// voir le grand commentaire de CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus bas) :
+// Team.chemistry, appliqué par Team.resolveInterview à TOUTE l'équipe
+// (contrairement à formWin/formLoss ci-dessus, réservé aux joueurs ayant
+// disputé CE match précis) — la cohésion du vestiaire dépend du discours du
+// coach dans son ensemble, pas seulement de qui a joué. Un ton "Agressif"
+// coûte toujours un peu de cohésion (l'égo individuel prime sur le
+// collectif), pire encore après une défaite (chercher des excuses divise le
+// vestiaire) ; un ton "Humble" (crédit aux coéquipiers, responsabilité
+// assumée) est au contraire ce qui construit le plus de cohésion, même
+// après une défaite ; "Mesuré" reste neutre à légèrement positif. Un vrai
+// choix à faire pour le coach : "Agressif" est excellent pour les
+// supporters mais coûte de la cohésion, "Humble" est l'inverse.
 const MILESTONE_INTERVIEW_TONES = {
-  "Agressif": { fanWin: 7,   fanLoss: -7, formWin: 4, formLoss: -4 },
-  "Mesuré":   { fanWin: 3,   fanLoss: -3, formWin: 2, formLoss: -2 },
-  "Humble":   { fanWin: 1.5, fanLoss: 3,  formWin: 1, formLoss: 2 },
+  "Agressif": { fanWin: 7,   fanLoss: -7, formWin: 4, formLoss: -4, chemistryWin: -1, chemistryLoss: -2 },
+  "Mesuré":   { fanWin: 3,   fanLoss: -3, formWin: 2, formLoss: -2, chemistryWin: 1,  chemistryLoss: 0 },
+  "Humble":   { fanWin: 1.5, fanLoss: 3,  formWin: 1, formLoss: 2,  chemistryWin: 2,  chemistryLoss: 1 },
 };
 
 // Citations "étoffées" (retour utilisateur : "une interview un peu
@@ -1582,6 +1616,31 @@ const JERSEY_COLORS = {
   jaune:  "#e8c93f",
 };
 
+// Luminosité perçue d'une couleur de JERSEY_COLORS (0 = noir, 1 = blanc),
+// formule YIQ standard. Sert uniquement à choisir une couleur de maillot
+// EXTÉRIEUR par défaut qui contraste avec le maillot domicile (voir
+// defaultAwayJerseyColor juste en dessous), jamais utilisée pour le rendu.
+function jerseyColorLuminance(colorKey) {
+  const hex = JERSEY_COLORS[colorKey];
+  if (!hex) return 0;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+// Couleur de maillot EXTÉRIEUR par défaut à la création d'un club ou quand la
+// couleur domicile change (retour utilisateur, 2026-09 : "Travaille sur les
+// maillots extérieurs également") : un club de basket porte traditionnellement
+// un maillot clair à domicile et un maillot sombre à l'extérieur, ou
+// inversement, jamais 2 maillots de la même tonalité. Ici, "noir" si la
+// couleur domicile est claire, "blanc" sinon, pour garantir un contraste
+// visible dès la création. Reste modifiable ensuite via
+// Team.setAwayJerseyColor comme n'importe quelle couleur de la palette.
+function defaultAwayJerseyColor(homeColorKey) {
+  return jerseyColorLuminance(homeColorKey) > 0.6 ? "noir" : "blanc";
+}
+
 // Deux formes de maillot seulement (retour utilisateur explicite) : "A"
 // (débardeur, col rond) et "B" (débardeur, col en V à bandes latérales).
 // Toujours SANS manche (retour utilisateur : "Il n'y a pas de manches sur
@@ -1756,6 +1815,92 @@ function salaryForOverall(overall) {
   return Math.max(SALARY_MIN, Math.round(raw));
 }
 
+// ---------------------------------------------------------------------
+// FORME PHYSIQUE (retour utilisateur, 2026-09 : "Chaque joueur possède une
+// forme comprise entre 0 et 100 [...] totalement indépendante de
+// l'entraînement [...] l'interface affiche l'état correspondant [...] perte
+// après un match qui dépend des minutes jouées [...] récupère +15 points de
+// forme par jour de repos"). Champ VOLONTAIREMENT séparé de Player.form
+// (confiance du joueur, alimentée par les interviews, voir INTERVIEW_TONES/
+// applyMoraleForResult plus bas) et de Player.fatigue (énergie EN MATCH,
+// remise à 0 à chaque coup d'envoi par resetForMatch, voir MatchEngine.
+// applyFatigue) : ici, Player.condition survit d'un match à l'autre, sur
+// plusieurs JOURS réels, exactement comme l'endurance physique d'un vrai
+// sportif.
+//
+// États affichés (retour utilisateur, mêmes seuils que fournis) : la valeur
+// réelle (Player.condition) reste précise en interne, seule l'UI affiche
+// l'état correspondant (voir conditionStateFor). Chaque état porte aussi le
+// malus de performance (perfFactor, lu par Player.eff() plus bas, même
+// esprit que formFactor/fatigueFactor) et un multiplicateur de risque de
+// blessure (injuryMult, lu par MatchEngine.applyFatigue) : un joueur
+// "Épuisé" prend clairement plus de risques qu'un joueur frais.
+const CONDITION_STATES = [
+  { min: 90, label: "Pas de fatigue",     perfFactor: 1.00, injuryMult: 1.0 },
+  { min: 75, label: "Légèrement fatigué", perfFactor: 0.97, injuryMult: 1.05 },
+  { min: 60, label: "Fatigué",            perfFactor: 0.90, injuryMult: 1.20 },
+  { min: 40, label: "Très fatigué",       perfFactor: 0.75, injuryMult: 1.45 },
+  { min: 0,  label: "Épuisé",             perfFactor: 0.55, injuryMult: 1.80 },
+];
+function conditionStateFor(condition) {
+  return CONDITION_STATES.find(s => condition >= s.min) || CONDITION_STATES[CONDITION_STATES.length - 1];
+}
+
+// Durée d'un jour réel, pour la récupération (voir currentCondition
+// ci-dessous) — INDÉPENDANTE de CALENDAR_DAY_MS (plus bas dans ce fichier,
+// propre au rythme du calendrier de championnat) : la récupération de forme
+// suit le temps réel qui passe pour le MANAGER, pas le rythme des journées
+// de championnat (un club peut très bien ne jouer qu'un match par semaine).
+const CONDITION_DAY_MS = 24 * 60 * 60 * 1000;
+const CONDITION_RECOVERY_PER_DAY = 15;
+
+// Valeur ACTUELLE de la forme d'un joueur, jours de repos écoulés depuis
+// Player.conditionUpdatedAt déjà rattrapés (retour utilisateur : "+15
+// points de forme par jour de repos, avec un plafond à 100"). Fonction PURE
+// (ne modifie rien), même principe que computeClubReputationStars
+// (recalculée à l'affichage plutôt que stockée en continu). La vraie mise à
+// jour PERSISTÉE de Player.condition/conditionUpdatedAt n'a lieu qu'aux
+// moments où elle compte réellement : au coup d'envoi d'un match (snapshot,
+// voir Player.resetForMatch) puis juste après (perte selon les minutes
+// jouées, voir recordMatchStatsForTeam plus bas).
+function currentCondition(player, now = Date.now()) {
+  const daysRested = Math.floor((now - (player.conditionUpdatedAt || now)) / CONDITION_DAY_MS);
+  if (daysRested <= 0) return player.condition;
+  return clamp(player.condition + daysRested * CONDITION_RECOVERY_PER_DAY, 0, 100);
+}
+
+// Perte de forme après un match, selon les minutes jouées (retour
+// utilisateur, valeurs de référence : 5 min -> -3, 10 -> -6, 20 -> -12,
+// 30 -> -18, 40 -> -25). Linéaire (-0,6/minute) jusqu'à 30 minutes, puis un
+// peu plus coûteux au-delà (-0,7/minute) pour les grosses charges de fin de
+// match, à l'image d'un vrai gros temps de jeu qui fatigue plus que
+// proportionnellement. Arrondie au point entier le plus proche, comme les
+// exemples fournis par l'utilisateur.
+function conditionLossForMinutes(minutesPlayed) {
+  if (minutesPlayed <= 0) return 0;
+  const loss = minutesPlayed <= 30
+    ? minutesPlayed * 0.6
+    : 30 * 0.6 + (minutesPlayed - 30) * 0.7;
+  return Math.round(loss);
+}
+
+// État affiché pour Player.form (voir son commentaire au constructeur juste
+// en dessous, retour utilisateur, 2026-09 : "La motivation du joueur n'
+// apparaît pas ?") : mêmes seuils que moraleLabel/chemistryLabel plus haut
+// (85/65/45/25), Player.form étant alimenté par LE MÊME système
+// d'interviews de jalon (voir MILESTONE_INTERVIEW_TONES formWin/formLoss,
+// resolveInterview plus bas) que Team.fanMorale/Team.chemistry, juste à
+// l'échelle d'un joueur plutôt que du club entier. Libellé propre plutôt
+// qu'un simple appel à moraleLabel/chemistryLabel : "motivation" du joueur,
+// pas "humeur des supporters" ni "cohésion du groupe".
+function motivationLabel(form) {
+  if (form >= 85) return "Très motivé";
+  if (form >= 65) return "Motivé";
+  if (form >= 45) return "Neutre";
+  if (form >= 25) return "Peu motivé";
+  return "Démotivé";
+}
+
 class Player {
   constructor({ name, position, height, age, attrs, aggressiveness }) {
     this.id = uid();
@@ -1766,6 +1911,15 @@ class Player {
     this.attrs = attrs; // {midRange, threePoint, inside, pass, rebound, block, dribble, agility, defOutside, defInside}
     this.aggressiveness = aggressiveness; // caractéristique cachée 1-100
     this.form = clamp(Math.round(rand(55, 90)), 1, 100);
+
+    // Forme physique (voir CONDITION_STATES/currentCondition/
+    // conditionLossForMinutes plus haut) : démarre fraîche (haut de la
+    // fourchette "Pas de fatigue"/"Légèrement fatigué"), un joueur qui
+    // rejoint l'effectif n'a par définition subi aucune charge de matchs
+    // récente. `conditionUpdatedAt` : posé à la génération, sert de point de
+    // départ pour la récupération (voir currentCondition).
+    this.condition = clamp(Math.round(rand(80, 100)), 0, 100);
+    this.conditionUpdatedAt = Date.now();
 
     // Bonus temporaire de MVP (retour utilisateur, 2026-09 : "le mvp d'un
     // match doit avoir un petit bonus pour le match [...] +2 sur toutes ses
@@ -1813,6 +1967,11 @@ class Player {
     this.disqualified = false;
     this.injured = false;
     this.onCourt = false;
+    // Série de ratés/pertes de balle d'affilée EN MATCH (voir "mental" au-dessus
+    // d'ATTRS) : incrémentée sur un tir manqué ou une perte de balle, remise à
+    // 0 sur un tir réussi (voir playPossession) - alimente le malus de "tilt"
+    // qui s'aggrave ou s'atténue selon Player.attrs.mental.
+    this.consecutiveMisses = 0;
     // Poste occupé DANS CE MATCH (peut différer de this.position si le
     // joueur est aligné comme remplaçant sur un autre poste que le sien —
     // voir Team.lineup). Fixé à l'entrée sur le terrain (titulaire ou
@@ -1964,12 +2123,13 @@ class Player {
     };
   }
 
-  resetForMatch() {
+  resetForMatch(now = Date.now()) {
     this.fatigue = 0;
     this.fouls = 0;
     this.disqualified = false;
     this.injured = false;
     this.onCourt = false;
+    this.consecutiveMisses = 0;
     this.matchPosition = null;
     this.secondsPlayed = 0;
     this.secondsPlayedByPosition = {};
@@ -1977,20 +2137,45 @@ class Player {
     // (voir son commentaire au constructeur) : il doit survivre aux DEUX
     // autres matchs du jour, jusqu'à ce que Team.trainWeek le consomme.
     this.stats = this.emptyStats();
+    // Forme physique (voir currentCondition/CONDITION_STATES plus haut) :
+    // snapshot pris UNE FOIS au coup d'envoi (jours de repos déjà rattrapés
+    // par currentCondition), lu par eff() pendant tout le match, jamais
+    // recalculé possession par possession (contrairement à fatigue, qui
+    // évolue EN DIRECT). La perte liée à CE match n'est appliquée qu'ensuite,
+    // une fois les minutes réellement jouées connues (voir
+    // recordMatchStatsForTeam).
+    this.matchCondition = currentCondition(this, now);
   }
 
+  // Moyenne des 13 caractéristiques (voir le grand commentaire au-dessus
+  // d'ATTRS) : "mental"/"endurance"/"freeThrow" comptent ici exactement
+  // comme les 10 d'origine, mêmes citoyens à part entière (contrairement à
+  // aggressiveness, caractéristique cachée volontairement EXCLUE d'overall,
+  // voir le constructeur plus haut).
   overall() {
     const a = this.attrs;
     return (a.midRange + a.threePoint + a.inside + a.pass + a.rebound +
-      a.block + a.dribble + a.agility + a.defOutside + a.defInside) / 10;
+      a.block + a.dribble + a.agility + a.defOutside + a.defInside +
+      a.mental + a.endurance + a.freeThrow) / 13;
   }
 
-  // Statistique effective en jeu = (base + bonus MVP éventuel) * forme * fatigue
+  // Statistique effective en jeu = (base + bonus MVP éventuel) * forme * fatigue * forme physique * alchimie d'équipe
   eff(stat) {
     const base = this.attrs[stat] + (this.pendingMatchBoost || 0);
     const formFactor = 0.85 + (this.form / 100) * 0.30;      // 0.85 → 1.15
     const fatigueFactor = 1 - (this.fatigue / 100) * 0.35;   // jusqu'à -35%
-    return clamp(base * formFactor * fatigueFactor, 1, 130);
+    // Forme physique (voir CONDITION_STATES plus haut) : lit matchCondition
+    // (snapshot posé par resetForMatch), jamais Player.condition directement
+    // (pas encore rattrapé/perdu pour CE match tant que resetForMatch n'est
+    // pas passé), `?? this.condition` en dernier recours si eff() était
+    // jamais appelée hors match (aucun appel de ce genre aujourd'hui, voir
+    // les usages dans playPossession, mais un filet de sécurité coûte peu).
+    const conditionFactor = conditionStateFor(this.matchCondition ?? this.condition).perfFactor;
+    // Alchimie d'équipe (voir Team.chemistryFactor/resetForMatch plus haut) :
+    // lit matchChemistryFactor (snapshot d'ÉQUIPE posé par Team.resetForMatch),
+    // `?? 1` en dernier recours si eff() était jamais appelée hors match.
+    const chemistryFactor = this.matchChemistryFactor ?? 1;
+    return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor, 1, 130);
   }
 }
 
@@ -2008,6 +2193,76 @@ class Player {
 // Coupe n'ait elle-même de planification à l'avance).
 function planKey(round, competition) {
   return `${competition || "championship"}:${round}`;
+}
+
+// ---------------------------------------------------------------------
+// ALCHIMIE D'ÉQUIPE (retour utilisateur, 2026-09 : "l'alchimie du groupe
+// elle doit avoir un impact positif ou négatif sur les performances
+// d'équipe [...] elle peut être impactée : par le coach lors de ses
+// interviews [...] par les changements fréquents de joueurs (jamais une
+// base de joueurs fixes, donc il faut recreer du lien entre les joueurs),
+// mais changer un joueur majeur d'une équipe doit forcément avoir bcp plus
+// d'impact que de changer le 12 homme (qui doit être très faible) [...]
+// changer trop régulièrement de tactique doit aussi avoir un petit
+// impact"). `Team.chemistry` : 0-100, MÊME convention que Team.fanMorale
+// (neutre à 50 à la création, voir le constructeur plus bas) — mais,
+// contrairement à fanMorale, ne bouge QUE par les 3 leviers explicitement
+// listés ci-dessus, jamais de dérive naturelle dans le temps :
+//   1) Interviews de jalon (voir MILESTONE_INTERVIEW_TONES.chemistryWin/
+//      chemistryLoss, appliqué par Team.resolveInterview) : le ton choisi
+//      par le coach peut construire ou abîmer la cohésion du groupe, dans
+//      un sens ou dans l'autre (positif OU négatif, comme demandé).
+//   2) Changements d'effectif (voir chemistryRosterImportance/rosterRankOf
+//      ci-dessous, appliqué par League._resolveListing au marché des
+//      transferts et par Team.sellPlayer à la vente forcée) : TOUJOURS un
+//      malus (jamais un bonus, un club ne "gagne" pas en cohésion en
+//      brassant son effectif), pondéré par l'importance du joueur parti/
+//      arrivé dans l'effectif.
+//   3) Changements de tactique trop fréquents (voir Team.checkTacticsChemistry
+//      ci-dessous, appliqué à chaque match réellement joué) : petit malus
+//      fixe si l'identité tactique de fond (attaque prioritaire/défense/
+//      rythme) diffère du dernier match, aucun effet si elle est restée la
+//      même.
+// Lu par Team.chemistryFactor() (voir Player.eff()/Team.resetForMatch plus
+// bas) pour un effet MODESTE sur la performance de TOUTE l'équipe (jamais
+// aussi marqué que la forme physique ou la fatigue d'UN seul joueur) : la
+// cohésion collective aide ou pénalise le groupe entier, pas un joueur en
+// particulier.
+const CHEMISTRY_ROSTER_CHANGE_MAX_RANK = 12; // "le 12 homme" (retour utilisateur, littéral)
+const CHEMISTRY_ROSTER_CHANGE_BASE = 8; // malus max, pour le tout meilleur joueur de l'effectif
+const CHEMISTRY_TACTICS_CHANGE_PENALTY = 2; // "un petit impact" (retour utilisateur)
+
+// Poids d'un changement de joueur selon son RANG dans l'effectif (1 = tout
+// meilleur joueur au sens overall(), voir rosterRankOf ci-dessous) :
+// décroît LINÉAIREMENT jusqu'à 0 au rang CHEMISTRY_ROSTER_CHANGE_MAX_RANK
+// (le "12e homme" pèse donc quasiment rien, comme demandé), et reste à 0
+// au-delà (un effectif de 22 joueurs maximum, voir MAX_ROSTER_SIZE, peut
+// avoir un rang 13+ qui ne compte simplement plus du tout).
+function chemistryRosterImportance(rank) {
+  return clamp(1 - (rank - 1) / (CHEMISTRY_ROSTER_CHANGE_MAX_RANK - 1), 0, 1);
+}
+
+// Rang (1 = meilleur) d'un joueur PRÉCIS dans une liste de joueurs donnée,
+// d'après overall() — à appeler au moment EXACT où ce joueur quitte ou
+// rejoint un effectif (avant le splice() côté vendeur, après le push() côté
+// acheteur, voir League._resolveListing/Team.sellPlayer), jamais après
+// coup : le rang d'un joueur qui vient de partir n'a plus de sens une fois
+// qu'il n'est plus dans la liste.
+function rosterRankOf(players, playerId) {
+  const sorted = [...players].sort((a, b) => b.overall() - a.overall());
+  const idx = sorted.findIndex(p => p.id === playerId);
+  return idx === -1 ? sorted.length + 1 : idx + 1;
+}
+
+// État affiché pour Team.chemistry (voir moraleLabel plus haut, mêmes
+// seuils, même esprit : la valeur exacte reste interne, seul l'état est
+// montré au manager).
+function chemistryLabel(chemistry) {
+  if (chemistry >= 85) return "Alchimie parfaite";
+  if (chemistry >= 65) return "Bonne cohésion";
+  if (chemistry >= 45) return "Cohésion correcte";
+  if (chemistry >= 25) return "Tensions dans le groupe";
+  return "Vestiaire fracturé";
 }
 
 // ---------------------------------------------------------------------
@@ -2263,6 +2518,15 @@ class Team {
     this.fanMorale = 50;
     this.moraleHistory = [];
 
+    // Alchimie d'équipe (voir le grand commentaire au-dessus de
+    // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : neutre au départ, comme
+    // fanMorale. `lastTacticsSnapshotForChemistry` : `null` tant qu'aucun
+    // match n'a encore été joué (voir Team.checkTacticsChemistry), pas de
+    // malus au tout premier match de la saison, faute de match précédent
+    // auquel se comparer.
+    this.chemistry = 50;
+    this.lastTacticsSnapshotForChemistry = null;
+
     // Médias : interviews de jalon en attente d'un ton de réponse (retour
     // utilisateur, 2026-09 : "Interview d'après match qui pourrait influencer
     // sur les supporters et les joueurs [...] une petite interaction à choix
@@ -2320,6 +2584,21 @@ class Team {
     // rendu) pour ne jamais avoir à distinguer "pas encore choisi" de
     // "choisi mais ignoré".
     this.jerseyTwoTone = Object.keys(JERSEY_TWO_TONE_SETS)[0];
+
+    // Maillot EXTÉRIEUR, indépendant du maillot domicile ci-dessus (retour
+    // utilisateur, 2026-09 : "sur les maillots, il y a un problème, c'est
+    // qu'on ne peut choisir que les maillots domiciles, il faudrait changer
+    // ça" puis "Travaille sur les maillots extérieurs également") : même
+    // forme que le domicile (jerseyShape, un club n'a qu'une seule coupe de
+    // maillot), mais couleur/motif/combinaison propres, mêmes garde-fous
+    // "isPaying" que jerseyPattern/jerseyTwoTone (voir
+    // setAwayJerseyPattern/setAwayJerseyTwoTone plus bas). Couleur par
+    // défaut choisie pour contraster avec le maillot domicile (voir
+    // defaultAwayJerseyColor plus haut) plutôt qu'une couleur fixe, pour ne
+    // pas avoir 2 maillots identiques dès la création d'un club.
+    this.awayJerseyColor = defaultAwayJerseyColor(this.jerseyColor);
+    this.awayJerseyPattern = JERSEY_PATTERNS[0];
+    this.awayJerseyTwoTone = Object.keys(JERSEY_TWO_TONE_SETS)[0];
 
     // Date de création et trophées (retour utilisateur, 2026-09 : "on
     // pourrait ajouter les petites infos comme date de création, renommée et
@@ -2514,6 +2793,9 @@ class Team {
     if (!toneCfg) return null;
     const fanDelta = entry.won ? toneCfg.fanWin : toneCfg.fanLoss;
     const formDelta = entry.won ? toneCfg.formWin : toneCfg.formLoss;
+    // Alchimie d'équipe (voir MILESTONE_INTERVIEW_TONES.chemistryWin/
+    // chemistryLoss ci-dessus) : levier 1 des 3 (retour utilisateur).
+    const chemistryDelta = entry.won ? toneCfg.chemistryWin : toneCfg.chemistryLoss;
     const milestoneInfo = MILESTONE_INTERVIEW_TYPES[entry.milestone];
     const milestoneLabel = milestoneInfo ? milestoneInfo.label : "Interview de jalon";
     const quotes = interviewTranscriptFor(entry.milestone, tone, entry.won, entry.opponentName);
@@ -2523,8 +2805,55 @@ class Team {
       const p = this.players.find(pl => pl.id === pid);
       if (p) p.form = clamp(Math.round(p.form + formDelta), 1, 100);
     });
+    this.applyChemistryDelta(chemistryDelta);
     this.pendingInterviews.splice(idx, 1);
-    return { ok: true, delta: fanDelta, formDelta, quotes };
+    return { ok: true, delta: fanDelta, formDelta, chemistryDelta, quotes };
+  }
+
+  // Applique un delta à Team.chemistry, toujours borné à [0, 100] (voir le
+  // grand commentaire de CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut pour les
+  // 3 leviers qui l'appellent) : point d'entrée UNIQUE pour modifier
+  // Team.chemistry, pour qu'aucun appelant ne puisse oublier le clamp.
+  applyChemistryDelta(delta) {
+    this.chemistry = clamp(this.chemistry + delta, 0, 100);
+  }
+
+  // Multiplicateur de performance lié à l'alchimie (voir Player.eff()/
+  // Team.resetForMatch plus bas) : effet volontairement MODESTE (0.94 à
+  // 1.06, +/-6%) — un "petit plus/petit moins" d'ensemble sur TOUTE
+  // l'équipe, jamais un levier aussi fort que la forme physique ou la
+  // fatigue d'UN joueur (voir CONDITION_STATES.perfFactor, qui va jusqu'à
+  // -45%).
+  chemistryFactor() {
+    return 0.94 + (this.chemistry / 100) * 0.12;
+  }
+
+  // Détecte un changement de tactique par rapport au DERNIER match
+  // RÉELLEMENT joué (retour utilisateur : "changer trop régulièrement de
+  // tactique doit aussi avoir un petit impact", levier 3 des 3) : compare
+  // uniquement l'identité tactique de FOND (attaque prioritaire, défense,
+  // rythme), volontairement PAS les réglages fins (aide défensive, style de
+  // contre-attaque, marquage individuel...) — on ne pénalise qu'un vrai
+  // changement de plan de jeu, pas un simple ajustement. Appelée à chaque
+  // match réellement simulé (voir recordMatchStatsForTeam), jamais pendant
+  // la planification à l'avance (stagePlanForRound), qui ne représente
+  // encore qu'une intention et non un ordre réellement donné. `null` posé
+  // par le constructeur = pas encore de match de référence : aucun malus au
+  // tout premier match de la saison.
+  checkTacticsChemistry() {
+    const current = {
+      offense: [...this.offensivePriorities],
+      defense: this.defense,
+      rhythm: this.rhythm,
+    };
+    const prev = this.lastTacticsSnapshotForChemistry;
+    if (prev) {
+      const changed = prev.defense !== current.defense
+        || prev.rhythm !== current.rhythm
+        || prev.offense.join("|") !== current.offense.join("|");
+      if (changed) this.applyChemistryDelta(-CHEMISTRY_TACTICS_CHANGE_PENALTY);
+    }
+    this.lastTacticsSnapshotForChemistry = current;
   }
 
   // Ignore une interview en attente ("pas de commentaire") : aucun effet sur
@@ -2584,6 +2913,47 @@ class Team {
       return { ok: false, error: "Passez en club payant pour choisir une combinaison de couleurs." };
     }
     this.jerseyTwoTone = key;
+    return { ok: true };
+  }
+
+  // Couleur du maillot EXTÉRIEUR (voir Team.awayJerseyColor plus haut) :
+  // même palette et même validation que setJersey ci-dessus, mais la forme
+  // (jerseyShape) reste PARTAGÉE avec le maillot domicile, un club n'ayant
+  // qu'une seule coupe de maillot. Couleur libre pour tous les clubs, comme
+  // jerseyColor (seuls le motif et la combinaison 2 couleurs sont réservés
+  // au mode payant, voir setAwayJerseyPattern/setAwayJerseyTwoTone
+  // ci-dessous).
+  setAwayJerseyColor(color) {
+    if (!JERSEY_COLORS[color]) return { ok: false, error: "Couleur de maillot inconnue." };
+    this.awayJerseyColor = color;
+    return { ok: true };
+  }
+
+  // Motif du maillot EXTÉRIEUR (voir Team.awayJerseyPattern plus haut) :
+  // même garde-fou "isPaying" que setJerseyPattern ci-dessus, "uni" toujours
+  // autorisé. Jamais effacé en repassant gratuit, seul le rendu l'ignore
+  // tant que le club n'est pas payant (voir effectiveAwayJerseyPattern côté
+  // moteurbasket3.html).
+  setAwayJerseyPattern(pattern) {
+    if (!JERSEY_PATTERNS.includes(pattern)) return { ok: false, error: "Motif de maillot inconnu." };
+    if (pattern !== JERSEY_PATTERNS[0] && !this.isPaying) {
+      return { ok: false, error: "Passez en club payant pour un motif de maillot personnalisé." };
+    }
+    this.awayJerseyPattern = pattern;
+    return { ok: true };
+  }
+
+  // Combinaison de 2 couleurs du maillot EXTÉRIEUR (voir
+  // Team.awayJerseyTwoTone plus haut) : même garde-fou "isPaying" strict
+  // que setJerseyTwoTone ci-dessus, pas d'équivalent "uni" neutre. Jamais
+  // effacée en repassant gratuit, seul le rendu l'ignore (voir
+  // effectiveAwayJerseyTwoTone côté moteurbasket3.html).
+  setAwayJerseyTwoTone(key) {
+    if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
+    if (!this.isPaying) {
+      return { ok: false, error: "Passez en club payant pour choisir une combinaison de couleurs." };
+    }
+    this.awayJerseyTwoTone = key;
     return { ok: true };
   }
 
@@ -2675,7 +3045,13 @@ class Team {
   sellPlayer(playerId) {
     const idx = this.players.findIndex(p => p.id === playerId);
     if (idx === -1 || !this.players[idx].forSale) return false;
+    // Alchimie d'équipe (voir chemistryRosterImportance/rosterRankOf plus
+    // haut, levier 2 des 3) : rang AVANT le splice() ci-dessous, aucun
+    // acheteur ici (liquidation d'urgence, pas un vrai transfert), donc
+    // malus uniquement pour ce club.
+    const departureImportance = chemistryRosterImportance(rosterRankOf(this.players, playerId));
     const [p] = this.players.splice(idx, 1);
+    this.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * departureImportance);
     this.recordTransaction(`Vente de ${p.name}`, p.salePrice || 0);
     // Retour utilisateur (2026-09) : "en cas d'indisponibilité pour vente
     // d'un joueur, qui avait été mis dans la composition, il doit être
@@ -3739,8 +4115,16 @@ class Team {
     return this.missingStarterPositions().length === 0;
   }
 
-  resetForMatch() {
-    this.players.forEach(p => p.resetForMatch());
+  resetForMatch(now = Date.now()) {
+    // Alchimie d'équipe (voir Team.chemistryFactor plus haut) : snapshot
+    // pris UNE FOIS par match, sur CHAQUE joueur (comme matchCondition côté
+    // Player.resetForMatch) — c'est un multiplicateur d'ÉQUIPE, mais lu
+    // individuellement par Player.eff() pendant le match.
+    const chemistryFactor = this.chemistryFactor();
+    this.players.forEach(p => {
+      p.resetForMatch(now);
+      p.matchChemistryFactor = chemistryFactor;
+    });
     POSITIONS.forEach(pos => {
       const id = this.lineup.starters[pos];
       const p = id && this.players.find(x => x.id === id);
@@ -3807,6 +4191,13 @@ function heightForPosition(position) {
 // levelCoefficientFor plus bas) : les deux doivent s'accorder sur ce qui
 // définit chaque poste, sinon la génération et la grille salariale
 // raconteraient chacune une histoire différente du même joueur.
+// "mental"/"endurance"/"freeThrow" (voir leur commentaire au-dessus de
+// ATTRS) N'APPARAISSENT PAS ci-dessous, à dessein : ce sont des qualités
+// générales, pas propres à un poste (un Pivot encaisse aussi bien une
+// mauvaise série qu'un Meneur), donc elles retombent sur "base" pour
+// TOUS les postes via le filet `profile[a] || "base"` déjà en place plus
+// bas (generateAttrsForPosition/weightedRatingForPosition) plutôt que de
+// dupliquer "base" dans chacune des 5 entrées ci-dessous.
 const POSITION_ATTR_PROFILE = {
   "Meneur": { pass: "strong", dribble: "strong", agility: "strong", threePoint: "base",
     defOutside: "base", midRange: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak" },
@@ -4314,9 +4705,26 @@ function buildNextCupRound(prevRound, winners) {
 // scoreHome/scoreAway/forfeit, pour les DEUX équipes, et JAMAIS pour un
 // forfait (qui n'a jamais appelé MatchEngine.simulate(), donc p.stats/
 // p.secondsPlayed restent ceux — périmés — du match précédent de ce joueur).
-function recordMatchStatsForTeam(team, round, competition) {
+function recordMatchStatsForTeam(team, round, competition, now = Date.now()) {
+  // Alchimie d'équipe (voir Team.checkTacticsChemistry, levier 3 des 3) :
+  // une seule fois par match RÉELLEMENT joué (pas par joueur), compare la
+  // tactique de ce match à celle du précédent.
+  if (team.checkTacticsChemistry) team.checkTacticsChemistry();
   team.players.forEach(p => {
     if (p.secondsPlayed > 0) {
+      // Forme physique (voir CONDITION_STATES/conditionLossForMinutes plus
+      // haut) : perte selon les minutes RÉELLEMENT jouées ce match,
+      // appliquée sur matchCondition (déjà rattrapé des jours de repos par
+      // resetForMatch), jamais sur l'ancien Player.condition stocké
+      // directement, pour ne jamais compter deux fois la récupération.
+      // `matchCondition ?? currentCondition(...)` en filet de sécurité si
+      // cette fonction est appelée sans resetForMatch préalable (voir les
+      // tests qui l'appellent directement sur un joueur déjà mis en jeu à
+      // la main). `conditionUpdatedAt` posé à `now` : la prochaine
+      // récupération (voir currentCondition) repartira de CE match.
+      const baseCondition = p.matchCondition ?? currentCondition(p, now);
+      p.condition = clamp(Math.round(baseCondition - conditionLossForMinutes(p.secondsPlayed / 60)), 0, 100);
+      p.conditionUpdatedAt = now;
       // Bonus temporaire de MVP consommé (voir Player.pendingMatchBoost/eff()
       // /MVP_ATTR_BONUS/awardMatchMvp) : ce joueur vient justement de
       // disputer un match (p.stats/p.secondsPlayed au-dessus en témoignent),
@@ -4398,16 +4806,16 @@ function awardMatchMvp(home, away, round, competition, now = Date.now()) {
 // finalizeCupRound (server/liveMatch.js), pour qu'aucun futur appelant ne
 // puisse oublier d'accorder le MVP après avoir enregistré les stats.
 function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now()) {
-  recordMatchStatsForTeam(home, round, competition);
-  recordMatchStatsForTeam(away, round, competition);
+  recordMatchStatsForTeam(home, round, competition, now);
+  recordMatchStatsForTeam(away, round, competition, now);
   return awardMatchMvp(home, away, round, competition, now);
 }
 
-function simulateOrForfeit(teamHome, teamAway) {
+function simulateOrForfeit(teamHome, teamAway, now = Date.now()) {
   const homeOk = teamHome.hasValidLineup();
   const awayOk = teamAway.hasValidLineup();
   if (homeOk && awayOk) {
-    const result = new MatchEngine(teamHome, teamAway).simulate();
+    const result = new MatchEngine(teamHome, teamAway).simulate(now);
     return { scoreHome: result.finalScore.A, scoreAway: result.finalScore.B, forfeit: null };
   }
   if (!homeOk && !awayOk) return { scoreHome: 0, scoreAway: 0, forfeit: "both" };
@@ -4963,7 +5371,7 @@ class League {
       const round = this.playoffs.round;
       const matches = this.playoffMatchesForRound(round);
       matches.forEach(m => {
-        const result = simulateOrForfeit(this.teams[m.home], this.teams[m.away]);
+        const result = simulateOrForfeit(this.teams[m.home], this.teams[m.away], now);
         if (!result.forfeit) {
           recordMatchStatsAndAwardMvp(this.teams[m.home], this.teams[m.away], round, "championship", now);
         }
@@ -5157,6 +5565,10 @@ class League {
     }
     const idx = seller.players.findIndex(p => p.id === listing.playerId);
     if (idx === -1) { listing.result = "player-missing"; return; }
+    // Alchimie d'équipe (voir chemistryRosterImportance/rosterRankOf plus
+    // haut, levier 2 des 3) : le rang du joueur DANS L'EFFECTIF VENDEUR,
+    // calculé AVANT le splice() ci-dessous (tant qu'il y figure encore).
+    const sellerImportance = chemistryRosterImportance(rosterRankOf(seller.players, listing.playerId));
     const [player] = seller.players.splice(idx, 1);
     // Retour utilisateur (2026-09) : "en cas d'indisponibilité pour vente
     // d'un joueur, qui avait été mis dans la composition, il doit être
@@ -5181,6 +5593,14 @@ class League {
     if (seller.isHuman) seller.recordTransaction(`Vente de ${player.name} (enchères)`, amount);
     buyer.players.push(player);
     if (!buyer.isHuman) buyer.autoAssignLineup();
+    // Alchimie d'équipe (suite) : le rang du joueur DANS L'EFFECTIF
+    // ACHETEUR, calculé APRÈS le push() ci-dessus (il y figure désormais).
+    // Malus des DEUX côtés (jamais de bonus, voir le grand commentaire de
+    // CHEMISTRY_ROSTER_CHANGE_MAX_RANK) : partir ET arriver perturbent
+    // chacun la cohésion déjà en place dans leur effectif respectif.
+    const buyerImportance = chemistryRosterImportance(rosterRankOf(buyer.players, player.id));
+    seller.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * sellerImportance);
+    buyer.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * buyerImportance);
     listing.result = "sold";
     listing.finalPrice = amount;
   }
@@ -6196,6 +6616,12 @@ function serializePlayerRecord(p) {
     effectivePosition: p.effectivePosition,
     _trainProgress: { ...p._trainProgress },
     aggressiveness: p.aggressiveness, form: p.form,
+    // Forme physique (voir CONDITION_STATES/currentCondition plus haut) :
+    // conditionUpdatedAt DOIT être persisté avec condition (pas juste la
+    // valeur brute), sinon la récupération se rattraperait d'un coup, en
+    // trop, au prochain chargement (calculée depuis "maintenant" au lieu du
+    // dernier vrai point de mise à jour).
+    condition: p.condition, conditionUpdatedAt: p.conditionUpdatedAt,
     forSale: p.forSale, salePrice: p.salePrice,
     // Temps de jeu du DERNIER match, ventilé par poste (voir
     // Player.secondsPlayedByPosition) : sans ces deux champs, un
@@ -6320,6 +6746,16 @@ function serializeTeam(team) {
     transactions: team.transactions,
     fanMorale: team.fanMorale,
     moraleHistory: team.moraleHistory,
+    // Alchimie d'équipe (voir le grand commentaire de
+    // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : chemistry, plus le
+    // dernier instantané tactique utilisé pour détecter un changement au
+    // match suivant (voir Team.checkTacticsChemistry) : sans lui, un
+    // rechargement de page appliquerait à tort un malus au prochain match
+    // (aucun `prev` à comparer, alors qu'il y en avait bien un).
+    chemistry: team.chemistry,
+    lastTacticsSnapshotForChemistry: team.lastTacticsSnapshotForChemistry
+      ? { ...team.lastTacticsSnapshotForChemistry, offense: [...team.lastTacticsSnapshotForChemistry.offense] }
+      : null,
     // Interviews en attente (voir Team.pendingInterviews/applyMoraleForResult) :
     // même forme de persistance que pendingYouthDecisions plus bas, simple
     // copie superficielle de chaque entrée (objets plats, jamais de
@@ -6337,6 +6773,11 @@ function serializeTeam(team) {
     jerseyColor: team.jerseyColor,
     jerseyPattern: team.jerseyPattern,
     jerseyTwoTone: team.jerseyTwoTone,
+    // Maillot extérieur (voir Team.awayJerseyColor/awayJerseyPattern/
+    // awayJerseyTwoTone, setAwayJerseyColor et consorts plus haut).
+    awayJerseyColor: team.awayJerseyColor,
+    awayJerseyPattern: team.awayJerseyPattern,
+    awayJerseyTwoTone: team.awayJerseyTwoTone,
     // Fiche club (voir Team.foundedYear/trophies, generateFoundedYear/
     // MAX_TEAM_TROPHIES/League.recordTrophy plus haut) : copie superficielle
     // de chaque trophée, même précaution que pendingInterviews ci-dessus.
@@ -6412,6 +6853,23 @@ function playerFromSave(pdata) {
     name: pdata.name, position: pdata.position, height: pdata.height,
     age: pdata.age, attrs: { ...pdata.attrs }, aggressiveness: pdata.aggressiveness,
   });
+  // Migration : sauvegardes d'avant l'ajout de mental/endurance/freeThrow aux
+  // ATTRS (voir le grand commentaire au-dessus d'ATTRS) - ces 3 caractéristiques
+  // manquent alors totalement dans pdata.attrs, ce qui rendrait overall() (et
+  // tout ce qui en dépend : potentiel, salaire, entraînement) NaN. On les
+  // dérive de la moyenne des 10 caractéristiques d'origine du joueur (avec un
+  // léger bruit aléatoire pour éviter que tous les joueurs migrés se
+  // retrouvent avec exactement la même valeur), plutôt qu'une constante fixe,
+  // pour éviter un saut brutal d'overall/salaire au premier chargement après
+  // mise à jour.
+  const legacyAttrKeys = ["midRange", "threePoint", "inside", "pass", "rebound", "block", "dribble", "agility", "defOutside", "defInside"];
+  const missingNewAttrs = ["mental", "endurance", "freeThrow"].filter(k => typeof p.attrs[k] !== "number");
+  if (missingNewAttrs.length) {
+    const legacyAvg = legacyAttrKeys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / legacyAttrKeys.length;
+    missingNewAttrs.forEach(k => {
+      p.attrs[k] = clamp(Math.round(legacyAvg + (Math.random() * 10 - 5)), 1, 99);
+    });
+  }
   // Le potentiel est fixé une fois pour toutes à la création du joueur : on
   // écrase celui généré par défaut avec celui sauvegardé (sinon il serait
   // recalculé aléatoirement à chaque chargement, ce qui n'aurait aucun sens).
@@ -6434,6 +6892,12 @@ function playerFromSave(pdata) {
   p.effectivePosition = pdata.effectivePosition || p.effectivePosition;
   if (pdata._trainProgress) p._trainProgress = { ...pdata._trainProgress };
   if (typeof pdata.form === "number") p.form = pdata.form;
+  // Forme physique (voir serializePlayerRecord ci-dessus). Absent (ancienne
+  // sauvegarde d'avant cette fonctionnalité) : on garde condition/
+  // conditionUpdatedAt déjà posés par le constructeur (joueur "frais"),
+  // même principe que les autres champs manquants ci-dessous.
+  if (typeof pdata.condition === "number") p.condition = pdata.condition;
+  if (typeof pdata.conditionUpdatedAt === "number") p.conditionUpdatedAt = pdata.conditionUpdatedAt;
   if (pdata.id) p.id = pdata.id;
   // Temps de jeu du dernier match (voir serializePlayerRecord ci-dessus pour
   // pourquoi c'est indispensable, matchLog/box-score).
@@ -6617,6 +7081,18 @@ function teamFromSave(data) {
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
+  // Alchimie d'équipe (voir serializeTeam ci-dessus). Absent (sauvegarde
+  // d'avant cette fonctionnalité) : on garde les valeurs déjà posées par le
+  // constructeur (chemistry neutre à 50, aucun instantané tactique de
+  // référence).
+  if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, 0, 100);
+  if (data.lastTacticsSnapshotForChemistry && Array.isArray(data.lastTacticsSnapshotForChemistry.offense)) {
+    team.lastTacticsSnapshotForChemistry = {
+      offense: [...data.lastTacticsSnapshotForChemistry.offense],
+      defense: data.lastTacticsSnapshotForChemistry.defense,
+      rhythm: data.lastTacticsSnapshotForChemistry.rhythm,
+    };
+  }
   // Interviews en attente (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
@@ -6635,6 +7111,14 @@ function teamFromSave(data) {
   if (JERSEY_COLORS[data.jerseyColor]) team.jerseyColor = data.jerseyColor;
   if (JERSEY_PATTERNS.includes(data.jerseyPattern)) team.jerseyPattern = data.jerseyPattern;
   if (JERSEY_TWO_TONE_SETS[data.jerseyTwoTone]) team.jerseyTwoTone = data.jerseyTwoTone;
+  // Maillot extérieur (voir serializeTeam ci-dessus) : absent = sauvegarde
+  // d'avant cette fonctionnalité, on garde la valeur par défaut déjà posée
+  // par le constructeur (couleur contrastant avec le maillot domicile déjà
+  // restauré juste au-dessus, motif "uni", club gratuit) plutôt que
+  // d'accepter une valeur brute non validée.
+  if (JERSEY_COLORS[data.awayJerseyColor]) team.awayJerseyColor = data.awayJerseyColor;
+  if (JERSEY_PATTERNS.includes(data.awayJerseyPattern)) team.awayJerseyPattern = data.awayJerseyPattern;
+  if (JERSEY_TWO_TONE_SETS[data.awayJerseyTwoTone]) team.awayJerseyTwoTone = data.awayJerseyTwoTone;
   // Fiche club (voir serializeTeam ci-dessus) : absent = sauvegarde d'avant
   // cette fonctionnalité, on garde les valeurs par défaut déjà posées par le
   // constructeur (foundedYear tiré à l'instant, trophies vide) plutôt que
@@ -6919,7 +7403,13 @@ class MatchEngine {
   }
 
   freeThrows(shooter, n, events, quarter, clock, team) {
-    const ftPct = clamp(0.69 + (shooter.eff("midRange") - 50) / 300, 0.55, 0.92);
+    // Utilise désormais l'attribut dédié "freeThrow" (voir le grand
+    // commentaire au-dessus d'ATTRS) au lieu de l'ancien proxy sur midRange :
+    // un lanceur médiocre (freeThrow bas) et un bon shooteur mi-distance
+    // peuvent maintenant diverger, comme dans la réalité. Plage plus large
+    // que l'ancienne (50 à 93 % contre 55 à 92) pour que l'attribut se sente
+    // réellement discriminant sur la ligne des lancers francs.
+    const ftPct = clamp(0.50 + (shooter.eff("freeThrow") / 100) * 0.42, 0.50, 0.93);
     let made = 0;
     for (let i = 0; i < n; i++) {
       shooter.stats.fta++;
@@ -7021,6 +7511,10 @@ class MatchEngine {
 
     if (Math.random() < tovChance) {
       ballHandler.stats.tov++;
+      // Mental / tilt (voir consecutiveMisses et le grand commentaire
+      // au-dessus d'ATTRS) : une perte de balle compte comme un raté pour la
+      // série qui alimente le malus de tilt du prochain tir.
+      ballHandler.consecutiveMisses++;
       const stealer = weightedPick(onCourtDef, p => p.eff("agility") + p.eff("defOutside"));
       if (Math.random() < 0.55) {
         stealer.stats.stl++;
@@ -7191,7 +7685,21 @@ class MatchEngine {
     // ce terme, volontairement : ce n'est pas un réglage tactique, c'est un
     // ajustement de calibrage du moteur lui-même.
     const marginDamp = clamp(-scoreDiff / 500, -0.06, 0.06);
-    prob = clamp(prob + marginDamp, 0.10, 0.75);
+    // Mental (voir le grand commentaire au-dessus d'ATTRS) : deux effets
+    // additifs indépendants, appliqués avant le clamp final ci-dessous.
+    // 1) Boost clutch : actif uniquement dans la fenêtre "clutch" existante
+    //    (voir heroMult plus haut, ±8 pts, Q4, 2 dernières minutes) - un
+    //    mental élevé transforme un tir serré en fin de match, un mental bas
+    //    le fait douter. Pivot à 50 (valeur moyenne) => aucun effet pour un
+    //    joueur "moyen", jusqu'à environ ±6 pts de % pour un mental extrême.
+    const mentalClutchBoost = clutch ? (shooter.attrs.mental - 50) * 0.0012 : 0;
+    // 2) Malus de "tilt" : après 3 ratés/pertes de balle d'affilée (voir
+    //    consecutiveMisses, mis à jour plus bas et incrémenté aussi sur
+    //    perte de balle) - un mental élevé (>=70) annule totalement le
+    //    malus, un mental bas peut aller jusqu'à -9 pts de %.
+    const tiltPenalty = shooter.consecutiveMisses >= 3
+      ? clamp((70 - shooter.attrs.mental) * 0.0015, 0, 0.09) : 0;
+    prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty, 0.10, 0.75);
 
     const made = Math.random() < prob;
     const points = zone === "three" ? 3 : 2;
@@ -7202,6 +7710,9 @@ class MatchEngine {
     const shotLabel = zone === "three" ? "three" : zone === "mid" ? "mid" : "inside";
 
     if (made) {
+      // Mental / tilt (voir consecutiveMisses plus haut) : un tir réussi
+      // remet le compteur à zéro, quelle que soit sa longueur de série.
+      shooter.consecutiveMisses = 0;
       shooter.stats.pts += points;
       if (zone === "three") shooter.stats.fgm3++; else shooter.stats.fgm2++;
       if (zone === "inside") shooter.stats.paintMade++;
@@ -7217,6 +7728,10 @@ class MatchEngine {
       }
       return { possessionOffense: false, scored: true };
     } else {
+      // Mental / tilt (voir plus haut) : un tir raté incrémente le compteur,
+      // même s'il est suivi de lancers francs (contre-attribué par le malus
+      // de "tilt" au prochain tir).
+      shooter.consecutiveMisses++;
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
         this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, possession: this.teamKey(offTeam) });
@@ -7281,7 +7796,16 @@ class MatchEngine {
     // repos plus bas, seulement sur le rythme d'accumulation pendant le jeu.
     const wellnessMult = team.facilityFatigueMult ? team.facilityFatigueMult() : 1;
     team.onCourtPlayers().forEach(p => {
-      p.fatigue = clamp(p.fatigue + (seconds / 24) * mult * wellnessMult, 0, 100);
+      // Endurance (voir le grand commentaire au-dessus d'ATTRS) : version
+      // INDIVIDUELLE de l'effet "espace bien-être" ci-dessus, réduit
+      // l'accumulation de fatigue EN MATCH propre à CE joueur uniquement -
+      // pivot à 50 (valeur moyenne) pour que le comportement d'un joueur
+      // "moyen" reste identique à avant l'ajout de cet attribut. N'agit
+      // jamais sur la récupération sur le banc (ligne plus bas) ni sur la
+      // forme physique jour après jour (currentCondition) : uniquement sur
+      // le rythme d'accumulation pendant le jeu, comme demandé.
+      const enduranceMult = 1.25 - (p.attrs.endurance / 100) * 0.5;
+      p.fatigue = clamp(p.fatigue + (seconds / 24) * mult * wellnessMult * enduranceMult, 0, 100);
       p.secondsPlayed += seconds;
       if (p.matchPosition) {
         p.secondsPlayedByPosition[p.matchPosition] = (p.secondsPlayedByPosition[p.matchPosition] || 0) + seconds;
@@ -7298,7 +7822,15 @@ class MatchEngine {
       if (!p.injured) {
         const fatigueFactor = 0.25 + 0.75 * (p.fatigue / 100);
         const injuryRiskMult = team.facilityInjuryRiskMult ? team.facilityInjuryRiskMult() : 1;
-        const injuryChance = BASE_INJURY_RATE * (seconds / 12) * fatigueFactor * injuryRiskMult;
+        // Forme physique (retour utilisateur : "0-39 Épuisé -> gros malus +
+        // risque de blessure augmenté", voir CONDITION_STATES plus haut) :
+        // multiplicateur additionnel, indépendant de injuryRiskMult
+        // (infrastructures du club) et de fatigueFactor (énergie EN MATCH
+        // ci-dessus) — un joueur peut très bien être frais EN MATCH
+        // (fatigue basse) mais arriver déjà éprouvé par son calendrier des
+        // derniers jours (condition basse), et inversement.
+        const conditionInjuryMult = conditionStateFor(p.matchCondition ?? p.condition).injuryMult;
+        const injuryChance = BASE_INJURY_RATE * (seconds / 12) * fatigueFactor * injuryRiskMult * conditionInjuryMult;
         if (Math.random() < injuryChance) {
           p.injured = true;
           p.onCourt = false;
@@ -7314,9 +7846,9 @@ class MatchEngine {
     });
   }
 
-  simulate() {
-    this.teamA.resetForMatch();
-    this.teamB.resetForMatch();
+  simulate(now = Date.now()) {
+    this.teamA.resetForMatch(now);
+    this.teamB.resetForMatch(now);
     const events = [];
     const quarterScores = { A: [0, 0, 0, 0], B: [0, 0, 0, 0] };
     let score = { A: 0, B: 0 };
@@ -7486,7 +8018,7 @@ return {
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
   ARENA_LEVELS, arenaInfo, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel,
-  JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, JERSEY_TWO_TONE_SETS, MAX_TEAM_LOGO_DATA_URL_LENGTH,
+  JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, JERSEY_TWO_TONE_SETS, defaultAwayJerseyColor, MAX_TEAM_LOGO_DATA_URL_LENGTH,
   // Interviews de jalon + MVP automatique (retour utilisateur, 2026-09 : voir
   // le grand commentaire au-dessus de MILESTONE_INTERVIEW_TYPES/MVP_ATTR_BONUS).
   MILESTONE_INTERVIEW_TYPES, MILESTONE_INTERVIEW_TONES, MILESTONE_INTERVIEW_QUOTES,
@@ -7495,6 +8027,16 @@ return {
   statEvaluation, MVP_ATTR_BONUS, MVP_QUOTES,
   TOUR_REWARD_BY_TOPIC,
   MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars,
+  // Forme physique (voir le grand commentaire au-dessus de CONDITION_STATES) :
+  CONDITION_STATES, conditionStateFor, currentCondition, conditionLossForMinutes,
+  CONDITION_DAY_MS, CONDITION_RECOVERY_PER_DAY,
+  // Motivation du joueur (voir le commentaire de motivationLabel au-dessus
+  // de "class Player") :
+  motivationLabel,
+  // Alchimie d'équipe (voir le grand commentaire au-dessus de
+  // CHEMISTRY_ROSTER_CHANGE_MAX_RANK) :
+  CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE, CHEMISTRY_TACTICS_CHANGE_PENALTY,
+  chemistryRosterImportance, rosterRankOf, chemistryLabel,
   CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,

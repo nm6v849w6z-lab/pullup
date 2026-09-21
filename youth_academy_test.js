@@ -605,7 +605,7 @@ function withMockedRandom(value, fn) {
   // le jeune reste dans youthPlayers (rien n'est perdu).
   const team = freshTeam();
   while (team.players.length < MAX_ROSTER_SIZE) {
-    team.players.push(new Player({ name: "Effectif complet", position: "Pivot", height: 205, age: 25, attrs: { midRange: 40, threePoint: 40, inside: 40, pass: 40, rebound: 40, block: 40, dribble: 40, agility: 40, defOutside: 40, defInside: 40 }, aggressiveness: 50 }));
+    team.players.push(new Player({ name: "Effectif complet", position: "Pivot", height: 205, age: 25, attrs: { midRange: 40, threePoint: 40, inside: 40, pass: 40, rebound: 40, block: 40, dribble: 40, agility: 40, defOutside: 40, defInside: 40, mental: 40, endurance: 40, freeThrow: 40 }, aggressiveness: 50 }));
   }
   const attrs = {}; ATTRS.forEach(a => attrs[a] = 60);
   const youngster = new Player({ name: "Sans place", position: "Meneur", height: 190, age: 18, attrs, aggressiveness: 50 });

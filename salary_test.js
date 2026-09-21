@@ -16,14 +16,21 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 // une étiquette : l'exemple donné par l'utilisateur — "gros rebond, grosse
 // défense intérieure → pivot". ---
 {
+  // mental/endurance/freeThrow ajoutés à une valeur neutre (50) : ces 3
+  // caractéristiques ne pèsent jamais dans POSITION_ATTR_PROFILE (voir son
+  // commentaire, engine.js), donc une valeur neutre ne fausse ni le poste
+  // détecté ni la comparaison à la moyenne brute ci-dessous, tout en évitant
+  // un overall()/coefficient NaN (les 13 caractéristiques sont désormais
+  // toutes lues par weightedRatingForPosition).
   const pivotLikeAttrs = {
     midRange: 20, threePoint: 15, inside: 88, pass: 18, rebound: 86,
     block: 78, dribble: 15, agility: 22, defOutside: 18, defInside: 84,
+    mental: 50, endurance: 50, freeThrow: 50,
   };
   const { position, coefficient } = levelCoefficientFor(pivotLikeAttrs);
   console.log("Profil 'gros rebond + grosse défense intérieure' → poste détecté :", position, "| coefficient :", coefficient.toFixed(1));
   if (position !== "Pivot") throw new Error("❌ Un profil gros rebond/grosse défense intérieure devrait ressortir Pivot, pas " + position);
-  const flatAvg = Object.values(pivotLikeAttrs).reduce((a, b) => a + b, 0) / 10;
+  const flatAvg = Object.values(pivotLikeAttrs).reduce((a, b) => a + b, 0) / Object.keys(pivotLikeAttrs).length;
   console.log("(moyenne brute pour comparaison :", flatAvg.toFixed(1), "— le coefficient pondéré doit être nettement supérieur, ses lacunes hors-spécialité comptant moins)");
   if (coefficient <= flatAvg + 5) throw new Error("❌ Le coefficient pondéré devrait dépasser nettement la moyenne brute pour un spécialiste bien typé.");
   console.log("✅ Le poste effectif est bien déterminé d'après les caractéristiques, et valorise correctement un spécialiste.");
@@ -39,6 +46,9 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
   const starAttrs = {
     midRange: 55, threePoint: 97, inside: 20, pass: 45, rebound: 20,
     block: 15, dribble: 45, agility: 50, defOutside: 45, defInside: 15,
+    // mental/endurance/freeThrow à une valeur neutre (50), voir le
+    // commentaire de pivotLikeAttrs plus haut.
+    mental: 50, endurance: 50, freeThrow: 50,
   };
   const star = new Player({ name: "Star Test", position: "Arrière", height: 195, age: 24, attrs: starAttrs, aggressiveness: 0.5 });
   console.log("\nJoueur à 97 en tir à 3pts (poste Arrière) → poste effectif :", star.effectivePosition, "| salaire :", star.salary, "€/sem.");
@@ -57,6 +67,9 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
   const freakAttrs = {
     midRange: 20, threePoint: 20, inside: 99, pass: 20, rebound: 99,
     block: 99, dribble: 20, agility: 20, defOutside: 20, defInside: 99,
+    // mental/endurance/freeThrow à une valeur neutre (50), voir le
+    // commentaire de pivotLikeAttrs plus haut.
+    mental: 50, endurance: 50, freeThrow: 50,
   };
   const freak = new Player({ name: "Freak Test", position: "Pivot", height: 215, age: 24, attrs: freakAttrs, aggressiveness: 0.5 });
   console.log("Profil extrême (4 carac fortes du Pivot à 99) → salaire :", freak.salary, "€/sem.");
@@ -250,6 +263,9 @@ win2.close();
   const pivotLikeAttrs = {
     midRange: 20, threePoint: 15, inside: 88, pass: 18, rebound: 86,
     block: 78, dribble: 15, agility: 22, defOutside: 18, defInside: 84,
+    // mental/endurance/freeThrow à une valeur neutre (50), voir le
+    // commentaire de pivotLikeAttrs en tête de fichier.
+    mental: 50, endurance: 50, freeThrow: 50,
   };
   // Confirme d'abord que la mutation est bien pertinente pour un joueur de
   // carte Arrière : appliquée à froid, elle ferait ressortir Pivot (sinon le
