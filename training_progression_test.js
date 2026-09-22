@@ -16,7 +16,7 @@
 // catchUpLeague) — on ne peut donc plus isoler "un entraînement validé sans
 // qu'aucun match n'ait jamais été joué avec le nouvel effectif" comme avant.
 // En pratique, ça n'enlève rien à la couverture utile : un effectif fraîchement
-// regonflé (voir refillRosterBtn, qui AJOUTE des débutants à côté de
+// regonflé (voir inflateRosterWithRookies, qui AJOUTE des débutants à côté de
 // l'effectif existant, sans plancher de rotation) contient presque toujours,
 // après une semaine réelle jouée normalement, un mélange de joueurs qui ONT
 // joué (minutes > 0) et de joueurs restés sur le banc lors du DERNIER match
@@ -24,8 +24,26 @@
 // exactement le cas "silencieux" à couvrir, mais désormais dans son contexte
 // réel plutôt que provoqué artificiellement.
 const fs = require("fs");
-const { startTestServer, openGame, flush, readRawSave, fastForwardCalendar } = require("./test_helpers.js");
+const { startTestServer, openGame, flush, readRawSave, writeRawSave, fastForwardCalendar } = require("./test_helpers.js");
+const E = require("./engine.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+
+// Regonfle l'effectif de 15 joueurs débutants supplémentaires (3 par poste),
+// directement dans la sauvegarde brute : remplace l'ancien clic sur
+// #refillRosterBtn (outil de test retiré de l'onglet Économie, retour
+// utilisateur, 2026-09 : "enleve les outils ici, ça n'a rien à faire là").
+// Ajoutés SANS toucher à la feuille de match existante (ni Team.
+// autoAssignLineup ni aucun remplissage des postes de remplaçants) : les 15
+// nouveaux joueurs restent donc du pur surplus de banc, qui ne joue jamais,
+// exactement le "mélange joueurs ayant joué/pas joué" recherché par ce
+// scénario, voir le grand commentaire juste en dessous.
+function inflateRosterWithRookies(savePath) {
+  const saved = readRawSave(savePath);
+  E.POSITIONS.forEach(pos => {
+    for (let i = 0; i < 3; i++) saved.team.players.push(E.serializePlayerRecord(E.generateRookiePlayer(pos)));
+  });
+  writeRawSave(savePath, saved);
+}
 
 async function loadGame() {
   const { server, savePath, baseUrl } = await startTestServer();
@@ -136,22 +154,25 @@ function sumTrainedProgress(before, after, trainedPositions, filterFn) {
 }
 
 // ---------------------------------------------------------------------
-// Partie 2 : le cas silencieux — après une régénération d'effectif (voir
-// refillRosterBtn, qui ajoute des débutants SANS toucher au plancher de
-// rotation) puis UNE semaine réelle jouée normalement (2 matchs), certains
+// Partie 2 : le cas silencieux, après une régénération d'effectif (voir
+// inflateRosterWithRookies, qui ajoute des débutants SANS toucher au plancher
+// de rotation) puis UNE semaine réelle jouée normalement (2 matchs), certains
 // joueurs du poste entraîné restent sans la moindre minute au DERNIER match
-// (resetForMatch() remet le compteur à zéro à chaque match, voir engine.js)
-// — le rapport hebdomadaire doit désormais EXPLIQUER pourquoi, joueur par
+// (resetForMatch() remet le compteur à zéro à chaque match, voir engine.js).
+// Le rapport hebdomadaire doit désormais EXPLIQUER pourquoi, joueur par
 // joueur, plutôt que de laisser un silence total (l'ancien bug : aucun gain,
 // aucune ligne, l'impression que l'entraînement est cassé). Les joueurs qui
-// ONT bien joué, eux, progressent normalement la même semaine — la même
+// ONT bien joué, eux, progressent normalement la même semaine : la même
 // semaine réelle couvre donc les deux moitiés du problème signalé par
 // l'utilisateur.
 // ---------------------------------------------------------------------
 {
   let { doc, win, dom, server, savePath, baseUrl } = await loadGame();
-  clickTab(doc, "economie");
-  doc.getElementById("refillRosterBtn").click();
+  win.close();
+  inflateRosterWithRookies(savePath);
+  dom = await openGame(html, baseUrl);
+  doc = dom.window.document;
+  win = dom.window;
   setTraining(doc, "threePoint");
   await flush(dom);
   const trainedPositions = readRawSave(savePath).team.trainingPositions;

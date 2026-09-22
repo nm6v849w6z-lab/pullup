@@ -1073,8 +1073,12 @@
      verrait bien les tactiques que l'on maîtrise ou pas") : un groupe par
      catégorie (Attaque/Défense/Rythme), chacun une rangée de jauges
      compactes qui passe à la ligne, même style que .roster-chemistry-
-     gauge-wrap mais en rangée plutôt qu'empilées. */
-  .tactical-knowledge-gauges-groups{display:flex; flex-direction:column; gap:16px; margin-top:10px;}
+     gauge-wrap mais en rangée plutôt qu'empilées. Écart entre groupes
+     relevé (retour utilisateur, 2026-09 : "mets un tout petit peu plus
+     d'écart entre les blocs attaque, défense et rythme, que l'on puisse
+     bien distinguer les 3 thématiques") : 16px ne détachait pas assez
+     visuellement les 3 groupes les uns des autres.*/
+  .tactical-knowledge-gauges-groups{display:flex; flex-direction:column; gap:26px; margin-top:10px;}
   .tactical-knowledge-gauge-group-title{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); font-weight:700; margin:0 0 6px;}
   .tactical-knowledge-gauges-row{display:flex; gap:14px; flex-wrap:wrap;}
   .tactical-knowledge-gauge-item{flex:1 1 140px; min-width:120px;}
@@ -1101,6 +1105,14 @@
   }
   .staff-hire-grid{display:grid; grid-template-columns:repeat(5, 1fr); gap:8px;}
   @media(max-width:680px){ .staff-hire-grid{grid-template-columns:repeat(2, 1fr);} }
+  /* Bouton "Afficher plus"/"Afficher moins" sous chaque marché de staff
+     (retour utilisateur, 2026-09 : "montrer uniquement les 5 prochains
+     staffs aux enchères [...] et mettre un petit bouton pour en afficher
+     plus [...] sinon faut beaucoup scroller"), voir staffListingsToggleHtml.
+     Centré sous le tableau plutôt qu'aligné à gauche comme un bouton
+     d'action normal, pour bien lire comme un simple "déplier" plutôt qu'une
+     action sur un candidat précis. */
+  .staff-listings-toggle-btn{display:block; margin:10px auto 0;}
   /* Variante pour les grilles qui n'ont jamais qu'UNE seule carte (prochain
      palier de la Salle, prochain palier de la boutique des supporters) —
      contrairement au recrutement de Staff (jusqu'à 5 candidats), qui a
@@ -2169,18 +2181,11 @@
       <h3 class="field-label">Transactions récentes</h3>
       <div id="economieTransactions"></div>
 
-      <h3 class="field-label" style="margin-top:26px;">Outils</h3>
-      <div id="devToolsFeedback"></div>
-      <div class="actions" style="margin:10px 0 22px;">
-        <button class="secondary" id="resetBudgetBtn">Remettre le budget à 0</button>
-        <button class="secondary" id="refillRosterBtn">Régénérer un effectif complet (15 joueurs débutants)</button>
-      </div>
-
       <!-- Réservé au SEUL manager qui porte Team.isAdmin (voir POST
            /api/reset-multi-league côté serveur) — masqué par défaut, affiché
            uniquement pour lui par initGame() une fois teamA.isAdmin connu.
-           Séparé visuellement des "Outils" ci-dessus : cette action touche
-           TOUS les managers de la ligue, pas seulement ce club. -->
+           Cette action touche TOUS les managers de la ligue, pas seulement
+           ce club. -->
       <div id="adminResetLeagueSection" class="hidden" style="margin-top:8px;padding-top:18px;border-top:2px solid #d33;">
         <h3 class="field-label" style="color:#d33;">Administration de la ligue</h3>
         <p class="sub">Réinitialise TOUTE la ligue partagée (calendrier, classement, effectifs, Coupe) pour les 10 managers à la fois, pas seulement ce club. Action irréversible.</p>
@@ -16166,7 +16171,7 @@ function renderLastTrainingReport() {
   if (!report) { holder.innerHTML = ""; return; }
   holder.innerHTML = `<div class="last-training-report">` +
     `<h4>Bilan de la semaine dernière (semaine ${teamA.week - 1})</h4>` +
-    `${trainingReportHtml(report)}</div>`;
+    `${trainingReportHtml(report, { playersOnly: true })}</div>`;
 }
 
 // 18 jauges de connaissance tactique, une PAR OPTION précise (retour
@@ -16378,6 +16383,31 @@ function staffFeedback(message, ok) {
   el.innerHTML = message ? `<div class="gain-line ${ok ? "gain-up" : "gain-down"}">${escapeHtml(message)}</div>` : "";
 }
 
+// Nombre d'enchères affichées d'entrée sur chaque marché de staff (retour
+// utilisateur, 2026-09 : "montrer uniquement les 5 prochains staffs aux
+// enchères pour chaque type de staff et mettre un petit bouton pour en
+// afficher plus [...] sinon faut beaucoup scroller") : les 5 plus proches de
+// leur clôture (déjà triées par closesAt, voir renderCoachListings/
+// renderAnalystListings/renderRecruiterListings), un bouton "Afficher plus"
+// dévoilant le reste à la demande. Un booléen par type de staff (pas un seul
+// partagé) : déplier le marché des entraîneurs ne doit pas aussi déplier
+// celui des analystes/recruteurs, qui vivent sur des sous-onglets séparés.
+const STAFF_LISTINGS_COLLAPSED_COUNT = 5;
+let coachListingsExpanded = false;
+let analystListingsExpanded = false;
+let recruiterListingsExpanded = false;
+
+// Bouton "Afficher plus (N)"/"Afficher moins" commun aux 3 marchés de staff
+// ci-dessous : factorisé ici pour ne pas tripler le même HTML/logique.
+function staffListingsToggleHtml(totalCount, visibleCount, expanded, toggleAttr) {
+  if (visibleCount >= totalCount) {
+    return expanded && totalCount > STAFF_LISTINGS_COLLAPSED_COUNT
+      ? `<button type="button" class="secondary staff-listings-toggle-btn" ${toggleAttr}="less">Afficher moins</button>`
+      : "";
+  }
+  return `<button type="button" class="secondary staff-listings-toggle-btn" ${toggleAttr}="more">Afficher ${totalCount - visibleCount} de plus</button>`;
+}
+
 function renderStaffPanel() {
   const budgetEl = document.getElementById("staffBudget");
   budgetEl.textContent = `Budget club : ${formatMoney(teamA.budget)}`;
@@ -16485,9 +16515,10 @@ function renderAnalystListings() {
     holder.innerHTML = "<p class='training-empty'>Aucun candidat analyste vidéo aux enchères pour l'instant, revenez plus tard.</p>";
     return;
   }
+  const visible = analystListingsExpanded ? open : open.slice(0, STAFF_LISTINGS_COLLAPSED_COUNT);
   let html = "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
     "<th>Niveau</th><th>Salaire</th><th>Enchère actuelle</th><th>Temps restant</th><th></th></tr></thead><tbody>";
-  open.forEach(l => {
+  visible.forEach(l => {
     const currentLabel = l.currentBid
       ? `${formatMoney(l.currentBid)}${l.currentBidderIdx === myTeamIndex ? " (vous)" : ""}`
       : `Aucune (départ ${formatMoney(l.startPrice)})`;
@@ -16513,10 +16544,17 @@ function renderAnalystListings() {
       `<td>${escapeHtml(timeLeftLabel(l.closesAt, now))}</td><td>${actionCell}</td></tr>`;
   });
   html += "</tbody></table></div>";
+  html += staffListingsToggleHtml(open.length, visible.length, analystListingsExpanded, "data-toggle-analyst-listings");
   holder.innerHTML = html;
 }
 
 document.getElementById("staffAnalystHireGrid").addEventListener("click", (e) => {
+  const toggleBtn = e.target.closest("[data-toggle-analyst-listings]");
+  if (toggleBtn) {
+    analystListingsExpanded = toggleBtn.dataset.toggleAnalystListings === "more";
+    renderAnalystListings();
+    return;
+  }
   const btn = e.target.closest("[data-analyst-bid-listing]");
   if (!btn) return;
   const id = Number(btn.dataset.analystBidListing);
@@ -16598,9 +16636,10 @@ function renderRecruiterListings() {
     holder.innerHTML = "<p class='training-empty'>Aucun candidat recruteur aux enchères pour l'instant, revenez plus tard.</p>";
     return;
   }
+  const visible = recruiterListingsExpanded ? open : open.slice(0, STAFF_LISTINGS_COLLAPSED_COUNT);
   let html = "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
     "<th>Niveau</th><th>Salaire</th><th>Enchère actuelle</th><th>Temps restant</th><th></th></tr></thead><tbody>";
-  open.forEach(l => {
+  visible.forEach(l => {
     const currentLabel = l.currentBid
       ? `${formatMoney(l.currentBid)}${l.currentBidderIdx === myTeamIndex ? " (vous)" : ""}`
       : `Aucune (départ ${formatMoney(l.startPrice)})`;
@@ -16622,10 +16661,17 @@ function renderRecruiterListings() {
       `<td>${escapeHtml(timeLeftLabel(l.closesAt, now))}</td><td>${actionCell}</td></tr>`;
   });
   html += "</tbody></table></div>";
+  html += staffListingsToggleHtml(open.length, visible.length, recruiterListingsExpanded, "data-toggle-recruiter-listings");
   holder.innerHTML = html;
 }
 
 document.getElementById("staffRecruiterHireGrid").addEventListener("click", (e) => {
+  const toggleBtn = e.target.closest("[data-toggle-recruiter-listings]");
+  if (toggleBtn) {
+    recruiterListingsExpanded = toggleBtn.dataset.toggleRecruiterListings === "more";
+    renderRecruiterListings();
+    return;
+  }
   const btn = e.target.closest("[data-recruiter-bid-listing]");
   if (!btn) return;
   const id = Number(btn.dataset.recruiterBidListing);
@@ -16660,9 +16706,10 @@ function renderCoachListings() {
     holder.innerHTML = "<p class='training-empty'>Aucun candidat entraîneur aux enchères pour l'instant, revenez plus tard.</p>";
     return;
   }
+  const visible = coachListingsExpanded ? open : open.slice(0, STAFF_LISTINGS_COLLAPSED_COUNT);
   let html = "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
     "<th>Niveau</th><th>Salaire</th><th>Enchère actuelle</th><th>Temps restant</th><th></th></tr></thead><tbody>";
-  open.forEach(l => {
+  visible.forEach(l => {
     const currentLabel = l.currentBid
       ? `${formatMoney(l.currentBid)}${l.currentBidderIdx === myTeamIndex ? " (vous)" : ""}`
       : `Aucune (départ ${formatMoney(l.startPrice)})`;
@@ -16684,10 +16731,17 @@ function renderCoachListings() {
       `<td>${escapeHtml(timeLeftLabel(l.closesAt, now))}</td><td>${actionCell}</td></tr>`;
   });
   html += "</tbody></table></div>";
+  html += staffListingsToggleHtml(open.length, visible.length, coachListingsExpanded, "data-toggle-coach-listings");
   holder.innerHTML = html;
 }
 
 document.getElementById("staffHireGrid").addEventListener("click", (e) => {
+  const toggleBtn = e.target.closest("[data-toggle-coach-listings]");
+  if (toggleBtn) {
+    coachListingsExpanded = toggleBtn.dataset.toggleCoachListings === "more";
+    renderCoachListings();
+    return;
+  }
   const btn = e.target.closest("[data-coach-bid-listing]");
   if (!btn) return;
   const id = Number(btn.dataset.coachBidListing);
@@ -16964,9 +17018,45 @@ function buildTrainingRow(player) {
 // renderTrainingReport pour être réutilisable aussi bien depuis l'onglet
 // Entraînement (si un jour on veut réafficher le dernier rapport connu) que
 // depuis le récapitulatif de retour (voir showCatchupSummaryIfAny).
-function trainingReportHtml(weekResult) {
+// `opts.playersOnly` (retour utilisateur, 2026-09 : "dans le bilan de la
+// semaine sur la page entrainement, il ne faut qu'apparaisse que ce qui est
+// relatif aux up et down des joueurs, rien de financier") : saute tout le
+// bloc club (staff payé, salaires, déficit, recettes boutique/TV, humeur des
+// supporters) pour ne garder que la progression des joueurs et les notes
+// expliquant une progression manquée, utilisé par renderLastTrainingReport
+// UNIQUEMENT ; le récapitulatif "Pendant votre absence" (showCatchupSummaryIfAny)
+// continue d'appeler cette fonction SANS `opts`, il garde donc le rapport
+// complet (c'est le seul endroit où ces infos financières sont encore
+// données).
+function trainingReportHtml(weekResult, opts = {}) {
   const entries = Object.values(weekResult.players);
   let html = "";
+
+  if (opts.playersOnly) {
+    entries.forEach(e => {
+      e.gains.forEach(g => {
+        const up = g.after > g.before;
+        html += `<div class="gain-line ${up ? "gain-up" : "gain-down"}">` +
+          `${escapeHtml(e.name)} : ${TRAINING_LABELS[g.attr]} ${g.before} → ${g.after} ${up ? "↑" : "↓"}</div>`;
+      });
+    });
+    const trainedPositions = teamA.trainingPositions || [];
+    entries.forEach(e => {
+      if (!e.skill || !trainedPositions.includes(e.position)) return;
+      if (!e.posSelected) {
+        html += `<div class="gain-note">${escapeHtml(e.name)} (${POS_SHORT[e.position]}) : aucune minute enregistrée au poste entraîné sur les matchs de ce cycle (n'a pas encore joué avec ce poste dans l'équipe, ou est resté sur le banc), aucune progression pour lui cette semaine.</div>`;
+        return;
+      }
+      const pct = Math.round((e.attendanceFactor || 0) * 100);
+      if (pct >= 90) return; // quasiment plein temps, rien à signaler
+      const mins = Math.round(e.secondsPlayed / 60);
+      html += `<div class="gain-note">${escapeHtml(e.name)} (${POS_SHORT[e.position]}) : n'a joué que ${mins} min ce cycle sur ${Math.round(TRAINING_FULL_MATCH_SECONDS / 60)}, l'entraînement ne compte qu'à ${pct}% pour lui cette semaine.</div>`;
+    });
+    if (!html) {
+      return "<p class='training-empty'>Pas de changement visible cette semaine, la progression est lente et se joue sur plusieurs semaines.</p>";
+    }
+    return `<div class="training-report-list">${html}</div>`;
+  }
 
   if (weekResult.trainerSalaryPaid) {
     html += `<div class="gain-note">Staff payé cette semaine : ${formatMoney(weekResult.trainerSalaryPaid)} (budget restant : ${formatMoney(weekResult.budget)}).</div>`;
@@ -18688,43 +18778,6 @@ document.getElementById("youthCandidatesHolder").addEventListener("click", (e) =
     academieFeedback(result.ok ? "Candidat ignoré." : "Candidat introuvable.", result.ok);
     renderAcademieSection();
   }
-});
-
-// ---------------------------------------------------------------------
-// Outils de test (retour utilisateur : "remets mon budget à 0 et remets moi
-// des joueurs" — après une session de test où le club a été vidé
-// exprès via la vente sans plancher et/ou le déficit forcé). Ne touche ni
-// au classement, ni au calendrier, ni à la division : uniquement le budget
-// et/ou l'effectif du club du joueur.
-// ---------------------------------------------------------------------
-function devToolsFeedback(message) {
-  const el = document.getElementById("devToolsFeedback");
-  if (el) el.innerHTML = message ? `<div class="gain-line gain-up">${escapeHtml(message)}</div>` : "";
-}
-
-document.getElementById("resetBudgetBtn").addEventListener("click", () => {
-  // recordTransaction ajoute un DELTA au budget (pas une valeur absolue) —
-  // le delta nécessaire pour retomber exactement à 0 est donc l'opposé du
-  // budget actuel, quel que soit son signe.
-  teamA.recordTransaction("Remise à zéro du budget (outil de test)", -teamA.budget);
-  saveMyTeam();
-  renderEconomieSection();
-  devToolsFeedback("Budget remis à 0.");
-});
-
-document.getElementById("refillRosterBtn").addEventListener("click", () => {
-  // Ajoute 15 joueurs débutants fraîchement générés (3 par poste, comme un
-  // effectif de départ — voir generateStartingRoster) À CÔTÉ des joueurs
-  // restants, sans rien supprimer : pratique après avoir vendu tout ou
-  // partie de l'effectif pendant un test. La feuille de match est
-  // réassignée automatiquement.
-  POSITIONS.forEach(pos => {
-    for (let i = 0; i < 3; i++) teamA.players.push(generateRookiePlayer(pos));
-  });
-  teamA.autoAssignLineup();
-  saveMyTeam();
-  renderEconomieSection();
-  devToolsFeedback(`15 nouveaux joueurs débutants ajoutés à l'effectif (${teamA.players.length} au total), direction l'onglet Effectif pour les voir.`);
 });
 
 // Réinitialisation COMPLÈTE de la ligue partagée (Phase B, 2026-09 : "Antony
