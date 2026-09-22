@@ -11889,8 +11889,30 @@ async function initGame() {
 // Fait vivre le marché des transferts (voir League.refreshMarket) et
 // sauvegarde le résultat — appelé au chargement de la page, à l'ouverture de
 // l'onglet Marché, et après chaque validation de semaine d'entraînement.
+//
+// EN LIGUE PARTAGÉE (managerToken posé) : ne fait plus RIEN localement
+// (retour utilisateur Discord, 2026-09 : "Cette enchère est déjà terminée"
+// en cliquant Enchérir sur une annonce affichée avec un temps restant
+// pourtant positif). Cause trouvée : \`uid()\` (voir engine.js, \`let __uid =
+// 1\`) repart de 1 à CHAQUE chargement de page, un compteur purement LOCAL au
+// navigateur, totalement déconnecté de celui du serveur (qui, lui, continue
+// depuis longtemps dans une ligue avec de l'historique). Si ce
+// rafraîchissement LOCAL générait un nouveau candidat (marché tombé sous son
+// plancher au moment précis où CE navigateur rafraîchit, avant que le
+// serveur n'ait eu l'occasion de le faire lui-même), l'id tout petit obtenu
+// (1, 2, 3...) pouvait entrer en collision avec l'id d'une tout autre entité
+// déjà chargée (ex. une ancienne annonce déjà résolue/fermée) :
+// \`Array.prototype.find\` renvoie alors le PREMIER élément qui matche,
+// potentiellement cette entité fermée, même si l'annonce affichée à l'écran
+// (filtrée sur "open") est bien la bonne. Le serveur exécute déjà cette même
+// méthode à CHAQUE requête GET /api/state (voir server/autoSim.js:
+// catchUpLeague, qui appelle refreshMarket/refreshCoachMarket/
+// refreshAnalystMarket/refreshRecruiterMarket), donc cette repasse locale
+// n'apportait plus rien d'utile en ligue partagée, seulement ce risque.
+// Inchangé en solo (managerToken null) : rien d'autre ne rafraîchit ces
+// marchés pour une carrière solo.
 function refreshTransferMarket() {
-  if (!league) return;
+  if (!league || managerToken) return;
   league.refreshMarket(Date.now());
   saveMyTeam();
 }
@@ -11898,27 +11920,34 @@ function refreshTransferMarket() {
 // Fait vivre le marché des entraîneurs (voir League.refreshCoachMarket) et
 // sauvegarde le résultat — même cadence que refreshTransferMarket ci-dessus
 // (chargement de la page, ouverture de l'onglet Staff), plus l'ouverture de
-// l'onglet Staff spécifiquement (voir TAB_HANDLERS.staff).
+// l'onglet Staff spécifiquement (voir TAB_HANDLERS.staff). Même garde
+// \`managerToken\` que refreshTransferMarket ci-dessus, pour la même raison
+// (voir son commentaire) : c'est d'ailleurs très exactement ce marché-ci qui
+// a révélé le problème (candidats entraîneurs).
 function refreshCoachMarket() {
-  if (!league) return;
+  if (!league || managerToken) return;
   league.refreshCoachMarket(Date.now());
   saveMyTeam();
 }
 
 // Fait vivre le marché des analystes vidéo (voir League.refreshAnalystMarket)
 // et sauvegarde le résultat — même cadence/mêmes points d'appel que
-// refreshCoachMarket ci-dessus.
+// refreshCoachMarket ci-dessus. Même garde \`managerToken\` (voir le
+// commentaire de refreshTransferMarket) : même mécanique de marché, même
+// risque de collision d'id.
 function refreshAnalystMarket() {
-  if (!league) return;
+  if (!league || managerToken) return;
   league.refreshAnalystMarket(Date.now());
   saveMyTeam();
 }
 
 // Fait vivre le marché des recruteurs (voir League.refreshRecruiterMarket)
 // et sauvegarde le résultat — même cadence/mêmes points d'appel que
-// refreshCoachMarket/refreshAnalystMarket ci-dessus.
+// refreshCoachMarket/refreshAnalystMarket ci-dessus. Même garde
+// \`managerToken\` (voir le commentaire de refreshTransferMarket) : même
+// mécanique de marché, même risque de collision d'id.
 function refreshRecruiterMarket() {
-  if (!league) return;
+  if (!league || managerToken) return;
   league.refreshRecruiterMarket(Date.now());
   saveMyTeam();
 }
