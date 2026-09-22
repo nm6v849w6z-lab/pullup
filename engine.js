@@ -919,8 +919,15 @@ const COACH_AUCTION_DURATION_MS = TRANSFER_AUCTION_DURATION_MS; // même durée 
 // refreshRecruiterMarket), 2 candidats ouverts en permanence suffisaient
 // pour une poignée de managers mais affamait/faisait s'affronter en
 // permanence les 10 managers humains de la ligue de test sur trop peu de
-// choix à la fois.
-const COACH_MARKET_MIN_OPEN_LISTINGS = 6;
+// choix à la fois. Relevé une seconde fois, de 6 à 20 (retour utilisateur,
+// 2026-09 : "il faut que tu ajoutes beaucoup plus de staff sur le marché,
+// on fait des tests et on ne peut acheter personne") : 6 restait
+// insuffisant une fois 10 managers humains réellement actifs en même temps
+// sur les 3 marchés à la fois. Voir aussi refreshCoachMarket/
+// refreshAnalystMarket/refreshRecruiterMarket plus bas, où le
+// réapprovisionnement jusqu'à ce plancher ne dépend plus non plus d'un
+// délai d'une journée réelle entière.
+const COACH_MARKET_MIN_OPEN_LISTINGS = 20;
 const COACH_MARKET_GENERATE_CHECK_INTERVAL_MS = TRANSFER_CPU_CHECK_INTERVAL_MS;
 const COACH_CPU_BID_CHANCE = TRANSFER_CPU_BID_CHANCE;
 
@@ -2434,7 +2441,7 @@ class Player {
       a.mental + a.endurance + a.freeThrow) / 13;
   }
 
-  // Statistique effective en jeu = (base + bonus MVP éventuel) * forme * fatigue * forme physique * alchimie d'équipe
+  // Statistique effective en jeu = (base + bonus MVP éventuel) * forme * fatigue * forme physique * alchimie d'équipe * connaissance tactique
   eff(stat) {
     const base = this.attrs[stat] + (this.pendingMatchBoost || 0);
     const formFactor = 0.85 + (this.form / 100) * 0.30;      // 0.85 → 1.15
@@ -2450,7 +2457,11 @@ class Player {
     // lit matchChemistryFactor (snapshot d'ÉQUIPE posé par Team.resetForMatch),
     // `?? 1` en dernier recours si eff() était jamais appelée hors match.
     const chemistryFactor = this.matchChemistryFactor ?? 1;
-    return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor, 1, 130);
+    // Connaissance tactique (voir Team.tacticalKnowledgeFactor/resetForMatch
+    // plus bas) : même snapshot d'ÉQUIPE, SÉPARÉ de chemistryFactor
+    // ci-dessus (les deux se cumulent), `?? 1` même filet de sécurité.
+    const tacticalKnowledgeFactor = this.matchTacticalKnowledgeFactor ?? 1;
+    return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor * tacticalKnowledgeFactor, 1, 130);
   }
 }
 
@@ -2477,12 +2488,11 @@ function planKey(round, competition) {
 // interviews [...] par les changements fréquents de joueurs (jamais une
 // base de joueurs fixes, donc il faut recreer du lien entre les joueurs),
 // mais changer un joueur majeur d'une équipe doit forcément avoir bcp plus
-// d'impact que de changer le 12 homme (qui doit être très faible) [...]
-// changer trop régulièrement de tactique doit aussi avoir un petit
-// impact"). `Team.chemistry` : 0-100, MÊME convention que Team.fanMorale
-// (neutre à 50 à la création, voir le constructeur plus bas) — mais,
-// contrairement à fanMorale, ne bouge QUE par les 3 leviers explicitement
-// listés ci-dessus, jamais de dérive naturelle dans le temps :
+// d'impact que de changer le 12 homme (qui doit être très faible)").
+// `Team.chemistry` : 0-100, MÊME convention que Team.fanMorale (neutre à 50
+// à la création, voir le constructeur plus bas) — mais, contrairement à
+// fanMorale, ne bouge QUE par les 2 leviers explicitement listés ci-dessus,
+// jamais de dérive naturelle dans le temps :
 //   1) Interviews de jalon (voir MILESTONE_INTERVIEW_TONES.chemistryWin/
 //      chemistryLoss, appliqué par Team.resolveInterview) : le ton choisi
 //      par le coach peut construire ou abîmer la cohésion du groupe, dans
@@ -2493,19 +2503,15 @@ function planKey(round, competition) {
 //      malus (jamais un bonus, un club ne "gagne" pas en cohésion en
 //      brassant son effectif), pondéré par l'importance du joueur parti/
 //      arrivé dans l'effectif.
-//   3) Changements de tactique trop fréquents (voir Team.checkTacticsChemistry
-//      ci-dessous, appliqué à chaque match réellement joué) : malus
-//      PROPORTIONNEL à ce qui change réellement dans l'identité tactique de
-//      fond (attaque prioritaire/défense/rythme) par rapport au dernier
-//      match, aucun effet si elle est restée la même (retour utilisateur,
-//      2026-09 : "si je passe de pick and roll + pénétration + transition à
-//      pick and roll + pénétration + jeu intérieur, je perds combien
-//      d'alchimie ?" : la réponse ne doit plus être "pareil que si j'avais
-//      tout changé"). Atténué de moitié quand l'entraînement collectif de la
-//      semaine porte sur "tactique" (voir Team.collectiveTraining plus bas,
-//      et CHEMISTRY_TACTICS_TRAINED_FACTOR) : travailler la nouvelle
-//      tactique à l'entraînement rend sa mise en place en match moins
-//      coûteuse pour la cohésion, sans jamais l'annuler complètement.
+// Un troisième levier a existé un temps ici (changer trop souvent de
+// tactique pénalisait l'alchimie) : retiré (retour utilisateur, 2026-09,
+// "sur la partie connaissance tactique, on va modifier un peu la chose. ajd
+// ça impacte l'alchimie d'équipe. on va enlever ça et créer une jauge
+// connaissance tactique qui impactera le niveau de l'équipe") au profit
+// d'une jauge séparée, voir le grand commentaire CONNAISSANCE TACTIQUE plus
+// bas (Team.tacticalKnowledge/updateTacticalKnowledge) : changer de
+// tactique n'affecte donc plus JAMAIS Team.chemistry, seulement la
+// connaissance tactique.
 // Lu par Team.chemistryFactor() (voir Player.eff()/Team.resetForMatch plus
 // bas) pour un effet MODESTE sur la performance de TOUTE l'équipe (jamais
 // aussi marqué que la forme physique ou la fatigue d'UN seul joueur) : la
@@ -2513,83 +2519,119 @@ function planKey(round, competition) {
 // particulier.
 const CHEMISTRY_ROSTER_CHANGE_MAX_RANK = 12; // "le 12 homme" (retour utilisateur, littéral)
 const CHEMISTRY_ROSTER_CHANGE_BASE = 8; // malus max, pour le tout meilleur joueur de l'effectif
-// Décomposition du malus tactique (retour utilisateur, 2026-09) : un point
-// par priorité offensive qui change (0 à 3, comparées en ENSEMBLE, pas en
-// ordre : permuter l'ordre de 3 priorités identiques ne coûte rien), la
-// défense pèse plus qu'une priorité isolée (changer de schéma défensif est
-// un vrai changement d'identité), le rythme un peu moins. Maximum cumulé si
-// TOUT change à la fois (3 priorités + défense + rythme) : 3+2+1 = 6, du
-// même ordre de grandeur qu'un changement d'effectif (CHEMISTRY_ROSTER_
-// CHANGE_BASE = 8 pour le tout meilleur joueur de l'effectif), plutôt que
-// l'ancien malus fixe de 2 quel que soit l'ampleur du changement.
-const CHEMISTRY_TACTICS_OFFENSE_PENALTY = 1; // par priorité offensive changée (0 à 3)
-const CHEMISTRY_TACTICS_DEFENSE_PENALTY = 2;
-const CHEMISTRY_TACTICS_RHYTHM_PENALTY = 1;
-// Retour utilisateur (2026-09) : "je pense qu'il faut [...] diviser à chaque
-// fois par 2 le malus sur la tactique bossée par jour d'entrainement sur la
-// tactique", n'est plus une atténuation fixe appliquée en bloc dès que
-// l'entraînement collectif porte sur "tactique", mais la base d'une
-// puissance : CHEMISTRY_TACTICS_TRAINED_FACTOR ** (nombre de jours de repos
-// passés à travailler PRÉCISÉMENT la catégorie qui a changé, voir
-// Team.daysTrainedForTarget/collectiveTrainingLog), 0 jour banqué = ×1 (pas
-// encore d'atténuation), 1 jour = ×0.5, 2 jours = ×0.25, 3 jours = ×0.125...
-// Ne s'annule jamais exactement (asymptote vers 0), mais peut s'en approcher
-// beaucoup avec suffisamment de jours de préparation.
-const CHEMISTRY_TACTICS_TRAINED_FACTOR = 0.5;
 
-// Deux instantanés tactiques {offense, defense, rhythm} représentent-ils
-// EXACTEMENT la même chose ? Les priorités offensives sont comparées en
-// ENSEMBLE (Set), pas en ordre — voir tacticsChangePenalty ci-dessous pour
-// la même convention. `a`/`b` peuvent être `null` (pas encore de match de
-// référence) : deux `null` sont considérés égaux, un `null` et un instantané
-// réel jamais égaux.
-function tacticsEqual(a, b) {
-  if (!a || !b) return a === b;
-  if (a.defense !== b.defense || a.rhythm !== b.rhythm) return false;
-  if (a.offense.length !== b.offense.length) return false;
-  const setA = new Set(a.offense);
-  return b.offense.every(t => setA.has(t));
+// ---------------------------------------------------------------------
+// CONNAISSANCE TACTIQUE (retour utilisateur, 2026-09 : "sur la partie
+// connaissance tactique, on va modifier un peu la chose. ajd ça impacte
+// l'alchimie d'équipe. on va enlever ça et créer une jauge connaissance
+// tactique qui impactera le niveau de l'équipe [...] l'entrainement
+// augmente la connaissance tactique"). Remplace l'ancien troisième levier
+// d'alchimie (voir le grand commentaire ALCHIMIE D'ÉQUIPE ci-dessus) :
+// changer de tactique n'abîme plus la cohésion du groupe, mais fait chuter
+// une jauge SÉPARÉE qui mesure à quel point l'équipe maîtrise son plan de
+// jeu.
+//
+// DEUXIÈME révision (retour utilisateur, 2026-09 : "il faudrait qu'il y ait
+// une jauge par type d'attaque, une par rythme et une par défense [...]
+// comme ça on verrait bien les tactiques que l'on maîtrise ou pas [...] il
+// faudrait que ce soit plus progressif. après un match on n'oublie pas.
+// après 2 matchs on commence à oublier. après 3 encore plus etc [...] si on
+// joue un match on apprend mais on est pas direct au taquet et ce n'est pas
+// direct la tactique de référence") : `Team.tacticalKnowledge` suit
+// désormais CHAQUE option précise SÉPARÉMENT, pas 3 grandes catégories :
+//   tacticalKnowledge.offense[priorité] pour CHACUNE des 10 priorités
+//     offensives possibles (voir OFFENSE_PROFILES), même celles que
+//     l'équipe ne joue pas actuellement (elle n'en joue que 3 à la fois),
+//   tacticalKnowledge.defense[type] pour CHACUN des 5 types de défense
+//     possibles (voir DEFENSES),
+//   tacticalKnowledge.rhythm[rythme] pour CHACUN des 3 rythmes possibles
+//     (voir RHYTHMS),
+// chaque valeur 0-100, neutre à 50 à la création (même convention que
+// Team.chemistry, voir le constructeur plus bas).
+//
+// Bouge à CHAQUE match réellement joué (voir Team.updateTacticalKnowledge
+// plus bas, appelée depuis recordMatchStatsForTeam, jamais pendant la
+// simple planification à l'avance via stagePlanForRound) : pour CHACUNE des
+// 18 options ci-dessus, on regarde si elle vient d'être jouée CE match-là
+// ou non, PROGRESSIVEMENT plutôt qu'en tout-ou-rien :
+//   - jouée : la maîtrise MONTE (voir tacticalKnowledgeGainForStreak),
+//     d'autant plus vite qu'elle est jouée plusieurs matchs DE SUITE, jamais
+//     un saut direct à la maîtrise maximale dès le premier match ("pas
+//     direct au taquet"),
+//   - délaissée : la maîtrise BAISSE (voir tacticalKnowledgeLossForStreak),
+//     mais SEULEMENT à partir du 2e match d'absence consécutif — un
+//     aller-retour d'un seul match ne coûte donc RIEN ("après un match on
+//     n'oublie pas"), puis la perte s'accélère plus l'absence se prolonge.
+// Team.tacticalKnowledgeStreaks (même forme imbriquée que tacticalKnowledge
+// ci-dessus) garde, PAR OPTION, le nombre de matchs consécutifs où elle
+// vient d'être jouée (positif) ou délaissée (négatif) — sert uniquement à
+// calculer le prochain mouvement, aucune autre lecture ailleurs.
+//
+// Remplace l'ancienne "tactique établie" (un seul instantané de référence,
+// bascule binaire après 2 matchs identiques de suite, retour gratuit ou
+// perte pleine selon les cas) : chaque option a maintenant sa PROPRE
+// mémoire continue, donc revenir à une tactique délaissée plusieurs matchs
+// remonte progressivement, au même rythme que si on l'apprenait pour la
+// première fois : jamais gratuit, jamais un mur non plus.
+//
+// L'entraînement collectif "tactique" (Team.trainedTactics/
+// daysTrainedForTarget, inchangé depuis la première version) ajoute un
+// BONUS de gain PAR-DESSUS la courbe ci-dessus, uniquement sur l'option
+// RÉELLEMENT jouée ce match (voir TACTICAL_KNOWLEDGE_DAILY_GAIN plus bas) :
+// une préparation en avance sur une option pas encore jouée en live
+// n'accélère donc rien tant que l'ordre live n'a pas effectivement changé,
+// le crédit banqué reste en attente jusque-là.
+//
+// Lu par Team.tacticalKnowledgeFactor() (voir Player.eff()/
+// Team.resetForMatch plus bas) : moyenne des 3 options ACTUELLEMENT jouées
+// (les 3 priorités offensives + la défense + le rythme en cours), pour un
+// effet MODESTE sur la performance de TOUTE l'équipe, SÉPARÉ de
+// chemistryFactor() (les deux se cumulent) — même ordre de grandeur
+// (+/-6%).
+// ---------------------------------------------------------------------
+// Courbe de gain, par match consécutif où une option reste jouée : monte
+// progressivement puis plafonne (jamais un saut direct au maximum, même en
+// restant indéfiniment sur la même tactique : l'entraînement ciblé reste le
+// seul moyen d'accélérer, voir TACTICAL_KNOWLEDGE_DAILY_GAIN ci-dessous).
+const TACTICAL_KNOWLEDGE_GAIN_BASE = 6; // 1er match consécutif sur cette option
+const TACTICAL_KNOWLEDGE_GAIN_STEP = 2; // += par match consécutif supplémentaire
+const TACTICAL_KNOWLEDGE_GAIN_MAX = 12; // plafond (atteint au 4e match consécutif)
+function tacticalKnowledgeGainForStreak(playStreak) {
+  if (playStreak <= 0) return 0;
+  return Math.min(TACTICAL_KNOWLEDGE_GAIN_MAX, TACTICAL_KNOWLEDGE_GAIN_BASE + (playStreak - 1) * TACTICAL_KNOWLEDGE_GAIN_STEP);
 }
 
-// Malus entre deux instantanés tactiques {offense, defense, rhythm} :
-// fonction PURE partagée par Team.checkTacticsChemistry (moteur, applique
-// réellement le malus après un match) et par l'aperçu en direct de la page
-// Ordres côté client (renderOrdresChemistryGauge, ne fait QUE prévisualiser,
-// n'appelle jamais applyChemistryDelta) : les deux doivent toujours calculer
-// exactement le même nombre. `prev` peut être `null` (pas encore de match de
-// référence), renvoie alors 0, jamais de malus au tout premier match.
-// Les 3 priorités offensives sont comparées en ENSEMBLE (Set), pas en ordre :
-// { "A", "B", "C" } -> { "C", "A", "B" } ne compte pour aucun changement.
-// `trained` (optionnel, voir Team.trainedTactics) : UN SEUL aspect
-// précisément travaillé à l'entraînement collectif (retour utilisateur,
-// 2026-09 : "il faut effectivement choisir ce qui est bossé comme tactique
-// [...] un seul aspect et pas tous les aspects") — `{ category, value }`,
-// jamais plusieurs catégories à la fois. `trainedFactor` (voir
-// CHEMISTRY_TACTICS_TRAINED_FACTOR ci-dessus, calculé par l'appelant selon
-// le nombre de jours banqués) ne s'applique JAMAIS au malus dans son
-// ensemble, mais UNIQUEMENT à la catégorie de `trained`, et seulement quand
-// la valeur RÉELLEMENT jouée (`current`) correspond EXACTEMENT à ce qui a
-// été travaillé : passer d'une défense à une autre que celle travaillée à
-// l'entraînement paie donc le plein tarif sur la défense, même si `trained`
-// porte sur la défense.
-function tacticsChangePenalty(prev, current, trained, trainedFactor = CHEMISTRY_TACTICS_TRAINED_FACTOR) {
-  if (!prev) return 0;
-  const prevOffense = new Set(prev.offense);
-  let penalty = 0;
-  current.offense.forEach(t => {
-    if (prevOffense.has(t)) return;
-    const factor = trained && trained.category === "offense" && trained.value === t ? trainedFactor : 1;
-    penalty += CHEMISTRY_TACTICS_OFFENSE_PENALTY * factor;
-  });
-  if (prev.defense !== current.defense) {
-    const factor = trained && trained.category === "defense" && trained.value === current.defense ? trainedFactor : 1;
-    penalty += CHEMISTRY_TACTICS_DEFENSE_PENALTY * factor;
-  }
-  if (prev.rhythm !== current.rhythm) {
-    const factor = trained && trained.category === "rhythm" && trained.value === current.rhythm ? trainedFactor : 1;
-    penalty += CHEMISTRY_TACTICS_RHYTHM_PENALTY * factor;
-  }
-  return penalty;
+// Courbe de perte, par match consécutif où une option reste délaissée :
+// AUCUNE perte au 1er match d'absence (un aller-retour d'un seul match ne
+// coûte rien), puis la perte accélère avant de plafonner.
+const TACTICAL_KNOWLEDGE_LOSS_STEP = 4; // += par match d'absence supplémentaire (à partir du 2e)
+const TACTICAL_KNOWLEDGE_LOSS_MAX = 16; // plafond (atteint au 5e match d'absence)
+function tacticalKnowledgeLossForStreak(awayStreak) {
+  if (awayStreak <= 1) return 0;
+  return Math.min(TACTICAL_KNOWLEDGE_LOSS_MAX, (awayStreak - 1) * TACTICAL_KNOWLEDGE_LOSS_STEP);
+}
+
+// Gain quotidien de connaissance tactique par jour d'entraînement collectif
+// "tactique" RÉELLEMENT banqué (voir Team.daysTrainedForTarget) sur
+// l'option EXACTEMENT en train d'être jouée : bonus ADDITIF par-dessus
+// tacticalKnowledgeGainForStreak ci-dessus, inchangé depuis la première
+// version de cette fonctionnalité ("l'entrainement augmente la
+// connaissance tactique", littéralement).
+const TACTICAL_KNOWLEDGE_DAILY_GAIN = 4;
+
+// Construit la forme imbriquée par défaut de Team.tacticalKnowledge/
+// tacticalKnowledgeStreaks (une entrée par option possible des 3
+// catégories, voir le grand commentaire CONNAISSANCE TACTIQUE ci-dessus) :
+// `value` = valeur de départ identique pour toutes les options (50 pour la
+// maîtrise, neutre comme Team.chemistry ; 0 pour les séries, "pas encore de
+// match de référence").
+function defaultTacticalKnowledgeShape(value) {
+  const build = keys => keys.reduce((o, k) => { o[k] = value; return o; }, {});
+  return {
+    offense: build(Object.keys(OFFENSE_PROFILES)),
+    defense: build(Object.keys(DEFENSES)),
+    rhythm: build(Object.keys(RHYTHMS)),
+  };
 }
 
 // Poids d'un changement de joueur selon son RANG dans l'effectif (1 = tout
@@ -2736,9 +2778,10 @@ class Team {
     // (l'un porte sur les caractéristiques individuelles d'un groupe de
     // postes, l'autre sur le collectif de toute l'équipe). `null` = aucun
     // focus collectif cette semaine (comportement par défaut, inchangé pour
-    // les parties déjà en cours). "tactique" : atténue le malus d'alchimie
-    // d'un changement de tactique (voir Team.trainedTactics/
-    // CHEMISTRY_TACTICS_TRAINED_FACTOR/checkTacticsChemistry). "recuperation" :
+    // les parties déjà en cours). "tactique" : ajoute un bonus de gain sur
+    // l'aspect précis travaillé (voir Team.trainedTactics/
+    // TACTICAL_KNOWLEDGE_DAILY_GAIN/updateTacticalKnowledge).
+    // "recuperation" :
     // porte la récupération de forme physique quotidienne à CONDITION_
     // RECOVERY_PER_DAY_TRAINED au lieu de CONDITION_RECOVERY_PER_DAY (voir
     // conditionRecoveryPerDay ci-dessous/currentCondition plus haut).
@@ -2752,11 +2795,11 @@ class Team {
     // fois (jamais plusieurs catégories en même temps comme dans une
     // première version de cette fonctionnalité) — pertinent UNIQUEMENT
     // quand collectiveTraining === "tactique", ignoré sinon. `category`
-    // désigne QUELLE des 3 catégories comparées par checkTacticsChemistry/
-    // tacticsChangePenalty est travaillée, `value` LA valeur précise de
-    // cette catégorie (une priorité offensive pour "offense", un nom de
-    // défense pour "defense", un rythme pour "rhythm") — voir
-    // tacticsChangePenalty plus bas pour le détail de l'appariement.
+    // désigne QUELLE des 3 catégories lues par Team.updateTacticalKnowledge
+    // est travaillée, `value` LA valeur précise de cette catégorie (une
+    // priorité offensive pour "offense", un nom de défense pour "defense",
+    // un rythme pour "rhythm") — voir Team.updateTacticalKnowledge plus bas
+    // pour le détail de l'appariement.
     this.trainedTactics = null; // null | { category: "offense"|"defense"|"rhythm", value: string }
 
     // Historique quotidien de l'entraînement collectif DEPUIS LE DERNIER
@@ -2764,7 +2807,9 @@ class Team {
     // divises à chaque fois par 2 le malus [...] par jour d'entrainement sur
     // la tactique [...] si le vendredi on fait entrainement récup [...] on
     // doit quand même avoir le malus divisé par deux du mercredi et par deux
-    // encore une fois le jeudi") : UNE entrée par jour civil (voir
+    // encore une fois le jeudi" — formulé à l'origine pour l'alchimie,
+    // conservé à l'identique pour la connaissance tactique) : UNE entrée par
+    // jour civil (voir
     // Team.syncCollectiveTrainingLog/parisCalendarDayIndex plus bas),
     // reconduite automatiquement d'un jour à l'autre si rien ne change,
     // JAMAIS effacée par un jour "récupération" intercalé (seul un vrai
@@ -2779,17 +2824,6 @@ class Team {
     // s'applique littéralement, jamais un historique plus ancien. `null`
     // tant qu'aucun match n'a encore été joué.
     this.tacticsCycleStartDayIndex = null;
-
-    // Identité tactique "établie" du club (retour utilisateur, 2026-09 : "si
-    // je joue toute la saison sur une tactique, je change pour un seul
-    // match, et je reviens à ma tactique, j'ai un malus [...] ça ne devrait
-    // pas être le cas") : DIFFÉRENT de lastTacticsSnapshotForChemistry
-    // ci-dessous (qui suit le tout DERNIER match, quel qu'il soit) — celui-ci
-    // ne bouge QUE quand une même tactique est jouée 2 fois DE SUITE (un vrai
-    // changement durable, pas un aller-retour ponctuel), voir
-    // checkTacticsChemistry pour le détail. `null` tant qu'aucun match n'a
-    // encore été joué.
-    this.establishedTacticsSnapshot = null;
 
     // Staff : l'entraîneur n'a d'effet QUE sur la vitesse d'entraînement
     // (jamais sur les matchs). Pas d'entraîneur par défaut.
@@ -2969,12 +3003,17 @@ class Team {
 
     // Alchimie d'équipe (voir le grand commentaire au-dessus de
     // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : neutre au départ, comme
-    // fanMorale. `lastTacticsSnapshotForChemistry` : `null` tant qu'aucun
-    // match n'a encore été joué (voir Team.checkTacticsChemistry), pas de
-    // malus au tout premier match de la saison, faute de match précédent
-    // auquel se comparer.
+    // fanMorale.
     this.chemistry = 50;
-    this.lastTacticsSnapshotForChemistry = null;
+    // Connaissance tactique (voir le grand commentaire CONNAISSANCE
+    // TACTIQUE au-dessus de TACTICAL_KNOWLEDGE_GAIN_BASE plus haut) : neutre
+    // au départ sur CHACUNE des 18 options possibles (10 priorités
+    // offensives + 5 défenses + 3 rythmes, voir defaultTacticalKnowledgeShape),
+    // même convention que chemistry ci-dessus. tacticalKnowledgeStreaks
+    // (même forme, valeur de départ 0) garde le compteur de série par
+    // option qui pilote la courbe de gain/perte progressive.
+    this.tacticalKnowledge = defaultTacticalKnowledgeShape(50);
+    this.tacticalKnowledgeStreaks = defaultTacticalKnowledgeShape(0);
 
     // Médias : interviews de jalon en attente d'un ton de réponse (retour
     // utilisateur, 2026-09 : "Interview d'après match qui pourrait influencer
@@ -3377,7 +3416,7 @@ class Team {
     }
     // Purge tout jour antérieur (ou identique) au début du cycle actuel
     // (dernier match RÉELLEMENT joué, voir tacticsCycleStartDayIndex/
-    // checkTacticsChemistry ci-dessous) : "depuis le dernier match"
+    // updateTacticalKnowledge ci-dessous) : "depuis le dernier match"
     // s'applique littéralement, et ça évite une historique illimitée.
     if (this.tacticsCycleStartDayIndex != null) {
       this.collectiveTrainingLog = this.collectiveTrainingLog.filter(e => e.dayIndex > this.tacticsCycleStartDayIndex);
@@ -3386,13 +3425,14 @@ class Team {
 
   // Nombre de jours (depuis le dernier match, voir tacticsCycleStartDayIndex)
   // où l'entraînement collectif a porté EXACTEMENT sur `target` ({ category,
-  // value }, voir Team.trainedTactics), utilisé par checkTacticsChemistry
-  // pour calculer l'atténuation composée du malus (voir
-  // CHEMISTRY_TACTICS_TRAINED_FACTOR). Un jour "récupération" (ou tout autre
-  // focus) intercalé ne compte simplement pas, mais n'efface pas non plus
-  // les jours déjà banqués (retour utilisateur, 2026-09 : "si le vendredi on
-  // fait entrainement récup [...] on doit quand même avoir le malus divisé
-  // par deux du mercredi et par deux encore une fois le jeudi").
+  // value }, voir Team.trainedTactics), utilisé par updateTacticalKnowledge
+  // pour calculer le bonus de gain dû à l'entraînement (voir
+  // TACTICAL_KNOWLEDGE_DAILY_GAIN). Un jour
+  // "récupération" (ou tout autre focus) intercalé ne compte simplement
+  // pas, mais n'efface pas non plus les jours déjà banqués (retour
+  // utilisateur, 2026-09 : "si le vendredi on fait entrainement récup
+  // [...] on doit quand même avoir le malus divisé par deux du mercredi et
+  // par deux encore une fois le jeudi").
   daysTrainedForTarget(target) {
     if (!target || !Array.isArray(this.collectiveTrainingLog)) return 0;
     const cycleStart = this.tacticsCycleStartDayIndex;
@@ -3403,74 +3443,74 @@ class Team {
     }).length;
   }
 
-  // Détecte un changement de tactique par rapport à la RÉFÉRENCE de
-  // cohésion (retour utilisateur : "changer trop régulièrement de tactique
-  // doit aussi avoir un petit impact", levier 3 des 3) : compare uniquement
+  // Fait évoluer Team.tacticalKnowledge, PAR OPTION (voir le grand
+  // commentaire CONNAISSANCE TACTIQUE au-dessus de
+  // TACTICAL_KNOWLEDGE_GAIN_BASE plus haut) : pour chacune des 18 options
+  // possibles (10 priorités offensives, 5 défenses, 3 rythmes), regarde si
+  // elle vient d'être jouée CE match-là ou non, et applique la courbe de
+  // gain (tacticalKnowledgeGainForStreak) ou de perte
+  // (tacticalKnowledgeLossForStreak) correspondante, PROGRESSIVEMENT selon
+  // la série en cours (Team.tacticalKnowledgeStreaks). Compare uniquement
   // l'identité tactique de FOND (attaque prioritaire, défense, rythme),
   // volontairement PAS les réglages fins (aide défensive, style de
-  // contre-attaque, marquage individuel...) — on ne pénalise qu'un vrai
-  // changement de plan de jeu, pas un simple ajustement. Appelée à chaque
-  // match réellement simulé (voir recordMatchStatsForTeam), jamais pendant
-  // la planification à l'avance (stagePlanForRound), qui ne représente
-  // encore qu'une intention et non un ordre réellement donné.
-  //
-  // La RÉFÉRENCE n'est pas toujours lastTacticsSnapshotForChemistry (le tout
-  // dernier match, quel qu'il soit) : retour utilisateur, 2026-09 — "si je
-  // joue toute la saison sur une tactique, je change pour un seul match, et
-  // je reviens à ma tactique, j'ai un malus [...] ça ne devrait pas être le
-  // cas". Si la tactique actuelle correspond EXACTEMENT à l'identité établie
-  // (establishedTacticsSnapshot, voir le constructeur) ET diffère de ce qui
-  // vient d'être joué au match précédent (un vrai aller-retour, pas "on
-  // continue comme avant"), on compare à cette identité établie à la place :
-  // le malus tombe alors à 0 (revenir chez soi ne coûte rien). `null` posé
-  // par le constructeur = pas encore de match de référence : aucun malus au
-  // tout premier match de la saison.
-  checkTacticsChemistry(now = Date.now()) {
-    const current = {
-      offense: [...this.offensivePriorities],
-      defense: this.defense,
-      rhythm: this.rhythm,
-    };
-    const lastPlayed = this.lastTacticsSnapshotForChemistry;
-    const established = this.establishedTacticsSnapshot;
-    let referenceForPenalty = lastPlayed;
-    if (established && tacticsEqual(current, established) && !tacticsEqual(current, lastPlayed)) {
-      referenceForPenalty = established;
-    }
+  // contre-attaque, marquage individuel...). Appelée à chaque match
+  // réellement simulé (voir recordMatchStatsForTeam), jamais pendant la
+  // planification à l'avance (stagePlanForRound), qui ne représente encore
+  // qu'une intention et non un ordre réellement donné. Anciennement
+  // checkTacticsChemistry puis une première version basée sur un seul
+  // instantané de référence (bascule binaire "tactique établie") ; cette
+  // version-ci suit chaque option indépendamment, voir le grand commentaire
+  // ci-dessus pour l'historique complet.
+  updateTacticalKnowledge(now = Date.now()) {
+    const playedOffense = new Set(this.offensivePriorities);
 
     // Entraînement collectif "tactique" (retour utilisateur, 2026-09 : "soit
-    // bosser une nouvelle tactique ; ce qui permet d'éviter de trop
-    // dégrader l'alchimie quand on la met en place en match [...] il faut
-    // effectivement choisir ce qui est bossé comme tactique [...] un seul
-    // aspect et pas tous les aspects") : UN SEUL aspect précis (voir
-    // Team.trainedTactics), atténué CATÉGORIE PAR CATÉGORIE (jamais le malus
-    // dans son ensemble), et d'autant plus fort que ça fait de jours de
-    // repos consécutifs que cet aspect précis est travaillé (voir
-    // daysTrainedForTarget/CHEMISTRY_TACTICS_TRAINED_FACTOR). Lu
+    // bosser une nouvelle tactique [...] il faut effectivement choisir ce
+    // qui est bossé comme tactique [...] un seul aspect et pas tous les
+    // aspects") : UN SEUL aspect précis (voir Team.trainedTactics), lu
     // directement sur `this.trainedTactics`, PAS conditionné à
     // `collectiveTraining === "tactique"` À CET INSTANT PRÉCIS (retour
     // utilisateur, 2026-09 : "si le vendredi on fait entrainement récup
     // [...] on doit quand même avoir le malus divisé par deux du mercredi et
-    // par deux encore une fois le jeudi") — le focus du jour du MATCH lui-même
-    // ne compte de toute façon jamais comme un jour d'entraînement (voir
-    // tacticsCycleStartDayIndex), donc peu importe s'il a entre-temps changé ;
-    // seul le nombre de jours RÉELLEMENT banqués dans collectiveTrainingLog
-    // (voir daysTrainedForTarget) détermine l'atténuation.
+    // par deux encore une fois le jeudi", formulé à l'origine pour
+    // l'atténuation de l'ancien système, vaut ici pour le bonus de gain) —
+    // le focus du jour du MATCH lui-même ne compte de toute façon jamais
+    // comme un jour d'entraînement (voir tacticsCycleStartDayIndex), donc
+    // peu importe s'il a entre-temps changé ; seul le nombre de jours
+    // RÉELLEMENT banqués dans collectiveTrainingLog (voir
+    // daysTrainedForTarget) détermine le bonus ci-dessous.
     const target = this.trainedTactics;
     const daysTrained = target ? this.daysTrainedForTarget(target) : 0;
-    const trainedFactor = Math.pow(CHEMISTRY_TACTICS_TRAINED_FACTOR, daysTrained);
-    const penalty = tacticsChangePenalty(referenceForPenalty, current, target, trainedFactor);
-    if (penalty > 0) this.applyChemistryDelta(-penalty);
+    const trainingBonus = TACTICAL_KNOWLEDGE_DAILY_GAIN * daysTrained;
 
-    // Identité établie (voir le grand commentaire ci-dessus) : n'avance que
-    // quand la MÊME tactique vient d'être jouée 2 fois de suite (current ==
-    // lastPlayed, avant écrasement ci-dessous) — un vrai changement durable,
-    // jamais un simple aller-retour ponctuel — ou au tout premier match
-    // (established encore `null`).
-    if (!established || tacticsEqual(current, lastPlayed)) {
-      this.establishedTacticsSnapshot = current;
-    }
-    this.lastTacticsSnapshotForChemistry = current;
+    // Applique le mouvement (gain ou perte) d'UNE option précise : `cat` la
+    // catégorie ("offense"/"defense"/"rhythm"), `key` la valeur précise
+    // (une priorité, un nom de défense, un rythme), `played` si elle vient
+    // d'être jouée CE match. Le bonus d'entraînement ci-dessus ne s'applique
+    // QUE sur l'option EXACTEMENT trainedTactics ET réellement jouée (une
+    // préparation en avance sur une option pas encore en live n'accélère
+    // rien tant que l'ordre live n'a pas changé, le crédit reste en
+    // attente).
+    const updateOne = (cat, key, played) => {
+      const streaks = this.tacticalKnowledgeStreaks[cat];
+      const knowledge = this.tacticalKnowledge[cat];
+      const prevStreak = streaks[key] || 0;
+      if (played) {
+        const streak = prevStreak > 0 ? prevStreak + 1 : 1;
+        streaks[key] = streak;
+        let gain = tacticalKnowledgeGainForStreak(streak);
+        if (target && target.category === cat && target.value === key) gain += trainingBonus;
+        knowledge[key] = clamp(knowledge[key] + gain, 0, 100);
+      } else {
+        const streak = prevStreak < 0 ? prevStreak - 1 : -1;
+        streaks[key] = streak;
+        const loss = tacticalKnowledgeLossForStreak(-streak);
+        knowledge[key] = clamp(knowledge[key] - loss, 0, 100);
+      }
+    };
+    Object.keys(OFFENSE_PROFILES).forEach(p => updateOne("offense", p, playedOffense.has(p)));
+    Object.keys(DEFENSES).forEach(d => updateOne("defense", d, d === this.defense));
+    Object.keys(RHYTHMS).forEach(r => updateOne("rhythm", r, r === this.rhythm));
 
     // Ce match consomme tout le crédit accumulé dans collectiveTrainingLog
     // (voir daysTrainedForTarget ci-dessus) : nouveau cycle à partir de
@@ -3478,6 +3518,25 @@ class Team {
     // filtre `dayIndex > tacticsCycleStartDayIndex` dans syncCollectiveTrainingLog/
     // daysTrainedForTarget).
     this.tacticsCycleStartDayIndex = parisCalendarDayIndex(now);
+  }
+
+  // Multiplicateur de performance lié à la connaissance tactique (voir le
+  // grand commentaire CONNAISSANCE TACTIQUE au-dessus de
+  // TACTICAL_KNOWLEDGE_GAIN_BASE plus haut, et Player.eff()/
+  // Team.resetForMatch plus bas) : SÉPARÉ de chemistryFactor() (les deux se
+  // cumulent), même formule/même ordre de grandeur (0.94 à 1.06, +/-6%) —
+  // moyenne des 3 options ACTUELLEMENT jouées (les 3 priorités offensives +
+  // la défense + le rythme en cours, PAS les 18 options dans leur
+  // ensemble), un "petit plus/petit moins" d'ensemble sur TOUTE l'équipe.
+  tacticalKnowledgeFactor() {
+    const offenseValues = this.offensivePriorities.map(p => this.tacticalKnowledge.offense[p] ?? 50);
+    const offenseAvg = offenseValues.length
+      ? offenseValues.reduce((sum, v) => sum + v, 0) / offenseValues.length
+      : 50;
+    const defenseVal = this.tacticalKnowledge.defense[this.defense] ?? 50;
+    const rhythmVal = this.tacticalKnowledge.rhythm[this.rhythm] ?? 50;
+    const avg = (offenseAvg + defenseVal + rhythmVal) / 3;
+    return 0.94 + (avg / 100) * 0.12;
   }
 
   // Taux de récupération de forme physique quotidien de ce club (retour
@@ -4870,6 +4929,9 @@ class Team {
     // Player.resetForMatch) — c'est un multiplicateur d'ÉQUIPE, mais lu
     // individuellement par Player.eff() pendant le match.
     const chemistryFactor = this.chemistryFactor();
+    // Connaissance tactique (voir Team.tacticalKnowledgeFactor plus haut) :
+    // même snapshot d'ÉQUIPE, SÉPARÉ de chemistryFactor ci-dessus.
+    const tacticalKnowledgeFactor = this.tacticalKnowledgeFactor();
     // Récupération de forme physique (retour utilisateur, 2026-09, voir
     // Team.conditionRecoveryPerDay/collectiveTraining) : taux du CLUB,
     // calculé UNE FOIS ici puis transmis à chaque joueur, plutôt que
@@ -4878,6 +4940,7 @@ class Team {
     this.players.forEach(p => {
       p.resetForMatch(now, recoveryPerDay);
       p.matchChemistryFactor = chemistryFactor;
+      p.matchTacticalKnowledgeFactor = tacticalKnowledgeFactor;
     });
     POSITIONS.forEach(pos => {
       const id = this.lineup.starters[pos];
@@ -5476,10 +5539,10 @@ function buildNextCupRound(prevRound, winners) {
 // forfait (qui n'a jamais appelé MatchEngine.simulate(), donc p.stats/
 // p.secondsPlayed restent ceux — périmés — du match précédent de ce joueur).
 function recordMatchStatsForTeam(team, round, competition, now = Date.now()) {
-  // Alchimie d'équipe (voir Team.checkTacticsChemistry, levier 3 des 3) :
-  // une seule fois par match RÉELLEMENT joué (pas par joueur), compare la
-  // tactique de ce match à celle du précédent.
-  if (team.checkTacticsChemistry) team.checkTacticsChemistry(now);
+  // Connaissance tactique (voir Team.updateTacticalKnowledge) : une seule
+  // fois par match RÉELLEMENT joué (pas par joueur), compare la tactique de
+  // ce match à celle du précédent.
+  if (team.updateTacticalKnowledge) team.updateTacticalKnowledge(now);
   team.players.forEach(p => {
     if (p.secondsPlayed > 0) {
       // Forme physique (voir CONDITION_STATES/conditionLossForMinutes plus
@@ -6602,11 +6665,19 @@ class League {
 
     // 2) Renouvelle les candidats pour garder au moins
     // COACH_MARKET_MIN_OPEN_LISTINGS annonces ouvertes en permanence (voir
-    // le commentaire sur cette constante) — personne ne "vend" son
+    // le commentaire sur cette constante), personne ne "vend" son
     // entraîneur spontanément comme sur le marché des transferts, donc ce
-    // plancher est généré directement plutôt que probable.
-    if (now - (this.lastCoachGenerationCheckAt || 0) >= COACH_MARKET_GENERATE_CHECK_INTERVAL_MS) {
-      this.lastCoachGenerationCheckAt = now;
+    // plancher est généré directement plutôt que probable. Vérifié à CHAQUE
+    // appel, plus seulement une fois par COACH_MARKET_GENERATE_CHECK_INTERVAL_MS
+    // (retour utilisateur, 2026-09 : "on fait des tests et on ne peut
+    // acheter personne") : ce délai d'une journée réelle reste adapté aux
+    // enchères CPU ci-dessus (pas la peine qu'une équipe CPU consulte le
+    // marché plus souvent), mais laissait le marché vide pendant des heures
+    // dès que plusieurs managers humains vidaient les annonces ouvertes le
+    // même jour. this.lastCoachGenerationCheckAt reste posé (simple suivi
+    // informatif) mais ne conditionne plus rien ici.
+    this.lastCoachGenerationCheckAt = now;
+    {
       let openCount = this.coachListings.filter(l => l.status === "open").length;
       while (openCount < COACH_MARKET_MIN_OPEN_LISTINGS) {
         this.generateCoachCandidate(now);
@@ -6762,11 +6833,14 @@ class League {
     });
 
     // 2) Renouvelle les candidats pour garder au moins
-    // COACH_MARKET_MIN_OPEN_LISTINGS annonces ouvertes en permanence — même
+    // COACH_MARKET_MIN_OPEN_LISTINGS annonces ouvertes en permanence, même
     // plancher que le marché des entraîneurs (voir son commentaire), pour la
-    // même raison (personne ne "vend" spontanément son analyste).
-    if (now - (this.lastAnalystGenerationCheckAt || 0) >= COACH_MARKET_GENERATE_CHECK_INTERVAL_MS) {
-      this.lastAnalystGenerationCheckAt = now;
+    // même raison (personne ne "vend" spontanément son analyste). Vérifié à
+    // CHAQUE appel, même raisonnement que refreshCoachMarket ci-dessus (voir
+    // son commentaire, retour utilisateur "on fait des tests et on ne peut
+    // acheter personne").
+    this.lastAnalystGenerationCheckAt = now;
+    {
       let openCount = this.analystListings.filter(l => l.status === "open").length;
       while (openCount < COACH_MARKET_MIN_OPEN_LISTINGS) {
         this.generateAnalystCandidate(now);
@@ -6899,10 +6973,13 @@ class League {
     });
 
     // 2) Renouvelle les candidats pour garder au moins
-    // COACH_MARKET_MIN_OPEN_LISTINGS annonces ouvertes en permanence — même
-    // plancher que les deux autres marchés de staff.
-    if (now - (this.lastRecruiterGenerationCheckAt || 0) >= COACH_MARKET_GENERATE_CHECK_INTERVAL_MS) {
-      this.lastRecruiterGenerationCheckAt = now;
+    // COACH_MARKET_MIN_OPEN_LISTINGS annonces ouvertes en permanence, même
+    // plancher que les deux autres marchés de staff. Vérifié à CHAQUE appel,
+    // même raisonnement que refreshCoachMarket plus haut (voir son
+    // commentaire, retour utilisateur "on fait des tests et on ne peut
+    // acheter personne").
+    this.lastRecruiterGenerationCheckAt = now;
+    {
       let openCount = this.recruiterListings.filter(l => l.status === "open").length;
       while (openCount < COACH_MARKET_MIN_OPEN_LISTINGS) {
         this.generateRecruiterCandidate(now);
@@ -7873,22 +7950,25 @@ function serializeTeam(team) {
     // pas encore (voir teamFromSave plus bas).
     seasonObjectiveVerdictSettled: !!team.seasonObjectiveVerdictSettled,
     // Alchimie d'équipe (voir le grand commentaire de
-    // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : chemistry, plus le
-    // dernier instantané tactique utilisé pour détecter un changement au
-    // match suivant (voir Team.checkTacticsChemistry) : sans lui, un
-    // rechargement de page appliquerait à tort un malus au prochain match
-    // (aucun `prev` à comparer, alors qu'il y en avait bien un).
+    // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : simple valeur 0-100.
     chemistry: team.chemistry,
-    lastTacticsSnapshotForChemistry: team.lastTacticsSnapshotForChemistry
-      ? { ...team.lastTacticsSnapshotForChemistry, offense: [...team.lastTacticsSnapshotForChemistry.offense] }
-      : null,
-    // Identité tactique établie (voir Team.establishedTacticsSnapshot/
-    // checkTacticsChemistry) : même raisonnement que lastTacticsSnapshotForChemistry
-    // ci-dessus, DOIT survivre au rechargement, sinon un aller-retour de
-    // tactique redeviendrait à tort payant après chaque redémarrage serveur.
-    establishedTacticsSnapshot: team.establishedTacticsSnapshot
-      ? { ...team.establishedTacticsSnapshot, offense: [...team.establishedTacticsSnapshot.offense] }
-      : null,
+    // Connaissance tactique (voir le grand commentaire CONNAISSANCE
+    // TACTIQUE plus haut) : maîtrise PAR OPTION (10 priorités offensives, 5
+    // défenses, 3 rythmes), plus la série en cours par option
+    // (tacticalKnowledgeStreaks) qui pilote la courbe de gain/perte
+    // progressive au match suivant — sans elle, un rechargement de page
+    // repartirait à tort d'une série à 0 (perdant la mémoire de "depuis
+    // combien de matchs" une option est jouée ou délaissée).
+    tacticalKnowledge: {
+      offense: { ...team.tacticalKnowledge.offense },
+      defense: { ...team.tacticalKnowledge.defense },
+      rhythm: { ...team.tacticalKnowledge.rhythm },
+    },
+    tacticalKnowledgeStreaks: {
+      offense: { ...team.tacticalKnowledgeStreaks.offense },
+      defense: { ...team.tacticalKnowledgeStreaks.defense },
+      rhythm: { ...team.tacticalKnowledgeStreaks.rhythm },
+    },
     // Entraînement collectif (voir Team.collectiveTraining ci-dessus) : DOIT
     // survivre au rechargement, comme trainingSkill/trainingPositions plus
     // haut, sinon le focus collectif de la semaine reviendrait à "aucun" à
@@ -8270,35 +8350,65 @@ function teamFromSave(data) {
   // valeur déjà posée par le constructeur (false).
   team.seasonObjectiveVerdictSettled = !!data.seasonObjectiveVerdictSettled;
   // Alchimie d'équipe (voir serializeTeam ci-dessus). Absent (sauvegarde
-  // d'avant cette fonctionnalité) : on garde les valeurs déjà posées par le
-  // constructeur (chemistry neutre à 50, aucun instantané tactique de
-  // référence).
+  // d'avant cette fonctionnalité) : on garde la valeur déjà posée par le
+  // constructeur (chemistry neutre à 50).
   if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, 0, 100);
-  if (data.lastTacticsSnapshotForChemistry && Array.isArray(data.lastTacticsSnapshotForChemistry.offense)) {
-    team.lastTacticsSnapshotForChemistry = {
-      offense: [...data.lastTacticsSnapshotForChemistry.offense],
-      defense: data.lastTacticsSnapshotForChemistry.defense,
-      rhythm: data.lastTacticsSnapshotForChemistry.rhythm,
-    };
+  // Connaissance tactique (voir serializeTeam ci-dessus) : PAR OPTION depuis
+  // cette révision (retour utilisateur, 2026-09 : "il faudrait qu'il y ait
+  // une jauge par type d'attaque, une par rythme et une par défense") —
+  // deux anciens formats possibles à migrer, une ancienne sauvegarde à 3
+  // catégories scalaires ({offense,defense,rhythm} chacun un seul nombre,
+  // toute première version de cette fonctionnalité), ou carrément absente
+  // (sauvegarde d'avant la fonctionnalité elle-même). Dans les deux cas on
+  // repart de defaultTacticalKnowledgeShape(50) (neutre partout) : la forme
+  // scalaire ne correspond à rien de précis dans le nouveau modèle par
+  // option, seule la valeur des options ACTUELLEMENT jouées peut en être
+  // raisonnablement reprise (offensivePriorities/defense/rhythm déjà
+  // chargés plus haut), le reste repart neutre.
+  team.tacticalKnowledge = defaultTacticalKnowledgeShape(50);
+  const savedKnowledge = data.tacticalKnowledge;
+  if (savedKnowledge && typeof savedKnowledge === "object") {
+    const isPerOption = savedKnowledge.offense && typeof savedKnowledge.offense === "object";
+    if (isPerOption) {
+      ["offense", "defense", "rhythm"].forEach(cat => {
+        const saved = savedKnowledge[cat];
+        if (!saved || typeof saved !== "object") return;
+        Object.keys(team.tacticalKnowledge[cat]).forEach(key => {
+          if (typeof saved[key] === "number") team.tacticalKnowledge[cat][key] = clamp(saved[key], 0, 100);
+        });
+      });
+    } else {
+      // Ancien format scalaire : seule la valeur ACTUELLEMENT jouée de
+      // chaque catégorie peut raisonnablement en hériter.
+      if (typeof savedKnowledge.offense === "number") {
+        const v = clamp(savedKnowledge.offense, 0, 100);
+        team.offensivePriorities.forEach(p => {
+          if (team.tacticalKnowledge.offense[p] !== undefined) team.tacticalKnowledge.offense[p] = v;
+        });
+      }
+      if (typeof savedKnowledge.defense === "number" && team.tacticalKnowledge.defense[team.defense] !== undefined) {
+        team.tacticalKnowledge.defense[team.defense] = clamp(savedKnowledge.defense, 0, 100);
+      }
+      if (typeof savedKnowledge.rhythm === "number" && team.tacticalKnowledge.rhythm[team.rhythm] !== undefined) {
+        team.tacticalKnowledge.rhythm[team.rhythm] = clamp(savedKnowledge.rhythm, 0, 100);
+      }
+    }
   }
-  // Identité tactique établie (voir serializeTeam ci-dessus/
-  // Team.establishedTacticsSnapshot). Absent (sauvegarde d'avant cette
-  // fonctionnalité) : on reprend lastTacticsSnapshotForChemistry ci-dessus
-  // quand il existe (une carrière déjà en cours part du principe que sa
-  // tactique la plus récente est déjà son identité établie), sinon `null`
-  // (déjà posé par le constructeur).
-  if (data.establishedTacticsSnapshot && Array.isArray(data.establishedTacticsSnapshot.offense)) {
-    team.establishedTacticsSnapshot = {
-      offense: [...data.establishedTacticsSnapshot.offense],
-      defense: data.establishedTacticsSnapshot.defense,
-      rhythm: data.establishedTacticsSnapshot.rhythm,
-    };
-  } else if (team.lastTacticsSnapshotForChemistry) {
-    team.establishedTacticsSnapshot = {
-      offense: [...team.lastTacticsSnapshotForChemistry.offense],
-      defense: team.lastTacticsSnapshotForChemistry.defense,
-      rhythm: team.lastTacticsSnapshotForChemistry.rhythm,
-    };
+  // Série en cours par option (voir Team.tacticalKnowledgeStreaks) : neutre
+  // à 0 (constructeur) pour toute sauvegarde n'ayant pas encore ce format
+  // (y compris l'ancien système à instantané de référence unique, dont
+  // lastTacticsSnapshot/establishedTacticsSnapshot ne sont plus lus du tout
+  // ici — ils n'ont pas d'équivalent dans le nouveau modèle par option).
+  team.tacticalKnowledgeStreaks = defaultTacticalKnowledgeShape(0);
+  const savedStreaks = data.tacticalKnowledgeStreaks;
+  if (savedStreaks && typeof savedStreaks === "object") {
+    ["offense", "defense", "rhythm"].forEach(cat => {
+      const saved = savedStreaks[cat];
+      if (!saved || typeof saved !== "object") return;
+      Object.keys(team.tacticalKnowledgeStreaks[cat]).forEach(key => {
+        if (typeof saved[key] === "number") team.tacticalKnowledgeStreaks[cat][key] = saved[key];
+      });
+    });
   }
   // Entraînement collectif (voir serializeTeam ci-dessus). Absent (sauvegarde
   // d'avant cette fonctionnalité) : on garde null (déjà posé par le
@@ -9339,9 +9449,13 @@ return {
   // Alchimie d'équipe (voir le grand commentaire au-dessus de
   // CHEMISTRY_ROSTER_CHANGE_MAX_RANK) :
   CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE,
-  CHEMISTRY_TACTICS_OFFENSE_PENALTY, CHEMISTRY_TACTICS_DEFENSE_PENALTY, CHEMISTRY_TACTICS_RHYTHM_PENALTY,
-  CHEMISTRY_TACTICS_TRAINED_FACTOR, tacticsChangePenalty, tacticsEqual, parisCalendarDayIndex,
+  parisCalendarDayIndex,
   chemistryRosterImportance, rosterRankOf, chemistryLabel,
+  // Connaissance tactique (voir le grand commentaire au-dessus de
+  // TACTICAL_KNOWLEDGE_GAIN_BASE) :
+  TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
+  TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_DAILY_GAIN,
+  tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
   CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,

@@ -6,16 +6,24 @@
 //  - par les changements fréquents de joueurs (jamais une base de joueurs
 //    fixes, donc il faut recreer du lien entre les joueurs), mais changer
 //    un joueur majeur d'une équipe doit forcément avoir bcp plus d'impact
-//    que de changer le 12 homme (qui doit être très faible)
-//  - changer trop régulièrement de tactique doit aussi avoir un petit
-//    impact"
+//    que de changer le 12 homme (qui doit être très faible)"
+//
+// Un troisième levier (changer trop souvent de tactique) a existé ici un
+// temps, RETIRÉ depuis (retour utilisateur, 2026-09 : "sur la partie
+// connaissance tactique, on va modifier un peu la chose. ajd ça impacte
+// l'alchimie d'équipe. on va enlever ça et créer une jauge connaissance
+// tactique qui impactera le niveau de l'équipe") au profit d'une jauge
+// séparée, voir tactical_knowledge_test.js pour toute la mécanique de
+// changement/entraînement de tactique — ce fichier-ci ne garde qu'un test
+// de non-régression (section 6 ci-dessous) confirmant que changer de
+// tactique ne touche plus JAMAIS Team.chemistry.
 //
 // Voir engine.js : le grand commentaire au-dessus de
 // CHEMISTRY_ROSTER_CHANGE_MAX_RANK, Team.chemistry/chemistryFactor/
-// applyChemistryDelta/checkTacticsChemistry, chemistryRosterImportance/
-// rosterRankOf, MILESTONE_INTERVIEW_TONES.chemistryWin/chemistryLoss,
-// League._resolveListing/Team.sellPlayer (levier 2), recordMatchStatsForTeam
-// (levier 3), Player.eff()/Team.resetForMatch (effet sur la performance).
+// applyChemistryDelta, chemistryRosterImportance/rosterRankOf,
+// MILESTONE_INTERVIEW_TONES.chemistryWin/chemistryLoss,
+// League._resolveListing/Team.sellPlayer (levier 2), Player.eff()/
+// Team.resetForMatch (effet sur la performance).
 //
 // Test purement moteur (pas de serveur HTTP ni de DOM, comme
 // server/actions_test.js) : plus rapide, se concentre sur la logique.
@@ -24,8 +32,6 @@ const {
   generateStartingRoster, generateLeague, generateMultiManagerLeague, serializeTeam, teamFromSave,
   chemistryRosterImportance, rosterRankOf, chemistryLabel,
   CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE,
-  CHEMISTRY_TACTICS_OFFENSE_PENALTY, CHEMISTRY_TACTICS_DEFENSE_PENALTY, CHEMISTRY_TACTICS_RHYTHM_PENALTY,
-  CHEMISTRY_TACTICS_TRAINED_FACTOR,
   MILESTONE_INTERVIEW_TONES, recordMatchStatsForTeam, MatchEngine,
 } = E;
 
@@ -168,301 +174,38 @@ const T0 = Date.UTC(2026, 8, 21);
 })();
 
 // ---------------------------------------------------------------------
-// 6) Levier 3 (tactique) : un changement de tactique entre deux matchs
-//    coûte un malus PROPORTIONNEL à ce qui change réellement (retour
-//    utilisateur, 2026-09 : "si je passe de pick and roll + pénétration +
-//    transition à pick and roll + pénétration + jeu intérieur, je perds
-//    combien d'alchimie ?" — 1 seule priorité sur 3 changée ne doit PAS
-//    coûter autant qu'un changement complet) ; rejouer la MÊME tactique ne
-//    coûte rien.
+// 6) Non-régression (retour utilisateur, 2026-09 : "on va enlever ça" à
+//    propos de l'impact tactique sur l'alchimie) : changer de tactique,
+//    même TOUT changer d'un coup (offense + défense + rythme), plusieurs
+//    matchs de suite, ne doit plus JAMAIS faire bouger Team.chemistry —
+//    voir tactical_knowledge_test.js pour vérifier que ça fait bien bouger
+//    Team.tacticalKnowledge à la place.
 // ---------------------------------------------------------------------
-(function testTacticsChangeImpact() {
-  const home = generateStartingRoster("Home Tactics");
-  generateLeague(home, 1, T0);
-  home.chemistry = 60;
+const ONE_DAY = 24 * 60 * 60 * 1000;
 
-  // Premier match "réellement joué" : pose juste la référence, aucun malus
-  // (pas de match précédent auquel se comparer).
-  recordMatchStatsForTeam(home, 0, "championship", T0);
-  if (home.chemistry !== 60) throw new Error("❌ Le tout premier match ne devrait donner aucun malus de tactique.");
-
-  // Même tactique au match suivant : aucun malus.
-  recordMatchStatsForTeam(home, 1, "championship", T0 + 1000);
-  if (home.chemistry !== 60) throw new Error("❌ Rejouer la même tactique ne devrait donner aucun malus.");
-
-  // Change la défense seule : malus = CHEMISTRY_TACTICS_DEFENSE_PENALTY.
-  home.defense = home.defense === "Homme à homme" ? "Zone extérieure" : "Homme à homme";
-  recordMatchStatsForTeam(home, 2, "championship", T0 + 2000);
-  if (home.chemistry !== 60 - CHEMISTRY_TACTICS_DEFENSE_PENALTY) {
-    throw new Error(`❌ Changer de défense devrait coûter exactement CHEMISTRY_TACTICS_DEFENSE_PENALTY (${CHEMISTRY_TACTICS_DEFENSE_PENALTY}), obtenu ${60 - home.chemistry}.`);
-  }
-  console.log(`✅ Changer de défense seule coûte exactement -${CHEMISTRY_TACTICS_DEFENSE_PENALTY}, rejouer la même tactique ne coûte rien, aucun malus au tout premier match.`);
-})();
-
-// ---------------------------------------------------------------------
-// 6bis) Le malus offensif est PROPORTIONNEL au nombre de priorités qui
-//       changent réellement, pas un tout-ou-rien (retour utilisateur,
-//       2026-09 : "si je passe de pick and roll + pénétration + transition
-//       à pick and roll + pénétration + jeu intérieur, je perds combien
-//       d'alchimie ?" — 1 seule priorité sur 3 changée ne doit PAS coûter
-//       autant qu'un changement complet). Chaque scénario repart d'une
-//       équipe fraîche pour mesurer un delta isolé, propre, sans effet de
-//       bord d'un scénario sur l'autre (le premier match "réellement joué"
-//       après un changement pose lui-même une nouvelle référence).
-// ---------------------------------------------------------------------
-(function testTacticsOffensePriorityIsProportional() {
-  function chemistryDeltaForOffenseChange(newPriorities) {
-    const team = generateStartingRoster("Proportional Tactics");
-    generateLeague(team, 1, T0);
-    team.chemistry = 60;
-    // Pose la référence (3 priorités par défaut du constructeur, voir
-    // Team.constructor) : aucun malus sur ce tout premier match.
-    recordMatchStatsForTeam(team, 0, "championship", T0);
-    const before = team.chemistry;
-    team.offensivePriorities = newPriorities;
-    recordMatchStatsForTeam(team, 1, "championship", T0 + 1000);
-    return before - team.chemistry;
-  }
-
-  // Priorités par défaut (Team.constructor) : ["Équilibrée", "Pick & Roll", "Jeu en mouvement"].
-  const oneChanged = chemistryDeltaForOffenseChange(["Équilibrée", "Pick & Roll", "Jeu intérieur"]);
-  if (oneChanged !== CHEMISTRY_TACTICS_OFFENSE_PENALTY) {
-    throw new Error(`❌ Changer 1 priorité offensive sur 3 devrait coûter exactement CHEMISTRY_TACTICS_OFFENSE_PENALTY (${CHEMISTRY_TACTICS_OFFENSE_PENALTY}), obtenu ${oneChanged}.`);
-  }
-
-  const twoChanged = chemistryDeltaForOffenseChange(["Équilibrée", "Jeu intérieur", "Contre-attaque"]);
-  if (twoChanged !== 2 * CHEMISTRY_TACTICS_OFFENSE_PENALTY) {
-    throw new Error(`❌ Changer 2 priorités offensives sur 3 devrait coûter 2× CHEMISTRY_TACTICS_OFFENSE_PENALTY (${2 * CHEMISTRY_TACTICS_OFFENSE_PENALTY}), obtenu ${twoChanged}.`);
-  }
-
-  const threeChanged = chemistryDeltaForOffenseChange(["Jeu intérieur", "Contre-attaque", "Poste bas"]);
-  if (threeChanged !== 3 * CHEMISTRY_TACTICS_OFFENSE_PENALTY) {
-    throw new Error(`❌ Changer les 3 priorités offensives devrait coûter 3× CHEMISTRY_TACTICS_OFFENSE_PENALTY (${3 * CHEMISTRY_TACTICS_OFFENSE_PENALTY}), obtenu ${threeChanged}.`);
-  }
-  if (!(twoChanged > oneChanged && threeChanged > twoChanged)) {
-    throw new Error(`❌ Le malus devrait croître strictement avec le nombre de priorités changées (1=${oneChanged}, 2=${twoChanged}, 3=${threeChanged}).`);
-  }
-
-  // Permuter l'ORDRE des 3 mêmes priorités par défaut : aucun malus
-  // (comparaison en ENSEMBLE, pas en ordre).
-  const reordered = chemistryDeltaForOffenseChange(["Jeu en mouvement", "Équilibrée", "Pick & Roll"]);
-  if (reordered !== 0) {
-    throw new Error(`❌ Permuter l'ordre des mêmes 3 priorités ne devrait donner aucun malus, obtenu -${reordered}.`);
-  }
-
-  console.log(`✅ Le malus offensif est proportionnel au nombre de priorités changées : 1=-${oneChanged}, 2=-${twoChanged}, 3=-${threeChanged}, réordonner les mêmes=0.`);
-})();
-
-// ---------------------------------------------------------------------
-// 6ter) Tout change à la fois (3 priorités + défense + rythme) : le malus
-//       cumule les 3 catégories plutôt que de plafonner à une seule.
-// ---------------------------------------------------------------------
-(function testTacticsFullChangeStacks() {
-  const home = generateStartingRoster("Home Full Tactics Change");
+(function testTacticsChangeNoLongerAffectsChemistry() {
+  const home = generateStartingRoster("Tactics No Longer Chemistry");
   generateLeague(home, 1, T0);
   home.chemistry = 60;
   recordMatchStatsForTeam(home, 0, "championship", T0);
-  const before = home.chemistry;
+  if (home.chemistry !== 60) throw new Error("❌ Le tout premier match ne devrait donner aucun changement d'alchimie.");
 
   home.offensivePriorities = ["Contre-attaque", "Poste bas", "Écrans multiples"];
   home.defense = home.defense === "Homme à homme" ? "Zone extérieure" : "Homme à homme";
   home.rhythm = home.rhythm === "Rapide" ? "Lent" : "Rapide";
-  recordMatchStatsForTeam(home, 1, "championship", T0 + 1000);
-
-  const fullChangePenalty = 3 * CHEMISTRY_TACTICS_OFFENSE_PENALTY + CHEMISTRY_TACTICS_DEFENSE_PENALTY + CHEMISTRY_TACTICS_RHYTHM_PENALTY;
-  if (before - home.chemistry !== fullChangePenalty) {
-    throw new Error(`❌ Tout changer d'un coup devrait coûter le cumul des 3 catégories (-${fullChangePenalty}), obtenu -${before - home.chemistry}.`);
-  }
-  console.log(`✅ Changer attaque + défense + rythme en même temps cumule les 3 malus (-${fullChangePenalty} au total).`);
-})();
-
-// ---------------------------------------------------------------------
-// 6quater) Entraînement collectif "tactique" (retour utilisateur, 2026-09,
-//       puis "il faut effectivement choisir ce qui est bossé comme
-//       tactique [...] un seul aspect et pas tous les aspects", puis "tu
-//       divises à chaque fois par 2 le malus [...] par jour d'entrainement
-//       sur la tactique") : UN SEUL aspect précis ({ category, value }),
-//       atténué CATÉGORIE PAR CATÉGORIE, et d'autant plus fort qu'il a été
-//       travaillé de jours de repos banqués depuis le dernier match (voir
-//       Team.syncCollectiveTrainingLog/daysTrainedForTarget).
-// ---------------------------------------------------------------------
-const ONE_DAY = 24 * 60 * 60 * 1000;
-
-(function testCollectiveTrainingNoMitigationWithoutBankedDays() {
-  const home = generateStartingRoster("Collective Tactics No Banked Days");
-  generateLeague(home, 1, T0);
-  home.chemistry = 60;
-  home.defense = "Homme à homme";
-  recordMatchStatsForTeam(home, 0, "championship", T0);
-
-  // Choisi le jour même du match suivant, sans le moindre jour de repos
-  // banqué au préalable (aucun appel à syncCollectiveTrainingLog entre les
-  // deux matchs) : aucune atténuation, plein tarif.
-  home.collectiveTraining = "tactique";
-  home.trainedTactics = { category: "defense", value: "Zone extérieure" };
-  home.defense = "Zone extérieure";
-  recordMatchStatsForTeam(home, 1, "championship", T0 + 1000);
-
-  if (home.chemistry !== 60 - CHEMISTRY_TACTICS_DEFENSE_PENALTY) {
-    throw new Error(`❌ Sans le moindre jour de repos banqué, le malus devrait rester plein tarif (-${CHEMISTRY_TACTICS_DEFENSE_PENALTY}), obtenu ${60 - home.chemistry}.`);
-  }
-  console.log(`✅ trainedTactics choisi le jour même du match (0 jour banqué) : malus plein tarif (-${CHEMISTRY_TACTICS_DEFENSE_PENALTY}), pas encore d'atténuation.`);
-})();
-
-(function testCollectiveTrainingCompoundsPerBankedDay() {
-  const home = generateStartingRoster("Collective Tactics Compounding");
-  generateLeague(home, 1, T0);
-  home.chemistry = 60;
-  home.defense = "Homme à homme";
-  recordMatchStatsForTeam(home, 0, "championship", T0); // "mardi"
-
-  home.collectiveTraining = "tactique";
-  home.trainedTactics = { category: "defense", value: "Zone extérieure" };
-  // 3 jours de repos ("mercredi/jeudi/vendredi"), même choix chaque jour.
-  home.syncCollectiveTrainingLog(T0 + 1 * ONE_DAY);
-  home.syncCollectiveTrainingLog(T0 + 2 * ONE_DAY);
-  home.syncCollectiveTrainingLog(T0 + 3 * ONE_DAY);
-
-  home.defense = "Zone extérieure";
-  recordMatchStatsForTeam(home, 1, "championship", T0 + 4 * ONE_DAY); // "samedi"
-
-  const expectedPenalty = CHEMISTRY_TACTICS_DEFENSE_PENALTY * Math.pow(CHEMISTRY_TACTICS_TRAINED_FACTOR, 3);
-  if (Math.abs((60 - home.chemistry) - expectedPenalty) > 1e-9) {
-    throw new Error(`❌ 3 jours de repos banqués sur la même tactique devraient diviser le malus par 2 trois fois de suite (-${expectedPenalty.toFixed(3)}), obtenu ${(60 - home.chemistry).toFixed(3)}.`);
-  }
-  console.log(`✅ 3 jours de repos consécutifs (mer/jeu/ven) sur la même tactique : malus divisé par 2 trois fois (-${expectedPenalty.toFixed(3)} au lieu de -${CHEMISTRY_TACTICS_DEFENSE_PENALTY}), comme un match mardi -> samedi.`);
-})();
-
-(function testCollectiveTrainingRecuperationDayDoesNotEraseBankedProgress() {
-  const home = generateStartingRoster("Collective Tactics Recup Keeps Progress");
-  generateLeague(home, 1, T0);
-  home.chemistry = 60;
-  home.defense = "Homme à homme";
-  recordMatchStatsForTeam(home, 0, "championship", T0);
-
-  home.collectiveTraining = "tactique";
-  home.trainedTactics = { category: "defense", value: "Zone extérieure" };
-  home.syncCollectiveTrainingLog(T0 + 1 * ONE_DAY); // "mercredi" : tactique
-  home.syncCollectiveTrainingLog(T0 + 2 * ONE_DAY); // "jeudi" : tactique
-  // "vendredi" : passe en récupération SANS toucher trainedTactics, ne doit
-  // ni ajouter un 3e jour, ni effacer les 2 déjà banqués (retour
-  // utilisateur : "on doit quand même avoir le malus divisé par deux du
-  // mercredi et par deux encore une fois le jeudi").
-  home.collectiveTraining = "recuperation";
-  home.syncCollectiveTrainingLog(T0 + 3 * ONE_DAY);
-
-  home.defense = "Zone extérieure";
-  recordMatchStatsForTeam(home, 1, "championship", T0 + 4 * ONE_DAY); // "samedi"
-
-  const expectedPenalty = CHEMISTRY_TACTICS_DEFENSE_PENALTY * Math.pow(CHEMISTRY_TACTICS_TRAINED_FACTOR, 2);
-  if (Math.abs((60 - home.chemistry) - expectedPenalty) > 1e-9) {
-    throw new Error(`❌ Un jour "récupération" intercalé ne devrait ni ajouter ni effacer de jours banqués (attendu -${expectedPenalty.toFixed(3)} pour 2 jours), obtenu -${(60 - home.chemistry).toFixed(3)}.`);
-  }
-  console.log(`✅ Jour "récupération" intercalé (vendredi) : les 2 jours déjà banqués (mercredi+jeudi) restent acquis, malus -${expectedPenalty.toFixed(3)} au lieu de -${CHEMISTRY_TACTICS_DEFENSE_PENALTY}.`);
-})();
-
-(function testCollectiveTrainingTacticsNoMitigationWhenMismatched() {
-  const home = generateStartingRoster("Home Collective Tactics Mismatched");
-  generateLeague(home, 1, T0);
-  home.chemistry = 60;
-  home.defense = "Homme à homme";
-  recordMatchStatsForTeam(home, 0, "championship", T0);
-
-  // On entraîne "Zone extérieure" (2 jours banqués), mais on joue en fait
-  // une AUTRE défense en match : ça ne correspond pas à ce qui a été
-  // travaillé, donc plein tarif malgré les jours banqués.
-  home.collectiveTraining = "tactique";
-  home.trainedTactics = { category: "defense", value: "Zone extérieure" };
-  home.syncCollectiveTrainingLog(T0 + 1 * ONE_DAY);
-  home.syncCollectiveTrainingLog(T0 + 2 * ONE_DAY);
-
-  home.defense = "Zone intérieure";
-  recordMatchStatsForTeam(home, 1, "championship", T0 + 3 * ONE_DAY);
-
-  if (home.chemistry !== 60 - CHEMISTRY_TACTICS_DEFENSE_PENALTY) {
-    throw new Error(`❌ Un changement de défense qui ne correspond PAS à trainedTactics devrait coûter le plein tarif (-${CHEMISTRY_TACTICS_DEFENSE_PENALTY}), obtenu ${60 - home.chemistry}.`);
-  }
-  console.log(`✅ Défense jouée différente de celle entraînée : malus plein tarif (-${CHEMISTRY_TACTICS_DEFENSE_PENALTY}), même avec des jours banqués sur une AUTRE défense.`);
-})();
-
-(function testCollectiveTrainingTacticsNoMitigationWhenUnset() {
-  const home = generateStartingRoster("Home Collective Tactics Unset");
-  generateLeague(home, 1, T0);
-  home.chemistry = 60;
-  home.defense = "Homme à homme";
-  // trainedTactics resté `null` (cas par défaut avant toute sélection).
-
-  recordMatchStatsForTeam(home, 0, "championship", T0);
-  home.defense = "Zone extérieure";
-  recordMatchStatsForTeam(home, 1, "championship", T0 + 1000);
-
-  if (home.chemistry !== 60 - CHEMISTRY_TACTICS_DEFENSE_PENALTY) {
-    throw new Error(`❌ Sans trainedTactics choisi, le malus devrait rester plein tarif (-${CHEMISTRY_TACTICS_DEFENSE_PENALTY}), obtenu ${60 - home.chemistry}.`);
-  }
-  console.log(`✅ Aucun trainedTactics choisi : aucune atténuation, malus plein tarif (-${CHEMISTRY_TACTICS_DEFENSE_PENALTY}).`);
-})();
-
-// ---------------------------------------------------------------------
-// 6quinquies) Identité tactique établie (retour utilisateur, 2026-09 : "si
-//       je joue toute la saison sur une tactique, je change pour un seul
-//       match, et je reviens à ma tactique, j'ai un malus [...] ça ne
-//       devrait pas être le cas") : revenir EXACTEMENT à la tactique
-//       établie après un aller-retour d'UN match ne coûte rien, mais s'y
-//       tenir 2 matchs de suite en fait la NOUVELLE identité établie (un
-//       retour à l'ancienne coûte alors de nouveau).
-// ---------------------------------------------------------------------
-(function testEstablishedTacticsNoPenaltyOnReturnAfterOneOffDeviation() {
-  const home = generateStartingRoster("Established Tactics Return");
-  generateLeague(home, 1, T0);
-  home.chemistry = 60;
-  home.defense = "Homme à homme"; // tactique établie "toute la saison"
-  recordMatchStatsForTeam(home, 0, "championship", T0);
-  recordMatchStatsForTeam(home, 1, "championship", T0 + 1 * ONE_DAY); // rejouée, confirme l'identité
-  const chemistryBeforeDeviation = home.chemistry;
-
-  // Un seul match sur une autre défense (retour utilisateur : "je change
-  // pour un seul match") : coûte normalement.
-  home.defense = "Zone extérieure";
-  recordMatchStatsForTeam(home, 2, "championship", T0 + 2 * ONE_DAY);
-  if (home.chemistry !== chemistryBeforeDeviation - CHEMISTRY_TACTICS_DEFENSE_PENALTY) {
-    throw new Error(`❌ Le changement d'un seul match devrait coûter le plein tarif (-${CHEMISTRY_TACTICS_DEFENSE_PENALTY}), obtenu ${chemistryBeforeDeviation - home.chemistry}.`);
-  }
-  const chemistryAfterDeviation = home.chemistry;
-
-  // Retour à la tactique établie ("et je reviens à ma tactique") : aucun
-  // malus, ce n'est pas un "nouveau" changement.
-  home.defense = "Homme à homme";
-  recordMatchStatsForTeam(home, 3, "championship", T0 + 3 * ONE_DAY);
-  if (home.chemistry !== chemistryAfterDeviation) {
-    throw new Error(`❌ Revenir à la tactique établie après UN seul match d'écart ne devrait coûter aucun malus (attendu ${chemistryAfterDeviation}, obtenu ${home.chemistry}).`);
-  }
-  console.log(`✅ Retour à la tactique établie après un aller-retour d'un match : aucun malus (chemistry inchangée à ${home.chemistry}).`);
-})();
-
-(function testEstablishedTacticsSolidifiesAfterTwoConsecutiveMatches() {
-  const home = generateStartingRoster("Established Tactics Solidify");
-  generateLeague(home, 1, T0);
-  home.chemistry = 60;
-  home.defense = "Homme à homme";
-  recordMatchStatsForTeam(home, 0, "championship", T0);
   recordMatchStatsForTeam(home, 1, "championship", T0 + 1 * ONE_DAY);
-
-  // Change de défense et s'y tient 2 matchs de suite : devient la NOUVELLE
-  // identité établie.
-  home.defense = "Zone extérieure";
-  recordMatchStatsForTeam(home, 2, "championship", T0 + 2 * ONE_DAY); // coûte (1er match sur la nouvelle défense)
-  recordMatchStatsForTeam(home, 3, "championship", T0 + 3 * ONE_DAY); // gratuit (rejoue la même chose)
-  const chemistryAfterSolidifying = home.chemistry;
-
-  // Revenir à l'ANCIENNE défense coûte maintenant de nouveau : "Zone
-  // extérieure" est devenue l'identité établie, "Homme à homme" est
-  // désormais l'écart.
-  home.defense = "Homme à homme";
-  recordMatchStatsForTeam(home, 4, "championship", T0 + 4 * ONE_DAY);
-  if (home.chemistry !== chemistryAfterSolidifying - CHEMISTRY_TACTICS_DEFENSE_PENALTY) {
-    throw new Error(`❌ Revenir à l'ANCIENNE tactique après 2 matchs sur la nouvelle devrait de nouveau coûter le plein tarif (-${CHEMISTRY_TACTICS_DEFENSE_PENALTY}), obtenu ${chemistryAfterSolidifying - home.chemistry}.`);
+  if (home.chemistry !== 60) {
+    throw new Error(`❌ Tout changer d'un coup (attaque+défense+rythme) ne devrait plus affecter l'alchimie, obtenu ${home.chemistry}.`);
   }
-  console.log(`✅ Une tactique jouée 2 matchs de suite devient la nouvelle identité établie : y revenir après coup coûte de nouveau (-${CHEMISTRY_TACTICS_DEFENSE_PENALTY}).`);
+
+  // Encore un changement au match suivant, pour être sûr qu'aucun effet ne
+  // se déclenche même en cumulant plusieurs changements successifs.
+  home.defense = home.defense === "Homme à homme" ? "Zone extérieure" : "Homme à homme";
+  recordMatchStatsForTeam(home, 2, "championship", T0 + 2 * ONE_DAY);
+  if (home.chemistry !== 60) {
+    throw new Error(`❌ Un second changement de tactique ne devrait toujours pas affecter l'alchimie, obtenu ${home.chemistry}.`);
+  }
+  console.log("✅ Changer de tactique (même tout à la fois, même plusieurs matchs de suite) n'affecte plus jamais Team.chemistry.");
 })();
 
 // ---------------------------------------------------------------------
@@ -530,81 +273,38 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
 })();
 
 // ---------------------------------------------------------------------
-// 10) Round-trip serializeTeam/teamFromSave : chemistry et l'instantané
-//     tactique de référence doivent survivre à l'identique.
+// 10) Round-trip serializeTeam/teamFromSave : chemistry doit survivre à
+//     l'identique (voir tactical_knowledge_test.js pour le round-trip de
+//     tacticalKnowledge/tacticalKnowledgeStreaks/trainedTactics/
+//     collectiveTrainingLog/tacticsCycleStartDayIndex).
 // ---------------------------------------------------------------------
 (function testSerializationRoundTrip() {
   const team = generateStartingRoster("Roundtrip Chemistry");
   generateLeague(team, 1, T0);
   team.chemistry = 37;
-  team.lastTacticsSnapshotForChemistry = { offense: ["Jeu en pénétration"], defense: "Zone press", rhythm: "Rapide" };
-  team.establishedTacticsSnapshot = { offense: ["Jeu en pénétration"], defense: "Zone press", rhythm: "Lent" };
-  team.collectiveTraining = "tactique";
-  team.trainedTactics = { category: "defense", value: "Zone extérieure" };
-  team.syncCollectiveTrainingLog(T0);
-  team.syncCollectiveTrainingLog(T0 + ONE_DAY);
-  team.tacticsCycleStartDayIndex = T0 - ONE_DAY;
 
   const saved = serializeTeam(team);
   if (saved.chemistry !== 37) throw new Error("❌ serializeTeam devrait persister chemistry.");
-  if (!saved.lastTacticsSnapshotForChemistry || saved.lastTacticsSnapshotForChemistry.defense !== "Zone press") {
-    throw new Error("❌ serializeTeam devrait persister lastTacticsSnapshotForChemistry.");
-  }
-  if (!saved.establishedTacticsSnapshot || saved.establishedTacticsSnapshot.rhythm !== "Lent") {
-    throw new Error("❌ serializeTeam devrait persister establishedTacticsSnapshot.");
-  }
-  if (!saved.trainedTactics || saved.trainedTactics.category !== "defense" || saved.trainedTactics.value !== "Zone extérieure") {
-    throw new Error("❌ serializeTeam devrait persister trainedTactics (nouveau format { category, value }).");
-  }
-  if (!Array.isArray(saved.collectiveTrainingLog) || saved.collectiveTrainingLog.length !== 2) {
-    throw new Error(`❌ serializeTeam devrait persister collectiveTrainingLog (2 entrées attendues, ${saved.collectiveTrainingLog && saved.collectiveTrainingLog.length} obtenues).`);
-  }
-  if (saved.tacticsCycleStartDayIndex !== T0 - ONE_DAY) {
-    throw new Error("❌ serializeTeam devrait persister tacticsCycleStartDayIndex.");
-  }
 
   const reloaded = teamFromSave(saved);
   if (reloaded.chemistry !== 37) throw new Error("❌ teamFromSave devrait restaurer chemistry.");
-  if (!reloaded.lastTacticsSnapshotForChemistry || reloaded.lastTacticsSnapshotForChemistry.rhythm !== "Rapide") {
-    throw new Error("❌ teamFromSave devrait restaurer lastTacticsSnapshotForChemistry.");
-  }
-  if (!reloaded.establishedTacticsSnapshot || reloaded.establishedTacticsSnapshot.rhythm !== "Lent") {
-    throw new Error("❌ teamFromSave devrait restaurer establishedTacticsSnapshot.");
-  }
-  if (!reloaded.trainedTactics || reloaded.trainedTactics.category !== "defense" || reloaded.trainedTactics.value !== "Zone extérieure") {
-    throw new Error("❌ teamFromSave devrait restaurer trainedTactics.");
-  }
-  if (!Array.isArray(reloaded.collectiveTrainingLog) || reloaded.collectiveTrainingLog.length !== 2) {
-    throw new Error("❌ teamFromSave devrait restaurer collectiveTrainingLog.");
-  }
-  if (reloaded.tacticsCycleStartDayIndex !== T0 - ONE_DAY) {
-    throw new Error("❌ teamFromSave devrait restaurer tacticsCycleStartDayIndex.");
-  }
-  console.log("✅ chemistry/lastTacticsSnapshotForChemistry/establishedTacticsSnapshot/trainedTactics/collectiveTrainingLog/tacticsCycleStartDayIndex survivent à l'identique à un round-trip serializeTeam/teamFromSave.");
+  console.log("✅ chemistry survit à l'identique à un round-trip serializeTeam/teamFromSave.");
 })();
 
 // ---------------------------------------------------------------------
 // 11) Sauvegarde ancienne (avant cette fonctionnalité) : chemistry absent
 //     des données -> on garde la valeur neutre par défaut (50), jamais une
-//     erreur, et aucun malus de tactique au match suivant.
+//     erreur.
 // ---------------------------------------------------------------------
 (function testBackwardCompatibilityOldSave() {
   const team = generateStartingRoster("Old Save Chemistry");
   generateLeague(team, 1, T0);
   const saved = serializeTeam(team);
   delete saved.chemistry;
-  delete saved.lastTacticsSnapshotForChemistry;
 
   const reloaded = teamFromSave(saved);
   if (typeof reloaded.chemistry !== "number" || reloaded.chemistry < 0 || reloaded.chemistry > 100) {
     throw new Error("❌ Une sauvegarde sans chemistry devrait garder une valeur par défaut valide (constructeur, 50).");
-  }
-  if (reloaded.lastTacticsSnapshotForChemistry !== null) {
-    throw new Error("❌ Une sauvegarde sans instantané tactique devrait garder null (constructeur).");
-  }
-  recordMatchStatsForTeam(reloaded, 0, "championship", T0);
-  if (reloaded.chemistry !== 50) {
-    throw new Error("❌ Le premier match après une sauvegarde ancienne ne devrait donner aucun malus de tactique.");
   }
   console.log("✅ Une sauvegarde antérieure à cette fonctionnalité (chemistry absent) se recharge sans erreur, avec des valeurs par défaut valides.");
 })();
