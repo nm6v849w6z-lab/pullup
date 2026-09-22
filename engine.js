@@ -29,10 +29,32 @@ const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivo
 //   individuelle de l'effet de l'Espace bien-être du club.
 // - "freeThrow" : réussite aux lancers francs (voir MatchEngine.freeThrows),
 //   qui utilisait jusqu'ici le tir à mi-distance comme simple approximation.
+// 7 caractéristiques ajoutées (retour utilisateur, 2026-09 : "il nous
+// faudrait ajouter la pénétration, la création de tir et les interceptions
+// [...]" puis, sur les caractéristiques déjà présentes mais sans aucun
+// effet de match dédié, "trouve un intérêt aux carac qui ne sont pas
+// utilisées sinon on les enleve") : mêmes citoyens à part entière que les
+// 13 précédentes (Player.overall()/potentiel/salaire/entraînement, voir
+// POSITION_ATTR_PROFILE/TRAINING_PROGRAMS plus bas), chacune avec un rôle
+// de match précis :
+// - "penetration"/"shotCreation"/"steal" : techniques offensives/défensives
+//   supplémentaires, mêmes fondamentaux que les 10 d'origine.
+// - "power" (Puissance) : fautes provoquées en zone intérieure (voir
+//   foulDrawBase dans MatchEngine.playPossession).
+// - "focus" (Concentration) : réussite aux lancers francs, en plus du
+//   Lancer franc lui-même (voir MatchEngine.freeThrows).
+// - "anticipation" : pression défensive forçant des pertes de balle (voir
+//   pressure dans MatchEngine.playPossession).
+// - "leadership" : allège, pour TOUTE l'équipe (pas seulement lui-même), le
+//   malus de "tilt" après une série de ratés/pertes de balle consécutives
+//   du meilleur joueur du cinq en jeu (voir leadershipRelief dans
+//   MatchEngine.playPossession) — en plus de l'effet déjà existant de
+//   "mental" côté tilt, individuel à chaque tireur.
 const ATTRS = [
   "midRange", "threePoint", "inside", "pass", "rebound",
   "block", "dribble", "agility", "defOutside", "defInside",
-  "mental", "endurance", "freeThrow"
+  "mental", "endurance", "freeThrow",
+  "penetration", "shotCreation", "steal", "power", "focus", "anticipation", "leadership",
 ];
 
 const TRAINING_LABELS = {
@@ -49,6 +71,13 @@ const TRAINING_LABELS = {
   mental: "Mental",
   endurance: "Endurance",
   freeThrow: "Lancer franc",
+  penetration: "Pénétration",
+  shotCreation: "Création de tir",
+  steal: "Interceptions",
+  power: "Puissance",
+  focus: "Concentration",
+  anticipation: "Anticipation",
+  leadership: "Leadership",
 };
 
 const OFFENSE_PROFILES = {
@@ -492,14 +521,24 @@ function declineFactorForAge(age) {
 const TRAINING_SYNERGY = {
   midRange: ["threePoint"],
   threePoint: ["midRange"],
-  inside: ["rebound"],
+  inside: ["rebound", "power"],
   rebound: ["inside", "defInside"],
   pass: ["dribble"],
-  dribble: ["pass", "agility"],
+  dribble: ["pass", "agility", "penetration"],
   block: ["defInside"],
   agility: ["dribble", "defOutside"],
-  defOutside: ["defInside", "agility"],
+  defOutside: ["defInside", "agility", "steal"],
   defInside: ["defOutside", "block"],
+  // Paires ajoutées avec les 7 nouvelles caractéristiques (retour
+  // utilisateur, 2026-09 : "réfléchis aux entrainements croisés" — repris ici
+  // via le mécanisme de synergie déjà existant plutôt qu'un système séparé,
+  // voir la note d'adaptation au-dessus de POSITION_ATTR_PROFILE) :
+  penetration: ["dribble"],
+  shotCreation: ["midRange"],
+  steal: ["defOutside", "anticipation"],
+  power: ["inside"],
+  focus: ["freeThrow"],
+  anticipation: ["steal"],
 };
 
 // Temps CUMULÉ, au poste entraîné, sur les matchs du cycle d'entraînement en
@@ -565,6 +604,13 @@ const TRAINING_HOME_POSITION = {
   // à 90%.
   defOutside: "Meneur",
   defInside: "Pivot",
+  // 7 nouvelles caractéristiques (voir le grand commentaire au-dessus
+  // d'ATTRS) : poste de prédilection choisi sur le même principe que
+  // ci-dessus (le poste qui incarne le mieux la caractéristique).
+  penetration: "Meneur",
+  shotCreation: "Arrière",
+  steal: "Meneur",
+  power: "Pivot",
 };
 
 // Dilution du rendement selon le nombre de postes couverts cette semaine
@@ -581,11 +627,11 @@ const TRAINING_DILUTION_BY_POSITION_COUNT = { 1: 0, 2: 0.15, 3: 0.30, 4: 0.40, 5
 // pas figé (et donc de plus en plus faible) pendant qu'un club bien géré
 // s'entraîne semaine après semaine.
 const POSITION_STRONG_ATTRS = {
-  "Meneur": ["pass", "dribble", "agility"],
-  "Arrière": ["threePoint", "midRange"],
-  "Ailier shooteur": ["threePoint", "defOutside"],
-  "Ailier fort": ["inside", "rebound", "defInside"],
-  "Pivot": ["inside", "rebound", "block", "defInside"],
+  "Meneur": ["pass", "dribble", "agility", "penetration", "shotCreation", "steal"],
+  "Arrière": ["threePoint", "midRange", "dribble", "penetration", "shotCreation", "steal"],
+  "Ailier shooteur": ["threePoint", "defOutside", "shotCreation"],
+  "Ailier fort": ["inside", "rebound", "defInside", "power"],
+  "Pivot": ["inside", "rebound", "block", "defInside", "power"],
 };
 
 function positionEfficiencyForSkill(skill, position) {
@@ -631,8 +677,9 @@ function trainingPositionOptions(skill) {
 // facilement sur les compétences "de petit" (dribble, agilité, tir extérieur,
 // passe, défense extérieure). Le tir à mi-distance est neutre.
 const TRAINING_HEIGHT_AFFINITY = {
-  inside: "tall", rebound: "tall", block: "tall", defInside: "tall",
+  inside: "tall", rebound: "tall", block: "tall", defInside: "tall", power: "tall",
   dribble: "short", agility: "short", threePoint: "short", defOutside: "short", pass: "short",
+  penetration: "short", shotCreation: "short", steal: "short",
   midRange: "neutral",
 };
 const HEIGHT_MIN = 178, HEIGHT_MAX = 222; // bornes observées sur l'ensemble des postes
@@ -680,6 +727,15 @@ const TRAINING_PROGRAMS = {
   // entraînables via un programme dédié.
   freeThrow:  makeTrainingProgram("Lancer franc", ["freeThrow"]),
   endurance:  makeTrainingProgram("Endurance", ["endurance"]),
+  // 7 nouvelles caractéristiques (voir le grand commentaire au-dessus
+  // d'ATTRS) : mêmes programmes "purs" que ci-dessus, plein rendement.
+  penetration:  makeTrainingProgram("Pénétration", ["penetration"]),
+  shotCreation: makeTrainingProgram("Création de tir", ["shotCreation"]),
+  steal:        makeTrainingProgram("Interceptions", ["steal"]),
+  power:        makeTrainingProgram("Puissance", ["power"]),
+  focus:        makeTrainingProgram("Concentration", ["focus"]),
+  anticipation: makeTrainingProgram("Anticipation", ["anticipation"]),
+  leadership:   makeTrainingProgram("Leadership", ["leadership"]),
   // -- Programmes composites (plusieurs caractéristiques liées, rendement
   // dilué par caractéristique — voir WEIGHT_BY_PROGRAM_SIZE) --
   outsideShot: makeTrainingProgram("Tir extérieur", ["midRange", "threePoint"]),
@@ -2429,16 +2485,16 @@ class Player {
     this.matchCondition = currentCondition(this, now, recoveryPerDay);
   }
 
-  // Moyenne des 13 caractéristiques (voir le grand commentaire au-dessus
-  // d'ATTRS) : "mental"/"endurance"/"freeThrow" comptent ici exactement
-  // comme les 10 d'origine, mêmes citoyens à part entière (contrairement à
+  // Moyenne des 20 caractéristiques (voir le grand commentaire au-dessus
+  // d'ATTRS) : les 7 dernières ajoutées comptent ici exactement comme les
+  // 13 précédentes, mêmes citoyens à part entière (contrairement à
   // aggressiveness, caractéristique cachée volontairement EXCLUE d'overall,
-  // voir le constructeur plus haut).
+  // voir le constructeur plus haut). Calculée dynamiquement sur ATTRS
+  // plutôt qu'une somme figée, pour ne plus jamais se désynchroniser si
+  // ATTRS change encore.
   overall() {
     const a = this.attrs;
-    return (a.midRange + a.threePoint + a.inside + a.pass + a.rebound +
-      a.block + a.dribble + a.agility + a.defOutside + a.defInside +
-      a.mental + a.endurance + a.freeThrow) / 13;
+    return ATTRS.reduce((sum, key) => sum + a[key], 0) / ATTRS.length;
   }
 
   // Statistique effective en jeu = (base + bonus MVP éventuel) * forme * fatigue * forme physique * alchimie d'équipe * connaissance tactique
@@ -5033,15 +5089,25 @@ function heightForPosition(position) {
 // dupliquer "base" dans chacune des 5 entrées ci-dessous.
 const POSITION_ATTR_PROFILE = {
   "Meneur": { pass: "strong", dribble: "strong", agility: "strong", threePoint: "base",
-    defOutside: "base", midRange: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak" },
-  "Arrière": { threePoint: "strong", midRange: "strong", agility: "base", dribble: "base",
-    pass: "base", defOutside: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak" },
+    defOutside: "base", midRange: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak",
+    penetration: "strong", shotCreation: "strong", steal: "strong", power: "weak" },
+  // Dribble (retour utilisateur, 2026-09 : "signature du Meneur, mais aussi
+  // signature de l'Arrière pour le dribble") : l'Arrière manie autant le
+  // ballon en un-contre-un que le Meneur, seulement avec un but différent
+  // (se créer SON tir plutôt que distribuer) - désormais "strong" pour
+  // l'Arrière aussi, plus seulement "base".
+  "Arrière": { threePoint: "strong", midRange: "strong", agility: "base", dribble: "strong",
+    pass: "base", defOutside: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak",
+    penetration: "strong", shotCreation: "strong", steal: "strong", power: "weak" },
   "Ailier shooteur": { threePoint: "strong", midRange: "base", agility: "base", defOutside: "strong",
-    inside: "base", pass: "base", dribble: "base", rebound: "base", block: "weak", defInside: "weak" },
+    inside: "base", pass: "base", dribble: "base", rebound: "base", block: "weak", defInside: "weak",
+    penetration: "base", shotCreation: "strong", steal: "base", power: "base" },
   "Ailier fort": { inside: "strong", rebound: "strong", midRange: "base", defInside: "strong",
-    block: "base", defOutside: "weak", pass: "weak", dribble: "weak", agility: "base", threePoint: "weak" },
+    block: "base", defOutside: "weak", pass: "weak", dribble: "weak", agility: "base", threePoint: "weak",
+    penetration: "weak", shotCreation: "base", steal: "base", power: "strong" },
   "Pivot": { inside: "strong", rebound: "strong", block: "strong", defInside: "strong",
-    midRange: "weak", threePoint: "weak", pass: "weak", dribble: "weak", agility: "weak", defOutside: "weak" },
+    midRange: "weak", threePoint: "weak", pass: "weak", dribble: "weak", agility: "weak", defOutside: "weak",
+    penetration: "weak", shotCreation: "weak", steal: "weak", power: "strong" },
 };
 
 function generateAttrsForPosition(position, tier) {
@@ -8111,6 +8177,20 @@ function playerFromSave(pdata) {
       p.attrs[k] = clamp(Math.round(legacyAvg + (Math.random() * 10 - 5)), 1, 99);
     });
   }
+  // Même migration pour les 7 caractéristiques ajoutées ensuite (Pénétration/
+  // Création de tir/Interceptions/Puissance/Concentration/Anticipation/
+  // Leadership, voir le grand commentaire au-dessus d'ATTRS) : dérivées de la
+  // moyenne des 13 caractéristiques précédentes (déjà garanties présentes à
+  // ce stade par la migration ci-dessus), même principe (bruit léger, pas de
+  // constante fixe).
+  const attrs13Keys = [...legacyAttrKeys, "mental", "endurance", "freeThrow"];
+  const missingAttrs20 = ["penetration", "shotCreation", "steal", "power", "focus", "anticipation", "leadership"].filter(k => typeof p.attrs[k] !== "number");
+  if (missingAttrs20.length) {
+    const avg13 = attrs13Keys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / attrs13Keys.length;
+    missingAttrs20.forEach(k => {
+      p.attrs[k] = clamp(Math.round(avg13 + (Math.random() * 10 - 5)), 1, 99);
+    });
+  }
   // Le potentiel est fixé une fois pour toutes à la création du joueur : on
   // écrase celui généré par défaut avec celui sauvegardé (sinon il serait
   // recalculé aléatoirement à chaque chargement, ce qui n'aurait aucun sens).
@@ -8792,7 +8872,10 @@ class MatchEngine {
     // peuvent maintenant diverger, comme dans la réalité. Plage plus large
     // que l'ancienne (50 à 93 % contre 55 à 92) pour que l'attribut se sente
     // réellement discriminant sur la ligne des lancers francs.
-    const ftPct = clamp(0.50 + (shooter.eff("freeThrow") / 100) * 0.42, 0.50, 0.93);
+    // Concentration (retour utilisateur, 2026-09) : léger bonus/malus en plus
+    // du Lancer franc lui-même, à Lancer franc égal un tireur concentré est
+    // statistiquement un peu meilleur.
+    const ftPct = clamp(0.50 + (shooter.eff("freeThrow") / 100) * 0.42 + (shooter.eff("focus") - 50) * 0.0006, 0.50, 0.93);
     let made = 0;
     for (let i = 0; i < n; i++) {
       shooter.stats.fta++;
@@ -8863,7 +8946,9 @@ class MatchEngine {
 
     // --- Perte de balle ---
     const ballHandler = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass"));
-    const pressure = onCourtDef.reduce((s, p) => s + p.eff("defOutside"), 0) / 5;
+    // Anticipation (retour utilisateur, 2026-09) : une défense avec une forte
+    // Anticipation collective force statistiquement plus de pertes de balle.
+    const pressure = onCourtDef.reduce((s, p) => s + p.eff("defOutside") + p.eff("anticipation") * 0.15, 0) / 5;
     let tovChance = 0.12 + offense.tov + defense.pressure + (pressure - ballHandler.eff("dribble")) / 400;
     tovChance *= rhythmOff.tovMult;
     // Défense sur écrans "Prise à deux" (double sur le porteur au screen,
@@ -9040,8 +9125,11 @@ class MatchEngine {
     // test d'assist existant. ---
     const assistOpenBonus = (screen.assistOpenMod || 0) * prWeight + (zone === "inside" ? (postD.assistOpenMod || 0) : 0);
 
+    // Puissance (retour utilisateur, 2026-09) : en zone intérieure, un
+    // tireur puissant provoque statistiquement plus de fautes.
+    const powerFoulMod = zone === "inside" ? (shooter.eff("power") - 50) * 0.0004 : 0;
     const foulDrawBase = (zone === "inside" ? 0.10 : 0.03) + (offense.drawFoul || 0) + shooter.aggressiveness / 900
-      + (zone === "inside" ? (postD.foulMod || 0) : 0);
+      + (zone === "inside" ? (postD.foulMod || 0) : 0) + powerFoulMod;
     const shootingFoul = Math.random() < clamp(foulDrawBase - defBoost, 0.01, 0.35);
 
     const base = { inside: 0.50, mid: 0.40, three: 0.335 }[zone];
@@ -9085,7 +9173,15 @@ class MatchEngine {
     //    malus, un mental bas peut aller jusqu'à -9 pts de %.
     const tiltPenalty = shooter.consecutiveMisses >= 3
       ? clamp((70 - shooter.attrs.mental) * 0.0015, 0, 0.09) : 0;
-    prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty, 0.10, 0.75);
+    // 3) Leadership (retour utilisateur, 2026-09) : en plus du Mental
+    //    individuel du tireur ci-dessus, le meilleur Leadership du cinq en
+    //    jeu allège CE MÊME malus de tilt, mais pour TOUTE l'équipe, pas
+    //    seulement pour lui-même — un capitaine fort limite les dégâts d'une
+    //    mauvaise série même pour un coéquipier au Mental plus faible.
+    const captainLeadership = Math.max(...onCourtOff.map(p => p.attrs.leadership));
+    const leadershipRelief = shooter.consecutiveMisses >= 3
+      ? clamp((captainLeadership - 50) * 0.0008, 0, 0.05) : 0;
+    prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty + leadershipRelief, 0.10, 0.75);
 
     const made = Math.random() < prob;
     const points = zone === "three" ? 3 : 2;

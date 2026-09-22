@@ -979,7 +979,7 @@
   .attr-cell.attr-lo .attr-val{color:var(--ink-faint);}
   .attr-cell.attr-lo .attr-bar-fill{background:var(--danger);}
   /* Nouvelle fiche joueur (retour utilisateur, 2026-09, exemple fourni pour
-     "Adama Kovac") : grille à 2 colonnes pour les 13 caractéristiques (voir
+     "Adama Kovac") : grille à 2 colonnes pour les caractéristiques (voir
      renderPlayerDetail) plutôt que l'ancien tableau à une seule ligne
      scrollable horizontalement, grid-auto-flow ligne par ligne sur l'ordre
      de ATTRS (engine.js) reproduit exactement le groupement demandé
@@ -2373,11 +2373,11 @@
 
       <div class="guide-entry">
         <h3>Effectif &amp; feuille de match</h3>
-        <p class="training-intro">Caractéristiques de tous les joueurs du club (0 à 99), et colonne <b>Marché</b> pour mettre un joueur aux enchères au prix de votre choix (voir l'onglet <b>Marché</b> pour suivre les enchères en cours, les vôtres et celles des adversaires). Pour composer la feuille de match et donner les ordres avant le prochain match, direction l'onglet <b>Ordres</b>.</p>
+        <p class="training-intro">Caractéristiques de tous les joueurs du club (0 à 99), colonne <b>Rôle</b> (Titulaire, Joueur de rotation ou Réserviste, d'après la feuille de match actuelle) et colonne <b>Marché</b> pour mettre un joueur aux enchères au prix de votre choix (voir l'onglet <b>Marché</b> pour suivre les enchères en cours, les vôtres et celles des adversaires ; la fiche d'un joueur que vous avez mis aux enchères affiche aussi le montant de l'enchère actuelle, sans avoir à changer d'onglet). Pour composer la feuille de match et donner les ordres avant le prochain match, direction l'onglet <b>Ordres</b>.</p>
         <p class="training-intro" style="margin-top:10px;">Les salaires (masse salariale visible sur l'onglet <b>Économie</b>) sont recalculés au début de chaque nouvelle saison, d'après le niveau de chaque joueur AU POSTE où ses caractéristiques le valorisent le mieux. Vous pouvez vendre l'intégralité de votre effectif si vous le souhaitez, mais un match sans assez de joueurs pour composer un cinq de départ est perdu par forfait (20-0).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>13 caractéristiques (0 à 99)</b> : Tir à mi-distance, Tir à 3 points, Jeu intérieur, Passe, Rebond, Contre, Dribble, Agilité, Défense extérieure, Défense intérieure, Mental, Endurance et Lancer franc. Sur chacune, plus le chiffre est élevé, mieux c'est, sans exception. La petite barre colorée sous chaque valeur donne le niveau en un coup d'œil (gris en dessous de 45, jaune de 45 à 64, vert de 65 à 79, violet à partir de 80). Elles ne sont plus affichées directement dans le tableau <b>Effectif</b> (devenu trop chargé) : cliquez sur le nom d'un joueur pour ouvrir sa fiche et voir ses 13 caractéristiques en détail.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Quelles caractéristiques comptent selon le poste</b> : Meneur (Passe, Dribble, Agilité), Arrière (Tir à 3 points, Tir à mi-distance), Ailier shooteur (Tir à 3 points, Défense extérieure), Ailier fort (Jeu intérieur, Rebond, Défense intérieure), Pivot (Jeu intérieur, Rebond, Contre, Défense intérieure). Mental, Endurance et Lancer franc ne sont liées à aucun poste en particulier : ce sont des qualités générales, aussi utiles à un Meneur qu'à un Pivot. Pour juger si un joueur est bon À SON POSTE, comparez-le aux autres sur les caractéristiques propres à ce poste plutôt que sur l'ensemble des treize. Sur la feuille de match (onglet <b>Ordres</b>), chaque joueur proposé comme remplaçant apparaît aussi avec un niveau global entre parenthèses (moyenne simple des treize caractéristiques), pratique pour trancher vite entre deux joueurs au même poste.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Mental, Endurance et Lancer franc</b> : en plus de compter dans le niveau global comme les 10 autres, chacune alimente un mécanisme de match dédié. Le <b>Mental</b> améliore (ou dégrade) la réussite au tir dans le money time (dernières minutes d'un match serré), et limite les dégâts d'une mauvaise série de tirs manqués ou de pertes de balle consécutives, un Mental élevé permettant d'encaisser une série sans s'enfoncer. L'<b>Endurance</b> ralentit l'accumulation de fatigue EN MATCH propre à ce joueur, comme un Espace bien-être personnel (voir <b>Salle</b>). Le <b>Lancer franc</b> détermine directement la réussite aux lancers francs, indépendamment du tir à mi-distance.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>20 caractéristiques (0 à 99)</b> : Tir à mi-distance, Tir à 3 points, Jeu intérieur, Passe, Rebond, Contre, Dribble, Agilité, Défense extérieure, Défense intérieure, Mental, Endurance, Lancer franc, Pénétration, Création de tir, Interceptions, Puissance, Concentration, Anticipation et Leadership. Sur chacune, plus le chiffre est élevé, mieux c'est, sans exception. La petite barre colorée sous chaque valeur donne le niveau en un coup d'œil (rouge en dessous de 45, grise de 45 à 64, verte de 65 à 79, dorée à partir de 80, niveau élite). Elles ne sont plus affichées directement dans le tableau <b>Effectif</b> (onglet Général, devenu trop chargé) : cliquez sur le nom d'un joueur pour ouvrir sa fiche et voir ses 20 caractéristiques en détail, ou passez par le sous-onglet <b>Caractéristiques</b> de l'Effectif pour les comparer d'un coup d'œil entre tous vos joueurs.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Quelles caractéristiques comptent selon le poste</b> : Meneur (Passe, Dribble, Agilité, Pénétration, Création de tir, Interceptions), Arrière (Tir à 3 points, Tir à mi-distance, Dribble, Pénétration, Création de tir, Interceptions), Ailier shooteur (Tir à 3 points, Défense extérieure, Création de tir), Ailier fort (Jeu intérieur, Rebond, Défense intérieure, Puissance), Pivot (Jeu intérieur, Rebond, Contre, Défense intérieure, Puissance). Mental, Endurance, Lancer franc, Concentration et Leadership ne sont liées à aucun poste en particulier : ce sont des qualités générales, aussi utiles à un Meneur qu'à un Pivot. Pour juger si un joueur est bon À SON POSTE, comparez-le aux autres sur les caractéristiques propres à ce poste plutôt que sur l'ensemble des vingt. Sur la feuille de match (onglet <b>Ordres</b>), chaque joueur proposé comme remplaçant apparaît aussi avec un niveau global entre parenthèses (moyenne simple des vingt caractéristiques), pratique pour trancher vite entre deux joueurs au même poste.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Mental, Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership</b> : en plus de compter dans le niveau global comme les autres, chacune alimente aussi un mécanisme de match dédié. Le <b>Mental</b> améliore (ou dégrade) la réussite au tir dans le money time (dernières minutes d'un match serré), et limite les dégâts d'une mauvaise série de tirs manqués ou de pertes de balle consécutives pour le tireur concerné, un Mental élevé permettant d'encaisser une série sans s'enfoncer. L'<b>Endurance</b> ralentit l'accumulation de fatigue EN MATCH propre à ce joueur, comme un Espace bien-être personnel (voir <b>Salle</b>). Le <b>Lancer franc</b> détermine directement la réussite aux lancers francs, indépendamment du tir à mi-distance ; la <b>Concentration</b> l'améliore encore un peu plus. La <b>Puissance</b> augmente les fautes provoquées sur les tirs près du panier. L'<b>Anticipation</b> renforce la pression défensive de toute l'équipe sur les extérieurs adverses, aux côtés de la Défense extérieure. Le <b>Leadership</b> fonctionne différemment des six autres : c'est celui du MEILLEUR joueur du cinq en jeu (pas forcément le tireur en difficulté) qui compte, et il allège, pour TOUTE L'ÉQUIPE, le malus d'une mauvaise série de tirs manqués consécutifs (à partir de 3 d'affilée pour le tireur concerné).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Potentiel</b> : un nom de palier (10 paliers, de Débutant à Générationnel), jamais le chiffre exact. Il indique la marge de progression ENCORE POSSIBLE au-dessus du niveau actuel du joueur, pas sa qualité du moment : un jeune joueur encore faible mais à fort potentiel peut, bien entraîné (onglet <b>Entraînement</b>), dépasser largement un joueur déjà bon mais dont le potentiel est presque atteint. Survolez le nom du palier pour voir son rang exact (1 à 10).</p>
       </div>
 
@@ -2418,7 +2418,7 @@
 
       <div class="guide-entry">
         <h3>Marché des transferts</h3>
-        <p class="training-intro">Toutes les enchères en cours dans la ligue, les vôtres et celles des 9 adversaires. Enchères réelles sur 3 jours (temps réel, pas en semaines de jeu) : les 9 adversaires listent et enchérissent aussi. Incrément minimum entre deux enchères : le plus grand de 1 000 € ou 20 % de l'enchère actuelle. Pour mettre l'un de VOS joueurs aux enchères, direction l'onglet <b>Effectif</b> (colonne Marché, prix de votre choix). Revenez consulter le marché de temps en temps, les enchères CPU se déclenchent progressivement, pas en un coup.</p>
+        <p class="training-intro">Toutes les enchères en cours dans la ligue, les vôtres et celles des 9 adversaires. Enchères réelles sur 3 jours (temps réel, pas en semaines de jeu) : les 9 adversaires listent et enchérissent aussi. Incrément minimum entre deux enchères : le plus grand de 1 000 € ou 20 % de l'enchère actuelle. Pour mettre l'un de VOS joueurs aux enchères, direction l'onglet <b>Effectif</b> (colonne Marché, prix de votre choix) ou sa propre fiche joueur (même bouton). L'identité de l'enchérisseur en tête reste privée (vous ne voyez "Vous êtes en tête" que pour vos propres enchères) ; en revanche, une fois l'un de vos joueurs mis aux enchères, sa fiche affiche directement le montant de l'enchère actuelle et le temps restant, sans avoir besoin de revenir sur cet onglet. Revenez consulter le marché de temps en temps, les enchères CPU se déclenchent progressivement, pas en un coup.</p>
       </div>
 
       <div class="guide-entry">
@@ -2501,10 +2501,15 @@ const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivo
 //   individuelle de l'effet de l'Espace bien-être du club.
 // - "freeThrow" : réussite aux lancers francs (voir MatchEngine.freeThrows),
 //   qui utilisait jusqu'ici le tir à mi-distance comme simple approximation.
+// 7 caractéristiques ajoutées (retour utilisateur, 2026-09 : Pénétration/
+// Création de tir/Interceptions/Puissance/Concentration/Anticipation/
+// Leadership). Copie mirroir EXACTE de engine.js (voir son grand commentaire
+// au-dessus d'ATTRS pour le détail du rôle de chacune).
 const ATTRS = [
   "midRange", "threePoint", "inside", "pass", "rebound",
   "block", "dribble", "agility", "defOutside", "defInside",
-  "mental", "endurance", "freeThrow"
+  "mental", "endurance", "freeThrow",
+  "penetration", "shotCreation", "steal", "power", "focus", "anticipation", "leadership",
 ];
 
 const TRAINING_LABELS = {
@@ -2521,6 +2526,13 @@ const TRAINING_LABELS = {
   mental: "Mental",
   endurance: "Endurance",
   freeThrow: "Lancer franc",
+  penetration: "Pénétration",
+  shotCreation: "Création de tir",
+  steal: "Interceptions",
+  power: "Puissance",
+  focus: "Concentration",
+  anticipation: "Anticipation",
+  leadership: "Leadership",
 };
 
 const OFFENSE_PROFILES = {
@@ -2890,17 +2902,24 @@ function declineFactorForAge(age) {
 // Une caractéristique travaillée en fait progresser un peu une autre, liée
 // (ex : la défense extérieure profite un peu à la défense intérieure ET à
 // l'agilité). Purement additif au multiplicateur "focus".
+// Copie mirroir EXACTE de engine.js.
 const TRAINING_SYNERGY = {
   midRange: ["threePoint"],
   threePoint: ["midRange"],
-  inside: ["rebound"],
+  inside: ["rebound", "power"],
   rebound: ["inside", "defInside"],
   pass: ["dribble"],
-  dribble: ["pass", "agility"],
+  dribble: ["pass", "agility", "penetration"],
   block: ["defInside"],
   agility: ["dribble", "defOutside"],
-  defOutside: ["defInside", "agility"],
+  defOutside: ["defInside", "agility", "steal"],
   defInside: ["defOutside", "block"],
+  penetration: ["dribble"],
+  shotCreation: ["midRange"],
+  steal: ["defOutside", "anticipation"],
+  power: ["inside"],
+  focus: ["freeThrow"],
+  anticipation: ["steal"],
 };
 
 // Temps CUMULÉ, au poste entraîné, sur les matchs du cycle d'entraînement en
@@ -2953,6 +2972,11 @@ const TRAINING_HOME_POSITION = {
   // engine.js, miroir identique.
   defOutside: "Meneur",
   defInside: "Pivot",
+  // 7 nouvelles caractéristiques. Copie mirroir EXACTE de engine.js.
+  penetration: "Meneur",
+  shotCreation: "Arrière",
+  steal: "Meneur",
+  power: "Pivot",
 };
 
 // Dilution du rendement selon le nombre de postes couverts cette semaine
@@ -2969,11 +2993,11 @@ const TRAINING_DILUTION_BY_POSITION_COUNT = { 1: 0, 2: 0.15, 3: 0.30, 4: 0.40, 5
 // pas figé (et donc de plus en plus faible) pendant qu'un club bien géré
 // s'entraîne semaine après semaine.
 const POSITION_STRONG_ATTRS = {
-  "Meneur": ["pass", "dribble", "agility"],
-  "Arrière": ["threePoint", "midRange"],
-  "Ailier shooteur": ["threePoint", "defOutside"],
-  "Ailier fort": ["inside", "rebound", "defInside"],
-  "Pivot": ["inside", "rebound", "block", "defInside"],
+  "Meneur": ["pass", "dribble", "agility", "penetration", "shotCreation", "steal"],
+  "Arrière": ["threePoint", "midRange", "dribble", "penetration", "shotCreation", "steal"],
+  "Ailier shooteur": ["threePoint", "defOutside", "shotCreation"],
+  "Ailier fort": ["inside", "rebound", "defInside", "power"],
+  "Pivot": ["inside", "rebound", "block", "defInside", "power"],
 };
 
 function positionEfficiencyForSkill(skill, position) {
@@ -3019,8 +3043,9 @@ function trainingPositionOptions(skill) {
 // facilement sur les compétences "de petit" (dribble, agilité, tir extérieur,
 // passe, défense extérieure). Le tir à mi-distance est neutre.
 const TRAINING_HEIGHT_AFFINITY = {
-  inside: "tall", rebound: "tall", block: "tall", defInside: "tall",
+  inside: "tall", rebound: "tall", block: "tall", defInside: "tall", power: "tall",
   dribble: "short", agility: "short", threePoint: "short", defOutside: "short", pass: "short",
+  penetration: "short", shotCreation: "short", steal: "short",
   midRange: "neutral",
 };
 const HEIGHT_MIN = 178, HEIGHT_MAX = 222; // bornes observées sur l'ensemble des postes
@@ -3067,6 +3092,14 @@ const TRAINING_PROGRAMS = {
   // n'étaient pas encore entraînables via un programme dédié.
   freeThrow:  makeTrainingProgram("Lancer franc", ["freeThrow"]),
   endurance:  makeTrainingProgram("Endurance", ["endurance"]),
+  // 7 nouvelles caractéristiques. Copie mirroir EXACTE de engine.js.
+  penetration:  makeTrainingProgram("Pénétration", ["penetration"]),
+  shotCreation: makeTrainingProgram("Création de tir", ["shotCreation"]),
+  steal:        makeTrainingProgram("Interceptions", ["steal"]),
+  power:        makeTrainingProgram("Puissance", ["power"]),
+  focus:        makeTrainingProgram("Concentration", ["focus"]),
+  anticipation: makeTrainingProgram("Anticipation", ["anticipation"]),
+  leadership:   makeTrainingProgram("Leadership", ["leadership"]),
   // -- Programmes composites (plusieurs caractéristiques liées, rendement
   // dilué par caractéristique — voir WEIGHT_BY_PROGRAM_SIZE) --
   outsideShot: makeTrainingProgram("Tir extérieur", ["midRange", "threePoint"]),
@@ -4437,16 +4470,10 @@ class Player {
     this.matchCondition = currentCondition(this, now, recoveryPerDay);
   }
 
-  // Moyenne des 13 caractéristiques (voir le grand commentaire au-dessus
-  // d'ATTRS) : "mental"/"endurance"/"freeThrow" comptent ici exactement
-  // comme les 10 d'origine, mêmes citoyens à part entière (contrairement à
-  // aggressiveness, caractéristique cachée volontairement EXCLUE d'overall,
-  // voir le constructeur plus haut).
+  // Moyenne des 20 caractéristiques. Copie mirroir EXACTE de engine.js.
   overall() {
     const a = this.attrs;
-    return (a.midRange + a.threePoint + a.inside + a.pass + a.rebound +
-      a.block + a.dribble + a.agility + a.defOutside + a.defInside +
-      a.mental + a.endurance + a.freeThrow) / 13;
+    return ATTRS.reduce((sum, key) => sum + a[key], 0) / ATTRS.length;
   }
 
   // Statistique effective en jeu = (base + bonus MVP éventuel) * forme * fatigue * forme physique * alchimie d'équipe
@@ -6472,17 +6499,24 @@ function heightForPosition(position) {
 // TOUS les postes via le filet `profile[a] || "base"` déjà en place plus
 // bas (generateAttrsForPosition/weightedRatingForPosition) plutôt que de
 // dupliquer "base" dans chacune des 5 entrées ci-dessous.
+// Dribble signature commune au Meneur ET à l'Arrière (retour utilisateur,
+// 2026-09), 7 nouvelles caractéristiques. Copie mirroir EXACTE de engine.js.
 const POSITION_ATTR_PROFILE = {
   "Meneur": { pass: "strong", dribble: "strong", agility: "strong", threePoint: "base",
-    defOutside: "base", midRange: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak" },
-  "Arrière": { threePoint: "strong", midRange: "strong", agility: "base", dribble: "base",
-    pass: "base", defOutside: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak" },
+    defOutside: "base", midRange: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak",
+    penetration: "strong", shotCreation: "strong", steal: "strong", power: "weak" },
+  "Arrière": { threePoint: "strong", midRange: "strong", agility: "base", dribble: "strong",
+    pass: "base", defOutside: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak",
+    penetration: "strong", shotCreation: "strong", steal: "strong", power: "weak" },
   "Ailier shooteur": { threePoint: "strong", midRange: "base", agility: "base", defOutside: "strong",
-    inside: "base", pass: "base", dribble: "base", rebound: "base", block: "weak", defInside: "weak" },
+    inside: "base", pass: "base", dribble: "base", rebound: "base", block: "weak", defInside: "weak",
+    penetration: "base", shotCreation: "strong", steal: "base", power: "base" },
   "Ailier fort": { inside: "strong", rebound: "strong", midRange: "base", defInside: "strong",
-    block: "base", defOutside: "weak", pass: "weak", dribble: "weak", agility: "base", threePoint: "weak" },
+    block: "base", defOutside: "weak", pass: "weak", dribble: "weak", agility: "base", threePoint: "weak",
+    penetration: "weak", shotCreation: "base", steal: "base", power: "strong" },
   "Pivot": { inside: "strong", rebound: "strong", block: "strong", defInside: "strong",
-    midRange: "weak", threePoint: "weak", pass: "weak", dribble: "weak", agility: "weak", defOutside: "weak" },
+    midRange: "weak", threePoint: "weak", pass: "weak", dribble: "weak", agility: "weak", defOutside: "weak",
+    penetration: "weak", shotCreation: "weak", steal: "weak", power: "strong" },
 };
 
 function generateAttrsForPosition(position, tier) {
@@ -8947,6 +8981,15 @@ function playerFromSave(pdata) {
       p.attrs[k] = clamp(Math.round(legacyAvg + (Math.random() * 10 - 5)), 1, 99);
     });
   }
+  // 7 caractéristiques ajoutées ensuite. Copie mirroir EXACTE de engine.js.
+  const attrs13Keys = [...legacyAttrKeys, "mental", "endurance", "freeThrow"];
+  const missingAttrs20 = ["penetration", "shotCreation", "steal", "power", "focus", "anticipation", "leadership"].filter(k => typeof p.attrs[k] !== "number");
+  if (missingAttrs20.length) {
+    const avg13 = attrs13Keys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / attrs13Keys.length;
+    missingAttrs20.forEach(k => {
+      p.attrs[k] = clamp(Math.round(avg13 + (Math.random() * 10 - 5)), 1, 99);
+    });
+  }
   // Le potentiel est fixé une fois pour toutes à la création du joueur : on
   // écrase celui généré par défaut avec celui sauvegardé (sinon il serait
   // recalculé aléatoirement à chaque chargement, ce qui n'aurait aucun sens).
@@ -9531,7 +9574,8 @@ class MatchEngine {
     // peuvent maintenant diverger, comme dans la réalité. Plage plus large
     // que l'ancienne (50 à 93 % contre 55 à 92) pour que l'attribut se sente
     // réellement discriminant sur la ligne des lancers francs.
-    const ftPct = clamp(0.50 + (shooter.eff("freeThrow") / 100) * 0.42, 0.50, 0.93);
+    // Concentration. Copie mirroir EXACTE de engine.js.
+    const ftPct = clamp(0.50 + (shooter.eff("freeThrow") / 100) * 0.42 + (shooter.eff("focus") - 50) * 0.0006, 0.50, 0.93);
     let made = 0;
     for (let i = 0; i < n; i++) {
       shooter.stats.fta++;
@@ -9600,7 +9644,8 @@ class MatchEngine {
 
     // --- Perte de balle ---
     const ballHandler = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass"));
-    const pressure = onCourtDef.reduce((s, p) => s + p.eff("defOutside"), 0) / 5;
+    // Anticipation. Copie mirroir EXACTE de engine.js.
+    const pressure = onCourtDef.reduce((s, p) => s + p.eff("defOutside") + p.eff("anticipation") * 0.15, 0) / 5;
     let tovChance = 0.12 + offense.tov + defense.pressure + (pressure - ballHandler.eff("dribble")) / 400;
     tovChance *= rhythmOff.tovMult;
     // Défense sur écrans "Prise à deux" (double sur le porteur au screen,
@@ -9756,8 +9801,10 @@ class MatchEngine {
     // consigne"/"Classique" => 0 dans les deux cas. ---
     const assistOpenBonus = (screen.assistOpenMod || 0) * prWeight + (zone === "inside" ? (postD.assistOpenMod || 0) : 0);
 
+    // Puissance. Copie mirroir EXACTE de engine.js.
+    const powerFoulMod = zone === "inside" ? (shooter.eff("power") - 50) * 0.0004 : 0;
     const foulDrawBase = (zone === "inside" ? 0.10 : 0.03) + (offense.drawFoul || 0) + shooter.aggressiveness / 900
-      + (zone === "inside" ? (postD.foulMod || 0) : 0);
+      + (zone === "inside" ? (postD.foulMod || 0) : 0) + powerFoulMod;
     const shootingFoul = Math.random() < clamp(foulDrawBase - defBoost, 0.01, 0.35);
 
     const base = { inside: 0.50, mid: 0.40, three: 0.335 }[zone];
@@ -9785,7 +9832,11 @@ class MatchEngine {
     //    malus, un mental bas peut aller jusqu'à -9 pts de %.
     const tiltPenalty = shooter.consecutiveMisses >= 3
       ? clamp((70 - shooter.attrs.mental) * 0.0015, 0, 0.09) : 0;
-    prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty, 0.10, 0.75);
+    // Leadership. Copie mirroir EXACTE de engine.js.
+    const captainLeadership = Math.max(...onCourtOff.map(p => p.attrs.leadership));
+    const leadershipRelief = shooter.consecutiveMisses >= 3
+      ? clamp((captainLeadership - 50) * 0.0008, 0, 0.05) : 0;
+    prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty + leadershipRelief, 0.10, 0.75);
 
     const made = Math.random() < prob;
     const points = zone === "three" ? 3 : 2;
@@ -10086,6 +10137,9 @@ const ATTR_SHORT = {
   // engine.js) : libellés volontairement très courts (comme "MI-D"/"CTR"
   // ci-dessus) pour limiter l'impact sur la largeur du tableau Effectif.
   mental: "MENT", endurance: "END", freeThrow: "LF",
+  // 7 caractéristiques ajoutées ensuite : mêmes libellés courts.
+  penetration: "PÉN", shotCreation: "CRÉA", steal: "INTC",
+  power: "PUIS", focus: "CONC", anticipation: "ANTI", leadership: "LEAD",
 };
 
 // Cellule d'attribut façon manager (retour utilisateur : "façon football ou
@@ -13418,7 +13472,16 @@ function renderPlayerDetail(teamIdx, playerId) {
   // OUVERTE sur ce joueur lève le verrou de scoutisme ici aussi, pour rester
   // cohérent avec ce qu'on voit déjà sur la carte du marché en cliquant
   // dessus.
-  const onMarket = (league.transferListings || []).some(l => l.status === "open" && l.playerId === player.id);
+  // openListing (et non plus un simple booléen) : nécessaire plus bas pour
+  // afficher l'enchère en cours directement sur cette fiche (retour
+  // utilisateur, 2026-09 : "enchère/enchérisseur visibles sur la fiche d'un
+  // joueur en vente"). Volontairement PAS l'identité de l'enchérisseur : le
+  // marché (renderMarketListings) ne l'affiche déjà nulle part, même pour un
+  // adversaire (retour utilisateur explicite qui a fait retirer le suffixe
+  // "(vous)" de currentLabel là-bas) — seul le montant est une information
+  // publique dans ce jeu, rester cohérent avec cette règle déjà établie.
+  const openListing = (league.transferListings || []).find(l => l.status === "open" && l.playerId === player.id);
+  const onMarket = Boolean(openListing);
 
   // Caractéristiques déjà visibles sur cette fiche (son propre effectif, un
   // joueur sur le marché, ou celles déjà débloquées par le scoutisme pour
@@ -13531,7 +13594,15 @@ function renderPlayerDetail(teamIdx, playerId) {
   // mettre aux enchères le joueur d'un adversaire depuis sa fiche).
   if (isOwnTeam) {
     if (onMarket) {
-      html += `<p class="training-intro"><span class="market-listed-badge">Aux enchères</span> Suivez l'enchère dans l'onglet <b>Marché</b>.</p>`;
+      // Montant + temps restant directement ici (retour utilisateur : "je dois
+      // pouvoir voir l'enchère [...] sans changer d'onglet") : même formule
+      // que le badge "Enchère en cours" du bandeau déficit (voir
+      // deficitBannerHtml) pour "aucune enchère" vs. "montant actuel", et
+      // même timeLeftLabel que les cartes du Marché (renderMarketListings).
+      const bidLine = openListing.currentBid
+        ? `Enchère actuelle : <b>${formatMoney(openListing.currentBid)}</b>`
+        : `Aucune enchère pour l'instant (prix de départ ${formatMoney(openListing.startPrice)})`;
+      html += `<p class="training-intro"><span class="market-listed-badge">Aux enchères</span> ${bidLine} · ${escapeHtml(timeLeftLabel(openListing.closesAt, Date.now()))}. Suivez l'enchère dans l'onglet <b>Marché</b>.</p>`;
     } else {
       html += `<p class="training-intro"><input type="number" class="market-price-input" id="playerDetailListPrice" placeholder="Prix (€)" min="1" step="100"> ` +
         `<button type="button" class="secondary" data-list-player-detail="${player.id}">Mettre aux enchères</button></p>`;
@@ -17622,6 +17693,11 @@ function effectifSubNavHtml() {
 const ROSTER_SORT_COLUMNS = [
   { key: "name", label: "Nom" },
   { key: "position", label: "Poste" },
+  // Rôle dans l'équipe (titulaire/rotation/réserviste — voir
+  // playerRoleLabel) : retour utilisateur "ajoute le role des joueurs" sur
+  // l'onglet Effectif > Général. Tri par "valeur" de rôle (Titulaire au
+  // dessus) plutôt qu'alphabétique, voir rosterSortValue ci-dessous.
+  { key: "role", label: "Rôle" },
   { key: "age", label: "Âge" },
   { key: "height", label: "Taille" },
   { key: "salary", label: "Salaire/sem." },
@@ -17639,6 +17715,12 @@ function rosterSortValue(p, key) {
   switch (key) {
     case "name": return p.name;
     case "position": return POSITIONS.indexOf(p.position);
+    // Rôle : Titulaire > Joueur de rotation > Réserviste (voir
+    // playerRoleLabel), pas d'ordre alphabétique pertinent ici.
+    case "role": {
+      const role = playerRoleLabel(teamA, p);
+      return role === "Titulaire" ? 2 : role === "Joueur de rotation" ? 1 : 0;
+    }
     case "age": return p.age;
     case "height": return p.height;
     case "salary": return p.salary;
@@ -17654,7 +17736,7 @@ function rosterSortValue(p, key) {
       if (!recent.length) return 0;
       return recent.reduce((s, entry) => s + statEvaluation(entry), 0) / recent.length;
     }
-    // Toute autre clé = une des 13 caractéristiques (ATTRS) ou le potentiel,
+    // Toute autre clé = une des caractéristiques (ATTRS) ou le potentiel,
     // conservé pour compatibilité (rosterSortState peut encore pointer vers
     // une ancienne colonne d'une session précédente) même si elles n'ont
     // plus de bouton d'en-tête dans ROSTER_SORT_COLUMNS ci-dessus.
@@ -17778,6 +17860,7 @@ function renderEffectifSection() {
     const transferBadge = transferRequestBadgeHtml(p);
     const rowClass = cross ? "injured" : (isStarter ? "me" : "");
     html += `<tr class="${rowClass}"><td>${playerLinkHtml(myTeamIndex, p.id, p.name)}${cross || ""}${transferBadge || ""}${forSaleCell}</td><td>${posCell}</td>` +
+      `<td>${escapeHtml(playerRoleLabel(teamA, p))}</td>` +
       `<td>${p.age}</td><td>${p.height} cm</td>` +
       `<td title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
       `<td>${conditionBadgeHtml(p, now, teamA.conditionRecoveryPerDay())}</td>` +

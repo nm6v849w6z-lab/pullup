@@ -26,6 +26,19 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
     midRange: 20, threePoint: 15, inside: 88, pass: 18, rebound: 86,
     block: 78, dribble: 15, agility: 22, defOutside: 18, defInside: 84,
     mental: 50, endurance: 50, freeThrow: 50,
+    // penetration/shotCreation/steal/power/focus/anticipation/leadership à
+    // une valeur neutre (50) également (7 caractéristiques ajoutées après
+    // coup, retour utilisateur 2026-09) : même logique que mental/endurance/
+    // freeThrow ci-dessus, juste pour éviter un NaN dans overall()/
+    // weightedRatingForPosition (désormais lus sur les 20 caractéristiques,
+    // voir ATTRS). Certaines PÈSENT "strong" pour le poste testé ici (ex :
+    // Puissance pour Pivot, Pénétration/Création de tir/Interceptions pour
+    // Arrière) : une valeur neutre est volontairement PLUS FAIBLE que le
+    // profil extrême déjà posé sur les autres caractéristiques signature du
+    // même poste, donc ne fausse jamais les assertions ci-dessous vers le
+    // haut, seulement (un peu) vers le bas si tant est que ça change
+    // quelque chose.
+    penetration: 50, shotCreation: 50, steal: 50, power: 50, focus: 50, anticipation: 50, leadership: 50,
   };
   const { position, coefficient } = levelCoefficientFor(pivotLikeAttrs);
   console.log("Profil 'gros rebond + grosse défense intérieure' → poste détecté :", position, "| coefficient :", coefficient.toFixed(1));
@@ -49,6 +62,19 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
     // mental/endurance/freeThrow à une valeur neutre (50), voir le
     // commentaire de pivotLikeAttrs plus haut.
     mental: 50, endurance: 50, freeThrow: 50,
+    // penetration/shotCreation/steal/power/focus/anticipation/leadership à
+    // une valeur neutre (50) également (7 caractéristiques ajoutées après
+    // coup, retour utilisateur 2026-09) : même logique que mental/endurance/
+    // freeThrow ci-dessus, juste pour éviter un NaN dans overall()/
+    // weightedRatingForPosition (désormais lus sur les 20 caractéristiques,
+    // voir ATTRS). Certaines PÈSENT "strong" pour le poste testé ici (ex :
+    // Puissance pour Pivot, Pénétration/Création de tir/Interceptions pour
+    // Arrière) : une valeur neutre est volontairement PLUS FAIBLE que le
+    // profil extrême déjà posé sur les autres caractéristiques signature du
+    // même poste, donc ne fausse jamais les assertions ci-dessous vers le
+    // haut, seulement (un peu) vers le bas si tant est que ça change
+    // quelque chose.
+    penetration: 50, shotCreation: 50, steal: 50, power: 50, focus: 50, anticipation: 50, leadership: 50,
   };
   const star = new Player({ name: "Star Test", position: "Arrière", height: 195, age: 24, attrs: starAttrs, aggressiveness: 0.5 });
   console.log("\nJoueur à 97 en tir à 3pts (poste Arrière) → poste effectif :", star.effectivePosition, "| salaire :", star.salary, "€/sem.");
@@ -70,6 +96,19 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
     // mental/endurance/freeThrow à une valeur neutre (50), voir le
     // commentaire de pivotLikeAttrs plus haut.
     mental: 50, endurance: 50, freeThrow: 50,
+    // penetration/shotCreation/steal/power/focus/anticipation/leadership à
+    // une valeur neutre (50) également (7 caractéristiques ajoutées après
+    // coup, retour utilisateur 2026-09) : même logique que mental/endurance/
+    // freeThrow ci-dessus, juste pour éviter un NaN dans overall()/
+    // weightedRatingForPosition (désormais lus sur les 20 caractéristiques,
+    // voir ATTRS). Certaines PÈSENT "strong" pour le poste testé ici (ex :
+    // Puissance pour Pivot, Pénétration/Création de tir/Interceptions pour
+    // Arrière) : une valeur neutre est volontairement PLUS FAIBLE que le
+    // profil extrême déjà posé sur les autres caractéristiques signature du
+    // même poste, donc ne fausse jamais les assertions ci-dessous vers le
+    // haut, seulement (un peu) vers le bas si tant est que ça change
+    // quelque chose.
+    penetration: 50, shotCreation: 50, steal: 50, power: 50, focus: 50, anticipation: 50, leadership: 50,
   };
   const freak = new Player({ name: "Freak Test", position: "Pivot", height: 215, age: 24, attrs: freakAttrs, aggressiveness: 0.5 });
   console.log("Profil extrême (4 carac fortes du Pivot à 99) → salaire :", freak.salary, "€/sem.");
@@ -266,6 +305,19 @@ win2.close();
     // mental/endurance/freeThrow à une valeur neutre (50), voir le
     // commentaire de pivotLikeAttrs en tête de fichier.
     mental: 50, endurance: 50, freeThrow: 50,
+    // penetration/shotCreation/steal/power/focus/anticipation/leadership à
+    // une valeur neutre (50) également (7 caractéristiques ajoutées après
+    // coup, retour utilisateur 2026-09) : même logique que mental/endurance/
+    // freeThrow ci-dessus, juste pour éviter un NaN dans overall()/
+    // weightedRatingForPosition (désormais lus sur les 20 caractéristiques,
+    // voir ATTRS). Certaines PÈSENT "strong" pour le poste testé ici (ex :
+    // Puissance pour Pivot, Pénétration/Création de tir/Interceptions pour
+    // Arrière) : une valeur neutre est volontairement PLUS FAIBLE que le
+    // profil extrême déjà posé sur les autres caractéristiques signature du
+    // même poste, donc ne fausse jamais les assertions ci-dessous vers le
+    // haut, seulement (un peu) vers le bas si tant est que ça change
+    // quelque chose.
+    penetration: 50, shotCreation: 50, steal: 50, power: 50, focus: 50, anticipation: 50, leadership: 50,
   };
   // Confirme d'abord que la mutation est bien pertinente pour un joueur de
   // carte Arrière : appliquée à froid, elle ferait ressortir Pivot (sinon le

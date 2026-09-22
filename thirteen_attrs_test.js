@@ -41,15 +41,24 @@ const T0 = Date.now();
     midRange: 60, threePoint: 50, inside: 40, pass: 70, rebound: 55,
     block: 45, dribble: 65, agility: 58, defOutside: 52, defInside: 48,
     mental: 80, endurance: 20, freeThrow: 90,
+    // 7 caractéristiques ajoutées après ce test (retour utilisateur,
+    // 2026-09) : `p.attrs = { ...values }` ci-dessous REMPLACE tout
+    // l'objet attrs (pas une simple fusion), donc omettre ces clés ici
+    // ferait lire `undefined` pour elles dans overall() (désormais une
+    // moyenne sur ATTRS.length, voir engine.js), et produirait un NaN
+    // silencieusement accepté par la comparaison `Math.abs(NaN - x) >
+    // 0.001` (toujours fausse) plus bas — un faux positif repéré en
+    // portant ce test, corrigé en listant bien les 20 clés désormais.
+    penetration: 35, shotCreation: 72, steal: 44, power: 61, focus: 28, anticipation: 83, leadership: 50,
   };
   p.attrs = { ...values };
-  const expected = Object.values(values).reduce((a, b) => a + b, 0) / 13;
+  const expected = Object.values(values).reduce((a, b) => a + b, 0) / ATTRS.length;
   const got = p.overall();
-  console.log(`overall() sur un profil connu : obtenu ${got.toFixed(3)}, attendu ${expected.toFixed(3)} (moyenne des 13 caractéristiques).`);
+  console.log(`overall() sur un profil connu : obtenu ${got.toFixed(3)}, attendu ${expected.toFixed(3)} (moyenne des ${ATTRS.length} caractéristiques).`);
   if (Math.abs(got - expected) > 0.001) {
-    throw new Error(`❌ overall() devrait faire la moyenne des 13 caractéristiques (attendu ${expected}, obtenu ${got}).`);
+    throw new Error(`❌ overall() devrait faire la moyenne des ${ATTRS.length} caractéristiques (attendu ${expected}, obtenu ${got}).`);
   }
-  console.log("✅ overall() moyenne bien les 13 caractéristiques, Mental/Endurance/Lancer franc comptant comme les 10 d'origine.");
+  console.log(`✅ overall() moyenne bien les ${ATTRS.length} caractéristiques, Mental/Endurance/Lancer franc et les 7 caractéristiques plus récentes comptant comme les 10 d'origine.`);
 })();
 
 // ---------------------------------------------------------------------
@@ -309,7 +318,7 @@ async function testRosterTableShowsNewColumns() {
     ["MENT", "END", "LF"].forEach(short => {
       if (headers.some(h => h.startsWith(short))) throw new Error(`❌ La colonne "${short}" (Mental/Endurance/Lancer franc) ne devrait plus apparaître dans l'en-tête du tableau Effectif (déplacée vers la fiche joueur).`);
     });
-    console.log("✅ Le tableau Effectif n'affiche plus les 13 colonnes de caractéristiques (déplacées vers la fiche joueur).");
+    console.log("✅ Le tableau Effectif n'affiche plus les colonnes de caractéristiques (déplacées vers la fiche joueur).");
 
     const firstPlayerLink = doc.querySelector("#rosterContent .player-link");
     if (!firstPlayerLink) throw new Error("❌ (setup) l'Effectif devrait afficher au moins un lien joueur cliquable.");
@@ -318,12 +327,18 @@ async function testRosterTableShowsNewColumns() {
     // "Adama Kovac") : les Caractéristiques sont affichées en grille
     // (.player-attr-grid, un .player-attr-name par caractéristique), plus en
     // table.roster-table à en-têtes <th>, voir renderPlayerDetail.
+    // Noms complets, pas les abréviations (retour utilisateur, 2026-09 :
+    // "mets toutes les noms des carac en entier, on a de la place pour le
+    // faire") : .player-attr-name affiche désormais TRAINING_LABELS[a], pas
+    // ATTR_SHORT[a] (voir renderPlayerDetail) — seul l'onglet Effectif
+    // ("Caractéristiques", tableau plus dense) et le marché des transferts
+    // utilisent encore les abréviations à 2-3 lettres.
     const attrHeaders = [...doc.querySelectorAll("#playerDetailContent .player-attr-grid .player-attr-name")].map(el => el.textContent.trim());
     console.log("En-têtes de caractéristiques sur la fiche joueur :", attrHeaders.join(", "));
-    ["MENT", "END", "LF"].forEach(short => {
-      if (!attrHeaders.includes(short)) throw new Error(`❌ La colonne "${short}" (Mental/Endurance/Lancer franc) devrait apparaître sur la fiche joueur.`);
+    ["Mental", "Endurance", "Lancer franc"].forEach(full => {
+      if (!attrHeaders.includes(full)) throw new Error(`❌ La colonne "${full}" devrait apparaître (en toutes lettres) sur la fiche joueur.`);
     });
-    console.log("✅ La fiche joueur affiche bien les 3 nouvelles colonnes (MENT/END/LF) en plus des 10 d'origine.");
+    console.log("✅ La fiche joueur affiche bien les 3 nouvelles caractéristiques (Mental/Endurance/Lancer franc) en plus des 10 d'origine, en toutes lettres.");
     dom.window.close();
   } finally {
     server.close();
