@@ -39,6 +39,10 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
     // haut, seulement (un peu) vers le bas si tant est que ça change
     // quelque chose.
     penetration: 50, shotCreation: 50, steal: 50, power: 50, focus: 50, anticipation: 50, leadership: 50,
+    // 9 dernières caractéristiques (retour utilisateur 2026-09, "il en
+    // manque une partie") : même logique de valeur neutre que ci-dessus.
+    speed: 50, acceleration: 50, strength: 50, vertical: 50, decision: 50,
+    composure: 50, determination: 50, discipline: 50, vision: 50,
   };
   const { position, coefficient } = levelCoefficientFor(pivotLikeAttrs);
   console.log("Profil 'gros rebond + grosse défense intérieure' → poste détecté :", position, "| coefficient :", coefficient.toFixed(1));
@@ -75,6 +79,10 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
     // haut, seulement (un peu) vers le bas si tant est que ça change
     // quelque chose.
     penetration: 50, shotCreation: 50, steal: 50, power: 50, focus: 50, anticipation: 50, leadership: 50,
+    // 9 dernières caractéristiques (retour utilisateur 2026-09, "il en
+    // manque une partie") : même logique de valeur neutre que ci-dessus.
+    speed: 50, acceleration: 50, strength: 50, vertical: 50, decision: 50,
+    composure: 50, determination: 50, discipline: 50, vision: 50,
   };
   const star = new Player({ name: "Star Test", position: "Arrière", height: 195, age: 24, attrs: starAttrs, aggressiveness: 0.5 });
   console.log("\nJoueur à 97 en tir à 3pts (poste Arrière) → poste effectif :", star.effectivePosition, "| salaire :", star.salary, "€/sem.");
@@ -109,6 +117,10 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
     // haut, seulement (un peu) vers le bas si tant est que ça change
     // quelque chose.
     penetration: 50, shotCreation: 50, steal: 50, power: 50, focus: 50, anticipation: 50, leadership: 50,
+    // 9 dernières caractéristiques (retour utilisateur 2026-09, "il en
+    // manque une partie") : même logique de valeur neutre que ci-dessus.
+    speed: 50, acceleration: 50, strength: 50, vertical: 50, decision: 50,
+    composure: 50, determination: 50, discipline: 50, vision: 50,
   };
   const freak = new Player({ name: "Freak Test", position: "Pivot", height: 215, age: 24, attrs: freakAttrs, aggressiveness: 0.5 });
   console.log("Profil extrême (4 carac fortes du Pivot à 99) → salaire :", freak.salary, "€/sem.");
@@ -318,6 +330,10 @@ win2.close();
     // haut, seulement (un peu) vers le bas si tant est que ça change
     // quelque chose.
     penetration: 50, shotCreation: 50, steal: 50, power: 50, focus: 50, anticipation: 50, leadership: 50,
+    // 9 dernières caractéristiques (retour utilisateur 2026-09, "il en
+    // manque une partie") : même logique de valeur neutre que ci-dessus.
+    speed: 50, acceleration: 50, strength: 50, vertical: 50, decision: 50,
+    composure: 50, determination: 50, discipline: 50, vision: 50,
   };
   // Confirme d'abord que la mutation est bien pertinente pour un joueur de
   // carte Arrière : appliquée à froid, elle ferait ressortir Pivot (sinon le

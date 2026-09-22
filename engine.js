@@ -50,11 +50,47 @@ const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivo
 //   du meilleur joueur du cinq en jeu (voir leadershipRelief dans
 //   MatchEngine.playPossession) — en plus de l'effet déjà existant de
 //   "mental" côté tilt, individuel à chaque tireur.
+// 9 caractéristiques ajoutées (retour utilisateur, 2026-09 : après le
+// portage des 7 précédentes, "seulement 7 nouvelles carac ? il en manque une
+// partie" — le bac à sable de cette même conversation était allé plus loin,
+// avec une refonte à 3 catégories Fondamentaux/Physiques/Mentales portant à
+// 28 le total des caractéristiques ; ce dépôt réel garde son architecture à
+// plat, entièrement entraînable, plutôt que d'importer la catégorie
+// Physique/Mentale à progression automatique du bac à sable — voir la note
+// d'adaptation au-dessus de POSITION_ATTR_PROFILE). Les 9 manquantes
+// rejoignent donc ici les 7 précédentes, mêmes citoyens à part entière
+// (overall()/potentiel/salaire/entraînement), chacune avec un rôle de match
+// précis repris du bac à sable :
+// - "speed"/"acceleration" (Vitesse/Accélération) : chance de contre-attaque
+//   après une interception ou un rebond défensif (voir
+//   MatchEngine.transitionChanceFromSpeed), poids secondaire dans le choix
+//   du voleur de balle sur une perte de balle adverse, et mismatch
+//   Accélération contre Agilité défensive au tir (accelMismatch), commun aux
+//   deux zones.
+// - "strength" (Force) : en zone intérieure, un tireur plus fort que son
+//   défenseur se crée un passage au contact (strengthMismatch), et
+//   contribue au combat du rebond avec la Détente (voir physRebound).
+// - "vertical" (Détente) : contribue au contre (blockChance, avec le Contre
+//   fondamental) et au combat du rebond avec la Force (physRebound).
+// - "decision" (Décision) : un porteur qui lit bien le jeu perd moins le
+//   ballon sous pression (voir tovChance dans playPossession).
+// - "vision" (Vision) : un passeur avec une bonne vision de jeu trouve mieux
+//   le partenaire démarqué (poids secondaire dans le choix du passeur
+//   potentiel).
+// - "composure"/"determination" (Sang-froid/Détermination) : allègent, en
+//   plus du Mental déjà en place (effet indépendant, pas un remplacement),
+//   le boost clutch et le malus de tilt du tireur ; le Sang-froid influence
+//   aussi le risque de faute technique/exclusion pour indiscipline (voir
+//   MatchEngine.maybeEjectForComposure).
+// - "discipline" (Discipline) : un défenseur peu discipliné commet
+//   davantage de fautes en défendant un tir (voir disciplineFoulMod dans
+//   foulDrawBase).
 const ATTRS = [
   "midRange", "threePoint", "inside", "pass", "rebound",
   "block", "dribble", "agility", "defOutside", "defInside",
   "mental", "endurance", "freeThrow",
   "penetration", "shotCreation", "steal", "power", "focus", "anticipation", "leadership",
+  "speed", "acceleration", "strength", "vertical", "decision", "composure", "determination", "discipline", "vision",
 ];
 
 const TRAINING_LABELS = {
@@ -78,6 +114,15 @@ const TRAINING_LABELS = {
   focus: "Concentration",
   anticipation: "Anticipation",
   leadership: "Leadership",
+  speed: "Vitesse",
+  acceleration: "Accélération",
+  strength: "Force",
+  vertical: "Détente",
+  decision: "Décision",
+  composure: "Sang-froid",
+  determination: "Détermination",
+  discipline: "Discipline",
+  vision: "Vision",
 };
 
 const OFFENSE_PROFILES = {
@@ -346,6 +391,11 @@ const PHRASES = {
     "Faute de {defender} sur le tir de {shooter}.",
     "{defender} accroche {shooter} sur son tir.",
   ],
+  blockedShot: [
+    "{defender} contre le tir de {shooter} !",
+    "Tir de {shooter} contré par {defender}.",
+    "{defender} repousse la tentative de {shooter}.",
+  ],
   turnoverSteal: [
     "{stealer} intercepte ! Perte de balle de {ballHandler}.",
     "{stealer} vole le ballon à {ballHandler} !",
@@ -369,6 +419,30 @@ const PHRASES = {
   ],
   foulOut: [
     "{player} ({team}) est exclu pour 5 fautes.",
+  ],
+  // Faute technique pour indiscipline (voir MatchEngine.maybeEjectForComposure,
+  // retour utilisateur 2026-09 : "un joueur avec peu de sang-froid peut
+  // aussi être exclu plus souvent parce qu'il s'énerve sur les adversaires
+  // ou les arbitres") : première faute technique du joueur dans le match,
+  // sanctionnée d'un lancer franc adverse mais PAS d'exclusion (retour
+  // utilisateur 2026-09 : "il faut 2 fautes techniques pour qu'un joueur
+  // soit exclu"), comme la vraie règle du basket. Voir technicalEjection
+  // juste en dessous pour la deuxième.
+  technicalFoul: [
+    "{player} ({team}) proteste auprès de l'arbitre et écope d'une faute technique.",
+    "Faute technique sifflée contre {player} ({team}) : il s'énerve contre l'arbitrage.",
+    "{player} ({team}) perd patience : faute technique.",
+  ],
+  // Exclusion pour indiscipline : deuxième faute technique du même joueur
+  // dans le match (voir MatchEngine.maybeEjectForComposure et le compteur
+  // Player.technicalFouls) - distincte de foulOut ci-dessus (5 fautes
+  // personnelles atteintes), celle-ci frappe un joueur qui a perdu son
+  // sang-froid à deux reprises, quel que soit son total de fautes
+  // personnelles.
+  technicalEjection: [
+    "Deuxième faute technique pour {player} ({team}) : exclusion !",
+    "{player} ({team}) écope d'une deuxième faute technique et est exclu du match.",
+    "Coup de sang de trop pour {player} ({team}) : deuxième faute technique, direction les vestiaires.",
   ],
   substitution: [
     "{replacement} remplace {player} ({team}).",
@@ -521,24 +595,59 @@ function declineFactorForAge(age) {
 const TRAINING_SYNERGY = {
   midRange: ["threePoint"],
   threePoint: ["midRange"],
-  inside: ["rebound", "power"],
-  rebound: ["inside", "defInside"],
-  pass: ["dribble"],
+  // Force (retour utilisateur, 2026-09 : "il en manque une partie" — reprend
+  // ici la même association que PHYSICAL_CROSS_TRAINING.strength du bac à
+  // sable : Jeu intérieur → Force, le contact près du cercle).
+  inside: ["rebound", "power", "strength"],
+  // Détente (même principe, PHYSICAL_CROSS_TRAINING.vertical : Rebond →
+  // Détente, il faut sauter pour aller chercher un rebond).
+  rebound: ["inside", "defInside", "vertical"],
+  // Vision (MENTAL_CROSS_TRAINING.vision : Passe → Vision, lire le jeu pour
+  // trouver le bon partenaire).
+  pass: ["dribble", "vision"],
   dribble: ["pass", "agility", "penetration"],
   block: ["defInside"],
+  // Agilité (PHYSICAL_CROSS_TRAINING.agility : Interceptions → Agilité,
+  // ajouté au "steal" ci-dessous plutôt que dupliqué ici).
   agility: ["dribble", "defOutside"],
-  defOutside: ["defInside", "agility", "steal"],
-  defInside: ["defOutside", "block"],
-  // Paires ajoutées avec les 7 nouvelles caractéristiques (retour
+  // Vitesse (PHYSICAL_CROSS_TRAINING.speed : Défense extérieure → Vitesse,
+  // suivre son homme sur tout le terrain).
+  defOutside: ["defInside", "agility", "steal", "speed"],
+  // Sang-froid (MENTAL_CROSS_TRAINING.composure : Défense intérieure →
+  // Sang-froid, rester calme dans le contact sous le cercle).
+  defInside: ["defOutside", "block", "composure"],
+  // Paires ajoutées avec les 7 caractéristiques précédentes (retour
   // utilisateur, 2026-09 : "réfléchis aux entrainements croisés" — repris ici
   // via le mécanisme de synergie déjà existant plutôt qu'un système séparé,
   // voir la note d'adaptation au-dessus de POSITION_ATTR_PROFILE) :
-  penetration: ["dribble"],
-  shotCreation: ["midRange"],
-  steal: ["defOutside", "anticipation"],
+  // Accélération (PHYSICAL_CROSS_TRAINING.acceleration : Pénétration →
+  // Accélération, percer une défense demande de l'explosivité).
+  penetration: ["dribble", "acceleration"],
+  // Décision (MENTAL_CROSS_TRAINING.decision : Création de tir → Décision,
+  // lire vite la défense pour se créer un tir).
+  shotCreation: ["midRange", "decision"],
+  steal: ["defOutside", "anticipation", "agility"],
   power: ["inside"],
+  // Concentration (MENTAL_CROSS_TRAINING.focus : Lancer franc →
+  // Concentration, répéter le même geste sous pression) : déjà présent dans
+  // le sens focus->freeThrow juste en dessous, complété ici dans l'autre
+  // sens pour retrouver exactement la paire du bac à sable.
+  freeThrow: ["focus"],
   focus: ["freeThrow"],
   anticipation: ["steal"],
+  // Entrées propres aux 9 dernières caractéristiques (retour utilisateur,
+  // 2026-09, après le portage des 7 précédentes : "seulement 7 nouvelles
+  // carac ? il en manque une partie" — Détermination et Discipline n'ont
+  // volontairement PAS de paire, le bac à sable ne leur en donnait pas non
+  // plus, "volontairement partiel [...] seules les associations vraiment
+  // évidentes", même traitement que Leadership plus haut).
+  strength: ["inside"],
+  vertical: ["rebound"],
+  acceleration: ["penetration"],
+  speed: ["defOutside"],
+  decision: ["shotCreation"],
+  vision: ["pass"],
+  composure: ["defInside"],
 };
 
 // Temps CUMULÉ, au poste entraîné, sur les matchs du cycle d'entraînement en
@@ -611,6 +720,15 @@ const TRAINING_HOME_POSITION = {
   shotCreation: "Arrière",
   steal: "Meneur",
   power: "Pivot",
+  // 9 dernières caractéristiques (retour utilisateur, 2026-09, "il en manque
+  // une partie") : même principe. Décision/Sang-froid/Détermination/
+  // Discipline n'ont volontairement pas d'entrée ici (comme Mental/
+  // Endurance/Lancer franc/Concentration/Anticipation/Leadership plus haut) :
+  // des qualités générales, sans poste de prédilection évident.
+  speed: "Meneur",
+  acceleration: "Meneur",
+  strength: "Pivot",
+  vertical: "Pivot",
 };
 
 // Dilution du rendement selon le nombre de postes couverts cette semaine
@@ -627,11 +745,11 @@ const TRAINING_DILUTION_BY_POSITION_COUNT = { 1: 0, 2: 0.15, 3: 0.30, 4: 0.40, 5
 // pas figé (et donc de plus en plus faible) pendant qu'un club bien géré
 // s'entraîne semaine après semaine.
 const POSITION_STRONG_ATTRS = {
-  "Meneur": ["pass", "dribble", "agility", "penetration", "shotCreation", "steal"],
-  "Arrière": ["threePoint", "midRange", "dribble", "penetration", "shotCreation", "steal"],
+  "Meneur": ["pass", "dribble", "agility", "penetration", "shotCreation", "steal", "speed", "acceleration"],
+  "Arrière": ["threePoint", "midRange", "dribble", "penetration", "shotCreation", "steal", "speed", "acceleration"],
   "Ailier shooteur": ["threePoint", "defOutside", "shotCreation"],
-  "Ailier fort": ["inside", "rebound", "defInside", "power"],
-  "Pivot": ["inside", "rebound", "block", "defInside", "power"],
+  "Ailier fort": ["inside", "rebound", "defInside", "power", "strength", "vertical"],
+  "Pivot": ["inside", "rebound", "block", "defInside", "power", "strength", "vertical"],
 };
 
 function positionEfficiencyForSkill(skill, position) {
@@ -681,6 +799,16 @@ const TRAINING_HEIGHT_AFFINITY = {
   dribble: "short", agility: "short", threePoint: "short", defOutside: "short", pass: "short",
   penetration: "short", shotCreation: "short", steal: "short",
   midRange: "neutral",
+  // 9 dernières caractéristiques (retour utilisateur, 2026-09, "il en manque
+  // une partie") : même principe physique que ci-dessus. Force/Détente vont
+  // avec les qualités "de grand" (contact, détente sous le cercle),
+  // Vitesse/Accélération avec les qualités "de petit" (explosivité, foulée).
+  // Décision/Sang-froid/Détermination/Discipline/Vision n'ont
+  // volontairement pas d'entrée ici (comme Mental/Endurance/Lancer franc/
+  // Concentration/Anticipation/Leadership plus haut) : des qualités
+  // mentales, sans lien avec le gabarit.
+  strength: "tall", vertical: "tall",
+  speed: "short", acceleration: "short",
 };
 const HEIGHT_MIN = 178, HEIGHT_MAX = 222; // bornes observées sur l'ensemble des postes
 
@@ -736,6 +864,17 @@ const TRAINING_PROGRAMS = {
   focus:        makeTrainingProgram("Concentration", ["focus"]),
   anticipation: makeTrainingProgram("Anticipation", ["anticipation"]),
   leadership:   makeTrainingProgram("Leadership", ["leadership"]),
+  // 9 dernières caractéristiques (retour utilisateur, 2026-09, "il en manque
+  // une partie") : mêmes programmes "purs" que ci-dessus, plein rendement.
+  speed:         makeTrainingProgram("Vitesse", ["speed"]),
+  acceleration:  makeTrainingProgram("Accélération", ["acceleration"]),
+  strength:      makeTrainingProgram("Force", ["strength"]),
+  vertical:      makeTrainingProgram("Détente", ["vertical"]),
+  decision:      makeTrainingProgram("Décision", ["decision"]),
+  composure:     makeTrainingProgram("Sang-froid", ["composure"]),
+  determination: makeTrainingProgram("Détermination", ["determination"]),
+  discipline:    makeTrainingProgram("Discipline", ["discipline"]),
+  vision:        makeTrainingProgram("Vision", ["vision"]),
   // -- Programmes composites (plusieurs caractéristiques liées, rendement
   // dilué par caractéristique — voir WEIGHT_BY_PROGRAM_SIZE) --
   outsideShot: makeTrainingProgram("Tir extérieur", ["midRange", "threePoint"]),
@@ -2264,6 +2403,13 @@ class Player {
     this.fatigue = 0;       // 0 = frais, 100 = épuisé
     this.fouls = 0;
     this.disqualified = false;
+    // Compteur de fautes techniques pour indiscipline (voir Sang-froid dans
+    // le grand commentaire au-dessus d'ATTRS et MatchEngine.
+    // maybeEjectForComposure) : deux fautes techniques dans le même match
+    // valent exclusion, comme la vraie règle du basket. Remis à zéro à
+    // chaque match dans resetForMatch ci-dessous, initialisé ici comme
+    // fouls/disqualified juste au-dessus.
+    this.technicalFouls = 0;
     this.injured = false;
     this.onCourt = false;
     // Blessure PERSISTANTE encore en cours à l'entrée de CE match (voir
@@ -2457,6 +2603,7 @@ class Player {
     this.fatigue = 0;
     this.fouls = 0;
     this.disqualified = false;
+    this.technicalFouls = 0;
     this.injured = false;
     this.onCourt = false;
     // Blessure PERSISTANTE (voir son commentaire au constructeur, et
@@ -5087,10 +5234,20 @@ function heightForPosition(position) {
 // TOUS les postes via le filet `profile[a] || "base"` déjà en place plus
 // bas (generateAttrsForPosition/weightedRatingForPosition) plutôt que de
 // dupliquer "base" dans chacune des 5 entrées ci-dessous.
+// 9 dernières caractéristiques (retour utilisateur, 2026-09, "il en manque
+// une partie") : seules Vitesse/Accélération/Force/Détente reçoivent une
+// entrée ci-dessous, sur le même principe que Pénétration/Création de
+// tir/Interceptions/Puissance plus haut (spécialisation par poste).
+// Décision/Sang-froid/Détermination/Discipline/Vision n'ont volontairement
+// aucune entrée ici, exactement comme Mental/Endurance/Lancer franc/
+// Concentration/Anticipation/Leadership : des qualités générales, sans
+// poste de prédilection (elles retombent sur "base" partout via le
+// `profile[a] || "base"` de generateAttrsForPosition/weightedRatingForPosition).
 const POSITION_ATTR_PROFILE = {
   "Meneur": { pass: "strong", dribble: "strong", agility: "strong", threePoint: "base",
     defOutside: "base", midRange: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak",
-    penetration: "strong", shotCreation: "strong", steal: "strong", power: "weak" },
+    penetration: "strong", shotCreation: "strong", steal: "strong", power: "weak",
+    speed: "strong", acceleration: "strong", strength: "weak", vertical: "weak" },
   // Dribble (retour utilisateur, 2026-09 : "signature du Meneur, mais aussi
   // signature de l'Arrière pour le dribble") : l'Arrière manie autant le
   // ballon en un-contre-un que le Meneur, seulement avec un but différent
@@ -5098,16 +5255,19 @@ const POSITION_ATTR_PROFILE = {
   // l'Arrière aussi, plus seulement "base".
   "Arrière": { threePoint: "strong", midRange: "strong", agility: "base", dribble: "strong",
     pass: "base", defOutside: "base", inside: "weak", rebound: "weak", block: "weak", defInside: "weak",
-    penetration: "strong", shotCreation: "strong", steal: "strong", power: "weak" },
+    penetration: "strong", shotCreation: "strong", steal: "strong", power: "weak",
+    speed: "strong", acceleration: "strong", strength: "weak", vertical: "weak" },
   "Ailier shooteur": { threePoint: "strong", midRange: "base", agility: "base", defOutside: "strong",
     inside: "base", pass: "base", dribble: "base", rebound: "base", block: "weak", defInside: "weak",
     penetration: "base", shotCreation: "strong", steal: "base", power: "base" },
   "Ailier fort": { inside: "strong", rebound: "strong", midRange: "base", defInside: "strong",
     block: "base", defOutside: "weak", pass: "weak", dribble: "weak", agility: "base", threePoint: "weak",
-    penetration: "weak", shotCreation: "base", steal: "base", power: "strong" },
+    penetration: "weak", shotCreation: "base", steal: "base", power: "strong",
+    speed: "weak", acceleration: "weak", strength: "strong", vertical: "strong" },
   "Pivot": { inside: "strong", rebound: "strong", block: "strong", defInside: "strong",
     midRange: "weak", threePoint: "weak", pass: "weak", dribble: "weak", agility: "weak", defOutside: "weak",
-    penetration: "weak", shotCreation: "weak", steal: "weak", power: "strong" },
+    penetration: "weak", shotCreation: "weak", steal: "weak", power: "strong",
+    speed: "weak", acceleration: "weak", strength: "strong", vertical: "strong" },
 };
 
 function generateAttrsForPosition(position, tier) {
@@ -8191,6 +8351,21 @@ function playerFromSave(pdata) {
       p.attrs[k] = clamp(Math.round(avg13 + (Math.random() * 10 - 5)), 1, 99);
     });
   }
+  // Même migration pour les 9 dernières caractéristiques (Vitesse/
+  // Accélération/Force/Détente/Décision/Sang-froid/Détermination/
+  // Discipline/Vision, retour utilisateur, 2026-09 : "il en manque une
+  // partie", voir le grand commentaire au-dessus d'ATTRS) : dérivées de la
+  // moyenne des 20 caractéristiques précédentes (déjà garanties présentes à
+  // ce stade par les deux migrations ci-dessus), même principe (bruit léger,
+  // pas de constante fixe).
+  const attrs20Keys = [...attrs13Keys, "penetration", "shotCreation", "steal", "power", "focus", "anticipation", "leadership"];
+  const missingAttrs29 = ["speed", "acceleration", "strength", "vertical", "decision", "composure", "determination", "discipline", "vision"].filter(k => typeof p.attrs[k] !== "number");
+  if (missingAttrs29.length) {
+    const avg20 = attrs20Keys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / attrs20Keys.length;
+    missingAttrs29.forEach(k => {
+      p.attrs[k] = clamp(Math.round(avg20 + (Math.random() * 10 - 5)), 1, 99);
+    });
+  }
   // Le potentiel est fixé une fois pour toutes à la création du joueur : on
   // écrase celui généré par défaut avec celui sauvegardé (sinon il serait
   // recalculé aléatoirement à chaque chargement, ce qui n'aurait aucun sens).
@@ -8808,6 +8983,24 @@ class MatchEngine {
     return team.onCourtPlayers().slice().sort((a, b) => b.overall() - a.overall())[0];
   }
 
+  // Chance qu'une possession suivante bénéficie d'un bonus de contre-attaque
+  // (voir `_transitionBoost`, consommé en tête de playPossession) selon la
+  // Vitesse/Accélération moyenne des 5 joueurs de `team` actuellement sur le
+  // terrain (retour utilisateur, 2026-09 : "il en manque une partie", 9
+  // dernières caractéristiques) — appelée après une interception ou un
+  // rebond défensif (voir leurs commentaires respectifs), jamais après un
+  // panier encaissé (la défense a alors le temps de se replacer, pas de
+  // transition possible). Pivot à 50 (valeur moyenne) => ~4% de chance pour
+  // un cinq "moyen", jusqu'à ~28% pour un cinq de sprinteurs (90+), jamais
+  // nul (même un cinq très lent garde une petite chance) ni écrasant
+  // (jamais garanti).
+  transitionChanceFromSpeed(team) {
+    const onCourt = team.onCourtPlayers();
+    if (!onCourt.length) return 0;
+    const avgSpeed = onCourt.reduce((s, p) => s + (p.eff("speed") + p.eff("acceleration")) / 2, 0) / onCourt.length;
+    return clamp((avgSpeed - 50) / 180 + 0.04, 0.02, 0.28);
+  }
+
   matchupDefender(defTeam, offPlayer, zone) {
     const onCourt = defTeam.onCourtPlayers();
     // Le poste JOUÉ CE MATCH (matchPosition) fait foi, pas le poste naturel
@@ -8888,6 +9081,42 @@ class MatchEngine {
     return made;
   }
 
+  // Exclusion pour indiscipline (retour utilisateur, 2026-09 : "un joueur
+  // avec peu de sang-froid peut aussi être exclu plus souvent parce qu'il
+  // s'énerve sur les adversaires ou les arbitres") : INDÉPENDANTE du seuil
+  // des 5 fautes personnelles (foulOut, voir substituteIfNeeded) - un
+  // défenseur qui vient de commettre une faute personnelle peut en plus
+  // écoper d'une faute technique pour dissipation si son sang-froid est bas,
+  // même loin de sa 5e faute. Appelée UNIQUEMENT depuis les fautes
+  // personnelles "en jeu" (tir manqué/and-one), jamais depuis la faute
+  // intentionnelle de fin de match (calculée, pas une perte de sang-froid).
+  // Chance faible même au pire sang-froid (plafond 5%), pour rester un
+  // évènement rare et marquant, pas un tirage fréquent qui viderait les
+  // bancs. Il faut DEUX fautes techniques du même joueur dans le match pour
+  // l'exclure (retour utilisateur 2026-09 : "il faut 2 fautes techniques
+  // pour qu'un joueur soit exclu (ou technique et antisportive)"), comme la
+  // vraie règle du basket - voir Player.technicalFouls, remis à zéro à
+  // chaque match (voir resetForMatch). Chaque faute technique, la première
+  // comme la deuxième, accorde 1 lancer franc à l'équipe adverse (règle
+  // réelle simplifiée à 1 LF, tiré par `ftShooter`). À la deuxième
+  // seulement, `disqualified` est posé (même champ que l'exclusion à 5
+  // fautes) : substituteIfNeeded s'occupe ensuite de sortir ce joueur au
+  // prochain passage, EXACTEMENT comme pour foulOut - aucune nouvelle
+  // mécanique de sortie de terrain à écrire.
+  maybeEjectForComposure(defender, defTeam, offTeam, ftShooter, quarter, clock, events) {
+    if (defender.disqualified || defender.attrs.composure >= 50) return;
+    const technicalChance = clamp((50 - defender.attrs.composure) * 0.001, 0, 0.05);
+    if (Math.random() >= technicalChance) return;
+    defender.technicalFouls = (defender.technicalFouls || 0) + 1;
+    if (defender.technicalFouls >= 2) {
+      defender.disqualified = true;
+      this.log(events, quarter, clock, say(PHRASES.technicalEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam) });
+    } else {
+      this.log(events, quarter, clock, say(PHRASES.technicalFoul, { player: defender.name, team: defTeam.name }), { type: "technicalFoul", team: this.teamKey(defTeam) });
+    }
+    this.freeThrows(ftShooter, 1, events, quarter, clock, offTeam);
+  }
+
   // scoreDiff = score(offTeam) - score(defTeam) au moment présent : sert aux
   // décisions de fin de match (faute intentionnelle, hero ball, gestion du chrono).
   playPossession(offTeam, defTeam, quarter, clock, events, scoreDiff) {
@@ -8946,11 +9175,31 @@ class MatchEngine {
 
     // --- Perte de balle ---
     const ballHandler = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass"));
-    // Anticipation (retour utilisateur, 2026-09) : une défense avec une forte
-    // Anticipation collective force statistiquement plus de pertes de balle.
-    const pressure = onCourtDef.reduce((s, p) => s + p.eff("defOutside") + p.eff("anticipation") * 0.15, 0) / 5;
+    // Interception (retour utilisateur, 2026-09 : "il faut travailler sur
+    // l'impact des caractéristiques [...] interception [...] si pas encore
+    // fait") : jusqu'ici Interception ne comptait nulle part dans la
+    // simulation, seule la défense extérieure (defOutside) pesait sur la
+    // pression collective. Poids majoritaire conservé à defOutside (la
+    // pression sur le porteur reste d'abord une question de défense
+    // généraliste) mais Interception entre désormais dans le calcul, pour
+    // qu'un cinq avec de bons intercepteurs génère vraiment plus de pertes
+    // de balle.
+    // Anticipation (retour utilisateur, 2026-09 : "trouve un intérêt aux
+    // carac qui ne sont pas utilisées") : lire le jeu avant qu'il ne se
+    // développe complète Défense extérieure/Interception déjà en place ici -
+    // poids mineur (0.15), un bon lecteur de jeu aide la pression collective
+    // sans jamais la dominer.
+    const pressure = onCourtDef.reduce((s, p) => s + p.eff("defOutside") * 0.7 + p.eff("steal") * 0.3 + p.eff("anticipation") * 0.15, 0) / 5;
     let tovChance = 0.12 + offense.tov + defense.pressure + (pressure - ballHandler.eff("dribble")) / 400;
     tovChance *= rhythmOff.tovMult;
+    // Décision (retour utilisateur, 2026-09 : "Décision/Vision → pertes de
+    // balle et passes décisives") : un porteur qui lit bien le jeu perd moins
+    // le ballon sous pression, un porteur indécis en perd davantage. Pivot à
+    // 50 (valeur moyenne) => aucun effet pour un porteur "moyen", jusqu'à
+    // environ ±0.03 de chance de perte de balle pour un profil extrême (à
+    // mettre en regard du plancher/plafond 0.03-0.35 posé par le clamp plus
+    // bas).
+    tovChance -= (ballHandler.attrs.decision - 50) * 0.0006;
     // Défense sur écrans "Prise à deux" (double sur le porteur au screen,
     // pondéré par prWeight — voir plus haut) et garbage time "Adaptatif"
     // (imprécision des deux côtés en fin de match déséquilibrée) : ajoutés
@@ -8986,10 +9235,33 @@ class MatchEngine {
       // au-dessus d'ATTRS) : une perte de balle compte comme un raté pour la
       // série qui alimente le malus de tilt du prochain tir.
       ballHandler.consecutiveMisses++;
-      const stealer = weightedPick(onCourtDef, p => p.eff("agility") + p.eff("defOutside"));
+      // Interception pèse maintenant dans le choix du voleur de balle (voir
+      // le commentaire sur `pressure` plus haut), avec un poids plus fort
+      // que agilité/defOutside : c'est l'attribut le plus directement nommé
+      // pour ce geste précis, il doit se voir statistiquement. Vitesse/
+      // Accélération (retour utilisateur, 2026-09 : "Vitesse/Accélération →
+      // contre-attaques et interceptions") ajoutées en poids secondaire : un
+      // défenseur explosif referme les lignes de passe plus vite, sans pour
+      // autant dominer le choix (poids réduit, l'agilité/le steal restent
+      // les facteurs premiers d'une interception).
+      const stealer = weightedPick(onCourtDef, p =>
+        p.eff("agility") + p.eff("defOutside") + p.eff("steal") * 1.5 + (p.eff("speed") + p.eff("acceleration")) * 0.35
+      );
       if (Math.random() < 0.55) {
         stealer.stats.stl++;
         this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), possession: this.teamKey(offTeam) });
+        // Contre-attaque (retour utilisateur, 2026-09 : "Vitesse/Accélération
+        // → contre-attaques") : une interception donne le ballon à l'équipe
+        // qui défendait, qui devient offensive à la possession suivante (voir
+        // simulate(), qui bascule possessionTeam puisque possessionOffense
+        // vaut false ici) — plus cette équipe est rapide collectivement (5
+        // joueurs sur le terrain), plus elle transforme l'interception en
+        // vrai débordement de transition. Réutilise `_transitionBoost` (même
+        // mécanisme que le rebond offensif agressif raté plus bas, consommé
+        // une seule fois en tête de playPossession) plutôt qu'un système
+        // séparé : sémantiquement, c'est la même chose (prochaine possession
+        // de cette équipe face à une défense pas replacée).
+        if (Math.random() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
       } else {
         this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), possession: this.teamKey(offTeam) });
       }
@@ -9020,15 +9292,36 @@ class MatchEngine {
     // blowoutThreshold=null => inBlowout toujours faux => blowoutHeroMult=1,
     // comportement actuel inchangé.
     const blowoutHeroMult = inBlowout ? Math.max(1 + endgameMgmt.blowoutHeroMod, 0.3) : 1;
+    // Pénétration (retour utilisateur, 2026-09 : "il faut travailler sur
+    // l'impact des caractéristiques [...] pénétration [...] si pas encore
+    // fait") : en zone "inside", un bon pénétrateur a davantage de chances
+    // d'être choisi comme tireur, en plus de sa seule note de tir intérieur
+    // (statForZone) — jusqu'ici Pénétration ne comptait nulle part dans le
+    // choix du tireur ni dans la simulation. Neutre (×1) hors zone
+    // intérieure.
+    const penetrationBonus = zone === "inside" ? p => 1 + p.eff("penetration") / 200 : () => 1;
     const shooter = weightedPick(onCourtOff, p =>
-      Math.pow(p.eff(statForZone), 2.1) * (star && p.id === star.id ? heroMult * blowoutHeroMult : 1)
+      Math.pow(p.eff(statForZone), 2.1) * penetrationBonus(p) * (star && p.id === star.id ? heroMult * blowoutHeroMult : 1)
     );
     const defender = this.matchupDefender(defTeam, shooter, zone);
 
+    // Vision (retour utilisateur, 2026-09 : "Décision/Vision → pertes de
+    // balle et passes décisives") : un joueur avec une bonne vision de jeu
+    // trouve mieux le partenaire démarqué, poids secondaire (0.6) par
+    // rapport à la Passe elle-même, qui reste l'attribut premier du choix du
+    // passeur.
     const creators = onCourtOff.filter(p => p.id !== shooter.id);
-    const creator = creators.length ? weightedPick(creators, p => p.eff("pass")) : null;
+    const creator = creators.length ? weightedPick(creators, p => p.eff("pass") + p.eff("vision") * 0.6) : null;
 
-    let creation = (shooter.eff("dribble") + shooter.eff("agility") + (creator ? creator.eff("pass") * 0.8 : 0)) / (creator ? 2.8 : 2);
+    // Création de tir (retour utilisateur, 2026-09) : cette formule
+    // s'appelait déjà `creation` et alimentait la qualité du tir, mais ne
+    // lisait jamais l'attribut Création de tir lui-même — un oubli plutôt
+    // qu'un choix, corrigé ici en poids dominant (1.5), dribble/agilité
+    // gardant un rôle secondaire plutôt que d'être remplacés entièrement,
+    // pour ne pas invalider tout l'existant d'un coup. Diviseur ajusté pour
+    // rester sur la même échelle moyenne (0-100, comme les autres `eff()`)
+    // qu'avant ce correctif.
+    let creation = (shooter.eff("shotCreation") * 1.5 + shooter.eff("dribble") + shooter.eff("agility") * 0.7 + (creator ? creator.eff("pass") * 0.8 : 0)) / (creator ? 4.0 : 3.2);
     // Défense sur écrans : n'affecte que la fraction de possessions
     // "Pick & Roll" (prWeight) — gêne (ou pas) la création du porteur selon
     // le choix du coach défenseur. "Aucune consigne" => ballCreationMod = 0.
@@ -9054,10 +9347,34 @@ class MatchEngine {
     // vide par défaut => 0. ---
     defBoost -= watchGamblePenalty;
 
-    // --- Effet de matchup : taille en intérieur, agilité en extérieur/pénétration ---
+    // --- Effet de matchup : taille ET pénétration en intérieur, agilité en
+    // extérieur. Le terme Pénétration (retour utilisateur, 2026-09) permet à
+    // un bon pénétrateur de battre une défense intérieure sans forcément
+    // avoir l'avantage de taille, coefficient volontairement plus faible
+    // (0.10) que celui de la taille (0.22) pour rester un complément, pas un
+    // remplacement, du mismatch physique déjà en place. ---
+    // Force (retour utilisateur, 2026-09 : "la force doit aussi permettre de
+    // se créer un passage dans la raquette") : en zone "inside" uniquement,
+    // un tireur plus fort que son défenseur se crée un passage au contact,
+    // même sans avantage de taille ni de pénétration - coefficient (0.08)
+    // volontairement plus faible que taille (0.22) et proche de celui de la
+    // pénétration (0.10), en complément de ces deux termes déjà en place,
+    // jamais un remplacement.
+    const strengthMismatch = zone === "inside" ? (shooter.eff("strength") - defender.eff("strength")) * 0.08 : 0;
+    // Accélération (retour utilisateur, 2026-09 : "accélération doit aussi
+    // aider dans la pénétration ou pour déborder son défenseur") : un
+    // tireur plus explosif que la lecture latérale de son défenseur
+    // (comparée à l'Agilité défensive, l'attribut qui capte déjà le mieux la
+    // capacité d'un défenseur à rester devant son homme) le bat plus
+    // facilement au premier pas, en intérieur comme en extérieur - terme
+    // commun aux deux zones (contrairement à Force/Pénétration, réservés à
+    // l'intérieur), coefficient (0.05) volontairement plus faible que tous
+    // les termes de mismatch déjà en place (0.22/0.11/0.10/0.08), un
+    // complément, jamais un remplacement.
+    const accelMismatch = (shooter.eff("acceleration") - defender.eff("agility")) * 0.05;
     let mismatch = zone === "inside"
-      ? (shooter.height - defender.height) * 0.22
-      : (shooter.eff("agility") - defender.eff("agility")) * 0.11;
+      ? (shooter.height - defender.height) * 0.22 + (shooter.eff("penetration") - defender.eff("defInside")) * 0.10 + strengthMismatch + accelMismatch
+      : (shooter.eff("agility") - defender.eff("agility")) * 0.11 + accelMismatch;
     // --- Close-out agressif : meilleur contest extérieur ci-dessus, mais
     // avantage offensif accru à l'intérieur (le risque de pénétration
     // derrière une fermeture trop appuyée) — "Contrôlé" = delta zéro. ---
@@ -9117,6 +9434,29 @@ class MatchEngine {
     else if (openness > -10) { quality = "contesté"; qualityMod = 0; }
     else { quality = "très contesté"; qualityMod = -0.10; }
 
+    // Contre (retour utilisateur, 2026-09 : "il faut travailler sur l'impact
+    // des caractéristiques [...] si pas encore fait") : mécanisme absent
+    // jusqu'ici, stats.blk restait TOUJOURS à 0 pour tout le monde, quel que
+    // soit le Contre du défenseur — pas juste un attribut sans effet, un pan
+    // entier de la simulation qui n'existait pas. Plus probable près du
+    // cercle, jamais sur un tir grand ouvert (blockContestMult = 0, un
+    // défenseur qui ne gêne pas du tout le tir ne peut pas non plus le
+    // contrer), monte avec le Contre du défenseur, redescend avec la
+    // maîtrise du tireur sur cette zone précise (statForZone) — un très bon
+    // tireur reste plus dur à contrer même sous pression.
+    const blockBase = zone === "inside" ? 0.075 : zone === "mid" ? 0.02 : 0.004;
+    const blockContestMult = quality === "très contesté" ? 1.5 : quality === "contesté" ? 1 : 0;
+    // Détente (retour utilisateur, 2026-09 : "Force/Détente → rebonds et
+    // contres") : un défenseur explosif conteste mieux en l'air, poids moitié
+    // moindre (0.0006) que le Contre fondamental lui-même (0.0012), qui reste
+    // le facteur premier - un bon "block" technique prime toujours sur la
+    // seule qualité physique.
+    const blockChance = clamp(
+      (blockBase + (defender.eff("block") - 50) * 0.0012 + (defender.eff("vertical") - 50) * 0.0006 - (shooter.eff(statForZone) - 50) * 0.0004) * blockContestMult,
+      0, 0.28
+    );
+    const blocked = Math.random() < blockChance;
+
     const assistCandidate = creator;
     // --- Bonus d'assist ciblé : écran "Prise à deux" (kick-out après double
     // sur le porteur, pondéré par prWeight) et gestion du post-up (kick-out
@@ -9125,12 +9465,25 @@ class MatchEngine {
     // test d'assist existant. ---
     const assistOpenBonus = (screen.assistOpenMod || 0) * prWeight + (zone === "inside" ? (postD.assistOpenMod || 0) : 0);
 
-    // Puissance (retour utilisateur, 2026-09) : en zone intérieure, un
-    // tireur puissant provoque statistiquement plus de fautes.
+    // Discipline (retour utilisateur, 2026-09 : "Discipline → fautes") : un
+    // défenseur peu discipliné commet davantage de fautes en défendant un
+    // tir, un défenseur discipliné évite mieux le contact inutile. Pivot à
+    // 50 (valeur moyenne) => aucun effet pour un défenseur "moyen".
+    const disciplineFoulMod = (50 - defender.attrs.discipline) * 0.0015;
+    // Puissance (retour utilisateur, 2026-09 : "trouve un intérêt aux carac
+    // qui ne sont pas utilisées") : en zone "inside" uniquement, un tireur
+    // puissant provoque plus de contact au moment du tir - à distinguer de
+    // la Force (strengthMismatch plus haut, qui se contente de créer un
+    // passage AVANT le tir) : ici c'est le contact PENDANT le tir qui
+    // compte. Poids (0.0004) modeste, en complément de disciplineFoulMod
+    // déjà en place, jamais un remplacement.
     const powerFoulMod = zone === "inside" ? (shooter.eff("power") - 50) * 0.0004 : 0;
     const foulDrawBase = (zone === "inside" ? 0.10 : 0.03) + (offense.drawFoul || 0) + shooter.aggressiveness / 900
-      + (zone === "inside" ? (postD.foulMod || 0) : 0) + powerFoulMod;
-    const shootingFoul = Math.random() < clamp(foulDrawBase - defBoost, 0.01, 0.35);
+      + (zone === "inside" ? (postD.foulMod || 0) : 0) + disciplineFoulMod + powerFoulMod;
+    // !blocked : un tir contré ne peut pas aussi être une faute sur le tir
+    // (voir `blocked` plus haut) — évite de cumuler les deux évènements sur
+    // la même tentative.
+    const shootingFoul = !blocked && Math.random() < clamp(foulDrawBase - defBoost, 0.01, 0.35);
 
     const base = { inside: 0.50, mid: 0.40, three: 0.335 }[zone];
     const effStat = shooter.eff(statForZone);
@@ -9173,17 +9526,34 @@ class MatchEngine {
     //    malus, un mental bas peut aller jusqu'à -9 pts de %.
     const tiltPenalty = shooter.consecutiveMisses >= 3
       ? clamp((70 - shooter.attrs.mental) * 0.0015, 0, 0.09) : 0;
-    // 3) Leadership (retour utilisateur, 2026-09) : en plus du Mental
-    //    individuel du tireur ci-dessus, le meilleur Leadership du cinq en
-    //    jeu allège CE MÊME malus de tilt, mais pour TOUTE l'équipe, pas
-    //    seulement pour lui-même — un capitaine fort limite les dégâts d'une
-    //    mauvaise série même pour un coéquipier au Mental plus faible.
+    // Leadership (retour utilisateur, 2026-09 : "trouve un intérêt aux carac
+    // qui ne sont pas utilisées") : un capitaine (le meilleur Leadership du
+    // cinq en jeu, pas forcément le tireur) aide toute l'équipe à mieux
+    // encaisser une mauvaise série - vient s'ajouter au Mental individuel du
+    // tireur ci-dessus, mais pour TOUTE L'ÉQUIPE, seulement dans la même
+    // fenêtre (3 ratés/pertes d'affilée). Poids (0.0008) volontairement plus
+    // faible que le mental direct du tireur (0.0015) : un capitaine aide,
+    // mais ne remplace jamais la solidité individuelle.
     const captainLeadership = Math.max(...onCourtOff.map(p => p.attrs.leadership));
     const leadershipRelief = shooter.consecutiveMisses >= 3
       ? clamp((captainLeadership - 50) * 0.0008, 0, 0.05) : 0;
-    prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty + leadershipRelief, 0.10, 0.75);
+    // Sang-froid/Détermination (retour utilisateur, 2026-09, "il en manque
+    // une partie" : "Sang-froid/Détermination → performance en fin de match
+    // serré") : terme SECONDAIRE, ajouté à côté du Mental ci-dessus (pas un
+    // remplacement) - même principe de "relief" de tilt que Leadership
+    // juste au-dessus (même fenêtre des 3 ratés/pertes d'affilée, même poids
+    // 0.0008, même plafond 0.05), mais propre au tireur lui-même : le
+    // Sang-froid et la Détermination ("ne rien lâcher") aident CE joueur à
+    // ne pas s'enfoncer après une mauvaise série, en complément du Mental,
+    // qui reste le facteur premier (coefficient 0.0015, plafond 0.09).
+    const clutchComposure = (shooter.attrs.composure + shooter.attrs.determination) / 2;
+    const composureRelief = shooter.consecutiveMisses >= 3
+      ? clamp((clutchComposure - 50) * 0.0008, 0, 0.05) : 0;
+    prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty + leadershipRelief + composureRelief, 0.10, 0.75);
 
-    const made = Math.random() < prob;
+    // !blocked : un tir contré est toujours un tir manqué, jamais soumis au
+    // tirage de réussite ci-dessus (voir `blocked` plus haut).
+    const made = !blocked && Math.random() < prob;
     const points = zone === "three" ? 3 : 2;
 
     if (zone === "three") { shooter.stats.fga3++; } else { shooter.stats.fga2++; }
@@ -9199,7 +9569,11 @@ class MatchEngine {
       this.applyPlusMinusForPoints(offTeam, points);
       if (zone === "three") shooter.stats.fgm3++; else shooter.stats.fgm2++;
       if (zone === "inside") shooter.stats.paintMade++;
-      if (assistCandidate && quality === "ouvert" && Math.random() < 0.65 + offense.assist + assistOpenBonus) {
+      // Vision (retour utilisateur, 2026-09 : "Décision/Vision → [...]
+      // passes décisives") : un passeur avec une bonne vision de jeu convertit
+      // plus souvent une passe en vraie passe décisive une fois le tir ouvert.
+      const visionAssistBonus = assistCandidate ? (assistCandidate.attrs.vision - 50) * 0.001 : 0;
+      if (assistCandidate && quality === "ouvert" && Math.random() < 0.65 + offense.assist + assistOpenBonus + visionAssistBonus) {
         assistCandidate.stats.ast++;
       }
       this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, possession: this.teamKey(offTeam) });
@@ -9208,6 +9582,7 @@ class MatchEngine {
         defender.stats.pf++; defender.fouls++;
         this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, 1, events, quarter, clock, offTeam);
+        this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
       }
       return { possessionOffense: false, scored: true };
     } else {
@@ -9215,18 +9590,36 @@ class MatchEngine {
       // même s'il est suivi de lancers francs (contre-attribué par le malus
       // de "tilt" au prochain tir).
       shooter.consecutiveMisses++;
+      // Contre (voir `blocked` plus haut) : loggé séparément du rebond qui
+      // suit juste en dessous (reboundOff/reboundDef, qui garde son propre
+      // message générique) — la balle reste vivante après un contre, elle
+      // peut toujours être reprise par les deux équipes, exactement comme un
+      // tir raté normal.
+      if (blocked) {
+        defender.stats.blk++;
+        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, possession: this.teamKey(offTeam) });
+      }
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
         this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
+        this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
         return { possessionOffense: false, scored: true };
       }
 
       // --- Rebond offensif (Prudent/Normal/Agressif) : "Normal" = delta
       // zéro, comportement actuel inchangé. ---
+      // Force/Détente (retour utilisateur, 2026-09 : "Force/Détente →
+      // rebonds et contres") : un cinq fort et explosif gagne plus de duels
+      // au rebond, en plus de son seul attribut Rebond fondamental - poids
+      // (0.15) calé pour rester comparable à la contribution de la taille
+      // (height/20 vaut ~9-10.5 pour un joueur typique, ce terme physique
+      // monte jusqu'à ~14.85 pour un profil extrême), un complément, jamais
+      // un remplacement du Rebond lui-même.
+      const physRebound = p => (p.eff("strength") + p.eff("vertical")) / 2 * 0.15;
       const offRebStyle = OFF_REBOUND_STYLES[offTeam.offRebStyle] || OFF_REBOUND_STYLES.Normal;
-      let offReb = onCourtOff.reduce((s, p) => s + p.eff("rebound") + p.height / 20, 0) * (1 + (offRebStyle.offRebWeightMod || 0));
-      let defReb = onCourtDef.reduce((s, p) => s + p.eff("rebound") * 1.35 + p.height / 20, 0);
+      let offReb = onCourtOff.reduce((s, p) => s + p.eff("rebound") + p.height / 20 + physRebound(p), 0) * (1 + (offRebStyle.offRebWeightMod || 0));
+      let defReb = onCourtDef.reduce((s, p) => s + p.eff("rebound") * 1.35 + p.height / 20 + physRebound(p), 0);
       // --- Surveiller "priorité au rebond" : boxout ciblé sur le joueur du
       // poste surveillé — réduit sa contribution à l'effort de rebond
       // offensif de son équipe (individualEff*offRebWeightPenalty en moins
@@ -9254,10 +9647,20 @@ class MatchEngine {
       if (!offensiveRebound && offRebStyle.transitionRisk && Math.random() < offRebStyle.transitionRisk) {
         defTeam._transitionBoost = true;
       }
+      // Contre-attaque sur rebond défensif (retour utilisateur, 2026-09 :
+      // "Vitesse/Accélération → contre-attaques") : un cinq rapide qui
+      // capte un rebond défensif relance vite en transition - même
+      // mécanisme que sur interception plus haut (voir
+      // transitionChanceFromSpeed/_transitionBoost), déclenché ici pour
+      // `defTeam` qui devient offensif à la possession suivante
+      // (possessionOffense vaut `offensiveRebound`, donc false ici).
+      if (!offensiveRebound) {
+        if (Math.random() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
+      }
 
       const rebounder = weightedPick(
         offensiveRebound ? onCourtOff : onCourtDef,
-        p => p.eff("rebound") + p.height / 10
+        p => p.eff("rebound") + p.height / 10 + physRebound(p) * 2
       );
       rebounder.stats.reb++;
       if (offensiveRebound) rebounder.stats.oreb++; else rebounder.stats.dreb++;

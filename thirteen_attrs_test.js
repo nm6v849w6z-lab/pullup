@@ -50,6 +50,10 @@ const T0 = Date.now();
     // 0.001` (toujours fausse) plus bas — un faux positif repéré en
     // portant ce test, corrigé en listant bien les 20 clés désormais.
     penetration: 35, shotCreation: 72, steal: 44, power: 61, focus: 28, anticipation: 83, leadership: 50,
+    // 9 dernières caractéristiques (retour utilisateur, 2026-09, "il en
+    // manque une partie") : même piège NaN que ci-dessus, même correction.
+    speed: 66, acceleration: 39, strength: 57, vertical: 42, decision: 71,
+    composure: 33, determination: 64, discipline: 48, vision: 77,
   };
   p.attrs = { ...values };
   const expected = Object.values(values).reduce((a, b) => a + b, 0) / ATTRS.length;
