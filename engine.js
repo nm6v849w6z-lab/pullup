@@ -55,10 +55,10 @@ const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
   "Jeu intérieur":     { inside: .60, mid: .25, three: .15, tov: -.01, assist: 0,   tempo: -.05 },
   "Jeu extérieur":     { inside: .15, mid: .30, three: .55, tov: 0,    assist: .02, tempo: 0 },
-  "Jeu en pénétration":{ inside: .50, mid: .35, three: .15, tov: .03,  assist: 0,   tempo: .05, drawFoul: .04 },
+  "Isolation":         { inside: .30, mid: .40, three: .30, tov: .04,  assist: -.05,tempo: -.03 },
   "Pick & Roll":       { inside: .40, mid: .30, three: .30, tov: 0,    assist: .05, tempo: 0 },
   "Post-up":           { inside: .65, mid: .25, three: .10, tov: -.02, assist: -.02,tempo: -.08 },
-  "Isolation":         { inside: .30, mid: .40, three: .30, tov: .04,  assist: -.05,tempo: -.03 },
+  "Jeu en pénétration":{ inside: .50, mid: .35, three: .15, tov: .03,  assist: 0,   tempo: .05, drawFoul: .04 },
   "Jeu en mouvement":  { inside: .30, mid: .30, three: .40, tov: -.01, assist: .06, tempo: .02 },
   "Transition rapide": { inside: .45, mid: .25, three: .30, tov: .05,  assist: .02, tempo: .18 },
   "Tirs rapides":      { inside: .20, mid: .35, three: .45, tov: .04,  assist: -.03,tempo: .12 },
@@ -8653,6 +8653,21 @@ function leagueFromSave(data, userTeam = null) {
   // en cours reprise, comme avant ce champ.
   lg.liveMatches = data.liveMatches && typeof data.liveMatches === "object" ? data.liveMatches : {};
   lg.liveMatch = data.liveMatch || null;
+  // Rétro-compatibilité (retour utilisateur, 2026-09 : "comment se fait-il
+  // que le CA n'a pas donné d'objectif alors que la saison commence
+  // demain ?") : une ligue créée AVANT l'ajout de cette fonctionnalité n'a
+  // jamais eu ses objectifs de saison posés (voir assignSeasonObjectives,
+  // normalement appelée UNE SEULE fois à la création de la ligue dans
+  // buildLeagueWithHumanTeams) — teamFromSave ne fait que RESTAURER un
+  // champ déjà présent dans la sauvegarde, jamais en poser un nouveau, donc
+  // `seasonObjective` reste `null` pour toujours sans ce rattrapage.
+  // Seulement tant que rien n'a encore été joué (round 0, aucun résultat) :
+  // au-delà, le niveau actuel des équipes ne reflète plus fidèlement leur
+  // niveau de DÉBUT de saison, et poser un objectif a posteriori n'aurait
+  // plus de sens.
+  if (lg.round === 0 && lg.results.length === 0 && lg.teams.some(t => !t.seasonObjective)) {
+    assignSeasonObjectives(lg);
+  }
   return lg;
 }
 

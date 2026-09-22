@@ -983,11 +983,18 @@
      renderPlayerDetail) plutôt que l'ancien tableau à une seule ligne
      scrollable horizontalement, grid-auto-flow ligne par ligne sur l'ordre
      de ATTRS (engine.js) reproduit exactement le groupement demandé
-     (MI-D/3PTS, INT/PASSE, ...) sans logique de pairage dédiée. */
-  .player-attr-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px 20px; margin-bottom:16px; max-width:420px;}
+     (MI-D/3PTS, INT/PASSE, ...) sans logique de pairage dédiée. Largeur
+     relevée (retour utilisateur, 2026-09 : "ce serait bien si sur la page
+     joueur tu peux mettre toutes les noms des carac en entier, on a de la
+     place pour le faire") pour le nom complet (TRAINING_LABELS, voir
+     renderPlayerDetail) à la place de l'abréviation (ATTR_SHORT) : le nom le
+     plus long ("Défense extérieure"/"Défense intérieure") tient maintenant
+     confortablement à côté de sa barre, la fiche joueur ayant elle-même son
+     propre gabarit plus large que le reste de l'appli (voir .wrap-narrow). */
+  .player-attr-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-bottom:16px; max-width:640px;}
   .player-attr-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
-  .player-attr-name{font-size:11px; font-weight:700; letter-spacing:.03em; color:var(--ink-faint); flex-shrink:0;}
-  .player-attr-row .attr-cell{flex:1; max-width:110px;}
+  .player-attr-name{font-size:11px; font-weight:700; letter-spacing:.03em; color:var(--ink-faint); flex-shrink:0; white-space:nowrap;}
+  .player-attr-row .attr-cell{flex:1; max-width:140px;}
   /* Citation de vestiaire (retour utilisateur, 2026-09, "💬 «...»" dans la
      maquette) : purement dérivée du Rôle/de la Motivation déjà calculés,
      jamais une nouvelle donnée sauvegardée (voir playerRoleQuote). */
@@ -1050,13 +1057,13 @@
      toute la largeur ; centrée horizontalement dans #prepSection pour
      retomber au-dessus du milieu de ce panneau. Ne touche pas la jauge
      jumelle de la page Effectif (#rosterChemistryGaugeFill), qui garde son
-     alignement à gauche sous le titre.*/
-  #ordresChemistryGaugeWrap{margin-left:auto; margin-right:auto;}
-  /* Connaissance tactique sur la page Ordres (retour utilisateur, 2026-09,
-     voir #ordresTacticalKnowledgeGaugeWrap plus bas) : même jauge compacte,
-     même centrage que la jauge d'alchimie jumelle ci-dessus, juste en
-     dessous d'elle. */
-  #ordresTacticalKnowledgeGaugeWrap{margin:0 auto 16px;}
+     alignement à gauche sous le titre.
+     Alchimie et connaissance tactique côte à côte (retour utilisateur,
+     2026-09 : "mets alchimie et connaissance tactique cote à cote") plutôt
+     qu'empilées : voir .ordres-gauges-row ci-dessous, qui les regroupe dans
+     une même rangée centrée. */
+  .ordres-gauges-row{display:flex; gap:20px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;}
+  .ordres-gauges-row .roster-chemistry-gauge-wrap{flex:1 1 260px; max-width:320px; margin:0;}
 
   /* ---- Entraînement ---- */
   .training-intro{font-size:13px; color:var(--ink-dim); line-height:1.5; margin:0 0 16px;}
@@ -1754,29 +1761,33 @@
          plus à un changement de tactique (retour utilisateur, 2026-09 : "on
          va enlever ça [...] et créer une jauge connaissance tactique qui
          impactera le niveau de l'équipe" à la place) — voir
-         #ordresTacticalKnowledgeGaugeWrap juste en dessous pour l'aperçu EN
+         #ordresTacticalKnowledgeGaugeWrap juste à côté pour l'aperçu EN
          DIRECT de l'impact d'un changement de tactique, désormais sur cette
-         jauge séparée. -->
-    <div class="roster-chemistry-gauge-wrap" id="ordresChemistryGaugeWrap">
-      <div class="roster-chemistry-gauge-label"><span>Alchimie d'équipe</span><b id="ordresChemistryValue"></b></div>
-      <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresChemistryGaugeFill"></div></div>
-    </div>
-    <!-- Retour utilisateur (2026-09) : "on va enlever ça [l'impact tactique
-         sur l'alchimie] et créer une jauge connaissance tactique qui
-         impactera le niveau de l'équipe [...] cette jauge doit apparaitre
-         dans la zone en rouge" : reprend exactement la place de l'ancien
-         avertissement d'alchimie ci-dessus, sur une jauge séparée. Affiche
-         la maîtrise ACTUELLE (teamA.tacticalKnowledge, voir engine.js) des 3
-         options sélectionnées dans `tacticsSource` (ordres en direct ou plan
-         d'une journée future, voir renderOrdresTacticalKnowledgeGauge plus
-         bas) : plus d'aperçu "avant/après" depuis que la connaissance
-         tactique évolue progressivement match par match plutôt que par un
-         malus instantané au changement (retour utilisateur, 2026-09 : "il
-         faudrait que ce soit plus progressif"), il n'y a donc plus de perte
-         brutale à anticiper ici. -->
-    <div class="roster-chemistry-gauge-wrap" id="ordresTacticalKnowledgeGaugeWrap">
-      <div class="roster-chemistry-gauge-label"><span>Connaissance tactique</span><b id="ordresTacticalKnowledgeValue"></b></div>
-      <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresTacticalKnowledgeGaugeFill"></div></div>
+         jauge séparée. Les deux jauges sont côte à côte (retour utilisateur,
+         2026-09 : "mets alchimie et connaissance tactique cote à cote"),
+         voir .ordres-gauges-row. -->
+    <div class="ordres-gauges-row">
+      <div class="roster-chemistry-gauge-wrap" id="ordresChemistryGaugeWrap">
+        <div class="roster-chemistry-gauge-label"><span>Alchimie d'équipe</span><b id="ordresChemistryValue"></b></div>
+        <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresChemistryGaugeFill"></div></div>
+      </div>
+      <!-- Retour utilisateur (2026-09) : "on va enlever ça [l'impact tactique
+           sur l'alchimie] et créer une jauge connaissance tactique qui
+           impactera le niveau de l'équipe [...] cette jauge doit apparaitre
+           dans la zone en rouge" : reprend exactement la place de l'ancien
+           avertissement d'alchimie ci-dessus, sur une jauge séparée. Affiche
+           la maîtrise ACTUELLE (teamA.tacticalKnowledge, voir engine.js) des
+           3 options sélectionnées dans `tacticsSource` (ordres en direct ou
+           plan d'une journée future, voir renderOrdresTacticalKnowledgeGauge
+           plus bas) : plus d'aperçu "avant/après" depuis que la connaissance
+           tactique évolue progressivement match par match plutôt que par un
+           malus instantané au changement (retour utilisateur, 2026-09 : "il
+           faudrait que ce soit plus progressif"), il n'y a donc plus de
+           perte brutale à anticiper ici. -->
+      <div class="roster-chemistry-gauge-wrap" id="ordresTacticalKnowledgeGaugeWrap">
+        <div class="roster-chemistry-gauge-label"><span>Connaissance tactique</span><b id="ordresTacticalKnowledgeValue"></b></div>
+        <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresTacticalKnowledgeGaugeFill"></div></div>
+      </div>
     </div>
     <!-- Retour utilisateur (2026-09) : "page ordre enleve ce texte :
          Préparation à l'avance, [...] Ces ordres seront appliqués
@@ -2511,10 +2522,10 @@ const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
   "Jeu intérieur":     { inside: .60, mid: .25, three: .15, tov: -.01, assist: 0,   tempo: -.05 },
   "Jeu extérieur":     { inside: .15, mid: .30, three: .55, tov: 0,    assist: .02, tempo: 0 },
-  "Jeu en pénétration":{ inside: .50, mid: .35, three: .15, tov: .03,  assist: 0,   tempo: .05, drawFoul: .04 },
+  "Isolation":         { inside: .30, mid: .40, three: .30, tov: .04,  assist: -.05,tempo: -.03 },
   "Pick & Roll":       { inside: .40, mid: .30, three: .30, tov: 0,    assist: .05, tempo: 0 },
   "Post-up":           { inside: .65, mid: .25, three: .10, tov: -.02, assist: -.02,tempo: -.08 },
-  "Isolation":         { inside: .30, mid: .40, three: .30, tov: .04,  assist: -.05,tempo: -.03 },
+  "Jeu en pénétration":{ inside: .50, mid: .35, three: .15, tov: .03,  assist: 0,   tempo: .05, drawFoul: .04 },
   "Jeu en mouvement":  { inside: .30, mid: .30, three: .40, tov: -.01, assist: .06, tempo: .02 },
   "Transition rapide": { inside: .45, mid: .25, three: .30, tov: .05,  assist: .02, tempo: .18 },
   "Tirs rapides":      { inside: .20, mid: .35, three: .45, tov: .04,  assist: -.03,tempo: .12 },
@@ -9392,6 +9403,12 @@ function leagueFromSave(data, userTeam = null) {
   lg.cup = data.cup || null;
   lg.liveMatches = data.liveMatches && typeof data.liveMatches === "object" ? data.liveMatches : {};
   lg.liveMatch = data.liveMatch || null;
+  // Rétro-compatibilité (voir engine.js, miroir identique) : rattrape une
+  // ligue créée avant l'ajout des objectifs de saison, seulement tant que
+  // rien n'a encore été joué.
+  if (lg.round === 0 && lg.results.length === 0 && lg.teams.some(t => !t.seasonObjective)) {
+    assignSeasonObjectives(lg);
+  }
   return lg;
 }
 
@@ -13529,13 +13546,17 @@ function renderPlayerDetail(teamIdx, playerId) {
   // commentaire CSS de .player-attr-grid, le groupement par paires
   // (MI-D/3PTS, INT/PASSE, ...) tombe naturellement de l'ordre d'ATTRS
   // (engine.js) avec grid-auto-flow ligne par ligne, aucun pairage
-  // manuel nécessaire.
+  // manuel nécessaire. Nom complet (retour utilisateur, 2026-09 : "mets
+  // toutes les noms des carac en entier, on a de la place pour le faire") :
+  // TRAINING_LABELS (déjà utilisé pour Points forts/Points faibles juste en
+  // dessous) plutôt qu'ATTR_SHORT, qui ne sert plus qu'à l'onglet Effectif
+  // ("Caractéristiques", tableau plus dense) et au marché des transferts.
   html += "<h3 class='field-label'>Caractéristiques</h3>";
   html += "<div class='player-attr-grid'>" + ATTRS.map(a => {
     const cell = (isOwnTeam || onMarket || revealedSet.has(a))
       ? attrCellHtml(player.attrs[a])
       : `<div class="attr-cell attr-locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique"></div>`;
-    return `<div class="player-attr-row"><span class="player-attr-name">${ATTR_SHORT[a]}</span>${cell}</div>`;
+    return `<div class="player-attr-row"><span class="player-attr-name">${TRAINING_LABELS[a]}</span>${cell}</div>`;
   }).join("") + "</div>";
 
   // Points forts / points faibles (voir playerStrengthsAndWeaknesses plus
