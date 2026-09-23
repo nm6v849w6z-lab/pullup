@@ -21,13 +21,23 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 ## À faire
 
 1. **Radar "Profil (vue d'ensemble)" : respecter le code couleur
-   rouge/orange/blanc/vert** — retour utilisateur (capture d'écran) : les
-   anneaux de fond utilisaient un dégradé décoratif à 5 bandes sans rapport
-   avec le vrai barème du jeu (`attrColorTier`). Code fait dans
-   `moteurbasket3.html` (`radarChartSvg`/nouvelle fonction
+   rouge/orange/blanc/vert, en couleurs vives** — retour utilisateur
+   (capture d'écran) : les anneaux de fond utilisaient un dégradé décoratif
+   à 5 bandes sans rapport avec le vrai barème du jeu (`attrColorTier`).
+   Code fait dans `moteurbasket3.html` (`radarChartSvg`/nouvelle fonction
    `radarTierColor`) : 4 bandes calées sur les seuils 20/50/80 + chaque
-   point de donnée coloré selon son propre palier. **Testé** (Playwright +
-   suite de 94 tests verte) — **PRÊT À COMMITTER**, pas encore poussé.
+   point de donnée coloré selon son propre palier. Puis retour utilisateur
+   (capture d'écran de la prod) : "bien la vue d'ensemble mais mets le
+   rouge plus vif, idem pour le orange stp" — nouveaux tokens CSS dédiés
+   `--attr-tier-red`/`--attr-tier-amber` (`#ff3b30`/`#ff9500`, plus vifs que
+   les tokens génériques `--danger`/`--amber` utilisés ailleurs dans
+   l'appli pour l'accent UI général, volontairement laissés inchangés) :
+   utilisés par `radarTierColor`/`ringBands` ET par toutes les règles CSS
+   `.attr-tier-red`/`.attr-tier-orange` (couleur des caractéristiques
+   partout dans l'appli, pas seulement le radar). **Testé** (Playwright,
+   dont vérification que l'accent UI générique — ex. bouton CTA — reste
+   inchangé + suite de 94 tests verte) — **PRÊT À COMMITTER**, pas encore
+   poussé.
 
 2. **Box score en direct : équipe domicile à gauche, extérieure à droite**
    — retour utilisateur : les onglets `.live-bs-tab`/`.bs-tab` affichaient
@@ -71,10 +81,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
    site EuroLeague (euroleaguebasketball.net/stats) : sur la page Ligue, la
    section "meilleurs joueurs de la saison" devrait ressembler à ces
    cartes — 1er avec avatar affiché en grand, les 5 premiers listés, bouton
-   "Afficher tout" en bas qui déplie jusqu'au top 20. Pas commencé — à
-   investiguer : où sont actuellement rendues ces stats sur la page Ligue,
-   quel système d'avatar existe déjà (réutilisable, ex. MVP du box score),
-   comment étendre top 5 → top 20 au clic.
+   "Afficher tout" en bas qui déplie jusqu'au top 20. Code fait dans
+   `moteurbasket3.html` (`renderLeagueStatsPanel`) : le n°1 de chaque
+   catégorie (`LEAGUE_STAT_CATEGORIES`) reste le premier `<li>` de la liste
+   existante (pas de structure séparée, pour ne pas casser les vérifs déjà
+   en place) mais gagne son avatar (`playerAvatarHtml`, même fonction que
+   le MVP de la journée juste au-dessus) et sa valeur affichée en grand ;
+   les rangs 2-5 restent une liste classique numérotée (`<ol start="2">`,
+   le n°1 étant en `display:flex` donc hors du compteur automatique) ;
+   bouton "Afficher tout"/"Réduire" par catégorie
+   (`leagueStatsExpandedCats`, état indépendant par carte) qui bascule
+   entre top 5 et top 20. **Testé** (Playwright desktop + mobile 390px,
+   `league_stats_test.js` étendu avec la vérification avatar + dépliage/
+   repliage + indépendance entre catégories, suite de 94 tests verte) —
+   **PRÊT À COMMITTER**, pas encore poussé.
 
 5. **Box score en direct : ligne total + tous les joueurs + minutes
    jouées** — retour utilisateur : actuellement `liveBoxScore` ne crée une
@@ -127,7 +147,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   `training_progression_test.js`, `player_detail_test.js`,
   `thirteen_attrs_test.js`, `disciplinary_ejection_test.js`,
   `onboarding_tour_test.js`, `post_match_interview_button_test.js`,
-  `season_objective_endreg_client_test.js`.
+  `season_objective_endreg_client_test.js`,
+  `calendrier_ordres_stale_live_redirect_test.js`,
+  `attr_color_scheme_everywhere_test.js`, `full_run_test.js`.
 - **`ordres_validate_without_edit_test.js` échoue de façon RÉPÉTABLE**
   (pas flaky, pas causé par les sessions récentes) : en ligue partagée,
   valider un plan sans édition préalable ne l'enregistre pas localement

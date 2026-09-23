@@ -142,6 +142,68 @@ if (!topScorerLine.includes(independentTopScorer.name) || !topScorerLine.include
 }
 console.log("✅ La moyenne de points affichée pour le meilleur marqueur correspond exactement au calcul indépendant sur matchLog.");
 
+// ---------------------------------------------------------------------
+// Partie 3 (retour utilisateur, 2026-09-23, capture du site EuroLeague/
+// stats) : "le premier aurait son avatar, on affiche les 5 premiers, si on
+// clique sur le bouton afficher en bas, on aurait les 20 premiers" — le
+// n°1 de chaque carte affiche un avatar, 5 lignes par défaut, un clic sur
+// "Afficher tout" déplie jusqu'à 20 (et se réplie avec un second clic).
+// ---------------------------------------------------------------------
+cards.forEach(card => {
+  const firstLi = card.querySelector("li");
+  if (!firstLi.classList.contains("stats-leader-first")) {
+    throw new Error(`❌ Le premier <li> de chaque carte devrait porter la classe "stats-leader-first" (mise en avant EuroLeague), obtenu pour "${card.querySelector("h4").textContent}".`);
+  }
+  if (!firstLi.querySelector(".player-avatar")) {
+    throw new Error(`❌ Le n°1 de chaque carte devrait afficher son avatar (playerAvatarHtml), absent pour "${card.querySelector("h4").textContent}".`);
+  }
+});
+console.log("✅ Le n°1 de chaque carte affiche bien son avatar (mise en avant façon EuroLeague).");
+
+const totalPlayers = win2.eval("league.teams.reduce((s, t) => s + t.players.length, 0)");
+console.log(`Nombre total de joueurs dans la ligue (pour vérifier top 5 -> top 20) : ${totalPlayers}`);
+
+const pointsCard = cards.find(c => c.querySelector("h4").textContent.startsWith("Points"));
+const itemsBefore = pointsCard.querySelectorAll("li").length;
+if (itemsBefore !== 5) throw new Error(`❌ Par défaut, chaque carte devrait afficher 5 joueurs, obtenu : ${itemsBefore}.`);
+console.log("✅ Par défaut, 5 joueurs affichés par carte.");
+
+const expandBtn = pointsCard.querySelector("[data-stats-expand-cat='pts']");
+if (!expandBtn) throw new Error("❌ Bouton \"Afficher tout\" introuvable sur la carte Points (la ligue de test devrait compter plus de 5 joueurs éligibles).");
+if (!/Afficher tout/.test(expandBtn.textContent)) {
+  throw new Error(`❌ Le bouton devrait afficher "Afficher tout" avant d'être déplié, obtenu : "${expandBtn.textContent}".`);
+}
+
+expandBtn.click();
+const itemsAfterExpand = doc2.querySelector("#leagueStatsPanel .stats-leader-card [data-stats-expand-cat='pts']").closest(".stats-leader-card").querySelectorAll("li").length;
+const expectedExpanded = Math.min(20, totalPlayers);
+console.log(`Nombre de joueurs affichés après clic sur "Afficher tout" : ${itemsAfterExpand} (attendu : ${expectedExpanded})`);
+if (itemsAfterExpand !== expectedExpanded) {
+  throw new Error(`❌ Après avoir cliqué sur "Afficher tout", la carte Points devrait afficher ${expectedExpanded} joueurs (top 20, ou moins si la ligue en compte moins), obtenu : ${itemsAfterExpand}.`);
+}
+const expandBtnAfter = doc2.querySelector("#leagueStatsPanel .stats-leader-card [data-stats-expand-cat='pts']");
+if (!/Réduire/.test(expandBtnAfter.textContent)) {
+  throw new Error(`❌ Après dépliage, le bouton devrait proposer de "Réduire", obtenu : "${expandBtnAfter.textContent}".`);
+}
+console.log("✅ Un clic sur \"Afficher tout\" déplie bien la carte Points jusqu'au top 20 (ou moins si la ligue en compte moins).");
+
+expandBtnAfter.click();
+const itemsAfterCollapse = doc2.querySelector("#leagueStatsPanel .stats-leader-card [data-stats-expand-cat='pts']").closest(".stats-leader-card").querySelectorAll("li").length;
+if (itemsAfterCollapse !== 5) {
+  throw new Error(`❌ Un second clic ("Réduire") devrait revenir à 5 joueurs affichés, obtenu : ${itemsAfterCollapse}.`);
+}
+console.log("✅ Un second clic (\"Réduire\") replie bien la carte à 5 joueurs.");
+
+// Les AUTRES cartes ne doivent pas avoir été affectées par le clic sur
+// celle de Points (état de dépliage indépendant par catégorie).
+const otherCardsStillCollapsed = [...doc2.querySelectorAll("#leagueStatsPanel .stats-leader-card")]
+  .filter(c => !c.querySelector("h4").textContent.startsWith("Points"))
+  .every(c => c.querySelectorAll("li").length <= 5);
+if (!otherCardsStillCollapsed) {
+  throw new Error("❌ Déplier/replier la carte Points ne devrait pas affecter l'état des autres catégories.");
+}
+console.log("✅ L'état déplié/replié est bien indépendant par catégorie.");
+
 await flush(dom2);
 dom2.window.close();
 server.close();

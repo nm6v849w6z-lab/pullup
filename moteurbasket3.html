@@ -30,6 +30,22 @@
     --teamA:#33b4a1; --teamA-ink:#052622; --teamA-soft:#12332e;
     --teamB:#e2694f; --teamB-ink:#3a140b; --teamB-soft:#3a201a;
     --danger:#e2694f; --ok:#33b4a1;
+    /* Retour utilisateur (2026-09-23) : "bien la vue d'ensemble mais mets le
+       rouge plus vif, idem pour le orange stp" (à propos du radar "Profil
+       (vue d'ensemble)", palier attr-tier-red/orange). Tokens DÉDIÉS plutôt
+       que de changer --danger/--amber directement : ces deux-là sont
+       réutilisés comme couleur d'accent générale de toute l'app (bouton
+       "Donnez vos ordres", onglets actifs, badges "en direct"...), pas
+       seulement le barème des caractéristiques (voir attrColorTier/
+       radarTierColor) — les changer aurait reteinté toute l'interface au
+       lieu de juste rendre le rouge/orange des carac plus vifs comme
+       demandé. Utilisés par les classes .attr-tier-red/.attr-tier-orange
+       (attr-cell, pdp-overall-num, pdp-attr-value, compare-profile-tile,
+       compare-row) ET par radarTierColor/ringBands (radar SVG) — seule
+       source pour ce barème précis, à modifier ICI uniquement si on veut
+       encore ajuster ces deux couleurs plus tard.
+    */
+    --attr-tier-red:#ff3b30; --attr-tier-amber:#ff9500;
     --radius:10px;
     /* Retour utilisateur (2026-09-23, "sur tous les menus déroulants dans le
        jeu, pourrais tu enlever le cadre blanc qu'il y a autour des
@@ -1082,10 +1098,10 @@
      commentaire pour la liste des écrans concernés (Effectif, Marché, fiche
      équipe adverse, Académie de jeunes : tous partagent ce même composant
      .attr-cell, donc tous héritent cohéremment du même changement). */
-  .attr-cell.attr-tier-red .attr-val{color:var(--danger);}
-  .attr-cell.attr-tier-red .attr-bar-fill{background:var(--danger);}
-  .attr-cell.attr-tier-orange .attr-val{color:var(--amber);}
-  .attr-cell.attr-tier-orange .attr-bar-fill{background:var(--amber);}
+  .attr-cell.attr-tier-red .attr-val{color:var(--attr-tier-red);}
+  .attr-cell.attr-tier-red .attr-bar-fill{background:var(--attr-tier-red);}
+  .attr-cell.attr-tier-orange .attr-val{color:var(--attr-tier-amber);}
+  .attr-cell.attr-tier-orange .attr-bar-fill{background:var(--attr-tier-amber);}
   .attr-cell.attr-tier-white .attr-val{color:var(--ink);}
   .attr-cell.attr-tier-white .attr-bar-fill{background:var(--ink);}
   .attr-cell.attr-tier-green .attr-val{color:#3ecf67;}
@@ -1155,8 +1171,8 @@
      teal, pas le vert demandé) repris tel quel des mockups approuvés
      (color_scheme_comparison.html/color_scheme_no_halo.html). Toujours SANS
      halo ici : c'est déjà juste le chiffre coloré, pas une pastille.*/
-  .pdp-overall-num.attr-tier-red{color:var(--danger);}
-  .pdp-overall-num.attr-tier-orange{color:var(--amber);}
+  .pdp-overall-num.attr-tier-red{color:var(--attr-tier-red);}
+  .pdp-overall-num.attr-tier-orange{color:var(--attr-tier-amber);}
   .pdp-overall-num.attr-tier-white{color:var(--ink);}
   .pdp-overall-num.attr-tier-green{color:#3ecf67;}
   .pdp-card .stars{color:var(--amber); font-size:14px; letter-spacing:1px;}
@@ -1209,8 +1225,8 @@
   }
   .pdp-pill.locked{background:var(--panel-2); color:var(--ink-faint);}
   .pdp-attr-value{min-width:22px; text-align:right; font-weight:800; font-size:12.5px;}
-  .pdp-attr-value.attr-tier-red{color:var(--danger);}
-  .pdp-attr-value.attr-tier-orange{color:var(--amber);}
+  .pdp-attr-value.attr-tier-red{color:var(--attr-tier-red);}
+  .pdp-attr-value.attr-tier-orange{color:var(--attr-tier-amber);}
   .pdp-attr-value.attr-tier-white{color:var(--ink);}
   .pdp-attr-value.attr-tier-green{color:#3ecf67;}
   .pdp-trend{font-size:10px; width:10px; display:inline-block; text-align:center;}
@@ -1287,8 +1303,8 @@
   .compare-profile-tile .cpt-sep{color:var(--ink-faint); font-size:10px;}
   .compare-profile-tile .cpt-val.win{background:rgba(62,207,103,.12); box-shadow:inset 0 0 0 1px rgba(62,207,103,.35);}
   .compare-profile-tile .cpt-val.locked{color:var(--ink-faint); font-weight:600;}
-  .compare-profile-tile .cpt-val.attr-tier-red{color:var(--danger);}
-  .compare-profile-tile .cpt-val.attr-tier-orange{color:var(--amber);}
+  .compare-profile-tile .cpt-val.attr-tier-red{color:var(--attr-tier-red);}
+  .compare-profile-tile .cpt-val.attr-tier-orange{color:var(--attr-tier-amber);}
   .compare-profile-tile .cpt-val.attr-tier-white{color:var(--ink);}
   .compare-profile-tile .cpt-val.attr-tier-green{color:#3ecf67;}
 
@@ -1311,8 +1327,8 @@
      une ligne où un des deux côtés est verrouillé/non scouté (pas
      comparable), voir pdpCompareAttrRowHtml. */
   .compare-row .cmp-val.win{background:rgba(62,207,103,.12); box-shadow:inset 0 0 0 1px rgba(62,207,103,.35);}
-  .compare-row .cmp-val.attr-tier-red{color:var(--danger);}
-  .compare-row .cmp-val.attr-tier-orange{color:var(--amber);}
+  .compare-row .cmp-val.attr-tier-red{color:var(--attr-tier-red);}
+  .compare-row .cmp-val.attr-tier-orange{color:var(--attr-tier-amber);}
   .compare-row .cmp-val.attr-tier-white{color:var(--ink);}
   .compare-row .cmp-val.attr-tier-green{color:#3ecf67;}
   .compare-row .cmp-val.locked{color:var(--ink-faint); font-weight:600;}
@@ -1633,8 +1649,25 @@
   .stats-leaders-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:14px;}
   @media(max-width:820px){ .stats-leaders-grid{grid-template-columns:repeat(2, 1fr);} }
   @media(max-width:480px){ .stats-leaders-grid{grid-template-columns:1fr;} }
+  /* Retour utilisateur (2026-09-23, capture du site EuroLeague/stats) : "le
+     premier aurait son avatar, on affiche les 5 premiers, si on clique sur
+     le bouton afficher en bas, on aurait les 20 premiers". Chaque carte
+     gagne un fond propre (avant : simplement posée dans la grille, sans
+     bordure) et son n°1 se distingue du reste de la liste (avatar + valeur
+     en grand) SANS sortir de la <ol> existante (reste le premier <li>, avec
+     juste des classes/contenu en plus) : le texte "Nom (Équipe) · valeur"
+     de chaque <li> ne change pas, pour ne pas casser les vérifications déjà
+     en place côté league_stats_test.js (split("·"), tri décroissant, etc.).
+  */
+  .stats-leader-card{background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
   .stats-leader-card ol{margin:0; padding-left:18px; font-size:12.5px; color:var(--ink); line-height:1.9;}
   .stats-leader-card li span.sub{color:var(--ink-faint); font-size:11px;}
+  .stats-leader-card li.stats-leader-first{list-style:none; margin:-2px -2px 8px -18px; padding:0 0 10px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line);}
+  .stats-leader-first-body{flex:1 1 auto; min-width:0; font-size:13.5px;}
+  .stats-leader-first-body .player-link{font-weight:700;}
+  .stats-leader-first-value{flex:none; font-size:19px; font-weight:800; color:var(--amber);}
+  .stats-leader-expand-btn{display:block; width:100%; margin-top:10px; background:none; border:none; border-top:1px dashed var(--line); padding-top:8px; color:var(--amber); font-size:11.5px; cursor:pointer; text-align:center;}
+  .stats-leader-expand-btn:hover{text-decoration:underline;}
 
   /* ---- Stats hebdo (retour utilisateur, 2026-09 : "développe l'onglet
      stats hebdo") ---- */
@@ -15668,6 +15701,18 @@ const LEAGUE_STAT_CATEGORIES = [
   { key: "eval", label: "Évaluation" },
 ];
 
+// Retour utilisateur (2026-09-23, capture du site EuroLeague/stats) :
+// "si on clique sur le bouton afficher en bas, on aurait les 20 premiers"
+// — quelles catégories sont actuellement dépliées (top 20 au lieu du top 5
+// par défaut), par clé de LEAGUE_STAT_CATEGORIES. Module-level comme
+// teamDetailSubView/effectifSubView ci-dessous : survit aux re-rendus de
+// renderLeagueStatsPanel (déclenchés par le clic lui-même) tant que l'onglet
+// Ligue reste ouvert, repart à vide (repliée) à chaque nouvelle partie
+// (rechargement complet de la page).
+let leagueStatsExpandedCats = new Set();
+const LEAGUE_STATS_TOP_N = 5;
+const LEAGUE_STATS_EXPANDED_N = 20;
+
 // Agrège, pour CHAQUE joueur de la ligue (toutes équipes, pas seulement le
 // club du joueur), ses matchs de championnat de la saison en cours en
 // totaux + moyennes par match — la base des classements de stats ci-dessous
@@ -15765,12 +15810,41 @@ function renderLeagueStatsPanel() {
     const pool = eligible.length ? eligible : rows;
     html += `<div class="stats-leaders-grid">`;
     LEAGUE_STAT_CATEGORIES.forEach(cat => {
-      const top = [...pool].sort((a, b) => b.perGame[cat.key] - a.perGame[cat.key]).slice(0, 5);
-      html += `<div class="stats-leader-card"><h4>${cat.label} / match</h4><ol>`;
-      top.forEach(r => {
-        html += `<li>${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)} <span class="sub">(${escapeHtml(r.teamName)})</span> · ${r.perGame[cat.key].toFixed(1)}</li>`;
+      const sorted = [...pool].sort((a, b) => b.perGame[cat.key] - a.perGame[cat.key]);
+      const expanded = leagueStatsExpandedCats.has(cat.key);
+      const limit = expanded ? LEAGUE_STATS_EXPANDED_N : LEAGUE_STATS_TOP_N;
+      const top = sorted.slice(0, limit);
+      // start="2" : le n°1 (avatar mis en avant ci-dessous) est un <li>
+      // avec display:flex, donc exclu du compteur automatique de la <ol>
+      // (display:flex n'a pas de compteur list-item) — sans ce start, la
+      // liste "2e à 5e" recommencerait visuellement à "1." et laisserait
+      // croire à un deuxième 1er.
+      html += `<div class="stats-leader-card"><h4>${cat.label} / match</h4><ol start="2">`;
+      top.forEach((r, i) => {
+        const valueText = r.perGame[cat.key].toFixed(1);
+        if (i === 0) {
+          // Retour utilisateur (2026-09-23) : "le premier aurait son
+          // avatar" (voir playerAvatarHtml, même fonction que le MVP de la
+          // journée ci-dessus) — reste le premier <li> de la <ol> (pas une
+          // structure à part) pour continuer à compter comme "un
+          // classement" au sens accessibilité/tests, juste mis en valeur.
+          html += `<li class="stats-leader-first">` +
+            playerAvatarHtml(r.player, league.teams[r.teamIdx], 40) +
+            `<span class="stats-leader-first-body">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)} <span class="sub">(${escapeHtml(r.teamName)})</span></span>` +
+            `<span class="stats-leader-first-value">${valueText}</span></li>`;
+        } else {
+          html += `<li>${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)} <span class="sub">(${escapeHtml(r.teamName)})</span> · ${valueText}</li>`;
+        }
       });
-      html += `</ol></div>`;
+      html += `</ol>`;
+      // Bouton "Afficher tout"/"Réduire" (retour utilisateur : "si on
+      // clique sur le bouton afficher en bas, on aurait les 20 premiers") —
+      // affiché seulement s'il y a réellement plus de LEAGUE_STATS_TOP_N
+      // joueurs éligibles à montrer (pas de bouton qui ne changerait rien).
+      if (sorted.length > LEAGUE_STATS_TOP_N) {
+        html += `<button type="button" class="stats-leader-expand-btn" data-stats-expand-cat="${cat.key}">${expanded ? "Réduire ▲" : "Afficher tout ▼"}</button>`;
+      }
+      html += `</div>`;
     });
     html += `</div>`;
   }
@@ -15778,6 +15852,20 @@ function renderLeagueStatsPanel() {
   html += `</div>`;
   holder.innerHTML = html;
 }
+
+// Clic sur "Afficher tout"/"Réduire" d'une carte de classement (voir
+// LEAGUE_STATS_EXPANDED_N/leagueStatsExpandedCats ci-dessus) — délégué sur
+// le conteneur fixe #leagueStatsPanel (même mécanique que
+// #teamDetailContent pour teamDetailSubView) puisque son contenu est
+// entièrement regénéré à chaque clic par renderLeagueStatsPanel.
+document.getElementById("leagueStatsPanel").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-stats-expand-cat]");
+  if (!btn) return;
+  const key = btn.dataset.statsExpandCat;
+  if (leagueStatsExpandedCats.has(key)) leagueStatsExpandedCats.delete(key);
+  else leagueStatsExpandedCats.add(key);
+  renderLeagueStatsPanel();
+});
 
 // ---------------------------------------------------------------------
 // Fiche joueur (retour utilisateur, 2026-09 : "pages joueur avec stats de
@@ -16401,8 +16489,12 @@ function playerRadarCategories(player) {
 // coloré selon le tier de SON PROPRE axe, exactement comme un chiffre de
 // caractéristique ailleurs dans le jeu, au lieu d'un blanc uniforme.
 function radarTierColor(value) {
-  if (value <= 20) return "var(--danger)";
-  if (value <= 50) return "var(--amber)";
+  // --attr-tier-red/--attr-tier-amber (PAS --danger/--amber) : voir leur
+  // commentaire dans :root — tokens dédiés au barème des caractéristiques,
+  // rendus plus vifs sur demande utilisateur (2026-09-23) sans reteinter le
+  // reste de l'interface (--amber sert aussi de couleur d'accent générale).
+  if (value <= 20) return "var(--attr-tier-red)";
+  if (value <= 50) return "var(--attr-tier-amber)";
   if (value <= 80) return "var(--ink)";
   return "#3ecf67";
 }
@@ -16421,8 +16513,8 @@ function radarChartSvg(categories) {
   const ringBands = [
     { frac: 1.0, color: "#3ecf67" },
     { frac: 0.8, color: "var(--ink)" },
-    { frac: 0.5, color: "var(--amber)" },
-    { frac: 0.2, color: "var(--danger)" },
+    { frac: 0.5, color: "var(--attr-tier-amber)" },
+    { frac: 0.2, color: "var(--attr-tier-red)" },
   ];
   let svg = `<svg viewBox="-42 -8 304 252" width="100%" height="auto">`;
   ringBands.forEach(({ frac, color }) => {
