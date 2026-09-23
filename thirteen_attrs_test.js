@@ -327,17 +327,18 @@ async function testRosterTableShowsNewColumns() {
     const firstPlayerLink = doc.querySelector("#rosterContent .player-link");
     if (!firstPlayerLink) throw new Error("❌ (setup) l'Effectif devrait afficher au moins un lien joueur cliquable.");
     firstPlayerLink.click();
-    // Depuis la nouvelle fiche joueur (retour utilisateur, 2026-09, maquette
-    // "Adama Kovac") : les Caractéristiques sont affichées en grille
-    // (.player-attr-grid, un .player-attr-name par caractéristique), plus en
-    // table.roster-table à en-têtes <th>, voir renderPlayerDetail.
-    // Noms complets, pas les abréviations (retour utilisateur, 2026-09 :
-    // "mets toutes les noms des carac en entier, on a de la place pour le
-    // faire") : .player-attr-name affiche désormais TRAINING_LABELS[a], pas
-    // ATTR_SHORT[a] (voir renderPlayerDetail) — seul l'onglet Effectif
-    // ("Caractéristiques", tableau plus dense) et le marché des transferts
-    // utilisent encore les abréviations à 2-3 lettres.
-    const attrHeaders = [...doc.querySelectorAll("#playerDetailContent .player-attr-grid .player-attr-name")].map(el => el.textContent.trim());
+    // Depuis la fiche joueur "pdp-card" (retour utilisateur, 2026-09, "on a
+    // tjrs pas les pages joueurs à jour") : les Caractéristiques sont
+    // affichées en pastilles réparties par catégorie
+    // (.pdp-attr-grid > .pdp-attr-row .lbl, un par caractéristique), plus en
+    // table.roster-table à en-têtes <th>, voir renderPlayerDetail/
+    // pdpAttrRowHtml. Noms complets, pas les abréviations (retour
+    // utilisateur, 2026-09 : "mets toutes les noms des carac en entier, on a
+    // de la place pour le faire") : .lbl affiche TRAINING_LABELS[a], pas
+    // ATTR_SHORT[a] — seul l'onglet Effectif ("Caractéristiques", tableau
+    // plus dense) et le marché des transferts utilisent encore les
+    // abréviations à 2-3 lettres.
+    const attrHeaders = [...doc.querySelectorAll("#playerDetailContent .pdp-attr-grid .lbl")].map(el => el.textContent.trim());
     console.log("En-têtes de caractéristiques sur la fiche joueur :", attrHeaders.join(", "));
     ["Mental", "Endurance", "Lancer franc"].forEach(full => {
       if (!attrHeaders.includes(full)) throw new Error(`❌ La colonne "${full}" devrait apparaître (en toutes lettres) sur la fiche joueur.`);

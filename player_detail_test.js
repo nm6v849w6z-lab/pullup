@@ -34,7 +34,7 @@ if (!playerDetailVisible || !effectifHiddenNow) throw new Error("❌ Cliquer sur
 if (!doc1.getElementById("playerDetailName").textContent.includes(firstPlayerName)) {
   throw new Error("❌ Le titre de la fiche devrait reprendre le nom du joueur cliqué.");
 }
-const attrCellsOwn = doc1.querySelectorAll("#playerDetailContent .attr-cell:not(.attr-locked)").length;
+const attrCellsOwn = doc1.querySelectorAll("#playerDetailContent .pdp-pill:not(.locked)").length;
 console.log("Cellules de caractéristiques déverrouillées (propre effectif) :", attrCellsOwn, "(attendu > 0)");
 if (attrCellsOwn === 0) throw new Error("❌ Les caractéristiques de son propre joueur devraient toujours être visibles en clair.");
 if (!doc1.getElementById("playerDetailContent").textContent.includes("Aucun match joué cette saison")) {
@@ -119,11 +119,14 @@ const firstRowText = matchRows[0].textContent;
 if (!firstRowText.includes(`Journée ${independent.latest.round + 1}`) || !firstRowText.includes(String(independent.latest.pts))) {
   throw new Error(`❌ La 1ère ligne affichée (${firstRowText.replace(/\s+/g, " ")}) devrait correspondre à la journée la plus récente du matchLog brut (journée ${independent.latest.round + 1}, ${independent.latest.pts} pts).`);
 }
-// Index 0 (et non plus 1) depuis que les Caractéristiques (retour
-// utilisateur, 2026-09, nouvelle fiche joueur façon "Adama Kovac") sont
-// affichées en grille (.player-attr-grid) plutôt qu'en table.roster-table :
-// il ne reste donc que 2 table.roster-table sur la fiche (Moyennes de la
-// saison, puis Match par match), voir renderPlayerDetail.
+// Index 0 (et non plus 1) depuis que les Caractéristiques sont affichées en
+// grille de pastilles (.pdp-attr-grid/.pdp-pill) plutôt qu'en
+// table.roster-table, et depuis la refonte "pdp-card" (2026-09, "on a tjrs
+// pas les pages joueurs à jour") qui a ajouté un aperçu des 5 derniers
+// matchs en table.pdp-games (classe distincte, jamais roster-table) : il ne
+// reste donc toujours que 2 table.roster-table sur la fiche, tout en bas
+// (Moyennes détaillées de la saison, puis Match par match, historique
+// complet), voir renderPlayerDetail.
 const avgPtsShown = doc2.querySelectorAll("#playerDetailContent table.roster-table")[0].querySelector("tbody tr td:nth-child(2)").textContent;
 const expectedAvg = (independent.totalPts / independent.gp).toFixed(1);
 console.log("Moyenne de points affichée :", avgPtsShown, "| attendue (calcul indépendant) :", expectedAvg);
@@ -151,7 +154,7 @@ if (!opponentPlayerLink) throw new Error("❌ (setup) la fiche équipe adverse d
 const oppName = opponentPlayerLink.textContent;
 opponentPlayerLink.click();
 
-const lockedCells = doc2.querySelectorAll("#playerDetailContent .attr-cell.attr-locked").length;
+const lockedCells = doc2.querySelectorAll("#playerDetailContent .pdp-pill.locked").length;
 console.log("\nFiche ouverte pour un joueur adverse (scoutisme) :", oppName, "| cellules verrouillées :", lockedCells, "(attendu = toutes, aucune séance vidéo faite)");
 if (lockedCells !== ATTRS_LENGTH_FALLBACK(win2)) {
   throw new Error(`❌ Sans séance vidéo faite sur cet adversaire, TOUTES ses caractéristiques devraient rester verrouillées sur sa fiche, obtenu ${lockedCells} verrouillées.`);

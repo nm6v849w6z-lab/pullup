@@ -978,6 +978,117 @@
   .attr-cell.attr-mid .attr-bar-fill{background:var(--ink-dim);}
   .attr-cell.attr-lo .attr-val{color:var(--ink-faint);}
   .attr-cell.attr-lo .attr-bar-fill{background:var(--danger);}
+  /* ===================================================================
+     Fiche joueur "pdp-card" (retour utilisateur, 2026-09 : "on a tjrs pas
+     les pages joueurs à jour" / "je n'ai tjrs pas les bonnes fiches
+     joueurs", capture d'écran "Adama Kovac" montrant encore l'ancienne
+     grille à plat ci-dessus) : mise en page à cartes portée depuis le
+     fichier de référence (moteurbasket3-1.html, maquette validée par
+     l'utilisateur, mockup_player_page.html), remplace .player-attr-grid
+     ci-dessus (laissée en place mais plus référencée par renderPlayerDetail,
+     voir plus bas). DEUX adaptations volontaires par rapport à la copie
+     mirroir habituelle (divergences déjà justifiées au moment du port JS,
+     voir renderPlayerDetail) :
+     - 4 paliers de couleur RÉUTILISÉS depuis .attr-cell ci-dessus
+       (attr-lo/attr-mid/attr-good/attr-elite, mêmes seuils 45/65/80,
+       mêmes variables de couleur) plutôt que l'échelle rouge/orange/
+       blanc/vert du fichier de référence (attrColorTier), qui aurait
+       introduit une DEUXIÈME échelle de couleur incohérente avec le
+       reste du jeu (Effectif/Marché) pour les mêmes valeurs.
+     - Pas de variante ".range" (fourchette de scoutisme) : le jeu réel
+       révèle une caractéristique en tout ou rien (voir teamA.scoutedAttrs/
+       revealedSet), jamais une fourchette autour d'une valeur approchée
+       (mécanisme du fichier de référence, incompatible ici).
+     =================================================================== */
+  .pdp-grid{display:grid; grid-template-columns:280px 1fr; gap:16px;}
+  @media (max-width:820px){.pdp-grid{grid-template-columns:1fr;}}
+  .pdp-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px; margin-bottom:16px;
+  }
+  .pdp-card h3{
+    margin:0 0 12px; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-faint); font-weight:700;
+  }
+  .pdp-overall-row{display:flex; align-items:baseline; gap:10px; margin-bottom:6px;}
+  .pdp-overall-num{font-size:34px; font-weight:800;}
+  .pdp-overall-num.attr-elite{color:var(--amber);}
+  .pdp-overall-num.attr-good{color:var(--ok);}
+  .pdp-overall-num.attr-mid{color:var(--ink-dim);}
+  .pdp-overall-num.attr-lo{color:var(--ink-faint);}
+  .pdp-card .stars{color:var(--amber); font-size:14px; letter-spacing:1px;}
+  .pdp-overall-caption{font-size:11.5px; color:var(--ink-faint);}
+  .pdp-meta-list{margin-top:12px; font-size:12.5px;}
+  .pdp-meta-list div{display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--line-soft);}
+  .pdp-meta-list div:last-child{border-bottom:none;}
+  .pdp-meta-list span:first-child{color:var(--ink-dim);}
+  .pdp-profile-row{display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:12.5px;}
+  .pdp-profile-row .stars{font-size:12px;}
+  /* Schéma de terrain compact (réutilise COURT_SVG/COURT_MARKER_POS, déjà
+     utilisés par .lineup-court/.court-marker pour l'éditeur de feuille de
+     match) : variante statique, juste le poste du joueur mis en évidence. */
+  .pdp-court-wrap{margin-top:14px;}
+  .pdp-court{position:relative; width:100%; aspect-ratio:15/14; margin:0 auto;}
+  .pdp-court svg{position:absolute; inset:0; width:100%; height:100%; display:block;}
+  .pdp-court .ct-line{fill:none; stroke:rgba(230,168,88,.28); stroke-width:.5;}
+  .pdp-court .ct-fill{fill:rgba(230,168,88,.05);}
+  .pdp-court-marker{
+    position:absolute; transform:translate(-50%,-50%); display:flex; align-items:center;
+    justify-content:center; width:22px; height:22px; border-radius:50%;
+    background:var(--panel-2); border:1px solid #3a4a63; font-size:8px; font-weight:700;
+    color:var(--ink-faint);
+  }
+  .pdp-court-marker.own{
+    width:26px; height:26px; background:var(--amber); border-color:var(--amber);
+    color:var(--amber-ink); font-size:8.5px;
+  }
+  .pdp-attr-grid{display:grid; grid-template-columns:2fr 1fr 1fr; gap:20px;}
+  @media (max-width:820px){.pdp-attr-grid{grid-template-columns:1fr;}}
+  .pdp-attr-block h4{
+    margin:0 0 8px; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink-dim); font-weight:800; border-bottom:1px solid var(--line-soft); padding-bottom:8px;
+  }
+  .pdp-attr-subgrid{display:grid; grid-template-columns:1fr 1fr; gap:0 18px;}
+  @media (max-width:520px){.pdp-attr-subgrid{grid-template-columns:1fr;}}
+  .pdp-attr-row{display:flex; align-items:center; justify-content:space-between; padding:5px 0; font-size:12.5px;}
+  .pdp-attr-row .lbl{color:var(--ink-dim);}
+  .pdp-attr-right{display:flex; align-items:center; gap:6px;}
+  .pdp-pill{
+    min-width:26px; text-align:center; font-weight:800; font-size:11.5px;
+    padding:2px 6px; border-radius:6px;
+  }
+  .pdp-pill.attr-elite{background:rgba(240,162,60,.16); color:var(--amber);}
+  .pdp-pill.attr-good{background:rgba(51,180,161,.16); color:var(--ok);}
+  .pdp-pill.attr-mid{background:var(--panel-2); color:var(--ink-dim);}
+  .pdp-pill.attr-lo{background:rgba(226,105,79,.12); color:var(--ink-faint);}
+  .pdp-pill.locked{background:var(--panel-2); color:var(--ink-faint);}
+  .pdp-trend{font-size:10px; width:10px; display:inline-block; text-align:center;}
+  .pdp-trend.up{color:var(--ok);}
+  .pdp-trend.down{color:var(--danger);}
+  .pdp-trend.flat{color:var(--ink-faint);}
+  .pdp-scouting{
+    margin-top:14px; padding-top:12px; border-top:1px solid var(--line-soft);
+    font-size:12.5px; color:var(--ink-dim);
+  }
+  .pdp-scouting b{color:var(--ink);}
+  .pdp-status-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+  @media (max-width:820px){.pdp-status-grid{grid-template-columns:repeat(2,1fr);}}
+  .pdp-status-card h3 + .condition-badge{margin-right:auto;}
+  .pdp-kv{display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0;}
+  .pdp-kv span:first-child{color:var(--ink-dim);}
+  .pdp-two-col{display:grid; grid-template-columns:280px 1fr; gap:16px; margin-top:16px;}
+  @media (max-width:820px){.pdp-two-col{grid-template-columns:1fr;}}
+  table.pdp-games{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.pdp-games th{
+    text-align:left; color:var(--ink-faint); font-weight:700; font-size:10.5px;
+    text-transform:uppercase; letter-spacing:.04em; padding:6px 8px; border-bottom:1px solid var(--line-soft);
+  }
+  table.pdp-games td{padding:7px 8px; border-bottom:1px solid var(--line-soft); color:var(--ink-dim);}
+  table.pdp-games td.strong{color:var(--ink); font-weight:700;}
+  .pdp-res{font-weight:800; font-size:11px; padding:2px 7px; border-radius:5px;}
+  .pdp-res.w{background:rgba(51,180,161,.16); color:var(--ok);}
+  .pdp-res.l{background:rgba(226,105,79,.16); color:var(--danger);}
+  .pdp-locked-note{font-size:12.5px; color:var(--ink-faint); font-style:italic;}
   /* Nouvelle fiche joueur (retour utilisateur, 2026-09, exemple fourni pour
      "Adama Kovac") : grille à 2 colonnes pour les caractéristiques (voir
      renderPlayerDetail) plutôt que l'ancien tableau à une seule ligne
@@ -15352,6 +15463,186 @@ function opponentNameForMatchLogEntry(teamIdx, entry) {
   return league.teams[sched.home === teamIdx ? sched.away : sched.home].name;
 }
 
+// ===================================================================
+// Fiche joueur "pdp-card" — fonctions d'appui (voir le grand commentaire
+// CSS ci-dessus et renderPlayerDetail plus bas). Portées depuis le fichier
+// de référence (moteurbasket3-1.html), à l'identique SAUF :
+// - pdpAttrRowHtml : réécrite contre le mécanisme RÉEL de scoutisme du jeu
+//   (revealedSet/visibleAttrs, tout ou rien par caractéristique révélée)
+//   au lieu de scoutingInfo/scoutingRangeFor (fourchettes) du fichier de
+//   référence, incompatible ici (déjà écarté pour la même raison lors du
+//   port scoutingReportText/playerStrengthsAndWeaknesses).
+// - pdpPillTier : délègue aux paliers attr-lo/mid/good/elite déjà utilisés
+//   par attrCellHtml (voir son commentaire), pas l'échelle rouge/orange/
+//   blanc/vert (attrColorTier) du fichier de référence.
+// - Pas de port de nationality/RADAR_AXES nécessitant un nouveau champ
+//   Player : voir playerRadarCategories plus bas, qui les réutilise
+//   directement (FUNDAMENTAL_ATTRS/PHYSICAL_ATTRS/MENTAL_ATTRS existent
+//   déjà côté jeu réel depuis l'entraînement des fondamentaux).
+// - player.lastAttrTrend n'existe pas encore côté moteur réel (suivi de
+//   tendance semaine par semaine, fonctionnalité séparée non demandée pour
+//   ce chantier) : pdpAttrRowHtml/scoutingReportText le lisent quand même
+//   de façon défensive (`player.lastAttrTrend &&`, comme dans le fichier
+//   de référence) — la flèche de tendance reste simplement toujours
+//   "·" (flat) tant qu'il n'est pas câblé, sans rien casser.
+// ===================================================================
+function pdpPillTier(value) {
+  if (value >= 80) return "attr-elite";
+  if (value >= 65) return "attr-good";
+  if (value >= 45) return "attr-mid";
+  return "attr-lo";
+}
+function starRatingFromScore(score, max = 99) {
+  return clamp(Math.round((score / max) * 5), 1, 5);
+}
+function pdpAttrRowHtml(player, attr, visible) {
+  const label = TRAINING_LABELS[attr] || ATTR_SHORT[attr];
+  if (!visible) {
+    return `<div class="pdp-attr-row"><span class="lbl">${escapeHtml(label)}</span><span class="pdp-attr-right">` +
+      `<span class="pdp-pill locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique">?</span></span></div>`;
+  }
+  const value = player.attrs[attr];
+  const trend = player.lastAttrTrend ? (player.lastAttrTrend[attr] || "flat") : "flat";
+  const trendSymbol = trend === "up" ? "▲" : trend === "down" ? "▼" : "·";
+  return `<div class="pdp-attr-row"><span class="lbl">${escapeHtml(label)}</span><span class="pdp-attr-right">` +
+    `<span class="pdp-trend ${trend}">${trendSymbol}</span><span class="pdp-pill ${pdpPillTier(value)}">${value}</span></span></div>`;
+}
+// Schéma de terrain compact (voir COURT_SVG/COURT_MARKER_POS plus haut,
+// déjà utilisés par la feuille de match/.lineup-court) : les 5 postes,
+// celui du joueur mis en évidence — jamais gaté par visibleAttrs (le poste
+// d'un joueur n'est jamais verrouillé par le scoutisme, voir
+// renderTeamDetail : "Nom/poste/taille/salaire TOUJOURS affichés").
+function pdpCourtHtml(player) {
+  let markers = "";
+  POSITIONS.forEach(pos => {
+    const coords = COURT_MARKER_POS[pos];
+    const isOwn = pos === player.position;
+    markers += `<div class="pdp-court-marker${isOwn ? " own" : ""}" style="left:${coords.left}%; top:${coords.top}%;" title="${escapeHtml(pos)}">${POS_SHORT[pos]}</div>`;
+  });
+  return `<div class="pdp-court-wrap"><div class="pdp-court">${COURT_SVG}${markers}</div></div>`;
+}
+function scoutingReportText(player, visibleAttrs) {
+  const { strengths, weaknesses } = playerStrengthsAndWeaknesses(player, visibleAttrs);
+  if (!strengths.length) return null;
+  const label = a => (TRAINING_LABELS[a] || ATTR_SHORT[a]).toLowerCase();
+  let text = `Points forts : ${strengths.map(e => label(e.attr)).join(", ")}.`;
+  if (weaknesses.length) text += ` Points faibles : ${weaknesses.map(e => label(e.attr)).join(", ")}.`;
+  const trendingDown = visibleAttrs.find(a => player.lastAttrTrend && player.lastAttrTrend[a] === "down");
+  const trendingUp = visibleAttrs.find(a => player.lastAttrTrend && player.lastAttrTrend[a] === "up");
+  if (trendingDown) text += ` ${TRAINING_LABELS[trendingDown]} semble en retrait ces dernières semaines.`;
+  else if (trendingUp) text += ` ${TRAINING_LABELS[trendingUp]} progresse ces dernières semaines.`;
+  return text;
+}
+// Score final + victoire/défaite (du point de vue de `teamIdx`) pour une
+// entrée de Player.matchLog donnée : même repérage round/compétition
+// qu'opponentNameForMatchLogEntry (championnat via league.schedule/
+// league.results, coupe via league.cup.rounds). `null` si non trouvé/non
+// résolu (ne devrait pas arriver pour un match déjà présent dans matchLog,
+// mais reste défensif) — n'existait pas encore côté jeu réel (le tableau
+// "Match par match" n'affichait jusqu'ici pas de colonne Résultat).
+function matchResultForLogEntry(teamIdx, entry) {
+  if (entry.competition === "cup") {
+    const round = league.cup && league.cup.rounds.find(r => r.index === entry.round);
+    const m = round && round.matches.find(x => x.home === teamIdx || x.away === teamIdx);
+    if (!m || m.bye || !m.resolved) return null;
+    const isHome = m.home === teamIdx;
+    const myScore = isHome ? m.scoreHome : m.scoreAway;
+    const oppScore = isHome ? m.scoreAway : m.scoreHome;
+    return { myScore, oppScore, win: myScore > oppScore };
+  }
+  const result = league.results.find(res => res.round === entry.round && (res.home === teamIdx || res.away === teamIdx));
+  if (!result) return null;
+  const isHome = result.home === teamIdx;
+  const myScore = isHome ? result.scoreHome : result.scoreAway;
+  const oppScore = isHome ? result.scoreAway : result.scoreHome;
+  return { myScore, oppScore, win: myScore > oppScore };
+}
+// Les 7 axes du radar "Profil (vue d'ensemble)" : chaque axe regroupe
+// plusieurs FONDAMENTAUX en une seule note (moyenne simple), sauf REBOND
+// (un seul attribut), PHYSIQUE et MENTAL (moyenne de toute leur catégorie,
+// voir PHYSICAL_ATTRS/MENTAL_ATTRS — existent déjà côté jeu réel depuis
+// l'entraînement des fondamentaux, aucune adaptation nécessaire ici). Les 5
+// axes de fondamentaux se partagent la TOTALITÉ des 13 FUNDAMENTAL_ATTRS,
+// chacun une seule fois (3+2+3+4+1 = 13).
+const RADAR_AXES = [
+  { key: "shoot", label: "TIR EXTÉRIEUR", attrs: ["midRange", "threePoint", "freeThrow"] },
+  { key: "finish", label: "FINITION", attrs: ["inside", "penetration"] },
+  { key: "create", label: "CRÉATION", attrs: ["shotCreation", "pass", "dribble"] },
+  { key: "defense", label: "DÉFENSE", attrs: ["defOutside", "defInside", "steal", "block"] },
+  { key: "rebound", label: "REBOND", attrs: ["rebound"] },
+  { key: "physical", label: "PHYSIQUE", attrs: PHYSICAL_ATTRS },
+  { key: "mental", label: "MENTAL", attrs: MENTAL_ATTRS },
+];
+function playerRadarCategories(player) {
+  const cats = {};
+  RADAR_AXES.forEach(ax => {
+    cats[ax.key] = ax.attrs.reduce((sum, a) => sum + player.attrs[a], 0) / ax.attrs.length;
+  });
+  return cats;
+}
+// SVG générique à 7 axes : anneaux concentriques décoratifs, rayons
+// repères, polygone de données réel, étiquettes tout autour.
+function radarChartSvg(categories) {
+  const cx = 110, cy = 118, maxR = 90, labelR = 104;
+  const n = RADAR_AXES.length;
+  const angleFor = i => (Math.PI * 2 * i) / n - Math.PI / 2;
+  const pointAt = (i, r) => {
+    const a = angleFor(i);
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  };
+  const ringColors = ["var(--ok)", "#7fa889", "var(--amber)", "var(--danger)", "#a83a2a"];
+  let svg = `<svg viewBox="-42 -8 304 252" width="100%" height="auto">`;
+  [1, 0.8, 0.6, 0.4, 0.2].forEach((frac, idx) => {
+    const pts = RADAR_AXES.map((_, i) => pointAt(i, maxR * frac).map(v => v.toFixed(1)).join(",")).join(" ");
+    svg += `<polygon points="${pts}" fill="${ringColors[idx]}"/>`;
+  });
+  RADAR_AXES.forEach((_, i) => {
+    const [x, y] = pointAt(i, maxR);
+    svg += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--bg)" stroke-opacity="0.4"/>`;
+  });
+  const dataPts = RADAR_AXES.map((ax, i) => pointAt(i, (clamp(categories[ax.key], 0, 100) / 100) * maxR));
+  svg += `<polygon points="${dataPts.map(p => p.map(v => v.toFixed(1)).join(",")).join(" ")}" fill="var(--ink)" fill-opacity="0.14" stroke="var(--ink)" stroke-width="2"/>`;
+  dataPts.forEach(([x, y]) => { svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--ink)"/>`; });
+  RADAR_AXES.forEach((ax, i) => {
+    const [x, y] = pointAt(i, labelR);
+    const angle = angleFor(i);
+    const cosA = Math.cos(angle);
+    const anchor = cosA > 0.15 ? "start" : cosA < -0.15 ? "end" : "middle";
+    svg += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="9" font-weight="700" letter-spacing="0.03em" fill="var(--ink-faint)">${escapeHtml(ax.label)}</text>`;
+  });
+  svg += `</svg>`;
+  return svg;
+}
+// Fenêtre de comparables pour la valorisation "Mise en vente" (retour
+// utilisateur, 2026-09 : "dans la brique enchère, mets une petite
+// valorisation du joueur basée sur les joueurs ayant des carac similaires
+// mis en vente ET vendus dans les 60 derniers jours" — jamais une simple
+// annonce encore ouverte ou invendue, voir le filtre result === "sold").
+const MARKET_COMPARABLE_WINDOW_MS = 60 * 24 * 60 * 60 * 1000;
+// Valorisation à partir des VRAIES ventes comparables des 60 derniers jours
+// (même poste, note globale overall() proche) plutôt qu'une distance sur
+// les 29 caractéristiques une à une (trop capricieux avec le peu de ventes
+// généralement disponibles). Pas de snapshot des caractéristiques au
+// moment de la vente (transferListings ne conserve que playerId/
+// finalPrice) : on relit donc la note ACTUELLE via league.playerById, une
+// approximation faute de mieux. Renvoie null si moins de 2 comparables.
+function comparableSalesValuation(player, now = Date.now()) {
+  const targetOverall = player.overall();
+  const comparables = (league.transferListings || [])
+    .filter(l => l.result === "sold" && l.finalPrice && l.playerId !== player.id && (now - l.closesAt) <= MARKET_COMPARABLE_WINDOW_MS)
+    .map(l => {
+      const p = league.playerById(l.playerId);
+      if (!p || p.position !== player.position) return null;
+      return { price: l.finalPrice, gap: Math.abs(p.overall() - targetOverall) };
+    })
+    .filter(c => c && c.gap <= 10)
+    .sort((a, b) => a.gap - b.gap)
+    .slice(0, 5);
+  if (comparables.length < 2) return null;
+  const estimate = Math.round(comparables.reduce((s, c) => s + c.price, 0) / comparables.length);
+  return { estimate, sampleSize: comparables.length };
+}
+
 function renderPlayerDetail(teamIdx, playerId) {
   const nameHeader = document.getElementById("playerDetailName");
   const holder = document.getElementById("playerDetailContent");
@@ -15380,111 +15671,37 @@ function renderPlayerDetail(teamIdx, playerId) {
   // marché (renderMarketListings) ne l'affiche déjà nulle part, même pour un
   // adversaire (retour utilisateur explicite qui a fait retirer le suffixe
   // "(vous)" de currentLabel là-bas) — seul le montant est une information
-  // publique dans ce jeu, rester cohérent avec cette règle déjà établie.
+  // publique dans ce jeu, rester cohérent avec cette règle déjà établie. Même
+  // règle reprise dans la carte "Mise en vente" de la refonte pdp-card
+  // ci-dessous : contrairement au fichier de référence (qui affiche le nom
+  // de l'équipe en tête via teamLinkHtml), on ne montre ici QUE le montant.
   const openListing = (league.transferListings || []).find(l => l.status === "open" && l.playerId === player.id);
   const onMarket = Boolean(openListing);
 
   // Caractéristiques déjà visibles sur cette fiche (son propre effectif, un
   // joueur sur le marché, ou celles déjà débloquées par le scoutisme pour
   // un adversaire, voir teamA.scoutedAttrs) : calculé ICI (avant même
-  // l'entête) plutôt que juste avant la grille de caractéristiques plus bas,
-  // pour pouvoir aussi gater la Tactique de prédilection (voir plus bas,
-  // juste après Rôle) sur la même règle, sans dupliquer la logique de
-  // verrouillage à deux endroits différents de cette fonction.
+  // l'entête) pour pouvoir aussi gater Profils/le radar/la note globale plus
+  // bas sur la même règle, sans dupliquer la logique de verrouillage.
+  // `fullyVisible` : la note globale et le radar mélangent les 29
+  // caractéristiques (overall(), playerRadarCategories), affichés en exact
+  // seulement une fois l'équipe entièrement scoutée, jamais avant (sinon
+  // fuite d'information par la bande à partir d'une moyenne globale).
   const revealedSet = (isOwnTeam || onMarket) ? null : new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
   const visibleAttrs = ATTRS.filter(a => isOwnTeam || onMarket || revealedSet.has(a));
-
-  // Avatar (retour utilisateur, 2026-09 : "intègre les avatars sur les pages
-  // joueurs [...]") : recalculé depuis l'id du joueur (voir AvatarGen/
-  // playerAvatarHtml plus haut), aux couleurs réelles de l'équipe du joueur.
-  // Le nom reste dans #playerDetailName (h2 statique juste au-dessus, voir
-  // nameHeader plus haut) : pas de doublon ici, juste l'avatar à côté de la
-  // ligne d'infos.
-  let html = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">` +
-    playerAvatarHtml(player, team, 72) +
-    `<p class="training-intro" style="margin:0">${escapeHtml(team.name)} · ${POS_SHORT[player.position]} · ${player.height} cm · ${player.age} ans` +
-    (isOwnTeam ? ` · ${formatMoney(player.salary)}/sem.` : "") + `</p>` +
-    `</div>`;
-  // Potentiel/Forme physique/Motivation/Rôle : retour utilisateur (2026-09)
-  // "mais tout ça l'un à côté de l'autre" : une seule ligne de chips
-  // (.player-stats-row) plutôt qu'un paragraphe par info, chaque chip
-  // gardant sa propre condition de visibilité (Potentiel/Motivation réservés
-  // à SON PROPRE effectif, jamais affichés sur le marché ni pour un
-  // adversaire, contrairement à Forme physique/Rôle, toujours visibles, des
-  // états observables de l'extérieur plutôt que des talents cachés par le
-  // scoutisme).
-  const statChips = [];
-  // Potentiel : réapparu ici après la refonte de l'onglet Effectif (retour
-  // utilisateur, 2026-09 : "on verra toutes les carac des joueurs en
-  // cliquant sur la page du joueur"), qui a retiré cette colonne du tableau :
-  // sans cette ligne, l'information aurait purement disparu du jeu.
-  // Uniquement le NOM du palier (voir potentialTierLabel), le chiffre exact
-  // (1-99) reste caché ; le `title` révèle quand même le PALIER (1 à 10, voir
-  // potentialTierIndex), même principe qu'avant dans le tableau Effectif.
-  if (isOwnTeam) {
-    statChips.push(`<span class="player-stat-item"><b>Potentiel</b> <span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></span>`);
-  }
-  // Forme physique (voir CONDITION_STATES/conditionBadgeHtml plus haut) :
-  // jamais verrouillée par le scoutisme, contrairement aux caractéristiques
-  // ci-dessous : c'est un état de forme, pas un talent révélé progressivement.
-  statChips.push(`<span class="player-stat-item"><b>Forme physique</b> ${conditionBadgeHtml(player, Date.now(), team.conditionRecoveryPerDay())}</span>`);
-  // Motivation (voir Player.form/motivationBadgeHtml plus haut, retour
-  // utilisateur, 2026-09 : "La motivation du joueur n'apparaît pas ?") :
-  // contrairement à la forme physique juste au-dessus (observable de
-  // l'extérieur), la confiance d'un joueur alimentée par les interviews du
-  // coach est une information interne au club, jamais affichée pour un
-  // adversaire (ni même déverrouillable via le scoutisme, qui ne porte que
-  // sur les caractéristiques ci-dessous).
-  if (isOwnTeam) statChips.push(`<span class="player-stat-item"><b>Motivation</b> ${motivationBadgeHtml(player)}</span>`);
-  // Rôle (voir playerRoleLabel plus haut, retour utilisateur, 2026-09,
-  // nouvelle fiche joueur) : toujours visible, y compris pour un
-  // adversaire, même principe que la Forme physique ci-dessus (qui
-  // démarre/qui est sur le banc est une information de composition
-  // observable, pas un talent caché par le scoutisme).
+  const visibleAttrsSet = new Set(visibleAttrs);
+  const fullyVisible = visibleAttrs.length === ATTRS.length;
   const roleLabel = playerRoleLabel(team, player);
-  statChips.push(`<span class="player-stat-item"><b>Rôle</b> ${escapeHtml(roleLabel)}</span>`);
-  html += `<div class="player-stats-row">${statChips.join("")}</div>`;
-  // Blessure PERSISTANTE (voir injuryCrossHtml/isCurrentlyInjured plus haut) :
-  // visible pour n'importe quel joueur, même règle que la forme physique
-  // ci-dessus (un état observable de l'extérieur, pas un talent caché par le
-  // scoutisme) : utile pour juger un adversaire avant un match tout autant
-  // que pour son propre effectif.
+
+  let html = "";
+
+  // ---- Notices (blessure, demande de transfert, mise aux enchères) :
+  // conservées à l'identique (mêmes classes/ids/gestionnaires de clic déjà
+  // câblés plus bas dans ce fichier), juste placées AVANT la grille de
+  // cartes plutôt que dispersées dedans — ce sont des actions/états de
+  // gestion, pas des caractéristiques à présenter façon maquette. ----
   const detailCross = injuryCrossHtml(player);
   if (detailCross) html += `<p class="training-intro">${detailCross} Blessé : ${escapeHtml(player.injuryType || "Blessure")}, ${injuryDaysRemaining(player)} jour${injuryDaysRemaining(player) > 1 ? "s" : ""} restant${injuryDaysRemaining(player) > 1 ? "s" : ""}</p>`;
-  // Tactique de prédilection (voir bestTacticsForPlayer/TACTIC_ATTR_PROFILE
-  // plus haut, retour utilisateur, 2026-09 : "ça pourrait être pas mal si tu
-  // mettais sur quel tactique le joueur peut être bon") : exige la TOTALITÉ
-  // des caractéristiques offensives (TACTICAL_ATTRS) déjà visibles sur
-  // cette fiche (`visibleAttrs`, calculé tout en haut) : un calcul partiel
-  // sur un adversaire à peine scouté donnerait un classement trompeur,
-  // plutôt que de l'omettre proprement en attendant d'en savoir plus.
-  if (TACTICAL_ATTRS.every(a => visibleAttrs.includes(a))) {
-    const bestTactics = bestTacticsForPlayer(player);
-    html += `<p class="training-intro">Tactique de prédilection : ${bestTactics.map(t => escapeHtml(t.tactic)).join(", ")}</p>`;
-  }
-  // Citation de vestiaire (voir playerRoleQuote plus haut) : dérivée du
-  // Rôle ci-dessus, jamais une nouvelle jauge de moral (retour
-  // utilisateur explicite : "n'appelle pas ça moral mais motivation,
-  // garde le terme").
-  html += `<p class="player-quote">💬 « ${escapeHtml(playerRoleQuote(team, player, roleLabel))} »</p>`;
-  // Demande de transfert (voir Player.transferRequestActive/
-  // discussTransferRequest côté moteur, retour utilisateur 2026-09 : "un
-  // joueur très frustré [...] peut demander son transfert dans la presse
-  // [...] ouvrir la discussion avec lui pour le remotiver (ne marche pas à
-  // chaque fois) ou le vendre sont les deux possibilités") : réservée à SON
-  // PROPRE effectif, même raison que la Motivation juste au-dessus. "Vendre"
-  // pointe simplement vers la mise aux enchères déjà proposée plus bas sur
-  // cette même fiche, aucun bouton dédié nécessaire.
-  //
-  // Le conteneur de retour (#playerDetailTransferRequestFeedback) est rendu
-  // dès que isOwnTeam, PAS seulement si player.transferRequestActive, même
-  // convention que #playerDetailMarketFeedback plus bas (onMarket) : une
-  // discussion réussie éteint transferRequestActive juste avant que
-  // discussTransferRequestAction ne rappelle renderPlayerDetail, donc le
-  // bloc notice+bouton disparaît AVANT que le message "discussion réussie"
-  // ne soit posé, si son conteneur était logé DANS ce même bloc conditionné
-  // par transferRequestActive, il disparaîtrait avec lui et le message ne
-  // s'afficherait jamais, exactement le cas "succès silencieux" à éviter.
   if (isOwnTeam && player.transferRequestActive) {
     html += `<p class="training-intro transfer-request-notice">${escapeHtml(player.transferRequestQuote || `${player.name} demande son transfert.`)}</p>`;
     html += `<p class="training-intro"><button type="button" class="secondary" data-discuss-transfer-request="${player.id}">Discuter avec le joueur</button> ` +
@@ -15493,79 +15710,166 @@ function renderPlayerDetail(teamIdx, playerId) {
   if (isOwnTeam) html += `<div id="playerDetailTransferRequestFeedback"></div>`;
   if (onMarket) html += `<p class="sub">Ce joueur est actuellement aux enchères sur le marché des transferts, ses caractéristiques sont donc visibles.</p>`;
 
-  // Mettre aux enchères directement depuis la fiche joueur (retour
-  // utilisateur, 2026-09 : "ajoute les éléments pour pouvoir mettre aux
-  // enchères un joueur directement sur la page du joueur") : jusqu'ici seul
-  // l'onglet Effectif (colonne Marché, voir renderEffectifSection) permettait
-  // de lister un joueur ; même mécanique ici (league.listPlayerForSale, prix
-  // libre choisi par le manager, pas de valeur pré-remplie, même raison que
-  // dans l'Effectif : "il faut pouvoir mettre le prix qu'on veut"), réservée
-  // à SON PROPRE effectif comme la Motivation ci-dessus (impossible de
-  // mettre aux enchères le joueur d'un adversaire depuis sa fiche).
+  // ---- Grille de cartes ----
+  html += `<div class="pdp-grid">`;
+
+  // Colonne de gauche : Caractéristiques (note globale, infos, terrain) + Profils
+  html += `<div>`;
+  html += `<div class="pdp-card">`;
+  html += `<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">` +
+    playerAvatarHtml(player, team, 80) +
+    `<div><h3 style="margin:0 0 2px">${escapeHtml(player.name)}</h3><div class="sub">Caractéristiques</div></div>` +
+    `</div>`;
+  if (fullyVisible) {
+    const overall = Math.round(player.overall());
+    const stars = starRatingFromScore(overall);
+    html += `<div class="pdp-overall-row"><div class="pdp-overall-num ${pdpPillTier(overall)}">${overall}</div>` +
+      `<div class="stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</div></div>`;
+    html += `<div class="pdp-overall-caption">Note globale</div>`;
+  } else {
+    html += `<p class="pdp-locked-note">Pas encore assez scoutée pour une note globale.</p>`;
+  }
+  html += `<div class="pdp-meta-list">` +
+    `<div><span>Équipe</span><span>${escapeHtml(team.name)}</span></div>` +
+    `<div><span>Âge</span><span>${player.age} ans</span></div>` +
+    `<div><span>Taille</span><span>${player.height} cm</span></div>` +
+    `<div><span>Poste</span><span>${escapeHtml(player.position)}</span></div>`;
   if (isOwnTeam) {
+    html += `<div><span>Salaire</span><span>${formatMoney(player.salary)}/sem.</span></div>` +
+      `<div><span>Potentiel</span><span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></div>`;
+  }
+  html += `<div><span>Rôle</span><span>${escapeHtml(roleLabel)}</span></div>`;
+  html += `</div>`; // pdp-meta-list
+  html += pdpCourtHtml(player);
+  html += `</div>`; // pdp-card Caractéristiques
+
+  html += `<div class="pdp-card"><h3>Profils</h3>`;
+  if (TACTICAL_ATTRS.every(a => visibleAttrsSet.has(a))) {
+    bestTacticsForPlayer(player, 4).forEach(t => {
+      const stars = starRatingFromScore(t.score);
+      html += `<div class="pdp-profile-row"><span>${escapeHtml(t.tactic)}</span>` +
+        `<span class="stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</span></div>`;
+    });
+  } else {
+    html += `<p class="pdp-locked-note">Caractéristiques pas encore assez scoutées pour déterminer les profils de ce joueur.</p>`;
+  }
+  html += `</div>`; // pdp-card Profils
+  html += `</div>`; // colonne de gauche
+
+  // Colonne de droite : caractéristiques détaillées, statut, radar, derniers matchs
+  html += `<div>`;
+  html += `<div class="pdp-card"><h3>Caractéristiques détaillées</h3>`;
+  html += `<div class="pdp-attr-grid">`;
+  html += `<div class="pdp-attr-block"><h4>Fondamentaux</h4><div class="pdp-attr-subgrid">` +
+    `<div>${FUNDAMENTAL_ATTRS.slice(0, 7).map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a))).join("")}</div>` +
+    `<div>${FUNDAMENTAL_ATTRS.slice(7).map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a))).join("")}</div>` +
+    `</div></div>`;
+  html += `<div class="pdp-attr-block"><h4>Physique</h4><div>` +
+    PHYSICAL_ATTRS.map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a))).join("") + `</div></div>`;
+  html += `<div class="pdp-attr-block"><h4>Mental</h4><div>` +
+    MENTAL_ATTRS.map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a))).join("") + `</div></div>`;
+  html += `</div>`; // pdp-attr-grid
+  const scouting = scoutingReportText(player, visibleAttrs);
+  html += scouting
+    ? `<div class="pdp-scouting"><b>Rapport de scouting</b> : ${escapeHtml(scouting)}</div>`
+    : `<div class="pdp-scouting">Pas encore assez de caractéristiques révélées pour un rapport de scouting (faites une séance vidéo pour en débloquer).</div>`;
+  html += `</div>`; // pdp-card Caractéristiques détaillées
+
+  const log = player.matchLog || [];
+
+  html += `<div class="pdp-status-grid">`;
+  html += `<div class="pdp-card pdp-status-card"><h3>Condition</h3>` +
+    conditionBadgeHtml(player, Date.now(), team.conditionRecoveryPerDay());
+  if (isOwnTeam) html += `<div class="pdp-kv"><span>Motivation</span><span>${motivationBadgeHtml(player)}</span></div>`;
+  html += `<p class="player-quote">💬 « ${escapeHtml(playerRoleQuote(team, player, roleLabel))} »</p>`;
+  html += `</div>`;
+
+  html += `<div class="pdp-card pdp-status-card"><h3>Statistiques (saison)</h3>`;
+  if (log.length) {
+    const gp = log.length;
+    const avgPts = log.reduce((s, m) => s + (m.pts || 0), 0) / gp;
+    const avgReb = log.reduce((s, m) => s + (m.reb || 0), 0) / gp;
+    const avgAst = log.reduce((s, m) => s + (m.ast || 0), 0) / gp;
+    html += `<div class="pdp-kv"><span>Points</span><span>${avgPts.toFixed(1)} /match</span></div>` +
+      `<div class="pdp-kv"><span>Rebonds</span><span>${avgReb.toFixed(1)} /match</span></div>` +
+      `<div class="pdp-kv"><span>Passes</span><span>${avgAst.toFixed(1)} /match</span></div>`;
+  } else {
+    html += `<p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="pdp-card pdp-status-card"><h3>Records</h3>`;
+  if (log.length) {
+    const bestPts = Math.max(...log.map(m => m.pts || 0));
+    html += `<div class="pdp-kv"><span>Meilleur match</span><span>${bestPts} pts</span></div>` +
+      `<div class="pdp-kv"><span>Suivi depuis</span><span>cette saison</span></div>`;
+  } else {
+    html += `<p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
+  }
+  html += `</div>`;
+  html += `</div>`; // pdp-status-grid
+
+  html += `<div class="pdp-two-col">`;
+  html += `<div class="pdp-card"><h3>Profil (vue d'ensemble)</h3>`;
+  html += fullyVisible
+    ? radarChartSvg(playerRadarCategories(player))
+    : `<p class="pdp-locked-note">Profil complet pas encore scouté.</p>`;
+  html += `</div>`;
+
+  html += `<div class="pdp-card"><h3>Derniers matchs</h3>`;
+  if (log.length) {
+    const recent = [...log].sort((a, b) => b.round - a.round).slice(0, 5);
+    html += `<table class="pdp-games"><tr><th>J</th><th>Adversaire</th><th>Résultat</th><th>Pts</th><th>Reb</th><th>Pd</th><th>Éval</th></tr>`;
+    recent.forEach(m => {
+      const label = m.competition === "cup" ? cupStageLabelForRoundIndex(m.round) : `${m.round + 1}`;
+      const result = matchResultForLogEntry(teamIdx, m);
+      const resultCell = result
+        ? `<span class="pdp-res ${result.win ? "w" : "l"}">${result.win ? "V" : "D"}</span> ${result.myScore}-${result.oppScore}`
+        : "–";
+      html += `<tr><td>${escapeHtml(label)}</td><td class="strong">${escapeHtml(opponentNameForMatchLogEntry(teamIdx, m))}</td>` +
+        `<td>${resultCell}</td><td class="strong">${m.pts}</td><td>${m.reb}</td><td>${m.ast}</td><td class="strong">${statEvaluation(m)}</td></tr>`;
+    });
+    html += `</table>`;
+  } else {
+    html += `<p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
+  }
+  html += `</div>`;
+  html += `</div>`; // pdp-two-col
+
+  html += `</div>`; // colonne de droite
+  html += `</div>`; // pdp-grid
+
+  // ---- Mise en vente : reprend EXACTEMENT le mécanisme déjà en place
+  // (league.listPlayerForSale, prix libre, jamais pré-rempli), simplement
+  // encapsulée dans une carte .pdp-card tout en bas, réservée à isOwnTeam.
+  // Ajoute la valorisation par ventes comparables (comparableSalesValuation
+  // ci-dessus) quand le joueur n'est pas déjà en vente. ----
+  if (isOwnTeam) {
+    html += `<div class="pdp-card"><h3>Mise en vente</h3>`;
     if (onMarket) {
-      // Montant + temps restant directement ici (retour utilisateur : "je dois
-      // pouvoir voir l'enchère [...] sans changer d'onglet") : même formule
-      // que le badge "Enchère en cours" du bandeau déficit (voir
-      // deficitBannerHtml) pour "aucune enchère" vs. "montant actuel", et
-      // même timeLeftLabel que les cartes du Marché (renderMarketListings).
       const bidLine = openListing.currentBid
         ? `Enchère actuelle : <b>${formatMoney(openListing.currentBid)}</b>`
         : `Aucune enchère pour l'instant (prix de départ ${formatMoney(openListing.startPrice)})`;
       html += `<p class="training-intro"><span class="market-listed-badge">Aux enchères</span> ${bidLine} · ${escapeHtml(timeLeftLabel(openListing.closesAt, Date.now()))}. Suivez l'enchère dans l'onglet <b>Marché</b>.</p>`;
     } else {
+      const valuation = comparableSalesValuation(player);
+      if (valuation) {
+        html += `<p class="sub">Estimation basée sur ${valuation.sampleSize} vente${valuation.sampleSize > 1 ? "s" : ""} comparable${valuation.sampleSize > 1 ? "s" : ""} (même poste, note globale proche) ces 60 derniers jours : <b>${formatMoney(valuation.estimate)}</b></p>`;
+      } else {
+        html += `<p class="sub">Pas assez de ventes comparables (même poste, note globale proche) ces 60 derniers jours pour une estimation.</p>`;
+      }
       html += `<p class="training-intro"><input type="number" class="market-price-input" id="playerDetailListPrice" placeholder="Prix (€)" min="1" step="100"> ` +
         `<button type="button" class="secondary" data-list-player-detail="${player.id}">Mettre aux enchères</button></p>`;
     }
     html += `<div id="playerDetailMarketFeedback"></div>`;
+    html += `</div>`;
   }
 
-  // Caractéristiques : toujours visibles pour son propre effectif ou pour un
-  // joueur sur le marché (onMarket, voir ci-dessus), sinon verrouillées/
-  // révélées exactement comme le panneau de scoutisme (teamA.scoutedAttrs) :
-  // jamais un accès complet aux caractéristiques adverses juste parce qu'on
-  // est passé par la fiche joueur plutôt que le panneau de scoutisme.
-  // (`revealedSet`/`visibleAttrs` déjà calculés tout en haut de cette
-  // fonction, voir leur commentaire.)
-  // Grille à 2 colonnes (retour utilisateur, 2026-09, maquette "Adama
-  // Kovac") : remplace l'ancien tableau à une seule ligne, voir le grand
-  // commentaire CSS de .player-attr-grid, le groupement par paires
-  // (MI-D/3PTS, INT/PASSE, ...) tombe naturellement de l'ordre d'ATTRS
-  // (engine.js) avec grid-auto-flow ligne par ligne, aucun pairage
-  // manuel nécessaire. Nom complet (retour utilisateur, 2026-09 : "mets
-  // toutes les noms des carac en entier, on a de la place pour le faire") :
-  // TRAINING_LABELS (déjà utilisé pour Points forts/Points faibles juste en
-  // dessous) plutôt qu'ATTR_SHORT, qui ne sert plus qu'à l'onglet Effectif
-  // ("Caractéristiques", tableau plus dense) et au marché des transferts.
-  html += "<h3 class='field-label'>Caractéristiques</h3>";
-  html += "<div class='player-attr-grid'>" + ATTRS.map(a => {
-    const cell = (isOwnTeam || onMarket || revealedSet.has(a))
-      ? attrCellHtml(player.attrs[a])
-      : `<div class="attr-cell attr-locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique"></div>`;
-    return `<div class="player-attr-row"><span class="player-attr-name">${TRAINING_LABELS[a]}</span>${cell}</div>`;
-  }).join("") + "</div>";
-
-  // Points forts / points faibles (voir playerStrengthsAndWeaknesses plus
-  // haut) : uniquement à partir des caractéristiques déjà visibles
-  // ci-dessus, jamais un classement calculé sur du scoutisme non débloqué.
-  const { strengths, weaknesses } = playerStrengthsAndWeaknesses(player, visibleAttrs);
-  if (strengths.length) {
-    html += "<div class='player-sw-columns'>";
-    html += "<div class='player-sw-col'><h4>Points forts</h4><ul>" +
-      strengths.map(e => `<li>${escapeHtml(TRAINING_LABELS[e.attr] || ATTR_SHORT[e.attr])}</li>`).join("") + "</ul></div>";
-    if (weaknesses.length) {
-      html += "<div class='player-sw-col'><h4>Points faibles</h4><ul>" +
-        weaknesses.map(e => `<li>${escapeHtml(TRAINING_LABELS[e.attr] || ATTR_SHORT[e.attr])}</li>`).join("") + "</ul></div>";
-    }
-    html += "</div>";
-  } else {
-    html += "<p class='training-empty'>Pas encore assez de caractéristiques révélées pour dégager des points forts/faibles (faites une séance vidéo pour en débloquer).</p>";
-  }
-
-  // Moyennes + match par match de la saison en cours (championnat ET coupe
-  // confondus dans les moyennes — le détail match par match, lui, distingue
-  // les deux compétitions sur chaque ligne).
-  const log = player.matchLog || [];
+  // ---- Historique complet (moyennes détaillées au tir + match par match
+  // complet) : conservé sous la grille de cartes, la maquette n'affichant
+  // qu'un aperçu des 5 derniers matchs, jamais un remplacement. Réutilise
+  // `log` (déjà déclaré plus haut pour la carte "Derniers matchs"), pas
+  // besoin d'une deuxième lecture de player.matchLog. ----
   if (!log.length) {
     html += "<p class='training-empty'>Aucun match joué cette saison pour l'instant.</p>";
   } else {
@@ -19660,6 +19964,11 @@ function rosterSortValue(p, key) {
     // une ancienne colonne d'une session précédente) même si elles n'ont
     // plus de bouton d'en-tête dans ROSTER_SORT_COLUMNS ci-dessus.
     case "potential": return p.potential;
+    // Colonnes moyennées "Physique"/"Mental" du sous-onglet Caractéristiques
+    // (voir categoryAverageCellHtml, même calcul — arrondi comme la valeur
+    // affichée à l'écran, pour trier exactement sur ce que le joueur voit).
+    case "physicalAvg": return Math.round(PHYSICAL_ATTRS.reduce((s, a) => s + p.attrs[a], 0) / PHYSICAL_ATTRS.length);
+    case "mentalAvg": return Math.round(MENTAL_ATTRS.reduce((s, a) => s + p.attrs[a], 0) / MENTAL_ATTRS.length);
     default: return p.attrs[key];
   }
 }
@@ -19722,11 +20031,21 @@ function renderEffectifSection() {
     // une par une. Propre effectif uniquement ici (sorted vient de
     // teamA.players plus haut) : jamais de verrou de scoutisme à gérer,
     // contrairement à teamDetailEffectifHtml plus bas.
+    // Tri (retour utilisateur, 2026-09 : "les colonnes ne peuvent de nouveau
+    // plus être triées") : réutilise EXACTEMENT le même mécanisme que le
+    // sous-onglet "Général" (rosterHeaderCellHtml/rosterSortState/
+    // rosterSortValue, écouteur délégué déjà câblé plus bas sur
+    // #rosterContent pour [data-sort], quel que soit le sous-onglet affiché)
+    // plutôt qu'un système de tri séparé — `sorted` (plus haut dans cette
+    // fonction) en tient déjà compte, il ne manquait que des en-têtes
+    // cliquables ici.
     let attrsHtml = effectifSubNavHtml();
     attrsHtml += "<div class='table-scroll roster-table-frozen'><table class='roster-table'><thead><tr>" +
-      "<th>Nom</th><th>Poste</th><th>Taille</th><th>Salaire/sem.</th>" +
-      FUNDAMENTAL_ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") +
-      "<th>Physique</th><th>Mental</th></tr></thead><tbody>";
+      rosterHeaderCellHtml("name", "Nom") + rosterHeaderCellHtml("position", "Poste") +
+      rosterHeaderCellHtml("height", "Taille") + rosterHeaderCellHtml("salary", "Salaire/sem.") +
+      FUNDAMENTAL_ATTRS.map(a => rosterHeaderCellHtml(a, ATTR_SHORT[a])).join("") +
+      rosterHeaderCellHtml("physicalAvg", "Physique") + rosterHeaderCellHtml("mentalAvg", "Mental") +
+      "</tr></thead><tbody>";
     sorted.forEach(p => {
       attrsHtml += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, teamA, 24)}${playerLinkHtml(myTeamIndex, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
       FUNDAMENTAL_ATTRS.forEach(a => { attrsHtml += `<td>${attrCellHtml(p.attrs[a])}</td>`; });
