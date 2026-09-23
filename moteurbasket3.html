@@ -1662,10 +1662,25 @@
   .stats-leader-card{background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
   .stats-leader-card ol{margin:0; padding-left:18px; font-size:12.5px; color:var(--ink); line-height:1.9;}
   .stats-leader-card li span.sub{color:var(--ink-faint); font-size:11px;}
-  .stats-leader-card li.stats-leader-first{list-style:none; margin:-2px -2px 8px -18px; padding:0 0 10px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line);}
-  .stats-leader-first-body{flex:1 1 auto; min-width:0; font-size:13.5px;}
+  /* margin-right:0 (pas de bleed comme à gauche) : retour utilisateur
+     (2026-09-23) : "aligne toutes les stats cotés droits" — sinon le bord
+     droit de la valeur du n°1 (.stats-leader-first-value) se retrouvait
+     décalé de quelques px par rapport à la colonne des rangs 2-5/2-20
+     ci-dessous (.stats-leader-val), qui eux n'ont pas ce bleed. */
+  .stats-leader-card li.stats-leader-first{list-style:none; margin:-2px 0 8px -18px; padding:0 0 10px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line);}
+  .stats-leader-first-body{flex:1 1 auto; min-width:0; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .stats-leader-first-body .player-link{font-weight:700;}
   .stats-leader-first-value{flex:none; font-size:19px; font-weight:800; color:var(--amber);}
+  /* Retour utilisateur (2026-09-23) : "mets peut être (Cerberus Basket...)"
+     — les rangs 2-5/2-20 passent par un conteneur flex interne à chaque
+     <li> (le <li> lui-même reste display:list-item par défaut, pour
+     garder son numéro automatique, voir <ol start="2"> ci-dessus) : le nom
+     du joueur + nom d'équipe tronque avec "..." plutôt que de retourner à
+     la ligne, la valeur (.stats-leader-val) reste toujours entièrement
+     visible, alignée à droite, sur la même ligne. */
+  .stats-leader-row{display:flex; align-items:baseline; gap:6px; width:100%;}
+  .stats-leader-name{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .stats-leader-val{flex:none;}
   .stats-leader-expand-btn{display:block; width:100%; margin-top:10px; background:none; border:none; border-top:1px dashed var(--line); padding-top:8px; color:var(--amber); font-size:11.5px; cursor:pointer; text-align:center;}
   .stats-leader-expand-btn:hover{text-decoration:underline;}
 
@@ -15789,7 +15804,7 @@ function renderLeagueStatsPanel() {
     html += `<div class="mvp-callout" style="display:flex;align-items:flex-start;gap:10px"><div>` +
       playerAvatarHtml(mvp.player, mvp.team, 40) +
       `</div><div><h4>MVP de la journée ${e.round + 1}</h4>` +
-      `<p><b>${playerLinkHtml(mvp.teamIdx, mvp.player.id, mvp.player.name)}</b> (${escapeHtml(mvp.team.name)}) : ${bits.join(", ")}</p>` +
+      `<p><b>${playerLinkHtml(mvp.teamIdx, mvp.player.id, mvp.player.name)}</b> (${teamLinkHtml(mvp.teamIdx, mvp.team.name)}) : ${bits.join(", ")}</p>` +
       (e.mvpQuote ? `<p class="sub">« ${escapeHtml(e.mvpQuote)} »</p>` : "") +
       `</div></div>`;
   } else {
@@ -15830,10 +15845,19 @@ function renderLeagueStatsPanel() {
           // classement" au sens accessibilité/tests, juste mis en valeur.
           html += `<li class="stats-leader-first">` +
             playerAvatarHtml(r.player, league.teams[r.teamIdx], 40) +
-            `<span class="stats-leader-first-body">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)} <span class="sub">(${escapeHtml(r.teamName)})</span></span>` +
+            `<span class="stats-leader-first-body" title="${escapeHtml(r.player.name)} (${escapeHtml(r.teamName)})">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)} <span class="sub">(${teamLinkHtml(r.teamIdx, r.teamName)})</span></span>` +
             `<span class="stats-leader-first-value">${valueText}</span></li>`;
         } else {
-          html += `<li>${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)} <span class="sub">(${escapeHtml(r.teamName)})</span> · ${valueText}</li>`;
+          // Retour utilisateur (2026-09-23) : "mets peut être (Cerberus
+          // Basket...)" — nom d'équipe cliquable (teamLinkHtml, même
+          // écouteur délégué global que la fiche équipe) ET tronqué avec
+          // "..." plutôt que de retourner à la ligne (voir .stats-leader-
+          // row/.stats-leader-name ci-dessus) : la valeur reste toujours
+          // visible entière sur la même ligne, quelle que soit la longueur
+          // du nom d'équipe. title= porte le texte complet pour le survol.
+          html += `<li><span class="stats-leader-row">` +
+            `<span class="stats-leader-name" title="${escapeHtml(r.player.name)} (${escapeHtml(r.teamName)})">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)} <span class="sub">(${teamLinkHtml(r.teamIdx, r.teamName)})</span></span>` +
+            `<span class="stats-leader-val">· ${valueText}</span></span></li>`;
         }
       });
       html += `</ol>`;

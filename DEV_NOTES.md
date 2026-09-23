@@ -91,10 +91,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
    le n°1 étant en `display:flex` donc hors du compteur automatique) ;
    bouton "Afficher tout"/"Réduire" par catégorie
    (`leagueStatsExpandedCats`, état indépendant par carte) qui bascule
-   entre top 5 et top 20. **Testé** (Playwright desktop + mobile 390px,
-   `league_stats_test.js` étendu avec la vérification avatar + dépliage/
-   repliage + indépendance entre catégories, suite de 94 tests verte) —
-   **PRÊT À COMMITTER**, pas encore poussé.
+   entre top 5 et top 20. Puis retours utilisateur complémentaires :
+   "fais en sorte que les noms d'équipe soient aussi cliquable" (les noms
+   d'équipe du MVP ET des classements passent par `teamLinkHtml`, même
+   écouteur délégué global que le reste de l'appli) ; "mets peut être
+   (Cerberus Basket...)" et "aligne toutes les stats cotés droits" (nom
+   joueur+équipe sur une ligne flex qui tronque avec "…" au lieu de
+   retourner à la ligne quand le nom d'équipe est long — `title=` porte le
+   texte complet au survol — pendant que la valeur reste sur une colonne
+   alignée à droite, pixel-identique entre le n°1 et les rangs 2-20,
+   vérifié via les `getBoundingClientRect()` Playwright). **Testé**
+   (Playwright desktop + mobile 390px + vérif alignement pixel,
+   `league_stats_test.js` étendu avec avatar + dépliage/repliage +
+   indépendance entre catégories + clic sur nom d'équipe → fiche équipe,
+   suite de 94 tests verte) — **PRÊT À COMMITTER**, pas encore poussé.
 
 5. **Box score en direct : ligne total + tous les joueurs + minutes
    jouées** — retour utilisateur : actuellement `liveBoxScore` ne crée une

@@ -160,6 +160,35 @@ cards.forEach(card => {
 });
 console.log("✅ Le n°1 de chaque carte affiche bien son avatar (mise en avant façon EuroLeague).");
 
+// Retour utilisateur (2026-09-23) : "fais en sorte que les noms d'équipe
+// soient aussi cliquable" — chaque nom d'équipe (n°1 ET rangs 2-5) doit
+// être un vrai lien équipe (teamLinkHtml/data-team-idx), pas juste du
+// texte, et amener sur la fiche équipe correspondante en cliquant dessus.
+cards.forEach(card => {
+  const teamLinks = [...card.querySelectorAll("li .team-link")];
+  if (teamLinks.length !== 5) {
+    throw new Error(`❌ Chaque carte devrait afficher 5 noms d'équipe cliquables (.team-link), obtenu ${teamLinks.length} pour "${card.querySelector("h4").textContent}".`);
+  }
+});
+console.log("✅ Chaque nom d'équipe des classements (n°1 et rangs 2-5) est bien un lien cliquable.");
+
+const someTeamLink = pointsCardTeamLinkProbe();
+function pointsCardTeamLinkProbe() {
+  const card = cards.find(c => c.querySelector("h4").textContent.startsWith("Points"));
+  return card.querySelector("li .team-link");
+}
+const clickedTeamIdx = Number(someTeamLink.dataset.teamIdx);
+someTeamLink.click();
+const teamDetailVisible = !doc2.getElementById("teamDetailSection").classList.contains("hidden");
+const shownTeamIdx = win2.eval("teamDetailIdx");
+console.log(`Clic sur un nom d'équipe (idx ${clickedTeamIdx}) -> fiche équipe affichée pour l'idx ${shownTeamIdx} (visible : ${teamDetailVisible})`);
+if (!teamDetailVisible || shownTeamIdx !== clickedTeamIdx) {
+  throw new Error(`❌ Cliquer sur un nom d'équipe dans un classement de stats devrait ouvrir sa fiche équipe (idx ${clickedTeamIdx}), obtenu : visible=${teamDetailVisible}, idx affiché=${shownTeamIdx}.`);
+}
+console.log("✅ Cliquer sur un nom d'équipe dans un classement de stats ouvre bien sa fiche équipe.");
+hideTeamDetailIfOpen();
+function hideTeamDetailIfOpen() { win2.eval("hideTeamDetail();"); }
+
 const totalPlayers = win2.eval("league.teams.reduce((s, t) => s + t.players.length, 0)");
 console.log(`Nombre total de joueurs dans la ligue (pour vérifier top 5 -> top 20) : ${totalPlayers}`);
 
