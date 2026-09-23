@@ -81,14 +81,30 @@ const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivo
 //   plus du Mental déjà en place (effet indépendant, pas un remplacement),
 //   le boost clutch et le malus de tilt du tireur ; le Sang-froid influence
 //   aussi le risque de faute technique/exclusion pour indiscipline (voir
-//   MatchEngine.maybeEjectForComposure).
+//   MatchEngine.maybeEjectForComposure) - l'exclusion elle-même dépend
+//   depuis 2026-09 à la fois des fautes techniques (Sang-froid) ET des
+//   fautes antisportives (Discipline, voir juste en dessous et
+//   MatchEngine.shouldEjectForFouls) : 2 techniques, 2 antisportives, ou 1
+//   de chaque.
 // - "discipline" (Discipline) : un défenseur peu discipliné commet
 //   davantage de fautes en défendant un tir (voir disciplineFoulMod dans
-//   foulDrawBase).
+//   foulDrawBase). Alimente aussi, depuis 2026-09 (voir plus bas, retour
+//   utilisateur : "les fautes antisportives [...]"), le risque de faute
+//   antisportive/exclusion pour contact excessif (voir MatchEngine.
+//   maybeCommitUnsportsmanlikeFoul), pendant du Sang-froid/faute technique
+//   ci-dessus.
+// Retrait de "mental" comme caractéristique indépendante (retour
+// utilisateur, 2026-09 : "la caractéristique mental [...] n'a plus lieu
+// d'exister [...] le mental c'est désormais la moyenne de toutes ces
+// lignes" — c-à-d la moyenne des 8 autres traits de MENTAL_ATTRS, voir
+// mentalAverage() plus bas). "mental" n'est donc plus stocké/entraîné
+// individuellement ; partout où le moteur avait besoin d'une valeur
+// "mental" (bonus clutch, malus de tilt, discussion de demande de
+// transfert), on calcule désormais mentalAverage(joueur) à la volée.
 const ATTRS = [
   "midRange", "threePoint", "inside", "pass", "rebound",
   "block", "dribble", "agility", "defOutside", "defInside",
-  "mental", "endurance", "freeThrow",
+  "endurance", "freeThrow",
   "penetration", "shotCreation", "steal", "power", "focus", "anticipation", "leadership",
   "speed", "acceleration", "strength", "vertical", "decision", "composure", "determination", "discipline", "vision",
 ];
@@ -104,7 +120,6 @@ const TRAINING_LABELS = {
   agility: "Agilité",
   defOutside: "Défense extérieure",
   defInside: "Défense intérieure",
-  mental: "Mental",
   endurance: "Endurance",
   freeThrow: "Lancer franc",
   penetration: "Pénétration",
@@ -152,16 +167,28 @@ const TRAINING_LABELS = {
 // cette semaine-là (le lien existe déjà, voir TRAINING_SYNERGY plus haut :
 // entraîner "Jeu intérieur" fait par exemple un peu progresser "Force").
 //
-// MENTAL (9, expérience/caractère — "mental" lui-même rejoint ici les 8
-// autres traits du bac à sable, qui lui ne le connaissait plus) : ne
-// progresse plus non plus par l'entraînement individuel direct, seulement
-// une progression naturelle chaque semaine, plus rapide en début de carrière
-// et de plus en plus lente ensuite, mais qui NE DÉCLINE JAMAIS, sur toute la
-// carrière (voir mentalGrowthFactorForAge et Player.mentalPotential), avec
-// le même petit supplément de synergie que le Physique ci-dessus.
+// MENTAL (8, expérience/caractère) : ne progresse plus non plus par
+// l'entraînement individuel direct, seulement une progression naturelle
+// chaque semaine, plus rapide en début de carrière et de plus en plus lente
+// ensuite, mais qui NE DÉCLINE JAMAIS, sur toute la carrière (voir
+// mentalGrowthFactorForAge et Player.mentalPotential), avec le même petit
+// supplément de synergie que le Physique ci-dessus. "mental" n'est PLUS un
+// membre indépendant de ce groupe (retour utilisateur, 2026-09, voir la
+// note au-dessus d'ATTRS) : partout où le moteur a besoin d'une valeur
+// "mental", on utilise mentalAverage(joueur), la moyenne de ces 8 traits.
 const PHYSICAL_ATTRS = ["speed", "acceleration", "agility", "strength", "vertical", "endurance", "power"];
-const MENTAL_ATTRS = ["mental", "decision", "focus", "composure", "anticipation", "determination", "leadership", "discipline", "vision"];
+const MENTAL_ATTRS = ["decision", "focus", "composure", "anticipation", "determination", "leadership", "discipline", "vision"];
 const FUNDAMENTAL_ATTRS = ATTRS.filter(a => !PHYSICAL_ATTRS.includes(a) && !MENTAL_ATTRS.includes(a));
+
+// mentalAverage(p) : valeur "mental" calculée à la volée comme la moyenne
+// des 8 traits de MENTAL_ATTRS (retour utilisateur, 2026-09 : "le mental
+// c'est désormais la moyenne de toutes ces lignes") — remplace toute
+// lecture directe de l'ancien attrs.mental indépendant, aux 3 endroits du
+// moteur qui en avaient besoin (demande de transfert, boost clutch, malus
+// de tilt).
+function mentalAverage(p) {
+  return MENTAL_ATTRS.reduce((sum, a) => sum + p.attrs[a], 0) / MENTAL_ATTRS.length;
+}
 
 const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
@@ -517,26 +544,54 @@ const PHRASES = {
   // Faute technique pour indiscipline (voir MatchEngine.maybeEjectForComposure,
   // retour utilisateur 2026-09 : "un joueur avec peu de sang-froid peut
   // aussi être exclu plus souvent parce qu'il s'énerve sur les adversaires
-  // ou les arbitres") : première faute technique du joueur dans le match,
-  // sanctionnée d'un lancer franc adverse mais PAS d'exclusion (retour
-  // utilisateur 2026-09 : "il faut 2 fautes techniques pour qu'un joueur
-  // soit exclu"), comme la vraie règle du basket. Voir technicalEjection
-  // juste en dessous pour la deuxième.
+  // ou les arbitres") : sanctionnée d'un lancer franc adverse. Ne mène à
+  // l'exclusion QUE si elle fait franchir le seuil de MatchEngine.
+  // shouldEjectForFouls (voir son commentaire, plus bas : 2 techniques, OU 1
+  // technique + 1 antisportive) — sinon, ce message générique s'affiche,
+  // qu'il s'agisse de la 1ère faute technique du joueur ou, plus rare, d'une
+  // 2e qui ne suffit pas encore (ex : avait déjà 1 antisportive effacée...
+  // non, les compteurs ne s'effacent jamais en cours de match, ce cas
+  // n'existe donc pas en pratique, mais le message reste volontairement
+  // neutre plutôt que de compter explicitement "1ère"/"2e").
   technicalFoul: [
     "{player} ({team}) proteste auprès de l'arbitre et écope d'une faute technique.",
     "Faute technique sifflée contre {player} ({team}) : il s'énerve contre l'arbitrage.",
     "{player} ({team}) perd patience : faute technique.",
   ],
-  // Exclusion pour indiscipline : deuxième faute technique du même joueur
-  // dans le match (voir MatchEngine.maybeEjectForComposure et le compteur
-  // Player.technicalFouls) - distincte de foulOut ci-dessus (5 fautes
-  // personnelles atteintes), celle-ci frappe un joueur qui a perdu son
-  // sang-froid à deux reprises, quel que soit son total de fautes
-  // personnelles.
+  // Faute antisportive (retour utilisateur, 2026-09 : "les fautes
+  // antisportives [...] comme pour les fautes techniques 2 antisportives
+  // c'est exclusion. 1 antisportive et une technique c'est exclusion aussi")
+  // : contact jugé excessif/inutile en défense plutôt qu'une dissipation
+  // hors ballon (voir Discipline dans le grand commentaire au-dessus
+  // d'ATTRS, et MatchEngine.maybeCommitUnsportsmanlikeFoul) — sanctionnée de
+  // 2 lancers francs adverses (plus sévère que la faute technique, comme la
+  // vraie règle du basket). Même principe que technicalFoul ci-dessus pour
+  // le message générique : ne mène à l'exclusion que si elle fait franchir
+  // le seuil de shouldEjectForFouls.
+  unsportsmanlikeFoul: [
+    "Faute antisportive sifflée contre {player} ({team}) : contact jugé beaucoup trop dur.",
+    "{player} ({team}) écope d'une faute antisportive.",
+    "Intervention beaucoup trop appuyée de {player} ({team}) : faute antisportive.",
+  ],
+  // Exclusion pour cumul de fautes disciplinaires (voir MatchEngine.
+  // shouldEjectForFouls) : 2 fautes techniques, 2 fautes antisportives, OU 1
+  // de chaque (retour utilisateur, 2026-09, voir unsportsmanlikeFoul
+  // ci-dessus) - jamais spécifiquement "la 2e technique" (le mélange des
+  // deux compteurs rendrait ce chiffre faux dans le cas 1+1), d'où une
+  // formulation volontairement générique. Distincte de foulOut plus haut (5
+  // fautes personnelles) : celle-ci frappe un joueur qui a perdu son
+  // sang-froid et/ou joué trop dur à deux reprises, quel que soit son total
+  // de fautes personnelles. Affichée juste après le message technicalFoul/
+  // unsportsmanlikeFoul de la faute qui déclenche l'exclusion (voir
+  // MatchEngine.maybeEjectForComposure/maybeCommitUnsportsmanlikeFoul), pas
+  // à sa place.
   technicalEjection: [
-    "Deuxième faute technique pour {player} ({team}) : exclusion !",
-    "{player} ({team}) écope d'une deuxième faute technique et est exclu du match.",
-    "Coup de sang de trop pour {player} ({team}) : deuxième faute technique, direction les vestiaires.",
+    "Nouvelle faute technique pour {player} ({team}) : cumul de fautes disciplinaires, exclusion !",
+    "{player} ({team}) est exclu du match après une nouvelle faute technique (cumul de fautes disciplinaires).",
+  ],
+  unsportsmanlikeEjection: [
+    "Nouvelle faute antisportive pour {player} ({team}) : cumul de fautes disciplinaires, exclusion !",
+    "{player} ({team}) est exclu du match après une nouvelle faute antisportive (cumul de fautes disciplinaires).",
   ],
   substitution: [
     "{replacement} remplace {player} ({team}).",
@@ -2625,6 +2680,17 @@ class Player {
     // chaque match dans resetForMatch ci-dessous, initialisé ici comme
     // fouls/disqualified juste au-dessus.
     this.technicalFouls = 0;
+    // Compteur de fautes antisportives (retour utilisateur, 2026-09 : "les
+    // fautes antisportives [...] Comme pour les fautes techniques 2
+    // antisportives c'est exclusion. 1 antisportive et une technique c'est
+    // exclusion aussi") : contact jugé excessif en défense plutôt qu'une
+    // dissipation hors ballon (voir Discipline dans le grand commentaire
+    // au-dessus d'ATTRS et MatchEngine.maybeCommitUnsportsmanlikeFoul) —
+    // combiné à technicalFouls ci-dessus par MatchEngine.shouldEjectForFouls
+    // pour décider de l'exclusion (2 antisportives, OU 1 antisportive + 1
+    // technique). Même traitement que technicalFouls : remis à zéro à chaque
+    // match dans resetForMatch, jamais persisté (stat de match uniquement).
+    this.unsportsmanlikeFouls = 0;
     this.injured = false;
     this.onCourt = false;
     // Blessure PERSISTANTE encore en cours à l'entrée de CE match (voir
@@ -2636,7 +2702,8 @@ class Player {
     // Série de ratés/pertes de balle d'affilée EN MATCH (voir "mental" au-dessus
     // d'ATTRS) : incrémentée sur un tir manqué ou une perte de balle, remise à
     // 0 sur un tir réussi (voir playPossession) - alimente le malus de "tilt"
-    // qui s'aggrave ou s'atténue selon Player.attrs.mental.
+    // qui s'aggrave ou s'atténue selon mentalAverage(joueur) (voir plus haut,
+    // au-dessus de PHYSICAL_ATTRS).
     this.consecutiveMisses = 0;
     // Poste occupé DANS CE MATCH (peut différer de this.position si le
     // joueur est aligné comme remplaçant sur un autre poste que le sien —
@@ -2924,6 +2991,7 @@ class Player {
     this.fouls = 0;
     this.disqualified = false;
     this.technicalFouls = 0;
+    this.unsportsmanlikeFouls = 0;
     this.injured = false;
     this.onCourt = false;
     // Blessure PERSISTANTE (voir son commentaire au constructeur, et
@@ -4822,7 +4890,10 @@ class Team {
     const p = this.players.find(pl => pl.id === playerId);
     if (!p) return { ok: false, reason: "not-found" };
     if (!p.transferRequestActive) return { ok: false, reason: "not-requesting" };
-    const chance = TRANSFER_REQUEST_DISCUSS_BASE_CHANCE + (p.attrs.mental / 100) * TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS;
+    // "mental" n'est plus stocké individuellement (retour utilisateur,
+    // 2026-09, voir mentalAverage() au-dessus de PHYSICAL_ATTRS) : on
+    // utilise ici la moyenne des 8 traits de MENTAL_ATTRS.
+    const chance = TRANSFER_REQUEST_DISCUSS_BASE_CHANCE + (mentalAverage(p) / 100) * TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS;
     const success = Math.random() < chance;
     const formBefore = p.form;
     if (success) {
@@ -5547,19 +5618,21 @@ function heightForPosition(position) {
 // levelCoefficientFor plus bas) : les deux doivent s'accorder sur ce qui
 // définit chaque poste, sinon la génération et la grille salariale
 // raconteraient chacune une histoire différente du même joueur.
-// "mental"/"endurance"/"freeThrow" (voir leur commentaire au-dessus de
-// ATTRS) N'APPARAISSENT PAS ci-dessous, à dessein : ce sont des qualités
+// "endurance"/"freeThrow" (voir leur commentaire au-dessus de ATTRS)
+// N'APPARAISSENT PAS ci-dessous, à dessein : ce sont des qualités
 // générales, pas propres à un poste (un Pivot encaisse aussi bien une
 // mauvaise série qu'un Meneur), donc elles retombent sur "base" pour
 // TOUS les postes via le filet `profile[a] || "base"` déjà en place plus
 // bas (generateAttrsForPosition/weightedRatingForPosition) plutôt que de
-// dupliquer "base" dans chacune des 5 entrées ci-dessous.
+// dupliquer "base" dans chacune des 5 entrées ci-dessous. "mental" n'est
+// plus concerné : ce n'est plus une caractéristique stockée du tout (voir
+// mentalAverage() au-dessus de PHYSICAL_ATTRS), donc rien à profiler ici.
 // 9 dernières caractéristiques (retour utilisateur, 2026-09, "il en manque
 // une partie") : seules Vitesse/Accélération/Force/Détente reçoivent une
 // entrée ci-dessous, sur le même principe que Pénétration/Création de
 // tir/Interceptions/Puissance plus haut (spécialisation par poste).
 // Décision/Sang-froid/Détermination/Discipline/Vision n'ont volontairement
-// aucune entrée ici, exactement comme Mental/Endurance/Lancer franc/
+// aucune entrée ici, exactement comme Endurance/Lancer franc/
 // Concentration/Anticipation/Leadership : des qualités générales, sans
 // poste de prédilection (elles retombent sur "base" partout via le
 // `profile[a] || "base"` de generateAttrsForPosition/weightedRatingForPosition).
@@ -8657,8 +8730,18 @@ function playerFromSave(pdata) {
   // retrouvent avec exactement la même valeur), plutôt qu'une constante fixe,
   // pour éviter un saut brutal d'overall/salaire au premier chargement après
   // mise à jour.
+  // "mental" retiré de cette liste (retour utilisateur, 2026-09, voir le
+  // grand commentaire au-dessus d'ATTRS) : ce n'est plus une caractéristique
+  // stockée, donc plus rien à migrer/backfiller pour elle ici. Une éventuelle
+  // ancienne sauvegarde qui a encore un attrs.mental orphelin (via le spread
+  // { ...pdata.attrs } ci-dessus) le garde tel quel sans dommage : ce champ
+  // n'est plus jamais lu ni écrit ailleurs dans le moteur (voir
+  // mentalAverage()). Les noms attrs13Keys/attrs20Keys ci-dessous restent
+  // ceux d'origine (comptaient bien 13/20 clés avant ce retrait) mais n'en
+  // comptent plus que 12/19 désormais — comptes purement historiques, sans
+  // impact fonctionnel puisqu'ils ne servent qu'à calculer une moyenne.
   const legacyAttrKeys = ["midRange", "threePoint", "inside", "pass", "rebound", "block", "dribble", "agility", "defOutside", "defInside"];
-  const missingNewAttrs = ["mental", "endurance", "freeThrow"].filter(k => typeof p.attrs[k] !== "number");
+  const missingNewAttrs = ["endurance", "freeThrow"].filter(k => typeof p.attrs[k] !== "number");
   if (missingNewAttrs.length) {
     const legacyAvg = legacyAttrKeys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / legacyAttrKeys.length;
     missingNewAttrs.forEach(k => {
@@ -8668,10 +8751,10 @@ function playerFromSave(pdata) {
   // Même migration pour les 7 caractéristiques ajoutées ensuite (Pénétration/
   // Création de tir/Interceptions/Puissance/Concentration/Anticipation/
   // Leadership, voir le grand commentaire au-dessus d'ATTRS) : dérivées de la
-  // moyenne des 13 caractéristiques précédentes (déjà garanties présentes à
+  // moyenne des caractéristiques précédentes (déjà garanties présentes à
   // ce stade par la migration ci-dessus), même principe (bruit léger, pas de
   // constante fixe).
-  const attrs13Keys = [...legacyAttrKeys, "mental", "endurance", "freeThrow"];
+  const attrs13Keys = [...legacyAttrKeys, "endurance", "freeThrow"];
   const missingAttrs20 = ["penetration", "shotCreation", "steal", "power", "focus", "anticipation", "leadership"].filter(k => typeof p.attrs[k] !== "number");
   if (missingAttrs20.length) {
     const avg13 = attrs13Keys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / attrs13Keys.length;
@@ -9417,45 +9500,88 @@ class MatchEngine {
     }
     if (made > 0) {
       this.applyPlusMinusForPoints(team, made);
-      this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), possession: this.teamKey(team) });
+      this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, made, attempts: n, possession: this.teamKey(team) });
     }
     return made;
   }
 
-  // Exclusion pour indiscipline (retour utilisateur, 2026-09 : "un joueur
-  // avec peu de sang-froid peut aussi être exclu plus souvent parce qu'il
-  // s'énerve sur les adversaires ou les arbitres") : INDÉPENDANTE du seuil
-  // des 5 fautes personnelles (foulOut, voir substituteIfNeeded) - un
-  // défenseur qui vient de commettre une faute personnelle peut en plus
-  // écoper d'une faute technique pour dissipation si son sang-froid est bas,
-  // même loin de sa 5e faute. Appelée UNIQUEMENT depuis les fautes
-  // personnelles "en jeu" (tir manqué/and-one), jamais depuis la faute
-  // intentionnelle de fin de match (calculée, pas une perte de sang-froid).
-  // Chance faible même au pire sang-froid (plafond 5%), pour rester un
-  // évènement rare et marquant, pas un tirage fréquent qui viderait les
-  // bancs. Il faut DEUX fautes techniques du même joueur dans le match pour
-  // l'exclure (retour utilisateur 2026-09 : "il faut 2 fautes techniques
-  // pour qu'un joueur soit exclu (ou technique et antisportive)"), comme la
-  // vraie règle du basket - voir Player.technicalFouls, remis à zéro à
-  // chaque match (voir resetForMatch). Chaque faute technique, la première
-  // comme la deuxième, accorde 1 lancer franc à l'équipe adverse (règle
-  // réelle simplifiée à 1 LF, tiré par `ftShooter`). À la deuxième
-  // seulement, `disqualified` est posé (même champ que l'exclusion à 5
-  // fautes) : substituteIfNeeded s'occupe ensuite de sortir ce joueur au
-  // prochain passage, EXACTEMENT comme pour foulOut - aucune nouvelle
-  // mécanique de sortie de terrain à écrire.
+  // Seuil d'exclusion disciplinaire (retour utilisateur, 2026-09 : "les
+  // fautes antisportives [...] comme pour les fautes techniques 2
+  // antisportives c'est exclusion. 1 antisportive et une technique c'est
+  // exclusion aussi") : PARTAGÉ par maybeEjectForComposure (faute technique,
+  // ci-dessous) et maybeCommitUnsportsmanlikeFoul (faute antisportive, plus
+  // bas) — un joueur est exclu dès que le total de ses fautes techniques ET
+  // antisportives, combinées de n'importe quelle façon, atteint 2 : 2
+  // techniques, 2 antisportives, ou 1 de chaque. Jamais 1 seule d'un type ou
+  // de l'autre. INDÉPENDANT du seuil des 5 fautes personnelles (foulOut, voir
+  // substituteIfNeeded) - un joueur loin de sa 5e faute personnelle peut très
+  // bien être exclu par ce mécanisme, et inversement.
+  shouldEjectForFouls(p) {
+    const technical = p.technicalFouls || 0;
+    const unsportsmanlike = p.unsportsmanlikeFouls || 0;
+    return technical >= 2 || unsportsmanlike >= 2 || (technical >= 1 && unsportsmanlike >= 1);
+  }
+
+  // Faute technique pour indiscipline (retour utilisateur, 2026-09 : "un
+  // joueur avec peu de sang-froid peut aussi être exclu plus souvent parce
+  // qu'il s'énerve sur les adversaires ou les arbitres") : dissipation hors
+  // ballon (protestation, geste d'humeur), à distinguer de la faute
+  // antisportive ci-dessous (contact excessif EN JEU, voir Discipline).
+  // Appelée UNIQUEMENT depuis les fautes personnelles "en jeu" (tir manqué/
+  // and-one), jamais depuis la faute intentionnelle de fin de match
+  // (calculée, pas une perte de sang-froid). Chance faible même au pire
+  // sang-froid (plafond 5%), pour rester un évènement rare et marquant, pas
+  // un tirage fréquent qui viderait les bancs. Chaque faute technique
+  // accorde 1 lancer franc à l'équipe adverse (règle réelle simplifiée à 1
+  // LF, tiré par `ftShooter`), qu'elle mène ou non à l'exclusion cette
+  // fois-ci (voir shouldEjectForFouls juste au-dessus) - si oui,
+  // `disqualified` est posé (même champ que l'exclusion à 5 fautes) :
+  // substituteIfNeeded s'occupe ensuite de sortir ce joueur au prochain
+  // passage, EXACTEMENT comme pour foulOut - aucune nouvelle mécanique de
+  // sortie de terrain à écrire.
   maybeEjectForComposure(defender, defTeam, offTeam, ftShooter, quarter, clock, events) {
     if (defender.disqualified || defender.attrs.composure >= 50) return;
     const technicalChance = clamp((50 - defender.attrs.composure) * 0.001, 0, 0.05);
     if (Math.random() >= technicalChance) return;
     defender.technicalFouls = (defender.technicalFouls || 0) + 1;
-    if (defender.technicalFouls >= 2) {
+    if (this.shouldEjectForFouls(defender)) {
       defender.disqualified = true;
       this.log(events, quarter, clock, say(PHRASES.technicalEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam) });
     } else {
       this.log(events, quarter, clock, say(PHRASES.technicalFoul, { player: defender.name, team: defTeam.name }), { type: "technicalFoul", team: this.teamKey(defTeam) });
     }
     this.freeThrows(ftShooter, 1, events, quarter, clock, offTeam);
+  }
+
+  // Faute antisportive (retour utilisateur, 2026-09, voir shouldEjectForFouls
+  // ci-dessus) : contact jugé excessif/inutile EN JEU plutôt qu'une
+  // dissipation hors ballon (maybeEjectForComposure ci-dessus, déclenchée par
+  // un Sang-froid bas) — déclenchée ici par une Discipline basse, cohérent
+  // avec son rôle déjà établi ailleurs dans le moteur ("un défenseur peu
+  // discipliné commet davantage de fautes en défendant un tir", voir
+  // disciplineFoulMod dans foulDrawBase et le grand commentaire au-dessus
+  // d'ATTRS). Appelée aux 2 mêmes points que maybeEjectForComposure (fautes
+  // personnelles "en jeu"), à la suite l'une de l'autre - les deux se
+  // gardent via `defender.disqualified` en tête de fonction, donc une
+  // exclusion déjà prononcée par l'une empêche l'autre de rejouer/reloguer
+  // pour le même joueur. Plafond volontairement plus bas que la faute
+  // technique (3% contre 5%) : une faute antisportive est un évènement plus
+  // grave dans la vraie règle du basket (contact dangereux), donc plus rare
+  // ici aussi. Sanctionnée de 2 lancers francs adverses (contre 1 pour la
+  // technique, règle réelle simplifiée) - accordés qu'elle mène ou non à
+  // l'exclusion cette fois-ci.
+  maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, ftShooter, quarter, clock, events) {
+    if (defender.disqualified || defender.attrs.discipline >= 50) return;
+    const unsportsmanlikeChance = clamp((50 - defender.attrs.discipline) * 0.0006, 0, 0.03);
+    if (Math.random() >= unsportsmanlikeChance) return;
+    defender.unsportsmanlikeFouls = (defender.unsportsmanlikeFouls || 0) + 1;
+    if (this.shouldEjectForFouls(defender)) {
+      defender.disqualified = true;
+      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam) });
+    } else {
+      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeFoul, { player: defender.name, team: defTeam.name }), { type: "unsportsmanlikeFoul", team: this.teamKey(defTeam) });
+    }
+    this.freeThrows(ftShooter, 2, events, quarter, clock, offTeam);
   }
 
   // scoreDiff = score(offTeam) - score(defTeam) au moment présent : sert aux
@@ -9509,7 +9635,7 @@ class MatchEngine {
       // On évite si possible de faire fauter un joueur déjà proche de l'exclusion.
       const defender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
       defender.stats.pf++; defender.fouls++;
-      this.log(events, quarter, clock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, possession: this.teamKey(offTeam) });
       this.freeThrows(ballHandler, 2, events, quarter, clock, offTeam);
       return { possessionOffense: false, scored: true, intentionalFoul: true };
     }
@@ -9590,7 +9716,7 @@ class MatchEngine {
       );
       if (Math.random() < 0.55) {
         stealer.stats.stl++;
-        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, stealer: stealer.name, possession: this.teamKey(offTeam) });
         // Contre-attaque (retour utilisateur, 2026-09 : "Vitesse/Accélération
         // → contre-attaques") : une interception donne le ballon à l'équipe
         // qui défendait, qui devient offensive à la possession suivante (voir
@@ -9604,7 +9730,7 @@ class MatchEngine {
         // de cette équipe face à une défense pas replacée).
         if (Math.random() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
       } else {
-        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, stealer: null, possession: this.teamKey(offTeam) });
       }
       return { possessionOffense: false };
     }
@@ -9860,13 +9986,16 @@ class MatchEngine {
     //    mental élevé transforme un tir serré en fin de match, un mental bas
     //    le fait douter. Pivot à 50 (valeur moyenne) => aucun effet pour un
     //    joueur "moyen", jusqu'à environ ±6 pts de % pour un mental extrême.
-    const mentalClutchBoost = clutch ? (shooter.attrs.mental - 50) * 0.0012 : 0;
+    // "mental" n'est plus stocké individuellement (retour utilisateur,
+    // 2026-09, voir mentalAverage() au-dessus de PHYSICAL_ATTRS) : on
+    // utilise ici la moyenne des 8 traits de MENTAL_ATTRS.
+    const mentalClutchBoost = clutch ? (mentalAverage(shooter) - 50) * 0.0012 : 0;
     // 2) Malus de "tilt" : après 3 ratés/pertes de balle d'affilée (voir
     //    consecutiveMisses, mis à jour plus bas et incrémenté aussi sur
     //    perte de balle) - un mental élevé (>=70) annule totalement le
     //    malus, un mental bas peut aller jusqu'à -9 pts de %.
     const tiltPenalty = shooter.consecutiveMisses >= 3
-      ? clamp((70 - shooter.attrs.mental) * 0.0015, 0, 0.09) : 0;
+      ? clamp((70 - mentalAverage(shooter)) * 0.0015, 0, 0.09) : 0;
     // Leadership (retour utilisateur, 2026-09 : "trouve un intérêt aux carac
     // qui ne sont pas utilisées") : un capitaine (le meilleur Leadership du
     // cinq en jeu, pas forcément le tireur) aide toute l'équipe à mieux
@@ -9914,16 +10043,29 @@ class MatchEngine {
       // passes décisives") : un passeur avec une bonne vision de jeu convertit
       // plus souvent une passe en vraie passe décisive une fois le tir ouvert.
       const visionAssistBonus = assistCandidate ? (assistCandidate.attrs.vision - 50) * 0.001 : 0;
+      // `assistedBy` (retour utilisateur, 2026-09 : "il n'y a pas de box
+      // score en direct. il faut l'ajouter") : capture explicitement QUI a
+      // été crédité de la passe décisive (si quelqu'un l'a été) pour le
+      // remonter dans le champ structuré `assister` du log ci-dessous — sans
+      // ça, le tirage assistCandidate.stats.ast++ n'était visible que dans le
+      // buildBoxScore FINAL (déjà simulé en entier avant même la diffusion,
+      // voir enterLiveMatch/matchResult.boxScoreA/B), jamais reconstituable
+      // événement par événement côté client pendant la diffusion (seul moyen
+      // de suivre les stats EN DIRECT sans montrer par avance le résultat
+      // final, voir applyLiveBoxScoreEvent plus bas dans moteurbasket3.html).
+      let assistedBy = null;
       if (assistCandidate && quality === "ouvert" && Math.random() < 0.65 + offense.assist + assistOpenBonus + visionAssistBonus) {
         assistCandidate.stats.ast++;
+        assistedBy = assistCandidate.name;
       }
-      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, assister: assistedBy, possession: this.teamKey(offTeam) });
 
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, 1, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
+        this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
       }
       return { possessionOffense: false, scored: true };
     } else {
@@ -9938,13 +10080,14 @@ class MatchEngine {
       // tir raté normal.
       if (blocked) {
         defender.stats.blk++;
-        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, blocker: defender.name, possession: this.teamKey(offTeam) });
       }
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, defender: defender.name, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
+        this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
         return { possessionOffense: false, scored: true };
       }
 
@@ -10009,7 +10152,7 @@ class MatchEngine {
       this.log(events, quarter, clock, say(
         offensiveRebound ? PHRASES.reboundOff : PHRASES.reboundDef,
         { shooter: shooter.name, rebounder: rebounder.name }
-      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
+      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, rebounder: rebounder.name, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
       return { possessionOffense: offensiveRebound };
     }
@@ -10229,6 +10372,12 @@ class MatchEngine {
       .filter(p => p.secondsPlayed > 0)
       .sort((a, b) => b.secondsPlayed - a.secondsPlayed)
       .map(p => ({
+        // `id` ajouté (retour utilisateur, 2026-09 : "ajoute l'avatar du
+        // joueur MVP sur les box scores") : champ ADDITIF, seul moyen pour
+        // le client de retrouver le VRAI Player (donc son avatar procédural,
+        // voir playerAvatarHtml) depuis une ligne de box score, le nom seul
+        // n'étant pas garanti unique entre deux clubs.
+        id: p.id,
         name: p.name, position: p.matchPosition || p.position,
         min: Math.max(1, Math.round(p.secondsPlayed / 60)),
         ...p.stats,
@@ -10245,7 +10394,7 @@ return {
   // Catégorisation Fondamentaux/Physique/Mental (voir le grand commentaire
   // au-dessus de PHYSICAL_ATTRS, retour utilisateur 2026-09 : "entrainement
   // des fondamentaux [...] ça ne doit entrainer que les fondamentaux") :
-  FUNDAMENTAL_ATTRS, PHYSICAL_ATTRS, MENTAL_ATTRS,
+  FUNDAMENTAL_ATTRS, PHYSICAL_ATTRS, MENTAL_ATTRS, mentalAverage,
   physicalGrowthFactorForAge, physicalDeclineFactorForAge, mentalGrowthFactorForAge,
   physicalPotentialHeadroom, mentalPotentialHeadroom,
   TRAINING_HOME_POSITION, TRAINING_DILUTION_BY_POSITION_COUNT, TRAINING_HEIGHT_AFFINITY,

@@ -45,7 +45,11 @@ const wrapClasses = doc1.querySelector(".wrap").className;
 console.log("Classes du gabarit sur la fiche joueur :", wrapClasses);
 if (!wrapClasses.includes("wrap-wide")) throw new Error("❌ La fiche joueur devrait utiliser le gabarit large (wrap-wide), pas rester plafonnée à 700px/960px.");
 console.log("✅ La fiche joueur utilise bien le gabarit large (pas de vide gauche/droite).");
-const attrCellsOwn = doc1.querySelectorAll("#playerDetailContent .pdp-pill:not(.locked)").length;
+// .pdp-pill:not(.locked) → .pdp-attr-value depuis le revirtement 2026-09-23
+// (échelle rouge/orange/blanc/vert SANS halo pour les valeurs révélées,
+// voir moteurbasket3.html/DEV_NOTES.md) : .pdp-pill ne sert plus qu'au
+// badge "?" verrouillé (voir lockedCells plus bas, inchangé).
+const attrCellsOwn = doc1.querySelectorAll("#playerDetailContent .pdp-attr-value").length;
 console.log("Cellules de caractéristiques déverrouillées (propre effectif) :", attrCellsOwn, "(attendu > 0)");
 if (attrCellsOwn === 0) throw new Error("❌ Les caractéristiques de son propre joueur devraient toujours être visibles en clair.");
 if (!doc1.getElementById("playerDetailContent").textContent.includes("Aucun match joué cette saison")) {

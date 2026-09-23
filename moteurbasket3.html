@@ -2,6 +2,25 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- Retour utilisateur (2026-09-23, capture d'écran mobile) : "Le texte passe
+     au dessus de la barre du haut du site" — sur téléphone, le texte de la
+     page Guide (et vraisemblablement d'autres pages) défilait par-dessus la
+     barre système du téléphone (heure/réseau/batterie), recouvrant même des
+     mots au milieu d'une phrase. Cause : il n'y avait AUCUNE balise
+     <meta name="viewport"> dans ce document. Sans elle, les navigateurs
+     mobiles simulent un viewport large façon desktop (~980px) puis mettent
+     TOUTE la page à l'échelle pour la faire tenir à l'écran — ce qui (a)
+     empêche les media queries @media(max-width:900px/680px/560px/...) déjà
+     présentes dans cette feuille de style (menu latéral, .topbar, grilles...)
+     de jamais se déclencher sur un vrai téléphone, et (b) casse le
+     positionnement position:sticky/position:fixed sur iOS Safari quand la
+     page n'est pas rendue à l'échelle 1:1 (bug connu : le contenu peut alors
+     glisser au-dessus d'un élément sticky censé rester fixe en haut, comme
+     .topbar ici). Corrigé en ajoutant la balise standard ci-dessous, qui fait
+     correspondre le viewport à la largeur réelle de l'appareil et démarre au
+     zoom 1:1 — cela permet aussi enfin aux media queries mobiles existantes
+     de s'appliquer normalement. -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pull Up · Basket Manager</title>
 <style>
   :root{
@@ -12,6 +31,22 @@
     --teamB:#e2694f; --teamB-ink:#3a140b; --teamB-soft:#3a201a;
     --danger:#e2694f; --ok:#33b4a1;
     --radius:10px;
+    /* Retour utilisateur (2026-09-23, "sur tous les menus déroulants dans le
+       jeu, pourrais tu enlever le cadre blanc qu'il y a autour des
+       propositions [...] plus moderne") : sans ceci, chaque <select> natif
+       (il y en a beaucoup, ex. Préparation d'un match, Entraînement, poste
+       d'un remplaçant sur le terrain live...) ouvre sa liste d'options en
+       thème CLAIR par défaut du navigateur/OS (fond blanc, cadre clair) —
+       ce n'est PAS du CSS sur .pdp-pill/option qui contrôle ça, c'est le
+       rendu natif du popup de <select>, qui ignore la plupart des styles de
+       page. `color-scheme: dark` est le seul levier standard qui fait
+       vraiment basculer ce popup natif (et la scrollbar, les cases à
+       cocher, etc.) sur le thème sombre de l'OS/navigateur plutôt que le
+       clair par défaut. Voir aussi `select{}` et `select option{}` plus bas
+       pour la couleur de fond/texte explicite des options (respectée par
+       Firefox et en bonne partie par Chrome/Edge, en complément).
+    */
+    color-scheme: dark;
   }
   *{box-sizing:border-box;}
   input[type="range"]{accent-color:var(--amber); width:100%;}
@@ -162,7 +197,19 @@
   select{
     width:100%; background:var(--panel-2); color:var(--ink); border:1px solid var(--line);
     border-radius:8px; padding:8px 10px; font-size:13px;
+    /* color-scheme est déjà posé sur :root (voir son commentaire), mais on
+       le répète ici explicitement sur select : certains navigateurs
+       n'appliquent le thème sombre au POPUP natif que si la propriété est
+       aussi présente sur l'élément lui-même, pas seulement hérité. */
+    color-scheme: dark;
   }
+  /* Couleur de fond/texte explicite des <option> à l'intérieur du popup natif
+     (Firefox la respecte pleinement ; Chrome/Edge en tiennent compte pour le
+     fond de chaque ligne, même si le "cadre" du popup reste géré par
+     color-scheme ci-dessus) — sans ce petit filet, un navigateur qui
+     ignorerait color-scheme retomberait sur du texte sombre illisible sur
+     fond sombre par défaut plutôt que sur nos propres couleurs. */
+  select option{background:var(--panel-2); color:var(--ink);}
   .tactic-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
   .tactic-chip{
     display:flex; align-items:center; gap:6px; font-size:12px; padding:7px 8px;
@@ -433,6 +480,17 @@
   .boxscore-toggle{display:flex; gap:8px; margin-bottom:10px;}
   .bs-tab{background:transparent; border:1px solid var(--line); color:var(--ink-dim); font-size:12px; padding:7px 14px; border-radius:999px; cursor:pointer;}
   .bs-tab.active{color:var(--ink); border-color:var(--amber);}
+  /* Onglets du box score EN DIRECT (#liveBoxscoreSection) : même habillage
+     que .bs-tab ci-dessus, mais une classe DIFFÉRENTE exprès — .bs-tab est
+     câblé une seule fois au chargement du script (document.querySelectorAll
+     ".bs-tab", voir tout en bas du fichier) directement vers renderBoxScore,
+     la feuille FINALE (matchResult.boxScoreA/B, déjà connue en entier dès
+     l'entrée sur l'écran Live) ; réutiliser cette classe aurait donc câblé
+     ces boutons vers les mauvaises données (spoiler du résultat final) en
+     plus de leur propre gestionnaire dédié (voir son initialisation près de
+     renderLiveBoxScore).  */
+  .live-bs-tab{background:transparent; border:1px solid var(--line); color:var(--ink-dim); font-size:12px; padding:7px 14px; border-radius:999px; cursor:pointer;}
+  .live-bs-tab.active{color:var(--ink); border-color:var(--amber);}
   table.boxscore{width:100%; border-collapse:collapse; font-size:12px; background:var(--panel); border-radius:var(--radius); overflow:hidden;}
   table.boxscore th, table.boxscore td{padding:8px 6px; text-align:center; border-bottom:1px solid var(--line-soft); white-space:nowrap;}
   table.boxscore th{color:var(--ink-faint); font-weight:700; text-transform:uppercase; font-size:10px;}
@@ -448,6 +506,17 @@
   table.boxscore tbody tr.boxscore-totals:hover{background:transparent;}
   table.boxscore tbody tr.boxscore-mvp-row{background:rgba(240, 162, 60, .12);}
   .match-mvp-callout{margin-bottom:10px;}
+  /* Avatar du joueur MVP à côté de ses stats (retour utilisateur, 2026-09 :
+     "ajoute l'avatar du joueur MVP sur les box scores") : scopé à
+     .match-mvp-callout (pas .mvp-callout lui-même, partagé avec le MVP de
+     la journée sur l'onglet Ligue et le bandeau Académie, qui n'ont pas
+     d'avatar) — voir matchMvpCalloutHtml. L'avatar peut être absent (ligne
+     de box score persistée avant l'ajout du champ `id`, voir son
+     commentaire) : .mvp-callout-body reste un simple flex, rien ne casse
+     sans lui.*/
+  .match-mvp-callout .mvp-callout-body{display:flex; align-items:center; gap:10px;}
+  .match-mvp-callout .mvp-callout-body p{flex:1 1 auto; min-width:0;}
+  .match-mvp-callout .player-avatar{flex:none;}
   .section{margin-top:26px;}
   .locked-note{text-align:center; font-size:12px; color:var(--ink-faint); margin-top:-10px; margin-bottom:20px;}
   .lock-warning{text-align:center; font-size:12px; color:#e2694f; margin:-6px 0 8px; min-height:1em;}
@@ -846,6 +915,22 @@
   }
   @media(max-width:560px){
     .topbar-meta{display:none;}
+    /* Retour utilisateur (2026-09-23, suite du correctif meta viewport
+       ci-dessus dans <head>) : une fois la page enfin rendue à la vraie
+       largeur de l'écran sur téléphone (au lieu d'être zoomée arrière en
+       bloc, ce qui masquait le problème), la sidebar (.sidebar, largeur FIXE
+       236px, volontairement jamais réduite à un rail à toutes tailles
+       d'écran — voir le commentaire juste au-dessus, "la sidebar garde donc
+       désormais sa largeur... à toutes les tailles d'écran") ne laisse plus
+       que ~150px à .main-col sur un téléphone étroit (ex. 390px). Le bouton
+       "Donnez vos ordres" (button.topbar-cta, white-space:nowrap d'origine)
+       y débordait alors du cadre (mesuré : ~19px de débordement horizontal
+       à 390px de large). Corrigé en l'autorisant à passer sur deux lignes et
+       en réduisant son remplissage/sa taille de police sous ce palier,
+       plutôt qu'en touchant à la largeur de la sidebar (choix délibéré et
+       récent de l'utilisateur, hors sujet de ce correctif). */
+    button.topbar-cta{padding:8px 10px; font-size:11.5px; white-space:normal; text-align:center; line-height:1.2; max-width:120px;}
+    .topbar-right{gap:8px;}
   }
 
   /* ---- Tableau de bord club / économie / salle ---- */
@@ -867,7 +952,7 @@
   .quick-links{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
   .table-scroll{overflow-x:auto; margin-bottom:16px;}
   table.roster-table{width:100%; border-collapse:collapse; font-size:11.5px; background:var(--panel); border-radius:var(--radius); overflow:hidden;}
-  table.roster-table th, table.roster-table td{padding:7px 5px; text-align:center; border-bottom:1px solid var(--line-soft); white-space:nowrap;}
+  table.roster-table th, table.roster-table td{padding:7px 3px; text-align:center; border-bottom:1px solid var(--line-soft); white-space:nowrap;}
   table.roster-table th{color:var(--ink-faint); font-weight:700; text-transform:uppercase; font-size:9px;}
   table.roster-table td:first-child, table.roster-table th:first-child{text-align:left; padding-left:12px;}
   table.roster-table tbody tr:hover{background:var(--panel-2);}
@@ -970,14 +1055,24 @@
   .attr-cell .attr-val{font-weight:800; font-size:11.5px; font-variant-numeric:tabular-nums;}
   .attr-cell .attr-bar-track{height:3px; background:var(--line-soft); border-radius:2px; margin-top:4px; overflow:hidden;}
   .attr-cell .attr-bar-fill{height:100%; border-radius:2px;}
-  .attr-cell.attr-elite .attr-val{color:var(--amber);}
-  .attr-cell.attr-elite .attr-bar-fill{background:var(--amber);}
-  .attr-cell.attr-good .attr-val{color:var(--ok);}
-  .attr-cell.attr-good .attr-bar-fill{background:var(--ok);}
-  .attr-cell.attr-mid .attr-val{color:var(--ink-dim);}
-  .attr-cell.attr-mid .attr-bar-fill{background:var(--ink-dim);}
-  .attr-cell.attr-lo .attr-val{color:var(--ink-faint);}
-  .attr-cell.attr-lo .attr-bar-fill{background:var(--danger);}
+  /* Retour utilisateur (2026-09-23, "reprends le meme code couleur pour les
+     pages effectifs, les joueurs sur le marché des transferts [...]") :
+     remplace l'ancienne échelle attr-lo/mid/good/elite (seuils 45/65/80) par
+     la MÊME échelle rouge/orange/blanc/vert (0-20/21-50/51-80/81+, voir
+     attrColorTier) déjà utilisée sur la fiche joueur (.pdp-attr-value/
+     .pdp-overall-num, voir plus bas). attrCellHtml (moteurbasket3.html)
+     émet directement ces classes attr-tier-* désormais — voir son
+     commentaire pour la liste des écrans concernés (Effectif, Marché, fiche
+     équipe adverse, Académie de jeunes : tous partagent ce même composant
+     .attr-cell, donc tous héritent cohéremment du même changement). */
+  .attr-cell.attr-tier-red .attr-val{color:var(--danger);}
+  .attr-cell.attr-tier-red .attr-bar-fill{background:var(--danger);}
+  .attr-cell.attr-tier-orange .attr-val{color:var(--amber);}
+  .attr-cell.attr-tier-orange .attr-bar-fill{background:var(--amber);}
+  .attr-cell.attr-tier-white .attr-val{color:var(--ink);}
+  .attr-cell.attr-tier-white .attr-bar-fill{background:var(--ink);}
+  .attr-cell.attr-tier-green .attr-val{color:#3ecf67;}
+  .attr-cell.attr-tier-green .attr-bar-fill{background:#3ecf67;}
   /* ===================================================================
      Fiche joueur "pdp-card" (retour utilisateur, 2026-09 : "on a tjrs pas
      les pages joueurs à jour" / "je n'ai tjrs pas les bonnes fiches
@@ -989,12 +1084,34 @@
      voir plus bas). DEUX adaptations volontaires par rapport à la copie
      mirroir habituelle (divergences déjà justifiées au moment du port JS,
      voir renderPlayerDetail) :
-     - 4 paliers de couleur RÉUTILISÉS depuis .attr-cell ci-dessus
-       (attr-lo/attr-mid/attr-good/attr-elite, mêmes seuils 45/65/80,
-       mêmes variables de couleur) plutôt que l'échelle rouge/orange/
-       blanc/vert du fichier de référence (attrColorTier), qui aurait
-       introduit une DEUXIÈME échelle de couleur incohérente avec le
-       reste du jeu (Effectif/Marché) pour les mêmes valeurs.
+     - REVIRTEMENT VOLONTAIRE (2026-09-23) de la décision ci-dessous, gardée
+       en historique pour comprendre le contexte : à l'origine, 4 paliers de
+       couleur RÉUTILISÉS depuis .attr-cell ci-dessus (attr-lo/attr-mid/
+       attr-good/attr-elite, seuils 45/65/80, mêmes variables de couleur)
+       plutôt que l'échelle rouge/orange/blanc/vert du fichier de référence
+       (attrColorTier), pour ne pas introduire une DEUXIÈME échelle de
+       couleur incohérente avec le reste du jeu (Effectif/Marché). Retour
+       utilisateur ("petite mission intermédiaire — simule une page d'un
+       joueur avec les carac de cette couleur : 0-20 rouge, 21-50 orange,
+       51-80 blanc et +81 vert" puis, après un aller-retour sur deux mockups
+       jetables `color_scheme_comparison.html`/`color_scheme_no_halo.html`,
+       "on va partir sur la version sans mockup avec les couleurs rouges
+       orange blanc vert") : l'utilisateur choisit EXPLICITEMENT cette
+       DEUXIÈME échelle, d'abord uniquement pour la fiche joueur (.pdp-pill/
+       .pdp-overall-num, voir attrColorTier plus bas) — SANS halo (juste le
+       chiffre en gras coloré, pas de pastille/fond). À ce moment-là,
+       l'Effectif/le Marché (.attr-cell) gardaient volontairement leur
+       propre échelle 45/65/80, cette demande ne les concernant pas encore.
+       ÉTAPE SUIVANTE, même jour ("reprends le meme code couleur pour les
+       pages effectifs, les joueurs sur le marché des transferts, l'humeur
+       des supporters, alchimie, connaissance tactique") : l'utilisateur
+       revient sur cette exception et étend EXPLICITEMENT la même échelle
+       attrColorTier à .attr-cell aussi (voir sa nouvelle CSS juste
+       au-dessus) — il n'y a donc plus qu'UNE seule échelle de couleur dans
+       tout le jeu, la boucle "deux échelles incohérentes" que la première
+       version de ce commentaire cherchait justement à éviter est refermée
+       dans l'autre sens : le jeu entier est maintenant unifié sur
+       rouge/orange/blanc/vert plutôt que sur attr-lo/mid/good/elite.
      - Pas de variante ".range" (fourchette de scoutisme) : le jeu réel
        révèle une caractéristique en tout ou rien (voir teamA.scoutedAttrs/
        revealedSet), jamais une fourchette autour d'une valeur approchée
@@ -1012,18 +1129,19 @@
   }
   .pdp-overall-row{display:flex; align-items:baseline; gap:10px; margin-bottom:6px;}
   .pdp-overall-num{font-size:34px; font-weight:800;}
-  .pdp-overall-num.attr-elite{color:var(--amber);}
-  .pdp-overall-num.attr-good{color:var(--ok);}
-  .pdp-overall-num.attr-mid{color:var(--ink-dim);}
-  /* Retour utilisateur (2026-09, "on a plus du tout les couleurs sur les
-     carac et la note globale") : var(--ink-faint) (gris très sourd) était
-     quasi invisible sur ce fond sombre pour un palier faible — contrairement
-     à attrCellHtml (Effectif/Marché) où la MINI-BARRE (déjà colorée en
-     var(--danger) pour "lo", voir plus bas) porte le signal visuel et le
-     texte peut rester discret ; ici la pastille EST le seul signal, donc
-     "lo" doit être clairement coloré comme "good"/"elite", pas fondu dans
-     le fond. */
-  .pdp-overall-num.attr-lo{color:var(--danger);}
+  /* Échelle rouge/orange/blanc/vert (attrColorTier), voir le grand commentaire
+     plus haut ("REVIRTEMENT VOLONTAIRE 2026-09-23") : remplace l'ancienne
+     échelle attr-lo/mid/good/elite (45/65/80, réutilisée de .attr-cell) sur
+     CETTE fiche joueur uniquement. --danger/--amber/--ink correspondent déjà
+     exactement au rouge/orange/blanc validés sur les mockups ; #3ecf67 est
+     un vrai vert (aucune variable existante ne correspond : --ok est un
+     teal, pas le vert demandé) repris tel quel des mockups approuvés
+     (color_scheme_comparison.html/color_scheme_no_halo.html). Toujours SANS
+     halo ici : c'est déjà juste le chiffre coloré, pas une pastille.*/
+  .pdp-overall-num.attr-tier-red{color:var(--danger);}
+  .pdp-overall-num.attr-tier-orange{color:var(--amber);}
+  .pdp-overall-num.attr-tier-white{color:var(--ink);}
+  .pdp-overall-num.attr-tier-green{color:#3ecf67;}
   .pdp-card .stars{color:var(--amber); font-size:14px; letter-spacing:1px;}
   .pdp-overall-caption{font-size:11.5px; color:var(--ink-faint);}
   .pdp-meta-list{margin-top:12px; font-size:12.5px;}
@@ -1061,18 +1179,23 @@
   .pdp-attr-row{display:flex; align-items:center; justify-content:space-between; padding:5px 0; font-size:12.5px;}
   .pdp-attr-row .lbl{color:var(--ink-dim);}
   .pdp-attr-right{display:flex; align-items:center; gap:6px;}
+  /* "pdp-pill" (pastille/halo) sert désormais UNIQUEMENT au badge "?" d'une
+     caractéristique verrouillée/non révélée (.locked ci-dessous) : signal
+     différent d'une valeur chiffrée (état "à débloquer"), donc garde son
+     fond. Pour les VALEURS chiffrées révélées, voir .pdp-attr-value juste
+     après : retour utilisateur 2026-09-23, "ça serait possible de présenter
+     les valeurs sans halo autour ?" — plus de pastille/fond, juste le
+     chiffre en gras coloré (voir attrColorTier). */
   .pdp-pill{
     min-width:26px; text-align:center; font-weight:800; font-size:11.5px;
     padding:2px 6px; border-radius:6px;
   }
-  .pdp-pill.attr-elite{background:rgba(240,162,60,.16); color:var(--amber);}
-  .pdp-pill.attr-good{background:rgba(51,180,161,.16); color:var(--ok);}
-  .pdp-pill.attr-mid{background:var(--panel-2); color:var(--ink-dim);}
-  /* Même correctif que .pdp-overall-num.attr-lo plus haut (voir son
-     commentaire) : texte coloré var(--danger), pas var(--ink-faint) qui se
-     fondait dans le fond sombre. */
-  .pdp-pill.attr-lo{background:rgba(226,105,79,.12); color:var(--danger);}
   .pdp-pill.locked{background:var(--panel-2); color:var(--ink-faint);}
+  .pdp-attr-value{min-width:22px; text-align:right; font-weight:800; font-size:12.5px;}
+  .pdp-attr-value.attr-tier-red{color:var(--danger);}
+  .pdp-attr-value.attr-tier-orange{color:var(--amber);}
+  .pdp-attr-value.attr-tier-white{color:var(--ink);}
+  .pdp-attr-value.attr-tier-green{color:#3ecf67;}
   .pdp-trend{font-size:10px; width:10px; display:inline-block; text-align:center;}
   .pdp-trend.up{color:var(--ok);}
   .pdp-trend.down{color:var(--danger);}
@@ -1108,6 +1231,93 @@
      retombait donc sur la taille de police par défaut d'un <p>, plus grande
      que .pdp-card h3 (11px, voir plus haut). */
   .pdp-card .sub{font-size:12px; color:var(--ink-dim);}
+
+  /* ---- Comparateur de joueurs (retour utilisateur, 2026-09-23, "reflechis
+     à ça, ça me plait bien") : format "paysage" validé via mockup AVANT
+     implémentation (color_scheme_comparison/mockup_player_compare.html,
+     voir DEV_NOTES.md) — tout doit tenir sur la hauteur d'un écran plutôt
+     que dérouler en longueur, d'où les 3 groupes de caractéristiques CÔTE À
+     CÔTE (.compare-attr-columns) plutôt qu'empilés comme sur la fiche
+     joueur (.pdp-attr-grid). Réutilise attrColorTier/les classes
+     attr-tier-* déjà en place (voir .pdp-attr-value.attr-tier-* juste
+     au-dessus) plutôt que de dupliquer l'échelle de couleur. */
+  .compare-heads{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; margin-bottom:14px;}
+  .compare-player-head{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 16px; display:flex; align-items:center; gap:12px;
+  }
+  .compare-player-head.side-a{border-top:3px solid var(--teamA);}
+  .compare-player-head.side-b{border-top:3px solid var(--teamB); flex-direction:row-reverse; text-align:right;}
+  .compare-player-head .cph-name{font-size:14.5px; font-weight:800; margin-bottom:1px;}
+  .compare-player-head .cph-meta{font-size:11px; color:var(--ink-dim);}
+  .compare-player-head .cph-team{font-size:10.5px; color:var(--ink-faint); margin-top:2px;}
+  .compare-vs-badge{
+    font-size:11.5px; font-weight:800; color:var(--ink-faint); background:var(--panel-2);
+    border:1px solid var(--line); border-radius:999px; width:30px; height:30px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .compare-position-note{font-size:11px; color:var(--ink-faint); text-align:center; margin:-4px 0 16px; font-style:italic;}
+
+  .compare-profile-strip{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px;}
+  .compare-profile-tile{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:9px 10px;}
+  .compare-profile-tile .cpt-label{
+    font-size:9.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-faint);
+    font-weight:800; text-align:center; margin-bottom:6px;
+  }
+  .compare-profile-tile .cpt-vals{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:6px;}
+  .compare-profile-tile .cpt-val{text-align:center; font-weight:800; font-size:14px; padding:3px 2px; border-radius:6px;}
+  .compare-profile-tile .cpt-val.small{font-size:11px; font-weight:700;}
+  .compare-profile-tile .cpt-sep{color:var(--ink-faint); font-size:10px;}
+  .compare-profile-tile .cpt-val.win{background:rgba(62,207,103,.12); box-shadow:inset 0 0 0 1px rgba(62,207,103,.35);}
+  .compare-profile-tile .cpt-val.locked{color:var(--ink-faint); font-weight:600;}
+  .compare-profile-tile .cpt-val.attr-tier-red{color:var(--danger);}
+  .compare-profile-tile .cpt-val.attr-tier-orange{color:var(--amber);}
+  .compare-profile-tile .cpt-val.attr-tier-white{color:var(--ink);}
+  .compare-profile-tile .cpt-val.attr-tier-green{color:#3ecf67;}
+
+  .compare-attr-columns{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
+  @media (max-width:900px){.compare-attr-columns{grid-template-columns:1fr;}}
+  .compare-attr-col{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px 6px;}
+  .compare-attr-col h3{
+    font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-faint);
+    margin:0 0 6px; font-weight:800;
+  }
+  .compare-row{
+    display:grid; grid-template-columns:38px 1fr 38px; align-items:center;
+    gap:6px; padding:4.5px 0; border-bottom:1px solid var(--line-soft); font-size:11.5px;
+  }
+  .compare-row:last-child{border-bottom:none;}
+  .compare-row .cmp-label{text-align:center; color:var(--ink-dim); font-size:10.5px;}
+  .compare-row .cmp-val{text-align:center; font-weight:700; font-size:12px; padding:2px 0; border-radius:5px;}
+  /* Meilleure valeur des deux côtés sur une ligne donnée : léger liseré vert
+     en plus de la couleur de palier habituelle (attrColorTier) — jamais sur
+     une ligne où un des deux côtés est verrouillé/non scouté (pas
+     comparable), voir pdpCompareAttrRowHtml. */
+  .compare-row .cmp-val.win{background:rgba(62,207,103,.12); box-shadow:inset 0 0 0 1px rgba(62,207,103,.35);}
+  .compare-row .cmp-val.attr-tier-red{color:var(--danger);}
+  .compare-row .cmp-val.attr-tier-orange{color:var(--amber);}
+  .compare-row .cmp-val.attr-tier-white{color:var(--ink);}
+  .compare-row .cmp-val.attr-tier-green{color:#3ecf67;}
+  .compare-row .cmp-val.locked{color:var(--ink-faint); font-weight:600;}
+
+  .compare-legend{display:flex; gap:16px; justify-content:center; margin:16px 0 0; font-size:11px; color:var(--ink-faint); flex-wrap:wrap;}
+  .compare-legend span{display:inline-flex; align-items:center; gap:5px;}
+  .compare-legend i{width:9px; height:9px; border-radius:50%; display:inline-block;}
+  .compare-avatar-circle{
+    width:44px; height:44px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;
+  }
+  .compare-player-head.side-a .compare-avatar-circle{background:var(--teamA-soft); color:var(--teamA);}
+  .compare-player-head.side-b .compare-avatar-circle{background:var(--teamB-soft); color:var(--teamB);}
+  /* playerCompareSection est dans WIDE_PAGE_IDS (.wrap.wrap-wide{max-width:
+     none;}, voir plus haut) pour la même raison que playerDetailSection —
+     mais contrairement à la fiche joueur (qui profite de toute la largeur
+     disponible), le format "paysage" validé sur mockup n'a pas besoin de
+     s'étirer au-delà de sa largeur naturelle sur un très grand écran : on
+     re-plafonne ICI, sur le contenu lui-même plutôt que sur .wrap, pour ne
+     pas priver les autres pages larges (Effectif, Coupe...) de leur propre
+     comportement. */
+  #playerCompareSection .section{max-width:1440px; margin-left:auto; margin-right:auto;}
   /* Nouvelle fiche joueur (retour utilisateur, 2026-09, exemple fourni pour
      "Adama Kovac") : grille à 2 colonnes pour les caractéristiques (voir
      renderPlayerDetail) plutôt que l'ancien tableau à une seule ligne
@@ -1164,6 +1374,21 @@
   .morale-gauge-fill{height:100%; border-radius:999px; transition:width .3s;}
   .eff-position{color:var(--amber); font-size:11px; font-weight:600;}
   .potential-tier{white-space:nowrap; font-size:12.5px; font-weight:600; color:var(--ink-dim);}
+  /* Dans les tableaux denses (.roster-table : Effectif Général/Caractéristiques,
+     Academy), le libellé forcé sur une seule ligne (white-space:nowrap
+     ci-dessus) pour les paliers longs ("Très bon joueur", "Joueur correct")
+     élargissait trop la colonne "Potentiel" et faisait déborder le tableau
+     horizontalement sur les résolutions d'ordinateur portable courantes
+     (retour utilisateur, 2026-09-23 : "il y a besoin de scroller vers la
+     droite maintenant ? tout ne rentre plus dans l'affichage ?" — confirmé
+     par mesure réelle : ~150px pour cette seule colonne, dépassement de
+     135px à 1280px de large, 49px à 1366px). On autorise ici le libellé à
+     revenir sur 2 lignes dans une largeur plafonnée plutôt que de le
+     tronquer (on garde l'info complète, juste réarrangée) — uniquement dans
+     ces tableaux denses : les usages avec plus de place (carte Marché,
+     fiche joueur) gardent l'affichage sur une seule ligne via la règle
+     générale ci-dessus. */
+  table.roster-table .potential-tier{white-space:normal; display:inline-block; max-width:58px; font-size:10.5px; line-height:1.15; text-align:center; overflow-wrap:break-word; word-break:break-word;}
 
   /* Alchimie d'équipe sur l'Effectif (retour utilisateur, 2026-09 : "voir le
      niveau d'alchimie sur la page effectif [...] une petite jauge plus ou
@@ -1197,21 +1422,14 @@
 
   /* ---- Entraînement ---- */
   .training-intro{font-size:13px; color:var(--ink-dim); line-height:1.5; margin:0 0 16px;}
-  /* Jauges de connaissance tactique PAR OPTION sur l'onglet Entraînement
-     (retour utilisateur, 2026-09 : "il faudrait qu'il y ait une jauge par
-     type d'attaque, une par rythme et une par défense [...] comme ça on
-     verrait bien les tactiques que l'on maîtrise ou pas") : un groupe par
-     catégorie (Attaque/Défense/Rythme), chacun une rangée de jauges
-     compactes qui passe à la ligne, même style que .roster-chemistry-
-     gauge-wrap mais en rangée plutôt qu'empilées. Écart entre groupes
-     relevé (retour utilisateur, 2026-09 : "mets un tout petit peu plus
-     d'écart entre les blocs attaque, défense et rythme, que l'on puisse
-     bien distinguer les 3 thématiques") : 16px ne détachait pas assez
-     visuellement les 3 groupes les uns des autres.*/
-  .tactical-knowledge-gauges-groups{display:flex; flex-direction:column; gap:26px; margin-top:10px;}
-  .tactical-knowledge-gauge-group-title{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); font-weight:700; margin:0 0 6px;}
-  .tactical-knowledge-gauges-row{display:flex; gap:14px; flex-wrap:wrap;}
-  .tactical-knowledge-gauge-item{flex:1 1 140px; min-width:120px;}
+  /* Les jauges de connaissance tactique PAR OPTION (18 au total,
+     .tactical-knowledge-gauges-groups/.tkGaugeRow*) ont été RETIRÉES de
+     cette section (retour utilisateur, 2026-09 : "pas mal le menu déroulant,
+     enleve ce qu'il y a en dessous") — désormais redondantes depuis
+     qu'elles sont intégrées DIRECTEMENT dans le menu déroulant personnalisé
+     du choix d'aspect travaillé (voir renderTrainedTacticsPicker et son
+     grand commentaire, plus bas dans ce fichier). Classes CSS et fonction
+     de rendu (renderTacticalKnowledgeTrainingGauges) retirées avec. */
 
   /* ---- Staff / entraîneur ---- */
   .staff-panel{
@@ -1571,6 +1789,43 @@
      tactiques de la page Ordres (.tactic-grid/.tactic-chip réutilisés). */
   .trained-tactics-picker{margin-top:10px; padding-top:10px; border-top:1px solid var(--line-soft);}
   .trained-tactics-picker select{margin-bottom:10px;}
+  /* Sélecteur personnalisé de l'aspect tactique travaillé (retour
+     utilisateur, 2026-09 : "tu n'as pas intégré les jauges de niveau de
+     connaissance tactique directement dans le menu déroulant") : remplace
+     l'ancien <select id="trainedTacticSelect"> par un bouton déclencheur +
+     un menu <div> (voir renderTrainedTacticsPicker), car un <option> natif
+     ne peut afficher que du texte brut — aucune jauge colorée n'est
+     possible à l'intérieur. Même gabarit visuel que .topbar-search-results
+     (menu flottant sous un déclencheur, fermé par un clic en dehors) pour
+     rester cohérent avec le reste de l'appli.*/
+  .trained-tactic-dropdown{position:relative; margin-bottom:10px;}
+  .trained-tactic-trigger{
+    width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:space-between;
+    gap:10px; background:var(--panel-2); color:var(--ink); border:1px solid var(--line);
+    font-family:inherit; font-size:13px; padding:9px 12px; border-radius:10px; cursor:pointer;
+  }
+  .trained-tactic-trigger:hover{border-color:var(--amber);}
+  .trained-tactic-trigger-arrow{color:var(--ink-faint); font-size:11px; flex:0 0 auto;}
+  .trained-tactic-menu{
+    position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--panel);
+    border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 28px rgba(0,0,0,.35);
+    max-height:340px; overflow-y:auto; z-index:20; padding:6px;
+  }
+  .trained-tactic-group-label{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); padding:8px 10px 3px;}
+  .trained-tactic-option{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
+    box-sizing:border-box; text-align:left; background:transparent; border:none; color:var(--ink);
+    font-family:inherit; font-size:13px; padding:7px 10px; border-radius:8px; cursor:pointer;
+  }
+  .trained-tactic-option:hover, .trained-tactic-option:focus{background:var(--panel-2);}
+  .trained-tactic-option.selected{background:rgba(240,162,60,.14); color:var(--amber); font-weight:700;}
+  .trained-tactic-option .tto-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .trained-tactic-trigger .tto-name{font-weight:600;}
+  .tto-gauge-wrap{display:flex; align-items:center; gap:6px; flex:0 0 auto;}
+  .tto-gauge{width:52px; height:6px; border-radius:999px; background:var(--panel-2); overflow:hidden; flex:0 0 auto;}
+  .trained-tactic-trigger .tto-gauge{background:var(--line-soft);}
+  .tto-gauge-fill{display:block; height:100%; border-radius:999px;}
+  .tto-value{font-size:11px; min-width:20px; text-align:right;}
   .training-dilution-note{font-size:12px; color:var(--ink-dim); margin-top:2px;}
   .training-dilution-note b{color:var(--amber);}
   .training-list{
@@ -2032,6 +2287,16 @@
             <rect class="lcv-line bold" x="20" y="20" width="960" height="400" rx="6"/>
             <line class="lcv-line" x1="500" y1="20" x2="500" y2="420"/>
             <circle class="lcv-line" cx="500" cy="220" r="45"/>
+            <!-- Logo de l'équipe qui REÇOIT, au milieu du terrain (retour
+                 utilisateur, 2026-09 : "maintenant qu'on a des logos (meme
+                 pour les joueurs non payant) ce serait pas mal si le logo
+                 apparaissait au milieu du terrain [...] logo de l'équipe qui
+                 recoit forcement") : rempli dynamiquement dans enterLiveMatch
+                 via liveCourtHomeLogoSvg(), teamA si liveMatch.isHome sinon
+                 teamB (mon équipe n'est pas toujours à domicile — voir
+                 liveMatchScoreAB juste au-dessus pour le même calcul). Vide
+                 par défaut (rien avant l'entrée sur un direct). -->
+            <g id="liveCourtHomeLogo"></g>
 
             <rect class="lcv-fill-a" x="20" y="140" width="190" height="160"/>
             <rect class="lcv-line" x="20" y="140" width="190" height="160"/>
@@ -2055,6 +2320,33 @@
         <div class="live-court-tooltip" id="liveCourtTooltip"></div>
       </div>
       <div class="feed" id="feed"></div>
+    </div>
+
+    <!-- Box score EN DIRECT (retour utilisateur, 2026-09 : "il n'y a pas de
+         box score en direct. il faut l'ajouter") : distinct de
+         #boxscoreSection ci-dessous (feuille de stats FINALE, affichée
+         seulement à la fin du direct/en cas de forfait, voir finishPlayback/
+         enterLiveMatch) — celle-ci se construit événement par événement
+         PENDANT la diffusion (voir applyLiveBoxScoreEvent/renderLiveBoxScore
+         plus bas), pour ne jamais montrer par avance des statistiques du
+         match qui ne sont pas encore "arrivées" à l'écran (le résultat
+         complet, boxScoreA/B, est déjà connu côté client dès l'entrée sur
+         l'écran Live — voir enterLiveMatch — puisque tout le match est
+         simulé d'un coup côté serveur puis rejoué avec des délais ; l'afficher
+         tel quel pendant la diffusion spoilerait le match). Colonnes
+         volontairement réduites par rapport à la feuille finale (pas de
+         MIN/+/- : nécessiteraient de suivre les 10 joueurs sur le terrain à
+         tout instant, pas seulement l'auteur de chaque action) — voir
+         liveBoxscoreTableHtml. Masquée pendant un forfait (rien à
+         diffuser) et à la fin du direct (finishPlayback affiche alors la
+         feuille finale, complète, ci-dessous). -->
+    <div class="section" id="liveBoxscoreSection">
+      <h3 class="training-config-title">Statistiques en direct</h3>
+      <div class="boxscore-toggle">
+        <button type="button" class="live-bs-tab active" data-live-team="A" id="liveBsTabA">Lyon</button>
+        <button type="button" class="live-bs-tab" data-live-team="B" id="liveBsTabB">Paris</button>
+      </div>
+      <div id="liveBoxscoreHolder"></div>
     </div>
 
     <div class="section" id="boxscoreSection" style="display:none">
@@ -2114,31 +2406,14 @@
              collectiveTraining === "tactique" (voir
              renderTrainedTacticsPicker), écrit dans Team.trainedTactics. -->
         <div id="trainedTacticsPicker" class="trained-tactics-picker hidden"></div>
-        <!-- Retour utilisateur (2026-09) : "dans l'onglet entrainement [...]
-             il faudrait mettre des petites jauges avec les tactiques plus ou
-             moins maitrisé (offensive, défensive et rythme) l'entrainement
-             augmente la connaissance tactique", puis "il faudrait qu'il y
-             ait une jauge par type d'attaque, une par rythme et une par
-             défense [...] comme ça on verrait bien les tactiques que l'on
-             maîtrise ou pas" : une jauge PAR OPTION précise (18 au total),
-             regroupées par catégorie, générées dynamiquement (voir
-             renderTacticalKnowledgeTrainingGauges) plutôt qu'écrites en dur
-             ici. -->
-        <div class="field-label">Connaissance tactique de l'équipe</div>
-        <div class="tactical-knowledge-gauges-groups" id="tacticalKnowledgeGaugesRow">
-          <div class="tactical-knowledge-gauge-group">
-            <div class="tactical-knowledge-gauge-group-title">Attaque</div>
-            <div class="tactical-knowledge-gauges-row" id="tkGaugeRowOffense"></div>
-          </div>
-          <div class="tactical-knowledge-gauge-group">
-            <div class="tactical-knowledge-gauge-group-title">Défense</div>
-            <div class="tactical-knowledge-gauges-row" id="tkGaugeRowDefense"></div>
-          </div>
-          <div class="tactical-knowledge-gauge-group">
-            <div class="tactical-knowledge-gauge-group-title">Rythme</div>
-            <div class="tactical-knowledge-gauges-row" id="tkGaugeRowRhythm"></div>
-          </div>
-        </div>
+        <!-- Les jauges de connaissance tactique PAR OPTION (18 au total,
+             une section dédiée "Connaissance tactique de l'équipe" ici même)
+             ont été RETIRÉES (retour utilisateur, 2026-09 : "pas mal le menu
+             déroulant, enleve ce qu'il y a en dessous") : elles sont
+             désormais intégrées DIRECTEMENT dans le menu déroulant
+             personnalisé ci-dessus (#trainedTacticsPicker, voir
+             renderTrainedTacticsPicker), qui rendait cette section
+             redondante. -->
       </div>
     </div>
   </div>
@@ -2395,10 +2670,44 @@
        (playerDetailOrigin), pas systématiquement l'Effectif. -->
   <div id="playerDetailSection" class="hidden">
     <div class="section">
-      <h2 id="playerDetailName">Fiche joueur</h2>
+      <!-- Retour utilisateur (2026-09) : "enlève le nom en blanc sur la page
+           joueur au dessus de la brique, laisse uniquement celui qui est
+           dans la brique" — ce titre restait dans le DOM (renderPlayerDetail
+           continue à mettre son textContent à jour) mais n'est plus affiché,
+           le nom du joueur étant désormais uniquement affiché dans la
+           première pdp-card (voir plus bas, ~ligne 15818). -->
+      <h2 id="playerDetailName" style="display:none">Fiche joueur</h2>
       <div id="playerDetailContent"></div>
       <div class="actions">
         <button class="secondary" id="closePlayerDetailBtn">← Retour</button>
+        <!-- Comparateur de joueurs (retour utilisateur, 2026-09-23,
+             "reflechis à ça, ça me plait bien" — mockup validé en amont) :
+             ouvre le sélecteur du 2e joueur avec CE joueur déjà fixé comme
+             joueur A. Voir openPlayerCompareFromDetail/showPlayerComparePicker. -->
+        <button class="secondary" id="openPlayerCompareBtn">⇄ Comparer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparateur de joueurs (retour utilisateur, 2026-09-23) : page dédiée
+       (pas une fenêtre superposée, décision validée par l'utilisateur),
+       format "paysage" — mockup validé avant implémentation (voir
+       DEV_NOTES.md). Deux temps : d'abord le sélecteur du 2e joueur
+       (#playerComparePicker), puis la vue comparative elle-même
+       (#playerCompareContent) une fois les deux joueurs choisis. Voir
+       showPlayerComparePicker/renderPlayerCompareView. -->
+  <div id="playerCompareSection" class="hidden">
+    <div class="section">
+      <div id="playerComparePicker" class="hidden">
+        <p class="training-intro" id="playerComparePickerIntro"></p>
+        <div class="topbar-search" id="compareSearchWrap" style="max-width:420px;">
+          <input type="text" class="topbar-search-input" id="compareSearchInput" placeholder="Rechercher le 2e joueur (nom)…" autocomplete="off" aria-label="Rechercher le 2e joueur">
+          <div class="topbar-search-results hidden" id="compareSearchResults"></div>
+        </div>
+      </div>
+      <div id="playerCompareContent"></div>
+      <div class="actions">
+        <button class="secondary" id="closePlayerCompareBtn">← Retour</button>
       </div>
     </div>
   </div>
@@ -2505,7 +2814,7 @@
         <p class="training-intro" style="margin-top:10px;"><b>29 caractéristiques (0 à 99)</b> : Tir à mi-distance, Tir à 3 points, Jeu intérieur, Passe, Rebond, Contre, Dribble, Agilité, Défense extérieure, Défense intérieure, Mental, Endurance, Lancer franc, Pénétration, Création de tir, Interceptions, Puissance, Concentration, Anticipation, Leadership, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision. Sur chacune, plus le chiffre est élevé, mieux c'est, sans exception. La petite barre colorée sous chaque valeur donne le niveau en un coup d'œil (rouge en dessous de 45, grise de 45 à 64, verte de 65 à 79, dorée à partir de 80, niveau élite). Elles ne sont plus affichées directement dans le tableau <b>Effectif</b> (onglet Général, devenu trop chargé) : cliquez sur le nom d'un joueur pour ouvrir sa fiche et voir ses 29 caractéristiques en détail, ou passez par le sous-onglet <b>Caractéristiques</b> de l'Effectif pour les comparer d'un coup d'œil entre tous vos joueurs.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Quelles caractéristiques comptent selon le poste</b> : Meneur (Passe, Dribble, Agilité, Pénétration, Création de tir, Interceptions, Vitesse, Accélération), Arrière (Tir à 3 points, Tir à mi-distance, Dribble, Pénétration, Création de tir, Interceptions, Vitesse, Accélération), Ailier shooteur (Tir à 3 points, Défense extérieure, Création de tir), Ailier fort (Jeu intérieur, Rebond, Défense intérieure, Puissance, Force, Détente), Pivot (Jeu intérieur, Rebond, Contre, Défense intérieure, Puissance, Force, Détente). Mental, Endurance, Lancer franc, Concentration, Leadership, Décision, Sang-froid, Détermination, Discipline et Vision ne sont liées à aucun poste en particulier : ce sont des qualités générales, aussi utiles à un Meneur qu'à un Pivot. Pour juger si un joueur est bon À SON POSTE, comparez-le aux autres sur les caractéristiques propres à ce poste plutôt que sur l'ensemble des vingt-neuf. Sur la feuille de match (onglet <b>Ordres</b>), chaque joueur proposé comme remplaçant apparaît aussi avec un niveau global entre parenthèses (moyenne simple des vingt-neuf caractéristiques), pratique pour trancher vite entre deux joueurs au même poste.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Mental, Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership</b> : en plus de compter dans le niveau global comme les autres, chacune alimente aussi un mécanisme de match dédié. Le <b>Mental</b> améliore (ou dégrade) la réussite au tir dans le money time (dernières minutes d'un match serré), et limite les dégâts d'une mauvaise série de tirs manqués ou de pertes de balle consécutives pour le tireur concerné, un Mental élevé permettant d'encaisser une série sans s'enfoncer. L'<b>Endurance</b> ralentit l'accumulation de fatigue EN MATCH propre à ce joueur, comme un Espace bien-être personnel (voir <b>Salle</b>). Le <b>Lancer franc</b> détermine directement la réussite aux lancers francs, indépendamment du tir à mi-distance ; la <b>Concentration</b> l'améliore encore un peu plus. La <b>Puissance</b> augmente les fautes provoquées sur les tirs près du panier. L'<b>Anticipation</b> renforce la pression défensive de toute l'équipe sur les extérieurs adverses, aux côtés de la Défense extérieure. Le <b>Leadership</b> fonctionne différemment des six autres : c'est celui du MEILLEUR joueur du cinq en jeu (pas forcément le tireur en difficulté) qui compte, et il allège, pour TOUTE L'ÉQUIPE, le malus d'une mauvaise série de tirs manqués consécutifs (à partir de 3 d'affilée pour le tireur concerné).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Pénétration, Création de tir, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision</b> : elles aussi comptent dans le niveau global, et chacune alimente à son tour un mécanisme de match dédié. La <b>Pénétration</b> augmente les chances d'être choisi comme tireur près du cercle, et aide à se créer un accès à la raquette face à un défenseur solide. La <b>Création de tir</b> est désormais le facteur principal de la qualité d'ouverture d'un tir. Les <b>Interceptions</b> pèsent directement dans le choix du voleur de balle sur une perte de balle adverse, et dans la pression collective qui en provoque. La <b>Vitesse</b> et l'<b>Accélération</b> déclenchent des contre-attaques après une interception ou un rebond défensif, et aident à battre son défenseur au premier pas. La <b>Force</b> et la <b>Détente</b> renforcent le combat du rebond et la capacité à contrer un tir adverse. La <b>Décision</b> réduit les pertes de balle du porteur de balle ; la <b>Vision</b> améliore le choix du passeur et la conversion en passe décisive. Le <b>Sang-froid</b> et la <b>Détermination</b> agissent comme le Mental dans le money time et après une mauvaise série. La <b>Discipline</b> réduit les fautes provoquées en défense ; un défenseur peu discipliné ou peu serein (Sang-froid bas) risque en plus une faute technique, deux dans le même match valant exclusion, comme la vraie règle du basket.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Pénétration, Création de tir, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision</b> : elles aussi comptent dans le niveau global, et chacune alimente à son tour un mécanisme de match dédié. La <b>Pénétration</b> augmente les chances d'être choisi comme tireur près du cercle, et aide à se créer un accès à la raquette face à un défenseur solide. La <b>Création de tir</b> est désormais le facteur principal de la qualité d'ouverture d'un tir. Les <b>Interceptions</b> pèsent directement dans le choix du voleur de balle sur une perte de balle adverse, et dans la pression collective qui en provoque. La <b>Vitesse</b> et l'<b>Accélération</b> déclenchent des contre-attaques après une interception ou un rebond défensif, et aident à battre son défenseur au premier pas. La <b>Force</b> et la <b>Détente</b> renforcent le combat du rebond et la capacité à contrer un tir adverse. La <b>Décision</b> réduit les pertes de balle du porteur de balle ; la <b>Vision</b> améliore le choix du passeur et la conversion en passe décisive. Le <b>Sang-froid</b> et la <b>Détermination</b> agissent comme le Mental dans le money time et après une mauvaise série. La <b>Discipline</b> réduit les fautes provoquées en défense ; un défenseur peu discipliné risque en plus une faute antisportive (contact jugé excessif), et un défenseur peu serein (Sang-froid bas) une faute technique (dissipation) — deux fautes techniques, deux antisportives, ou une de chaque dans le même match valent exclusion, comme la vraie règle du basket.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Potentiel</b> : un nom de palier (10 paliers, de Débutant à Générationnel), jamais le chiffre exact. Il indique la marge de progression ENCORE POSSIBLE au-dessus du niveau actuel du joueur, pas sa qualité du moment : un jeune joueur encore faible mais à fort potentiel peut, bien entraîné (onglet <b>Entraînement</b>), dépasser largement un joueur déjà bon mais dont le potentiel est presque atteint. Survolez le nom du palier pour voir son rang exact (1 à 10).</p>
       </div>
 
@@ -2633,10 +2942,13 @@ const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivo
 // Création de tir/Interceptions/Puissance/Concentration/Anticipation/
 // Leadership). Copie mirroir EXACTE de engine.js (voir son grand commentaire
 // au-dessus d'ATTRS pour le détail du rôle de chacune).
+// "mental" retiré comme caractéristique indépendante (retour utilisateur,
+// 2026-09 : "le mental c'est désormais la moyenne de toutes ces lignes") —
+// copie mirroir EXACTE de engine.js, voir mentalAverage() plus bas.
 const ATTRS = [
   "midRange", "threePoint", "inside", "pass", "rebound",
   "block", "dribble", "agility", "defOutside", "defInside",
-  "mental", "endurance", "freeThrow",
+  "endurance", "freeThrow",
   "penetration", "shotCreation", "steal", "power", "focus", "anticipation", "leadership",
   "speed", "acceleration", "strength", "vertical", "decision", "composure", "determination", "discipline", "vision",
 ];
@@ -2652,7 +2964,6 @@ const TRAINING_LABELS = {
   agility: "Agilité",
   defOutside: "Défense extérieure",
   defInside: "Défense intérieure",
-  mental: "Mental",
   endurance: "Endurance",
   freeThrow: "Lancer franc",
   penetration: "Pénétration",
@@ -2683,8 +2994,15 @@ const TRAINING_LABELS = {
 // Player.trainWeek plus bas (logique) ET par categoryAverageCellHtml plus
 // loin dans ce fichier (affichage 2-colonnes Physique/Mental de l'Effectif).
 const PHYSICAL_ATTRS = ["speed", "acceleration", "agility", "strength", "vertical", "endurance", "power"];
-const MENTAL_ATTRS = ["mental", "decision", "focus", "composure", "anticipation", "determination", "leadership", "discipline", "vision"];
+const MENTAL_ATTRS = ["decision", "focus", "composure", "anticipation", "determination", "leadership", "discipline", "vision"];
 const FUNDAMENTAL_ATTRS = ATTRS.filter(a => !PHYSICAL_ATTRS.includes(a) && !MENTAL_ATTRS.includes(a));
+
+// mentalAverage(p) : copie mirroir EXACTE de engine.js (voir son grand
+// commentaire au-dessus de PHYSICAL_ATTRS) — valeur "mental" calculée à la
+// volée comme la moyenne des 8 traits de MENTAL_ATTRS.
+function mentalAverage(p) {
+  return MENTAL_ATTRS.reduce((sum, a) => sum + p.attrs[a], 0) / MENTAL_ATTRS.length;
+}
 
 const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
@@ -2955,11 +3273,22 @@ const PHRASES = {
     "Faute technique sifflée contre {player} ({team}) : il s'énerve contre l'arbitrage.",
     "{player} ({team}) perd patience : faute technique.",
   ],
-  // Exclusion pour indiscipline : deuxième faute technique du même joueur.
+  // Faute antisportive (voir MatchEngine.maybeCommitUnsportsmanlikeFoul) :
+  // copie mirroir EXACTE de engine.js.
+  unsportsmanlikeFoul: [
+    "Faute antisportive sifflée contre {player} ({team}) : contact jugé beaucoup trop dur.",
+    "{player} ({team}) écope d'une faute antisportive.",
+    "Intervention beaucoup trop appuyée de {player} ({team}) : faute antisportive.",
+  ],
+  // Exclusion pour cumul de fautes disciplinaires (voir MatchEngine.
+  // shouldEjectForFouls) : 2 techniques, 2 antisportives, OU 1 de chaque.
   technicalEjection: [
-    "Deuxième faute technique pour {player} ({team}) : exclusion !",
-    "{player} ({team}) écope d'une deuxième faute technique et est exclu du match.",
-    "Coup de sang de trop pour {player} ({team}) : deuxième faute technique, direction les vestiaires.",
+    "Nouvelle faute technique pour {player} ({team}) : cumul de fautes disciplinaires, exclusion !",
+    "{player} ({team}) est exclu du match après une nouvelle faute technique (cumul de fautes disciplinaires).",
+  ],
+  unsportsmanlikeEjection: [
+    "Nouvelle faute antisportive pour {player} ({team}) : cumul de fautes disciplinaires, exclusion !",
+    "{player} ({team}) est exclu du match après une nouvelle faute antisportive (cumul de fautes disciplinaires).",
   ],
   substitution: [
     "{replacement} remplace {player} ({team}).",
@@ -5857,6 +6186,10 @@ class Player {
     // chaque match dans resetForMatch ci-dessous, initialisé ici comme
     // fouls/disqualified juste au-dessus.
     this.technicalFouls = 0;
+    // Compteur de fautes antisportives (copie mirroir EXACTE de engine.js,
+    // voir son grand commentaire) : combiné à technicalFouls ci-dessus par
+    // MatchEngine.shouldEjectForFouls pour décider de l'exclusion.
+    this.unsportsmanlikeFouls = 0;
     this.injured = false;
     this.onCourt = false;
     // Blessure PERSISTANTE encore en cours à l'entrée de CE match (voir
@@ -5865,7 +6198,8 @@ class Player {
     // Série de ratés/pertes de balle d'affilée EN MATCH (voir "mental" au-dessus
     // d'ATTRS) : incrémentée sur un tir manqué ou une perte de balle, remise à
     // 0 sur un tir réussi (voir playPossession) - alimente le malus de "tilt"
-    // qui s'aggrave ou s'atténue selon Player.attrs.mental.
+    // qui s'aggrave ou s'atténue selon mentalAverage(joueur) (voir plus haut,
+    // au-dessus de PHYSICAL_ATTRS).
     this.consecutiveMisses = 0;
     // Poste occupé DANS CE MATCH (peut différer de this.position si le
     // joueur est aligné comme remplaçant sur un autre poste que le sien —
@@ -6125,6 +6459,7 @@ class Player {
     this.fouls = 0;
     this.disqualified = false;
     this.technicalFouls = 0;
+    this.unsportsmanlikeFouls = 0;
     this.injured = false;
     this.onCourt = false;
     // Blessure PERSISTANTE (voir engine.js, miroir identique).
@@ -7462,7 +7797,7 @@ class Team {
     const p = this.players.find(pl => pl.id === playerId);
     if (!p) return { ok: false, reason: "not-found" };
     if (!p.transferRequestActive) return { ok: false, reason: "not-requesting" };
-    const chance = TRANSFER_REQUEST_DISCUSS_BASE_CHANCE + (p.attrs.mental / 100) * TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS;
+    const chance = TRANSFER_REQUEST_DISCUSS_BASE_CHANCE + (mentalAverage(p) / 100) * TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS;
     const success = Math.random() < chance;
     const formBefore = p.form;
     if (success) {
@@ -10659,8 +10994,10 @@ function playerFromSave(pdata) {
   // retrouvent avec exactement la même valeur), plutôt qu'une constante fixe,
   // pour éviter un saut brutal d'overall/salaire au premier chargement après
   // mise à jour.
+  // "mental" retiré de cette liste (retour utilisateur, 2026-09, voir le
+  // grand commentaire au-dessus d'ATTRS) : copie mirroir EXACTE de engine.js.
   const legacyAttrKeys = ["midRange", "threePoint", "inside", "pass", "rebound", "block", "dribble", "agility", "defOutside", "defInside"];
-  const missingNewAttrs = ["mental", "endurance", "freeThrow"].filter(k => typeof p.attrs[k] !== "number");
+  const missingNewAttrs = ["endurance", "freeThrow"].filter(k => typeof p.attrs[k] !== "number");
   if (missingNewAttrs.length) {
     const legacyAvg = legacyAttrKeys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / legacyAttrKeys.length;
     missingNewAttrs.forEach(k => {
@@ -10668,7 +11005,7 @@ function playerFromSave(pdata) {
     });
   }
   // 7 caractéristiques ajoutées ensuite. Copie mirroir EXACTE de engine.js.
-  const attrs13Keys = [...legacyAttrKeys, "mental", "endurance", "freeThrow"];
+  const attrs13Keys = [...legacyAttrKeys, "endurance", "freeThrow"];
   const missingAttrs20 = ["penetration", "shotCreation", "steal", "power", "focus", "anticipation", "leadership"].filter(k => typeof p.attrs[k] !== "number");
   if (missingAttrs20.length) {
     const avg13 = attrs13Keys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / attrs13Keys.length;
@@ -11301,9 +11638,17 @@ class MatchEngine {
     }
     if (made > 0) {
       this.applyPlusMinusForPoints(team, made);
-      this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), possession: this.teamKey(team) });
+      this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, made, attempts: n, possession: this.teamKey(team) });
     }
     return made;
+  }
+
+  // Seuil d'exclusion disciplinaire (voir MatchEngine.shouldEjectForFouls
+  // dans engine.js). Copie mirroir EXACTE de engine.js.
+  shouldEjectForFouls(p) {
+    const technical = p.technicalFouls || 0;
+    const unsportsmanlike = p.unsportsmanlikeFouls || 0;
+    return technical >= 2 || unsportsmanlike >= 2 || (technical >= 1 && unsportsmanlike >= 1);
   }
 
   // Exclusion pour indiscipline (voir MatchEngine.maybeEjectForComposure
@@ -11313,13 +11658,29 @@ class MatchEngine {
     const technicalChance = clamp((50 - defender.attrs.composure) * 0.001, 0, 0.05);
     if (Math.random() >= technicalChance) return;
     defender.technicalFouls = (defender.technicalFouls || 0) + 1;
-    if (defender.technicalFouls >= 2) {
+    if (this.shouldEjectForFouls(defender)) {
       defender.disqualified = true;
       this.log(events, quarter, clock, say(PHRASES.technicalEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam) });
     } else {
       this.log(events, quarter, clock, say(PHRASES.technicalFoul, { player: defender.name, team: defTeam.name }), { type: "technicalFoul", team: this.teamKey(defTeam) });
     }
     this.freeThrows(ftShooter, 1, events, quarter, clock, offTeam);
+  }
+
+  // Faute antisportive (voir MatchEngine.maybeCommitUnsportsmanlikeFoul dans
+  // engine.js). Copie mirroir EXACTE de engine.js.
+  maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, ftShooter, quarter, clock, events) {
+    if (defender.disqualified || defender.attrs.discipline >= 50) return;
+    const unsportsmanlikeChance = clamp((50 - defender.attrs.discipline) * 0.0006, 0, 0.03);
+    if (Math.random() >= unsportsmanlikeChance) return;
+    defender.unsportsmanlikeFouls = (defender.unsportsmanlikeFouls || 0) + 1;
+    if (this.shouldEjectForFouls(defender)) {
+      defender.disqualified = true;
+      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam) });
+    } else {
+      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeFoul, { player: defender.name, team: defTeam.name }), { type: "unsportsmanlikeFoul", team: this.teamKey(defTeam) });
+    }
+    this.freeThrows(ftShooter, 2, events, quarter, clock, offTeam);
   }
 
   // scoreDiff = score(offTeam) - score(defTeam) au moment présent : sert aux
@@ -11373,7 +11734,7 @@ class MatchEngine {
       // On évite si possible de faire fauter un joueur déjà proche de l'exclusion.
       const defender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
       defender.stats.pf++; defender.fouls++;
-      this.log(events, quarter, clock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, possession: this.teamKey(offTeam) });
       this.freeThrows(ballHandler, 2, events, quarter, clock, offTeam);
       return { possessionOffense: false, scored: true, intentionalFoul: true };
     }
@@ -11454,7 +11815,7 @@ class MatchEngine {
       );
       if (Math.random() < 0.55) {
         stealer.stats.stl++;
-        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, stealer: stealer.name, possession: this.teamKey(offTeam) });
         // Contre-attaque (retour utilisateur, 2026-09 : "Vitesse/Accélération
         // → contre-attaques") : une interception donne le ballon à l'équipe
         // qui défendait, qui devient offensive à la possession suivante (voir
@@ -11468,7 +11829,7 @@ class MatchEngine {
         // de cette équipe face à une défense pas replacée).
         if (Math.random() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
       } else {
-        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, stealer: null, possession: this.teamKey(offTeam) });
       }
       return { possessionOffense: false };
     }
@@ -11724,13 +12085,13 @@ class MatchEngine {
     //    mental élevé transforme un tir serré en fin de match, un mental bas
     //    le fait douter. Pivot à 50 (valeur moyenne) => aucun effet pour un
     //    joueur "moyen", jusqu'à environ ±6 pts de % pour un mental extrême.
-    const mentalClutchBoost = clutch ? (shooter.attrs.mental - 50) * 0.0012 : 0;
+    const mentalClutchBoost = clutch ? (mentalAverage(shooter) - 50) * 0.0012 : 0;
     // 2) Malus de "tilt" : après 3 ratés/pertes de balle d'affilée (voir
     //    consecutiveMisses, mis à jour plus bas et incrémenté aussi sur
     //    perte de balle) - un mental élevé (>=70) annule totalement le
     //    malus, un mental bas peut aller jusqu'à -9 pts de %.
     const tiltPenalty = shooter.consecutiveMisses >= 3
-      ? clamp((70 - shooter.attrs.mental) * 0.0015, 0, 0.09) : 0;
+      ? clamp((70 - mentalAverage(shooter)) * 0.0015, 0, 0.09) : 0;
     // Leadership (retour utilisateur, 2026-09 : "trouve un intérêt aux carac
     // qui ne sont pas utilisées") : un capitaine (le meilleur Leadership du
     // cinq en jeu, pas forcément le tireur) aide toute l'équipe à mieux
@@ -11778,16 +12139,26 @@ class MatchEngine {
       // passes décisives") : un passeur avec une bonne vision de jeu convertit
       // plus souvent une passe en vraie passe décisive une fois le tir ouvert.
       const visionAssistBonus = assistCandidate ? (assistCandidate.attrs.vision - 50) * 0.001 : 0;
+      // `assistedBy` (retour utilisateur, 2026-09 : "il n'y a pas de box
+      // score en direct. il faut l'ajouter") : copie miroir EXACTE du
+      // correctif engine.js (voir son commentaire) — capture explicitement
+      // qui a été crédité de la passe décisive pour le champ structuré
+      // `assister` ci-dessous, seul moyen de reconstituer le box score EN
+      // DIRECT (voir applyLiveBoxScoreEvent plus bas) sans dévoiler le
+      // résultat final déjà entièrement simulé.
+      let assistedBy = null;
       if (assistCandidate && quality === "ouvert" && Math.random() < 0.65 + offense.assist + assistOpenBonus + visionAssistBonus) {
         assistCandidate.stats.ast++;
+        assistedBy = assistCandidate.name;
       }
-      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, assister: assistedBy, possession: this.teamKey(offTeam) });
 
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, 1, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
+        this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
       }
       return { possessionOffense: false, scored: true };
     } else {
@@ -11802,13 +12173,14 @@ class MatchEngine {
       // tir raté normal.
       if (blocked) {
         defender.stats.blk++;
-        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, blocker: defender.name, possession: this.teamKey(offTeam) });
       }
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, defender: defender.name, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
+        this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
         return { possessionOffense: false, scored: true };
       }
 
@@ -11873,7 +12245,7 @@ class MatchEngine {
       this.log(events, quarter, clock, say(
         offensiveRebound ? PHRASES.reboundOff : PHRASES.reboundDef,
         { shooter: shooter.name, rebounder: rebounder.name }
-      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
+      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, rebounder: rebounder.name, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
       return { possessionOffense: offensiveRebound };
     }
@@ -12076,6 +12448,12 @@ class MatchEngine {
       .filter(p => p.secondsPlayed > 0)
       .sort((a, b) => b.secondsPlayed - a.secondsPlayed)
       .map(p => ({
+        // `id` ajouté (retour utilisateur, 2026-09 : "ajoute l'avatar du
+        // joueur MVP sur les box scores") : champ ADDITIF, seul moyen pour
+        // le client de retrouver le VRAI Player (donc son avatar procédural,
+        // voir playerAvatarHtml) depuis une ligne de box score, le nom seul
+        // n'étant pas garanti unique entre deux clubs.
+        id: p.id,
         name: p.name, position: p.matchPosition || p.position,
         min: Math.max(1, Math.round(p.secondsPlayed / 60)),
         ...p.stats,
@@ -12097,7 +12475,10 @@ const ATTR_SHORT = {
   // 3 caractéristiques ajoutées (voir le grand commentaire au-dessus d'ATTRS,
   // engine.js) : libellés volontairement très courts (comme "MI-D"/"CTR"
   // ci-dessus) pour limiter l'impact sur la largeur du tableau Effectif.
-  mental: "MENT", endurance: "END", freeThrow: "LF",
+  // "mental" retiré (n'est plus dans ATTRS, retour utilisateur 2026-09) :
+  // plus besoin d'un libellé court pour une caractéristique qui n'existe
+  // plus individuellement.
+  endurance: "END", freeThrow: "LF",
   // 7 caractéristiques ajoutées ensuite : mêmes libellés courts.
   penetration: "PÉN", shotCreation: "CRÉA", steal: "INTC",
   power: "PUIS", focus: "CONC", anticipation: "ANTI", leadership: "LEAD",
@@ -12214,12 +12595,27 @@ function evaluationSquaresHtml(player) {
   return html;
 }
 
+// Retour utilisateur (2026-09-23, "reprends le meme code couleur pour les
+// pages effectifs, les joueurs sur le marché des transferts [...]") :
+// utilise désormais attrColorTier (même échelle rouge/orange/blanc/vert,
+// 0-20/21-50/51-80/81+, que la fiche joueur — voir son grand commentaire CSS
+// "REVIRTEMENT VOLONTAIRE") au lieu de l'ancienne échelle attr-lo/mid/good/
+// elite (45/65/80) codée en dur ici auparavant. attrColorTier est déclarée
+// PLUS BAS dans ce fichier (avec les fonctions d'appui de la fiche joueur),
+// mais `function attrColorTier(...)` est une déclaration de fonction, donc
+// hissée (hoisting) en haut du script : l'appeler ici, avant sa définition
+// textuelle, est parfaitement valide en JS. attrCellHtml est le SEUL point
+// d'affichage des caractéristiques chiffrées façon "mini-barre" du jeu — le
+// changement se propage donc cohéremment à tous ses appelants : Effectif
+// (sous-onglet Caractéristiques), Marché (fiches des joueurs à vendre),
+// fiche équipe d'un adversaire, ET Académie de jeunes (effectif jeunes +
+// prospects en attente de signature) — ces deux derniers n'étaient pas
+// nommés explicitement dans la demande mais partagent ce même composant,
+// les en exclure aurait cassé la cohérence que ce changement vise
+// justement à obtenir dans tout le jeu.
 function attrCellHtml(value) {
   const pct = Math.max(0, Math.min(100, value));
-  let tier = "attr-lo";
-  if (value >= 80) tier = "attr-elite";
-  else if (value >= 65) tier = "attr-good";
-  else if (value >= 45) tier = "attr-mid";
+  const tier = attrColorTier(value);
   return `<div class="attr-cell ${tier}"><span class="attr-val">${value}</span><div class="attr-bar-track"><div class="attr-bar-fill" style="width:${pct}%"></div></div></div>`;
 }
 
@@ -12377,12 +12773,22 @@ const TACTIC_ATTR_PROFILE = {
   "Transition rapide":   { agility: "strong", endurance: "strong", dribble: "strong", midRange: "weak" },
   "Tirs rapides":        { threePoint: "strong", agility: "strong", inside: "weak" },
 };
+// "mental" reste dans TACTICAL_ATTRS (aucun tacticKey ne le pondère en
+// "strong"/"weak" ci-dessus, il compte donc toujours en "base", exactement
+// comme avant son retrait de ATTRS) mais n'est plus un attrs[a] direct
+// (retour utilisateur, 2026-09, voir le grand commentaire au-dessus
+// d'ATTRS/PHYSICAL_ATTRS) : cette fonction reçoit un objet attrs brut, pas
+// un joueur complet, donc on ne peut pas appeler mentalAverage(joueur) ici
+// et on recalcule la moyenne des MENTAL_ATTRS directement depuis `attrs`.
 function tacticalFitScore(attrs, tacticKey) {
   const profile = TACTIC_ATTR_PROFILE[tacticKey] || {};
   let sum = 0, totalW = 0;
   TACTICAL_ATTRS.forEach(a => {
     const w = TACTIC_ATTR_CATEGORY_WEIGHT[profile[a] || "base"];
-    sum += attrs[a] * w;
+    const value = a === "mental"
+      ? MENTAL_ATTRS.reduce((s, k) => s + attrs[k], 0) / MENTAL_ATTRS.length
+      : attrs[a];
+    sum += value * w;
     totalW += w;
   });
   return totalW ? sum / totalW : 0;
@@ -13604,7 +14010,7 @@ const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
   "clubSection", "staffSection", "academieSection", "economieSection", "salleSection", "calendrierSection", "coupeSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
-  "guideSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection",
+  "guideSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
 ];
 
 // Pages dont le contenu (tableau dense en colonnes) a besoin de toute la
@@ -13627,7 +14033,12 @@ const PAGE_IDS = [
 // plafonner à 700px : elle rejoint donc WIDE_PAGE_IDS comme les autres pages
 // à grille dense, plutôt que de rester bridée par un gabarit pensé pour
 // l'ancien format.
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection", "playerDetailSection"]);
+// "playerCompareSection" ajouté (retour utilisateur, 2026-09-23, comparateur
+// de joueurs, mockup format "paysage" validé) : mêmes raisons que
+// "playerDetailSection" juste au-dessus, en plus dense encore (3 colonnes de
+// caractéristiques côte à côte plutôt qu'empilées, exprès pour éviter de
+// dérouler en longueur — voir renderPlayerCompareView).
+const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection", "playerDetailSection", "playerCompareSection"]);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
 // "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
@@ -15351,6 +15762,301 @@ function hidePlayerDetail() {
 }
 document.getElementById("closePlayerDetailBtn").addEventListener("click", hidePlayerDetail);
 
+// Calcule la visibilité des caractéristiques d'un joueur (verrou de
+// scoutisme) : SOURCE UNIQUE (2026-09-23, extraite de renderPlayerDetail à
+// l'ajout du comparateur de joueurs — comportement strictement identique à
+// avant, pure extraction) — reprend la règle déjà en place : son propre
+// effectif ou une annonce OUVERTE sur ce joueur lève le verrou, sinon
+// seules les caractéristiques déjà débloquées par le scoutisme
+// (teamA.scoutedAttrs) sont visibles. `fullyVisible` : la note globale et
+// le radar mélangent les 29 caractéristiques, affichés seulement une fois
+// l'équipe entièrement scoutée (sinon fuite d'info par la bande).
+function computePlayerVisibility(teamIdx, player) {
+  const isOwnTeam = teamIdx === myTeamIndex;
+  const openListing = (league.transferListings || []).find(l => l.status === "open" && l.playerId === player.id);
+  const onMarket = Boolean(openListing);
+  const revealedSet = (isOwnTeam || onMarket) ? null : new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
+  const visibleAttrs = ATTRS.filter(a => isOwnTeam || onMarket || revealedSet.has(a));
+  return {
+    isOwnTeam, openListing, onMarket,
+    visibleAttrs, visibleAttrsSet: new Set(visibleAttrs),
+    fullyVisible: visibleAttrs.length === ATTRS.length,
+  };
+}
+
+// ---------------------------------------------------------------------
+// Comparateur de joueurs (retour utilisateur, 2026-09-23 : "Un comparateur
+// de joueurs côte à côte (marché des transferts et effectif) / reflechis à
+// ça, ça me plait bien"). Décisions de cadrage validées par l'utilisateur
+// (question à choix) : page dédiée (pas de fenêtre superposée), 2 joueurs
+// comparés à la fois. Format "paysage" validé sur mockup statique AVANT
+// implémentation (voir DEV_NOTES.md) : les 3 groupes de caractéristiques
+// tiennent côte à côte plutôt qu'empilés, pour que tout rentre sur la
+// hauteur d'un écran — cohérent avec la bataille récente contre le
+// débordement horizontal de l'Effectif (retour utilisateur : "il y a
+// besoin de scroller vers la droite maintenant ?").
+//
+// Entrée UNIQUE : le bouton "Comparer" de la fiche joueur (voir
+// currentPlayerDetailRef, mis à jour à chaque renderPlayerDetail), qui fixe
+// le joueur A puis ouvre un sélecteur pour le joueur B, réutilisant l'index
+// de recherche déjà en place pour la barre de recherche globale
+// (normalizeSearchText/league.teams, voir renderTopbarSearchResults)
+// plutôt que d'en reconstruire un second.
+let currentPlayerDetailRef = null; // { teamIdx, playerId } — dernier joueur affiché sur la fiche joueur
+let playerCompareState = { a: null, b: null }; // { teamIdx, playerId } chacun, b: null tant que pas choisi
+
+function openPlayerCompareFromDetail() {
+  if (!currentPlayerDetailRef) return;
+  showPlayerComparePicker(currentPlayerDetailRef.teamIdx, currentPlayerDetailRef.playerId);
+}
+document.getElementById("openPlayerCompareBtn").addEventListener("click", openPlayerCompareFromDetail);
+
+function showPlayerComparePicker(teamIdxA, idA) {
+  const teamObj = league.teams[teamIdxA];
+  const playerA = teamObj && teamObj.players.find(p => p.id === idA);
+  if (!playerA) return; // joueur A plus dans son effectif (vendu/transféré depuis) : rien à comparer
+  playerCompareState = { a: { teamIdx: teamIdxA, playerId: idA }, b: null };
+
+  const picker = document.getElementById("playerComparePicker");
+  const content = document.getElementById("playerCompareContent");
+  const intro = document.getElementById("playerComparePickerIntro");
+  const input = document.getElementById("compareSearchInput");
+  content.innerHTML = "";
+  intro.textContent = `Comparer ${playerA.name} à…`;
+  input.value = "";
+  document.getElementById("compareSearchResults").innerHTML = "";
+  document.getElementById("compareSearchResults").classList.add("hidden");
+  picker.classList.remove("hidden");
+  showPage("playerCompareSection");
+  input.focus();
+}
+
+function hidePlayerCompare() {
+  // "← Retour" depuis le comparateur : toujours vers la fiche du joueur A
+  // (là où on a cliqué "Comparer"), jamais vers playerCompareOrigin séparé —
+  // plus prévisible que de remonter encore plus loin, et cohérent avec le
+  // fait qu'on est arrivé ici DEPUIS cette fiche.
+  if (playerCompareState.a) {
+    showPlayerDetail(playerCompareState.a.teamIdx, playerCompareState.a.playerId);
+  } else {
+    hidePlayerDetail();
+  }
+}
+document.getElementById("closePlayerCompareBtn").addEventListener("click", hidePlayerCompare);
+
+// Plafond d'affichage du sélecteur (même valeur que TOPBAR_SEARCH_MAX_PLAYERS,
+// même raison : éviter une liste interminable pour une recherche trop large).
+const COMPARE_SEARCH_MAX_PLAYERS = 8;
+
+function renderCompareSearchResults(rawQuery) {
+  const box = document.getElementById("compareSearchResults");
+  if (!box) return;
+  const query = normalizeSearchText(rawQuery);
+  if (!query || !league || !league.teams || !playerCompareState.a) {
+    box.classList.add("hidden");
+    box.innerHTML = "";
+    return;
+  }
+  const { teamIdx: teamIdxA, playerId: idA } = playerCompareState.a;
+  const matched = [];
+  league.teams.forEach((t, idx) => {
+    t.players.forEach(p => {
+      if (idx === teamIdxA && p.id === idA) return; // pas se comparer à soi-même
+      if (normalizeSearchText(p.name).includes(query)) matched.push({ teamIdx: idx, teamName: t.name, player: p });
+    });
+  });
+
+  let html = "";
+  if (matched.length === 0) {
+    html += `<div class="topbar-search-empty">Aucun joueur ne correspond.</div>`;
+  } else {
+    matched.slice(0, COMPARE_SEARCH_MAX_PLAYERS).forEach(m => {
+      const meta = `${POS_SHORT[m.player.position]} · ${m.teamIdx === myTeamIndex ? "Votre équipe" : m.teamName}`;
+      html += `<button type="button" class="topbar-search-result" data-compare-player-team="${m.teamIdx}" data-compare-player-id="${m.player.id}">` +
+        `<span class="tsr-name">${escapeHtml(m.player.name)}</span><span class="tsr-meta">${escapeHtml(meta)}</span></button>`;
+    });
+    if (matched.length > COMPARE_SEARCH_MAX_PLAYERS) {
+      html += `<div class="topbar-search-more">+ ${matched.length - COMPARE_SEARCH_MAX_PLAYERS} autre(s), affinez la recherche</div>`;
+    }
+  }
+  box.innerHTML = html;
+  box.classList.remove("hidden");
+}
+
+document.getElementById("compareSearchInput").addEventListener("input", (e) => renderCompareSearchResults(e.target.value));
+document.getElementById("compareSearchResults").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-compare-player-team][data-compare-player-id]");
+  if (!btn) return;
+  playerCompareState.b = { teamIdx: Number(btn.dataset.comparePlayerTeam), playerId: Number(btn.dataset.comparePlayerId) };
+  renderPlayerCompareView();
+});
+
+// Étiquette d'initiales pour l'avatar rond du comparateur (pas de vrai
+// avatar ici, contrairement à playerAvatarHtml sur la fiche joueur — juste
+// un repère visuel léger pour distinguer les deux côtés A/B, cohérent avec
+// le mockup validé).
+function compareInitials(name) {
+  return (name || "").split(" ").map(s => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+}
+
+function compareProfileTileHtml(label, aDisplay, bDisplay, aExtraClass, bExtraClass) {
+  return `<div class="compare-profile-tile"><div class="cpt-label">${escapeHtml(label)}</div>` +
+    `<div class="cpt-vals"><span class="cpt-val ${aExtraClass || ""}">${aDisplay}</span>` +
+    `<span class="cpt-sep">vs</span>` +
+    `<span class="cpt-val ${bExtraClass || ""}">${bDisplay}</span></div></div>`;
+}
+
+// Une ligne de caractéristique du comparateur : même verrou "?" que
+// pdpAttrRowHtml sur la fiche joueur (chaque côté indépendamment, un
+// adversaire pas encore scouté peut très bien avoir CETTE caractéristique
+// verrouillée pendant que l'autre côté (le vôtre, ou un joueur du marché)
+// l'a révélée) — jamais de "meilleure valeur" mise en avant si un des deux
+// côtés est verrouillé, la comparaison n'aurait pas de sens.
+function pdpCompareAttrRowHtml(attr, playerA, visA, playerB, visB) {
+  const label = TRAINING_LABELS[attr] || ATTR_SHORT[attr];
+  const aVisible = visA.has(attr);
+  const bVisible = visB.has(attr);
+  const aVal = aVisible ? playerA.attrs[attr] : null;
+  const bVal = bVisible ? playerB.attrs[attr] : null;
+  const bothVisible = aVisible && bVisible;
+  const aWin = bothVisible && aVal > bVal;
+  const bWin = bothVisible && bVal > aVal;
+  const aClass = aVisible ? `cmp-val ${attrColorTier(aVal)}${aWin ? " win" : ""}` : "cmp-val locked";
+  const bClass = bVisible ? `cmp-val ${attrColorTier(bVal)}${bWin ? " win" : ""}` : "cmp-val locked";
+  return `<div class="compare-row"><span class="${aClass}">${aVisible ? aVal : "?"}</span>` +
+    `<span class="cmp-label">${escapeHtml(label)}</span>` +
+    `<span class="${bClass}">${bVisible ? bVal : "?"}</span></div>`;
+}
+
+function renderPlayerCompareView() {
+  const picker = document.getElementById("playerComparePicker");
+  const holder = document.getElementById("playerCompareContent");
+  const { a, b } = playerCompareState;
+  if (!a || !b) return;
+
+  const teamObjA = league.teams[a.teamIdx];
+  const teamObjB = league.teams[b.teamIdx];
+  const playerA = teamObjA && teamObjA.players.find(p => p.id === a.playerId);
+  const playerB = teamObjB && teamObjB.players.find(p => p.id === b.playerId);
+  if (!playerA || !playerB) {
+    picker.classList.add("hidden");
+    holder.innerHTML = "<p class='training-empty'>Un des deux joueurs n'est plus disponible (vendu ou transféré depuis).</p>";
+    return;
+  }
+  picker.classList.add("hidden");
+
+  const visA = computePlayerVisibility(a.teamIdx, playerA);
+  const visB = computePlayerVisibility(b.teamIdx, playerB);
+  const teamLabel = (teamIdx, vis) => teamIdx === myTeamIndex
+    ? "Votre équipe"
+    : (vis.onMarket ? "Marché des transferts" : league.teams[teamIdx].name);
+
+  let html = "";
+  html += `<div class="compare-heads">`;
+  html += `<div class="compare-player-head side-a"><div class="compare-avatar-circle">${escapeHtml(compareInitials(playerA.name))}</div>` +
+    `<div><div class="cph-name">${escapeHtml(playerA.name)}</div>` +
+    `<div class="cph-meta">${escapeHtml(playerA.position)} · ${playerA.age} ans · ${playerA.height} cm</div>` +
+    `<div class="cph-team">${escapeHtml(teamLabel(a.teamIdx, visA))}</div></div></div>`;
+  html += `<div class="compare-vs-badge">VS</div>`;
+  html += `<div class="compare-player-head side-b"><div class="compare-avatar-circle">${escapeHtml(compareInitials(playerB.name))}</div>` +
+    `<div><div class="cph-name">${escapeHtml(playerB.name)}</div>` +
+    `<div class="cph-meta">${escapeHtml(playerB.position)} · ${playerB.age} ans · ${playerB.height} cm</div>` +
+    `<div class="cph-team">${escapeHtml(teamLabel(b.teamIdx, visB))}</div></div></div>`;
+  html += `</div>`; // compare-heads
+
+  html += playerA.position === playerB.position
+    ? `<p class="compare-position-note">Même poste (${escapeHtml(playerA.position)}) — comparaison directement pertinente.</p>`
+    : `<p class="compare-position-note">Postes différents (${escapeHtml(playerA.position)} / ${escapeHtml(playerB.position)}) — à garder en tête pour cette comparaison.</p>`;
+
+  // ---- Bandeau de profil (4 mini-cartes) ----
+  html += `<div class="compare-profile-strip">`;
+  // Évaluation globale : verrouillée tant qu'un des deux côtés n'est pas
+  // ENTIÈREMENT scouté (même règle que la fiche joueur — overall() mélange
+  // les 29 caractéristiques, fuite d'info si affiché plus tôt).
+  if (visA.fullyVisible && visB.fullyVisible) {
+    const overallA = Math.round(playerA.overall());
+    const overallB = Math.round(playerB.overall());
+    html += compareProfileTileHtml("Évaluation globale", overallA, overallB,
+      `${attrColorTier(overallA)}${overallA > overallB ? " win" : ""}`,
+      `${attrColorTier(overallB)}${overallB > overallA ? " win" : ""}`);
+  } else {
+    html += compareProfileTileHtml("Évaluation globale",
+      visA.fullyVisible ? Math.round(playerA.overall()) : "?",
+      visB.fullyVisible ? Math.round(playerB.overall()) : "?", "locked", "locked");
+  }
+  // Potentiel : jamais montré pour un joueur qui n'est pas dans VOTRE
+  // effectif (même règle que renderPlayerDetail, "Potentiel" n'apparaît que
+  // dans isOwnTeam) — pas même pour un joueur du marché, contrairement aux
+  // caractéristiques (le potentiel reste une info privée du propriétaire).
+  {
+    const aTxt = visA.isOwnTeam ? potentialTierLabel(playerA.potential) : "Inconnu";
+    const bTxt = visB.isOwnTeam ? potentialTierLabel(playerB.potential) : "Inconnu";
+    let aCls = visA.isOwnTeam ? "small" : "small locked";
+    let bCls = visB.isOwnTeam ? "small" : "small locked";
+    if (visA.isOwnTeam && visB.isOwnTeam) {
+      const iA = potentialTierIndex(playerA.potential), iB = potentialTierIndex(playerB.potential);
+      if (iA > iB) aCls += " win"; else if (iB > iA) bCls += " win";
+    }
+    html += compareProfileTileHtml("Potentiel", aTxt, bTxt, aCls, bCls);
+  }
+  // Salaire : réel uniquement pour VOTRE joueur (jamais celui d'un
+  // adversaire, même règle que la fiche joueur). Exception volontaire pour
+  // un joueur sur le marché : l'enchère en cours (ou le prix de départ) y
+  // est déjà une information PUBLIQUE ailleurs dans le jeu (cartes du
+  // Marché, visibles de tous) — la reprendre ici n'invente aucune fuite, et
+  // sert justement le cas d'usage principal du comparateur (comparer le
+  // coût d'une cible de transfert à un joueur déjà dans l'effectif).
+  {
+    const priceText = (player, vis) => {
+      if (vis.isOwnTeam) return `${formatMoney(player.salary)}/sem.`;
+      if (vis.onMarket) {
+        const l = vis.openListing;
+        return l.currentBid ? `${formatMoney(l.currentBid)} (enchère)` : `${formatMoney(l.startPrice)} (départ)`;
+      }
+      return "Inconnu";
+    };
+    const aCls = (visA.isOwnTeam || visA.onMarket) ? "small" : "small locked";
+    const bCls = (visB.isOwnTeam || visB.onMarket) ? "small" : "small locked";
+    html += compareProfileTileHtml("Salaire", priceText(playerA, visA), priceText(playerB, visB), aCls, bCls);
+  }
+  // Forme : toujours visible pour les deux côtés (même règle que la fiche
+  // joueur : conditionBadgeHtml n'est jamais gaté par isOwnTeam, contrairement
+  // à la Motivation juste à côté sur la fiche joueur — volontairement exclue
+  // ici du comparateur, elle EST gatée par isOwnTeam et n'aurait donc de sens
+  // que pour votre propre effectif).
+  {
+    const nowMs = Date.now();
+    const condA = conditionBadgeHtml(playerA, nowMs, teamObjA.conditionRecoveryPerDay());
+    const condB = conditionBadgeHtml(playerB, nowMs, teamObjB.conditionRecoveryPerDay());
+    html += compareProfileTileHtml("Forme", condA, condB, "small", "small");
+  }
+  html += `</div>`; // compare-profile-strip
+
+  // ---- 3 colonnes de caractéristiques côte à côte (coeur du format
+  // "paysage" validé sur mockup) ----
+  html += `<div class="compare-attr-columns">`;
+  html += `<div class="compare-attr-col"><h3>Fondamentaux</h3>` +
+    FUNDAMENTAL_ATTRS.map(a => pdpCompareAttrRowHtml(a, playerA, visA.visibleAttrsSet, playerB, visB.visibleAttrsSet)).join("") +
+    `</div>`;
+  html += `<div class="compare-attr-col"><h3>Physique</h3>` +
+    PHYSICAL_ATTRS.map(a => pdpCompareAttrRowHtml(a, playerA, visA.visibleAttrsSet, playerB, visB.visibleAttrsSet)).join("") +
+    `</div>`;
+  html += `<div class="compare-attr-col"><h3>Mental</h3>` +
+    MENTAL_ATTRS.map(a => pdpCompareAttrRowHtml(a, playerA, visA.visibleAttrsSet, playerB, visB.visibleAttrsSet)).join("") +
+    `</div>`;
+  html += `</div>`; // compare-attr-columns
+
+  html += `<div class="compare-legend">` +
+    `<span><i style="background:var(--danger)"></i> 0-20</span>` +
+    `<span><i style="background:var(--amber)"></i> 21-50</span>` +
+    `<span><i style="background:var(--ink)"></i> 51-80</span>` +
+    `<span><i style="background:#3ecf67"></i> 81+</span>` +
+    `<span><i style="background:rgba(62,207,103,.5)"></i> Meilleure valeur des deux</span>` +
+    `</div>`;
+
+  holder.innerHTML = html;
+}
+
 function playerDetailMarketFeedback(message, ok) {
   const el = document.getElementById("playerDetailMarketFeedback");
   if (el) el.innerHTML = message ? `<div class="gain-line ${ok ? "gain-up" : "gain-down"}">${escapeHtml(message)}</div>` : "";
@@ -15502,9 +16208,12 @@ function opponentNameForMatchLogEntry(teamIdx, entry) {
 //   au lieu de scoutingInfo/scoutingRangeFor (fourchettes) du fichier de
 //   référence, incompatible ici (déjà écarté pour la même raison lors du
 //   port scoutingReportText/playerStrengthsAndWeaknesses).
-// - pdpPillTier : délègue aux paliers attr-lo/mid/good/elite déjà utilisés
-//   par attrCellHtml (voir son commentaire), pas l'échelle rouge/orange/
-//   blanc/vert (attrColorTier) du fichier de référence.
+// - attrColorTier (ex-pdpPillTier) : délèguait aux paliers attr-lo/mid/good/
+//   elite déjà utilisés par attrCellHtml — REVIRTEMENT 2026-09-23 (voir le
+//   grand commentaire CSS ci-dessus) : utilise désormais l'échelle rouge/
+//   orange/blanc/vert (0-20/21-50/51-80/81+), demandée explicitement par
+//   l'utilisateur pour CETTE fiche joueur uniquement, sans halo autour des
+//   valeurs (voir .pdp-attr-value/.pdp-overall-num en CSS).
 // - Pas de port de nationality/RADAR_AXES nécessitant un nouveau champ
 //   Player : voir playerRadarCategories plus bas, qui les réutilise
 //   directement (FUNDAMENTAL_ATTRS/PHYSICAL_ATTRS/MENTAL_ATTRS existent
@@ -15516,11 +16225,11 @@ function opponentNameForMatchLogEntry(teamIdx, entry) {
 //   de référence) — la flèche de tendance reste simplement toujours
 //   "·" (flat) tant qu'il n'est pas câblé, sans rien casser.
 // ===================================================================
-function pdpPillTier(value) {
-  if (value >= 80) return "attr-elite";
-  if (value >= 65) return "attr-good";
-  if (value >= 45) return "attr-mid";
-  return "attr-lo";
+function attrColorTier(value) {
+  if (value <= 20) return "attr-tier-red";
+  if (value <= 50) return "attr-tier-orange";
+  if (value <= 80) return "attr-tier-white";
+  return "attr-tier-green";
 }
 function starRatingFromScore(score, max = 99) {
   return clamp(Math.round((score / max) * 5), 1, 5);
@@ -15535,7 +16244,7 @@ function pdpAttrRowHtml(player, attr, visible) {
   const trend = player.lastAttrTrend ? (player.lastAttrTrend[attr] || "flat") : "flat";
   const trendSymbol = trend === "up" ? "▲" : trend === "down" ? "▼" : "·";
   return `<div class="pdp-attr-row"><span class="lbl">${escapeHtml(label)}</span><span class="pdp-attr-right">` +
-    `<span class="pdp-trend ${trend}">${trendSymbol}</span><span class="pdp-pill ${pdpPillTier(value)}">${value}</span></span></div>`;
+    `<span class="pdp-trend ${trend}">${trendSymbol}</span><span class="pdp-attr-value ${attrColorTier(value)}">${value}</span></span></div>`;
 }
 // Schéma de terrain compact (voir COURT_SVG/COURT_MARKER_POS plus haut,
 // déjà utilisés par la feuille de match/.lineup-court) : les 5 postes,
@@ -15678,6 +16387,18 @@ function renderPlayerDetail(teamIdx, playerId) {
   const holder = document.getElementById("playerDetailContent");
   const team = league.teams[teamIdx];
   const player = team && team.players.find(p => p.id === playerId);
+  // Comparateur de joueurs (retour utilisateur, 2026-09-23) : mémorise QUEL
+  // joueur est affiché ici, pour que le bouton "Comparer" (voir
+  // openPlayerCompareFromDetail plus bas) sache toujours qui est le joueur A
+  // sans avoir à faire remonter teamIdx/playerId depuis chaque appelant de
+  // showPlayerDetail (topbar, effectif, marché, classements...). Mis à jour
+  // à CHAQUE rendu (y compris les re-rendus en place après une action, ex.
+  // discussTransferRequestAction), jamais seulement à l'ouverture initiale.
+  // Laissé à null si le joueur n'est plus dans cet effectif (cas ci-dessous)
+  // : le bouton "Comparer" n'a alors personne de valide à comparer.
+  currentPlayerDetailRef = player ? { teamIdx, playerId } : null;
+  const openCompareBtn = document.getElementById("openPlayerCompareBtn");
+  if (openCompareBtn) openCompareBtn.classList.toggle("hidden", !player);
   if (!player) {
     nameHeader.textContent = "Fiche joueur";
     holder.innerHTML = "<p class='training-empty'>Ce joueur n'est plus dans cet effectif (vendu, ou transféré).</p>";
@@ -15705,8 +16426,12 @@ function renderPlayerDetail(teamIdx, playerId) {
   // règle reprise dans la carte "Mise en vente" de la refonte pdp-card
   // ci-dessous : contrairement au fichier de référence (qui affiche le nom
   // de l'équipe en tête via teamLinkHtml), on ne montre ici QUE le montant.
-  const openListing = (league.transferListings || []).find(l => l.status === "open" && l.playerId === player.id);
-  const onMarket = Boolean(openListing);
+  // Extrait dans computePlayerVisibility (2026-09-23, ajout du comparateur
+  // de joueurs) : SOURCE UNIQUE de cette règle de verrouillage, désormais
+  // partagée avec renderPlayerCompareView plutôt que dupliquée — voir cette
+  // fonction plus bas pour le détail (comportement strictement identique à
+  // avant, pure extraction).
+  const { openListing, onMarket, visibleAttrs, visibleAttrsSet, fullyVisible } = computePlayerVisibility(teamIdx, player);
 
   // Caractéristiques déjà visibles sur cette fiche (son propre effectif, un
   // joueur sur le marché, ou celles déjà débloquées par le scoutisme pour
@@ -15717,10 +16442,6 @@ function renderPlayerDetail(teamIdx, playerId) {
   // caractéristiques (overall(), playerRadarCategories), affichés en exact
   // seulement une fois l'équipe entièrement scoutée, jamais avant (sinon
   // fuite d'information par la bande à partir d'une moyenne globale).
-  const revealedSet = (isOwnTeam || onMarket) ? null : new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
-  const visibleAttrs = ATTRS.filter(a => isOwnTeam || onMarket || revealedSet.has(a));
-  const visibleAttrsSet = new Set(visibleAttrs);
-  const fullyVisible = visibleAttrs.length === ATTRS.length;
   const roleLabel = playerRoleLabel(team, player);
 
   let html = "";
@@ -15748,12 +16469,21 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `<div class="pdp-card">`;
   html += `<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">` +
     playerAvatarHtml(player, team, 80) +
-    `<div><h3 style="margin:0 0 2px">${escapeHtml(player.name)}</h3><div class="sub">Caractéristiques</div></div>` +
+    // Retour utilisateur (2026-09) : "enlève le nom en blanc sur la page
+    // joueur au dessus de la brique, laisse uniquement celui qui est dans la
+    // brique mais grossis le un peu et mets le en blanc. enlève également
+    // caractéristiques, ça ne sert à rien" — ce h3 hérite par défaut du style
+    // .pdp-card h3 (11px, majuscules, gris sourd var(--ink-faint), pensé pour
+    // les titres de section comme "Profils"), pas adapté à un nom de joueur :
+    // surchargé ici en plus grand et blanc (var(--ink)), texte normal (pas de
+    // majuscules forcées). Le sous-titre "Caractéristiques" est supprimé (ne
+    // servait à rien selon le retour).
+    `<div><h3 style="margin:0 0 2px;font-size:16px;text-transform:none;letter-spacing:normal;color:var(--ink)">${escapeHtml(player.name)}</h3></div>` +
     `</div>`;
   if (fullyVisible) {
     const overall = Math.round(player.overall());
     const stars = starRatingFromScore(overall);
-    html += `<div class="pdp-overall-row"><div class="pdp-overall-num ${pdpPillTier(overall)}">${overall}</div>` +
+    html += `<div class="pdp-overall-row"><div class="pdp-overall-num ${attrColorTier(overall)}">${overall}</div>` +
       `<div class="stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</div></div>`;
     html += `<div class="pdp-overall-caption">Note globale</div>`;
   } else {
@@ -15774,7 +16504,16 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `</div>`; // pdp-card Caractéristiques
 
   html += `<div class="pdp-card"><h3>Profils</h3>`;
-  if (TACTICAL_ATTRS.every(a => visibleAttrsSet.has(a))) {
+  // "mental" (dans TACTICAL_ATTRS) n'est plus une clé de ATTRS depuis son
+  // retrait (retour utilisateur, 2026-09, voir le grand commentaire
+  // au-dessus d'ATTRS/PHYSICAL_ATTRS) : visibleAttrsSet, calculé sur ATTRS,
+  // ne le contiendra donc plus jamais — sans ce cas particulier, le verrou
+  // de scoutisme resterait fermé à vie sur les Profils. On exige à la place
+  // que les 8 MENTAL_ATTRS soient tous révélés avant de considérer "mental"
+  // comme visible ici (même logique que mentalAverage()).
+  const tacticalAttrsVisible = TACTICAL_ATTRS.every(a =>
+    a === "mental" ? MENTAL_ATTRS.every(k => visibleAttrsSet.has(k)) : visibleAttrsSet.has(a));
+  if (tacticalAttrsVisible) {
     bestTacticsForPlayer(player, 4).forEach(t => {
       const stars = starRatingFromScore(t.score);
       html += `<div class="pdp-profile-row"><span>${escapeHtml(t.tactic)}</span>` +
@@ -15808,8 +16547,15 @@ function renderPlayerDetail(teamIdx, playerId) {
   const log = player.matchLog || [];
 
   html += `<div class="pdp-status-grid">`;
+  // Retour utilisateur (2026-09) : "garde la même structure : forme : pas de
+  // fatigue (avec une étiquette verte) / motivation : motivé (avec une
+  // étiquette verte)" — la forme n'avait pas d'étiquette "Forme" à gauche
+  // (seule la pastille conditionBadgeHtml était affichée juste sous le titre
+  // "Condition"), contrairement à la ligne Motivation ci-dessous qui a
+  // toujours suivi la structure .pdp-kv (libellé à gauche, pastille à
+  // droite). On aligne les deux sur la même structure .pdp-kv.
   html += `<div class="pdp-card pdp-status-card"><h3>Condition</h3>` +
-    conditionBadgeHtml(player, Date.now(), team.conditionRecoveryPerDay());
+    `<div class="pdp-kv"><span>Forme</span><span>${conditionBadgeHtml(player, Date.now(), team.conditionRecoveryPerDay())}</span></div>`;
   if (isOwnTeam) html += `<div class="pdp-kv"><span>Motivation</span><span>${motivationBadgeHtml(player)}</span></div>`;
   html += `<p class="player-quote">💬 « ${escapeHtml(playerRoleQuote(team, player, roleLabel))} »</p>`;
   html += `</div>`;
@@ -16567,6 +17313,33 @@ function teamLogoHtml(team, size) {
     return `<img class="team-logo-img" src="${team.customLogoDataUrl}" alt="Logo de ${escapeHtml(team.name)}" width="${s}" height="${s}">`;
   }
   return defaultTeamLogoSvg(team, s);
+}
+
+// Variante SVG-native de teamLogoHtml, pour l'incruster DANS le terrain du
+// live (voir #liveCourtHomeLogo, enterLiveMatch) — retour utilisateur,
+// 2026-09 : "maintenant qu'on a des logos (meme pour les joueurs non
+// payant) ce serait pas mal si le logo apparaissait au milieu du terrain
+// [...] logo de l'équipe qui recoit forcement". teamLogoHtml() ne convient
+// pas telle quelle ici : elle renvoie soit un <img> (HTML, invalide comme
+// enfant direct d'un <svg> sans <foreignObject> — évité volontairement, mal
+// supporté par jsdom dans les tests de cette appli), soit déjà un <svg>
+// complet (defaultTeamLogoSvg) qu'il suffit alors de repositionner via un
+// <g transform="translate(...)"> englobant (un <svg> imbriqué dans un autre
+// <svg> est parfaitement valide, voir spec SVG 2). Pour un logo personnalisé
+// (club payant), un <image> SVG natif fait le même travail qu'un <img> HTML,
+// découpé en cercle via <clipPath> pour rester cohérent avec le rendu rond
+// de .team-logo-img (border-radius:50%) utilisé partout ailleurs.
+function liveCourtHomeLogoSvg(team, cx, cy, r) {
+  const size = r * 2;
+  const x = cx - r, y = cy - r;
+  if (team.isPaying && team.customLogoDataUrl) {
+    return `<g transform="translate(${x},${y})">` +
+      `<clipPath id="liveCourtLogoClip"><circle cx="${r}" cy="${r}" r="${r}"/></clipPath>` +
+      `<image href="${team.customLogoDataUrl}" x="0" y="0" width="${size}" height="${size}" ` +
+      `preserveAspectRatio="xMidYMid slice" clip-path="url(#liveCourtLogoClip)">` +
+      `<title>Logo de ${escapeHtml(team.name)}</title></image></g>`;
+  }
+  return `<g transform="translate(${x},${y})">${defaultTeamLogoSvg(team, size)}</g>`;
 }
 
 // Les `n` derniers résultats RÉELLEMENT joués d'une équipe (championnat +
@@ -18070,7 +18843,15 @@ function enterLiveMatch(liveMatch, opts) {
   document.querySelectorAll(".bs-tab").forEach(b => {
     b.textContent = b.dataset.team === "A" ? teamA.name : teamB.name;
   });
+  // Même mise à jour que .bs-tab ci-dessus, pour les onglets DÉDIÉS du box
+  // score en direct (.live-bs-tab, jamais .bs-tab lui-même — voir le grand
+  // commentaire CSS associé).
+  document.querySelectorAll(".live-bs-tab").forEach(b => {
+    b.textContent = b.dataset.liveTeam === "A" ? teamA.name : teamB.name;
+  });
   document.getElementById("boxscoreSection").style.display = "none";
+  document.getElementById("liveBoxscoreSection").style.display = "";
+  resetLiveBoxScore();
   document.getElementById("feed").innerHTML = "";
   resetQuarterBars();
   document.getElementById("scoreA").textContent = "0";
@@ -18094,6 +18875,7 @@ function enterLiveMatch(liveMatch, opts) {
     const courtWrap = document.getElementById("liveCourtWrap");
     if (courtWrap) courtWrap.classList.add("hidden"); // rien à diffuser, rien à animer
     appendFeedItem({ type: "forfeit", text: "Effectif insuffisant pour aligner un cinq de départ complet : forfait immédiat, rien à diffuser." });
+    document.getElementById("liveBoxscoreSection").style.display = "none"; // rien à diffuser, rien à suivre en direct
     document.getElementById("boxscoreSection").style.display = "block";
     renderBoxScore("A");
     syncTopbarLiveStrip();
@@ -18101,6 +18883,15 @@ function enterLiveMatch(liveMatch, opts) {
   }
 
   resetCourtView();
+  // Logo de l'équipe qui REÇOIT au milieu du terrain (voir #liveCourtHomeLogo
+  // et liveCourtHomeLogoSvg ci-dessus) : mon équipe (teamA) n'est pas
+  // toujours à domicile, d'où liveMatch.isHome, même calcul que
+  // liveMatchScoreAB juste au-dessus dans ce fichier.
+  const homeLogoGroup = document.getElementById("liveCourtHomeLogo");
+  if (homeLogoGroup) {
+    const homeTeam = liveMatch.isHome ? teamA : teamB;
+    homeLogoGroup.innerHTML = liveCourtHomeLogoSvg(homeTeam, 500, 220, 40);
+  }
   document.getElementById("liveDot").classList.remove("off");
   document.getElementById("boardStatus").textContent = "En direct";
 
@@ -18173,6 +18964,163 @@ function appendPauseFeedItem(pause) {
   feed.scrollTop = feed.scrollHeight;
 }
 
+// ---------------------------------------------------------------------
+// Box score EN DIRECT (retour utilisateur, 2026-09 : "il n'y a pas de box
+// score en direct. il faut l'ajouter") — voir le grand commentaire HTML au-
+// dessus de #liveBoxscoreSection pour le POURQUOI (matchResult.boxScoreA/B
+// est déjà le résultat FINAL en entier dès l'entrée sur l'écran Live,
+// l'afficher tel quel spoilerait le match). Ce tableau est reconstruit
+// événement par événement, au fur et à mesure qu'ils sont appliqués (voir
+// applyLiveBoxScoreEvent, appelée depuis applyEvent ci-dessous), en lisant
+// UNIQUEMENT les champs structurés déjà posés par engine.js/le moteur
+// embarqué (shooter/assister/blocker/defender/rebounder/player/stealer —
+// voir leur grand commentaire dans engine.js:playPossession). Ne couvre
+// volontairement pas MIN ni +/- (nécessiteraient de suivre les 10 joueurs
+// sur le terrain à tout instant, pas seulement l'auteur de chaque action) :
+// voir liveBoxscoreTableHtml, qui n'a qu'un sous-ensemble des colonnes de
+// boxscoreTableHtml (feuille finale). Limite connue : un lancer franc où
+// TOUS les essais sont manqués n'est jamais loggué (voir MatchEngine.
+// freeThrows côté moteur, `if (made > 0)`), donc ces tentatives manquent au
+// FTA en direct (déjà le cas du fil de commentaires existant, pas une
+// régression introduite ici) — sans impact sur la feuille FINALE
+// (buildBoxScore lit directement p.stats.fta, incrémenté à chaque lancer).
+let liveBoxScore = null; // { A: Map<nom, ligne>, B: Map<nom, ligne> }
+let liveBoxScoreActiveTeam = "A";
+
+function newLiveBoxScoreRow(name, position) {
+  return {
+    name, position,
+    pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0,
+    fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0,
+  };
+}
+
+// Retrouve (ou crée à la volée) la ligne d'un joueur nommé `name` dans
+// l'équipe `teamKeyAB` ("A"/"B") — la position vient de teamA/teamB (objets
+// globaux déjà à jour à l'entrée sur l'écran Live, voir enterLiveMatch),
+// cherchée par nom puisque les événements ne portent que des noms, jamais
+// d'id joueur structuré (voir le même choix déjà fait pour les infobulles du
+// terrain, addCourtMark/ev.shooter).
+function liveBoxScoreRow(teamKeyAB, name) {
+  const map = liveBoxScore[teamKeyAB];
+  let row = map.get(name);
+  if (!row) {
+    const teamObj = teamKeyAB === "A" ? teamA : teamB;
+    const playerObj = teamObj && teamObj.players && teamObj.players.find(p => p.name === name);
+    row = newLiveBoxScoreRow(name, playerObj ? (playerObj.matchPosition || playerObj.position) : "");
+    map.set(name, row);
+  }
+  return row;
+}
+
+function resetLiveBoxScore() {
+  liveBoxScore = { A: new Map(), B: new Map() };
+  liveBoxScoreActiveTeam = "A";
+  document.querySelectorAll(".live-bs-tab").forEach(b => b.classList.toggle("active", b.dataset.liveTeam === "A"));
+  renderLiveBoxScore();
+}
+
+// Applique UN événement au box score en direct — voir le grand commentaire
+// plus haut pour la correspondance champ/colonne. `ev.team` porte un sens
+// différent selon le type d'événement (déjà le cas ailleurs dans ce fichier,
+// voir applyEvent/addCourtMark) : pour "shot"/"rebound"/"freeThrow", c'est
+// l'équipe du tireur/rebondeur ; pour "foul"/"turnover", c'est déjà l'équipe
+// de l'auteur de la faute/perte de balle. Le contreur (blocker) et le
+// défenseur fautif (defender) sur un tir appartiennent donc à l'équipe
+// OPPOSÉE à ev.team, d'où les `oppOf(ev.team)` ci-dessous.
+function oppOfLiveTeam(team) { return team === "A" ? "B" : "A"; }
+
+function applyLiveBoxScoreEvent(ev) {
+  if (!liveBoxScore || (ev.team !== "A" && ev.team !== "B")) return;
+  switch (ev.type) {
+    case "shot": {
+      if (!ev.shooter) break;
+      const row = liveBoxScoreRow(ev.team, ev.shooter);
+      const isThree = ev.zone === "three";
+      if (isThree) row.fga3++; else row.fga2++;
+      if (ev.made) {
+        row.pts += isThree ? 3 : 2;
+        if (isThree) row.fgm3++; else row.fgm2++;
+        if (ev.assister) liveBoxScoreRow(ev.team, ev.assister).ast++;
+      } else {
+        const defTeamKey = oppOfLiveTeam(ev.team);
+        if (ev.blocked && ev.blocker) liveBoxScoreRow(defTeamKey, ev.blocker).blk++;
+        if (ev.defender) liveBoxScoreRow(defTeamKey, ev.defender).pf++;
+      }
+      break;
+    }
+    case "rebound": {
+      if (ev.rebounder) liveBoxScoreRow(ev.team, ev.rebounder).reb++;
+      break;
+    }
+    case "freeThrow": {
+      if (!ev.shooter) break;
+      const row = liveBoxScoreRow(ev.team, ev.shooter);
+      row.fta += ev.attempts || 0;
+      row.ftm += ev.made || 0;
+      row.pts += ev.made || 0;
+      break;
+    }
+    case "turnover": {
+      if (ev.player) liveBoxScoreRow(ev.team, ev.player).tov++;
+      if (ev.stealer) liveBoxScoreRow(oppOfLiveTeam(ev.team), ev.stealer).stl++;
+      break;
+    }
+    case "foul": {
+      if (ev.defender) liveBoxScoreRow(ev.team, ev.defender).pf++;
+      break;
+    }
+    default:
+      return; // type sans effet sur le box score : pas la peine de réafficher
+  }
+  renderLiveBoxScore();
+}
+
+// Mêmes colonnes que BOXSCORE_COLS (feuille finale, voir plus bas) sauf
+// MIN — volontairement absent ici, voir le grand commentaire plus haut.
+const LIVE_BOXSCORE_COLS = [
+  ["pts", "PTS"], ["reb", "REB"], ["ast", "PD"], ["stl", "INT"],
+  ["blk", "CTR"], ["tov", "PDB"], ["pf", "FTS"],
+];
+
+function liveBoxscoreTableHtml(rows) {
+  let html = "<table class='boxscore'><thead><tr><th>Joueur</th><th>Poste</th>";
+  LIVE_BOXSCORE_COLS.forEach(c => html += `<th>${c[1]}</th>`);
+  html += "<th>2PTS</th><th>3PTS</th><th>LF</th><th>ÉVAL</th></tr></thead><tbody>";
+  rows.forEach(p => {
+    html += `<tr><td>${escapeHtml(p.name)}</td><td>${POS_SHORT[p.position] || ""}</td>`;
+    LIVE_BOXSCORE_COLS.forEach(c => { html += `<td>${p[c[0]] || 0}</td>`; });
+    html += `<td>${p.fgm2}/${p.fga2}</td><td>${p.fgm3}/${p.fga3}</td><td>${p.ftm}/${p.fta}</td><td>${statEvaluation(p)}</td></tr>`;
+  });
+  html += "</tbody></table>";
+  return html;
+}
+
+function renderLiveBoxScore() {
+  const holder = document.getElementById("liveBoxscoreHolder");
+  if (!holder) return;
+  if (!liveBoxScore) { holder.innerHTML = ""; return; }
+  const rows = Array.from(liveBoxScore[liveBoxScoreActiveTeam].values())
+    .sort((a, b) => (b.pts - a.pts) || (b.reb - a.reb) || (b.ast - a.ast));
+  holder.innerHTML = rows.length
+    ? liveBoxscoreTableHtml(rows)
+    : "<p class='training-empty'>Aucune statistique enregistrée pour le moment.</p>";
+}
+
+// Câblage des onglets Domicile/Extérieur du box score en direct — UNE SEULE
+// fois au chargement du script (mêmes présents dans le HTML statique dès le
+// départ, voir #liveBoxscoreSection), classe dédiée .live-bs-tab (jamais
+// .bs-tab, voir le grand commentaire CSS associé) pour ne jamais être
+// capturé par le câblage .bs-tab plus bas dans ce fichier (qui appelle
+// renderBoxScore, la feuille FINALE).
+document.querySelectorAll(".live-bs-tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    liveBoxScoreActiveTeam = btn.dataset.liveTeam;
+    document.querySelectorAll(".live-bs-tab").forEach(b => b.classList.toggle("active", b === btn));
+    renderLiveBoxScore();
+  });
+});
+
 function applyEvent(ev) {
   // Rempli directement à la fin de CHAQUE quart-temps (événement structuré
   // "quarterEnd", voir engine.js) plutôt qu'en attendant le premier
@@ -18202,6 +19150,7 @@ function applyEvent(ev) {
     : `${ev.quarter}${ev.quarter === 1 ? "er" : "e"} quart-temps`;
   addCourtMark(ev);
   appendFeedItem(ev);
+  applyLiveBoxScoreEvent(ev);
   // Retour utilisateur (2026-09) : "il n'y a plus le score en direct sur le
   // live, il doit se mettre à jour en temps réel" : syncTopbarLiveStrip()
   // n'était jusque-là appelée qu'à l'entrée dans le direct, au tick
@@ -18300,6 +19249,10 @@ function finishPlayback() {
   }
   document.getElementById("liveDot").classList.add("off");
   document.getElementById("boardStatus").textContent = "Terminé";
+  // Le direct est fini : la feuille FINALE (complète, avec MIN/+/-/MVP,
+  // voir renderBoxScore) prend le relais du box score en direct, désormais
+  // masqué pour éviter un doublon redondant à l'écran.
+  document.getElementById("liveBoxscoreSection").style.display = "none";
   document.getElementById("boxscoreSection").style.display = "block";
   renderBoxScore("A");
   syncTopbarLiveStrip();
@@ -18383,14 +19336,24 @@ function boxscoreTableHtml(rows, mvpRow) {
 // cette propriété plus que nécessaire). Sans ligne `isMvp` (direct encore en
 // cours, voir renderBoxScore/matchResult.boxScoreA/B, pas encore finalisé
 // côté serveur), repli sur le calcul habituel.
+// `side` ajouté au résultat (retour utilisateur, 2026-09 : "ajoute l'avatar
+// du joueur MVP sur les box scores") : "A" ou "B" selon que la ligne
+// gagnante vient de `rowsA`/`rowsB`, ADDITIF (rien ne change pour le code
+// existant qui ne lit que `.row`/`.evalScore`) — nécessaire à
+// matchMvpCalloutHtml pour savoir dans quel `team.players` chercher le VRAI
+// Player par id (voir uid(), globalement unique), sans avoir à parcourir
+// les deux effectifs à chaque fois.
 function boxscoreMatchMvp(rowsA, rowsB) {
-  const all = [...rowsA, ...rowsB];
-  const persisted = all.find(row => row.isMvp);
-  if (persisted) return { row: persisted, evalScore: statEvaluation(persisted) };
+  const all = [
+    ...rowsA.map(row => ({ row, side: "A" })),
+    ...rowsB.map(row => ({ row, side: "B" })),
+  ];
+  const persisted = all.find(x => x.row.isMvp);
+  if (persisted) return { row: persisted.row, side: persisted.side, evalScore: statEvaluation(persisted.row) };
   let best = null;
-  all.forEach(row => {
-    const evalScore = statEvaluation(row);
-    if (!best || evalScore > best.evalScore) best = { row, evalScore };
+  all.forEach(x => {
+    const evalScore = statEvaluation(x.row);
+    if (!best || evalScore > best.evalScore) best = { row: x.row, side: x.side, evalScore };
   });
   return best;
 }
@@ -18402,15 +19365,30 @@ function boxscoreMatchMvp(rowsA, rowsB) {
 // direct encore en cours (matchResult.boxScoreA/B, voir renderBoxScore —
 // MVP recalculé à la volée côté client, pas encore élu/cité côté serveur à
 // ce stade), auquel cas ce paragraphe est simplement omis.
-function matchMvpCalloutHtml(mvp) {
+// `teamForSideA`/`teamForSideB` (retour utilisateur, 2026-09 : "ajoute
+// l'avatar du joueur MVP sur les box scores") : les VRAIS objets Team dont
+// viennent `rowsA`/`rowsB` passées à boxscoreMatchMvp (peu importe leur nom
+// réel — teamA/teamB pour un match qui vient de se jouer, ou home/away pour
+// un match déjà passé rouvert depuis le Calendrier, voir les deux appelants
+// ci-dessous) — nécessaires pour retrouver le VRAI Player (via mvp.side +
+// r.id) et donc générer son avatar procédural (playerAvatarHtml, mêmes
+// couleurs de maillot que son club). `id`/`side` peuvent être absents sur
+// une TRÈS ancienne sauvegarde (ligne de box score persistée avant l'ajout
+// de ces champs additifs) : dans ce cas `player` reste `null` et aucun
+// avatar ne s'affiche, sans casser le reste du bandeau.
+function matchMvpCalloutHtml(mvp, teamForSideA, teamForSideB) {
   const r = mvp.row;
   const bits = [`${r.pts} pts`, `${r.reb} reb`, `${r.ast} pas`, `${r.stl || 0} int`, `${r.blk || 0} ctr`];
   if (r.tov) bits.push(`${r.tov} bp`);
   bits.push(`${r.fgm2 || 0}/${r.fga2 || 0} à 2pts`, `${r.fgm3 || 0}/${r.fga3 || 0} à 3pts`);
   if (r.fta) bits.push(`${r.ftm || 0}/${r.fta || 0} LF`);
   bits.push(`évaluation ${mvp.evalScore}`);
+  const team = mvp.side === "A" ? teamForSideA : teamForSideB;
+  const player = team && typeof r.id !== "undefined" ? team.players.find(p => p.id === r.id) : null;
+  const avatar = player ? playerAvatarHtml(player, team, 44) : "";
   return `<div class="mvp-callout match-mvp-callout"><h4>MVP du match</h4>` +
-    `<p><b>${escapeHtml(r.name)}</b> : ${bits.join(", ")}</p></div>` +
+    `<div class="mvp-callout-body">${avatar}` +
+    `<p><b>${escapeHtml(r.name)}</b> : ${bits.join(", ")}</p></div></div>` +
     (r.mvpQuote ? `<p class="sub">« ${escapeHtml(r.mvpQuote)} »</p>` : "");
 }
 
@@ -18419,7 +19397,7 @@ function renderBoxScore(side) {
   const rows = side === "A" ? matchResult.boxScoreA : matchResult.boxScoreB;
   const mvp = boxscoreMatchMvp(matchResult.boxScoreA, matchResult.boxScoreB);
   const mvpHolder = document.getElementById("boxscoreMvpHolder");
-  if (mvpHolder) mvpHolder.innerHTML = mvp ? matchMvpCalloutHtml(mvp) : "";
+  if (mvpHolder) mvpHolder.innerHTML = mvp ? matchMvpCalloutHtml(mvp, teamA, teamB) : "";
   document.getElementById("boxscoreHolder").innerHTML = boxscoreTableHtml(rows, mvp ? mvp.row : null);
 }
 
@@ -18443,6 +19421,9 @@ function boxscoreRowsFromMatchLog(team, round, competition) {
       const entry = (p.matchLog || []).find(e => e.round === round && e.competition === competition);
       if (!entry) return null;
       return {
+        // `id` : même raison additive que dans buildBoxScore (moteur) — voir
+        // son commentaire, retrouver le VRAI Player pour son avatar.
+        id: p.id,
         name: p.name, position: p.position, min: entry.min,
         pts: entry.pts, reb: entry.reb, ast: entry.ast, stl: entry.stl, blk: entry.blk, tov: entry.tov, pf: entry.pf,
         fgm2: entry.fgm2, fga2: entry.fga2, fgm3: entry.fgm3, fga3: entry.fga3, ftm: entry.ftm, fta: entry.fta,
@@ -18474,7 +19455,7 @@ function renderMatchBoxscoreTab(side) {
   const rows = side === "A" ? matchBoxscoreState.rowsHome : matchBoxscoreState.rowsAway;
   const mvp = boxscoreMatchMvp(matchBoxscoreState.rowsHome, matchBoxscoreState.rowsAway);
   const mvpHolder = document.getElementById("matchBoxscoreMvpHolder");
-  if (mvpHolder) mvpHolder.innerHTML = mvp ? matchMvpCalloutHtml(mvp) : "";
+  if (mvpHolder) mvpHolder.innerHTML = mvp ? matchMvpCalloutHtml(mvp, matchBoxscoreState.teamHome, matchBoxscoreState.teamAway) : "";
   document.getElementById("matchBoxscoreHolder").innerHTML = rows.length
     ? boxscoreTableHtml(rows, mvp ? mvp.row : null)
     : "<p class='training-empty'>Aucune statistique disponible pour cette équipe sur ce match (joueurs partis depuis).</p>";
@@ -18488,6 +19469,11 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
     rowsHome: boxscoreRowsFromMatchLog(homeTeam, round, competition),
     rowsAway: boxscoreRowsFromMatchLog(awayTeam, round, competition),
     nameHome: homeTeam.name, nameAway: awayTeam.name,
+    // teamHome/teamAway (retour utilisateur, 2026-09 : "ajoute l'avatar du
+    // joueur MVP sur les box scores") : les VRAIS objets Team, passés à
+    // matchMvpCalloutHtml pour qu'elle retrouve le VRAI Player MVP (son
+    // avatar a besoin de son id ET des couleurs de maillot de son club).
+    teamHome: homeTeam, teamAway: awayTeam,
   };
   const overlay = document.createElement("div");
   overlay.className = "upgrade-confirm-overlay match-boxscore-overlay";
@@ -18573,40 +19559,14 @@ function renderLastTrainingReport() {
     `${trainingReportHtml(report, { playersOnly: true })}</div>`;
 }
 
-// 18 jauges de connaissance tactique, une PAR OPTION précise (retour
-// utilisateur, 2026-09 : "il faudrait qu'il y ait une jauge par type
-// d'attaque, une par rythme et une par défense [...] comme ça on verrait
-// bien les tactiques que l'on maîtrise ou pas") : PAS seulement les 3
-// options actuellement jouées par l'équipe, TOUTES (10 priorités
-// offensives, 5 défenses, 3 rythmes, voir OFFENSE_PROFILES/DEFENSES/
-// RHYTHMS), générées dynamiquement dans les 3 rangées groupées par
-// catégorie (voir le HTML de #tacticalKnowledgeGaugesRow). Simple affichage
-// de teamA.tacticalKnowledge (voir Team.tacticalKnowledge côté moteur),
-// sans aperçu de changement ici (contrairement à
-// renderOrdresTacticalKnowledgeGauge sur la page Ordres) : ces valeurs ne
-// bougent qu'au prochain match réellement simulé, jamais pendant la
-// configuration de l'entraînement.
-function renderTacticalKnowledgeTrainingGauges() {
-  const knowledge = teamA.tacticalKnowledge;
-  if (!knowledge) return;
-  const groups = [
-    { cat: "offense", rowId: "tkGaugeRowOffense", options: Object.keys(OFFENSE_PROFILES) },
-    { cat: "defense", rowId: "tkGaugeRowDefense", options: Object.keys(DEFENSES) },
-    { cat: "rhythm", rowId: "tkGaugeRowRhythm", options: Object.keys(RHYTHMS) },
-  ];
-  groups.forEach(({ cat, rowId, options }) => {
-    const row = document.getElementById(rowId);
-    if (!row) return;
-    row.innerHTML = options.map(key => {
-      const value = knowledge[cat] && typeof knowledge[cat][key] === "number" ? knowledge[cat][key] : 50;
-      const color = moraleGaugeColor(value);
-      return `<div class="tactical-knowledge-gauge-item">` +
-        `<div class="roster-chemistry-gauge-label"><span>${escapeHtml(key)}</span><b style="color:${color}">${Math.round(value)}/100</b></div>` +
-        `<div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" style="width:${Math.round(value)}%; background:${color};"></div></div>` +
-        `</div>`;
-    }).join("");
-  });
-}
+// renderTacticalKnowledgeTrainingGauges (18 jauges de connaissance tactique,
+// une PAR OPTION précise, affichées dans une section dédiée sous le
+// sélecteur d'aspect travaillé) a été RETIRÉE (retour utilisateur, 2026-09 :
+// "pas mal le menu déroulant, enleve ce qu'il y a en dessous") : ces mêmes
+// jauges sont désormais intégrées DIRECTEMENT dans le menu déroulant
+// personnalisé du choix d'aspect travaillé (voir renderTrainedTacticsPicker
+// et son grand commentaire, ci-dessous), qui rendait cette section
+// redondante.
 
 function showTrainingSection() {
   document.getElementById("trainingTitle").textContent = `Semaine d'entraînement : semaine ${teamA.week}`;
@@ -18615,7 +19575,6 @@ function showTrainingSection() {
   renderTrainingPositionsSelect();
   renderTrainingList();
   populateCollectiveTrainingSelect();
-  renderTacticalKnowledgeTrainingGauges();
   showPage("trainingSection");
   setActiveTab("entrainement");
 }
@@ -18694,6 +19653,30 @@ function trainedTacticsSelectOptions() {
 // aussi, à titre indicatif, le nombre de jours déjà banqués sur ce choix
 // depuis le dernier match (voir Team.daysTrainedForTarget) pour que le
 // manager comprenne d'où vient le bonus au prochain match joué.
+// Menu déroulant personnalisé (retour utilisateur, 2026-09 : "tu n'as pas
+// intégré les jauges de niveau de connaissance tactique directement dans le
+// menu déroulant") : remplace l'ancien <select id="trainedTacticSelect"> par
+// un bouton déclencheur (#trainedTacticTrigger) + un menu <div> personnalisé
+// (#trainedTacticMenu, un <button class="trained-tactic-option"> par choix
+// possible). Un <option> HTML natif ne peut afficher QUE du texte brut —
+// aucune jauge colorée n'est possible à l'intérieur — d'où ce composant sur
+// mesure (confirmé sans précédent équivalent ailleurs dans l'appli avant de
+// l'écrire, y compris sur la page Ordres qui utilise encore des <select>
+// classiques pour ses propres choix tactiques). Chaque ligne du menu
+// réutilise directement teamA.tacticalKnowledge[cat][key] (même source que
+// l'ancienne section "Connaissance tactique de l'équipe" retirée juste
+// au-dessus, voir showTrainingSection) pour afficher une mini-jauge (barre +
+// valeur/100) à côté du nom de la tactique, et le bouton déclencheur affiche
+// la même mini-jauge pour l'option actuellement choisie.
+// Modèle de données et effets de bord INCHANGÉS : teamA.trainedTactics =
+// {category, value} ; mêmes appels (saveMyTeam/syncTrainingToServer/
+// renderOrdresChemistryGauge/renderOrdresTacticalKnowledgeGauge) qu'avant,
+// simplement déclenchés par le clic sur une ligne du menu plutôt que par
+// l'onchange d'un <select>. La fermeture au clic en dehors est gérée par UN
+// SEUL écouteur global posé une fois (voir plus bas dans le fichier, près de
+// la fermeture de #topbarSearchResults) plutôt que dans cette fonction —
+// celle-ci est réappelée à chaque rendu de l'onglet Entraînement, un
+// document.addEventListener posé ici s'empilerait à chaque fois.
 function renderTrainedTacticsPicker() {
   const holder = document.getElementById("trainedTacticsPicker");
   if (!holder) return;
@@ -18710,26 +19693,75 @@ function renderTrainedTacticsPicker() {
   label.textContent = "Aspect précisément travaillé";
   holder.appendChild(label);
 
-  const sel = document.createElement("select");
-  sel.id = "trainedTacticSelect";
-  const noneOpt = document.createElement("option");
-  noneOpt.value = "";
-  noneOpt.textContent = "Rien de précis";
-  sel.appendChild(noneOpt);
-  trainedTacticsSelectOptions().forEach(group => {
-    const optgroup = document.createElement("optgroup");
-    optgroup.label = group.label;
-    group.values.forEach(v => {
-      const o = document.createElement("option");
-      o.value = `${group.category}:${v}`;
-      o.textContent = v;
-      optgroup.appendChild(o);
+  const knowledge = teamA.tacticalKnowledge || {};
+  function knowledgeValue(cat, key) {
+    return knowledge[cat] && typeof knowledge[cat][key] === "number" ? knowledge[cat][key] : 50;
+  }
+  function optionGaugeHtml(cat, key) {
+    const value = knowledgeValue(cat, key);
+    const color = moraleGaugeColor(value);
+    return `<span class="tto-gauge-wrap"><span class="tto-gauge"><span class="tto-gauge-fill" style="width:${Math.round(value)}%;background:${color};"></span></span><b class="tto-value" style="color:${color}">${Math.round(value)}</b></span>`;
+  }
+
+  const dropdown = document.createElement("div");
+  dropdown.className = "trained-tactic-dropdown";
+  dropdown.id = "trainedTacticDropdown";
+
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "trained-tactic-trigger";
+  trigger.id = "trainedTacticTrigger";
+  dropdown.appendChild(trigger);
+
+  const menu = document.createElement("div");
+  menu.className = "trained-tactic-menu hidden";
+  menu.id = "trainedTacticMenu";
+  dropdown.appendChild(menu);
+
+  holder.appendChild(dropdown);
+
+  function renderTrigger() {
+    const trained = teamA.trainedTactics;
+    const content = trained
+      ? `<span class="tto-name">${escapeHtml(trained.value)}</span>${optionGaugeHtml(trained.category, trained.value)}`
+      : `<span class="tto-name">Rien de précis</span>`;
+    trigger.innerHTML = content + `<span class="trained-tactic-trigger-arrow">▾</span>`;
+  }
+
+  function renderMenu() {
+    const trained = teamA.trainedTactics;
+    let html = `<button type="button" class="trained-tactic-option${!trained ? " selected" : ""}" data-category="" data-value="">` +
+      `<span class="tto-name">Rien de précis</span></button>`;
+    trainedTacticsSelectOptions().forEach(group => {
+      html += `<div class="trained-tactic-group-label">${escapeHtml(group.label)}</div>`;
+      group.values.forEach(v => {
+        const isSelected = !!trained && trained.category === group.category && trained.value === v;
+        html += `<button type="button" class="trained-tactic-option${isSelected ? " selected" : ""}" data-category="${group.category}" data-value="${escapeHtml(v)}">` +
+          `<span class="tto-name">${escapeHtml(v)}</span>${optionGaugeHtml(group.category, v)}</button>`;
+      });
     });
-    sel.appendChild(optgroup);
+    menu.innerHTML = html;
+  }
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (menu.classList.contains("hidden")) { renderMenu(); menu.classList.remove("hidden"); }
+    else menu.classList.add("hidden");
   });
-  const trained = teamA.trainedTactics;
-  sel.value = trained ? `${trained.category}:${trained.value}` : "";
-  holder.appendChild(sel);
+  menu.addEventListener("click", (e) => {
+    const opt = e.target.closest(".trained-tactic-option");
+    if (!opt) return;
+    teamA.trainedTactics = opt.dataset.category ? { category: opt.dataset.category, value: opt.dataset.value } : null;
+    menu.classList.add("hidden");
+    renderTrigger();
+    renderProgressNote();
+    saveMyTeam();
+    syncTrainingToServer();
+    renderOrdresChemistryGauge();
+    renderOrdresTacticalKnowledgeGauge();
+  });
+
+  renderTrigger();
 
   const progressNote = document.createElement("div");
   progressNote.className = "training-dilution-note";
@@ -18746,20 +19778,6 @@ function renderTrainedTacticsPicker() {
       : "";
   }
   renderProgressNote();
-
-  sel.onchange = () => {
-    if (!sel.value) {
-      teamA.trainedTactics = null;
-    } else {
-      const sepIdx = sel.value.indexOf(":");
-      teamA.trainedTactics = { category: sel.value.slice(0, sepIdx), value: sel.value.slice(sepIdx + 1) };
-    }
-    renderProgressNote();
-    saveMyTeam();
-    syncTrainingToServer();
-    renderOrdresChemistryGauge();
-    renderOrdresTacticalKnowledgeGauge();
-  };
 }
 
 function formatMoney(n) {
@@ -19592,13 +20610,26 @@ function renderClubSection() {
 
   const effectifCard = document.createElement("div");
   effectifCard.className = "stat-card";
+  // Retour utilisateur beta-testeur (Discord, 2026-09) : "je dirais qu'on
+  // s'attend soit à voir 15 (dans mon cas) soit que la catégorie s'appelle
+  // Niveau de l'effectif" — le gros chiffre affichait le NIVEAU moyen (une
+  // note sur 40, ex. 30) sous le titre "Effectif", facilement confondu avec
+  // un nombre de joueurs. Tranché ensuite par l'utilisateur (2026-09) : "là
+  // il faut plus mettre le niveau moyen, mais mettre le nombre de joueur
+  // dans l'équipe" — le gros chiffre devient donc bien l'effectif réel
+  // (teamA.players.length), le niveau moyen n'est pas perdu pour autant,
+  // juste redescendu en sous-titre (même principe que les autres cartes de
+  // ce tableau de bord : gros chiffre = info principale, `.sub` = détail).
   const avgOverall = Math.round(teamA.players.reduce((s, p) => s + p.overall(), 0) / teamA.players.length);
-  effectifCard.innerHTML = `<h3>Effectif</h3><div class="big">${avgOverall}</div>` +
-    `<div class="sub">Niveau moyen de l'effectif (${teamA.players.length} joueurs).</div>`;
+  effectifCard.innerHTML = `<h3>Effectif</h3><div class="big">${teamA.players.length}</div>` +
+    `<div class="sub">Joueurs sous contrat · niveau moyen ${avgOverall}.</div>`;
   const effectifLink = document.createElement("div");
   effectifLink.className = "quick-links";
-  effectifLink.innerHTML = `<button class="secondary" data-tab="effectif">Voir l'effectif</button>` +
-    `<button class="secondary" data-tab="ordres">Donner mes ordres</button>`;
+  // Bouton "Donner mes ordres" retiré (retour utilisateur, 2026-09 : "enleve
+  // le bouton donner mes ordres") — ne reste que l'accès direct à
+  // l'Effectif, cohérent avec les autres cartes de ce tableau de bord
+  // (Économie/Salle) qui n'ont chacune qu'un seul bouton de raccourci.
+  effectifLink.innerHTML = `<button class="secondary" data-tab="effectif">Voir l'effectif</button>`;
   effectifCard.appendChild(effectifLink);
   grid.appendChild(effectifCard);
 
@@ -20021,6 +21052,16 @@ function effectifSubNavHtml() {
 const ROSTER_SORT_COLUMNS = [
   { key: "name", label: "Nom" },
   { key: "position", label: "Poste" },
+  // Potentiel (retour utilisateur beta-testeur "Ariane", Discord, 2026-09 :
+  // "Possible de le remettre ? [...] c'était avant sur le tableau, avant on
+  // devait cliquer sur la fiche joueur" — la colonne existait autrefois sur
+  // cet onglet, retirée depuis) : remis sur demande explicite de
+  // l'utilisateur ("ajoute le potentiel juste après le poste"), à cet
+  // endroit précis plutôt qu'à la place de Rôle comme suggéré par la
+  // testeuse. Tri déjà supporté de longue date (voir rosterSortValue,
+  // `case "potential"`, gardé "pour compatibilité" avant même que cette
+  // colonne ne réapparaisse ici).
+  { key: "potential", label: "Potentiel" },
   // Rôle dans l'équipe (titulaire/rotation/réserviste — voir
   // playerRoleLabel) : retour utilisateur "ajoute le role des joueurs" sur
   // l'onglet Effectif > Général. Tri par "valeur" de rôle (Titulaire au
@@ -20145,14 +21186,19 @@ function renderEffectifSection() {
     // fonction) en tient déjà compte, il ne manquait que des en-têtes
     // cliquables ici.
     let attrsHtml = effectifSubNavHtml();
+    // Potentiel (retour utilisateur, 2026-09 : "idem là, juste après le
+    // poste" — même demande que sur le sous-onglet "Général" juste
+    // au-dessus, appliquée ici aussi) : même pastille/tri que là-bas.
     attrsHtml += "<div class='table-scroll roster-table-frozen'><table class='roster-table'><thead><tr>" +
       rosterHeaderCellHtml("name", "Nom") + rosterHeaderCellHtml("position", "Poste") +
+      rosterHeaderCellHtml("potential", "Potentiel") +
       rosterHeaderCellHtml("height", "Taille") + rosterHeaderCellHtml("salary", "Salaire/sem.") +
       FUNDAMENTAL_ATTRS.map(a => rosterHeaderCellHtml(a, ATTR_SHORT[a])).join("") +
       rosterHeaderCellHtml("physicalAvg", "Physique") + rosterHeaderCellHtml("mentalAvg", "Mental") +
       "</tr></thead><tbody>";
     sorted.forEach(p => {
-      attrsHtml += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, teamA, 24)}${playerLinkHtml(myTeamIndex, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
+      const potentialCell = `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(p.potential)}/10">${escapeHtml(potentialTierLabel(p.potential))}</span>`;
+      attrsHtml += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, teamA, 24)}${playerLinkHtml(myTeamIndex, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${potentialCell}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
       FUNDAMENTAL_ATTRS.forEach(a => { attrsHtml += `<td>${attrCellHtml(p.attrs[a])}</td>`; });
       attrsHtml += `<td>${categoryAverageCellHtml(p, PHYSICAL_ATTRS, null)}</td><td>${categoryAverageCellHtml(p, MENTAL_ATTRS, null)}</td>`;
       attrsHtml += "</tr>";
@@ -20215,7 +21261,11 @@ function renderEffectifSection() {
     const cross = injuryCrossHtml(p, now);
     const transferBadge = transferRequestBadgeHtml(p);
     const rowClass = cross ? "injured" : (isStarter ? "me" : "");
-    html += `<tr class="${rowClass}"><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, teamA, 24)}${playerLinkHtml(myTeamIndex, p.id, p.name)}${cross || ""}${transferBadge || ""}${forSaleCell}</span></td><td>${posCell}</td>` +
+    // Même pastille/infobulle que le marché des transferts (voir
+    // potentialCell dans renderMarketListings) : le palier 1-10, jamais le
+    // chiffre exact 1-99.
+    const potentialCell = `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(p.potential)}/10">${escapeHtml(potentialTierLabel(p.potential))}</span>`;
+    html += `<tr class="${rowClass}"><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, teamA, 24)}${playerLinkHtml(myTeamIndex, p.id, p.name)}${cross || ""}${transferBadge || ""}${forSaleCell}</span></td><td>${posCell}</td><td>${potentialCell}</td>` +
       `<td>${escapeHtml(playerRoleLabel(teamA, p))}</td>` +
       `<td>${p.age}</td><td>${p.height} cm</td>` +
       `<td title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
@@ -21849,10 +22899,27 @@ function renderAttendanceHistory() {
 // moteur), et journal des événements récents (résultats de matchs, dérive
 // liée au prix des billets — voir Team.recordMoraleEvent).
 // ---------------------------------------------------------------------
+// Retour utilisateur (2026-09-23, "reprends le meme code couleur pour les
+// pages effectifs, les joueurs sur le marché des transferts, l'humeur des
+// supporters, alchimie, connaissance tactique") : mêmes seuils/couleurs
+// EXACTEMENT que attrColorTier (voir son grand commentaire CSS "REVIRTEMENT
+// VOLONTAIRE" plus haut), mais renvoie ici la couleur LITTÉRALE plutôt
+// qu'un nom de classe CSS — tous les appelants de moraleGaugeColor
+// l'utilisent en style inline dynamique (`style.color = ...`,
+// `style.background = ...`), jamais via une classe posée sur l'élément,
+// donc pas de pendant "classe CSS" possible ici contrairement à
+// attrCellHtml/pdpAttrRowHtml. Remplace l'ancienne échelle à 3 paliers
+// (65/45, vert-teal/orange/rouge, sans palier "blanc/neutre" intermédiaire).
+// Appelants concernés (tous un score 0-100) : Humeur des supporters
+// (renderHumeurSection, carte "Supporters" du tableau de bord), Alchimie
+// (renderOrdresChemistryGauge, carte "Alchimie" du tableau de bord, jauge
+// compacte de l'Effectif), Connaissance tactique (renderOrdresTacticalKnowledgeGauge
+// et les jauges par option du menu déroulant d'entraînement, optionGaugeHtml).
 function moraleGaugeColor(morale) {
-  if (morale >= 65) return "var(--ok)";
-  if (morale >= 45) return "var(--amber)";
-  return "var(--danger)";
+  if (morale <= 20) return "var(--danger)";
+  if (morale <= 50) return "var(--amber)";
+  if (morale <= 80) return "var(--ink)";
+  return "#3ecf67";
 }
 
 function renderHumeurSection() {
@@ -22728,6 +23795,20 @@ document.getElementById("topbarOrdersBtn").addEventListener("click", goToOrdresT
     if (topbarSearchWrap && !topbarSearchWrap.contains(e.target)) hideTopbarSearchResults();
   });
 }
+
+// Fermeture du menu déroulant personnalisé de l'aspect tactique travaillé
+// (voir renderTrainedTacticsPicker) au clic en dehors — UN SEUL écouteur
+// global posé ici une fois (même patron que topbarSearchWrap juste
+// au-dessus), plutôt que dans renderTrainedTacticsPicker elle-même qui est
+// réappelée à chaque rendu de l'onglet Entraînement (un addEventListener
+// posé là s'empilerait à chaque rendu). Les éléments sont recherchés par id
+// à chaque clic (plutôt que capturés une fois par closure) car le menu et
+// son déclencheur sont entièrement recréés à chaque renderTrainedTacticsPicker.
+document.addEventListener("click", (e) => {
+  const menu = document.getElementById("trainedTacticMenu");
+  const dropdown = document.getElementById("trainedTacticDropdown");
+  if (menu && dropdown && !dropdown.contains(e.target)) menu.classList.add("hidden");
+});
 
 // Médias (voir interviewWidgetHtml/showInterviewModal plus haut) : VRAIE
 // délégation sur document, même patron que la barre d'onglets [data-tab]

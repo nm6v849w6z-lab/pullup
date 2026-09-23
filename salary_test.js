@@ -16,7 +16,7 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 // une étiquette : l'exemple donné par l'utilisateur — "gros rebond, grosse
 // défense intérieure → pivot". ---
 {
-  // mental/endurance/freeThrow ajoutés à une valeur neutre (50) : ces 3
+  // endurance/freeThrow ajoutés à une valeur neutre (50) : ces 3
   // caractéristiques ne pèsent jamais dans POSITION_ATTR_PROFILE (voir son
   // commentaire, engine.js), donc une valeur neutre ne fausse ni le poste
   // détecté ni la comparaison à la moyenne brute ci-dessous, tout en évitant
@@ -25,7 +25,7 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
   const pivotLikeAttrs = {
     midRange: 20, threePoint: 15, inside: 88, pass: 18, rebound: 86,
     block: 78, dribble: 15, agility: 22, defOutside: 18, defInside: 84,
-    mental: 50, endurance: 50, freeThrow: 50,
+    endurance: 50, freeThrow: 50,
     // penetration/shotCreation/steal/power/focus/anticipation/leadership à
     // une valeur neutre (50) également (7 caractéristiques ajoutées après
     // coup, retour utilisateur 2026-09) : même logique que mental/endurance/
@@ -63,9 +63,9 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
   const starAttrs = {
     midRange: 55, threePoint: 97, inside: 20, pass: 45, rebound: 20,
     block: 15, dribble: 45, agility: 50, defOutside: 45, defInside: 15,
-    // mental/endurance/freeThrow à une valeur neutre (50), voir le
+    // endurance/freeThrow à une valeur neutre (50), voir le
     // commentaire de pivotLikeAttrs plus haut.
-    mental: 50, endurance: 50, freeThrow: 50,
+    endurance: 50, freeThrow: 50,
     // penetration/shotCreation/steal/power/focus/anticipation/leadership à
     // une valeur neutre (50) également (7 caractéristiques ajoutées après
     // coup, retour utilisateur 2026-09) : même logique que mental/endurance/
@@ -101,9 +101,9 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
   const freakAttrs = {
     midRange: 20, threePoint: 20, inside: 99, pass: 20, rebound: 99,
     block: 99, dribble: 20, agility: 20, defOutside: 20, defInside: 99,
-    // mental/endurance/freeThrow à une valeur neutre (50), voir le
+    // endurance/freeThrow à une valeur neutre (50), voir le
     // commentaire de pivotLikeAttrs plus haut.
-    mental: 50, endurance: 50, freeThrow: 50,
+    endurance: 50, freeThrow: 50,
     // penetration/shotCreation/steal/power/focus/anticipation/leadership à
     // une valeur neutre (50) également (7 caractéristiques ajoutées après
     // coup, retour utilisateur 2026-09) : même logique que mental/endurance/
@@ -314,9 +314,9 @@ win2.close();
   const pivotLikeAttrs = {
     midRange: 20, threePoint: 15, inside: 88, pass: 18, rebound: 86,
     block: 78, dribble: 15, agility: 22, defOutside: 18, defInside: 84,
-    // mental/endurance/freeThrow à une valeur neutre (50), voir le
+    // endurance/freeThrow à une valeur neutre (50), voir le
     // commentaire de pivotLikeAttrs en tête de fichier.
-    mental: 50, endurance: 50, freeThrow: 50,
+    endurance: 50, freeThrow: 50,
     // penetration/shotCreation/steal/power/focus/anticipation/leadership à
     // une valeur neutre (50) également (7 caractéristiques ajoutées après
     // coup, retour utilisateur 2026-09) : même logique que mental/endurance/

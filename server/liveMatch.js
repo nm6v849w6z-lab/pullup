@@ -104,7 +104,8 @@ function breakAfterQuarter(q, hasNext) {
 // `homeName`/`awayName` (retour utilisateur, 2026-09 : "dans les commentaires
 // du match, quand il y a un temps mort [...] il faudrait aussi que ça soit
 // mis dans le texte. temps mort demandé par ....") — permettent d'attribuer
-// chaque temps mort à une équipe ("⏱️ Temps mort demandé par {équipe}") au
+// chaque temps mort à une équipe ("Temps mort demandé par {équipe}", sans
+// emoji — retiré depuis, retour utilisateur, 2026-09 : "enlève l'emoji") au
 // lieu du texte générique d'avant. Toujours PUR/déterministe (voir le
 // commentaire de schedulePlayback plus haut, "aucun Math.random ici") :
 // l'équipe qui demande le temps mort est celle qui est MENÉE au score à cet
@@ -160,7 +161,9 @@ function schedulePlayback(events, kickoffAt, homeName = "Domicile", awayName = "
         const callingTeamName = callingTeam === "home" ? homeName : awayName;
         pauses.push({
           kind: "timeout", team: callingTeam,
-          label: `⏱️ Temps mort demandé par ${callingTeamName}`,
+          // Retour utilisateur (2026-09) : "enlève l'emoji" (sur la
+          // banderole/le fil de commentaires de temps mort).
+          label: `Temps mort demandé par ${callingTeamName}`,
           airAt: kickoffAt + cursor, durationMs: TIMEOUT_BREAK_MS,
         });
         cursor += TIMEOUT_BREAK_MS;

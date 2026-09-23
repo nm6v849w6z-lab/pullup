@@ -15,7 +15,7 @@
 // bench_frustration_test.js) : plus rapide, se concentre sur la logique.
 const E = require("./engine.js");
 const {
-  generateStartingRoster, ATTRS,
+  generateStartingRoster, ATTRS, MENTAL_ATTRS,
   TRANSFER_REQUEST_MOTIVATION_THRESHOLD, TRANSFER_REQUEST_WEEKS_THRESHOLD,
   TRANSFER_REQUEST_DISCUSS_BASE_CHANCE, TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS,
   TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST,
@@ -223,6 +223,10 @@ function anyPlayer(team) {
 // ---------------------------------------------------------------------
 // 9) L'attribut Mental déplace la chance de succès de la fourchette
 //    attendue (statistique, sur un grand nombre d'essais).
+//    "mental" n'est plus stocké individuellement (retour utilisateur,
+//    2026-09, voir mentalAverage() au-dessus de PHYSICAL_ATTRS dans
+//    engine.js) : on fixe les 8 traits de MENTAL_ATTRS à la même valeur
+//    pour obtenir exactement mentalAverage(p) === mental.
 // ---------------------------------------------------------------------
 (function testMentalAttributeShiftsSuccessChance() {
   const N = 4000;
@@ -230,7 +234,7 @@ function anyPlayer(team) {
 
   function successRateForMental(mental) {
     const p = anyPlayer(team);
-    p.attrs.mental = mental;
+    MENTAL_ATTRS.forEach(a => { p.attrs[a] = mental; });
     let successes = 0;
     for (let i = 0; i < N; i++) {
       p.form = 10;

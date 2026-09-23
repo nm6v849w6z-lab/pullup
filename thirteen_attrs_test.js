@@ -21,10 +21,20 @@
 // Tests MOTEUR (pas de DOM) pour la logique de simulation, plus une
 // vérification jsdom légère pour l'affichage des 3 nouvelles colonnes dans
 // l'onglet Effectif (voir tabs_test.js pour le même patron).
+//
+// MISE À JOUR (retour utilisateur, 2026-09, après-coup) : "mental" a depuis
+// été retiré comme caractéristique STOCKÉE indépendamment ("le mental c'est
+// désormais la moyenne de toutes ces lignes", voir le grand commentaire
+// au-dessus d'ATTRS/PHYSICAL_ATTRS dans engine.js et mentalAverage()) - les
+// effets de match ci-dessous (boost clutch, malus de tilt) restent
+// inchangés, mais lisent désormais mentalAverage(joueur) plutôt qu'un
+// attrs.mental direct ; les tests ci-dessous ont été adaptés en conséquence
+// (ils fixent les 8 traits de MENTAL_ATTRS à la même valeur plutôt que
+// p.attrs.mental directement).
 const fs = require("fs");
 const E = require("./engine.js");
 const {
-  generateStartingRoster, MatchEngine, Player, clamp, ATTRS,
+  generateStartingRoster, MatchEngine, Player, clamp, ATTRS, MENTAL_ATTRS, mentalAverage,
   serializeTeam, teamFromSave,
 } = E;
 const { startTestServer, openGame } = require("./test_helpers.js");
@@ -37,10 +47,14 @@ const T0 = Date.now();
 (function testOverallUsesThirteenAttributes() {
   const team = generateStartingRoster("Overall Test");
   const p = team.players[0];
+  // "mental" retiré de cet objet (retour utilisateur, 2026-09 : "le mental
+  // c'est désormais la moyenne de toutes ces lignes", voir le grand
+  // commentaire au-dessus d'ATTRS dans engine.js) : ce n'est plus une clé de
+  // ATTRS, donc plus rien à fixer ici pour elle - overall() ne la lit plus.
   const values = {
     midRange: 60, threePoint: 50, inside: 40, pass: 70, rebound: 55,
     block: 45, dribble: 65, agility: 58, defOutside: 52, defInside: 48,
-    mental: 80, endurance: 20, freeThrow: 90,
+    endurance: 20, freeThrow: 90,
     // 7 caractéristiques ajoutées après ce test (retour utilisateur,
     // 2026-09) : `p.attrs = { ...values }` ci-dessous REMPLACE tout
     // l'objet attrs (pas une simple fusion), donc omettre ces clés ici
@@ -73,12 +87,16 @@ const T0 = Date.now();
 (function testMigrationShimForMissingAttrs() {
   const team = generateStartingRoster("Migration Team");
   const saved = serializeTeam(team);
-  saved.players.forEach(p => { delete p.attrs.mental; delete p.attrs.endurance; delete p.attrs.freeThrow; });
+  // "mental" retiré de cette liste (retour utilisateur, 2026-09, voir le
+  // grand commentaire au-dessus d'ATTRS) : generateStartingRoster ne produit
+  // plus jamais de p.attrs.mental, donc rien à supprimer/migrer pour elle -
+  // seuls endurance/freeThrow restent à couvrir par ce test de migration.
+  saved.players.forEach(p => { delete p.attrs.endurance; delete p.attrs.freeThrow; });
 
   const reloaded = teamFromSave(saved);
   let checked = 0;
   reloaded.players.forEach(p => {
-    ["mental", "endurance", "freeThrow"].forEach(k => {
+    ["endurance", "freeThrow"].forEach(k => {
       const v = p.attrs[k];
       if (typeof v !== "number" || Number.isNaN(v) || v < 1 || v > 99) {
         throw new Error(`❌ Migration : "${k}" devrait être un nombre valide (1-99) après rechargement d'une sauvegarde ancienne, obtenu ${v} pour ${p.name}.`);
@@ -86,8 +104,9 @@ const T0 = Date.now();
       checked++;
     });
     if (Number.isNaN(p.overall())) throw new Error(`❌ overall() ne devrait jamais être NaN après migration (joueur ${p.name}).`);
+    if (Number.isNaN(mentalAverage(p))) throw new Error(`❌ mentalAverage() ne devrait jamais être NaN après migration (joueur ${p.name}).`);
   });
-  console.log(`✅ Une sauvegarde antérieure à cette fonctionnalité (mental/endurance/freeThrow absents de ${reloaded.players.length} joueurs, ${checked} valeurs vérifiées) se recharge sans erreur, avec des valeurs dérivées valides et overall() non-NaN.`);
+  console.log(`✅ Une sauvegarde antérieure à cette fonctionnalité (endurance/freeThrow absents de ${reloaded.players.length} joueurs, ${checked} valeurs vérifiées) se recharge sans erreur, avec des valeurs dérivées valides et overall()/mentalAverage() non-NaN.`);
 })();
 
 // ---------------------------------------------------------------------
@@ -216,9 +235,14 @@ const T0 = Date.now();
   const baseOff = generateStartingRoster("Clutch Off Base");
   const baseDef = generateStartingRoster("Clutch Def Base");
 
+  // "mental" n'est plus stocké individuellement (retour utilisateur,
+  // 2026-09, voir mentalAverage() au-dessus de PHYSICAL_ATTRS dans
+  // engine.js) : pour obtenir une valeur "mental" précise et connue, on met
+  // les 8 traits de MENTAL_ATTRS à LA MÊME valeur, ce qui donne exactement
+  // mentalAverage(p) === mentalValue (moyenne d'une constante répétée).
   function variant(mentalValue) {
     const team = teamFromSave(serializeTeam(baseOff));
-    team.players.forEach(p => { p.attrs.mental = mentalValue; });
+    team.players.forEach(p => { MENTAL_ATTRS.forEach(a => { p.attrs[a] = mentalValue; }); });
     return team;
   }
 
@@ -259,9 +283,14 @@ const T0 = Date.now();
   const baseOff = generateStartingRoster("Tilt Off Base");
   const baseDef = generateStartingRoster("Tilt Def Base");
 
+  // "mental" n'est plus stocké individuellement (retour utilisateur,
+  // 2026-09, voir mentalAverage() au-dessus de PHYSICAL_ATTRS dans
+  // engine.js) : même technique que testMentalClutchBoost ci-dessus, les 8
+  // traits de MENTAL_ATTRS à la même valeur pour obtenir mentalAverage(p)
+  // === mentalValue exactement.
   function variant(mentalValue) {
     const team = teamFromSave(serializeTeam(baseOff));
-    team.players.forEach(p => { p.attrs.mental = mentalValue; });
+    team.players.forEach(p => { MENTAL_ATTRS.forEach(a => { p.attrs[a] = mentalValue; }); });
     return team;
   }
 
@@ -340,10 +369,18 @@ async function testRosterTableShowsNewColumns() {
     // abréviations à 2-3 lettres.
     const attrHeaders = [...doc.querySelectorAll("#playerDetailContent .pdp-attr-grid .lbl")].map(el => el.textContent.trim());
     console.log("En-têtes de caractéristiques sur la fiche joueur :", attrHeaders.join(", "));
-    ["Mental", "Endurance", "Lancer franc"].forEach(full => {
+    ["Endurance", "Lancer franc"].forEach(full => {
       if (!attrHeaders.includes(full)) throw new Error(`❌ La colonne "${full}" devrait apparaître (en toutes lettres) sur la fiche joueur.`);
     });
-    console.log("✅ La fiche joueur affiche bien les 3 nouvelles caractéristiques (Mental/Endurance/Lancer franc) en plus des 10 d'origine, en toutes lettres.");
+    // "Mental" ne devrait PLUS apparaître comme ligne individuelle (retour
+    // utilisateur, 2026-09 : "la caractéristique mental [...] n'a plus lieu
+    // d'exister [...] le mental c'est désormais la moyenne de toutes ces
+    // lignes" — MENTAL_ATTRS ne contient plus "mental" lui-même, voir le
+    // grand commentaire au-dessus d'ATTRS/PHYSICAL_ATTRS dans engine.js).
+    if (attrHeaders.includes("Mental")) {
+      throw new Error("❌ \"Mental\" ne devrait plus apparaître comme caractéristique individuelle sur la fiche joueur (c'est désormais la moyenne des 8 autres traits mentaux, pas une ligne à part).");
+    }
+    console.log("✅ La fiche joueur affiche bien Endurance/Lancer franc en toutes lettres, et \"Mental\" n'apparaît plus comme ligne individuelle (retiré comme caractéristique indépendante).");
     dom.window.close();
   } finally {
     server.close();

@@ -41,13 +41,17 @@ const { potentialTierLabel, POTENTIAL_TIERS } = E;
 }
 
 // ---------------------------------------------------------------------
-// Partie 2 : affichage sur la fiche joueur — le NOM du palier apparaît, mais
-// jamais le chiffre exact caché. Depuis la refonte de l'onglet Effectif
-// (retour utilisateur, 2026-09 : "on verra toutes les carac des joueurs en
-// cliquant sur la page du joueur"), le Potentiel n'est plus une colonne du
-// tableau Effectif lui-même : il a été réajouté sur renderPlayerDetail pour
-// ne pas perdre cette information (voir moteurbasket3.html, juste après la
-// ligne Motivation), donc c'est là qu'on le vérifie maintenant.
+// Partie 2 : affichage sur l'onglet Effectif ET sur la fiche joueur — le NOM
+// du palier apparaît aux deux endroits, mais jamais le chiffre exact caché.
+// Historique : le Potentiel avait d'abord été retiré de l'onglet Effectif
+// lors de la refonte de la fiche joueur (retour utilisateur, 2026-09 : "on
+// verra toutes les carac des joueurs en cliquant sur la page du joueur"),
+// puis un beta-testeur ("Ariane", Discord) a signalé son absence gênante sur
+// le tableau — l'utilisateur a explicitement demandé de le remettre : "ajoute
+// le potentiel juste après le poste" (sous-onglet "Général"), puis "idem là,
+// juste après le poste" (sous-onglet "Caractéristiques"). Il reste AUSSI sur
+// la fiche joueur (jamais retiré de là), donc affiché aux deux endroits
+// désormais — voir ROSTER_SORT_COLUMNS/rosterHeaderCellHtml.
 // ---------------------------------------------------------------------
 (async () => {
   const html = fs.readFileSync("moteurbasket3.html", "utf-8");
@@ -58,16 +62,41 @@ const { potentialTierLabel, POTENTIAL_TIERS } = E;
   const clickTab = (key) => [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click();
   clickTab("effectif");
 
-  const rosterTable = doc.querySelector("#rosterContent table");
-  if (!rosterTable) throw new Error("❌ Tableau de l'effectif introuvable.");
-  if ([...rosterTable.querySelectorAll("thead th")].some(th => th.textContent.trim() === "Potentiel")) {
-    throw new Error("❌ Le tableau Effectif ne devrait plus afficher de colonne \"Potentiel\" (déplacée vers la fiche joueur).");
+  function checkPotentialColumn(label) {
+    const table = doc.querySelector("#rosterContent table");
+    if (!table) throw new Error(`❌ [${label}] Tableau de l'effectif introuvable.`);
+    const headers = [...table.querySelectorAll("thead th")].map(th => th.textContent.trim());
+    const posIdx = headers.indexOf("Poste");
+    const potIdx = headers.indexOf("Potentiel");
+    if (posIdx === -1) throw new Error(`❌ [${label}] Colonne "Poste" introuvable — en-têtes : ${headers.join(", ")}`);
+    if (potIdx === -1) throw new Error(`❌ [${label}] Colonne "Potentiel" introuvable (retour utilisateur : "ajoute le potentiel juste après le poste") — en-têtes : ${headers.join(", ")}`);
+    if (potIdx !== posIdx + 1) {
+      throw new Error(`❌ [${label}] La colonne "Potentiel" devrait être JUSTE APRÈS "Poste" (index ${posIdx + 1}), trouvée en position ${potIdx} — en-têtes : ${headers.join(", ")}`);
+    }
+    const rows = [...table.querySelectorAll("tbody tr")];
+    if (rows.length === 0) throw new Error(`❌ [${label}] Aucune ligne de joueur dans le tableau.`);
+    rows.forEach((tr, i) => {
+      const cellText = tr.children[potIdx].textContent.trim();
+      if (!POTENTIAL_TIERS.some(t => t.label === cellText)) {
+        throw new Error(`❌ [${label}] Ligne ${i} : la cellule Potentiel ("${cellText}") ne correspond à aucun nom de palier connu.`);
+      }
+    });
+    console.log(`✅ [${label}] Colonne "Potentiel" présente juste après "Poste" (${rows.length} lignes, palier nommé sur chacune, jamais le chiffre caché).`);
   }
+
+  checkPotentialColumn("Général");
+
+  // Sous-onglet "Caractéristiques" : même demande explicite ("idem là").
+  const carSubTab = [...doc.querySelectorAll("[data-effectif-subview]")].find(b => b.dataset.effectifSubview === "caracteristiques");
+  if (!carSubTab) throw new Error("❌ (setup) Sous-onglet \"Caractéristiques\" introuvable.");
+  carSubTab.click();
+  checkPotentialColumn("Caractéristiques");
+  // Revient sur "Général" pour la suite du test (clic sur la fiche joueur).
+  const genSubTab = [...doc.querySelectorAll("[data-effectif-subview]")].find(b => b.dataset.effectifSubview === "general");
+  if (genSubTab) genSubTab.click();
+
   await flush(dom);
   const teamPlayers = readRawSave(savePath).team.players;
-  const rows = [...rosterTable.querySelectorAll("tbody tr")];
-  if (rows.length !== teamPlayers.length) throw new Error(`❌ ${teamPlayers.length} joueurs attendus dans le tableau, obtenu ${rows.length} lignes.`);
-  console.log(`✅ Le tableau Effectif (${rows.length} joueurs) n'affiche plus de colonne Potentiel.`);
 
   const allLabels = new Set(POTENTIAL_TIERS.map(t => t.label));
   const firstPlayerLink = doc.querySelector("#rosterContent .player-link");
