@@ -352,6 +352,62 @@ const BASE_INJURY_RATE = 0.00013;
 let __uid = 1;
 function uid() { return __uid++; }
 
+// Corrige à la racine le bug "Cette enchère est déjà terminée" (retour
+// utilisateur Discord, 2026-09 — voir le commentaire sur refreshTransferMarket
+// côté moteurbasket3.html pour le détail du symptôme et le premier correctif
+// partiel, dd27f48) : `__uid` ci-dessus repart de 1 à chaque redémarrage du
+// PROCESS SERVEUR (chaque déploiement Render, pas seulement chaque
+// rechargement de page navigateur — dd27f48 n'empêchait que la génération
+// locale côté navigateur en ligue partagée, jamais ce cas-ci). Si le marché
+// (transferts/entraîneurs/analystes/recruteurs) doit se réapprovisionner
+// juste après un redémarrage, les nouveaux id générés (1, 2, 3...) peuvent
+// entrer en collision avec ceux, bien plus élevés, déjà utilisés par
+// d'anciennes entités (joueurs, annonces déjà closes...) encore présentes
+// dans la sauvegarde — `Array.prototype.find(l => l.id === listingId)`
+// renvoie alors la MAUVAISE entité (souvent une annonce déjà fermée),
+// exactement le symptôme observé, alors même que l'annonce affichée à
+// l'écran (filtrée sur "open") reste la bonne.
+//
+// `bumpUidFloor` relève le plancher de `__uid` (jamais vers le bas, un appel
+// tardif/redondant reste sans danger) ; `reseedUidFromSave` parcourt tout
+// l'objet de sauvegarde brut (avant reconstruction des classes Team/League)
+// à la recherche du plus grand champ numérique `id` déjà utilisé, où qu'il
+// soit niché (joueurs, annonces de marché, entrées d'historique de
+// matchs...) — un parcours générique plutôt qu'une liste figée des
+// emplacements connus, pour ne jamais désynchroniser ce correctif d'un futur
+// nouvel usage de uid(). Appelée à CHAQUE chargement d'une sauvegarde (voir
+// server/store.js:deserialize/deserializeMultiLeague, et loadMyTeam côté
+// moteurbasket3.html pour le miroir client) : rien à faire de spécial au
+// démarrage du process, le tout premier chargement s'en charge déjà.
+function scanMaxId(node, depth = 0) {
+  if (depth > 40 || node == null || typeof node !== "object") return 0;
+  let best = 0;
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const v = scanMaxId(item, depth + 1);
+      if (v > best) best = v;
+    }
+    return best;
+  }
+  for (const key of Object.keys(node)) {
+    const v = node[key];
+    if (key === "id" && typeof v === "number" && Number.isFinite(v)) {
+      if (v > best) best = v;
+    } else if (v && typeof v === "object") {
+      const nested = scanMaxId(v, depth + 1);
+      if (nested > best) best = nested;
+    }
+  }
+  return best;
+}
+function bumpUidFloor(min) {
+  if (Number.isFinite(min) && min > __uid) __uid = min;
+}
+function reseedUidFromSave(data) {
+  const maxId = scanMaxId(data);
+  if (maxId > 0) bumpUidFloor(maxId + 1);
+}
+
 // Jeton privé non-devinable pour un lien de manager (retour utilisateur,
 // 2026-09 : jusqu'à 10 vrais managers humains dans UNE ligue partagée — voir
 // Team.managerLinkToken plus bas, généré une fois pour toutes à la création
@@ -992,9 +1048,24 @@ const TRAINING_PROGRAMS = {
   playmaking:  makeTrainingProgram("Meneur de jeu", ["pass", "dribble"]),
   allroundDef: makeTrainingProgram("Défense polyvalente", ["defOutside", "defInside"]),
   // "Tirs rapides" perd son quatrième ingrédient "agility" (désormais
-  // physique, non trainable directement, voir plus haut) : ne garde que les
-  // 3 fondamentaux de tir qui donnaient son sens à ce composite.
-  quickShots:  makeTrainingProgram("Tirs rapides", ["midRange", "threePoint", "inside"]),
+  // physique, non trainable directement, voir plus haut), remplacé par
+  // "dribble" : un joueur qui enchaîne dribble + tirs rapides colle mieux à
+  // l'intitulé qu'une simple amputation à 3 fondamentaux.
+  quickShots:  makeTrainingProgram("Tirs rapides", ["dribble", "midRange", "threePoint", "inside"]),
+  // Retour utilisateur (2026-09, une fois les 3 nouveaux fondamentaux
+  // pénétration/création de tir/interception en place) : "je pense qu'on
+  // pourrait créer de nouveaux entrainement combo, étant donné qu'il y a des
+  // choses qui vont bien ensemble". Les 2 premiers reprennent tels quels des
+  // liens déjà établis par TRAINING_SYNERGY ci-dessus (shotCreation-dribble,
+  // steal-defOutside) : entraîner directement la paire plutôt que de
+  // compter sur le petit bonus de synergie (×0.4, voir Team.trainWeek) pour
+  // qui veut progresser sur les deux à plein rendement ensemble. Le
+  // troisième (pénétration + lancer franc) n'a pas d'entrée TRAINING_SYNERGY
+  // dédiée mais reste un duo classique de basket (attaquer le cercle en
+  // dribble attire les fautes, donc les lancers francs).
+  creativeScoring:  makeTrainingProgram("Scoreur créatif", ["shotCreation", "dribble"]),
+  perimeterDefense: makeTrainingProgram("Défense de périmètre", ["steal", "defOutside"]),
+  rimAttack:        makeTrainingProgram("Attaque du cercle", ["penetration", "freeThrow"]),
 };
 
 // Aptitude d'un poste pour un PROGRAMME entier = moyenne (pondérée par le
@@ -10166,6 +10237,10 @@ class MatchEngine {
 }
 
 return {
+  // uid()/reseedUidFromSave : voir le grand commentaire au-dessus de leur
+  // définition (correctif "Cette enchère est déjà terminée" après un
+  // redémarrage du process serveur, 2026-09).
+  uid, reseedUidFromSave, bumpUidFloor, scanMaxId,
   POSITIONS, ATTRS, TRAINING_LABELS, TRAINING_SYNERGY, TRAINING_FULL_MATCH_SECONDS, attendanceFactorForSeconds,
   // Catégorisation Fondamentaux/Physique/Mental (voir le grand commentaire
   // au-dessus de PHYSICAL_ATTRS, retour utilisateur 2026-09 : "entrainement

@@ -2674,6 +2674,45 @@ const BASE_INJURY_RATE = 0.00013;
 let __uid = 1;
 function uid() { return __uid++; }
 
+// Copie miroir EXACTE de engine.js (voir son commentaire à côté de
+// scanMaxId/bumpUidFloor/reseedUidFromSave pour le détail du bug corrigé :
+// "Cette enchère est déjà terminée" après un redémarrage du process
+// serveur). Câblée ici aussi (pas seulement côté serveur) car ce même
+// `__uid` reset tout autant à CHAQUE rechargement de page navigateur, et le
+// client génère lui-même de nouveaux candidats de marché en solo
+// (managerToken null, voir refreshCoachMarket etc. plus bas) — jamais en
+// ligue partagée (voir le même garde), mais reseedUidFromSave reste appelée
+// dans les deux cas ci-dessous par simplicité/cohérence, sans risque : elle
+// ne fait que relever un plancher, jamais un no-op dangereux.
+function scanMaxId(node, depth = 0) {
+  if (depth > 40 || node == null || typeof node !== "object") return 0;
+  let best = 0;
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const v = scanMaxId(item, depth + 1);
+      if (v > best) best = v;
+    }
+    return best;
+  }
+  for (const key of Object.keys(node)) {
+    const v = node[key];
+    if (key === "id" && typeof v === "number" && Number.isFinite(v)) {
+      if (v > best) best = v;
+    } else if (v && typeof v === "object") {
+      const nested = scanMaxId(v, depth + 1);
+      if (nested > best) best = nested;
+    }
+  }
+  return best;
+}
+function bumpUidFloor(min) {
+  if (Number.isFinite(min) && min > __uid) __uid = min;
+}
+function reseedUidFromSave(data) {
+  const maxId = scanMaxId(data);
+  if (maxId > 0) bumpUidFloor(maxId + 1);
+}
+
 // Jeton privé non-devinable pour un lien de manager (retour utilisateur,
 // 2026-09 : jusqu'à 10 vrais managers humains dans UNE ligue partagée — voir
 // Team.managerLinkToken plus bas, généré une fois pour toutes à la création
@@ -3275,9 +3314,24 @@ const TRAINING_PROGRAMS = {
   playmaking:  makeTrainingProgram("Meneur de jeu", ["pass", "dribble"]),
   allroundDef: makeTrainingProgram("Défense polyvalente", ["defOutside", "defInside"]),
   // "Tirs rapides" perd son quatrième ingrédient "agility" (désormais
-  // physique, non trainable directement, voir plus haut) : ne garde que les
-  // 3 fondamentaux de tir qui donnaient son sens à ce composite.
-  quickShots:  makeTrainingProgram("Tirs rapides", ["midRange", "threePoint", "inside"]),
+  // physique, non trainable directement, voir plus haut), remplacé par
+  // "dribble" : un joueur qui enchaîne dribble + tirs rapides colle mieux à
+  // l'intitulé qu'une simple amputation à 3 fondamentaux.
+  quickShots:  makeTrainingProgram("Tirs rapides", ["dribble", "midRange", "threePoint", "inside"]),
+  // Retour utilisateur (2026-09, une fois les 3 nouveaux fondamentaux
+  // pénétration/création de tir/interception en place) : "je pense qu'on
+  // pourrait créer de nouveaux entrainement combo, étant donné qu'il y a des
+  // choses qui vont bien ensemble". Les 2 premiers reprennent tels quels des
+  // liens déjà établis par TRAINING_SYNERGY ci-dessus (shotCreation-dribble,
+  // steal-defOutside) : entraîner directement la paire plutôt que de
+  // compter sur le petit bonus de synergie (×0.4, voir Team.trainWeek) pour
+  // qui veut progresser sur les deux à plein rendement ensemble. Le
+  // troisième (pénétration + lancer franc) n'a pas d'entrée TRAINING_SYNERGY
+  // dédiée mais reste un duo classique de basket (attaquer le cercle en
+  // dribble attire les fautes, donc les lancers francs).
+  creativeScoring:  makeTrainingProgram("Scoreur créatif", ["shotCreation", "dribble"]),
+  perimeterDefense: makeTrainingProgram("Défense de périmètre", ["steal", "defOutside"]),
+  rimAttack:        makeTrainingProgram("Attaque du cercle", ["penetration", "freeThrow"]),
 };
 
 // Aptitude d'un poste pour un PROGRAMME entier = moyenne (pondérée par le
@@ -13250,6 +13304,11 @@ async function loadMyTeam() {
     }
     const data = await res.json();
     if (!data || !data.league) return null;
+    // Relève le plancher de uid() AVANT toute reconstruction d'objets (voir
+    // reseedUidFromSave plus haut) : même précaution que côté serveur
+    // (server/store.js:deserialize), pour ce même compteur qui repart de 1 à
+    // chaque rechargement de page.
+    reseedUidFromSave(data);
     // Quelle équipe, parmi league.teams, est celle DE CE NAVIGATEUR (voir
     // myTeamIndex côté server/index.js) — toujours 0 en solo historique
     // (data.team, voir ci-dessous), résolu par le serveur pour n'importe

@@ -183,6 +183,11 @@ function serializeMultiLeague(league) {
 // privilégiée à reconstruire à part : voir Engine.leagueFromSave (userTeam
 // omis).
 function deserializeMultiLeague(data) {
+  // Même précaution que deserialize() ci-dessus, pour la ligue partagée
+  // (c'est d'ailleurs très exactement ce chemin-ci qui a révélé le bug :
+  // marché de staff/transferts en ligue partagée, voir le commentaire sur
+  // Engine.reseedUidFromSave).
+  Engine.reseedUidFromSave(data);
   return { league: leagueFromSave(data.league) };
 }
 
@@ -288,6 +293,13 @@ function serialize(team, league) {
 }
 
 function deserialize(data) {
+  // Reconstitue le plancher de uid() AVANT toute reconstruction d'objets
+  // (voir Engine.reseedUidFromSave/__uid, correctif 2026-09 "Cette enchère
+  // est déjà terminée" après un redémarrage du process serveur) : sans ça,
+  // le tout premier candidat de marché généré après un redémarrage pourrait
+  // reprendre un id déjà utilisé par une entité plus ancienne de CETTE
+  // sauvegarde.
+  Engine.reseedUidFromSave(data);
   const team = teamFromSave(data.team);
   const league = leagueFromSave(data.league, team);
   return { team, league };
