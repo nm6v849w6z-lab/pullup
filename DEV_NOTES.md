@@ -19,24 +19,118 @@ de l'état réel du code.
 
 ## En cours
 
-### teamDetailEffectifHtml (effectif d'une équipe adverse) — non triable, pas dans le périmètre de ce correctif
-- Repéré en creusant le bug ci-dessous (Historique) : `teamDetailEffectifHtml`
-  (vue de l'effectif d'une équipe adverse, `#teamDetailContent`) a le même
-  genre de tableau `<th>` bruts, sans `data-sort`, donc non triable non
-  plus — mais PAS ce que l'utilisateur a signalé (ses captures montraient
-  bien son propre Effectif). Laissé de côté volontairement cette fois pour
-  rester focalisé sur le bug réellement signalé ; pas de demande
-  utilisateur dessus pour l'instant.
-- **Prochaine étape (si demandé)** : même traitement que ci-dessous
-  (`rosterHeaderCellHtml`-like + état de tri dédié, `#teamDetailContent` a
-  son propre écouteur délégué séparé de `#rosterContent`) — mais attention,
-  ce tableau peut afficher un adversaire NON scouté (verrou de scoutisme à
-  respecter, contrairement à `renderEffectifSection` qui n'affiche que sa
-  propre équipe).
+### Retrait de "Mental" comme caractéristique indépendante du moteur
+- Signalé (2026-09-23) : "et la caractéristique mental (ici 27) n'a plus
+  lieu d'exister [...] le mental c'est désormais la moyenne de toutes ces
+  lignes", puis confirmé sans ambiguïté : "j'espère que tu n'as pas gardé
+  une ligne de code mental dans le moteur de jeu".
+- Contexte : `mental` est actuellement l'UNE des 9 `MENTAL_ATTRS`, stockée/
+  persistée comme les 8 autres (decision/focus/composure/anticipation/
+  determination/leadership/discipline/vision), avec ses propres mécanismes
+  de match dédiés (boost clutch fin de match serrée + malus de "tilt" après
+  une série de ratés, voir le grand commentaire au-dessus d'ATTRS dans
+  engine.js) — décision DÉLIBÉRÉE prise lors d'une session précédente de la
+  garder ainsi (contrairement au bac à sable de référence qui l'avait déjà
+  éclatée en 8 traits séparés), désormais inversée par ce retour
+  utilisateur.
+- **Objectif** : `mental` disparaît d'ATTRS/MENTAL_ATTRS/TRAINING_LABELS (29
+  → 28 caractéristiques au total) ; partout où le moteur avait besoin d'une
+  valeur "mental" (bonus clutch, malus de tilt, chance de discussion de
+  demande de transfert), la calculer désormais à la volée comme la moyenne
+  des 8 traits mentaux restants, plutôt que de lire un champ indépendant.
+- **À faire, dans engine.js ET son miroir dans moteurbasket3.html (les deux
+  DOIVENT rester identiques, voir le grand commentaire "moteur mirroré" déjà
+  en place)** :
+  - ATTRS (retirer "mental"), TRAINING_LABELS (retirer l'entrée), MENTAL_ATTRS
+    (retirer "mental", 9 → 8).
+  - Nouvelle fonction `mentalAverage(player)` (moyenne des 8 `MENTAL_ATTRS`
+    restants) — remplace les 3 lectures directes de `attrs.mental` trouvées :
+    `TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS` (chance de discuter une demande
+    de transfert), et les 2 formules clutch/tilt de `MatchEngine.
+    playPossession` (`mentalClutchBoost`/`tiltPenalty`).
+  - Migration des sauvegardes (`playerFromSave`) : `missingNewAttrs`/
+    `attrs13Keys` retirent "mental" de la liste (12 clés au lieu de 13 pour
+    ce palier de migration, pas de backfill pour un champ qui n'existe plus).
+    Les sauvegardes existantes garderont un champ `attrs.mental` orphelin
+    (jamais lu/écrit par le moteur désormais) — inoffensif, pas de nettoyage
+    actif nécessaire.
+  - Nettoyer les commentaires les plus trompeurs (le grand commentaire
+    au-dessus d'ATTRS présente encore "mental" comme un trait à part, la
+    section MENTAL (9, ...) doit devenir (8, ...), POSITION_ATTR_PROFILE
+    mentionne encore "Mental" dans son énumération des traits généralistes).
+  - Vérifié : `TRAINING_SYNERGY`, `POSITION_ATTR_PROFILE`, `TACTICAL_ATTRS`
+    n'ont AUCUNE entrée "mental" à retirer (déjà absent, confirmé par grep).
+    Les boucles `mentalPotential`/progression naturelle
+    (`mentalGrowthFactorForAge`) itèrent déjà génériquement sur
+    `MENTAL_ATTRS` : rien à changer là, elles s'ajustent automatiquement à
+    8 entrées.
+- **Tests à mettre à jour** : `thirteen_attrs_test.js` (overall() attendu sur
+  28 caractéristiques et non 29, migration mental/endurance/freeThrow →
+  endurance/freeThrow seulement, formules clutch/tilt à retester via les 8
+  sous-attributs plutôt que `attrs.mental` directement, en-tête "Mental" de
+  la fiche joueur qui ne doit PLUS apparaître comme ligne individuelle).
+  Vérifier aussi `training_progression_test.js`/`salary_test.js`/
+  `synergy_training_test.js`/`tactical_knowledge_test.js` pour toute
+  référence directe à `attrs.mental` ou à un total de 29 caractéristiques.
+- **Pas encore commencé le code** (uniquement l'investigation/le plan
+  ci-dessus à ce stade) — reprendre par l'édition d'engine.js.
 
 ---
 
 ## Historique (terminé, committé ou en attente de commit)
+
+### 2026-09-23 — pas encore commité — 4 correctifs fiche joueur + tri effectif adverse
+- **Plus de couleurs sur les pastilles/note globale** ("on a plus du tout les
+  couleurs sur les carac et la note globale") : le palier "lo" (< 45)
+  utilisait `var(--ink-faint)` (gris très sourd, quasi invisible sur fond
+  sombre) au lieu d'une vraie couleur — contrairement à `attrCellHtml`
+  (Effectif/Marché) où la mini-barre (déjà colorée en rouge pour "lo") porte
+  le signal visuel pendant que le texte reste discret ; sur la fiche joueur,
+  la pastille EST le seul signal. Corrigé : `.pdp-pill.attr-lo`/
+  `.pdp-overall-num.attr-lo` passent à `var(--danger)` (rouge), comme
+  "good"/"elite" ont déjà leur propre couleur.
+- **Texte "Mise en vente" trop gros** ("il est plus grand que le titre MISE
+  EN VENTE") : `<p class="sub">` (estimation par ventes comparables) n'avait
+  ici AUCUNE règle CSS scopée `.pdp-card .sub` (contrairement à CHAQUE
+  autre usage de "sub" dans ce fichier, toujours scopé à son conteneur) et
+  retombait donc sur la taille par défaut d'un `<p>`. Ajouté
+  `.pdp-card .sub{font-size:12px;color:var(--ink-dim);}`.
+- **Grand vide à gauche ET à droite de la fiche joueur** ("pourquoi c'est
+  aussi serré ? [...] gros trou [...] à gauche [...] à droite il y a aussi
+  de la perte de place") — PAS un bug du schéma de terrain (vérifié
+  identique au fichier de référence), le vrai coupable :
+  `playerDetailSection` était dans `NARROW_PAGE_IDS` (gabarit plafonné à
+  700px, voir `.wrap-narrow`), réglage hérité de l'ANCIEN format à plat
+  (chips + grille plafonnée à 420px, où 700px avait justement été choisi
+  pour éviter un vide à DROITE). La refonte "pdp-card" (grille 280px+1fr,
+  elle-même avec un bloc à 3 colonnes Fondamentaux/Physique/Mental à
+  droite) est maintenant aussi dense que l'Effectif — 700px la comprimait
+  des deux côtés. Corrigé : `playerDetailSection` déplacée de
+  `NARROW_PAGE_IDS` vers `WIDE_PAGE_IDS` (comme Effectif/Coupe/Ordres, voir
+  showPage/.wrap-wide). `NARROW_PAGE_IDS` est désormais vide (conservé pour
+  un futur besoin).
+- **Effectif d'une équipe adverse non triable** ("il faut aussi pouvoir
+  trier sur la page effectif de qqun", juste après le correctif du tri sur
+  SON PROPRE Effectif) : `teamDetailEffectifHtml` avait le même défaut
+  (`<th>` bruts, aucun `data-sort`). Corrigé en réutilisant le même schéma
+  que `rosterHeaderCellHtml`/`rosterSortState` (nouvel état dédié
+  `teamDetailEffectifSortState`, écouteur délégué sur `[data-team-sort]`
+  dans `#teamDetailContent`) — MAIS avec un garde-fou spécifique au
+  scoutisme : une colonne de caractéristique n'est triable QUE si sa valeur
+  est déjà révélée pour CETTE équipe précise (`teamDetailSortAllowed`),
+  jamais pour un adversaire non scouté (trier révèle un ORDRE, donc de
+  l'information sur des valeurs censées rester cachées) ; et si un tri
+  choisi sur une équipe où la colonne était révélée reste actif en
+  changeant d'équipe où elle ne l'est plus, repli automatique sur le tri
+  par défaut (poste + note globale) plutôt que de trier silencieusement sur
+  la vraie valeur cachée.
+- **Testé** : `player_detail_test.js` étendu (vérifie `wrap-wide` sur la
+  fiche joueur) ; nouveau `team_detail_effectif_sort_test.js` (colonnes
+  triables sur sa propre équipe, verrouillées pour un adversaire non
+  scouté, garde-fou anti-fuite en changeant d'équipe). Suite complète
+  (84/84, avec ce nouveau fichier) confirmée verte en sandbox.
+- **Pas encore déployé sur le Mac** au moment de l'écriture de cette
+  entrée — en cours.
 
 ### 2026-09-23 — pas encore commité — Effectif > Caractéristiques : colonnes triables
 - Signalé (2 captures d'écran, onglet Effectif > sous-onglet Caractéristiques,

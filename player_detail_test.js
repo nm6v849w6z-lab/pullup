@@ -34,6 +34,17 @@ if (!playerDetailVisible || !effectifHiddenNow) throw new Error("❌ Cliquer sur
 if (!doc1.getElementById("playerDetailName").textContent.includes(firstPlayerName)) {
   throw new Error("❌ Le titre de la fiche devrait reprendre le nom du joueur cliqué.");
 }
+// Gabarit large (retour utilisateur, 2026-09, refonte "pdp-card" :
+// "pourquoi c'est aussi serré ? [...] gros trou [...] à gauche [...] à
+// droite il y a aussi de la perte de place") : playerDetailSection est
+// passée de NARROW_PAGE_IDS (ancien format à plat, 700px) à WIDE_PAGE_IDS
+// (voir showPage/.wrap-wide) — sans ça, la grille 280px+1fr de la refonte se
+// retrouvait plafonnée à 700px, laissant un grand vide symétrique de chaque
+// côté sur un écran large.
+const wrapClasses = doc1.querySelector(".wrap").className;
+console.log("Classes du gabarit sur la fiche joueur :", wrapClasses);
+if (!wrapClasses.includes("wrap-wide")) throw new Error("❌ La fiche joueur devrait utiliser le gabarit large (wrap-wide), pas rester plafonnée à 700px/960px.");
+console.log("✅ La fiche joueur utilise bien le gabarit large (pas de vide gauche/droite).");
 const attrCellsOwn = doc1.querySelectorAll("#playerDetailContent .pdp-pill:not(.locked)").length;
 console.log("Cellules de caractéristiques déverrouillées (propre effectif) :", attrCellsOwn, "(attendu > 0)");
 if (attrCellsOwn === 0) throw new Error("❌ Les caractéristiques de son propre joueur devraient toujours être visibles en clair.");

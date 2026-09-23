@@ -39,17 +39,17 @@
      WIDE_PAGE_IDS/showPage — toute la largeur du contenu plutôt que le
      gabarit "lecture" à 960px, pour tenir sans scroll horizontal. */
   .wrap.wrap-wide{max-width:none;}
-  /* Fiche joueur (retour utilisateur, 2026-09 : "il faudrait trouver un
-     moyen de boucher le grand trou à droite") : sur un écran large, le
-     contenu de la fiche joueur (ligne de chips, grille de caractéristiques
-     plafonnée à 420px, points forts/faibles) est bien plus étroit que le
-     gabarit "lecture" à 960px, ce qui laissait un grand vide à droite du
-     contenu réel à l'intérieur même de .wrap (en plus de la marge extérieure
-     déjà symétrique de .wrap). Voir NARROW_PAGE_IDS/showPage : un gabarit
-     plus étroit, propre à cette page, plutôt que d'agrandir artificiellement
-     le contenu pour remplir les 960px (la maquette validée par l'utilisateur
-     reste à 2 colonnes, pas question d'en ajouter une 3e juste pour "faire
-     de la place"). */
+  /* Fiche joueur (ancien format à plat : ligne de chips, grille de
+     caractéristiques plafonnée à 420px, points forts/faibles) : utilisait
+     jusqu'ici ce gabarit étroit (voir NARROW_PAGE_IDS/showPage), le contenu
+     étant alors bien plus étroit que le gabarit "lecture" à 960px. Depuis la
+     refonte "pdp-card" (retour utilisateur, 2026-09 : "pourquoi c'est aussi
+     serré ? [...] gros trou [...] à gauche [...] à droite il y a aussi de la
+     perte de place") : la fiche joueur est passée dans WIDE_PAGE_IDS à la
+     place (voir son commentaire) — 700px était devenu bien trop étroit pour
+     la nouvelle grille 280px+1fr (elle-même avec un bloc à 3 colonnes à
+     droite), d'où ce grand vide gauche/droite. .wrap-narrow n'est donc plus
+     utilisé par aucune page pour l'instant (conservé pour un futur besoin). */
   .wrap.wrap-narrow{max-width:700px;}
   .eyebrow{
     font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint);
@@ -1015,7 +1015,15 @@
   .pdp-overall-num.attr-elite{color:var(--amber);}
   .pdp-overall-num.attr-good{color:var(--ok);}
   .pdp-overall-num.attr-mid{color:var(--ink-dim);}
-  .pdp-overall-num.attr-lo{color:var(--ink-faint);}
+  /* Retour utilisateur (2026-09, "on a plus du tout les couleurs sur les
+     carac et la note globale") : var(--ink-faint) (gris très sourd) était
+     quasi invisible sur ce fond sombre pour un palier faible — contrairement
+     à attrCellHtml (Effectif/Marché) où la MINI-BARRE (déjà colorée en
+     var(--danger) pour "lo", voir plus bas) porte le signal visuel et le
+     texte peut rester discret ; ici la pastille EST le seul signal, donc
+     "lo" doit être clairement coloré comme "good"/"elite", pas fondu dans
+     le fond. */
+  .pdp-overall-num.attr-lo{color:var(--danger);}
   .pdp-card .stars{color:var(--amber); font-size:14px; letter-spacing:1px;}
   .pdp-overall-caption{font-size:11.5px; color:var(--ink-faint);}
   .pdp-meta-list{margin-top:12px; font-size:12.5px;}
@@ -1060,7 +1068,10 @@
   .pdp-pill.attr-elite{background:rgba(240,162,60,.16); color:var(--amber);}
   .pdp-pill.attr-good{background:rgba(51,180,161,.16); color:var(--ok);}
   .pdp-pill.attr-mid{background:var(--panel-2); color:var(--ink-dim);}
-  .pdp-pill.attr-lo{background:rgba(226,105,79,.12); color:var(--ink-faint);}
+  /* Même correctif que .pdp-overall-num.attr-lo plus haut (voir son
+     commentaire) : texte coloré var(--danger), pas var(--ink-faint) qui se
+     fondait dans le fond sombre. */
+  .pdp-pill.attr-lo{background:rgba(226,105,79,.12); color:var(--danger);}
   .pdp-pill.locked{background:var(--panel-2); color:var(--ink-faint);}
   .pdp-trend{font-size:10px; width:10px; display:inline-block; text-align:center;}
   .pdp-trend.up{color:var(--ok);}
@@ -1089,6 +1100,14 @@
   .pdp-res.w{background:rgba(51,180,161,.16); color:var(--ok);}
   .pdp-res.l{background:rgba(226,105,79,.16); color:var(--danger);}
   .pdp-locked-note{font-size:12.5px; color:var(--ink-faint); font-style:italic;}
+  /* Retour utilisateur (2026-09, "mets ce texte plus petit, il est plus
+     grand que le titre MISE EN VENTE") : class="sub" (estimation par ventes
+     comparables, comparableSalesValuation) n'avait ici AUCUNE règle scopée
+     .pdp-card .sub (contrairement à chaque autre usage de "sub" dans ce
+     fichier, toujours scopé à son conteneur, voir .stat-card .sub etc.) et
+     retombait donc sur la taille de police par défaut d'un <p>, plus grande
+     que .pdp-card h3 (11px, voir plus haut). */
+  .pdp-card .sub{font-size:12px; color:var(--ink-dim);}
   /* Nouvelle fiche joueur (retour utilisateur, 2026-09, exemple fourni pour
      "Adama Kovac") : grille à 2 colonnes pour les caractéristiques (voir
      renderPlayerDetail) plutôt que l'ancien tableau à une seule ligne
@@ -13597,16 +13616,27 @@ const PAGE_IDS = [
 // scrollant", deux colonnes voir .prep-columns/buildTeamPanel) : le gabarit
 // "lecture" à 960px de .wrap suffisait pour l'ancien panneau vertical
 // unique, plus pour les deux colonnes côte à côte sans les tasser.
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection"]);
+// "playerDetailSection" ajouté (retour utilisateur, 2026-09, refonte
+// "pdp-card" : "pourquoi c'est aussi serré ? [...] gros trou [...] à
+// gauche [...] à droite il y a aussi de la perte de place") : la fiche
+// joueur était dans NARROW_PAGE_IDS (voir son ancienne entrée ci-dessous,
+// retirée) depuis l'ANCIEN format à plat (chips + grille plafonnée à 420px,
+// nettement plus étroit que 960px) — la refonte pdp-card (grille 280px+1fr,
+// elle-même avec un bloc Fondamentaux/Physique/Mental à 3 colonnes à
+// droite) est maintenant AUSSI dense que l'Effectif, plus question de la
+// plafonner à 700px : elle rejoint donc WIDE_PAGE_IDS comme les autres pages
+// à grille dense, plutôt que de rester bridée par un gabarit pensé pour
+// l'ancien format.
+const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection", "playerDetailSection"]);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
-// "lecture" à 960px (retour utilisateur, 2026-09 : "il faudrait trouver un
-// moyen de boucher le grand trou à droite", sur la fiche joueur à large
-// largeur d'écran), voir .wrap.wrap-narrow en CSS. Pas l'inverse de
+// "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
 // WIDE_PAGE_IDS (une page peut n'être dans aucun des deux, et garder le
-// gabarit 960px par défaut) : seule la fiche joueur a été signalée jusqu'ici,
-// pas question d'en rétrécir d'autres sans un retour utilisateur dessus.
-const NARROW_PAGE_IDS = new Set(["playerDetailSection"]);
+// gabarit 960px par défaut). Vide depuis le retrait de "playerDetailSection"
+// (voir son commentaire au-dessus de WIDE_PAGE_IDS) — conservé (plutôt que
+// supprimé) au cas où une future page à contenu volontairement étroit en ait
+// besoin.
+const NARROW_PAGE_IDS = new Set([]);
 
 function showPage(id) {
   PAGE_IDS.forEach(pid => {
@@ -16027,10 +16057,74 @@ document.getElementById("teamDetailContent").addEventListener("click", (e) => {
 // concerne que les caractéristiques cachées, pas le résultat des matchs déjà
 // disputés — déjà consultable match par match via le boxscore, voir
 // showMatchBoxscore).
+// Tri du tableau Effectif d'une fiche équipe (propre équipe OU adversaire,
+// voir teamDetailEffectifHtml juste en dessous) — retour utilisateur
+// (2026-09, une fois le tri ajouté sur SON PROPRE Effectif) : "il faut aussi
+// pouvoir trier sur la page effectif de qqun". Écouteur délégué séparé de
+// #rosterContent (voir rosterSortState/ROSTER_SORT_COLUMNS plus haut, autre
+// conteneur), même principe de colonnes cliquables. État gardé au niveau
+// module comme teamDetailIdx/teamDetailSubView, PAS remis à zéro en changeant
+// d'équipe consultée (comportement déjà établi pour rosterSortState).
+let teamDetailEffectifSortState = { key: null, dir: 1 };
+
+function teamDetailSortValue(p, key) {
+  switch (key) {
+    case "name": return p.name;
+    case "position": return POSITIONS.indexOf(p.position);
+    case "height": return p.height;
+    case "salary": return p.salary;
+    // Colonnes moyennées Physique/Mental (voir categoryAverageCellHtml) :
+    // même calcul que rosterSortValue ("physicalAvg"/"mentalAvg"), arrondi
+    // comme la valeur affichée.
+    case "physicalAvg": return Math.round(PHYSICAL_ATTRS.reduce((s, a) => s + p.attrs[a], 0) / PHYSICAL_ATTRS.length);
+    case "mentalAvg": return Math.round(MENTAL_ATTRS.reduce((s, a) => s + p.attrs[a], 0) / MENTAL_ATTRS.length);
+    default: return p.attrs[key];
+  }
+}
+// Une colonne de caractéristique (brute ou moyennée) n'est triable que si sa
+// VALEUR RÉELLE est déjà visible à l'écran pour CE tableau précis — jamais
+// pour un adversaire non scouté (revealedSet vide/partiel) : trier révèle un
+// ORDRE, qui est lui-même de l'information sur des valeurs censées rester
+// cachées (même principe que le verrou d'affichage lui-même, voir
+// attr-locked). Nom/Poste/Taille/Salaire sont toujours visibles, donc
+// toujours triables. Physique/Mental (moyennes) : triables dès qu'AU MOINS
+// UNE caractéristique de la catégorie est révélée (categoryAverageCellHtml
+// affiche alors déjà une vraie valeur, pas un verrou).
+function teamDetailSortAllowed(key, isOwnTeam, revealedSet) {
+  if (["name", "position", "height", "salary"].includes(key)) return true;
+  if (isOwnTeam) return true;
+  if (key === "physicalAvg") return PHYSICAL_ATTRS.some(a => revealedSet.has(a));
+  if (key === "mentalAvg") return MENTAL_ATTRS.some(a => revealedSet.has(a));
+  return revealedSet.has(key);
+}
+function teamDetailHeaderCellHtml(key, label, isOwnTeam, revealedSet) {
+  if (!teamDetailSortAllowed(key, isOwnTeam, revealedSet)) return `<th>${escapeHtml(label)}</th>`;
+  const active = teamDetailEffectifSortState.key === key;
+  const arrow = active ? (teamDetailEffectifSortState.dir === 1 ? " ▲" : " ▼") : "";
+  return `<th class="sortable-th${active ? " sorted" : ""}" data-team-sort="${key}">${escapeHtml(label)}${arrow}</th>`;
+}
+
 function teamDetailEffectifHtml(teamIdx) {
   const team = league.teams[teamIdx];
   const isOwnTeam = teamIdx === myTeamIndex;
-  const sorted = [...team.players].sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall());
+  const alreadyScoutedList = (teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || [];
+  const revealedSet = new Set(alreadyScoutedList);
+  // Ne trie sur teamDetailEffectifSortState QUE si la colonne visée est
+  // effectivement autorisée pour CETTE équipe précise (voir
+  // teamDetailSortAllowed) : sans ce garde-fou, un tri choisi sur une
+  // caractéristique révélée d'un premier adversaire resterait actif en
+  // consultant un second adversaire où elle ne l'est pas, triant alors
+  // silencieusement sur la vraie valeur cachée (fuite d'information),
+  // même si aucune en-tête cliquable ne le montre. Repli sur le tri par
+  // défaut (poste puis note globale) sinon, comme avant l'ajout du tri.
+  const sortKey = teamDetailEffectifSortState.key;
+  const sorted = sortKey && teamDetailSortAllowed(sortKey, isOwnTeam, revealedSet)
+    ? [...team.players].sort((a, b) => {
+        const va = teamDetailSortValue(a, sortKey), vb = teamDetailSortValue(b, sortKey);
+        const cmp = typeof va === "string" ? va.localeCompare(vb) : va - vb;
+        return cmp * teamDetailEffectifSortState.dir;
+      })
+    : [...team.players].sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall());
   let html = "";
 
   // Mêmes 13 colonnes Fondamentaux détaillées + 2 colonnes moyennées
@@ -16041,9 +16135,11 @@ function teamDetailEffectifHtml(teamIdx) {
   if (isOwnTeam) {
     html += "<p class='training-intro'>Votre équipe : toutes les caractéristiques sont déjà visibles ici, comme sur l'onglet Effectif.</p>";
     html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-      "<th>Nom</th><th>Poste</th><th>Taille</th><th>Salaire/sem.</th>" +
-      FUNDAMENTAL_ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") +
-      "<th>Physique</th><th>Mental</th></tr></thead><tbody>";
+      teamDetailHeaderCellHtml("name", "Nom", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("position", "Poste", isOwnTeam, revealedSet) +
+      teamDetailHeaderCellHtml("height", "Taille", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("salary", "Salaire/sem.", isOwnTeam, revealedSet) +
+      FUNDAMENTAL_ATTRS.map(a => teamDetailHeaderCellHtml(a, ATTR_SHORT[a], isOwnTeam, revealedSet)).join("") +
+      teamDetailHeaderCellHtml("physicalAvg", "Physique", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("mentalAvg", "Mental", isOwnTeam, revealedSet) +
+      "</tr></thead><tbody>";
     sorted.forEach(p => {
       html += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, team, 24)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
       FUNDAMENTAL_ATTRS.forEach(a => { html += `<td>${attrCellHtml(p.attrs[a])}</td>`; });
@@ -16052,12 +16148,12 @@ function teamDetailEffectifHtml(teamIdx) {
     });
     html += "</tbody></table></div>";
   } else {
-    const alreadyScoutedList = (teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || [];
-    const revealedSet = new Set(alreadyScoutedList);
     html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-      "<th>Nom</th><th>Poste</th><th>Taille</th><th>Salaire/sem.</th>" +
-      FUNDAMENTAL_ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") +
-      "<th>Physique</th><th>Mental</th></tr></thead><tbody>";
+      teamDetailHeaderCellHtml("name", "Nom", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("position", "Poste", isOwnTeam, revealedSet) +
+      teamDetailHeaderCellHtml("height", "Taille", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("salary", "Salaire/sem.", isOwnTeam, revealedSet) +
+      FUNDAMENTAL_ATTRS.map(a => teamDetailHeaderCellHtml(a, ATTR_SHORT[a], isOwnTeam, revealedSet)).join("") +
+      teamDetailHeaderCellHtml("physicalAvg", "Physique", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("mentalAvg", "Mental", isOwnTeam, revealedSet) +
+      "</tr></thead><tbody>";
     sorted.forEach(p => {
       html += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, team, 24)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
       FUNDAMENTAL_ATTRS.forEach(a => {
@@ -16075,6 +16171,15 @@ function teamDetailEffectifHtml(teamIdx) {
   html += teamSeasonStatsTableHtml(teamIdx);
   return html;
 }
+document.getElementById("teamDetailContent").addEventListener("click", (e) => {
+  const th = e.target.closest("[data-team-sort]");
+  if (!th) return;
+  const key = th.dataset.teamSort;
+  teamDetailEffectifSortState = teamDetailEffectifSortState.key === key
+    ? { key, dir: teamDetailEffectifSortState.dir * -1 }
+    : { key, dir: key === "name" ? 1 : -1 };
+  renderTeamDetail(teamDetailIdx);
+});
 
 // Agrège Player.matchLog de tout l'effectif ACTUEL en une ligne de moyennes
 // par joueur (mêmes champs/même calcul que renderPlayerDetail plus haut,
