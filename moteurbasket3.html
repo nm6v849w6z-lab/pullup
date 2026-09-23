@@ -491,6 +491,23 @@
      renderLiveBoxScore).  */
   .live-bs-tab{background:transparent; border:1px solid var(--line); color:var(--ink-dim); font-size:12px; padding:7px 14px; border-radius:999px; cursor:pointer;}
   .live-bs-tab.active{color:var(--ink); border-color:var(--amber);}
+  /* Retour utilisateur (2026-09-23) : "sur le live, le box score doit
+     correspondre à l'équipe domicile à gauche, et l'équipe extérieure à
+     droite" — les onglets .live-bs-tab/.bs-tab affichaient toujours "mon
+     équipe" (teamA) en premier, quel que soit domicile/extérieur,
+     contrairement au bandeau de score principal (.score-row.my-team-away
+     plus haut) qui gère déjà ce cas. Même mécanisme réutilisé ici plutôt
+     qu'inventé : .boxscore-toggle est déjà un conteneur flex, donc `order`
+     suffit à inverser la position VISUELLE sans toucher à la logique
+     interne (data-live-team="A"/data-team="A" restent "mon équipe" partout
+     en JS — liveBoxScore, applyLiveBoxScoreEvent... — seule leur place à
+     l'écran change). Classe posée sur .boxscore-toggle (pas sur .score-row
+     cette fois : deux conteneurs différents) dans enterLiveMatch, comme
+     .score-row.my-team-away. */
+  .boxscore-toggle.my-team-away .live-bs-tab[data-live-team="A"],
+  .boxscore-toggle.my-team-away .bs-tab[data-team="A"]{order:2;}
+  .boxscore-toggle.my-team-away .live-bs-tab[data-live-team="B"],
+  .boxscore-toggle.my-team-away .bs-tab[data-team="B"]{order:1;}
   table.boxscore{width:100%; border-collapse:collapse; font-size:12px; background:var(--panel); border-radius:var(--radius); overflow:hidden;}
   table.boxscore th, table.boxscore td{padding:8px 6px; text-align:center; border-bottom:1px solid var(--line-soft); white-space:nowrap;}
   table.boxscore th{color:var(--ink-faint); font-weight:700; text-transform:uppercase; font-size:10px;}
@@ -10501,6 +10518,22 @@ const CALENDAR_WEEK_MS = 7 * CALENDAR_DAY_MS;
 const CALENDAR_CHAMPIONSHIP_SLOT_OFFSETS_MS = [2 * CALENDAR_DAY_MS, 5 * CALENDAR_DAY_MS];
 const CALENDAR_ROUNDS_PER_REAL_WEEK = CALENDAR_CHAMPIONSHIP_SLOT_OFFSETS_MS.length;
 
+// Copie de MATCH_BROADCAST_DURATION_MS (voir server/calendar.js, CES DEUX
+// COPIES DOIVENT RESTER IDENTIQUES) — bug corrigé (retour utilisateur,
+// 2026-09-23 : "quand il y a un live en route, ça bugue un peu, impossible
+// d'aller faire une compo [...] surtout quand le match est fini je crois en
+// fait, mais que le live apparait tjrs en haut"). Le navigateur en avait
+// jusqu'ici gardé l'ANCIENNE hypothèse (voir le commentaire d'origine de
+// liveMatchHasEnded plus bas, "les deux sont TOUJOURS égaux") d'une époque
+// où la durée réelle de diffusion (schedulePlayback, côté serveur) était
+// forcément calée sur cette fenêtre de 90 min — depuis que schedulePlayback
+// calcule une durée RÉELLE variable (rythme du match, prolongations...),
+// souvent bien PLUS COURTE que 90 min, ce n'est plus vrai : voir
+// liveMatchReadyForServerCatchup ci-dessous, qui a besoin de cette même
+// valeur pour distinguer "l'animation du direct est finie" de "le serveur
+// est prêt à finaliser la journée".
+const MATCH_BROADCAST_DURATION_MS = 90 * 60 * 1000;
+
 // `weekMs`/`slotOffsetsMs` explicites (au lieu des constantes CLASSIQUES
 // ci-dessus directement) : c'est ce qui permet à une ligue individuelle de
 // tourner sur un rythme différent (voir League.calendarWeekMs/
@@ -14786,13 +14819,22 @@ function renderPrep() {
 // match normalement (toujours un match de championnat, voir le commentaire
 // de selectedOrdresCompetition ci-dessus), SAUF s'il est actuellement EN
 // DIRECT (résultat déjà déterminé côté serveur dès le coup d'envoi, voir
-// liveMatchHasEnded et le README "le résultat est déterminé une seule
-// fois") : dans ce cas la journée en direct n'est plus modifiable, donc on
-// saute directement à la prochaine journée/tour qui l'est encore, pour
-// pouvoir continuer à préparer les matchs à venir PENDANT la diffusion
-// (retour utilisateur, 2026-09 : "la page ordres doit être accessible même
-// quand un match se joue"). L'onglet "Live" séparé (goToLiveTab) reste la
-// façon de suivre le match en cours. Renvoie {round, competition} ou null.
+// liveMatchReadyForServerCatchup et le README "le résultat est déterminé
+// une seule fois") : dans ce cas la journée en direct n'est plus
+// modifiable, donc on saute directement à la prochaine journée/tour qui
+// l'est encore, pour pouvoir continuer à préparer les matchs à venir
+// PENDANT la diffusion (retour utilisateur, 2026-09 : "la page ordres doit
+// être accessible même quand un match se joue"). L'onglet "Live" séparé
+// (goToLiveTab) reste la façon de suivre le match en cours. Renvoie
+// {round, competition} ou null.
+//
+// liveMatchReadyForServerCatchup (PAS liveMatchHasEnded) : une journée en
+// direct reste verrouillée côté serveur jusqu'à la fin de SA fenêtre de 90
+// min, pas seulement jusqu'à la fin de son animation locale (souvent bien
+// plus courte) — bug corrigé (retour utilisateur, 2026-09-23, voir le grand
+// commentaire de liveMatchReadyForServerCatchup) : avec liveMatchHasEnded,
+// dès l'animation finie la journée en direct redevenait "présélectionnable"
+// ici alors qu'elle est encore totalement figée côté serveur.
 function defaultOrdresRound() {
   if (!currentMatch) return null;
   // `competition` du direct en cours comparé explicitement : un tour de
@@ -14800,7 +14842,7 @@ function defaultOrdresRound() {
   // immédiate sous prétexte qu'ils partagent le même numéro (voir le
   // commentaire de selectedOrdresCompetition).
   const liveNow = league.liveMatch && (league.liveMatch.competition || "championship") === "championship" &&
-    !liveMatchHasEnded(league.liveMatch) && league.liveMatch.round === currentMatch.round;
+    !liveMatchReadyForServerCatchup(league.liveMatch) && league.liveMatch.round === currentMatch.round;
   if (!liveNow) return { round: currentMatch.round, competition: "championship" };
   const nextEditable = upcomingRoundsForOrders().find(r => !(r.competition === "championship" && r.round === currentMatch.round));
   return nextEditable
@@ -14882,8 +14924,14 @@ function renderOrdresRoundSelector() {
     // visible pour information sans être choisissable (voir defaultOrdresRound,
     // qui ne la présélectionne jamais). Comparaison de compétition explicite
     // (voir defaultOrdresRound) pour ne pas confondre un direct de Coupe avec
-    // une journée de championnat de même numéro.
-    const isLiveNow = league.liveMatch && !liveMatchHasEnded(league.liveMatch) &&
+    // une journée de championnat de même numéro. liveMatchReadyForServerCatchup
+    // (PAS liveMatchHasEnded) : verrouillée jusqu'à la fin de la fenêtre
+    // SERVEUR de 90 min, pas seulement jusqu'à la fin de l'animation locale
+    // (bug corrigé, retour utilisateur 2026-09-23, voir le grand commentaire
+    // de liveMatchReadyForServerCatchup) — sinon l'option redevenait
+    // sélectionnable/l'étiquette "(en direct)" disparaissait dès l'animation
+    // finie, alors que la journée reste en réalité figée côté serveur.
+    const isLiveNow = league.liveMatch && !liveMatchReadyForServerCatchup(league.liveMatch) &&
       r.round === league.liveMatch.round && r.competition === (league.liveMatch.competition || "championship");
     const label = r.competition === "cup" ? cupStageLabelForRoundIndex(r.round) : `J${r.round + 1}`;
     const opt = document.createElement("option");
@@ -15423,9 +15471,23 @@ let countdownTimer = null;
 // rare (seulement en revenant sur l'onglet du navigateur, pas à chaque tick
 // du compte à rebours) mais toujours présent. Les deux appellent maintenant
 // cette même garde.
+//
+// TROISIÈME vague du même bug (retour utilisateur, 2026-09-23 : "impossible
+// d'aller faire une compo [...] le live apparait tjrs en haut") :
+// liveMatchHasEnded (fin de l'ANIMATION locale) était encore le mauvais test
+// ici — voir le grand commentaire de liveMatchReadyForServerCatchup. Une
+// fois l'animation finie mais AVANT la fin de la fenêtre serveur de 90 min,
+// currentMatchAlreadyLive() renvoyait déjà `false`, donc startCountdown()
+// relançait un compte à rebours vers un coup d'envoi déjà largement passé :
+// `remaining <= 0` presque immédiatement → refreshFromServerAndReenter()
+// (sans round demandé) → league.liveMatch toujours renvoyé tel quel par le
+// serveur (pas encore finalisable) → enterNextMatchOrShowSeasonEnd()
+// rebranche alors sur enterLiveMatch(league.liveMatch) : boucle, exactement
+// le symptôme "ça bugue [...] impossible d'aller faire une compo" (et
+// répétée à CHAQUE tick du compte à rebours puisque rien ne l'arrêtait).
 function currentMatchAlreadyLive() {
   return !!(currentMatch && league && league.liveMatch &&
-    !liveMatchHasEnded(league.liveMatch) && league.liveMatch.round === currentMatch.round);
+    !liveMatchReadyForServerCatchup(league.liveMatch) && league.liveMatch.round === currentMatch.round);
 }
 
 function startCountdown() {
@@ -16321,6 +16383,29 @@ function playerRadarCategories(player) {
 }
 // SVG générique à 7 axes : anneaux concentriques décoratifs, rayons
 // repères, polygone de données réel, étiquettes tout autour.
+//
+// Retour utilisateur (2026-09-23, capture d'écran) : "pour le profil vue
+// d'ensemble, respecte le code couleur des carac, rouge/orange/blanc/vert" —
+// les anneaux de fond utilisaient un dégradé décoratif à 5 bandes de 20% en
+// 20% (teal/vert-terne/ambre/rouge/rouge-foncé, voir l'ancien ringColors),
+// sans rapport avec le VRAI barème du jeu (attrColorTier plus bas : ≤20
+// rouge, ≤50 orange, ≤80 blanc, >80 vert — déjà utilisé partout ailleurs
+// pour les caractéristiques : Effectif, Marché, fiche joueur...). Remplacé
+// par exactement 4 bandes calées sur CES MÊMES seuils (20/50/80) et CES
+// MÊMES couleurs (var(--danger)/var(--amber)/var(--ink)/#3ecf67, identiques
+// aux règles .attr-tier-*). fill-opacity réduite (plutôt que les teintes
+// pleines utilisées pour le texte) : un aplat blanc à pleine opacité sur un
+// tiers du graphique serait beaucoup trop agressif sur fond sombre — ici ce
+// n'est qu'un repère de zone en arrière-plan, pas la donnée elle-même.
+// Chaque point de donnée (voir dataPts plus bas) est en plus désormais
+// coloré selon le tier de SON PROPRE axe, exactement comme un chiffre de
+// caractéristique ailleurs dans le jeu, au lieu d'un blanc uniforme.
+function radarTierColor(value) {
+  if (value <= 20) return "var(--danger)";
+  if (value <= 50) return "var(--amber)";
+  if (value <= 80) return "var(--ink)";
+  return "#3ecf67";
+}
 function radarChartSvg(categories) {
   const cx = 110, cy = 118, maxR = 90, labelR = 104;
   const n = RADAR_AXES.length;
@@ -16329,11 +16414,20 @@ function radarChartSvg(categories) {
     const a = angleFor(i);
     return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
   };
-  const ringColors = ["var(--ok)", "#7fa889", "var(--amber)", "var(--danger)", "#a83a2a"];
+  // Bandes peintes de la plus grande à la plus petite (chaque polygone
+  // recouvre celui d'avant, ne laissant apparaître qu'un anneau) : la plus
+  // grande (100%) est verte, la plus petite (20%, le disque central) est
+  // rouge — exactement les seuils attrColorTier (100/80/50/20).
+  const ringBands = [
+    { frac: 1.0, color: "#3ecf67" },
+    { frac: 0.8, color: "var(--ink)" },
+    { frac: 0.5, color: "var(--amber)" },
+    { frac: 0.2, color: "var(--danger)" },
+  ];
   let svg = `<svg viewBox="-42 -8 304 252" width="100%" height="auto">`;
-  [1, 0.8, 0.6, 0.4, 0.2].forEach((frac, idx) => {
+  ringBands.forEach(({ frac, color }) => {
     const pts = RADAR_AXES.map((_, i) => pointAt(i, maxR * frac).map(v => v.toFixed(1)).join(",")).join(" ");
-    svg += `<polygon points="${pts}" fill="${ringColors[idx]}"/>`;
+    svg += `<polygon points="${pts}" fill="${color}" fill-opacity="0.5"/>`;
   });
   RADAR_AXES.forEach((_, i) => {
     const [x, y] = pointAt(i, maxR);
@@ -16341,7 +16435,10 @@ function radarChartSvg(categories) {
   });
   const dataPts = RADAR_AXES.map((ax, i) => pointAt(i, (clamp(categories[ax.key], 0, 100) / 100) * maxR));
   svg += `<polygon points="${dataPts.map(p => p.map(v => v.toFixed(1)).join(",")).join(" ")}" fill="var(--ink)" fill-opacity="0.14" stroke="var(--ink)" stroke-width="2"/>`;
-  dataPts.forEach(([x, y]) => { svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--ink)"/>`; });
+  RADAR_AXES.forEach((ax, i) => {
+    const [x, y] = dataPts[i];
+    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="${radarTierColor(clamp(categories[ax.key], 0, 100))}"/>`;
+  });
   RADAR_AXES.forEach((ax, i) => {
     const [x, y] = pointAt(i, labelR);
     const angle = angleFor(i);
@@ -18848,6 +18945,24 @@ function enterLiveMatch(liveMatch, opts) {
   // commentaire CSS associé).
   document.querySelectorAll(".live-bs-tab").forEach(b => {
     b.textContent = b.dataset.liveTeam === "A" ? teamA.name : teamB.name;
+  });
+  // Retour utilisateur (2026-09-23) : "sur le live, le box score doit
+  // correspondre à l'équipe domicile à gauche, et l'équipe extérieure à
+  // droite" — même bascule que .score-row.my-team-away ci-dessus (mon
+  // équipe reste .team-block A / data-team="A" partout en interne, seule
+  // la position visuelle des onglets change). Concerne les DEUX conteneurs
+  // .boxscore-toggle de #liveBoxscoreSection (en direct) et #boxscoreSection
+  // (juste après un direct) — sélecteur volontairement scopé à ces deux
+  // sections (pas un simple ".boxscore-toggle" global) pour ne jamais
+  // toucher à l'overlay de showMatchBoxscore() (Calendrier), qui a sa
+  // PROPRE div .boxscore-toggle avec les vraies équipes domicile/extérieure
+  // et gère déjà correctement l'ordre — cette fonction pouvant être
+  // ré-invoquée pendant qu'un tel overlay est ouvert (voir le commentaire de
+  // resynchronisation `visibilitychange` juste au-dessus de cette
+  // fonction), un sélecteur global aurait pu lui appliquer my-team-away à
+  // tort et inverser un ordre déjà correct.
+  document.querySelectorAll("#liveBoxscoreSection .boxscore-toggle, #boxscoreSection .boxscore-toggle").forEach(el => {
+    el.classList.toggle("my-team-away", !liveMatch.isHome);
   });
   document.getElementById("boxscoreSection").style.display = "none";
   document.getElementById("liveBoxscoreSection").style.display = "";
@@ -23670,16 +23785,56 @@ if (tourLaunchBtn) tourLaunchBtn.addEventListener("click", startRealTour);
 // ---------------------------------------------------------------------
 // Événements UI
 // ---------------------------------------------------------------------
-// Un match en direct est "terminé" localement une fois sa fenêtre de
-// diffusion écoulée (voir MATCH_BROADCAST_DURATION_MS côté serveur,
-// totalDurationMs ici — les deux sont TOUJOURS égaux, voir schedulePlayback)
-// — c'est aussi exactement l'instant à partir duquel le serveur, lui, est
-// prêt à le finaliser et faire avancer la journée (voir catchUpLeague) :
-// tant que ce n'est pas atteint, revenir sur l'onglet Ordres doit juste
-// rouvrir le MÊME direct localement (rien de nouveau côté serveur) ; une
-// fois atteint, il faut aller chercher l'issue officielle auprès du serveur.
+// Un match en direct est "terminé" localement une fois sa fenêtre
+// D'ANIMATION écoulée (totalDurationMs, la durée RÉELLE de diffusion
+// calculée par schedulePlayback côté serveur — rythme du match,
+// prolongations éventuelles...) : c'est le signal purement VISUEL/local
+// ("plus rien à jouer, afficher le score final"), utilisé par les endroits
+// de ce fichier qui décident si l'animation elle-même doit continuer à
+// tourner ou non.
+//
+// CORRECTIF IMPORTANT (retour utilisateur, 2026-09-23 : "quand il y a un
+// live en route, ça bugue un peu, impossible d'aller faire une compo [...]
+// surtout quand le match est fini je crois en fait, mais que le live
+// apparait tjrs en haut") : ce commentaire affirmait auparavant, à tort,
+// que totalDurationMs et MATCH_BROADCAST_DURATION_MS (la fenêtre de 90 min
+// que le SERVEUR, lui, attend avant de finaliser la journée — voir
+// catchUpClassic/catchUpDailyAnchored dans server/autoSim.js) sont
+// "TOUJOURS égaux". Ce n'était vrai qu'à une époque révolue : depuis que
+// schedulePlayback calcule une durée réelle VARIABLE (souvent bien PLUS
+// COURTE que 90 min), un match peut très bien finir de s'animer
+// localement (totalDurationMs écoulé, écran "Terminé") largement AVANT que
+// le serveur n'ait atteint sa propre fenêtre de sécurité de 90 min. Pendant
+// tout cet écart, league.liveMatch reste renvoyé tel quel par le serveur
+// (rien à finaliser encore, voir la garde `dueAt + MATCH_BROADCAST_
+// DURATION_MS > now` côté serveur) : utiliser CETTE fonction (animation)
+// pour décider s'il faut aller chercher l'issue "officielle" auprès du
+// serveur (refreshFromServerAndReenter) était donc le bug — le serveur
+// renvoyait le MÊME liveMatch non finalisé, et enterNextMatchOrShowSeasonEnd
+// rebranchait alors le joueur sur enterLiveMatch(league.liveMatch) au lieu
+// de le laisser continuer vers Ordres : d'où le sentiment de "boucle"/
+// bandeau live qui ne disparaît jamais tant que ces 90 min ne sont pas
+// écoulées. Voir liveMatchReadyForServerCatchup ci-dessous, la fonction à
+// utiliser pour CETTE décision précise (elle, alignée sur
+// MATCH_BROADCAST_DURATION_MS, la vraie borne côté serveur) — cette
+// fonction-ci (liveMatchHasEnded) reste correcte et doit rester utilisée
+// pour tout ce qui ne concerne que l'affichage/l'animation locale (arrêter
+// le chrono du direct, ne pas rejouer une diffusion déjà entièrement vue,
+// etc.).
 function liveMatchHasEnded(liveMatch) {
   return Date.now() >= liveMatch.kickoffAt + liveMatch.totalDurationMs;
+}
+
+// Distinct de liveMatchHasEnded ci-dessus (voir son grand commentaire) :
+// reflète le moment où le SERVEUR est réellement prêt à finaliser la
+// journée (même seuil que catchUpClassic/catchUpDailyAnchored côté
+// serveur, MATCH_BROADCAST_DURATION_MS après le coup d'envoi) — à utiliser
+// pour toute décision de navigation qui déclenche un aller-retour serveur
+// (refreshFromServerAndReenter) ou qui doit considérer une journée comme
+// "encore verrouillée" côté serveur (round pas encore avancé), PAS pour de
+// l'affichage/animation purement local (voir liveMatchHasEnded pour ça).
+function liveMatchReadyForServerCatchup(liveMatch) {
+  return Date.now() >= liveMatch.kickoffAt + MATCH_BROADCAST_DURATION_MS;
 }
 
 // Point d'entrée du nouvel onglet "🔴 Live" (sidebar, visible seulement
@@ -23691,7 +23846,14 @@ function liveMatchHasEnded(liveMatch) {
 // trouver en haut quand il y a un match en cours").
 function goToLiveTab() {
   if (league && league.liveMatch) {
-    if (liveMatchHasEnded(league.liveMatch)) {
+    // Bug corrigé (retour utilisateur, 2026-09-23 : voir le grand
+    // commentaire de liveMatchReadyForServerCatchup/liveMatchHasEnded) :
+    // c'est bien liveMatchReadyForServerCatchup (fenêtre serveur de 90 min)
+    // qu'il faut tester ici, PAS liveMatchHasEnded (fin de l'animation
+    // locale, souvent bien plus tôt) — sinon un aller-retour serveur
+    // inutile renvoie le MÊME liveMatch non finalisé, et
+    // enterNextMatchOrShowSeasonEnd rouvre alors ce même direct : boucle.
+    if (liveMatchReadyForServerCatchup(league.liveMatch)) {
       refreshFromServerAndReenter(league.liveMatch.round, league.liveMatch.competition);
     } else {
       enterLiveMatch(league.liveMatch);
@@ -23724,15 +23886,20 @@ function goToLiveTab() {
 // par défaut si omis, voir renderCalendrierSection) : nécessaire pour
 // présélectionner correctement un tour de Coupe (voir selectOrdresRound).
 function goToOrdresTab(round, competition) {
-  // Une diffusion en direct déjà TERMINÉE (fenêtre écoulée) doit encore
-  // passer par le serveur pour faire avancer la journée normalement (voir
-  // catchUpLeague) — seul ce cas-là redirige encore. Un direct encore EN
-  // COURS ne redirige plus vers lui : l'onglet Ordres reste accessible pour
-  // préparer les matchs à venir pendant la diffusion (voir defaultOrdresRound,
-  // qui saute automatiquement la journée en direct puisqu'elle n'est de
-  // toute façon plus modifiable) ; l'onglet "Live" séparé (goToLiveTab) sert
-  // à suivre le match en cours.
-  if (league && league.liveMatch && liveMatchHasEnded(league.liveMatch)) {
+  // Une diffusion en direct dont la fenêtre SERVEUR (90 min, voir
+  // liveMatchReadyForServerCatchup) est vraiment écoulée doit encore passer
+  // par le serveur pour faire avancer la journée normalement (voir
+  // catchUpLeague) — seul ce cas-là redirige encore. Tant que cette fenêtre
+  // n'est pas atteinte (direct encore en cours d'ANIMATION, OU animation
+  // déjà finie mais serveur pas encore prêt à finaliser — bug corrigé,
+  // retour utilisateur 2026-09-23 : "impossible d'aller faire une compo
+  // [...] le live apparait tjrs en haut", voir le grand commentaire de
+  // liveMatchReadyForServerCatchup/liveMatchHasEnded), on ne redirige plus
+  // vers lui : l'onglet Ordres reste accessible pour préparer les matchs à
+  // venir (voir defaultOrdresRound, qui saute automatiquement la journée en
+  // direct puisqu'elle n'est de toute façon plus modifiable) ; l'onglet
+  // "Live" séparé (goToLiveTab) sert à suivre/revoir le match en cours.
+  if (league && league.liveMatch && liveMatchReadyForServerCatchup(league.liveMatch)) {
     refreshFromServerAndReenter(league.liveMatch.round, league.liveMatch.competition, round, competition);
     return;
   }

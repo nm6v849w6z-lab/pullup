@@ -22,7 +22,7 @@ const fs = require("fs");
 const Engine = require("./engine.js");
 const { generateMultiManagerLeague } = Engine;
 const Calendar = require("./server/calendar.js");
-const { dailyAnchoredCalendarConfig } = Calendar;
+const { dailyAnchoredCalendarConfig, MATCH_BROADCAST_DURATION_MS } = Calendar;
 const store = require("./server/store.js");
 const { startTestServer, openGame, patchDateNow } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
@@ -52,16 +52,26 @@ const T0 = Date.UTC(2026, 8, 22, 7, 0, 0); // 22 septembre 2026, mardi arbitrair
 
   // Simule un direct pour la journée IMMÉDIATE (currentRound) dont la
   // fenêtre de diffusion est déjà écoulée, mais que le client n'a pas encore
-  // rattrapé côté serveur (pas de requête réseau depuis).
+  // rattrapé côté serveur (pas de requête réseau depuis). kickoffAt choisi
+  // bien AVANT MATCH_BROADCAST_DURATION_MS (90 min, voir server/calendar.js)
+  // — pas seulement avant sa propre totalDurationMs (bug corrigé, retour
+  // utilisateur 2026-09-23 : "impossible d'aller faire une compo [...] le
+  // live apparait tjrs en haut", voir le grand commentaire de
+  // liveMatchReadyForServerCatchup/liveMatchHasEnded dans moteurbasket3.html)
+  // : depuis ce correctif, goToOrdresTab ne redirige plus vers le serveur
+  // tant que la fenêtre SERVEUR (pas juste l'animation locale) n'est pas
+  // écoulée — un kickoffAt trop récent ne testerait alors plus du tout la
+  // branche visée par CE test-ci (celle qui transmet bien `round`/
+  // `competition` à travers un refreshFromServerAndReenter).
   win1.eval(`
     league.liveMatch = {
       round: ${currentRound}, competition: "championship",
-      kickoffAt: ${T0} - 1000000, totalDurationMs: 60000,
+      kickoffAt: ${T0} - ${MATCH_BROADCAST_DURATION_MS} - 1000000, totalDurationMs: 60000,
       opponentIdx: 1, isHome: true, homeScore: 88, awayScore: 76,
     };
   `);
-  if (win1.eval("liveMatchHasEnded(league.liveMatch)") !== true) {
-    throw new Error("❌ (setup) le direct simulé devrait être considéré comme terminé.");
+  if (win1.eval("liveMatchReadyForServerCatchup(league.liveMatch)") !== true) {
+    throw new Error("❌ (setup) le direct simulé devrait être considéré comme prêt à être rattrapé côté serveur.");
   }
 
   // Le joueur clique sur "Ordres" pour une journée FUTURE différente, PAS
