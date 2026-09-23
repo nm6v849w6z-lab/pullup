@@ -42,6 +42,16 @@ function getTeamA(w) { return w.eval("teamA"); }
 function getMyTeamIndex(w) { return w.eval("myTeamIndex"); }
 function getAttrs(w) { return w.eval("ATTRS"); }
 const ATTRS = getAttrs(win);
+// Regroupement Fondamentaux/Physique/Mental (retour utilisateur, 2026-09 :
+// "sur les tableaux récap [...] mental et physique sur 2 colonnes, on fait
+// une moyenne") : le tableau de scoutisme n'affiche plus une colonne par
+// caractéristique physique/mentale, mais une seule moyenne chacune (voir
+// PHYSICAL_ATTRS/MENTAL_ATTRS/FUNDAMENTAL_ATTRS/categoryAverageCellHtml dans
+// moteurbasket3.html) — les assertions ci-dessous en tiennent compte.
+const FUNDAMENTAL_ATTRS = win.eval("FUNDAMENTAL_ATTRS");
+const PHYSICAL_ATTRS = win.eval("PHYSICAL_ATTRS");
+const MENTAL_ATTRS = win.eval("MENTAL_ATTRS");
+const DENSE_ATTR_COLUMNS = FUNDAMENTAL_ATTRS.length + 2; // + Physique + Mental moyennés
 
 // ---------------------------------------------------------------------
 // Partie 1 : onglet Staff — section analyste vidéo, séparée de celle de
@@ -132,16 +142,16 @@ console.log("Colonnes :", headerTexts);
 ["Nom", "Poste", "Taille", "Salaire/sem."].forEach(col => {
   if (!headerTexts.includes(col)) throw new Error(`❌ La colonne baseline '${col}' devrait toujours être présente.`);
 });
-if (headerTexts.length !== 4 + ATTRS.length) {
-  throw new Error(`❌ Les colonnes de caractéristiques devraient TOUTES être présentes (verrouillées ou pas) : attendu ${4 + ATTRS.length}, obtenu ${headerTexts.length}.`);
+if (headerTexts.length !== 4 + DENSE_ATTR_COLUMNS) {
+  throw new Error(`❌ Les colonnes de caractéristiques devraient TOUTES être présentes (verrouillées ou pas) : attendu ${4 + DENSE_ATTR_COLUMNS}, obtenu ${headerTexts.length}.`);
 }
 const firstRowCells = scoutingTable.querySelector("tbody tr");
 if (!firstRowCells || !firstRowCells.cells[0].textContent.trim()) throw new Error("❌ Le nom du joueur adverse devrait toujours être visible.");
 const lockedCells = scoutingTable.querySelectorAll(".attr-locked").length;
-console.log("Cellules verrouillées (🔒) :", lockedCells, "(attendu : tous les joueurs × toutes les caractéristiques, aucune séance encore faite)");
+console.log("Cellules verrouillées (🔒) :", lockedCells, "(attendu : tous les joueurs × toutes les colonnes denses, aucune séance encore faite)");
 const opponentRosterSize = getLeague(win).teams[opponentIdx].players.length;
-if (lockedCells !== opponentRosterSize * ATTRS.length) {
-  throw new Error(`❌ Sans séance vidéo, TOUTES les cellules de caractéristiques devraient être verrouillées : attendu ${opponentRosterSize * ATTRS.length}, obtenu ${lockedCells}.`);
+if (lockedCells !== opponentRosterSize * DENSE_ATTR_COLUMNS) {
+  throw new Error(`❌ Sans séance vidéo, TOUTES les cellules de caractéristiques devraient être verrouillées : attendu ${opponentRosterSize * DENSE_ATTR_COLUMNS}, obtenu ${lockedCells}.`);
 }
 console.log("✅ Le panneau de scoutisme affiche toujours nom/poste/taille/salaire, et verrouille (au lieu d'omettre) les caractéristiques non révélées.");
 
@@ -175,11 +185,25 @@ if (sessionResult.revealed.length !== 3) throw new Error(`❌ Niveau 3 devrait r
 win.eval("teamDetailSubView = 'effectif';");
 win.renderTeamDetail(opponentIdx);
 const lockedAfter = doc.getElementById("teamDetailContent").querySelectorAll(".attr-locked").length;
-console.log("Cellules verrouillées après la séance :", lockedAfter, "(attendu : réduites de 3 × nb de joueurs)");
-if (lockedAfter !== (opponentRosterSize * ATTRS.length) - (opponentRosterSize * 3)) {
-  throw new Error(`❌ Après la séance, exactement 3 caractéristiques par joueur devraient être déverrouillées, obtenu ${lockedAfter} cellules verrouillées restantes.`);
+// Colonnes denses désormais (13 Fondamentaux détaillés + moyennes
+// Physique/Mental, voir DENSE_ATTR_COLUMNS plus haut) : une caractéristique
+// Fondamentale révélée déverrouille sa PROPRE colonne, mais une seule
+// caractéristique Physique (ou Mentale) révélée déverrouille TOUTE la
+// moyenne de sa catégorie (categoryAverageCellHtml calcule la moyenne sur
+// les seules caractéristiques déjà révélées dès qu'il y en a au moins une,
+// voir son commentaire dans moteurbasket3.html) — donc le nombre de cellules
+// déverrouillées dépend de la répartition des 3 caractéristiques tirées au
+// sort entre les 3 catégories, pas d'un simple "-3".
+const revealed = sessionResult.revealed;
+const lockedFundamentalsPerPlayer = FUNDAMENTAL_ATTRS.filter(a => !revealed.includes(a)).length;
+const physicalLockedPerPlayer = PHYSICAL_ATTRS.some(a => revealed.includes(a)) ? 0 : 1;
+const mentalLockedPerPlayer = MENTAL_ATTRS.some(a => revealed.includes(a)) ? 0 : 1;
+const lockedPerPlayer = lockedFundamentalsPerPlayer + physicalLockedPerPlayer + mentalLockedPerPlayer;
+console.log("Cellules verrouillées après la séance :", lockedAfter, `(attendu : ${lockedPerPlayer} × ${opponentRosterSize} joueurs, révélé cette séance : ${revealed.join(", ")})`);
+if (lockedAfter !== opponentRosterSize * lockedPerPlayer) {
+  throw new Error(`❌ Après la séance, ${lockedPerPlayer} colonnes par joueur devraient rester verrouillées (13 Fondamentaux + Physique + Mental, moins celles touchées par les 3 caractéristiques révélées), obtenu ${lockedAfter} cellules verrouillées restantes (attendu ${opponentRosterSize * lockedPerPlayer}).`);
 }
-console.log("✅ Une séance vidéo réussie révèle bien le bon nombre de caractéristiques dans le panneau (niveau 3 -> 3/10).");
+console.log("✅ Une séance vidéo réussie révèle bien le bon nombre de caractéristiques dans le panneau (niveau 3 -> 3/10), reflété dans les colonnes Fondamentaux/Physique/Mental.");
 
 // Adversaire déjà scouté (retour utilisateur, 2026-09 : un même adversaire
 // n'est scoutable qu'UNE FOIS PAR SAISON, pas un cooldown quotidien) :

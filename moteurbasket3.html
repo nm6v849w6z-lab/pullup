@@ -1320,23 +1320,20 @@
     border-radius:var(--radius);
   }
   .arena-visual-wrap{
-    /* Retour utilisateur (2026-09), après deux essais de recadrage CSS
-       (object-fit:cover + une hauteur fixe, puis + object-position) qui
-       coupaient toujours mal selon l'image ("c'est encore pire") : "j'ai
-       recadré les images, garde strictement la hauteur que je t'ai donné
-       (tu peux agrandir ou réduire l'image mais ne pas la recouper)" — le
-       cadrage vient maintenant des images elles-mêmes (déjà recadrées côté
-       source, la plupart en 1100x566/567, un palier volontairement resté
-       carré), plus aucun recadrage ici : max-height fixe + object-fit:
-       contain, qui ne fait qu'agrandir/réduire chaque image en entier,
-       jamais la recouper. Le palier resté carré est donc réduit pour
-       tenir dans cette hauteur, avec des bandes vides sur les côtés
-       (letterboxing) plutôt qu'un bout d'image coupé. */
+    /* Retour utilisateur (2026-09) : "j'aimerais bien qu'il y ait une salle
+       différente en fonction du nombre de places", d'où un retour au dessin
+       généré (voir ArenaGen/arenaVisualCapacity plus bas dans le JS), cette
+       fois avec des gradins dont la taille suit la capacité réelle plutôt
+       que des images figées par palier. Le générateur produit un SVG dont
+       le viewBox est déjà calé sur le format voulu (option aspect, ~1.9 par
+       défaut) : max-height fixe suffit à borner la hauteur de la carte sans
+       jamais recouper le dessin (contrairement à un recadrage object-fit:
+       cover sur une photo). */
     display:flex; align-items:center; justify-content:center; max-height:480px;
     background:radial-gradient(ellipse 70% 80% at 55% 50%, #1b2740, #0f1622); border:1px solid var(--line-soft);
     border-radius:var(--radius); overflow:hidden; margin-bottom:12px;
   }
-  .arena-visual-wrap img{display:block; max-width:100%; max-height:480px; width:auto; height:auto; object-fit:contain;}
+  .arena-visual-wrap svg{display:block; max-width:100%; max-height:480px; width:100%; height:auto;}
   /* Cartes d'infrastructure (salle, boutique des supporters, centre de
      formation, CLUB_FACILITIES) : retour utilisateur, 2026-09 : "je ne veux
      voir que l'état actuel [...] une petite flèche sur la brique pour
@@ -1955,7 +1952,7 @@
       <div id="lastTrainingReportHolder"></div>
 
       <div class="training-config">
-        <h3 class="training-config-title">Entraînement individuel</h3>
+        <h3 class="training-config-title">Entraînement des fondamentaux</h3>
         <div class="field-label">Compétence entraînée cette semaine</div>
         <select id="trainingSkillSelect"></select>
         <div class="field-label">Postes concernés</div>
@@ -2546,6 +2543,19 @@ const TRAINING_LABELS = {
   vision: "Vision",
 };
 
+// Répartition FONDAMENTAUX/PHYSIQUE/MENTAL (retour utilisateur, 2026-09 :
+// "on ne dit plus entrainement individuel mais entrainement des fondamentaux
+// [...] et ça ne doit entrainer que les fondamentaux", puis "on avait prévu
+// que le physique ne bouge qu'un peu au cours de la carrière du joueur,
+// alors que le mental peut bien évoluer et progresse durant toute la
+// carrière du joueur"). Copie mirroir EXACTE de engine.js (voir son grand
+// commentaire au-dessus pour le détail) — utilisée ici à la fois par
+// Player.trainWeek plus bas (logique) ET par categoryAverageCellHtml plus
+// loin dans ce fichier (affichage 2-colonnes Physique/Mental de l'Effectif).
+const PHYSICAL_ATTRS = ["speed", "acceleration", "agility", "strength", "vertical", "endurance", "power"];
+const MENTAL_ATTRS = ["mental", "decision", "focus", "composure", "anticipation", "determination", "leadership", "discipline", "vision"];
+const FUNDAMENTAL_ATTRS = ATTRS.filter(a => !PHYSICAL_ATTRS.includes(a) && !MENTAL_ATTRS.includes(a));
+
 const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
   "Jeu intérieur":     { inside: .60, mid: .25, three: .15, tov: -.01, assist: 0,   tempo: -.05 },
@@ -2927,6 +2937,86 @@ function declineFactorForAge(age) {
   return 1.12;                 // 0.16
 }
 
+// Marge de progression restante (min, max points au-dessus de la valeur
+// ACTUELLE, pas d'un "potentiel caché") pour une caractéristique PHYSIQUE,
+// selon l'âge (voir Player.physicalPotential) : marge volontairement petite
+// (retour utilisateur, 2026-09 : "le physique ne bouge qu'un peu au cours de
+// la carrière du joueur") — le physique est surtout inné, il y a peu de
+// marge à révéler. Nulle au-delà de 31 ans : passé cet âge, plus aucune
+// marge de progression ; un joueur de 32/33 ans est donc sur un plateau (ni
+// progression ni déclin) jusqu'à ce que le déclin
+// (physicalDeclineFactorForAge plus bas, à partir de 34 ans) prenne le
+// relais. Copie mirroir EXACTE de engine.js.
+function physicalPotentialHeadroom(age) {
+  if (age <= 19) return [10, 18];
+  if (age <= 21) return [7, 14];
+  if (age <= 23) return [4, 10];
+  if (age <= 25) return [2, 6];
+  if (age <= 27) return [0, 3];
+  if (age <= 31) return [0, 1];
+  return [0, 0];
+}
+
+// Même principe, pour les caractéristiques MENTALES (voir
+// Player.mentalPotential) : marge volontairement GRANDE et jamais nulle
+// (retour utilisateur, 2026-09 : "le mental peut bien évoluer et progresse
+// durant toute la carrière du joueur") — même un vétéran garde toujours un
+// peu de marge, rien ne s'arrête jamais tout à fait, contrairement au
+// physique. Copie mirroir EXACTE de engine.js.
+function mentalPotentialHeadroom(age) {
+  if (age <= 21) return [15, 35];
+  if (age <= 24) return [7, 25];
+  if (age <= 27) return [2, 17];
+  if (age <= 30) return [2, 14];
+  if (age <= 33) return [2, 11];
+  return [2, 9];
+}
+
+// Vitesse de progression hebdomadaire NATURELLE des caractéristiques
+// PHYSIQUES (voir Player.trainWeek) : même forme que growthFactorForAge
+// (rapide chez les jeunes, décroissante ensuite), mais calée pour culminer
+// vers 27/28 ans plutôt que de continuer à progresser significativement
+// au-delà (quasi nulle ensuite) : le plateau est pris en charge par le
+// plafond physicalPotential ci-dessus, pas par un ralentissement
+// supplémentaire ici. Copie mirroir EXACTE de engine.js.
+function physicalGrowthFactorForAge(age) {
+  if (age <= 20) return 2.0;
+  if (age <= 22) return 1.6;
+  if (age <= 24) return 1.2;
+  if (age <= 26) return 0.8;
+  if (age <= 28) return 0.4;
+  if (age <= 31) return 0.12;
+  return 0.03;
+}
+
+// Déclin hebdomadaire naturel des caractéristiques PHYSIQUES : démarre à 34
+// ans, le même âge que le déclin des fondamentaux (declineFactorForAge),
+// mais légèrement moins marqué à chaque palier. Copie mirroir EXACTE de
+// engine.js.
+function physicalDeclineFactorForAge(age) {
+  if (age < 34) return 0;
+  if (age < 36) return 0.28;
+  if (age < 38) return 0.50;
+  if (age < 40) return 0.75;
+  return 1.10;
+}
+
+// Vitesse de progression hebdomadaire naturelle des caractéristiques
+// MENTALES : TOUJOURS positive, même en fin de carrière (contrairement au
+// physique, qui plafonne puis décline) — rapide en début de carrière, de
+// plus en plus lente ensuite, jamais nulle. Il n'existe volontairement PAS
+// de mentalDeclineFactorForAge : le mental ne décline jamais dans ce
+// modèle. Copie mirroir EXACTE de engine.js.
+function mentalGrowthFactorForAge(age) {
+  if (age <= 20) return 1.1;
+  if (age <= 23) return 0.85;
+  if (age <= 26) return 0.6;
+  if (age <= 29) return 0.4;
+  if (age <= 32) return 0.25;
+  if (age <= 35) return 0.15;
+  return 0.08;
+}
+
 // Une caractéristique travaillée en fait progresser un peu une autre, liée
 // (ex : la défense extérieure profite un peu à la défense intérieure ET à
 // l'agilité). Purement additif au multiplicateur "focus".
@@ -3149,6 +3239,21 @@ function makeTrainingProgram(label, attrs) {
   return { label, attrs: attrs.map(attr => ({ attr, weight })) };
 }
 
+// Retour utilisateur (2026-09) : "on ne dit plus entrainement individuel
+// mais entrainement des fondamentaux, et ça ne doit entrainer que les
+// fondamentaux" — ce catalogue ne couvre plus QUE les 13 FUNDAMENTAL_ATTRS
+// (voir le grand commentaire au-dessus de PHYSICAL_ATTRS/MENTAL_ATTRS/
+// FUNDAMENTAL_ATTRS, près d'ATTRS). Les programmes physiques/mentaux purs
+// qui existaient ici (Agilité, Endurance, Puissance, Concentration,
+// Anticipation, Leadership, Vitesse, Accélération, Force, Détente, Décision,
+// Sang-froid, Détermination, Discipline, Vision) ont été retirés : ces 16
+// caractéristiques ne progressent plus que naturellement (voir
+// Player.trainWeek) ou par synergie (TRAINING_SYNERGY plus haut, un simple
+// supplément quand un fondamental lié est entraîné). Toute sauvegarde dont
+// `trainingSkill` pointait vers l'un de ces programmes retirés retombe
+// automatiquement sur "freeThrow" au chargement (voir teamFromSave plus
+// bas, garde déjà existante pour ce cas de figure). Copie mirroir EXACTE de
+// engine.js.
 const TRAINING_PROGRAMS = {
   // -- Programmes "purs" (une seule caractéristique, plein rendement) --
   threePoint: makeTrainingProgram("Tir à 3 points", ["threePoint"]),
@@ -3158,38 +3263,21 @@ const TRAINING_PROGRAMS = {
   rebound:    makeTrainingProgram("Rebond", ["rebound"]),
   block:      makeTrainingProgram("Contre", ["block"]),
   dribble:    makeTrainingProgram("Dribble", ["dribble"]),
-  agility:    makeTrainingProgram("Agilité", ["agility"]),
   defOutside: makeTrainingProgram("Défense extérieure", ["defOutside"]),
   defInside:  makeTrainingProgram("Défense intérieure", ["defInside"]),
-  // Retour utilisateur (2026-09) : "Ajoute les entrainements lancer franc et
-  // endurance", les deux caractéristiques existaient déjà dans ATTRS mais
-  // n'étaient pas encore entraînables via un programme dédié.
   freeThrow:  makeTrainingProgram("Lancer franc", ["freeThrow"]),
-  endurance:  makeTrainingProgram("Endurance", ["endurance"]),
-  // 7 nouvelles caractéristiques. Copie mirroir EXACTE de engine.js.
   penetration:  makeTrainingProgram("Pénétration", ["penetration"]),
   shotCreation: makeTrainingProgram("Création de tir", ["shotCreation"]),
   steal:        makeTrainingProgram("Interceptions", ["steal"]),
-  power:        makeTrainingProgram("Puissance", ["power"]),
-  focus:        makeTrainingProgram("Concentration", ["focus"]),
-  anticipation: makeTrainingProgram("Anticipation", ["anticipation"]),
-  leadership:   makeTrainingProgram("Leadership", ["leadership"]),
-  // 9 dernières caractéristiques. Copie mirroir EXACTE de engine.js.
-  speed:         makeTrainingProgram("Vitesse", ["speed"]),
-  acceleration:  makeTrainingProgram("Accélération", ["acceleration"]),
-  strength:      makeTrainingProgram("Force", ["strength"]),
-  vertical:      makeTrainingProgram("Détente", ["vertical"]),
-  decision:      makeTrainingProgram("Décision", ["decision"]),
-  composure:     makeTrainingProgram("Sang-froid", ["composure"]),
-  determination: makeTrainingProgram("Détermination", ["determination"]),
-  discipline:    makeTrainingProgram("Discipline", ["discipline"]),
-  vision:        makeTrainingProgram("Vision", ["vision"]),
   // -- Programmes composites (plusieurs caractéristiques liées, rendement
   // dilué par caractéristique — voir WEIGHT_BY_PROGRAM_SIZE) --
   outsideShot: makeTrainingProgram("Tir extérieur", ["midRange", "threePoint"]),
   playmaking:  makeTrainingProgram("Meneur de jeu", ["pass", "dribble"]),
   allroundDef: makeTrainingProgram("Défense polyvalente", ["defOutside", "defInside"]),
-  quickShots:  makeTrainingProgram("Tirs rapides", ["agility", "midRange", "threePoint", "inside"]),
+  // "Tirs rapides" perd son quatrième ingrédient "agility" (désormais
+  // physique, non trainable directement, voir plus haut) : ne garde que les
+  // 3 fondamentaux de tir qui donnaient son sens à ce composite.
+  quickShots:  makeTrainingProgram("Tirs rapides", ["midRange", "threePoint", "inside"]),
 };
 
 // Aptitude d'un poste pour un PROGRAMME entier = moyenne (pondérée par le
@@ -4068,6 +4156,1185 @@ const JERSEY_COLORS = {
   blanc:  "#f2f2f0",
   jaune:  "#e8c93f",
 };
+
+// ---------------------------------------------------------------- avatars des joueurs
+// Generateur d'avatars SVG proceduraux (retour utilisateur 2026-09 :
+// "recupere ces visuels la pour mettre des avatars pour les joueurs"),
+// fourni par l'utilisateur sous forme de module autonome (avatar-generator.js,
+// cf. planche-avatars.html pour l'outil de creation/export utilise pour le
+// produire). Recalcule a CHAQUE affichage a partir de l'id du joueur (aucune
+// image a stocker ni a synchroniser) : meme id => toujours le meme visage.
+// Enveloppe dans une IIFE pour isoler les propres helpers du generateur
+// (pick/mix/shade/rng/UID/etc.) du reste de ce fichier, qui a deja ses
+// propres fonctions de meme nom mais de signature differente (voir pick(arr)
+// plus haut : un simple tirage uniforme, alors que celui du generateur
+// d'avatar attend un generateur pseudo-aleatoire en premier argument) - donc
+// AUCUN risque de collision malgre les noms tres generiques utilises a
+// l'interieur (INK, SH, LW, mix, shade, rng...).
+// Volontairement DEPOUILLE des maillots aleatoires du module d'origine
+// (retour utilisateur : "ne recupere pas les maillots, pour les maillots, il
+// faudra mettre ceux de l'equipe") : le tableau JERSEYS de paires de
+// couleurs aleatoires, le champ `team` tire au hasard dans
+// generateAppearance, et le catalogue de planches (partInfo/partSVG/
+// PART_COUNTS, qui ne servait qu'a exporter les pieces separement pour
+// l'artiste) ont ete retires. renderAvatar/generateAvatar attendent
+// desormais `options.teamColors` (voir teamAvatarColors juste en dessous,
+// qui lit les vraies couleurs JERSEY_COLORS[team.jerseyColor]/
+// [team.awayJerseyColor] de l'equipe reelle du joueur) et ne retombent sur
+// un gris neutre que si un appel oublie de le fournir.
+const AvatarGen = (function () {
+  /**
+   * Generateur d'avatars de joueurs de basket, par pieces detachees (SVG).
+   * Style illustre semi-realiste : contours encres, ombrages en aplats.
+   * Fourni par l'utilisateur (2026-09), integre ici SANS les maillots
+   * aleatoires d'origine (retour utilisateur : "ne recupere pas les
+   * maillots, pour les maillots, il faudra mettre ceux de l'equipe") : les
+   * couleurs de maillot viennent toujours de options.teamColors, jamais
+   * d'un choix aleatoire interne au generateur.
+   *
+   * Usage : AvatarGen.generateAvatar(playerId, { teamColors: [main, liseré] })
+   */
+
+  const INK = '#17110d';
+  const SH = 'rgba(70,35,15,0.28)';   // ombre neutre, s'adapte à toutes les peaux
+  const DK = 'rgba(40,18,8,0.55)';
+  const HL = 'rgba(255,255,255,0.22)';
+
+  // ---------------------------------------------------------------- catalogues
+
+  const SKINS = ['#F7DCC8', '#F0CBAE', '#E6B894', '#D9A47C', '#C98E62', '#B77A50', '#A0663F', '#855032', '#6B3E26', '#4E2D1C'];
+
+  const FACE_SHAPES = [
+    { id: 'ovale', w: 23.5, dip: 0.5, ja: 19, jy: 79, cw: 7, cy: 96 },
+    { id: 'carre', w: 24.5, dip: 0.3, ja: 22.5, jy: 81, cw: 10, cy: 96 },
+    { id: 'fin', w: 22, dip: 0.5, ja: 17.5, jy: 78, cw: 6, cy: 97 },
+    { id: 'large', w: 26, dip: 0.4, ja: 22, jy: 78, cw: 9, cy: 95 },
+    { id: 'anguleux', w: 24.5, dip: 1.2, ja: 19, jy: 81, cw: 6.5, cy: 96.5 },
+  ];
+
+  const HAIR_STYLES = ['buzz', 'short', 'sidepart', 'slick', 'wavy', 'long', 'bun', 'fade', 'curlytop', 'afro', 'twists', 'cornrows',
+    'mohawk', 'frohawk', 'hightop', 'undercut', 'topknot', 'receding', 'waves', 'buzzdesign'];
+  const HAIR_COLORS = ['#15100c', '#2a1b12', '#4a2e1a', '#6e4526', '#7a3a1c', '#b5532e', '#b08440', '#d8b56e', '#8e8b86', '#e4e1da'];
+
+  const EYE_SHAPES = [
+    { id: 'amande', h: 3.6, tilt: 0, lo: 0.8 },
+    { id: 'rond', h: 4.4, tilt: 0, lo: 1 },
+    { id: 'tombant', h: 3.2, tilt: 1.2, lo: 0.8, hood: true },
+    { id: 'etroit', h: 2.7, tilt: 0, lo: 0.7 },
+    { id: 'releve', h: 3.6, tilt: -1.3, lo: 0.75 },
+  ];
+  const IRIS_COLORS = ['#3a2210', '#4a2a14', '#5a3a1e', '#6b4a22', '#7a5a2a', '#5d6b2e', '#3f6f3a', '#3d6fa8', '#6fa0c8', '#6f7d86'];
+
+  const BROWS = [
+    { id: 'droit', d: 'M41 49.5 Q48 47 56 47.5 L56 50 Q48 49.5 41.5 51.5Z' },
+    { id: 'arque', d: 'M41 50.5 Q46 44.5 56 47 L56 49.6 Q47 47.2 41.6 52Z' },
+    { id: 'epais', d: 'M40.5 49.5 Q47 45 56.5 46.5 L56.5 50.8 Q47 48.8 41 52.8Z' },
+    { id: 'fin', d: 'M41.5 50 Q48 46.5 55.5 48 L55.5 49.3 Q48 48 42 51Z' },
+    { id: 'anguleux', d: 'M41 51 L50 45.8 L56 47.5 L56 50 L50.5 48.3 L41.6 52.3Z' },
+    { id: 'fronce', d: 'M41 48.5 Q48 47 56 49 L56 51.5 Q48 49.8 41.4 50.8Z' },
+    { id: 'broussailleux', d: 'M40.5 50 Q47 44.5 56.5 46.5 L56.8 51 Q47 48.5 40.8 53Z', hairy: true },
+    { id: 'arrondi', d: 'M41 51 Q47 44.5 55 47.5 L55.5 50 Q47 47.5 41.6 52.5Z' },
+  ];
+
+  // 25 nez : 5 largeurs x 5 longueurs
+  const NOSES = [];
+  for (let l = 0; l < 5; l++) for (let wd = 0; wd < 5; wd++) NOSES.push({ nw: 4.2 + wd * 0.7, ty: 72 + l });
+
+  // 36 bouches : 6 expressions x 3 épaisseurs x 2 largeurs
+  const MOUTH_EXPRESSIONS = [
+    { id: 'neutre', c: 0, open: 0 },
+    { id: 'sourire', c: 1.3, open: 0 },
+    { id: 'dents', c: 1.8, open: 2.2, teeth: true },
+    { id: 'rire', c: 2.3, open: 3.8, teeth: true, tongue: true },
+    { id: 'serre', c: -0.7, open: 0, press: true },
+    { id: 'moue', c: 0.2, open: 0, asym: 1.8 },
+  ];
+  const MOUTHS = [];
+  for (const e of MOUTH_EXPRESSIONS) for (const t of [0.8, 1, 1.3]) for (const mw of [8, 9.5]) MOUTHS.push({ ...e, t, mw });
+
+  const BEARD_STYLES = ['stubble', 'goatee', 'soulpatch', 'mustache', 'circle', 'chinstrap', 'horseshoe', 'boxed', 'full', 'long',
+    'vandyke', 'muttonchops', 'chincurtain', 'short'];
+  const JERSEY_STYLES = ['round', 'v', 'double'];
+  const DURAG_COLORS = ['#1b1b1e', '#b8262b', '#1d4fa8', '#e4e1da', '#5b2d91', '#1f7a43'];
+  const HEADBAND_COLORS = ['#ffffff', '#1b1b1e', '#b8262b', '#1d4fa8', '#e9a23b', '#1f7a43'];
+  const MARKS = ['none', 'mole', 'scar', 'browscar'];
+
+  // ---------------------------------------------------------------- utilitaires
+
+  function rng(seed) {
+    let a = seed | 0;
+    return function () {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const pick = (r, a) => a[Math.floor(r() * a.length)];
+  const hexToRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const rgbToHex = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  const shade = (h, m) => rgbToHex(hexToRgb(h).map((v) => v + m));
+  const mix = (a, b, t) => { const x = hexToRgb(a), y = hexToRgb(b); return rgbToHex(x.map((v, i) => v + (y[i] - v) * t)); };
+  const f1 = (n) => (+n).toFixed(1);
+  const mirror = (s) => `<g transform="translate(120 0) scale(-1 1)">${s}</g>`;
+  const scaleX = (s, w) => `<g transform="translate(60 0) scale(${(w / 24).toFixed(3)} 1) translate(-60 0)">${s}</g>`;
+  const LW = `stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"`;
+  let UID = 0;
+
+  function star(cx, cy, R, r) {
+    const p = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5, d = i % 2 ? r : R;
+      p.push(`${f1(cx + Math.cos(a) * d)},${f1(cy + Math.sin(a) * d)}`);
+    }
+    return p.join(' ');
+  }
+
+  function scallop(cx, cy, rx, ry, n, rad, fill) {
+    let o = '', b = '';
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, x = f1(cx + Math.cos(a) * rx), y = f1(cy + Math.sin(a) * ry);
+      o += `<circle cx="${x}" cy="${y}" r="${rad}" fill="${fill}" stroke="${INK}" stroke-width="2.4"/>`;
+      b += `<circle cx="${x}" cy="${y}" r="${rad}" fill="${fill}"/>`;
+    }
+    return o + `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}"/>` + b;
+  }
+
+  function curls(seed, color, cx, cy, rx, ry, n) {
+    const r = rng(seed), c = shade(color, 50);
+    let s = '';
+    for (let i = 0; i < n; i++) {
+      const a = r() * Math.PI * 2, d = Math.sqrt(r());
+      s += `<path d="M${f1(cx + Math.cos(a) * rx * d)} ${f1(cy + Math.sin(a) * ry * d)} q1.5 -1.8 3 0" stroke="${c}" stroke-width="0.9" fill="none" stroke-linecap="round"/>`;
+    }
+    return s;
+  }
+
+  function strands(color, paths, width = 1) {
+    return `<path d="${paths}" stroke="${shade(color, 50)}" stroke-width="${width}" fill="none" stroke-linecap="round" opacity="0.75"/>`;
+  }
+
+  // ---------------------------------------------------------------- pièces : visage
+
+  // Spline de Catmull-Rom fermée : courbe lisse passant par tous les points clés
+  function smoothPath(P) {
+    const n = P.length;
+    let d = `M${f1(P[0][0])} ${f1(P[0][1])}`;
+    for (let i = 0; i < n; i++) {
+      const p0 = P[(i - 1 + n) % n], p1 = P[i], p2 = P[(i + 1) % n], p3 = P[(i + 2) % n];
+      d += ` C${f1(p1[0] + (p2[0] - p0[0]) / 6)} ${f1(p1[1] + (p2[1] - p0[1]) / 6)} ${f1(p2[0] - (p3[0] - p1[0]) / 6)} ${f1(p2[1] - (p3[1] - p1[1]) / 6)} ${f1(p2[0])} ${f1(p2[1])}`;
+    }
+    return d + 'Z';
+  }
+
+  // Points clés du côté droit (dôme du crâne, tempe, pommette, angle de mâchoire, menton)
+  function headPath(f) {
+    const R = 60 + f.w, J = 60 + f.ja, C = 60 + f.cw;
+    const right = [[60 + 0.36 * f.w, 16.3], [60 + 0.707 * f.w, 21.6], [60 + 0.94 * f.w, 31.4], [R, 41], [R - 0.4 + f.dip * 0.8, 56], [J, f.jy], [C + 1.2, f.cy - 2.4]];
+    const left = right.map(([x, y]) => [120 - x, y]).reverse();
+    return smoothPath([[60, 15], ...right, [60, f.cy], ...left]);
+  }
+
+  /** Cou (à dessiner avant le maillot) */
+  function renderNeck(skin) {
+    const sh = shade(skin, -30), sh2 = shade(skin, -50);
+    return `<path d="M45 78 Q44 92 43 104 L77 104 Q76 92 75 78Z" fill="${skin}"/>` +
+      `<path d="M71 80 L75.5 80 L77 104 L69 104Z" fill="${sh}" opacity="0.7"/>` +
+      `<path d="M43 84 Q60 106 77 84 L77 93 Q60 111 43 93Z" fill="${sh}"/>` +
+      `<path d="M50 93 Q53 99 55.5 104 M70 93 Q67 99 64.5 104" stroke="${sh2}" stroke-width="0.9" fill="none" opacity="0.7"/>` +
+      `<path d="M58.8 97 Q60 99.5 61.2 97" stroke="${sh2}" stroke-width="0.8" fill="none" opacity="0.6"/>` +
+      `<path d="M45 78 Q44 88 43.5 93 M75 78 Q76 88 76.5 93" ${LW} fill="none"/>`;
+  }
+
+  /** Tête : oreilles, crâne, ombrages. opts : age, freckles, earrings, bald */
+  function renderHead(skin, shapeIndex, opts = {}) {
+    const f = FACE_SHAPES[shapeIndex % FACE_SHAPES.length];
+    const L = 60 - f.w, R = 60 + f.w, cw = f.cw;
+    const id = `hd${++UID}`;
+    const sh = shade(skin, -30), sh2 = shade(skin, -52), hl = shade(skin, 20), hl2 = shade(skin, 34);
+    const old = (opts.age || 0) >= 31;
+
+    // oreilles : la gauche dans la lumière, la droite dans l'ombre
+    const earShape = `M${L + 1} 47 Q${L - 5.5} 43.5 ${L - 6} 55 Q${L - 6} 66 ${L + 1.5} 71Z`;
+    const ear = `<path d="${earShape}" fill="${skin}" ${LW}/>` +
+      `<path d="M${L - 4} 51 Q${L - 4.8} 59 ${L - 2} 66" stroke="${sh2}" stroke-width="0.9" fill="none"/>` +
+      `<ellipse cx="${L - 2.2}" cy="58" rx="1.5" ry="3.6" fill="${sh}" opacity="0.8"/>` +
+      (opts.earrings ? `<circle cx="${L - 2.5}" cy="69" r="1.7" fill="${opts.earrings}" stroke="${INK}" stroke-width="0.6"/>` : '');
+    const rightEar = mirror(ear + `<path d="${earShape}" fill="${sh2}" opacity="0.35"/>`);
+    const head = headPath(f);
+    // ombres dessinées librement puis découpées par la silhouette de la tête
+    const formShadow = `M${R - 10} 8 Q${R - 3.5} 30 ${R - 5.5} 50 Q${R - 10} 58 ${R - 8.5} 66 Q${R - 6.5} 74 ${R - 8.5} 82 Q${f1(60 + cw * 0.8)} 93 ${f1(60 - cw + 3)} 101 L126 106 L126 4Z`;
+    const clip = `<defs><clipPath id="${id}"><path d="${head}"/></clipPath><clipPath id="${id}r"><rect x="${f1(60 + f.w * 0.2)}" y="0" width="70" height="130"/></clipPath></defs>`;
+    let s = clip + ear + rightEar +
+      `<path d="${head}" fill="${skin}"/>` +
+      `<g clip-path="url(#${id})">` +
+      // orbites
+      `<path d="M53.5 50.5 Q57.8 53 57 59.5 Q55.2 55.5 52 53Z" fill="${sh}" opacity="0.45"/>` +
+      `<path d="M66.5 50.5 Q62.2 53 63 59.5 Q64.8 55.5 68 53Z" fill="${sh}" opacity="0.55"/>` +
+      `<path d="M42 51 Q49 48.5 56 50.5 Q49 50 42.5 52.5Z" fill="${sh}" opacity="0.35"/>` +
+      `<path d="M78 51 Q71 48.5 64 50.5 Q71 50 77.5 52.5Z" fill="${sh}" opacity="0.45"/>` +
+      // ombre de forme et ombre portée le long du bord
+      `<path d="${formShadow}" fill="${sh}"/>` +
+      `<g clip-path="url(#${id}r)"><path d="${head}" fill="none" stroke="${sh2}" stroke-width="5" opacity="0.5"/></g>` +
+      `<path d="M${L + 2} 64 Q${L + 5} 72.5 ${L + 10.5} 80 Q${L + 5.5} 73 ${L + 4.5} 64Z" fill="${sh}" opacity="0.55"/>` +
+      `<path d="M${L + 1.5} 40 Q${L + 3.7} 48 ${L + 2.5} 56" stroke="${sh}" stroke-width="1.4" fill="none" opacity="0.35"/>` +
+      // lumières
+      `<path d="M${L + 6} 37 Q51 25 63 26 Q54 29.5 ${L + 8.5} 41Z" fill="${hl2}" opacity="0.55"/>` +
+      `<path d="M${L + 5} 63 Q${L + 9} 60.5 ${L + 14} 63 Q${L + 9} 62.5 ${L + 5.5} 65Z" fill="${hl2}" opacity="0.4"/>` +
+      `<path d="M59.2 58.5 L59.2 69" stroke="${hl2}" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>` +
+      `<ellipse cx="58" cy="${f1(f.cy - 5.5)}" rx="3.2" ry="1.3" fill="${hl}" opacity="0.6"/>` +
+      // joues et philtrum
+      `<ellipse cx="45" cy="70" rx="5" ry="3" fill="#c0503a" opacity="0.07"/>` +
+      `<ellipse cx="75" cy="70" rx="5" ry="3" fill="#c0503a" opacity="0.06"/>` +
+      `<path d="M58.8 76.5 L59 79.8 M61.2 76.5 L61 79.8" stroke="${sh}" stroke-width="0.6" opacity="0.45"/>` +
+      (opts.bald ? `<path d="M${L + 8} 27 Q52 16 64 18 Q54 21 ${L + 9.5} 30Z" fill="${hl2}" opacity="0.6"/>` : '') +
+      `</g>` +
+      // contour : trait plus épais côté ombre
+      `<path d="${head}" fill="none" ${LW}/>` +
+      `<g clip-path="url(#${id}r)"><path d="${head}" fill="none" stroke="${INK}" stroke-width="2.4"/></g>` +
+      // plis et menton
+      `<path d="M53 74 Q50 79 51.5 83" stroke="${sh}" stroke-width="0.8" fill="none" opacity="${old ? 1 : 0.45}"/>` +
+      `<path d="M67 74 Q70 79 68.5 83" stroke="${sh2}" stroke-width="0.8" fill="none" opacity="${old ? 1 : 0.45}"/>` +
+      `<path d="M56.5 ${f1(f.cy - 3.2)} Q60 ${f1(f.cy - 1.8)} 63.5 ${f1(f.cy - 3.2)}" stroke="${sh}" stroke-width="0.8" fill="none"/>`;
+    if (old) {
+      s += `<path d="M48 36 Q60 34 72 36 M50 40 Q60 38.5 70 40" stroke="${sh}" stroke-width="0.7" fill="none"/>` +
+        `<path d="M41 57 L38 56 M41.5 59.5 L38.5 60 M79 57 L82 56 M78.5 59.5 L81.5 60" stroke="${sh}" stroke-width="0.8"/>` +
+        `<path d="M44 62 Q48 64 52 62.5 M68 62.5 Q72 64 76 62" stroke="${sh}" stroke-width="0.7" fill="none" opacity="0.8"/>`;
+    }
+    if (opts.freckles) {
+      const fr = [[42, 65], [45, 63.5], [47.5, 66], [44, 67.5], [50, 64.5]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="0.8" fill="${shade(skin, -40)}"/>`).join('');
+      s += fr + mirror(fr);
+    }
+    return s;
+  }
+
+  // ---------------------------------------------------------------- pièces : cheveux
+
+  const CAP = 'M36 46 Q35 18 60 16 Q85 18 84 46 Q82 34 72 30 Q60 27 48 30 Q38 34 36 46Z';
+
+  /** Renvoie { back, front } ; w = demi-largeur du visage (FACE_SHAPES[i].w) */
+  function renderHair(style, color, w = 24, seed = 1) {
+    const hc = color, hd = shade(color, -30);
+    let back = '', front = '';
+    switch (style) {
+      case 'buzz': {
+        front = `<path d="${CAP}" fill="${hc}" opacity="0.88"/>`;
+        const r = rng(seed);
+        for (let i = 0; i < 40; i++) {
+          const x = 40 + r() * 40, y = 20 + r() * 12 + Math.abs(x - 60) * 0.25;
+          front += `<circle cx="${f1(x)}" cy="${f1(y)}" r="0.45" fill="${shade(hc, 35)}" opacity="0.6"/>`;
+        }
+        break;
+      }
+      case 'short':
+        front = `<path d="M35 50 Q32 20 50 13 Q62 9 74 13 Q88 20 85 50 Q84 38 80 33 Q72 27 60 28 Q46 27 40 33 Q36 38 35 50Z" fill="${hc}" ${LW}/>` +
+          `<path d="M38 44 Q40 34 48 30 Q60 27 72 30 Q80 34 82 44 Q78 34 72 32 Q60 29.5 48 32 Q42 34 38 44Z" fill="${hd}"/>` +
+          strands(hc, 'M45 18 Q50 22 50 29 M56 14 Q61 19 61 27 M67 15 Q71 20 70 28 M77 20 Q80 26 80 33 M40 26 Q43 30 42 36');
+        break;
+      case 'sidepart':
+        front = `<path d="M35 50 Q31 22 46 14 Q60 8 76 13 Q89 20 85 50 Q84 36 78 31 Q68 25 52 27 Q44 24 42 28 Q37 36 35 50Z" fill="${hc}" ${LW}/>` +
+          `<path d="M46 15 Q44 21 42 28" stroke="${INK}" stroke-width="1.2" fill="none"/>` +
+          strands(hc, 'M50 15 Q62 14 74 20 Q80 24 82 32 M52 20 Q64 19 76 27 M40 22 Q38 28 37 36');
+        break;
+      case 'slick':
+        front = `<path d="M36 44 Q35 16 60 13 Q85 16 84 44 Q80 28 60 26 Q40 28 36 44Z" fill="${hc}" ${LW}/>` +
+          strands(hc, 'M44 30 Q48 20 56 15 M52 27 Q55 19 61 14 M60 26 L62 14 M68 27 Q67 19 64 14 M76 30 Q72 20 66 15', 0.9);
+        break;
+      case 'wavy':
+        front = `<path d="M34 54 Q28 22 48 12 Q62 6 76 12 Q92 20 86 54 Q86 40 80 34 Q74 26 62 30 Q54 24 46 30 Q38 36 34 54Z" fill="${hc}" ${LW}/>` +
+          `<path d="M36 48 Q38 36 46 31 Q54 26 62 31 Q74 27 80 35 Q84 40 84 48 Q80 38 74 34 Q66 31 62 33 Q54 29 47 33 Q40 38 36 48Z" fill="${hd}"/>` +
+          strands(hc, 'M42 20 Q48 16 54 20 Q58 24 62 20 M40 28 Q46 24 50 27 M66 16 Q72 18 76 24 Q80 28 82 36 M64 22 Q70 22 72 27');
+        break;
+      case 'long':
+        back = `<path d="M30 60 Q24 18 60 12 Q96 18 90 60 L92 94 Q86 101 80 97 L76 70 L44 70 L40 97 Q34 101 28 94Z" fill="${hc}" ${LW}/>` +
+          `<path d="M34 70 L33 92 M86 70 L87 92 M38 74 L37 90 M82 74 L83 90" stroke="${shade(hc, 50)}" stroke-width="0.9" opacity="0.7"/>`;
+        front = `<path d="M35 56 Q32 22 60 16 Q88 22 85 56 Q82 36 70 30 Q64 27 60 30 Q56 27 50 30 Q38 36 35 56Z" fill="${hc}" ${LW}/>` +
+          strands(hc, 'M60 18 L60 29 M46 22 Q42 30 40 42 M74 22 Q78 30 80 42 M52 20 Q48 26 46 32 M68 20 Q72 26 74 32');
+        break;
+      case 'bun':
+        back = `<circle cx="60" cy="12" r="8" fill="${hc}" ${LW}/><path d="M55 9 Q60 6 65 9 M54 13 Q60 11 66 13" stroke="${shade(hc, 50)}" stroke-width="0.9" fill="none"/>`;
+        front = `<path d="M36 44 Q35 18 60 15 Q85 18 84 44 Q80 30 60 28 Q40 30 36 44Z" fill="${hc}" ${LW}/>` +
+          strands(hc, 'M44 30 Q48 20 58 17 M60 28 L61 16 M76 30 Q72 20 64 17 M52 28 Q54 20 59 16', 0.9);
+        break;
+      case 'fade':
+        front = `<path d="${CAP}" fill="${hc}" opacity="0.45"/>` + scallop(60, 23, 21, 6.5, 12, 4.5, hc) + curls(seed, hc, 60, 22, 18, 5, 8);
+        break;
+      case 'curlytop':
+        front = `<path d="${CAP}" fill="${hc}" opacity="0.55"/>` + scallop(60, 17, 23, 10, 14, 6, hc) + curls(seed, hc, 60, 15, 20, 8, 12);
+        break;
+      case 'afro':
+        back = scallop(60, 32, 32, 25, 20, 7, hc) + curls(seed, hc, 60, 26, 26, 16, 18);
+        front = `<path d="M35 48 Q34 24 60 24 Q86 24 85 48 Q82 36 72 33 Q60 30 48 33 Q38 36 35 48Z" fill="${hc}"/>`;
+        break;
+      case 'twists': {
+        front = `<path d="${CAP}" fill="${hc}" ${LW}/>`;
+        for (let i = 0; i < 13; i++) {
+          const a = Math.PI * (1.08 + i * 0.066), cx = 60 + Math.cos(a) * 21, cy = 38 + Math.sin(a) * 19;
+          const tx = 60 + Math.cos(a) * 32, ty = 38 + Math.sin(a) * 30;
+          const nx = -Math.sin(a) * 3.4, ny = Math.cos(a) * 3.4;
+          front += `<path d="M${f1(cx - nx)} ${f1(cy - ny)} L${f1(tx)} ${f1(ty)} L${f1(cx + nx)} ${f1(cy + ny)}Z" fill="${hc}" ${LW}/>` +
+            `<path d="M${f1((cx + tx) / 2 - nx * 0.4)} ${f1((cy + ty) / 2 - ny * 0.4)} L${f1((cx + tx) / 2 + nx * 0.4)} ${f1((cy + ty) / 2 + ny * 0.4)}" stroke="${shade(hc, 50)}" stroke-width="0.8"/>`;
+        }
+        break;
+      }
+      case 'cornrows':
+        front = `<path d="${CAP}" fill="${hc}" ${LW}/>`;
+        for (let k = -3; k <= 3; k++) {
+          front += `<path d="M${f1(60 + k * 6.5)} ${f1(29.5 + Math.abs(k) * 1.1)} Q${f1(60 + k * 7)} 22 ${f1(60 + k * 4.5)} 16" stroke="rgba(255,235,215,0.35)" stroke-width="0.9" fill="none"/>` +
+            `<path d="M${f1(60 + k * 6.5 + 3)} ${f1(28.5 + Math.abs(k) * 1.1)} Q${f1(60 + k * 7 + 3)} 22 ${f1(60 + k * 4.5 + 2)} 16.5" stroke="${shade(hc, 45)}" stroke-width="1.6" fill="none" stroke-dasharray="1.5 1.2" opacity="0.7"/>`;
+        }
+        break;
+      case 'mohawk':
+        front = `<path d="${CAP}" fill="${hc}" opacity="0.35"/>` +
+          `<path d="M53 31 Q51 13 60 5 Q69 13 67 31 Q60 28 53 31Z" fill="${hc}" ${LW}/>` +
+          strands(hc, 'M57 28 Q56 16 60 8 M63 28 Q64 16 60 8', 0.9);
+        break;
+      case 'frohawk':
+        front = `<path d="${CAP}" fill="${hc}" opacity="0.35"/>` + scallop(60, 18, 8, 11, 10, 5.5, hc) + curls(seed, hc, 60, 18, 6, 9, 6);
+        break;
+      case 'hightop':
+        front = `<path d="${CAP}" fill="${hc}" opacity="0.45"/>` +
+          `<path d="M41 35 L40.5 9 Q41 4 46 4 L74 4 Q79 4 79.5 9 L79 35 Q70 30.5 60 30.5 Q50 30.5 41 35Z" fill="${hc}" ${LW}/>` +
+          `<path d="M42 9 L78 9" stroke="${shade(hc, 45)}" stroke-width="0.9" opacity="0.6"/>` + curls(seed, hc, 60, 20, 15, 9, 14);
+        break;
+      case 'undercut':
+        front = `<path d="${CAP}" fill="${hc}" opacity="0.4"/>` +
+          `<path d="M38 37 Q34 16 54 10 Q72 5 84 17 Q87 24 82 31 Q72 22 58 26 Q46 28 38 37Z" fill="${hc}" ${LW}/>` +
+          strands(hc, 'M44 24 Q56 14 72 12 M46 29 Q58 20 76 18 M58 25 Q68 18 80 22');
+        break;
+      case 'topknot':
+        back = `<ellipse cx="60" cy="9" rx="9" ry="7" fill="${hc}" ${LW}/>` +
+          `<path d="M53 8 Q60 4 67 8 M52 11 Q60 8 68 11 M54 14 Q60 12 66 14" stroke="${shade(hc, 45)}" stroke-width="0.8" fill="none"/>`;
+        front = `<path d="${CAP}" fill="${hc}" ${LW}/>` +
+          `<path d="${[42, 48, 54, 60, 66, 72, 78].map((x) => `M${x} ${30 + Math.abs(x - 60) * 0.12} Q${60 + (x - 60) * 0.6} 22 ${60 + (x - 60) * 0.25} 16`).join(' ')}" stroke="${shade(hc, 45)}" stroke-width="0.8" fill="none" opacity="0.7"/>`;
+        break;
+      case 'receding':
+        front = `<path d="M36 46 Q35 18 60 16 Q85 18 84 46 Q83 34 79 26 Q72 30 66 25 Q60 23 54 25 Q48 30 41 26 Q37 34 36 46Z" fill="${hc}" opacity="0.92"/>` +
+          strands(hc, 'M40 32 Q41 38 38 44 M80 32 Q79 38 82 44', 0.8);
+        break;
+      case 'waves':
+        front = `<path d="${CAP}" fill="${hc}"/>`;
+        for (let k = 0; k < 5; k++) {
+          const rx = 5 + k * 4.3, ry = rx * 0.78;
+          front += `<path d="M${f1(60 - rx)} 36 A${f1(rx)} ${f1(ry)} 0 0 1 ${f1(60 + rx)} 36" stroke="${shade(hc, 40)}" stroke-width="0.8" fill="none" stroke-dasharray="3 1.6" opacity="0.7"/>`;
+        }
+        break;
+      case 'buzzdesign':
+        front = `<path d="${CAP}" fill="${hc}" opacity="0.88"/>` +
+          `<path d="M42 23 L48.5 31.5 M44 21 L50.5 29.5" stroke="rgba(255,228,205,0.55)" stroke-width="1.1" stroke-linecap="round"/>`;
+        break;
+    }
+    return { back: back ? scaleX(back, w) : '', front: front ? scaleX(front, w) : '' };
+  }
+
+  /** Durag : remplace la coiffure. Renvoie { back, front } */
+  function renderDurag(color, w = 24) {
+    const back = `<path d="M74 40 Q86 70 90 96 L83 97 Q78 70 70 44Z" fill="${shade(color, -22)}" ${LW}/>` +
+      `<path d="M77 44 Q85 70 88 94" stroke="${shade(color, 25)}" stroke-width="0.8" fill="none" opacity="0.5"/>`;
+    const front = `<path d="M34 50 Q32 15 60 13 Q88 15 86 50 Q84 38 78 34 Q60 28.5 42 34 Q36 38 34 50Z" fill="${color}" ${LW}/>` +
+      `<path d="M36 41 Q60 31 84 41" stroke="${shade(color, -30)}" stroke-width="1" fill="none"/>` +
+      `<path d="M60 14 L60 30" stroke="${shade(color, -25)}" stroke-width="0.9"/>` +
+      `<path d="M44 20 Q52 16 58 16" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.28" stroke-linecap="round"/>`;
+    return { back: scaleX(back, w), front: scaleX(front, w) };
+  }
+
+  // ---------------------------------------------------------------- pièces : sourcils, yeux
+
+  function renderBrows(index, hairColor) {
+    const b = BROWS[index % BROWS.length];
+    const col = hairColor === HAIR_COLORS[8] || hairColor === HAIR_COLORS[9] ? '#5a5550' : mix(hairColor, '#000000', 0.25);
+    const left = `<path d="${b.d}" fill="${col}" stroke="${INK}" stroke-width="0.6" stroke-linejoin="round"/>` +
+      `<path d="M44 ${b.hairy ? 49 : 49.5} l1.5 -1.5 M48 48.5 l1.5 -1.4 M52 48 l1.5 -1.2" stroke="${shade(col, 45)}" stroke-width="0.6" opacity="0.8"/>`;
+    return left + mirror(left);
+  }
+
+  function renderEyes(shapeIndex, iris) {
+    const s = EYE_SHAPES[shapeIndex % EYE_SHAPES.length], h = s.h;
+    const ox = 42.5, oy = 56 + s.tilt, ix = 55.5, iy = 55.6;
+    const topY = 55.6 - h * 1.25, botY = 55.6 + h * s.lo * 1.1;
+    const up = `M${ox} ${f1(oy)} Q49 ${f1(topY)} ${ix} ${iy}`;
+    const eye = `${up} Q49 ${f1(botY)} ${ox} ${f1(oy)}Z`;
+    const id = `eye${++UID}`;
+    const left =
+      (s.hood ? `<path d="M${ox + 0.5} ${f1(oy - 1.5)} Q49 ${f1(topY - 2.6)} ${ix - 0.5} ${iy - 1.8} Q49 ${f1(topY + 0.6)} ${ox + 0.5} ${f1(oy - 1.5)}Z" fill="${SH}"/>` : '') +
+      `<path d="M${ox + 1} ${f1(oy - 2.5 - h * 0.3)} Q49 ${f1(topY - 1.8)} ${ix - 1.5} ${iy - 2.2}" stroke="${SH}" stroke-width="0.8" fill="none"/>` +
+      `<path d="${eye}" fill="#f5f1ea"/>` +
+      `<g clip-path="url(#${id})">` +
+      `<circle cx="49" cy="55.8" r="3.2" fill="${iris}"/>` +
+      `<circle cx="49" cy="56.7" r="1.9" fill="${shade(iris, 45)}" opacity="0.45"/>` +
+      `<circle cx="49" cy="55.8" r="3.2" fill="none" stroke="${shade(iris, -45)}" stroke-width="0.7"/>` +
+      `<circle cx="49" cy="55.8" r="1.35" fill="#0e0b09"/>` +
+      `<path d="M${ox} ${f1(oy)} Q49 ${f1(topY)} ${ix} ${iy} Q49 ${f1(topY + 2.4)} ${ox} ${f1(oy)}Z" fill="rgba(0,0,0,0.25)"/>` +
+      `<circle cx="50.1" cy="54.7" r="0.9" fill="#ffffff"/><circle cx="47.9" cy="57" r="0.45" fill="#ffffff" opacity="0.8"/>` +
+      `</g>` +
+      `<path d="${up}" stroke="${INK}" stroke-width="1.7" fill="none" stroke-linecap="round"/>` +
+      `<path d="M${ox} ${f1(oy)} l-1.6 -0.7 M${ox + 1.2} ${f1(oy - 1)} l-1.3 -1.3" stroke="${INK}" stroke-width="0.9" stroke-linecap="round"/>` +
+      `<path d="M${ox + 1.5} ${f1(oy + 0.8)} Q49 ${f1(botY + 0.4)} ${ix - 1} ${iy + 1}" stroke="${SH}" stroke-width="0.7" fill="none"/>`;
+    return `<defs><clipPath id="${id}"><path d="${eye}"/></clipPath></defs>` + left + mirror(left);
+  }
+
+  // ---------------------------------------------------------------- pièces : nez, bouche
+
+  function renderNose(index) {
+    const { nw, ty } = NOSES[index % NOSES.length];
+    return `<path d="M58.2 57 Q57.2 ${ty - 8} ${f1(60 - nw + 1)} ${ty - 3.5}" stroke="${SH}" stroke-width="0.9" fill="none"/>` +
+      `<path d="M61 57 Q63.5 ${ty - 7} ${f1(60 + nw - 0.5)} ${ty - 3} Q${f1(60 + nw + 1)} ${ty} 62.5 ${ty + 1} Q61 ${ty - 3} 61 57Z" fill="${SH}"/>` +
+      `<path d="M59 58 L59 ${ty - 4}" stroke="${HL}" stroke-width="1.4"/>` +
+      `<ellipse cx="59.2" cy="${ty - 2.4}" rx="1.4" ry="1" fill="${HL}"/>` +
+      `<path d="M57 ${ty + 1.8} Q60 ${ty + 3} 63 ${ty + 1.8} Q60 ${ty + 2.4} 57 ${ty + 1.8}Z" fill="${SH}"/>` +
+      `<path d="M${f1(60 - nw)} ${ty - 3.5} Q${f1(60 - nw - 1.3)} ${ty + 0.3} 57.3 ${ty + 0.7} M${f1(60 + nw)} ${ty - 3.5} Q${f1(60 + nw + 1.3)} ${ty + 0.3} 62.7 ${ty + 0.7}" stroke="${INK}" stroke-width="1" fill="none" stroke-linecap="round"/>` +
+      `<path d="M57.3 ${ty + 0.7} Q60 ${ty + 1.9} 62.7 ${ty + 0.7}" stroke="rgba(40,18,8,0.45)" stroke-width="0.9" fill="none" stroke-linecap="round"/>` +
+      `<ellipse cx="57.6" cy="${ty - 0.1}" rx="1.25" ry="0.6" fill="${DK}"/><ellipse cx="62.4" cy="${ty - 0.1}" rx="1.25" ry="0.6" fill="${DK}"/>`;
+  }
+
+  function renderMouth(index, skin) {
+    const m = MOUTHS[index % MOUTHS.length];
+    const mw = m.mw, asym = m.asym || 0;
+    const t = m.press ? m.t * 0.6 : m.open ? m.t * 0.75 : m.t;   // la lèvre supérieure s'affine quand on sourit
+    const lip = mix(shade(skin, -30), '#9a3f3f', 0.3), lipL = shade(lip, 16);
+    const line = mix(lip, '#1a0c08', 0.6);                          // trait de bouche teinté, pas noir pur
+    const lx = 60 - mw, rx = 60 + mw, ly = 82 - m.c, ry = 82 - m.c - asym;
+    const my = 82.3 + m.c * 0.35;                                  // milieu de la fente
+    const ctrl = (mid) => 2 * mid - (ly + ry) / 2;                  // point de contrôle pour que la courbe passe par mid
+    const openMid = my + (m.open || 0) * 1.15;
+    const lowMid = openMid + 3.4 * m.t;                             // bas de la lèvre inférieure
+    const id = `mo${++UID}`;
+    const upper = `M${lx} ${f1(ly)} Q${f1(60 - mw * 0.5)} ${f1(ly - 2.2 * t)} 60 ${f1(my - 1.6 * t)} Q${f1(60 + mw * 0.5)} ${f1(ry - 2.2 * t)} ${rx} ${f1(ry)} Q60 ${f1(ctrl(my))} ${lx} ${f1(ly)}Z`;
+    const lower = `M${lx + 1} ${f1(ly + 0.3)} Q60 ${f1(ctrl(openMid) + 0.2)} ${rx - 1} ${f1(ry + 0.3)} Q60 ${f1(ctrl(lowMid))} ${lx + 1} ${f1(ly + 0.3)}Z`;
+    let s = '';
+    // plis de sourire au coin des lèvres
+    if (m.c > 1) s += `<path d="M${lx - 0.9} ${f1(ly - 2)} Q${lx - 2} ${f1(ly)} ${lx - 0.7} ${f1(ly + 1.8)} M${rx + 0.9} ${f1(ry - 2)} Q${rx + 2} ${f1(ry)} ${rx + 0.7} ${f1(ry + 1.8)}" stroke="${SH}" stroke-width="0.7" fill="none" stroke-linecap="round" opacity="0.8"/>`;
+    s += `<path d="${lower}" fill="${lipL}"/>`;
+    if (m.open) {
+      const hole = `M${lx} ${f1(ly)} Q60 ${f1(ctrl(my))} ${rx} ${f1(ry)} Q60 ${f1(ctrl(openMid))} ${lx} ${f1(ly)}Z`;
+      const teethBottom = m.tongue ? my + m.open * 0.62 : openMid + 1;
+      s += `<defs><clipPath id="${id}"><path d="${hole}"/></clipPath></defs>` +
+        `<path d="${hole}" fill="#4a1c18"/>` +
+        `<g clip-path="url(#${id})">` +
+        (m.tongue ? `<ellipse cx="60" cy="${f1(openMid + 0.6)}" rx="${f1(mw * 0.5)}" ry="2.2" fill="#b4574f"/>` : '') +
+        `<path d="M${lx} ${f1(ly)} Q60 ${f1(ctrl(my))} ${rx} ${f1(ry)} L${rx} ${f1(teethBottom)} Q60 ${f1(teethBottom + 1.2)} ${lx} ${f1(teethBottom)}Z" fill="#f3eee4"/>` +
+        `<path d="M${lx + 2} ${f1(teethBottom - 0.4)} Q60 ${f1(teethBottom + 0.9)} ${rx - 2} ${f1(teethBottom - 0.4)}" stroke="#d9d1c3" stroke-width="0.7" fill="none"/>` +
+        `<path d="M${f1(60 - mw * 0.25)} ${f1(my)} l0 ${f1(m.open * 0.5)} M60 ${f1(my + 0.3)} l0 ${f1(m.open * 0.55)} M${f1(60 + mw * 0.25)} ${f1(my)} l0 ${f1(m.open * 0.5)}" stroke="#e2dbcf" stroke-width="0.35"/>` +
+        `<rect x="${lx}" y="${f1(my - 3)}" width="${mw * 2}" height="2.4" fill="rgba(0,0,0,0.12)"/>` +
+        `</g>` +
+        `<path d="M${lx} ${f1(ly)} Q60 ${f1(ctrl(openMid))} ${rx} ${f1(ry)}" stroke="${line}" stroke-width="0.7" fill="none" opacity="0.6"/>`;
+    }
+    s += `<path d="${upper}" fill="${lip}"/>` +
+      `<path d="M${f1(60 - mw * 0.55)} ${f1(ly - 1.4 * t)} Q60 ${f1(my - 2.1 * t)} ${f1(60 + mw * 0.55)} ${f1(ry - 1.4 * t)}" stroke="${shade(lip, 22)}" stroke-width="0.5" fill="none" opacity="0.6"/>` +
+      `<path d="M${f1(lx - 0.4)} ${f1(ly)} Q60 ${f1(ctrl(my))} ${f1(rx + 0.4)} ${f1(ry)}" stroke="${line}" stroke-width="${m.open ? 1 : 1.15}" fill="none" stroke-linecap="round"/>` +
+      `<ellipse cx="60" cy="${f1((openMid + lowMid) / 2 + 0.3)}" rx="${f1(mw * 0.3)}" ry="0.65" fill="#ffffff" opacity="0.28"/>` +
+      `<path d="M56.5 ${f1(lowMid + 1.3)} Q60 ${f1(lowMid + 2.1)} 63.5 ${f1(lowMid + 1.3)}" stroke="${SH}" stroke-width="0.8" fill="none"/>` +
+      `<circle cx="${f1(lx - 0.3)}" cy="${f1(ly)}" r="0.55" fill="${line}"/><circle cx="${f1(rx + 0.3)}" cy="${f1(ry)}" r="0.55" fill="${line}"/>`;
+    return s;
+  }
+
+  // ---------------------------------------------------------------- pièces : barbes
+
+  const MUSTACHE = 'M51 80.5 Q55 77 60 78.5 Q65 77 69 80.5 Q64 79.5 60 80.5 Q56 79.5 51 80.5Z';
+
+  // Contour extérieur qui suit la mâchoire du visage (ext = longueur supplémentaire sous le menton)
+  function beardOuter(f, ext = 0) {
+    const R = 60 + f.w, J = 60 + f.ja, C = 60 + f.cw;
+    return [[R + 0.1, 57.5], [R - 0.2 + f.dip * 0.6, 65], [J + 0.9, f.jy + 0.6 + ext * 0.3], [C + 1.8 + ext * 0.15, f.cy - 1.2 + ext * 0.75], [60, f.cy + 2.4 + ext]];
+  }
+  const mirrorPts = (pts) => pts.map(([x, y]) => [120 - x, y]);
+
+  function beardFullPath(f, ext = 0) {
+    const R = 60 + f.w;
+    const outerR = beardOuter(f, ext);
+    const center = outerR.pop();
+    const outerL = mirrorPts(outerR).reverse();
+    const innerR = [[R - 2, 59], [R - 3.2, 67], [R - 7.5, 74], [68.5, 78.6]];
+    const innerL = mirrorPts(innerR);
+    return smoothPath([...outerR, center, ...outerL, ...innerL, [60, 77.8], ...innerR.reverse()]);
+  }
+
+  function chinstrapPath(f, thick = 1) {
+    const R = 60 + f.w, J = 60 + f.ja, C = 60 + f.cw;
+    const outerR = beardOuter(f);
+    const center = outerR.pop();
+    const innerR = [[R - 2.6, 57], [R - 2.8 * thick + f.dip * 0.6, 64], [J - 2 * thick, f.jy - 1.6 * thick], [C - 0.6 * thick, f.cy - 3.2 * thick]];
+    return smoothPath([...outerR, center, ...mirrorPts(outerR).reverse(), ...mirrorPts(innerR), [60, f.cy - 1.2 * thick], ...innerR.reverse()]);
+  }
+
+  function muttonPath(f) {
+    const R = 60 + f.w, J = 60 + f.ja;
+    return smoothPath([[R + 0.1, 57.5], [R - 0.2 + f.dip * 0.6, 65], [J + 0.9, f.jy + 0.6], [J - 5, f.jy + 2], [R - 7.5, 74], [R - 3.2, 67], [R - 2, 59]]);
+  }
+
+  /** Renvoie { body, mustache } (la moustache se dessine après la bouche). faceShape = index de FACE_SHAPES */
+  function renderBeard(style, color, faceShape = 0) {
+    const f = FACE_SHAPES[faceShape % FACE_SHAPES.length];
+    const R = 60 + f.w, L = 60 - f.w, dy = f1(f.cy - 96);
+    const hc = color, tex = (d) => `<path d="${d}" stroke="${shade(hc, 50)}" stroke-width="0.9" opacity="0.7" stroke-linecap="round"/>`;
+    const must = `<path d="${MUSTACHE}" fill="${hc}" ${LW}/>` + tex('M54 79.5 l0.5 1 M58 79 l0.3 1 M62 79 l-0.3 1 M66 79.5 l-0.5 1');
+    const chin = (d) => `<g transform="translate(0 ${dy})">${d}</g>`;
+    const strokes = (ext) => tex(`M${L + 5} ${f1(f.jy - 5 + ext * 0.3)} l1 3.5 M52 ${f1(f.cy - 4 + ext * 0.6)} l0.8 3.5 M60 ${f1(f.cy - 2 + ext * 0.8)} l0 3.5 M68 ${f1(f.cy - 4 + ext * 0.6)} l-0.8 3.5 M${R - 5} ${f1(f.jy - 5 + ext * 0.3)} l-1 3.5 M${L + 2.5} 64 l0.8 3.5 M${R - 2.5} 64 l-0.8 3.5`);
+    let body = '', mustache = '';
+    switch (style) {
+      case 'stubble':
+        body = `<path d="${beardFullPath(f)}" fill="${hc}" opacity="0.26"/>`;
+        mustache = `<path d="${MUSTACHE}" fill="${hc}" opacity="0.35"/>`;
+        break;
+      case 'goatee':
+        body = chin(`<path d="M53 88 Q60 99 67 88 Q64 91 60 90.5 Q56 91 53 88Z" fill="${hc}" ${LW}/>` + tex('M58 92 l0 2.5 M62 92 l0 2.5'));
+        mustache = must;
+        break;
+      case 'soulpatch':
+        body = chin(`<path d="M57 88 Q60 93 63 88 Q60 89 57 88Z" fill="${hc}" ${LW}/>`);
+        break;
+      case 'mustache':
+        mustache = must;
+        break;
+      case 'circle':
+        body = `<path d="M51 81 Q49 ${f1(86 + f.cy - 96)} 53 ${f1(90 + f.cy - 96)} Q60 ${f1(99 + f.cy - 96)} 67 ${f1(90 + f.cy - 96)} Q71 ${f1(86 + f.cy - 96)} 69 81 Q67.5 86 64 88 Q60 89.5 56 88 Q52.5 86 51 81Z" fill="${hc}" ${LW}/>`;
+        mustache = must;
+        break;
+      case 'chinstrap':
+        body = `<path d="${chinstrapPath(f)}" fill="${hc}" ${LW}/>`;
+        break;
+      case 'horseshoe':
+        mustache = `<path d="M50 80.5 L50 91 L52.5 91 L52.5 82 Q56 79.5 60 80.5 Q64 79.5 67.5 82 L67.5 91 L70 91 L70 80.5 Q65 76.5 60 78.3 Q55 76.5 50 80.5Z" fill="${hc}" ${LW}/>`;
+        break;
+      case 'boxed':
+        body = `<path d="${beardFullPath(f)}" fill="${hc}" opacity="0.85"/>` + strokes(0);
+        mustache = `<path d="${MUSTACHE}" fill="${hc}" opacity="0.9"/>`;
+        break;
+      case 'full':
+        body = `<path d="${beardFullPath(f)}" fill="${hc}" ${LW}/>` + strokes(0);
+        mustache = must;
+        break;
+      case 'long':
+        body = `<path d="${beardFullPath(f, 12)}" fill="${hc}" ${LW}/>` + strokes(10);
+        mustache = must;
+        break;
+      case 'vandyke':
+        body = chin(`<path d="M55 87 Q60 102 65 87 Q62 90 60 89.5 Q58 90 55 87Z" fill="${hc}" ${LW}/>` + tex('M60 92 l0 4'));
+        mustache = `<path d="M51.5 80 Q55 77.2 59.3 78.6 L59.3 79.6 Q55 79 51.5 80Z M68.5 80 Q65 77.2 60.7 78.6 L60.7 79.6 Q65 79 68.5 80Z" fill="${hc}" ${LW}/>`;
+        break;
+      case 'muttonchops':
+        body = `<path d="${muttonPath(f)}" fill="${hc}" ${LW}/>` + mirror(`<path d="${muttonPath(f)}" fill="${hc}" ${LW}/>`) +
+          tex(`M${R - 3} 66 l-0.6 3 M${L + 3} 66 l0.6 3`);
+        break;
+      case 'chincurtain':
+        body = `<path d="${chinstrapPath(f, 2.4)}" fill="${hc}" ${LW}/>` + strokes(0);
+        break;
+      case 'short': {
+        const dots = [];
+        const r = rng(faceShape * 31 + 7);
+        for (let i = 0; i < 70; i++) {
+          const x = L + 3 + r() * (2 * f.w - 6), y = 66 + r() * (f.cy - 66);
+          if (Math.abs(x - 60) < 8 && y < 88) continue;
+          dots.push(`<circle cx="${f1(x)}" cy="${f1(y)}" r="0.45" fill="${shade(hc, 35)}" opacity="0.6"/>`);
+        }
+        const cid = `bs${++UID}`;
+        body = `<defs><clipPath id="${cid}"><path d="${beardFullPath(f)}"/></clipPath></defs><path d="${beardFullPath(f)}" fill="${hc}" opacity="0.6"/><g clip-path="url(#${cid})">${dots.join('')}</g>`;
+        mustache = `<path d="${MUSTACHE}" fill="${hc}" opacity="0.7"/>`;
+        break;
+      }
+    }
+    return { body, mustache };
+  }
+
+  // ---------------------------------------------------------------- pièces : corps et maillot
+
+  function renderShoulders(skin) {
+    return `<path d="M0 130 L0 118 Q6 104 26 100 Q40 97 45 88 L75 88 Q80 97 94 100 Q114 104 120 118 L120 130Z" fill="${skin}" ${LW}/>` +
+      `<path d="M94 100 Q114 104 120 118 L120 130 L106 130 Q104 110 94 100Z" fill="${shade(skin, -32)}"/>`;
+  }
+
+  /** style : 'round' (col rond), 'v' (col en V), 'double' (double liseré) */
+  function renderJersey(main, trim, style = 'round') {
+    const neck = style === 'v' ? 'M46 90 L60 111 L74 90' : 'M46 90 Q50 107 60 109 Q70 107 74 90';
+    const TR = `${neck} M35 99 Q28 116 20 130 M85 99 Q92 116 100 130`;
+    let s = `<path d="M20 130 Q28 116 35 99 ${neck.replace('M46 90', 'L46 90')} L85 99 Q92 116 100 130Z" fill="${main}" ${LW}/>` +
+      `<path d="M85 99 Q92 116 100 130 L91 130 Q88 114 80 103Z" fill="${shade(main, -28)}"/>`;
+    if (style === 'double') {
+      s += `<path d="${TR}" stroke="${INK}" stroke-width="7.4" fill="none"/><path d="${TR}" stroke="${trim}" stroke-width="5.6" fill="none"/><path d="${TR}" stroke="${main}" stroke-width="1.6" fill="none"/>`;
+    } else {
+      s += `<path d="${TR}" stroke="${INK}" stroke-width="5.2" fill="none"/><path d="${TR}" stroke="${trim}" stroke-width="3.2" fill="none"/>`;
+    }
+    return s;
+  }
+
+  // ---------------------------------------------------------------- apparence aléatoire
+
+  /**
+   * Tire une apparence complète à partir d'une seed.
+   * options.age : impose l'âge (rides, cheveux gris)
+   */
+  function generateAppearance(seed, options = {}) {
+    const r = rng(seed);
+    const skinIndex = Math.floor(r() * SKINS.length);
+    const dark = skinIndex >= 5;
+    const coily = dark ? r() < 0.88 : r() < 0.1;
+    const drawnAge = 19 + Math.floor(r() * 17);
+    const age = options.age ?? drawnAge;
+    let hairColor = dark || coily ? pick(r, HAIR_COLORS.slice(0, 2)) : pick(r, HAIR_COLORS.slice(0, 8));
+    if (r() < 0.45 && age >= 32) hairColor = HAIR_COLORS[8];
+    const hairStyle = coily
+      ? pick(r, ['afro', 'curlytop', 'buzz', 'cornrows', 'twists', 'fade', 'buzz', 'bald', 'hightop', 'frohawk', 'waves', 'waves', 'topknot', 'buzzdesign', 'mohawk'])
+      : pick(r, ['short', 'sidepart', 'slick', 'wavy', 'long', 'bun', 'buzz', 'fade', 'curlytop', 'short', 'bald', 'undercut', 'undercut', 'mohawk', 'buzzdesign', age >= 30 ? 'receding' : 'short']);
+    const spec = {
+      seed, age, skinIndex,
+      skin: SKINS[skinIndex],
+      faceShape: Math.floor(r() * FACE_SHAPES.length),
+      hairStyle, hairColor,
+      eyeShape: Math.floor(r() * EYE_SHAPES.length),
+      iris: dark ? pick(r, IRIS_COLORS.slice(0, 4)) : pick(r, [...IRIS_COLORS.slice(0, 5), ...IRIS_COLORS]),
+      brows: Math.floor(r() * BROWS.length),
+      nose: Math.floor(r() * NOSES.length),
+      mouth: Math.floor(r() * MOUTHS.length),
+      beard: pick(r, ['none', 'none', 'none', 'stubble', 'goatee', 'boxed', 'full', 'circle', 'mustache', 'chinstrap', 'long', 'soulpatch', 'horseshoe', 'stubble', 'vandyke', 'muttonchops', 'chincurtain', 'short', 'short']),
+      earrings: r() < 0.2 ? pick(r, ['#e9b949', '#d9d9d6']) : null,
+      headband: r() < 0.12,
+    };
+    const t = r();
+    spec.neckTattoo = t < 0.08 ? 'script' : t < 0.14 ? 'star' : t < 0.2 ? 'tribal' : 'none';
+    spec.chain = r() < 0.15 ? (r() < 0.5 ? '#e9b949' : '#d9d9d6') : null;
+    spec.browSlit = r() < 0.12;
+    spec.freckles = skinIndex < 3 && r() < 0.18;
+    spec.jerseyStyle = pick(r, JERSEY_STYLES);
+    spec.durag = r() < (coily ? 0.08 : 0.02) ? pick(r, DURAG_COLORS) : null;
+    if (spec.headband) spec.headbandColor = r() < 0.5 ? null : pick(r, HEADBAND_COLORS);
+    const mk = r();
+    spec.mark = mk < 0.06 ? 'mole' : mk < 0.1 ? 'scar' : mk < 0.13 ? 'browscar' : 'none';
+    return spec;
+  }
+
+  // ---------------------------------------------------------------- assemblage
+
+  /**
+   * Assemble un avatar complet.
+   * options.teamColors : [maillot, liseré] ; options.background : false = fond transparent
+   */
+  function renderAvatar(a, options = {}) {
+    const [jersey, trim] = options.teamColors || ['#3a3a40', '#55555c'];
+    const w = FACE_SHAPES[a.faceShape % FACE_SHAPES.length].w;
+    const hair = a.durag ? renderDurag(a.durag, w) : a.hairStyle === 'bald' ? { back: '', front: '' } : renderHair(a.hairStyle, a.hairColor, w, a.seed || 1);
+    const beard = a.beard && a.beard !== 'none' ? renderBeard(a.beard, a.hairColor, a.faceShape) : { body: '', mustache: '' };
+    const TATTOO = '#1f2a44';
+    let tattoo = '';
+    if (a.neckTattoo === 'script') tattoo = `<g stroke="${TATTOO}" stroke-width="1.1" fill="none" opacity="0.6" stroke-linecap="round"><path d="M66 90 q2 -2 4 0 t4 0"/><path d="M66 94 q2 -2 4 0 t3 0"/><path d="M67 98 q2 -2 4 0"/></g>`;
+    if (a.neckTattoo === 'star') tattoo = `<polygon points="${star(70, 94, 4, 1.7)}" fill="none" stroke="${TATTOO}" stroke-width="1.1" opacity="0.65"/>`;
+    if (a.neckTattoo === 'tribal') tattoo = `<path d="M65 100 Q66 92 73 89 Q70 94 74 97 Q68 96 65 100Z" fill="${TATTOO}" opacity="0.55"/>`;
+    const L = 60 - w, R = 60 + w;
+    const bandColor = a.headbandColor || (jersey === '#f0efec' ? trim : jersey);
+    const headband = a.headband && !a.durag ? `<path d="M${L - 0.5} 37 Q60 31 ${R + 0.5} 37 L${R + 0.5} 43.5 Q60 37.5 ${L - 0.5} 43.5Z" fill="${bandColor}" ${LW}/><path d="M${L + 1} 39.6 Q60 34 ${R - 1} 39.6" stroke="${shade(bandColor, -30)}" stroke-width="0.6" fill="none" opacity="0.6"/>` : '';
+    let mark = '';
+    if (a.mark === 'mole') mark = `<circle cx="${f1(L + 9)}" cy="72" r="0.9" fill="${shade(a.skin, -65)}"/>`;
+    if (a.mark === 'scar') mark = `<path d="M${f1(L + 5)} 63 l5 4.5" stroke="${shade(a.skin, 28)}" stroke-width="1.1" stroke-linecap="round"/><path d="M${f1(L + 6)} 65.6 l1.2 -1.2 M${f1(L + 8)} 67.3 l1.2 -1.2" stroke="${shade(a.skin, -35)}" stroke-width="0.5"/>`;
+    if (a.mark === 'browscar') mark = `<path d="M47.5 44.5 L46 52" stroke="${shade(a.skin, 25)}" stroke-width="1.1" stroke-linecap="round"/>`;
+    return `<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" width="100%" role="img" aria-label="Avatar du joueur">` +
+      (options.background !== false ? '<rect width="120" height="130" fill="#26262a"/><circle cx="60" cy="58" r="56" fill="#2f2f34"/>' : '') +
+      hair.back +
+      renderShoulders(a.skin) + renderNeck(a.skin) + tattoo +
+      (a.chain ? `<path d="M49 94 Q60 107 71 94" stroke="${a.chain}" stroke-width="1.6" fill="none"/>` : '') +
+      renderJersey(jersey, trim, a.jerseyStyle || 'round') +
+      renderHead(a.skin, a.faceShape, { age: a.age, freckles: a.freckles, earrings: a.earrings, bald: a.hairStyle === 'bald' }) +
+      mark + hair.front + headband + beard.body +
+      renderBrows(a.brows, a.hairColor) +
+      (a.browSlit ? `<path d="M70.5 45.5 L69.5 51" stroke="${a.skin}" stroke-width="1.4"/>` : '') +
+      renderEyes(a.eyeShape, a.iris) +
+      (a.mark === 'browscar' ? mark : '') +
+      renderNose(a.nose) +
+      renderMouth(a.mouth, a.skin) +
+      beard.mustache +
+      `</svg>`;
+  }
+
+  /** Raccourci : seed -> SVG */
+  function generateAvatar(seed, options = {}) {
+    return renderAvatar(generateAppearance(seed, options), options);
+  }
+  return { generateAppearance, renderAvatar, generateAvatar };
+})();
+
+/** [couleur principale, couleur de lisere] reelles de l'equipe pour l'avatar (voir JERSEY_COLORS/team.jerseyColor/team.awayJerseyColor). */
+function teamAvatarColors(team) {
+  if (!team) return ['#3a3a40', '#55555c'];
+  return [JERSEY_COLORS[team.jerseyColor] || '#3a3a40', JERSEY_COLORS[team.awayJerseyColor] || '#55555c'];
+}
+
+/** Avatar SVG d'un joueur, recalcule depuis son id (voir AvatarGen ci-dessus, toujours le meme visage pour un joueur donne). size = largeur en px (hauteur au meme ratio que le viewBox 120x130). */
+function playerAvatarHtml(player, team, size) {
+  size = size || 28;
+  if (!player) return '';
+  const svg = AvatarGen.generateAvatar(player.id, { teamColors: teamAvatarColors(team) });
+  const h = Math.round(size * 130 / 120);
+  return `<span class="player-avatar" style="display:inline-block;flex:none;width:${size}px;height:${h}px;border-radius:${Math.round(size * 0.18)}px;overflow:hidden;vertical-align:middle;line-height:0">${svg}</span>`;
+}
+
+// ArenaGen (retour utilisateur, 2026-09, voir le commentaire au-dessus de
+// .arena-visual-wrap plus haut dans ce fichier) : generateur procedural de
+// salle en SVG (vue isometrique), fourni par l'utilisateur (arena-generator.js)
+// et repris ici tel quel, enveloppe dans une IIFE (meme demarche que
+// AvatarGen ci-dessus) pour isoler ses nombreux noms generiques (rng, shade,
+// f1, INK, box, poly, flat, line, rect, UID, ...) du reste de ce fichier,
+// qui declare deja des identifiants du meme nom avec une signature
+// differente. Seules arenaLayout/generateArena sont exposees.
+const ArenaGen = (function () {
+  const INK = '#17110d';
+  const K = 1.9;
+  const SEATS_PER_UNIT = 2.5;
+  const ROW_DEPTH = 0.95, ROW_HEIGHT = 0.5;
+  const SHADOW = [0.7, 0.25];   // direction des ombres portées au sol, par unité de hauteur
+
+  // ---------------------------------------------------------------- utilitaires
+
+  function rng(seed) {
+    let a = seed | 0;
+    return function () {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const hexToRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const rgbToHex = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  const shade = (h, m) => rgbToHex(hexToRgb(h).map((v) => v + m));
+  const luminance = (h) => { const [r, g, b] = hexToRgb(h); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
+  const f1 = (n) => n.toFixed(1);
+  const esc = (t) => String(t).replace(/[<&>"]/g, '');
+  let UID = 0;
+
+  const P = (x, y, z = 0) => [(x - y) * 0.866 * K, (x + y) * 0.5 * K - z * K];
+  const pts = (a) => a.map((p) => P(...p).map(f1).join(',')).join(' ');
+  const poly = (a, fill, sw = 0.8, extra = '') => `<polygon points="${pts(a)}" fill="${fill}" stroke="${INK}" stroke-width="${sw}" stroke-linejoin="round" ${extra}/>`;
+  const flat = (a, fill, extra = '') => `<polygon points="${pts(a)}" fill="${fill}" ${extra}/>`;
+  const line = (a, color, sw, extra = '') => `<polyline points="${pts(a)}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" ${extra}/>`;
+  const rect = (x0, x1, y0, y1, z = 0) => [[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]];
+  const faceY = (x0, x1, y, z0, z1) => [[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]];
+  const faceX = (x, y0, y1, z0, z1) => [[x, y0, z0], [x, y1, z0], [x, y1, z1], [x, y0, z1]];
+
+  function box(x0, x1, y0, y1, z0, z1, top, fy, fx, sw = 0.6) {
+    return poly(faceY(x0, x1, y1, z0, z1), fy, sw) + poly(faceX(x1, y0, y1, z0, z1), fx, sw) + poly(rect(x0, x1, y0, y1, z1), top, sw);
+  }
+
+  function arc(cx, cy, r, a0, a1, n, z = 0.05) {
+    const o = [];
+    for (let i = 0; i <= n; i++) { const a = a0 + ((a1 - a0) * i) / n; o.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r, z]); }
+    return o;
+  }
+
+  // Texte posé à plat sur une face verticale orientée vers +y (façade avant)
+  function textOnFaceY(x, y, zTop, str, size, color, maxWidth) {
+    const o = P(x, y, zTop);
+    const fit = str.length * size * 0.62 > maxWidth ? ` textLength="${f1(maxWidth)}" lengthAdjust="spacingAndGlyphs"` : '';
+    return `<text transform="matrix(${f1(0.866 * K)} ${f1(0.5 * K)} 0 ${f1(K)} ${f1(o[0])} ${f1(o[1])})" x="0" y="${f1(size * 0.92)}" font-size="${size}" font-weight="800" letter-spacing="0.08" text-anchor="middle" fill="${color}" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"${fit}>${esc(str)}</text>`;
+  }
+
+  // Texte posé à plat sur le sol
+  function textOnFloor(x, y, str, size, color) {
+    const o = P(x, y, 0.07);
+    return `<text transform="matrix(${f1(0.866 * K)} ${f1(0.5 * K)} ${f1(-0.866 * K)} ${f1(0.5 * K)} ${f1(o[0])} ${f1(o[1])})" x="0" y="${f1(size * 0.35)}" font-size="${size}" font-weight="800" text-anchor="middle" fill="${color}" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">${esc(str)}</text>`;
+  }
+
+  function hull(points) {
+    const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const lo = [], up = [];
+    for (const q of p) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+    for (const q of p.reverse()) { while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+    return lo.slice(0, -1).concat(up.slice(0, -1));
+  }
+
+  // ---------------------------------------------------------------- objets du décor
+
+  function treeShadow(x, y, s) {
+    const c = P(x + (2.2 + s) * SHADOW[0], y + (2.2 + s) * SHADOW[1], 0);
+    return `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(s * K * 1.15)}" ry="${f1(s * K * 0.62)}" fill="rgba(0,0,0,0.2)"/>`;
+  }
+  function tree(x, y, s, hue) {
+    const t = P(x, y, 0), c = P(x, y, 2.2 + s);
+    const leaf = ['#3f7a34', '#4a8238', '#376e2f'][hue % 3];
+    return `<line x1="${f1(t[0])}" y1="${f1(t[1])}" x2="${f1(c[0])}" y2="${f1(c[1])}" stroke="#5a3d25" stroke-width="1.6"/>` +
+      `<circle cx="${f1(c[0])}" cy="${f1(c[1])}" r="${f1(s * K)}" fill="${leaf}" stroke="${INK}" stroke-width="0.8"/>` +
+      `<circle cx="${f1(c[0] + s * 0.5)}" cy="${f1(c[1] + s * 0.5)}" r="${f1(s * K * 0.55)}" fill="${shade(leaf, -18)}" opacity="0.6"/>` +
+      `<circle cx="${f1(c[0] - s * 0.6)}" cy="${f1(c[1] - s * 0.7)}" r="${f1(s * K * 0.42)}" fill="#5f9e4a"/>`;
+  }
+  function car(x, y, color) {
+    const sh = P(x + 0.7, y + 0.25, 0);
+    return `<ellipse cx="${f1(sh[0])}" cy="${f1(sh[1])}" rx="${f1(2.6 * K)}" ry="${f1(1.3 * K)}" fill="rgba(0,0,0,0.18)"/>` +
+      box(x - 2, x + 2, y - 0.9, y + 0.9, 0.15, 0.95, color, shade(color, -35), shade(color, -55), 0.5) +
+      box(x - 1, x + 1.1, y - 0.8, y + 0.8, 0.95, 1.6, shade(color, 10), '#3b4a5a', '#2f3c4a', 0.4);
+  }
+  function lamp(x, y) {
+    const b = P(x, y, 0), t = P(x, y, 6.2), h = P(x + 0.9, y, 6.2);
+    return `<line x1="${f1(b[0])}" y1="${f1(b[1])}" x2="${f1(t[0])}" y2="${f1(t[1])}" stroke="#2b2b2e" stroke-width="1"/>` +
+      `<line x1="${f1(t[0])}" y1="${f1(t[1])}" x2="${f1(h[0])}" y2="${f1(h[1])}" stroke="#2b2b2e" stroke-width="1"/>` +
+      `<circle cx="${f1(h[0])}" cy="${f1(h[1] + 0.8)}" r="1.1" fill="#fff4cf" stroke="${INK}" stroke-width="0.4"/>`;
+  }
+  function flag(x, y, color, h = 9) {
+    const b = P(x, y, 0), t = P(x, y, h);
+    return `<line x1="${f1(b[0])}" y1="${f1(b[1])}" x2="${f1(t[0])}" y2="${f1(t[1])}" stroke="#d9d9d6" stroke-width="0.9"/>` +
+      poly([[x, y, h - 0.2], [x + 3.2, y, h - 0.5], [x + 3.2, y, h - 2.3], [x, y, h - 2]], color, 0.5);
+  }
+
+  // ---------------------------------------------------------------- disposition
+
+  /** Configuration de la salle à partir de sa capacité */
+  function arenaLayout(capacity) {
+    const c = Math.max(200, Math.min(15000, capacity));
+    const d = ROW_DEPTH, k = SEATS_PER_UNIT;
+    const mode = c <= 700 ? 'one' : c <= 2200 ? 'two' : 'bowl';
+    const longSeats = (i) => (mode === 'bowl' ? 2 * (16.5 + (i + 1) * d) : 2 * (14 + i * 0.3)) * k;
+    const shortSeats = (i) => 2 * (9.5 + i * d) * k;
+    let rows = 0, total = 0;
+    while (total < c && rows < 60) {
+      total += mode === 'one' ? longSeats(rows) : mode === 'two' ? 2 * longSeats(rows) : 2 * longSeats(rows) + 2 * shortSeats(rows);
+      rows++;
+    }
+    const D = 2 * Math.ceil(9.5 + rows * d + 2.5);
+    const W = 2 * Math.ceil(mode === 'bowl' ? 16.5 + rows * d + 2.5 : Math.max(20, 14 + rows * 0.3 + 4.5));
+    const H = Math.round(5.5 + rows * 0.42);
+    return { capacity: c, seats: Math.round(total), mode, rows, W, D, H, scoreboard: c >= 4000 };
+  }
+
+  // Ordre de dessin pour des objets en forme de boîte qui ne se chevauchent pas
+  function paintOrder(items) {
+    const n = items.length, after = items.map(() => []), indeg = new Array(n).fill(0);
+    const scr = items.map(({ x0, x1, y0, y1, z1 }) => {
+      const c = [P(x0, y1, 0), P(x1, y0, 0), P(x0, y0, z1), P(x1, y1, 0)];
+      return [Math.min(...c.map((q) => q[0])), Math.max(...c.map((q) => q[0])), Math.min(...c.map((q) => q[1])), Math.max(...c.map((q) => q[1]))];
+    });
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      const A = items[i], B = items[j], a = scr[i], b = scr[j];
+      if (a[1] <= b[0] || b[1] <= a[0] || a[3] <= b[2] || b[3] <= a[2]) continue;
+      const aB = A.x1 <= B.x0 + 1e-6 || A.y1 <= B.y0 + 1e-6, bA = B.x1 <= A.x0 + 1e-6 || B.y1 <= A.y0 + 1e-6;
+      if (aB && !bA) { after[i].push(j); indeg[j]++; } else if (bA && !aB) { after[j].push(i); indeg[i]++; }
+    }
+    const depth = (o) => o.x0 + o.x1 + o.y0 + o.y1;
+    const ready = [], out = [];
+    for (let i = 0; i < n; i++) if (!indeg[i]) ready.push(i);
+    while (ready.length) {
+      ready.sort((a, b) => depth(items[b]) - depth(items[a]));
+      const i = ready.pop(); out.push(items[i]);
+      for (const j of after[i]) if (!--indeg[j]) ready.push(j);
+    }
+    if (out.length < n) items.forEach((o) => { if (!out.includes(o)) out.push(o); });
+    return out;
+  }
+
+  // ---------------------------------------------------------------- terrain
+
+  function court(main, second, name) {
+    const z = 0.05, lines = '#fbf6ec';
+    let s = poly(rect(-16, 16, -9, 9, z), shade(main, -40), 0.7) + poly(rect(-14, 14, -7.5, 7.5, z), '#d9a35f', 0.7);
+    // lames de parquet : bandes légèrement contrastées
+    for (let y = -7.5, k = 0; y < 7.5; y += 1.25, k++) if (k % 2) s += flat(rect(-14, 14, y, Math.min(7.5, y + 1.25), z), '#d09a57');
+    for (let x = -12.6; x < 14; x += 2.8) s += line([[x, -7.5, z], [x, 7.5, z]], 'rgba(120,70,30,0.25)', 0.4);
+    s += flat(rect(-14, -8.2, -2.45, 2.45, z), main) + flat(rect(8.2, 14, -2.45, 2.45, z), main);
+    s += line([[-14, -7.5, z], [14, -7.5, z], [14, 7.5, z], [-14, 7.5, z], [-14, -7.5, z]], lines, 0.9) + line([[0, -7.5, z], [0, 7.5, z]], lines, 0.9);
+    for (const sd of [-1, 1]) {
+      const bx = sd * 14, c = sd * 12.43;
+      s += line([[bx, -2.45, z], [sd * 8.2, -2.45, z], [sd * 8.2, 2.45, z], [bx, 2.45, z]], lines, 0.9) +
+        line(sd < 0 ? arc(sd * 8.2, 0, 1.8, -Math.PI / 2, Math.PI / 2, 12) : arc(sd * 8.2, 0, 1.8, Math.PI / 2, Math.PI * 1.5, 12), lines, 0.9) +
+        line([[bx, -6.6, z], [c - sd * 1.5, -6.6, z]], lines, 0.9) + line([[bx, 6.6, z], [c - sd * 1.5, 6.6, z]], lines, 0.9) +
+        line(sd < 0 ? arc(c, 0, 6.75, -1.35, 1.35, 20) : arc(c, 0, 6.75, Math.PI - 1.35, Math.PI + 1.35, 20), lines, 0.9);
+      s += line([[sd * 15.2, 0, 0], [sd * 15.2, 0, 3.6], [sd * 13.3, 0, 3.6]], '#2b2b2e', 1.3) +
+        poly(faceX(sd * 13.3, -0.9, 0.9, 2.9, 4.1), '#f4f4f2', 0.6) +
+        line([[sd * 13.3, -0.3, 3.05], [sd * 13.3, 0.3, 3.05], [sd * 13.3, 0.3, 3.45], [sd * 13.3, -0.3, 3.45], [sd * 13.3, -0.3, 3.05]], '#e0662a', 0.5);
+      const r = P(c + sd * 0.3, 0, 3.05);
+      s += `<ellipse cx="${f1(r[0])}" cy="${f1(r[1])}" rx="1.7" ry="0.9" fill="none" stroke="#e0662a" stroke-width="1"/>`;
+    }
+    // logo central
+    s += flat(arc(0, 0, 2.4, 0, Math.PI * 2, 28, 0.06), main) + line(arc(0, 0, 2.4, 0, Math.PI * 2, 28, 0.06), lines, 0.9) +
+      line(arc(0, 0, 1.85, 0, Math.PI * 2, 28, 0.065), second, 0.6);
+    if (name) s += textOnFloor(0, 0, String(name).trim().charAt(0).toUpperCase(), 2.2, second);
+    return s;
+  }
+
+  // ---------------------------------------------------------------- rendu
+
+  /**
+   * options.teamColors : [couleur principale, couleur secondaire]
+   * options.attendance : remplissage des tribunes entre 0 et 1
+   * options.name       : nom du club (façade et rond central)
+   * options.aspect     : format du cadre, largeur / hauteur (défaut 1.9)
+   * options.seed       : variante du décor (arbres, voitures)
+   */
+  function generateArena(capacity, options = {}) {
+    const L = arenaLayout(capacity);
+    const { W, D, H } = L, n = L.rows, d = ROW_DEPTH;
+    const [main, second] = options.teamColors || ['#1d4fa8', '#ffffff'];
+    const attendance = Math.max(0, Math.min(1, options.attendance ?? 0));
+    const name = options.name ? String(options.name).toUpperCase().slice(0, 16) : '';
+    const aspect = options.aspect || 1.9;
+    const r = rng(options.seed ?? 11);
+    const rc = rng((options.seed ?? 11) * 131 + 17);
+
+    // ---- cadrage : le bâtiment et son parvis remplissent le rectangle
+    const frame = [];
+    for (const x of [-W / 2, W / 2]) for (const y of [-D / 2, D / 2]) for (const z of [0, H]) frame.push(P(x, y, z));
+    frame.push(P(-14, D / 2 + 14), P(14, D / 2 + 14), P(0, 0, H + (L.scoreboard ? 10 : 0)));
+    let minX = Math.min(...frame.map((q) => q[0])), maxX = Math.max(...frame.map((q) => q[0]));
+    let minY = Math.min(...frame.map((q) => q[1])), maxY = Math.max(...frame.map((q) => q[1]));
+    let vw = (maxX - minX) * 1.1, vh = (maxY - minY) * 1.12;
+    if (vw / vh < aspect) vw = vh * aspect; else vh = vw / aspect;
+    const vx = (minX + maxX) / 2 - vw / 2, vy = (minY + maxY) / 2 - vh / 2;
+    const inView = (x, y, pad = 30) => { const q = P(x, y, 0); return q[0] > vx - pad && q[0] < vx + vw + pad && q[1] > vy - pad && q[1] < vy + vh + pad * 2; };
+
+    // ---- zones du site
+    const px0 = W / 2 + 6, px1 = W / 2 + 30, py0 = -D / 2 - 6, py1 = D / 2 + 13;
+    const roadY = [-D / 2 - 17, -D / 2 - 9], roadX = [-W / 2 - 20, -W / 2 - 12];
+    const R = 140;
+    const id = `ar${++UID}`;
+    let s = `<defs>` +
+      `<radialGradient id="${id}l"><stop offset="0" stop-color="#fffbe8" stop-opacity="0.42"/><stop offset="0.6" stop-color="#fffbe8" stop-opacity="0.12"/><stop offset="1" stop-color="#fffbe8" stop-opacity="0"/></radialGradient>` +
+      `<radialGradient id="${id}w"><stop offset="0" stop-color="#ffd98a" stop-opacity="0.45"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>` +
+      `<radialGradient id="${id}v" cx="0.5" cy="0.45" r="0.75"><stop offset="0.55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.35"/></radialGradient>` +
+      `</defs>`;
+    s += `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="#6c9a45"/>`;
+    for (let x = -R, k = 0; x < R; x += 6, k++) if (k % 2) s += flat(rect(x, x + 6, -R, R), '#73a14b');
+    for (let i = 0; i < 45; i++) {
+      const x = (r() - 0.5) * (W + 110), y = (r() - 0.5) * (D + 110), q = P(x, y, 0), rr = 6 + r() * 14;
+      s += `<ellipse cx="${f1(q[0])}" cy="${f1(q[1])}" rx="${f1(rr * K)}" ry="${f1(rr * K * 0.55)}" fill="${r() < 0.5 ? '#5f8e3c' : '#7fae55'}" opacity="0.35"/>`;
+    }
+
+    // routes, trottoirs, passage piéton
+    s += flat(rect(-R, R, roadY[0] - 1.6, roadY[1] + 1.6), '#bdb8ab') + flat(rect(-R, R, roadY[0], roadY[1]), '#4a4d52') +
+      line([[-R, (roadY[0] + roadY[1]) / 2, 0.02], [R, (roadY[0] + roadY[1]) / 2, 0.02]], '#e8e4d8', 0.8, 'stroke-dasharray="5 5"');
+    s += flat(rect(roadX[0] - 1.6, roadX[1] + 1.6, -R, R), '#bdb8ab') + flat(rect(roadX[0], roadX[1], -R, R), '#4a4d52') +
+      line([[(roadX[0] + roadX[1]) / 2, roadY[1] + 1.6, 0.02], [(roadX[0] + roadX[1]) / 2, R, 0.02]], '#e8e4d8', 0.8, 'stroke-dasharray="5 5"') +
+      flat(rect(roadX[0], roadX[1], roadY[0], roadY[1]), '#4a4d52');
+    for (let x = roadX[0] + 0.6; x < roadX[1]; x += 1.4) s += flat(rect(x, x + 0.7, D / 2 + 17, D / 2 + 21, 0.02), '#e8e4d8');
+
+    // parking
+    s += poly(rect(px0, px1, py0, py1), '#55585d', 0.6);
+    const bays = [px0 + 0.5, px0 + 10.5, px0 + 15.5];
+    for (let y = py0 + 1; y <= py1 - 1; y += 2.6) for (const bx of bays) s += line([[bx, y, 0.02], [bx + 5, y, 0.02]], '#e8e4d8', 0.5);
+    s += line([[px0 + 15.5, py0 + 1, 0.02], [px0 + 15.5, py1 - 1, 0.02]], '#e8e4d8', 0.5);
+
+    // abords du bâtiment : trottoir, parvis pavé, allée
+    s += poly(rect(-W / 2 - 2.5, W / 2 + 2.5, -D / 2 - 2.5, D / 2 + 2.5), '#bdb8ab', 0.6) +
+      poly(rect(-15, 15, D / 2 + 2.5, D / 2 + 15), '#d3cec1', 0.6) + flat(rect(-3, 3, D / 2 + 15, R), '#d3cec1');
+    for (let x = -13; x < 15; x += 2) s += line([[x, D / 2 + 2.5, 0.02], [x, D / 2 + 15, 0.02]], '#c3beb1', 0.4);
+    for (let y = D / 2 + 4.5; y < D / 2 + 15; y += 2) s += line([[-15, y, 0.02], [15, y, 0.02]], '#c3beb1', 0.4);
+
+    // ---- décor : arbres, voitures, lampadaires
+    const decor = [];
+    for (let gx = -W / 2 - 60; gx <= W / 2 + 60; gx += 7) for (let gy = -D / 2 - 60; gy <= D / 2 + 60; gy += 7) {
+      const x = gx + (r() - 0.5) * 4, y = gy + (r() - 0.5) * 4, keep = r() < 0.55, size = 1.5 + r() * 1.1, hue = Math.floor(r() * 3);
+      if (!keep || !inView(x, y)) continue;
+      if (Math.abs(x) < W / 2 + 5 && Math.abs(y) < D / 2 + 5) continue;
+      if (y > roadY[0] - 3 && y < roadY[1] + 3) continue;
+      if (x > roadX[0] - 3 && x < roadX[1] + 3) continue;
+      if (x > px0 - 2 && x < px1 + 2 && y > py0 - 2 && y < py1 + 2) continue;
+      if (Math.abs(x) < 16 && y > D / 2 && y < D / 2 + 16) continue;
+      if (Math.abs(x) < 5 && y > D / 2) continue;
+      decor.push({ x, y, kind: 'tree', size, hue });
+    }
+    const carColors = ['#e8e6e1', '#2c2c30', '#3d5a8a', '#9a2a2a', '#c9c9c9', '#e8e6e1', '#5c6b3a'];
+    for (let y = py0 + 2.3; y < py1 - 1; y += 2.6) for (const bx of bays) {
+      if (r() < 0.62) decor.push({ x: bx + 2.5, y, kind: 'car', color: carColors[Math.floor(r() * carColors.length)] });
+    }
+    for (let y = py0 + 4; y < py1; y += 12) decor.push({ x: px0 + 8, y, kind: 'lamp' });
+    for (let x = -W / 2 - 4; x < W / 2 + 30; x += 14) decor.push({ x, y: roadY[1] + 2.2, kind: 'lamp' });
+    decor.push({ x: -11, y: D / 2 + 9, kind: 'tree', size: 2, hue: 1 }, { x: 11, y: D / 2 + 9, kind: 'tree', size: 2, hue: 1 });
+    const flags = [[-9, D / 2 + 13.5, main], [-6.5, D / 2 + 13.5, second], [6.5, D / 2 + 13.5, second], [9, D / 2 + 13.5, main]];
+    const behind = (o) => o.y < -D / 2 || o.x < -W / 2;
+    const drawDecor = (o) => (o.kind === 'tree' ? tree(o.x, o.y, o.size, o.hue) : o.kind === 'car' ? car(o.x, o.y, o.color) : lamp(o.x, o.y));
+    decor.sort((a, b) => a.x + a.y - (b.x + b.y));
+
+    // ombres portées au sol
+    const top = [[-W / 2, -D / 2], [W / 2, -D / 2], [W / 2, D / 2], [-W / 2, D / 2]];
+    const shadowPts = hull([...top, ...top.map(([x, y]) => [x + H * SHADOW[0], y + H * SHADOW[1]])]);
+    s += `<polygon points="${pts(shadowPts.map(([x, y]) => [x, y, 0]))}" fill="rgba(0,0,0,0.22)"/>`;
+    s += flat(rect(-W / 2, W / 2 + 1.4, D / 2, D / 2 + 1.4), 'rgba(0,0,0,0.16)') + flat(rect(W / 2, W / 2 + 1.4, -D / 2, D / 2), 'rgba(0,0,0,0.16)');
+    { const g = P(0, D / 2 + 5, 0); s += `<ellipse cx="${f1(g[0])}" cy="${f1(g[1])}" rx="${f1(14 * K)}" ry="${f1(8 * K)}" fill="url(#${id}w)"/>`; }
+    decor.filter((o) => o.kind === 'tree').forEach((o) => { s += treeShadow(o.x, o.y, o.size); });
+    decor.filter(behind).forEach((o) => { s += drawDecor(o); });
+
+    // ---- intérieur
+    const t = 1.2, xi0 = -W / 2 + t, xi1 = W / 2 - t, yi0 = -D / 2 + t, yi1 = D / 2 - t;
+    s += poly(rect(xi0, xi1, yi0, yi1), '#6f747c', 0.6);
+    for (let x = xi0 + 3; x < xi1; x += 3) s += line([[x, yi0, 0.02], [x, yi1, 0.02]], 'rgba(255,255,255,0.05)', 0.4);
+    s += poly(faceX(xi0, yi0, yi1, 0, H), '#a9a498', 0.6) + poly(faceY(xi0, xi1, yi0, 0, H), '#c2bdb1', 0.6);
+    s += poly(faceY(xi0 + 3, xi1 - 3, yi0, H - 2.6, H - 1), '#56708a', 0.5) + poly(faceX(xi0, yi0 + 3, yi1 - 3, H - 2.6, H - 1), '#4a6179', 0.5);
+    for (let x = xi0 + 5; x < xi1 - 3; x += 3) s += line([[x, yi0, H - 2.6], [x, yi0, H - 1]], INK, 0.35);
+    s += flat(faceY(xi0, xi1, yi0, H - 0.6, H - 0.1), main) + flat(faceX(xi0, yi0, yi1, H - 0.6, H - 0.1), shade(main, -20));
+    if (H >= 8) {
+      const nb = Math.min(6, Math.floor((xi1 - xi0) / 6)), step = (xi1 - xi0) / (nb + 1);
+      for (let b = 1; b <= nb; b++) {
+        const x = xi0 + b * step - 0.8, top = H - 1.3, bot = H - 1.3 - Math.min(4.2, H * 0.3);
+        s += poly([[x, yi0 + 0.05, top], [x + 1.6, yi0 + 0.05, top], [x + 1.6, yi0 + 0.05, bot], [x + 0.8, yi0 + 0.05, bot - 0.6], [x, yi0 + 0.05, bot]], b % 2 ? main : shade(main, -25), 0.4) +
+          line([[x + 0.2, yi0 + 0.06, top - 0.5], [x + 1.4, yi0 + 0.06, top - 0.5]], second, 0.5) +
+          line([[x + 0.2, yi0 + 0.06, bot + 0.6], [x + 1.4, yi0 + 0.06, bot + 0.6]], second, 0.5);
+      }
+    }
+    s += court(main, second, name);
+    { const c = P(0, 0, 0.1); s += `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(24 * K)}" ry="${f1(13 * K)}" fill="url(#${id}l)"/>`; }
+
+    // tribunes, panneaux publicitaires, bancs et table de marque, triés ensemble
+    const items = [];
+    const seatBase = luminance(main) > 0.8 ? shade(main, -60) : main;
+    const seats = [seatBase, shade(seatBase, -16)];
+    const aisle = '#9a9ea6';
+    const crowd = [main, second, main, '#e8e6e1', '#2c2c30', '#3d5a8a', '#9a2a2a', '#d9a35f', main];
+    const heads = ['#F0CBAE', '#D9A47C', '#A0663F', '#6B3E26', '#E6B894'];
+    const aisleX = [-9.5, 0, 9.5], aisleY = [0];
+    const row = (x0, x1, y0, y1, z, i, axis, inner) => items.push({
+      x0, x1, y0, y1, z1: z,
+      draw() {
+        const c = seats[i % 2];
+        let o = box(x0, x1, y0, y1, 0, z, c, shade(c, -38), shade(c, -52), 0.4);
+        const cuts = axis === 'x' ? aisleX.filter((a) => a > x0 + 1 && a < x1 - 1) : aisleY;
+        for (const a of cuts) o += axis === 'x' ? flat(rect(a - 0.45, a + 0.45, y0, y1, z), aisle) : flat(rect(x0, x1, a - 0.45, a + 0.45, z), aisle);
+        const edge = inner === 'y1' ? [[x0, y1, z], [x1, y1, z]] : inner === 'y0' ? [[x0, y0, z], [x1, y0, z]] : inner === 'x0' ? [[x0, y0, z], [x0, y1, z]] : [[x1, y0, z], [x1, y1, z]];
+        o += line(edge, shade(c, 45), 0.45);
+        if (attendance > 0) {
+          const len = axis === 'x' ? x1 - x0 : y1 - y0;
+          for (let u = 0.6; u < len; u += 1.15) {
+            const px = axis === 'x' ? x0 + u : (x0 + x1) / 2, py = axis === 'x' ? (y0 + y1) / 2 : y0 + u;
+            const along = axis === 'x' ? px : py;
+            if (cuts.some((a) => Math.abs(along - a) < 0.8) || rc() > attendance) continue;
+            const q = P(px, py, z + 0.35);
+            o += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="0.85" fill="${crowd[Math.floor(rc() * crowd.length)]}"/>` +
+              `<circle cx="${f1(q[0])}" cy="${f1(q[1] - 1)}" r="0.48" fill="${heads[Math.floor(rc() * heads.length)]}"/>`;
+          }
+        }
+        return o;
+      },
+    });
+    for (let i = 0; i < n; i++) {
+      const z = (i + 1) * ROW_HEIGHT, yIn = 9.5 + i * d, yOut = yIn + d;
+      const half = L.mode === 'bowl' ? 16.5 + (i + 1) * d : 14 + i * 0.3;
+      row(-half, half, -yOut, -yIn, z, i, 'x', 'y1');
+      if (L.mode !== 'one') row(-half, half, yIn, yOut, z, i, 'x', 'y0');
+      if (L.mode === 'bowl') {
+        const xIn = 16.5 + i * d;
+        row(xIn, xIn + d, -yIn, yIn, z, i, 'y', 'x0');
+        row(-xIn - d, -xIn, -yIn, yIn, z, i, 'y', 'x1');
+      }
+    }
+    const led = (x0, x1, y0, y1, faceColor) => items.push({
+      x0, x1, y0, y1, z1: 0.75,
+      draw() {
+        let o = box(x0, x1, y0, y1, 0, 0.75, '#1b1b1e', faceColor.y || '#1b1b1e', faceColor.x || '#141416', 0.4);
+        if (faceColor.y) for (let x = x0 + 1; x < x1 - 1; x += 3.2) o += line([[x, y1, 0.37], [x + 1.6, y1, 0.37]], second, 0.5);
+        if (faceColor.x) for (let y = y0 + 1; y < y1 - 1; y += 3.2) o += line([[x1, y, 0.37], [x1, y + 1.6, 0.37]], second, 0.5);
+        return o;
+      },
+    });
+    led(-14.5, 14.5, -9.35, -9.0, { y: main });
+    if (L.mode !== 'one') led(-14.5, 14.5, 9.0, 9.35, {});
+    if (L.mode === 'bowl') { led(-16.35, -16.0, -7, 7, { x: main }); led(16.0, 16.35, -7, 7, {}); }
+    const bench = (x0, x1) => items.push({ x0, x1, y0: 7.9, y1: 8.6, z1: 0.5, draw: () => box(x0, x1, 7.9, 8.6, 0, 0.5, shade(main, 20), main, shade(main, -25), 0.4) });
+    bench(-10, -4); bench(4, 10);
+    items.push({ x0: -2.8, x1: 2.8, y0: -8.75, y1: -8.1, z1: 0.8, draw: () => box(-2.8, 2.8, -8.75, -8.1, 0, 0.8, '#f0efec', main, shade(main, -25), 0.4) });
+    for (const o of paintOrder(items)) s += o.draw();
+
+    // toiture en anneau : côtés du fond (les côtés avant sont dessinés après les façades)
+    const ring = L.mode === 'bowl' ? 3.6 : 2.6, roof = '#9b968a', roofEdge = '#c4bfb2';
+    const spots = (a) => a.map(([x, y]) => { const q = P(x, y, H - 0.25); return `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="2.2" fill="#fff6d6" opacity="0.22"/><circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="0.8" fill="#fffbe8"/>`; }).join('');
+    s += poly(rect(-W / 2, W / 2, -D / 2, -D / 2 + ring, H), roof, 0.6) + poly(rect(-W / 2, -W / 2 + ring, -D / 2 + ring, D / 2, H), roof, 0.6) +
+      line([[-W / 2 + ring, D / 2 - ring, H], [-W / 2 + ring, -D / 2 + ring, H], [W / 2 - ring, -D / 2 + ring, H]], roofEdge, 0.7);
+    const spotsBack = [];
+    for (let x = -W / 2 + ring + 2; x < W / 2 - ring; x += 4.5) spotsBack.push([x, -D / 2 + ring]);
+    for (let y = -D / 2 + ring + 4; y < D / 2 - ring; y += 4.5) spotsBack.push([-W / 2 + ring, y]);
+    s += spots(spotsBack);
+
+    // écran géant
+    if (L.scoreboard) {
+      const e = 2 + n * 0.06, h = 2.2 + n * 0.05, z0 = H + 1;
+      s += box(-e, e, -e, e, z0, z0 + h + 0.8, '#2b2b2e', '#1d1d20', '#141416', 0.6) +
+        poly(faceY(-e + 0.3, e - 0.3, e, z0 + 0.4, z0 + h + 0.4), '#6fa6d6', 0.5) + poly(faceX(e, -e + 0.3, e - 0.3, z0 + 0.4, z0 + h + 0.4), '#5c8fbd', 0.5) +
+        flat(faceY(-e + 0.3, e - 0.3, e, z0 + h * 0.55, z0 + h + 0.4), 'rgba(255,255,255,0.18)') +
+        poly(rect(-e * 0.7, e * 0.7, -e * 0.7, e * 0.7, z0 + h + 0.8), main, 0.5);
+    }
+
+    // ---- façades
+    const wallF = '#d8d2c5', wallS = '#b5afa1';
+    s += poly(faceX(W / 2, -D / 2, D / 2, 0, H), wallS, 0.9) + poly(faceY(-W / 2, W / 2, D / 2, 0, H), wallF, 0.9);
+    for (let y = -D / 2 + 3; y < D / 2; y += 3) s += line([[W / 2, y, 0.9], [W / 2, y, H - 0.4]], '#a39d90', 0.45);
+    for (let x = -W / 2 + 3; x < W / 2; x += 3) s += line([[x, D / 2, 0.9], [x, D / 2, H - 0.4]], '#c9c3b6', 0.45);
+    s += flat(faceX(W / 2, -D / 2, D / 2, 0, 0.9), '#8f8a7e') + flat(faceY(-W / 2, W / 2, D / 2, 0, 0.9), '#a39d90');
+    // bandeau vitré latéral
+    s += poly(faceX(W / 2, -D / 2 + 2, D / 2 - 2, H - 3.4, H - 1.4), '#4f6a82', 0.5);
+    for (let y = -D / 2 + 4; y < D / 2 - 2; y += 2.5) s += line([[W / 2, y, H - 3.4], [W / 2, y, H - 1.4]], INK, 0.35);
+    // mur-rideau vitré en façade avec reflets
+    const gx = Math.min(15, W / 2 - 3), g0 = 0.9, g1 = H - 1.2;
+    s += poly(faceY(-gx, gx, D / 2, g0, g1), '#5f7f98', 0.7);
+    s += flat([[-gx + 2, D / 2, g0], [-gx + 7, D / 2, g0], [-gx + 13, D / 2, g1], [-gx + 8, D / 2, g1]], 'rgba(255,255,255,0.16)') +
+      flat([[-gx + 10, D / 2, g0], [-gx + 12, D / 2, g0], [-gx + 18, D / 2, g1], [-gx + 16, D / 2, g1]], 'rgba(255,255,255,0.1)');
+    for (let x = -gx + 2; x < gx; x += 2) s += line([[x, D / 2, g0], [x, D / 2, g1]], '#2c3a46', 0.4);
+    for (let z = g0 + 2.4; z < g1; z += 2.4) s += line([[-gx, D / 2, z], [gx, D / 2, z]], '#2c3a46', 0.4);
+    if (name) s += textOnFaceY(0, D / 2 + 0.05, g1 - 0.4, name, Math.min(2.2, 1.3 + H * 0.06), '#ffffff', gx * 1.7);
+    // bandeau aux couleurs du club et couronnement
+    s += flat(faceY(-W / 2, W / 2, D / 2, H - 0.7, H - 0.1), main) + flat(faceX(W / 2, -D / 2, D / 2, H - 0.7, H - 0.1), shade(main, -22));
+    s += poly(rect(W / 2 - ring, W / 2, -D / 2, D / 2, H), roof, 0.6) + poly(rect(-W / 2, W / 2 - ring, D / 2 - ring, D / 2, H), roof, 0.6) +
+      line([[-W / 2 + ring, D / 2 - ring, H], [W / 2 - ring, D / 2 - ring, H], [W / 2 - ring, -D / 2 + ring, H]], roofEdge, 0.7) +
+      line([[-W / 2, D / 2, H], [W / 2, D / 2, H], [W / 2, -D / 2, H]], '#e3dfd4', 0.6);
+    const spotsFront = [];
+    for (let x = -W / 2 + ring + 2; x < W / 2 - ring; x += 4.5) spotsFront.push([x, D / 2 - ring]);
+    for (let y = -D / 2 + ring + 2; y < D / 2 - ring; y += 4.5) spotsFront.push([W / 2 - ring, y]);
+    s += spots(spotsFront);
+
+    // entrée : auvent sur poteaux, portes
+    s += poly(faceY(-4.5, 4.5, D / 2, 0, 2.8), '#f0d49a', 0.6) + flat(faceY(-4.5, 4.5, D / 2, 1.9, 2.8), '#e2bd78');
+    for (let x = -3; x < 4.5; x += 1.5) s += line([[x, D / 2, 0], [x, D / 2, 2.8]], '#6b5634', 0.45);
+    for (const x of [-7.6, 7.6]) s += line([[x, D / 2 + 3.7, 0], [x, D / 2 + 3.7, 3.4]], '#2b2b2e', 1.1);
+    s += box(-8.2, 8.2, D / 2, D / 2 + 4.2, 3.4, 4, '#3a3a3e', main, shade(main, -25), 0.7);
+
+    // ---- premier plan : haies, jardinières, drapeaux
+    const hedge = (x0, x1, y0, y1) => box(x0, x1, y0, y1, 0, 0.9, '#4a8238', '#376e2f', '#2f5f28', 0.5);
+    s += hedge(-W / 2, -16.5, D / 2 + 3, D / 2 + 4) + hedge(16.5, W / 2 + 2.5, D / 2 + 3, D / 2 + 4) + hedge(px0 - 2.6, px0 - 1.6, py0, D / 2 + 2);
+    for (const sx of [-1, 1]) {
+      const cx = sx * 11, cy = D / 2 + 9;
+      s += box(cx - 1.8, cx + 1.8, cy - 1.8, cy + 1.8, 0, 0.6, '#5a3d25', '#a39d90', '#8f8a7e', 0.5);
+      const fr = rng(cx * 7 + 3);
+      for (let i = 0; i < 14; i++) {
+        const q = P(cx + (fr() - 0.5) * 3, cy + (fr() - 0.5) * 3, 0.65);
+        s += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="0.7" fill="${['#e6603f', '#f2c14e', '#f4f1ea', '#d4537e'][i % 4]}"/>`;
+      }
+    }
+    flags.forEach(([x, y, c]) => { s += flag(x, y, c); });
+    decor.filter((o) => !behind(o)).forEach((o) => { s += drawDecor(o); });
+    s += `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="rgba(255,196,130,0.06)"/>` +
+      `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="url(#${id}v)"/>`;
+
+    return `<svg viewBox="${f1(vx)} ${f1(vy)} ${f1(vw)} ${f1(vh)}" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Salle de ${L.capacity} places">${s}</svg>`;
+  }
+
+  return { arenaLayout, generateArena };
+})();
+
+// Capacite "visuelle" passee a ArenaGen.generateArena, distincte de la
+// capacite REELLE affichee a l'ecran (toujours info.capacity, jamais celle-
+// ci ni l'aria-label interne du SVG, voir renderSalleSection). Necessaire
+// car ArenaGen clampe en interne a 15000 places (arenaLayout ci-dessus) alors
+// que les salles du jeu vont jusqu'a 45000 (ARENA_LEVELS, palier 8) : sans
+// remise a l'echelle, les 4 derniers paliers (17000 a 45000) donneraient tous
+// exactement le meme dessin, a l'oppose du retour utilisateur qui demandait
+// justement une taille differente "en fonction du nombre de places".
+// Correctif (retour utilisateur, 2026-09 : "quand j'agrandis la salle, je
+// n'ai pas l'impression que la salle change") : une premiere version
+// etalait la capacite REELLE [5000, 45000] lineairement sur [5000, 15000] -
+// mais les 3 premiers paliers d'ARENA_LEVELS sont tres serres en valeur
+// reelle (5000/8000/12000, contre 17000..45000 pour les 5 suivants), donc
+// une fois etires lineairement ils restaient eux aussi tres proches en
+// visuel (5000/5750/6750) : a peine une rangee de gradins d'ecart d'un
+// palier a l'autre, quasi invisible a l'ecran. On repartit desormais par
+// RANG du palier (0 a 7 sur les 8 d'ARENA_LEVELS), a intervalles EGAUX sur
+// [2500, 15000] (mini abaisse pour laisser plus de marge) plutot que par
+// capacite reelle : chaque agrandissement produit ainsi un saut de taille
+// comparable et bien visible, du premier au dernier palier (toujours
+// croissant avec la capacite reelle, jamais l'inverse, seule l'ESPACEMENT
+// entre paliers change). `idx` non trouve (capacite hors table, ne devrait
+// pas arriver en pratique, info.capacity vient toujours d'arenaInfo) :
+// repli sur l'ancienne interpolation par valeur, pure securite.
+function arenaVisualCapacity(realCapacity) {
+  const MIN_VISUAL = 2500, MAX_VISUAL = 15000;
+  const idx = ARENA_LEVELS.findIndex(a => a.capacity === realCapacity);
+  const steps = ARENA_LEVELS.length - 1;
+  const t = idx >= 0
+    ? idx / steps
+    : Math.max(0, Math.min(1, (realCapacity - ARENA_LEVELS[0].capacity) / (ARENA_LEVELS[steps].capacity - ARENA_LEVELS[0].capacity)));
+  return Math.round(MIN_VISUAL + t * (MAX_VISUAL - MIN_VISUAL));
+}
+
 // Couleur de maillot extérieur par défaut (voir engine.js pour le
 // commentaire détaillé, miroir identique).
 function jerseyColorLuminance(colorKey) {
@@ -4347,6 +5614,36 @@ class Player {
       this.potential = clamp(Math.round(this.overall() + rand(lo, hi)), 1, 99);
     }
 
+    // Potentiels PHYSIQUE et MENTAL (retour utilisateur, 2026-09 : "le
+    // physique ne bouge qu'un peu au cours de la carrière du joueur, alors
+    // que le mental peut bien évoluer et progresse durant toute la carrière
+    // du joueur", voir le grand commentaire au-dessus de PHYSICAL_ATTRS/
+    // MENTAL_ATTRS) : même principe que le potentiel global ci-dessus
+    // (valeur ACTUELLE + marge selon l'âge, voir physicalPotentialHeadroom/
+    // mentalPotentialHeadroom), mais un plafond PAR CARACTÉRISTIQUE plutôt
+    // qu'un seul chiffre global — la progression naturelle hebdomadaire de
+    // chaque caractéristique physique/mentale (voir Player.trainWeek) vise
+    // son propre plafond ici, indépendamment des autres. Recalculés à
+    // chaque construction (génération OU rechargement de sauvegarde), sauf
+    // écrasement explicite par playerFromSave juste après si une valeur
+    // sauvegardée existe déjà (mêmes raisons que Player.potential : sinon
+    // ça se recalculerait au hasard à chaque rechargement, et un joueur déjà
+    // entraîné directement sur ces caractéristiques avant ce changement de
+    // règle garde ici un plafond dérivé de SA valeur actuelle, jamais une
+    // réinitialisation). Copie mirroir EXACTE de engine.js.
+    {
+      const [plo, phi] = physicalPotentialHeadroom(this.age);
+      this.physicalPotential = {};
+      PHYSICAL_ATTRS.forEach(a => {
+        this.physicalPotential[a] = clamp(Math.round((this.attrs[a] || 50) + rand(plo, phi)), 1, 99);
+      });
+      const [mlo, mhi] = mentalPotentialHeadroom(this.age);
+      this.mentalPotential = {};
+      MENTAL_ATTRS.forEach(a => {
+        this.mentalPotential[a] = clamp(Math.round((this.attrs[a] || 25) + rand(mlo, mhi)), 1, 99);
+      });
+    }
+
     // Salaire hebdomadaire — voir salaryForOverall (grille salariale) :
     // dépend du niveau ACTUEL du joueur au poste où ses caractéristiques le
     // valorisent le mieux (voir levelCoefficientFor), pas d'une simple
@@ -4459,8 +5756,31 @@ class Player {
     const gains = [];
     const growth = growthFactorForAge(this.age);
     const decline = declineFactorForAge(this.age);
+    const physGrowth = physicalGrowthFactorForAge(this.age);
+    const physDecline = physicalDeclineFactorForAge(this.age);
+    const mentGrowth = mentalGrowthFactorForAge(this.age);
 
-    ATTRS.forEach(a => {
+    // Matérialise un delta fractionnaire sur une caractéristique, factorisé
+    // ici, partagé par les 3 catégories ci-dessous (avant : dupliqué dans la
+    // seule boucle ATTRS.forEach d'origine). Copie mirroir EXACTE de engine.js.
+    const applyDelta = (a, before, delta) => {
+      this._trainProgress[a] = (this._trainProgress[a] || 0) + delta;
+      const whole = Math.trunc(this._trainProgress[a]);
+      if (whole !== 0) {
+        this._trainProgress[a] -= whole;
+        const after = clamp(before + whole, 1, 99);
+        if (after !== before) {
+          gains.push({ attr: a, before, after });
+        }
+        this.attrs[a] = after;
+      }
+    };
+
+    // Fondamentaux : SEULE catégorie entraînable directement (voir
+    // TRAINING_PROGRAMS, désormais restreint aux 13 fondamentaux) — logique
+    // de progression/déclin INCHANGÉE, juste restreinte à FUNDAMENTAL_ATTRS
+    // au lieu de la totalité d'ATTRS.
+    FUNDAMENTAL_ATTRS.forEach(a => {
       const before = this.attrs[a];
       const weight = clamp((attrWeights && attrWeights[a]) || 0, 0, 2);
       let delta = 0;
@@ -4511,20 +5831,95 @@ class Player {
         const declineReduction = weight > 0 ? clamp(1 - 0.6 * Math.min(weight, 1), 0.2, 1) : 1;
         delta -= decline * rand(0.3, 1.0) * declineReduction;
       }
-
-      // On accumule le delta fractionnaire ; on ne touche à l'attribut affiché
-      // qu'une fois qu'un point entier s'est accumulé (dans un sens ou l'autre).
-      this._trainProgress[a] = (this._trainProgress[a] || 0) + delta;
-      const whole = Math.trunc(this._trainProgress[a]);
-      if (whole !== 0) {
-        this._trainProgress[a] -= whole;
-        const after = clamp(before + whole, 1, 99);
-        if (after !== before) {
-          gains.push({ attr: a, before, after });
-        }
-        this.attrs[a] = after;
-      }
+      applyDelta(a, before, delta);
     });
+
+    // Physique : progression NATURELLE seule (indépendante de attrWeights,
+    // donc de l'entraînement des fondamentaux choisi cette semaine, retiré
+    // de TRAINING_PROGRAMS), vise physicalPotential[a] jusqu'à maturité
+    // (~27/28 ans, physicalGrowthFactorForAge), puis décline à partir de 34
+    // ans (physicalDeclineFactorForAge). PLUS un tout petit supplément de
+    // synergie : si une caractéristique fondamentale liée à celle-ci a été
+    // entraînée cette semaine (voir TRAINING_SYNERGY plus haut, qui reprend
+    // déjà ces associations, ex. "Jeu intérieur" → Force), `attrWeights[a]`
+    // porte alors le poids dilué de cette synergie (voir Team.trainWeek) —
+    // un simple supplément, jamais un second levier d'entraînement à part
+    // entière (coefficient volontairement petit, 0.04, face à progressRoom
+    // ~0.10-1.1 du terme naturel juste au-dessus). Comme le terme naturel,
+    // actif seulement tant que le joueur progresse encore physiquement
+    // (physGrowth > 0, jamais après le début du déclin à 34 ans). Copie
+    // mirroir EXACTE de engine.js.
+    PHYSICAL_ATTRS.forEach(a => {
+      const before = this.attrs[a];
+      let delta = 0;
+      const ceiling = (this.physicalPotential && this.physicalPotential[a]) || before;
+      // `crossWeight` : un attribut Physique n'est plus JAMAIS entraîné
+      // directement (retiré de TRAINING_PROGRAMS), donc tout poids non-nul
+      // ici vient forcément de TRAINING_SYNERGY (voir Team.trainWeek). Même
+      // correction que pour les fondamentaux de synergie ci-dessus (roomScale
+      // au prorata du poids) : SANS ça, un attribut Physique très en retard
+      // sur son propre plafond peut rattraper plus vite, cette semaine-là,
+      // que le fondamental réellement entraîné — exactement le bug corrigé
+      // plus haut (voir synergy_training_test.js, désormais aussi couvert
+      // pour le cas fondamental → synergie physique). Quand crossWeight est
+      // nul (aucune synergie active cette semaine sur cet attribut précis),
+      // la progression naturelle reste intégrale (roomScale = 1) : le
+      // Physique continue bien d'évoluer tout seul, indépendamment de ce qui
+      // est entraîné, comme voulu. `crossWeight²` (et non simplement
+      // `crossWeight`) : la marge de synergie du fondamental (poids déjà
+      // dilué ×0.4, voir TRAINING_SYNERGY) reste petite, mais un fondamental
+      // synergique peut partir d'un très gros écart à son propre plafond
+      // (potential + 12) tout comme un attribut Physique peut partir d'un
+      // gros écart à SON plafond (physicalPotential) — la seule dilution
+      // ×poids ne suffit alors pas à garder le fondamental réellement
+      // entraîné devant (constaté par synergy_training_test.js) ; au carré,
+      // la marge de rattrapage synergique reste toujours structurellement
+      // plus lente, quel que soit l'écart de départ des deux côtés.
+      const crossWeight = clamp((attrWeights && attrWeights[a]) || 0, 0, 1);
+      if (physGrowth > 0) {
+        const gap = ceiling - before;
+        const beyondCeilingMult = gap > 0 ? 1 : 0.12;
+        const roomScale = crossWeight > 0 ? crossWeight * crossWeight : 1;
+        const progressRoom = (Math.max(gap, 0) / 20 + 0.10) * roomScale;
+        delta += physGrowth * progressRoom * beyondCeilingMult * rand(0.5, 1.3);
+        if (crossWeight > 0) {
+          delta += physGrowth * crossWeight * 0.04 * rand(0.5, 1.3);
+        }
+      }
+      if (physDecline > 0) {
+        delta -= physDecline * rand(0.3, 1.0);
+      }
+      applyDelta(a, before, delta);
+    });
+
+    // Mental : même principe que le Physique ci-dessus (progression
+    // NATURELLE + petit supplément de synergie, voir TRAINING_SYNERGY), vise
+    // mentalPotential[a], ralentit avec l'âge (mentalGrowthFactorForAge)
+    // mais NE DÉCLINE JAMAIS (aucun terme négatif ici, volontairement —
+    // retour utilisateur : "le mental peut bien évoluer et progresse durant
+    // toute la carrière du joueur"). Coefficient de synergie (0.03) encore
+    // un peu plus petit que celui du Physique (0.04) : le Mental progresse
+    // déjà plus lentement par nature (`progressRoom` vise un écart deux fois
+    // plus large, /25 contre /20). Copie mirroir EXACTE de engine.js.
+    MENTAL_ATTRS.forEach(a => {
+      const before = this.attrs[a];
+      const ceiling = (this.mentalPotential && this.mentalPotential[a]) || before;
+      const gap = ceiling - before;
+      const beyondCeilingMult = gap > 0 ? 1 : 0.15;
+      // Même correction roomScale que pour le Physique juste au-dessus (voir
+      // son commentaire, y compris le choix de `crossWeight²`) : un attribut
+      // Mental n'est lui non plus jamais entraîné directement, tout poids
+      // ici vient de TRAINING_SYNERGY.
+      const crossWeight = clamp((attrWeights && attrWeights[a]) || 0, 0, 1);
+      const roomScale = crossWeight > 0 ? crossWeight * crossWeight : 1;
+      const progressRoom = (Math.max(gap, 0) / 25 + 0.08) * roomScale;
+      let delta = mentGrowth * progressRoom * beyondCeilingMult * rand(0.5, 1.3);
+      if (crossWeight > 0 && mentGrowth > 0) {
+        delta += mentGrowth * crossWeight * 0.03 * rand(0.5, 1.3);
+      }
+      applyDelta(a, before, delta);
+    });
+
     return gains;
   }
 
@@ -8816,6 +10211,15 @@ function serializePlayerRecord(p) {
   return {
     name: p.name, position: p.position, height: p.height, age: p.age,
     attrs: { ...p.attrs }, potential: p.potential, salary: p.salary,
+    // Plafonds physique/mental, caractéristique par caractéristique (voir
+    // Player.physicalPotential/mentalPotential, retour utilisateur 2026-09 :
+    // "le physique ne bouge qu'un peu [...] le mental peut bien évoluer") :
+    // fixés une fois pour toutes à la génération, comme `potential`
+    // ci-dessus, DOIVENT survivre au rechargement, sinon la progression
+    // naturelle hebdomadaire (Player.trainWeek) viserait un plafond redéfini
+    // au hasard à chaque chargement de la sauvegarde. Copie mirroir EXACTE
+    // de engine.js.
+    physicalPotential: { ...p.physicalPotential }, mentalPotential: { ...p.mentalPotential },
     // `effectivePosition` (voir Player.constructor/levelCoefficientFor) :
     // DOIT être sauvegardé au même rythme que `salary` juste au-dessus
     // (retour utilisateur, 2026-09 : "le poste est fixé en début de saison
@@ -9101,6 +10505,19 @@ function playerFromSave(pdata) {
   // écrase celui généré par défaut avec celui sauvegardé (sinon il serait
   // recalculé aléatoirement à chaque chargement, ce qui n'aurait aucun sens).
   p.potential = typeof pdata.potential === "number" ? pdata.potential : p.potential;
+  // Plafonds physique/mental sauvegardés (voir serializePlayerRecord) :
+  // restaurés APRÈS les migrations ci-dessus, pour qu'ils écrasent les
+  // valeurs par défaut fraîchement (re)calculées par le constructeur — sinon
+  // un plafond déjà fixé lors d'un chargement précédent serait redéfini au
+  // hasard à chaque nouveau chargement (même raison que `potential`
+  // ci-dessus). Absent (sauvegarde d'avant ce changement de règle, 2026-09) :
+  // on garde le plafond fraîchement calculé par le constructeur, dérivé de
+  // la valeur ACTUELLE de chaque caractéristique physique/mentale — jamais
+  // une réinitialisation, un joueur déjà entraîné directement dessus avant
+  // ce changement garde donc une marge de progression cohérente avec son
+  // niveau déjà atteint. Copie mirroir EXACTE de engine.js.
+  if (pdata.physicalPotential) p.physicalPotential = { ...p.physicalPotential, ...pdata.physicalPotential };
+  if (pdata.mentalPotential) p.mentalPotential = { ...p.mentalPotential, ...pdata.mentalPotential };
   // Le salaire n'est recalculé qu'au passage d'une saison (voir
   // Team.recalculateSalaries) : on restaure la valeur sauvegardée plutôt que
   // de le laisser se recalculer d'après les attributs ACTUELS à chaque
@@ -10622,6 +12039,36 @@ function attrCellHtml(value) {
   return `<div class="attr-cell ${tier}"><span class="attr-val">${value}</span><div class="attr-bar-track"><div class="attr-bar-fill" style="width:${pct}%"></div></div></div>`;
 }
 
+// PHYSICAL_ATTRS/MENTAL_ATTRS/FUNDAMENTAL_ATTRS : déclarées plus haut, juste
+// après TRAINING_LABELS (copie mirroir engine.js) — à l'origine un simple
+// regroupement VISUEL pour les tableaux denses de l'Effectif ci-dessous
+// (retour utilisateur, 2026-09 : "sur les tableaux récap [...] mental et
+// physique sur 2 colonnes, on fait une moyenne"), ce regroupement sert
+// désormais AUSSI à Player.trainWeek (retour utilisateur suivant : "ça ne
+// doit entrainer que les fondamentaux") — d'où leur remontée plus haut dans
+// le fichier, avant la classe Player qui en a besoin.
+//
+// Moyenne Physique/Mental pour les tableaux denses "Caractéristiques" de
+// l'Effectif (voir renderEffectifSection/teamDetailEffectifHtml plus bas).
+// `revealedSet` : `null` pour son propre effectif ou un joueur sur le marché
+// (toujours exact, comme attrCellHtml) ; un Set de noms de caractéristiques
+// RÉVÉLÉES (voir Team.scoutedAttrs, révélation attribut par attribut, pas
+// par catégorie) pour un adversaire scouté partiellement. La moyenne ne
+// porte alors que sur les caractéristiques de la catégorie déjà révélées ;
+// si aucune ne l'est encore, la cellule reste verrouillée comme avant.
+function categoryAverageCellHtml(player, categoryAttrs, revealedSet) {
+  const attrsToAverage = revealedSet ? categoryAttrs.filter(a => revealedSet.has(a)) : categoryAttrs;
+  if (revealedSet && attrsToAverage.length === 0) {
+    return `<div class="attr-cell attr-locked" title="Non révélé, faites une séance vidéo pour débloquer cette catégorie"></div>`;
+  }
+  const avg = Math.round(attrsToAverage.reduce((s, a) => s + player.attrs[a], 0) / attrsToAverage.length);
+  const cell = attrCellHtml(avg);
+  if (revealedSet && attrsToAverage.length < categoryAttrs.length) {
+    return cell.replace("class=\"attr-cell", `title="Moyenne calculée sur ${attrsToAverage.length}/${categoryAttrs.length} caractéristiques révélées" class="attr-cell`);
+  }
+  return cell;
+}
+
 // Rôle dans la feuille de match ACTUELLE (retour utilisateur, 2026-09,
 // nouvelle fiche joueur façon "Adama Kovac") : purement dérivé de
 // Team.lineup (voir starterPosition/lineup.backupPositions), aucune
@@ -11893,8 +13340,8 @@ async function initGame() {
 // EN LIGUE PARTAGÉE (managerToken posé) : ne fait plus RIEN localement
 // (retour utilisateur Discord, 2026-09 : "Cette enchère est déjà terminée"
 // en cliquant Enchérir sur une annonce affichée avec un temps restant
-// pourtant positif). Cause trouvée : \`uid()\` (voir engine.js, \`let __uid =
-// 1\`) repart de 1 à CHAQUE chargement de page, un compteur purement LOCAL au
+// pourtant positif). Cause trouvée : `uid()` (voir engine.js, `let __uid =
+// 1`) repart de 1 à CHAQUE chargement de page, un compteur purement LOCAL au
 // navigateur, totalement déconnecté de celui du serveur (qui, lui, continue
 // depuis longtemps dans une ligue avec de l'historique). Si ce
 // rafraîchissement LOCAL générait un nouveau candidat (marché tombé sous son
@@ -11902,7 +13349,7 @@ async function initGame() {
 // serveur n'ait eu l'occasion de le faire lui-même), l'id tout petit obtenu
 // (1, 2, 3...) pouvait entrer en collision avec l'id d'une tout autre entité
 // déjà chargée (ex. une ancienne annonce déjà résolue/fermée) :
-// \`Array.prototype.find\` renvoie alors le PREMIER élément qui matche,
+// `Array.prototype.find` renvoie alors le PREMIER élément qui matche,
 // potentiellement cette entité fermée, même si l'annonce affichée à l'écran
 // (filtrée sur "open") est bien la bonne. Le serveur exécute déjà cette même
 // méthode à CHAQUE requête GET /api/state (voir server/autoSim.js:
@@ -11921,7 +13368,7 @@ function refreshTransferMarket() {
 // sauvegarde le résultat — même cadence que refreshTransferMarket ci-dessus
 // (chargement de la page, ouverture de l'onglet Staff), plus l'ouverture de
 // l'onglet Staff spécifiquement (voir TAB_HANDLERS.staff). Même garde
-// \`managerToken\` que refreshTransferMarket ci-dessus, pour la même raison
+// `managerToken` que refreshTransferMarket ci-dessus, pour la même raison
 // (voir son commentaire) : c'est d'ailleurs très exactement ce marché-ci qui
 // a révélé le problème (candidats entraîneurs).
 function refreshCoachMarket() {
@@ -11932,7 +13379,7 @@ function refreshCoachMarket() {
 
 // Fait vivre le marché des analystes vidéo (voir League.refreshAnalystMarket)
 // et sauvegarde le résultat — même cadence/mêmes points d'appel que
-// refreshCoachMarket ci-dessus. Même garde \`managerToken\` (voir le
+// refreshCoachMarket ci-dessus. Même garde `managerToken` (voir le
 // commentaire de refreshTransferMarket) : même mécanique de marché, même
 // risque de collision d'id.
 function refreshAnalystMarket() {
@@ -11944,7 +13391,7 @@ function refreshAnalystMarket() {
 // Fait vivre le marché des recruteurs (voir League.refreshRecruiterMarket)
 // et sauvegarde le résultat — même cadence/mêmes points d'appel que
 // refreshCoachMarket/refreshAnalystMarket ci-dessus. Même garde
-// \`managerToken\` (voir le commentaire de refreshTransferMarket) : même
+// `managerToken` (voir le commentaire de refreshTransferMarket) : même
 // mécanique de marché, même risque de collision d'id.
 function refreshRecruiterMarket() {
   if (!league || managerToken) return;
@@ -13621,10 +15068,12 @@ function renderLeagueStatsPanel() {
     // Simplement absent pour un match encore en direct au moment du rendu
     // (mvpQuote pas encore élu côté serveur), auquel cas ce paragraphe est
     // omis comme là-bas.
-    html += `<div class="mvp-callout"><h4>MVP de la journée ${e.round + 1}</h4>` +
+    html += `<div class="mvp-callout" style="display:flex;align-items:flex-start;gap:10px"><div>` +
+      playerAvatarHtml(mvp.player, mvp.team, 40) +
+      `</div><div><h4>MVP de la journée ${e.round + 1}</h4>` +
       `<p><b>${playerLinkHtml(mvp.teamIdx, mvp.player.id, mvp.player.name)}</b> (${escapeHtml(mvp.team.name)}) : ${bits.join(", ")}</p>` +
       (e.mvpQuote ? `<p class="sub">« ${escapeHtml(e.mvpQuote)} »</p>` : "") +
-      `</div>`;
+      `</div></div>`;
   } else {
     html += `<div class="mvp-callout"><h4>MVP de la dernière journée</h4>` +
       `<p class="sub">Aucune journée de championnat jouée pour l'instant.</p></div>`;
@@ -13886,8 +15335,17 @@ function renderPlayerDetail(teamIdx, playerId) {
   const revealedSet = (isOwnTeam || onMarket) ? null : new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
   const visibleAttrs = ATTRS.filter(a => isOwnTeam || onMarket || revealedSet.has(a));
 
-  let html = `<p class="training-intro">${escapeHtml(team.name)} · ${POS_SHORT[player.position]} · ${player.height} cm · ${player.age} ans` +
-    (isOwnTeam ? ` · ${formatMoney(player.salary)}/sem.` : "") + `</p>`;
+  // Avatar (retour utilisateur, 2026-09 : "intègre les avatars sur les pages
+  // joueurs [...]") : recalculé depuis l'id du joueur (voir AvatarGen/
+  // playerAvatarHtml plus haut), aux couleurs réelles de l'équipe du joueur.
+  // Le nom reste dans #playerDetailName (h2 statique juste au-dessus, voir
+  // nameHeader plus haut) : pas de doublon ici, juste l'avatar à côté de la
+  // ligne d'infos.
+  let html = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">` +
+    playerAvatarHtml(player, team, 72) +
+    `<p class="training-intro" style="margin:0">${escapeHtml(team.name)} · ${POS_SHORT[player.position]} · ${player.height} cm · ${player.age} ans` +
+    (isOwnTeam ? ` · ${formatMoney(player.salary)}/sem.` : "") + `</p>` +
+    `</div>`;
   // Potentiel/Forme physique/Motivation/Rôle : retour utilisateur (2026-09)
   // "mais tout ça l'un à côté de l'autre" : une seule ligne de chips
   // (.player-stats-row) plutôt qu'un paragraphe par info, chaque chip
@@ -14212,14 +15670,21 @@ function teamDetailEffectifHtml(teamIdx) {
   const sorted = [...team.players].sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall());
   let html = "";
 
+  // Mêmes 13 colonnes Fondamentaux détaillées + 2 colonnes moyennées
+  // (Physique/Mental) que l'onglet Effectif > Caractéristiques (voir son
+  // grand commentaire, PHYSICAL_ATTRS/MENTAL_ATTRS/FUNDAMENTAL_ATTRS/
+  // categoryAverageCellHtml plus haut) : même tableau, propre équipe ou
+  // adversaire.
   if (isOwnTeam) {
     html += "<p class='training-intro'>Votre équipe : toutes les caractéristiques sont déjà visibles ici, comme sur l'onglet Effectif.</p>";
     html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
       "<th>Nom</th><th>Poste</th><th>Taille</th><th>Salaire/sem.</th>" +
-      ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") + "</tr></thead><tbody>";
+      FUNDAMENTAL_ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") +
+      "<th>Physique</th><th>Mental</th></tr></thead><tbody>";
     sorted.forEach(p => {
-      html += `<tr><td>${playerLinkHtml(teamIdx, p.id, p.name)}</td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
-      ATTRS.forEach(a => { html += `<td>${attrCellHtml(p.attrs[a])}</td>`; });
+      html += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, team, 24)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
+      FUNDAMENTAL_ATTRS.forEach(a => { html += `<td>${attrCellHtml(p.attrs[a])}</td>`; });
+      html += `<td>${categoryAverageCellHtml(p, PHYSICAL_ATTRS, null)}</td><td>${categoryAverageCellHtml(p, MENTAL_ATTRS, null)}</td>`;
       html += "</tr>";
     });
     html += "</tbody></table></div>";
@@ -14228,14 +15693,16 @@ function teamDetailEffectifHtml(teamIdx) {
     const revealedSet = new Set(alreadyScoutedList);
     html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
       "<th>Nom</th><th>Poste</th><th>Taille</th><th>Salaire/sem.</th>" +
-      ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") + "</tr></thead><tbody>";
+      FUNDAMENTAL_ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") +
+      "<th>Physique</th><th>Mental</th></tr></thead><tbody>";
     sorted.forEach(p => {
-      html += `<tr><td>${playerLinkHtml(teamIdx, p.id, p.name)}</td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
-      ATTRS.forEach(a => {
+      html += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, team, 24)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
+      FUNDAMENTAL_ATTRS.forEach(a => {
         html += revealedSet.has(a)
           ? `<td>${attrCellHtml(p.attrs[a])}</td>`
           : `<td><div class="attr-cell attr-locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique"></div></td>`;
       });
+      html += `<td>${categoryAverageCellHtml(p, PHYSICAL_ATTRS, revealedSet)}</td><td>${categoryAverageCellHtml(p, MENTAL_ATTRS, revealedSet)}</td>`;
       html += "</tr>";
     });
     html += "</tbody></table></div>";
@@ -16607,12 +18074,12 @@ function coachRulesHtml() {
 function trainingRulesHtml() {
   const fullMin = Math.round(TRAINING_FULL_MATCH_SECONDS / 60);
   const halfMin = Math.round(TRAINING_FULL_MATCH_SECONDS / 120);
-  const individual = `Chaque jour, le club choisit <b>une seule compétence</b> à travailler et les postes concernés : ce n'est pas un choix joueur par joueur. Un joueur en profite s'il occupe l'un des postes choisis, proportionnellement au temps qu'il a joué à ce poste, CUMULÉ sur tous les matchs de la journée (jusqu'à 3 : 2 de championnat, 10h et 19h, plus 1 de coupe à 15h les jours où un tour est dû), pas seulement le dernier (${fullMin} minutes cumulées = 100% de l'entraînement, ${halfMin} minutes = 50%, etc.) ; s'il n'a pas joué au bon poste ce jour-là, aucune caractéristique ne progresse (seul le déclin lié à l'âge continue de s'appliquer normalement). L'entraînement se déclenche automatiquement juste après le dernier match du jour (19h) : c'est à ce moment-là que les compteurs de temps de jeu de cet onglet repartent à 0 pour la journée suivante. Le poste (plus ou moins naturel pour la compétence) et le gabarit (un grand progresse plus vite en jeu intérieur/rebond/contre, un petit en dribble/agilité/tir extérieur/passe) influencent aussi la vitesse de progression. Étendre l'entraînement à plus de postes forme plus de joueurs mais dilue le rendement de tous. Le staff (entraîneur) se gère depuis l'onglet <b>Staff</b>.`;
+  const individual = `Chaque jour, le club choisit <b>une seule compétence parmi les 13 fondamentaux</b> (tir, passe, défense, etc.) à travailler et les postes concernés : ce n'est pas un choix joueur par joueur. Un joueur en profite s'il occupe l'un des postes choisis, proportionnellement au temps qu'il a joué à ce poste, CUMULÉ sur tous les matchs de la journée (jusqu'à 3 : 2 de championnat, 10h et 19h, plus 1 de coupe à 15h les jours où un tour est dû), pas seulement le dernier (${fullMin} minutes cumulées = 100% de l'entraînement, ${halfMin} minutes = 50%, etc.) ; s'il n'a pas joué au bon poste ce jour-là, aucun fondamental ne progresse (seul le déclin lié à l'âge continue de s'appliquer normalement). L'entraînement se déclenche automatiquement juste après le dernier match du jour (19h) : c'est à ce moment-là que les compteurs de temps de jeu de cet onglet repartent à 0 pour la journée suivante. Le poste (plus ou moins naturel pour la compétence) et le gabarit (un grand progresse plus vite en jeu intérieur/rebond/contre, un petit en dribble/agilité/tir extérieur/passe) influencent aussi la vitesse de progression. Étendre l'entraînement à plus de postes forme plus de joueurs mais dilue le rendement de tous. Le Physique et le Mental, eux, ne se travaillent plus directement : le Physique évolue à peine tout seul au fil de la carrière, tandis que le Mental progresse nettement et continuellement, jusqu'à un âge avancé — avec un petit coup de pouce quand un fondamental lié est entraîné (ex. le Jeu intérieur aide un peu la Force). Le staff (entraîneur) se gère depuis l'onglet <b>Staff</b>.`;
   // Retour utilisateur (2026-09) : "enleve ça, c'est pour le guide" (le
   // détail du focus collectif était auparavant affiché directement sous le
   // sélecteur de l'onglet Entraînement) + "ne mets pas de chiffre dans le
   // guide par contre" : explication volontairement sans aucun chiffre ici.
-  const collective = `En plus de l'entraînement individuel ci-dessus, le club peut aussi consacrer un <b>focus collectif</b> chaque jour : soit préparer une nouvelle tactique, soit privilégier la récupération physique de l'équipe. <b>Préparer une tactique</b> : un seul aspect précis à la fois, une priorité offensive, une défense OU un rythme (jamais plusieurs en même temps), à choisir parmi tout ce qui peut être réglé sur l'onglet <b>Ordres</b>. Plus l'équipe enchaîne de jours de repos à s'entraîner sur ce même aspect avant le prochain match, moins ce changement pénalise l'alchimie d'équipe s'il est effectivement joué en match ; tout autre changement de dernière minute, non entraîné, reste pénalisé normalement. <b>Récupération</b> : accélère la remontée de la forme physique de l'équipe les jours sans match.`;
+  const collective = `En plus de l'entraînement des fondamentaux ci-dessus, le club peut aussi consacrer un <b>focus collectif</b> chaque jour : soit préparer une nouvelle tactique, soit privilégier la récupération physique de l'équipe. <b>Préparer une tactique</b> : un seul aspect précis à la fois, une priorité offensive, une défense OU un rythme (jamais plusieurs en même temps), à choisir parmi tout ce qui peut être réglé sur l'onglet <b>Ordres</b>. Plus l'équipe enchaîne de jours de repos à s'entraîner sur ce même aspect avant le prochain match, moins ce changement pénalise l'alchimie d'équipe s'il est effectivement joué en match ; tout autre changement de dernière minute, non entraîné, reste pénalisé normalement. <b>Récupération</b> : accélère la remontée de la forme physique de l'équipe les jours sans match.`;
   return `<p class="training-intro">${individual}</p><p class="training-intro" style="margin-top:10px;">${collective}</p>`;
 }
 
@@ -18185,13 +19652,26 @@ function renderEffectifSection() {
   // ("Stats hebdo"). Retourne ici, jamais mélangé avec le tableau "Général"
   // ci-dessous (colonnes trop différentes pour un seul tableau).
   if (effectifSubView === "caracteristiques") {
+    // Retour utilisateur (2026-09) : "il y a beaucoup trop de données
+    // maintenant [...] on garde les données des fondamentaux + une moyenne
+    // du physique et une moyenne du mental" — 13 colonnes Fondamentaux
+    // détaillées + 2 colonnes moyennées (Physique/Mental) au lieu des 29
+    // colonnes individuelles (voir PHYSICAL_ATTRS/MENTAL_ATTRS/
+    // FUNDAMENTAL_ATTRS/categoryAverageCellHtml plus haut). Le détail complet
+    // caractéristique par caractéristique reste consultable sur la fiche
+    // joueur (renderPlayerDetail), seul endroit où les 29 restent affichées
+    // une par une. Propre effectif uniquement ici (sorted vient de
+    // teamA.players plus haut) : jamais de verrou de scoutisme à gérer,
+    // contrairement à teamDetailEffectifHtml plus bas.
     let attrsHtml = effectifSubNavHtml();
     attrsHtml += "<div class='table-scroll roster-table-frozen'><table class='roster-table'><thead><tr>" +
       "<th>Nom</th><th>Poste</th><th>Taille</th><th>Salaire/sem.</th>" +
-      ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") + "</tr></thead><tbody>";
+      FUNDAMENTAL_ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") +
+      "<th>Physique</th><th>Mental</th></tr></thead><tbody>";
     sorted.forEach(p => {
-      attrsHtml += `<tr><td>${playerLinkHtml(myTeamIndex, p.id, p.name)}</td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
-      ATTRS.forEach(a => { attrsHtml += `<td>${attrCellHtml(p.attrs[a])}</td>`; });
+      attrsHtml += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, teamA, 24)}${playerLinkHtml(myTeamIndex, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
+      FUNDAMENTAL_ATTRS.forEach(a => { attrsHtml += `<td>${attrCellHtml(p.attrs[a])}</td>`; });
+      attrsHtml += `<td>${categoryAverageCellHtml(p, PHYSICAL_ATTRS, null)}</td><td>${categoryAverageCellHtml(p, MENTAL_ATTRS, null)}</td>`;
       attrsHtml += "</tr>";
     });
     attrsHtml += "</tbody></table></div>";
@@ -18252,7 +19732,7 @@ function renderEffectifSection() {
     const cross = injuryCrossHtml(p, now);
     const transferBadge = transferRequestBadgeHtml(p);
     const rowClass = cross ? "injured" : (isStarter ? "me" : "");
-    html += `<tr class="${rowClass}"><td>${playerLinkHtml(myTeamIndex, p.id, p.name)}${cross || ""}${transferBadge || ""}${forSaleCell}</td><td>${posCell}</td>` +
+    html += `<tr class="${rowClass}"><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, teamA, 24)}${playerLinkHtml(myTeamIndex, p.id, p.name)}${cross || ""}${transferBadge || ""}${forSaleCell}</span></td><td>${posCell}</td>` +
       `<td>${escapeHtml(playerRoleLabel(teamA, p))}</td>` +
       `<td>${p.age}</td><td>${p.height} cm</td>` +
       `<td title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
@@ -18438,9 +19918,12 @@ function renderMarketListings() {
     const attrChips = ATTRS.map(a => `<div class="market-attr-chip"><span class="market-attr-label">${ATTR_SHORT[a]}</span>${attrCellHtml(player.attrs[a])}</div>`).join("");
     html += `<div class="market-card" data-listing-id="${l.id}">` +
       `<div class="market-card-head">` +
-        `<div class="market-card-player">` +
-          `<div class="market-card-name">${playerLinkHtml(l.sellerIdx, player.id, player.name)}</div>` +
-          `<div class="market-card-meta">${POS_SHORT[player.position]} · ${player.age} ans · Potentiel ${potentialCell} · Vendeur : ${isMine ? "Vous" : teamLinkHtml(l.sellerIdx, seller.name)}</div>` +
+        `<div class="market-card-player" style="display:flex;align-items:center;gap:8px">` +
+          playerAvatarHtml(player, seller, 30) +
+          `<div>` +
+            `<div class="market-card-name">${playerLinkHtml(l.sellerIdx, player.id, player.name)}</div>` +
+            `<div class="market-card-meta">${POS_SHORT[player.position]} · ${player.age} ans · Potentiel ${potentialCell} · Vendeur : ${isMine ? "Vous" : teamLinkHtml(l.sellerIdx, seller.name)}</div>` +
+          `</div>` +
         `</div>` +
         `<div class="market-card-bid">` +
           `<div class="market-card-price"><b>${currentLabel}</b>${escapeHtml(timeLeftLabel(l.closesAt, now))}</div>` +
@@ -19218,7 +20701,7 @@ function renderYouthCandidates() {
     "<th>Nom</th><th>Poste</th><th>Âge</th><th>Taille</th><th>Potentiel</th><th>Expire dans</th>" +
     ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") + "<th></th></tr></thead><tbody>";
   candidates.forEach(c => {
-    html += `<tr><td>${escapeHtml(c.name)}</td><td>${POS_SHORT[c.position]}</td>` +
+    html += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(c, teamA, 24)}${escapeHtml(c.name)}</span></td><td>${POS_SHORT[c.position]}</td>` +
       `<td>${c.age}</td><td>${c.height} cm</td>` +
       `<td><span class="potential-tier" title="Potentiel encore caché, seule la promotion en effectif pro, après signature, le révèlera">${escapeHtml(youthProspectLabel(c.potential))}</span></td>` +
       `<td>${escapeHtml(timeLeftLabel(c.expiresAt, now))}</td>` +
@@ -19500,16 +20983,32 @@ function renderSalleSection() {
   // format que les autres infrastructures (voir plus bas). Ancienne rangée
   // de badges (Boutique/Centre de formation/Station TV/...) retirée aussi
   // (retour utilisateur : "enleve les briques" — doublon de ces mêmes
-  // cartes). L'image seule reste ici.
+  // cartes). Le dessin seul reste ici.
+  //
+  // Retour utilisateur (2026-09) : "j'aimerais bien qu'il y ait une salle
+  // différente en fonction du nombre de places" — remplace l'ancienne
+  // <img src="arenaImageUrl(...)"> (8 images figées par palier) par
+  // ArenaGen.generateArena, qui dessine des gradins dont la taille suit la
+  // capacité réelle (voir arenaVisualCapacity pour la remise à l'échelle, et
+  // teamAvatarColors pour les couleurs réelles du club, déjà utilisée pour
+  // les avatars, voir plus haut). role/aria-label internes du SVG
+  // désactivés (aria-hidden) au profit de ceux posés sur le conteneur juste
+  // en dessous, qui utilisent la capacité RÉELLE (info.capacity) plutôt que
+  // celle, remise à l'échelle et donc potentiellement fausse pour
+  // l'accessibilité, que porte le SVG lui-même.
+  const arenaSvg = ArenaGen.generateArena(arenaVisualCapacity(info.capacity), {
+    teamColors: teamAvatarColors(teamA),
+    attendance: rate,
+    name: teamA.name,
+  }).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
   visualHolder.innerHTML = `<div class="arena-card">` +
-    `<div class="arena-visual-wrap"><img src="${arenaImageUrl(teamA.arenaLevel)}" alt="${escapeHtml(info.name)}" loading="lazy"></div>` +
+    `<div class="arena-visual-wrap" role="img" aria-label="${escapeHtml(info.name)}, ${info.capacity.toLocaleString("fr-FR")} places">${arenaSvg}</div>` +
     `</div>`;
-  // Une fois l'image chargée, sa hauteur réelle peut changer (voir
-  // syncArenaPurchasesHeight plus bas) : on replafonne la colonne de droite
-  // à ce moment-là aussi, pas seulement à l'appel synchrone en fin de
-  // fonction ci-dessous (qui peut tomber avant la fin du chargement).
-  const arenaImg = visualHolder.querySelector("img");
-  if (arenaImg) arenaImg.addEventListener("load", syncArenaPurchasesHeight);
+  // Contrairement à l'ancienne <img> (chargement asynchrone, d'où un
+  // écouteur "load" avant de remesurer la colonne de droite), le SVG est
+  // inséré directement dans le DOM ci-dessus : sa taille est déjà connue au
+  // moment de l'appel synchrone à syncArenaPurchasesHeight plus bas, plus
+  // besoin d'écouteur de chargement.
 
   // --- Salle : carte d'état actuel (nom/capacité/fréquentation), avec une
   // flèche d'amélioration plutôt qu'un aperçu du palier suivant (retour
@@ -20271,8 +21770,8 @@ const TOUR_STEPS = [
   },
 
   { kind: "spotlight", topic: "Entraînement", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="entrainement"]', pos: "right",
-    title: "Entraînement hebdomadaire",
-    text: "Chaque semaine, choisissez un programme (tir à 3 points, rebond, défense extérieure...) et un ou plusieurs postes à qui l'appliquer. Cibler un seul poste donne le plein rendement ; l'étendre à toute l'équipe touche plus de joueurs mais dilue l'effet.",
+    title: "Entraînement des fondamentaux",
+    text: "Chaque semaine, choisissez un programme parmi les 13 fondamentaux (tir à 3 points, rebond, défense extérieure...) et un ou plusieurs postes à qui l'appliquer. Cibler un seul poste donne le plein rendement ; l'étendre à toute l'équipe touche plus de joueurs mais dilue l'effet. Le Physique et le Mental évoluent, eux, tout seuls au fil de la carrière, indépendamment de ce programme.",
     tip: "Un joueur qui n'a pas assez joué cette semaine progresse moins, même avec le bon programme : gardez un œil sur son temps de jeu cumulé.",
   },
   // Entraînement collectif (retour utilisateur, 2026-09 : "entrainement
@@ -20289,7 +21788,7 @@ const TOUR_STEPS = [
     kind: "spotlight", topic: "Entraînement", page: "entrainement",
     target: "#collectiveTrainingConfig",
     title: "Entraînement collectif",
-    text: "Un réglage séparé de l'entraînement individuel ci-dessus, les deux tournent en même temps : travailler une nouvelle tactique atténue le malus d'alchimie d'un changement de tactique en match (divisé par 2 par jour banqué), travailler la récupération accélère le retour de forme physique des joueurs qui ne jouent pas ce jour-là.",
+    text: "Un réglage séparé de l'entraînement des fondamentaux ci-dessus, les deux tournent en même temps : travailler une nouvelle tactique atténue le malus d'alchimie d'un changement de tactique en match (divisé par 2 par jour banqué), travailler la récupération accélère le retour de forme physique des joueurs qui ne jouent pas ce jour-là.",
     tip: "Le crédit de jours banqués reste utilisable même si vous repassez sur \"Aucun\" ou changez de focus entre-temps : pas besoin de s'y tenir sans interruption.",
     reward: TOUR_REWARD_BY_TOPIC["Entraînement"],
   },

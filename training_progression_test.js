@@ -100,14 +100,21 @@ function setTraining(doc, skill) {
 // reviendrait à noyer le vrai signal (le gain des joueurs entraînés) dans
 // le déclin, sans rapport, de joueurs qui ne s'entraînent pas du tout cette
 // semaine-là — ce qui rendait le total agrégé imprévisible sur la durée.
-function sumTrainedProgress(before, after, trainedPositions, filterFn) {
+// `onlyAttrs` (optionnel) restreint la somme à un sous-ensemble de
+// caractéristiques — voir son usage plus bas : depuis "Entraînement des
+// fondamentaux" (retour utilisateur, 2026-09), le Physique et le Mental ne
+// dépendent plus DU TOUT du temps de jeu (ils évoluent tout seuls, voir
+// Player.trainWeek/PHYSICAL_ATTRS/MENTAL_ATTRS) — seuls les FUNDAMENTAL_ATTRS
+// restent conditionnés aux minutes réellement jouées au poste entraîné.
+function sumTrainedProgress(before, after, trainedPositions, filterFn, onlyAttrs = null) {
   let total = 0;
   after.forEach(p => {
     if (!trainedPositions.includes(p.position)) return;
     if (filterFn && !filterFn(p)) return;
     const b = before.find(x => x.id === p.id);
     if (!b) return;
-    Object.keys(p.attrs).forEach(a => {
+    const attrKeys = onlyAttrs || Object.keys(p.attrs);
+    attrKeys.forEach(a => {
       const afterVal = p.attrs[a] + ((p._trainProgress && p._trainProgress[a]) || 0);
       const beforeVal = b.attrs[a] + ((b._trainProgress && b._trainProgress[a]) || 0);
       total += (afterVal - beforeVal);
@@ -210,10 +217,14 @@ function sumTrainedProgress(before, after, trainedPositions, filterFn) {
   }
   console.log("✅ Le rapport hebdomadaire explique désormais clairement, joueur par joueur, pourquoi certains n'ont pas progressé (au lieu du silence total d'avant).");
 
-  // Aucun gain (attrs + progrès fractionnaire) pour les joueurs sans minutes...
-  const zeroGain = sumTrainedProgress(before, after, trainedPositions, p => zeroMinutePlayers.some(z => z.id === p.id));
-  console.log("Progrès total des joueurs sans minutes (attendu 0) :", zeroGain.toFixed(3));
-  if (zeroGain !== 0) throw new Error("❌ Un joueur sans la moindre minute au dernier match ne devrait avoir AUCUN gain (comportement attendu, pas le bug).");
+  // Aucun gain SUR LES FONDAMENTAUX pour les joueurs sans minutes (le
+  // Physique/Mental, eux, évoluent tout seuls indépendamment du temps de
+  // jeu depuis "Entraînement des fondamentaux" — voir le commentaire de
+  // sumTrainedProgress ci-dessus, ce n'est plus un bug si ces deux
+  // catégories bougent un peu ici).
+  const zeroGain = sumTrainedProgress(before, after, trainedPositions, p => zeroMinutePlayers.some(z => z.id === p.id), E.FUNDAMENTAL_ATTRS);
+  console.log("Progrès des fondamentaux pour les joueurs sans minutes (attendu 0) :", zeroGain.toFixed(3));
+  if (zeroGain !== 0) throw new Error("❌ Un joueur sans la moindre minute au dernier match ne devrait avoir AUCUN gain de fondamentaux (comportement attendu, pas le bug).");
 
   // ...mais un gain bien réel pour ceux qui ont effectivement joué.
   const playedGain = sumTrainedProgress(before, after, trainedPositions, p => playedPlayers.some(z => z.id === p.id));

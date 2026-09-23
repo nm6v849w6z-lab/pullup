@@ -125,6 +125,44 @@ const TRAINING_LABELS = {
   vision: "Vision",
 };
 
+// Regroupement en 3 catégories aux règles de progression DIFFÉRENTES (retour
+// utilisateur, 2026-09 : "on ne dit plus entrainement individuel mais
+// entrainement des fondamentaux, et ça ne doit entrainer que les
+// fondamentaux" — puis, sur la question de la progression du Physique/
+// Mental : "on avait prévu que le physique ne bouge qu'un peu au cours de la
+// carrière du joueur, alors que le mental peut bien évoluer et progresse
+// durant toute la carrière du joueur"). Reprend, adapté à l'architecture À
+// PLAT de ce jeu (contrairement au bac à sable de référence, qui avait
+// éclaté "mental" en 8 traits séparés, PULLUP-REAL LE GARDE tel quel, voir le
+// commentaire au-dessus d'ATTRS), la même répartition que
+// PHYSICAL_ATTRS/MENTAL_ATTRS/FUNDAMENTAL_ATTRS du bac à sable :
+//
+// FONDAMENTAUX (13, technique pure) : ne progressent QUE par l'entraînement
+// individuel (Team.trainWeek/TRAINING_PROGRAMS, désormais restreint à ces 13
+// seules caractéristiques, voir plus bas), plafonnées par Player.potential —
+// inchangé.
+//
+// PHYSIQUE (7, inné, ne se travaille quasiment pas) : ne progresse plus par
+// l'entraînement individuel direct (retiré de TRAINING_PROGRAMS, voir plus
+// bas) — seulement une TOUTE PETITE progression naturelle chaque semaine
+// jusqu'à maturité physique (~27/28 ans), puis un plateau, puis un léger
+// déclin à partir de 34 ans (voir physicalGrowthFactorForAge/
+// physicalDeclineFactorForAge et Player.physicalPotential plus bas), PLUS un
+// petit supplément quand une caractéristique fondamentale liée est entraînée
+// cette semaine-là (le lien existe déjà, voir TRAINING_SYNERGY plus haut :
+// entraîner "Jeu intérieur" fait par exemple un peu progresser "Force").
+//
+// MENTAL (9, expérience/caractère — "mental" lui-même rejoint ici les 8
+// autres traits du bac à sable, qui lui ne le connaissait plus) : ne
+// progresse plus non plus par l'entraînement individuel direct, seulement
+// une progression naturelle chaque semaine, plus rapide en début de carrière
+// et de plus en plus lente ensuite, mais qui NE DÉCLINE JAMAIS, sur toute la
+// carrière (voir mentalGrowthFactorForAge et Player.mentalPotential), avec
+// le même petit supplément de synergie que le Physique ci-dessus.
+const PHYSICAL_ATTRS = ["speed", "acceleration", "agility", "strength", "vertical", "endurance", "power"];
+const MENTAL_ATTRS = ["mental", "decision", "focus", "composure", "anticipation", "determination", "leadership", "discipline", "vision"];
+const FUNDAMENTAL_ATTRS = ATTRS.filter(a => !PHYSICAL_ATTRS.includes(a) && !MENTAL_ATTRS.includes(a));
+
 const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
   "Jeu intérieur":     { inside: .60, mid: .25, three: .15, tov: -.01, assist: 0,   tempo: -.05 },
@@ -589,6 +627,88 @@ function declineFactorForAge(age) {
   return 1.12;                 // 0.16
 }
 
+// Marge de progression restante (min, max points au-dessus de la valeur
+// ACTUELLE, pas d'un "potentiel caché") pour une caractéristique PHYSIQUE,
+// selon l'âge (voir Player.physicalPotential) : marge volontairement petite
+// (retour utilisateur, 2026-09 : "le physique ne bouge qu'un peu au cours de
+// la carrière du joueur") — le physique est surtout inné, il y a peu de
+// marge à révéler. Nulle au-delà de 31 ans : passé cet âge, plus aucune
+// marge de progression ; un joueur de 32/33 ans est donc sur un plateau (ni
+// progression ni déclin) jusqu'à ce que le déclin
+// (physicalDeclineFactorForAge plus bas, à partir de 34 ans) prenne le
+// relais. Reprise telle quelle du bac à sable de référence
+// (physicalPotentialHeadroom), qui avait déjà exactement cette calibration.
+function physicalPotentialHeadroom(age) {
+  if (age <= 19) return [10, 18];
+  if (age <= 21) return [7, 14];
+  if (age <= 23) return [4, 10];
+  if (age <= 25) return [2, 6];
+  if (age <= 27) return [0, 3];
+  if (age <= 31) return [0, 1];
+  return [0, 0];
+}
+
+// Même principe, pour les caractéristiques MENTALES (voir
+// Player.mentalPotential) : marge volontairement GRANDE et jamais nulle
+// (retour utilisateur, 2026-09 : "le mental peut bien évoluer et progresse
+// durant toute la carrière du joueur") — même un vétéran garde toujours un
+// peu de marge, rien ne s'arrête jamais tout à fait, contrairement au
+// physique. Reprise du bac à sable de référence (mentalPotentialHeadroom).
+function mentalPotentialHeadroom(age) {
+  if (age <= 21) return [15, 35];
+  if (age <= 24) return [7, 25];
+  if (age <= 27) return [2, 17];
+  if (age <= 30) return [2, 14];
+  if (age <= 33) return [2, 11];
+  return [2, 9];
+}
+
+// Vitesse de progression hebdomadaire NATURELLE des caractéristiques
+// PHYSIQUES (voir Player.trainWeek) : même forme que growthFactorForAge
+// (rapide chez les jeunes, décroissante ensuite), mais calée pour culminer
+// vers 27/28 ans plutôt que de continuer à progresser significativement
+// au-delà (quasi nulle ensuite) : le plateau est pris en charge par le
+// plafond physicalPotential ci-dessus, pas par un ralentissement
+// supplémentaire ici. Reprise du bac à sable de référence.
+function physicalGrowthFactorForAge(age) {
+  if (age <= 20) return 2.0;
+  if (age <= 22) return 1.6;
+  if (age <= 24) return 1.2;
+  if (age <= 26) return 0.8;
+  if (age <= 28) return 0.4;
+  if (age <= 31) return 0.12;
+  return 0.03;
+}
+
+// Déclin hebdomadaire naturel des caractéristiques PHYSIQUES : démarre à 34
+// ans, le même âge que le déclin des fondamentaux (declineFactorForAge),
+// mais légèrement moins marqué à chaque palier. Reprise du bac à sable de
+// référence.
+function physicalDeclineFactorForAge(age) {
+  if (age < 34) return 0;
+  if (age < 36) return 0.28;
+  if (age < 38) return 0.50;
+  if (age < 40) return 0.75;
+  return 1.10;
+}
+
+// Vitesse de progression hebdomadaire naturelle des caractéristiques
+// MENTALES : TOUJOURS positive, même en fin de carrière (contrairement au
+// physique, qui plafonne puis décline, voir le grand commentaire au-dessus
+// d'OFFENSE_PROFILES) — rapide en début de carrière, de plus en plus lente
+// ensuite, jamais nulle. Il n'existe volontairement PAS de
+// mentalDeclineFactorForAge : le mental ne décline jamais dans ce modèle.
+// Reprise du bac à sable de référence.
+function mentalGrowthFactorForAge(age) {
+  if (age <= 20) return 1.1;
+  if (age <= 23) return 0.85;
+  if (age <= 26) return 0.6;
+  if (age <= 29) return 0.4;
+  if (age <= 32) return 0.25;
+  if (age <= 35) return 0.15;
+  return 0.08;
+}
+
 // Une caractéristique travaillée en fait progresser un peu une autre, liée
 // (ex : la défense extérieure profite un peu à la défense intérieure ET à
 // l'agilité). Purement additif au multiplicateur "focus".
@@ -837,6 +957,20 @@ function makeTrainingProgram(label, attrs) {
   return { label, attrs: attrs.map(attr => ({ attr, weight })) };
 }
 
+// Retour utilisateur (2026-09) : "on ne dit plus entrainement individuel
+// mais entrainement des fondamentaux, et ça ne doit entrainer que les
+// fondamentaux" — ce catalogue ne couvre plus QUE les 13 FUNDAMENTAL_ATTRS
+// (voir le grand commentaire au-dessus de PHYSICAL_ATTRS/MENTAL_ATTRS/
+// FUNDAMENTAL_ATTRS). Les programmes physiques/mentaux purs qui existaient
+// ici (Agilité, Endurance, Puissance, Concentration, Anticipation,
+// Leadership, Vitesse, Accélération, Force, Détente, Décision, Sang-froid,
+// Détermination, Discipline, Vision) ont été retirés : ces 16
+// caractéristiques ne progressent plus que naturellement (voir
+// Player.trainWeek) ou par synergie (TRAINING_SYNERGY plus haut, un simple
+// supplément quand un fondamental lié est entraîné). Toute sauvegarde dont
+// `trainingSkill` pointait vers l'un de ces programmes retirés retombe
+// automatiquement sur "freeThrow" au chargement (voir teamFromSave plus
+// bas, garde déjà existante pour ce cas de figure).
 const TRAINING_PROGRAMS = {
   // -- Programmes "purs" (une seule caractéristique, plein rendement) --
   threePoint: makeTrainingProgram("Tir à 3 points", ["threePoint"]),
@@ -846,41 +980,21 @@ const TRAINING_PROGRAMS = {
   rebound:    makeTrainingProgram("Rebond", ["rebound"]),
   block:      makeTrainingProgram("Contre", ["block"]),
   dribble:    makeTrainingProgram("Dribble", ["dribble"]),
-  agility:    makeTrainingProgram("Agilité", ["agility"]),
   defOutside: makeTrainingProgram("Défense extérieure", ["defOutside"]),
   defInside:  makeTrainingProgram("Défense intérieure", ["defInside"]),
-  // Retour utilisateur (2026-09) : "Ajoute les entrainements lancer franc et
-  // endurance", les deux caractéristiques existaient déjà dans ATTRS (voir
-  // le grand commentaire au-dessus d'ATTRS) mais n'étaient pas encore
-  // entraînables via un programme dédié.
   freeThrow:  makeTrainingProgram("Lancer franc", ["freeThrow"]),
-  endurance:  makeTrainingProgram("Endurance", ["endurance"]),
-  // 7 nouvelles caractéristiques (voir le grand commentaire au-dessus
-  // d'ATTRS) : mêmes programmes "purs" que ci-dessus, plein rendement.
   penetration:  makeTrainingProgram("Pénétration", ["penetration"]),
   shotCreation: makeTrainingProgram("Création de tir", ["shotCreation"]),
   steal:        makeTrainingProgram("Interceptions", ["steal"]),
-  power:        makeTrainingProgram("Puissance", ["power"]),
-  focus:        makeTrainingProgram("Concentration", ["focus"]),
-  anticipation: makeTrainingProgram("Anticipation", ["anticipation"]),
-  leadership:   makeTrainingProgram("Leadership", ["leadership"]),
-  // 9 dernières caractéristiques (retour utilisateur, 2026-09, "il en manque
-  // une partie") : mêmes programmes "purs" que ci-dessus, plein rendement.
-  speed:         makeTrainingProgram("Vitesse", ["speed"]),
-  acceleration:  makeTrainingProgram("Accélération", ["acceleration"]),
-  strength:      makeTrainingProgram("Force", ["strength"]),
-  vertical:      makeTrainingProgram("Détente", ["vertical"]),
-  decision:      makeTrainingProgram("Décision", ["decision"]),
-  composure:     makeTrainingProgram("Sang-froid", ["composure"]),
-  determination: makeTrainingProgram("Détermination", ["determination"]),
-  discipline:    makeTrainingProgram("Discipline", ["discipline"]),
-  vision:        makeTrainingProgram("Vision", ["vision"]),
   // -- Programmes composites (plusieurs caractéristiques liées, rendement
   // dilué par caractéristique — voir WEIGHT_BY_PROGRAM_SIZE) --
   outsideShot: makeTrainingProgram("Tir extérieur", ["midRange", "threePoint"]),
   playmaking:  makeTrainingProgram("Meneur de jeu", ["pass", "dribble"]),
   allroundDef: makeTrainingProgram("Défense polyvalente", ["defOutside", "defInside"]),
-  quickShots:  makeTrainingProgram("Tirs rapides", ["agility", "midRange", "threePoint", "inside"]),
+  // "Tirs rapides" perd son quatrième ingrédient "agility" (désormais
+  // physique, non trainable directement, voir plus haut) : ne garde que les
+  // 3 fondamentaux de tir qui donnaient son sens à ce composite.
+  quickShots:  makeTrainingProgram("Tirs rapides", ["midRange", "threePoint", "inside"]),
 };
 
 // Aptitude d'un poste pour un PROGRAMME entier = moyenne (pondérée par le
@@ -2381,6 +2495,36 @@ class Player {
       this.potential = clamp(Math.round(this.overall() + rand(lo, hi)), 1, 99);
     }
 
+    // Potentiels PHYSIQUE et MENTAL (retour utilisateur, 2026-09 : "le
+    // physique ne bouge qu'un peu au cours de la carrière du joueur, alors
+    // que le mental peut bien évoluer et progresse durant toute la carrière
+    // du joueur", voir le grand commentaire au-dessus de PHYSICAL_ATTRS/
+    // MENTAL_ATTRS) : même principe que le potentiel global ci-dessus
+    // (valeur ACTUELLE + marge selon l'âge, voir physicalPotentialHeadroom/
+    // mentalPotentialHeadroom), mais un plafond PAR CARACTÉRISTIQUE plutôt
+    // qu'un seul chiffre global — la progression naturelle hebdomadaire de
+    // chaque caractéristique physique/mentale (voir Player.trainWeek) vise
+    // son propre plafond ici, indépendamment des autres. Recalculés à
+    // chaque construction (génération OU rechargement de sauvegarde), sauf
+    // écrasement explicite par playerFromSave juste après si une valeur
+    // sauvegardée existe déjà (mêmes raisons que Player.potential : sinon
+    // ça se recalculerait au hasard à chaque rechargement, et un joueur déjà
+    // entraîné directement sur ces caractéristiques avant ce changement de
+    // règle garde ici un plafond dérivé de SA valeur actuelle, jamais une
+    // réinitialisation).
+    {
+      const [plo, phi] = physicalPotentialHeadroom(this.age);
+      this.physicalPotential = {};
+      PHYSICAL_ATTRS.forEach(a => {
+        this.physicalPotential[a] = clamp(Math.round((this.attrs[a] || 50) + rand(plo, phi)), 1, 99);
+      });
+      const [mlo, mhi] = mentalPotentialHeadroom(this.age);
+      this.mentalPotential = {};
+      MENTAL_ATTRS.forEach(a => {
+        this.mentalPotential[a] = clamp(Math.round((this.attrs[a] || 25) + rand(mlo, mhi)), 1, 99);
+      });
+    }
+
     // Salaire hebdomadaire — voir salaryForOverall (grille salariale) :
     // dépend du niveau ACTUEL du joueur au poste où ses caractéristiques le
     // valorisent le mieux (voir levelCoefficientFor), pas d'une simple
@@ -2502,12 +2646,43 @@ class Player {
   // caractéristique liée progresse toujours moins qu'une caractéristique
   // directement travaillée". Renvoie la liste des caractéristiques qui ont
   // bougé, sous la forme [{attr, before, after}, ...].
+  // Retour utilisateur (2026-09 : "on ne dit plus entrainement individuel
+  // mais entrainement des fondamentaux, et ça ne doit entrainer que les
+  // fondamentaux" — puis "le physique ne bouge qu'un peu au cours de la
+  // carrière du joueur, alors que le mental peut bien évoluer et progresse
+  // durant toute la carrière du joueur") : 3 boucles distinctes désormais,
+  // une par catégorie (voir le grand commentaire au-dessus de
+  // PHYSICAL_ATTRS/MENTAL_ATTRS/FUNDAMENTAL_ATTRS) au lieu d'une seule
+  // boucle ATTRS.forEach uniforme.
   trainWeek(attrWeights, trainerMult = 1, synergyAttrs = null) {
     const gains = [];
     const growth = growthFactorForAge(this.age);
     const decline = declineFactorForAge(this.age);
+    const physGrowth = physicalGrowthFactorForAge(this.age);
+    const physDecline = physicalDeclineFactorForAge(this.age);
+    const mentGrowth = mentalGrowthFactorForAge(this.age);
 
-    ATTRS.forEach(a => {
+    // Matérialise un delta fractionnaire sur une caractéristique, factorisé
+    // ici, partagé par les 3 catégories ci-dessous (avant : dupliqué dans la
+    // seule boucle ATTRS.forEach d'origine).
+    const applyDelta = (a, before, delta) => {
+      this._trainProgress[a] = (this._trainProgress[a] || 0) + delta;
+      const whole = Math.trunc(this._trainProgress[a]);
+      if (whole !== 0) {
+        this._trainProgress[a] -= whole;
+        const after = clamp(before + whole, 1, 99);
+        if (after !== before) {
+          gains.push({ attr: a, before, after });
+        }
+        this.attrs[a] = after;
+      }
+    };
+
+    // Fondamentaux : SEULE catégorie entraînable directement (voir
+    // TRAINING_PROGRAMS, désormais restreint aux 13 fondamentaux) — logique
+    // de progression/déclin INCHANGÉE, juste restreinte à FUNDAMENTAL_ATTRS
+    // au lieu de la totalité d'ATTRS.
+    FUNDAMENTAL_ATTRS.forEach(a => {
       const before = this.attrs[a];
       const weight = clamp((attrWeights && attrWeights[a]) || 0, 0, 2);
       let delta = 0;
@@ -2558,20 +2733,94 @@ class Player {
         const declineReduction = weight > 0 ? clamp(1 - 0.6 * Math.min(weight, 1), 0.2, 1) : 1;
         delta -= decline * rand(0.3, 1.0) * declineReduction;
       }
-
-      // On accumule le delta fractionnaire ; on ne touche à l'attribut affiché
-      // qu'une fois qu'un point entier s'est accumulé (dans un sens ou l'autre).
-      this._trainProgress[a] = (this._trainProgress[a] || 0) + delta;
-      const whole = Math.trunc(this._trainProgress[a]);
-      if (whole !== 0) {
-        this._trainProgress[a] -= whole;
-        const after = clamp(before + whole, 1, 99);
-        if (after !== before) {
-          gains.push({ attr: a, before, after });
-        }
-        this.attrs[a] = after;
-      }
+      applyDelta(a, before, delta);
     });
+
+    // Physique : progression NATURELLE seule (indépendante de attrWeights,
+    // donc de l'entraînement des fondamentaux choisi cette semaine, retiré
+    // de TRAINING_PROGRAMS), vise physicalPotential[a] jusqu'à maturité
+    // (~27/28 ans, physicalGrowthFactorForAge), puis décline à partir de 34
+    // ans (physicalDeclineFactorForAge). PLUS un tout petit supplément de
+    // synergie : si une caractéristique fondamentale liée à celle-ci a été
+    // entraînée cette semaine (voir TRAINING_SYNERGY plus haut, qui reprend
+    // déjà ces associations, ex. "Jeu intérieur" → Force), `attrWeights[a]`
+    // porte alors le poids dilué de cette synergie (voir Team.trainWeek) —
+    // un simple supplément, jamais un second levier d'entraînement à part
+    // entière (coefficient volontairement petit, 0.04, face à progressRoom
+    // ~0.10-1.1 du terme naturel juste au-dessus). Comme le terme naturel,
+    // actif seulement tant que le joueur progresse encore physiquement
+    // (physGrowth > 0, jamais après le début du déclin à 34 ans).
+    PHYSICAL_ATTRS.forEach(a => {
+      const before = this.attrs[a];
+      let delta = 0;
+      const ceiling = (this.physicalPotential && this.physicalPotential[a]) || before;
+      // `crossWeight` : un attribut Physique n'est plus JAMAIS entraîné
+      // directement (retiré de TRAINING_PROGRAMS), donc tout poids non-nul
+      // ici vient forcément de TRAINING_SYNERGY (voir Team.trainWeek). Même
+      // correction que pour les fondamentaux de synergie ci-dessus (roomScale
+      // au prorata du poids) : SANS ça, un attribut Physique très en retard
+      // sur son propre plafond peut rattraper plus vite, cette semaine-là,
+      // que le fondamental réellement entraîné — exactement le bug corrigé
+      // plus haut (voir synergy_training_test.js, désormais aussi couvert
+      // pour le cas fondamental → synergie physique). Quand crossWeight est
+      // nul (aucune synergie active cette semaine sur cet attribut précis),
+      // la progression naturelle reste intégrale (roomScale = 1) : le
+      // Physique continue bien d'évoluer tout seul, indépendamment de ce qui
+      // est entraîné, comme voulu. `crossWeight²` (et non simplement
+      // `crossWeight`) : la marge de synergie du fondamental (poids déjà
+      // dilué ×0.4, voir TRAINING_SYNERGY) reste petite, mais un fondamental
+      // synergique peut partir d'un très gros écart à son propre plafond
+      // (potential + 12) tout comme un attribut Physique peut partir d'un
+      // gros écart à SON plafond (physicalPotential) — la seule dilution
+      // ×poids ne suffit alors pas à garder le fondamental réellement
+      // entraîné devant (constaté par synergy_training_test.js) ; au carré,
+      // la marge de rattrapage synergique reste toujours structurellement
+      // plus lente, quel que soit l'écart de départ des deux côtés.
+      const crossWeight = clamp((attrWeights && attrWeights[a]) || 0, 0, 1);
+      if (physGrowth > 0) {
+        const gap = ceiling - before;
+        const beyondCeilingMult = gap > 0 ? 1 : 0.12;
+        const roomScale = crossWeight > 0 ? crossWeight * crossWeight : 1;
+        const progressRoom = (Math.max(gap, 0) / 20 + 0.10) * roomScale;
+        delta += physGrowth * progressRoom * beyondCeilingMult * rand(0.5, 1.3);
+        if (crossWeight > 0) {
+          delta += physGrowth * crossWeight * 0.04 * rand(0.5, 1.3);
+        }
+      }
+      if (physDecline > 0) {
+        delta -= physDecline * rand(0.3, 1.0);
+      }
+      applyDelta(a, before, delta);
+    });
+
+    // Mental : même principe que le Physique ci-dessus (progression
+    // NATURELLE + petit supplément de synergie, voir TRAINING_SYNERGY), vise
+    // mentalPotential[a], ralentit avec l'âge (mentalGrowthFactorForAge)
+    // mais NE DÉCLINE JAMAIS (aucun terme négatif ici, volontairement —
+    // retour utilisateur : "le mental peut bien évoluer et progresse durant
+    // toute la carrière du joueur"). Coefficient de synergie (0.03) encore
+    // un peu plus petit que celui du Physique (0.04) : le Mental progresse
+    // déjà plus lentement par nature (`progressRoom` vise un écart deux fois
+    // plus large, /25 contre /20).
+    MENTAL_ATTRS.forEach(a => {
+      const before = this.attrs[a];
+      const ceiling = (this.mentalPotential && this.mentalPotential[a]) || before;
+      const gap = ceiling - before;
+      const beyondCeilingMult = gap > 0 ? 1 : 0.15;
+      // Même correction roomScale que pour le Physique juste au-dessus (voir
+      // son commentaire, y compris le choix de `crossWeight²`) : un attribut
+      // Mental n'est lui non plus jamais entraîné directement, tout poids
+      // ici vient de TRAINING_SYNERGY.
+      const crossWeight = clamp((attrWeights && attrWeights[a]) || 0, 0, 1);
+      const roomScale = crossWeight > 0 ? crossWeight * crossWeight : 1;
+      const progressRoom = (Math.max(gap, 0) / 25 + 0.08) * roomScale;
+      let delta = mentGrowth * progressRoom * beyondCeilingMult * rand(0.5, 1.3);
+      if (crossWeight > 0 && mentGrowth > 0) {
+        delta += mentGrowth * crossWeight * 0.03 * rand(0.5, 1.3);
+      }
+      applyDelta(a, before, delta);
+    });
+
     return gains;
   }
 
@@ -8007,6 +8256,14 @@ function serializePlayerRecord(p) {
   return {
     name: p.name, position: p.position, height: p.height, age: p.age,
     attrs: { ...p.attrs }, potential: p.potential, salary: p.salary,
+    // Plafonds physique/mental, caractéristique par caractéristique (voir
+    // Player.physicalPotential/mentalPotential, retour utilisateur 2026-09 :
+    // "le physique ne bouge qu'un peu [...] le mental peut bien évoluer") :
+    // fixés une fois pour toutes à la génération, comme `potential`
+    // ci-dessus, DOIVENT survivre au rechargement, sinon la progression
+    // naturelle hebdomadaire (Player.trainWeek) viserait un plafond redéfini
+    // au hasard à chaque chargement de la sauvegarde.
+    physicalPotential: { ...p.physicalPotential }, mentalPotential: { ...p.mentalPotential },
     // `effectivePosition` (voir Player.constructor/levelCoefficientFor) :
     // DOIT être sauvegardé au même rythme que `salary` juste au-dessus
     // (retour utilisateur, 2026-09 : "le poste est fixé en début de saison
@@ -8370,6 +8627,19 @@ function playerFromSave(pdata) {
   // écrase celui généré par défaut avec celui sauvegardé (sinon il serait
   // recalculé aléatoirement à chaque chargement, ce qui n'aurait aucun sens).
   p.potential = typeof pdata.potential === "number" ? pdata.potential : p.potential;
+  // Plafonds physique/mental sauvegardés (voir serializePlayerRecord) :
+  // restaurés APRÈS les migrations ci-dessus, pour qu'ils écrasent les
+  // valeurs par défaut fraîchement (re)calculées par le constructeur — sinon
+  // un plafond déjà fixé lors d'un chargement précédent serait redéfini au
+  // hasard à chaque nouveau chargement (même raison que `potential`
+  // ci-dessus). Absent (sauvegarde d'avant ce changement de règle, 2026-09) :
+  // on garde le plafond fraîchement calculé par le constructeur, dérivé de
+  // la valeur ACTUELLE de chaque caractéristique physique/mentale — jamais
+  // une réinitialisation, un joueur déjà entraîné directement dessus avant
+  // ce changement garde donc une marge de progression cohérente avec son
+  // niveau déjà atteint.
+  if (pdata.physicalPotential) p.physicalPotential = { ...p.physicalPotential, ...pdata.physicalPotential };
+  if (pdata.mentalPotential) p.mentalPotential = { ...p.mentalPotential, ...pdata.mentalPotential };
   // Le salaire n'est recalculé qu'au passage d'une saison (voir
   // Team.recalculateSalaries) : on restaure la valeur sauvegardée plutôt que
   // de le laisser se recalculer d'après les attributs ACTUELS à chaque
@@ -9897,6 +10167,12 @@ class MatchEngine {
 
 return {
   POSITIONS, ATTRS, TRAINING_LABELS, TRAINING_SYNERGY, TRAINING_FULL_MATCH_SECONDS, attendanceFactorForSeconds,
+  // Catégorisation Fondamentaux/Physique/Mental (voir le grand commentaire
+  // au-dessus de PHYSICAL_ATTRS, retour utilisateur 2026-09 : "entrainement
+  // des fondamentaux [...] ça ne doit entrainer que les fondamentaux") :
+  FUNDAMENTAL_ATTRS, PHYSICAL_ATTRS, MENTAL_ATTRS,
+  physicalGrowthFactorForAge, physicalDeclineFactorForAge, mentalGrowthFactorForAge,
+  physicalPotentialHeadroom, mentalPotentialHeadroom,
   TRAINING_HOME_POSITION, TRAINING_DILUTION_BY_POSITION_COUNT, TRAINING_HEIGHT_AFFINITY,
   positionEfficiencyForSkill, rankedPositionsForSkill, trainingPositionOptions, heightMultiplierForSkill,
   TRAINING_PROGRAMS, WEIGHT_BY_PROGRAM_SIZE, positionEfficiencyForProgram, rankedPositionsForProgram,
