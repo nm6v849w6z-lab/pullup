@@ -120,47 +120,73 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
    nécessitera probablement la même mécanique mais déclenchée/adressée
    différemment (par équipe/journée plutôt qu'implicite au club du joueur).
 
-7. **[En cours] Fiche joueur : bouton "Comparer" déplacé + flèches de
-   navigation entre joueurs de l'effectif** — retour utilisateur
+7. **[Prêt à committer] Fiche joueur : bouton "Comparer" déplacé + flèches
+   de navigation entre joueurs de l'effectif** — retour utilisateur
    (2026-09-24, capture annotée d'un cercle rouge en haut à droite de la
    fiche joueur, zone vide à droite de "Modifier vos ordres") : "mets le
    bouton comparer dans la zone gribouillée en rouge et juste à côté de ce
    bouton, mets des flèches de navigation pour passer d'un joueur à l'autre
-   de son effectif". Deux parties :
-   - Déplacer le bouton "Comparer" (actuellement en bas de la fiche, à côté
-     de "← Retour", voir `openPlayerCompareFromDetail`) vers la zone en
-     haut à droite de la fiche joueur (à côté de "Modifier vos ordres",
-     zone actuellement vide dans le topbar/header quand une fiche joueur
-     est ouverte).
-   - Ajouter des flèches (précédent/suivant) juste à côté de ce bouton pour
-     naviguer d'un joueur à l'autre DANS L'EFFECTIF DE SON CLUB (parcourir
-     `team.players` dans l'ordre affiché à l'Effectif) sans repasser par la
-     page Effectif à chaque fois.
-   En cours — pas encore commencé (juste noté, investigation du markup du
-   topbar de la fiche joueur et de l'ordre des joueurs à faire).
+   de son effectif".
+   Statut : CODE FAIT + TESTÉ (sandbox), prêt à livrer sur le Mac.
+   - Bouton "Comparer" déplacé du bas de la fiche (à côté de "← Retour")
+     vers le topbar GLOBAL, dans la zone vide à côté de "Modifier vos
+     ordres" (`#topbarPlayerNav`, voir son grand commentaire CSS) — cachée
+     par défaut, révélée uniquement quand la fiche joueur est la page
+     active (un seul point de bascule dans `showPage()`, attrape tous les
+     chemins d'entrée/sortie).
+   - Flèches précédent/suivant ajoutées juste à côté (`playerDetailRosterOrder`/
+     `navigatePlayerDetail`) : parcourent l'effectif de l'équipe actuellement
+     affichée, dans le même ordre par défaut que l'onglet Effectif (poste,
+     puis note globale décroissante) — stable même si l'Effectif a été
+     retrié entre-temps. Désactivées en bout de liste (pas de bouclage).
+   - Fichiers touchés : `moteurbasket3.html` (topbar HTML/CSS, `showPage`,
+     `renderPlayerDetail`), `player_compare_test.js` (id du bouton mis à
+     jour : `topbarComparePlayerBtn`), nouveau
+     `player_detail_topbar_nav_test.js` (visibilité liée à la page active,
+     flèches, ordre de navigation).
+   - Tests : suite complète relancée individuellement — tout passe.
+     Vérifié visuellement (Playwright) : placement conforme à la capture
+     annotée, comportement correct en largeur mobile (même repli que le
+     reste du topbar).
+   - Reste à faire : livrer sur le Mac, donner les commandes git.
 
-8. **[En cours] Fiche joueur : bloc "Derniers matchs" → fenêtre "toute la
-   saison" + réordonnancement des blocs** — retour utilisateur
-   (2026-09-24, 2 captures) : dans le bloc "DERNIERS MATCHS" (5 lignes
-   actuellement, voir `renderPlayerDetail`/`log.slice(0,5)`), ajouter un
-   bouton pour voir plus que les 5 derniers matchs / toute la saison :
-   "ça pourrait ouvrir une fenetre qui se superpose et qui montre toutes
-   les stats (pas juste point rebond passse) de la saison avec une moyenne
-   en bas" — donc une fenêtre/modal avec TOUTES les stats par match de la
-   saison (pas seulement PTS/REB/PD comme le tableau "Derniers matchs"
-   actuel) + une ligne de moyenne en bas. Par ailleurs, "enleve le match
-   par match en bas" — le tableau "MATCH PAR MATCH" actuellement affiché
-   sous "MOYENNES DE LA SAISON" (en bas de la fiche) doit disparaître,
-   remplacé par cette nouvelle fenêtre superposée accessible depuis
-   "Derniers matchs". Et enfin : "il faut remonter le bloc moyenne de la
-   saison au dessus du bloc mise en vente" — le bloc "MOYENNES DE LA
-   SAISON" doit passer AU-DESSUS du bloc "MISE EN VENTE" dans l'ordre
-   d'affichage de la fiche (actuellement : Mise en vente, PUIS Moyennes de
-   la saison, PUIS Match par match — voir `renderPlayerDetail`).
-   En cours — pas encore commencé (investigation du markup de ces 3 blocs
-   à faire : où ils sont générés dans `renderPlayerDetail`, structure du
-   tableau "Moyennes de la saison" pour réutiliser ses colonnes complètes
-   dans la nouvelle fenêtre superposée).
+8. **[Prêt à committer] Fiche joueur : bloc "Derniers matchs" → fenêtre
+   "toute la saison" + réordonnancement des blocs** — retour utilisateur
+   (2026-09-24, 2 captures) : "dans derniers matchs, ajoute un bouton pour
+   voir plus que les 5 derniers matchs et voir toute la saison (ça pourrait
+   ouvrir une fenetre qui se superpose et qui montre toutes les stats (pas
+   juste point rebond passse) de la saison avec une moyenne en bas. enleve
+   le match par match en bas" + "il faut remonter le bloc moyenne de la
+   saison au dessus du bloc mise en vente".
+   Statut : CODE FAIT + TESTÉ (sandbox), prêt à livrer sur le Mac.
+   - Bouton "Voir toute la saison (N matchs)" ajouté dans la carte
+     "Derniers matchs" (visible seulement si plus de 5 matchs joués, même
+     principe que "Afficher tout" des classements de stats) — ouvre
+     `showPlayerSeasonStatsModal` : une fenêtre superposée (même patron que
+     `showMatchBoxscore`/`showClubIdentityModal` : `.upgrade-confirm-overlay`
+     + boîte centrée) listant TOUS les matchs de la saison avec TOUTES les
+     stats (15 colonnes : Journée/Adversaire/Résultat/Min/Pts/Reb/Pas/Int/
+     Ctr/Perte/Faute/2pts/3pts/LF/Éval, pas seulement Pts/Reb/Pd comme
+     l'aperçu), avec la ligne de moyennes en bas (réutilise
+     `playerSeasonAveragesTableHtml`, la même fonction que celle du bloc
+     "Moyennes de la saison" affiché par ailleurs — pas de second calcul
+     qui pourrait diverger).
+   - Tableau "Match par match" (historique complet, en bas de la fiche)
+     entièrement RETIRÉ — remplacé par cette fenêtre.
+   - Bloc "Moyennes de la saison" REMONTÉ au-dessus de "Mise en vente"
+     (juste après la grille de cartes, avant elle désormais).
+   - Fichiers touchés : `moteurbasket3.html` (`renderPlayerDetail` +
+     nouvelles `playerSeasonAveragesTableHtml`/
+     `playerFullSeasonMatchesTableHtml`/`showPlayerSeasonStatsModal` + CSS
+     `.player-season-stats-box`), `player_detail_test.js` (assertions sur
+     l'ancien tableau "Match par match" adaptées à la nouvelle structure +
+     vérification de l'ordre), nouveau
+     `player_season_stats_modal_test.js` (bouton, contenu complet de la
+     fenêtre, fermeture, ordre garanti sur son propre effectif).
+   - Tests : suite complète relancée individuellement — tout passe.
+     Vérifié visuellement (Playwright, desktop + mobile) : fenêtre lisible,
+     défilement horizontal correct sur petit écran (`table-scroll`).
+   - Reste à faire : livrer sur le Mac, donner les commandes git.
 
 ---
 

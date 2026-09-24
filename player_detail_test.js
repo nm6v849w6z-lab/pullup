@@ -115,38 +115,56 @@ if (!doc2.getElementById("playerDetailName").textContent.includes(mvpName)) {
 if (!detailContent.includes("Moyennes de la saison (3 matchs)")) {
   throw new Error("❌ Après 3 journées jouées, la fiche devrait afficher '3 matchs' dans le titre des moyennes.");
 }
-const matchRows = [...doc2.querySelectorAll("#playerDetailContent table.roster-table")].pop().querySelectorAll("tbody tr");
-console.log("Lignes 'match par match' affichées :", matchRows.length, "(attendu 3)");
-if (matchRows.length !== 3) throw new Error("❌ 3 journées jouées devraient produire 3 lignes de match par match, obtenu : " + matchRows.length);
+// Retour utilisateur (2026-09-24) : "enleve le match par match en bas" — le
+// tableau "Match par match" (historique complet, journée par journée) a été
+// retiré du bas de la fiche joueur, remplacé par la fenêtre superposée
+// "Voir toute la saison" ouverte depuis la carte "Derniers matchs"
+// (n'apparaît que si plus de 5 matchs joués, voir
+// player_season_stats_modal_test.js pour cette fenêtre en détail — ce
+// fichier-ci n'en a que 3, pas assez pour que le bouton apparaisse). Il ne
+// reste donc plus qu'UNE SEULE table.roster-table sur la fiche : "Moyennes
+// de la saison" (remontée AU-DESSUS de "Mise en vente", retour utilisateur
+// "il faut remonter le bloc moyenne de la saison au dessus du bloc mise en
+// vente" — voir renderPlayerDetail).
+const rosterTables = doc2.querySelectorAll("#playerDetailContent table.roster-table");
+if (rosterTables.length !== 1) {
+  throw new Error(`❌ Une seule table.roster-table ("Moyennes de la saison") devrait rester sur la fiche joueur (le "Match par match" a été retiré), obtenu ${rosterTables.length}.`);
+}
+console.log("✅ Le tableau \"Match par match\" a bien disparu de la fiche joueur (une seule table.roster-table restante : Moyennes de la saison).");
 
-// Recoupe la 1ère ligne affichée (la plus RÉCENTE, tri décroissant) avec le
-// matchLog brut du joueur.
+// Recoupe la moyenne de points affichée avec le matchLog brut du joueur.
 const independent = win2.eval(`
   (function() {
     const team = league.teams[${mvpTeamIdx}];
     const p = team.players.find(pl => pl.id === ${mvpPlayerId});
-    const log = [...p.matchLog].sort((a, b) => b.round - a.round);
-    return { latest: log[0], gp: p.matchLog.length, totalPts: p.matchLog.reduce((s, m) => s + m.pts, 0) };
+    return { gp: p.matchLog.length, totalPts: p.matchLog.reduce((s, m) => s + m.pts, 0) };
   })()
 `);
-console.log("Dernière entrée matchLog (calcul indépendant) :", independent.latest);
-const firstRowText = matchRows[0].textContent;
-if (!firstRowText.includes(`Journée ${independent.latest.round + 1}`) || !firstRowText.includes(String(independent.latest.pts))) {
-  throw new Error(`❌ La 1ère ligne affichée (${firstRowText.replace(/\s+/g, " ")}) devrait correspondre à la journée la plus récente du matchLog brut (journée ${independent.latest.round + 1}, ${independent.latest.pts} pts).`);
-}
-// Index 0 (et non plus 1) depuis que les Caractéristiques sont affichées en
-// grille de pastilles (.pdp-attr-grid/.pdp-pill) plutôt qu'en
-// table.roster-table, et depuis la refonte "pdp-card" (2026-09, "on a tjrs
-// pas les pages joueurs à jour") qui a ajouté un aperçu des 5 derniers
-// matchs en table.pdp-games (classe distincte, jamais roster-table) : il ne
-// reste donc toujours que 2 table.roster-table sur la fiche, tout en bas
-// (Moyennes détaillées de la saison, puis Match par match, historique
-// complet), voir renderPlayerDetail.
-const avgPtsShown = doc2.querySelectorAll("#playerDetailContent table.roster-table")[0].querySelector("tbody tr td:nth-child(2)").textContent;
+const avgPtsShown = rosterTables[0].querySelector("tbody tr td:nth-child(2)").textContent;
 const expectedAvg = (independent.totalPts / independent.gp).toFixed(1);
 console.log("Moyenne de points affichée :", avgPtsShown, "| attendue (calcul indépendant) :", expectedAvg);
 if (avgPtsShown !== expectedAvg) throw new Error(`❌ La moyenne de points affichée (${avgPtsShown}) ne correspond pas au calcul indépendant (${expectedAvg}).`);
-console.log("✅ Fiche joueur ouverte depuis les stats de la ligue : moyennes et match par match cohérents avec le matchLog brut.");
+console.log("✅ Fiche joueur ouverte depuis les stats de la ligue : moyennes cohérentes avec le matchLog brut.");
+
+// Ordre "Moyennes de la saison" AVANT "Mise en vente" (retour utilisateur,
+// voir plus haut) : comparaison de position dans le texte brut du
+// conteneur plutôt qu'un sélecteur DOM dédié (les deux ne sont pas dans le
+// même type de bloc — .pdp-card pour "Mise en vente", <h3 class="field-
+// label"> nu pour "Moyennes de la saison", voir renderPlayerDetail).
+// "Mise en vente" n'existe que pour SON PROPRE effectif (isOwnTeam) : ce
+// MVP est celui de toute la ligue, pas forcément dans l'équipe du joueur —
+// ce test d'ordre ne s'applique donc que si le bloc est bien présent ici.
+const fullText = doc2.getElementById("playerDetailContent").textContent;
+const idxAverages = fullText.indexOf("Moyennes de la saison");
+const idxForSale = fullText.indexOf("Mise en vente");
+if (idxAverages === -1) throw new Error("❌ \"Moyennes de la saison\" devrait être présent sur la fiche joueur.");
+if (idxForSale === -1) {
+  console.log("ℹ️ MVP hors de son propre effectif ici (pas de bloc \"Mise en vente\") : ordre non vérifiable sur cette fiche, voir player_season_stats_modal_test.js pour un cas garanti sur son propre effectif.");
+} else if (idxAverages >= idxForSale) {
+  throw new Error(`❌ "Moyennes de la saison" devrait apparaître AVANT "Mise en vente" dans la fiche joueur (idxAverages=${idxAverages}, idxForSale=${idxForSale}).`);
+} else {
+  console.log("✅ Le bloc \"Moyennes de la saison\" apparaît bien au-dessus de \"Mise en vente\".");
+}
 
 doc2.getElementById("closePlayerDetailBtn").click();
 const standingsVisibleAfterBack = !doc2.getElementById("standingsSection").classList.contains("hidden");

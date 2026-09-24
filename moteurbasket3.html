@@ -913,6 +913,37 @@
   /* Retour utilisateur (2026-09) : bouton "Modifier vos ordres" (couleur
      différente une fois les ordres validés, voir updateTopbar). */
   button.topbar-cta.topbar-cta-validated{background:var(--ok); color:#fff;}
+  /* Fiche joueur : bouton "Comparer" + flèches de navigation entre joueurs
+     de l'effectif, DANS le topbar (retour utilisateur, 2026-09-24, capture
+     annotée d'un cercle rouge à côté de "Modifier vos ordres") : "mets le
+     bouton comparer dans la zone gribouillée en rouge et juste à côté de
+     ce bouton, mets des flèches de navigation pour passer d'un joueur à
+     l'autre de son effectif" — remplace l'ancien bouton "⇄ Comparer" qui
+     était en bas de la fiche joueur (voir .actions dans
+     #playerDetailSection, retiré). Cette barre étant dans le topbar
+     GLOBAL (même markup sur toutes les pages, voir <header class="topbar">
+     plus haut), elle reste cachée par défaut (.hidden) et n'est révélée
+     que lorsque la fiche joueur est la page active — voir showPage(),
+     seul point de bascule (attrape tous les chemins d'entrée/sortie :
+     clic sur un nom de joueur n'importe où, "← Retour", changement
+     d'onglet...). Contenu/état (joueur courant, flèches actives ou non en
+     bout d'effectif) mis à jour à chaque renderPlayerDetail, comme
+     l'ancien bouton l'était déjà pour currentPlayerDetailRef. Boutons
+     compacts assortis au topbar plutôt que button.secondary (page
+     entière, trop large ici). */
+  .topbar-player-nav{display:flex; align-items:center; gap:6px;}
+  .topbar-player-nav button.topbar-compare-btn{
+    background:transparent; color:var(--ink-dim); border:1px solid var(--line);
+    font-size:12.5px; padding:8px 14px; border-radius:999px; cursor:pointer; white-space:nowrap;
+  }
+  .topbar-player-nav button.topbar-compare-btn:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .topbar-player-nav-arrow{
+    background:transparent; color:var(--ink-dim); border:1px solid var(--line);
+    width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:16px; line-height:1;
+    display:flex; align-items:center; justify-content:center; padding:0; font-family:inherit;
+  }
+  .topbar-player-nav-arrow:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .topbar-player-nav-arrow:disabled{opacity:.3; cursor:default;}
   /* Mini bandeau de score dans le topbar — voir syncTopbarLiveStrip(). */
   .topbar-live-strip{
     display:flex; align-items:center; gap:8px; background:rgba(226,105,79,.1);
@@ -1886,6 +1917,17 @@
      + sélecteurs, un contenu comparable en encombrement à une feuille de
      stats), avec son propre défilement interne pour le petit écran. */
   .club-identity-modal-box{max-width:640px; max-height:85vh; overflow-y:auto;}
+  /* Fenêtre "Voir toute la saison" de la fiche joueur (retour utilisateur,
+     2026-09-24 : "ajoute un bouton pour voir plus que les 5 derniers
+     matchs et voir toute la saison [...] une fenetre qui se superpose et
+     qui montre toutes les stats [...] avec une moyenne en bas"), voir
+     showPlayerSeasonStatsModal : même overlay que .upgrade-confirm-overlay,
+     mais plus large que .match-boxscore-box (15 colonnes dans le tableau
+     "tous les matchs", contre 2 équipes à onglets pour une feuille de
+     match) — défilement interne à la fois vertical (petit écran) et
+     horizontal (table.table-scroll déjà prévue pour ça, voir son usage
+     existant pour "Moyennes de la saison"). */
+  .player-season-stats-box{max-width:820px; max-height:85vh; overflow-y:auto;}
   /* Petit aperçu du logo sur la carte "teaser" du tableau de bord (voir
      renderClubSection) : juste le logo, pas le bouton "Changer le
      logo"/l'upload (réservés au panneau complet, dans la modale). */
@@ -2239,6 +2281,14 @@
         <div class="topbar-search-results hidden" id="topbarSearchResults"></div>
       </div>
       <div class="topbar-right">
+        <!-- Fiche joueur : "Comparer" + flèches de navigation (voir le grand
+             commentaire CSS de .topbar-player-nav) — caché sauf quand la
+             fiche joueur est affichée. -->
+        <div class="topbar-player-nav hidden" id="topbarPlayerNav">
+          <button class="topbar-compare-btn" id="topbarComparePlayerBtn">⇄ Comparer</button>
+          <button class="topbar-player-nav-arrow" id="topbarPlayerPrevBtn" title="Joueur précédent de l'effectif" aria-label="Joueur précédent de l'effectif">‹</button>
+          <button class="topbar-player-nav-arrow" id="topbarPlayerNextBtn" title="Joueur suivant de l'effectif" aria-label="Joueur suivant de l'effectif">›</button>
+        </div>
         <!-- Mini bandeau de score : remplace le contexte "prochain match"
              tant qu'un match du club est en train de se diffuser — retour
              utilisateur : "quand on a un match en cours, il faut juste que
@@ -2808,13 +2858,14 @@
            première pdp-card (voir plus bas, ~ligne 15818). -->
       <h2 id="playerDetailName" style="display:none">Fiche joueur</h2>
       <div id="playerDetailContent"></div>
+      <!-- Le bouton "⇄ Comparer" vivait ici (voir git blame) — déplacé dans
+           le topbar (retour utilisateur, 2026-09-24, capture annotée) : "mets
+           le bouton comparer dans la zone gribouillée en rouge [...]" — voir
+           #topbarPlayerNav/.topbar-player-nav plus haut, à côté des flèches
+           de navigation entre joueurs de l'effectif ajoutées dans la même
+           demande. -->
       <div class="actions">
         <button class="secondary" id="closePlayerDetailBtn">← Retour</button>
-        <!-- Comparateur de joueurs (retour utilisateur, 2026-09-23,
-             "reflechis à ça, ça me plait bien" — mockup validé en amont) :
-             ouvre le sélecteur du 2e joueur avec CE joueur déjà fixé comme
-             joueur A. Voir openPlayerCompareFromDetail/showPlayerComparePicker. -->
-        <button class="secondary" id="openPlayerCompareBtn">⇄ Comparer</button>
       </div>
     </div>
   </div>
@@ -14388,6 +14439,14 @@ function showPage(id) {
     wrapEl.classList.toggle("wrap-wide", WIDE_PAGE_IDS.has(id));
     wrapEl.classList.toggle("wrap-narrow", NARROW_PAGE_IDS.has(id));
   }
+  // Bouton "Comparer" + flèches de navigation de la fiche joueur, dans le
+  // topbar GLOBAL (voir le grand commentaire CSS de .topbar-player-nav) :
+  // un seul point de bascule ici plutôt que dans chaque appelant de
+  // showPage, pour ne rater aucun chemin d'entrée/sortie de la fiche
+  // joueur (clic sur un nom de joueur n'importe où dans l'appli, "←
+  // Retour", changement d'onglet direct...).
+  const playerNavEl = document.getElementById("topbarPlayerNav");
+  if (playerNavEl) playerNavEl.classList.toggle("hidden", id !== "playerDetailSection");
 }
 
 function setActiveTab(key) {
@@ -16266,7 +16325,39 @@ function openPlayerCompareFromDetail() {
   if (!currentPlayerDetailRef) return;
   showPlayerComparePicker(currentPlayerDetailRef.teamIdx, currentPlayerDetailRef.playerId);
 }
-document.getElementById("openPlayerCompareBtn").addEventListener("click", openPlayerCompareFromDetail);
+document.getElementById("topbarComparePlayerBtn").addEventListener("click", openPlayerCompareFromDetail);
+
+// Flèches de navigation "joueur précédent/suivant" de la fiche joueur
+// (retour utilisateur, 2026-09-24, capture annotée, voir le grand
+// commentaire CSS de .topbar-player-nav) : parcourt l'effectif DE L'ÉQUIPE
+// ACTUELLEMENT AFFICHÉE (celle du joueur ouvert — le sien, mais aussi celle
+// d'un adversaire scouté/sur le marché, cette fiche fonctionnant pour les
+// deux), dans le même ordre par défaut que l'onglet Effectif
+// (renderEffectifSection : poste, puis note globale décroissante — un ordre
+// stable, indépendant du tri temporaire éventuellement choisi là-bas, pour
+// que "suivant/précédent" reste prévisible même si l'utilisateur a
+// re-trié l'Effectif entre-temps).
+function playerDetailRosterOrder(teamIdx) {
+  const team = league.teams[teamIdx];
+  if (!team) return [];
+  return [...team.players].sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall());
+}
+// Pas de retour au début en bout de liste (délibéré) : les flèches se
+// désactivent simplement au premier/dernier joueur (voir renderPlayerDetail
+// plus bas), pattern précédent/suivant classique plutôt qu'un bouclage qui
+// pourrait surprendre sur un effectif de 15 joueurs.
+function navigatePlayerDetail(step) {
+  if (!currentPlayerDetailRef) return;
+  const { teamIdx, playerId } = currentPlayerDetailRef;
+  const ordered = playerDetailRosterOrder(teamIdx);
+  const idx = ordered.findIndex(p => p.id === playerId);
+  if (idx === -1) return;
+  const target = ordered[idx + step];
+  if (!target) return;
+  showPlayerDetail(teamIdx, target.id);
+}
+document.getElementById("topbarPlayerPrevBtn").addEventListener("click", () => navigatePlayerDetail(-1));
+document.getElementById("topbarPlayerNextBtn").addEventListener("click", () => navigatePlayerDetail(1));
 
 function showPlayerComparePicker(teamIdxA, idA) {
   const teamObj = league.teams[teamIdxA];
@@ -16912,6 +17003,108 @@ function comparableSalesValuation(player, now = Date.now()) {
   return { estimate, sampleSize: comparables.length };
 }
 
+// Table "Moyennes de la saison" (retour utilisateur, 2026-09) : extraite en
+// fonction séparée (2026-09-24, ajout du bouton "Voir toute la saison" —
+// voir showPlayerSeasonStatsModal plus bas) pour être réutilisée à DEUX
+// endroits (le bloc top-level de la fiche joueur, ET le bas de la fenêtre
+// superposée "toute la saison") sans dupliquer le calcul, qui pourrait sinon
+// diverger entre les deux affichages. Comportement/calcul strictement
+// identique à avant, pure extraction. `log` non vide garanti par l'appelant.
+function playerSeasonAveragesTableHtml(log) {
+  const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
+  log.forEach(m => { Object.keys(sum).forEach(k => { sum[k] += m[k] || 0; }); });
+  const gp = log.length;
+  const pct = (made, att) => att > 0 ? `${Math.round((made / att) * 100)}%` : "–";
+  return `<h3 class="field-label">Moyennes de la saison (${gp} match${gp > 1 ? "s" : ""})</h3>` +
+    "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
+    "<th>Min</th><th>Pts</th><th>Reb</th><th>Pas</th><th>Int</th><th>Ctr</th><th>Perte</th><th>Faute</th>" +
+    "<th>2 pts</th><th>3 pts</th><th>LF</th></tr></thead><tbody><tr>" +
+    `<td>${(sum.min / gp).toFixed(1)}</td><td>${(sum.pts / gp).toFixed(1)}</td><td>${(sum.reb / gp).toFixed(1)}</td>` +
+    `<td>${(sum.ast / gp).toFixed(1)}</td><td>${(sum.stl / gp).toFixed(1)}</td><td>${(sum.blk / gp).toFixed(1)}</td>` +
+    `<td>${(sum.tov / gp).toFixed(1)}</td><td>${(sum.pf / gp).toFixed(1)}</td>` +
+    `<td>${sum.fgm2}/${sum.fga2} (${pct(sum.fgm2, sum.fga2)})</td>` +
+    `<td>${sum.fgm3}/${sum.fga3} (${pct(sum.fgm3, sum.fga3)})</td>` +
+    `<td>${sum.ftm}/${sum.fta} (${pct(sum.ftm, sum.fta)})</td>` +
+    "</tr></tbody></table></div>";
+}
+
+// Table complète "tous les matchs, toutes les stats" de la fenêtre
+// superposée "Voir toute la saison" (retour utilisateur, 2026-09-24, voir
+// showPlayerSeasonStatsModal) : remplace l'ancien tableau "Match par match"
+// (retiré du bas de la fiche joueur, "enleve le match par match en bas"),
+// avec plus de colonnes que lui (Résultat/Perte/Faute/2pts/3pts/LF/Éval en
+// plus) — "toutes les stats (pas juste point rebond passse)" comme demandé,
+// pas seulement le sous-ensemble qu'affichait "Derniers matchs" ou l'ancien
+// "Match par match". `log` non vide garanti par l'appelant.
+function playerFullSeasonMatchesTableHtml(teamIdx, log) {
+  const sortedLog = [...log].sort((a, b) => b.round - a.round);
+  let html = "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
+    "<th>Journée</th><th>Adversaire</th><th>Résultat</th><th>Min</th><th>Pts</th><th>Reb</th><th>Pas</th>" +
+    "<th>Int</th><th>Ctr</th><th>Perte</th><th>Faute</th><th>2 pts</th><th>3 pts</th><th>LF</th><th>Éval</th></tr></thead><tbody>";
+  sortedLog.forEach(m => {
+    const label = m.competition === "cup" ? escapeHtml(cupStageLabelForRoundIndex(m.round)) : `Journée ${m.round + 1}`;
+    const result = matchResultForLogEntry(teamIdx, m);
+    const resultCell = result
+      ? `<span class="pdp-res ${result.win ? "w" : "l"}">${result.win ? "V" : "D"}</span> ${result.myScore}-${result.oppScore}`
+      : "–";
+    html += `<tr><td>${label}</td><td>${escapeHtml(opponentNameForMatchLogEntry(teamIdx, m))}</td><td>${resultCell}</td>` +
+      `<td>${m.min}</td><td>${m.pts}</td><td>${m.reb}</td><td>${m.ast}</td><td>${m.stl}</td><td>${m.blk}</td>` +
+      `<td>${m.tov}</td><td>${m.pf}</td>` +
+      `<td>${m.fgm2}/${m.fga2}</td><td>${m.fgm3}/${m.fga3}</td><td>${m.ftm}/${m.fta}</td>` +
+      `<td class="strong">${statEvaluation(m)}</td></tr>`;
+  });
+  html += "</tbody></table></div>";
+  return html;
+}
+
+// Fenêtre superposée "Voir toute la saison" (retour utilisateur,
+// 2026-09-24, capture des blocs "Derniers matchs"/"Match par match") :
+// "dans derniers matchs, ajoute un bouton pour voir plus que les 5 derniers
+// matchs et voir toute la saison (ça pourrait ouvrir une fenetre qui se
+// superpose et qui montre toutes les stats (pas juste point rebond passse)
+// de la saison avec une moyenne en bas". Même patron générique que
+// showMatchBoxscore/showClubIdentityModal (.upgrade-confirm-overlay +
+// .upgrade-confirm-box, voir leurs commentaires CSS) : overlay assombri,
+// boîte centrée avec son propre défilement, fermeture par la croix, le
+// bouton "Fermer", ou un clic sur le fond. Relit teamIdx/playerId au
+// moment du clic (comme showMatchBoxscore) plutôt que de fermer sur des
+// données capturées à l'ouverture de la fiche joueur, au cas où quelque
+// chose aurait changé entre-temps.
+function closePlayerSeasonStatsModal() {
+  const existing = document.getElementById("playerSeasonStatsOverlay");
+  if (existing) existing.remove();
+}
+function showPlayerSeasonStatsModal(teamIdx, playerId) {
+  closePlayerSeasonStatsModal();
+  const team = league.teams[teamIdx];
+  const player = team && team.players.find(p => p.id === playerId);
+  if (!player) return;
+  const log = player.matchLog || [];
+  if (!log.length) return; // le bouton qui ouvre cette fenêtre n'apparaît de toute façon que si log.length > 5
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay player-season-stats-overlay";
+  overlay.id = "playerSeasonStatsOverlay";
+  overlay.innerHTML = `<div class="upgrade-confirm-box player-season-stats-box">` +
+    `<h3>Statistiques de la saison — ${escapeHtml(player.name)}</h3>` +
+    playerFullSeasonMatchesTableHtml(teamIdx, log) +
+    playerSeasonAveragesTableHtml(log) +
+    `<button type="button" class="upgrade-confirm-cancel-btn" id="playerSeasonStatsCloseBtn" style="margin-top:14px; width:100%;">Fermer</button>` +
+    `</div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closePlayerSeasonStatsModal(); });
+  document.getElementById("playerSeasonStatsCloseBtn").addEventListener("click", closePlayerSeasonStatsModal);
+}
+// Délégué sur le document (le bouton n'existe que par intermittence, recréé
+// à chaque renderPlayerDetail, voir #playerSeasonStatsOpenBtn) plutôt qu'un
+// addEventListener direct qui se perdrait dès le premier re-rendu — même
+// raison/patron que renderStatsLeaderExpand (data-stats-expand-cat) plus
+// haut.
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("#playerSeasonStatsOpenBtn");
+  if (!btn) return;
+  showPlayerSeasonStatsModal(Number(btn.dataset.teamIdx), Number(btn.dataset.playerId));
+});
+
 function renderPlayerDetail(teamIdx, playerId) {
   const nameHeader = document.getElementById("playerDetailName");
   const holder = document.getElementById("playerDetailContent");
@@ -16927,8 +17120,20 @@ function renderPlayerDetail(teamIdx, playerId) {
   // Laissé à null si le joueur n'est plus dans cet effectif (cas ci-dessous)
   // : le bouton "Comparer" n'a alors personne de valide à comparer.
   currentPlayerDetailRef = player ? { teamIdx, playerId } : null;
-  const openCompareBtn = document.getElementById("openPlayerCompareBtn");
-  if (openCompareBtn) openCompareBtn.classList.toggle("hidden", !player);
+  const compareBtn = document.getElementById("topbarComparePlayerBtn");
+  if (compareBtn) compareBtn.classList.toggle("hidden", !player);
+  // Flèches précédent/suivant (voir navigatePlayerDetail/
+  // playerDetailRosterOrder) : désactivées en bout d'effectif (premier
+  // joueur -> pas de précédent, dernier -> pas de suivant), et les deux si
+  // le joueur affiché n'est plus dans cet effectif (rien à parcourir).
+  const prevBtn = document.getElementById("topbarPlayerPrevBtn");
+  const nextBtn = document.getElementById("topbarPlayerNextBtn");
+  if (prevBtn && nextBtn) {
+    const ordered = player ? playerDetailRosterOrder(teamIdx) : [];
+    const idx = player ? ordered.findIndex(p => p.id === playerId) : -1;
+    prevBtn.disabled = idx <= 0;
+    nextBtn.disabled = idx === -1 || idx >= ordered.length - 1;
+  }
   if (!player) {
     nameHeader.textContent = "Fiche joueur";
     holder.innerHTML = "<p class='training-empty'>Ce joueur n'est plus dans cet effectif (vendu, ou transféré).</p>";
@@ -17136,6 +17341,18 @@ function renderPlayerDetail(teamIdx, playerId) {
         `<td>${resultCell}</td><td class="strong">${m.pts}</td><td>${m.reb}</td><td>${m.ast}</td><td class="strong">${statEvaluation(m)}</td></tr>`;
     });
     html += `</table>`;
+    // Bouton "Voir toute la saison" (retour utilisateur, 2026-09-24) :
+    // "dans derniers matchs, ajoute un bouton pour voir plus que les 5
+    // derniers matchs et voir toute la saison (ça pourrait ouvrir une
+    // fenetre qui se superpose et qui montre toutes les stats (pas juste
+    // point rebond passse) de la saison avec une moyenne en bas" — voir
+    // showPlayerSeasonStatsModal. Affiché seulement s'il y a réellement
+    // plus de 5 matchs à voir (même principe que .stats-leader-expand-btn
+    // pour les classements de la ligue : pas de bouton qui ne changerait
+    // rien à afficher).
+    if (log.length > 5) {
+      html += `<button type="button" class="stats-leader-expand-btn" id="playerSeasonStatsOpenBtn" data-team-idx="${teamIdx}" data-player-id="${player.id}">Voir toute la saison (${log.length} matchs) ▾</button>`;
+    }
   } else {
     html += `<p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
   }
@@ -17144,6 +17361,15 @@ function renderPlayerDetail(teamIdx, playerId) {
 
   html += `</div>`; // colonne de droite
   html += `</div>`; // pdp-grid
+
+  // ---- Moyennes de la saison (retour utilisateur, 2026-09-24 : "il faut
+  // remonter le bloc moyenne de la saison au dessus du bloc mise en
+  // vente") : REMONTÉ ici, juste après la grille de cartes et AVANT "Mise
+  // en vente" ci-dessous (précédemment après elle, voir git blame).
+  // playerSeasonAveragesTableHtml extraite en fonction séparée (voir son
+  // commentaire) : réutilisée aussi par showPlayerSeasonStatsModal, pour
+  // ne jamais avoir deux calculs de moyennes qui pourraient diverger. ----
+  if (log.length) html += playerSeasonAveragesTableHtml(log);
 
   // ---- Mise en vente : reprend EXACTEMENT le mécanisme déjà en place
   // (league.listPlayerForSale, prix libre, jamais pré-rempli), simplement
@@ -17170,44 +17396,14 @@ function renderPlayerDetail(teamIdx, playerId) {
     html += `<div id="playerDetailMarketFeedback"></div>`;
     html += `</div>`;
   }
-
-  // ---- Historique complet (moyennes détaillées au tir + match par match
-  // complet) : conservé sous la grille de cartes, la maquette n'affichant
-  // qu'un aperçu des 5 derniers matchs, jamais un remplacement. Réutilise
-  // `log` (déjà déclaré plus haut pour la carte "Derniers matchs"), pas
-  // besoin d'une deuxième lecture de player.matchLog. ----
-  if (!log.length) {
-    html += "<p class='training-empty'>Aucun match joué cette saison pour l'instant.</p>";
-  } else {
-    const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
-    log.forEach(m => { Object.keys(sum).forEach(k => { sum[k] += m[k] || 0; }); });
-    const gp = log.length;
-    const pct = (made, att) => att > 0 ? `${Math.round((made / att) * 100)}%` : "–";
-    html += `<h3 class="field-label">Moyennes de la saison (${gp} match${gp > 1 ? "s" : ""})</h3>`;
-    html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-      "<th>Min</th><th>Pts</th><th>Reb</th><th>Pas</th><th>Int</th><th>Ctr</th><th>Perte</th><th>Faute</th>" +
-      "<th>2 pts</th><th>3 pts</th><th>LF</th></tr></thead><tbody><tr>" +
-      `<td>${(sum.min / gp).toFixed(1)}</td><td>${(sum.pts / gp).toFixed(1)}</td><td>${(sum.reb / gp).toFixed(1)}</td>` +
-      `<td>${(sum.ast / gp).toFixed(1)}</td><td>${(sum.stl / gp).toFixed(1)}</td><td>${(sum.blk / gp).toFixed(1)}</td>` +
-      `<td>${(sum.tov / gp).toFixed(1)}</td><td>${(sum.pf / gp).toFixed(1)}</td>` +
-      `<td>${sum.fgm2}/${sum.fga2} (${pct(sum.fgm2, sum.fga2)})</td>` +
-      `<td>${sum.fgm3}/${sum.fga3} (${pct(sum.fgm3, sum.fga3)})</td>` +
-      `<td>${sum.ftm}/${sum.fta} (${pct(sum.ftm, sum.fta)})</td>` +
-      "</tr></tbody></table></div>";
-
-    const sortedLog = [...log].sort((a, b) => b.round - a.round);
-    html += `<h3 class="field-label">Match par match</h3>`;
-    html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-      "<th>Journée</th><th>Adversaire</th><th>Min</th><th>Pts</th><th>Reb</th><th>Pas</th><th>Int</th><th>Ctr</th></tr></thead><tbody>";
-    sortedLog.forEach(m => {
-      const label = m.competition === "cup"
-        ? `${escapeHtml(cupStageLabelForRoundIndex(m.round))}`
-        : `Journée ${m.round + 1}`;
-      html += `<tr><td>${label}</td><td>${escapeHtml(opponentNameForMatchLogEntry(teamIdx, m))}</td>` +
-        `<td>${m.min}</td><td>${m.pts}</td><td>${m.reb}</td><td>${m.ast}</td><td>${m.stl}</td><td>${m.blk}</td></tr>`;
-    });
-    html += "</tbody></table></div>";
-  }
+  // Le tableau "Match par match" vivait ici (voir git blame) — retiré
+  // (retour utilisateur, 2026-09-24 : "enleve le match par match en bas"),
+  // remplacé par la fenêtre superposée "Voir toute la saison" ouverte
+  // depuis la carte "Derniers matchs" ci-dessus (showPlayerSeasonStatsModal
+  // : mêmes données + TOUTES les stats, pas seulement Min/Pts/Reb/Pas/Int/
+  // Ctr comme cet ancien tableau). Pas de message "aucun match" en double
+  // ici si log est vide : la carte "Derniers matchs" plus haut l'affiche
+  // déjà (voir son <p class="pdp-locked-note">).
 
   holder.innerHTML = html;
 }

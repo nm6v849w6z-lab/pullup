@@ -40,7 +40,11 @@ function expectedTierClass(value) {
   const playerB = myPlayers[1];
 
   win.showPlayerDetail(0, playerA.id);
-  const compareBtn = doc.getElementById("openPlayerCompareBtn");
+  // #topbarComparePlayerBtn (retour utilisateur, 2026-09-24) : le bouton
+  // "Comparer" a été déplacé du bas de la fiche joueur vers le topbar,
+  // voir .topbar-player-nav dans moteurbasket3.html — même bouton,
+  // nouvel id/emplacement.
+  const compareBtn = doc.getElementById("topbarComparePlayerBtn");
   if (!compareBtn || compareBtn.classList.contains("hidden")) {
     throw new Error("❌ Le bouton \"Comparer\" devrait être visible sur la fiche joueur.");
   }
@@ -131,7 +135,7 @@ function escapeForCheck(s) { return s.replace(/[&<>"']/g, () => ""); } // approx
   const playerB = saved.team.players[1];
 
   win.showPlayerDetail(0, playerA.id);
-  doc.getElementById("openPlayerCompareBtn").click();
+  doc.getElementById("topbarComparePlayerBtn").click();
   const input = doc.getElementById("compareSearchInput");
   input.value = playerB.name;
   input.dispatchEvent(new win.Event("input", { bubbles: true }));
@@ -233,7 +237,7 @@ function escapeForCheck(s) { return s.replace(/[&<>"']/g, () => ""); } // approx
   const myPlayer = saved.team.players[0];
 
   win.showPlayerDetail(0, myPlayer.id);
-  doc.getElementById("openPlayerCompareBtn").click();
+  doc.getElementById("topbarComparePlayerBtn").click();
   const input = doc.getElementById("compareSearchInput");
   input.value = listedPlayer.name;
   input.dispatchEvent(new win.Event("input", { bubbles: true }));
@@ -292,7 +296,7 @@ function escapeForCheck(s) { return s.replace(/[&<>"']/g, () => ""); } // approx
   const oppPlayer = saved.league.teams[oppTeamIdx].players[0];
 
   win.showPlayerDetail(0, myPlayer.id);
-  doc.getElementById("openPlayerCompareBtn").click();
+  doc.getElementById("topbarComparePlayerBtn").click();
   const input = doc.getElementById("compareSearchInput");
   input.value = oppPlayer.name;
   input.dispatchEvent(new win.Event("input", { bubbles: true }));
