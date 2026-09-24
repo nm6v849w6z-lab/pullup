@@ -19,16 +19,20 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
 // AvatarGen (voir son grand commentaire, moteurbasket3.html) incrémente un
 // compteur MODULE-LEVEL (`UID`) pour générer des ids SVG uniques sur la
-// page (gradients/clip-paths : `hd123`, `eye124`, `mo125`, `bs126`...) à
+// page (gradients/clip-paths : `hd123`, `eye124`, `mo125`, `bs126`,
+// `tx127` (texture peau/maillot/barbe), `arm128` (tatouages de bras)...) à
 // CHAQUE rendu — deux appels de playerAvatarHtml pour le MÊME joueur
 // produisent donc un SVG visuellement identique mais textuellement
 // différent (ids différents), confirmé en isolant generateAppearance
 // (déterministe, JSON identique à seed égal) de renderAvatar (les seuls ids
 // bougent). On neutralise ces ids avant de comparer deux rendus, pour
 // vérifier le VRAI joueur sans dépendre d'un compteur global qui avance à
-// chaque appel.
+// chaque appel. Liste tenue à jour avec les préfixes `${++UID}` du
+// générateur (2026-09-23 : ajout de `tx`/`arm` lors de l'intégration de la
+// version étendue d'avatar-generator.js — texture de peau/maillot/barbe et
+// tatouages de bras).
 function normalizeAvatarHtml(s) {
-  return s.replace(/(hd|eye|mo|bs)\d+/g, "$1X");
+  return s.replace(/(hd|eye|mo|bs|tx|arm)\d+/g, "$1X");
 }
 
 (async () => {
