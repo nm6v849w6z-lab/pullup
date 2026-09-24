@@ -20,7 +20,48 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-1. **Box score en direct : ligne total + tous les joueurs + minutes
+1. **[Prêt à committer] Troncature des noms d'équipe longs (classements de
+   stats)** — retour utilisateur (2026-09-24, capture) : "pour les longs
+   nom d'équipe il faut affiche les 10 premières lettres quand meme, ça ne
+   ressemble à rien là" — "Gotham Knights" (14 caractères, forte proportion
+   de majuscules) passait au travers de l'ancien seuil de troncature
+   (maxChars=14, comparaison en NOMBRE de caractères) tout en débordant
+   quand même de la colonne fixe 92px en pixels réels, redéclenchant le bug
+   d'origine (bouton de nom d'équipe entièrement effacé, "(…)" tout seul).
+   Statut : CODE FAIT + TESTÉ (sandbox), prêt à livrer sur le Mac.
+   - `truncateTeamNameForColumn` : seuil abaissé de 14 à 11 (10 lettres +
+     "…") — marge de sécurité plus large plutôt que retenté au pixel près.
+   - Filet de sécurité CSS supplémentaire (découvert en testant le pire cas
+     pathologique, un nom fait uniquement de "W" : même tronqué à 10
+     lettres, ça peut encore déborder des 92px) : le bouton `.team-link`
+     reçoit sa PROPRE ellipsis CSS (au lieu de compter sur celle du
+     parent), et `text-overflow:ellipsis` est retiré de
+     `.stats-leader-team`/`.stats-leader-first-team` (qui gardent juste
+     `overflow:hidden`) — sinon le bouton redevient une boîte atomique du
+     point de vue de l'ellipsis du PARENT une fois `display:inline-block`,
+     et se refait effacer entièrement (vérifié avec Playwright : reproduit
+     exactement le bug).
+   - Fichiers touchés : `moteurbasket3.html` (fonction + CSS),
+     `league_stats_test.js` (nouvelles assertions : troncature JS +
+     garde-fou texte brut sur le CSS, voir Partie 4).
+   - Tests : suite complète des 94 tests relancée (individuellement, pas en
+     parallèle) — tout passe. Vérification visuelle pixel par pixel faite
+     hors suite avec Playwright (bouton toujours visible, y compris pour le
+     nom pathologique "WWWWWWWWWWWW").
+   - Reste à faire : livrer sur le Mac (device_commit_files), donner les
+     commandes git à l'utilisateur (jamais de push par Claude).
+
+2. **[À investiguer, pas commencé] Couleurs du radar (profil joueur) pas
+   assez vives** — retour utilisateur (2026-09-24, capture "PROFIL (VUE
+   D'ENSEMBLE)") : "les zones rouge et orange sur le profil ne sont tjrs
+   pas vives". Déjà "corrigé" deux fois avant sans satisfaire pleinement
+   l'utilisateur (commits `91ea530` "Corrige couleurs radar" et `06d282d`
+   "Radar plus vif, ...") — donc une simple re-tentative de la même
+   approche risque de ne pas suffire, à creuser pour comprendre ce qui n'a
+   pas été couvert par les deux essais précédents. Pas encore investigué
+   (pas de lecture du code de rendu du radar effectuée à ce stade).
+
+3. **Box score en direct : ligne total + tous les joueurs + minutes
    jouées** — retour utilisateur : actuellement `liveBoxScore` ne crée une
    ligne que pour un joueur ayant déjà généré une statistique (lazy), pas
    de colonne MIN (volontairement absente à l'origine, voir le commentaire
@@ -34,19 +75,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
    départ pour calculer le temps réellement passé sur le terrain par
    joueur.
 
-2. **Feuille de match : score par quart-temps** — retour Discord (Ariane,
+4. **Feuille de match : score par quart-temps** — retour Discord (Ariane,
    relayé par l'utilisateur) : afficher le score par quart-temps sur la
    boxscore du match. `quarterScores` existe déjà côté moteur
    (`{A:[...4], B:[...4]}`, voir engine.js `simulate()`) — pas encore
    affiché sur la feuille de stats. Pas commencé.
 
-3. **Augmenter le pool de noms de famille générés** — retour Discord
+5. **Augmenter le pool de noms de famille générés** — retour Discord
    (Ariane, relayé par l'utilisateur) : trop de doublons de noms de
    famille dans un même effectif (ex. "3 Fontaine, 2 Novak, 2 Petit, c'est
    la galère pour m'y retrouver"). Élargir la liste de noms de famille
    utilisée à la génération des joueurs. Pas commencé.
 
-4. **Pouvoir regarder le live d'une autre équipe depuis son calendrier** —
+6. **Pouvoir regarder le live d'une autre équipe depuis son calendrier** —
    retour utilisateur : actuellement l'écran Live ne montre que le match du
    club du joueur (`league.liveMatch`, calculé pour son propre club). Il
    faudrait un accès au direct d'un match d'une AUTRE équipe depuis la page

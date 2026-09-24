@@ -1702,11 +1702,43 @@
      alignée à droite, sur la même ligne.
   */
   .stats-leader-card{--stats-leader-team-w: 92px;}
-  .stats-leader-first-team{flex:none; width:var(--stats-leader-team-w); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink-faint); font-size:12px;}
+  .stats-leader-first-team{flex:none; width:var(--stats-leader-team-w); overflow:hidden; white-space:nowrap; color:var(--ink-faint); font-size:12px;}
   .stats-leader-row{display:flex; align-items:baseline; gap:4px; width:100%;}
   .stats-leader-name{flex:1 1 auto; min-width:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .stats-leader-team{flex:none; width:var(--stats-leader-team-w); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .stats-leader-team{flex:none; width:var(--stats-leader-team-w); overflow:hidden; white-space:nowrap;}
   .stats-leader-val{flex:none; padding-left:4px;}
+  /* Filet de sécurité supplémentaire (retour utilisateur 2026-09-24 :
+     "pour les longs nom d'équipe il faut affiche les 10 premières lettres
+     quand meme, ça ne ressemble à rien là" — capture d'une carte "Gotham
+     Knights" affichant juste "(…)"). La troncature JS ci-dessus
+     (truncateTeamNameForColumn, 10 lettres + "…" par défaut) suffit pour
+     l'immense majorité des noms réels, mais reste une approximation en
+     NOMBRE DE CARACTÈRES d'une largeur en PIXELS — un nom pathologique
+     fait uniquement de lettres très larges (majuscules "W"/"M" en rafale)
+     peut en théorie encore déborder des 92px même une fois réduit à 10
+     lettres (vérifié : "WWWWWWWWWWWW" tronqué à "WWWWWWWWWW…" mesure
+     ~115px, plus large que les 92px de la colonne). Plutôt que de re-
+     chasser un seuil de caractères parfait (fragile, on l'a déjà fait deux
+     fois), DEUX changements ensemble règlent ce résidu :
+     1) le bouton lui-même (.team-link, dans ces deux colonnes) reçoit SA
+        PROPRE ellipsis CSS (overflow:hidden + text-overflow:ellipsis +
+        max-width:100%, posés sur la boîte qui possède directement le
+        texte) au lieu de compter sur l'ellipsis du parent ;
+     2) `text-overflow:ellipsis` est RETIRÉ des deux colonnes parentes
+        (.stats-leader-team/-first-team, juste au-dessus — elles gardent
+        seulement overflow:hidden, un clip géométrique simple).
+     Testé isolément : garder l'ellipsis sur LE PARENT en plus de celle du
+     bouton reproduit EXACTEMENT le bug d'origine (le bouton redevient une
+     boîte atomique du point de vue de l'ellipsis du parent une fois
+     display:inline-block, donc le parent l'efface entièrement — "(…)" tout
+     seul). Seul overflow:hidden (sans text-overflow) sur le parent fait un
+     clip géométrique pur (pas de recherche "où couper le texte"), qui
+     laisse le bouton se gérer lui-même et rester visible, partiellement
+     coupé avec sa propre ellipsis ("(WWWWW…"). Vérifié avec ce nom-limite
+     artificiel : sans ces deux changements, bouton entièrement invisible ;
+     avec, le bouton reste visible et affiche "WWWWW…" tronqué proprement.
+  */
+  .stats-leader-first-team .team-link, .stats-leader-team .team-link{display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom;}
   /* Pas de largeur réduite sous 480px (essayé, puis retiré) : le nom
      d'équipe déjà tronqué en JS (truncateTeamNameForColumn, jusqu'à 14
      caractères) ne tenait plus dans une colonne mobile plus étroite —
@@ -15958,8 +15990,21 @@ const LEAGUE_STATS_EXPANDED_N = 20;
 // le CSS coupe quoi que ce soit dans le cas courant — l'ellipsis CSS de la
 // colonne reste en place comme filet de sécurité, pas comme mécanisme
 // principal). `title=` sur la colonne porte toujours le nom complet.
+//
+// Retour utilisateur (2026-09-24, capture) : "pour les longs nom d'équipe
+// il faut affiche les 10 premières lettres quand meme, ça ne ressemble à
+// rien là" — le seuil initial (14 caractères) revenait de fait au MÊME bug
+// pour certains noms : compter des CARACTÈRES n'est qu'une approximation
+// grossière d'une largeur en PIXELS (des majuscules comme "Gotham Knights"
+// — 14 caractères pile, donc laissé tel quel, non tronqué — sont bien plus
+// larges à l'écran que 14 minuscules, et débordaient quand même des 92px de
+// la colonne, ramenant EXACTEMENT au bug d'origine : bouton entier effacé,
+// "(…)" tout seul). Seuil abaissé à 11 (10 lettres + "…") avec une bonne
+// marge de sécurité plutôt que retenté au pixel près — testé avec des noms
+// à forte proportion de majuscules (le pire cas) pour confirmer que ça
+// tient bien dans la colonne, voir league_stats_test.js.
 function truncateTeamNameForColumn(name, maxChars) {
-  maxChars = maxChars || 14;
+  maxChars = maxChars || 11;
   if (!name || name.length <= maxChars) return name || "";
   return name.slice(0, maxChars - 1).trimEnd() + "…";
 }

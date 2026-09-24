@@ -262,6 +262,57 @@ if (!otherCardsStillCollapsed) {
 }
 console.log("✅ L'état déplié/replié est bien indépendant par catégorie.");
 
+// ---------------------------------------------------------------------
+// Partie 4 (retour utilisateur, 2026-09-24, capture) : "pour les longs nom
+// d'équipe il faut affiche les 10 premières lettres quand meme, ça ne
+// ressemble à rien là" — un nom de 14 caractères à forte proportion de
+// majuscules ("Gotham Knights") passait au travers de l'ancien seuil de
+// troncature (maxChars=14, comparaison en NOMBRE de caractères) tout en
+// débordant quand même de la colonne fixe (92px) en pixels réels, ce qui
+// redéclenchait le bug d'origine (bouton entièrement effacé, "(…)" tout
+// seul — voir le grand commentaire de truncateTeamNameForColumn dans
+// moteurbasket3.html). jsdom ne fait pas de vraie mise en page (pas de
+// getBoundingClientRect utile ici, voir mobile_viewport_meta_test.js pour
+// le même constat) : on vérifie donc directement la fonction de troncature
+// (déterministe, pas besoin d'espérer qu'un nom précis tombe dans un top 5
+// tiré au hasard), et on garde un garde-fou texte brut sur le CSS pour la
+// régression déjà rencontrée deux fois (largeur en pixels vs. nombre de
+// caractères) : la vérification pixel par pixel elle-même a été faite hors
+// suite avec Playwright (bouton toujours visible, y compris pour le pire
+// cas pathologique "WWWWWWWWWWWW", troncature JS ou pas).
+// ---------------------------------------------------------------------
+const truncationCases = [
+  { name: "Gotham Knights", expected: "Gotham Kni…" },
+  { name: "Cerberus Basketball Team International", expected: "Cerberus B…" },
+  { name: "ESSEC", expected: "ESSEC" }, // déjà court : pas de troncature
+];
+truncationCases.forEach(({ name, expected }) => {
+  const got = win2.eval(`truncateTeamNameForColumn(${JSON.stringify(name)})`);
+  if (got !== expected) {
+    throw new Error(`❌ truncateTeamNameForColumn(${JSON.stringify(name)}) devrait donner ${JSON.stringify(expected)} (10 lettres + "…"), obtenu ${JSON.stringify(got)}.`);
+  }
+});
+console.log("✅ truncateTeamNameForColumn tronque bien à 10 lettres + \"…\" pour les noms longs (ex. \"Gotham Knights\"), sans toucher aux noms déjà courts.");
+
+// Garde-fou léger (vérif texte brut, pas de mise en page réelle dans
+// jsdom, même limite que mobile_viewport_meta_test.js ci-dessus) : les
+// deux colonnes nom d'équipe (n°1 ET rangs 2-5) ne doivent PAS avoir leur
+// propre text-overflow:ellipsis — sinon le bouton .team-link qu'elles
+// contiennent redevient une boîte atomique pour l'ellipsis du PARENT une
+// fois display:inline-block, et se fait à nouveau effacer entièrement par
+// celle-ci (vérifié avec Playwright : reproduit exactement le bug "(…)").
+// Seul overflow:hidden (clip géométrique simple, sans recherche
+// d'ellipsis) doit rester sur ces deux colonnes.
+if (/\.stats-leader-team\{[^}]*text-overflow:ellipsis/.test(html) || /\.stats-leader-first-team\{[^}]*text-overflow:ellipsis/.test(html)) {
+  throw new Error("❌ .stats-leader-team/.stats-leader-first-team ne devraient plus avoir leur propre text-overflow:ellipsis (régression du correctif 2026-09-24 : redéclenche le bug du bouton de nom d'équipe entièrement effacé).");
+}
+// Le bouton .team-link, LUI, doit porter sa propre ellipsis dans ces deux
+// colonnes (le filet de sécurité qui remplace celle du parent).
+if (!/\.stats-leader-first-team \.team-link, \.stats-leader-team \.team-link\{[^}]*text-overflow:ellipsis/.test(html)) {
+  throw new Error("❌ Le filet de sécurité CSS (.team-link avec sa propre ellipsis dans .stats-leader-team/-first-team) semble avoir disparu (régression du correctif 2026-09-24).");
+}
+console.log("✅ Le CSS des colonnes de nom d'équipe garde bien l'ellipsis sur le bouton lui-même (filet de sécurité), pas sur ses parents (qui redéclencherait le bug du bouton effacé).");
+
 await flush(dom2);
 dom2.window.close();
 server.close();
