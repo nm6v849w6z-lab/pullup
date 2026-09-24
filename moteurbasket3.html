@@ -1660,27 +1660,60 @@
      en place côté league_stats_test.js (split("·"), tri décroissant, etc.).
   */
   .stats-leader-card{background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
-  .stats-leader-card ol{margin:0; padding-left:18px; font-size:12.5px; color:var(--ink); line-height:1.9;}
+  /* list-style:none + numéros affichés "à la main" (.stats-leader-rank,
+     voir plus bas) plutôt que de compter sur le marqueur natif <ol>/<li> :
+     retour utilisateur (2026-09-23, capture Safari) : "pour les classements
+     de stats pour les joueurs à partir du 2e mets 2. 3. 4. 5. etc" — les
+     rangs 2+ n'affichaient AUCUN numéro dans Safari alors que Chrome/
+     Chromium les affichait correctement (`start="2"` + compteur natif
+     list-item, vérifié : Safari a un bug connu de rendu du compteur natif
+     quand un <li> voisin passe en display:flex comme .stats-leader-first
+     ci-dessous — le marqueur natif dépend trop du moteur de rendu pour un
+     simple numéro). Un <span> de texte normal ne dépend d'aucun moteur de
+     comptage CSS et s'affiche pareil partout. */
+  .stats-leader-card ol{margin:0; padding-left:0; list-style:none; font-size:12.5px; color:var(--ink); line-height:1.9;}
   .stats-leader-card li span.sub{color:var(--ink-faint); font-size:11px;}
-  /* margin-right:0 (pas de bleed comme à gauche) : retour utilisateur
-     (2026-09-23) : "aligne toutes les stats cotés droits" — sinon le bord
-     droit de la valeur du n°1 (.stats-leader-first-value) se retrouvait
-     décalé de quelques px par rapport à la colonne des rangs 2-5/2-20
-     ci-dessous (.stats-leader-val), qui eux n'ont pas ce bleed. */
-  .stats-leader-card li.stats-leader-first{list-style:none; margin:-2px 0 8px -18px; padding:0 0 10px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line);}
-  .stats-leader-first-body{flex:1 1 auto; min-width:0; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .stats-leader-first-body .player-link{font-weight:700;}
-  .stats-leader-first-value{flex:none; font-size:19px; font-weight:800; color:var(--amber);}
+  .stats-leader-rank{flex:none; width:18px; text-align:right; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+  /* Pas de bleed à gauche ici (contrairement à avant) : l'<ol> n'a plus de
+     padding-left (list-style:none ci-dessus, plus de marqueur natif à
+     loger), donc le n°1 s'aligne déjà naturellement sur le padding de la
+     carte sans correctif de marge. margin-right:0 (pas de bleed comme à
+     droite) : retour utilisateur (2026-09-23) : "aligne toutes les stats
+     cotés droits" — sinon le bord droit de la valeur du n°1
+     (.stats-leader-first-value) se retrouvait décalé de quelques px par
+     rapport à la colonne des rangs 2-5/2-20 ci-dessous (.stats-leader-val),
+     qui eux n'ont pas ce bleed. */
+  .stats-leader-card li.stats-leader-first{list-style:none; margin:-2px 0 8px 0; padding:0 0 10px; display:flex; align-items:center; gap:6px; border-bottom:1px solid var(--line);}
+  .stats-leader-first-name{flex:1 1 auto; min-width:20px; font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .stats-leader-first-value{flex:none; font-size:19px; font-weight:800; color:var(--amber); padding-left:4px;}
   /* Retour utilisateur (2026-09-23) : "mets peut être (Cerberus Basket...)"
-     — les rangs 2-5/2-20 passent par un conteneur flex interne à chaque
-     <li> (le <li> lui-même reste display:list-item par défaut, pour
-     garder son numéro automatique, voir <ol start="2"> ci-dessus) : le nom
-     du joueur + nom d'équipe tronque avec "..." plutôt que de retourner à
-     la ligne, la valeur (.stats-leader-val) reste toujours entièrement
-     visible, alignée à droite, sur la même ligne. */
-  .stats-leader-row{display:flex; align-items:baseline; gap:6px; width:100%;}
-  .stats-leader-name{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .stats-leader-val{flex:none;}
+     puis "si le nom est trop long, faut au moins mettre le début du nom de
+     l'équipe" + "les colonnes doivent tjrs avoir la meme largeur, c'est
+     plus harmonieux" — le nom du joueur (flexible, .stats-leader-name/
+     -first-name) et le nom d'équipe (.stats-leader-team/-first-team)
+     tronquent CHACUN dans leur propre boîte, au lieu d'un seul bloc
+     "Nom (Équipe)" tronqué ensemble : sinon un nom de joueur déjà long à
+     lui seul pouvait epuiser toute la place et ne plus laisser un seul
+     caractère du nom d'équipe (juste "(…)"). Le nom d'équipe a une largeur
+     FIXE (`--stats-leader-team-w`, même valeur partout dans la carte : n°1
+     ET rangs 2-20) plutôt qu'une largeur qui varie selon le contenu, pour
+     que cette "colonne" reste alignée d'une ligne à l'autre. La valeur
+     (.stats-leader-val/-first-value) reste toujours entièrement visible,
+     alignée à droite, sur la même ligne.
+  */
+  .stats-leader-card{--stats-leader-team-w: 92px;}
+  .stats-leader-first-team{flex:none; width:var(--stats-leader-team-w); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink-faint); font-size:12px;}
+  .stats-leader-row{display:flex; align-items:baseline; gap:4px; width:100%;}
+  .stats-leader-name{flex:1 1 auto; min-width:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .stats-leader-team{flex:none; width:var(--stats-leader-team-w); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .stats-leader-val{flex:none; padding-left:4px;}
+  /* Pas de largeur réduite sous 480px (essayé, puis retiré) : le nom
+     d'équipe déjà tronqué en JS (truncateTeamNameForColumn, jusqu'à 14
+     caractères) ne tenait plus dans une colonne mobile plus étroite —
+     même bug que le <button> qui s'efface entièrement au lieu de se
+     couper, voir le commentaire de truncateTeamNameForColumn. Une seule
+     largeur, partout, réglée pour aller avec cette troncature JS.
+  */
   .stats-leader-expand-btn{display:block; width:100%; margin-top:10px; background:none; border:none; border-top:1px dashed var(--line); padding-top:8px; color:var(--amber); font-size:11.5px; cursor:pointer; text-align:center;}
   .stats-leader-expand-btn:hover{text-decoration:underline;}
 
@@ -4764,11 +4797,19 @@ const AvatarGen = (function () {
   /**
    * Generateur d'avatars de joueurs de basket, par pieces detachees (SVG).
    * Style illustre semi-realiste : contours encres, ombrages en aplats.
-   * Fourni par l'utilisateur (2026-09), integre ici SANS les maillots
-   * aleatoires d'origine (retour utilisateur : "ne recupere pas les
-   * maillots, pour les maillots, il faudra mettre ceux de l'equipe") : les
-   * couleurs de maillot viennent toujours de options.teamColors, jamais
-   * d'un choix aleatoire interne au generateur.
+   * Fourni par l'utilisateur, version 2026-09-23 (avatar-generator.js) qui
+   * remplace la version precedente : plus de styles de cheveux/barbes, tatouages
+   * de bras, fossette au menton, textures de peau/maillot/barbe plus fines.
+   * Integre ici SANS les maillots aleatoires d'origine (meme convention que la
+   * version precedente, retour utilisateur : "ne recupere pas les maillots, pour
+   * les maillots, il faudra mettre ceux de l'equipe") : le tableau JERSEYS de
+   * paires de couleurs aleatoires, le champ `team` tire au hasard dans
+   * generateAppearance, et le catalogue de planches (partInfo/partSVG/
+   * PART_COUNTS, qui ne sert qu'a exporter les pieces separement pour
+   * l'artiste, voir planche-avatars.html) ont ete retires. renderAvatar/
+   * generateAvatar attendent toujours `options.teamColors` (voir
+   * teamAvatarColors juste en dessous) et ne retombent sur un gris neutre que
+   * si un appel oublie de le fournir.
    *
    * Usage : AvatarGen.generateAvatar(playerId, { teamColors: [main, liseré] })
    */
@@ -4783,11 +4824,11 @@ const AvatarGen = (function () {
   const SKINS = ['#F7DCC8', '#F0CBAE', '#E6B894', '#D9A47C', '#C98E62', '#B77A50', '#A0663F', '#855032', '#6B3E26', '#4E2D1C'];
 
   const FACE_SHAPES = [
-    { id: 'ovale', w: 23.5, dip: 0.5, ja: 19, jy: 79, cw: 7, cy: 96 },
-    { id: 'carre', w: 24.5, dip: 0.3, ja: 22.5, jy: 81, cw: 10, cy: 96 },
-    { id: 'fin', w: 22, dip: 0.5, ja: 17.5, jy: 78, cw: 6, cy: 97 },
-    { id: 'large', w: 26, dip: 0.4, ja: 22, jy: 78, cw: 9, cy: 95 },
-    { id: 'anguleux', w: 24.5, dip: 1.2, ja: 19, jy: 81, cw: 6.5, cy: 96.5 },
+    { id: 'ovale', w: 24, dip: 0.6, ja: 20.8, jy: 80, cw: 7.2, cy: 96.5 },
+    { id: 'carre', w: 25, dip: 0.4, ja: 23, jy: 81.5, cw: 9.5, cy: 96 },
+    { id: 'allonge', w: 23, dip: 0.6, ja: 19.8, jy: 80.5, cw: 6.4, cy: 98 },
+    { id: 'large', w: 26.2, dip: 0.5, ja: 23, jy: 79.5, cw: 8.6, cy: 95.5 },
+    { id: 'anguleux', w: 25, dip: 1.4, ja: 21, jy: 82, cw: 6.4, cy: 97.5 },
   ];
 
   const HAIR_STYLES = ['buzz', 'short', 'sidepart', 'slick', 'wavy', 'long', 'bun', 'fade', 'curlytop', 'afro', 'twists', 'cornrows',
@@ -4795,11 +4836,11 @@ const AvatarGen = (function () {
   const HAIR_COLORS = ['#15100c', '#2a1b12', '#4a2e1a', '#6e4526', '#7a3a1c', '#b5532e', '#b08440', '#d8b56e', '#8e8b86', '#e4e1da'];
 
   const EYE_SHAPES = [
-    { id: 'amande', h: 3.6, tilt: 0, lo: 0.8 },
-    { id: 'rond', h: 4.4, tilt: 0, lo: 1 },
-    { id: 'tombant', h: 3.2, tilt: 1.2, lo: 0.8, hood: true },
-    { id: 'etroit', h: 2.7, tilt: 0, lo: 0.7 },
-    { id: 'releve', h: 3.6, tilt: -1.3, lo: 0.75 },
+    { id: 'amande', h: 3.5, tilt: 0, lo: 0.8 },
+    { id: 'rond', h: 4, tilt: 0, lo: 0.95 },
+    { id: 'tombant', h: 3.2, tilt: 1, lo: 0.8, hood: true },
+    { id: 'etroit', h: 2.8, tilt: 0, lo: 0.7 },
+    { id: 'releve', h: 3.5, tilt: -1, lo: 0.75 },
   ];
   const IRIS_COLORS = ['#3a2210', '#4a2a14', '#5a3a1e', '#6b4a22', '#7a5a2a', '#5d6b2e', '#3f6f3a', '#3d6fa8', '#6fa0c8', '#6f7d86'];
 
@@ -4816,7 +4857,7 @@ const AvatarGen = (function () {
 
   // 25 nez : 5 largeurs x 5 longueurs
   const NOSES = [];
-  for (let l = 0; l < 5; l++) for (let wd = 0; wd < 5; wd++) NOSES.push({ nw: 4.2 + wd * 0.7, ty: 72 + l });
+  for (let l = 0; l < 5; l++) for (let wd = 0; wd < 5; wd++) NOSES.push({ nw: 5.4 + wd * 0.7, ty: 72 + l });
 
   // 36 bouches : 6 expressions x 3 épaisseurs x 2 largeurs
   const MOUTH_EXPRESSIONS = [
@@ -4828,14 +4869,15 @@ const AvatarGen = (function () {
     { id: 'moue', c: 0.2, open: 0, asym: 1.8 },
   ];
   const MOUTHS = [];
-  for (const e of MOUTH_EXPRESSIONS) for (const t of [0.8, 1, 1.3]) for (const mw of [8, 9.5]) MOUTHS.push({ ...e, t, mw });
+  for (const e of MOUTH_EXPRESSIONS) for (const t of [0.62, 0.76, 0.92]) for (const mw of [8, 9.5]) MOUTHS.push({ ...e, t, mw });
 
-  const BEARD_STYLES = ['stubble', 'goatee', 'soulpatch', 'mustache', 'circle', 'chinstrap', 'horseshoe', 'boxed', 'full', 'long',
-    'vandyke', 'muttonchops', 'chincurtain', 'short'];
+  const BEARD_STYLES = ['stubble', 'goatee', 'soulpatch', 'mustache', 'circle', 'horseshoe', 'boxed', 'full', 'long',
+    'vandyke', 'muttonchops', 'short'];
   const JERSEY_STYLES = ['round', 'v', 'double'];
   const DURAG_COLORS = ['#1b1b1e', '#b8262b', '#1d4fa8', '#e4e1da', '#5b2d91', '#1f7a43'];
   const HEADBAND_COLORS = ['#ffffff', '#1b1b1e', '#b8262b', '#1d4fa8', '#e9a23b', '#1f7a43'];
   const MARKS = ['none', 'mole', 'scar', 'browscar'];
+  const ARM_TATTOOS = ['none', 'tribal', 'sleeve', 'script', 'stars'];
 
   // ---------------------------------------------------------------- utilitaires
 
@@ -4853,6 +4895,7 @@ const AvatarGen = (function () {
   const rgbToHex = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
   const shade = (h, m) => rgbToHex(hexToRgb(h).map((v) => v + m));
   const mix = (a, b, t) => { const x = hexToRgb(a), y = hexToRgb(b); return rgbToHex(x.map((v, i) => v + (y[i] - v) * t)); };
+  const luminance = (h) => { const [r, g, b] = hexToRgb(h); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
   const f1 = (n) => (+n).toFixed(1);
   const mirror = (s) => `<g transform="translate(120 0) scale(-1 1)">${s}</g>`;
   const scaleX = (s, w) => `<g transform="translate(60 0) scale(${(w / 24).toFixed(3)} 1) translate(-60 0)">${s}</g>`;
@@ -4888,6 +4931,17 @@ const AvatarGen = (function () {
     return s;
   }
 
+  // mèches en pointe le long d'un contour (style animé)
+  function spikes(color, base, n, len, seed, dir = -1) {
+    const r = rng(seed);
+    let o = '';
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n, [x, y] = base(t), l = len * (0.7 + r() * 0.6), lean = (r() - 0.5) * 4;
+      o += `<path d="M${f1(x - 2.2)} ${f1(y)} Q${f1(x + lean)} ${f1(y + dir * l * 0.6)} ${f1(x + lean * 1.4)} ${f1(y + dir * l)} Q${f1(x + 1.4)} ${f1(y + dir * l * 0.45)} ${f1(x + 2.2)} ${f1(y)}Z" fill="${color}" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    }
+    return o;
+  }
+
   function strands(color, paths, width = 1) {
     return `<path d="${paths}" stroke="${shade(color, 50)}" stroke-width="${width}" fill="none" stroke-linecap="round" opacity="0.75"/>`;
   }
@@ -4908,7 +4962,7 @@ const AvatarGen = (function () {
   // Points clés du côté droit (dôme du crâne, tempe, pommette, angle de mâchoire, menton)
   function headPath(f) {
     const R = 60 + f.w, J = 60 + f.ja, C = 60 + f.cw;
-    const right = [[60 + 0.36 * f.w, 16.3], [60 + 0.707 * f.w, 21.6], [60 + 0.94 * f.w, 31.4], [R, 41], [R - 0.4 + f.dip * 0.8, 56], [J, f.jy], [C + 1.2, f.cy - 2.4]];
+    const right = [[60 + 0.38 * f.w, 17.2], [60 + 0.73 * f.w, 22.6], [60 + 0.95 * f.w, 32], [R, 41], [R - 0.4 + f.dip * 0.8, 56], [J + 1.6, f.jy - 6.5], [J + 0.3, f.jy - 1.5], [J - 3, f.jy + 4.5], [C + 1.6, f.cy - 2.2]];
     const left = right.map(([x, y]) => [120 - x, y]).reverse();
     return smoothPath([[60, 15], ...right, [60, f.cy], ...left]);
   }
@@ -4916,12 +4970,13 @@ const AvatarGen = (function () {
   /** Cou (à dessiner avant le maillot) */
   function renderNeck(skin) {
     const sh = shade(skin, -30), sh2 = shade(skin, -50);
-    return `<path d="M45 78 Q44 92 43 104 L77 104 Q76 92 75 78Z" fill="${skin}"/>` +
-      `<path d="M71 80 L75.5 80 L77 104 L69 104Z" fill="${sh}" opacity="0.7"/>` +
-      `<path d="M43 84 Q60 106 77 84 L77 93 Q60 111 43 93Z" fill="${sh}"/>` +
-      `<path d="M50 93 Q53 99 55.5 104 M70 93 Q67 99 64.5 104" stroke="${sh2}" stroke-width="0.9" fill="none" opacity="0.7"/>` +
-      `<path d="M58.8 97 Q60 99.5 61.2 97" stroke="${sh2}" stroke-width="0.8" fill="none" opacity="0.6"/>` +
-      `<path d="M45 78 Q44 88 43.5 93 M75 78 Q76 88 76.5 93" ${LW} fill="none"/>`;
+    return `<path d="M44 78 Q42.5 92 41 104 L79 104 Q77.5 92 76 78Z" fill="${skin}"/>` +
+      `<path d="M43 82 Q60 100 77 82 L77 86 Q60 104 43 86Z" fill="${shade(skin, -60)}" opacity="0.35"/>` +
+      `<path d="M71 80 L77 80 L79 104 L69 104Z" fill="${sh}" opacity="0.7"/>` +
+      `<path d="M41 84 Q60 106 79 84 L79 93 Q60 111 41 93Z" fill="${sh}"/>` +
+      `<path d="M49 93 Q52.5 99 55 104 M71 93 Q67.5 99 65 104" stroke="${sh2}" stroke-width="1" fill="none" opacity="0.75"/>` +
+      `<path d="M58.4 95.5 Q60 99 61.6 95.5" stroke="${sh2}" stroke-width="0.9" fill="none" opacity="0.75"/>` +
+      `<path d="M44 78 Q42.5 88 41.8 93 M76 78 Q77.5 88 78.2 93" ${LW} fill="none"/>`;
   }
 
   /** Tête : oreilles, crâne, ombrages. opts : age, freckles, earrings, bald */
@@ -4930,13 +4985,17 @@ const AvatarGen = (function () {
     const L = 60 - f.w, R = 60 + f.w, cw = f.cw;
     const id = `hd${++UID}`;
     const sh = shade(skin, -30), sh2 = shade(skin, -52), hl = shade(skin, 20), hl2 = shade(skin, 34);
-    const old = (opts.age || 0) >= 31;
+    const inkS = mix(shade(skin, -110), INK, 0.35), LWS = `stroke="${inkS}" stroke-width="1.5" stroke-linejoin="round"`;
+    const old = (opts.age || 0) >= 33;
 
     // oreilles : la gauche dans la lumière, la droite dans l'ombre
-    const earShape = `M${L + 1} 47 Q${L - 5.5} 43.5 ${L - 6} 55 Q${L - 6} 66 ${L + 1.5} 71Z`;
-    const ear = `<path d="${earShape}" fill="${skin}" ${LW}/>` +
+    const earShape = `M${L + 1} 48 Q${L - 4.6} 45 ${L - 5} 55.5 Q${L - 5} 65.5 ${L + 1.5} 70Z`;
+    const ear = `<path d="${earShape}" fill="${skin}" ${LWS}/>` +
       `<path d="M${L - 4} 51 Q${L - 4.8} 59 ${L - 2} 66" stroke="${sh2}" stroke-width="0.9" fill="none"/>` +
+      `<path d="M${L - 2.4} 49.5 Q${L - 4.4} 52 ${L - 3.6} 56" stroke="${sh}" stroke-width="0.7" fill="none"/>` +
+      `<path d="M${L - 0.4} 60 Q${L - 1.6} 62 ${L - 0.2} 63.5" stroke="${sh2}" stroke-width="0.8" fill="none"/>` +
       `<ellipse cx="${L - 2.2}" cy="58" rx="1.5" ry="3.6" fill="${sh}" opacity="0.8"/>` +
+      `<path d="${earShape}" fill="#c04a3a" opacity="0.1"/>` +
       (opts.earrings ? `<circle cx="${L - 2.5}" cy="69" r="1.7" fill="${opts.earrings}" stroke="${INK}" stroke-width="0.6"/>` : '');
     const rightEar = mirror(ear + `<path d="${earShape}" fill="${sh2}" opacity="0.35"/>`);
     const head = headPath(f);
@@ -4949,11 +5008,18 @@ const AvatarGen = (function () {
       // orbites
       `<path d="M53.5 50.5 Q57.8 53 57 59.5 Q55.2 55.5 52 53Z" fill="${sh}" opacity="0.45"/>` +
       `<path d="M66.5 50.5 Q62.2 53 63 59.5 Q64.8 55.5 68 53Z" fill="${sh}" opacity="0.55"/>` +
-      `<path d="M42 51 Q49 48.5 56 50.5 Q49 50 42.5 52.5Z" fill="${sh}" opacity="0.35"/>` +
-      `<path d="M78 51 Q71 48.5 64 50.5 Q71 50 77.5 52.5Z" fill="${sh}" opacity="0.45"/>` +
+      `<path d="M41 51.8 Q49 46.8 57 50.6 Q49 51 41.5 54Z" fill="${sh}" opacity="0.4"/>` +
+      `<path d="M79 51.8 Q71 46.8 63 50.6 Q71 51 78.5 54Z" fill="${sh}" opacity="0.5"/>` +
+      `<path d="M42 47.5 Q60 43.5 78 47.5 Q60 46 42 49Z" fill="${sh}" opacity="0.2"/>` +
+      `<ellipse cx="48.5" cy="61.5" rx="6" ry="1.8" fill="${sh}" opacity="0.22"/><ellipse cx="71.5" cy="61.5" rx="6" ry="1.8" fill="${sh}" opacity="0.3"/>` +
+      `<ellipse cx="${f1(L + 5)}" cy="44" rx="4" ry="7" fill="${sh}" opacity="0.22"/>` +
+      `<ellipse cx="44" cy="66" rx="6" ry="3" fill="${hl2}" opacity="0.28"/>` +
+      `<path d="M52.5 73 Q49 79 50.5 85" stroke="${sh}" stroke-width="2.6" fill="none" opacity="0.14" stroke-linecap="round"/><path d="M67.5 73 Q71 79 69.5 85" stroke="${sh2}" stroke-width="2.6" fill="none" opacity="0.18" stroke-linecap="round"/>` +
       // ombre de forme et ombre portée le long du bord
       `<path d="${formShadow}" fill="${sh}"/>` +
       `<g clip-path="url(#${id}r)"><path d="${head}" fill="none" stroke="${sh2}" stroke-width="5" opacity="0.5"/></g>` +
+      (opts.tex ? `<g clip-path="url(#${id}r)"><path d="${formShadow}" fill="url(#${opts.tex}h)" opacity="0.16"/></g><path d="${head}" fill="url(#${opts.tex}g)" opacity="0.07"/><path d="${head}" fill="url(#${opts.tex}f)"/>` +
+        `<g clip-path="url(#${id}r)"><path d="${head}" fill="none" stroke="#ffe9cf" stroke-width="2.4" opacity="0.45"/></g>` : '') +
       `<path d="M${L + 2} 64 Q${L + 5} 72.5 ${L + 10.5} 80 Q${L + 5.5} 73 ${L + 4.5} 64Z" fill="${sh}" opacity="0.55"/>` +
       `<path d="M${L + 1.5} 40 Q${L + 3.7} 48 ${L + 2.5} 56" stroke="${sh}" stroke-width="1.4" fill="none" opacity="0.35"/>` +
       // lumières
@@ -4962,17 +5028,19 @@ const AvatarGen = (function () {
       `<path d="M59.2 58.5 L59.2 69" stroke="${hl2}" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>` +
       `<ellipse cx="58" cy="${f1(f.cy - 5.5)}" rx="3.2" ry="1.3" fill="${hl}" opacity="0.6"/>` +
       // joues et philtrum
-      `<ellipse cx="45" cy="70" rx="5" ry="3" fill="#c0503a" opacity="0.07"/>` +
-      `<ellipse cx="75" cy="70" rx="5" ry="3" fill="#c0503a" opacity="0.06"/>` +
+
       `<path d="M58.8 76.5 L59 79.8 M61.2 76.5 L61 79.8" stroke="${sh}" stroke-width="0.6" opacity="0.45"/>` +
       (opts.bald ? `<path d="M${L + 8} 27 Q52 16 64 18 Q54 21 ${L + 9.5} 30Z" fill="${hl2}" opacity="0.6"/>` : '') +
       `</g>` +
       // contour : trait plus épais côté ombre
-      `<path d="${head}" fill="none" ${LW}/>` +
-      `<g clip-path="url(#${id}r)"><path d="${head}" fill="none" stroke="${INK}" stroke-width="2.4"/></g>` +
+      `<path d="${head}" fill="none" ${LWS}/>` +
+      `<g clip-path="url(#${id}r)"><path d="${head}" fill="none" stroke="${inkS}" stroke-width="2.2"/></g>` +
       // plis et menton
-      `<path d="M53 74 Q50 79 51.5 83" stroke="${sh}" stroke-width="0.8" fill="none" opacity="${old ? 1 : 0.45}"/>` +
-      `<path d="M67 74 Q70 79 68.5 83" stroke="${sh2}" stroke-width="0.8" fill="none" opacity="${old ? 1 : 0.45}"/>` +
+      `<path d="M53 74 Q50 79 51.5 83" stroke="${sh}" stroke-width="0.8" fill="none" opacity="${old ? 0.9 : 0.35}"/>` +
+      `<path d="M67 74 Q70 79 68.5 83" stroke="${sh2}" stroke-width="0.8" fill="none" opacity="${old ? 0.9 : 0.35}"/>` +
+      `<path d="M${f1(L + 4)} 66 Q${f1(L + 5.5)} 76 ${f1(60 - f.cw - 1)} 87" stroke="${sh}" stroke-width="0.9" fill="none" opacity="0.3"/>` +
+      `<path d="M${f1(R - 4)} 66 Q${f1(R - 5.5)} 76 ${f1(60 + f.cw + 1)} 87" stroke="${sh2}" stroke-width="0.9" fill="none" opacity="0.35"/>` +
+      (opts.cleft ? `<path d="M60 ${f1(f.cy - 7.5)} L60 ${f1(f.cy - 4.5)}" stroke="${sh}" stroke-width="1" stroke-linecap="round" opacity="0.7"/>` : '') +
       `<path d="M56.5 ${f1(f.cy - 3.2)} Q60 ${f1(f.cy - 1.8)} 63.5 ${f1(f.cy - 3.2)}" stroke="${sh}" stroke-width="0.8" fill="none"/>`;
     if (old) {
       s += `<path d="M48 36 Q60 34 72 36 M50 40 Q60 38.5 70 40" stroke="${sh}" stroke-width="0.7" fill="none"/>` +
@@ -5005,23 +5073,27 @@ const AvatarGen = (function () {
         break;
       }
       case 'short':
-        front = `<path d="M35 50 Q32 20 50 13 Q62 9 74 13 Q88 20 85 50 Q84 38 80 33 Q72 27 60 28 Q46 27 40 33 Q36 38 35 50Z" fill="${hc}" ${LW}/>` +
-          `<path d="M38 44 Q40 34 48 30 Q60 27 72 30 Q80 34 82 44 Q78 34 72 32 Q60 29.5 48 32 Q42 34 38 44Z" fill="${hd}"/>` +
-          strands(hc, 'M45 18 Q50 22 50 29 M56 14 Q61 19 61 27 M67 15 Q71 20 70 28 M77 20 Q80 26 80 33 M40 26 Q43 30 42 36');
+        front = spikes(hc, (t) => [38 + t * 44, 18 - Math.sin(t * Math.PI) * 9], 9, 6, seed) +
+          `<path d="M35 50 Q31 15 50 9 Q62 4 74 8 Q89 14 85 50 Q84 36 79 30 Q70 24 60 25 Q48 24 41 30 Q36 36 35 50Z" fill="${hc}" ${LW}/>` +
+          `<path d="M37 46 Q39 33 47 29 Q60 25 73 29 Q81 33 83 46 Q79 35 73 32 Q60 29 47 32 Q41 35 37 46Z" fill="${hd}"/>` +
+          strands(hc, 'M44 20 Q49 23 49 30 M55 14 Q60 18 60 26 M66 14 Q71 19 70 27 M77 20 Q80 26 80 33 M40 27 Q43 31 42 37', 1.1);
         break;
       case 'sidepart':
-        front = `<path d="M35 50 Q31 22 46 14 Q60 8 76 13 Q89 20 85 50 Q84 36 78 31 Q68 25 52 27 Q44 24 42 28 Q37 36 35 50Z" fill="${hc}" ${LW}/>` +
-          `<path d="M46 15 Q44 21 42 28" stroke="${INK}" stroke-width="1.2" fill="none"/>` +
-          strands(hc, 'M50 15 Q62 14 74 20 Q80 24 82 32 M52 20 Q64 19 76 27 M40 22 Q38 28 37 36');
+        front = spikes(hc, (t) => [44 + t * 40, 11 - Math.sin(t * Math.PI) * 5 + t * 3], 7, 5.5, seed) +
+          `<path d="M35 50 Q29 19 47 10 Q66 2 82 11 Q91 20 85 50 Q84 35 76 29 Q64 23 50 27 Q43 25 41 30 Q36 38 35 50Z" fill="${hc}" ${LW}/>` +
+          `<path d="M37 46 Q40 32 50 28 Q64 24 76 30 Q82 34 83 46 Q79 37 74 33 Q63 27 51 30 Q42 33 37 46Z" fill="${hd}"/>` +
+          `<path d="M47 11 Q44 20 41 30" stroke="${INK}" stroke-width="1.3" fill="none"/>` +
+          strands(hc, 'M52 12 Q64 10 76 17 Q82 22 84 32 M54 18 Q66 17 78 26 M56 24 Q66 23 74 30', 1.1);
         break;
       case 'slick':
-        front = `<path d="M36 44 Q35 16 60 13 Q85 16 84 44 Q80 28 60 26 Q40 28 36 44Z" fill="${hc}" ${LW}/>` +
-          strands(hc, 'M44 30 Q48 20 56 15 M52 27 Q55 19 61 14 M60 26 L62 14 M68 27 Q67 19 64 14 M76 30 Q72 20 66 15', 0.9);
+        front = `<path d="M36 46 Q33 12 60 9 Q87 12 84 46 Q80 27 60 25 Q40 27 36 46Z" fill="${hc}" ${LW}/>` +
+          `<path d="M38 44 Q40 32 60 30 Q80 32 82 44 Q78 34 60 32 Q42 34 38 44Z" fill="${hd}"/>` +
+          strands(hc, 'M42 30 Q47 17 56 11 M50 27 Q54 15 61 10 M60 25 L62 10 M69 27 Q68 15 65 10 M78 30 Q73 17 66 11 M46 40 Q48 24 55 14', 1);
         break;
       case 'wavy':
-        front = `<path d="M34 54 Q28 22 48 12 Q62 6 76 12 Q92 20 86 54 Q86 40 80 34 Q74 26 62 30 Q54 24 46 30 Q38 36 34 54Z" fill="${hc}" ${LW}/>` +
-          `<path d="M36 48 Q38 36 46 31 Q54 26 62 31 Q74 27 80 35 Q84 40 84 48 Q80 38 74 34 Q66 31 62 33 Q54 29 47 33 Q40 38 36 48Z" fill="${hd}"/>` +
-          strands(hc, 'M42 20 Q48 16 54 20 Q58 24 62 20 M40 28 Q46 24 50 27 M66 16 Q72 18 76 24 Q80 28 82 36 M64 22 Q70 22 72 27');
+        front = `<path d="M34 54 Q27 20 46 10 Q60 3 76 10 Q94 19 86 54 Q88 42 81 36 Q74 29 65 32 Q60 27 54 31 Q46 27 41 34 Q37 40 34 54Z" fill="${hc}" ${LW}/>` +
+          `<path d="M36 48 Q39 36 47 32 Q54 27 61 32 Q73 27 79 36 Q84 41 84 48 Q80 39 75 35 Q66 31 62 34 Q54 29 47 34 Q40 38 36 48Z" fill="${hd}"/>` +
+          strands(hc, 'M40 20 Q46 15 52 20 Q57 25 62 19 M38 30 Q45 25 50 29 M64 14 Q71 16 76 23 Q81 29 83 38 M62 24 Q70 23 74 30 M44 42 Q48 36 54 38', 1.1);
         break;
       case 'long':
         back = `<path d="M30 60 Q24 18 60 12 Q96 18 90 60 L92 94 Q86 101 80 97 L76 70 L44 70 L40 97 Q34 101 28 94Z" fill="${hc}" ${LW}/>` +
@@ -5035,13 +5107,13 @@ const AvatarGen = (function () {
           strands(hc, 'M44 30 Q48 20 58 17 M60 28 L61 16 M76 30 Q72 20 64 17 M52 28 Q54 20 59 16', 0.9);
         break;
       case 'fade':
-        front = `<path d="${CAP}" fill="${hc}" opacity="0.45"/>` + scallop(60, 23, 21, 6.5, 12, 4.5, hc) + curls(seed, hc, 60, 22, 18, 5, 8);
+        front = `<path d="${CAP}" fill="${hc}" opacity="0.45"/>` + scallop(60, 21, 22, 7.5, 14, 5, hc) + curls(seed, hc, 60, 20, 19, 6, 10);
         break;
       case 'curlytop':
-        front = `<path d="${CAP}" fill="${hc}" opacity="0.55"/>` + scallop(60, 17, 23, 10, 14, 6, hc) + curls(seed, hc, 60, 15, 20, 8, 12);
+        front = `<path d="${CAP}" fill="${hc}" opacity="0.55"/>` + scallop(60, 15, 24, 12, 16, 6.5, hc) + curls(seed, hc, 60, 13, 21, 9, 16);
         break;
       case 'afro':
-        back = scallop(60, 32, 32, 25, 20, 7, hc) + curls(seed, hc, 60, 26, 26, 16, 18);
+        back = scallop(60, 30, 35, 28, 22, 7.5, hc) + curls(seed, hc, 60, 24, 28, 18, 24) + `<ellipse cx="60" cy="40" rx="30" ry="14" fill="${hd}" opacity="0.5"/>`;
         front = `<path d="M35 48 Q34 24 60 24 Q86 24 85 48 Q82 36 72 33 Q60 30 48 33 Q38 36 35 48Z" fill="${hc}"/>`;
         break;
       case 'twists': {
@@ -5077,8 +5149,10 @@ const AvatarGen = (function () {
         break;
       case 'undercut':
         front = `<path d="${CAP}" fill="${hc}" opacity="0.4"/>` +
-          `<path d="M38 37 Q34 16 54 10 Q72 5 84 17 Q87 24 82 31 Q72 22 58 26 Q46 28 38 37Z" fill="${hc}" ${LW}/>` +
-          strands(hc, 'M44 24 Q56 14 72 12 M46 29 Q58 20 76 18 M58 25 Q68 18 80 22');
+          spikes(hc, (t) => [46 + t * 34, 13 - Math.sin(t * Math.PI) * 4 + t * 4], 6, 6, seed) +
+          `<path d="M38 37 Q33 13 54 7 Q74 2 86 16 Q89 24 83 31 Q72 22 58 26 Q46 28 38 37Z" fill="${hc}" ${LW}/>` +
+          `<path d="M40 35 Q44 26 56 24 Q70 20 82 30 Q72 25 58 28 Q47 30 40 35Z" fill="${hd}"/>` +
+          strands(hc, 'M44 22 Q56 12 72 10 M46 28 Q58 19 76 17 M58 24 Q68 17 80 21', 1.1);
         break;
       case 'topknot':
         back = `<ellipse cx="60" cy="9" rx="9" ry="7" fill="${hc}" ${LW}/>` +
@@ -5120,56 +5194,67 @@ const AvatarGen = (function () {
 
   function renderBrows(index, hairColor) {
     const b = BROWS[index % BROWS.length];
-    const col = hairColor === HAIR_COLORS[8] || hairColor === HAIR_COLORS[9] ? '#5a5550' : mix(hairColor, '#000000', 0.25);
-    const left = `<path d="${b.d}" fill="${col}" stroke="${INK}" stroke-width="0.6" stroke-linejoin="round"/>` +
-      `<path d="M44 ${b.hairy ? 49 : 49.5} l1.5 -1.5 M48 48.5 l1.5 -1.4 M52 48 l1.5 -1.2" stroke="${shade(col, 45)}" stroke-width="0.6" opacity="0.8"/>`;
+    const light = luminance(hairColor) > 0.5;
+    const col = hairColor === HAIR_COLORS[8] || hairColor === HAIR_COLORS[9] ? '#5a5550' : mix(hairColor, '#000000', light ? 0.45 : 0.25);
+    const left = `<g transform="translate(0 0.9)"><path d="${b.d}" fill="${col}" stroke="${col}" stroke-width="1.5" stroke-linejoin="round"/>` +
+      `<path d="${b.d}" fill="none" stroke="${INK}" stroke-width="0.55" stroke-linejoin="round"/>` +
+      `<path d="M44 ${b.hairy ? 49 : 49.5} l1.5 -1.5 M48 48.5 l1.5 -1.4 M52 48 l1.5 -1.2" stroke="${shade(col, 40)}" stroke-width="0.6" opacity="0.7"/></g>`;
     return left + mirror(left);
   }
 
-  function renderEyes(shapeIndex, iris) {
+  function renderEyes(shapeIndex, iris, gid = '') {
     const s = EYE_SHAPES[shapeIndex % EYE_SHAPES.length], h = s.h;
-    const ox = 42.5, oy = 56 + s.tilt, ix = 55.5, iy = 55.6;
-    const topY = 55.6 - h * 1.25, botY = 55.6 + h * s.lo * 1.1;
-    const up = `M${ox} ${f1(oy)} Q49 ${f1(topY)} ${ix} ${iy}`;
+    const ox = 42, oy = 56.2 + s.tilt, ix = 55.5, iy = 55.4;
+    const topY = 55.6 - h * 1.3, botY = 55.6 + h * s.lo * 1.05;
+    const up = `M${ox} ${f1(oy)} Q48.5 ${f1(topY)} ${ix} ${iy}`;
     const eye = `${up} Q49 ${f1(botY)} ${ox} ${f1(oy)}Z`;
+    // paupière : forme pleine, épaisse au coin externe, effilée vers l'intérieur
+    const lid = `M${ox - 1.2} ${f1(oy - 0.6)} Q48.5 ${f1(topY - 1.7)} ${ix + 0.3} ${iy - 0.6} Q49 ${f1(topY + 0.3)} ${ox} ${f1(oy + 0.4)}Z`;
     const id = `eye${++UID}`;
     const left =
-      (s.hood ? `<path d="M${ox + 0.5} ${f1(oy - 1.5)} Q49 ${f1(topY - 2.6)} ${ix - 0.5} ${iy - 1.8} Q49 ${f1(topY + 0.6)} ${ox + 0.5} ${f1(oy - 1.5)}Z" fill="${SH}"/>` : '') +
-      `<path d="M${ox + 1} ${f1(oy - 2.5 - h * 0.3)} Q49 ${f1(topY - 1.8)} ${ix - 1.5} ${iy - 2.2}" stroke="${SH}" stroke-width="0.8" fill="none"/>` +
-      `<path d="${eye}" fill="#f5f1ea"/>` +
+      (s.hood ? `<path d="M${ox + 0.5} ${f1(oy - 2)} Q49 ${f1(topY - 3.4)} ${ix} ${iy - 2.4} Q49 ${f1(topY - 0.6)} ${ox + 0.5} ${f1(oy - 2)}Z" fill="${SH}"/>` : '') +
+      `<path d="M${ox + 1.5} ${f1(oy - 3 - h * 0.3)} Q49 ${f1(topY - 2.6)} ${ix - 1} ${iy - 3}" stroke="${SH}" stroke-width="0.8" fill="none"/>` +
+      `<path d="${eye}" fill="#f7f4ee"/>` +
       `<g clip-path="url(#${id})">` +
-      `<circle cx="49" cy="55.8" r="3.2" fill="${iris}"/>` +
-      `<circle cx="49" cy="56.7" r="1.9" fill="${shade(iris, 45)}" opacity="0.45"/>` +
-      `<circle cx="49" cy="55.8" r="3.2" fill="none" stroke="${shade(iris, -45)}" stroke-width="0.7"/>` +
-      `<circle cx="49" cy="55.8" r="1.35" fill="#0e0b09"/>` +
-      `<path d="M${ox} ${f1(oy)} Q49 ${f1(topY)} ${ix} ${iy} Q49 ${f1(topY + 2.4)} ${ox} ${f1(oy)}Z" fill="rgba(0,0,0,0.25)"/>` +
-      `<circle cx="50.1" cy="54.7" r="0.9" fill="#ffffff"/><circle cx="47.9" cy="57" r="0.45" fill="#ffffff" opacity="0.8"/>` +
+      `<circle cx="49" cy="55.9" r="3.1" fill="${iris}"/>` +
+      `<circle cx="49" cy="56.9" r="1.9" fill="${shade(iris, 50)}" opacity="0.5"/>` +
+      `<circle cx="49" cy="55.9" r="3.1" fill="none" stroke="${shade(iris, -50)}" stroke-width="0.8"/>` +
+      `<circle cx="49" cy="55.9" r="3.1" fill="url(#${gid}i)"/>` +
+      `<path d="${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => { const a = k * Math.PI / 4 + 0.3; return `M${f1(49 + Math.cos(a) * 1.5)} ${f1(55.9 + Math.sin(a) * 1.5)} L${f1(49 + Math.cos(a) * 3)} ${f1(55.9 + Math.sin(a) * 3)}`; }).join(' ')}" stroke="${shade(iris, -40)}" stroke-width="0.35" opacity="0.5"/>` +
+      `<ellipse cx="49" cy="56" rx="1.35" ry="1.6" fill="#0e0b09"/>` +
+      `<path d="M${ox} ${f1(oy)} Q48.5 ${f1(topY)} ${ix} ${iy} Q49 ${f1(topY + 2.6)} ${ox} ${f1(oy)}Z" fill="rgba(0,0,0,0.3)"/>` +
+      `<circle cx="50.4" cy="54.4" r="1.05" fill="#ffffff"/><circle cx="47.7" cy="57.4" r="0.55" fill="#ffffff" opacity="0.85"/>` +
       `</g>` +
-      `<path d="${up}" stroke="${INK}" stroke-width="1.7" fill="none" stroke-linecap="round"/>` +
-      `<path d="M${ox} ${f1(oy)} l-1.6 -0.7 M${ox + 1.2} ${f1(oy - 1)} l-1.3 -1.3" stroke="${INK}" stroke-width="0.9" stroke-linecap="round"/>` +
-      `<path d="M${ox + 1.5} ${f1(oy + 0.8)} Q49 ${f1(botY + 0.4)} ${ix - 1} ${iy + 1}" stroke="${SH}" stroke-width="0.7" fill="none"/>`;
-    return `<defs><clipPath id="${id}"><path d="${eye}"/></clipPath></defs>` + left + mirror(left);
+      `<path d="${lid}" fill="${INK}"/>` +
+      `<path d="M${ox + 2} ${f1(oy - 3.6 - h * 0.35)} Q49 ${f1(topY - 3.4)} ${ix - 1.5} ${iy - 3.3}" stroke="${SH}" stroke-width="0.7" fill="none" opacity="0.7"/>` +
+      `<path d="M${ox - 1} ${f1(oy - 0.4)} l-1.6 -1.1 M${ox - 0.2} ${f1(oy - 1.5)} l-1.3 -1.4" stroke="${INK}" stroke-width="0.5" stroke-linecap="round" opacity="0.5"/>` +
+      `<path d="M${ox + 1.2} ${f1(oy + 0.9)} Q49 ${f1(botY + 0.3)} ${ix - 1} ${iy + 1.1}" stroke="#fff" stroke-width="0.45" fill="none" opacity="0.5"/>` +
+      `<path d="M${ox + 1.5} ${f1(oy + 1)} Q49 ${f1(botY + 0.6)} ${ix - 1} ${iy + 1.2}" stroke="${INK}" stroke-width="0.55" fill="none" opacity="0.55"/>`;
+    const localGrad = gid ? '' : `<radialGradient id="${id}i" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff" stop-opacity="0.28"/><stop offset="0.7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.55"/></radialGradient>`;
+    return `<defs><clipPath id="${id}"><path d="${eye}"/></clipPath>${localGrad}</defs>` + left.replace(`url(#${gid}i)`, `url(#${gid || id}i)`) + mirror(left.replace(`url(#${gid}i)`, `url(#${gid || id}i)`));
   }
 
   // ---------------------------------------------------------------- pièces : nez, bouche
 
   function renderNose(index) {
     const { nw, ty } = NOSES[index % NOSES.length];
-    return `<path d="M58.2 57 Q57.2 ${ty - 8} ${f1(60 - nw + 1)} ${ty - 3.5}" stroke="${SH}" stroke-width="0.9" fill="none"/>` +
-      `<path d="M61 57 Q63.5 ${ty - 7} ${f1(60 + nw - 0.5)} ${ty - 3} Q${f1(60 + nw + 1)} ${ty} 62.5 ${ty + 1} Q61 ${ty - 3} 61 57Z" fill="${SH}"/>` +
-      `<path d="M59 58 L59 ${ty - 4}" stroke="${HL}" stroke-width="1.4"/>` +
-      `<ellipse cx="59.2" cy="${ty - 2.4}" rx="1.4" ry="1" fill="${HL}"/>` +
-      `<path d="M57 ${ty + 1.8} Q60 ${ty + 3} 63 ${ty + 1.8} Q60 ${ty + 2.4} 57 ${ty + 1.8}Z" fill="${SH}"/>` +
-      `<path d="M${f1(60 - nw)} ${ty - 3.5} Q${f1(60 - nw - 1.3)} ${ty + 0.3} 57.3 ${ty + 0.7} M${f1(60 + nw)} ${ty - 3.5} Q${f1(60 + nw + 1.3)} ${ty + 0.3} 62.7 ${ty + 0.7}" stroke="${INK}" stroke-width="1" fill="none" stroke-linecap="round"/>` +
-      `<path d="M57.3 ${ty + 0.7} Q60 ${ty + 1.9} 62.7 ${ty + 0.7}" stroke="rgba(40,18,8,0.45)" stroke-width="0.9" fill="none" stroke-linecap="round"/>` +
-      `<ellipse cx="57.6" cy="${ty - 0.1}" rx="1.25" ry="0.6" fill="${DK}"/><ellipse cx="62.4" cy="${ty - 0.1}" rx="1.25" ry="0.6" fill="${DK}"/>`;
+    return `<path d="M58.4 57.5 Q57 ${ty - 8} ${f1(60 - nw + 1.6)} ${ty - 3.2}" stroke="${SH}" stroke-width="0.9" fill="none" stroke-linecap="round"/>` +
+      `<path d="M61 57.5 Q63.6 ${ty - 7} ${f1(60 + nw - 0.4)} ${ty - 2.8} Q${f1(60 + nw + 0.8)} ${ty} 62.5 ${ty + 0.8} Q61 ${ty - 3} 61 57.5Z" fill="${SH}"/>` +
+      `<path d="M59 58.5 L59 ${ty - 4.5}" stroke="${HL}" stroke-width="1.4"/>` +
+      `<ellipse cx="59.3" cy="${ty - 2.2}" rx="1.4" ry="1" fill="${HL}"/>` +
+      `<ellipse cx="59" cy="${ty - 1.6}" rx="0.7" ry="0.45" fill="#fff" opacity="0.5"/>` +
+      `<ellipse cx="60" cy="${ty - 3.5}" rx="3.2" ry="2.2" fill="#c04a3a" opacity="0.06"/>` +
+      `<path d="M${f1(60 + nw - 0.6)} ${ty - 4} Q${f1(60 + nw + 1)} ${ty} 62.8 ${ty + 0.9}" stroke="${INK}" stroke-width="1.1" fill="none" stroke-linecap="round"/>` +
+      `<path d="M57 ${ty + 0.9} Q60 ${ty + 2} 63 ${ty + 0.9}" stroke="${DK}" stroke-width="0.9" fill="none" stroke-linecap="round"/>` +
+      `<path d="M${f1(60 - nw + 0.2)} ${ty - 2.4} Q${f1(60 - nw - 0.6)} ${ty} 57.4 ${ty + 0.7}" stroke="${INK}" stroke-width="0.7" fill="none" stroke-linecap="round" opacity="0.6"/>` +
+      `<ellipse cx="57.7" cy="${ty}" rx="1" ry="0.5" fill="${DK}"/><ellipse cx="62.3" cy="${ty}" rx="1" ry="0.5" fill="${DK}"/>`;
   }
 
   function renderMouth(index, skin) {
     const m = MOUTHS[index % MOUTHS.length];
     const mw = m.mw, asym = m.asym || 0;
     const t = m.press ? m.t * 0.6 : m.open ? m.t * 0.75 : m.t;   // la lèvre supérieure s'affine quand on sourit
-    const lip = mix(shade(skin, -30), '#9a3f3f', 0.3), lipL = shade(lip, 16);
+    const lip = mix(shade(skin, -24), '#6f4438', 0.1), lipL = shade(lip, 10);
     const line = mix(lip, '#1a0c08', 0.6);                          // trait de bouche teinté, pas noir pur
     const lx = 60 - mw, rx = 60 + mw, ly = 82 - m.c, ry = 82 - m.c - asym;
     const my = 82.3 + m.c * 0.35;                                  // milieu de la fente
@@ -5200,8 +5285,10 @@ const AvatarGen = (function () {
     s += `<path d="${upper}" fill="${lip}"/>` +
       `<path d="M${f1(60 - mw * 0.55)} ${f1(ly - 1.4 * t)} Q60 ${f1(my - 2.1 * t)} ${f1(60 + mw * 0.55)} ${f1(ry - 1.4 * t)}" stroke="${shade(lip, 22)}" stroke-width="0.5" fill="none" opacity="0.6"/>` +
       `<path d="M${f1(lx - 0.4)} ${f1(ly)} Q60 ${f1(ctrl(my))} ${f1(rx + 0.4)} ${f1(ry)}" stroke="${line}" stroke-width="${m.open ? 1 : 1.15}" fill="none" stroke-linecap="round"/>` +
-      `<ellipse cx="60" cy="${f1((openMid + lowMid) / 2 + 0.3)}" rx="${f1(mw * 0.3)}" ry="0.65" fill="#ffffff" opacity="0.28"/>` +
+      `<ellipse cx="60" cy="${f1((openMid + lowMid) / 2 + 0.3)}" rx="${f1(mw * 0.26)}" ry="0.55" fill="#ffffff" opacity="0.14"/>` +
       `<path d="M56.5 ${f1(lowMid + 1.3)} Q60 ${f1(lowMid + 2.1)} 63.5 ${f1(lowMid + 1.3)}" stroke="${SH}" stroke-width="0.8" fill="none"/>` +
+      `<path d="M54 ${f1(lowMid + 0.6)} Q60 ${f1(lowMid + 3)} 66 ${f1(lowMid + 0.6)}" stroke="${SH}" stroke-width="2.2" fill="none" opacity="0.35" stroke-linecap="round"/>` +
+      `<path d="M57 ${f1(ly + 0.8)} l0.3 ${f1(3 * t)} M60 ${f1(ly + 0.5)} l0 ${f1(3.4 * t)} M63 ${f1(ly + 0.8)} l-0.3 ${f1(3 * t)}" stroke="${shade(lip, -25)}" stroke-width="0.35" opacity="0.5"/>` +
       `<circle cx="${f1(lx - 0.3)}" cy="${f1(ly)}" r="0.55" fill="${line}"/><circle cx="${f1(rx + 0.3)}" cy="${f1(ry)}" r="0.55" fill="${line}"/>`;
     return s;
   }
@@ -5213,7 +5300,7 @@ const AvatarGen = (function () {
   // Contour extérieur qui suit la mâchoire du visage (ext = longueur supplémentaire sous le menton)
   function beardOuter(f, ext = 0) {
     const R = 60 + f.w, J = 60 + f.ja, C = 60 + f.cw;
-    return [[R + 0.1, 57.5], [R - 0.2 + f.dip * 0.6, 65], [J + 0.9, f.jy + 0.6 + ext * 0.3], [C + 1.8 + ext * 0.15, f.cy - 1.2 + ext * 0.75], [60, f.cy + 2.4 + ext]];
+    return [[R - 1.4, 68], [R - 0.8 + f.dip * 0.6, 73], [J + 0.9, f.jy + 0.6 + ext * 0.3], [C + 1.8 + ext * 0.15, f.cy - 1.2 + ext * 0.75], [60, f.cy + 2.4 + ext]];
   }
   const mirrorPts = (pts) => pts.map(([x, y]) => [120 - x, y]);
 
@@ -5222,7 +5309,7 @@ const AvatarGen = (function () {
     const outerR = beardOuter(f, ext);
     const center = outerR.pop();
     const outerL = mirrorPts(outerR).reverse();
-    const innerR = [[R - 2, 59], [R - 3.2, 67], [R - 7.5, 74], [68.5, 78.6]];
+    const innerR = [[R - 3.4, 69.5], [R - 5.2, 74.5], [R - 9.5, 78.5], [68.8, 80.2]];
     const innerL = mirrorPts(innerR);
     return smoothPath([...outerR, center, ...outerL, ...innerL, [60, 77.8], ...innerR.reverse()]);
   }
@@ -5231,28 +5318,33 @@ const AvatarGen = (function () {
     const R = 60 + f.w, J = 60 + f.ja, C = 60 + f.cw;
     const outerR = beardOuter(f);
     const center = outerR.pop();
-    const innerR = [[R - 2.6, 57], [R - 2.8 * thick + f.dip * 0.6, 64], [J - 2 * thick, f.jy - 1.6 * thick], [C - 0.6 * thick, f.cy - 3.2 * thick]];
+    const innerR = [[R - 3.4, 69.5], [R - 2.8 * thick + f.dip * 0.6, 74.5], [J - 2 * thick, f.jy - 1.6 * thick], [C - 0.6 * thick, f.cy - 3.2 * thick]];
     return smoothPath([...outerR, center, ...mirrorPts(outerR).reverse(), ...mirrorPts(innerR), [60, f.cy - 1.2 * thick], ...innerR.reverse()]);
   }
 
   function muttonPath(f) {
     const R = 60 + f.w, J = 60 + f.ja;
-    return smoothPath([[R + 0.1, 57.5], [R - 0.2 + f.dip * 0.6, 65], [J + 0.9, f.jy + 0.6], [J - 5, f.jy + 2], [R - 7.5, 74], [R - 3.2, 67], [R - 2, 59]]);
+    return smoothPath([[R - 1.4, 68], [R - 0.8 + f.dip * 0.6, 73], [J + 0.9, f.jy + 0.6], [J - 5, f.jy + 2], [R - 9.5, 78.5], [R - 5.2, 74.5], [R - 3.4, 69.5]]);
   }
 
   /** Renvoie { body, mustache } (la moustache se dessine après la bouche). faceShape = index de FACE_SHAPES */
-  function renderBeard(style, color, faceShape = 0) {
+  function renderBeard(style, color, faceShape = 0, tid = '') {
     const f = FACE_SHAPES[faceShape % FACE_SHAPES.length];
     const R = 60 + f.w, L = 60 - f.w, dy = f1(f.cy - 96);
     const hc = color, tex = (d) => `<path d="${d}" stroke="${shade(hc, 50)}" stroke-width="0.9" opacity="0.7" stroke-linecap="round"/>`;
     const must = `<path d="${MUSTACHE}" fill="${hc}" ${LW}/>` + tex('M54 79.5 l0.5 1 M58 79 l0.3 1 M62 79 l-0.3 1 M66 79.5 l-0.5 1');
     const chin = (d) => `<g transform="translate(0 ${dy})">${d}</g>`;
-    const strokes = (ext) => tex(`M${L + 5} ${f1(f.jy - 5 + ext * 0.3)} l1 3.5 M52 ${f1(f.cy - 4 + ext * 0.6)} l0.8 3.5 M60 ${f1(f.cy - 2 + ext * 0.8)} l0 3.5 M68 ${f1(f.cy - 4 + ext * 0.6)} l-0.8 3.5 M${R - 5} ${f1(f.jy - 5 + ext * 0.3)} l-1 3.5 M${L + 2.5} 64 l0.8 3.5 M${R - 2.5} 64 l-0.8 3.5`);
+    const hatch = (d) => tid ? `<path d="${d}" fill="url(#${tid}h)" opacity="0.28"/>` : '';
+    const strokes = (ext) => tex(`M${L + 5} ${f1(f.jy - 5 + ext * 0.3)} l1 3.5 M52 ${f1(f.cy - 4 + ext * 0.6)} l0.8 3.5 M60 ${f1(f.cy - 2 + ext * 0.8)} l0 3.5 M68 ${f1(f.cy - 4 + ext * 0.6)} l-0.8 3.5 M${R - 5} ${f1(f.jy - 5 + ext * 0.3)} l-1 3.5 M${L + 4} 73 l0.8 3.5 M${R - 4} 73 l-0.8 3.5`);
     let body = '', mustache = '';
     switch (style) {
+      case 'shadow':
+        body = `<path d="${beardFullPath(f)}" fill="${hc}" opacity="0.14"/>`;
+        mustache = `<path d="${MUSTACHE}" fill="${hc}" opacity="0.16"/>`;
+        break;
       case 'stubble':
-        body = `<path d="${beardFullPath(f)}" fill="${hc}" opacity="0.26"/>`;
-        mustache = `<path d="${MUSTACHE}" fill="${hc}" opacity="0.35"/>`;
+        body = `<path d="${beardFullPath(f)}" fill="${hc}" opacity="0.34"/>`;
+        mustache = `<path d="${MUSTACHE}" fill="${hc}" opacity="0.42"/>`;
         break;
       case 'goatee':
         body = chin(`<path d="M53 88 Q60 99 67 88 Q64 91 60 90.5 Q56 91 53 88Z" fill="${hc}" ${LW}/>` + tex('M58 92 l0 2.5 M62 92 l0 2.5'));
@@ -5275,15 +5367,15 @@ const AvatarGen = (function () {
         mustache = `<path d="M50 80.5 L50 91 L52.5 91 L52.5 82 Q56 79.5 60 80.5 Q64 79.5 67.5 82 L67.5 91 L70 91 L70 80.5 Q65 76.5 60 78.3 Q55 76.5 50 80.5Z" fill="${hc}" ${LW}/>`;
         break;
       case 'boxed':
-        body = `<path d="${beardFullPath(f)}" fill="${hc}" opacity="0.85"/>` + strokes(0);
+        body = `<path d="${beardFullPath(f)}" fill="${hc}" opacity="0.85"/>` + hatch(beardFullPath(f)) + strokes(0);
         mustache = `<path d="${MUSTACHE}" fill="${hc}" opacity="0.9"/>`;
         break;
       case 'full':
-        body = `<path d="${beardFullPath(f)}" fill="${hc}" ${LW}/>` + strokes(0);
+        body = `<path d="${beardFullPath(f)}" fill="${hc}" ${LW}/>` + hatch(beardFullPath(f)) + strokes(0);
         mustache = must;
         break;
       case 'long':
-        body = `<path d="${beardFullPath(f, 12)}" fill="${hc}" ${LW}/>` + strokes(10);
+        body = `<path d="${beardFullPath(f, 12)}" fill="${hc}" ${LW}/>` + hatch(beardFullPath(f, 12)) + strokes(10);
         mustache = must;
         break;
       case 'vandyke':
@@ -5301,7 +5393,7 @@ const AvatarGen = (function () {
         const dots = [];
         const r = rng(faceShape * 31 + 7);
         for (let i = 0; i < 70; i++) {
-          const x = L + 3 + r() * (2 * f.w - 6), y = 66 + r() * (f.cy - 66);
+          const x = L + 3 + r() * (2 * f.w - 6), y = 73 + r() * (f.cy - 73);
           if (Math.abs(x - 60) < 8 && y < 88) continue;
           dots.push(`<circle cx="${f1(x)}" cy="${f1(y)}" r="0.45" fill="${shade(hc, 35)}" opacity="0.6"/>`);
         }
@@ -5317,16 +5409,23 @@ const AvatarGen = (function () {
   // ---------------------------------------------------------------- pièces : corps et maillot
 
   function renderShoulders(skin) {
-    return `<path d="M0 130 L0 118 Q6 104 26 100 Q40 97 45 88 L75 88 Q80 97 94 100 Q114 104 120 118 L120 130Z" fill="${skin}" ${LW}/>` +
-      `<path d="M94 100 Q114 104 120 118 L120 130 L106 130 Q104 110 94 100Z" fill="${shade(skin, -32)}"/>`;
+    const sh = shade(skin, -32), hl = shade(skin, 22);
+    return `<path d="M0 130 L0 118 Q6 104 26 100 Q40 97 45 88 L75 88 Q80 97 94 100 Q114 104 120 118 L120 130Z" fill="${skin}" stroke="${mix(shade(skin, -110), INK, 0.35)}" stroke-width="1.5" stroke-linejoin="round"/>` +
+      `<path d="M94 100 Q114 104 120 118 L120 130 L106 130 Q104 110 94 100Z" fill="${sh}"/>` +
+      `<path d="M4 118 Q10 106 24 102 Q16 108 10 122Z" fill="${hl}" opacity="0.5"/>` +
+      `<path d="M2 130 Q4 118 14 112" stroke="${sh}" stroke-width="1.2" fill="none" opacity="0.5"/><path d="M118 130 Q116 118 106 112" stroke="${shade(skin, -55)}" stroke-width="1.2" fill="none" opacity="0.5"/>` +
+      `<path d="M30 101 Q40 99 45 92 M90 101 Q80 99 75 92" stroke="${sh}" stroke-width="1" fill="none" opacity="0.45"/>`;
   }
 
-  /** style : 'round' (col rond), 'v' (col en V), 'double' (double liseré) */
-  function renderJersey(main, trim, style = 'round') {
+  /** style : 'round' (col rond), 'v' (col en V), 'double' (double liseré). tid : identifiant des motifs de texture */
+  function renderJersey(main, trim, style = 'round', tid = '') {
     const neck = style === 'v' ? 'M46 90 L60 111 L74 90' : 'M46 90 Q50 107 60 109 Q70 107 74 90';
     const TR = `${neck} M35 99 Q28 116 20 130 M85 99 Q92 116 100 130`;
-    let s = `<path d="M20 130 Q28 116 35 99 ${neck.replace('M46 90', 'L46 90')} L85 99 Q92 116 100 130Z" fill="${main}" ${LW}/>` +
-      `<path d="M85 99 Q92 116 100 130 L91 130 Q88 114 80 103Z" fill="${shade(main, -28)}"/>`;
+    const body = `M20 130 Q28 116 35 99 ${neck.replace('M46 90', 'L46 90')} L85 99 Q92 116 100 130Z`;
+    let s = `<path d="${body}" fill="${main}" ${LW}/>` +
+      `<path d="M85 99 Q92 116 100 130 L91 130 Q88 114 80 103Z" fill="${shade(main, -28)}"/>` +
+      `<path d="M40 104 Q52 100 60 112 Q68 100 80 104 L84 116 Q60 122 36 116Z" fill="${shade(main, -18)}" opacity="0.5"/>` +
+      (tid ? `<path d="${body}" fill="url(#${tid}m)" opacity="${luminance(main) > 0.8 ? 0.08 : 0.14}"/><path d="${body}" fill="url(#${tid}j)"/>` : '');
     if (style === 'double') {
       s += `<path d="${TR}" stroke="${INK}" stroke-width="7.4" fill="none"/><path d="${TR}" stroke="${trim}" stroke-width="5.6" fill="none"/><path d="${TR}" stroke="${main}" stroke-width="1.6" fill="none"/>`;
     } else {
@@ -5349,10 +5448,10 @@ const AvatarGen = (function () {
     const drawnAge = 19 + Math.floor(r() * 17);
     const age = options.age ?? drawnAge;
     let hairColor = dark || coily ? pick(r, HAIR_COLORS.slice(0, 2)) : pick(r, HAIR_COLORS.slice(0, 8));
-    if (r() < 0.45 && age >= 32) hairColor = HAIR_COLORS[8];
+    if (r() < 0.3 && age >= 34) hairColor = HAIR_COLORS[8];
     const hairStyle = coily
       ? pick(r, ['afro', 'curlytop', 'buzz', 'cornrows', 'twists', 'fade', 'buzz', 'bald', 'hightop', 'frohawk', 'waves', 'waves', 'topknot', 'buzzdesign', 'mohawk'])
-      : pick(r, ['short', 'sidepart', 'slick', 'wavy', 'long', 'bun', 'buzz', 'fade', 'curlytop', 'short', 'bald', 'undercut', 'undercut', 'mohawk', 'buzzdesign', age >= 30 ? 'receding' : 'short']);
+      : pick(r, ['short', 'short', 'short', 'sidepart', 'slick', 'buzz', 'buzz', 'fade', 'curlytop', 'undercut', 'undercut', 'buzzdesign', 'mohawk', 'wavy', 'bald', 'bald', 'bun', 'long', age >= 30 ? 'receding' : 'short']);
     const spec = {
       seed, age, skinIndex,
       skin: SKINS[skinIndex],
@@ -5363,15 +5462,20 @@ const AvatarGen = (function () {
       brows: Math.floor(r() * BROWS.length),
       nose: Math.floor(r() * NOSES.length),
       mouth: Math.floor(r() * MOUTHS.length),
-      beard: pick(r, ['none', 'none', 'none', 'stubble', 'goatee', 'boxed', 'full', 'circle', 'mustache', 'chinstrap', 'long', 'soulpatch', 'horseshoe', 'stubble', 'vandyke', 'muttonchops', 'chincurtain', 'short', 'short']),
-      earrings: r() < 0.2 ? pick(r, ['#e9b949', '#d9d9d6']) : null,
+      beard: pick(r, ['none', 'stubble', 'stubble', 'stubble', 'short', 'short', 'goatee', 'boxed', 'boxed', 'full', 'full', 'circle', 'vandyke', 'mustache', 'soulpatch', 'muttonchops', 'horseshoe', 'long']),
+      earrings: r() < 0.06 ? pick(r, ['#e9b949', '#d9d9d6']) : null,
       headband: r() < 0.12,
     };
+    // cheveux longs ou attachés : on force une barbe pour que la lecture reste masculine
+    if (['long', 'bun', 'topknot'].includes(spec.hairStyle) && spec.beard === 'none') spec.beard = 'stubble';
     const t = r();
     spec.neckTattoo = t < 0.08 ? 'script' : t < 0.14 ? 'star' : t < 0.2 ? 'tribal' : 'none';
     spec.chain = r() < 0.15 ? (r() < 0.5 ? '#e9b949' : '#d9d9d6') : null;
     spec.browSlit = r() < 0.12;
     spec.freckles = skinIndex < 3 && r() < 0.18;
+    spec.cleft = r() < 0.22;
+    spec.armTattoo = r() < 0.3 ? pick(r, ARM_TATTOOS.slice(1)) : 'none';
+    spec.armSide = pick(r, ['left', 'right', 'both']);
     spec.jerseyStyle = pick(r, JERSEY_STYLES);
     spec.durag = r() < (coily ? 0.08 : 0.02) ? pick(r, DURAG_COLORS) : null;
     if (spec.headband) spec.headbandColor = r() < 0.5 ? null : pick(r, HEADBAND_COLORS);
@@ -5388,9 +5492,20 @@ const AvatarGen = (function () {
    */
   function renderAvatar(a, options = {}) {
     const [jersey, trim] = options.teamColors || ['#3a3a40', '#55555c'];
+    const tid = `tx${++UID}`;
+    const defs = `<defs>` +
+      `<pattern id="${tid}h" width="2.2" height="2.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><line x1="0" y1="0" x2="0" y2="2.2" stroke="#1a0c06" stroke-width="0.55"/></pattern>` +
+      `<pattern id="${tid}m" width="1.4" height="1.4" patternUnits="userSpaceOnUse"><circle cx="0.7" cy="0.7" r="0.32" fill="#000"/></pattern>` +
+      `<pattern id="${tid}g" width="3" height="3" patternUnits="userSpaceOnUse"><circle cx="0.8" cy="1.1" r="0.28" fill="#000"/><circle cx="2.2" cy="2.4" r="0.22" fill="#fff"/></pattern>` +
+      `<radialGradient id="${tid}f" cx="0.4" cy="0.32" r="0.75"><stop offset="0" stop-color="#fff5e6" stop-opacity="0.3"/><stop offset="0.5" stop-color="#fff5e6" stop-opacity="0.05"/><stop offset="1" stop-color="#2a1208" stop-opacity="0.28"/></radialGradient>` +
+      `<linearGradient id="${tid}hair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset="0.55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.38"/></linearGradient>` +
+      `<linearGradient id="${tid}j" x1="0" y1="0" x2="1" y2="0.4"><stop offset="0" stop-color="#fff" stop-opacity="0.2"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.3"/></linearGradient>` +
+      `<radialGradient id="${tid}bg" cx="0.5" cy="0.42" r="0.6"><stop offset="0" stop-color="${jersey === '#f0efec' ? trim : jersey}" stop-opacity="0.35"/><stop offset="1" stop-color="${jersey}" stop-opacity="0"/></radialGradient>` +
+      `<radialGradient id="${tid}i" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff" stop-opacity="0.28"/><stop offset="0.7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.55"/></radialGradient>` +
+      `</defs>`;
     const w = FACE_SHAPES[a.faceShape % FACE_SHAPES.length].w;
     const hair = a.durag ? renderDurag(a.durag, w) : a.hairStyle === 'bald' ? { back: '', front: '' } : renderHair(a.hairStyle, a.hairColor, w, a.seed || 1);
-    const beard = a.beard && a.beard !== 'none' ? renderBeard(a.beard, a.hairColor, a.faceShape) : { body: '', mustache: '' };
+    const beard = a.beard && a.beard !== 'none' ? renderBeard(a.beard, a.hairColor, a.faceShape, tid) : renderBeard('shadow', a.hairColor, a.faceShape, tid);
     const TATTOO = '#1f2a44';
     let tattoo = '';
     if (a.neckTattoo === 'script') tattoo = `<g stroke="${TATTOO}" stroke-width="1.1" fill="none" opacity="0.6" stroke-linecap="round"><path d="M66 90 q2 -2 4 0 t4 0"/><path d="M66 94 q2 -2 4 0 t3 0"/><path d="M67 98 q2 -2 4 0"/></g>`;
@@ -5398,27 +5513,86 @@ const AvatarGen = (function () {
     if (a.neckTattoo === 'tribal') tattoo = `<path d="M65 100 Q66 92 73 89 Q70 94 74 97 Q68 96 65 100Z" fill="${TATTOO}" opacity="0.55"/>`;
     const L = 60 - w, R = 60 + w;
     const bandColor = a.headbandColor || (jersey === '#f0efec' ? trim : jersey);
-    const headband = a.headband && !a.durag ? `<path d="M${L - 0.5} 37 Q60 31 ${R + 0.5} 37 L${R + 0.5} 43.5 Q60 37.5 ${L - 0.5} 43.5Z" fill="${bandColor}" ${LW}/><path d="M${L + 1} 39.6 Q60 34 ${R - 1} 39.6" stroke="${shade(bandColor, -30)}" stroke-width="0.6" fill="none" opacity="0.6"/>` : '';
+    // le bandeau enveloppe la chevelure : plus large quand la coiffure a du volume
+    const puffy = ['wavy', 'long', 'sidepart', 'short', 'undercut', 'afro', 'curlytop', 'hightop', 'fade', 'frohawk', 'receding'].includes(a.hairStyle);
+    const bx = puffy ? 4.2 : 1.6, bw = w + bx;
+    const headband = a.headband && !a.durag ? `<path d="M${f1(60 - bw)} 41.5 Q60 35 ${f1(60 + bw)} 41.5 Q${f1(60 + bw + 0.6)} 44.5 ${f1(60 + bw - 0.6)} 48 Q60 42.5 ${f1(60 - bw + 0.6)} 48 Q${f1(60 - bw - 0.6)} 44.5 ${f1(60 - bw)} 41.5Z" fill="${bandColor}" ${LW}/><path d="M${f1(60 - bw + 2)} 43.8 Q60 38 ${f1(60 + bw - 2)} 43.8" stroke="${shade(bandColor, -30)}" stroke-width="0.6" fill="none" opacity="0.6"/><path d="M${L - 1} 48 Q60 43 ${R + 1} 48" stroke="rgba(0,0,0,0.25)" stroke-width="1.6" fill="none"/>` : '';
     let mark = '';
     if (a.mark === 'mole') mark = `<circle cx="${f1(L + 9)}" cy="72" r="0.9" fill="${shade(a.skin, -65)}"/>`;
     if (a.mark === 'scar') mark = `<path d="M${f1(L + 5)} 63 l5 4.5" stroke="${shade(a.skin, 28)}" stroke-width="1.1" stroke-linecap="round"/><path d="M${f1(L + 6)} 65.6 l1.2 -1.2 M${f1(L + 8)} 67.3 l1.2 -1.2" stroke="${shade(a.skin, -35)}" stroke-width="0.5"/>`;
     if (a.mark === 'browscar') mark = `<path d="M47.5 44.5 L46 52" stroke="${shade(a.skin, 25)}" stroke-width="1.1" stroke-linecap="round"/>`;
-    return `<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" width="100%" role="img" aria-label="Avatar du joueur">` +
-      (options.background !== false ? '<rect width="120" height="130" fill="#26262a"/><circle cx="60" cy="58" r="56" fill="#2f2f34"/>' : '') +
+    return `<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" width="100%" role="img" aria-label="Avatar du joueur">` + defs +
+      (options.background !== false ? `<rect width="120" height="130" fill="#26262a"/><circle cx="60" cy="58" r="56" fill="#2f2f34"/><rect width="120" height="130" fill="url(#${tid}bg)"/><path d="M-10 0 L38 0 L-2 130 L-50 130Z" fill="#fff" opacity="0.035"/>` : '') +
       hair.back +
-      renderShoulders(a.skin) + renderNeck(a.skin) + tattoo +
+      renderShoulders(a.skin) + renderArmTattoos(a) + renderNeck(a.skin) + tattoo +
       (a.chain ? `<path d="M49 94 Q60 107 71 94" stroke="${a.chain}" stroke-width="1.6" fill="none"/>` : '') +
-      renderJersey(jersey, trim, a.jerseyStyle || 'round') +
-      renderHead(a.skin, a.faceShape, { age: a.age, freckles: a.freckles, earrings: a.earrings, bald: a.hairStyle === 'bald' }) +
-      mark + hair.front + headband + beard.body +
+      renderJersey(jersey, trim, a.jerseyStyle || 'round', tid) +
+      renderHead(a.skin, a.faceShape, { age: a.age, freckles: a.freckles, earrings: a.earrings, bald: a.hairStyle === 'bald', cleft: a.cleft, tex: tid }) +
+      mark + hair.front + hairTexture(a, w, tid) + hairSheen(a, w) + headband + beard.body +
       renderBrows(a.brows, a.hairColor) +
       (a.browSlit ? `<path d="M70.5 45.5 L69.5 51" stroke="${a.skin}" stroke-width="1.4"/>` : '') +
-      renderEyes(a.eyeShape, a.iris) +
+      renderEyes(a.eyeShape, a.iris, tid) +
       (a.mark === 'browscar' ? mark : '') +
       renderNose(a.nose) +
       renderMouth(a.mouth, a.skin) +
       beard.mustache +
       `</svg>`;
+  }
+
+  // Mèches fines dans la calotte, pour donner de la matière aux cheveux
+  function hairTexture(a, w, tid) {
+    const ok = ['short', 'sidepart', 'slick', 'wavy', 'long', 'bun', 'topknot', 'receding', 'afro', 'twists', 'cornrows', 'waves', 'hightop', 'flattop', 'undercut'];
+    if (a.durag || !ok.includes(a.hairStyle)) return '';
+    const r = rng((a.seed || 1) + 777);
+    const dark = shade(a.hairColor, -55), light = shade(a.hairColor, 60);
+    let o = '';
+    for (let i = 0; i < 26; i++) {
+      const x = 38 + r() * 44, y = 20 + r() * 20, l = 2 + r() * 3.5, c = r() < 0.5 ? dark : light;
+      o += `<path d="M${f1(x)} ${f1(y)} q${f1((r() - 0.5) * 2)} ${f1(l * 0.5)} ${f1((r() - 0.5) * 1.6)} ${f1(l)}" stroke="${c}" stroke-width="0.6" fill="none" stroke-linecap="round" opacity="0.55"/>`;
+    }
+    return scaleX(`<defs><clipPath id="${tid}c"><path d="${CAP}"/></clipPath></defs><g clip-path="url(#${tid}c)"><rect x="30" y="10" width="60" height="40" fill="url(#${tid}hair)"/>${o}</g>`, w);
+  }
+
+  // Bande de reflet en zigzag sur les cheveux, façon animé
+  function hairSheen(a, w) {
+    const ok = ['short', 'sidepart', 'slick', 'wavy', 'long', 'bun', 'undercut', 'topknot', 'flattop', 'hightop'];
+    if (a.durag || !ok.includes(a.hairStyle)) return '';
+    const y = a.hairStyle === 'hightop' ? 14 : a.hairStyle === 'undercut' ? 20 : 25;
+    const pts = [];
+    for (let i = 0; i <= 8; i++) pts.push(`${f1(45 + i * 3.75)} ${f1(y + (i % 2 ? 2.4 : 0) - Math.abs(i - 4) * 0.9)}`);
+    return scaleX(`<path d="M${pts.join(' L')}" stroke="${shade(a.hairColor, 70)}" stroke-width="1.8" fill="none" stroke-linejoin="round" opacity="0.7"/>`, w);
+  }
+
+  /** Tatouages sur les épaules et les bras */
+  function renderArmTattoos(a) {
+    if (!a.armTattoo || a.armTattoo === 'none') return '';
+    const ink = '#1f2a44', id = `arm${++UID}`;
+    const SH = 'M0 130 L0 118 Q6 104 26 100 Q40 97 45 88 L75 88 Q80 97 94 100 Q114 104 120 118 L120 130Z';
+    const r = rng((a.seed || 1) + 4242);
+    let art = '';
+    switch (a.armTattoo) {
+      case 'tribal':
+        art = `<path d="M2 111 Q10 104 20 108 Q14 110 18 114 Q8 112 4 118Z M6 121 Q14 116 24 119 Q18 121 22 126 Q12 123 8 128Z" fill="${ink}" opacity="0.6"/>`;
+        break;
+      case 'sleeve':
+        for (let i = 0; i < 18; i++) {
+          const x = 2 + r() * 26, y = 102 + r() * 27, k = r();
+          art += k < 0.4 ? `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(1 + r() * 1.6)}" fill="none" stroke="${ink}" stroke-width="0.8" opacity="0.6"/>`
+            : k < 0.7 ? `<path d="M${f1(x)} ${f1(y)} q2 -3 4 0 t4 0" fill="none" stroke="${ink}" stroke-width="0.9" opacity="0.6"/>`
+            : `<polygon points="${star(x, y, 1.8, 0.8)}" fill="${ink}" opacity="0.6"/>`;
+        }
+        art += `<path d="M0 126 Q14 122 30 128" stroke="${ink}" stroke-width="1.4" fill="none" opacity="0.55"/>`;
+        break;
+      case 'script':
+        art = `<g stroke="${ink}" stroke-width="1.1" fill="none" opacity="0.6" stroke-linecap="round" transform="rotate(-28 14 116)"><path d="M6 113 q2 -2 4 0 t4 0 t4 0"/><path d="M7 117 q2 -2 4 0 t4 0 t3 0"/><path d="M9 121 q2 -2 4 0 t4 0"/></g>`;
+        break;
+      case 'stars':
+        art = [[8, 112, 2.6], [15, 120, 1.8], [22, 111, 1.5], [5, 124, 1.3]].map(([x, y, sz]) => `<polygon points="${star(x, y, sz, sz * 0.45)}" fill="${ink}" opacity="0.62"/>`).join('');
+        break;
+    }
+    const left = a.armSide !== 'right' ? art : '';
+    const right = a.armSide !== 'left' ? mirror(art) : '';
+    return `<defs><clipPath id="${id}"><path d="${SH}"/></clipPath></defs><g clip-path="url(#${id})">${left}${right}</g>`;
   }
 
   /** Raccourci : seed -> SVG */
@@ -5452,6 +5626,19 @@ function playerAvatarHtml(player, team, size) {
 // qui declare deja des identifiants du meme nom avec une signature
 // differente. Seules arenaLayout/generateArena sont exposees.
 const ArenaGen = (function () {
+  /**
+   * Generateur procedural de salle en SVG (vue isometrique), fourni par
+   * l'utilisateur, version 2026-09-23 (arena-generator.js) qui remplace la
+   * version precedente : ajoute un mode 'dusk' (soir de match, defaut) avec
+   * eclairage nocturne (vitrages allumes, lampadaires, projecteurs) en plus du
+   * mode 'day' d'origine (seul mode de la version precedente). Repris tel
+   * quel, enveloppe dans une IIFE (meme demarche que AvatarGen ci-dessus) pour
+   * isoler ses nombreux noms generiques (rng, shade, f1, INK, box, poly, flat,
+   * line, rect, UID, ...) du reste de ce fichier, qui declare deja des
+   * identifiants du meme nom avec une signature differente. Seules
+   * arenaLayout/generateArena sont exposees.
+   */
+
   const INK = '#17110d';
   const K = 1.9;
   const SEATS_PER_UNIT = 2.5;
@@ -5632,6 +5819,7 @@ const ArenaGen = (function () {
    * options.name       : nom du club (façade et rond central)
    * options.aspect     : format du cadre, largeur / hauteur (défaut 1.9)
    * options.seed       : variante du décor (arbres, voitures)
+   * options.mood       : 'dusk' (soir de match, par défaut) ou 'day'
    */
   function generateArena(capacity, options = {}) {
     const L = arenaLayout(capacity);
@@ -5640,6 +5828,7 @@ const ArenaGen = (function () {
     const attendance = Math.max(0, Math.min(1, options.attendance ?? 0));
     const name = options.name ? String(options.name).toUpperCase().slice(0, 16) : '';
     const aspect = options.aspect || 1.9;
+    const dusk = (options.mood || 'dusk') !== 'day';
     const r = rng(options.seed ?? 11);
     const rc = rng((options.seed ?? 11) * 131 + 17);
 
@@ -5663,6 +5852,7 @@ const ArenaGen = (function () {
       `<radialGradient id="${id}l"><stop offset="0" stop-color="#fffbe8" stop-opacity="0.42"/><stop offset="0.6" stop-color="#fffbe8" stop-opacity="0.12"/><stop offset="1" stop-color="#fffbe8" stop-opacity="0"/></radialGradient>` +
       `<radialGradient id="${id}w"><stop offset="0" stop-color="#ffd98a" stop-opacity="0.45"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>` +
       `<radialGradient id="${id}v" cx="0.5" cy="0.45" r="0.75"><stop offset="0.55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.35"/></radialGradient>` +
+      `<radialGradient id="${id}g"><stop offset="0" stop-color="#ffd27a" stop-opacity="0.5"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>` +
       `</defs>`;
     s += `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="#6c9a45"/>`;
     for (let x = -R, k = 0; x < R; x += 6, k++) if (k % 2) s += flat(rect(x, x + 6, -R, R), '#73a14b');
@@ -5743,7 +5933,7 @@ const ArenaGen = (function () {
       }
     }
     s += court(main, second, name);
-    { const c = P(0, 0, 0.1); s += `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(24 * K)}" ry="${f1(13 * K)}" fill="url(#${id}l)"/>`; }
+    { const c = P(0, 0, 0.1); s += `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(24 * K)}" ry="${f1(13 * K)}" fill="url(#${id}l)"/>`; if (dusk) s += `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(20 * K)}" ry="${f1(11 * K)}" fill="url(#${id}l)"/>`; }
 
     // tribunes, panneaux publicitaires, bancs et table de marque, triés ensemble
     const items = [];
@@ -5870,12 +6060,38 @@ const ArenaGen = (function () {
     }
     flags.forEach(([x, y, c]) => { s += flag(x, y, c); });
     decor.filter((o) => !behind(o)).forEach((o) => { s += drawDecor(o); });
-    s += `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="rgba(255,196,130,0.06)"/>` +
-      `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="url(#${id}v)"/>`;
+    if (dusk) {
+      const opening = rect(-W / 2 + ring, W / 2 - ring, -D / 2 + ring, D / 2 - ring, H);
+      s += `<path d="M${f1(vx)} ${f1(vy)} h${f1(vw)} v${f1(vh)} h${f1(-vw)}Z M${pts(opening).replace(/ /g, ' L')}Z" fill="rgba(14,22,48,0.5)" fill-rule="evenodd"/>`;
+      // ouverture : léger débordement de lumière chaude sur la toiture
+      s += `<polygon points="${pts(opening)}" fill="none" stroke="#ffd98a" stroke-width="3" opacity="0.18"/>`;
+      // vitrages allumés
+      s += flat(faceY(-gx, gx, D / 2, g0, g1), 'rgba(255,205,120,0.42)') + flat(faceX(W / 2, -D / 2 + 2, D / 2 - 2, H - 3.4, H - 1.4), 'rgba(255,205,120,0.3)');
+      for (let x = -gx + 2; x < gx; x += 2) s += line([[x, D / 2, g0], [x, D / 2, g1]], 'rgba(20,20,30,0.45)', 0.4);
+      s += flat(faceY(-4.5, 4.5, D / 2, 0, 2.8), 'rgba(255,215,140,0.5)');
+      { const gl = P(0, D / 2 + 6, 0); s += `<ellipse cx="${f1(gl[0])}" cy="${f1(gl[1])}" rx="${f1(16 * K)}" ry="${f1(9 * K)}" fill="url(#${id}g)"/>`; }
+      // lampadaires : halos au sol et lumières
+      decor.filter((o) => o.kind === 'lamp').forEach((o) => {
+        const gnd = P(o.x + 0.9, o.y, 0), top = P(o.x + 0.9, o.y, 6.2);
+        s += `<ellipse cx="${f1(gnd[0])}" cy="${f1(gnd[1])}" rx="${f1(7 * K)}" ry="${f1(3.8 * K)}" fill="url(#${id}g)"/>` +
+          `<circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="2.6" fill="#ffd98a" opacity="0.35"/><circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="1.1" fill="#fff6d6"/>`;
+      });
+      // projecteurs de toiture plus lumineux
+      s += spots(spotsBack).replace(/opacity="0.22"/g, 'opacity="0.5"') + spots(spotsFront).replace(/opacity="0.22"/g, 'opacity="0.5"');
+      // enseigne rétroéclairée
+      if (name) s += textOnFaceY(0, D / 2 + 0.05, g1 - 0.4, name, Math.min(2.2, 1.3 + H * 0.06), '#fff3d0', gx * 1.7);
+      // bandeau du club lumineux
+      s += flat(faceY(-W / 2, W / 2, D / 2, H - 0.7, H - 0.1), shade(main, 40)) + flat(faceX(W / 2, -D / 2, D / 2, H - 0.7, H - 0.1), shade(main, 10));
+      // feux des voitures
+      decor.filter((o) => o.kind === 'car').forEach((o) => { const q = P(o.x + 2, o.y, 0.6); s += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="0.5" fill="#ff6a5a" opacity="0.8"/>`; });
+      s += `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="url(#${id}v)"/>`;
+    } else {
+      s += `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="rgba(255,196,130,0.06)"/>` +
+        `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="url(#${id}v)"/>`;
+    }
 
     return `<svg viewBox="${f1(vx)} ${f1(vy)} ${f1(vw)} ${f1(vh)}" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Salle de ${L.capacity} places">${s}</svg>`;
   }
-
   return { arenaLayout, generateArena };
 })();
 
@@ -15728,6 +15944,26 @@ let leagueStatsExpandedCats = new Set();
 const LEAGUE_STATS_TOP_N = 5;
 const LEAGUE_STATS_EXPANDED_N = 20;
 
+// Retour utilisateur (2026-09-23) : "si le nom est trop long, faut au moins
+// mettre le début du nom de l'équipe" — la colonne nom d'équipe a une
+// largeur CSS fixe (.stats-leader-team/-first-team, voir leur commentaire),
+// mais un `text-overflow:ellipsis` CSS ne peut pas tronquer PARTIELLEMENT
+// le texte d'un <button> (le lien équipe, teamLinkHtml) : un bouton est une
+// boîte inline atomique pour la mise en page, donc dès qu'il ne tient plus
+// en entier, le navigateur l'efface ENTIÈREMENT plutôt que d'en révéler un
+// bout — constaté au pixel près (une carte "Cerberus Basketball Team
+// International" affichait juste "(…)", pas même "(Cerberus…"). Solution :
+// tronquer la CHAÎNE elle-même avant de la donner à teamLinkHtml, pour que
+// le bouton n'ait jamais qu'un texte déjà court à afficher (plus besoin que
+// le CSS coupe quoi que ce soit dans le cas courant — l'ellipsis CSS de la
+// colonne reste en place comme filet de sécurité, pas comme mécanisme
+// principal). `title=` sur la colonne porte toujours le nom complet.
+function truncateTeamNameForColumn(name, maxChars) {
+  maxChars = maxChars || 14;
+  if (!name || name.length <= maxChars) return name || "";
+  return name.slice(0, maxChars - 1).trimEnd() + "…";
+}
+
 // Agrège, pour CHAQUE joueur de la ligue (toutes équipes, pas seulement le
 // club du joueur), ses matchs de championnat de la saison en cours en
 // totaux + moyennes par match — la base des classements de stats ci-dessous
@@ -15829,12 +16065,7 @@ function renderLeagueStatsPanel() {
       const expanded = leagueStatsExpandedCats.has(cat.key);
       const limit = expanded ? LEAGUE_STATS_EXPANDED_N : LEAGUE_STATS_TOP_N;
       const top = sorted.slice(0, limit);
-      // start="2" : le n°1 (avatar mis en avant ci-dessous) est un <li>
-      // avec display:flex, donc exclu du compteur automatique de la <ol>
-      // (display:flex n'a pas de compteur list-item) — sans ce start, la
-      // liste "2e à 5e" recommencerait visuellement à "1." et laisserait
-      // croire à un deuxième 1er.
-      html += `<div class="stats-leader-card"><h4>${cat.label} / match</h4><ol start="2">`;
+      html += `<div class="stats-leader-card"><h4>${cat.label} / match</h4><ol>`;
       top.forEach((r, i) => {
         const valueText = r.perGame[cat.key].toFixed(1);
         if (i === 0) {
@@ -15845,18 +16076,25 @@ function renderLeagueStatsPanel() {
           // classement" au sens accessibilité/tests, juste mis en valeur.
           html += `<li class="stats-leader-first">` +
             playerAvatarHtml(r.player, league.teams[r.teamIdx], 40) +
-            `<span class="stats-leader-first-body" title="${escapeHtml(r.player.name)} (${escapeHtml(r.teamName)})">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)} <span class="sub">(${teamLinkHtml(r.teamIdx, r.teamName)})</span></span>` +
+            `<span class="stats-leader-first-name" title="${escapeHtml(r.player.name)}">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)}</span>` +
+            `<span class="stats-leader-first-team sub" title="${escapeHtml(r.teamName)}">(${teamLinkHtml(r.teamIdx, truncateTeamNameForColumn(r.teamName))})</span>` +
             `<span class="stats-leader-first-value">${valueText}</span></li>`;
         } else {
           // Retour utilisateur (2026-09-23) : "mets peut être (Cerberus
-          // Basket...)" — nom d'équipe cliquable (teamLinkHtml, même
-          // écouteur délégué global que la fiche équipe) ET tronqué avec
-          // "..." plutôt que de retourner à la ligne (voir .stats-leader-
-          // row/.stats-leader-name ci-dessus) : la valeur reste toujours
-          // visible entière sur la même ligne, quelle que soit la longueur
-          // du nom d'équipe. title= porte le texte complet pour le survol.
+          // Basket...)" puis "si le nom est trop long, faut au moins mettre
+          // le début du nom de l'équipe" + "les colonnes doivent tjrs avoir
+          // la meme largeur" — nom du joueur et nom d'équipe (cliquable,
+          // teamLinkHtml, même écouteur délégué global que la fiche équipe)
+          // dans DEUX boîtes séparées qui tronquent chacune de leur côté
+          // (voir .stats-leader-name/-team ci-dessus) : le nom d'équipe a
+          // une largeur fixe, donc toujours au moins son DÉBUT visible même
+          // si le nom du joueur est lui-même déjà long. La valeur reste
+          // toujours visible entière sur la même ligne. title= porte le
+          // texte complet pour le survol.
           html += `<li><span class="stats-leader-row">` +
-            `<span class="stats-leader-name" title="${escapeHtml(r.player.name)} (${escapeHtml(r.teamName)})">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)} <span class="sub">(${teamLinkHtml(r.teamIdx, r.teamName)})</span></span>` +
+            `<span class="stats-leader-rank">${i + 1}.</span>` +
+            `<span class="stats-leader-name" title="${escapeHtml(r.player.name)}">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)}</span>` +
+            `<span class="stats-leader-team sub" title="${escapeHtml(r.teamName)}">(${teamLinkHtml(r.teamIdx, truncateTeamNameForColumn(r.teamName))})</span>` +
             `<span class="stats-leader-val">· ${valueText}</span></span></li>`;
         }
       });

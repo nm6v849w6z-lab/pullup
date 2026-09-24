@@ -18,99 +18,142 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ---
 
+## Prêt à committer (code fait + testé en sandbox, PAS ENCORE livré sur le Mac)
+
+**2026-09-23, tard le soir** : l'utilisateur est allé se coucher ("fais tout
+ce que tu as à faire et on pousse demain matin") pendant que je finissais le
+point ci-dessous et démarrais le suivant (intégration avatars/salle) — au
+moment de livrer sur le Mac via le pont `device_bash`/`device_commit_files`,
+la connexion à son ordinateur s'est coupée (normal, il est en train de se
+mettre en veille/se fermer). **Les deux chantiers ci-dessous sont donc CODE
+FAIT + TESTÉS EN SANDBOX mais PAS livrés sur le Mac** — la prochaine session
+(demain matin, ou dès que le pont se reconnecte) doit d'abord réessayer
+`device_commit_files` (précaution nom de fichier neuf + vérif md5sum
+habituelle) avant de donner les commandes git à l'utilisateur.
+
+- **Classements de stats de la Ligue : numéros de rang 2-5/2-20 + colonnes
+  toujours alignées** — retour utilisateur (2026-09-23, captures) :
+  1. "si le nom est trop long, faut au moins mettre le début du nom de
+     l'équipe" (le nom d'équipe s'affichait comme "(...)" vide dès qu'il
+     était trop long pour tenir dans le `<button>` — un `<button>` est une
+     boîte inline atomique, `text-overflow:ellipsis` ne peut pas le couper
+     partiellement, il disparaît en entier). Corrigé en tronquant la
+     CHAÎNE elle-même en JS avant de l'insérer dans le bouton
+     (`truncateTeamNameForColumn`, 14 caractères max) plutôt que de
+     compter sur l'ellipsis CSS.
+  2. "les colonnes doivent tjrs avoir la meme largeur, c'est plus
+     harmonieux" — colonne nom d'équipe à largeur FIXE
+     (`--stats-leader-team-w: 92px`, même valeur n°1 et rangs 2-20, même
+     valeur mobile/desktop — une largeur mobile réduite avait été essayée
+     puis retirée, elle cassait à nouveau la troncature JS ci-dessus).
+  3. "pour les classements de stats pour les joueurs à partir du 2e mets
+     2. 3. 4. 5. etc" (capture Safari) — les rangs 2+ n'affichaient AUCUN
+     numéro dans Safari (Chrome/Chromium les affichait correctement).
+     Cause : le numéro reposait sur le compteur natif `<ol start="2">` +
+     `<li>` (`list-style`), et Safari a un bug de rendu de ce compteur
+     natif quand un `<li>` voisin (le n°1, `.stats-leader-first`) passe en
+     `display:flex`. Corrigé en abandonnant complètement le compteur natif :
+     le rang 2-20 est maintenant du texte explicite
+     (`<span class="stats-leader-rank">2.</span>`, etc.), qui s'affiche
+     pareil dans tous les navigateurs.
+  Fichiers : `moteurbasket3.html` (CSS `.stats-leader-card`/-rank/-team,
+  JS `renderLeagueStatsPanel`), `league_stats_test.js` (nouvelles
+  assertions : rangs 2-5 explicites, rangs 2-20 une fois dépliée).
+  Statut : code fait, `league_stats_test.js` vert, suite complète (94
+  fichiers) verte (les 4 échecs de la première passe —
+  `calendrier_ordres_stale_live_redirect_test.js`, `end_to_end_test.js`,
+  `onboarding_tour_test.js`, `thirteen_attrs_test.js` — sont tous passés
+  individuellement au retry, flakiness connue sous charge, pas des
+  régressions). **PAS ENCORE livré sur le Mac** (pont coupé, voir note en
+  tête de section) — livrer `moteurbasket3.html` + `league_stats_test.js` +
+  `DEV_NOTES.md`, puis :
+
+  ```
+  cd ~/Documents/PullUp
+  git add moteurbasket3.html league_stats_test.js DEV_NOTES.md
+  git commit -m "Numéros de rang 2-20 des classements de stats (fix Safari) + troncature/alignement des colonnes"
+  git push
+  ```
+
+  Une fois ce commit poussé, retirer cette entrée de DEV_NOTES.md (elle
+  n'a plus rien à faire ici, l'historique Git suffit).
+
+- **Nouveaux générateurs d'avatars et de salle (fichiers fournis par
+  l'utilisateur, 2026-09-23 soir : "j'en profite pour te donner les nouveaux
+  fichiers avatar et salle à intégrer à la place de ce qui est existant")**
+  — `avatar-generator.js` et `arena-generator.js` (+ `INTEGRATION.md`)
+  remplacent les corps des IIFE `AvatarGen`/`ArenaGen` existantes dans
+  `moteurbasket3.html` (mêmes points d'entrée exposés, `AvatarGen.
+  generateAvatar`/`ArenaGen.generateArena`, donc les DEUX seuls appelants du
+  jeu — `playerAvatarHtml` et le rendu de la page Salle — n'ont pas eu à
+  changer). Nouveautés apportées par cette version par rapport à
+  l'ancienne :
+  - Avatars : plus de styles de cheveux/barbes, tatouages de bras
+    (`armTattoo`/`armSide`), fossette au menton (`cleft`), textures fines de
+    peau/maillot/barbe (motifs `tx${UID}...`).
+  - Salle : nouveau mode **`dusk`** (soir de match, éclairage nocturne —
+    vitrages allumés, lampadaires, projecteurs, bandeau du club lumineux),
+    **DÉFAUT** de `generateArena` désormais (`options.mood` vaut `'dusk'`
+    sauf si `'day'` est passé explicitement) — l'ancienne version n'avait
+    QUE le mode jour. L'appel existant (page Salle) ne précise pas `mood`,
+    donc la salle s'affiche maintenant de nuit par défaut (vérifié
+    visuellement, rendu correct, voir capture prise pendant la session).
+  Intégration : mêmes conventions que la version précédente déjà en place
+  (voir le commentaire au-dessus de `AvatarGen` dans `moteurbasket3.html`) —
+  maillots aléatoires du module d'origine (tableau `JERSEYS`, champ `team`
+  de `generateAppearance`) et catalogue de planches artiste
+  (`partInfo`/`partSVG`/`PART_COUNTS`, utile seulement pour
+  `planche-avatars.html`, pas pour le jeu) retirés ; `options.teamColors`
+  reste la seule source de couleurs de maillot, avec un repli gris neutre
+  (`['#3a3a40', '#55555c']`) si jamais un appel oublie de le fournir, comme
+  avant.
+  Correctif collatéral : `mvp_avatar_test.js` neutralise les ids SVG
+  générés par le compteur `UID` module-level (`hd123`, `eye124`...) avant
+  de comparer deux rendus du même joueur — la nouvelle version ajoute deux
+  nouveaux préfixes d'id (`tx` pour les textures, `arm` pour les tatouages
+  de bras) qui n'étaient pas dans la liste, corrigé
+  (`normalizeAvatarHtml`).
+  Fichiers : `moteurbasket3.html` (corps de `AvatarGen`/`ArenaGen`
+  remplacés), `mvp_avatar_test.js` (regex de normalisation étendue).
+  Statut : code fait, suite complète (94 fichiers) verte (3 échecs de la
+  première passe — `calendrier_ordres_stale_live_redirect_test.js`,
+  `end_to_end_test.js`, `onboarding_tour_test.js` — tous passés
+  individuellement au retry, flakiness connue), vérifié visuellement
+  (Playwright : page Effectif — avatars variés, cohérents — et page Salle —
+  rendu nocturne propre, enseigne du club lisible, aucun artefact). **PAS
+  ENCORE livré sur le Mac** (pont coupé, voir note en tête de section) —
+  livrer `moteurbasket3.html` + `mvp_avatar_test.js` + `DEV_NOTES.md`, puis :
+
+  ```
+  cd ~/Documents/PullUp
+  git add moteurbasket3.html mvp_avatar_test.js DEV_NOTES.md
+  git commit -m "Nouveaux générateurs avatars/salle (plus de styles, tatouages, salle en mode soir par défaut)"
+  git push
+  ```
+
+  Une fois ce commit poussé, retirer cette entrée de DEV_NOTES.md.
+
+  **Non traité intentionnellement (hors scope avatars/salle avatars du
+  jeu)** : `demo.html`, `planche-avatars.html`, `planche-salles.html` (outils
+  autonomes pour l'artiste, pas des fichiers du jeu — comme la version
+  précédente, seuls `avatar-generator.js`/`arena-generator.js` sont
+  intégrés). Si l'utilisateur veut repasser en mode jour par défaut pour la
+  Salle (`mood: 'day'`), c'est un choix produit à lui demander, pas fait
+  d'office ici — le mode nuit a été gardé car explicitement décrit comme
+  l'amélioration principale du nouveau générateur (voir INTEGRATION.md :
+  "'dusk' (soir de match, par défaut)").
+
+---
+
 ## À faire
 
-1. **Radar "Profil (vue d'ensemble)" : respecter le code couleur
-   rouge/orange/blanc/vert, en couleurs vives** — retour utilisateur
-   (capture d'écran) : les anneaux de fond utilisaient un dégradé décoratif
-   à 5 bandes sans rapport avec le vrai barème du jeu (`attrColorTier`).
-   Code fait dans `moteurbasket3.html` (`radarChartSvg`/nouvelle fonction
-   `radarTierColor`) : 4 bandes calées sur les seuils 20/50/80 + chaque
-   point de donnée coloré selon son propre palier. Puis retour utilisateur
-   (capture d'écran de la prod) : "bien la vue d'ensemble mais mets le
-   rouge plus vif, idem pour le orange stp" — nouveaux tokens CSS dédiés
-   `--attr-tier-red`/`--attr-tier-amber` (`#ff3b30`/`#ff9500`, plus vifs que
-   les tokens génériques `--danger`/`--amber` utilisés ailleurs dans
-   l'appli pour l'accent UI général, volontairement laissés inchangés) :
-   utilisés par `radarTierColor`/`ringBands` ET par toutes les règles CSS
-   `.attr-tier-red`/`.attr-tier-orange` (couleur des caractéristiques
-   partout dans l'appli, pas seulement le radar). **Testé** (Playwright,
-   dont vérification que l'accent UI générique — ex. bouton CTA — reste
-   inchangé + suite de 94 tests verte) — **PRÊT À COMMITTER**, pas encore
-   poussé.
-
-2. **Box score en direct : équipe domicile à gauche, extérieure à droite**
-   — retour utilisateur : les onglets `.live-bs-tab`/`.bs-tab` affichaient
-   toujours "mon équipe" (teamA) en premier, quel que soit domicile/
-   extérieur. Réutilise le même mécanisme CSS que le bandeau de score
-   principal (`order` sur un conteneur flex, classe `my-team-away`),
-   appliqué à `#liveBoxscoreSection` ET `#boxscoreSection` (pas
-   `showMatchBoxscore`, qui gérait déjà correctement domicile/extérieur).
-   **Testé** (Playwright, layout réel + suite de 94 tests) — **PRÊT À
-   COMMITTER**, pas encore poussé.
-
-3. **Bug : impossible d'aller sur Ordres pendant/juste après un live** —
-   retour utilisateur (2026-09-23) : "quand il y a un live en route, ça
-   bugue un peu, impossible d'aller faire une compo [...] surtout quand le
-   match est fini je crois en fait, mais que le live apparait tjrs en
-   haut". Cause trouvée : le navigateur confondait "l'animation du direct a
-   fini de se jouer" (`liveMatchHasEnded`, basé sur `totalDurationMs` —
-   souvent 15 à 70 min réelles selon le rythme du match) avec "le serveur
-   est prêt à finaliser la journée" (toujours 90 min pile,
-   `MATCH_BROADCAST_DURATION_MS`, voir `server/autoSim.js:catchUpClassic`/
-   `catchUpDailyAnchored`). Entre les deux, `goToOrdresTab`/`goToLiveTab`/
-   `currentMatchAlreadyLive`/`defaultOrdresRound` déclenchaient un aller-
-   retour serveur inutile qui renvoyait le MÊME direct non finalisé, et
-   `enterNextMatchOrShowSeasonEnd` rebranchait alors sur l'écran Live au
-   lieu de laisser le joueur continuer vers Ordres (boucle, bandeau "live"
-   qui ne disparaît jamais avant la fin des 90 min). Nouvelle fonction
-   `liveMatchReadyForServerCatchup` (alignée sur `MATCH_BROADCAST_
-   DURATION_MS`, nouvelle constante client dupliquée depuis
-   `server/calendar.js`) introduite pour cette décision précise ;
-   `liveMatchHasEnded` reste utilisée là où elle est correcte (affichage/
-   animation locale uniquement). Reproduit puis corrigé avec un script de
-   repro dédié (script jetable, pas conservé) confirmant la boucle AVANT le
-   correctif et son absence APRÈS, sur plusieurs tirages aléatoires.
-   **Testé** (repro ciblée + suite de 94 tests, dont
-   `calendrier_ordres_stale_live_redirect_test.js` mis à jour pour
-   utiliser le nouveau seuil de 90 min) — **PRÊT À COMMITTER**, pas encore
-   poussé.
-
-4. **Page Ligue : cartes stats façon EuroLeague (top 5 + avatar +
-   "Afficher tout" → top 20)** — retour utilisateur avec capture d'écran du
-   site EuroLeague (euroleaguebasketball.net/stats) : sur la page Ligue, la
-   section "meilleurs joueurs de la saison" devrait ressembler à ces
-   cartes — 1er avec avatar affiché en grand, les 5 premiers listés, bouton
-   "Afficher tout" en bas qui déplie jusqu'au top 20. Code fait dans
-   `moteurbasket3.html` (`renderLeagueStatsPanel`) : le n°1 de chaque
-   catégorie (`LEAGUE_STAT_CATEGORIES`) reste le premier `<li>` de la liste
-   existante (pas de structure séparée, pour ne pas casser les vérifs déjà
-   en place) mais gagne son avatar (`playerAvatarHtml`, même fonction que
-   le MVP de la journée juste au-dessus) et sa valeur affichée en grand ;
-   les rangs 2-5 restent une liste classique numérotée (`<ol start="2">`,
-   le n°1 étant en `display:flex` donc hors du compteur automatique) ;
-   bouton "Afficher tout"/"Réduire" par catégorie
-   (`leagueStatsExpandedCats`, état indépendant par carte) qui bascule
-   entre top 5 et top 20. Puis retours utilisateur complémentaires :
-   "fais en sorte que les noms d'équipe soient aussi cliquable" (les noms
-   d'équipe du MVP ET des classements passent par `teamLinkHtml`, même
-   écouteur délégué global que le reste de l'appli) ; "mets peut être
-   (Cerberus Basket...)" et "aligne toutes les stats cotés droits" (nom
-   joueur+équipe sur une ligne flex qui tronque avec "…" au lieu de
-   retourner à la ligne quand le nom d'équipe est long — `title=` porte le
-   texte complet au survol — pendant que la valeur reste sur une colonne
-   alignée à droite, pixel-identique entre le n°1 et les rangs 2-20,
-   vérifié via les `getBoundingClientRect()` Playwright). **Testé**
-   (Playwright desktop + mobile 390px + vérif alignement pixel,
-   `league_stats_test.js` étendu avec avatar + dépliage/repliage +
-   indépendance entre catégories + clic sur nom d'équipe → fiche équipe,
-   suite de 94 tests verte) — **PRÊT À COMMITTER**, pas encore poussé.
-
-5. **Box score en direct : ligne total + tous les joueurs + minutes
+1. **Box score en direct : ligne total + tous les joueurs + minutes
    jouées** — retour utilisateur : actuellement `liveBoxScore` ne crée une
    ligne que pour un joueur ayant déjà généré une statistique (lazy), pas
    de colonne MIN (volontairement absente à l'origine, voir le commentaire
-   existant dans `moteurbasket3.html`), pas de ligne total. Pas commencé.
+   existant dans `moteurbasket3.html`), pas de ligne total. En cours —
+   investigation démarrée (`resetLiveBoxScore`/`liveBoxScore`/flux
+   d'événements `type: "substitution"`).
    Pistes : pré-remplir toutes les lignes à `resetLiveBoxScore()` à partir
    de la feuille de match (titulaires + remplaçants désignés) plutôt que
    lazy ; pour les minutes, suivre les événements de substitution déjà
@@ -118,19 +161,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
    départ pour calculer le temps réellement passé sur le terrain par
    joueur.
 
-6. **Feuille de match : score par quart-temps** — retour Discord (Ariane,
+2. **Feuille de match : score par quart-temps** — retour Discord (Ariane,
    relayé par l'utilisateur) : afficher le score par quart-temps sur la
    boxscore du match. `quarterScores` existe déjà côté moteur
    (`{A:[...4], B:[...4]}`, voir engine.js `simulate()`) — pas encore
    affiché sur la feuille de stats. Pas commencé.
 
-7. **Augmenter le pool de noms de famille générés** — retour Discord
+3. **Augmenter le pool de noms de famille générés** — retour Discord
    (Ariane, relayé par l'utilisateur) : trop de doublons de noms de
    famille dans un même effectif (ex. "3 Fontaine, 2 Novak, 2 Petit, c'est
    la galère pour m'y retrouver"). Élargir la liste de noms de famille
    utilisée à la génération des joueurs. Pas commencé.
 
-8. **Pouvoir regarder le live d'une autre équipe depuis son calendrier** —
+4. **Pouvoir regarder le live d'une autre équipe depuis son calendrier** —
    retour utilisateur : actuellement l'écran Live ne montre que le match du
    club du joueur (`league.liveMatch`, calculé pour son propre club). Il
    faudrait un accès au direct d'un match d'une AUTRE équipe depuis la page

@@ -172,6 +172,26 @@ cards.forEach(card => {
 });
 console.log("✅ Chaque nom d'équipe des classements (n°1 et rangs 2-5) est bien un lien cliquable.");
 
+// Retour utilisateur (2026-09-23, capture Safari) : "pour les classements de
+// stats pour les joueurs à partir du 2e mets 2. 3. 4. 5. etc" — le rang
+// affiché DOIT être du texte explicite (.stats-leader-rank), pas un
+// marqueur natif <ol>/<li> (Safari ne l'affichait pas du tout, voir le
+// commentaire CSS de .stats-leader-card ol dans moteurbasket3.html). Le n°1
+// (mis en avant avec avatar) n'a volontairement pas de numéro affiché.
+cards.forEach(card => {
+  const label = card.querySelector("h4").textContent;
+  const firstLi = card.querySelector("li");
+  if (firstLi.querySelector(".stats-leader-rank")) {
+    throw new Error(`❌ Le n°1 (mis en avant) ne devrait pas afficher de rang numéroté, obtenu pour "${label}".`);
+  }
+  const ranks = [...card.querySelectorAll("li .stats-leader-rank")].map(s => s.textContent);
+  const expectedRanks = ["2.", "3.", "4.", "5."].slice(0, ranks.length);
+  if (JSON.stringify(ranks) !== JSON.stringify(expectedRanks)) {
+    throw new Error(`❌ Les rangs 2-5 de "${label}" devraient afficher "2. 3. 4. 5." (texte explicite), obtenu : ${JSON.stringify(ranks)}.`);
+  }
+});
+console.log("✅ Les rangs 2-5 de chaque classement affichent bien leur numéro (\"2. 3. 4. 5.\").");
+
 const someTeamLink = pointsCardTeamLinkProbe();
 function pointsCardTeamLinkProbe() {
   const card = cards.find(c => c.querySelector("h4").textContent.startsWith("Points"));
@@ -215,6 +235,15 @@ if (!/Réduire/.test(expandBtnAfter.textContent)) {
   throw new Error(`❌ Après dépliage, le bouton devrait proposer de "Réduire", obtenu : "${expandBtnAfter.textContent}".`);
 }
 console.log("✅ Un clic sur \"Afficher tout\" déplie bien la carte Points jusqu'au top 20 (ou moins si la ligue en compte moins).");
+
+// Les rangs affichés doivent continuer jusqu'au dernier joueur déplié (ex.
+// "20." si la ligue en compte au moins 20 éligibles), pas seulement 2-5.
+const expandedRanks = [...doc2.querySelector("#leagueStatsPanel .stats-leader-card [data-stats-expand-cat='pts']").closest(".stats-leader-card").querySelectorAll("li .stats-leader-rank")].map(s => s.textContent);
+const expectedExpandedRanks = Array.from({ length: expectedExpanded - 1 }, (_, i) => `${i + 2}.`);
+if (JSON.stringify(expandedRanks) !== JSON.stringify(expectedExpandedRanks)) {
+  throw new Error(`❌ Une fois dépliée, la carte Points devrait afficher les rangs ${JSON.stringify(expectedExpandedRanks)}, obtenu : ${JSON.stringify(expandedRanks)}.`);
+}
+console.log(`✅ Une fois dépliée, la carte Points affiche bien les rangs 2 à ${expectedExpanded} (dernier : "${expandedRanks[expandedRanks.length - 1]}").`);
 
 expandBtnAfter.click();
 const itemsAfterCollapse = doc2.querySelector("#leagueStatsPanel .stats-leader-card [data-stats-expand-cat='pts']").closest(".stats-leader-card").querySelectorAll("li").length;
