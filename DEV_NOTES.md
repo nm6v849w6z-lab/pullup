@@ -51,15 +51,37 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
    - Reste à faire : livrer sur le Mac (device_commit_files), donner les
      commandes git à l'utilisateur (jamais de push par Claude).
 
-2. **[À investiguer, pas commencé] Couleurs du radar (profil joueur) pas
-   assez vives** — retour utilisateur (2026-09-24, capture "PROFIL (VUE
+2. **[Prêt à committer] Couleurs du radar (profil joueur) pas assez
+   vives** — retour utilisateur (2026-09-24, capture "PROFIL (VUE
    D'ENSEMBLE)") : "les zones rouge et orange sur le profil ne sont tjrs
    pas vives". Déjà "corrigé" deux fois avant sans satisfaire pleinement
    l'utilisateur (commits `91ea530` "Corrige couleurs radar" et `06d282d`
-   "Radar plus vif, ...") — donc une simple re-tentative de la même
-   approche risque de ne pas suffire, à creuser pour comprendre ce qui n'a
-   pas été couvert par les deux essais précédents. Pas encore investigué
-   (pas de lecture du code de rendu du radar effectuée à ce stade).
+   "Radar plus vif") — ces deux tentatives n'avaient éclairci que les
+   COULEURS elles-mêmes, sans jamais toucher à la vraie cause.
+   Statut : CODE FAIT + TESTÉ (sandbox), prêt à livrer sur le Mac.
+   - Vraie cause enfin trouvée : `radarChartSvg` empilait 4 DISQUES PLEINS
+     (du plus grand au plus petit) à fill-opacity 0.5 chacun — la bande
+     rouge (la plus petite, au centre) se composait donc par-dessus le
+     vert PUIS le blanc PUIS l'orange déjà empilés en dessous, ce qui la
+     diluait en orange/saumon terne (mesuré au pixel avec Playwright :
+     rgb(226,111,63) au lieu du rouge #ff3b30 attendu).
+   - Corrigé en dessinant chaque bande comme un VRAI ANNEAU indépendant
+     (path SVG à deux sous-tracés + `fill-rule="evenodd"`, voir le grand
+     commentaire de `radarChartSvg`) au lieu d'un disque plein empilé :
+     chaque bande n'est composée qu'UNE SEULE FOIS avec le fond sombre,
+     plus de dilution en cascade. Opacité remontée de 0.5 à 0.65 au passage
+     (retour utilisateur "pas assez vives"), sans revenir à un aplat plein
+     jugé "trop agressif" à l'origine.
+   - Vérifié visuellement sur la vraie fiche joueur (Playwright) : rouge et
+     orange nettement vifs et distincts maintenant.
+   - Fichiers touchés : `moteurbasket3.html` (`radarChartSvg` + commentaire
+     `:root`), nouveau `radar_chart_colors_test.js` (structure du SVG :
+     vrais anneaux creux vs disques pleins, couleurs, opacité, seuils
+     `radarTierColor`).
+   - Tests : suite complète (95 fichiers désormais) relancée
+     individuellement — tout passe.
+   - Reste à faire : livrer sur le Mac (device_commit_files), donner les
+     commandes git à l'utilisateur.
 
 3. **Box score en direct : ligne total + tous les joueurs + minutes
    jouées** — retour utilisateur : actuellement `liveBoxScore` ne crée une
@@ -97,6 +119,48 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
    `schedulePlayback` côté serveur) ; regarder le match d'une autre équipe
    nécessitera probablement la même mécanique mais déclenchée/adressée
    différemment (par équipe/journée plutôt qu'implicite au club du joueur).
+
+7. **[En cours] Fiche joueur : bouton "Comparer" déplacé + flèches de
+   navigation entre joueurs de l'effectif** — retour utilisateur
+   (2026-09-24, capture annotée d'un cercle rouge en haut à droite de la
+   fiche joueur, zone vide à droite de "Modifier vos ordres") : "mets le
+   bouton comparer dans la zone gribouillée en rouge et juste à côté de ce
+   bouton, mets des flèches de navigation pour passer d'un joueur à l'autre
+   de son effectif". Deux parties :
+   - Déplacer le bouton "Comparer" (actuellement en bas de la fiche, à côté
+     de "← Retour", voir `openPlayerCompareFromDetail`) vers la zone en
+     haut à droite de la fiche joueur (à côté de "Modifier vos ordres",
+     zone actuellement vide dans le topbar/header quand une fiche joueur
+     est ouverte).
+   - Ajouter des flèches (précédent/suivant) juste à côté de ce bouton pour
+     naviguer d'un joueur à l'autre DANS L'EFFECTIF DE SON CLUB (parcourir
+     `team.players` dans l'ordre affiché à l'Effectif) sans repasser par la
+     page Effectif à chaque fois.
+   En cours — pas encore commencé (juste noté, investigation du markup du
+   topbar de la fiche joueur et de l'ordre des joueurs à faire).
+
+8. **[En cours] Fiche joueur : bloc "Derniers matchs" → fenêtre "toute la
+   saison" + réordonnancement des blocs** — retour utilisateur
+   (2026-09-24, 2 captures) : dans le bloc "DERNIERS MATCHS" (5 lignes
+   actuellement, voir `renderPlayerDetail`/`log.slice(0,5)`), ajouter un
+   bouton pour voir plus que les 5 derniers matchs / toute la saison :
+   "ça pourrait ouvrir une fenetre qui se superpose et qui montre toutes
+   les stats (pas juste point rebond passse) de la saison avec une moyenne
+   en bas" — donc une fenêtre/modal avec TOUTES les stats par match de la
+   saison (pas seulement PTS/REB/PD comme le tableau "Derniers matchs"
+   actuel) + une ligne de moyenne en bas. Par ailleurs, "enleve le match
+   par match en bas" — le tableau "MATCH PAR MATCH" actuellement affiché
+   sous "MOYENNES DE LA SAISON" (en bas de la fiche) doit disparaître,
+   remplacé par cette nouvelle fenêtre superposée accessible depuis
+   "Derniers matchs". Et enfin : "il faut remonter le bloc moyenne de la
+   saison au dessus du bloc mise en vente" — le bloc "MOYENNES DE LA
+   SAISON" doit passer AU-DESSUS du bloc "MISE EN VENTE" dans l'ordre
+   d'affichage de la fiche (actuellement : Mise en vente, PUIS Moyennes de
+   la saison, PUIS Match par match — voir `renderPlayerDetail`).
+   En cours — pas encore commencé (investigation du markup de ces 3 blocs
+   à faire : où ils sont générés dans `renderPlayerDetail`, structure du
+   tableau "Moyennes de la saison" pour réutiliser ses colonnes complètes
+   dans la nouvelle fenêtre superposée).
 
 ---
 

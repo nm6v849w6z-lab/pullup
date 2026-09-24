@@ -16795,6 +16795,27 @@ function playerRadarCategories(player) {
 // Chaque point de donnée (voir dataPts plus bas) est en plus désormais
 // coloré selon le tier de SON PROPRE axe, exactement comme un chiffre de
 // caractéristique ailleurs dans le jeu, au lieu d'un blanc uniforme.
+//
+// Retour utilisateur (2026-09-23 PUIS ENCORE 2026-09-24, même capture "PROFIL
+// (VUE D'ENSEMBLE)") : "les zones rouge et orange sur le profil ne sont tjrs
+// pas vives" — la première tentative (91ea530/06d282d) n'avait fait
+// qu'éclaircir les COULEURS elles-mêmes (--attr-tier-red/-amber, voir
+// :root), sans toucher à la façon dont les bandes sont DESSINÉES, qui était
+// la VRAIE cause : chaque bande était un DISQUE PLEIN empilé du plus grand
+// au plus petit (voir git blame), chacun peint PAR-DESSUS le précédent avec
+// fill-opacity 0.5 — la bande rouge (la plus petite, tout au centre) se
+// retrouvait donc composée par-dessus le vert PUIS le blanc PUIS l'orange
+// déjà empilés en dessous (chacun à 50% d'opacité), et ce mélange en
+// cascade la faisait virer à un orange/saumon terne au lieu d'un rouge vif
+// (mesuré au pixel avec Playwright : rgb(226,111,63), une teinte totalement
+// différente du rouge #ff3b30 demandé). Corrigé en dessinant chaque bande
+// comme un VRAI ANNEAU (creux au milieu, `radarRingAnnulusPath` plus bas,
+// path SVG en deux sous-tracés + fill-rule="evenodd") plutôt qu'un disque
+// plein : chaque bande n'est alors composée QU'UNE SEULE FOIS avec le fond
+// sombre de la page, jamais avec les bandes voisines, donc plus aucune
+// dilution en cascade. Profite de l'occasion pour remonter légèrement
+// l'opacité (0.5 → 0.65, toujours loin du plein-aplat jugé "trop agressif"
+// ci-dessus) maintenant que ce n'est plus un problème de compositing.
 function radarTierColor(value) {
   // --attr-tier-red/--attr-tier-amber (PAS --danger/--amber) : voir leur
   // commentaire dans :root — tokens dédiés au barème des caractéristiques,
@@ -16813,20 +16834,33 @@ function radarChartSvg(categories) {
     const a = angleFor(i);
     return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
   };
-  // Bandes peintes de la plus grande à la plus petite (chaque polygone
-  // recouvre celui d'avant, ne laissant apparaître qu'un anneau) : la plus
-  // grande (100%) est verte, la plus petite (20%, le disque central) est
-  // rouge — exactement les seuils attrColorTier (100/80/50/20).
+  // Bandes = 4 VRAIS ANNEAUX indépendants (chacun avec un bord extérieur ET
+  // un bord intérieur), pas des disques pleins empilés (voir le grand
+  // commentaire au-dessus de radarTierColor : empiler des disques pleins
+  // semi-transparents composait chaque bande par-dessus TOUTES celles
+  // en-dessous, diluant le rouge/orange en une teinte terne). La plus
+  // grande (100-80%) est verte, la plus petite (20-0%, disque plein au
+  // centre puisqu'il n'y a pas de bande encore plus petite) est rouge —
+  // exactement les seuils attrColorTier (100/80/50/20).
   const ringBands = [
-    { frac: 1.0, color: "#3ecf67" },
-    { frac: 0.8, color: "var(--ink)" },
-    { frac: 0.5, color: "var(--attr-tier-amber)" },
-    { frac: 0.2, color: "var(--attr-tier-red)" },
+    { outer: 1.0, inner: 0.8, color: "#3ecf67" },
+    { outer: 0.8, inner: 0.5, color: "var(--ink)" },
+    { outer: 0.5, inner: 0.2, color: "var(--attr-tier-amber)" },
+    { outer: 0.2, inner: 0, color: "var(--attr-tier-red)" },
   ];
+  // Anneau (creux) = un <path> à deux sous-tracés (contour extérieur, puis
+  // contour intérieur) avec fill-rule="evenodd", qui ne peint QUE la zone
+  // entre les deux — jamais le disque intérieur en dessous. Sans bord
+  // intérieur (inner=0, la bande centrale), c'est simplement un polygone
+  // plein classique, comme avant.
+  const ringPolygonPath = frac => {
+    const pts = RADAR_AXES.map((_, i) => pointAt(i, maxR * frac).map(v => v.toFixed(1)).join(",")).join(" L ");
+    return `M ${pts} Z`;
+  };
   let svg = `<svg viewBox="-42 -8 304 252" width="100%" height="auto">`;
-  ringBands.forEach(({ frac, color }) => {
-    const pts = RADAR_AXES.map((_, i) => pointAt(i, maxR * frac).map(v => v.toFixed(1)).join(",")).join(" ");
-    svg += `<polygon points="${pts}" fill="${color}" fill-opacity="0.5"/>`;
+  ringBands.forEach(({ outer, inner, color }) => {
+    const d = inner > 0 ? `${ringPolygonPath(outer)} ${ringPolygonPath(inner)}` : ringPolygonPath(outer);
+    svg += `<path d="${d}" fill="${color}" fill-opacity="0.65" fill-rule="evenodd"/>`;
   });
   RADAR_AXES.forEach((_, i) => {
     const [x, y] = pointAt(i, maxR);
