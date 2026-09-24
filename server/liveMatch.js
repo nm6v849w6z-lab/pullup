@@ -240,6 +240,9 @@ function computeLiveMatch(Engine, league, round, homeIdx, awayIdx, kickoffAt, co
       round, kickoffAt, homeIdx, awayIdx, competition,
       forfeit: true,
       finalScore: { home: homeScore, away: awayScore },
+      // Forfait : aucun quart-temps réellement joué (voir simulateOrForfeit
+      // côté moteur, même convention `null`).
+      quarterScores: null,
       events: [], pauses: [], totalDurationMs: 0,
       boxScoreA: [], boxScoreB: [],
     };
@@ -253,6 +256,15 @@ function computeLiveMatch(Engine, league, round, homeIdx, awayIdx, kickoffAt, co
     round, kickoffAt, homeIdx, awayIdx, competition,
     forfeit: false,
     finalScore: { home: result.finalScore.A, away: result.finalScore.B },
+    // quarterScores (retour Discord d'Ariane, relayé par l'utilisateur,
+    // 2026-09-24 : "afficher le score par quart-temps sur la boxscore du
+    // match") : posée ici (même endroit que finalScore juste au-dessus, même
+    // réorientation A/B -> home/away) pour survivre à la diffusion en
+    // direct de ce match (league.liveMatches est persisté sur disque) — lue
+    // ensuite par finalizeRound/finalizeCupRound/finalizePlayoffRound une
+    // fois le match terminé, pour l'attacher au matchLog des joueurs (voir
+    // Engine.recordMatchStatsAndAwardMvp).
+    quarterScores: { home: result.quarterScores.A, away: result.quarterScores.B },
     events, pauses, totalDurationMs,
     boxScoreA: result.boxScoreA, boxScoreB: result.boxScoreB,
   };
@@ -368,11 +380,12 @@ function finalizeCupRound(Engine, league) {
     const key = cupLiveMatchKey(round.index, m.home, m.away);
     const live = league.liveMatches && league.liveMatches[key];
 
-    let scoreHome, scoreAway, forfeit;
+    let scoreHome, scoreAway, forfeit, quarterScores;
     if (live) {
       scoreHome = live.finalScore.home;
       scoreAway = live.finalScore.away;
       forfeit = live.forfeit;
+      quarterScores = live.quarterScores || null;
       delete league.liveMatches[key];
     } else {
       // Jamais démarré en direct (CPU-vs-CPU, ou tour rattrapé d'un coup) :
@@ -388,6 +401,7 @@ function finalizeCupRound(Engine, league) {
       scoreHome = sim.scoreHome;
       scoreAway = sim.scoreAway;
       forfeit = sim.forfeit;
+      quarterScores = sim.quarterScores;
     }
     // Journal de matchs (voir finalizeRound ci-dessus pour le même principe
     // côté championnat) : un match de coupe compte aussi pour les stats de
@@ -396,7 +410,7 @@ function finalizeCupRound(Engine, league) {
     // chaque fois" — chaque match réellement simulé, coupe comprise, voir
     // recordMatchStatsAndAwardMvp/awardMatchMvp côté moteur).
     if (!forfeit) {
-      recordMatchStatsAndAwardMvp(home, away, round.index, "cup");
+      recordMatchStatsAndAwardMvp(home, away, round.index, "cup", undefined, quarterScores);
     }
     league.recordCupMatchResult(matchIndex, scoreHome, scoreAway, forfeit);
   });
@@ -490,11 +504,12 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
     const key = liveMatchKey(round, m.home, m.away);
     const live = league.liveMatches && league.liveMatches[key];
 
-    let scoreHome, scoreAway, forfeit;
+    let scoreHome, scoreAway, forfeit, quarterScores;
     if (live) {
       scoreHome = live.finalScore.home;
       scoreAway = live.finalScore.away;
       forfeit = live.forfeit;
+      quarterScores = live.quarterScores || null;
       delete league.liveMatches[key];
     } else {
       // Jamais démarré en direct (CPU-vs-CPU, ou tour rattrapé d'un coup) :
@@ -507,6 +522,7 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
       scoreHome = sim.scoreHome;
       scoreAway = sim.scoreAway;
       forfeit = sim.forfeit;
+      quarterScores = sim.quarterScores;
     }
 
     // Journal de matchs (voir le même principe côté finalizeRound ci-dessous)
@@ -515,7 +531,7 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
     // "championship" (voir le grand commentaire en tête de ce bloc) : jamais
     // un tag "playoff" séparé ici.
     if (!forfeit) {
-      recordMatchStatsAndAwardMvp(home, away, round, "championship", now);
+      recordMatchStatsAndAwardMvp(home, away, round, "championship", now, quarterScores);
     }
 
     league.recordPlayoffGameResult(m.seriesId, m.home, m.away, scoreHome, scoreAway, now);
@@ -610,11 +626,12 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
     const key = liveMatchKey(round, m.home, m.away);
     const live = league.liveMatches && league.liveMatches[key];
 
-    let scoreHome, scoreAway, forfeit;
+    let scoreHome, scoreAway, forfeit, quarterScores;
     if (live) {
       scoreHome = live.finalScore.home;
       scoreAway = live.finalScore.away;
       forfeit = live.forfeit;
+      quarterScores = live.quarterScores || null;
       delete league.liveMatches[key];
     } else {
       // Jamais démarré en direct (CPU-vs-CPU, ou journée rattrapée d'un
@@ -629,15 +646,19 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
       scoreHome = sim.scoreHome;
       scoreAway = sim.scoreAway;
       forfeit = sim.forfeit;
+      quarterScores = sim.quarterScores;
     }
 
     // Journal de matchs (voir Player.matchLog/recordMatchStatsForTeam côté
     // moteur) : alimente les stats de saison/MVP de la dernière journée
     // (onglet Ligue) et les pages joueur — JAMAIS pour un forfait (aucune
     // simulation réelle n'a eu lieu, p.stats/p.secondsPlayed restent ceux du
-    // match précédent de chaque joueur).
+    // match précédent de chaque joueur). `quarterScores` (retour Discord
+    // d'Ariane, relayé par l'utilisateur, 2026-09-24) : propagé jusqu'au
+    // matchLog pour l'affichage du score par quart-temps sur la feuille de
+    // match (voir boxscoreRowsFromMatchLog/showMatchBoxscore côté client).
     if (!forfeit) {
-      recordMatchStatsAndAwardMvp(home, away, round, "championship", now);
+      recordMatchStatsAndAwardMvp(home, away, round, "championship", now, quarterScores);
     }
 
     league.recordResult(round, m.home, m.away, scoreHome, scoreAway);
@@ -806,10 +827,32 @@ function viewLiveMatchForTeam(league, teamIndex) {
   };
 }
 
+// Liste ALLÉGÉE (retour utilisateur, 2026-09-24 : "pouvoir regarder le live
+// d'une autre équipe depuis son calendrier" — voir DEV_NOTES.md) de TOUS les
+// matchs actuellement en direct (league.liveMatches, PLURIEL) — SANS le
+// contenu du match (événements/scores), volontairement : cette liste sert
+// uniquement à savoir QUELLES équipes sont actuellement en direct, pour
+// afficher un bouton "🔴 En direct" sur la fiche d'une équipe adverse (voir
+// server/index.js:/api/live-status et moteurbasket3.html). Le contenu
+// complet (et personnalisé, A = équipe suivie) n'est renvoyé qu'à la demande
+// explicite du spectateur, voir /api/spectate et viewLiveMatchForTeam
+// ci-dessus — jamais poussé automatiquement à tout le monde. Portée
+// VOLONTAIREMENT limitée aux matchs DÉJÀ dans league.liveMatches (décision
+// utilisateur du 2026-09-24, "Limiter aux matchs déjà en direct") : un match
+// CPU-vs-CPU n'y apparaît jamais (voir server/autoSim_test.js) et cette
+// fonction ne change rien à cette architecture délibérée.
+function liveMatchesLiteFor(league) {
+  if (!league.liveMatches) return [];
+  return Object.values(league.liveMatches).map(m => ({
+    homeIdx: m.homeIdx, awayIdx: m.awayIdx, round: m.round, competition: m.competition || "championship",
+  }));
+}
+
 module.exports = {
   HALFTIME_BREAK_MS, QUARTER_BREAK_MS, OVERTIME_BREAK_MS, TIMEOUT_BREAK_MS, TIMEOUTS_PER_QUARTER,
   SECONDS_SCALE_MS, MIN_EVENT_GAP_MS,
   schedulePlayback, liveMatchKey, computeLiveMatch, ensureLiveMatchStarted, finalizeRound, viewLiveMatchForTeam,
+  liveMatchesLiteFor,
   // Coupe (voir le bloc dédié plus haut) :
   cupLiveMatchKey, ensureCupLiveMatchStarted, finalizeCupRound,
   // Play-offs (voir le bloc dédié plus haut) :

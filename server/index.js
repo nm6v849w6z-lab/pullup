@@ -890,6 +890,63 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Liste allégée des matchs actuellement en direct (retour utilisateur,
+      // 2026-09-24 : "pouvoir regarder le live d'une autre équipe depuis son
+      // calendrier" — voir DEV_NOTES.md) : ne renvoie QUE {homeIdx, awayIdx,
+      // round, competition} pour chaque match en cours (voir
+      // LiveMatch.liveMatchesLiteFor) — jamais son contenu (événements/
+      // scores), pour que le navigateur sache QUELLES équipes sont
+      // actuellement en direct (afficher un bouton "🔴 En direct" sur la
+      // fiche d'une équipe adverse) sans rien révéler du match tant que le
+      // manager ne clique pas explicitement dessus (voir /api/spectate juste
+      // après). Route JOUEUR (nécessite resolvePlayerContext) simplement pour
+      // rattraper la ligue (tick) avant de lire league.liveMatches — pas de
+      // restriction supplémentaire ensuite : cette liste est volontairement
+      // la même pour tout manager de la ligue (aucune donnée de match dedans).
+      if (route.pathname === "/api/live-status" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        sendJson(res, 200, { ok: true, live: LiveMatch.liveMatchesLiteFor(ctx.league) });
+        return;
+      }
+
+      // Suivre le direct d'une AUTRE équipe (même retour utilisateur que
+      // ci-dessus, "depuis son calendrier") : ?team=<index dans
+      // league.teams>. Portée VOLONTAIREMENT limitée (voir DEV_NOTES.md,
+      // décision utilisateur du 2026-09-24 : "Limiter aux matchs déjà en
+      // direct") aux matchs DÉJÀ présents dans league.liveMatches — jamais un
+      // match CPU-vs-CPU (jamais diffusé, voir server/autoSim_test.js) :
+      // aucun changement à cette architecture délibérée. Réutilise TEL QUEL
+      // viewLiveMatchForTeam (voir son grand commentaire) avec l'index de
+      // l'équipe SUIVIE (pas celui de l'appelant) — la restriction "un
+      // manager ne voit que SON propre match" reste appliquée ailleurs
+      // (buildStateSnapshot/POST /api/save), jamais dans
+      // viewLiveMatchForTeam elle-même, donc rien à modifier côté moteur
+      // pour ce point précis.
+      if (route.pathname === "/api/spectate" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        const teamParam = route.searchParams.get("team");
+        const teamIdx = teamParam === null ? NaN : Number(teamParam);
+        if (!Number.isInteger(teamIdx) || teamIdx < 0 || teamIdx >= ctx.league.teams.length) {
+          sendJson(res, 400, { ok: false, error: "'team' (index d'équipe valide) requis." });
+          return;
+        }
+        const live = LiveMatch.viewLiveMatchForTeam(ctx.league, teamIdx);
+        if (!live) {
+          sendJson(res, 404, { ok: false, error: "Cette équipe n'est pas actuellement en direct." });
+          return;
+        }
+        const watchedTeam = ctx.league.teams[teamIdx];
+        const opponent = ctx.league.teams[live.opponentIdx];
+        sendJson(res, 200, { ok: true, teamName: watchedTeam.name, opponentName: opponent.name, live });
+        return;
+      }
+
       const actionFn = req.method === "POST" ? ACTION_ROUTES[route.pathname] : null;
       if (actionFn) {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);

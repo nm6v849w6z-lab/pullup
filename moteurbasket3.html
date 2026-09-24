@@ -1909,6 +1909,36 @@
      boîte plus large pour accueillir la table .boxscore (déjà stylée plus
      haut pour le match en direct) et défilante en cas de très petit écran. */
   .match-boxscore-box{max-width:640px; max-height:85vh; overflow-y:auto;}
+  /* Score par quart-temps (retour Discord d'Ariane, relayé par
+     l'utilisateur, 2026-09-24, voir boxscoreQuarterScoresHtml) : même table
+     .roster-table que le reste, juste des colonnes de quart-temps étroites
+     (un chiffre chacune) et centrées, plutôt que la largeur par défaut
+     pensée pour des noms de joueur. */
+  .quarter-scores-table th, .quarter-scores-table td{text-align:center; padding:4px 8px;}
+  .quarter-scores-table th:first-child, .quarter-scores-table td:first-child{text-align:left;}
+  /* "Regarder le live d'une autre équipe depuis son calendrier" (retour
+     utilisateur, 2026-09-24 : "pouvoir regarder le live d'une autre équipe
+     depuis son calendrier" — voir DEV_NOTES.md, portée limitée aux matchs
+     DÉJÀ en direct). Pastille affichée en tête du sous-onglet Calendrier
+     d'une fiche équipe adverse actuellement en direct (voir
+     refreshTeamDetailLiveBanner), et boîte de la fenêtre spectateur ouverte
+     en cliquant "Suivre" (showSpectateMatch) — même famille visuelle que
+     .match-boxscore-box (overlay .upgrade-confirm-overlay). */
+  .live-spectate-banner{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:rgba(226,105,79,.1); border:1px solid var(--danger); border-radius:var(--radius);
+    padding:10px 14px; margin-bottom:12px; font-weight:700; color:var(--danger);
+  }
+  .live-spectate-banner button{
+    background:var(--danger); color:#fff; border:none; border-radius:999px;
+    padding:7px 16px; font-weight:800; font-size:12px; cursor:pointer;
+  }
+  .spectate-box{max-width:640px; max-height:85vh; overflow-y:auto;}
+  .spectate-score-row{display:flex; align-items:baseline; gap:10px; margin-bottom:10px;}
+  .spectate-score-row .spectate-score{font-size:28px; font-weight:800; color:var(--ink);}
+  .spectate-actions{display:flex; gap:10px; margin-top:14px;}
+  .spectate-actions button{flex:1; padding:10px; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;}
+  #spectateRefreshBtn{background:var(--amber); color:var(--amber-ink); border:1px solid var(--amber);}
   /* Modale "Identité du club" (retour utilisateur, 2026-09 : "je rajouterai
      une petite brique à coté de dernier évènement avec un petit bouton
      changer l'identité [...] via une petite fenetre qui s ouvre"), voir
@@ -2514,10 +2544,15 @@
          l'écran Live — voir enterLiveMatch — puisque tout le match est
          simulé d'un coup côté serveur puis rejoué avec des délais ; l'afficher
          tel quel pendant la diffusion spoilerait le match). Colonnes
-         volontairement réduites par rapport à la feuille finale (pas de
-         MIN/+/- : nécessiteraient de suivre les 10 joueurs sur le terrain à
-         tout instant, pas seulement l'auteur de chaque action) — voir
-         liveBoxscoreTableHtml. Masquée pendant un forfait (rien à
+         réduites par rapport à la feuille finale (pas de +/- : n'aurait pas
+         de sens à calculer en direct, voir MatchEngine.applyPlusMinusForPoints
+         côté moteur qui l'attribue déjà pendant la simulation complète) mais
+         MIN comprise depuis le 2026-09-24 (retour Discord d'Ariane, relayé
+         par l'utilisateur : "tous les joueurs [...] minutes jouées") — voir
+         le grand commentaire au-dessus de `let liveBoxScore` plus bas pour
+         le détail (toute la feuille de match pré-remplie dès le coup
+         d'envoi, minutes reconstituées depuis les événements de changement
+         de joueur, ligne de total). Masquée pendant un forfait (rien à
          diffuser) et à la fin du direct (finishPlayback affiche alors la
          feuille finale, complète, ci-dessous). -->
     <div class="section" id="liveBoxscoreSection">
@@ -18276,7 +18311,13 @@ function renderTeamDetail(teamIdx) {
 
   let html = teamDetailSubNavHtml();
   if (teamDetailSubView === "calendrier") {
-    html += teamCalendarTableHtml(teamIdx);
+    // #teamDetailLiveBanner : placeholder vide au rendu synchrone, rempli
+    // (ou laissé vide) juste après par refreshTeamDetailLiveBanner (retour
+    // utilisateur, 2026-09-24 : "pouvoir regarder le live d'une autre équipe
+    // depuis son calendrier" — voir DEV_NOTES.md), qui a besoin d'un aller-
+    // retour réseau (/api/live-status) donc ne peut pas être prêt à temps
+    // pour CE rendu synchrone.
+    html += `<div id="teamDetailLiveBanner" class="hidden"></div>` + teamCalendarTableHtml(teamIdx);
   } else if (teamDetailSubView === "analyse") {
     html += teamDetailAnalyseHtml(teamIdx);
   } else if (teamDetailSubView === "effectif") {
@@ -18285,7 +18326,48 @@ function renderTeamDetail(teamIdx) {
     html += teamDetailApercuHtml(teamIdx);
   }
   holder.innerHTML = html;
+  // `window.__lastLiveBannerCheck` (même convention que `window.__lastSave`
+  // pour saveMyTeam) : permet aux tests d'attendre déterministiquement la
+  // fin de cet aller-retour réseau asynchrone plutôt qu'un délai arbitraire.
+  if (teamDetailSubView === "calendrier") window.__lastLiveBannerCheck = refreshTeamDetailLiveBanner(teamIdx);
 }
+
+// Vérifie si `teamIdx` est actuellement en direct (voir /api/live-status,
+// GET LiveMatch.liveMatchesLiteFor côté serveur — ne renvoie QUE des index
+// d'équipe, jamais le contenu d'un match) et affiche, le cas échéant, une
+// pastille "🔴 En direct — Suivre" en tête du sous-onglet Calendrier (retour
+// utilisateur, 2026-09-24 : "pouvoir regarder le live d'une autre équipe
+// depuis son calendrier" — voir DEV_NOTES.md). Portée VOLONTAIREMENT limitée
+// (décision utilisateur du même jour, "Limiter aux matchs déjà en direct")
+// aux matchs DÉJÀ diffusés (au moins un côté humain) : un match CPU-vs-CPU
+// n'apparaît jamais dans league.liveMatches (voir server/autoSim_test.js),
+// donc jamais dans cette liste, donc jamais de pastille pour lui — aucun
+// changement nécessaire ici pour respecter cette architecture délibérée.
+//
+// Double garde anti-course (`teamDetailIdx`/`teamDetailSubView` ET
+// l'existence du placeholder dans le DOM) : la réponse réseau peut revenir
+// après que le manager a déjà changé d'équipe consultée ou de sous-onglet —
+// dans ce cas, on abandonne silencieusement plutôt que d'injecter la
+// pastille de l'équipe X sur la page de l'équipe Y.
+async function refreshTeamDetailLiveBanner(teamIdx) {
+  let data;
+  try {
+    const res = await fetchApi("/api/live-status");
+    if (!res.ok) return;
+    data = await res.json();
+  } catch (e) { return; } // pas de connexion : pas de pastille, rien d'autre n'en dépend.
+  if (teamDetailIdx !== teamIdx || teamDetailSubView !== "calendrier") return;
+  const banner = document.getElementById("teamDetailLiveBanner");
+  if (!banner) return;
+  const entry = (data.live || []).find(m => m.homeIdx === teamIdx || m.awayIdx === teamIdx);
+  if (!entry) { banner.classList.add("hidden"); banner.innerHTML = ""; return; }
+  banner.classList.remove("hidden");
+  banner.innerHTML = `<span>🔴 Ce match est actuellement en direct</span>` +
+    `<button type="button" id="spectateLiveBtn">Suivre</button>`;
+}
+document.addEventListener("click", (e) => {
+  if (e.target && e.target.id === "spectateLiveBtn") window.__lastSpectateOpen = showSpectateMatch(teamDetailIdx);
+});
 
 // ---------------------------------------------------------------------
 // Recherche globale (topbar) : équipes ET joueurs de la ligue du manager
@@ -19718,25 +19800,134 @@ function appendPauseFeedItem(pause) {
 // applyLiveBoxScoreEvent, appelée depuis applyEvent ci-dessous), en lisant
 // UNIQUEMENT les champs structurés déjà posés par engine.js/le moteur
 // embarqué (shooter/assister/blocker/defender/rebounder/player/stealer —
-// voir leur grand commentaire dans engine.js:playPossession). Ne couvre
-// volontairement pas MIN ni +/- (nécessiteraient de suivre les 10 joueurs
-// sur le terrain à tout instant, pas seulement l'auteur de chaque action) :
-// voir liveBoxscoreTableHtml, qui n'a qu'un sous-ensemble des colonnes de
-// boxscoreTableHtml (feuille finale). Limite connue : un lancer franc où
+// voir leur grand commentaire dans engine.js:playPossession). Limite connue
+// (déjà documentée avant ce correctif, toujours vraie) : un lancer franc où
 // TOUS les essais sont manqués n'est jamais loggué (voir MatchEngine.
 // freeThrows côté moteur, `if (made > 0)`), donc ces tentatives manquent au
 // FTA en direct (déjà le cas du fil de commentaires existant, pas une
 // régression introduite ici) — sans impact sur la feuille FINALE
 // (buildBoxScore lit directement p.stats.fta, incrémenté à chaque lancer).
+//
+// Retour Discord d'Ariane, relayé par l'utilisateur, 2026-09-24 : "ligne
+// total + tous les joueurs + minutes jouées" (voir DEV_NOTES.md). Trois
+// correctifs distincts, tous ci-dessous :
+//   1. "tous les joueurs" : resetLiveBoxScore() pré-remplit désormais une
+//      ligne à zéro pour TOUTE la feuille de match (titulaires + remplaçants
+//      désignés, voir matchdayRosterPlayers) dès le coup d'envoi, au lieu de
+//      ne créer une ligne qu'À LA VOLÉE au premier événement d'un joueur
+//      (liveBoxScoreRow) — un joueur resté muet toute la rencontre
+//      n'apparaissait alors JAMAIS, contrairement à la feuille finale qui
+//      liste toujours tout le monde ayant joué (et même les remplaçants pas
+//      entrés, sur un vrai bulletin de match).
+//   2. "ligne total" : même patron que boxscoreTableHtml (feuille finale),
+//      voir liveBoxscoreTableHtml plus bas.
+//   3. "minutes jouées" : ancienne limitation levée (nécessitait bien de
+//      suivre les 10 joueurs sur le terrain à tout instant, comme prévu par
+//      ce commentaire avant ce correctif) — voir elapsedSecondsAt/
+//      liveCourtState/closeCourtInterval/openCourtInterval juste en dessous.
+//      Repose sur les événements "substitution"/"shortHanded" du moteur
+//      (voir MatchEngine.substituteIfNeeded dans engine.js), désormais
+//      structurés avec `player`/`replacement` ET déclenchés pour TOUT
+//      changement de joueur (y compris fauté-out/blessure, pas seulement les
+//      changements volontaires — voir le grand commentaire de
+//      substituteIfNeeded côté moteur pour le correctif correspondant).
 let liveBoxScore = null; // { A: Map<nom, ligne>, B: Map<nom, ligne> }
 let liveBoxScoreActiveTeam = "A";
+// Joueurs actuellement SUR LE TERRAIN et depuis quand (en secondes écoulées
+// depuis le coup d'envoi, voir elapsedSecondsAt) : { A: Map<nom, depuisSec>,
+// B: Map<nom, depuisSec> }. Un nom absent de la Map = pas sur le terrain en
+// ce moment (sur le banc, ou pas encore entré). Voir liveMinutesFor.
+let liveCourtState = null;
+// Secondes écoulées depuis le coup d'envoi au DERNIER événement traité (mis
+// à jour pour CHAQUE événement, y compris ceux sans effet sur une statistique
+// comme "quarterEnd" — voir applyLiveBoxScoreEvent) : sert de repère "main-
+// tenant" pour calculer les minutes des joueurs ENCORE sur le terrain (leur
+// intervalle n'est pas fermé), voir liveMinutesFor.
+let liveBoxScoreNowElapsed = 0;
+
+// Convertit un couple (quart-temps, horloge restante "MM:SS") en secondes
+// ÉCOULÉES depuis le coup d'envoi — inverse de fmtClock côté moteur (une
+// horloge de quart-temps DÉCOMPTE depuis QUARTER_SECONDS/OVERTIME_SECONDS
+// jusqu'à 0), en cumulant la durée de tous les quarts-temps déjà terminés
+// avant celui-ci. Mêmes constantes que le moteur (QUARTER_SECONDS/
+// OVERTIME_SECONDS, déjà définies plus haut dans ce fichier).
+function elapsedSecondsAt(quarter, clockStr) {
+  let before = 0;
+  for (let q = 1; q < quarter; q++) before += q <= 4 ? QUARTER_SECONDS : OVERTIME_SECONDS;
+  const qLen = quarter <= 4 ? QUARTER_SECONDS : OVERTIME_SECONDS;
+  return before + (qLen - clockSecondsFromStr(clockStr));
+}
+
+// Feuille de match d'une équipe pour CE match : titulaires (lineup.starters)
+// + remplaçants désignés (lineup.backupPositions), JAMAIS un pur réserviste
+// (ni l'un ni l'autre) — voir le grand commentaire de Team.autoAssignLineup/
+// lineup plus haut dans ce fichier pour la définition exacte. `.lineup` est
+// posé pour TOUTE équipe, humaine ou CPU (constructeur Team + deserializeTeam),
+// donc utilisable ici sans distinction.
+function matchdayRosterPlayers(team) {
+  if (!team || !team.lineup) return [];
+  const starterIds = new Set(Object.values(team.lineup.starters || {}).filter(Boolean));
+  return team.players.filter(p => starterIds.has(p.id) || (team.lineup.backupPositions[p.id] || []).length > 0);
+}
+
+// Poste affiché pour le pré-remplissage (voir resetLiveBoxScore) : le poste
+// TITULAIRE de ce match si `player` en est un (lineup.starters), sinon son
+// poste naturel (un remplaçant pas encore entré n'a pas encore de
+// matchPosition pour CE match — et p.matchPosition, lui, reflète encore
+// l'ÉTAT DE FIN du dernier match simulé côté serveur au moment où ces
+// objets teamA/teamB sont reçus, voir le commentaire de computeLiveMatch
+// côté serveur : tout le match est déjà simulé d'un coup avant sa diffusion
+// différée, donc `matchPosition` ne peut pas servir de repère fiable ici).
+function startingPositionFor(team, player) {
+  if (team && team.lineup) {
+    const starterPos = POSITIONS.find(pos => team.lineup.starters[pos] === player.id);
+    if (starterPos) return starterPos;
+  }
+  return player.position;
+}
 
 function newLiveBoxScoreRow(name, position) {
   return {
     name, position,
     pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0,
     fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0,
+    // Minutes jouées déjà "fermées" (intervalles terminés par une sortie du
+    // terrain), en SECONDES — voir liveMinutesFor pour la conversion et
+    // l'ajout du temps de l'intervalle EN COURS, s'il y en a un.
+    secondsPlayed: 0,
   };
+}
+
+// Ferme l'intervalle de jeu en cours d'un joueur (l'ajoute à ses minutes déjà
+// jouées) — no-op silencieux si ce joueur n'était pas suivi comme "sur le
+// terrain" (garde-fou : un événement de changement mal formé ou un joueur
+// hors feuille de match ne doit jamais faire planter le direct).
+function closeCourtInterval(teamKeyAB, name, atSeconds) {
+  if (!liveCourtState) return;
+  const since = liveCourtState[teamKeyAB].get(name);
+  if (since == null) return;
+  const row = liveBoxScore[teamKeyAB].get(name) || liveBoxScoreRow(teamKeyAB, name);
+  row.secondsPlayed = (row.secondsPlayed || 0) + Math.max(0, atSeconds - since);
+  liveCourtState[teamKeyAB].delete(name);
+}
+// Ouvre un intervalle de jeu pour un joueur qui vient d'entrer sur le
+// terrain (voir closeCourtInterval juste au-dessus pour la fermeture).
+function openCourtInterval(teamKeyAB, name, atSeconds) {
+  if (!liveCourtState) return;
+  liveCourtState[teamKeyAB].set(name, atSeconds);
+}
+// Minutes jouées ACTUELLES d'un joueur : ses intervalles déjà fermés
+// (row.secondsPlayed) + le temps écoulé depuis le début de son intervalle en
+// cours s'il est ENCORE sur le terrain (liveCourtState), jusqu'à
+// liveBoxScoreNowElapsed (le dernier repère temporel connu). Arrondi à la
+// minute la plus proche, comme la feuille finale (voir
+// recordMatchStatsForTeam côté moteur, `Math.round(p.secondsPlayed / 60)`).
+function liveMinutesFor(teamKeyAB, name) {
+  const row = liveBoxScore[teamKeyAB].get(name);
+  if (!row) return 0;
+  const openSince = liveCourtState && liveCourtState[teamKeyAB].get(name);
+  const secondsPlayed = (row.secondsPlayed || 0) + (openSince != null ? Math.max(0, liveBoxScoreNowElapsed - openSince) : 0);
+  return Math.round(secondsPlayed / 60);
 }
 
 // Retrouve (ou crée à la volée) la ligne d'un joueur nommé `name` dans
@@ -19759,7 +19950,23 @@ function liveBoxScoreRow(teamKeyAB, name) {
 
 function resetLiveBoxScore() {
   liveBoxScore = { A: new Map(), B: new Map() };
+  liveCourtState = { A: new Map(), B: new Map() };
+  liveBoxScoreNowElapsed = 0;
   liveBoxScoreActiveTeam = "A";
+  // Pré-remplissage "tous les joueurs" (voir le grand commentaire au-dessus
+  // de `let liveBoxScore`) : une ligne à zéro pour toute la feuille de match
+  // dès le coup d'envoi, et les 5 titulaires directement suivis comme "sur
+  // le terrain depuis 0 seconde" (liveCourtState) — un remplaçant désigné
+  // mais pas encore entré, lui, obtient une ligne mais aucun intervalle
+  // ouvert (ne comptera aucune minute tant qu'il n'entre pas réellement).
+  [["A", teamA], ["B", teamB]].forEach(([key, team]) => {
+    matchdayRosterPlayers(team).forEach(p => {
+      liveBoxScore[key].set(p.name, newLiveBoxScoreRow(p.name, startingPositionFor(team, p)));
+      if (team.lineup && Object.values(team.lineup.starters || {}).includes(p.id)) {
+        liveCourtState[key].set(p.name, 0);
+      }
+    });
+  });
   document.querySelectorAll(".live-bs-tab").forEach(b => b.classList.toggle("active", b.dataset.liveTeam === "A"));
   renderLiveBoxScore();
 }
@@ -19775,7 +19982,15 @@ function resetLiveBoxScore() {
 function oppOfLiveTeam(team) { return team === "A" ? "B" : "A"; }
 
 function applyLiveBoxScoreEvent(ev) {
-  if (!liveBoxScore || (ev.team !== "A" && ev.team !== "B")) return;
+  if (!liveBoxScore) return;
+  // Horloge de match écoulée (voir elapsedSecondsAt) : mise à jour pour
+  // CHAQUE événement daté, y compris ceux sans équipe (ex. "quarterEnd",
+  // qui n'a pas de champ `team`) et ceux sans effet sur une statistique —
+  // c'est ce repère qui permet d'afficher des minutes jouées qui progressent
+  // même entre deux statistiques, pour les joueurs encore sur le terrain
+  // (voir liveMinutesFor).
+  if (ev.quarter != null && ev.clock != null) liveBoxScoreNowElapsed = elapsedSecondsAt(ev.quarter, ev.clock);
+  if (ev.team !== "A" && ev.team !== "B") { renderLiveBoxScore(); return; }
   switch (ev.type) {
     case "shot": {
       if (!ev.shooter) break;
@@ -19814,28 +20029,75 @@ function applyLiveBoxScoreEvent(ev) {
       if (ev.defender) liveBoxScoreRow(ev.team, ev.defender).pf++;
       break;
     }
+    // Changements de joueur (retour Discord d'Ariane, relayé par
+    // l'utilisateur, 2026-09-24 : "minutes jouées") : ferme l'intervalle de
+    // jeu du sortant (ajouté à ses minutes déjà jouées, voir
+    // closeCourtInterval) et ouvre celui de l'entrant s'il y en a un (voir
+    // openCourtInterval). `player`/`replacement` structurés depuis ce
+    // correctif côté moteur (voir MatchEngine.substituteIfNeeded dans
+    // engine.js) — auparavant seul le texte narratif portait ces noms.
+    // "foulOut" lui-même n'ouvre/ne ferme rien : c'est TOUJOURS l'événement
+    // "substitution" (ou "shortHanded" si le banc est épuisé) juste après
+    // qui fait le vrai mouvement sur le terrain, exactement comme côté
+    // moteur (`onCourt` n'est mis à jour QUE là, jamais avant, voir le
+    // commentaire de substituteIfNeeded).
+    case "substitution": {
+      if (ev.player) closeCourtInterval(ev.team, ev.player, liveBoxScoreNowElapsed);
+      if (ev.replacement) openCourtInterval(ev.team, ev.replacement, liveBoxScoreNowElapsed);
+      break;
+    }
+    case "shortHanded": {
+      if (ev.player) closeCourtInterval(ev.team, ev.player, liveBoxScoreNowElapsed);
+      break;
+    }
     default:
-      return; // type sans effet sur le box score : pas la peine de réafficher
+      // Type sans effet sur une statistique (ex. "foulOut"/"injury", déjà
+      // suivis d'un "substitution"/"shortHanded" séparé pour le vrai
+      // mouvement sur le terrain, voir ci-dessus) : on réaffiche quand même
+      // (contrairement à avant ce correctif) — les minutes des joueurs
+      // encore sur le terrain progressent avec liveBoxScoreNowElapsed même
+      // sans nouvelle statistique.
+      renderLiveBoxScore();
+      return;
   }
   renderLiveBoxScore();
 }
 
-// Mêmes colonnes que BOXSCORE_COLS (feuille finale, voir plus bas) sauf
-// MIN — volontairement absent ici, voir le grand commentaire plus haut.
+// Mêmes colonnes que BOXSCORE_COLS (feuille finale, voir plus bas), MIN
+// compris depuis le correctif "minutes jouées" (retour Discord d'Ariane,
+// relayé par l'utilisateur, 2026-09-24 — voir le grand commentaire plus
+// haut au-dessus de `let liveBoxScore`).
 const LIVE_BOXSCORE_COLS = [
-  ["pts", "PTS"], ["reb", "REB"], ["ast", "PD"], ["stl", "INT"],
+  ["min", "MIN"], ["pts", "PTS"], ["reb", "REB"], ["ast", "PD"], ["stl", "INT"],
   ["blk", "CTR"], ["tov", "PDB"], ["pf", "FTS"],
 ];
 
+// Ligne de total (retour Discord d'Ariane, relayé par l'utilisateur,
+// 2026-09-24) : même patron que boxscoreTableHtml (feuille finale) —
+// classe `boxscore-totals`, déjà stylée, réutilisée telle quelle.
 function liveBoxscoreTableHtml(rows) {
   let html = "<table class='boxscore'><thead><tr><th>Joueur</th><th>Poste</th>";
   LIVE_BOXSCORE_COLS.forEach(c => html += `<th>${c[1]}</th>`);
   html += "<th>2PTS</th><th>3PTS</th><th>LF</th><th>ÉVAL</th></tr></thead><tbody>";
+  const totals = {};
+  LIVE_BOXSCORE_COLS.forEach(c => { totals[c[0]] = 0; });
+  totals.fgm2 = 0; totals.fga2 = 0; totals.fgm3 = 0; totals.fga3 = 0; totals.ftm = 0; totals.fta = 0;
   rows.forEach(p => {
     html += `<tr><td>${escapeHtml(p.name)}</td><td>${POS_SHORT[p.position] || ""}</td>`;
-    LIVE_BOXSCORE_COLS.forEach(c => { html += `<td>${p[c[0]] || 0}</td>`; });
+    LIVE_BOXSCORE_COLS.forEach(c => { const val = p[c[0]] || 0; html += `<td>${val}</td>`; totals[c[0]] += val; });
     html += `<td>${p.fgm2}/${p.fga2}</td><td>${p.fgm3}/${p.fga3}</td><td>${p.ftm}/${p.fta}</td><td>${statEvaluation(p)}</td></tr>`;
+    totals.fgm2 += p.fgm2 || 0; totals.fga2 += p.fga2 || 0;
+    totals.fgm3 += p.fgm3 || 0; totals.fga3 += p.fga3 || 0;
+    totals.ftm += p.ftm || 0; totals.fta += p.fta || 0;
   });
+  if (rows.length) {
+    html += `<tr class="boxscore-totals"><td>Total</td><td></td>`;
+    LIVE_BOXSCORE_COLS.forEach(c => html += `<td>${totals[c[0]]}</td>`);
+    // ÉVAL volontairement laissée vide sur la ligne de total, même
+    // raisonnement que boxscoreTableHtml (feuille finale) : la somme des
+    // évaluations individuelles n'a pas de lecture utile.
+    html += `<td>${totals.fgm2}/${totals.fga2}</td><td>${totals.fgm3}/${totals.fga3}</td><td>${totals.ftm}/${totals.fta}</td><td></td></tr>`;
+  }
   html += "</tbody></table>";
   return html;
 }
@@ -19845,10 +20107,267 @@ function renderLiveBoxScore() {
   if (!holder) return;
   if (!liveBoxScore) { holder.innerHTML = ""; return; }
   const rows = Array.from(liveBoxScore[liveBoxScoreActiveTeam].values())
-    .sort((a, b) => (b.pts - a.pts) || (b.reb - a.reb) || (b.ast - a.ast));
+    // Minutes recalculées à CHAQUE rendu (voir liveMinutesFor) plutôt que
+    // stockées sur la ligne elle-même : un joueur encore sur le terrain doit
+    // voir ses minutes progresser même sans nouvelle statistique à lui (voir
+    // le "default: renderLiveBoxScore()" de applyLiveBoxScoreEvent).
+    .map(row => ({ ...row, min: liveMinutesFor(liveBoxScoreActiveTeam, row.name) }))
+    // Trié par minutes jouées d'abord désormais (même convention que
+    // boxscoreRowsFromMatchLog, la feuille FINALE, `b.min - a.min`) —
+    // logique maintenant que TOUTE la feuille de match est affichée (voir
+    // resetLiveBoxScore) : sans ce tri, les remplaçants pas encore entrés
+    // (tout à 0) se mélangeraient avec les titulaires en fonction du seul
+    // hasard de l'ordre d'insertion.
+    .sort((a, b) => (b.min - a.min) || (b.pts - a.pts) || (b.reb - a.reb) || (b.ast - a.ast));
   holder.innerHTML = rows.length
     ? liveBoxscoreTableHtml(rows)
     : "<p class='training-empty'>Aucune statistique enregistrée pour le moment.</p>";
+}
+
+// ---------------------------------------------------------------------
+// "Regarder le live d'une autre équipe depuis son calendrier" (retour
+// utilisateur, 2026-09-24 : "pouvoir regarder le live d'une autre équipe
+// depuis son calendrier" — voir DEV_NOTES.md). Portée VOLONTAIREMENT limitée
+// (décision utilisateur explicite via AskUserQuestion le même jour,
+// "Limiter aux matchs déjà en direct") aux matchs DÉJÀ diffusés (au moins un
+// côté humain, voir league.liveMatches/LiveMatch.viewLiveMatchForTeam côté
+// serveur) : jamais un match CPU-vs-CPU (jamais diffusé, voir
+// server/autoSim_test.js) — aucun changement à cette architecture
+// délibérée, voir /api/live-status et /api/spectate dans server/index.js.
+//
+// DÉLIBÉRÉMENT isolé de currentLiveMatch/teamA/teamB/liveBoxScore/
+// liveCourtState (l'état global utilisé pour SON PROPRE direct, entretenu
+// par de vrais setTimeout programmés à l'entrée dans l'écran Live, voir
+// enterLiveMatch) : consulter le direct d'une AUTRE équipe ne doit jamais
+// pouvoir interférer avec (ni être interrompu par) le direct qu'un manager
+// suit déjà pour lui-même — les deux peuvent en théorie être ouverts l'un
+// après l'autre sans que l'un ne pollue l'état de l'autre. Pas de replay
+// animé/temps réel ici (autre différence assumée avec son propre direct,
+// voir même décision utilisateur ci-dessus) : /api/spectate renvoie TOUT le
+// match déjà écoulé jusqu'à "maintenant" d'un coup, affiché tel quel, avec
+// un simple bouton "🔄 Actualiser" pour rafraîchir (voir refreshSpectateMatch)
+// plutôt que des setTimeout — plus simple, et un spectateur n'a de toute
+// façon pas besoin d'un fil de commentaires qui défile panier par panier
+// pour un match qui n'est pas le sien.
+let spectateState = null; // { teamIdx, opponentIdx, teamName, opponentName, teamObj, opponentObj, live, activeSide, box }
+
+// Reconstitution du box score, en LECTURE SEULE, pour le spectateur d'une
+// AUTRE équipe — même logique de reconstitution événement par événement que
+// applyLiveBoxScoreEvent (voir son grand commentaire) pour SON PROPRE
+// direct, mais DÉLIBÉRÉMENT dupliquée plutôt que réutilisée telle quelle
+// (voir le commentaire juste au-dessus : isolation totale de l'état global
+// currentLiveMatch/liveBoxScore, pour ne jamais risquer de les modifier par
+// erreur en consultant le direct d'un autre) et en UN SEUL passage (pas
+// d'incrémental : `airedEvents` est déjà filtré par l'appelant, voir
+// renderSpectateMatch) plutôt qu'événement par événement au fil de
+// setTimeout. Ne lit JAMAIS `live.boxScoreA`/`live.boxScoreB` (déjà le
+// résultat FINAL du match en entier, voir le commentaire de computeLiveMatch
+// côté serveur — les renvoyer tels quels spoilerait immédiatement un match
+// encore en cours) : recalcule tout depuis les champs structurés des
+// événements eux-mêmes, comme pour son propre direct.
+function computeSpectateBoxScore(airedEvents, teamA, teamB) {
+  const box = { A: new Map(), B: new Map() };
+  const onCourtSince = { A: new Map(), B: new Map() };
+  let nowElapsed = 0;
+  [["A", teamA], ["B", teamB]].forEach(([key, team]) => {
+    matchdayRosterPlayers(team).forEach(p => {
+      box[key].set(p.name, newLiveBoxScoreRow(p.name, startingPositionFor(team, p)));
+      if (team.lineup && Object.values(team.lineup.starters || {}).includes(p.id)) {
+        onCourtSince[key].set(p.name, 0);
+      }
+    });
+  });
+  function row(key, name) {
+    let r = box[key].get(name);
+    if (!r) { r = newLiveBoxScoreRow(name, ""); box[key].set(name, r); }
+    return r;
+  }
+  function closeInterval(key, name, atSeconds) {
+    const since = onCourtSince[key].get(name);
+    if (since == null) return;
+    const r = row(key, name);
+    r.secondsPlayed = (r.secondsPlayed || 0) + Math.max(0, atSeconds - since);
+    onCourtSince[key].delete(name);
+  }
+  function openInterval(key, name, atSeconds) { onCourtSince[key].set(name, atSeconds); }
+  const opp = (k) => (k === "A" ? "B" : "A");
+
+  airedEvents.forEach(ev => {
+    if (ev.quarter != null && ev.clock != null) nowElapsed = elapsedSecondsAt(ev.quarter, ev.clock);
+    if (ev.team !== "A" && ev.team !== "B") return;
+    switch (ev.type) {
+      case "shot": {
+        if (!ev.shooter) break;
+        const r = row(ev.team, ev.shooter);
+        const isThree = ev.zone === "three";
+        if (isThree) r.fga3++; else r.fga2++;
+        if (ev.made) {
+          r.pts += isThree ? 3 : 2;
+          if (isThree) r.fgm3++; else r.fgm2++;
+          if (ev.assister) row(ev.team, ev.assister).ast++;
+        } else {
+          const defKey = opp(ev.team);
+          if (ev.blocked && ev.blocker) row(defKey, ev.blocker).blk++;
+          if (ev.defender) row(defKey, ev.defender).pf++;
+        }
+        break;
+      }
+      case "rebound":
+        if (ev.rebounder) row(ev.team, ev.rebounder).reb++;
+        break;
+      case "freeThrow": {
+        if (!ev.shooter) break;
+        const r = row(ev.team, ev.shooter);
+        r.fta += ev.attempts || 0; r.ftm += ev.made || 0; r.pts += ev.made || 0;
+        break;
+      }
+      case "turnover":
+        if (ev.player) row(ev.team, ev.player).tov++;
+        if (ev.stealer) row(opp(ev.team), ev.stealer).stl++;
+        break;
+      case "foul":
+        if (ev.defender) row(ev.team, ev.defender).pf++;
+        break;
+      case "substitution":
+        if (ev.player) closeInterval(ev.team, ev.player, nowElapsed);
+        if (ev.replacement) openInterval(ev.team, ev.replacement, nowElapsed);
+        break;
+      case "shortHanded":
+        if (ev.player) closeInterval(ev.team, ev.player, nowElapsed);
+        break;
+      default:
+        break;
+    }
+  });
+  ["A", "B"].forEach(key => {
+    box[key].forEach((r, name) => {
+      const since = onCourtSince[key].get(name);
+      const secondsPlayed = (r.secondsPlayed || 0) + (since != null ? Math.max(0, nowElapsed - since) : 0);
+      r.min = Math.round(secondsPlayed / 60);
+    });
+  });
+  return box;
+}
+
+// Score/quart-temps/horloge affichés en tête de la fenêtre spectateur —
+// depuis le DERNIER événement déjà diffusé (`ev.score`/`ev.quarter`/
+// `ev.clock`, mêmes champs que pour son propre direct, voir applyEvent),
+// jamais depuis `live.finalScore` (déjà connu en entier, spoilerait). Un
+// match par forfait (voir computeLiveMatch côté serveur) n'a jamais
+// d'événements : son score final est déjà décidé et sans intérêt à suivre en
+// direct, affiché tel quel dans ce seul cas.
+function spectateStatusHtml(live, airedEvents) {
+  if (live.forfeit) {
+    return `<p class="sub">Forfait — score final ${live.finalScore.home} - ${live.finalScore.away}.</p>`;
+  }
+  const last = airedEvents[airedEvents.length - 1];
+  if (!last) return "<p class=\"sub\">Coup d'envoi imminent…</p>";
+  const quarterLabel = last.quarter > 4 ? `Prolongation ${last.quarter - 4}` : `${last.quarter}${last.quarter === 1 ? "er" : "e"} quart-temps`;
+  return `<div class="spectate-score-row"><span class="spectate-score">${last.score.A} - ${last.score.B}</span>` +
+    `<span class="sub">${escapeHtml(quarterLabel)} · ${escapeHtml(last.clock)}</span></div>`;
+}
+
+// Derniers événements déjà diffusés (les plus récents en premier, lecture
+// "dernières nouvelles" plutôt qu'un fil qui défile comme pour son propre
+// direct — voir le grand commentaire plus haut sur l'absence de replay animé
+// ici) — même style `.feed-item`/`.fclock`/`.ftext` que #feed (son propre
+// direct), réutilisé tel quel.
+function spectateFeedHtml(airedEvents) {
+  const notable = airedEvents.filter(ev => ev.text);
+  const recent = notable.slice(-15).reverse();
+  if (!recent.length) return "<p class='training-empty'>Aucun événement diffusé pour l'instant.</p>";
+  return `<div class="feed spectate-feed">` + recent.map(ev => {
+    const isMarker = ev.type === "quarterStart" || ev.type === "quarterEnd" || ev.type === "forfeit";
+    return `<div class="feed-item${isMarker ? " header" : ""}">` +
+      (!isMarker && ev.clock ? `<span class="fclock">${escapeHtml(ev.clock)}</span>` : "") +
+      `<span class="ftext">${escapeHtml(ev.text)}</span></div>`;
+  }).join("") + `</div>`;
+}
+
+function renderSpectateBoxScoreTab(side) {
+  if (!spectateState) return;
+  spectateState.activeSide = side;
+  document.querySelectorAll("#spectateOverlay .spectate-bs-tab").forEach(b => b.classList.toggle("active", b.dataset.side === side));
+  const holder = document.getElementById("spectateBoxscoreHolder");
+  if (!holder) return;
+  const rows = Array.from(spectateState.box[side].values()).sort((a, b) => (b.min - a.min) || (b.pts - a.pts) || (b.reb - a.reb) || (b.ast - a.ast));
+  holder.innerHTML = rows.length
+    ? liveBoxscoreTableHtml(rows)
+    : "<p class='training-empty'>Aucune statistique enregistrée pour le moment.</p>";
+}
+
+function renderSpectateMatch() {
+  if (!spectateState) return;
+  const { live } = spectateState;
+  const airedEvents = live.forfeit ? [] : live.events.filter(ev => ev.airAt <= Date.now());
+  spectateState.box = computeSpectateBoxScore(airedEvents, spectateState.teamObj, spectateState.opponentObj);
+  const statusHolder = document.getElementById("spectateStatusHolder");
+  const feedHolder = document.getElementById("spectateFeedHolder");
+  if (statusHolder) statusHolder.innerHTML = spectateStatusHtml(live, airedEvents);
+  if (feedHolder) feedHolder.innerHTML = spectateFeedHtml(airedEvents);
+  renderSpectateBoxScoreTab(spectateState.activeSide || "A");
+}
+
+function closeSpectateMatch() {
+  const existing = document.getElementById("spectateOverlay");
+  if (existing) existing.remove();
+  spectateState = null;
+}
+
+// Rafraîchit manuellement le direct suivi (voir le grand commentaire plus
+// haut : décision utilisateur explicite de ne PAS animer le direct d'une
+// autre équipe comme le sien propre) — relance /api/spectate et redessine
+// tout, sans toucher aux setTimeout/timers de son propre direct éventuel.
+async function refreshSpectateMatch() {
+  if (!spectateState) return;
+  try {
+    const res = await fetchApi(`/api/spectate?team=${spectateState.teamIdx}`);
+    const data = await res.json();
+    if (!res.ok || !data.ok) { closeSpectateMatch(); return; } // le match est probablement terminé entre-temps
+    spectateState.live = data.live;
+    renderSpectateMatch();
+  } catch (e) { /* pas de connexion : on garde le dernier affichage connu */ }
+}
+
+async function showSpectateMatch(teamIdx) {
+  closeSpectateMatch();
+  let res, data;
+  try {
+    res = await fetchApi(`/api/spectate?team=${teamIdx}`);
+    data = await res.json();
+  } catch (e) { return; } // pas de connexion : on n'ouvre simplement rien.
+  if (!res.ok || !data.ok) return; // plus en direct entre-temps (finalisé) : rien à montrer.
+  const teamObj = league.teams[teamIdx];
+  const opponentObj = league.teams[data.live.opponentIdx];
+  if (!teamObj || !opponentObj) return;
+  spectateState = {
+    teamIdx, opponentIdx: data.live.opponentIdx, teamName: data.teamName, opponentName: data.opponentName,
+    teamObj, opponentObj, live: data.live, activeSide: "A", box: null,
+  };
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay spectate-overlay";
+  overlay.id = "spectateOverlay";
+  overlay.innerHTML = `<div class="upgrade-confirm-box spectate-box">` +
+    `<h3>🔴 En direct : ${escapeHtml(data.teamName)} - ${escapeHtml(data.opponentName)}</h3>` +
+    `<div id="spectateStatusHolder"></div>` +
+    `<div class="boxscore-toggle">` +
+      `<button type="button" class="bs-tab spectate-bs-tab active" data-side="A">${escapeHtml(data.teamName)}</button>` +
+      `<button type="button" class="bs-tab spectate-bs-tab" data-side="B">${escapeHtml(data.opponentName)}</button>` +
+    `</div>` +
+    `<div id="spectateBoxscoreHolder"></div>` +
+    `<h4>Derniers événements</h4>` +
+    `<div id="spectateFeedHolder"></div>` +
+    `<div class="spectate-actions">` +
+      `<button type="button" id="spectateRefreshBtn">🔄 Actualiser</button>` +
+      `<button type="button" class="upgrade-confirm-cancel-btn" id="spectateCloseBtn">Fermer</button>` +
+    `</div>` +
+    `</div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeSpectateMatch(); });
+  document.getElementById("spectateCloseBtn").addEventListener("click", closeSpectateMatch);
+  document.getElementById("spectateRefreshBtn").addEventListener("click", () => { window.__lastSpectateRefresh = refreshSpectateMatch(); });
+  overlay.querySelectorAll(".spectate-bs-tab").forEach(b => b.addEventListener("click", () => renderSpectateBoxScoreTab(b.dataset.side)));
+  renderSpectateMatch();
 }
 
 // Câblage des onglets Domicile/Extérieur du box score en direct — UNE SEULE
@@ -20185,7 +20704,43 @@ function boxscoreRowsFromMatchLog(team, round, competition) {
     .sort((a, b) => b.min - a.min);
 }
 
-let matchBoxscoreState = null; // { rowsHome, rowsAway, nameHome, nameAway }, pour le bascule d'onglet.
+// Score par quart-temps du match (retour Discord d'Ariane, relayé par
+// l'utilisateur, 2026-09-24 : "afficher le score par quart-temps sur la
+// boxscore du match" — voir DEV_NOTES.md/Engine.recordMatchStatsForTeam).
+// `quarterScores` ({home:[...], away:[...]}) est recopié IDENTIQUE sur
+// CHAQUE entrée matchLog de ce match (les deux équipes, tous les joueurs) —
+// on prend donc simplement la première trouvée, peu importe le joueur.
+// `null` si aucune entrée ne la porte (match jamais joué, ou persisté avant
+// ce correctif) : boxscoreQuarterScoresHtml gère ce cas en n'affichant rien.
+function matchQuarterScoresFromTeam(team, round, competition) {
+  for (const p of team.players) {
+    const entry = (p.matchLog || []).find(e => e.round === round && e.competition === competition);
+    if (entry && entry.quarterScores) return entry.quarterScores;
+  }
+  return null;
+}
+
+// Petit tableau compact (quart par quart + total), affiché une seule fois
+// en tête de la fenêtre "Feuille de statistiques" (indépendant de l'onglet
+// domicile/extérieur actif, contrairement au reste de la modale — c'est une
+// info sur LE MATCH, pas sur une équipe précise). Gère les prolongations
+// (quarterScores.home peut contenir plus de 4 entrées, voir MatchEngine.
+// simulate) avec un intitulé "Prol. N" au-delà du 4e quart-temps.
+function boxscoreQuarterScoresHtml(quarterScores, nameHome, nameAway) {
+  if (!quarterScores || !quarterScores.home || !quarterScores.home.length) return "";
+  const qCount = quarterScores.home.length;
+  const headers = Array.from({ length: qCount }, (_, i) => i < 4 ? `${i + 1}${i === 0 ? "er" : "e"}` : `Prol. ${i - 3}`);
+  const totalHome = quarterScores.home.reduce((a, b) => a + b, 0);
+  const totalAway = quarterScores.away.reduce((a, b) => a + b, 0);
+  const rowHtml = (label, scores, total) =>
+    `<tr><td>${escapeHtml(label)}</td>${scores.map(s => `<td>${s}</td>`).join("")}<td><b>${total}</b></td></tr>`;
+  return `<div class="table-scroll"><table class="roster-table quarter-scores-table">` +
+    `<thead><tr><th></th>${headers.map(h => `<th>${h}</th>`).join("")}<th>Total</th></tr></thead>` +
+    `<tbody>${rowHtml(nameHome, quarterScores.home, totalHome)}${rowHtml(nameAway, quarterScores.away, totalAway)}</tbody>` +
+    `</table></div>`;
+}
+
+let matchBoxscoreState = null; // { rowsHome, rowsAway, nameHome, nameAway, quarterScores }, pour le bascule d'onglet.
 
 function closeMatchBoxscore() {
   const existing = document.getElementById("matchBoxscoreOverlay");
@@ -20218,6 +20773,12 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
     // matchMvpCalloutHtml pour qu'elle retrouve le VRAI Player MVP (son
     // avatar a besoin de son id ET des couleurs de maillot de son club).
     teamHome: homeTeam, teamAway: awayTeam,
+    // Score par quart-temps (voir matchQuarterScoresFromTeam ci-dessus) :
+    // cherché côté domicile D'ABORD puis extérieur en repli (les deux
+    // devraient toujours porter la même valeur pour un match réellement
+    // joué, voir recordMatchStatsForTeam côté moteur — le repli couvre
+    // seulement le cas où un effectif n'a plus aucun joueur de l'époque).
+    quarterScores: matchQuarterScoresFromTeam(homeTeam, round, competition) || matchQuarterScoresFromTeam(awayTeam, round, competition),
   };
   const overlay = document.createElement("div");
   overlay.className = "upgrade-confirm-overlay match-boxscore-overlay";
@@ -20225,6 +20786,7 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
   overlay.innerHTML = `<div class="upgrade-confirm-box match-boxscore-box">` +
     `<h3>Feuille de statistiques</h3>` +
     `<div id="matchBoxscoreMvpHolder"></div>` +
+    `<div id="matchBoxscoreQuartersHolder">${boxscoreQuarterScoresHtml(matchBoxscoreState.quarterScores, homeTeam.name, awayTeam.name)}</div>` +
     `<div class="boxscore-toggle">` +
     `<button type="button" class="bs-tab active" data-team="A">${escapeHtml(homeTeam.name)}</button>` +
     `<button type="button" class="bs-tab" data-team="B">${escapeHtml(awayTeam.name)}</button>` +

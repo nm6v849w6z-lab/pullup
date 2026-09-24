@@ -5597,9 +5597,43 @@ class Team {
 const FIRST_NAMES = ["Léo", "Hugo", "Nathan", "Malik", "Yanis", "Théo", "Amir", "Kevin",
   "Rayan", "Bastien", "Enzo", "Souleymane", "Diego", "Marc", "Karim", "Sacha",
   "Jordan", "Tom", "Adama", "Noé", "Elias", "Baptiste", "Milo", "Quentin"];
+// Pool élargi le 2026-09-24 (retour Discord d'Ariane, relayé par
+// l'utilisateur : "3 Fontaine, 2 Novak, 2 Petit, c'est la galère pour m'y
+// retrouver" — avec seulement 22 noms de famille, un effectif de 15 joueurs
+// (POSITIONS × 3, voir generateTeam/generateStartingRoster) tombait
+// quasi-systématiquement sur des doublons, paradoxe des anniversaires
+// oblige). Élargi à ~90 noms (toujours le même mélange français/
+// international que l'original) plutôt que retenté avec un pool à peine
+// plus grand — et voir pickUniqueLastName juste en dessous, qui évite en
+// plus activement les répétitions AU SEIN d'un même effectif tant que le
+// pool le permet (double filet, pas seulement "moins probable").
 const LAST_NAMES = ["Dupont", "Martin", "Garcia", "Johnson", "N'Diaye", "Rossi", "Kovac",
   "Petit", "Silva", "Traoré", "Bernard", "Moreau", "Lefevre", "Diallo", "Novak",
-  "Fontaine", "Girard", "Brooks", "Fournier", "Lopez", "Barros", "Chevalier"];
+  "Fontaine", "Girard", "Brooks", "Fournier", "Lopez", "Barros", "Chevalier",
+  "Durand", "Leroy", "Simon", "Laurent", "Michel", "Legrand", "Roux", "Vidal",
+  "Caron", "Perrin", "Morel", "Gauthier", "Renard", "Blanchard", "Guerin",
+  "Muller", "Weber", "Schmidt", "Fischer", "Hoffmann", "Keita", "Cissé",
+  "Toure", "Ouedraogo", "Kone", "Mbaye", "Sow", "Ndiaye", "Camara", "Fofana",
+  "Kante", "Sy", "Diakite", "Sanogo", "Coulibaly", "Costa", "Ferreira",
+  "Santos", "Oliveira", "Pereira", "Alves", "Ramos", "Nunes", "Almeida",
+  "Ivanov", "Petrov", "Popov", "Horvat", "Novakovic", "Jankovic", "Dimitrov",
+  "Rossetti", "Bianchi", "Ferrari", "Ricci", "Marino", "Greco", "Conti",
+  "Hernandez", "Gonzalez", "Rodriguez", "Fernandez", "Morales", "Castillo",
+  "Nakamura", "Sato", "Kobayashi", "Yamada", "Watanabe", "Suzuki",
+  "Andersson", "Nilsson", "Larsen", "Hansen", "Kowalski", "Nowak",
+  "O'Brien", "Murphy", "Walsh", "Kelly", "Cooper", "Bennett", "Wright"];
+
+// Choisit un nom au hasard dans `list` en évitant de répéter un nom déjà
+// utilisé DANS CET EFFECTIF (`used`, un Set) tant que le pool le permet.
+// Si tous les noms disponibles ont déjà été pris (effectif plus grand que
+// le pool, ou malchance), on retombe sur un tirage classique plutôt que de
+// planter — un doublon occasionnel reste préférable à une erreur.
+function pickUniqueLastName(list, used) {
+  const available = list.filter(n => !used.has(n));
+  const chosen = pick(available.length ? available : list);
+  used.add(chosen);
+  return chosen;
+}
 
 function heightForPosition(position) {
   const ranges = {
@@ -5839,8 +5873,14 @@ function generateRawYouthAttrs(tier, position) {
   return generateRawAttrsInRange(position, 10, 50, tier);
 }
 
-function generatePlayer(position, tier) {
-  const name = `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`;
+// `usedLastNames` (optionnel) : Set partagé par TOUT un effectif en cours de
+// génération (voir generateTeam), pour éviter les doublons de nom de
+// famille au sein d'une même équipe (pickUniqueLastName) — absent (appel
+// isolé, hors génération d'effectif complet), on retombe sur un tirage
+// classique.
+function generatePlayer(position, tier, usedLastNames) {
+  const lastName = usedLastNames ? pickUniqueLastName(LAST_NAMES, usedLastNames) : pick(LAST_NAMES);
+  const name = `${pick(FIRST_NAMES)} ${lastName}`;
   const age = Math.round(rand(18, 33));
   const attrs = age <= YOUNG_PROSPECT_MAX_AGE
     ? generateRawYouthAttrs(tier, position)
@@ -5857,8 +5897,9 @@ function generatePlayer(position, tier) {
 
 function generateTeam(name, tier = 1) {
   const players = [];
+  const usedLastNames = new Set();
   POSITIONS.forEach(pos => {
-    for (let i = 0; i < 3; i++) players.push(generatePlayer(pos, tier * rand(0.9, 1.1)));
+    for (let i = 0; i < 3; i++) players.push(generatePlayer(pos, tier * rand(0.9, 1.1), usedLastNames));
   });
   return new Team({ name, players });
 }
@@ -5873,8 +5914,10 @@ function generateTeam(name, tier = 1) {
 // départ avec un joueur déjà à 97 dans une caractéristique n'a pas de sens,
 // une telle caractéristique doit se mériter par le jeu, pas être offerte
 // gratuitement à la création).
-function generateRookiePlayer(position) {
-  const name = `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`;
+// `usedLastNames` optionnel, même rôle que dans generatePlayer ci-dessus.
+function generateRookiePlayer(position, usedLastNames) {
+  const lastName = usedLastNames ? pickUniqueLastName(LAST_NAMES, usedLastNames) : pick(LAST_NAMES);
+  const name = `${pick(FIRST_NAMES)} ${lastName}`;
   const age = Math.round(rand(18, 33));
   return new Player({
     name,
@@ -5888,8 +5931,9 @@ function generateRookiePlayer(position) {
 
 function generateStartingRoster(name) {
   const players = [];
+  const usedLastNames = new Set();
   POSITIONS.forEach(pos => {
-    for (let i = 0; i < 3; i++) players.push(generateRookiePlayer(pos));
+    for (let i = 0; i < 3; i++) players.push(generateRookiePlayer(pos, usedLastNames));
   });
   return new Team({ name, players });
 }
@@ -6157,7 +6201,16 @@ function buildNextCupRound(prevRound, winners) {
 // scoreHome/scoreAway/forfeit, pour les DEUX équipes, et JAMAIS pour un
 // forfait (qui n'a jamais appelé MatchEngine.simulate(), donc p.stats/
 // p.secondsPlayed restent ceux — périmés — du match précédent de ce joueur).
-function recordMatchStatsForTeam(team, round, competition, now = Date.now()) {
+// `quarterScores` (optionnel, {home:[...], away:[...]}, voir simulateOrForfeit
+// ci-dessous) : simplement recopié tel quel sur CHAQUE entrée matchLog posée
+// ici (identique côté home et côté away, ce n'est qu'une info sur LE match,
+// pas sur ce joueur) — lu ensuite par boxscoreRowsFromMatchLog côté client
+// pour afficher le score par quart-temps sur la feuille de match (retour
+// Discord d'Ariane, relayé par l'utilisateur, 2026-09-24). `null`/absent
+// pour tout appelant qui ne la fournit pas encore (aucune régression sur les
+// matchs déjà persistés avant ce correctif, ni sur les appels de test qui
+// ne s'en soucient pas).
+function recordMatchStatsForTeam(team, round, competition, now = Date.now(), quarterScores = null) {
   // Connaissance tactique (voir Team.updateTacticalKnowledge) : une seule
   // fois par match RÉELLEMENT joué (pas par joueur), compare la tactique de
   // ce match à celle du précédent.
@@ -6208,6 +6261,9 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now()) {
         // figé ici pour survivre à la remise à zéro de p.stats au prochain
         // match (resetForMatch), tout comme le reste de cette entrée.
         plusMinus: p.stats.plusMinus || 0,
+        // Score par quart-temps du MATCH (pas de ce joueur) — voir le grand
+        // commentaire au-dessus de la signature de cette fonction.
+        quarterScores,
       });
     }
   });
@@ -6261,9 +6317,11 @@ function awardMatchMvp(home, away, round, competition, now = Date.now()) {
 // séparés à recordMatchStatsForTeam qu'utilisaient jusqu'ici finalizeRound/
 // finalizeCupRound (server/liveMatch.js), pour qu'aucun futur appelant ne
 // puisse oublier d'accorder le MVP après avoir enregistré les stats.
-function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now()) {
-  recordMatchStatsForTeam(home, round, competition, now);
-  recordMatchStatsForTeam(away, round, competition, now);
+// `quarterScores` (optionnel, voir recordMatchStatsForTeam) : simplement
+// relayé aux deux équipes.
+function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now(), quarterScores = null) {
+  recordMatchStatsForTeam(home, round, competition, now, quarterScores);
+  recordMatchStatsForTeam(away, round, competition, now, quarterScores);
   return awardMatchMvp(home, away, round, competition, now);
 }
 
@@ -6272,11 +6330,24 @@ function simulateOrForfeit(teamHome, teamAway, now = Date.now()) {
   const awayOk = teamAway.hasValidLineup();
   if (homeOk && awayOk) {
     const result = new MatchEngine(teamHome, teamAway).simulate(now);
-    return { scoreHome: result.finalScore.A, scoreAway: result.finalScore.B, forfeit: null };
+    // quarterScores (retour Discord d'Ariane, relayé par l'utilisateur,
+    // 2026-09-24 : "afficher le score par quart-temps sur la boxscore du
+    // match" — voir DEV_NOTES.md) : MatchEngine.simulate() la calcule déjà
+    // ({A,B}, un tableau par équipe) mais elle n'était jusqu'ici jamais
+    // propagée au-delà de cette fonction. Réorientée ici home/away (A =
+    // teamHome, B = teamAway, voir le constructeur de MatchEngine juste
+    // au-dessus) pour que tout le reste de la chaîne (recordMatchStats
+    // AndAwardMvp -> matchLog -> boxscoreRowsFromMatchLog côté client)
+    // n'ait plus jamais besoin de connaître A/B, seulement home/away.
+    const quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
+    return { scoreHome: result.finalScore.A, scoreAway: result.finalScore.B, forfeit: null, quarterScores };
   }
-  if (!homeOk && !awayOk) return { scoreHome: 0, scoreAway: 0, forfeit: "both" };
-  if (!homeOk) return { scoreHome: 0, scoreAway: FORFEIT_SCORE, forfeit: "home" };
-  return { scoreHome: FORFEIT_SCORE, scoreAway: 0, forfeit: "away" };
+  // Forfait : aucun quart-temps réellement joué, voir recordMatchStatsForTeam
+  // (jamais appelée pour un forfait) — quarterScores reste `null` ici pour
+  // que l'absence de la donnée soit explicite plutôt qu'un tableau vide trompeur.
+  if (!homeOk && !awayOk) return { scoreHome: 0, scoreAway: 0, forfeit: "both", quarterScores: null };
+  if (!homeOk) return { scoreHome: 0, scoreAway: FORFEIT_SCORE, forfeit: "home", quarterScores: null };
+  return { scoreHome: FORFEIT_SCORE, scoreAway: 0, forfeit: "away", quarterScores: null };
 }
 
 // Championnat + phase finale. `teams[0]` est TOUJOURS le club du joueur (les
@@ -6829,7 +6900,7 @@ class League {
       matches.forEach(m => {
         const result = simulateOrForfeit(this.teams[m.home], this.teams[m.away], now);
         if (!result.forfeit) {
-          recordMatchStatsAndAwardMvp(this.teams[m.home], this.teams[m.away], round, "championship", now);
+          recordMatchStatsAndAwardMvp(this.teams[m.home], this.teams[m.away], round, "championship", now, result.quarterScores);
         }
         this.recordPlayoffGameResult(m.seriesId, m.home, m.away, result.scoreHome, result.scoreAway, now);
       });
@@ -9451,7 +9522,13 @@ class MatchEngine {
 
       if (p.fouls >= 5 && !p.disqualified) {
         p.disqualified = true;
-        this.log(events, quarter, clock, say(PHRASES.foulOut, { player: p.name, team: team.name }), { type: "foulOut", team: this.teamKey(team) });
+        // `player` (retour Discord d'Ariane, relayé par l'utilisateur,
+        // 2026-09-24 : "box score en direct [...] tous les joueurs [...]
+        // minutes jouées") : champ structuré déjà présent dans le texte
+        // interpolé, mais jamais exposé séparément jusqu'ici — nécessaire
+        // côté client pour reconstituer QUI sort à quel instant (voir
+        // liveMinutesFromEvents dans moteurbasket3.html).
+        this.log(events, quarter, clock, say(PHRASES.foulOut, { player: p.name, team: team.name }), { type: "foulOut", team: this.teamKey(team), player: p.name });
       }
 
       const mustLeave = p.disqualified || p.injured;
@@ -9469,13 +9546,20 @@ class MatchEngine {
         p.onCourt = false;
         replacement.onCourt = true;
         replacement.matchPosition = p.matchPosition;
-        if (!mustLeave) {
-          this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team) });
-        }
+        // Annoncé pour TOUT changement désormais, pas seulement les
+        // volontaires (`!mustLeave`) comme avant ce correctif — un fauté-out
+        // ou un blessé qui sortait déjà (voir foulOut/injury juste au-dessus)
+        // n'était JAMAIS suivi de "qui le remplace" dans le fil, un vrai trou
+        // d'info pour le spectateur. `player`/`replacement` structurés (même
+        // raison que foulOut ci-dessus) : c'est SURTOUT cet événement,
+        // désormais systématique à chaque changement de joueur sur le
+        // terrain, qui permet au client de reconstruire les minutes jouées
+        // de CHAQUE joueur, remplacement obligatoire compris.
+        this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: replacement.name });
       } else if (mustLeave) {
         // Banc épuisé (rare) : le joueur sort quand même, l'équipe joue en infériorité.
         p.onCourt = false;
-        this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team) });
+        this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team), player: p.name });
       }
       // Si ce n'est qu'une question de fatigue/fautes (pas obligatoire) et qu'aucun
       // remplaçant n'est disponible, le joueur reste simplement sur le terrain.
@@ -10203,7 +10287,26 @@ class MatchEngine {
         const injuryChance = BASE_INJURY_RATE * (seconds / 12) * fatigueFactor * injuryRiskMult * conditionInjuryMult;
         if (Math.random() < injuryChance) {
           p.injured = true;
-          p.onCourt = false;
+          // PAS de `p.onCourt = false` ICI (bug corrigé le 2026-09-24, trouvé
+          // en travaillant sur le box score en direct — retour Discord
+          // d'Ariane, relayé par l'utilisateur — en vérifiant que les
+          // minutes reconstituées tombaient bien juste) : substituteIfNeeded,
+          // appelée juste après (voir simulate(), toujours applyFatigue PUIS
+          // substituteIfNeeded pour les deux équipes), lit `team.
+          // onCourtPlayers()` pour décider qui remplacer — si `onCourt`
+          // passait déjà à false ICI, ce joueur blessé n'apparaissait PLUS
+          // dans cette liste et son remplacement (mustLeave = p.disqualified
+          // || p.injured, plus bas) n'était donc JAMAIS déclenché : l'équipe
+          // finissait le match à 4 contre 5 après la moindre blessure, sans
+          // jamais recompléter le terrain (vérifié : 51/51 matchs avec
+          // blessure testés jouaient short-handed jusqu'à la fin). EXACTEMENT
+          // le même bug, et le même correctif, que celui déjà documenté
+          // juste en dessous pour l'exclusion sur 5 fautes (`p.disqualified`
+          // ne touche pas non plus `onCourt` directement) — seule cette
+          // branche blessure n'avait pas reçu le même correctif à l'époque.
+          // `onCourt` est donc désormais TOUJOURS mis à jour au même endroit,
+          // par substituteIfNeeded, qu'il s'agisse d'une faute, d'une
+          // blessure ou d'un simple repos.
           // Tire le type et la durée RÉELLE d'indisponibilité (voir
           // INJURY_TYPES/rollInjury plus haut) : PERSISTANT, contrairement à
           // `injured` juste au-dessus (remis à false au prochain match).
@@ -10213,7 +10316,7 @@ class MatchEngine {
           const rolled = rollInjury(this.matchNow ?? Date.now());
           p.injuryType = rolled.injuryType;
           p.injuryUntil = rolled.injuryUntil;
-          this.log(events, quarter, clock, say(PHRASES.injury, { player: p.name, team: team.name }), { type: "injury", team: this.teamKey(team) });
+          this.log(events, quarter, clock, say(PHRASES.injury, { player: p.name, team: team.name }), { type: "injury", team: this.teamKey(team), player: p.name });
         }
       }
     });
@@ -10486,7 +10589,7 @@ return {
   clamp, rand, pick, weightedPick,
   Player, Team, MatchEngine,
   heightForPosition, generateAttrsForPosition, generateRawYouthAttrs, generateRawAttrsInRange, generatePlayer, generateTeam,
-  generateRookiePlayer, generateStartingRoster,
+  generateRookiePlayer, generateStartingRoster, FIRST_NAMES, LAST_NAMES,
   potentialHeadroom, growthFactorForAge, declineFactorForAge, YOUNG_PROSPECT_MAX_AGE, SEASON_LENGTH_WEEKS,
   POTENTIAL_TIERS, potentialTierLabel, potentialTierIndex,
   QUARTER_SECONDS, OVERTIME_SECONDS,

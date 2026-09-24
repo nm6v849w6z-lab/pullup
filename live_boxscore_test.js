@@ -52,8 +52,12 @@ console.log("✅ La feuille de stats finale reste bien cachée pendant la diffus
 // est forcément attribué à exactement un joueur (tir ou lancer franc), voir
 // applyLiveBoxScoreEvent. Un écart signifierait un événement de score perdu
 // ou mal attribué lors de la reconstruction côté client.
+// ":not(.boxscore-totals)" (retour Discord d'Ariane, relayé par
+// l'utilisateur, 2026-09-24 : "ligne total" — voir liveBoxscoreTableHtml)
+// exclut la ligne de total ajoutée en bas du tableau, sinon elle doublerait
+// la somme (déjà couverte, elle, par sa propre assertion plus bas).
 function sumColumn(colIndex) {
-  const rows = [...doc.querySelectorAll("#liveBoxscoreHolder table.boxscore tbody tr")];
+  const rows = [...doc.querySelectorAll("#liveBoxscoreHolder table.boxscore tbody tr:not(.boxscore-totals)")];
   return rows.reduce((sum, tr) => {
     const cell = tr.children[colIndex];
     const v = parseInt(cell && cell.textContent, 10);
@@ -68,8 +72,11 @@ if (!(scoreA > 0 || scoreB > 0)) throw new Error("❌ À mi-diffusion, au moins 
 // Équipe A (onglet actif par défaut à l'entrée sur l'écran Live).
 const liveBsTabA = doc.getElementById("liveBsTabA");
 if (!liveBsTabA.classList.contains("active")) throw new Error("❌ L'onglet équipe A du box score en direct devrait être actif par défaut à l'entrée sur l'écran Live.");
-const ptsColIndex = 2; // <td> Joueur(0) Poste(1) PTS(2) ...
-const rowsA = doc.querySelectorAll("#liveBoxscoreHolder table.boxscore tbody tr").length;
+// Joueur(0) Poste(1) MIN(2) PTS(3) ... — MIN ajoutée en 2026-09-24 (retour
+// Discord d'Ariane, relayé par l'utilisateur, "minutes jouées"), décale PTS
+// d'une colonne par rapport à avant ce correctif.
+const ptsColIndex = 3;
+const rowsA = doc.querySelectorAll("#liveBoxscoreHolder table.boxscore tbody tr:not(.boxscore-totals)").length;
 if (rowsA === 0) throw new Error("❌ Le box score en direct de l'équipe A devrait avoir au moins une ligne à mi-diffusion.");
 const sumPtsA = sumColumn(ptsColIndex);
 if (sumPtsA !== scoreA) {
