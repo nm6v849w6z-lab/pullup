@@ -20,6 +20,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — « Pendant votre
+  absence » : refonte visuelle** — retour utilisateur : "améliore cette
+  page, c'est horrible". Bandeau résumé (matchs, V/D, entraînements) ;
+  cartes match (pastille V/D, score en grand, humeur/affluence en puces) ;
+  carte entraînement (finances en lignes chiffrées + solde + budget
+  restant, progression groupée par joueur en <details> avec les tuiles de
+  la page Entraînement, notes « À savoir »). Fichiers : moteurbasket3.html
+  (showCatchupSummaryIfAny, catchupTrainingHtml, trainingGainGroupsHtml,
+  #catchupSummary, CSS .cu-*). Tests verts (calendar, forfeit, humeur,
+  tv_rights, lineup, end_to_end, season_objective_*_client,
+  post_match_interview_button, persistence, deficit, tabs). Commit partiel
+  (seules ces lignes). Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de la page Ordres
   (maquette canevas "Ordres — Lyon vs Rennes")** — retour utilisateur :
   "code tout ça stp". Fait :
