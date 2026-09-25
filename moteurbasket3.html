@@ -2654,8 +2654,8 @@
   .eco-title-sub{color:var(--ink-dim); font-size:14px; margin:0 0 18px;}
   .eco-label{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); font-weight:600;}
   .eco-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px 24px; display:flex; flex-direction:column; gap:14px; min-width:0; box-sizing:border-box;}
-  .eco-hero{display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); gap:20px; margin-bottom:20px;}
-  .eco-cards{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-bottom:30px;}
+  .eco-hero{display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:20px; margin-bottom:20px;}
+  .eco-cards{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; margin-bottom:30px;}
   /* Retour utilisateur (2026-09-25, capture prod) : "fais quelque chose sur les
      polices, ça rend très moche" — la Barlow Condensed (chargée en prod)
      écrasait les chiffres ; même police système que le reste du jeu, en
@@ -2666,7 +2666,7 @@
   .eco-num.md{font-size:26px;}
   .eco-num .unit{font-size:.5em; color:var(--ink-dim); font-weight:600; letter-spacing:0; margin-left:3px;}
   .eco-num.negative{color:var(--eco-out);}
-  .eco-budget-top{display:flex; flex-direction:column; gap:12px;}
+  .eco-budget-top{display:flex; flex-direction:column; gap:10px;}
   .eco-budget-meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; font-size:13px; color:var(--ink-dim);}
   .eco-budget-meta:empty{display:none;}
   .eco-chip{display:inline-block; padding:5px 12px; border-radius:999px; font-weight:700; font-size:13.5px;}
@@ -2751,9 +2751,10 @@
   #economieSection .gain-line-total b{font-size:16px;}
   #economieSection .gain-line-total.gain-up b{color:var(--eco-in);}
   #economieSection .gain-line-total.gain-down b{color:var(--eco-out);}
-  @media (max-width:1150px){ .eco-cards{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  @media (max-width:1150px){ .eco-hero{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);} }
   @media (max-width:880px){
     .eco-hero{grid-template-columns:1fr;}
+    .eco-cards{grid-template-columns:1fr;}
     .eco-num.xl{font-size:48px;}
     .eco-week-bars{display:none;}
     .eco-week-head{justify-content:space-between;}
@@ -3981,9 +3982,11 @@
   <div id="economieSection" class="hidden">
     <!-- Refonte 2026-09-25 (retour utilisateur : "réfléchis à comment rendre
          cette page plus sympa", maquette validée) : bandeau budget + courbe,
-         carte "Semaine type", 4 cartes chiffrées, historique groupé par
-         semaine. Contenu rempli par renderEconomieSection. Les IDs
-         historiques (economieBudget, economieBudgetStart, economiePayroll,
+         4 cartes chiffrées, historique groupé par semaine. Allégée le même
+         jour (retour utilisateur : textes explicatifs, carte "Semaine type"
+         et solde de début de semaine retirés, "réorganise la page") :
+         budget + masse salariale en tête, Salle/Boutique/Droits TV dessous. Contenu rempli par renderEconomieSection. Les IDs
+         historiques (economieBudget, economiePayroll,
          economieTvRights, economieTransactions...) sont conservés : les
          tests existants s'appuient dessus. -->
     <div class="section eco-page">
@@ -3993,25 +3996,20 @@
       <div class="eco-hero">
         <section class="eco-card">
           <div class="eco-budget-top">
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <span class="eco-label">Budget du club</span>
-              <div class="eco-num xl" id="economieBudget"></div>
-            </div>
+            <span class="eco-label">Budget du club</span>
+            <div class="eco-num xl" id="economieBudget"></div>
             <div class="eco-budget-meta" id="economieBudgetMeta"></div>
           </div>
           <div id="economieBudgetChart"></div>
-          <div class="eco-start-line">Solde en début de semaine : <b id="economieBudgetStart"></b> · <span id="economieBudgetStartSub"></span></div>
         </section>
-        <section class="eco-card" id="economieWeeklyCard"></section>
-      </div>
-      <div class="eco-cards">
         <section class="eco-card">
           <span class="eco-label">Masse salariale</span>
           <div class="eco-num lg" id="economiePayroll"></div>
           <div id="economiePayrollChart"></div>
-          <div class="eco-small" id="economiePayrollSub"></div>
           <div class="quick-links"><button class="secondary" data-tab="effectif">Voir l'effectif</button></div>
         </section>
+      </div>
+      <div class="eco-cards">
         <section class="eco-card">
           <span class="eco-label">Salle</span>
           <div id="economieArenaSummary" style="display:flex; flex-direction:column; gap:14px;"></div>
@@ -4025,7 +4023,7 @@
         <section class="eco-card">
           <span class="eco-label">Droits TV</span>
           <div class="eco-num lg" id="economieTvRights"></div>
-          <div id="economieTvSub" style="display:flex; flex-direction:column; gap:12px; flex-grow:1;"></div>
+          <div id="economieTvSub" style="display:flex; flex-direction:column; gap:12px;"></div>
         </section>
       </div>
       <div class="eco-history-head">
@@ -28453,38 +28451,6 @@ function ecoBudgetChartHtml(points) {
   return html + `</div>`;
 }
 
-const ECO_WARN_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5 M12 16.5v.5 M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>`;
-const ECO_OK_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>`;
-
-function ecoWeeklyCardHtml(rec) {
-  const max = Math.max(rec.revenue, rec.charges, 1);
-  const lastHome = (teamA.attendanceHistory || [])[0];
-  let html = `<div style="display:flex; flex-direction:column; gap:4px;"><span class="eco-label">Semaine type</span><span class="eco-small">Hors billetterie et subvention, avec l'effectif et le staff actuels</span></div>`;
-  html += `<div class="eco-bar-row"><div class="eco-bar-head"><span>Revenus fixes <span class="eco-muted">${escapeHtml(rec.revenueParts.join(" + ") || "aucun")}</span></span><span class="eco-in">${ecoSigned(rec.revenue)}</span></div>` +
-    `<div class="eco-track"><div class="eco-fill in" style="width:${Math.round(rec.revenue / max * 100)}%"></div></div></div>`;
-  html += `<div class="eco-bar-row"><div class="eco-bar-head"><span>Charges fixes <span class="eco-muted">${escapeHtml(rec.chargeParts.join(" + "))}</span></span><span class="eco-out">${ecoSigned(-rec.charges)}</span></div>` +
-    `<div class="eco-track"><div class="eco-fill out" style="width:${Math.round(rec.charges / max * 100)}%"></div></div></div>`;
-  html += `<div class="eco-net"><span>Solde fixe</span><span class="eco-num md ${rec.net < 0 ? "negative" : ""}" style="${rec.net >= 0 ? "color:var(--eco-in)" : ""}">${ecoSigned(rec.net)}<span class="unit">/sem</span></span></div>`;
-  let extras = "";
-  if (rec.subsidyWeeksLeft > 0) {
-    const withSub = rec.net + STARTUP_SUBSIDY_AMOUNT;
-    extras += `<span>+ Subvention de démarrage (${ecoMoney(STARTUP_SUBSIDY_AMOUNT)}, encore ${rec.subsidyWeeksLeft} sem.) → <strong class="${withSub >= 0 ? "eco-in" : "eco-out"}">${ecoSigned(withSub)}/sem</strong></span>`;
-  }
-  if (lastHome) {
-    extras += `<span>+ Dernière recette à domicile : <strong class="eco-in">${ecoMoney(lastHome.revenue)}</strong></span>`;
-  }
-  if (extras) html += `<div class="eco-extras">${extras}</div>`;
-  if (rec.net < 0) {
-    const weeks = teamA.budget > 0 ? Math.floor(teamA.budget / -rec.net) : 0;
-    html += `<div class="eco-alert">${ECO_WARN_ICON}<span>${weeks > 0
-      ? `Autonomie ≈ <strong>${weeks} semaine${weeks > 1 ? "s" : ""}</strong> sans subvention ni match à domicile.`
-      : `Budget épuisé : sans recette de billetterie, chaque semaine creuse le déficit.`}</span></div>`;
-  } else {
-    html += `<div class="eco-alert ok">${ECO_OK_ICON}<span>Les revenus fixes couvrent les charges : la billetterie est du bonus.</span></div>`;
-  }
-  return html;
-}
-
 function ecoPayrollChartHtml(rec) {
   const total = rec.charges;
   if (!total) return "";
@@ -28562,7 +28528,6 @@ function ecoTvHtml(rec) {
   if (rec.station) {
     html += `<div class="eco-kv"><div><span class="k">Station TV</span><span class="eco-in">${ecoSigned(rec.station)}/sem.</span></div></div>`;
   }
-  html += `<span class="eco-small" style="margin-top:auto">Versé automatiquement chaque semaine, que le club entraîne ou pas. Le montant dépend de la division du club.</span>`;
   return html;
 }
 
@@ -28700,21 +28665,11 @@ function renderEconomieSection() {
   budgetEl.textContent = ecoMoney(teamA.budget);
   budgetEl.classList.toggle("negative", teamA.budget < 0);
 
-  // Retour utilisateur (2026-09) : "sur l'espace transaction il manque le
-  // solde en début de période" — reconstitué à partir du budget actuel moins
-  // les transactions de LA SEMAINE EN COURS (teamA.week), aucune valeur
-  // séparée n'est stockée pour ça. Relégué en pied de la carte budget
-  // (refonte 2026-09-25 : il affichait exactement le même chiffre que le
-  // budget en tête de page tant qu'aucune transaction n'avait eu lieu).
+  // Sous-titre : bilan de LA SEMAINE EN COURS (teamA.week). Le "solde en
+  // début de semaine" (retour utilisateur 2026-09) a été retiré le
+  // 2026-09-25 à sa demande, avec le reste des textes secondaires.
   const weekTransactions = transactions.filter(t => t.week === teamA.week);
   const weekTotal = weekTransactions.reduce((s, t) => s + t.amount, 0);
-  const budgetStart = teamA.budget - weekTotal;
-  const startEl = document.getElementById("economieBudgetStart");
-  startEl.textContent = ecoMoney(budgetStart);
-  startEl.classList.toggle("negative", budgetStart < 0);
-  document.getElementById("economieBudgetStartSub").textContent = weekTransactions.length
-    ? `${ecoSigned(weekTotal)} cette semaine (semaine ${teamA.week}).`
-    : `aucune transaction encore cette semaine (semaine ${teamA.week}).`;
   document.getElementById("economieWeekSub").textContent = `Semaine ${teamA.week} · ${weekTransactions.length
     ? `${ecoSigned(weekTotal)} depuis le début de la semaine`
     : "aucune transaction encore cette semaine"}`;
@@ -28728,23 +28683,16 @@ function renderEconomieSection() {
       const lastNet = series.byWeek.get(doneWeeks[0]);
       meta += `<span class="eco-chip ${lastNet >= 0 ? "up" : "down"}">${lastNet >= 0 ? "▲" : "▼"} ${ecoSigned(lastNet)} en semaine ${doneWeeks[0]}</span>`;
     }
-    if (series.complete) {
-      const sinceStart = teamA.budget - CLUB_STARTING_BUDGET;
-      meta += `<span>${ecoSigned(sinceStart)} depuis le début (départ : ${ecoMoney(CLUB_STARTING_BUDGET)})</span>`;
-    }
   }
   document.getElementById("economieBudgetMeta").innerHTML = meta;
   document.getElementById("economieBudgetChart").innerHTML = ecoBudgetChartHtml(series.points);
 
   const rec = ecoRecurring();
-  document.getElementById("economieWeeklyCard").innerHTML = ecoWeeklyCardHtml(rec);
 
   // Masse salariale : joueurs + staff + stagiaires (avant la refonte, seuls
   // les joueurs étaient comptés alors que le staff pèse lourd aussi).
   document.getElementById("economiePayroll").innerHTML = `${ecoMoney(rec.charges)}<span class="unit">/sem.</span>`;
   document.getElementById("economiePayrollChart").innerHTML = ecoPayrollChartHtml(rec);
-  document.getElementById("economiePayrollSub").textContent =
-    "Payée chaque semaine, entraînement ou pas. Salaires des joueurs recalculés au début de chaque saison selon leur niveau.";
 
   document.getElementById("economieArenaSummary").innerHTML = ecoArenaHtml();
   document.getElementById("economieFanShopSummary").innerHTML = ecoFanShopHtml(transactions);

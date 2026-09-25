@@ -20,15 +20,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Économie : polices** — retour
-  utilisateur sur capture prod : "fais quelque chose sur les polices, ça
-  rend très moche" (Barlow Condensed chargée en prod, chiffres écrasés).
-  Toute la page Économie passe sur la police système du reste du jeu, en
-  gras, tailles recalibrées (budget 52px, cartes 28px, montants 15,5px).
-  Fichier : moteurbasket3.html (CSS .eco-* uniquement). Test
-  economie_redesign_test vert. Reste : `git push`, puis retirer cette
-  entrée.
-
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Économie : polices
+  + allègement** — retours utilisateur sur capture prod : "fais quelque
+  chose sur les polices, ça rend très moche" (Barlow Condensed → police
+  système du jeu, en gras, tailles recalibrées), puis "enlève [textes
+  explicatifs TV/masse salariale, solde en début de semaine, 'depuis le
+  début', toute la brique Semaine type] et réorganise la page". Nouvelle
+  disposition : budget + courbe (2/3) et masse salariale (1/3) en tête,
+  Salle / Boutique / Droits TV sur une ligne de 3, historique dessous.
+  Fichiers : moteurbasket3.html (#economieSection, CSS .eco-*,
+  renderEconomieSection ; ecoWeeklyCardHtml supprimée),
+  economie_redesign_test.js (vérifie aussi que les éléments retirés ne
+  reviennent pas). Tests Économie/TV/salaires/enchère verts. Reste :
+  `git push`, puis retirer cette entrée.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Salle : retouches après mise en ligne**
   — refonte (5ba4dfd) et 1res retouches (ba02cb8 : prix idéal = recette
   max, plus de cases −/+ ni de confort, chiffres clés sortis de l'image)

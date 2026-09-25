@@ -4,8 +4,10 @@
 // d'écran de l'utilisateur : historique groupé par semaine avec bilans
 // exacts, tutoriel regroupé en une ligne (détail dépliable), libellés
 // réinterprétés ("Salaire du staff" = Entraîneur), filtres Revenus/Dépenses,
-// repli d'une semaine, carte "Semaine type" (charges = joueurs + staff),
-// cartes Salle/Boutique, et bloc admin toujours présent tel quel.
+// repli d'une semaine, masse salariale (joueurs + staff), cartes
+// Salle/Boutique, et bloc admin toujours présent tel quel. La carte
+// "Semaine type" et les textes secondaires ont été retirés à la demande de
+// l'utilisateur (2026-09-25) : on vérifie qu'ils ne reviennent pas.
 const fs = require("fs");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
@@ -76,11 +78,7 @@ assert(!doc.querySelectorAll("#economieTransactions .eco-week")[0].classList.con
 const total = norm(doc.querySelector("#economieTransactions .gain-line-total").textContent);
 assert(total.includes("Budget initial : 300 000 €") && total.includes("+273 947 €"), "Pied d'historique : budget initial et total depuis le début");
 
-const weekly = norm(doc.getElementById("economieWeeklyCard").textContent);
 const charges = win.eval("teamA.players.reduce((s,p)=>s+p.salary,0) + teamA.trainerSalary() + teamA.videoAnalystSalary() + teamA.recruiterSalary()");
-assert(weekly.includes("+27 000 €"), "Semaine type : revenus fixes = TV + boutique (27 000 €)");
-assert(weekly.includes("−" + charges.toLocaleString("fr-FR").replace(/[  ]/g, " ") + " €"), "Semaine type : charges fixes = joueurs + staff (" + charges + " €)");
-assert(weekly.includes("encore 2 sem."), "Semaine type : subvention de démarrage encore versée 2 semaines (S3 et S4)");
 assert(norm(doc.getElementById("economiePayroll").textContent).startsWith(charges.toLocaleString("fr-FR").replace(/[  ]/g, " ")), "Carte Masse salariale : total joueurs + staff");
 
 const arena = norm(doc.getElementById("economieArenaSummary").textContent);
@@ -89,6 +87,8 @@ const shop = norm(doc.getElementById("economieFanShopSummary").textContent);
 assert(shop.includes("4 000 / 40 000 €") && shop.includes("18 semaines") && shop.includes("Boutique du club"), "Carte Boutique : amortissement, semaines restantes et palier suivant");
 
 assert(doc.getElementById("economieBudgetChart").querySelectorAll(".eco-chart-dot").length === 3, "Courbe du budget : départ + fin S1 + fin S2");
+const pageText = norm(doc.getElementById("economieSection").textContent);
+assert(!pageText.includes("Semaine type") && !pageText.includes("Autonomie") && !pageText.includes("Solde en début de semaine") && !pageText.includes("depuis le début (départ") && !pageText.includes("Versé automatiquement") && !pageText.includes("Payée chaque semaine"), "Carte Semaine type et textes secondaires bien retirés");
 assert(!!doc.getElementById("adminResetLeagueSection") && !!doc.getElementById("resetLeagueBtn"), "Bloc d'administration de la ligue toujours présent");
 
 await flush(dom);
