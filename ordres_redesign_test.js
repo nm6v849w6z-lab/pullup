@@ -91,8 +91,9 @@ if (JSON.stringify(segValues) !== JSON.stringify(win.eval("RHYTHM_LIST"))) throw
 const rapide = [...rhythm.querySelectorAll(".seg-btn")].find(b => b.dataset.value === "Rapide");
 rapide.dispatchEvent(new win.Event("click", { bubbles: true }));
 if (win.eval("teamA.rhythm") !== "Rapide") throw new Error("❌ Cliquer 'Rapide' devrait mettre teamA.rhythm à 'Rapide'.");
-const rhythmHelp = rhythm.parentElement.querySelector(".field-help").textContent;
-if (rhythmHelp !== win.eval("ORDRES_FIELD_HELP.rhythm['Rapide']")) throw new Error(`❌ La ligne d'aide du Rythme devrait suivre la valeur choisie, obtenu "${rhythmHelp}".`);
+// Plus aucune ligne d'aide sur la page Ordres (retour utilisateur 2026-09-25 :
+// "enlève le texte superflu, on a tout dans le guide").
+if (doc.querySelector("#prepSection .field-help")) throw new Error("❌ La page Ordres ne devrait plus afficher de ligne d'aide (.field-help).");
 ["ordresTierToggle", "ordresEndgameSelect", "ordresOffRebSelect", "ordresHelpDefenseSelect", "ordresCloseoutSelect"].forEach(id => {
   const el = doc.getElementById(id);
   if (!el || !el.classList.contains("seg-control")) throw new Error(`❌ #${id} devrait être un groupe de boutons segmentés.`);

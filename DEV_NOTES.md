@@ -20,6 +20,23 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Ordres : textes
+  d'aide retirés + postes dans le menu des titulaires** — retours
+  utilisateur : "enlève le texte superflu, on a tout dans le guide (et si
+  ça n'y est pas on le rajoutera)" puis "ajoute les postes dans le menu
+  déroulant des titulaires". Retirés : aides sous les jauges alchimie /
+  connaissance tactique, table ORDRES_FIELD_HELP (lignes sous chaque
+  réglage, dont « Réglage neutre. »), intro des priorités, note « Clique
+  une priorité… / Encore N à choisir » (le compteur N / 3 reste), intro
+  « Adversaires à surveiller », « Un titulaire par poste », « Le remplaçant
+  le plus frais… ». Menu titulaire : « Nom (M) · titulaire ailleurs ».
+  Tests Mac verts (ordres_redesign adapté, lineup, confirmed_tactics,
+  planned_tactics, onboarding_tour, ordres_validate_*, cup_ordres_planning,
+  select_dark_dropdown). À vérifier/ajouter au Guide si absent : priorité
+  n°1 = celle vue par le scouting adverse, joueurs adverses à surveiller
+  (max, consigne qui suit le poste), jauge de connaissance tactique.
+  Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — « Pendant votre
   absence » : refonte visuelle** — retour utilisateur : "améliore cette
   page, c'est horrible". Bandeau résumé (matchs, V/D, entraînements) ;

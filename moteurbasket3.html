@@ -4237,7 +4237,15 @@
   #effectifSection .eff-general tr.eff-group-row th{height:auto; padding:22px 0 10px 2px; text-align:left; background:transparent; font-weight:600; color:var(--ink); text-transform:none;}
   #effectifSection .eff-general tbody:first-of-type tr.eff-group-row th{padding-top:6px;}
   .eff-group-title{font-size:18px; font-weight:700; margin-right:10px;}
-  .eff-group-count{font-size:12.5px; font-weight:500; color:var(--ink-dim);}
+  /* Largeurs de colonnes fixes (retour utilisateur 2026-09-25 : "il y a un
+     problème de largeur de colonne") : sans ça, le tableau en auto-layout
+     collait Âge/Taille/Salaire les uns aux autres et laissait un grand vide
+     dans Forme. Nom prend l'espace restant ; voir <colgroup> dans
+     renderEffectifSection. */
+  #effectifSection table.eff-general{table-layout:fixed; min-width:1180px;}
+  #effectifSection table.eff-general td{overflow:hidden; text-overflow:ellipsis;}
+  #effectifSection table.eff-general td.eff-td-actions{overflow:visible;}
+  #effectifSection table.eff-general th.eff-th-condition, #effectifSection table.eff-general td.eff-td-condition{padding-left:28px;}
   #effectifSection .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
   #effectifSection .eff-general .eff-group-starters tr.eff-row td{height:58px; background:var(--eff-row);}
   #effectifSection .eff-general .eff-group-starters .eff-player .player-link{font-size:15px;}
@@ -4526,12 +4534,10 @@
         <div class="roster-chemistry-gauge-wrap" id="ordresChemistryGaugeWrap">
           <div class="roster-chemistry-gauge-label"><span>Alchimie d'équipe</span><b id="ordresChemistryValue"></b></div>
           <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresChemistryGaugeFill"></div></div>
-          <div class="field-help">Monte ou baisse avec le ton de tes interviews de jalon ; chaque transfert la fait baisser.</div>
         </div>
         <div class="roster-chemistry-gauge-wrap" id="ordresTacticalKnowledgeGaugeWrap">
           <div class="roster-chemistry-gauge-label"><span>Connaissance tactique</span><b id="ordresTacticalKnowledgeValue"></b></div>
           <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresTacticalKnowledgeGaugeFill"></div></div>
-          <div class="field-help">Monte à chaque match joué avec ces choix (plus vite en les travaillant à l'entraînement tactique) ; changer souvent la fait baisser.</div>
         </div>
       </div>
     </section>
@@ -24544,63 +24550,11 @@ function startNewSeason() {
 // "Confirmé" (masculin, "niveau confirmé") : retour utilisateur 2026-09-25,
 // la clé interne "confirmée" est inchangée pour ne casser aucune sauvegarde.
 //
-// ORDRES_FIELD_HELP : une ligne d'aide par valeur, affichée sous chaque
-// réglage et mise à jour à chaque changement. Écrite d'après les vraies
-// tables du moteur (RHYTHMS, DEFENSES, SCREEN_DEFENSES, HELP_DEFENSE_LEVELS,
-// POST_DEFENSES, CLOSEOUT_STYLES, OFF_REBOUND_STYLES, ENDGAME_MANAGEMENT) et
-// le Guide, pas d'après la maquette (dont les textes étaient des
-// suppositions). À garder cohérent si ces tables changent un jour.
+// Plus aucune ligne d'aide sous les réglages (retour utilisateur,
+// 2026-09-25 : "enlève le texte superflu, on a tout dans le guide") : les
+// explications vivent uniquement dans le Guide.
 // ---------------------------------------------------------------------
 const TACTIC_VALUE_LABELS = { "Classique": "Aucune consigne", "débutant": "Débutant", "confirmée": "Confirmé" };
-const ORDRES_FIELD_HELP = {
-  rhythm: {
-    "Lent": "Moins de possessions, moins de fatigue et moins de pertes de balle.",
-    "Normal": "Rythme standard.",
-    "Rapide": "Plus de possessions, mais plus de fatigue et de pertes de balle.",
-  },
-  tacticalTier: {
-    "débutant": "Consignes avancées sur leur valeur standard. Ne change rien au moteur.",
-    "confirmée": "Affiche les consignes avancées ci-dessous. Ne change rien au moteur tant qu'elles restent sur leur valeur standard.",
-  },
-  endgameManagement: {
-    "Standard": "Comportement habituel en fin de match.",
-    "Adaptatif": "Lève le pied dès 10 points d'écart à partir du 3e quart-temps, accélère dans les 5 dernières minutes d'un match serré.",
-  },
-  offRebStyle: {
-    "Prudent": "Moins de rebonds offensifs tentés, aucun risque de contre-attaque.",
-    "Normal": "Réglage neutre.",
-    "Agressif": "Plus de secondes chances, mais l'adversaire contre-attaque plus vite en cas d'échec.",
-  },
-  defense: {
-    "Homme à homme": "Réglage neutre.",
-    "Zone press": "Pression sur les extérieurs adverses, au prix d'une grosse fatigue.",
-    "Box and one": "Cible le meilleur joueur adverse pour le freiner.",
-    "Zone extérieure": "Renforce la défense à l'extérieur, au détriment de la raquette.",
-    "Zone intérieure": "Protège la raquette, au détriment des tirs extérieurs.",
-  },
-  screenDefense: {
-    "Aucune consigne": "Réglage neutre.",
-    "Au-dessus": "Gêne le porteur, mais le joueur qui plonge vers le panier est plus libre.",
-    "En-dessous": "Gêne davantage le porteur, mais laisse plus de tirs ouverts aux shooteurs.",
-    "Switch": "Les défenseurs échangent : duels plus imprévisibles.",
-    "Prise à deux": "Étouffe le porteur et provoque des pertes de balle, mais libère un partenaire.",
-  },
-  helpDefense: {
-    "Faible": "Tireurs extérieurs mieux gardés, raquette moins protégée.",
-    "Moyenne": "Réglage neutre.",
-    "Forte": "Raquette mieux protégée, mais plus de tirs à 3 points ouverts.",
-  },
-  postDefense: {
-    "Classique": "Réglage neutre.",
-    "Pousser vers le fond": "Meilleure défense près du panier, un peu plus de fautes.",
-    "Pousser vers le centre": "Défense près du panier renforcée, mais passes plus faciles.",
-    "Prise à deux": "Grosse défense près du panier et pertes de balle provoquées, mais passes ouvertes.",
-  },
-  closeoutStyle: {
-    "Contrôlé": "Réglage neutre.",
-    "Agressif": "Conteste mieux les tirs extérieurs, mais ouvre la pénétration.",
-  },
-};
 
 // Construit le panneau de MON équipe sur la page Ordres (teamA en direct,
 // ou le proxy de plan d'une journée future, voir planProxyForRound) : deux
@@ -24677,14 +24631,6 @@ function buildTeamPanel(team, side, opts = {}) {
     parent.appendChild(f);
     return f;
   };
-  const addHelp = (fieldEl, field) => {
-    const help = document.createElement("div");
-    help.className = "field-help";
-    const update = () => { help.textContent = (ORDRES_FIELD_HELP[field] || {})[team[field]] || ""; };
-    update();
-    fieldEl.appendChild(help);
-    return update;
-  };
   const addSegmented = (parent, labelText, list, field, o = {}) => {
     const f = addField(parent, labelText, o.className);
     const group = document.createElement("div");
@@ -24692,7 +24638,6 @@ function buildTeamPanel(team, side, opts = {}) {
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", labelText);
     if (isMain && o.id) group.id = o.id;
-    let updateHelp = () => {};
     const btns = list.map(v => {
       const b = document.createElement("button");
       b.type = "button";
@@ -24712,14 +24657,12 @@ function buildTeamPanel(team, side, opts = {}) {
       if (!editable || team[field] === b.dataset.value) return;
       team[field] = b.dataset.value;
       paint();
-      updateHelp();
       if (o.onChange) o.onChange(team[field]);
       onDirty();
       syncField(field, team[field]);
     }));
     paint();
     f.appendChild(group);
-    updateHelp = addHelp(f, field);
     return { field: f, group };
   };
   const addSelectField = (parent, labelText, list, field, o = {}) => {
@@ -24733,15 +24676,12 @@ function buildTeamPanel(team, side, opts = {}) {
       sel.appendChild(opt);
     });
     sel.disabled = !editable;
-    let updateHelp = () => {};
     sel.addEventListener("change", () => {
       team[field] = sel.value;
-      updateHelp();
       if (editable) onDirty();
       syncField(field, team[field]);
     });
     f.appendChild(sel);
-    updateHelp = addHelp(f, field);
     return { field: f, sel };
   };
 
@@ -24759,10 +24699,6 @@ function buildTeamPanel(team, side, opts = {}) {
   leftCol.appendChild(attaque);
 
   const prioField = addField(attaque, "Priorités offensives", "ordres-field-wide");
-  const prioIntro = document.createElement("div");
-  prioIntro.className = "field-help";
-  prioIntro.textContent = "Choisis 3 axes de jeu. Ils pèsent autant l'un que l'autre dans le match ; le n°1 est celui que retiennent les rapports de scouting adverses.";
-  prioField.appendChild(prioIntro);
   const tWrap = document.createElement("div");
   tWrap.className = "tactic-picker";
   // id stable (tutoriel d'accueil, voir TOUR_STEPS/startRealTour).
@@ -24823,14 +24759,8 @@ function buildTeamPanel(team, side, opts = {}) {
     const pool = document.createElement("div");
     pool.className = "tactic-grid tactic-pool";
     OFF_TACTICS_LIST.filter(t => !chosen.includes(t)).forEach(t => pool.appendChild(makeChip(t, null)));
-    const note = document.createElement("div");
-    note.className = "field-help tactic-count";
-    note.textContent = full
-      ? "Clique une priorité numérotée pour la retirer et en choisir une autre."
-      : `Encore ${3 - chosen.length} à choisir.`;
     tWrap.appendChild(selectedRow);
     tWrap.appendChild(pool);
-    tWrap.appendChild(note);
   };
   renderPriorities();
 
@@ -24877,10 +24807,6 @@ function buildTeamPanel(team, side, opts = {}) {
   adversaires.classList.add("tactic-confirmee-block");
   leftCol.appendChild(adversaires);
   confirmedEls.push(adversaires);
-  const watchIntro = document.createElement("div");
-  watchIntro.className = "field-help";
-  watchIntro.textContent = `Cible jusqu'à ${MAX_WATCH_ASSIGNMENTS} joueurs adverses et donne une consigne pour chacun. La consigne suit le poste : si l'adversaire change de titulaire, elle s'applique au nouveau.`;
-  adversaires.appendChild(watchIntro);
   const watchWrap = document.createElement("div");
   watchWrap.className = "watch-assignments";
   if (isMain) watchWrap.id = "ordresWatchAssignments";
@@ -25036,7 +24962,7 @@ function renderLineupEditor(team, container, opts = {}) {
   // --- Carte "Cinq de départ" : les 5 titulaires, positionnés sur le terrain ---
   const missing = POSITIONS.filter(pos => !team.lineup.starters[pos]).length;
   const cinqCard = makeCard("ordresCardCinq", "Cinq de départ",
-    missing ? `${missing} poste${missing > 1 ? "s" : ""} à pourvoir` : "Un titulaire par poste");
+    missing ? `${missing} poste${missing > 1 ? "s" : ""} à pourvoir` : "");
   const courtWrap = document.createElement("div");
   courtWrap.className = "lineup-court-wrap";
   const court = document.createElement("div");
@@ -25065,8 +24991,10 @@ function renderLineupEditor(team, container, opts = {}) {
     byOverall.forEach(p => {
       const o = document.createElement("option");
       o.value = p.id;
-      const elsewhere = starterIds.has(p.id) && p.id !== starterId ? " (titulaire ailleurs)" : "";
-      o.textContent = `${p.name}${elsewhere}`;
+      // Poste naturel affiché (retour utilisateur, 2026-09-25 : "ajoute les
+      // postes dans le menu déroulant des titulaires").
+      const elsewhere = starterIds.has(p.id) && p.id !== starterId ? " · titulaire ailleurs" : "";
+      o.textContent = `${p.name} (${POS_SHORT[p.position] || p.position})${elsewhere}`;
       if (p.id === starterId) o.selected = true;
       sel.appendChild(o);
     });
@@ -25087,7 +25015,7 @@ function renderLineupEditor(team, container, opts = {}) {
 
   // --- Carte "Rotation" : remplaçants par poste (un même joueur peut
   // couvrir plusieurs postes) + ligne récapitulative des réservistes ---
-  const rotationCard = makeCard("ordresCardRotation", "Rotation", "Le remplaçant le plus frais du poste entre en premier");
+  const rotationCard = makeCard("ordresCardRotation", "Rotation", "");
   const eligibleBackups = team.players.filter(p => !starterIds.has(p.id));
   const backupPositionsOf = (p) => (team.lineup.backupPositions[p.id] || []).filter(pos => POSITIONS.includes(pos));
   const multi = eligibleBackups.filter(p => backupPositionsOf(p).length >= 2);
@@ -29373,6 +29301,13 @@ function effSortPlayers(players, defaultCmp) {
   });
 }
 
+// Largeurs (px) des colonnes de l'onglet Général ; "name" absent = prend le
+// reste de la largeur (table-layout:fixed, voir CSS .eff-general).
+const EFF_GENERAL_COL_WIDTHS = {
+  position: 100, potential: 200, age: 60, height: 90, salary: 110,
+  condition: 220, motivation: 140, evaluation: 130,
+};
+
 function renderEffectifSection() {
   renderEffectifHeader();
   const holder = document.getElementById("rosterContent");
@@ -29425,7 +29360,8 @@ function renderEffectifSection() {
   const columns = ROSTER_SORT_COLUMNS.filter(c => c.key !== "role");
   const colCount = columns.length + 1;
   let html = effectifSubNavHtml() + `<div id="rosterMarketFeedback"></div>`;
-  html += `<div class="eff-table-wrap"><table class="roster-table eff-table eff-general"><thead><tr>` +
+  html += `<div class="eff-table-wrap"><table class="roster-table eff-table eff-general">` +
+    `<colgroup>${columns.map(c => `<col class="eff-col-${c.key}"${EFF_GENERAL_COL_WIDTHS[c.key] ? ` style="width:${EFF_GENERAL_COL_WIDTHS[c.key]}px"` : ""}>`).join("")}<col style="width:52px"></colgroup><thead><tr>` +
     columns.map(c => effHeaderCellHtml(c.key, c.label, { cls: `eff-th-${c.key}` })).join("") +
     `<th class="eff-th-actions"><span class="eff-sr">Actions</span></th></tr></thead>`;
   const defaultCmp = (a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall();
@@ -29434,7 +29370,7 @@ function renderEffectifSection() {
     if (!members.length) return;
     const isStarters = group.role === "Titulaire";
     html += `<tbody class="eff-group${isStarters ? " eff-group-starters" : ""}">` +
-      `<tr class="eff-group-row"><th colspan="${colCount}" scope="rowgroup"><span class="eff-group-title">${escapeHtml(group.label)}</span><span class="eff-group-count">${members.length} joueur${members.length > 1 ? "s" : ""}</span></th></tr>`;
+      `<tr class="eff-group-row"><th colspan="${colCount}" scope="rowgroup"><span class="eff-group-title">${escapeHtml(group.label)}</span></th></tr>`;
     effSortPlayers(members, defaultCmp).forEach(p => {
       const effPos = p.effectivePosition && p.effectivePosition !== p.position ? p.effectivePosition : null;
       const posCell = effPosBadgeHtml(p.position) + (effPos
@@ -29454,7 +29390,7 @@ function renderEffectifSection() {
         `<td>${posCell}</td><td>${effPotentialHtml(p)}</td>` +
         `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td>` +
         `<td class="eff-num" title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
-        `<td>${effConditionHtml(p, now, recovery)}</td>` +
+        `<td class="eff-td-condition">${effConditionHtml(p, now, recovery)}</td>` +
         `<td>${effMotivationHtml(p)}</td>` +
         `<td>${evaluationSquaresHtml(p)}</td>` +
         `<td class="eff-td-actions">${effActionsMenuHtml(p, isListed)}</td></tr>`;
