@@ -17171,7 +17171,46 @@ function renderOrdresGrid() {
 // forget, elles avalent déjà leurs erreurs en console.warn) : ce bouton a
 // justement besoin de LIRE la réponse pour afficher la vraie raison d'un
 // refus serveur (voir fail()/{ok:false,error} côté server/actions.js).
+// Bug signalé par un manager (Discord, Diablue, 2026-09-24, match de
+// championnat de 19h) : "les ordres que j'avais établis n'ont pas été pris
+// en compte, alors que c'était bien enregistré". Root cause identifiée
+// (voir DEV_NOTES.md, section "Repères techniques") : refreshFromServerAndReenter()
+// (plus bas) REMPLACE ENTIÈREMENT l'objet global teamA par un objet
+// fraîchement rechargé depuis le serveur, et peut se déclencher À TOUT
+// MOMENT (countdown, retour d'onglet, navigation Live/Ordres) — y compris
+// pendant qu'une validateOrdres() est en train de muter teamA localement
+// (stagePlanForRound/ordresValidatedRound) ou d'attendre la confirmation
+// réseau du serveur. Si ce remplacement survient entre la confirmation
+// serveur et la mutation locale qui la reflète (ou pendant l'attente
+// réseau elle-même), la mutation locale a lieu sur l'ANCIEN teamA,
+// aussitôt jeté : la validation semble réussie ("Ordres enregistrés.")
+// mais son effet local disparaît. `ordresValidationInFlight` est une
+// promesse posée au tout début de CHAQUE appel à validateOrdres() (avant
+// le moindre `await`, donc sans fenêtre de course à la pose) et résolue
+// dans son `finally`, succès ou échec confondus — refreshFromServerAndReenter()
+// l'attend avant de recharger/remplacer teamA, ce qui séquence les deux
+// au lieu de les laisser courir en concurrence, sans changer le
+// comportement d'aucun appelant existant (tous l'appellent déjà sans
+// attendre son retour). Couvre les DEUX branches de validateOrdres()
+// (journée immédiate ET journée future) : c'est justement la branche
+// immédiate qui correspond le plus probablement au cas de Diablue (match
+// du soir même). On ne peut pas confirmer à 100% que c'est EXACTEMENT son
+// cas sans sa sauvegarde/les logs exacts, mais c'est le mécanisme le plus
+// plausible identifié pour ce symptôme.
+let ordresValidationInFlight = null;
+
 async function validateOrdres() {
+  let releaseOrdresValidationGate;
+  ordresValidationInFlight = new Promise(resolve => { releaseOrdresValidationGate = resolve; });
+  try {
+    await validateOrdresImpl();
+  } finally {
+    ordresValidationInFlight = null;
+    releaseOrdresValidationGate();
+  }
+}
+
+async function validateOrdresImpl() {
   const btn = document.getElementById("ordresValidateBtn");
   const feedbackEl = document.getElementById("ordresValidateFeedback");
   const setFeedback = (text, kind) => {
@@ -17521,6 +17560,17 @@ function startCountdown() {
 // goToOrdresTab avec la journée originellement demandée une fois l'état
 // serveur à jour, au lieu du repli générique.
 async function refreshFromServerAndReenter(justWatchedRound, justWatchedCompetition, desiredOrdresRound, desiredOrdresCompetition) {
+  // Voir le grand commentaire d'ordresValidationInFlight (au-dessus de
+  // validateOrdres) : n'écrase jamais teamA pendant qu'une validation
+  // d'ordres est en cours de confirmation — on attend qu'elle se termine
+  // (succès ou échec) avant de recharger, plutôt que de risquer de perdre
+  // sa mutation locale. Le rechargement a quand même bien lieu juste
+  // après (jamais annulé), simplement séquencé au lieu d'être concurrent ;
+  // comme la validation est un aller-retour réseau normalement bref, ce
+  // léger report est sans conséquence pratique pour les 4 appelants
+  // (countdown, visibilitychange, goToLiveTab, goToOrdresTab), aucun
+  // desquels n'attend le retour de cette fonction.
+  if (ordresValidationInFlight) await ordresValidationInFlight;
   const loaded = await loadMyTeam();
   // Serveur injoignable : rien à faire de plus ici (pas de nouvelle
   // tentative automatique) — un rechargement manuel de la page suffira une

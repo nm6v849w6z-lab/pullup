@@ -1542,6 +1542,135 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
       run séquentiel, donc absent de son compte de 120) revérifié seul
       juste après, vert.
 
+13. **✅ CODE ÉCRIT, TESTÉ EN SANDBOX — pas encore livré sur le Mac — bug
+    Ordres/synchronisation : les ordres validés peuvent se perdre si un
+    rechargement automatique survient en concurrence** — investigation
+    demandée par l'utilisateur suite à un signalement Discord ("Diablue",
+    2026-09-24, ~19h50, à propos du match de CHAMPIONNAT de 19h) : « les
+    ordres que j'avais établis n'ont pas été pris en compte, alors que
+    c'était bien enregistré ». **On ne peut pas confirmer à 100 % que c'est
+    EXACTEMENT son cas** (pas de sa sauvegarde ni de logs serveur exacts
+    pour ce match précis), mais l'investigation a identifié un mécanisme
+    réel et plausible, désormais corrigé.
+
+    **Root cause** : `refreshFromServerAndReenter()` (moteurbasket3.html)
+    remplace ENTIÈREMENT l'objet global `teamA` par un objet fraîchement
+    rechargé depuis le serveur (`teamA = loaded.team;`), et peut se
+    déclencher À TOUT MOMENT — countdown (`startCountdown`/`tick`), retour
+    d'onglet (`visibilitychange`), navigation vers Live/Ordres
+    (`goToLiveTab`/`goToOrdresTab`) — y compris PENDANT qu'une
+    `validateOrdres()` est en train de confirmer une validation auprès du
+    serveur (journée immédiate : POST `/api/tactics` + `/api/lineup` ;
+    journée future : POST `/api/plan`). Si ce remplacement survient alors
+    que la validation vient tout juste d'aboutir localement (ou pendant
+    l'attente réseau elle-même), le GET `/api/save` du rechargement peut
+    être traité par le serveur avant que la validation n'ait fini d'y être
+    persistée (ou sa réponse simplement traitée localement après coup) : le
+    remplacement écrase alors `teamA` avec un instantané qui ne reflète pas
+    encore la validation — perdue silencieusement, sans erreur visible pour
+    le joueur. Un manager qui valide ses ordres juste avant/au moment du
+    coup d'envoi (exactement le cas du match de 19h de Diablue) se trouve
+    précisément dans la fenêtre où le countdown peut déclencher ce
+    rechargement en concurrence avec sa validation.
+
+    **Découvert en creusant `ordres_validate_without_edit_test.js`**, qui
+    échouait de façon répétable depuis plusieurs sessions (voir l'ancienne
+    entrée "Repères techniques" ci-dessous, retirée) : sa partie "LIGUE
+    PARTAGÉE" utilisait l'horloge RÉELLE du navigateur jsdom (jamais
+    patchée) alors que l'horloge SERVEUR de test est fixée dans le passé
+    (`T0`) — un décalage qui grandit chaque jour où le test tourne. Ce
+    décalage déclenchait un `refreshFromServerAndReenter()` PARASITE dès le
+    chargement initial de la page (avant même que le test n'agisse), qui
+    concourait avec la validation faite par le test juste après — exposant
+    par accident le vrai bug de concurrence ci-dessus. **Correctif de
+    test** (bug de test réel — horloges désynchronisées — pas un simple
+    contournement) : `patchDateNow(win, () => T0)` appliqué via
+    `extraBeforeParse` d'`openGame()` (donc AVANT que le moindre script de
+    la page ne s'exécute — l'appliquer seulement APRÈS `openGame()`, comme
+    fait initialement, arrive trop tard : le premier tick() synchrone du
+    countdown a déjà eu lieu avec l'horloge réelle pendant le chargement).
+    La partie "SOLO" du même test a été vérifiée non concernée : elle
+    utilise `startTestServer()` sans `nowFn` (horloge serveur réelle par
+    défaut), donc déjà cohérente avec l'horloge client réelle — confirmé,
+    pas juste supposé.
+
+    **Correctif retenu** (le plus ciblé/le moins risqué parmi les pistes
+    évaluées, voir ci-dessous pourquoi) : `ordresValidationInFlight`, une
+    promesse posée au tout début de CHAQUE appel à `validateOrdres()`
+    (avant le moindre `await`, donc sans fenêtre de course à la pose) et
+    résolue dans son `finally` (succès ET échec confondus, pour ne jamais
+    bloquer indéfiniment un rechargement si la validation échoue).
+    `refreshFromServerAndReenter()` l'attend tout au début, avant même
+    d'appeler `loadMyTeam()` — ça SÉQUENCE les deux au lieu de les laisser
+    courir en concurrence : le rechargement a TOUJOURS lieu (jamais annulé
+    ni sauté), simplement reporté jusqu'à ce que la validation en cours
+    soit entièrement terminée (réseau ET mutation locale). Une fois le
+    rechargement autorisé à continuer, le serveur a nécessairement déjà
+    traité la validation (le POST a reçu sa réponse 200 avant que le
+    `finally` ne libère la promesse), donc l'état qu'il renvoie la reflète
+    déjà — aucun risque de la perdre par un remplacement de `teamA` fondé
+    sur un instantané antérieur. Couvre les DEUX branches de
+    `validateOrdres()` (journée immédiate ET journée future) sans les
+    distinguer : le point d'étranglement est dans `refreshFromServerAndReenter()`,
+    un seul endroit, plutôt que de dupliquer une garde dans chacun des 4
+    appelants de cette fonction. `validateOrdres()` elle-même a été
+    minimalement redécoupée (renommée `validateOrdresImpl`, appelée depuis
+    un nouveau `validateOrdres()` qui pose/lève la garde) — AUCUN de ses 4
+    appelants existants n'attend son retour (déjà "fire-and-forget"),
+    aucun changement de comportement pour eux.
+
+    **Pistes envisagées et écartées** : un verrou "skip ce tick" dans
+    `startCountdown()` seul aurait laissé passer les 3 AUTRES appelants de
+    `refreshFromServerAndReenter()` (visibilitychange, goToLiveTab,
+    goToOrdresTab) sans protection, et aurait pu faire "sauter" un
+    rechargement légitime plutôt que de le reporter (risque de régression
+    sur les scénarios déjà fragiles que `refreshFromServerAndReenter()`
+    gère — direct qui vient de se terminer, rattrapage après absence,
+    voir ses 4 appelants et leurs commentaires) ; le point d'étranglement
+    unique dans `refreshFromServerAndReenter()` évite les deux problèmes.
+
+    **Fichiers touchés** :
+    - `moteurbasket3.html` : `ordresValidationInFlight` +
+      `validateOrdres()`/`validateOrdresImpl()` (redécoupage), garde dans
+      `refreshFromServerAndReenter()`.
+    - `ordres_validate_without_edit_test.js` : `patchDateNow` via
+      `extraBeforeParse` sur les DEUX `openGame()` de la partie "LIGUE
+      PARTAGÉE" (session principale et session de vérification indépendante
+      — sans quoi cette seconde fenêtre déclenchait elle aussi un
+      rechargement parasite en tâche de fond après la fermeture du
+      serveur, bruit inoffensif pour l'assertion mais évitable).
+    - Nouveau `ordres_validate_concurrent_refresh_test.js` : reproduit
+      EXPLICITEMENT la concurrence (plutôt que de dépendre d'une vraie
+      course réseau non déterministe) — appelle `validateOrdres()` puis,
+      dans le même tour de boucle d'événements (avant le moindre `await`
+      résolu), `refreshFromServerAndReenter()`, pour la journée IMMÉDIATE
+      (scénario le plus proche du cas de Diablue) ET la journée FUTURE.
+      Instrumente `window.fetch` pour vérifier, dans l'ordre réel des
+      requêtes réseau, que le GET `/api/save` du rechargement ne démarre
+      JAMAIS avant que les requêtes de validation n'aient reçu leur
+      réponse — la garantie structurelle du correctif, pas seulement l'état
+      final. **Vérifié activement régressif sans le correctif** : la ligne
+      de garde retirée temporairement (`git` absent de ce dépôt, retrait/
+      restauration manuels du fichier) fait échouer ce nouveau test de
+      façon reproductible (`ordresValidatedRound` perdu, GET `/api/save`
+      démarré avant la fin de `/api/lineup`), confirmant qu'il détecterait
+      une régression future.
+
+    **Tests** : `ordres_validate_without_edit_test.js` passe désormais
+    (les deux parties, SOLO et LIGUE PARTAGÉE) — n'est PLUS un échec
+    "attendu". `ordres_validate_concurrent_refresh_test.js` (nouveau) passe.
+    Suite complète (`run_final.sh`, 123 fichiers avec le nouveau test,
+    séquentiel) relancée intégralement : **123 passent/0 échec** — y
+    compris tous les tests historiquement flaky de la liste ci-dessous
+    (aucun n'a échoué sur cette passe, coup de chance de timing, pas une
+    preuve qu'ils ne sont plus flaky).
+
+    **Reste à faire** : livrer sur le Mac (comme tout le reste de ce
+    fichier) ; pas de moyen de confirmer avec certitude que c'est bien CE
+    QUI est arrivé à Diablue sans sa sauvegarde/les logs serveur exacts de
+    ce match précis — à garder à l'esprit s'il resignale un cas similaire
+    après ce correctif (chercher alors une AUTRE cause).
+
 ---
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)
@@ -1573,13 +1702,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   après les 3 chantiers de la session — vu échouer une fois sur la suite
   complète, confirmé passant seul, test de simulation probabiliste sans
   rapport avec l'un des 3 chantiers).
-- **`ordres_validate_without_edit_test.js` échoue de façon RÉPÉTABLE**
-  (pas flaky, pas causé par les sessions récentes) : en ligue partagée,
-  valider un plan sans édition préalable ne l'enregistre pas localement
-  tout de suite (message du test : "BUG NON CORRIGÉ"). La partie "SOLO" du
-  même test passe. Semble être un bug de longue date déjà connu du code
-  (test-TODO existant). À creuser lors d'une session dédiée aux Ordres, pas
-  traité jusqu'ici.
+- **`ordres_validate_without_edit_test.js` échouait de façon RÉPÉTABLE,
+  CORRIGÉ (voir point 13 ci-dessus)** : ce n'était pas le bug Ordres qu'il
+  semblait signaler — c'était un bug de TEST (horloge client jsdom jamais
+  patchée dans la partie "LIGUE PARTAGÉE", désynchronisée de l'horloge
+  serveur mockée), qui déclenchait par accident un rechargement parasite
+  exposant un VRAI bug de concurrence dans `refreshFromServerAndReenter()`
+  (peut écraser `teamA` pendant qu'une validation d'ordres est en cours).
+  Les deux sont corrigés. Ne plus lister ce test comme échec attendu — un
+  nouvel échec ici serait désormais une vraie régression.
 - **Lancer la suite de tests avec trop de jobs en parallèle cause de faux
   échecs** : `end_to_end_test.js`/`visibility_refresh_test.js` (minuteurs
   réels sous charge CPU) et `persistence_test.js`/`promotion_test.js`

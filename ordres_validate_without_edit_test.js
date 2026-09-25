@@ -10,7 +10,7 @@
 // ET la ligue partagée (round-trip serveur réel), les deux chemins de code
 // distincts dans validateOrdres().
 const fs = require("fs");
-const { startTestServer, openGame, flush, tmpMultiSavePath } = require("./test_helpers.js");
+const { startTestServer, openGame, flush, tmpMultiSavePath, patchDateNow } = require("./test_helpers.js");
 const Engine = require("./engine.js");
 const { generateMultiManagerLeague } = Engine;
 const Calendar = require("./server/calendar.js");
@@ -74,7 +74,33 @@ function calendarBtnForRound(doc, round) {
   const { server, multiSavePath, baseUrl } = await startTestServer(() => T0);
   await store.saveMultiLeague(league, multiSavePath);
 
-  const dom = await openGame(html, `${baseUrl}?m=${manager.managerLinkToken}`);
+  // Bug de TEST corrigé (horloges désynchronisées, pas un bug du jeu) :
+  // startTestServer(() => T0) fixe l'horloge SERVEUR dans le passé (T0 =
+  // 2026-09-22), mais sans patcher l'horloge CLIENT jsdom, celle-ci reste
+  // la vraie horloge de la machine qui fait tourner les tests — largement
+  // postérieure à T0 (et cet écart ne fait que grandir avec le temps).
+  // scheduledTimeForCurrentMatch() pour le round 0 (immédiat) renvoie donc
+  // un horaire déjà dépassé du point de vue du client : startCountdown()
+  // (déclenché dès le chargement initial de la page, DANS initGame(), donc
+  // AVANT même que le code du test n'ait la main) exécute tick() une fois
+  // de façon SYNCHRONE dès son démarrage, voit
+  // `scheduledAt - Date.now() <= 0` et déclenche aussitôt
+  // refreshFromServerAndReenter() en tâche de fond (fetch asynchrone,
+  // jamais attendu par son appelant) — qui recharge teamA depuis le
+  // serveur en concurrence avec la validation plus bas, exactement le
+  // mécanisme identifié comme root cause plausible du signalement Discord
+  // de Diablue (voir DEV_NOTES.md). Patcher l'horloge APRÈS openGame()
+  // (une fois la page déjà chargée) arrive TROP TARD : ce premier tick()
+  // synchrone s'est déjà exécuté avec la vraie horloge pendant le
+  // chargement. Il faut donc patcher `window.Date` AVANT que le moindre
+  // script de la page ne s'exécute, via `extraBeforeParse` (3e argument
+  // d'openGame, voir test_helpers.js) — même précaution que
+  // visibility_refresh_test.js, appliquée assez tôt cette fois pour
+  // couvrir aussi le chargement initial, pas seulement les vérifications
+  // faites après coup par le test.
+  const dom = await openGame(html, `${baseUrl}?m=${manager.managerLinkToken}`, (win) => {
+    patchDateNow(win, () => T0);
+  });
   const win = dom.window;
   const doc = win.document;
 
@@ -101,7 +127,18 @@ function calendarBtnForRound(doc, round) {
 
   // Vérifie aussi que c'est réellement persisté côté serveur (pas juste
   // localement) : rouvre une session indépendante sur le même serveur.
-  const dom2 = await openGame(html, `${baseUrl}?m=${manager.managerLinkToken}`);
+  // Même patch d'horloge que ci-dessus (et pour la même raison) : sans
+  // lui, cette seconde fenêtre déclenche elle aussi un
+  // refreshFromServerAndReenter() de fond dès son chargement (horloge
+  // réelle vs calendrier calé sur T0), qui continue de tourner en tâche
+  // de fond après la fermeture de `server` plus bas et pollue la sortie du
+  // test avec des erreurs réseau sans rapport (ECONNREFUSED) — inoffensif
+  // pour l'assertion elle-même (lue avant que ce fetch n'ait une chance
+  // d'aboutir) mais un bruit évitable, et le même mécanisme de fond que
+  // celui documenté plus haut.
+  const dom2 = await openGame(html, `${baseUrl}?m=${manager.managerLinkToken}`, (win) => {
+    patchDateNow(win, () => T0);
+  });
   const hasPlanReloaded = dom2.window.eval(`teamA.hasPlanForRound(${futureRound})`);
   console.log(`LIGUE PARTAGÉE - hasPlanForRound(${futureRound}) après réouverture d'une session indépendante : ${hasPlanReloaded}`);
   if (!hasPlanReloaded) {
