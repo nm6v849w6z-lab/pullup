@@ -63,7 +63,8 @@ function setTraining(doc, skill) {
   const skillSel = doc.getElementById("trainingSkillSelect");
   skillSel.value = skill;
   skillSel.onchange();
-  const posSel = doc.getElementById("trainingPositionsSelect");
+  // Postes : boutons à bascule (refonte 2026-09-25) ; changer de
+  // compétence repart déjà d'UN seul poste, le plus favorable.
   // Un seul poste (le plus favorable à cette compétence, TOUJOURS la
   // première option — voir trainingPositionOptionsForProgram) : c'est
   // délibérément le réglage SANS dilution (voir
@@ -75,8 +76,8 @@ function setTraining(doc, skill) {
   // qu'on cherche à éliminer (voir sumTrainedProgress ci-dessous, qui règle
   // le vrai problème — le plafond individuel d'UN joueur sur UNE seule
   // caractéristique — sans avoir besoin de diluer l'entraînement).
-  posSel.selectedIndex = 0;
-  posSel.onchange();
+  const on = [...doc.querySelectorAll("#trainingPositionsToggles .tp-pos[aria-pressed='true']")];
+  if (on.length !== 1) throw new Error("❌ setTraining : un seul poste devrait être sélectionné.");
 }
 
 // Somme, sur les joueurs du/des poste(s) réellement entraîné(s)

@@ -78,9 +78,10 @@ clickTab(doc, "entrainement");
 const skillSel = doc.getElementById("trainingSkillSelect");
 skillSel.value = "threePoint";
 skillSel.onchange();
-const posSel = doc.getElementById("trainingPositionsSelect");
-posSel.selectedIndex = 0;
-posSel.onchange();
+// Postes : boutons à bascule depuis la refonte de la page (2026-09-25) ;
+// changer de compétence repart déjà du meilleur poste seul.
+const posBtns = [...doc.querySelectorAll("#trainingPositionsToggles .tp-pos")];
+if (posBtns.length !== 5 || posBtns.filter(b => b.getAttribute("aria-pressed") === "true").length !== 1) throw new Error("❌ Après le choix de la compétence, un seul poste devrait être sélectionné parmi 5 boutons.");
 
 await flush(dom);
 let saved = readRawSave(savePath);

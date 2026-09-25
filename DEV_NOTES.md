@@ -20,6 +20,25 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de la page Entraînement (maquette
+  canevas "Hoop Manager – Entraînement", claude.ai BUWU3iuMd1iBXVGRXDnCfL)**
+  — retour utilisateur : "code la page". En-tête « ENTRAÎNEMENT / Semaine
+  N » ; bilan de la semaine dernière groupé par joueur (repliable, stats
+  classées Fondamentaux/Physique/Mental en tuiles avant → après +delta) ;
+  deux cartes côte à côte Fondamentaux (compétence + 5 boutons de poste
+  à bascule au lieu du select de combinaisons, ligne de dilution colorée)
+  et Collectif (focus + aspect travaillé + jauge « Maîtrise actuelle ») ;
+  carte « Qui profite des fondamentaux cette semaine » (légende
+  plein/partiel/aucun, barre empilée, tableau poste/joueur/temps au poste
+  sur 30 min/rendement). Fichiers : moteurbasket3.html (#trainingSection,
+  showTrainingSection & co, CSS .tp-*), tests end_to_end_test.js,
+  persistence_test.js, training_progression_test.js (select de postes →
+  boutons). Statut : code fait sur le Mac ; tests verts sur le Mac
+  (end_to_end, persistence, trained_tactic_dropdown,
+  attr_color_scheme_everywhere, tabs) ; rendu vérifié en capture
+  Playwright desktop 1440 + mobile 390. training_progression_test.js
+  échoue AUSSI sans ce chantier (scénario "débutants sans minute",
+  aléatoire, déjà listé flaky) — pas une régression. Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Humeur des supporters : refonte d'après la
   maquette canevas "Hoop Manager — Humeur des supporters"** (canvas Design
   claude.ai VNq4GkKK3WqbkGDYMGFjnh) — retour utilisateur : "code la page

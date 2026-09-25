@@ -2786,74 +2786,141 @@
   .tto-value{font-size:11px; min-width:20px; text-align:right;}
   .training-dilution-note{font-size:12px; color:var(--ink-dim); margin-top:2px;}
   .training-dilution-note b{color:var(--amber);}
-  .training-list{
-    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-    max-height:420px; overflow-y:auto;
+  /* Refonte de la page Entraînement (retour utilisateur, 2026-09-25 : "code
+     la page", maquette canevas "Hoop Manager – Entraînement") : en-tête
+     "Semaine N", bilan repliable groupé par joueur, cartes Fondamentaux /
+     Collectif côte à côte, carte "Qui profite des fondamentaux" en tableau.
+     Remplace l'ancien habillage liste (.training-list à scroll interne,
+     .last-training-report, lignes .training-row à 3 colonnes). */
+  #trainingSection .tp-page{display:flex; flex-direction:column; gap:20px;}
+  .tp-head{display:flex; flex-direction:column; gap:4px;}
+  .tp-eyebrow{font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--amber);}
+  .tp-title{margin:0; font-size:36px; font-weight:800; line-height:1.05; color:var(--ink);}
+  .tp-card{background:var(--panel); border:1px solid var(--line); border-radius:14px;}
+  .tp-sub{font-size:13px; color:var(--ink-dim);}
+  .tp-cols{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:start;}
+  .tp-config{padding:20px; display:flex; flex-direction:column; gap:8px;}
+  .tp-config .field-label{margin:8px 0 0;}
+  .tp-config select{margin:0; width:100%; min-height:44px;}
+  .tp-card-head{display:flex; align-items:center; gap:12px; margin-bottom:4px;}
+  .tp-card-head h3{margin:0; font-size:19px; font-weight:800; color:var(--ink);}
+  .tp-icon{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:none;}
+  .tp-icon-fond{background:rgba(240,162,60,.14); color:var(--amber);}
+  .tp-icon-coll{background:rgba(51,180,161,.14); color:var(--ok);}
+  .tp-pos-grid{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px;}
+  .tp-pos{
+    min-height:58px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    padding:6px 4px; border-radius:10px; background:var(--panel-2); border:1.5px solid var(--line);
+    color:var(--ink-dim); cursor:pointer; font:inherit;
   }
-  /* Retour utilisateur (2026-09) : "au dessus de ces temps de jeu, il
-     faudrait ajouter un historique des ups et downs de la derniere semaine
-     d'entrainement" (voir Team.lastTrainingReport/renderLastTrainingReport).
-     Même famille visuelle que .training-list ci-dessus (scroll interne de
-     secours si le bilan est long), avec un titre propre au lieu de
-     réutiliser .training-config déjà pris par la configuration de la
-     semaine EN COURS juste en dessous. */
-  .last-training-report{
-    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-    margin-bottom:14px; max-height:320px; overflow-y:auto;
+  .tp-pos:hover{border-color:var(--ink-faint);}
+  .tp-pos.on{background:rgba(240,162,60,.16); border-color:var(--amber); color:var(--amber);}
+  .tp-pos:disabled{opacity:.5; cursor:default;}
+  .tp-pos:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  .tp-pos-code{font-size:18px; font-weight:800; line-height:1;}
+  .tp-pos-name{font-size:10.5px; line-height:1.2; text-align:center; opacity:.85;}
+  .tp-dilution{display:flex; align-items:center; gap:8px; font-size:13px; margin-top:2px;}
+  .tp-dot{width:8px; height:8px; border-radius:50%; background:currentColor; flex:none;}
+  .tp-dilution-full{color:var(--ok);}
+  .tp-dilution-diluted{color:var(--amber);}
+  .tp-dilution-none{color:var(--danger);}
+  #trainingSection .trained-tactics-picker{margin-top:4px; padding-top:0; border-top:none;}
+  #trainingSection .trained-tactics-picker .field-label{margin:8px 0 8px;}
+  .tp-mastery{display:flex; flex-direction:column; gap:6px; padding:12px 14px; background:var(--panel-2); border-radius:10px; margin-bottom:6px;}
+  .tp-mastery-row{display:flex; justify-content:space-between; gap:10px; font-size:13px; color:var(--ink-dim);}
+  .tp-mastery-row b{font-variant-numeric:tabular-nums;}
+  .tp-mastery-bar{height:8px; border-radius:999px; background:var(--line); overflow:hidden;}
+  .tp-mastery-bar > div{height:100%; border-radius:999px;}
+  /* Bilan de la semaine dernière */
+  .tp-report-head{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line-soft);}
+  .tp-report-title{display:flex; align-items:center; gap:10px;}
+  .tp-report-head h3{margin:0; font-size:15px; font-weight:700; color:var(--ink);}
+  .tp-chip{font-size:12px; font-weight:600; color:var(--ink-dim); padding:3px 10px; border-radius:999px; background:var(--panel-2);}
+  .tp-report-body{padding:14px 20px 18px; display:flex; flex-direction:column; gap:10px;}
+  .tp-rp{border:1px solid var(--line-soft); border-radius:12px; background:var(--bg);}
+  .tp-rp-toggle{
+    width:100%; min-height:56px; display:flex; align-items:center; gap:12px; padding:10px 14px;
+    background:none; border:none; color:var(--ink); cursor:pointer; text-align:left; font:inherit; border-radius:12px;
   }
-  .last-training-report h4{
-    margin:0; padding:10px 14px; font-size:13px; color:var(--ink-dim);
-    border-bottom:1px solid var(--line-soft);
+  .tp-rp-toggle:focus-visible{outline:2px solid var(--amber); outline-offset:-2px;}
+  .tp-avatar{width:36px; height:36px; border-radius:50%; background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:var(--ink-dim); flex:none;}
+  .tp-rp-name{font-weight:700; font-size:15px;}
+  .tp-pill{font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; white-space:nowrap;}
+  .tp-pill-up{color:var(--ok); background:rgba(51,180,161,.12);}
+  .tp-pill-down{color:var(--danger); background:rgba(226,105,79,.12);}
+  .tp-grow{flex:1 1 auto;}
+  .tp-rp-action{font-size:13px; color:var(--ink-dim); white-space:nowrap;}
+  .tp-chevron{color:var(--ink-dim); transition:transform .15s; flex:none;}
+  .tp-chevron.open{transform:rotate(180deg);}
+  .tp-rp-detail{padding:2px 14px 16px 62px; display:flex; flex-direction:column; gap:12px;}
+  .tp-rp-group{display:flex; flex-direction:column; gap:6px;}
+  .tp-rp-group-name{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint);}
+  .tp-rp-tiles{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;}
+  .tp-tile{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 12px; background:var(--panel-2); border-radius:10px; font-size:13.5px;}
+  .tp-tile-label{color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .tp-tile-vals{display:flex; align-items:center; gap:7px; font-variant-numeric:tabular-nums; flex:none;}
+  .tp-tile-from{color:var(--ink-faint);}
+  .tp-tile-to{font-weight:700; color:var(--ink);}
+  .tp-tile-delta{font-size:12px; font-weight:700; min-width:22px; text-align:right;}
+  .tp-tile-delta.up{color:var(--ok);}
+  .tp-tile-delta.down{color:var(--danger);}
+  .tp-report-notes{border:1px solid var(--line-soft); border-radius:12px; overflow:hidden;}
+  #trainingSection .tp-report .training-empty{margin:4px 0;}
+  /* Qui profite des fondamentaux */
+  .tp-players{padding:20px; display:flex; flex-direction:column; gap:16px;}
+  .tp-players-head{display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;}
+  .tp-players-head h3{margin:0 0 4px; font-size:15px; font-weight:700; color:var(--ink);}
+  .tp-legend{display:flex; gap:16px; font-size:13px; color:var(--ink-dim); flex-wrap:wrap;}
+  .tp-legend > span{display:flex; align-items:center; gap:6px;}
+  .tp-legend b{color:var(--ink);}
+  .tp-sw{width:10px; height:10px; border-radius:3px; flex:none;}
+  .tp-stack{height:10px; display:flex; gap:3px; border-radius:999px; overflow:hidden;}
+  .tp-sw.full, .tp-seg.full{background:var(--ok);}
+  .tp-sw.partial, .tp-seg.partial{background:var(--amber);}
+  .tp-sw.none, .tp-seg.none{background:var(--line);}
+  #trainingSection .training-list{border:1px solid var(--line-soft); border-radius:12px; overflow:hidden;}
+  .tp-table-head, #trainingSection .training-row{
+    display:grid; grid-template-columns:48px minmax(0,2fr) minmax(0,3fr) 200px; gap:16px; align-items:center; padding:12px 16px;
   }
-  /* Retour utilisateur (2026-09) : "il y a un probleme d'alignement, regarde
-     la ligne de quentin lopez, c'est décalé avec le reste" : la 3e colonne
-     (.tr-status, le badge de droite) était en `auto`, or CHAQUE ligne est
-     son PROPRE conteneur grid (display:grid posé sur .training-row, pas un
-     seul grid partagé par toute la liste), donc l'`auto` se calculait
-     indépendamment ligne par ligne, sur le texte du badge de CETTE
-     ligne-là. Un texte de badge plus court (ex. "✓ Jeu intérieur" sans son
-     "(100%)", masqué au-delà de 90%, voir buildTrainingRow) rétrécissait sa
-     propre 3e colonne, ce qui élargissait d'autant la 1re colonne (1fr,
-     élastique) juste à côté, décalant la colonne du milieu (minutes,
-     170px fixe) par rapport aux lignes voisines. Largeur fixe (assez large
-     pour le plus long texte de badge possible, "Défense polyvalente (0%,
-     n'a pas joué)") au lieu de `auto` : les 3 colonnes ont désormais
-     exactement la même largeur sur toutes les lignes, quel que soit le
-     texte du badge. */
-  .training-row{
-    display:grid; grid-template-columns:1fr 170px 230px; gap:14px; align-items:center;
-    padding:10px 14px; border-bottom:1px solid var(--line-soft);
-  }
-  .training-row:last-child{border-bottom:none;}
-  .training-row.will-train{background:rgba(51,180,161,.06);}
-  .tr-name{font-size:13px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .tp-table-head{padding:9px 16px; background:var(--panel-2); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);}
+  .tp-table-head span:last-child{text-align:right;}
+  #trainingSection .training-row{border-top:1px solid var(--line-soft);}
   .tr-pos-badge{
-    font-size:10px; font-weight:700; letter-spacing:.3px; text-transform:uppercase;
-    color:var(--ink-dim); background:var(--panel-2); border:1px solid var(--line);
-    border-radius:4px; padding:2px 6px; flex:none;
+    width:36px; height:26px; border-radius:6px; background:var(--panel-2); display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:12.5px; color:var(--ink-dim);
   }
-  .tr-meta{font-size:11px; color:var(--ink-faint); font-weight:400;}
-  .tr-minutes-wrap{display:flex; flex-direction:column; gap:4px; align-items:flex-end;}
-  .tr-minutes{font-size:11px; text-align:right; white-space:nowrap; color:var(--ink-faint);}
-  .tr-minutes.ok{color:var(--ok);}
-  .tr-minutes.mid{color:var(--amber);}
-  .tr-minutes.low{color:var(--danger);}
-  .tr-minutes-bar{width:100%; height:4px; border-radius:3px; background:var(--panel-2); overflow:hidden;}
-  .tr-minutes-bar-fill{height:100%; border-radius:3px;}
-  .tr-minutes-bar-fill.ok{background:var(--ok);}
-  .tr-minutes-bar-fill.mid{background:var(--amber);}
-  .tr-minutes-bar-fill.low{background:var(--danger);}
-  .tr-status{
-    font-size:11px; text-align:center; white-space:nowrap; font-weight:700;
-    padding:3px 9px; border-radius:20px; justify-self:end;
+  .tr-name{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .tr-player{font-weight:700; font-size:14.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .tr-meta{font-size:12.5px; color:var(--ink-dim);}
+  .tr-minutes-wrap{display:flex; align-items:center; gap:12px;}
+  .tr-minutes-bar{flex:1 1 auto; height:8px; border-radius:999px; background:var(--line); overflow:hidden;}
+  .tr-minutes-bar-fill{height:100%; border-radius:999px; background:var(--ink-faint);}
+  .tier-full .tr-minutes-bar-fill{background:var(--ok);}
+  .tier-partial .tr-minutes-bar-fill{background:var(--amber);}
+  .tr-minutes{font-size:13px; color:var(--ink-dim); white-space:nowrap; min-width:88px; text-align:right; font-variant-numeric:tabular-nums;}
+  .tr-minutes b{color:var(--ink);}
+  .tr-status{display:flex; align-items:center; justify-content:flex-end; gap:10px; min-width:0;}
+  .tr-skill{font-size:13px; color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .tr-eff{font-size:18px; font-weight:800; color:var(--amber); min-width:52px; text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .tier-full .tr-eff{color:var(--ok);}
+  .tier-none .tr-eff{color:var(--ink-faint);}
+  .tp-foot{font-size:13px; color:var(--ink-faint);}
+  .tp-foot:empty{display:none;}
+  #trainingSection .training-empty{padding:18px; margin:0;}
+  @media(max-width:900px){
+    .tp-cols{grid-template-columns:1fr;}
   }
-  .tr-status.status-yes{color:var(--ok); background:rgba(51,180,161,.14);}
-  .tr-status.status-no{color:var(--ink-faint); font-weight:600; background:var(--panel-2);}
   @media(max-width:680px){
-    .training-row{grid-template-columns:1fr; text-align:left;}
-    .tr-minutes-wrap{align-items:flex-start;}
-    .tr-minutes{text-align:left;}
-    .tr-status{justify-self:start;}
+    .tp-title{font-size:30px;}
+    .tp-pos-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .tp-table-head{display:none;}
+    #trainingSection .training-row{grid-template-columns:40px minmax(0,1fr); gap:10px 12px;}
+    .tr-minutes-wrap, .tr-status{grid-column:1 / -1;}
+    .tr-status{justify-content:flex-start;}
+    .tp-rp-detail{padding-left:14px;}
+    .tp-rp-tiles{grid-template-columns:1fr;}
+    .tp-rp-action{display:none;}
+    .tp-report-head{flex-wrap:wrap;}
   }
   #trainingReport{margin-top:16px;}
   .training-empty{font-size:13px; color:var(--ink-dim); text-align:center;}
@@ -4073,59 +4140,70 @@
   </div>
 
   <div id="trainingSection" class="hidden">
-    <div class="section">
-      <h2 id="trainingTitle">Semaine d'entraînement</h2>
+    <!-- Refonte de la page (retour utilisateur, 2026-09-25 : "code la page",
+         maquette canevas "Hoop Manager – Entraînement") : en-tête "Semaine N",
+         bilan de la semaine dernière groupé par joueur (repliable), deux
+         cartes côte à côte Fondamentaux / Collectif, puis la carte "Qui
+         profite des fondamentaux cette semaine" (légende plein/partiel/aucun,
+         barre empilée, tableau des joueurs ayant joué au(x) poste(s)
+         entraîné(s)). Ordre voulu inchangé sur le fond (retours 2026-09) :
+         bilan, réglages, joueurs concernés. -->
+    <div class="section tp-page">
+      <div class="tp-head">
+        <span class="tp-eyebrow">Entraînement</span>
+        <h2 id="trainingTitle" class="tp-title">Semaine</h2>
+      </div>
 
-      <!-- Retour utilisateur (2026-09) : "au dessus de ces temps de jeu, il
-           faudrait ajouter un historique des ups et downs de la derniere
-           semaine d'entrainement" : bilan de la DERNIÈRE semaine déjà
-           résolue (voir Team.lastTrainingReport/renderLastTrainingReport),
-           avant la configuration de la semaine EN COURS ci-dessous. Vide
-           (aucun contenu) tant qu'aucune semaine n'a encore été jouée. -->
       <div id="lastTrainingReportHolder"></div>
 
-      <div class="training-config">
-        <h3 class="training-config-title">Entraînement des fondamentaux</h3>
-        <div class="field-label">Compétence entraînée cette semaine</div>
-        <select id="trainingSkillSelect"></select>
-        <div class="field-label">Postes concernés</div>
-        <select id="trainingPositionsSelect"></select>
-        <div class="training-dilution-note" id="trainingDilutionNote"></div>
+      <div class="tp-cols">
+        <section class="tp-card tp-config" aria-labelledby="tpFondTitle">
+          <div class="tp-card-head">
+            <span class="tp-icon tp-icon-fond" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"></path></svg></span>
+            <div>
+              <h3 id="tpFondTitle">Fondamentaux</h3>
+              <span class="tp-sub">Travail individuel par poste</span>
+            </div>
+          </div>
+          <label class="field-label" for="trainingSkillSelect">Compétence travaillée</label>
+          <select id="trainingSkillSelect"></select>
+          <span class="field-label" id="tpPosLabel">Postes concernés</span>
+          <div id="trainingPositionsToggles" class="tp-pos-grid" role="group" aria-labelledby="tpPosLabel"></div>
+          <div class="training-dilution-note tp-dilution" id="trainingDilutionNote"></div>
+        </section>
+
+        <section class="tp-card tp-config" id="collectiveTrainingConfig" aria-labelledby="tpCollTitle">
+          <div class="tp-card-head">
+            <span class="tp-icon tp-icon-coll" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="7" r="2.5"></circle><circle cx="18" cy="7" r="2.5"></circle><circle cx="12" cy="17" r="2.5"></circle><path d="M8 8.5l2.5 6M16 8.5l-2.5 6M8.5 7h7"></path></svg></span>
+            <div>
+              <h3 id="tpCollTitle">Collectif</h3>
+              <span class="tp-sub">Focus d'équipe de la semaine</span>
+            </div>
+          </div>
+          <label class="field-label" for="collectiveTrainingSelect">Focus collectif</label>
+          <select id="collectiveTrainingSelect"></select>
+          <div class="training-dilution-note" id="collectiveTrainingNote"></div>
+          <!-- Sous-panneau affiché UNIQUEMENT quand collectiveTraining ===
+               "tactique" (voir renderTrainedTacticsPicker) : aspect travaillé
+               (menu avec jauges) + jauge "Maîtrise actuelle". -->
+          <div id="trainedTacticsPicker" class="trained-tactics-picker hidden"></div>
+        </section>
       </div>
-      <!-- Retour utilisateur (2026-09) : "en dessous les joueurs (en ne
-           mettant que les joueurs qui ont pris du temps de jeu et qui
-           seront entrainés [...] et ensuite tu mets l'entrainement
-           collectif" : ordre voulu = individuel, puis la liste des joueurs
-           entraînés, puis l'entraînement collectif tout en bas (voir
-           renderTrainingList pour le filtre "au moins 1min de jeu sur le
-           poste entraîné"). -->
-      <div id="trainingSummary"></div>
-      <div class="training-list" id="trainingList"></div>
-      <!-- Retour utilisateur (2026-09) : "je souhaite mettre en place
-           maintenant l'entrainement collectif [...] soit bosser une
-           nouvelle tactique [...] soit bosser la récupération" : réglage
-           SÉPARÉ de l'entraînement individuel ci-dessus (voir Team.
-           collectiveTraining), les deux tournent en même temps. -->
-      <div class="training-config collective-training-config" id="collectiveTrainingConfig">
-        <h3 class="training-config-title">Entraînement collectif</h3>
-        <div class="field-label">Focus collectif cette semaine</div>
-        <select id="collectiveTrainingSelect"></select>
-        <div class="training-dilution-note" id="collectiveTrainingNote"></div>
-        <!-- Retour utilisateur (2026-09) : "il faut effectivement choisir ce
-             qui est bossé comme tactique si c'est ce qui est choisi (exemple
-             zone extérieure)" : sous-panneau affiché UNIQUEMENT quand
-             collectiveTraining === "tactique" (voir
-             renderTrainedTacticsPicker), écrit dans Team.trainedTactics. -->
-        <div id="trainedTacticsPicker" class="trained-tactics-picker hidden"></div>
-        <!-- Les jauges de connaissance tactique PAR OPTION (18 au total,
-             une section dédiée "Connaissance tactique de l'équipe" ici même)
-             ont été RETIRÉES (retour utilisateur, 2026-09 : "pas mal le menu
-             déroulant, enleve ce qu'il y a en dessous") : elles sont
-             désormais intégrées DIRECTEMENT dans le menu déroulant
-             personnalisé ci-dessus (#trainedTacticsPicker, voir
-             renderTrainedTacticsPicker), qui rendait cette section
-             redondante. -->
-      </div>
+
+      <section class="tp-card tp-players" aria-labelledby="tpPlayTitle">
+        <div class="tp-players-head">
+          <div>
+            <h3 id="tpPlayTitle">Qui profite des fondamentaux cette semaine</h3>
+            <span class="tp-sub" id="tpPlaySub">Selon le temps de jeu au bon poste sur le cycle</span>
+          </div>
+          <div id="trainingSummary"></div>
+        </div>
+        <div id="trainingSummaryBar"></div>
+        <!-- Seuls les joueurs ayant au moins 1 min au(x) poste(s) entraîné(s)
+             sur le cycle apparaissent (voir renderTrainingList). -->
+        <div class="training-list" id="trainingList"></div>
+        <div class="tp-foot" id="trainingListFoot"></div>
+      </section>
     </div>
   </div>
 
@@ -25649,14 +25727,111 @@ function trainingRulesHtml() {
 // son rapport (voir Team.trainWeek), donc au moment où ce rapport est
 // affiché, teamA.week désigne déjà la semaine SUIVANTE (celle en cours de
 // configuration juste en dessous).
+// Groupes du bilan par joueur (refonte 2026-09-25) et état replié/déplié
+// de chaque joueur (le 1er est déplié par défaut à chaque nouvelle semaine).
+const TRAINING_REPORT_GROUPS = [
+  { name: "Fondamentaux", attrs: FUNDAMENTAL_ATTRS },
+  { name: "Physique", attrs: PHYSICAL_ATTRS },
+  { name: "Mental", attrs: MENTAL_ATTRS },
+];
+let trainingReportOpenKeys = null;
+let trainingReportOpenWeek = null;
 function renderLastTrainingReport() {
   const holder = document.getElementById("lastTrainingReportHolder");
   if (!holder) return;
   const report = teamA.lastTrainingReport;
   if (!report) { holder.innerHTML = ""; return; }
-  holder.innerHTML = `<div class="last-training-report">` +
-    `<h4>Bilan de la semaine dernière (semaine ${teamA.week - 1})</h4>` +
-    `${trainingReportHtml(report, { playersOnly: true })}</div>`;
+  // Refonte de la page (retour utilisateur, 2026-09-25 : "code la page") :
+  // bilan GROUPÉ PAR JOUEUR (une ligne repliable par joueur, pastille du
+  // nombre de progressions/baisses), le détail classé Fondamentaux /
+  // Physique / Mental en tuiles "avant → après +écart". Toujours rien de
+  // financier ici (retour 2026-09 : "il ne faut qu'apparaisse que ce qui est
+  // relatif aux up et down des joueurs") ; les notes de progression manquée
+  // (trainingReportNotesHtml) restent affichées en dessous.
+  const entries = Object.entries(report.players || {}).filter(([, e]) => e && (e.gains || []).length);
+  if (trainingReportOpenWeek !== teamA.week || !trainingReportOpenKeys) {
+    trainingReportOpenWeek = teamA.week;
+    trainingReportOpenKeys = new Set(entries.length ? [entries[0][0]] : []);
+  }
+  let body = "";
+  if (!entries.length) {
+    body = `<p class="training-empty">Pas de changement visible cette semaine, la progression est lente et se joue sur plusieurs semaines.</p>`;
+  }
+  entries.forEach(([key, e], idx) => {
+    const ups = e.gains.filter(g => g.after > g.before).length;
+    const downs = e.gains.length - ups;
+    const open = trainingReportOpenKeys.has(key);
+    const initials = String(e.name || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+    body += `<div class="tp-rp">` +
+      `<button type="button" class="tp-rp-toggle" data-report-idx="${idx}" aria-expanded="${open}">` +
+      `<span class="tp-avatar" aria-hidden="true">${escapeHtml(initials)}</span>` +
+      `<span class="tp-rp-name">${escapeHtml(e.name)}</span>` +
+      (ups ? `<span class="tp-pill tp-pill-up">${ups} progression${ups > 1 ? "s" : ""}</span>` : "") +
+      (downs ? `<span class="tp-pill tp-pill-down">${downs} baisse${downs > 1 ? "s" : ""}</span>` : "") +
+      `<span class="tp-grow"></span>` +
+      `<span class="tp-rp-action">${open ? "Réduire" : "Voir le détail"}</span>` +
+      `<svg class="tp-chevron${open ? " open" : ""}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>` +
+      `</button>`;
+    if (open) {
+      body += `<div class="tp-rp-detail">`;
+      const used = new Set();
+      const groups = TRAINING_REPORT_GROUPS.map(gr => ({ name: gr.name, gains: e.gains.filter(g => gr.attrs.includes(g.attr) && !used.has(g) && used.add(g)) }));
+      const rest = e.gains.filter(g => !used.has(g));
+      if (rest.length) groups.push({ name: "Autres", gains: rest });
+      groups.filter(gr => gr.gains.length).forEach(gr => {
+        body += `<div class="tp-rp-group"><span class="tp-rp-group-name">${gr.name}</span><div class="tp-rp-tiles">`;
+        gr.gains.forEach(g => {
+          const diff = g.after - g.before;
+          const label = TRAINING_LABELS[g.attr] || g.attr;
+          body += `<div class="tp-tile"><span class="tp-tile-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>` +
+            `<span class="tp-tile-vals"><span class="tp-tile-from">${g.before}</span>` +
+            `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-label="devient"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>` +
+            `<span class="tp-tile-to">${g.after}</span>` +
+            `<span class="tp-tile-delta ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : "−"}${Math.abs(diff)}</span></span></div>`;
+        });
+        body += `</div></div>`;
+      });
+      body += `</div>`;
+    }
+    body += `</div>`;
+  });
+  const notes = trainingReportNotesHtml(report);
+  if (notes) body += `<div class="tp-report-notes">${notes}</div>`;
+  holder.innerHTML = `<section class="tp-card tp-report" aria-labelledby="tpReportTitle">` +
+    `<div class="tp-report-head"><div class="tp-report-title"><h3 id="tpReportTitle">Bilan de la semaine dernière</h3>` +
+    `<span class="tp-chip">semaine ${teamA.week - 1}</span></div><span class="tp-sub">Groupé par joueur</span></div>` +
+    `<div class="tp-report-body">${body}</div></section>`;
+  holder.querySelectorAll(".tp-rp-toggle").forEach(btn => btn.addEventListener("click", () => {
+    const idx = Number(btn.dataset.reportIdx);
+    const key = entries[idx][0];
+    if (trainingReportOpenKeys.has(key)) trainingReportOpenKeys.delete(key);
+    else trainingReportOpenKeys.add(key);
+    renderLastTrainingReport();
+    const again = holder.querySelector(`.tp-rp-toggle[data-report-idx="${idx}"]`);
+    if (again) again.focus();
+  }));
+}
+
+// Notes expliquant une progression manquée (aucune minute au poste
+// entraîné, ou temps de jeu partiel) pour le bilan de la semaine : extrait
+// de trainingReportHtml (playersOnly) pour être réutilisé par la refonte de
+// renderLastTrainingReport (2026-09-25).
+function trainingReportNotesHtml(weekResult) {
+  const entries = Object.values(weekResult.players || {});
+  let html = "";
+  const trainedPositions = teamA.trainingPositions || [];
+  entries.forEach(e => {
+    if (!e.skill || !trainedPositions.includes(e.position)) return;
+    if (!e.posSelected) {
+      html += `<div class="gain-note">${escapeHtml(e.name)} (${POS_SHORT[e.position]}) : aucune minute enregistrée au poste entraîné sur les matchs de ce cycle (n'a pas encore joué avec ce poste dans l'équipe, ou est resté sur le banc), aucune progression pour lui cette semaine.</div>`;
+      return;
+    }
+    const pct = Math.round((e.attendanceFactor || 0) * 100);
+    if (pct >= 90) return; // quasiment plein temps, rien à signaler
+    const mins = Math.round(e.secondsPlayed / 60);
+    html += `<div class="gain-note">${escapeHtml(e.name)} (${POS_SHORT[e.position]}) : n'a joué que ${mins} min ce cycle sur ${Math.round(TRAINING_FULL_MATCH_SECONDS / 60)}, l'entraînement ne compte qu'à ${pct}% pour lui cette semaine.</div>`;
+  });
+  return html;
 }
 
 // renderTacticalKnowledgeTrainingGauges (18 jauges de connaissance tactique,
@@ -25669,10 +25844,10 @@ function renderLastTrainingReport() {
 // redondante.
 
 function showTrainingSection() {
-  document.getElementById("trainingTitle").textContent = `Semaine d'entraînement : semaine ${teamA.week}`;
+  document.getElementById("trainingTitle").textContent = `Semaine ${teamA.week}`;
   renderLastTrainingReport();
   populateTrainingSkillSelect();
-  renderTrainingPositionsSelect();
+  renderTrainingPositionsToggles();
   renderTrainingList();
   populateCollectiveTrainingSelect();
   showPage("trainingSection");
@@ -25790,7 +25965,7 @@ function renderTrainedTacticsPicker() {
 
   const label = document.createElement("div");
   label.className = "field-label";
-  label.textContent = "Aspect précisément travaillé";
+  label.textContent = "Aspect travaillé";
   holder.appendChild(label);
 
   const knowledge = teamA.tacticalKnowledge || {};
@@ -25863,6 +26038,22 @@ function renderTrainedTacticsPicker() {
 
   renderTrigger();
 
+  // Jauge "Maîtrise actuelle" de l'aspect choisi (refonte de la page,
+  // 2026-09-25) : même source que les mini-jauges du menu
+  // (teamA.tacticalKnowledge), en grand sous le sélecteur.
+  const mastery = document.createElement("div");
+  mastery.className = "tp-mastery hidden";
+  holder.appendChild(mastery);
+  function renderMastery() {
+    const t = teamA.trainedTactics;
+    if (!t) { mastery.classList.add("hidden"); mastery.innerHTML = ""; return; }
+    const v = Math.round(knowledgeValue(t.category, t.value));
+    const color = moraleGaugeColor(v);
+    mastery.classList.remove("hidden");
+    mastery.innerHTML = `<div class="tp-mastery-row"><span>Maîtrise actuelle</span><b style="color:${color}">${v} / 100</b></div>` +
+      `<div class="tp-mastery-bar"><div style="width:${Math.max(0, Math.min(100, v))}%;background:${color}"></div></div>`;
+  }
+
   const progressNote = document.createElement("div");
   progressNote.className = "training-dilution-note";
   holder.appendChild(progressNote);
@@ -25871,6 +26062,7 @@ function renderTrainedTacticsPicker() {
   // quand 0 jour n'est encore banqué, seule la progression réelle (au moins
   // 1 jour banqué) reste affichée ici.
   function renderProgressNote() {
+    renderMastery();
     const days = teamA.trainedTactics ? teamA.daysTrainedForTarget(teamA.trainedTactics) : 0;
     const bonus = days * TACTICAL_KNOWLEDGE_DAILY_GAIN;
     progressNote.textContent = days > 0
@@ -26245,71 +26437,84 @@ function populateTrainingSkillSelect() {
     teamA.trainingPositions = [rankedPositionsForProgram(teamA.trainingSkill)[0]];
     saveMyTeam();
     syncTrainingToServer();
-    renderTrainingPositionsSelect();
+    renderTrainingPositionsToggles();
     renderTrainingList();
   };
 }
 
-function renderTrainingPositionsSelect() {
-  const sel = document.getElementById("trainingPositionsSelect");
-  sel.innerHTML = "";
+// Refonte de la page (retour utilisateur, 2026-09-25 : "code la page") : le
+// menu déroulant de combinaisons de postes (1 à 3 postes contigus dans le
+// classement du programme, ou toute l'équipe) est remplacé par 5 boutons à
+// bascule, un par poste (aria-pressed). Toute combinaison de 1 à 5 postes
+// est acceptée (le serveur, /api/training, l'acceptait déjà) ; on ne peut
+// pas désélectionner le dernier poste (le serveur refuse une liste vide).
+// L'efficacité du poste pour la compétence choisie (normalisée sur le
+// meilleur poste, voir trainingPositionOptionsForProgram) est indiquée sous
+// son nom quand elle n'est pas de 100%.
+function renderTrainingPositionsToggles() {
+  const holder = document.getElementById("trainingPositionsToggles");
+  if (!holder) return;
   const skill = teamA.trainingSkill;
-
-  if (!skill) {
-    const o = document.createElement("option");
-    o.value = "";
-    o.textContent = "–";
-    sel.appendChild(o);
-    sel.disabled = true;
-    sel.onchange = null;
-    updateDilutionNote();
-    return;
+  const selected = new Set(teamA.trainingPositions || []);
+  const effByPos = {};
+  if (skill) {
+    trainingPositionOptionsForProgram(skill)
+      .filter(o => o.positions.length === 1)
+      .forEach(o => { effByPos[o.positions[0]] = o.efficiency; });
   }
-
-  sel.disabled = false;
-  trainingPositionOptionsForProgram(skill).forEach(opt => {
-    const o = document.createElement("option");
-    o.value = opt.positions.join("|");
-    const posLabel = opt.positions.length === 5 ? "Toute l'équipe" : opt.positions.map(p => POS_SHORT[p]).join(" + ");
-    // Retour utilisateur : "quand c'est 100% enlève '100%', ce sera plus
-    // propre" (le 100% n'apporte rien : c'est déjà le meilleur choix pour ce
-    // programme, inutile de l'annoter).
-    o.textContent = opt.efficiency === 100 ? posLabel : `${posLabel} (${opt.efficiency}%)`;
-    sel.appendChild(o);
-  });
-
-  const current = (teamA.trainingPositions || []).join("|");
-  const match = [...sel.options].find(o => o.value === current);
-  if (match) {
-    sel.value = current;
-  } else if (sel.options.length) {
-    sel.selectedIndex = 0;
-    teamA.trainingPositions = sel.value.split("|").filter(Boolean);
-  }
-
-  sel.onchange = () => {
-    teamA.trainingPositions = sel.value.split("|").filter(Boolean);
+  holder.innerHTML = POSITIONS.map(pos => {
+    const on = selected.has(pos);
+    const eff = effByPos[pos];
+    const effTxt = eff != null && eff < 100 ? ` · ${eff}%` : "";
+    const title = eff != null ? `${pos} : efficacité ${eff}% sur cette compétence` : pos;
+    return `<button type="button" class="tp-pos${on ? " on" : ""}" data-pos="${escapeHtml(pos)}" aria-pressed="${on}"` +
+      `${skill ? "" : " disabled"} title="${escapeHtml(title)}">` +
+      `<span class="tp-pos-code">${POS_SHORT[pos]}</span><span class="tp-pos-name">${escapeHtml(pos)}${effTxt}</span></button>`;
+  }).join("");
+  holder.querySelectorAll(".tp-pos").forEach(btn => btn.addEventListener("click", () => {
+    const pos = btn.dataset.pos;
+    const cur = teamA.trainingPositions || [];
+    let next;
+    if (cur.includes(pos)) {
+      if (cur.length <= 1) return;
+      next = cur.filter(p => p !== pos);
+    } else {
+      next = POSITIONS.filter(p => cur.includes(p) || p === pos);
+    }
+    teamA.trainingPositions = next;
     saveMyTeam();
     syncTrainingToServer();
-    updateDilutionNote();
+    renderTrainingPositionsToggles();
     renderTrainingList();
-  };
+    const again = holder.querySelector(`.tp-pos[data-pos="${pos}"]`);
+    if (again) again.focus();
+  }));
   updateDilutionNote();
 }
 
 function updateDilutionNote() {
   const note = document.getElementById("trainingDilutionNote");
+  if (!note) return;
   const skill = teamA.trainingSkill;
   const n = (teamA.trainingPositions || []).length;
+  let tier, text;
   if (!skill || !n) {
-    note.textContent = "Aucune compétence choisie : personne ne progresse cette semaine (choisissez une compétence et des postes pour lancer l'entraînement).";
-    return;
+    tier = "none";
+    text = "Aucun poste sélectionné : personne ne progresse cette semaine.";
+  } else {
+    const dilution = TRAINING_DILUTION_BY_POSITION_COUNT[n] || 0;
+    if (dilution > 0) {
+      tier = "diluted";
+      text = `${n} postes couverts · rendement dilué de ${Math.round(dilution * 100)}% pour tout le monde`;
+    } else {
+      tier = "full";
+      text = `${n} poste couvert · rendement plein, aucune dilution`;
+    }
   }
-  const dilution = TRAINING_DILUTION_BY_POSITION_COUNT[n] || 0;
-  note.innerHTML = dilution > 0
-    ? `${n} poste(s) couverts cette semaine, dilution du rendement pour tout le monde : <b>-${Math.round(dilution * 100)}%</b>.`
-    : `${n} poste couvert cette semaine, rendement plein, aucune dilution.`;
+  note.className = "training-dilution-note tp-dilution tp-dilution-" + tier;
+  note.innerHTML = `<span class="tp-dot" aria-hidden="true"></span>${escapeHtml(text)}`;
 }
+
 
 // Retour utilisateur (2026-09) : "en dessous les joueurs (en ne mettant que
 // les joueurs qui ont pris du temps de jeu et qui seront entrainés (dès
@@ -26320,127 +26525,107 @@ function updateDilutionNote() {
 // poste "de carte" du joueur : un joueur qui n'a pas du tout joué au poste
 // entraîné aujourd'hui n'apparaît plus dans cette liste.
 const TRAINING_LIST_MIN_SECONDS = 60;
+// Palier d'un joueur pour l'aperçu de la semaine (légende et couleurs de la
+// carte "Qui profite des fondamentaux") : plein ≥ 90%, partiel > 0, aucun.
+function trainingTierFor(preview) {
+  if (!preview.posSelected || preview.finalPct <= 0) return "none";
+  return preview.finalPct >= 90 ? "full" : "partial";
+}
+function trainingPositionsShortLabel() {
+  return (teamA.trainingPositions || []).map(p => POS_SHORT[p]).join(", ");
+}
 function renderTrainingList() {
   const holder = document.getElementById("trainingList");
+  if (!holder) return;
   holder.innerHTML = "";
+  const previews = new Map(teamA.players.map(p => [p, teamA.trainingPreviewFor(p)]));
   // Les plus jeunes (plus de marge de progression) d'abord, pour attirer l'œil.
   const sorted = [...teamA.players].sort((a, b) => a.age - b.age)
-    .filter(p => teamA.trainingPreviewFor(p).trainedSeconds >= TRAINING_LIST_MIN_SECONDS);
+    .filter(p => previews.get(p).trainedSeconds >= TRAINING_LIST_MIN_SECONDS);
   if (sorted.length === 0) {
     const empty = document.createElement("p");
     empty.className = "training-empty";
     empty.textContent = "Aucun joueur n'a encore joué au(x) poste(s) entraîné(s) cette semaine.";
     holder.appendChild(empty);
   } else {
-    sorted.forEach(p => holder.appendChild(buildTrainingRow(p)));
+    const head = document.createElement("div");
+    head.className = "tp-table-head";
+    head.innerHTML = `<span>Poste</span><span>Joueur</span><span>Temps de jeu au poste</span><span>Rendement</span>`;
+    holder.appendChild(head);
+    sorted.forEach(p => holder.appendChild(buildTrainingRow(p, previews.get(p))));
   }
-  renderTrainingSummary();
+  const sub = document.getElementById("tpPlaySub");
+  if (sub) sub.textContent = `Selon le temps de jeu au bon poste sur le cycle (objectif ${Math.round(TRAINING_FULL_MATCH_SECONDS / 60)} min)`;
+  const foot = document.getElementById("trainingListFoot");
+  if (foot) {
+    const others = teamA.players.length - sorted.length;
+    const posLabel = trainingPositionsShortLabel();
+    foot.textContent = others > 0 && posLabel
+      ? (others > 1
+        ? `${others} autres joueurs n'ont pas assez joué au poste ${posLabel} pour progresser cette semaine.`
+        : `1 autre joueur n'a pas assez joué au poste ${posLabel} pour progresser cette semaine.`)
+      : "";
+  }
+  renderTrainingSummary(previews);
 }
 
 // Récapitulatif demandé par le club : combien de joueurs profiteront
 // pleinement / partiellement / pas du tout de l'entraînement de la semaine,
 // selon le temps qu'ils ont RÉELLEMENT joué au(x) poste(s) concerné(s) (voir
-// Team.trainingPreviewFor) — un coup d'œil avant de valider, sans avoir à
-// éplucher la liste ligne par ligne.
-function renderTrainingSummary() {
+// Team.trainingPreviewFor) — légende chiffrée + barre empilée (refonte
+// 2026-09-25) au lieu de l'ancienne phrase.
+function renderTrainingSummary(previews) {
   const holder = document.getElementById("trainingSummary");
+  const bar = document.getElementById("trainingSummaryBar");
   if (!holder) return;
   if (!teamA.trainingSkill || !(teamA.trainingPositions || []).length) {
     holder.innerHTML = "";
+    if (bar) bar.innerHTML = "";
     return;
   }
-  const full = [], partial = [], none = [];
+  const counts = { full: [], partial: [], none: [] };
   teamA.players.forEach(p => {
-    const preview = teamA.trainingPreviewFor(p);
-    if (!preview.posSelected || preview.finalPct <= 0) none.push(p);
-    else if (preview.finalPct >= 90) full.push(p);
-    else partial.push(p);
+    const preview = previews ? previews.get(p) : teamA.trainingPreviewFor(p);
+    counts[trainingTierFor(preview)].push(p);
   });
-  let html = `<p class="training-dilution-note"><b>${full.length}</b> joueur(s) ont assez joué au bon poste pour profiter pleinement de l'entraînement cette semaine`;
-  if (full.length) html += ` (${full.map(p => escapeHtml(p.name)).join(", ")})`;
-  html += `, <b>${partial.length}</b> en profitent partiellement, et <b>${none.length}</b> pas du tout cette semaine.</p>`;
-  holder.innerHTML = html;
+  const labels = { full: "plein", partial: "partiel", none: "aucun" };
+  holder.innerHTML = `<div class="tp-legend">` + ["full", "partial", "none"].map(k =>
+    `<span title="${escapeHtml(counts[k].map(p => p.name).join(", "))}"><span class="tp-sw ${k}" aria-hidden="true"></span><b>${counts[k].length}</b> ${labels[k]}</span>`
+  ).join("") + `</div>`;
+  if (bar) {
+    const total = teamA.players.length || 1;
+    bar.innerHTML = `<div class="tp-stack" aria-hidden="true">` + ["full", "partial", "none"]
+      .filter(k => counts[k].length)
+      .map(k => `<div class="tp-seg ${k}" style="width:${(100 * counts[k].length / total).toFixed(2)}%"></div>`)
+      .join("") + `</div>`;
+  }
 }
 
-function buildTrainingRow(player) {
+function buildTrainingRow(player, preview) {
+  // Même calcul que Team.trainWeek (seule source de vérité, via
+  // teamA.trainingPreviewFor) : temps RÉELLEMENT joué au(x) poste(s)
+  // entraîné(s), cumulé sur les matchs du cycle en cours (remis à 0 une fois
+  // l'entraînement consommé), pas le poste "de carte" du joueur.
+  preview = preview || teamA.trainingPreviewFor(player);
+  const tier = trainingTierFor(preview);
   const row = document.createElement("div");
-  row.className = "training-row";
-
-  // Poste en petit badge (même logique visuelle que les barres d'attributs
-  // de l'Effectif) au lieu du texte brut d'origine — retour utilisateur :
-  // l'écran Entraînement détonnait par rapport au reste de l'habillage FM.
-  const nameDiv = document.createElement("div");
-  nameDiv.className = "tr-name";
-  nameDiv.innerHTML = `<span class="tr-pos-badge">${POS_SHORT[player.position]}</span>${escapeHtml(player.name)} ` +
-    `<span class="tr-meta">${player.height} cm · ${player.age} ans</span>`;
-  row.appendChild(nameDiv);
-
-  // Se base sur le temps RÉELLEMENT joué au(x) poste(s) entraîné(s), CUMULÉ
-  // sur tous les matchs du cycle d'entraînement en cours (teamA.
-  // trainingPreviewFor, qui lit Player.trainingSecondsPlayedByPosition via
-  // Team.trainablySecondsFor), pas sur le poste "de carte" du joueur : un
-  // remplaçant polyvalent aligné sur un autre poste que le sien (voir
-  // Team.lineup) doit être crédité pour CE poste-là, pas pour celui indiqué
-  // sur sa fiche. Même calcul que Team.trainWeek (seule source de vérité),
-  // en lecture seule pour l'aperçu avant validation. Calculé UNE SEULE FOIS
-  // ici (au lieu de deux fois comme avant ce correctif), et réutilisé plus
-  // bas pour le badge de statut.
-  const preview = teamA.trainingPreviewFor(player);
-
-  // Minutes jouées : texte + mini barre de progression (même famille que
-  // attrCellHtml) pour repérer le niveau d'assiduité en un coup d'œil.
-  // Retour utilisateur, 2026-09 : "pourquoi ça affiche que les joueurs ont
-  // eu leur temps de jeu alors que l'entrainement est déjà passé [...] la
-  // semaine est en fait une journée avec 3 matchs [...] quand la maj est
-  // passée, les compteurs de temps de jeu doivent être remis à 0". Cet
-  // affichage lisait auparavant player.secondsPlayed (temps du SEUL dernier
-  // match, jamais remis à zéro par l'entraînement, voir son commentaire au
-  // constructeur), d'où les deux symptômes à la fois : le cumul ne portait
-  // que sur le dernier des 3 matchs du jour, ET le compteur restait affiché
-  // tel quel juste après l'entraînement au lieu de retomber à 0.
-  // preview.trainedSeconds (via trainablySecondsFor) règle les deux : cumulé
-  // sur les 3 matchs, et remis à 0 par Team.trainWeek une fois consommé.
-  const minutesWrap = document.createElement("div");
-  minutesWrap.className = "tr-minutes-wrap";
+  row.className = `training-row tier-${tier}` + (preview.finalPct > 0 ? " will-train" : "");
   const secs = preview.trainedSeconds || 0;
-  const totalAttendancePct = Math.round((preview.attendanceFactor || 0) * 100);
-  const attendanceTier = totalAttendancePct >= 90 ? "ok" : totalAttendancePct > 0 ? "mid" : "low";
-  const minutes = document.createElement("div");
-  minutes.className = "tr-minutes " + attendanceTier;
-  minutes.textContent = `${Math.round(secs / 60)} min ce cycle (${totalAttendancePct}% de ${Math.round(TRAINING_FULL_MATCH_SECONDS / 60)} min)`;
-  minutesWrap.appendChild(minutes);
-  const minutesBar = document.createElement("div");
-  minutesBar.className = "tr-minutes-bar";
-  minutesBar.innerHTML = `<div class="tr-minutes-bar-fill ${attendanceTier}" style="width:${Math.max(0, Math.min(100, totalAttendancePct))}%"></div>`;
-  minutesWrap.appendChild(minutesBar);
-  row.appendChild(minutesWrap);
-
-  const status = document.createElement("div");
+  const target = Math.round(TRAINING_FULL_MATCH_SECONDS / 60);
+  const attendancePct = Math.max(0, Math.min(100, Math.round((preview.attendanceFactor || 0) * 100)));
   const skill = teamA.trainingSkill;
-  if (preview.posSelected) {
-    const finalPct = preview.finalPct;
-    const label = TRAINING_PROGRAMS[skill].label;
-    row.classList.toggle("will-train", finalPct > 0);
-    status.className = "tr-status " + (finalPct > 0 ? "status-yes" : "status-no");
-    // Affichage arrondi au multiple de 10 le plus proche (retour utilisateur :
-    // "ce sera plus propre visuellement, même si dans les faits l'entraînement
-    // n'est qu'à 89%") ; le calcul réel (attrWeights dans Team.trainWeek) reste
-    // sur finalPct/preview.finalPct tel quel, cet arrondi n'est que visuel. Le
-    // "100%" est aussi masqué comme pour le menu déroulant des postes.
-    const displayPct = Math.round(finalPct / 10) * 10;
-    status.textContent = finalPct > 0
-      ? (displayPct >= 100 ? `✓ ${label}` : `✓ ${label} (${displayPct}%)`)
-      : `${label} (0%, n'a pas joué)`;
-  } else {
-    status.className = "tr-status status-no";
-    // "N'a pas joué à ce poste" couvre aussi bien le joueur dont le poste de
-    // carte n'est pas concerné cette semaine que celui qui l'est mais est
-    // resté sur le banc (ou a joué un tout autre poste) sur tous les matchs
-    // du cycle en cours.
-    status.textContent = !skill ? "Pas d'entraînement" : "N'a pas joué à ce poste";
-  }
-  row.appendChild(status);
-
+  const label = skill && TRAINING_PROGRAMS[skill] ? TRAINING_PROGRAMS[skill].label : "Pas d'entraînement";
+  // Rendement arrondi au multiple de 10 (retour utilisateur : "ce sera plus
+  // propre visuellement") ; le calcul réel reste sur preview.finalPct.
+  const displayPct = Math.round((preview.finalPct || 0) / 10) * 10;
+  row.innerHTML =
+    `<span class="tr-pos-badge">${POS_SHORT[player.position]}</span>` +
+    `<div class="tr-name"><span class="tr-player">${escapeHtml(player.name)}</span>` +
+    `<span class="tr-meta">${player.height} cm · ${player.age} ans</span></div>` +
+    `<div class="tr-minutes-wrap"><div class="tr-minutes-bar"><div class="tr-minutes-bar-fill" style="width:${attendancePct}%"></div></div>` +
+    `<span class="tr-minutes"><b>${Math.round(secs / 60)} min</b> / ${target}</span></div>` +
+    `<div class="tr-status"><span class="tr-skill">${escapeHtml(label)}</span>` +
+    `<span class="tr-eff">${preview.posSelected ? displayPct + " %" : "–"}</span></div>`;
   return row;
 }
 
@@ -26484,18 +26669,7 @@ function trainingReportHtml(weekResult, opts = {}) {
           `${escapeHtml(e.name)} : ${TRAINING_LABELS[g.attr]} ${g.before} → ${g.after} ${up ? "↑" : "↓"}</div>`;
       });
     });
-    const trainedPositions = teamA.trainingPositions || [];
-    entries.forEach(e => {
-      if (!e.skill || !trainedPositions.includes(e.position)) return;
-      if (!e.posSelected) {
-        html += `<div class="gain-note">${escapeHtml(e.name)} (${POS_SHORT[e.position]}) : aucune minute enregistrée au poste entraîné sur les matchs de ce cycle (n'a pas encore joué avec ce poste dans l'équipe, ou est resté sur le banc), aucune progression pour lui cette semaine.</div>`;
-        return;
-      }
-      const pct = Math.round((e.attendanceFactor || 0) * 100);
-      if (pct >= 90) return; // quasiment plein temps, rien à signaler
-      const mins = Math.round(e.secondsPlayed / 60);
-      html += `<div class="gain-note">${escapeHtml(e.name)} (${POS_SHORT[e.position]}) : n'a joué que ${mins} min ce cycle sur ${Math.round(TRAINING_FULL_MATCH_SECONDS / 60)}, l'entraînement ne compte qu'à ${pct}% pour lui cette semaine.</div>`;
-    });
+    html += trainingReportNotesHtml(weekResult);
     if (!html) {
       return "<p class='training-empty'>Pas de changement visible cette semaine, la progression est lente et se joue sur plusieurs semaines.</p>";
     }

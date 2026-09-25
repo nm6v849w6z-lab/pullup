@@ -62,10 +62,12 @@ const skillSel = doc1.getElementById("trainingSkillSelect");
 skillSel.value = "inside";
 skillSel.dispatchEvent(new win1.Event("change"));
 
-const posSel = doc1.getElementById("trainingPositionsSelect");
-console.log("Options de postes proposées pour 'Jeu intérieur' :", [...posSel.options].map(o => o.textContent));
-// La 1ère option doit être le poste "naturel" (Pivot, 100%).
-console.log("Postes sélectionnés par défaut :", posSel.value);
+// Postes : 5 boutons à bascule depuis la refonte de la page (2026-09-25).
+const posBtns = (doc) => [...doc.querySelectorAll("#trainingPositionsToggles .tp-pos")];
+const pressedPositions = (doc) => posBtns(doc).filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.pos);
+console.log("Boutons de postes pour 'Jeu intérieur' :", posBtns(doc1).map(b => b.textContent));
+// Par défaut, le poste "naturel" seul (Pivot, 100%).
+console.log("Postes sélectionnés par défaut :", pressedPositions(doc1));
 console.log("Note de dilution :", doc1.getElementById("trainingDilutionNote").textContent);
 
 // Retour utilisateur (2026-09) : la liste (voir renderTrainingList) ne
@@ -87,11 +89,10 @@ console.log(`\n${pivots(doc1).length} pivots trouvés.`);
 
 // Étend à 2 postes (Pivot + Ailier fort) pour vérifier la dilution + la
 // couverture de plus de joueurs.
-const twoPosOption = [...posSel.options].find(o => o.value.split("|").length === 2);
-if (twoPosOption) {
-  posSel.value = twoPosOption.value;
-  posSel.dispatchEvent(new win1.Event("change"));
-  console.log("\nAprès extension à 2 postes :", posSel.value, "| note :", doc1.getElementById("trainingDilutionNote").textContent);
+const afBtn = posBtns(doc1).find(b => b.dataset.pos === "Ailier fort");
+if (afBtn && afBtn.getAttribute("aria-pressed") !== "true") {
+  afBtn.click();
+  console.log("\nAprès extension à 2 postes :", pressedPositions(doc1), "| note :", doc1.getElementById("trainingDilutionNote").textContent);
 }
 
 // --- Avance le calendrier de WEEKS semaines réelles complètes (ROUNDS
@@ -166,9 +167,9 @@ console.log(`${journeeOk ? "✅" : "❌"} Calendrier persisté : la journée ${R
 
 win2.eval("TAB_HANDLERS.entrainement();");
 const skillOk = doc2.getElementById("trainingSkillSelect").value === "inside";
-const posOk = doc2.getElementById("trainingPositionsSelect").value.split("|").length === 2;
+const posOk = pressedPositions(doc2).length === 2;
 console.log(`${skillOk ? "✅" : "❌"} Compétence entraînée persistée : "${doc2.getElementById("trainingSkillSelect").value}"`);
-console.log(`${posOk ? "✅" : "❌"} Postes entraînés persistés : "${doc2.getElementById("trainingPositionsSelect").value}"`);
+console.log(`${posOk ? "✅" : "❌"} Postes entraînés persistés : "${pressedPositions(doc2).join(" + ")}"`);
 
 // Le poste vit désormais dans son propre badge .tr-pos-badge (habillage FM
 // de l'écran Entraînement), plus dans le texte de .tr-meta — voir
