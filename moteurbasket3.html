@@ -2516,6 +2516,12 @@
     background:radial-gradient(ellipse 70% 80% at 55% 50%, #1b2740, #0f1622); border:1px solid var(--line-soft);
     border-radius:var(--radius); overflow:hidden; margin-bottom:12px;
   }
+  /* Jauge de l'aspect SÉLECTIONNÉ (bouton fermé) plus grande que celles du
+     menu (retour utilisateur 2026-09-25 : "mets un peu plus grand la jauge
+     dans aspect travaillé quand elle a été sélectionnée, qu'on voit mieux"). */
+  .trained-tactic-trigger .tto-gauge-wrap{gap:10px;}
+  .trained-tactic-trigger .tto-gauge{width:120px; height:10px;}
+  .trained-tactic-trigger .tto-value{font-size:15px; min-width:26px;}
   .arena-visual-wrap svg{display:block; max-width:100%; max-height:480px; width:100%; height:auto;}
   /* Cartes d'infrastructure (salle, boutique des supporters, centre de
      formation, CLUB_FACILITIES) : retour utilisateur, 2026-09 : "je ne veux
