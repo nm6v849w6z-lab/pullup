@@ -20,6 +20,16 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Ligue : ", N points
+  en jeu" retiré ; Moyennes/Totaux (et dépliage des cartes leaders) ne font
+  plus sauter la page** — retours utilisateur (capture) : "enlève 24 points
+  en jeu", "quand on clique sur moyenne ou totaux, ça fait sauter et ça
+  remonte". renderLeagueStatsPanelKeepingScroll (hauteur figée pendant le
+  rendu + défilement restauré, focus preventScroll) ; vérifié Playwright
+  (scrollY identique avant/après, bureau et mobile). league_stats_test :
+  échec "pastille PTS du MVP" sans rapport (test déjà listé flaky).
+  Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Effectif > Général :
   libellés Potentiel/Forme au-dessus de leur jauge** — retour utilisateur :
   "toujours de gros écarts entre potentiel et âge et entre forme et

@@ -19618,7 +19618,8 @@ function lgRaceCardHtml(table) {
     const names = tied.map(s => escapeHtml(s.name));
     const list = names.length > 1 ? names.slice(0, -1).join(", ") + " et " + names[names.length - 1] : names[0];
     note = `À égalité de points avec ${list} : la différence de points vous départage.`;
-  } else if (left) note = `Encore ${left} journée${left > 1 ? "s" : ""} de saison régulière, ${left * 2} points en jeu.`;
+  // ", N points en jeu" retiré (retour utilisateur, 2026-09-25 : "enlève 24 points en jeu").
+  } else if (left) note = `Encore ${left} journée${left > 1 ? "s" : ""} de saison régulière.`;
   else note = "Saison régulière terminée.";
 
   return `<section class="lg-panel lg-race" aria-labelledby="lgRaceTitle">` +
@@ -19870,14 +19871,33 @@ function renderLeagueStatsPanel() {
 // Clics délégués sur le conteneur fixe #leagueStatsPanel (son contenu est
 // regénéré à chaque clic) : dépliage d'une carte (top 5 <-> top 20) et
 // bascule Moyennes/Totaux.
+// Re-rendu SANS saut de page (retour utilisateur, 2026-09-25 : "quand on
+// clique sur moyenne ou totaux, ça fait sauter et ça remonte") : vider puis
+// remplir innerHTML réduit un instant la hauteur de la page (le navigateur
+// recale alors le défilement), et focus() sans preventScroll fait aussi
+// défiler. On fige la hauteur du panneau pendant le rendu et on restaure la
+// position de défilement de chaque conteneur qui défile.
+function renderLeagueStatsPanelKeepingScroll() {
+  const panel = document.getElementById("leagueStatsPanel");
+  const saved = [];
+  for (let el = panel.parentElement; el; el = el.parentElement) {
+    if (el.scrollTop > 0) saved.push([el, el.scrollTop]);
+  }
+  const root = document.scrollingElement || document.documentElement;
+  saved.push([root, root.scrollTop]);
+  panel.style.minHeight = panel.offsetHeight + "px";
+  renderLeagueStatsPanel();
+  panel.style.minHeight = "";
+  saved.forEach(([el, top]) => { el.scrollTop = top; });
+}
 document.getElementById("leagueStatsPanel").addEventListener("click", (e) => {
   const modeBtn = e.target.closest("[data-lg-mode]");
   if (modeBtn) {
     if (leagueStatsMode === modeBtn.dataset.lgMode) return;
     leagueStatsMode = modeBtn.dataset.lgMode;
-    renderLeagueStatsPanel();
+    renderLeagueStatsPanelKeepingScroll();
     const again = document.querySelector(`#leagueStatsPanel [data-lg-mode="${leagueStatsMode}"]`);
-    if (again) again.focus();
+    if (again) again.focus({ preventScroll: true });
     return;
   }
   const btn = e.target.closest("[data-stats-expand-cat]");
@@ -19885,7 +19905,7 @@ document.getElementById("leagueStatsPanel").addEventListener("click", (e) => {
   const key = btn.dataset.statsExpandCat;
   if (leagueStatsExpandedCats.has(key)) leagueStatsExpandedCats.delete(key);
   else leagueStatsExpandedCats.add(key);
-  renderLeagueStatsPanel();
+  renderLeagueStatsPanelKeepingScroll();
 });
 
 // ---------------------------------------------------------------------
