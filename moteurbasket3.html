@@ -22360,9 +22360,9 @@ function sp2ProfileStyleHtml(report, t, adv) {
     `<div class="scouting-profile-callout scouting-profile-callout-force"><span class="scouting-profile-callout-label">▲ Forces</span><span class="scouting-profile-callout-value">${escapeHtml(force || "Aucun point fort marqué ne ressort de leurs stats actuelles.")}</span></div>` +
     `<div class="scouting-profile-callout scouting-profile-callout-weak"><span class="scouting-profile-callout-label">▼ Faiblesses</span><span class="scouting-profile-callout-value">${escapeHtml(weakness || "Aucune faiblesse nette ne ressort de leurs stats actuelles.")}</span></div>` +
     `</div>`;
-  if (adv.gamesPlayedChampionship && adv.gamesPlayedChampionship !== adv.gamesPlayed) {
-    left += `<p class="sp2-note">ORtg, DRtg, Net Rating et Pace : ${adv.gamesPlayedChampionship} match${adv.gamesPlayedChampionship > 1 ? "s" : ""} de championnat. Les autres stats incluent la Coupe (${adv.gamesPlayed} matchs).</p>`;
-  }
+  // Note "ORtg, DRtg, Net Rating et Pace : N matchs de championnat. Les
+  // autres stats incluent la Coupe" retirée (retour utilisateur,
+  // 2026-09-25 : "enlève" cette phrase) — le calcul reste inchangé.
 
   let right = "";
   const hasShotZones = report.shotZones && report.shotZones.totalAttempts > 0;
