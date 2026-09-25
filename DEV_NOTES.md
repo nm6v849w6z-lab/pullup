@@ -20,6 +20,12 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Entraînement,
+  retouches** — retour utilisateur : retirer « N autres joueurs n'ont pas
+  assez joué au poste … » et « Selon le temps de jeu au bon poste sur le
+  cycle (objectif 30 min) », titre renommé « Qui profite de l'entraînement
+  des fondamentaux cette semaine ». Fichier : moteurbasket3.html. Tests
+  persistence/trained_tactic_dropdown/tabs verts. Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Effectif : refonte visuelle Général +
   Caractéristiques d'après la maquette** — retour utilisateur : "code ces
   pages effectifs stp" (canvas Design claude.ai 1Gb9JTjGU6gVfDYuHvLyq4,

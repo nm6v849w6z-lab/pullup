@@ -2904,8 +2904,6 @@
   .tr-eff{font-size:18px; font-weight:800; color:var(--amber); min-width:52px; text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;}
   .tier-full .tr-eff{color:var(--ok);}
   .tier-none .tr-eff{color:var(--ink-faint);}
-  .tp-foot{font-size:13px; color:var(--ink-faint);}
-  .tp-foot:empty{display:none;}
   #trainingSection .training-empty{padding:18px; margin:0;}
   @media(max-width:900px){
     .tp-cols{grid-template-columns:1fr;}
@@ -4351,17 +4349,13 @@
 
       <section class="tp-card tp-players" aria-labelledby="tpPlayTitle">
         <div class="tp-players-head">
-          <div>
-            <h3 id="tpPlayTitle">Qui profite des fondamentaux cette semaine</h3>
-            <span class="tp-sub" id="tpPlaySub">Selon le temps de jeu au bon poste sur le cycle</span>
-          </div>
+          <h3 id="tpPlayTitle">Qui profite de l'entraînement des fondamentaux cette semaine</h3>
           <div id="trainingSummary"></div>
         </div>
         <div id="trainingSummaryBar"></div>
         <!-- Seuls les joueurs ayant au moins 1 min au(x) poste(s) entraîné(s)
              sur le cycle apparaissent (voir renderTrainingList). -->
         <div class="training-list" id="trainingList"></div>
-        <div class="tp-foot" id="trainingListFoot"></div>
       </section>
     </div>
   </div>
@@ -26711,9 +26705,6 @@ function trainingTierFor(preview) {
   if (!preview.posSelected || preview.finalPct <= 0) return "none";
   return preview.finalPct >= 90 ? "full" : "partial";
 }
-function trainingPositionsShortLabel() {
-  return (teamA.trainingPositions || []).map(p => POS_SHORT[p]).join(", ");
-}
 function renderTrainingList() {
   const holder = document.getElementById("trainingList");
   if (!holder) return;
@@ -26733,18 +26724,6 @@ function renderTrainingList() {
     head.innerHTML = `<span>Poste</span><span>Joueur</span><span>Temps de jeu au poste</span><span>Rendement</span>`;
     holder.appendChild(head);
     sorted.forEach(p => holder.appendChild(buildTrainingRow(p, previews.get(p))));
-  }
-  const sub = document.getElementById("tpPlaySub");
-  if (sub) sub.textContent = `Selon le temps de jeu au bon poste sur le cycle (objectif ${Math.round(TRAINING_FULL_MATCH_SECONDS / 60)} min)`;
-  const foot = document.getElementById("trainingListFoot");
-  if (foot) {
-    const others = teamA.players.length - sorted.length;
-    const posLabel = trainingPositionsShortLabel();
-    foot.textContent = others > 0 && posLabel
-      ? (others > 1
-        ? `${others} autres joueurs n'ont pas assez joué au poste ${posLabel} pour progresser cette semaine.`
-        : `1 autre joueur n'a pas assez joué au poste ${posLabel} pour progresser cette semaine.`)
-      : "";
   }
   renderTrainingSummary(previews);
 }
