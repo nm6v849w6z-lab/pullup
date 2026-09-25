@@ -51,22 +51,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   cours restent dans le working tree), À POUSSER PAR L'UTILISATEUR. Reste :
   `git push`, puis retirer cette entrée.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Salle : retouches après mise en ligne**
-  — la refonte visuelle (commit 5ba4dfd) est poussée. Retours utilisateur
-  sur la version en ligne : "j'ai l'impression que le prix idéal c'est 26
-  alors que tu annonces 17" puis "oui c'est mieux" (repère = prix qui
-  maximise la recette du match, sous la zone rouge, au lieu du confort >=
-  95%) ; "enleve les cases - 26 e +" (prix en texte, réglage au curseur
-  seul) ; "enlève les notions de confort" ; message "Au-dessus du prix
-  idéal [...] bonus d'humeur" retiré (le conseil ne s'affiche plus que pour
-  un gain possible ou une vraie baisse d'humeur) ; police du "68%
-  remplissage" réduite ; carte Affluence sans "Matchs à domicile", et les
-  4 chiffres clés sortis de l'image, posés au-dessus de cette carte ("ça
-  allégera un peu"). Fichiers : moteurbasket3.html (seatPriceZones,
-  buildSeatCategoryRow, updateSalleTicketingPreview, renderAttendanceHistory,
-  markup #salleSection .sl-side, CSS .sl-*), salle_redesign_test.js.
-  Commit partiel (seul ce chantier indexé, les modifs Économie non
-  committées restent dans le working tree). Reste : `git push`, puis
-  retirer cette entrée.
+  — refonte (5ba4dfd) et 1res retouches (ba02cb8 : prix idéal = recette
+  max, plus de cases −/+ ni de confort, chiffres clés sortis de l'image)
+  déjà poussées. Dernière retouche : "dans l'affluence, je ne mettrai que le
+  dernier match et je mettrai un petit bouton pour voir le reste. comme ça
+  on arrivera à avoir les briques bien aligné et pas de vide sous la brique
+  billetterie" — liste d'affluence repliée au seul dernier match (bouton
+  "Voir les N matchs précédents"), colonnes de .sl-grid étirées à la même
+  hauteur (carte Affluence en flex:1). Fichiers : moteurbasket3.html
+  (renderAttendanceHistory, CSS .sl-grid), salle_redesign_test.js.
+  Commit fait via un index temporaire pour ne pas toucher aux fichiers
+  déjà indexés par la session Tableau de bord (son moteurbasket3.html
+  indexé a reçu la même retouche, pour qu'elle ne soit pas annulée par son
+  prochain commit). Reste : `git push`, puis retirer cette entrée.
 - **✅ COMMITTÉ, À POUSSER (2026-09-25) — Analyse d'équipe (Scouting Pro) : retouches** —
   retour utilisateur (captures BC Dia) : "le 5 suggéré doit être en dessous
   du plan de match", "rends un peu plus joli aussi, il y a des polices trop

@@ -17,7 +17,7 @@
 //      alors que tu annonces 17") ; plus de cases −/+ ni de notion de confort
 //      (vrai modèle ticketPriceComfortFactor/moraleForgiveness) ;
 //   4. le graphique d'affluence (une barre par match + la prévision) et la
-//      liste repliée à 3 lignes (les 10 restent dans le DOM) ;
+//      liste repliée au seul dernier match (les 10 restent dans le DOM) ;
 //   5. les cartes d'infrastructure (jauge de niveau, état "non construit").
 // Les parcours d'achat (flèches/confirmations) restent couverts par
 // salle_upgrade_confirm_test.js/tabs_test.js, l'historique par
@@ -128,7 +128,7 @@ if (labels.length !== histLen + 1 || labels[labels.length - 1] !== "Prochain") t
 if (doc.querySelectorAll("#attendanceHistoryHolder .sl-bar-proj").length !== 3) throw new Error("❌ La barre de prévision devrait être empilée par catégorie (3 segments).");
 const lines = doc.querySelectorAll("#attendanceHistoryHolder .gain-line");
 const extra = doc.querySelectorAll("#attendanceHistoryHolder .gain-line.sl-history-extra");
-if (lines.length !== histLen || extra.length !== histLen - 3) throw new Error(`❌ Toutes les lignes devraient rester dans le DOM, les ${histLen - 3} plus anciennes repliées.`);
+if (lines.length !== histLen || extra.length !== histLen - 1) throw new Error(`❌ Toutes les lignes devraient rester dans le DOM, seule celle du dernier match visible (${histLen - 1} repliées).`);
 doc.querySelector(".sl-history-toggle").click();
 if (!doc.querySelector("#attendanceHistoryHolder .sl-history--open")) throw new Error("❌ 'Voir les N matchs' devrait déplier la liste.");
 console.log("✅ Graphique (matchs + prévision) et liste dépliable.");

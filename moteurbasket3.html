@@ -3278,7 +3278,11 @@
   .sl-ring small{font-size:8px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-dim);}
 
   /* --- Cartes --- */
-  .sl-grid{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:18px; margin-bottom:18px; align-items:start;}
+  /* Colonnes étirées à la même hauteur (retour utilisateur, 2026-09-25 : "pas
+     de vide sous la brique billetterie") : la carte Affluence prend la place
+     restante sous les chiffres clés. */
+  .sl-grid{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:18px; margin-bottom:18px; align-items:stretch;}
+  .sl-side #attendanceHistoryHolder{flex:1;}
   .sl-card{min-width:0; padding:20px; border-radius:16px; background:var(--panel); border:1px solid var(--line);}
   .sl-card-head{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:8px 12px; margin-bottom:16px;}
   .sl-eyebrow{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);}
@@ -29547,7 +29551,7 @@ function updateSalleTicketingPreview() {
 // (simple ligne totale dans ce cas, pas de faux détail reconstitué).
 // Refonte 2026-09-25 : précédée d'un graphique en barres empilées (du plus
 // ancien au plus récent, puis la prévision du prochain match à domicile aux
-// prix actuels), et seules les 3 lignes les plus récentes sont visibles par
+// prix actuels), et seule la ligne du DERNIER match est visible par
 // défaut (les autres restent dans le DOM, dépliables).
 let salleHistoryExpanded = false;
 function renderAttendanceHistory() {
@@ -29567,7 +29571,9 @@ function renderAttendanceHistory() {
   history.forEach((entry, i) => {
     const capacity = entry.capacity || 0;
     const rate = capacity > 0 ? Math.round((entry.attendance / capacity) * 100) : null;
-    html += `<div class="gain-line attendance-line${i >= 3 ? " sl-history-extra" : ""}">` +
+    // Retour utilisateur (2026-09-25) : "je ne mettrai que le dernier match et
+    // je mettrai un petit bouton pour voir le reste" (colonnes alignées).
+    html += `<div class="gain-line attendance-line${i >= 1 ? " sl-history-extra" : ""}">` +
       `<div class="sl-history-main"><b>Semaine ${entry.week}, vs ${escapeHtml(entry.opponentName)}</b>`;
     if (Array.isArray(entry.breakdown) && entry.breakdown.length) {
       html += `<div class="attendance-breakdown">` +
@@ -29586,8 +29592,9 @@ function renderAttendanceHistory() {
       `<small class="sl-num">${entry.attendance.toLocaleString("fr-FR")} spectateurs${rate != null ? ` (${rate}%)` : ""}</small></div></div>`;
   });
   html += "</div>";
-  if (history.length > 3) {
-    html += `<button type="button" class="sl-history-toggle">${salleHistoryExpanded ? "Réduire" : `Voir les ${history.length} matchs`}</button>`;
+  if (history.length > 1) {
+    const older = history.length - 1;
+    html += `<button type="button" class="sl-history-toggle">${salleHistoryExpanded ? "Réduire" : `Voir ${older > 1 ? `les ${older} matchs précédents` : "le match précédent"}`}</button>`;
   }
   holder.innerHTML = html;
   const toggle = holder.querySelector(".sl-history-toggle");
