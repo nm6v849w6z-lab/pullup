@@ -34,19 +34,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   reviennent pas). Tests Économie/TV/salaires/enchère verts. Reste :
   `git push`, puis retirer cette entrée.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Salle : retouches après mise en ligne**
-  — refonte (5ba4dfd) et 1res retouches (ba02cb8 : prix idéal = recette
-  max, plus de cases −/+ ni de confort, chiffres clés sortis de l'image)
-  déjà poussées. Dernière retouche : "dans l'affluence, je ne mettrai que le
-  dernier match et je mettrai un petit bouton pour voir le reste. comme ça
-  on arrivera à avoir les briques bien aligné et pas de vide sous la brique
-  billetterie" — liste d'affluence repliée au seul dernier match (bouton
-  "Voir les N matchs précédents"), colonnes de .sl-grid étirées à la même
-  hauteur (carte Affluence en flex:1). Fichiers : moteurbasket3.html
-  (renderAttendanceHistory, CSS .sl-grid), salle_redesign_test.js.
-  Commit fait via un index temporaire pour ne pas toucher aux fichiers
-  déjà indexés par la session Tableau de bord (son moteurbasket3.html
-  indexé a reçu la même retouche, pour qu'elle ne soit pas annulée par son
-  prochain commit). Reste : `git push`, puis retirer cette entrée.
+  — refonte (5ba4dfd) et retouches ba02cb8/4eaf62b déjà poussées. Dernière
+  retouche : "enlève tous les chiffres dans billetterie, il y a trop de
+  données ça en devient moche. laisse uniquement le nombre de place et le
+  choix du prix" — billetterie réduite à nom + places + prix + curseur
+  (repère "idéal" et zone rouge gardés) ; plus de barre de remplissage, de
+  recette par tribune, de spectateurs attendus ni de recette prévue ;
+  avertissement affiché seulement si les prix font baisser l'humeur ; les 3
+  lignes se répartissent la hauteur de la carte. Et "réduis remplissage en
+  dessous du 68%" (minuscules, 9px). Fichiers : moteurbasket3.html
+  (renderSalleTicketing, buildSeatCategoryRow, updateSalleTicketingPreview,
+  CSS), salle_redesign_test.js. Reste : `git push`, puis retirer cette
+  entrée.
 - **✅ COMMITTÉ, À POUSSER (2026-09-25) — Analyse d'équipe (Scouting Pro) : retouches** —
   retour utilisateur (captures BC Dia) : "le 5 suggéré doit être en dessous
   du plan de match", "rends un peu plus joli aussi, il y a des polices trop

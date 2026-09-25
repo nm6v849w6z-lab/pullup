@@ -3280,7 +3280,8 @@
   .sl-ring-value{fill:none; stroke:var(--amber); stroke-width:8; stroke-linecap:round;}
   .sl-ring div{text-align:center; line-height:1;}
   .sl-ring b{display:block; font-size:20px; font-weight:800; color:#fff;}
-  .sl-ring small{font-size:8px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-dim);}
+  /* Retour utilisateur (2026-09-25) : "réduis remplissage en dessous du 68%". */
+  .sl-ring small{display:block; margin-top:2px; font-size:9px; letter-spacing:0; text-transform:none; color:var(--ink-dim);}
 
   /* --- Cartes --- */
   /* Colonnes étirées à la même hauteur (retour utilisateur, 2026-09-25 : "pas
@@ -3307,7 +3308,11 @@
   #salleSection .seat-category-card.sl-seat-row{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px 16px; align-items:center;
     margin:0; padding:14px 0 16px; background:none; border:0; border-top:1px solid var(--line-soft); border-radius:0;}
   .sl-seat-row .sl-seat-ctrl{grid-column:1 / -1; grid-row:2;}
-  .sl-seat-row .sl-seat-result{grid-column:2; grid-row:1; min-width:130px;}
+
+  /* Billetterie épurée (prix seuls) : les 3 lignes se répartissent la hauteur
+     de la carte, alignée sur la colonne chiffres clés + Affluence. */
+  #seatCategoriesHolder{display:flex; flex-direction:column;}
+  #slSeatRows{flex:1; display:flex; flex-direction:column; justify-content:space-evenly;}
   .sl-seat-name{display:flex; align-items:center; gap:11px; min-width:0;}
   .sl-seat-name > div{min-width:0;}
   .sl-seat-name h4{margin:0; font-size:14px; color:var(--ink);}
@@ -29399,21 +29404,21 @@ function renderSalleHero(info, stats) {
 function renderSalleTicketing() {
   const holder = document.getElementById("seatCategoriesHolder");
   if (!holder) return;
+  // Retour utilisateur (2026-09-25) : "enlève tous les chiffres dans
+  // billetterie, il y a trop de données ça en devient moche. laisse
+  // uniquement le nombre de place et le choix du prix" — plus de barre de
+  // remplissage, de recette par tribune, de spectateurs attendus ni de
+  // recette prévue totale : nom + places + prix + curseur (avec le repère
+  // "idéal"), et un avertissement seulement si les prix vont faire baisser
+  // l'humeur des supporters. La prévision chiffrée reste visible dans le
+  // graphique Affluence (barre "Prochain").
   const nm = salleNextMatchInfo();
   const title = nm && nm.isHome ? `Prochain match · vs ${escapeHtml(nm.name)}` : "Prix des billets";
-  const pill = nm && !nm.isHome
-    ? `<span class="sl-pill">Prochain match à l'extérieur</span>`
-    : `<span class="sl-pill">Aperçu en direct</span>`;
-  const cap = SEAT_CATEGORIES.reduce((s, cat) => s + teamA.categoryCapacity(cat.key), 0);
+  const pill = nm && !nm.isHome ? `<span class="sl-pill">Prochain match à l'extérieur</span>` : "";
   holder.innerHTML =
     `<div class="sl-card-head"><div><div class="sl-eyebrow">Billetterie</div><h3 class="sl-card-title">${title}</h3></div>${pill}</div>` +
-    `<div class="sl-seatmap">${SEAT_CATEGORIES.map(cat =>
-      `<div class="sl-seatmap-seg" style="flex:${cat.shareOfCapacity}" title="${escapeHtml(cat.name)}"><i data-seatmap-fill="${cat.key}" style="background:${SEAT_CATEGORY_COLORS[cat.key]}"></i></div>`).join("")}</div>` +
-    `<div class="sl-seatmap-legend"><span id="slSeatMapLabel"></span><span>${cap.toLocaleString("fr-FR")} places</span></div>` +
     `<div class="sl-seat-rows" id="slSeatRows"></div>` +
-    `<div class="sl-total"><div><small>Recette prévue</small><div class="sl-total-value sl-num" id="slTotalRevenue"></div></div>` +
-    `<div class="sl-total-right"><small>vs dernier match</small><div class="sl-num" id="slTotalDelta"></div></div></div>` +
-    `<div class="sl-tip" id="slTip"></div>`;
+    `<div class="sl-tip" id="slTip" hidden></div>`;
   const rows = holder.querySelector("#slSeatRows");
   SEAT_CATEGORIES.forEach(cat => rows.appendChild(buildSeatCategoryRow(cat)));
   updateSalleTicketingPreview();
@@ -29430,8 +29435,6 @@ function buildSeatCategoryRow(cat) {
     `<div class="sl-seat-name"><span class="sl-icon-chip" style="color:${color}">${salleIcon(SEAT_CATEGORY_ICONS[cat.key])}</span>` +
     `<div><h4>${escapeHtml(cat.name)}</h4><small class="sl-num">${teamA.categoryCapacity(cat.key).toLocaleString("fr-FR")} places</small></div></div>` +
     `<div class="sl-seat-ctrl">` +
-      // Retour utilisateur (2026-09-25) : "enleve les cases - 26 e +" — prix
-      // en simple texte, réglage au curseur seul (clavier : flèches).
       `<span class="sl-seat-price sl-num" id="seatPrice_${cat.key}"></span>` +
       `<div class="sl-track">` +
         `<div class="sl-track-bar"><div class="sl-track-red" style="left:${pct(zones.red)}%" title="Prix jugés trop élevés"></div>` +
@@ -29441,10 +29444,7 @@ function buildSeatCategoryRow(cat) {
         `<input type="range" id="ticketPriceRange_${cat.key}" min="${cat.minPrice}" max="${cat.maxPrice}" step="1" value="${teamA.ticketPrices[cat.key]}" aria-label="Prix : ${escapeHtml(cat.name)}">` +
         `<div class="sl-knob" data-knob></div>` +
       `</div>` +
-    `</div>` +
-    `<div class="sl-seat-result"><b class="sl-num" data-seat-revenue></b>` +
-      `<div class="sub" id="seatNote_${cat.key}"></div>` +
-      `<div class="sl-gauge"><i data-seat-gauge style="background:${color}"></i></div></div>`;
+    `</div>`;
 
   const range = row.querySelector("input[type=range]");
   // Glisser = aperçu en direct (rien n'est encore enregistré) ; relâcher
@@ -29465,64 +29465,30 @@ function commitSeatPrice(cat, price) {
   renderAttendanceHistory(); // la barre "prévision" du graphique suit le nouveau prix
 }
 
-// Recalcule toute la billetterie à partir des curseurs AFFICHÉS (qui
-// peuvent précéder le prix enregistré pendant un glisser).
+// Met à jour la billetterie à partir des curseurs AFFICHÉS (qui peuvent
+// précéder le prix enregistré pendant un glisser) : prix en texte,
+// position du curseur, et avertissement d'humeur (même seuil que la dérive
+// hebdomadaire de Team.trainWeek : confort MOYEN des 3 catégories < 60%).
 function updateSalleTicketingPreview() {
-  let total = 0, attendance = 0, capacity = 0, idealTotal = 0, comfortSum = 0;
-  const pricey = [], tooPricey = [];
+  let comfortSum = 0, count = 0;
+  const tooPricey = [];
   SEAT_CATEGORIES.forEach(cat => {
     const row = document.querySelector(`.sl-seat-row[data-seat-key="${cat.key}"]`);
     if (!row) return;
-    const range = row.querySelector("input[type=range]");
-    const price = parseInt(range.value, 10);
-    const pv = seatPreview(cat, price);
-    const zones = seatPriceZones(cat);
-    total += pv.revenue; attendance += pv.attendance; capacity += pv.capacity; comfortSum += pv.comfort;
-    idealTotal += seatPreview(cat, zones.ideal).revenue;
-    if (price >= zones.red) tooPricey.push(cat.name); else if (price > zones.ideal) pricey.push(cat.name);
+    const price = parseInt(row.querySelector("input[type=range]").value, 10);
     const pct = ((price - cat.minPrice) / (cat.maxPrice - cat.minPrice)) * 100;
     row.querySelector(`#seatPrice_${cat.key}`).textContent = `${price} €`;
     row.querySelector("[data-track-fill]").style.width = `${pct}%`;
     row.querySelector("[data-knob]").style.left = `${pct}%`;
-    row.querySelector("[data-seat-revenue]").textContent = formatMoney(pv.revenue);
-    // Retour utilisateur (2026-09-25) : "enlève les notions de confort".
-    row.querySelector(`#seatNote_${cat.key}`).textContent =
-      `~${pv.attendance.toLocaleString("fr-FR")} spect. · ${Math.round(pv.rate * 100)}%`;
-    row.querySelector("[data-seat-gauge]").style.width = `${Math.round(pv.rate * 100)}%`;
-    const fill = document.querySelector(`[data-seatmap-fill="${cat.key}"]`);
-    if (fill) fill.style.width = `${Math.round(pv.rate * 100)}%`;
+    comfortSum += seatPreview(cat, price).comfort; count++;
+    if (price >= seatPriceZones(cat).red) tooPricey.push(cat.name);
   });
-  const label = document.getElementById("slSeatMapLabel");
-  if (!label) return;
-  label.textContent = `~${attendance.toLocaleString("fr-FR")} spectateurs attendus (${capacity ? Math.round(attendance / capacity * 100) : 0}%)`;
-  document.getElementById("slTotalRevenue").textContent = formatMoney(total);
-  const last = (teamA.attendanceHistory || [])[0];
-  const deltaEl = document.getElementById("slTotalDelta");
-  if (last && last.revenue) {
-    const d = (total - last.revenue) / last.revenue * 100;
-    deltaEl.className = `sl-num ${d >= 0 ? "sl-up" : "sl-down"}`;
-    deltaEl.textContent = `${d >= 0 ? "▲ +" : "▼ "}${d.toFixed(1).replace(".", ",")} %`;
-  } else {
-    deltaEl.className = "sl-num sl-muted";
-    deltaEl.textContent = "premier match";
-  }
-
-  // Conseil : même seuils que la dérive d'humeur hebdomadaire (confort
-  // MOYEN des 3 catégories, voir Team.trainWeek).
-  const avgComfort = comfortSum / SEAT_CATEGORIES.length;
-  const gain = Math.round(idealTotal - total);
   const tip = document.getElementById("slTip");
-  const list = names => names.join(", ").toLowerCase();
-  // Retour utilisateur (2026-09-25) : message "Au-dessus du prix idéal [...]
-  // vous perdez le petit bonus d'humeur" retiré, ainsi que le "Prix au top"
-  // : le bloc n'apparaît plus que s'il y a vraiment quelque chose à dire.
-  tip.hidden = false;
-  if (avgComfort < 0.6) {
+  if (!tip || !count) return;
+  if (comfortSum / count < 0.6) {
+    tip.hidden = false;
     tip.className = "sl-tip sl-tip--bad";
-    tip.innerHTML = `Prix trop élevés${tooPricey.length ? ` (${escapeHtml(list(tooPricey))})` : ""} : l'humeur des supporters baissera chaque semaine.`;
-  } else if (gain > Math.max(500, total * 0.01)) {
-    tip.className = "sl-tip sl-tip--info";
-    tip.innerHTML = `Aux prix idéaux (repères verts), <b>+${formatMoney(gain)}</b> sur ce match.`;
+    tip.innerHTML = `Prix trop élevés${tooPricey.length ? ` (${escapeHtml(tooPricey.join(", ").toLowerCase())})` : ""} : l'humeur des supporters baissera chaque semaine.`;
   } else {
     tip.hidden = true;
   }

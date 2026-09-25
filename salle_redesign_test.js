@@ -9,9 +9,8 @@
 // Couvre :
 //   1. le bandeau (niveau X/8, bouton d'agrandissement, chiffres clés,
 //      anneau de remplissage), avec et sans historique d'affluence ;
-//   2. l'aperçu EN DIRECT de la billetterie : faire glisser un curseur
-//      (évènement "input") met à jour la recette affichée SANS enregistrer
-//      le prix ; le relâcher ("change") ou cliquer +/− l'enregistre ;
+//   2. la billetterie (places + prix seulement) : faire glisser un curseur
+//      (évènement "input") met à jour le prix affiché SANS l'enregistrer ; le relâcher ("change") ou cliquer +/− l'enregistre ;
 //   3. le repère "prix idéal" = prix qui maximise la recette du match, sous
 //      la zone rouge (retour utilisateur 2026-09-25 : "le prix idéal c'est 26
 //      alors que tu annonces 17") ; plus de cases −/+ ni de notion de confort
@@ -79,17 +78,15 @@ const rows = doc.querySelectorAll("#seatCategoriesHolder .seat-category-card");
 if (rows.length !== 3) throw new Error(`❌ 3 catégories attendues dans le bloc billetterie, obtenu ${rows.length}.`);
 const savedBefore = readRawSave(savePath);
 const gradinsBefore = win.eval("teamA.ticketPrices.gradins");
-const totalBefore = txt("#slTotalRevenue");
+// Retour utilisateur (2026-09-25) : "enlève tous les chiffres dans
+// billetterie [...] laisse uniquement le nombre de place et le choix du prix".
+const ticketText = txt("#seatCategoriesHolder");
+if (/spect|recette|%/i.test(ticketText)) throw new Error(`❌ La billetterie ne devrait plus afficher que places et prix, obtenu : "${ticketText}".`);
 const range = doc.getElementById("ticketPriceRange_gradins");
 range.value = String(gradinsBefore + 10);
 range.dispatchEvent(new win.Event("input"));
-const totalLive = txt("#slTotalRevenue");
-console.log(`Recette prévue : ${totalBefore} → ${totalLive} pendant le glisser`);
-if (totalLive === totalBefore) throw new Error("❌ Faire glisser un curseur devrait mettre à jour la recette prévue en direct.");
 if (txt("#seatPrice_gradins") !== `${gradinsBefore + 10} €`) throw new Error("❌ Le prix affiché devrait suivre le curseur pendant le glisser.");
 if (win.eval("teamA.ticketPrices.gradins") !== gradinsBefore) throw new Error("❌ Un simple glisser (input) ne devrait PAS encore enregistrer le prix.");
-const livePv = win.eval(`seatPreview(seatCategoryInfo("gradins"), ${gradinsBefore + 10}).revenue`);
-if (!txt('[data-seat-key="gradins"] [data-seat-revenue]').includes(fr(livePv))) throw new Error("❌ La recette de la catégorie devrait venir de seatPreview (vrai modèle de remplissage).");
 range.dispatchEvent(new win.Event("change"));
 await flush(dom);
 if (win.eval("teamA.ticketPrices.gradins") !== gradinsBefore + 10) throw new Error("❌ Relâcher le curseur (change) devrait enregistrer le prix.");
@@ -103,7 +100,7 @@ await flush(dom);
 const logeAfter = win.eval("teamA.ticketPrices.loge");
 if (logeAfter !== savedBefore.team.ticketPrices.loge + 1) throw new Error(`❌ Le curseur des loges devrait enregistrer +1 €, obtenu ${logeAfter}.`);
 if (txt("#seatPrice_loge") !== `${logeAfter} €`) throw new Error("❌ Le prix affiché en texte devrait suivre le curseur.");
-console.log("✅ Aperçu en direct au glisser, enregistrement au relâcher, sans cases −/+ ni confort affiché.");
+console.log("✅ Billetterie épurée (places + prix), prix suivi au glisser, enregistré au relâcher.");
 
 // --- 3. Prix idéal ---
 for (const key of ["gradins", "tribune", "loge"]) {
