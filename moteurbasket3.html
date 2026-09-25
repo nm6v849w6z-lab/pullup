@@ -2926,8 +2926,8 @@
   --accent: #F5A13A;
   --accent-ink: #1A0F02;
   --bad: #FF7A7F;
-  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
-  --body: "DM Sans", system-ui, sans-serif;
+  --display: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --body: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
 
   display: flex;
   min-height: 100vh;
@@ -3129,14 +3129,17 @@
   flex-direction: column;
   gap: 16px;
   color: var(--hm-text);
-  font-family: "DM Sans", system-ui, sans-serif;
+  /* Même pile de polices que le reste du jeu (retour utilisateur 2026-09-25 :
+     "la police n'est pas corrigée") : "DM Sans" n'est jamais chargée. */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 .hm-feed__head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 
 .hm-feed__title {
   margin: 0;
-  font-family: "Barlow Condensed", sans-serif;
+  /* "Barlow Condensed" n'est jamais chargée : pile système du jeu. */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   font-weight: 700;
   font-size: 19px;
   text-transform: uppercase;
@@ -3161,7 +3164,7 @@
   border: 1px solid #2A3752;
   background: transparent;
   color: #C4CEDD;
-  font: 600 13px "DM Sans", system-ui, sans-serif;
+  font: 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   cursor: pointer;
 }
 .hm-feed__filter:hover { border-color: #3E4E70; color: var(--hm-text); }

@@ -21,6 +21,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 ## À faire
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Tableau de bord :
+  polices = pile système du jeu** — retour utilisateur : "la police n'est
+  pas corrigée j'ai l'impression". Cause : le tableau de bord (.hm-dash)
+  déclarait --display "Barlow Condensed", "Arial Narrow" (Barlow jamais
+  chargée → repli sur Arial Narrow, VRAIE police étroite) et "DM Sans"
+  (jamais chargée) pour --body, .hm-dash, .hm-feed__title et un bouton du
+  fil. Tout pointe maintenant sur la pile système du reste du jeu. Le
+  même correctif --display/--body existait déjà, non committé, dans le
+  chantier "vrais logos + boutons en pilule" d'une autre session
+  (livrer_dashboard_fixes.sh) : commit partiel, seules les lignes de
+  polices. Tests dashboard verts. Reste : `git push`.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Tableau de bord :
   brique Budget = chiffres de la semaine précédente** — retours
   utilisateur : "dans la brique budget, dépense et revenu et Revenus Net
   Hebdomadaires (incluant la billetterie), à mettre à jour toutes les
