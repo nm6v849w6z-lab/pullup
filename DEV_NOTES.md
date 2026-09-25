@@ -40,7 +40,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   (#staffBudget = montant seul). Tests verts sur Mac : client_scouting,
   persistence, tabs, staff_market_persistence, coach_market,
   analyst_market, youth_academy, onboarding_tour, dashboard_e2e,
-  economie_redesign. Reste : `git push`.
+  economie_redesign.
+  Retouches (2026-09-25, retour utilisateur avec capture) : phrase
+  d'intro sous "Staff" retirée ; description + résumé "N candidats ·
+  prochaine fin d'enchère" retirés sous chaque rôle ; niveau en texte
+  retiré pour le staff en poste (cartes poste + bloc "en poste"), seules
+  les étoiles restent (aria-label "Niveau N sur 5" pour les lecteurs
+  d'écran, tests client_scouting/persistence adaptés).
+  Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Pendant un direct :
   « Voir le live » au lieu des ordres** — retour utilisateur (capture) :

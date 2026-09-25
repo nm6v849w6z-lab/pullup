@@ -1591,7 +1591,6 @@
   .stf-top__titles{display:flex; flex-direction:column; gap:6px; min-width:0; flex:1 1 360px;}
   .stf-top__titles h2{margin:0; font-family:var(--stf-display); font-weight:800; font-size:34px; line-height:1.05; letter-spacing:-.02em; color:var(--ink);}
   .stf-table th:last-child{text-align:right;}
-  .stf-lede{margin:0; color:var(--ink-dim); font-size:15px; max-width:640px;}
   .stf-kpis{display:flex; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
   .stf-kpi{background:var(--panel); padding:12px 20px; display:flex; flex-direction:column; gap:2px;}
   .stf-kpi__label{font-size:13px; color:var(--ink-dim);}
@@ -1624,8 +1623,8 @@
   .stf-role__head{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:20px 24px;}
   .stf-role__titles{display:flex; flex-direction:column; gap:4px; min-width:0;}
   .stf-role__titles h3{margin:0; font-family:var(--stf-display); font-weight:800; font-size:22px; line-height:1.15; color:var(--ink);}
-  .stf-role__desc{font-size:14px; color:var(--ink-dim);}
-  .stf-role__summary{font-size:13px; color:var(--ink-faint);}
+  .stf-slot__status{display:flex; flex-wrap:wrap; align-items:center; gap:2px 8px;}
+  .stf-nowrap{white-space:nowrap;}
   .stf-current-holder{padding:0 24px;}
   .stf-current-holder .staff-none{margin:0 0 16px; font-size:14px;}
   .stf-page .stf-current{margin:0 0 18px; padding:12px 16px; border-radius:12px; background:var(--panel-2); border:1px solid var(--line);}
@@ -4081,7 +4080,6 @@
       <div class="stf-top">
         <div class="stf-top__titles">
           <h2>Staff</h2>
-          <p class="stf-lede">Recrutez votre staff aux enchères. À la clôture, le plus offrant signe : sa mise devient son salaire de départ, payé chaque semaine tant que le contrat court.</p>
         </div>
         <div class="stf-kpis">
           <div class="stf-kpi"><span class="stf-kpi__label">Budget club</span><span class="stf-kpi__value" id="staffBudget"></span></div>
@@ -4095,8 +4093,6 @@
         <div class="stf-role__head">
           <div class="stf-role__titles">
             <h3 id="staffCoachTitle">Candidats entraîneur</h3>
-            <span class="stf-role__desc">Accélère la progression de vos joueurs à l'entraînement. Aucun effet direct en match.</span>
-            <span class="stf-role__summary" id="staffCoachSummary"></span>
           </div>
           <button type="button" class="stf-ghost-btn" data-staff-toggle-role="coach" aria-controls="staffCoachBody"></button>
         </div>
@@ -4110,8 +4106,6 @@
         <div class="stf-role__head">
           <div class="stf-role__titles">
             <h3 id="staffAnalystTitle">Candidats analyste vidéo</h3>
-            <span class="stf-role__desc">Prépare des séances vidéo sur vos adversaires (Analyse d'équipe). Aucun effet sur l'entraînement.</span>
-            <span class="stf-role__summary" id="staffAnalystSummary"></span>
           </div>
           <button type="button" class="stf-ghost-btn" data-staff-toggle-role="analyst" aria-controls="staffAnalystBody"></button>
         </div>
@@ -4125,8 +4119,6 @@
         <div class="stf-role__head">
           <div class="stf-role__titles">
             <h3 id="staffRecruiterTitle">Candidats recruteur</h3>
-            <span class="stf-role__desc">Déniche de jeunes prospects pour votre Académie de jeunes.</span>
-            <span class="stf-role__summary" id="staffRecruiterSummary"></span>
           </div>
           <button type="button" class="stf-ghost-btn" data-staff-toggle-role="recruiter" aria-controls="staffRecruiterBody"></button>
         </div>
@@ -25730,7 +25722,7 @@ const STAFF_ROLES = [
   {
     key: "coach", label: "Entraîneur", noun: "entraîneur",
     listKey: "coachListings", currentId: "staffCurrent", gridId: "staffHireGrid",
-    summaryId: "staffCoachSummary", bodyId: "staffCoachBody", inputPrefix: "coachBid_",
+    bodyId: "staffCoachBody", inputPrefix: "coachBid_",
     member: () => teamA.trainer, salary: () => teamA.trainerSalary(),
     placeBid: (id, amount, now) => league.placeCoachBid(id, myTeamIndex, amount, now),
     syncBid: (id, amount) => syncCoachBidToServer(id, amount),
@@ -25745,7 +25737,7 @@ const STAFF_ROLES = [
   {
     key: "analyst", label: "Analyste vidéo", noun: "analyste vidéo",
     listKey: "analystListings", currentId: "staffAnalystCurrent", gridId: "staffAnalystHireGrid",
-    summaryId: "staffAnalystSummary", bodyId: "staffAnalystBody", inputPrefix: "analystBid_",
+    bodyId: "staffAnalystBody", inputPrefix: "analystBid_",
     member: () => teamA.videoAnalyst, salary: () => teamA.videoAnalystSalary(),
     placeBid: (id, amount, now) => league.placeAnalystBid(id, myTeamIndex, amount, now),
     syncBid: (id, amount) => syncAnalystBidToServer(id, amount),
@@ -25756,7 +25748,7 @@ const STAFF_ROLES = [
   {
     key: "recruiter", label: "Recruteur", noun: "recruteur",
     listKey: "recruiterListings", currentId: "staffRecruiterCurrent", gridId: "staffRecruiterHireGrid",
-    summaryId: "staffRecruiterSummary", bodyId: "staffRecruiterBody", inputPrefix: "recruiterBid_",
+    bodyId: "staffRecruiterBody", inputPrefix: "recruiterBid_",
     member: () => teamA.recruiter, salary: () => teamA.recruiterSalary(),
     placeBid: (id, amount, now) => league.placeRecruiterBid(id, myTeamIndex, amount, now),
     syncBid: (id, amount) => syncRecruiterBidToServer(id, amount),
@@ -25776,7 +25768,10 @@ const staffUi = {
 };
 
 function staffStarsHtml(level) {
-  return `<span class="stf-stars" aria-hidden="true"><span class="on">${"★".repeat(level)}</span><span class="off">${"★".repeat(5 - level)}</span></span>`;
+  // role="img" + aria-label : le niveau n'est plus écrit en toutes lettres
+  // pour le staff en poste (retour utilisateur 2026-09-25 : "on a déjà les
+  // étoiles"), il reste lisible par les lecteurs d'écran.
+  return `<span class="stf-stars" role="img" aria-label="Niveau ${level} sur 5"><span class="on">${"★".repeat(level)}</span><span class="off">${"★".repeat(5 - level)}</span></span>`;
 }
 function staffCandidatesLabel(n) {
   return `${n} candidat${n > 1 ? "s" : ""}`;
@@ -25805,7 +25800,7 @@ function staffSlotHtml(role, now) {
   let state, status, badge;
   if (m) {
     state = "filled"; badge = "En poste";
-    status = `${staffStarsHtml(m.level)} Niveau ${m.level} · ${escapeHtml(formatMoney(role.salary()))}/sem.`;
+    status = `${staffStarsHtml(m.level)}<span class="stf-nowrap">${escapeHtml(formatMoney(role.salary()))}/sem.</span>`;
   } else if (leadingCount) {
     state = "bidding"; badge = "En cours";
     status = `Vous menez ${leadingCount} enchère${leadingCount > 1 ? "s" : ""}`;
@@ -25828,7 +25823,7 @@ function renderStaffRole(role, now) {
   const m = role.member();
   if (m) {
     currentHolder.innerHTML = `<div class="staff-current stf-current">` +
-      `<div class="staff-current-info">${staffStarsHtml(m.level)} <strong>${role.label} niveau ${m.level}</strong>` +
+      `<div class="staff-current-info">${staffStarsHtml(m.level)} <strong>${role.label}</strong>` +
       `<span class="staff-current-meta">En poste depuis ${m.weeksEmployed} semaine(s) · salaire actuel : ${escapeHtml(formatMoney(role.salary()))}/semaine</span></div>` +
       `<button type="button" class="staff-fire-btn" data-staff-fire="${role.key}">Congédier</button></div>`;
   } else {
@@ -25836,9 +25831,8 @@ function renderStaffRole(role, now) {
   }
 
   // En-tête : résumé + bouton replier/déplier.
-  document.getElementById(role.summaryId).textContent = open.length
-    ? `${staffCandidatesLabel(open.length)} · prochaine fin d'enchère dans ${timeLeftLabel(open[0].closesAt, now)}`
-    : "Aucun candidat aux enchères pour l'instant";
+  // Retour utilisateur (2026-09-25) : plus de phrase de description ni de
+  // résumé "N candidats · prochaine fin d'enchère" sous le titre du rôle.
   const toggle = document.querySelector(`[data-staff-toggle-role="${role.key}"]`);
   toggle.textContent = ui.open ? "Masquer les candidats" : "Voir les candidats";
   toggle.setAttribute("aria-expanded", ui.open ? "true" : "false");

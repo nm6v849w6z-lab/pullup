@@ -76,7 +76,7 @@ getLeague(win).teams[getMyTeamIndex(win)].hireVideoAnalyst(3, 5000);
 win.renderStaffPanel();
 const analystCurrentInfo = doc.querySelector("#staffAnalystCurrent .staff-current-info");
 console.log("\nBloc 'analyste en poste' après embauche :", analystCurrentInfo && analystCurrentInfo.textContent);
-if (!analystCurrentInfo || !analystCurrentInfo.textContent.includes("niveau 3")) {
+if (!analystCurrentInfo || !analystCurrentInfo.querySelector('[aria-label="Niveau 3 sur 5"]')) {
   throw new Error("❌ Après embauche, le panneau devrait afficher l'analyste en poste (niveau 3).");
 }
 // Retour utilisateur (2026-09) : le nombre de caractéristiques révélées par

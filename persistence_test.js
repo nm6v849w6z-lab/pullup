@@ -190,7 +190,9 @@ const staffText = doc2.getElementById("staffCurrent").textContent.replace(/\s+/g
 const budgetText = doc2.getElementById("staffBudget").textContent;
 console.log("Staff après rechargement :", staffText);
 console.log("Budget après rechargement :", budgetText);
-const staffOk = staffText.includes("niveau 4") && staffText.includes(`En poste depuis ${WEEKS} semaine`);
+// Refonte Staff (2026-09-25) : le niveau n'est plus écrit en texte, seulement
+// en étoiles (aria-label "Niveau N sur 5").
+const staffOk = !!doc2.querySelector('#staffCurrent [aria-label="Niveau 4 sur 5"]') && staffText.includes(`En poste depuis ${WEEKS} semaine`);
 // Refonte Staff (2026-09-25) : #staffBudget ne contient plus que le montant
 // (le libellé "Budget club" est désormais une étiquette séparée de la tuile).
 const budgetOk = budgetText === `${savedTeam.budget.toLocaleString("fr-FR")} €`;
