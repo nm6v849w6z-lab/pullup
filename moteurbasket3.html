@@ -30004,7 +30004,10 @@ function renderEffectifSection() {
     const best = {};
     allKeys.forEach(k => { best[k] = Math.max(...teamA.players.map(p => effAttrValue(p, k))); });
     const avgActive = !rosterSortState.key || rosterSortState.key === "avg";
-    let html = effectifSubNavHtml(`<span class="eff-hint">Cadre : meilleur de l'équipe. Cliquez une colonne pour trier.</span>`);
+    // Plus de texte d'aide à droite des onglets (retour utilisateur
+    // 2026-09-25 : "enlève Cadre : meilleur de l'équipe. Cliquez une colonne
+    // pour trier.").
+    let html = effectifSubNavHtml();
     html += `<div class="eff-table-wrap eff-table-wrap-caracs"><table class="roster-table eff-table eff-caracs"><thead>`;
     // Ligne de familles (Tir/Jeu/Défense/Condition) : en <td> exprès, pour
     // que `thead th` ne liste que les colonnes réelles (une par cellule de
