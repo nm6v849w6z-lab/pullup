@@ -48,9 +48,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   (journalisés seulement par l'événement rebound) sans doubler les contres.
   live.css en container queries (la barre latérale réduit la largeur).
   Statut : testé en navigateur (1280/1024, en cours, mi-temps, fin), tests
-  live JSDOM verts. Reste : `git push` ; plus tard, côté moteur,
-  élision « de Adama » → de() et texte du rebond du tireur ; supprimer
-  l'ancienne vue une fois la nouvelle validée.
+  live JSDOM verts. Textes du moteur corrigés
+  ensuite (élision « d'Adama », rebond repris par le tireur : « il reprend
+  son propre rebond »), engine.js + copie embarquée. Reste : `git push` ;
+  supprimer l'ancienne vue une fois la nouvelle validée.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25)
   — Calendrier : refonte visuelle + horaires stables au changement d'heure**
   — retours utilisateur : "améliore l'affichage du calendrier", maquette

@@ -482,7 +482,17 @@ function weightedPick(items, weightFn) {
 // ---------------------------------------------------------------------
 function say(templates, vars) {
   const t = pick(templates);
-  return t.replace(/\{(\w+)\}/g, (_, k) => (vars[k] !== undefined ? vars[k] : `{${k}}`));
+  // Élision (retour utilisateur 2026-09-25, refonte du live) : « de » devant
+  // un nom qui commence par une voyelle ou un h devient « d' » — « Tir manqué
+  // d'Adama Diallo », jamais « de Adama Diallo ».
+  return t.replace(/(\bde )?\{(\w+)\}/g, (m, de, k) => {
+    if (vars[k] === undefined) return m;
+    const v = String(vars[k]);
+    return de ? elideDe(v) : v;
+  });
+}
+function elideDe(name) {
+  return (/^[aeiouyàâäéèêëîïôöùûüh]/i.test(name) ? "d'" : "de ") + name;
 }
 
 const PHRASES = {
@@ -543,6 +553,13 @@ const PHRASES = {
   reboundOff: [
     "Tir manqué de {shooter}. Rebond offensif de {rebounder}.",
     "{shooter} manque son tir, {rebounder} suit et récupère en attaque.",
+  ],
+  // Rebond offensif pris par le tireur lui-même (retour utilisateur
+  // 2026-09-25 : plus de « Rayan Brooks manque son tir, Rayan Brooks suit et
+  // récupère »).
+  reboundOwn: [
+    "{shooter} manque son tir, il reprend son propre rebond.",
+    "Tir manqué de {shooter}, qui récupère lui-même le rebond offensif.",
   ],
   reboundDef: [
     "Tir manqué de {shooter}. Rebond défensif de {rebounder}.",
@@ -11200,7 +11217,7 @@ class MatchEngine {
       if (offensiveRebound) rebounder.stats.oreb++; else rebounder.stats.dreb++;
 
       this.log(events, quarter, clock, say(
-        offensiveRebound ? PHRASES.reboundOff : PHRASES.reboundDef,
+        offensiveRebound ? (rebounder === shooter ? PHRASES.reboundOwn : PHRASES.reboundOff) : PHRASES.reboundDef,
         { shooter: shooter.name, rebounder: rebounder.name }
       ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, rebounder: rebounder.name, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
