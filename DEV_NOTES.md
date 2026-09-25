@@ -20,6 +20,36 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de l'onglet Économie** — retour
+  utilisateur : "réfléchis à comment rendre cette page plus sympa (le bouton
+  admin en bas doit rester tel quel)", maquette Claude validée ("ça claque
+  pas mal, code tout ça"). Contenu : bandeau budget + courbe d'évolution
+  (reconstituée depuis le journal), carte "Semaine type" (revenus fixes vs
+  charges fixes joueurs+staff+académie, subvention restante, autonomie),
+  4 cartes chiffrées (masse salariale en anneau, salle = remplissage du
+  dernier match à domicile, boutique = amortissement + palier suivant,
+  droits TV), historique groupé par semaine (repliable, filtres Tout/Revenus/
+  Dépenses, icônes, tutoriel regroupé en une ligne, étiquettes
+  Exceptionnel/Transfert). Bloc admin inchangé. Aucun changement moteur
+  (libellés de transaction réinterprétés côté affichage seulement, ex.
+  "Salaire du staff" = Entraîneur). IDs conservés pour les tests existants
+  (economieBudget, economieBudgetStart, economiePayroll, economieTvRights,
+  economieTransactions + .gain-line.gain-pending/.gain-line-total).
+  Fichiers : moteurbasket3.html (HTML #economieSection, CSS .eco-*,
+  renderEconomieSection + helpers eco*).
+  Nouveau test : economie_redesign_test.js (journal de la capture
+  utilisateur : bilans par semaine, tutoriel regroupé, filtres, repli,
+  Semaine type, cartes Salle/Boutique, bloc admin présent). Rendu vérifié
+  dans Chromium (1440 px). Mobile : non traité (même limite que le reste de
+  l'app, barre latérale fixe à 390 px — consigne "mets de côté le mobile").
+  Tests : suite complète 124 fichiers, tout vert sauf
+  training_progression_test (flaky connu, échoue aussi seul) ;
+  calendrier_ordres_stale_live_redirect_test et end_to_end_test ont échoué
+  en parallèle (charge) mais passent seuls.
+  Statut : COMMITTÉ (commit partiel : seules les parties Économie de
+  moteurbasket3.html, les retouches Salle/écussons d'autres sessions en
+  cours restent dans le working tree), À POUSSER PAR L'UTILISATEUR. Reste :
+  `git push`, puis retirer cette entrée.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte visuelle Salle**
   (onglet Salle) — retour utilisateur : "aide moi à rendre cette page plus
   sexy", puis sur la maquette HTML proposée : "vas y ça me plait bien, code

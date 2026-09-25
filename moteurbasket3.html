@@ -2635,6 +2635,127 @@
      pour ne pas la confondre avec une transaction réellement réglée. Voir
      renderEconomieSection. */
   .gain-line.gain-pending{color:var(--amber);}
+  /* =====================================================================
+     Économie — refonte (retour utilisateur 2026-09-25 : "réfléchis à
+     comment rendre cette page plus sympa", maquette validée "ça claque pas
+     mal, code tout ça"). Bandeau budget + courbe, carte "Semaine type",
+     4 cartes chiffrées, historique groupé par semaine. Tout est scopé sous
+     .eco-page / #economieSection pour ne rien reteinter ailleurs. Voir
+     renderEconomieSection et les helpers eco* côté JS.
+     ===================================================================== */
+  .eco-page{--eco-in:#5fd6ae; --eco-out:#f58a76; --eco-in-bg:rgba(76,201,160,.14); --eco-out-bg:rgba(240,122,100,.14); --eco-display:"Barlow Condensed","Arial Narrow",sans-serif; font-variant-numeric:tabular-nums;}
+  .eco-page > h2{margin-bottom:4px;}
+  .eco-title-sub{color:var(--ink-dim); font-size:14px; margin:0 0 18px;}
+  .eco-label{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); font-weight:600;}
+  .eco-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px 24px; display:flex; flex-direction:column; gap:14px; min-width:0; box-sizing:border-box;}
+  .eco-hero{display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); gap:20px; margin-bottom:20px;}
+  .eco-cards{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-bottom:30px;}
+  .eco-num{font-family:var(--eco-display); font-weight:700; line-height:1; color:var(--ink); white-space:nowrap;}
+  .eco-num.xl{font-size:64px;}
+  .eco-num.lg{font-size:34px;}
+  .eco-num.md{font-size:30px;}
+  .eco-num .unit{font-size:.55em; color:var(--ink-dim); font-weight:600;}
+  .eco-num.negative{color:var(--eco-out);}
+  .eco-budget-top{display:flex; flex-direction:column; gap:12px;}
+  .eco-budget-meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; font-size:13px; color:var(--ink-dim);}
+  .eco-budget-meta:empty{display:none;}
+  .eco-chip{display:inline-block; padding:5px 12px; border-radius:999px; font-weight:700; font-size:13.5px;}
+  .eco-chip.up{background:var(--eco-in-bg); color:var(--eco-in);}
+  .eco-chip.down{background:var(--eco-out-bg); color:var(--eco-out);}
+  .eco-chart{position:relative; height:140px; margin:6px 8px 26px;}
+  .eco-chart svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible;}
+  .eco-chart-grid{position:absolute; left:0; right:0; border-top:1px dashed var(--line-soft);}
+  .eco-chart-dot{position:absolute; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; background:var(--bg); border:2.5px solid var(--amber); box-sizing:border-box;}
+  .eco-chart-dot.last{background:var(--amber); width:12px; height:12px; margin:-6px 0 0 -6px;}
+  .eco-chart-lbl{position:absolute; bottom:-24px; transform:translateX(-50%); font-size:12px; color:var(--ink-dim); white-space:nowrap;}
+  .eco-chart-lbl.first{transform:none;}
+  .eco-chart-lbl.last{transform:translateX(-100%); color:var(--ink); font-weight:700;}
+  .eco-chart-empty{color:var(--ink-dim); font-size:13px; margin:18px 0;}
+  .eco-start-line{font-size:13px; color:var(--ink-dim); border-top:1px solid var(--line-soft); padding-top:12px; margin-top:auto;}
+  .eco-start-line b{color:var(--ink);}
+  .eco-start-line b.negative{color:var(--eco-out);}
+  .eco-bar-row{display:flex; flex-direction:column; gap:6px;}
+  .eco-bar-head{display:flex; justify-content:space-between; gap:8px; font-size:14px;}
+  .eco-bar-head > span:last-child{white-space:nowrap;}
+  .eco-muted{color:var(--ink-dim);}
+  .eco-track{height:9px; border-radius:5px; background:var(--panel-2); overflow:hidden;}
+  .eco-fill{height:100%; border-radius:5px; background:var(--amber);}
+  .eco-fill.in{background:#4cc9a0;}
+  .eco-fill.out{background:#f07a64;}
+  .eco-in{color:var(--eco-in); font-weight:700;}
+  .eco-out{color:var(--eco-out); font-weight:700;}
+  .eco-net{display:flex; justify-content:space-between; align-items:baseline; gap:10px; border-top:1px solid var(--line); padding-top:12px; font-weight:600;}
+  .eco-extras{display:flex; flex-direction:column; gap:5px; font-size:13.5px; color:var(--ink-dim);}
+  .eco-alert{margin-top:auto; padding:11px 14px; border-radius:12px; background:#2a2218; border:1px solid #5a4424; color:#f5d7a6; font-size:13.5px; display:flex; gap:10px; align-items:center;}
+  .eco-alert.ok{background:rgba(76,201,160,.08); border-color:rgba(76,201,160,.35); color:#c6f0e1;}
+  .eco-alert svg{flex-shrink:0;}
+  .eco-kv{display:flex; flex-direction:column; gap:4px; font-size:13.5px;}
+  .eco-kv > div{display:flex; justify-content:space-between; gap:8px;}
+  .eco-kv .k{color:var(--ink-dim);}
+  .eco-small{font-size:12.5px; color:var(--ink-dim); line-height:1.45;}
+  .eco-card .quick-links{margin-top:auto;}
+  .eco-card .quick-links .secondary{width:100%;}
+  .eco-donut-row{display:flex; flex-wrap:wrap; gap:14px; align-items:center;}
+  .eco-donut-row svg{flex-shrink:0;}
+  .eco-legend{display:flex; flex-direction:column; gap:4px; font-size:12.5px; flex:1 1 150px; min-width:0;}
+  .eco-legend > div{display:flex; justify-content:space-between; gap:6px;}
+  .eco-legend > div > span:first-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .eco-dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;}
+  .eco-pill-tag{align-self:flex-start; padding:3px 10px; border-radius:999px; background:var(--panel-2); font-size:12.5px; font-weight:600; color:var(--ink-dim);}
+  .eco-history-head{display:flex; justify-content:space-between; align-items:center; gap:12px; margin:0 0 12px; flex-wrap:wrap;}
+  .eco-history-head h3{margin:0; font-family:var(--eco-display); font-size:28px; font-weight:700;}
+  .eco-filters{display:flex; gap:4px; padding:4px; border-radius:999px; background:var(--panel); border:1px solid var(--line);}
+  .eco-filters button{height:34px; padding:0 16px; border:0; border-radius:999px; background:transparent; color:var(--ink-dim); font-weight:600; cursor:pointer; font-size:13.5px; font-family:inherit;}
+  .eco-filters button.active{background:var(--amber); color:var(--amber-ink);}
+  .eco-pending{margin-bottom:12px;}
+  .eco-week{background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; margin-bottom:12px;}
+  .eco-week-head{width:100%; display:flex; align-items:center; gap:18px; padding:14px 18px; border:0; background:transparent; color:var(--ink); cursor:pointer; text-align:left; font:inherit;}
+  .eco-week-head:hover{background:rgba(255,255,255,.02);}
+  .eco-week-name{display:flex; flex-direction:column; gap:2px; width:170px; flex-shrink:0;}
+  .eco-week-name b{font-family:var(--eco-display); font-size:22px; font-weight:700;}
+  .eco-week-name span{font-size:12.5px; color:var(--ink-dim);}
+  .eco-week-bars{display:flex; flex-direction:column; gap:5px; flex-grow:1; min-width:0;}
+  .eco-week-bars > span{display:flex; align-items:center; gap:10px; font-size:12.5px;}
+  .eco-week-bars i{display:block; height:7px; border-radius:4px; flex-shrink:0;}
+  .eco-week-net{font-family:var(--eco-display); font-size:26px; white-space:nowrap;}
+  .eco-chev{transition:transform .15s; color:var(--ink-dim); flex-shrink:0;}
+  .eco-week.open .eco-chev{transform:rotate(180deg);}
+  .eco-rows{display:none;}
+  .eco-week.open .eco-rows{display:block;}
+  #economieSection .eco-row.gain-line{display:flex; align-items:center; gap:12px; min-height:48px; box-sizing:border-box; padding:6px 18px; border-top:1px solid var(--line-soft); border-bottom:0; color:var(--ink); font-size:14.5px;}
+  .eco-ico{width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .eco-row.gain-up .eco-ico{background:var(--eco-in-bg); color:var(--eco-in);}
+  .eco-row.gain-down .eco-ico{background:var(--eco-out-bg); color:var(--eco-out);}
+  .eco-row-label{flex-grow:1; min-width:0;}
+  .eco-row-label span{color:var(--ink-dim);}
+  .eco-tag{padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:600; background:var(--panel-2); color:var(--ink-dim); white-space:nowrap;}
+  .eco-sub-toggle{height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--ink); font-size:12.5px; cursor:pointer; font-family:inherit;}
+  .eco-amt{width:120px; text-align:right; font-family:var(--eco-display); font-weight:600; font-size:20px; flex-shrink:0; white-space:nowrap;}
+  .eco-row.gain-up .eco-amt{color:var(--eco-in);}
+  .eco-row.gain-down .eco-amt{color:var(--eco-out);}
+  .eco-subgrid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:2px 18px 14px 62px;}
+  .eco-subgrid span{display:flex; justify-content:space-between; gap:6px; padding:7px 11px; border-radius:9px; background:var(--bg); font-size:12.5px;}
+  .eco-subgrid b{color:var(--eco-in); font-weight:600;}
+  .eco-empty-filter{padding:14px 18px; border-top:1px solid var(--line-soft); color:var(--ink-dim); font-size:13px;}
+  #economieSection .gain-line-total{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; border-top:0; padding:6px 18px 0; color:var(--ink-dim); font-size:14px;}
+  #economieSection .gain-line-total b{font-size:16px;}
+  #economieSection .gain-line-total.gain-up b{color:var(--eco-in);}
+  #economieSection .gain-line-total.gain-down b{color:var(--eco-out);}
+  @media (max-width:1150px){ .eco-cards{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  @media (max-width:880px){
+    .eco-hero{grid-template-columns:1fr;}
+    .eco-num.xl{font-size:48px;}
+    .eco-week-bars{display:none;}
+    .eco-week-head{justify-content:space-between;}
+    .eco-subgrid{grid-template-columns:repeat(2,minmax(0,1fr)); padding-left:18px;}
+    .eco-tag{display:none;}
+  }
+  @media (max-width:560px){
+    .eco-cards{grid-template-columns:1fr;}
+    .eco-card{padding:18px;}
+    .eco-amt{width:auto;}
+    .eco-week-name{width:auto;}
+  }
   .gain-note{padding:7px 14px; font-size:12px; color:var(--ink-faint); border-bottom:1px solid var(--line-soft);}
   .gain-note:last-child{border-bottom:none;}
   /* Détail par catégorie de place sous chaque ligne de l'historique
@@ -3848,42 +3969,63 @@
   </div>
 
   <div id="economieSection" class="hidden">
-    <div class="section">
+    <!-- Refonte 2026-09-25 (retour utilisateur : "réfléchis à comment rendre
+         cette page plus sympa", maquette validée) : bandeau budget + courbe,
+         carte "Semaine type", 4 cartes chiffrées, historique groupé par
+         semaine. Contenu rempli par renderEconomieSection. Les IDs
+         historiques (economieBudget, economieBudgetStart, economiePayroll,
+         economieTvRights, economieTransactions...) sont conservés : les
+         tests existants s'appuient dessus. -->
+    <div class="section eco-page">
       <h2>Économie</h2>
+      <p class="eco-title-sub" id="economieWeekSub"></p>
       <div id="economieDeficitBanner"></div>
-      <div class="stat-grid">
-        <div class="stat-card">
-          <h3>Solde en début de semaine</h3>
-          <div class="big staff-budget" id="economieBudgetStart"></div>
-          <div class="sub" id="economieBudgetStartSub"></div>
-        </div>
-        <div class="stat-card">
-          <h3>Budget du club</h3>
-          <div class="big staff-budget" id="economieBudget"></div>
-        </div>
-        <div class="stat-card">
-          <h3>Masse salariale</h3>
-          <div class="big" id="economiePayroll"></div>
-          <div class="sub" id="economiePayrollSub"></div>
+      <div class="eco-hero">
+        <section class="eco-card">
+          <div class="eco-budget-top">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <span class="eco-label">Budget du club</span>
+              <div class="eco-num xl" id="economieBudget"></div>
+            </div>
+            <div class="eco-budget-meta" id="economieBudgetMeta"></div>
+          </div>
+          <div id="economieBudgetChart"></div>
+          <div class="eco-start-line">Solde en début de semaine : <b id="economieBudgetStart"></b> · <span id="economieBudgetStartSub"></span></div>
+        </section>
+        <section class="eco-card" id="economieWeeklyCard"></section>
+      </div>
+      <div class="eco-cards">
+        <section class="eco-card">
+          <span class="eco-label">Masse salariale</span>
+          <div class="eco-num lg" id="economiePayroll"></div>
+          <div id="economiePayrollChart"></div>
+          <div class="eco-small" id="economiePayrollSub"></div>
           <div class="quick-links"><button class="secondary" data-tab="effectif">Voir l'effectif</button></div>
-        </div>
-        <div class="stat-card">
-          <h3>Salle</h3>
-          <div class="sub" id="economieArenaSummary"></div>
+        </section>
+        <section class="eco-card">
+          <span class="eco-label">Salle</span>
+          <div id="economieArenaSummary" style="display:flex; flex-direction:column; gap:14px;"></div>
           <div class="quick-links"><button class="secondary" data-tab="salle">Gérer la salle</button></div>
-        </div>
-        <div class="stat-card">
-          <h3>Boutique des supporters</h3>
-          <div class="sub" id="economieFanShopSummary"></div>
+        </section>
+        <section class="eco-card">
+          <span class="eco-label">Boutique</span>
+          <div id="economieFanShopSummary" style="display:flex; flex-direction:column; gap:14px;"></div>
           <div class="quick-links"><button class="secondary" data-tab="salle">Gérer la boutique</button></div>
-        </div>
-        <div class="stat-card">
-          <h3>Droits TV</h3>
-          <div class="big" id="economieTvRights"></div>
-          <div class="sub">Revenu fixe hebdomadaire, selon la division actuelle du club, versé que le club entraîne ou pas, aucune gestion nécessaire.</div>
+        </section>
+        <section class="eco-card">
+          <span class="eco-label">Droits TV</span>
+          <div class="eco-num lg" id="economieTvRights"></div>
+          <div id="economieTvSub" style="display:flex; flex-direction:column; gap:12px; flex-grow:1;"></div>
+        </section>
+      </div>
+      <div class="eco-history-head">
+        <h3>Historique</h3>
+        <div class="eco-filters" id="economieFilters" role="group" aria-label="Filtrer l'historique">
+          <button type="button" data-eco-filter="all">Tout</button>
+          <button type="button" data-eco-filter="in">Revenus</button>
+          <button type="button" data-eco-filter="out">Dépenses</button>
         </div>
       </div>
-      <h3 class="field-label">Transactions récentes</h3>
       <div id="economieTransactions"></div>
 
       <!-- Réservé au SEUL manager qui porte Team.isAdmin (voir POST
@@ -28099,90 +28241,460 @@ function deficitBannerHtml() {
 }
 
 // ---------------------------------------------------------------------
-// Économie — budget, résumé de la salle, et journal des transactions
-// récentes (recettes de billetterie, salaire du staff, agrandissements de
-// la salle — voir Team.recordTransaction côté moteur).
+// Économie — refonte (retour utilisateur 2026-09-25 : "réfléchis à comment
+// rendre cette page plus sympa", maquette validée "ça claque pas mal, code
+// tout ça"). Aucune donnée nouvelle côté moteur : tout est reconstitué à
+// partir de teamA (budget, transactions — journal plafonné aux 40 dernières
+// lignes, voir Team.recordTransaction —, salaires joueurs/staff, boutique,
+// attendanceHistory) et des constantes du moteur. Les libellés bruts des
+// transactions ne changent PAS (tests, sauvegardes) : ecoDescribeTransaction
+// les réinterprète seulement pour l'affichage (icône, titre, détail,
+// étiquette), ex. "Salaire du staff" tout court = l'entraîneur (voir
+// Team.trainWeek, seul membre du staff payé sous ce libellé).
 // ---------------------------------------------------------------------
-function renderEconomieSection() {
-  document.getElementById("economieDeficitBanner").innerHTML = deficitBannerHtml();
-  const budgetEl = document.getElementById("economieBudget");
-  budgetEl.textContent = formatMoney(teamA.budget);
-  budgetEl.classList.toggle("negative", teamA.budget < 0);
+let ecoHistoryFilter = "all";      // "all" | "in" | "out"
+const ecoWeekOpen = {};            // semaine -> bool (choix explicite du manager)
+const ecoTutoOpen = {};            // semaine -> bool (détail du tutoriel déplié)
 
-  // Retour utilisateur (2026-09) : "sur l'espace transaction il manque le
-  // solde en début de période" — reconstitué à partir du budget actuel moins
-  // les transactions de LA SEMAINE EN COURS (teamA.week), aucune valeur
-  // séparée n'est stockée pour ça (Team.recordTransaction ne mute que
-  // this.budget, voir plus bas dans le moteur). Même portée hebdomadaire que
-  // les lignes "Semaine X" du journal juste en dessous et que l'ancien bloc
-  // "Finances de la semaine" (retiré des Stats hebdo, doublon avec cet
-  // onglet — voir renderStatsHebdoSection).
-  const allTransactions = teamA.transactions || [];
-  const weekTransactions = allTransactions.filter(t => t.week === teamA.week);
-  const weekTotal = weekTransactions.reduce((s, t) => s + t.amount, 0);
-  const budgetStart = teamA.budget - weekTotal;
-  const startEl = document.getElementById("economieBudgetStart");
-  startEl.textContent = formatMoney(budgetStart);
-  startEl.classList.toggle("negative", budgetStart < 0);
-  const startSubEl = document.getElementById("economieBudgetStartSub");
-  startSubEl.textContent = weekTransactions.length
-    ? `${weekTotal >= 0 ? "+" : ""}${formatMoney(weekTotal)} cette semaine (semaine ${teamA.week}).`
-    : `Aucune transaction encore cette semaine (semaine ${teamA.week}).`;
+const ECO_ICONS = {
+  ticket: "M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4z M14 6v12",
+  gift: "M4 11h16v9H4z M3 7h18v4H3z M12 7v13 M12 7c-2-4-6-3-5 0 M12 7c2-4 6-3 5 0",
+  tv: "M3 7h18v12H3z M8 3l4 4 4-4",
+  shop: "M4 9h16l-1 11H5z M8 9V7a4 4 0 0 1 8 0v2",
+  build: "M3 21h18 M5 21V10l7-5 7 5v11 M10 21v-6h4v6",
+  people: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M3 20a6 6 0 0 1 12 0 M16 5a3 3 0 0 1 0 6 M18 14a5 5 0 0 1 3 6",
+  person: "M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21a8 8 0 0 1 16 0",
+  star: "M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z",
+  transfer: "M4 8h14l-4-4 M20 16H6l4 4",
+  coin: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7v10 M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5",
+};
 
-  const totalPayroll = teamA.players.reduce((s, p) => s + p.salary, 0);
-  document.getElementById("economiePayroll").textContent = `${formatMoney(totalPayroll)}/sem.`;
-  document.getElementById("economiePayrollSub").textContent =
-    "Payée chaque semaine, entraînement ou pas, recalculée au début de chaque nouvelle saison selon le niveau de chaque joueur.";
+function ecoIconSvg(key, size) {
+  const s = size || 18;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ECO_ICONS[key] || ECO_ICONS.coin}"></path></svg>`;
+}
 
-  const info = arenaInfo(teamA.arenaLevel);
-  const priceSummary = SEAT_CATEGORIES.map(cat => `${cat.name} : ${teamA.ticketPrices[cat.key]} €`).join(" · ");
-  document.getElementById("economieArenaSummary").textContent =
-    `${info.name} · ${info.capacity.toLocaleString("fr-FR")} places. ${priceSummary}. Seuls les matchs à domicile rapportent une recette.`;
+// formatMoney utilise l'espace fine insécable (U+202F) de toLocaleString,
+// que la police des gros chiffres n'affiche pas toujours (retour utilisateur
+// sur capture : "573947 €" collé) : espace insécable classique à la place.
+function ecoMoney(n) {
+  return formatMoney(n).replace(/[  ]/g, " ");
+}
+function ecoSigned(n) {
+  return (n >= 0 ? "+" : "−") + ecoMoney(Math.abs(n));
+}
+function ecoNum(n) {
+  return Math.round(n).toLocaleString("fr-FR").replace(/[  ]/g, " ");
+}
 
-  const shopInfo = fanShopInfo(teamA.fanShopLevel);
-  document.getElementById("economieFanShopSummary").textContent = teamA.fanShopLevel > 0
-    ? `${shopInfo.name} · ${formatMoney(shopInfo.weeklyRevenue)}/semaine.`
-    : "Aucune boutique, aucun revenu hebdomadaire fixe pour l'instant.";
+function ecoDescribeTransaction(label, amount) {
+  let m;
+  if ((m = /^Tutoriel d'accueil : (.+)$/.exec(label))) return { cat: "star", title: "Tutoriel d'accueil", detail: "", tag: "Unique", tutoTopic: m[1] };
+  if ((m = /^Billetterie vs (.+) \((\d+) spect\.\)$/.exec(label))) return { cat: "ticket", title: `Billetterie vs ${m[1]}`, detail: `· ${ecoNum(+m[2])} spect.` };
+  if (label === "Subvention de démarrage") return { cat: "gift", title: label, detail: "", tag: "Temporaire" };
+  if ((m = /^Droits TV \((.+)\)$/.exec(label))) return { cat: "tv", title: "Droits TV", detail: `· ${m[1]}` };
+  if ((m = /^Recettes station TV \((.+)\)$/.exec(label))) return { cat: "tv", title: "Station TV", detail: `· ${m[1]}` };
+  if ((m = /^Recettes boutique des supporters \((.+)\)$/.exec(label))) return { cat: "shop", title: "Boutique", detail: `· ${m[1]}` };
+  if ((m = /^Boutique des supporters : (.+)$/.exec(label))) return { cat: "shop", title: "Achat boutique", detail: `· ${m[1]}`, tag: "Exceptionnel" };
+  if ((m = /^Agrandissement de la salle \((.+)\)$/.exec(label))) return { cat: "build", title: "Agrandissement de la salle", detail: `· ${m[1]}`, tag: "Exceptionnel" };
+  if (label === "Salaire du staff") return { cat: "person", title: "Staff", detail: "· Entraîneur" };
+  if ((m = /^Salaire du staff \((.+)\)$/.exec(label))) return { cat: "person", title: "Staff", detail: `· ${m[1].charAt(0).toUpperCase()}${m[1].slice(1)}` };
+  if (label === "Salaires des joueurs") return { cat: "people", title: label, detail: "" };
+  if (label === "Salaires du centre de formation") return { cat: "people", title: "Salaires", detail: "· centre de formation" };
+  if ((m = /^Achat de (.+?)( \(enchères\))?$/.exec(label))) return { cat: "transfer", title: `Achat de ${m[1]}`, detail: m[2] ? "· enchères" : "", tag: "Transfert" };
+  if ((m = /^Vente de (.+?)( \(enchères\))?$/.exec(label))) return { cat: "transfer", title: `Vente de ${m[1]}`, detail: m[2] ? "· enchères" : "", tag: "Transfert" };
+  // Achat d'une infrastructure ("Centre de formation : X", "Station TV : X"...).
+  if (amount < 0 && (m = /^(.+?) : (.+)$/.exec(label))) return { cat: "build", title: m[1], detail: `· ${m[2]}`, tag: "Exceptionnel" };
+  return { cat: "coin", title: label, detail: "" };
+}
 
-  // Droits TV (voir TV_RIGHTS_WEEKLY_BY_LEVEL côté moteur) : dépend de la
-  // division ACTUELLE (`league`, pas `teamA` qui ne connaît pas sa propre
-  // position dans la pyramide).
+// Revenus et charges FIXES d'une semaine avec la configuration ACTUELLE du
+// club (mêmes règles que Team.trainWeek : TV selon la division, boutique,
+// station TV ; salaires joueurs, staff sous contrat, stagiaires).
+function ecoRecurring() {
   const divLevel = league ? (league.divisionLevel || MAX_DIVISION_LEVEL) : null;
-  const tvAmount = divLevel ? TV_RIGHTS_WEEKLY_BY_LEVEL[divLevel] : null;
-  document.getElementById("economieTvRights").textContent = tvAmount != null
-    ? `${formatMoney(tvAmount)}/sem.`
-    : "–";
+  const tv = divLevel && TV_RIGHTS_WEEKLY_BY_LEVEL[divLevel] != null ? TV_RIGHTS_WEEKLY_BY_LEVEL[divLevel] : 0;
+  const shop = teamA.fanShopLevel > 0 ? fanShopInfo(teamA.fanShopLevel).weeklyRevenue : 0;
+  const stationLevel = (teamA.facilityLevels && teamA.facilityLevels.tvStation) || 0;
+  const station = stationLevel > 0 ? (facilityInfo("tvStation", stationLevel).weeklyRevenue || 0) : 0;
+  const players = teamA.players.reduce((s, p) => s + p.salary, 0);
+  const youth = (teamA.youthPlayers || []).length * YOUTH_TRAINEE_WEEKLY_SALARY;
+  const payroll = [
+    { label: "Joueurs", amount: players, color: "#f0a23c" },
+    { label: "Entraîneur", amount: teamA.trainerSalary(), color: "#b58cf0" },
+    { label: "Analyste vidéo", amount: teamA.videoAnalystSalary(), color: "#6b9cf5" },
+    { label: "Recruteur", amount: teamA.recruiterSalary(), color: "#4cc9a0" },
+    { label: "Centre de formation", amount: youth, color: "#7f8ca3" },
+  ].filter(x => x.amount > 0);
+  const revenueParts = [];
+  if (tv) revenueParts.push("TV");
+  if (shop) revenueParts.push("boutique");
+  if (station) revenueParts.push("station TV");
+  const chargeParts = ["joueurs"];
+  if (teamA.trainer || teamA.videoAnalyst || teamA.recruiter) chargeParts.push("staff");
+  if (youth) chargeParts.push("académie");
+  const revenue = tv + shop + station;
+  const charges = payroll.reduce((s, x) => s + x.amount, 0);
+  const subsidyWeeksLeft = teamA.week <= STARTUP_SUBSIDY_WEEKS ? STARTUP_SUBSIDY_WEEKS - teamA.week + 1 : 0;
+  return { divLevel, tv, shop, station, stationLevel, players, payroll, revenue, charges, net: revenue - charges, revenueParts, chargeParts, subsidyWeeksLeft };
+}
 
+// Points de la courbe du budget : solde en fin de chaque semaine présente
+// dans le journal, reconstitué à rebours depuis le budget actuel. Le journal
+// étant plafonné à 40 lignes, sa semaine la plus ancienne peut être
+// incomplète : elle ne sert alors que de point de départ (solde en FIN de
+// cette semaine, exact) plutôt que d'afficher un "début de semaine" faux.
+function ecoBudgetSeries(transactions) {
+  const byWeek = new Map();
+  transactions.forEach(t => byWeek.set(t.week, (byWeek.get(t.week) || 0) + t.amount));
+  const weeks = [...byWeek.keys()].sort((a, b) => a - b);
+  if (!weeks.length) return { points: [], complete: false };
+  const complete = transactions.length < 40 && weeks[0] === 1;
+  let bal = teamA.budget - transactions.reduce((s, t) => s + t.amount, 0);
+  const points = [];
+  if (complete) {
+    points.push({ label: "Départ", value: bal });
+    weeks.forEach(w => { bal += byWeek.get(w); points.push({ label: `S${w}`, value: bal, week: w }); });
+  } else {
+    weeks.forEach((w, i) => { bal += byWeek.get(w); if (i > 0 || weeks.length === 1) points.push({ label: `S${w}`, value: bal, week: w }); });
+    if (weeks.length > 1) points.unshift({ label: `S${weeks[0]}`, value: bal - weeks.slice(1).reduce((s, w) => s + byWeek.get(w), 0), week: weeks[0] });
+  }
+  points.forEach(p => { if (p.week === teamA.week) p.label = `S${p.week} (en cours)`; });
+  return { points: points.slice(-10), complete, byWeek };
+}
+
+function ecoBudgetChartHtml(points) {
+  if (points.length < 2) return `<p class="eco-chart-empty">La courbe du budget apparaîtra après la première semaine.</p>`;
+  const vals = points.map(p => p.value);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  let span = hi - lo;
+  if (span < 1) span = Math.max(1000, Math.abs(hi) * 0.1);
+  lo -= span * 0.35; hi += span * 0.15;
+  const n = points.length;
+  const xy = points.map((p, i) => ({ x: (i / (n - 1)) * 100, y: (1 - (p.value - lo) / (hi - lo)) * 100 }));
+  const line = xy.map((q, i) => `${i ? "L" : "M"}${q.x.toFixed(2)} ${q.y.toFixed(2)}`).join(" ");
+  const area = `${line} L100 100 L0 100 Z`;
+  let html = `<div class="eco-chart" role="img" aria-label="Évolution du budget : ${escapeHtml(points.map(p => `${p.label} ${ecoMoney(p.value)}`).join(", "))}">`;
+  html += `<div class="eco-chart-grid" style="top:0"></div><div class="eco-chart-grid" style="top:50%"></div>`;
+  html += `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="ecoBudgetGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a23c" stop-opacity="0.28"></stop><stop offset="1" stop-color="#f0a23c" stop-opacity="0"></stop></linearGradient></defs>` +
+    `<path d="${area}" fill="url(#ecoBudgetGrad)"></path><path d="${line}" fill="none" stroke="#f0a23c" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path></svg>`;
+  // Étiquettes : toutes jusqu'à 6 points, sinon une sur deux (+ la dernière).
+  const every = n > 6 ? 2 : 1;
+  xy.forEach((q, i) => {
+    const last = i === n - 1, first = i === 0;
+    html += `<span class="eco-chart-dot${last ? " last" : ""}" style="left:${q.x}%; top:${q.y}%" title="${escapeHtml(points[i].label)} : ${ecoMoney(points[i].value)}"></span>`;
+    if (last || first || (n - 1 - i) % every === 0) {
+      const txt = last ? `${points[i].label} · ${ecoMoney(points[i].value)}` : (first ? `${points[i].label} · ${ecoMoney(points[i].value)}` : points[i].label);
+      html += `<span class="eco-chart-lbl${first ? " first" : ""}${last ? " last" : ""}" style="left:${q.x}%">${escapeHtml(txt)}</span>`;
+    }
+  });
+  return html + `</div>`;
+}
+
+const ECO_WARN_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5 M12 16.5v.5 M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>`;
+const ECO_OK_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>`;
+
+function ecoWeeklyCardHtml(rec) {
+  const max = Math.max(rec.revenue, rec.charges, 1);
+  const lastHome = (teamA.attendanceHistory || [])[0];
+  let html = `<div style="display:flex; flex-direction:column; gap:4px;"><span class="eco-label">Semaine type</span><span class="eco-small">Hors billetterie et subvention, avec l'effectif et le staff actuels</span></div>`;
+  html += `<div class="eco-bar-row"><div class="eco-bar-head"><span>Revenus fixes <span class="eco-muted">${escapeHtml(rec.revenueParts.join(" + ") || "aucun")}</span></span><span class="eco-in">${ecoSigned(rec.revenue)}</span></div>` +
+    `<div class="eco-track"><div class="eco-fill in" style="width:${Math.round(rec.revenue / max * 100)}%"></div></div></div>`;
+  html += `<div class="eco-bar-row"><div class="eco-bar-head"><span>Charges fixes <span class="eco-muted">${escapeHtml(rec.chargeParts.join(" + "))}</span></span><span class="eco-out">${ecoSigned(-rec.charges)}</span></div>` +
+    `<div class="eco-track"><div class="eco-fill out" style="width:${Math.round(rec.charges / max * 100)}%"></div></div></div>`;
+  html += `<div class="eco-net"><span>Solde fixe</span><span class="eco-num md ${rec.net < 0 ? "negative" : ""}" style="${rec.net >= 0 ? "color:var(--eco-in)" : ""}">${ecoSigned(rec.net)}<span class="unit">/sem</span></span></div>`;
+  let extras = "";
+  if (rec.subsidyWeeksLeft > 0) {
+    const withSub = rec.net + STARTUP_SUBSIDY_AMOUNT;
+    extras += `<span>+ Subvention de démarrage (${ecoMoney(STARTUP_SUBSIDY_AMOUNT)}, encore ${rec.subsidyWeeksLeft} sem.) → <strong class="${withSub >= 0 ? "eco-in" : "eco-out"}">${ecoSigned(withSub)}/sem</strong></span>`;
+  }
+  if (lastHome) {
+    extras += `<span>+ Dernière recette à domicile : <strong class="eco-in">${ecoMoney(lastHome.revenue)}</strong></span>`;
+  }
+  if (extras) html += `<div class="eco-extras">${extras}</div>`;
+  if (rec.net < 0) {
+    const weeks = teamA.budget > 0 ? Math.floor(teamA.budget / -rec.net) : 0;
+    html += `<div class="eco-alert">${ECO_WARN_ICON}<span>${weeks > 0
+      ? `Autonomie ≈ <strong>${weeks} semaine${weeks > 1 ? "s" : ""}</strong> sans subvention ni match à domicile.`
+      : `Budget épuisé : sans recette de billetterie, chaque semaine creuse le déficit.`}</span></div>`;
+  } else {
+    html += `<div class="eco-alert ok">${ECO_OK_ICON}<span>Les revenus fixes couvrent les charges : la billetterie est du bonus.</span></div>`;
+  }
+  return html;
+}
+
+function ecoPayrollChartHtml(rec) {
+  const total = rec.charges;
+  if (!total) return "";
+  const C = 2 * Math.PI * 42;
+  let offset = 0;
+  const segs = rec.payroll.map(x => {
+    const len = x.amount / total * C;
+    const seg = `<circle cx="50" cy="50" r="42" stroke="${x.color}" stroke-dasharray="${len.toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}"></circle>`;
+    offset += len;
+    return seg;
+  }).join("");
+  const playersPct = Math.round(rec.players / total * 100);
+  const legend = rec.payroll.map(x =>
+    `<div><span><span class="eco-dot" style="background:${x.color}"></span>${escapeHtml(x.label)}</span><span>${ecoNum(x.amount)}</span></div>`
+  ).join("");
+  return `<div class="eco-donut-row"><svg width="84" height="84" viewBox="0 0 100 100" role="img" aria-label="Joueurs : ${playersPct} % de la masse salariale">` +
+    `<g transform="rotate(-90 50 50)" fill="none" stroke-width="14">${segs}</g>` +
+    `<text x="50" y="55" text-anchor="middle" font-size="16" font-weight="700" fill="#eef2f7">${playersPct} %</text></svg>` +
+    `<div class="eco-legend">${legend}</div></div>`;
+}
+
+function ecoArenaHtml() {
+  const info = arenaInfo(teamA.arenaLevel);
+  const last = (teamA.attendanceHistory || [])[0];
+  const prices = SEAT_CATEGORIES.map(cat => teamA.ticketPrices[cat.key]).join(" · ") + " €";
+  if (!last) {
+    return `<div class="eco-num lg">${ecoNum(info.capacity)}<span class="unit"> places</span></div>` +
+      `<span class="eco-small">${escapeHtml(info.name)} · aucun match à domicile joué pour l'instant. Seuls les matchs à domicile rapportent une recette.</span>` +
+      `<div class="eco-kv"><div><span class="k">Prix</span><span>${prices}</span></div></div>`;
+  }
+  const cap = last.capacity || info.capacity;
+  const pct = cap ? Math.round(last.attendance / cap * 100) : 0;
+  const perSpec = last.attendance ? (last.revenue / last.attendance).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " €" : "–";
+  return `<div class="eco-num lg">${pct} %<span class="unit"> remplie</span></div>` +
+    `<div class="eco-bar-row"><div class="eco-track"><div class="eco-fill" style="width:${Math.min(100, pct)}%"></div></div>` +
+    `<span class="eco-small">${ecoNum(last.attendance)} / ${ecoNum(cap)} places · vs ${escapeHtml(last.opponentName || "?")} (S${last.week})</span></div>` +
+    `<div class="eco-kv"><div><span class="k">Recette</span><span class="eco-in">${ecoMoney(last.revenue)}</span></div>` +
+    `<div><span class="k">Par spectateur</span><span>${perSpec}</span></div>` +
+    `<div><span class="k">Prix</span><span>${prices}</span></div></div>`;
+}
+
+function ecoFanShopHtml(transactions) {
+  const level = teamA.fanShopLevel || 0;
+  const next = FAN_SHOP_LEVELS.find(f => f.level === level + 1);
+  const nextHtml = next
+    ? `<span class="eco-small">Niveau suivant : <b style="color:var(--ink)">${escapeHtml(next.name)}</b> · ${ecoMoney(next.cost)} → ${ecoMoney(next.weeklyRevenue)}/sem.</span>`
+    : `<span class="eco-small">Niveau maximum atteint.</span>`;
+  if (level <= 0) {
+    return `<div class="eco-num lg">0 €<span class="unit">/sem</span></div><span class="eco-small">Aucune boutique pour l'instant, aucun revenu hebdomadaire fixe.</span>${nextHtml}`;
+  }
+  const info = fanShopInfo(level);
+  let html = `<div class="eco-num lg">${ecoMoney(info.weeklyRevenue)}<span class="unit">/sem</span></div><span class="eco-pill-tag">${escapeHtml(info.name)}</span>`;
+  // Amortissement du DERNIER palier acheté, seulement si son achat figure
+  // encore dans le journal (plafonné à 40 lignes) : gain apporté par ce
+  // palier = revenu du palier - revenu du palier précédent (voir le
+  // commentaire de FAN_SHOP_LEVELS côté moteur).
+  const idx = transactions.findIndex(t => t.label === `Boutique des supporters : ${info.name}`);
+  const gainPerWeek = info.weeklyRevenue - fanShopInfo(level - 1).weeklyRevenue;
+  if (idx >= 0 && gainPerWeek > 0) {
+    const cost = Math.abs(transactions[idx].amount) || info.cost;
+    const paidWeeks = transactions.slice(0, idx).filter(t => t.label.startsWith("Recettes boutique des supporters")).length;
+    const earned = paidWeeks * gainPerWeek;
+    const pct = Math.min(100, Math.round(earned / cost * 100));
+    const left = Math.max(0, Math.ceil((cost - earned) / gainPerWeek));
+    html += `<div class="eco-bar-row"><div class="eco-bar-head" style="font-size:13px"><span class="eco-muted">Amortissement</span><span>${ecoNum(Math.min(earned, cost))} / ${ecoMoney(cost)}</span></div>` +
+      `<div class="eco-track"><div class="eco-fill in" style="width:${pct}%"></div></div>` +
+      `<span class="eco-small">${left > 0 ? `Rentabilisée dans <b style="color:var(--ink)">${left} semaine${left > 1 ? "s" : ""}</b>` : "Déjà rentabilisée"}</span></div>`;
+  }
+  return html + nextHtml;
+}
+
+function ecoTvHtml(rec) {
+  let html = "";
+  if (rec.divLevel) html += `<span class="eco-pill-tag">${escapeHtml(divisionInfo(rec.divLevel).name)}</span>`;
+  if (rec.station) {
+    html += `<div class="eco-kv"><div><span class="k">Station TV</span><span class="eco-in">${ecoSigned(rec.station)}/sem.</span></div></div>`;
+  }
+  html += `<span class="eco-small" style="margin-top:auto">Versé automatiquement chaque semaine, que le club entraîne ou pas. Le montant dépend de la division du club.</span>`;
+  return html;
+}
+
+function ecoRenderHistory() {
   const list = document.getElementById("economieTransactions");
+  if (!list) return;
+  document.querySelectorAll("#economieFilters [data-eco-filter]").forEach(b => {
+    const on = b.dataset.ecoFilter === ecoHistoryFilter;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
   const transactions = teamA.transactions || [];
   // Retour utilisateur (2026-09) : "quand un joueur est en vente, s'il y a
   // enchère, il faut qu'apparaisse le montant dans une ligne transaction".
-  // Mes propres annonces (transferListings, marché des transferts) avec une
-  // enchère en cours, PAS encore réglées (voir League.placeBid/le règlement
-  // à la clôture côté moteur, qui crédite via recordTransaction séparément :
-  // ces lignes-ci disparaîtront et seront remplacées par une vraie ligne
-  // "Vente de ... (enchères)" une fois l'enchère effectivement close).
+  // Mes propres annonces avec une enchère en cours, PAS encore réglées (voir
+  // League.placeBid/le règlement à la clôture côté moteur, qui crédite via
+  // recordTransaction séparément : ces lignes disparaîtront au profit d'une
+  // vraie ligne "Vente de ... (enchères)" une fois l'enchère close). Jamais
+  // comptées dans les totaux.
   const pendingBids = (league ? league.transferListings : [])
     .filter(l => l.status === "open" && l.sellerIdx === myTeamIndex && l.currentBid);
   if (!transactions.length && !pendingBids.length) {
     list.innerHTML = "<p class='training-empty'>Aucune transaction enregistrée pour l'instant. Jouez un match à domicile ou validez une semaine d'entraînement.</p>";
     return;
   }
-  let html = "<div class='training-report-list'>";
-  pendingBids.forEach(l => {
-    const player = league.playerById(l.playerId);
-    const name = player ? player.name : "un joueur";
-    html += `<div class="gain-line gain-pending">Enchère en cours sur ${escapeHtml(name)} : ${formatMoney(l.currentBid)} (pas encore réglée)</div>`;
+  let html = "";
+  if (pendingBids.length) {
+    html += `<div class="training-report-list eco-pending">`;
+    pendingBids.forEach(l => {
+      const player = league.playerById(l.playerId);
+      const name = player ? player.name : "un joueur";
+      html += `<div class="gain-line gain-pending">Enchère en cours sur ${escapeHtml(name)} : ${formatMoney(l.currentBid)} (pas encore réglée)</div>`;
+    });
+    html += `</div>`;
+  }
+  const weeks = [...new Set(transactions.map(t => t.week))].sort((a, b) => b - a);
+  const flows = weeks.map(w => {
+    const txs = transactions.filter(t => t.week === w);
+    const inv = txs.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+    const outv = txs.filter(t => t.amount < 0).reduce((s, t) => s - t.amount, 0);
+    return { w, txs, inv, outv };
   });
-  transactions.forEach(t => {
-    const up = t.amount >= 0;
-    html += `<div class="gain-line ${up ? "gain-up" : "gain-down"}">Semaine ${t.week}, ${escapeHtml(t.label)} : ${up ? "+" : ""}${formatMoney(t.amount)}</div>`;
+  const maxFlow = Math.max(1, ...flows.map(f => Math.max(f.inv, f.outv)));
+  flows.forEach(({ w, txs, inv, outv }, i) => {
+    const open = ecoWeekOpen[w] != null ? ecoWeekOpen[w] : i < 2;
+    const net = inv - outv;
+    // Regroupe les lignes du tutoriel d'accueil de la semaine en une seule.
+    const rows = [];
+    let tuto = null;
+    txs.forEach(t => {
+      const d = ecoDescribeTransaction(t.label, t.amount);
+      if (d.tutoTopic) {
+        if (!tuto) { tuto = { cat: "star", title: "Tutoriel d'accueil", tag: "Unique", amount: 0, sub: [] }; rows.push(tuto); }
+        tuto.amount += t.amount;
+        tuto.sub.push({ topic: d.tutoTopic, amount: t.amount });
+      } else {
+        rows.push({ ...d, amount: t.amount });
+      }
+    });
+    if (tuto) tuto.detail = `· ${tuto.sub.length} étape${tuto.sub.length > 1 ? "s" : ""}`;
+    rows.sort((a, b) => (b.amount > 0) - (a.amount > 0) || (a.amount > 0 ? b.amount - a.amount : a.amount - b.amount));
+    const shown = rows.filter(r => ecoHistoryFilter === "all" || (ecoHistoryFilter === "in" ? r.amount > 0 : r.amount < 0));
+    const count = rows.length;
+    html += `<div class="eco-week${open ? " open" : ""}">` +
+      `<button type="button" class="eco-week-head" data-eco-week="${w}" aria-expanded="${open}">` +
+      `<span class="eco-week-name"><b>Semaine ${w}${w === teamA.week ? " (en cours)" : ""}</b><span>${count} opération${count > 1 ? "s" : ""}</span></span>` +
+      `<span class="eco-week-bars">` +
+      `<span><i style="width:${Math.max(2, Math.round(inv / maxFlow * 200))}px; background:#4cc9a0"></i><b class="eco-in">${ecoSigned(inv)}</b></span>` +
+      `<span><i style="width:${Math.max(2, Math.round(outv / maxFlow * 200))}px; background:#f07a64"></i><b class="eco-out">${ecoSigned(-outv)}</b></span></span>` +
+      `<span class="eco-week-net ${net >= 0 ? "eco-in" : "eco-out"}">${ecoSigned(net)}</span>` +
+      `<svg class="eco-chev" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>` +
+      `</button><div class="eco-rows">`;
+    if (!shown.length) {
+      html += `<div class="eco-empty-filter">${ecoHistoryFilter === "in" ? "Aucun revenu" : "Aucune dépense"} cette semaine.</div>`;
+    }
+    shown.forEach(r => {
+      const up = r.amount >= 0;
+      const subOpen = !!(r.sub && ecoTutoOpen[w]);
+      html += `<div class="gain-line eco-row ${up ? "gain-up" : "gain-down"}">` +
+        `<span class="eco-ico">${ecoIconSvg(r.cat)}</span>` +
+        `<span class="eco-row-label">${escapeHtml(r.title)}${r.detail ? ` <span>${escapeHtml(r.detail)}</span>` : ""}</span>` +
+        (r.tag ? `<span class="eco-tag">${escapeHtml(r.tag)}</span>` : "") +
+        (r.sub ? `<button type="button" class="eco-sub-toggle" data-eco-tuto="${w}" aria-expanded="${subOpen}">${subOpen ? "Masquer" : "Détail"}</button>` : "") +
+        `<span class="eco-amt">${ecoSigned(r.amount)}</span></div>`;
+      if (subOpen) {
+        html += `<div class="eco-subgrid">` + r.sub.map(s => `<span><span class="eco-muted">${escapeHtml(s.topic)}</span><b>${ecoSigned(s.amount)}</b></span>`).join("") + `</div>`;
+      }
+    });
+    html += `</div></div>`;
   });
-  html += "</div>";
-  const total = transactions.reduce((s, t) => s + t.amount, 0);
-  const totalUp = total >= 0;
-  html += `<div class="gain-line-total ${totalUp ? "gain-up" : "gain-down"}"><b>Total : ${totalUp ? "+" : ""}${formatMoney(total)}</b></div>`;
+  if (transactions.length) {
+    const total = transactions.reduce((s, t) => s + t.amount, 0);
+    const complete = transactions.length < 40 && Math.min(...transactions.map(t => t.week)) === 1;
+    html += `<div class="gain-line-total ${total >= 0 ? "gain-up" : "gain-down"}">` +
+      `<span>${complete ? `Budget initial : ${ecoMoney(CLUB_STARTING_BUDGET)}` : "Journal limité aux 40 dernières opérations"}</span>` +
+      `<span>${complete ? "Total depuis le début" : "Total du journal"} : <b>${ecoSigned(total)}</b></span></div>`;
+  }
   list.innerHTML = html;
+}
+
+function ecoBindEvents() {
+  const sec = document.getElementById("economieSection");
+  if (!sec || sec.dataset.ecoBound) return;
+  sec.dataset.ecoBound = "1";
+  sec.addEventListener("click", e => {
+    let sel = null;
+    const f = e.target.closest("[data-eco-filter]");
+    const wk = e.target.closest("[data-eco-week]");
+    const tu = e.target.closest("[data-eco-tuto]");
+    if (f) {
+      ecoHistoryFilter = f.dataset.ecoFilter;
+      sel = `[data-eco-filter="${f.dataset.ecoFilter}"]`;
+    } else if (wk) {
+      ecoWeekOpen[+wk.dataset.ecoWeek] = wk.getAttribute("aria-expanded") !== "true";
+      sel = `[data-eco-week="${wk.dataset.ecoWeek}"]`;
+    } else if (tu) {
+      ecoTutoOpen[+tu.dataset.ecoTuto] = !ecoTutoOpen[+tu.dataset.ecoTuto];
+      sel = `[data-eco-tuto="${tu.dataset.ecoTuto}"]`;
+    } else {
+      return;
+    }
+    ecoRenderHistory();
+    // Le rendu remplace les boutons : on rend le focus clavier au même.
+    const again = sec.querySelector(sel);
+    if (again) again.focus();
+  });
+}
+
+function renderEconomieSection() {
+  ecoBindEvents();
+  document.getElementById("economieDeficitBanner").innerHTML = deficitBannerHtml();
+  const transactions = teamA.transactions || [];
+
+  const budgetEl = document.getElementById("economieBudget");
+  budgetEl.textContent = ecoMoney(teamA.budget);
+  budgetEl.classList.toggle("negative", teamA.budget < 0);
+
+  // Retour utilisateur (2026-09) : "sur l'espace transaction il manque le
+  // solde en début de période" — reconstitué à partir du budget actuel moins
+  // les transactions de LA SEMAINE EN COURS (teamA.week), aucune valeur
+  // séparée n'est stockée pour ça. Relégué en pied de la carte budget
+  // (refonte 2026-09-25 : il affichait exactement le même chiffre que le
+  // budget en tête de page tant qu'aucune transaction n'avait eu lieu).
+  const weekTransactions = transactions.filter(t => t.week === teamA.week);
+  const weekTotal = weekTransactions.reduce((s, t) => s + t.amount, 0);
+  const budgetStart = teamA.budget - weekTotal;
+  const startEl = document.getElementById("economieBudgetStart");
+  startEl.textContent = ecoMoney(budgetStart);
+  startEl.classList.toggle("negative", budgetStart < 0);
+  document.getElementById("economieBudgetStartSub").textContent = weekTransactions.length
+    ? `${ecoSigned(weekTotal)} cette semaine (semaine ${teamA.week}).`
+    : `aucune transaction encore cette semaine (semaine ${teamA.week}).`;
+  document.getElementById("economieWeekSub").textContent = `Semaine ${teamA.week} · ${weekTransactions.length
+    ? `${ecoSigned(weekTotal)} depuis le début de la semaine`
+    : "aucune transaction encore cette semaine"}`;
+
+  // Bandeau budget : résultat de la dernière semaine TERMINÉE + courbe.
+  const series = ecoBudgetSeries(transactions);
+  let meta = "";
+  if (series.byWeek) {
+    const doneWeeks = [...series.byWeek.keys()].filter(w => w < teamA.week).sort((a, b) => b - a);
+    if (doneWeeks.length) {
+      const lastNet = series.byWeek.get(doneWeeks[0]);
+      meta += `<span class="eco-chip ${lastNet >= 0 ? "up" : "down"}">${lastNet >= 0 ? "▲" : "▼"} ${ecoSigned(lastNet)} en semaine ${doneWeeks[0]}</span>`;
+    }
+    if (series.complete) {
+      const sinceStart = teamA.budget - CLUB_STARTING_BUDGET;
+      meta += `<span>${ecoSigned(sinceStart)} depuis le début (départ : ${ecoMoney(CLUB_STARTING_BUDGET)})</span>`;
+    }
+  }
+  document.getElementById("economieBudgetMeta").innerHTML = meta;
+  document.getElementById("economieBudgetChart").innerHTML = ecoBudgetChartHtml(series.points);
+
+  const rec = ecoRecurring();
+  document.getElementById("economieWeeklyCard").innerHTML = ecoWeeklyCardHtml(rec);
+
+  // Masse salariale : joueurs + staff + stagiaires (avant la refonte, seuls
+  // les joueurs étaient comptés alors que le staff pèse lourd aussi).
+  document.getElementById("economiePayroll").innerHTML = `${ecoMoney(rec.charges)}<span class="unit">/sem.</span>`;
+  document.getElementById("economiePayrollChart").innerHTML = ecoPayrollChartHtml(rec);
+  document.getElementById("economiePayrollSub").textContent =
+    "Payée chaque semaine, entraînement ou pas. Salaires des joueurs recalculés au début de chaque saison selon leur niveau.";
+
+  document.getElementById("economieArenaSummary").innerHTML = ecoArenaHtml();
+  document.getElementById("economieFanShopSummary").innerHTML = ecoFanShopHtml(transactions);
+
+  // Droits TV (voir TV_RIGHTS_WEEKLY_BY_LEVEL côté moteur) : dépend de la
+  // division ACTUELLE (`league`, pas `teamA`).
+  document.getElementById("economieTvRights").innerHTML = rec.divLevel
+    ? `${ecoMoney(rec.tv)}<span class="unit">/sem.</span>`
+    : "–";
+  document.getElementById("economieTvSub").innerHTML = ecoTvHtml(rec);
+
+  ecoRenderHistory();
 }
 
 // ---------------------------------------------------------------------
