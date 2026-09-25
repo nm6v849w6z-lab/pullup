@@ -202,6 +202,19 @@ function catchUpPlayoffs(league, now, events) {
   }
 
   if (league.isPlayoffsDone()) {
+    // Lot de fin de saison des pronostics (voir DEV_NOTES.md point 11,
+    // server/shows.js:grantSeasonPrizeSync — "1 mois de Premium" au
+    // vainqueur du classement mondial) : ajout ADDITIF, `require` paresseux
+    // (voir le même choix et pourquoi dans server/liveMatch.js:finalizeRound)
+    // et protégé par try/catch — ne doit jamais empêcher la détection de fin
+    // de saison ci-dessus.
+    try {
+      require("./shows.js").grantSeasonPrizeSync(league, now);
+    } catch (e) {
+      if (typeof console !== "undefined" && console.warn) {
+        console.warn(`[hoop-shows] lot de fin de saison échoué : ${e && e.message}`);
+      }
+    }
     events.push({ type: "season-end" });
   }
 }

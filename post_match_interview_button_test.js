@@ -11,27 +11,41 @@
 //    manager qui a manqué la diffusion en direct entière : déjà son
 //    comportement historique pour les journées SANS jalon, inchangé ici.
 //
-// 2) Le panneau d'interview du tableau de bord (#clubInterviewPanel,
-//    renderClubInterviewPanel), AJOUTÉ pour couvrir le trou laissé par le
-//    retrait des boutons direct/calendrier : un manager resté connecté
-//    pendant TOUTE la diffusion d'un match portant un jalon (ex. journée 9,
+// 2) Le tableau de bord, AJOUTÉ pour couvrir le trou laissé par le retrait
+//    des boutons direct/calendrier : un manager resté connecté pendant
+//    TOUTE la diffusion d'un match portant un jalon (ex. journée 9,
 //    "mi-saison") ne voit jamais son interview via "Pendant votre absence"
 //    (voir refreshFromServerAndReenter, qui filtre explicitement la journée
 //    qu'on vient de suivre en direct de la liste des événements à
-//    rattraper). Sans ce panneau, l'interview resterait inaccessible jusqu'à
+//    rattraper). Sans cet accès, l'interview resterait inaccessible jusqu'à
 //    expiration silencieuse au bout de 3 jours, une régression par rapport à
-//    l'ancien bouton "Faire l'interview d'après match" du direct. Ce panneau
-//    est aussi le SEUL point d'entrée de l'interview "début de saison"
+//    l'ancien bouton "Faire l'interview d'après match" du direct. C'est
+//    aussi le SEUL point d'entrée de l'interview "début de saison"
 //    (correctif 2026-09, voir Partie 1 plus bas) : depuis qu'elle est mise
 //    en attente AVANT le premier match plutôt qu'après son résultat
 //    (round=null), elle ne peut plus jamais apparaître dans "Pendant votre
 //    absence", qui ne retrouve les interviews de jalon que par round de
 //    match.
 //
+//    RÉÉCRIT (2026-09-24, voir DEV_NOTES.md point 10, refonte du tableau de
+//    bord "Soir de match") : l'ancien panneau dédié (#clubInterviewPanel,
+//    renderClubInterviewPanel, un widget `.interview-widget` qu'on pouvait
+//    remplacer en place par une confirmation textuelle) a été remplacé par
+//    `mountDashboard()` — l'interview de jalon en attente apparaît désormais
+//    comme une TÂCHE de la liste "Cette semaine" (voir dashBuildTasks), avec
+//    un lien `[data-dash-href^="/interview/"]` ("Répondre") qui ouvre le
+//    même popup qu'avant (dashResolveNavigate → showInterviewModal). Comme
+//    ce lien ne porte pas `data-interview-trigger` (mécanisme de mise à jour
+//    en place de l'ancien panneau, voir finishInterviewTrigger), le tableau
+//    de bord est intégralement REMONTÉ après Valider/Sans commentaire (voir
+//    l'appel à renderClubSection() ajouté dans finishInterviewTrigger) —
+//    plus de confirmation textuelle en place, la tâche disparaît simplement
+//    de "Cette semaine" une fois l'interview traitée.
+//
 // Correctif 2026-09 (retour utilisateur : "mets un vrai pop up pour
 // l'interview qu'on peut passer et faire en retournant dans le tableau de
 // bord, si on veut le faire plus tard") : dans les deux cas ci-dessus, le
-// widget n'affiche plus qu'un bouton compact qui ouvre un vrai popup
+// point d'entrée n'est plus qu'un bouton compact qui ouvre un vrai popup
 // (showInterviewModal), où vivent désormais les vraies questions, la
 // prévisualisation par ton (INDÉPENDANTE pour chaque question depuis un
 // second correctif 2026-09, voir Partie 1) et le choix final (Valider/Sans
@@ -81,9 +95,9 @@ if (!seasonPreviewPending) throw new Error("❌ Une interview \"début de saison
 console.log("✅ L'interview de jalon \"début de saison\" est bien mise en attente dès la création de la ligue, avant que la journée 0 ne soit jouée.");
 
 clickTab(doc, "club");
-const dashboardWidgetSeasonPreview = doc.querySelector("#clubInterviewPanel [data-interview-open]");
-if (!dashboardWidgetSeasonPreview) throw new Error("❌ Le tableau de bord devrait donner accès à l'interview \"début de saison\" avant même le premier match.");
-dashboardWidgetSeasonPreview.click();
+const dashboardTaskSeasonPreview = doc.querySelector('[data-dash-href^="/interview/"]');
+if (!dashboardTaskSeasonPreview) throw new Error("❌ Le tableau de bord devrait donner accès à l'interview \"début de saison\" avant même le premier match.");
+dashboardTaskSeasonPreview.click();
 
 // Correctif 2026-09 (retour utilisateur : "tu as mis plus de question avec
 // la possibilité de choisir le ton pour chacune d'entre elle et pas
@@ -202,10 +216,11 @@ if (!doc.getElementById("catchupSection").classList.contains("hidden")) {
 }
 
 clickTab(doc, "club");
-const dashboardWidget = doc.querySelector("#clubInterviewPanel .interview-widget");
-console.log("Widget d'interview affiché sur le tableau de bord :", !!dashboardWidget);
-if (!dashboardWidget) throw new Error("❌ BUG : le panneau du tableau de bord (#clubInterviewPanel) devrait afficher l'interview de jalon manquée par le direct.");
-console.log("✅ Le panneau du tableau de bord affiche bien l'interview de jalon pour une journée suivie en direct jusqu'au bout.");
+function dashboardInterviewTask() { return doc.querySelector('[data-dash-href^="/interview/"]'); }
+const dashboardTask = dashboardInterviewTask();
+console.log("Tâche d'interview affichée sur le tableau de bord :", !!dashboardTask);
+if (!dashboardTask) throw new Error("❌ BUG : le tableau de bord devrait afficher l'interview de jalon manquée par le direct (tâche \"Cette semaine\").");
+console.log("✅ Le tableau de bord affiche bien l'interview de jalon pour une journée suivie en direct jusqu'au bout.");
 
 // ---------------------------------------------------------------------
 // Correctif 2026-09 (retour utilisateur : "mets un vrai pop up pour
@@ -214,22 +229,26 @@ console.log("✅ Le panneau du tableau de bord affiche bien l'interview de jalon
 // rien résoudre, l'interview doit rester en attente et le bouton doit
 // rester disponible pour la reprendre.
 // ---------------------------------------------------------------------
-dashboardWidget.querySelector("[data-interview-open]").click();
+dashboardTask.click();
 const laterBtn = doc.getElementById("interviewModalLater");
 if (!laterBtn) throw new Error("❌ (setup) Le popup d'interview devrait proposer \"Plus tard\".");
 laterBtn.click();
 const modalGoneAfterLater = !doc.getElementById("interviewModalOverlay");
 const pendingAfterLater = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'mi-saison')");
-const widgetStillThereAfterLater = !!doc.querySelector("#clubInterviewPanel [data-interview-open]");
-console.log(`\n"Plus tard" : popup fermé=${modalGoneAfterLater} | interview toujours en attente=${pendingAfterLater} | bouton toujours affiché=${widgetStillThereAfterLater}`);
+// "Plus tard" (closeInterviewModal seul, sans finishInterviewTrigger) ne
+// remonte PAS le tableau de bord (rien n'a changé côté données) — la tâche
+// déjà affichée doit donc rester exactement telle quelle, sans même avoir
+// besoin de requêter à nouveau le DOM.
+const taskStillThereAfterLater = !!dashboardInterviewTask();
+console.log(`\n"Plus tard" : popup fermé=${modalGoneAfterLater} | interview toujours en attente=${pendingAfterLater} | tâche toujours affichée=${taskStillThereAfterLater}`);
 if (!modalGoneAfterLater) throw new Error("❌ \"Plus tard\" devrait fermer le popup.");
 if (!pendingAfterLater) throw new Error("❌ \"Plus tard\" ne devrait RIEN résoudre : l'interview devrait rester en attente (reprenable plus tard).");
-if (!widgetStillThereAfterLater) throw new Error("❌ \"Plus tard\" ne devrait pas faire disparaître le bouton \"Faire l'interview\" du tableau de bord (l'interview reste à faire).");
-console.log("✅ \"Plus tard\" ferme le popup sans rien résoudre : l'interview reste en attente, reprenable via le même bouton.");
+if (!taskStillThereAfterLater) throw new Error("❌ \"Plus tard\" ne devrait pas faire disparaître la tâche \"Répondre\" du tableau de bord (l'interview reste à faire).");
+console.log("✅ \"Plus tard\" ferme le popup sans rien résoudre : l'interview reste en attente, reprenable via la même tâche.");
 
 // Correctif 2026-09 (voir plus haut) : "Sans commentaire" vit désormais dans
-// le popup, ouvert via le bouton du widget.
-dashboardWidget.querySelector("[data-interview-open]").click();
+// le popup, ouvert via la tâche du tableau de bord.
+dashboardInterviewTask().click();
 const skipBtn = doc.getElementById("interviewModalSkip");
 if (!skipBtn) throw new Error("❌ (setup) Le popup d'interview devrait proposer \"Sans commentaire\".");
 skipBtn.click();
@@ -239,15 +258,17 @@ await flush(dom);
 const pendingAfterSkip = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'mi-saison')");
 console.log("Interview de mi-saison encore en attente après \"Sans commentaire\" depuis le tableau de bord :", pendingAfterSkip);
 if (pendingAfterSkip) throw new Error("❌ \"Sans commentaire\" depuis le tableau de bord devrait retirer l'interview de la file d'attente.");
-console.log("✅ \"Sans commentaire\" depuis le panneau du tableau de bord retire bien l'interview de la file d'attente.");
+console.log("✅ \"Sans commentaire\" depuis le tableau de bord retire bien l'interview de la file d'attente.");
 
-const panelConfirmationAfterSkip = doc.getElementById("clubInterviewPanel").textContent.trim();
-const widgetGoneFromPanel = !doc.querySelector("#clubInterviewPanel .interview-widget");
-console.log("Confirmation affichée sur le panneau du tableau de bord après réponse :", panelConfirmationAfterSkip);
-if (!widgetGoneFromPanel || !panelConfirmationAfterSkip.includes("Sans commentaire")) {
-  throw new Error(`❌ Le panneau du tableau de bord devrait remplacer le widget par une confirmation "Sans commentaire" une fois l'interview traitée (voir refreshCatchupAfterInterview), obtenu : "${panelConfirmationAfterSkip}".`);
-}
-console.log("✅ Le panneau du tableau de bord remplace bien le widget par une confirmation une fois l'interview traitée.");
+// Le tableau de bord est REMONTÉ en entier après Sans commentaire/Valider
+// (voir l'appel à renderClubSection() dans finishInterviewTrigger, ajouté
+// avec la refonte du tableau de bord) : plus de confirmation textuelle en
+// place comme l'ancien panneau, la tâche "Répondre" disparaît simplement de
+// "Cette semaine" puisque l'interview n'est plus en attente.
+const taskGoneAfterSkip = !dashboardInterviewTask();
+console.log("Tâche d'interview disparue du tableau de bord après réponse :", taskGoneAfterSkip);
+if (!taskGoneAfterSkip) throw new Error("❌ Le tableau de bord devrait remonter et ne plus afficher la tâche d'interview une fois celle-ci traitée (voir finishInterviewTrigger → renderClubSection).");
+console.log("✅ Le tableau de bord se remonte bien et n'affiche plus la tâche une fois l'interview traitée.");
 
 await flush(dom);
 await dom.window.close();

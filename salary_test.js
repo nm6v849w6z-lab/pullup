@@ -232,6 +232,15 @@ if (!payrollText || payrollText === "0 €/sem.") throw new Error("❌ La carte 
 // domicile) — pas seulement au sous-ensemble "salaires + subvention" comme
 // avant, ce qui reste une vérification tout aussi stricte de la cohérence
 // budget/journal, tout en couvrant le cas général.
+// Attend toute sauvegarde "fire-and-forget" encore en vol (initGame()
+// enchaîne plusieurs saveMyTeam() en arrière-plan, voir son commentaire côté
+// moteurbasket3.html) AVANT de lire/modifier le fichier de sauvegarde
+// directement — même précaution que fastForwardCalendar dans lineup_test.js,
+// sans quoi une sauvegarde encore en vol au moment de fastForwardCalendar
+// pouvait écraser ensuite le calendarStartAt décalé avec un état plus ancien
+// (constaté : plus aucune transaction ni changement de budget après
+// rattrapage, symptôme d'un calendrier resté non décalé).
+await flush(dom);
 const budgetBeforeSave = readRawSave(savePath);
 const budgetBefore = budgetBeforeSave.team.budget;
 const txCountBefore = budgetBeforeSave.team.transactions.length;

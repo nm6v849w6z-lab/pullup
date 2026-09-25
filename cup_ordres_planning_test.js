@@ -228,6 +228,56 @@ if (!cupOrderBtnAfter || !cupOrderBtnAfter.textContent.includes("Modifier")) {
 console.log("✅ Le bouton du calendrier reflète bien l'état \"déjà préparé\" pour le tour de Coupe.");
 
 // ---------------------------------------------------------------------
+// B4bis) BUG corrigé (2026-09-24, retour utilisateur : "impossible de
+//    mettre un remplaçant", capture d'écran du panneau Ordres poste Pivot,
+//    précisé ensuite : "ça ne le ferait que pour le match de coupe, pour
+//    le championnat [...] ça marche") : Team.prototype.toggleBackupPosition
+//    (engine.js) appelle en interne this.starterPosition(playerId) (garde-
+//    fou : un titulaire ne peut pas aussi être remplaçant) — planProxyForRound
+//    (moteurbasket3.html, utilisé pour TOUTE journée préparée à l'avance,
+//    donc TOUJOURS pour un tour de Coupe, jamais "le match immédiat") ne
+//    copiait que setStarter/toggleBackupPosition sur son proxy, jamais
+//    starterPosition : cliquer "+ Ajouter un remplaçant…" sur un tour de
+//    Coupe levait TypeError DANS le gestionnaire d'évènement (exception
+//    non interceptée, donc silencieuse pour le manager) et ne changeait
+//    RIEN. Reproduit puis corrigé avec ce test précis : choisit
+//    explicitement la ligne "Pivot" (même poste que la capture d'écran du
+//    retour utilisateur) et un candidat déjà remplaçant ailleurs, pour que
+//    le diff (son tableau de postes doit grandir) ne laisse aucune place
+//    au doute.
+// ---------------------------------------------------------------------
+win.eval(`selectOrdresRound(${round0.index}, "cup");`);
+const prepGridBackup = doc.querySelector("#prepGrid");
+if (!prepGridBackup) throw new Error("❌ Pas de #prepGrid après re-sélection du tour de Coupe.");
+const pivotRow = [...prepGridBackup.querySelectorAll(".lineup-add-select")]
+  .find(sel => { const tr = sel.closest("tr"); return tr && tr.querySelector(".lt-pos").textContent === "P"; });
+if (!pivotRow) throw new Error("❌ Pas de <select> \"Ajouter un remplaçant\" pour le poste Pivot.");
+const backupCandidate = pivotRow.options[1];
+if (!backupCandidate) throw new Error("❌ Aucun candidat remplaçant disponible pour le poste Pivot dans ce test.");
+const backupCandidateId = backupCandidate.value;
+const backupsBeforeForCandidate = win.eval(`(teamA.getPlanForRound(${round0.index}, "cup").lineup.backupPositions[${backupCandidateId}] || [])`);
+pivotRow.value = backupCandidateId;
+pivotRow.dispatchEvent(new win.Event("change"));
+
+const hasCupPlanAfterBackup = win.eval(`teamA.hasPlanForRound(${round0.index}, "cup")`);
+const backupsAfterForCandidate = win.eval(`(teamA.getPlanForRound(${round0.index}, "cup").lineup.backupPositions[${backupCandidateId}] || [])`);
+console.log(`B4bis) Après ajout d'un remplaçant Pivot sur le tour de Coupe : plan présent = ${hasCupPlanAfterBackup} | postes du joueur ${backupCandidateId} avant/après : ${JSON.stringify(backupsBeforeForCandidate)} / ${JSON.stringify(backupsAfterForCandidate)}`);
+if (!hasCupPlanAfterBackup) throw new Error("❌ RÉGRESSION : ajouter un remplaçant sur un tour de Coupe ne crée/complète plus le plan de ce tour.");
+if (!backupsAfterForCandidate.includes("Pivot") || backupsAfterForCandidate.length !== backupsBeforeForCandidate.length + 1) {
+  throw new Error(`❌ RÉGRESSION (bug "impossible de mettre un remplaçant") : le joueur ${backupCandidateId} n'a pas été ajouté comme remplaçant Pivot dans le plan de Coupe (postes avant ${JSON.stringify(backupsBeforeForCandidate)}, après ${JSON.stringify(backupsAfterForCandidate)}).`);
+}
+console.log("✅ Ajouter un remplaçant sur un tour de Coupe (planProxyForRound) fonctionne — starterPosition bien porté par le proxy.");
+
+await flush(dom);
+const multiSaveAfterBackup = JSON.parse(fs.readFileSync(multiSavePath, "utf-8"));
+const savedBackupsForCandidate = multiSaveAfterBackup.league.teams[0].plannedTactics?.[`cup:${round0.index}`]?.lineup?.backupPositions?.[backupCandidateId];
+console.log("Côté serveur (fichier de sauvegarde), postes remplaçant de ce joueur :", JSON.stringify(savedBackupsForCandidate));
+if (!savedBackupsForCandidate || !savedBackupsForCandidate.includes("Pivot")) {
+  throw new Error("❌ RÉGRESSION : le remplaçant Pivot ajouté sur le tour de Coupe n'a pas été persisté côté serveur.");
+}
+console.log("✅ Le remplaçant ajouté sur un tour de Coupe est bien persisté côté serveur (fichier de la ligue partagée).");
+
+// ---------------------------------------------------------------------
 // B5) Persistance : le plan de Coupe survit à un rechargement complet de la
 //    page (nouvelle session JSDOM, même lien manager, même serveur).
 // ---------------------------------------------------------------------

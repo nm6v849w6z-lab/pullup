@@ -241,13 +241,22 @@ function computeLiveMatch(Engine, league, round, homeIdx, awayIdx, kickoffAt, co
       forfeit: true,
       finalScore: { home: homeScore, away: awayScore },
       // Forfait : aucun quart-temps réellement joué (voir simulateOrForfeit
-      // côté moteur, même convention `null`).
+      // côté moteur, même convention `null`) — idem pour tacticsUsed
+      // (aucune tactique réellement mise en œuvre).
       quarterScores: null,
+      tacticsUsed: null,
       events: [], pauses: [], totalDurationMs: 0,
       boxScoreA: [], boxScoreB: [],
     };
   }
 
+  // Tactiques "en direct" de CHACUNE des deux équipes, capturées ICI (retour
+  // utilisateur, 2026-09 : "Scouting Pro" — voir le grand commentaire de
+  // Engine.recordMatchStatsForTeam sur tacticsUsed/server/scouting.js) :
+  // exactement l'instant où elles comptent réellement pour CE match, AVANT
+  // que le manager ne puisse les changer pour son prochain match pendant que
+  // celui-ci est encore en cours de diffusion (voir Engine.tacticsSnapshotFor).
+  const tacticsUsed = { home: Engine.tacticsSnapshotFor(home), away: Engine.tacticsSnapshotFor(away) };
   const engine = new Engine.MatchEngine(home, away);
   const result = engine.simulate();
   const { events, pauses, totalDurationMs } = schedulePlayback(result.events, kickoffAt, home.name, away.name);
@@ -263,8 +272,10 @@ function computeLiveMatch(Engine, league, round, homeIdx, awayIdx, kickoffAt, co
     // direct de ce match (league.liveMatches est persisté sur disque) — lue
     // ensuite par finalizeRound/finalizeCupRound/finalizePlayoffRound une
     // fois le match terminé, pour l'attacher au matchLog des joueurs (voir
-    // Engine.recordMatchStatsAndAwardMvp).
+    // Engine.recordMatchStatsAndAwardMvp). `tacticsUsed` : même principe,
+    // même survie à la diffusion en direct.
     quarterScores: { home: result.quarterScores.A, away: result.quarterScores.B },
+    tacticsUsed,
     events, pauses, totalDurationMs,
     boxScoreA: result.boxScoreA, boxScoreB: result.boxScoreB,
   };
@@ -369,7 +380,7 @@ function ensureCupLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueCu
 // le champion si c'était la finale) une fois tous les matchs réels du tour
 // enregistrés. Renvoie `null` si aucun tour n'était en attente (no-op).
 function finalizeCupRound(Engine, league) {
-  const { simulateOrForfeit, recordMatchStatsAndAwardMvp } = Engine;
+  const { simulateOrForfeit, recordMatchStatsAndAwardMvp, handleGameEvent } = Engine;
   const round = league.pendingCupRound();
   if (!round) return null;
 
@@ -380,12 +391,13 @@ function finalizeCupRound(Engine, league) {
     const key = cupLiveMatchKey(round.index, m.home, m.away);
     const live = league.liveMatches && league.liveMatches[key];
 
-    let scoreHome, scoreAway, forfeit, quarterScores;
+    let scoreHome, scoreAway, forfeit, quarterScores, tacticsUsed;
     if (live) {
       scoreHome = live.finalScore.home;
       scoreAway = live.finalScore.away;
       forfeit = live.forfeit;
       quarterScores = live.quarterScores || null;
+      tacticsUsed = live.tacticsUsed || null;
       delete league.liveMatches[key];
     } else {
       // Jamais démarré en direct (CPU-vs-CPU, ou tour rattrapé d'un coup) :
@@ -402,6 +414,7 @@ function finalizeCupRound(Engine, league) {
       scoreAway = sim.scoreAway;
       forfeit = sim.forfeit;
       quarterScores = sim.quarterScores;
+      tacticsUsed = sim.tacticsUsed;
     }
     // Journal de matchs (voir finalizeRound ci-dessus pour le même principe
     // côté championnat) : un match de coupe compte aussi pour les stats de
@@ -410,9 +423,29 @@ function finalizeCupRound(Engine, league) {
     // chaque fois" — chaque match réellement simulé, coupe comprise, voir
     // recordMatchStatsAndAwardMvp/awardMatchMvp côté moteur).
     if (!forfeit) {
-      recordMatchStatsAndAwardMvp(home, away, round.index, "cup", undefined, quarterScores);
+      recordMatchStatsAndAwardMvp(home, away, round.index, "cup", undefined, quarterScores, tacticsUsed);
     }
     league.recordCupMatchResult(matchIndex, scoreHome, scoreAway, forfeit);
+
+    // Fil d'actualité (voir finalizeRound ci-dessus pour le même principe
+    // côté championnat) : pas de récap "league_round" pour la Coupe (élimination
+    // directe, pas une journée à plat comme le championnat — le prestataire
+    // ne prévoit ce récap que pour `league_round`, jamais pour un tour de
+    // Coupe).
+    if (home.isHuman && home.feed) {
+      handleGameEvent(home.feed, {
+        type: "match_played", week: home.week, matchId: `cup:${round.index}:${m.home}:${m.away}`,
+        opponent: away.name, home: true, pointsFor: scoreHome, pointsAgainst: scoreAway,
+        topScorer: topScorerForTeamRound(home, round.index, "cup"),
+      }, { clubName: home.name });
+    }
+    if (away.isHuman && away.feed) {
+      handleGameEvent(away.feed, {
+        type: "match_played", week: away.week, matchId: `cup:${round.index}:${m.home}:${m.away}`,
+        opponent: home.name, home: false, pointsFor: scoreAway, pointsAgainst: scoreHome,
+        topScorer: topScorerForTeamRound(away, round.index, "cup"),
+      }, { clubName: away.name });
+    }
   });
 
   const cupRoundIndex = round.index;
@@ -504,12 +537,13 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
     const key = liveMatchKey(round, m.home, m.away);
     const live = league.liveMatches && league.liveMatches[key];
 
-    let scoreHome, scoreAway, forfeit, quarterScores;
+    let scoreHome, scoreAway, forfeit, quarterScores, tacticsUsed;
     if (live) {
       scoreHome = live.finalScore.home;
       scoreAway = live.finalScore.away;
       forfeit = live.forfeit;
       quarterScores = live.quarterScores || null;
+      tacticsUsed = live.tacticsUsed || null;
       delete league.liveMatches[key];
     } else {
       // Jamais démarré en direct (CPU-vs-CPU, ou tour rattrapé d'un coup) :
@@ -523,6 +557,7 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
       scoreAway = sim.scoreAway;
       forfeit = sim.forfeit;
       quarterScores = sim.quarterScores;
+      tacticsUsed = sim.tacticsUsed;
     }
 
     // Journal de matchs (voir le même principe côté finalizeRound ci-dessous)
@@ -531,7 +566,7 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
     // "championship" (voir le grand commentaire en tête de ce bloc) : jamais
     // un tag "playoff" séparé ici.
     if (!forfeit) {
-      recordMatchStatsAndAwardMvp(home, away, round, "championship", now, quarterScores);
+      recordMatchStatsAndAwardMvp(home, away, round, "championship", now, quarterScores, tacticsUsed);
     }
 
     league.recordPlayoffGameResult(m.seriesId, m.home, m.away, scoreHome, scoreAway, now);
@@ -604,14 +639,46 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
 // plutôt que d'attendre en réel, comme les tests). Optionnel (défaut
 // Date.now()) uniquement pour ne pas casser les quelques appels directs
 // existants (tests) qui ne le passent pas encore.
+// Meilleur marqueur d'UNE équipe pour UNE journée donnée (fil d'actualité du
+// tableau de bord, voir handleGameEvent "match_played" plus bas) : lu depuis
+// Player.matchLog, dont la DERNIÈRE entrée vient justement d'être poussée
+// par recordMatchStatsAndAwardMvp (voir son appel juste au-dessus de chaque
+// utilisation de cette fonction) — jamais recalculé depuis p.stats, remis à
+// zéro entre-temps par resetForMatch au prochain match. `null` pour un
+// forfait (aucune simulation réelle, donc aucune entrée matchLog ajoutée ce
+// tour-ci) ou une équipe où personne n'a de minutes jouées.
+function topScorerForTeamRound(team, round, competition) {
+  let best = null;
+  team.players.forEach(p => {
+    const entry = p.matchLog[p.matchLog.length - 1];
+    if (!entry || entry.round !== round || entry.competition !== competition) return;
+    if (!best || entry.pts > best.points) best = { name: p.name, points: entry.pts };
+  });
+  return best;
+}
+
 function finalizeRound(Engine, league, round, now = Date.now()) {
   const {
     simulateOrForfeit, recordMatchStatsAndAwardMvp, milestoneTypeForRound,
     seasonObjectiveMidSeasonSignal, seasonObjectiveEndOfRegularSeasonSignal,
-    seasonObjectiveVerdict,
+    seasonObjectiveVerdict, handleGameEvent,
   } = Engine;
   const matches = league.matchesForRound(round);
   const userResults = [];
+  // Émissions avant-match/mi-temps + pronostics (voir DEV_NOTES.md point 11,
+  // server/shows.js) : résumé de CHAQUE match réellement joué (jamais un
+  // forfait, voir le push conditionnel plus bas), accumulé pendant CETTE
+  // boucle puis transmis à Shows.resolveRoundShowsSync tout à la fin de la
+  // fonction — ajout ADDITIF et ISOLÉ, ne change RIEN au calcul/à la
+  // diffusion en direct ci-dessus.
+  const showResults = [];
+  // Fil d'actualité (voir handleGameEvent "league_round" plus bas) : récap de
+  // TOUS les résultats de cette journée, construit au fil de la boucle
+  // ci-dessous, envoyé une fois à chaque équipe humaine concernée par cette
+  // journée APRÈS la boucle (voir plus bas) — jamais pendant, pour inclure
+  // les matchs traités plus tard dans la même boucle.
+  const feedRoundResults = [];
+  const feedHumanTeamsThisRound = new Set();
   // Interview de jalon (retour utilisateur, 2026-09 : "elle doit avoir lieu
   // après le match de la mi saison de championnat [...] et [...] après la
   // fin de la saison régulière [...] idem pour le début de saison", voir
@@ -626,12 +693,13 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
     const key = liveMatchKey(round, m.home, m.away);
     const live = league.liveMatches && league.liveMatches[key];
 
-    let scoreHome, scoreAway, forfeit, quarterScores;
+    let scoreHome, scoreAway, forfeit, quarterScores, tacticsUsed;
     if (live) {
       scoreHome = live.finalScore.home;
       scoreAway = live.finalScore.away;
       forfeit = live.forfeit;
       quarterScores = live.quarterScores || null;
+      tacticsUsed = live.tacticsUsed || null;
       delete league.liveMatches[key];
     } else {
       // Jamais démarré en direct (CPU-vs-CPU, ou journée rattrapée d'un
@@ -647,7 +715,14 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
       scoreAway = sim.scoreAway;
       forfeit = sim.forfeit;
       quarterScores = sim.quarterScores;
+      tacticsUsed = sim.tacticsUsed;
     }
+
+    // Voir la déclaration de showResults plus haut — jamais pour un forfait
+    // (aucun événement réel à montrer/aucune stat de match pour résoudre un
+    // "meilleur marqueur", voir Adapter.buildMatchesInputForRound/
+    // topScorerMapForMatch).
+    if (!forfeit) showResults.push({ homeIdx: m.home, awayIdx: m.away, scoreHome, scoreAway, quarterScores });
 
     // Journal de matchs (voir Player.matchLog/recordMatchStatsForTeam côté
     // moteur) : alimente les stats de saison/MVP de la dernière journée
@@ -658,10 +733,11 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
     // matchLog pour l'affichage du score par quart-temps sur la feuille de
     // match (voir boxscoreRowsFromMatchLog/showMatchBoxscore côté client).
     if (!forfeit) {
-      recordMatchStatsAndAwardMvp(home, away, round, "championship", now, quarterScores);
+      recordMatchStatsAndAwardMvp(home, away, round, "championship", now, quarterScores, tacticsUsed);
     }
 
     league.recordResult(round, m.home, m.away, scoreHome, scoreAway);
+    feedRoundResults.push({ home: home.name, away: away.name, homePts: scoreHome, awayPts: scoreAway });
 
     if (home.isHuman) {
       const won = scoreHome > scoreAway;
@@ -679,6 +755,18 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
         teamIdx: m.home, round, isHome: true, opponent: away.name, opponentIdx: m.away,
         scoreUser: scoreHome, scoreOpponent: scoreAway, won, forfeit, moraleDelta, attendanceInfo,
       });
+      // Fil d'actualité (voir INTEGRATION.md du prestataire, DEV_NOTES.md
+      // point 10) : un match_played par équipe humaine impliquée, même pour
+      // un forfait (topScorer reste `null` dans ce cas, le fil l'affiche
+      // "Personne", voir handleGameEvent côté moteur).
+      if (home.feed) {
+        handleGameEvent(home.feed, {
+          type: "match_played", week: home.week, matchId: `${round}:${m.home}:${m.away}`,
+          opponent: away.name, home: true, pointsFor: scoreHome, pointsAgainst: scoreAway,
+          topScorer: topScorerForTeamRound(home, round, "championship"),
+        }, { clubName: home.name });
+      }
+      feedHumanTeamsThisRound.add(home);
     }
     if (away.isHuman) {
       const won = scoreAway > scoreHome;
@@ -687,7 +775,30 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
         teamIdx: m.away, round, isHome: false, opponent: home.name, opponentIdx: m.home,
         scoreUser: scoreAway, scoreOpponent: scoreHome, won, forfeit, moraleDelta, attendanceInfo: null,
       });
+      if (away.feed) {
+        handleGameEvent(away.feed, {
+          type: "match_played", week: away.week, matchId: `${round}:${m.home}:${m.away}`,
+          opponent: home.name, home: false, pointsFor: scoreAway, pointsAgainst: scoreHome,
+          topScorer: topScorerForTeamRound(away, round, "championship"),
+        }, { clubName: away.name });
+      }
+      feedHumanTeamsThisRound.add(away);
     }
+  });
+
+  // Récap de journée (voir feedRoundResults/feedHumanTeamsThisRound
+  // ci-dessus) : une seule entrée par équipe humaine (dédoublonnée par
+  // `key: league_round_<semaine>` dans handleGameEvent côté moteur), même si
+  // plusieurs de ses matchs (aucun cas réel aujourd'hui, une équipe ne joue
+  // qu'un match par journée) l'avaient ajoutée deux fois à l'ensemble.
+  // `round + 1` : convention d'affichage déjà en place ailleurs dans l'appli
+  // (voir updateTopbar côté client, "Journée X/18" = round + 1, `round`
+  // restant 0-indexé côté moteur).
+  feedHumanTeamsThisRound.forEach(team => {
+    if (!team.feed) return;
+    handleGameEvent(team.feed, {
+      type: "league_round", week: team.week, round: round + 1, results: feedRoundResults,
+    }, { clubName: team.name });
   });
 
   // Signal INTERMÉDIAIRE de l'objectif du CA (retour utilisateur, 2026-09 :
@@ -749,6 +860,24 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
       league.teams[r.teamIdx].recordMoraleEvent(signal.label, signal.delta);
       r.seasonObjectiveSignal = signal;
     });
+  }
+
+  // Émissions avant-match/mi-temps + pronostics (voir showResults plus haut,
+  // DEV_NOTES.md point 11) : résolution des pronostics déjà publiés pour
+  // cette journée, maintenant que tous les scores/quarterScores sont connus.
+  // `require` PARESSEUX (jamais en tête de fichier) : server/shows.js
+  // requiert lui-même ce fichier (pour HALFTIME_BREAK_MS) — un require en
+  // tête créerait une dépendance circulaire ; appelé ici, les deux modules
+  // sont déjà complètement chargés (finalizeRound n'est jamais invoquée
+  // pendant l'initialisation des modules). Entièrement protégé par
+  // try/catch : voir le grand commentaire de Shows.resolveRoundShowsSync,
+  // jamais une raison d'empêcher la finalisation d'une journée de match.
+  try {
+    require("./shows.js").resolveRoundShowsSync(league, round, showResults, now);
+  } catch (e) {
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn(`[hoop-shows] résolution journée ${round} échouée : ${e && e.message}`);
+    }
   }
 
   league.advanceRound();

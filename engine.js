@@ -512,6 +512,19 @@ const PHRASES = {
     "Faute de {defender} sur le tir de {shooter}.",
     "{defender} accroche {shooter} sur son tir.",
   ],
+  // Faute simple hors tir (retour utilisateur, 2026-09-24 : "il y a
+  // généralement très peu de fautes par match [...] on est plutôt à 18/20
+  // par match en moyenne") : voir le grand commentaire au-dessus de
+  // nonShootingFoulChance dans playPossession — contact sur pénétration,
+  // écran illégal ou faute de zone en cours d'action, jamais modélisé
+  // jusqu'ici. Formulée SANS dire que l'action s'arrête là (contrairement à
+  // missedFoul plus haut) : l'action continue juste après dans le même
+  // passage (voir le commentaire dans playPossession sur le rythme).
+  commonFoul: [
+    "Faute de {defender} sur {attacker} en cours d'action.",
+    "Contact signalé sur {attacker}, faute de {defender}.",
+    "{defender} est sanctionné pour une faute sur {attacker}.",
+  ],
   blockedShot: [
     "{defender} contre le tir de {shooter} !",
     "Tir de {shooter} contré par {defender}.",
@@ -2671,6 +2684,18 @@ class Player {
 
     // état de match (réinitialisé à chaque simulate())
     this.fatigue = 0;       // 0 = frais, 100 = épuisé
+    // Seuils de fatigue déclenchant un repos (voir MatchEngine.
+    // substituteIfNeeded) — INDIVIDUELS et tirés au sort à CHAQUE match (voir
+    // resetForMatch, même logique que le reste de resetForMatch pour tout ce
+    // qui doit varier d'un match à l'autre). Deux seuils, pas un seul (voir
+    // le grand commentaire dans resetForMatch pour le contexte complet et
+    // pourquoi UN SEUL seuil bas, essayé d'abord, était une erreur) :
+    // firstRestThreshold (bas) pour LA toute première sortie de CE joueur ce
+    // match, restThreshold (haut, proche de l'ancienne constante à 82) pour
+    // toutes les suivantes une fois la rotation initiale posée.
+    this.firstRestThreshold = 82;
+    this.restThreshold = 82;
+    this.hasHadFirstRest = false;
     this.fouls = 0;
     this.disqualified = false;
     // Compteur de fautes techniques pour indiscipline (voir Sang-froid dans
@@ -2988,6 +3013,68 @@ class Player {
 
   resetForMatch(now = Date.now(), recoveryPerDay = CONDITION_RECOVERY_PER_DAY) {
     this.fatigue = 0;
+    // Rotations/temps de jeu (retour utilisateur, 2026-09-24 : "pas un seul
+    // changement au bout de 13 min ? et ils sont trop propres, très souvent
+    // tous les remplaçants ont le même temps de jeu"). Diagnostic (voir
+    // scripts de calibration en scratchpad, sub_diag2/3.js) : le seuil de
+    // repos fatigue >= 82 (constante partagée par TOUS les joueurs) n'était
+    // quasiment JAMAIS le déclencheur réel d'un changement (0 fois sur 20
+    // matchs simulés avec le taux de fautes actuel) — ce sont les fautes
+    // personnelles (p.fouls >= 4) qui déclenchaient presque tous les premiers
+    // changements, souvent tard (médiane ~17-18 min de jeu écoulé dans ces
+    // mêmes 20 matchs) ET de façon groupée : les 5 titulaires accumulent des
+    // minutes IDENTIQUES depuis l'entre-deux, donc une fatigue quasi
+    // identique à endurance égale (formule 100% déterministe, voir
+    // MatchEngine.applyFatigue) - dès qu'un seuil UNIQUE partagé est
+    // atteint, plusieurs titulaires le franchissent en même temps, d'où le
+    // banc qui rentre "en bloc" et ressort "en bloc" avec des temps de jeu
+    // identiques.
+    //
+    // Premier essai (abandonné) : UN SEUL seuil bas (30-60) pour TOUTES les
+    // sorties du match, pas seulement la première. Ça corrigeait bien le
+    // symptôme signalé (premier changement ramené à une médiane ~9 min,
+    // 100% des matchs avec un changement avant 13 min - voir
+    // rotation_calib.js) mais cassait autre chose, découvert seulement en
+    // recalibrant les passes décisives (déjà calibrées plus tôt ce jour,
+    // voir plus haut) avec assist_calib2.js : le titulaire le PLUS utilisé
+    // d'une équipe ne jouait plus que ~19.8 min/match en moyenne (voir
+    // minutes_check.js) au lieu d'environ 28-34 min pour un titulaire
+    // réaliste - un seuil bas appliqué à CHAQUE repos, y compris ceux d'un
+    // remplaçant qui vient d'entrer, aplatit tout le temps de jeu de
+    // l'effectif au lieu de simplement avancer LE PREMIER changement. Passer
+    // l'exposant de concentration des passes décisives de 2.3 à 7 a
+    // seulement à moitié compensé (top 5 remonté à 5.09 pd/match, sous la
+    // cible 5.7-7.4) avec une valeur d'exposant absurde - signe qu'il
+    // fallait corriger la VRAIE cause (la répartition des minutes) plutôt
+    // que forcer un symptôme en aval.
+    //
+    // Correctif retenu : DEUX seuils par joueur (voir firstRestThreshold/
+    // restThreshold/hasHadFirstRest ci-dessus) - un seuil bas et tiré au
+    // sort UNIQUEMENT pour la toute première sortie de CE joueur ce match
+    // (fait intervenir la fatigue tôt, avant que les fautes n'aient le temps
+    // de s'accumuler - un vrai coach fait souffler un titulaire autour de
+    // 5-8 min) ; une fois cette première sortie posée
+    // (hasHadFirstRest = true dans MatchEngine.substituteIfNeeded), tous les
+    // repos suivants de ce joueur (titulaire de retour comme remplaçant
+    // installé) utilisent restThreshold, un seuil haut proche de l'ancienne
+    // constante à 82 (jitté pour rester désynchronisé) - la rotation
+    // s'installe puis les temps de jeu redeviennent proches de l'ancien
+    // comportement (calibré) pour le reste du match, au lieu de s'aplatir.
+    // Calibré empiriquement (voir rotation_calib2.js/minutes_check2.js en
+    // scratchpad) : voir le résultat mesuré dans DEV_NOTES.md.
+    // Deuxième correctif (voir Team.resetForMatch, où isStarterThisMatch est
+    // posé) : firstRestThreshold ne s'applique qu'aux 5 titulaires DU match,
+    // jamais à un remplaçant qui vient d'entrer — sinon CHAQUE joueur du
+    // banc récupère lui aussi un seuil bas artificiel dès son entrée, ce qui
+    // le fait ressortir presque aussitôt et aplatit le temps de jeu de tout
+    // l'effectif au lieu d'avancer seulement le premier changement des
+    // titulaires (mesuré : le titulaire le plus utilisé tombait à ~20
+    // min/match, moyenne top 5 passes à 3.3 pd/match, cible 5.7-7.4 cassée -
+    // voir minutes_check.js/assist_calib2.js en scratchpad).
+    this.isStarterThisMatch = false;
+    this.firstRestThreshold = rand(20, 50);
+    this.restThreshold = rand(75, 90);
+    this.hasHadFirstRest = false;
     this.fouls = 0;
     this.disqualified = false;
     this.technicalFouls = 0;
@@ -3259,6 +3346,383 @@ function chemistryLabel(chemistry) {
 }
 
 // ---------------------------------------------------------------------
+// Fil d'actualité du tableau de bord (refonte "Soir de match", 2026-09-24)
+// — logique de fil d'actualité PURE (aucun accès DOM), portée depuis le
+// livrable prestataire `tableau-de-bord/newsFeed.js` (voir INTEGRATION.md et
+// DEV_NOTES.md point 10 pour le contexte complet). Un fil par équipe
+// (Team.feed, voir plus bas), sérialisé dans la sauvegarde comme le reste de
+// l'état (serializeTeam/teamFromSave) — MÊME MIROIR EXACT dans
+// moteurbasket3.html que le reste de ce moteur (convention du projet).
+// Quelques noms renommés par rapport au livrable d'origine pour éviter toute
+// ambiguïté dans ce fichier déjà très chargé en identifiants globaux :
+// CATEGORIES → FEED_CATEGORIES, MAX_ENTRIES → FEED_MAX_ENTRIES, TEMPLATES →
+// FEED_TEMPLATES, pick/fill/trim/euros (locaux au livrable) → feedPick/
+// fillTemplate/trimFeedEntries/feedEuros (`pick` existe déjà plus haut dans
+// ce fichier avec une signature différente). Comportement et contrat de
+// données INCHANGÉS par rapport au livrable (voir ses propres tests
+// `newsFeed.test.mjs`, réécrits dans le style du projet sous
+// `dashboard_feed_test.js`).
+// ---------------------------------------------------------------------
+
+const FEED_CATEGORIES = ["club", "ligue", "presse", "marche", "supporters"];
+const FEED_MAX_ENTRIES = 40;
+
+/** Crée un fil vide, ou restaure un fil sauvegardé (objet JSON). */
+function createFeed(saved) {
+  return {
+    entries: saved && saved.entries ? [...saved.entries] : [],
+    nextId: (saved && saved.nextId) || 1,
+  };
+}
+
+/** Objet sérialisable à mettre dans la sauvegarde de la partie. */
+function serializeFeed(feed) {
+  return { entries: feed.entries, nextId: feed.nextId };
+}
+
+/**
+ * Ajoute une entrée. Si `key` est fourni et qu'une entrée avec la même clé
+ * existe déjà, elle est remplacée (évite les doublons : une seule alerte
+ * "staff vide", un seul récap de journée, etc.).
+ */
+function pushEntry(feed, entry) {
+  if (!FEED_CATEGORIES.includes(entry.category)) {
+    throw new Error(`Catégorie de fil d'actualité inconnue : ${entry.category}`);
+  }
+  const full = Object.assign({
+    id: `evt_${feed.nextId++}`,
+    priority: "normal",
+    read: false,
+    createdAt: Date.now(),
+    action: null,
+    key: null,
+  }, entry);
+  if (full.key) {
+    feed.entries = feed.entries.filter(e => e.key !== full.key);
+  }
+  feed.entries.unshift(full);
+  trimFeedEntries(feed);
+  return full;
+}
+
+/** Retire une entrée par clé (ex. quand le problème d'une alerte est réglé). */
+function removeByKey(feed, key) {
+  feed.entries = feed.entries.filter(e => e.key !== key);
+}
+
+function markAllRead(feed) {
+  feed.entries.forEach(e => { e.read = true; });
+}
+
+function unreadCount(feed) {
+  return feed.entries.filter(e => !e.read).length;
+}
+
+/**
+ * Entrées à afficher : alertes d'abord, puis les plus récentes.
+ * `category` = "tout" ou une des FEED_CATEGORIES.
+ */
+function getVisibleEntries(feed, opts) {
+  const category = (opts && opts.category) || "tout";
+  const limit = (opts && opts.limit) || 8;
+  return feed.entries
+    .filter(e => category === "tout" || e.category === category)
+    .sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority === "alert" ? -1 : 1;
+      if (a.week !== b.week) return b.week - a.week;
+      return b.createdAt - a.createdAt;
+    })
+    .slice(0, limit);
+}
+
+function trimFeedEntries(feed) {
+  if (feed.entries.length <= FEED_MAX_ENTRIES) return;
+  // On ne supprime jamais une alerte active : on retire les plus anciennes normales.
+  const normals = feed.entries.filter(e => e.priority !== "alert");
+  const excess = feed.entries.length - FEED_MAX_ENTRIES;
+  const toDrop = new Set(
+    normals.sort((a, b) => a.createdAt - b.createdAt).slice(0, excess).map(e => e.id)
+  );
+  feed.entries = feed.entries.filter(e => !toDrop.has(e.id));
+}
+
+const FEED_TEMPLATES = {
+  victoire: {
+    title: ["Victoire face à {adv}", "{club} s'impose contre {adv}", "Succès contre {adv}"],
+    text: [
+      "{club} gagne {score}{lieu}. {top} termine meilleur marqueur avec {pts} points.",
+      "Score final {score}{lieu}. {top} a porté l'équipe ({pts} points).",
+    ],
+  },
+  defaite: {
+    title: ["Défaite contre {adv}", "{adv} fait tomber {club}", "Revers face à {adv}"],
+    text: [
+      "{club} s'incline {score}{lieu}. {top} a tenté de maintenir l'équipe à flot ({pts} points).",
+      "Score final {score}{lieu}. Seul {top} a surnagé avec {pts} points.",
+    ],
+  },
+  blessure: {
+    title: ["{joueur} blessé", "Coup dur : {joueur} à l'infirmerie"],
+    text: ["Indisponible environ {duree} semaine(s).", "Le staff médical prévoit {duree} semaine(s) d'absence."],
+  },
+  arrivee: {
+    title: ["{joueur} rejoint {club}", "Recrue : {joueur}"],
+    text: ["Arrivée en provenance de {origine} pour {montant}.", "Transfert conclu avec {origine} ({montant})."],
+  },
+  depart: {
+    title: ["{joueur} quitte le club", "Départ de {joueur}"],
+    text: ["Il rejoint {destination} pour {montant}.", "Transfert vers {destination} ({montant})."],
+  },
+  offre: {
+    title: ["Offre reçue pour {joueur}", "{acheteur} s'intéresse à {joueur}"],
+    text: ["{acheteur} propose {montant}. Réponse avant la semaine {limite}."],
+  },
+  staff: {
+    title: ["{nom} nommé {poste}", "Nouveau {poste} : {nom}"],
+    text: ["Le poste de {poste} est désormais pourvu.", "{nom} prend ses fonctions cette semaine."],
+  },
+};
+
+function fillTemplate(template, vars) {
+  return template.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? vars[k] : `{${k}}`).toString());
+}
+
+function feedPick(list, rng) {
+  return list[Math.floor(rng() * list.length)];
+}
+
+function feedFromTemplate(type, vars, rng) {
+  const t = FEED_TEMPLATES[type];
+  return { title: fillTemplate(feedPick(t.title, rng), vars), text: fillTemplate(feedPick(t.text, rng), vars) };
+}
+
+function feedEuros(n) {
+  return `${n.toLocaleString("fr-FR")} €`;
+}
+
+/**
+ * Point d'entrée unique pour le moteur. `event.type` décide du traitement.
+ * `ctx` = { clubName, rng } (rng optionnel, Math.random par défaut).
+ */
+function handleGameEvent(feed, event, ctx) {
+  const rng = (ctx && ctx.rng) || Math.random;
+  const club = ctx && ctx.clubName;
+  const w = event.week;
+
+  switch (event.type) {
+    case "match_played": {
+      const win = event.pointsFor > event.pointsAgainst;
+      const vars = {
+        club,
+        adv: event.opponent,
+        score: `${event.pointsFor}-${event.pointsAgainst}`,
+        lieu: event.home ? " à domicile" : ` à ${event.opponent}`,
+        top: (event.topScorer && event.topScorer.name) || "Personne",
+        pts: (event.topScorer && event.topScorer.points) || 0,
+      };
+      return pushEntry(feed, Object.assign({
+        category: "club",
+        week: w,
+        action: { label: "Voir le match", href: `/match/${event.matchId}` },
+      }, feedFromTemplate(win ? "victoire" : "defaite", vars, rng)));
+    }
+
+    case "league_round": {
+      // Un seul récap par journée, même si on l'appelle plusieurs fois.
+      const lines = event.results.map(r => `${r.home} ${r.homePts}-${r.awayPts} ${r.away}`);
+      return pushEntry(feed, {
+        key: `league_round_${w}`,
+        category: "ligue",
+        week: w,
+        title: `Journée ${event.round} : ${event.results.length} résultats`,
+        text: lines.slice(0, 2).join(" · ") + (lines.length > 2 ? "…" : ""),
+        action: { label: "Classement", href: "/ligue" },
+      });
+    }
+
+    case "injury":
+      return pushEntry(feed, Object.assign({
+        key: `injury_${event.playerId}`,
+        category: "club",
+        priority: event.weeks >= 3 ? "alert" : "normal",
+        week: w,
+        action: { label: "Effectif", href: "/effectif" },
+      }, feedFromTemplate("blessure", { joueur: event.playerName, duree: event.weeks }, rng)));
+
+    case "injury_healed":
+      removeByKey(feed, `injury_${event.playerId}`);
+      return pushEntry(feed, {
+        category: "club",
+        week: w,
+        title: `${event.playerName} de retour`,
+        text: "Remis de sa blessure, il est de nouveau disponible.",
+      });
+
+    case "transfer_in":
+      return pushEntry(feed, Object.assign({
+        category: "marche",
+        week: w,
+        action: { label: "Voir le joueur", href: `/joueur/${event.playerId}` },
+      }, feedFromTemplate("arrivee", {
+        club, joueur: event.playerName, origine: event.from, montant: feedEuros(event.fee),
+      }, rng)));
+
+    case "transfer_out":
+      return pushEntry(feed, Object.assign({
+        category: "marche",
+        week: w,
+      }, feedFromTemplate("depart", {
+        joueur: event.playerName, destination: event.to, montant: feedEuros(event.fee),
+      }, rng)));
+
+    case "offer_received":
+      return pushEntry(feed, Object.assign({
+        key: `offer_${event.offerId}`,
+        category: "marche",
+        priority: "alert",
+        week: w,
+        action: { label: "Répondre", href: `/marche/offre/${event.offerId}` },
+      }, feedFromTemplate("offre", {
+        joueur: event.playerName, acheteur: event.buyer, montant: feedEuros(event.amount), limite: event.deadlineWeek,
+      }, rng)));
+
+    case "offer_closed":
+      removeByKey(feed, `offer_${event.offerId}`);
+      return null;
+
+    case "staff_hired":
+      return pushEntry(feed, Object.assign({
+        category: "club",
+        week: w,
+      }, feedFromTemplate("staff", { nom: event.name, poste: event.role }, rng)));
+
+    case "interview":
+      return pushEntry(feed, {
+        key: `interview_${event.interviewId}`,
+        category: "presse",
+        priority: "alert",
+        week: w,
+        title: event.title || "Un journaliste veut vous entendre",
+        text: `${event.subject}, réponse attendue sous ${event.daysLeft} jours.`,
+        action: { label: "Répondre", href: `/interview/${event.interviewId}` },
+      });
+
+    case "interview_done":
+      removeByKey(feed, `interview_${event.interviewId}`);
+      return null;
+
+    default:
+      return null; // Événement non concerné par le fil.
+  }
+}
+
+const FEED_STAFF_LABELS = { coach: "entraîneur", analyst: "analyste vidéo", scout: "recruteur" };
+// Variante capitalisée (rôle "staff_hired" du contrat newsFeed.js, ex.
+// "Nouveau Entraîneur : Niveau 5") — mêmes 3 rôles que FEED_STAFF_LABELS
+// ci-dessus, juste la casse.
+const FEED_STAFF_ROLE_LABELS = { coach: "Entraîneur", analyst: "Analyste vidéo", scout: "Recruteur" };
+// Le staff n'a pas de nom propre dans ce jeu (seulement un niveau, voir
+// Team.trainer/videoAnalyst/recruiter) — placeholder EXPLICITEMENT documenté
+// (voir DEV_NOTES.md point 10, question ouverte "staff nommé") plutôt que
+// d'inventer un nom : "Niveau N", cohérent avec l'adaptateur du tableau de
+// bord (moteurbasket3.html) qui affiche le même texte pour staff.coach.name.
+function feedStaffPlaceholderName(level) {
+  return `Niveau ${level}`;
+}
+
+function feedMoodEntry(feed, week, category, value, cfg) {
+  const key = `mood_${cfg.keyPrefix || category}`;
+  const zone = value < 30 ? "low" : value > 70 ? "high" : null;
+  const existing = feed.entries.find(e => e.key === key);
+  if (!zone) {
+    removeByKey(feed, key);
+    return;
+  }
+  if (existing && existing.zone === zone) return; // Déjà signalé, pas de spam chaque semaine.
+  const [title, text] = cfg[zone];
+  pushEntry(feed, {
+    key, zone, category,
+    priority: zone === "low" ? "alert" : "normal",
+    week, title,
+    text: fillTemplate(text, { v: value }),
+    action: { label: "Détail", href: cfg.href },
+  });
+}
+
+/**
+ * state = { week, budget, supporters, chemistry, staff: { coach, analyst, scout } }
+ * (supporters et chemistry sur 100 ; staff : true si le poste est pourvu)
+ */
+function checkThresholds(feed, state) {
+  const w = state.week;
+
+  const missing = Object.entries(state.staff)
+    .filter(([, filled]) => !filled)
+    .map(([role]) => FEED_STAFF_LABELS[role] || role);
+  if (missing.length > 0) {
+    pushEntry(feed, {
+      key: "alert_staff",
+      category: "club",
+      priority: "alert",
+      week: w,
+      title: missing.length === 3 ? "Le banc technique est vide" : "Postes de staff à pourvoir",
+      text: `À recruter : ${missing.join(", ")}.`,
+      action: { label: "Recruter", href: "/staff" },
+    });
+  } else {
+    removeByKey(feed, "alert_staff");
+  }
+
+  if (state.budget < 0) {
+    pushEntry(feed, {
+      key: "alert_budget",
+      category: "club",
+      priority: "alert",
+      week: w,
+      title: "Budget dans le rouge",
+      text: `Solde actuel : ${feedEuros(state.budget)}. Réduisez la masse salariale ou vendez un joueur.`,
+      action: { label: "Économie", href: "/economie" },
+    });
+  } else {
+    removeByKey(feed, "alert_budget");
+  }
+
+  feedMoodEntry(feed, w, "supporters", state.supporters, {
+    low: ["Les supporters grondent", "Humeur à {v}/100. Les tribunes attendent une réaction."],
+    high: ["Les supporters sont conquis", "Humeur à {v}/100. La salle devrait être pleine."],
+    href: "/supporters",
+  });
+  feedMoodEntry(feed, w, "club", state.chemistry, {
+    low: ["Tensions dans le vestiaire", "Alchimie à {v}/100. Les résultats risquent d'en pâtir."],
+    high: ["Un groupe soudé", "Alchimie à {v}/100. L'équipe joue ensemble."],
+    href: "/effectif",
+    keyPrefix: "chemistry",
+  });
+}
+
+/** state = { clubName, week, rounds, firstOpponent, firstMatchHome, firstMatchDate, supporters } */
+function seedSeasonStart(feed, state) {
+  pushEntry(feed, {
+    key: "season_start",
+    category: "ligue",
+    week: state.week,
+    title: "Le championnat est lancé",
+    text: `${state.rounds} journées au programme. ${state.clubName} ouvre ${
+      state.firstMatchHome ? "à domicile" : "à l'extérieur"
+    } face à ${state.firstOpponent} ${state.firstMatchDate}.`,
+    action: { label: "Calendrier", href: "/calendrier" },
+  });
+  pushEntry(feed, {
+    key: "season_start_supporters",
+    category: "supporters",
+    week: state.week,
+    title: "Les supporters attendent de voir",
+    text: `Humeur à ${state.supporters}/100 : le premier match comptera.`,
+    action: { label: "Détail", href: "/supporters" },
+  });
+}
+
+// ---------------------------------------------------------------------
 // ÉQUIPE
 // ---------------------------------------------------------------------
 class Team {
@@ -3336,6 +3800,13 @@ class Team {
     // (clé = bare round number, forcément championnat à l'époque) vers ce
     // nouveau format : voir teamFromSave plus bas.
     this.plannedTactics = {};
+
+    // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
+    // de FEED_CATEGORIES) : un fil par équipe, vide à la création — rempli
+    // via handleGameEvent/checkThresholds au fil de la saison. Toujours créé
+    // (même pour une équipe CPU, jamais affiché ni consulté dans ce cas)
+    // pour que serializeTeam/teamFromSave restent uniformes.
+    this.feed = createFeed();
 
     this.week = 1; // semaine d'entraînement courante (pas de calendrier complet pour l'instant)
     // Retour utilisateur (2026-09) : "au dessus de ces temps de jeu, il
@@ -3453,6 +3924,59 @@ class Team {
     // par jour", même esprit que "training/economy once per day").
     this.scoutedAttrs = {};
     this.lastVideoSessionAt = null;
+
+    // Scouting Pro (retour utilisateur, 2026-09 : "analyse des équipes
+    // adverses (« Scouting Pro ») en mode payant + accès gratuit via pub
+    // récompensée") : un DEUXIÈME rapport d'adversaire, séparé du rapport
+    // tactique déjà existant et déjà gratuit (voir tacticalReportHtml/
+    // computeScoutingTendencies côté navigateur, qui restent inchangés) —
+    // celui-ci ajoute forme récente, bilan domicile/extérieur, séries,
+    // historique des confrontations, zones de tir et joueurs clés, gagné
+    // soit en visionnant une pub (factice pour l'instant, voir
+    // server/scouting.js), soit via `scoutingPremium` ci-dessous. Clé de
+    // `scoutingUnlocks`/décision de "premium ou pas" : l'INDEX de
+    // l'adversaire au sein de la ligue (même convention que scoutedAttrs
+    // juste au-dessus), PAS un identifiant de match précis — ce rapport
+    // porte sur l'adversaire lui-même (tout son historique de saison), pas
+    // sur une seule confrontation à venir, exactement comme le rapport
+    // tactique gratuit déjà existant qui, lui non plus, n'est lié à aucun
+    // match précis (voir runVideoSession, même principe).
+    //
+    // "Passer Pro" (retour utilisateur : "Bouton 'Passer Pro' factice pour
+    // le moment [...] pas de vrai paiement") : bascule dev UNIQUEMENT,
+    // aucune notion de paiement réel tant qu'aucune régie n'est branchée —
+    // voir server/actions.js:setScoutingPremium. Un club Premium voit TOUS
+    // les rapports Pro débloqués en permanence, jamais besoin de pub.
+    this.scoutingPremium = false;
+    // Rapports Pro déjà débloqués : { [opponentIdx]: { level: "full",
+    // unlockedAt, source: "ad"|"premium", gamesPlayedAtUnlock } }.
+    // `gamesPlayedAtUnlock` (nombre de matchs de l'adversaire déjà comptés
+    // à ce moment-là, voir server/scouting.js:buildScoutingReport) sert à
+    // détecter la péremption : dès que l'adversaire a disputé un nouveau
+    // match depuis ce déblocage, les données ont changé, le rapport doit
+    // être redébloqué (pub ou Premium) pour rester à jour — plus simple et
+    // plus robuste qu'une expiration calée sur un horaire de coup d'envoi
+    // précis (jamais qu'UN SEUL adversaire par entrée ici, pas de clé
+    // composite round/compétition nécessaire, voir le commentaire ci-dessus).
+    this.scoutingUnlocks = {};
+    // Horodatages (ms) des pubs (factices) effectivement COMPLÉTÉES par ce
+    // club, tous adversaires confondus — sert uniquement à compter le quota
+    // quotidien de 3 (DAILY_AD_UNLOCK_CAP, voir server/scouting.js),
+    // recalculé à la demande par jour civil à Paris (parisCalendarDayIndex,
+    // même esprit que collectiveTrainingLog plus haut) plutôt que maintenu
+    // par un compteur séparé, pour ne jamais risquer un désync entre les
+    // deux. Jamais purgé (les entrées d'un jour révolu ne comptent
+    // simplement plus dans le quota, mais restent en historique).
+    this.scoutingAdWatchLog = [];
+    // Tickets de pub (factice) en attente de complétion : { [ticketId]:
+    // { opponentIdx, createdAt } }. Créé par POST /api/scouting/ad-ticket
+    // (juste avant d'afficher l'écran gris), consommé par POST
+    // /api/scouting/ad-complete (après le décompte côté client) — un ticket
+    // garantit que ad-complete ne peut débloquer QUE ce que ad-ticket a
+    // explicitement autorisé, et rend la complétion idempotente (un ticket
+    // déjà consommé, supprimé de cette carte, ne peut plus l'être une
+    // deuxième fois).
+    this.scoutingAdTickets = {};
 
     // Retour utilisateur (2026-09) : "quand les ordres ont été validés, il
     // faudrait [...] que le bouton donnez vos ordres deviennent : Modifier
@@ -3647,6 +4171,18 @@ class Team {
     // toujours régénéré depuis le nom/la couleur de maillot du club, sans
     // rien stocker (voir teamLogoHtml côté moteurbasket3.html).
     this.isPaying = false;
+    // Premium TEMPORAIRE (voir DEV_NOTES.md point 11, "Hoop Shows" —
+    // pronostics d'avant-match/mi-temps) : lot de fin de saison pour le
+    // vainqueur du classement mondial des pronostics ("1 mois de Premium",
+    // décision Antony). Délibérément SÉPARÉ d'`isPaying` ci-dessus (qui reste
+    // un interrupteur manuel permanent, jamais un statut avec date
+    // d'expiration) plutôt que de réutiliser `isPaying` tel quel : un lot
+    // "temporaire" a besoin d'une échéance, qu'`isPaying` n'a jamais eue.
+    // Voir `hasActivePremium` plus bas, qui combine les deux (permanent OU
+    // temporaire en cours) — c'est CETTE méthode, jamais `isPaying` seul, que
+    // lit le lecteur d'émission (showPlayer `premium`) pour sauter la page de
+    // pub. `null` = aucun Premium temporaire en cours.
+    this.premiumUntil = null;
     this.customLogoDataUrl = null;
     this.jerseyShape = JERSEY_SHAPES[0];
     this.jerseyColor = Object.keys(JERSEY_COLORS)[0];
@@ -3814,6 +4350,19 @@ class Team {
         playerIds: explicitPlayerIds || this.players.filter(p => p.secondsPlayed > 0).map(p => p.id),
       };
       this.pendingInterviews.push(entry);
+      // Fil d'actualité du tableau de bord (voir FEED_CATEGORIES plus haut) :
+      // même entrée `pendingInterviews` ci-dessus, juste projetée dans le fil
+      // (clé `interview_<id>`, retirée par resolveInterview ci-dessous).
+      // `daysLeft` toujours 3 à la création (voir MILESTONE_INTERVIEW_RESPONSE_
+      // DEADLINE_MS, même délai que pruneExpiredInterviews).
+      if (this.feed) {
+        const milestoneInfo = MILESTONE_INTERVIEW_TYPES[milestone];
+        handleGameEvent(this.feed, {
+          type: "interview", week: this.week, interviewId: entry.id,
+          subject: milestoneInfo ? milestoneInfo.label : "Interview de jalon",
+          daysLeft: 3, title: milestoneInfo ? milestoneInfo.label : "Interview de jalon",
+        }, { clubName: this.name });
+      }
     }
     return delta;
   }
@@ -3908,6 +4457,10 @@ class Team {
     this.players.forEach(p => { p.form = clamp(Math.round(p.form + formDelta), 1, 100); });
     this.applyChemistryDelta(chemistryDelta);
     this.pendingInterviews.splice(idx, 1);
+    // Fil d'actualité (voir applyMoraleForResult ci-dessus, qui a créé
+    // l'entrée `interview_<id>` correspondante) : retirée, l'interview est
+    // répondue.
+    if (this.feed) handleGameEvent(this.feed, { type: "interview_done", interviewId: entry.id }, { clubName: this.name });
     return { ok: true, delta: fanDelta, formDelta, chemistryDelta, quotes };
   }
 
@@ -3946,6 +4499,17 @@ class Team {
       playerName: keyPlayer.name,
     };
     this.pendingInterviews.push(entry);
+    // Fil d'actualité (voir applyMoraleForResult pour le même principe sur
+    // les autres jalons) : cette interview d'avant-saison n'y passe pas
+    // (aucun résultat encore), d'où sa propre entrée ici.
+    if (this.feed) {
+      const milestoneInfo = MILESTONE_INTERVIEW_TYPES["debut-saison"];
+      handleGameEvent(this.feed, {
+        type: "interview", week: this.week, interviewId: entry.id,
+        subject: milestoneInfo ? milestoneInfo.label : "Interview de jalon",
+        daysLeft: 3, title: milestoneInfo ? milestoneInfo.label : "Interview de jalon",
+      }, { clubName: this.name });
+    }
     return entry;
   }
 
@@ -4277,6 +4841,26 @@ class Team {
   setPaying(isPaying) {
     this.isPaying = !!isPaying;
     return { ok: true };
+  }
+
+  // Vrai si ce club profite du statut Premium MAINTENANT, que ce soit via
+  // l'interrupteur manuel permanent (`isPaying`) ou un Premium temporaire en
+  // cours (`premiumUntil` pas encore atteint — voir son commentaire au
+  // constructeur). Seul point de lecture pour "ce club est-il Premium ?" côté
+  // Hoop Shows (server/shows.js) : jamais `isPaying`/`premiumUntil` lus
+  // séparément ailleurs, pour ne pas dupliquer cette règle.
+  hasActivePremium(now = Date.now()) {
+    return !!this.isPaying || (typeof this.premiumUntil === "number" && now < this.premiumUntil);
+  }
+
+  // Accorde un Premium temporaire de `durationMs` à partir de `now` (lot de
+  // fin de saison des pronostics, voir server/shows.js:grantSeasonPrize) —
+  // repousse l'échéance si un Premium temporaire était déjà en cours (jamais
+  // raccourci), n'affecte jamais `isPaying`.
+  grantTemporaryPremium(durationMs, now = Date.now()) {
+    const until = now + durationMs;
+    this.premiumUntil = Math.max(this.premiumUntil || 0, until);
+    return { ok: true, premiumUntil: this.premiumUntil };
   }
 
   // Marque le tutoriel d'accueil comme terminé (retour utilisateur,
@@ -5199,6 +5783,45 @@ class Team {
     // qui ne passe pas encore ce second paramètre.
     if (now != null) this.refreshYouthCandidates(now);
 
+    // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
+    // de FEED_CATEGORIES) : rafraîchi une fois par semaine, au même rythme
+    // que le reste de ce rapport, uniquement pour une équipe humaine.
+    // - checkThresholds : alertes staff vide / budget négatif / supporters
+    //   ou alchimie hors zone confortable (déjà idempotent, voir sa doc).
+    // - "de retour" (injury_healed) : contrairement à "injury" (émis au
+    //   moment RÉEL de la blessure, voir MatchEngine.applyFatigue), la fin
+    //   d'une blessure n'a pas de "tick" dédié dans le moteur (isCurrentlyInjured
+    //   est recalculée à la demande, jamais annoncée) — détecté ici PAR DIFF :
+    //   toute entrée `injury_<id>` encore présente dans le fil pour un joueur
+    //   qui n'est plus courrament blessé signale une guérison.
+    if (this.isHuman && this.feed) {
+      const nowForFeed = now != null ? now : Date.now();
+      this.feed.entries
+        .filter(e => e.key && e.key.startsWith("injury_"))
+        .forEach(e => {
+          const playerId = e.key.slice("injury_".length);
+          // p.id est numérique (voir uid()) mais playerId est une chaîne
+          // extraite de la clé du fil — comparaison par String() des deux
+          // côtés pour ne jamais manquer le joueur (sinon repli silencieux
+          // sur "Le joueur" à chaque guérison, cf. dashboard_feed_test.js).
+          const player = this.players.find(p => String(p.id) === playerId);
+          const stillInjured = player && isCurrentlyInjured(player, nowForFeed);
+          if (!stillInjured) {
+            handleGameEvent(this.feed, {
+              type: "injury_healed", week: this.week, playerId,
+              playerName: player ? player.name : "Le joueur",
+            }, { clubName: this.name });
+          }
+        });
+      checkThresholds(this.feed, {
+        week: this.week,
+        budget: this.budget,
+        supporters: this.fanMorale,
+        chemistry: this.chemistry,
+        staff: { coach: !!this.trainer, analyst: !!this.videoAnalyst, scout: !!this.recruiter },
+      });
+    }
+
     const result = {
       players: report, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid,
       playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, tvStationRevenue, moraleDrift, salaryChanges,
@@ -5552,7 +6175,20 @@ class Team {
       if (p && p.matchInjuryLocked) {
         p = this.backupsForSlot(pos)[0] || null;
       }
-      if (p) { p.onCourt = true; p.matchPosition = pos; }
+      if (p) {
+        p.onCourt = true;
+        p.matchPosition = pos;
+        // Repos précoce planifié (voir Player.firstRestThreshold/
+        // MatchEngine.substituteIfNeeded) : réservé aux 5 titulaires DU
+        // MATCH (marqués ici, au moment où ils sont alignés) — un
+        // remplaçant qui entre plus tard EST déjà l'événement de rotation
+        // recherché, lui donner en plus un seuil de repos artificiellement
+        // bas dès son entrée ne fait que le faire ressortir presque aussitôt
+        // (mesuré : ça aplatissait tout le temps de jeu de l'effectif au
+        // lieu d'avancer seulement le premier changement des titulaires,
+        // voir le grand commentaire dans Player.resetForMatch).
+        p.isStarterThisMatch = true;
+      }
     });
   }
 
@@ -6210,7 +6846,7 @@ function buildNextCupRound(prevRound, winners) {
 // pour tout appelant qui ne la fournit pas encore (aucune régression sur les
 // matchs déjà persistés avant ce correctif, ni sur les appels de test qui
 // ne s'en soucient pas).
-function recordMatchStatsForTeam(team, round, competition, now = Date.now(), quarterScores = null) {
+function recordMatchStatsForTeam(team, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null) {
   // Connaissance tactique (voir Team.updateTacticalKnowledge) : une seule
   // fois par match RÉELLEMENT joué (pas par joueur), compare la tactique de
   // ce match à celle du précédent.
@@ -6264,6 +6900,26 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
         // Score par quart-temps du MATCH (pas de ce joueur) — voir le grand
         // commentaire au-dessus de la signature de cette fonction.
         quarterScores,
+        // Tactique utilisée par CETTE équipe pour ce match (retour
+        // utilisateur, 2026-09 : "Scouting Pro" — graphiques de fréquence
+        // des systèmes offensifs/défensifs adverses, voir
+        // server/scouting.js:aggregateStrategyUsage) : `{defense, offense,
+        // rhythm}`, capturée au moment RÉEL de la simulation (voir
+        // Engine.simulateOrForfeit/server/liveMatch.js:computeLiveMatch),
+        // PAS relue ici depuis `team.defense` — un manager peut avoir déjà
+        // changé ses ordres pour son PROCHAIN match avant que cette
+        // fonction ne s'exécute (diffusion en direct étalée dans le temps
+        // réel), donc `team.defense` au moment de cet appel ne reflète pas
+        // forcément ce qui a été RÉELLEMENT joué ce match-ci. `offense` =
+        // SEULE la priorité offensive n°1 du moment (team.offensivePriorities
+        // est un classement de 3, pas un choix unique comme la défense/le
+        // rythme — voir Team.constructor) : simplification délibérée pour
+        // ce graphique de fréquence, la priorité n°1 est la plus proche
+        // équivalent d'un "système joué" au sens BuzzerBeater. `null` pour
+        // un forfait (voir Engine.simulateOrForfeit, aucune tactique n'a
+        // été réellement mise en œuvre) ou pour tout matchLog déjà persisté
+        // avant cette fonctionnalité.
+        tacticsUsed: tacticsUsed || null,
       });
     }
   });
@@ -6318,17 +6974,39 @@ function awardMatchMvp(home, away, round, competition, now = Date.now()) {
 // finalizeCupRound (server/liveMatch.js), pour qu'aucun futur appelant ne
 // puisse oublier d'accorder le MVP après avoir enregistré les stats.
 // `quarterScores` (optionnel, voir recordMatchStatsForTeam) : simplement
-// relayé aux deux équipes.
-function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now(), quarterScores = null) {
-  recordMatchStatsForTeam(home, round, competition, now, quarterScores);
-  recordMatchStatsForTeam(away, round, competition, now, quarterScores);
+// relayé aux deux équipes. `tacticsUsed` (optionnel, voir
+// recordMatchStatsForTeam et Engine.simulateOrForfeit) : `{home:{defense,
+// offense,rhythm}, away:{...}}`, éclaté ici en un objet PLAT par équipe
+// avant de le relayer (chaque matchLog ne porte que la tactique de SA
+// PROPRE équipe, jamais celle de l'adversaire — contrairement à
+// quarterScores, qui reste volontairement le même objet {home,away} des
+// deux côtés pour l'affichage de la feuille de match).
+function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null) {
+  recordMatchStatsForTeam(home, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.home);
+  recordMatchStatsForTeam(away, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.away);
   return awardMatchMvp(home, away, round, competition, now);
+}
+
+// Instantané des ordres "en direct" d'une équipe au moment précis où son
+// match est simulé (voir simulateOrForfeit ci-dessous et
+// server/liveMatch.js:computeLiveMatch, seuls appelants) — capturé à la
+// source plutôt que relu plus tard depuis `team.defense`/etc. (voir le grand
+// commentaire de recordMatchStatsForTeam sur `tacticsUsed` pour pourquoi
+// c'est important pour un match diffusé en direct). `offense` = seulement la
+// priorité offensive n°1 du moment (team.offensivePriorities est un
+// classement de 3, pas un choix unique).
+function tacticsSnapshotFor(team) {
+  return { defense: team.defense, offense: (team.offensivePriorities || [])[0] || null, rhythm: team.rhythm };
 }
 
 function simulateOrForfeit(teamHome, teamAway, now = Date.now()) {
   const homeOk = teamHome.hasValidLineup();
   const awayOk = teamAway.hasValidLineup();
   if (homeOk && awayOk) {
+    // Tactiques capturées AVANT simulate() (voir tacticsSnapshotFor ci-dessus)
+    // — simulate() ne les modifie jamais, mais autant figer l'instantané au
+    // plus près du moment qui compte vraiment.
+    const tacticsUsed = { home: tacticsSnapshotFor(teamHome), away: tacticsSnapshotFor(teamAway) };
     const result = new MatchEngine(teamHome, teamAway).simulate(now);
     // quarterScores (retour Discord d'Ariane, relayé par l'utilisateur,
     // 2026-09-24 : "afficher le score par quart-temps sur la boxscore du
@@ -6340,14 +7018,15 @@ function simulateOrForfeit(teamHome, teamAway, now = Date.now()) {
     // AndAwardMvp -> matchLog -> boxscoreRowsFromMatchLog côté client)
     // n'ait plus jamais besoin de connaître A/B, seulement home/away.
     const quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
-    return { scoreHome: result.finalScore.A, scoreAway: result.finalScore.B, forfeit: null, quarterScores };
+    return { scoreHome: result.finalScore.A, scoreAway: result.finalScore.B, forfeit: null, quarterScores, tacticsUsed };
   }
   // Forfait : aucun quart-temps réellement joué, voir recordMatchStatsForTeam
-  // (jamais appelée pour un forfait) — quarterScores reste `null` ici pour
-  // que l'absence de la donnée soit explicite plutôt qu'un tableau vide trompeur.
-  if (!homeOk && !awayOk) return { scoreHome: 0, scoreAway: 0, forfeit: "both", quarterScores: null };
-  if (!homeOk) return { scoreHome: 0, scoreAway: FORFEIT_SCORE, forfeit: "home", quarterScores: null };
-  return { scoreHome: FORFEIT_SCORE, scoreAway: 0, forfeit: "away", quarterScores: null };
+  // (jamais appelée pour un forfait) — quarterScores/tacticsUsed restent
+  // `null` ici pour que l'absence de la donnée soit explicite plutôt qu'un
+  // tableau/objet vide trompeur.
+  if (!homeOk && !awayOk) return { scoreHome: 0, scoreAway: 0, forfeit: "both", quarterScores: null, tacticsUsed: null };
+  if (!homeOk) return { scoreHome: 0, scoreAway: FORFEIT_SCORE, forfeit: "home", quarterScores: null, tacticsUsed: null };
+  return { scoreHome: FORFEIT_SCORE, scoreAway: 0, forfeit: "away", quarterScores: null, tacticsUsed: null };
 }
 
 // Championnat + phase finale. `teams[0]` est TOUJOURS le club du joueur (les
@@ -6469,6 +7148,12 @@ class League {
     // dans le temps réel jusqu'à sa clôture (voir MATCH_BROADCAST_DURATION_MS).
     this.liveMatches = {};
 
+    // Stockage brut du service de pronostics des émissions avant-match/
+    // mi-temps (voir serializeLeague/leagueFromSave, server/shows.js,
+    // DEV_NOTES.md point 11) — jamais lu/écrit directement ici, seulement
+    // transporté.
+    this.showsPronostics = {};
+
     // Confort d'affichage UNIQUEMENT : le match en direct DE CELUI QUI A FAIT
     // LA REQUÊTE, déjà résolu depuis this.liveMatches par le serveur (voir
     // server/liveMatch.js:viewLiveMatchForTeam) avant de sérialiser la
@@ -6532,16 +7217,72 @@ class League {
   // match. Corrigé en sautant, comme upcomingRoundsForOrders(), tout round
   // déjà résolu pour `teamIdx` d'après `this.results`, plutôt que de
   // supposer que `this.round` (global) reflète déjà son propre état.
+  // BUG corrigé (retour utilisateur, 2026-09-24, capture d'écran du
+  // calendrier : "le match devrait s'afficher en haut pour la coupe aussi
+  // (il faut tjrs afficher le prochain match, et pas uniquement le prochain
+  // match de championnat)") : cette méthode ne regardait QUE this.schedule
+  // (championnat), jamais this.cup — un tour de Coupe programmé AVANT le
+  // prochain match de championnat (même jour, horaire plus tôt, ou un jour
+  // plus tôt, voir league.cup au créneau quotidien fixe de 15h) restait donc
+  // invisible ici, alors que c'est cette méthode qui alimente currentMatch
+  // (voir enterNextMatchOrShowSeasonEnd côté moteurbasket3.html), donc le
+  // bandeau du haut, l'écran de préparation ET l'échéance de validation des
+  // ordres. Cherche maintenant AUSSI le tour de Coupe actuellement en
+  // attente (voir pendingCupRound) pour ce club, et renvoie celui des deux
+  // (championnat ou Coupe) dont l'horaire RÉEL programmé est le plus proche
+  // — jamais les deux mélangés, jamais un simple ordre de priorité fixe.
+  // `competition` : ABSENTE pour un match de championnat (comportement
+  // historique inchangé, {round, isHome, opponent} tel quel — voir le
+  // commentaire de defaultOrdresRound côté moteurbasket3.html pour pourquoi
+  // ne rien ajouter ici évite de casser la comparaison stricte déjà en place
+  // ailleurs), posée à "cup" UNIQUEMENT pour un tour de Coupe — même
+  // convention que league.liveMatch.competition (voir enterLiveMatch/
+  // defaultOrdresRound : `.competition || "championship"` partout où c'est
+  // lu).
   nextUserMatch(teamIdx = 0) {
+    let champ = null;
     for (let r = this.round; r < this.totalRounds; r++) {
       const m = this.schedule[r].find(x => x.home === teamIdx || x.away === teamIdx);
       if (!m) continue;
       const alreadyPlayed = this.results.some(res => res.round === r && (res.home === teamIdx || res.away === teamIdx));
       if (alreadyPlayed) continue;
       const isHome = m.home === teamIdx;
-      return { round: r, isHome, opponent: isHome ? m.away : m.home };
+      champ = { round: r, isHome, opponent: isHome ? m.away : m.home };
+      break;
     }
-    return null;
+
+    // Coupe : le SEUL tour qui puisse jamais être "à venir" pour ce club
+    // (voir pendingCupRound/upcomingRoundsForOrders côté moteurbasket3.html,
+    // même logique reprise ici) — absent si cette ligue n'a pas de Coupe, si
+    // le tour en attente ne concerne pas ce club (déjà éliminé, ou exempt
+    // sans adversaire réel), ou si son match a déjà été résolu.
+    let cup = null;
+    const cupRound = this.pendingCupRound();
+    if (cupRound) {
+      const m = cupRound.matches.find(x => (x.home === teamIdx || x.away === teamIdx) && !x.bye);
+      if (m && !m.resolved) {
+        const isHome = m.home === teamIdx;
+        cup = { round: cupRound.index, isHome, opponent: isHome ? m.away : m.home, competition: "cup" };
+      }
+    }
+
+    if (!champ) return cup;
+    if (!cup) return champ;
+    // Comparaison chronologique par horaire RÉEL programmé (mêmes formules
+    // que scheduledTimeForLeagueRound/scheduledTimeForLeagueCupRound côté
+    // server/calendar.js, et leurs équivalents côté moteurbasket3.html
+    // scheduledTimeForChampionshipRound/scheduledTimeForCupRound) — seule une
+    // ligue au calendrier ancré quotidien a jamais une Coupe (voir
+    // generateMultiManagerLeague), donc calendarStartAt est toujours défini
+    // ici si `cup` est non-null ; repli défensif sur le championnat (ancien
+    // comportement) si ce n'est vraiment pas le cas (ancienne sauvegarde
+    // atypique).
+    if (typeof this.calendarStartAt !== "number") return champ;
+    const champAt = this.calendarDailyAnchored
+      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round)
+      : calendarScheduledTimeForRound(this.calendarStartAt, champ.round, this.calendarWeekMs || undefined, this.calendarSlotOffsetsMs || undefined);
+    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex);
+    return cupAt <= champAt ? cup : champ;
   }
 
   recordResult(round, home, away, scoreHome, scoreAway) {
@@ -7118,6 +7859,21 @@ class League {
     else seller.autoAssignLineup();
     if (buyer.isHuman) buyer.recordTransaction(`Achat de ${player.name} (enchères)`, -amount);
     if (seller.isHuman) seller.recordTransaction(`Vente de ${player.name} (enchères)`, amount);
+    // Fil d'actualité du tableau de bord (voir FEED_CATEGORIES plus haut) :
+    // les DEUX côtés humains d'un même transfert reçoivent chacun leur propre
+    // entrée (transfer_in pour l'acheteur, transfer_out pour le vendeur) dans
+    // LEUR fil respectif — jamais le même événement des deux côtés.
+    if (buyer.isHuman && buyer.feed) {
+      handleGameEvent(buyer.feed, {
+        type: "transfer_in", week: buyer.week, playerId: player.id, playerName: player.name,
+        from: seller.name, fee: amount,
+      }, { clubName: buyer.name });
+    }
+    if (seller.isHuman && seller.feed) {
+      handleGameEvent(seller.feed, {
+        type: "transfer_out", week: seller.week, playerName: player.name, to: buyer.name, fee: amount,
+      }, { clubName: seller.name });
+    }
     buyer.players.push(player);
     // Voir le grand commentaire de TRANSFER_NEW_CLUB_MOTIVATION_FLOOR plus
     // haut : un vrai changement de club (ce transfert-ci) relève la
@@ -7319,6 +8075,12 @@ class League {
       return;
     }
     buyer.hireTrainer(listing.level, amount);
+    if (buyer.isHuman && buyer.feed) {
+      handleGameEvent(buyer.feed, {
+        type: "staff_hired", week: buyer.week,
+        name: feedStaffPlaceholderName(listing.level), role: FEED_STAFF_ROLE_LABELS.coach,
+      }, { clubName: buyer.name });
+    }
     listing.result = "sold";
     listing.finalPrice = amount;
   }
@@ -7489,6 +8251,12 @@ class League {
       return;
     }
     buyer.hireVideoAnalyst(listing.level, amount);
+    if (buyer.isHuman && buyer.feed) {
+      handleGameEvent(buyer.feed, {
+        type: "staff_hired", week: buyer.week,
+        name: feedStaffPlaceholderName(listing.level), role: FEED_STAFF_ROLE_LABELS.analyst,
+      }, { clubName: buyer.name });
+    }
     listing.result = "sold";
     listing.finalPrice = amount;
   }
@@ -7630,6 +8398,12 @@ class League {
       return;
     }
     buyer.hireRecruiter(listing.level, amount);
+    if (buyer.isHuman && buyer.feed) {
+      handleGameEvent(buyer.feed, {
+        type: "staff_hired", week: buyer.week,
+        name: feedStaffPlaceholderName(listing.level), role: FEED_STAFF_ROLE_LABELS.scout,
+      }, { clubName: buyer.name });
+    }
     listing.result = "sold";
     listing.finalPrice = amount;
   }
@@ -8623,6 +9397,19 @@ function serializeTeam(team) {
     videoAnalyst: team.videoAnalyst ? { ...team.videoAnalyst } : null,
     scoutedAttrs: team.scoutedAttrs || {},
     lastVideoSessionAt: typeof team.lastVideoSessionAt === "number" ? team.lastVideoSessionAt : null,
+    // Scouting Pro (voir Team.constructor plus haut) : DOIT survivre au
+    // rechargement comme le reste du staff/scoutisme juste au-dessus, sinon
+    // un rapport payé (pub ou Premium) redeviendrait verrouillé au premier
+    // redémarrage du serveur.
+    scoutingPremium: !!team.scoutingPremium,
+    scoutingUnlocks: team.scoutingUnlocks || {},
+    scoutingAdWatchLog: Array.isArray(team.scoutingAdWatchLog) ? [...team.scoutingAdWatchLog] : [],
+    scoutingAdTickets: team.scoutingAdTickets || {},
+    // Fil d'actualité du tableau de bord (voir Team.constructor/FEED_CATEGORIES
+    // plus haut) : DOIT survivre au rechargement comme le reste, sinon le fil
+    // reviendrait vide (et les alertes déjà vues redeviendraient "non lues")
+    // à chaque redémarrage du serveur.
+    feed: serializeFeed(team.feed),
     // Badge "Modifier vos ordres" (voir Team.ordresValidatedRound ci-dessus) :
     // même raison de persister que lastVideoSessionAt juste au-dessus.
     ordresValidatedRound: typeof team.ordresValidatedRound === "number" ? team.ordresValidatedRound : null,
@@ -8707,6 +9494,11 @@ function serializeTeam(team) {
     // Identité du club (voir Team.isPaying/customLogoDataUrl/jerseyShape/
     // jerseyColor, JERSEY_COLORS/JERSEY_SHAPES plus haut).
     isPaying: !!team.isPaying,
+    // Premium temporaire (voir Team.premiumUntil/hasActivePremium/
+    // grantTemporaryPremium plus haut, DEV_NOTES.md point 11) : DOIT survivre
+    // au rechargement comme isPaying ci-dessus, sinon le lot de fin de saison
+    // des pronostics se perdrait au premier redémarrage du serveur.
+    premiumUntil: typeof team.premiumUntil === "number" ? team.premiumUntil : null,
     customLogoDataUrl: team.customLogoDataUrl || null,
     jerseyShape: team.jerseyShape,
     jerseyColor: team.jerseyColor,
@@ -9057,6 +9849,18 @@ function teamFromSave(data) {
   // scouté, comme au tout premier lancement.
   team.scoutedAttrs = data.scoutedAttrs && typeof data.scoutedAttrs === "object" ? data.scoutedAttrs : {};
   team.lastVideoSessionAt = typeof data.lastVideoSessionAt === "number" ? data.lastVideoSessionAt : null;
+  // Scouting Pro (voir serializeTeam ci-dessus) : `false`/`{}`/`[]` par
+  // défaut (déjà les valeurs posées par le constructeur Team) pour une
+  // sauvegarde d'avant cette fonctionnalité — aucun rapport débloqué, comme
+  // au tout premier lancement.
+  team.scoutingPremium = !!data.scoutingPremium;
+  team.scoutingUnlocks = data.scoutingUnlocks && typeof data.scoutingUnlocks === "object" ? data.scoutingUnlocks : {};
+  team.scoutingAdWatchLog = Array.isArray(data.scoutingAdWatchLog) ? [...data.scoutingAdWatchLog] : [];
+  team.scoutingAdTickets = data.scoutingAdTickets && typeof data.scoutingAdTickets === "object" ? data.scoutingAdTickets : {};
+  // Fil d'actualité (voir serializeTeam ci-dessus) : `createFeed()` accepte
+  // `undefined` (sauvegarde d'avant cette fonctionnalité) et renvoie alors un
+  // fil vide, comme au tout premier lancement.
+  team.feed = createFeed(data.feed);
   team.ordresValidatedRound = typeof data.ordresValidatedRound === "number" ? data.ordresValidatedRound : null;
   if (typeof data.budget === "number") team.budget = data.budget;
   if (typeof data.deficitWeeks === "number") team.deficitWeeks = data.deficitWeeks;
@@ -9209,6 +10013,7 @@ function teamFromSave(data) {
   // défaut, club gratuit) plutôt que d'accepter n'importe quelle valeur
   // brute non validée venant de la sauvegarde.
   team.isPaying = !!data.isPaying;
+  team.premiumUntil = typeof data.premiumUntil === "number" ? data.premiumUntil : null;
   team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
   if (JERSEY_SHAPES.includes(data.jerseyShape)) team.jerseyShape = data.jerseyShape;
   if (JERSEY_COLORS[data.jerseyColor]) team.jerseyColor = data.jerseyColor;
@@ -9358,6 +10163,15 @@ function serializeLeague(lg) {
     // viewLiveMatchForTeam) — `null` si l'appelant n'a rien résolu de
     // particulier ; jamais recalculé ici.
     liveMatch: lg.liveMatch || null,
+    // Émissions avant-match/mi-temps + pronostics (voir DEV_NOTES.md point
+    // 11, server/shows.js) : stockage brut du service de pronostics livré
+    // par le prestataire (server/shows/pronostics.js,
+    // createPronosticsService({store})) — un objet plat {clé: valeur} tenant
+    // lieu de `store` (voir server/shows.js:leagueBackedPronosticsStore),
+    // réutilisant TEL QUEL le mécanisme de sauvegarde JSON déjà en place ici
+    // plutôt que d'inventer une persistance séparée (fichier/DB à part).
+    // Survit au rechargement/redémarrage comme le reste de la ligue.
+    showsPronostics: lg.showsPronostics && typeof lg.showsPronostics === "object" ? lg.showsPronostics : {},
   };
 }
 
@@ -9403,6 +10217,11 @@ function leagueFromSave(data, userTeam = null) {
   // en cours reprise, comme avant ce champ.
   lg.liveMatches = data.liveMatches && typeof data.liveMatches === "object" ? data.liveMatches : {};
   lg.liveMatch = data.liveMatch || null;
+  // Émissions avant-match/mi-temps + pronostics (voir serializeLeague
+  // ci-dessus) : absent = sauvegarde d'avant cette fonctionnalité, objet
+  // vide (aucune émission publiée pour l'instant), même convention que
+  // liveMatches ci-dessus.
+  lg.showsPronostics = data.showsPronostics && typeof data.showsPronostics === "object" ? data.showsPronostics : {};
   // Rétro-compatibilité (retour utilisateur, 2026-09 : "comment se fait-il
   // que le CA n'a pas donné d'objectif alors que la saison commence
   // demain ?") : une ligue créée AVANT l'ajout de cette fonctionnalité n'a
@@ -9532,11 +10351,25 @@ class MatchEngine {
       }
 
       const mustLeave = p.disqualified || p.injured;
+      // p.firstRestThreshold/p.restThreshold (voir Player.resetForMatch)
+      // remplacent la constante fixe à 82 utilisée avant ce correctif —
+      // seuils individuels tirés au sort à chaque match. Seul un TITULAIRE
+      // (isStarterThisMatch, posé par Team.resetForMatch) qui n'a pas encore
+      // eu son premier repos utilise le seuil bas (firstRestThreshold, fait
+      // intervenir la fatigue tôt) ; un remplaçant qui vient d'entrer, ou
+      // n'importe quel joueur après son premier repos (hasHadFirstRest posé
+      // plus bas), utilise le seuil haut (restThreshold) — voir le grand
+      // commentaire associé dans Player/Team.resetForMatch.
+      const fatigueThreshold = (p.isStarterThisMatch && !p.hasHadFirstRest) ? p.firstRestThreshold : p.restThreshold;
       const shouldRest = !mustLeave && (
-        (p.fatigue >= 82 && !team.maintainDespiteFouls.has(p.id)) ||
+        (p.fatigue >= fatigueThreshold && !team.maintainDespiteFouls.has(p.id)) ||
         (p.fouls >= 4 && !team.maintainDespiteFouls.has(p.id))
       );
       if (!mustLeave && !shouldRest) continue;
+      // Posé dès QU'une sortie a lieu pour ce joueur (fatigue, fautes, ou
+      // mustLeave), quelle qu'en soit la cause — s'il revient plus tard,
+      // c'est le seuil haut qui s'applique désormais (voir ci-dessus).
+      p.hasHadFirstRest = true;
 
       // Remplaçant pour LE POSTE QUE p OCCUPAIT (matchPosition), pas
       // forcément son poste naturel — voir Team.backupsForSlot.
@@ -9676,6 +10509,21 @@ class MatchEngine {
     const rhythmOff = RHYTHMS[offTeam.rhythm];
     const onCourtOff = offTeam.onCourtPlayers();
     const onCourtDef = defTeam.onCourtPlayers();
+    // Garde-fou (retour utilisateur, 2026-09-24, "fautes par match trop
+    // faible" — voir nonShootingFoulChance plus bas) : substituteIfNeeded
+    // accepte déjà explicitement qu'une équipe finisse "en infériorité" si
+    // son banc est épuisé (voir son commentaire "Banc épuisé (rare)"), donc
+    // onCourtPlayers() pouvait déjà, en théorie, retomber sous 5 joueurs —
+    // mais un cas extrême (banc ENTIÈREMENT épuisé, 0 joueur éligible) n'a
+    // jamais été gardé nulle part en aval (weightedPick(onCourtOff, ...)
+    // plante sur un tableau vide) : resté purement théorique tant que les
+    // fautes étaient rares, devenu ATTEIGNABLE en pratique après avoir
+    // sensiblement augmenté le volume de fautes ci-dessous (trouvé en
+    // calibration, 240 matchs simulés). Si un camp n'a plus AUCUN joueur
+    // disponible, cette possession ne peut objectivement pas être jouée —
+    // on la neutralise (aucun évènement, la balle change juste de main)
+    // plutôt que de laisser planter toute la simulation.
+    if (!onCourtOff.length || !onCourtDef.length) return { possessionOffense: false };
 
     // --- Tactique confirmée (voir le grand commentaire au-dessus de
     // SCREEN_DEFENSES, plus haut dans ce fichier) : lookup une fois par
@@ -9819,6 +10667,56 @@ class MatchEngine {
       return { possessionOffense: false };
     }
 
+    // --- Faute simple, hors tir (retour utilisateur, 2026-09-24 : "il y a
+    // généralement très peu de fautes par match. on est plutôt à 18/20 par
+    // match en moyenne") : jusqu'ici, la SEULE source de faute en dehors de
+    // la faute intentionnelle de fin de match (shouldFoulIntentionally plus
+    // haut) était `shootingFoul` plus bas — donc un tir devait être levé
+    // pour qu'une faute existe. Or une grande partie des fautes réelles
+    // n'ont rien à voir avec un tir (contact sur pénétration qui ne va pas
+    // au bout, écran illégal, faute de zone/hors ballon) — mesuré à
+    // seulement ~9.7 fautes d'équipe/match avant ce correctif (calibration :
+    // script jetable simulant une saison complète, 16 équipes × 30 matchs),
+    // loin du repère utilisateur (18-20/équipe/match).
+    // PREMIER ESSAI (abandonné) : un `return { possessionOffense: true }`
+    // ici, comme un rebond offensif — semblait juste (l'équipe qui attaquait
+    // garde la balle), mais faussait le rythme : chaque possession de la
+    // boucle de simulate() consomme un `possessionLength` MOYEN fixe
+    // (calibré sur `avgPossessions`, indépendant de ce qui s'y passe), donc
+    // un `return` ici "vole" un créneau entier du budget total de
+    // possessions du match SANS jamais produire de tir — mesuré : -11,5% de
+    // points/équipe/match (66,5 → 58,9 sur la même calibration). En vrai,
+    // une faute simple ne fait PAS perdre à l'attaque son tir : elle
+    // récupère juste la balle sur remise en jeu et continue SA MÊME action.
+    // Correctif : pas de `return`, la faute est journalisée puis l'action
+    // continue directement vers le tir plus bas, dans la MÊME itération —
+    // la faute s'ajoute au volume de statistiques sans jamais coûter de tir
+    // à l'attaque, exactement comme un and-one (tir + faute + lancer, déjà
+    // journalisés au même chrono plus bas) empile plusieurs évènements sur
+    // un seul et même passage. Volontairement SANS lancer franc
+    // (contrairement à une faute sur tir) : la règle du bonus (FIBA :
+    // lancers francs dès la 5e faute d'équipe du quart-temps, voir
+    // `p.fouls >= 5` déjà utilisé pour l'exclusion individuelle plus haut)
+    // N'EST PAS modélisée ici (hors scope v1, même principe que la Coupe
+    // exclue des splits domicile-extérieur du Scouting Pro) : ce correctif
+    // corrige le VOLUME de fautes, pas encore leurs conséquences de fin de
+    // quart-temps. Probabilité (0.125) calibrée empiriquement (même
+    // méthode, calibration rejouée après l'abandon du `return`) : 19.55
+    // fautes/équipe/match mesurées (cible 18-20), points/équipe/match et
+    // pace INCHANGÉS par rapport à la mesure sans ce correctif (~66-68
+    // pts/équipe, ~76-77 de pace dans les deux cas).
+    const nonShootingFoulChance = 0.125;
+    if (Math.random() < nonShootingFoulChance) {
+      const foulTarget = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass") + 1);
+      const commonFoulDefender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
+      commonFoulDefender.stats.pf++; commonFoulDefender.fouls++;
+      this.log(events, quarter, clock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", team: this.teamKey(defTeam), defender: commonFoulDefender.name, possession: this.teamKey(offTeam) });
+      this.maybeEjectForComposure(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
+      this.maybeCommitUnsportsmanlikeFoul(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
+      // Pas de `return` ici — voir le grand commentaire ci-dessus : l'action
+      // continue directement vers le tir, dans cette même itération.
+    }
+
     const zoneRoll = Math.random();
     let zone;
     if (zoneRoll < offense.inside) zone = "inside";
@@ -9862,7 +10760,27 @@ class MatchEngine {
     // rapport à la Passe elle-même, qui reste l'attribut premier du choix du
     // passeur.
     const creators = onCourtOff.filter(p => p.id !== shooter.id);
-    const creator = creators.length ? weightedPick(creators, p => p.eff("pass") + p.eff("vision") * 0.6) : null;
+    // Concentration du jeu (retour utilisateur, 2026-09-24 : "c'est très
+    // très faible [...] en euroleague la saison dernière les 5 premiers
+    // avait entre 7,4 pd et 5,7 pd") : ce tirage était jusqu'ici linéaire
+    // (poids brut Passe+Vision*0.6), qui répartit la création BEAUCOUP trop
+    // uniformément entre les 4 coéquipiers sur le terrain — un meneur avec
+    // 20 pts de Passe/Vision de plus que le reste du 5 ne recevait qu'un
+    // avantage marginal dans le tirage. Le choix du TIREUR juste au-dessus
+    // (`shooter`) utilise déjà une puissance (`Math.pow(..., 2.1)`) pour
+    // concentrer les tirs sur les meilleurs scoreurs — même principe
+    // appliqué ici au passeur (exposant 2.3, proche de celui du tireur :
+    // dans une ligue à 5 postes, la création est presque aussi concentrée
+    // sur le meneur/le meilleur passeur du cinq que le tir sur son meilleur
+    // scoreur), calibré empiriquement (script jetable simulant une saison
+    // complète, 20 équipes × 38 matchs pour lisser le bruit d'échantillonnage
+    // — un essai à 10 équipes/18 matchs faisait sauter la moyenne du top 5
+    // de ~4,6 à ~5,0 pd/match d'un tirage à l'autre) : top 5 passeurs/match
+    // mesuré à 7.32/6.13/5.24/5.13/4.95 (moyenne 5.75), contre le repère
+    // donné par l'utilisateur (Euroleague saison dernière, top 5 entre 7,4
+    // et 5,7 pd/match) — même ordre de grandeur, meilleur passeur mesuré
+    // quasi identique au repère réel (7.32 vs 7.4).
+    const creator = creators.length ? weightedPick(creators, p => Math.pow(Math.max(p.eff("pass") + p.eff("vision") * 0.6, 1), 4.6)) : null;
 
     // Création de tir (retour utilisateur, 2026-09) : cette formule
     // s'appelait déjà `creation` et alimentait la qualité du tir, mais ne
@@ -10137,8 +11055,37 @@ class MatchEngine {
       // événement par événement côté client pendant la diffusion (seul moyen
       // de suivre les stats EN DIRECT sans montrer par avance le résultat
       // final, voir applyLiveBoxScoreEvent plus bas dans moteurbasket3.html).
+      // Taux d'assist (retour utilisateur, 2026-09-24 : "c'est très très
+      // faible [...] en euroleague la saison dernière les 5 premiers avait
+      // entre 7,4 pd et 5,7 pd") : ce tirage était jusqu'ici réservé aux
+      // seuls tirs "ouvert" (~40% des tirs marqués, mesuré par calibration —
+      // script jetable simulant une saison complète, 10 équipes × 18 matchs
+      // via le round robin aller-retour) — un tir "contesté" ou "très
+      // contesté" ne pouvait JAMAIS être crédité d'une passe décisive, même
+      // marqué. Résultat mesuré : ~27,6% des tirs marqués assistés, meneurs
+      // plafonnant à ~2,4 pd/match — loin des repères réels (assist rate
+      // toutes ligues confondues généralement ~55-65% des tirs marqués,
+      // largement dominé par les tirs à 3pts en réception ; le repère
+      // Euroleague donné par l'utilisateur, ~5,7-7,4 pd/match pour les 5
+      // meilleurs passeurs, confirme le même ordre de grandeur). Un tir
+      // contesté PEUT être assisté dans la réalité (feed sur pénétration
+      // contestée, tir en sortie d'écran gêné par un rotateur) — seule une
+      // action "très contestée" (quasi toujours une création solo, tir
+      // forcé) reste peu assistée. Probabilité de base par palier de
+      // qualité, calibrée empiriquement (même méthode) pour retomber dans la
+      // bande cible : "ouvert" 0.78 (était 0.65, seul palier existant avant),
+      // "contesté" 0.42 (nouveau), "très contesté" 0.12 (nouveau, jamais 0 :
+      // même un tir forcé peut suivre un vrai décalage/kick-out). Les bonus
+      // tactiques/vision existants (offense.assist/assistOpenBonus/
+      // visionAssistBonus) s'appliquent toujours par-dessus, inchangés. Ce
+      // correctif seul suffisait à ramener le taux d'équipe dans la bande
+      // réaliste (~55-65% des tirs marqués assistés) mais pas encore les
+      // meneurs individuellement (répartition trop uniforme entre les 4
+      // coéquipiers) — voir le second correctif sur `creator` plus haut
+      // (choix du passeur, juste avant le calcul de `creation`).
+      const assistChanceByQuality = quality === "ouvert" ? 0.78 : quality === "contesté" ? 0.42 : 0.12;
       let assistedBy = null;
-      if (assistCandidate && quality === "ouvert" && Math.random() < 0.65 + offense.assist + assistOpenBonus + visionAssistBonus) {
+      if (assistCandidate && Math.random() < clamp(assistChanceByQuality + offense.assist + assistOpenBonus + visionAssistBonus, 0.05, 0.95)) {
         assistCandidate.stats.ast++;
         assistedBy = assistCandidate.name;
       }
@@ -10317,6 +11264,19 @@ class MatchEngine {
           p.injuryType = rolled.injuryType;
           p.injuryUntil = rolled.injuryUntil;
           this.log(events, quarter, clock, say(PHRASES.injury, { player: p.name, team: team.name }), { type: "injury", team: this.teamKey(team), player: p.name });
+          // Fil d'actualité (tableau de bord, voir FEED_CATEGORIES plus haut) :
+          // uniquement pour une équipe humaine (`team.feed` existe pour toute
+          // équipe, mais seule une équipe humaine consulte un tableau de bord).
+          // `weeks` du contrat newsFeed.js dérivé de la durée RÉELLE en jours
+          // (rollInjury ne raisonne qu'en jours) — arrondi à la semaine
+          // supérieure, jamais 0 (une blessure de 2 jours reste "1 semaine").
+          if (team.isHuman && team.feed) {
+            const injuryDays = Math.max(1, Math.round((rolled.injuryUntil - (this.matchNow ?? Date.now())) / CONDITION_DAY_MS));
+            const injuryWeeks = Math.max(1, Math.round(injuryDays / 7));
+            handleGameEvent(team.feed, {
+              type: "injury", week: team.week, playerId: p.id, playerName: p.name, weeks: injuryWeeks,
+            }, { clubName: team.name });
+          }
         }
       }
     });
@@ -10533,6 +11493,7 @@ return {
   COACH_AUCTION_DURATION_MS, COACH_MARKET_MIN_OPEN_LISTINGS, COACH_MARKET_GENERATE_CHECK_INTERVAL_MS, COACH_CPU_BID_CHANCE,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
+  tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel,
   JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, JERSEY_TWO_TONE_SETS, defaultAwayJerseyColor, MAX_TEAM_LOGO_DATA_URL_LENGTH,
@@ -10612,6 +11573,11 @@ return {
   // sérialisation), plutôt que de dupliquer cette formule dans le test.
   planKey,
   serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave,
+  // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
+  // de FEED_CATEGORIES) : exportées pour server/actions.js, server/liveMatch.js
+  // et les tests.
+  FEED_CATEGORIES, FEED_MAX_ENTRIES, createFeed, serializeFeed, pushEntry, removeByKey,
+  markAllRead, unreadCount, getVisibleEntries, handleGameEvent, checkThresholds, seedSeasonStart,
   DIVISIONS, MAX_DIVISION_LEVEL, divisionInfo,
 };
 

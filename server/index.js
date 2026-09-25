@@ -43,6 +43,8 @@ const Calendar = require("./calendar.js");
 const LiveMatch = require("./liveMatch.js");
 const { scheduledTimeForLeagueRound } = Calendar;
 const actions = require("./actions.js");
+const Scouting = require("./scouting.js");
+const Shows = require("./shows.js");
 
 // MODE ACCÉLÉRÉ (tests/démo) — voir le commentaire détaillé dans
 // server/calendar.js. Activé en lançant le serveur avec la variable
@@ -69,7 +71,16 @@ const MAX_BODY_BYTES = 1024 * 1024; // 1 Mo — largement suffisant pour une feu
 // répertoire — donc AUCUNE dépendance à express.static, juste `fs`/`path`.
 // ---------------------------------------------------------------------
 const ASSETS_DIR = path.join(__dirname, "..", "assets");
-const ASSET_CONTENT_TYPES = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp" };
+// Extensions "hoop-shows" (émissions avant-match/mi-temps, voir DEV_NOTES.md
+// point 11) ajoutées au même mécanisme générique — assets/hoop-shows/ sert le
+// lecteur (showPlayer.js/.css) et la police Exo 2 auto-hébergée (fonts/*),
+// jamais de logique nouvelle : même liste blanche par extension, même
+// résolution realpath sous ASSETS_DIR ci-dessous.
+const ASSET_CONTENT_TYPES = {
+  ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp",
+  ".js": "application/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
+  ".woff2": "font/woff2", ".txt": "text/plain; charset=utf-8",
+};
 
 function serveAsset(res, pathname) {
   const relative = pathname.replace(/^\/assets\//, "");
@@ -465,6 +476,18 @@ const ACTION_ROUTES = {
   "/api/market/analyst-bid": actions.bidOnAnalystListing,
   "/api/staff/fire-analyst": actions.fireVideoAnalyst,
   "/api/staff/video-session": actions.runVideoSession,
+  // Scouting Pro (voir server/scouting.js et le grand commentaire de
+  // Team.scoutingPremium/scoutingUnlocks dans engine.js) : les 2 routes
+  // GET (accès/rapport) sont gérées à part plus bas, comme /api/live-status
+  // et /api/spectate ci-dessus (lecture pure, jamais de mutation).
+  "/api/scouting/ad-ticket": actions.createScoutingAdTicket,
+  "/api/scouting/ad-complete": actions.completeScoutingAdTicket,
+  "/api/scouting/set-premium": actions.setScoutingPremium,
+  // Hoop Shows — émissions avant-match/mi-temps + pronostics (voir
+  // server/shows.js, DEV_NOTES.md point 11) : envoi des réponses. Les GET
+  // (émission elle-même/mes réponses déjà envoyées/classement mondial) sont
+  // gérées à part plus bas, même convention que Scouting Pro ci-dessus.
+  "/api/pronostics/submit": actions.submitPronostics,
   // Académie de jeunes (recruteur + centre de formation + pipeline privé de
   // prospects, voir server/actions.js et Team.recruiter/youthCandidates/
   // youthPlayers/trainingCenterLevel/pendingYouthDecisions côté moteur) —
@@ -944,6 +967,115 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const watchedTeam = ctx.league.teams[teamIdx];
         const opponent = ctx.league.teams[live.opponentIdx];
         sendJson(res, 200, { ok: true, teamName: watchedTeam.name, opponentName: opponent.name, live });
+        return;
+      }
+
+      // Scouting Pro — accès (verrouillé/débloqué/périmé, quota de pubs
+      // restant) et rapport complet (voir server/scouting.js, le grand
+      // commentaire en tête de ce fichier) : ?opponent=<index dans
+      // league.teams>. Routes GET pures (aucune mutation, contrairement à
+      // ad-ticket/ad-complete/set-premium ci-dessus, gérées par
+      // ACTION_ROUTES) — pas de persistContext nécessaire au-delà du tick
+      // déjà fait par resolvePlayerContext/tick.
+      if (route.pathname === "/api/scouting/access" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        const opponentParam = route.searchParams.get("opponent");
+        const opponentIdx = opponentParam === null ? NaN : Number(opponentParam);
+        const access = Scouting.getScoutingAccess(ctx.league, ctx.teamIndex, opponentIdx, now);
+        if (!access.ok) { sendJson(res, 400, access); return; }
+        sendJson(res, 200, access);
+        return;
+      }
+
+      if (route.pathname === "/api/scouting/report" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        const opponentParam = route.searchParams.get("opponent");
+        const opponentIdx = opponentParam === null ? NaN : Number(opponentParam);
+        const access = Scouting.getScoutingAccess(ctx.league, ctx.teamIndex, opponentIdx, now);
+        if (!access.ok) { sendJson(res, 400, access); return; }
+        // Rapport JAMAIS renvoyé sans accès "full" (Premium ou pub déjà
+        // regardée, pas périmée) — voir le grand commentaire en tête de
+        // server/scouting.js : contrairement au rapport tactique gratuit
+        // déjà existant (transporté tel quel dans /api/save pour toute la
+        // ligue), CE rapport est bien gated côté serveur, jamais envoyé au
+        // navigateur avant que l'accès ne soit acquis.
+        if (access.level !== "full") { sendJson(res, 403, { ok: false, error: "Rapport verrouillé.", access }); return; }
+        const report = Scouting.buildScoutingReport(ctx.league, ctx.teamIndex, opponentIdx, now);
+        if (!report.ok) { sendJson(res, 400, report); return; }
+        sendJson(res, 200, { ...report, access });
+        return;
+      }
+
+      // Hoop Shows — émissions avant-match/mi-temps + pronostics (voir
+      // server/shows.js, DEV_NOTES.md point 11). `round` toujours celui DE LA
+      // LIGUE côté serveur (ctx.league.round), jamais un paramètre fourni par
+      // le client : la journée concernée n'est jamais ambiguë ("mon prochain
+      // match de championnat"), pas besoin qu'un manager la précise ni de
+      // risque de désynchronisation avec ce que le serveur sait réellement.
+      // 404 tant que la fenêtre n'est pas ouverte (voir INTEGRATION.md §5) —
+      // PAS une erreur, le client repasse simplement plus tard (voir
+      // moteurbasket3.html, bouton "Voir l'émission"/ouverture automatique).
+      if (route.pathname === "/api/shows/prematch" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        if (ctx.league.isRegularSeasonDone()) { sendJson(res, 404, { ok: false, error: "Aucune émission disponible." }); return; }
+        const show = Shows.getPrematchShow(ctx.league, ctx.teamIndex, ctx.league.round, now);
+        if (!show) { sendJson(res, 404, { ok: false, error: "Émission pas encore ouverte." }); return; }
+        // Publication des pronostics = mutation de league.showsPronostics
+        // (voir Shows.getPrematchShow) : persistée explicitement ici (jamais
+        // fire-and-forget, voir le grand commentaire d'en-tête de
+        // server/shows.js) pour ne pas dépendre d'une prochaine requête.
+        await persistContext(ctx);
+        sendJson(res, 200, show);
+        return;
+      }
+
+      if (route.pathname === "/api/shows/halftime" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        if (ctx.league.isRegularSeasonDone()) { sendJson(res, 404, { ok: false, error: "Aucune émission disponible." }); return; }
+        const show = Shows.getHalftimeShow(ctx.league, ctx.teamIndex, ctx.league.round, now);
+        if (!show) { sendJson(res, 404, { ok: false, error: "Émission pas encore ouverte." }); return; }
+        await persistContext(ctx);
+        sendJson(res, 200, show);
+        return;
+      }
+
+      // Mes réponses déjà envoyées pour une émission (reprise de session
+      // après rechargement, voir showPlayer.js `submission`) — `?showId=`.
+      if (route.pathname === "/api/pronostics/me" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        const showId = route.searchParams.get("showId");
+        if (!showId) { sendJson(res, 400, { ok: false, error: "showId manquant." }); return; }
+        const sub = Shows.getSubmissionSync(ctx.league, ctx.teamIndex, showId);
+        if (!sub) { sendJson(res, 404, { ok: false, error: "Aucune réponse envoyée." }); return; }
+        sendJson(res, 200, sub);
+        return;
+      }
+
+      // Classement mondial des pronostics — `?season=` optionnel (saison
+      // courante par défaut, voir Shows.currentSeasonKey).
+      if (route.pathname === "/api/pronostics/leaderboard" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        const season = route.searchParams.get("season") || Shows.currentSeasonKey();
+        const lb = Shows.leaderboardSync(ctx.league, season, { userId: String(ctx.teamIndex), limit: 50 });
+        sendJson(res, 200, { ok: true, ...lb });
         return;
       }
 

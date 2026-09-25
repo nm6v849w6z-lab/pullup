@@ -206,15 +206,17 @@ const { server, savePath, baseUrl } = await startTestServer();
   }
   console.log("✅ [Alchimie/Ordres] Jauge d'alchimie correctement colorée.");
 
-  // Tableau de bord.
+  // Tableau de bord (refonte "Soir de match", voir DEV_NOTES.md point 10 —
+  // l'ancien #clubStatsGrid a été remplacé par la jauge "Alchimie" du bloc
+  // "Pouls du club", voir dashRenderPulse/dashGauge côté moteurbasket3.html).
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "club").click();
-  const chemCardTitle = [...doc.querySelectorAll("#clubStatsGrid h3")].find(h => h.textContent.trim() === "Alchimie");
-  if (!chemCardTitle) throw new Error("❌ (setup) Carte 'Alchimie' introuvable sur le Tableau de bord.");
-  const chemCardBig = chemCardTitle.closest(".stat-card").querySelector(".big");
-  if (!colorMatches(chemCardBig.style.color, expected)) {
-    throw new Error(`❌ [Alchimie/Tableau de bord] chemistry=${testValue} : couleur "${chemCardBig.style.color}", attendu "${expected}".`);
+  const chemGaugeLabel = [...doc.querySelectorAll(".hm-gauge__label .hm-strong")].find(h => h.textContent.trim() === "Alchimie");
+  if (!chemGaugeLabel) throw new Error("❌ (setup) Jauge 'Alchimie' introuvable sur le Tableau de bord.");
+  const chemGaugeValue = chemGaugeLabel.closest(".hm-gauge").querySelector(".hm-gauge__value");
+  if (!colorMatches(chemGaugeValue.style.color, expected)) {
+    throw new Error(`❌ [Alchimie/Tableau de bord] chemistry=${testValue} : couleur "${chemGaugeValue.style.color}", attendu "${expected}".`);
   }
-  console.log("✅ [Alchimie/Tableau de bord] Carte 'Alchimie' correctement colorée.");
+  console.log("✅ [Alchimie/Tableau de bord] Jauge 'Alchimie' correctement colorée.");
 
   // Effectif (jauge compacte sous le titre de l'onglet).
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "effectif").click();

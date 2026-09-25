@@ -24,6 +24,8 @@
 // comme avant.
 // =====================================================================
 const Engine = require("../engine.js");
+const Scouting = require("./scouting.js");
+const Shows = require("./shows.js");
 
 const {
   POSITIONS, OFFENSE_PROFILES, DEFENSES, RHYTHMS,
@@ -984,6 +986,41 @@ function runVideoSession(team, teamIndex, league, body, now) {
   return { ok: true, opponentIdx: result.opponentIdx, revealed: result.revealed, analystLevel: result.analystLevel };
 }
 
+// Scouting Pro (retour utilisateur, 2026-09 — voir le grand commentaire en
+// tête de server/scouting.js) : ces 3 fonctions ne font qu'adapter la
+// signature commune (team, teamIndex, league, body, now) attendue par
+// ACTION_ROUTES (voir index.js) vers server/scouting.js, qui porte toute la
+// vraie logique (validation, quota, péremption) et reste testable seul.
+function createScoutingAdTicket(team, teamIndex, league, body, now) {
+  const opponentIdx = body && body.opponent;
+  if (!Number.isInteger(opponentIdx)) return fail(`opponent invalide : ${JSON.stringify(body && body.opponent)}.`);
+  return Scouting.createAdTicket(league, teamIndex, opponentIdx, now);
+}
+
+function completeScoutingAdTicket(team, teamIndex, league, body, now) {
+  const ticketId = body && body.ticketId;
+  if (typeof ticketId !== "string" || !ticketId) return fail("ticketId invalide.");
+  return Scouting.completeAdTicket(league, teamIndex, ticketId, now);
+}
+
+// Bouton "Passer Pro" factice (voir Team.scoutingPremium côté moteur) :
+// body.premium true/false bascule l'abonnement, AUCUN paiement réel.
+function setScoutingPremium(team, teamIndex, league, body) {
+  return Scouting.setPremium(team, !!(body && body.premium));
+}
+
+// Hoop Shows — envoi des réponses aux pronostics d'une émission (voir
+// server/shows.js:submitPronosticsSync, DEV_NOTES.md point 11).
+// `body.showId`/`body.answers` (objet questionId -> optionId, voir
+// showPlayer.js onSubmitPronostics).
+function submitPronostics(team, teamIndex, league, body, now) {
+  const showId = body && body.showId;
+  if (typeof showId !== "string" || !showId) return fail("showId invalide.");
+  const answers = body && body.answers;
+  if (!answers || typeof answers !== "object") return fail("answers invalide.");
+  return Shows.submitPronosticsSync(league, teamIndex, showId, answers, now);
+}
+
 module.exports = {
   setLineup, setTactics, setTraining, setPlan, listPlayer, bidOnListing, bidOnCoachListing,
   upgradeArena, setTicketPrices, upgradeFanShop, fireTrainer,
@@ -1007,4 +1044,7 @@ module.exports = {
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/
   // claimTutorialReward) :
   setOnboardingTourCompleted, claimTutorialReward,
+  // Scouting Pro (voir server/scouting.js) :
+  createScoutingAdTicket, completeScoutingAdTicket, setScoutingPremium,
+  submitPronostics,
 };
