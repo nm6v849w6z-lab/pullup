@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Démo · Match en direct</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./live.css">
+<style>body{margin:0;background:#0b1120;padding:20px 16px 48px}</style>
+</head>
+<body>
+<div id="live"></div>
+<script type="module">
+  import { createLiveView } from "./live-view.js";
+  import { createDemoMatch } from "./demo-sim.js";
+
+  const view = createLiveView(document.getElementById("live"));
+  const match = createDemoMatch();
+
+  // On démarre vers la fin du 2e quart pour voir un match déjà entamé
+  while (!(match.state.quarter === 2 && match.state.clock < 200)) match.tick();
+  view.update(structuredClone(match.state));
+
+  // Rythme réel de la démo : une possession toutes les 2,6 s, la mi-temps décompte à la seconde
+  (function loop() {
+    const s = match.tick();
+    view.update(structuredClone(s));
+    if (s.status !== "final") setTimeout(loop, s.status === "halftime" ? 1000 : 2600);
+  })();
+</script>
+</body>
+</html>

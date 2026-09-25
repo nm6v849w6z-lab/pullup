@@ -20,6 +20,25 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de
+  l'affichage des matchs en direct** — nouvelle vue live (tableau
+  d'affichage + courbe d'écart, bandeau et bouton de mi-temps, carte des
+  tirs filtrable, fil du match, face-à-face, feuille de match). Pourquoi :
+  « rendre l'affichage des lives plus sympa », « faire un plus beau
+  bouton » (mi-temps). Fichiers : assets/live/ (live-view.js, live.css,
+  format.js, README.md = contrat de données, demo*.js/html = démo),
+  moteurbasket3.html (adaptateur hmLive* après finishPlayback, appels dans
+  enterLiveMatch/applyEvent/applyTimelineItem/finishPlayback/
+  updateLiveClockTick, #hmLiveRoot, CSS .hm-live-on qui masque l'ancienne
+  vue). L'ancienne vue reste dans le DOM et à jour (tests JSDOM + repli si
+  le module ES ne charge pas, ex. file:// ou JSDOM). Au passage : le box
+  score en direct compte enfin la tentative des tirs manqués « simples »
+  (journalisés seulement par l'événement rebound) sans doubler les contres.
+  live.css en container queries (la barre latérale réduit la largeur).
+  Statut : testé en navigateur (1280/1024, en cours, mi-temps, fin), tests
+  live JSDOM verts. Reste : `git push` ; plus tard, côté moteur,
+  élision « de Adama » → de() et texte du rebond du tireur ; supprimer
+  l'ancienne vue une fois la nouvelle validée.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25)
   — Calendrier : refonte visuelle + horaires stables au changement d'heure**
   — retours utilisateur : "améliore l'affichage du calendrier", maquette
