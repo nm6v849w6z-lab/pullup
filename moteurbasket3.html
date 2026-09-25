@@ -1690,6 +1690,7 @@
   .pdp2-foot{display:flex; gap:24px; flex-wrap:wrap; margin-top:16px; padding:0 2px 16px; border-bottom:1px solid var(--line); font-size:16px; color:var(--ink-dim);}
   /* Retour utilisateur (2026-09-25) : Contres/Pertes/Fautes/Minutes "un peu plus gros, ça paraît perdu". */
   .pdp2-foot b{font-size:18px; font-weight:800; margin-left:4px;}
+  .pdp2-foot .pdp2-foot-gp b{margin:0 4px 0 0;}
   .pdp2-foot b{color:var(--ink);}
 
   .pdp2-head--attrs{align-items:flex-start;}
@@ -20758,7 +20759,9 @@ function renderPlayerDetail(teamIdx, playerId) {
     const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
     log.forEach(m => { Object.keys(sum).forEach(k => { sum[k] += m[k] || 0; }); });
     const avg = k => (sum[k] / gp).toFixed(1);
-    html += `<div class="pdp2-head"><h3>Saison</h3><span class="pdp2-meta">${gp} match${gp > 1 ? "s" : ""}</span></div>`; // "min / match · record" retirés (retour utilisateur, 2026-09-25)
+    // Nombre de matchs déplacé à côté de "Minutes" (retour utilisateur,
+    // 2026-09-25 : "mets 8 matchs à côté de Minutes 21.8").
+    html += `<div class="pdp2-head"><h3>Saison</h3></div>`;
     html += `<div class="pdp2-tiles">` +
       [["pts", "Points"], ["reb", "Rebonds"], ["ast", "Passes déc."], ["stl", "Interceptions"]]
         .map(([k, lbl]) => `<div class="pdp2-tile"><span class="pdp2-tile-num">${avg(k)}</span><span class="pdp2-tile-lbl">${lbl}</span></div>`).join("") +
@@ -20769,6 +20772,7 @@ function renderPlayerDetail(teamIdx, playerId) {
     html += `<div class="pdp2-foot">` +
       [["blk", "Contres"], ["tov", "Pertes"], ["pf", "Fautes"], ["min", "Minutes"]]
         .map(([k, lbl]) => `<span>${lbl} <b>${avg(k)}</b></span>`).join("") +
+      `<span class="pdp2-foot-gp"><b>${gp}</b> match${gp > 1 ? "s" : ""}</span>` +
       `</div>`;
     html += `<div class="pdp2-shots">`;
     [["Tir à 2 pts", sum.fgm2, sum.fga2], ["Tir à 3 pts", sum.fgm3, sum.fga3], ["Lancers francs", sum.ftm, sum.fta]].forEach(([lbl, made, att]) => {

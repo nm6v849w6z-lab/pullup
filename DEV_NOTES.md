@@ -21,6 +21,12 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 ## À faire
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur, carte
+  Saison : "N matchs" déplacé à côté de Minutes** — retour utilisateur :
+  "mets 8 matchs à côté de Minutes 21.8". Fichier : moteurbasket3.html.
+  Tests fiche verts (player_season_stats_modal_test flaky une fois :
+  "6 matchs au lieu de 7" au setup, vert en relance). Reste : `git push`.
+
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur, carte
   Saison : ligne Contres/Pertes/Fautes/Minutes remontée sous les tuiles,
   barres de tir en dessous ; "min / match · record" retirés de l'en-tête**
   — retours utilisateur : "inverser les jauges tirs [...] avec contres,
