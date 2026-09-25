@@ -4278,7 +4278,11 @@ class Team {
   recordMoraleEvent(label, delta, extra = {}) {
     this.moraleHistory = this.moraleHistory || [];
     const rounded = Math.round(delta * 10) / 10;
-    this.moraleHistory.unshift({ week: this.week, label, delta: rounded, ...extra });
+    // `after` : humeur réellement atteinte après cet événement (bornée 0-100),
+    // pour que la courbe "Évolution sur la saison" de l'écran Humeur ne
+    // dérive pas quand une variation bute sur 0 ou 100.
+    const after = Math.round(clamp(this.fanMorale + delta, 0, 100) * 10) / 10;
+    this.moraleHistory.unshift({ week: this.week, label, delta: rounded, ...extra, after });
     if (this.moraleHistory.length > 40) this.moraleHistory.length = 40;
     this.fanMorale = clamp(this.fanMorale + delta, 0, 100);
   }

@@ -1537,10 +1537,11 @@
   .hu-evo-head h3{margin:0; font-size:15px; font-weight:700;}
   .hu-evo-head span{font-size:13px; color:var(--ink-dim);}
   .hu-chart svg{display:block; width:100%; height:auto;}
-  .hu-chart-labels{position:relative; height:16px; font-size:12px; color:var(--ink-faint); margin-top:4px;}
-  .hu-chart-labels span{position:absolute; top:0; white-space:nowrap; transform:translateX(-50%);}
-  .hu-chart-labels span:first-child{transform:none;}
-  .hu-chart-labels span.hu-last{transform:translateX(-100%); color:var(--ink); font-weight:600;}
+  .hu-chart-labels{position:relative; height:34px; font-size:12px; color:var(--ink-dim); margin-top:6px;}
+  .hu-chart-labels span{position:absolute; top:0; display:flex; flex-direction:column; align-items:center; gap:1px; white-space:nowrap; transform:translateX(-50%); font-variant-numeric:tabular-nums;}
+  .hu-chart-labels span em{font-style:normal; font-size:11px; color:var(--ink-faint);}
+  .hu-chart-labels span.hu-first{transform:none; align-items:flex-start;}
+  .hu-chart-labels span.hu-last{transform:translateX(-100%); align-items:flex-end; color:var(--ink); font-weight:700;}
   .hu-chart-empty{font-size:13px; color:var(--ink-faint); padding:40px 0; text-align:center;}
   .hu-scale{display:flex; flex-direction:column; gap:8px; margin-top:4px;}
   .hu-scale-track{position:relative; height:8px; overflow:visible; border:0;}
@@ -1559,10 +1560,6 @@
   .hu-bar{position:relative; height:10px; border-radius:5px; background:var(--panel-2);}
   .hu-bar-fill{position:absolute; top:0; height:10px; border-radius:5px;}
   .hu-bar-mid{position:absolute; left:50%; top:-3px; width:2px; height:16px; margin-left:-1px; background:var(--ink-faint);}
-  .hu-chips{display:flex; gap:8px; flex-wrap:wrap;}
-  .hu-chip{padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;}
-  .hu-chip.up{background:rgba(51,180,161,.14); color:var(--ok);}
-  .hu-chip.down{background:rgba(226,105,79,.14); color:var(--danger);}
   .hu-events{background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden; margin-top:18px;}
   .hu-events-head{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 22px; border-bottom:1px solid var(--line);}
   .hu-events-head h3{margin:0; font-size:15px; font-weight:700;}
@@ -1586,7 +1583,6 @@
     .hu-cards{grid-template-columns:minmax(0,1fr);}
     .hu-hero-evo,.hu-hero-gauge{padding:20px 16px;}
     .hu-events-head,.hu-week,.hu-event{padding-left:16px; padding-right:16px;}
-    .hu-chart-labels span:not(:first-child):not(.hu-last){display:none;}
     .hu-scale-labels{font-size:10px; gap:2px;}
   }
   .eff-position{color:var(--amber); font-size:11px; font-weight:600;}
@@ -4800,8 +4796,6 @@
         <div class="hu-card">
           <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="4.5"></circle><circle cx="12" cy="12" r="0.8" fill="currentColor"></circle></svg>Objectif du conseil</h3>
           <div class="big hu-text" id="seasonObjectiveValue"></div>
-          <div class="hu-chips"><span class="hu-chip up">Dépassé : bonus d'humeur</span><span class="hu-chip down">Manqué : forte baisse</span></div>
-          <div class="sub">Fixé en début de saison d'après le niveau des équipes du championnat. Évalué à l'issue de la saison.</div>
         </div>
       </section>
       <section class="hu-events">
@@ -9594,7 +9588,11 @@ class Team {
   recordMoraleEvent(label, delta, extra = {}) {
     this.moraleHistory = this.moraleHistory || [];
     const rounded = Math.round(delta * 10) / 10;
-    this.moraleHistory.unshift({ week: this.week, label, delta: rounded, ...extra });
+    // `after` : humeur réellement atteinte après cet événement (bornée 0-100),
+    // pour que la courbe "Évolution sur la saison" de l'écran Humeur ne
+    // dérive pas quand une variation bute sur 0 ou 100.
+    const after = Math.round(clamp(this.fanMorale + delta, 0, 100) * 10) / 10;
+    this.moraleHistory.unshift({ week: this.week, label, delta: rounded, ...extra, after });
     if (this.moraleHistory.length > 40) this.moraleHistory.length = 40;
     this.fanMorale = clamp(this.fanMorale + delta, 0, 100);
   }
@@ -30700,14 +30698,26 @@ function humeurSigned(v) {
 // si celui-ci remonte à la semaine 1).
 function humeurSeasonPoints(morale, history) {
   if (!history.length) return [];
+  // Remonte le journal du plus récent au plus ancien : valeur après chaque
+  // événement = `after` enregistré (voir recordMoraleEvent) ou, pour les
+  // anciennes sauvegardes, la valeur courante reconstituée pas à pas.
+  let running = clamp(morale, 0, 100);
+  const endOfWeek = {};
+  history.forEach(ev => {
+    const after = typeof ev.after === "number" ? ev.after : running;
+    const w = ev.week || 0;
+    if (!(w in endOfWeek)) endOfWeek[w] = after;
+    running = clamp(after - ev.delta, 0, 100);
+  });
   const weeks = history.map(ev => ev.week || 0);
   const minWeek = Math.min(...weeks);
   const maxWeek = Math.max(teamA.week || 0, ...weeks);
-  const total = history.reduce((s, ev) => s + ev.delta, 0);
-  const points = [{ label: minWeek <= 1 ? "Début" : `Avant S${minWeek}`, value: clamp(morale - total, 0, 100) }];
+  const points = [{ label: minWeek <= 1 ? "Début" : `Avant semaine ${minWeek}`, short: minWeek <= 1 ? "Début" : `Avant S${minWeek}`, value: running }];
+  let carry = running;
   for (let w = minWeek; w <= maxWeek; w++) {
-    const after = history.filter(ev => (ev.week || 0) > w).reduce((s, ev) => s + ev.delta, 0);
-    points.push({ label: `Semaine ${w}`, value: clamp(morale - after, 0, 100) });
+    if (w in endOfWeek) carry = endOfWeek[w];
+    if (w === maxWeek) carry = clamp(morale, 0, 100);
+    points.push({ label: `Semaine ${w}`, short: `S${w}`, value: carry });
   }
   return points;
 }
@@ -30728,15 +30738,20 @@ function humeurChartHtml(points, color) {
     ? `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="6" fill="${color}"></circle>`
     : (points.length <= 12 ? `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="4" fill="var(--panel)" stroke="${color}" stroke-width="2.5"></circle>` : "")).join("");
   const aria = points.map(p => `${p.label} ${humeurFmt(p.value)}`).join(", ");
-  // Libellés : tous si la saison est courte, sinon un sur N (toujours le
-  // premier et le dernier) pour ne pas se chevaucher.
-  const step = points.length <= 7 ? 1 : Math.ceil((points.length - 1) / 5);
+  // Libellés courts sur deux lignes ("S3" / "71,4") centrés sous chaque
+  // point (retour utilisateur, 2026-09-25 : "y a du texte qui se
+  // chevauche" avec les libellés longs "Semaine 3 · 71,4") : tous si la
+  // saison est courte, sinon un sur N, toujours le premier et le dernier,
+  // en sautant celui qui tomberait juste avant le dernier.
+  const step = points.length <= 9 ? 1 : Math.ceil((points.length - 1) / 7);
+  const lastIdx = points.length - 1;
   const labels = points.map((p, i) => {
-    const last = i === points.length - 1;
+    const last = i === lastIdx;
     if (!last && i % step !== 0) return "";
-    if (!last && points.length - 1 - i < step / 2 && i !== 0) return "";
+    if (!last && i !== 0 && lastIdx - i < Math.max(1, step * 0.75)) return "";
     const left = (xs[i] / W) * 100;
-    return `<span${last ? ' class="hu-last"' : ""} style="left:${left.toFixed(2)}%">${escapeHtml(p.label)} · ${humeurFmt(p.value)}</span>`;
+    const cls = last ? "hu-last" : i === 0 ? "hu-first" : "";
+    return `<span${cls ? ` class="${cls}"` : ""} style="left:${left.toFixed(2)}%"><em>${escapeHtml(p.short || p.label)}</em>${humeurFmt(p.value)}</span>`;
   }).join("");
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Humeur : ${escapeHtml(aria)}">
     <line x1="0" y1="${top}" x2="${W}" y2="${top}" stroke="var(--line)" stroke-dasharray="4 6" vector-effect="non-scaling-stroke"></line>

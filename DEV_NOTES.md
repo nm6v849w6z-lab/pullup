@@ -20,6 +20,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Humeur des
+  supporters : retouches** — retour utilisateur (captures) : "enlève
+  Dépassé : bonus d'humeur / Manqué : forte baisse / Fixé en début de
+  saison…" et "dans évolution de la saison, y a du texte qui se
+  chevauche". Carte Objectif réduite au seul objectif ; libellés de la
+  courbe courts sur deux lignes (S3 / 71,4), un sur N au-delà de 9 points.
+  Courbe juste même quand l'humeur bute sur 0/100 : recordMoraleEvent
+  (client + engine.js) enregistre `after` (valeur réellement atteinte).
+  Fichiers : moteurbasket3.html, engine.js. Tests verts (humeur,
+  attr_color_scheme_everywhere, season_objective_endreg,
+  milestone_interview_and_mvp). Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Entraînement,
   retouches 2** — retour utilisateur : retirer du bilan les notes « X (A) :
   n'a joué que N min ce cycle… » et la ligne « 1 poste couvert · rendement
@@ -79,27 +90,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   Playwright desktop 1440 + mobile 390. training_progression_test.js
   échoue AUSSI sans ce chantier (scénario "débutants sans minute",
   aléatoire, déjà listé flaky) — pas une régression. Reste : `git push`.
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Humeur des supporters : refonte d'après la
-  maquette canevas "Hoop Manager — Humeur des supporters"** (canvas Design
-  claude.ai VNq4GkKK3WqbkGDYMGFjnh) — retour utilisateur : "code la page
-  humeur des supporters". Bandeau : anneau 0-100 + libellé en pastille +
-  variation de la semaine | courbe d'évolution sur la saison (reconstruite
-  depuis moraleHistory) + échelle à 5 paliers (seuils de moraleLabel) ; 3
-  cartes (affluence, tolérance tarifaire, objectif du conseil) ; journal
-  groupé par semaine avec total, icônes victoire/défaite/autre. Couleurs :
-  moraleGaugeColor partout (règle du 2026-09-25, pas l'orange fixe de la
-  maquette). Ids historiques conservés (moraleValue, moraleLabelText,
-  moraleGaugeFill, moraleAttendanceEffect, moraleForgivenessEffect,
-  seasonObjectiveValue, moraleHistoryContent). Fichiers :
-  moteurbasket3.html (#humeurSection, CSS .hu-*, renderHumeurSection).
-  Statut : code fait sur le Mac, tests Mac verts (humeur,
-  attr_color_scheme_everywhere, season_objective_client,
-  season_objective_midseason_client, season_objective_endreg_client,
-  tabs, onboarding_tour). Rendu vérifié en capture (bureau + mobile 390px,
-  aperçu : "Claude outputs/humeur_snapshot.html"). Committé seul (commit partiel,
-  les autres chantiers de moteurbasket3.html restent non committés).
-  Reste : `git push`.
-
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Staff : refonte
   visuelle d'après la maquette "Hoop Manager — page Staff"** (canvas Design
   claude.ai 4xZdYyuiTxzGLbAXPrzf87) — retour utilisateur : "code la page
