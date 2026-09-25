@@ -20,6 +20,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Pendant un direct :
+  « Voir le live » au lieu des ordres** — retour utilisateur (capture) :
+  "quand le match est en cours, on ne peut pas avoir le bouton donner vos
+  ordres et scouter l'adversaire, il faut que ce soit noté voir le live
+  plutôt ; idem dans la barre en haut, il faut enlever le bouton donner vos
+  ordres". Tableau de bord : nextMatch.isLive (même test que liveNow de
+  l'onglet Ordres), bandeau marqué « En direct » avec un seul bouton « Voir
+  le live » (data-tab="live"), tâche « Ordres de match » masquée pendant ce
+  direct. Topbar : syncTopbarLiveStrip masque #topbarOrdersBtn tant que
+  league.liveMatch existe. Fichiers : moteurbasket3.html,
+  dashboard_live_match_test.js. Tests dashboard/direct verts. Reste :
+  `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Tableau de bord :
   polices = pile système du jeu** — retour utilisateur : "la police n'est
   pas corrigée j'ai l'impression". Cause : le tableau de bord (.hm-dash)

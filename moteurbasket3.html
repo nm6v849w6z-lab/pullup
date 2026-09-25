@@ -3065,6 +3065,8 @@
 .hm-kpi__value { font-family: var(--display); font-weight: 800; font-size: 28px; line-height: 1.15; }
 .hm-kpi__value small { font-size: 16px; color: var(--muted); }
 .hm-kpi__value.is-bad { color: var(--bad); }
+/* Pastille "En direct" du bandeau Prochain match (voir dashRenderNextMatch). */
+.hm-hero__live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #e2694f; margin-right: 8px; vertical-align: 1px; animation: pulse 1.4s infinite; }
 /* Brique Budget : revenus / dépenses / revenu net de la semaine précédente
    (voir dashBudgetLastWeekHtml). */
 .hm-kpi-flows { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
@@ -16977,6 +16979,12 @@ function syncTopbarLiveStrip() {
   const isLive = !!(league && league.liveMatch);
   strip.classList.toggle("hidden", !isLive);
   if (metaWrap) metaWrap.classList.toggle("hidden", isLive);
+  // Retour utilisateur (2026-09-25) : "dans la barre en haut, quand un match
+  // est en cours, il faut enlever le bouton donner vos ordres" — le bandeau
+  // du direct (juste à côté) suffit, et les ordres de ce match ne peuvent
+  // plus changer.
+  const ordersBtn = document.getElementById("topbarOrdersBtn");
+  if (ordersBtn) ordersBtn.classList.toggle("hidden", isLive);
   if (!isLive) return;
   const copyText = (fromId, toId) => {
     const from = document.getElementById(fromId), to = document.getElementById(toId);
@@ -26403,7 +26411,7 @@ function dashBuildTasks(data) {
       cta: { label: "Recruter", href: "/staff", style: "primary" },
     });
   }
-  if (data.nextMatch && !data.ordersGiven) {
+  if (data.nextMatch && !data.ordersGiven && !data.nextMatch.isLive) {
     tasks.push({
       id: "orders",
       icon: "orders",
@@ -26579,7 +26587,7 @@ function dashRenderNextMatch(data) {
     <div class="hm-hero__split" aria-hidden="true"></div>
     <svg class="hm-hero__court" width="600" height="300" viewBox="0 0 600 300" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="300" cy="150" r="90"/><circle cx="300" cy="150" r="30"/><line x1="300" y1="0" x2="300" y2="300"/></svg>
     <div class="hm-hero__top">
-      <span class="hm-hero__comp">Prochain match · ${dashEsc(m.competition)} · ${dashEsc(m.roundLabel || `Journée ${m.round}/${m.totalRounds}`)}</span>
+      <span class="hm-hero__comp">${m.isLive ? '<span class="hm-hero__live-dot" aria-hidden="true"></span>En direct' : "Prochain match"} · ${dashEsc(m.competition)} · ${dashEsc(m.roundLabel || `Journée ${m.round}/${m.totalRounds}`)}</span>
       <span>${m.home ? "À domicile" : "À l'extérieur"}${m.home && data.arena ? ` · ${dashEsc(data.arena.capacity.toLocaleString("fr-FR"))} places` : ""}</span>
     </div>
     <div class="hm-hero__teams">
@@ -26597,8 +26605,13 @@ function dashRenderNextMatch(data) {
       </div>
     </div>
     <div class="hm-hero__actions">
-      <button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ordres">Préparer le match</button>
-      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}">Scouter ${dashEsc(m.opponent.name)}</button>
+      ${m.isLive
+        // Retour utilisateur (2026-09-25) : "quand le match est en cours, on
+        // ne peut pas avoir le bouton donner vos ordres et scouter
+        // l'adversaire, il faut que ce soit noté voir le live plutôt".
+        ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-tab="live">Voir le live</button>`
+        : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ordres">Préparer le match</button>
+      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}">Scouter ${dashEsc(m.opponent.name)}</button>`}
     </div>
   </section>`;
 }
@@ -27040,6 +27053,12 @@ function dashboardDataFromGameState() {
       opponentRecord: dashboardTeamRecord(currentMatch.opponent),
       clubLevel: dashboardTeamLevel(teamA),
       opponentLevel: dashboardTeamLevel(teamB),
+      // Même test que la sélection du match modifiable dans l'onglet Ordres
+      // (voir liveNow plus haut) : ce match précis est en train d'être
+      // diffusé.
+      isLive: !!(league.liveMatch &&
+        (league.liveMatch.competition || "championship") === (currentMatch.competition === "cup" ? "cup" : "championship") &&
+        league.liveMatch.round === currentMatch.round),
     };
   }
 
