@@ -1758,12 +1758,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     ce match précis — à garder à l'esprit s'il resignale un cas similaire
     après ce correctif (chercher alors une AUTRE cause).
 
-14. **✅ CODE ÉCRIT, TESTÉ EN SANDBOX — pas encore livré sur le Mac — bug
-    tailles de police du tableau de bord (refonte "Soir de match", point 10)
-    ** — retour utilisateur avec captures de la page live
-    (pullup-030q.onrender.com) : "retravaille les tailles de police stp,
-    c'est trop grand", puis "tu peux prendre aussi plus de largeur sur la
-    page je pense".
+14. **✅ LIVRÉ SUR LE MAC ET POUSSÉ (commit `5e6d722`) — bug tailles de
+    police du tableau de bord (refonte "Soir de match", point 10)** — retour
+    utilisateur avec captures de la page live (pullup-030q.onrender.com) :
+    "retravaille les tailles de police stp, c'est trop grand", puis "tu peux
+    prendre aussi plus de largeur sur la page je pense".
 
     **Root cause, vérifiée par capture d'écran réelle (vrai serveur local +
     Playwright, PAS jsdom, sur `moteurbasket3.html` tel quel)** : le nom du
@@ -1934,8 +1933,54 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     **Fichiers touchés** : `engine.js`, `moteurbasket3.html` (miroir),
     `dashboard_feed_test.js`, `dashboard_e2e_test.js`.
 
-    **Reste à faire** : livrer sur le Mac (comme tout le reste de ce
-    fichier).
+    **Livré sur le Mac et poussé** (commit `5e6d722`).
+
+    **Complément 4 (2026-09-25, sur capture de la page live) — logo de
+    l'adversaire non chargé** : retour utilisateur avec 2 captures du
+    bandeau "Prochain match" en production (match vs "BC Dia") — l'écusson
+    adverse s'affichait en simple rond de couleur uni avec les initiales
+    "BD", pas une image de logo. "le logo de l'adversaire n'est pas chargé,
+    il faudrait qu'il le soit".
+
+    **Ce n'était pas un problème de chargement réseau** : un adversaire
+    généré par le moteur n'a JAMAIS de logo personnalisé —
+    `customLogoDataUrl` n'existe que pour un club `isPaying`
+    (`club.logoUrl` dans `dashboardDataFromGameState()` ne le résout que
+    pour `teamA`), et seul le joueur humain peut passer payant (voir
+    `Team.setPaying`) ; `dashboardTeamRef()` (utilisé pour l'adversaire) ne
+    résout même pas de `logoUrl` du tout. Il n'y avait donc rien à
+    "charger". **Le vrai bug** : `dashCrest()` retombait sur un simple rond
+    de couleur + texte d'initiales à la place — alors que le reste du jeu
+    (calendrier, live, etc.) a déjà un logo générique "ballon" dédié à ce
+    cas (`defaultTeamLogoSvg`/`teamLogoHtml`, voir leur commentaire d'origine
+    : retour utilisateur "faut un ballon avec le nom de l'équipe dedans,
+    un truc pas trop moche") — le tableau de bord avait réinventé un
+    fallback différent (et plus pauvre) au lieu de réutiliser celui déjà
+    en place. Incohérence visuelle, pas un bug de chargement.
+
+    **Correctif** : `dashCrest()` appelle désormais `dashDefaultCrestSvg()`
+    (nouvelle fonction) quand il n'y a pas de `logoUrl` — même dessin
+    SVG que `defaultTeamLogoSvg` (ballon orange, coutures, anneau coloré,
+    initiales au centre), adapté pour prendre les valeurs déjà résolues par
+    le tableau de bord (`colors.primary`, `shortName`) plutôt qu'une
+    instance `Team` complète, car `dashCrest` est aussi appelé pour
+    l'adversaire (un simple `dashboardTeamRef`, pas un `Team`, donc pas de
+    `jerseyColor` brut disponible). Le logo personnalisé d'un club payant
+    (`<img>`) reste inchangé.
+
+    **Vérifié** : script Playwright jetable contre un vrai petit serveur
+    local (capture ci-jointe à l'utilisateur) — club ET adversaire
+    affichent maintenant le ballon générique avec initiales, anneau coloré
+    par équipe ; plus aucun rond plat. Nouveau test dédié ajouté à
+    `dashboard_e2e_test.js` (partie 5 bis) : vérifie qu'aucun `<img>` n'est
+    utilisé tant qu'aucun club n'est payant, que le SVG générique est
+    présent pour les deux écussons, et que l'`aria-label` nomme le bon
+    club. Suite complète relancée en fond.
+
+    **Fichiers touchés** : `moteurbasket3.html` uniquement (`dashCrest()`
+    nouvelle fonction `dashDefaultCrestSvg()`), `dashboard_e2e_test.js`.
+
+    **Reste à faire** : livrer sur le Mac.
 
 ---
 

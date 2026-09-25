@@ -166,6 +166,34 @@ if (!staffFeedEntryAfterReload) throw new Error("❌ L'événement de fil réel 
 console.log("✅ Un événement réel du moteur (staff_hired) apparaît dans le fil affiché ET survit à un rechargement complet.");
 
 // ---------------------------------------------------------------------
+// Partie 5 bis : écussons du bandeau "Prochain match" (retour utilisateur,
+// 2026-09-25, capture de la production : "le logo de l'adversaire n'est pas
+// chargé, il faudrait qu'il le soit"). Un adversaire généré par le moteur
+// n'a JAMAIS de logo personnalisé (customLogoDataUrl n'existe que pour un
+// club isPaying, réservé au joueur humain) — il n'y avait donc rien à
+// "charger" côté réseau, mais dashCrest retombait sur un simple rond de
+// couleur uni au lieu du logo générique "ballon" utilisé PARTOUT ailleurs
+// dans le jeu pour un club gratuit (voir defaultTeamLogoSvg). Vérifié ici
+// que les DEUX écussons du bandeau utilisent ce même logo générique tant
+// qu'aucun des deux clubs n'a de logo personnalisé.
+// ---------------------------------------------------------------------
+clickTab2("club");
+const heroCrests = [...doc2.querySelectorAll(".hm-hero__team .hm-crest")];
+console.log("Écussons affichés dans le bandeau \"Prochain match\" :", heroCrests.length);
+if (heroCrests.length !== 2) throw new Error("❌ Le bandeau \"Prochain match\" devrait afficher exactement 2 écussons (club + adversaire).");
+const teamAName = dom2.window.eval("teamA.name");
+const opponentName = dom2.window.eval("teamB.name");
+heroCrests.forEach((el) => {
+  const svg = el.querySelector("svg");
+  const img = el.querySelector("img");
+  if (img) throw new Error(`❌ Aucun des deux clubs n'est payant avec un logo personnalisé dans ce scénario : l'écusson ne devrait donc jamais afficher un <img> (trouvé pour ${el.textContent.trim()}).`);
+  if (!svg) throw new Error("❌ Sans logo personnalisé, l'écusson devrait afficher le logo générique \"ballon\" (dashDefaultCrestSvg), pas un simple texte.");
+  const label = svg.getAttribute("aria-label") || "";
+  if (!label.includes(teamAName) && !label.includes(opponentName)) throw new Error(`❌ Le logo générique devrait porter un aria-label nommant le club (ni "${teamAName}" ni "${opponentName}" trouvé dans "${label}").`);
+});
+console.log("✅ Les écussons du club et de l'adversaire affichent tous deux le logo générique \"ballon\" (cohérent avec le reste du jeu), aria-label correct pour chacun.");
+
+// ---------------------------------------------------------------------
 // Partie 6 : quitter le tableau de bord marque le fil comme lu (voir
 // clubDashboardMounted + markAllRead dans la délégation [data-tab]).
 // ---------------------------------------------------------------------

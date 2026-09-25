@@ -26380,11 +26380,46 @@ const dashTaskIcon = (name, size = 36) =>
 // Blocs
 // ---------------------------------------------------------------------
 
+// Écusson affiché pour un club sur le tableau de bord (bandeau "Prochain
+// match", en-tête). Correctif 2026-09-25 (retour utilisateur : "le logo de
+// l'adversaire n'est pas chargé, il faudrait qu'il le soit") : un adversaire
+// généré par le moteur n'a JAMAIS de logo personnalisé (customLogoDataUrl
+// n'existe que pour un club `isPaying`, et seul le joueur humain peut passer
+// payant — voir Team.setPaying) — il n'y avait donc rien à "charger", mais le
+// tableau de bord retombait sur un simple rond de couleur + initiales au lieu
+// du logo générique "ballon" déjà utilisé PARTOUT ailleurs dans le jeu pour
+// un club gratuit (voir defaultTeamLogoSvg/teamLogoHtml, retour utilisateur
+// d'origine : "faut un ballon par exemple avec le nom de l'équipe dedans").
+// Incohérence corrigée en réutilisant le même dessin ici (voir
+// dashDefaultCrestSvg juste en dessous) plutôt qu'en réinventant un fallback
+// différent — le logo personnalisé (club payant) reste, lui, inchangé.
 function dashCrest(team, size) {
   const c = (team && team.colors) || {};
+  const hasLogo = !!(team && team.logoUrl);
   return `<div class="hm-crest hm-crest--${size}" style="--crest-bg:${dashEsc(c.primary ?? "#34425E")};--crest-ring:${dashEsc(c.secondary ?? "#93A1B8")}">
-    ${team && team.logoUrl ? `<img src="${dashEsc(team.logoUrl)}" alt="">` : dashEsc(team ? team.shortName : "?")}
+    ${hasLogo ? `<img src="${dashEsc(team.logoUrl)}" alt="">` : dashDefaultCrestSvg(team, c.primary)}
   </div>`;
+}
+
+// Logo générique "ballon" pour un club sans logo personnalisé, en miroir
+// EXACT du dessin de defaultTeamLogoSvg (même émail : ballon orange, coutures
+// foncées, anneau de couleur maillot, initiales au centre) — seule différence
+// : ce point d'entrée-ci prend directement les valeurs déjà résolues par le
+// tableau de bord (colors.primary, shortName) plutôt qu'une instance Team
+// complète, car dashCrest est aussi appelé pour l'adversaire (un simple
+// `dashboardTeamRef`, pas un Team), qui n'a pas de champ `jerseyColor` brut.
+function dashDefaultCrestSvg(team, accent) {
+  const abbrev = dashEsc((team && team.shortName) || "?");
+  const label = dashEsc(team && team.name ? `Logo de ${team.name}` : "Logo");
+  const ring = dashEsc(accent || "#F26B1D");
+  return `<svg viewBox="0 0 120 120" width="100%" height="100%" role="img" aria-label="${label}">` +
+    `<circle cx="60" cy="60" r="55" fill="#d97b35" stroke="${ring}" stroke-width="5"/>` +
+    `<path d="M60 5 V115 M5 60 H115" stroke="#2b1a0e" stroke-width="3" fill="none"/>` +
+    `<path d="M60 5 C 30 32, 30 88, 60 115" stroke="#2b1a0e" stroke-width="3" fill="none"/>` +
+    `<path d="M60 5 C 90 32, 90 88, 60 115" stroke="#2b1a0e" stroke-width="3" fill="none"/>` +
+    `<circle cx="60" cy="60" r="32" fill="rgba(255,255,255,.92)"/>` +
+    `<text x="60" y="70" text-anchor="middle" font-size="26" font-weight="800" fill="#2b1a0e">${abbrev}</text>` +
+    `</svg>`;
 }
 
 const DASH_NAV = [
