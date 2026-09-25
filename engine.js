@@ -5002,7 +5002,15 @@ class Team {
   // confort tarifaire (moraleForgiveness : des supporters contents tolèrent
   // un prix plus élevé avant de déserter cette catégorie).
   projectedAttendanceRateFor(categoryKey) {
-    const price = (this.ticketPrices || {})[categoryKey];
+    return this.projectedAttendanceRateAtPrice(categoryKey, (this.ticketPrices || {})[categoryKey]);
+  }
+
+  // Même calcul que projectedAttendanceRateFor, mais pour un prix
+  // HYPOTHÉTIQUE, sans toucher à this.ticketPrices — sert à l'aperçu en
+  // direct du curseur de prix de l'onglet Salle (refonte 2026-09-25 : recette
+  // et affluence mises à jour pendant qu'on fait glisser le curseur, avant
+  // même de valider le nouveau prix).
+  projectedAttendanceRateAtPrice(categoryKey, price) {
     const forgiveness = moraleForgiveness(this.fanMorale);
     const comfort = ticketPriceComfortFactor(price / forgiveness, categoryKey);
     return clamp(attendanceBaseForMorale(this.fanMorale) * comfort, 0.08, 0.98);

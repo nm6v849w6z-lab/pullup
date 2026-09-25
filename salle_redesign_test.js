@@ -1,42 +1,28 @@
-// Vérifie le retour utilisateur (2026-09) : "ici, je souhaite que les
-// briques de droite n'aillent pas plus bas que la brique de gauche. ce sera
-// plus beau visuellement" (onglet Salle, .arena-row : carte visuelle de la
-// salle à gauche, carte d'état actuel + "Autres infrastructures" à droite).
+// Vérifie la refonte visuelle de l'onglet Salle (retour utilisateur,
+// 2026-09-25 : "aide moi à rendre cette page plus sexy", puis sur la
+// maquette : "vas y ça me plait bien, code tout ça"). Remplace
+// salle_arena_purchases_height_test.js (renommé via git mv) : l'ancienne
+// colonne d'achats alignée sur la hauteur de l'image (#arenaPurchasesCol,
+// syncArenaPurchasesHeight) n'existe plus, remplacée par un bandeau pleine
+// largeur.
 //
-// Suite au retour utilisateur (2026-09, après la suppression des emojis des
-// briques) : "les briques droites sont un peu petite maintenant. essaie que
-// ce soit aligné avec la brique avec l'image de la salle à gauche".
-// syncArenaPurchasesHeight visait alors une height fixe sur #arenaPurchasesCol
-// pour que la colonne de droite s'étire pile à la hauteur de la carte de
-// gauche (le CSS, #otherFacilitiesPanel/.facilities-grid en flex:1 +
-// align-content:stretch, redistribue ensuite cet espace entre les cartes
-// d'infrastructure plutôt que de laisser un vide en dessous).
-//
-// Retour utilisateur suivant (2026-09) : "les briques de droite sont
-// désormais plus grande que la brique de gauche (il faut scroller)" : une
-// height FIXE comprimait un contenu de droite devenu plus haut que l'image
-// (ex. l'avertissement de changement de capacité, voir buildAttendanceBreakdown
-// dans moteurbasket3.html) et forçait un défilement interne au lieu de
-// laisser la colonne grandir. syncArenaPurchasesHeight pose désormais un
-// minHeight (un plancher, pas une valeur figée) : la colonne s'aligne sur
-// l'image quand son contenu tient dedans, mais peut grandir au-delà sans
-// scroll si besoin.
-//
-// Le vrai rendu (image de la salle, nombre de lignes de cartes selon le
-// nombre d'infrastructures construites) dépend de la mise en page réelle du
-// navigateur, que JSDOM ne calcule pas (getBoundingClientRect renvoie
-// toujours des zéros ici, voir plus bas). Ce test vérifie donc directement
-// le mécanisme JS qui garantit l'alignement (syncArenaPurchasesHeight,
-// appelée depuis renderSalleSection et depuis un écouteur "resize" sur
-// window) : #arenaPurchasesCol reçoit bien un minHeight calqué sur la
-// hauteur RÉELLEMENT mesurée de la carte de gauche (#arenaVisualCard
-// .arena-card), pas une valeur figée. L'alignement visuel lui-même (3
-// colonnes pour la grille de droite, défilement interne en dernier recours
-// si ça ne suffit toujours pas) est le filet de sécurité CSS, voir les
-// commentaires sur #arenaPurchasesCol/.arena-purchases .facilities-grid
-// dans moteurbasket3.html.
+// Couvre :
+//   1. le bandeau (niveau X/8, bouton d'agrandissement, chiffres clés,
+//      anneau de remplissage), avec et sans historique d'affluence ;
+//   2. l'aperçu EN DIRECT de la billetterie : faire glisser un curseur
+//      (évènement "input") met à jour la recette affichée SANS enregistrer
+//      le prix ; le relâcher ("change") ou cliquer +/− l'enregistre ;
+//   3. le repère "prix idéal" = prix le plus élevé gardant un confort >= 95%
+//      (vrai modèle ticketPriceComfortFactor/moraleForgiveness) ;
+//   4. le graphique d'affluence (une barre par match + la prévision) et la
+//      liste repliée à 3 lignes (les 10 restent dans le DOM) ;
+//   5. les cartes d'infrastructure (jauge de niveau, état "non construit").
+// Les parcours d'achat (flèches/confirmations) restent couverts par
+// salle_upgrade_confirm_test.js/tabs_test.js, l'historique par
+// attendance_history_test.js.
+
 const fs = require("fs");
-const { startTestServer, openGame, flush } = require("./test_helpers.js");
+const { startTestServer, openGame, flush, readRawSave } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
 (async () => {
@@ -51,80 +37,108 @@ function clickTab(key) {
   if (!btn) throw new Error(`❌ Onglet introuvable : ${key}`);
   btn.click();
 }
+// Espaces normalisés des deux côtés (toLocaleString("fr-FR") produit des
+// espaces insécables fines, que \s capture aussi).
+const norm = str => String(str).replace(/\s+/g, " ").trim();
+const txt = sel => norm((doc.querySelector(sel) || { textContent: "" }).textContent);
+const fr = n => norm(n.toLocaleString("fr-FR"));
 
-// Monkey-patch de getBoundingClientRect (JSDOM ne fait pas de vraie mise en
-// page) : seule la carte visuelle de gauche (#arenaVisualCard .arena-card)
-// renvoie une hauteur contrôlée par le test, tout le reste garde le
-// comportement JSDOM normal (zéros).
-let mockedLeftHeight = 300;
-const realGetBoundingClientRect = win.Element.prototype.getBoundingClientRect;
-win.Element.prototype.getBoundingClientRect = function () {
-  if (this.matches && this.matches("#arenaVisualCard .arena-card")) {
-    return { x: 0, y: 0, top: 0, left: 0, right: 0, width: 0, height: mockedLeftHeight, bottom: mockedLeftHeight };
-  }
-  return realGetBoundingClientRect.call(this);
-};
-
-// ---------------------------------------------------------------------
-// Partie 1 : renderSalleSection (appelée par clickTab ci-dessous, voir
-// TAB_HANDLERS.salle) reporte bien la hauteur mesurée de la carte de gauche
-// comme max-height sur #arenaPurchasesCol.
-// ---------------------------------------------------------------------
+// --- 1a. Bandeau, aucun match à domicile joué ---
+win.eval("teamA.attendanceHistory = []; teamA.arenaLevel = 1; teamA.fanShopLevel = 0; teamA.facilityLevels = { tvStation: 0, gym: 0, wellness: 0 };");
 clickTab("salle");
-const purchasesCol = doc.getElementById("arenaPurchasesCol");
-if (!purchasesCol) throw new Error("❌ (setup) #arenaPurchasesCol introuvable : id manquant sur .arena-purchases ?");
-console.log("minHeight après premier rendu de l'onglet Salle :", purchasesCol.style.minHeight, `(attendu ${mockedLeftHeight}px)`);
-if (purchasesCol.style.minHeight !== `${mockedLeftHeight}px`) {
-  throw new Error(`❌ BUG NON CORRIGÉ : #arenaPurchasesCol devrait recevoir minHeight:${mockedLeftHeight}px (hauteur mesurée de la carte de gauche), obtenu "${purchasesCol.style.minHeight}".`);
-}
-if (purchasesCol.style.height) {
-  throw new Error(`❌ BUG NON CORRIGÉ : #arenaPurchasesCol ne devrait plus recevoir de height figée (elle empêcherait la colonne de grandir au-delà), obtenu "${purchasesCol.style.height}".`);
-}
-console.log("✅ La colonne de droite reçoit bien un minHeight calqué sur la hauteur réelle de la carte de gauche, sans height figée.");
+if (!doc.querySelector("#salleHero #arenaVisualCard svg")) throw new Error("❌ Le dessin de la salle devrait être dans le bandeau.");
+const tier = txt(".sl-tier");
+console.log("Badge de niveau :", tier);
+if (!tier.includes(`Niveau 1 / ${win.eval("ARENA_LEVELS.length")}`)) throw new Error(`❌ Le badge devrait afficher "Niveau 1 / 8", obtenu "${tier}".`);
+if (doc.querySelectorAll(".sl-tier i span.on").length !== 1) throw new Error("❌ Une seule pastille de niveau devrait être allumée au niveau 1.");
+if (txt(".sl-hero-title") !== win.eval("arenaInfo(1).name")) throw new Error("❌ Le titre du bandeau devrait être le nom de la salle actuelle.");
+if (!txt("#salleHeroKpis").includes("Affluence prévue")) throw new Error("❌ Sans match joué, le bandeau devrait afficher l'affluence PRÉVUE.");
+if (!txt("#salleHeroRing").includes("prévu")) throw new Error("❌ Sans match joué, l'anneau devrait indiquer un remplissage prévu.");
+const upgrade = doc.querySelector("#arenaCurrentPanel .sl-hero-upgrade");
+if (!upgrade || !upgrade.textContent.includes(win.eval("teamA.nextArenaLevel().name"))) throw new Error("❌ Le bouton d'agrandissement devrait nommer le palier suivant.");
+console.log("✅ Bandeau sans historique : niveau, nom, affluence prévue, bouton d'agrandissement.");
 
-// ---------------------------------------------------------------------
-// Partie 2 : re-rendre avec une hauteur de gauche différente (simule un
-// autre palier de salle avec une image de format différent, ou une fenêtre
-// redimensionnée) doit mettre à jour le minHeight en conséquence.
-// ---------------------------------------------------------------------
-mockedLeftHeight = 520;
-win.renderSalleSection();
-console.log("\nminHeight après un second rendu (hauteur de gauche changée à 520) :", purchasesCol.style.minHeight);
-if (purchasesCol.style.minHeight !== "520px") {
-  throw new Error(`❌ Un nouveau rendu de l'onglet Salle devrait remesurer et mettre à jour minHeight, obtenu "${purchasesCol.style.minHeight}" au lieu de "520px".`);
-}
-console.log("✅ Un nouveau rendu remesure bien et met à jour le minHeight.");
+// --- 1b. Bandeau avec historique ---
+win.eval(`teamA.week = 1; ["Venomous", "ZyF0x_", "Brest", "Toulouse", "Nantes"].forEach(o => { teamA.week++; teamA.simulateHomeAttendance(o); });`);
+win.eval("renderSalleSection();");
+const kpis = txt("#salleHeroKpis");
+console.log("Chiffres clés :", kpis);
+const expectedAvg = win.eval("Math.round(teamA.attendanceHistory.reduce((s, e) => s + e.attendance, 0) / teamA.attendanceHistory.length)");
+if (!kpis.includes(fr(expectedAvg))) throw new Error(`❌ L'affluence moyenne réelle (${expectedAvg}) devrait apparaître dans les chiffres clés.`);
+if (!kpis.includes("Dernière recette")) throw new Error("❌ Avec au moins un match joué, la dernière recette devrait être affichée.");
+if (doc.querySelectorAll("#salleHeroKpis .sl-kpi-cats span").length !== 3) throw new Error("❌ Le taux de remplissage par catégorie (3 pastilles) devrait accompagner l'affluence moyenne.");
+if (!txt("#salleHeroRing").includes("remplissage")) throw new Error("❌ Avec des matchs joués, l'anneau devrait montrer le remplissage RÉEL.");
+console.log("✅ Bandeau avec historique : moyenne réelle, détail par catégorie, dernière recette.");
 
-// ---------------------------------------------------------------------
-// Partie 3 : l'écouteur "resize" sur window (voir juste après
-// syncArenaPurchasesHeight dans moteurbasket3.html) remesure et met à jour
-// le minHeight UNIQUEMENT quand l'onglet Salle est actuellement affiché,
-// pas sur un autre écran (pour ne pas modifier un style qui n'est plus
-// pertinent).
-// ---------------------------------------------------------------------
-mockedLeftHeight = 410;
-win.dispatchEvent(new win.Event("resize"));
-console.log("\nminHeight après un évènement resize, onglet Salle toujours affiché :", purchasesCol.style.minHeight);
-if (purchasesCol.style.minHeight !== "410px") {
-  throw new Error(`❌ BUG NON CORRIGÉ : redimensionner la fenêtre pendant que l'onglet Salle est affiché devrait remesurer et mettre à jour minHeight, obtenu "${purchasesCol.style.minHeight}" au lieu de "410px".`);
-}
-console.log("✅ Redimensionner la fenêtre pendant que l'onglet Salle est affiché remesure bien la colonne de droite.");
+// --- 2. Billetterie : aperçu en direct puis validation ---
+const rows = doc.querySelectorAll("#seatCategoriesHolder .seat-category-card");
+if (rows.length !== 3) throw new Error(`❌ 3 catégories attendues dans le bloc billetterie, obtenu ${rows.length}.`);
+const savedBefore = readRawSave(savePath);
+const gradinsBefore = win.eval("teamA.ticketPrices.gradins");
+const totalBefore = txt("#slTotalRevenue");
+const range = doc.getElementById("ticketPriceRange_gradins");
+range.value = String(gradinsBefore + 10);
+range.dispatchEvent(new win.Event("input"));
+const totalLive = txt("#slTotalRevenue");
+console.log(`Recette prévue : ${totalBefore} → ${totalLive} pendant le glisser`);
+if (totalLive === totalBefore) throw new Error("❌ Faire glisser un curseur devrait mettre à jour la recette prévue en direct.");
+if (txt("#seatPrice_gradins") !== `${gradinsBefore + 10} €`) throw new Error("❌ Le prix affiché devrait suivre le curseur pendant le glisser.");
+if (win.eval("teamA.ticketPrices.gradins") !== gradinsBefore) throw new Error("❌ Un simple glisser (input) ne devrait PAS encore enregistrer le prix.");
+const livePv = win.eval(`seatPreview(seatCategoryInfo("gradins"), ${gradinsBefore + 10}).revenue`);
+if (!txt('[data-seat-key="gradins"] [data-seat-revenue]').includes(fr(livePv))) throw new Error("❌ La recette de la catégorie devrait venir de seatPreview (vrai modèle de remplissage).");
+range.dispatchEvent(new win.Event("change"));
+await flush(dom);
+if (win.eval("teamA.ticketPrices.gradins") !== gradinsBefore + 10) throw new Error("❌ Relâcher le curseur (change) devrait enregistrer le prix.");
+if (readRawSave(savePath).team.ticketPrices.gradins !== gradinsBefore + 10) throw new Error("❌ Le nouveau prix devrait être sauvegardé.");
+doc.querySelector('[data-seat-key="loge"] [data-step="1"]').click();
+await flush(dom);
+const logeAfter = win.eval("teamA.ticketPrices.loge");
+if (logeAfter !== savedBefore.team.ticketPrices.loge + 1) throw new Error(`❌ Le bouton + devrait monter le prix des loges d'1 €, obtenu ${logeAfter}.`);
+if (doc.getElementById("ticketPriceRange_loge").value !== String(logeAfter)) throw new Error("❌ Le curseur devrait suivre le bouton +.");
+console.log("✅ Aperçu en direct au glisser, enregistrement au relâcher et via les boutons +/−.");
 
-clickTab("effectif"); // quitte l'onglet Salle
-const heightBeforeIgnoredResize = purchasesCol.style.minHeight;
-mockedLeftHeight = 999;
-win.dispatchEvent(new win.Event("resize"));
-console.log("\nminHeight après un resize alors qu'on a quitté l'onglet Salle :", purchasesCol.style.minHeight, "(attendu inchangé, ni 999px)");
-if (purchasesCol.style.minHeight !== heightBeforeIgnoredResize) {
-  throw new Error(`❌ Redimensionner la fenêtre depuis un AUTRE onglet ne devrait pas toucher #arenaPurchasesCol (onglet Salle non affiché), obtenu "${purchasesCol.style.minHeight}" au lieu de "${heightBeforeIgnoredResize}".`);
+// --- 3. Prix idéal ---
+for (const key of ["gradins", "tribune", "loge"]) {
+  const r = win.eval(`(() => { const cat = seatCategoryInfo("${key}"); const z = seatPriceZones(cat); const f = moraleForgiveness(teamA.fanMorale);
+    return { ideal: z.ideal, red: z.red, cIdeal: ticketPriceComfortFactor(z.ideal / f, "${key}"), cAbove: ticketPriceComfortFactor((z.ideal + 1) / f, "${key}"), cRed: ticketPriceComfortFactor(z.red / f, "${key}"), max: cat.maxPrice }; })()`);
+  if (r.cIdeal < 0.95) throw new Error(`❌ ${key} : le prix idéal (${r.ideal} €) devrait garder un confort >= 95%, obtenu ${r.cIdeal}.`);
+  if (r.ideal < r.max && r.cAbove >= 0.95) throw new Error(`❌ ${key} : 1 € au-dessus du prix idéal devrait passer sous 95% de confort (sinon le repère est trop bas).`);
+  if (r.red < r.max && r.cRed >= 0.6) throw new Error(`❌ ${key} : la zone rouge (${r.red} €) devrait commencer sous 60% de confort.`);
+  const label = txt(`[data-seat-key="${key}"] .sl-track-ideal-label`);
+  if (label !== `idéal ${r.ideal} €`) throw new Error(`❌ ${key} : repère attendu "idéal ${r.ideal} €", obtenu "${label}".`);
 }
-console.log("✅ Un resize depuis un autre onglet ne modifie pas la colonne de droite de la Salle (pas affichée).");
+console.log("✅ Repère de prix idéal et zone rouge calés sur le vrai modèle de confort tarifaire.");
 
-win.Element.prototype.getBoundingClientRect = realGetBoundingClientRect;
+// --- 4. Graphique + liste repliée ---
+const histLen = win.eval("teamA.attendanceHistory.length");
+const labels = [...doc.querySelectorAll("#attendanceHistoryHolder .sl-chart-label")].map(t => t.textContent);
+console.log("Barres du graphique :", labels.join(", "));
+if (labels.length !== histLen + 1 || labels[labels.length - 1] !== "Prochain") throw new Error("❌ Le graphique devrait avoir une barre par match joué + une barre de prévision.");
+if (doc.querySelectorAll("#attendanceHistoryHolder .sl-bar-proj").length !== 3) throw new Error("❌ La barre de prévision devrait être empilée par catégorie (3 segments).");
+const lines = doc.querySelectorAll("#attendanceHistoryHolder .gain-line");
+const extra = doc.querySelectorAll("#attendanceHistoryHolder .gain-line.sl-history-extra");
+if (lines.length !== histLen || extra.length !== histLen - 3) throw new Error(`❌ Toutes les lignes devraient rester dans le DOM, les ${histLen - 3} plus anciennes repliées.`);
+doc.querySelector(".sl-history-toggle").click();
+if (!doc.querySelector("#attendanceHistoryHolder .sl-history--open")) throw new Error("❌ 'Voir les N matchs' devrait déplier la liste.");
+console.log("✅ Graphique (matchs + prévision) et liste dépliable.");
+
+// --- 5. Infrastructures ---
+win.eval("teamA.facilityLevels = { tvStation: 0, gym: 2, wellness: 0 }; renderSalleSection();");
+const gym = doc.querySelector('[data-facility-card="gym"]');
+if (gym.classList.contains("sl-fac--off")) throw new Error("❌ Une infrastructure construite ne devrait pas être grisée.");
+if (gym.querySelectorAll(".sl-pips span.on").length !== 2 || gym.querySelectorAll(".sl-pips span").length !== 3) throw new Error("❌ La jauge de la salle de musculation (niveau 2/3) devrait avoir 2 pastilles allumées sur 3.");
+const tv = doc.querySelector('[data-facility-card="tvStation"]');
+if (!tv.classList.contains("sl-fac--off") || !tv.querySelector(".sl-fac-why")) throw new Error("❌ Une infrastructure jamais construite devrait être marquée 'non construite' avec sa description.");
+if (!tv.textContent.includes("Construire")) throw new Error("❌ Une infrastructure jamais construite devrait proposer 'Construire'.");
+if (!txt("#facilitiesCountPill").includes("/ 5 construites")) throw new Error("❌ Le compteur d'infrastructures construites devrait être affiché.");
+tv.querySelector(".facility-card-action .sl-fac-action-label").click();
+if (!doc.getElementById("upgradeConfirmOverlay")) throw new Error("❌ Cliquer sur le libellé 'Construire' devrait ouvrir la même confirmation que la flèche.");
+doc.getElementById("upgradeConfirmCancel").click();
+console.log("✅ Cartes d'infrastructure : jauge de niveau, état non construit, libellé cliquable.");
 
 await flush(dom);
 await dom.window.close();
 server.close();
-console.log("\n🏁 Tous les tests salle_arena_purchases_height_test.js sont passés.");
+console.log("\n🏁 Tous les tests salle_redesign_test.js sont passés.");
 
 })().catch(e => { console.error(e); process.exit(1); });

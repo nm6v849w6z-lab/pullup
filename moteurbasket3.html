@@ -3060,6 +3060,205 @@
      DEV_NOTES.md) -- sans ce correctif le bouton "Donnez vos ordres"
      collerait juste apres le nom du club. */
   .hm-head__identity-btn{margin-left:auto;}
+  /* =====================================================================
+     Onglet Salle — refonte visuelle (retour utilisateur, 2026-09-25 : "aide
+     moi à rendre cette page plus sexy", puis sur la maquette : "vas y ça me
+     plait bien, code tout ça"). Tout est préfixé .sl- (voir
+     renderSalleSection et suivantes dans le JS). Couleurs des catégories de
+     places : ambre de l'app pour les gradins, le bleu déjà validé de
+     --court-zone-three pour la tribune, un violet pour les loges VIP.
+     ===================================================================== */
+  :root{ --seat-gradins:var(--amber); --seat-tribune:#3987e5; --seat-loge:#a78bfa; }
+  #salleSection .sl-num{font-variant-numeric:tabular-nums;}
+  #salleSection .sl-up{color:var(--ok);}
+  #salleSection .sl-down{color:var(--danger);}
+  #salleSection .sl-warn{color:var(--amber);}
+  #salleSection .sl-muted{color:var(--ink-faint);}
+
+  /* --- Bandeau --- */
+  .sl-hero{position:relative; display:flex; min-height:340px; margin-bottom:18px; border-radius:16px; overflow:hidden; border:1px solid var(--line); background:#0b1119;}
+  .sl-hero-visual{position:absolute; top:0; right:0; bottom:0; width:74%;}
+  .sl-hero-visual .arena-card{margin:0; padding:0; border:0; border-radius:0; background:none; height:100%;}
+  .sl-hero-visual .arena-visual-wrap{margin:0; border:0; border-radius:0; height:100%; max-height:none; background:#0f1622;}
+  .sl-hero-visual .arena-visual-wrap svg{width:100%; height:100%; max-height:none;}
+  .sl-hero::after{content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(90deg, #0b1119 0%, rgba(11,17,25,.93) 27%, rgba(11,17,25,.4) 50%, rgba(11,17,25,0) 68%),
+               linear-gradient(0deg, rgba(11,17,25,.9) 0%, rgba(11,17,25,0) 45%);}
+  .sl-hero-content{position:relative; z-index:2; display:flex; flex-direction:column; gap:14px; padding:24px 26px; width:100%; min-width:0; box-sizing:border-box;}
+  .sl-tier{display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px 9px; width:max-content; max-width:100%; padding:5px 11px; border-radius:999px;
+    font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--amber);
+    background:rgba(240,162,60,.12); border:1px solid rgba(240,162,60,.35);}
+  .sl-tier i{display:flex; gap:3px;}
+  .sl-tier i span{width:11px; height:5px; border-radius:2px; background:rgba(240,162,60,.22);}
+  .sl-tier i span.on{background:var(--amber);}
+  .sl-hero-title{margin:10px 0 2px; font-size:40px; line-height:1; font-weight:900; letter-spacing:-.01em; text-transform:uppercase; color:#fff; text-shadow:0 2px 18px rgba(0,0,0,.5); overflow-wrap:anywhere;}
+  .sl-hero-sub{font-size:14px; color:#b9c4d8;}
+  .sl-hero-sub b{color:#fff;}
+  #arenaCurrentPanel .sl-hero-upgrade{display:inline-flex; align-items:center; gap:14px; width:max-content; max-width:100%; padding:8px 8px 8px 16px; margin:0;
+    border-radius:12px; text-align:left; cursor:pointer; background:linear-gradient(135deg, rgba(240,162,60,.22), rgba(240,162,60,.08)); border:1px solid rgba(240,162,60,.55);
+    transition:background .15s, transform .15s;}
+  #arenaCurrentPanel .sl-hero-upgrade:hover{background:linear-gradient(135deg, rgba(240,162,60,.32), rgba(240,162,60,.14)); transform:translateY(-1px);}
+  #arenaCurrentPanel .sl-hero-upgrade--max{cursor:default; background:rgba(20,28,41,.7); border-color:var(--line);}
+  .sl-hero-upgrade-label{display:block; font-size:14px; font-weight:800; color:#fff;}
+  .sl-hero-upgrade-next{display:block; font-size:12px; color:var(--ink-dim); margin-top:1px;}
+  .sl-hero-upgrade-next b{color:var(--amber);}
+  #arenaCurrentPanel .facility-upgrade-arrow{width:36px; height:36px; font-size:17px; background:var(--amber); color:var(--amber-ink);}
+  .sl-kpis{display:flex; flex-wrap:wrap; gap:10px; margin-top:auto;}
+  .sl-kpi{min-width:132px; padding:10px 14px; border-radius:12px; background:rgba(20,28,41,.74); border:1px solid rgba(255,255,255,.08);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
+  .sl-kpi small{display:block; margin-bottom:3px; font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-dim);}
+  .sl-kpi b{font-size:24px; font-weight:800; line-height:1.1; color:#fff;}
+  .sl-kpi em{margin-left:6px; font-style:normal; font-size:12px; font-weight:700;}
+  .sl-kpi-sub{font-size:11px; color:var(--ink-faint); margin-top:3px;}
+  .sl-kpi-cats{display:flex; gap:9px; margin-top:5px; font-size:11px; color:var(--ink-dim);}
+  .sl-kpi-cats span{display:inline-flex; align-items:center; gap:4px;}
+  .sl-kpi-cats i{width:7px; height:7px; border-radius:2px;}
+  .sl-hero-note{margin-top:6px; font-size:11px; color:var(--ink-faint);}
+  .sl-ring{position:absolute; top:20px; right:20px; z-index:2; display:grid; place-items:center; width:116px; height:116px; border-radius:50%;
+    background:rgba(11,17,25,.72); border:1px solid rgba(255,255,255,.08); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
+  .sl-ring svg{position:absolute; inset:6px; width:calc(100% - 12px); height:calc(100% - 12px);}
+  .sl-ring-track{fill:none; stroke:rgba(255,255,255,.08); stroke-width:8;}
+  .sl-ring-value{fill:none; stroke:var(--amber); stroke-width:8; stroke-linecap:round;}
+  .sl-ring div{text-align:center; line-height:1;}
+  .sl-ring b{display:block; font-size:28px; font-weight:900; color:#fff;}
+  .sl-ring small{font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim);}
+
+  /* --- Cartes --- */
+  .sl-grid{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:18px; margin-bottom:18px; align-items:start;}
+  .sl-card{min-width:0; padding:20px; border-radius:16px; background:var(--panel); border:1px solid var(--line);}
+  .sl-card-head{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:8px 12px; margin-bottom:16px;}
+  .sl-eyebrow{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);}
+  .sl-card-title{margin:3px 0 0; font-size:17px; font-weight:800; color:var(--ink);}
+  .sl-pill{flex-shrink:0; padding:5px 10px; border-radius:999px; font-size:11.5px; color:var(--ink-dim); background:var(--panel-2); border:1px solid var(--line);}
+  .sl-icon-chip{display:grid; place-items:center; flex-shrink:0; width:38px; height:38px; border-radius:10px;
+    background:rgba(255,255,255,.05); background:color-mix(in srgb, currentColor 15%, transparent);}
+
+  /* --- Billetterie --- */
+  .sl-seatmap{display:flex; gap:3px; height:12px; margin-bottom:6px;}
+  .sl-seatmap-seg{position:relative; overflow:hidden; border-radius:4px; background:rgba(255,255,255,.06);}
+  .sl-seatmap-seg i{position:absolute; top:0; bottom:0; left:0; border-radius:4px; transition:width .2s;}
+  .sl-seatmap-legend{display:flex; justify-content:space-between; gap:10px; margin-bottom:6px; font-size:12px; color:var(--ink-dim);}
+  /* Deux lignes par catégorie (nom + recette en haut, prix + curseur pleine
+     largeur en dessous) : le bloc billetterie ne fait qu'environ 60% de la
+     largeur utile, un curseur sur une seule ligne y serait trop court. */
+  #salleSection .seat-category-card.sl-seat-row{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px 16px; align-items:center;
+    margin:0; padding:14px 0 16px; background:none; border:0; border-top:1px solid var(--line-soft); border-radius:0;}
+  .sl-seat-row .sl-seat-ctrl{grid-column:1 / -1; grid-row:2;}
+  .sl-seat-row .sl-seat-result{grid-column:2; grid-row:1; min-width:130px;}
+  .sl-seat-name{display:flex; align-items:center; gap:11px; min-width:0;}
+  .sl-seat-name > div{min-width:0;}
+  .sl-seat-name h4{margin:0; font-size:14px; color:var(--ink);}
+  .sl-seat-name small{font-size:12px; color:var(--ink-faint);}
+  .sl-seat-ctrl{display:flex; align-items:center; gap:14px; min-width:0;}
+  .sl-stepper{display:flex; align-items:center; flex-shrink:0; overflow:hidden; border-radius:10px; background:var(--panel-2); border:1px solid var(--line);}
+  .sl-stepper button{width:30px; height:34px; padding:0; border:0; background:none; color:var(--ink-dim); font-size:17px; cursor:pointer;}
+  .sl-stepper button:hover{color:var(--ink); background:rgba(255,255,255,.05);}
+  .sl-stepper span{min-width:50px; text-align:center; font-size:15px; font-weight:800; color:var(--ink);}
+  .sl-track{position:relative; flex:1; min-width:110px; height:36px;}
+  .sl-track-bar{position:absolute; left:0; right:0; top:12px; height:6px; border-radius:3px; background:rgba(255,255,255,.08);}
+  .sl-track-red{position:absolute; top:0; bottom:0; right:0; border-radius:0 3px 3px 0;
+    background:repeating-linear-gradient(135deg, rgba(226,105,79,.55) 0 3px, rgba(226,105,79,.18) 3px 6px);}
+  .sl-track-fill{position:absolute; top:0; bottom:0; left:0; border-radius:3px;}
+  .sl-track-ideal{position:absolute; top:7px; width:2px; height:16px; border-radius:1px; background:var(--ok); transform:translateX(-50%); pointer-events:none;}
+  .sl-track-ideal-label{position:absolute; top:25px; font-size:10px; font-weight:600; color:var(--ok); white-space:nowrap; transform:translateX(-50%); pointer-events:none;}
+  .sl-track input[type=range]{position:absolute; left:0; top:0; z-index:3; width:100%; height:30px; margin:0; opacity:0; cursor:pointer;}
+  .sl-knob{position:absolute; top:6px; z-index:2; width:18px; height:18px; border-radius:50%; background:#fff; transform:translateX(-50%); pointer-events:none;
+    box-shadow:0 0 0 4px rgba(255,255,255,.1), 0 3px 8px rgba(0,0,0,.5);}
+  .sl-track input[type=range]:focus-visible ~ .sl-knob{box-shadow:0 0 0 4px var(--amber), 0 3px 8px rgba(0,0,0,.5);}
+  .sl-seat-result{text-align:right;}
+  .sl-seat-result b{display:block; font-size:15px; color:var(--ink);}
+  .sl-seat-result .sub{margin:2px 0 0; font-size:11.5px; color:var(--ink-dim);}
+  .sl-gauge{height:4px; margin-top:6px; overflow:hidden; border-radius:2px; background:rgba(255,255,255,.07);}
+  .sl-gauge i{display:block; height:100%; border-radius:2px; transition:width .2s;}
+  .sl-total{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; padding-top:16px; border-top:1px solid var(--line-soft);}
+  .sl-total small{display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);}
+  .sl-total-value{font-size:34px; font-weight:900; line-height:1.1; color:var(--amber);}
+  .sl-total-right{text-align:right; font-size:14px; font-weight:700;}
+  .sl-tip{margin-top:14px; padding:10px 13px; border-radius:10px; font-size:12.5px; line-height:1.4; border:1px solid;}
+  .sl-tip--good{background:rgba(51,180,161,.08); border-color:rgba(51,180,161,.3); color:#9fe3d8;}
+  .sl-tip--info{background:rgba(51,180,161,.08); border-color:rgba(51,180,161,.3); color:#9fe3d8;}
+  .sl-tip--info b{color:#fff;}
+  .sl-tip--warn{background:rgba(240,162,60,.08); border-color:rgba(240,162,60,.3); color:#f5c98a;}
+  .sl-tip--bad{background:rgba(226,105,79,.1); border-color:rgba(226,105,79,.35); color:#f2a896;}
+
+  /* --- Affluence --- */
+  .sl-legend{display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:8px; font-size:11.5px; color:var(--ink-dim);}
+  .sl-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .sl-legend i{width:9px; height:9px; border-radius:2px;}
+  .sl-legend i.sl-legend-proj{border:1.5px dashed var(--ink-dim);}
+  .sl-chart{display:block; width:100%; height:auto; overflow:visible;}
+  .sl-chart-cap{stroke:var(--line); stroke-dasharray:4 4;}
+  .sl-chart-caplabel{font-size:10px; fill:var(--ink-faint);}
+  .sl-chart-total{font-size:11px; font-weight:700; fill:var(--ink);}
+  .sl-chart-label{font-size:10.5px; fill:var(--ink-faint);}
+  .sl-chart-label-proj{fill:var(--ink-dim); font-weight:700;}
+  .sl-chart-rev{font-size:10.5px; font-weight:600; fill:var(--ink-dim);}
+  .sl-chart-rev-proj{fill:var(--amber);}
+  .sl-bar-gradins{fill:var(--seat-gradins);} .sl-bar-tribune{fill:var(--seat-tribune);} .sl-bar-loge{fill:var(--seat-loge);}
+  .sl-bar-proj{fill-opacity:.3; stroke-width:1.2; stroke-dasharray:3 2.5;}
+  .sl-bar-proj.sl-bar-gradins{stroke:var(--seat-gradins);} .sl-bar-proj.sl-bar-tribune{stroke:var(--seat-tribune);} .sl-bar-proj.sl-bar-loge{stroke:var(--seat-loge);}
+  .sl-bar-legacy{fill:var(--ink-faint);}
+  #salleSection .sl-history{margin-top:12px; padding:0; background:none; border:0;}
+  #salleSection .sl-history .gain-line.attendance-line{display:flex; justify-content:space-between; gap:12px; margin:0; padding:10px 0; border:0; border-top:1px solid var(--line-soft); border-radius:0; background:none;}
+  #salleSection .sl-history .gain-line.attendance-line.sl-history-extra{display:none;}
+  #salleSection .sl-history--open .gain-line.attendance-line.sl-history-extra{display:flex;}
+  .sl-history-main{min-width:0; font-size:13px;}
+  .sl-history-main b{font-weight:700; color:var(--ink);}
+  .sl-history .attendance-breakdown{display:flex; flex-wrap:wrap; gap:2px 10px;}
+  .sl-history .attendance-breakdown > span{white-space:nowrap;}
+  .sl-history .attendance-breakdown .sl-sep{display:none;}
+  .sl-sr{position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;}
+  .sl-history .attendance-breakdown i{display:inline-block; width:7px; height:7px; margin-right:4px; border-radius:2px; vertical-align:1px;}
+  .sl-history-side{flex-shrink:0; text-align:right;}
+  .sl-history-side b{display:block; font-size:13px; color:var(--ink);}
+  .sl-history-side small{font-size:11px; color:var(--ink-faint);}
+  .sl-history-toggle{margin-top:8px; padding:0; border:0; background:none; color:var(--amber); font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;}
+
+  /* --- Infrastructures --- */
+  .facilities-grid.sl-fac-grid{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:12px;}
+  #salleSection .facility-card.sl-fac{display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:10px; min-height:0; margin:0; padding:15px;
+    text-align:left; border-radius:14px; background:var(--panel-2); border:1px solid var(--line); transition:transform .15s, border-color .15s;}
+  #salleSection .facility-card.sl-fac:hover{transform:translateY(-2px); border-color:#34466a;}
+  #salleSection .facility-card.sl-fac--off{border-style:dashed;
+    background:repeating-linear-gradient(135deg, rgba(255,255,255,.018) 0 9px, transparent 9px 18px), var(--panel-2);}
+  .sl-fac--off .sl-fac-icon{filter:grayscale(1); opacity:.55;}
+  .sl-fac--off .price{color:var(--ink-dim);}
+  .sl-fac-icon{margin-bottom:10px;}
+  #salleSection .sl-fac .facility-card-category{font-size:10px; letter-spacing:.07em;}
+  #salleSection .sl-fac .price{font-size:14px; font-weight:800;}
+  #salleSection .sl-fac .bonus{font-size:12px; font-weight:600; margin-top:8px;}
+  .sl-pips{display:flex; gap:4px; margin-top:9px;}
+  .sl-pips span{flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,.08);}
+  .sl-pips span.on{background:var(--amber);}
+  .sl-fac-why{margin-top:8px; font-size:12px; line-height:1.35; color:var(--ink-dim);}
+  #salleSection .sl-fac .facility-card-action{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:10px; border-top:1px solid var(--line-soft); cursor:pointer;}
+  .sl-fac-action-label{font-size:12.5px; font-weight:800; color:var(--amber);}
+  .sl-fac-action-label small{display:block; font-size:11px; font-weight:500; color:var(--ink-faint);}
+
+  @media(max-width:1100px){
+    .sl-grid{grid-template-columns:minmax(0,1fr);}
+    .facilities-grid.sl-fac-grid{grid-template-columns:repeat(3, minmax(0,1fr));}
+  }
+  @media(max-width:760px){
+    .sl-hero{flex-direction:column; min-height:0;}
+    .sl-hero-visual{position:relative; width:100%; height:190px;}
+    .sl-hero::after{background:linear-gradient(180deg, rgba(11,17,25,0) 0, rgba(11,17,25,0) 120px, #0b1119 190px);}
+    .sl-hero-content{padding:4px 16px 18px;}
+    .sl-hero-title{font-size:28px;}
+    .sl-ring{top:12px; right:12px; width:84px; height:84px;}
+    .sl-ring b{font-size:20px;}
+    .sl-kpi{flex:1 1 calc(50% - 10px); min-width:0;}
+    .sl-kpi b{font-size:20px;}
+    .sl-card{padding:16px;}
+    .sl-total-value{font-size:28px;}
+    .facilities-grid.sl-fac-grid{grid-template-columns:repeat(2, minmax(0,1fr));}
+  }
+  @media(max-width:420px){
+    .facilities-grid.sl-fac-grid{grid-template-columns:1fr;}
+    .sl-seat-row .sl-seat-result{min-width:0;}
+    .sl-seat-ctrl{gap:10px;}
+    .sl-total{flex-wrap:wrap;}
+  }
 </style>
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
@@ -3678,34 +3877,40 @@
   <div id="salleSection" class="hidden">
     <div class="section">
       <h2>Salle</h2>
-      <!-- Retour utilisateur (2026-09) : "la case du gymnase plus grande, et
-           les infrastructures à acheter à côté, tout sur une ligne, avec le
-           carré du gymnase plus grand que le reste pour montrer que c'est le
-           plus important" — carte visuelle de la salle (image + capacité +
-           infrastructures déjà actives, bien alignées) à gauche, plus large ;
-           les achats (prochain palier de salle, puis les autres
-           infrastructures) à droite, en colonne plus étroite. Un seul bloc
-           .arena-row, repli en 1 colonne sous ~900px (voir CSS). -->
-      <div class="arena-row">
-        <div id="arenaVisualCard"></div>
-        <div class="arena-purchases" id="arenaPurchasesCol">
+      <!-- Refonte visuelle (retour utilisateur, 2026-09-25 : "aide moi à
+           rendre cette page plus sexy" puis "vas y ça me plait bien, code
+           tout ça", sur la maquette proposée) : bandeau d'en-tête pleine
+           largeur (dessin de la salle en fond, #arenaVisualCard ; bouton
+           d'agrandissement, #arenaCurrentPanel), puis billetterie et
+           affluence côte à côte, puis les autres infrastructures. Les ids
+           historiques sont conservés (tests, tutoriel : voir
+           les étapes "Salle" du tutoriel). Voir renderSalleSection dans le JS. -->
+      <div class="sl-hero" id="salleHero">
+        <div id="arenaVisualCard" class="sl-hero-visual"></div>
+        <div class="sl-hero-content">
+          <div id="salleHeroHead"></div>
           <div id="arenaCurrentPanel"></div>
-          <h3 class="field-label" style="margin-top:4px;">Autres infrastructures</h3>
-          <div id="otherFacilitiesPanel"></div>
+          <div id="salleHeroKpis"></div>
         </div>
+        <div id="salleHeroRing" class="sl-ring"></div>
       </div>
 
-      <div id="seatCategoriesHolder"></div>
+      <div class="sl-grid">
+        <div class="sl-card" id="seatCategoriesHolder"></div>
+        <!-- Retour utilisateur (2026-09) : "sur l'onglet salle, il n'y a tjrs
+             pas l'affluence des matchs précédents (jusqu'à 10 matchs)" : voir
+             Team.attendanceHistory/simulateHomeAttendance (engine.js) et
+             renderAttendanceHistory dans le JS. -->
+        <div class="sl-card" id="attendanceHistoryHolder"></div>
+      </div>
 
-      <!-- Retour utilisateur (2026-09) : "sur l'onglet salle, il n'y a tjrs
-           pas l'affluence des matchs précédents (jusqu'à 10 matchs)" : voir
-           Team.attendanceHistory/simulateHomeAttendance (engine.js) et
-           renderAttendanceHistory plus bas dans le JS. Un match à domicile
-           seulement (l'affluence de la salle adverse n'est pas suivie),
-           alimenté match après match, jamais rétroactivement pour les
-           matchs déjà joués avant cette fonctionnalité (aucune donnée
-           d'affluence n'existait alors). -->
-      <div id="attendanceHistoryHolder"></div>
+      <div class="sl-card">
+        <div class="sl-card-head">
+          <div><div class="sl-eyebrow">Autres infrastructures</div><h3 class="sl-card-title">Développer le club</h3></div>
+          <span class="sl-pill" id="facilitiesCountPill"></span>
+        </div>
+        <div id="otherFacilitiesPanel"></div>
+      </div>
     </div>
   </div>
 
@@ -9101,7 +9306,15 @@ class Team {
   // confort tarifaire (moraleForgiveness : des supporters contents tolèrent
   // un prix plus élevé avant de déserter cette catégorie).
   projectedAttendanceRateFor(categoryKey) {
-    const price = (this.ticketPrices || {})[categoryKey];
+    return this.projectedAttendanceRateAtPrice(categoryKey, (this.ticketPrices || {})[categoryKey]);
+  }
+
+  // Même calcul que projectedAttendanceRateFor, mais pour un prix
+  // HYPOTHÉTIQUE, sans toucher à this.ticketPrices — sert à l'aperçu en
+  // direct du curseur de prix de l'onglet Salle (refonte 2026-09-25 : recette
+  // et affluence mises à jour pendant qu'on fait glisser le curseur, avant
+  // même de valider le nouveau prix).
+  projectedAttendanceRateAtPrice(categoryKey, price) {
     const forgiveness = moraleForgiveness(this.fanMorale);
     const comfort = ticketPriceComfortFactor(price / forgiveness, categoryKey);
     return clamp(attendanceBaseForMorale(this.fanMorale) * comfort, 0.08, 0.98);
@@ -28316,85 +28529,84 @@ function buildUpgradeArrow(confirmOpts) {
   return btn;
 }
 
-// Retour utilisateur (2026-09) : "je souhaite que les briques de droite
-// n'aillent pas plus bas que la brique de gauche. ce sera plus beau
-// visuellement" (onglet Salle), puis (suite à la suppression des emojis
-// des briques, 2026-09) : "les briques droites sont un peu petite
-// maintenant. essaie que ce soit aligné avec la brique avec l'image de la
-// salle à gauche". Sans leurs emojis, les 5 cartes "Autres infrastructures"
-// sont devenues plus basses, laissant un vide sous la colonne de droite. On
-// ne se contente donc plus de PLAFONNER la hauteur (max-height, ce qui
-// laissait ce vide) : la colonne de droite VISE la même hauteur que l'image
-// de gauche, et #otherFacilitiesPanel/.facilities-grid (voir CSS, flex:1 +
-// align-content stretch) redistribue cet espace supplémentaire entre les
-// cartes d'infrastructure pour qu'elles grandissent plutôt que de laisser un
-// vide. Retour utilisateur suivant (2026-09) : "les briques de droite sont
-// désormais plus grande que la brique de gauche (il faut scroller)" : une
-// hauteur FIXE (style.height) comprimait un contenu de droite devenu plus
-// haut que l'image (ex. l'avertissement de changement de capacité) et
-// forçait un défilement interne. On pose donc un PLANCHER (style.minHeight)
-// plutôt qu'une valeur fixe : la colonne s'aligne sur l'image quand son
-// contenu tient, mais peut grandir au-delà si besoin, sans scroll.
-// Mesure la hauteur réellement affichée de #arenaVisualCard (variable selon
-// le format de chaque image de salle et la largeur d'écran, donc impossible
-// à fixer en dur en CSS) ; #arenaPurchasesCol garde overflow-y:auto en
-// filet de sécurité si un cas extrême ne tenait toujours pas.
-// Appelée depuis renderSalleSection, à la fois immédiatement et au
-// chargement de l'image (voir plus bas dans cette même fonction).
-function syncArenaPurchasesHeight() {
-  const visualCard = document.querySelector("#arenaVisualCard .arena-card");
-  const purchasesCol = document.getElementById("arenaPurchasesCol");
-  if (!visualCard || !purchasesCol) return;
-  const h = visualCard.getBoundingClientRect().height;
-  // Retour utilisateur (2026-09) : "les briques de droite sont désormais plus
-  // grande que la brique de gauche (il faut scroller)". Avec .style.height
-  // (valeur fixe), un contenu de droite plus haut que l'image (ex. le texte
-  // d'avertissement sur le changement de capacité, voir buildAttendanceBreakdown
-  // un peu plus haut dans ce fichier) était comprimé dans cette hauteur fixe
-  // puis nécessitait un défilement interne. minHeight règle un PLANCHER
-  // (aligné avec l'image quand le contenu tient) sans empêcher la colonne de
-  // grandir naturellement au-delà si son propre contenu en a besoin.
-  if (h > 0) purchasesCol.style.minHeight = `${Math.round(h)}px`;
+// ---------------------------------------------------------------------
+// Onglet Salle — refonte visuelle (retour utilisateur, 2026-09-25 : "aide
+// moi à rendre cette page plus sexy", puis, sur la maquette proposée : "vas
+// y ça me plait bien, code tout ça"). La page est découpée en quatre blocs,
+// chacun rendu par sa propre fonction pour pouvoir être rafraîchi seul :
+//   - renderSalleHero : bandeau d'en-tête, dessin ArenaGen en fond (même
+//     générateur qu'avant, voir arenaVisualCapacity), niveau X/8, bouton
+//     d'agrandissement (#arenaCurrentPanel, même flèche/confirmation
+//     qu'avant, voir buildUpgradeArrow), chiffres clés et anneau de
+//     remplissage (affluence RÉELLE des matchs joués, voir
+//     arenaAttendanceStats, repli sur la projection s'il n'y en a aucun).
+//   - renderSalleTicketing : les 3 catégories de places dans UN seul bloc,
+//     avec aperçu EN DIRECT pendant qu'on fait glisser un curseur (voir
+//     Team.projectedAttendanceRateAtPrice), repère "prix idéal" et zone
+//     rouge (voir seatPriceZones), recette prévue totale et conseil.
+//   - renderAttendanceHistory : graphique empilé par catégorie + prévision
+//     du prochain match à domicile, puis la liste détaillée (inchangée sur
+//     le fond, .gain-line/.attendance-breakdown).
+//   - renderSalleFacilities : cartes d'infrastructure avec icône, jauge de
+//     niveau et état "non construit" visible (hachures).
+// Remplace l'ancienne mise en page .arena-row (image à gauche, colonne
+// d'achats alignée dessus par syncArenaPurchasesHeight) : le bandeau pleine
+// largeur n'a plus besoin de cet alignement, fonction et écouteur "resize"
+// retirés avec elle.
+// ---------------------------------------------------------------------
+
+// Couleur de chaque catégorie de place, partout sur la page (barre de
+// remplissage, curseur, graphique, légende) — voir --seat-* dans le CSS.
+const SEAT_CATEGORY_COLORS = { gradins: "var(--seat-gradins)", tribune: "var(--seat-tribune)", loge: "var(--seat-loge)" };
+const SEAT_CATEGORY_ICONS = { gradins: "ticket", tribune: "stand", loge: "star" };
+
+// Pictogrammes au trait (pas d'emoji : retirés à la demande de
+// l'utilisateur en 2026-09, voir le commentaire de syncArenaPurchasesHeight
+// dans l'historique Git).
+const SALLE_ICON_PATHS = {
+  ticket: '<path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z"/><path d="M15 7v10" stroke-dasharray="2 2.5"/>',
+  stand: '<path d="M3 9.5 12 4l9 5.5"/><path d="M5 9v11M19 9v11M5 13.5h14M5 17.5h14"/>',
+  star: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+  ball: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5v17M6 6c3.2 3.4 3.2 8.6 0 12M18 6c-3.2 3.4-3.2 8.6 0 12"/>',
+  bag: '<path d="M5 8.5h14l-1.2 11.5H6.2z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>',
+  tv: '<rect x="3" y="6.5" width="18" height="12" rx="2"/><path d="M8.5 21.5h7M8.5 2.5 12 6.5l3.5-4"/>',
+  dumbbell: '<path d="M7 6.5v11M17 6.5v11M4 9v6M20 9v6M7 12h10"/>',
+  leaf: '<path d="M5 19.5C5 11 10 5 20 4.5 20 14 14.5 19.5 6 19.5"/><path d="M5 19.5c3-4.2 6.2-6.8 10-8.5"/>',
+  up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+};
+function salleIcon(name, size = 20) {
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SALLE_ICON_PATHS[name] || ""}</svg>`;
 }
-// Écouteur UNIQUE au niveau window (pas un par appel de renderSalleSection,
-// pour ne pas en empiler à chaque passage sur l'onglet) : redimensionner la
-// fenêtre change la largeur de la colonne de gauche donc la hauteur réelle
-// de l'image (voir .arena-visual-wrap img, object-fit:contain), qui doit
-// être remesurée. Ne fait rien si l'onglet Salle n'est pas affiché, pour ne
-// pas modifier un style resté dans le DOM depuis un passage précédent sur un
-// autre écran.
-window.addEventListener("resize", () => {
-  const salleEl = document.getElementById("salleSection");
-  if (salleEl && !salleEl.classList.contains("hidden")) syncArenaPurchasesHeight();
-});
 
-// Retour utilisateur (2026-09) : "le texte sous le type de salle doit
-// correspondre à l'influence réelle dans la salle : ~5 564 spectateurs en
-// moyenne (~70% de remplissage) alors que j'ai un seul match avec Gradins
-// populaires : 1 692 (62%) · Tribune couverte : 990 (66%) · Loges VIP : 533
-// (71%)" — le texte sous "Petit gymnase" affichait jusqu'ici une estimation
-// PROJETÉE (Team.projectedAttendanceRate, calculée à partir de l'humeur des
-// supporters/du confort tarifaire, jamais mise à jour par les matchs
-// réellement joués), sans rapport avec l'affluence RÉELLE déjà visible plus
-// bas sur cette même page (voir teamA.attendanceHistory/
-// renderAttendanceHistory). On calcule donc ici la moyenne réelle à partir
-// de cet historique (jusqu'à 10 derniers matchs à domicile, même source),
-// avec le même détail par catégorie de place que renderAttendanceHistory,
-// pour que les deux se recoupent. La capacité utilisée pour le taux de
-// remplissage est celle de CHAQUE match dans l'historique (elle peut
-// différer de la capacité actuelle si la salle a été agrandie entre-temps),
-// sommée puis divisée, pas la capacité actuelle seule. Repli sur
-// l'estimation projetée UNIQUEMENT si aucun match à domicile n'a encore été
-// joué (l'historique est alors vide, il n'y a rien de réel à mesurer).
-function arenaAttendanceSummaryHtml(info, projectedRate) {
+// Montant compact pour les chiffres clés/le graphique ("159 k€").
+function formatMoneyCompact(n) {
+  const v = Math.round(n || 0);
+  if (Math.abs(v) >= 1000000) return `${(v / 1000000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M€`;
+  if (Math.abs(v) >= 10000) return `${Math.round(v / 1000).toLocaleString("fr-FR")} k€`;
+  return formatMoney(v);
+}
+
+// Prochain match du club (voir currentMatch/teamB, posés par
+// enterNextMatchOrShowSeasonEnd, mêmes sources que la barre du haut) —
+// null s'il n'y en a pas (fin de saison, chargement).
+function salleNextMatchInfo() {
+  if (typeof currentMatch === "undefined" || !currentMatch || typeof teamB === "undefined" || !teamB) return null;
+  return { isHome: !!currentMatch.isHome, name: teamB.name };
+}
+
+// Affluence RÉELLE moyenne, calculée sur teamA.attendanceHistory (jusqu'aux
+// 10 derniers matchs à domicile) — reprend EXACTEMENT le calcul de
+// l'ancienne arenaAttendanceSummaryHtml (retour utilisateur, 2026-09 : "le
+// texte sous le type de salle doit correspondre à l'influence réelle dans la
+// salle") : capacité de CHAQUE match sommée (elle a pu changer entre-temps),
+// détail par catégorie, et signalement d'un historique qui mélange ancienne
+// et nouvelle capacité (retour utilisateur : "ici le 64% de remplissage
+// correspond au gymnase avant agrandissement, il faudrait le noter").
+function arenaAttendanceStats(info) {
   const history = teamA.attendanceHistory || [];
-  if (!history.length) {
-    return `~${Math.round(info.capacity * projectedRate).toLocaleString("fr-FR")} spectateurs en moyenne estimés (~${Math.round(projectedRate * 100)}% de remplissage) — aucun match à domicile joué pour l'instant.`;
-  }
-
-  let totalAttendance = 0, totalCapacity = 0;
   const byCategory = {};
-  SEAT_CATEGORIES.forEach(cat => { byCategory[cat.key] = { name: cat.name, attendance: 0, capacity: 0 }; });
+  SEAT_CATEGORIES.forEach(cat => { byCategory[cat.key] = { attendance: 0, capacity: 0 }; });
+  let totalAttendance = 0, totalCapacity = 0;
   history.forEach(entry => {
     totalAttendance += entry.attendance || 0;
     totalCapacity += entry.capacity || 0;
@@ -28405,107 +28617,106 @@ function arenaAttendanceSummaryHtml(info, projectedRate) {
       }
     });
   });
-
-  const avgAttendance = Math.round(totalAttendance / history.length);
-  const avgRate = totalCapacity > 0 ? totalAttendance / totalCapacity : 0;
-  let html = `~${avgAttendance.toLocaleString("fr-FR")} spectateurs en moyenne (~${Math.round(avgRate * 100)}% de remplissage)`;
-
-  const breakdown = SEAT_CATEGORIES
-    .map(cat => {
+  return {
+    matches: history.length,
+    avgAttendance: history.length ? Math.round(totalAttendance / history.length) : null,
+    avgRate: totalCapacity > 0 ? totalAttendance / totalCapacity : null,
+    categories: SEAT_CATEGORIES.map(cat => {
       const c = byCategory[cat.key];
-      if (!c.capacity) return null;
-      const avg = Math.round(c.attendance / history.length);
-      const catRate = Math.round((c.attendance / c.capacity) * 100);
-      return `${escapeHtml(c.name)} : ${avg.toLocaleString("fr-FR")} (${catRate}%)`;
-    })
-    .filter(Boolean);
-  if (breakdown.length) {
-    html += `<div class="attendance-breakdown">${breakdown.join(" · ")}</div>`;
-  }
+      return {
+        key: cat.key, name: cat.name,
+        avg: history.length && c.capacity ? Math.round(c.attendance / history.length) : null,
+        rate: c.capacity ? c.attendance / c.capacity : null,
+      };
+    }),
+    hasOldCapacityMatch: history.some(entry => entry.capacity && entry.capacity !== info.capacity),
+  };
+}
 
-  // Retour utilisateur (2026-09) : "ici le 64% de remplissage correspond au
-  // gymnase avant agrandissement, il faudrait le noter pour que ce ne soit
-  // pas faux" — la moyenne ci-dessus reste calculée sur la capacité RÉELLE de
-  // chaque match (correcte historiquement, voir le commentaire au-dessus de
-  // la fonction), mais si au moins un des matchs de l'historique a été joué
-  // sous une capacité différente de celle affichée juste au-dessus (info.name/
-  // info.capacity, la salle ACTUELLE), la moyenne mélange donc un ancien et un
-  // nouveau palier de salle : on le signale explicitement plutôt que de
-  // laisser croire que ce pourcentage reflète la salle actuelle.
-  const hasOldCapacityMatch = history.some(entry => entry.capacity && entry.capacity !== info.capacity);
-  if (hasOldCapacityMatch) {
-    html += `<div class="attendance-breakdown">Capacité modifiée depuis (désormais ${info.capacity.toLocaleString("fr-FR")} places).</div>`;
-  }
+// Repères du curseur de prix d'une catégorie, dérivés du VRAI modèle de
+// confort tarifaire (ticketPriceComfortFactor/moraleForgiveness, et la
+// dérive d'humeur hebdomadaire de Team.trainWeek) :
+//   - ideal : prix le plus élevé qui garde un confort >= 95% (au-delà du
+//     plafond de confort, chaque euro coûte un peu d'affluence ; jusqu'à ce
+//     seuil la recette augmente quand même, et un confort moyen >= 95%
+//     donne le petit bonus d'humeur "Prix des billets jugés raisonnables") ;
+//   - red : premier prix où le confort passe SOUS 60% (seuil de la baisse
+//     d'humeur "Prix des billets jugés trop élevés" si la MOYENNE des 3
+//     catégories y tombe).
+function seatPriceZones(cat) {
+  const forgiveness = moraleForgiveness(teamA.fanMorale);
+  return {
+    ideal: clamp(Math.floor(forgiveness * (cat.comfortCeiling + 0.05 / cat.comfortSlope)), cat.minPrice, cat.maxPrice),
+    // Premier euro STRICTEMENT sous 60% (à 60% pile, pas encore de baisse).
+    red: clamp(Math.floor(forgiveness * (cat.comfortCeiling + 0.4 / cat.comfortSlope) + 1e-9) + 1, cat.minPrice, cat.maxPrice),
+  };
+}
 
-  return html;
+// Aperçu d'une catégorie de place à un prix donné (sans rien modifier).
+function seatPreview(cat, price) {
+  const capacity = teamA.categoryCapacity(cat.key);
+  const rate = teamA.projectedAttendanceRateAtPrice(cat.key, price);
+  const attendance = Math.round(capacity * rate);
+  const comfort = ticketPriceComfortFactor(price / moraleForgiveness(teamA.fanMorale), cat.key);
+  return { capacity, rate, attendance, revenue: attendance * price, comfort };
 }
 
 function renderSalleSection() {
-  const visualHolder = document.getElementById("arenaVisualCard");
   const info = arenaInfo(teamA.arenaLevel);
-  const rate = teamA.projectedAttendanceRate();
-  // Retour utilisateur (2026-09) : "Petit gymnase, niveau 1, 5 000 places
-  // (...) enlève ça, et mets le là sous forme de brique" — l'état actuel de
-  // la salle (nom/capacité/fréquentation) n'est plus affiché en texte libre
-  // sous l'image, mais dans la carte #arenaCurrentPanel ci-dessous, au même
-  // format que les autres infrastructures (voir plus bas). Ancienne rangée
-  // de badges (Boutique/Centre de formation/Station TV/...) retirée aussi
-  // (retour utilisateur : "enleve les briques" — doublon de ces mêmes
-  // cartes). Le dessin seul reste ici.
-  //
-  // Retour utilisateur (2026-09) : "j'aimerais bien qu'il y ait une salle
-  // différente en fonction du nombre de places" — remplace l'ancienne
-  // <img src="arenaImageUrl(...)"> (8 images figées par palier) par
-  // ArenaGen.generateArena, qui dessine des gradins dont la taille suit la
-  // capacité réelle (voir arenaVisualCapacity pour la remise à l'échelle, et
-  // teamAvatarColors pour les couleurs réelles du club, déjà utilisée pour
-  // les avatars, voir plus haut). role/aria-label internes du SVG
-  // désactivés (aria-hidden) au profit de ceux posés sur le conteneur juste
-  // en dessous, qui utilisent la capacité RÉELLE (info.capacity) plutôt que
-  // celle, remise à l'échelle et donc potentiellement fausse pour
-  // l'accessibilité, que porte le SVG lui-même.
+  const stats = arenaAttendanceStats(info);
+  renderSalleHero(info, stats);
+  renderSalleTicketing();
+  renderAttendanceHistory();
+  renderSalleFacilities();
+}
+
+// --- Bandeau d'en-tête -------------------------------------------------
+function renderSalleHero(info, stats) {
+  const projectedRate = teamA.projectedAttendanceRate();
+  const history = teamA.attendanceHistory || [];
+
+  // Dessin de la salle (ArenaGen, voir arenaVisualCapacity/teamAvatarColors) :
+  // cadré plus large (aspect 2.3) pour servir de fond au bandeau, le SVG est
+  // déjà en preserveAspectRatio "slice" (remplit sans se déformer).
+  const visualHolder = document.getElementById("arenaVisualCard");
   const arenaSvg = ArenaGen.generateArena(arenaVisualCapacity(info.capacity), {
     teamColors: teamAvatarColors(teamA),
-    attendance: rate,
+    attendance: stats.avgRate != null ? stats.avgRate : projectedRate,
     name: teamA.name,
+    aspect: 2.3,
   }).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
   visualHolder.innerHTML = `<div class="arena-card">` +
     `<div class="arena-visual-wrap" role="img" aria-label="${escapeHtml(info.name)}, ${info.capacity.toLocaleString("fr-FR")} places">${arenaSvg}</div>` +
     `</div>`;
-  // Contrairement à l'ancienne <img> (chargement asynchrone, d'où un
-  // écouteur "load" avant de remesurer la colonne de droite), le SVG est
-  // inséré directement dans le DOM ci-dessus : sa taille est déjà connue au
-  // moment de l'appel synchrone à syncArenaPurchasesHeight plus bas, plus
-  // besoin d'écouteur de chargement.
 
-  // --- Salle : carte d'état actuel (nom/capacité/fréquentation), avec une
-  // flèche d'amélioration plutôt qu'un aperçu du palier suivant (retour
-  // utilisateur, 2026-09 : "je ne veux voir que l'état actuel [...] une
-  // petite flèche sur la brique pour upgrader l'installation"). Dans la
-  // colonne de droite (.arena-purchases), à côté des autres infrastructures
-  // achetables ci-dessous. ---
+  const pips = ARENA_LEVELS.map(a => `<span class="${a.level <= info.level ? "on" : ""}"></span>`).join("");
+  const nm = salleNextMatchInfo();
+  const nextLine = nm && nm.isHome ? ` · prochain match à domicile <b>vs ${escapeHtml(nm.name)}</b>` : "";
+  document.getElementById("salleHeroHead").innerHTML =
+    `<span class="sl-tier">Niveau ${info.level} / ${ARENA_LEVELS.length}<i>${pips}</i></span>` +
+    `<h3 class="sl-hero-title">${escapeHtml(info.name)}</h3>` +
+    `<div class="sl-hero-sub">${escapeHtml(teamA.name)} · ${info.capacity.toLocaleString("fr-FR")} places${nextLine}</div>`;
+
+  // Agrandissement : même flèche/confirmation qu'avant (buildUpgradeArrow),
+  // mise en avant comme bouton principal du bandeau. N'affiche que l'état
+  // ACTUEL et le NOM/COÛT du palier suivant, jamais sa capacité (voir
+  // salle_upgrade_confirm_test.js : la capacité future n'apparaît que dans
+  // la confirmation). La salle démarre au niveau 1, donc toujours
+  // "Agrandir", jamais "Construire".
   const holder = document.getElementById("arenaCurrentPanel");
   holder.innerHTML = "";
-
   const next = teamA.nextArenaLevel();
-  const grid = document.createElement("div");
-  grid.className = "staff-hire-grid staff-hire-grid--single";
   const arenaCard = document.createElement("div");
-  arenaCard.className = "staff-hire-card facility-card";
+  arenaCard.className = "staff-hire-card facility-card sl-hero-upgrade";
   arenaCard.dataset.arenaCard = "1";
-  const arenaCardBody = document.createElement("div");
-  arenaCardBody.className = "facility-card-body";
-  arenaCardBody.innerHTML = `<div class="price">${escapeHtml(info.name)}</div>` +
-    `<div class="bonus">${info.capacity.toLocaleString("fr-FR")} places</div>` +
-    `<div class="staff-current-meta" style="margin-top:6px;">${arenaAttendanceSummaryHtml(info, rate)}</div>`;
-  arenaCard.appendChild(arenaCardBody);
-  const arenaActionLine = document.createElement("div");
-  arenaActionLine.className = "facility-card-action";
-  // La salle démarre toujours au niveau 1 (jamais 0), donc toujours
-  // "Agrandir", jamais "Construire" (contrairement aux autres infrastructures
-  // ci-dessous, qui partent bien de zéro).
+  const body = document.createElement("div");
+  body.className = "facility-card-body";
+  const action = document.createElement("div");
+  action.className = "facility-card-action";
   if (next) {
-    arenaActionLine.appendChild(buildUpgradeArrow({
+    body.innerHTML = `<span class="sl-hero-upgrade-label">Agrandir la salle</span>` +
+      `<span class="sl-hero-upgrade-next">${escapeHtml(next.name)} · <b>${formatMoney(next.upgradeCost)}</b></span>`;
+    action.appendChild(buildUpgradeArrow({
       title: `Agrandir la salle : ${next.name}`,
       icon: "",
       beforeLabel: `${info.name} (niveau ${info.level})`,
@@ -28522,310 +28733,491 @@ function renderSalleSection() {
         }
       },
     }));
+    // Toute la pastille est cliquable (pas seulement la petite flèche).
+    arenaCard.addEventListener("click", () => {
+      const arrow = arenaCard.querySelector(".facility-upgrade-arrow");
+      if (arrow) arrow.click();
+    });
   } else {
-    arenaActionLine.innerHTML = `<span class="facility-max-badge">Max</span>`;
+    arenaCard.classList.add("sl-hero-upgrade--max");
+    body.innerHTML = `<span class="sl-hero-upgrade-label">Salle au niveau maximum</span>`;
+    action.innerHTML = `<span class="facility-max-badge">Max</span>`;
   }
-  arenaCard.appendChild(arenaActionLine);
-  grid.appendChild(arenaCard);
-  holder.appendChild(grid);
+  arenaCard.appendChild(body);
+  arenaCard.appendChild(action);
+  holder.appendChild(arenaCard);
 
-  // --- Autres infrastructures (retour utilisateur, 2026-09 : "à côté du
-  // bouton salle à acheter, mettre les autres améliorations [...] centre de
-  // formation [...] station tv [...] salle de soin, SPA, salle de
-  // musculation") : un raccourci vers le Centre de formation (acheté depuis
-  // l'onglet Académie de jeunes, jamais dupliqué ici) + une carte d'état
-  // actuel par infrastructure de CLUB_FACILITIES (station TV, salle de
-  // musculation, espace bien-être), chacune avec sa flèche d'amélioration. ---
-  const otherHolder = document.getElementById("otherFacilitiesPanel");
-  if (otherHolder) {
-    otherHolder.innerHTML = "";
-    const otherGrid = document.createElement("div");
-    otherGrid.className = "facilities-grid";
-
-    // Centre de formation (retour utilisateur, 2026-09 : "mets aussi un
-    // systeme de fleche ici [...] comme ça à l'écran on a que le niveau du
-    // centre actuelle [...] centre le texte sur la brique comme il n'y en a
-    // pas bcp") : même carte état-actuel + flèche d'amélioration que les
-    // autres infrastructures ci-dessus/ci-dessous, plutôt qu'un simple
-    // raccourci vers l'onglet Académie (celui-ci reste inchangé, voir
-    // renderTrainingCenterPanel plus bas, ce n'est pas dupliqué ici). Texte
-    // désormais aligné à gauche comme les 4 autres cartes de cette grille
-    // (retour utilisateur, 2026-09 : "le texte centre de formation [...] est
-    // centré alors que les autres sont à gauche. harmonise (jaime mieux à
-    // gauche)") : .facility-card-center retiré, c'était la seule des 5
-    // cartes à l'utiliser.
-    const tcInfo = trainingCenterInfo(teamA.trainingCenterLevel);
-    const nextTc = teamA.nextTrainingCenterLevel();
-    const tcCard = document.createElement("div");
-    tcCard.className = "staff-hire-card facility-card";
-    tcCard.dataset.trainingCenterCard = "1";
-    const tcCardBody = document.createElement("div");
-    tcCardBody.className = "facility-card-body";
-    // Mêmes couleurs que les 4 autres cartes ci-dessous (retour utilisateur,
-    // 2026-09 : "mets centre de formation en gris comme les autres, et
-    // terrain arrière en blanc") : catégorie fixe en gris/petit (.facility-
-    // card-category) au-dessus du nom du palier actuel en blanc/gras (.price)
-    // — avant cet ajustement, "Centre de formation" ressortait en blanc/gras
-    // (.price) et le nom du palier en vert (.bonus), l'inverse des autres.
-    tcCardBody.innerHTML = `<div class="facility-card-icon"></div><div class="facility-card-category">Centre de formation</div>` +
-      `<div class="price">${escapeHtml(tcInfo.name)}</div>`;
-    tcCard.appendChild(tcCardBody);
-    const tcActionLine = document.createElement("div");
-    tcActionLine.className = "facility-card-action";
-    if (nextTc) {
-      tcActionLine.appendChild(buildUpgradeArrow({
-        title: `Améliorer le centre de formation : ${nextTc.name}`,
-        icon: "",
-        beforeLabel: tcInfo.name,
-        afterLabel: nextTc.name,
-        effectLabel: "Progression des jeunes",
-        effectBefore: `x${tcInfo.growthMultiplier}`,
-        effectAfter: `x${nextTc.growthMultiplier}`,
-        cost: nextTc.upgradeCost,
-        onConfirm: () => {
-          if (teamA.upgradeTrainingCenter()) {
-            saveMyTeam();
-            syncTrainingCenterUpgradeToServer();
-            renderSalleSection();
-          }
-        },
-      }));
-    } else {
-      tcActionLine.innerHTML = `<span class="facility-max-badge">Max</span>`;
-    }
-    tcCard.appendChild(tcActionLine);
-    otherGrid.appendChild(tcCard);
-
-    // Boutique des supporters (retour utilisateur, 2026-09 : "la boutique de
-    // supporters doit être avec les autres infrastructures en haut") : même
-    // format de carte que les infrastructures de CLUB_FACILITIES ci-dessous
-    // (état actuel + flèche d'amélioration), plutôt qu'une section séparée
-    // sous les catégories de places. `data-fan-shop-card` : repère stable
-    // pour les tests (voir tabs_test.js), plus fiable qu'un ancien id de
-    // conteneur.
-    const shopInfo = fanShopInfo(teamA.fanShopLevel);
-    const nextShop = teamA.nextFanShopLevel();
-    const shopCard = document.createElement("div");
-    shopCard.className = "staff-hire-card facility-card";
-    shopCard.dataset.fanShopCard = "1";
-    const shopCardBody = document.createElement("div");
-    shopCardBody.className = "facility-card-body";
-    shopCardBody.innerHTML = `<div class="facility-card-icon"></div><div class="facility-card-category">Boutique des supporters</div><div class="price">${escapeHtml(shopInfo.name)}</div>` +
-      (shopInfo.weeklyRevenue > 0 ? `<div class="bonus">+${formatMoney(shopInfo.weeklyRevenue)}/semaine</div>` : "");
-    shopCard.appendChild(shopCardBody);
-    const shopActionLine = document.createElement("div");
-    shopActionLine.className = "facility-card-action";
-    if (nextShop) {
-      // Niveau 0 = boutique jamais construite (retour utilisateur, 2026-09 :
-      // le libellé d'action doit dire "Construire" plutôt qu'"Améliorer" tant
-      // que rien n'existe encore).
-      const shopActionLabel = teamA.fanShopLevel === 0 ? "Construire" : "Améliorer";
-      shopActionLine.appendChild(buildUpgradeArrow({
-        title: `${shopActionLabel} : ${nextShop.name}`,
-        icon: "",
-        beforeLabel: shopInfo.name,
-        afterLabel: nextShop.name,
-        effectLabel: "Revenu hebdomadaire",
-        effectBefore: `${formatMoney(shopInfo.weeklyRevenue)}/semaine`,
-        effectAfter: `${formatMoney(nextShop.weeklyRevenue)}/semaine`,
-        cost: nextShop.cost,
-        onConfirm: () => {
-          if (teamA.upgradeFanShop()) {
-            saveMyTeam();
-            syncFanShopUpgradeToServer();
-            renderSalleSection();
-          }
-        },
-      }));
-    } else {
-      shopActionLine.innerHTML = `<span class="facility-max-badge">Max</span>`;
-    }
-    shopCard.appendChild(shopActionLine);
-    otherGrid.appendChild(shopCard);
-
-    Object.keys(CLUB_FACILITIES).forEach(key => {
-      const cfg = CLUB_FACILITIES[key];
-      const curLevel = (teamA.facilityLevels && teamA.facilityLevels[key]) || 0;
-      const curInfo = facilityInfo(key, curLevel);
-      const next = teamA.nextFacilityLevel(key);
-      const card = document.createElement("div");
-      card.className = "staff-hire-card facility-card";
-      card.dataset.facilityCard = key;
-      let curEffectLine = "";
-      if (curLevel > 0) {
-        if (key === "tvStation") {
-          curEffectLine = `+${formatMoney(curInfo.weeklyRevenue)}/semaine`;
-        } else if (key === "gym") {
-          curEffectLine = `Risque de blessure : -${Math.round((1 - curInfo.injuryRiskMult) * 100)}%`;
-        } else {
-          curEffectLine = `Fatigue en match : -${Math.round((1 - curInfo.fatigueMult) * 100)}%`;
-        }
-      }
-      // Nom de catégorie affiché au-dessus du nom du palier actuel (voir
-      // .facility-card-category ci-dessus) : raccourci pour l'espace
-      // bien-être (son cfg.name complet, "Espace bien-être (spa et soins)",
-      // est le libellé technique utilisé ailleurs, mais trop long pour tenir
-      // sur cette petite carte).
-      const categoryLabel = key === "wellness" ? "Espace bien-être" : cfg.name;
-      const cardBody = document.createElement("div");
-      cardBody.className = "facility-card-body";
-      cardBody.innerHTML = `<div class="facility-card-icon">${cfg.icon}</div><div class="facility-card-category">${escapeHtml(categoryLabel)}</div><div class="price">${escapeHtml(curInfo.name)}</div>` +
-        (curEffectLine ? `<div class="bonus">${curEffectLine}</div>` : "");
-      card.appendChild(cardBody);
-      const actionLine = document.createElement("div");
-      actionLine.className = "facility-card-action";
-      if (next) {
-        let effectLabel, effectBefore, effectAfter;
-        if (key === "tvStation") {
-          effectLabel = "Revenu hebdomadaire";
-          effectBefore = `${formatMoney(curInfo.weeklyRevenue)}/semaine`;
-          effectAfter = `${formatMoney(next.weeklyRevenue)}/semaine`;
-        } else if (key === "gym") {
-          effectLabel = "Risque de blessure";
-          effectBefore = `${Math.round(curInfo.injuryRiskMult * 100)}%`;
-          effectAfter = `${Math.round(next.injuryRiskMult * 100)}%`;
-        } else {
-          effectLabel = "Fatigue en match";
-          effectBefore = `${Math.round(curInfo.fatigueMult * 100)}%`;
-          effectAfter = `${Math.round(next.fatigueMult * 100)}%`;
-        }
-        // Niveau 0 = infrastructure jamais construite (retour utilisateur,
-        // 2026-09 : libellé "Construire" plutôt qu'"Améliorer" tant que rien
-        // n'existe encore).
-        const actionLabel = curLevel === 0 ? "Construire" : "Améliorer";
-        actionLine.appendChild(buildUpgradeArrow({
-          title: `${actionLabel} : ${next.name}`,
-          icon: cfg.icon,
-          beforeLabel: curInfo.name,
-          afterLabel: next.name,
-          effectLabel,
-          effectBefore,
-          effectAfter,
-          cost: next.cost,
-          onConfirm: () => {
-            if (teamA.upgradeFacility(key)) {
-              saveMyTeam();
-              syncFacilityUpgradeToServer(key);
-              renderSalleSection();
-            }
-          },
-        }));
-      } else {
-        actionLine.innerHTML = `<span class="facility-max-badge">Max</span>`;
-      }
-      card.appendChild(actionLine);
-      otherGrid.appendChild(card);
-    });
-
-    otherHolder.appendChild(otherGrid);
+  // Chiffres clés.
+  const kpi = (label, value, extra = "", title = "") =>
+    `<div class="sl-kpi"${title ? ` title="${escapeHtml(title)}"` : ""}><small>${label}</small><b class="sl-num">${value}</b>${extra}</div>`;
+  const deltaHtml = (cur, prev) => {
+    if (!prev) return "";
+    const d = (cur - prev) / prev * 100;
+    return `<em class="${d >= 0 ? "sl-up" : "sl-down"}">${d >= 0 ? "▲" : "▼"} ${Math.abs(Math.round(d))}%</em>`;
+  };
+  let html = kpi("Capacité", info.capacity.toLocaleString("fr-FR"));
+  if (stats.avgAttendance != null) {
+    const catDots = stats.categories
+      .filter(c => c.rate != null)
+      .map(c => `<span title="${escapeHtml(c.name)} : ${c.avg.toLocaleString("fr-FR")} en moyenne"><i style="background:${SEAT_CATEGORY_COLORS[c.key]}"></i>${Math.round(c.rate * 100)}%</span>`)
+      .join("");
+    html += kpi("Affluence moyenne", stats.avgAttendance.toLocaleString("fr-FR"),
+      catDots ? `<div class="sl-kpi-cats">${catDots}</div>` : "",
+      `Moyenne des ${stats.matches} dernier${stats.matches > 1 ? "s" : ""} match${stats.matches > 1 ? "s" : ""} à domicile`);
+  } else {
+    html += kpi("Affluence prévue", `~${Math.round(info.capacity * projectedRate).toLocaleString("fr-FR")}`,
+      `<div class="sl-kpi-sub">aucun match à domicile joué</div>`);
   }
+  if (history.length) {
+    html += kpi("Dernière recette", formatMoneyCompact(history[0].revenue),
+      deltaHtml(history[0].revenue, history[1] && history[1].revenue),
+      `vs ${history[0].opponentName} : ${formatMoney(history[0].revenue)}`);
+  }
+  const shopWeekly = fanShopInfo(teamA.fanShopLevel).weeklyRevenue || 0;
+  const tvLevel = (teamA.facilityLevels && teamA.facilityLevels.tvStation) || 0;
+  const tvWeekly = tvLevel > 0 ? facilityInfo("tvStation", tvLevel).weeklyRevenue : 0;
+  html += kpi("Revenus fixes", `+${formatMoneyCompact(shopWeekly + tvWeekly)}`, `<em class="sl-muted">/ sem.</em>`,
+    "Boutique des supporters + station TV, versés chaque semaine");
+  let note = "";
+  if (stats.hasOldCapacityMatch) {
+    note = `<div class="sl-hero-note">Moyennes incluant des matchs joués avant un changement de capacité (désormais ${info.capacity.toLocaleString("fr-FR")} places).</div>`;
+  }
+  document.getElementById("salleHeroKpis").innerHTML = `<div class="sl-kpis">${html}</div>${note}`;
 
-  // Retour utilisateur (2026-09) : "les briques de droite n'aillent pas plus
-  // bas que la brique de gauche" (voir aussi le commentaire CSS sur
-  // #arenaPurchasesCol/.arena-purchases .facilities-grid ci-dessus, qui
-  // réduit déjà le dépassement en resserrant la grille). La garantie vient
-  // d'ici : une fois les DEUX colonnes construites, on mesure la hauteur
-  // RÉELLEMENT affichée de la carte de gauche et on la reporte comme
-  // max-height sur la colonne de droite. Appelé une première fois
-  // immédiatement (l'image n'a pas forcément fini de charger, la mesure peut
-  // donc être trop petite ou nulle) ET une seconde fois au chargement de
-  // l'image (voir plus haut) pour corriger vers la vraie taille.
-  syncArenaPurchasesHeight();
-
-  // --- Une carte de prix par catégorie de place (gradins / tribune / loges),
-  // chacune avec sa propre capacité, son propre curseur de prix et son
-  // propre confort tarifaire (voir SEAT_CATEGORIES). ---
-  const catHolder = document.getElementById("seatCategoriesHolder");
-  catHolder.innerHTML = "";
-  SEAT_CATEGORIES.forEach(cat => {
-    const card = document.createElement("div");
-    card.className = "seat-category-card";
-    const capacity = teamA.categoryCapacity(cat.key);
-    const catRate = teamA.projectedAttendanceRateFor(cat.key);
-    const price = teamA.ticketPrices[cat.key];
-    const comfort = Math.round(ticketPriceComfortFactor(price, cat.key) * 100);
-
-    const title = document.createElement("h4");
-    title.textContent = `${cat.name}, ${capacity.toLocaleString("fr-FR")} places`;
-    card.appendChild(title);
-
-    const sub = document.createElement("div");
-    sub.className = "sub";
-    sub.id = `seatNote_${cat.key}`;
-    sub.innerHTML = `<b>${price} €</b>, ~${Math.round(capacity * catRate).toLocaleString("fr-FR")} spectateurs attendus (~${Math.round(catRate * 100)}%)${comfort < 100 ? `, confort ${comfort}%` : ""}.`;
-    card.appendChild(sub);
-
-    const range = document.createElement("input");
-    range.type = "range";
-    range.min = cat.minPrice;
-    range.max = cat.maxPrice;
-    range.step = 1;
-    range.value = price;
-    range.id = `ticketPriceRange_${cat.key}`;
-    range.style.marginTop = "8px";
-    range.addEventListener("input", () => {
-      const p2 = parseInt(range.value, 10);
-      const c2 = Math.round(ticketPriceComfortFactor(p2, cat.key) * 100);
-      sub.innerHTML = `<b>${p2} €</b>${c2 < 100 ? `, confort ${c2}%` : ""}.`;
-    });
-    range.addEventListener("change", () => {
-      teamA.setTicketPrice(cat.key, parseInt(range.value, 10));
-      saveMyTeam();
-      syncTicketPriceToServer(cat.key, teamA.ticketPrices[cat.key]);
-      renderSalleSection();
-    });
-    card.appendChild(range);
-    catHolder.appendChild(card);
-  });
-
-  // La Boutique des supporters est désormais une carte parmi les "Autres
-  // infrastructures" ci-dessus (voir shopCard/otherGrid), plus de section
-  // séparée ici.
-
-  renderAttendanceHistory();
+  // Anneau de remplissage (réel si au moins un match joué, sinon prévu).
+  const ringRate = stats.avgRate != null ? stats.avgRate : projectedRate;
+  const circ = 2 * Math.PI * 46;
+  document.getElementById("salleHeroRing").innerHTML =
+    `<svg viewBox="0 0 108 108" aria-hidden="true"><circle cx="54" cy="54" r="46" class="sl-ring-track"/>` +
+    `<circle cx="54" cy="54" r="46" class="sl-ring-value" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${(circ * (1 - clamp(ringRate, 0, 1))).toFixed(1)}" transform="rotate(-90 54 54)"/></svg>` +
+    `<div><b class="sl-num">${Math.round(ringRate * 100)}%</b><small>${stats.avgRate != null ? "remplissage" : "prévu"}</small></div>`;
 }
 
+// --- Billetterie -------------------------------------------------------
+function renderSalleTicketing() {
+  const holder = document.getElementById("seatCategoriesHolder");
+  if (!holder) return;
+  const nm = salleNextMatchInfo();
+  const title = nm && nm.isHome ? `Prochain match · vs ${escapeHtml(nm.name)}` : "Prix des billets";
+  const pill = nm && !nm.isHome
+    ? `<span class="sl-pill">Prochain match à l'extérieur</span>`
+    : `<span class="sl-pill">Aperçu en direct</span>`;
+  const cap = SEAT_CATEGORIES.reduce((s, cat) => s + teamA.categoryCapacity(cat.key), 0);
+  holder.innerHTML =
+    `<div class="sl-card-head"><div><div class="sl-eyebrow">Billetterie</div><h3 class="sl-card-title">${title}</h3></div>${pill}</div>` +
+    `<div class="sl-seatmap">${SEAT_CATEGORIES.map(cat =>
+      `<div class="sl-seatmap-seg" style="flex:${cat.shareOfCapacity}" title="${escapeHtml(cat.name)}"><i data-seatmap-fill="${cat.key}" style="background:${SEAT_CATEGORY_COLORS[cat.key]}"></i></div>`).join("")}</div>` +
+    `<div class="sl-seatmap-legend"><span id="slSeatMapLabel"></span><span>${cap.toLocaleString("fr-FR")} places</span></div>` +
+    `<div class="sl-seat-rows" id="slSeatRows"></div>` +
+    `<div class="sl-total"><div><small>Recette prévue</small><div class="sl-total-value sl-num" id="slTotalRevenue"></div></div>` +
+    `<div class="sl-total-right"><small>vs dernier match</small><div class="sl-num" id="slTotalDelta"></div></div></div>` +
+    `<div class="sl-tip" id="slTip"></div>`;
+  const rows = holder.querySelector("#slSeatRows");
+  SEAT_CATEGORIES.forEach(cat => rows.appendChild(buildSeatCategoryRow(cat)));
+  updateSalleTicketingPreview();
+}
+
+function buildSeatCategoryRow(cat) {
+  const color = SEAT_CATEGORY_COLORS[cat.key];
+  const zones = seatPriceZones(cat);
+  const pct = p => ((p - cat.minPrice) / (cat.maxPrice - cat.minPrice)) * 100;
+  const row = document.createElement("div");
+  row.className = "seat-category-card sl-seat-row";
+  row.dataset.seatKey = cat.key;
+  row.innerHTML =
+    `<div class="sl-seat-name"><span class="sl-icon-chip" style="color:${color}">${salleIcon(SEAT_CATEGORY_ICONS[cat.key])}</span>` +
+    `<div><h4>${escapeHtml(cat.name)}</h4><small class="sl-num">${teamA.categoryCapacity(cat.key).toLocaleString("fr-FR")} places</small></div></div>` +
+    `<div class="sl-seat-ctrl">` +
+      `<div class="sl-stepper"><button type="button" data-step="-1" aria-label="Baisser le prix : ${escapeHtml(cat.name)}">−</button>` +
+      `<span class="sl-num" id="seatPrice_${cat.key}"></span>` +
+      `<button type="button" data-step="1" aria-label="Augmenter le prix : ${escapeHtml(cat.name)}">+</button></div>` +
+      `<div class="sl-track">` +
+        `<div class="sl-track-bar"><div class="sl-track-red" style="left:${pct(zones.red)}%" title="Prix jugés trop élevés"></div>` +
+        `<div class="sl-track-fill" data-track-fill style="background:${color}"></div></div>` +
+        `<div class="sl-track-ideal" style="left:${pct(zones.ideal)}%"></div>` +
+        `<div class="sl-track-ideal-label" style="left:${pct(zones.ideal)}%">idéal ${zones.ideal} €</div>` +
+        `<input type="range" id="ticketPriceRange_${cat.key}" min="${cat.minPrice}" max="${cat.maxPrice}" step="1" value="${teamA.ticketPrices[cat.key]}" aria-label="Prix : ${escapeHtml(cat.name)}">` +
+        `<div class="sl-knob" data-knob></div>` +
+      `</div>` +
+    `</div>` +
+    `<div class="sl-seat-result"><b class="sl-num" data-seat-revenue></b>` +
+      `<div class="sub" id="seatNote_${cat.key}"></div>` +
+      `<div class="sl-gauge"><i data-seat-gauge style="background:${color}"></i></div></div>`;
+
+  const range = row.querySelector("input[type=range]");
+  // Glisser = aperçu en direct (rien n'est encore enregistré) ; relâcher
+  // (évènement "change") = prix validé, sauvegardé et envoyé au serveur,
+  // exactement comme avant la refonte (voir tabs_test.js/humeur_test.js).
+  range.addEventListener("input", () => updateSalleTicketingPreview());
+  range.addEventListener("change", () => commitSeatPrice(cat, parseInt(range.value, 10)));
+  row.querySelectorAll("[data-step]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const p = clamp(parseInt(range.value, 10) + parseInt(btn.dataset.step, 10), cat.minPrice, cat.maxPrice);
+      range.value = p;
+      commitSeatPrice(cat, p);
+    });
+  });
+  return row;
+}
+
+function commitSeatPrice(cat, price) {
+  teamA.setTicketPrice(cat.key, price);
+  saveMyTeam();
+  syncTicketPriceToServer(cat.key, teamA.ticketPrices[cat.key]);
+  const range = document.getElementById(`ticketPriceRange_${cat.key}`);
+  if (range) range.value = teamA.ticketPrices[cat.key];
+  updateSalleTicketingPreview();
+  renderAttendanceHistory(); // la barre "prévision" du graphique suit le nouveau prix
+}
+
+// Recalcule toute la billetterie à partir des curseurs AFFICHÉS (qui
+// peuvent précéder le prix enregistré pendant un glisser).
+function updateSalleTicketingPreview() {
+  let total = 0, attendance = 0, capacity = 0, idealTotal = 0, comfortSum = 0;
+  const pricey = [], tooPricey = [];
+  SEAT_CATEGORIES.forEach(cat => {
+    const row = document.querySelector(`.sl-seat-row[data-seat-key="${cat.key}"]`);
+    if (!row) return;
+    const range = row.querySelector("input[type=range]");
+    const price = parseInt(range.value, 10);
+    const pv = seatPreview(cat, price);
+    const zones = seatPriceZones(cat);
+    total += pv.revenue; attendance += pv.attendance; capacity += pv.capacity; comfortSum += pv.comfort;
+    idealTotal += seatPreview(cat, zones.ideal).revenue;
+    if (price >= zones.red) tooPricey.push(cat.name); else if (price > zones.ideal) pricey.push(cat.name);
+    const pct = ((price - cat.minPrice) / (cat.maxPrice - cat.minPrice)) * 100;
+    row.querySelector(`#seatPrice_${cat.key}`).textContent = `${price} €`;
+    row.querySelector("[data-track-fill]").style.width = `${pct}%`;
+    row.querySelector("[data-knob]").style.left = `${pct}%`;
+    row.querySelector("[data-seat-revenue]").textContent = formatMoney(pv.revenue);
+    const comfort = Math.round(pv.comfort * 100);
+    row.querySelector(`#seatNote_${cat.key}`).innerHTML =
+      `~${pv.attendance.toLocaleString("fr-FR")} spect. · ${Math.round(pv.rate * 100)}%` +
+      (comfort < 100 ? ` · <span class="${pv.comfort < 0.6 ? "sl-down" : "sl-warn"}">confort ${comfort}%</span>` : "");
+    row.querySelector("[data-seat-gauge]").style.width = `${Math.round(pv.rate * 100)}%`;
+    const fill = document.querySelector(`[data-seatmap-fill="${cat.key}"]`);
+    if (fill) fill.style.width = `${Math.round(pv.rate * 100)}%`;
+  });
+  const label = document.getElementById("slSeatMapLabel");
+  if (!label) return;
+  label.textContent = `~${attendance.toLocaleString("fr-FR")} spectateurs attendus (${capacity ? Math.round(attendance / capacity * 100) : 0}%)`;
+  document.getElementById("slTotalRevenue").textContent = formatMoney(total);
+  const last = (teamA.attendanceHistory || [])[0];
+  const deltaEl = document.getElementById("slTotalDelta");
+  if (last && last.revenue) {
+    const d = (total - last.revenue) / last.revenue * 100;
+    deltaEl.className = `sl-num ${d >= 0 ? "sl-up" : "sl-down"}`;
+    deltaEl.textContent = `${d >= 0 ? "▲ +" : "▼ "}${d.toFixed(1).replace(".", ",")} %`;
+  } else {
+    deltaEl.className = "sl-num sl-muted";
+    deltaEl.textContent = "premier match";
+  }
+
+  // Conseil : même seuils que la dérive d'humeur hebdomadaire (confort
+  // MOYEN des 3 catégories, voir Team.trainWeek).
+  const avgComfort = comfortSum / SEAT_CATEGORIES.length;
+  const gain = Math.round(idealTotal - total);
+  const tip = document.getElementById("slTip");
+  const list = names => names.join(", ").toLowerCase();
+  if (avgComfort < 0.6) {
+    tip.className = "sl-tip sl-tip--bad";
+    tip.innerHTML = `Prix jugés trop élevés${tooPricey.length ? ` (${escapeHtml(list(tooPricey))})` : ""} : l'humeur des supporters baissera chaque semaine.`;
+  } else if (avgComfort < 0.95) {
+    tip.className = "sl-tip sl-tip--warn";
+    tip.innerHTML = `Au-dessus du prix idéal${pricey.length + tooPricey.length ? ` (${escapeHtml(list(pricey.concat(tooPricey)))})` : ""} : les supporters ne râlent pas encore, mais vous perdez le petit bonus d'humeur des prix jugés raisonnables.`;
+  } else if (gain > Math.max(500, total * 0.01)) {
+    tip.className = "sl-tip sl-tip--info";
+    tip.innerHTML = `Aux prix idéaux (repères verts), <b>+${formatMoney(gain)}</b> sur ce match, sans froisser les supporters.`;
+  } else {
+    tip.className = "sl-tip sl-tip--good";
+    tip.innerHTML = `Prix au top : recette quasi maximale et supporters satisfaits (humeur en légère hausse chaque semaine).`;
+  }
+}
+
+// --- Affluence : graphique + liste -------------------------------------
 // Retour utilisateur (2026-09) : "sur l'onglet salle, il n'y a tjrs pas
 // l'affluence des matchs précédents (jusqu'à 10 matchs)" : liste les
 // entrées de teamA.attendanceHistory (la plus récente d'abord, déjà l'ordre
-// de stockage, voir Team.simulateHomeAttendance dans engine.js), même style
-// que la liste de transactions de l'onglet Économie (.training-report-list/
-// .gain-line, voir renderEconomieSection) pour rester cohérent avec le
-// reste de l'app plutôt que d'introduire un nouveau composant.
+// de stockage, voir Team.simulateHomeAttendance dans engine.js), avec le
+// détail catégorie par catégorie ("je mettrai le détail catégorie de place
+// par catégorie place"), absent pour une entrée enregistrée avant ce détail
+// (simple ligne totale dans ce cas, pas de faux détail reconstitué).
+// Refonte 2026-09-25 : précédée d'un graphique en barres empilées (du plus
+// ancien au plus récent, puis la prévision du prochain match à domicile aux
+// prix actuels), et seules les 3 lignes les plus récentes sont visibles par
+// défaut (les autres restent dans le DOM, dépliables).
+let salleHistoryExpanded = false;
 function renderAttendanceHistory() {
   const holder = document.getElementById("attendanceHistoryHolder");
   if (!holder) return;
   const history = teamA.attendanceHistory || [];
-  holder.innerHTML = `<h3 class="field-label" style="margin-top:18px;">Affluence des derniers matchs à domicile</h3>`;
+  let html = `<div class="sl-card-head"><div><div class="sl-eyebrow">Affluence</div><h3 class="sl-card-title">Matchs à domicile</h3></div></div>`;
+  html += `<div class="sl-legend">` + SEAT_CATEGORIES.map(cat =>
+    `<span><i style="background:${SEAT_CATEGORY_COLORS[cat.key]}"></i>${escapeHtml(cat.name)}</span>`).join("") +
+    `<span><i class="sl-legend-proj"></i>Prévision</span></div>`;
+  html += salleAttendanceChartSvg(history);
   if (!history.length) {
-    holder.innerHTML += "<p class='training-empty'>Aucun match à domicile joué pour l'instant.</p>";
+    holder.innerHTML = html + "<p class='training-empty'>Aucun match à domicile joué pour l'instant.</p>";
     return;
   }
-  let html = "<div class='training-report-list'>";
-  history.forEach(entry => {
+  html += `<div class="training-report-list sl-history${salleHistoryExpanded ? " sl-history--open" : ""}">`;
+  history.forEach((entry, i) => {
     const capacity = entry.capacity || 0;
     const rate = capacity > 0 ? Math.round((entry.attendance / capacity) * 100) : null;
-    html += `<div class="gain-line attendance-line">Semaine ${entry.week}, vs ${escapeHtml(entry.opponentName)} : ` +
-      `${entry.attendance.toLocaleString("fr-FR")} spectateurs${rate != null ? ` (${rate}%)` : ""}, ` +
-      `recette de ${formatMoney(entry.revenue)}.`;
-    // Détail catégorie de place par catégorie de place (retour utilisateur,
-    // 2026-09, sur l'historique une fois affiché : "sur l'affluence, c'est
-    // bien, mais je mettrai le détail catégorie de place par catégorie
-    // place") : absent pour une entrée enregistrée avant ce détail (voir
-    // teamFromSave/le miroir engine.js), simple ligne totale ci-dessus dans
-    // ce cas, plutôt qu'une erreur ou un faux détail reconstitué.
+    html += `<div class="gain-line attendance-line${i >= 3 ? " sl-history-extra" : ""}">` +
+      `<div class="sl-history-main"><b>Semaine ${entry.week}, vs ${escapeHtml(entry.opponentName)}</b>`;
     if (Array.isArray(entry.breakdown) && entry.breakdown.length) {
       html += `<div class="attendance-breakdown">` +
         entry.breakdown.map(b => {
           const catRate = b.capacity > 0 ? Math.round((b.attendance / b.capacity) * 100) : null;
-          return `${escapeHtml(b.name)} : ${b.attendance.toLocaleString("fr-FR")}${catRate != null ? ` (${catRate}%)` : ""}`;
-        }).join(" · ") +
+          // Nom complet gardé dans le texte (lecteurs d'écran, tests) mais
+          // masqué à l'écran : la pastille de couleur, identique à la
+          // légende et au graphique juste au-dessus, suffit visuellement
+          // et évite trois lignes de détail par match.
+          const full = `${b.name} : ${b.attendance.toLocaleString("fr-FR")}${catRate != null ? ` (${catRate}%)` : ""}`;
+          return `<span title="${escapeHtml(full)}"><i style="background:${SEAT_CATEGORY_COLORS[b.key] || "var(--ink-faint)"}"></i><span class="sl-sr">${escapeHtml(b.name)} : </span>${b.attendance.toLocaleString("fr-FR")}${catRate != null ? ` (${catRate}%)` : ""}</span>`;
+        }).join(`<span class="sl-sep"> · </span>`) +
         `</div>`;
     }
-    html += `</div>`;
+    html += `</div><div class="sl-history-side"><b class="sl-num">${formatMoney(entry.revenue)}</b>` +
+      `<small class="sl-num">${entry.attendance.toLocaleString("fr-FR")} spectateurs${rate != null ? ` (${rate}%)` : ""}</small></div></div>`;
   });
   html += "</div>";
-  holder.innerHTML += html;
+  if (history.length > 3) {
+    html += `<button type="button" class="sl-history-toggle">${salleHistoryExpanded ? "Réduire" : `Voir les ${history.length} matchs`}</button>`;
+  }
+  holder.innerHTML = html;
+  const toggle = holder.querySelector(".sl-history-toggle");
+  if (toggle) toggle.addEventListener("click", () => { salleHistoryExpanded = !salleHistoryExpanded; renderAttendanceHistory(); });
+}
+
+function salleAttendanceChartSvg(history) {
+  const bars = history.slice().reverse().map(e => ({
+    label: `S${e.week}`,
+    total: e.attendance,
+    revenue: e.revenue,
+    parts: SEAT_CATEGORIES.map(cat => {
+      const b = (e.breakdown || []).find(x => x.key === cat.key);
+      return b ? b.attendance : 0;
+    }),
+    // Ancienne entrée sans détail : une seule barre neutre.
+    legacy: !(Array.isArray(e.breakdown) && e.breakdown.length),
+    capacity: e.capacity || 0,
+  }));
+  // Prévision : prix ACTUELLEMENT enregistrés (voir commitSeatPrice, qui
+  // redessine ce graphique à chaque nouveau prix validé).
+  const proj = SEAT_CATEGORIES.map(cat => seatPreview(cat, teamA.ticketPrices[cat.key]));
+  bars.push({
+    label: "Prochain", proj: true,
+    total: proj.reduce((s, p) => s + p.attendance, 0),
+    revenue: proj.reduce((s, p) => s + p.revenue, 0),
+    parts: proj.map(p => p.attendance),
+    capacity: teamA.arenaCapacity(),
+  });
+  const W = 420, H = 210, top = 26, bottom = 40, left = 8, right = 8;
+  const plotH = H - top - bottom;
+  const maxCap = Math.max(...bars.map(b => b.capacity), 1);
+  const slot = (W - left - right) / bars.length;
+  const bw = Math.min(46, slot * 0.62);
+  const y = v => top + plotH - (v / maxCap) * plotH;
+  const curCap = teamA.arenaCapacity();
+  let s = `<svg class="sl-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Affluence des matchs à domicile et prévision du prochain">`;
+  s += `<line x1="${left}" x2="${W - right}" y1="${y(curCap).toFixed(1)}" y2="${y(curCap).toFixed(1)}" class="sl-chart-cap"/>` +
+    `<text x="${W - right}" y="${(y(curCap) - 5).toFixed(1)}" text-anchor="end" class="sl-chart-caplabel">capacité ${curCap.toLocaleString("fr-FR")}</text>`;
+  const dense = bars.length > 7;
+  bars.forEach((b, i) => {
+    const x = left + i * slot + (slot - bw) / 2;
+    let acc = 0;
+    if (b.legacy) {
+      s += `<rect x="${x.toFixed(1)}" y="${y(b.total).toFixed(1)}" width="${bw.toFixed(1)}" height="${(plotH - (y(b.total) - top)).toFixed(1)}" rx="3" class="sl-bar-legacy"/>`;
+    } else {
+      b.parts.forEach((v, j) => {
+        if (v <= 0) return;
+        const y1 = y(acc + v), h = y(acc) - y1;
+        s += `<rect x="${x.toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0, h - 1.5).toFixed(1)}" rx="2.5" class="sl-bar sl-bar-${SEAT_CATEGORIES[j].key}${b.proj ? " sl-bar-proj" : ""}"/>`;
+        acc += v;
+      });
+    }
+    const cx = (x + bw / 2).toFixed(1);
+    if (!dense || b.proj) s += `<text x="${cx}" y="${(y(b.total) - 6).toFixed(1)}" text-anchor="middle" class="sl-chart-total">${b.total.toLocaleString("fr-FR")}</text>`;
+    s += `<text x="${cx}" y="${H - bottom + 15}" text-anchor="middle" class="sl-chart-label${b.proj ? " sl-chart-label-proj" : ""}">${b.label}</text>`;
+    s += `<text x="${cx}" y="${H - bottom + 30}" text-anchor="middle" class="sl-chart-rev${b.proj ? " sl-chart-rev-proj" : ""}">${formatMoneyCompact(b.revenue).replace(" €", "€")}</text>`;
+    s += `<title>${b.proj ? "Prévision" : b.label} : ${b.total.toLocaleString("fr-FR")} spectateurs, ${formatMoney(b.revenue)}</title>`;
+  });
+  return s + `</svg>`;
+}
+
+// --- Autres infrastructures --------------------------------------------
+// Même contenu qu'avant la refonte (centre de formation — acheté ici comme
+// depuis l'onglet Académie —, boutique des supporters, puis chaque entrée
+// de CLUB_FACILITIES), mêmes repères pour les tests et le tutoriel
+// (data-training-center-card, data-fan-shop-card, data-facility-card),
+// mêmes flèches/confirmations (buildUpgradeArrow) et libellés
+// "Construire"/"Améliorer" (niveau 0 = jamais construit). En plus : un
+// pictogramme, une jauge de niveau et, pour une infrastructure pas encore
+// construite, une phrase qui dit à quoi elle sert.
+function buildSalleFacilityCard(opts) {
+  const card = document.createElement("div");
+  card.className = `staff-hire-card facility-card sl-fac${opts.level === 0 ? " sl-fac--off" : ""}`;
+  card.dataset[opts.dataKey] = opts.dataValue;
+  const pips = Array.from({ length: opts.maxLevel }, (_, i) => `<span class="${i < opts.level ? "on" : ""}"></span>`).join("");
+  const body = document.createElement("div");
+  body.className = "facility-card-body";
+  body.innerHTML =
+    `<span class="sl-icon-chip sl-fac-icon" style="color:${opts.color}">${salleIcon(opts.icon, 22)}</span>` +
+    `<div class="facility-card-category">${escapeHtml(opts.category)}</div>` +
+    `<div class="price">${escapeHtml(opts.levelName)}</div>` +
+    `<div class="sl-pips" title="Niveau ${opts.level} / ${opts.maxLevel}">${pips}</div>` +
+    (opts.effect ? `<div class="bonus">${opts.effect}</div>` : `<div class="sl-fac-why">${opts.why}</div>`);
+  card.appendChild(body);
+  const action = document.createElement("div");
+  action.className = "facility-card-action";
+  if (opts.next) {
+    const label = opts.level === 0 ? "Construire" : "Améliorer";
+    action.innerHTML = `<span class="sl-fac-action-label">${label}<small class="sl-num">${formatMoney(opts.nextCost)}</small></span>`;
+    action.appendChild(buildUpgradeArrow(Object.assign({ title: `${opts.titlePrefix || label + " : "}${opts.next.name}` }, opts.confirm)));
+    action.addEventListener("click", () => {
+      const arrow = action.querySelector(".facility-upgrade-arrow");
+      if (arrow) arrow.click();
+    });
+  } else {
+    action.innerHTML = `<span class="sl-fac-action-label sl-muted">Niveau maximum</span><span class="facility-max-badge">Max</span>`;
+  }
+  card.appendChild(action);
+  return card;
+}
+
+function renderSalleFacilities() {
+  const otherHolder = document.getElementById("otherFacilitiesPanel");
+  if (!otherHolder) return;
+  otherHolder.innerHTML = "";
+  const grid = document.createElement("div");
+  grid.className = "facilities-grid sl-fac-grid";
+  let built = 0, total = 0;
+  const count = level => { total++; if (level > 0) built++; };
+
+  // Centre de formation (démarre au niveau 1, donc toujours "Améliorer").
+  const tcInfo = trainingCenterInfo(teamA.trainingCenterLevel);
+  const nextTc = teamA.nextTrainingCenterLevel();
+  count(teamA.trainingCenterLevel);
+  grid.appendChild(buildSalleFacilityCard({
+    dataKey: "trainingCenterCard", dataValue: "1",
+    category: "Centre de formation", levelName: tcInfo.name, icon: "ball", color: "var(--seat-tribune)",
+    level: teamA.trainingCenterLevel, maxLevel: TRAINING_CENTER_LEVELS[TRAINING_CENTER_LEVELS.length - 1].level,
+    effect: tcInfo.growthMultiplier > 1 ? `Progression des jeunes x${tcInfo.growthMultiplier}` : "Progression des jeunes : base",
+    next: nextTc, nextCost: nextTc && nextTc.upgradeCost,
+    titlePrefix: "Améliorer le centre de formation : ",
+    confirm: nextTc && {
+      icon: "",
+      beforeLabel: tcInfo.name,
+      afterLabel: nextTc.name,
+      effectLabel: "Progression des jeunes",
+      effectBefore: `x${tcInfo.growthMultiplier}`,
+      effectAfter: `x${nextTc.growthMultiplier}`,
+      cost: nextTc.upgradeCost,
+      onConfirm: () => {
+        if (teamA.upgradeTrainingCenter()) {
+          saveMyTeam();
+          syncTrainingCenterUpgradeToServer();
+          renderSalleSection();
+        }
+      },
+    },
+  }));
+
+  // Boutique des supporters.
+  const shopInfo = fanShopInfo(teamA.fanShopLevel);
+  const nextShop = teamA.nextFanShopLevel();
+  count(teamA.fanShopLevel);
+  grid.appendChild(buildSalleFacilityCard({
+    dataKey: "fanShopCard", dataValue: "1",
+    category: "Boutique des supporters", levelName: shopInfo.name, icon: "bag", color: "var(--seat-gradins)",
+    level: teamA.fanShopLevel, maxLevel: FAN_SHOP_LEVELS[FAN_SHOP_LEVELS.length - 1].level,
+    effect: shopInfo.weeklyRevenue > 0 ? `+${formatMoney(shopInfo.weeklyRevenue)}/semaine` : "",
+    why: "Un revenu fixe chaque semaine",
+    next: nextShop, nextCost: nextShop && nextShop.cost,
+    confirm: nextShop && {
+      icon: "",
+      beforeLabel: shopInfo.name,
+      afterLabel: nextShop.name,
+      effectLabel: "Revenu hebdomadaire",
+      effectBefore: `${formatMoney(shopInfo.weeklyRevenue)}/semaine`,
+      effectAfter: `${formatMoney(nextShop.weeklyRevenue)}/semaine`,
+      cost: nextShop.cost,
+      onConfirm: () => {
+        if (teamA.upgradeFanShop()) {
+          saveMyTeam();
+          syncFanShopUpgradeToServer();
+          renderSalleSection();
+        }
+      },
+    },
+  }));
+
+  const FACILITY_STYLE = {
+    tvStation: { icon: "tv", color: "var(--seat-loge)", why: "Un revenu fixe chaque semaine" },
+    gym: { icon: "dumbbell", color: "var(--danger)", why: "Moins de blessures en match" },
+    wellness: { icon: "leaf", color: "var(--ok)", why: "Moins de fatigue en match" },
+  };
+  Object.keys(CLUB_FACILITIES).forEach(key => {
+    const cfg = CLUB_FACILITIES[key];
+    const curLevel = (teamA.facilityLevels && teamA.facilityLevels[key]) || 0;
+    const curInfo = facilityInfo(key, curLevel);
+    const next = teamA.nextFacilityLevel(key);
+    const style = FACILITY_STYLE[key] || { icon: "up", color: "var(--amber)", why: "" };
+    count(curLevel);
+    let effect = "";
+    if (curLevel > 0) {
+      if (key === "tvStation") effect = `+${formatMoney(curInfo.weeklyRevenue)}/semaine`;
+      else if (key === "gym") effect = `Risque de blessure : -${Math.round((1 - curInfo.injuryRiskMult) * 100)}%`;
+      else effect = `Fatigue en match : -${Math.round((1 - curInfo.fatigueMult) * 100)}%`;
+    }
+    let confirm = null;
+    if (next) {
+      let effectLabel, effectBefore, effectAfter;
+      if (key === "tvStation") {
+        effectLabel = "Revenu hebdomadaire";
+        effectBefore = `${formatMoney(curInfo.weeklyRevenue)}/semaine`;
+        effectAfter = `${formatMoney(next.weeklyRevenue)}/semaine`;
+      } else if (key === "gym") {
+        effectLabel = "Risque de blessure";
+        effectBefore = `${Math.round(curInfo.injuryRiskMult * 100)}%`;
+        effectAfter = `${Math.round(next.injuryRiskMult * 100)}%`;
+      } else {
+        effectLabel = "Fatigue en match";
+        effectBefore = `${Math.round(curInfo.fatigueMult * 100)}%`;
+        effectAfter = `${Math.round(next.fatigueMult * 100)}%`;
+      }
+      confirm = {
+        icon: cfg.icon,
+        beforeLabel: curInfo.name,
+        afterLabel: next.name,
+        effectLabel, effectBefore, effectAfter,
+        cost: next.cost,
+        onConfirm: () => {
+          if (teamA.upgradeFacility(key)) {
+            saveMyTeam();
+            syncFacilityUpgradeToServer(key);
+            renderSalleSection();
+          }
+        },
+      };
+    }
+    grid.appendChild(buildSalleFacilityCard({
+      dataKey: "facilityCard", dataValue: key,
+      // Nom court pour l'espace bien-être (son cfg.name complet est trop
+      // long pour la carte, voir l'ancien commentaire de renderSalleSection).
+      category: key === "wellness" ? "Espace bien-être" : cfg.name,
+      levelName: curInfo.name, icon: style.icon, color: style.color,
+      level: curLevel, maxLevel: cfg.levels[cfg.levels.length - 1].level,
+      effect, why: style.why,
+      next, nextCost: next && next.cost, confirm,
+    }));
+  });
+
+  otherHolder.appendChild(grid);
+  const pill = document.getElementById("facilitiesCountPill");
+  if (pill) pill.textContent = `${built} / ${total} construites`;
 }
 
 // ---------------------------------------------------------------------

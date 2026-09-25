@@ -20,6 +20,34 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte visuelle Salle**
+  (onglet Salle) — retour utilisateur : "aide moi à rendre cette page plus
+  sexy", puis sur la maquette HTML proposée : "vas y ça me plait bien, code
+  tout ça", puis "pousse juste pour ton travail stp". Contenu : bandeau
+  d'en-tête (dessin ArenaGen en fond, niveau X/8, bouton Agrandir, 4
+  chiffres clés, anneau de remplissage réel) ; billetterie en un seul bloc
+  (barre de remplissage par tribune, prix +/−, curseur avec aperçu EN
+  DIRECT, repère "prix idéal" = confort >= 95% et zone rouge = confort <
+  60%, recette prévue vs dernier match, conseil) ; graphique d'affluence
+  empilé + prévision du prochain match, liste repliée à 3 lignes ; cartes
+  d'infrastructure avec icône SVG (pas d'emoji), jauge de niveau, état "non
+  construit" hachuré. IDs historiques conservés (tests + tutoriel).
+  Fichiers : moteurbasket3.html (#salleSection, CSS .sl-*,
+  renderSalleSection/renderSalleHero/renderSalleTicketing/
+  renderAttendanceHistory/renderSalleFacilities — syncArenaPurchasesHeight
+  et arenaAttendanceSummaryHtml supprimées), engine.js + moteurbasket3.html
+  (nouvelle méthode miroir Team.projectedAttendanceRateAtPrice),
+  salle_redesign_test.js (remplace salle_arena_purchases_height_test.js ;
+  le renommage seul était déjà parti dans 5e6d722, fait en parallèle par une
+  autre session). Commit PARTIEL volontaire : seul ce chantier est dans le
+  commit (moteurbasket3.html indexé = HEAD + cette refonte uniquement),
+  les modifs non committées Économie/Scouting Pro restent dans le working
+  tree, non indexées. Tests (copie HEAD + refonte seule) : 121/123 ;
+  échecs = training_progression_test (flaky connu) et
+  tactical_scouting_report_test (échoue déjà sur HEAD pur : moitié du
+  chantier Scouting Pro partie dans 5e6d722, ses tests non committés).
+  Reste : `git push` par l'utilisateur, puis retirer cette entrée.
+
 - **🚧 EN COURS (2026-09-25) — Analyse d'équipe (Scouting Pro) : retouches** —
   retour utilisateur (captures BC Dia) : "le 5 suggéré doit être en dessous
   du plan de match", "rends un peu plus joli aussi, il y a des polices trop
