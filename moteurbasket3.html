@@ -1186,6 +1186,9 @@
     padding:14px 28px; border-bottom:1px solid var(--line); background:var(--panel);
     flex-wrap:wrap; position:sticky; top:0; z-index:5;
   }
+  /* Masqué sur la page Ordres seulement (doublon avec l'en-tête du match,
+     voir showPage). */
+  .topbar.topbar-hidden-on-page{display:none;}
   .topbar-left{display:flex; flex-direction:column; gap:2px; min-width:0;}
   .topbar-club{font-size:15px; font-weight:800; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .topbar-sub{font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em;}
@@ -17345,6 +17348,16 @@ function showPage(id) {
   // Retour", changement d'onglet direct...).
   const playerNavEl = document.getElementById("topbarPlayerNav");
   if (playerNavEl) playerNavEl.classList.toggle("hidden", id !== "playerDetailSection");
+  // Retour utilisateur (2026-09-25) : sur la page Ordres, le bandeau global
+  // (nom du club, recherche, "vs X · Journée N" + "Donnez vos ordres") fait
+  // doublon avec l'en-tête du match et la barre "Ordres de match" -> masqué
+  // UNIQUEMENT sur cette page. --topbar-h est resynchronisé (0 quand masqué)
+  // pour que la barre d'action des Ordres se colle tout en haut.
+  const topbarEl = document.querySelector(".topbar");
+  if (topbarEl) {
+    topbarEl.classList.toggle("topbar-hidden-on-page", id === "prepSection");
+    syncTopbarHeightVar();
+  }
 }
 
 function setActiveTab(key) {

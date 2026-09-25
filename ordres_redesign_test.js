@@ -171,6 +171,17 @@ const link = doc.getElementById("resetCareerLink");
 if (!link || !doc.getElementById("guideSection").contains(link)) throw new Error("❌ 'Réinitialiser ma carrière' devrait se trouver dans le Guide.");
 console.log("✅ 'Réinitialiser ma carrière' retiré de la page Ordres, présent en bas du Guide.");
 
+// 9) Bandeau global (club, recherche, "Donnez vos ordres") masqué sur la
+// page Ordres UNIQUEMENT (retour utilisateur 2026-09-25 : infos en doublon).
+const topbar = doc.querySelector(".topbar");
+openOrdres();
+if (!topbar.classList.contains("topbar-hidden-on-page")) throw new Error("❌ Le bandeau du haut devrait être masqué sur la page Ordres.");
+[...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "club").click();
+if (topbar.classList.contains("topbar-hidden-on-page")) throw new Error("❌ Le bandeau du haut devrait réapparaître hors de la page Ordres.");
+openOrdres();
+if (!topbar.classList.contains("topbar-hidden-on-page")) throw new Error("❌ Le bandeau devrait de nouveau être masqué en revenant sur Ordres.");
+console.log("✅ Bandeau du haut masqué sur Ordres uniquement.");
+
 await flush(dom);
 win.close();
 server.close();
