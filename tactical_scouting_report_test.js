@@ -145,30 +145,27 @@ console.log(`✅ Le meilleur rebondeur offensif identifié est bien le pivot (${
 
 const reportText = doc2.querySelector("#teamDetailContent .tactical-report").textContent.replace(/\s+/g, " ").trim();
 console.log("\nTexte du rapport tactique :", reportText);
-if (!reportText.includes(`${expected.paintSharePct}%`)) throw new Error("❌ Le pourcentage de tirs dans la raquette devrait apparaître dans le texte du rapport.");
-if (!reportText.includes(`${expected.pivotPaintSharePct}%`)) throw new Error("❌ La part du pivot dans les tirs intérieurs devrait apparaître dans le texte du rapport.");
-if (!reportText.includes(`${expected.meneurDriveRatePct}%`)) throw new Error("❌ Le taux de pénétration du meneur devrait apparaître dans le texte du rapport.");
-if (!reportText.includes(`${expected.threeRatePct}%`)) throw new Error("❌ Le taux de tirs à 3 points devrait apparaître dans le texte du rapport.");
-if (!reportText.includes(`${expected.orebSharePct}%`)) throw new Error("❌ Le taux de rebonds offensifs devrait apparaître dans le texte du rapport.");
-console.log("✅ Les 5 pourcentages calculés apparaissent bien, textuellement, dans le rapport affiché.");
-
-// Les conseils doivent citer les VRAIS libellés de consignes (WATCH_FOCUS_LABELS),
-// jamais un réglage tactique actuel de l'adversaire (aucune trace de
-// screenDefense/helpDefense/postDefense/closeoutStyle, réglages qui restent
-// volontairement invisibles, voir renderOrdresGrid).
+// "Tendances observées" RETIRÉ du rapport (retour utilisateur, 2026-09-25 :
+// "enlève tendance observés que ce soit payant ou gratuit") — les
+// pourcentages restent calculés (vérifiés ci-dessus via
+// computeScoutingTendencies) mais ne sont plus affichés en barres ; le
+// rapport ne garde que la composition recommandée (défense + consignes + 5
+// de départ suggéré), qui doit toujours citer les vrais libellés de
+// consignes et les vrais joueurs.
+if (reportText.includes("Tendances observées")) throw new Error("❌ La section 'Tendances observées' ne devrait plus apparaître dans le rapport.");
+if (doc2.querySelector("#teamDetailContent .tactical-report .tactical-insight")) throw new Error("❌ Plus aucune barre de tendance (.tactical-insight) ne devrait être rendue.");
+console.log("✅ La section 'Tendances observées' a bien disparu du rapport.");
+if (!reportText.includes("Composition tactique recommandée")) throw new Error("❌ La composition tactique recommandée devrait rester affichée.");
+if (!reportText.includes("5 de départ suggéré")) throw new Error("❌ Le 5 de départ suggéré devrait rester affiché dans le rapport gratuit.");
 const labels = win2.eval("WATCH_FOCUS_LABELS");
-console.log("\nLibellés de consignes attendus dans le texte :", labels);
-if (!reportText.includes(labels.denyDrive)) throw new Error(`❌ Le conseil sur le meneur devrait citer la consigne "${labels.denyDrive}".`);
-if (!reportText.includes(labels.reboundPriority)) throw new Error(`❌ Le conseil rebond devrait citer la consigne "${labels.reboundPriority}".`);
-if (!reportText.includes("pivot") || !reportText.includes(`"${labels.reboundPriority}" sur leur pivot`)) {
-  throw new Error(`❌ Le conseil rebond devrait nommer explicitement le poste ciblé ("sur leur pivot"), pas rester générique, obtenu : "${reportText}".`);
+const setupShown = win2.eval("suggestTacticalSetup")(tendencies);
+if (!setupShown) throw new Error("❌ suggestTacticalSetup devrait produire une composition pour cette fixture.");
+if (!reportText.includes(setupShown.defense)) throw new Error(`❌ La défense conseillée "${setupShown.defense}" devrait apparaître.`);
+for (const a of setupShown.assignments) {
+  if (!reportText.includes(labels[a.focus])) throw new Error(`❌ La consigne "${labels[a.focus]}" devrait être citée.`);
+  if (a.target && !reportText.includes(a.target)) throw new Error(`❌ Le joueur ciblé "${a.target}" devrait être cité.`);
 }
-console.log("✅ Le conseil rebond nomme explicitement le poste (et le joueur) à surveiller, pas une consigne générique.");
-if (!reportText.includes(labels.denyEntry) && !reportText.includes(labels.denyPostUp)) {
-  throw new Error(`❌ Le conseil sur le pivot devrait citer "${labels.denyEntry}" ou "${labels.denyPostUp}".`);
-}
-if (!reportText.includes(labels.harassOutsideShot)) throw new Error(`❌ Le conseil sur le tir à 3 points devrait citer la consigne "${labels.harassOutsideShot}".`);
-console.log("✅ Les conseils citent bien les vrais libellés de consignes défensives existantes (Ordres/WATCH_FOCUS_LABELS).");
+console.log("✅ La composition recommandée cite la défense, les vrais libellés de consignes et les vrais joueurs ciblés.");
 
 for (const forbidden of ["screenDefense", "helpDefense", "postDefense", "closeoutStyle", "Switch", "Prise à deux", "Zone press", "Box and one"]) {
   if (reportText.includes(forbidden)) {

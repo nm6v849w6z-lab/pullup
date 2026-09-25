@@ -2055,6 +2055,8 @@
      titres. Aligné sur l'échelle du panneau Scouting Pro (12.5px, --ink-dim). */
   .tactical-report{max-width:1120px; margin-left:auto; margin-right:auto; font-size:14px; line-height:1.45;}
   .tactical-report h3{font-size:17px; margin:0 0 4px;}
+  .tactical-report[hidden]{display:none !important;}
+  .tactical-report .scouting-section-title{margin-top:14px;}
   .tactical-report .sub{font-size:12.5px; color:var(--ink-dim); margin:0 0 2px;}
   .tactical-suggestion-defense b{font-size:14px;}
   .sp2-five-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 10px;}
@@ -2064,6 +2066,31 @@
   .sp2-five-def b{color:var(--amber);}
   .scouting-starting-five .roster-table{font-size:12.5px;}
   .scouting-starting-five .roster-table th{font-size:10.5px;}
+  .scouting-starting-five .roster-table th:nth-child(2), .scouting-starting-five .roster-table td:nth-child(2){text-align:left;}
+  .scouting-actions .sub{font-size:12.5px; color:var(--ink-dim); margin:6px 0 0;}
+  /* Forme et contexte (retouche 2026-09-25, voir sp2FormContextHtml) :
+     grille 2×2 de blocs + pastille "Face à toi" dans l'en-tête. */
+  .sp2-panel-head{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 16px;}
+  .sp2-panel-head .sp2-panel-title{margin:0;}
+  .sp2-h2h{display:inline-flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:5px 14px; font-size:12.5px;}
+  .sp2-h2h-label{color:var(--ink-faint); font-weight:700;}
+  .sp2-h2h-game{display:inline-flex; align-items:center; gap:6px;}
+  .sp2-h2h-game .scouting-form-sq{margin-right:0;}
+  .sp2-h2h-game small{color:var(--ink-faint); font-size:11px;}
+  .sp2-h2h-none{color:var(--ink-dim);}
+  .sp2-h2h-rec{font-weight:800; color:var(--ink);}
+  .sp2-h2h-more{color:var(--ink-faint); font-weight:700;}
+  .sp2-h2h-game + .sp2-h2h-game{padding-left:10px; border-left:1px solid var(--line);}
+  .sp2-strat-row.other{color:var(--ink-dim);}
+  .sp2-strat-row.other .sp2-strat-fill{opacity:.5;}
+  .sp2-ctx-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:22px 24px; align-items:stretch;}
+  .sp2-ctx-cell{display:flex; flex-direction:column; min-width:0;}
+  .sp2-ctx-cell.full{grid-column:1 / -1;}
+  .sp2-ctx-cell .sp2-h{margin-top:0;}
+  .sp2-ctx-cell > .sp2-chart, .sp2-ctx-cell > .sp2-bf, .sp2-ctx-cell > .sp2-strat-card{flex:1;}
+  .sp2-ctx-cell > .sp2-chart{display:flex; align-items:center;}
+  .sp2-ctx-cell > .sp2-chart > svg{flex:1; min-width:0;}
+  .sp2-strat-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:18px; justify-content:center;}
   /* Refonte visuelle v3 (retour utilisateur, 2026-09-24 : "ce n'est pas très
      beau visuellement. rebosse ça [...] regarde comment c'est sur football
      manager") : le v2 ci-dessus empilait trop de listes en boîtes lourdes
@@ -2307,8 +2334,8 @@
   .sp2-leader .player-avatar{width:60px !important; height:65px !important; border-radius:12px !important; box-shadow:0 0 0 2px var(--panel-2), 0 0 0 3px var(--line);}
   .sp2-leader-rank{position:absolute; right:14px; top:-14px; font-family:var(--display); font-size:92px; font-weight:800; color:rgba(255,255,255,.035); line-height:1; pointer-events:none;}
   .sp2-leader-info{min-width:0; flex:1;}
-  .sp2-leader-name{font-weight:800; font-size:14px;}
-  .sp2-leader-line{font-size:12.5px; color:var(--ink-dim); margin-top:2px;}
+  .sp2-leader-name{display:block; font-weight:800; font-size:14px;}
+  .sp2-leader-line{display:block; font-size:12.5px; color:var(--ink-dim); margin-top:2px;}
   .sp2-leader-pts{font-size:32px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; text-align:right; font-family:var(--display); letter-spacing:.01em;}
   .sp2-leader-pts small{display:block; font-size:11px; color:var(--ink-faint); font-weight:700; margin-top:3px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}
   .sp2-leader-share{flex-basis:100%; margin-top:10px;}
@@ -22221,15 +22248,25 @@ function sp2BfRowsHtml(labelA, labelB, rows) {
 function sp2PointDiffChartHtml(games) {
   const n = games.length;
   if (!n) return "";
-  const chartW = 520, chartH = 230, baseline = 128, maxBarH = 90;
-  const maxAbs = Math.max(1, ...games.map(g => Math.abs(g.scoreFor - g.scoreAgainst)));
+  // Ligne de base placée selon la part des victoires/défaites (retouche
+  // 2026-09-25) : l'ancienne base fixe (y=128, barres jusqu'à ±90px) faisait
+  // déborder une grosse défaite et son libellé "-14" SUR le score du match
+  // écrit en dessous (y=204). La zone utile (y=26 à 164) est désormais
+  // partagée entre le plus grand écart positif et le plus grand négatif.
+  const chartW = 520, chartH = 230;
+  const diffs = games.map(g => g.scoreFor - g.scoreAgainst);
+  const maxPos = Math.max(0, ...diffs), maxNeg = Math.max(0, ...diffs.map(d => -d));
+  const plotTop = 26, plotBottom = 164;
+  const span = Math.max(1, maxPos + maxNeg);
+  const baseline = Math.round(plotTop + (plotBottom - plotTop) * (maxPos / span));
+  const pxPerPt = (plotBottom - plotTop) / span;
   const slot = (chartW - 48) / n;
   const barW = Math.min(46, slot * 0.62);
   let bars = "";
   games.forEach((g, i) => {
     const diff = g.scoreFor - g.scoreAgainst;
     const cx = 24 + slot * i + slot / 2;
-    const h = Math.max(4, Math.round((Math.abs(diff) / maxAbs) * maxBarH));
+    const h = Math.max(4, Math.round(Math.abs(diff) * pxPerPt));
     const win = diff >= 0;
     const y = win ? baseline - h : baseline;
     const color = win ? "var(--ok)" : "var(--danger)";
@@ -22243,57 +22280,45 @@ function sp2PointDiffChartHtml(games) {
     `<line x1="24" y1="${baseline}" x2="${chartW - 24}" y2="${baseline}" stroke="var(--line)" stroke-width="1"/>` + bars + `</svg></div>`;
 }
 
-// ---- Forme et contexte : écart de points/confrontations/stratégies (voir
-// .sp2-strat, remplace .scouting-strategy-row pour ce nouveau design — mêmes
-// données, report.strategyUsage) à gauche ; tendance récente vs saison et
-// domicile/extérieur (adv) à droite. --------------------------------------
+// ---- Forme et contexte — refonte de la mise en page (retour utilisateur,
+// 2026-09-25 : "on a tjrs ce vide sous face à toi cette saison (hormis en
+// PO, on aura jamais plus d'un match voir rien, donc c'est pas ouf d'avoir
+// autant de vide)") : "Face à toi" n'est plus un bloc de colonne mais une
+// simple pastille dans l'en-tête du panneau (0 ou 1 match en saison
+// régulière, parfois 2-3 en playoffs). Les 4 vrais blocs (écart de points,
+// 3 derniers vs saison, domicile/extérieur, stratégies utilisées) sont
+// posés deux par deux sur une grille, dans cet ordre, pour que chaque rangée
+// associe deux blocs de hauteur comparable. Mêmes données qu'avant
+// (report.recentForm/headToHead/strategyUsage, adv.recentVsSeason/homeAway/
+// halves), seule la présentation change.
 function sp2FormContextHtml(report, adv) {
+  const blocks = [];
   const chronoForm = [...(report.recentForm || [])].reverse();
-  let left = "";
   if (chronoForm.length) {
-    left += `<h3 class="sp2-h">Écart de points, match par match</h3>` + sp2PointDiffChartHtml(chronoForm);
+    blocks.push(`<h3 class="sp2-h">Écart de points, match par match</h3>` + sp2PointDiffChartHtml(chronoForm));
   }
-  left += `<h3 class="sp2-h" style="margin-top:22px">Face à toi cette saison</h3>`;
-  if (report.headToHead && report.headToHead.length) {
-    left += `<ul class="scouting-clean-list">` + report.headToHead.map(g =>
-      `<li>${scoutingFormSquareHtml(g.win)}<span class="scouting-clean-score">${g.scoreFor}-${g.scoreAgainst}</span>` +
-      `<span class="scouting-clean-opp">${g.isHome ? "À domicile" : "À l'extérieur"}</span>` +
-      `<span class="scouting-clean-meta">J${g.round + 1}</span></li>`
-    ).join("") + `</ul>`;
-  } else {
-    left += `<p class="sub">Aucune confrontation directe encore disputée cette saison.</p>`;
-  }
-  if (report.strategyUsage && report.strategyUsage.totalMatches) {
-    left += `<h3 class="sp2-h" style="margin-top:22px">Stratégies utilisées <span class="sp2-badge">${report.strategyUsage.totalMatches} match${report.strategyUsage.totalMatches > 1 ? "s" : ""} suivi${report.strategyUsage.totalMatches > 1 ? "s" : ""}</span></h3>`;
-    const stratRows = (list, cls) => list.map(r =>
-      `<div class="sp2-strat-row"><span>${escapeHtml(r.type)}</span><span class="sp2-strat-bar"><span class="sp2-strat-track"><span class="sp2-strat-fill ${cls}" style="width:${r.pct}%"></span></span><span class="sp2-strat-pct">${r.pct}% · ${r.count} match${r.count > 1 ? "s" : ""}</span></span></div>`
-    ).join("");
-    if (report.strategyUsage.offense.length) left += `<div class="sp2-strat"><h4>Attaque</h4>${stratRows(report.strategyUsage.offense, "")}</div>`;
-    if (report.strategyUsage.defense.length) left += `<div class="sp2-strat def" style="margin-top:12px"><h4>Défense</h4>${stratRows(report.strategyUsage.defense, "def")}</div>`;
-  }
-
-  let right = "";
   if (adv && adv.recentVsSeason) {
     const rv = adv.recentVsSeason;
-    right += `<h3 class="sp2-h">3 derniers matchs vs saison <span class="sp2-badge">${rv.recentWins}V-${rv.recentGames - rv.recentWins}D</span></h3>`;
+    let b = `<h3 class="sp2-h">3 derniers matchs vs saison <span class="sp2-badge">${rv.recentWins}V-${rv.recentGames - rv.recentWins}D</span></h3>`;
     const rows = [
       ["Points marqués", rv.seasonPtsFor, rv.recentPtsFor, ""],
       ["Points encaissés", rv.seasonPtsAgainst, rv.recentPtsAgainst, ""],
       ["% au tir", rv.seasonFgPct, rv.recentFgPct, "%"],
       ["% à 3 pts", rv.seasonThreePct, rv.recentThreePct, "%"],
     ].filter(r => r[1] != null && r[2] != null);
-    if (rows.length) right += sp2BfRowsHtml("Saison", "3 derniers", rows);
+    if (rows.length) b += sp2BfRowsHtml("Saison", "3 derniers", rows);
     if (rv.seasonPtsFor != null && rv.recentPtsFor != null) {
       const ptsDelta = Math.round((rv.recentPtsFor - rv.seasonPtsFor) * 10) / 10;
       const fgDelta = rv.recentFgPct != null && rv.seasonFgPct != null ? Math.round((rv.recentFgPct - rv.seasonFgPct) * 10) / 10 : null;
       if (Math.abs(ptsDelta) >= 3 || (fgDelta != null && Math.abs(fgDelta) >= 3)) {
-        right += `<p class="sp2-note">${ptsDelta >= 0 ? "En hausse" : "En baisse"} offensive récemment : ${ptsDelta >= 0 ? "+" : ""}${ptsDelta} pts marqués${fgDelta != null ? ` et ${fgDelta >= 0 ? "+" : ""}${fgDelta}% au tir` : ""}.</p>`;
+        b += `<p class="sp2-note">${ptsDelta >= 0 ? "En hausse" : "En baisse"} offensive récemment : ${ptsDelta >= 0 ? "+" : ""}${ptsDelta} pts marqués${fgDelta != null ? ` et ${fgDelta >= 0 ? "+" : ""}${fgDelta}% au tir` : ""}.</p>`;
       }
     }
+    blocks.push(b);
   }
   if (adv && adv.homeAway && (adv.homeAway.home || adv.homeAway.away)) {
     const h = adv.homeAway.home, a = adv.homeAway.away;
-    right += `<h3 class="sp2-h" style="margin-top:22px">Domicile vs extérieur <span class="sp2-badge warn">${h ? h.games : 0} matchs dom. · ${a ? a.games : 0} ext.</span></h3>`;
+    let b = `<h3 class="sp2-h">Domicile vs extérieur <span class="sp2-badge warn">${h ? h.games : 0} matchs dom. · ${a ? a.games : 0} ext.</span></h3>`;
     const rows = [
       ["Points marqués", h && h.ptsForPerGame, a && a.ptsForPerGame, ""],
       ["Points encaissés", h && h.ptsAgainstPerGame, a && a.ptsAgainstPerGame, ""],
@@ -22303,16 +22328,61 @@ function sp2FormContextHtml(report, adv) {
       ["Rebonds off.", h && h.orebPerGame, a && a.orebPerGame, ""],
       ["Rebonds déf.", h && h.drebPerGame, a && a.drebPerGame, ""],
     ].filter(r => r[1] != null && r[2] != null);
-    if (rows.length) right += sp2BfRowsHtml("Domicile", "Extérieur", rows);
-    if (adv.halves) {
-      const hv = adv.halves;
-      right += `<p class="sp2-note">Mi-temps : ${hv.firstHalf.for} puis ${hv.secondHalf.for} pts marqués, ${hv.firstHalf.against} puis ${hv.secondHalf.against} encaissés (${hv.games} match${hv.games > 1 ? "s" : ""}).</p>`;
-    }
+    if (rows.length) b += sp2BfRowsHtml("Domicile", "Extérieur", rows);
+    // Note "Mi-temps : X puis Y pts marqués..." retirée (retour utilisateur,
+    // 2026-09-25 : "enlève le mi-temps 56,2 puis...") — elle décalait aussi
+    // le bas de cette carte par rapport à "Stratégies utilisées" à côté.
+    blocks.push(b);
+  }
+  if (report.strategyUsage && report.strategyUsage.totalMatches) {
+    const su = report.strategyUsage;
+    // Plafonné à 3 lignes par côté + une ligne "Autres (n)" qui agrège le
+    // reste (retour utilisateur, 2026-09-25 : "si on a plus de stratégie
+    // joué que 3, ça va se comporter comment ?") — jusqu'à 5 défenses et
+    // autant de profils offensifs existent, la carte doublerait sinon de
+    // hauteur et casserait l'alignement avec "Domicile vs extérieur".
+    const SP2_STRAT_MAX_ROWS = 3;
+    const capStrat = list => {
+      if (list.length <= SP2_STRAT_MAX_ROWS + 1) return list;
+      const rest = list.slice(SP2_STRAT_MAX_ROWS);
+      return list.slice(0, SP2_STRAT_MAX_ROWS).concat([{
+        type: `Autres (${rest.length})`,
+        count: rest.reduce((n, r) => n + r.count, 0),
+        pct: rest.reduce((n, r) => n + r.pct, 0),
+        other: true,
+      }]);
+    };
+    const stratRows = (list, cls) => capStrat(list).map(r =>
+      `<div class="sp2-strat-row${r.other ? " other" : ""}"><span>${escapeHtml(r.type)}</span><span class="sp2-strat-bar"><span class="sp2-strat-track"><span class="sp2-strat-fill ${cls}" style="width:${Math.min(100, r.pct)}%"></span></span><span class="sp2-strat-pct">${Math.min(100, r.pct)}% · ${r.count} match${r.count > 1 ? "s" : ""}</span></span></div>`
+    ).join("");
+    let b = `<h3 class="sp2-h">Stratégies utilisées <span class="sp2-badge">${su.totalMatches} match${su.totalMatches > 1 ? "s" : ""} suivi${su.totalMatches > 1 ? "s" : ""}</span></h3><div class="sp2-strat-card">`;
+    if (su.offense.length) b += `<div class="sp2-strat"><h4>Attaque</h4>${stratRows(su.offense, "")}</div>`;
+    if (su.defense.length) b += `<div class="sp2-strat def"><h4>Défense</h4>${stratRows(su.defense, "def")}</div>`;
+    b += `</div>`;
+    blocks.push(b);
   }
 
-  if (!left && !right) return "";
-  return `<section class="sp2-panel"><h2 class="sp2-panel-title">Forme et contexte</h2>` +
-    `<div class="sp2-grid-even"><div>${left}</div><div>${right}</div></div></section>`;
+  // Pastille "Face à toi" dans l'en-tête (voir commentaire ci-dessus).
+  const h2hList = report.headToHead || [];
+  const h2h = `<div class="sp2-h2h"><span class="sp2-h2h-label">Face à toi cette saison</span>` +
+    // Plusieurs confrontations (Coupe/playoffs) : pastilles côte à côte, la
+    // plus récente d'abord (headToHead est déjà trié par journée
+    // décroissante), 3 au maximum + "+N" pour ne jamais faire exploser
+    // l'en-tête ; bilan V-D global en tête dès 2 matchs.
+    (h2hList.length > 1 ? `<span class="sp2-h2h-rec">${h2hList.filter(g => g.win).length}V-${h2hList.filter(g => !g.win).length}D</span>` : "") +
+    (h2hList.length
+      ? h2hList.slice(0, 3).map(g => `<span class="sp2-h2h-game">${scoutingFormSquareHtml(g.win)}<b>${g.scoreFor}-${g.scoreAgainst}</b><small>${g.isHome ? "dom." : "ext."} · J${g.round + 1}</small></span>`).join("") +
+        (h2hList.length > 3 ? `<span class="sp2-h2h-more">+${h2hList.length - 3}</span>` : "")
+      : `<span class="sp2-h2h-none">Aucune confrontation</span>`) + `</div>`;
+
+  if (!blocks.length) {
+    return `<section class="sp2-panel"><div class="sp2-panel-head"><h2 class="sp2-panel-title">Forme et contexte</h2>${h2h}</div></section>`;
+  }
+  // Nombre impair de blocs : le dernier occupe toute la largeur plutôt que
+  // de laisser une demi-rangée vide.
+  const cells = blocks.map((b, i) => `<div class="sp2-ctx-cell${blocks.length % 2 === 1 && i === blocks.length - 1 ? " full" : ""}">${b}</div>`).join("");
+  return `<section class="sp2-panel"><div class="sp2-panel-head"><h2 class="sp2-panel-title">Forme et contexte</h2>${h2h}</div>` +
+    `<div class="sp2-ctx-grid">${cells}</div></section>`;
 }
 
 // Tableau "Effectif complet" (sp2-roster) — réutilise teamSeasonStatsRows

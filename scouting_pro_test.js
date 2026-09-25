@@ -446,6 +446,21 @@ function request(server, method, urlPath, jsonBody) {
       // (report.strategyUsage), seule la présentation change.
       assertTrue(panelAfter.querySelectorAll(".sp2-strat-row").length > 0, "C2bis: au moins une barre de fréquence de stratégie est rendue");
 
+      // C2ter) Retouches 2026-09-25 (retour utilisateur) : "le 5 suggéré doit
+      // être en dessous du plan de match", "enlève forme x% sous les avatars
+      // des joueurs", "enlève tendance observés que ce soit payant ou
+      // gratuit" — et le rapport gratuit (qui ne contient plus que la
+      // composition recommandée) est masqué une fois Pro débloqué.
+      const planEl = panelAfter.querySelector(".sp2-plan");
+      const fiveEl = panelAfter.querySelector(".sp2-five");
+      assertTrue(!!fiveEl, "C2ter: la section '5 de départ suggéré' est présente dans Scouting Pro");
+      assertTrue(!!planEl && planEl.nextElementSibling === fiveEl, "C2ter: le 5 suggéré suit immédiatement le Plan de match");
+      assertTrue(!panelAfter.textContent.includes("Tendances observées"), "C2ter: plus de 'Tendances observées' dans Scouting Pro");
+      const lineupMeta = [...panelAfter.querySelectorAll(".sp2-token-meta, .sp2-leader-line")].map(el => el.textContent).join(" | ");
+      assertTrue(!/forme \d+%/.test(lineupMeta), "C2ter: plus de 'forme x%' sous les avatars (5 majeur / joueurs clés)");
+      const freeReportAfter = doc.querySelector("#teamDetailContent .tactical-report");
+      assertTrue(!freeReportAfter || freeReportAfter.hidden, "C2ter: le rapport tactique gratuit est masqué une fois Pro débloqué (pas de doublon)");
+
       // C3) "Passer Pro" sur un AUTRE adversaire débloque instantanément,
       // sans passer par l'écran gris.
       const oppIdx3 = [1, 2, 3, 4].find(i => i !== oppIdx2 && i !== 0);

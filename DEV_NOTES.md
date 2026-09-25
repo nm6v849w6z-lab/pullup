@@ -48,14 +48,37 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   chantier Scouting Pro partie dans 5e6d722, ses tests non committés).
   Reste : `git push` par l'utilisateur, puis retirer cette entrée.
 
-- **🚧 EN COURS (2026-09-25) — Analyse d'équipe (Scouting Pro) : retouches** —
+- **✅ COMMITTÉ, À POUSSER (2026-09-25) — Analyse d'équipe (Scouting Pro) : retouches** —
   retour utilisateur (captures BC Dia) : "le 5 suggéré doit être en dessous
   du plan de match", "rends un peu plus joli aussi, il y a des polices trop
   grandes", "dans forme et contexte il y a un vide", "enlève forme x% sous
   les avatars des joueurs", "enlève tendance observés que ce soit payant ou
   gratuit". Fichiers : moteurbasket3.html (tacticalReportHtml,
   scoutingProReportHtml, sp2FormContextHtml, sp2RosterHtml, CSS sp2/tactical),
-  tactical_scouting_report_test.js. Statut : en cours de code.
+  tactical_scouting_report_test.js, scouting_pro_test.js. Fait : "Tendances
+  observées" retiré (gratuit + Pro) ; nouvelle section Pro "5 de départ
+  suggéré" (sp2SuggestedFiveHtml, + défense conseillée) juste sous le Plan
+  de match, rapport gratuit masqué (`hidden`) une fois Pro débloqué ;
+  "forme x%" retiré sous les avatars (5 majeur + joueurs clés) ; Forme et
+  contexte refait (2e retour : "on a tjrs ce vide sous face à toi") :
+  "Face à toi" devient une pastille dans l'en-tête du panneau, les 4 blocs
+  (écart de points, 3 derniers vs saison, domicile/extérieur, stratégies)
+  en grille 2×2 à hauteurs égalisées ; 3e retour : note "Mi-temps : X puis
+  Y" retirée, stratégies plafonnées à 3 lignes + "Autres (n)" par côté,
+  "Face à toi" = bilan V-D + 3 derniers matchs + "+N", ligne de base du
+  graphique d'écart dynamique (une grosse défaite ne chevauche plus le
+  score écrit dessous) ; polices réduites (titres de panneaux, gros chiffres, hero,
+  .sub du rapport gratuit qui héritaient de la taille du corps).
+  Statut : tests Mac verts (tactical_scouting_report_test, scouting_pro_test,
+  scouting_advanced_stats_test, client_scouting_test, team_detail_page_test),
+  captures Playwright vérifiées. ⚠️ Une PREMIÈRE partie de ces modifs
+  (CSS polices, retrait Tendances, sp2SuggestedFiveHtml, retrait forme x%)
+  est déjà partie par erreur dans le commit 5e6d722 (Tableau de bord), fait
+  en parallèle par une autre session ; le reste (Forme et contexte,
+  masquage du rapport gratuit, stratégies en grille, tests) est NON
+  committé et partage moteurbasket3.html avec le chantier Économie
+  ci-dessus. Committé seul (hunks Scouting Pro uniquement, Économie laissé
+  hors commit). Reste : push utilisateur, puis retirer cette entrée.
 
 0. **✅ TRANCHÉ (2026-09-24) — Écran mi-temps : PAS de choix tactiques à la
    mi-temps** — ce point était EN PAUSE depuis le 2026-09-24 matin, retour
