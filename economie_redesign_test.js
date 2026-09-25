@@ -5,7 +5,7 @@
 // exacts, tutoriel regroupé en une ligne (détail dépliable), libellés
 // réinterprétés ("Salaire du staff" = Entraîneur), filtres Revenus/Dépenses,
 // repli d'une semaine, masse salariale (joueurs + staff), cartes
-// Salle/Boutique, et bloc admin toujours présent tel quel. La carte
+// Salle (dernière recette seule) / Boutique (revenu + niveau seuls), et bloc admin toujours présent tel quel. La carte
 // "Semaine type" et les textes secondaires ont été retirés à la demande de
 // l'utilisateur (2026-09-25) : on vérifie qu'ils ne reviennent pas.
 const fs = require("fs");
@@ -82,9 +82,9 @@ const charges = win.eval("teamA.players.reduce((s,p)=>s+p.salary,0) + teamA.trai
 assert(norm(doc.getElementById("economiePayroll").textContent).startsWith(charges.toLocaleString("fr-FR").replace(/[  ]/g, " ")), "Carte Masse salariale : total joueurs + staff");
 
 const arena = norm(doc.getElementById("economieArenaSummary").textContent);
-assert(arena.includes("71 %") && arena.includes("159 455 €") && arena.includes("28,1 €"), "Carte Salle : remplissage 71 %, recette et prix moyen par spectateur");
+assert(arena.includes("159 455 €") && !arena.includes("%") && !arena.includes("Prix"), "Carte Salle : uniquement la dernière recette (" + arena + ")");
 const shop = norm(doc.getElementById("economieFanShopSummary").textContent);
-assert(shop.includes("4 000 / 40 000 €") && shop.includes("18 semaines") && shop.includes("Boutique du club"), "Carte Boutique : amortissement, semaines restantes et palier suivant");
+assert(shop.includes("2 000 €") && shop.includes("Niveau 1/3") && shop.includes("Stand souvenirs") && !shop.includes("Amortissement") && !shop.includes("Niveau suivant"), "Carte Boutique : uniquement revenu + niveau (" + shop + ")");
 
 assert(doc.getElementById("economieBudgetChart").querySelectorAll(".eco-chart-dot").length === 3, "Courbe du budget : départ + fin S1 + fin S2");
 const pageText = norm(doc.getElementById("economieSection").textContent);

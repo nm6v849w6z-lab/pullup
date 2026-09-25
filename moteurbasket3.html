@@ -2713,6 +2713,15 @@
   .eco-card .quick-links{margin-top:auto;}
   .eco-card .quick-links .secondary{width:100%;}
   .eco-donut-row{display:flex; flex-wrap:wrap; gap:14px; align-items:center;}
+  /* Retour utilisateur (2026-09-25) : "essaie de centrer le camembert et la
+     légende de la masse salariale (peut-être le montant aussi) pour que ce
+     soit moins vide" — montant + anneau + légende centrés, l'anneau
+     occupant l'espace libre de la carte (alignée en hauteur sur Budget). */
+  .eco-payroll-card #economiePayroll{align-self:center; font-size:32px;}
+  .eco-payroll-card #economiePayrollChart{flex-grow:1; display:flex; align-items:center; justify-content:center;}
+  .eco-payroll-card .eco-donut-row{justify-content:center; gap:22px;}
+  .eco-payroll-card .eco-donut-row svg{width:120px; height:120px;}
+  .eco-payroll-card .eco-legend{flex:0 1 190px; font-size:13.5px; gap:7px;}
   .eco-donut-row svg{flex-shrink:0;}
   .eco-legend{display:flex; flex-direction:column; gap:4px; font-size:12.5px; flex:1 1 150px; min-width:0;}
   .eco-legend > div{display:flex; justify-content:space-between; gap:6px;}
@@ -4014,7 +4023,7 @@
           </div>
           <div id="economieBudgetChart"></div>
         </section>
-        <section class="eco-card">
+        <section class="eco-card eco-payroll-card">
           <span class="eco-label">Masse salariale</span>
           <div class="eco-num lg" id="economiePayroll"></div>
           <div id="economiePayrollChart"></div>
@@ -28513,54 +28522,27 @@ function ecoPayrollChartHtml(rec) {
     `<div class="eco-legend">${legend}</div></div>`;
 }
 
+// Cartes Salle et Boutique volontairement minimales (retour utilisateur
+// 2026-09-25 : "pour la brique salle, mets uniquement dedans la dernière
+// recette + bouton gérer la salle ; pour la brique boutique, juste le revenu
+// + le niveau + le bouton" — le détail vit déjà dans l'onglet Salle).
 function ecoArenaHtml() {
-  const info = arenaInfo(teamA.arenaLevel);
   const last = (teamA.attendanceHistory || [])[0];
-  const prices = SEAT_CATEGORIES.map(cat => teamA.ticketPrices[cat.key]).join(" · ") + " €";
   if (!last) {
-    return `<div class="eco-num lg">${ecoNum(info.capacity)}<span class="unit"> places</span></div>` +
-      `<span class="eco-small">${escapeHtml(info.name)} · aucun match à domicile joué pour l'instant. Seuls les matchs à domicile rapportent une recette.</span>` +
-      `<div class="eco-kv"><div><span class="k">Prix</span><span>${prices}</span></div></div>`;
+    return `<div class="eco-num lg">–</div><span class="eco-small">Aucun match à domicile joué pour l'instant.</span>`;
   }
-  const cap = last.capacity || info.capacity;
-  const pct = cap ? Math.round(last.attendance / cap * 100) : 0;
-  const perSpec = last.attendance ? (last.revenue / last.attendance).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " €" : "–";
-  return `<div class="eco-num lg">${pct} %<span class="unit"> remplie</span></div>` +
-    `<div class="eco-bar-row"><div class="eco-track"><div class="eco-fill" style="width:${Math.min(100, pct)}%"></div></div>` +
-    `<span class="eco-small">${ecoNum(last.attendance)} / ${ecoNum(cap)} places · vs ${escapeHtml(last.opponentName || "?")} (S${last.week})</span></div>` +
-    `<div class="eco-kv"><div><span class="k">Recette</span><span class="eco-in">${ecoMoney(last.revenue)}</span></div>` +
-    `<div><span class="k">Par spectateur</span><span>${perSpec}</span></div>` +
-    `<div><span class="k">Prix</span><span>${prices}</span></div></div>`;
+  return `<div class="eco-num lg">${ecoMoney(last.revenue)}</div><span class="eco-small">Dernière recette · vs ${escapeHtml(last.opponentName || "?")} (S${last.week})</span>`;
 }
 
-function ecoFanShopHtml(transactions) {
+function ecoFanShopHtml() {
   const level = teamA.fanShopLevel || 0;
-  const next = FAN_SHOP_LEVELS.find(f => f.level === level + 1);
-  const nextHtml = next
-    ? `<span class="eco-small">Niveau suivant : <b style="color:var(--ink)">${escapeHtml(next.name)}</b> · ${ecoMoney(next.cost)} → ${ecoMoney(next.weeklyRevenue)}/sem.</span>`
-    : `<span class="eco-small">Niveau maximum atteint.</span>`;
+  const maxLevel = FAN_SHOP_LEVELS[FAN_SHOP_LEVELS.length - 1].level;
   if (level <= 0) {
-    return `<div class="eco-num lg">0 €<span class="unit">/sem</span></div><span class="eco-small">Aucune boutique pour l'instant, aucun revenu hebdomadaire fixe.</span>${nextHtml}`;
+    return `<div class="eco-num lg">0 €<span class="unit">/sem</span></div><span class="eco-pill-tag">Aucune boutique</span>`;
   }
   const info = fanShopInfo(level);
-  let html = `<div class="eco-num lg">${ecoMoney(info.weeklyRevenue)}<span class="unit">/sem</span></div><span class="eco-pill-tag">${escapeHtml(info.name)}</span>`;
-  // Amortissement du DERNIER palier acheté, seulement si son achat figure
-  // encore dans le journal (plafonné à 40 lignes) : gain apporté par ce
-  // palier = revenu du palier - revenu du palier précédent (voir le
-  // commentaire de FAN_SHOP_LEVELS côté moteur).
-  const idx = transactions.findIndex(t => t.label === `Boutique des supporters : ${info.name}`);
-  const gainPerWeek = info.weeklyRevenue - fanShopInfo(level - 1).weeklyRevenue;
-  if (idx >= 0 && gainPerWeek > 0) {
-    const cost = Math.abs(transactions[idx].amount) || info.cost;
-    const paidWeeks = transactions.slice(0, idx).filter(t => t.label.startsWith("Recettes boutique des supporters")).length;
-    const earned = paidWeeks * gainPerWeek;
-    const pct = Math.min(100, Math.round(earned / cost * 100));
-    const left = Math.max(0, Math.ceil((cost - earned) / gainPerWeek));
-    html += `<div class="eco-bar-row"><div class="eco-bar-head" style="font-size:13px"><span class="eco-muted">Amortissement</span><span>${ecoNum(Math.min(earned, cost))} / ${ecoMoney(cost)}</span></div>` +
-      `<div class="eco-track"><div class="eco-fill in" style="width:${pct}%"></div></div>` +
-      `<span class="eco-small">${left > 0 ? `Rentabilisée dans <b style="color:var(--ink)">${left} semaine${left > 1 ? "s" : ""}</b>` : "Déjà rentabilisée"}</span></div>`;
-  }
-  return html + nextHtml;
+  return `<div class="eco-num lg">${ecoMoney(info.weeklyRevenue)}<span class="unit">/sem</span></div>` +
+    `<span class="eco-pill-tag">Niveau ${level}/${maxLevel} · ${escapeHtml(info.name)}</span>`;
 }
 
 function ecoTvHtml(rec) {
@@ -28736,7 +28718,7 @@ function renderEconomieSection() {
   document.getElementById("economiePayrollChart").innerHTML = ecoPayrollChartHtml(rec);
 
   document.getElementById("economieArenaSummary").innerHTML = ecoArenaHtml();
-  document.getElementById("economieFanShopSummary").innerHTML = ecoFanShopHtml(transactions);
+  document.getElementById("economieFanShopSummary").innerHTML = ecoFanShopHtml();
 
   // Droits TV (voir TV_RIGHTS_WEEKLY_BY_LEVEL côté moteur) : dépend de la
   // division ACTUELLE (`league`, pas `teamA`).
