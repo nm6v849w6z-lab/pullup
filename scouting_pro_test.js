@@ -82,7 +82,7 @@ function assertTrue(cond, label) {
 
     const accessBefore = Scouting.getScoutingAccess(lg, teamIdx, oppIdx, T0);
     assertEqual(accessBefore.level, "locked", "A1: accès verrouillé par défaut");
-    assertEqual(accessBefore.adsRemainingToday, 3, "A1: 3 pubs disponibles au départ");
+    assertEqual(accessBefore.adsRemainingThisMonth, 1, "A1: 1 pub disponible au départ (quota mensuel, retour utilisateur 2026-09-25)");
 
     const ticket = Scouting.createAdTicket(lg, teamIdx, oppIdx, T0);
     assertTrue(ticket.ok, "A1: création du ticket de pub réussie");
@@ -91,7 +91,7 @@ function assertTrue(cond, label) {
 
     const accessAfter = Scouting.getScoutingAccess(lg, teamIdx, oppIdx, T0 + 20000);
     assertEqual(accessAfter.level, "full", "A1: accès débloqué après la pub");
-    assertEqual(accessAfter.adsWatchedToday, 1, "A1: 1 pub comptée aujourd'hui");
+    assertEqual(accessAfter.adsWatchedThisMonth, 1, "A1: 1 pub comptée ce mois-ci");
 
     const report = Scouting.buildScoutingReport(lg, teamIdx, oppIdx, T0 + 20000);
     assertTrue(report.ok, "A1: rapport construit avec succès");
@@ -153,36 +153,31 @@ function assertTrue(cond, label) {
   }
 
   // -----------------------------------------------------------------
-  // A3) Quota quotidien de 3 pubs, idempotence de la complétion d'un ticket.
+  // A3) Quota MENSUEL d'1 pub (retour utilisateur, 2026-09-25 : "on ne
+  //     doit pouvoir le faire qu'une fois par mois"), mois CIVIL Paris ;
+  //     idempotence de la complétion d'un ticket.
   // -----------------------------------------------------------------
   {
     const lg = freshLeague();
     playRounds(lg, 2);
-    const opponents = [1, 2, 3]; // 3 adversaires distincts, jamais teamIdx=0
-    const tickets = [];
-    opponents.forEach(oppIdx => {
-      const t = Scouting.createAdTicket(lg, 0, oppIdx, T0);
-      assertTrue(t.ok, `A3: ticket ${oppIdx} créé (dans le quota)`);
-      tickets.push(t);
-    });
-    // 4e adversaire : quota déjà épuisé (3 tickets CRÉÉS mais pas encore
-    // complétés ne consomment PAS le quota — voir createAdTicket, seul un
-    // ticket COMPLÉTÉ incrémente scoutingAdWatchLog) : on complète d'abord
-    // les 3 avant de vérifier le refus du 4e.
-    tickets.forEach(t => {
-      const c = Scouting.completeAdTicket(lg, 0, t.ticketId, T0);
-      assertTrue(c.ok, "A3: complétion réussie");
-    });
-    const refused = Scouting.createAdTicket(lg, 0, 4, T0);
-    assertEqual(refused.ok, false, "A3: 4e pub du jour refusée (quota atteint)");
-
-    // Idempotence : compléter le MÊME ticket une deuxième fois échoue
-    // proprement, sans recréditer le quota (déjà supprimé de
-    // scoutingAdTickets à la première complétion).
-    const doubleComplete = Scouting.completeAdTicket(lg, 0, tickets[0].ticketId, T0);
+    const t1 = Scouting.createAdTicket(lg, 0, 1, T0);
+    assertTrue(t1.ok, "A3: 1re pub du mois acceptée");
+    assertTrue(Scouting.completeAdTicket(lg, 0, t1.ticketId, T0).ok, "A3: complétion réussie");
+    const refused = Scouting.createAdTicket(lg, 0, 2, T0 + 5 * 24 * 3600 * 1000);
+    assertEqual(refused.ok, false, "A3: 2e pub dans le même mois refusée (quota atteint)");
+    const access2 = Scouting.getScoutingAccess(lg, 0, 2, T0);
+    assertEqual(access2.adsRemainingThisMonth, 0, "A3: plus aucune pub restante ce mois-ci");
+    assertTrue(access2.nextAdAvailableAt === Date.UTC(2026, 9, 1), "A3: prochaine pub annoncée au 1er du mois suivant");
+    // Idempotence : compléter le MÊME ticket une deuxième fois échoue sans
+    // recréditer le quota.
+    const doubleComplete = Scouting.completeAdTicket(lg, 0, t1.ticketId, T0);
     assertEqual(doubleComplete.ok, false, "A3: compléter deux fois le même ticket échoue");
-    assertEqual(Scouting.adsWatchedToday(lg.teams[0], T0), 3, "A3: exactement 3 pubs comptées, pas 4");
-    console.log("✅ A3 : quota quotidien de 3 pubs respecté, complétion de ticket idempotente.");
+    assertEqual(Scouting.adsWatchedThisMonth(lg.teams[0], T0), 1, "A3: exactement 1 pub comptée, pas 2");
+    // Mois suivant (T0 = 7 septembre → 3 octobre) : de nouveau disponible.
+    const nextMonth = Date.UTC(2026, 9, 3, 12);
+    const t2 = Scouting.createAdTicket(lg, 0, 2, nextMonth);
+    assertTrue(t2.ok, "A3: une nouvelle pub est de nouveau possible le mois suivant");
+    console.log("✅ A3 : quota d'1 pub par mois civil respecté, remis à zéro le mois suivant, complétion idempotente.");
   }
 
   // -----------------------------------------------------------------
@@ -337,16 +332,17 @@ function request(server, method, urlPath, jsonBody) {
     assertTrue(report.body.opponentIdx === oppIdx, "B3: le rapport porte bien sur le bon adversaire");
     assertTrue(Array.isArray(report.body.recentForm), "B3: le rapport contient recentForm");
 
-    // B4) Quota quotidien de 3 pubs appliqué bout en bout via HTTP (déjà 1
-    // pub consommée par oppIdx ci-dessus, encore 2 disponibles avant refus).
-    const others = [1, 2, 3, 4, 5].filter(i => i !== oppIdx).slice(0, 3);
+    // B4) Quota MENSUEL d'1 pub appliqué bout en bout via HTTP (déjà
+    // consommé par oppIdx ci-dessus) : toute autre tentative ce mois-ci est
+    // refusée.
+    const others = [1, 2, 3, 4, 5].filter(i => i !== oppIdx).slice(0, 2);
     let refusals = 0;
     for (const idx of others) {
       const t = await request(server, "POST", "/api/scouting/ad-ticket", { opponent: idx });
       if (t.statusCode !== 200) { refusals++; continue; }
       await request(server, "POST", "/api/scouting/ad-complete", { ticketId: t.body.ticketId });
     }
-    assertEqual(refusals, 1, "B4: exactement 1 refus sur les 3 tentatives suivantes (2 restantes + 1 déjà utilisée = quota de 3 atteint)");
+    assertEqual(refusals, 2, "B4: toutes les pubs suivantes du mois sont refusées (quota d'1 par mois)");
 
     // B5) Premium (bouton factice) débloque tout instantanément, sans pub.
     const premiumOn = await request(server, "POST", "/api/scouting/set-premium", { premium: true });
@@ -356,7 +352,7 @@ function request(server, method, urlPath, jsonBody) {
     const reportPremium = await request(server, "GET", "/api/scouting/report?opponent=6");
     assertEqual(reportPremium.statusCode, 200, "B5: rapport Premium accessible sans aucune pub");
 
-    console.log("✅ Partie B (serveur, mode solo) : accès verrouillé/débloqué/gaté correctement, quota quotidien respecté, Premium contourne tout.");
+    console.log("✅ Partie B (serveur, mode solo) : accès verrouillé/débloqué/gaté correctement, quota mensuel respecté, Premium contourne tout.");
   } finally {
     server.close();
   }
@@ -393,16 +389,14 @@ function request(server, method, urlPath, jsonBody) {
       await win.__lastScoutingProCheck;
       const panel = doc.getElementById("scoutingProPanel");
       assertTrue(!!panel, "C1: le panneau Scouting Pro existe");
-      assertTrue(panel.innerHTML.includes("Scouting Pro"), "C1: le panneau affiche bien son titre");
+      assertTrue(panel.querySelector(".sp-lock"), "C1: l'écran verrouillé s'affiche pour un non-Pro");
       const watchAdBtn = doc.getElementById("scoutingProWatchAdBtn");
       assertTrue(!!watchAdBtn, "C1: le bouton 'Regarder une pub' est affiché (verrouillé)");
       assertTrue(!doc.getElementById("scoutingProReport"), "C1: aucun contenu de rapport tant que verrouillé");
-      const tacticalReportEl = doc.querySelector(".tactical-report");
-      assertTrue(!!tacticalReportEl, "C1: le rapport tactique GRATUIT reste affiché (jamais remplacé)");
-      // Ordre DOM : Scouting Pro doit précéder le rapport tactique gratuit
-      // (DOCUMENT_POSITION_FOLLOWING = 4, voir Node.compareDocumentPosition)
-      // — c'est l'inverse de l'ordre d'origine.
-      assertTrue((panel.compareDocumentPosition(tacticalReportEl) & 4) === 4, "C1: Scouting Pro est placé AVANT le rapport tactique gratuit dans la page");
+      // Mode gratuit retiré (retour utilisateur, 2026-09-25) : plus aucun
+      // rapport tactique gratuit pour un adversaire, seulement l'écran
+      // verrouillé (pub 1 fois/mois ou Passer Pro).
+      assertTrue(!doc.querySelector("#teamDetailContent .tactical-report"), "C1: plus de rapport tactique gratuit pour un adversaire non débloqué");
 
       // C2) Cliquer "Regarder une pub" ouvre l'écran gris, puis (après
       // avance de l'horloge factice + tick manuel, voir

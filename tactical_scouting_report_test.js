@@ -47,9 +47,19 @@ opponentRow.querySelector("[data-team-idx]").click();
 // l'ouverture, voir showTeamDetail).
 doc.querySelector('[data-team-detail-subview="analyse"]').click();
 
-const reportBefore = doc.querySelector("#teamDetailContent .tactical-report");
-console.log("Rapport tactique présent (avant tout match) :", !!reportBefore);
-if (!reportBefore) throw new Error("❌ Le panneau de scoutisme devrait toujours contenir un bloc '.tactical-report', même sans données.");
+// Mode gratuit retiré pour les adversaires (retour utilisateur,
+// 2026-09-25 : "on va enlever le mode gratuit dans l'analyse") : la page
+// d'un adversaire n'affiche plus le rapport tactique, seulement l'écran
+// verrouillé Scouting Pro. tacticalReportHtml reste utilisé (sa propre
+// équipe) : il est rendu ici directement pour vérifier son contenu.
+if (doc.querySelector("#teamDetailContent .tactical-report")) {
+  throw new Error("❌ Le rapport tactique gratuit ne devrait plus s'afficher sur la page d'un adversaire.");
+}
+console.log("✅ Plus de rapport tactique gratuit sur la page d'un adversaire.");
+const holder1 = doc.createElement("div");
+holder1.innerHTML = win.eval(`tacticalReportHtml(league.teams[${opponentIdx}])`);
+const reportBefore = holder1.querySelector(".tactical-report");
+if (!reportBefore) throw new Error("❌ tacticalReportHtml devrait toujours produire un bloc '.tactical-report', même sans données.");
 console.log("Texte affiché :", reportBefore.textContent.replace(/\s+/g, " ").trim().slice(0, 200));
 if (!reportBefore.textContent.includes("Pas encore assez")) {
   throw new Error("❌ Sans aucun match disputé par l'adversaire, le rapport devrait afficher un message d'absence de données, pas des pourcentages inventés.");
@@ -143,7 +153,9 @@ if (tendencies.topRebounderName !== pivot.name) {
 }
 console.log(`✅ Le meilleur rebondeur offensif identifié est bien le pivot (${tendencies.topRebounderName}), poste avec le plus de rebonds offensifs.`);
 
-const reportText = doc2.querySelector("#teamDetailContent .tactical-report").textContent.replace(/\s+/g, " ").trim();
+const holder2 = doc2.createElement("div");
+holder2.innerHTML = win2.tacticalReportHtml(oppTeamLive);
+const reportText = holder2.querySelector(".tactical-report").textContent.replace(/\s+/g, " ").trim();
 console.log("\nTexte du rapport tactique :", reportText);
 // "Tendances observées" RETIRÉ du rapport (retour utilisateur, 2026-09-25 :
 // "enlève tendance observés que ce soit payant ou gratuit") — les
@@ -153,7 +165,7 @@ console.log("\nTexte du rapport tactique :", reportText);
 // de départ suggéré), qui doit toujours citer les vrais libellés de
 // consignes et les vrais joueurs.
 if (reportText.includes("Tendances observées")) throw new Error("❌ La section 'Tendances observées' ne devrait plus apparaître dans le rapport.");
-if (doc2.querySelector("#teamDetailContent .tactical-report .tactical-insight")) throw new Error("❌ Plus aucune barre de tendance (.tactical-insight) ne devrait être rendue.");
+if (holder2.querySelector(".tactical-insight")) throw new Error("❌ Plus aucune barre de tendance (.tactical-insight) ne devrait être rendue.");
 console.log("✅ La section 'Tendances observées' a bien disparu du rapport.");
 if (!reportText.includes("Composition tactique recommandée")) throw new Error("❌ La composition tactique recommandée devrait rester affichée.");
 if (!reportText.includes("5 de départ suggéré")) throw new Error("❌ Le 5 de départ suggéré devrait rester affiché dans le rapport gratuit.");

@@ -46,41 +46,23 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   (renderSalleTicketing, buildSeatCategoryRow, updateSalleTicketingPreview,
   CSS), salle_redesign_test.js. Reste : `git push`, puis retirer cette
   entrée.
-- **✅ COMMITTÉ, À POUSSER (2026-09-25) — Analyse d'équipe (Scouting Pro) : retouches** —
-  retour utilisateur (captures BC Dia) : "le 5 suggéré doit être en dessous
-  du plan de match", "rends un peu plus joli aussi, il y a des polices trop
-  grandes", "dans forme et contexte il y a un vide", "enlève forme x% sous
-  les avatars des joueurs", "enlève tendance observés que ce soit payant ou
-  gratuit". Fichiers : moteurbasket3.html (tacticalReportHtml,
-  scoutingProReportHtml, sp2FormContextHtml, sp2RosterHtml, CSS sp2/tactical),
-  tactical_scouting_report_test.js, scouting_pro_test.js. Fait : "Tendances
-  observées" retiré (gratuit + Pro) ; nouvelle section Pro "5 de départ
-  suggéré" (sp2SuggestedFiveHtml, + défense conseillée) juste sous le Plan
-  de match, rapport gratuit masqué (`hidden`) une fois Pro débloqué ;
-  "forme x%" retiré sous les avatars (5 majeur + joueurs clés) ; Forme et
-  contexte refait (2e retour : "on a tjrs ce vide sous face à toi") :
-  "Face à toi" devient une pastille dans l'en-tête du panneau, les 4 blocs
-  (écart de points, 3 derniers vs saison, domicile/extérieur, stratégies)
-  en grille 2×2 à hauteurs égalisées ; 3e retour : note "Mi-temps : X puis
-  Y" retirée, stratégies plafonnées à 3 lignes + "Autres (n)" par côté,
-  "Face à toi" = bilan V-D + 3 derniers matchs + "+N", ligne de base du
-  graphique d'écart dynamique (une grosse défaite ne chevauche plus le
-  score écrit dessous) ; polices réduites (titres de panneaux, gros chiffres, hero,
-  .sub du rapport gratuit qui héritaient de la taille du corps).
-  Statut : tests Mac verts (tactical_scouting_report_test, scouting_pro_test,
-  scouting_advanced_stats_test, client_scouting_test, team_detail_page_test),
-  captures Playwright vérifiées. ⚠️ Une PREMIÈRE partie de ces modifs
-  (CSS polices, retrait Tendances, sp2SuggestedFiveHtml, retrait forme x%)
-  est déjà partie par erreur dans le commit 5e6d722 (Tableau de bord), fait
-  en parallèle par une autre session ; le reste (Forme et contexte,
-  masquage du rapport gratuit, stratégies en grille, tests) est NON
-  committé et partage moteurbasket3.html avec le chantier Économie
-  ci-dessus. Committé seul (hunks Scouting Pro uniquement, Économie laissé
-  hors commit) : f920eb7. 4e retour (captures prod) : âge retiré sous les
-  avatars du 5 majeur et du tableau "5 de départ suggéré", Identité en une
-  seule bande de 5 colonnes (.sp2-ident, fini la 2e ligne avec "Création"
-  seule), carte Zones de tir centrée au-dessus des jauges. Reste : push
-  utilisateur des 2 commits, puis retirer cette entrée.
+- **✅ COMMITTÉ, À POUSSER (2026-09-25) — Analyse d'équipe : fin du mode
+  gratuit, pub limitée à 1 par mois** — retour utilisateur : "on va enlever
+  le mode gratuit dans l'analyse, si on est pas pro et qu'on clique dessus,
+  on doit avoir un bouton regarder la pub et accéder au contenu / on ne doit
+  pouvoir le faire qu'une fois par mois". Fait : plus de rapport tactique
+  gratuit sur la page d'un adversaire (tacticalReportHtml conservé pour sa
+  propre équipe), nouvel écran verrouillé (.sp-lock, scoutingProTeaserHtml)
+  avec "Regarder une pub pour débloquer" + "Passer Pro" ; quota passé de 3
+  pubs/jour à 1 pub par MOIS CIVIL Paris (server/scouting.js
+  MONTHLY_AD_UNLOCK_CAP/parisMonthKey + miroir local), message "prochaine
+  disponible le 1er <mois>" une fois utilisée. Un déblocage par pub reste
+  valable jusqu'à ce que l'adversaire rejoue (péremption inchangée). API :
+  adsRemainingToday/dailyCap → adsRemainingThisMonth/monthlyCap/
+  nextAdAvailableAt. Tests Mac verts : scouting_pro_test (A3/B4/C1 réécrits),
+  tactical_scouting_report_test, client_scouting_test, team_detail_page_test,
+  scouting_advanced_stats_test, server/hoop_shows_test. Reste : push
+  utilisateur, puis retirer cette entrée.
 
 0. **✅ TRANCHÉ (2026-09-24) — Écran mi-temps : PAS de choix tactiques à la
    mi-temps** — ce point était EN PAUSE depuis le 2026-09-24 matin, retour

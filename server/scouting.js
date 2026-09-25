@@ -29,10 +29,26 @@
 // =====================================================================
 const Engine = require("../engine.js");
 
-// Nombre maximum de pubs (factices) qu'un club peut "regarder" par jour
-// civil à Paris (retour utilisateur : "3 pubs par jour maximum, après quoi
-// on incite à passer Premium").
-const DAILY_AD_UNLOCK_CAP = 3;
+// Nombre maximum de pubs (factices) qu'un club peut "regarder" par MOIS
+// civil à Paris. Était 3 par jour ; retour utilisateur (2026-09-25) : "on
+// va enlever le mode gratuit dans l'analyse, si on est pas pro et qu'on
+// clique dessus, on doit avoir un bouton regarder la pub et accéder au
+// contenu / on ne doit pouvoir le faire qu'une fois par mois". Mois CIVIL
+// (du 1er au dernier jour, heure de Paris), pas 30 jours glissants.
+const MONTHLY_AD_UNLOCK_CAP = 1;
+
+// Clé "année-mois" du mois civil à Paris de `ms` (ex. "2026-9").
+function parisMonthKey(ms) {
+  const d = new Date(Engine.parisCalendarDayIndex(ms));
+  return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`;
+}
+
+// Premier jour du mois civil suivant (Paris), en ms "minuit UTC" du triplet
+// année/mois/jour — sert uniquement à afficher "prochaine pub le 1er ...".
+function nextParisMonthStart(ms) {
+  const d = new Date(Engine.parisCalendarDayIndex(ms));
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+}
 
 function fail(error) {
   return { ok: false, error };
@@ -42,12 +58,12 @@ function validOpponentIdx(league, teamIndex, opponentIdx) {
   return Number.isInteger(opponentIdx) && opponentIdx >= 0 && opponentIdx < league.teams.length && opponentIdx !== teamIndex;
 }
 
-// Combien de pubs ce club a déjà "regardé" AUJOURD'HUI (jour civil Paris) —
+// Combien de pubs ce club a déjà "regardé" CE MOIS-CI (mois civil Paris) —
 // recalculé à la demande depuis scoutingAdWatchLog (voir Team.constructor),
 // jamais un compteur séparé qui pourrait diverger.
-function adsWatchedToday(team, now) {
-  const todayIdx = Engine.parisCalendarDayIndex(now);
-  return (team.scoutingAdWatchLog || []).filter(ts => Engine.parisCalendarDayIndex(ts) === todayIdx).length;
+function adsWatchedThisMonth(team, now) {
+  const key = parisMonthKey(now);
+  return (team.scoutingAdWatchLog || []).filter(ts => parisMonthKey(ts) === key).length;
 }
 
 // Nombre de matchs déjà comptés dans le matchLog de `opponent` cette saison
@@ -75,7 +91,7 @@ function getScoutingAccess(league, teamIndex, opponentIdx, now = Date.now()) {
   const currentGames = gamesPlayedFor(opponent);
   const stale = !!unlock && typeof unlock.gamesPlayedAtUnlock === "number" && unlock.gamesPlayedAtUnlock !== currentGames;
   const unlocked = !!unlock && !stale;
-  const adsToday = adsWatchedToday(team, now);
+  const adsMonth = adsWatchedThisMonth(team, now);
   return {
     ok: true,
     opponentIdx,
@@ -85,9 +101,10 @@ function getScoutingAccess(league, teamIndex, opponentIdx, now = Date.now()) {
     stale,
     unlockedAt: unlock ? unlock.unlockedAt : null,
     unlockedSource: unlock ? unlock.source : null,
-    adsWatchedToday: adsToday,
-    adsRemainingToday: Math.max(0, DAILY_AD_UNLOCK_CAP - adsToday),
-    dailyCap: DAILY_AD_UNLOCK_CAP,
+    adsWatchedThisMonth: adsMonth,
+    adsRemainingThisMonth: Math.max(0, MONTHLY_AD_UNLOCK_CAP - adsMonth),
+    monthlyCap: MONTHLY_AD_UNLOCK_CAP,
+    nextAdAvailableAt: nextParisMonthStart(now),
   };
 }
 
@@ -103,8 +120,8 @@ function createAdTicket(league, teamIndex, opponentIdx, now = Date.now()) {
   if (team.scoutingPremium) return fail("Déjà Premium : aucune pub nécessaire.");
   const access = getScoutingAccess(league, teamIndex, opponentIdx, now);
   if (access.unlocked) return fail("Ce rapport est déjà débloqué et à jour.");
-  if (adsWatchedToday(team, now) >= DAILY_AD_UNLOCK_CAP) {
-    return fail(`Quota quotidien de ${DAILY_AD_UNLOCK_CAP} pubs déjà atteint. Réessayez demain, ou passez Premium.`);
+  if (adsWatchedThisMonth(team, now) >= MONTHLY_AD_UNLOCK_CAP) {
+    return fail("Pub gratuite déjà utilisée ce mois-ci. Revenez le mois prochain, ou passez Pro.");
   }
   const ticketId = Engine.randomHexToken(12);
   team.scoutingAdTickets = team.scoutingAdTickets || {};
@@ -341,12 +358,12 @@ function buildScoutingReport(league, teamIdx, opponentIdx, now = Date.now()) {
 }
 
 module.exports = {
-  DAILY_AD_UNLOCK_CAP,
+  MONTHLY_AD_UNLOCK_CAP, parisMonthKey, adsWatchedThisMonth,
   getScoutingAccess, createAdTicket, completeAdTicket, setPremium,
   buildScoutingReport,
   // Exportées pour les tests (vérification indépendante, voir
   // scouting_pro_test.js) plutôt que de dupliquer ces formules dans le test.
-  gamesPlayedFor, adsWatchedToday, aggregateShotZones, aggregateStrategyUsage,
+  gamesPlayedFor, aggregateShotZones, aggregateStrategyUsage,
   // Exportées pour server/showsAdapter.js (Hoop Shows, DEV_NOTES.md point
   // 11) — déjà utilisées EN INTERNE par buildScoutingReport ci-dessus
   // (forme récente/bilan domicile-extérieur/série en cours/confrontations

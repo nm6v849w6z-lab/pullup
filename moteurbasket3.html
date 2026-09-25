@@ -1992,6 +1992,13 @@
      que .spectate-box (overlay .upgrade-confirm-overlay). */
   .scouting-pro-panel{margin-top:14px;}
   .scouting-pro-actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:8px;}
+  /* Écran verrouillé (scoutingProTeaserHtml, 2026-09-25). */
+  .sp-lock{max-width:560px; margin:24px auto; text-align:center; background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:28px 24px;}
+  .sp-lock-icon{width:52px; height:52px; margin:0 auto 12px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:var(--amber); background:rgba(240,162,60,.12); border:1px solid rgba(240,162,60,.35);}
+  .sp-lock h3{font-size:18px; margin:0 0 6px;}
+  .sp-lock .sub{font-size:13px; color:var(--ink-dim);}
+  .sp-lock .scouting-pro-actions{justify-content:center; margin-top:16px;}
+  .sp-lock-note{font-size:12px; color:var(--ink-faint); margin:12px 0 0 !important;}
   /* Visuels Scouting Pro v2 (retour utilisateur, 2026-09 : "trop simple pour
      le moment [...] faudrait des choses plus visuels que ton texte / bilan
      tu mets des carré rouges ou verts / zone de tir une carte du terrain...
@@ -19955,8 +19962,11 @@ function teamDetailAnalyseHtml(teamIdx) {
   // "les conseils tactiques mets les en bas") — c'est désormais Scouting Pro
   // qui ouvre ce sous-onglet, le rapport gratuit vient fermer la page.
   html += `<div id="scoutingProPanel" class="section scouting-pro-panel">` +
-    `<h3>Scouting Pro</h3><p class="sub">Chargement…</p></div>`;
-  html += tacticalReportHtml(team);
+    `<p class="sub">Chargement…</p></div>`;
+  // Rapport tactique gratuit RETIRÉ pour les adversaires (retour
+  // utilisateur, 2026-09-25 : "on va enlever le mode gratuit dans
+  // l'analyse") : un non-Pro voit uniquement l'écran verrouillé (pub 1
+  // fois/mois ou Passer Pro), voir scoutingProTeaserHtml.
   return html;
 }
 
@@ -21200,7 +21210,10 @@ function tacticalReportHtml(opponent) {
 // convention que le reste de ce fichier pour le moteur, voir son en-tête),
 // jamais de vraie notion de "serveur" à consulter dans ce mode.
 // =========================================================================
-const SCOUTING_DAILY_AD_CAP = 3;
+// 1 pub par MOIS civil (Paris) — retour utilisateur 2026-09-25 : "on ne doit
+// pouvoir le faire qu'une fois par mois" (était 3 par jour). Miroir de
+// MONTHLY_AD_UNLOCK_CAP/parisMonthKey dans server/scouting.js.
+const SCOUTING_MONTHLY_AD_CAP = 1;
 const SCOUTING_AD_WATCH_MS = 15000; // durée de l'écran gris (voir showScoutingAdOverlay plus bas)
 
 function scoutingLocalGamesPlayedFor(team) {
@@ -21209,9 +21222,17 @@ function scoutingLocalGamesPlayedFor(team) {
   return keys.size;
 }
 
-function scoutingLocalAdsWatchedToday(team, now) {
-  const todayIdx = parisCalendarDayIndex(now);
-  return (team.scoutingAdWatchLog || []).filter(ts => parisCalendarDayIndex(ts) === todayIdx).length;
+function scoutingParisMonthKey(ms) {
+  const d = new Date(parisCalendarDayIndex(ms));
+  return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`;
+}
+function scoutingNextParisMonthStart(ms) {
+  const d = new Date(parisCalendarDayIndex(ms));
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+}
+function scoutingLocalAdsWatchedThisMonth(team, now) {
+  const key = scoutingParisMonthKey(now);
+  return (team.scoutingAdWatchLog || []).filter(ts => scoutingParisMonthKey(ts) === key).length;
 }
 
 function scoutingLocalAccess(opponentIdx, now = Date.now()) {
@@ -21223,11 +21244,12 @@ function scoutingLocalAccess(opponentIdx, now = Date.now()) {
   const currentGames = scoutingLocalGamesPlayedFor(opponent);
   const stale = !!unlock && typeof unlock.gamesPlayedAtUnlock === "number" && unlock.gamesPlayedAtUnlock !== currentGames;
   const unlocked = !!unlock && !stale;
-  const adsToday = scoutingLocalAdsWatchedToday(team, now);
+  const adsMonth = scoutingLocalAdsWatchedThisMonth(team, now);
   return {
     ok: true, opponentIdx, level: premium || unlocked ? "full" : "locked", premium, unlocked, stale,
     unlockedAt: unlock ? unlock.unlockedAt : null, unlockedSource: unlock ? unlock.source : null,
-    adsWatchedToday: adsToday, adsRemainingToday: Math.max(0, SCOUTING_DAILY_AD_CAP - adsToday), dailyCap: SCOUTING_DAILY_AD_CAP,
+    adsWatchedThisMonth: adsMonth, adsRemainingThisMonth: Math.max(0, SCOUTING_MONTHLY_AD_CAP - adsMonth), monthlyCap: SCOUTING_MONTHLY_AD_CAP,
+    nextAdAvailableAt: scoutingNextParisMonthStart(now),
   };
 }
 
@@ -21239,8 +21261,8 @@ function scoutingLocalCreateAdTicket(opponentIdx, now = Date.now()) {
   if (team.scoutingPremium) return { ok: false, error: "Déjà Premium : aucune pub nécessaire." };
   const access = scoutingLocalAccess(opponentIdx, now);
   if (access.unlocked) return { ok: false, error: "Ce rapport est déjà débloqué et à jour." };
-  if (scoutingLocalAdsWatchedToday(team, now) >= SCOUTING_DAILY_AD_CAP) {
-    return { ok: false, error: `Quota quotidien de ${SCOUTING_DAILY_AD_CAP} pubs déjà atteint. Réessayez demain, ou passez Premium.` };
+  if (scoutingLocalAdsWatchedThisMonth(team, now) >= SCOUTING_MONTHLY_AD_CAP) {
+    return { ok: false, error: "Pub gratuite déjà utilisée ce mois-ci. Revenez le mois prochain, ou passez Pro." };
   }
   const ticketId = randomHexToken(12);
   team.scoutingAdTickets = team.scoutingAdTickets || {};
@@ -21416,7 +21438,7 @@ async function fetchScoutingAccess(opponentIdx) {
   const res = await fetchApi(`/api/scouting/access?opponent=${opponentIdx}`);
   const data = await res.json().catch(() => null);
   if (!res.ok || !data || data.ok === false) {
-    return { ok: false, level: "locked", premium: false, unlocked: false, stale: false, adsWatchedToday: 0, adsRemainingToday: 0, dailyCap: SCOUTING_DAILY_AD_CAP };
+    return { ok: false, level: "locked", premium: false, unlocked: false, stale: false, adsWatchedThisMonth: 0, adsRemainingThisMonth: 0, monthlyCap: SCOUTING_MONTHLY_AD_CAP };
   }
   return data;
 }
@@ -21679,22 +21701,36 @@ function scoutingStartingFiveCardHtml(team, teamIdx, now = Date.now(), startersO
   return html;
 }
 
+// Écran verrouillé de l'analyse adverse — retour utilisateur (2026-09-25) :
+// "on va enlever le mode gratuit dans l'analyse, si on est pas pro et qu'on
+// clique dessus, on doit avoir un bouton regarder la pub et accéder au
+// contenu / on ne doit pouvoir le faire qu'une fois par mois". Plus de
+// rapport tactique gratuit sous ce panneau (voir teamDetailAnalyseHtml) :
+// c'est désormais le SEUL contenu de l'onglet pour un non-Pro.
 function scoutingProTeaserHtml(access, opponentIdx) {
-  let html = `<h3>Scouting Pro</h3>`;
-  if (access.stale) {
-    html += `<p class="sub">Cet adversaire a rejoué depuis votre dernier rapport Pro : les données ont changé, débloquez une version à jour.</p>`;
-  } else {
-    html += `<p class="sub">Forme récente, bilan domicile/extérieur, séries, historique des confrontations, zones de tir et joueurs clés — en plus du rapport tactique gratuit ci-dessus.</p>`;
-  }
+  const opp = league && league.teams[opponentIdx];
+  const remaining = access.adsRemainingThisMonth || 0;
+  const nextMonth = access.nextAdAvailableAt
+    ? new Date(access.nextAdAvailableAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "UTC" })
+    : null;
+  let html = `<div class="sp-lock">`;
+  html += `<div class="sp-lock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>`;
+  html += `<h3>Analyse de ${escapeHtml(opp ? opp.name : "l'adversaire")}</h3>`;
+  html += access.stale
+    ? `<p class="sub">Cet adversaire a rejoué depuis ton dernier déblocage : les données ont changé.</p>`
+    : `<p class="sub">Plan de match, 5 de départ suggéré, profil et style de jeu, forme récente et effectif détaillé.</p>`;
   html += `<div class="scouting-pro-actions">`;
-  if (access.adsRemainingToday > 0) {
-    html += `<button class="secondary" id="scoutingProWatchAdBtn" data-opponent-idx="${opponentIdx}">▶️ Regarder une pub (test) — ${access.adsRemainingToday}/${access.dailyCap} restantes aujourd'hui</button>`;
+  if (remaining > 0) {
+    html += `<button class="primary" id="scoutingProWatchAdBtn" data-opponent-idx="${opponentIdx}">▶ Regarder une pub pour débloquer</button>`;
   } else {
-    html += `<button class="secondary" disabled title="Quota quotidien de pubs déjà atteint">▶️ Regarder une pub (test)</button>`;
-    html += `<p class="sub">Quota de ${access.dailyCap} pubs atteint pour aujourd'hui (revenez demain), ou passez Premium pour un accès illimité.</p>`;
+    html += `<button class="secondary" disabled title="Pub gratuite déjà utilisée ce mois-ci">▶ Regarder une pub pour débloquer</button>`;
   }
   html += `<button class="secondary" id="scoutingProGoPremiumBtn">⭐ Passer Pro (test)</button>`;
-  html += `</div><div id="scoutingProFeedback"></div>`;
+  html += `</div>`;
+  html += remaining > 0
+    ? `<p class="sp-lock-note">1 déblocage par pub par mois. Passe Pro pour un accès illimité à toutes les équipes.</p>`
+    : `<p class="sp-lock-note">Tu as déjà utilisé ta pub du mois${nextMonth ? ` — prochaine disponible le ${escapeHtml(nextMonth)}` : ""}. Passe Pro pour un accès illimité.</p>`;
+  html += `<div id="scoutingProFeedback"></div></div>`;
   return html;
 }
 
@@ -22725,7 +22761,7 @@ async function refreshScoutingProPanel(teamIdx) {
     const freeReport = document.querySelector("#teamDetailContent .tactical-report");
     if (freeReport) freeReport.hidden = proOk && !!(report && report.gamesPlayed);
   } else {
-    holder.innerHTML = scoutingProTeaserHtml(access || { adsRemainingToday: 0, dailyCap: SCOUTING_DAILY_AD_CAP }, teamIdx);
+    holder.innerHTML = scoutingProTeaserHtml(access || { adsRemainingThisMonth: 0, monthlyCap: SCOUTING_MONTHLY_AD_CAP }, teamIdx);
     const freeReport = document.querySelector("#teamDetailContent .tactical-report");
     if (freeReport) freeReport.hidden = false;
   }
