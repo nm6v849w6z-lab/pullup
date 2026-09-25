@@ -191,7 +191,9 @@ const budgetText = doc2.getElementById("staffBudget").textContent;
 console.log("Staff après rechargement :", staffText);
 console.log("Budget après rechargement :", budgetText);
 const staffOk = staffText.includes("niveau 4") && staffText.includes(`En poste depuis ${WEEKS} semaine`);
-const budgetOk = budgetText === `Budget club : ${savedTeam.budget.toLocaleString("fr-FR")} €`;
+// Refonte Staff (2026-09-25) : #staffBudget ne contient plus que le montant
+// (le libellé "Budget club" est désormais une étiquette séparée de la tuile).
+const budgetOk = budgetText === `${savedTeam.budget.toLocaleString("fr-FR")} €`;
 console.log(`${staffOk ? "✅" : "❌"} Entraîneur (niveau + ancienneté) persisté.`);
 console.log(`${budgetOk ? "✅" : "❌"} Budget du club persisté.`);
 

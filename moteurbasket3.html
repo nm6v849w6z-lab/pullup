@@ -1581,6 +1581,125 @@
      d'action normal, pour bien lire comme un simple "déplier" plutôt qu'une
      action sur un candidat précis. */
   .staff-listings-toggle-btn{display:block; margin:10px auto 0;}
+  /* ---- Staff : refonte 2026-09-25 (maquette Design "Hoop Manager — page
+     Staff"). Tout est préfixé .stf- et scopé sous .stf-page : rien ne
+     déborde sur les autres écrans qui réutilisent .staff-hire-grid/
+     .staff-hire-card (Salle, boutique, centre de formation). ---- */
+  .stf-page{--stf-lead:#6cb4ff; --stf-lead-bg:#10233d; --stf-display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-variant-numeric:tabular-nums; display:flex; flex-direction:column; gap:24px;}
+  .stf-page [hidden]{display:none !important;}
+  .stf-top{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
+  .stf-top__titles{display:flex; flex-direction:column; gap:6px; min-width:0; flex:1 1 360px;}
+  .stf-top__titles h2{margin:0; font-family:var(--stf-display); font-weight:800; font-size:34px; line-height:1.05; letter-spacing:-.02em; color:var(--ink);}
+  .stf-table th:last-child{text-align:right;}
+  .stf-lede{margin:0; color:var(--ink-dim); font-size:15px; max-width:640px;}
+  .stf-kpis{display:flex; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  .stf-kpi{background:var(--panel); padding:12px 20px; display:flex; flex-direction:column; gap:2px;}
+  .stf-kpi__label{font-size:13px; color:var(--ink-dim);}
+  .stf-kpi__value{font-family:var(--stf-display); font-weight:800; font-size:24px; line-height:1.15; color:var(--ink); white-space:nowrap;}
+  .stf-kpi__value.negative{color:var(--danger);}
+  .stf-unit{font-size:14px; font-weight:500; color:var(--ink-dim);}
+  #staffFeedback:empty{display:none;}
+
+  .stf-slots{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px;}
+  .stf-slot{display:flex; align-items:center; gap:14px; padding:16px 18px; background:var(--panel); border:1px dashed #3a4c6a; border-radius:14px; color:var(--ink); text-align:left; font:inherit; cursor:pointer; min-width:0;}
+  .stf-slot:hover{border-color:var(--amber);}
+  .stf-slot--filled{border-style:solid; border-color:var(--line);}
+  .stf-slot__icon{width:46px; height:46px; border-radius:50%; border:2px dashed #4a5d7e; display:flex; align-items:center; justify-content:center; color:var(--ink-dim); flex-shrink:0;}
+  .stf-slot--filled .stf-slot__icon{border-style:solid; border-color:var(--amber); color:var(--amber);}
+  .stf-slot--bidding .stf-slot__icon{border-color:var(--stf-lead); color:var(--stf-lead);}
+  .stf-slot__text{display:flex; flex-direction:column; gap:2px; flex-grow:1; min-width:0;}
+  .stf-slot__role{font-weight:700; font-size:16px;}
+  .stf-slot__status{font-size:13px; color:var(--ink-dim);}
+  .stf-badge{font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px; white-space:nowrap; flex-shrink:0;}
+  .stf-badge--vacant{background:var(--amber); color:var(--amber-ink);}
+  .stf-badge--bidding{background:var(--stf-lead-bg); color:var(--stf-lead); border:1px solid var(--stf-lead);}
+  .stf-badge--filled{background:var(--panel-2); color:var(--ink); border:1px solid var(--line);}
+
+  .stf-stars{letter-spacing:1px; line-height:1; font-size:16px;}
+  .stf-stars .on{color:var(--amber);}
+  .stf-stars .off{color:#33445f;}
+  .stf-stars--all .off{color:#4a5d7e;}
+
+  .stf-role{background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden;}
+  .stf-role__head{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:20px 24px;}
+  .stf-role__titles{display:flex; flex-direction:column; gap:4px; min-width:0;}
+  .stf-role__titles h3{margin:0; font-family:var(--stf-display); font-weight:800; font-size:22px; line-height:1.15; color:var(--ink);}
+  .stf-role__desc{font-size:14px; color:var(--ink-dim);}
+  .stf-role__summary{font-size:13px; color:var(--ink-faint);}
+  .stf-current-holder{padding:0 24px;}
+  .stf-current-holder .staff-none{margin:0 0 16px; font-size:14px;}
+  .stf-page .stf-current{margin:0 0 18px; padding:12px 16px; border-radius:12px; background:var(--panel-2); border:1px solid var(--line);}
+  .stf-page .stf-current .staff-current-info{font-size:15px; display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px;}
+  .stf-page .stf-current .staff-current-meta{flex-basis:100%; font-size:13px; color:var(--ink-dim); margin-top:0;}
+  .stf-page .staff-fire-btn{min-height:40px; padding:0 16px; font-size:14px; font-weight:600;}
+  .stf-role__body{border-top:1px solid var(--line);}
+  .stf-ghost-btn{min-height:44px; padding:0 18px; background:transparent; border:1px solid #2a3b57; border-radius:10px; color:var(--ink); font:inherit; font-weight:600; font-size:14px; cursor:pointer; white-space:nowrap;}
+  .stf-ghost-btn:hover{border-color:var(--amber);}
+
+  .stf-levels{margin:0; border:none; border-bottom:1px solid var(--line); padding:18px 24px 20px; min-width:0;}
+  .stf-levels legend{float:left; width:100%; padding:0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; font-weight:700; font-size:15px; color:var(--ink);}
+  .stf-levels__sort{font-weight:500; font-size:13px; color:var(--ink-dim);}
+  .stf-levels__grid{clear:both; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px;}
+  .stf-level{display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:12px 14px; border-radius:12px; text-align:left; color:var(--ink); background:var(--bg); border:2px solid var(--line); font:inherit; cursor:pointer; min-width:0;}
+  .stf-level:hover:not(:disabled){border-color:#3a4c6a;}
+  .stf-level.is-selected{background:#2a1f10; border-color:var(--amber);}
+  .stf-level:disabled{opacity:.45; cursor:not-allowed;}
+  .stf-level__title{font-weight:700; font-size:14px;}
+  .stf-level__meta{font-size:12px; color:var(--ink-dim);}
+
+  .stf-table-wrap{overflow-x:auto;}
+  .stf-table{width:100%; border-collapse:collapse; min-width:860px;}
+  .stf-table th{text-align:left; font-weight:500; font-size:13px; color:var(--ink-dim); padding:12px 12px; white-space:nowrap;}
+  .stf-table th:first-child, .stf-table td:first-child{padding-left:24px;}
+  .stf-table th:last-child, .stf-table td:last-child{padding-right:24px;}
+  .stf-table td{padding:14px 12px; border-top:1px solid var(--line-soft); vertical-align:middle;}
+  .stf-row.is-top td{background:rgba(255,255,255,.02);}
+  .stf-row.is-leading td{background:var(--stf-lead-bg);}
+  .stf-row.is-leading td:first-child{box-shadow:inset 3px 0 0 var(--stf-lead);}
+  .stf-cell{display:flex; flex-direction:column; gap:3px;}
+  .stf-row .stf-stars{font-size:20px; letter-spacing:2px;}
+  .stf-strong{font-weight:700; font-size:16px; color:var(--ink);}
+  .stf-muted{font-weight:600; font-size:15px; color:var(--ink-dim);}
+  .stf-lead{font-weight:700; font-size:16px; color:var(--stf-lead);}
+  .stf-sub{font-size:12px; color:var(--ink-dim);}
+  .stf-time{font-weight:600; font-size:15px; color:var(--ink); white-space:nowrap;}
+  .stf-time.is-urgent{font-weight:700; color:var(--amber);}
+  .stf-offer{display:flex; align-items:center; gap:10px; justify-content:flex-end;}
+  .stf-stepper{display:flex; align-items:center; height:44px; background:var(--bg); border:1px solid #2a3b57; border-radius:10px;}
+  .stf-step{width:40px; height:42px; background:transparent; border:none; color:var(--ink); font-size:20px; cursor:pointer;}
+  .stf-step:hover{color:var(--amber);}
+  .stf-amount{width:72px; background:transparent; border:none; color:var(--ink); font:inherit; font-weight:700; font-size:15px; text-align:right; padding:0; -moz-appearance:textfield;}
+  .stf-amount::-webkit-outer-spin-button, .stf-amount::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+  .stf-amount-unit{font-weight:700; font-size:15px; padding:0 2px 0 4px; color:var(--ink);}
+  .stf-bid-btn{min-width:118px; height:44px; border-radius:10px; background:var(--amber); border:1px solid var(--amber); color:var(--amber-ink); font:inherit; font-weight:700; font-size:14px; cursor:pointer; white-space:nowrap;}
+  .stf-bid-btn.is-secondary{background:transparent; border-color:var(--stf-lead); color:var(--stf-lead);}
+  .stf-more{display:flex; justify-content:center; padding:16px 24px 20px; border-top:1px solid var(--line-soft);}
+  .stf-page .stf-more .staff-listings-toggle-btn{margin:0;}
+  .stf-page .training-empty{padding:18px 24px; margin:0;}
+
+  @media (max-width:1100px){
+    .stf-slots{grid-template-columns:1fr;}
+    .stf-levels__grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+  }
+  @media (max-width:768px){
+    .stf-role__head{flex-wrap:wrap; padding:16px;}
+    .stf-current-holder{padding:0 16px;}
+    .stf-levels{padding:14px 16px 16px;}
+    .stf-levels__grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .stf-table{min-width:0;}
+    .stf-table thead{display:none;}
+    .stf-table, .stf-table tbody, .stf-table tr, .stf-table td{display:block; width:auto;}
+    .stf-table tr{border-top:1px solid var(--line); padding:12px 16px;}
+    .stf-table td, .stf-table td:first-child, .stf-table td:last-child{border:none; padding:6px 0; display:flex; justify-content:space-between; align-items:center; gap:12px;}
+    .stf-table td::before{content:attr(data-label); font-size:12px; color:var(--ink-dim);}
+    .stf-table td[data-label="Votre offre"]::before{display:none;}
+    .stf-table td .stf-cell{align-items:flex-end; text-align:right;}
+    .stf-row.is-leading td:first-child{box-shadow:none;}
+    .stf-row.is-leading{box-shadow:inset 3px 0 0 var(--stf-lead); background:var(--stf-lead-bg);}
+    .stf-offer{width:100%; justify-content:space-between;}
+    .stf-kpis{width:100%;}
+    .stf-kpi{flex:1;}
+  }
   /* Variante pour les grilles qui n'ont jamais qu'UNE seule carte (prochain
      palier de la Salle, prochain palier de la boutique des supporters) —
      contrairement au recrutement de Staff (jusqu'à 5 candidats), qui a
@@ -3947,53 +4066,75 @@
   </div>
 
   <div id="staffSection" class="hidden">
-    <div class="section">
-      <h2>Staff · entraîneur</h2>
-      <div class="staff-panel" id="staffPanel">
-        <div class="staff-header">
-          <span class="field-label" style="margin:0">Entraîneur du club</span>
-          <span class="staff-budget" id="staffBudget"></span>
+    <!-- Refonte Staff (2026-09-25, maquette Design "Hoop Manager — page
+         Staff") : une seule page au lieu de 3 sections empilées. En-tête
+         avec Budget club / Salaires staff, 3 cartes "poste" (entraîneur,
+         analyste vidéo, recruteur : vacant / enchère en cours / en poste)
+         qui ouvrent la section du rôle, puis une section par rôle : membre
+         en poste (Congédier), filtre par niveau, enchères en lignes avec
+         pas de ±100 € sur l'offre. Tout le HTML dynamique est produit par
+         renderStaffPanel/renderStaffRole (voir STAFF_ROLES). Les ids
+         historiques (#staffBudget, #staffCurrent, #staffHireGrid,
+         #staffAnalystCurrent, #staffAnalystHireGrid, #staffRecruiter...)
+         sont conservés : tests et autres écrans s'y réfèrent. -->
+    <div class="section stf-page">
+      <div class="stf-top">
+        <div class="stf-top__titles">
+          <h2>Staff</h2>
+          <p class="stf-lede">Recrutez votre staff aux enchères. À la clôture, le plus offrant signe : sa mise devient son salaire de départ, payé chaque semaine tant que le contrat court.</p>
         </div>
-        <div id="staffCurrent"></div>
-        <div id="staffFeedback"></div>
-        <div id="staffHireGrid"></div>
-      </div>
-    </div>
-    <!-- Analyste vidéo (voir renderAnalystPanel/renderAnalystListings) :
-         DEUXIÈME rôle de staff, sans effet sur l'entraînement — il débloque
-         des séances vidéo qui révèlent les caractéristiques des adversaires
-         (voir le panneau de scoutisme sur l'écran Classement). Section
-         séparée plutôt que fusionnée avec le panneau entraîneur ci-dessus :
-         deux marchés/deux rôles bien distincts, mieux de ne pas les mélanger
-         visuellement. -->
-    <div class="section">
-      <h2>Staff · analyste vidéo</h2>
-      <div class="staff-panel" id="staffAnalystPanel">
-        <div class="staff-header">
-          <span class="field-label" style="margin:0">Analyste vidéo du club</span>
+        <div class="stf-kpis">
+          <div class="stf-kpi"><span class="stf-kpi__label">Budget club</span><span class="stf-kpi__value" id="staffBudget"></span></div>
+          <div class="stf-kpi"><span class="stf-kpi__label">Salaires staff</span><span class="stf-kpi__value" id="staffPayroll"></span></div>
         </div>
-        <div id="staffAnalystCurrent"></div>
-        <div id="staffAnalystHireGrid"></div>
       </div>
-    </div>
-    <!-- Recruteur (voir renderRecruiterPanel/renderRecruiterListings) :
-         TROISIÈME rôle de staff, même structure/même marché aux enchères que
-         les deux ci-dessus (League.recruiterListings/placeRecruiterBid/
-         refreshRecruiterMarket, calqués sur le marché entraîneur — voir
-         engine.js), mais un effet complètement différent : aucun bonus
-         d'entraînement ni séance vidéo, il alimente à la place le vivier
-         PRIVÉ de jeunes prospects de l'académie (Team.youthCandidates),
-         consultable et signable depuis le nouvel onglet Académie de
-         jeunes ci-dessous (renderAcademieSection). -->
-    <div class="section">
-      <h2>Staff · recruteur</h2>
-      <div class="staff-panel" id="staffRecruiterPanel">
-        <div class="staff-header">
-          <span class="field-label" style="margin:0">Recruteur du club</span>
+      <div id="staffFeedback" role="status" aria-live="polite"></div>
+      <div class="stf-slots" id="staffSlots"></div>
+
+      <section class="stf-role" id="staffPanel" data-staff-role="coach" aria-labelledby="staffCoachTitle">
+        <div class="stf-role__head">
+          <div class="stf-role__titles">
+            <h3 id="staffCoachTitle">Candidats entraîneur</h3>
+            <span class="stf-role__desc">Accélère la progression de vos joueurs à l'entraînement. Aucun effet direct en match.</span>
+            <span class="stf-role__summary" id="staffCoachSummary"></span>
+          </div>
+          <button type="button" class="stf-ghost-btn" data-staff-toggle-role="coach" aria-controls="staffCoachBody"></button>
         </div>
-        <div id="staffRecruiterCurrent"></div>
-        <div id="staffRecruiterHireGrid"></div>
-      </div>
+        <div id="staffCurrent" class="stf-current-holder"></div>
+        <div class="stf-role__body" id="staffCoachBody">
+          <div id="staffHireGrid"></div>
+        </div>
+      </section>
+
+      <section class="stf-role" id="staffAnalystPanel" data-staff-role="analyst" aria-labelledby="staffAnalystTitle">
+        <div class="stf-role__head">
+          <div class="stf-role__titles">
+            <h3 id="staffAnalystTitle">Candidats analyste vidéo</h3>
+            <span class="stf-role__desc">Prépare des séances vidéo sur vos adversaires (Analyse d'équipe). Aucun effet sur l'entraînement.</span>
+            <span class="stf-role__summary" id="staffAnalystSummary"></span>
+          </div>
+          <button type="button" class="stf-ghost-btn" data-staff-toggle-role="analyst" aria-controls="staffAnalystBody"></button>
+        </div>
+        <div id="staffAnalystCurrent" class="stf-current-holder"></div>
+        <div class="stf-role__body" id="staffAnalystBody">
+          <div id="staffAnalystHireGrid"></div>
+        </div>
+      </section>
+
+      <section class="stf-role" id="staffRecruiterPanel" data-staff-role="recruiter" aria-labelledby="staffRecruiterTitle">
+        <div class="stf-role__head">
+          <div class="stf-role__titles">
+            <h3 id="staffRecruiterTitle">Candidats recruteur</h3>
+            <span class="stf-role__desc">Déniche de jeunes prospects pour votre Académie de jeunes.</span>
+            <span class="stf-role__summary" id="staffRecruiterSummary"></span>
+          </div>
+          <button type="button" class="stf-ghost-btn" data-staff-toggle-role="recruiter" aria-controls="staffRecruiterBody"></button>
+        </div>
+        <div id="staffRecruiterCurrent" class="stf-current-holder"></div>
+        <div class="stf-role__body" id="staffRecruiterBody">
+          <div id="staffRecruiterHireGrid"></div>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -25561,389 +25702,315 @@ function formatMoney(n) {
 // ---------------------------------------------------------------------
 function staffFeedback(message, ok) {
   const el = document.getElementById("staffFeedback");
+  if (!el) return;
   el.innerHTML = message ? `<div class="gain-line ${ok ? "gain-up" : "gain-down"}">${escapeHtml(message)}</div>` : "";
 }
 
-// Nombre d'enchères affichées d'entrée sur chaque marché de staff (retour
-// utilisateur, 2026-09 : "montrer uniquement les 5 prochains staffs aux
-// enchères pour chaque type de staff et mettre un petit bouton pour en
-// afficher plus [...] sinon faut beaucoup scroller") : les 5 plus proches de
-// leur clôture (déjà triées par closesAt, voir renderCoachListings/
-// renderAnalystListings/renderRecruiterListings), un bouton "Afficher plus"
-// dévoilant le reste à la demande. Un booléen par type de staff (pas un seul
-// partagé) : déplier le marché des entraîneurs ne doit pas aussi déplier
-// celui des analystes/recruteurs, qui vivent sur des sous-onglets séparés.
+// Refonte Staff (2026-09-25, maquette Design "Hoop Manager — page Staff",
+// retour utilisateur : "code la page stp") : les 3 rôles de staff
+// (entraîneur, analyste vidéo, recruteur) partagent désormais UN SEUL rendu
+// (renderStaffRole) piloté par la table STAFF_ROLES ci-dessous, au lieu de 3
+// copies quasi identiques (renderCoachListings/renderAnalystListings/
+// renderRecruiterListings et leurs 3 écouteurs de clic). Le comportement
+// métier est inchangé : mêmes appels moteur (placeCoachBid/fireTeamTrainer/
+// ...), mêmes synchros serveur, mêmes messages de refus.
+//
+// Nombre d'enchères affichées d'entrée sur chaque marché (retour utilisateur,
+// 2026-09 : "montrer uniquement les 5 prochains staffs aux enchères pour
+// chaque type de staff et mettre un petit bouton pour en afficher plus") :
+// les 5 plus proches de leur clôture, le reste à la demande. État par rôle
+// (déplier les entraîneurs ne déplie pas les analystes).
 const STAFF_LISTINGS_COLLAPSED_COUNT = 5;
-let coachListingsExpanded = false;
-let analystListingsExpanded = false;
-let recruiterListingsExpanded = false;
+const STAFF_ICONS = {
+  coach: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20v-1a7 7 0 0 1 14 0v1"></path><circle cx="12" cy="8" r="4"></circle></svg>',
+  analyst: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="m16 10 5-3v10l-5-3"></path></svg>',
+  recruiter: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path><path d="M11 8v6M8 11h6"></path></svg>',
+};
+const STAFF_ROLES = [
+  {
+    key: "coach", label: "Entraîneur", noun: "entraîneur",
+    listKey: "coachListings", currentId: "staffCurrent", gridId: "staffHireGrid",
+    summaryId: "staffCoachSummary", bodyId: "staffCoachBody", inputPrefix: "coachBid_",
+    member: () => teamA.trainer, salary: () => teamA.trainerSalary(),
+    placeBid: (id, amount, now) => league.placeCoachBid(id, myTeamIndex, amount, now),
+    syncBid: (id, amount) => syncCoachBidToServer(id, amount),
+    // league.fireTeamTrainer (voir engine.js) plutôt que teamA.fireTrainer()
+    // directement : retour utilisateur (2026-09) "dès qu'un staff est viré
+    // parce que devenu trop cher, il faut qu'il retourne sur le marché avec
+    // un salaire baissé de 30%" — règle partagée solo/multi-manager.
+    fire: (now) => league.fireTeamTrainer(myTeamIndex, now),
+    syncFire: () => syncFireTrainerToServer(),
+    firedMsg: "Entraîneur congédié", noneText: "Aucun entraîneur sous contrat.",
+  },
+  {
+    key: "analyst", label: "Analyste vidéo", noun: "analyste vidéo",
+    listKey: "analystListings", currentId: "staffAnalystCurrent", gridId: "staffAnalystHireGrid",
+    summaryId: "staffAnalystSummary", bodyId: "staffAnalystBody", inputPrefix: "analystBid_",
+    member: () => teamA.videoAnalyst, salary: () => teamA.videoAnalystSalary(),
+    placeBid: (id, amount, now) => league.placeAnalystBid(id, myTeamIndex, amount, now),
+    syncBid: (id, amount) => syncAnalystBidToServer(id, amount),
+    fire: (now) => league.fireTeamVideoAnalyst(myTeamIndex, now),
+    syncFire: () => syncFireAnalystToServer(),
+    firedMsg: "Analyste vidéo congédié", noneText: "Aucun analyste vidéo sous contrat.",
+  },
+  {
+    key: "recruiter", label: "Recruteur", noun: "recruteur",
+    listKey: "recruiterListings", currentId: "staffRecruiterCurrent", gridId: "staffRecruiterHireGrid",
+    summaryId: "staffRecruiterSummary", bodyId: "staffRecruiterBody", inputPrefix: "recruiterBid_",
+    member: () => teamA.recruiter, salary: () => teamA.recruiterSalary(),
+    placeBid: (id, amount, now) => league.placeRecruiterBid(id, myTeamIndex, amount, now),
+    syncBid: (id, amount) => syncRecruiterBidToServer(id, amount),
+    fire: (now) => league.fireTeamRecruiter(myTeamIndex, now),
+    syncFire: () => syncFireRecruiterToServer(),
+    firedMsg: "Recruteur congédié", noneText: "Aucun recruteur sous contrat.",
+  },
+];
+const STAFF_ROLE_BY_KEY = Object.fromEntries(STAFF_ROLES.map(r => [r.key, r]));
+// État d'affichage par rôle : section dépliée (seul l'entraîneur l'est
+// d'entrée, comme sur la maquette), filtre de niveau (0 = tous), liste
+// complète affichée ou non.
+const staffUi = {
+  coach: { open: true, level: 0, expanded: false },
+  analyst: { open: false, level: 0, expanded: false },
+  recruiter: { open: false, level: 0, expanded: false },
+};
 
-// Bouton "Afficher plus (N)"/"Afficher moins" commun aux 3 marchés de staff
-// ci-dessous : factorisé ici pour ne pas tripler le même HTML/logique.
-function staffListingsToggleHtml(totalCount, visibleCount, expanded, toggleAttr) {
-  if (visibleCount >= totalCount) {
-    return expanded && totalCount > STAFF_LISTINGS_COLLAPSED_COUNT
-      ? `<button type="button" class="secondary staff-listings-toggle-btn" ${toggleAttr}="less">Afficher moins</button>`
-      : "";
-  }
-  return `<button type="button" class="secondary staff-listings-toggle-btn" ${toggleAttr}="more">Afficher ${totalCount - visibleCount} de plus</button>`;
+function staffStarsHtml(level) {
+  return `<span class="stf-stars" aria-hidden="true"><span class="on">${"★".repeat(level)}</span><span class="off">${"★".repeat(5 - level)}</span></span>`;
+}
+function staffCandidatesLabel(n) {
+  return `${n} candidat${n > 1 ? "s" : ""}`;
+}
+function staffOpenListings(role) {
+  return (league[role.listKey] || []).filter(l => l.status === "open").sort((a, b) => a.closesAt - b.closesAt);
 }
 
 function renderStaffPanel() {
   const budgetEl = document.getElementById("staffBudget");
-  budgetEl.textContent = `Budget club : ${formatMoney(teamA.budget)}`;
+  budgetEl.textContent = formatMoney(teamA.budget);
   budgetEl.classList.toggle("negative", teamA.budget < 0);
+  const payroll = STAFF_ROLES.reduce((sum, r) => sum + (r.member() ? r.salary() : 0), 0);
+  document.getElementById("staffPayroll").innerHTML = `${escapeHtml(formatMoney(payroll))}<span class="stf-unit"> /sem.</span>`;
 
-  const currentHolder = document.getElementById("staffCurrent");
-  currentHolder.innerHTML = "";
-  if (teamA.trainer) {
-    const { level, weeksEmployed } = teamA.trainer;
-    const salary = teamA.trainerSalary();
-    const box = document.createElement("div");
-    box.className = "staff-current";
-    box.innerHTML = `<div class="staff-current-info"><span class="stars">${"★".repeat(level)}${"☆".repeat(5 - level)}</span> Entraîneur niveau ${level}` +
-      `<span class="staff-current-meta">En poste depuis ${weeksEmployed} semaine(s) · salaire actuel : ${formatMoney(salary)}/semaine</span></div>`;
-    const fireBtn = document.createElement("button");
-    fireBtn.className = "staff-fire-btn";
-    fireBtn.textContent = "Congédier";
-    fireBtn.addEventListener("click", () => {
-      // league.fireTeamTrainer (voir engine.js) plutôt que teamA.fireTrainer()
-      // directement : retour utilisateur (2026-09) "dès qu'un staff est viré
-      // parce que devenu trop cher, il faut qu'il retourne sur le marché avec
-      // un salaire baissé de 30%" — règle de gameplay partagée solo/multi-
-      // manager, donc appelée ici même en solo (result.relisted est presque
-      // toujours true : false seulement si, cas limite, aucun entraîneur
-      // n'était en fait en poste).
-      const result = league.fireTeamTrainer(myTeamIndex, Date.now());
-      saveMyTeam();
-      syncFireTrainerToServer();
-      staffFeedback(
-        result.relisted
-          ? "Entraîneur congédié, il est remis sur le marché à prix réduit (-30%)."
-          : "Entraîneur congédié.",
-        true
-      );
-      renderStaffPanel();
-    });
-    box.appendChild(fireBtn);
-    currentHolder.appendChild(box);
-  } else {
-    const p = document.createElement("p");
-    p.className = "staff-none";
-    p.textContent = "Aucun entraîneur sous contrat.";
-    currentHolder.appendChild(p);
-  }
-
-  renderCoachListings();
-  renderAnalystPanel();
-  renderRecruiterPanel();
-}
-
-// Analyste vidéo (voir Team.videoAnalyst/League.analystListings côté
-// moteur) — même structure que la section entraîneur ci-dessus (renderCoach
-// listings compris), juste un rôle de staff différent : pas de bonus
-// d'entraînement affiché ici (il n'en a aucun), à la place le nombre de
-// caractéristiques révélées par séance vidéo (voir League.runVideoSession).
-function renderAnalystPanel() {
-  const currentHolder = document.getElementById("staffAnalystCurrent");
-  currentHolder.innerHTML = "";
-  if (teamA.videoAnalyst) {
-    const { level, weeksEmployed } = teamA.videoAnalyst;
-    const salary = teamA.videoAnalystSalary();
-    const box = document.createElement("div");
-    box.className = "staff-current";
-    box.innerHTML = `<div class="staff-current-info"><span class="stars">${"★".repeat(level)}${"☆".repeat(5 - level)}</span> Analyste vidéo niveau ${level}` +
-      `<span class="staff-current-meta">En poste depuis ${weeksEmployed} semaine(s) · salaire actuel : ${formatMoney(salary)}/semaine</span></div>`;
-    const fireBtn = document.createElement("button");
-    fireBtn.className = "staff-fire-btn";
-    fireBtn.textContent = "Congédier";
-    fireBtn.addEventListener("click", () => {
-      // league.fireTeamVideoAnalyst (voir engine.js), même raisonnement que
-      // le bouton "Congédier" de l'entraîneur ci-dessus : relistage à -30%
-      // partagé solo/multi-manager.
-      const result = league.fireTeamVideoAnalyst(myTeamIndex, Date.now());
-      saveMyTeam();
-      syncFireAnalystToServer();
-      staffFeedback(
-        result.relisted
-          ? "Analyste vidéo congédié, il est remis sur le marché à prix réduit (-30%)."
-          : "Analyste vidéo congédié.",
-        true
-      );
-      renderStaffPanel();
-    });
-    box.appendChild(fireBtn);
-    currentHolder.appendChild(box);
-  } else {
-    const p = document.createElement("p");
-    p.className = "staff-none";
-    p.textContent = "Aucun analyste vidéo sous contrat.";
-    currentHolder.appendChild(p);
-  }
-
-  renderAnalystListings();
-}
-
-// Marché aux enchères des analystes vidéo — même structure que
-// renderCoachListings ci-dessus, juste une liste (league.analystListings) et
-// une colonne différentes (caractéristiques révélées plutôt que bonus
-// d'entraînement).
-function renderAnalystListings() {
-  const holder = document.getElementById("staffAnalystHireGrid");
   const now = Date.now();
-  const open = (league.analystListings || []).filter(l => l.status === "open").sort((a, b) => a.closesAt - b.closesAt);
+  document.getElementById("staffSlots").innerHTML = STAFF_ROLES.map(r => staffSlotHtml(r, now)).join("");
+  STAFF_ROLES.forEach(r => renderStaffRole(r, now));
+}
+
+// Carte "poste" en haut de page : vacant / enchère en tête / en poste.
+function staffSlotHtml(role, now) {
+  const m = role.member();
+  const open = staffOpenListings(role);
+  const leadingCount = open.filter(l => l.currentBidderIdx === myTeamIndex).length;
+  let state, status, badge;
+  if (m) {
+    state = "filled"; badge = "En poste";
+    status = `${staffStarsHtml(m.level)} Niveau ${m.level} · ${escapeHtml(formatMoney(role.salary()))}/sem.`;
+  } else if (leadingCount) {
+    state = "bidding"; badge = "En cours";
+    status = `Vous menez ${leadingCount} enchère${leadingCount > 1 ? "s" : ""}`;
+  } else {
+    state = "vacant"; badge = "À pourvoir";
+    status = `Poste vacant · ${staffCandidatesLabel(open.length)}`;
+  }
+  return `<button type="button" class="stf-slot stf-slot--${state}" data-staff-open-role="${role.key}">` +
+    `<span class="stf-slot__icon" aria-hidden="true">${STAFF_ICONS[role.key]}</span>` +
+    `<span class="stf-slot__text"><span class="stf-slot__role">${role.label}</span><span class="stf-slot__status">${status}</span></span>` +
+    `<span class="stf-badge stf-badge--${state}">${badge}</span></button>`;
+}
+
+function renderStaffRole(role, now) {
+  const ui = staffUi[role.key];
+  const open = staffOpenListings(role);
+
+  // Membre en poste (toujours visible, même section repliée).
+  const currentHolder = document.getElementById(role.currentId);
+  const m = role.member();
+  if (m) {
+    currentHolder.innerHTML = `<div class="staff-current stf-current">` +
+      `<div class="staff-current-info">${staffStarsHtml(m.level)} <strong>${role.label} niveau ${m.level}</strong>` +
+      `<span class="staff-current-meta">En poste depuis ${m.weeksEmployed} semaine(s) · salaire actuel : ${escapeHtml(formatMoney(role.salary()))}/semaine</span></div>` +
+      `<button type="button" class="staff-fire-btn" data-staff-fire="${role.key}">Congédier</button></div>`;
+  } else {
+    currentHolder.innerHTML = `<p class="staff-none">${role.noneText}</p>`;
+  }
+
+  // En-tête : résumé + bouton replier/déplier.
+  document.getElementById(role.summaryId).textContent = open.length
+    ? `${staffCandidatesLabel(open.length)} · prochaine fin d'enchère dans ${timeLeftLabel(open[0].closesAt, now)}`
+    : "Aucun candidat aux enchères pour l'instant";
+  const toggle = document.querySelector(`[data-staff-toggle-role="${role.key}"]`);
+  toggle.textContent = ui.open ? "Masquer les candidats" : "Voir les candidats";
+  toggle.setAttribute("aria-expanded", ui.open ? "true" : "false");
+  document.getElementById(role.bodyId).hidden = !ui.open;
+
+  renderStaffListings(role, open, now);
+}
+
+function renderStaffListings(role, open, now) {
+  const ui = staffUi[role.key];
+  const holder = document.getElementById(role.gridId);
   if (!open.length) {
-    holder.innerHTML = "<p class='training-empty'>Aucun candidat analyste vidéo aux enchères pour l'instant, revenez plus tard.</p>";
+    holder.innerHTML = `<p class='training-empty'>Aucun candidat ${role.noun} aux enchères pour l'instant, revenez plus tard.</p>`;
     return;
   }
-  const visible = analystListingsExpanded ? open : open.slice(0, STAFF_LISTINGS_COLLAPSED_COUNT);
-  let html = "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-    "<th>Niveau</th><th>Salaire</th><th>Enchère actuelle</th><th>Temps restant</th><th></th></tr></thead><tbody>";
+  // Un filtre de niveau devenu vide (enchères closes entre-temps) retombe
+  // sur "Tous" plutôt que d'afficher une liste vide.
+  if (ui.level && !open.some(l => l.level === ui.level)) ui.level = 0;
+  const filtered = ui.level ? open.filter(l => l.level === ui.level) : open;
+  const visible = ui.expanded ? filtered : filtered.slice(0, STAFF_LISTINGS_COLLAPSED_COUNT);
+
+  const levelBtns = [0, 1, 2, 3, 4, 5].map(lv => {
+    const pool = lv ? open.filter(l => l.level === lv) : open;
+    const empty = pool.length === 0;
+    const selected = ui.level === lv;
+    const minPrice = empty ? 0 : Math.min(...pool.map(l => minNextBidFor(l)));
+    const stars = lv
+      ? staffStarsHtml(lv)
+      : `<span class="stf-stars stf-stars--all" aria-hidden="true"><span class="off">★★★★★</span></span>`;
+    return `<button type="button" class="stf-level${selected ? " is-selected" : ""}" data-staff-level="${role.key}:${lv}" aria-pressed="${selected}"${empty ? " disabled" : ""}>` +
+      `${stars}<span class="stf-level__title">${lv ? `Niveau ${lv}` : "Tous"}</span>` +
+      `<span class="stf-level__meta">${empty ? "Aucun candidat" : staffCandidatesLabel(pool.length)}</span>` +
+      `<span class="stf-level__meta">${empty ? "—" : `dès ${escapeHtml(formatMoney(minPrice))}`}</span></button>`;
+  }).join("");
+  const sortLabel = (ui.level ? `${staffCandidatesLabel(filtered.length)} de niveau ${ui.level}` : staffCandidatesLabel(filtered.length)) + " · triés par fin d'enchère";
+
+  let html = `<fieldset class="stf-levels"><legend><span>Quel niveau voulez-vous recruter ?</span><span class="stf-levels__sort">${sortLabel}</span></legend>` +
+    `<div class="stf-levels__grid">${levelBtns}</div></fieldset>`;
+
+  html += `<div class="stf-table-wrap"><table class="stf-table"><thead><tr>` +
+    `<th scope="col">Niveau</th><th scope="col">Salaire de réf.</th><th scope="col">Enchère actuelle</th><th scope="col">Fin de l'enchère</th><th scope="col">Votre offre</th>` +
+    `</tr></thead><tbody>`;
   visible.forEach(l => {
-    const currentLabel = l.currentBid
-      ? `${formatMoney(l.currentBid)}${l.currentBidderIdx === myTeamIndex ? " (vous)" : ""}`
-      : `Aucune (départ ${formatMoney(l.startPrice)})`;
+    const mine = l.currentBidderIdx === myTeamIndex;
     const minBid = minNextBidFor(l);
-    let actionCell;
-    if (l.currentBidderIdx === myTeamIndex) {
-      // Retour utilisateur (2026-09) : "ce serait bien qu'on puisse se
-      // surenchérir sur soi-même, parce qu'on peut se tromper et cliquer
-      // trop vite, alors que l'on voulait mettre un montant fixe plus
-      // élevé". Même formulaire d'enchère que pour un adversaire (côté
-      // moteur, League.placeAnalystBid ne bloque déjà que "own-listing",
-      // jamais "déjà en tête") plutôt que le simple statut figé d'avant, qui
-      // empêchait de se corriger une fois en tête.
-      actionCell = `<div class="bid-leading-cell"><span class="sub">Vous êtes en tête</span><br>` +
-        `<input type="number" class="market-price-input" id="analystBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-analyst-bid-listing="${l.id}">Augmenter mon enchère</button></div>`;
+    const msLeft = l.closesAt - now;
+    const urgent = msLeft < 3600 * 1000;
+    let current;
+    if (mine) {
+      current = `<span class="stf-lead">Vous menez · ${escapeHtml(formatMoney(l.currentBid))}</span><span class="stf-sub">Vous pouvez encore augmenter votre offre</span>`;
+    } else if (l.currentBid) {
+      current = `<span class="stf-strong">${escapeHtml(formatMoney(l.currentBid))}</span><span class="stf-sub">Un autre club mène</span>`;
     } else {
-      actionCell = `<input type="number" class="market-price-input" id="analystBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-analyst-bid-listing="${l.id}">Enchérir</button>`;
+      current = `<span class="stf-muted">Aucune offre</span><span class="stf-sub">Mise de départ ${escapeHtml(formatMoney(l.startPrice))}</span>`;
     }
-    html += `<tr><td><span class="stars">${"★".repeat(l.level)}${"☆".repeat(5 - l.level)}</span></td>` +
-      `<td>${formatMoney(TRAINER_BASE_SALARY[l.level] || 0)}/sem.</td><td>${currentLabel}</td>` +
-      `<td>${escapeHtml(timeLeftLabel(l.closesAt, now))}</td><td>${actionCell}</td></tr>`;
+    html += `<tr class="stf-row${mine ? " is-leading" : ""}${l.level >= 4 ? " is-top" : ""}">` +
+      `<td data-label="Niveau"><div class="stf-cell">${staffStarsHtml(l.level)}<span class="stf-sub">Niveau ${l.level} sur 5</span></div></td>` +
+      `<td data-label="Salaire de réf."><div class="stf-cell"><span class="stf-strong">${escapeHtml(formatMoney(TRAINER_BASE_SALARY[l.level] || 0))}</span><span class="stf-sub">par semaine</span></div></td>` +
+      `<td data-label="Enchère actuelle"><div class="stf-cell">${current}</div></td>` +
+      `<td data-label="Fin de l'enchère"><div class="stf-cell"><span class="stf-time${urgent ? " is-urgent" : ""}" data-closes-at="${l.closesAt}">${escapeHtml(timeLeftLabel(l.closesAt, now))}</span>` +
+      `<span class="stf-sub">${urgent ? "Dernière heure" : "restant"}</span></div></td>` +
+      `<td data-label="Votre offre"><div class="stf-offer">` +
+        `<div class="stf-stepper">` +
+          `<button type="button" class="stf-step" data-staff-step="${role.key}:${l.id}:-100" aria-label="Baisser l'offre de 100 €">−</button>` +
+          `<input type="number" class="stf-amount" id="${role.inputPrefix}${l.id}" value="${minBid}" min="${minBid}" step="100" aria-label="Montant de l'offre en euros (minimum ${minBid})">` +
+          `<span class="stf-amount-unit" aria-hidden="true">€</span>` +
+          `<button type="button" class="stf-step" data-staff-step="${role.key}:${l.id}:100" aria-label="Augmenter l'offre de 100 €">+</button>` +
+        `</div>` +
+        `<button type="button" class="stf-bid-btn${mine ? " is-secondary" : ""}" data-staff-bid="${role.key}:${l.id}">${mine ? "Surenchérir" : "Enchérir"}</button>` +
+      `</div></td></tr>`;
   });
   html += "</tbody></table></div>";
-  html += staffListingsToggleHtml(open.length, visible.length, analystListingsExpanded, "data-toggle-analyst-listings");
+
+  const rest = filtered.length - visible.length;
+  if (rest > 0) {
+    html += `<div class="stf-more"><button type="button" class="stf-ghost-btn staff-listings-toggle-btn" data-staff-more="${role.key}">` +
+      `${rest > 1 ? `Voir les ${rest} autres candidats` : "Voir l'autre candidat"}</button></div>`;
+  } else if (ui.expanded && filtered.length > STAFF_LISTINGS_COLLAPSED_COUNT) {
+    html += `<div class="stf-more"><button type="button" class="stf-ghost-btn staff-listings-toggle-btn" data-staff-more="${role.key}">Afficher moins</button></div>`;
+  }
   holder.innerHTML = html;
 }
 
-document.getElementById("staffAnalystHireGrid").addEventListener("click", (e) => {
-  const toggleBtn = e.target.closest("[data-toggle-analyst-listings]");
-  if (toggleBtn) {
-    analystListingsExpanded = toggleBtn.dataset.toggleAnalystListings === "more";
-    renderAnalystListings();
+// Un seul écouteur délégué pour toute la page Staff (cartes poste, replier/
+// déplier, filtre de niveau, ±100 €, enchérir, congédier, afficher plus).
+document.getElementById("staffSection").addEventListener("click", (e) => {
+  const t = e.target.closest("[data-staff-open-role],[data-staff-toggle-role],[data-staff-level],[data-staff-more],[data-staff-step],[data-staff-bid],[data-staff-fire]");
+  if (!t || t.disabled) return;
+  const d = t.dataset;
+
+  if (d.staffOpenRole) {
+    staffUi[d.staffOpenRole].open = true;
+    renderStaffPanel();
+    const section = document.querySelector(`.stf-role[data-staff-role="${d.staffOpenRole}"]`);
+    if (section && section.scrollIntoView) section.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
-  const btn = e.target.closest("[data-analyst-bid-listing]");
-  if (!btn) return;
-  const id = Number(btn.dataset.analystBidListing);
-  const input = document.getElementById(`analystBid_${id}`);
-  const amount = Math.round(Number(input.value) || 0);
-  const res = league.placeAnalystBid(id, myTeamIndex, amount, Date.now());
-  if (!res.ok) {
-    const reasons = {
-      "closed": "Cette enchère est déjà terminée.",
-      "invalid-bidder": "Enchérisseur invalide.",
-      "too-low": `Enchère trop basse, minimum ${formatMoney(res.minBid || 0)}.`,
-      "insufficient-budget": "Budget insuffisant pour cette enchère.",
-    };
-    staffFeedback(reasons[res.reason] || "Enchère refusée.", false);
-  } else {
-    staffFeedback(`Enchère de ${formatMoney(amount)} enregistrée.`, true);
-  }
-  saveMyTeam();
-  if (res.ok) syncAnalystBidToServer(id, amount);
-  renderStaffPanel();
-});
-
-// Recruteur (voir Team.recruiter/League.recruiterListings côté moteur) —
-// TROISIÈME rôle de staff, même structure que renderAnalystPanel/
-// renderAnalystListings ci-dessus (marché aux enchères identique), mais
-// aucun bonus/révélation affiché ici : son effet (probabilité quotidienne de
-// dénicher un nouveau prospect pour l'académie, voir
-// YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL) ne se voit que dans le nouvel
-// onglet 🧒 Académie de jeunes (renderAcademieSection plus bas).
-function renderRecruiterPanel() {
-  const currentHolder = document.getElementById("staffRecruiterCurrent");
-  currentHolder.innerHTML = "";
-  if (teamA.recruiter) {
-    const { level, weeksEmployed } = teamA.recruiter;
-    const salary = teamA.recruiterSalary();
-    const box = document.createElement("div");
-    box.className = "staff-current";
-    box.innerHTML = `<div class="staff-current-info"><span class="stars">${"★".repeat(level)}${"☆".repeat(5 - level)}</span> Recruteur niveau ${level}` +
-      `<span class="staff-current-meta">En poste depuis ${weeksEmployed} semaine(s) · salaire actuel : ${formatMoney(salary)}/semaine</span></div>`;
-    const fireBtn = document.createElement("button");
-    fireBtn.className = "staff-fire-btn";
-    fireBtn.textContent = "Congédier";
-    fireBtn.addEventListener("click", () => {
-      // league.fireTeamRecruiter (voir engine.js), même raisonnement que les
-      // boutons "Congédier" entraîneur/analyste ci-dessus : relistage à -30%
-      // partagé solo/multi-manager.
-      const result = league.fireTeamRecruiter(myTeamIndex, Date.now());
-      saveMyTeam();
-      syncFireRecruiterToServer();
-      staffFeedback(
-        result.relisted
-          ? "Recruteur congédié, il est remis sur le marché à prix réduit (-30%)."
-          : "Recruteur congédié.",
-        true
-      );
-      renderStaffPanel();
-    });
-    box.appendChild(fireBtn);
-    currentHolder.appendChild(box);
-  } else {
-    const p = document.createElement("p");
-    p.className = "staff-none";
-    p.textContent = "Aucun recruteur sous contrat.";
-    currentHolder.appendChild(p);
-  }
-
-  renderRecruiterListings();
-}
-
-// Marché aux enchères des recruteurs — même structure que
-// renderAnalystListings/renderCoachListings ci-dessus, juste une liste
-// (league.recruiterListings) et une colonne différentes (chance de prospect
-// par jour plutôt que bonus d'entraînement/caractéristiques révélées).
-function renderRecruiterListings() {
-  const holder = document.getElementById("staffRecruiterHireGrid");
-  const now = Date.now();
-  const open = (league.recruiterListings || []).filter(l => l.status === "open").sort((a, b) => a.closesAt - b.closesAt);
-  if (!open.length) {
-    holder.innerHTML = "<p class='training-empty'>Aucun candidat recruteur aux enchères pour l'instant, revenez plus tard.</p>";
+  if (d.staffToggleRole) {
+    staffUi[d.staffToggleRole].open = !staffUi[d.staffToggleRole].open;
+    renderStaffPanel();
     return;
   }
-  const visible = recruiterListingsExpanded ? open : open.slice(0, STAFF_LISTINGS_COLLAPSED_COUNT);
-  let html = "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-    "<th>Niveau</th><th>Salaire</th><th>Enchère actuelle</th><th>Temps restant</th><th></th></tr></thead><tbody>";
-  visible.forEach(l => {
-    const currentLabel = l.currentBid
-      ? `${formatMoney(l.currentBid)}${l.currentBidderIdx === myTeamIndex ? " (vous)" : ""}`
-      : `Aucune (départ ${formatMoney(l.startPrice)})`;
-    const minBid = minNextBidFor(l);
-    let actionCell;
-    if (l.currentBidderIdx === myTeamIndex) {
-      // Retour utilisateur (2026-09) : pouvoir se surenchérir soi-même en
-      // cas de clic trop rapide sur un montant trop bas, voir le même
-      // commentaire dans renderAnalystListings ci-dessus.
-      actionCell = `<div class="bid-leading-cell"><span class="sub">Vous êtes en tête</span><br>` +
-        `<input type="number" class="market-price-input" id="recruiterBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-recruiter-bid-listing="${l.id}">Augmenter mon enchère</button></div>`;
+  if (d.staffLevel) {
+    const [key, lv] = d.staffLevel.split(":");
+    staffUi[key].level = Number(lv);
+    staffUi[key].expanded = false;
+    renderStaffPanel();
+    return;
+  }
+  if (d.staffMore) {
+    staffUi[d.staffMore].expanded = !staffUi[d.staffMore].expanded;
+    renderStaffPanel();
+    return;
+  }
+  if (d.staffStep) {
+    const [key, id, delta] = d.staffStep.split(":");
+    const input = document.getElementById(`${STAFF_ROLE_BY_KEY[key].inputPrefix}${id}`);
+    if (!input) return;
+    const min = Number(input.min) || 0;
+    input.value = String(Math.max(min, (Math.round(Number(input.value)) || min) + Number(delta)));
+    return;
+  }
+  if (d.staffBid) {
+    const [key, idStr] = d.staffBid.split(":");
+    const role = STAFF_ROLE_BY_KEY[key];
+    const id = Number(idStr);
+    const input = document.getElementById(`${role.inputPrefix}${id}`);
+    const amount = Math.round(Number(input && input.value) || 0);
+    const res = role.placeBid(id, amount, Date.now());
+    if (!res.ok) {
+      const reasons = {
+        "closed": "Cette enchère est déjà terminée.",
+        "invalid-bidder": "Enchérisseur invalide.",
+        "too-low": `Enchère trop basse, minimum ${formatMoney(res.minBid || 0)}.`,
+        "insufficient-budget": "Budget insuffisant pour cette enchère.",
+      };
+      staffFeedback(reasons[res.reason] || "Enchère refusée.", false);
     } else {
-      actionCell = `<input type="number" class="market-price-input" id="recruiterBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-recruiter-bid-listing="${l.id}">Enchérir</button>`;
+      staffFeedback(`Enchère de ${formatMoney(amount)} enregistrée.`, true);
     }
-    html += `<tr><td><span class="stars">${"★".repeat(l.level)}${"☆".repeat(5 - l.level)}</span></td>` +
-      `<td>${formatMoney(TRAINER_BASE_SALARY[l.level] || 0)}/sem.</td><td>${currentLabel}</td>` +
-      `<td>${escapeHtml(timeLeftLabel(l.closesAt, now))}</td><td>${actionCell}</td></tr>`;
-  });
-  html += "</tbody></table></div>";
-  html += staffListingsToggleHtml(open.length, visible.length, recruiterListingsExpanded, "data-toggle-recruiter-listings");
-  holder.innerHTML = html;
-}
-
-document.getElementById("staffRecruiterHireGrid").addEventListener("click", (e) => {
-  const toggleBtn = e.target.closest("[data-toggle-recruiter-listings]");
-  if (toggleBtn) {
-    recruiterListingsExpanded = toggleBtn.dataset.toggleRecruiterListings === "more";
-    renderRecruiterListings();
+    saveMyTeam();
+    if (res.ok) role.syncBid(id, amount);
+    renderStaffPanel();
     return;
   }
-  const btn = e.target.closest("[data-recruiter-bid-listing]");
-  if (!btn) return;
-  const id = Number(btn.dataset.recruiterBidListing);
-  const input = document.getElementById(`recruiterBid_${id}`);
-  const amount = Math.round(Number(input.value) || 0);
-  const res = league.placeRecruiterBid(id, myTeamIndex, amount, Date.now());
-  if (!res.ok) {
-    const reasons = {
-      "closed": "Cette enchère est déjà terminée.",
-      "invalid-bidder": "Enchérisseur invalide.",
-      "too-low": `Enchère trop basse, minimum ${formatMoney(res.minBid || 0)}.`,
-      "insufficient-budget": "Budget insuffisant pour cette enchère.",
-    };
-    staffFeedback(reasons[res.reason] || "Enchère refusée.", false);
-  } else {
-    staffFeedback(`Enchère de ${formatMoney(amount)} enregistrée.`, true);
+  if (d.staffFire) {
+    const role = STAFF_ROLE_BY_KEY[d.staffFire];
+    const result = role.fire(Date.now());
+    saveMyTeam();
+    role.syncFire();
+    staffFeedback(
+      result.relisted
+        ? `${role.firedMsg}, il est remis sur le marché à prix réduit (-30%).`
+        : `${role.firedMsg}.`,
+      true
+    );
+    renderStaffPanel();
   }
-  saveMyTeam();
-  if (res.ok) syncRecruiterBidToServer(id, amount);
-  renderStaffPanel();
 });
 
-// Marché aux enchères des entraîneurs (voir League.coachListings/
-// placeCoachBid/refreshCoachMarket côté moteur) — mêmes structure/style que
-// renderMarketListings (marché des transferts) plus bas : un candidat par
-// ligne, enchère actuelle ou "Vous êtes en tête", temps restant.
-function renderCoachListings() {
-  const holder = document.getElementById("staffHireGrid");
+// Compte à rebours des enchères tenu à jour tant que la page Staff est
+// affichée (sans tout re-rendre : l'offre en cours de saisie est conservée).
+setInterval(() => {
+  const sec = document.getElementById("staffSection");
+  if (!sec || sec.classList.contains("hidden")) return;
   const now = Date.now();
-  const open = (league.coachListings || []).filter(l => l.status === "open").sort((a, b) => a.closesAt - b.closesAt);
-  if (!open.length) {
-    holder.innerHTML = "<p class='training-empty'>Aucun candidat entraîneur aux enchères pour l'instant, revenez plus tard.</p>";
-    return;
-  }
-  const visible = coachListingsExpanded ? open : open.slice(0, STAFF_LISTINGS_COLLAPSED_COUNT);
-  let html = "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-    "<th>Niveau</th><th>Salaire</th><th>Enchère actuelle</th><th>Temps restant</th><th></th></tr></thead><tbody>";
-  visible.forEach(l => {
-    const currentLabel = l.currentBid
-      ? `${formatMoney(l.currentBid)}${l.currentBidderIdx === myTeamIndex ? " (vous)" : ""}`
-      : `Aucune (départ ${formatMoney(l.startPrice)})`;
-    const minBid = minNextBidFor(l);
-    let actionCell;
-    if (l.currentBidderIdx === myTeamIndex) {
-      // Retour utilisateur (2026-09) : pouvoir se surenchérir soi-même en
-      // cas de clic trop rapide sur un montant trop bas, voir le même
-      // commentaire dans renderAnalystListings plus haut.
-      actionCell = `<div class="bid-leading-cell"><span class="sub">Vous êtes en tête</span><br>` +
-        `<input type="number" class="market-price-input" id="coachBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-coach-bid-listing="${l.id}">Augmenter mon enchère</button></div>`;
-    } else {
-      actionCell = `<input type="number" class="market-price-input" id="coachBid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-coach-bid-listing="${l.id}">Enchérir</button>`;
-    }
-    html += `<tr><td><span class="stars">${"★".repeat(l.level)}${"☆".repeat(5 - l.level)}</span></td>` +
-      `<td>${formatMoney(TRAINER_BASE_SALARY[l.level] || 0)}/sem.</td><td>${currentLabel}</td>` +
-      `<td>${escapeHtml(timeLeftLabel(l.closesAt, now))}</td><td>${actionCell}</td></tr>`;
+  sec.querySelectorAll("[data-closes-at]").forEach(el => {
+    const closesAt = Number(el.dataset.closesAt);
+    el.textContent = timeLeftLabel(closesAt, now);
+    el.classList.toggle("is-urgent", closesAt - now < 3600 * 1000);
   });
-  html += "</tbody></table></div>";
-  html += staffListingsToggleHtml(open.length, visible.length, coachListingsExpanded, "data-toggle-coach-listings");
-  holder.innerHTML = html;
-}
-
-document.getElementById("staffHireGrid").addEventListener("click", (e) => {
-  const toggleBtn = e.target.closest("[data-toggle-coach-listings]");
-  if (toggleBtn) {
-    coachListingsExpanded = toggleBtn.dataset.toggleCoachListings === "more";
-    renderCoachListings();
-    return;
-  }
-  const btn = e.target.closest("[data-coach-bid-listing]");
-  if (!btn) return;
-  const id = Number(btn.dataset.coachBidListing);
-  const input = document.getElementById(`coachBid_${id}`);
-  const amount = Math.round(Number(input.value) || 0);
-  const res = league.placeCoachBid(id, myTeamIndex, amount, Date.now());
-  if (!res.ok) {
-    const reasons = {
-      "closed": "Cette enchère est déjà terminée.",
-      "invalid-bidder": "Enchérisseur invalide.",
-      "too-low": `Enchère trop basse, minimum ${formatMoney(res.minBid || 0)}.`,
-      "insufficient-budget": "Budget insuffisant pour cette enchère.",
-    };
-    staffFeedback(reasons[res.reason] || "Enchère refusée.", false);
-  } else {
-    staffFeedback(`Enchère de ${formatMoney(amount)} enregistrée.`, true);
-  }
-  saveMyTeam();
-  if (res.ok) syncCoachBidToServer(id, amount);
-  renderStaffPanel();
-});
+}, 30000);
 
 // Retour utilisateur (2026-09) : "enleve l'entrainement aucune (entrainement
 // général uniquement)" — il n'existe plus d'option "pas de focus cette

@@ -63,7 +63,7 @@ clickTab("staff");
 const analystNoneMsg = doc.querySelector("#staffAnalystCurrent .staff-none");
 console.log("\nMessage 'aucun analyste' présent :", !!analystNoneMsg);
 if (!analystNoneMsg) throw new Error("❌ Sans analyste sous contrat, un message 'aucun analyste' devrait s'afficher dans #staffAnalystCurrent.");
-const analystListingRows = doc.querySelectorAll("#staffAnalystHireGrid table.roster-table tbody tr").length;
+const analystListingRows = doc.querySelectorAll("#staffAnalystHireGrid table.stf-table tbody tr").length;
 console.log("Candidats analystes aux enchères :", analystListingRows, "(attendu >= 2, COACH_MARKET_MIN_OPEN_LISTINGS)");
 if (analystListingRows < 2) throw new Error("❌ Le marché des analystes devrait être peuplé d'au moins COACH_MARKET_MIN_OPEN_LISTINGS candidats.");
 console.log("✅ L'onglet Staff affiche bien une section analyste vidéo séparée, avec marché peuplé.");

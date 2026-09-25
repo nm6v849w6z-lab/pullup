@@ -20,6 +20,28 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Staff : refonte
+  visuelle d'après la maquette "Hoop Manager — page Staff"** (canvas Design
+  claude.ai 4xZdYyuiTxzGLbAXPrzf87) — retour utilisateur : "code la page
+  stp". En-tête Staff + tuiles Budget club / Salaires staff (somme des 3
+  salaires en cours), 3 cartes poste (Entraîneur / Analyste vidéo /
+  Recruteur : À pourvoir / En cours / En poste) qui ouvrent la section du
+  rôle, puis une section par rôle (repliable, entraîneur déplié d'entrée) :
+  membre en poste + Congédier, filtre par niveau (Tous, 1–5, nb de
+  candidats, "dès X €"), enchères en lignes (étoiles, salaire de réf.,
+  enchère actuelle / "Vous menez", fin d'enchère en orange la dernière
+  heure, offre avec −/+ 100 € et saisie libre, Enchérir/Surenchérir),
+  "Voir les N autres candidats". Les 3 rendus/écouteurs dupliqués sont
+  fusionnés en un seul (STAFF_ROLES, renderStaffRole, écouteur délégué sur
+  #staffSection) ; logique moteur/synchro serveur inchangée ; compte à
+  rebours rafraîchi toutes les 30 s. Mobile : lignes en cartes. Fichiers :
+  moteurbasket3.html (#staffSection, renderStaffPanel & co, CSS .stf-*),
+  client_scouting_test.js (table.stf-table), persistence_test.js
+  (#staffBudget = montant seul). Tests verts sur Mac : client_scouting,
+  persistence, tabs, staff_market_persistence, coach_market,
+  analyst_market, youth_academy, onboarding_tour, dashboard_e2e,
+  economie_redesign. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Pendant un direct :
   « Voir le live » au lieu des ordres** — retour utilisateur (capture) :
   "quand le match est en cours, on ne peut pas avoir le bouton donner vos
