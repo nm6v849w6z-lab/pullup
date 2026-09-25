@@ -20,6 +20,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Entraînement,
+  carte Collectif allégée** — retour utilisateur (capture) : "c'est pas
+  très beau d'avoir 2 jauges dans collectif [...] et la brique prend trop
+  de place par rapport à l'autre". Bloc « Maîtrise actuelle » retiré (la
+  mini-jauge du menu Aspect travaillé suffit), notes vides masquées, cartes
+  Fondamentaux/Collectif à la même hauteur. Fichier : moteurbasket3.html.
+  Tests trained_tactic_dropdown/tabs/persistence verts. Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Ordres : textes
   d'aide retirés + postes dans le menu des titulaires** — retours
   utilisateur : "enlève le texte superflu, on a tout dans le guide (et si

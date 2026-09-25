@@ -3194,7 +3194,7 @@
   .tp-title{margin:0; font-size:36px; font-weight:800; line-height:1.05; color:var(--ink);}
   .tp-card{background:var(--panel); border:1px solid var(--line); border-radius:14px;}
   .tp-sub{font-size:13px; color:var(--ink-dim);}
-  .tp-cols{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:start;}
+  .tp-cols{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:stretch;}
   .tp-config{padding:20px; display:flex; flex-direction:column; gap:8px;}
   .tp-config .field-label{margin:8px 0 0;}
   .tp-config select{margin:0; width:100%; min-height:44px;}
@@ -3223,11 +3223,11 @@
   .tp-dilution-none{color:var(--danger);}
   #trainingSection .trained-tactics-picker{margin-top:4px; padding-top:0; border-top:none;}
   #trainingSection .trained-tactics-picker .field-label{margin:8px 0 8px;}
-  .tp-mastery{display:flex; flex-direction:column; gap:6px; padding:12px 14px; background:var(--panel-2); border-radius:10px; margin-bottom:6px;}
-  .tp-mastery-row{display:flex; justify-content:space-between; gap:10px; font-size:13px; color:var(--ink-dim);}
-  .tp-mastery-row b{font-variant-numeric:tabular-nums;}
-  .tp-mastery-bar{height:8px; border-radius:999px; background:var(--line); overflow:hidden;}
-  .tp-mastery-bar > div{height:100%; border-radius:999px;}
+  /* Retour utilisateur (2026-09-25) : "c'est pas très beau d'avoir 2 jauges
+     dans collectif [...] et la brique prend trop de place" : plus de bloc
+     "Maîtrise actuelle" séparé (la jauge du déclencheur suffit), notes vides
+     masquées, cartes Fondamentaux/Collectif à la même hauteur. */
+  .tp-config .training-dilution-note:empty{display:none;}
   /* Bilan de la semaine dernière */
   .tp-report-head{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line-soft);}
   .tp-report-title{display:flex; align-items:center; gap:10px;}
@@ -27055,22 +27055,6 @@ function renderTrainedTacticsPicker() {
 
   renderTrigger();
 
-  // Jauge "Maîtrise actuelle" de l'aspect choisi (refonte de la page,
-  // 2026-09-25) : même source que les mini-jauges du menu
-  // (teamA.tacticalKnowledge), en grand sous le sélecteur.
-  const mastery = document.createElement("div");
-  mastery.className = "tp-mastery hidden";
-  holder.appendChild(mastery);
-  function renderMastery() {
-    const t = teamA.trainedTactics;
-    if (!t) { mastery.classList.add("hidden"); mastery.innerHTML = ""; return; }
-    const v = Math.round(knowledgeValue(t.category, t.value));
-    const color = moraleGaugeColor(v);
-    mastery.classList.remove("hidden");
-    mastery.innerHTML = `<div class="tp-mastery-row"><span>Maîtrise actuelle</span><b style="color:${color}">${v} / 100</b></div>` +
-      `<div class="tp-mastery-bar"><div style="width:${Math.max(0, Math.min(100, v))}%;background:${color}"></div></div>`;
-  }
-
   const progressNote = document.createElement("div");
   progressNote.className = "training-dilution-note";
   holder.appendChild(progressNote);
@@ -27079,7 +27063,6 @@ function renderTrainedTacticsPicker() {
   // quand 0 jour n'est encore banqué, seule la progression réelle (au moins
   // 1 jour banqué) reste affichée ici.
   function renderProgressNote() {
-    renderMastery();
     const days = teamA.trainedTactics ? teamA.daysTrainedForTarget(teamA.trainedTactics) : 0;
     const bonus = days * TACTICAL_KNOWLEDGE_DAILY_GAIN;
     progressNote.textContent = days > 0
