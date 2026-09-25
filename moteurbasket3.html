@@ -1362,6 +1362,157 @@
   .pdp-res{font-weight:800; font-size:11px; padding:2px 7px; border-radius:5px;}
   .pdp-res.w{background:rgba(51,180,161,.16); color:var(--ok);}
   .pdp-res.l{background:rgba(226,105,79,.16); color:var(--danger);}
+  /* ===================================================================
+     Fiche joueur — refonte (retour utilisateur, 2026-09-25 : "code la page
+     joueur stp", maquette canevas "Hoop Manager – Fiche joueur (refonte)").
+     Tout est préfixé .pdp2-* (les classes .pdp-* encore relues par les
+     tests — .pdp-attr-grid/.pdp-attr-row/.pdp-attr-value/.pdp-pill/
+     .pdp-overall-num — sont réutilisées, surchargées ci-dessous). Pile de
+     polices système du jeu (pas de Barlow : même choix que le tableau de
+     bord et Scouting Pro).
+     =================================================================== */
+  .pdp2{display:flex; flex-direction:column; gap:18px;}
+  .pdp2-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px 22px; min-width:0;}
+  .pdp2-head{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
+  .pdp2-head h3{margin:0; font-size:15px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--ink);}
+  .pdp2-meta{font-size:12.5px; color:var(--ink-dim);}
+  .pdp2-center{text-align:center;}
+
+  .pdp2-hero{display:flex; gap:28px; align-items:stretch; padding:24px 28px;}
+  .pdp2-id{display:flex; gap:22px; align-items:center; flex:1 1 auto; min-width:0;}
+  .pdp2-avatar{flex:0 0 auto; width:112px; height:112px; border-radius:18px; overflow:hidden; background:var(--panel-2); border:2px solid var(--line); display:flex; align-items:flex-end; justify-content:center;}
+  .pdp2-avatar svg, .pdp2-avatar img{display:block;}
+  .pdp2-id-text{display:flex; flex-direction:column; gap:10px; min-width:0;}
+  .pdp2-id-top{display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:13.5px; color:var(--ink-dim);}
+  .pdp2-id-top .team-link{font-size:13.5px; color:var(--ink-dim);}
+  .pdp2-pos{font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--amber-ink); background:var(--amber); padding:3px 10px; border-radius:6px;}
+  .pdp2-name{margin:0; font-size:44px; line-height:1; font-weight:800; letter-spacing:-.01em; text-transform:uppercase; color:var(--ink); overflow-wrap:anywhere;}
+  .pdp2-chips{display:flex; gap:8px; flex-wrap:wrap;}
+  .pdp2-chip{font-size:13px; padding:5px 12px; border-radius:999px; background:var(--panel-2); color:var(--ink-dim); white-space:nowrap;}
+  .pdp2-chip .potential-tier{color:var(--ink); font-weight:700;}
+
+  .pdp2-cond{flex:0 0 280px; display:flex; flex-direction:column; justify-content:center; gap:12px; padding:0 26px; border-left:1px solid var(--line); border-right:1px solid var(--line);}
+  .pdp2-form{display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:12px; border:1px solid var(--line); background:var(--panel-2);}
+  .pdp2-form--ok{color:var(--ok); background:rgba(51,180,161,.10); border-color:rgba(51,180,161,.35);}
+  .pdp2-form--mid{color:var(--amber); background:rgba(240,162,60,.10); border-color:rgba(240,162,60,.35);}
+  .pdp2-form--bad{color:var(--danger); background:rgba(226,105,79,.14); border-color:rgba(226,105,79,.45);}
+  .pdp2-form-text{display:flex; flex-direction:column; gap:2px;}
+  .pdp2-form-lbl{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim);}
+  .pdp2-form .condition-badge{background:none; padding:0; font-size:20px; font-weight:800; letter-spacing:0;}
+  .pdp2-kv{display:flex; justify-content:space-between; align-items:center; font-size:14px; color:var(--ink-dim);}
+  .pdp2-quote{margin:0; font-size:12.5px; line-height:1.45; font-style:italic; color:var(--ink-dim);}
+
+  .pdp2-rating{flex:0 0 190px; display:flex; flex-direction:column; align-items:center; justify-content:space-between; gap:12px;}
+  .pdp2-ring{position:relative; width:112px; height:112px;}
+  .pdp2-ring svg{display:block;}
+  .pdp2-ring--locked{border-radius:50%; border:9px solid var(--line); box-sizing:border-box;}
+  .pdp2-ring-center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;}
+  .pdp2-ring .pdp-overall-num{font-size:40px; line-height:1; font-variant-numeric:tabular-nums;}
+  .pdp2-ring-q{font-size:34px; font-weight:800; color:var(--ink-faint); line-height:1;}
+  .pdp2-ring-lbl{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim);}
+  .pdp2-actions{display:flex; gap:8px; width:100%;}
+  .pdp2-btn{flex:1 1 0; min-height:44px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0 10px;}
+  .pdp2-btn:hover{border-color:var(--ink-faint);}
+  .pdp2-btn--accent{background:transparent; border-color:var(--amber); color:var(--amber);}
+  .pdp2-btn--accent:hover{background:rgba(240,162,60,.10); border-color:var(--amber);}
+  .pdp2-btn--static{cursor:default; color:var(--amber); border-color:rgba(240,162,60,.45); font-size:13px;}
+
+  .pdp2-row{display:grid; gap:18px;}
+  .pdp2-row--profile{grid-template-columns:420px minmax(0,1fr);}
+  .pdp2-row--games{grid-template-columns:minmax(0,1fr) 360px;}
+  .pdp2-radar svg{display:block; width:100%; height:auto; max-height:320px;}
+
+  .pdp2-tiles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
+  .pdp2-tile{background:var(--bg); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:4px;}
+  .pdp2-tile-num{font-size:34px; font-weight:800; line-height:1; color:var(--ink); font-variant-numeric:tabular-nums;}
+  .pdp2-tile-lbl{font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim);}
+  .pdp2-shots{display:flex; flex-direction:column; gap:12px; margin-top:20px;}
+  .pdp2-shot{display:flex; align-items:center; gap:14px;}
+  .pdp2-shot-lbl{width:110px; font-size:13.5px; font-weight:600; color:var(--ink);}
+  .pdp2-shot-track{flex:1 1 auto; height:10px; border-radius:999px; background:var(--bg); overflow:hidden;}
+  .pdp2-shot-track span{display:block; height:100%; border-radius:999px;}
+  .pdp2-shot-pct{width:48px; text-align:right; font-size:17px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;}
+  .pdp2-shot-made{width:56px; text-align:right; font-size:12.5px; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
+  .pdp2-foot{display:flex; gap:24px; flex-wrap:wrap; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); font-size:13.5px; color:var(--ink-dim);}
+  .pdp2-foot b{color:var(--ink);}
+
+  .pdp2-head--attrs{align-items:flex-start;}
+  .pdp2-legend{display:flex; flex-direction:column; gap:6px; width:min(480px,100%);}
+  .pdp2-legend-bar{display:flex; gap:2px; height:8px; border-radius:999px; overflow:hidden;}
+  .pdp2-legend-bar span{display:block;}
+  .pdp2-legend-bar .r{width:20%; background:var(--attr-tier-red);}
+  .pdp2-legend-bar .o{width:30%; background:var(--attr-tier-amber);}
+  .pdp2-legend-bar .w{width:30%; background:var(--ink);}
+  .pdp2-legend-bar .g{width:20%; background:#3ecf67;}
+  .pdp2-legend-lbl{display:flex; font-size:11.5px; color:var(--ink-dim);}
+  .pdp2-legend-lbl span:nth-child(1), .pdp2-legend-lbl span:nth-child(4){width:20%;}
+  .pdp2-legend-lbl span:nth-child(2), .pdp2-legend-lbl span:nth-child(3){width:30%;}
+  .pdp2-legend-lbl .attr-tier-red{color:var(--attr-tier-red);}
+  .pdp2-legend-lbl .attr-tier-orange{color:var(--attr-tier-amber);}
+  .pdp2-legend-lbl .attr-tier-white{color:var(--ink);}
+  .pdp2-legend-lbl .attr-tier-green{color:#3ecf67;}
+  .pdp2 .pdp-attr-grid{grid-template-columns:repeat(4,minmax(0,1fr)); gap:28px;}
+  .pdp2-attr-block{display:flex; flex-direction:column; gap:8px; min-width:0;}
+  .pdp2-attr-block.wide{grid-column:span 2;}
+  .pdp2-attr-head{display:flex; justify-content:space-between; align-items:baseline; padding-bottom:8px; border-bottom:1px solid var(--line);}
+  .pdp2-attr-head h4{margin:0; font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink);}
+  .pdp2-attr-head span{font-size:12.5px; color:var(--ink-dim);}
+  .pdp2-attr-head b{color:var(--ink);}
+  .pdp2-attr-list{display:flex; flex-direction:column;}
+  .pdp2-attr-list.two{display:grid; grid-auto-flow:column; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:28px;}
+  .pdp2 .pdp-attr-row{display:flex; align-items:center; gap:10px; padding:5px 0; font-size:13.5px;}
+  .pdp2 .pdp-attr-row .lbl{flex:1 1 auto; min-width:0; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .pdp2-bar{flex:0 0 80px; height:6px; border-radius:999px; background:var(--bg); overflow:hidden;}
+  .pdp2-bar span{display:block; height:100%; border-radius:999px;}
+  .pdp2 .pdp-attr-value{min-width:26px; font-size:16px; font-variant-numeric:tabular-nums;}
+  .pdp2 .pdp-attr-row .pdp-pill.locked{min-width:26px; text-align:center;}
+  .pdp2 .pdp-scouting{margin-top:18px;}
+
+  .pdp2-spark{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--ink-dim);}
+  .pdp2 table.pdp-games{font-size:14px;}
+  .pdp2 table.pdp-games th.num, .pdp2 table.pdp-games td.num{text-align:right;}
+  .pdp2 table.pdp-games td{padding:8px;}
+  .pdp2 table.pdp-games td.round{font-size:12.5px; color:var(--ink-dim); white-space:nowrap;}
+  .pdp2 table.pdp-games td.hot{color:var(--amber);}
+  .pdp2 .pdp-res{margin-right:6px;}
+  .pdp2 table.pdp-games td:nth-child(3){white-space:nowrap;}
+  .pdp2-eval{display:inline-block; min-width:40px; text-align:center; padding:3px 8px; border-radius:6px; font-weight:800; font-size:13px; background:var(--panel-2); color:var(--ink);}
+  .pdp2-eval.good{background:rgba(51,180,161,.16); color:var(--ok);}
+  .pdp2-eval.bad{background:rgba(226,105,79,.18); color:var(--danger);}
+  .pdp2 #playerSeasonStatsOpenBtn{margin-top:12px;}
+
+  .pdp2-side{display:flex; flex-direction:column; gap:18px; min-width:0;}
+  .pdp2-posgrid{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px;}
+  .pdp2-poscell{height:44px; display:flex; align-items:center; justify-content:center; border-radius:10px; background:var(--bg); color:var(--ink-faint); font-weight:700;}
+  .pdp2-poscell.own{background:var(--amber); color:var(--amber-ink); font-weight:800;}
+  .pdp2 .pdp-profile-row{font-size:14px; color:var(--ink-dim); padding:7px 0;}
+  .pdp2-pips{display:flex; gap:4px;}
+  .pdp2-pips span{width:20px; height:8px; border-radius:2px; background:var(--line);}
+  .pdp2-pips span.on{background:var(--amber);}
+  #pdpSaleCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
+
+  @media (max-width:1180px){
+    .pdp2-hero{flex-wrap:wrap;}
+    .pdp2-id{flex-basis:100%;}
+    .pdp2-cond{flex:1 1 260px; padding:0 20px 0 0; border-left:none;}
+    .pdp2-row--profile, .pdp2-row--games{grid-template-columns:minmax(0,1fr);}
+    .pdp2 .pdp-attr-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  @media (max-width:720px){
+    .pdp2-card{padding:16px;}
+    .pdp2-hero{padding:18px 16px; gap:18px;}
+    .pdp2-id{gap:14px;}
+    .pdp2-avatar{width:80px; height:80px;}
+    .pdp2-name{font-size:30px;}
+    .pdp2-cond{flex-basis:100%; padding:0; border-right:none;}
+    .pdp2-rating{flex-basis:100%; flex-direction:row; justify-content:flex-start;}
+    .pdp2-tiles{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .pdp2 .pdp-attr-grid{grid-template-columns:minmax(0,1fr);}
+    .pdp2-attr-block.wide{grid-column:auto;}
+    .pdp2-attr-list.two{grid-auto-flow:row; grid-template-columns:minmax(0,1fr); grid-template-rows:none !important;}
+    .pdp2-shot-lbl{width:88px;}
+    .pdp2 table.pdp-games{font-size:13px;}
+  }
   .pdp-locked-note{font-size:12.5px; color:var(--ink-faint); font-style:italic;}
   /* Retour utilisateur (2026-09, "mets ce texte plus petit, il est plus
      grand que le titre MISE EN VENTE") : class="sub" (estimation par ventes
@@ -19360,6 +19511,22 @@ async function discussTransferRequestAction(playerId) {
 // ce fichier) pour le bouton "Mettre aux enchères" ajouté ci-dessus dans
 // renderPlayerDetail.
 document.getElementById("playerDetailContent").addEventListener("click", (e) => {
+  // En-tête de la fiche (refonte 2026-09-25) : "Comparer" = même action que
+  // le bouton "⇄ Comparer" de la barre du haut ; "Vendre" descend à la
+  // carte "Mise en vente" et place le curseur dans le champ de prix.
+  if (e.target.closest("[data-pdp-compare]")) {
+    openPlayerCompareFromDetail();
+    return;
+  }
+  if (e.target.closest("[data-pdp-sell]")) {
+    const card = document.getElementById("pdpSaleCard");
+    if (card) {
+      if (card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "center" });
+      const input = document.getElementById("playerDetailListPrice");
+      if (input) input.focus({ preventScroll: true });
+    }
+    return;
+  }
   const discussBtn = e.target.closest("[data-discuss-transfer-request]");
   if (discussBtn) {
     discussTransferRequestAction(Number(discussBtn.dataset.discussTransferRequest));
@@ -19462,16 +19629,19 @@ function starRatingFromScore(score, max = 99) {
   return clamp(Math.round((score / max) * 5), 1, 5);
 }
 function pdpAttrRowHtml(player, attr, visible) {
+  // Refonte fiche joueur (2026-09-25) : libellé, mini-barre remplie au
+  // barème rouge/orange/blanc/vert, puis le chiffre coloré (mêmes classes
+  // .pdp-attr-value/.attr-tier-* qu'avant). Non révélée : barre vide + "?"
+  // verrouillé (.pdp-pill.locked, inchangé).
   const label = TRAINING_LABELS[attr] || ATTR_SHORT[attr];
   if (!visible) {
-    return `<div class="pdp-attr-row"><span class="lbl">${escapeHtml(label)}</span><span class="pdp-attr-right">` +
-      `<span class="pdp-pill locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique">?</span></span></div>`;
+    return `<div class="pdp-attr-row"><span class="lbl">${escapeHtml(label)}</span><span class="pdp2-bar"></span>` +
+      `<span class="pdp-pill locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique">?</span></div>`;
   }
   const value = player.attrs[attr];
-  const trend = player.lastAttrTrend ? (player.lastAttrTrend[attr] || "flat") : "flat";
-  const trendSymbol = trend === "up" ? "▲" : trend === "down" ? "▼" : "·";
-  return `<div class="pdp-attr-row"><span class="lbl">${escapeHtml(label)}</span><span class="pdp-attr-right">` +
-    `<span class="pdp-trend ${trend}">${trendSymbol}</span><span class="pdp-attr-value ${attrColorTier(value)}">${value}</span></span></div>`;
+  return `<div class="pdp-attr-row"><span class="lbl">${escapeHtml(label)}</span>` +
+    `<span class="pdp2-bar"><span style="width:${clamp(value, 0, 100)}%;background:${radarTierColor(value)}"></span></span>` +
+    `<span class="pdp-attr-value ${attrColorTier(value)}">${value}</span></div>`;
 }
 // Schéma de terrain compact (voir COURT_SVG/COURT_MARKER_POS plus haut,
 // déjà utilisés par la feuille de match/.lineup-court) : les 5 postes,
@@ -19606,7 +19776,7 @@ function radarTierColor(value) {
   if (value <= 80) return "var(--ink)";
   return "#3ecf67";
 }
-function radarChartSvg(categories) {
+function radarChartSvg(categories, opts = {}) {
   const cx = 110, cy = 118, maxR = 90, labelR = 104;
   const n = RADAR_AXES.length;
   const angleFor = i => (Math.PI * 2 * i) / n - Math.PI / 2;
@@ -19637,7 +19807,9 @@ function radarChartSvg(categories) {
     const pts = RADAR_AXES.map((_, i) => pointAt(i, maxR * frac).map(v => v.toFixed(1)).join(",")).join(" L ");
     return `M ${pts} Z`;
   };
-  let svg = `<svg viewBox="-42 -8 304 252" width="100%" height="auto">`;
+  let svg = opts.showValues
+    ? `<svg viewBox="-70 -8 360 252" width="100%" height="auto" role="img" aria-label="Profil : ${RADAR_AXES.map(ax => `${ax.label.toLowerCase()} ${Math.round(categories[ax.key])}`).join(", ")}">`
+    : `<svg viewBox="-42 -8 304 252" width="100%" height="auto">`;
   ringBands.forEach(({ outer, inner, color }) => {
     const d = inner > 0 ? `${ringPolygonPath(outer)} ${ringPolygonPath(inner)}` : ringPolygonPath(outer);
     svg += `<path d="${d}" fill="${color}" fill-opacity="0.65" fill-rule="evenodd"/>`;
@@ -19657,7 +19829,7 @@ function radarChartSvg(categories) {
     const angle = angleFor(i);
     const cosA = Math.cos(angle);
     const anchor = cosA > 0.15 ? "start" : cosA < -0.15 ? "end" : "middle";
-    svg += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="9" font-weight="700" letter-spacing="0.03em" fill="var(--ink-faint)">${escapeHtml(ax.label)}</text>`;
+    svg += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="${opts.showValues ? 10.5 : 9}" font-weight="700" letter-spacing="0.03em" fill="var(--ink-faint)">${escapeHtml(ax.label)}${opts.showValues ? ` <tspan font-weight="800" fill="var(--ink)">${Math.round(categories[ax.key])}</tspan>` : ""}</text>`;
   });
   svg += `</svg>`;
   return svg;
@@ -19885,180 +20057,218 @@ function renderPlayerDetail(teamIdx, playerId) {
   if (isOwnTeam) html += `<div id="playerDetailTransferRequestFeedback"></div>`;
   if (onMarket) html += `<p class="sub">Ce joueur est actuellement aux enchères sur le marché des transferts, ses caractéristiques sont donc visibles.</p>`;
 
-  // ---- Grille de cartes ----
-  html += `<div class="pdp-grid">`;
+  // ---- Refonte visuelle (retour utilisateur, 2026-09-25 : "code la page
+  // joueur stp" sur la maquette canevas "Hoop Manager – Fiche joueur
+  // (refonte)") : en-tête (identité, forme/motivation, anneau de note +
+  // actions), puis Profil (radar) | Saison, Caractéristiques en 4 colonnes
+  // avec la légende du barème, puis Derniers matchs | Poste + Profils de
+  // jeu. MÊMES règles de verrouillage qu'avant (computePlayerVisibility :
+  // fullyVisible pour la note/le radar, visibleAttrsSet par
+  // caractéristique, TACTICAL_ATTRS pour les profils) et mêmes classes
+  // relues par les tests (.pdp-attr-grid .lbl, .pdp-attr-value,
+  // .pdp-pill.locked, .pdp-overall-num, .condition-badge,
+  // .motivation-badge, .potential-tier). Le tableau "Moyennes de la
+  // saison" disparaît de la page : la carte Saison affiche désormais
+  // toutes ces moyennes (la fenêtre "Voir toute la saison" garde, elle,
+  // son tableau de moyennes en bas). ----
+  const log = player.matchLog || [];
+  const now = Date.now();
+  html += `<div class="pdp2">`;
 
-  // Colonne de gauche : Caractéristiques (note globale, infos, terrain) + Profils
-  html += `<div>`;
-  html += `<div class="pdp-card">`;
-  html += `<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">` +
-    playerAvatarHtml(player, team, 80) +
-    // Retour utilisateur (2026-09) : "enlève le nom en blanc sur la page
-    // joueur au dessus de la brique, laisse uniquement celui qui est dans la
-    // brique mais grossis le un peu et mets le en blanc. enlève également
-    // caractéristiques, ça ne sert à rien" — ce h3 hérite par défaut du style
-    // .pdp-card h3 (11px, majuscules, gris sourd var(--ink-faint), pensé pour
-    // les titres de section comme "Profils"), pas adapté à un nom de joueur :
-    // surchargé ici en plus grand et blanc (var(--ink)), texte normal (pas de
-    // majuscules forcées). Le sous-titre "Caractéristiques" est supprimé (ne
-    // servait à rien selon le retour).
-    `<div><h3 style="margin:0 0 2px;font-size:16px;text-transform:none;letter-spacing:normal;color:var(--ink)">${escapeHtml(player.name)}</h3></div>` +
+  // == En-tête ==
+  html += `<section class="pdp2-card pdp2-hero">`;
+  html += `<div class="pdp2-id">` +
+    `<div class="pdp2-avatar">${playerAvatarHtml(player, team, 104)}</div>` +
+    `<div class="pdp2-id-text">` +
+    `<div class="pdp2-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>${teamLinkHtml(teamIdx, team.name)}</div>` +
+    `<h3 class="pdp2-name">${escapeHtml(player.name)}</h3>` +
+    `<div class="pdp2-chips">` +
+    `<span class="pdp2-chip">${player.age} ans</span>` +
+    `<span class="pdp2-chip">${player.height} cm</span>` +
+    `<span class="pdp2-chip">${escapeHtml(roleLabel)}</span>`;
+  if (isOwnTeam) {
+    html += `<span class="pdp2-chip">Potentiel · <span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></span>` +
+      `<span class="pdp2-chip">${formatMoney(player.salary)} / sem.</span>`;
+  }
+  html += `</div></div></div>`; // chips, id-text, id
+
+  const condValue = currentCondition(player, now, team.conditionRecoveryPerDay());
+  const condBox = condValue >= 75 ? "ok" : condValue >= 60 ? "mid" : "bad";
+  html += `<div class="pdp2-cond">` +
+    `<div class="pdp2-form pdp2-form--${condBox}">` +
+    `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line><line x1="6" y1="10" x2="6" y2="14"></line></svg>` +
+    `<div class="pdp2-form-text"><span class="pdp2-form-lbl">Forme</span>${conditionBadgeHtml(player, now, team.conditionRecoveryPerDay())}</div>` +
     `</div>`;
+  if (isOwnTeam) html += `<div class="pdp2-kv"><span>Motivation</span>${motivationBadgeHtml(player)}</div>`;
+  html += `<p class="player-quote pdp2-quote">« ${escapeHtml(playerRoleQuote(team, player, roleLabel))} »</p>`;
+  html += `</div>`; // pdp2-cond
+
+  html += `<div class="pdp2-rating">`;
   if (fullyVisible) {
     const overall = Math.round(player.overall());
-    const stars = starRatingFromScore(overall);
-    html += `<div class="pdp-overall-row"><div class="pdp-overall-num ${attrColorTier(overall)}">${overall}</div>` +
-      `<div class="stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</div></div>`;
-    html += `<div class="pdp-overall-caption">Note globale</div>`;
+    const circ = 2 * Math.PI * 48;
+    const dash = (clamp(overall, 0, 100) / 100) * circ;
+    html += `<div class="pdp2-ring" title="Note globale">` +
+      `<svg width="112" height="112" viewBox="0 0 116 116" aria-hidden="true">` +
+      `<circle cx="58" cy="58" r="48" fill="none" stroke="var(--line)" stroke-width="9"></circle>` +
+      `<circle cx="58" cy="58" r="48" fill="none" stroke="${radarTierColor(overall)}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 58 58)"></circle>` +
+      `</svg>` +
+      `<div class="pdp2-ring-center"><span class="pdp-overall-num ${attrColorTier(overall)}">${overall}</span><span class="pdp2-ring-lbl">Note</span></div>` +
+      `</div>`;
   } else {
-    html += `<p class="pdp-locked-note">Pas encore assez scoutée pour une note globale.</p>`;
+    html += `<div class="pdp2-ring pdp2-ring--locked"><div class="pdp2-ring-center"><span class="pdp2-ring-q">?</span><span class="pdp2-ring-lbl">Note</span></div></div>` +
+      `<p class="pdp-locked-note pdp2-center">Pas encore assez scoutée pour une note globale.</p>`;
   }
-  html += `<div class="pdp-meta-list">` +
-    `<div><span>Équipe</span><span>${escapeHtml(team.name)}</span></div>` +
-    `<div><span>Âge</span><span>${player.age} ans</span></div>` +
-    `<div><span>Taille</span><span>${player.height} cm</span></div>` +
-    `<div><span>Poste</span><span>${escapeHtml(player.position)}</span></div>`;
+  html += `<div class="pdp2-actions">` +
+    `<button type="button" class="pdp2-btn" data-pdp-compare>Comparer</button>`;
   if (isOwnTeam) {
-    html += `<div><span>Salaire</span><span>${formatMoney(player.salary)}/sem.</span></div>` +
-      `<div><span>Potentiel</span><span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></div>`;
+    html += onMarket
+      ? `<span class="pdp2-btn pdp2-btn--static">Aux enchères</span>`
+      : `<button type="button" class="pdp2-btn pdp2-btn--accent" data-pdp-sell>Vendre</button>`;
   }
-  html += `<div><span>Rôle</span><span>${escapeHtml(roleLabel)}</span></div>`;
-  html += `</div>`; // pdp-meta-list
-  html += pdpCourtHtml(player);
-  html += `</div>`; // pdp-card Caractéristiques
+  html += `</div></div>`; // actions, rating
+  html += `</section>`; // hero
 
-  html += `<div class="pdp-card"><h3>Profils</h3>`;
-  // "mental" (dans TACTICAL_ATTRS) n'est plus une clé de ATTRS depuis son
-  // retrait (retour utilisateur, 2026-09, voir le grand commentaire
-  // au-dessus d'ATTRS/PHYSICAL_ATTRS) : visibleAttrsSet, calculé sur ATTRS,
-  // ne le contiendra donc plus jamais — sans ce cas particulier, le verrou
-  // de scoutisme resterait fermé à vie sur les Profils. On exige à la place
-  // que les 8 MENTAL_ATTRS soient tous révélés avant de considérer "mental"
-  // comme visible ici (même logique que mentalAverage()).
+  // == Profil (radar) | Saison ==
+  html += `<div class="pdp2-row pdp2-row--profile">`;
+  html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Profil</h3><span class="pdp2-meta">échelle 0–100</span></div>`;
+  html += fullyVisible
+    ? `<div class="pdp2-radar">${radarChartSvg(playerRadarCategories(player), { showValues: true })}</div>`
+    : `<p class="pdp-locked-note">Profil complet pas encore scouté.</p>`;
+  html += `</section>`;
+
+  html += `<section class="pdp2-card">`;
+  if (log.length) {
+    const gp = log.length;
+    const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
+    log.forEach(m => { Object.keys(sum).forEach(k => { sum[k] += m[k] || 0; }); });
+    const avg = k => (sum[k] / gp).toFixed(1);
+    const bestPts = Math.max(...log.map(m => m.pts || 0));
+    html += `<div class="pdp2-head"><h3>Saison</h3><span class="pdp2-meta">${gp} match${gp > 1 ? "s" : ""} · ${avg("min")} min / match · record : ${bestPts} pts</span></div>`;
+    html += `<div class="pdp2-tiles">` +
+      [["pts", "Points"], ["reb", "Rebonds"], ["ast", "Passes déc."], ["stl", "Interceptions"]]
+        .map(([k, lbl]) => `<div class="pdp2-tile"><span class="pdp2-tile-num">${avg(k)}</span><span class="pdp2-tile-lbl">${lbl}</span></div>`).join("") +
+      `</div>`;
+    html += `<div class="pdp2-shots">`;
+    [["Tir à 2 pts", sum.fgm2, sum.fga2], ["Tir à 3 pts", sum.fgm3, sum.fga3], ["Lancers francs", sum.ftm, sum.fta]].forEach(([lbl, made, att]) => {
+      const pct = att > 0 ? Math.round((made / att) * 100) : null;
+      html += `<div class="pdp2-shot"><span class="pdp2-shot-lbl">${lbl}</span>` +
+        `<span class="pdp2-shot-track">${pct === null ? "" : `<span style="width:${pct}%;background:${radarTierColor(pct)}"></span>`}</span>` +
+        `<span class="pdp2-shot-pct">${pct === null ? "–" : pct + "%"}</span><span class="pdp2-shot-made">${made}/${att}</span></div>`;
+    });
+    html += `</div>`;
+    html += `<div class="pdp2-foot">` +
+      [["blk", "Contres"], ["tov", "Pertes"], ["pf", "Fautes"], ["min", "Minutes"]]
+        .map(([k, lbl]) => `<span>${lbl} <b>${avg(k)}</b></span>`).join("") +
+      `</div>`;
+  } else {
+    html += `<div class="pdp2-head"><h3>Saison</h3></div><p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
+  }
+  html += `</section>`;
+  html += `</div>`; // row profile
+
+  // == Caractéristiques ==
+  const attrBlockHtml = (title, attrs, wide) => {
+    const shown = attrs.filter(a => visibleAttrsSet.has(a));
+    const hidden = attrs.filter(a => !visibleAttrsSet.has(a));
+    const ordered = [...shown].sort((a, b) => player.attrs[b] - player.attrs[a]).concat(hidden);
+    const meta = shown.length === attrs.length
+      ? `moy. <b>${(shown.reduce((s, a) => s + player.attrs[a], 0) / shown.length).toFixed(1)}</b>`
+      : `${shown.length}/${attrs.length} révélées`;
+    const listStyle = wide ? ` style="grid-template-rows:repeat(${Math.ceil(attrs.length / 2)}, auto)"` : "";
+    return `<div class="pdp-attr-block pdp2-attr-block${wide ? " wide" : ""}">` +
+      `<div class="pdp2-attr-head"><h4>${title}</h4><span>${meta}</span></div>` +
+      `<div class="pdp2-attr-list${wide ? " two" : ""}"${listStyle}>${ordered.map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a))).join("")}</div>` +
+      `</div>`;
+  };
+  html += `<section class="pdp2-card">`;
+  html += `<div class="pdp2-head pdp2-head--attrs"><h3>Caractéristiques</h3>` +
+    `<div class="pdp2-legend" aria-label="Barème des caractéristiques">` +
+    `<div class="pdp2-legend-bar"><span class="r"></span><span class="o"></span><span class="w"></span><span class="g"></span></div>` +
+    `<div class="pdp2-legend-lbl"><span>0–20 <b class="attr-tier-red">Faible</b></span><span>21–50 <b class="attr-tier-orange">Moyen</b></span><span>51–80 <b class="attr-tier-white">Bon</b></span><span>81+ <b class="attr-tier-green">Élite</b></span></div>` +
+    `</div></div>`;
+  html += `<div class="pdp-attr-grid">` +
+    attrBlockHtml("Fondamentaux", FUNDAMENTAL_ATTRS, true) +
+    attrBlockHtml("Physique", PHYSICAL_ATTRS, false) +
+    attrBlockHtml("Mental", MENTAL_ATTRS, false) +
+    `</div>`;
+  const scouting = scoutingReportText(player, visibleAttrs);
+  html += scouting
+    ? `<div class="pdp-scouting"><b>Rapport de scouting</b> : ${escapeHtml(scouting)}</div>`
+    : `<div class="pdp-scouting">Pas encore assez de caractéristiques révélées pour un rapport de scouting (faites une séance vidéo pour en débloquer).</div>`;
+  html += `</section>`;
+
+  // == Derniers matchs | Poste + Profils de jeu ==
+  html += `<div class="pdp2-row pdp2-row--games">`;
+  html += `<section class="pdp2-card">`;
+  if (log.length) {
+    const recent = [...log].sort((a, b) => b.round - a.round).slice(0, 5);
+    const evals = recent.map(m => statEvaluation(m)).reverse(); // du plus ancien au plus récent
+    let spark = "";
+    if (evals.length > 1) {
+      const lo = Math.min(0, ...evals), hi = Math.max(1, ...evals);
+      const y = v => 4 + ((hi - v) / (hi - lo)) * 26;
+      const stepX = 120 / (evals.length - 1);
+      const pts = evals.map((v, i) => `${(i * stepX).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+      const last = evals[evals.length - 1];
+      const lastColor = last >= 10 ? "var(--ok)" : last < 0 ? "var(--danger)" : "var(--ink)";
+      spark = `<div class="pdp2-spark"><span>Tendance éval.</span>` +
+        `<svg width="124" height="34" viewBox="-2 0 124 34" role="img" aria-label="Évaluation sur les ${evals.length} derniers matchs : ${evals.join(", ")}">` +
+        `<line x1="0" y1="${y(0).toFixed(1)}" x2="120" y2="${y(0).toFixed(1)}" stroke="var(--line)" stroke-dasharray="3 3"></line>` +
+        `<polyline points="${pts}" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linejoin="round"></polyline>` +
+        `<circle cx="120" cy="${y(last).toFixed(1)}" r="3.5" fill="${lastColor}"></circle></svg></div>`;
+    }
+    html += `<div class="pdp2-head"><h3>Derniers matchs</h3>${spark}</div>`;
+    html += `<table class="pdp-games"><thead><tr><th>Match</th><th>Adversaire</th><th>Résultat</th><th class="num">Pts</th><th class="num">Reb</th><th class="num">PD</th><th class="num">Éval</th></tr></thead><tbody>`;
+    recent.forEach(m => {
+      const label = m.competition === "cup" ? cupStageLabelForRoundIndex(m.round) : `J${m.round + 1}`;
+      const result = matchResultForLogEntry(teamIdx, m);
+      const resultCell = result
+        ? `<span class="pdp-res ${result.win ? "w" : "l"}">${result.win ? "V" : "D"}</span> ${result.myScore}–${result.oppScore}`
+        : "–";
+      const ev = statEvaluation(m);
+      const evClass = ev >= 10 ? "good" : ev < 0 ? "bad" : "mid";
+      html += `<tr><td class="round">${escapeHtml(label)}</td><td class="strong">${escapeHtml(opponentNameForMatchLogEntry(teamIdx, m))}</td>` +
+        `<td>${resultCell}</td><td class="num strong${m.pts >= 20 ? " hot" : ""}">${m.pts}</td><td class="num">${m.reb}</td><td class="num">${m.ast}</td>` +
+        `<td class="num"><span class="pdp2-eval ${evClass}">${ev > 0 ? "+" + ev : ev}</span></td></tr>`;
+    });
+    html += `</tbody></table>`;
+    // Bouton "Voir toute la saison" (retour utilisateur, 2026-09-24) :
+    // inchangé, voir showPlayerSeasonStatsModal. Affiché seulement s'il y a
+    // réellement plus de 5 matchs à voir.
+    if (log.length > 5) {
+      html += `<button type="button" class="stats-leader-expand-btn" id="playerSeasonStatsOpenBtn" data-team-idx="${teamIdx}" data-player-id="${player.id}">Voir toute la saison (${log.length} matchs) ▾</button>`;
+    }
+  } else {
+    html += `<div class="pdp2-head"><h3>Derniers matchs</h3></div><p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
+  }
+  html += `</section>`;
+
+  html += `<div class="pdp2-side">`;
+  // Poste : jamais gaté par le scoutisme (voir pdpCourtHtml, "Nom/poste/
+  // taille/salaire TOUJOURS affichés").
+  html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Poste</h3></div><div class="pdp2-posgrid">` +
+    POSITIONS.map(pos => `<span class="pdp2-poscell${pos === player.position ? " own" : ""}" title="${escapeHtml(pos)}">${POS_SHORT[pos]}</span>`).join("") +
+    `</div></section>`;
+  html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Profils de jeu</h3></div>`;
+  // "mental" (dans TACTICAL_ATTRS) n'est plus une clé de ATTRS : on exige
+  // que les 8 MENTAL_ATTRS soient tous révélés avant de le considérer
+  // visible (même logique que mentalAverage()).
   const tacticalAttrsVisible = TACTICAL_ATTRS.every(a =>
     a === "mental" ? MENTAL_ATTRS.every(k => visibleAttrsSet.has(k)) : visibleAttrsSet.has(a));
   if (tacticalAttrsVisible) {
     bestTacticsForPlayer(player, 4).forEach(t => {
       const stars = starRatingFromScore(t.score);
-      html += `<div class="pdp-profile-row"><span>${escapeHtml(t.tactic)}</span>` +
-        `<span class="stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</span></div>`;
+      html += `<div class="pdp-profile-row" title="${stars}/5"><span>${escapeHtml(t.tactic)}</span><span class="pdp2-pips">` +
+        [0, 1, 2, 3, 4].map(i => `<span class="${i < stars ? "on" : ""}"></span>`).join("") + `</span></div>`;
     });
   } else {
     html += `<p class="pdp-locked-note">Caractéristiques pas encore assez scoutées pour déterminer les profils de ce joueur.</p>`;
   }
-  html += `</div>`; // pdp-card Profils
-  html += `</div>`; // colonne de gauche
-
-  // Colonne de droite : caractéristiques détaillées, statut, radar, derniers matchs
-  html += `<div>`;
-  html += `<div class="pdp-card"><h3>Caractéristiques détaillées</h3>`;
-  html += `<div class="pdp-attr-grid">`;
-  html += `<div class="pdp-attr-block"><h4>Fondamentaux</h4><div class="pdp-attr-subgrid">` +
-    `<div>${FUNDAMENTAL_ATTRS.slice(0, 7).map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a))).join("")}</div>` +
-    `<div>${FUNDAMENTAL_ATTRS.slice(7).map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a))).join("")}</div>` +
-    `</div></div>`;
-  html += `<div class="pdp-attr-block"><h4>Physique</h4><div>` +
-    PHYSICAL_ATTRS.map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a))).join("") + `</div></div>`;
-  html += `<div class="pdp-attr-block"><h4>Mental</h4><div>` +
-    MENTAL_ATTRS.map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a))).join("") + `</div></div>`;
-  html += `</div>`; // pdp-attr-grid
-  const scouting = scoutingReportText(player, visibleAttrs);
-  html += scouting
-    ? `<div class="pdp-scouting"><b>Rapport de scouting</b> : ${escapeHtml(scouting)}</div>`
-    : `<div class="pdp-scouting">Pas encore assez de caractéristiques révélées pour un rapport de scouting (faites une séance vidéo pour en débloquer).</div>`;
-  html += `</div>`; // pdp-card Caractéristiques détaillées
-
-  const log = player.matchLog || [];
-
-  html += `<div class="pdp-status-grid">`;
-  // Retour utilisateur (2026-09) : "garde la même structure : forme : pas de
-  // fatigue (avec une étiquette verte) / motivation : motivé (avec une
-  // étiquette verte)" — la forme n'avait pas d'étiquette "Forme" à gauche
-  // (seule la pastille conditionBadgeHtml était affichée juste sous le titre
-  // "Condition"), contrairement à la ligne Motivation ci-dessous qui a
-  // toujours suivi la structure .pdp-kv (libellé à gauche, pastille à
-  // droite). On aligne les deux sur la même structure .pdp-kv.
-  html += `<div class="pdp-card pdp-status-card"><h3>Condition</h3>` +
-    `<div class="pdp-kv"><span>Forme</span><span>${conditionBadgeHtml(player, Date.now(), team.conditionRecoveryPerDay())}</span></div>`;
-  if (isOwnTeam) html += `<div class="pdp-kv"><span>Motivation</span><span>${motivationBadgeHtml(player)}</span></div>`;
-  html += `<p class="player-quote">💬 « ${escapeHtml(playerRoleQuote(team, player, roleLabel))} »</p>`;
-  html += `</div>`;
-
-  html += `<div class="pdp-card pdp-status-card"><h3>Statistiques (saison)</h3>`;
-  if (log.length) {
-    const gp = log.length;
-    const avgPts = log.reduce((s, m) => s + (m.pts || 0), 0) / gp;
-    const avgReb = log.reduce((s, m) => s + (m.reb || 0), 0) / gp;
-    const avgAst = log.reduce((s, m) => s + (m.ast || 0), 0) / gp;
-    html += `<div class="pdp-kv"><span>Points</span><span>${avgPts.toFixed(1)} /match</span></div>` +
-      `<div class="pdp-kv"><span>Rebonds</span><span>${avgReb.toFixed(1)} /match</span></div>` +
-      `<div class="pdp-kv"><span>Passes</span><span>${avgAst.toFixed(1)} /match</span></div>`;
-  } else {
-    html += `<p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
-  }
-  html += `</div>`;
-
-  html += `<div class="pdp-card pdp-status-card"><h3>Records</h3>`;
-  if (log.length) {
-    const bestPts = Math.max(...log.map(m => m.pts || 0));
-    html += `<div class="pdp-kv"><span>Meilleur match</span><span>${bestPts} pts</span></div>` +
-      `<div class="pdp-kv"><span>Suivi depuis</span><span>cette saison</span></div>`;
-  } else {
-    html += `<p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
-  }
-  html += `</div>`;
-  html += `</div>`; // pdp-status-grid
-
-  html += `<div class="pdp-two-col">`;
-  html += `<div class="pdp-card"><h3>Profil (vue d'ensemble)</h3>`;
-  html += fullyVisible
-    ? radarChartSvg(playerRadarCategories(player))
-    : `<p class="pdp-locked-note">Profil complet pas encore scouté.</p>`;
-  html += `</div>`;
-
-  html += `<div class="pdp-card"><h3>Derniers matchs</h3>`;
-  if (log.length) {
-    const recent = [...log].sort((a, b) => b.round - a.round).slice(0, 5);
-    html += `<table class="pdp-games"><tr><th>J</th><th>Adversaire</th><th>Résultat</th><th>Pts</th><th>Reb</th><th>Pd</th><th>Éval</th></tr>`;
-    recent.forEach(m => {
-      const label = m.competition === "cup" ? cupStageLabelForRoundIndex(m.round) : `${m.round + 1}`;
-      const result = matchResultForLogEntry(teamIdx, m);
-      const resultCell = result
-        ? `<span class="pdp-res ${result.win ? "w" : "l"}">${result.win ? "V" : "D"}</span> ${result.myScore}-${result.oppScore}`
-        : "–";
-      html += `<tr><td>${escapeHtml(label)}</td><td class="strong">${escapeHtml(opponentNameForMatchLogEntry(teamIdx, m))}</td>` +
-        `<td>${resultCell}</td><td class="strong">${m.pts}</td><td>${m.reb}</td><td>${m.ast}</td><td class="strong">${statEvaluation(m)}</td></tr>`;
-    });
-    html += `</table>`;
-    // Bouton "Voir toute la saison" (retour utilisateur, 2026-09-24) :
-    // "dans derniers matchs, ajoute un bouton pour voir plus que les 5
-    // derniers matchs et voir toute la saison (ça pourrait ouvrir une
-    // fenetre qui se superpose et qui montre toutes les stats (pas juste
-    // point rebond passse) de la saison avec une moyenne en bas" — voir
-    // showPlayerSeasonStatsModal. Affiché seulement s'il y a réellement
-    // plus de 5 matchs à voir (même principe que .stats-leader-expand-btn
-    // pour les classements de la ligue : pas de bouton qui ne changerait
-    // rien à afficher).
-    if (log.length > 5) {
-      html += `<button type="button" class="stats-leader-expand-btn" id="playerSeasonStatsOpenBtn" data-team-idx="${teamIdx}" data-player-id="${player.id}">Voir toute la saison (${log.length} matchs) ▾</button>`;
-    }
-  } else {
-    html += `<p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
-  }
-  html += `</div>`;
-  html += `</div>`; // pdp-two-col
-
-  html += `</div>`; // colonne de droite
-  html += `</div>`; // pdp-grid
-
-  // ---- Moyennes de la saison (retour utilisateur, 2026-09-24 : "il faut
-  // remonter le bloc moyenne de la saison au dessus du bloc mise en
-  // vente") : REMONTÉ ici, juste après la grille de cartes et AVANT "Mise
-  // en vente" ci-dessous (précédemment après elle, voir git blame).
-  // playerSeasonAveragesTableHtml extraite en fonction séparée (voir son
-  // commentaire) : réutilisée aussi par showPlayerSeasonStatsModal, pour
-  // ne jamais avoir deux calculs de moyennes qui pourraient diverger. ----
-  if (log.length) html += playerSeasonAveragesTableHtml(log);
+  html += `</section>`;
+  html += `</div>`; // side
+  html += `</div>`; // row games
+  html += `</div>`; // pdp2
 
   // ---- Mise en vente : reprend EXACTEMENT le mécanisme déjà en place
   // (league.listPlayerForSale, prix libre, jamais pré-rempli), simplement
@@ -20066,7 +20276,7 @@ function renderPlayerDetail(teamIdx, playerId) {
   // Ajoute la valorisation par ventes comparables (comparableSalesValuation
   // ci-dessus) quand le joueur n'est pas déjà en vente. ----
   if (isOwnTeam) {
-    html += `<div class="pdp-card"><h3>Mise en vente</h3>`;
+    html += `<div class="pdp-card" id="pdpSaleCard"><h3>Mise en vente</h3>`;
     if (onMarket) {
       const bidLine = openListing.currentBid
         ? `Enchère actuelle : <b>${formatMoney(openListing.currentBid)}</b>`
@@ -25969,7 +26179,7 @@ function renderLastTrainingReport() {
   });
   holder.innerHTML = `<section class="tp-card tp-report" aria-labelledby="tpReportTitle">` +
     `<div class="tp-report-head"><div class="tp-report-title"><h3 id="tpReportTitle">Bilan de la semaine dernière</h3>` +
-    `<span class="tp-chip">semaine ${teamA.week - 1}</span></div></div>` +
+    `<span class="tp-chip">semaine ${teamA.week - 1}</span></div><span class="tp-sub">Groupé par joueur</span></div>` +
     `<div class="tp-report-body">${body}</div></section>`;
   holder.querySelectorAll(".tp-rp-toggle").forEach(btn => btn.addEventListener("click", () => {
     const idx = Number(btn.dataset.reportIdx);

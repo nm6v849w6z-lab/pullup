@@ -112,8 +112,12 @@ console.log("\nFiche ouverte pour le MVP :", mvpName);
 if (!doc2.getElementById("playerDetailName").textContent.includes(mvpName)) {
   throw new Error("❌ Le titre de la fiche devrait reprendre le nom du MVP cliqué.");
 }
-if (!detailContent.includes("Moyennes de la saison (3 matchs)")) {
-  throw new Error("❌ Après 3 journées jouées, la fiche devrait afficher '3 matchs' dans le titre des moyennes.");
+// Refonte fiche joueur (2026-09-25, maquette "Fiche joueur (refonte)") :
+// les moyennes de la saison vivent désormais dans la carte "Saison"
+// (tuiles Points/Rebonds/Passes/Interceptions + barres de tir + ligne
+// Contres/Pertes/Fautes/Minutes), plus dans un tableau séparé.
+if (!detailContent.includes("3 matchs ·")) {
+  throw new Error("❌ Après 3 journées jouées, la carte Saison de la fiche devrait afficher '3 matchs'.");
 }
 // Retour utilisateur (2026-09-24) : "enleve le match par match en bas" — le
 // tableau "Match par match" (historique complet, journée par journée) a été
@@ -127,10 +131,10 @@ if (!detailContent.includes("Moyennes de la saison (3 matchs)")) {
 // "il faut remonter le bloc moyenne de la saison au dessus du bloc mise en
 // vente" — voir renderPlayerDetail).
 const rosterTables = doc2.querySelectorAll("#playerDetailContent table.roster-table");
-if (rosterTables.length !== 1) {
-  throw new Error(`❌ Une seule table.roster-table ("Moyennes de la saison") devrait rester sur la fiche joueur (le "Match par match" a été retiré), obtenu ${rosterTables.length}.`);
+if (rosterTables.length !== 0) {
+  throw new Error(`❌ Plus aucune table.roster-table ne devrait rester sur la fiche joueur (moyennes dans la carte Saison, "Match par match" retiré), obtenu ${rosterTables.length}.`);
 }
-console.log("✅ Le tableau \"Match par match\" a bien disparu de la fiche joueur (une seule table.roster-table restante : Moyennes de la saison).");
+console.log("✅ Plus de tableau \"Match par match\" ni de tableau de moyennes séparé sur la fiche joueur (carte Saison).");
 
 // Recoupe la moyenne de points affichée avec le matchLog brut du joueur.
 const independent = win2.eval(`
@@ -140,7 +144,7 @@ const independent = win2.eval(`
     return { gp: p.matchLog.length, totalPts: p.matchLog.reduce((s, m) => s + m.pts, 0) };
   })()
 `);
-const avgPtsShown = rosterTables[0].querySelector("tbody tr td:nth-child(2)").textContent;
+const avgPtsShown = doc2.querySelector("#playerDetailContent .pdp2-tile-num").textContent;
 const expectedAvg = (independent.totalPts / independent.gp).toFixed(1);
 console.log("Moyenne de points affichée :", avgPtsShown, "| attendue (calcul indépendant) :", expectedAvg);
 if (avgPtsShown !== expectedAvg) throw new Error(`❌ La moyenne de points affichée (${avgPtsShown}) ne correspond pas au calcul indépendant (${expectedAvg}).`);
@@ -155,9 +159,9 @@ console.log("✅ Fiche joueur ouverte depuis les stats de la ligue : moyennes co
 // MVP est celui de toute la ligue, pas forcément dans l'équipe du joueur —
 // ce test d'ordre ne s'applique donc que si le bloc est bien présent ici.
 const fullText = doc2.getElementById("playerDetailContent").textContent;
-const idxAverages = fullText.indexOf("Moyennes de la saison");
+const idxAverages = fullText.indexOf("3 matchs ·");
 const idxForSale = fullText.indexOf("Mise en vente");
-if (idxAverages === -1) throw new Error("❌ \"Moyennes de la saison\" devrait être présent sur la fiche joueur.");
+if (idxAverages === -1) throw new Error("❌ La carte \"Saison\" (moyennes) devrait être présente sur la fiche joueur.");
 if (idxForSale === -1) {
   console.log("ℹ️ MVP hors de son propre effectif ici (pas de bloc \"Mise en vente\") : ordre non vérifiable sur cette fiche, voir player_season_stats_modal_test.js pour un cas garanti sur son propre effectif.");
 } else if (idxAverages >= idxForSale) {

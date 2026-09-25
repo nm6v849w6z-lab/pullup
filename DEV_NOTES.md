@@ -20,6 +20,38 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur : refonte visuelle d'après la
+  maquette "Hoop Manager – Fiche joueur (refonte)"** (canvas Design claude.ai
+  ARSMXuUcCC5E18MEHPC12i) — retour utilisateur : "code la page joueur stp".
+  En-tête (avatar, pastille poste, équipe, nom en grand, puces âge/taille/
+  rôle/potentiel/salaire ; bloc Forme + Motivation + citation ; anneau de
+  note globale + boutons Comparer/Vendre), ligne Profil (radar) + Saison
+  (4 tuiles moyennes, barres de réussite aux tirs, ligne contres/pertes/
+  fautes/minutes), Caractéristiques en 4 colonnes avec légende du barème,
+  Derniers matchs (tableau + courbe d'éval) | Poste + Profils de jeu.
+  Mêmes règles de scoutisme/verrous, mêmes ids/data-* (mise en vente,
+  demande de transfert, "Voir toute la saison"). Fichiers :
+  moteurbasket3.html (renderPlayerDetail, CSS .pdp-*), tests fiche joueur.
+  Le tableau "Moyennes de la saison" quitte la page (tout est dans la
+  carte Saison ; la fenêtre "Voir toute la saison" le garde). Bouton
+  "Comparer" ajouté dans l'en-tête (le "⇄ Comparer" de la barre du haut
+  est conservé), "Vendre" descend à la carte "Mise en vente" (#pdpSaleCard).
+  Fichiers : moteurbasket3.html (renderPlayerDetail, pdpAttrRowHtml,
+  radarChartSvg option showValues, écouteur #playerDetailContent, CSS
+  .pdp2-*), player_detail_test.js et player_season_stats_modal_test.js
+  (moyennes lues dans la carte Saison).
+  Statut : CODÉ, tests Mac verts (pdp_color_scheme, potential_tier,
+  thirteen_attrs, player_season_stats_modal, player_compare,
+  player_detail_topbar_nav, radar_chart_colors, team_detail_page) ;
+  captures Playwright OK (bureau 1440 + mobile 390, sans erreur JS).
+  player_detail_test.js : parties fiche joueur vertes, échoue ensuite sur
+  "(setup) la fiche équipe adverse devrait afficher des liens joueur" —
+  fiche ÉQUIPE (sous-onglet Aperçu, chantier "modèle E" non committé),
+  pas la fiche joueur → à adapter avec ce chantier-là.
+  Validé par l'utilisateur ("vas y pousse"), commit partiel (seules les
+  lignes de ce chantier). Reste : `git push`.
+
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Humeur des
   supporters : retouches** — retour utilisateur (captures) : "enlève
   Dépassé : bonus d'humeur / Manqué : forte baisse / Fixé en début de
@@ -32,8 +64,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   attr_color_scheme_everywhere, season_objective_endreg,
   milestone_interview_and_mvp). Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Entraînement,
-  retouches 2** — retour utilisateur : retirer « Groupé par joueur » en
-  tête du bilan, et du bilan les notes « X (A) :
+  retouches 2** — retour utilisateur : retirer du bilan les notes « X (A) :
   n'a joué que N min ce cycle… » et la ligne « 1 poste couvert · rendement
   plein, aucune dilution » (la ligne ne s'affiche plus qu'en cas de
   dilution). Fichier : moteurbasket3.html. Reste : `git push`.

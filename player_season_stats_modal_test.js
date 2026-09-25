@@ -119,7 +119,9 @@ console.log("✅ La 1ère ligne de la fenêtre correspond bien au match le plus 
 if (!averagesTable.closest("body") || !overlay.textContent.includes("Moyennes de la saison (7 matchs)")) {
   throw new Error("❌ La fenêtre devrait afficher \"Moyennes de la saison (7 matchs)\" en bas.");
 }
-const avgOnPage = doc.querySelector("#playerDetailContent table.roster-table tbody tr td:nth-child(2)").textContent;
+// Refonte 2026-09-25 : sur la fiche, la moyenne de points est la 1re tuile
+// de la carte "Saison" (plus de tableau de moyennes séparé sur la page).
+const avgOnPage = doc.querySelector("#playerDetailContent .pdp2-tile-num").textContent;
 const avgInModal = averagesTable.querySelector("tbody tr td:nth-child(2)").textContent;
 if (avgOnPage !== avgInModal) {
   throw new Error(`❌ La moyenne de points dans la fenêtre (${avgInModal}) devrait être identique à celle affichée sur la fiche (${avgOnPage}) — même calcul réutilisé.`);
@@ -148,7 +150,7 @@ console.log("✅ Un clic sur le fond assombri ferme bien la fenêtre.");
 // en vente", et le tableau "Match par match" doit avoir disparu.
 // ---------------------------------------------------------------------
 const fullText = doc.getElementById("playerDetailContent").textContent;
-const idxAverages = fullText.indexOf("Moyennes de la saison");
+const idxAverages = fullText.indexOf("7 matchs ·"); // carte "Saison" (refonte 2026-09-25)
 const idxForSale = fullText.indexOf("Mise en vente");
 if (idxAverages === -1 || idxForSale === -1) {
   throw new Error(`❌ (setup) Les deux blocs devraient être présents sur son propre effectif (idxAverages=${idxAverages}, idxForSale=${idxForSale}).`);
