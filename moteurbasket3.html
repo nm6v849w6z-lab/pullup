@@ -4363,12 +4363,14 @@
   /* Largeurs de colonnes fixes (retour utilisateur 2026-09-25 : "il y a un
      problème de largeur de colonne") : sans ça, le tableau en auto-layout
      collait Âge/Taille/Salaire les uns aux autres et laissait un grand vide
-     dans Forme. Nom prend l'espace restant ; voir <colgroup> dans
+     dans Forme. Largeurs en % (Nom compris) ; voir <colgroup> dans
      renderEffectifSection. */
-  #effectifSection table.eff-general{table-layout:fixed; min-width:1180px;}
+  #effectifSection table.eff-general{table-layout:fixed; min-width:1120px;}
   #effectifSection table.eff-general td{overflow:hidden; text-overflow:ellipsis;}
   #effectifSection table.eff-general td.eff-td-actions{overflow:visible;}
-  #effectifSection table.eff-general th.eff-th-condition, #effectifSection table.eff-general td.eff-td-condition{padding-left:28px;}
+  #effectifSection table.eff-general .eff-player{max-width:100%;}
+  #effectifSection table.eff-general .eff-player .player-link{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  #effectifSection table.eff-general th.eff-th-condition, #effectifSection table.eff-general td.eff-td-condition{padding-left:20px;}
   #effectifSection .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
   #effectifSection .eff-general .eff-group-starters tr.eff-row td{height:58px; background:var(--eff-row);}
   #effectifSection .eff-general .eff-group-starters .eff-player .player-link{font-size:15px;}
@@ -29442,11 +29444,13 @@ function effSortPlayers(players, defaultCmp) {
   });
 }
 
-// Largeurs (px) des colonnes de l'onglet Général ; "name" absent = prend le
-// reste de la largeur (table-layout:fixed, voir CSS .eff-general).
+// Largeurs (%) des colonnes de l'onglet Général (table-layout:fixed, voir CSS
+// .eff-general) + 5 % pour le menu ⋯. En POURCENTAGE, Nom compris : en px
+// avec Nom "au reste", Nom tombait à ~30 px sur un écran moins large (retour
+// utilisateur 2026-09-25 : "la largeur des colonnes ne va pas du tout").
 const EFF_GENERAL_COL_WIDTHS = {
-  position: 100, potential: 200, age: 60, height: 90, salary: 110,
-  condition: 220, motivation: 140, evaluation: 130,
+  name: 16, position: 7, potential: 17, age: 5, height: 6, salary: 8,
+  condition: 17, motivation: 10, evaluation: 9,
 };
 
 function renderEffectifSection() {
@@ -29502,7 +29506,7 @@ function renderEffectifSection() {
   const colCount = columns.length + 1;
   let html = effectifSubNavHtml() + `<div id="rosterMarketFeedback"></div>`;
   html += `<div class="eff-table-wrap"><table class="roster-table eff-table eff-general">` +
-    `<colgroup>${columns.map(c => `<col class="eff-col-${c.key}"${EFF_GENERAL_COL_WIDTHS[c.key] ? ` style="width:${EFF_GENERAL_COL_WIDTHS[c.key]}px"` : ""}>`).join("")}<col style="width:52px"></colgroup><thead><tr>` +
+    `<colgroup>${columns.map(c => `<col class="eff-col-${c.key}"${EFF_GENERAL_COL_WIDTHS[c.key] ? ` style="width:${EFF_GENERAL_COL_WIDTHS[c.key]}%"` : ""}>`).join("")}<col style="width:5%"></colgroup><thead><tr>` +
     columns.map(c => effHeaderCellHtml(c.key, c.label, { cls: `eff-th-${c.key}` })).join("") +
     `<th class="eff-th-actions"><span class="eff-sr">Actions</span></th></tr></thead>`;
   const defaultCmp = (a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall();
