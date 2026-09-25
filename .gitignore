@@ -24,3 +24,6 @@ last_run.json
 
 # Dossier de fichiers en attente de suppression manuelle par l'utilisateur (pas du code).
 _to_delete/
+
+# Fichiers de travail des sessions Claude (captures, scripts, sauvegardes) — jamais commités.
+Claude outputs/
