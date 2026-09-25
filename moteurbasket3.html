@@ -1687,7 +1687,7 @@
   .pdp2-shot-track span{display:block; height:100%; border-radius:999px;}
   .pdp2-shot-pct{width:48px; text-align:right; font-size:17px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;}
   .pdp2-shot-made{width:56px; text-align:right; font-size:12.5px; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
-  .pdp2-foot{display:flex; gap:24px; flex-wrap:wrap; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); font-size:16px; color:var(--ink-dim);}
+  .pdp2-foot{display:flex; gap:24px; flex-wrap:wrap; margin-top:16px; padding:0 2px 16px; border-bottom:1px solid var(--line); font-size:16px; color:var(--ink-dim);}
   /* Retour utilisateur (2026-09-25) : Contres/Pertes/Fautes/Minutes "un peu plus gros, ça paraît perdu". */
   .pdp2-foot b{font-size:18px; font-weight:800; margin-left:4px;}
   .pdp2-foot b{color:var(--ink);}
@@ -20742,11 +20742,17 @@ function renderPlayerDetail(teamIdx, playerId) {
     const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
     log.forEach(m => { Object.keys(sum).forEach(k => { sum[k] += m[k] || 0; }); });
     const avg = k => (sum[k] / gp).toFixed(1);
-    const bestPts = Math.max(...log.map(m => m.pts || 0));
-    html += `<div class="pdp2-head"><h3>Saison</h3><span class="pdp2-meta">${gp} match${gp > 1 ? "s" : ""} · ${avg("min")} min / match · record : ${bestPts} pts</span></div>`;
+    html += `<div class="pdp2-head"><h3>Saison</h3><span class="pdp2-meta">${gp} match${gp > 1 ? "s" : ""}</span></div>`; // "min / match · record" retirés (retour utilisateur, 2026-09-25)
     html += `<div class="pdp2-tiles">` +
       [["pts", "Points"], ["reb", "Rebonds"], ["ast", "Passes déc."], ["stl", "Interceptions"]]
         .map(([k, lbl]) => `<div class="pdp2-tile"><span class="pdp2-tile-num">${avg(k)}</span><span class="pdp2-tile-lbl">${lbl}</span></div>`).join("") +
+      `</div>`;
+    // Ligne Contres/Pertes/Fautes/Minutes remontée juste sous les tuiles,
+    // barres de tir en dessous (retour utilisateur, 2026-09-25 : "inverser
+    // les jauges tirs [...] avec contres, pertes, fautes, minutes").
+    html += `<div class="pdp2-foot">` +
+      [["blk", "Contres"], ["tov", "Pertes"], ["pf", "Fautes"], ["min", "Minutes"]]
+        .map(([k, lbl]) => `<span>${lbl} <b>${avg(k)}</b></span>`).join("") +
       `</div>`;
     html += `<div class="pdp2-shots">`;
     [["Tir à 2 pts", sum.fgm2, sum.fga2], ["Tir à 3 pts", sum.fgm3, sum.fga3], ["Lancers francs", sum.ftm, sum.fta]].forEach(([lbl, made, att]) => {
@@ -20756,10 +20762,6 @@ function renderPlayerDetail(teamIdx, playerId) {
         `<span class="pdp2-shot-pct">${pct === null ? "–" : pct + "%"}</span><span class="pdp2-shot-made">${made}/${att}</span></div>`;
     });
     html += `</div>`;
-    html += `<div class="pdp2-foot">` +
-      [["blk", "Contres"], ["tov", "Pertes"], ["pf", "Fautes"], ["min", "Minutes"]]
-        .map(([k, lbl]) => `<span>${lbl} <b>${avg(k)}</b></span>`).join("") +
-      `</div>`;
   } else {
     html += `<div class="pdp2-head"><h3>Saison</h3></div><p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
   }

@@ -116,7 +116,7 @@ if (!doc2.getElementById("playerDetailName").textContent.includes(mvpName)) {
 // les moyennes de la saison vivent désormais dans la carte "Saison"
 // (tuiles Points/Rebonds/Passes/Interceptions + barres de tir + ligne
 // Contres/Pertes/Fautes/Minutes), plus dans un tableau séparé.
-if (!detailContent.includes("3 matchs ·")) {
+if (!detailContent.includes("3 matchs")) {
   throw new Error("❌ Après 3 journées jouées, la carte Saison de la fiche devrait afficher '3 matchs'.");
 }
 // Retour utilisateur (2026-09-24) : "enleve le match par match en bas" — le
@@ -159,7 +159,7 @@ console.log("✅ Fiche joueur ouverte depuis les stats de la ligue : moyennes co
 // MVP est celui de toute la ligue, pas forcément dans l'équipe du joueur —
 // ce test d'ordre ne s'applique donc que si le bloc est bien présent ici.
 const fullText = doc2.getElementById("playerDetailContent").textContent;
-const idxAverages = fullText.indexOf("3 matchs ·");
+const idxAverages = fullText.indexOf("3 matchs");
 const idxForSale = fullText.indexOf("Mise en vente");
 if (idxAverages === -1) throw new Error("❌ La carte \"Saison\" (moyennes) devrait être présente sur la fiche joueur.");
 if (idxForSale === -1) {

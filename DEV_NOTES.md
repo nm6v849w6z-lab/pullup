@@ -20,6 +20,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur, carte
+  Saison : ligne Contres/Pertes/Fautes/Minutes remontée sous les tuiles,
+  barres de tir en dessous ; "min / match · record" retirés de l'en-tête**
+  — retours utilisateur : "inverser les jauges tirs [...] avec contres,
+  pertes, fautes, minutes", "enlève ça 21.8 min / match · record : 12 pts".
+  NB : l'inversion n'avait PAS été committée plus tôt (erreur d'analyse :
+  le fichier de travail avait été écrasé à 19h10 par une autre session
+  avec une base de 05h12, restauré depuis HEAD + vue live à 19h15 ;
+  copie de l'état écrasé : Claude outputs/moteurbasket3_ecrase_1910_avant_fusion.html).
+  Fichiers : moteurbasket3.html, player_detail_test.js,
+  player_season_stats_modal_test.js. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de
   l'affichage des matchs en direct** — nouvelle vue live (tableau
   d'affichage + courbe d'écart, bandeau et bouton de mi-temps, carte des

@@ -150,7 +150,7 @@ console.log("✅ Un clic sur le fond assombri ferme bien la fenêtre.");
 // en vente", et le tableau "Match par match" doit avoir disparu.
 // ---------------------------------------------------------------------
 const fullText = doc.getElementById("playerDetailContent").textContent;
-const idxAverages = fullText.indexOf("7 matchs ·"); // carte "Saison" (refonte 2026-09-25)
+const idxAverages = fullText.indexOf("7 matchs"); // carte "Saison" (refonte 2026-09-25)
 const idxForSale = fullText.indexOf("Mise en vente");
 if (idxAverages === -1 || idxForSale === -1) {
   throw new Error(`❌ (setup) Les deux blocs devraient être présents sur son propre effectif (idxAverages=${idxAverages}, idxForSale=${idxForSale}).`);
