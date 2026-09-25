@@ -64,16 +64,28 @@ const jerseyEls = doc.querySelectorAll("#teamDetailContent .jersey-mockup svg");
 console.log("Logo (SVG type, club gratuit) présent :", !!logoEl, "| Maillots (SVG, Domicile+Extérieur) présents :", jerseyEls.length);
 if (!logoEl) throw new Error("❌ Le logo type (SVG, club gratuit par défaut) devrait être affiché sur l'Aperçu.");
 if (jerseyEls.length !== 2) throw new Error("❌ Les deux maillots (Domicile + Extérieur, SVG) devraient être affichés sur l'Aperçu.");
-if (!doc.querySelector("#teamDetailContent").textContent.includes("Derniers résultats")) {
-  throw new Error("❌ La section \"Derniers résultats\" devrait être présente sur l'Aperçu.");
+if (!doc.querySelector("#teamDetailContent").textContent.includes("Résultats & calendrier")) {
+  throw new Error("❌ La ligne \"Résultats & calendrier\" devrait être présente sur l'Aperçu.");
 }
-if (!doc.querySelector("#teamDetailContent").textContent.includes("Joueur en forme du moment")) {
-  throw new Error("❌ La section \"Joueur en forme du moment\" devrait être présente sur l'Aperçu.");
+if (!doc.querySelector("#teamDetailContent .apercu-row[data-team-detail-subview=\"effectif\"]")) {
+  throw new Error("❌ La ligne \"Effectif\" (joueur en forme) devrait être présente sur l'Aperçu.");
 }
-if (!doc.querySelector("#teamDetailContent").textContent.includes("Dernières interviews du coach")) {
-  throw new Error("❌ La section \"Dernières interviews du coach\" devrait être présente sur l'Aperçu.");
+if (!doc.querySelector("#teamDetailContent").textContent.includes("Interviews")) {
+  throw new Error("❌ Le pied \"Interviews\" devrait être présent sur l'Aperçu.");
 }
 console.log("✅ La fiche équipe s'ouvre bien sur l'Aperçu (logo type + maillot + sections attendues).");
+
+// Modèle E (2026-09-25) : chaque ligne de l'Aperçu ouvre son sous-onglet.
+for (const view of ["calendrier", "effectif", "analyse"]) {
+  win.showTeamDetail(opponentIdx);
+  doc.querySelector(`#teamDetailContent .apercu-row[data-team-detail-subview="${view}"]`).click();
+  const active = doc.querySelector("#teamDetailContent .bs-tab.active");
+  if (!active || active.dataset.teamDetailSubview !== view) {
+    throw new Error(`❌ Cliquer la ligne "${view}" de l'Aperçu devrait ouvrir le sous-onglet correspondant.`);
+  }
+}
+win.showTeamDetail(opponentIdx);
+console.log("✅ Les 3 lignes de l'Aperçu ouvrent bien Calendrier / Effectif / Analyse.");
 
 // ---------------------------------------------------------------------
 // Partie 2 : forme récente ("VVVDV") : injecte 5 résultats réels sur les
@@ -371,17 +383,17 @@ console.log("Année de création affichée sur l'Aperçu :", foundedYear, "| pr�
 if (!apercuText.includes(String(foundedYear))) {
   throw new Error("❌ La date de création du club (foundedYear) devrait être affichée sur l'Aperçu.");
 }
-if (!doc.querySelector("#teamDetailContent .infobar-item .stars")) {
+if (!doc.querySelector("#teamDetailContent .team-apercu-summary .stars")) {
   throw new Error("❌ La renommée du club devrait être affichée en étoiles sur l'Aperçu.");
 }
 console.log("✅ La date de création et la renommée (étoiles) sont bien affichées sur l'Aperçu.");
 
-if (!doc.querySelector("#teamDetailContent").textContent.includes("Palmarès encore vierge")) {
+if (!doc.querySelector("#teamDetailContent").querySelector(".apercu-foot-trophies").textContent.includes("Encore vierge")) {
   throw new Error("❌ (setup) Le palmarès devrait être vierge avant tout trophée.");
 }
 win.eval(`league.recordTrophy(${myIdx}, "cup", Date.now());`);
 win.showTeamDetail(myIdx);
-const trophyItem = doc.querySelector("#teamDetailContent .trophy-item");
+const trophyItem = doc.querySelector("#teamDetailContent .apercu-foot-trophies");
 console.log("Trophée affiché sur l'Aperçu après League.recordTrophy :", trophyItem && trophyItem.textContent.trim());
 if (!trophyItem || !trophyItem.textContent.includes("Vainqueur de la Coupe")) {
   throw new Error("❌ Un trophée enregistré via League.recordTrophy devrait apparaître dans le palmarès de l'Aperçu.");

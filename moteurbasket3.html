@@ -385,16 +385,36 @@
      de club (blason + barre d'infos + kits + palmarès), en réutilisant les
      briques déjà en place ailleurs (.stat-card/.stat-grid) plutôt que d'en
      inventer de nouvelles, voir teamDetailApercuHtml. */
-  .team-apercu-top{display:flex; gap:18px; align-items:center; flex-wrap:wrap; margin-bottom:8px;}
+  /* Modèle E "Aperçu en liste" (2026-09-25, voir teamDetailApercuHtml) :
+     en-tête + liste de 3 lignes cliquables + pied d'une ligne. Les anciennes
+     classes .team-apercu-grid/.infobar-item ne sont plus utilisées. */
+  .team-apercu-top{display:flex; gap:22px; align-items:center; flex-wrap:wrap; margin:6px 0 22px;}
   .team-apercu-crest{flex-shrink:0;}
-  .team-apercu-name{margin:0 0 8px; font-size:22px;}
-  .team-apercu-infobar{display:flex; gap:10px; flex-wrap:wrap;}
-  .infobar-item{background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:5px 14px; font-size:12px; color:var(--ink-dim); display:inline-flex; gap:6px; align-items:center;}
-  .infobar-item .infobar-value{color:var(--ink); font-weight:700;}
-  .infobar-item .stars{color:var(--amber); letter-spacing:1px;}
-  .team-apercu-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px;}
-  .team-apercu-grid .stat-card.span-2{grid-column:1 / -1;}
-  @media(max-width:680px){.team-apercu-grid{grid-template-columns:1fr;}}
+  .team-apercu-id{flex:1; min-width:220px; display:flex; flex-direction:column; gap:6px;}
+  .team-apercu-name{margin:0; font-size:30px; line-height:1.1;}
+  .team-apercu-summary{margin:0; font-size:14px; color:var(--ink-dim);}
+  .team-apercu-summary .stars{color:var(--amber); letter-spacing:1px;}
+  .team-apercu-jerseys{gap:16px; flex:0 0 auto;}
+  .team-apercu-jerseys .jersey-mockup{flex:0 0 auto; gap:2px;}
+  .apercu-list{display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+  .apercu-row{display:grid; grid-template-columns:200px 1fr 32px; align-items:center; gap:18px; padding:18px 22px; min-height:44px; background:transparent; border:0; border-top:1px solid var(--line); color:var(--ink); font:inherit; font-size:14px; text-align:left; cursor:pointer;}
+  .apercu-row:first-child{border-top:0;}
+  .apercu-row:hover, .apercu-row:focus-visible{background:var(--panel-2);}
+  .apercu-row-label{font-weight:800; font-size:13px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-dim);}
+  .apercu-row-body{display:flex; flex-direction:column; gap:10px; min-width:0;}
+  .apercu-row-line{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .apercu-row-body .form-badge{width:24px; height:24px; font-size:12px;}
+  .apercu-row-body .form-streak{gap:5px;}
+  .apercu-row-arrow{color:var(--amber); font-size:20px; text-align:right;}
+  .apercu-muted{color:var(--ink-dim);}
+  .apercu-accent{color:var(--amber); font-weight:700;}
+  .apercu-foot{display:flex; gap:32px; flex-wrap:wrap; padding:14px 22px 0; font-size:13px; color:var(--ink-dim);}
+  .apercu-foot-label{font-weight:800; font-size:12px; letter-spacing:1.2px; text-transform:uppercase; margin-right:8px;}
+  @media(max-width:680px){
+    .apercu-row{grid-template-columns:1fr 24px; gap:8px 12px; padding:14px 16px;}
+    .apercu-row-label{grid-column:1 / -1;}
+    .team-apercu-jerseys{width:100%; justify-content:center;}
+  }
   .team-logo-img{border-radius:50%; object-fit:cover; display:block;}
   .jersey-mockups{display:flex; gap:20px;}
   .jersey-mockup{display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;}
@@ -20522,56 +20542,114 @@ function trophiesHtml(teamIdx) {
 // blason + nom + barre d'infos en haut, puis une grille de cartes
 // (.team-apercu-grid, mêmes briques .stat-card que le reste de l'app, voir
 // son commentaire CSS) pour les maillots, la forme du moment, le joueur en
-// forme, le palmarès et les interviews.
+// forme, le palmarès et les interviews. Remplacée le 2026-09-25 par le
+// modèle E "Aperçu en liste" (voir le commentaire en tête de la fonction).
 function teamDetailApercuHtml(teamIdx) {
+  // Modèle E "Aperçu en liste" (retour utilisateur, 2026-09-25 : "code le
+  // modele e", maquette Design "Hoop Manager – Page adversaire", planche
+  // ApercuListe) : l'Aperçu devient une page d'accueil très simple — un
+  // en-tête (logo, nom, une seule ligne de résumé, maillots à droite) puis
+  // trois lignes cliquables qui mènent chacune à un sous-onglet (mêmes
+  // data-team-detail-subview que teamDetailSubNavHtml, donc gérées par le
+  // même écouteur délégué), chacune avec son résumé d'une ligne.
   const team = league.teams[teamIdx];
   const isOwnTeam = teamIdx === myTeamIndex;
   const stars = computeClubReputationStars(team, league.divisionLevel);
+  const table = league.standings();
+  const rank = table.findIndex(r => r.idx === teamIdx) + 1;
+  const row = table.find(r => r.idx === teamIdx);
 
-  let html = `<div class="team-apercu-top">`;
-  html += `<div class="team-apercu-crest">${teamLogoHtml(team, 88)}</div>`;
-  html += `<div>`;
-  html += `<h2 class="team-apercu-name">${escapeHtml(team.name)}</h2>`;
-  html += `<div class="team-apercu-infobar">`;
-  html += `<span class="infobar-item">Division <span class="infobar-value">${escapeHtml(divisionInfo(league.divisionLevel).name)}</span></span>`;
-  html += `<span class="infobar-item">Fondé en <span class="infobar-value">${team.foundedYear}</span></span>`;
-  html += `<span class="infobar-item">Renommée ${reputationStarsHtml(stars)}</span>`;
-  html += `</div>`;
-  html += `</div>`;
-  html += `</div>`;
-  if (isOwnTeam) {
-    html += `<p class="sub">Logo et maillot modifiables depuis le tableau de bord (onglet <b>Club</b>).</p>`;
-  }
-
-  html += `<div class="team-apercu-grid">`;
+  const summary = [
+    escapeHtml(divisionInfo(league.divisionLevel).name),
+    row && row.played ? `${rank}${rank === 1 ? "er" : "e"} · ${row.wins}V – ${row.losses}D` : null,
+    `Renommée ${reputationStarsHtml(stars)}`,
+    `Fondé en ${team.foundedYear}`,
+  ].filter(Boolean).join(" · ");
 
   const jerseyPattern = effectiveJerseyPattern(team);
   const jerseyTwoTone = effectiveJerseyTwoTone(team);
-  // Maillot extérieur : couleur/motif/combinaison propres (voir
-  // Team.awayJerseyColor et consorts, engine.js), plus dérivés du maillot
-  // domicile (correctif, retour utilisateur, 2026-09 : "on ne peut choisir
-  // que les maillots domiciles [...] Travaille sur les maillots extérieurs
-  // également").
   const awayJerseyPattern = effectiveAwayJerseyPattern(team);
   const awayJerseyTwoTone = effectiveAwayJerseyTwoTone(team);
-  html += `<div class="stat-card"><h3>Maillots</h3><div class="jersey-mockups">` +
-    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 84, "home", jerseyPattern, jerseyTwoTone)}<p class="sub">Domicile</p></div>` +
-    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.awayJerseyColor, 84, "away", awayJerseyPattern, awayJerseyTwoTone)}<p class="sub">Extérieur</p></div>` +
-    `</div></div>`;
 
-  html += `<div class="stat-card"><h3>Derniers résultats</h3>${formStreakHtml(teamIdx)}</div>`;
-
-  const hot = hotPlayerForTeam(teamIdx);
-  html += `<div class="stat-card"><h3>Joueur en forme du moment</h3>` + (hot
-    ? `<p class="sub">${playerLinkHtml(teamIdx, hot.player.id, hot.player.name)} (${POS_SHORT[hot.player.position]}) : ${hot.avg.toFixed(1)} d'efficacité moyenne (points + rebonds + passes - pertes) sur ${hot.gamesCount === 1 ? "son dernier match" : `ses ${hot.gamesCount} derniers matchs`}.</p>`
-    : `<p class="training-empty">Pas encore assez de matchs joués pour dégager un joueur en forme.</p>`) +
-    `</div>`;
-
-  html += `<div class="stat-card"><h3>Palmarès</h3>${trophiesHtml(teamIdx)}</div>`;
-
-  html += `<div class="stat-card span-2"><h3>Dernières interviews du coach</h3>${recentInterviewsHtml(teamIdx)}</div>`;
-
+  let html = `<div class="team-apercu-top">`;
+  html += `<div class="team-apercu-crest">${teamLogoHtml(team, 88)}</div>`;
+  html += `<div class="team-apercu-id">`;
+  html += `<h2 class="team-apercu-name">${escapeHtml(team.name)}</h2>`;
+  html += `<p class="team-apercu-summary">${summary}</p>`;
+  if (isOwnTeam) html += `<p class="sub">Logo et maillots modifiables depuis le tableau de bord (onglet <b>Club</b>).</p>`;
   html += `</div>`;
+  html += `<div class="jersey-mockups team-apercu-jerseys" aria-label="Maillots">` +
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 80, "home", jerseyPattern, jerseyTwoTone)}<p class="sub">Domicile</p></div>` +
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.awayJerseyColor, 80, "away", awayJerseyPattern, awayJerseyTwoTone)}<p class="sub">Extérieur</p></div>` +
+    `</div>`;
+  html += `</div>`;
+
+  // --- Ligne 1 : résultats & calendrier ---
+  let lastPlayed = null, nextMatch = null, vsMe = null;
+  for (let r = 0; r < league.totalRounds; r++) {
+    const m = league.schedule[r].find(x => x.home === teamIdx || x.away === teamIdx);
+    if (!m) continue;
+    const isHome = m.home === teamIdx;
+    const oppIdx = isHome ? m.away : m.home;
+    const res = league.results.find(x => x.round === r && (x.home === teamIdx || x.away === teamIdx));
+    if (res) {
+      const my = isHome ? res.scoreHome : res.scoreAway, opp = isHome ? res.scoreAway : res.scoreHome;
+      lastPlayed = { round: r, oppIdx, my, opp };
+    } else {
+      if (!nextMatch) nextMatch = { round: r, oppIdx, isHome };
+      if (!isOwnTeam && !vsMe && oppIdx === myTeamIndex) vsMe = { round: r };
+    }
+  }
+  const oppName = idx => escapeHtml(league.teams[idx] ? league.teams[idx].name : "?");
+  let resultsLines = `<span class="apercu-row-line">${formStreakHtml(teamIdx)}` +
+    (lastPlayed ? `<span class="apercu-muted">Dernier : ${lastPlayed.my > lastPlayed.opp ? "V" : "D"} ${lastPlayed.my}–${lastPlayed.opp} contre ${oppName(lastPlayed.oppIdx)} (J${lastPlayed.round + 1})</span>` : "") +
+    `</span>`;
+  if (nextMatch) {
+    resultsLines += `<span class="apercu-row-line"><span>Prochain : ${oppName(nextMatch.oppIdx)} (J${nextMatch.round + 1}, ${nextMatch.isHome ? "dom." : "ext."})` +
+      (vsMe ? ` · <span class="apercu-accent">contre toi en J${vsMe.round + 1}</span>` : "") + `</span></span>`;
+  } else {
+    resultsLines += `<span class="apercu-row-line apercu-muted">Plus aucun match de championnat programmé.</span>`;
+  }
+
+  // --- Ligne 2 : effectif (joueur en forme) ---
+  const hot = hotPlayerForTeam(teamIdx);
+  const effectifLine = hot
+    ? `En forme : <b>${escapeHtml(hot.player.name)}</b> (${POS_SHORT[hot.player.position]}) · ${hot.avg.toFixed(1)} d'efficacité sur ${hot.gamesCount === 1 ? "1 match" : `${hot.gamesCount} matchs`}`
+    : `<span class="apercu-muted">Pas encore assez de matchs pour dégager un joueur en forme.</span>`;
+
+  // --- Ligne 3 : analyse d'équipe (points marqués / encaissés) ---
+  const analyseLine = row && row.played
+    ? `${(row.pf / row.played).toFixed(1)} pts marqués · ${(row.pa / row.played).toFixed(1)} encaissés par match`
+    : `<span class="apercu-muted">Aucun match joué pour l'instant.</span>`;
+
+  // Un corps d'une seule ligne est enveloppé dans un <span> : sans ça, le
+  // flex-direction:column de .apercu-row-body empilerait chaque nœud texte
+  // et <b> sur sa propre ligne.
+  const rowHtml = (view, label, body) =>
+    `<button type="button" class="apercu-row" data-team-detail-subview="${view}">` +
+    `<span class="apercu-row-label">${label}</span>` +
+    `<span class="apercu-row-body">${body}</span>` +
+    `<span class="apercu-row-arrow" aria-hidden="true">→</span></button>`;
+
+  html += `<nav class="apercu-list" aria-label="Sections de l'équipe">` +
+    rowHtml("calendrier", "Résultats &amp; calendrier", resultsLines) +
+    rowHtml("effectif", "Effectif", `<span>${effectifLine}</span>`) +
+    rowHtml("analyse", "Analyse d'équipe", `<span>${analyseLine}</span>`) +
+    `</nav>`;
+
+  // --- Pied : palmarès + dernière interview ---
+  const trophies = team.trophies || [];
+  const trophyText = trophies.length
+    ? `${trophies.length} titre${trophies.length > 1 ? "s" : ""} · dernier : ${escapeHtml(trophies[0].label)} (${new Date(trophies[0].at).getFullYear()})`
+    : "Encore vierge";
+  const lastInterview = (team.moraleHistory || []).find(e => e.milestone && e.quote);
+  const interviewText = lastInterview
+    ? `« ${escapeHtml(lastInterview.quote)} » <span class="apercu-muted">(semaine ${lastInterview.week})</span>`
+    : "Aucune pour l'instant";
+  html += `<div class="apercu-foot">` +
+    `<span class="apercu-foot-trophies"><span class="apercu-foot-label">Palmarès</span>${trophyText}</span>` +
+    `<span><span class="apercu-foot-label">Interviews</span>${interviewText}</span>` +
+    `</div>`;
   return html;
 }
 
