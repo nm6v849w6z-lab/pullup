@@ -87,23 +87,27 @@ win.eval("closeClubIdentityModal()");
 console.log("✅ Le bouton \"Identité du club\" ouvre bien la modale existante (pas de nouvel écran de paramètres créé).");
 
 // ---------------------------------------------------------------------
-// Partie 4 : fil d'actualité — une VRAIE interview de début de saison est
-// déjà présente (queueSeasonPreviewInterview, voir generateLeague côté
-// moteur) : elle doit apparaître dans le fil affiché, et son lien "Répondre"
-// doit ouvrir la VRAIE modale d'interview (pas une modale factice).
+// Partie 4 : une VRAIE interview de début de saison est déjà présente
+// (queueSeasonPreviewInterview, voir generateLeague côté moteur) : elle
+// doit apparaître dans la carte "Cette semaine" (dashBuildTasks), et son
+// bouton "Répondre" doit ouvrir la VRAIE modale d'interview (pas une modale
+// factice). Depuis le correctif "doublon fil/Cette semaine" (retour
+// utilisateur, 2026-09-25, voir DEV_NOTES.md point 14), cette interview en
+// attente n'apparaît PLUS AUSSI dans le fil d'actualité — vérifié ici en
+// négatif pour ne jamais régresser silencieusement vers l'ancien doublon.
 // ---------------------------------------------------------------------
 clickTab("club");
 const feedItems = [...doc.querySelectorAll(".hm-feed__item")];
-console.log("Entrées de fil affichées :", feedItems.length);
-if (feedItems.length < 1) throw new Error("❌ Le fil d'actualité devrait afficher au moins une entrée (interview de début de saison).");
-const interviewLink = doc.querySelector('.hm-feed__action[href^="/interview/"]');
-if (!interviewLink) throw new Error("❌ Une entrée de fil \"interview\" avec un lien /interview/:id devrait être affichée.");
-interviewLink.dispatchEvent(new win.MouseEvent("click", { bubbles: true, cancelable: true }));
+console.log("Entrées de fil affichées (hors interview de début de saison) :", feedItems.length);
+if (doc.querySelector('.hm-feed__action[href^="/interview/"]')) throw new Error("❌ L'interview de début de saison ne devrait plus créer d'entrée dans le fil (doublon avec la tâche \"Cette semaine\", voir DEV_NOTES.md point 14).");
+const interviewTaskBtn = doc.querySelector('.hm-task button[data-dash-href^="/interview/"]');
+if (!interviewTaskBtn) throw new Error("❌ La tâche \"Cette semaine\" devrait donner accès à l'interview de début de saison (bouton /interview/:id).");
+interviewTaskBtn.dispatchEvent(new win.MouseEvent("click", { bubbles: true, cancelable: true }));
 const interviewOverlay = doc.getElementById("interviewModalOverlay");
-console.log("Modale d'interview ouverte depuis le fil :", !!interviewOverlay);
-if (!interviewOverlay) throw new Error("❌ Le clic sur l'action d'une entrée \"interview\" du fil devrait ouvrir la VRAIE modale d'interview (showInterviewModal).");
+console.log("Modale d'interview ouverte depuis \"Cette semaine\" :", !!interviewOverlay);
+if (!interviewOverlay) throw new Error("❌ Le clic sur la tâche \"interview\" de \"Cette semaine\" devrait ouvrir la VRAIE modale d'interview (showInterviewModal).");
 win.eval("closeInterviewModal()");
-console.log("✅ Le fil d'actualité affiche de vraies entrées et ses actions routent vers les vrais écrans (dashResolveNavigate).");
+console.log("✅ L'interview de début de saison n'est plus dupliquée dans le fil ; \"Cette semaine\" reste la seule action, et route vers le vrai écran (dashResolveNavigate).");
 
 // ---------------------------------------------------------------------
 // Partie 5 : un événement RÉEL émis par le moteur (staff_hired, via

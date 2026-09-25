@@ -3597,15 +3597,17 @@ function handleGameEvent(feed, event, ctx) {
       }, feedFromTemplate("staff", { nom: event.name, poste: event.role }, rng)));
 
     case "interview":
-      return pushEntry(feed, {
-        key: `interview_${event.interviewId}`,
-        category: "presse",
-        priority: "alert",
-        week: w,
-        title: event.title || "Un journaliste veut vous entendre",
-        text: `${event.subject}, réponse attendue sous ${event.daysLeft} jours.`,
-        action: { label: "Répondre", href: `/interview/${event.interviewId}` },
-      });
+      // Retiré du fil (retour utilisateur, 2026-09-25 : "fil d'actualité et
+      // cette semaine, ça ne fait pas un peu doublon ?", voir DEV_NOTES.md
+      // point 14) : cette même interview en attente est DÉJÀ affichée dans
+      // la tâche "Cette semaine" du tableau de bord (dashBuildTasks, même
+      // titre, même bouton "Répondre") tant qu'elle n'est pas traitée — plus
+      // besoin de la pousser AUSSI dans le fil. `interview_done` ci-dessous
+      // reste inchangé (removeByKey) : il nettoie sans condition toute
+      // entrée `interview_<id>` déjà poussée AVANT ce correctif (sauvegarde
+      // existante avec une interview en attente au moment du déploiement),
+      // qui serait sinon restée coincée indéfiniment dans le fil.
+      return null;
 
     case "interview_done":
       removeByKey(feed, `interview_${event.interviewId}`);
@@ -3656,36 +3658,16 @@ function feedMoodEntry(feed, week, category, value, cfg) {
 function checkThresholds(feed, state) {
   const w = state.week;
 
-  const missing = Object.entries(state.staff)
-    .filter(([, filled]) => !filled)
-    .map(([role]) => FEED_STAFF_LABELS[role] || role);
-  if (missing.length > 0) {
-    pushEntry(feed, {
-      key: "alert_staff",
-      category: "club",
-      priority: "alert",
-      week: w,
-      title: missing.length === 3 ? "Le banc technique est vide" : "Postes de staff à pourvoir",
-      text: `À recruter : ${missing.join(", ")}.`,
-      action: { label: "Recruter", href: "/staff" },
-    });
-  } else {
-    removeByKey(feed, "alert_staff");
-  }
-
-  if (state.budget < 0) {
-    pushEntry(feed, {
-      key: "alert_budget",
-      category: "club",
-      priority: "alert",
-      week: w,
-      title: "Budget dans le rouge",
-      text: `Solde actuel : ${feedEuros(state.budget)}. Réduisez la masse salariale ou vendez un joueur.`,
-      action: { label: "Économie", href: "/economie" },
-    });
-  } else {
-    removeByKey(feed, "alert_budget");
-  }
+  // alert_staff / alert_budget : retirés du fil (retour utilisateur,
+  // 2026-09-25, même correctif que "interview" ci-dessus, voir
+  // DEV_NOTES.md point 14) — dashBuildTasks (tableau de bord) affiche déjà
+  // "Staff : N/3 postes pourvus" et "Budget dans le rouge" dans la carte
+  // "Cette semaine", mêmes conditions exactement (missing.length > 0 /
+  // budget < 0). Le nettoyage reste INCONDITIONNEL (plus de branche
+  // `else`) pour retirer, dès le prochain passage, toute entrée déjà
+  // poussée avant ce correctif sur une sauvegarde existante.
+  removeByKey(feed, "alert_staff");
+  removeByKey(feed, "alert_budget");
 
   feedMoodEntry(feed, w, "supporters", state.supporters, {
     low: ["Les supporters grondent", "Humeur à {v}/100. Les tribunes attendent une réaction."],

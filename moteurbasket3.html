@@ -2048,6 +2048,22 @@
   .tactical-suggestion-defense{margin-bottom:8px;}
   .tactical-suggestion-defense .sub{margin:2px 0 0;}
   .tactical-suggestion .scouting-clean-list{margin-top:4px;}
+  /* Retouches 2026-09-25 (retour utilisateur : "il y a des polices trop
+     grandes") : les .sub de ce bloc n'avaient AUCUNE taille propre hors de
+     #scoutingProPanel et héritaient de la taille du corps de page — le
+     conseil/la défense/"5 de départ suggéré" ressortaient plus gros que les
+     titres. Aligné sur l'échelle du panneau Scouting Pro (12.5px, --ink-dim). */
+  .tactical-report{max-width:1120px; margin-left:auto; margin-right:auto; font-size:14px; line-height:1.45;}
+  .tactical-report h3{font-size:17px; margin:0 0 4px;}
+  .tactical-report .sub{font-size:12.5px; color:var(--ink-dim); margin:0 0 2px;}
+  .tactical-suggestion-defense b{font-size:14px;}
+  .sp2-five-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 10px;}
+  .sp2-five-head .sub, .tactical-five-title{font-size:12.5px; color:var(--ink-dim);}
+  .tactical-five-title{font-weight:700; color:var(--ink); margin:14px 0 6px !important;}
+  .sp2-five-def{display:inline-flex; align-items:center; gap:8px; font-size:13px; background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:4px 12px;}
+  .sp2-five-def b{color:var(--amber);}
+  .scouting-starting-five .roster-table{font-size:12.5px;}
+  .scouting-starting-five .roster-table th{font-size:10.5px;}
   /* Refonte visuelle v3 (retour utilisateur, 2026-09-24 : "ce n'est pas très
      beau visuellement. rebosse ça [...] regarde comment c'est sur football
      manager") : le v2 ci-dessus empilait trop de listes en boîtes lourdes
@@ -2225,7 +2241,7 @@
   /* Plan de match */
   .sp2-plan{background:var(--panel-2); border:1px solid rgba(240,162,60,.35); border-radius:14px; padding:20px 22px; margin-bottom:20px; box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -18px rgba(0,0,0,.6);}
   .sp2-plan-top{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
-  .sp2-plan-top h2{font-size:28px; font-weight:800; margin:0; font-family:var(--display); letter-spacing:.01em;}
+  .sp2-plan-top h2{font-size:21px; font-weight:800; margin:0; font-family:var(--display); letter-spacing:.01em;}
   .sp2-plan-cols{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:22px;}
   .sp2-plan-col h3{font-size:13px; font-weight:800; margin:0 0 10px; display:flex; align-items:center; gap:8px;}
   .sp2-plan-col.threat h3{color:var(--danger);}
@@ -2236,10 +2252,10 @@
   .sp2-plan-item .sp2-plan-num{width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px;}
   .threat .sp2-plan-item .sp2-plan-num{background:var(--teamB-soft); color:var(--danger);}
   .key .sp2-plan-item .sp2-plan-num{background:var(--teamA-soft); color:var(--ok);}
-  .sp2-plan-item b{display:block; font-size:14px; color:var(--ink);}
+  .sp2-plan-item b{display:block; font-size:13.5px; color:var(--ink);}
   .sp2-plan-item span{display:block; font-size:12.5px; color:var(--ink-dim); margin-top:2px;}
   .sp2-plan-item em{font-style:normal; color:var(--ink); font-weight:700;}
-  .sp2-plan-big{font-size:34px; font-weight:800; font-variant-numeric:tabular-nums; text-align:right; line-height:1; padding-left:8px; font-family:var(--display); letter-spacing:.01em;}
+  .sp2-plan-big{font-size:27px; font-weight:800; font-variant-numeric:tabular-nums; text-align:right; line-height:1; padding-left:8px; font-family:var(--display); letter-spacing:.01em;}
   .sp2-plan-big small{display:block; font-size:10.5px; font-weight:700; color:var(--ink-faint); margin-top:4px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}
   .threat .sp2-plan-big{color:var(--danger);}
   .key .sp2-plan-big{color:var(--ok);}
@@ -2248,7 +2264,7 @@
 
   /* Panneaux */
   .sp2-panel{background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:18px 20px 20px; margin-bottom:20px; box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -18px rgba(0,0,0,.6);}
-  .sp2-panel-title{display:flex; align-items:center; gap:9px; font-size:24px; font-weight:800; margin:0 0 16px; font-family:var(--display); letter-spacing:.01em;}
+  .sp2-panel-title{display:flex; align-items:center; gap:9px; font-size:19px; font-weight:800; margin:0 0 16px; font-family:var(--display); letter-spacing:.01em;}
   .sp2-panel-title::before{content:""; width:4px; height:20px; border-radius:2px; background:var(--amber);}
   .sp2-h{font-size:13px; font-weight:800; color:var(--ink); margin:18px 0 8px;}
   .sp2-h:first-child{margin-top:0;}
@@ -2293,7 +2309,7 @@
   .sp2-leader-info{min-width:0; flex:1;}
   .sp2-leader-name{font-weight:800; font-size:14px;}
   .sp2-leader-line{font-size:12.5px; color:var(--ink-dim); margin-top:2px;}
-  .sp2-leader-pts{font-size:40px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; text-align:right; font-family:var(--display); letter-spacing:.01em;}
+  .sp2-leader-pts{font-size:32px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; text-align:right; font-family:var(--display); letter-spacing:.01em;}
   .sp2-leader-pts small{display:block; font-size:11px; color:var(--ink-faint); font-weight:700; margin-top:3px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}
   .sp2-leader-share{flex-basis:100%; margin-top:10px;}
   .sp2-leader-share div{height:5px; border-radius:3px; background:var(--panel-2); overflow:hidden;}
@@ -2373,13 +2389,13 @@
   .sp2-hero-id{position:relative; min-width:0;}
   .sp2-hero-kicker{font-size:12.5px; font-weight:700; color:var(--amber); display:flex; align-items:center; gap:8px;}
   .sp2-pro{background:var(--amber); color:var(--amber-ink); font-weight:800; font-size:10.5px; padding:2px 8px; border-radius:999px; letter-spacing:.04em;}
-  .sp2-hero-name{font-family:var(--display); font-size:58px; font-weight:800; line-height:.95; margin:6px 0 8px; letter-spacing:.005em;}
+  .sp2-hero-name{font-family:var(--display); font-size:44px; font-weight:800; line-height:.95; margin:6px 0 8px; letter-spacing:.005em;}
   .sp2-hero-sub{font-size:13px; color:var(--ink-dim); display:flex; gap:14px; flex-wrap:wrap; align-items:center;}
   .sp2-hero-stats{position:relative; display:flex; gap:0; background:rgba(13,19,29,.72); border:1px solid var(--line); border-radius:14px; backdrop-filter:blur(4px);}
   .sp2-hs{padding:14px 20px; min-width:112px; border-left:1px solid var(--line);}
   .sp2-hs:first-child{border-left:none;}
   .sp2-hs-label{font-size:11.5px; color:var(--ink-faint); font-weight:700;}
-  .sp2-hero-num{font-size:38px; font-weight:800; line-height:1; margin-top:4px; font-variant-numeric:tabular-nums; font-family:var(--display); letter-spacing:.01em;}
+  .sp2-hero-num{font-size:30px; font-weight:800; line-height:1; margin-top:4px; font-variant-numeric:tabular-nums; font-family:var(--display); letter-spacing:.01em;}
   .sp2-hero-num sup{font-size:.5em;}
   .sp2-hs-sub{font-size:11.5px; color:var(--ink-dim); margin-top:4px; white-space:nowrap;}
   .sp2-hs.ok .sp2-hero-num{color:var(--ok);}
@@ -2388,12 +2404,12 @@
   .sp2-duel{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 18px;}
   .sp2-duel-top{display:flex; justify-content:space-between; align-items:flex-end; gap:12px;}
   .sp2-duel-side small{display:block; font-size:12px; color:var(--ink-faint); font-weight:700;}
-  .sp2-duel-num{font-size:44px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; font-family:var(--display); letter-spacing:.01em;}
+  .sp2-duel-num{font-size:36px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; font-family:var(--display); letter-spacing:.01em;}
   .sp2-duel-side.off .sp2-duel-num{color:var(--amber);}
   .sp2-duel-side.def{text-align:right;}
   .sp2-duel-side.def .sp2-duel-num{color:var(--ink-dim);}
   .sp2-duel-net{text-align:center; padding-bottom:4px;}
-  .sp2-duel-net b{display:inline-block; font-family:var(--display); font-size:22px; color:var(--ok); background:var(--teamA-soft); border:1px solid rgba(51,180,161,.4); border-radius:999px; padding:2px 12px;}
+  .sp2-duel-net b{display:inline-block; font-family:var(--display); font-size:18px; color:var(--ok); background:var(--teamA-soft); border:1px solid rgba(51,180,161,.4); border-radius:999px; padding:2px 12px;}
   .sp2-duel-net small{display:block; font-size:11px; color:var(--ink-faint); margin-top:4px;}
   .sp2-duel-bar{position:relative; height:12px; margin-top:14px; border-radius:6px; background:var(--panel-2); overflow:hidden; display:flex;}
   .sp2-duel-bar .o{background:var(--amber);}
@@ -2403,13 +2419,13 @@
   .sp2-ring{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 10px 12px; display:flex; flex-direction:column; align-items:center; gap:6px;}
   .sp2-ring-wrap{position:relative; width:84px; height:84px;}
   .sp2-ring-wrap svg{width:100%; height:100%; transform:rotate(-90deg);}
-  .sp2-ring-val{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:800; font-family:var(--display); letter-spacing:.01em;}
+  .sp2-ring-val{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:21px; font-weight:800; font-family:var(--display); letter-spacing:.01em;}
   .sp2-ring-val small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}
   .sp2-ring-label{font-size:12.5px; font-weight:700;}
   .sp2-ring-sub{font-size:11px; color:var(--ink-faint); text-align:center;}
   .sp2-mini{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:10px;}
   .sp2-mini div{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:9px 12px;}
-  .sp2-mini b{display:block; font-family:var(--display); font-size:22px; font-weight:800; line-height:1.05;}
+  .sp2-mini b{display:block; font-family:var(--display); font-size:19px; font-weight:800; line-height:1.05;}
   .sp2-mini span{font-size:11px; color:var(--ink-faint); font-weight:700;}
   /* Modale "Identité du club" (retour utilisateur, 2026-09 : "je rajouterai
      une petite brique à coté de dernier évènement avec un petit bouton
@@ -8135,15 +8151,17 @@ function handleGameEvent(feed, event, ctx) {
       }, feedFromTemplate("staff", { nom: event.name, poste: event.role }, rng)));
 
     case "interview":
-      return pushEntry(feed, {
-        key: `interview_${event.interviewId}`,
-        category: "presse",
-        priority: "alert",
-        week: w,
-        title: event.title || "Un journaliste veut vous entendre",
-        text: `${event.subject}, réponse attendue sous ${event.daysLeft} jours.`,
-        action: { label: "Répondre", href: `/interview/${event.interviewId}` },
-      });
+      // Retiré du fil (retour utilisateur, 2026-09-25 : "fil d'actualité et
+      // cette semaine, ça ne fait pas un peu doublon ?", voir DEV_NOTES.md
+      // point 14) : cette même interview en attente est DÉJÀ affichée dans
+      // la tâche "Cette semaine" du tableau de bord (dashBuildTasks, même
+      // titre, même bouton "Répondre") tant qu'elle n'est pas traitée — plus
+      // besoin de la pousser AUSSI dans le fil. `interview_done` ci-dessous
+      // reste inchangé (removeByKey) : il nettoie sans condition toute
+      // entrée `interview_<id>` déjà poussée AVANT ce correctif (sauvegarde
+      // existante avec une interview en attente au moment du déploiement),
+      // qui serait sinon restée coincée indéfiniment dans le fil.
+      return null;
 
     case "interview_done":
       removeByKey(feed, `interview_${event.interviewId}`);
@@ -8194,36 +8212,16 @@ function feedMoodEntry(feed, week, category, value, cfg) {
 function checkThresholds(feed, state) {
   const w = state.week;
 
-  const missing = Object.entries(state.staff)
-    .filter(([, filled]) => !filled)
-    .map(([role]) => FEED_STAFF_LABELS[role] || role);
-  if (missing.length > 0) {
-    pushEntry(feed, {
-      key: "alert_staff",
-      category: "club",
-      priority: "alert",
-      week: w,
-      title: missing.length === 3 ? "Le banc technique est vide" : "Postes de staff à pourvoir",
-      text: `À recruter : ${missing.join(", ")}.`,
-      action: { label: "Recruter", href: "/staff" },
-    });
-  } else {
-    removeByKey(feed, "alert_staff");
-  }
-
-  if (state.budget < 0) {
-    pushEntry(feed, {
-      key: "alert_budget",
-      category: "club",
-      priority: "alert",
-      week: w,
-      title: "Budget dans le rouge",
-      text: `Solde actuel : ${feedEuros(state.budget)}. Réduisez la masse salariale ou vendez un joueur.`,
-      action: { label: "Économie", href: "/economie" },
-    });
-  } else {
-    removeByKey(feed, "alert_budget");
-  }
+  // alert_staff / alert_budget : retirés du fil (retour utilisateur,
+  // 2026-09-25, même correctif que "interview" ci-dessus, voir
+  // DEV_NOTES.md point 14) — dashBuildTasks (tableau de bord) affiche déjà
+  // "Staff : N/3 postes pourvus" et "Budget dans le rouge" dans la carte
+  // "Cette semaine", mêmes conditions exactement (missing.length > 0 /
+  // budget < 0). Le nettoyage reste INCONDITIONNEL (plus de branche
+  // `else`) pour retirer, dès le prochain passage, toute entrée déjà
+  // poussée avant ce correctif sur une sauvegarde existante.
+  removeByKey(feed, "alert_staff");
+  removeByKey(feed, "alert_budget");
 
   feedMoodEntry(feed, w, "supporters", state.supporters, {
     low: ["Les supporters grondent", "Humeur à {v}/100. Les tribunes attendent une réaction."],
@@ -20737,49 +20735,10 @@ function tacticalReportHtml(opponent) {
   }
   html += `<p class="sub">D'après ${t.gamesPlayed} match${t.gamesPlayed > 1 ? "s" : ""} disputé${t.gamesPlayed > 1 ? "s" : ""} cette saison.</p>`;
 
-  // ---- Tendances observées : barre chiffrée + conseil sous chacune --------
-  html += `<h4 class="scouting-section-title">Tendances observées</h4>`;
-  html += `<div class="tactical-insights">`;
-  const insight = (label, pct, conseil) =>
-    `<div class="tactical-insight">` +
-    `<div class="scouting-strategy-row"><span class="scouting-strategy-label">${escapeHtml(label)}</span>` +
-    `<span class="scouting-strategy-track"><span class="scouting-strategy-fill" style="width:${pct}%"></span></span>` +
-    `<span class="scouting-strategy-pct">${pct}%</span></div>` +
-    `<p class="sub">${conseil}</p></div>`;
-  if (t.paintSharePct != null) {
-    const conseil = t.paintSharePct >= 40
-      ? "Conseil : défense Zone intérieure ou Aide Forte pour resserrer la raquette."
-      : t.paintSharePct <= 25
-        ? "Conseil : défense Zone extérieure ou Aide Faible, ils forcent peu la raquette."
-        : "Profil équilibré intérieur/extérieur.";
-    html += insight("Tirs dans la raquette", t.paintSharePct, conseil);
-  }
-  if (t.pivotPaintSharePct != null) {
-    const qui = t.pivotName ? ` (${escapeHtml(t.pivotName)})` : "";
-    html += insight("Tirs raquette venant du pivot", t.pivotPaintSharePct,
-      `Conseil : consigne "${escapeHtml(WATCH_FOCUS_LABELS.denyEntry)}" ou "${escapeHtml(WATCH_FOCUS_LABELS.denyPostUp)}" sur leur pivot${qui}.`);
-  }
-  if (t.meneurDriveRatePct != null) {
-    const qui = t.meneurName ? ` (${escapeHtml(t.meneurName)})` : "";
-    html += insight("Tirs du meneur en pénétration", t.meneurDriveRatePct,
-      `Conseil : consigne "${escapeHtml(WATCH_FOCUS_LABELS.denyDrive)}" sur leur meneur${qui}.`);
-  }
-  if (t.threeRatePct != null) {
-    const conseil = t.threeRatePct >= 40
-      ? `Conseil : consigne "${escapeHtml(WATCH_FOCUS_LABELS.harassOutsideShot)}"${t.topShooterName ? ` sur ${escapeHtml(t.topShooterName)}` : ""}.`
-      : "Dépendance au tir à 3 points modérée.";
-    html += insight("Tirs à 3 points", t.threeRatePct, conseil);
-  }
-  if (t.orebSharePct != null) {
-    const targetLabel = t.topRebounderPosition
-      ? ` sur leur ${escapeHtml(t.topRebounderPosition.toLowerCase())}${t.topRebounderName ? ` (${escapeHtml(t.topRebounderName)})` : ""}`
-      : "";
-    const conseil = t.orebSharePct >= 32
-      ? `Conseil : consigne "${escapeHtml(WATCH_FOCUS_LABELS.reboundPriority)}"${targetLabel} pour limiter leurs secondes chances.`
-      : "Peu de secondes chances au rebond offensif.";
-    html += insight("Rebonds captés en attaque", t.orebSharePct, conseil);
-  }
-  html += `</div>`;
+  // "Tendances observées" (barres chiffrées + conseil sous chacune)
+  // RETIRÉ le 2026-09-25 (retour utilisateur : "enlève tendance observés
+  // que ce soit payant ou gratuit") — computeScoutingTendencies reste la
+  // source de la composition recommandée ci-dessous et du "Plan de match".
 
   // ---- Composition tactique recommandée ------------------------------------
   const setup = suggestTacticalSetup(t);
@@ -20808,7 +20767,7 @@ function tacticalReportHtml(opponent) {
     // .overall() par poste) mais SANS jamais modifier le vrai alignement —
     // pure suggestion en lecture seule.
     const suggestedFive = suggestStartingFive(teamA, Date.now());
-    html += `<p class="sub" style="margin-top:12px">5 de départ suggéré (meilleur joueur disponible par poste)</p>`;
+    html += `<p class="sub tactical-five-title">5 de départ suggéré <span style="font-weight:400;color:var(--ink-faint)">· meilleur joueur disponible par poste</span></p>`;
     html += scoutingStartingFiveCardHtml(teamA, myTeamIndex, Date.now(), suggestedFive);
     html += `</div>`;
   }
@@ -21932,6 +21891,24 @@ function sp2PlanHtml(report, teamIdx, setup, attackTips) {
   return html;
 }
 
+// ---- 5 de départ suggéré (retour utilisateur, 2026-09-25 : "le 5 suggéré
+// doit être en dessous du plan de match") : même suggestion que dans le
+// rapport tactique gratuit (suggestStartingFive sur MON effectif, défense
+// de suggestTacticalSetup), mais placée directement sous le Plan de match
+// dans Scouting Pro — le rapport gratuit, qui ne contenait plus que ça une
+// fois "Tendances observées" retiré, est masqué quand Pro est débloqué
+// (voir refreshScoutingProPanel), pour ne rien afficher deux fois.
+function sp2SuggestedFiveHtml(setup) {
+  const now = Date.now();
+  const five = suggestStartingFive(teamA, now);
+  const table = scoutingStartingFiveCardHtml(teamA, myTeamIndex, now, five);
+  if (!table) return "";
+  const def = setup ? `<span class="sp2-five-def" title="${escapeHtml(setup.defenseReason.replace(/<[^>]*>/g, ""))}">Défense conseillée : <b>${escapeHtml(setup.defense)}</b></span>` : "";
+  return `<section class="sp2-panel sp2-five"><h2 class="sp2-panel-title">5 de départ suggéré</h2>` +
+    `<div class="sp2-five-head"><span class="sub">Ton meilleur joueur disponible à chaque poste pour ce match.</span>${def}</div>` +
+    table + `</section>`;
+}
+
 // ---- Profil et style de jeu : duel ORtg/DRtg, anneaux eFG%/TS%/LF%, mini-
 // stats, puces d'identité (scoutingIdentityChips, MÊMES seuils que l'ancien
 // design), callouts Forces/Faiblesses (scoutingTeamProfileForce/Weakness,
@@ -22170,7 +22147,7 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
     html += `<h3 class="sp2-h">Joueurs clés</h3><div class="sp2-leaders">`;
     html += report.keyPlayers.map((p, i) => {
       const share = shareByName.get(p.name);
-      const state = p.injured ? `<span class="gain-down">blessé</span>` : (typeof p.condition === "number" ? `forme ${p.condition}%` : "");
+      const state = p.injured ? `<span class="gain-down">blessé</span>` : "";
       let shareHtml = "";
       if (share && share.pctOfTeamPoints != null) {
         shareHtml = `<div class="sp2-leader-share"><div><span style="display:block;width:${share.pctOfTeamPoints}%"></span></div>` +
@@ -22213,7 +22190,7 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
       const rpg = gp ? (log.reduce((s, m) => s + (m.reb || 0), 0) / gp).toFixed(1) : "0.0";
       const apg = gp ? (log.reduce((s, m) => s + (m.ast || 0), 0) / gp).toFixed(1) : "0.0";
       const injured = !!(p.injuryUntil && p.injuryUntil > now);
-      const meta = injured ? `<span class="gain-down">blessé</span>` : (typeof p.condition === "number" ? `${p.age} ans · forme ${p.condition}%` : `${p.age} ans`);
+      const meta = injured ? `<span class="gain-down">blessé</span>` : `${p.age} ans`;
       return `<div class="sp2-token" style="left:${spot[0]}%;top:${spot[1]}%"><div class="sp2-token-av">` +
         playerAvatarHtml(p, oppTeam, 52) + `<span class="sp2-token-pos">${POS_SHORT[pos]}</span></div>` +
         `<button type="button" class="player-link sp2-token-name" data-player-team="${teamIdx}" data-player-id="${p.id}">${escapeHtml(p.name)}</button>` +
@@ -22254,6 +22231,7 @@ function scoutingProReportHtml(report) {
 
   let html = sp2HeroHtml(report, oppTeam, adv);
   html += sp2PlanHtml(report, report.opponentIdx, setup, attackTips);
+  html += sp2SuggestedFiveHtml(setup);
   html += sp2ProfileStyleHtml(report, t, adv);
   html += sp2FormContextHtml(report, adv);
   html += sp2RosterHtml(report, oppTeam, adv, report.opponentIdx);
@@ -22285,11 +22263,16 @@ async function refreshScoutingProPanel(teamIdx) {
     if (teamDetailIdx !== teamIdx || teamDetailSubView !== "analyse") return;
     const holder2 = document.getElementById("scoutingProPanel");
     if (!holder2) return;
-    holder2.innerHTML = (report && report.ok !== false)
+    const proOk = !!(report && report.ok !== false);
+    holder2.innerHTML = proOk
       ? scoutingProReportHtml({ ...report, access })
       : `<h3>Scouting Pro</h3><p class="sub">Impossible de charger le rapport Scouting Pro pour le moment.</p>`;
+    const freeReport = document.querySelector("#teamDetailContent .tactical-report");
+    if (freeReport) freeReport.hidden = proOk && !!(report && report.gamesPlayed);
   } else {
     holder.innerHTML = scoutingProTeaserHtml(access || { adsRemainingToday: 0, dailyCap: SCOUTING_DAILY_AD_CAP }, teamIdx);
+    const freeReport = document.querySelector("#teamDetailContent .tactical-report");
+    if (freeReport) freeReport.hidden = false;
   }
 }
 
@@ -26010,7 +25993,6 @@ function dashRenderHeader(data) {
       <div class="hm-head__meta">${dashEsc(club.division)} · Saison ${dashEsc(club.season)} · Semaine ${dashEsc(club.week)}</div>
     </div>
     <button type="button" class="hm-btn hm-btn--ghost hm-head__identity-btn" data-dash-href="/parametres/identite">Identité du club</button>
-    <button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ordres">Donnez vos ordres</button>
   </header>`;
 }
 
@@ -26108,8 +26090,18 @@ function dashRenderPulse(data) {
 
 function dashRenderKpis(data) {
   const filled = dashStaffFilled(data.staff);
-  const p = data.arena.prices;
   const lvl = Math.max(0, Math.min(100, data.squad.avgLevel));
+  // Effectif (niveau moyen) et Staff (postes pourvus) recolorés avec le même
+  // code couleur à 4 paliers que les jauges "Pouls du club" juste au-dessus
+  // (rouge/orange/blanc/vert, moraleGaugeColor — retour utilisateur,
+  // 2026-09-25 : "les jauges effectifs et staff doivent reprendre le meme
+  // code couleur"). Staff n'a que 4 valeurs possibles (0..DASH_STAFF_ROLES.
+  // length postes) : ramené sur une échelle 0-100 (pourcentage de postes
+  // pourvus) pour retomber sur les mêmes seuils que partout ailleurs, plutôt
+  // que l'ancien tout ou rien (rouge si incomplet, texte neutre sinon).
+  const levelColor = moraleGaugeColor(lvl);
+  const staffPct = DASH_STAFF_ROLES.length ? (filled / DASH_STAFF_ROLES.length) * 100 : 100;
+  const staffColor = moraleGaugeColor(staffPct);
   return `<div class="hm-kpis">
     <a class="hm-card hm-kpi" href="/economie" data-dash-href="/economie">
       <div class="hm-kpi__label">Budget</div>
@@ -26119,17 +26111,19 @@ function dashRenderKpis(data) {
     <a class="hm-card hm-kpi" href="/salle" data-dash-href="/salle">
       <div class="hm-kpi__label">Salle</div>
       <div class="hm-kpi__value">${dashEsc(data.arena.capacity.toLocaleString("fr-FR"))} <small>places</small></div>
-      <div class="hm-chips"><span>Gradins ${dashEsc(p.stands)} €</span><span>Tribune ${dashEsc(p.tribune)} €</span><span>Loges ${dashEsc(p.boxes)} €</span></div>
+      <div class="hm-muted">${data.arena.avgAttendance
+        ? `Affluence moyenne : ${dashEsc(data.arena.avgAttendance.value.toLocaleString("fr-FR"))}${data.arena.avgAttendance.rate != null ? ` (${dashEsc(data.arena.avgAttendance.rate)}%)` : ""}`
+        : "Aucun match à domicile joué"}</div>
     </a>
     <a class="hm-card hm-kpi" href="/effectif" data-dash-href="/effectif">
       <div class="hm-kpi__label">Effectif</div>
       <div class="hm-kpi__value">${dashEsc(data.squad.count)} <small>joueurs</small></div>
-      <div class="hm-bar"><span class="hm-muted">Niveau ${dashEsc(data.squad.avgLevel)}</span><div class="hm-bar__track"><div class="hm-bar__fill" style="width:${lvl}%"></div></div></div>
+      <div class="hm-bar"><span class="hm-muted" style="color:${dashEsc(levelColor)}">Niveau ${dashEsc(data.squad.avgLevel)}</span><div class="hm-bar__track"><div class="hm-bar__fill" style="width:${lvl}%;background:${dashEsc(levelColor)}"></div></div></div>
     </a>
     <a class="hm-card hm-kpi" href="/staff" data-dash-href="/staff">
       <div class="hm-kpi__label">Staff</div>
-      <div class="hm-kpi__value${filled < DASH_STAFF_ROLES.length ? " is-bad" : ""}">${filled}/${DASH_STAFF_ROLES.length}</div>
-      <div class="hm-slots">${DASH_STAFF_ROLES.map((r) => `<span class="hm-slot${data.staff[r.id] ? " is-filled" : ""}" title="${dashEsc(r.label)}${data.staff[r.id] ? ` : ${dashEsc(data.staff[r.id].name)}` : " : non recruté"}"></span>`).join("")}</div>
+      <div class="hm-kpi__value" style="color:${dashEsc(staffColor)}">${filled}/${DASH_STAFF_ROLES.length}</div>
+      <div class="hm-slots">${DASH_STAFF_ROLES.map((r) => `<span class="hm-slot${data.staff[r.id] ? " is-filled" : ""}" style="${data.staff[r.id] ? `background:${dashEsc(staffColor)};` : ""}" title="${dashEsc(r.label)}${data.staff[r.id] ? ` : ${dashEsc(data.staff[r.id].name)}` : " : non recruté"}"></span>`).join("")}</div>
     </a>
   </div>`;
 }
@@ -26510,6 +26504,25 @@ function dashboardDataFromGameState() {
         tribune: teamA.ticketPrices.tribune,
         boxes: teamA.ticketPrices.loge,
       },
+      // Affluence moyenne (retour utilisateur, 2026-09-25 : "dans la brique
+      // salle mets plutôt le nombre de spectateur moyen (au global)
+      // éventuellement avec le %" — remplace les 3 chips de prix qui
+      // passaient la carte sur 3 lignes) : moyenne sur le même historique
+      // que l'onglet Salle (teamA.attendanceHistory, jusqu'aux 10 derniers
+      // matchs à domicile, voir renderAttendanceHistory/
+      // Team.simulateHomeAttendance) — aucune donnée inventée, `null` tant
+      // qu'aucun match à domicile n'a encore été joué (voir son propre repli
+      // "Aucun match à domicile joué pour l'instant.").
+      avgAttendance: (() => {
+        const history = teamA.attendanceHistory || [];
+        if (!history.length) return null;
+        const totalAtt = history.reduce((s, h) => s + (h.attendance || 0), 0);
+        const totalCap = history.reduce((s, h) => s + (h.capacity || 0), 0);
+        return {
+          value: Math.round(totalAtt / history.length),
+          rate: totalCap > 0 ? Math.round((totalAtt / totalCap) * 100) : null,
+        };
+      })(),
     },
     squad: {
       count: teamA.players.length,

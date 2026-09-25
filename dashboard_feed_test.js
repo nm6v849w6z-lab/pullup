@@ -89,14 +89,22 @@ function freshLeague(budget = 5000000) {
   console.log("✅ injury (alerte si ≥3 semaines) puis injury_healed (retire l'alerte, annonce le retour).");
 }
 {
-  // interview / interview_done : même mécanique clé/retrait.
+  // interview : NE crée PLUS d'entrée de fil (retour utilisateur,
+  // 2026-09-25, "fil d'actualité et cette semaine, ça ne fait pas un peu
+  // doublon ?", voir DEV_NOTES.md point 14) — la même interview en attente
+  // est déjà affichée dans la tâche "Cette semaine" du tableau de bord
+  // (dashBuildTasks), plus besoin de la dupliquer dans le fil.
   const feed = createFeed();
   const ctx = { clubName: "Lyon" };
   handleGameEvent(feed, { type: "interview", week: 1, interviewId: "i1", subject: "Bilan", daysLeft: 3, title: "Interview de mi-saison" }, ctx);
-  if (!feed.entries.some(e => e.key === "interview_i1" && e.priority === "alert")) throw new Error("❌ interview devrait créer une alerte clé interview_<id>.");
+  if (feed.entries.some(e => e.key === "interview_i1")) throw new Error("❌ interview ne devrait plus créer d'entrée dans le fil (doublon avec la tâche \"Cette semaine\").");
+  // interview_done reste un nettoyage INCONDITIONNEL (removeByKey) : une
+  // sauvegarde déjà passée par l'ancien comportement (entrée poussée avant
+  // ce correctif) ne doit pas rester coincée indéfiniment dans le fil.
+  feed.entries.push({ id: "evt_migration", key: "interview_i1", category: "presse", priority: "alert", read: false, title: "Ancienne entrée", text: "", action: null });
   handleGameEvent(feed, { type: "interview_done", interviewId: "i1" }, ctx);
-  if (feed.entries.some(e => e.key === "interview_i1")) throw new Error("❌ interview_done devrait retirer l'entrée.");
-  console.log("✅ interview (alerte) puis interview_done (retire l'alerte).");
+  if (feed.entries.some(e => e.key === "interview_i1")) throw new Error("❌ interview_done devrait nettoyer toute entrée interview_<id> déjà présente (migration depuis une sauvegarde antérieure à ce correctif).");
+  console.log("✅ interview ne duplique plus la tâche \"Cette semaine\" dans le fil ; interview_done nettoie toujours une éventuelle entrée héritée.");
 }
 {
   // staff_hired : pas de clé (plusieurs recrutements dans la saison restent
@@ -123,20 +131,32 @@ function freshLeague(budget = 5000000) {
   console.log("✅ transfer_in/transfer_out remplis correctement.");
 }
 {
-  // checkThresholds : alertes staff/budget/humeur apparaissent puis
-  // disparaissent, aucun spam semaine après semaine.
+  // checkThresholds : alert_staff/alert_budget NE créent PLUS d'entrée
+  // (même correctif que "interview" ci-dessus, doublon avec les tâches
+  // "Staff : N/3 postes pourvus" / "Budget dans le rouge" de "Cette
+  // semaine") — seule l'alerte d'humeur (mood_*, PAS affichée dans "Cette
+  // semaine") reste propre au fil, toujours sans spam semaine après
+  // semaine.
   const feed = createFeed();
   const state = { week: 1, budget: 100000, supporters: 20, chemistry: 50, staff: { coach: false, analyst: false, scout: false } };
   checkThresholds(feed, state);
-  if (!feed.entries.some(e => e.key === "alert_staff")) throw new Error("❌ Staff vide devrait déclencher une alerte.");
+  if (feed.entries.some(e => e.key === "alert_staff")) throw new Error("❌ Staff vide ne devrait plus créer d'alerte dans le fil (doublon avec la tâche \"Cette semaine\").");
   if (!feed.entries.some(e => e.key === "mood_supporters")) throw new Error("❌ Supporters < 30 devrait déclencher une alerte d'humeur.");
   if (feed.entries.some(e => e.key === "alert_budget")) throw new Error("❌ Budget positif ne devrait déclencher aucune alerte.");
-  for (let w = 2; w <= 5; w++) checkThresholds(feed, { ...state, week: w });
-  if (feed.entries.filter(e => e.key === "alert_staff").length !== 1) throw new Error("❌ L'alerte staff ne devrait jamais se dupliquer semaine après semaine.");
   checkThresholds(feed, { ...state, week: 6, staff: { coach: true, analyst: true, scout: true }, supporters: 50 });
-  if (feed.entries.some(e => e.key === "alert_staff")) throw new Error("❌ L'alerte staff devrait disparaître une fois le staff au complet.");
   if (feed.entries.some(e => e.key === "mood_supporters")) throw new Error("❌ L'alerte d'humeur devrait disparaître une fois l'humeur revenue en zone normale.");
-  console.log("✅ checkThresholds : alertes staff/humeur apparaissent, ne se dupliquent jamais, disparaissent quand réglées.");
+  console.log("✅ checkThresholds : alert_staff/alert_budget ne dupliquent plus \"Cette semaine\" dans le fil ; l'alerte d'humeur (propre au fil) continue d'apparaître/disparaître normalement.");
+}
+{
+  // Migration : une entrée alert_staff/alert_budget déjà poussée AVANT ce
+  // correctif (sauvegarde existante) doit être nettoyée au prochain passage
+  // de checkThresholds, plutôt que de rester coincée indéfiniment.
+  const feed = createFeed();
+  feed.entries.push({ id: "evt_m1", key: "alert_staff", category: "club", priority: "alert", read: false, title: "Ancienne alerte staff", text: "", action: null });
+  feed.entries.push({ id: "evt_m2", key: "alert_budget", category: "club", priority: "alert", read: false, title: "Ancienne alerte budget", text: "", action: null });
+  checkThresholds(feed, { week: 1, budget: 100000, supporters: 50, chemistry: 50, staff: { coach: true, analyst: true, scout: true } });
+  if (feed.entries.some(e => e.key === "alert_staff" || e.key === "alert_budget")) throw new Error("❌ checkThresholds devrait nettoyer toute entrée alert_staff/alert_budget héritée d'avant ce correctif.");
+  console.log("✅ checkThresholds nettoie les entrées alert_staff/alert_budget héritées d'une sauvegarde antérieure à ce correctif.");
 }
 {
   // Sérialisation : round-trip JSON complet (comme une vraie sauvegarde).
@@ -227,23 +247,27 @@ function freshLeague(budget = 5000000) {
   user.applyMoraleForResult(true, 10, "Rennes", 0, now, "mi-saison");
   const pending = user.pendingInterviews.find(i => i.milestone === "mi-saison");
   if (!pending) throw new Error("❌ Scénario cassé : aucune interview de jalon créée.");
-  const feedEntry = user.feed.entries.find(e => e.key === `interview_${pending.id}`);
-  console.log("\ninterview créée dans le fil :", feedEntry && feedEntry.title);
-  if (!feedEntry) throw new Error("❌ applyMoraleForResult(milestone) devrait pousser un événement 'interview' dans team.feed.");
+  // Ne pousse plus d'entrée dans team.feed (retour utilisateur, 2026-09-25,
+  // doublon avec la tâche "Cette semaine" — voir DEV_NOTES.md point 14) :
+  // seul team.pendingInterviews (déjà affiché par dashBuildTasks côté
+  // tableau de bord) fait foi désormais.
+  if (user.feed.entries.some(e => e.key === `interview_${pending.id}`)) throw new Error("❌ applyMoraleForResult(milestone) ne devrait plus pousser d'entrée dans team.feed (doublon avec \"Cette semaine\").");
+  console.log("\ninterview de jalon en attente (sans doublon dans le fil) :", pending.milestone);
   user.resolveInterview(pending.id, "Mesuré", now + 1000);
-  if (user.feed.entries.some(e => e.key === `interview_${pending.id}`)) throw new Error("❌ resolveInterview devrait retirer l'entrée du fil (interview_done).");
-  console.log("✅ interview (applyMoraleForResult) puis interview_done (resolveInterview) réellement branchés.");
+  if (user.pendingInterviews.some(i => i.id === pending.id)) throw new Error("❌ resolveInterview devrait retirer l'interview de team.pendingInterviews.");
+  if (user.feed.entries.some(e => e.key === `interview_${pending.id}`)) throw new Error("❌ resolveInterview ne devrait laisser aucune entrée interview_<id> dans le fil.");
+  console.log("✅ interview de jalon (applyMoraleForResult) : plus de doublon dans le fil ; resolveInterview la retire bien de pendingInterviews.");
 }
 {
-  // queueSeasonPreviewInterview (interview d'avant-saison) pousse aussi son
-  // propre événement "interview".
+  // queueSeasonPreviewInterview (interview d'avant-saison) : même correctif,
+  // ne pousse plus non plus son propre événement "interview" dans le fil.
   const lg = freshLeague();
   const user = lg.teams[0];
   const entry = user.queueSeasonPreviewInterview(Date.now());
-  const feedEntry = user.feed.entries.find(e => e.key === `interview_${entry.id}`);
-  console.log("\ninterview d'avant-saison créée dans le fil :", feedEntry && feedEntry.title);
-  if (!feedEntry) throw new Error("❌ queueSeasonPreviewInterview devrait aussi pousser un événement 'interview'.");
-  console.log("✅ interview d'avant-saison branchée.");
+  if (user.feed.entries.some(e => e.key === `interview_${entry.id}`)) throw new Error("❌ queueSeasonPreviewInterview ne devrait plus pousser d'entrée dans team.feed (doublon avec \"Cette semaine\").");
+  if (!user.pendingInterviews.some(i => i.id === entry.id)) throw new Error("❌ queueSeasonPreviewInterview devrait toujours mettre l'interview en attente dans team.pendingInterviews.");
+  console.log("\ninterview d'avant-saison en attente (sans doublon dans le fil) :", entry.id);
+  console.log("✅ interview d'avant-saison : plus de doublon dans le fil, toujours bien mise en attente.");
 }
 {
   // Team.trainWeek : checkThresholds tourne chaque semaine (budget négatif
@@ -252,13 +276,19 @@ function freshLeague(budget = 5000000) {
   const lg = freshLeague();
   const user = lg.teams[0];
   user.budget = -5000;
+  // Humeur forcée en zone basse : témoin indépendant que checkThresholds
+  // tourne bien chaque semaine via trainWeek, puisque alert_budget ne
+  // pousse plus rien dans le fil (voir plus haut, doublon avec "Budget dans
+  // le rouge" de "Cette semaine") et ne peut donc plus servir de témoin.
+  user.fanMorale = 20;
   const player = user.players[0];
   const now = Date.now();
   player.injured = true;
   player.injuryUntil = now - 1000; // déjà guéri au moment de trainWeek
   pushEntry(user.feed, { key: `injury_${player.id}`, category: "club", week: user.week, title: `${player.name} blessé`, text: "x" });
   user.trainWeek(1, now);
-  if (!user.feed.entries.some(e => e.key === "alert_budget")) throw new Error("❌ trainWeek devrait déclencher checkThresholds (alerte budget négatif).");
+  if (user.feed.entries.some(e => e.key === "alert_budget")) throw new Error("❌ trainWeek ne devrait plus créer d'alerte budget dans le fil (doublon avec la tâche \"Cette semaine\").");
+  if (!user.feed.entries.some(e => e.key === "mood_supporters")) throw new Error("❌ trainWeek devrait toujours déclencher checkThresholds (alerte d'humeur en zone basse).");
   if (user.feed.entries.some(e => e.key === `injury_${player.id}`)) throw new Error("❌ trainWeek devrait détecter la guérison et retirer l'entrée injury_<id>.");
   if (!user.feed.entries.some(e => e.title === `${player.name} de retour`)) throw new Error("❌ trainWeek devrait annoncer le retour du joueur guéri.");
   console.log("✅ Team.trainWeek : checkThresholds hebdomadaire + détection de guérison (injury_healed) par diff, tous deux réellement branchés.");

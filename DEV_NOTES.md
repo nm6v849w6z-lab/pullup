@@ -20,6 +20,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🚧 EN COURS (2026-09-25) — Analyse d'équipe (Scouting Pro) : retouches** —
+  retour utilisateur (captures BC Dia) : "le 5 suggéré doit être en dessous
+  du plan de match", "rends un peu plus joli aussi, il y a des polices trop
+  grandes", "dans forme et contexte il y a un vide", "enlève forme x% sous
+  les avatars des joueurs", "enlève tendance observés que ce soit payant ou
+  gratuit". Fichiers : moteurbasket3.html (tacticalReportHtml,
+  scoutingProReportHtml, sp2FormContextHtml, sp2RosterHtml, CSS sp2/tactical),
+  tactical_scouting_report_test.js. Statut : en cours de code.
+
 0. **✅ TRANCHÉ (2026-09-24) — Écran mi-temps : PAS de choix tactiques à la
    mi-temps** — ce point était EN PAUSE depuis le 2026-09-24 matin, retour
    utilisateur : "Couper le match en deux doit être discuté avec les
@@ -806,8 +815,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
    concernés à synchroniser : `moteurbasket3.html`,
    `scouting_advanced_stats_test.js` (nouveau), `DEV_NOTES.md`.
 
-4. **✅ CODE ÉCRIT, TESTÉ EN SANDBOX, pas encore livré sur le Mac — Taux
-   d'assists (passes décisives) beaucoup trop faible** — retour utilisateur
+4. **✅ LIVRÉ SUR LE MAC** (statut corrigé le 2026-09-25 : `pas encore
+   livré` ci-dessous était périmé — confirmé déjà en production par grep
+   direct sur `engine.js` du Mac, `assistChanceByQuality`/0.78-0.42-0.12
+   présent, et par `git log` : plusieurs commits déjà poussés depuis)
+   **— Taux d'assists (passes décisives) beaucoup trop faible** — retour utilisateur
    (2026-09-24) : "c'est très très faible. je veux bien que les joueurs ne
    soient pas forts, mais ils jouent contre d'autres joueurs pas forts. en
    euroleague la saison dernière les 5 premiers avait entre 7,4 pd et 5,7
@@ -834,8 +846,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
    - **Reste à faire** : synchroniser sur le Mac (pont déconnecté), donner
      les commandes commit/push à l'utilisateur.
 
-5. **✅ CODE ÉCRIT, TESTÉ EN SANDBOX, pas encore livré sur le Mac — Nombre
-   de fautes par match trop faible** — retour utilisateur (2026-09-24) :
+5. **✅ LIVRÉ SUR LE MAC** (statut corrigé le 2026-09-25, même vérification
+   que le point 4 : `nonShootingFoulChance` confirmé présent dans
+   `engine.js` du Mac) **— Nombre de fautes par match trop faible** —
+   retour utilisateur (2026-09-24) :
    "il y a généralement très peu de fautes par match. on est plutôt à
    18/20 par matchs en moyenne", puis précisé plus tard : "après faut pas
    être toujours à 19/20 fautes, ça peut être 10 comme 30 mais en moyenne
@@ -887,8 +901,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
    - **Reste à faire** : synchroniser sur le Mac (pont déconnecté), donner
      les commandes commit/push à l'utilisateur.
 
-6. **✅ CODE ÉCRIT, TESTÉ EN SANDBOX, pas encore livré sur le Mac — Temps
-   de jeu / rotations irréalistes** — retour utilisateur (2026-09-24),
+6. **✅ LIVRÉ SUR LE MAC** (statut corrigé le 2026-09-25, même vérification
+   que les points 4-5 : `firstRestThreshold` confirmé présent dans
+   `engine.js` du Mac) **— Temps de jeu / rotations irréalistes** — retour
+   utilisateur (2026-09-24),
    captures d'écran boxscore à l'appui : "il y a un travail sur les temps
    de jeu aussi à faire. ils sont bizarre : pas un seul changement au bout
    de 13 min ? et ils sont trop propres, très souvent tous les remplaçants
@@ -1755,6 +1771,97 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     **Fichiers touchés** : `moteurbasket3.html` uniquement (CSS `.hm-*`
     dans le `<style>` du tableau de bord + `WIDE_PAGE_IDS` + `dashGauge()`/
     `dashRenderPulse()`).
+
+    **Complément 2 (même session, 2026-09-25, sur capture de la page live)**
+    :
+    - "enlève le donnez vos ordres à côté d'identité du club et décale le
+      bouton identité du club à sa place" — le bouton "Donnez vos ordres" de
+      l'en-tête du tableau de bord (`dashRenderHeader`) faisait doublon avec
+      celui du topbar global ET celui du bandeau "Prochain match"
+      ("Préparer le match"). Retiré ; `.hm-head__identity-btn` a déjà
+      `margin-left:auto` (CSS existante), donc "Identité du club" prend
+      naturellement sa place à droite sans changement CSS.
+    - "les jauges effectifs et staff doivent reprendre le meme code couleur"
+      — même logique que le complément 1 ci-dessus (`moraleGaugeColor`),
+      appliquée cette fois aux DEUX KPI restants qui en étaient dépourvus :
+      Effectif (niveau moyen, déjà une échelle 0-100 : couleur du texte
+      "Niveau X" ET de la barre `.hm-bar__fill`) et Staff (postes pourvus,
+      ramené sur une échelle 0-100 via `filled/total*100` puisqu'il n'a que
+      `DASH_STAFF_ROLES.length + 1` valeurs possibles — remplace l'ancien
+      tout-ou-rien rouge/neutre ; couleur appliquée au chiffre ET aux
+      pastilles pourvues).
+    - "dans la brique salle mets plutôt le nombre de spectateur moyen (au
+      global) éventuellement avec le %[...] ça permettra de réduire la
+      hauteur de toutes les briques [...] et de ne pas avoir du vide" — la
+      carte KPI "Salle" affichait 3 chips de prix (Gradins/Tribune/Loges)
+      qui passaient sur 2-3 lignes et étiraient TOUTE la rangée de cartes
+      (grille CSS, hauteur alignée sur la plus haute) : remplacés par une
+      seule ligne d'affluence moyenne à domicile, calculée sur le même
+      historique que l'onglet Salle (`teamA.attendanceHistory`, jusqu'aux 10
+      derniers matchs à domicile — aucune donnée inventée, repli "Aucun
+      match à domicile joué" tant que l'historique est vide, nouveau champ
+      `data.arena.avgAttendance` dans `dashboardDataFromGameState()`). Les
+      prix de billets restent modifiables sur la vraie page Salle
+      (inchangée), simplement plus dupliqués ici.
+
+    **Vérifié visuellement** (captures à 1440px et 1800px, historique
+    d'affluence simulé sur 2 matchs) : les 4 cartes KPI ont maintenant la
+    même hauteur, plus de vide sous Effectif/Staff.
+
+    **Tests** : `dashboard_e2e_test.js`/`dashboard_feed_test.js` repassés,
+    verts ; aucun test existant ne référençait les chips de prix retirées ni
+    le bouton d'en-tête retiré. Suite complète relancée en fond.
+
+    **Fichiers touchés** : `moteurbasket3.html` uniquement
+    (`dashRenderHeader`, `dashRenderKpis`, `dashboardDataFromGameState`).
+
+    **Complément 3 (même session, 2026-09-25) — doublon "Cette semaine" /
+    "Fil d'actualité"** : retour utilisateur "fil d'actualité et cette
+    semaine, ça ne fait pas un peu doublon ?", confirmé dans le code (pas
+    qu'une impression) : Interview en attente, Staff vide et Budget négatif
+    poussaient CHACUN à la fois une tâche dans "Cette semaine"
+    (`dashBuildTasks`) ET une entrée strictement identique (même titre, même
+    bouton) dans le fil (`handleGameEvent` case "interview", et
+    `checkThresholds` clés `alert_staff`/`alert_budget`) — les deux
+    disparaissant ensemble une fois réglées. Seule "Ordres de match" n'était
+    pas dupliquée (pas d'équivalent côté fil). Option choisie par
+    l'utilisateur parmi 3 proposées : retirer le doublon DU FIL, "Cette
+    semaine" reste la seule liste actionnable en haut, le fil redevient un
+    historique pur.
+
+    **Ce qui reste donc dans le fil** (inchangé, jamais dupliqué avec "Cette
+    semaine") : résultat de match (`match_played`), récap de journée
+    (`league_round`), blessure/retour (`injury`/`injury_healed`), arrivée/
+    départ de joueur (`transfer_in`/`transfer_out`), recrutement de staff
+    (`staff_hired`), et les alertes d'humeur Supporters/Alchimie hors zone
+    confortable (`mood_supporters`/`mood_chemistry`, via `feedMoodEntry` —
+    PAS affichées dans "Cette semaine", donc légitimement propres au fil).
+    `offer_received`/`offer_closed` existent aussi dans le code mais ne sont
+    jamais émis aujourd'hui (aucune offre spontanée d'un club adverse,
+    question déjà ouverte ailleurs dans ce fichier).
+
+    **Correctif** : `handleGameEvent` case `"interview"` (engine.js ET son
+    miroir moteurbasket3.html) retourne désormais `null` sans pousser
+    d'entrée ; `checkThresholds` ne pousse plus `alert_staff`/`alert_budget`
+    mais continue de les nettoyer SANS CONDITION (`removeByKey`, plus de
+    branche `else`) à chaque passage — migration : toute entrée déjà
+    poussée AVANT ce correctif sur une sauvegarde existante se nettoie
+    d'elle-même au prochain rafraîchissement hebdomadaire (`trainWeek`) ou à
+    la résolution de l'interview concernée (`interview_done` reste
+    inchangé), plutôt que de rester coincée indéfiniment dans le fil.
+
+    **Tests** : `dashboard_feed_test.js` largement réécrit sur ce point
+    (assertions inversées : plus aucune entrée `interview_<id>`/
+    `alert_staff`/`alert_budget` créée ; nouveaux tests dédiés au nettoyage
+    migration, entrée pré-poussée manuellement puis vérifiée nettoyée) ;
+    `dashboard_e2e_test.js` (partie 4) réécrit pour vérifier l'ABSENCE
+    d'entrée de fil ET que le bouton "Répondre" de la tâche "Cette semaine"
+    ouvre toujours la vraie modale d'interview. `post_match_interview_button_test.js`/
+    `milestone_interview_and_mvp_test.js` (ne touchent pas le fil) repassés
+    par sécurité, verts. Suite complète relancée en fond.
+
+    **Fichiers touchés** : `engine.js`, `moteurbasket3.html` (miroir),
+    `dashboard_feed_test.js`, `dashboard_e2e_test.js`.
 
     **Reste à faire** : livrer sur le Mac (comme tout le reste de ce
     fichier).
