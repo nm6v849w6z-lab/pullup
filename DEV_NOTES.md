@@ -20,6 +20,56 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25)
+  — Calendrier : refonte visuelle + horaires stables au changement d'heure**
+  — retours utilisateur : "améliore l'affichage du calendrier", maquette
+  validée (https://claude.ai/artifact/SNdM4yACiQuWAm6h9CpF3E : "ça me va,
+  code tout ça"), puis "enlève la brique PROCHAIN sur la ligne J4, elle ne
+  sert à rien".
+  - Refonte (moteurbasket3.html, `renderCalendrierSection` + nouvelles
+    `calendarRowHtml`/`calendarNextMatchCardHtml`/`calendarSeasonCardHtml`/
+    `calendarApplyFilter`, CSS `.cal-*`, `calendrierSection` ajouté à
+    `WIDE_PAGE_IDS`) : un `<table class="calendar-table">` PAR MOIS (thead =
+    en-tête du mois, colgroup + table-layout:fixed pour aligner les
+    colonnes), colonnes date courte + heure / J4 (ou "Coupe · <tour>") /
+    écusson + vs/@ / pastille Domicile-Extérieur / résultat V/D (score
+    toujours cliquable vers le boxscore) / bouton Ordres avec icône
+    (textContent inchangé). Match à venir surligné (classe "me"), SANS
+    badge "PROCHAIN". Filtres Tous/Domicile/Extérieur/À venir (affichage
+    seul). Colonne de droite : prochain match (compte à rebours, bouton
+    `.cal-next-btn` — classe distincte de `.calendar-order-btn` pour garder
+    exactement un bouton par journée — et état des ordres) + saison (bilan,
+    classement, diff., progression, dom/ext, forme 5 matchs). Bloc "À
+    surveiller" de la maquette NON repris (aucune vraie source de données).
+    Mobile (assets/mobile/mobile.css) : cartes au-dessus de la liste,
+    en-têtes de mois visibles, filtres défilants.
+  - Horaires (cause trouvée sur la capture : 07:57 → 06:57 après le 25/10) :
+    le calendrier classique additionnait des ms fixes depuis
+    `calendarStartAt`. Désormais, quand le rythme se compte en jours
+    entiers, on avance en jours civils à Paris en gardant l'heure murale
+    (`parisWallClockPlusDays`/`calendarCountsWholeDays`), dans les 4 copies
+    (server/calendar.js — `scheduledTimeForRound` ET `realWeekEndAt` —,
+    engine.js, moteurbasket3.html, live_2d_demo.html). Mode accéléré et
+    calendrier ancré quotidien inchangés. ⚠️ Change l'heure RÉELLE des
+    matchs d'une carrière en cours après un changement d'heure (+1 h en UTC
+    pour les matchs après le 25/10, ce qui les remet à l'heure affichée
+    jusque-là).
+  - Tests : nouveau `calendar_redesign_test.js` ; `calendar_merge_test.js`
+    adapté (nouveau format de date ; sa vérification chronologique passait
+    par hasard avec un index -1, corrigée). Suite complète (127 fichiers,
+    4 en parallèle) : 119 verts au premier passage, les 8 autres
+    (calendar_test, calendrier_ordres_stale_live_redirect, end_to_end,
+    disciplinary_ejection, onboarding_tour, post_match_interview_button,
+    spectate_live_match, visibility_refresh — ECONNRESET/minuteurs sous
+    charge, tous déjà connus flaky) repassés SEULS : tous verts. Zéro
+    régression. Vérifié aussi dans un vrai Chromium (1440 px et 390 px).
+  - Patch appliqué sur le Mac (`git am -3` sur d316368, seul DEV_NOTES.md
+    en conflit, résolu). Reste : `git push` par l'utilisateur, puis passer
+    cette entrée en Historique.
+    À discuter : l'heure elle-même (07:57 = instant de création de la
+    carrière) pourrait être arrondie à une heure fixe (maquette : 20:00) —
+    pas fait, changerait le rythme des carrières existantes.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur : retouches après la
   refonte** — retours utilisateur : "mets Motivé en un peu plus gros",
   Contres/Pertes/Fautes/Minutes "un peu plus gros, ça paraît perdu",

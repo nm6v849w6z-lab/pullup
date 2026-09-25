@@ -33,13 +33,18 @@ console.log("Première ligne du calendrier (carrière solo) — cellule Date :",
 if (dateCellText.includes("—")) {
   throw new Error("❌ En carrière solo, calendarStartAt est toujours configuré : la première journée devrait afficher une vraie date/heure, pas '—'.");
 }
-if (!/Journée 1/.test(dateCellText)) {
-  throw new Error("❌ Le sous-titre 'Journée 1' devrait rester visible sous la date.");
+// Refonte du calendrier (2026-09-25) : la date est découpée en jour court
+// ("sam. 26 sept.") + heure ("19:00"), et le numéro de journée passe dans
+// la 2e colonne ("J1", libellé complet "Journée 1" en infobulle).
+const roundAbbr = firstRow.children[1].querySelector("abbr");
+if (!roundAbbr || roundAbbr.textContent !== "J1" || roundAbbr.getAttribute("title") !== "Journée 1") {
+  throw new Error(`❌ La 2e colonne devrait afficher "J1" (infobulle "Journée 1"), obtenu "${firstRow.children[1].textContent}".`);
 }
 const expectedFirstDate = win1.eval("scheduledTimeForChampionshipRound(0)");
-const expectedFirstDateFr = win1.eval(`formatDateTimeFr(${expectedFirstDate})`);
-if (!dateCellText.includes(expectedFirstDateFr)) {
-  throw new Error(`❌ La date affichée (${dateCellText}) devrait correspondre exactement à scheduledTimeForChampionshipRound(0) formatée (${expectedFirstDateFr}).`);
+const expectedDay = win1.eval(`formatCalendarDayFr(${expectedFirstDate})`);
+const expectedTime = win1.eval(`formatCalendarTimeFr(${expectedFirstDate})`);
+if (!dateCellText.includes(expectedDay) || !dateCellText.includes(expectedTime)) {
+  throw new Error(`❌ La date affichée (${dateCellText}) devrait correspondre exactement à scheduledTimeForChampionshipRound(0) formatée (${expectedDay} / ${expectedTime}).`);
 }
 console.log("✅ Chaque journée de championnat affiche bien sa date/heure programmée exacte, pas seulement son numéro.");
 
@@ -96,7 +101,10 @@ console.log("✅ Le tour de coupe apparaît bien dans la même feuille que le ch
 // Vérifie la fusion CHRONOLOGIQUE : la ligne de coupe (jour 0, 15h) doit
 // être ordonnée par rapport aux lignes de championnat selon son horaire
 // programmé réel, pas reléguée après-coup dans un second tableau.
-const champRow0Idx = rows.findIndex(r => r.textContent.includes("Journée 1"));
+// Refonte 2026-09-25 : "Journée 1" n'est plus dans le texte de la ligne
+// mais dans l'infobulle de l'abréviation "J1" (2e colonne).
+const champRow0Idx = rows.findIndex(r => !!r.querySelector('abbr[title="Journée 1"]'));
+if (champRow0Idx === -1) throw new Error("❌ (setup) la ligne de la journée 1 de championnat devrait être trouvable.");
 console.log("Index de la ligne de coupe :", cupRowIdx, "| index de la journée 1 de championnat :", champRow0Idx, `(coupe avant journée 1 attendu : ${cupScheduledAt < champRound0At})`);
 const expectedCupBeforeRound0 = cupScheduledAt < champRound0At;
 const actualCupBeforeRound0 = cupRowIdx < champRow0Idx;

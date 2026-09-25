@@ -1907,7 +1907,6 @@
   .player-sw-col ul{margin:0; padding-left:18px; font-size:13px; color:var(--ink-dim); line-height:1.6;}
   .seat-category-card{margin-bottom:14px; padding:14px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);}
   .seat-category-card h4{margin:0 0 6px; font-size:13px; color:var(--ink);}
-  .calendar-order-btn{background:transparent; border:1px solid var(--amber); color:var(--amber); font-size:11px; padding:5px 10px; border-radius:999px; cursor:pointer;}
   .calendar-order-btn.calendar-live-btn{border-color:var(--danger); color:var(--danger); font-weight:700;}
   /* Retour utilisateur (2026-09) : "Modifier vos ordres" une fois les ordres
      déjà donnés pour cette journée (voir renderCalendrierSection). */
@@ -1916,6 +1915,114 @@
      "date/heure [...] fusionner la coupe dans la même feuille") : sous la
      date/heure programmée, un sous-titre discret ("Journée 3", "Huitièmes"). */
   .calendar-table .sub{color:var(--ink-faint); font-size:11px; margin-top:2px;}
+
+  /* ---- Calendrier, refonte visuelle (retour utilisateur 2026-09-25,
+     maquette validée — voir renderCalendrierSection/DEV_NOTES.md) : liste
+     groupée par mois à gauche, prochain match + bilan de la saison à
+     droite. Uniquement des tokens :root existants. ---- */
+  .cal-layout{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:20px; align-items:start;}
+  .cal-main{min-width:0;}
+  .cal-toolbar{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;}
+  .cal-filter{background:var(--panel); border:1px solid var(--line); color:var(--ink-dim); font:inherit; font-size:13px; font-weight:600; padding:7px 14px; border-radius:8px; cursor:pointer;}
+  .cal-filter:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .cal-filter.active{background:var(--amber); border-color:var(--amber); color:var(--amber-ink);}
+  .cal-filter-count{opacity:.75; font-weight:500; margin-left:2px;}
+  .cal-filter:focus-visible, .cal-next-btn:focus-visible, .calendar-order-btn:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+
+  .calendar-table.cal-month{table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0; background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; overflow:hidden; margin-bottom:14px;}
+  .cal-month-head th{text-align:left; padding:12px 16px 10px; background:var(--panel-2); border-bottom:1px solid var(--line-soft); font-weight:600;}
+  .cal-month-title{font-size:14px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink);}
+  .cal-month-summary{float:right; font-size:12px; font-weight:500; color:var(--ink-dim); letter-spacing:0; text-transform:none;}
+  .calendar-table.cal-month td{padding:9px 12px; border-bottom:1px solid var(--line-soft); vertical-align:middle; font-size:14px;}
+  .calendar-table.cal-month tbody tr:last-child td{border-bottom:none;}
+  .calendar-table.cal-month tbody tr.cal-row:hover td{background:rgba(255,255,255,.025);}
+  .calendar-table.cal-month tr.me td{background:rgba(240,162,60,.07);}
+  .calendar-table.cal-month tr.me td:first-child{box-shadow:inset 3px 0 0 var(--amber);}
+  .cal-col-date{width:118px;} .cal-col-round{width:74px;} .cal-col-venue{width:100px;} .cal-col-result{width:116px;} .cal-col-action{width:170px;}
+  .cal-c-date{white-space:nowrap; padding-left:16px !important;}
+  .cal-day{font-weight:600; color:var(--ink);}
+  .cal-row[data-status="played"] .cal-day{color:var(--ink-dim);}
+  .cal-cup-badge{white-space:normal;}
+  .cal-round{font-weight:700; color:var(--ink-dim); text-decoration:none; font-size:13px;}
+  .cal-row.me .cal-round{color:var(--amber);}
+  .cal-cup-badge{display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(57,135,229,.15); color:#8fb9f0;}
+  .cal-opp{display:flex; align-items:center; gap:10px; min-width:0;}
+  .cal-opp-logo{display:inline-flex; flex:none; width:28px; height:28px;}
+  .cal-opp-logo svg, .cal-opp-logo img{width:28px; height:28px; border-radius:50%;}
+  .cal-opp-prefix{color:var(--ink-faint); font-size:12px; font-weight:600; width:18px; flex:none;}
+  .cal-opp .team-link{font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .cal-row[data-status="played"] .cal-opp .team-link{color:var(--ink-dim);}
+  .cal-opp-bye{color:var(--ink-dim); font-style:italic;}
+  .cal-venue{display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:6px;}
+  .cal-venue-home{background:rgba(240,162,60,.14); color:var(--amber);}
+  .cal-venue-away{background:var(--panel-2); color:var(--ink-dim);}
+  .cal-c-result{white-space:nowrap;}
+  .cal-result{display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:13px; padding:3px 9px; border-radius:6px;}
+  .cal-result-letter{font-weight:800;}
+  .cal-result-win{background:rgba(51,180,161,.15); color:var(--ok);}
+  .cal-result-loss{background:rgba(226,105,79,.15); color:var(--danger);}
+  .cal-result-draw{background:var(--panel-2); color:var(--ink-dim);}
+  .cal-result .calendar-score-btn{color:inherit; font-weight:700;}
+  .cal-result-pending{color:var(--ink-faint); font-size:13px;}
+  .cal-row.me .cal-result-pending{color:var(--amber); font-weight:600;}
+  .cal-result-live{color:var(--danger); font-weight:700; font-size:13px;}
+  .cal-c-action{white-space:nowrap; text-align:right; padding-right:16px !important;}
+  .calendar-order-btn{display:inline-flex; align-items:center; gap:6px; background:transparent; border:1px solid var(--line); color:var(--ink-dim); font:inherit; font-size:12px; font-weight:600; padding:6px 11px; border-radius:8px; cursor:pointer;}
+  .calendar-order-btn:hover{border-color:var(--amber); color:var(--amber);}
+  .cal-row.me .calendar-order-btn{border-color:var(--amber); color:var(--amber);}
+  .cal-icon{flex:none;}
+  .cal-row .calendar-order-btn.calendar-order-btn-validated{border-color:var(--ok); color:var(--ok);}
+  .cal-row .calendar-order-btn.calendar-live-btn{border-color:var(--danger); color:var(--danger);}
+
+  .cal-side{display:flex; flex-direction:column; gap:14px; position:sticky; top:76px;}
+  .cal-card{background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; padding:18px;}
+  .cal-card-kicker{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim);}
+  .cal-card-empty{color:var(--ink-dim); font-size:13px; margin:10px 0 0;}
+  .cal-next{border-color:var(--amber); background:linear-gradient(180deg, rgba(240,162,60,.08), rgba(240,162,60,0) 60%), var(--panel);}
+  .cal-next .cal-card-kicker{color:var(--amber);}
+  .cal-next-teams{display:grid; grid-template-columns:1fr auto 1fr; align-items:start; gap:8px; margin:16px 0 12px;}
+  .cal-next-team{display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; min-width:0;}
+  .cal-next-team svg, .cal-next-team img{width:56px; height:56px; border-radius:50%;}
+  .cal-next-name{font-weight:700; font-size:14px; max-width:100%; overflow-wrap:break-word;}
+  .cal-next-name .team-link{font-weight:700;}
+  .cal-next-rank{font-size:12px; color:var(--ink-dim);}
+  .cal-next-vs{font-weight:800; font-size:18px; color:var(--ink-faint); padding-top:18px;}
+  .cal-next-meta{display:flex; justify-content:center; gap:10px; font-size:13px; color:var(--ink-dim); padding:9px 0; border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft);}
+  .cal-next-sep{color:var(--ink-faint);}
+  .cal-next-count{text-align:center; font-size:26px; font-weight:800; letter-spacing:.01em; margin-top:14px; font-variant-numeric:tabular-nums;}
+  .cal-next-count.is-live{color:var(--danger);}
+  .cal-next-count-sub{text-align:center; font-size:12px; color:var(--ink-dim); margin-bottom:4px;}
+  .cal-next-btn{display:block; width:100%; margin-top:14px; padding:11px 14px; border:none; border-radius:10px; background:var(--amber); color:var(--amber-ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer;}
+  .cal-next-btn:hover{filter:brightness(1.08);}
+  .cal-next-btn.is-live{background:var(--danger); color:#fff;}
+  .cal-next-orders{text-align:center; font-size:12px; margin-top:8px;}
+  .cal-next-orders.is-missing{color:var(--amber);}
+  .cal-next-orders.is-ok{color:var(--ok);}
+  .cal-kpis{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:12px;}
+  .cal-kpi{background:var(--panel-2); border-radius:8px; padding:10px 12px;}
+  .cal-kpi-label{font-size:12px; color:var(--ink-dim);}
+  .cal-kpi-value{font-size:22px; font-weight:800; margin-top:2px; font-variant-numeric:tabular-nums;}
+  .cal-kpi-value small{font-size:12px; font-weight:700; vertical-align:super; margin-left:1px;}
+  .cal-kpi-value.is-pos{color:var(--ok);}
+  .cal-kpi-value.is-neg{color:var(--danger);}
+  .cal-progress{margin-top:14px;}
+  .cal-progress-head{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-dim); margin-bottom:6px;}
+  .cal-progress-track{height:6px; border-radius:3px; background:var(--panel-2); overflow:hidden;}
+  .cal-progress-fill{height:100%; background:var(--amber); border-radius:3px;}
+  .cal-split{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; font-size:13px;}
+  .cal-split > div{display:flex; justify-content:space-between; background:var(--panel-2); border-radius:8px; padding:9px 12px;}
+  .cal-split span{color:var(--ink-dim);}
+  .cal-form-wrap{margin-top:14px;}
+  .cal-form-row{display:flex; gap:6px; margin-top:6px;}
+  .cal-form{width:30px; height:30px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; box-sizing:border-box;}
+  .cal-form-win{background:rgba(51,180,161,.15); color:var(--ok);}
+  .cal-form-loss{background:rgba(226,105,79,.15); color:var(--danger);}
+  .cal-form-draw{background:var(--panel-2); color:var(--ink-dim);}
+  .cal-form-empty{border:1px dashed var(--line);}
+  @media (max-width:1100px){
+    .cal-layout{grid-template-columns:1fr;}
+    .cal-side{position:static; order:-1; display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+  }
 
   /* ---- Humeur des supporters ---- */
   .morale-value{text-align:center; font-size:40px; font-weight:800; line-height:1; margin-top:6px;}
@@ -13754,7 +13861,32 @@ const MATCH_BROADCAST_DURATION_MS = 90 * 60 * 1000;
 function calendarScheduledTimeForRound(calendarStartAt, round, weekMs = CALENDAR_WEEK_MS, slotOffsetsMs = CALENDAR_CHAMPIONSHIP_SLOT_OFFSETS_MS) {
   const week = Math.floor(round / CALENDAR_ROUNDS_PER_REAL_WEEK);
   const slot = round % CALENDAR_ROUNDS_PER_REAL_WEEK;
+  // Correctif (2026-09-25, capture d'écran du calendrier : "07:57" jusqu'au
+  // 24 octobre puis "06:57" à partir du 27) : additionner des millisecondes
+  // fixes faisait glisser l'heure affichée d'1 h au changement d'heure
+  // (heure d'été → hiver le 25 octobre, l'inverse fin mars). Quand le rythme
+  // se compte en JOURS entiers (calendrier classique : semaine de 7 jours,
+  // créneaux à J+2/J+5), on avance donc en jours CIVILS à Paris en gardant
+  // l'heure murale de calendarStartAt — même principe que le calendrier
+  // ancré quotidien. Rien ne change hors période de changement d'heure, ni
+  // pour le mode accéléré (créneaux de quelques heures, pas des jours
+  // entiers). CES COPIES DOIVENT RESTER IDENTIQUES (server/calendar.js,
+  // engine.js, moteurbasket3.html, live_2d_demo.html — voir
+  // server/calendar_test.js, test croisé).
+  if (calendarCountsWholeDays(weekMs, slotOffsetsMs)) {
+    return parisWallClockPlusDays(calendarStartAt, (week * weekMs + slotOffsetsMs[slot]) / CALENDAR_DAY_MS);
+  }
   return calendarStartAt + week * weekMs + slotOffsetsMs[slot];
+}
+
+// Même heure murale (Paris) que `startMs`, `days` jours civils plus tard.
+function parisWallClockPlusDays(startMs, days) {
+  const p = parisLocalDateParts(startMs);
+  const d = addParisCalendarDays(p, days);
+  return parisEpochForLocalTime(d.year, d.month, d.day, p.hour, p.minute, p.second) + (((startMs % 1000) + 1000) % 1000);
+}
+function calendarCountsWholeDays(weekMs, slotOffsetsMs) {
+  return weekMs % CALENDAR_DAY_MS === 0 && slotOffsetsMs.every(o => o % CALENDAR_DAY_MS === 0);
 }
 
 // Ancre calendarStartAt sur un horaire "propre" (minuit) UNIQUEMENT quand le
@@ -17319,7 +17451,9 @@ const PAGE_IDS = [
 // forçant le nom du club à retourner à la ligne lettre par lettre même pour
 // un nom court — même famille de correctif que playerDetailSection plus
 // haut (contenu à grille dense, pas un flux de lecture).
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection"]);
+// "calendrierSection" ajouté (refonte du calendrier, 2026-09-25) : liste +
+// colonne de droite (prochain match, bilan) côte à côte.
+const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection"]);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
 // "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
@@ -29680,6 +29814,216 @@ document.getElementById("marketListings").addEventListener("click", (e) => {
 // son horaire programmé (voir scheduledTimeForChampionshipRound/
 // scheduledTimeForCupRound ci-dessus), puis les trie chronologiquement —
 // l'ordre dans lequel elles se jouent RÉELLEMENT, pas par compétition.
+// ---------------------------------------------------------------------
+// Calendrier — briques d'affichage de la refonte (retour utilisateur,
+// 2026-09-25, maquette validée — voir le grand commentaire dans
+// renderCalendrierSection et DEV_NOTES.md). Toutes pures (lisent `row`,
+// `league`, `teamA`, jamais d'état caché) sauf `calendarFilter`, simple
+// préférence d'affichage conservée d'un rendu à l'autre pendant la session.
+// ---------------------------------------------------------------------
+let calendarFilter = "all"; // "all" | "home" | "away" | "upcoming"
+
+// Date courte ("sam. 26 sept.") et heure ("19:00") : même source (toLocale*
+// en fr-FR, heure locale du navigateur) que formatDateTimeFr, simplement
+// découpée en deux lignes pour la colonne Date.
+function formatCalendarDayFr(ts) {
+  return new Date(ts).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+}
+function formatCalendarTimeFr(ts) {
+  return new Date(ts).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+function calendarMonthKey(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${d.getMonth()}`;
+}
+function calendarMonthTitle(ts) {
+  const m = new Date(ts).toLocaleDateString("fr-FR", { month: "long" });
+  return m.charAt(0).toUpperCase() + m.slice(1);
+}
+
+// Icône "feuille de match" des boutons Ordres : un <svg> sans <title>, donc
+// sans texte — le textContent du bouton reste exactement "Ordres"/"Modifier
+// vos ordres" (voir ordres_validated_badge_test.js).
+const CALENDAR_ORDERS_ICON = `<svg class="cal-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4V3h6v1M9 11h6M9 15h4"></path></svg>`;
+
+function calendarRowHtml(row) {
+  const venueKey = row.bye ? "none" : row.isHome ? "home" : "away";
+  const status = row.played ? "played" : row.bye ? "bye" : "upcoming";
+  const cls = ["cal-row", row.cls].filter(Boolean).join(" ");
+  const isNext = row.cls.split(" ").includes("me");
+
+  const dateCell = row.scheduledAt != null
+    ? `<div class="cal-day">${escapeHtml(formatCalendarDayFr(row.scheduledAt))}</div><div class="sub">${escapeHtml(formatCalendarTimeFr(row.scheduledAt))}</div>`
+    : `<div class="cal-day">–</div>`;
+
+  // "J4" pour le championnat (libellé complet en infobulle), "Coupe ·
+  // Huitièmes" pour la Coupe : la colonne "Compétition" (qui répétait
+  // "Championnat" sur chaque ligne) disparaît, le mot "Coupe" reste donc
+  // visible ici pour distinguer ses tours.
+  const roundCell = row.competition === "cup"
+    ? `<span class="cal-cup-badge">Coupe · ${escapeHtml(row.label)}</span>`
+    : `<abbr class="cal-round" title="${escapeHtml(row.label)}">${escapeHtml(row.shortLabel || row.label)}</abbr>`;
+
+  // Nom de l'adversaire toujours cliquable (teamLinkHtml/showTeamDetail),
+  // précédé de son écusson (teamLogoHtml, même logo que partout ailleurs) et
+  // de "vs" (domicile) / "@" (extérieur).
+  let opponentCell;
+  if (row.opponentIdx != null) {
+    const oppTeam = league.teams[row.opponentIdx];
+    opponentCell = `<div class="cal-opp"><span class="cal-opp-logo">${teamLogoHtml(oppTeam, 28)}</span>` +
+      `<span class="cal-opp-prefix" aria-hidden="true">${row.isHome ? "vs" : "@"}</span>${teamLinkHtml(row.opponentIdx, row.opponent)}</div>`;
+  } else {
+    opponentCell = `<div class="cal-opp cal-opp-bye">${escapeHtml(row.opponent)}</div>`;
+  }
+
+  const venueCell = row.location
+    ? `<span class="cal-venue cal-venue-${venueKey}">${escapeHtml(row.location)}</span>`
+    : "";
+
+  // Le score reste cliquable pour ouvrir le boxscore (retour utilisateur
+  // 2026-09, voir showMatchBoxscore et le clic délégué plus bas), précédé
+  // d'un V/D : la couleur n'est jamais le seul signal.
+  let resultCell;
+  if (row.played) {
+    const tone = row.won ? "win" : row.lost ? "loss" : "draw";
+    const letter = row.won ? "V" : row.lost ? "D" : "N";
+    const score = row.boxscore
+      ? `<button type="button" class="calendar-score-btn" data-boxscore-round="${row.boxscore.round}" data-boxscore-competition="${row.boxscore.competition}" data-boxscore-home="${row.boxscore.homeIdx}" data-boxscore-away="${row.boxscore.awayIdx}">${row.scoreText}</button>`
+      : row.scoreText;
+    resultCell = `<span class="cal-result cal-result-${tone}"><span class="cal-result-letter">${letter}</span>${score}</span>`;
+  } else if (row.isLive) {
+    resultCell = `<span class="cal-result-live">En direct</span>`;
+  } else if (row.bye) {
+    resultCell = "";
+  } else {
+    resultCell = `<span class="cal-result-pending">${isNext ? "À jouer" : "–"}</span>`;
+  }
+
+  return `<tr class="${cls}" data-venue="${venueKey}" data-status="${status}">` +
+    `<td class="cal-c-date">${dateCell}</td><td class="cal-c-round">${roundCell}</td>` +
+    `<td class="cal-c-opp">${opponentCell}</td><td class="cal-c-venue">${venueCell}</td>` +
+    `<td class="cal-c-result">${resultCell}</td><td class="cal-c-action">${row.actionCell}</td></tr>`;
+}
+
+// Rang et bilan de CHAMPIONNAT d'une équipe (League.standings, même
+// classement que l'onglet Ligue), ex. "3e · 2-1" ; vide tant qu'elle n'a
+// joué aucun match.
+function calendarStandingLine(teamIdx) {
+  const table = league.standings();
+  const pos = table.findIndex(s => s.idx === teamIdx);
+  if (pos === -1 || !table[pos].played) return "";
+  const s = table[pos];
+  return `${pos + 1}${pos === 0 ? "er" : "e"} · ${s.wins}-${s.losses}`;
+}
+
+function calendarNextMatchCardHtml(row) {
+  if (!row) {
+    return `<div class="cal-card cal-next"><div class="cal-card-kicker">Prochain match</div>` +
+      `<p class="cal-card-empty">Plus aucun match à jouer cette saison.</p></div>`;
+  }
+  const homeIdx = row.isHome ? myTeamIndex : row.opponentIdx;
+  const awayIdx = row.isHome ? row.opponentIdx : myTeamIndex;
+  const side = idx => {
+    const t = league.teams[idx];
+    const line = row.competition === "cup" ? "" : calendarStandingLine(idx);
+    return `<div class="cal-next-team${idx === myTeamIndex ? " is-me" : ""}">${teamLogoHtml(t, 56)}` +
+      `<div class="cal-next-name">${idx === myTeamIndex ? escapeHtml(t.name) : teamLinkHtml(idx, t.name)}</div>` +
+      (line ? `<div class="cal-next-rank">${escapeHtml(line)}</div>` : "") + `</div>`;
+  };
+  const kicker = row.competition === "cup" ? `Prochain match · Coupe · ${row.label}` : `Prochain match · ${row.label}`;
+  const when = row.scheduledAt != null
+    ? `${formatCalendarDayFr(row.scheduledAt)} · ${formatCalendarTimeFr(row.scheduledAt)}`
+    : row.label;
+  let countdown = "";
+  if (row.isLive) {
+    countdown = `<div class="cal-next-count is-live">En direct</div>`;
+  } else if (row.scheduledAt != null && row.scheduledAt > Date.now()) {
+    countdown = `<div class="cal-next-count">${escapeHtml(formatDuration(row.scheduledAt - Date.now()))}</div>` +
+      `<div class="cal-next-count-sub">avant le coup d'envoi</div>`;
+  }
+  // Bouton principal : classe DISTINCTE de .calendar-order-btn (réservée aux
+  // lignes de la liste, une par journée à venir — voir calendar_test.js),
+  // même délégation [data-tab]/data-round que les lignes.
+  const action = row.isLive
+    ? `<button type="button" class="cal-next-btn is-live" data-tab="live">Voir le direct</button>`
+    : `<button type="button" class="cal-next-btn" data-tab="ordres" data-round="${row.orderRound}" data-competition="${row.orderCompetition}">${row.alreadyOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>` +
+      `<div class="cal-next-orders ${row.alreadyOrdered ? "is-ok" : "is-missing"}">${row.alreadyOrdered ? "Ordres enregistrés pour ce match" : "Ordres non définis pour ce match"}</div>`;
+  return `<div class="cal-card cal-next"><div class="cal-card-kicker">${escapeHtml(kicker)}</div>` +
+    `<div class="cal-next-teams">${side(homeIdx)}<div class="cal-next-vs">VS</div>${side(awayIdx)}</div>` +
+    `<div class="cal-next-meta"><span>${escapeHtml(when)}</span><span class="cal-next-sep" aria-hidden="true">|</span><span>${escapeHtml(row.location)}</span></div>` +
+    countdown + action + `</div>`;
+}
+
+function calendarSeasonCardHtml(rows, playedRows) {
+  const record = list => `${list.filter(r => r.won).length}-${list.filter(r => r.lost).length}`;
+  const homePlayed = playedRows.filter(r => r.isHome);
+  const awayPlayed = playedRows.filter(r => !r.isHome);
+  const champPlayed = rows.filter(r => r.competition === "champ" && r.played).length;
+  const champTotal = league.totalRounds || rows.filter(r => r.competition === "champ").length;
+  const pct = champTotal ? Math.round(champPlayed / champTotal * 100) : 0;
+
+  const table = league.standings();
+  const pos = table.findIndex(s => s.idx === myTeamIndex);
+  const me = pos === -1 ? null : table[pos];
+  const hasChamp = !!(me && me.played);
+  const rankText = hasChamp ? `${pos + 1}<small>${pos === 0 ? "er" : "e"}</small>` : "–";
+  const diff = hasChamp ? me.pf - me.pa : null;
+  const diffText = diff == null ? "–" : (diff > 0 ? `+${diff}` : String(diff));
+  const diffTone = diff == null || diff === 0 ? "" : diff > 0 ? " is-pos" : " is-neg";
+
+  // Forme : 5 derniers matchs joués (toutes compétitions, ordre
+  // chronologique), cases en pointillés tant qu'il y en a moins de 5.
+  const last = playedRows.slice(-5);
+  let form = last.map(r => {
+    const tone = r.won ? "win" : r.lost ? "loss" : "draw";
+    const letter = r.won ? "V" : r.lost ? "D" : "N";
+    return `<span class="cal-form cal-form-${tone}" title="${escapeHtml(r.label)} : ${escapeHtml(r.scoreText)}">${letter}</span>`;
+  }).join("");
+  for (let i = last.length; i < 5; i++) form += `<span class="cal-form cal-form-empty" aria-hidden="true"></span>`;
+
+  return `<div class="cal-card cal-season"><div class="cal-card-kicker">Saison</div>` +
+    `<div class="cal-kpis">` +
+      `<div class="cal-kpi"><div class="cal-kpi-label">Bilan</div><div class="cal-kpi-value">${record(playedRows)}</div></div>` +
+      `<div class="cal-kpi"><div class="cal-kpi-label">Classement</div><div class="cal-kpi-value">${rankText}</div></div>` +
+      `<div class="cal-kpi"><div class="cal-kpi-label">Diff.</div><div class="cal-kpi-value${diffTone}">${diffText}</div></div>` +
+    `</div>` +
+    `<div class="cal-progress"><div class="cal-progress-head"><span>Championnat</span><span>${champPlayed} / ${champTotal} journées</span></div>` +
+      `<div class="cal-progress-track"><div class="cal-progress-fill" style="width:${pct}%"></div></div></div>` +
+    `<div class="cal-split"><div><span>Domicile</span><b>${homePlayed.length ? record(homePlayed) : "–"}</b></div>` +
+      `<div><span>Extérieur</span><b>${awayPlayed.length ? record(awayPlayed) : "–"}</b></div></div>` +
+    `<div class="cal-form-wrap"><div class="cal-kpi-label">Forme</div><div class="cal-form-row">${form}</div></div>` +
+  `</div>`;
+}
+
+// Filtres Tous/Domicile/Extérieur/À venir : masque les lignes (et un mois
+// entier s'il ne lui reste plus rien) sans re-rendre la page.
+function calendarApplyFilter() {
+  const holder = document.getElementById("calendrierContent");
+  if (!holder) return;
+  let visibleTotal = 0;
+  holder.querySelectorAll("table.cal-month").forEach(table => {
+    let visible = 0;
+    table.querySelectorAll("tbody tr.cal-row").forEach(tr => {
+      const v = tr.dataset.venue, st = tr.dataset.status;
+      const show = calendarFilter === "all" ||
+        (calendarFilter === "home" && v === "home") ||
+        (calendarFilter === "away" && v === "away") ||
+        (calendarFilter === "upcoming" && st === "upcoming");
+      tr.classList.toggle("hidden", !show);
+      if (show) visible++;
+    });
+    table.classList.toggle("hidden", visible === 0);
+    visibleTotal += visible;
+  });
+  holder.querySelectorAll("[data-cal-filter]").forEach(b => {
+    const on = b.dataset.calFilter === calendarFilter;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+  const empty = holder.querySelector(".cal-filter-empty");
+  if (empty) empty.classList.toggle("hidden", visibleTotal > 0);
+}
+
 function renderCalendrierSection() {
   const holder = document.getElementById("calendrierContent");
   const rows = [];
@@ -29765,13 +30109,20 @@ function renderCalendrierSection() {
           ? ""
           : `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>`)
       : isUpcoming
-        ? `<button class="calendar-order-btn${alreadyOrdered ? " calendar-order-btn-validated" : ""}" data-tab="ordres" data-round="${r}" data-competition="championship">${alreadyOrdered ? "Modifier vos ordres" : "Ordres"}</button>`
+        ? `<button class="calendar-order-btn${alreadyOrdered ? " calendar-order-btn-validated" : ""}" data-tab="ordres" data-round="${r}" data-competition="championship">${CALENDAR_ORDERS_ICON}${alreadyOrdered ? "Modifier vos ordres" : "Ordres"}</button>`
         : "";
     rows.push({
-      competition: "champ", label: `Journée ${r + 1}`, opponent: oppName, opponentIdx: oppIdx,
+      competition: "champ", label: `Journée ${r + 1}`, shortLabel: `J${r + 1}`, opponent: oppName, opponentIdx: oppIdx,
       location: isHome ? "Domicile" : "Extérieur", scoreText, boxscore,
       cls: [isNext ? "me" : "", cls].filter(Boolean).join(" "),
       actionCell, scheduledAt: scheduledTimeForChampionshipRound(r), fallbackOrder: r * 2,
+      // Champs ajoutés pour la refonte visuelle (retour utilisateur,
+      // 2026-09-25, maquette validée — voir DEV_NOTES.md) : filtres
+      // Domicile/Extérieur/À venir, résultat V/D, carte "Prochain match" et
+      // bilan de la colonne de droite. Aucune nouvelle donnée, uniquement ce
+      // qui était déjà calculé juste au-dessus.
+      isHome, played: !!result, won: cls === "result-win", lost: cls === "result-loss",
+      isLive: isCurrentlyLive && !liveHasEnded, alreadyOrdered, orderRound: r, orderCompetition: "championship",
     });
   }
 
@@ -29790,7 +30141,7 @@ function renderCalendrierSection() {
       if (m.bye) {
         rows.push({
           competition: "cup", label, opponent: "Exempt, qualifié(e) directement", location: "",
-          scoreText: "", cls: "", actionCell: "", scheduledAt, fallbackOrder,
+          scoreText: "", cls: "", actionCell: "", scheduledAt, fallbackOrder, bye: true,
         });
         return;
       }
@@ -29824,11 +30175,13 @@ function renderCalendrierSection() {
       const actionCell = isCupLive
         ? `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>`
         : !m.resolved
-          ? `<button class="calendar-order-btn${cupAlreadyPlanned ? " calendar-order-btn-validated" : ""}" data-tab="ordres" data-round="${round.index}" data-competition="cup">${cupAlreadyPlanned ? "Modifier vos ordres" : "Ordres"}</button>`
+          ? `<button class="calendar-order-btn${cupAlreadyPlanned ? " calendar-order-btn-validated" : ""}" data-tab="ordres" data-round="${round.index}" data-competition="cup">${CALENDAR_ORDERS_ICON}${cupAlreadyPlanned ? "Modifier vos ordres" : "Ordres"}</button>`
           : "";
       rows.push({
         competition: "cup", label, opponent: oppName, opponentIdx: oppIdxCup, location: isHomeCup ? "Domicile" : "Extérieur",
         scoreText, boxscore, cls, actionCell, scheduledAt, fallbackOrder,
+        isHome: isHomeCup, played: !!m.resolved, won: cls === "result-win", lost: cls === "result-loss",
+        isLive: isCupLive, alreadyOrdered: cupAlreadyPlanned, orderRound: round.index, orderCompetition: "cup",
       });
     });
   }
@@ -29843,39 +30196,95 @@ function renderCalendrierSection() {
     return a.fallbackOrder - b.fallbackOrder;
   });
 
-  let html = "<table class='standings-table calendar-table'><thead><tr>" +
-    "<th>Date</th><th>Compétition</th><th>Adversaire</th><th>Lieu</th><th>Score</th><th></th></tr></thead><tbody>";
+  // -------------------------------------------------------------------
+  // Refonte visuelle (retour utilisateur, 2026-09-25 : "améliore
+  // l'affichage du calendrier", maquette validée "ça me va, code tout ça",
+  // puis "enlève la brique PROCHAIN sur la ligne J4, elle ne sert à rien") :
+  // - liste groupée par MOIS (un <table class="calendar-table"> par mois,
+  //   son <thead> sert d'en-tête de mois — les tests et le CSS mobile
+  //   continuent de trouver "table.calendar-table tbody tr", une ligne par
+  //   match, dans l'ordre chronologique) ;
+  // - colonnes : date (jour court + heure), J./tour, adversaire (écusson +
+  //   "vs"/"@"), pastille Domicile/Extérieur, résultat V/D coloré, action —
+  //   la colonne "Compétition" répétait "Championnat" sur chaque ligne, elle
+  //   devient le numéro de journée (ou "Coupe · <tour>" pour la Coupe) ;
+  // - le match à venir reste surligné (classe "me"), SANS badge
+  //   "PROCHAIN" (retiré à la demande de l'utilisateur) ;
+  // - filtres Tous / Domicile / Extérieur / À venir (voir
+  //   calendarApplyFilter, purement côté affichage) ;
+  // - colonne de droite : prochain match (compte à rebours + état des
+  //   ordres) et bilan de la saison, tous deux dérivés des MÊMES lignes
+  //   `rows` que la liste (aucune donnée inventée : pas de bloc "À
+  //   surveiller" de la maquette, qui n'avait pas de vraie source).
+  // -------------------------------------------------------------------
+  const playedRows = rows.filter(r => r.played);
+  const upcomingRows = rows.filter(r => !r.played && !r.bye);
+  const nextRow = upcomingRows.find(r => r.isLive) || upcomingRows[0] || null;
+
+  const groups = [];
   rows.forEach(row => {
-    const dateCell = row.scheduledAt != null
-      ? `${escapeHtml(formatDateTimeFr(row.scheduledAt))}<div class="sub">${escapeHtml(row.label)}</div>`
-      : `–<div class="sub">${escapeHtml(row.label)}</div>`;
-    const compLabel = row.competition === "cup" ? "Coupe" : "Championnat";
-    // Retour utilisateur (2026-09) : "quand un match est fini, je dois
-    // pouvoir cliquer sur le score pour voir le boxscore". Voir
-    // showMatchBoxscore/le gestionnaire de clic délégué juste après cette
-    // fonction.
-    const scoreCell = row.boxscore
-      ? `<button type="button" class="calendar-score-btn" data-boxscore-round="${row.boxscore.round}" data-boxscore-competition="${row.boxscore.competition}" data-boxscore-home="${row.boxscore.homeIdx}" data-boxscore-away="${row.boxscore.awayIdx}">${row.scoreText}</button>`
-      : row.scoreText;
-    // Retour utilisateur (2026-09) : "dans l'onglet calendrier, je dois
-    // pouvoir cliquer sur le nom des équipes et ouvrir la page de leur
-    // équipe" : voir teamLinkHtml/showTeamDetail. `opponentIdx` est absent
-    // pour un exempt de coupe (aucun véritable adversaire ce tour-là) : reste
-    // du texte brut dans ce cas.
-    const opponentCell = row.opponentIdx != null ? teamLinkHtml(row.opponentIdx, row.opponent) : escapeHtml(row.opponent);
-    html += `<tr class="${row.cls}"><td>${dateCell}</td><td>${compLabel}</td>` +
-      `<td>${opponentCell}</td><td>${escapeHtml(row.location)}</td><td>${scoreCell}</td><td>${row.actionCell}</td></tr>`;
+    const key = row.scheduledAt != null ? calendarMonthKey(row.scheduledAt) : "saison";
+    let g = groups.find(x => x.key === key);
+    if (!g) {
+      g = { key, title: row.scheduledAt != null ? calendarMonthTitle(row.scheduledAt) : "Saison", rows: [] };
+      groups.push(g);
+    }
+    g.rows.push(row);
   });
-  html += "</tbody></table>";
+
+  const counts = {
+    all: rows.filter(r => !r.bye).length,
+    home: rows.filter(r => !r.bye && r.isHome).length,
+    away: rows.filter(r => !r.bye && !r.isHome).length,
+    upcoming: upcomingRows.length,
+  };
+  const filterBtn = (key, label) =>
+    `<button type="button" class="cal-filter${calendarFilter === key ? " active" : ""}" data-cal-filter="${key}" aria-pressed="${calendarFilter === key}">${label} <span class="cal-filter-count">${counts[key]}</span></button>`;
+
+  let html = `<div class="cal-layout"><div class="cal-main">`;
+  html += `<div class="cal-toolbar" role="group" aria-label="Filtrer les matchs">` +
+    filterBtn("all", "Tous") + filterBtn("home", "Domicile") + filterBtn("away", "Extérieur") + filterBtn("upcoming", "À venir") +
+    `</div>`;
+
+  groups.forEach(g => {
+    const gPlayed = g.rows.filter(r => r.played);
+    const gWins = gPlayed.filter(r => r.won).length;
+    const gLosses = gPlayed.filter(r => r.lost).length;
+    const gMatches = g.rows.filter(r => !r.bye).length;
+    const summary = `${gMatches} match${gMatches > 1 ? "s" : ""}` + (gPlayed.length ? ` · ${gWins} V – ${gLosses} D` : "");
+    // <colgroup> + table-layout:fixed (voir CSS .cal-month) : mêmes largeurs
+    // de colonnes dans chaque tableau de mois, sinon chaque mois calculait
+    // les siennes et les colonnes ne s'alignaient pas d'un mois à l'autre.
+    html += `<table class="calendar-table cal-month"><colgroup><col class="cal-col-date"><col class="cal-col-round"><col><col class="cal-col-venue"><col class="cal-col-result"><col class="cal-col-action"></colgroup>` +
+      `<thead><tr class="cal-month-head"><th colspan="6">` +
+      `<span class="cal-month-title">${escapeHtml(g.title)}</span><span class="cal-month-summary">${escapeHtml(summary)}</span>` +
+      `</th></tr></thead><tbody>`;
+    g.rows.forEach(row => { html += calendarRowHtml(row); });
+    html += `</tbody></table>`;
+  });
 
   if (league.cup && !rows.some(r => r.competition === "cup")) {
     html += "<p class='training-empty'>Votre club n'est plus engagé en Coupe cette saison (déjà éliminé, ou éliminé avant même d'avoir pu jouer).</p>";
   }
+  html += `<p class="training-empty cal-filter-empty hidden">Aucun match ne correspond à ce filtre.</p>`;
+  html += `</div><aside class="cal-side" aria-label="Résumé de la saison">`;
+  html += calendarNextMatchCardHtml(nextRow);
+  html += calendarSeasonCardHtml(rows, playedRows);
+  html += `</aside></div>`;
 
   holder.innerHTML = html;
+  calendarApplyFilter();
 }
 
 document.getElementById("calendrierContent").addEventListener("click", (e) => {
+  // Filtres Tous/Domicile/Extérieur/À venir (refonte 2026-09-25, voir
+  // calendarApplyFilter).
+  const filterBtn = e.target.closest("[data-cal-filter]");
+  if (filterBtn) {
+    calendarFilter = filterBtn.dataset.calFilter;
+    calendarApplyFilter();
+    return;
+  }
   const boxscoreBtn = e.target.closest("[data-boxscore-round]");
   if (boxscoreBtn) {
     showMatchBoxscore(

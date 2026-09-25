@@ -95,7 +95,32 @@ function isLastRoundOfRealWeek(round) {
 function scheduledTimeForRound(calendarStartAt, round, weekMs = WEEK_MS, slotOffsetsMs = CHAMPIONSHIP_SLOT_OFFSETS_MS) {
   const week = realWeekIndexForRound(round);
   const slot = slotIndexForRound(round);
+  // Correctif (2026-09-25, capture d'écran du calendrier : "07:57" jusqu'au
+  // 24 octobre puis "06:57" à partir du 27) : additionner des millisecondes
+  // fixes faisait glisser l'heure affichée d'1 h au changement d'heure
+  // (heure d'été → hiver le 25 octobre, l'inverse fin mars). Quand le rythme
+  // se compte en JOURS entiers (calendrier classique : semaine de 7 jours,
+  // créneaux à J+2/J+5), on avance donc en jours CIVILS à Paris en gardant
+  // l'heure murale de calendarStartAt — même principe que le calendrier
+  // ancré quotidien. Rien ne change hors période de changement d'heure, ni
+  // pour le mode accéléré (créneaux de quelques heures, pas des jours
+  // entiers). CES COPIES DOIVENT RESTER IDENTIQUES (server/calendar.js,
+  // engine.js, moteurbasket3.html, live_2d_demo.html — voir
+  // server/calendar_test.js, test croisé).
+  if (calendarCountsWholeDays(weekMs, slotOffsetsMs)) {
+    return parisWallClockPlusDays(calendarStartAt, (week * weekMs + slotOffsetsMs[slot]) / DAY_MS);
+  }
   return calendarStartAt + week * weekMs + slotOffsetsMs[slot];
+}
+
+// Même heure murale (Paris) que `startMs`, `days` jours civils plus tard.
+function parisWallClockPlusDays(startMs, days) {
+  const p = parisLocalDateParts(startMs);
+  const d = addParisCalendarDays(p, days);
+  return parisEpochForLocalTime(d.year, d.month, d.day, p.hour, p.minute, p.second) + (((startMs % 1000) + 1000) % 1000);
+}
+function calendarCountsWholeDays(weekMs, slotOffsetsMs) {
+  return weekMs % DAY_MS === 0 && slotOffsetsMs.every(o => o % DAY_MS === 0);
 }
 
 // Confort : lit calendarWeekMs/calendarSlotOffsetsMs directement sur la
@@ -141,6 +166,9 @@ function scheduledTimeForLeagueCupRound(league, cupDayIndex) {
 // une fois par semaine calendaire même si l'appelant "rattrape" plusieurs
 // semaines d'un coup après une longue absence).
 function realWeekEndAt(calendarStartAt, weekIndex, weekMs = WEEK_MS) {
+  // Même correctif changement d'heure que scheduledTimeForRound (voir son
+  // commentaire) : la fin de semaine suit l'heure murale de Paris.
+  if (weekMs % DAY_MS === 0) return parisWallClockPlusDays(calendarStartAt, (weekIndex + 1) * weekMs / DAY_MS);
   return calendarStartAt + (weekIndex + 1) * weekMs;
 }
 

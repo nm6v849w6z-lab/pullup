@@ -82,22 +82,34 @@
   .court-marker select { font-size: 11.5px; padding: 6px 4px; }
 
   /* ---- Calendrier : chaque ligne du tableau devient une carte ----
-     Colonnes d'origine : 1 Date, 2 Compétition, 3 Adversaire, 4 Lieu,
-     5 Score, 6 bouton (Ordres / direct). */
-  .calendar-table thead { display: none; }
+     Colonnes (refonte 2026-09-25) : 1 Date (jour + heure), 2 J./tour de
+     Coupe, 3 Adversaire (écusson + vs/@), 4 Lieu, 5 Résultat, 6 bouton
+     (Ordres / direct). Un tableau par mois : son <thead> est l'en-tête du
+     mois, gardé visible. La colonne de droite (prochain match + saison)
+     passe au-dessus de la liste. */
+  .cal-layout { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
+  .cal-side { position: static; display: flex; flex-direction: column; order: -1; }
+  .cal-toolbar { overflow-x: auto; flex-wrap: nowrap; }
+  .cal-filter { flex: none; }
+  .calendar-table thead { display: block; }
+  .calendar-table thead tr, .calendar-table thead th { display: block; }
   .calendar-table, .calendar-table tbody { display: block; width: 100%; }
-  .calendar-table tr {
+  .calendar-table colgroup { display: none; }
+  .calendar-table tbody tr {
     display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 3px 8px; align-items: center;
     padding: 12px 14px; border-bottom: 1px solid var(--line-soft);
   }
-  .calendar-table td { display: block; padding: 0 !important; border: 0 !important; text-align: left !important; white-space: normal; }
+  .calendar-table tbody tr.hidden { display: none; }
+  .calendar-table.cal-month tr.me td { background: transparent; }
+  .calendar-table.cal-month tr.me td:first-child { box-shadow: none; }
+  .calendar-table.cal-month tbody tr.me { background: rgba(240,162,60,.07); box-shadow: inset 3px 0 0 var(--amber); }
+  .calendar-table td { display: block; padding: 0 !important; border: 0 !important; text-align: left !important; white-space: normal; width: auto !important; }
   .calendar-table td:nth-child(3) { grid-column: 1 / 3; grid-row: 1; font-size: 16px; font-weight: 700; color: var(--ink); }
   .calendar-table td:nth-child(5) { grid-column: 3; grid-row: 1; text-align: right !important; font-weight: 800; }
-  .calendar-table td:nth-child(1) { grid-column: 1 / 3; grid-row: 2; font-size: 13px; color: var(--ink-dim); }
-  .calendar-table td:nth-child(1) .sub { display: inline; margin-left: 6px; }
+  .calendar-table td:nth-child(1) { grid-column: 1 / 3; grid-row: 2; font-size: 13px; color: var(--ink-dim); display: flex; gap: 6px; align-items: baseline; }
+  .calendar-table td:nth-child(1) .sub { display: inline; margin: 0; }
   .calendar-table td:nth-child(2) { grid-column: 1; grid-row: 3; font-size: 12.5px; color: var(--ink-faint); }
   .calendar-table td:nth-child(4) { grid-column: 2; grid-row: 3; font-size: 12.5px; color: var(--ink-faint); }
-  .calendar-table td:nth-child(4)::before { content: "· "; }
   .calendar-table td:nth-child(6) { grid-column: 3; grid-row: 2 / 4; justify-self: end; }
   .calendar-table td:nth-child(6):empty { display: none; }
 }
