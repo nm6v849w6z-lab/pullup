@@ -342,6 +342,201 @@
      l'appli (ex. Scouting Pro). */
   .ordres-lock-note{max-width:420px; margin:0 auto 10px; padding:8px 12px; border-radius:8px; text-align:center; font-size:13px; font-weight:700; color:var(--amber); background:rgba(240,162,60,.12); border:1px solid rgba(240,162,60,.35);}
 
+  /* =====================================================================
+     Page Ordres, refonte 2026-09-25 (retour utilisateur sur la maquette
+     canevas "Ordres — Lyon vs Rennes" : "code tout ça stp") — voir le
+     commentaire HTML de #ordresActionBar et buildTeamPanel. Tokens et
+     polices du reste du jeu (pas les Barlow de la maquette, jamais
+     chargées dans ce projet, voir le correctif polices du tableau de bord).
+     Tout est préfixé #prepSection pour ne rien toucher ailleurs.
+     ===================================================================== */
+  #prepSection{max-width:1240px; margin:0 auto;}
+  #prepSection .prep-grid{max-width:none; margin:0 0 18px;}
+  #prepSection .field-help{font-size:12px; line-height:1.4; color:var(--ink-dim); margin-top:6px;}
+
+  /* Barre d'action fixe, juste sous le topbar global (sticky lui aussi,
+     hauteur mesurée en JS : syncTopbarHeightVar -> --topbar-h). */
+  .ordres-actionbar{
+    position:sticky; top:var(--topbar-h, 64px); z-index:4;
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    margin:-24px -28px 18px; padding:12px 28px;
+    background:var(--panel); border-bottom:1px solid var(--line);
+  }
+  .oab-left{display:flex; align-items:center; gap:20px; flex-wrap:wrap; min-width:0;}
+  .oab-title{margin:0; font-size:20px; font-weight:800; letter-spacing:.01em; color:var(--ink);}
+  .oab-tabs{display:flex; gap:4px; flex-wrap:wrap;}
+  .oab-tab{
+    font:inherit; font-size:13px; font-weight:700; color:var(--ink-dim); background:transparent;
+    border:1px solid transparent; border-radius:999px; padding:8px 12px; cursor:pointer; min-height:36px;
+  }
+  .oab-tab:hover{color:var(--ink); background:var(--panel-2);}
+  .oab-tab.active{color:var(--ink); background:var(--panel-2); border-color:var(--line);}
+  .oab-tab:focus-visible, .seg-btn:focus-visible, #prepSection .tactic-chip:focus-within{outline:2px solid var(--amber); outline-offset:2px;}
+  .oab-right{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .ordres-status{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--ink-dim);}
+  .ordres-status-dot{width:8px; height:8px; border-radius:50%; background:currentColor; flex-shrink:0;}
+  .ordres-status.dirty, .ordres-status.todo{color:var(--amber);}
+  .ordres-status.ok{color:var(--ok);}
+  .ordres-status.locked{color:var(--ink-dim);}
+  #prepSection .ordres-validate-btn{width:auto; min-height:44px; padding:0 22px; border-radius:999px; font-size:14px;}
+  #prepSection .ordres-validate-feedback{margin:0 0 12px; text-align:right; min-height:0;}
+  #prepSection .ordres-validate-feedback:empty{display:none;}
+
+  /* Carte "match" : équipes + journée à gauche, jauges à droite. */
+  .ordres-match-card{
+    display:grid; grid-template-columns:minmax(0, 1.3fr) minmax(0, 1fr); gap:24px;
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px 26px; margin-bottom:22px;
+  }
+  .omc-match{display:flex; flex-direction:column; gap:14px; min-width:0;}
+  #prepSection .ordres-round-datetime{margin:0; text-align:left; color:var(--ink); font-weight:400; font-size:14px;}
+  .omc-meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--ink-dim);}
+  .omc-badge{background:rgba(240,162,60,.14); color:var(--amber); padding:4px 10px; border-radius:999px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; font-size:12px;}
+  .omc-teams{display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-top:10px;}
+  .omc-team{font-size:32px; font-weight:800; line-height:1.05; color:var(--ink); letter-spacing:-.01em;}
+  .omc-team a{color:inherit; text-decoration:none;}
+  .omc-team a:hover{color:var(--amber);}
+  .omc-vs{font-size:16px; font-weight:800; color:var(--ink-faint); text-transform:uppercase;}
+  #prepSection .ordres-round-selector{max-width:none; margin:0; padding:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  #prepSection .ordres-round-selector.hidden{display:none;}
+  #prepSection .ordres-round-selector .field-label{margin:0; text-transform:none; letter-spacing:0; font-size:13px; font-weight:600; color:var(--ink-dim);}
+  #prepSection .ordres-round-selector select{width:auto; min-width:220px; text-align:left; min-height:38px;}
+  #prepSection .omc-gauges{display:flex; flex-direction:column; justify-content:center; gap:18px; margin:0; border-left:1px solid var(--line); padding-left:24px;}
+  #prepSection .omc-gauges .roster-chemistry-gauge-wrap{max-width:none; flex:none; margin:0;}
+  #prepSection .omc-gauges .roster-chemistry-gauge-label{font-size:13px;}
+  #prepSection .omc-gauges .roster-chemistry-gauge-label span{color:var(--ink); font-weight:700;}
+  #prepSection .ordres-lock-note{max-width:none; margin:0 0 18px;}
+
+  /* Panneau : plus de cadre, ce sont les cartes qui en portent un. */
+  #prepSection .team-panel.ordres-panel{background:none; border:none; border-radius:0; padding:0;}
+  #prepSection .prep-columns{grid-template-columns:minmax(0, 1.15fr) minmax(0, 1fr); gap:22px;}
+  #prepSection .prep-col{display:flex; flex-direction:column; gap:22px; min-width:0;}
+  #prepSection .lineup-editor{margin-top:0; display:flex; flex-direction:column; gap:22px;}
+  .ordres-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px;
+    display:flex; flex-direction:column; gap:18px;
+    scroll-margin-top:calc(var(--topbar-h, 64px) + 90px);
+  }
+  .ordres-card.hidden{display:none;}
+  .ordres-card-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap;}
+  .ordres-card-title{margin:0; font-size:20px; font-weight:800; color:var(--ink);}
+  .ordres-card-aside{font-size:13px; color:var(--ink-dim);}
+  .ordres-card-aside b{color:var(--amber);}
+  #prepSection .field-label{margin:0 0 8px; font-size:13px; text-transform:none; letter-spacing:0; font-weight:700; color:var(--ink);}
+  .ordres-field{display:flex; flex-direction:column; min-width:0;}
+  .ordres-field.hidden{display:none;}
+  .ordres-settings-grid{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:20px;}
+  .ordres-settings-grid.hidden{display:none;}
+  /* Le bloc "confirmé" de la carte Défense prolonge la grille du Système. */
+  .ordres-settings-grid-nested{padding-top:18px; border-top:1px solid var(--line-soft);}
+  #prepSection .ordres-settings-grid.ordres-divided{padding-top:18px; border-top:1px solid var(--line-soft);}
+  #prepSection .ordres-card select{min-height:44px; font-size:14px; padding:0 12px; border-radius:10px;}
+  #prepSection .tactic-confirmee-block:not(.ordres-card){border-top:none; margin-top:0; padding-top:0;}
+  #prepSection .ordres-settings-grid-nested.tactic-confirmee-block{padding-top:18px; border-top:1px solid var(--line-soft);}
+
+  /* Boutons segmentés (réglages à 2-3 valeurs). */
+  .seg-control{display:flex; gap:4px; padding:4px; background:var(--bg); border:1px solid var(--line); border-radius:10px;}
+  .seg-btn{
+    flex:1 1 0; min-width:0; min-height:36px; padding:0 8px; font:inherit; font-size:13px; font-weight:700;
+    color:var(--ink-dim); background:transparent; border:none; border-radius:7px; cursor:pointer;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .seg-btn:hover:not(:disabled){color:var(--ink); background:var(--panel-2);}
+  .seg-btn.active{background:var(--amber); color:var(--amber-ink);}
+  .seg-btn:disabled{cursor:default; opacity:.7;}
+
+  /* Priorités offensives : 3 puces numérotées, puis le reste en pilules. */
+  .tactic-picker{display:flex; flex-direction:column; gap:12px; margin-top:10px;}
+  .tactic-selected{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px;}
+  #prepSection .tactic-chip{
+    position:relative; display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none;
+    font-size:14px; font-weight:600; color:var(--ink-dim);
+    background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:0 14px; min-height:38px;
+  }
+  #prepSection .tactic-chip input{position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none;}
+  #prepSection .tactic-chip:hover{color:var(--ink); border-color:var(--ink-faint);}
+  #prepSection .tactic-selected .tactic-chip{
+    min-height:52px; border-radius:12px; border:1.5px solid var(--amber); background:rgba(240,162,60,.12);
+    color:var(--ink); padding:0 12px;
+  }
+  #prepSection .tactic-selected .tactic-chip:hover{background:rgba(240,162,60,.2);}
+  .tactic-rank{
+    width:24px; height:24px; flex-shrink:0; border-radius:50%; background:var(--amber); color:var(--amber-ink);
+    font-size:13px; font-weight:800; display:inline-flex; align-items:center; justify-content:center;
+  }
+  .tactic-name{min-width:0; line-height:1.2;}
+  .tactic-slot-empty{
+    display:flex; align-items:center; gap:10px; min-height:52px; padding:0 12px; border-radius:12px;
+    border:1.5px dashed var(--line); color:var(--ink-faint); font-size:14px;
+  }
+  .tactic-slot-empty .tactic-rank{background:var(--panel-2); color:var(--ink-faint);}
+  #prepSection .tactic-pool{display:flex; flex-wrap:wrap; gap:8px;}
+  #prepSection .tactic-chip.is-full{opacity:.45; cursor:not-allowed;}
+  #prepSection .tactic-chip.is-full:hover{color:var(--ink-dim); border-color:var(--line);}
+  #prepSection .tactic-count{margin-top:0; font-size:12px; color:var(--ink-faint);}
+
+  /* Adversaires à surveiller. */
+  #prepSection .watch-assignments{gap:10px;}
+  #prepSection .watch-row{grid-template-columns:24px minmax(0, 1fr) minmax(0, 1fr); gap:10px; align-items:center;}
+  .watch-num{font-size:16px; font-weight:800; color:var(--ink-faint); text-align:center;}
+  #prepSection .watch-row.is-empty select:first-of-type{border-style:dashed; color:var(--ink-dim);}
+  #prepSection .watch-row select:disabled{opacity:.55;}
+
+  /* Cinq de départ : le terrain garde son gabarit (voir .lineup-court). */
+  #prepSection .lineup-court-wrap{margin-bottom:0;}
+
+  /* Rotation : même <table> qu'avant, présentée en lignes de carte. */
+  .ordres-alert{
+    display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:10px;
+    background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.35); color:var(--amber); font-size:13px; line-height:1.4;
+  }
+  .ordres-alert svg{flex-shrink:0; margin-top:1px;}
+  .ordres-alert span{color:var(--ink);}
+  #prepSection .lineup-table{width:100%; border-collapse:collapse; background:none; border-radius:0; overflow:visible;}
+  #prepSection .lineup-table thead{display:none;}
+  #prepSection .lineup-table td{padding:12px 0; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
+  #prepSection .lineup-table tr:last-child td{border-bottom:none;}
+  #prepSection .lineup-table .lt-pos{width:40px; font-weight:800; color:var(--amber); font-size:15px;}
+  #prepSection .lineup-table .lt-starter{width:128px; padding-right:12px; font-size:14px; font-weight:700; color:var(--ink);}
+  #prepSection .lineup-backups-list{gap:6px; align-items:center;}
+  #prepSection .lineup-backup-chip{font-size:12px; padding:4px 9px; border-color:var(--line); color:var(--ink); background:var(--panel-2); cursor:default;}
+  #prepSection .lineup-backup-chip.multi{border-color:var(--amber); color:var(--amber);}
+  #prepSection .lineup-chip-remove{min-width:20px; min-height:20px; font-size:15px;}
+  #prepSection .ordres-card .lineup-add-select{
+    display:inline-block; width:auto; max-width:110px; margin:0; min-height:30px; font-size:12.5px; padding:0 10px;
+    border:1px dashed var(--line); border-radius:999px; background:transparent; color:var(--ink-dim); cursor:pointer;
+  }
+  #prepSection .lineup-reserves{margin-top:0; font-size:12.5px;}
+
+  @media(max-width:1100px){
+    .ordres-match-card{grid-template-columns:1fr;}
+    #prepSection .omc-gauges{border-left:none; padding-left:0; border-top:1px solid var(--line); padding-top:18px;}
+    #prepSection .prep-columns{grid-template-columns:1fr;}
+  }
+  @media(max-width:900px){
+    .ordres-actionbar{margin:-18px -16px 16px; padding:10px 16px;}
+    .ordres-settings-grid{grid-template-columns:1fr;}
+    .tactic-selected{grid-template-columns:1fr;}
+    .omc-team{font-size:24px;}
+    #prepSection .lineup-table .lt-starter{width:auto;}
+  }
+  /* Téléphone : barre d'action sur 2 lignes au plus (titre masqué, onglets
+     défilants sur une seule ligne) pour ne pas manger l'écran en restant
+     collée en haut. */
+  @media(max-width:768px){
+    .ordres-actionbar{gap:8px;}
+    .oab-title{display:none;}
+    .oab-left, .oab-tabs{flex-wrap:nowrap; width:100%;}
+    .oab-tabs{overflow-x:auto; scrollbar-width:none;}
+    .oab-tab{white-space:nowrap; padding:6px 10px;}
+    .oab-right{width:100%; justify-content:space-between; flex-wrap:nowrap;}
+    #prepSection .ordres-validate-btn{min-height:40px; padding:0 16px;}
+  }
+
+  /* "Réinitialiser ma carrière", désormais en bas du Guide. */
+  #guideResetCareerEntry{text-align:left; margin-top:0;}
+  #guideResetCareerEntry .reset-career-action{margin:10px 0 0;}
+  #guideResetCareerEntry a{color:var(--danger); font-size:13px; text-decoration:underline; cursor:pointer;}
+
   .catchup-item{max-width:560px; margin:0 auto 16px; padding:16px 20px; border-radius:14px; border:1px solid var(--line); background:var(--panel);}
   .catchup-item h3{margin:0 0 6px;}
   .catchup-item p{margin:4px 0;}
@@ -4223,74 +4418,75 @@
          toujours synchronisé avec la journée sélectionnée (voir
          renderOrdresRoundDateTime, appelée à la fois par renderPrep et
          selectOrdresRound). -->
-    <p class="ordres-round-datetime" id="ordresRoundDateTime"></p>
-    <div class="ordres-round-selector hidden" id="ordresRoundSelector"></div>
-    <!-- Retour utilisateur (2026-09) : "ajoute une petite jauge de l'alchimie
-         sur la page ordre (en dessous du menu déroulant)" : même jauge
-         compacte que la page Effectif (#rosterChemistryGaugeFill). Ne réagit
-         plus à un changement de tactique (retour utilisateur, 2026-09 : "on
-         va enlever ça [...] et créer une jauge connaissance tactique qui
-         impactera le niveau de l'équipe" à la place) — voir
-         #ordresTacticalKnowledgeGaugeWrap juste à côté pour l'aperçu EN
-         DIRECT de l'impact d'un changement de tactique, désormais sur cette
-         jauge séparée. Les deux jauges sont côte à côte (retour utilisateur,
-         2026-09 : "mets alchimie et connaissance tactique cote à cote"),
-         voir .ordres-gauges-row. -->
-    <div class="ordres-gauges-row">
-      <div class="roster-chemistry-gauge-wrap" id="ordresChemistryGaugeWrap">
-        <div class="roster-chemistry-gauge-label"><span>Alchimie d'équipe</span><b id="ordresChemistryValue"></b></div>
-        <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresChemistryGaugeFill"></div></div>
+    <!-- Refonte de la page Ordres (retour utilisateur, 2026-09-25, maquette
+         canevas "Ordres — Lyon vs Rennes" : "code tout ça stp") :
+         - barre d'action FIXE en haut de page (#ordresActionBar, collée sous
+           le topbar global via --topbar-h) : le bouton "Valider les ordres"
+           y remonte (avant, il fallait descendre tout en bas), avec l'état
+           des ordres (#ordresStatus, voir renderOrdresStatus) et des onglets
+           qui font défiler jusqu'à chaque carte (Attaque, Défense, Cinq &
+           rotation, Adversaires) ;
+         - carte "match" (#ordresRoundDateTime = équipes, journée, date/heure,
+           lieu ; sélecteur de journée ; jauges Alchimie/Connaissance
+           tactique, chacune avec une ligne qui dit comment la faire monter) ;
+         - #prepGrid : deux colonnes de cartes, voir buildTeamPanel.
+         "Réinitialiser ma carrière" n'est plus sur cette page (action
+         destructrice juste sous le bouton de validation) : déplacé en bas
+         de l'onglet Guide, voir #resetCareerLink. Anciennes décisions
+         toujours valables : bandeau jour/heure SYNCHRONISÉ avec la journée
+         sélectionnée (jamais currentMatch figé), pas de "Derniers
+         événements" ni de texte "Préparation à l'avance" ici. -->
+    <div class="ordres-actionbar" id="ordresActionBar">
+      <div class="oab-left">
+        <h1 class="oab-title">Ordres de match</h1>
+        <nav class="oab-tabs" id="ordresSectionTabs" aria-label="Sections des ordres">
+          <button type="button" class="oab-tab" data-ordres-jump="ordresCardAttaque">Attaque</button>
+          <button type="button" class="oab-tab" data-ordres-jump="ordresCardDefense">Défense</button>
+          <button type="button" class="oab-tab" data-ordres-jump="ordresCardCinq">Cinq &amp; rotation</button>
+          <button type="button" class="oab-tab" data-ordres-jump="ordresCardAdversaires">Adversaires</button>
+        </nav>
       </div>
-      <!-- Retour utilisateur (2026-09) : "on va enlever ça [l'impact tactique
-           sur l'alchimie] et créer une jauge connaissance tactique qui
-           impactera le niveau de l'équipe [...] cette jauge doit apparaitre
-           dans la zone en rouge" : reprend exactement la place de l'ancien
-           avertissement d'alchimie ci-dessus, sur une jauge séparée. Affiche
-           la maîtrise ACTUELLE (teamA.tacticalKnowledge, voir engine.js) des
-           3 options sélectionnées dans `tacticsSource` (ordres en direct ou
-           plan d'une journée future, voir renderOrdresTacticalKnowledgeGauge
-           plus bas) : plus d'aperçu "avant/après" depuis que la connaissance
-           tactique évolue progressivement match par match plutôt que par un
-           malus instantané au changement (retour utilisateur, 2026-09 : "il
-           faudrait que ce soit plus progressif"), il n'y a donc plus de
-           perte brutale à anticiper ici. -->
-      <div class="roster-chemistry-gauge-wrap" id="ordresTacticalKnowledgeGaugeWrap">
-        <div class="roster-chemistry-gauge-label"><span>Connaissance tactique</span><b id="ordresTacticalKnowledgeValue"></b></div>
-        <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresTacticalKnowledgeGaugeFill"></div></div>
+      <div class="oab-right">
+        <span class="ordres-status" id="ordresStatus" role="status"></span>
+        <button type="button" class="ordres-validate-btn" id="ordresValidateBtn">Valider les ordres</button>
       </div>
     </div>
-    <!-- Retour utilisateur (2026-09) : "page ordre enleve ce texte :
-         Préparation à l'avance, [...] Ces ordres seront appliqués
-         automatiquement au moment de ce match [...]" : ce bandeau
-         (#ordresPlanNote) redisait, avec une phrase d'explication en plus,
-         exactement les mêmes infos (adversaire, domicile/extérieur, jour et
-         heure) déjà affichées par #ordresRoundDateTime juste au-dessus (voir
-         renderOrdresRoundDateTime), pour n'importe quelle journée
-         sélectionnée y compris un tour de Coupe. Retiré. -->
-    <!-- Retour utilisateur (2026-09) : un panneau "Derniers événements" avait
-         été ajouté ici (demandé, puis son contenu corrigé pour ne plus
-         montrer de données financières), avant que l'utilisateur ne demande
-         explicitement son retrait complet de cette page : "tjrs rien à faire
-         là. n'essaie pas de copier qqch d'une autre page. juste enleve le" —
-         retiré. Ce panneau reste sur le tableau de bord (voir
-         renderClubSection), qui n'a jamais été concerné par cette demande. -->
+    <p class="ordres-validate-feedback" id="ordresValidateFeedback" role="status"></p>
+    <section class="ordres-match-card" aria-label="Match à préparer">
+      <div class="omc-match">
+        <div class="ordres-round-datetime" id="ordresRoundDateTime"></div>
+        <div class="ordres-round-selector hidden" id="ordresRoundSelector"></div>
+      </div>
+      <!-- Jauges Alchimie / Connaissance tactique (retours utilisateur
+           2026-09 : "ajoute une petite jauge de l'alchimie sur la page
+           ordre", puis "créer une jauge connaissance tactique [...] mets
+           alchimie et connaissance tactique cote à cote") : mêmes ids
+           qu'avant (renderOrdresChemistryGauge /
+           renderOrdresTacticalKnowledgeGauge), plus une ligne d'aide
+           (retour utilisateur 2026-09-25) écrite d'après le moteur :
+           l'alchimie ne bouge QUE par le ton des interviews de jalon et les
+           transferts (Team.applyChemistryDelta), la connaissance tactique
+           par les matchs joués avec ces options et l'entraînement tactique
+           (Team.updateTacticalKnowledge). -->
+      <div class="omc-gauges ordres-gauges-row">
+        <div class="roster-chemistry-gauge-wrap" id="ordresChemistryGaugeWrap">
+          <div class="roster-chemistry-gauge-label"><span>Alchimie d'équipe</span><b id="ordresChemistryValue"></b></div>
+          <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresChemistryGaugeFill"></div></div>
+          <div class="field-help">Monte ou baisse avec le ton de tes interviews de jalon ; chaque transfert la fait baisser.</div>
+        </div>
+        <div class="roster-chemistry-gauge-wrap" id="ordresTacticalKnowledgeGaugeWrap">
+          <div class="roster-chemistry-gauge-label"><span>Connaissance tactique</span><b id="ordresTacticalKnowledgeValue"></b></div>
+          <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="ordresTacticalKnowledgeGaugeFill"></div></div>
+          <div class="field-help">Monte à chaque match joué avec ces choix (plus vite en les travaillant à l'entraînement tactique) ; changer souvent la fait baisser.</div>
+        </div>
+      </div>
+    </section>
     <p class="ordres-lock-note hidden" id="ordresLockNote"></p>
     <div class="prep-grid" id="prepGrid"></div>
-    <div class="ordres-validate-row">
-      <button type="button" class="ordres-validate-btn" id="ordresValidateBtn">Valider les ordres</button>
-      <p class="ordres-validate-feedback" id="ordresValidateFeedback"></p>
-    </div>
     <div class="actions" id="prepActions">
       <button class="secondary" id="regenBtn">Classement</button>
     </div>
     <p class="lock-warning" id="lockWarning"></p>
-    <!-- Retour utilisateur (2026-09) : "La feuille de match et les tactiques
-         s'enregistrent automatiquement [...] enleve sur la page ordre" :
-         texte statique retiré (aucune logique JS ne le pilotait, voir
-         .locked-note ci-dessus toujours utilisée par #attendanceNote/
-         #moraleNote ailleurs dans ce fichier, donc la RÈGLE CSS est
-         conservée, seul CET élément-ci disparaît). -->
-    <p class="reset-career"><a href="#" id="resetCareerLink">Réinitialiser ma carrière</a></p>
   </div>
 
   <div id="catchupSection" class="hidden">
@@ -5021,14 +5217,14 @@
 
       <div class="guide-entry">
         <h3>Ordres et tactiques</h3>
-        <p class="training-intro">Avant chaque match (ou pour une journée future, via le sélecteur de journée en haut de l'onglet <b>Ordres</b>), réglez trois choses pour votre équipe. Tout s'enregistre automatiquement à chaque changement, et un bouton "Valider les ordres" en bas de page confirme que l'enregistrement a bien eu lieu.</p>
+        <p class="training-intro">Avant chaque match (ou pour une journée future, via le sélecteur de journée en haut de l'onglet <b>Ordres</b>), réglez trois choses pour votre équipe. Tout s'enregistre automatiquement à chaque changement, et le bouton "Valider les ordres", toujours visible dans la barre en haut de la page, confirme que l'enregistrement a bien eu lieu.</p>
         <p class="training-intro" style="margin-top:10px;"><b>3 priorités offensives</b> : choisissez exactement 3 styles parmi les 10 proposés (Équilibrée, Jeu intérieur, Jeu extérieur, Jeu en pénétration, Pick &amp; Roll, Post-up, Isolation, Jeu en mouvement, Transition rapide, Tirs rapides). Les 3 choix se combinent à parts égales pour déterminer la répartition des tirs de l'équipe entre l'intérieur, la mi-distance et le 3 points, ainsi que le rythme, le taux de passes décisives et le risque de perte de balle. Un jeu intérieur ou en Post-up privilégie les tirs proches du panier ; un jeu extérieur ou des Tirs rapides misent sur le 3 points ; la Transition rapide et le Jeu en pénétration augmentent le rythme (et les fautes provoquées pour la pénétration), au prix de plus de pertes de balle.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Défense</b> : un seul choix parmi 5 systèmes. Homme à homme est le réglage neutre. Zone press met la pression sur les extérieurs adverses, au prix d'une fatigue importante. Box and one cible spécifiquement le meilleur joueur adverse pour le freiner. Zone extérieure et Zone intérieure renforcent un secteur du terrain au détriment de l'autre.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Rythme</b> : Lent, Normal ou Rapide. Plus le rythme est élevé, plus il y a de possessions dans le match (donc plus d'occasions de marquer, des deux côtés), mais aussi plus de fatigue et plus de pertes de balle.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Feuille de match</b> : un titulaire par poste (5 postes obligatoires pour pouvoir jouer), et des remplaçants qui peuvent chacun couvrir plusieurs postes à la fois. Un match sans assez de joueurs disponibles pour aligner un cinq complet est perdu par forfait (20-0).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Niveau tactique</b> : Débutant ou Confirmée, en haut de l'écran. Ce choix ne change QUE la complexité de l'interface affichée ici, jamais la façon dont un match se joue : une équipe restée en Débutant simule exactement comme avant, sans aucun désavantage. Confirmée révèle six réglages supplémentaires pour affiner encore la défense.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Niveau tactique</b> : Débutant ou Confirmé, dans la carte Attaque. Ce choix ne change QUE la complexité de l'interface affichée ici, jamais la façon dont un match se joue : une équipe restée en Débutant simule exactement comme avant, sans aucun désavantage. Confirmé révèle six réglages supplémentaires pour affiner encore le jeu.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Gestion de fin de match</b> (visible aux deux niveaux) : Standard garde le comportement habituel de fin de match. Adaptatif ajoute un vrai garbage time (moins de forcing sur votre meilleur joueur, un peu plus d'imprécision des deux côtés) dès 10 points d'écart ou plus à partir du 3e quart-temps, et accélère légèrement le rythme dans les 5 dernières minutes d'un match serré (écart de moins de 5 points).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Réglages du niveau Confirmée</b> : Défense sur écrans (Aucune consigne, Au-dessus, En-dessous, Switch, Prise à deux) ajuste la façon de défendre le Pick &amp; Roll adverse. Aide défensive (Faible, Moyenne, Forte) déplace le curseur entre protection du panier et tirs extérieurs bien gardés. Gestion du post-up (Aucune consigne, Pousser vers le fond, Pousser vers le centre, Prise à deux) ne concerne que les tirs près du panier. Close-out (Contrôlé, Agressif) échange un meilleur contest extérieur contre plus de vulnérabilité à la pénétration. Rebond offensif (Prudent, Normal, Agressif) échange plus de secondes chances contre un risque de contre-attaque adverse en cas d'échec. Surveiller permet de cibler jusqu'à 3 joueurs adverses par leur poste, chacun avec un focus précis (empêcher le post-up, coller sur les pénétrations, harceler le tir extérieur, priorité au rebond, empêcher les entrées de balle) : un vrai avantage défensif ciblé, avec toujours une contrepartie quelque part.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Réglages du niveau Confirmé</b> : Défense sur écrans (Aucune consigne, Au-dessus, En-dessous, Switch, Prise à deux) ajuste la façon de défendre le Pick &amp; Roll adverse. Aide défensive (Faible, Moyenne, Forte) déplace le curseur entre protection du panier et tirs extérieurs bien gardés. Gestion du post-up (Aucune consigne, Pousser vers le fond, Pousser vers le centre, Prise à deux) ne concerne que les tirs près du panier. Close-out (Contrôlé, Agressif) échange un meilleur contest extérieur contre plus de vulnérabilité à la pénétration. Rebond offensif (Prudent, Normal, Agressif) échange plus de secondes chances contre un risque de contre-attaque adverse en cas d'échec. Surveiller (carte Adversaires) permet de cibler jusqu'à 3 joueurs adverses par leur poste, chacun avec un focus précis (empêcher le post-up, coller sur les pénétrations, harceler le tir extérieur, priorité au rebond, empêcher les entrées de balle) : un vrai avantage défensif ciblé, avec toujours une contrepartie quelque part.</p>
       </div>
 
       <div class="guide-entry">
@@ -5095,6 +5291,19 @@
       <div class="guide-entry">
         <h3>Outils de test (Économie)</h3>
         <p class="training-intro">Pratique après une session de test (effectif vendu, budget mis à mal exprès) : remet le club dans un état jouable sans toucher au classement ni au calendrier de la saison en cours.</p>
+      </div>
+
+      <!-- "Réinitialiser ma carrière" (déplacé depuis le bas de la page
+           Ordres, retour utilisateur 2026-09-25 : action destructrice juste
+           sous "Valider les ordres", un clic accidentel qui attend
+           d'arriver). Le jeu n'a pas de page Paramètres : dernière entrée du
+           Guide, toujours derrière la confirmation confirm(). Classe
+           .reset-career conservée : masquée pour tout manager avec un jeton
+           (seul l'organisateur peut réinitialiser, voir resetCareer). -->
+      <div class="guide-entry reset-career" id="guideResetCareerEntry">
+        <h3>Réinitialiser la partie</h3>
+        <p class="training-intro">Repart de zéro avec une équipe neuve : tout l'effectif entraîné est perdu. Une confirmation est demandée avant.</p>
+        <p class="reset-career-action"><a href="#" id="resetCareerLink">Réinitialiser ma carrière</a></p>
       </div>
     </div>
   </div>
@@ -17945,6 +18154,11 @@ function renderOrdresRoundSelector() {
   }
   holder.classList.remove("hidden");
   holder.innerHTML = "";
+  const selLabel = document.createElement("label");
+  selLabel.className = "field-label";
+  selLabel.htmlFor = "ordresRoundSelect";
+  selLabel.textContent = "Préparer le match";
+  holder.appendChild(selLabel);
   const sel = document.createElement("select");
   sel.id = "ordresRoundSelect";
   rounds.forEach(r => {
@@ -18027,10 +18241,26 @@ function renderOrdresRoundDateTime() {
   // on y ajoute l'adversaire et le lieu, mêmes infos et même formulation que
   // le sélecteur juste en dessous (🏠/✈️, voir renderOrdresRoundSelector) et
   // que describeMatchup.
+  //
+  // Refonte 2026-09-25 (maquette) : carte "match" plutôt qu'une ligne de
+  // texte : badge de la journée (ou du tour de Coupe), date/heure et lieu,
+  // puis les deux équipes, domicile à gauche (même convention que le direct).
+  // L'heure affichée est bien celle du COUP D'ENVOI programmé
+  // (scheduledAt, voir scheduledTimeForChampionshipRound), jamais l'heure
+  // système : sur une partie solo son calendrier démarre à l'heure de
+  // création de la partie, d'où des heures "bizarres" (ex. 07:57) qui n'ont
+  // rien d'un bug.
   const opp = league.teams[selected.opponentIdx];
-  const lieu = selected.isHome ? "à domicile" : "à l'extérieur";
-  const quand = selected.scheduledAt != null ? `, ${formatDateTimeFr(selected.scheduledAt)}` : "";
-  el.textContent = `Contre ${opp.name} (${lieu})${quand}`;
+  const lieu = selected.isHome ? "À domicile" : "À l'extérieur";
+  const badge = selected.competition === "cup"
+    ? `Coupe · ${cupStageLabelForRoundIndex(selected.round)}`
+    : `Journée ${selected.round + 1} / ${league.totalRounds}`;
+  const quand = selected.scheduledAt != null ? formatDateTimeFr(selected.scheduledAt) : "";
+  const me = `<span class="omc-team omc-team-me">${escapeHtml(teamA.name)}</span>`;
+  const them = `<span class="omc-team">${teamLinkHtml(selected.opponentIdx, opp.name)}</span>`;
+  el.innerHTML = `
+    <div class="omc-meta"><span class="omc-badge">${escapeHtml(badge)}</span>${quand ? `<span>${escapeHtml(quand)}</span><span aria-hidden="true">·</span>` : ""}<span>${lieu}</span></div>
+    <div class="omc-teams">${selected.isHome ? me : them}<span class="omc-vs">vs</span>${selected.isHome ? them : me}</div>`;
 }
 
 // Léger "proxy de plan" pour une journée future : mêmes champs qu'une
@@ -18176,6 +18406,77 @@ function renderOrdresTacticalKnowledgeGauge(tacticsSource) {
 // instant précis).
 const LINEUP_LOCK_BEFORE_KICKOFF_MS = 5 * 60 * 1000;
 
+// ---------------------------------------------------------------------
+// Barre d'action fixe de la page Ordres (refonte 2026-09-25, voir le
+// commentaire HTML de #ordresActionBar) : état des ordres + onglets de
+// navigation vers chaque carte.
+//
+// État affiché (#ordresStatus), par ordre de priorité :
+//   - "Compositions verrouillées" : coup d'envoi imminent (voir
+//     LINEUP_LOCK_BEFORE_KICKOFF_MS) ;
+//   - "Modifications à valider" : au moins un réglage changé depuis
+//     l'ouverture de cette journée (ordresDirty, remis à zéro à chaque rendu
+//     de la grille et après une validation réussie). Chaque changement est
+//     DÉJÀ enregistré automatiquement (autosave inchangé, voir
+//     buildTeamPanel/onDirty) : la maquette disait "non enregistrées", ce
+//     qui aurait été faux ici, d'où "à valider" ;
+//   - "Ordres validés" (match immédiat, teamA.ordresValidatedRound, même
+//     source que le bouton "Modifier vos ordres" du topbar) ou "Ordres
+//     préparés" (journée future, teamA.hasPlanForRound) ;
+//   - sinon "Ordres pas encore validés" / "pas encore préparés".
+// ---------------------------------------------------------------------
+let ordresDirty = false;
+let ordresPanelLocked = false;
+
+function ordresSelectionIsImmediate() {
+  const round = selectedOrdresRound != null ? selectedOrdresRound : (currentMatch ? currentMatch.round : null);
+  const competition = selectedOrdresCompetition || "championship";
+  return competition === "championship" &&
+    (!currentMatch || (currentMatch.competition !== "cup" && round === currentMatch.round));
+}
+
+function markOrdresDirty() {
+  ordresDirty = true;
+  renderOrdresStatus();
+}
+
+function renderOrdresStatus() {
+  const el = document.getElementById("ordresStatus");
+  if (!el || !teamA) return;
+  const round = selectedOrdresRound != null ? selectedOrdresRound : (currentMatch ? currentMatch.round : null);
+  const competition = selectedOrdresCompetition || "championship";
+  const immediate = ordresSelectionIsImmediate();
+  let kind, text;
+  if (ordresPanelLocked) { kind = "locked"; text = "Compositions verrouillées"; }
+  else if (ordresDirty) { kind = "dirty"; text = "Modifications à valider"; }
+  else if (immediate && round != null && teamA.ordresValidatedRound === round) { kind = "ok"; text = "Ordres validés"; }
+  else if (!immediate && round != null && teamA.hasPlanForRound(round, competition)) { kind = "ok"; text = "Ordres préparés"; }
+  else { kind = "todo"; text = immediate ? "Ordres pas encore validés" : "Ordres pas encore préparés"; }
+  el.className = "ordres-status " + kind;
+  el.innerHTML = `<span class="ordres-status-dot" aria-hidden="true"></span><span>${text}</span>`;
+  el.title = (kind === "dirty" || kind === "todo")
+    ? "Chaque changement est déjà enregistré automatiquement. « Valider les ordres » confirme l'enregistrement auprès du serveur."
+    : "";
+}
+
+// Onglet "Adversaires" masqué quand sa carte l'est (niveau Débutant, voir
+// buildTeamPanel/applyTierVisibility).
+function updateOrdresSectionTabs() {
+  document.querySelectorAll("#ordresSectionTabs [data-ordres-jump]").forEach(btn => {
+    const target = document.getElementById(btn.dataset.ordresJump);
+    btn.classList.toggle("hidden", !target || target.classList.contains("hidden"));
+  });
+}
+
+// Hauteur réelle du topbar global (sticky, voir .topbar) exposée en
+// --topbar-h, pour que la barre d'action des Ordres se colle JUSTE en
+// dessous plutôt que de passer derrière (sa hauteur varie : retour à la
+// ligne, version mobile).
+function syncTopbarHeightVar() {
+  const topbar = document.querySelector(".topbar");
+  if (topbar) document.documentElement.style.setProperty("--topbar-h", `${topbar.offsetHeight}px`);
+}
+
 function renderOrdresGrid() {
   const grid = document.getElementById("prepGrid");
   grid.innerHTML = "";
@@ -18196,6 +18497,14 @@ function renderOrdresGrid() {
   }
   const round = selectedOrdresRound != null ? selectedOrdresRound : (currentMatch ? currentMatch.round : null);
   const competition = selectedOrdresCompetition || "championship";
+  // Barre d'action (voir renderOrdresStatus) : rien n'a encore été modifié
+  // sur la journée qu'on (ré)affiche.
+  ordresDirty = false;
+  ordresPanelLocked = false;
+  // Adversaire de la journée affichée (carte "Adversaires", voir
+  // buildTeamPanel) : même source que le bandeau/sélecteur.
+  const selectedEntry = upcomingRoundsForOrders().find(r => r.round === round && r.competition === competition);
+  const opponentTeam = selectedEntry ? league.teams[selectedEntry.opponentIdx] : null;
   // Un tour de Coupe n'est JAMAIS "le match immédiat" au sens ci-dessous
   // (voir le piège documenté dans DEV_NOTES.md point 12) : il garde son
   // propre écran "Modifier vos ordres" par ligne dans le calendrier, toujours
@@ -18241,13 +18550,17 @@ function renderOrdresGrid() {
         if (btn) btn.onclick = () => openHoopShow("prematch");
       }
     }
+    ordresPanelLocked = locked;
     grid.appendChild(buildTeamPanel(teamA, "a", {
       editable: !locked,
-      onDirty: () => { updateLockAvailability(); saveMyTeam(); renderOrdresChemistryGauge(); renderOrdresTacticalKnowledgeGauge(teamA); }
+      opponent: opponentTeam || teamB,
+      onDirty: () => { updateLockAvailability(); saveMyTeam(); renderOrdresChemistryGauge(); renderOrdresTacticalKnowledgeGauge(teamA); markOrdresDirty(); }
     }));
     updateLockAvailability();
     renderOrdresChemistryGauge();
     renderOrdresTacticalKnowledgeGauge(teamA);
+    renderOrdresStatus();
+    updateOrdresSectionTabs();
     return;
   }
 
@@ -18289,10 +18602,15 @@ function renderOrdresGrid() {
     renderOrdresRoundSelector(); // pour faire apparaître/rester le ● "déjà préparé"
     renderOrdresChemistryGauge();
     renderOrdresTacticalKnowledgeGauge(proxy);
+    markOrdresDirty();
   };
-  grid.appendChild(buildTeamPanel(proxy, "a", { onDirty: commit }));
+  const lockNoteFuture = document.getElementById("ordresLockNote");
+  if (lockNoteFuture) { lockNoteFuture.innerHTML = ""; lockNoteFuture.classList.add("hidden"); }
+  grid.appendChild(buildTeamPanel(proxy, "a", { onDirty: commit, opponent: opponentTeam }));
   renderOrdresChemistryGauge();
   renderOrdresTacticalKnowledgeGauge(proxy);
+  renderOrdresStatus();
+  updateOrdresSectionTabs();
 }
 
 // Bouton "✅ Valider les ordres" (retour utilisateur, 2026-09 : "une fois que
@@ -18406,6 +18724,8 @@ async function validateOrdresImpl() {
       saveMyTeam();
     }
     setFeedback("Ordres enregistrés.", "ok");
+    ordresDirty = false;
+    renderOrdresStatus();
     // Retour utilisateur (2026-09 : "obligé encore de refresh complet la
     // page sinon ça ne se modifie pas [...] il faudrait qu'une fois qu'on
     // ait validé les ordres, on revienne sur la page calendrier directement
@@ -18497,6 +18817,8 @@ async function validateOrdresImpl() {
       teamA.stagePlanForRound(round, patch, competition);
     }
     setFeedback("Ordres enregistrés.", "ok");
+    ordresDirty = false;
+    renderOrdresStatus();
     // Retour utilisateur (2026-09, voir le commentaire jumeau dans la
     // branche solo ci-dessus) : ne ramène à la page Calendrier QU'après un
     // succès confirmé par le serveur (jamais depuis le bloc catch
@@ -24113,24 +24435,112 @@ function startNewSeason() {
 //     CHAQUE changement — c'est lui qui décide où va la modification
 //     (ordres en direct + sauvegarde immédiate, ou plan préparé pour une
 //     journée future via Team.stagePlanForRound, voir renderOrdresGrid).
+// ---------------------------------------------------------------------
+// Page Ordres, refonte 2026-09-25 (retour utilisateur sur la maquette
+// canevas "Ordres — Lyon vs Rennes" : "code tout ça stp"). Libellés et
+// lignes d'aide affichés par buildTeamPanel.
+//
+// TACTIC_VALUE_LABELS : texte affiché pour certaines valeurs internes,
+// quand le libellé voulu à l'écran diffère de la clé utilisée en interne
+// (sauvegardes, moteur de match). Ne change QUE l'affichage : la valeur
+// enregistrée reste la clé brute ("Classique", "confirmée"...), donc
+// team[field]/POST_DEFENSES[...] etc. ne voient jamais ce libellé.
+// "Confirmé" (masculin, "niveau confirmé") : retour utilisateur 2026-09-25,
+// la clé interne "confirmée" est inchangée pour ne casser aucune sauvegarde.
+//
+// ORDRES_FIELD_HELP : une ligne d'aide par valeur, affichée sous chaque
+// réglage et mise à jour à chaque changement. Écrite d'après les vraies
+// tables du moteur (RHYTHMS, DEFENSES, SCREEN_DEFENSES, HELP_DEFENSE_LEVELS,
+// POST_DEFENSES, CLOSEOUT_STYLES, OFF_REBOUND_STYLES, ENDGAME_MANAGEMENT) et
+// le Guide, pas d'après la maquette (dont les textes étaient des
+// suppositions). À garder cohérent si ces tables changent un jour.
+// ---------------------------------------------------------------------
+const TACTIC_VALUE_LABELS = { "Classique": "Aucune consigne", "débutant": "Débutant", "confirmée": "Confirmé" };
+const ORDRES_FIELD_HELP = {
+  rhythm: {
+    "Lent": "Moins de possessions, moins de fatigue et moins de pertes de balle.",
+    "Normal": "Rythme standard.",
+    "Rapide": "Plus de possessions, mais plus de fatigue et de pertes de balle.",
+  },
+  tacticalTier: {
+    "débutant": "Consignes avancées sur leur valeur standard. Ne change rien au moteur.",
+    "confirmée": "Affiche les consignes avancées ci-dessous. Ne change rien au moteur tant qu'elles restent sur leur valeur standard.",
+  },
+  endgameManagement: {
+    "Standard": "Comportement habituel en fin de match.",
+    "Adaptatif": "Lève le pied dès 10 points d'écart à partir du 3e quart-temps, accélère dans les 5 dernières minutes d'un match serré.",
+  },
+  offRebStyle: {
+    "Prudent": "Moins de rebonds offensifs tentés, aucun risque de contre-attaque.",
+    "Normal": "Réglage neutre.",
+    "Agressif": "Plus de secondes chances, mais l'adversaire contre-attaque plus vite en cas d'échec.",
+  },
+  defense: {
+    "Homme à homme": "Réglage neutre.",
+    "Zone press": "Pression sur les extérieurs adverses, au prix d'une grosse fatigue.",
+    "Box and one": "Cible le meilleur joueur adverse pour le freiner.",
+    "Zone extérieure": "Renforce la défense à l'extérieur, au détriment de la raquette.",
+    "Zone intérieure": "Protège la raquette, au détriment des tirs extérieurs.",
+  },
+  screenDefense: {
+    "Aucune consigne": "Réglage neutre.",
+    "Au-dessus": "Gêne le porteur, mais le joueur qui plonge vers le panier est plus libre.",
+    "En-dessous": "Gêne davantage le porteur, mais laisse plus de tirs ouverts aux shooteurs.",
+    "Switch": "Les défenseurs échangent : duels plus imprévisibles.",
+    "Prise à deux": "Étouffe le porteur et provoque des pertes de balle, mais libère un partenaire.",
+  },
+  helpDefense: {
+    "Faible": "Tireurs extérieurs mieux gardés, raquette moins protégée.",
+    "Moyenne": "Réglage neutre.",
+    "Forte": "Raquette mieux protégée, mais plus de tirs à 3 points ouverts.",
+  },
+  postDefense: {
+    "Classique": "Réglage neutre.",
+    "Pousser vers le fond": "Meilleure défense près du panier, un peu plus de fautes.",
+    "Pousser vers le centre": "Défense près du panier renforcée, mais passes plus faciles.",
+    "Prise à deux": "Grosse défense près du panier et pertes de balle provoquées, mais passes ouvertes.",
+  },
+  closeoutStyle: {
+    "Contrôlé": "Réglage neutre.",
+    "Agressif": "Conteste mieux les tirs extérieurs, mais ouvre la pénétration.",
+  },
+};
+
+// Construit le panneau de MON équipe sur la page Ordres (teamA en direct,
+// ou le proxy de plan d'une journée future, voir planProxyForRound) : deux
+// colonnes de cartes, tactiques à gauche (Attaque, Défense, Adversaires),
+// cinq de départ et rotation à droite (voir renderLineupEditor). Refonte
+// 2026-09-25 (voir le commentaire de TACTIC_VALUE_LABELS ci-dessus) :
+//   - priorités offensives en puces numérotées 1-2-3 (ordre de sélection)
+//     au-dessus des autres options, grisées une fois le quota de 3 atteint.
+//     Ce sont toujours de vraies cases à cocher (masquées visuellement) :
+//     accessibles au clavier, et `.tactic-chip input` reste le point
+//     d'entrée des tests existants (end_to_end_test.js). Le moteur les pèse
+//     À PARTS ÉGALES (Team.offenseProfile) : le numéro sert à montrer
+//     l'ordre choisi, seul le n°1 a un rôle à part (graphique des systèmes
+//     joués dans le scouting adverse, voir tacticsUsed côté moteur).
+//   - réglages à 2 ou 3 valeurs en boutons segmentés (Rythme, Niveau
+//     tactique, Fin de match, Rebond offensif, Aide défensive, Close-out),
+//     les autres restent des <select> ; chacun a sa ligne d'aide.
+//   - le bloc "confirmé" est désormais réparti sur trois cartes : tous ses
+//     morceaux portent la classe .tactic-confirmee-block et sont
+//     masqués/révélés ensemble (celui de la carte Défense garde l'id
+//     historique #ordresConfirmedBlock, utilisé par le tutoriel).
+//   - "Surveiller" : "Choisir un joueur…" puis "Consigne" (désactivée tant
+//     qu'aucun joueur n'est choisi). La consigne vise toujours un POSTE côté
+//     moteur (watchAssignments {position, focus}, inchangé) : le menu affiche
+//     le titulaire actuel de l'adversaire à ce poste quand on le connaît
+//     (opts.opponent), et la carte précise que la consigne suit le poste.
+// `opts.editable` / `opts.onDirty` : même contrat qu'avant la refonte.
 function buildTeamPanel(team, side, opts = {}) {
   const editable = opts.editable !== false;
   const onDirty = opts.onDirty || (() => { updateLockAvailability(); saveMyTeam(); });
+  const opponent = opts.opponent || null;
+  const isMain = side === "a";
 
   const panel = document.createElement("div");
-  panel.className = "team-panel " + side;
+  panel.className = "team-panel ordres-panel " + side;
 
-  const h = document.createElement("h2");
-  h.textContent = team.name;
-  panel.appendChild(h);
-
-  // Retour utilisateur (2026-09) : "il faudrait qqch de moins scrollant [...]
-  // plus de donnée à droite et gauche, pas tout au milieu [...] le terrain et
-  // les joueurs à choisir en remplaçant pourrait être à droite" — deux
-  // colonnes au lieu d'un long panneau vertical unique : réglages tactiques
-  // à gauche (priorités/défense/rythme/tactique confirmée), terrain +
-  // feuille de match à droite (voir `hint`/renderLineupEditor plus bas).
-  // Repli en 1 colonne sous ~900px (voir .prep-columns dans le CSS).
   const columnsWrap = document.createElement("div");
   columnsWrap.className = "prep-columns";
   panel.appendChild(columnsWrap);
@@ -24141,201 +24551,254 @@ function buildTeamPanel(team, side, opts = {}) {
   rightCol.className = "prep-col prep-col-right";
   columnsWrap.appendChild(rightCol);
 
-  leftCol.appendChild(makeLabel("3 priorités offensives"));
-  const tGrid = document.createElement("div");
-  tGrid.className = "tactic-grid";
-  // id stable (retour utilisateur, 2026-09 : tutoriel d'accueil qui ouvre
-  // vraiment cette page et éclaire chaque élément un par un, voir
-  // TOUR_STEPS/startRealTour plus bas) : identifie ce bloc sans dépendre
-  // d'une classe CSS qui pourrait un jour être réutilisée ailleurs.
-  if (side === "a") tGrid.id = "ordresOffTacticsGrid";
-  OFF_TACTICS_LIST.forEach(t => {
-    const chip = document.createElement("label");
-    chip.className = "tactic-chip" + (team.offensivePriorities.includes(t) ? " checked" : "");
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = team.offensivePriorities.includes(t);
-    if (!editable) cb.disabled = true;
-    cb.addEventListener("change", () => {
-      if (cb.checked) {
-        if (team.offensivePriorities.length >= 3) { cb.checked = false; return; }
-        team.offensivePriorities.push(t);
-      } else {
-        team.offensivePriorities = team.offensivePriorities.filter(x => x !== t);
-      }
-      chip.classList.toggle("checked", cb.checked);
-      countEl.textContent = `${team.offensivePriorities.length} / 3 sélectionnées`;
-      if (editable) onDirty();
-      // Uniquement les ordres EN DIRECT de teamA — jamais un plan préparé à
-      // l'avance pour une autre journée (voir planProxyForRound), qui n'a
-      // pas de contrepartie /api/tactics et reste purement local.
-      if (editable && team === teamA) syncTacticsToServer({ offensivePriorities: team.offensivePriorities });
-    });
-    chip.appendChild(cb);
-    chip.appendChild(document.createTextNode(t));
-    tGrid.appendChild(chip);
-  });
-  leftCol.appendChild(tGrid);
-  const countEl = document.createElement("div");
-  countEl.className = "tactic-count";
-  countEl.textContent = `${team.offensivePriorities.length} / 3 sélectionnées`;
-  leftCol.appendChild(countEl);
-
-  leftCol.appendChild(makeLabel("Défense"));
-  const defSel = document.createElement("select");
-  if (side === "a") defSel.id = "ordresDefenseSelect"; // voir commentaire id sur tGrid plus haut
-  DEF_LIST.forEach(d => {
-    const o = document.createElement("option");
-    o.value = d; o.textContent = d; if (d === team.defense) o.selected = true;
-    defSel.appendChild(o);
-  });
-  defSel.disabled = !editable;
-  defSel.addEventListener("change", () => {
-    team.defense = defSel.value;
-    if (editable) onDirty();
-    if (editable && team === teamA) syncTacticsToServer({ defense: team.defense });
-  });
-  leftCol.appendChild(defSel);
-
-  leftCol.appendChild(makeLabel("Rythme"));
-  const rhSel = document.createElement("select");
-  if (side === "a") rhSel.id = "ordresRhythmSelect"; // voir commentaire id sur tGrid plus haut
-  RHYTHM_LIST.forEach(r => {
-    const o = document.createElement("option");
-    o.value = r; o.textContent = r; if (r === team.rhythm) o.selected = true;
-    rhSel.appendChild(o);
-  });
-  rhSel.disabled = !editable;
-  rhSel.addEventListener("change", () => {
-    team.rhythm = rhSel.value;
-    if (editable) onDirty();
-    if (editable && team === teamA) syncTacticsToServer({ rhythm: team.rhythm });
-  });
-  leftCol.appendChild(rhSel);
-
-  // ---------------------------------------------------------------------
-  // Tactique confirmée (retour utilisateur, 2026-09 : les nouveaux réglages
-  // définis avec le nouveau moteur de jeu ce matin même — voir le grand
-  // commentaire au-dessus de SCREEN_DEFENSES). "Complexité de l'interface
-  // Ordres" (réponse explicite du joueur à la question posée) : le sélecteur
-  // "débutant"/"confirmée" ne contrôle QUE ce qui s'affiche ici, jamais le
-  // moteur lui-même (qui applique toujours les mêmes formules, y compris
-  // pour une équipe "débutant" restée à ses valeurs standard delta-zéro).
-  // `endgameManagement` est délibérément affiché AVANT le sélecteur de
-  // niveau et en dehors du bloc "confirmée" : il est indépendant du tier
-  // (voir ENDGAME_MANAGEMENT côté moteur), donc toujours visible, même en
-  // mode débutant.
-  // ---------------------------------------------------------------------
   const syncField = (field, value) => { if (editable && team === teamA) syncTacticsToServer({ [field]: value }); };
 
-  // Petit utilitaire local pour les selects "tactique confirmée" ci-dessous
-  // (tous du même gabarit : label + select + onDirty + sync serveur) — évite
-  // de répéter 6 fois le même code que pour Défense/Rythme ci-dessus.
-  const addTacticSelect = (labelText, list, field, onChangeExtra) => {
-    leftCol.appendChild(makeLabel(labelText));
+  // --- petits gabarits locaux (carte, champ, aide, segmenté, select) ---
+  const makeCard = (id, title, aside) => {
+    const section = document.createElement("section");
+    section.className = "ordres-card";
+    if (isMain && id) section.id = id;
+    const head = document.createElement("div");
+    head.className = "ordres-card-head";
+    const h = document.createElement("h2");
+    h.className = "ordres-card-title";
+    h.textContent = title;
+    head.appendChild(h);
+    if (aside) head.appendChild(aside);
+    section.appendChild(head);
+    return section;
+  };
+  const makeAside = (text) => {
+    const s = document.createElement("span");
+    s.className = "ordres-card-aside";
+    if (text) s.textContent = text;
+    return s;
+  };
+  const addField = (parent, labelText, extraClass) => {
+    const f = document.createElement("div");
+    f.className = "ordres-field" + (extraClass ? " " + extraClass : "");
+    f.appendChild(makeLabel(labelText));
+    parent.appendChild(f);
+    return f;
+  };
+  const addHelp = (fieldEl, field) => {
+    const help = document.createElement("div");
+    help.className = "field-help";
+    const update = () => { help.textContent = (ORDRES_FIELD_HELP[field] || {})[team[field]] || ""; };
+    update();
+    fieldEl.appendChild(help);
+    return update;
+  };
+  const addSegmented = (parent, labelText, list, field, o = {}) => {
+    const f = addField(parent, labelText, o.className);
+    const group = document.createElement("div");
+    group.className = "seg-control";
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-label", labelText);
+    if (isMain && o.id) group.id = o.id;
+    let updateHelp = () => {};
+    const btns = list.map(v => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "seg-btn" + (o.btnClass ? " " + o.btnClass : "");
+      b.dataset.value = v;
+      b.textContent = TACTIC_VALUE_LABELS[v] || v;
+      b.disabled = !editable;
+      group.appendChild(b);
+      return b;
+    });
+    const paint = () => btns.forEach(b => {
+      const on = b.dataset.value === team[field];
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    btns.forEach(b => b.addEventListener("click", () => {
+      if (!editable || team[field] === b.dataset.value) return;
+      team[field] = b.dataset.value;
+      paint();
+      updateHelp();
+      if (o.onChange) o.onChange(team[field]);
+      onDirty();
+      syncField(field, team[field]);
+    }));
+    paint();
+    f.appendChild(group);
+    updateHelp = addHelp(f, field);
+    return { field: f, group };
+  };
+  const addSelectField = (parent, labelText, list, field, o = {}) => {
+    const f = addField(parent, labelText, o.className);
     const sel = document.createElement("select");
+    if (isMain && o.id) sel.id = o.id;
     list.forEach(v => {
-      const o = document.createElement("option");
-      o.value = v; o.textContent = v; if (v === team[field]) o.selected = true;
-      sel.appendChild(o);
+      const opt = document.createElement("option");
+      opt.value = v; opt.textContent = TACTIC_VALUE_LABELS[v] || v;
+      if (v === team[field]) opt.selected = true;
+      sel.appendChild(opt);
     });
     sel.disabled = !editable;
+    let updateHelp = () => {};
     sel.addEventListener("change", () => {
       team[field] = sel.value;
+      updateHelp();
       if (editable) onDirty();
       syncField(field, team[field]);
-      if (onChangeExtra) onChangeExtra();
     });
-    leftCol.appendChild(sel);
-    return sel;
+    f.appendChild(sel);
+    updateHelp = addHelp(f, field);
+    return { field: f, sel };
   };
 
-  const endgameSel = addTacticSelect("Gestion de fin de match", ENDGAME_MANAGEMENT_LIST, "endgameManagement");
-  if (side === "a") endgameSel.id = "ordresEndgameSelect"; // voir commentaire id sur tGrid plus haut
-
-  const tierRow = document.createElement("div");
-  tierRow.className = "tier-toggle";
-  if (side === "a") tierRow.id = "ordresTierToggle"; // voir commentaire id sur tGrid plus haut
-  const tierBtnDebutant = document.createElement("button");
-  tierBtnDebutant.type = "button";
-  tierBtnDebutant.className = "tier-toggle-btn" + (team.tacticalTier === "débutant" ? " active" : "");
-  tierBtnDebutant.textContent = "Débutant";
-  const tierBtnConfirmee = document.createElement("button");
-  tierBtnConfirmee.type = "button";
-  tierBtnConfirmee.className = "tier-toggle-btn" + (team.tacticalTier === "confirmée" ? " active" : "");
-  tierBtnConfirmee.textContent = "Confirmée";
-  if (!editable) { tierBtnDebutant.disabled = true; tierBtnConfirmee.disabled = true; }
-  const setTier = (tier) => {
-    team.tacticalTier = tier;
-    tierBtnDebutant.classList.toggle("active", tier === "débutant");
-    tierBtnConfirmee.classList.toggle("active", tier === "confirmée");
-    confirmedBlock.classList.toggle("hidden", tier !== "confirmée");
-    if (editable) onDirty();
-    syncField("tacticalTier", tier);
+  // Tous les morceaux "confirmé" (voir le commentaire de la fonction).
+  const confirmedEls = [];
+  const applyTierVisibility = () => {
+    const show = team.tacticalTier === "confirmée";
+    confirmedEls.forEach(el => el.classList.toggle("hidden", !show));
+    updateOrdresSectionTabs();
   };
-  tierBtnDebutant.addEventListener("click", () => setTier("débutant"));
-  tierBtnConfirmee.addEventListener("click", () => setTier("confirmée"));
-  tierRow.appendChild(tierBtnDebutant);
-  tierRow.appendChild(tierBtnConfirmee);
-  leftCol.appendChild(makeLabel("Niveau tactique"));
-  leftCol.appendChild(tierRow);
 
+  // =================== ATTAQUE ===================
+  const prioCount = makeAside();
+  const attaque = makeCard("ordresCardAttaque", "Attaque", prioCount);
+  leftCol.appendChild(attaque);
+
+  const prioField = addField(attaque, "Priorités offensives", "ordres-field-wide");
+  const prioIntro = document.createElement("div");
+  prioIntro.className = "field-help";
+  prioIntro.textContent = "Choisis 3 axes de jeu. Ils pèsent autant l'un que l'autre dans le match ; le n°1 est celui que retiennent les rapports de scouting adverses.";
+  prioField.appendChild(prioIntro);
+  const tWrap = document.createElement("div");
+  tWrap.className = "tactic-picker";
+  // id stable (tutoriel d'accueil, voir TOUR_STEPS/startRealTour).
+  if (isMain) tWrap.id = "ordresOffTacticsGrid";
+  prioField.appendChild(tWrap);
+
+  const renderPriorities = () => {
+    tWrap.innerHTML = "";
+    const chosen = team.offensivePriorities;
+    const full = chosen.length >= 3;
+    prioCount.innerHTML = `Priorités <b>${chosen.length} / 3</b>`;
+    const makeChip = (t, rank) => {
+      const checked = rank != null;
+      const chip = document.createElement("label");
+      chip.className = "tactic-chip" + (checked ? " checked" : "") + (!checked && full ? " is-full" : "");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = checked;
+      cb.disabled = !editable || (!checked && full);
+      cb.setAttribute("aria-label", checked ? `Priorité ${rank} : ${t} (retirer)` : `Ajouter ${t}`);
+      cb.addEventListener("change", () => {
+        if (cb.checked) {
+          if (team.offensivePriorities.length >= 3) { cb.checked = false; return; }
+          team.offensivePriorities.push(t);
+        } else {
+          team.offensivePriorities = team.offensivePriorities.filter(x => x !== t);
+        }
+        renderPriorities();
+        if (editable) onDirty();
+        // Uniquement les ordres EN DIRECT de teamA — jamais un plan préparé
+        // à l'avance (voir planProxyForRound), qui passe par onDirty/commit.
+        if (editable && team === teamA) syncTacticsToServer({ offensivePriorities: team.offensivePriorities });
+      });
+      chip.appendChild(cb);
+      if (checked) {
+        const rankEl = document.createElement("span");
+        rankEl.className = "tactic-rank";
+        rankEl.setAttribute("aria-hidden", "true");
+        rankEl.textContent = String(rank);
+        chip.appendChild(rankEl);
+      }
+      const name = document.createElement("span");
+      name.className = "tactic-name";
+      name.textContent = t;
+      chip.appendChild(name);
+      return chip;
+    };
+    const selectedRow = document.createElement("div");
+    selectedRow.className = "tactic-selected";
+    for (let i = 0; i < 3; i++) {
+      const t = chosen[i];
+      if (t) { selectedRow.appendChild(makeChip(t, i + 1)); continue; }
+      const slot = document.createElement("div");
+      slot.className = "tactic-slot-empty";
+      slot.innerHTML = `<span class="tactic-rank" aria-hidden="true">${i + 1}</span><span>À choisir</span>`;
+      selectedRow.appendChild(slot);
+    }
+    const pool = document.createElement("div");
+    pool.className = "tactic-grid tactic-pool";
+    OFF_TACTICS_LIST.filter(t => !chosen.includes(t)).forEach(t => pool.appendChild(makeChip(t, null)));
+    const note = document.createElement("div");
+    note.className = "field-help tactic-count";
+    note.textContent = full
+      ? "Clique une priorité numérotée pour la retirer et en choisir une autre."
+      : `Encore ${3 - chosen.length} à choisir.`;
+    tWrap.appendChild(selectedRow);
+    tWrap.appendChild(pool);
+    tWrap.appendChild(note);
+  };
+  renderPriorities();
+
+  const attaqueGrid = document.createElement("div");
+  attaqueGrid.className = "ordres-settings-grid ordres-divided";
+  attaque.appendChild(attaqueGrid);
+  addSegmented(attaqueGrid, "Rythme", RHYTHM_LIST, "rhythm", { id: "ordresRhythmSelect" });
+  // "Niveau tactique" : ne contrôle QUE ce qui s'affiche (voir le grand
+  // commentaire au-dessus de SCREEN_DEFENSES) — le moteur applique toujours
+  // les mêmes formules, une équipe "débutant" reste aux valeurs standard.
+  addSegmented(attaqueGrid, "Niveau tactique", ["débutant", "confirmée"], "tacticalTier", {
+    id: "ordresTierToggle", btnClass: "tier-toggle-btn", onChange: applyTierVisibility,
+  });
+  // Indépendant du niveau tactique (voir ENDGAME_MANAGEMENT) : toujours visible.
+  addSegmented(attaqueGrid, "Gestion de fin de match", ENDGAME_MANAGEMENT_LIST, "endgameManagement", { id: "ordresEndgameSelect" });
+  const offReb = addSegmented(attaqueGrid, "Rebond offensif", OFF_REBOUND_STYLE_LIST, "offRebStyle", {
+    id: "ordresOffRebSelect", className: "tactic-confirmee-block",
+  });
+  confirmedEls.push(offReb.field);
+
+  // =================== DÉFENSE ===================
+  const defense = makeCard("ordresCardDefense", "Défense");
+  leftCol.appendChild(defense);
+  const defenseGrid = document.createElement("div");
+  defenseGrid.className = "ordres-settings-grid";
+  defense.appendChild(defenseGrid);
+  addSelectField(defenseGrid, "Système défensif", DEF_LIST, "defense", { id: "ordresDefenseSelect" });
   const confirmedBlock = document.createElement("div");
-  confirmedBlock.className = "tactic-confirmee-block" + (team.tacticalTier === "confirmée" ? "" : " hidden");
-  if (side === "a") confirmedBlock.id = "ordresConfirmedBlock"; // voir commentaire id sur tGrid plus haut
-  leftCol.appendChild(confirmedBlock);
+  confirmedBlock.className = "tactic-confirmee-block ordres-settings-grid ordres-settings-grid-nested";
+  if (isMain) confirmedBlock.id = "ordresConfirmedBlock";
+  defense.appendChild(confirmedBlock);
+  confirmedEls.push(confirmedBlock);
+  addSelectField(confirmedBlock, "Défense sur écrans", SCREEN_DEFENSE_LIST, "screenDefense", { id: "ordresScreenDefenseSelect" });
+  addSegmented(confirmedBlock, "Aide défensive", HELP_DEFENSE_LIST, "helpDefense", { id: "ordresHelpDefenseSelect" });
+  addSelectField(confirmedBlock, "Gestion du post-up", POST_DEFENSE_LIST, "postDefense", { id: "ordresPostDefenseSelect" });
+  addSegmented(confirmedBlock, "Close-out", CLOSEOUT_STYLE_LIST, "closeoutStyle", { id: "ordresCloseoutSelect" });
 
-  // Même gabarit que addTacticSelect ci-dessus, mais ajoute au conteneur
-  // `parent` passé explicitement (confirmedBlock) plutôt qu'à `panel`
-  // directement, pour que ces réglages se masquent/révèlent avec le bloc.
-  // Libellé affiché pour certaines valeurs internes de tactique, quand le
-  // texte voulu à l'écran diffère de la clé utilisée en interne (sauvegardes,
-  // moteur de match). Ne change QUE l'affichage : o.value reste la clé brute,
-  // donc team[field]/POST_DEFENSES[...] etc. ne voient jamais ce libellé.
-  const TACTIC_VALUE_LABELS = { "Classique": "Aucune consigne" };
-  const addTacticSelectIn = (parent, labelText, list, field, onChangeExtra) => {
-    const lbl = makeLabel(labelText);
-    parent.appendChild(lbl);
-    const sel = document.createElement("select");
-    list.forEach(v => {
-      const o = document.createElement("option");
-      o.value = v; o.textContent = TACTIC_VALUE_LABELS[v] || v; if (v === team[field]) o.selected = true;
-      sel.appendChild(o);
-    });
-    sel.disabled = !editable;
-    sel.addEventListener("change", () => {
-      team[field] = sel.value;
-      if (editable) onDirty();
-      syncField(field, team[field]);
-      if (onChangeExtra) onChangeExtra();
-    });
-    parent.appendChild(sel);
-    return sel;
-  };
-
-  const screenSel = addTacticSelectIn(confirmedBlock, "Défense sur écrans", SCREEN_DEFENSE_LIST, "screenDefense");
-  const helpSel = addTacticSelectIn(confirmedBlock, "Aide défensive", HELP_DEFENSE_LIST, "helpDefense");
-  const postSel = addTacticSelectIn(confirmedBlock, "Gestion du post-up", POST_DEFENSE_LIST, "postDefense");
-  const closeoutSel = addTacticSelectIn(confirmedBlock, "Close-out", CLOSEOUT_STYLE_LIST, "closeoutStyle");
-  const offRebSel = addTacticSelectIn(confirmedBlock, "Rebond offensif", OFF_REBOUND_STYLE_LIST, "offRebStyle");
-  // ids stables (voir commentaire id sur tGrid plus haut) : un par réglage,
-  // pour que le tutoriel éclaire chacun individuellement.
-  if (side === "a") {
-    screenSel.id = "ordresScreenDefenseSelect";
-    helpSel.id = "ordresHelpDefenseSelect";
-    postSel.id = "ordresPostDefenseSelect";
-    closeoutSel.id = "ordresCloseoutSelect";
-    offRebSel.id = "ordresOffRebSelect";
-  }
-
-  // --- Surveiller : jusqu'à MAX_WATCH_ASSIGNMENTS affectations {position,
-  // focus}, chacune sur sa propre ligne (poste + focus), avec une option
-  // "Aucune" pour libérer le créneau. Tableau vide par défaut = aucun effet
-  // (voir WATCH_FOCUS_EFFECTS côté moteur). ---
-  confirmedBlock.appendChild(makeLabel("Surveiller (joueurs adverses ciblés)"));
+  // =================== ADVERSAIRES (Surveiller) ===================
+  // Jusqu'à MAX_WATCH_ASSIGNMENTS affectations {position, focus} (moteur
+  // inchangé, voir WATCH_FOCUS_EFFECTS) : tableau vide = aucun effet.
+  const watchCount = makeAside();
+  const adversaires = makeCard("ordresCardAdversaires",
+    opponent && opponent.name ? `Joueurs de ${opponent.name} à surveiller` : "Joueurs adverses à surveiller", watchCount);
+  adversaires.classList.add("tactic-confirmee-block");
+  leftCol.appendChild(adversaires);
+  confirmedEls.push(adversaires);
+  const watchIntro = document.createElement("div");
+  watchIntro.className = "field-help";
+  watchIntro.textContent = `Cible jusqu'à ${MAX_WATCH_ASSIGNMENTS} joueurs adverses et donne une consigne pour chacun. La consigne suit le poste : si l'adversaire change de titulaire, elle s'applique au nouveau.`;
+  adversaires.appendChild(watchIntro);
   const watchWrap = document.createElement("div");
   watchWrap.className = "watch-assignments";
-  if (side === "a") watchWrap.id = "ordresWatchAssignments"; // voir commentaire id sur tGrid plus haut
+  if (isMain) watchWrap.id = "ordresWatchAssignments";
+  adversaires.appendChild(watchWrap);
+  // Titulaire actuel de l'adversaire à un poste, si on le connaît (sinon
+  // simple nom du poste) — purement informatif, voir le commentaire de la
+  // fonction.
+  const opponentStarterName = (pos) => {
+    if (!opponent || !opponent.lineup || !opponent.lineup.starters || !Array.isArray(opponent.players)) return null;
+    const id = opponent.lineup.starters[pos];
+    const p = id != null ? opponent.players.find(x => x.id === id) : null;
+    return p ? p.name : null;
+  };
+  const paintWatchCount = () => { watchCount.innerHTML = `<b>${team.watchAssignments.length} / ${MAX_WATCH_ASSIGNMENTS}</b>`; };
   const renderWatchRows = () => {
     watchWrap.innerHTML = "";
     for (let i = 0; i < MAX_WATCH_ASSIGNMENTS; i++) {
@@ -24343,20 +24806,30 @@ function buildTeamPanel(team, side, opts = {}) {
       const row = document.createElement("div");
       row.className = "watch-row";
 
+      const num = document.createElement("span");
+      num.className = "watch-num";
+      num.setAttribute("aria-hidden", "true");
+      num.textContent = String(i + 1);
+      row.appendChild(num);
+
       const posSel = document.createElement("select");
+      posSel.setAttribute("aria-label", `Joueur surveillé ${i + 1}`);
       const posNone = document.createElement("option");
-      posNone.value = ""; posNone.textContent = "Poste ?";
+      posNone.value = ""; posNone.textContent = "Choisir un joueur…";
       posSel.appendChild(posNone);
       POSITIONS.forEach(pos => {
         const o = document.createElement("option");
-        o.value = pos; o.textContent = POS_SHORT[pos];
+        o.value = pos;
+        const starter = opponentStarterName(pos);
+        o.textContent = starter ? `${starter} (${POS_SHORT[pos]})` : pos;
         if (current && current.position === pos) o.selected = true;
         posSel.appendChild(o);
       });
 
       const focusSel = document.createElement("select");
+      focusSel.setAttribute("aria-label", `Consigne ${i + 1}`);
       const focusNone = document.createElement("option");
-      focusNone.value = ""; focusNone.textContent = "Focus ?";
+      focusNone.value = ""; focusNone.textContent = "Consigne";
       focusSel.appendChild(focusNone);
       WATCH_FOCUS_LIST.forEach(f => {
         const o = document.createElement("option");
@@ -24365,17 +24838,24 @@ function buildTeamPanel(team, side, opts = {}) {
         focusSel.appendChild(o);
       });
 
+      const paintRow = () => {
+        focusSel.disabled = !editable || !posSel.value;
+        row.classList.toggle("is-empty", !posSel.value);
+      };
       const commitRow = () => {
+        if (!posSel.value) focusSel.value = "";
+        paintRow();
         const pos = posSel.value, focus = focusSel.value;
         const next = team.watchAssignments.slice(0, MAX_WATCH_ASSIGNMENTS);
         if (pos && focus) next[i] = { position: pos, focus };
         else next[i] = undefined;
         team.watchAssignments = next.filter(Boolean);
+        paintWatchCount();
         if (editable) onDirty();
         syncField("watchAssignments", team.watchAssignments);
       };
       posSel.disabled = !editable;
-      focusSel.disabled = !editable;
+      paintRow();
       posSel.addEventListener("change", commitRow);
       focusSel.addEventListener("change", commitRow);
 
@@ -24385,22 +24865,29 @@ function buildTeamPanel(team, side, opts = {}) {
     }
   };
   renderWatchRows();
-  confirmedBlock.appendChild(watchWrap);
+  paintWatchCount();
 
+  // =================== CINQ + ROTATION (colonne de droite) ===================
   const hint = document.createElement("div");
-  if (side === "a") hint.id = "ordresLineupEditor"; // voir commentaire id sur tGrid plus haut
+  if (isMain) hint.id = "ordresLineupEditor"; // tutoriel d'accueil
   if (editable) {
     hint.className = "lineup-editor";
     renderLineupEditor(team, hint, { onDirty });
   } else {
-    hint.className = "roster-hint readonly";
-    hint.innerHTML = "<b>Titulaires&nbsp;:</b> " + POSITIONS.map(pos => {
+    hint.className = "lineup-editor readonly";
+    const card = makeCard("ordresCardCinq", "Cinq de départ", makeAside("Verrouillé"));
+    const txt = document.createElement("div");
+    txt.className = "roster-hint readonly";
+    txt.innerHTML = "<b>Titulaires&nbsp;:</b> " + POSITIONS.map(pos => {
       const p = team.players.find(x => x.id === team.lineup.starters[pos]);
-      return p ? `${p.name} (${POS_SHORT[pos]}, ${Math.round(p.overall())})` : `${POS_SHORT[pos]} –`;
+      return p ? `${escapeHtml(p.name)} (${POS_SHORT[pos]}, ${Math.round(p.overall())})` : `${POS_SHORT[pos]} –`;
     }).join(" · ");
+    card.appendChild(txt);
+    hint.appendChild(card);
   }
   rightCol.appendChild(hint);
 
+  applyTierVisibility();
   return panel;
 }
 
@@ -24424,14 +24911,36 @@ function resolvePlayerIdFromSelectValue(team, value) {
 // `opts.onDirty` : voir buildTeamPanel — même contrat, propagé ici pour que
 // l'éditeur de feuille de match fonctionne identiquement que `team` soit
 // teamA (ordres en direct) ou un proxy de plan pour une journée future.
+// Refonte 2026-09-25 : deux cartes, "Cinq de départ" (#ordresCardCinq,
+// terrain) et "Rotation" (tableau des remplaçants, même structure <table>
+// qu'avant : .lt-pos/.lt-starter/.lineup-backup-chip/.lineup-add-select,
+// sur lesquels s'appuient lineup_test.js et cup_ordres_planning_test.js).
+// Alerte (maquette, retour utilisateur 2026-09-25) quand un remplaçant est
+// listé à plusieurs postes : c'est AUTORISÉ par le moteur, mais une fois
+// entré à l'un il n'est plus disponible pour l'autre (Team.backupsForSlot
+// exclut les joueurs déjà sur le terrain), d'où un simple avertissement,
+// jamais un blocage. Pas de numérotation "ordre d'entrée" des remplaçants
+// (idée de la maquette) : le moteur fait entrer le remplaçant le MOINS
+// FATIGUÉ du poste (backupsForSlot trie par fatigue), l'ordre de la liste
+// n'a donc aucun effet et un numéro aurait induit en erreur.
 function renderLineupEditor(team, container, opts = {}) {
   const onDirty = opts.onDirty || (() => { updateLockAvailability(); saveMyTeam(); });
   container.innerHTML = "";
   const starterIds = new Set(POSITIONS.map(pos => team.lineup.starters[pos]).filter(Boolean));
   const byOverall = team.players.slice().sort((a, b) => b.overall() - a.overall());
   const rerender = () => { onDirty(); renderLineupEditor(team, container, opts); };
+  const makeCard = (id, title, asideText) => {
+    const section = document.createElement("section");
+    section.className = "ordres-card";
+    if (id) section.id = id;
+    section.innerHTML = `<div class="ordres-card-head"><h2 class="ordres-card-title">${escapeHtml(title)}</h2>${asideText ? `<span class="ordres-card-aside">${escapeHtml(asideText)}</span>` : ""}</div>`;
+    return section;
+  };
 
-  // --- Schéma de terrain : les 5 titulaires, positionnés spatialement ---
+  // --- Carte "Cinq de départ" : les 5 titulaires, positionnés sur le terrain ---
+  const missing = POSITIONS.filter(pos => !team.lineup.starters[pos]).length;
+  const cinqCard = makeCard("ordresCardCinq", "Cinq de départ",
+    missing ? `${missing} poste${missing > 1 ? "s" : ""} à pourvoir` : "Un titulaire par poste");
   const courtWrap = document.createElement("div");
   courtWrap.className = "lineup-court-wrap";
   const court = document.createElement("div");
@@ -24452,6 +24961,7 @@ function renderLineupEditor(team, container, opts = {}) {
     marker.appendChild(label);
 
     const sel = document.createElement("select");
+    sel.setAttribute("aria-label", `Titulaire ${pos}`);
     const noneOpt = document.createElement("option");
     noneOpt.value = "";
     noneOpt.textContent = "Titulaire ?";
@@ -24466,9 +24976,9 @@ function renderLineupEditor(team, container, opts = {}) {
     });
     sel.addEventListener("change", () => {
       team.setStarter(pos, resolvePlayerIdFromSelectValue(team, sel.value));
-      // Uniquement les ordres EN DIRECT de teamA — voir syncLineupToServer
-      // ci-dessus ; un plan préparé à l'avance (proxy, voir
-      // planProxyForRound) n'a pas de contrepartie /api/lineup.
+      // Uniquement les ordres EN DIRECT de teamA — voir syncLineupToServer ;
+      // un plan préparé à l'avance (proxy, voir planProxyForRound) n'a pas
+      // de contrepartie /api/lineup.
       if (team === teamA) syncLineupToServer();
       rerender();
     });
@@ -24476,15 +24986,30 @@ function renderLineupEditor(team, container, opts = {}) {
     court.appendChild(marker);
   });
   courtWrap.appendChild(court);
-  container.appendChild(courtWrap);
+  cinqCard.appendChild(courtWrap);
+  container.appendChild(cinqCard);
 
-  // --- Tableau des remplaçants (un même joueur peut couvrir plusieurs
-  // postes) + ligne récapitulative des réservistes ---
+  // --- Carte "Rotation" : remplaçants par poste (un même joueur peut
+  // couvrir plusieurs postes) + ligne récapitulative des réservistes ---
+  const rotationCard = makeCard("ordresCardRotation", "Rotation", "Le remplaçant le plus frais du poste entre en premier");
+  const eligibleBackups = team.players.filter(p => !starterIds.has(p.id));
+  const backupPositionsOf = (p) => (team.lineup.backupPositions[p.id] || []).filter(pos => POSITIONS.includes(pos));
+  const multi = eligibleBackups.filter(p => backupPositionsOf(p).length >= 2);
+  if (multi.length) {
+    const alertEl = document.createElement("div");
+    alertEl.className = "ordres-alert";
+    alertEl.setAttribute("role", "note");
+    const names = multi.map(p => `<b>${escapeHtml(p.name)}</b>`);
+    const who = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`;
+    const verb = names.length === 1 ? "est listé" : "sont listés";
+    alertEl.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span>${who} ${verb} à plusieurs postes. Une fois entré à l'un, un remplaçant ne peut plus couvrir l'autre.</span>`;
+    rotationCard.appendChild(alertEl);
+  }
+
   const table = document.createElement("table");
   table.className = "lineup-table";
   table.innerHTML = "<thead><tr><th>Poste</th><th>Titulaire</th><th>Remplaçants</th></tr></thead>";
   const tbody = document.createElement("tbody");
-  const eligibleBackups = team.players.filter(p => !starterIds.has(p.id));
 
   POSITIONS.forEach(pos => {
     const starterId = team.lineup.starters[pos];
@@ -24504,7 +25029,7 @@ function renderLineupEditor(team, container, opts = {}) {
     const backupsCell = document.createElement("td");
     const backupsList = document.createElement("div");
     backupsList.className = "lineup-backups-list";
-    const assignedBackups = eligibleBackups.filter(p => (team.lineup.backupPositions[p.id] || []).includes(pos));
+    const assignedBackups = eligibleBackups.filter(p => backupPositionsOf(p).includes(pos));
     if (!assignedBackups.length) {
       const none = document.createElement("span");
       none.className = "lineup-backup-empty";
@@ -24512,14 +25037,17 @@ function renderLineupEditor(team, container, opts = {}) {
       backupsList.appendChild(none);
     }
     assignedBackups.forEach(p => {
+      const others = backupPositionsOf(p).filter(x => x !== pos);
       const chip = document.createElement("span");
-      chip.className = "lineup-backup-chip checked";
+      chip.className = "lineup-backup-chip checked" + (others.length ? " multi" : "");
+      if (others.length) chip.title = `Aussi remplaçant : ${others.map(x => POS_SHORT[x]).join(", ")}`;
       chip.appendChild(document.createTextNode(`${p.name} (${POS_SHORT[p.position]})`));
       const rm = document.createElement("button");
       rm.type = "button";
       rm.className = "lineup-chip-remove";
       rm.textContent = "×";
       rm.title = "Retirer";
+      rm.setAttribute("aria-label", `Retirer ${p.name} des remplaçants ${pos}`);
       rm.addEventListener("click", () => {
         team.toggleBackupPosition(p.id, pos, false);
         if (team === teamA) syncLineupToServer();
@@ -24528,15 +25056,15 @@ function renderLineupEditor(team, container, opts = {}) {
       chip.appendChild(rm);
       backupsList.appendChild(chip);
     });
-    backupsCell.appendChild(backupsList);
 
     const addable = eligibleBackups.filter(p => !assignedBackups.includes(p));
     if (addable.length) {
       const addSel = document.createElement("select");
       addSel.className = "lineup-add-select";
+      addSel.setAttribute("aria-label", `Ajouter un remplaçant ${pos}`);
       const opt0 = document.createElement("option");
       opt0.value = "";
-      opt0.textContent = "+ Ajouter un remplaçant…";
+      opt0.textContent = "+ Ajouter";
       addSel.appendChild(opt0);
       addable.forEach(p => {
         const o = document.createElement("option");
@@ -24550,22 +25078,24 @@ function renderLineupEditor(team, container, opts = {}) {
         if (team === teamA) syncLineupToServer();
         rerender();
       });
-      backupsCell.appendChild(addSel);
+      backupsList.appendChild(addSel);
     }
+    backupsCell.appendChild(backupsList);
     row.appendChild(backupsCell);
 
     tbody.appendChild(row);
   });
   table.appendChild(tbody);
-  container.appendChild(table);
+  rotationCard.appendChild(table);
 
-  const reserves = eligibleBackups.filter(p => !(team.lineup.backupPositions[p.id] || []).length);
+  const reserves = eligibleBackups.filter(p => !backupPositionsOf(p).length);
   if (reserves.length) {
     const reservesLine = document.createElement("div");
     reservesLine.className = "lineup-reserves";
     reservesLine.innerHTML = `<b>Réservistes&nbsp;:</b> ${reserves.map(p => `${escapeHtml(p.name)} (${POS_SHORT[p.position]})`).join(" · ")}`;
-    container.appendChild(reservesLine);
+    rotationCard.appendChild(reservesLine);
   }
+  container.appendChild(rotationCard);
 }
 
 function makeLabel(text) {
@@ -31404,12 +31934,12 @@ const TOUR_STEPS = [
 
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresRoundDateTime",
     title: "Pour quel match ?",
-    text: "En haut de la page, le prochain match auquel s'appliquent les ordres réglés ci-dessous. Si plusieurs journées sont à venir, un menu déroulant apparaît juste ici pour préparer une AUTRE journée à l'avance.",
+    text: "En haut de la page, le prochain match auquel s'appliquent les ordres réglés ci-dessous. Si plusieurs journées sont à venir, le menu déroulant juste en dessous permet de préparer une AUTRE journée à l'avance.",
     tip: "Une journée déjà préparée à l'avance affiche un petit indicateur ● dans ce menu.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresLineupEditor", wide: true,
     title: "La feuille de match",
-    text: "Placez vos 5 titulaires directement sur le terrain, un par poste. Complétez vos remplaçants dans le tableau juste en dessous, un même remplaçant peut couvrir plusieurs postes à la fois.",
+    text: "Placez vos 5 titulaires directement sur le terrain, un par poste. Complétez vos remplaçants dans la carte Rotation juste en dessous, un même remplaçant peut couvrir plusieurs postes à la fois.",
     tip: "Sans cinq titulaires complet aligné, le match est perdu par forfait (20-0) : vérifiez toujours vos disponibilités avant la date du match.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresOffTacticsGrid", wide: true,
@@ -31431,9 +31961,9 @@ const TOUR_STEPS = [
     text: "Ce réglage est toujours visible, quel que soit votre niveau tactique. En Adaptatif, l'équipe qui mène large lève le pied dès le 3e quart-temps, et le rythme s'accélère légèrement dans les 5 dernières minutes d'un match serré.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresTierToggle",
-    title: "Débutant ou confirmée",
-    text: "Ce bouton ne change RIEN au moteur du match : il choisit juste combien de réglages tactiques s'affichent à l'écran. Une équipe restée en Débutant joue avec des valeurs standards, exactement comme si elle avait activé le mode confirmée sans rien changer.",
-    tip: "Passez en Confirmée dès que vous voulez affiner un point précis (par exemple neutraliser le pivot adverse) : les réglages suivants apparaissent alors.",
+    title: "Débutant ou confirmé",
+    text: "Ce bouton ne change RIEN au moteur du match : il choisit juste combien de réglages tactiques s'affichent à l'écran. Une équipe restée en Débutant joue avec des valeurs standards, exactement comme si elle avait activé le mode confirmé sans rien changer.",
+    tip: "Passez en Confirmé dès que vous voulez affiner un point précis (par exemple neutraliser le pivot adverse) : les réglages suivants apparaissent alors.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresScreenDefenseSelect",
     title: "Défense sur écrans",
@@ -31622,8 +32152,12 @@ function tourClearSpotlight() {
 // serveur, donc rien à annuler côté données, juste l'affichage.
 function tourShowPage(pageKey) {
   const key = pageKey || "dashboard";
-  const confirmedBlock = document.getElementById("ordresConfirmedBlock");
-  if (confirmedBlock && teamA.tacticalTier !== "confirmée") confirmedBlock.classList.add("hidden");
+  // Tous les morceaux "confirmé" (voir buildTeamPanel), pas seulement
+  // #ordresConfirmedBlock, depuis la refonte Ordres du 2026-09-25.
+  if (teamA.tacticalTier !== "confirmée") {
+    document.querySelectorAll("#prepGrid .tactic-confirmee-block").forEach(el => el.classList.add("hidden"));
+    updateOrdresSectionTabs();
+  }
   const tabKey = TOUR_PAGE_KEY_TO_TAB[key];
   if (TAB_HANDLERS[tabKey]) TAB_HANDLERS[tabKey]();
 }
@@ -31687,6 +32221,12 @@ function tourRender() {
     if (step.reveal) {
       const block = document.getElementById(step.reveal);
       if (block) block.classList.remove("hidden");
+      // Refonte Ordres (2026-09-25) : les réglages "confirmé" sont répartis
+      // sur trois cartes (voir buildTeamPanel), tous révélés ensemble.
+      if (step.reveal === "ordresConfirmedBlock") {
+        document.querySelectorAll("#prepGrid .tactic-confirmee-block").forEach(el => el.classList.remove("hidden"));
+        updateOrdresSectionTabs();
+      }
     }
 
     const scrim = document.createElement("div");
@@ -31944,6 +32484,25 @@ function goToOrdresTab(round, competition) {
 
 document.getElementById("regenBtn").addEventListener("click", showStandings);
 document.getElementById("ordresValidateBtn").addEventListener("click", validateOrdres);
+// Onglets + hauteur du topbar de la barre d'action Ordres (voir renderOrdresStatus).
+{
+  const tabs = document.getElementById("ordresSectionTabs");
+  if (tabs) {
+    tabs.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-ordres-jump]");
+      if (!btn) return;
+      const target = document.getElementById(btn.dataset.ordresJump);
+      if (!target) return;
+      tabs.querySelectorAll("[data-ordres-jump]").forEach(b => b.classList.toggle("active", b === btn));
+      syncTopbarHeightVar();
+      // jsdom (tests) n'implémente pas scrollIntoView.
+      if (typeof target.scrollIntoView === "function") target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+  syncTopbarHeightVar();
+  window.addEventListener("resize", syncTopbarHeightVar);
+}
+
 document.getElementById("closeStandingsBtn").addEventListener("click", hideStandings);
 document.getElementById("newSeasonBtn").addEventListener("click", startNewSeason);
 

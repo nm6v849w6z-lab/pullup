@@ -20,6 +20,51 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de la page Ordres
+  (maquette canevas "Ordres — Lyon vs Rennes")** — retour utilisateur :
+  "code tout ça stp". Fait :
+  - barre d'action FIXE sous le topbar (#ordresActionBar, --topbar-h mesuré
+    en JS) : titre, onglets Attaque/Défense/Cinq & rotation/Adversaires
+    (défilement vers la carte ; Adversaires masqué en Débutant), état
+    (#ordresStatus : "Modifications à valider" / "Ordres validés" /
+    "Ordres préparés" / "pas encore validés" / "Compositions
+    verrouillées" — PAS "non enregistrées" : l'autosave existe toujours),
+    bouton "Valider les ordres" (même validateOrdres qu'avant).
+  - carte match : badge Journée N / 18 (ou tour de Coupe), date/heure du
+    coup d'envoi, lieu, "Lyon vs Rennes" (domicile à gauche), sélecteur
+    "Préparer le match", jauges + ligne d'aide tirée du moteur.
+  - buildTeamPanel réécrit en cartes : Attaque (priorités en puces
+    numérotées 1-2-3, pool grisé à 3/3 ; Rythme, Niveau tactique, Fin de
+    match, Rebond offensif en boutons segmentés), Défense (Système, écrans,
+    post-up en select ; Aide défensive, Close-out segmentés), Adversaires
+    (Choisir un joueur… = titulaire adverse au poste, stocké par POSTE
+    comme avant ; Consigne désactivée sans joueur). Ligne d'aide par valeur
+    (ORDRES_FIELD_HELP, écrite d'après les tables du moteur).
+    Réglages "confirmé" répartis sur 3 cartes (.tactic-confirmee-block,
+    #ordresConfirmedBlock gardé pour le tutoriel, reveal adapté).
+  - renderLineupEditor : cartes Cinq de départ + Rotation (même <table>),
+    alerte "listé à plusieurs postes" + puces surlignées. Pas de numéro
+    "ordre d'entrée" : le moteur fait entrer le remplaçant le MOINS fatigué
+    (backupsForSlot), l'ordre de la liste n'a aucun effet.
+  - "Confirmée" → "Confirmé" (affichage seulement, clé interne inchangée) ;
+    textes du Guide et du tutoriel mis à jour.
+  - "Réinitialiser ma carrière" retiré de la page Ordres → dernière entrée
+    du Guide (#guideResetCareerEntry, toujours masquée avec un jeton).
+  - "07:57" de la maquette NON retiré : c'est l'heure du coup d'envoi
+    programmé (scheduledAt), pas l'heure système ; en solo le calendrier
+    démarre à l'heure de création de la partie, d'où des heures "bizarres".
+  Fichiers : moteurbasket3.html, confirmed_tactics_test.js (segmentés,
+  "Confirmé", 3 blocs confirmés), ordres_redesign_test.js (nouveau).
+  Tests : suite complète en sandbox verte hors flaky connus ; tests Ordres
+  verts sur le Mac. Fusion 3 voies faite sur le Mac (une autre session
+  modifiait moteurbasket3.html en même temps : Staff/Effectif/direct) —
+  sauvegarde de la version d'avant fusion : "Claude outputs/
+  ordres_theirs_backup.html" (+ ordres_base/mine/merged.html, fichiers de
+  travail à supprimer).
+  Commit PARTIEL (seules les lignes de la refonte Ordres de
+  moteurbasket3.html ; les modifs non committées du tableau de bord, cf.
+  livrer_dashboard_fixes.sh, restent dans l'arbre de travail), tests Ordres
+  verts sur exactement le contenu committé. Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur : refonte visuelle d'après la
   maquette "Hoop Manager – Fiche joueur (refonte)"** (canvas Design claude.ai
   ARSMXuUcCC5E18MEHPC12i) — retour utilisateur : "code la page joueur stp".

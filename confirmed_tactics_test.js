@@ -107,13 +107,23 @@ const tierBtns = [...doc.querySelectorAll("#prepGrid .tier-toggle-btn")];
 console.log("\nBoutons de niveau tactique trouvés :", tierBtns.map(b => b.textContent.trim() + (b.classList.contains("active") ? " (actif)" : "")));
 if (tierBtns.length !== 2) throw new Error(`❌ Le panneau Ordres devrait avoir exactement 2 boutons de niveau tactique (Débutant/Confirmée), obtenu ${tierBtns.length}.`);
 const debutantBtn = tierBtns.find(b => b.textContent.trim() === "Débutant");
-const confirmeeBtn = tierBtns.find(b => b.textContent.trim() === "Confirmée");
-if (!debutantBtn || !confirmeeBtn) throw new Error("❌ Les boutons 'Débutant' et 'Confirmée' devraient tous les deux être présents.");
+// Libellé "Confirmé" (retour utilisateur 2026-09-25, refonte Ordres) : la
+// valeur interne reste "confirmée" (teamA.tacticalTier, sauvegardes).
+const confirmeeBtn = tierBtns.find(b => b.textContent.trim() === "Confirmé");
+if (!debutantBtn || !confirmeeBtn) throw new Error("❌ Les boutons 'Débutant' et 'Confirmé' devraient tous les deux être présents.");
 if (!debutantBtn.classList.contains("active")) throw new Error("❌ Le bouton 'Débutant' devrait être actif par défaut (teamA.tacticalTier === 'débutant').");
 
-const confirmedBlock = doc.querySelector("#prepGrid .tactic-confirmee-block");
+// Refonte Ordres (2026-09-25) : les réglages "confirmé" sont répartis sur
+// trois cartes (Rebond offensif dans Attaque, #ordresConfirmedBlock dans
+// Défense, carte Adversaires), tous portant .tactic-confirmee-block et
+// masqués/révélés ensemble.
+const confirmedBlock = doc.getElementById("ordresConfirmedBlock");
+const confirmedParts = [...doc.querySelectorAll("#prepGrid .tactic-confirmee-block")];
 if (!confirmedBlock) throw new Error("❌ Le bloc des réglages confirmée devrait exister dans le DOM (masqué, pas absent).");
-if (!confirmedBlock.classList.contains("hidden")) throw new Error("❌ En mode 'débutant', le bloc des réglages confirmée devrait être masqué.");
+if (confirmedParts.length !== 3) throw new Error(`❌ Attendu 3 morceaux .tactic-confirmee-block (Attaque, Défense, Adversaires), obtenu ${confirmedParts.length}.`);
+if (!confirmedParts.every(el => el.classList.contains("hidden"))) throw new Error("❌ En mode 'débutant', tous les réglages confirmée devraient être masqués.");
+const advTab = doc.querySelector('#ordresSectionTabs [data-ordres-jump="ordresCardAdversaires"]');
+if (!advTab || !advTab.classList.contains("hidden")) throw new Error("❌ En mode 'débutant', l'onglet 'Adversaires' de la barre d'action devrait être masqué.");
 console.log("✅ En mode 'débutant' : bloc de réglages avancés présent mais masqué, bouton 'Débutant' actif.");
 
 const endgameLabels = [...doc.querySelectorAll("#prepGrid .field-label")].map(l => l.textContent);
@@ -138,7 +148,8 @@ if (win.eval("teamA.tacticalTier") !== "confirmée") throw new Error("❌ Clique
 if (!confirmeeBtn.classList.contains("active") || debutantBtn.classList.contains("active")) {
   throw new Error("❌ Après le clic, seul le bouton 'Confirmée' devrait être actif.");
 }
-if (confirmedBlock.classList.contains("hidden")) throw new Error("❌ Après avoir basculé sur 'Confirmée', le bloc des réglages avancés devrait être révélé.");
+if (confirmedParts.some(el => el.classList.contains("hidden"))) throw new Error("❌ Après avoir basculé sur 'Confirmé', tous les réglages avancés devraient être révélés.");
+if (advTab.classList.contains("hidden")) throw new Error("❌ Après avoir basculé sur 'Confirmé', l'onglet 'Adversaires' devrait réapparaître.");
 console.log("✅ Basculer sur 'Confirmée' révèle le bloc de réglages avancés et met à jour teamA.tacticalTier.");
 
 // ---------------------------------------------------------------------
@@ -153,15 +164,26 @@ const confirmedSelectFields = [
   ["Close-out", "closeoutStyle", "Agressif"],
   ["Rebond offensif", "offRebStyle", "Agressif"],
 ];
+// Refonte Ordres (2026-09-25) : les réglages à 2-3 valeurs (Aide défensive,
+// Close-out, Rebond offensif) sont des boutons segmentés (.seg-btn avec
+// data-value = valeur interne), les autres restent des <select>.
 confirmedSelectFields.forEach(([labelText, field, targetValue]) => {
-  const label = [...confirmedBlock.querySelectorAll(".field-label")].find(l => l.textContent === labelText);
-  if (!label) throw new Error(`❌ Le champ "${labelText}" devrait être présent dans le bloc confirmée.`);
-  const sel = label.nextElementSibling;
-  if (!sel || sel.tagName !== "SELECT") throw new Error(`❌ Le champ "${labelText}" devrait être suivi d'un <select>.`);
-  const hasTarget = [...sel.options].some(o => o.value === targetValue);
-  if (!hasTarget) throw new Error(`❌ Le select "${labelText}" devrait proposer l'option "${targetValue}".`);
-  sel.value = targetValue;
-  sel.dispatchEvent(new win.Event("change"));
+  const label = confirmedParts.flatMap(el => [...el.querySelectorAll(".field-label")]).find(l => l.textContent === labelText);
+  if (!label) throw new Error(`❌ Le champ "${labelText}" devrait être présent dans les réglages confirmée.`);
+  const ctl = label.nextElementSibling;
+  if (ctl && ctl.tagName === "SELECT") {
+    const hasTarget = [...ctl.options].some(o => o.value === targetValue);
+    if (!hasTarget) throw new Error(`❌ Le select "${labelText}" devrait proposer l'option "${targetValue}".`);
+    ctl.value = targetValue;
+    ctl.dispatchEvent(new win.Event("change"));
+  } else if (ctl && ctl.classList.contains("seg-control")) {
+    const btn = [...ctl.querySelectorAll(".seg-btn")].find(b => b.dataset.value === targetValue);
+    if (!btn) throw new Error(`❌ Les boutons "${labelText}" devraient proposer la valeur "${targetValue}".`);
+    btn.dispatchEvent(new win.Event("click", { bubbles: true }));
+    if (btn.getAttribute("aria-pressed") !== "true") throw new Error(`❌ Le bouton "${targetValue}" de "${labelText}" devrait être marqué actif (aria-pressed).`);
+  } else {
+    throw new Error(`❌ Le champ "${labelText}" devrait être suivi d'un <select> ou de boutons segmentés.`);
+  }
   const applied = win.eval(`teamA.${field}`);
   if (applied !== targetValue) throw new Error(`❌ Changer "${labelText}" vers "${targetValue}" aurait dû mettre à jour teamA.${field}, obtenu "${applied}".`);
 });
@@ -279,8 +301,8 @@ console.log("✅ Tous les réglages de tactique confirmée (y compris watchAssig
 // re-cliquer), preuve que le rendu initial lit bien team.tacticalTier et pas
 // seulement les clics.
 [...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
-const confirmeeBtn2 = [...doc2.querySelectorAll("#prepGrid .tier-toggle-btn")].find(b => b.textContent.trim() === "Confirmée");
-const confirmedBlock2 = doc2.querySelector("#prepGrid .tactic-confirmee-block");
+const confirmeeBtn2 = [...doc2.querySelectorAll("#prepGrid .tier-toggle-btn")].find(b => b.textContent.trim() === "Confirmé");
+const confirmedBlock2 = doc2.getElementById("ordresConfirmedBlock");
 console.log("Après rechargement — bouton 'Confirmée' actif :", confirmeeBtn2.classList.contains("active"), "| bloc révélé :", !confirmedBlock2.classList.contains("hidden"));
 if (!confirmeeBtn2.classList.contains("active")) throw new Error("❌ Après rechargement avec tacticalTier='confirmée', le bouton 'Confirmée' devrait être actif au premier rendu.");
 if (confirmedBlock2.classList.contains("hidden")) throw new Error("❌ Après rechargement avec tacticalTier='confirmée', le bloc de réglages avancés devrait être révélé au premier rendu.");
@@ -320,7 +342,7 @@ win3.eval("teamA.tacticalTier = 'débutant';");
 win3.eval(`selectOrdresRound(${futureRound});`);
 
 const liveTierBefore = win3.eval("teamA.tacticalTier");
-const futureConfirmeeBtn = [...doc3.querySelectorAll("#prepGrid .tier-toggle-btn")].find(b => b.textContent.trim() === "Confirmée");
+const futureConfirmeeBtn = [...doc3.querySelectorAll("#prepGrid .tier-toggle-btn")].find(b => b.textContent.trim() === "Confirmé");
 if (!futureConfirmeeBtn) throw new Error("❌ Le panneau de préparation d'une journée future devrait aussi avoir le sélecteur de niveau tactique.");
 futureConfirmeeBtn.dispatchEvent(new win3.Event("click", { bubbles: true }));
 
