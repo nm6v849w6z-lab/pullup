@@ -1648,7 +1648,9 @@
   .pdp2-form-text{display:flex; flex-direction:column; gap:2px;}
   .pdp2-form-lbl{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim);}
   .pdp2-form .condition-badge{background:none; padding:0; font-size:20px; font-weight:800; letter-spacing:0;}
-  .pdp2-kv{display:flex; justify-content:space-between; align-items:center; font-size:14px; color:var(--ink-dim);}
+  .pdp2-kv{display:flex; justify-content:space-between; align-items:center; font-size:15px; color:var(--ink-dim);}
+  /* Retour utilisateur (2026-09-25) : "mets Motivé en un peu plus gros". */
+  .pdp2-kv .motivation-badge{font-size:14px; padding:4px 12px;}
   .pdp2-quote{margin:0; font-size:12.5px; line-height:1.45; font-style:italic; color:var(--ink-dim);}
 
   .pdp2-rating{flex:0 0 190px; display:flex; flex-direction:column; align-items:center; justify-content:space-between; gap:12px;}
@@ -1682,7 +1684,9 @@
   .pdp2-shot-track span{display:block; height:100%; border-radius:999px;}
   .pdp2-shot-pct{width:48px; text-align:right; font-size:17px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;}
   .pdp2-shot-made{width:56px; text-align:right; font-size:12.5px; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
-  .pdp2-foot{display:flex; gap:24px; flex-wrap:wrap; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); font-size:13.5px; color:var(--ink-dim);}
+  .pdp2-foot{display:flex; gap:24px; flex-wrap:wrap; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); font-size:16px; color:var(--ink-dim);}
+  /* Retour utilisateur (2026-09-25) : Contres/Pertes/Fautes/Minutes "un peu plus gros, ça paraît perdu". */
+  .pdp2-foot b{font-size:18px; font-weight:800; margin-left:4px;}
   .pdp2-foot b{color:var(--ink);}
 
   .pdp2-head--attrs{align-items:flex-start;}
@@ -1715,7 +1719,10 @@
   .pdp2-bar span{display:block; height:100%; border-radius:999px;}
   .pdp2 .pdp-attr-value{min-width:26px; font-size:16px; font-variant-numeric:tabular-nums;}
   .pdp2 .pdp-attr-row .pdp-pill.locked{min-width:26px; text-align:center;}
-  .pdp2 .pdp-scouting{margin-top:18px;}
+  /* Rapport de scouting mis en évidence (retour utilisateur, 2026-09-25 :
+     "un peu plus gros [...] c'est un peu perdu") : encadré teinté accent. */
+  .pdp2 .pdp-scouting{margin-top:20px; padding:14px 18px; border:1px solid rgba(240,162,60,.35); border-left-width:1px; border-radius:12px; background:rgba(240,162,60,.08); font-size:15px; line-height:1.5; color:var(--ink);}
+  .pdp2 .pdp-scouting b{color:var(--amber); font-weight:800;}
 
   .pdp2-spark{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--ink-dim);}
   .pdp2 table.pdp-games{font-size:14px;}
@@ -20606,11 +20613,9 @@ function renderPlayerDetail(teamIdx, playerId) {
       `</div>`;
   };
   html += `<section class="pdp2-card">`;
-  html += `<div class="pdp2-head pdp2-head--attrs"><h3>Caractéristiques</h3>` +
-    `<div class="pdp2-legend" aria-label="Barème des caractéristiques">` +
-    `<div class="pdp2-legend-bar"><span class="r"></span><span class="o"></span><span class="w"></span><span class="g"></span></div>` +
-    `<div class="pdp2-legend-lbl"><span>0–20 <b class="attr-tier-red">Faible</b></span><span>21–50 <b class="attr-tier-orange">Moyen</b></span><span>51–80 <b class="attr-tier-white">Bon</b></span><span>81+ <b class="attr-tier-green">Élite</b></span></div>` +
-    `</div></div>`;
+  // Légende du barème retirée (retour utilisateur, 2026-09-25 : "enlève la
+  // légende, ça n'apporte rien").
+  html += `<div class="pdp2-head"><h3>Caractéristiques</h3></div>`;
   html += `<div class="pdp-attr-grid">` +
     attrBlockHtml("Fondamentaux", FUNDAMENTAL_ATTRS, true) +
     attrBlockHtml("Physique", PHYSICAL_ATTRS, false) +

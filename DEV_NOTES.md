@@ -20,6 +20,16 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur : retouches après la
+  refonte** — retours utilisateur : "mets Motivé en un peu plus gros",
+  Contres/Pertes/Fautes/Minutes "un peu plus gros, ça paraît perdu",
+  "enlève la légende, ça n'apporte rien" (barème de Caractéristiques),
+  rapport de scouting "un peu plus gros [...] plus en évidence".
+  Fichier : moteurbasket3.html (renderPlayerDetail, CSS .pdp2-kv,
+  .pdp2-foot, .pdp2 .pdp-scouting). Statut : code fait, tests fiche joueur
+  verts, capture Playwright OK.
+  Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Entraînement,
   carte Collectif allégée** — retour utilisateur (capture) : "c'est pas
   très beau d'avoir 2 jauges dans collectif [...] et la brique prend trop
