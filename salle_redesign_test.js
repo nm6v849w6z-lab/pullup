@@ -12,7 +12,9 @@
 //   2. l'aperçu EN DIRECT de la billetterie : faire glisser un curseur
 //      (évènement "input") met à jour la recette affichée SANS enregistrer
 //      le prix ; le relâcher ("change") ou cliquer +/− l'enregistre ;
-//   3. le repère "prix idéal" = prix le plus élevé gardant un confort >= 95%
+//   3. le repère "prix idéal" = prix qui maximise la recette du match, sous
+//      la zone rouge (retour utilisateur 2026-09-25 : "le prix idéal c'est 26
+//      alors que tu annonces 17") ; plus de cases −/+ ni de notion de confort
 //      (vrai modèle ticketPriceComfortFactor/moraleForgiveness) ;
 //   4. le graphique d'affluence (une barre par match + la prévision) et la
 //      liste repliée à 3 lignes (les 10 restent dans le DOM) ;
@@ -68,7 +70,9 @@ if (!kpis.includes(fr(expectedAvg))) throw new Error(`❌ L'affluence moyenne r�
 if (!kpis.includes("Dernière recette")) throw new Error("❌ Avec au moins un match joué, la dernière recette devrait être affichée.");
 if (doc.querySelectorAll("#salleHeroKpis .sl-kpi-cats span").length !== 3) throw new Error("❌ Le taux de remplissage par catégorie (3 pastilles) devrait accompagner l'affluence moyenne.");
 if (!txt("#salleHeroRing").includes("remplissage")) throw new Error("❌ Avec des matchs joués, l'anneau devrait montrer le remplissage RÉEL.");
-console.log("✅ Bandeau avec historique : moyenne réelle, détail par catégorie, dernière recette.");
+if (doc.querySelector("#salleHero #salleHeroKpis")) throw new Error("❌ Les chiffres clés ne devraient plus être sur l'image de la salle (retour utilisateur : 'ça allégera un peu').");
+if (!doc.querySelector(".sl-side #salleHeroKpis + #attendanceHistoryHolder")) throw new Error("❌ Les chiffres clés devraient être juste au-dessus de la carte Affluence.");
+console.log("✅ Chiffres clés (hors image, au-dessus de l'affluence) : moyenne réelle, détail par catégorie, dernière recette.");
 
 // --- 2. Billetterie : aperçu en direct puis validation ---
 const rows = doc.querySelectorAll("#seatCategoriesHolder .seat-category-card");
@@ -90,24 +94,31 @@ range.dispatchEvent(new win.Event("change"));
 await flush(dom);
 if (win.eval("teamA.ticketPrices.gradins") !== gradinsBefore + 10) throw new Error("❌ Relâcher le curseur (change) devrait enregistrer le prix.");
 if (readRawSave(savePath).team.ticketPrices.gradins !== gradinsBefore + 10) throw new Error("❌ Le nouveau prix devrait être sauvegardé.");
-doc.querySelector('[data-seat-key="loge"] [data-step="1"]').click();
+if (doc.querySelector("#seatCategoriesHolder [data-step]")) throw new Error("❌ Les cases −/+ ont été retirées (retour utilisateur).");
+if (/confort/i.test(txt("#seatCategoriesHolder"))) throw new Error("❌ Plus aucune notion de confort ne devrait être affichée dans la billetterie.");
+const logeRange = doc.getElementById("ticketPriceRange_loge");
+logeRange.value = String(savedBefore.team.ticketPrices.loge + 1);
+logeRange.dispatchEvent(new win.Event("change"));
 await flush(dom);
 const logeAfter = win.eval("teamA.ticketPrices.loge");
-if (logeAfter !== savedBefore.team.ticketPrices.loge + 1) throw new Error(`❌ Le bouton + devrait monter le prix des loges d'1 €, obtenu ${logeAfter}.`);
-if (doc.getElementById("ticketPriceRange_loge").value !== String(logeAfter)) throw new Error("❌ Le curseur devrait suivre le bouton +.");
-console.log("✅ Aperçu en direct au glisser, enregistrement au relâcher et via les boutons +/−.");
+if (logeAfter !== savedBefore.team.ticketPrices.loge + 1) throw new Error(`❌ Le curseur des loges devrait enregistrer +1 €, obtenu ${logeAfter}.`);
+if (txt("#seatPrice_loge") !== `${logeAfter} €`) throw new Error("❌ Le prix affiché en texte devrait suivre le curseur.");
+console.log("✅ Aperçu en direct au glisser, enregistrement au relâcher, sans cases −/+ ni confort affiché.");
 
 // --- 3. Prix idéal ---
 for (const key of ["gradins", "tribune", "loge"]) {
   const r = win.eval(`(() => { const cat = seatCategoryInfo("${key}"); const z = seatPriceZones(cat); const f = moraleForgiveness(teamA.fanMorale);
-    return { ideal: z.ideal, red: z.red, cIdeal: ticketPriceComfortFactor(z.ideal / f, "${key}"), cAbove: ticketPriceComfortFactor((z.ideal + 1) / f, "${key}"), cRed: ticketPriceComfortFactor(z.red / f, "${key}"), max: cat.maxPrice }; })()`);
-  if (r.cIdeal < 0.95) throw new Error(`❌ ${key} : le prix idéal (${r.ideal} €) devrait garder un confort >= 95%, obtenu ${r.cIdeal}.`);
-  if (r.ideal < r.max && r.cAbove >= 0.95) throw new Error(`❌ ${key} : 1 € au-dessus du prix idéal devrait passer sous 95% de confort (sinon le repère est trop bas).`);
+    let better = null; const rev = p => p * teamA.projectedAttendanceRateAtPrice("${key}", p);
+    for (let p = cat.minPrice; p < z.red; p++) if (rev(p) > rev(z.ideal) + 1e-9) better = p;
+    return { ideal: z.ideal, red: z.red, better, cRed: ticketPriceComfortFactor(z.red / f, "${key}"), max: cat.maxPrice }; })()`);
+  if (r.better !== null) throw new Error(`❌ ${key} : ${r.better} € rapporterait plus que le prix idéal annoncé (${r.ideal} €).`);
+  if (r.red < r.max && r.ideal >= r.red) throw new Error(`❌ ${key} : le prix idéal (${r.ideal} €) ne devrait jamais être dans la zone rouge (${r.red} €).`);
+  console.log(`  ${key} : idéal ${r.ideal} €, zone rouge dès ${r.red} €`);
   if (r.red < r.max && r.cRed >= 0.6) throw new Error(`❌ ${key} : la zone rouge (${r.red} €) devrait commencer sous 60% de confort.`);
   const label = txt(`[data-seat-key="${key}"] .sl-track-ideal-label`);
   if (label !== `idéal ${r.ideal} €`) throw new Error(`❌ ${key} : repère attendu "idéal ${r.ideal} €", obtenu "${label}".`);
 }
-console.log("✅ Repère de prix idéal et zone rouge calés sur le vrai modèle de confort tarifaire.");
+console.log("✅ Prix idéal = recette maximale hors zone rouge, zone rouge calée sur le vrai modèle.");
 
 // --- 4. Graphique + liste repliée ---
 const histLen = win.eval("teamA.attendanceHistory.length");
