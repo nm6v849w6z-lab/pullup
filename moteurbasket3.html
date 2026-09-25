@@ -4360,17 +4360,16 @@
   #effectifSection .eff-general tr.eff-group-row th{height:auto; padding:22px 0 10px 2px; text-align:left; background:transparent; font-weight:600; color:var(--ink); text-transform:none;}
   #effectifSection .eff-general tbody:first-of-type tr.eff-group-row th{padding-top:6px;}
   .eff-group-title{font-size:18px; font-weight:700; margin-right:10px;}
-  /* Largeurs de colonnes fixes (retour utilisateur 2026-09-25 : "il y a un
-     problème de largeur de colonne") : sans ça, le tableau en auto-layout
-     collait Âge/Taille/Salaire les uns aux autres et laissait un grand vide
-     dans Forme. Largeurs en % (Nom compris) ; voir <colgroup> dans
-     renderEffectifSection. */
-  #effectifSection table.eff-general{table-layout:fixed; min-width:1120px;}
-  #effectifSection table.eff-general td{overflow:hidden; text-overflow:ellipsis;}
-  #effectifSection table.eff-general td.eff-td-actions{overflow:visible;}
-  #effectifSection table.eff-general .eff-player{max-width:100%;}
-  #effectifSection table.eff-general .eff-player .player-link{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  #effectifSection table.eff-general th.eff-th-condition, #effectifSection table.eff-general td.eff-td-condition{padding-left:20px;}
+  /* Largeurs de colonnes (retour utilisateur 2026-09-25, 3e essai : "il y a
+     bcp de vide entre potentiel et âge et entre forme et motivation, ce
+     n'est pas harmonieux"). Des largeurs figées (px puis %) devaient prévoir
+     les libellés les plus longs (« Très bon joueur », « Légèrement
+     fatigué ») et laissaient donc du vide quand l'équipe n'en a pas. Ici :
+     chaque colonne se RESSERRE sur son contenu réel (width:1%), avec le
+     même espacement partout, et seule Nom absorbe la place restante. */
+  #effectifSection table.eff-general th, #effectifSection table.eff-general td{width:1%; padding-left:14px; padding-right:14px;}
+  #effectifSection table.eff-general th.eff-th-name, #effectifSection table.eff-general td.eff-td-name{width:auto;}
+  #effectifSection table.eff-general th.eff-th-condition, #effectifSection table.eff-general td.eff-td-condition{padding-left:22px;}
   #effectifSection .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
   #effectifSection .eff-general .eff-group-starters tr.eff-row td{height:58px; background:var(--eff-row);}
   #effectifSection .eff-general .eff-group-starters .eff-player .player-link{font-size:15px;}
@@ -29743,15 +29742,6 @@ function effSortPlayers(players, defaultCmp) {
   });
 }
 
-// Largeurs (%) des colonnes de l'onglet Général (table-layout:fixed, voir CSS
-// .eff-general) + 5 % pour le menu ⋯. En POURCENTAGE, Nom compris : en px
-// avec Nom "au reste", Nom tombait à ~30 px sur un écran moins large (retour
-// utilisateur 2026-09-25 : "la largeur des colonnes ne va pas du tout").
-const EFF_GENERAL_COL_WIDTHS = {
-  name: 16, position: 7, potential: 17, age: 5, height: 6, salary: 8,
-  condition: 17, motivation: 10, evaluation: 9,
-};
-
 function renderEffectifSection() {
   renderEffectifHeader();
   const holder = document.getElementById("rosterContent");
@@ -29805,7 +29795,7 @@ function renderEffectifSection() {
   const colCount = columns.length + 1;
   let html = effectifSubNavHtml() + `<div id="rosterMarketFeedback"></div>`;
   html += `<div class="eff-table-wrap"><table class="roster-table eff-table eff-general">` +
-    `<colgroup>${columns.map(c => `<col class="eff-col-${c.key}"${EFF_GENERAL_COL_WIDTHS[c.key] ? ` style="width:${EFF_GENERAL_COL_WIDTHS[c.key]}%"` : ""}>`).join("")}<col style="width:5%"></colgroup><thead><tr>` +
+    `<thead><tr>` +
     columns.map(c => effHeaderCellHtml(c.key, c.label, { cls: `eff-th-${c.key}` })).join("") +
     `<th class="eff-th-actions"><span class="eff-sr">Actions</span></th></tr></thead>`;
   const defaultCmp = (a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall();
