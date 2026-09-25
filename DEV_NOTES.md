@@ -20,6 +20,27 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Humeur des supporters : refonte d'après la
+  maquette canevas "Hoop Manager — Humeur des supporters"** (canvas Design
+  claude.ai VNq4GkKK3WqbkGDYMGFjnh) — retour utilisateur : "code la page
+  humeur des supporters". Bandeau : anneau 0-100 + libellé en pastille +
+  variation de la semaine | courbe d'évolution sur la saison (reconstruite
+  depuis moraleHistory) + échelle à 5 paliers (seuils de moraleLabel) ; 3
+  cartes (affluence, tolérance tarifaire, objectif du conseil) ; journal
+  groupé par semaine avec total, icônes victoire/défaite/autre. Couleurs :
+  moraleGaugeColor partout (règle du 2026-09-25, pas l'orange fixe de la
+  maquette). Ids historiques conservés (moraleValue, moraleLabelText,
+  moraleGaugeFill, moraleAttendanceEffect, moraleForgivenessEffect,
+  seasonObjectiveValue, moraleHistoryContent). Fichiers :
+  moteurbasket3.html (#humeurSection, CSS .hu-*, renderHumeurSection).
+  Statut : code fait sur le Mac, tests Mac verts (humeur,
+  attr_color_scheme_everywhere, season_objective_client,
+  season_objective_midseason_client, season_objective_endreg_client,
+  tabs, onboarding_tour). Rendu vérifié en capture (bureau + mobile 390px,
+  aperçu : "Claude outputs/humeur_snapshot.html"). Committé seul (commit partiel,
+  les autres chantiers de moteurbasket3.html restent non committés).
+  Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Staff : refonte
   visuelle d'après la maquette "Hoop Manager — page Staff"** (canvas Design
   claude.ai 4xZdYyuiTxzGLbAXPrzf87) — retour utilisateur : "code la page
