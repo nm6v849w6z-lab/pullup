@@ -20,6 +20,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Calendrier :
+  retouches après la refonte** — retours utilisateur (capture en ligne) :
+  "mauvaise gestion de l'espace", "Modifier vos ordres est trop sur le
+  côté" (bouton coupé par le bord du tableau), "Coupe · Quarts c'est
+  moche" (badge sur 2-3 lignes). Colonne Action 170 → 196 px, boutons
+  Ordres/Modifier vos ordres de même largeur (colonne alignée), autres
+  colonnes resserrées ; badge de Coupe court sur une ligne ("Coupe 1/8",
+  "Coupe 1/4", "Coupe 1/2", "Finale"), tour complet en infobulle.
+  Fichiers : moteurbasket3.html (CSS .cal-col-*, .cal-cup-badge,
+  .cal-c-action, calendarRowHtml), calendar_merge_test.js (attend
+  "Coupe 1/8"). Tests Mac verts : calendar_redesign, calendar_merge,
+  calendrier_boxscore, ordres_validated_badge ; rendu vérifié sur maquette
+  statique (Chromium, 1180/1440 px). La refonte elle-même (b027b72) est
+  en ligne. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Ligue : ", N points
   en jeu" retiré ; Moyennes/Totaux (et dépliage des cartes leaders) ne font
   plus sauter la page** — retours utilisateur (capture) : "enlève 24 points

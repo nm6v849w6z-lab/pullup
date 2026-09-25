@@ -93,7 +93,10 @@ const cupRowIdx = rows.findIndex(r => r.textContent.includes("Coupe"));
 if (cupRowIdx === -1) throw new Error("❌ Le tour de coupe du club du joueur devrait apparaître dans la même feuille que le championnat (une ligne 'Coupe').");
 const cupRow = rows[cupRowIdx];
 console.log("Ligne de coupe trouvée :", cupRow.textContent.replace(/\s+/g, " ").trim());
-if (!cupRow.textContent.includes("Huitièmes")) throw new Error("❌ La ligne de coupe devrait afficher le nom du tour ('Huitièmes').");
+// Depuis 2026-09-25 ("Coupe · Quarts c'est moche") : badge court sur une
+// ligne ("Coupe 1/8"), nom complet du tour en infobulle.
+const cupBadge = cupRow.querySelector(".cal-cup-badge");
+if (!cupBadge || cupBadge.textContent !== "Coupe 1/8" || !cupBadge.title.includes("Huitièmes")) throw new Error(`❌ La ligne de coupe devrait afficher "Coupe 1/8" (infobulle "Huitièmes"), obtenu "${cupBadge && cupBadge.textContent}".`);
 if (!cupRow.textContent.includes("88 - 74")) throw new Error("❌ La ligne de coupe devrait afficher le score exact du match (88 - 74).");
 if (!cupRow.classList.contains("result-win")) throw new Error("❌ Une victoire de coupe devrait être stylée comme une victoire (classe 'result-win'), comme au championnat.");
 console.log("✅ Le tour de coupe apparaît bien dans la même feuille que le championnat, avec son tour, son score, et son style de victoire/défaite.");

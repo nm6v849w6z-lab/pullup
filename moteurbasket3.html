@@ -1939,14 +1939,18 @@
   .calendar-table.cal-month tbody tr.cal-row:hover td{background:rgba(255,255,255,.025);}
   .calendar-table.cal-month tr.me td{background:rgba(240,162,60,.07);}
   .calendar-table.cal-month tr.me td:first-child{box-shadow:inset 3px 0 0 var(--amber);}
-  .cal-col-date{width:118px;} .cal-col-round{width:74px;} .cal-col-venue{width:100px;} .cal-col-result{width:116px;} .cal-col-action{width:170px;}
+  /* Largeurs revues (retour utilisateur 2026-09-25, capture : "mauvaise
+     gestion de l'espace", "Modifier vos ordres est trop sur le côté") :
+     colonne Action assez large pour "Modifier vos ordres" (il débordait
+     et était coupé par le bord du tableau), un peu moins de vide entre
+     l'adversaire et le lieu. */
+  .cal-col-date{width:112px;} .cal-col-round{width:84px;} .cal-col-venue{width:92px;} .cal-col-result{width:108px;} .cal-col-action{width:196px;}
   .cal-c-date{white-space:nowrap; padding-left:16px !important;}
   .cal-day{font-weight:600; color:var(--ink);}
   .cal-row[data-status="played"] .cal-day{color:var(--ink-dim);}
-  .cal-cup-badge{white-space:normal;}
   .cal-round{font-weight:700; color:var(--ink-dim); text-decoration:none; font-size:13px;}
   .cal-row.me .cal-round{color:var(--amber);}
-  .cal-cup-badge{display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(57,135,229,.15); color:#8fb9f0;}
+  .cal-cup-badge{display:inline-block; white-space:nowrap; text-decoration:none; font-size:12px; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(57,135,229,.15); color:#8fb9f0;}
   .cal-opp{display:flex; align-items:center; gap:10px; min-width:0;}
   .cal-opp-logo{display:inline-flex; flex:none; width:28px; height:28px;}
   .cal-opp-logo svg, .cal-opp-logo img{width:28px; height:28px; border-radius:50%;}
@@ -1968,6 +1972,9 @@
   .cal-row.me .cal-result-pending{color:var(--amber); font-weight:600;}
   .cal-result-live{color:var(--danger); font-weight:700; font-size:13px;}
   .cal-c-action{white-space:nowrap; text-align:right; padding-right:16px !important;}
+  /* Boutons de même largeur ("Ordres" comme "Modifier vos ordres") : la
+     colonne reste alignée au lieu de former un bord en escalier. */
+  .cal-c-action .calendar-order-btn{width:100%; justify-content:center; box-sizing:border-box;}
   .calendar-order-btn{display:inline-flex; align-items:center; gap:6px; background:transparent; border:1px solid var(--line); color:var(--ink-dim); font:inherit; font-size:12px; font-weight:600; padding:6px 11px; border-radius:8px; cursor:pointer;}
   .calendar-order-btn:hover{border-color:var(--amber); color:var(--amber);}
   .cal-row.me .calendar-order-btn{border-color:var(--amber); color:var(--amber);}
@@ -30400,12 +30407,14 @@ function calendarRowHtml(row) {
     ? `<div class="cal-day">${escapeHtml(formatCalendarDayFr(row.scheduledAt))}</div><div class="sub">${escapeHtml(formatCalendarTimeFr(row.scheduledAt))}</div>`
     : `<div class="cal-day">–</div>`;
 
-  // "J4" pour le championnat (libellé complet en infobulle), "Coupe ·
-  // Huitièmes" pour la Coupe : la colonne "Compétition" (qui répétait
-  // "Championnat" sur chaque ligne) disparaît, le mot "Coupe" reste donc
-  // visible ici pour distinguer ses tours.
+  // "J4" pour le championnat (libellé complet en infobulle), "Coupe 1/8"
+  // pour la Coupe, sur UNE ligne (retour utilisateur 2026-09-25 : "Coupe ·
+  // Quarts c'est moche", le badge passait sur 2-3 lignes) ; tour complet
+  // en infobulle. La colonne "Compétition" a disparu, le mot "Coupe" reste
+  // donc visible ici pour distinguer ses tours.
+  const CUP_SHORT = { "Huitièmes": "1/8", "Quarts": "1/4", "Demies": "1/2" };
   const roundCell = row.competition === "cup"
-    ? `<span class="cal-cup-badge">Coupe · ${escapeHtml(row.label)}</span>`
+    ? `<abbr class="cal-cup-badge" title="Coupe · ${escapeHtml(row.label)}">${row.label === "Finale" ? "Finale" : `Coupe ${escapeHtml(CUP_SHORT[row.label] || row.label)}`}</abbr>`
     : `<abbr class="cal-round" title="${escapeHtml(row.label)}">${escapeHtml(row.shortLabel || row.label)}</abbr>`;
 
   // Nom de l'adversaire toujours cliquable (teamLinkHtml/showTeamDetail),
