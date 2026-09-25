@@ -32,7 +32,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   attr_color_scheme_everywhere, season_objective_endreg,
   milestone_interview_and_mvp). Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Entraînement,
-  retouches 2** — retour utilisateur : retirer du bilan les notes « X (A) :
+  retouches 2** — retour utilisateur : retirer « Groupé par joueur » en
+  tête du bilan, et du bilan les notes « X (A) :
   n'a joué que N min ce cycle… » et la ligne « 1 poste couvert · rendement
   plein, aucune dilution » (la ligne ne s'affiche plus qu'en cas de
   dilution). Fichier : moteurbasket3.html. Reste : `git push`.

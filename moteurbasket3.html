@@ -25969,7 +25969,7 @@ function renderLastTrainingReport() {
   });
   holder.innerHTML = `<section class="tp-card tp-report" aria-labelledby="tpReportTitle">` +
     `<div class="tp-report-head"><div class="tp-report-title"><h3 id="tpReportTitle">Bilan de la semaine dernière</h3>` +
-    `<span class="tp-chip">semaine ${teamA.week - 1}</span></div><span class="tp-sub">Groupé par joueur</span></div>` +
+    `<span class="tp-chip">semaine ${teamA.week - 1}</span></div></div>` +
     `<div class="tp-report-body">${body}</div></section>`;
   holder.querySelectorAll(".tp-rp-toggle").forEach(btn => btn.addEventListener("click", () => {
     const idx = Number(btn.dataset.reportIdx);
