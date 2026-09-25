@@ -5188,7 +5188,7 @@
           <div class="eff-kpi-sep" aria-hidden="true"></div>
           <div class="eff-kpi">
             <div class="eff-kpi-label">Masse salariale</div>
-            <div class="eff-kpi-line"><b class="eff-kpi-num" id="rosterPayrollValue"></b><span class="eff-kpi-unit">par semaine</span></div>
+            <div class="eff-kpi-line"><b class="eff-kpi-num" id="rosterPayrollValue"></b></div>
           </div>
           <div class="eff-kpi-sep" aria-hidden="true"></div>
           <div class="eff-kpi">
@@ -29693,15 +29693,11 @@ function closeEffectifMenus(except) {
 }
 
 // Prochain match (bandeau d'en-tête) : même source que la barre du haut
-// (currentMatch/teamB, voir updateTopbar), libellé de journée court.
+// (currentMatch/teamB, voir updateTopbar) ; plus de n° de journée (retour
+// utilisateur 2026-09-25 : "enlève , journée 7"), seulement domicile/extérieur.
 function effNextMatchInfo() {
   if (!currentMatch || !teamB) return { name: "—", round: "" };
-  const round = currentMatch.seriesId
-    ? (currentMatch.seriesId === "final" ? "finale" : "demi-finale")
-    : currentMatch.competition === "cup"
-      ? `coupe, ${cupStageLabelForRoundIndex(currentMatch.round).toLowerCase()}`
-      : `journée ${currentMatch.round + 1}`;
-  return { name: teamB.name, round: `${currentMatch.isHome ? "à domicile" : "à l'extérieur"}, ${round}` };
+  return { name: teamB.name, round: currentMatch.isHome ? "à domicile" : "à l'extérieur" };
 }
 
 function renderEffectifHeader() {
@@ -29715,7 +29711,9 @@ function renderEffectifHeader() {
     chemValueEl.style.color = chemColor;
   }
   const chemLabelEl = document.getElementById("rosterChemistryLabel");
-  if (chemLabelEl) chemLabelEl.textContent = `/100, ${chemistryLabel(chemistry).toLowerCase()}`;
+  // Retour utilisateur 2026-09-25 : "enlève cohésion correcte" (et "par
+  // semaine", ", journée N") : bandeau réduit aux chiffres.
+  if (chemLabelEl) chemLabelEl.textContent = "/100";
   const chemFill = document.getElementById("rosterChemistryGaugeFill");
   if (chemFill) {
     chemFill.style.width = `${Math.round(chemistry)}%`;
