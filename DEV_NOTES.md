@@ -21,6 +21,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 ## À faire
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Entraînement,
+  retouches 2** — retour utilisateur : retirer du bilan les notes « X (A) :
+  n'a joué que N min ce cycle… » et la ligne « 1 poste couvert · rendement
+  plein, aucune dilution » (la ligne ne s'affiche plus qu'en cas de
+  dilution). Fichier : moteurbasket3.html. Reste : `git push`.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Entraînement,
   retouches** — retour utilisateur : retirer « N autres joueurs n'ont pas
   assez joué au poste … » et « Selon le temps de jeu au bon poste sur le
   cycle (objectif 30 min) », titre renommé « Qui profite de l'entraînement

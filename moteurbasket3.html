@@ -2820,6 +2820,7 @@
   .tp-pos-code{font-size:18px; font-weight:800; line-height:1;}
   .tp-pos-name{font-size:10.5px; line-height:1.2; text-align:center; opacity:.85;}
   .tp-dilution{display:flex; align-items:center; gap:8px; font-size:13px; margin-top:2px;}
+  .tp-dilution:empty{display:none;}
   .tp-dot{width:8px; height:8px; border-radius:50%; background:currentColor; flex:none;}
   .tp-dilution-full{color:var(--ok);}
   .tp-dilution-diluted{color:var(--amber);}
@@ -2864,7 +2865,6 @@
   .tp-tile-delta{font-size:12px; font-weight:700; min-width:22px; text-align:right;}
   .tp-tile-delta.up{color:var(--ok);}
   .tp-tile-delta.down{color:var(--danger);}
-  .tp-report-notes{border:1px solid var(--line-soft); border-radius:12px; overflow:hidden;}
   #trainingSection .tp-report .training-empty{margin:4px 0;}
   /* Qui profite des fondamentaux */
   .tp-players{padding:20px; display:flex; flex-direction:column; gap:16px;}
@@ -25969,8 +25969,6 @@ function renderLastTrainingReport() {
     }
     body += `</div>`;
   });
-  const notes = trainingReportNotesHtml(report);
-  if (notes) body += `<div class="tp-report-notes">${notes}</div>`;
   holder.innerHTML = `<section class="tp-card tp-report" aria-labelledby="tpReportTitle">` +
     `<div class="tp-report-head"><div class="tp-report-title"><h3 id="tpReportTitle">Bilan de la semaine dernière</h3>` +
     `<span class="tp-chip">semaine ${teamA.week - 1}</span></div><span class="tp-sub">Groupé par joueur</span></div>` +
@@ -26681,8 +26679,11 @@ function updateDilutionNote() {
       tier = "diluted";
       text = `${n} postes couverts · rendement dilué de ${Math.round(dilution * 100)}% pour tout le monde`;
     } else {
-      tier = "full";
-      text = `${n} poste couvert · rendement plein, aucune dilution`;
+      // Retour utilisateur (2026-09-25) : "enlève 1 poste couvert ·
+      // rendement plein, aucune dilution" — rien à signaler sans dilution.
+      note.className = "training-dilution-note tp-dilution";
+      note.innerHTML = "";
+      return;
     }
   }
   note.className = "training-dilution-note tp-dilution tp-dilution-" + tier;
