@@ -20,12 +20,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Effectif > Général :
+  libellés Potentiel/Forme au-dessus de leur jauge** — retour utilisateur :
+  "toujours de gros écarts entre potentiel et âge et entre forme et
+  motivation". Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur, carte
   Saison : "N matchs" déplacé à côté de Minutes** — retour utilisateur :
   "mets 8 matchs à côté de Minutes 21.8". Fichier : moteurbasket3.html.
   Tests fiche verts (player_season_stats_modal_test flaky une fois :
   "6 matchs au lieu de 7" au setup, vert en relance). Reste : `git push`.
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Effectif :
+  bandeau d'en-tête réduit aux chiffres** — retour utilisateur : "enlève
+  cohésion correcte / par semaine / , journée 7". Commit 9a2c5aa. Reste :
+  `git push`. ⚠ Le moteurbasket3.html du DOSSIER est une ancienne version
+  (remplacé vers 19 h 07) : ne PAS le committer ; HEAD fait foi.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur, carte
   Saison : ligne Contres/Pertes/Fautes/Minutes remontée sous les tuiles,
   barres de tir en dessous ; "min / match · record" retirés de l'en-tête**
@@ -38,26 +47,26 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   Fichiers : moteurbasket3.html, player_detail_test.js,
   player_season_stats_modal_test.js. Reste : `git push`.
 
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de
-  l'affichage des matchs en direct** — nouvelle vue live (tableau
-  d'affichage + courbe d'écart, bandeau et bouton de mi-temps, carte des
-  tirs filtrable, fil du match, face-à-face, feuille de match). Pourquoi :
-  « rendre l'affichage des lives plus sympa », « faire un plus beau
-  bouton » (mi-temps). Fichiers : assets/live/ (live-view.js, live.css,
-  format.js, README.md = contrat de données, demo*.js/html = démo),
-  moteurbasket3.html (adaptateur hmLive* après finishPlayback, appels dans
-  enterLiveMatch/applyEvent/applyTimelineItem/finishPlayback/
-  updateLiveClockTick, #hmLiveRoot, CSS .hm-live-on qui masque l'ancienne
-  vue). L'ancienne vue reste dans le DOM et à jour (tests JSDOM + repli si
-  le module ES ne charge pas, ex. file:// ou JSDOM). Au passage : le box
-  score en direct compte enfin la tentative des tirs manqués « simples »
-  (journalisés seulement par l'événement rebound) sans doubler les contres.
-  live.css en container queries (la barre latérale réduit la largeur).
-  Statut : testé en navigateur (1280/1024, en cours, mi-temps, fin), tests
-  live JSDOM verts. Textes du moteur corrigés
-  ensuite (élision « d'Adama », rebond repris par le tireur : « il reprend
-  son propre rebond »), engine.js + copie embarquée. Reste : `git push` ;
-  supprimer l'ancienne vue une fois la nouvelle validée.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Page Ligue :
+  refonte visuelle** — retour utilisateur : maquette `ligue-apercu.html`
+  avec "code ça et intègre stp". moteurbasket3.html : `renderLeagueTop`
+  (en-tête "Journée N sur M", classement `lg-table` avec logos, Diff/m,
+  forme championnat 5 derniers, séparateurs de zones `tr.lg-div`, ligne
+  TOI ; colonne "Ta course aux play-offs/au maintien" ; carte MVP de la
+  journée en pastilles + barres de tir + citation) et
+  `renderLeagueStatsPanel` réécrit (Leaders : bascule Moyennes/Totaux qui
+  re-trie, `leagueStatsMode`, codes équipe 3 lettres `lgTeamCodes`,
+  joueurs du club en ambre, "Classement complet" top 20). CSS `.lg-*` en
+  container queries, `standingsSection` dans WIDE_PAGE_IDS. Pas de Barlow
+  (police système, comme le Scouting Pro). `standingsTableHtml` conservé
+  pour la fin de saison ; `truncateTeamNameForColumn` et CSS
+  `.stats-leader-*` retirés (sauf `.stats-leader-expand-btn`, réutilisé
+  par la fiche joueur). Tests : league_stats_test.js réécrit ; sélecteurs
+  adaptés dans calendar/client_scouting/scouting_advanced_stats/
+  tactical_scouting_report/player_detail. Suite complète : verte sauf
+  player_detail_test (étape "fiche équipe adverse", échoue AUSSI sur HEAD
+  cc87ce5, pas lié) et training_progression_test (échoue aussi sur HEAD).
+  Vérifié dans Chromium à 1440/1100/390 px. Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25)
   — Calendrier : refonte visuelle + horaires stables au changement d'heure**
   — retours utilisateur : "améliore l'affichage du calendrier", maquette
@@ -108,16 +117,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     carrière) pourrait être arrondie à une heure fixe (maquette : 20:00) —
     pas fait, changerait le rythme des carrières existantes.
 
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur : retouches après la
-  refonte** — retours utilisateur : "mets Motivé en un peu plus gros",
-  Contres/Pertes/Fautes/Minutes "un peu plus gros, ça paraît perdu",
-  "enlève la légende, ça n'apporte rien" (barème de Caractéristiques),
-  rapport de scouting "un peu plus gros [...] plus en évidence".
-  Fichier : moteurbasket3.html (renderPlayerDetail, CSS .pdp2-kv,
-  .pdp2-foot, .pdp2 .pdp-scouting). Statut : code fait, tests fiche joueur
-  verts, capture Playwright OK.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Ordres :
+  bandeau du haut masqué sur cette page uniquement** (commit a3f3649) —
+  retour utilisateur : infos en doublon avec l'en-tête du match. showPage()
+  ajoute .topbar-hidden-on-page sur prepSection + syncTopbarHeightVar().
+  Test : ordres_redesign_test.js étape 9. Tests verts sur copie propre de
+  HEAD. Commit fait via l'index (copie de travail de moteurbasket3.html
+  périmée, écrasée par une autre session — à resynchroniser avec HEAD).
   Reste : `git push`.
-
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Entraînement,
   carte Collectif allégée** — retour utilisateur (capture) : "c'est pas
   très beau d'avoir 2 jauges dans collectif [...] et la brique prend trop
@@ -142,6 +149,37 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   (max, consigne qui suit le poste), jauge de connaissance tactique.
   Reste : `git push`.
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de
+  l'affichage des matchs en direct** — nouvelle vue live (tableau
+  d'affichage + courbe d'écart, bandeau et bouton de mi-temps, carte des
+  tirs filtrable, fil du match, face-à-face, feuille de match). Pourquoi :
+  « rendre l'affichage des lives plus sympa », « faire un plus beau
+  bouton » (mi-temps). Fichiers : assets/live/ (live-view.js, live.css,
+  format.js, README.md = contrat de données, demo*.js/html = démo),
+  moteurbasket3.html (adaptateur hmLive* après finishPlayback, appels dans
+  enterLiveMatch/applyEvent/applyTimelineItem/finishPlayback/
+  updateLiveClockTick, #hmLiveRoot, CSS .hm-live-on qui masque l'ancienne
+  vue). L'ancienne vue reste dans le DOM et à jour (tests JSDOM + repli si
+  le module ES ne charge pas, ex. file:// ou JSDOM). Au passage : le box
+  score en direct compte enfin la tentative des tirs manqués « simples »
+  (journalisés seulement par l'événement rebound) sans doubler les contres.
+  live.css en container queries (la barre latérale réduit la largeur).
+  Statut : testé en navigateur (1280/1024, en cours, mi-temps, fin), tests
+  live JSDOM verts. Textes du moteur corrigés
+  ensuite (élision « d'Adama », rebond repris par le tireur : « il reprend
+  son propre rebond »), engine.js + copie embarquée. Reste : `git push` ;
+  supprimer l'ancienne vue une fois la nouvelle validée.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Humeur des
+  supporters : retouches** — retour utilisateur (captures) : "enlève
+  Dépassé : bonus d'humeur / Manqué : forte baisse / Fixé en début de
+  saison…" et "dans évolution de la saison, y a du texte qui se
+  chevauche". Carte Objectif réduite au seul objectif ; libellés de la
+  courbe courts sur deux lignes (S3 / 71,4), un sur N au-delà de 9 points.
+  Courbe juste même quand l'humeur bute sur 0/100 : recordMoraleEvent
+  (client + engine.js) enregistre `after` (valeur réellement atteinte).
+  Fichiers : moteurbasket3.html, engine.js. Tests verts (humeur,
+  attr_color_scheme_everywhere, season_objective_endreg,
+  milestone_interview_and_mvp). Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — « Pendant votre
   absence » : refonte visuelle** — retour utilisateur : "améliore cette
   page, c'est horrible". Bandeau résumé (matchs, V/D, entraînements) ;
@@ -155,96 +193,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   post_match_interview_button, persistence, deficit, tabs). Commit partiel
   (seules ces lignes). Reste : `git push`.
 
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de la page Ordres
-  (maquette canevas "Ordres — Lyon vs Rennes")** — retour utilisateur :
-  "code tout ça stp". Fait :
-  - barre d'action FIXE sous le topbar (#ordresActionBar, --topbar-h mesuré
-    en JS) : titre, onglets Attaque/Défense/Cinq & rotation/Adversaires
-    (défilement vers la carte ; Adversaires masqué en Débutant), état
-    (#ordresStatus : "Modifications à valider" / "Ordres validés" /
-    "Ordres préparés" / "pas encore validés" / "Compositions
-    verrouillées" — PAS "non enregistrées" : l'autosave existe toujours),
-    bouton "Valider les ordres" (même validateOrdres qu'avant).
-  - carte match : badge Journée N / 18 (ou tour de Coupe), date/heure du
-    coup d'envoi, lieu, "Lyon vs Rennes" (domicile à gauche), sélecteur
-    "Préparer le match", jauges + ligne d'aide tirée du moteur.
-  - buildTeamPanel réécrit en cartes : Attaque (priorités en puces
-    numérotées 1-2-3, pool grisé à 3/3 ; Rythme, Niveau tactique, Fin de
-    match, Rebond offensif en boutons segmentés), Défense (Système, écrans,
-    post-up en select ; Aide défensive, Close-out segmentés), Adversaires
-    (Choisir un joueur… = titulaire adverse au poste, stocké par POSTE
-    comme avant ; Consigne désactivée sans joueur). Ligne d'aide par valeur
-    (ORDRES_FIELD_HELP, écrite d'après les tables du moteur).
-    Réglages "confirmé" répartis sur 3 cartes (.tactic-confirmee-block,
-    #ordresConfirmedBlock gardé pour le tutoriel, reveal adapté).
-  - renderLineupEditor : cartes Cinq de départ + Rotation (même <table>),
-    alerte "listé à plusieurs postes" + puces surlignées. Pas de numéro
-    "ordre d'entrée" : le moteur fait entrer le remplaçant le MOINS fatigué
-    (backupsForSlot), l'ordre de la liste n'a aucun effet.
-  - "Confirmée" → "Confirmé" (affichage seulement, clé interne inchangée) ;
-    textes du Guide et du tutoriel mis à jour.
-  - "Réinitialiser ma carrière" retiré de la page Ordres → dernière entrée
-    du Guide (#guideResetCareerEntry, toujours masquée avec un jeton).
-  - "07:57" de la maquette NON retiré : c'est l'heure du coup d'envoi
-    programmé (scheduledAt), pas l'heure système ; en solo le calendrier
-    démarre à l'heure de création de la partie, d'où des heures "bizarres".
-  Fichiers : moteurbasket3.html, confirmed_tactics_test.js (segmentés,
-  "Confirmé", 3 blocs confirmés), ordres_redesign_test.js (nouveau).
-  Tests : suite complète en sandbox verte hors flaky connus ; tests Ordres
-  verts sur le Mac. Fusion 3 voies faite sur le Mac (une autre session
-  modifiait moteurbasket3.html en même temps : Staff/Effectif/direct) —
-  sauvegarde de la version d'avant fusion : "Claude outputs/
-  ordres_theirs_backup.html" (+ ordres_base/mine/merged.html, fichiers de
-  travail à supprimer).
-  Commit PARTIEL (seules les lignes de la refonte Ordres de
-  moteurbasket3.html ; les modifs non committées du tableau de bord, cf.
-  livrer_dashboard_fixes.sh, restent dans l'arbre de travail), tests Ordres
-  verts sur exactement le contenu committé. Reste : `git push`.
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche joueur : refonte visuelle d'après la
-  maquette "Hoop Manager – Fiche joueur (refonte)"** (canvas Design claude.ai
-  ARSMXuUcCC5E18MEHPC12i) — retour utilisateur : "code la page joueur stp".
-  En-tête (avatar, pastille poste, équipe, nom en grand, puces âge/taille/
-  rôle/potentiel/salaire ; bloc Forme + Motivation + citation ; anneau de
-  note globale + boutons Comparer/Vendre), ligne Profil (radar) + Saison
-  (4 tuiles moyennes, barres de réussite aux tirs, ligne contres/pertes/
-  fautes/minutes), Caractéristiques en 4 colonnes avec légende du barème,
-  Derniers matchs (tableau + courbe d'éval) | Poste + Profils de jeu.
-  Mêmes règles de scoutisme/verrous, mêmes ids/data-* (mise en vente,
-  demande de transfert, "Voir toute la saison"). Fichiers :
-  moteurbasket3.html (renderPlayerDetail, CSS .pdp-*), tests fiche joueur.
-  Le tableau "Moyennes de la saison" quitte la page (tout est dans la
-  carte Saison ; la fenêtre "Voir toute la saison" le garde). Bouton
-  "Comparer" ajouté dans l'en-tête (le "⇄ Comparer" de la barre du haut
-  est conservé), "Vendre" descend à la carte "Mise en vente" (#pdpSaleCard).
-  Fichiers : moteurbasket3.html (renderPlayerDetail, pdpAttrRowHtml,
-  radarChartSvg option showValues, écouteur #playerDetailContent, CSS
-  .pdp2-*), player_detail_test.js et player_season_stats_modal_test.js
-  (moyennes lues dans la carte Saison).
-  Statut : CODÉ, tests Mac verts (pdp_color_scheme, potential_tier,
-  thirteen_attrs, player_season_stats_modal, player_compare,
-  player_detail_topbar_nav, radar_chart_colors, team_detail_page) ;
-  captures Playwright OK (bureau 1440 + mobile 390, sans erreur JS).
-  player_detail_test.js : parties fiche joueur vertes, échoue ensuite sur
-  "(setup) la fiche équipe adverse devrait afficher des liens joueur" —
-  fiche ÉQUIPE (sous-onglet Aperçu, chantier "modèle E" non committé),
-  pas la fiche joueur → à adapter avec ce chantier-là.
-  Validé par l'utilisateur ("vas y pousse"), commit partiel (seules les
-  lignes de ce chantier). Reste : `git push`.
-
-
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Humeur des
-  supporters : retouches** — retour utilisateur (captures) : "enlève
-  Dépassé : bonus d'humeur / Manqué : forte baisse / Fixé en début de
-  saison…" et "dans évolution de la saison, y a du texte qui se
-  chevauche". Carte Objectif réduite au seul objectif ; libellés de la
-  courbe courts sur deux lignes (S3 / 71,4), un sur N au-delà de 9 points.
-  Courbe juste même quand l'humeur bute sur 0/100 : recordMoraleEvent
-  (client + engine.js) enregistre `after` (valeur réellement atteinte).
-  Fichiers : moteurbasket3.html, engine.js. Tests verts (humeur,
-  attr_color_scheme_everywhere, season_objective_endreg,
-  milestone_interview_and_mvp). Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Entraînement,
-  retouches 2** — retour utilisateur : retirer du bilan les notes « X (A) :
+  retouches 2** — retour utilisateur : retirer « Groupé par joueur » en
+  tête du bilan, et du bilan les notes « X (A) :
   n'a joué que N min ce cycle… » et la ligne « 1 poste couvert · rendement
   plein, aucune dilution » (la ligne ne s'affiche plus qu'en cas de
   dilution). Fichier : moteurbasket3.html. Reste : `git push`.
@@ -254,35 +205,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   cycle (objectif 30 min) », titre renommé « Qui profite de l'entraînement
   des fondamentaux cette semaine ». Fichier : moteurbasket3.html. Tests
   persistence/trained_tactic_dropdown/tabs verts. Reste : `git push`.
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Effectif : refonte visuelle Général +
-  Caractéristiques d'après la maquette** — retour utilisateur : "code ces
-  pages effectifs stp" (canvas Design claude.ai 1Gb9JTjGU6gVfDYuHvLyq4,
-  planches "Effectif – Général" et "Effectif – Caractéristiques").
-  Général : en-tête titre + "<club>, N joueurs" et bandeau Alchimie /
-  Masse salariale (somme des salaires joueurs) / Prochain match ; joueurs
-  groupés Cinq de départ / Rotation / Réserve (remplace la colonne Rôle,
-  tri appliqué dans chaque groupe) ; pastilles de poste colorées ;
-  potentiel en 5 segments + nom du palier ; forme en mini-barre ;
-  motivation en pastille ; colonne Évaluation GARDÉE (absente de la
-  maquette mais demandée plus tôt) ; colonne Marché remplacée par un menu
-  "⋯" (Voir la fiche / Mettre aux enchères avec prix libre / Vendre pour
-  1 € si déficit). Caractéristiques : familles Tir / Jeu / Défense /
-  Condition, colonne Moy. (moyenne des 15 colonnes, tri par défaut),
-  meilleur de l'équipe cerclé, chiffres seuls au barème attrColorTier ;
-  Potentiel gardé (demandé plus tôt), Taille/Salaire retirés (maquette).
-  Police : pile système du jeu (pas la Barlow de la maquette).
-  Fichiers : moteurbasket3.html (#effectifSection, effectifSubNavHtml,
-  renderEffectifSection + helpers eff*, rosterSortValue "avg", écouteurs
-  du menu, étape du tutoriel Alchimie → #effectifSection .eff-kpi-chem,
-  CSS "Onglet Effectif — refonte"), nouveau effectif_redesign_test.js,
-  tests adaptés (lignes joueurs = tr.eff-row) : tabs, potential_tier,
-  transfer_market, deficit, injury_duration. Tests Mac verts (15 fichiers
-  Effectif/liés + le nouveau). Captures Playwright vérifiées en 1440 px et
-  390 px. Sources du patch : "Claude outputs/effectif-refonte/".
-  Commit partiel (seuls les morceaux Effectif de moteurbasket3.html, les
-  autres chantiers en cours restent non committés), testé dans un worktree
-  propre sur HEAD. Reste : `git push`, puis retirer cette entrée.
-
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de la page Entraînement (maquette
   canevas "Hoop Manager – Entraînement", claude.ai BUWU3iuMd1iBXVGRXDnCfL)**
   — retour utilisateur : "code la page". En-tête « ENTRAÎNEMENT / Semaine
@@ -347,6 +269,85 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   league.liveMatch existe. Fichiers : moteurbasket3.html,
   dashboard_live_match_test.js. Tests dashboard/direct verts. Reste :
   `git push`.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de la page Ordres
+  (maquette canevas "Ordres — Lyon vs Rennes")** — retour utilisateur :
+  "code tout ça stp". Fait :
+  - barre d'action FIXE sous le topbar (#ordresActionBar, --topbar-h mesuré
+    en JS) : titre, onglets Attaque/Défense/Cinq & rotation/Adversaires
+    (défilement vers la carte ; Adversaires masqué en Débutant), état
+    (#ordresStatus : "Modifications à valider" / "Ordres validés" /
+    "Ordres préparés" / "pas encore validés" / "Compositions
+    verrouillées" — PAS "non enregistrées" : l'autosave existe toujours),
+    bouton "Valider les ordres" (même validateOrdres qu'avant).
+  - carte match : badge Journée N / 18 (ou tour de Coupe), date/heure du
+    coup d'envoi, lieu, "Lyon vs Rennes" (domicile à gauche), sélecteur
+    "Préparer le match", jauges + ligne d'aide tirée du moteur.
+  - buildTeamPanel réécrit en cartes : Attaque (priorités en puces
+    numérotées 1-2-3, pool grisé à 3/3 ; Rythme, Niveau tactique, Fin de
+    match, Rebond offensif en boutons segmentés), Défense (Système, écrans,
+    post-up en select ; Aide défensive, Close-out segmentés), Adversaires
+    (Choisir un joueur… = titulaire adverse au poste, stocké par POSTE
+    comme avant ; Consigne désactivée sans joueur). Ligne d'aide par valeur
+    (ORDRES_FIELD_HELP, écrite d'après les tables du moteur).
+    Réglages "confirmé" répartis sur 3 cartes (.tactic-confirmee-block,
+    #ordresConfirmedBlock gardé pour le tutoriel, reveal adapté).
+  - renderLineupEditor : cartes Cinq de départ + Rotation (même <table>),
+    alerte "listé à plusieurs postes" + puces surlignées. Pas de numéro
+    "ordre d'entrée" : le moteur fait entrer le remplaçant le MOINS fatigué
+    (backupsForSlot), l'ordre de la liste n'a aucun effet.
+  - "Confirmée" → "Confirmé" (affichage seulement, clé interne inchangée) ;
+    textes du Guide et du tutoriel mis à jour.
+  - "Réinitialiser ma carrière" retiré de la page Ordres → dernière entrée
+    du Guide (#guideResetCareerEntry, toujours masquée avec un jeton).
+  - "07:57" de la maquette NON retiré : c'est l'heure du coup d'envoi
+    programmé (scheduledAt), pas l'heure système ; en solo le calendrier
+    démarre à l'heure de création de la partie, d'où des heures "bizarres".
+  Fichiers : moteurbasket3.html, confirmed_tactics_test.js (segmentés,
+  "Confirmé", 3 blocs confirmés), ordres_redesign_test.js (nouveau).
+  Tests : suite complète en sandbox verte hors flaky connus ; tests Ordres
+  verts sur le Mac. Fusion 3 voies faite sur le Mac (une autre session
+  modifiait moteurbasket3.html en même temps : Staff/Effectif/direct) —
+  sauvegarde de la version d'avant fusion : "Claude outputs/
+  ordres_theirs_backup.html" (+ ordres_base/mine/merged.html, fichiers de
+  travail à supprimer).
+  Commit PARTIEL (seules les lignes de la refonte Ordres de
+  moteurbasket3.html ; les modifs non committées du tableau de bord, cf.
+  livrer_dashboard_fixes.sh, restent dans l'arbre de travail), tests Ordres
+  verts sur exactement le contenu committé. Reste : `git push`.
+
+- **✅ COMMITTÉ (a6330a4), À POUSSER PAR L'UTILISATEUR (2026-09-25) — Fiche équipe, sous-onglet Aperçu : modèle E
+  "Aperçu en liste"** (canvas Design claude.ai PxsxLTruLSFtGa8o7ZBvBf,
+  planche ApercuListe) — retour utilisateur : "code le modele e". En-tête
+  (logo, nom, ligne Division · rang · bilan · renommée · fondé en, maillots
+  domicile/extérieur agrandis à droite) puis 3 lignes cliquables qui ouvrent
+  les sous-onglets : Résultats & calendrier (pastilles V/D, dernier match,
+  prochain match, "contre toi en Jn"), Effectif (joueur en forme), Analyse
+  d'équipe (points marqués/encaissés par match) ; pied : Palmarès +
+  dernière interview. Fichiers : moteurbasket3.html (teamDetailApercuHtml,
+  CSS .team-apercu-*/.apercu-row), team_home_page_test.js (libellés +
+  nouveau contrôle : chaque ligne ouvre son sous-onglet).
+  Statut : code fait, tests Mac verts (team_home_page, away_jersey,
+  team_detail_page, team_detail_effectif_sort, tactical_scouting_report,
+  scouting_pro). Rendu vérifié par l'utilisateur. Commit partiel
+  (seules les lignes du modèle E). Reste : `git push`, puis retirer
+  cette entrée.
+
+- **🚧 EN COURS (2026-09-25) — Ordres : refonte visuelle d'après la maquette
+  "Hoop Manager — Ordres (refonte)"** (canvas Design claude.ai
+  H4qJesrwzYg7DWyp9Qkzq4) — retour utilisateur : "code ça stp". Barre
+  d'action collante (titre + raccourcis Attaque/Défense/Cinq/Adversaires +
+  Valider), carte match (journée, date, domicile/extérieur, les deux clubs,
+  sélecteur de journée, jauges alchimie/connaissance), deux colonnes :
+  Attaque (3 priorités classées + réserve), Défense, Adversaires à
+  surveiller | Cinq de départ (terrain, pastilles) + Rotation (alerte
+  joueurs listés à plusieurs postes). Rythme / aide défensive / close-out /
+  rebond offensif en boutons segmentés (le <select> d'origine reste dans le
+  DOM, masqué, comme source de vérité). Pas de bouton "Annuler" ni de
+  "modifications non enregistrées" (tout s'enregistre déjà à chaque
+  changement). Fichiers : moteurbasket3.html (#prepSection, buildTeamPanel,
+  renderLineupEditor, renderOrdresRoundDateTime, CSS #prepSection),
+  tests adaptés (sélecteur Défense par id). Statut : en cours de code.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Tableau de bord :
   polices = pile système du jeu** — retour utilisateur : "la police n'est
   pas corrigée j'ai l'impression". Cause : le tableau de bord (.hm-dash)
@@ -2324,7 +2325,151 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     **Fichiers touchés** : `moteurbasket3.html` uniquement (`dashCrest()`
     nouvelle fonction `dashDefaultCrestSvg()`), `dashboard_e2e_test.js`.
 
-    **Reste à faire** : livrer sur le Mac.
+    **Livré sur le Mac et poussé** (commit `70e1f31`).
+
+    **Complément 5 (2026-09-25, sur nouvelle capture de la page live) —
+    vrai bug trouvé APRÈS le Complément 4 : le fallback était corrigé, mais
+    un adversaire avec un VRAI logo personnalisé ne l'affichait toujours
+    pas** : retour utilisateur avec capture de la fiche équipe "BC Dia"
+    (onglet "Aperçu") montrant un logo personnalisé bien réel (image
+    distincte, pas le ballon générique), alors que le bandeau "Prochain
+    match" du tableau de bord affichait toujours le ballon générique pour
+    ce même club. "ça ne charge pas son logo personnalisé".
+
+    **Root cause** : `dashboardTeamRef(idx, team)` (le petit gabarit
+    `{id,name,shortName,colors}` construit pour l'adversaire, voir
+    `dashboardDataFromGameState()`) ne résolvait `logoUrl` dans AUCUN cas —
+    contrairement à `club` (le joueur), qui lui résout bien
+    `(teamA.isPaying && teamA.customLogoDataUrl) ? ... : null`. Le
+    Complément 4 avait corrigé le fallback (ballon générique au lieu d'un
+    rond plat) sans remarquer que le VRAI logo de l'adversaire n'était
+    jamais transmis à `dashCrest()` en premier lieu, quel que soit son
+    état. Comme `isPaying`/`customLogoDataUrl` existent sur CHAQUE `Team`
+    (pas un champ réservé à `teamA`), un adversaire peut légitimement en
+    avoir un — notamment en ligue partagée multi-manager, où l'"adversaire"
+    est le club d'un autre vrai manager, qui peut passer payant et charger
+    son propre logo exactement comme le joueur.
+
+    **Correctif** : `dashboardTeamRef()` résout désormais `logoUrl` avec
+    EXACTEMENT la même expression que `club.logoUrl`, appliquée à `team`
+    (l'adversaire) au lieu de `teamA`. `dashCrest()` n'a pas eu besoin de
+    changer : il utilisait déjà `team.logoUrl` en priorité sur le ballon
+    générique, c'est juste que ce champ n'arrivait jamais jusqu'à lui pour
+    l'adversaire.
+
+    **Vérifié** : script Playwright jetable — adversaire forcé `isPaying`
+    avec un `customLogoDataUrl` factice (simule un autre manager payant) :
+    son écusson devient bien un `<img>` pointant vers CE logo, tandis que
+    le club du joueur (toujours gratuit) garde le ballon générique. Nouveau
+    test dédié (`dashboard_e2e_test.js`, partie 5 ter) : force `teamB` à
+    être payant avec un logo, re-rend via `renderClubSection()`, vérifie
+    que SEUL l'écusson adversaire devient un `<img>` avec la bonne `src`.
+
+    **Fichiers touchés** : `moteurbasket3.html` uniquement
+    (`dashboardTeamRef()`), `dashboard_e2e_test.js`.
+
+    **Même retour utilisateur, deux demandes de forme de bouton** :
+    - "modifie la forme des boutons préparer le match (renomme en modifier
+      vos ordres) et scouter bc dia pourqu'il ait la meme forme que les
+      autres boutons du jeu (modifier vos ordres en haut à droite)" — les
+      2 boutons d'action du bandeau "Prochain match" (`.hm-btn--display`)
+      avaient un `border-radius:12px` propre au tableau de bord, différent
+      de la pilule (`border-radius:999px`) de `button.topbar-cta` (le VRAI
+      bouton "Modifier vos ordres"/"Donnez vos ordres" en haut à droite,
+      référence de forme citée par l'utilisateur) utilisée partout ailleurs
+      dans le jeu. `.hm-btn--display` passé à `border-radius:999px` (seul
+      utilisateur de cette classe : les 2 boutons du bandeau, aucun effet de
+      bord ailleurs) ; "Préparer le match" renommé en "Modifier vos ordres"
+      (libellé statique, comme demandé — pas de logique dynamique
+      "Donnez"/"Modifier" ajoutée, non demandée).
+    - "idem pour identité du club stp" — même correctif de forme sur
+      `.hm-head__identity-btn` (10px hérité de `.hm-btn` → 999px).
+
+    **Vérifié** : capture Playwright + lecture de `getComputedStyle(...).borderRadius`
+    des 3 boutons contre celui de `#topbarOrdersBtn` (référence) : les 4
+    valeurs sont identiques (`999px`). Même test `dashboard_e2e_test.js`
+    (partie 5 quater) que ci-dessus, vérifie aussi le nouveau libellé.
+
+    **Fichiers touchés** : `moteurbasket3.html` uniquement (CSS
+    `.hm-btn--display`/`.hm-head__identity-btn`, libellé dans
+    `dashRenderNextMatch`), `dashboard_e2e_test.js`.
+
+    **Livré sur le Mac** (synchronisé et vérifié identique octet pour
+    octet à la sandbox). **Reste à faire** : committer + pousser — script
+    prêt : `livrer_dashboard_fixes.sh` (à la racine du dépôt sur le Mac),
+    à lancer par l'utilisateur depuis son terminal.
+
+    **⚠️ NOTE 2026-09-25 (incident DEV_NOTES.md)** : ce fichier a été trouvé
+    VIDE (0 octet) dans l'arborescence de travail alors que ce Complément 5
+    n'avait pas encore été committé — probablement écrasé par une autre
+    session travaillant en parallèle sur le même dossier (Économie/Salle/
+    Analyse d'équipe, voir commits `b59ba7c`..`d6ba5a9`). Reconstruit ici à
+    partir du dernier `HEAD` commité (qui, lui, était intact) + réapplication
+    de ce Complément 5 depuis une copie de sauvegarde. Si ce fichier venait
+    à sembler tronqué ou à perdre du contenu récent une nouvelle fois,
+    comparer d'abord avec `git show HEAD:DEV_NOTES.md` avant de supposer
+    qu'une entrée a été perdue pour de bon — et éviter que deux sessions
+    committent DEV_NOTES.md en parallèle sans avoir relu l'état de l'autre
+    au préalable.
+
+    **Complément 6 (2026-09-25) — polices du tableau de bord pas alignées
+    sur le reste du jeu** : retour utilisateur, sur une capture du tableau
+    de bord après les correctifs ci-dessus : "on a bien les mêmes polices
+    que sur le reste du jeu ?". Question légitime : NON, pas tout à fait.
+
+    **Root cause** : `.hm-dash` définit ses propres `--display`/`--body`
+    (`"Barlow Condensed", "Arial Narrow", sans-serif` et `"DM Sans",
+    system-ui, sans-serif`), jamais chargées (aucun lien Google Fonts dans
+    ce projet). Le commentaire d'origine au-dessus de `.hm-dash` affirmait
+    que ça "retombe automatiquement sur la pile système" — FAUX pour
+    `--display` : son deuxième choix, `"Arial Narrow"`, est une VRAIE
+    police étroite installée sur la plupart des systèmes (pas un simple nom
+    de repli générique comme `sans-serif`), donc les titres/chiffres du
+    tableau de bord (noms d'équipe, chiffres clés, boutons `--display`)
+    s'affichaient réellement dans une police plus condensée que le reste du
+    jeu — PAS la même pile que `body{}` tout en haut du fichier. Même
+    incohérence de nature que celle déjà corrigée sur la page Économie (voir
+    commit `b59ba7c`, "police système du jeu à la place de la Barlow
+    Condensed") : le tableau de bord n'avait juste pas reçu le même
+    traitement. `--body` était moins grave (`system-ui` ≈ souvent le même
+    rendu que la pile explicite ailleurs) mais gardait quand même un nom de
+    police (`"DM Sans"`) sans rapport avec le reste de l'appli.
+
+    **Correctif** : `--display`/`--body` sur `.hm-dash` remplacés par
+    EXACTEMENT la même pile que `body{}` (et que `.eco-page`/
+    `#scoutingProPanel`, déjà alignées) :
+    `-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif`.
+    Commentaire au-dessus de `.hm-dash` corrigé (il affirmait à tort un
+    repli déjà correct).
+
+    **Vérifié** : script Playwright jetable contre un vrai Chromium (pas
+    seulement jsdom, qui ne résout pas `var(--display)` À L'INTÉRIEUR d'un
+    raccourci `font-family`) — `getComputedStyle(...).fontFamily` du nom de
+    club, des chiffres clés et des boutons du bandeau valent maintenant
+    TOUS exactement `-apple-system, BlinkMacSystemFont, "Segoe UI",
+    Helvetica, Arial, sans-serif`, identique à `body{}`. Capture
+    avant/après jointe à l'utilisateur. Nouveau test dédié dans
+    `dashboard_e2e_test.js` (partie 5 quinquies) : vérifie la valeur BRUTE
+    de la custom property `--display`/`--body` sur `.hm-dash` (ce que jsdom
+    résout correctement, contrairement au raccourci `font-family`).
+
+    **Fichiers touchés** : `moteurbasket3.html` uniquement (`--display`/
+    `--body` de `.hm-dash` + commentaire), `dashboard_e2e_test.js`.
+
+    **Livré sur le Mac** (synchronisé et vérifié identique octet pour
+    octet à la sandbox, `dashboard_e2e_test.js` relancé en sandbox : vert).
+    **Reste à faire** : committer + pousser — même script que le
+    Complément 5 ci-dessus (`livrer_dashboard_fixes.sh`, commit unique
+    couvrant logo/boutons/polices), à lancer par l'utilisateur.
+
+    **Note (nettoyage, fait)** : `push_logo_fix.sh`, `push_dashboard_fixes.sh`
+    et `_devnotes_head_scratch.md` (scripts/scratch devenus obsolètes
+    d'échanges précédents) supprimés du dépôt sur le Mac à la demande de
+    l'utilisateur ("Supprime ce qui ne sert à rien"), après autorisation
+    explicite de suppression (`device_request_delete_permission`,
+    normalement refusée par défaut dans un dossier connecté). `"Claude
+    outputs/"`, d'origine incertaine (peut-être propre à l'utilisateur),
+    volontairement laissé en place.
 
 ---
 

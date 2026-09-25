@@ -35,7 +35,7 @@ function clickTab(key) {
 // message d'absence de données, pas de crash ni de pourcentages inventés.
 // ---------------------------------------------------------------------
 clickTab("ligue");
-const rows = [...doc.querySelectorAll("#standingsContent table.standings-table tbody tr")];
+const rows = [...doc.querySelectorAll("#standingsContent table.lg-table tbody tr[data-lg-team]")];
 const myRow = rows.find(r => r.classList.contains("me"));
 const opponentRow = rows.find(r => r !== myRow);
 const opponentIdx = Number(opponentRow.querySelector("[data-team-idx]").dataset.teamIdx);
@@ -123,7 +123,7 @@ const expected = {
 console.log("\nAttendu (calcul indépendant) :", expected);
 
 [...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ligue").click();
-const oppRow2 = [...doc2.querySelectorAll("#standingsContent table.standings-table tbody tr")]
+const oppRow2 = [...doc2.querySelectorAll("#standingsContent table.lg-table tbody tr[data-lg-team]")]
   .find(r => r.querySelector("[data-team-idx]") && Number(r.querySelector("[data-team-idx]").dataset.teamIdx) === opponentIdx);
 oppRow2.querySelector("[data-team-idx]").click();
 doc2.querySelector('[data-team-detail-subview="analyse"]').click();

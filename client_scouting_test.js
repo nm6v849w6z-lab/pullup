@@ -94,7 +94,7 @@ console.log("✅ Le panneau analyste affiche bien le niveau, sans le nombre de c
 // avant ce correctif, seules les lignes adverses étaient cliquables).
 // ---------------------------------------------------------------------
 clickTab("ligue");
-const rows = [...doc.querySelectorAll("#standingsContent table.standings-table tbody tr")];
+const rows = [...doc.querySelectorAll("#standingsContent table.lg-table tbody tr[data-lg-team]")];
 console.log("\nLignes du classement :", rows.length, "(attendu 10)");
 if (rows.length !== 10) throw new Error("❌ Le classement devrait lister les 10 équipes.");
 const myRow = rows.find(r => r.classList.contains("me"));

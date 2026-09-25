@@ -26,7 +26,7 @@ const win = dom.window;
 // Repère l'adversaire (même patron que tactical_scouting_report_test.js).
 // ---------------------------------------------------------------------
 [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ligue").click();
-const rows = [...doc.querySelectorAll("#standingsContent table.standings-table tbody tr")];
+const rows = [...doc.querySelectorAll("#standingsContent table.lg-table tbody tr[data-lg-team]")];
 const myRow = rows.find(r => r.classList.contains("me"));
 const opponentRow = rows.find(r => r !== myRow);
 const opponentIdx = Number(opponentRow.querySelector("[data-team-idx]").dataset.teamIdx);

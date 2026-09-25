@@ -2456,112 +2456,148 @@
   /* Retour utilisateur (2026-09) : "ajoute la date à laquelle le joueur est
      passé pro" (voir h.promotedAt/formatDateFr ci-dessus). */
   .academy-graduate-date{color:var(--ink-faint); font-size:12px;}
-  /* 3 colonnes fixes (retour utilisateur, 2026-09 : "mets plutot les
-     classements de stats sur 3 colonnes plutot que 4 comme là, comme ça on a
-     pas de trou") : avec 6 catégories (LEAGUE_STAT_CATEGORIES) et
-     l'ancienne grille auto-fill qui en tenait 4 par ligne, la 2e ligne ne
-     comptait que 2 cartes, laissant un vide à droite. 3 colonnes = 2 lignes
-     de 3, toujours pleines. */
-  .stats-leaders-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:14px;}
-  @media(max-width:820px){ .stats-leaders-grid{grid-template-columns:repeat(2, 1fr);} }
-  @media(max-width:480px){ .stats-leaders-grid{grid-template-columns:1fr;} }
-  /* Retour utilisateur (2026-09-23, capture du site EuroLeague/stats) : "le
-     premier aurait son avatar, on affiche les 5 premiers, si on clique sur
-     le bouton afficher en bas, on aurait les 20 premiers". Chaque carte
-     gagne un fond propre (avant : simplement posée dans la grille, sans
-     bordure) et son n°1 se distingue du reste de la liste (avatar + valeur
-     en grand) SANS sortir de la <ol> existante (reste le premier <li>, avec
-     juste des classes/contenu en plus) : le texte "Nom (Équipe) · valeur"
-     de chaque <li> ne change pas, pour ne pas casser les vérifications déjà
-     en place côté league_stats_test.js (split("·"), tri décroissant, etc.).
-  */
-  .stats-leader-card{background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
-  /* list-style:none + numéros affichés "à la main" (.stats-leader-rank,
-     voir plus bas) plutôt que de compter sur le marqueur natif <ol>/<li> :
-     retour utilisateur (2026-09-23, capture Safari) : "pour les classements
-     de stats pour les joueurs à partir du 2e mets 2. 3. 4. 5. etc" — les
-     rangs 2+ n'affichaient AUCUN numéro dans Safari alors que Chrome/
-     Chromium les affichait correctement (`start="2"` + compteur natif
-     list-item, vérifié : Safari a un bug connu de rendu du compteur natif
-     quand un <li> voisin passe en display:flex comme .stats-leader-first
-     ci-dessous — le marqueur natif dépend trop du moteur de rendu pour un
-     simple numéro). Un <span> de texte normal ne dépend d'aucun moteur de
-     comptage CSS et s'affiche pareil partout. */
-  .stats-leader-card ol{margin:0; padding-left:0; list-style:none; font-size:12.5px; color:var(--ink); line-height:1.9;}
-  .stats-leader-card li span.sub{color:var(--ink-faint); font-size:11px;}
-  .stats-leader-rank{flex:none; width:18px; text-align:right; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
-  /* Pas de bleed à gauche ici (contrairement à avant) : l'<ol> n'a plus de
-     padding-left (list-style:none ci-dessus, plus de marqueur natif à
-     loger), donc le n°1 s'aligne déjà naturellement sur le padding de la
-     carte sans correctif de marge. margin-right:0 (pas de bleed comme à
-     droite) : retour utilisateur (2026-09-23) : "aligne toutes les stats
-     cotés droits" — sinon le bord droit de la valeur du n°1
-     (.stats-leader-first-value) se retrouvait décalé de quelques px par
-     rapport à la colonne des rangs 2-5/2-20 ci-dessous (.stats-leader-val),
-     qui eux n'ont pas ce bleed. */
-  .stats-leader-card li.stats-leader-first{list-style:none; margin:-2px 0 8px 0; padding:0 0 10px; display:flex; align-items:center; gap:6px; border-bottom:1px solid var(--line);}
-  .stats-leader-first-name{flex:1 1 auto; min-width:20px; font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .stats-leader-first-value{flex:none; font-size:19px; font-weight:800; color:var(--amber); padding-left:4px;}
-  /* Retour utilisateur (2026-09-23) : "mets peut être (Cerberus Basket...)"
-     puis "si le nom est trop long, faut au moins mettre le début du nom de
-     l'équipe" + "les colonnes doivent tjrs avoir la meme largeur, c'est
-     plus harmonieux" — le nom du joueur (flexible, .stats-leader-name/
-     -first-name) et le nom d'équipe (.stats-leader-team/-first-team)
-     tronquent CHACUN dans leur propre boîte, au lieu d'un seul bloc
-     "Nom (Équipe)" tronqué ensemble : sinon un nom de joueur déjà long à
-     lui seul pouvait epuiser toute la place et ne plus laisser un seul
-     caractère du nom d'équipe (juste "(…)"). Le nom d'équipe a une largeur
-     FIXE (`--stats-leader-team-w`, même valeur partout dans la carte : n°1
-     ET rangs 2-20) plutôt qu'une largeur qui varie selon le contenu, pour
-     que cette "colonne" reste alignée d'une ligne à l'autre. La valeur
-     (.stats-leader-val/-first-value) reste toujours entièrement visible,
-     alignée à droite, sur la même ligne.
-  */
-  .stats-leader-card{--stats-leader-team-w: 92px;}
-  .stats-leader-first-team{flex:none; width:var(--stats-leader-team-w); overflow:hidden; white-space:nowrap; color:var(--ink-faint); font-size:12px;}
-  .stats-leader-row{display:flex; align-items:baseline; gap:4px; width:100%;}
-  .stats-leader-name{flex:1 1 auto; min-width:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .stats-leader-team{flex:none; width:var(--stats-leader-team-w); overflow:hidden; white-space:nowrap;}
-  .stats-leader-val{flex:none; padding-left:4px;}
-  /* Filet de sécurité supplémentaire (retour utilisateur 2026-09-24 :
-     "pour les longs nom d'équipe il faut affiche les 10 premières lettres
-     quand meme, ça ne ressemble à rien là" — capture d'une carte "Gotham
-     Knights" affichant juste "(…)"). La troncature JS ci-dessus
-     (truncateTeamNameForColumn, 10 lettres + "…" par défaut) suffit pour
-     l'immense majorité des noms réels, mais reste une approximation en
-     NOMBRE DE CARACTÈRES d'une largeur en PIXELS — un nom pathologique
-     fait uniquement de lettres très larges (majuscules "W"/"M" en rafale)
-     peut en théorie encore déborder des 92px même une fois réduit à 10
-     lettres (vérifié : "WWWWWWWWWWWW" tronqué à "WWWWWWWWWW…" mesure
-     ~115px, plus large que les 92px de la colonne). Plutôt que de re-
-     chasser un seuil de caractères parfait (fragile, on l'a déjà fait deux
-     fois), DEUX changements ensemble règlent ce résidu :
-     1) le bouton lui-même (.team-link, dans ces deux colonnes) reçoit SA
-        PROPRE ellipsis CSS (overflow:hidden + text-overflow:ellipsis +
-        max-width:100%, posés sur la boîte qui possède directement le
-        texte) au lieu de compter sur l'ellipsis du parent ;
-     2) `text-overflow:ellipsis` est RETIRÉ des deux colonnes parentes
-        (.stats-leader-team/-first-team, juste au-dessus — elles gardent
-        seulement overflow:hidden, un clip géométrique simple).
-     Testé isolément : garder l'ellipsis sur LE PARENT en plus de celle du
-     bouton reproduit EXACTEMENT le bug d'origine (le bouton redevient une
-     boîte atomique du point de vue de l'ellipsis du parent une fois
-     display:inline-block, donc le parent l'efface entièrement — "(…)" tout
-     seul). Seul overflow:hidden (sans text-overflow) sur le parent fait un
-     clip géométrique pur (pas de recherche "où couper le texte"), qui
-     laisse le bouton se gérer lui-même et rester visible, partiellement
-     coupé avec sa propre ellipsis ("(WWWWW…"). Vérifié avec ce nom-limite
-     artificiel : sans ces deux changements, bouton entièrement invisible ;
-     avec, le bouton reste visible et affiche "WWWWW…" tronqué proprement.
-  */
-  .stats-leader-first-team .team-link, .stats-leader-team .team-link{display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom;}
-  /* Pas de largeur réduite sous 480px (essayé, puis retiré) : le nom
-     d'équipe déjà tronqué en JS (truncateTeamNameForColumn, jusqu'à 14
-     caractères) ne tenait plus dans une colonne mobile plus étroite —
-     même bug que le <button> qui s'efface entièrement au lieu de se
-     couper, voir le commentaire de truncateTeamNameForColumn. Une seule
-     largeur, partout, réglée pour aller avec cette troncature JS.
-  */
+  /* =====================================================================
+     Page Ligue, refonte 2026-09-25 (retour utilisateur sur la maquette
+     "ligue-apercu.html" : "code ça et intègre stp") — voir renderLeagueTop/
+     renderLeagueStatsPanel. Tokens et polices du reste du jeu (pas la
+     Barlow embarquée de la maquette, même choix que le Scouting Pro).
+     Tout est préfixé lg- ; mise en page en container queries (la barre
+     latérale réduit la largeur disponible, pas le viewport).
+     ===================================================================== */
+  #standingsSection{
+    container:lgpage / inline-size; font-size:14px;
+    --display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    /* Jaune dédié au barrage pour ne pas se confondre avec l'ambre de
+       "mon équipe". */
+    --zone-po:var(--ok); --zone-mid:var(--ink-faint); --zone-bar:#e8c547; --zone-rel:var(--danger);
+  }
+  #standingsSection > .section{max-width:1180px; margin-left:auto; margin-right:auto;}
+  .lg-head{margin-bottom:20px;}
+  .lg-head small{display:block; font-size:12.5px; font-weight:700; color:var(--amber); margin-bottom:4px;}
+  .lg-head h1{font-family:var(--display); font-size:40px; font-weight:800; line-height:1; margin:0; letter-spacing:-.01em;}
+  .lg-top{display:grid; grid-template-columns:minmax(0,1.9fr) minmax(0,1fr); gap:20px; align-items:start;}
+  .lg-panel{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 18px 14px; box-shadow:0 12px 30px -18px rgba(0,0,0,.6);}
+  .lg-panel-title{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin:0 0 12px;}
+  .lg-panel-title h2{font-family:var(--display); font-size:22px; font-weight:800; margin:0;}
+  .lg-panel-title span{font-size:12px; color:var(--ink-faint);}
+  .lg-empty{margin:0; font-size:13.5px; color:var(--ink-dim);}
+  #standingsSection .pos{color:var(--ok);} #standingsSection .neg{color:#f0a292;} #standingsSection .warn{color:var(--zone-bar);}
+
+  /* Classement */
+  .lg-table-wrap{overflow-x:auto;}
+  table.lg-table{width:100%; border-collapse:separate; border-spacing:0; font-size:14px;}
+  .lg-table th{font-size:11px; font-weight:700; color:var(--ink-faint); text-align:left; padding:0 8px 8px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  .lg-table td{padding:0 8px; height:50px; white-space:nowrap;}
+  .lg-table .c{text-align:center;} .lg-table .r{text-align:right;}
+  .lg-table .dim{color:var(--ink-dim);}
+  .lg-table td.pos, .lg-table td.neg{font-weight:700;}
+  .lg-table tbody tr:not(.lg-div) td{border-bottom:1px solid var(--line-soft);}
+  .lg-rank{display:inline-flex; width:28px; height:28px; border-radius:7px; align-items:center; justify-content:center;
+    font-family:var(--display); font-size:15px; font-weight:800; border:1.5px solid var(--zc, var(--line)); color:var(--zc, var(--ink-dim));}
+  .lg-z-po{--zc:var(--zone-po);} .lg-z-mid{--zc:var(--zone-mid);} .lg-z-bar{--zc:var(--zone-bar);} .lg-z-rel{--zc:var(--zone-rel);}
+  .lg-team{display:flex; align-items:center; gap:10px; min-width:0;}
+  .lg-badge{flex:none; width:32px; height:32px; display:flex; align-items:center; justify-content:center; line-height:0;}
+  .lg-badge svg, .lg-badge img{width:32px; height:32px; border-radius:50%; object-fit:cover;}
+  .lg-tname{font-weight:600; overflow:hidden; text-overflow:ellipsis; max-width:230px;}
+  .lg-tname .team-link{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle;}
+  .lg-you{flex:none; font-size:10px; font-weight:800; letter-spacing:.06em; padding:2px 6px; border-radius:4px; background:#3a2a0c; color:var(--amber);}
+  .lg-pts{font-family:var(--display); font-size:20px; font-weight:800;}
+  .lg-form{display:inline-flex; gap:4px;}
+  .lg-f{width:24px; height:24px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:800;}
+  .lg-f.w{background:var(--teamA-soft); color:#5fd6c4;} .lg-f.l{background:var(--teamB-soft); color:#f0a292;}
+  .lg-f-empty{color:var(--ink-faint);}
+  tr.lg-mine td{background:rgba(240,162,60,.08);}
+  tr.lg-mine td:first-child{border-radius:10px 0 0 10px;} tr.lg-mine td:last-child{border-radius:0 10px 10px 0;}
+  tr.lg-mine .lg-tname{color:var(--amber); font-weight:800;}
+  tr.lg-div td{height:26px; padding:0 8px;}
+  tr.lg-div span{display:flex; align-items:center; gap:10px; font-size:10.5px; font-weight:700; color:var(--zc);}
+  tr.lg-div span::before, tr.lg-div span::after{content:""; flex:1; border-top:1px dashed var(--zc); opacity:.7;}
+  .lg-legend{display:flex; flex-wrap:wrap; gap:8px 18px; font-size:12px; color:var(--ink-dim); padding:12px 4px 2px; margin-top:6px; border-top:1px solid var(--line);}
+  .lg-legend i{display:inline-block; width:10px; height:10px; border-radius:3px; border:1.5px solid var(--zc); margin-right:6px; vertical-align:-1px;}
+
+  /* Colonne latérale : course + MVP */
+  .lg-side{display:flex; flex-direction:column; gap:20px;}
+  .lg-race-kpis{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;}
+  .lg-race-kpis div{background:var(--panel-2); border-radius:10px; padding:10px 12px; min-width:0;}
+  .lg-race-kpis b{display:block; font-family:var(--display); font-size:28px; font-weight:800; line-height:1.05; white-space:nowrap;}
+  .lg-race-kpis sup{font-size:.5em;}
+  .lg-race-kpis span{font-size:12px; color:var(--ink-dim);}
+  .lg-race-list{list-style:none; margin:14px 0 0; padding:0; font-size:13.5px;}
+  .lg-race-list li{display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-bottom:1px solid var(--line-soft);}
+  .lg-race-list li span{color:var(--ink-dim);}
+  .lg-race-list li b{white-space:nowrap;}
+  .lg-race-note{margin:12px 0 0; font-size:13px; color:var(--ink-dim); background:var(--panel-2); border-radius:8px; padding:10px 12px;}
+  .lg-mvp{background:#1a1a14; border-color:#5a4212;}
+  .lg-mvp-kicker{font-size:12px; font-weight:800; color:var(--amber); margin-bottom:12px;}
+  .lg-mvp-id{display:flex; align-items:center; gap:12px;}
+  .lg-mvp-id .lg-av{flex:none; line-height:0;}
+  .lg-mvp-id > div{flex:1; min-width:0;}
+  .lg-mvp-id b{display:block; font-size:17px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .lg-mvp-id small{font-size:12.5px; color:var(--ink-dim);}
+  .lg-mvp-id .lg-mvp-eval{flex:none; text-align:right; font-family:var(--display); font-size:40px; font-weight:800; color:var(--amber); line-height:1;}
+  .lg-mvp-eval small{display:block; font-size:11px; color:var(--ink-faint); font-weight:700; font-family:inherit;}
+  .lg-chips{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; margin:14px 0;}
+  .lg-chips div{background:#24231a; border-radius:8px; padding:7px 2px; text-align:center;}
+  .lg-chips b{display:block; font-family:var(--display); font-size:20px; font-weight:800; line-height:1.1;}
+  .lg-chips span{font-size:10px; font-weight:700; color:#a8a18c;}
+  .lg-shot{display:grid; grid-template-columns:40px minmax(0,1fr) 40px 36px; gap:10px; align-items:center; font-size:12.5px; margin-bottom:7px;}
+  .lg-shot > span:first-child{color:#a8a18c; font-weight:700;}
+  .lg-shot-bar{height:6px; border-radius:3px; background:#2e2c20; overflow:hidden;}
+  .lg-shot-bar span{display:block; height:100%; background:var(--amber);}
+  .lg-shot-m{text-align:right; font-variant-numeric:tabular-nums;} .lg-shot-p{text-align:right; color:#a8a18c;}
+  .lg-quote{margin:12px 0 0; font-size:13.5px; font-style:italic; line-height:1.5; color:#d9d3bf;}
+
+  /* Leaders de la ligue */
+  .lg-leaders{margin-top:28px;}
+  .lg-leaders-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;}
+  .lg-leaders-head h2{font-family:var(--display); font-size:26px; font-weight:800; margin:0;}
+  .lg-leaders-tools{display:flex; align-items:center; gap:16px; font-size:13px; color:var(--ink-dim);}
+  .lg-leaders-tools i{display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--amber); margin-right:6px;}
+  .lg-toggle{display:flex; gap:4px; padding:4px; background:var(--panel); border:1px solid var(--line); border-radius:10px;}
+  .lg-toggle button{min-height:34px; padding:0 16px; border:0; border-radius:7px; background:transparent; color:var(--ink-dim); font:inherit; font-weight:600; cursor:pointer;}
+  .lg-toggle button[aria-pressed="true"]{background:var(--amber); color:var(--amber-ink);}
+  .lg-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px;}
+  .lg-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0;}
+  .lg-card header{display:flex; justify-content:space-between; align-items:baseline; gap:8px;}
+  .lg-card h3{margin:0; font-size:13px; font-weight:800; color:var(--ink-dim);}
+  .lg-unit{font-size:11.5px; color:var(--ink-faint);}
+  .lg-lead{display:flex; align-items:center; gap:12px;}
+  .lg-lead .lg-av{flex:none; line-height:0;}
+  .lg-lead-id{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; align-items:flex-start;}
+  .lg-lead-id b{font-size:15.5px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .lg-code{font-size:10.5px; font-weight:800; letter-spacing:.05em; color:var(--ink-dim); white-space:nowrap;}
+  .lg-lead-id .lg-code{background:var(--panel-2); border-radius:4px; padding:2px 6px;}
+  .lg-lead-v{font-family:var(--display); font-size:38px; font-weight:800; color:var(--amber); line-height:1; font-variant-numeric:tabular-nums;}
+  .lg-card ol{list-style:none; margin:0; padding:12px 0 0; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:9px;}
+  .lg-card li{display:grid; grid-template-columns:18px minmax(0,1fr) 34px 40px; gap:4px 8px; align-items:center; font-size:13.5px;}
+  .lg-r{font-size:11.5px; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+  .lg-pn{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;}
+  .lg-card li .lg-v{text-align:right; font-weight:700; font-variant-numeric:tabular-nums;}
+  .lg-bar{grid-column:2 / -1; height:3px; border-radius:2px; background:var(--panel-2); overflow:hidden;}
+  .lg-bar span{display:block; height:100%; background:#4b5b75;}
+  .lg-mine-p .lg-pn, .lg-lead.lg-mine-p .lg-lead-id b{color:var(--amber); font-weight:800;}
+  .lg-mine-p .lg-bar span{background:var(--amber);}
+  .lg-more{min-height:38px; border:0; border-radius:8px; background:var(--panel-2); color:var(--amber); font:inherit; font-size:13px; font-weight:700; cursor:pointer; margin-top:auto;}
+  .lg-more:hover{background:#212d40;}
+  #standingsSection button:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+
+  @container lgpage (max-width:960px){
+    .lg-top{grid-template-columns:minmax(0,1fr);}
+    .lg-side{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start;}
+    .lg-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  @container lgpage (max-width:640px){
+    .lg-head h1{font-size:32px;}
+    .lg-side{display:flex;}
+    .lg-grid{grid-template-columns:minmax(0,1fr);}
+    .lg-table .lg-hide-sm{display:none;}
+    .lg-tname{max-width:110px;} .lg-badge, .lg-badge svg, .lg-badge img{width:26px; height:26px;}
+    .lg-rank{width:24px; height:24px; font-size:13px;} .lg-you{display:none;}
+    .lg-table td, .lg-table th{padding-left:4px; padding-right:4px;}
+    .lg-f{width:20px; height:20px; font-size:10.5px;} .lg-form .lg-f:nth-last-child(n+4){display:none;}
+    .lg-panel{padding:14px 12px;}
+    .lg-chips{grid-template-columns:repeat(3,minmax(0,1fr));}
+  }
   .stats-leader-expand-btn{display:block; width:100%; margin-top:10px; background:none; border:none; border-top:1px dashed var(--line); padding-top:8px; color:var(--amber); font-size:11.5px; cursor:pointer; text-align:center;}
   .stats-leader-expand-btn:hover{text-decoration:underline;}
 
@@ -4705,12 +4741,11 @@
 
   <div id="standingsSection" class="hidden">
     <div class="section">
-      <h2>Classement</h2>
+      <!-- Page Ligue (refonte 2026-09-25, voir renderLeagueTop) : en-tête,
+           classement, course aux play-offs et MVP de la journée. -->
       <div id="standingsContent"></div>
-      <!-- Stats de la ligue + MVP de la dernière journée (retour utilisateur,
-           2026-09) : voir renderLeagueStatsPanel, alimenté par Player.matchLog
-           (journal de matchs de la saison, voir recordMatchStatsForTeam côté
-           moteur). Toujours affiché sous le classement, pas besoin de clic. -->
+      <!-- Leaders de la ligue (voir renderLeagueStatsPanel), alimentés par
+           Player.matchLog (journal de matchs de la saison). -->
       <div id="leagueStatsPanel"></div>
       <div class="actions">
         <button class="secondary" id="closeStandingsBtn">← Retour</button>
@@ -17493,7 +17528,9 @@ const PAGE_IDS = [
 // haut (contenu à grille dense, pas un flux de lecture).
 // "calendrierSection" ajouté (refonte du calendrier, 2026-09-25) : liste +
 // colonne de droite (prochain match, bilan) côte à côte.
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection"]);
+// "standingsSection" ajouté (refonte de la page Ligue, 2026-09-25) :
+// classement + colonne course/MVP côte à côte, leaders sur 3 colonnes.
+const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection"]);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
 // "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
@@ -19428,8 +19465,226 @@ function standingsTableHtml(table) {
   return html;
 }
 
+// ---------------------------------------------------------------------
+// Page Ligue — refonte 2026-09-25 (retour utilisateur : maquette
+// "ligue-apercu.html", "code ça et intègre stp"). Tout le rendu est préfixé
+// lg- (CSS "Page Ligue" plus haut). #standingsContent porte l'en-tête, le
+// classement et la colonne de droite (course aux play-offs + MVP de la
+// journée), #leagueStatsPanel les leaders de la ligue (re-rendu seul au clic
+// sur Moyennes/Totaux ou "Classement complet").
+// standingsTableHtml ci-dessus reste utilisé tel quel par l'écran de fin de
+// saison (seasonEndContent).
+// ---------------------------------------------------------------------
+
+// Libellés des zones (ligue à 10 équipes, voir standingsRowZone) : sert aux
+// séparateurs du classement, à la légende et à la colonne "course".
+const LG_ZONE_META = {
+  "zone-promo": { key: "po", label: "Play-offs" },
+  "zone-mid": { key: "mid", label: "Hors play-offs" },
+  "zone-barrage": { key: "bar", label: "Zone de barrage" },
+  "zone-relegation": { key: "rel", label: "Relégation directe" },
+};
+
+function lgZoneOf(rank, total) {
+  return standingsRowZone(rank, total) || (total === 10 ? "zone-mid" : "");
+}
+
+// Code court (3 lettres) d'un club pour les colonnes étroites (leaders) :
+// 3 premières lettres du nom, ou initiales si deux clubs de la ligue
+// tomberaient sur le même code. Unique dans la ligue, recalculé à chaque
+// rendu (rien de persisté).
+function lgTeamCodes() {
+  const clean = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+  const first3 = name => (clean(name).replace(/[^A-Z0-9]/g, "").slice(0, 3) || "???");
+  const initials = name => {
+    const words = clean(name).split(/[^A-Z0-9]+/).filter(Boolean);
+    return words.length >= 2 ? words.slice(0, 3).map(w => w[0]).join("").padEnd(3, words[words.length - 1][1] || "X") : first3(name);
+  };
+  const codes = league.teams.map(t => first3(t.name));
+  const count = c => codes.filter(x => x === c).length;
+  const out = codes.map((c, i) => (count(c) > 1 ? initials(league.teams[i].name) : c));
+  return out.map((c, i) => (out.filter(x => x === c).length > 1 ? c.slice(0, 2) + (i % 10) : c));
+}
+
+// Résultats de CHAMPIONNAT d'un club (du plus ancien au plus récent) —
+// la forme du classement ne mélange pas la coupe, contrairement à
+// recentFormForTeam (fiche équipe).
+function lgChampionshipForm(teamIdx, n) {
+  const list = league.results
+    .filter(r => r.round < league.totalRounds && (r.home === teamIdx || r.away === teamIdx))
+    .sort((a, b) => a.round - b.round)
+    .map(r => {
+      const isHome = r.home === teamIdx;
+      const mine = isHome ? r.scoreHome : r.scoreAway, theirs = isHome ? r.scoreAway : r.scoreHome;
+      const opp = league.teams[isHome ? r.away : r.home];
+      return { won: mine > theirs, text: `J${r.round + 1} ${isHome ? "vs" : "@"} ${opp ? opp.name : "?"} : ${mine}-${theirs}` };
+    });
+  return list.slice(-n);
+}
+
+function lgSignedText(v, digits) {
+  const s = digits ? Math.abs(v).toFixed(digits) : String(Math.abs(v));
+  return (v > 0 ? "+" : v < 0 ? "-" : "") + s;
+}
+
+function lgOrdinal(n) { return n === 1 ? "1re" : `${n}e`; }
+
+function lgStandingsTableHtml(table) {
+  const total = table.length;
+  let html = `<div class="lg-table-wrap"><table class="lg-table"><thead><tr>` +
+    `<th>#</th><th>Équipe</th><th class="c lg-hide-sm">J</th><th class="c">V</th><th class="c">D</th>` +
+    `<th class="r lg-hide-sm" title="Différence de points par match">Diff/m</th><th class="r lg-hide-sm">+/-</th>` +
+    `<th class="r">Pts</th><th class="r">Forme</th></tr></thead><tbody>`;
+  let prevZone = null;
+  table.forEach((t, i) => {
+    const rank = i + 1;
+    const zone = lgZoneOf(rank, total);
+    const meta = LG_ZONE_META[zone];
+    // Séparateur à chaque changement de zone (sauf avant la 1re) : ligne
+    // décorative marquée .lg-div (aria-hidden), les lignes d'équipes
+    // portent data-lg-team pour qui veut les compter.
+    if (prevZone !== null && zone !== prevZone && meta) {
+      html += `<tr class="lg-div lg-z-${meta.key}" aria-hidden="true"><td colspan="9"><span>${meta.label}</span></td></tr>`;
+    }
+    prevZone = zone;
+    const team = league.teams[t.idx];
+    const isMe = t.idx === myTeamIndex;
+    const diff = t.pf - t.pa;
+    const perGame = t.played ? diff / t.played : 0;
+    const cls = [meta ? `lg-z-${meta.key}` : "", zone, isMe ? "me lg-mine" : ""].filter(Boolean).join(" ");
+    const form = lgChampionshipForm(t.idx, 5).map(f =>
+      `<span class="lg-f ${f.won ? "w" : "l"}" title="${escapeHtml(f.text)}">${f.won ? "V" : "D"}</span>`).join("");
+    html += `<tr class="${cls}" data-lg-team="${t.idx}">` +
+      `<td><span class="lg-rank">${rank}</span></td>` +
+      `<td><div class="lg-team"><span class="lg-badge">${team ? teamLogoHtml(team, 32) : ""}</span>` +
+        `<span class="lg-tname" title="${escapeHtml(t.name)}">${teamLinkHtml(t.idx, t.name)}</span>` +
+        (isMe ? `<span class="lg-you">TOI</span>` : "") + `</div></td>` +
+      `<td class="c dim lg-hide-sm">${t.played}</td><td class="c">${t.wins}</td><td class="c">${t.losses}</td>` +
+      `<td class="r dim lg-hide-sm">${t.played ? lgSignedText(perGame, 1) : "–"}</td>` +
+      `<td class="r lg-hide-sm ${diff > 0 ? "pos" : diff < 0 ? "neg" : "dim"}">${lgSignedText(diff)}</td>` +
+      `<td class="r lg-pts">${t.points}</td>` +
+      `<td class="r"><div class="lg-form">${form || `<span class="lg-f-empty">–</span>`}</div></td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  if (total === 10) {
+    html += `<div class="lg-legend">` +
+      `<span><i class="lg-z-po"></i>Play-offs · le champion peut monter</span>` +
+      `<span><i class="lg-z-bar"></i>Barrage de relégation (7e contre 8e)</span>` +
+      `<span><i class="lg-z-rel"></i>Relégation directe (9e, 10e)</span></div>`;
+  }
+  return html;
+}
+
+// "Ta course aux play-offs" (ou "au maintien" une fois sous la 6e place) :
+// position, bilan, différence, écarts avec les places qui comptent, et les
+// clubs à égalité de points.
+function lgRaceCardHtml(table) {
+  const pos = table.findIndex(s => s.idx === myTeamIndex);
+  if (pos === -1) return "";
+  const me = table[pos];
+  const rank = pos + 1;
+  const total = table.length;
+  const diff = me.pf - me.pa;
+  const title = total === 10 && rank >= 7 ? "Ta course au maintien" : "Ta course aux play-offs";
+  const zone = lgZoneOf(rank, total);
+  const zoneColor = { "zone-promo": "var(--amber)", "zone-mid": "var(--ink)", "zone-barrage": "var(--zone-bar)", "zone-relegation": "var(--danger)" }[zone] || "var(--amber)";
+  const pts = n => `${n} pt${Math.abs(n) > 1 ? "s" : ""}`;
+  const gapTo = r => table[r - 1] ? table[r - 1].points - me.points : null; // >0 : retard
+  const lines = [];
+  if (me.played) {
+    if (rank === 1) {
+      if (table[1]) lines.push({ label: "Avance sur la 2e place", value: pts(me.points - table[1].points), tone: "ok" });
+    } else {
+      lines.push({ label: "Retard sur la 1re place", value: pts(gapTo(1)) });
+    }
+    if (total === 10) {
+      if (rank <= 4) lines.push({ label: "Avance sur la 5e (hors play-offs)", value: pts(me.points - table[4].points), warn: me.points - table[4].points <= 1 });
+      else if (rank <= 6) {
+        lines.push({ label: "Retard sur la 4e (play-offs)", value: pts(gapTo(4)) });
+        lines.push({ label: "Avance sur la 7e (barrage)", value: pts(me.points - table[6].points), warn: me.points - table[6].points <= 1 });
+      } else if (rank <= 8) {
+        lines.push({ label: "Retard sur la 6e (maintien direct)", value: pts(gapTo(6)) });
+        lines.push({ label: "Avance sur la 9e (relégation)", value: pts(me.points - table[8].points), warn: me.points - table[8].points <= 1 });
+      } else {
+        lines.push({ label: "Retard sur la 8e (barrage)", value: pts(gapTo(8)) });
+      }
+    }
+  }
+  const tied = table.filter(s => s.idx !== myTeamIndex && s.points === me.points && s.played);
+  const left = Math.max(0, league.totalRounds - me.played);
+  let note;
+  if (!me.played) note = "La saison n'a pas encore commencé : tout le monde part à 0.";
+  else if (tied.length) {
+    const names = tied.map(s => escapeHtml(s.name));
+    const list = names.length > 1 ? names.slice(0, -1).join(", ") + " et " + names[names.length - 1] : names[0];
+    note = `À égalité de points avec ${list} : la différence de points vous départage.`;
+  } else if (left) note = `Encore ${left} journée${left > 1 ? "s" : ""} de saison régulière, ${left * 2} points en jeu.`;
+  else note = "Saison régulière terminée.";
+
+  return `<section class="lg-panel lg-race" aria-labelledby="lgRaceTitle">` +
+    `<div class="lg-panel-title"><h2 id="lgRaceTitle">${title}</h2></div>` +
+    `<div class="lg-race-kpis">` +
+      `<div><b style="color:${zoneColor}">${me.played ? `${rank}<sup>${rank === 1 ? "er" : "e"}</sup>` : "–"}</b><span>Position</span></div>` +
+      `<div><b>${me.wins}-${me.losses}</b><span>Bilan</span></div>` +
+      `<div><b class="${diff > 0 ? "pos" : diff < 0 ? "neg" : ""}">${me.played ? lgSignedText(diff) : "–"}</b><span>Différence</span></div>` +
+    `</div>` +
+    (lines.length ? `<ul class="lg-race-list">${lines.map(l =>
+      `<li><span>${l.label}</span><b${l.warn ? ` class="warn"` : l.tone === "ok" ? ` class="pos"` : ""}>${l.value}</b></li>`).join("")}</ul>` : "") +
+    `<p class="lg-race-note">${note}</p></section>`;
+}
+
+// MVP de la dernière journée jouée (computeLastMatchdayMvp) : évaluation,
+// ligne de stats en pastilles, barres de tir et citation d'interview
+// (mvpQuote, absente tant que le match est en direct).
+function lgMvpCardHtml() {
+  const mvp = computeLastMatchdayMvp();
+  if (!mvp) {
+    return `<section class="lg-panel lg-mvp" aria-labelledby="lgMvpTitle">` +
+      `<div class="lg-mvp-kicker" id="lgMvpTitle">MVP de la dernière journée</div>` +
+      `<p class="lg-empty">Aucune journée de championnat jouée pour l'instant.</p></section>`;
+  }
+  const e = mvp.entry;
+  const chips = [["PTS", e.pts], ["REB", e.reb], ["PAS", e.ast], ["INT", e.stl], ["CTR", e.blk], ["BP", e.tov]]
+    .map(([k, v]) => `<div><b>${v || 0}</b><span>${k}</span></div>`).join("");
+  const shot = (label, m, a) => {
+    const pct = a ? Math.round(m / a * 100) : 0;
+    return `<div class="lg-shot"><span>${label}</span><span class="lg-shot-bar"><span style="width:${pct}%"></span></span>` +
+      `<span class="lg-shot-m">${m}/${a}</span><span class="lg-shot-p">${a ? pct + "%" : "–"}</span></div>`;
+  };
+  return `<section class="lg-panel lg-mvp" aria-labelledby="lgMvpTitle">` +
+    `<div class="lg-mvp-kicker" id="lgMvpTitle">MVP de la journée ${e.round + 1}</div>` +
+    `<div class="lg-mvp-id"><span class="lg-av">${playerAvatarHtml(mvp.player, mvp.team, 50)}</span>` +
+      `<div><b>${playerLinkHtml(mvp.teamIdx, mvp.player.id, mvp.player.name)}</b><small>${teamLinkHtml(mvp.teamIdx, mvp.team.name)}</small></div>` +
+      `<div class="lg-mvp-eval">${mvp.evalScore}<small>Éval.</small></div></div>` +
+    `<div class="lg-chips">${chips}</div>` +
+    shot("2 pts", e.fgm2 || 0, e.fga2 || 0) + shot("3 pts", e.fgm3 || 0, e.fga3 || 0) + shot("LF", e.ftm || 0, e.fta || 0) +
+    (e.mvpQuote ? `<blockquote class="lg-quote">« ${escapeHtml(e.mvpQuote)} »</blockquote>` : "") +
+    `</section>`;
+}
+
+function lgHeadKicker() {
+  const n = league.teams.length;
+  const played = Math.min(league.round, league.totalRounds);
+  if (played <= 0) return `Avant la 1re journée · ${n} équipes`;
+  if (played >= league.totalRounds) return `Saison régulière terminée · ${n} équipes`;
+  return `Journée ${played} sur ${league.totalRounds} · ${n} équipes`;
+}
+
+function renderLeagueTop() {
+  const table = league.standings();
+  document.getElementById("standingsContent").innerHTML =
+    `<div class="lg-head"><small>${lgHeadKicker()}</small><h1>Ligue</h1></div>` +
+    `<div class="lg-top">` +
+      `<section class="lg-panel" aria-labelledby="lgStandingsTitle">` +
+        `<div class="lg-panel-title"><h2 id="lgStandingsTitle">Classement</h2><span>Victoire 2 pts · Défaite 1 pt</span></div>` +
+        lgStandingsTableHtml(table) +
+      `</section>` +
+      `<div class="lg-side">${lgRaceCardHtml(table)}${lgMvpCardHtml()}</div>` +
+    `</div>`;
+}
+
 function showStandings() {
-  document.getElementById("standingsContent").innerHTML = standingsTableHtml(league.standings());
+  renderLeagueTop();
   renderLeagueStatsPanel();
   showPage("standingsSection");
   setActiveTab("ligue");
@@ -19471,7 +19726,7 @@ function pirTier(score) {
 const LEAGUE_STAT_CATEGORIES = [
   { key: "pts", label: "Points" },
   { key: "reb", label: "Rebonds" },
-  { key: "ast", label: "Passes" },
+  { key: "ast", label: "Passes décisives" },
   { key: "stl", label: "Interceptions" },
   { key: "blk", label: "Contres" },
   { key: "eval", label: "Évaluation" },
@@ -19488,39 +19743,6 @@ const LEAGUE_STAT_CATEGORIES = [
 let leagueStatsExpandedCats = new Set();
 const LEAGUE_STATS_TOP_N = 5;
 const LEAGUE_STATS_EXPANDED_N = 20;
-
-// Retour utilisateur (2026-09-23) : "si le nom est trop long, faut au moins
-// mettre le début du nom de l'équipe" — la colonne nom d'équipe a une
-// largeur CSS fixe (.stats-leader-team/-first-team, voir leur commentaire),
-// mais un `text-overflow:ellipsis` CSS ne peut pas tronquer PARTIELLEMENT
-// le texte d'un <button> (le lien équipe, teamLinkHtml) : un bouton est une
-// boîte inline atomique pour la mise en page, donc dès qu'il ne tient plus
-// en entier, le navigateur l'efface ENTIÈREMENT plutôt que d'en révéler un
-// bout — constaté au pixel près (une carte "Cerberus Basketball Team
-// International" affichait juste "(…)", pas même "(Cerberus…"). Solution :
-// tronquer la CHAÎNE elle-même avant de la donner à teamLinkHtml, pour que
-// le bouton n'ait jamais qu'un texte déjà court à afficher (plus besoin que
-// le CSS coupe quoi que ce soit dans le cas courant — l'ellipsis CSS de la
-// colonne reste en place comme filet de sécurité, pas comme mécanisme
-// principal). `title=` sur la colonne porte toujours le nom complet.
-//
-// Retour utilisateur (2026-09-24, capture) : "pour les longs nom d'équipe
-// il faut affiche les 10 premières lettres quand meme, ça ne ressemble à
-// rien là" — le seuil initial (14 caractères) revenait de fait au MÊME bug
-// pour certains noms : compter des CARACTÈRES n'est qu'une approximation
-// grossière d'une largeur en PIXELS (des majuscules comme "Gotham Knights"
-// — 14 caractères pile, donc laissé tel quel, non tronqué — sont bien plus
-// larges à l'écran que 14 minuscules, et débordaient quand même des 92px de
-// la colonne, ramenant EXACTEMENT au bug d'origine : bouton entier effacé,
-// "(…)" tout seul). Seuil abaissé à 11 (10 lettres + "…") avec une bonne
-// marge de sécurité plutôt que retenté au pixel près — testé avec des noms
-// à forte proportion de majuscules (le pire cas) pour confirmer que ça
-// tient bien dans la colonne, voir league_stats_test.js.
-function truncateTeamNameForColumn(name, maxChars) {
-  maxChars = maxChars || 11;
-  if (!name || name.length <= maxChars) return name || "";
-  return name.slice(0, maxChars - 1).trimEnd() + "…";
-}
 
 // Agrège, pour CHAQUE joueur de la ligue (toutes équipes, pas seulement le
 // club du joueur), ses matchs de championnat de la saison en cours en
@@ -19541,6 +19763,10 @@ function computeSeasonPlayerStats() {
         perGame: {
           pts: sum.pts / gp, reb: sum.reb / gp, ast: sum.ast / gp,
           stl: sum.stl / gp, blk: sum.blk / gp, eval: evalTotal / gp,
+        },
+        totals: {
+          pts: sum.pts, reb: sum.reb, ast: sum.ast,
+          stl: sum.stl, blk: sum.blk, eval: evalTotal,
         },
       });
     });
@@ -19567,118 +19793,93 @@ function computeLastMatchdayMvp() {
   return best;
 }
 
+// Leaders de la ligue (refonte 2026-09-25, voir "Page Ligue" plus haut) :
+// une carte par catégorie, le n°1 mis en avant (avatar, grosse valeur),
+// rangs suivants avec une barre relative au n°1, joueurs du club en ambre.
+// Bascule Moyennes/Totaux (leagueStatsMode, module-level comme
+// leagueStatsExpandedCats : survit aux re-rendus, repart en "avg" à chaque
+// rechargement) — le tri suit le mode affiché.
+let leagueStatsMode = "avg";
+
 function renderLeagueStatsPanel() {
   const holder = document.getElementById("leagueStatsPanel");
-  let html = `<div class="league-stats-panel"><h3>Statistiques de la ligue</h3>`;
+  const rows = computeSeasonPlayerStats();
+  const mode = leagueStatsMode;
+  const toggle = `<div class="lg-toggle" role="group" aria-label="Affichage des stats">` +
+    `<button type="button" data-lg-mode="avg" aria-pressed="${mode === "avg"}">Moyennes</button>` +
+    `<button type="button" data-lg-mode="tot" aria-pressed="${mode === "tot"}">Totaux</button></div>`;
+  let html = `<section class="lg-leaders" aria-labelledby="lgLeadersTitle"><div class="lg-leaders-head">` +
+    `<h2 id="lgLeadersTitle">Leaders de la ligue</h2>` +
+    (rows.length ? `<div class="lg-leaders-tools"><span><i></i>Tes joueurs</span>${toggle}</div>` : "") + `</div>`;
 
-  const mvp = computeLastMatchdayMvp();
-  if (mvp) {
-    // Retour utilisateur (2026-09) : "pour le mvp de la journée, mets plus
-    // de stats, et mets l'évaluation" : ligne de stats complète (comme un
-    // boxscore condensé, voir renderBoxScore) plutôt que les 3-5 stats
-    // basiques d'avant, plus le score d'évaluation (déjà calculé pour élire
-    // ce MVP, voir computeLastMatchdayMvp/statEvaluation) qui n'était encore
-    // affiché nulle part ici.
-    const e = mvp.entry;
-    const bits = [`${e.pts} pts`, `${e.reb} reb`, `${e.ast} pas`, `${e.stl || 0} int`, `${e.blk || 0} ctr`];
-    if (e.tov) bits.push(`${e.tov} bp`);
-    bits.push(`${e.fgm2 || 0}/${e.fga2 || 0} à 2pts`, `${e.fgm3 || 0}/${e.fga3 || 0} à 3pts`);
-    if (e.fta) bits.push(`${e.ftm || 0}/${e.fta || 0} LF`);
-    bits.push(`évaluation ${mvp.evalScore}`);
-    // Retour utilisateur (2026-09) : "rajoute sa petite citation d'interview
-    // (qu'on a déjà parce qu'il est logiquement aussi mvp de son match)" :
-    // le MVP de la journée a forcément la meilleure évaluation de TOUTE la
-    // ligue ce jour-là (voir computeLastMatchdayMvp), donc aussi la
-    // meilleure de son propre match : awardMatchMvp lui a donc déjà posé
-    // isMvp/mvpQuote sur cette même entrée matchLog (voir
-    // matchMvpCalloutHtml, même mécanique côté box score du match fini).
-    // Simplement absent pour un match encore en direct au moment du rendu
-    // (mvpQuote pas encore élu côté serveur), auquel cas ce paragraphe est
-    // omis comme là-bas.
-    html += `<div class="mvp-callout" style="display:flex;align-items:flex-start;gap:10px"><div>` +
-      playerAvatarHtml(mvp.player, mvp.team, 40) +
-      `</div><div><h4>MVP de la journée ${e.round + 1}</h4>` +
-      `<p><b>${playerLinkHtml(mvp.teamIdx, mvp.player.id, mvp.player.name)}</b> (${teamLinkHtml(mvp.teamIdx, mvp.team.name)}) : ${bits.join(", ")}</p>` +
-      (e.mvpQuote ? `<p class="sub">« ${escapeHtml(e.mvpQuote)} »</p>` : "") +
-      `</div></div>`;
-  } else {
-    html += `<div class="mvp-callout"><h4>MVP de la dernière journée</h4>` +
-      `<p class="sub">Aucune journée de championnat jouée pour l'instant.</p></div>`;
+  if (!rows.length) {
+    html += `<p class="lg-empty lg-panel">Aucune statistique de saison disponible pour l'instant, revenez après les premiers matchs.</p></section>`;
+    holder.innerHTML = html;
+    return;
   }
 
-  const rows = computeSeasonPlayerStats();
-  if (!rows.length) {
-    html += `<p class="sub">Aucune statistique de saison disponible pour l'instant, revenez après les premiers matchs.</p>`;
-  } else {
-    // Un joueur qui n'a joué qu'un seul match ne devrait pas squatter les
-    // premières places sur un coup d'éclat isolé — on exige au moins 3
-    // matchs dès que la saison le permet (sinon, tout début de saison, on
-    // redescend le seuil pour ne pas afficher des classements vides).
-    const minGames = Math.max(1, Math.min(3, league.round));
-    const eligible = rows.filter(r => r.gp >= minGames);
-    const pool = eligible.length ? eligible : rows;
-    html += `<div class="stats-leaders-grid">`;
-    LEAGUE_STAT_CATEGORIES.forEach(cat => {
-      const sorted = [...pool].sort((a, b) => b.perGame[cat.key] - a.perGame[cat.key]);
-      const expanded = leagueStatsExpandedCats.has(cat.key);
-      const limit = expanded ? LEAGUE_STATS_EXPANDED_N : LEAGUE_STATS_TOP_N;
-      const top = sorted.slice(0, limit);
-      html += `<div class="stats-leader-card"><h4>${cat.label} / match</h4><ol>`;
-      top.forEach((r, i) => {
-        const valueText = r.perGame[cat.key].toFixed(1);
-        if (i === 0) {
-          // Retour utilisateur (2026-09-23) : "le premier aurait son
-          // avatar" (voir playerAvatarHtml, même fonction que le MVP de la
-          // journée ci-dessus) — reste le premier <li> de la <ol> (pas une
-          // structure à part) pour continuer à compter comme "un
-          // classement" au sens accessibilité/tests, juste mis en valeur.
-          html += `<li class="stats-leader-first">` +
-            playerAvatarHtml(r.player, league.teams[r.teamIdx], 40) +
-            `<span class="stats-leader-first-name" title="${escapeHtml(r.player.name)}">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)}</span>` +
-            `<span class="stats-leader-first-team sub" title="${escapeHtml(r.teamName)}">(${teamLinkHtml(r.teamIdx, truncateTeamNameForColumn(r.teamName))})</span>` +
-            `<span class="stats-leader-first-value">${valueText}</span></li>`;
-        } else {
-          // Retour utilisateur (2026-09-23) : "mets peut être (Cerberus
-          // Basket...)" puis "si le nom est trop long, faut au moins mettre
-          // le début du nom de l'équipe" + "les colonnes doivent tjrs avoir
-          // la meme largeur" — nom du joueur et nom d'équipe (cliquable,
-          // teamLinkHtml, même écouteur délégué global que la fiche équipe)
-          // dans DEUX boîtes séparées qui tronquent chacune de leur côté
-          // (voir .stats-leader-name/-team ci-dessus) : le nom d'équipe a
-          // une largeur fixe, donc toujours au moins son DÉBUT visible même
-          // si le nom du joueur est lui-même déjà long. La valeur reste
-          // toujours visible entière sur la même ligne. title= porte le
-          // texte complet pour le survol.
-          html += `<li><span class="stats-leader-row">` +
-            `<span class="stats-leader-rank">${i + 1}.</span>` +
-            `<span class="stats-leader-name" title="${escapeHtml(r.player.name)}">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)}</span>` +
-            `<span class="stats-leader-team sub" title="${escapeHtml(r.teamName)}">(${teamLinkHtml(r.teamIdx, truncateTeamNameForColumn(r.teamName))})</span>` +
-            `<span class="stats-leader-val">· ${valueText}</span></span></li>`;
-        }
+  // Moyennes : au moins 3 matchs dès que la saison le permet (un coup
+  // d'éclat isolé ne squatte pas le haut du classement). Totaux : tout le
+  // monde, le volume de matchs fait déjà partie de la stat.
+  const minGames = Math.max(1, Math.min(3, league.round));
+  const eligible = mode === "avg" ? rows.filter(r => r.gp >= minGames) : rows;
+  const pool = eligible.length ? eligible : rows;
+  const codes = lgTeamCodes();
+  const valueOf = (r, key) => (mode === "avg" ? r.perGame[key] : r.totals[key]);
+  const fmt = v => (mode === "avg" ? v.toFixed(1) : String(Math.round(v)));
+  const maxGp = Math.max(...rows.map(r => r.gp));
+  const unit = mode === "avg" ? "par match" : `sur ${maxGp} match${maxGp > 1 ? "s" : ""}`;
+  const codeLink = r => `<span class="lg-code" title="${escapeHtml(r.teamName)}">${teamLinkHtml(r.teamIdx, codes[r.teamIdx])}</span>`;
+
+  html += `<div class="lg-grid">`;
+  LEAGUE_STAT_CATEGORIES.forEach(cat => {
+    const sorted = [...pool].sort((a, b) => valueOf(b, cat.key) - valueOf(a, cat.key));
+    const expanded = leagueStatsExpandedCats.has(cat.key);
+    const top = sorted.slice(0, expanded ? LEAGUE_STATS_EXPANDED_N : LEAGUE_STATS_TOP_N);
+    const lead = top[0];
+    const leadV = valueOf(lead, cat.key);
+    html += `<article class="lg-card" data-lg-cat="${cat.key}">` +
+      `<header><h3>${cat.label}</h3><span class="lg-unit">${unit}</span></header>` +
+      `<div class="lg-lead${lead.teamIdx === myTeamIndex ? " lg-mine-p" : ""}">` +
+        `<span class="lg-av">${playerAvatarHtml(lead.player, league.teams[lead.teamIdx], 44)}</span>` +
+        `<div class="lg-lead-id"><b>${playerLinkHtml(lead.teamIdx, lead.player.id, lead.player.name)}</b>${codeLink(lead)}</div>` +
+        `<span class="lg-lead-v">${fmt(leadV)}</span></div>`;
+    if (top.length > 1) {
+      html += `<ol start="2">`;
+      top.slice(1).forEach((r, i) => {
+        const v = valueOf(r, cat.key);
+        const w = leadV > 0 ? Math.max(0, Math.min(100, Math.round(v / leadV * 100))) : 0;
+        html += `<li class="${r.teamIdx === myTeamIndex ? "lg-mine-p" : ""}">` +
+          `<span class="lg-r">${i + 2}</span>` +
+          `<span class="lg-pn">${playerLinkHtml(r.teamIdx, r.player.id, r.player.name)}</span>` +
+          codeLink(r) +
+          `<span class="lg-v">${fmt(v)}</span>` +
+          `<span class="lg-bar"><span style="width:${w}%"></span></span></li>`;
       });
       html += `</ol>`;
-      // Bouton "Afficher tout"/"Réduire" (retour utilisateur : "si on
-      // clique sur le bouton afficher en bas, on aurait les 20 premiers") —
-      // affiché seulement s'il y a réellement plus de LEAGUE_STATS_TOP_N
-      // joueurs éligibles à montrer (pas de bouton qui ne changerait rien).
-      if (sorted.length > LEAGUE_STATS_TOP_N) {
-        html += `<button type="button" class="stats-leader-expand-btn" data-stats-expand-cat="${cat.key}">${expanded ? "Réduire ▲" : "Afficher tout ▼"}</button>`;
-      }
-      html += `</div>`;
-    });
-    html += `</div>`;
-  }
-
-  html += `</div>`;
+    }
+    if (sorted.length > LEAGUE_STATS_TOP_N) {
+      html += `<button type="button" class="lg-more" data-stats-expand-cat="${cat.key}" aria-expanded="${expanded}">${expanded ? "Réduire" : "Classement complet"}</button>`;
+    }
+    html += `</article>`;
+  });
+  html += `</div></section>`;
   holder.innerHTML = html;
 }
 
-// Clic sur "Afficher tout"/"Réduire" d'une carte de classement (voir
-// LEAGUE_STATS_EXPANDED_N/leagueStatsExpandedCats ci-dessus) — délégué sur
-// le conteneur fixe #leagueStatsPanel (même mécanique que
-// #teamDetailContent pour teamDetailSubView) puisque son contenu est
-// entièrement regénéré à chaque clic par renderLeagueStatsPanel.
+// Clics délégués sur le conteneur fixe #leagueStatsPanel (son contenu est
+// regénéré à chaque clic) : dépliage d'une carte (top 5 <-> top 20) et
+// bascule Moyennes/Totaux.
 document.getElementById("leagueStatsPanel").addEventListener("click", (e) => {
+  const modeBtn = e.target.closest("[data-lg-mode]");
+  if (modeBtn) {
+    if (leagueStatsMode === modeBtn.dataset.lgMode) return;
+    leagueStatsMode = modeBtn.dataset.lgMode;
+    renderLeagueStatsPanel();
+    const again = document.querySelector(`#leagueStatsPanel [data-lg-mode="${leagueStatsMode}"]`);
+    if (again) again.focus();
+    return;
+  }
   const btn = e.target.closest("[data-stats-expand-cat]");
   if (!btn) return;
   const key = btn.dataset.statsExpandCat;

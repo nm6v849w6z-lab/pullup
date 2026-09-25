@@ -30,7 +30,7 @@ doc1.getElementById("regenBtn").click(); // "📊 Classement"
 const standingsVisible = !doc1.getElementById("standingsSection").classList.contains("hidden");
 const prepHiddenNow = doc1.getElementById("prepSection").classList.contains("hidden");
 console.log(`${standingsVisible && prepHiddenNow ? "✅" : "❌"} Écran de classement accessible depuis la préparation.`);
-const rowsBefore = doc1.querySelectorAll("#standingsContent tbody tr").length;
+const rowsBefore = doc1.querySelectorAll("#standingsContent tbody tr[data-lg-team]").length;
 console.log("Lignes du classement (attendu 10) :", rowsBefore);
 if (rowsBefore !== 10) throw new Error("❌ Le classement devrait afficher 10 équipes : " + rowsBefore);
 doc1.getElementById("closeStandingsBtn").click();

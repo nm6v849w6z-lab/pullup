@@ -100,7 +100,7 @@ const win2 = dom2.window;
 doc2.getElementById("catchupContinueBtn").click();
 doc2.getElementById("regenBtn").click(); // "📊 Classement" -> onglet Ligue
 
-const mvpLink = doc2.querySelector("#leagueStatsPanel .mvp-callout .player-link");
+const mvpLink = doc2.querySelector("#standingsContent .lg-mvp .player-link");
 if (!mvpLink) throw new Error("❌ (setup) le MVP de la dernière journée devrait être un lien joueur cliquable.");
 const mvpTeamIdx = Number(mvpLink.dataset.playerTeam);
 const mvpPlayerId = Number(mvpLink.dataset.playerId);
