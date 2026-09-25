@@ -102,6 +102,67 @@ function serveAsset(res, pathname) {
   });
 }
 
+// ---------------------------------------------------------------------
+// Application mobile (PWA, 2026-09-25 — retour utilisateur : "réfléchis à
+// l'application mobile et prépare le code") : deux fichiers qui DOIVENT
+// être servis à la racine plutôt que sous /assets/ :
+// - /sw.js : un service worker ne contrôle que les pages sous son propre
+//   chemin, donc il faut /sw.js pour couvrir "/" ;
+// - /manifest.webmanifest : généré à la volée pour y recopier le jeton
+//   manager (`?m=`) dans start_url. Sans ça, une appli installée sur l'écran
+//   d'accueil (qui a son PROPRE stockage sur iOS, séparé de Safari) se
+//   rouvrirait sans jeton, donc hors de la ligue partagée du manager.
+// Contenu des fichiers : assets/mobile/ (voir aussi mobile.css/mobile.js).
+// ---------------------------------------------------------------------
+const MOBILE_SW_PATH = path.join(ASSETS_DIR, "mobile", "sw.js");
+
+function serveServiceWorker(res) {
+  fs.readFile(MOBILE_SW_PATH, (err, data) => {
+    if (err) { sendJson(res, 404, { error: "Service worker introuvable" }); return; }
+    res.writeHead(200, {
+      "Content-Type": "application/javascript; charset=utf-8",
+      "Content-Length": data.length,
+      // Toujours revalidé : une nouvelle version du service worker doit
+      // être prise en compte au prochain chargement, pas dans 24 h.
+      "Cache-Control": "no-cache",
+      "Service-Worker-Allowed": "/",
+    });
+    res.end(data);
+  });
+}
+
+function mobileManifest(token) {
+  const safeToken = typeof token === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(token) ? token : null;
+  return {
+    name: "Hoop Manager",
+    short_name: "Hoop Manager",
+    description: "Gère ton club de basket en temps réel : ordres, matchs en direct, économie.",
+    lang: "fr",
+    id: "/",
+    start_url: safeToken ? `/?m=${safeToken}` : "/",
+    scope: "/",
+    display: "standalone",
+    orientation: "portrait",
+    background_color: "#0d131d",
+    theme_color: "#0f1728",
+    icons: [
+      { src: "/assets/mobile/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/assets/mobile/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/assets/mobile/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+  };
+}
+
+function serveManifest(res, token) {
+  const body = Buffer.from(JSON.stringify(mobileManifest(token)), "utf-8");
+  res.writeHead(200, {
+    "Content-Type": "application/manifest+json; charset=utf-8",
+    "Content-Length": body.length,
+    "Cache-Control": "no-cache",
+  });
+  res.end(body);
+}
+
 // La page elle-même : servie depuis ICI, et relue à chaque requête (pas de
 // cache) — reste vrai quel que soit le mode (solo ou multi-manager) ni la
 // présence d'un `?m=<jeton>` dans l'URL : la route "/" ne dépend jamais de
@@ -646,6 +707,17 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Application mobile (voir serveServiceWorker/serveManifest plus haut) :
+      // comme "/", aucune sauvegarde touchée.
+      if (route.pathname === "/sw.js" && req.method === "GET") {
+        serveServiceWorker(res);
+        return;
+      }
+      if (route.pathname === "/manifest.webmanifest" && req.method === "GET") {
+        serveManifest(res, route.searchParams ? route.searchParams.get("m") : null);
+        return;
+      }
+
       // Assets statiques (visuels de la Salle) — voir serveAsset plus haut ;
       // avant `now`/toute sauvegarde, exactement comme "/", puisque charger
       // une image n'a aucune raison de toucher à une carrière.
@@ -1137,5 +1209,5 @@ if (require.main === module) {
 
 module.exports = {
   createHandler, buildStateSnapshot, tick, startServer,
-  personalizeEventsForTeam, resolvePlayerContext, getManagerToken,
+  personalizeEventsForTeam, resolvePlayerContext, getManagerToken, mobileManifest,
 };

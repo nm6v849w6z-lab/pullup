@@ -20,6 +20,40 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Application mobile
+  (PWA + Capacitor), 1re étape** — retour utilisateur : "réfléchis à
+  l'application mobile et prépare le code" ; choix validés : PWA + emballage
+  Capacitor, écrans du quotidien d'abord. Fait :
+  - assets/mobile/ : mobile.css (tout sous @media max-width:768px, rien ne
+    change sur ordinateur), mobile.js (barre d'onglets du bas Accueil/
+    Ordres/Calendrier/Économie/Menu = vrais .tab-btn[data-tab] ; menu
+    latéral en tiroir ; loupe qui déplie la recherche ; manifest avec jeton ;
+    enregistrement du service worker), sw.js (réseau d'abord pour la page,
+    /api/ jamais en cache, page hors ligne), icônes (192/512/maskable/
+    iPhone/favicon, tirées du logo de la sidebar).
+  - moteurbasket3.html : seulement des balises <head> (viewport-fit=cover,
+    manifest, theme-color, meta Apple, icônes) + chargement de mobile.css/
+    mobile.js APRÈS la grande feuille de style.
+  - server/index.js : routes /sw.js (no-cache, Service-Worker-Allowed) et
+    /manifest.webmanifest?m= (start_url avec le jeton — indispensable sur
+    iOS où l'appli installée a un stockage séparé de Safari) ;
+    mobileManifest exporté.
+  - Écrans retouchés sur mobile : en-tête compact (bouton ordres sans
+    retour à la ligne), terrain de la feuille de match (menus des postes
+    A/AS ne débordent plus), Calendrier en cartes (plus de tableau qui
+    déborde). Tableau de bord et Économie passaient déjà bien.
+  - mobile-app/ : projet Capacitor 8 (appId fr.hoopmanager.app), page de
+    lancement www/index.html qui demande une fois le lien d'invitation puis
+    ouvre le jeu sur Render (allowNavigation) ; README (PWA à installer
+    tout de suite, étapes Xcode/Android Studio, avertissement règle 4.2
+    Apple → prévoir les notifications push). `npx cap add android` vérifié.
+  - Test : mobile_pwa_test.js. Suite complète 125 fichiers verte sauf
+    training_progression_test (flaky connu) ; spectate_live_match_test a
+    échoué sous charge, passe seul.
+  Reste (2e temps) : direct (liveSection) non vérifié sur téléphone faute
+  de match en cours pendant les tests ; Scouting Pro, Marché, Académie,
+  Effectif à adapter ; notifications push ; icône HD 1024 px pour les
+  stores. Puis `git push` par l'utilisateur.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Économie : cartes
   compactes + masse salariale centrée** — retours utilisateur : "brique
   salle : uniquement la dernière recette + bouton ; brique boutique : juste

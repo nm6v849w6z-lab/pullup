@@ -1,0 +1,24 @@
+{
+  "name": "hoop-manager-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Emballage Capacitor de Hoop Manager pour l'App Store et le Play Store (voir README.md).",
+  "scripts": {
+    "sync": "cap sync",
+    "ios": "cap open ios",
+    "android": "cap open android",
+    "icons": "capacitor-assets generate --iconBackgroundColor '#0d131d' --splashBackgroundColor '#0d131d'"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
+  }
+}

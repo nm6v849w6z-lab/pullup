@@ -1,0 +1,28 @@
+{
+  "appId": "fr.hoopmanager.app",
+  "appName": "Hoop Manager",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "allowNavigation": ["pullup-030q.onrender.com"]
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0d131d"
+  },
+  "android": {
+    "backgroundColor": "#0d131d"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 800,
+      "backgroundColor": "#0d131d",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0f1728",
+      "overlaysWebView": true
+    }
+  }
+}

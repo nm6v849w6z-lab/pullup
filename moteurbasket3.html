@@ -20,8 +20,21 @@
      correspondre le viewport à la largeur réelle de l'appareil et démarre au
      zoom 1:1 — cela permet aussi enfin aux media queries mobiles existantes
      de s'appliquer normalement. -->
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pull Up · Basket Manager</title>
+<!-- Application mobile (PWA, 2026-09-25 — retour utilisateur : "réfléchis à
+     l'application mobile et prépare le code"). Tout le code mobile vit dans
+     assets/mobile/ (barre d'onglets du bas, tiroir, service worker) ;
+     viewport-fit=cover ci-dessus + env(safe-area-inset-*) dans mobile.css
+     pour l'encoche/la barre d'accueil de l'iPhone en mode installé. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0f1728">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hoop Manager">
+<link rel="apple-touch-icon" href="/assets/mobile/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/mobile/favicon-32.png">
 <style>
   :root{
     --bg:#0d131d; --panel:#141c29; --panel-2:#1a2433; --line:#26334a; --line-soft:#1e2939;
@@ -3464,6 +3477,11 @@
      un bouton (openHoopShow), donc son chargement différé ne change rien
      en pratique. -->
 <script src="assets/hoop-shows/showPlayer.js" defer></script>
+<!-- Couche mobile (voir le commentaire PWA plus haut) : APRÈS la grande
+     feuille de style, pour que ses règles @media(max-width:768px) l'emportent
+     à spécificité égale ; defer pour la même raison que showPlayer.js. -->
+<link rel="stylesheet" href="assets/mobile/mobile.css">
+<script src="assets/mobile/mobile.js" defer></script>
 </head>
 <body>
 <!-- Écran de chargement (retour utilisateur, 2026-09 : "crée aussi une

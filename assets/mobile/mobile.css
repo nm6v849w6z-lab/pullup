@@ -1,0 +1,103 @@
+/* Hoop Manager — couche "application mobile" (PWA, 2026-09-25).
+   Voir mobile.js pour le contexte. Tout est sous @media (max-width:768px) :
+   rien ne change sur ordinateur. Les éléments ajoutés par mobile.js (barre
+   d'onglets, fond du tiroir, bouton loupe) sont masqués hors mobile. */
+.m-tabbar, .m-drawer-backdrop, .m-search-toggle { display: none; }
+
+@media (max-width: 768px) {
+  html { -webkit-text-size-adjust: 100%; }
+  body { overscroll-behavior-y: none; }
+  /* iOS zoome sur tout champ texte de moins de 16px au focus : on l'en
+     empêche (les <select> gardent leur taille, sinon les menus du terrain
+     de la feuille de match débordent). */
+  input[type="text"], input[type="search"], input[type="number"], input:not([type]), textarea { font-size: 16px !important; }
+
+  /* ---- Menu latéral → tiroir ---- */
+  .app-shell { display: block; }
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; height: auto; width: min(300px, 84vw);
+    flex: none; z-index: 60; transform: translateX(-105%); transition: transform .22s ease;
+    box-shadow: 12px 0 40px rgba(0,0,0,.45);
+    padding-top: calc(18px + env(safe-area-inset-top));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+  body.m-drawer-open .sidebar { transform: none; }
+  .tab-btn.sidebar-link { font-size: 15px; padding: 12px 12px; }
+  .m-drawer-backdrop {
+    display: block; position: fixed; inset: 0; z-index: 55; background: rgba(4,8,15,.6);
+    opacity: 0; pointer-events: none; transition: opacity .2s ease;
+  }
+  body.m-drawer-open .m-drawer-backdrop { opacity: 1; pointer-events: auto; }
+  body.m-drawer-open { overflow: hidden; }
+
+  /* ---- En-tête compact ---- */
+  .topbar {
+    padding: calc(10px + env(safe-area-inset-top)) 14px 10px; gap: 10px; flex-wrap: nowrap;
+  }
+  .topbar-sub, .topbar-meta { display: none !important; }
+  .topbar-club { font-size: 16px; }
+  .topbar-right { gap: 8px; flex-wrap: nowrap; }
+  .topbar-left { flex: 1 1 auto; min-width: 0; }
+  .topbar-right { flex: none; }
+  button.topbar-cta { padding: 10px 14px; font-size: 12.5px; white-space: nowrap; max-width: none; line-height: 1.1; }
+  .topbar-search { display: none; }
+  body.m-search-open .topbar-search {
+    display: block; position: absolute; left: 10px; right: 10px; top: 100%; margin-top: 8px;
+    max-width: none; z-index: 30;
+  }
+  body.m-search-open .topbar-search-input { padding: 12px 16px; box-shadow: 0 10px 28px rgba(0,0,0,.4); }
+  .m-search-toggle {
+    display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: none;
+    border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer; padding: 0;
+  }
+  .topbar-live-strip { padding: 7px 12px; }
+  .topbar-live-strip .tls-clock { display: none; }
+  .topbar-player-nav .topbar-compare-btn { display: none; }
+
+  /* ---- Contenu : place pour la barre du bas ---- */
+  .content-scroll { padding: 14px 12px calc(88px + env(safe-area-inset-bottom)); }
+
+  /* ---- Barre d'onglets du bas ---- */
+  .m-tabbar {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: rgba(15,23,40,.96); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+  }
+  .m-tabbar .m-tab {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    min-height: 52px; background: none; border: 0; color: var(--ink-dim); cursor: pointer;
+    font-family: inherit; font-size: 10.5px; font-weight: 600; padding: 4px 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .m-tabbar .m-tab.active { color: var(--amber); }
+  .m-tabbar .m-tab[aria-expanded="true"] { color: var(--ink); }
+
+  /* ---- Ordres : terrain de la feuille de match ---- */
+  /* Les postes A/AS sont placés près des lignes de touche : sur un écran
+     étroit leur menu déborderait du terrain (coupé par overflow:hidden). */
+  .lineup-court { overflow: visible; }
+  .court-marker { width: 84px; }
+  .court-marker select { font-size: 11.5px; padding: 6px 4px; }
+
+  /* ---- Calendrier : chaque ligne du tableau devient une carte ----
+     Colonnes d'origine : 1 Date, 2 Compétition, 3 Adversaire, 4 Lieu,
+     5 Score, 6 bouton (Ordres / direct). */
+  .calendar-table thead { display: none; }
+  .calendar-table, .calendar-table tbody { display: block; width: 100%; }
+  .calendar-table tr {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 3px 8px; align-items: center;
+    padding: 12px 14px; border-bottom: 1px solid var(--line-soft);
+  }
+  .calendar-table td { display: block; padding: 0 !important; border: 0 !important; text-align: left !important; white-space: normal; }
+  .calendar-table td:nth-child(3) { grid-column: 1 / 3; grid-row: 1; font-size: 16px; font-weight: 700; color: var(--ink); }
+  .calendar-table td:nth-child(5) { grid-column: 3; grid-row: 1; text-align: right !important; font-weight: 800; }
+  .calendar-table td:nth-child(1) { grid-column: 1 / 3; grid-row: 2; font-size: 13px; color: var(--ink-dim); }
+  .calendar-table td:nth-child(1) .sub { display: inline; margin-left: 6px; }
+  .calendar-table td:nth-child(2) { grid-column: 1; grid-row: 3; font-size: 12.5px; color: var(--ink-faint); }
+  .calendar-table td:nth-child(4) { grid-column: 2; grid-row: 3; font-size: 12.5px; color: var(--ink-faint); }
+  .calendar-table td:nth-child(4)::before { content: "· "; }
+  .calendar-table td:nth-child(6) { grid-column: 3; grid-row: 2 / 4; justify-self: end; }
+  .calendar-table td:nth-child(6):empty { display: none; }
+}
