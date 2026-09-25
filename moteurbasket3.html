@@ -3748,6 +3748,165 @@
     .sl-seat-ctrl{gap:10px;}
     .sl-total{flex-wrap:wrap;}
   }
+  /* =====================================================================
+     Onglet Effectif — refonte visuelle (retour utilisateur, 2026-09-25 :
+     "code ces pages effectifs stp", maquette Design "Hoop Manager –
+     Effectif retravaillé"). Tout est préfixé .eff- et limité à
+     #effectifSection (voir renderEffectifSection et suivantes dans le JS).
+     Police : la pile système du reste du jeu (la maquette utilisait Barlow,
+     jamais chargée dans ce projet). Couleurs : tokens :root du jeu +
+     pastilles de poste propres à cet écran.
+     ===================================================================== */
+  #effectifSection{--eff-row:#172031; --eff-row-2:#141c2b; --eff-sep:#222b3d; --eff-track:#243048;
+    --eff-pos-m-bg:rgba(96,165,250,.16); --eff-pos-m:#9cc5fb;
+    --eff-pos-a-bg:rgba(45,212,191,.15); --eff-pos-a:#6ee7d2;
+    --eff-pos-as-bg:rgba(167,139,250,.18); --eff-pos-as:#c9bbfd;
+    --eff-pos-af-bg:rgba(245,165,36,.16); --eff-pos-af:#fbc063;
+    --eff-pos-p-bg:rgba(244,114,182,.16); --eff-pos-p:#f7a8d2;}
+  .eff-page{font-variant-numeric:tabular-nums;}
+  .eff-head{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:22px;}
+  .eff-title h2{margin:0; font-size:34px; line-height:1.05; letter-spacing:-.01em;}
+  .eff-sub{margin-top:4px; font-size:14px; color:var(--ink-dim);}
+  .eff-kpis{display:flex; background:var(--panel); border:1px solid var(--line); border-radius:12px;}
+  .eff-kpi{padding:12px 22px; display:flex; flex-direction:column; gap:5px; justify-content:center; min-width:0;}
+  .eff-kpi-chem{width:210px;}
+  .eff-kpi-sep{width:1px; background:var(--line);}
+  .eff-kpi-label{font-size:12.5px; color:var(--ink-dim);}
+  .eff-kpi-line{display:flex; align-items:baseline; gap:6px; white-space:nowrap;}
+  .eff-kpi-num{font-size:24px; font-weight:800; line-height:1; color:var(--ink);}
+  .eff-kpi-unit{font-size:13px; color:var(--ink-dim);}
+  .eff-meter{display:inline-block; position:relative; width:36px; height:6px; border-radius:3px; background:var(--eff-track); overflow:hidden; flex:none;}
+  .eff-meter-lg{display:block; width:100%;}
+  .eff-meter-fill{display:block; height:100%; border-radius:3px; background:var(--amber);}
+
+  .eff-toolbar{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px;}
+  .eff-seg{display:inline-flex; gap:4px; padding:4px; background:var(--panel); border:1px solid var(--line); border-radius:10px;}
+  .eff-seg-btn{padding:8px 18px; min-height:36px; border:0; border-radius:7px; background:transparent; color:var(--ink-dim); font:inherit; font-size:14px; font-weight:500; cursor:pointer;}
+  .eff-seg-btn:hover{color:var(--ink);}
+  .eff-seg-btn.active{background:#2a3550; color:var(--ink); font-weight:600;}
+  .eff-seg-btn:focus-visible, .eff-menu-btn:focus-visible, .eff-th:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  .eff-hint{font-size:12.5px; color:var(--ink-dim);}
+  .eff-sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
+
+  /* --- Tableaux (base commune) --- */
+  .eff-table-wrap{margin-bottom:16px;}
+  #effectifSection table.eff-table{width:100%; background:transparent; border-radius:0; overflow:visible; border-collapse:separate; border-spacing:0; font-size:14px;}
+  #effectifSection table.eff-table th, #effectifSection table.eff-table td{padding:0 8px; border-bottom:0; text-align:left; white-space:nowrap;}
+  #effectifSection table.eff-table thead th{height:34px; font-size:12px; font-weight:600; text-transform:none; color:var(--ink-dim); letter-spacing:0;}
+  #effectifSection table.eff-table thead th.sorted{color:var(--amber);}
+  #effectifSection table.eff-table th.sortable-th:hover{color:var(--ink);}
+  #effectifSection table.eff-table th:first-child, #effectifSection table.eff-table td:first-child{padding-left:16px;}
+  #effectifSection table.eff-table th:last-child, #effectifSection table.eff-table td:last-child{padding-right:12px;}
+  .eff-sort-ico{margin-left:3px; vertical-align:middle;}
+  .eff-th.asc .eff-sort-ico{transform:rotate(180deg);}
+  .eff-num{text-align:right !important;}
+  #effectifSection table.eff-table th.eff-th-age, #effectifSection table.eff-table th.eff-th-height, #effectifSection table.eff-table th.eff-th-salary{text-align:right;}
+  .eff-player{display:inline-flex; align-items:center; gap:10px; min-width:0;}
+  .eff-player .player-link{font-weight:600;}
+  .eff-pos{display:inline-flex; min-width:34px; justify-content:center; padding:3px 8px; border-radius:6px; font-weight:800; font-size:13px; letter-spacing:.02em;}
+  .eff-pos-m{background:var(--eff-pos-m-bg); color:var(--eff-pos-m);}
+  .eff-pos-a{background:var(--eff-pos-a-bg); color:var(--eff-pos-a);}
+  .eff-pos-as{background:var(--eff-pos-as-bg); color:var(--eff-pos-as);}
+  .eff-pos-af{background:var(--eff-pos-af-bg); color:var(--eff-pos-af);}
+  .eff-pos-p{background:var(--eff-pos-p-bg); color:var(--eff-pos-p);}
+  .eff-position{font-size:12px; color:var(--ink-dim);}
+
+  /* Potentiel : 5 segments + nom du palier, teinte au barème attr-tier-*. */
+  .eff-pot{display:inline-flex; align-items:center; gap:10px; --eff-tier:var(--ink);}
+  .eff-pot.attr-tier-red{--eff-tier:var(--attr-tier-red);}
+  .eff-pot.attr-tier-orange{--eff-tier:var(--attr-tier-amber);}
+  .eff-pot.attr-tier-white{--eff-tier:var(--ink);}
+  .eff-pot.attr-tier-green{--eff-tier:#3fd08f;}
+  .eff-pips{display:inline-flex; gap:3px;}
+  .eff-pip{width:12px; height:6px; border-radius:3px; background:#2a3550;}
+  .eff-pip.on{background:var(--eff-tier);}
+  #effectifSection .eff-pot .potential-tier{font-size:13px; font-weight:500; color:var(--eff-tier); max-width:none; white-space:nowrap; text-align:left;}
+
+  /* Forme : mini-barre + état. */
+  .eff-cond{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-dim); --eff-c:var(--ok);}
+  .eff-cond.cond-great, .eff-cond.cond-good{--eff-c:#4fc3a1;}
+  .eff-cond.cond-mid{--eff-c:var(--amber);}
+  .eff-cond.cond-low, .eff-cond.cond-critical{--eff-c:var(--danger);}
+  .eff-cond.cond-low .eff-cond-label, .eff-cond.cond-critical .eff-cond-label{color:var(--danger);}
+  .eff-cond .eff-meter-fill{background:var(--eff-c);}
+
+  /* Motivation : pastille + libellé. */
+  .eff-motiv{display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink); --eff-c:#6b768a;}
+  .eff-dot{width:8px; height:8px; border-radius:50%; background:var(--eff-c); flex:none;}
+  .eff-motiv.motiv-great{--eff-c:var(--amber); color:var(--amber);}
+  .eff-motiv.motiv-good{--eff-c:#4fc3a1;}
+  .eff-motiv.motiv-mid{--eff-c:#6b768a; color:var(--ink-dim);}
+  .eff-motiv.motiv-low{--eff-c:var(--danger);}
+  .eff-motiv.motiv-critical{--eff-c:var(--danger); color:var(--danger); font-weight:700;}
+
+  /* --- Général : groupes Cinq de départ / Rotation / Réserve --- */
+  #effectifSection .eff-general tr.eff-group-row th{height:auto; padding:22px 0 10px 2px; text-align:left; background:transparent; font-weight:600; color:var(--ink); text-transform:none;}
+  #effectifSection .eff-general tbody:first-of-type tr.eff-group-row th{padding-top:6px;}
+  .eff-group-title{font-size:18px; font-weight:700; margin-right:10px;}
+  .eff-group-count{font-size:12.5px; font-weight:500; color:var(--ink-dim);}
+  #effectifSection .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
+  #effectifSection .eff-general .eff-group-starters tr.eff-row td{height:58px; background:var(--eff-row);}
+  #effectifSection .eff-general .eff-group-starters .eff-player .player-link{font-size:15px;}
+  #effectifSection .eff-general tr.eff-row td:first-child{border-left:1px solid var(--eff-sep);}
+  #effectifSection .eff-general tr.eff-row td:last-child{border-right:1px solid var(--eff-sep);}
+  #effectifSection .eff-general tr.eff-group-row + tr.eff-row td:first-child{border-top-left-radius:12px;}
+  #effectifSection .eff-general tr.eff-group-row + tr.eff-row td:last-child{border-top-right-radius:12px;}
+  #effectifSection .eff-general tr.eff-row:last-child td{border-bottom:1px solid var(--eff-sep);}
+  #effectifSection .eff-general tr.eff-row:last-child td:first-child{border-bottom-left-radius:12px;}
+  #effectifSection .eff-general tr.eff-row:last-child td:last-child{border-bottom-right-radius:12px;}
+  #effectifSection .eff-general tr.eff-row:hover td{background:#1c2638;}
+  #effectifSection .eff-general tr.eff-row.injured td{background:rgba(226,105,79,.12); color:var(--danger);}
+  #effectifSection .eff-listed{margin-left:6px; padding:1px 8px; font-size:10.5px;}
+
+  /* Menu "⋯". */
+  .eff-td-actions{position:relative; width:44px;}
+  .eff-menu-btn{width:36px; height:36px; border:0; border-radius:8px; background:transparent; color:var(--ink-dim); display:inline-flex; align-items:center; justify-content:center; cursor:pointer;}
+  .eff-menu-btn:hover, .eff-menu-btn[aria-expanded="true"]{background:#243048; color:var(--ink);}
+  .eff-menu{position:absolute; right:8px; top:calc(100% - 4px); z-index:20; width:250px; padding:6px; display:flex; flex-direction:column; gap:2px; background:#1a2436; border:1px solid #2e3b56; border-radius:10px; box-shadow:0 12px 32px rgba(0,0,0,.45); white-space:normal; text-align:left;}
+  .eff-menu[hidden]{display:none;}
+  .eff-menu-item{display:block; width:100%; margin:0; padding:9px 10px; border:0; border-radius:7px; background:transparent; color:var(--ink); font:inherit; font-size:13.5px; text-align:left; text-decoration:none; cursor:pointer;}
+  .eff-menu-item:hover{background:#243048;}
+  .eff-menu-label{display:block; padding:8px 10px 4px; font-size:12px; color:var(--ink-dim);}
+  .eff-menu-row{display:flex; gap:6px; padding:0 4px 6px;}
+  #effectifSection .eff-menu .market-price-input{flex:1 1 auto; width:auto; min-width:0; height:36px; padding:0 10px; border:1px solid #2e3b56; border-radius:7px; background:var(--panel); font-size:13px;}
+  .eff-menu-cta{height:36px; padding:0 14px; border:0; border-radius:999px; background:var(--amber); color:var(--amber-ink); font:inherit; font-size:13px; font-weight:700; cursor:pointer;}
+  .eff-menu-note{padding:8px 10px; font-size:12.5px; color:var(--ink-dim);}
+  #effectifSection .eff-menu .sell-btn.eff-menu-danger{margin:0; border:0; border-radius:7px; padding:9px 10px; font-size:13.5px; color:var(--danger);}
+  #effectifSection .eff-menu .sell-btn.eff-menu-danger:hover{background:rgba(226,105,79,.12);}
+
+  /* --- Caractéristiques --- */
+  #effectifSection .eff-table-wrap-caracs{overflow-x:auto; background:var(--eff-row-2); border:1px solid var(--eff-sep); border-radius:12px;}
+  #effectifSection .eff-caracs{font-size:13.5px;}
+  #effectifSection .eff-caracs tr.eff-family-row td{padding-top:14px; padding-bottom:0; height:auto;}
+  #effectifSection .eff-caracs td.eff-family{text-align:left !important; padding:14px 4px 0 !important;}
+  .eff-family span{display:block; padding-bottom:5px; border-bottom:2px solid #2a3550; font-size:14px; font-weight:700; color:#c3cbd9;}
+  #effectifSection .eff-caracs thead tr:last-child th{border-bottom:1px solid var(--line); padding-bottom:4px;}
+  #effectifSection .eff-caracs th.eff-th-attr, #effectifSection .eff-caracs th.eff-th-avg{text-align:center; padding:0 2px; font-size:11px; white-space:normal; line-height:1.15; min-width:38px;}
+  #effectifSection .eff-caracs .eff-pot{gap:6px;}
+  #effectifSection .eff-caracs .eff-pip{width:8px;}
+  #effectifSection .eff-caracs .eff-pot .potential-tier{font-size:12px;}
+  #effectifSection .eff-caracs .eff-player{gap:8px;}
+  #effectifSection .eff-caracs td{height:44px; border-bottom:1px solid #1d2536;}
+  #effectifSection .eff-caracs tr:last-child td{border-bottom:0;}
+  #effectifSection .eff-caracs td:nth-child(n+4){text-align:center; padding:0 2px;}
+  #effectifSection .eff-caracs .eff-gstart{padding-left:12px !important;}
+  #effectifSection .eff-caracs tbody tr:hover td{background:#1a2333;}
+  .eff-td-avg{font-size:15px; font-weight:800;}
+  #effectifSection .attr-cell.eff-attr{display:inline-flex; align-items:center; justify-content:center; width:36px; min-width:0; height:30px; margin:0; padding:0; border-radius:6px; background:transparent; gap:0;}
+  #effectifSection .attr-cell.eff-attr .attr-val{font-size:15px; font-weight:500;}
+  #effectifSection .attr-cell.eff-attr.eff-best{box-shadow:inset 0 0 0 1.5px rgba(244,246,250,.6);}
+  #effectifSection .attr-cell.eff-attr.eff-best .attr-val{font-weight:800;}
+
+  @media(max-width:1180px){
+    .eff-table-wrap:not(.eff-table-wrap-caracs){overflow-x:auto; padding-bottom:140px; margin-bottom:-124px;}
+    .eff-head{align-items:flex-start;}
+  }
+  @media(max-width:768px){
+    .eff-kpis{width:100%; flex-direction:column;}
+    .eff-kpi-chem{width:auto;}
+    .eff-kpi-sep{width:auto; height:1px;}
+    .eff-title h2{font-size:28px;}
+  }
 </style>
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
@@ -4472,16 +4631,37 @@
   </div>
 
   <div id="effectifSection" class="hidden">
-    <div class="section">
-      <h2>Effectif</h2>
-      <!-- Alchimie d'équipe (retour utilisateur, 2026-09 : "voir le niveau
-           d'alchimie sur la page effectif [...] juste en dessous ou à côté
-           du titre avec une petite jauge") : voir renderEffectifSection pour
-           le remplissage (largeur + couleur), même mécanique que la jauge de
-           l'onglet Humeur des supporters (#moraleGaugeFill). -->
-      <div class="roster-chemistry-gauge-wrap">
-        <div class="roster-chemistry-gauge-label"><span>Alchimie d'équipe</span><b id="rosterChemistryValue"></b></div>
-        <div class="morale-gauge roster-chemistry-gauge"><div class="morale-gauge-fill" id="rosterChemistryGaugeFill"></div></div>
+    <!-- Refonte visuelle de l'Effectif (retour utilisateur, 2026-09-25 :
+         "code ces pages effectifs stp", maquette Design "Hoop Manager –
+         Effectif retravaillé") : en-tête titre + sous-titre (club, nombre de
+         joueurs) à gauche, bandeau de 3 repères à droite (Alchimie d'équipe,
+         Masse salariale, Prochain match). Les ids #rosterChemistryValue/
+         #rosterChemistryGaugeFill sont CONSERVÉS (même mécanique de couleur
+         que la jauge Humeur, voir renderEffectifSection). Tout est préfixé
+         .eff- (voir la feuille de style, bloc "Onglet Effectif — refonte"). -->
+    <div class="section eff-page">
+      <div class="eff-head">
+        <div class="eff-title">
+          <h2>Effectif</h2>
+          <div class="eff-sub" id="rosterSubtitle"></div>
+        </div>
+        <div class="eff-kpis">
+          <div class="eff-kpi eff-kpi-chem">
+            <div class="eff-kpi-label">Alchimie d'équipe</div>
+            <div class="eff-kpi-line"><b class="eff-kpi-num" id="rosterChemistryValue"></b><span class="eff-kpi-unit" id="rosterChemistryLabel"></span></div>
+            <div class="eff-meter eff-meter-lg"><div class="eff-meter-fill" id="rosterChemistryGaugeFill"></div></div>
+          </div>
+          <div class="eff-kpi-sep" aria-hidden="true"></div>
+          <div class="eff-kpi">
+            <div class="eff-kpi-label">Masse salariale</div>
+            <div class="eff-kpi-line"><b class="eff-kpi-num" id="rosterPayrollValue"></b><span class="eff-kpi-unit">par semaine</span></div>
+          </div>
+          <div class="eff-kpi-sep" aria-hidden="true"></div>
+          <div class="eff-kpi">
+            <div class="eff-kpi-label">Prochain match</div>
+            <div class="eff-kpi-line"><b class="eff-kpi-num" id="rosterNextOpponent"></b><span class="eff-kpi-unit" id="rosterNextRound"></span></div>
+          </div>
+        </div>
       </div>
       <div id="rosterContent"></div>
     </div>
@@ -28016,14 +28196,17 @@ let rosterSortState = { key: null, dir: 1 };
 // re-rendu).
 let effectifSubView = "general"; // "general" | "caracteristiques"
 
-function effectifSubNavHtml() {
+function effectifSubNavHtml(rightHtml = "") {
   const tabs = [
     { key: "general", label: "Général" },
     { key: "caracteristiques", label: "Caractéristiques" },
   ];
-  return `<div class="boxscore-toggle effectif-subnav">` +
-    tabs.map(t => `<button type="button" class="bs-tab${effectifSubView === t.key ? " active" : ""}" data-effectif-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
-    `</div>`;
+  // Contrôle segmenté (maquette "Effectif retravaillé") : même
+  // [data-effectif-subview] qu'avant, classe dédiée .eff-seg (pas .bs-tab,
+  // déjà écoutée ailleurs pour le box-score).
+  return `<div class="eff-toolbar"><div class="eff-seg effectif-subnav" role="tablist" aria-label="Vues de l'effectif">` +
+    tabs.map(t => `<button type="button" role="tab" aria-selected="${effectifSubView === t.key}" class="eff-seg-btn${effectifSubView === t.key ? " active" : ""}" data-effectif-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
+    `</div>${rightHtml}</div>`;
 }
 
 // Refonte de l'onglet Effectif (retour utilisateur, 2026-09 : "On va
@@ -28098,6 +28281,8 @@ function rosterSortValue(p, key) {
     // Colonnes moyennées "Physique"/"Mental" du sous-onglet Caractéristiques
     // (voir categoryAverageCellHtml, même calcul — arrondi comme la valeur
     // affichée à l'écran, pour trier exactement sur ce que le joueur voit).
+    // Colonne "Moy." du sous-onglet Caractéristiques (voir effAttrAverage).
+    case "avg": return effAttrAverage(p);
     case "physicalAvg": return Math.round(PHYSICAL_ATTRS.reduce((s, a) => s + p.attrs[a], 0) / PHYSICAL_ATTRS.length);
     case "mentalAvg": return Math.round(MENTAL_ATTRS.reduce((s, a) => s + p.attrs[a], 0) / MENTAL_ATTRS.length);
     default: return p.attrs[key];
@@ -28110,156 +28295,274 @@ function rosterHeaderCellHtml(key, label) {
   return `<th class="sortable-th${active ? " sorted" : ""}" data-sort="${key}">${escapeHtml(label)}${arrow}</th>`;
 }
 
-function renderEffectifSection() {
-  // Alchimie d'équipe (retour utilisateur, 2026-09 : voir le commentaire de
-  // .roster-chemistry-gauge-wrap ci-dessus dans le HTML) : même mécanique de
-  // remplissage/couleur que renderHumeurSection (#moraleGaugeFill), sur la
-  // jauge compacte sous le titre de cet onglet.
+// ---------------------------------------------------------------------
+// Onglet Effectif — refonte visuelle (retour utilisateur, 2026-09-25 : "code
+// ces pages effectifs stp", maquette Design "Hoop Manager – Effectif
+// retravaillé", planches "Effectif – Général" et "Effectif –
+// Caractéristiques"). Même données, même tri (rosterSortState/
+// rosterSortValue), mêmes actions de marché qu'avant — seul l'habillage
+// change :
+//  - Général : joueurs GROUPÉS par rôle (Cinq de départ / Rotation /
+//    Réserve, voir playerRoleLabel — remplace l'ancienne colonne "Rôle"),
+//    tri appliqué à l'intérieur de chaque groupe ; poste en pastille
+//    colorée, potentiel en 5 segments + nom du palier, forme en mini-barre,
+//    motivation en pastille ; les actions (fiche, mise aux enchères, vente
+//    forcée à 1 €) passent dans un menu "⋯" en bout de ligne au lieu d'une
+//    colonne "Marché" toujours dépliée.
+//  - Caractéristiques : 13 fondamentaux regroupés Tir / Jeu / Défense +
+//    Condition (moyennes Physique/Mental), colonne "Moy." (moyenne des 15
+//    colonnes affichées, tri par défaut de ce sous-onglet), meilleur de
+//    l'équipe cerclé dans chaque colonne, chiffres seuls colorés au barème
+//    rouge/orange/blanc/vert (attrColorTier) sans mini-barre.
+// Les lignes joueurs portent la classe .eff-row (les lignes de titre de
+// groupe, .eff-group-row, n'en sont pas) : c'est elle que les tests comptent.
+// ---------------------------------------------------------------------
+const EFF_POS_CLASS = { "Meneur": "m", "Arrière": "a", "Ailier shooteur": "as", "Ailier fort": "af", "Pivot": "p" };
+const EFF_ROLE_GROUPS = [
+  { role: "Titulaire", label: "Cinq de départ" },
+  { role: "Joueur de rotation", label: "Rotation" },
+  { role: "Réserviste", label: "Réserve" },
+];
+// Regroupement des colonnes du sous-onglet Caractéristiques (maquette) : les
+// 13 FUNDAMENTAL_ATTRS répartis en 3 familles, puis les 2 moyennes.
+const EFF_ATTR_GROUPS = [
+  { label: "Tir", keys: ["midRange", "threePoint", "inside", "freeThrow"] },
+  { label: "Jeu", keys: ["pass", "dribble", "shotCreation", "penetration"] },
+  { label: "Défense", keys: ["defOutside", "defInside", "steal", "rebound", "block"] },
+  { label: "Condition", keys: ["physicalAvg", "mentalAvg"] },
+];
+const EFF_AVG_LABELS = { physicalAvg: "Physique", mentalAvg: "Mental" };
+
+// Valeur affichée d'une colonne de caractéristique (brute pour un
+// fondamental, moyenne arrondie pour Physique/Mental — voir rosterSortValue).
+function effAttrValue(p, key) {
+  return (key === "physicalAvg" || key === "mentalAvg") ? rosterSortValue(p, key) : p.attrs[key];
+}
+// Colonne "Moy." : moyenne des 15 colonnes du sous-onglet Caractéristiques.
+function effAttrAverage(p) {
+  const keys = EFF_ATTR_GROUPS.flatMap(g => g.keys);
+  return keys.reduce((s, k) => s + effAttrValue(p, k), 0) / keys.length;
+}
+
+function effChevronSvg() {
+  return `<svg class="eff-sort-ico" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>`;
+}
+// En-tête triable (même data-sort/écouteur que l'ancien rosterHeaderCellHtml),
+// avec chevron au lieu de ▲/▼ et aria-sort pour les lecteurs d'écran.
+function effHeaderCellHtml(key, label, opts = {}) {
+  const active = opts.forceActive || rosterSortState.key === key;
+  const dir = opts.forceActive ? -1 : rosterSortState.dir;
+  const cls = ["sortable-th", "eff-th", opts.cls || "", active ? "sorted" : "", active && dir === 1 ? "asc" : ""].filter(Boolean).join(" ");
+  const ariaSort = active ? (dir === 1 ? "ascending" : "descending") : "none";
+  const title = opts.title ? ` title="${escapeHtml(opts.title)}"` : "";
+  return `<th class="${cls}" data-sort="${key}" aria-sort="${ariaSort}"${title}>${escapeHtml(label)}${active ? effChevronSvg() : ""}</th>`;
+}
+
+function effPosBadgeHtml(position) {
+  return `<span class="eff-pos eff-pos-${EFF_POS_CLASS[position] || "m"}" title="${escapeHtml(position)}">${POS_SHORT[position]}</span>`;
+}
+
+// Potentiel : 5 segments (palier 1-10 ramené sur 5) + nom du palier, teintés
+// au barème des caractéristiques (palier × 10 → attrColorTier). Le nom du
+// palier reste dans .potential-tier (seul texte de la cellule), jamais le
+// chiffre caché 1-99.
+function effPotentialHtml(p) {
+  const idx = potentialTierIndex(p.potential);
+  const lvl = Math.ceil(idx / 2);
+  const tier = attrColorTier(idx * 10);
+  let pips = "";
+  for (let i = 1; i <= 5; i++) pips += `<span class="eff-pip${i <= lvl ? " on" : ""}"></span>`;
+  return `<span class="eff-pot ${tier}" title="Palier de potentiel : ${idx}/10"><span class="eff-pips" aria-hidden="true">${pips}</span><span class="potential-tier">${escapeHtml(potentialTierLabel(p.potential))}</span></span>`;
+}
+
+// Forme physique : mini-barre (valeur courante rattrapée, voir
+// currentCondition) + état en toutes lettres, mêmes paliers que
+// conditionBadgeHtml.
+function effConditionHtml(p, now, recoveryPerDay) {
+  const value = currentCondition(p, now, recoveryPerDay);
+  const state = conditionStateFor(value);
+  const tier = value >= 90 ? "cond-great" : value >= 75 ? "cond-good" : value >= 60 ? "cond-mid" : value >= 40 ? "cond-low" : "cond-critical";
+  return `<span class="eff-cond ${tier}" title="Forme physique : ${escapeHtml(state.label)} (${value}/100)"><span class="eff-meter"><span class="eff-meter-fill" style="width:${Math.max(0, Math.min(100, value))}%"></span></span><span class="eff-cond-label">${escapeHtml(state.label)}</span></span>`;
+}
+
+// Motivation : pastille colorée + libellé, mêmes paliers que
+// motivationBadgeHtml.
+function effMotivationHtml(p) {
+  const value = p.form;
+  const tier = value >= 85 ? "motiv-great" : value >= 65 ? "motiv-good" : value >= 45 ? "motiv-mid" : value >= 25 ? "motiv-low" : "motiv-critical";
+  return `<span class="eff-motiv ${tier}" title="Motivation : ${value}/100"><span class="eff-dot" aria-hidden="true"></span>${escapeHtml(motivationLabel(value))}</span>`;
+}
+
+// Menu "⋯" d'une ligne : fiche joueur, mise aux enchères (prix libre, même
+// #listPrice_<id>/[data-list-player] qu'avant) et vente forcée à 1 € quand le
+// club est en déficit prolongé. Rendu d'avance mais `hidden` : ouvert/fermé
+// par l'écouteur délégué de #rosterContent (voir [data-eff-menu]).
+function effActionsMenuHtml(p, isListed) {
+  const name = escapeHtml(p.name);
+  let body = `<button type="button" class="player-link eff-menu-item" data-player-team="${myTeamIndex}" data-player-id="${p.id}">Voir la fiche</button>`;
+  if (isListed) {
+    body += `<div class="eff-menu-note">Aux enchères. Suivez l'enchère dans l'onglet Marché.</div>`;
+  } else {
+    body += `<label class="eff-menu-label" for="listPrice_${p.id}">Mettre aux enchères</label>` +
+      `<div class="eff-menu-row"><input type="number" class="market-price-input" id="listPrice_${p.id}" placeholder="Prix de départ (€)" min="1" step="100">` +
+      `<button type="button" class="eff-menu-cta" data-list-player="${p.id}" data-player-name="${name}">Lister</button></div>`;
+  }
+  if (p.forSale) {
+    body += `<button type="button" class="sell-btn eff-menu-item eff-menu-danger" data-sell-player="${p.id}" title="Vendre ${name} pour 1 €">Vendre pour 1 €</button>`;
+  }
+  return `<button type="button" class="eff-menu-btn" data-eff-menu="${p.id}" aria-haspopup="true" aria-expanded="false" aria-controls="effMenu_${p.id}" aria-label="Actions pour ${name}">` +
+    `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>` +
+    `<div class="eff-menu" id="effMenu_${p.id}" role="menu" hidden>${body}</div>`;
+}
+
+function closeEffectifMenus(except) {
+  document.querySelectorAll("#rosterContent .eff-menu").forEach(menu => {
+    if (menu === except) return;
+    menu.hidden = true;
+    const btn = document.querySelector(`#rosterContent [data-eff-menu="${menu.id.replace("effMenu_", "")}"]`);
+    if (btn) btn.setAttribute("aria-expanded", "false");
+  });
+}
+
+// Prochain match (bandeau d'en-tête) : même source que la barre du haut
+// (currentMatch/teamB, voir updateTopbar), libellé de journée court.
+function effNextMatchInfo() {
+  if (!currentMatch || !teamB) return { name: "—", round: "" };
+  const round = currentMatch.seriesId
+    ? (currentMatch.seriesId === "final" ? "finale" : "demi-finale")
+    : currentMatch.competition === "cup"
+      ? `coupe, ${cupStageLabelForRoundIndex(currentMatch.round).toLowerCase()}`
+      : `journée ${currentMatch.round + 1}`;
+  return { name: teamB.name, round: `${currentMatch.isHome ? "à domicile" : "à l'extérieur"}, ${round}` };
+}
+
+function renderEffectifHeader() {
+  // Alchimie d'équipe : même mécanique de remplissage/couleur que
+  // renderHumeurSection (#moraleGaugeFill), voir moraleGaugeColor.
   const chemistry = teamA.chemistry;
   const chemColor = moraleGaugeColor(chemistry);
   const chemValueEl = document.getElementById("rosterChemistryValue");
   if (chemValueEl) {
-    chemValueEl.textContent = `${Math.round(chemistry)}/100 · ${chemistryLabel(chemistry)}`;
+    chemValueEl.textContent = `${Math.round(chemistry)}`;
     chemValueEl.style.color = chemColor;
   }
+  const chemLabelEl = document.getElementById("rosterChemistryLabel");
+  if (chemLabelEl) chemLabelEl.textContent = `/100, ${chemistryLabel(chemistry).toLowerCase()}`;
   const chemFill = document.getElementById("rosterChemistryGaugeFill");
   if (chemFill) {
     chemFill.style.width = `${Math.round(chemistry)}%`;
     chemFill.style.background = chemColor;
   }
+  const subEl = document.getElementById("rosterSubtitle");
+  if (subEl) subEl.textContent = `${teamA.name}, ${teamA.players.length} joueur${teamA.players.length > 1 ? "s" : ""}`;
+  const payrollEl = document.getElementById("rosterPayrollValue");
+  if (payrollEl) payrollEl.textContent = formatMoney(teamA.players.reduce((s, p) => s + p.salary, 0));
+  const next = effNextMatchInfo();
+  const oppEl = document.getElementById("rosterNextOpponent");
+  if (oppEl) oppEl.textContent = next.name;
+  const roundEl = document.getElementById("rosterNextRound");
+  if (roundEl) roundEl.textContent = next.round;
+}
 
+function effSortPlayers(players, defaultCmp) {
+  if (!rosterSortState.key) return [...players].sort(defaultCmp);
+  const { key, dir } = rosterSortState;
+  return [...players].sort((a, b) => {
+    const va = rosterSortValue(a, key), vb = rosterSortValue(b, key);
+    const cmp = typeof va === "string" ? va.localeCompare(vb) : va - vb;
+    return cmp * dir;
+  });
+}
+
+function renderEffectifSection() {
+  renderEffectifHeader();
   const holder = document.getElementById("rosterContent");
-  let sorted;
-  if (rosterSortState.key) {
-    const { key, dir } = rosterSortState;
-    sorted = [...teamA.players].sort((a, b) => {
-      const va = rosterSortValue(a, key), vb = rosterSortValue(b, key);
-      const cmp = typeof va === "string" ? va.localeCompare(vb) : va - vb;
-      return cmp * dir;
-    });
-  } else {
-    sorted = [...teamA.players].sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall());
-  }
-  const listedIds = new Set((league.transferListings || []).filter(l => l.status === "open").map(l => l.playerId));
 
-  // Sous-onglet "Caractéristiques" (retour utilisateur, 2026-09 : "sur
-  // l'onglet effectif, il faudrait deux sous onglets [...] un onglet où on
-  // voit les caracs des joueurs comme si on consulte la page d'un
-  // adversaire (avec les carac bien évidemment)") : même tableau que la
-  // branche "propre équipe" de teamDetailEffectifHtml (voir son commentaire),
-  // sans les statistiques de saison qui ont déjà leur propre onglet dédié
-  // ("Stats hebdo"). Retourne ici, jamais mélangé avec le tableau "Général"
-  // ci-dessous (colonnes trop différentes pour un seul tableau).
+  // Sous-onglet "Caractéristiques" (voir le grand commentaire au-dessus
+  // d'EFF_POS_CLASS). Propre effectif uniquement : jamais de verrou de
+  // scoutisme ici, contrairement à teamDetailEffectifHtml. Détail complet des
+  // 28 caractéristiques : fiche joueur (renderPlayerDetail).
   if (effectifSubView === "caracteristiques") {
-    // Retour utilisateur (2026-09) : "il y a beaucoup trop de données
-    // maintenant [...] on garde les données des fondamentaux + une moyenne
-    // du physique et une moyenne du mental" — 13 colonnes Fondamentaux
-    // détaillées + 2 colonnes moyennées (Physique/Mental) au lieu des 29
-    // colonnes individuelles (voir PHYSICAL_ATTRS/MENTAL_ATTRS/
-    // FUNDAMENTAL_ATTRS/categoryAverageCellHtml plus haut). Le détail complet
-    // caractéristique par caractéristique reste consultable sur la fiche
-    // joueur (renderPlayerDetail), seul endroit où les 29 restent affichées
-    // une par une. Propre effectif uniquement ici (sorted vient de
-    // teamA.players plus haut) : jamais de verrou de scoutisme à gérer,
-    // contrairement à teamDetailEffectifHtml plus bas.
-    // Tri (retour utilisateur, 2026-09 : "les colonnes ne peuvent de nouveau
-    // plus être triées") : réutilise EXACTEMENT le même mécanisme que le
-    // sous-onglet "Général" (rosterHeaderCellHtml/rosterSortState/
-    // rosterSortValue, écouteur délégué déjà câblé plus bas sur
-    // #rosterContent pour [data-sort], quel que soit le sous-onglet affiché)
-    // plutôt qu'un système de tri séparé — `sorted` (plus haut dans cette
-    // fonction) en tient déjà compte, il ne manquait que des en-têtes
-    // cliquables ici.
-    let attrsHtml = effectifSubNavHtml();
-    // Potentiel (retour utilisateur, 2026-09 : "idem là, juste après le
-    // poste" — même demande que sur le sous-onglet "Général" juste
-    // au-dessus, appliquée ici aussi) : même pastille/tri que là-bas.
-    attrsHtml += "<div class='table-scroll roster-table-frozen'><table class='roster-table'><thead><tr>" +
-      rosterHeaderCellHtml("name", "Nom") + rosterHeaderCellHtml("position", "Poste") +
-      rosterHeaderCellHtml("potential", "Potentiel") +
-      rosterHeaderCellHtml("height", "Taille") + rosterHeaderCellHtml("salary", "Salaire/sem.") +
-      FUNDAMENTAL_ATTRS.map(a => rosterHeaderCellHtml(a, ATTR_SHORT[a])).join("") +
-      rosterHeaderCellHtml("physicalAvg", "Physique") + rosterHeaderCellHtml("mentalAvg", "Mental") +
+    const sorted = effSortPlayers(teamA.players, (a, b) => effAttrAverage(b) - effAttrAverage(a));
+    const allKeys = EFF_ATTR_GROUPS.flatMap(g => g.keys);
+    const best = {};
+    allKeys.forEach(k => { best[k] = Math.max(...teamA.players.map(p => effAttrValue(p, k))); });
+    const avgActive = !rosterSortState.key || rosterSortState.key === "avg";
+    let html = effectifSubNavHtml(`<span class="eff-hint">Cadre : meilleur de l'équipe. Cliquez une colonne pour trier.</span>`);
+    html += `<div class="eff-table-wrap eff-table-wrap-caracs"><table class="roster-table eff-table eff-caracs"><thead>`;
+    // Ligne de familles (Tir/Jeu/Défense/Condition) : en <td> exprès, pour
+    // que `thead th` ne liste que les colonnes réelles (une par cellule de
+    // ligne joueur, voir les tests de tri).
+    html += `<tr class="eff-family-row"><td colspan="4"></td>` +
+      EFF_ATTR_GROUPS.map(g => `<td colspan="${g.keys.length}" class="eff-family"><span>${escapeHtml(g.label)}</span></td>`).join("") + `</tr>`;
+    html += "<tr>" + effHeaderCellHtml("name", "Nom", { cls: "eff-th-name" }) + effHeaderCellHtml("position", "Poste") +
+      effHeaderCellHtml("potential", "Potentiel") +
+      effHeaderCellHtml("avg", "Moy.", { cls: "eff-th-avg", forceActive: avgActive && !rosterSortState.key, title: "Moyenne des 15 colonnes" }) +
+      EFF_ATTR_GROUPS.map((g, gi) => g.keys.map((k, ki) => effHeaderCellHtml(k, EFF_AVG_LABELS[k] || ATTR_SHORT[k], {
+        cls: `eff-th-attr${ki === 0 && gi > 0 ? " eff-gstart" : ""}`,
+        title: EFF_AVG_LABELS[k] ? `Moyenne ${EFF_AVG_LABELS[k].toLowerCase()}` : TRAINING_LABELS[k],
+      })).join("")).join("") +
       "</tr></thead><tbody>";
     sorted.forEach(p => {
-      const potentialCell = `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(p.potential)}/10">${escapeHtml(potentialTierLabel(p.potential))}</span>`;
-      attrsHtml += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, teamA, 24)}${playerLinkHtml(myTeamIndex, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${potentialCell}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
-      FUNDAMENTAL_ATTRS.forEach(a => { attrsHtml += `<td>${attrCellHtml(p.attrs[a])}</td>`; });
-      attrsHtml += `<td>${categoryAverageCellHtml(p, PHYSICAL_ATTRS, null)}</td><td>${categoryAverageCellHtml(p, MENTAL_ATTRS, null)}</td>`;
-      attrsHtml += "</tr>";
+      html += `<tr class="eff-row"><td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, teamA, 26)}${playerLinkHtml(myTeamIndex, p.id, p.name)}</span></td>` +
+        `<td>${effPosBadgeHtml(p.position)}</td><td>${effPotentialHtml(p)}</td>` +
+        `<td class="eff-td-avg">${effAttrAverage(p).toFixed(1).replace(".", ",")}</td>`;
+      EFF_ATTR_GROUPS.forEach((g, gi) => g.keys.forEach((k, ki) => {
+        const v = effAttrValue(p, k);
+        const isBest = v === best[k];
+        html += `<td class="${ki === 0 && gi > 0 ? "eff-gstart" : ""}"><span class="attr-cell eff-attr ${attrColorTier(v)}${isBest ? " eff-best" : ""}"${isBest ? ` title="Meilleur de l'équipe"` : ""}><span class="attr-val">${v}</span></span></td>`;
+      }));
+      html += "</tr>";
     });
-    attrsHtml += "</tbody></table></div>";
-    holder.innerHTML = attrsHtml;
+    html += "</tbody></table></div>";
+    holder.innerHTML = html;
     return;
   }
 
-  // Le texte explicatif (recalcul des salaires, avertissement forfait) et la
-  // masse salariale (déjà affichée sur l'onglet Économie) ont été retirés
-  // d'ici — retour utilisateur : "enlève les [textes d'aide] des onglets" —
-  // voir l'onglet 📖 Guide (renderGuideSection) pour le détail.
+  // Sous-onglet "Général".
   const now = Date.now();
+  const recovery = teamA.conditionRecoveryPerDay();
+  const listedIds = new Set((league.transferListings || []).filter(l => l.status === "open").map(l => l.playerId));
+  const columns = ROSTER_SORT_COLUMNS.filter(c => c.key !== "role");
+  const colCount = columns.length + 1;
   let html = effectifSubNavHtml() + `<div id="rosterMarketFeedback"></div>`;
-  // .roster-table-frozen (voir son commentaire CSS) : en-tête figée au
-  // scroll, propre à cet onglet.
-  html += "<div class='table-scroll roster-table-frozen'><table class='roster-table'><thead><tr>" +
-    ROSTER_SORT_COLUMNS.map(c => rosterHeaderCellHtml(c.key, c.label)).join("") + "<th>Marché</th></tr></thead><tbody>";
-  sorted.forEach(p => {
-    const isStarter = Object.values(teamA.lineup.starters).includes(p.id);
-    const effPos = p.effectivePosition && p.effectivePosition !== p.position ? p.effectivePosition : null;
-    const posCell = effPos
-      ? `${POS_SHORT[p.position]} <span class="eff-position" title="Poste utilisé pour le salaire, d'après ses caractéristiques">→ ${POS_SHORT[effPos]}</span>`
-      : POS_SHORT[p.position];
-    const salaryTitle = effPos
-      ? `Calculé pour le poste ${effPos.toLowerCase()} (ses caractéristiques y sont mieux valorisées qu'à son poste de carte).`
-      : `Calculé pour son poste (${p.position.toLowerCase()}).`;
-    // Mise en vente forcée (déficit économique prolongé — voir
-    // deficitBannerHtml/DEFICIT_ALERT_THRESHOLD) : badge + bouton pour vendre
-    // effectivement le joueur (Team.sellPlayer) — aucun plancher d'effectif
-    // (retour utilisateur : "on peut vendre tout son effectif si on le
-    // souhaite").
-    const forSaleCell = p.forSale
-      ? `<span class="forsale-badge">En vente : 1 €</span>` +
-        `<button class="sell-btn" data-sell-player="${p.id}" title="Vendre ${escapeHtml(p.name)} pour 1 €">Vendre</button>`
-      : "";
-    // Marché des transferts (enchères, prix choisi) : soit déjà aux
-    // enchères (lecture seule ici, voir l'onglet Marché pour la suivre),
-    // soit un champ de prix à saisir + bouton pour la lister. Retour
-    // utilisateur (2026-09) : "il faut pouvoir mettre le prix qu'on veut, et
-    // pas le prix qui est suggeré (prix qu'on doit enlever, parce que on a
-    // aucune donnée de prix)" — plus de valeur pré-remplie (l'ancienne
-    // estimateMarketValue(p) ne sert plus qu'en interne, pour le
-    // comportement des enchères CPU, jamais affichée au joueur).
-    let marketCell;
-    if (listedIds.has(p.id)) {
-      // .market-listed-badge (pas .forsale-badge, pensé pour un badge
-      // inline à côté d'un nom) : padding calqué sur button.secondary pour
-      // que cette ligne fasse la même hauteur que les autres (voir le
-      // commentaire CSS de .market-listed-badge, retour utilisateur 2026-09).
-      marketCell = `<span class="market-listed-badge">Aux enchères</span>`;
-    } else {
-      marketCell = `<input type="number" class="market-price-input" id="listPrice_${p.id}" placeholder="Prix (€)" min="1" step="100"> ` +
-        `<button class="secondary" data-list-player="${p.id}">Mettre aux enchères</button>`;
-    }
-    // Blessure PERSISTANTE (voir injuryCrossHtml/tr.injured plus haut) :
-    // l'emporte sur tr.me si un titulaire encore blessé n'a pas été remplacé
-    // dans la feuille de match (voir la déclaration CSS de tr.injured).
-    const cross = injuryCrossHtml(p, now);
-    const transferBadge = transferRequestBadgeHtml(p);
-    const rowClass = cross ? "injured" : (isStarter ? "me" : "");
-    // Même pastille/infobulle que le marché des transferts (voir
-    // potentialCell dans renderMarketListings) : le palier 1-10, jamais le
-    // chiffre exact 1-99.
-    const potentialCell = `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(p.potential)}/10">${escapeHtml(potentialTierLabel(p.potential))}</span>`;
-    html += `<tr class="${rowClass}"><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, teamA, 24)}${playerLinkHtml(myTeamIndex, p.id, p.name)}${cross || ""}${transferBadge || ""}${forSaleCell}</span></td><td>${posCell}</td><td>${potentialCell}</td>` +
-      `<td>${escapeHtml(playerRoleLabel(teamA, p))}</td>` +
-      `<td>${p.age}</td><td>${p.height} cm</td>` +
-      `<td title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
-      `<td>${conditionBadgeHtml(p, now, teamA.conditionRecoveryPerDay())}</td>` +
-      `<td>${motivationBadgeHtml(p)}</td>` +
-      `<td>${evaluationSquaresHtml(p)}</td>` +
-      `<td>${marketCell}</td></tr>`;
+  html += `<div class="eff-table-wrap"><table class="roster-table eff-table eff-general"><thead><tr>` +
+    columns.map(c => effHeaderCellHtml(c.key, c.label, { cls: `eff-th-${c.key}` })).join("") +
+    `<th class="eff-th-actions"><span class="eff-sr">Actions</span></th></tr></thead>`;
+  const defaultCmp = (a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall();
+  EFF_ROLE_GROUPS.forEach(group => {
+    const members = teamA.players.filter(p => playerRoleLabel(teamA, p) === group.role);
+    if (!members.length) return;
+    const isStarters = group.role === "Titulaire";
+    html += `<tbody class="eff-group${isStarters ? " eff-group-starters" : ""}">` +
+      `<tr class="eff-group-row"><th colspan="${colCount}" scope="rowgroup"><span class="eff-group-title">${escapeHtml(group.label)}</span><span class="eff-group-count">${members.length} joueur${members.length > 1 ? "s" : ""}</span></th></tr>`;
+    effSortPlayers(members, defaultCmp).forEach(p => {
+      const effPos = p.effectivePosition && p.effectivePosition !== p.position ? p.effectivePosition : null;
+      const posCell = effPosBadgeHtml(p.position) + (effPos
+        ? ` <span class="eff-position" title="Poste utilisé pour le salaire, d'après ses caractéristiques">→ ${POS_SHORT[effPos]}</span>`
+        : "");
+      const salaryTitle = effPos
+        ? `Calculé pour le poste ${effPos.toLowerCase()} (ses caractéristiques y sont mieux valorisées qu'à son poste de carte).`
+        : `Calculé pour son poste (${p.position.toLowerCase()}).`;
+      const isListed = listedIds.has(p.id);
+      // Blessure PERSISTANTE (voir injuryCrossHtml) : ligne teintée de rouge.
+      const cross = injuryCrossHtml(p, now);
+      const badges = (cross || "") + (transferRequestBadgeHtml(p) || "") +
+        (p.forSale ? `<span class="forsale-badge">En vente : 1 €</span>` : "") +
+        (isListed ? `<span class="market-listed-badge eff-listed">Aux enchères</span>` : "");
+      html += `<tr class="eff-row${cross ? " injured" : ""}">` +
+        `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, teamA, isStarters ? 30 : 26)}${playerLinkHtml(myTeamIndex, p.id, p.name)}${badges}</span></td>` +
+        `<td>${posCell}</td><td>${effPotentialHtml(p)}</td>` +
+        `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td>` +
+        `<td class="eff-num" title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
+        `<td>${effConditionHtml(p, now, recovery)}</td>` +
+        `<td>${effMotivationHtml(p)}</td>` +
+        `<td>${evaluationSquaresHtml(p)}</td>` +
+        `<td class="eff-td-actions">${effActionsMenuHtml(p, isListed)}</td></tr>`;
+    });
+    html += `</tbody>`;
   });
-  html += "</tbody></table></div>";
+  html += "</table></div>";
   holder.innerHTML = html;
 }
 
@@ -28275,6 +28578,20 @@ function sellRosterPlayer(playerId) {
   saveMyTeam();
   renderEffectifSection();
 }
+// Ferme les menus "⋯" de l'Effectif sur un clic ailleurs ou sur Échap.
+document.addEventListener("click", (e) => {
+  if (!e.target.closest || e.target.closest(".eff-menu, [data-eff-menu]")) return;
+  closeEffectifMenus(null);
+});
+document.getElementById("rosterContent").addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  const open = document.querySelector("#rosterContent .eff-menu:not([hidden])");
+  if (!open) return;
+  closeEffectifMenus(null);
+  const btn = document.querySelector(`#rosterContent [data-eff-menu="${open.id.replace("effMenu_", "")}"]`);
+  if (btn) btn.focus();
+});
+
 document.getElementById("rosterContent").addEventListener("click", (e) => {
   // Sous-onglets "Général"/"Caractéristiques" (voir effectifSubView/
   // effectifSubNavHtml) : même patron délégué que le reste de cet écouteur,
@@ -28285,6 +28602,22 @@ document.getElementById("rosterContent").addEventListener("click", (e) => {
   if (subViewBtn) {
     effectifSubView = subViewBtn.dataset.effectifSubview;
     renderEffectifSection();
+    return;
+  }
+  // Menu "⋯" d'une ligne (voir effActionsMenuHtml) : ouvre/ferme sans
+  // re-rendre (le prix saisi dans un autre menu n'est pas perdu).
+  const menuBtn = e.target.closest("[data-eff-menu]");
+  if (menuBtn) {
+    const menu = document.getElementById(`effMenu_${menuBtn.dataset.effMenu}`);
+    if (!menu) return;
+    const willOpen = menu.hidden;
+    closeEffectifMenus(menu);
+    menu.hidden = !willOpen;
+    menuBtn.setAttribute("aria-expanded", String(willOpen));
+    if (willOpen) {
+      const input = menu.querySelector("input");
+      if (input) input.focus();
+    }
     return;
   }
   // Tri par en-tête cliquée (voir rosterSortState/ROSTER_SORT_COLUMNS) :
@@ -28318,7 +28651,7 @@ document.getElementById("rosterContent").addEventListener("click", (e) => {
       return;
     }
     const price = Math.max(1, Math.round(Number(raw)));
-    const playerName = listBtn.closest("tr").querySelector("td").textContent.trim();
+    const playerName = listBtn.dataset.playerName || listBtn.closest("tr").querySelector("td").textContent.trim();
     const listing = league.listPlayerForSale(myTeamIndex, id, price, Date.now());
     // Le message est calculé AVANT le re-rendu (renderEffectifSection
     // reconstruit tout #rosterContent, y compris #rosterMarketFeedback —
@@ -30830,7 +31163,7 @@ const TOUR_STEPS = [
   // motivation, alchimie...)") : trois nouvelles étapes, sur la VRAIE page
   // Effectif cette fois (page: "effectif", contrairement à l'étape
   // ci-dessus qui ne fait que pointer le lien de la barre latérale), qui
-  // spotlightent les colonnes/jauge réelles (voir rosterHeaderCellHtml pour
+  // spotlightent les colonnes/jauge réelles (voir effHeaderCellHtml pour
   // data-sort="condition"/"motivation", .roster-chemistry-gauge-wrap pour
   // la jauge d'alchimie). La prime du thème "Effectif" est déplacée ICI, sur
   // la DERNIÈRE étape du groupe (même convention que tous les autres thèmes
@@ -30853,7 +31186,9 @@ const TOUR_STEPS = [
   },
   {
     kind: "spotlight", topic: "Effectif", page: "effectif",
-    target: ".roster-chemistry-gauge-wrap",
+    // Jauge d'alchimie du bandeau d'en-tête depuis la refonte de l'Effectif
+    // (2026-09-25, voir renderEffectifHeader).
+    target: "#effectifSection .eff-kpi-chem",
     title: "Alchimie d'équipe",
     text: "Une jauge collective, distincte de la forme/motivation individuelles, qui ne bouge que par 3 leviers précis, jamais de dérive naturelle dans le temps : le ton choisi en interview de jalon (voir l'onglet Humeur des supporters), les changements d'effectif au marché des transferts (toujours un malus, plus fort pour un joueur important) et les changements de tactique trop fréquents en match, atténuables en les travaillant à l'entraînement collectif.",
     tip: "Une alchimie élevée profite à TOUTE l'équipe sur le terrain, un levier collectif à ne pas négliger face à un effectif individuellement plus fort mais moins soudé.",

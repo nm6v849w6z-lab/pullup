@@ -73,7 +73,7 @@ const { potentialTierLabel, POTENTIAL_TIERS } = E;
     if (potIdx !== posIdx + 1) {
       throw new Error(`❌ [${label}] La colonne "Potentiel" devrait être JUSTE APRÈS "Poste" (index ${posIdx + 1}), trouvée en position ${potIdx} — en-têtes : ${headers.join(", ")}`);
     }
-    const rows = [...table.querySelectorAll("tbody tr")];
+    const rows = [...table.querySelectorAll("tbody tr.eff-row")]; // hors titres de groupe (refonte 2026-09-25)
     if (rows.length === 0) throw new Error(`❌ [${label}] Aucune ligne de joueur dans le tableau.`);
     rows.forEach((tr, i) => {
       const cellText = tr.children[potIdx].textContent.trim();

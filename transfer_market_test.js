@@ -350,8 +350,8 @@ const win = dom.window;
 function clickTab(key) { [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click(); }
 
 clickTab("effectif");
-console.log("\nOnglet Effectif — lignes :", doc.querySelectorAll("#rosterContent tbody tr").length);
-if (doc.querySelectorAll("#rosterContent tbody tr").length !== 15) throw new Error("❌ Le tableau Effectif devrait afficher les 15 joueurs du club du joueur.");
+console.log("\nOnglet Effectif — lignes :", doc.querySelectorAll("#rosterContent tbody tr.eff-row").length);
+if (doc.querySelectorAll("#rosterContent tbody tr.eff-row").length !== 15) throw new Error("❌ Le tableau Effectif devrait afficher les 15 joueurs du club du joueur.");
 console.log("✅ L'onglet Effectif affiche l'effectif complet du club du joueur.");
 
 // --- Mettre un joueur aux enchères via le bouton, DEPUIS L'EFFECTIF, avec

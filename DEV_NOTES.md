@@ -20,6 +20,35 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Effectif : refonte visuelle Général +
+  Caractéristiques d'après la maquette** — retour utilisateur : "code ces
+  pages effectifs stp" (canvas Design claude.ai 1Gb9JTjGU6gVfDYuHvLyq4,
+  planches "Effectif – Général" et "Effectif – Caractéristiques").
+  Général : en-tête titre + "<club>, N joueurs" et bandeau Alchimie /
+  Masse salariale (somme des salaires joueurs) / Prochain match ; joueurs
+  groupés Cinq de départ / Rotation / Réserve (remplace la colonne Rôle,
+  tri appliqué dans chaque groupe) ; pastilles de poste colorées ;
+  potentiel en 5 segments + nom du palier ; forme en mini-barre ;
+  motivation en pastille ; colonne Évaluation GARDÉE (absente de la
+  maquette mais demandée plus tôt) ; colonne Marché remplacée par un menu
+  "⋯" (Voir la fiche / Mettre aux enchères avec prix libre / Vendre pour
+  1 € si déficit). Caractéristiques : familles Tir / Jeu / Défense /
+  Condition, colonne Moy. (moyenne des 15 colonnes, tri par défaut),
+  meilleur de l'équipe cerclé, chiffres seuls au barème attrColorTier ;
+  Potentiel gardé (demandé plus tôt), Taille/Salaire retirés (maquette).
+  Police : pile système du jeu (pas la Barlow de la maquette).
+  Fichiers : moteurbasket3.html (#effectifSection, effectifSubNavHtml,
+  renderEffectifSection + helpers eff*, rosterSortValue "avg", écouteurs
+  du menu, étape du tutoriel Alchimie → #effectifSection .eff-kpi-chem,
+  CSS "Onglet Effectif — refonte"), nouveau effectif_redesign_test.js,
+  tests adaptés (lignes joueurs = tr.eff-row) : tabs, potential_tier,
+  transfer_market, deficit, injury_duration. Tests Mac verts (15 fichiers
+  Effectif/liés + le nouveau). Captures Playwright vérifiées en 1440 px et
+  390 px. Sources du patch : "Claude outputs/effectif-refonte/".
+  Commit partiel (seuls les morceaux Effectif de moteurbasket3.html, les
+  autres chantiers en cours restent non committés), testé dans un worktree
+  propre sur HEAD. Reste : `git push`, puis retirer cette entrée.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Refonte de la page Entraînement (maquette
   canevas "Hoop Manager – Entraînement", claude.ai BUWU3iuMd1iBXVGRXDnCfL)**
   — retour utilisateur : "code la page". En-tête « ENTRAÎNEMENT / Semaine

@@ -69,7 +69,7 @@ console.log("\n✅ Les 13 onglets affichent chacun leur propre page.");
 clickTab("effectif");
 const rosterTable = doc.querySelector("#rosterContent table.roster-table");
 if (!rosterTable) throw new Error("❌ L'onglet Effectif devrait afficher un tableau de synthèse des joueurs.");
-const rosterRows = rosterTable.querySelectorAll("tbody tr").length;
+const rosterRows = rosterTable.querySelectorAll("tbody tr.eff-row").length; // .eff-row : lignes joueurs (hors titres de groupe, refonte 2026-09-25)
 console.log(`\nOnglet Effectif : ${rosterRows} joueurs listés (attendu 15).`);
 if (rosterRows !== 15) throw new Error("❌ L'onglet Effectif devrait lister les 15 joueurs du club : " + rosterRows);
 const hasPrepGridInEffectif = !!doc.querySelector("#effectifSection #prepGrid");

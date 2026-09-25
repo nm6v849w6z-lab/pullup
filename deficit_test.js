@@ -241,11 +241,11 @@ console.log("✅ Badges et boutons de vente affichés pour tout l'effectif list�
 // --- Vendre effectivement un joueur via le bouton met à jour le budget et
 // l'effectif, et c'est persisté. ---
 const budgetBeforeSale = readRawSave(savePath).team.budget;
-const countBeforeSale = doc2.querySelectorAll("#rosterContent tbody tr").length;
+const countBeforeSale = doc2.querySelectorAll("#rosterContent tbody tr.eff-row").length;
 sellButtons[0].click();
 await flush(dom2);
 const savedAfterSale = readRawSave(savePath);
-const countAfterSale = doc2.querySelectorAll("#rosterContent tbody tr").length;
+const countAfterSale = doc2.querySelectorAll("#rosterContent tbody tr.eff-row").length;
 console.log(`\nBudget avant/après vente : ${budgetBeforeSale} → ${savedAfterSale.team.budget} | Lignes du tableau avant/après : ${countBeforeSale} → ${countAfterSale}`);
 if (savedAfterSale.team.budget !== budgetBeforeSale + 1) throw new Error("❌ La vente d'un joueur listé devrait créditer exactement 1 € au budget.");
 if (countAfterSale !== countBeforeSale - 1) throw new Error("❌ Le tableau de l'effectif devrait perdre une ligne après la vente.");

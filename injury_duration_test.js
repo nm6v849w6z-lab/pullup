@@ -201,7 +201,7 @@ const T0 = Date.UTC(2026, 8, 21);
     if (!row.classList.contains("injured")) throw new Error("❌ La ligne du joueur blessé devrait porter la classe 'injured' (ligne teintée de rouge).");
 
     const squares = doc2.querySelectorAll("#rosterContent .eval-square");
-    if (squares.length !== doc2.querySelectorAll("#rosterContent tbody tr").length * 5) {
+    if (squares.length !== doc2.querySelectorAll("#rosterContent tbody tr.eff-row").length * 5) {
       throw new Error("❌ Chaque ligne du tableau Effectif devrait afficher exactement 5 carrés d'évaluation (matchs manquants = cases vides).");
     }
     const filledSquares = [...squares].filter(sq => sq.getAttribute("title"));
