@@ -119,6 +119,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   d'écran, tests client_scouting/persistence adaptés).
   Plus aucun nombre de candidats affiché (carte poste, boutons de
   niveau, libellé de tri).
+  Lignes d'enchère : plus de "Mise de départ X €" (déjà dans le champ
+  d'offre) ni de "Niveau N sur 5" (étoiles seules).
   Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Pendant un direct :

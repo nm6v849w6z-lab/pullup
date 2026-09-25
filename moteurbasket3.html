@@ -26450,10 +26450,12 @@ function renderStaffListings(role, open, now) {
     } else if (l.currentBid) {
       current = `<span class="stf-strong">${escapeHtml(formatMoney(l.currentBid))}</span><span class="stf-sub">Un autre club mène</span>`;
     } else {
-      current = `<span class="stf-muted">Aucune offre</span><span class="stf-sub">Mise de départ ${escapeHtml(formatMoney(l.startPrice))}</span>`;
+      // Retour utilisateur (2026-09-25) : pas de "Mise de départ" ici, le
+      // montant est déjà dans le champ d'offre à côté du bouton Enchérir.
+      current = `<span class="stf-muted">Aucune offre</span>`;
     }
     html += `<tr class="stf-row${mine ? " is-leading" : ""}${l.level >= 4 ? " is-top" : ""}">` +
-      `<td data-label="Niveau"><div class="stf-cell">${staffStarsHtml(l.level)}<span class="stf-sub">Niveau ${l.level} sur 5</span></div></td>` +
+      `<td data-label="Niveau"><div class="stf-cell">${staffStarsHtml(l.level)}</div></td>` +
       `<td data-label="Salaire de réf."><div class="stf-cell"><span class="stf-strong">${escapeHtml(formatMoney(TRAINER_BASE_SALARY[l.level] || 0))}</span><span class="stf-sub">par semaine</span></div></td>` +
       `<td data-label="Enchère actuelle"><div class="stf-cell">${current}</div></td>` +
       `<td data-label="Fin de l'enchère"><div class="stf-cell"><span class="stf-time${urgent ? " is-urgent" : ""}" data-closes-at="${l.closesAt}">${escapeHtml(timeLeftLabel(l.closesAt, now))}</span>` +
