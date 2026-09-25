@@ -20,6 +20,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Tableau de bord :
+  brique Budget = chiffres de la semaine précédente** — retours
+  utilisateur : "dans la brique budget, dépense et revenu et Revenus Net
+  Hebdomadaires (incluant la billetterie), à mettre à jour toutes les
+  semaines, à la mise à jour éco", puis "il faut pas des moyennes mais les
+  chiffres de la semaine précédente". Revenus / Dépenses / Revenu net de la
+  dernière semaine TERMINÉE du journal (toutes les lignes, même bilan que
+  l'historique Économie), sous le montant du budget ; repli sur la ligne
+  masse salariale tant qu'aucune semaine n'est terminée. Fichiers :
+  moteurbasket3.html (dashboardLastWeekFlows, dashBudgetLastWeekHtml,
+  finances.lastWeek, CSS .hm-kpi-flows), dashboard_budget_last_week_test.js.
+  Tests dashboard_e2e/dashboard_feed/nouveau test verts. Reste : `git push`.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Application mobile
   (PWA + Capacitor), 1re étape** — retour utilisateur : "réfléchis à
   l'application mobile et prépare le code" ; choix validés : PWA + emballage

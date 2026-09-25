@@ -3065,6 +3065,15 @@
 .hm-kpi__value { font-family: var(--display); font-weight: 800; font-size: 28px; line-height: 1.15; }
 .hm-kpi__value small { font-size: 16px; color: var(--muted); }
 .hm-kpi__value.is-bad { color: var(--bad); }
+/* Brique Budget : revenus / dépenses / revenu net de la semaine précédente
+   (voir dashBudgetLastWeekHtml). */
+.hm-kpi-flows { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
+.hm-kpi-flows > div { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); }
+.hm-kpi-flows b { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hm-kpi-flows b.is-up { color: #5fd6ae; }
+.hm-kpi-flows b.is-down { color: #f58a76; }
+.hm-kpi-flows__net { border-top: 1px solid var(--border); padding-top: 5px; margin-top: 2px; color: var(--text) !important; font-weight: 600; }
+.hm-kpi-flows__note { font-size: 11.5px; }
 .hm-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .hm-chips span { font-size: 12px; background: #1A2439; padding: 4px 8px; border-radius: 8px; }
 .hm-bar { display: flex; align-items: center; gap: 10px; }
@@ -26641,6 +26650,23 @@ function dashRenderPulse(data) {
   </section>`;
 }
 
+// Lignes Revenus / Dépenses / Revenu net de la semaine précédente dans la
+// brique Budget (voir dashboardLastWeekFlows). Avant la toute première mise à
+// jour économique, rien à montrer : on garde l'ancienne ligne masse salariale.
+function dashBudgetLastWeekHtml(finances) {
+  const lw = finances.lastWeek;
+  if (!lw) {
+    return `<div class="hm-muted">${finances.weeklyWages != null ? `Masse salariale : ${dashEsc(dashFormatEuros(finances.weeklyWages))} / sem.` : "Budget actuel du club"}</div>`;
+  }
+  const signed = n => (n >= 0 ? "+" : "−") + dashFormatEuros(Math.abs(n));
+  return `<div class="hm-kpi-flows">
+        <div><span>Revenus</span><b class="is-up">${dashEsc(signed(lw.revenue))}</b></div>
+        <div><span>Dépenses</span><b class="is-down">${dashEsc(signed(-lw.expenses))}</b></div>
+        <div class="hm-kpi-flows__net"><span>Revenu net</span><b class="${lw.net >= 0 ? "is-up" : "is-down"}">${dashEsc(signed(lw.net))}</b></div>
+      </div>
+      <div class="hm-muted hm-kpi-flows__note">Semaine ${dashEsc(lw.week)} (billetterie comprise)</div>`;
+}
+
 function dashRenderKpis(data) {
   const filled = dashStaffFilled(data.staff);
   const lvl = Math.max(0, Math.min(100, data.squad.avgLevel));
@@ -26659,7 +26685,7 @@ function dashRenderKpis(data) {
     <a class="hm-card hm-kpi" href="/economie" data-dash-href="/economie">
       <div class="hm-kpi__label">Budget</div>
       <div class="hm-kpi__value${data.finances.budget < 0 ? " is-bad" : ""}">${dashEsc(dashFormatEuros(data.finances.budget))}</div>
-      <div class="hm-muted">${data.finances.weeklyWages != null ? `Masse salariale : ${dashEsc(dashFormatEuros(data.finances.weeklyWages))} / sem.` : "Budget actuel du club"}</div>
+      ${dashBudgetLastWeekHtml(data.finances)}
     </a>
     <a class="hm-card hm-kpi" href="/salle" data-dash-href="/salle">
       <div class="hm-kpi__label">Salle</div>
@@ -26937,6 +26963,29 @@ function dashboardWeeklyWages(team) {
   return team.players.reduce((s, p) => s + p.salary, 0);
 }
 
+// Brique Budget du tableau de bord : revenus, dépenses et revenu net de la
+// SEMAINE PRÉCÉDENTE (retours utilisateur 2026-09-25 : "dépense et revenu et
+// Revenus Net Hebdomadaires [...] incluant la billetterie, à mettre à jour
+// toutes les semaines, à la mise à jour éco", puis "il faut pas des moyennes
+// mais les chiffres de la semaine précédente"). Dernière semaine TERMINÉE du
+// journal (week < team.week) : les chiffres ne changent donc qu'au passage de
+// la mise à jour économique hebdomadaire (Team.trainWeek). Toutes les lignes
+// de cette semaine comptent (billetterie, salaires, TV, boutique, achats...),
+// exactement comme le bilan de la même semaine dans l'historique de l'onglet
+// Économie. null tant qu'aucune semaine n'est terminée.
+function dashboardLastWeekFlows(team) {
+  const transactions = team.transactions || [];
+  const done = transactions.map(t => t.week).filter(w => w < team.week);
+  if (!done.length) return null;
+  const week = Math.max(...done);
+  let revenue = 0, expenses = 0;
+  transactions.forEach(t => {
+    if (t.week !== week) return;
+    if (t.amount >= 0) revenue += t.amount; else expenses -= t.amount;
+  });
+  return { week, revenue, expenses, net: revenue - expenses };
+}
+
 /**
  * Construit l'objet de données attendu par mountDashboard() à partir de
  * l'état réel du jeu. Voir DEV_NOTES.md point 10 pour la liste complète des
@@ -27049,6 +27098,7 @@ function dashboardDataFromGameState() {
     finances: {
       budget: teamA.budget,
       weeklyWages: dashboardWeeklyWages(teamA),
+      lastWeek: dashboardLastWeekFlows(teamA),
     },
     arena: {
       capacity: arenaInfo(teamA.arenaLevel).capacity,
