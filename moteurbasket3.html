@@ -4370,7 +4370,15 @@
      même espacement partout, et seule Nom absorbe la place restante. */
   #effectifSection table.eff-general th, #effectifSection table.eff-general td{width:1%; padding-left:14px; padding-right:14px;}
   #effectifSection table.eff-general th.eff-th-name, #effectifSection table.eff-general td.eff-td-name{width:auto;}
-  #effectifSection table.eff-general th.eff-th-condition, #effectifSection table.eff-general td.eff-td-condition{padding-left:22px;}
+  /* Potentiel et Forme : libellé AU-DESSUS de sa jauge (retour utilisateur
+     2026-09-25 : "on a toujours de gros écarts entre potentiel et âge et
+     entre forme et motivation"). Côte à côte, la colonne prenait la largeur
+     jauge + plus long libellé de l'effectif (« Joueur correct », «
+     Légèrement fatigué ») et laissait un grand vide sur toutes les autres
+     lignes ; empilés, elle ne fait plus que la largeur du libellé. */
+  #effectifSection table.eff-general .eff-pot, #effectifSection table.eff-general .eff-cond{flex-direction:column-reverse; align-items:flex-start; gap:5px;}
+  #effectifSection table.eff-general .eff-pot .potential-tier, #effectifSection table.eff-general .eff-cond-label{font-size:13px; line-height:1.2;}
+  #effectifSection table.eff-general .eff-cond .eff-meter{width:60px;}
   #effectifSection .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
   #effectifSection .eff-general .eff-group-starters tr.eff-row td{height:58px; background:var(--eff-row);}
   #effectifSection .eff-general .eff-group-starters .eff-player .player-link{font-size:15px;}
