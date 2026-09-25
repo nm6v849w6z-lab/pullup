@@ -25851,9 +25851,6 @@ function staffStarsHtml(level) {
   // étoiles"), il reste lisible par les lecteurs d'écran.
   return `<span class="stf-stars" role="img" aria-label="Niveau ${level} sur 5"><span class="on">${"★".repeat(level)}</span><span class="off">${"★".repeat(5 - level)}</span></span>`;
 }
-function staffCandidatesLabel(n) {
-  return `${n} candidat${n > 1 ? "s" : ""}`;
-}
 function staffOpenListings(role) {
   return (league[role.listKey] || []).filter(l => l.status === "open").sort((a, b) => a.closesAt - b.closesAt);
 }
@@ -25884,7 +25881,7 @@ function staffSlotHtml(role, now) {
     status = `Vous menez ${leadingCount} enchère${leadingCount > 1 ? "s" : ""}`;
   } else {
     state = "vacant"; badge = "À pourvoir";
-    status = `Poste vacant · ${staffCandidatesLabel(open.length)}`;
+    status = "Poste vacant";
   }
   return `<button type="button" class="stf-slot stf-slot--${state}" data-staff-open-role="${role.key}">` +
     `<span class="stf-slot__icon" aria-hidden="true">${STAFF_ICONS[role.key]}</span>` +
@@ -25942,10 +25939,12 @@ function renderStaffListings(role, open, now) {
       : `<span class="stf-stars stf-stars--all" aria-hidden="true"><span class="off">★★★★★</span></span>`;
     return `<button type="button" class="stf-level${selected ? " is-selected" : ""}" data-staff-level="${role.key}:${lv}" aria-pressed="${selected}"${empty ? " disabled" : ""}>` +
       `${stars}<span class="stf-level__title">${lv ? `Niveau ${lv}` : "Tous"}</span>` +
-      `<span class="stf-level__meta">${empty ? "Aucun candidat" : staffCandidatesLabel(pool.length)}</span>` +
+      (empty ? `<span class="stf-level__meta">Aucun candidat</span>` : "") +
       `<span class="stf-level__meta">${empty ? "—" : `dès ${escapeHtml(formatMoney(minPrice))}`}</span></button>`;
   }).join("");
-  const sortLabel = (ui.level ? `${staffCandidatesLabel(filtered.length)} de niveau ${ui.level}` : staffCandidatesLabel(filtered.length)) + " · triés par fin d'enchère";
+  // Retour utilisateur (2026-09-25) : plus aucun nombre de candidats affiché
+  // (carte poste, boutons de niveau, libellé de tri).
+  const sortLabel = "Triés par fin d'enchère";
 
   let html = `<fieldset class="stf-levels"><legend><span>Quel niveau voulez-vous recruter ?</span><span class="stf-levels__sort">${sortLabel}</span></legend>` +
     `<div class="stf-levels__grid">${levelBtns}</div></fieldset>`;

@@ -47,6 +47,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   retiré pour le staff en poste (cartes poste + bloc "en poste"), seules
   les étoiles restent (aria-label "Niveau N sur 5" pour les lecteurs
   d'écran, tests client_scouting/persistence adaptés).
+  Plus aucun nombre de candidats affiché (carte poste, boutons de
+  niveau, libellé de tri).
   Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Pendant un direct :
