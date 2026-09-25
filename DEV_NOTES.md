@@ -97,7 +97,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   masquage du rapport gratuit, stratégies en grille, tests) est NON
   committé et partage moteurbasket3.html avec le chantier Économie
   ci-dessus. Committé seul (hunks Scouting Pro uniquement, Économie laissé
-  hors commit). Reste : push utilisateur, puis retirer cette entrée.
+  hors commit) : f920eb7. 4e retour (captures prod) : âge retiré sous les
+  avatars du 5 majeur et du tableau "5 de départ suggéré", Identité en une
+  seule bande de 5 colonnes (.sp2-ident, fini la 2e ligne avec "Création"
+  seule), carte Zones de tir centrée au-dessus des jauges. Reste : push
+  utilisateur des 2 commits, puis retirer cette entrée.
 
 0. **✅ TRANCHÉ (2026-09-24) — Écran mi-temps : PAS de choix tactiques à la
    mi-temps** — ce point était EN PAUSE depuis le 2026-09-24 matin, retour

@@ -2304,7 +2304,13 @@
   #scoutingProPanel .scouting-profile-grid{grid-template-columns:repeat(auto-fit, minmax(120px,1fr));}
   .sp2-callouts{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin-top:8px;}
   .sp2-callouts .scouting-profile-callout-value + .scouting-profile-callout-value{margin-top:4px;}
-  .sp2-court{width:100% !important; max-width:260px;}
+  .sp2-court{width:100% !important; max-width:260px; margin:0 auto; display:flex; justify-content:center;}
+  /* Identité (voir sp2ProfileStyleHtml) : une bande, 5 colonnes égales. */
+  .sp2-ident{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); background:var(--panel); border:1px solid var(--line); border-radius:12px; margin:8px 0 12px;}
+  .sp2-ident-item{padding:10px 12px; min-width:0; border-left:1px solid var(--line);}
+  .sp2-ident-item:first-child{border-left:none;}
+  .sp2-ident-label{display:block; font-size:10px; text-transform:uppercase; letter-spacing:.06em; font-weight:800; color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .sp2-ident-value{display:block; font-size:13.5px; font-weight:700; color:var(--ink); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .sp2-zone-key{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:7px; vertical-align:-1px;}
 
   /* Comparaisons (Récent/Saison, Dom/Ext) */
@@ -21649,13 +21655,13 @@ function scoutingStartingFiveCardHtml(team, teamIdx, now = Date.now(), startersO
     };
   });
   let html = `<div class="scouting-starting-five table-scroll"><table class="roster-table"><thead><tr>` +
-    `<th>Poste</th><th>Nom</th><th>Âge</th><th>Salaire/sem.</th><th>Forme</th><th>Pts</th><th>Reb</th><th>Pas</th></tr></thead><tbody>`;
+    `<th>Poste</th><th>Nom</th><th>Salaire/sem.</th><th>Forme</th><th>Pts</th><th>Reb</th><th>Pas</th></tr></thead><tbody>`;
   rows.forEach(r => {
-    if (r.empty) { html += `<tr><td>${POS_SHORT[r.pos]}</td><td colspan="7" class="sub">— non pourvu —</td></tr>`; return; }
+    if (r.empty) { html += `<tr><td>${POS_SHORT[r.pos]}</td><td colspan="6" class="sub">— non pourvu —</td></tr>`; return; }
     const p = r.player;
     const conditionText = r.injured ? `<span class="gain-down">blessé</span>` : (r.condition != null ? `${r.condition}%` : "–");
     html += `<tr><td>${POS_SHORT[r.pos]}</td><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, team, 22)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td>` +
-      `<td>${p.age}</td><td>${formatMoney(p.salary)}</td><td>${conditionText}</td>` +
+      `<td>${formatMoney(p.salary)}</td><td>${conditionText}</td>` +
       `<td>${r.ppg}</td><td>${r.rpg}</td><td>${r.apg}</td></tr>`;
   });
   html += `</tbody></table></div>`;
@@ -22324,8 +22330,18 @@ function sp2ProfileStyleHtml(report, t, adv) {
   if (minis.length) left += `<div class="sp2-mini">${minis.map(([v, l]) => `<div><b>${v}</b><span>${escapeHtml(l)}</span></div>`).join("")}</div>`;
 
   const chips = scoutingIdentityChips(t, adv);
-  left += `<h3 class="sp2-h">Identité</h3><div class="scouting-profile-grid">` +
-    chips.map(([label, val]) => `<div class="scouting-profile-chip"><span class="scouting-profile-label">${escapeHtml(label)}</span><span class="scouting-profile-value">${escapeHtml(val)}</span></div>`).join("") + `</div>`;
+  // Identité en une seule bande de 5 colonnes séparées par un filet
+  // (retour utilisateur, 2026-09-25 : "fais différemment pour l'identité,
+  // c'est sur 2 lignes et c'est pas très beau comme ça") — l'ancienne grille
+  // de puces (auto-fit, 4 par ligne) laissait "Création" seule sur une 2e
+  // ligne. Libellés raccourcis, valeurs longues ("Non déterminé (pas encore
+  // de match...)") réduites à "—" avec le texte complet en infobulle.
+  const shortLabel = { "Dépendance 3 pts": "Dép. 3 pts", "Jeu intérieur": "Jeu int." };
+  left += `<h3 class="sp2-h">Identité</h3><div class="sp2-ident">` +
+    chips.map(([label, val]) => {
+      const short = /^Non (déterminée?|identifiée)/.test(val) ? "—" : val;
+      return `<div class="sp2-ident-item" title="${escapeHtml(label)} : ${escapeHtml(val)}"><span class="sp2-ident-label">${escapeHtml(shortLabel[label] || label)}</span><span class="sp2-ident-value">${escapeHtml(short)}</span></div>`;
+    }).join("") + `</div>`;
 
   const force = scoutingTeamProfileForce(t, adv);
   const weakness = scoutingTeamProfileWeakness(t, adv);
@@ -22616,12 +22632,14 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
       const rpg = gp ? (log.reduce((s, m) => s + (m.reb || 0), 0) / gp).toFixed(1) : "0.0";
       const apg = gp ? (log.reduce((s, m) => s + (m.ast || 0), 0) / gp).toFixed(1) : "0.0";
       const injured = !!(p.injuryUntil && p.injuryUntil > now);
-      const meta = injured ? `<span class="gain-down">blessé</span>` : `${p.age} ans`;
+      // Âge retiré (retour utilisateur, 2026-09-25 : "enlève l'age sur les
+      // joueurs, ça sert à rien") — seule une blessure reste signalée.
+      const meta = injured ? `<span class="gain-down">blessé</span>` : "";
       return `<div class="sp2-token" style="left:${spot[0]}%;top:${spot[1]}%"><div class="sp2-token-av">` +
         playerAvatarHtml(p, oppTeam, 52) + `<span class="sp2-token-pos">${POS_SHORT[pos]}</span></div>` +
         `<button type="button" class="player-link sp2-token-name" data-player-team="${teamIdx}" data-player-id="${p.id}">${escapeHtml(p.name)}</button>` +
         `<div class="sp2-token-stats"><b>${ppg}</b> pts · ${rpg} reb · ${apg} pd</div>` +
-        `<div class="sp2-token-meta">${meta}</div></div>`;
+        (meta ? `<div class="sp2-token-meta">${meta}</div>` : "") + `</div>`;
     }).join("");
     html += `<h3 class="sp2-h" style="margin-top:22px">5 majeur</h3><div class="sp2-lineup">${SP2_LINEUP_COURT_SVG}${tokens}</div>`;
   }
