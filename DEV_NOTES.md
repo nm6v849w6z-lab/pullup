@@ -1671,6 +1671,94 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     ce match précis — à garder à l'esprit s'il resignale un cas similaire
     après ce correctif (chercher alors une AUTRE cause).
 
+14. **✅ CODE ÉCRIT, TESTÉ EN SANDBOX — pas encore livré sur le Mac — bug
+    tailles de police du tableau de bord (refonte "Soir de match", point 10)
+    ** — retour utilisateur avec captures de la page live
+    (pullup-030q.onrender.com) : "retravaille les tailles de police stp,
+    c'est trop grand", puis "tu peux prendre aussi plus de largeur sur la
+    page je pense".
+
+    **Root cause, vérifiée par capture d'écran réelle (vrai serveur local +
+    Playwright, PAS jsdom, sur `moteurbasket3.html` tel quel)** : le nom du
+    club dans le bandeau "Prochain match" (`.hm-hero__name`) retournait à la
+    ligne LETTRE PAR LETTRE même pour un nom COURT ("Lyon", 4 lettres, pas
+    besoin d'un nom long pour reproduire) — pas juste "trop gros", un vrai
+    bug de mise en page. Cause exacte : `.hm-hero__teams` est une grille à 3
+    pistes (`minmax(0,1fr) auto minmax(0,1fr)`) dans une page plafonnée à
+    960px (`.wrap`, `clubSection` absent de `WIDE_PAGE_IDS`) ; une fois le
+    blason (104px) et l'espace (22px) retirés de la colonne restante, il ne
+    restait qu'une centaine de pixels pour un nom à 54px — largeur
+    insuffisante même pour "LYON" sans coupure. `overflow-wrap:anywhere`
+    (nécessaire au cas où un nom déborde) a un effet de bord connu en
+    flex/grid : il autorise le moteur de mise en page à réduire la largeur
+    "min-content" de la boîte jusqu'à UN SEUL caractère plutôt que de
+    respecter la largeur du mot le plus long — d'où l'empilement vertical.
+
+    **Correctif (les deux retours utilisateur, tailles ET largeur)** :
+    - `clubSection` ajouté à `WIDE_PAGE_IDS` (voir `showPage`) — même
+      mécanisme déjà utilisé par Effectif/Coupe/Ordres/Fiche joueur/
+      Comparateur, le tableau de bord n'y était pour aucune raison
+      particulière (juste pas encore fait lors de la refonte). `.hm-main`
+      (conteneur réel du contenu, `flex:1; min-width:0`) s'étend déjà
+      correctement à la largeur disponible, aucun autre changement de mise
+      en page nécessaire pour ça.
+    - `overflow-wrap:anywhere` → `overflow-wrap:break-word` sur
+      `.hm-hero__name` (coupe seulement un mot isolé trop long en dernier
+      recours, ne réduit plus le min-content de la boîte à un caractère) +
+      `flex-shrink:0` sur le blason + `min-width:0` sur le bloc nom/bilan
+      (pour que `break-word` puisse s'appliquer sans forcer un débordement).
+    - Tailles réduites dans `.hm-dash` (toutes proportionnelles, breakpoints
+      `@media` associés mis à jour dans le même sens) : nom du club hero
+      54px→30px (1200px : 42→24), "VS" 88px→48px (700px : 56→38), date
+      22px→15px, blason hero 104px→76px (1200px : 80→60, SVG du dégradé
+      inchangé, juste la taille CSS de l'écusson), titres de carte (`.hm-h2`,
+      fil d'actualité) 26px→19px, chiffres clés (`.hm-kpi__value`) 44px→28px
+      (le "small" à côté 22px→16px), jauges rondes Supporters/Alchimie
+      (`.hm-gauge__value`) 40px→28px avec l'anneau SVG lui-même redimensionné
+      en cohérence (112px→92px, rayon 46→38, épaisseur 10→8 — sans ce
+      changement le cercle SVG à taille fixe aurait débordé du conteneur
+      réduit en CSS).
+
+    **Vérifié visuellement** (pas seulement lu le CSS) : script Playwright
+    jetable contre un VRAI petit serveur local (mêmes `startTestServer`/
+    sauvegarde par défaut que les tests, club renommé directement dans le
+    fichier de sauvegarde pour rejouer EXACTEMENT le cas signalé) —
+    captures avant/après avec "Gotham Knights" (le nom du signalement
+    utilisateur) à 1440px et 1800px de large : le nom tient maintenant sur
+    une seule ligne, budget/effectif/salle ne débordent plus de leur
+    carte. Testé aussi un nom délibérément absurde (9 mots) pour confirmer
+    que le pire cas fait un retour à la ligne normal, MOT par mot (jamais
+    plus lettre par lettre) — script jetable supprimé après usage, jamais
+    committé.
+
+    **Tests** : `dashboard_e2e_test.js` et `dashboard_feed_test.js`
+    repassés individuellement, tous verts (CSS pur, aucune assertion sur
+    des tailles/classes calculées n'a été touchée) ; suite complète
+    (`run_final.sh`) relancée en fond pour confirmer aucune régression
+    ailleurs.
+
+    **Complément (même retour utilisateur, même session, 2026-09-25)** :
+    "pour les jauges, il faudrait reprendre les règles de couleur qu'on a
+    sur les jauges et les nombres ailleurs (rouge, orange, blanc, vert)" —
+    les jauges rondes Supporters/Alchimie du bloc "Pouls du club" gardaient
+    une couleur d'anneau FIXE par jauge (orange pour Supporters, bleu pour
+    Alchimie — choix visuel d'origine du prestataire), alors que le CHIFFRE
+    au centre suivait déjà `moraleGaugeColor` (mêmes 4 paliers que partout
+    ailleurs — Ordres, Effectif, Marché, Humeur des supporters, voir
+    `attr_color_scheme_everywhere_test.js`). `dashGauge()` colore
+    maintenant l'anneau ET le chiffre avec `moraleGaugeColor(value)` ; le
+    paramètre `color` fixe retiré de sa signature et des deux appels dans
+    `dashRenderPulse()`. Vérifié visuellement (capture ci-jointe à
+    l'utilisateur) : Supporters=10 → anneau + chiffre rouges, Alchimie=90 →
+    anneau + chiffre verts.
+
+    **Fichiers touchés** : `moteurbasket3.html` uniquement (CSS `.hm-*`
+    dans le `<style>` du tableau de bord + `WIDE_PAGE_IDS` + `dashGauge()`/
+    `dashRenderPulse()`).
+
+    **Reste à faire** : livrer sur le Mac (comme tout le reste de ce
+    fichier).
+
 ---
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)

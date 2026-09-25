@@ -2775,7 +2775,7 @@
 }
 .hm-crest img { width: 100%; height: 100%; object-fit: cover; }
 .hm-crest--sm { width: 40px; height: 40px; font-size: 14px; }
-.hm-crest--lg { width: 104px; height: 104px; border-width: 5px; font-size: 32px; }
+.hm-crest--lg { width: 76px; height: 76px; border-width: 4px; font-size: 24px; }
 
 /* ---------- Boutons ---------- */
 .hm-btn {
@@ -2805,19 +2805,27 @@
 .hm-hero__top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
 .hm-hero__comp { color: var(--accent); font-weight: 700; letter-spacing: 2px; }
 .hm-hero__teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; }
-.hm-hero__team { display: flex; align-items: center; gap: 22px; min-width: 0; }
+.hm-hero__team { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .hm-hero__team--right { justify-content: flex-end; text-align: right; }
-.hm-hero__name { font-family: var(--display); font-weight: 800; font-size: 54px; line-height: 0.95; text-transform: uppercase; overflow-wrap: anywhere; }
+.hm-hero__team .hm-crest--lg { flex-shrink: 0; }
+/* Le wrapper (nom + bilan) doit pouvoir descendre sous sa largeur "min-content"
+   (nom du club inclus) pour que le flex ne le comprime jamais au point de
+   forcer un retour à la ligne caractère par caractère — retour utilisateur,
+   2026-09 : un nom de 4 lettres ("Lyon") se retrouvait déjà empilé en
+   colonne d'une lettre par ligne, la place restante dans la colonne d'équipe
+   (grille à 3 pistes ci-dessus) étant plus étroite que le texte à 54px. */
+.hm-hero__team > div:not(.hm-crest) { min-width: 0; }
+.hm-hero__name { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1.05; text-transform: uppercase; overflow-wrap: break-word; }
 .hm-hero__sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
 .hm-hero__vs { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.hm-hero__vs-text { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 88px; line-height: 0.85; color: var(--accent); }
-.hm-hero__date { font-family: var(--display); font-weight: 600; font-size: 22px; letter-spacing: 1px; text-transform: uppercase; text-align: center; }
+.hm-hero__vs-text { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 48px; line-height: 0.85; color: var(--accent); }
+.hm-hero__date { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; text-align: center; }
 .hm-hero__actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
 
 /* ---------- Cartes ---------- */
 .hm-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 22px 24px; }
 .hm-card__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.hm-h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 26px; text-transform: uppercase; letter-spacing: 0.5px; }
+.hm-h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 19px; text-transform: uppercase; letter-spacing: 0.5px; }
 .hm-row { display: grid; grid-template-columns: 1.45fr 1fr; gap: 20px; }
 
 /* ---------- Cette semaine ---------- */
@@ -2841,17 +2849,17 @@
 .hm-pulse__link { color: inherit; text-decoration: none; display: flex; }
 .hm-gauge { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: var(--card); border-radius: 14px; padding: 16px; text-align: center; }
 .hm-pulse__link:hover .hm-gauge { background: #1A2540; }
-.hm-gauge__ring { position: relative; width: 112px; height: 112px; }
+.hm-gauge__ring { position: relative; width: 92px; height: 92px; }
 .hm-gauge__ring svg circle:last-child { transition: stroke-dasharray 0.8s ease-out; }
-.hm-gauge__value { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 800; font-size: 40px; }
+.hm-gauge__value { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 800; font-size: 28px; }
 
 /* ---------- Chiffres clés ---------- */
 .hm-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
 .hm-kpi { display: flex; flex-direction: column; gap: 8px; color: var(--text); text-decoration: none; padding: 20px 22px; }
 .hm-kpi:hover { border-color: var(--border-strong); }
 .hm-kpi__label { font-size: 12px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); }
-.hm-kpi__value { font-family: var(--display); font-weight: 800; font-size: 44px; line-height: 1; }
-.hm-kpi__value small { font-size: 22px; color: var(--muted); }
+.hm-kpi__value { font-family: var(--display); font-weight: 800; font-size: 28px; line-height: 1.15; }
+.hm-kpi__value small { font-size: 16px; color: var(--muted); }
 .hm-kpi__value.is-bad { color: var(--bad); }
 .hm-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .hm-chips span { font-size: 12px; background: #1A2439; padding: 4px 8px; border-radius: 8px; }
@@ -2865,8 +2873,8 @@
 /* ---------- Responsive ---------- */
 @media (max-width: 1200px) {
   .hm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hm-hero__name { font-size: 42px; }
-  .hm-crest--lg { width: 80px; height: 80px; font-size: 26px; }
+  .hm-hero__name { font-size: 24px; }
+  .hm-crest--lg { width: 60px; height: 60px; font-size: 19px; }
 }
 @media (max-width: 1000px) {
   .hm-side { display: none; }
@@ -2880,7 +2888,7 @@
   .hm-hero__teams { grid-template-columns: 1fr; justify-items: center; text-align: center; }
   .hm-hero__team, .hm-hero__team--right { flex-direction: column; text-align: center; justify-content: center; }
   .hm-hero__team--right > div:first-child { order: 2; }
-  .hm-hero__vs-text { font-size: 56px; }
+  .hm-hero__vs-text { font-size: 38px; }
   .hm-task { flex-wrap: wrap; }
   .hm-task__body { flex-basis: calc(100% - 52px); }
   .hm-kpis { grid-template-columns: 1fr; }
@@ -2917,7 +2925,7 @@
   margin: 0;
   font-family: "Barlow Condensed", sans-serif;
   font-weight: 700;
-  font-size: 26px;
+  font-size: 19px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -15893,7 +15901,14 @@ const PAGE_IDS = [
 // "playerDetailSection" juste au-dessus, en plus dense encore (3 colonnes de
 // caractéristiques côte à côte plutôt qu'empilées, exprès pour éviter de
 // dérouler en longueur — voir renderPlayerCompareView).
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection", "playerDetailSection", "playerCompareSection"]);
+// "clubSection" ajouté (retour utilisateur, 2026-09-25, refonte "Soir de
+// match" du tableau de bord : "tu peux prendre aussi plus de largeur sur la
+// page je pense") : le gabarit "lecture" à 960px comprimait trop les deux
+// colonnes d'équipe du bandeau "Prochain match" (voir .hm-hero__teams),
+// forçant le nom du club à retourner à la ligne lettre par lettre même pour
+// un nom court — même famille de correctif que playerDetailSection plus
+// haut (contenu à grille dense, pas un flux de lecture).
+const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection"]);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
 // "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
@@ -26058,16 +26073,21 @@ function dashRenderTasks(data) {
   </section>`;
 }
 
-function dashGauge(value, label, sub, color) {
-  // Couleur du CHIFFRE (moraleGaugeColor, même 4 paliers rouge/orange/blanc/
-  // vert que partout ailleurs dans le jeu — Ordres, Effectif, Humeur des
-  // supporters, voir attr_color_scheme_everywhere_test.js) : indépendante de
-  // `color`, la couleur FIXE de l'anneau de la jauge (identité visuelle du
-  // prestataire, jamais codée par seuil côté anneau, seulement côté texte).
+function dashGauge(value, label, sub) {
+  // Couleur de l'anneau ET du chiffre (moraleGaugeColor, même 4 paliers
+  // rouge/orange/blanc/vert que partout ailleurs dans le jeu — Ordres,
+  // Effectif, Marché, Humeur des supporters, voir
+  // attr_color_scheme_everywhere_test.js) : retour utilisateur, 2026-09-25
+  // ("il faudrait reprendre les règles de couleur qu'on a sur les jauges et
+  // les nombres ailleurs") — la couleur FIXE par jauge (orange Supporters/
+  // bleu Alchimie, identité visuelle d'origine du prestataire) est
+  // abandonnée au profit du même code couleur par seuil que le reste du
+  // jeu, sur l'anneau ET le chiffre (jusqu'ici seul le chiffre suivait déjà
+  // ce code couleur).
   const valueColor = moraleGaugeColor(value);
   return `<div class="hm-gauge">
     <div class="hm-gauge__ring">
-      <svg width="112" height="112" viewBox="0 0 112 112" aria-hidden="true"><circle cx="56" cy="56" r="46" fill="none" stroke="#24314B" stroke-width="10"/><circle cx="56" cy="56" r="46" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${dashGaugeDash(value, 46)}" transform="rotate(-90 56 56)"/></svg>
+      <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true"><circle cx="46" cy="46" r="38" fill="none" stroke="#24314B" stroke-width="8"/><circle cx="46" cy="46" r="38" fill="none" stroke="${dashEsc(valueColor)}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dashGaugeDash(value, 38)}" transform="rotate(-90 46 46)"/></svg>
       <div class="hm-gauge__value" style="color:${dashEsc(valueColor)}">${dashEsc(Math.round(value))}</div>
     </div>
     <div class="hm-gauge__label"><div class="hm-strong">${dashEsc(label)}</div><div class="hm-muted">${dashEsc(sub)}</div></div>
@@ -26080,8 +26100,8 @@ function dashRenderPulse(data) {
   return `<section class="hm-card hm-pulse">
     <h2 class="hm-h2">Pouls du club</h2>
     <div class="hm-pulse__grid">
-      <a class="hm-pulse__link" href="/humeur" data-dash-href="/humeur" aria-label="Supporters : ${dashEsc(s)} sur 100">${dashGauge(s, "Supporters", data.supporters.label ?? dashMoodLabel(s), "#F5A13A")}</a>
-      <a class="hm-pulse__link" href="/effectif" data-dash-href="/effectif" aria-label="Alchimie : ${dashEsc(c)} sur 100">${dashGauge(c, "Alchimie", data.chemistry.label ?? dashMoodLabel(c, "chemistry"), "#7FB4FF")}</a>
+      <a class="hm-pulse__link" href="/humeur" data-dash-href="/humeur" aria-label="Supporters : ${dashEsc(s)} sur 100">${dashGauge(s, "Supporters", data.supporters.label ?? dashMoodLabel(s))}</a>
+      <a class="hm-pulse__link" href="/effectif" data-dash-href="/effectif" aria-label="Alchimie : ${dashEsc(c)} sur 100">${dashGauge(c, "Alchimie", data.chemistry.label ?? dashMoodLabel(c, "chemistry"))}</a>
     </div>
   </section>`;
 }
