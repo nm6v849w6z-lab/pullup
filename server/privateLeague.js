@@ -15,8 +15,11 @@
 //   ligue privée regroupe des clubs HUMAINS d'une même ligue partagée.
 // - Création ET participation réservées aux clubs Premium
 //   (Team.hasActivePremium), vérifié côté serveur à chaque action.
-// - Une journée par semaine, le VENDREDI à 21h30 (heure de Paris) — après le
-//   dernier créneau officiel du jour (championnat 19h + 90 min de diffusion).
+// - Une journée par semaine, le VENDREDI, à l'heure choisie par le créateur
+//   (heure de Paris, par demi-heure de 08h00 à 23h30 ; 21h30 par défaut et
+//   pour les ligues créées avant ce choix — retour utilisateur 2026-09-26 :
+//   "laisse le choix de l'heure des matchs"). Les matchs sont simulés sur
+//   des copies : aucun conflit possible avec les créneaux officiels.
 //   Aller-retour (generateRoundRobinSchedule), 6/8/10 équipes.
 // - Les matchs sont simulés sur des COPIES des équipes (serializeTeam →
 //   teamFromSave) : MatchEngine.simulate a ses propres effets de bord
@@ -29,7 +32,7 @@
 //   MatchEngine, voir HOME_ADVANTAGE_FACTOR côté moteur ; "neutral" = aucun.
 //
 // Forme d'une ligue privée (JSON brut dans League.privateLeagues) :
-// { id, name, code, creatorTeamIndex, size, venue, status
+// { id, name, code, creatorTeamIndex, size, venue, hour, minute, status
 //   ("open"|"running"|"finished"), createdAt, startedAt, finishedAt,
 //   teamIndices: [idx...],
 //   rounds: [{ index, dueAt, matches: [{ home, away, played, playedAt,
@@ -45,8 +48,12 @@ const PRIVATE_LEAGUE_SIZES = [6, 8, 10];
 const PRIVATE_LEAGUE_MIN_TEAMS_TO_START = 4;
 const PRIVATE_LEAGUE_VENUES = ["home", "neutral"];
 const PRIVATE_LEAGUE_WEEKDAY = 5; // vendredi (convention Date#getUTCDay)
+// Heure par défaut (et des ligues créées avant le choix de l'heure).
 const PRIVATE_LEAGUE_HOUR = 21;
 const PRIVATE_LEAGUE_MINUTE = 30;
+// Heures proposées au créateur : toutes les demi-heures de 08h00 à 23h30.
+const PRIVATE_LEAGUE_TIMES = [];
+for (let h = 8; h <= 23; h++) [0, 30].forEach(m => PRIVATE_LEAGUE_TIMES.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`));
 const PRIVATE_LEAGUE_NAME_MAX = 30;
 const PRIVATE_LEAGUE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sans 0/O/1/I
 const PRIVATE_LEAGUE_CODE_LENGTH = 6;
@@ -81,6 +88,21 @@ function normalizeCode(raw) {
   return code.length === PRIVATE_LEAGUE_CODE_LENGTH ? code : null;
 }
 
+// "HH:MM" → { hour, minute } si c'est une heure proposée, sinon null.
+// Absent → heure par défaut (ancien client qui n'envoie pas le champ).
+function normalizeTime(raw) {
+  if (raw === undefined || raw === null || raw === "") return { hour: PRIVATE_LEAGUE_HOUR, minute: PRIVATE_LEAGUE_MINUTE };
+  if (typeof raw !== "string" || !PRIVATE_LEAGUE_TIMES.includes(raw)) return null;
+  const [hour, minute] = raw.split(":").map(Number);
+  return { hour, minute };
+}
+
+// Heure des matchs d'une ligue (ancienne ligue sans le champ → 21h30).
+function leagueTime(lp) {
+  const ok = lp && Number.isInteger(lp.hour) && Number.isInteger(lp.minute);
+  return ok ? { hour: lp.hour, minute: lp.minute } : { hour: PRIVATE_LEAGUE_HOUR, minute: PRIVATE_LEAGUE_MINUTE };
+}
+
 function isActive(lp) {
   return lp.status === "open" || lp.status === "running";
 }
@@ -109,7 +131,7 @@ function checkEligibility(team, league, now) {
 
 // --- Actions --------------------------------------------------------------
 
-// POST /api/private-league/create  body: { name, size, venue }
+// POST /api/private-league/create  body: { name, size, venue, time: "HH:MM" }
 function createPrivateLeague(Engine, team, teamIndex, league, body, now) {
   const err = checkEligibility(team, league, now);
   if (err) return fail(err);
@@ -120,6 +142,8 @@ function createPrivateLeague(Engine, team, teamIndex, league, body, now) {
   if (!PRIVATE_LEAGUE_SIZES.includes(size)) return fail("Nombre d'équipes invalide (6, 8 ou 10).");
   const venue = body && body.venue;
   if (!PRIVATE_LEAGUE_VENUES.includes(venue)) return fail("Choix du terrain invalide.");
+  const time = normalizeTime(body && body.time);
+  if (!time) return fail("Heure des matchs invalide.");
 
   if (!Array.isArray(league.privateLeagues)) league.privateLeagues = [];
   let code = randomCode();
@@ -129,6 +153,7 @@ function createPrivateLeague(Engine, team, teamIndex, league, body, now) {
     name, code,
     creatorTeamIndex: teamIndex,
     size, venue,
+    hour: time.hour, minute: time.minute,
     status: "open",
     createdAt: now, startedAt: null, finishedAt: null,
     teamIndices: [teamIndex],
@@ -187,26 +212,26 @@ function startPrivateLeague(Engine, team, teamIndex, league, body, now) {
 
 // --- Calendrier -------------------------------------------------------------
 
-// Premier vendredi 21h30 (Paris) strictement APRÈS `now`.
-function firstPrivateLeagueSlotAfter(now) {
+// Premier vendredi à hour:minute (Paris, 21h30 par défaut) strictement APRÈS `now`.
+function firstPrivateLeagueSlotAfter(now, hour = PRIVATE_LEAGUE_HOUR, minute = PRIVATE_LEAGUE_MINUTE) {
   const today = Calendar.parisLocalDateParts(now);
   const daysAhead = Calendar.daysUntilParisWeekday(today, PRIVATE_LEAGUE_WEEKDAY);
   let target = daysAhead > 0 ? Calendar.addParisCalendarDays(today, daysAhead) : today;
-  let slot = Calendar.parisEpochForLocalTime(target.year, target.month, target.day, PRIVATE_LEAGUE_HOUR, PRIVATE_LEAGUE_MINUTE);
+  let slot = Calendar.parisEpochForLocalTime(target.year, target.month, target.day, hour, minute);
   if (slot <= now) {
     target = Calendar.addParisCalendarDays(today, daysAhead + 7);
-    slot = Calendar.parisEpochForLocalTime(target.year, target.month, target.day, PRIVATE_LEAGUE_HOUR, PRIVATE_LEAGUE_MINUTE);
+    slot = Calendar.parisEpochForLocalTime(target.year, target.month, target.day, hour, minute);
   }
   return slot;
 }
 
 // Créneau de la journée `roundIndex` : `roundIndex` semaines civiles après le
-// premier créneau (toujours un vendredi 21h30, changement d'heure compris).
-function privateLeagueSlotForRound(firstSlot, roundIndex) {
+// premier créneau (toujours un vendredi, même heure, changement d'heure compris).
+function privateLeagueSlotForRound(firstSlot, roundIndex, hour = PRIVATE_LEAGUE_HOUR, minute = PRIVATE_LEAGUE_MINUTE) {
   if (roundIndex === 0) return firstSlot;
   const day0 = Calendar.parisLocalDateParts(firstSlot);
   const target = Calendar.addParisCalendarDays(day0, 7 * roundIndex);
-  return Calendar.parisEpochForLocalTime(target.year, target.month, target.day, PRIVATE_LEAGUE_HOUR, PRIVATE_LEAGUE_MINUTE);
+  return Calendar.parisEpochForLocalTime(target.year, target.month, target.day, hour, minute);
 }
 
 function startPrivateLeagueNow(Engine, lp, now) {
@@ -219,10 +244,11 @@ function startPrivateLeagueNow(Engine, lp, now) {
   }
   if (participants.length % 2 === 1) participants.push(-1);
   const schedule = Engine.generateRoundRobinSchedule(participants.length);
-  const firstSlot = firstPrivateLeagueSlotAfter(now);
+  const { hour, minute } = leagueTime(lp);
+  const firstSlot = firstPrivateLeagueSlotAfter(now, hour, minute);
   lp.rounds = schedule.map((round, index) => ({
     index,
-    dueAt: privateLeagueSlotForRound(firstSlot, index),
+    dueAt: privateLeagueSlotForRound(firstSlot, index, hour, minute),
     matches: round
       .map(m => ({ home: participants[m.home], away: participants[m.away] }))
       .filter(m => m.home !== -1 && m.away !== -1)
@@ -364,10 +390,10 @@ function sanitizePrivateLeaguesForViewer(privateLeagues, viewerTeamIndex) {
 
 module.exports = {
   PRIVATE_LEAGUE_SIZES, PRIVATE_LEAGUE_MIN_TEAMS_TO_START, PRIVATE_LEAGUE_VENUES,
-  PRIVATE_LEAGUE_WEEKDAY, PRIVATE_LEAGUE_HOUR, PRIVATE_LEAGUE_MINUTE, PRIVATE_LEAGUE_NAME_MAX,
+  PRIVATE_LEAGUE_WEEKDAY, PRIVATE_LEAGUE_HOUR, PRIVATE_LEAGUE_MINUTE, PRIVATE_LEAGUE_TIMES, PRIVATE_LEAGUE_NAME_MAX,
   PRIVATE_LEAGUE_CODE_LENGTH, PRIVATE_LEAGUE_FINISHED_RETENTION_MS,
   createPrivateLeague, joinPrivateLeague, leavePrivateLeague, startPrivateLeague,
   startPrivateLeagueNow, firstPrivateLeagueSlotAfter, privateLeagueSlotForRound,
   simulatePrivateLeagueMatch, catchUpPrivateLeagues, privateLeagueStandings,
-  activePrivateLeagueFor, sanitizePrivateLeaguesForViewer, normalizeCode,
+  activePrivateLeagueFor, sanitizePrivateLeaguesForViewer, normalizeCode, normalizeTime,
 };

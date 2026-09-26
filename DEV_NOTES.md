@@ -20,6 +20,23 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées :
+  page d'accueil épurée + heure des matchs au choix** — retour utilisateur :
+  enlever le titre jaune "LIGUES PRIVÉES" et le texte d'intro ("Une
+  compétition à part…"), les sous-textes des deux choix de terrain
+  ("Aller-retour dans la salle…", "Aucun bonus pour personne…"), la phrase
+  "Une journée par semaine, le vendredi à 21h30…" ; "laisse le choix de
+  l'heure des matchs". moteurbasket3.html (lpHubHtml, lpRulesCardHtml,
+  création, salle d'attente/ligue en cours : "vendredi HHhMM") ;
+  server/privateLeague.js : champ `time` "HH:MM" à la création (demi-heures
+  08h00–23h30, 21h30 par défaut), stocké en lp.hour/lp.minute, ligue
+  ancienne sans le champ → 21h30 ; les créneaux gardent le vendredi.
+  Tests : server/private_league_test.js (heure choisie, refus hors liste,
+  DST, rétrocompat) et private_league_ui_test.js verts (sandbox + Mac ; sur
+  le Mac lancer le test UI avec TZ=Europe/Paris, l'heure affichée dépend du
+  fuseau). Suite complète sandbox verte hors player_detail_test.js (déjà en
+  échec avant). Reste : `git push` + redéploiement.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle : bandeau
   sans la ligne "Club · N places"** — retour utilisateur (capture 13:26,
   puis correction) : "enlève tout Gotham Knights · 8 000 places, le nombre

@@ -5481,7 +5481,6 @@
   .lp-venue.on{border-color:var(--amber); background:rgba(240,162,60,.08);}
   .lp-venue:disabled{opacity:.5; cursor:not-allowed;}
   .lp-venue-title{font-weight:700; font-size:15px;}
-  .lp-venue-sub{font-size:12.5px; color:var(--ink-dim); line-height:1.45;}
   .lp-actions{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
   .lp-actions .cal-next-btn{display:inline-block; width:auto; margin-top:0; padding:11px 22px;}
   .lp-btn:disabled{opacity:.5; cursor:not-allowed;}
@@ -36791,7 +36790,17 @@ document.getElementById("guideSection").addEventListener("click", (e) => {
 // réponse d'action (result.privateLeagues).
 // ---------------------------------------------------------------------
 const LP_SIZES = [6, 8, 10];
-let lpUi = { venue: "home", size: 8, filter: "mine", feedback: null };
+let lpUi = { venue: "home", size: 8, time: "21:30", filter: "mine", feedback: null };
+// Heures proposées au créateur (mêmes valeurs que PRIVATE_LEAGUE_TIMES côté
+// serveur) : toutes les demi-heures de 08h00 à 23h30, 21h30 par défaut.
+const LP_TIMES = [];
+for (let h = 8; h <= 23; h++) [0, 30].forEach(m => LP_TIMES.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`));
+// Heure des matchs d'une ligue ("21h30") — ancienne ligue sans le champ → 21h30.
+function lpTimeLabel(lp) {
+  const ok = lp && Number.isInteger(lp.hour) && Number.isInteger(lp.minute);
+  const h = ok ? lp.hour : 21, m = ok ? lp.minute : 30;
+  return `${h}h${String(m).padStart(2, "0")}`;
+}
 
 function lpMyLeague() {
   return (league.privateLeagues || []).find(lp => (lp.status === "open" || lp.status === "running") && lp.teamIndices.includes(myTeamIndex)) || null;
@@ -36815,6 +36824,7 @@ function lpStandings(lp) {
   list.sort((x, y) => y.pts - x.pts || y.diff - x.diff || y.pf - x.pf);
   return list;
 }
+function findLpById(id) { return (league.privateLeagues || []).find(lp => lp.id === id) || null; }
 function lpTeamName(idx) { const t = league.teams[idx]; return t ? t.name : "?"; }
 function lpVenueLabel(venue) { return venue === "neutral" ? "Terrain neutre" : "Domicile / extérieur"; }
 
@@ -36855,19 +36865,19 @@ function lpPremiumNoteHtml(premium) {
 function lpHubHtml(premium) {
   const dis = premium ? "" : " disabled";
   let html = `<div class="cal-layout lp-layout"><div class="cal-main">`;
-  html += `<div class="lp-intro"><span class="lp-kicker">Ligues privées</span>` +
-    `<p class="lp-lead">Une compétition à part, entre amis. Les matchs se jouent le vendredi à 21h30 et n'ont aucun impact sur la forme, l'entraînement, les blessures ou les finances de votre club.</p></div>`;
   html += lpPremiumNoteHtml(premium);
   html += `<div class="lp-card"><div class="lp-card-title">Créer une ligue privée</div>`;
   html += `<div class="lp-form-row"><div class="lp-field lp-field-grow"><label class="field-label" for="lpNameInput">Nom de la ligue</label>` +
     `<input type="text" id="lpNameInput" class="lp-input" maxlength="30" placeholder="Coupe des Potes"${dis}></div>` +
     `<div class="lp-field"><label class="field-label" for="lpSizeSelect">Nombre d'équipes</label><select id="lpSizeSelect"${dis}>` +
-    LP_SIZES.map(n => `<option value="${n}"${n === lpUi.size ? " selected" : ""}>${n} équipes · ${(n - 1) * 2} journées</option>`).join("") + `</select></div></div>`;
+    LP_SIZES.map(n => `<option value="${n}"${n === lpUi.size ? " selected" : ""}>${n} équipes · ${(n - 1) * 2} journées</option>`).join("") + `</select></div>` +
+    `<div class="lp-field"><label class="field-label" for="lpTimeSelect">Heure des matchs (vendredi)</label><select id="lpTimeSelect"${dis}>` +
+    LP_TIMES.map(t => `<option value="${t}"${t === lpUi.time ? " selected" : ""}>${t.replace(":", "h")}</option>`).join("") + `</select></div></div>`;
   html += `<p class="field-label">Terrain</p><div class="lp-venues">` +
     `<button type="button" class="lp-venue${lpUi.venue === "home" ? " on" : ""}" data-lp-venue="home" aria-pressed="${lpUi.venue === "home"}"${dis}>` +
-    `<span class="lp-venue-title">Domicile / extérieur</span><span class="lp-venue-sub">Aller-retour dans la salle du club recevant. Avantage du terrain pour celui qui reçoit, désavantage pour celui qui se déplace.</span></button>` +
+    `<span class="lp-venue-title">Domicile / extérieur</span></button>` +
     `<button type="button" class="lp-venue${lpUi.venue === "neutral" ? " on" : ""}" data-lp-venue="neutral" aria-pressed="${lpUi.venue === "neutral"}"${dis}>` +
-    `<span class="lp-venue-title">Terrain neutre</span><span class="lp-venue-sub">Aucun bonus pour personne. Le pur duel d'effectifs.</span></button></div>`;
+    `<span class="lp-venue-title">Terrain neutre</span></button></div>`;
   html += `<div class="lp-actions"><button type="button" class="cal-next-btn lp-btn" id="lpCreateBtn"${dis}>Créer la ligue</button>` +
     `<span class="lp-hint">Seuls les clubs Premium peuvent rejoindre. La ligue démarre dès qu'elle est complète, ou quand vous la lancez (4 clubs minimum).</span></div></div>`;
   html += `<div class="lp-card"><div class="lp-card-title">Rejoindre une ligue</div>` +
@@ -36882,15 +36892,14 @@ function lpRulesCardHtml() {
   return `<div class="cal-card"><div class="cal-card-kicker">Ce que la ligue privée ne touche pas</div><ul class="lp-rules">` +
     ["Forme et fatigue des joueurs", "Entraînement du jour", "Blessures", "Finances, billetterie, affluence", "Stats de carrière et classement"].map(t => `<li>${t}</li>`).join("") +
     `</ul></div><div class="cal-card"><div class="cal-card-kicker">Rendez-vous du vendredi</div>` +
-    `<div class="lp-week">${["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"].map(d => `<span class="${d === "VEN" ? "on" : ""}">${d}</span>`).join("")}</div>` +
-    `<p class="cal-card-empty">Une journée par semaine, le vendredi à 21h30. Les joueurs récupèrent normalement ce jour-là.</p></div>`;
+    `<div class="lp-week">${["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"].map(d => `<span class="${d === "VEN" ? "on" : ""}">${d}</span>`).join("")}</div></div>`;
 }
 
 function lpLobbyHtml(lp) {
   const isCreator = lp.creatorTeamIndex === myTeamIndex;
   let html = `<div class="cal-layout lp-layout"><div class="cal-main">`;
   html += `<div class="lp-intro"><span class="lp-kicker">Ligue privée · en attente de clubs</span><h3 class="lp-name">${escapeHtml(lp.name)}</h3>` +
-    `<p class="lp-lead">${lp.teamIndices.length} / ${lp.size} clubs · ${lpVenueLabel(lp.venue)} · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}</p></div>`;
+    `<p class="lp-lead">${lp.teamIndices.length} / ${lp.size} clubs · ${lpVenueLabel(lp.venue)} · vendredi ${lpTimeLabel(lp)} · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}</p></div>`;
   html += `<div class="lp-card"><div class="lp-card-title">Code d'invitation</div>` +
     `<div class="lp-code-row"><span class="lp-code">${escapeHtml(lp.code || "••••••")}</span><span class="lp-hint">Transmettez ce code aux managers Premium que vous voulez inviter. Ils le saisissent dans l'onglet Ligues privées.</span></div></div>`;
   html += `<div class="lp-card"><div class="lp-card-title">Clubs inscrits</div><div class="lp-members">` +
@@ -36913,7 +36922,7 @@ function lpLeagueHtml(lp) {
   const table = lpStandings(lp);
   const playedRounds = lp.rounds.filter(r => r.matches.every(m => m.played)).length;
   let html = `<div class="lp-intro"><span class="lp-kicker">Ligue privée <span class="lp-tag lp-tag-muted">Hors compétition</span></span><h3 class="lp-name">${escapeHtml(lp.name)}</h3>` +
-    `<p class="lp-lead">${lp.teamIndices.length} équipes · ${lpVenueLabel(lp.venue)} · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}` +
+    `<p class="lp-lead">${lp.teamIndices.length} équipes · ${lpVenueLabel(lp.venue)} · vendredi ${lpTimeLabel(lp)} · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}` +
     (lp.status === "finished" ? " · <b>terminée</b>" : lp.code ? ` · code <span class="lp-code lp-code-sm">${escapeHtml(lp.code)}</span>` : "") + `</p></div>`;
   html += `<div class="cal-layout lp-layout"><div class="cal-main">`;
   // Classement
@@ -37045,7 +37054,9 @@ async function lpAction(path, body, okText) {
       const name = (document.getElementById("lpNameInput") || {}).value || "";
       const size = Number((document.getElementById("lpSizeSelect") || {}).value || lpUi.size);
       lpUi.size = size;
-      lpAction("/api/private-league/create", { name, size, venue: lpUi.venue }, "Ligue créée. Partagez le code d'invitation à vos amis.");
+      const time = String((document.getElementById("lpTimeSelect") || {}).value || lpUi.time);
+      lpUi.time = time;
+      lpAction("/api/private-league/create", { name, size, venue: lpUi.venue, time }, "Ligue créée. Partagez le code d'invitation à vos amis.");
       return;
     }
     if (e.target.closest("#lpJoinBtn")) {
@@ -37054,7 +37065,7 @@ async function lpAction(path, body, okText) {
       return;
     }
     const start = e.target.closest("#lpStartBtn");
-    if (start && !start.disabled) { lpAction("/api/private-league/start", { id: start.dataset.lpId }, "La ligue est lancée : première journée vendredi à 21h30."); return; }
+    if (start && !start.disabled) { { const lp = findLpById(start.dataset.lpId); lpAction("/api/private-league/start", { id: start.dataset.lpId }, `La ligue est lancée : première journée vendredi à ${lpTimeLabel(lp)}.`); } return; }
     const leave = e.target.closest("#lpLeaveBtn");
     if (leave) {
       const lp = lpMyLeague();

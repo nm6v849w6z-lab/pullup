@@ -318,7 +318,7 @@ function tick(league, now) {
   AutoSim.ensureLiveMatch(league, now);
   const events = AutoSim.catchUpLeague(league, now);
   // Ligues privées (voir server/privateLeague.js) : journées du vendredi
-  // 21h30 dues, simulées sur des copies des équipes — indépendantes du
+  // (heure choisie par le créateur) dues, simulées sur des copies des équipes — indépendantes du
   // rattrapage officiel ci-dessus (rien en commun, ni saison ni play-offs).
   PrivateLeague.catchUpPrivateLeagues(Engine, league, now);
   // Histoire du club (voir Engine.archiveSeasonForTeam) : la saison est

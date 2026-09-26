@@ -2,7 +2,7 @@
 // renderLpSection dans moteurbasket3.html et server/privateLeague.js).
 // Ligue multi-manager de test avec 3 clubs humains : A crée une ligue, B la
 // rejoint par code, le créateur la lance (4 clubs minimum → refus à 2), puis
-// on avance au vendredi 21h30 et on vérifie classement, calendrier et
+// on avance au vendredi à l'heure choisie (20h00) et on vérifie classement, calendrier et
 // feuille de match — et qu'un club non Premium voit les boutons désactivés.
 const fs = require("fs");
 const Engine = require("./engine.js");
@@ -44,6 +44,9 @@ async function waitFor(fn, label, tries = 60) {
   docA.querySelector("[data-lp-venue='home']").click();
   docA.getElementById("lpNameInput").value = "Coupe des Potes";
   docA.getElementById("lpSizeSelect").value = "6";
+  check(!docA.querySelector("#lpContent .lp-kicker") && !docA.querySelector(".lp-venue-sub") && !/récupèrent|Aucun bonus|Aller-retour dans la salle|Une compétition à part/.test(docA.getElementById("lpContent").textContent), "page d'accueil épurée : ni titre jaune, ni textes d'explication");
+  check(docA.getElementById("lpTimeSelect").value === "21:30" && docA.getElementById("lpTimeSelect").options.length === 32, "heure des matchs : 32 créneaux, 21h30 par défaut");
+  docA.getElementById("lpTimeSelect").value = "20:00";
   docA.getElementById("lpCreateBtn").click();
   await waitFor(() => docA.querySelector(".lp-code"), "code d'invitation affiché après création");
   const code = docA.querySelector(".lp-code").textContent.trim();
@@ -96,19 +99,19 @@ async function waitFor(fn, label, tries = 60) {
   check(docA2.querySelectorAll(".lp-table tbody tr").length === 4, "classement à 4 équipes");
   const rows = docA2.querySelectorAll(".lp-cal-row");
   check(rows.length === 6, "calendrier « Mes matchs » : 6 journées (aller-retour à 4)");
-  check(/ven\./.test(rows[0].querySelector(".lp-cal-date").textContent) && /21:30/.test(rows[0].textContent), "J1 un vendredi à 21:30");
+  check(/ven\./.test(rows[0].querySelector(".lp-cal-date").textContent) && /20:00/.test(rows[0].textContent), "J1 un vendredi à 20:00 (heure choisie)");
   docA2.querySelector("[data-lp-filter='all']").click();
   check(docA2.querySelectorAll(".lp-cal-row").length === 12, "filtre « Tous » : 12 matchs");
   check(!!docA2.querySelector(".cal-next .cal-card-kicker") && /J1/.test(docA2.querySelector(".cal-next .cal-card-kicker").textContent), "carte « Prochain match · J1 »");
 
-  // --- Vendredi 21h31 : la journée se joue au prochain accès.
-  const friday = Calendar.parisEpochForLocalTime(2026, 10, 2, 21, 31);
+  // --- Vendredi 20h01 : la journée se joue au prochain accès.
+  const friday = Calendar.parisEpochForLocalTime(2026, 10, 2, 20, 1);
   now = friday;
   const domA3 = await openGame(html, `${baseUrl}?m=${tokens[0]}`);
   const docA3 = domA3.window.document;
   [...docA3.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "lp").click();
   const played = [...docA3.querySelectorAll(".lp-table tbody tr")].every(tr => tr.children[2].textContent === "1");
-  check(played, "après vendredi 21h30 : chaque équipe a 1 match joué");
+  check(played, "après vendredi 20h00 : chaque équipe a 1 match joué");
   const scoreBtn = docA3.querySelector(".lp-score");
   check(!!scoreBtn && /\d+ – \d+/.test(scoreBtn.textContent), `score cliquable dans le calendrier (${scoreBtn && scoreBtn.textContent})`);
   scoreBtn.click();

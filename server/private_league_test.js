@@ -135,6 +135,27 @@ const cpuIdx = league.teams.findIndex(t => !t.isHuman);
 const view = PL.sanitizePrivateLeaguesForViewer(league.privateLeagues, cpuIdx);
 check(view[0].code === null && PL.sanitizePrivateLeaguesForViewer(league.privateLeagues, humans[2])[0].code === lp2.code, "code masqué hors membres, visible pour un membre");
 
+// 10b. Heure des matchs au choix du créateur (retour utilisateur 2026-09-26).
+{
+  const lg = Engine.generateMultiManagerLeague(names, names.length, T0, Calendar.dailyAnchoredCalendarConfig());
+  const hs = lg.teams.map((t, i) => (t.isHuman ? i : -1)).filter(i => i >= 0);
+  hs.forEach(i => { lg.teams[i].isPaying = true; });
+  let rr = PL.createPrivateLeague(Engine, lg.teams[hs[0]], hs[0], lg, { name: "Heure", size: 6, venue: "home", time: "21:15" }, T0);
+  check(!rr.ok && /Heure/.test(rr.error), "heure hors liste (21:15) refusée");
+  rr = PL.createPrivateLeague(Engine, lg.teams[hs[0]], hs[0], lg, { name: "Heure", size: 6, venue: "home", time: "18:00" }, T0);
+  const lpT = lg.privateLeagues[0];
+  check(rr.ok && lpT.hour === 18 && lpT.minute === 0, "heure 18h00 enregistrée sur la ligue");
+  for (let k = 1; k <= 5; k++) PL.joinPrivateLeague(Engine, lg.teams[hs[k]], hs[k], lg, { code: lpT.code }, T0);
+  check(lpT.rounds[0].dueAt === Calendar.parisEpochForLocalTime(2026, 10, 2, 18, 0), "J1 le vendredi à 18h00");
+  const p5 = Calendar.parisLocalDateParts(lpT.rounds[5].dueAt);
+  check(p5.hour === 18 && p5.minute === 0, "18h00 conservé après le changement d'heure");
+  // Ancienne ligue sans hour/minute → 21h30.
+  delete lpT.hour; delete lpT.minute; lpT.status = "open"; lpT.rounds = [];
+  PL.startPrivateLeagueNow(Engine, lpT, T0);
+  check(lpT.rounds[0].dueAt === Calendar.parisEpochForLocalTime(2026, 10, 2, 21, 30), "ligue sans heure (ancienne sauvegarde) → 21h30");
+  check(PL.normalizeTime(undefined).hour === 21 && PL.normalizeTime("08:00").hour === 8 && PL.normalizeTime("07:30") === null, "normalizeTime : défaut 21h30, 08h00 accepté, 07h30 refusé");
+}
+
 // 11. Aller-retour de sérialisation de la ligue.
 const rebuilt = Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.serializeLeague(league))));
 check(Array.isArray(rebuilt.privateLeagues) && rebuilt.privateLeagues[0].id === lp2.id, "privateLeagues survit à serializeLeague/leagueFromSave");
