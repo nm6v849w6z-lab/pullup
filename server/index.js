@@ -45,6 +45,9 @@ const { scheduledTimeForLeagueRound } = Calendar;
 const actions = require("./actions.js");
 const Scouting = require("./scouting.js");
 const Shows = require("./shows.js");
+// Ligues privées (Premium) — voir server/privateLeague.js.
+const PrivateLeague = require("./privateLeague.js");
+const Engine = require("../engine.js");
 
 // MODE ACCÉLÉRÉ (tests/démo) — voir le commentaire détaillé dans
 // server/calendar.js. Activé en lançant le serveur avec la variable
@@ -314,6 +317,10 @@ async function persistContext(ctx) {
 function tick(league, now) {
   AutoSim.ensureLiveMatch(league, now);
   const events = AutoSim.catchUpLeague(league, now);
+  // Ligues privées (voir server/privateLeague.js) : journées du vendredi
+  // 21h30 dues, simulées sur des copies des équipes — indépendantes du
+  // rattrapage officiel ci-dessus (rien en commun, ni saison ni play-offs).
+  PrivateLeague.catchUpPrivateLeagues(Engine, league, now);
   // Médias : purge toute interview de jalon en attente depuis plus de 3
   // jours, pour TOUTES les équipes humaines de la ligue (voir
   // Team.pruneExpiredInterviews/MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS
@@ -521,8 +528,25 @@ function buildStateSnapshot(league, teamIndex, now) {
 // Team.upgradeArena/setTicketPrice/upgradeFanShop côté moteur (voir
 // actions.js) — ce ne sont pas de nouvelles règles, juste le même calcul
 // déplacé côté serveur pour qu'il persiste réellement.
+// Ligues privées (voir server/privateLeague.js) : mêmes signatures que les
+// autres actions, Engine résolu ici ; chaque réponse renvoie AUSSI la liste
+// des ligues privées telle que ce manager a le droit de la voir (code
+// d'invitation masqué hors membres), pour que le navigateur se mette à jour
+// sans recharger toute la sauvegarde.
+function privateLeagueAction(fn) {
+  return (team, teamIndex, league, body, now) => {
+    const result = fn(Engine, team, teamIndex, league, body, now);
+    if (!result.ok) return result;
+    return { ...result, privateLeagues: PrivateLeague.sanitizePrivateLeaguesForViewer(league.privateLeagues, teamIndex) };
+  };
+}
+
 const ACTION_ROUTES = {
   "/api/lineup": actions.setLineup,
+  "/api/private-league/create": privateLeagueAction(PrivateLeague.createPrivateLeague),
+  "/api/private-league/join": privateLeagueAction(PrivateLeague.joinPrivateLeague),
+  "/api/private-league/leave": privateLeagueAction(PrivateLeague.leavePrivateLeague),
+  "/api/private-league/start": privateLeagueAction(PrivateLeague.startPrivateLeague),
   "/api/tactics": actions.setTactics,
   "/api/training": actions.setTraining,
   "/api/plan": actions.setPlan,
@@ -922,6 +946,8 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         payload.myTeamIndex = ctx.teamIndex;
         payload.league.liveMatch = LiveMatch.viewLiveMatchForTeam(ctx.league, ctx.teamIndex);
         delete payload.league.liveMatches;
+        // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
+        payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex);
         sendJson(res, 200, payload);
         return;
       }

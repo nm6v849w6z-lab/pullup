@@ -5415,6 +5415,85 @@
   .settings-theme-swatch.is-system{background:linear-gradient(135deg,#0f1728 50%,#ffffff 50%);}
   .settings-theme-swatch.is-system i{background:transparent;}
   .settings-note{margin:12px 0 0; font-size:12.5px; color:var(--ink-faint);}
+
+  /* ---- Ligues privées (Premium) — voir renderLpSection ---- */
+  #lpSection{--display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-size:14px;}
+  #lpSection .pos{color:var(--ok);} #lpSection .neg{color:#f0a292;} #lpSection .dim{color:var(--ink-faint);}
+  .lp-intro{margin-bottom:18px;}
+  .lp-kicker{display:inline-flex; align-items:center; gap:10px; font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--amber);}
+  .lp-name{font-family:var(--display); font-size:32px; font-weight:800; line-height:1; margin:6px 0 8px; letter-spacing:-.01em;}
+  .lp-lead{color:var(--ink-dim); font-size:14px; line-height:1.5; margin:0; max-width:640px;}
+  .lp-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px;}
+  .lp-card-title{font-family:var(--display); font-size:20px; font-weight:700; margin-bottom:12px;}
+  .lp-form-row{display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;}
+  .lp-field{display:flex; flex-direction:column; min-width:160px;}
+  .lp-field .field-label{margin-top:0;}
+  .lp-field-grow{flex:1 1 260px;}
+  .lp-field-btn{justify-content:flex-end;}
+  .lp-field select{width:auto; min-width:220px; height:44px;}
+  .lp-input{box-sizing:border-box; width:100%; height:44px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:15px; font-weight:500;}
+  .lp-input:focus{outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber);}
+  .lp-code-input{text-transform:uppercase; letter-spacing:.18em; font-weight:700; font-family:var(--display); font-size:18px; max-width:220px;}
+  .lp-venues{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin-bottom:16px;}
+  .lp-venue{text-align:left; padding:14px 16px; border-radius:10px; border:2px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; cursor:pointer; display:flex; flex-direction:column; gap:5px;}
+  .lp-venue:hover{border-color:var(--ink-faint);}
+  .lp-venue.on{border-color:var(--amber); background:rgba(240,162,60,.08);}
+  .lp-venue:disabled{opacity:.5; cursor:not-allowed;}
+  .lp-venue-title{font-weight:700; font-size:15px;}
+  .lp-venue-sub{font-size:12.5px; color:var(--ink-dim); line-height:1.45;}
+  .lp-actions{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .lp-actions .cal-next-btn{display:inline-block; width:auto; margin-top:0; padding:11px 22px;}
+  .lp-btn:disabled{opacity:.5; cursor:not-allowed;}
+  .lp-danger{margin-left:auto; color:var(--danger); border-color:var(--danger);}
+  .lp-hint{font-size:12.5px; color:var(--ink-dim); max-width:420px; line-height:1.45;}
+  .lp-premium-note{background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.45); color:var(--ink); border-radius:12px; padding:12px 16px; font-size:13.5px; margin-bottom:16px;}
+  .lp-rules{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:7px; font-size:13.5px; color:var(--ink-dim);}
+  .lp-rules li::before{content:"✓"; color:var(--ok); font-weight:800; margin-right:9px;}
+  .lp-week{display:flex; gap:5px; margin-top:10px;}
+  .lp-week span{flex:1; height:36px; border-radius:6px; background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--ink-faint);}
+  .lp-week span.on{background:var(--amber); color:var(--amber-ink);}
+  .lp-code-row{display:flex; align-items:center; gap:18px; flex-wrap:wrap;}
+  .lp-code{display:inline-block; font-family:var(--display); font-size:30px; font-weight:800; letter-spacing:.2em; color:var(--amber); background:var(--panel-2); border:1px dashed rgba(240,162,60,.6); border-radius:10px; padding:8px 16px;}
+  .lp-code-sm{font-size:14px; padding:1px 8px; letter-spacing:.14em; border-style:solid; vertical-align:middle;}
+  .lp-members{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px;}
+  .lp-member{display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; background:var(--panel-2); font-size:14px; font-weight:600;}
+  .lp-member.me{box-shadow:inset 3px 0 0 var(--amber);}
+  .lp-member .lg-badge svg, .lp-member .lg-badge img{width:28px; height:28px; border-radius:50%;}
+  .lp-member-empty{color:var(--ink-faint); font-style:italic; font-weight:500; border:1px dashed var(--line);}
+  .lp-tag{font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--amber); border:1px solid rgba(240,162,60,.5); border-radius:4px; padding:1px 6px; margin-left:8px;}
+  .lp-tag-muted{color:var(--ink-dim); border-color:var(--line); background:var(--panel-2);}
+  .lp-panel{margin-bottom:16px;}
+  .lp-table .lg-team{display:flex; align-items:center; gap:10px;}
+  .lp-footnote{font-size:12px; color:var(--ink-faint); margin:10px 0 0;}
+  .lp-cal-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;}
+  .lp-cal-filters{display:flex; gap:6px;}
+  .lp-cal-filters .cal-filter{padding:4px 9px; font-size:12px;}
+  .lp-cal-rows{display:flex; flex-direction:column;}
+  .lp-cal{border:1px solid var(--line); border-radius:14px; padding:18px;}
+  .lp-cal-row{display:grid; grid-template-columns:40px 96px minmax(0,1fr) 92px minmax(0,1fr); gap:12px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line-soft); font-size:14px;}
+  .lp-cal-row > .cal-result, .lp-cal-row > .cal-result-pending{justify-self:center;}
+  .lp-cal-row:last-child{border-bottom:none;}
+  .lp-cal-row.me{background:rgba(240,162,60,.06); margin:0 -8px; padding-left:8px; padding-right:8px; border-radius:6px;}
+  .lp-cal-j{font-size:11px; font-weight:700; color:var(--ink-faint);}
+  .lp-cal-row.me .lp-cal-j{color:var(--amber);}
+  .lp-cal-date{font-size:12px; color:var(--ink-dim); white-space:nowrap;}
+  .lp-cal-team{color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .lp-cal-team.r{text-align:right;}
+  .lp-cal-team.mine{color:var(--ink); font-weight:700;}
+  .lp-cal-bye{grid-template-columns:40px 96px 1fr;}
+  .lp-score{border:none; cursor:pointer; font:inherit; font-family:var(--display); font-size:14px;}
+  .lp-score:hover{filter:brightness(1.15);}
+  .lp-feedback{margin-top:14px; font-size:13.5px; font-weight:600; padding:10px 14px; border-radius:8px;}
+  .lp-feedback.ok{background:rgba(51,180,161,.15); color:var(--ok);}
+  .lp-feedback.err{background:rgba(226,105,79,.15); color:var(--danger);}
+  .lp-finished{margin-top:22px; background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; padding:14px 18px;}
+  .lp-finished-row{display:flex; align-items:center; gap:14px; padding:8px 0; border-top:1px solid var(--line-soft); font-size:13.5px;}
+  .lp-finished-row:nth-child(2){border-top:none;}
+  .lp-finished-name{font-weight:700;}
+  .lp-finished-meta{color:var(--ink-dim); flex:1;}
+  .lp-mbx-note{margin:0 22px; padding:9px 14px; border-radius:8px; background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.4); color:var(--ink); font-size:12.5px;}
+  @media(max-width:600px){ #lpSection .lg-hide-sm, #lpSection .lp-table th:last-child, #lpSection .lp-table td:last-child{display:none;} #lpSection .lp-table td, #lpSection .lp-table th{padding-left:6px; padding-right:6px;} }
+  @media(max-width:760px){ .lp-venues, .lp-members{grid-template-columns:1fr;} .lp-cal-row{grid-template-columns:30px 60px minmax(0,1fr) 70px minmax(0,1fr); gap:6px; font-size:12px;} .lp-danger{margin-left:0;} }
 </style>
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
@@ -5492,6 +5571,7 @@
       <button class="tab-btn sidebar-link" data-tab="coupe"><span class="sidebar-label">Coupe</span></button>
       <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-label">Calendrier</span></button>
       <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-label">Matchs amicaux</span></button>
+      <button class="tab-btn sidebar-link" data-tab="lp"><span class="sidebar-label">Ligues privées</span></button>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Gestion</div>
@@ -6142,6 +6222,14 @@
     <div class="section">
       <h2 class="page-title">Coupe</h2>
       <div id="coupeContent"></div>
+    </div>
+  </div>
+
+  <!-- Ligues privées (Premium) — voir renderLpSection et server/privateLeague.js. -->
+  <div id="lpSection" class="hidden">
+    <div class="section">
+      <h2 class="page-title">Ligues privées</h2>
+      <div id="lpContent"></div>
     </div>
   </div>
 
@@ -10496,7 +10584,14 @@ class Player {
     // Connaissance tactique (voir engine.js, miroir identique) : SÉPARÉ de
     // chemistryFactor ci-dessus, les deux se cumulent.
     const tacticalKnowledgeFactor = this.matchTacticalKnowledgeFactor ?? 1;
-    return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor * tacticalKnowledgeFactor, 1, 130);
+    // Avantage du terrain (ligues privées, retour communauté 2026-09 :
+    // "avantage d'être à domicile, à l'exterieur desavantage") : snapshot
+    // posé par MatchEngine.simulate quand l'option homeAdvantage est active
+    // (HOME_ADVANTAGE_FACTOR pour l'équipe qui reçoit, l'inverse pour celle
+    // qui se déplace), `?? 1` partout ailleurs — championnat et Coupe n'en
+    // ont toujours aucun (voir server/liveMatch.js).
+    const venueFactor = this.matchVenueFactor ?? 1;
+    return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor * tacticalKnowledgeFactor * venueFactor, 1, 130);
   }
 }
 
@@ -13723,6 +13818,16 @@ class League {
     this.lastAutoTrainedDay = -1;
     this.cup = null;
 
+    // Ligues privées (Premium, retour communauté 2026-09 : "Ligues perso ?
+    // comme LP sur BB [...] un truc à part qui ne joue pas sur la forme des
+    // joueurs") : tableau de ligues créées par des managers humains de CETTE
+    // ligue partagée, chacune {id, name, code, creatorTeamIndex, size, venue,
+    // status, teamIndices, rounds[...]} — voir createPrivateLeague /
+    // simulatePrivateLeagueMatch plus bas. Données JSON brutes (comme `cup`),
+    // sérialisées telles quelles. Les matchs sont simulés sur des COPIES
+    // des équipes : rien ici ne touche jamais les joueurs réels.
+    this.privateLeagues = [];
+
     // Matchs en direct en cours de diffusion pour la journée courante (voir
     // server/liveMatch.js) : UNE entrée par match diffusé (plusieurs
     // managers humains peuvent chacun avoir LE LEUR en même temps). Le
@@ -16247,6 +16352,7 @@ function serializeLeague(lg) {
     calendarDailyAnchored: !!lg.calendarDailyAnchored,
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
     cup: lg.cup || null,
+    privateLeagues: Array.isArray(lg.privateLeagues) ? lg.privateLeagues : [],
     // Diffusions en direct en cours (voir League.liveMatches ci-dessus) :
     // une entrée par match diffusé (plusieurs managers humains peuvent
     // chacun avoir la leur en même temps).
@@ -16292,6 +16398,9 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarDailyAnchored = !!data.calendarDailyAnchored;
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
   lg.cup = data.cup || null;
+  // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
+  // d'avant cette fonctionnalité, aucune ligue.
+  lg.privateLeagues = Array.isArray(data.privateLeagues) ? data.privateLeagues : [];
   lg.liveMatches = data.liveMatches && typeof data.liveMatches === "object" ? data.liveMatches : {};
   lg.liveMatch = data.liveMatch || null;
   // Voir engine.js, miroir identique (DEV_NOTES.md point 11).
@@ -16309,13 +16418,23 @@ function leagueFromSave(data, userTeam = null) {
 // MOTEUR DE MATCH
 // ---------------------------------------------------------------------
 const QUARTER_SECONDS = 10 * 60;
+// Avantage du terrain des ligues privées (option homeAdvantage de MatchEngine)
+// : +2 % de caractéristiques effectives pour l'équipe qui reçoit, -2 % pour
+// celle qui se déplace, soit ~4 % d'écart — de l'ordre des 3 points
+// d'avantage habituellement mesurés à domicile en basket.
+const HOME_ADVANTAGE_FACTOR = 1.02;
 // Prolongation standard : 5 minutes, plus courte qu'un quart-temps normal.
 const OVERTIME_SECONDS = 5 * 60;
 
 class MatchEngine {
-  constructor(teamA, teamB) {
+  // `options.homeAdvantage` (ligues privées, voir simulatePrivateLeagueMatch)
+  // : teamA reçoit, teamB se déplace ; +/- HOME_ADVANTAGE_FACTOR sur toutes
+  // les caractéristiques effectives (voir Player.eff). Absent/false =
+  // aucun avantage, comportement historique du championnat et de la Coupe.
+  constructor(teamA, teamB, options = {}) {
     this.teamA = teamA;
     this.teamB = teamB;
+    this.homeAdvantage = !!(options && options.homeAdvantage);
   }
 
   fmtClock(sec) {
@@ -17146,6 +17265,10 @@ class MatchEngine {
     this.matchNow = now;
     this.teamA.resetForMatch(now);
     this.teamB.resetForMatch(now);
+    // Avantage du terrain optionnel (voir le constructeur et Player.eff).
+    const homeFactor = this.homeAdvantage ? HOME_ADVANTAGE_FACTOR : 1;
+    this.teamA.players.forEach(p => { p.matchVenueFactor = homeFactor; });
+    this.teamB.players.forEach(p => { p.matchVenueFactor = this.homeAdvantage ? 2 - HOME_ADVANTAGE_FACTOR : 1; });
     const events = [];
     const quarterScores = { A: [0, 0, 0, 0], B: [0, 0, 0, 0] };
     let score = { A: 0, B: 0 };
@@ -18842,7 +18965,7 @@ function refreshRecruiterMarket() {
 // ---------------------------------------------------------------------
 const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
-  "clubSection", "staffSection", "academieSection", "economieSection", "salleSection", "calendrierSection", "coupeSection",
+  "clubSection", "staffSection", "academieSection", "economieSection", "salleSection", "calendrierSection", "coupeSection", "lpSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
   "guideSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
 ];
@@ -18883,7 +19006,7 @@ const PAGE_IDS = [
 // colonne de droite (prochain match, bilan) côte à côte.
 // "standingsSection" ajouté (refonte de la page Ligue, 2026-09-25) :
 // classement + colonne course/MVP côte à côte, leaders sur 3 colonnes.
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection"]);
+const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection"]);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
 // "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
@@ -29621,6 +29744,17 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
   };
   const st = matchBoxscoreState;
   const ctx = matchBoxscoreContext(round, competition, homeIdx, awayIdx, st.quarterScores, st.rowsHome, st.rowsAway);
+  openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx);
+}
+
+// Construit et affiche la fenêtre de feuille de statistiques à partir de
+// matchBoxscoreState (déjà rempli) et d'un contexte {kicker, whenText,
+// scoreHome, scoreAway, noteHtml?}. Partagé entre les matchs officiels
+// (showMatchBoxscore ci-dessus) et les ligues privées
+// (showPrivateLeagueBoxscore), dont les lignes viennent d'un stockage
+// différent (aucune trace dans matchLog, voir server/privateLeague.js).
+function openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx) {
+  const st = matchBoxscoreState;
   const homeWon = ctx.scoreHome > ctx.scoreAway, awayWon = ctx.scoreAway > ctx.scoreHome;
   // Résultat vu de MON club, seulement s'il a joué ce match.
   let myResult = "";
@@ -29650,6 +29784,7 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
     teamSide(awayTeam, "Extérieur", awayWon, "away") +
     `</div>` +
     `<div id="matchBoxscoreQuartersHolder" class="mbx-quarters">${boxscoreQuarterScoresHtml(st.quarterScores, homeTeam.name, awayTeam.name)}</div>` +
+    (ctx.noteHtml || "") +
     `<div class="mbx-body">` +
     `<div id="matchBoxscoreMvpHolder"></div>` +
     matchBoxscoreDuelHtml(st.rowsHome, st.rowsAway) +
@@ -31766,6 +31901,7 @@ const DASH_ROUTE_TO_TAB = {
   "/effectif": "effectif", "/salle": "salle", "/humeur": "humeur",
   "/marche": "marche", "/ligue": "ligue", "/coupe": "coupe",
   "/calendrier": "calendrier", "/entrainement": "entrainement",
+  "/ligues-privees": "lp",
   "/academie": "academie", "/supporters": "humeur",
 };
 
@@ -36211,6 +36347,297 @@ document.getElementById("guideSection").addEventListener("click", (e) => {
   if (btn.classList.contains("gd-link") && body && body.scrollIntoView) body.scrollIntoView({ block: "start" });
 });
 
+
+// ---------------------------------------------------------------------
+// LIGUES PRIVÉES (Premium) — retour communauté relayé par l'utilisateur,
+// 2026-09-26 (voir server/privateLeague.js pour les règles) : une
+// compétition à part entre clubs humains Premium d'une même ligue partagée,
+// jouée le vendredi soir sur des copies des équipes — aucun effet sur la
+// forme, l'entraînement, les blessures, les finances ni les stats de
+// carrière. Cette page : création (nom, 6/8/10 équipes, terrain), adhésion
+// par code, salle d'attente, puis classement + calendrier + feuilles de
+// match. Les données arrivent avec la sauvegarde (league.privateLeagues,
+// code d'invitation masqué hors membres) et sont rafraîchies par chaque
+// réponse d'action (result.privateLeagues).
+// ---------------------------------------------------------------------
+const LP_SIZES = [6, 8, 10];
+let lpUi = { venue: "home", size: 8, filter: "mine", feedback: null };
+
+function lpMyLeague() {
+  return (league.privateLeagues || []).find(lp => (lp.status === "open" || lp.status === "running") && lp.teamIndices.includes(myTeamIndex)) || null;
+}
+function lpMyFinishedLeagues() {
+  return (league.privateLeagues || []).filter(lp => lp.status === "finished" && lp.teamIndices.includes(myTeamIndex));
+}
+function lpStandings(lp) {
+  const rows = new Map();
+  lp.teamIndices.forEach(idx => rows.set(idx, { idx, played: 0, wins: 0, losses: 0, pf: 0, pa: 0, form: [] }));
+  lp.rounds.forEach(round => round.matches.forEach(m => {
+    if (!m.played) return;
+    const h = rows.get(m.home), a = rows.get(m.away);
+    if (!h || !a) return;
+    h.played++; a.played++;
+    h.pf += m.scoreHome; h.pa += m.scoreAway; a.pf += m.scoreAway; a.pa += m.scoreHome;
+    if (m.scoreHome > m.scoreAway) { h.wins++; a.losses++; h.form.push("V"); a.form.push("D"); }
+    else { a.wins++; h.losses++; a.form.push("V"); h.form.push("D"); }
+  }));
+  const list = [...rows.values()].map(r => ({ ...r, pts: r.wins * 2 + r.losses, diff: r.pf - r.pa, form: r.form.slice(-5) }));
+  list.sort((x, y) => y.pts - x.pts || y.diff - x.diff || y.pf - x.pf);
+  return list;
+}
+function lpTeamName(idx) { const t = league.teams[idx]; return t ? t.name : "?"; }
+function lpVenueLabel(venue) { return venue === "neutral" ? "Terrain neutre" : "Domicile / extérieur"; }
+
+function renderLpSection() {
+  const holder = document.getElementById("lpContent");
+  if (!holder) return;
+  if (!league.calendarDailyAnchored) {
+    holder.innerHTML = "<p class='training-empty'>Les ligues privées n'existent que dans la ligue partagée entre managers (pas en carrière solo).</p>";
+    return;
+  }
+  const premium = typeof teamA.hasActivePremium === "function" && teamA.hasActivePremium(Date.now());
+  const mine = lpMyLeague();
+  let html = "";
+  if (!mine) html += lpHubHtml(premium);
+  else if (mine.status === "open") html += lpLobbyHtml(mine);
+  else html += lpLeagueHtml(mine);
+  const finished = lpMyFinishedLeagues();
+  if (finished.length) {
+    html += `<div class="lp-finished"><div class="cal-card-kicker">Ligues terminées</div>` + finished.map(lp => {
+      const table = lpStandings(lp);
+      const me = table.findIndex(r => r.idx === myTeamIndex) + 1;
+      return `<div class="lp-finished-row"><span class="lp-finished-name">${escapeHtml(lp.name)}</span>` +
+        `<span class="lp-finished-meta">${lp.teamIndices.length} équipes · vainqueur ${escapeHtml(lpTeamName(table[0].idx))} · vous : ${me}${me === 1 ? "er" : "e"}</span>` +
+        `<button type="button" class="cal-filter lp-view-finished" data-lp-id="${lp.id}">Voir</button></div>`;
+    }).join("") + `</div>`;
+  }
+  if (lpUi.feedback) {
+    html += `<p class="lp-feedback ${lpUi.feedback.ok ? "ok" : "err"}">${escapeHtml(lpUi.feedback.text)}</p>`;
+  }
+  holder.innerHTML = html;
+}
+
+function lpPremiumNoteHtml(premium) {
+  if (premium) return "";
+  return `<div class="lp-premium-note"><b>Réservé aux clubs Premium.</b> Il faut un compte Premium pour créer une ligue privée comme pour en rejoindre une (statut du club : onglet Tableau de bord).</div>`;
+}
+
+function lpHubHtml(premium) {
+  const dis = premium ? "" : " disabled";
+  let html = `<div class="cal-layout lp-layout"><div class="cal-main">`;
+  html += `<div class="lp-intro"><span class="lp-kicker">Ligues privées</span>` +
+    `<p class="lp-lead">Une compétition à part, entre amis. Les matchs se jouent le vendredi à 21h30 et n'ont aucun impact sur la forme, l'entraînement, les blessures ou les finances de votre club.</p></div>`;
+  html += lpPremiumNoteHtml(premium);
+  html += `<div class="lp-card"><div class="lp-card-title">Créer une ligue privée</div>`;
+  html += `<div class="lp-form-row"><div class="lp-field lp-field-grow"><label class="field-label" for="lpNameInput">Nom de la ligue</label>` +
+    `<input type="text" id="lpNameInput" class="lp-input" maxlength="30" placeholder="Coupe des Potes"${dis}></div>` +
+    `<div class="lp-field"><label class="field-label" for="lpSizeSelect">Nombre d'équipes</label><select id="lpSizeSelect"${dis}>` +
+    LP_SIZES.map(n => `<option value="${n}"${n === lpUi.size ? " selected" : ""}>${n} équipes · ${(n - 1) * 2} journées</option>`).join("") + `</select></div></div>`;
+  html += `<p class="field-label">Terrain</p><div class="lp-venues">` +
+    `<button type="button" class="lp-venue${lpUi.venue === "home" ? " on" : ""}" data-lp-venue="home" aria-pressed="${lpUi.venue === "home"}"${dis}>` +
+    `<span class="lp-venue-title">Domicile / extérieur</span><span class="lp-venue-sub">Aller-retour dans la salle du club recevant. Avantage du terrain pour celui qui reçoit, désavantage pour celui qui se déplace.</span></button>` +
+    `<button type="button" class="lp-venue${lpUi.venue === "neutral" ? " on" : ""}" data-lp-venue="neutral" aria-pressed="${lpUi.venue === "neutral"}"${dis}>` +
+    `<span class="lp-venue-title">Terrain neutre</span><span class="lp-venue-sub">Aucun bonus pour personne. Le pur duel d'effectifs.</span></button></div>`;
+  html += `<div class="lp-actions"><button type="button" class="cal-next-btn lp-btn" id="lpCreateBtn"${dis}>Créer la ligue</button>` +
+    `<span class="lp-hint">Seuls les clubs Premium peuvent rejoindre. La ligue démarre dès qu'elle est complète, ou quand vous la lancez (4 clubs minimum).</span></div></div>`;
+  html += `<div class="lp-card"><div class="lp-card-title">Rejoindre une ligue</div>` +
+    `<div class="lp-form-row"><div class="lp-field lp-field-grow"><label class="field-label" for="lpCodeInput">Code d'invitation</label>` +
+    `<input type="text" id="lpCodeInput" class="lp-input lp-code-input" maxlength="6" placeholder="ABC123" autocomplete="off"${dis}></div>` +
+    `<div class="lp-field lp-field-btn"><button type="button" class="secondary lp-btn" id="lpJoinBtn"${dis}>Rejoindre</button></div></div></div>`;
+  html += `</div><aside class="cal-side">${lpRulesCardHtml()}</aside></div>`;
+  return html;
+}
+
+function lpRulesCardHtml() {
+  return `<div class="cal-card"><div class="cal-card-kicker">Ce que la ligue privée ne touche pas</div><ul class="lp-rules">` +
+    ["Forme et fatigue des joueurs", "Entraînement du jour", "Blessures", "Finances, billetterie, affluence", "Stats de carrière et classement"].map(t => `<li>${t}</li>`).join("") +
+    `</ul></div><div class="cal-card"><div class="cal-card-kicker">Rendez-vous du vendredi</div>` +
+    `<div class="lp-week">${["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"].map(d => `<span class="${d === "VEN" ? "on" : ""}">${d}</span>`).join("")}</div>` +
+    `<p class="cal-card-empty">Une journée par semaine, le vendredi à 21h30. Les joueurs récupèrent normalement ce jour-là.</p></div>`;
+}
+
+function lpLobbyHtml(lp) {
+  const isCreator = lp.creatorTeamIndex === myTeamIndex;
+  let html = `<div class="cal-layout lp-layout"><div class="cal-main">`;
+  html += `<div class="lp-intro"><span class="lp-kicker">Ligue privée · en attente de clubs</span><h3 class="lp-name">${escapeHtml(lp.name)}</h3>` +
+    `<p class="lp-lead">${lp.teamIndices.length} / ${lp.size} clubs · ${lpVenueLabel(lp.venue)} · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}</p></div>`;
+  html += `<div class="lp-card"><div class="lp-card-title">Code d'invitation</div>` +
+    `<div class="lp-code-row"><span class="lp-code">${escapeHtml(lp.code || "••••••")}</span><span class="lp-hint">Transmettez ce code aux managers Premium que vous voulez inviter. Ils le saisissent dans l'onglet Ligues privées.</span></div></div>`;
+  html += `<div class="lp-card"><div class="lp-card-title">Clubs inscrits</div><div class="lp-members">` +
+    lp.teamIndices.map(idx => { const t = league.teams[idx]; return `<div class="lp-member${idx === myTeamIndex ? " me" : ""}"><span class="lg-badge">${t ? teamLogoHtml(t, 28) : ""}</span><span>${teamLinkHtml(idx, lpTeamName(idx))}</span>${idx === lp.creatorTeamIndex ? `<span class="lp-tag">Créateur</span>` : ""}</div>`; }).join("") +
+    Array.from({ length: Math.max(0, lp.size - lp.teamIndices.length) }, () => `<div class="lp-member lp-member-empty">Place libre</div>`).join("") + `</div></div>`;
+  html += `<div class="lp-actions">`;
+  if (isCreator) {
+    const can = lp.teamIndices.length >= 4;
+    html += `<button type="button" class="cal-next-btn lp-btn" id="lpStartBtn" data-lp-id="${lp.id}"${can ? "" : " disabled"}>Lancer maintenant</button>` +
+      `<span class="lp-hint">${can ? "Le calendrier sera généré pour les clubs déjà inscrits." : "Il faut au moins 4 clubs pour lancer la ligue."}</span>`;
+    html += `<button type="button" class="secondary lp-btn lp-danger" id="lpLeaveBtn" data-lp-id="${lp.id}">Dissoudre la ligue</button>`;
+  } else {
+    html += `<button type="button" class="secondary lp-btn lp-danger" id="lpLeaveBtn" data-lp-id="${lp.id}">Quitter la ligue</button>`;
+  }
+  html += `</div></div><aside class="cal-side">${lpRulesCardHtml()}</aside></div>`;
+  return html;
+}
+
+function lpLeagueHtml(lp) {
+  const table = lpStandings(lp);
+  const playedRounds = lp.rounds.filter(r => r.matches.every(m => m.played)).length;
+  let html = `<div class="lp-intro"><span class="lp-kicker">Ligue privée <span class="lp-tag lp-tag-muted">Hors compétition</span></span><h3 class="lp-name">${escapeHtml(lp.name)}</h3>` +
+    `<p class="lp-lead">${lp.teamIndices.length} équipes · ${lpVenueLabel(lp.venue)} · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}` +
+    (lp.status === "finished" ? " · <b>terminée</b>" : lp.code ? ` · code <span class="lp-code lp-code-sm">${escapeHtml(lp.code)}</span>` : "") + `</p></div>`;
+  html += `<div class="cal-layout lp-layout"><div class="cal-main">`;
+  // Classement
+  html += `<section class="lg-panel lp-panel"><div class="lg-panel-title"><h2>Classement</h2><span>${playedRounds ? `après la ${playedRounds}${playedRounds === 1 ? "re" : "e"} journée` : "aucune journée jouée"} · Victoire 2 pts · Défaite 1 pt</span></div>`;
+  html += `<div class="lg-table-wrap"><table class="lg-table lp-table"><thead><tr><th>#</th><th>Équipe</th><th class="c">J</th><th class="c">V</th><th class="c">D</th><th class="r lg-hide-sm">+/-</th><th class="r">Pts</th><th class="r">Forme</th></tr></thead><tbody>`;
+  table.forEach((r, i) => {
+    const t = league.teams[r.idx];
+    const form = r.form.map(f => `<span class="lg-f ${f === "V" ? "w" : "l"}">${f}</span>`).join("");
+    html += `<tr class="${r.idx === myTeamIndex ? "me lg-mine" : ""}" data-lp-team="${r.idx}"><td><span class="lg-rank">${i + 1}</span></td>` +
+      `<td><div class="lg-team"><span class="lg-badge">${t ? teamLogoHtml(t, 32) : ""}</span><span class="lg-tname">${teamLinkHtml(r.idx, lpTeamName(r.idx))}</span>${r.idx === myTeamIndex ? `<span class="lp-tag">Vous</span>` : ""}</div></td>` +
+      `<td class="c dim">${r.played}</td><td class="c">${r.wins}</td><td class="c">${r.losses}</td>` +
+      `<td class="r lg-hide-sm ${r.diff > 0 ? "pos" : r.diff < 0 ? "neg" : "dim"}">${r.diff > 0 ? "+" : ""}${r.diff}</td>` +
+      `<td class="r lg-pts">${r.pts}</td><td class="r"><div class="lg-form">${form || `<span class="lg-f-empty">–</span>`}</div></td></tr>`;
+  });
+  html += `</tbody></table></div><p class="lp-footnote">Les statistiques de ligue privée ne comptent ni dans les stats de carrière ni dans le classement des joueurs.</p></section>`;
+  html += lpCalendarHtml(lp);
+  html += `</div><aside class="cal-side">${lpNextCardHtml(lp)}${lpRulesCardHtml()}</aside></div>`;
+  return html;
+}
+
+function lpNextCardHtml(lp) {
+  const next = lp.rounds.find(r => r.matches.some(m => !m.played));
+  if (!next) return `<div class="cal-card cal-next"><div class="cal-card-kicker">Ligue terminée</div><p class="cal-card-empty">Toutes les journées ont été jouées.</p></div>`;
+  const m = next.matches.find(x => x.home === myTeamIndex || x.away === myTeamIndex);
+  if (!m) return `<div class="cal-card cal-next"><div class="cal-card-kicker">Journée ${next.index + 1}</div><p class="cal-card-empty">Vous êtes exempt cette semaine.</p></div>`;
+  const home = league.teams[m.home], away = league.teams[m.away];
+  const iAmHome = m.home === myTeamIndex;
+  return `<div class="cal-card cal-next"><div class="cal-card-kicker">Prochain match · J${next.index + 1}</div>` +
+    `<div class="cal-next-teams"><div class="cal-next-team">${home ? teamLogoHtml(home, 48) : ""}<span class="cal-next-name">${teamLinkHtml(m.home, lpTeamName(m.home))}</span><span class="cal-next-rank">${lp.venue === "neutral" ? "Neutre" : "Domicile"}</span></div>` +
+    `<span class="cal-next-vs">VS</span>` +
+    `<div class="cal-next-team">${away ? teamLogoHtml(away, 48) : ""}<span class="cal-next-name">${teamLinkHtml(m.away, lpTeamName(m.away))}</span><span class="cal-next-rank">${lp.venue === "neutral" ? "Neutre" : "Extérieur"}</span></div></div>` +
+    `<div class="cal-next-meta"><span>${formatCalendarDayFr(next.dueAt)}</span><span class="cal-next-sep">·</span><span>${formatCalendarTimeFr(next.dueAt)}</span></div>` +
+    `<p class="cal-card-empty">${iAmHome && lp.venue === "home" ? "Vous recevez : avantage du terrain." : "Aucun impact sur la forme ni les finances."}</p></div>`;
+}
+
+function lpCalendarHtml(lp) {
+  let html = `<div class="cal-card lp-cal"><div class="lp-cal-head"><span class="cal-card-kicker">Calendrier</span><span class="lp-cal-filters">` +
+    `<button type="button" class="cal-filter cp-chip${lpUi.filter === "all" ? " on" : ""}" data-lp-filter="all">Tous</button>` +
+    `<button type="button" class="cal-filter cp-chip${lpUi.filter === "mine" ? " on" : ""}" data-lp-filter="mine">Mes matchs</button></span></div>`;
+  html += `<div class="lp-cal-rows">`;
+  lp.rounds.forEach(round => {
+    const list = round.matches.filter(m => lpUi.filter === "all" || m.home === myTeamIndex || m.away === myTeamIndex);
+    if (!list.length && lpUi.filter === "mine") {
+      html += `<div class="lp-cal-row lp-cal-bye"><span class="lp-cal-j">J${round.index + 1}</span><span class="lp-cal-date">${formatCalendarDayFr(round.dueAt)}</span><span class="cal-opp-bye">Exempt</span></div>`;
+      return;
+    }
+    list.forEach(m => {
+      const mine = m.home === myTeamIndex || m.away === myTeamIndex;
+      let mid;
+      if (m.played) {
+        const iWon = mine && ((m.home === myTeamIndex) === (m.scoreHome > m.scoreAway));
+        const cls = mine ? (iWon ? "cal-result-win" : "cal-result-loss") : "cal-result-draw";
+        mid = `<button type="button" class="cal-result ${cls} lp-score" data-lp-id="${lp.id}" data-lp-round="${round.index}" data-lp-home="${m.home}" data-lp-away="${m.away}" title="Feuille de match">${m.scoreHome} – ${m.scoreAway}</button>`;
+      } else {
+        mid = `<span class="cal-result-pending">${formatCalendarTimeFr(round.dueAt)}</span>`;
+      }
+      html += `<div class="lp-cal-row${mine ? " me" : ""}"><span class="lp-cal-j">J${round.index + 1}</span><span class="lp-cal-date">${formatCalendarDayFr(round.dueAt)}</span>` +
+        `<span class="lp-cal-team r${m.home === myTeamIndex ? " mine" : ""}">${escapeHtml(lpTeamName(m.home))}</span>${mid}<span class="lp-cal-team${m.away === myTeamIndex ? " mine" : ""}">${escapeHtml(lpTeamName(m.away))}</span></div>`;
+    });
+  });
+  html += `</div></div>`;
+  return html;
+}
+
+// Feuille de match d'une ligue privée : lignes stockées avec le match (voir
+// server/privateLeague.js:compactBoxScore), jamais matchLog.
+function showPrivateLeagueBoxscore(lp, roundIndex, homeIdx, awayIdx) {
+  const round = lp.rounds.find(r => r.index === roundIndex);
+  const m = round && round.matches.find(x => x.home === homeIdx && x.away === awayIdx);
+  if (!m || !m.played) return;
+  closeMatchBoxscore();
+  const homeTeam = league.teams[homeIdx], awayTeam = league.teams[awayIdx];
+  if (!homeTeam || !awayTeam) return;
+  matchBoxscoreState = {
+    rowsHome: (m.boxScoreHome || []).map(r => ({ ...r, isMvp: false })),
+    rowsAway: (m.boxScoreAway || []).map(r => ({ ...r, isMvp: false })),
+    nameHome: homeTeam.name, nameAway: awayTeam.name,
+    teamHome: homeTeam, teamAway: awayTeam,
+    quarterScores: m.quarterScores || null,
+  };
+  const ctx = {
+    kicker: `Ligue privée · ${lp.name} · Journée ${roundIndex + 1}`,
+    whenText: `${formatCalendarDayFr(round.dueAt)} · ${formatCalendarTimeFr(round.dueAt)}`,
+    scoreHome: m.scoreHome, scoreAway: m.scoreAway,
+    noteHtml: `<div class="lp-mbx-note">${m.forfeit ? "Match décidé par forfait (cinq de départ incomplet)." : "Match de ligue privée : aucun effet sur la forme, l'entraînement, les finances ni les stats de carrière."}</div>`,
+  };
+  openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx);
+}
+
+async function lpAction(path, body, okText) {
+  lpUi.feedback = null;
+  try {
+    const res = await fetchApi(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      lpUi.feedback = { ok: false, text: data.error || `Le serveur a refusé l'action (${res.status}).` };
+    } else {
+      if (Array.isArray(data.privateLeagues)) league.privateLeagues = data.privateLeagues;
+      lpUi.feedback = okText ? { ok: true, text: okText } : null;
+    }
+  } catch (e) {
+    lpUi.feedback = { ok: false, text: "Serveur injoignable." };
+  }
+  renderLpSection();
+}
+
+(function wireLpContent() {
+  const holder = document.getElementById("lpContent");
+  if (!holder) return;
+  holder.addEventListener("click", (e) => {
+    const venue = e.target.closest("[data-lp-venue]");
+    if (venue && !venue.disabled) { lpUi.venue = venue.dataset.lpVenue; renderLpSection(); return; }
+    const filter = e.target.closest("[data-lp-filter]");
+    if (filter) { lpUi.filter = filter.dataset.lpFilter; renderLpSection(); return; }
+    const score = e.target.closest(".lp-score");
+    if (score) {
+      const lp = (league.privateLeagues || []).find(l => l.id === score.dataset.lpId);
+      if (lp) showPrivateLeagueBoxscore(lp, Number(score.dataset.lpRound), Number(score.dataset.lpHome), Number(score.dataset.lpAway));
+      return;
+    }
+    const viewFinished = e.target.closest(".lp-view-finished");
+    if (viewFinished) {
+      const lp = (league.privateLeagues || []).find(l => l.id === viewFinished.dataset.lpId);
+      if (lp) { holder.innerHTML = lpLeagueHtml(lp) + `<p><button type="button" class="secondary lp-btn" id="lpBackBtn">← Retour</button></p>`; }
+      return;
+    }
+    if (e.target.closest("#lpBackBtn")) { renderLpSection(); return; }
+    if (e.target.closest("#lpCreateBtn")) {
+      const name = (document.getElementById("lpNameInput") || {}).value || "";
+      const size = Number((document.getElementById("lpSizeSelect") || {}).value || lpUi.size);
+      lpUi.size = size;
+      lpAction("/api/private-league/create", { name, size, venue: lpUi.venue }, "Ligue créée. Partagez le code d'invitation à vos amis.");
+      return;
+    }
+    if (e.target.closest("#lpJoinBtn")) {
+      const code = (document.getElementById("lpCodeInput") || {}).value || "";
+      lpAction("/api/private-league/join", { code }, "Vous avez rejoint la ligue.");
+      return;
+    }
+    const start = e.target.closest("#lpStartBtn");
+    if (start && !start.disabled) { lpAction("/api/private-league/start", { id: start.dataset.lpId }, "La ligue est lancée : première journée vendredi à 21h30."); return; }
+    const leave = e.target.closest("#lpLeaveBtn");
+    if (leave) {
+      const lp = lpMyLeague();
+      const isCreator = lp && lp.creatorTeamIndex === myTeamIndex;
+      lpAction("/api/private-league/leave", { id: leave.dataset.lpId }, isCreator ? "Ligue dissoute." : "Vous avez quitté la ligue.");
+    }
+  });
+  holder.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target && e.target.id === "lpCodeInput") { e.preventDefault(); const b = document.getElementById("lpJoinBtn"); if (b && !b.disabled) b.click(); }
+    if (e.key === "Enter" && e.target && e.target.id === "lpNameInput") { e.preventDefault(); const b = document.getElementById("lpCreateBtn"); if (b && !b.disabled) b.click(); }
+  });
+})();
+
 const TAB_HANDLERS = {
   live: goToLiveTab,
   guide: () => { renderGuideSection(); showPage("guideSection"); setActiveTab("guide"); },
@@ -36219,6 +36646,7 @@ const TAB_HANDLERS = {
   coupe: () => { renderCoupeSection(); showPage("coupeSection"); setActiveTab("coupe"); },
   calendrier: () => { renderCalendrierSection(); showPage("calendrierSection"); setActiveTab("calendrier"); },
   amicaux: () => showPlaceholder("amicaux"),
+  lp: () => { renderLpSection(); showPage("lpSection"); setActiveTab("lp"); },
   economie: () => { renderEconomieSection(); showPage("economieSection"); setActiveTab("economie"); },
   salle: () => { renderSalleSection(); showPage("salleSection"); setActiveTab("salle"); },
   staff: () => { for (const k in staffUi) staffUi[k].open = false; refreshCoachMarket(); refreshAnalystMarket(); refreshRecruiterMarket(); renderStaffPanel(); showPage("staffSection"); setActiveTab("staff"); },

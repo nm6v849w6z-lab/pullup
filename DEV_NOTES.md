@@ -20,6 +20,45 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées
+  (Premium)** — idées de la communauté relayées par l'utilisateur (Diablue,
+  aszat) : "Ligues perso ? comme LP sur BB", "un truc à part qui ne joue pas
+  sur la forme des joueurs [...] aucun impact sur la forme, l'entrainement
+  etc...", "il faut aucun revenu, le choix du terrain se fera dans les
+  parametres de la LP à domicile, avantage d'être à domicile, à l'exterieur
+  desavantage, mais aucun revenu de billetterie dans tous les cas", "pour
+  créer et rejoindre la LP il faut etre premium", "enleve les options".
+  Maquettes validées (canvas Design "Ligue privée — maquettes"). Livré :
+  server/privateLeague.js (nouveau : création nom/6-8-10 équipes/terrain
+  domicile-extérieur ou neutre, code d'invitation 6 caractères visible des
+  seuls membres, adhésion, lancement auto quand complète ou par le créateur
+  dès 4 clubs, quitter/dissoudre tant que pas lancée, aller-retour, une
+  journée par semaine le VENDREDI 21h30 Paris (après le championnat de 19h +
+  90 min de diffusion), matchs simulés sur des COPIES des équipes
+  (serializeTeam → teamFromSave) donc AUCUN effet sur forme/fatigue/
+  blessures/entraînement/finances/matchLog, feuille de match compacte
+  stockée avec le match, fil d'actu pour les membres, purge 60 j après la
+  fin, un seul club = une seule ligue active) ; engine.js ET copie HTML :
+  League.privateLeagues (sérialisé comme `cup`), option
+  `homeAdvantage` de MatchEngine (HOME_ADVANTAGE_FACTOR 1,02 receveur /
+  0,98 visiteur via Player.matchVenueFactor dans eff(), jamais actif en
+  championnat/Coupe) ; server/index.js : routes /api/private-league/
+  create|join|leave|start (garde Premium serveur), rattrapage dans tick(),
+  code masqué dans /api/save ; moteurbasket3.html : onglet "Ligues privées"
+  (sidebar, section Club), route /ligues-privees, page renderLpSection
+  (hub création+rejoindre, note Premium et boutons désactivés pour un club
+  gratuit, salle d'attente avec code, classement + calendrier Tous/Mes
+  matchs + carte Prochain match + feuille de match via
+  openMatchBoxscoreModal, extrait de showMatchBoxscore). Choix assumé :
+  ligue partagée uniquement (calendarDailyAnchored). Tests :
+  server/private_league_test.js et private_league_ui_test.js (nouveaux) +
+  tabs, cup_*, calendar_*, boxscore, live_boxscore, dashboard_feed,
+  league_stats, light_theme, persistence, end_to_end, tous les
+  server/*_test.js verts. Rendu vérifié dans Chromium (1440 et 390 px,
+  sombre et clair). Non fait : entrée dans le Guide ; émission/direct pour
+  les matchs LP (simulés en coulisses, feuille de match seulement).
+  Reste : `git push` + redéploiement.
+
 - **🔧 CODE FAIT, SUITE COMPLÈTE EN COURS (2026-09-26) — Temps de jeu :
   plafond 40 min par poste + rang Remplaçant/Réserviste selon les minutes**
   — retour utilisateur (capture 11:37, P à "39 / 40" avec 28/4/7) : "si je

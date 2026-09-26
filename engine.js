@@ -3186,7 +3186,14 @@ class Player {
     // plus bas) : même snapshot d'ÉQUIPE, SÉPARÉ de chemistryFactor
     // ci-dessus (les deux se cumulent), `?? 1` même filet de sécurité.
     const tacticalKnowledgeFactor = this.matchTacticalKnowledgeFactor ?? 1;
-    return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor * tacticalKnowledgeFactor, 1, 130);
+    // Avantage du terrain (ligues privées, retour communauté 2026-09 :
+    // "avantage d'être à domicile, à l'exterieur desavantage") : snapshot
+    // posé par MatchEngine.simulate quand l'option homeAdvantage est active
+    // (HOME_ADVANTAGE_FACTOR pour l'équipe qui reçoit, l'inverse pour celle
+    // qui se déplace), `?? 1` partout ailleurs — championnat et Coupe n'en
+    // ont toujours aucun (voir server/liveMatch.js).
+    const venueFactor = this.matchVenueFactor ?? 1;
+    return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor * tacticalKnowledgeFactor * venueFactor, 1, 130);
   }
 }
 
@@ -7417,6 +7424,16 @@ class League {
     // sort de byes à chaque fois, comme les 9 adversaires CPU.
     this.cup = null;
 
+    // Ligues privées (Premium, retour communauté 2026-09 : "Ligues perso ?
+    // comme LP sur BB [...] un truc à part qui ne joue pas sur la forme des
+    // joueurs") : tableau de ligues créées par des managers humains de CETTE
+    // ligue partagée, chacune {id, name, code, creatorTeamIndex, size, venue,
+    // status, teamIndices, rounds[...]} — voir createPrivateLeague /
+    // simulatePrivateLeagueMatch plus bas. Données JSON brutes (comme `cup`),
+    // sérialisées telles quelles. Les matchs sont simulés sur des COPIES
+    // des équipes : rien ici ne touche jamais les joueurs réels.
+    this.privateLeagues = [];
+
     // Matchs en direct en cours de diffusion pour la journée courante (voir
     // server/liveMatch.js) : UNE entrée par match diffusé, indexée par une
     // clé stable "round:home:away" (voir liveMatchKey côté server/liveMatch.js)
@@ -10507,6 +10524,7 @@ function serializeLeague(lg) {
     calendarDailyAnchored: !!lg.calendarDailyAnchored,
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
     cup: lg.cup || null,
+    privateLeagues: Array.isArray(lg.privateLeagues) ? lg.privateLeagues : [],
     // Diffusions en direct en cours (voir League.liveMatches ci-dessus) :
     // doivent survivre à un rechargement de page/redémarrage du serveur en
     // plein milieu d'un match, sinon reprendre "là où on en est" (retour
@@ -10568,6 +10586,9 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarDailyAnchored = !!data.calendarDailyAnchored;
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
   lg.cup = data.cup || null;
+  // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
+  // d'avant cette fonctionnalité, aucune ligue.
+  lg.privateLeagues = Array.isArray(data.privateLeagues) ? data.privateLeagues : [];
   // Ancienne sauvegarde (avant liveMatches au pluriel) : `data.liveMatches`
   // absent, {} par défaut (constructeur) reste en place — aucune diffusion
   // en cours reprise, comme avant ce champ.
@@ -10600,13 +10621,23 @@ function leagueFromSave(data, userTeam = null) {
 // MOTEUR DE MATCH
 // ---------------------------------------------------------------------
 const QUARTER_SECONDS = 10 * 60;
+// Avantage du terrain des ligues privées (option homeAdvantage de MatchEngine)
+// : +2 % de caractéristiques effectives pour l'équipe qui reçoit, -2 % pour
+// celle qui se déplace, soit ~4 % d'écart — de l'ordre des 3 points
+// d'avantage habituellement mesurés à domicile en basket.
+const HOME_ADVANTAGE_FACTOR = 1.02;
 // Prolongation standard : 5 minutes, plus courte qu'un quart-temps normal.
 const OVERTIME_SECONDS = 5 * 60;
 
 class MatchEngine {
-  constructor(teamA, teamB) {
+  // `options.homeAdvantage` (ligues privées, voir simulatePrivateLeagueMatch)
+  // : teamA reçoit, teamB se déplace ; +/- HOME_ADVANTAGE_FACTOR sur toutes
+  // les caractéristiques effectives (voir Player.eff). Absent/false =
+  // aucun avantage, comportement historique du championnat et de la Coupe.
+  constructor(teamA, teamB, options = {}) {
     this.teamA = teamA;
     this.teamB = teamB;
+    this.homeAdvantage = !!(options && options.homeAdvantage);
   }
 
   fmtClock(sec) {
@@ -11778,6 +11809,10 @@ class MatchEngine {
     this.matchNow = now;
     this.teamA.resetForMatch(now);
     this.teamB.resetForMatch(now);
+    // Avantage du terrain optionnel (voir le constructeur et Player.eff).
+    const homeFactor = this.homeAdvantage ? HOME_ADVANTAGE_FACTOR : 1;
+    this.teamA.players.forEach(p => { p.matchVenueFactor = homeFactor; });
+    this.teamB.players.forEach(p => { p.matchVenueFactor = this.homeAdvantage ? 2 - HOME_ADVANTAGE_FACTOR : 1; });
     const events = [];
     const quarterScores = { A: [0, 0, 0, 0], B: [0, 0, 0, 0] };
     let score = { A: 0, B: 0 };
