@@ -523,6 +523,14 @@
 
   /* Cinq de départ : le terrain garde son gabarit (voir .lineup-court). */
   #prepSection .lineup-court-wrap{margin-bottom:0;}
+  #prepSection .lineup-court{max-width:420px;}
+  #prepSection .court-marker{width:auto;}
+  #prepSection .court-marker.cm-edge-left{transform:translate(0,-50%); align-items:flex-start;}
+  #prepSection .court-marker.cm-edge-right{transform:translate(-100%,-50%); align-items:flex-end;}
+  #prepSection .ordres-card .court-marker select{width:auto; min-width:120px; max-width:175px; min-height:34px; font-size:13px; padding:0 24px 0 10px; white-space:nowrap; text-overflow:ellipsis;}
+  @media(max-width:600px){
+    #prepSection .ordres-card .court-marker select{min-width:92px; max-width:142px; min-height:30px; font-size:11.5px; padding:0 18px 0 6px;}
+  }
 
   /* Rotation : même <table> qu'avant, présentée en lignes de carte. */
   .ordres-alert{
@@ -536,9 +544,11 @@
   #prepSection .lineup-table td{padding:12px 0; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
   #prepSection .lineup-table tr:last-child td{border-bottom:none;}
   #prepSection .lineup-table .lt-pos{width:40px; font-weight:800; color:var(--amber); font-size:15px;}
-  #prepSection .lineup-table .lt-starter{width:128px; padding-right:12px; font-size:14px; font-weight:700; color:var(--ink);}
-  #prepSection .lineup-backups-list{gap:6px; align-items:center;}
-  #prepSection .lineup-backup-chip{font-size:12px; padding:4px 9px; border-color:var(--line); color:var(--ink); background:var(--panel-2); cursor:default;}
+  #prepSection .lineup-table .lt-starter{width:118px; padding-right:10px; font-size:14px; font-weight:700; color:var(--ink);}
+  #prepSection .lineup-backups-list{display:flex; flex-direction:column; align-items:flex-start; gap:6px;}
+  #prepSection .lineup-chips-line{display:flex; flex-wrap:wrap; gap:6px;}
+  #prepSection .lineup-chips-line .lineup-backup-chip{white-space:nowrap;}
+  #prepSection .lineup-backup-chip{font-size:12px; padding:4px 8px; border-color:var(--line); color:var(--ink); background:var(--panel-2); cursor:default;}
   #prepSection .lineup-backup-chip.multi{border-color:var(--amber); color:var(--amber);}
   #prepSection .lineup-chip-remove{min-width:20px; min-height:20px; font-size:15px;}
   #prepSection .ordres-card .lineup-add-select{
@@ -546,19 +556,31 @@
     border:1px dashed var(--line); border-radius:999px; background:transparent; color:var(--ink-dim); cursor:pointer;
   }
   #prepSection .lineup-reserves{margin-top:0; font-size:12.5px;}
-  /* Temps de jeu cible par poste (carte Rotation). */
-  #prepSection .lineup-table .lt-minutes{padding-left:12px; text-align:right; white-space:nowrap;}
-  #prepSection .lt-minutes-auto{font-size:12px; color:var(--ink-dim); margin-right:8px;}
-  #prepSection .lt-minutes-list{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; justify-content:flex-end;}
-  #prepSection .lt-minutes-item{display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--ink-dim); margin:0;}
-  #prepSection .lt-minutes-item span{color:var(--ink); font-weight:600;}
-  #prepSection .lt-minutes-item input{width:46px; min-height:28px; padding:0 4px; margin:0; font-size:13px; text-align:center;}
-  #prepSection .lt-minutes-total{font-size:12px; font-weight:800; color:var(--ink);}
-  #prepSection .lt-minutes-total.off{color:var(--amber);}
-  #prepSection .lt-minutes-btn{min-height:28px; padding:0 10px; font-size:12px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--ink); cursor:pointer;}
-  @media(max-width:900px){
-    #prepSection .lineup-table .lt-minutes{white-space:normal; max-width:150px;}
-    #prepSection .lt-minutes-list{flex-direction:column; align-items:flex-end;}
+  /* Carte « Temps de jeu » (minutes visées par poste). */
+  #prepSection .pt-intro{margin:0 0 4px; font-size:13px; line-height:1.45; color:var(--ink-dim);}
+  #prepSection .pt-row{display:grid; grid-template-columns:40px 1fr auto; gap:12px; align-items:start; padding:12px 0; border-bottom:1px solid var(--line-soft);}
+  #prepSection .pt-row:last-child{border-bottom:none;}
+  #prepSection .pt-pos{font-weight:800; color:var(--amber); font-size:15px; padding-top:4px;}
+  #prepSection .pt-body{display:flex; flex-direction:column; gap:6px; min-width:0;}
+  #prepSection .pt-auto{font-size:13px; color:var(--ink-dim); padding-top:5px;}
+  #prepSection .pt-player{display:flex; align-items:center; gap:8px; margin:0;}
+  #prepSection .pt-who{display:flex; flex-direction:column; flex:1; min-width:0;}
+  #prepSection .pt-name{font-size:14px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #prepSection .pt-player.starter .pt-name{font-weight:800;}
+  #prepSection .pt-role{font-size:11.5px; color:var(--ink-dim);}
+  #prepSection input.pt-input{width:56px; min-height:32px; height:32px; margin:0; padding:0 4px; font-size:14px; font-weight:700; text-align:center; border-radius:8px;}
+  #prepSection .pt-unit{font-size:12px; color:var(--ink-dim); width:24px;}
+  #prepSection .ordres-card select.pt-add{
+    display:inline-block; align-self:flex-start; width:auto; max-width:220px; margin:2px 0 0; min-height:30px; font-size:12.5px; padding:0 10px;
+    border:1px dashed var(--line); border-radius:999px; background:transparent; color:var(--ink-dim); cursor:pointer;
+  }
+  #prepSection .pt-side{display:flex; flex-direction:column; align-items:flex-end; gap:6px; padding-top:2px;}
+  #prepSection .pt-total{font-size:13px; font-weight:800; color:var(--ink); white-space:nowrap;}
+  #prepSection .pt-total.off{color:var(--amber);}
+  #prepSection .pt-btn{min-height:30px; padding:0 12px; font-size:12.5px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; white-space:nowrap;}
+  @media(max-width:600px){
+    #prepSection .pt-row{grid-template-columns:32px 1fr; gap:8px;}
+    #prepSection .pt-side{grid-column:2; flex-direction:row; align-items:center; justify-content:space-between; padding-top:0;}
   }
 
   @media(max-width:1100px){
@@ -5530,6 +5552,7 @@
           <button type="button" class="oab-tab" data-ordres-jump="ordresCardAttaque">Attaque</button>
           <button type="button" class="oab-tab" data-ordres-jump="ordresCardDefense">Défense</button>
           <button type="button" class="oab-tab" data-ordres-jump="ordresCardCinq">Cinq &amp; rotation</button>
+          <button type="button" class="oab-tab" data-ordres-jump="ordresCardMinutes">Temps de jeu</button>
           <button type="button" class="oab-tab" data-ordres-jump="ordresCardAdversaires">Adversaires</button>
         </nav>
       </div>
@@ -27127,6 +27150,11 @@ function renderLineupEditor(team, container, opts = {}) {
     const coords = COURT_MARKER_POS[pos];
     marker.style.left = coords.left + "%";
     marker.style.top = coords.top + "%";
+    // Menus plus larges (nom complet visible) : un marqueur près d'un bord
+    // du terrain s'aligne sur ce bord au lieu d'être centré, pour ne pas
+    // être coupé par le cadre.
+    if (coords.left < 30) { marker.classList.add("cm-edge-left"); marker.style.left = Math.max(2, coords.left - 11) + "%"; }
+    else if (coords.left > 70) { marker.classList.add("cm-edge-right"); marker.style.left = Math.min(98, coords.left + 11) + "%"; }
 
     const label = document.createElement("div");
     label.className = "cm-pos";
@@ -27183,7 +27211,7 @@ function renderLineupEditor(team, container, opts = {}) {
 
   const table = document.createElement("table");
   table.className = "lineup-table";
-  table.innerHTML = "<thead><tr><th>Poste</th><th>Titulaire</th><th>Remplaçants</th><th>Minutes</th></tr></thead>";
+  table.innerHTML = "<thead><tr><th>Poste</th><th>Titulaire</th><th>Remplaçants</th></tr></thead>";
   const tbody = document.createElement("tbody");
 
   POSITIONS.forEach(pos => {
@@ -27203,20 +27231,23 @@ function renderLineupEditor(team, container, opts = {}) {
 
     const backupsCell = document.createElement("td");
     const backupsList = document.createElement("div");
+    const chipsLine = document.createElement("div");
+    chipsLine.className = "lineup-chips-line";
     backupsList.className = "lineup-backups-list";
     const assignedBackups = eligibleBackups.filter(p => backupPositionsOf(p).includes(pos));
     if (!assignedBackups.length) {
       const none = document.createElement("span");
       none.className = "lineup-backup-empty";
       none.textContent = eligibleBackups.length ? "Aucun remplaçant" : "Aucun joueur disponible (tous titulaires).";
-      backupsList.appendChild(none);
+      chipsLine.appendChild(none);
     }
     assignedBackups.forEach(p => {
       const others = backupPositionsOf(p).filter(x => x !== pos);
       const chip = document.createElement("span");
       chip.className = "lineup-backup-chip checked" + (others.length ? " multi" : "");
       if (others.length) chip.title = `Aussi remplaçant : ${others.map(x => POS_SHORT[x]).join(", ")}`;
-      chip.appendChild(document.createTextNode(`${p.name} (${POS_SHORT[p.position]})`));
+      chip.appendChild(document.createTextNode(p.position === pos ? p.name : `${p.name} (${POS_SHORT[p.position]})`));
+      if (p.position !== pos) chip.title = (chip.title ? chip.title + " · " : "") + `Poste naturel : ${p.position}`;
       const rm = document.createElement("button");
       rm.type = "button";
       rm.className = "lineup-chip-remove";
@@ -27229,7 +27260,7 @@ function renderLineupEditor(team, container, opts = {}) {
         rerender();
       });
       chip.appendChild(rm);
-      backupsList.appendChild(chip);
+      chipsLine.appendChild(chip);
     });
 
     const addable = eligibleBackups.filter(p => !assignedBackups.includes(p));
@@ -27253,67 +27284,13 @@ function renderLineupEditor(team, container, opts = {}) {
         if (team === teamA) syncLineupToServer();
         rerender();
       });
+      backupsList.appendChild(chipsLine);
       backupsList.appendChild(addSel);
     }
+    if (!chipsLine.parentNode) backupsList.appendChild(chipsLine);
     backupsCell.appendChild(backupsList);
     row.appendChild(backupsCell);
 
-    // Temps de jeu cible du poste (voir Team.slotMinuteShares/
-    // MatchEngine.substituteToTarget) : "Auto" = rotation automatique du
-    // moteur ; "Régler" propose 28/12 puis chaque joueur du poste (titulaire,
-    // remplaçants, réserviste ajouté via "+ Ajouter") a sa case de minutes.
-    const minutesCell = document.createElement("td");
-    minutesCell.className = "lt-minutes";
-    const syncAndRerender = () => { if (team === teamA) syncLineupToServer(); rerender(); };
-    if (!team.hasSlotMinutes(pos)) {
-      const auto = document.createElement("span");
-      auto.className = "lt-minutes-auto";
-      auto.textContent = "Temps de jeu : auto";
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "lt-minutes-btn";
-      btn.textContent = "Régler";
-      btn.setAttribute("aria-label", `Régler les minutes ${pos}`);
-      btn.addEventListener("click", () => { team.enableSlotMinutes(pos); syncAndRerender(); });
-      minutesCell.append(auto, btn);
-    } else {
-      const wrap = document.createElement("div");
-      wrap.className = "lt-minutes-list";
-      const mins = team.lineup.minutes[pos];
-      let total = 0;
-      team.slotPlayerIds(pos).forEach(id => {
-        const pl = team.players.find(x => x.id === id);
-        if (!pl) return;
-        const v = Number(mins[id]) || 0;
-        total += v;
-        const lab = document.createElement("label");
-        lab.className = "lt-minutes-item";
-        const name = document.createElement("span");
-        name.textContent = pl.name.split(" ").slice(-1)[0];
-        name.title = pl.name;
-        const inp = document.createElement("input");
-        inp.type = "number"; inp.min = "0"; inp.max = "40"; inp.step = "1";
-        inp.value = String(v);
-        inp.setAttribute("aria-label", `Minutes ${pl.name} au poste ${pos}`);
-        inp.addEventListener("change", () => { team.setSlotMinutes(pos, id, inp.value); syncAndRerender(); });
-        lab.append(name, inp, document.createTextNode("min"));
-        wrap.appendChild(lab);
-      });
-      const tot = document.createElement("span");
-      tot.className = "lt-minutes-total" + (total === 40 ? "" : " off");
-      tot.textContent = total === 40 ? "40 / 40" : `${total} / 40`;
-      if (total !== 40) tot.title = total > 0 ? "Le total sera ramené à 40 min en gardant ces proportions." : "Aucune minute : le poste repassera en rotation automatique.";
-      const reset = document.createElement("button");
-      reset.type = "button";
-      reset.className = "lt-minutes-btn";
-      reset.textContent = "Auto";
-      reset.title = "Revenir à la rotation automatique";
-      reset.setAttribute("aria-label", `Rotation automatique ${pos}`);
-      reset.addEventListener("click", () => { team.clearSlotMinutes(pos); syncAndRerender(); });
-      wrap.append(tot, reset);
-      minutesCell.appendChild(wrap);
-    }
-    row.appendChild(minutesCell);
 
     tbody.appendChild(row);
   });
@@ -27328,6 +27305,125 @@ function renderLineupEditor(team, container, opts = {}) {
     rotationCard.appendChild(reservesLine);
   }
   container.appendChild(rotationCard);
+  renderPlayingTimeCard(team, container, makeCard, rerender);
+}
+
+// Carte « Temps de jeu » des Ordres (retour utilisateur 2026-09-26 :
+// "choisir les temps de jeu des joueurs [...] meneur c'est 30 min,
+// remplaçant 10", "il faut aussi pouvoir donner des minutes au réserviste",
+// "on mettra les minutes par poste", puis "je mettrai une brique temps de
+// jeu à part, ce sera plus propre, pas dans les rotations"). Une ligne par
+// poste : "Automatique" (rotation du moteur) + Régler, ou une case de
+// minutes par joueur du poste (titulaire, remplaçants), le total sur 40 et
+// Automatique pour revenir en arrière. "+ Réserviste" ajoute un joueur hors
+// rotation à ce poste (il devient remplaçant du poste, avec 0 min à régler).
+// Données/moteur : Team.slotMinuteShares, MatchEngine.substituteToTarget.
+function renderPlayingTimeCard(team, container, makeCard, rerender) {
+  const card = makeCard("ordresCardMinutes", "Temps de jeu", "Minutes visées par poste, sur 40");
+  const intro = document.createElement("p");
+  intro.className = "pt-intro";
+  intro.textContent = "Le moteur vise ces minutes et les ajuste seul en cas de blessure, de fautes ou de fatigue. Un poste en automatique garde la rotation habituelle.";
+  card.appendChild(intro);
+  const sync = () => { if (team === teamA) syncLineupToServer(); rerender(); };
+  const starterIds = new Set(POSITIONS.map(pos => team.lineup.starters[pos]).filter(Boolean));
+
+  POSITIONS.forEach(pos => {
+    const row = document.createElement("div");
+    row.className = "pt-row";
+    row.dataset.pos = pos;
+    const posEl = document.createElement("div");
+    posEl.className = "pt-pos";
+    posEl.textContent = POS_SHORT[pos];
+    row.appendChild(posEl);
+
+    const body = document.createElement("div");
+    body.className = "pt-body";
+    const side = document.createElement("div");
+    side.className = "pt-side";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pt-btn";
+
+    if (!team.hasSlotMinutes(pos)) {
+      const auto = document.createElement("span");
+      auto.className = "pt-auto";
+      auto.textContent = "Automatique";
+      body.appendChild(auto);
+      btn.textContent = "Régler";
+      btn.setAttribute("aria-label", `Régler les minutes ${pos}`);
+      btn.addEventListener("click", () => { team.enableSlotMinutes(pos); sync(); });
+      side.appendChild(btn);
+    } else {
+      const mins = team.lineup.minutes[pos];
+      const starterId = team.lineup.starters[pos];
+      let total = 0;
+      team.slotPlayerIds(pos).forEach(id => {
+        const pl = team.players.find(x => x.id === id);
+        if (!pl) return;
+        const v = Number(mins[id]) || 0;
+        total += v;
+        const item = document.createElement("label");
+        item.className = "pt-player" + (id === starterId ? " starter" : "");
+        const name = document.createElement("span");
+        name.className = "pt-name";
+        name.textContent = pl.name;
+        const role = document.createElement("span");
+        role.className = "pt-role";
+        role.textContent = id === starterId ? "Titulaire" : `Remplaçant · ${POS_SHORT[pl.position]}`;
+        const inp = document.createElement("input");
+        inp.type = "number"; inp.min = "0"; inp.max = "40"; inp.step = "1";
+        inp.className = "pt-input";
+        inp.value = String(v);
+        inp.setAttribute("aria-label", `Minutes ${pl.name} au poste ${pos}`);
+        inp.addEventListener("change", () => { team.setSlotMinutes(pos, id, inp.value); sync(); });
+        const unit = document.createElement("span");
+        unit.className = "pt-unit";
+        unit.textContent = "min";
+        const who = document.createElement("span");
+        who.className = "pt-who";
+        who.append(name, role);
+        item.append(who, inp, unit);
+        body.appendChild(item);
+      });
+      // Réserviste : joueur ni titulaire ni déjà dans ce poste.
+      const inSlot = new Set(team.slotPlayerIds(pos));
+      const addable = team.players.filter(x => !starterIds.has(x.id) && !inSlot.has(x.id));
+      if (addable.length) {
+        const add = document.createElement("select");
+        add.className = "pt-add";
+        add.setAttribute("aria-label", `Ajouter un joueur au temps de jeu ${pos}`);
+        const o0 = document.createElement("option");
+        o0.value = "";
+        o0.textContent = "+ Ajouter un joueur";
+        add.appendChild(o0);
+        addable.sort((x, y) => y.overall() - x.overall()).forEach(x => {
+          const o = document.createElement("option");
+          o.value = x.id;
+          const isReserve = !(team.lineup.backupPositions[x.id] || []).length;
+          o.textContent = `${x.name} (${POS_SHORT[x.position]}, ${Math.round(x.overall())})${isReserve ? " · réserviste" : ""}`;
+          add.appendChild(o);
+        });
+        add.addEventListener("change", () => {
+          const id = resolvePlayerIdFromSelectValue(team, add.value);
+          if (id) team.toggleBackupPosition(id, pos, true);
+          sync();
+        });
+        body.appendChild(add);
+      }
+      const tot = document.createElement("span");
+      tot.className = "pt-total" + (total === 40 ? "" : " off");
+      tot.textContent = `${total} / 40 min`;
+      if (total !== 40) tot.title = total > 0 ? "Le total sera ramené à 40 min en gardant ces proportions." : "Aucune minute : le poste repassera en automatique.";
+      btn.textContent = "Automatique";
+      btn.title = "Revenir à la rotation automatique";
+      btn.setAttribute("aria-label", `Rotation automatique ${pos}`);
+      btn.addEventListener("click", () => { team.clearSlotMinutes(pos); sync(); });
+      side.append(tot, btn);
+    }
+    row.append(body, side);
+    card.appendChild(row);
+  });
+  container.appendChild(card);
 }
 
 function makeLabel(text) {

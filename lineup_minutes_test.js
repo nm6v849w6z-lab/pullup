@@ -122,32 +122,38 @@ console.log(`  Titulaire blessé : remplaçant ${(b0.secondsPlayedByPosition.Men
 assert((b0.secondsPlayedByPosition.Meneur || 0) / 60 > 15, "le remplaçant doit récupérer le temps de jeu du titulaire blessé");
 console.log("✅ Moteur : minutes d'un titulaire blessé redistribuées automatiquement.");
 
-// --- 5. Écran Ordres ----------------------------------------------------
+// --- 5. Écran Ordres : carte « Temps de jeu » (à part de la Rotation) ---
 const { server, savePath, baseUrl } = await startTestServer();
 const dom = await openGame(html, baseUrl);
 const doc = dom.window.document;
 const win = dom.window;
-const rowByCode = code => [...doc.querySelectorAll(".lineup-table tbody tr")].find(r => r.querySelector(".lt-pos").textContent === code);
-let row = rowByCode("M");
-assert(row && /auto/i.test(row.querySelector(".lt-minutes").textContent), "le poste Meneur doit être en « auto » au départ");
-row.querySelector(".lt-minutes-btn").click();
-row = rowByCode("M");
-const inputs = [...row.querySelectorAll(".lt-minutes-item input")];
+const ptRow = p => doc.querySelector(`#ordresCardMinutes .pt-row[data-pos="${p}"]`);
+assert(doc.getElementById("ordresCardMinutes"), "la carte « Temps de jeu » doit exister");
+assert(!doc.querySelector("#ordresCardRotation input[type=number]"), "la carte Rotation ne doit pas contenir de minutes");
+assert(/Automatique/.test(ptRow("Meneur").textContent), "le poste Meneur doit être en automatique au départ");
+ptRow("Meneur").querySelector(".pt-btn").click();
+const inputs = [...ptRow("Meneur").querySelectorAll("input.pt-input")];
 assert(inputs.length >= 1, "« Régler » doit afficher une case de minutes par joueur du poste");
-assert(row.querySelector(".lt-minutes-total").textContent.trim() === "40 / 40", "total affiché 40 / 40 après « Régler »");
+assert(ptRow("Meneur").querySelector(".pt-total").textContent.trim() === "40 / 40 min", "total affiché 40 / 40 min après « Régler »");
 inputs[0].value = "30";
 inputs[0].dispatchEvent(new win.Event("change"));
-row = rowByCode("M");
-const totalTxt = row.querySelector(".lt-minutes-total").textContent.trim();
-assert(inputs.length === 1 || totalTxt === "42 / 40", `total mis à jour attendu 42 / 40, obtenu ${totalTxt}`);
+const totalTxt = ptRow("Meneur").querySelector(".pt-total").textContent.trim();
+assert(inputs.length === 1 || totalTxt === "42 / 40 min", `total mis à jour attendu 42 / 40 min, obtenu ${totalTxt}`);
+// Ajout d'un joueur hors du poste (réserviste ou remplaçant d'un autre poste).
+const add = ptRow("Meneur").querySelector("select.pt-add");
+assert(add && add.options.length > 1, "« + Ajouter un joueur » doit proposer des joueurs");
+const before = ptRow("Meneur").querySelectorAll("input.pt-input").length;
+add.value = add.options[1].value;
+add.dispatchEvent(new win.Event("change"));
+assert(ptRow("Meneur").querySelectorAll("input.pt-input").length === before + 1, "le joueur ajouté doit avoir sa case de minutes");
 await flush(dom);
 const saved = readRawSave(savePath).team.lineup;
 assert(saved.minutes && Object.values(saved.minutes.Meneur).includes(30), "les minutes saisies doivent être sauvegardées : " + JSON.stringify(saved.minutes));
-rowByCode("M").querySelector(".lt-minutes-list .lt-minutes-btn").click();
+ptRow("Meneur").querySelector(".pt-side .pt-btn").click();
 await flush(dom);
-assert(/auto/i.test(rowByCode("M").querySelector(".lt-minutes").textContent), "« Auto » doit rendre le poste à la rotation automatique");
-assert(!readRawSave(savePath).team.lineup.minutes, "« Auto » doit effacer le réglage sauvegardé");
-console.log("✅ Écran Ordres : Régler / saisie / Auto, sauvegardés.");
+assert(/Automatique/.test(ptRow("Meneur").querySelector(".pt-body").textContent), "« Automatique » doit rendre le poste à la rotation automatique");
+assert(!readRawSave(savePath).team.lineup.minutes, "« Automatique » doit effacer le réglage sauvegardé");
+console.log("✅ Carte « Temps de jeu » : Régler / saisie / ajout d'un joueur / Automatique, sauvegardés.");
 
 win.close();
 server.close();
