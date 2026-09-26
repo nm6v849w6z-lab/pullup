@@ -2009,7 +2009,6 @@
   .cal-next-btn:hover{filter:brightness(1.08);}
   .cal-next-btn.is-live{background:var(--danger); color:#fff;}
   .cal-next-orders{text-align:center; font-size:12px; margin-top:8px;}
-  .cal-next-orders.is-missing{color:var(--amber);}
   .cal-next-orders.is-ok{color:var(--ok);}
   .cal-kpis{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:12px;}
   .cal-kpi{background:var(--panel-2); border-radius:8px; padding:10px 12px;}
@@ -30505,7 +30504,9 @@ function calendarNextMatchCardHtml(row) {
   const action = row.isLive
     ? `<button type="button" class="cal-next-btn is-live" data-tab="live">Voir le direct</button>`
     : `<button type="button" class="cal-next-btn" data-tab="ordres" data-round="${row.orderRound}" data-competition="${row.orderCompetition}">${row.alreadyOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>` +
-      `<div class="cal-next-orders ${row.alreadyOrdered ? "is-ok" : "is-missing"}">${row.alreadyOrdered ? "Ordres enregistrés pour ce match" : "Ordres non définis pour ce match"}</div>`;
+      // "Ordres non définis pour ce match" retiré (retour utilisateur
+      // 2026-09-26) : le bouton "Donner les ordres" le dit déjà.
+      (row.alreadyOrdered ? `<div class="cal-next-orders is-ok">Ordres enregistrés pour ce match</div>` : "");
   return `<div class="cal-card cal-next"><div class="cal-card-kicker">${escapeHtml(kicker)}</div>` +
     `<div class="cal-next-teams">${side(homeIdx)}<div class="cal-next-vs">VS</div>${side(awayIdx)}</div>` +
     `<div class="cal-next-meta"><span>${escapeHtml(when)}</span><span class="cal-next-sep" aria-hidden="true">|</span><span>${escapeHtml(row.location)}</span></div>` +

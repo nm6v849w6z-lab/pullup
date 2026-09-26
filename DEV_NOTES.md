@@ -20,15 +20,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Calendrier :
-  colonne Domicile/Extérieur retirée** — retour utilisateur : "enlève tous
-  les domicile et extérieur, on a déjà @ et vs, ça fait redite" / "ça
-  aérera un peu le calendrier". Fichiers : moteurbasket3.html
-  (calendarRowHtml, colgroup, colspan 5), assets/mobile/mobile.css
-  (nth-child des cartes décalés). data-venue garde les filtres
-  Domicile/Extérieur ; la carte "Prochain match" garde son "Domicile".
-  Tests verts : calendar_redesign, calendar_merge, calendar,
-  calendrier_boxscore, ordres_validated_badge. Reste : `git push`.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Calendrier,
+  carte Prochain match : « Ordres non définis pour ce match » retiré** —
+  retour utilisateur : "enlève: Ordres non définis pour ce match" (le
+  bouton "Donner les ordres" le dit déjà). « Ordres enregistrés pour ce
+  match » conservé. Fichier : moteurbasket3.html
+  (calendarNextMatchCardHtml, CSS .cal-next-orders.is-missing retirée).
+  Tests calendar_redesign, calendar verts. Reste : `git push`.
 
 - **⏳ À REPRENDRE — Tableau de bord : vrai logo d'un adversaire payant**
   (issu de `livrer_dashboard_fixes.sh`, jamais committé) :
