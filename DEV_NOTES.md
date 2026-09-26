@@ -20,6 +20,16 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Entraînement :
+  avatars des joueurs dans le bilan** — retour utilisateur (capture "Bilan
+  de la semaine dernière") : "onglet entrainement, ajoute les avatars des
+  joueurs". trainingReportAvatarHtml (vrai avatar AvatarGen via
+  playerAvatarHtml, initiales en repli si le joueur a quitté l'effectif),
+  utilisé par le bilan (renderLastTrainingReport) ET le récap de rattrapage
+  (.cu-rp). CSS .tp-avatar--img. daily_training_cycle vert ;
+  training_progression échoue aussi sur HEAD sans ce changement (flaky
+  connu). Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle et
   Académie : bouton texte au lieu de la flèche d'amélioration** — retour
   utilisateur (capture Salle) : "plutot que de mettre des fleches qui

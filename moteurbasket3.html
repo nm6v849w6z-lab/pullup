@@ -3849,6 +3849,7 @@
   }
   .tp-rp-toggle:focus-visible{outline:2px solid var(--amber); outline-offset:-2px;}
   .tp-avatar{width:36px; height:36px; border-radius:50%; background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:var(--ink-dim); flex:none;}
+  .tp-avatar--img{width:40px; height:40px; overflow:hidden; align-items:flex-end; border:1px solid var(--line);}
   .tp-rp-name{font-weight:700; font-size:15px;}
   .tp-pill{font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; white-space:nowrap;}
   .tp-pill-up{color:var(--ok); background:rgba(51,180,161,.12);}
@@ -28439,7 +28440,8 @@ function catchupTrainingHtml(weekResult) {
     });
     html += `</div></div>`;
   }
-  const entries = Object.values(w.players || {}).filter(e => e && (e.gains || []).length);
+  const entryPairs = Object.entries(w.players || {}).filter(([, e]) => e && (e.gains || []).length);
+  const entries = entryPairs.map(([, e]) => e);
   const totalUps = entries.reduce((a, e) => a + e.gains.filter(g => g.after > g.before).length, 0);
   const totalDowns = entries.reduce((a, e) => a + e.gains.filter(g => g.after < g.before).length, 0);
   html += `<div class="cu-section"><div class="cu-section-title">Progression des joueurs` +
@@ -28452,10 +28454,9 @@ function catchupTrainingHtml(weekResult) {
     entries.forEach((e, idx) => {
       const ups = e.gains.filter(g => g.after > g.before).length;
       const downs = e.gains.length - ups;
-      const initials = String(e.name || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join("");
       html += `<details class="tp-rp cu-rp"${idx === 0 ? " open" : ""}>` +
         `<summary class="tp-rp-toggle">` +
-        `<span class="tp-avatar" aria-hidden="true">${escapeHtml(initials)}</span>` +
+        trainingReportAvatarHtml(entryPairs[idx][0], e) +
         `<span class="tp-rp-name">${escapeHtml(e.name)}</span>` +
         (ups ? `<span class="tp-pill tp-pill-up">+${ups}</span>` : "") +
         (downs ? `<span class="tp-pill tp-pill-down">−${downs}</span>` : "") +
@@ -28469,6 +28470,17 @@ function catchupTrainingHtml(weekResult) {
   const notes = trainingReportNotesHtml(w);
   if (notes) html += `<div class="cu-section"><div class="cu-section-title">À savoir</div><div class="cu-notes">${notes}</div></div>`;
   return html;
+}
+
+// Retour utilisateur (2026-09-26, capture de l'onglet Entraînement) :
+// "ajoute les avatars des joueurs" — vrai avatar AvatarGen (playerAvatarHtml,
+// comme l'Effectif) dans la pastille ronde du bilan ; les initiales restent
+// en repli si le joueur n'est plus dans l'effectif (vendu depuis).
+function trainingReportAvatarHtml(playerKey, entry) {
+  const player = teamA && teamA.players.find(p => String(p.id) === String(playerKey));
+  if (player) return `<span class="tp-avatar tp-avatar--img" aria-hidden="true">${playerAvatarHtml(player, teamA, 40)}</span>`;
+  const initials = String((entry && entry.name) || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+  return `<span class="tp-avatar" aria-hidden="true">${escapeHtml(initials)}</span>`;
 }
 
 function renderLastTrainingReport() {
@@ -28496,10 +28508,9 @@ function renderLastTrainingReport() {
     const ups = e.gains.filter(g => g.after > g.before).length;
     const downs = e.gains.length - ups;
     const open = trainingReportOpenKeys.has(key);
-    const initials = String(e.name || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
     body += `<div class="tp-rp">` +
       `<button type="button" class="tp-rp-toggle" data-report-idx="${idx}" aria-expanded="${open}">` +
-      `<span class="tp-avatar" aria-hidden="true">${escapeHtml(initials)}</span>` +
+      trainingReportAvatarHtml(key, e) +
       `<span class="tp-rp-name">${escapeHtml(e.name)}</span>` +
       (ups ? `<span class="tp-pill tp-pill-up">${ups} progression${ups > 1 ? "s" : ""}</span>` : "") +
       (downs ? `<span class="tp-pill tp-pill-down">${downs} baisse${downs > 1 ? "s" : ""}</span>` : "") +
