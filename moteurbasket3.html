@@ -35806,11 +35806,14 @@ function renderSalleHero(info, stats) {
 
   const pips = ARENA_LEVELS.map(a => `<span class="${a.level <= info.level ? "on" : ""}"></span>`).join("");
   const nm = salleNextMatchInfo();
-  const nextLine = nm && nm.isHome ? ` · prochain match à domicile <b>vs ${escapeHtml(nm.name)}</b>` : "";
   document.getElementById("salleHeroHead").innerHTML =
     `<span class="sl-tier">Niveau ${info.level} / ${ARENA_LEVELS.length}<i>${pips}</i></span>` +
     `<h3 class="sl-hero-title">${escapeHtml(teamArenaName(teamA))}</h3>` +
-    `<div class="sl-hero-sub">${escapeHtml(teamA.name)} · ${info.capacity.toLocaleString("fr-FR")} places${nextLine}</div>`;
+    // Plus de ligne "Club · N places" sous le nom (retour utilisateur
+    // 2026-09-26 : "enlève tout Gotham Knights · 8 000 places, le nombre
+    // de places on l'a déjà dans une brique") ; seul le prochain match à
+    // domicile reste affiché quand il y en a un.
+    (nm && nm.isHome ? `<div class="sl-hero-sub">Prochain match à domicile <b>vs ${escapeHtml(nm.name)}</b></div>` : "");
 
   // Agrandissement : même flèche/confirmation qu'avant (buildUpgradeArrow),
   // mise en avant comme bouton principal du bandeau. N'affiche que le bouton

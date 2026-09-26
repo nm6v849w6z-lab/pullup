@@ -20,6 +20,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle : bandeau
+  sans la ligne "Club · N places"** — retour utilisateur (capture 13:26,
+  puis correction) : "enlève tout Gotham Knights · 8 000 places, le nombre
+  de places on l'a déjà dans une brique". moteurbasket3.html (renderSalle) :
+  sous le nom de la salle ne reste que "Prochain match à domicile vs X"
+  quand il y en a un. salle_redesign_test.js vert. Reste : `git push` +
+  redéploiement.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Temps de jeu :
   plafond 40 min par poste + rang Remplaçant/Réserviste selon les minutes**
   — retour utilisateur (capture 11:37, P à "39 / 40" avec 28/4/7) : "si je
@@ -191,9 +199,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   pour ne presque pas toucher moteurbasket3.html. Une autre session modifiait
   moteurbasket3.html au même moment (carte « Temps de jeu » des Ordres, non
   committée à 10h07) : on N'Y TOUCHE PAS avant que ce chantier-là soit
-  committé (choix utilisateur). Statut : inventaire des textes (~2 900
-  unités) fait côté sandbox. Reste : moteur i18n, traduction, choix de
-  langue dans showSettingsModal, tests, vérif visuelle.
+  committé (choix utilisateur). Statut (11h40) : FAIT ET TESTÉ CÔTÉ
+  SANDBOX, rebasé sur 3165c4b — assets/i18n/i18n.js (defer ; en.js chargé
+  seulement en anglais ; exact + gabarits {n} avec élision d'/l', dates
+  « Lundi 28 septembre », postes M/A/AS/AF/P → PG/SG/SF/PF/C, lettres J/V/D
+  des tableaux, typo anglaise), assets/i18n/en.js (~2 800 entrées), petit
+  script en tête de page (dates/nombres "fr-FR" → en-GB en anglais), choix
+  Français/English dans Paramètres, i18n_english_test.js (vert). Suite
+  complète en français : aucune régression (player_detail_test.js déjà
+  cassé). Chromium 1440/390 px en anglais : propre. Reste : intégrer sur le
+  Mac quand l'autre session a fini (retraduire les textes ajoutés entre
+  temps), committer. Hors périmètre : page hors ligne du service worker et
+  mobile-app/www (restent en français).
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Titres d'onglet
   harmonisés + Ligue/Calendrier** — retours utilisateur (captures Ligue /
