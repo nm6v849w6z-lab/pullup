@@ -20,6 +20,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligue et
+  Calendrier : logos un peu plus petits sur PC** — commentaire d'un joueur
+  relayé : "sur PC les logos je les réduirais un poil". Classement
+  .lg-badge 32 → 26 px (24 px sur petit écran), Calendrier .cal-opp-logo
+  28 → 24 px, carte Prochain match .cal-next-team 56 → 48 px. Point 2 du
+  commentaire pas encore reçu (message coupé). Tests league_stats,
+  calendar_redesign, calendar_merge, calendar, team_detail_calendar,
+  cup_redesign verts. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Émissions
   avant-match / mi-temps dans l'esprit du jeu + pronostics de mi-temps** —
   retour utilisateur (captures du show de la mi-temps Lyon-Rennes) : "mets
