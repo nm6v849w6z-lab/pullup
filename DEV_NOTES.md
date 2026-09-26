@@ -113,6 +113,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   Puis : rond (halo) autour du dernier tir retiré ("c'est moche") ; seul
   le tir lui-même clignote ; idem l'onde qui s'élargissait autour d'un
   panier réussi ("idem autour du rond"). HM_LIVE_ASSET_VERSION 20260926-6.
+  Puis : "la page de live saute [...] ça me remonte d'un coup" : au retour
+  sur l'onglet (visibilitychange → enterLiveMatch), hmLiveReset détruisait
+  et recréait la vue → page vide un instant → retour en haut. Même direct :
+  la vue est gardée (hmLiveSameMatch), filtres conservés. Reproduit puis
+  vérifié corrigé dans Chromium (scroll gardé à 1345 px).
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Rotation : les
   10 titulaires jouaient tout le 1er quart-temps** — retour utilisateur

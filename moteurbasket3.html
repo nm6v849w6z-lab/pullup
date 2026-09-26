@@ -28205,16 +28205,31 @@ function hmLiveShotSpot(zone, teamIdx, seed) {
   return { x: teamIdx === 0 ? 94 - x : x, y: Math.max(0.5, Math.min(49.5, y)) };
 }
 
+// Même direct ré-entré (retour sur l'onglet du navigateur → visibilitychange
+// → enterLiveMatch rejoue tout l'historique) : on GARDE la vue au lieu de la
+// détruire puis la recréer. Retour utilisateur (2026-09-26) : « la page de
+// live saute, si je descends vers les stats tout en bas, ça me remonte d'un
+// coup » — la vue vidée le temps d'être recréée faisait retomber la page en
+// haut. Garder la vue conserve aussi les filtres choisis.
+function hmLiveSameMatch(a, b) {
+  return !!(a && b && (a === b || (a.kickoffAt === b.kickoffAt && a.round === b.round &&
+    (a.competition || "championship") === (b.competition || "championship"))));
+}
+
 function hmLiveReset(liveMatch) {
   try {
     const section = document.getElementById("liveSection");
-    if (hmLive && hmLive.view) { try { hmLive.view.destroy(); } catch (e) { /* rien */ } }
+    const prev = hmLive;
+    const keepView = !!(prev && prev.view && !liveMatch.forfeit && hmLiveSameMatch(prev.match, liveMatch));
+    if (prev && prev.view && !keepView) { try { prev.view.destroy(); } catch (e) { /* rien */ } }
     hmLive = {
-      match: liveMatch, view: null, final: false, scheduled: false, tickKey: "",
+      match: liveMatch, view: keepView ? prev.view : null, final: false, scheduled: false, tickKey: "",
       events: [], shots: [], fouls: [], raw: [], seq: 0, possession: null, quarter: 1,
+      dress: keepView ? prev.dress : undefined,
     };
     if (!section) return;
     if (liveMatch.forfeit) { section.classList.remove("hm-live-on"); return; }
+    if (keepView) { hmLiveSchedule(); return; }
     const state = hmLive;
     hmLiveLoadModule().then(mod => {
       if (!mod || hmLive !== state) { if (!mod) section.classList.remove("hm-live-on"); return; }
