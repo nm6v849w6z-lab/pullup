@@ -281,8 +281,53 @@ export function createLiveView(root, opts = {}) {
 
   // ---------- rendu ----------
   function render(newEv, newShots) {
-    applyColors();
-    renderBoard(); renderHalf(); renderLeaders(); renderCourt(newShots); renderFeed(newEv); renderCompare(); renderBox();
+    withStableScroll(() => {
+      applyColors();
+      renderBoard(); renderHalf(); renderLeaders(); renderCourt(newShots); renderFeed(newEv); renderCompare(); renderBox();
+    });
+  }
+
+  // Stabilité du défilement (retour utilisateur 2026-09-26 : "la page saute
+  // encore quand je suis tout en bas, ça saute notamment quand il y a un
+  // tir"). Safari n'a pas d'ancrage de défilement : tout changement de
+  // hauteur AU-DESSUS de ce qu'on regarde (pastille de série, bandeau de
+  // mi-temps, meneurs...) décalait la page. On retient donc la position à
+  // l'écran du premier bloc visible et on la rétablit après le rendu
+  // (l'ancrage natif est coupé dans la vue, voir live.css, pour ne pas
+  // corriger deux fois). Et la vue ne rétrécit pas en cours de quart-temps
+  // (hauteur minimale = plus grande hauteur atteinte) : tout en bas de page,
+  // une ligne qui disparaît faisait remonter l'écran.
+  let stablePhase = null, stableMaxH = 0;
+  function scrollerOf(el) {
+    for (let n = el.parentElement; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+      const oy = getComputedStyle(n).overflowY;
+      if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight) return n;
+    }
+    return null; // la fenêtre
+  }
+  function withStableScroll(fn) {
+    if (typeof window === "undefined" || typeof document === "undefined" || !root.isConnected || !root.getBoundingClientRect) { fn(); return; }
+    const phase = S ? `${S.status}|${S.quarter}` : "";
+    if (phase !== stablePhase) { stablePhase = phase; stableMaxH = 0; root.style.minHeight = ""; }
+    const sc = scrollerOf(root);
+    const viewTop = sc ? sc.getBoundingClientRect().top : 0;
+    let anchor = null, before = 0;
+    // Tout en haut de la page, on laisse le contenu pousser (comme l'ancrage
+    // natif) : le bandeau de mi-temps doit rester visible.
+    const atTop = (sc ? sc.scrollTop : window.scrollY) <= 0;
+    if (!atTop) for (const el of root.querySelectorAll("section, [data-ref]")) {
+      if (el.closest(".mini")) continue;
+      const r = el.getBoundingClientRect();
+      if (r.height > 0 && r.top >= viewTop - 1) { anchor = el; before = r.top; break; }
+    }
+    fn();
+    const h = root.offsetHeight;
+    if (h > stableMaxH) stableMaxH = h;
+    if (stableMaxH) root.style.minHeight = stableMaxH + "px";
+    if (anchor && anchor.isConnected) {
+      const delta = anchor.getBoundingClientRect().top - before;
+      if (Math.abs(delta) >= 1) { if (sc) sc.scrollTop += delta; else window.scrollBy(0, delta); }
+    }
   }
 
   function applyColors() {

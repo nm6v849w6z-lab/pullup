@@ -83,7 +83,10 @@
 .hm-live .qt td.tot{font-weight:800;color:var(--text);border-left:1px solid var(--line-strong)}
 .hm-live .tracker{min-width:0}
 .hm-live .tracker-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
-.hm-live .run{white-space:nowrap;font-size:13px;font-weight:600;color:var(--text2)}
+.hm-live .run{white-space:nowrap;font-size:13px;font-weight:600;color:var(--text2);padding:3px 0}
+/* Stabilité du défilement : ancrage natif coupé dans la vue, compensé par
+   withStableScroll (live-view.js) — même comportement dans Safari. */
+.hm-live, .hm-live *{overflow-anchor:none}
 .hm-live .run b{color:var(--text)}
 .hm-live .run.hot{color:var(--accent-ink);background:var(--accent);padding:3px 10px;border-radius:999px;font-weight:700;box-shadow:inset 3px 0 0 var(--rc)}
 .hm-live .run.hot b{color:var(--accent-ink)}

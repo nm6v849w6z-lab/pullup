@@ -20,6 +20,23 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Page live : la
+  page saute (surtout sur les tirs)** — retour utilisateur (Safari) : "la
+  page saute encore quand je suis tout en bas, ça saute notamment quand il
+  y a un tir je crois". Reproduit sur assets/live/demo.html dans Chromium
+  avec overflow-anchor coupé (Safari n'a pas d'ancrage de défilement) :
+  la pastille de série (.run → .run.hot, padding 3px ajouté) prenait 6 px
+  à chaque panier, le bandeau de mi-temps ~90-180 px. Correctif :
+  live-view.js render() dans withStableScroll (premier bloc visible gardé
+  à la même place à l'écran, sauf tout en haut de page ; hauteur minimale
+  de la vue = max atteint, remise à zéro à chaque changement de
+  quart-temps/statut) ; live.css : .run a toujours son padding vertical,
+  overflow-anchor:none dans .hm-live pour ne pas corriger deux fois.
+  HM_LIVE_ASSET_VERSION 20260926-10. Mesuré après : saut 0 px sur 100 s
+  (paniers, bandeau de mi-temps qui apparaît/disparaît), 1440 et 390 px.
+  Tests live_*, spectate, prematch_live_page, dashboard_live_match,
+  ordres_during_live verts. Reste : `git push` + vérifier dans Safari.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ordres :
   convocation (12 max) + grille alignée** — retours utilisateur (captures,
   10:28) : "je baisserai un peu l'AS pour qu'il soit entre l'AR et l'AF",
