@@ -20,6 +20,30 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🎨 MAQUETTE EN VALIDATION (2026-09-26) — Onglet Coupe : refonte pour
+  jusqu'à 12 tours** — retour utilisateur (capture) : "essaie d'améliorer
+  cet onglet, en sachant qu'en coupe on pourra avoir bcp plus d'équipes
+  (jusqu'à 12 tours)". Direction choisie : parcours du club + tour par
+  tour (+ arbre seulement à partir des quarts), maquette d'abord.
+  Maquette : https://claude.ai/artifact/WaKwxkuyohnJwHY6gYFAj1 (données
+  d'exemple, 3 000 clubs). Contenu : frise "Ton parcours" (12 tours,
+  V/D/exempté, prochain match ou "Éliminé" + suivre le vainqueur), onglets
+  par tour (nb de matchs), recherche de club, filtres Tous/Surprises/À
+  jouer, "Ton match" épinglé, pagination par 20, exemptés résumés en une
+  ligne (plus de cases EXEMPT), arbre Quarts → Finale. Reste : retours
+  utilisateur sur la maquette, puis code (moteurbasket3.html, onglet Coupe).
+
+- **🚧 EN COURS (2026-09-26) — Comparateur de joueurs : refonte visuelle**
+  — retour utilisateur (capture Adama Brooks vs Adama Diallo) : "rends
+  l'onglet comparaison un peu plus sexy". En-têtes "héros" (vrais avatars
+  AvatarGen, dégradé couleur d'équipe, pastille de poste), score du duel au
+  centre (nb de caractéristiques dominées), radar superposé des deux
+  joueurs (côté B dessiné seulement s'il est entièrement scouté), barres
+  "papillon" de part et d'autre de chaque caractéristique, barres de
+  moyenne par groupe. Classes testées (.compare-row/.cmp-val/.cpt-val...)
+  conservées. Fichier : moteurbasket3.html (renderPlayerCompareView + CSS
+  .compare-*). Statut : en cours de code.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Calendrier :
   deux textes retirés** — retours utilisateur : "enlève: Ordres non
   définis pour ce match" (carte Prochain match ; « Ordres enregistrés »
