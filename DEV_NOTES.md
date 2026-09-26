@@ -20,71 +20,25 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Tutoriel
-  d'accueil à jour** — question utilisateur : "sur le tutoriel, il y a bien
-  toutes les nouveautés ? ça explique l'alchimie ?". L'alchimie y était
-  déjà (texte mis à jour avec les leviers à la hausse). Ajouts : étape
-  Potentiel (10 paliers + estimation des jeunes), thème Compétitions sans
-  prime (Calendrier, Coupe sautée si la ligue n'en a pas, Ligue et ses
-  zones ; TOUR_PAGE_KEY_TO_TAB étendu), connaissance tactique dans l'étape
-  Entraînement collectif. Corrections : Effectif (groupes, fiche),
-  forme (10/j, 15 avec récupération), priorités "exactement 3",
-  fondamentaux "chaque jour", ordres préparés promus + verrou 5 min,
-  Marché (1 jour, filtres, valeur estimée), prospects (Espoir/Grand
-  espoir/Prodige), Salle (bouton Agrandir). onboarding_tour_test.js adapté
-  (étape Potentiel en plus, pages calendrier/coupe/ligue). Tests verts :
-  onboarding_tour, guide_nav, guide_content. Reste : `git push`.
-
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Guide : sommaire
-  + contenu à jour** — retours utilisateur : "étoffe le guide avec toutes
-  les dernières nouveautés [...] niveaux de potentiel [...] pros ou jeunes
-  du centre de formation" puis "structurer le guide avec un menu, plutôt
-  qu'un long texte". Sommaire à gauche (groupes Bien démarrer / Mon équipe
-  / Préparer les matchs / Compétitions / Club et finances / Réglages,
-  construit depuis data-guide-id/data-guide-group des .guide-entry), une
-  entrée affichée à la fois, liens internes (.gd-link). Nouvelles entrées :
-  Premiers pas (avec le bouton du tutoriel), Caractéristiques, Potentiel
-  (10 paliers pro + Espoir/Grand espoir/Prodige des jeunes), Alchimie,
-  Connaissance tactique, Match en direct, Économie. Mises à jour : Effectif
-  (groupes, menu ⋯, fiche joueur, Comparer), Forme (10/j, 15 avec
-  récupération), Ordres (préparés à l'avance promus, verrou 5 min),
-  Calendrier et Coupe, Ligue (zones), Scoutisme (fiche équipe adverse),
-  Stats hebdo, Académie, Marché (1 jour, recherche, valeur estimée),
-  Humeur (2 entrées fusionnées). Texte d'entraînement collectif et étape du
-  tutoriel corrigés (parlaient encore d'alchimie). Tests :
-  guide_nav_test.js (nouveau), guide_content, onboarding_tour,
-  ordres_redesign, tabs verts. Reste : `git push`.
-
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — "Les ordres
-  sautent"** — retour utilisateur (capture du calendrier : J7 à venir en
-  "Ordres" alors que J8/J9 préparées affichent "Modifier vos ordres").
-  Cause : une journée préparée à l'avance garde ses ordres dans
-  plannedTactics ; quand elle devient le prochain match, l'écran Ordres et
-  le calendrier lisent les ordres EN DIRECT + ordresValidatedRound → ordres
-  préparés invisibles, et toute retouche faite alors était écrasée au coup
-  d'envoi par applyPlannedTacticsForRound. Correctif : League.
-  promoteImmediatePlan (engine.js) promeut le plan en ordres en direct et
-  marque la journée validée dès qu'elle devient la prochaine (championnat
-  seulement, équipes humaines), appelé à chaque tick (server/index.js).
-  Test : server/promote_immediate_plan_test.js (nouveau) ; planned_tactics
-  (x2), index, confirmed_tactics_actions, autoSim, cup, cup_ordres_planning,
-  ordres_validated_badge, end_to_end, calendrier_ordres_stale verts.
-  Mode solo (navigateur seul) non couvert. Reste : `git push`.
-- **✅ COMMITTÉ, À POUSSER (2026-09-26) — Ligue : « La saison n'a pas encore
-  commencé : tout le monde part à 0. » retiré** (aucune note avant le 1er
-  match). Reste : `git push`.
-
-### À investiguer
-- **Crash pendant un match de Coupe (2026-09-26, signalé par
-  l'utilisateur)** : "ça a crash au 4ème QT et impossible de recharger le
-  site". Vérifié le 26/09 vers 7h45 : site accessible, aucune erreur
-  console, Coupe cohérente (demies du 25/09 résolues, rien de bloqué).
-  Pas d'accès aux logs Render depuis ici. Pistes : redémarrage/redéploiement
-  Render pendant le match (push en cours d'après-midi ?) ou manque de
-  mémoire. À recouper avec l'heure exacte et les logs Render.
-- **player_detail_test.js en échec sur HEAD** (setup : "la fiche équipe
-  adverse devrait afficher des liens joueur cliquables") — probablement
-  depuis la refonte de la fiche équipe adverse (56b9dab, autre session).
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Verrou des
+  ordres à T-5 min + accès à l'émission d'avant-match** — retour
+  utilisateur (capture tableau de bord à 07:56 pour un match à 07:57) :
+  "les ordres ne sont pas bloqués 5 min avant le match et il n'y a pas
+  l'émission de l'avant match qui est proposée". Causes : verrou calculé
+  une seule fois au rendu de l'écran Ordres, aucun verrou serveur, bouton
+  de l'émission présent UNIQUEMENT sur l'écran Ordres. Correctif :
+  server/actions.js (ordersLockedFor/liveOrdersLocked : /api/lineup,
+  /api/tactics, /api/plan refusés dans les 5 dernières minutes, Coupe
+  comprise) ; moteurbasket3.html (ordresRoundLocked/
+  currentMatchLineupLocked/prematchShowAvailable, onLineupLockReached
+  déclenché par startCountdown à T-5 min page ouverte ; tableau de bord :
+  bouton "Émission d'avant-match" + tâche dédiée ; topbar : bouton
+  "Émission d'avant-match" / "Ordres verrouillés" ; écran Ordres figé
+  aussi pour un tour de Coupe immédiat ; mountDashboard ne cumule plus
+  ses écouteurs de clic). Tests : server/orders_lock_test.js et
+  prematch_lock_ui_test.js (nouveaux) + 28 tests ordres/tableau de
+  bord/Coupe/direct/émissions verts. Émission de Coupe toujours hors
+  périmètre. Reste : `git push` + redéploiement.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Alchimie : leviers
   à la hausse** — retour utilisateur : "faisons la vivre davantage à la
@@ -151,6 +105,44 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   academie_progression_hidden, academie_redesign, tabs, onboarding_tour
   verts. Reste : `git push`.
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Académie de
+  jeunes : refonte visuelle** — retour utilisateur (capture) : "améliore
+  l'onglet académie de jeunes" (code direct, pas de maquette). Bandeau de
+  synthèse (places x/15, stagiaires €/sem., recruteur + chance/jour,
+  promus), décision 18 ans en carte, prospects en CARTES (avatar, badge
+  potentiel 3 bandes, compte à rebours rouge < 12 h, moyennes Technique/
+  Physique/Mental, 3 points forts / 2 à travailler, 28 caracs repliées,
+  Recruter/Ignorer visibles — avant cachés au bout d'un tableau à
+  défilement horizontal), effectif jeunes en cartes (moyenne vers le
+  plafond 50, caracs au plafond, saisons avant la décision ; tri par âge,
+  jamais par potentiel), Centre de formation + historique des promus côte à
+  côte en bas, états vides utiles (bouton "Engager un recruteur" → Staff).
+  Visite guidée réordonnée dans l'ordre de la page (ids conservés).
+  Fichiers : moteurbasket3.html (renderAcademieSection & co, CSS .ac-*),
+  nouveau academie_redesign_test.js. Tests académie/tour/tabs verts ;
+  suite complète : seuls player_detail_test et training_progression_test
+  échouent, et ils échouent AUSSI sur HEAD (sans lien). Commit limité aux
+  hunks Académie (moteurbasket3.html contient d'autres chantiers en cours
+  d'autres sessions). Reste : `git push`.
+
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Fiche équipe
+  adverse : refonte des sous-onglets Effectif et Calendrier** — retour
+  utilisateur (captures Rennes/Devil May Care) : "améliore les pages
+  effectifs et calendrier des adversaires. à noter que sur les pages
+  effectifs, on peut être amené à voir certaines caracs des joueurs".
+  Effectif : bandeau KPI (+ jauge caracs révélées X/28), vues Général
+  (groupes Cinq/Rotation/Réserve, infos publiques + moyennes) /
+  Caractéristiques (UNIQUEMENT les caracs révélées, groupées Tir/Jeu/
+  Défense/Physique/Mental, liste des cachées ; encart vers Analyse si rien
+  n'est révélé) / Statistiques. Calendrier : briques du calendrier du club
+  vues depuis CETTE équipe (mois, V/D, filtres, cartes Prochain match +
+  Saison, "Contre vous" + carte "Contre votre club", bouton "Préparer ce
+  match"). Tests : team_detail_calendar_test.js (nouveau),
+  team_detail_effectif_sort_test.js et client_scouting_test.js adaptés,
+  + suites voisines vertes sur le Mac. Commit limité à ces hunks (le
+  chantier Coupe en cours d'une autre session reste non committé).
+  Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Onglet Marché :
   refonte** — retours utilisateur : "améliore l'onglet marché" (priorités :
   filtres et tri, suivi de mes enchères, lisibilité, comparer/décider),
@@ -181,86 +173,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   utilisateur) : sous-titre "Enchères de 1 jour · le plus offrant [...]"
   et note de bas de page "Le potentiel affiché n'est qu'une estimation
   [...]". Reste : `git push`.
-
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Fiche équipe
-  adverse : refonte des sous-onglets Effectif et Calendrier** — retour
-  utilisateur (captures Rennes/Devil May Care) : "améliore les pages
-  effectifs et calendrier des adversaires. à noter que sur les pages
-  effectifs, on peut être amené à voir certaines caracs des joueurs".
-  Effectif : bandeau KPI (+ jauge caracs révélées X/28), vues Général
-  (groupes Cinq/Rotation/Réserve, infos publiques + moyennes) /
-  Caractéristiques (UNIQUEMENT les caracs révélées, groupées Tir/Jeu/
-  Défense/Physique/Mental, liste des cachées ; encart vers Analyse si rien
-  n'est révélé) / Statistiques. Calendrier : briques du calendrier du club
-  vues depuis CETTE équipe (mois, V/D, filtres, cartes Prochain match +
-  Saison, "Contre vous" + carte "Contre votre club", bouton "Préparer ce
-  match"). Tests : team_detail_calendar_test.js (nouveau),
-  team_detail_effectif_sort_test.js et client_scouting_test.js adaptés,
-  + suites voisines vertes sur le Mac. Commit limité à ces hunks (le
-  chantier Coupe en cours d'une autre session reste non committé).
-  Reste : `git push`.
-
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Académie de
-  jeunes : refonte visuelle** — retour utilisateur (capture) : "améliore
-  l'onglet académie de jeunes" (code direct, pas de maquette). Bandeau de
-  synthèse (places x/15, stagiaires €/sem., recruteur + chance/jour,
-  promus), décision 18 ans en carte, prospects en CARTES (avatar, badge
-  potentiel 3 bandes, compte à rebours rouge < 12 h, moyennes Technique/
-  Physique/Mental, 3 points forts / 2 à travailler, 28 caracs repliées,
-  Recruter/Ignorer visibles — avant cachés au bout d'un tableau à
-  défilement horizontal), effectif jeunes en cartes (moyenne vers le
-  plafond 50, caracs au plafond, saisons avant la décision ; tri par âge,
-  jamais par potentiel), Centre de formation + historique des promus côte à
-  côte en bas, états vides utiles (bouton "Engager un recruteur" → Staff).
-  Visite guidée réordonnée dans l'ordre de la page (ids conservés).
-  Fichiers : moteurbasket3.html (renderAcademieSection & co, CSS .ac-*),
-  nouveau academie_redesign_test.js. Tests académie/tour/tabs verts ;
-  suite complète : seuls player_detail_test et training_progression_test
-  échouent, et ils échouent AUSSI sur HEAD (sans lien). Commit limité aux
-  hunks Académie (moteurbasket3.html contient d'autres chantiers en cours
-  d'autres sessions). Reste : `git push`.
-
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Onglet Coupe :
-  refonte pour jusqu'à 12 tours** — retour utilisateur : "essaie
-  d'améliorer cet onglet, en sachant qu'en coupe on pourra avoir bcp plus
-  d'équipes (jusqu'à 12 tours)", maquette validée
-  (https://claude.ai/artifact/WaKwxkuyohnJwHY6gYFAj1 ; retouches : arbre à
-  partir des 8es, pas de "N sur N matchs affichés") puis "ok vas y integre".
-  - moteurbasket3.html : renderCoupeSection réécrit + cupJourneyHtml,
-    cupRoundTabsHtml, cupRoundBodyHtml, cupMatchRowHtml, cupRenderRoundPanel,
-    libellés génériques comptés depuis la finale (cupRoundLabel/Short/
-    Phrase : 1er tour… 32es, 16es, 8es, Quarts, Demies, Finale), délégation
-    sur #coupeContent (onglets, filtres, "Afficher 20 de plus", "Suivre",
-    boxscore). Parcours (frise V/D/exempté/à jouer, pastille En course/
-    Éliminé/Qualifié/Vainqueur, carte prochain match avec Ordres de Coupe ou
-    "Suivre" le club qui nous a sortis), Tour par tour (onglets, recherche
-    sans perte de focus, Tous/Surprises/À jouer, "Ton match" épinglé,
-    pagination par 20, exemptés résumés en une ligne, rang au championnat),
-    Phase finale = arbre des 4 derniers tours avec les classes .cup-*
-    d'origine (cupMatchCardHtml : "Vainqueur 1/8 n°k" + date). CSS .cp-*.
-    "Surprise" = vainqueur classé au moins max(4, n/3) places derrière.
-  - Moteur INCHANGÉ (CUP_STAGE_NAMES toujours 4 tours / 16 places) : l'UI
-    suit CUP_STAGE_NAMES.length, rien à reprendre côté affichage le jour où
-    la Coupe grandit.
-  - Tests : nouveau cup_redesign_test.js (4 tours, élimination + Suivre,
-    12 tours / 2 048 matchs en 64 ms) ; cup_bracket_card_alignment,
-    cup_bracket_order, cup_ordres_planning, server/cup_test, calendar_*
-    verts. Rendu vérifié dans Chromium (1320 px et 390 px).
-  - Style aligné sur le reste du jeu (retour utilisateur 2026-09-26, captures
-    Tableau de bord + Calendrier : "essaie d'avoir un style plus proche du
-    reste du jeu sur l'onglet coupe") : mise en page du Calendrier
-    (.cal-layout, colonne de droite), filtres de tour en .cal-filter, carte
-    "Prochain match" = calendarNextMatchCardHtml réutilisée telle quelle,
-    carte "Parcours" bâtie comme "Saison" (tuiles Tour/Victoires/Tours,
-    barre "Tours franchis", pastilles V/D/E par tour), tableau des matchs
-    au look des tableaux de mois (écussons, en-tête panel-2), arbre dans un
-    bloc du même style. Frise horizontale supprimée. Tests : même suite verte.
-  - Retirés ensuite (retours utilisateur 2026-09-26) : bouton « Suivre
-    <club> » de la carte Éliminé, filtre « Surprises », champ « Chercher
-    un club », puis le badge « Surprise » et sa logique (cupIsUpset).
-  - Commit PARTIEL : d'autres sessions avaient des modifs non committées
-    dans moteurbasket3.html (comparateur, académie…) — seules les lignes
-    Coupe sont committées. Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Comparateur de
   joueurs : alignement sur le style du jeu** — la refonte dea27d3 (poussée)

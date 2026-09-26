@@ -26,6 +26,7 @@
 const Engine = require("../engine.js");
 const Scouting = require("./scouting.js");
 const Shows = require("./shows.js");
+const Calendar = require("./calendar.js");
 
 const {
   POSITIONS, OFFENSE_PROFILES, DEFENSES, RHYTHMS,
@@ -182,7 +183,8 @@ function validateLineupBody(team, raw) {
 // moteur) — validation minimale mais réelle : postes connus, joueurs
 // existants dans CET effectif (pas d'id fantôme). Voir validateLineupBody
 // ci-dessus pour la validation elle-même (partagée avec setPlan).
-function setLineup(team, teamIndex, league, body) {
+function setLineup(team, teamIndex, league, body, now) {
+  if (liveOrdersLocked(league, teamIndex, now)) return fail(ORDERS_LOCKED_ERROR);
   const v = validateLineupBody(team, body);
   if (!v.ok) return fail(v.error);
   team.lineup = v.value;
@@ -195,8 +197,9 @@ function setLineup(team, teamIndex, league, body) {
 // jouera tout seul au moment programmé. Voir validateOffensivePriorities/
 // validateDefense/validateRhythm ci-dessus pour la validation elle-même
 // (partagée avec setPlan).
-function setTactics(team, teamIndex, league, body) {
+function setTactics(team, teamIndex, league, body, now) {
   if (!body || typeof body !== "object") return fail("Tactiques invalides.");
+  if (liveOrdersLocked(league, teamIndex, now)) return fail(ORDERS_LOCKED_ERROR);
   if (body.offensivePriorities !== undefined) {
     const v = validateOffensivePriorities(body.offensivePriorities);
     if (!v.ok) return fail(v.error);
@@ -309,6 +312,36 @@ function isValidFutureCupRoundForTeam(league, teamIndex, round) {
   return !match.resolved;
 }
 
+// Verrou des ordres à T − 5 min (retour utilisateur, 2026-09-26 : "les ordres
+// ne sont pas bloqués 5 min avant le match") — jusqu'ici le verrou n'existait
+// QUE dans l'affichage de l'écran Ordres (moteurbasket3.html:renderOrdresGrid),
+// jamais ici : /api/lineup, /api/tactics et /api/plan acceptaient tout
+// jusqu'au coup d'envoi. MÊME fenêtre que l'ouverture de l'émission
+// d'avant-match (Shows.lineupLocked, une seule source de vérité), appliquée
+// au match pas encore joué de `competition`/`round` pour cette équipe.
+const ORDERS_LOCKED_ERROR = "Ordres verrouillés : le coup d'envoi est dans moins de 5 minutes.";
+function ordersLockedFor(league, teamIndex, competition, round, now) {
+  if (typeof now !== "number" || typeof league.calendarStartAt !== "number") return false;
+  let kickoffAt = null;
+  if (competition === "cup") {
+    if (!league.calendarDailyAnchored || !isValidFutureCupRoundForTeam(league, teamIndex, round)) return false;
+    kickoffAt = Calendar.scheduledTimeForLeagueCupRound(league, round);
+  } else {
+    if (!isValidFutureRoundForTeam(league, teamIndex, round)) return false;
+    kickoffAt = Calendar.scheduledTimeForLeagueRound(league, round);
+  }
+  return Shows.lineupLocked(now, kickoffAt);
+}
+
+// Ordres "en direct" (team.lineup/tactiques, voir setLineup/setTactics) :
+// ils s'appliquent au prochain match de CHAMPIONNAT pas encore joué.
+function liveOrdersLocked(league, teamIndex, now) {
+  for (let r = league.round; r < league.totalRounds; r++) {
+    if (isValidFutureRoundForTeam(league, teamIndex, r)) return ordersLockedFor(league, teamIndex, "championship", r, now);
+  }
+  return false;
+}
+
 // Préparation à l'avance des ordres d'une journée FUTURE (retour utilisateur,
 // 2026-09 : "sur buzzerbeater on peut faire pour tous les matchs de la
 // saison [...] pratique de pouvoir préparer sa semaine en avance") — c'est
@@ -335,7 +368,7 @@ function isValidFutureCupRoundForTeam(league, teamIndex, round) {
 // historique) — voir Team.plannedTactics/planKey côté moteur pour la clé
 // composite qui évite qu'un tour de Coupe et une journée de championnat
 // portant le même numéro ne s'écrasent l'un l'autre.
-function setPlan(team, teamIndex, league, body) {
+function setPlan(team, teamIndex, league, body, now) {
   if (!body || typeof body !== "object") return fail("Plan invalide.");
   const round = body.round;
   const competition = body.competition === "cup" ? "cup" : "championship";
@@ -345,6 +378,7 @@ function setPlan(team, teamIndex, league, body) {
   if (!validRound) {
     return fail(`Journée invalide pour une préparation à l'avance (${competition}) : ${JSON.stringify(round)}.`);
   }
+  if (ordersLockedFor(league, teamIndex, competition, round, now)) return fail(ORDERS_LOCKED_ERROR);
   const patchBody = body.patch;
   if (!patchBody || typeof patchBody !== "object") return fail("'patch' est requis.");
   const patch = {};

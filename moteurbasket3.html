@@ -18840,8 +18840,11 @@ function updateTopbar() {
     const validated = !!currentMatch && (currentMatch.competition === "cup"
       ? teamA.hasPlanForRound(currentMatch.round, "cup")
       : teamA.ordresValidatedRound === currentMatch.round);
-    ordersBtn.textContent = validated ? "Modifier vos ordres" : "Donnez vos ordres";
-    ordersBtn.classList.toggle("topbar-cta-validated", !!validated);
+    const locked = currentMatchLineupLocked();
+    ordersBtn.textContent = prematchShowAvailable() ? "📺 Émission d'avant-match"
+      : locked ? "🔒 Ordres verrouillés"
+      : validated ? "Modifier vos ordres" : "Donnez vos ordres";
+    ordersBtn.classList.toggle("topbar-cta-validated", !!validated && !locked);
   }
 }
 
@@ -19411,6 +19414,41 @@ function renderOrdresTacticalKnowledgeGauge(tacticsSource) {
 // instant précis).
 const LINEUP_LOCK_BEFORE_KICKOFF_MS = 5 * 60 * 1000;
 
+// Verrou à T − 5 min d'un match quelconque (championnat ou Coupe) —
+// retour utilisateur (2026-09-26) : "les ordres ne sont pas bloqués 5 min
+// avant le match et il n'y a pas l'émission de l'avant match qui est
+// proposée". Même règle que server/actions.js:ordersLockedFor (qui refuse
+// désormais aussi les modifications côté serveur).
+// `untilKickoff` : ne verrouille que dans [T − 5 min, coup d'envoi) — pour
+// une journée préparée à l'avance, un horaire déjà dépassé signifie que le
+// serveur va rattraper ce match, pas qu'il faut figer l'écran.
+function ordresRoundLocked(round, competition, now = Date.now(), untilKickoff = false) {
+  const kickoffAt = competition === "cup"
+    ? scheduledTimeForCupRound(round)
+    : scheduledTimeForChampionshipRound(round);
+  if (typeof kickoffAt !== "number" || now < kickoffAt - LINEUP_LOCK_BEFORE_KICKOFF_MS) return false;
+  return !untilKickoff || now < kickoffAt;
+}
+function currentMatchLineupLocked(now = Date.now()) {
+  if (!currentMatch) return false;
+  return ordresRoundLocked(currentMatch.round, currentMatch.competition === "cup" ? "cup" : "championship", now);
+}
+// L'émission d'avant-match ne couvre que le championnat (DEV_NOTES.md
+// point 11) et s'ouvre exactement à la même fenêtre que le verrou.
+function prematchShowAvailable(now = Date.now()) {
+  return !!currentMatch && currentMatch.competition !== "cup" &&
+    !currentMatchAlreadyLive() && currentMatchLineupLocked(now);
+}
+// Appelée UNE fois quand T − 5 min est franchi pendant que la page est
+// ouverte (voir startCountdown) : sans elle, le verrou et le bouton de
+// l'émission n'apparaissaient qu'en rechargeant/rouvrant l'écran Ordres.
+function onLineupLockReached() {
+  updateTopbar();
+  const prep = document.getElementById("prepSection");
+  if (prep && !prep.classList.contains("hidden")) renderOrdresGrid();
+  if (clubDashboardMounted && clubDashboardHandle) clubDashboardHandle.update(dashboardDataFromGameState());
+}
+
 // ---------------------------------------------------------------------
 // Barre d'action fixe de la page Ordres (refonte 2026-09-25, voir le
 // commentaire HTML de #ordresActionBar) : état des ordres + onglets de
@@ -19538,8 +19576,7 @@ function renderOrdresGrid() {
     // buildTeamPanel (celui qui affiche déjà le panneau adverse en lecture
     // seule juste au-dessus) — aucune nouvelle UI de "verrou" à construire,
     // juste le même panneau figé appliqué à SA PROPRE équipe cette fois.
-    const kickoffAt = scheduledTimeForCurrentMatch();
-    const locked = typeof kickoffAt === "number" && Date.now() >= kickoffAt - LINEUP_LOCK_BEFORE_KICKOFF_MS;
+    const locked = currentMatchLineupLocked();
     const lockNote = document.getElementById("ordresLockNote");
     if (lockNote) {
       // L'émission d'avant-match s'ouvre exactement à la même fenêtre que
@@ -19609,9 +19646,16 @@ function renderOrdresGrid() {
     renderOrdresTacticalKnowledgeGauge(proxy);
     markOrdresDirty();
   };
+  // Verrou T − 5 min aussi pour un match préparé via plan (tour de Coupe
+  // immédiat notamment) — le serveur refuse de toute façon (setPlan).
+  const planLocked = ordresRoundLocked(round, competition, Date.now(), true);
   const lockNoteFuture = document.getElementById("ordresLockNote");
-  if (lockNoteFuture) { lockNoteFuture.innerHTML = ""; lockNoteFuture.classList.add("hidden"); }
-  grid.appendChild(buildTeamPanel(proxy, "a", { onDirty: commit, opponent: opponentTeam }));
+  if (lockNoteFuture) {
+    lockNoteFuture.innerHTML = planLocked ? "🔒 Compositions verrouillées : le coup d'envoi est imminent." : "";
+    lockNoteFuture.classList.toggle("hidden", !planLocked);
+  }
+  ordresPanelLocked = planLocked;
+  grid.appendChild(buildTeamPanel(proxy, "a", { editable: !planLocked, onDirty: commit, opponent: opponentTeam }));
   renderOrdresChemistryGauge();
   renderOrdresTacticalKnowledgeGauge(proxy);
   renderOrdresStatus();
@@ -19997,8 +20041,13 @@ function startCountdown() {
   const scheduledAt = scheduledTimeForCurrentMatch();
   if (!scheduledAt) return;
 
+  let lockReached = currentMatchLineupLocked();
   const tick = () => {
     const remaining = scheduledAt - Date.now();
+    if (!lockReached && remaining > 0 && remaining <= LINEUP_LOCK_BEFORE_KICKOFF_MS) {
+      lockReached = true;
+      onLineupLockReached();
+    }
     if (remaining <= 0) {
       clearInterval(countdownTimer);
       refreshFromServerAndReenter();
@@ -29651,7 +29700,19 @@ function dashBuildTasks(data) {
       cta: { label: "Recruter", href: "/staff", style: "primary" },
     });
   }
-  if (data.nextMatch && !data.ordersGiven && !data.nextMatch.isLive) {
+  if (data.nextMatch && !data.nextMatch.isLive && data.nextMatch.lineupLocked) {
+    tasks.push({
+      id: "orders",
+      icon: "orders",
+      title: data.nextMatch.prematchShow ? `Émission d'avant-match vs ${data.nextMatch.opponent.name}` : `Ordres verrouillés vs ${data.nextMatch.opponent.name}`,
+      text: data.nextMatch.prematchShow ? "Ordres verrouillés. Pronostics ouverts jusqu'au coup d'envoi." : "Le coup d'envoi est imminent.",
+      badge: "En cours",
+      tone: "warn",
+      cta: data.nextMatch.prematchShow
+        ? { label: "Regarder", href: "/emission-avant-match", style: "primary" }
+        : { label: "Voir", href: "/ordres", style: "ghost" },
+    });
+  } else if (data.nextMatch && !data.ordersGiven && !data.nextMatch.isLive) {
     tasks.push({
       id: "orders",
       icon: "orders",
@@ -29850,6 +29911,11 @@ function dashRenderNextMatch(data) {
         // ne peut pas avoir le bouton donner vos ordres et scouter
         // l'adversaire, il faut que ce soit noté voir le live plutôt".
         ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-tab="live">Voir le live</button>`
+        : m.prematchShow
+        ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/emission-avant-match">📺 Émission d'avant-match</button>
+      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/ordres">🔒 Ordres verrouillés</button>`
+        : m.lineupLocked
+        ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/ordres">🔒 Ordres verrouillés</button>`
         : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ordres">Préparer le match</button>
       <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}">Scouter ${dashEsc(m.opponent.name)}</button>`}
     </div>
@@ -29997,12 +30063,16 @@ function mountDashboard(root, data, opts) {
   // partout ailleurs dans ce fichier pour la navigation par onglets, voir le
   // grand commentaire "VRAIE délégation sur document" plus bas — un nom
   // distinct évite toute ambiguïté entre les deux mécanismes).
-  root.addEventListener("click", (e) => {
+  // Un seul écouteur actif par racine, même si le tableau de bord est
+  // remonté plusieurs fois (sinon chaque clic naviguait N fois).
+  if (root.__dashClickHandler) root.removeEventListener("click", root.__dashClickHandler);
+  root.__dashClickHandler = (e) => {
     const el = e.target.closest("[data-dash-href]");
     if (!el || !root.contains(el)) return;
     e.preventDefault();
     onNavigate(el.dataset.dashHref);
-  });
+  };
+  root.addEventListener("click", root.__dashClickHandler);
 
   render(data);
 
@@ -30299,6 +30369,9 @@ function dashboardDataFromGameState() {
       isLive: !!(league.liveMatch &&
         (league.liveMatch.competition || "championship") === (currentMatch.competition === "cup" ? "cup" : "championship") &&
         league.liveMatch.round === currentMatch.round),
+      // Verrou T − 5 min + émission d'avant-match (retour 2026-09-26).
+      lineupLocked: currentMatchLineupLocked(),
+      prematchShow: prematchShowAvailable(),
     };
   }
 
@@ -30496,7 +30569,7 @@ function renderClubSection() {
   // faire, voir deficit_test.js).
   document.getElementById("clubDeficitBanner").innerHTML = deficitBannerHtml();
   const data = dashboardDataFromGameState();
-  mountDashboard(root, data, {
+  clubDashboardHandle = mountDashboard(root, data, {
     feed: teamA.feed,
     // Le fil d'actualité est marqué lu en QUITTANT le tableau de bord (voir
     // INTEGRATION.md, dash.markFeedRead()), pas à l'arrivée — sinon le badge
@@ -30507,6 +30580,9 @@ function renderClubSection() {
     // l'appli pendant que le tableau de bord est affiché passe lui par la
     // délégation [data-tab] plus bas dans ce fichier (voir clubDashboardMounted).
     onNavigate: (href) => {
+      // Parenthèse plein écran par-dessus le tableau de bord (voir
+      // openHoopShow) : on ne quitte pas la page.
+      if (href === "/emission-avant-match") { openHoopShow("prematch"); return; }
       markAllRead(teamA.feed);
       saveMyTeam();
       clubDashboardMounted = false;
@@ -30521,6 +30597,7 @@ function renderClubSection() {
 // bord est la page actuellement affichée, remis à faux dès qu'on le quitte
 // (voir la délégation [data-tab] plus bas, qui marque alors le fil comme lu).
 let clubDashboardMounted = false;
+let clubDashboardHandle = null;
 
 
 // ---------------------------------------------------------------------
@@ -35473,7 +35550,10 @@ document.getElementById("newMatchBtn").addEventListener("click", goToOrdresTab);
 // Barre du haut : raccourci "Donnez vos ordres" pour le PROCHAIN match
 // uniquement (retour utilisateur — voir le commentaire HTML sur .topbar) ;
 // réutilise exactement la même logique que l'onglet Ordres (goToOrdresTab).
-document.getElementById("topbarOrdersBtn").addEventListener("click", goToOrdresTab);
+document.getElementById("topbarOrdersBtn").addEventListener("click", () => {
+  if (prematchShowAvailable()) { openHoopShow("prematch"); return; }
+  goToOrdresTab();
+});
 
 // Recherche globale du topbar (voir renderTopbarSearchResults) : filtre à
 // chaque frappe, ré-affiche au retour du focus si un texte est déjà saisi,
