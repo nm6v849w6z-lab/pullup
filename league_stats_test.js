@@ -209,7 +209,10 @@ teamRows.forEach((tr, i) => {
   if (tr.querySelector(".lg-pts").textContent !== String(s.points)) throw new Error(`❌ Points affichés incorrects pour ${s.name}.`);
 });
 const meRow = teamRows.find(tr => tr.classList.contains("me"));
-if (!meRow || !meRow.querySelector(".lg-you")) throw new Error("❌ La ligne du club du manager devrait être marquée (me + badge TOI).");
+if (!meRow) throw new Error("❌ La ligne du club du manager devrait être marquée (classe me).");
+// Badge « TOI » retiré (retour utilisateur, 2026-09-26 : « sur la page ligue enleve: TOI ») :
+// la ligne reste mise en évidence (classe me/lg-mine), sans le badge.
+if (meRow.querySelector(".lg-you") || /\bTOI\b/.test(meRow.textContent)) throw new Error("❌ Le badge « TOI » ne devrait plus apparaître sur la page Ligue.");
 const race = doc2.querySelector("#standingsContent .lg-race");
 const myRank = teamRows.indexOf(meRow) + 1;
 if (!race || !race.querySelector(".lg-race-kpis b").textContent.startsWith(String(myRank))) throw new Error("❌ La carte « course » devrait afficher la position du club (" + myRank + ").");

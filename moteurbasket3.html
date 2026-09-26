@@ -2974,7 +2974,6 @@
   .lg-badge svg, .lg-badge img{width:26px; height:26px; border-radius:50%; object-fit:cover;}
   .lg-tname{font-weight:600; overflow:hidden; text-overflow:ellipsis; max-width:230px;}
   .lg-tname .team-link{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle;}
-  .lg-you{flex:none; font-size:10px; font-weight:800; letter-spacing:.06em; padding:2px 6px; border-radius:4px; background:#3a2a0c; color:var(--amber);}
   .lg-pts{font-family:var(--display); font-size:20px; font-weight:800;}
   .lg-form{display:inline-flex; gap:4px;}
   .lg-f{width:24px; height:24px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:800;}
@@ -3066,7 +3065,7 @@
     .lg-grid{grid-template-columns:minmax(0,1fr);}
     .lg-table .lg-hide-sm{display:none;}
     .lg-tname{max-width:110px;} .lg-badge, .lg-badge svg, .lg-badge img{width:24px; height:24px;}
-    .lg-rank{width:24px; height:24px; font-size:13px;} .lg-you{display:none;}
+    .lg-rank{width:24px; height:24px; font-size:13px;}
     .lg-table td, .lg-table th{padding-left:4px; padding-right:4px;}
     .lg-f{width:20px; height:20px; font-size:10.5px;} .lg-form .lg-f:nth-last-child(n+4){display:none;}
     .lg-panel{padding:14px 12px;}
@@ -20447,7 +20446,7 @@ function lgStandingsTableHtml(table) {
       `<td><span class="lg-rank">${rank}</span></td>` +
       `<td><div class="lg-team"><span class="lg-badge">${team ? teamLogoHtml(team, 32) : ""}</span>` +
         `<span class="lg-tname" title="${escapeHtml(t.name)}">${teamLinkHtml(t.idx, t.name)}</span>` +
-        (isMe ? `<span class="lg-you">TOI</span>` : "") + `</div></td>` +
+        `</div></td>` +
       `<td class="c dim lg-hide-sm">${t.played}</td><td class="c">${t.wins}</td><td class="c">${t.losses}</td>` +
       `<td class="r dim lg-hide-sm">${t.played ? lgSignedText(perGame, 1) : "–"}</td>` +
       `<td class="r lg-hide-sm ${diff > 0 ? "pos" : diff < 0 ? "neg" : "dim"}">${lgSignedText(diff)}</td>` +
