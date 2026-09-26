@@ -75,6 +75,7 @@ if (!/4 clubs exemptés passent directement en quarts de finale/.test(q("#coupeC
 if (!rows.every(r => r.querySelector("button.cp-score[data-boxscore-round]"))) throw new Error("❌ Chaque score joué devrait ouvrir le boxscore.");
 if (q("#cupSearch")) throw new Error("❌ Le champ « Chercher un club » a été retiré (retour utilisateur 2026-09-26).");
 if (q('#coupeContent [data-cup-filter="upset"]')) throw new Error("❌ Le filtre « Surprises » a été retiré (retour utilisateur 2026-09-26).");
+if (qa("#coupeContent .cp-tag").some(t => /Surprise/.test(t.textContent))) throw new Error("❌ Le badge « Surprise » a été retiré (retour utilisateur 2026-09-26).");
 // Filtre "À jouer" sur un tour entièrement joué.
 q('#coupeContent [data-cup-filter="pending"]').click();
 if (qa("#coupeContent .cp-m").length !== 0 || !q("#coupeContent .cp-empty")) throw new Error("❌ Filtre « À jouer » sur les 8es (tout joué) : liste vide attendue.");

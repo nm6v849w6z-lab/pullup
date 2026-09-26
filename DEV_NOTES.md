@@ -122,8 +122,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     au look des tableaux de mois (écussons, en-tête panel-2), arbre dans un
     bloc du même style. Frise horizontale supprimée. Tests : même suite verte.
   - Retirés ensuite (retours utilisateur 2026-09-26) : bouton « Suivre
-    <club> » de la carte Éliminé, filtre « Surprises » (le badge
-    « Surprise » sur les lignes reste) et champ « Chercher un club ».
+    <club> » de la carte Éliminé, filtre « Surprises », champ « Chercher
+    un club », puis le badge « Surprise » et sa logique (cupIsUpset).
   - Commit PARTIEL : d'autres sessions avaient des modifs non committées
     dans moteurbasket3.html (comparateur, académie…) — seules les lignes
     Coupe sont committées. Reste : `git push`.

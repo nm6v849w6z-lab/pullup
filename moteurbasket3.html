@@ -1141,7 +1141,6 @@
   .cp-score.is-pending{background:none; color:var(--ink-faint); font-weight:600;}
   .cp-score.is-live{background:none; color:var(--danger);}
   .cp-tag{display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:6px; white-space:nowrap;}
-  .cp-tag.upset{background:rgba(240,162,60,.14); color:var(--amber);}
   .cp-tag.you{background:rgba(240,162,60,.14); color:var(--amber); font-weight:700;}
   .cp-byes{color:var(--ink-faint); font-size:12.5px; padding-left:16px !important;}
   .cp-empty{text-align:center; color:var(--ink-faint); padding:22px !important;}
@@ -1166,7 +1165,7 @@
   .cp-out-team svg, .cp-out-team img{width:56px; height:56px; border-radius:50%;}
   .cal-card.cal-next.cp-next-out{border-color:var(--line); background:var(--panel);}
   .cal-card.cal-next.cp-next-out .cal-card-kicker{color:var(--danger);}
-  /* Filtres Tous/Surprises/À jouer : état actif neutre, pour ne pas
+  /* Filtres Tous/À jouer : état actif neutre, pour ne pas
      concurrencer le tour sélectionné (ambre). */
   .cal-filter.cp-chip.on{background:var(--panel-2); border-color:var(--ink-faint); color:var(--ink);}
 
@@ -32294,7 +32293,7 @@ function cupDisplayOrder(cup) {
 // ---------------------------------------------------------------------
 const CUP_PAGE_SIZE = 20;
 let cupSelRound = null;   // tour affiché dans "Tour par tour" (null = celui du club)
-let cupFilter = "all";    // "all" | "upset" | "pending"
+let cupFilter = "all";    // "all" | "pending"
 let cupQuery = "";
 let cupPage = 1;
 
@@ -32319,20 +32318,13 @@ const cupIsMine = m => m && (m.home === myTeamIndex || m.away === myTeamIndex);
 function cupIsLiveRound(i) {
   return !!(league.liveMatch && league.liveMatch.competition === "cup" && league.liveMatch.round === i);
 }
-// Rang au classement de championnat (idx -> 1..n), pour les pastilles et
-// les "surprises" (le vainqueur pointe loin derrière le perdant au
-// classement : au moins un tiers du classement d'écart, 4 places minimum).
+// Rang au classement de championnat (idx -> 1..n), pour les pastilles.
+// (Badge/filtre "Surprise" retirés, retour utilisateur 2026-09-26 : "ça ne
+// sert à rien de mettre cette information là".)
 function cupRankMap() {
   const map = new Map();
   try { league.standings().forEach((s, pos) => map.set(s.idx, pos + 1)); } catch (e) { /* ancienne sauvegarde */ }
   return map;
-}
-function cupIsUpset(m, ranks) {
-  if (!m.resolved || m.bye) return false;
-  const loser = m.winner === m.home ? m.away : m.home;
-  const rw = ranks.get(m.winner), rl = ranks.get(loser);
-  if (rw == null || rl == null) return false;
-  return rw - rl >= Math.max(4, Math.round(league.teams.length / 3));
 }
 
 // Parcours du club, un état par tour : "win" | "loss" | "bye" | "pending" |
@@ -32477,7 +32469,7 @@ function cupMatchRowHtml(m, i, ranks) {
     const at = cupRoundAt(i);
     score = `<span class="cp-score is-pending">${at != null ? escapeHtml(formatCalendarTimeFr(at)) : "à jouer"}</span>`;
   }
-  const tag = mine ? `<span class="cp-tag you">Ton match</span>` : cupIsUpset(m, ranks) ? `<span class="cp-tag upset">Surprise</span>` : "";
+  const tag = mine ? `<span class="cp-tag you">Ton match</span>` : "";
   return `<tr class="cp-m${mine ? " mine me" : ""}"><td class="cp-c-home">${side(m.home, false)}</td><td class="cp-c-score">${score}</td>` +
     `<td class="cp-c-away">${side(m.away, true)}</td><td class="cp-c-tag">${tag}</td></tr>`;
 }
@@ -32494,7 +32486,7 @@ function cupRoundBodyHtml(cup, ranks) {
   }
   const real = round.matches.filter(m => !m.bye);
   const byes = round.matches.length - real.length;
-  let list = real.filter(m => cupFilter === "all" || (cupFilter === "upset" && cupIsUpset(m, ranks)) || (cupFilter === "pending" && !m.resolved));
+  let list = real.filter(m => cupFilter === "all" || (cupFilter === "pending" && !m.resolved));
   const q = cupQuery.trim().toLowerCase();
   if (q) list = list.filter(m => league.teams[m.home].name.toLowerCase().includes(q) || league.teams[m.away].name.toLowerCase().includes(q));
   list = list.filter(cupIsMine).concat(list.filter(m => !cupIsMine(m)));
