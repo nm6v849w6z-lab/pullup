@@ -95,6 +95,27 @@ intégré (meilleurs marqueurs, adresse, rebonds, pertes, plus gros écart).
 }
 ```
 
+### Habillage du jeu (facultatif)
+
+Ajouté le 2026-09-26 (« coller à l'esprit du jeu ») ; sans ces champs, la
+vue retombe sur des initiales et des couleurs par défaut.
+
+```js
+{
+  meta: { competition: "Championnat", round: "Journée 1/18", venue: "À domicile · 8 000 places" },
+  courtLogo: "<g>…</g>",      // SVG du club qui reçoit, dessiné pour un cercle de rayon 52 centré en (470, 250)
+  teams: [{
+    color: "#d6473f",         // couleur de maillot ; éclaircie par la vue si trop sombre pour le fond
+    logo: "<svg>…</svg>",     // écusson (HTML produit par le jeu, injecté tel quel)
+    mine: true,               // mon club : badge « Mon club », feuille de match ouverte dessus
+    players: [{
+      avatar: "<span>…</span>",       // avatar SVG du jeu
+      link: { team: 0, id: 12 },      // ouvre la fiche (attributs data-player-team / data-player-id)
+    }]
+  }]
+}
+```
+
 La courbe d'écart, la série en cours (« Série 8-0 pour CBT ») et les totaux
 d'équipe sont **calculés par la vue** à partir de `events[].score` et des
 stats joueurs : rien à fournir en plus.

@@ -20,6 +20,28 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Page live dans
+  l'esprit du jeu** — retour utilisateur (captures live Lyon-Rennes +
+  tableau de bord + fiche joueur) : "améliore la page live pour qu'elle
+  colle plus à l'esprit du jeu". Vue assets/live : bandeau repris du
+  "Prochain match" (fond scindé, cercle de terrain, liserés aux couleurs de
+  maillot, écussons du jeu, noms en capitales, badge "Mon club", ligne
+  "En direct · Championnat · Journée X/18" + "À domicile · N places"),
+  chrono ambre, ballon de possession, série en pastille ; tuiles "hommes
+  du match" (points/rebonds/passes, avatars) ; carte des tirs avec logo du
+  club qui reçoit au rond central (régression de l'ancienne vue) et
+  raquettes teintées ; fil avec pastilles +2/+3/LF/Faute/Perte ; feuille de
+  match avec avatars, pastilles de poste ambre, noms cliquables vers la
+  fiche, ouverte sur mon club ; titres en capitales, police et palette du
+  tableau de bord ; fin de match "Final / Victoire de X". Couleurs : maillot
+  domicile, l'extérieur passe en maillot extérieur si même couleur, maillot
+  trop sombre éclairci. Adaptateur : hmLiveDress/hmLiveMeta/hmLiveColors/
+  hmLiveAvatar (moteurbasket3.html, cache par match). Test :
+  live_view_game_style_test.js (nouveau) ; live_boxscore, live_court_*,
+  live_match_names, dashboard_live_match, spectate, tabs verts (sandbox et
+  Mac). Rendu vérifié dans Chromium sur un vrai direct (1440 et 390 px,
+  mi-temps, fin). Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Verrou des
   ordres à T-5 min + accès à l'émission d'avant-match** — retour
   utilisateur (capture tableau de bord à 07:56 pour un match à 07:57) :

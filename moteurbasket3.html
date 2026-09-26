@@ -28116,10 +28116,73 @@ function hmLiveRender() {
   catch (e) { console.warn("Nouvelle vue live : échec du rendu", e); }
 }
 
+// Habillage « esprit du jeu » de la vue live (retour utilisateur,
+// 2026-09-26 : « améliore la page live pour qu'elle colle plus à l'esprit
+// du jeu ») : écussons, couleurs de maillot, avatars et liens vers les
+// fiches joueurs, bandeau compétition/salle comme sur le tableau de bord.
+// Les avatars et logos sont calculés une fois par match (cache) : la vue
+// est redessinée chaque seconde.
+function hmLiveTeamIdx(team) {
+  const i = team && league && league.teams ? league.teams.indexOf(team) : -1;
+  return i >= 0 ? i : null;
+}
+function hmLiveColors(homeTeam, awayTeam) {
+  const homeKey = homeTeam && homeTeam.jerseyColor;
+  let awayKey = awayTeam && awayTeam.jerseyColor;
+  // Deux clubs de même couleur : l'équipe qui se déplace joue en maillot
+  // extérieur, comme sur un vrai parquet.
+  if (awayKey && awayKey === homeKey && awayTeam.awayJerseyColor) awayKey = awayTeam.awayJerseyColor;
+  const home = JERSEY_COLORS[homeKey] || null;
+  const away = JERSEY_COLORS[awayKey] || null;
+  return [home, away && away !== home ? away : null];
+}
+function hmLiveMeta() {
+  const cm = typeof currentMatch !== "undefined" ? currentMatch : null;
+  const m = hmLive.match;
+  const competition = !cm ? "" : cm.seriesId === "final" ? "Finale des play-offs"
+    : cm.seriesId ? "Demi-finale de play-offs"
+    : cm.competition === "cup" ? "Coupe" : "Championnat";
+  let round = "";
+  if (cm && !cm.seriesId && cm.round != null) {
+    round = cm.competition === "cup" ? cupStageLabelForRoundIndex(cm.round) : `Journée ${cm.round + 1}/${league.totalRounds}`;
+  }
+  const homeTeam = m.isHome ? teamA : teamB;
+  let venue = m.isHome ? "À domicile" : "À l'extérieur";
+  try {
+    const cap = arenaInfo(homeTeam.arenaLevel).capacity;
+    if (cap) venue += ` · ${cap.toLocaleString("fr-FR")} places`;
+  } catch (e) { /* salle inconnue : on s'en passe */ }
+  return { competition, round, venue };
+}
+function hmLiveDress() {
+  if (hmLive.dress) return hmLive.dress;
+  const m = hmLive.match;
+  const homeTeam = m.isHome ? teamA : teamB;
+  const awayTeam = m.isHome ? teamB : teamA;
+  const d = { avatars: new Map(), logos: ["", ""], colors: hmLiveColors(homeTeam, awayTeam), courtLogo: "", meta: null };
+  try { d.logos = [homeTeam, awayTeam].map(t => (t ? teamLogoHtml(t, 76) : "")); } catch (e) { /* écusson générique */ }
+  // id de clipPath renommé : l'ancienne vue (masquée) garde le sien.
+  try { d.courtLogo = homeTeam ? liveCourtHomeLogoSvg(homeTeam, 470, 250, 52).replace(/liveCourtLogoClip/g, "hmLiveCourtLogoClip") : ""; } catch (e) { /* pas de logo */ }
+  try { d.meta = hmLiveMeta(); } catch (e) { d.meta = null; }
+  hmLive.dress = d;
+  return d;
+}
+function hmLiveAvatar(pObj, team) {
+  if (!pObj) return "";
+  const cache = hmLiveDress().avatars;
+  if (!cache.has(pObj.id)) {
+    let html = "";
+    try { html = playerAvatarHtml(pObj, team, 40); } catch (e) { html = ""; }
+    cache.set(pObj.id, html);
+  }
+  return cache.get(pObj.id);
+}
+
 function hmLiveBuildState() {
   const m = hmLive.match;
   const homeKey = m.isHome ? "A" : "B";
   const keys = [homeKey, homeKey === "A" ? "B" : "A"];
+  const dress = hmLiveDress();
   const last = hmLive.raw[hmLive.raw.length - 1];
   let total = last ? last.score : [0, 0];
   if (hmLive.final) total = hmLiveScoreArr(liveMatchScoreAB(m));
@@ -28142,12 +28205,15 @@ function hmLiveBuildState() {
     const team = key === "A" ? teamA : teamB;
     const starterIds = new Set(Object.values((team && team.lineup && team.lineup.starters) || {}).filter(Boolean));
     const rows = liveBoxScore ? [...liveBoxScore[key].values()] : [];
+    const teamIdx = hmLiveTeamIdx(team);
     const players = rows.map(row => {
       const pObj = team && team.players && team.players.find(p => p.name === row.name);
       const openSince = liveCourtState && liveCourtState[key].get(row.name);
       const seconds = (row.secondsPlayed || 0) + (openSince != null ? Math.max(0, liveBoxScoreNowElapsed - openSince) : 0);
       return {
         id: key + ":" + row.name, name: row.name, pos: POS_SHORT[row.position] || "",
+        avatar: hmLiveAvatar(pObj, team),
+        link: pObj && teamIdx !== null ? { team: teamIdx, id: pObj.id } : null,
         starter: !!(pObj && starterIds.has(pObj.id)),
         onCourt: !hmLive.final && !!(liveCourtState && liveCourtState[key].has(row.name)),
         seconds,
@@ -28162,6 +28228,9 @@ function hmLiveBuildState() {
       quarterScores: quarterScores[t],
       teamFouls: hmLive.fouls.filter(f => f.team === t && f.quarter === hmLive.quarter).length,
       timeoutsLeft: 0, timeoutsTotal: 0,
+      color: dress.colors[t],
+      logo: dress.logos[t],
+      mine: key === "A",
       players,
     };
   });
@@ -28172,6 +28241,8 @@ function hmLiveBuildState() {
     clock: hmLive.final ? 0 : (clockEl ? clockSecondsFromStr(clockEl.textContent) : QUARTER_SECONDS),
     possession: hmLive.possession,
     halftimeResumeIn: half ? half.resumeIn : null,
+    meta: dress.meta,
+    courtLogo: dress.courtLogo,
     teams,
     shots: hmLive.shots,
     events: hmLive.events,

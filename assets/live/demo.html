@@ -17,15 +17,24 @@
 
   const view = createLiveView(document.getElementById("live"));
   const match = createDemoMatch();
+  // Habillage du jeu (fourni par l'adaptateur dans moteurbasket3.html).
+  const crest = (ab, ring) => `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="55" fill="#d97b35" stroke="${ring}" stroke-width="5"/><path d="M60 5 V115 M5 60 H115 M60 5 C 30 32, 30 88, 60 115 M60 5 C 90 32, 90 88, 60 115" stroke="#2b1a0e" stroke-width="3" fill="none"/><circle cx="60" cy="60" r="32" fill="rgba(255,255,255,.92)"/><text x="60" y="70" text-anchor="middle" font-size="26" font-weight="800" fill="#2b1a0e" font-family="sans-serif">${ab}</text></svg>`;
+  const dress = s => {
+    s.meta = { competition: "Championnat", round: "Journée 1/18", venue: "À domicile · 8 000 places" };
+    const cols = ["#e08a2e", "#d6473f"];
+    s.teams.forEach((t, i) => { t.color = cols[i]; t.logo = crest(t.short, cols[i]); t.mine = i === 0; });
+    s.courtLogo = `<g transform="translate(418,198)"><svg width="104" height="104" viewBox="0 0 120 120">${crest(s.teams[0].short, cols[0]).replace(/^<svg[^>]*>|<\/svg>$/g, "")}</svg></g>`;
+    return s;
+  };
 
   // On démarre vers la fin du 2e quart pour voir un match déjà entamé
   while (!(match.state.quarter === 2 && match.state.clock < 200)) match.tick();
-  view.update(structuredClone(match.state));
+  view.update(dress(structuredClone(match.state)));
 
   // Rythme réel de la démo : une possession toutes les 2,6 s, la mi-temps décompte à la seconde
   (function loop() {
     const s = match.tick();
-    view.update(structuredClone(s));
+    view.update(dress(structuredClone(s)));
     if (s.status !== "final") setTimeout(loop, s.status === "halftime" ? 1000 : 2600);
   })();
 </script>
