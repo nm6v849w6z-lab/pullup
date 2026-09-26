@@ -3133,6 +3133,19 @@
     transform:rotate(35deg);
   }
   .facility-upgrade-arrow:hover{background:var(--amber); color:var(--amber-ink);}
+  /* Bouton texte (retour utilisateur 2026-09-26, voir buildUpgradeArrow) :
+     remplace la flèche penchée ; contour ambre, plein au survol. */
+  .facility-upgrade-arrow.facility-upgrade-btn{transform:none; width:100%; height:auto; min-height:40px; border-radius:10px; padding:0 14px;
+    display:flex; align-items:center; justify-content:center; gap:6px; font:inherit; font-size:13.5px; font-weight:800;
+    background:transparent; border:1px solid var(--amber); color:var(--amber); white-space:nowrap;}
+  .facility-upgrade-btn .sl-fac-action-label{font-size:inherit; font-weight:inherit; color:inherit;}
+  .facility-upgrade-btn .facility-upgrade-cost{font-weight:600; font-variant-numeric:tabular-nums;}
+  .facility-upgrade-btn .facility-upgrade-cost::before{content:"·"; margin-right:6px; opacity:.7;}
+  .facility-upgrade-arrow.facility-upgrade-btn:hover{background:var(--amber); color:var(--amber-ink);}
+  .facility-upgrade-arrow.facility-upgrade-btn--solid{background:var(--amber); color:var(--amber-ink);}
+  .facility-upgrade-arrow.facility-upgrade-btn--solid:hover{filter:brightness(1.07);}
+  .facility-card-action--btn{flex:1 1 100%;}
+  #trainingCenterCurrentPanel .facility-card:has(.facility-card-action--btn){flex-wrap:wrap;}
   .facility-upgrade-arrow:disabled{opacity:.5; cursor:not-allowed;}
   .facility-card-center{text-align:center;}
 
@@ -4578,6 +4591,7 @@
   .sl-hero-upgrade-next{display:block; font-size:12px; color:var(--ink-dim); margin-top:1px;}
   .sl-hero-upgrade-next b{color:var(--amber);}
   #arenaCurrentPanel .facility-upgrade-arrow{width:36px; height:36px; font-size:17px; background:var(--amber); color:var(--amber-ink);}
+  #arenaCurrentPanel .facility-upgrade-arrow.facility-upgrade-btn{width:auto; height:auto; min-height:40px; padding:0 18px; font-size:14px;}
   .sl-side{display:flex; flex-direction:column; gap:12px; min-width:0;}
   .sl-kpis{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px;}
   .sl-kpi{min-width:0; padding:12px 14px; border-radius:14px; background:var(--panel); border:1px solid var(--line);}
@@ -4712,7 +4726,10 @@
   .sl-pips span{flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,.08);}
   .sl-pips span.on{background:var(--amber);}
   .sl-fac-why{margin-top:8px; font-size:12px; line-height:1.35; color:var(--ink-dim);}
-  #salleSection .sl-fac .facility-card-action{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:10px; border-top:1px solid var(--line-soft); cursor:pointer;}
+  #salleSection .sl-fac .facility-card-action{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:10px; border-top:1px solid var(--line-soft);}
+  #salleSection .sl-fac .facility-card-action--btn{border-top:0; padding-top:4px; margin-top:auto;}
+  #salleSection .sl-fac .facility-card-body{flex:0 1 auto;}
+  #salleSection .sl-fac .facility-upgrade-btn{padding:0 8px; font-size:13px; gap:4px; white-space:normal; flex-wrap:wrap; text-align:center; line-height:1.2; min-height:40px;}
   .sl-fac-action-label{font-size:12.5px; font-weight:800; color:var(--amber);}
   .sl-fac-action-label small{display:block; font-size:11px; font-weight:500; color:var(--ink-faint);}
 
@@ -33219,6 +33236,7 @@ function renderTrainingCenterPanel() {
   const actionLine = document.createElement("div");
   actionLine.className = "facility-card-action";
   if (next) {
+    actionLine.classList.add("facility-card-action--btn");
     actionLine.appendChild(buildUpgradeArrow({
       title: `Améliorer le centre de formation : ${next.name}`,
       icon: "",
@@ -33235,7 +33253,7 @@ function renderTrainingCenterPanel() {
           renderTrainingCenterPanel();
         }
       },
-    }));
+    }, { label: "Améliorer", cost: next.upgradeCost }));
   } else {
     actionLine.innerHTML = `<span class="facility-max-badge">Max</span>`;
   }
@@ -33465,11 +33483,20 @@ function showUpgradeConfirm({ title, icon, beforeLabel, afterLabel, effectLabel,
 // en cliquant dessus, on retrouve la confirmation qui s'ouvrait avant au
 // clic sur la carte entière, voir showUpgradeConfirm). `confirmOpts` est
 // passé tel quel à showUpgradeConfirm.
-function buildUpgradeArrow(confirmOpts) {
+// Retour utilisateur (2026-09-26, capture de l'onglet Salle) : "plutot que
+// de mettre des fleches qui monte pour améliorer les infrastructures ou la
+// salle, ce serait pas mieux un plus ? ou autre chose, tu peux proposer
+// (idem sur l'onglet academie des jeunes)" — option retenue : un vrai
+// bouton texte "Améliorer · 80 000 €" / "Construire · …" / "Agrandir"
+// (`btnOpts` = { label, cost?, solid? }), plus de flèche. La classe
+// .facility-upgrade-arrow est conservée comme ancre des tests et du tutoriel.
+function buildUpgradeArrow(confirmOpts, btnOpts) {
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = "facility-upgrade-arrow";
-  btn.textContent = "⬆";
+  const o = btnOpts || { label: "Améliorer" };
+  btn.className = `facility-upgrade-arrow facility-upgrade-btn${o.solid ? " facility-upgrade-btn--solid" : ""}`;
+  btn.innerHTML = `<span class="sl-fac-action-label">${escapeHtml(o.label)}</span>` +
+    (o.cost != null ? `<span class="facility-upgrade-cost">${formatMoney(o.cost)}</span>` : "");
   btn.title = confirmOpts.title;
   btn.setAttribute("aria-label", confirmOpts.title);
   btn.addEventListener("click", (e) => {
@@ -33674,8 +33701,8 @@ function renderSalleHero(info, stats) {
   const action = document.createElement("div");
   action.className = "facility-card-action";
   if (next) {
-    body.innerHTML = `<span class="sl-hero-upgrade-label">Agrandir la salle</span>` +
-      `<span class="sl-hero-upgrade-next">${escapeHtml(next.name)} · <b>${formatMoney(next.upgradeCost)}</b></span>`;
+    body.innerHTML = `<span class="sl-hero-upgrade-label">${escapeHtml(next.name)}</span>` +
+      `<span class="sl-hero-upgrade-next">Niveau ${next.level} · <b>${formatMoney(next.upgradeCost)}</b></span>`;
     action.appendChild(buildUpgradeArrow({
       title: `Agrandir la salle : ${next.name}`,
       icon: "",
@@ -33692,7 +33719,7 @@ function renderSalleHero(info, stats) {
           renderSalleSection();
         }
       },
-    }));
+    }, { label: "Agrandir", solid: true }));
     // Toute la pastille est cliquable (pas seulement la petite flèche).
     arenaCard.addEventListener("click", () => {
       const arrow = arenaCard.querySelector(".facility-upgrade-arrow");
@@ -33990,12 +34017,8 @@ function buildSalleFacilityCard(opts) {
   action.className = "facility-card-action";
   if (opts.next) {
     const label = opts.level === 0 ? "Construire" : "Améliorer";
-    action.innerHTML = `<span class="sl-fac-action-label">${label}<small class="sl-num">${formatMoney(opts.nextCost)}</small></span>`;
-    action.appendChild(buildUpgradeArrow(Object.assign({ title: `${opts.titlePrefix || label + " : "}${opts.next.name}` }, opts.confirm)));
-    action.addEventListener("click", () => {
-      const arrow = action.querySelector(".facility-upgrade-arrow");
-      if (arrow) arrow.click();
-    });
+    action.classList.add("facility-card-action--btn");
+    action.appendChild(buildUpgradeArrow(Object.assign({ title: `${opts.titlePrefix || label + " : "}${opts.next.name}` }, opts.confirm), { label, cost: opts.nextCost }));
   } else {
     action.innerHTML = `<span class="sl-fac-action-label sl-muted">Niveau maximum</span><span class="facility-max-badge">Max</span>`;
   }

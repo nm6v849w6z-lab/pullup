@@ -20,6 +20,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle et
+  Académie : bouton texte au lieu de la flèche d'amélioration** — retour
+  utilisateur (capture Salle) : "plutot que de mettre des fleches qui
+  monte pour améliorer les infrastructures ou la salle, ce serait pas mieux
+  un plus ? ou autre chose, tu peux proposer (idem sur l'onglet academie
+  des jeunes)". Option choisie : bouton pleine largeur "Améliorer ·
+  80 000 €" / "Construire · …" (contour ambre, plein au survol) ; bandeau
+  de la salle : "Nom du palier suivant / Niveau N · coût" + bouton plein
+  "Agrandir". buildUpgradeArrow(confirmOpts, btnOpts) ; classe
+  .facility-upgrade-arrow conservée (tests, tutoriel). Tests
+  salle_upgrade_confirm, salle_redesign, club_facilities,
+  academie_progression_hidden, academie_redesign, tabs, onboarding_tour
+  verts. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Onglet Marché :
   refonte** — retours utilisateur : "améliore l'onglet marché" (priorités :
   filtres et tri, suivi de mes enchères, lisibilité, comparer/décider),
