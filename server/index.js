@@ -633,7 +633,6 @@ const ACTION_ROUTES = {
   "/api/club/set-arena-name": actions.setTeamArenaName,
   // Hall of Fame + maillots retirés (voir Team.inductHallOfFame).
   "/api/club/hall-of-fame/induct": actions.inductHallOfFame,
-  "/api/club/hall-of-fame/remove": actions.removeHallOfFame,
   "/api/club/hall-of-fame/retire-jersey": actions.setRetiredJersey,
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/
   // claimTutorialReward et server/actions.js) :

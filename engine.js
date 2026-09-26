@@ -4892,7 +4892,8 @@ class Team {
   // l'afficher sur le visuel de la salle") : le manager y fait entrer qui
   // il veut parmi les joueurs ayant disputé un match officiel pour le club
   // (entry = ligne de liveAllTimePlayers, vérifiée côté serveur) ; numéro
-  // de maillot retiré facultatif (0-99, unique), null = pas retiré.
+  // de maillot retiré facultatif (0-99, unique), null = pas retiré. Entrée
+  // et maillot retiré sont définitifs.
   inductHallOfFame(entry, now = Date.now()) {
     if (!entry || !Number.isFinite(Number(entry.id))) return { ok: false, error: "Joueur inconnu." };
     this.hallOfFame = Array.isArray(this.hallOfFame) ? this.hallOfFame : [];
@@ -4907,19 +4908,14 @@ class Team {
     return { ok: true };
   }
 
-  removeHallOfFame(playerId) {
-    const id = Number(playerId);
-    const before = (this.hallOfFame || []).length;
-    this.hallOfFame = (this.hallOfFame || []).filter(h => h.id !== id);
-    if (this.hallOfFame.length === before) return { ok: false, error: "Ce joueur n'est pas au Hall of Fame." };
-    return { ok: true };
-  }
-
   setRetiredJersey(playerId, number) {
     const id = Number(playerId);
     const entry = (this.hallOfFame || []).find(h => h.id === id);
     if (!entry) return { ok: false, error: "Seul un joueur du Hall of Fame peut voir son maillot retiré." };
-    if (number === null) { entry.retiredNumber = null; return { ok: true }; }
+    // Définitif (retour utilisateur, 2026-09-26 : "une fois au hall of fame,
+    // on ne peut plus enlever") : ni sortie du Hall of Fame, ni retour sur
+    // un maillot retiré.
+    if (Number.isInteger(entry.retiredNumber)) return { ok: false, error: "Ce maillot est déjà retiré." };
     const n = Number(number);
     if (!Number.isInteger(n) || n < 0 || n > 99) return { ok: false, error: "Numéro de maillot entre 0 et 99." };
     if (this.hallOfFame.some(h => h.id !== id && h.retiredNumber === n)) return { ok: false, error: `Le numéro ${n} est déjà retiré.` };

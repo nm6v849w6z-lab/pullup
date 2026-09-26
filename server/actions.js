@@ -954,17 +954,10 @@ function inductHallOfFame(team, teamIndex, league, body, now) {
   return { ok: true, hallOfFame: team.hallOfFame };
 }
 
-function removeHallOfFame(team, teamIndex, league, body, now) {
-  if (!body || !Number.isFinite(Number(body.playerId))) return fail("'playerId' est requis.");
-  const result = team.removeHallOfFame(body.playerId);
-  if (!result.ok) return fail(result.error);
-  return { ok: true, hallOfFame: team.hallOfFame };
-}
-
-// number : 0-99, ou null pour annuler le retrait du maillot.
+// number : 0-99 (définitif, voir Team.setRetiredJersey).
 function setRetiredJersey(team, teamIndex, league, body, now) {
-  if (!body || !Number.isFinite(Number(body.playerId)) || !("number" in body)) return fail("'playerId' et 'number' sont requis.");
-  const result = team.setRetiredJersey(body.playerId, body.number === null ? null : body.number);
+  if (!body || !Number.isFinite(Number(body.playerId)) || !Number.isFinite(Number(body.number)) || body.number === null || body.number === "") return fail("'playerId' et 'number' sont requis.");
+  const result = team.setRetiredJersey(body.playerId, body.number);
   if (!result.ok) return fail(result.error);
   return { ok: true, hallOfFame: team.hallOfFame };
 }
@@ -1205,7 +1198,7 @@ module.exports = {
   // TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur) :
   discussTransferRequest,
   setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
-  inductHallOfFame, removeHallOfFame, setRetiredJersey,
+  inductHallOfFame, setRetiredJersey,
   setTeamAwayJersey, setTeamAwayJerseyPattern, setTeamAwayJerseyTwoTone,
   setTeamLogo, setTeamPaying, setTeamTrigram, setTeamArenaName, acceptSponsor, declineSponsor, terminateSponsor,
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/

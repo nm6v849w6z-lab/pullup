@@ -5524,19 +5524,16 @@
   .hc-ws-row .hc-world-rank{min-width:0; justify-self:end;}
   /* Hall of Fame. */
   .hc-hof{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px;}
-  .hc-hof-card{display:flex; gap:12px; align-items:flex-start; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:12px; min-width:0;}
+  .hc-hof-card{display:flex; gap:12px; align-items:center; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:12px; min-width:0;}
   .hc-hof-card.retired{border-color:rgba(240,162,60,.45);}
   .hc-hof-jersey{flex:0 0 auto; width:44px;}
   .hc-hof-jersey svg{width:44px; height:auto; display:block;}
   .hc-hof-id{min-width:0; flex:1; display:flex; flex-direction:column; gap:3px;}
   .hc-hof-name{font-weight:800; font-size:15px; overflow-wrap:anywhere;}
-  .hc-hof-stats{font-size:12.5px; color:var(--ink-dim);}
-  .hc-hof-badge{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--amber);}
   .hc-hof-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px;}
   .hc-hof-actions input{width:52px; height:28px; box-sizing:border-box; padding:0 6px; border-radius:6px; border:1px solid var(--line); background:var(--panel); color:var(--ink); font:inherit; font-size:13px;}
   .hc-link-btn{background:none; border:0; padding:0; font:inherit; font-size:12.5px; font-weight:700; color:var(--amber); cursor:pointer;}
   .hc-link-btn:hover{text-decoration:underline;}
-  .hc-link-btn.muted{color:var(--ink-faint); font-weight:600;}
   .hc-hof-add{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px;}
   .hc-hof-add select{flex:1 1 220px; min-width:0; height:38px;}
   .hc-hof-add .cal-next-btn{display:inline-block; width:auto; margin-top:0; padding:9px 18px;}
@@ -11926,7 +11923,8 @@ class Team {
   // l'afficher sur le visuel de la salle") : le manager y fait entrer qui
   // il veut parmi les joueurs ayant disputé un match officiel pour le club
   // (entry = ligne de liveAllTimePlayers, vérifiée côté serveur) ; numéro
-  // de maillot retiré facultatif (0-99, unique), null = pas retiré.
+  // de maillot retiré facultatif (0-99, unique), null = pas retiré. Entrée
+  // et maillot retiré sont définitifs.
   inductHallOfFame(entry, now = Date.now()) {
     if (!entry || !Number.isFinite(Number(entry.id))) return { ok: false, error: "Joueur inconnu." };
     this.hallOfFame = Array.isArray(this.hallOfFame) ? this.hallOfFame : [];
@@ -11941,19 +11939,14 @@ class Team {
     return { ok: true };
   }
 
-  removeHallOfFame(playerId) {
-    const id = Number(playerId);
-    const before = (this.hallOfFame || []).length;
-    this.hallOfFame = (this.hallOfFame || []).filter(h => h.id !== id);
-    if (this.hallOfFame.length === before) return { ok: false, error: "Ce joueur n'est pas au Hall of Fame." };
-    return { ok: true };
-  }
-
   setRetiredJersey(playerId, number) {
     const id = Number(playerId);
     const entry = (this.hallOfFame || []).find(h => h.id === id);
     if (!entry) return { ok: false, error: "Seul un joueur du Hall of Fame peut voir son maillot retiré." };
-    if (number === null) { entry.retiredNumber = null; return { ok: true }; }
+    // Définitif (retour utilisateur, 2026-09-26 : "une fois au hall of fame,
+    // on ne peut plus enlever") : ni sortie du Hall of Fame, ni retour sur
+    // un maillot retiré.
+    if (Number.isInteger(entry.retiredNumber)) return { ok: false, error: "Ce maillot est déjà retiré." };
     const n = Number(number);
     if (!Number.isInteger(n) || n < 0 || n > 99) return { ok: false, error: "Numéro de maillot entre 0 et 99." };
     if (this.hallOfFame.some(h => h.id !== id && h.retiredNumber === n)) return { ok: false, error: `Le numéro ${n} est déjà retiré.` };
@@ -37741,12 +37734,41 @@ function renderHistoireSection() {
   html += `<div class="hc-grid"><div class="hc-col">`;
   html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Palmarès</h2></div>${hcPalmaresHtml(team, idx)}</section>`;
   html += `<section class="lg-panel hc-panel" id="hcHallOfFame"><div class="lg-panel-title"><h2>Hall of Fame</h2></div>${hcHallOfFameHtml(team, idx)}</section>`;
-  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Classement mondial</h2></div>${hcWorldStatsHtml(idx)}</section>`;
+  html += `<section class="lg-panel hc-panel" id="hcWorldPanel"><div class="lg-panel-title"><h2>Classement mondial</h2></div>${hcWorldStatsHtml(idx)}</section>`;
   html += `</div><div class="hc-col">`;
   html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
   html += `</div></div>`;
   holder.innerHTML = html;
+  hcBalanceColumns();
 }
+
+// Classement mondial à gauche sous le Hall of Fame tant qu'il y a la place ;
+// dès que Palmarès + Hall of Fame dépassent la colonne des Records, il passe
+// en bas à droite (retour utilisateur, 2026-09-26 : "lorsque les briques
+// palmarès et hall of fame sont trop grandes, il faut que la brique
+// classement mondial aille à droite en bas"). Seulement quand les deux
+// colonnes sont côte à côte (sur mobile, une seule colonne : reste à gauche).
+function hcBalanceColumns() {
+  const cols = document.querySelectorAll("#histoireContent .hc-col");
+  const world = document.getElementById("hcWorldPanel");
+  if (cols.length !== 2 || !world) return;
+  const [left, right] = cols;
+  if (world.parentNode !== left) left.appendChild(world);
+  const sideBySide = right.getBoundingClientRect().left > left.getBoundingClientRect().left + 10;
+  if (!sideBySide) return;
+  const gap = parseFloat(getComputedStyle(left).rowGap) || 20;
+  const leftWithout = left.getBoundingClientRect().height - world.getBoundingClientRect().height - gap;
+  const rightHeight = right.getBoundingClientRect().height;
+  if (leftWithout > rightHeight) right.appendChild(world);
+}
+let hcBalanceTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(hcBalanceTimer);
+  hcBalanceTimer = setTimeout(() => {
+    const sec = document.getElementById("histoireSection");
+    if (sec && !sec.classList.contains("hidden")) hcBalanceColumns();
+  }, 120);
+});
 
 // Parcours en championnat (retour utilisateur, 2026-09-26 : "garde
 // uniquement championnat et coupe (championnat tu mettras relégation,
@@ -37831,29 +37853,24 @@ let hcFeedback = null;
 function hcHallOfFameHtml(team, idx) {
   const hof = Array.isArray(team.hallOfFame) ? team.hallOfFame : [];
   const allTime = liveAllTimePlayers(league, idx);
-  const byId = new Map(allTime.map(p => [p.id, p]));
   const stillHere = new Set(team.players.map(p => p.id));
   let html = "";
   if (!hof.length) {
     html += `<p class="training-empty">Aucun joueur au Hall of Fame pour l'instant.</p>`;
   } else {
+    // Carte = maillot + nom (retour utilisateur, 2026-09-26 : "mets juste
+    // le maillot et son nom") ; tant que le maillot n'est pas retiré, une
+    // petite saisie du numéro pour le retirer (définitif).
     html += `<div class="hc-hof">` + hof.map(h => {
-      const st = byId.get(h.id) || h;
       const retired = Number.isInteger(h.retiredNumber);
       const name = stillHere.has(h.id)
         ? `<a href="#" class="team-link" data-player-detail="${h.id}" data-player-team="${idx}">${escapeHtml(h.name)}</a>`
         : escapeHtml(h.name);
-      const actions = retired
-        ? `<button type="button" class="hc-link-btn muted" data-hof-unretire="${h.id}">Annuler le retrait</button>`
-        : `<input type="number" min="0" max="99" step="1" inputmode="numeric" placeholder="n°" aria-label="Numéro de maillot" data-hof-num="${h.id}"><button type="button" class="hc-link-btn" data-hof-retire="${h.id}">Retirer le maillot</button>`;
+      const actions = retired ? ""
+        : `<div class="hc-hof-actions"><input type="number" min="0" max="99" step="1" inputmode="numeric" placeholder="n°" aria-label="Numéro de maillot" data-hof-num="${h.id}"><button type="button" class="hc-link-btn" data-hof-retire="${h.id}">Retirer le maillot</button></div>`;
       return `<div class="hc-hof-card${retired ? " retired" : ""}">` +
         `<span class="hc-hof-jersey">${hcJerseySvg(team, retired ? h.retiredNumber : "★")}</span>` +
-        `<div class="hc-hof-id">` +
-          (retired ? `<span class="hc-hof-badge">Maillot n°${h.retiredNumber} retiré</span>` : "") +
-          `<span class="hc-hof-name">${name} <span class="dim">${escapeHtml(h.position || "")}</span></span>` +
-          `<span class="hc-hof-stats">${st.games || 0} match${(st.games || 0) > 1 ? "s" : ""} · ${st.pts || 0} pts · ${st.reb || 0} reb · ${st.ast || 0} pd</span>` +
-          `<div class="hc-hof-actions">${actions}<button type="button" class="hc-link-btn muted" data-hof-remove="${h.id}">Sortir du Hall of Fame</button></div>` +
-        `</div></div>`;
+        `<div class="hc-hof-id"><span class="hc-hof-name">${name}</span>${actions}</div></div>`;
     }).join("") + `</div>`;
   }
   const inHof = new Set(hof.map(h => h.id));
@@ -37944,10 +37961,6 @@ function hcWorldStatsHtml(idx) {
       hcHofAction("/api/club/hall-of-fame/retire-jersey", { playerId: Number(id), number: Number(raw) });
       return;
     }
-    const unretire = e.target.closest("[data-hof-unretire]");
-    if (unretire) { hcHofAction("/api/club/hall-of-fame/retire-jersey", { playerId: Number(unretire.dataset.hofUnretire), number: null }); return; }
-    const remove = e.target.closest("[data-hof-remove]");
-    if (remove) { hcHofAction("/api/club/hall-of-fame/remove", { playerId: Number(remove.dataset.hofRemove) }); return; }
   });
   holder.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && e.target && e.target.dataset && e.target.dataset.hofNum) {
@@ -38097,7 +38110,7 @@ const TAB_HANDLERS = {
   calendrier: () => { renderCalendrierSection(); showPage("calendrierSection"); setActiveTab("calendrier"); },
   amicaux: () => showPlaceholder("amicaux"),
   lp: () => { renderLpSection(); showPage("lpSection"); setActiveTab("lp"); },
-  histoire: () => { renderHistoireSection(); showPage("histoireSection"); setActiveTab("histoire"); },
+  histoire: () => { renderHistoireSection(); showPage("histoireSection"); setActiveTab("histoire"); hcBalanceColumns(); },
   economie: () => { renderEconomieSection(); showPage("economieSection"); setActiveTab("economie"); },
   sponsors: () => { renderSponsorsPanel(); showPage("sponsorsSection"); setActiveTab("sponsors"); },
   salle: () => { renderSalleSection(); showPage("salleSection"); setActiveTab("salle"); },

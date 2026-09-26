@@ -133,7 +133,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   retiré, colonnes Class./Bilan/Play-offs remplacées par "Championnat"
   (Champion, Finale, Play-offs, Milieu de tableau, Barrage, Relégation —
   hcChampionshipLabel ; nouveau champ barrageLost dans le résumé de
-  saison). Reste : `git push` + redéploiement.
+  saison). Puis Hall of Fame : carte = maillot + nom seulement (plus de
+  stats/poste), entrée et maillot retiré définitifs (removeHallOfFame et
+  la route /remove supprimés, setRetiredJersey refuse un maillot déjà
+  retiré ou null) ; Classement mondial déplacé en bas de la colonne de
+  droite quand Palmarès + Hall of Fame dépassent les Records
+  (hcBalanceColumns, appelée après showPage et au redimensionnement ;
+  vérifié dans Chromium). Reste : `git push` + redéploiement.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées :
   page d'accueil épurée + heure des matchs au choix** — retour utilisateur :
