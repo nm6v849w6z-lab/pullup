@@ -36,6 +36,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   boxscore_quarter_scores, mvp_avatar, live_boxscore(_minutes_totals) +
   suite complète). Reste : `git push`.
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26, 9ea5c60) —
+  Coupe : score cliquable dans l'arbre de la phase finale** — retour
+  utilisateur : "pouvoir cliquer et ouvrir les box scores des matchs
+  directement dans les briques des phases finales, en cliquant sur le
+  score". cupTeamRowHtml/cupMatchCardHtml : le score d'un match joué devient
+  un bouton data-boxscore-* (délégation existante de #coupeContent →
+  showMatchBoxscore). Test : cup_bracket_boxscore_test.js (nouveau) ;
+  cup_bracket_card_alignment, cup_bracket_order, cup_redesign verts.
+  Reste : `git push`.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Fiche joueur :
+  colonne Forme/Motivation 280 → 340 px** (+ text-wrap:pretty sur la
+  citation) — retour : "élargi un peu la colonne [...] comme ça la citation
+  n'aura pas 3 caractères sur la ligne du dessous". Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Page live dans
   l'esprit du jeu** — retour utilisateur (captures live Lyon-Rennes +
   tableau de bord + fiche joueur) : "améliore la page live pour qu'elle
