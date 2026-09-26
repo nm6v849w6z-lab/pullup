@@ -360,7 +360,7 @@
       '<footer class="hs-bottom"><div class="hs-avatar' + (opts.presenter ? ' hs-avatar-real' : '') + '">' + (opts.presenter || AVATAR) + '</div>' +
       '<div class="hs-bubble"><b>' + esc(opts.presenterName || 'Nicolas Cosset') + ' · présentateur</b><span data-hs-bubble></span></div>' +
       '<div class="hs-presented-small"><span>Présenté par</span>' + logoBlock({ opts, sponsor }, false) + '</div>' +
-      '<div class="hs-nav"><button type="button" class="hs-btn-ghost" data-hs-action="prev">← Précédent</button><button type="button" class="hs-btn-next" data-hs-action="next"></button></div></footer>';
+      '<div class="hs-nav"><button type="button" class="hs-btn-next" data-hs-action="next"></button></div></footer>';
     container.appendChild(rootEl);
 
     const $ = (sel) => rootEl.querySelector(sel);
@@ -380,7 +380,10 @@
       const next = $('.hs-btn-next');
       next.textContent = seg.type === 'ad' ? (opts.premium ? 'Suivant →' : 'Passer (Premium) →') : st.i === segs.length - 1 ? (show.kind === 'prematch' ? 'Aller au direct →' : 'Retour au match →') : 'Suivant →';
       next.disabled = seg.type === 'ad' && !opts.premium && st.adPending;
-      $('[data-hs-action="prev"]').disabled = st.i === 0;
+      // Plus de bouton « Précédent » (retour utilisateur, 2026-09-26 : « enlève
+      // le bouton précédent, il est incliquable quand on est sur les pronos » :
+      // revenir sur la pub la repassait aussitôt). Les barres de progression en
+      // haut restent cliquables pour revoir une rubrique.
       paintBars(); paintClock();
       if (seg.type === 'ad') startAd(seg);
     }
