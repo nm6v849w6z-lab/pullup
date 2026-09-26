@@ -5563,6 +5563,79 @@
   @media(max-width:600px){ .hc-records, .hc-hof{grid-template-columns:1fr;} #histoireSection .lg-hide-sm{display:none;}
     .hc-ws-row{grid-template-columns:minmax(0,1fr) 56px 52px;} .hc-ws-cat{grid-column:1 / -1;}
     .sl-retired{gap:6px;} .sl-retired-banner{width:36px; padding:8px 0 14px;} .sl-retired-banner b{font-size:17px;} .sl-retired-banner span{display:none;} }
+  /* ---- Messagerie privée entre managers (2026-09-26) — voir renderMessagesSection ---- */
+  .sidebar-badge{margin-left:auto; min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--amber); color:var(--amber-ink); font-size:11px; font-weight:800; line-height:18px; text-align:center; font-variant-numeric:tabular-nums;}
+  .msg-dash-banner{display:flex; align-items:center; gap:12px; width:100%; margin:0 0 16px; padding:12px 16px; border-radius:12px; border:1px solid rgba(240,162,60,.45); background:rgba(240,162,60,.1); color:var(--ink); font:inherit; font-size:14px; text-align:left; cursor:pointer;}
+  .msg-dash-banner:hover{background:rgba(240,162,60,.16);}
+  .msg-dash-banner b{color:var(--amber);}
+  .msg-dash-banner .msg-dash-go{margin-left:auto; font-weight:700; color:var(--amber); white-space:nowrap;}
+  #messagesSection{font-size:14px;}
+  .msg-lead{color:var(--ink-dim); margin:-4px 0 16px; max-width:680px; line-height:1.5;}
+  .msg-lead a{color:var(--amber);}
+  .msg-layout{display:grid; grid-template-columns:300px minmax(0,1fr); gap:16px; align-items:stretch; min-height:520px;}
+  .msg-col{background:var(--panel); border:1px solid var(--line); border-radius:14px; display:flex; flex-direction:column; min-width:0; overflow:hidden;}
+  .msg-col-head{padding:14px 16px; border-bottom:1px solid var(--line-soft); display:flex; align-items:center; gap:10px;}
+  .msg-col-title{font-weight:700; font-size:15px;}
+  .msg-new select{width:100%; height:40px; margin-top:0;}
+  .msg-list{list-style:none; margin:0; padding:6px; overflow-y:auto; flex:1;}
+  .msg-conv{display:flex; flex-direction:column; gap:3px; width:100%; text-align:left; padding:11px 12px; border-radius:10px; border:1px solid transparent; background:transparent; color:var(--ink); font:inherit; cursor:pointer;}
+  .msg-conv:hover{background:var(--panel-2);}
+  .msg-conv.on{background:rgba(240,162,60,.12); border-color:rgba(240,162,60,.35);}
+  .msg-conv-top{display:flex; align-items:center; gap:8px;}
+  .msg-conv-name{font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .msg-conv-time{margin-left:auto; font-size:11.5px; color:var(--ink-faint); white-space:nowrap;}
+  .msg-conv-last{font-size:12.5px; color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .msg-conv.unread .msg-conv-last{color:var(--ink); font-weight:600;}
+  .msg-conv .sidebar-badge{margin-left:6px;}
+  .msg-empty{padding:28px 20px; color:var(--ink-dim); text-align:center; line-height:1.5;}
+  .msg-thread-head .msg-back{display:none; background:none; border:none; color:var(--amber); font:inherit; font-weight:700; cursor:pointer; padding:0 4px 0 0;}
+  .msg-thread-name{font-weight:800; font-size:16px; background:none; border:none; color:var(--ink); font-family:inherit; padding:0; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .msg-thread-name:hover{color:var(--amber);}
+  .msg-head-actions{margin-left:auto; display:flex; gap:8px;}
+  .msg-small-btn{background:var(--panel-2); border:1px solid var(--line); color:var(--ink-dim); border-radius:8px; padding:6px 10px; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;}
+  .msg-small-btn:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .msg-small-btn.danger{color:var(--danger); border-color:var(--danger);}
+  .msg-messages{flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:6px; min-height:300px; max-height:62vh;}
+  .msg-day{align-self:center; font-size:11.5px; color:var(--ink-faint); margin:10px 0 4px; text-transform:capitalize;}
+  .msg-row{display:flex; flex-direction:column; align-items:flex-start; max-width:78%;}
+  .msg-row.mine{align-self:flex-end; align-items:flex-end;}
+  .msg-bubble{padding:9px 13px; border-radius:14px 14px 14px 4px; background:var(--panel-2); border:1px solid var(--line-soft); line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere;}
+  .msg-row.mine .msg-bubble{border-radius:14px 14px 4px 14px; background:rgba(240,162,60,.16); border-color:rgba(240,162,60,.3);}
+  .msg-meta{display:flex; gap:10px; align-items:center; font-size:11px; color:var(--ink-faint); margin-top:3px; padding:0 4px;}
+  .msg-report-link{background:none; border:none; padding:0; color:var(--ink-faint); font:inherit; font-size:11px; cursor:pointer; text-decoration:underline; opacity:0; transition:opacity .15s;}
+  .msg-row:hover .msg-report-link, .msg-report-link:focus{opacity:1;}
+  @media(hover:none){ .msg-report-link{opacity:1;} }
+  .msg-panel{margin:0 16px 12px; padding:12px 14px; border-radius:10px; background:var(--panel-2); border:1px solid var(--line); display:flex; flex-direction:column; gap:10px;}
+  .msg-panel-quote{font-size:13px; color:var(--ink-dim); border-left:3px solid var(--line); padding-left:10px; white-space:pre-wrap; overflow-wrap:anywhere; max-height:80px; overflow:hidden;}
+  .msg-panel-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .msg-panel-row select{width:auto; margin-top:0; height:36px;}
+  .msg-panel-row input{flex:1 1 200px; height:36px; box-sizing:border-box; padding:0 10px; border-radius:8px; border:1px solid var(--line); background:var(--panel); color:var(--ink); font:inherit;}
+  .msg-notice{margin:0 16px 12px; padding:10px 12px; border-radius:10px; font-size:13px; background:var(--panel-2); color:var(--ink-dim); border:1px solid var(--line);}
+  .msg-notice.err{color:var(--danger); border-color:var(--danger);}
+  .msg-compose{border-top:1px solid var(--line-soft); padding:12px 16px 14px; display:flex; gap:10px; align-items:flex-end;}
+  .msg-compose textarea{flex:1; min-height:44px; max-height:160px; resize:vertical; box-sizing:border-box; padding:11px 13px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:14px; line-height:1.4;}
+  .msg-compose textarea:focus{outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber);}
+  .msg-send{height:44px; padding:0 20px; border-radius:10px; border:none; background:var(--amber); color:var(--amber-ink); font:inherit; font-weight:800; cursor:pointer;}
+  .msg-send:disabled{opacity:.5; cursor:not-allowed;}
+  .msg-count{font-size:11px; color:var(--ink-faint); padding:0 16px 8px; text-align:right; margin-top:-8px;}
+  .msg-count.over{color:var(--danger);}
+  .msg-team-cta{display:flex; justify-content:flex-end; margin:-6px 0 12px;}
+  .msg-team-cta button{background:var(--panel-2); border:1px solid rgba(240,162,60,.45); color:var(--amber); border-radius:9px; padding:8px 14px; font:inherit; font-weight:700; cursor:pointer;}
+  .msg-team-cta button:hover{background:rgba(240,162,60,.12);}
+  /* Barre du bas (mobile, voir assets/mobile/mobile.js) : pastille sur
+     « Menu » quand un message attend, la Messagerie étant dans le tiroir. */
+  #mTabMenu{position:relative;}
+  #mTabMenu.msg-has-unread::after{content:""; position:absolute; top:6px; left:calc(50% + 8px); width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 0 2px var(--panel);}
+  @media(max-width:760px){
+    #messagesContent.has-thread .msg-lead{display:none;}
+    .msg-layout{grid-template-columns:1fr; min-height:0;}
+    .msg-layout.has-thread .msg-col-list{display:none;}
+    .msg-layout:not(.has-thread) .msg-col-thread{display:none;}
+    .msg-thread-head .msg-back{display:inline;}
+    .msg-row{max-width:90%;}
+    /* Fil + zone de saisie tiennent dans l'écran, au-dessus de la barre du bas. */
+    .msg-messages{min-height:200px; max-height:calc(100vh - 330px); max-height:calc(100dvh - 330px);}
+  }
   /* ---- Ligues privées (Premium) — voir renderLpSection ---- */
   #lpSection{--display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-size:14px;}
   #lpSection .pos{color:var(--ok);} #lpSection .neg{color:#f0a292;} #lpSection .dim{color:var(--ink-faint);}
@@ -5730,6 +5803,8 @@
       <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-label">Calendrier</span></button>
       <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-label">Matchs amicaux</span></button>
       <button class="tab-btn sidebar-link" data-tab="lp"><span class="sidebar-label">Ligues privées</span></button>
+      <!-- Messagerie privée entre managers (ligue partagée uniquement, voir msgUpdateBadge) -->
+      <button class="tab-btn sidebar-link hidden" data-tab="messages" id="tabMessages"><span class="sidebar-label">Messagerie</span><span class="sidebar-badge hidden" id="messagesBadge"></span></button>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Gestion</div>
@@ -6139,6 +6214,8 @@
          même id que côté Économie (#economieDeficitBanner) pour partager
          exactement le même mécanisme. -->
     <div id="clubDeficitBanner"></div>
+    <!-- "N nouveaux messages" (messagerie entre managers, voir msgUpdateBadge) -->
+    <div id="clubMessagesBanner"></div>
     <div id="clubDashboardRoot"></div>
   </div>
 
@@ -6407,6 +6484,14 @@
     <div class="section">
       <h2 class="page-title">Ligues privées</h2>
       <div id="lpContent"></div>
+    </div>
+  </div>
+
+  <!-- Messagerie privée entre managers — voir renderMessagesSection et server/messages.js. -->
+  <div id="messagesSection" class="hidden">
+    <div class="section">
+      <h2 class="page-title">Messagerie</h2>
+      <div id="messagesContent"></div>
     </div>
   </div>
 
@@ -19755,7 +19840,7 @@ function refreshRecruiterMarket() {
 // ---------------------------------------------------------------------
 const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
-  "clubSection", "staffSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "histoireSection",
+  "clubSection", "staffSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
   "guideSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
 ];
@@ -19796,7 +19881,7 @@ const PAGE_IDS = [
 // colonne de droite (prochain match, bilan) côte à côte.
 // "standingsSection" ajouté (refonte de la page Ligue, 2026-09-25) :
 // classement + colonne course/MVP côte à côte, leaders sur 3 colonnes.
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "histoireSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection"]);
+const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "messagesSection", "histoireSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection"]);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
 // "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
@@ -24866,6 +24951,10 @@ function renderTeamDetail(teamIdx) {
   nameHeader.textContent = `${team.name}`;
 
   let html = teamDetailSubNavHtml();
+  // Messagerie : écrire au manager de ce club (ligue partagée, club humain).
+  if (msgUi.available && team.isHuman && teamIdx !== myTeamIndex) {
+    html = `<div class="msg-team-cta"><button type="button" data-msg-open="${teamIdx}">Envoyer un message</button></div>` + html;
+  }
   if (teamDetailSubView === "calendrier") {
     // #teamDetailLiveBanner : placeholder vide au rendu synchrone, rempli
     // (ou laissé vide) juste après par refreshTeamDetailLiveBanner (retour
@@ -32782,6 +32871,7 @@ const DASH_ROUTE_TO_TAB = {
   "/marche": "marche", "/ligue": "ligue", "/coupe": "coupe",
   "/calendrier": "calendrier", "/entrainement": "entrainement",
   "/ligues-privees": "lp",
+  "/messagerie": "messages",
   "/sponsors": "sponsors",
   "/histoire": "histoire",
   "/academie": "academie", "/supporters": "humeur",
@@ -38184,6 +38274,441 @@ function sponsorBusy(btn, label) {
   });
 })();
 
+// ---------------------------------------------------------------------
+// MESSAGERIE PRIVÉE ENTRE MANAGERS (2026-09-26) — retour utilisateur : "il
+// faut uniquement les discussions avec les autres managers du jeu (jeu
+// online)", "les forums seront sur discord". Conversations 1-à-1 entre
+// managers humains de la ligue partagée (voir server/messages.js et les
+// routes /api/messages/*) ; les notifications du jeu restent sur le tableau
+// de bord (seul un bandeau "N nouveaux messages" y renvoie ici).
+// En solo (aucun jeton manager) : onglet masqué, aucun appel réseau.
+// Les textes écrits par les managers portent data-no-i18n : jamais passés
+// dans le traducteur à la volée (assets/i18n/i18n.js).
+// ---------------------------------------------------------------------
+const MSG_MAX_LENGTH = 1000;
+const MSG_SUMMARY_POLL_MS = 20000;
+const MSG_THREAD_POLL_MS = 6000;
+const MSG_REPORT_REASONS = [
+  { key: "insultes", label: "Insultes ou harcèlement" },
+  { key: "spam", label: "Spam" },
+  { key: "triche", label: "Triche ou arnaque" },
+  { key: "autre", label: "Autre" },
+];
+const msgUi = {
+  available: false,
+  summary: null,        // réponse de /api/messages/summary
+  activeWith: null,     // index d'équipe de l'interlocuteur ouvert
+  thread: null,         // réponse de /api/messages/thread
+  sending: false,
+  notice: null,         // { err: bool, text }
+  reportFor: null,      // id du message en cours de signalement
+  confirmBlock: false,
+  lastMarkedAt: 0,
+  pollTimer: null,
+  lastSummaryAt: 0,
+};
+
+function msgT(s) {
+  return window.hmI18n && typeof window.hmI18n.t === "function" ? window.hmI18n.t(s) : s;
+}
+
+function msgPageVisible() {
+  const el = document.getElementById("messagesSection");
+  return !!el && !el.classList.contains("hidden");
+}
+
+function msgFormatTime(at) {
+  const d = new Date(at);
+  const now = new Date();
+  const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (d.toDateString() === now.toDateString()) return time;
+  const y = new Date(now); y.setDate(now.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return `Hier ${time}`;
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
+function msgDayLabel(at) {
+  const d = new Date(at);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return "Aujourd'hui";
+  const y = new Date(now); y.setDate(now.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return "Hier";
+  return d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+}
+
+async function msgApi(method, url, body) {
+  const init = { method };
+  if (body !== undefined) { init.headers = { "Content-Type": "application/json" }; init.body = JSON.stringify(body); }
+  const res = await fetchApi(url, init);
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* réponse vide */ }
+  if (!res.ok || !data || data.ok === false) {
+    const err = new Error((data && data.error) || "Serveur injoignable.");
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+// Compteur de non-lus : sidebar + bandeau du tableau de bord.
+function msgUpdateBadge() {
+  const tab = document.getElementById("tabMessages");
+  if (tab) tab.classList.toggle("hidden", !msgUi.available);
+  const unread = msgUi.available && msgUi.summary ? msgUi.summary.unread : 0;
+  const menuBtn = document.getElementById("mTabMenu");
+  if (menuBtn) menuBtn.classList.toggle("msg-has-unread", !!unread);
+  const badge = document.getElementById("messagesBadge");
+  if (badge) {
+    badge.textContent = unread > 99 ? "99+" : String(unread);
+    badge.classList.toggle("hidden", !unread);
+  }
+  const banner = document.getElementById("clubMessagesBanner");
+  if (banner) {
+    if (!unread) { banner.innerHTML = ""; return; }
+    const senders = msgUi.summary.conversations.filter(c => c.unread > 0 && !c.blocked);
+    const who = senders.length === 1
+      ? `de <b data-no-i18n>${escapeHtml(senders[0].name)}</b>`
+      : `de ${senders.length} managers`;
+    const label = unread === 1 ? "1 nouveau message" : `${unread} nouveaux messages`;
+    banner.innerHTML = `<button type="button" class="msg-dash-banner" data-msg-open="${senders.length === 1 ? senders[0].teamIndex : ""}">` +
+      `<span>${label} ${who}</span><span class="msg-dash-go">Lire →</span></button>`;
+  }
+}
+
+async function msgRefreshSummary() {
+  if (!managerToken) { msgUi.available = false; msgUpdateBadge(); return; }
+  try {
+    const data = await msgApi("GET", "/api/messages/summary");
+    msgUi.available = !!data.available;
+    msgUi.summary = data;
+    msgUi.lastSummaryAt = Date.now();
+  } catch (e) {
+    return; // hors ligne : on garde le dernier état connu
+  }
+  msgUpdateBadge();
+  if (msgPageVisible()) renderMsgList();
+}
+
+async function msgLoadThread(teamIdx, opts) {
+  const o = opts || {};
+  try {
+    const data = await msgApi("GET", `/api/messages/thread?with=${encodeURIComponent(teamIdx)}`);
+    if (msgUi.activeWith !== teamIdx) return;
+    const grew = !msgUi.thread || msgUi.thread.messages.length !== data.messages.length;
+    msgUi.thread = data;
+    if (!o.silent) msgUi.notice = null;
+    renderMsgThread({ keepScroll: !grew && o.silent });
+    await msgMarkReadIfNeeded();
+  } catch (e) {
+    if (msgUi.activeWith !== teamIdx) return;
+    if (!o.silent) { msgUi.notice = { err: true, text: e.message }; renderMsgThread(); }
+  }
+}
+
+async function msgMarkReadIfNeeded() {
+  const t = msgUi.thread;
+  if (!t || !msgPageVisible() || document.visibilityState === "hidden") return;
+  const theirs = t.messages.filter(m => !m.mine);
+  if (!theirs.length) return;
+  const lastAt = theirs[theirs.length - 1].at;
+  const conv = msgUi.summary && msgUi.summary.conversations.find(c => c.teamIndex === t.with.teamIndex);
+  if (lastAt <= msgUi.lastMarkedAt && !(conv && conv.unread)) return;
+  msgUi.lastMarkedAt = lastAt;
+  try {
+    const data = await msgApi("POST", "/api/messages/read", { with: t.with.teamIndex, upTo: t.messages[t.messages.length - 1].at });
+    msgUi.summary = data;
+    msgUpdateBadge();
+    renderMsgList();
+  } catch (e) { /* réessayé au prochain rafraîchissement */ }
+}
+
+function msgOpenConversation(teamIdx) {
+  msgUi.activeWith = teamIdx;
+  msgUi.thread = null;
+  msgUi.notice = null;
+  msgUi.reportFor = null;
+  msgUi.confirmBlock = false;
+  msgUi.lastMarkedAt = 0;
+  renderMessagesSection();
+  return msgLoadThread(teamIdx);
+}
+
+// Point d'entrée depuis ailleurs (fiche équipe, bandeau du tableau de bord).
+function goToMessages(teamIdx) {
+  showPage("messagesSection");
+  setActiveTab("messages");
+  if (Number.isInteger(teamIdx)) return msgOpenConversation(teamIdx);
+  renderMessagesSection();
+  return msgRefreshSummary();
+}
+
+function renderMessagesSection() {
+  const root = document.getElementById("messagesContent");
+  if (!root) return;
+  if (!msgUi.available) {
+    root.innerHTML = `<div class="msg-col"><p class="msg-empty">La messagerie est réservée aux ligues partagées entre plusieurs managers.</p></div>`;
+    return;
+  }
+  root.innerHTML =
+    `<p class="msg-lead">Discutez en privé avec les autres managers de la ligue : négociations, défis, trash talk. Pour les discussions ouvertes à tous, rendez-vous sur le Discord.</p>` +
+    `<div class="msg-layout${msgUi.activeWith != null ? " has-thread" : ""}" id="msgLayout">` +
+      `<section class="msg-col msg-col-list">` +
+        `<div class="msg-col-head msg-new"><select id="msgNewSelect" aria-label="Écrire à un manager"></select></div>` +
+        `<ul class="msg-list" id="msgList"></ul>` +
+      `</section>` +
+      `<section class="msg-col msg-col-thread" id="msgThreadCol"></section>` +
+    `</div>`;
+  renderMsgList();
+  renderMsgThread();
+}
+
+function renderMsgList() {
+  const list = document.getElementById("msgList");
+  const select = document.getElementById("msgNewSelect");
+  if (!list || !msgUi.summary) return;
+  const s = msgUi.summary;
+  if (select) {
+    const opts = s.managers.filter(m => !m.blocked);
+    select.innerHTML = `<option value="">Nouveau message…</option>` +
+      opts.map(m => `<option value="${m.teamIndex}" data-no-i18n>${escapeHtml(m.name)}</option>`).join("");
+    select.disabled = !opts.length;
+  }
+  if (!s.conversations.length) {
+    list.innerHTML = `<li class="msg-empty">${s.managers.length ? "Aucune conversation pour l'instant. Choisissez un manager ci-dessus pour lui écrire." : "Aucun autre manager dans la ligue pour l'instant."}</li>`;
+    return;
+  }
+  list.innerHTML = s.conversations.map(c => {
+    const unread = c.unread > 0 && !c.blocked;
+
+    return `<li><button type="button" class="msg-conv${msgUi.activeWith === c.teamIndex ? " on" : ""}${unread ? " unread" : ""}" data-msg-conv="${c.teamIndex}">` +
+      `<span class="msg-conv-top"><span class="msg-conv-name" data-no-i18n>${escapeHtml(c.name)}</span>` +
+      (unread ? `<span class="sidebar-badge">${c.unread}</span>` : "") +
+      `<span class="msg-conv-time">${escapeHtml(msgFormatTime(c.lastMessage.at))}</span></span>` +
+      (c.blocked
+        ? `<span class="msg-conv-last">Manager bloqué</span>`
+        : `<span class="msg-conv-last">${c.lastMessage.mine ? "<span>Vous :</span> " : ""}<span data-no-i18n>${escapeHtml(c.lastMessage.text)}</span></span>`) +
+    `</button></li>`;
+  }).join("");
+}
+
+function msgMessagesHtml(t) {
+  if (!t.messages.length) return `<p class="msg-empty">Aucun message. Lancez la discussion !</p>`;
+  let html = "";
+  let lastDay = "";
+  const lastMine = [...t.messages].reverse().find(m => m.mine);
+  t.messages.forEach(m => {
+    const day = new Date(m.at).toDateString();
+    if (day !== lastDay) { html += `<div class="msg-day">${escapeHtml(msgDayLabel(m.at))}</div>`; lastDay = day; }
+    const time = new Date(m.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const seen = lastMine && m.id === lastMine.id && t.readByOtherUntil >= m.at;
+    html += `<div class="msg-row${m.mine ? " mine" : ""}">` +
+      `<div class="msg-bubble" data-no-i18n>${escapeHtml(m.text)}</div>` +
+      `<div class="msg-meta"><span>${escapeHtml(time)}</span>` +
+      (seen ? `<span>Vu</span>` : "") +
+      (!m.mine ? `<button type="button" class="msg-report-link" data-msg-report="${m.id}">Signaler</button>` : "") +
+      `</div></div>`;
+  });
+  return html;
+}
+
+function renderMsgThread(opts) {
+  const col = document.getElementById("msgThreadCol");
+  if (!col) return;
+  const layout = document.getElementById("msgLayout");
+  if (layout) layout.classList.toggle("has-thread", msgUi.activeWith != null);
+  const content = document.getElementById("messagesContent");
+  if (content) content.classList.toggle("has-thread", msgUi.activeWith != null);
+  if (msgUi.activeWith == null) {
+    col.innerHTML = `<p class="msg-empty">Sélectionnez une conversation, ou écrivez à un manager.</p>`;
+    return;
+  }
+  const t = msgUi.thread;
+  const conv = msgUi.summary && msgUi.summary.conversations.find(c => c.teamIndex === msgUi.activeWith);
+  const manager = msgUi.summary && msgUi.summary.managers.find(m => m.teamIndex === msgUi.activeWith);
+  const name = t ? t.with.name : (conv || manager || { name: (league && league.teams[msgUi.activeWith] || {}).name || "" }).name;
+  const blocked = t ? t.with.blocked : false;
+
+  // Le fil est reconstruit à chaque rafraîchissement, mais la zone de
+  // saisie n'est créée qu'une fois par conversation (brouillon, curseur et
+  // focus préservés pendant les rafraîchissements automatiques).
+  if (col.dataset.with !== String(msgUi.activeWith)) {
+    col.dataset.with = String(msgUi.activeWith);
+    col.innerHTML =
+      `<div class="msg-col-head msg-thread-head" id="msgThreadHead"></div>` +
+      `<div class="msg-messages" id="msgMessages"></div>` +
+      `<div id="msgPanelHolder"></div>` +
+      `<form class="msg-compose" id="msgComposeForm" autocomplete="off">` +
+        // Le traducteur ignore les <textarea> (et leurs attributs) : on
+        // traduit donc le texte d'invite nous-mêmes.
+        `<textarea id="msgInput" rows="1" maxlength="${MSG_MAX_LENGTH + 200}" placeholder="${escapeHtml(msgT("Votre message…"))}" aria-label="${escapeHtml(msgT("Votre message…"))}"></textarea>` +
+        `<button type="submit" class="msg-send" id="msgSendBtn">Envoyer</button>` +
+      `</form>` +
+      `<div class="msg-count hidden" id="msgCount"></div>`;
+  }
+  document.getElementById("msgThreadHead").innerHTML =
+    `<button type="button" class="msg-back" data-msg-back>←</button>` +
+    `<button type="button" class="msg-thread-name" data-msg-team="${msgUi.activeWith}" title="Voir la fiche du club" data-no-i18n>${escapeHtml(name)}</button>` +
+    `<span class="msg-head-actions">` +
+      (msgUi.confirmBlock
+        ? `<button type="button" class="msg-small-btn danger" data-msg-block="1">Confirmer le blocage</button><button type="button" class="msg-small-btn" data-msg-block-cancel>Annuler</button>`
+        : `<button type="button" class="msg-small-btn${blocked ? "" : ""}" data-msg-block="${blocked ? "0" : "ask"}">${blocked ? "Débloquer" : "Bloquer"}</button>`) +
+    `</span>`;
+
+  const box = document.getElementById("msgMessages");
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  const prevTop = box.scrollTop;
+  box.innerHTML = t ? msgMessagesHtml(t) : `<p class="msg-empty">Chargement…</p>`;
+  if (opts && opts.keepScroll && !atBottom) box.scrollTop = prevTop;
+  else box.scrollTop = box.scrollHeight;
+
+  let panel = "";
+  if (msgUi.reportFor != null && t) {
+    const m = t.messages.find(x => x.id === msgUi.reportFor);
+    if (m) {
+      panel = `<div class="msg-panel"><strong>Signaler ce message à l'organisation</strong>` +
+        `<div class="msg-panel-quote" data-no-i18n>${escapeHtml(m.text)}</div>` +
+        `<div class="msg-panel-row"><select id="msgReportReason">${MSG_REPORT_REASONS.map(r => `<option value="${r.key}">${escapeHtml(r.label)}</option>`).join("")}</select>` +
+        `<input type="text" id="msgReportComment" maxlength="500" placeholder="Précisions (facultatif)"></div>` +
+        `<div class="msg-panel-row"><button type="button" class="msg-small-btn danger" data-msg-report-send>Envoyer le signalement</button>` +
+        `<button type="button" class="msg-small-btn" data-msg-report-cancel>Annuler</button></div></div>`;
+    }
+  }
+  if (blocked) panel += `<div class="msg-notice">Vous avez bloqué ce manager : il ne peut plus vous écrire, et vous ne pouvez pas lui écrire tant qu'il est bloqué.</div>`;
+  if (msgUi.notice) panel += `<div class="msg-notice${msgUi.notice.err ? " err" : ""}">${escapeHtml(msgUi.notice.text)}</div>`;
+  document.getElementById("msgPanelHolder").innerHTML = panel;
+
+  const input = document.getElementById("msgInput");
+  const send = document.getElementById("msgSendBtn");
+  input.disabled = blocked;
+  send.disabled = blocked || msgUi.sending || !input.value.trim() || input.value.trim().length > MSG_MAX_LENGTH;
+  send.textContent = msgUi.sending ? "Envoi…" : "Envoyer";
+}
+
+function msgUpdateComposeState() {
+  const input = document.getElementById("msgInput");
+  const send = document.getElementById("msgSendBtn");
+  const count = document.getElementById("msgCount");
+  if (!input || !send) return;
+  const len = input.value.trim().length;
+  const blocked = msgUi.thread ? msgUi.thread.with.blocked : false;
+  send.disabled = blocked || msgUi.sending || !len || len > MSG_MAX_LENGTH;
+  if (count) {
+    count.classList.toggle("hidden", len < MSG_MAX_LENGTH - 200);
+    count.classList.toggle("over", len > MSG_MAX_LENGTH);
+    count.textContent = `${len} / ${MSG_MAX_LENGTH}`;
+  }
+}
+
+async function msgSend() {
+  const input = document.getElementById("msgInput");
+  if (!input || msgUi.sending || msgUi.activeWith == null) return;
+  const text = input.value.trim();
+  if (!text || text.length > MSG_MAX_LENGTH) return;
+  const to = msgUi.activeWith;
+  msgUi.sending = true;
+  msgUpdateComposeState();
+  document.getElementById("msgSendBtn").textContent = "Envoi…";
+  try {
+    const data = await msgApi("POST", "/api/messages/send", { to, text });
+    if (msgUi.activeWith === to) {
+      input.value = "";
+      msgUi.thread = data;
+      msgUi.notice = null;
+    }
+  } catch (e) {
+    if (msgUi.activeWith === to) msgUi.notice = { err: true, text: e.message };
+  }
+  msgUi.sending = false;
+  if (msgUi.activeWith === to) { renderMsgThread(); msgUpdateComposeState(); input.focus(); }
+  await msgRefreshSummary();
+}
+
+async function msgSetBlocked(blocked) {
+  const who = msgUi.activeWith;
+  msgUi.confirmBlock = false;
+  try {
+    msgUi.thread = await msgApi("POST", "/api/messages/block", { teamIndex: who, blocked });
+    msgUi.notice = { err: false, text: blocked ? "Manager bloqué." : "Manager débloqué." };
+  } catch (e) {
+    msgUi.notice = { err: true, text: e.message };
+  }
+  if (msgUi.activeWith === who) renderMsgThread();
+  await msgRefreshSummary();
+}
+
+async function msgSendReport() {
+  const t = msgUi.thread;
+  if (!t || msgUi.reportFor == null) return;
+  const reason = (document.getElementById("msgReportReason") || {}).value || "autre";
+  const comment = (document.getElementById("msgReportComment") || {}).value || "";
+  try {
+    const r = await msgApi("POST", "/api/messages/report", { with: t.with.teamIndex, messageId: msgUi.reportFor, reason, comment });
+    msgUi.notice = { err: false, text: r.alreadyReported ? "Vous avez déjà signalé ce message." : "Merci, le signalement a été transmis à l'organisation. Vous pouvez aussi bloquer ce manager." };
+    msgUi.reportFor = null;
+  } catch (e) {
+    msgUi.notice = { err: true, text: e.message };
+  }
+  renderMsgThread({ keepScroll: true });
+}
+
+(function wireMessages() {
+  document.addEventListener("click", (e) => {
+    const open = e.target.closest("[data-msg-open]");
+    if (open) {
+      const v = open.dataset.msgOpen;
+      window.__lastMsgNav = goToMessages(v === "" ? null : Number(v));
+      return;
+    }
+    const conv = e.target.closest("[data-msg-conv]");
+    if (conv) { window.__lastMsgNav = msgOpenConversation(Number(conv.dataset.msgConv)); return; }
+    if (e.target.closest("[data-msg-back]")) { msgUi.activeWith = null; msgUi.thread = null; renderMessagesSection(); return; }
+    const team = e.target.closest("[data-msg-team]");
+    if (team) { showTeamDetail(Number(team.dataset.msgTeam)); return; }
+    const block = e.target.closest("[data-msg-block]");
+    if (block) {
+      const v = block.dataset.msgBlock;
+      if (v === "ask") { msgUi.confirmBlock = true; renderMsgThread({ keepScroll: true }); return; }
+      window.__lastMsgAction = msgSetBlocked(v === "1");
+      return;
+    }
+    if (e.target.closest("[data-msg-block-cancel]")) { msgUi.confirmBlock = false; renderMsgThread({ keepScroll: true }); return; }
+    const rep = e.target.closest("[data-msg-report]");
+    if (rep) { msgUi.reportFor = Number(rep.dataset.msgReport); msgUi.notice = null; renderMsgThread({ keepScroll: true }); return; }
+    if (e.target.closest("[data-msg-report-cancel]")) { msgUi.reportFor = null; renderMsgThread({ keepScroll: true }); return; }
+    if (e.target.closest("[data-msg-report-send]")) { window.__lastMsgAction = msgSendReport(); return; }
+  });
+  document.addEventListener("change", (e) => {
+    if (e.target && e.target.id === "msgNewSelect" && e.target.value !== "") {
+      window.__lastMsgNav = msgOpenConversation(Number(e.target.value));
+    }
+  });
+  document.addEventListener("submit", (e) => {
+    if (e.target && e.target.id === "msgComposeForm") { e.preventDefault(); window.__lastMsgAction = msgSend(); }
+  });
+  document.addEventListener("input", (e) => {
+    if (e.target && e.target.id === "msgInput") msgUpdateComposeState();
+  });
+  document.addEventListener("keydown", (e) => {
+    // Entrée envoie, Maj+Entrée va à la ligne.
+    if (e.target && e.target.id === "msgInput" && e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      window.__lastMsgAction = msgSend();
+    }
+  });
+  // Rafraîchissement : le fil ouvert toutes les 6 s, le compteur toutes les
+  // 20 s, seulement quand l'onglet du navigateur est visible.
+  function tickMessages() {
+    if (!managerToken || document.visibilityState === "hidden") return;
+    if (msgPageVisible() && msgUi.activeWith != null && !msgUi.sending) msgLoadThread(msgUi.activeWith, { silent: true });
+    if (Date.now() - msgUi.lastSummaryAt >= MSG_SUMMARY_POLL_MS - 500) msgRefreshSummary();
+  }
+  if (managerToken) {
+    msgUi.pollTimer = setInterval(tickMessages, MSG_THREAD_POLL_MS);
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { msgUi.lastSummaryAt = 0; tickMessages(); } });
+    window.__lastMsgSummary = msgRefreshSummary();
+  }
+})();
+
 const TAB_HANDLERS = {
   live: goToLiveTab,
   guide: () => { renderGuideSection(); showPage("guideSection"); setActiveTab("guide"); },
@@ -38193,6 +38718,7 @@ const TAB_HANDLERS = {
   calendrier: () => { renderCalendrierSection(); showPage("calendrierSection"); setActiveTab("calendrier"); },
   amicaux: () => showPlaceholder("amicaux"),
   lp: () => { renderLpSection(); showPage("lpSection"); setActiveTab("lp"); },
+  messages: () => { window.__lastMsgNav = goToMessages(); },
   histoire: () => { renderHistoireSection(); showPage("histoireSection"); setActiveTab("histoire"); hcBalanceColumns(); },
   economie: () => { renderEconomieSection(); showPage("economieSection"); setActiveTab("economie"); },
   sponsors: () => { renderSponsorsPanel(); showPage("sponsorsSection"); setActiveTab("sponsors"); },

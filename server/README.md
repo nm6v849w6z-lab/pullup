@@ -108,6 +108,16 @@ tests correspondants.
   `/api/plan`, `/api/market/list`, `/api/market/bid`, `/api/market/coach-bid`,
   `/api/staff/fire-trainer` — voir plus bas ("désormais appelées par le
   navigateur") pour le détail de qui les appelle et depuis quel écran.
+- `messages.js` — messagerie privée entre managers de la ligue PARTAGÉE
+  (2026-09-26 ; pas de chat de ligue, les forums sont sur Discord). Stockée
+  à part de la ligue (`data/messages.json`, ou clé Redis `pullup:messages`
+  si Upstash est configuré). Routes : `GET /api/messages/summary` (non-lus,
+  conversations, annuaire des managers), `GET /api/messages/thread?with=<index
+  d'équipe>`, `POST /api/messages/send {to, text}`, `/read {with, upTo}`,
+  `/block {teamIndex, blocked}`, `/report {with, messageId, reason,
+  comment}`. Modération : `GET /api/admin/message-reports` (liste) et `POST
+  {id}` (clore), avec `X-Admin-Token`. En solo, `summary` renvoie
+  `available:false` et les autres routes 404.
 - `index.js` — serveur HTTP minimal (module natif `http`, aucune
   dépendance) :
   - `GET /` — sert `moteurbasket3.html` directement (relu à chaque requête,

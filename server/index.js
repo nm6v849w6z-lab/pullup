@@ -47,6 +47,8 @@ const Scouting = require("./scouting.js");
 const Shows = require("./shows.js");
 // Ligues privées (Premium) — voir server/privateLeague.js.
 const PrivateLeague = require("./privateLeague.js");
+// Messagerie privée entre managers (2026-09-26) — voir server/messages.js.
+const Messages = require("./messages.js");
 const Engine = require("../engine.js");
 
 // MODE ACCÉLÉRÉ (tests/démo) — voir le commentaire détaillé dans
@@ -769,6 +771,8 @@ async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSav
 // injectables — indispensable pour tester ce serveur sans dépendre du vrai
 // disque/de la vraie horloge (voir server/index_test.js).
 function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, multiSavePath = store.defaultMultiLeaguePath()) {
+  // Messagerie : stockée à côté de la ligue partagée (voir server/messages.js).
+  const messages = Messages.createService(Messages.messagesPathFor(multiSavePath));
   return async function handler(req, res) {
     try {
       let route;
@@ -995,6 +999,14 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           ? store.serializeMultiLeague(ctx.league)
           : store.serialize(ctx.league.teams[0], ctx.league);
         payload.myTeamIndex = ctx.teamIndex;
+        // SÉCURITÉ (2026-09-26, relevé en codant la messagerie) : la
+        // sauvegarde complète contenait le jeton privé de TOUS les managers
+        // (serializeTeam → managerLinkToken), donc n'importe quel manager
+        // pouvait se faire passer pour un autre. Seul SON propre jeton est
+        // renvoyé désormais — le navigateur n'utilise jamais ceux des autres.
+        if (ctx.isMulti && payload.league && Array.isArray(payload.league.teams)) {
+          payload.league.teams.forEach((t, i) => { if (t && i !== ctx.teamIndex) t.managerLinkToken = null; });
+        }
         payload.league.liveMatch = LiveMatch.viewLiveMatchForTeam(ctx.league, ctx.teamIndex);
         delete payload.league.liveMatches;
         // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
@@ -1232,6 +1244,64 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const season = route.searchParams.get("season") || Shows.currentSeasonKey();
         const lb = Shows.leaderboardSync(ctx.league, season, { userId: String(ctx.teamIndex), limit: 50 });
         sendJson(res, 200, { ok: true, ...lb });
+        return;
+      }
+
+      // -----------------------------------------------------------------
+      // Messagerie privée entre managers (voir server/messages.js). Ligue
+      // PARTAGÉE uniquement : en solo il n'y a personne à qui écrire
+      // (`available: false`, le navigateur masque alors l'onglet). Ces
+      // routes ne rattrapent PAS la ligue (pas de tick) et ne la réécrivent
+      // jamais : elles sont appelées souvent (compteur de non-lus) et ne
+      // doivent pas coûter une simulation ni une sauvegarde de la ligue.
+      // -----------------------------------------------------------------
+      if (route.pathname.startsWith("/api/messages/")) {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        if (!ctx.isMulti) {
+          if (route.pathname === "/api/messages/summary") { sendJson(res, 200, { ok: true, available: false, unread: 0, conversations: [], managers: [] }); return; }
+          sendJson(res, 404, { ok: false, error: "La messagerie n'existe que dans une ligue partagée." });
+          return;
+        }
+        let out = null;
+        try {
+          if (req.method === "GET" && route.pathname === "/api/messages/summary") {
+            out = await messages.summary(ctx.league, ctx.teamIndex);
+          } else if (req.method === "GET" && route.pathname === "/api/messages/thread") {
+            out = await messages.thread(ctx.league, ctx.teamIndex, route.searchParams.get("with"));
+          } else if (req.method === "POST") {
+            let body;
+            try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+            if (route.pathname === "/api/messages/send") out = await messages.send(ctx.league, ctx.teamIndex, body, now);
+            else if (route.pathname === "/api/messages/read") out = await messages.markRead(ctx.league, ctx.teamIndex, body);
+            else if (route.pathname === "/api/messages/block") out = await messages.setBlocked(ctx.league, ctx.teamIndex, body);
+            else if (route.pathname === "/api/messages/report") out = await messages.report(ctx.league, ctx.teamIndex, body, now);
+          }
+        } catch (e) {
+          sendJson(res, 503, { ok: false, error: e.message });
+          return;
+        }
+        if (!out) { sendJson(res, 404, { ok: false, error: "Route inconnue", path: route.pathname }); return; }
+        sendJson(res, out.status, out.body);
+        return;
+      }
+
+      // Modération de la messagerie (X-Admin-Token, comme les autres routes
+      // admin) : GET liste des signalements, POST {id} pour en clore un.
+      if (route.pathname === "/api/admin/message-reports") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Accès refusé." }); return; }
+        try {
+          let out;
+          if (req.method === "GET") out = await messages.listReports();
+          else if (req.method === "POST") {
+            let body;
+            try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+            out = await messages.resolveReport(body);
+          } else { sendJson(res, 405, { ok: false, error: "Méthode non autorisée." }); return; }
+          sendJson(res, out.status, out.body);
+        } catch (e) {
+          sendJson(res, 503, { ok: false, error: e.message });
+        }
         return;
       }
 

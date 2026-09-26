@@ -20,6 +20,42 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Messagerie
+  privée entre managers** — retour utilisateur : "il faut uniquement les discussions avec
+  les autres managers du jeu (jeu online)", "les forums seront sur discord"
+  → PAS de chat de ligue, PAS de notifications système dans la messagerie
+  (elles restent sur le tableau de bord). Fait :
+  - server/messages.js (nouveau) : conversations 1-à-1 entre managers
+    humains de la ligue PARTAGÉE, stockées À PART de la ligue
+    (server/data/messages.json à côté de multi-league.json, ou clé Redis
+    `pullup:messages` si Upstash) → envoyer un message ne réécrit jamais la
+    ligue. Participants identifiés par empreinte SHA-256 du jeton (jamais
+    exposée ; le navigateur parle en index d'équipe). File d'écriture en
+    série (pas de message perdu en cas d'envois simultanés). 1 000
+    caractères max, 300 messages gardés par conversation, anti-spam
+    (1 message/s, 10/min, en mémoire), blocage, signalement (+ contexte des
+    10 derniers messages), accusé "Vu".
+  - server/index.js : routes /api/messages/summary|thread (GET),
+    send|read|block|report (POST) — sans tick ni sauvegarde de la ligue ;
+    en solo `available:false`. Modération : GET/POST
+    /api/admin/message-reports (X-Admin-Token).
+  - **Faille corrigée au passage** : GET /api/save renvoyait le
+    managerLinkToken de TOUS les managers → n'importe qui pouvait se faire
+    passer pour un autre. Seul son propre jeton est renvoyé désormais.
+  - moteurbasket3.html : onglet "Messagerie" (section Club, masqué en solo)
+    avec badge de non-lus, page liste + fil (une colonne sur mobile, bouton
+    ←), rafraîchissement 6 s (fil ouvert) / 20 s (compteur), bandeau "N
+    nouveaux messages" en haut du tableau de bord, pastille sur "Menu" de la
+    barre mobile, bouton "Envoyer un message" sur la fiche d'un club humain.
+    Textes des managers en data-no-i18n (jamais traduits).
+  - assets/i18n/en.js : ~50 entrées.
+  - Tests : server/messages_test.js (41 vérifs) et messages_ui_test.js (28)
+    verts sur le Mac ; captures Chromium FR/EN, 1440 et 390 px OK.
+  Suite complète : 154/155 vertes (seul player_detail_test.js échoue, déjà
+  noté "À INVESTIGUER", identique sans ce chantier). Reste : `git push`. Idées pour plus
+  tard (non faites) : cartes "offre de transfert" dans le fil, notification
+  push mobile, écran de modération dans l'appli.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Menu bloqué sur
   téléphone, logo de la barre latérale, « D.I » dans le Palmarès** — retours
   utilisateur : "Sur le tel le menu reste figé. Je ne peux pas descendre",
