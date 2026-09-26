@@ -3212,7 +3212,123 @@
      showMatchBoxscore) : même overlay que .upgrade-confirm-overlay, mais une
      boîte plus large pour accueillir la table .boxscore (déjà stylée plus
      haut pour le match en direct) et défilante en cas de très petit écran. */
-  .match-boxscore-box{max-width:640px; max-height:85vh; overflow-y:auto;}
+  .match-boxscore-box{max-width:880px; max-height:90vh; overflow-y:auto; padding:0; border-radius:16px;}
+  /* Refonte de la feuille de statistiques (retour utilisateur, 2026-09-26 :
+     "améliore les feuilles de stats, elles ne sont pas très belles" /
+     "respecte plus l'esprit de la DA des autres pages" / "refais tout, c'est
+     horrible"). Même vocabulaire que le tableau de bord et "Pendant votre
+     absence" : surtitre ambre espacé, grand score, cartes --bg bordées
+     --line-soft, titres de section gris en capitales, pastilles V/D. Voir
+     showMatchBoxscore / matchMvpCalloutHtml / boxscoreTableHtml. */
+  .mbx-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:20px 22px 0;}
+  .mbx-kicker{display:block; font-size:11px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--amber);}
+  .match-boxscore-box .mbx-head h3{margin:6px 0 0; font-size:20px; font-weight:800; color:var(--ink); letter-spacing:-.01em;}
+  .mbx-close{flex:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--line); color:var(--ink-dim); cursor:pointer; padding:0;}
+  .mbx-close:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .mbx-board{display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:16px; margin:16px 22px 0; padding:20px 22px; border:1px solid var(--line); border-radius:14px 14px 0 0; background:var(--bg);}
+  .mbx-team{display:flex; align-items:center; gap:14px; min-width:0;}
+  .mbx-team.away{flex-direction:row-reverse; text-align:right;}
+  .mbx-logo{flex:none; display:flex;}
+  .mbx-team-txt{display:flex; flex-direction:column; min-width:0;}
+  .mbx-team-name{font-size:18px; font-weight:800; text-transform:uppercase; letter-spacing:.01em; line-height:1.15; color:var(--ink-dim); overflow-wrap:anywhere;}
+  .mbx-team.won .mbx-team-name{color:var(--ink);}
+  .mbx-team-where{font-size:12px; color:var(--ink-faint); margin-top:3px;}
+  .mbx-score{display:flex; flex-direction:column; align-items:center; gap:8px;}
+  .mbx-score-nums{display:flex; align-items:baseline; gap:10px; font-size:42px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-.01em;}
+  .mbx-score-nums .hi{color:var(--ink);}
+  .mbx-score-nums .lo{color:var(--ink-faint);}
+  .mbx-score-sep{color:var(--ink-faint); font-weight:600; font-size:28px;}
+  .mbx-result{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; padding:4px 10px; border-radius:6px; background:var(--panel-2); color:var(--ink-dim);}
+  .mbx-result.win{background:rgba(51,180,161,.15); color:var(--ok);}
+  .mbx-result.loss{background:rgba(226,105,79,.15); color:var(--danger);}
+  .mbx-quarters{margin:0 22px; border:1px solid var(--line); border-top:none; border-radius:0 0 14px 14px; background:var(--panel-2); padding:4px 14px 8px;}
+  .mbx-quarters:empty{padding:0; height:0;}
+  .mbx-quarters .table-scroll{margin:0;}
+  .mbx-quarters table.quarter-scores-table{width:100%; border-collapse:collapse; background:transparent; font-size:13px; font-variant-numeric:tabular-nums;}
+  .mbx-quarters .quarter-scores-table th{color:var(--ink-faint); font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:8px 8px 4px; border:none; background:transparent;}
+  .mbx-quarters .quarter-scores-table td{color:var(--ink-faint); padding:5px 8px; border:none; background:transparent;}
+  .mbx-quarters .quarter-scores-table td:first-child{color:var(--ink-dim); font-weight:600; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .mbx-quarters .quarter-scores-table td.q-win{color:var(--ink); font-weight:700;}
+  .mbx-quarters .quarter-scores-table .q-total{border-left:1px solid var(--line); font-weight:800;}
+  .mbx-body{padding:4px 22px 22px;}
+  .mbx-block{margin-top:22px;}
+  .mbx-block-title{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 10px;}
+  .mbx-duel{border:1px solid var(--line-soft); border-radius:12px; background:var(--bg); padding:4px 18px; display:grid; grid-template-columns:1fr 1fr; column-gap:32px;}
+  .mbx-duel-row:nth-last-child(2){border-bottom:none;}
+  .mbx-duel-row{display:grid; grid-template-columns:76px minmax(0,1fr) 76px; align-items:center; gap:14px; padding:8px 0; border-bottom:1px solid var(--line-soft);}
+  .mbx-duel-row:last-child{border-bottom:none;}
+  .mbx-duel-val{font-size:15px; font-weight:800; color:var(--ink-faint); font-variant-numeric:tabular-nums; line-height:1.15;}
+  .mbx-duel-val:last-child{text-align:right;}
+  .mbx-duel-val.best{color:var(--ink);}
+  .mbx-duel-val small{display:block; font-size:10.5px; font-weight:600; color:var(--ink-faint);}
+  .mbx-duel-label{display:block; text-align:center; font-size:12px; font-weight:600; color:var(--ink-dim); margin-bottom:5px;}
+  .mbx-duel-bars{display:grid; grid-template-columns:1fr 1fr; gap:4px;}
+  .mbx-duel-track{display:flex; height:6px; border-radius:999px; background:var(--panel-2); overflow:hidden;}
+  .mbx-duel-track.home{justify-content:flex-end;}
+  .mbx-duel-track i{display:block; height:100%; border-radius:999px; background:var(--ink-faint);}
+  .mbx-duel-track i.best{background:var(--amber);}
+  .mbx-tabs.boxscore-toggle{display:inline-flex; gap:2px; padding:3px; margin:0 0 12px; border:1px solid var(--line); border-radius:999px; background:var(--bg); max-width:100%; overflow-x:auto;}
+  .mbx-tabs .bs-tab{border:none; border-radius:999px; font-size:13px; font-weight:700; padding:7px 16px; white-space:nowrap; color:var(--ink-dim);}
+  .mbx-tabs .bs-tab.active{background:var(--amber); color:var(--amber-ink);}
+  .mbx-close-btn{display:block; width:100%; margin-top:20px;}
+  /* Carte MVP (modale du Calendrier ET fin de match en direct). */
+  .match-mvp-callout.mvp-callout{background:rgba(240,162,60,.06); border:1px solid rgba(240,162,60,.45); border-radius:14px; padding:16px 18px; margin:18px 0 0;}
+  .match-mvp-callout .mvp-callout-body{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .match-mvp-callout .player-avatar{border-radius:12px !important; box-shadow:0 0 0 2px var(--amber);}
+  .mmc-id{flex:1 1 160px; min-width:0; display:flex; flex-direction:column;}
+  .match-mvp-callout .mmc-id h4{margin:0 0 4px; font-size:11px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--amber);}
+  .match-mvp-callout .mmc-id b{font-size:19px; font-weight:800; color:var(--ink); line-height:1.2;}
+  .mmc-sub{font-size:12.5px; color:var(--ink-dim); margin-top:2px;}
+  .mmc-tiles{display:grid; grid-template-columns:repeat(4, minmax(62px,1fr)); gap:8px;}
+  .mmc-tile{display:flex; flex-direction:column; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:8px 10px;}
+  .mmc-val{font-size:22px; font-weight:800; color:var(--ink); line-height:1.1; font-variant-numeric:tabular-nums;}
+  .mmc-lab{font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin-top:2px;}
+  .mmc-line{display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:12px; font-size:12.5px; color:var(--ink-faint);}
+  .mmc-line em{font-style:normal; font-weight:700; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
+  .mmc-quote{margin:12px 0 0; padding:10px 14px; border-left:3px solid var(--amber); border-radius:0; background:var(--panel-2); font-size:13.5px; font-style:italic; line-height:1.5; color:var(--ink-dim);}
+  /* Tableau individuel (partagé : modale du Calendrier + fin de match en
+     direct, voir boxscoreTableHtml). Le tableau EN DIRECT
+     (liveBoxscoreTableHtml) n'a pas .bx-scroll et garde son style. */
+  .bx-scroll{overflow-x:auto; border:1px solid var(--line-soft); border-radius:12px; background:var(--bg);}
+  .bx-scroll table.boxscore{background:transparent; border-radius:0; font-size:13px; font-variant-numeric:tabular-nums;}
+  .bx-scroll table.boxscore th{background:var(--panel); color:var(--ink-faint); font-size:10.5px; font-weight:700; letter-spacing:.06em; padding:10px 8px; border-bottom:1px solid var(--line);}
+  .bx-scroll table.boxscore td{padding:9px 8px; color:var(--ink-dim); background:var(--bg);}
+  .bx-scroll table.boxscore .bx-name{position:sticky; left:0; z-index:1; text-align:left; padding-left:14px; min-width:150px; color:var(--ink); font-weight:600;}
+  .bx-scroll table.boxscore th.bx-name{background:var(--panel); z-index:2;}
+  .bx-scroll table.boxscore .bx-sep{border-left:1px solid var(--line-soft);}
+  .bx-scroll table.boxscore tbody tr:hover td{background:var(--panel);}
+  .bx-scroll table.boxscore td.bx-zero{color:var(--ink-faint);}
+  .bx-scroll table.boxscore td.bx-pts{color:var(--ink); font-weight:800;}
+  .bx-scroll table.boxscore td.bx-eval{color:var(--ink); font-weight:700;}
+  .bx-scroll table.boxscore td.bx-eval.neg{color:var(--danger);}
+  .bx-scroll table.boxscore td.bx-pm.up{color:var(--ok); font-weight:700;}
+  .bx-scroll table.boxscore td.bx-pm.down{color:var(--danger); font-weight:700;}
+  .bx-scroll table.boxscore tr.bx-dnp td{color:var(--ink-faint);}
+  .bx-pos{display:inline-block; min-width:26px; font-size:10.5px; font-weight:800; letter-spacing:.04em; color:var(--ink-dim); background:var(--panel-2); border-radius:5px; padding:2px 6px;}
+  .bx-scroll table.boxscore tbody tr.boxscore-mvp-row{background:transparent;}
+  .bx-scroll table.boxscore tbody tr.boxscore-mvp-row td{background:linear-gradient(rgba(240,162,60,.09), rgba(240,162,60,.09)), var(--bg);}
+  .bx-scroll table.boxscore tbody tr.boxscore-mvp-row td.bx-name{box-shadow:inset 3px 0 0 var(--amber);}
+  .bx-scroll table.boxscore tr.boxscore-mvp-row .bx-name::after{content:"MVP"; margin-left:8px; font-size:9.5px; font-weight:800; letter-spacing:.08em; color:var(--amber-ink); background:var(--amber); border-radius:4px; padding:2px 5px; vertical-align:1px;}
+  .bx-scroll table.boxscore tbody tr.boxscore-totals{border-top:none;}
+  .bx-scroll table.boxscore tbody tr.boxscore-totals td{background:var(--panel); color:var(--ink); font-weight:800; border-top:1px solid var(--line); border-bottom:none;}
+  .bx-scroll table.boxscore td.bx-shot small{display:block; font-size:10.5px; font-weight:700; color:var(--ink-faint); margin-top:1px;}
+  @media (max-width:640px){
+    .mbx-head{padding:16px 16px 0;}
+    .mbx-board{margin:14px 16px 0; padding:16px 14px; gap:10px;}
+    .mbx-team, .mbx-team.away{flex-direction:column; text-align:center; gap:8px;}
+    .mbx-logo svg, .mbx-logo img{width:44px; height:44px;}
+    .mbx-team-name{font-size:13px;}
+    .mbx-score-nums{font-size:30px; gap:6px;}
+    .mbx-score-sep{font-size:20px;}
+    .mbx-quarters{margin:0 16px; padding:2px 6px 6px;}
+    .mbx-quarters .quarter-scores-table td:first-child{max-width:110px;}
+    .mbx-body{padding:4px 16px 18px;}
+    .mmc-tiles{grid-template-columns:repeat(4, minmax(0,1fr)); width:100%;}
+    .mbx-duel{padding:2px 12px; grid-template-columns:1fr;}
+    .mbx-duel-row:nth-last-child(2){border-bottom:1px solid var(--line-soft);}
+    .mbx-duel-row{grid-template-columns:60px minmax(0,1fr) 60px; gap:10px;}
+    .bx-scroll table.boxscore .bx-name{min-width:120px;}
+  }
   /* Score par quart-temps (retour Discord d'Ariane, relayé par
      l'utilisateur, 2026-09-24, voir boxscoreQuarterScoresHtml) : même table
      .roster-table que le reste, juste des colonnes de quart-temps étroites
@@ -28273,41 +28389,60 @@ function formatPlusMinus(n) {
 // nom (deux joueurs de clubs différents pourraient théoriquement porter le
 // même nom, le générateur de noms n'en garantit pas l'unicité).
 function boxscoreTableHtml(rows, mvpRow) {
-  let html = "<table class='boxscore'><thead><tr><th>Joueur</th><th>Poste</th>";
-  BOXSCORE_COLS.forEach(c => html += `<th>${c[1]}</th>`);
-  // Évaluation (retour utilisateur, 2026-09 : "ajoute les colonnes de stats :
-  // évaluation et +/- [...] dans les box score (match terminé et aussi sur
-  // les live)") : même formule PIR que le MVP du match (statEvaluation),
-  // calculée à la volée pour chaque ligne plutôt que stockée (déjà toutes
-  // les stats brutes nécessaires, en direct comme pour un match déjà joué,
-  // voir statEvaluation/boxscoreMatchMvp). +/- (voir
-  // MatchEngine.applyPlusMinusForPoints côté moteur, déjà présent sur les
-  // lignes en direct — buildBoxScore, spread de p.stats — et sur celles
-  // d'un match déjà joué, voir boxscoreRowsFromMatchLog plus bas) placée
-  // tout à droite, après ÉVAL (retour utilisateur : "mets le +/- tout à
-  // droite des stats [...] après l'évaluation").
-  html += "<th>2PTS</th><th>3PTS</th><th>LF</th><th>ÉVAL</th><th>+/-</th></tr></thead><tbody>";
+  // Refonte visuelle (retour utilisateur, 2026-09-26 : "améliore les
+  // feuilles de stats, elles ne sont pas très belles" puis "respecte plus
+  // l'esprit de la DA des autres pages"). Ordre et TEXTE des cellules
+  // inchangés (les tests lisent children[0] = nom, [2] = MIN, [3] = PTS,
+  // et la ligne .boxscore-totals commence par "Total") : seules des classes
+  // sont ajoutées — groupes de colonnes séparés, zéros estompés, points et
+  // évaluation en avant, +/- coloré, nom figé à gauche au défilement
+  // horizontal. Le MVP n'a plus de "★ " dans le texte : l'étoile est
+  // dessinée en CSS (.boxscore-mvp-row .bx-name::after).
+  const HEAD_TITLES = { MIN: "Minutes", PTS: "Points", REB: "Rebonds", PD: "Passes décisives", INT: "Interceptions", CTR: "Contres", PDB: "Pertes de balle", FTS: "Fautes" };
+  const SEP_BEFORE = new Set(["pts", "stl"]);
+  const pct = (m, a) => a ? `${Math.round(100 * m / a)}%` : "–";
+  const num = (v, extra) => `<td class="${[v ? "" : "bx-zero", extra || ""].filter(Boolean).join(" ")}">${v}</td>`;
+  let html = "<div class='bx-scroll'><table class='boxscore'><thead><tr><th class='bx-name'>Joueur</th><th>Poste</th>";
+  BOXSCORE_COLS.forEach(c => html += `<th${SEP_BEFORE.has(c[0]) ? " class='bx-sep'" : ""} title="${HEAD_TITLES[c[1]] || c[1]}">${c[1]}</th>`);
+  // Évaluation (même formule PIR que le MVP du match, statEvaluation) et
+  // +/- tout à droite (retour utilisateur : "mets le +/- tout à droite des
+  // stats [...] après l'évaluation").
+  html += "<th class='bx-sep' title='Tirs à 2 points'>2PTS</th><th title='Tirs à 3 points'>3PTS</th><th title='Lancers francs'>LF</th>" +
+    "<th class='bx-sep' title='Évaluation'>ÉVAL</th><th title='Écart au score quand le joueur est sur le terrain'>+/-</th></tr></thead><tbody>";
   const totals = { fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
   BOXSCORE_COLS.forEach(c => { totals[c[0]] = 0; });
   rows.forEach(p => {
     const isMvp = !!(mvpRow && p === mvpRow);
-    html += `<tr${isMvp ? ' class="boxscore-mvp-row"' : ""}><td>${isMvp ? "★ " : ""}${escapeHtml(p.name)}</td><td>${POS_SHORT[p.position]}</td>`;
-    BOXSCORE_COLS.forEach(c => { const val = p[c[0]] || 0; html += `<td>${val}</td>`; totals[c[0]] += val; });
-    html += `<td>${p.fgm2}/${p.fga2}</td><td>${p.fgm3}/${p.fga3}</td><td>${p.ftm}/${p.fta}</td><td>${statEvaluation(p)}</td><td>${formatPlusMinus(p.plusMinus)}</td></tr>`;
+    const dnp = !(p.min > 0);
+    const cls = [isMvp ? "boxscore-mvp-row" : "", dnp ? "bx-dnp" : ""].filter(Boolean).join(" ");
+    html += `<tr${cls ? ` class="${cls}"` : ""}><td class="bx-name">${escapeHtml(p.name)}</td><td><span class="bx-pos">${POS_SHORT[p.position] || ""}</span></td>`;
+    BOXSCORE_COLS.forEach(c => {
+      const val = p[c[0]] || 0;
+      totals[c[0]] += val;
+      const extra = [c[0] === "pts" ? "bx-pts" : "", SEP_BEFORE.has(c[0]) ? "bx-sep" : ""].filter(Boolean).join(" ");
+      html += num(val, extra);
+    });
+    const shot = (m, a, sep) => `<td class="bx-shot${a ? "" : " bx-zero"}${sep ? " bx-sep" : ""}">${m || 0}/${a || 0}</td>`;
+    const ev = statEvaluation(p);
+    const pm = Math.round(p.plusMinus || 0);
+    html += shot(p.fgm2, p.fga2, true) + shot(p.fgm3, p.fga3) + shot(p.ftm, p.fta) +
+      `<td class="bx-sep bx-eval${ev < 0 ? " neg" : ""}">${ev}</td>` +
+      `<td class="bx-pm${pm > 0 ? " up" : pm < 0 ? " down" : " bx-zero"}">${formatPlusMinus(p.plusMinus)}</td></tr>`;
     totals.fgm2 += p.fgm2 || 0; totals.fga2 += p.fga2 || 0;
     totals.fgm3 += p.fgm3 || 0; totals.fga3 += p.fga3 || 0;
     totals.ftm += p.ftm || 0; totals.fta += p.fta || 0;
   });
   if (rows.length) {
-    html += `<tr class="boxscore-totals"><td>Total</td><td></td>`;
-    BOXSCORE_COLS.forEach(c => html += `<td>${totals[c[0]]}</td>`);
-    // ÉVAL et +/- volontairement laissées vides sur la ligne de total (voir
-    // plus haut, leur commentaire d'origine) : la somme des évaluations/+/-
-    // individuels d'un effectif n'a pas de lecture utile pour le manager,
-    // contrairement à un vrai total de rebonds/passes/etc.
-    html += `<td>${totals.fgm2}/${totals.fga2}</td><td>${totals.fgm3}/${totals.fga3}</td><td>${totals.ftm}/${totals.fta}</td><td></td><td></td></tr>`;
+    html += `<tr class="boxscore-totals"><td class="bx-name">Total</td><td></td>`;
+    BOXSCORE_COLS.forEach(c => html += `<td class="${[c[0] === "pts" ? "bx-pts" : "", SEP_BEFORE.has(c[0]) ? "bx-sep" : ""].filter(Boolean).join(" ")}">${totals[c[0]]}</td>`);
+    // Pourcentages de réussite sous les tirs de l'équipe ; ÉVAL et +/-
+    // volontairement vides (une somme d'évaluations/+/- individuels n'a pas
+    // de lecture utile pour le manager).
+    const tShot = (m, a, sep) => `<td class="bx-shot${sep ? " bx-sep" : ""}">${m}/${a}<small>${pct(m, a)}</small></td>`;
+    html += tShot(totals.fgm2, totals.fga2, true) + tShot(totals.fgm3, totals.fga3) + tShot(totals.ftm, totals.fta) +
+      `<td class="bx-sep"></td><td></td></tr>`;
   }
-  html += "</tbody></table>";
+  html += "</tbody></table></div>";
   return html;
 }
 
@@ -28367,20 +28502,40 @@ function boxscoreMatchMvp(rowsA, rowsB) {
 // une TRÈS ancienne sauvegarde (ligne de box score persistée avant l'ajout
 // de ces champs additifs) : dans ce cas `player` reste `null` et aucun
 // avatar ne s'affiche, sans casser le reste du bandeau.
+// Taille de l'avatar de la carte MVP (relue par mvp_avatar_test.js).
+const MVP_CALLOUT_AVATAR_SIZE = 56;
 function matchMvpCalloutHtml(mvp, teamForSideA, teamForSideB) {
+  // Refonte visuelle (retour utilisateur, 2026-09-26, voir boxscoreTableHtml) :
+  // la phrase "19 pts, 4 reb, 0 pas, ..." devient une carte — avatar,
+  // identité, 4 chiffres clés en grand (même famille que les tuiles du
+  // tableau de bord), la ligne de tirs en dessous, puis la citation.
+  // Structure attendue par les tests conservée : .mvp-callout contenant
+  // "MVP du match", .mvp-callout-body > .player-avatar, et le PREMIER <b>
+  // de .mvp-callout-body = nom du joueur.
   const r = mvp.row;
-  const bits = [`${r.pts} pts`, `${r.reb} reb`, `${r.ast} pas`, `${r.stl || 0} int`, `${r.blk || 0} ctr`];
-  if (r.tov) bits.push(`${r.tov} bp`);
-  bits.push(`${r.fgm2 || 0}/${r.fga2 || 0} à 2pts`, `${r.fgm3 || 0}/${r.fga3 || 0} à 3pts`);
-  if (r.fta) bits.push(`${r.ftm || 0}/${r.fta || 0} LF`);
-  bits.push(`évaluation ${mvp.evalScore}`);
   const team = mvp.side === "A" ? teamForSideA : teamForSideB;
   const player = team && typeof r.id !== "undefined" ? team.players.find(p => p.id === r.id) : null;
-  const avatar = player ? playerAvatarHtml(player, team, 44) : "";
-  return `<div class="mvp-callout match-mvp-callout"><h4>MVP du match</h4>` +
+  const avatar = player ? playerAvatarHtml(player, team, MVP_CALLOUT_AVATAR_SIZE) : "";
+  const tiles = [
+    [r.pts || 0, "Points"], [r.reb || 0, "Rebonds"], [r.ast || 0, "Passes"], [mvp.evalScore, "Éval."],
+  ].map(([v, l]) => `<span class="mmc-tile"><span class="mmc-val">${v}</span><span class="mmc-lab">${l}</span></span>`).join("");
+  const line = [
+    `<span><em>${r.fgm2 || 0}/${r.fga2 || 0}</em> à 2 pts</span>`,
+    `<span><em>${r.fgm3 || 0}/${r.fga3 || 0}</em> à 3 pts</span>`,
+    `<span><em>${r.ftm || 0}/${r.fta || 0}</em> LF</span>`,
+  ];
+  if (r.stl) line.push(`<span><em>${r.stl}</em> int.</span>`);
+  if (r.blk) line.push(`<span><em>${r.blk}</em> ctr</span>`);
+  if (r.tov) line.push(`<span><em>${r.tov}</em> bp</span>`);
+  if (r.min) line.push(`<span><em>${r.min}</em> min</span>`);
+  const sub = [team ? escapeHtml(team.name) : "", r.position ? escapeHtml(r.position) : ""].filter(Boolean).join(" · ");
+  return `<div class="mvp-callout match-mvp-callout">` +
     `<div class="mvp-callout-body">${avatar}` +
-    `<p><b>${escapeHtml(r.name)}</b> : ${bits.join(", ")}</p></div></div>` +
-    (r.mvpQuote ? `<p class="sub">« ${escapeHtml(r.mvpQuote)} »</p>` : "");
+    `<div class="mmc-id"><h4>MVP du match</h4><b>${escapeHtml(r.name)}</b>${sub ? `<span class="mmc-sub">${sub}</span>` : ""}</div>` +
+    `<div class="mmc-tiles">${tiles}</div></div>` +
+    `<div class="mmc-line">${line.join("")}</div>` +
+    (r.mvpQuote ? `<blockquote class="mmc-quote">« ${escapeHtml(r.mvpQuote)} »</blockquote>` : "") +
+    `</div>`;
 }
 
 function renderBoxScore(side) {
@@ -28460,11 +28615,14 @@ function boxscoreQuarterScoresHtml(quarterScores, nameHome, nameAway) {
   const headers = Array.from({ length: qCount }, (_, i) => i < 4 ? `${i + 1}${i === 0 ? "er" : "e"}` : `Prol. ${i - 3}`);
   const totalHome = quarterScores.home.reduce((a, b) => a + b, 0);
   const totalAway = quarterScores.away.reduce((a, b) => a + b, 0);
-  const rowHtml = (label, scores, total) =>
-    `<tr><td>${escapeHtml(label)}</td>${scores.map(s => `<td>${s}</td>`).join("")}<td><b>${total}</b></td></tr>`;
+  // Quart remporté mis en avant (classe seulement, texte inchangé — voir
+  // boxscore_quarter_scores_test.js qui relit chaque cellule).
+  const rowHtml = (label, scores, other, total, otherTotal) =>
+    `<tr><td>${escapeHtml(label)}</td>${scores.map((s, i) => `<td${s > (other[i] || 0) ? ' class="q-win"' : ""}>${s}</td>`).join("")}` +
+    `<td class="q-total${total > otherTotal ? " q-win" : ""}">${total}</td></tr>`;
   return `<div class="table-scroll"><table class="roster-table quarter-scores-table">` +
-    `<thead><tr><th></th>${headers.map(h => `<th>${h}</th>`).join("")}<th>Total</th></tr></thead>` +
-    `<tbody>${rowHtml(nameHome, quarterScores.home, totalHome)}${rowHtml(nameAway, quarterScores.away, totalAway)}</tbody>` +
+    `<thead><tr><th></th>${headers.map(h => `<th>${h}</th>`).join("")}<th class="q-total">Total</th></tr></thead>` +
+    `<tbody>${rowHtml(nameHome, quarterScores.home, quarterScores.away, totalHome, totalAway)}${rowHtml(nameAway, quarterScores.away, quarterScores.home, totalAway, totalHome)}</tbody>` +
     `</table></div>`;
 }
 
@@ -28488,6 +28646,77 @@ function renderMatchBoxscoreTab(side) {
     : "<p class='training-empty'>Aucune statistique disponible pour cette équipe sur ce match (joueurs partis depuis).</p>";
 }
 
+// En-tête de la feuille de stats (refonte 2026-09-26) : compétition, tour
+// et date du match, recalculés depuis le calendrier (aucune donnée
+// persistée en plus), et score final lu dans league.results / league.cup
+// (repli : somme des quarts-temps, puis somme des points des lignes).
+function matchBoxscoreContext(round, competition, homeIdx, awayIdx, quarterScores, rowsHome, rowsAway) {
+  let kicker = "", when = null, scoreHome = null, scoreAway = null;
+  if (competition === "cup" && league.cup) {
+    const cupRound = league.cup.rounds.find(r => r.index === round);
+    kicker = `Coupe · ${cupRound ? (CUP_STAGE_LABELS[cupRound.name] || cupRound.name) : "Tour " + (round + 1)}`;
+    if (cupRound) {
+      when = scheduledTimeForCupRound(cupRound.dayIndex);
+      const m = cupRound.matches.find(x => x.home === homeIdx && x.away === awayIdx);
+      if (m && m.resolved) { scoreHome = m.scoreHome; scoreAway = m.scoreAway; }
+    }
+  } else {
+    kicker = `Championnat · Journée ${round + 1}`;
+    when = scheduledTimeForChampionshipRound(round);
+    const res = (league.results || []).find(x => x.round === round && x.home === homeIdx && x.away === awayIdx);
+    if (res) { scoreHome = res.scoreHome; scoreAway = res.scoreAway; }
+  }
+  if (scoreHome == null && quarterScores && quarterScores.home) {
+    scoreHome = quarterScores.home.reduce((a, b) => a + b, 0);
+    scoreAway = quarterScores.away.reduce((a, b) => a + b, 0);
+  }
+  if (scoreHome == null) {
+    scoreHome = rowsHome.reduce((a, p) => a + (p.pts || 0), 0);
+    scoreAway = rowsAway.reduce((a, p) => a + (p.pts || 0), 0);
+  }
+  const whenText = when ? `${formatCalendarDayFr(when)} · ${formatCalendarTimeFr(when)}` : "";
+  return { kicker, whenText, scoreHome, scoreAway };
+}
+
+// "Duel" des deux équipes (refonte 2026-09-26) : quelques totaux d'équipe
+// face à face, barre du meilleur des deux en ambre. Calculé sur les lignes
+// affichées (mêmes limites que boxscoreRowsFromMatchLog : un joueur parti
+// depuis n'est plus compté).
+function matchBoxscoreDuelHtml(rowsHome, rowsAway) {
+  if (!rowsHome.length || !rowsAway.length) return "";
+  const sum = (rows, k) => rows.reduce((a, p) => a + (p[k] || 0), 0);
+  const pct = (m, a) => a ? Math.round(100 * m / a) : 0;
+  const side = rows => {
+    const fgm = sum(rows, "fgm2") + sum(rows, "fgm3"), fga = sum(rows, "fga2") + sum(rows, "fga3");
+    return {
+      fg: pct(fgm, fga), fgTxt: `${fgm}/${fga}`,
+      tp: pct(sum(rows, "fgm3"), sum(rows, "fga3")), tpTxt: `${sum(rows, "fgm3")}/${sum(rows, "fga3")}`,
+      ft: pct(sum(rows, "ftm"), sum(rows, "fta")), ftTxt: `${sum(rows, "ftm")}/${sum(rows, "fta")}`,
+      reb: sum(rows, "reb"), ast: sum(rows, "ast"), stl: sum(rows, "stl"), blk: sum(rows, "blk"), tov: sum(rows, "tov"),
+    };
+  };
+  const h = side(rowsHome), a = side(rowsAway);
+  const lines = [
+    ["Tirs", h.fg, a.fg, "%", h.fgTxt, a.fgTxt],
+    ["3 points", h.tp, a.tp, "%", h.tpTxt, a.tpTxt],
+    ["Lancers francs", h.ft, a.ft, "%", h.ftTxt, a.ftTxt],
+    ["Rebonds", h.reb, a.reb], ["Passes décisives", h.ast, a.ast],
+    ["Interceptions", h.stl, a.stl], ["Contres", h.blk, a.blk], ["Pertes de balle", h.tov, a.tov, "", "", "", true],
+  ];
+  const rowsHtml = lines.map(([label, hv, av, unit, hDetail, aDetail, lowerIsBetter]) => {
+    const max = Math.max(hv, av) || 1;
+    const hBest = lowerIsBetter ? hv < av : hv > av;
+    const aBest = lowerIsBetter ? av < hv : av > hv;
+    const val = (v, d, best) => `<span class="mbx-duel-val${best ? " best" : ""}">${v}${unit || ""}${d ? `<small>${d}</small>` : ""}</span>`;
+    return `<div class="mbx-duel-row">` + val(hv, hDetail, hBest) +
+      `<div class="mbx-duel-mid"><span class="mbx-duel-label">${label}</span><div class="mbx-duel-bars">` +
+      `<span class="mbx-duel-track home"><i class="${hBest ? "best" : ""}" style="width:${Math.round(100 * hv / max)}%"></i></span>` +
+      `<span class="mbx-duel-track away"><i class="${aBest ? "best" : ""}" style="width:${Math.round(100 * av / max)}%"></i></span>` +
+      `</div></div>` + val(av, aDetail, aBest) + `</div>`;
+  }).join("");
+  return `<div class="mbx-block"><div class="mbx-block-title">Face à face</div><div class="mbx-duel">${rowsHtml}</div></div>`;
+}
+
 function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
   closeMatchBoxscore();
   const homeTeam = league.teams[homeIdx];
@@ -28496,35 +28725,59 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
     rowsHome: boxscoreRowsFromMatchLog(homeTeam, round, competition),
     rowsAway: boxscoreRowsFromMatchLog(awayTeam, round, competition),
     nameHome: homeTeam.name, nameAway: awayTeam.name,
-    // teamHome/teamAway (retour utilisateur, 2026-09 : "ajoute l'avatar du
-    // joueur MVP sur les box scores") : les VRAIS objets Team, passés à
-    // matchMvpCalloutHtml pour qu'elle retrouve le VRAI Player MVP (son
-    // avatar a besoin de son id ET des couleurs de maillot de son club).
+    // teamHome/teamAway : les VRAIS objets Team, passés à matchMvpCalloutHtml
+    // pour qu'elle retrouve le VRAI Player MVP (avatar : id + couleurs du club).
     teamHome: homeTeam, teamAway: awayTeam,
-    // Score par quart-temps (voir matchQuarterScoresFromTeam ci-dessus) :
-    // cherché côté domicile D'ABORD puis extérieur en repli (les deux
-    // devraient toujours porter la même valeur pour un match réellement
-    // joué, voir recordMatchStatsForTeam côté moteur — le repli couvre
-    // seulement le cas où un effectif n'a plus aucun joueur de l'époque).
+    // Score par quart-temps (voir matchQuarterScoresFromTeam) : domicile
+    // d'abord, extérieur en repli (effectif sans plus aucun joueur de l'époque).
     quarterScores: matchQuarterScoresFromTeam(homeTeam, round, competition) || matchQuarterScoresFromTeam(awayTeam, round, competition),
   };
+  const st = matchBoxscoreState;
+  const ctx = matchBoxscoreContext(round, competition, homeIdx, awayIdx, st.quarterScores, st.rowsHome, st.rowsAway);
+  const homeWon = ctx.scoreHome > ctx.scoreAway, awayWon = ctx.scoreAway > ctx.scoreHome;
+  // Résultat vu de MON club, seulement s'il a joué ce match.
+  let myResult = "";
+  if (homeIdx === myTeamIndex || awayIdx === myTeamIndex) {
+    const iWon = homeIdx === myTeamIndex ? homeWon : awayWon;
+    const iLost = homeIdx === myTeamIndex ? awayWon : homeWon;
+    myResult = iWon ? `<span class="mbx-result win">Victoire</span>` : iLost ? `<span class="mbx-result loss">Défaite</span>` : "";
+  }
+  const teamSide = (team, where, won, cls) =>
+    `<div class="mbx-team ${cls}${won ? " won" : ""}">` +
+    `<span class="mbx-logo">${teamLogoHtml(team, 56)}</span>` +
+    `<span class="mbx-team-txt"><span class="mbx-team-name">${escapeHtml(team.name)}</span><span class="mbx-team-where">${where}</span></span></div>`;
   const overlay = document.createElement("div");
   overlay.className = "upgrade-confirm-overlay match-boxscore-overlay";
   overlay.id = "matchBoxscoreOverlay";
-  overlay.innerHTML = `<div class="upgrade-confirm-box match-boxscore-box">` +
-    `<h3>Feuille de statistiques</h3>` +
+  overlay.innerHTML = `<div class="upgrade-confirm-box match-boxscore-box" role="dialog" aria-modal="true" aria-labelledby="mbxTitle">` +
+    `<div class="mbx-head">` +
+    `<div class="mbx-head-txt"><span class="mbx-kicker">${escapeHtml(ctx.kicker)}${ctx.whenText ? ` · ${escapeHtml(ctx.whenText)}` : ""}</span>` +
+    `<h3 id="mbxTitle">Feuille de statistiques</h3></div>` +
+    `<button type="button" class="mbx-close" id="matchBoxscoreCloseX" aria-label="Fermer">` +
+    `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` +
+    `</div>` +
+    `<div class="mbx-board">` +
+    teamSide(homeTeam, "Domicile", homeWon, "home") +
+    `<div class="mbx-score"><div class="mbx-score-nums"><span class="${homeWon ? "hi" : "lo"}">${ctx.scoreHome}</span><span class="mbx-score-sep">–</span><span class="${awayWon ? "hi" : "lo"}">${ctx.scoreAway}</span></div>` +
+    `${myResult || `<span class="mbx-result">Terminé</span>`}</div>` +
+    teamSide(awayTeam, "Extérieur", awayWon, "away") +
+    `</div>` +
+    `<div id="matchBoxscoreQuartersHolder" class="mbx-quarters">${boxscoreQuarterScoresHtml(st.quarterScores, homeTeam.name, awayTeam.name)}</div>` +
+    `<div class="mbx-body">` +
     `<div id="matchBoxscoreMvpHolder"></div>` +
-    `<div id="matchBoxscoreQuartersHolder">${boxscoreQuarterScoresHtml(matchBoxscoreState.quarterScores, homeTeam.name, awayTeam.name)}</div>` +
-    `<div class="boxscore-toggle">` +
+    matchBoxscoreDuelHtml(st.rowsHome, st.rowsAway) +
+    `<div class="mbx-block"><div class="mbx-block-title">Statistiques individuelles</div>` +
+    `<div class="boxscore-toggle mbx-tabs">` +
     `<button type="button" class="bs-tab active" data-team="A">${escapeHtml(homeTeam.name)}</button>` +
     `<button type="button" class="bs-tab" data-team="B">${escapeHtml(awayTeam.name)}</button>` +
     `</div>` +
-    `<div id="matchBoxscoreHolder"></div>` +
-    `<button type="button" class="upgrade-confirm-cancel-btn" id="matchBoxscoreCloseBtn" style="margin-top:14px; width:100%;">Fermer</button>` +
-    `</div>`;
+    `<div id="matchBoxscoreHolder"></div></div>` +
+    `<button type="button" class="upgrade-confirm-cancel-btn mbx-close-btn" id="matchBoxscoreCloseBtn">Fermer</button>` +
+    `</div></div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener("click", (e) => { if (e.target === overlay) closeMatchBoxscore(); });
   document.getElementById("matchBoxscoreCloseBtn").addEventListener("click", closeMatchBoxscore);
+  document.getElementById("matchBoxscoreCloseX").addEventListener("click", closeMatchBoxscore);
   overlay.querySelectorAll(".bs-tab").forEach(b => b.addEventListener("click", () => renderMatchBoxscoreTab(b.dataset.team)));
   renderMatchBoxscoreTab("A");
 }

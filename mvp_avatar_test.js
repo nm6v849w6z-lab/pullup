@@ -76,7 +76,7 @@ function normalizeAvatarHtml(s) {
       const mvp = boxscoreMatchMvp(state.rowsHome, state.rowsAway);
       const team = mvp.side === "A" ? state.teamHome : state.teamAway;
       const player = team.players.find(p => p.id === mvp.row.id);
-      const rawHtml = playerAvatarHtml(player, team, 44);
+      const rawHtml = playerAvatarHtml(player, team, MVP_CALLOUT_AVATAR_SIZE);
       // Round-trip par le DOM (même sérialisation que .outerHTML côté
       // affiché) : sinon une balise SVG auto-fermante dans la chaîne brute
       // ne correspond jamais textuellement à sa forme restituée par le DOM,
@@ -105,7 +105,7 @@ function normalizeAvatarHtml(s) {
       const mvp = boxscoreMatchMvp(state.rowsHome, state.rowsAway);
       const team = mvp.side === "A" ? state.teamHome : state.teamAway;
       const other = team.players.find(p => p.id !== mvp.row.id);
-      return other ? playerAvatarHtml(other, team, 44) : null;
+      return other ? playerAvatarHtml(other, team, MVP_CALLOUT_AVATAR_SIZE) : null;
     })()
   `);
   if (otherPlayerAvatarHtml && normalizeAvatarHtml(avatarEl.outerHTML) === normalizeAvatarHtml(otherPlayerAvatarHtml)) {
@@ -160,7 +160,7 @@ function normalizeAvatarHtml(s) {
       const mvp = boxscoreMatchMvp(matchResult.boxScoreA, matchResult.boxScoreB);
       const team = mvp.side === "A" ? teamA : teamB;
       const player = team.players.find(p => p.id === mvp.row.id);
-      const rawHtml = playerAvatarHtml(player, team, 44);
+      const rawHtml = playerAvatarHtml(player, team, MVP_CALLOUT_AVATAR_SIZE);
       // Round-trip par le DOM (même raison que la partie 1 ci-dessus).
       const tmp = document.createElement("div");
       tmp.innerHTML = rawHtml;
