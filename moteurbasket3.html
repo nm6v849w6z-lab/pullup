@@ -35,6 +35,17 @@
 <meta name="apple-mobile-web-app-title" content="Hoop Manager">
 <link rel="apple-touch-icon" href="/assets/mobile/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/mobile/favicon-32.png">
+<script>
+  /* Thème (Paramètres, voir hmThemeApply plus bas) appliqué AVANT le premier
+     rendu pour éviter un flash sombre → clair au chargement. */
+  (function () {
+    try {
+      var pref = localStorage.getItem("hm-theme") || "dark";
+      var light = pref === "light" || (pref === "system" && window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches);
+      document.documentElement.setAttribute("data-theme", light ? "light" : "dark");
+    } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+  })();
+</script>
 <style>
   :root{
     --bg:#0d131d; --panel:#141c29; --panel-2:#1a2433; --line:#26334a; --line-soft:#1e2939;
@@ -5156,6 +5167,160 @@
      pages. */
   #liveSection.hm-live-on .playback-controls{display:none;}
   body:has(#liveSection.hm-live-on:not(.hidden)) #topbarLiveStrip{display:none !important;}
+  /* =====================================================================
+     THÈME CLAIR (2026-09-26, retour utilisateur : « travaille sur une
+     version claire du jeu », choix dans Paramètres à côté d'« Identité du
+     club » sur le tableau de bord, voir hmThemeApply). Tout est scopé sous
+     html[data-theme="light"] : le thème sombre d'origine reste la base,
+     intact. Même famille marine + ambre, sur fond papier : les tokens sont
+     redéfinis ici, puis les rares couleurs sombres écrites en dur sont
+     reprises une à une (sections suivantes).
+     ===================================================================== */
+  html[data-theme="light"]{color-scheme:light;}
+  html[data-theme="light"]:root{
+    --bg:#eef1f6; --panel:#ffffff; --panel-2:#f3f5f9; --line:#d8dfe9; --line-soft:#e6ebf2;
+    --ink:#142033; --ink-dim:#4d5b71; --ink-faint:#7a869a;
+    --amber:#d9800b; --amber-ink:#ffffff;
+    --teamA:#1b9a86; --teamA-ink:#ffffff; --teamA-soft:#d9f2ed;
+    --teamB:#d2563b; --teamB-ink:#ffffff; --teamB-soft:#fbe3dc;
+    --court-zone-inside:#b06a22; --court-zone-three:#2f78d6;
+    --danger:#cf4b31; --ok:#17917d;
+    --attr-tier-red:#e5322b; --attr-tier-amber:#e98500;
+  }
+  html[data-theme="light"] .hm-dash{
+    --bg:#eef1f6; --side:#ffffff; --surface:#ffffff; --card:#f3f5f9;
+    --border:#dbe2ec; --border-strong:#bfc9d8;
+    --text:#142033; --text-2:#34425a; --muted:#5d6b80; --faint:#7a869a;
+    --accent:#d9800b; --accent-ink:#ffffff; --bad:#d23f45;
+  }
+  html[data-theme="light"] .hm-feed{
+    --hm-surface:#ffffff; --hm-card:#f3f5f9; --hm-border:#dbe2ec;
+    --hm-text:#142033; --hm-muted:#5d6b80; --hm-faint:#7a869a; --hm-accent:#d9800b;
+  }
+  html[data-theme="light"] #effectifSection, html[data-theme="light"] #teamDetailSection{
+    --eff-row:#f6f8fb; --eff-row-2:#ffffff; --eff-sep:#e3e8f0; --eff-track:#e3e8f0;
+    --eff-pos-m-bg:rgba(59,130,246,.12); --eff-pos-m:#2563c9;
+    --eff-pos-a-bg:rgba(20,184,166,.13); --eff-pos-a:#0f8a79;
+    --eff-pos-as-bg:rgba(139,92,246,.13); --eff-pos-as:#6d45d6;
+    --eff-pos-af-bg:rgba(217,128,11,.14); --eff-pos-af:#b56607;
+    --eff-pos-p-bg:rgba(219,39,119,.11); --eff-pos-p:#c02675;
+  }
+  html[data-theme="light"] .eco-page{--eco-in:#12906f; --eco-out:#d24d33; --eco-in-bg:rgba(18,144,111,.1); --eco-out-bg:rgba(210,77,51,.1);}
+  html[data-theme="light"] .stf-page{--stf-lead:#2a6fce; --stf-lead-bg:#e3eefc;}
+  html[data-theme="light"] #standingsSection{--zone-bar:#c99a06;}
+  html[data-theme="light"] #standingsSection .neg{color:#cf4b31;}
+  /* Ombres : plus légères sur fond clair. */
+  html[data-theme="light"] .lg-panel{box-shadow:0 10px 26px -18px rgba(20,32,51,.25);}
+
+  /* ---- Thème clair : couleurs sombres écrites en dur, reprises ---- */
+  html[data-theme="light"] .hm-hero, html[data-theme="light"] .compare-hero{background:#ffffff; border-color:#dbe2ec; box-shadow:0 14px 34px -24px rgba(20,32,51,.35);}
+  html[data-theme="light"] .hm-hero__split, html[data-theme="light"] .compare-hero__split{background:#f8f0e4;}
+  html[data-theme="light"] .hm-hero__court{opacity:.28;}
+  html[data-theme="light"] .compare-duel-score{background:#f3f5f9; border-color:#dbe2ec;}
+  html[data-theme="light"] .hm-side{border-right-color:#dbe2ec;}
+  html[data-theme="light"] .hm-side__link:hover, html[data-theme="light"] .hm-btn--ghost:hover{background:#eef2f7;}
+  html[data-theme="light"] .hm-btn--primary:hover{background:#c47208;}
+  html[data-theme="light"] .hm-btn--outline:hover{background:#fdf1e1;}
+  html[data-theme="light"] .hm-task--urgent, html[data-theme="light"] .hm-feed__item.is-alert{background:#fdeeee; border-color:#f3c4c8;}
+  html[data-theme="light"] .hm-badge--warn{color:#8a4f00; background:#fdebd1;}
+  html[data-theme="light"] .hm-badge--info{color:#1f56a8; background:#e2ecfb;}
+  html[data-theme="light"] .hm-pulse__link:hover .hm-gauge{background:#e9eef5;}
+  html[data-theme="light"] .hm-chips span{background:#eef2f7;}
+  html[data-theme="light"] .hm-bar__track{background:#e3e8f0;}
+  html[data-theme="light"] .hm-slot{border-color:#b9c3d3;}
+  html[data-theme="light"] .hm-feed__filter{border-color:#d3dbe6; color:#4d5b71;}
+  html[data-theme="light"] .hm-feed__filter:hover{border-color:#aab6c8;}
+  html[data-theme="light"] .hm-feed__filter.is-active{color:#ffffff;}
+  html[data-theme="light"] .hm-feed__action:hover{color:#b56607;}
+  html[data-theme="light"] .hm-gauge__track{stroke:#e3e8f0;}
+  /* Ordres : terrain de la feuille de match en parquet clair. */
+  html[data-theme="light"] .lineup-court{background:radial-gradient(ellipse 70% 45% at 50% 9%, rgba(217,128,11,.12), transparent 65%), linear-gradient(180deg, #fbf6ee, #f1e7d7);}
+  html[data-theme="light"] .lineup-court .ct-line{stroke:rgba(180,104,14,.45);}
+  html[data-theme="light"] .lineup-court .ct-fill{fill:rgba(217,128,11,.07);}
+  html[data-theme="light"] .court-marker .cm-pos{background:rgba(255,255,255,.95);}
+  html[data-theme="light"] .court-marker select{background:rgba(255,255,255,.96);}
+  html[data-theme="light"] .pdp-court-marker{border-color:#c3ccda;}
+  /* Staff */
+  html[data-theme="light"] .stf-slot{border-color:#b9c3d3;}
+  html[data-theme="light"] .stf-ghost-btn, html[data-theme="light"] .stf-stepper{border-color:#cbd4e1;}
+  html[data-theme="light"] .stf-level:hover:not(:disabled){border-color:#aab6c8;}
+  html[data-theme="light"] .stf-level.is-selected{background:#fdf1e1;}
+  /* Ligue */
+  html[data-theme="light"] .lg-you{background:#fdebd1;}
+  html[data-theme="light"] .lg-mvp{background:#fffaf0; border-color:#efd3a4;}
+  html[data-theme="light"] .lg-chips div{background:#faf3e6;}
+  html[data-theme="light"] .lg-shot-bar{background:#efe6d4;}
+  html[data-theme="light"] .lg-shot > span:first-child, html[data-theme="light"] .lg-shot-p{color:#8a7f63;}
+  html[data-theme="light"] .lg-quote{color:#5a5140;}
+  html[data-theme="light"] .lg-more:hover{background:#e9eef5;}
+  /* Scouting Pro */
+  html[data-theme="light"] .sp2-hero-stats{background:rgba(255,255,255,.85);}
+  /* Économie */
+  html[data-theme="light"] .eco-alert{background:#fdf3e2; border-color:#efd3a4; color:#7a4a06;}
+  html[data-theme="light"] .eco-alert.ok{color:#0f6f5c;}
+  /* Salle : le bandeau reste une vue de soirée (image sombre, texte clair) ;
+     seules les astuces et cartes autour passent en clair. */
+  html[data-theme="light"] .sl-tip--good, html[data-theme="light"] .sl-tip--info{color:#0f6f5c;}
+  html[data-theme="light"] .sl-tip--info b{color:#0b4f42;}
+  html[data-theme="light"] .sl-tip--warn{color:#8a4f00;}
+  html[data-theme="light"] #salleSection .facility-card.sl-fac:hover{border-color:#aab6c8;}
+  /* Effectif / fiche équipe */
+  html[data-theme="light"] .eff-seg-btn.active{background:#142033; color:#ffffff;}
+  html[data-theme="light"] .eff-pip{background:#dfe5ee;}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:hover td{background:#eef2f8;}
+  html[data-theme="light"] .eff-menu-btn:hover, html[data-theme="light"] .eff-menu-btn[aria-expanded="true"], html[data-theme="light"] .eff-menu-item:hover{background:#eef2f7;}
+  html[data-theme="light"] .eff-menu{background:#ffffff; border-color:#d8dfe9; box-shadow:0 12px 32px rgba(20,32,51,.18);}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-menu .market-price-input{border-color:#d8dfe9;}
+  html[data-theme="light"] .eff-family span{border-bottom-color:#dfe5ee; color:#34425a;}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-caracs td, html[data-theme="light"] #teamDetailSection table.tde-stats td{border-bottom-color:#e6ebf2;}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-caracs tbody tr:hover td, html[data-theme="light"] #teamDetailSection table.tde-stats tbody tr:hover td{background:#f1f4f9;}
+  /* Fenêtres et superpositions : voile un peu moins opaque. */
+  html[data-theme="light"] .upgrade-confirm-overlay, html[data-theme="light"] .tour-center-overlay{background:rgba(20,32,51,.45);}
+
+  /* Palier vert des caractéristiques / jauges (#3ecf67, trop pâle sur fond
+     blanc) : vert plus soutenu. Les couleurs posées en style inline par le
+     JS (moraleGaugeColor…) sont rattrapées par sélecteur d'attribut. */
+  html[data-theme="light"] .attr-cell.attr-tier-green .attr-val, html[data-theme="light"] .pdp-overall-num.attr-tier-green,
+  html[data-theme="light"] .pdp-attr-value.attr-tier-green, html[data-theme="light"] .pdp2-legend-lbl .attr-tier-green,
+  html[data-theme="light"] .compare-profile-tile .cpt-val.attr-tier-green, html[data-theme="light"] .compare-row .cmp-val.attr-tier-green,
+  html[data-theme="light"] .ac-attr-row b.attr-tier-green{color:#1c9447;}
+  html[data-theme="light"] .attr-cell.attr-tier-green .attr-bar-fill, html[data-theme="light"] .pdp2-legend-bar .g{background:#23a653;}
+  html[data-theme="light"] [style^="color: rgb(62, 207, 103)"], html[data-theme="light"] [style*="; color: rgb(62, 207, 103)"],
+  html[data-theme="light"] [style^="color:#3ecf67"], html[data-theme="light"] [style*=";color:#3ecf67"]{color:#1c9447 !important;}
+  html[data-theme="light"] [stroke="#3ecf67"]{stroke:#23a653;}
+
+  /* Logo Hoop Manager au même orange que l'accent clair (retour utilisateur :
+     « modifie la couleur du logo pour qu'il soit plus foncé [...] on devrait
+     avoir la même couleur pour le logo ») : variante recolorée du PNG. */
+  html[data-theme="light"] .sidebar-brand .brand-logo-img{content:url("/assets/brand/logo-hoop-manager-clair.png");}
+
+  html[data-theme="light"] .stf-stars .off{color:#cdd5e0;}
+  html[data-theme="light"] .stf-stars--all .off{color:#b9c3d3;}
+  html[data-theme="light"] .mk-btn--primary, html[data-theme="light"] .mk-poscell.on, html[data-theme="light"] .mk-poscell.on .n, html[data-theme="light"] .hm-feed__unread{color:#ffffff;}
+
+  /* Mobile (assets/mobile/mobile.css) : barre d'onglets du bas. */
+  html[data-theme="light"] .m-tabbar{background:rgba(255,255,255,.96); box-shadow:0 -6px 18px -12px rgba(20,32,51,.3);}
+
+  /* ---- Paramètres (bouton du tableau de bord + fenêtre) ---- */
+  .hm-head__settings-btn{width:44px; padding:0; display:inline-flex; align-items:center; justify-content:center;}
+  .hm-head__settings-btn svg{width:20px; height:20px;}
+  .settings-modal-box{max-width:460px;}
+  .settings-modal-box h2{margin:0 0 4px; font-size:20px; text-transform:uppercase; letter-spacing:.5px;}
+  .settings-modal-box .settings-sub{margin:0 0 18px; color:var(--ink-dim); font-size:13.5px;}
+  .settings-row-label{font-size:11.5px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--ink-faint); margin-bottom:8px;}
+  .settings-theme{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px;}
+  .settings-theme button{display:flex; flex-direction:column; align-items:center; gap:8px; padding:12px 8px 10px; border-radius:12px; border:1.5px solid var(--line); background:var(--panel-2); color:var(--ink); font:600 13.5px inherit; font-family:inherit; cursor:pointer;}
+  .settings-theme button:hover{border-color:var(--ink-faint);}
+  .settings-theme button[aria-pressed="true"]{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
+  .settings-theme-swatch{width:100%; height:46px; border-radius:8px; border:1px solid rgba(127,127,127,.3); display:grid; grid-template-columns:1fr 2.2fr; overflow:hidden;}
+  .settings-theme-swatch i{display:block;}
+  .settings-theme-swatch b{display:flex; flex-direction:column; gap:5px; padding:8px 7px;}
+  .settings-theme-swatch b span{display:block; height:6px; border-radius:3px;}
+  .settings-theme-swatch.is-dark{background:#0f1728;} .settings-theme-swatch.is-dark i{background:#0a101c;} .settings-theme-swatch.is-dark span{background:#26334a;} .settings-theme-swatch.is-dark span:first-child{background:#f0a23c; width:55%;}
+  .settings-theme-swatch.is-light{background:#ffffff;} .settings-theme-swatch.is-light i{background:#eef1f6;} .settings-theme-swatch.is-light span{background:#d8dfe9;} .settings-theme-swatch.is-light span:first-child{background:#d9800b; width:55%;}
+  .settings-theme-swatch.is-system{background:linear-gradient(135deg,#0f1728 50%,#ffffff 50%);}
+  .settings-theme-swatch.is-system i{background:transparent;}
+  .settings-note{margin:12px 0 0; font-size:12.5px; color:var(--ink-faint);}
 </style>
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
@@ -28177,7 +28342,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20260926-6";
+const HM_LIVE_ASSET_VERSION = "20260926-7";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -30332,6 +30497,7 @@ function dashRenderHeader(data) {
       <div class="hm-head__meta">${dashEsc(club.division)} · Saison ${dashEsc(club.season)} · Semaine ${dashEsc(club.week)}</div>
     </div>
     <button type="button" class="hm-btn hm-btn--ghost hm-head__identity-btn" data-dash-href="/parametres/identite">Identité du club</button>
+    <button type="button" class="hm-btn hm-btn--ghost hm-head__settings-btn" data-dash-href="/parametres" aria-label="Paramètres" title="Paramètres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </header>`;
 }
 
@@ -30418,7 +30584,7 @@ function dashGauge(value, label, sub) {
   const valueColor = moraleGaugeColor(value);
   return `<div class="hm-gauge">
     <div class="hm-gauge__ring">
-      <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true"><circle cx="46" cy="46" r="38" fill="none" stroke="#24314B" stroke-width="8"/><circle cx="46" cy="46" r="38" fill="none" stroke="${dashEsc(valueColor)}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dashGaugeDash(value, 38)}" transform="rotate(-90 46 46)"/></svg>
+      <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true"><circle class="hm-gauge__track" cx="46" cy="46" r="38" fill="none" stroke="#24314B" stroke-width="8"/><circle cx="46" cy="46" r="38" fill="none" stroke="${dashEsc(valueColor)}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dashGaugeDash(value, 38)}" transform="rotate(-90 46 46)"/></svg>
       <div class="hm-gauge__value" style="color:${dashEsc(valueColor)}">${dashEsc(Math.round(value))}</div>
     </div>
     <div class="hm-gauge__label"><div class="hm-strong">${dashEsc(label)}</div><div class="hm-muted">${dashEsc(sub)}</div></div>
@@ -31012,6 +31178,10 @@ function dashResolveNavigate(href) {
     TAB_HANDLERS[DASH_ROUTE_TO_TAB[href]]();
     return;
   }
+  if (href === "/parametres") {
+    showSettingsModal();
+    return;
+  }
   if (href === "/parametres/identite") {
     // Accès pragmatique à la modale d'identité existante (voir
     // DEV_NOTES.md point 10, "carte Identité du club retirée du tableau de
@@ -31281,6 +31451,80 @@ function resizeImageFileToDataUrl(file, maxSize) {
 function closeClubIdentityModal() {
   const existing = document.getElementById("clubIdentityModalOverlay");
   if (existing) existing.remove();
+}
+
+// ---------------------------------------------------------------------
+// Paramètres (2026-09-26, retour utilisateur : « travaille sur une version
+// claire du jeu », « un petit bouton paramètre à côté d'identité du club
+// dans le tableau de bord »). Pour l'instant : le thème (Sombre / Clair /
+// Comme l'appareil), mémorisé dans CE navigateur (préférence d'affichage,
+// pas une donnée de jeu). Appliqué avant le premier rendu par le petit
+// script en tête de page ; hmThemeApply le réapplique ici.
+// ---------------------------------------------------------------------
+const HM_THEME_KEY = "hm-theme";
+function hmThemeGetPref() {
+  try { const v = window.localStorage.getItem(HM_THEME_KEY); return v === "light" || v === "system" ? v : "dark"; }
+  catch (e) { return "dark"; }
+}
+function hmThemeResolved(pref) {
+  if (pref === "system") {
+    try { return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"; }
+    catch (e) { return "dark"; }
+  }
+  return pref === "light" ? "light" : "dark";
+}
+function hmThemeApply(pref) {
+  const theme = hmThemeResolved(pref || hmThemeGetPref());
+  document.documentElement.setAttribute("data-theme", theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", theme === "light" ? "#ffffff" : "#0f1728");
+  return theme;
+}
+function hmThemeSetPref(pref) {
+  try { window.localStorage.setItem(HM_THEME_KEY, pref); } catch (e) { /* navigation privée : pour cette visite seulement */ }
+  hmThemeApply(pref);
+}
+try {
+  if (window.matchMedia) {
+    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = () => { if (hmThemeGetPref() === "system") hmThemeApply("system"); };
+    if (mq.addEventListener) mq.addEventListener("change", onChange); else if (mq.addListener) mq.addListener(onChange);
+  }
+} catch (e) { /* rien */ }
+hmThemeApply();
+
+function closeSettingsModal() {
+  const existing = document.getElementById("settingsModalOverlay");
+  if (existing) existing.remove();
+}
+function showSettingsModal() {
+  closeSettingsModal();
+  const pref = hmThemeGetPref();
+  const opt = (value, label, cls) =>
+    `<button type="button" data-theme-choice="${value}" aria-pressed="${pref === value}">` +
+    `<span class="settings-theme-swatch ${cls}"><i></i><b><span></span><span></span><span></span></b></span>${label}</button>`;
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay settings-modal-overlay";
+  overlay.id = "settingsModalOverlay";
+  overlay.innerHTML = `<div class="upgrade-confirm-box settings-modal-box" role="dialog" aria-labelledby="settingsModalTitle">` +
+    `<h2 id="settingsModalTitle">Paramètres</h2>` +
+    `<p class="settings-sub">Réglages d'affichage de ce navigateur.</p>` +
+    `<div class="settings-row-label">Thème</div>` +
+    `<div class="settings-theme" id="settingsThemeChoices">` +
+    opt("dark", "Sombre", "is-dark") + opt("light", "Clair", "is-light") + opt("system", "Comme l'appareil", "is-system") +
+    `</div>` +
+    `<p class="settings-note">« Comme l'appareil » suit le mode clair ou sombre de ton ordinateur ou de ton téléphone.</p>` +
+    `<button type="button" class="upgrade-confirm-cancel-btn" id="settingsModalCloseBtn" style="margin-top:18px; width:100%;">Fermer</button>` +
+    `</div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) { closeSettingsModal(); return; }
+    const b = e.target.closest("[data-theme-choice]");
+    if (!b) return;
+    hmThemeSetPref(b.dataset.themeChoice);
+    overlay.querySelectorAll("[data-theme-choice]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  });
+  document.getElementById("settingsModalCloseBtn").addEventListener("click", closeSettingsModal);
 }
 
 function showClubIdentityModal() {
@@ -33525,7 +33769,7 @@ function ecoPayrollChartHtml(rec) {
   ).join("");
   return `<div class="eco-donut-row"><svg width="84" height="84" viewBox="0 0 100 100" role="img" aria-label="Joueurs : ${playersPct} % de la masse salariale">` +
     `<g transform="rotate(-90 50 50)" fill="none" stroke-width="14">${segs}</g>` +
-    `<text x="50" y="55" text-anchor="middle" font-size="16" font-weight="700" fill="#eef2f7">${playersPct} %</text></svg>` +
+    `<text x="50" y="55" text-anchor="middle" font-size="16" font-weight="700" fill="#eef2f7" style="fill:var(--ink)">${playersPct} %</text></svg>` +
     `<div class="eco-legend">${legend}</div></div>`;
 }
 

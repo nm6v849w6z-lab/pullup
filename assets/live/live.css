@@ -315,3 +315,27 @@
   .hm-live .zp{text-align:left}
 }
 @media (prefers-reduced-motion:reduce){.hm-live *{animation:none!important;transition:none!important}}
+
+/* ---------- Thème clair (Paramètres du jeu, html[data-theme="light"]) ---------- */
+html[data-theme="light"] .hm-live{
+  --bg:#eef1f6; --panel:#ffffff; --panel2:#f3f5f9; --line:#dbe2ec; --line-strong:#bfc9d8;
+  --text:#142033; --text2:#34425a; --muted:#5d6b80;
+  --accent:#d9800b; --accent-ink:#ffffff; --good:#12906f; --danger:#d23f45; --live:#d2563b;
+  --court:#f7f1e7; --courtLine:rgba(180,104,14,.4);
+  color-scheme:light;
+}
+html[data-theme="light"] .hm-live .board{background:#ffffff;border-color:#dbe2ec;box-shadow:0 14px 34px -24px rgba(20,32,51,.35)}
+html[data-theme="light"] .hm-live .board-split{background:#f8f0e4}
+html[data-theme="light"] .hm-live .board-court{opacity:.26}
+html[data-theme="light"] .hm-live .board-bottom{background:rgba(243,245,249,.85);border-top-color:#e3e8f0}
+html[data-theme="light"] .hm-live .tname.mine::after{background:#fdebd1;color:#8a4f00}
+html[data-theme="light"] .hm-live .chip{background:#eef2f7}
+html[data-theme="light"] .hm-live .chip.pts{color:#ffffff}
+html[data-theme="light"] .hm-live .chip.foul,html[data-theme="light"] .hm-live .chip.turnover{color:#8a4f00;background:#fdebd1}
+html[data-theme="light"] .hm-live .chip.timeout{color:#1f56a8;background:#e2ecfb}
+html[data-theme="light"] .hm-live .ev.sep span{background:#fdf1e1}
+html[data-theme="light"] .hm-live .zbar,html[data-theme="light"] .hm-live .cbar{background:#e3e8f0}
+html[data-theme="light"] .hm-live .box tbody tr:not(.grp):not(.total):hover td{background:rgba(20,32,51,.03)}
+html[data-theme="light"] .hm-live .feed:hover::-webkit-scrollbar-thumb{background:#d9a35a}
+html[data-theme="light"] .hm-live .toast{box-shadow:0 10px 30px rgba(20,32,51,.18)}
+html[data-theme="light"] .hm-live dialog::backdrop{background:rgba(20,32,51,.45)}

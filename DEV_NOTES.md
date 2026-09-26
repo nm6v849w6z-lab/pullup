@@ -20,6 +20,34 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Version claire du
+  jeu + bouton Paramètres** — retours utilisateur : "travaille sur une
+  version claire du jeu", "un petit bouton paramètre à côté d'identité du
+  club dans le tableau de bord", puis "modifie la couleur du logo pour
+  qu'il soit plus foncé [...] la même couleur pour le logo" (logo Hoop
+  Manager). Bouton ⚙ (.hm-head__settings-btn, route /parametres) → fenêtre
+  Paramètres (showSettingsModal) : Sombre / Clair / Comme l'appareil,
+  mémorisé en localStorage "hm-theme" (préférence du navigateur), appliqué
+  avant le premier rendu par un petit script en tête de page, suit le mode
+  de l'appareil en « Comme l'appareil ». Thème : html[data-theme="light"]
+  (bloc CSS en fin de feuille) — tokens :root, .hm-dash, .hm-feed, Effectif,
+  Économie, Staff, Ligue redéfinis ; couleurs sombres en dur reprises
+  (bandeau Prochain match et comparateur en clair, terrain des Ordres en
+  parquet clair, tâches urgentes, badges, jauges, étoiles du Staff, menus
+  Effectif, barre d'onglets mobile, vert des paliers #3ecf67 → #1c9447) ;
+  la bannière de la Salle et les émissions restent en vue de soirée.
+  Logo : assets/brand/logo-hoop-manager-clair.png (même dessin recoloré à
+  l'orange #d9800b de l'accent clair). Page live : variante claire dans
+  assets/live/live.css, couleurs de maillot blanches/jaunes foncées en
+  clair (live-view.js), HM_LIVE_ASSET_VERSION 20260926-7. Test :
+  light_theme_settings_test.js (nouveau) + dashboard_e2e, dashboard_feed,
+  tabs, onboarding_tour, attr_color_scheme_everywhere, radar_chart_colors,
+  economie_redesign, mobile_pwa, live_view_game_style, effectif_redesign,
+  sidebar_logo verts. Toutes les pages vues dans Chromium en clair (1440 et
+  390 px) ; thème sombre inchangé. À surveiller : écrans rares pas encore
+  vus en clair (fin de saison, rattrapage, interviews, Scouting Pro).
+  Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligue et
   Calendrier : logos un peu plus petits sur PC** — commentaire d'un joueur
   relayé : "sur PC les logos je les réduirais un poil". Classement

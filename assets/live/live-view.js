@@ -142,10 +142,16 @@ function luminance(rgb) {
   const f = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
   return 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
 }
-function readable(hex) {
+function readable(hex, light) {
   const rgb = hexRgb(hex);
   if (!rgb) return null;
   const L = luminance(rgb);
+  if (light) {
+    // Thème clair : c'est le maillot blanc ou jaune qui disparaît sur le fond.
+    if (L <= 0.45) return hex;
+    const k = L > 0.8 ? 0.55 : 0.35;
+    return "#" + rgb.map(c => Math.round(c * (1 - k)).toString(16).padStart(2, "0")).join("");
+  }
   if (L >= 0.16) return hex;
   const k = L < 0.03 ? 0.6 : 0.38;
   const mix = rgb.map(c => Math.round(c + (255 - c) * k));
@@ -235,10 +241,13 @@ export function createLiveView(root, opts = {}) {
   }
 
   function applyColors() {
+    const light = typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "light";
     let c = S.teams.map((T, t) => T.color || DEFAULT_COLORS[t]);
-    const ink = c.map((x, t) => readable(x) || DEFAULT_COLORS[t]);
-    root.style.setProperty("--stripe0", c[0]);
-    root.style.setProperty("--stripe1", c[1]);
+    const ink = c.map((x, t) => readable(x, light) || DEFAULT_COLORS[t]);
+    // Liseré : vraie couleur de maillot, sauf un maillot blanc sur fond clair.
+    const stripe = c.map((x, t) => (light && hexRgb(x) && luminance(hexRgb(x)) > 0.8 ? ink[t] : x));
+    root.style.setProperty("--stripe0", stripe[0]);
+    root.style.setProperty("--stripe1", stripe[1]);
     root.style.setProperty("--c0", ink[0]);
     root.style.setProperty("--c1", ink[1]);
   }
