@@ -4672,6 +4672,13 @@
 
 .hm-feed__item-title { margin: 0; font-size: 15px; font-weight: 700; }
 .hm-feed__text { margin: 0; font-size: 13px; line-height: 1.4; color: var(--hm-muted); }
+.hm-feed__results { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; line-height: 1.35; }
+.hm-feed__results li { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: baseline; gap: 10px; color: var(--hm-muted); }
+.hm-feed__results .r-home { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-feed__results .r-away { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-feed__results .r-score { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--hm-muted); white-space: nowrap; }
+.hm-feed__results .is-win { color: var(--hm-text, #E8EDF5); font-weight: 700; }
+.hm-feed__results .is-mine { color: var(--amber, #F5A13A); }
 
 .hm-feed__action {
   align-self: center;
@@ -30664,8 +30671,31 @@ function dashRenderFeedEntry(entry) {
   title.textContent = entry.title;
   const text = document.createElement("p");
   text.className = "hm-feed__text";
-  text.textContent = entry.text;
-  body.append(meta, title, text);
+  text.textContent = dashFeedTidyNumbers(entry.text);
+  const results = dashFeedRoundResults(entry);
+  if (results) {
+    // Résultats de journée : un match par ligne (retour utilisateur,
+    // 2026-09-26 : « fais mieux que ça, un match une ligne ») au lieu de
+    // « A 34-45 B · C 66-48 D… » tronqué après deux matchs.
+    const ul = document.createElement("ul");
+    ul.className = "hm-feed__results";
+    results.forEach(r => {
+      const li = document.createElement("li");
+      const home = document.createElement("span"), score = document.createElement("span"), away = document.createElement("span");
+      home.className = "r-home"; score.className = "r-score"; away.className = "r-away";
+      home.textContent = r.home; away.textContent = r.away;
+      score.textContent = `${r.homePts} – ${r.awayPts}`;
+      if (r.homePts > r.awayPts) home.classList.add("is-win");
+      if (r.awayPts > r.homePts) away.classList.add("is-win");
+      if (r.homeMine) home.classList.add("is-mine");
+      if (r.awayMine) away.classList.add("is-mine");
+      li.append(home, score, away);
+      ul.appendChild(li);
+    });
+    body.append(meta, title, ul);
+  } else {
+    body.append(meta, title, text);
+  }
 
   el.append(iconEl, body);
 
@@ -30678,6 +30708,36 @@ function dashRenderFeedEntry(entry) {
     el.appendChild(a);
   }
   return el;
+}
+
+// Nombres à rallonge dans un texte du fil (retour utilisateur, 2026-09-26 :
+// « Humeur à 71.41278800908984/100 [...] ne mets pas plus qu'une décimale ») :
+// toute valeur décimale est ramenée à une décimale au plus, à la française
+// (71,4) — y compris dans les entrées déjà enregistrées dans une sauvegarde.
+function dashFeedTidyNumbers(str) {
+  return String(str == null ? "" : str).replace(/(\d+)\.(\d+)/g, (m, i, d) => {
+    const v = Math.round(parseFloat(i + "." + d) * 10) / 10;
+    return Number.isInteger(v) ? String(v) : String(v).replace(".", ",");
+  });
+}
+
+// Résultats complets d'une entrée « Journée N : X résultats » (clé
+// league_round_*), relus dans league.results (championnat, journée N-1 en
+// base 0) : marche aussi pour les entrées déjà enregistrées, dont le texte
+// ne gardait que deux matchs. null si introuvable (texte affiché tel quel).
+function dashFeedRoundResults(entry) {
+  if (!entry || entry.category !== "ligue" || !/^league_round_/.test(entry.key || "")) return null;
+  const m = /Journée\s+(\d+)/.exec(entry.title || "");
+  if (!m || typeof league === "undefined" || !league || !Array.isArray(league.results)) return null;
+  const round = Number(m[1]) - 1;
+  const rows = league.results.filter(r => r.round === round);
+  if (!rows.length) return null;
+  const name = (i) => (league.teams[i] && league.teams[i].name) || "?";
+  const mine = typeof myTeamIndex === "number" ? myTeamIndex : -1;
+  return rows.map(r => ({
+    home: name(r.home), away: name(r.away), homePts: r.scoreHome, awayPts: r.scoreAway,
+    homeMine: r.home === mine, awayMine: r.away === mine,
+  }));
 }
 
 function dashRenderFeedEmpty() {
