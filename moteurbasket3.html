@@ -18841,8 +18841,8 @@ function updateTopbar() {
       ? teamA.hasPlanForRound(currentMatch.round, "cup")
       : teamA.ordresValidatedRound === currentMatch.round);
     const locked = currentMatchLineupLocked();
-    ordersBtn.textContent = prematchShowAvailable() ? "📺 Émission d'avant-match"
-      : locked ? "🔒 Ordres verrouillés"
+    ordersBtn.textContent = prematchShowAvailable() ? "Émission d'avant-match"
+      : locked ? "Ordres verrouillés"
       : validated ? "Modifier vos ordres" : "Donnez vos ordres";
     ordersBtn.classList.toggle("topbar-cta-validated", !!validated && !locked);
   }
@@ -19584,7 +19584,7 @@ function renderOrdresGrid() {
       // prematchWindowOpen — MÊME formule que `locked` ci-dessus, pas une
       // coïncidence) : un seul bandeau annonce les deux à la fois.
       lockNote.innerHTML = locked
-        ? `🔒 Compositions verrouillées : le coup d'envoi est imminent. <button type="button" class="secondary hoop-show-pause-btn" id="hoopShowPrematchBtn">📺 Voir l'émission d'avant-match</button>`
+        ? `Compositions verrouillées : le coup d'envoi est imminent. <button type="button" class="secondary hoop-show-pause-btn" id="hoopShowPrematchBtn">Voir l'émission d'avant-match</button>`
         : "";
       lockNote.classList.toggle("hidden", !locked);
       if (locked) {
@@ -19651,7 +19651,7 @@ function renderOrdresGrid() {
   const planLocked = ordresRoundLocked(round, competition, Date.now(), true);
   const lockNoteFuture = document.getElementById("ordresLockNote");
   if (lockNoteFuture) {
-    lockNoteFuture.innerHTML = planLocked ? "🔒 Compositions verrouillées : le coup d'envoi est imminent." : "";
+    lockNoteFuture.innerHTML = planLocked ? "Compositions verrouillées : le coup d'envoi est imminent." : "";
     lockNoteFuture.classList.toggle("hidden", !planLocked);
   }
   ordresPanelLocked = planLocked;
@@ -27141,7 +27141,7 @@ function showPauseBanner(pause) {
   // à chaque banderole plutôt qu'un écouteur délégué : #pauseBanner est
   // entièrement réécrit ici à chaque pause, pas de risque de doublon.
   el.innerHTML = pause.kind === "halftime"
-    ? `<span>${escapeHtml(pause.label)}</span> <button type="button" class="secondary hoop-show-pause-btn" id="hoopShowHalftimeBtn">📺 Voir l'émission</button>`
+    ? `<span>${escapeHtml(pause.label)}</span> <button type="button" class="secondary hoop-show-pause-btn" id="hoopShowHalftimeBtn">Voir l'émission</button>`
     : escapeHtml(pause.label);
   if (pause.kind === "halftime") {
     const btn = document.getElementById("hoopShowHalftimeBtn");
@@ -29912,10 +29912,10 @@ function dashRenderNextMatch(data) {
         // l'adversaire, il faut que ce soit noté voir le live plutôt".
         ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-tab="live">Voir le live</button>`
         : m.prematchShow
-        ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/emission-avant-match">📺 Émission d'avant-match</button>
-      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/ordres">🔒 Ordres verrouillés</button>`
+        ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/emission-avant-match">Émission d'avant-match</button>
+      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/ordres">Ordres verrouillés</button>`
         : m.lineupLocked
-        ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/ordres">🔒 Ordres verrouillés</button>`
+        ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/ordres">Ordres verrouillés</button>`
         : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ordres">Préparer le match</button>
       <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}">Scouter ${dashEsc(m.opponent.name)}</button>`}
     </div>
