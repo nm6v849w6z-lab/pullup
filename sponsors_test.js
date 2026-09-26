@@ -129,12 +129,12 @@ const SPONSOR_ORDER = { prudent: 0, normal: 1, ambitieux: 2 };
   ter.click();
   await waitFor(() => doc.getElementById("economieSponsors").querySelectorAll(".spo-tag-ok").length === 1, "contrat rompu");
   check(/Rompu par le club/.test(doc.getElementById("economieSponsors").textContent), "historique : rompu par le club");
-  // Salle : encart sponsor + panneau dessiné.
+  // Salle : panneau dessiné, pas d'encart dans le bandeau.
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "salle").click();
   const hasSalle = win.eval('!!sponsorActiveContractForSlot(teamA, "salle")');
   if (hasSalle) {
     const nm = win.eval('sponsorNameForSlot(teamA, "salle")');
-    check(doc.querySelector(".sl-sponsor") && doc.querySelector(".sl-sponsor").textContent.includes(nm), "encart « Sponsor de la salle »");
+    check(!doc.querySelector(".sl-sponsor") && !doc.getElementById("salleHeroHead").textContent.includes(nm), "pas d'encart « Sponsor de la salle » dans le bandeau");
     check(doc.getElementById("arenaVisualCard").innerHTML.toUpperCase().includes(nm.toUpperCase()), "panneau du sponsor dessiné dans la salle (ArenaGen)");
   } else {
     check(!doc.querySelector(".sl-sponsor") && !/voir les offres/.test(doc.getElementById("salleHero").textContent), "sans sponsor : aucun encart sponsor sur la Salle");

@@ -4883,11 +4883,6 @@
   .sl-tier i span.on{background:var(--amber);}
   .sl-hero-title{margin:10px 0 2px; font-size:40px; line-height:1; font-weight:900; letter-spacing:-.01em; text-transform:uppercase; color:#fff; text-shadow:0 2px 18px rgba(0,0,0,.5); overflow-wrap:anywhere;}
   .sl-hero-sub{font-size:14px; color:#b9c4d8;}
-  .sl-sponsor{margin-top:12px; display:inline-flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; background:rgba(21,27,43,.9); border:1px solid rgba(255,255,255,.12); font-size:13px; color:#e6ebf5; max-width:460px;}
-  .sl-sponsor-badge{width:36px; height:36px; border-radius:8px; background:#0b1f3a; border:1px solid #1f4a86; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; color:#8fd0ff; flex:none;}
-  .sl-sponsor-txt{display:flex; flex-direction:column; gap:2px;}
-  .sl-sponsor-kicker{font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#9aa4bd;}
-  .sl-sponsor-link{background:none; border:none; color:var(--amber); font:inherit; font-size:13px; font-weight:600; cursor:pointer; padding:0; white-space:nowrap;}
   .sl-hero-sub b{color:#fff;}
   #arenaCurrentPanel .sl-hero-upgrade{display:inline-flex; align-items:center; gap:14px; width:max-content; max-width:100%; padding:8px 8px 8px 16px; margin:0;
     border-radius:12px; text-align:left; cursor:pointer; background:linear-gradient(135deg, rgba(240,162,60,.22), rgba(240,162,60,.08)); border:1px solid rgba(240,162,60,.55);
@@ -36374,16 +36369,6 @@ function salleRetiredJerseysHtml(team) {
 }
 
 // --- Bandeau d'en-tête -------------------------------------------------
-function salleSponsorEncartHtml() {
-  const c = sponsorActiveContractForSlot(teamA, "salle");
-  // Pas de sponsor : rien dans le bandeau (retour utilisateur, 2026-09-26 :
-  // enlever "Sponsor de la salle — Aucun · voir les offres").
-  if (!c) return "";
-  return `<div class="sl-sponsor"><span class="sl-sponsor-badge">${escapeHtml(defaultTrigramForName(c.sponsorName))}</span>` +
-    `<span class="sl-sponsor-txt"><span class="sl-sponsor-kicker">Sponsor de la salle</span><span><b>${escapeHtml(c.sponsorName)}</b> · ${formatMoney(c.weekly)} / sem · objectif ${escapeHtml(c.objectiveLabel)}</span></span>` +
-    `<button type="button" class="sl-sponsor-link" data-tab="sponsors">Sponsors →</button></div>`;
-}
-
 function renderSalleHero(info, stats) {
   const projectedRate = teamA.projectedAttendanceRate();
   const history = teamA.attendanceHistory || [];
@@ -36412,11 +36397,11 @@ function renderSalleHero(info, stats) {
     // 2026-09-26 : "enlève tout Gotham Knights · 8 000 places, le nombre
     // de places on l'a déjà dans une brique") ; seul le prochain match à
     // domicile reste affiché quand il y en a un.
-    (nm && nm.isHome ? `<div class="sl-hero-sub">Prochain match à domicile <b>vs ${escapeHtml(nm.name)}</b></div>` : "") +
-    // Sponsor de la salle (voir le bloc SPONSORS côté moteur) : encart
-    // vers Économie › Sponsors ; le panneau lui-même est dessiné par
-    // ArenaGen (options.sponsor) sur le mur latéral.
-    salleSponsorEncartHtml();
+    (nm && nm.isHome ? `<div class="sl-hero-sub">Prochain match à domicile <b>vs ${escapeHtml(nm.name)}</b></div>` : "");
+  // Sponsor de la salle : plus d'encart dans le bandeau (retour utilisateur,
+  // 2026-09-26 : "enlève [...] Sponsor de la salle · Transports Roux · 6 000 €
+  // / sem [...]") ; seul le panneau dessiné par ArenaGen (options.sponsor)
+  // sur le mur latéral le montre.
 
   // Agrandissement : même flèche/confirmation qu'avant (buildUpgradeArrow),
   // mise en avant comme bouton principal du bandeau. N'affiche que le bouton

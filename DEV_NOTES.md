@@ -20,6 +20,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle : plus
+  d'encart sponsor dans le bandeau, même avec un sponsor signé** — retour
+  utilisateur : "enlève: TR SPONSOR DE LA SALLE Transports Roux · 6 000 € /
+  sem · objectif Milieu de tableau Sponsors →". salleSponsorEncartHtml et
+  CSS .sl-sponsor* supprimés ; le panneau dessiné dans la salle (ArenaGen)
+  reste. sponsors_test.js adapté. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Émissions
   (avant-match, mi-temps) "présentées par" Hoop Manager Premium** — retour
   utilisateur (logo fourni) : "intègre ce logo comme sponsor : l'émission
