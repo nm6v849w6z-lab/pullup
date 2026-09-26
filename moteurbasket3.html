@@ -8844,6 +8844,26 @@ const AvatarGen = (function () {
     return s;
   }
 
+  // Tenue de plateau pour Max, le présentateur des émissions Hoop Shows
+  // (retour utilisateur, 2026-09-26 : « utilise la tete de l'avatar mais
+  // mets lui un costume quand meme ») : veste, chemise et cravate à la place
+  // du maillot, même trait encré que le reste. colors = [veste, cravate].
+  function renderSuit(colors) {
+    const [jacket, tie] = colors || ['#1F2A40', '#F5A13A'];
+    const body = 'M0 130 L0 118 Q6 104 26 100 Q38 97 45 89 L60 124 L75 89 Q82 97 94 100 Q114 104 120 118 L120 130Z';
+    const lapel = '<path d="M45 89 L51 106 L46.5 108.5 L60 126" stroke="' + INK + '" stroke-width="1.2" fill="none" stroke-linejoin="round"/>';
+    return `<path d="M44 88 L76 88 L60 124Z" fill="#e9eef5" ${LW}/>` +
+      `<path d="M52 88 L60 97 L68 88Z" fill="#c9d1dd" opacity="0.6"/>` +
+      `<path d="M57.4 95.5 L62.6 95.5 L61.6 100 L64.2 117 L60 123 L55.8 117 L58.4 100Z" fill="${tie}" ${LW}/>` +
+      `<path d="M58.4 100 L61.6 100" stroke="${shade(tie, -35)}" stroke-width="0.8"/>` +
+      `<path d="M45 88.5 L55 97.5 L58 91Z M75 88.5 L65 97.5 L62 91Z" fill="#f7f9fc" ${LW}/>` +
+      `<path d="${body}" fill="${jacket}" ${LW}/>` +
+      `<path d="M94 100 Q114 104 120 118 L120 130 L104 130 Q103 110 90 101Z" fill="${shade(jacket, -22)}"/>` +
+      `<path d="M4 118 Q10 106 24 102 Q16 108 10 122Z" fill="#fff" opacity="0.08"/>` +
+      lapel + mirror(lapel) +
+      `<path d="M83 112 l9 -1.5 l0.6 3.2 l-9 1.5Z" fill="${tie}" opacity="0.9"/>`;
+  }
+
   // ---------------------------------------------------------------- apparence aléatoire
 
   /**
@@ -8934,9 +8954,9 @@ const AvatarGen = (function () {
     return `<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" width="100%" role="img" aria-label="Avatar du joueur">` + defs +
       (options.background !== false ? `<rect width="120" height="130" fill="#26262a"/><circle cx="60" cy="58" r="56" fill="#2f2f34"/><rect width="120" height="130" fill="url(#${tid}bg)"/><path d="M-10 0 L38 0 L-2 130 L-50 130Z" fill="#fff" opacity="0.035"/>` : '') +
       hair.back +
-      renderShoulders(a.skin) + renderArmTattoos(a) + renderNeck(a.skin) + tattoo +
-      (a.chain ? `<path d="M49 94 Q60 107 71 94" stroke="${a.chain}" stroke-width="1.6" fill="none"/>` : '') +
-      renderJersey(jersey, trim, a.jerseyStyle || 'round', tid) +
+      renderShoulders(a.skin) + (options.outfit === 'suit' ? '' : renderArmTattoos(a)) + renderNeck(a.skin) + (options.outfit === 'suit' ? '' : tattoo) +
+      (a.chain && options.outfit !== 'suit' ? `<path d="M49 94 Q60 107 71 94" stroke="${a.chain}" stroke-width="1.6" fill="none"/>` : '') +
+      (options.outfit === 'suit' ? renderSuit(options.suitColors) : renderJersey(jersey, trim, a.jerseyStyle || 'round', tid)) +
       renderHead(a.skin, a.faceShape, { age: a.age, freckles: a.freckles, earrings: a.earrings, bald: a.hairStyle === 'bald', cleft: a.cleft, tex: tid }) +
       mark + hair.front + hairTexture(a, w, tid) + hairSheen(a, w) + headband + beard.body +
       renderBrows(a.brows, a.hairColor) +
@@ -25893,12 +25913,18 @@ async function openHoopShow(kind) {
 // aux couleurs Hoop Manager). Les ids d'équipe des émissions sont les index
 // de league.teams (voir server/showsAdapter.js), ceux des joueurs leurs
 // Player.id.
-const HOOP_SHOW_PRESENTER_SEED = 2441;
+// Nicolas Cosset, le présentateur (retour utilisateur, 2026-09-26 : « ce
+// serait mieux s'il est blanc », « on va l'appeler : Nicolas Cosset »).
+const HOOP_SHOW_PRESENTER_NAME = "Nicolas Cosset";
+const HOOP_SHOW_PRESENTER_SEED = 1388;
 let hoopShowPresenterSvg = null;
 function hoopShowPresenterAvatar() {
   if (hoopShowPresenterSvg == null) {
     try {
-      hoopShowPresenterSvg = AvatarGen.generateAvatar(HOOP_SHOW_PRESENTER_SEED, { teamColors: ["#1F2A40", "#F5A13A"] });
+      // Tête d'un avatar joueur (même générateur), mais en costume.
+      hoopShowPresenterSvg = AvatarGen.generateAvatar(HOOP_SHOW_PRESENTER_SEED, {
+        teamColors: ["#1F2A40", "#F5A13A"], outfit: "suit", suitColors: ["#1F2A40", "#F5A13A"],
+      });
     } catch (e) { hoopShowPresenterSvg = ""; }
   }
   return hoopShowPresenterSvg;
@@ -25910,6 +25936,7 @@ function hoopShowDressOpts() {
   return {
     logo: logoImg ? logoImg.getAttribute("src") : "assets/brand/logo-hoop-manager.png",
     presenter: hoopShowPresenterAvatar() || undefined,
+    presenterName: HOOP_SHOW_PRESENTER_NAME,
     team: (id) => {
       const t = teamOf(id);
       if (!t) return null;

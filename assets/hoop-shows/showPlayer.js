@@ -17,6 +17,7 @@
  *     player: (id, size) => html de l'avatar | '',
  *     logo: 'url du logo Hoop Manager',
  *     presenter: 'html de l'avatar du présentateur',
+ *     presenterName: 'Nicolas Cosset',
  *   });
  *   player.destroy();
  *
@@ -357,7 +358,7 @@
       '<button type="button" class="hs-btn-ghost" data-hs-action="exit">Quitter l’émission</button></div></header>' +
       '<main class="hs-stage"><div class="hs-inner" data-hs-body aria-live="polite"></div></main>' +
       '<footer class="hs-bottom"><div class="hs-avatar' + (opts.presenter ? ' hs-avatar-real' : '') + '">' + (opts.presenter || AVATAR) + '</div>' +
-      '<div class="hs-bubble"><b>Max · présentateur</b><span data-hs-bubble></span></div>' +
+      '<div class="hs-bubble"><b>' + esc(opts.presenterName || 'Nicolas Cosset') + ' · présentateur</b><span data-hs-bubble></span></div>' +
       '<div class="hs-presented-small"><span>Présenté par</span>' + logoBlock({ opts, sponsor }, false) + '</div>' +
       '<div class="hs-nav"><button type="button" class="hs-btn-ghost" data-hs-action="prev">← Précédent</button><button type="button" class="hs-btn-next" data-hs-action="next"></button></div></footer>';
     container.appendChild(rootEl);

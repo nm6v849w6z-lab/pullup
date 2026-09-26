@@ -65,6 +65,7 @@ function mountAt(show, i) {
 }
 {
   const { html } = mountAt(halftime, 0);
+  if (!html.includes("Nicolas Cosset · présentateur")) fail("le présentateur s'appelle Nicolas Cosset.");
   if (!html.includes('data-test="presenter"')) fail("l'avatar du présentateur fourni par le jeu doit remplacer le dessin fait maison.");
   if (!html.includes('class="hs-logo" src="data:image/png;base64,LOGO"')) fail("le logo Hoop Manager du jeu doit être utilisé (générique + bandeau du bas).");
   if ((html.match(/class="hs-logo"/g) || []).length < 2) fail("logo attendu au générique ET dans « Présenté par ».");
