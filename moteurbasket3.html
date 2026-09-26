@@ -12666,12 +12666,18 @@ class Team {
     const ids = [];
     const s = this.lineup.starters[pos];
     if (s != null) ids.push(s);
-    // Remplaçants du poste du mieux noté au moins bien noté : le premier est
-    // "le" remplaçant, les suivants des réservistes (carte Temps de jeu,
-    // répartition proposée par defaultSlotMinutes).
+    // Remplaçants du poste : le premier est "le" remplaçant, les suivants
+    // des réservistes (carte Temps de jeu, répartition proposée par
+    // defaultSlotMinutes). Quand des minutes sont réglées sur le poste,
+    // c'est celui qui en a le plus qui est le remplaçant (retour utilisateur
+    // 2026-09-26 : "si je mets plus de minutes au réserviste, il doit passer
+    // automatiquement remplaçant") ; à égalité, ou sans réglage, du mieux
+    // noté au moins bien noté.
+    const mins = (this.lineup.minutes && this.lineup.minutes[pos]) || null;
+    const minutesOf = p => (mins ? Number(mins[p.id]) || 0 : 0);
     this.players
       .filter(p => p.id !== s && (this.lineup.backupPositions[p.id] || []).includes(pos))
-      .sort((a, b) => b.overall() - a.overall())
+      .sort((a, b) => (minutesOf(b) - minutesOf(a)) || (b.overall() - a.overall()))
       .forEach(p => ids.push(p.id));
     return ids;
   }
@@ -12713,7 +12719,18 @@ class Team {
     if (!this.lineup.minutes || !this.lineup.minutes[pos]) return;
     if (!this.slotPlayerIds(pos).includes(playerId)) return;
     const m = Math.round(Number(minutes));
-    this.lineup.minutes[pos][playerId] = Number.isFinite(m) ? clamp(m, 0, 40) : 0;
+    // Plafond : 40 min au total sur le poste (retour utilisateur 2026-09-26 :
+    // "il faut bloquer les minutes pour ne pas pouvoir mettre plus que 40").
+    this.lineup.minutes[pos][playerId] = Number.isFinite(m) ? clamp(m, 0, this.slotMinutesRoom(pos, playerId)) : 0;
+  }
+
+  // Minutes maximales que `playerId` peut recevoir sur `pos` : 40 moins ce
+  // qui est déjà donné aux autres joueurs du poste.
+  slotMinutesRoom(pos, playerId) {
+    const m = (this.lineup.minutes && this.lineup.minutes[pos]) || {};
+    let others = 0;
+    Object.entries(m).forEach(([id, v]) => { if (String(id) !== String(playerId)) others += Number(v) || 0; });
+    return Math.max(0, 40 - others);
   }
 
   hasSlotMinutes(pos) {
@@ -16413,7 +16430,12 @@ class MatchEngine {
     // que l'ancienne (50 à 93 % contre 55 à 92) pour que l'attribut se sente
     // réellement discriminant sur la ligne des lancers francs.
     // Concentration. Copie mirroir EXACTE de engine.js.
-    const ftPct = clamp(0.50 + (shooter.eff("freeThrow") / 100) * 0.42 + (shooter.eff("focus") - 50) * 0.0006, 0.50, 0.93);
+    // Plancher relevé (retour utilisateur, 2026-09-26 : "relève un peu les
+    // planchers [...] le but c'est qu'on ait des matchs sympa à regarder
+    // quelle que soit la division. ça reste un jeu") : 0.58 + 0.35 × attr
+    // (au lieu de 0.50 + 0.42 × attr) — un lanceur à 30 passe de 63 % à
+    // 69 %, un lanceur à 100 reste à 93 %.
+    const ftPct = clamp(0.58 + (shooter.eff("freeThrow") / 100) * 0.35 + (shooter.eff("focus") - 50) * 0.0006, 0.55, 0.93);
     let made = 0;
     for (let i = 0; i < n; i++) {
       shooter.stats.fta++;
@@ -16836,7 +16858,21 @@ class MatchEngine {
 
     const base = { inside: 0.50, mid: 0.40, three: 0.335 }[zone];
     const effStat = shooter.eff(statForZone);
-    let prob = base + (effStat - 60) * 0.0048 + qualityMod;
+    // Pente compressée sous 60 (retour utilisateur, 2026-09-26 : "relève un
+    // peu les planchers, parce que ça fait plusieurs matchs moches, le but
+    // c'est qu'on ait des matchs sympa à regarder quelle que soit la
+    // division. ça reste un jeu") : au-dessus de 60 la pente reste 0.0048
+    // par point, en dessous elle est divisée par trois (0.0016). Mesuré avec
+    // simulate.js AVANT : Division VI (tier ~0.55, attributs ~30) tournait
+    // à 59 pts/équipe, FG2 30 %, FG3 22 %, 16,6 % de matchs < 45 pts — le
+    // rythme (~100 possessions) était bon, seule l'efficacité s'effondrait
+    // linéairement avec les attributs. L'ordre entre joueurs faibles est
+    // conservé (un 40 reste meilleur qu'un 25), seul l'écart absolu est
+    // réduit. APRÈS (avec les LF relevés dans freeThrows) : Division VI →
+    // 74 pts/équipe, FG2 39 %, FG3 30 %, 0,5 % de matchs < 45 ; référence
+    // (tier 0.85-1.15) 83 → 86 pts ; Division I inchangée (98 pts).
+    const attrDelta = effStat >= 60 ? (effStat - 60) * 0.0048 : (effStat - 60) * 0.0016;
+    let prob = base + attrDelta + qualityMod;
     // Frein anti-blowout de base (retour utilisateur : "on a un peu trop vite
     // de gros blowout") — même deux équipes RIGOUREUSEMENT de même niveau
     // rejouées des milliers de fois produisaient déjà ~28% d'écarts ≥20 pts
@@ -19976,7 +20012,7 @@ function planProxyForRound(round, competition) {
   proxy.starterPosition = function (playerId) { return Team.prototype.starterPosition.call(proxy, playerId); };
   // Temps de jeu cible par poste (voir Team.slotMinuteShares) : mêmes
   // méthodes que sur Team, appliquées au lineup du plan.
-  ["slotPlayerIds", "defaultSlotMinutes", "enableSlotMinutes", "clearSlotMinutes", "setSlotMinutes", "hasSlotMinutes", "slotMinuteShares", "convokedIds", "isConvoked", "setConvoked"]
+  ["slotPlayerIds", "defaultSlotMinutes", "enableSlotMinutes", "clearSlotMinutes", "setSlotMinutes", "slotMinutesRoom", "hasSlotMinutes", "slotMinuteShares", "convokedIds", "isConvoked", "setConvoked"]
     .forEach(m => { proxy[m] = function (...args) { return Team.prototype[m].apply(proxy, args); }; });
   return proxy;
 }
@@ -27571,7 +27607,7 @@ function renderPlayingTimeCard(team, container, makeCard, rerender) {
         roleEl.className = "pt-role";
         roleEl.textContent = role + (pl.position !== pos ? ` · ${POS_SHORT[pl.position]}` : "");
         const inp = document.createElement("input");
-        inp.type = "number"; inp.min = "0"; inp.max = "40"; inp.step = "1";
+        inp.type = "number"; inp.min = "0"; inp.max = String(team.slotMinutesRoom(pos, id)); inp.step = "1";
         inp.className = "pt-input";
         inp.value = String(v);
         inp.setAttribute("aria-label", `Minutes ${pl.name} au poste ${pos}`);

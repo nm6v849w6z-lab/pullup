@@ -129,7 +129,7 @@ const T0 = Date.now();
   function trial(freeThrowValue, midRangeValue) {
     shooter.attrs.freeThrow = freeThrowValue;
     shooter.attrs.midRange = midRangeValue;
-    const expectedPct = clamp(0.50 + (shooter.eff("freeThrow") / 100) * 0.42, 0.50, 0.93);
+    const expectedPct = clamp(0.58 + (shooter.eff("freeThrow") / 100) * 0.35, 0.55, 0.93); // même formule que MatchEngine.freeThrows (planchers relevés 2026-09-26)
     shooter.stats = shooter.emptyStats();
     const events = [];
     for (let i = 0; i < N; i++) me.freeThrows(shooter, 1, events, 1, 600, team);

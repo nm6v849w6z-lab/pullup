@@ -20,22 +20,47 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **À INVESTIGUER / DÉCISION UTILISATEUR (2026-09-26) — Scores bas en
-  Division VI (52-40, 44-34 en coupe)** — question utilisateur : "c'est dû
-  au niveau des joueurs ?". Mesuré avec simulate.js (copie temporaire, le
-  chemin /home/claude/basket/last_run.json n'existe pas sur le Mac) :
-  tier 0.85-1.15 (référence) → 83 pts/équipe, FG2 43 %, FG3 37 %, 0,6 % de
-  matchs < 45 ; tier 0.50-0.63 (= Division VI, tierMultiplier 0.55 ×
-  rand(0.9,1.15)) → 59 pts/équipe, FG2 30 %, FG3 22 %, FT 60 %, 16,6 % de
-  matchs < 45 ; tier 1.30-1.67 (Div I) → 98 pts, FG2 53 %, FG3 47 %.
-  Le rythme est bon partout (~97-100 possessions) : c'est l'EFFICACITÉ qui
-  chute linéairement avec les attributs (générés à ×0.55 en Div VI). Donc
-  oui, c'est le niveau des joueurs, via le mapping attributs → % de tir.
-  Pistes si on veut relever le plancher : (a) plancher sur les % de tir
-  (ex. FG2 ≥ ~38 %, FG3 ≥ ~28 %, FT ≥ ~65 %) indépendant des attributs, ou
-  (b) mapping attributs → réussite moins linéaire (compresser le bas de
-  l'échelle), ou (c) resserrer les tierMultiplier des divisions basses
-  (0.55 → ~0.75). Rien codé, en attente du choix utilisateur.
+- **🔧 CODE FAIT, SUITE COMPLÈTE EN COURS (2026-09-26) — Temps de jeu :
+  plafond 40 min par poste + rang Remplaçant/Réserviste selon les minutes**
+  — retour utilisateur (capture 11:37, P à "39 / 40" avec 28/4/7) : "si je
+  mets plus de minutes au réserviste, il doit passer automatiquement
+  remplaçant dans le descriptif", "il faut bloquer les minutes pour ne pas
+  pouvoir mettre plus que 40". Team (engine.js + copie HTML) :
+  slotPlayerIds trie les remplaçants du poste par minutes décroissantes
+  quand le poste est réglé (puis par note) → le libellé Remplaçant/
+  Réserviste de la carte et l'ordre de convocation par défaut suivent ;
+  setSlotMinutes borne à slotMinutesRoom (nouveau : 40 − minutes des
+  autres joueurs du poste) ; serveur (validateLineupBody) refuse un total
+  > 40 sur un poste ; UI : max de chaque case = marge restante. Effet :
+  pour monter un joueur, il faut d'abord baisser les autres (la valeur
+  tapée est ramenée à la marge). Tests : lineup_minutes_test.js adapté
+  (ne teste plus "42 / 40" mais le plafond, le rang, et le refus serveur) ;
+  convocation, ordres_redesign, end_to_end, live_boxscore_minutes_totals,
+  server/actions_test verts. Reste : résultat de la suite complète,
+  commit, `git push` + redéploiement.
+
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Moteur :
+  planchers d'efficacité relevés (scores moches en Division VI)** — retour
+  utilisateur (capture coupe : 52-40, 44-34) : "c'est dû au niveau des
+  joueurs ?" puis "relève un peu les planchers, parce que ça fait plusieurs
+  matchs moches, le but c'est qu'on ait des matchs sympa à regarder quelle
+  que soit la division. ça reste un jeu". Diagnostic (simulate.js, copie
+  temporaire car le chemin /home/claude/basket/last_run.json n'existe pas
+  sur le Mac) : le rythme est bon partout (~97-100 possessions/équipe),
+  seule l'efficacité chutait linéairement avec les attributs (Div VI =
+  tierMultiplier 0.55 → attributs ~30 → 59 pts/équipe, FG2 30 %, FG3 22 %,
+  LF 60 %, 16,6 % de matchs < 45 pts). Changement (engine.js + copie
+  identique dans moteurbasket3.html, playPossession + freeThrows) : pente
+  attribut → % de tir divisée par 3 sous 60 (0.0016 au lieu de 0.0048,
+  inchangée au-dessus) ; LF 0.58 + 0.35 × attr (au lieu de 0.50 + 0.42),
+  clamp 0.55-0.93. Après : Div VI 74 pts, FG2 39 %, FG3 30 %, LF 66 %,
+  0,5 % de matchs < 45 ; référence (0.85-1.15) 83 → 86 pts ; Div I
+  inchangée (98). thirteen_attrs_test.js : formule LF attendue alignée.
+  Tests verts : thirteen_attrs, deficit, forfeit, lineup_minutes,
+  team_chemistry, confirmed_tactics, tactical_knowledge, season_objective,
+  full_run, league_stats, server/liveMatch, server/autoSim. Reste :
+  `git push` + redéploiement Render (la partie en cours en profite dès le
+  prochain match simulé, pas de migration de données).
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ordres : carte
   Défense tout en boutons** — retours utilisateur (capture, 11:06) : "dans
