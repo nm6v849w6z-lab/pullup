@@ -16861,8 +16861,10 @@ class MatchEngine {
     // Pente compressée sous 60 (retour utilisateur, 2026-09-26 : "relève un
     // peu les planchers, parce que ça fait plusieurs matchs moches, le but
     // c'est qu'on ait des matchs sympa à regarder quelle que soit la
-    // division. ça reste un jeu") : au-dessus de 60 la pente reste 0.0048
-    // par point, en dessous elle est divisée par trois (0.0016). Mesuré avec
+    // division. ça reste un jeu", puis "ne monte pas si haut pour la
+    // division 1, plutôt 80/85 points [...] 87 points en moyenne en
+    // euroleague. pars sur ça") : pente 0.0018 par point au-dessus de 60 et
+    // 0.0016 en dessous (au lieu de 0.0048 partout). Mesuré avec
     // simulate.js AVANT : Division VI (tier ~0.55, attributs ~30) tournait
     // à 59 pts/équipe, FG2 30 %, FG3 22 %, 16,6 % de matchs < 45 pts — le
     // rythme (~100 possessions) était bon, seule l'efficacité s'effondrait
@@ -16870,8 +16872,12 @@ class MatchEngine {
     // conservé (un 40 reste meilleur qu'un 25), seul l'écart absolu est
     // réduit. APRÈS (avec les LF relevés dans freeThrows) : Division VI →
     // 74 pts/équipe, FG2 39 %, FG3 30 %, 0,5 % de matchs < 45 ; référence
-    // (tier 0.85-1.15) 83 → 86 pts ; Division I inchangée (98 pts).
-    const attrDelta = effStat >= 60 ? (effStat - 60) * 0.0048 : (effStat - 60) * 0.0016;
+    // (tier 0.85-1.15) 83 → 82 pts ; Division I 98 → 87 pts (moyenne
+    // Euroleague, cible utilisateur). Les attributs restent discriminants
+    // au sommet (1.6 vs 1.3 : 90 % de victoires, +17 pts d'écart moyen)
+    // parce que création, contest, pertes de balle et rebonds continuent
+    // de dépendre pleinement des attributs — seul le % brut est compressé.
+    const attrDelta = effStat >= 60 ? (effStat - 60) * 0.0018 : (effStat - 60) * 0.0016;
     let prob = base + attrDelta + qualityMod;
     // Frein anti-blowout de base (retour utilisateur : "on a un peu trop vite
     // de gros blowout") — même deux équipes RIGOUREUSEMENT de même niveau

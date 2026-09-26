@@ -51,11 +51,16 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   tierMultiplier 0.55 → attributs ~30 → 59 pts/équipe, FG2 30 %, FG3 22 %,
   LF 60 %, 16,6 % de matchs < 45 pts). Changement (engine.js + copie
   identique dans moteurbasket3.html, playPossession + freeThrows) : pente
-  attribut → % de tir divisée par 3 sous 60 (0.0016 au lieu de 0.0048,
-  inchangée au-dessus) ; LF 0.58 + 0.35 × attr (au lieu de 0.50 + 0.42),
-  clamp 0.55-0.93. Après : Div VI 74 pts, FG2 39 %, FG3 30 %, LF 66 %,
-  0,5 % de matchs < 45 ; référence (0.85-1.15) 83 → 86 pts ; Div I
-  inchangée (98). thirteen_attrs_test.js : formule LF attendue alignée.
+  attribut → % de tir 0.0018 au-dessus de 60 et 0.0016 en dessous (au
+  lieu de 0.0048 partout) ; LF 0.58 + 0.35 × attr (au lieu de
+  0.50 + 0.42), clamp 0.55-0.93. Second retour ("ne monte pas si haut
+  pour la division 1 [...] 87 points en moyenne en euroleague. pars sur
+  ça") : le haut est compressé aussi. Après : Div VI 74 pts, FG2 39 %,
+  FG3 30 %, LF 66 %, 0,5 % de matchs < 45 ; Div IV-V 77 ; référence
+  (0.85-1.15) 82 ; Div II 86 ; Div I 98 → 87. Attributs toujours
+  discriminants (1.6 vs 1.3 : 90 % de victoires, +17 pts).
+  thirteen_attrs_test.js : formule LF attendue alignée. Commits b746a64 +
+  suivant (pente haute).
   Tests verts : thirteen_attrs, deficit, forfeit, lineup_minutes,
   team_chemistry, confirmed_tactics, tactical_knowledge, season_objective,
   full_run, league_stats, server/liveMatch, server/autoSim. Reste :
