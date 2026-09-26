@@ -34,6 +34,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   cup_ordres_planning (B6 : panneau verrouillé → écriture directe de
   teamA.defense, ce que faisait de fait l'ancien contournement du select),
   next_match_cup_priority_ui ; onboarding_tour et end_to_end verts.
+  Second commit : carte Temps de jeu, écart entre les blocs par poste 10 →
+  18px ("aère un peu les briques dans temps de jeu, elles sont collées").
   Reste : `git push` + redéploiement.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle : boutons
