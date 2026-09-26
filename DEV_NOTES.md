@@ -20,6 +20,22 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26, 3e9b073) —
+  Feuille de statistiques refaite** — retours utilisateur : "améliore les
+  feuilles de stats, elles ne sont pas très belles", "respecte plus
+  l'esprit de la DA des autres pages", "refais tout, c'est horrible".
+  showMatchBoxscore / matchMvpCalloutHtml / boxscoreTableHtml /
+  boxscoreQuarterScoresHtml (moteurbasket3.html) : en-tête compétition ·
+  tour · date + bouton ×, tableau de score (logos, score, pastille
+  Victoire/Défaite de mon club), quarts-temps collés dessous, carte MVP
+  (avatar, 4 tuiles, ligne de tirs, citation), "Face à face" (8 totaux
+  d'équipe), onglets en pilule, tableau individuel (nom figé, groupes de
+  colonnes, zéros estompés, +/- coloré, badge MVP, % sur la ligne Total).
+  Profite aussi à la fin de match en direct. mvp_avatar_test.js lit
+  MVP_CALLOUT_AVATAR_SIZE. Tests sandbox verts (calendrier_boxscore,
+  boxscore_quarter_scores, mvp_avatar, live_boxscore(_minutes_totals) +
+  suite complète). Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Page live dans
   l'esprit du jeu** — retour utilisateur (captures live Lyon-Rennes +
   tableau de bord + fiche joueur) : "améliore la page live pour qu'elle
@@ -44,6 +60,37 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   Retouche : le fil du match prend la hauteur de la carte des tirs (plus de
   vide sous la carte ; défilement interne), hauteur fixe en une colonne.
   Reste : `git push`.
+
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Rotation : les
+  10 titulaires jouaient tout le 1er quart-temps** — retour utilisateur
+  (boxscore Lyon-Rennes en direct, début Q2, tous les titulaires à 10-11
+  min) : "que tu aies un ou deux joueurs qui jouent tout le premier quart
+  temps ça peut arriver. Mais les 5 des deux équipes non jamais". Cause
+  (league.json, 300 matchs) : 1er repos déclenché uniquement par la
+  fatigue (seuil 20-50) alors qu'un Q1 complet n'en apporte que ~20-25 →
+  59 % des équipes sans changement en Q1, 33 % des matchs sans changement
+  des deux côtés ; en plus un titulaire sorti ne revenait quasiment jamais
+  (titulaire moyen ~16 min). Correctif engine.js : Player.firstRestAt
+  (65 % sortent entre 4,5 et 9,5 min, 35 % enchaînent tout le Q1),
+  nextRestAt (pauses suivantes 7-12 min après chaque retour), relais court
+  du remplaçant (returnStarterId/stintEndAt, 2,5-5,5 min) puis retour du
+  titulaire s'il est dispo (pas exclu/blessé, < 4 fautes, reposé). Après :
+  0 % d'équipes sans changement en Q1, ~0,85 titulaire/équipe joue tout le
+  Q1, minutes par rang 32/29/28/26/23/14/12/11/9/7, points/passes
+  inchangés. Copie navigateur moteurbasket3.html NON touchée (déjà sans le
+  correctif rotations précédent ; matchs simulés côté serveur).
+  training_progression_test.js : point 7 résolu — les débutants n'étaient
+  ajoutés qu'à `saved.team` alors que le serveur lit l'équipe `isHuman` de
+  `saved.league.teams`, et la page pouvait écraser le fichier (flush
+  manquant) ; le test ne passait que par hasard, désormais déterministe.
+  Tests verts : training_progression, lineup, engine_live_events,
+  live_boxscore(+minutes_totals), milestone_interview_and_mvp,
+  disciplinary_ejection, injury_duration, forfeit, cpu_training,
+  bench_frustration, team_chemistry, chemistry_gain, tactical_knowledge,
+  player_condition, league_stats, boxscore_quarter_scores,
+  calendrier_boxscore, stats_hebdo, player_season_stats_modal,
+  live_view_game_style, scouting_advanced_stats, tous les server/*_test.js.
+  Reste : `git push` + redéploiement.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Verrou des
   ordres à T-5 min + accès à l'émission d'avant-match** — retour
@@ -1198,20 +1245,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
      run).
    - **Reste à faire** : synchroniser sur le Mac (pont déconnecté), donner
      les commandes commit/push à l'utilisateur.
-
-7. **⏳ À FAIRE — Investiguer `inflateRosterWithRookies` qui ne persiste
-   pas à une réouverture** — découvert en creusant le point 6 (test
-   `training_progression_test.js`), PAS causé par les correctifs de cette
-   session. `training_progression_test.js:inflateRosterWithRookies` ajoute
-   15 joueurs débutants directement dans la sauvegarde brute
-   (`readRawSave`/`writeRawSave`) ; juste après l'ajout, `readRawSave`
-   confirme bien 30 joueurs sur le disque — mais après un `openGame()`
-   (rouvre la page) suivant, l'effectif relu ne contient plus que les 15
-   joueurs d'origine. Cause non trouvée (pas creusé plus loin, hors scope
-   du chantier rotations) — soit le chargement de la page réécrit/valide
-   la sauvegarde d'une façon qui rejette les nouveaux joueurs, soit un
-   autre mécanisme écrase le fichier entre les deux lectures. À
-   investiguer avec un harnais dédié avant de toucher au code.
 
 8. **✅ FILET DE SÉCURITÉ AJOUTÉ (code écrit, testé en sandbox, pas encore
    livré sur le Mac) — cause EXACTE toujours pas identifiée — Crash

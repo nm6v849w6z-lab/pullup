@@ -3092,6 +3092,28 @@ class Player {
     this.firstRestThreshold = rand(20, 50);
     this.restThreshold = rand(75, 90);
     this.hasHadFirstRest = false;
+    // Repos planifié DANS LE TEMPS (retour utilisateur 2026-09-26, boxscore
+    // Lyon-Rennes où les 10 titulaires avaient joué tout le 1er
+    // quart-temps : "que tu aies un ou deux joueurs qui jouent tout le
+    // premier quart temps ça peut arriver. Mais les 5 des deux équipes non
+    // jamais"). Le seuil de fatigue bas ci-dessus ne suffisait pas : un Q1
+    // complet n'apporte que ~20-25 de fatigue à endurance moyenne, donc 59 %
+    // des équipes ne faisaient AUCUN changement en Q1 (mesuré sur
+    // league.json). firstRestAt = secondes jouées au bout desquelles un
+    // TITULAIRE sort pour sa première pause, quel que soit son niveau de
+    // fatigue : ~65 % entre 4,5 et 9,5 min, ~35 % "gros temps de jeu" qui
+    // enchaînent tout le Q1 (10-14 min) — un ou deux titulaires qui jouent
+    // tout le Q1 reste donc possible, les cinq quasiment jamais.
+    this.firstRestAt = Math.random() < 0.35 ? rand(600, 840) : rand(270, 570);
+    // Relais court d'un remplaçant entré pendant la première pause d'un
+    // titulaire (voir MatchEngine.substituteIfNeeded) : id du titulaire à
+    // faire revenir et secondes jouées au bout desquelles il revient.
+    this.returnStarterId = null;
+    this.stintEndAt = Infinity;
+    // Pauses suivantes d'un titulaire revenu en jeu : nextRestAt (secondes
+    // jouées) repoussé de 7 à 12 min à chaque retour, pour qu'un titulaire
+    // ne reste pas ensuite jusqu'au seuil de fatigue haut (~30 min d'affilée).
+    this.nextRestAt = this.firstRestAt;
     this.fouls = 0;
     this.disqualified = false;
     this.technicalFouls = 0;
@@ -10440,6 +10462,25 @@ class MatchEngine {
     for (const p of team.onCourtPlayers()) {
       if (!p.onCourt) continue; // déjà sorti plus tôt dans cette même passe
 
+      // Retour du titulaire après le relais court de son remplaçant (voir
+      // Player.returnStarterId/stintEndAt) : sans ça, un titulaire sorti pour
+      // sa première pause ne revenait quasiment jamais (le remplaçant, tout
+      // frais, restait jusqu'à son propre seuil de fatigue haut, ~30 min).
+      if (p.returnStarterId && p.secondsPlayed >= p.stintEndAt && !p.disqualified && !p.injured) {
+        const starter = team.players.find(x => x.id === p.returnStarterId);
+        p.returnStarterId = null;
+        if (starter && !starter.onCourt && !starter.disqualified && !starter.injured && !starter.matchInjuryLocked &&
+            starter.fatigue < starter.restThreshold - 15 &&
+            (starter.fouls < 4 || team.maintainDespiteFouls.has(starter.id))) {
+          p.onCourt = false;
+          starter.onCourt = true;
+          starter.matchPosition = p.matchPosition;
+          starter.nextRestAt = starter.secondsPlayed + rand(420, 720);
+          this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: starter.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: starter.name });
+          continue;
+        }
+      }
+
       if (p.fouls >= 5 && !p.disqualified) {
         p.disqualified = true;
         // `player` (retour Discord d'Ariane, relayé par l'utilisateur,
@@ -10462,14 +10503,17 @@ class MatchEngine {
       // plus bas), utilise le seuil haut (restThreshold) — voir le grand
       // commentaire associé dans Player/Team.resetForMatch.
       const fatigueThreshold = (p.isStarterThisMatch && !p.hasHadFirstRest) ? p.firstRestThreshold : p.restThreshold;
+      // Première pause planifiée dans le temps (voir Player.firstRestAt).
+      const plannedFirstRest = p.isStarterThisMatch && p.secondsPlayed >= p.nextRestAt;
       const shouldRest = !mustLeave && (
-        (p.fatigue >= fatigueThreshold && !team.maintainDespiteFouls.has(p.id)) ||
+        ((p.fatigue >= fatigueThreshold || plannedFirstRest) && !team.maintainDespiteFouls.has(p.id)) ||
         (p.fouls >= 4 && !team.maintainDespiteFouls.has(p.id))
       );
       if (!mustLeave && !shouldRest) continue;
       // Posé dès QU'une sortie a lieu pour ce joueur (fatigue, fautes, ou
       // mustLeave), quelle qu'en soit la cause — s'il revient plus tard,
       // c'est le seuil haut qui s'applique désormais (voir ci-dessus).
+      const isStarterFirstRest = p.isStarterThisMatch && !mustLeave;
       p.hasHadFirstRest = true;
 
       // Remplaçant pour LE POSTE QUE p OCCUPAIT (matchPosition), pas
@@ -10480,6 +10524,12 @@ class MatchEngine {
         p.onCourt = false;
         replacement.onCourt = true;
         replacement.matchPosition = p.matchPosition;
+        // Pause d'un titulaire : le remplaçant ne fait qu'un relais de 2,5
+        // à 5,5 min, puis le titulaire revient (voir le début de la boucle).
+        if (isStarterFirstRest) {
+          replacement.returnStarterId = p.id;
+          replacement.stintEndAt = replacement.secondsPlayed + rand(150, 330);
+        }
         // Annoncé pour TOUT changement désormais, pas seulement les
         // volontaires (`!mustLeave`) comme avant ce correctif — un fauté-out
         // ou un blessé qui sortait déjà (voir foulOut/injury juste au-dessus)

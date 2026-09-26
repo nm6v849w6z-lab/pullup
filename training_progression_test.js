@@ -39,8 +39,20 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 // scénario, voir le grand commentaire juste en dessous.
 function inflateRosterWithRookies(savePath) {
   const saved = readRawSave(savePath);
+  // L'équipe humaine existe en DEUX exemplaires dans la sauvegarde :
+  // `saved.team` et son entrée `isHuman` dans `saved.league.teams` — c'est
+  // cette dernière que le serveur simule et renvoie. N'ajouter les
+  // débutants qu'à `saved.team` (ancienne version) les faisait disparaître
+  // à la réouverture (point 7 de DEV_NOTES.md, résolu le 2026-09-26), et le
+  // test ne passait que par hasard, quand la rotation laissait un joueur
+  // du poste entraîné sans minute.
+  const humanInLeague = saved.league && (saved.league.teams || []).find(t => t.isHuman);
   E.POSITIONS.forEach(pos => {
-    for (let i = 0; i < 3; i++) saved.team.players.push(E.serializePlayerRecord(E.generateRookiePlayer(pos)));
+    for (let i = 0; i < 3; i++) {
+      const rec = E.serializePlayerRecord(E.generateRookiePlayer(pos));
+      saved.team.players.push(rec);
+      if (humanInLeague && humanInLeague !== saved.team) humanInLeague.players.push(JSON.parse(JSON.stringify(rec)));
+    }
   });
   writeRawSave(savePath, saved);
 }
@@ -176,6 +188,9 @@ function sumTrainedProgress(before, after, trainedPositions, filterFn, onlyAttrs
 // ---------------------------------------------------------------------
 {
   let { doc, win, dom, server, savePath, baseUrl } = await loadGame();
+  // Laisse la page finir sa sauvegarde initiale avant de modifier le
+  // fichier à la main, sinon elle peut écraser les débutants ajoutés.
+  await flush(dom);
   win.close();
   inflateRosterWithRookies(savePath);
   dom = await openGame(html, baseUrl);
