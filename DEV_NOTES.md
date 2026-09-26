@@ -79,41 +79,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   citation) — retour : "élargi un peu la colonne [...] comme ça la citation
   n'aura pas 3 caractères sur la ligne du dessous". Reste : `git push`.
 
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Page live dans
-  l'esprit du jeu** — retour utilisateur (captures live Lyon-Rennes +
-  tableau de bord + fiche joueur) : "améliore la page live pour qu'elle
-  colle plus à l'esprit du jeu". Vue assets/live : bandeau repris du
-  "Prochain match" (fond scindé, cercle de terrain, liserés aux couleurs de
-  maillot, écussons du jeu, noms en capitales, badge "Mon club", ligne
-  "En direct · Championnat · Journée X/18" + "À domicile · N places"),
-  chrono ambre, ballon de possession, série en pastille ; tuiles "hommes
-  du match" (points/rebonds/passes, avatars) ; carte des tirs avec logo du
-  club qui reçoit au rond central (régression de l'ancienne vue) et
-  raquettes teintées ; fil avec pastilles +2/+3/LF/Faute/Perte ; feuille de
-  match avec avatars, pastilles de poste ambre, noms cliquables vers la
-  fiche, ouverte sur mon club ; titres en capitales, police et palette du
-  tableau de bord ; fin de match "Final / Victoire de X". Couleurs : maillot
-  domicile, l'extérieur passe en maillot extérieur si même couleur, maillot
-  trop sombre éclairci. Adaptateur : hmLiveDress/hmLiveMeta/hmLiveColors/
-  hmLiveAvatar (moteurbasket3.html, cache par match). Test :
-  live_view_game_style_test.js (nouveau) ; live_boxscore, live_court_*,
-  live_match_names, dashboard_live_match, spectate, tabs verts (sandbox et
-  Mac). Rendu vérifié dans Chromium sur un vrai direct (1440 et 390 px,
-  mi-temps, fin).
-  Retouche : le fil du match prend la hauteur de la carte des tirs (plus de
-  vide sous la carte ; défilement interne), hauteur fixe en une colonne.
-  Poussé par l'utilisateur mais « ça n'est pas passé » (capture : ancienne
-  vue sur hoop-manager.com) : live.css/live-view.js gardés en cache —
-  service worker en « cache d'abord » sur /assets/* et Cache-Control 24 h.
-  Correctif : .js/.css servis en no-cache (serveAsset), service worker en
-  réseau d'abord pour .js/.css (CACHE_VERSION hoop-v2), et ?v=
-  HM_LIVE_ASSET_VERSION sur les URL de la vue live pour contourner les
-  copies déjà en cache. Tests mobile_pwa, index, live_view_game_style,
-  dashboard_live_match, live_court_home_logo verts.
-  Puis (captures du direct) : le dernier tir de la carte, réussi ou raté,
-  clignote avec un halo jusqu'au tir suivant ; pastille « Temps mort » du
-  fil passée sur deux lignes au lieu de déborder sur le texte.
-  live_view_game_style_test.js complété. Reste : `git push`.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Page live :
+  bouton Retour, score du topbar et liseré jaune retirés** — retour
+  utilisateur (capture du direct) : "enlève le bouton retour", "enlève le
+  score dans la barre quand on est sur cette page, ça fait doublon", "il y
+  a un petit truc jaune au dessus de la barre de recherche enlève aussi".
+  (La refonte « esprit du jeu », le dernier tir qui clignote et le correctif
+  de cache sont poussés.) Retour : #liveSection.hm-live-on
+  .playback-controls masqué (bouton gardé dans le DOM : tests, forfait) ;
+  mini-bandeau #topbarLiveStrip masqué via :has() quand la page live est
+  affichée, toujours visible ailleurs ; le « truc jaune » était le bas du
+  bandeau d'événement (.toast) de la vue live, caché hors écran mais pas
+  assez → visibility:hidden quand il n'est pas affiché.
+  HM_LIVE_ASSET_VERSION 20260926-4. Vérifié dans Chromium sur un vrai
+  direct ; live_view_game_style, dashboard_live_match, live_match_names,
+  live_boxscore, tabs, spectate verts. Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Rotation : les
   10 titulaires jouaient tout le 1er quart-temps** — retour utilisateur

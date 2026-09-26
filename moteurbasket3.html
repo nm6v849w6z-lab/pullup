@@ -5140,6 +5140,13 @@
   #liveSection.hm-live-on #liveCourtWrap,
   #liveSection.hm-live-on #feed,
   #liveSection.hm-live-on #liveBoxscoreSection{display:none !important;}
+  /* Retour utilisateur (2026-09-26, capture du direct) : « enlève le bouton
+     retour » et « enlève le score dans la barre quand on est sur cette
+     page, ça fait doublon » — le bouton reste dans le DOM (tests, forfait
+     sans nouvelle vue), le mini-bandeau du topbar reste sur les autres
+     pages. */
+  #liveSection.hm-live-on .playback-controls{display:none;}
+  body:has(#liveSection.hm-live-on:not(.hidden)) #topbarLiveStrip{display:none !important;}
 </style>
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
@@ -28108,7 +28115,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20260926-3";
+const HM_LIVE_ASSET_VERSION = "20260926-4";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
