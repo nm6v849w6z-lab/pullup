@@ -37748,7 +37748,6 @@ function renderSponsorsPanel() {
       return `<span>${escapeHtml(h.sponsorName)} <span class="dim">· ${escapeHtml(h.slotLabel || h.slot)}</span> ${verdict}</span>`;
     }).join("") + `</div>`;
   }
-  html += `<div class="spo-rules"><span class="spo-rules-title">Comment ça marche</span><span>Fixe chaque semaine + prime par victoire officielle + bonus si l'objectif du contrat est atteint en fin de saison.</span><span>Objectif raté : pas de bonus, contrat rompu, réputation ${SPONSOR_REPUTATION_MISS}. Jamais d'argent réclamé.</span><span>Objectif atteint : +${SPONSOR_PROFILES.prudent.reputationMet} (prudent), +${SPONSOR_PROFILES.normal.reputationMet} (normal), +${SPONSOR_PROFILES.ambitieux.reputationMet} (ambitieux).</span></div>`;
   if (sponsorsUi.feedback) html += `<p class="spo-feedback ${sponsorsUi.feedback.ok ? "ok" : "err"}">${escapeHtml(sponsorsUi.feedback.text)}</p>`;
   holder.innerHTML = html;
 }
