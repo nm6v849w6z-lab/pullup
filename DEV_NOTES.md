@@ -20,6 +20,37 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — "Les ordres
+  sautent"** — retour utilisateur (capture du calendrier : J7 à venir en
+  "Ordres" alors que J8/J9 préparées affichent "Modifier vos ordres").
+  Cause : une journée préparée à l'avance garde ses ordres dans
+  plannedTactics ; quand elle devient le prochain match, l'écran Ordres et
+  le calendrier lisent les ordres EN DIRECT + ordresValidatedRound → ordres
+  préparés invisibles, et toute retouche faite alors était écrasée au coup
+  d'envoi par applyPlannedTacticsForRound. Correctif : League.
+  promoteImmediatePlan (engine.js) promeut le plan en ordres en direct et
+  marque la journée validée dès qu'elle devient la prochaine (championnat
+  seulement, équipes humaines), appelé à chaque tick (server/index.js).
+  Test : server/promote_immediate_plan_test.js (nouveau) ; planned_tactics
+  (x2), index, confirmed_tactics_actions, autoSim, cup, cup_ordres_planning,
+  ordres_validated_badge, end_to_end, calendrier_ordres_stale verts.
+  Mode solo (navigateur seul) non couvert. Reste : `git push`.
+- **✅ COMMITTÉ, À POUSSER (2026-09-26) — Ligue : « La saison n'a pas encore
+  commencé : tout le monde part à 0. » retiré** (aucune note avant le 1er
+  match). Reste : `git push`.
+
+### À investiguer
+- **Crash pendant un match de Coupe (2026-09-26, signalé par
+  l'utilisateur)** : "ça a crash au 4ème QT et impossible de recharger le
+  site". Vérifié le 26/09 vers 7h45 : site accessible, aucune erreur
+  console, Coupe cohérente (demies du 25/09 résolues, rien de bloqué).
+  Pas d'accès aux logs Render depuis ici. Pistes : redémarrage/redéploiement
+  Render pendant le match (push en cours d'après-midi ?) ou manque de
+  mémoire. À recouper avec l'heure exacte et les logs Render.
+- **player_detail_test.js en échec sur HEAD** (setup : "la fiche équipe
+  adverse devrait afficher des liens joueur cliquables") — probablement
+  depuis la refonte de la fiche équipe adverse (56b9dab, autre session).
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Alchimie : leviers
   à la hausse** — retour utilisateur : "faisons la vivre davantage à la
   hausse, ça tire trop vers le bas là" (avant : seules les 5 interviews de

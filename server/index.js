@@ -328,6 +328,10 @@ function tick(league, now) {
   // entraînement (sinon un manager qui règle "tactique" une fois puis
   // n'ouvre plus jamais cette page ne banquerait jamais aucun jour).
   league.teams.forEach(t => { if (t.isHuman && t.syncCollectiveTrainingLog) t.syncCollectiveTrainingLog(now); });
+  // Ordres préparés à l'avance : promus en ordres en direct dès que leur
+  // journée devient le prochain match du club (voir
+  // League.promoteImmediatePlan côté moteur — "les ordres sautent").
+  if (league.promoteImmediatePlan) league.teams.forEach((t, i) => { if (t.isHuman) league.promoteImmediatePlan(i); });
   // `changed` : toujours `true` (voir le grand commentaire ci-dessus) —
   // ensureLiveMatch/catchUpLeague/pruneExpiredInterviews tournent tous les
   // trois SANS CONDITION à chaque appel et peuvent chacun muter `league`

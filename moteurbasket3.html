@@ -20183,7 +20183,9 @@ function lgRaceCardHtml(table) {
   const tied = table.filter(s => s.idx !== myTeamIndex && s.points === me.points && s.played);
   const left = Math.max(0, league.totalRounds - me.played);
   let note;
-  if (!me.played) note = "La saison n'a pas encore commencé : tout le monde part à 0.";
+  // "La saison n'a pas encore commencé : tout le monde part à 0." retiré
+  // (retour utilisateur 2026-09-26) : aucune note avant le 1er match.
+  if (!me.played) note = "";
   else if (tied.length) {
     const names = tied.map(s => escapeHtml(s.name));
     const list = names.length > 1 ? names.slice(0, -1).join(", ") + " et " + names[names.length - 1] : names[0];
@@ -20201,7 +20203,7 @@ function lgRaceCardHtml(table) {
     `</div>` +
     (lines.length ? `<ul class="lg-race-list">${lines.map(l =>
       `<li><span>${l.label}</span><b${l.warn ? ` class="warn"` : l.tone === "ok" ? ` class="pos"` : ""}>${l.value}</b></li>`).join("")}</ul>` : "") +
-    `<p class="lg-race-note">${note}</p></section>`;
+    (note ? `<p class="lg-race-note">${note}</p>` : "") + `</section>`;
 }
 
 // MVP de la dernière journée jouée (computeLastMatchdayMvp) : évaluation,

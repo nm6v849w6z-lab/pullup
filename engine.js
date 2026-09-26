@@ -7286,6 +7286,33 @@ class League {
   // convention que league.liveMatch.competition (voir enterLiveMatch/
   // defaultOrdresRound : `.competition || "championship"` partout où c'est
   // lu).
+  // Ordres préparés à l'avance pour la journée de championnat devenue le
+  // match IMMÉDIAT du club (retour utilisateur 2026-09-26, capture du
+  // calendrier : "de temps en temps, les ordres sautent"). Tant qu'une
+  // journée est future, ses ordres vivent dans plannedTactics ; dès qu'elle
+  // devient la prochaine (le match précédent vient d'être joué), l'écran
+  // Ordres et le calendrier lisent les ordres EN DIRECT (+
+  // ordresValidatedRound), qui ne contenaient pas encore ce plan : les ordres
+  // préparés semblaient perdus (bouton "Ordres" au lieu de "Modifier vos
+  // ordres", écran Ordres revenu aux anciens réglages), et pire, toute
+  // retouche faite à ce moment-là était écrasée au coup d'envoi par
+  // applyPlannedTacticsForRound. Ici, le plan est promu en ordres en direct
+  // DÈS que sa journée devient la prochaine, et marqué validé. Idempotent,
+  // appelé à chaque tick serveur (voir server/index.js:tick). Ne touche
+  // jamais à la Coupe (ses ordres passent toujours par un plan, voir
+  // cup_ordres_planning_test.js), ni à une journée dont le match en direct a
+  // déjà commencé (le plan y est déjà appliqué et consommé).
+  promoteImmediatePlan(teamIdx) {
+    const team = this.teams[teamIdx];
+    if (!team || !team.isHuman || !team.hasPlanForRound) return false;
+    const next = this.nextUserMatch(teamIdx);
+    if (!next || next.competition === "cup") return false;
+    if (!team.hasPlanForRound(next.round)) return false;
+    team.applyPlannedTacticsForRound(next.round);
+    team.ordresValidatedRound = next.round;
+    return true;
+  }
+
   nextUserMatch(teamIdx = 0) {
     let champ = null;
     for (let r = this.round; r < this.totalRounds; r++) {
