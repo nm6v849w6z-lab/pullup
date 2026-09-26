@@ -134,6 +134,13 @@ function playWholeSeason(league, now) {
   const txt = doc.getElementById("histoireContent").textContent;
   check(/Saison 1/.test(txt) && /Saison 2/.test(txt) && /En cours/.test(txt), "palmarès : saison 1 archivée + saison 2 en cours");
   check(doc.querySelectorAll(".hc-record").length >= 4, "records affichés");
+  const heads = [...doc.querySelectorAll("#histoireContent .hc-table th")].map(th => th.textContent.trim());
+  check(heads.join("|") === "Saison|Division|Championnat|Coupe|Meilleur marqueur" && !/Titres et parcours/.test(txt), `palmarès : colonnes Championnat + Coupe seulement (${heads.join("|")})`);
+  const lab = win.hcChampionshipLabel;
+  const base = { played: 18, teams: 10 };
+  check(lab({ ...base, rank: 1, champion: true }) === "Champion" && lab({ ...base, rank: 2, playoffResult: "Finaliste" }) === "Finale" && lab({ ...base, rank: 3, playoffResult: "Demi-finaliste" }) === "Play-offs"
+    && lab({ ...base, rank: 5 }) === "Milieu de tableau" && lab({ ...base, rank: 7 }) === "Barrage" && lab({ ...base, rank: 8, barrageLost: true }) === "Relégation" && lab({ ...base, rank: 10 }) === "Relégation",
+    "parcours en championnat : champion, finale, play-offs, milieu de tableau, barrage, relégation");
   check(doc.querySelectorAll(".hc-table").length === 1 && !/Légendes du club/.test(txt), "plus de tableau Légendes (remplacé par le Hall of Fame)");
   check(!/Nos joueurs parmi tous ceux de la ligue/.test(txt) && !/joueurs classés dans la ligue/.test(txt), "classement mondial : textes d'intro retirés");
   const cols = doc.querySelectorAll("#histoireContent .hc-col");

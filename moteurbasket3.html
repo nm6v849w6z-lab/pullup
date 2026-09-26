@@ -13974,6 +13974,9 @@ function seasonSummaryForTeam(league, teamIdx, now) {
     played: row.played, wins: row.wins, losses: row.losses, pf: row.pf, pa: row.pa, points: row.points,
     cupResult: cup ? cup.label : null,
     playoffResult: playoff,
+    // Perdant du barrage 7e-8e (relégué) : distingue "Barrage" de
+    // "Relégation" dans le palmarès (voir hcChampionshipLabel).
+    barrageLost: !!(league.relegationBarrage && league.relegationBarrage.loser === teamIdx),
     champion: playoff === "Champion",
     cupWinner: !!(cup && cup.won),
     topScorer: top ? { id: top.id, name: top.name, pts: top.pts, games: top.games } : null,
@@ -37736,13 +37739,32 @@ function renderHistoireSection() {
   // que le club est jeune, est suivi du Hall of Fame et du classement
   // mondial au lieu de laisser un trou face aux Records.
   html += `<div class="hc-grid"><div class="hc-col">`;
-  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Palmarès</h2><span>Titres et parcours saison par saison</span></div>${hcPalmaresHtml(team, idx)}</section>`;
+  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Palmarès</h2></div>${hcPalmaresHtml(team, idx)}</section>`;
   html += `<section class="lg-panel hc-panel" id="hcHallOfFame"><div class="lg-panel-title"><h2>Hall of Fame</h2></div>${hcHallOfFameHtml(team, idx)}</section>`;
   html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Classement mondial</h2></div>${hcWorldStatsHtml(idx)}</section>`;
   html += `</div><div class="hc-col">`;
   html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
   html += `</div></div>`;
   holder.innerHTML = html;
+}
+
+// Parcours en championnat (retour utilisateur, 2026-09-26 : "garde
+// uniquement championnat et coupe (championnat tu mettras relégation,
+// milieu de tableau, play off, finale, champion)", puis "barrage aussi") :
+// d'après les play-offs puis la zone du classement (1-4 play-offs, 7-8
+// barrage, 9-10 relégation ; perdant du barrage = relégation). Saison en
+// cours : zone actuelle.
+function hcChampionshipLabel(s) {
+  if (s.champion || s.playoffResult === "Champion") return "Champion";
+  if (s.playoffResult === "Finaliste") return "Finale";
+  if (s.playoffResult === "Demi-finaliste") return "Play-offs";
+  if (!s.rank || !s.played) return "–";
+  if (s.teams === 10) {
+    if (s.rank <= 4) return "Play-offs";
+    if (s.rank >= 9 || s.barrageLost) return "Relégation";
+    if (s.rank >= 7) return "Barrage";
+  }
+  return "Milieu de tableau";
 }
 
 function hcPalmaresHtml(team, idx) {
@@ -37754,14 +37776,12 @@ function hcPalmaresHtml(team, idx) {
   // Saison en cours (non archivée) en tête, puis les saisons archivées.
   const current = seasonSummaryForTeam(league, idx, Date.now());
   const rows = [{ ...current, current: true }, ...history];
-  html += `<div class="lg-table-wrap"><table class="lg-table hc-table"><thead><tr><th>Saison</th><th>Division</th><th class="c">Class.</th><th class="c">Bilan</th><th>Coupe</th><th>Play-offs</th><th class="lg-hide-sm">Meilleur marqueur</th></tr></thead><tbody>`;
+  html += `<div class="lg-table-wrap"><table class="lg-table hc-table"><thead><tr><th>Saison</th><th>Division</th><th>Championnat</th><th>Coupe</th><th class="lg-hide-sm">Meilleur marqueur</th></tr></thead><tbody>`;
   rows.forEach(s => {
     html += `<tr class="${s.current ? "hc-current" : ""}"><td><b>Saison ${s.seasonNo}</b>${s.current ? ` <span class="lp-tag">En cours</span>` : ""}</td>` +
       `<td>${escapeHtml(s.divisionName)}</td>` +
-      `<td class="c">${s.rank ? `<span class="lg-rank${s.rank === 1 ? " hc-gold" : ""}">${s.rank}</span>` : "–"}</td>` +
-      `<td class="c">${s.wins}-${s.losses}</td>` +
+      `<td>${s.champion ? `<span class="hc-win">🏆 Champion</span>` : escapeHtml(hcChampionshipLabel(s))}</td>` +
       `<td>${s.cupWinner ? `<span class="hc-win">🏆 Vainqueur</span>` : escapeHtml(s.cupResult || "–")}</td>` +
-      `<td>${s.champion ? `<span class="hc-win">🏆 Champion</span>` : escapeHtml(s.playoffResult || "–")}</td>` +
       `<td class="lg-hide-sm">${s.topScorer ? `${escapeHtml(s.topScorer.name)} <span class="dim">· ${s.topScorer.pts} pts</span>` : "–"}</td></tr>`;
   });
   html += `</tbody></table></div>`;

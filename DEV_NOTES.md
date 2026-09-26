@@ -129,8 +129,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   mis de côté (git stash) par un pull --rebase d'une autre session puis
   réappliqués ; revérifiés après les commits Sponsors. Commit suivant :
   ligne "Saison N · Voir le match" retirée des cartes de record ("enleve
-  dans la brique les saisons 1 · voir le match"). Reste : `git push` +
-  redéploiement.
+  dans la brique les saisons 1 · voir le match"). Puis Palmarès : sous-titre
+  retiré, colonnes Class./Bilan/Play-offs remplacées par "Championnat"
+  (Champion, Finale, Play-offs, Milieu de tableau, Barrage, Relégation —
+  hcChampionshipLabel ; nouveau champ barrageLost dans le résumé de
+  saison). Reste : `git push` + redéploiement.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées :
   page d'accueil épurée + heure des matchs au choix** — retour utilisateur :

@@ -7156,6 +7156,9 @@ function seasonSummaryForTeam(league, teamIdx, now) {
     played: row.played, wins: row.wins, losses: row.losses, pf: row.pf, pa: row.pa, points: row.points,
     cupResult: cup ? cup.label : null,
     playoffResult: playoff,
+    // Perdant du barrage 7e-8e (relégué) : distingue "Barrage" de
+    // "Relégation" dans le palmarès (voir hcChampionshipLabel).
+    barrageLost: !!(league.relegationBarrage && league.relegationBarrage.loser === teamIdx),
     champion: playoff === "Champion",
     cupWinner: !!(cup && cup.won),
     topScorer: top ? { id: top.id, name: top.name, pts: top.pts, games: top.games } : null,
