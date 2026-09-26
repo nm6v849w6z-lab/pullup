@@ -20,13 +20,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Calendrier,
-  carte Prochain match : « Ordres non définis pour ce match » retiré** —
-  retour utilisateur : "enlève: Ordres non définis pour ce match" (le
-  bouton "Donner les ordres" le dit déjà). « Ordres enregistrés pour ce
-  match » conservé. Fichier : moteurbasket3.html
-  (calendarNextMatchCardHtml, CSS .cal-next-orders.is-missing retirée).
-  Tests calendar_redesign, calendar verts. Reste : `git push`.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Calendrier :
+  deux textes retirés** — retours utilisateur : "enlève: Ordres non
+  définis pour ce match" (carte Prochain match ; « Ordres enregistrés »
+  conservé) et "enlève: 18 matchs · 6 V – 2 D" (résumé à droite de
+  l'en-tête de chaque mois ; bilan déjà dans la carte Saison). Fichier :
+  moteurbasket3.html (calendarNextMatchCardHtml, renderCalendrierSection,
+  CSS .cal-next-orders.is-missing et .cal-month-summary retirées). Tests
+  calendar_redesign, calendar_merge, calendar verts. Commits 288a433 +
+  suivant. Reste : `git push`.
 
 - **⏳ À REPRENDRE — Tableau de bord : vrai logo d'un adversaire payant**
   (issu de `livrer_dashboard_fixes.sh`, jamais committé) :
