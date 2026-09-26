@@ -4884,7 +4884,6 @@
   .sl-hero-title{margin:10px 0 2px; font-size:40px; line-height:1; font-weight:900; letter-spacing:-.01em; text-transform:uppercase; color:#fff; text-shadow:0 2px 18px rgba(0,0,0,.5); overflow-wrap:anywhere;}
   .sl-hero-sub{font-size:14px; color:#b9c4d8;}
   .sl-sponsor{margin-top:12px; display:inline-flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; background:rgba(21,27,43,.9); border:1px solid rgba(255,255,255,.12); font-size:13px; color:#e6ebf5; max-width:460px;}
-  .sl-sponsor-empty{color:#b9c4d8;}
   .sl-sponsor-badge{width:36px; height:36px; border-radius:8px; background:#0b1f3a; border:1px solid #1f4a86; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; color:#8fd0ff; flex:none;}
   .sl-sponsor-txt{display:flex; flex-direction:column; gap:2px;}
   .sl-sponsor-kicker{font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#9aa4bd;}
@@ -36374,7 +36373,9 @@ function salleRetiredJerseysHtml(team) {
 // --- Bandeau d'en-tête -------------------------------------------------
 function salleSponsorEncartHtml() {
   const c = sponsorActiveContractForSlot(teamA, "salle");
-  if (!c) return `<div class="sl-sponsor sl-sponsor-empty"><span class="sl-sponsor-kicker">Sponsor de la salle</span><span>Aucun · <button type="button" class="sl-sponsor-link" data-tab="sponsors">voir les offres</button></span></div>`;
+  // Pas de sponsor : rien dans le bandeau (retour utilisateur, 2026-09-26 :
+  // enlever "Sponsor de la salle — Aucun · voir les offres").
+  if (!c) return "";
   return `<div class="sl-sponsor"><span class="sl-sponsor-badge">${escapeHtml(defaultTrigramForName(c.sponsorName))}</span>` +
     `<span class="sl-sponsor-txt"><span class="sl-sponsor-kicker">Sponsor de la salle</span><span><b>${escapeHtml(c.sponsorName)}</b> · ${formatMoney(c.weekly)} / sem · objectif ${escapeHtml(c.objectiveLabel)}</span></span>` +
     `<button type="button" class="sl-sponsor-link" data-tab="sponsors">Sponsors →</button></div>`;

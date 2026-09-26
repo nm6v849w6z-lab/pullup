@@ -20,6 +20,12 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle : plus
+  d'encart "Sponsor de la salle — Aucun · voir les offres"** — retour
+  utilisateur : "enleve ça sur l'onglet salle". salleSponsorEncartHtml ne
+  renvoie rien sans sponsor (l'encart reste quand un sponsor est signé).
+  sponsors_test.js adapté, salle_redesign vert. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées
   à 4 équipes** — retour utilisateur : "sur la ligue privée, on doit aussi
   pouvoir mettre 4 équipes". PRIVATE_LEAGUE_SIZES (server/privateLeague.js)

@@ -137,7 +137,7 @@ const SPONSOR_ORDER = { prudent: 0, normal: 1, ambitieux: 2 };
     check(doc.querySelector(".sl-sponsor") && doc.querySelector(".sl-sponsor").textContent.includes(nm), "encart « Sponsor de la salle »");
     check(doc.getElementById("arenaVisualCard").innerHTML.toUpperCase().includes(nm.toUpperCase()), "panneau du sponsor dessiné dans la salle (ArenaGen)");
   } else {
-    check(!!doc.querySelector(".sl-sponsor-empty"), "encart « Aucun sponsor » sur la Salle");
+    check(!doc.querySelector(".sl-sponsor") && !/voir les offres/.test(doc.getElementById("salleHero").textContent), "sans sponsor : aucun encart sponsor sur la Salle");
   }
   // Vue live : le sponsor maillot arrive dans l'état de la vue.
   const st = win.eval(`(() => { hmLive = { match: { isHome: true, pregame: true, kickoffAt: Date.now() + 60000 }, dress: undefined, events: [], shots: [], fouls: [], raw: [], quarter: 1, final: false }; teamB = league.teams.find((t, i) => i !== myTeamIndex); const s = hmLiveBuildState(); return { sp: s.teams[0].sponsor, arena: s.arenaSponsor, short: s.teams[0].short }; })()`);
