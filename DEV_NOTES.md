@@ -20,6 +20,34 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Onglet Marché :
+  refonte** — retours utilisateur : "améliore l'onglet marché" (priorités :
+  filtres et tri, suivi de mes enchères, lisibilité, comparer/décider),
+  "recherche par carac avec 5 carac max (par exemple tir à 3 pts entre 70
+  et 90 + tir à mi distance entre 80 et 95)", "ce n'est pas trop dans
+  l'esprit des autres pages" ; maquette validée ("ça me va") :
+  https://claude.ai/artifact/SD4DVTUfPNSf7h3jtojvbQ. Livré : 4 tuiles KPI
+  (budget disponible = budget − enchères en tête, indicatif car placeBid
+  ne réserve rien ; achats en cours ; mes ventes ; effectif/places libres),
+  "Mes enchères" (Tout/Achats/Ventes, "Dépassé" = on a déjà enchéri via
+  listing.bids mais un autre est en tête, Relancer/Ouvrir → carte + focus
+  du montant), recherche (nom/club sans accents, postes, âge, potentiel
+  min PAR PALIER, prix max/dans mon budget, bonnes affaires, masquer mes
+  annonces, tri), 5 critères de caractéristiques max (min–max, ET), cartes
+  façon en-tête de fiche joueur (avatar, pastille de poste, anneau NOTE =
+  overall(), moyennes Tir/Jeu/Défense/Physique/Mental, valeur estimée +
+  verdict vs enchère minimale, montants rapides, 28 caracs dépliables),
+  Comparer → comparateur existant (showPlayerComparePicker). Pas de
+  "Retirer l'annonce" (aucune route serveur d'annulation). Grille des
+  cartes pilotée par @container (la barre latérale réduit la largeur).
+  Classes/ids historiques gardés pour les tests. Fichier :
+  moteurbasket3.html (#marcheSection, renderMarcheSection et suivantes,
+  CSS .mk-*). Tests transfer_market, team_detail_page,
+  attr_color_scheme_everywhere, dashboard_feed, tabs verts (aussi sur HEAD +
+  ce seul changement, worktree isolé). Commit construit à partir de HEAD
+  + ce seul patch (d'autres sessions ont des changements non commités
+  dans le même fichier, laissés intacts). Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Fiche équipe
   adverse : refonte des sous-onglets Effectif et Calendrier** — retour
   utilisateur (captures Rennes/Devil May Care) : "améliore les pages

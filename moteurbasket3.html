@@ -1534,18 +1534,213 @@
      lieu de défiler horizontalement, avec le bouton Enchérir remis à côté du
      prix/enchère actuelle (sa position d'origine, préférée par
      l'utilisateur). */
-  .market-cards{display:flex; flex-direction:column; gap:10px; margin-bottom:16px;}
-  .market-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
-  .market-card-head{display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:10px 16px; margin-bottom:10px;}
-  .market-card-player{min-width:0;}
-  .market-card-name{font-weight:800; font-size:14px; color:var(--ink);}
-  .market-card-meta{font-size:12px; color:var(--ink-dim); margin-top:3px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;}
-  .market-card-bid{display:flex; flex-wrap:wrap; align-items:center; gap:10px; flex-shrink:0;}
-  .market-card-price{text-align:right; font-size:11.5px; color:var(--ink-faint); white-space:nowrap;}
-  .market-card-price b{display:block; font-size:13.5px; color:var(--ink); font-weight:800;}
-  .market-card-attrs{display:flex; flex-wrap:wrap; gap:10px 16px; padding:10px 0; border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); margin-bottom:8px;}
-  .market-attr-chip{min-width:46px;}
-  .market-attr-label{display:block; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); margin-bottom:3px;}
+  /* Refonte (retour utilisateur, 2026-09-26 : "améliore l'onglet marché",
+     puis "ce n'est pas trop dans l'esprit des autres pages" — captures
+     fiche joueur + Tableau de bord) : la carte-tableau ci-dessus est
+     remplacée par l'esthétique des pages refaites (.hm-card/.pdp2-*) :
+     cartes arrondies 18 px, titres en capitales espacées, 4 tuiles KPI,
+     "Mes enchères" en lignes façon "Cette semaine", annonce façon en-tête de
+     fiche joueur (avatar carré, pastille de poste, NOM en capitales, puces,
+     anneau NOTE, 5 moyennes par famille), 28 caractéristiques dépliables en
+     blocs Fondamentaux/Physique/Mental comme la fiche. Tout reste empilé et
+     s'enroule (flex/grid) : aucun défilement horizontal (voir l'historique
+     ci-dessus). Classes .market-card* conservées comme ancres de tests. */
+  .mk-page{display:flex; flex-direction:column; gap:20px;}
+  .mk-page [hidden]{display:none !important;}
+  .mk-ph h2{margin:0; font-size:28px; font-weight:800; text-transform:uppercase; letter-spacing:.01em; line-height:1.05;}
+  .mk-ph p{margin:6px 0 0; color:var(--ink-dim); font-size:14px;}
+  .mk-card{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:22px 24px; min-width:0;}
+  .mk-card-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
+  .mk-card-head h3{margin:0; font-size:18px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--ink);}
+  .mk-kpis{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:20px;}
+  .mk-kpi{display:flex; flex-direction:column; gap:8px; padding:20px 22px;}
+  .mk-kpi-lbl{font-size:12px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:var(--ink-dim);}
+  .mk-kpi-val{font-weight:800; font-size:28px; line-height:1.15; font-variant-numeric:tabular-nums;}
+  .mk-kpi-val small{font-size:16px; color:var(--ink-dim); font-weight:700;}
+  .mk-kpi-row{display:flex; justify-content:space-between; gap:10px; font-size:13.5px; color:var(--ink-dim);}
+  .mk-kpi-row b{color:var(--ink); white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .mk-kpi-row b.is-bad{color:var(--danger);} .mk-kpi-row b.is-up{color:#5fd6ae;}
+  .mk-kpi-bar{height:6px; border-radius:3px; background:var(--bg); overflow:hidden;}
+  .mk-kpi-bar i{display:block; height:100%; background:var(--amber); border-radius:3px;}
+  .mk-tabs{display:inline-flex; gap:6px; flex-wrap:wrap;}
+  .mk-tab{background:transparent; border:1px solid var(--line); border-radius:999px; padding:6px 14px; font:inherit; font-size:13px; font-weight:700; color:var(--ink-dim); cursor:pointer;}
+  .mk-tab.on{background:var(--panel-2); color:var(--ink); border-color:var(--ink-faint);}
+  .mk-tab .n{margin-left:6px; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+  .mk-tasks{display:flex; flex-direction:column; gap:10px;}
+  .mk-task{display:grid; grid-template-columns:48px minmax(0,1fr) auto auto auto; align-items:center; gap:16px; background:var(--bg); border-radius:14px; padding:12px 16px;}
+  .mk-task-av{width:48px; height:48px; border-radius:12px; overflow:hidden; display:flex; align-items:flex-end; justify-content:center; background:var(--panel-2);}
+  .mk-task-t{min-width:0;}
+  .mk-task-t b{display:block; font-size:16px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mk-task-t span{color:var(--ink-dim); font-size:13.5px;}
+  .mk-task-amt{text-align:right;}
+  .mk-task-amt b{display:block; font-size:18px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .mk-task-amt span{font-size:12.5px; color:var(--ink-dim);}
+  .mk-empty{color:var(--ink-dim); padding:6px 2px; font-size:14px;}
+  .mk-badge{display:inline-flex; align-items:center; font-size:13px; font-weight:700; padding:5px 12px; border-radius:999px; white-space:nowrap;}
+  .mk-badge.lead{color:#5fd6ae; background:rgba(51,180,161,.12);}
+  .mk-badge.out{color:var(--danger); background:rgba(226,105,79,.14);}
+  .mk-badge.sale{color:var(--amber); background:rgba(240,162,60,.10);}
+  .mk-badge.mute{color:var(--ink-dim); background:var(--panel-2);}
+  .mk-btn{min-height:44px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:14px; font-weight:700; padding:0 18px; display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; cursor:pointer;}
+  .mk-btn:hover{border-color:var(--ink-faint);}
+  .mk-btn--outline{background:transparent;}
+  .mk-btn--accent{background:transparent; border-color:var(--amber); color:var(--amber);}
+  .mk-btn--accent:hover{background:rgba(240,162,60,.10);}
+  .mk-btn--primary{background:var(--amber); border-color:var(--amber); color:#1a0f02; font-weight:800;}
+  .mk-btn--primary:hover{filter:brightness(1.06);}
+  .mk-btn--danger{background:transparent; border-color:var(--danger); color:var(--danger);}
+  .mk-btn--sm{min-height:38px; padding:0 14px; font-size:13px;}
+  .mk-btn:disabled{opacity:.45; cursor:not-allowed;}
+  .mk-filters{display:flex; flex-direction:column; gap:14px;}
+  .mk-frow{display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+  .mk-search{flex:1 1 280px; min-width:0; background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:11px 18px; font:inherit; font-size:14.5px; color:var(--ink);}
+  .mk-search::placeholder{color:var(--ink-faint);}
+  .mk-poscells{display:flex; flex-wrap:wrap; gap:8px;}
+  .mk-poscell{height:42px; min-width:58px; padding:0 14px; border-radius:10px; background:var(--bg); border:1px solid transparent; color:var(--ink-dim); font:inherit; font-weight:800; font-size:13.5px; letter-spacing:.04em; cursor:pointer;}
+  .mk-poscell .n{font-weight:600; color:var(--ink-faint); margin-left:6px; font-size:12px; font-variant-numeric:tabular-nums;}
+  .mk-poscell.on{background:var(--amber); color:#1a0f02;}
+  .mk-poscell.on .n{color:#1a0f02; opacity:.7;}
+  .mk-page .mk-sel{width:auto;}
+  .mk-sel{height:42px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:0 12px; font:inherit; font-size:13.5px; color:var(--ink);}
+  .mk-pchip{height:42px; display:inline-flex; align-items:center; gap:8px; border-radius:999px; background:var(--bg); border:1px solid var(--line); padding:0 16px; font:inherit; font-size:13.5px; font-weight:600; color:var(--ink-dim); cursor:pointer;}
+  .mk-pchip.on{border-color:var(--amber); color:var(--amber); background:rgba(240,162,60,.10);}
+  .mk-pchip .n{font-weight:800; font-variant-numeric:tabular-nums;}
+  .mk-chev{transition:transform .15s;}
+  [aria-expanded="true"] > .mk-chev{transform:rotate(180deg);}
+  .mk-crit-tags{display:flex; flex-wrap:wrap; gap:8px;}
+  .mk-crit-tags:empty{display:none;}
+  .mk-crit-tag{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700; background:rgba(240,162,60,.10); color:var(--amber); border:1px solid rgba(240,162,60,.45); border-radius:999px; padding:5px 6px 5px 14px;}
+  .mk-crit-tag button{background:none; border:0; color:inherit; font-size:15px; line-height:1; padding:0 6px; cursor:pointer;}
+  .mk-crit-panel{background:var(--bg); border-radius:14px; padding:16px 18px; display:flex; flex-direction:column; gap:10px;}
+  .mk-crit-head{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; padding-bottom:10px; border-bottom:1px solid var(--line);}
+  .mk-crit-head h4{margin:0; font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink);}
+  .mk-crit-head span{font-size:13px; color:var(--ink-dim);}
+  .mk-crit-row{display:flex; flex-wrap:wrap; align-items:center; gap:10px;}
+  .mk-crit-row .mk-sel{min-width:210px; background:var(--panel);}
+  .mk-crit-row input{width:72px; height:42px; background:var(--panel); border:1px solid var(--line); border-radius:10px; text-align:center; font:inherit; font-weight:700; font-size:15px; color:var(--ink);}
+  .mk-crit-row .w{color:var(--ink-dim); font-size:13px;}
+  .mk-crit-x{background:none; border:0; color:var(--ink-faint); font-size:18px; padding:4px 8px; border-radius:8px; cursor:pointer;}
+  .mk-crit-x:hover{color:var(--danger); background:rgba(226,105,79,.14);}
+  .mk-crit-foot{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
+  .mk-linkbtn{background:none; border:0; color:var(--ink-dim); font:inherit; font-size:13.5px; font-weight:700; padding:4px 0; display:inline-flex; align-items:center; gap:6px; cursor:pointer;}
+  .mk-linkbtn:hover{color:var(--ink);}
+  .mk-linkbtn.amber{color:var(--amber);}
+  .mk-rescount{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; color:var(--ink-dim); font-size:14px;}
+  .mk-rescount b{color:var(--ink);}
+  #marketFeedback:empty{display:none;}
+  #marketFeedback{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); z-index:60; max-width:calc(100% - 32px);}
+  #marketFeedback .gain-line{background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:12px 18px; font-size:14px; box-shadow:0 10px 30px rgba(0,0,0,.45);}
+  #marketFeedback .gain-line.gain-up{border-color:var(--ok);}
+  #marketFeedback .gain-line.gain-down{border-color:var(--danger);}
+  #marketListings{display:flex; flex-direction:column; gap:18px; container-type:inline-size; container-name:mklist;}
+  .mk-lst{padding:0; overflow:hidden;}
+  .mk-lst.is-lead{border-color:rgba(51,180,161,.40);}
+  .mk-lst.is-out{border-color:rgba(226,105,79,.45);}
+  .mk-lst-main{display:grid; grid-template-columns:minmax(0,1fr) 310px; align-items:stretch;}
+  .mk-lst-prof{grid-column:1; grid-row:2; border-top:1px solid var(--line);}
+  .mk-lst-deal{grid-column:2; grid-row:1 / span 2;}
+  @container mklist (min-width:1180px){
+    .mk-lst-main{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 310px;}
+    .mk-lst-prof{grid-column:auto; grid-row:auto; border-top:0;}
+    .mk-lst-deal{grid-column:auto; grid-row:auto;}
+  }
+  @container mklist (max-width:700px){
+    .mk-lst-main{grid-template-columns:1fr;}
+    .mk-lst-prof, .mk-lst-deal{grid-column:1; grid-row:auto; border-left:0; border-top:1px solid var(--line);}
+    .mk-lst-id, .mk-lst-prof, .mk-lst-deal{padding:18px 16px;}
+    .mk-lst-foot{padding:12px 16px;}
+    .mk-attrs{padding:4px 16px 18px; grid-template-columns:1fr;}
+    .mk-avatar{width:72px; height:72px; border-radius:14px;}
+    .mk-pname{font-size:24px;}
+    .mk-alist.two{grid-auto-flow:row; grid-template-rows:none; grid-template-columns:1fr;}
+  }
+  @container mklist (max-width:980px){ .mk-attrs{grid-template-columns:1fr;} }
+  .mk-lst-id{display:flex; gap:20px; align-items:center; padding:22px 24px; min-width:0;}
+  .mk-avatar{flex:0 0 auto; width:96px; height:96px; border-radius:18px; overflow:hidden; background:var(--panel-2); border:2px solid var(--line); display:flex; align-items:flex-end; justify-content:center;}
+  .mk-id-text{display:flex; flex-direction:column; gap:10px; min-width:0;}
+  .mk-id-top{display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:14px; color:var(--ink-dim);}
+  .mk-pname{margin:0; font-size:30px; line-height:1; font-weight:800; text-transform:uppercase; letter-spacing:-.01em; overflow-wrap:anywhere; color:var(--ink);}
+  .mk-pname .player-link{font:inherit; color:inherit; text-transform:inherit; letter-spacing:inherit; text-align:left; background:none; border:0; padding:0; cursor:pointer;}
+  .mk-pname .player-link:hover{text-decoration:underline; text-decoration-thickness:2px;}
+  .mk-chips{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .mk-chip{font-size:13px; padding:5px 12px; border-radius:999px; background:var(--panel-2); color:var(--ink-dim); white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .mk-chip b, .mk-chip .potential-tier{color:var(--ink); font-weight:700;}
+  .mk-chip .team-link{font:inherit; color:var(--ink); background:none; border:0; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
+  .mk-chip.match{background:rgba(240,162,60,.10); color:var(--ink); box-shadow:inset 0 0 0 1px rgba(240,162,60,.45);}
+  .mk-lst-prof{display:flex; gap:22px; align-items:center; padding:22px 24px; border-left:1px solid var(--line); min-width:0;}
+  .mk-lst-prof .pdp2-ring{flex:none; width:104px; height:104px;}
+  .mk-lst-prof .pdp2-ring .pdp-overall-num{font-size:36px;}
+  .mk-grps{flex:1 1 auto; display:flex; flex-direction:column; min-width:0; max-width:380px;}
+  .mk-grp{display:flex; align-items:center; gap:10px; padding:4px 0; font-size:13.5px;}
+  .mk-grp .lbl{flex:1 1 auto; color:var(--ink-dim); white-space:nowrap;}
+  .mk-grp b{min-width:26px; text-align:right; font-size:16px; font-variant-numeric:tabular-nums;}
+  .mk-bar{flex:0 0 90px; height:6px; border-radius:999px; background:var(--bg); overflow:hidden;}
+  .mk-bar span{display:block; height:100%; border-radius:999px;}
+  .mk-lst-deal{display:flex; flex-direction:column; gap:12px; padding:22px 24px; border-left:1px solid var(--line); background:rgba(255,255,255,.012); min-width:0;}
+  .mk-deal-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .mk-lst-deal .market-card-price{text-align:left; white-space:normal;}
+  .mk-deal-lbl{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim);}
+  .mk-deal-price{display:block; font-size:28px; font-weight:800; line-height:1.1; color:var(--ink); font-variant-numeric:tabular-nums;}
+  .mk-deal-sub{font-size:12.5px; color:var(--ink-dim);}
+  .mk-timer{font-size:13px; font-weight:700; color:var(--ink-dim); white-space:nowrap; display:inline-flex; align-items:center; gap:6px; font-variant-numeric:tabular-nums;}
+  .mk-timer.urgent{color:var(--danger);}
+  .mk-value{display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-dim); flex-wrap:wrap;}
+  .mk-value b{color:var(--ink); font-variant-numeric:tabular-nums;}
+  .mk-verdict{font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;}
+  .mk-verdict.good{color:#5fd6ae; background:rgba(51,180,161,.12);}
+  .mk-verdict.fair{color:var(--ink-dim); background:var(--panel-2);}
+  .mk-verdict.high{color:var(--amber); background:rgba(240,162,60,.10);}
+  .market-card-action{display:flex; flex-direction:column; gap:10px;}
+  .mk-bidrow{display:flex; flex-wrap:wrap; gap:8px;}
+  .mk-bidrow .mk-btn{flex:1 1 auto;}
+  .mk-bidrow input{flex:1 1 110px; min-width:110px; width:auto; height:44px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:0 12px; text-align:right; font:inherit; font-weight:800; font-size:16px; color:var(--ink); font-variant-numeric:tabular-nums;}
+  .mk-quick{display:flex; gap:6px; flex-wrap:wrap;}
+  .mk-quick button{background:var(--bg); border:1px solid var(--line-soft); border-radius:999px; padding:4px 10px; font:inherit; font-size:12px; font-weight:700; color:var(--ink-dim); cursor:pointer;}
+  .mk-quick button:hover{color:var(--ink); border-color:var(--line);}
+  .mk-hint{font-size:12.5px; color:var(--ink-dim);}
+  .mk-hint.warn{color:var(--danger);}
+  .mk-hint b{color:var(--ink);}
+  .mk-lst-foot{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 24px; border-top:1px solid var(--line); flex-wrap:wrap;}
+  .mk-lst-foot .acts{display:flex; gap:10px; flex-wrap:wrap;}
+  .mk-attrs{padding:6px 24px 22px; display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr); gap:28px;}
+  .mk-ablock{display:flex; flex-direction:column; gap:8px; min-width:0;}
+  .mk-ahead{display:flex; justify-content:space-between; align-items:baseline; padding:14px 0 8px; border-bottom:1px solid var(--line);}
+  .mk-ahead h4{margin:0; font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink);}
+  .mk-ahead span{font-size:12.5px; color:var(--ink-dim);}
+  .mk-ahead b{color:var(--ink);}
+  .mk-alist{display:flex; flex-direction:column;}
+  .mk-alist.two{display:grid; grid-auto-flow:column; grid-template-rows:repeat(7,auto); grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:28px;}
+  .mk-arow{display:flex; align-items:center; gap:10px; padding:5px 0; font-size:13.5px; min-width:0;}
+  .mk-arow .lbl{flex:1 1 auto; min-width:0; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mk-arow.match .lbl{color:var(--amber); font-weight:700;}
+  .mk-arow .attr-cell{display:flex; flex-direction:row-reverse; align-items:center; gap:10px; flex:none;}
+  .mk-arow .attr-cell .attr-val{min-width:26px; text-align:right; font-size:16px;}
+  .mk-arow .attr-cell .attr-bar-track{width:80px; height:6px; margin-top:0; border-radius:999px; background:var(--bg);}
+  .mk-arow .attr-cell .attr-bar-fill{border-radius:999px;}
+  .mk-foot-note{font-size:13px; color:var(--ink-faint); margin:0;}
+  @media (max-width:1250px){
+    .mk-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  @media (max-width:760px){
+    .mk-card{padding:18px 16px;}
+    .mk-lst{padding:0;}
+    .mk-task{grid-template-columns:40px minmax(0,1fr) auto; gap:10px 12px;}
+    .mk-task-av{width:40px; height:40px;}
+    .mk-task .mk-badge{grid-column:2; grid-row:2; justify-self:start;}
+    .mk-task-amt{grid-column:3; grid-row:1;}
+    .mk-task .mk-btn{grid-column:3; grid-row:2;}
+    .mk-ph h2{font-size:24px;}
+  }
+  @media (max-width:560px){
+    .mk-kpis{gap:12px;}
+    .mk-kpi{padding:14px;  gap:6px;}
+    .mk-kpi-lbl{font-size:10.5px; letter-spacing:1px;}
+    .mk-kpi-val{font-size:22px;}
+    .mk-kpi-val small{font-size:13px;}
+    .mk-kpi-row{font-size:12px;}
+    .mk-kpi-row + .mk-kpi-row{display:none;}
+  }
+  @media (prefers-reduced-motion: reduce){ .mk-chev{transition:none;} }
   /* Barres d'attributs façon manager (retour utilisateur : "façon football
      ou basketball manager [...] ça fait très immersif") : chaque
      caractéristique (0-99, voir ATTRS) affiche sa valeur ET une mini-barre
@@ -5612,10 +5807,69 @@
   </div>
 
   <div id="marcheSection" class="hidden">
-    <div class="section">
-      <h2>Marché des transferts</h2>
-      <div id="marketFeedback"></div>
+    <!-- Refonte (retour utilisateur, 2026-09-26 : "améliore l'onglet
+         marché", puis "ce n'est pas trop dans l'esprit des autres pages" ;
+         maquette validée https://claude.ai/artifact/SD4DVTUfPNSf7h3jtojvbQ) :
+         tuiles KPI façon Tableau de bord, "Mes enchères" façon "Cette
+         semaine", recherche (postes, âge, potentiel, prix, 5 critères de
+         caractéristiques max), annonces façon en-tête de fiche joueur.
+         Ids/classes historiques conservés pour les tests (#marketFeedback,
+         #marketListings, .market-card[data-listing-id], .market-card-name,
+         .market-card-meta, .market-card-bid, .market-card-price,
+         .market-card-action, .market-attr-chip .attr-cell, bid_ID,
+         [data-bid-listing]). Voir renderMarcheSection. -->
+    <div class="section mk-page">
+      <div class="mk-ph">
+        <h2>Marché des transferts</h2>
+        <p id="marketSub"></p>
+      </div>
+      <div class="mk-kpis" id="marketKpis"></div>
+      <section class="mk-card" aria-labelledby="marketMineTitle">
+        <div class="mk-card-head">
+          <h3 id="marketMineTitle">Mes enchères</h3>
+          <div class="mk-tabs" id="marketMineTabs" role="tablist"></div>
+        </div>
+        <div class="mk-tasks" id="marketMineList"></div>
+      </section>
+      <section class="mk-card" aria-labelledby="marketSearchTitle">
+        <div class="mk-card-head">
+          <h3 id="marketSearchTitle">Joueurs sur le marché</h3>
+          <select class="mk-sel" id="marketSort" aria-label="Trier les annonces">
+            <option value="ends">Trier par fin d'enchère</option>
+            <option value="ovr">Trier par note</option>
+            <option value="pot">Trier par potentiel</option>
+            <option value="deal">Trier par meilleure affaire</option>
+            <option value="price">Trier par prix croissant</option>
+            <option value="age">Trier par âge</option>
+          </select>
+        </div>
+        <div class="mk-filters">
+          <div class="mk-frow">
+            <input class="mk-search" id="marketSearch" type="search" placeholder="Rechercher un joueur ou un club vendeur…" aria-label="Rechercher un joueur ou un club vendeur" autocomplete="off">
+            <div class="mk-poscells" id="marketPos" role="group" aria-label="Poste"></div>
+          </div>
+          <div class="mk-frow">
+            <select class="mk-sel" id="marketAge" aria-label="Âge">
+              <option value="all">Tous âges</option><option value="u21">21 ans et moins</option><option value="22-25">22–25 ans</option><option value="26-29">26–29 ans</option><option value="30+">30 ans et plus</option>
+            </select>
+            <select class="mk-sel" id="marketPot" aria-label="Potentiel minimum">
+              <option value="0">Tout potentiel</option><option value="30">Solide et plus</option><option value="40">Starter et plus</option><option value="50">Très bon joueur et plus</option><option value="60">Star et plus</option>
+            </select>
+            <select class="mk-sel" id="marketPrice" aria-label="Prix maximum">
+              <option value="0">Tout prix</option><option value="50000">Jusqu'à 50 000 €</option><option value="150000">Jusqu'à 150 000 €</option><option value="300000">Jusqu'à 300 000 €</option><option value="budget">Dans mon budget</option>
+            </select>
+            <button class="mk-pchip" id="marketCritBtn" type="button" aria-expanded="false" aria-controls="marketCritPanel"></button>
+            <button class="mk-pchip" id="marketDealBtn" type="button" aria-pressed="false">Bonnes affaires</button>
+            <button class="mk-pchip" id="marketHideMineBtn" type="button" aria-pressed="false">Masquer mes annonces</button>
+          </div>
+          <div class="mk-crit-tags" id="marketCritTags"></div>
+          <div class="mk-crit-panel" id="marketCritPanel" hidden></div>
+          <div class="mk-rescount" id="marketResCount"></div>
+        </div>
+      </section>
+      <div id="marketFeedback" role="status" aria-live="polite"></div>
       <div id="marketListings"></div>
+      <p class="mk-foot-note">Le potentiel affiché n'est qu'une estimation par palier. La valeur estimée repose sur le salaire et l'âge du joueur, comme le prix de départ suggéré à la mise en vente. Les caractéristiques sont visibles pour tous les joueurs du marché, même adverses.</p>
     </div>
   </div>
 
@@ -30939,103 +31193,390 @@ function timeLeftLabel(closesAt, now) {
   return `${mins} min`;
 }
 
+// Refonte de l'onglet Marché (retour utilisateur, 2026-09-26 : "améliore
+// l'onglet marché" ; priorités choisies : filtres et tri, suivi de mes
+// enchères, lisibilité des cartes, comparer/décider ; puis "il faudrait
+// aussi qu'on puisse recherche par carac avec 5 carac max (par exemple tir à
+// 3 pts entre 70 et 90 + tir à mi distance entre 80 et 95)" ; puis "ce
+// n'est pas trop dans l'esprit des autres pages" → restylé comme le Tableau
+// de bord et la fiche joueur). Maquette validée :
+// https://claude.ai/artifact/SD4DVTUfPNSf7h3jtojvbQ.
+// Règles INCHANGÉES par rapport à l'ancienne version (voir les retours
+// utilisateur cités dans l'historique Git de renderMarketListings) :
+// toutes les caractéristiques visibles, même adverses (aucun verrouillage
+// par scoutisme ici) ; nom du joueur ET du club vendeur cliquables ; pas de
+// bouton d'enchère sur sa propre annonce ; pas de "Votre annonce" (déjà dit
+// par "Vendeur : Vous") ; pas de "(vous)" sur le prix quand on est en tête ;
+// on peut se surenchérir soi-même ; bouton Enchérir à côté du prix ; aucun
+// défilement horizontal.
+const MK_GROUPS = [
+  { label: "Tir", keys: ["midRange", "threePoint", "inside", "freeThrow"] },
+  { label: "Jeu", keys: ["pass", "dribble", "shotCreation", "penetration"] },
+  { label: "Défense", keys: ["defOutside", "defInside", "steal", "rebound", "block"] },
+  { label: "Physique", keys: PHYSICAL_ATTRS },
+  { label: "Mental", keys: MENTAL_ATTRS },
+];
+const MK_BLOCKS = [
+  { label: "Fondamentaux", keys: MK_GROUPS.slice(0, 3).flatMap(g => g.keys), two: true },
+  { label: "Physique", keys: PHYSICAL_ATTRS },
+  { label: "Mental", keys: MENTAL_ATTRS },
+];
+const MK_CRIT_MAX = 5;
+const MK_CHEV = `<svg class="mk-chev" width="12" height="12" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>`;
+const MK_CLOCK = `<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"></circle><path d="M8 4.5V8l2.5 1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>`;
+// État d'affichage (filtres, tri, cartes dépliées) : purement local à
+// l'écran, jamais sauvegardé — comme les tris de l'Effectif.
+const marketUi = {
+  pos: "all", q: "", age: "all", pot: 0, price: "0", deal: false, hideMine: false,
+  sort: "ends", mineTab: "all", open: new Set(), crit: [], critOpen: false,
+};
+
+function mkAvg(player, keys) { return keys.reduce((s, k) => s + player.attrs[k], 0) / keys.length; }
+function mkOpenListings() { return league.transferListings.filter(l => l.status === "open"); }
+// "Dépassé" : on a déjà enchéri sur cette annonce (historique listing.bids)
+// mais quelqu'un d'autre est désormais en tête.
+function mkIsOutbid(l) {
+  return l.sellerIdx !== myTeamIndex && l.currentBidderIdx !== myTeamIndex &&
+    (l.bids || []).some(b => b.bidderIdx === myTeamIndex);
+}
+function mkStatus(l) {
+  if (l.sellerIdx === myTeamIndex) return "sale";
+  if (l.currentBidderIdx === myTeamIndex) return "lead";
+  if (mkIsOutbid(l)) return "out";
+  return null;
+}
+// Somme des enchères où l'on est en tête (hors `exceptId`). Indicatif : le
+// moteur ne réserve pas ces montants (placeBid ne compare qu'au budget
+// réel), mais c'est ce que coûterait le fait de toutes les remporter.
+function mkCommitted(exceptId) {
+  return mkOpenListings().filter(l => l.currentBidderIdx === myTeamIndex && l.id !== exceptId)
+    .reduce((s, l) => s + (l.currentBid || 0), 0);
+}
+function mkBudget() { const t = league.teams[myTeamIndex]; return t ? t.budget : 0; }
+function mkVerdict(l, player) {
+  const mine = l.sellerIdx === myTeamIndex;
+  const r = estimateMarketValue(player) / Math.max(1, minNextBidFor(l));
+  if (r >= 1.3) return ["good", mine ? "Prix de départ bas" : "Bonne affaire"];
+  if (r >= 0.85) return ["fair", mine ? "Prix cohérent" : "Prix correct"];
+  return ["high", "Au-dessus de sa valeur"];
+}
+function mkTimeLeft(closesAt, now) {
+  return timeLeftLabel(closesAt, now);
+}
+function mkCritActive() { return marketUi.crit.filter(c => c.key); }
+
 function renderMarcheSection() {
+  const days = Math.max(1, Math.round(TRANSFER_AUCTION_DURATION_MS / 86400000));
+  const sub = document.getElementById("marketSub");
+  if (sub) sub.textContent = `Enchères de ${days} jour${days > 1 ? "s" : ""} · le plus offrant à la clôture l'emporte · caractéristiques visibles pour tous les joueurs du marché`;
+  renderMarketKpis();
+  renderMarketMine();
+  renderMarketCritPanel();
   renderMarketListings();
+}
+
+function renderMarketKpis() {
+  const holder = document.getElementById("marketKpis");
+  if (!holder) return;
+  const now = Date.now();
+  const open = mkOpenListings();
+  const leads = open.filter(l => l.currentBidderIdx === myTeamIndex && l.sellerIdx !== myTeamIndex);
+  const outs = open.filter(mkIsOutbid);
+  const sales = open.filter(l => l.sellerIdx === myTeamIndex);
+  const committed = mkCommitted(null);
+  const budget = mkBudget();
+  const me = league.teams[myTeamIndex];
+  const n = me ? me.players.length : 0;
+  const free = Math.max(0, MAX_ROSTER_SIZE - n - leads.length);
+  const salesBid = sales.reduce((s, l) => s + (l.currentBid || 0), 0);
+  holder.innerHTML =
+    `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Budget disponible</div><div class="mk-kpi-val">${formatMoney(budget - committed)}</div>` +
+      `<div class="mk-kpi-row"><span>Budget total</span><b>${formatMoney(budget)}</b></div>` +
+      `<div class="mk-kpi-row"><span>Engagé en enchères</span><b class="${committed ? "is-bad" : ""}">${committed ? "−" : ""}${formatMoney(committed)}</b></div></div>` +
+    `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Achats en cours</div><div class="mk-kpi-val">${leads.length} <small>en tête</small></div>` +
+      `<div class="mk-kpi-row"><span>Dépassé${outs.length > 1 ? "s" : ""}</span><b class="${outs.length ? "is-bad" : ""}">${outs.length}</b></div>` +
+      `<div class="mk-kpi-row"><span>Prochaine clôture</span><b>${leads.length ? escapeHtml(mkTimeLeft(Math.min(...leads.map(l => l.closesAt)), now)) : "—"}</b></div></div>` +
+    `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Mes ventes</div><div class="mk-kpi-val">${sales.length} <small>annonce${sales.length > 1 ? "s" : ""}</small></div>` +
+      `<div class="mk-kpi-row"><span>Offres reçues</span><b class="${salesBid ? "is-up" : ""}">${salesBid ? "+" : ""}${formatMoney(salesBid)}</b></div>` +
+      `<div class="mk-kpi-row"><span>Sans offre</span><b>${sales.filter(l => !l.currentBid).length}</b></div></div>` +
+    `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Effectif</div><div class="mk-kpi-val">${n} <small>joueur${n > 1 ? "s" : ""}</small></div>` +
+      `<div class="mk-kpi-bar"><i style="width:${Math.min(100, n / MAX_ROSTER_SIZE * 100).toFixed(1)}%"></i></div>` +
+      `<div class="mk-kpi-row"><span>Places libres après vos enchères</span><b>${free} / ${MAX_ROSTER_SIZE}</b></div></div>`;
+}
+
+function renderMarketMine() {
+  const tabsEl = document.getElementById("marketMineTabs");
+  const listEl = document.getElementById("marketMineList");
+  if (!tabsEl || !listEl) return;
+  const now = Date.now();
+  const open = mkOpenListings();
+  const buy = open.filter(l => mkStatus(l) === "lead" || mkStatus(l) === "out");
+  const sell = open.filter(l => l.sellerIdx === myTeamIndex);
+  const tabs = [["all", "Tout", buy.length + sell.length], ["buy", "Achats", buy.length], ["sell", "Ventes", sell.length]];
+  tabsEl.innerHTML = tabs.map(([k, t, n]) => `<button type="button" class="mk-tab ${marketUi.mineTab === k ? "on" : ""}" role="tab" aria-selected="${marketUi.mineTab === k}" data-mk-mtab="${k}">${t}<span class="n">${n}</span></button>`).join("");
+  let rows = marketUi.mineTab === "buy" ? buy : marketUi.mineTab === "sell" ? sell : [...buy, ...sell];
+  rows = rows.slice().sort((a, b) => (mkStatus(b) === "out") - (mkStatus(a) === "out") || a.closesAt - b.closesAt);
+  if (!rows.length) {
+    listEl.innerHTML = `<div class="mk-empty">${marketUi.mineTab === "sell" ? "Aucun joueur en vente. Mettez un joueur aux enchères depuis l'onglet Effectif ou sa fiche." : "Aucune enchère en cours."}</div>`;
+    return;
+  }
+  listEl.innerHTML = rows.map(l => {
+    const player = league.playerById(l.playerId);
+    if (!player) return "";
+    const seller = league.teams[l.sellerIdx];
+    const st = mkStatus(l);
+    const urgent = l.closesAt - now < 3600000;
+    let badge, amt, sub, btn;
+    if (st === "lead") {
+      badge = `<span class="mk-badge lead">En tête</span>`; amt = formatMoney(l.currentBid); sub = "votre enchère";
+      btn = `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-goto="${l.id}">Ouvrir</button>`;
+    } else if (st === "out") {
+      badge = `<span class="mk-badge out">Dépassé</span>`; amt = formatMoney(l.currentBid); sub = `relance dès ${formatMoney(minNextBidFor(l))}`;
+      btn = `<button type="button" class="mk-btn mk-btn--danger mk-btn--sm" data-mk-goto="${l.id}">Relancer</button>`;
+    } else if (l.currentBid) {
+      const n = (l.bids || []).length;
+      const leader = league.teams[l.currentBidderIdx];
+      badge = `<span class="mk-badge sale">En vente</span>`; amt = formatMoney(l.currentBid);
+      sub = `${n} offre${n > 1 ? "s" : ""}${leader ? " · " + escapeHtml(leader.name) : ""}`;
+      btn = `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-goto="${l.id}">Ouvrir</button>`;
+    } else {
+      badge = `<span class="mk-badge mute">Aucune offre</span>`; amt = formatMoney(l.startPrice); sub = "prix de départ";
+      btn = `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-goto="${l.id}">Ouvrir</button>`;
+    }
+    return `<div class="mk-task" data-mk-task="${l.id}">` +
+      `<div class="mk-task-av">${playerAvatarHtml(player, seller, 44)}</div>` +
+      `<div class="mk-task-t"><b>${escapeHtml(player.name)}</b><span>${escapeHtml(player.position)} · ${player.age} ans · <span class="${urgent ? "mk-timer urgent" : ""}">clôture dans ${escapeHtml(mkTimeLeft(l.closesAt, now))}</span></span></div>` +
+      badge +
+      `<div class="mk-task-amt"><b>${amt}</b><span>${sub}</span></div>` +
+      btn +
+    `</div>`;
+  }).join("");
+}
+
+function renderMarketFilterControls() {
+  const open = mkOpenListings();
+  const posEl = document.getElementById("marketPos");
+  if (posEl) {
+    const opts = [["all", "Tous"], ...POSITIONS.map(p => [p, POS_SHORT[p]])];
+    posEl.innerHTML = opts.map(([k, t]) => {
+      const n = k === "all" ? open.length : open.filter(l => { const p = league.playerById(l.playerId); return p && p.position === k; }).length;
+      return `<button type="button" class="mk-poscell ${marketUi.pos === k ? "on" : ""}" aria-pressed="${marketUi.pos === k}" data-mk-pos="${escapeHtml(k)}" title="${k === "all" ? "Tous les postes" : escapeHtml(k)}">${escapeHtml(t)}<span class="n">${n}</span></button>`;
+    }).join("");
+  }
+  const deal = document.getElementById("marketDealBtn");
+  const hide = document.getElementById("marketHideMineBtn");
+  if (deal) { deal.classList.toggle("on", marketUi.deal); deal.setAttribute("aria-pressed", String(marketUi.deal)); }
+  if (hide) { hide.classList.toggle("on", marketUi.hideMine); hide.setAttribute("aria-pressed", String(marketUi.hideMine)); }
+  const act = mkCritActive();
+  const btn = document.getElementById("marketCritBtn");
+  if (btn) {
+    btn.classList.toggle("on", act.length > 0 || marketUi.critOpen);
+    btn.setAttribute("aria-expanded", String(marketUi.critOpen));
+    btn.innerHTML = `Caractéristiques${act.length ? ` <span class="n">${act.length}/${MK_CRIT_MAX}</span>` : ""} ${MK_CHEV}`;
+  }
+  const tags = document.getElementById("marketCritTags");
+  if (tags) {
+    tags.innerHTML = marketUi.critOpen ? "" : act.map(c => `<span class="mk-crit-tag">${escapeHtml(TRAINING_LABELS[c.key])} <span>${c.min}–${c.max}</span><button type="button" data-mk-crit-del="${marketUi.crit.indexOf(c)}" aria-label="Retirer ${escapeHtml(TRAINING_LABELS[c.key])}">×</button></span>`).join("");
+  }
+}
+
+// Panneau "Recherche par caractéristiques" : reconstruit seulement quand sa
+// STRUCTURE change (ouverture, ajout/retrait, choix de la carac) — la saisie
+// des bornes ne touche qu'aux annonces, pour ne pas perdre le focus.
+function renderMarketCritPanel() {
+  const panel = document.getElementById("marketCritPanel");
+  if (!panel) return;
+  panel.hidden = !marketUi.critOpen;
+  if (!marketUi.critOpen) { panel.innerHTML = ""; return; }
+  const taken = marketUi.crit.map(c => c.key);
+  const options = sel => `<option value="">Choisir une caractéristique…</option>` +
+    MK_GROUPS.map(g => `<optgroup label="${g.label}">${g.keys.map(k => `<option value="${k}"${k === sel ? " selected" : ""}${taken.includes(k) && k !== sel ? " disabled" : ""}>${escapeHtml(TRAINING_LABELS[k])}</option>`).join("")}</optgroup>`).join("");
+  panel.innerHTML = `<div class="mk-crit-head"><h4>Recherche par caractéristiques</h4><span>${MK_CRIT_MAX} critères max · tous doivent être remplis · bornes incluses</span></div>` +
+    marketUi.crit.map((c, i) => `<div class="mk-crit-row">` +
+      `<select class="mk-sel" id="marketCritKey_${i}" data-mk-crit-key="${i}" aria-label="Caractéristique ${i + 1}">${options(c.key)}</select>` +
+      `<span class="w">entre</span>` +
+      `<input type="number" id="marketCritMin_${i}" min="0" max="99" value="${c.min}" data-mk-crit-min="${i}" aria-label="Minimum">` +
+      `<span class="w">et</span>` +
+      `<input type="number" id="marketCritMax_${i}" min="0" max="99" value="${c.max}" data-mk-crit-max="${i}" aria-label="Maximum">` +
+      `<button type="button" class="mk-crit-x" data-mk-crit-del="${i}" aria-label="Retirer ce critère">×</button>` +
+    `</div>`).join("") +
+    `<div class="mk-crit-foot"><button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-crit-add${marketUi.crit.length >= MK_CRIT_MAX ? " disabled" : ""}>+ Ajouter un critère (${marketUi.crit.length}/${MK_CRIT_MAX})</button>` +
+    `${marketUi.crit.length ? `<button type="button" class="mk-linkbtn" data-mk-crit-clear>Tout effacer</button>` : ""}</div>`;
+}
+
+function mkFilteredListings() {
+  const u = marketUi;
+  const budget = mkBudget();
+  const crit = mkCritActive();
+  const q = normalizeSearchTextSafe(u.q);
+  const rows = mkOpenListings().map(l => ({ l, player: league.playerById(l.playerId) })).filter(({ l, player }) => {
+    if (!player) return false;
+    if (u.pos !== "all" && player.position !== u.pos) return false;
+    if (q) {
+      const seller = league.teams[l.sellerIdx];
+      if (!normalizeSearchTextSafe(player.name).includes(q) && !(seller && normalizeSearchTextSafe(seller.name).includes(q))) return false;
+    }
+    if (u.age === "u21" && player.age > 21) return false;
+    if (u.age === "22-25" && (player.age < 22 || player.age > 25)) return false;
+    if (u.age === "26-29" && (player.age < 26 || player.age > 29)) return false;
+    if (u.age === "30+" && player.age < 30) return false;
+    // Seuil par PALIER (jamais le chiffre exact, voir POTENTIAL_TIERS).
+    if (u.pot && potentialTierIndex(player.potential) < potentialTierIndex(u.pot)) return false;
+    const mine = l.sellerIdx === myTeamIndex;
+    if (u.price === "budget" && !mine && minNextBidFor(l) > budget - mkCommitted(l.id)) return false;
+    if (u.price !== "0" && u.price !== "budget" && minNextBidFor(l) > Number(u.price)) return false;
+    if (u.deal && mkVerdict(l, player)[0] !== "good") return false;
+    if (u.hideMine && mine) return false;
+    for (const c of crit) { const v = player.attrs[c.key]; if (v < c.min || v > c.max) return false; }
+    return true;
+  });
+  const deal = r => estimateMarketValue(r.player) / Math.max(1, minNextBidFor(r.l));
+  const by = {
+    ends: (a, b) => a.l.closesAt - b.l.closesAt,
+    ovr: (a, b) => b.player.overall() - a.player.overall(),
+    pot: (a, b) => potentialTierIndex(b.player.potential) - potentialTierIndex(a.player.potential) || a.l.closesAt - b.l.closesAt,
+    deal: (a, b) => deal(b) - deal(a),
+    price: (a, b) => minNextBidFor(a.l) - minNextBidFor(b.l),
+    age: (a, b) => a.player.age - b.player.age,
+  };
+  return rows.sort(by[u.sort] || by.ends);
+}
+// Recherche insensible à la casse ET aux accents, comme la barre du haut.
+function normalizeSearchTextSafe(s) {
+  return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+}
+
+function mkRingHtml(value) {
+  const circ = 2 * Math.PI * 48;
+  const dash = (clamp(value, 0, 100) / 100) * circ;
+  return `<div class="pdp2-ring" title="Note globale">` +
+    `<svg width="104" height="104" viewBox="0 0 116 116" aria-hidden="true">` +
+    `<circle cx="58" cy="58" r="48" fill="none" stroke="var(--line)" stroke-width="9"></circle>` +
+    `<circle cx="58" cy="58" r="48" fill="none" stroke="${radarTierColor(value)}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 58 58)"></circle>` +
+    `</svg>` +
+    `<div class="pdp2-ring-center"><span class="pdp-overall-num ${attrColorTier(value)}">${value}</span><span class="pdp2-ring-lbl">Note</span></div>` +
+  `</div>`;
+}
+function mkTierColor(value) {
+  return { "attr-tier-red": "var(--attr-tier-red)", "attr-tier-orange": "var(--attr-tier-amber)", "attr-tier-white": "var(--ink)", "attr-tier-green": "#3ecf67" }[attrColorTier(value)];
+}
+function mkBarHtml(value) {
+  const color = mkTierColor(value);
+  return `<span class="mk-bar"><span style="width:${clamp(value, 0, 100)}%;background:${color}"></span></span>`;
+}
+
+function mkListingCardHtml(l, player, now) {
+  const seller = league.teams[l.sellerIdx];
+  const isMine = l.sellerIdx === myTeamIndex;
+  const st = mkStatus(l);
+  const overall = Math.round(player.overall());
+  const critKeys = mkCritActive().map(c => c.key);
+  const minBid = minNextBidFor(l);
+  const value = estimateMarketValue(player);
+  const [vc, vt] = mkVerdict(l, player);
+  const nBids = (l.bids || []).length;
+  const potentialCell = `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span>`;
+  const critChips = critKeys.map(k => `<span class="mk-chip match">${escapeHtml(TRAINING_LABELS[k])} <b style="color:${mkTierColor(player.attrs[k])}">${player.attrs[k]}</b></span>`).join("");
+  const grps = MK_GROUPS.map(g => {
+    const v = Math.round(mkAvg(player, g.keys));
+    return `<div class="mk-grp"><span class="lbl">${g.label}</span>${mkBarHtml(v)}<b style="color:${mkTierColor(v)}">${v}</b></div>`;
+  }).join("");
+  const badge = st === "lead" ? `<span class="mk-badge lead">Vous êtes en tête</span>` : st === "out" ? `<span class="mk-badge out">Dépassé</span>` : "";
+  let action;
+  if (isMine) {
+    const leader = l.currentBidderIdx != null ? league.teams[l.currentBidderIdx] : null;
+    action = leader
+      ? `<div class="mk-hint">Meilleure offre : <b>${escapeHtml(leader.name)}</b>. La vente se conclut à la clôture.</div>`
+      : `<div class="mk-hint">Aucune offre pour l'instant.</div>`;
+  } else {
+    const avail = mkBudget() - mkCommitted(l.id);
+    const over = minBid > avail;
+    const plus15 = Math.max(minBid, Math.round(minBid * 1.15 / 100) * 100);
+    action = `<div class="mk-bidrow">` +
+        `<input type="number" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100" aria-label="Montant de l'enchère pour ${escapeHtml(player.name)}">` +
+        `<button type="button" class="mk-btn mk-btn--primary" data-bid-listing="${l.id}">${st === "lead" ? "Augmenter mon enchère" : "Enchérir"}</button>` +
+      `</div>` +
+      `<div class="mk-quick"><button type="button" data-mk-quick="${l.id}" data-v="${minBid}">Minimum</button><button type="button" data-mk-quick="${l.id}" data-v="${plus15}">+15 %</button><button type="button" data-mk-quick="${l.id}" data-v="${Math.max(minBid, value)}">Valeur estimée</button></div>` +
+      `<div class="mk-hint ${over ? "warn" : ""}">${over ? `Au-delà de votre budget disponible (${formatMoney(avail)}).` : `Il vous resterait ${formatMoney(avail - minBid)} au minimum.`}</div>`;
+  }
+  const open = marketUi.open.has(l.id);
+  const attrs = MK_BLOCKS.map(b => `<div class="mk-ablock"><div class="mk-ahead"><h4>${b.label}</h4><span>moy. <b>${mkAvg(player, b.keys).toFixed(1)}</b></span></div>` +
+    `<div class="mk-alist ${b.two ? "two" : ""}">${b.keys.map(k => `<div class="mk-arow market-attr-chip ${critKeys.includes(k) ? "match" : ""}"><span class="lbl">${escapeHtml(TRAINING_LABELS[k])}</span>${attrCellHtml(player.attrs[k])}</div>`).join("")}</div></div>`).join("");
+  const urgent = l.closesAt - now < 3600000;
+  return `<article class="market-card mk-card mk-lst ${st === "lead" ? "is-lead" : st === "out" ? "is-out" : ""}" data-listing-id="${l.id}" id="marketCard_${l.id}">` +
+    `<div class="mk-lst-main">` +
+      `<div class="mk-lst-id">` +
+        `<div class="mk-avatar">${playerAvatarHtml(player, seller, 88)}</div>` +
+        `<div class="mk-id-text">` +
+          `<div class="mk-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span></div>` +
+          `<div class="market-card-name mk-pname">${playerLinkHtml(l.sellerIdx, player.id, player.name)}</div>` +
+          `<div class="market-card-meta mk-chips">` +
+            `<span class="mk-chip">${player.age} ans</span>` +
+            (player.height ? `<span class="mk-chip">${player.height} cm</span>` : "") +
+            `<span class="mk-chip">Potentiel · ${potentialCell}</span>` +
+            `<span class="mk-chip">${formatMoney(player.salary)} / sem.</span>` +
+            `<span class="mk-chip">Vendeur : ${isMine ? "<b>Vous</b>" : teamLinkHtml(l.sellerIdx, seller.name)}</span>` +
+            critChips +
+          `</div>` +
+        `</div>` +
+      `</div>` +
+      `<div class="mk-lst-prof">${mkRingHtml(overall)}<div class="mk-grps" aria-label="Moyennes par famille">${grps}</div></div>` +
+      `<div class="mk-lst-deal market-card-bid">` +
+        `<div class="mk-deal-top">` +
+          `<div class="market-card-price"><div class="mk-deal-lbl">${l.currentBid ? "Enchère actuelle" : "Prix de départ"}</div><b class="mk-deal-price">${formatMoney(l.currentBid || l.startPrice)}</b><div class="mk-deal-sub">${nBids ? `${nBids} enchère${nBids > 1 ? "s" : ""}` : "Aucune enchère"}</div></div>` +
+          `<span class="mk-timer ${urgent ? "urgent" : ""}">${MK_CLOCK}${escapeHtml(mkTimeLeft(l.closesAt, now))}</span>` +
+        `</div>` +
+        (badge ? `<div>${badge}</div>` : "") +
+        `<div class="mk-value"><span>Valeur estimée <b>${formatMoney(value)}</b></span><span class="mk-verdict ${vc}">${vt}</span></div>` +
+        `<div class="market-card-action">${action}</div>` +
+      `</div>` +
+    `</div>` +
+    `<div class="mk-lst-foot">` +
+      `<button type="button" class="mk-linkbtn" data-mk-toggle="${l.id}" aria-expanded="${open}" aria-controls="marketAttrs_${l.id}">${open ? "Masquer" : "Voir"} les ${ATTRS.length} caractéristiques ${MK_CHEV}</button>` +
+      `<div class="acts">` +
+        (isMine ? "" : `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-compare="${l.id}">Comparer</button>`) +
+        `<button type="button" class="mk-btn mk-btn--accent mk-btn--sm" data-player-team="${l.sellerIdx}" data-player-id="${player.id}">Fiche joueur</button>` +
+      `</div>` +
+    `</div>` +
+    `<div class="mk-attrs" id="marketAttrs_${l.id}"${open ? "" : " hidden"}>${attrs}</div>` +
+  `</article>`;
 }
 
 function renderMarketListings() {
   const holder = document.getElementById("marketListings");
+  if (!holder) return;
+  renderMarketFilterControls();
   const now = Date.now();
-  const open = league.transferListings.filter(l => l.status === "open").sort((a, b) => a.closesAt - b.closesAt);
-  if (!open.length) {
-    holder.innerHTML = "<p class='training-empty'>Aucune enchère en cours pour l'instant, revenez plus tard, ou mettez un de vos joueurs aux enchères depuis l'onglet Effectif.</p>";
+  const total = mkOpenListings().length;
+  const rows = mkFilteredListings();
+  const u = marketUi;
+  const active = u.pos !== "all" || u.q || u.age !== "all" || u.pot || u.price !== "0" || u.deal || u.hideMine || mkCritActive().length > 0;
+  const count = document.getElementById("marketResCount");
+  if (count) {
+    count.innerHTML = `<span><b>${rows.length}</b> joueur${rows.length > 1 ? "s" : ""}${active ? ` sur ${total}` : " sur le marché"}</span>` +
+      (active ? `<button type="button" class="mk-linkbtn amber" data-mk-reset>Réinitialiser les filtres</button>` : "");
+  }
+  if (!total) {
+    holder.innerHTML = `<div class="mk-card mk-empty">Aucune enchère en cours pour l'instant, revenez plus tard, ou mettez un de vos joueurs aux enchères depuis l'onglet Effectif.</div>`;
     return;
   }
-  // Retour utilisateur : "il faut pouvoir voir les carac des joueurs et le
-  // potentiel, on achète sans rien savoir sinon" — mêmes informations que
-  // l'Effectif (potentiel par palier, caractéristiques). Retour utilisateur
-  // (2026-09, suite) : "je pense qu'on doit pouvoir voir toutes les caracs
-  // des joueurs sur le marché des transferts. ça peut évoluer mais pour
-  // l'instant on fait comme ça" — donc ICI, contrairement à la fiche joueur/
-  // au panneau Scoutisme, AUCUN verrouillage par scoutisme (teamA.scoutedAttrs) :
-  // le contexte "marché" affiche toujours les caractéristiques en clair, que
-  // le joueur soit à vous ou adverse. Un simple drapeau de contexte plutôt
-  // que de supprimer la règle de scoutisme elle-même (qui reste utilisée
-  // ailleurs, voir renderPlayerDetail/renderScoutingPanel) : revenir en
-  // arrière ici (par ex. ne remontrer les caracs qu'après scoutage) ne
-  // demandera de toucher qu'à ce bloc. Le nom du joueur est cliquable
-  // (playerLinkHtml) pour ouvrir sa fiche complète, comme partout ailleurs.
-  // Retour utilisateur (2026-09) : "sur l'onglet marché, je dois pouvoir
-  // cliquer sur le nom de l'équipe qui vend" : le nom du vendeur (quand ce
-  // n'est pas vous) est cliquable de la même façon (teamLinkHtml).
-  // Une carte par annonce, pas un tableau (retour utilisateur, 2026-09 : "il
-  // ne faut pas qu'on ait besoin de scroller sur le coté. il faut que tout
-  // s'affiche d'une bloc". Voir le commentaire CSS de .market-cards
-  // ci-dessus pour l'historique complet des essais précédents), avec le
-  // bouton Enchérir juste à côté du prix/enchère actuelle.
-  let html = "<div class='market-cards'>";
-  open.forEach(l => {
-    const player = league.playerById(l.playerId);
-    if (!player) return; // sécurité (ne devrait pas arriver)
-    const seller = league.teams[l.sellerIdx];
-    const isMine = l.sellerIdx === myTeamIndex;
-    // Retour utilisateur (2026-09) : "pas besoin de mettre vous et vous êtes
-    // en tête, ça fait redites". Le statut "en tête" vit désormais SEUL
-    // dans actionCell juste en dessous, currentLabel n'affiche plus que le
-    // montant brut (plus de suffixe "(vous)" ici).
-    const currentLabel = l.currentBid
-      ? formatMoney(l.currentBid)
-      : `Aucune (départ ${formatMoney(l.startPrice)})`;
-    const minBid = minNextBidFor(l);
-    let actionCell;
-    if (isMine) {
-      // Retour utilisateur (2026-09) : "ne mets pas Votre annonce quand
-      // c'est mon joueur, c'est moche". Déjà indiqué par "Vendeur : Vous"
-      // dans market-card-meta juste au-dessus, inutile de le répéter ici.
-      actionCell = "";
-    } else if (l.currentBidderIdx === myTeamIndex) {
-      // Retour utilisateur (2026-09) : pouvoir se surenchérir soi-même en
-      // cas de clic trop rapide sur un montant trop bas, voir le même
-      // commentaire dans renderAnalystListings plus haut.
-      actionCell = `<div class="bid-leading-cell"><span class="sub">Vous êtes en tête</span><br>` +
-        `<input type="number" class="market-price-input" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-bid-listing="${l.id}">Augmenter mon enchère</button></div>`;
-    } else {
-      actionCell = `<input type="number" class="market-price-input" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100"> ` +
-        `<button class="secondary" data-bid-listing="${l.id}">Enchérir</button>`;
-    }
-    // Même info au survol que dans l'effectif (voir renderEffectifSection) :
-    // le palier 1-10, jamais le chiffre exact 1-99.
-    const potentialCell = `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span>`;
-    const attrChips = ATTRS.map(a => `<div class="market-attr-chip"><span class="market-attr-label">${ATTR_SHORT[a]}</span>${attrCellHtml(player.attrs[a])}</div>`).join("");
-    html += `<div class="market-card" data-listing-id="${l.id}">` +
-      `<div class="market-card-head">` +
-        `<div class="market-card-player" style="display:flex;align-items:center;gap:8px">` +
-          playerAvatarHtml(player, seller, 30) +
-          `<div>` +
-            `<div class="market-card-name">${playerLinkHtml(l.sellerIdx, player.id, player.name)}</div>` +
-            `<div class="market-card-meta">${POS_SHORT[player.position]} · ${player.age} ans · Potentiel ${potentialCell} · Vendeur : ${isMine ? "Vous" : teamLinkHtml(l.sellerIdx, seller.name)}</div>` +
-          `</div>` +
-        `</div>` +
-        `<div class="market-card-bid">` +
-          `<div class="market-card-price"><b>${currentLabel}</b>${escapeHtml(timeLeftLabel(l.closesAt, now))}</div>` +
-          `<div class="market-card-action">${actionCell}</div>` +
-        `</div>` +
-      `</div>` +
-      `<div class="market-card-attrs">${attrChips}</div>` +
-    `</div>`;
-  });
-  html += "</div>";
-  html += `<p class="lineup-reserves">Le potentiel affiché n'est qu'une estimation par palier. Les caractéristiques sont visibles pour tous les joueurs du marché, même adverses.</p>`;
-  holder.innerHTML = html;
+  if (!rows.length) {
+    holder.innerHTML = `<div class="mk-card mk-empty">Aucun joueur ne correspond à ces filtres.</div>`;
+    return;
+  }
+  holder.innerHTML = rows.map(({ l, player }) => mkListingCardHtml(l, player, now)).join("");
 }
 
-document.getElementById("marketListings").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-bid-listing]");
-  if (!btn) return;
-  const id = Number(btn.dataset.bidListing);
+function mkResetFilters() {
+  Object.assign(marketUi, { pos: "all", q: "", age: "all", pot: 0, price: "0", deal: false, hideMine: false, crit: [], critOpen: false });
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set("marketSearch", ""); set("marketAge", "all"); set("marketPot", "0"); set("marketPrice", "0");
+}
+
+let marketFeedbackTimer = null;
+function mkPlaceBid(id) {
   const input = document.getElementById(`bid_${id}`);
-  const amount = Math.round(Number(input.value) || 0);
+  const amount = Math.round(Number(input && input.value) || 0);
   const res = league.placeBid(id, myTeamIndex, amount, Date.now());
   if (!res.ok) {
     const reasons = {
@@ -31050,9 +31591,82 @@ document.getElementById("marketListings").addEventListener("click", (e) => {
   } else {
     marketFeedback(`Enchère de ${formatMoney(amount)} enregistrée.`, true);
   }
+  // Message éphémère (affiché en bas d'écran, voir #marketFeedback en CSS).
+  clearTimeout(marketFeedbackTimer);
+  marketFeedbackTimer = setTimeout(() => marketFeedback("", true), 4000);
   saveMyTeam();
   if (res.ok) syncMarketBidToServer(id, amount);
   renderMarcheSection();
+}
+
+document.getElementById("marcheSection").addEventListener("click", (e) => {
+  const t = e.target.closest("button");
+  if (!t) return;
+  const d = t.dataset;
+  if (d.bidListing) { mkPlaceBid(Number(d.bidListing)); return; }
+  if (d.mkQuick) { const input = document.getElementById(`bid_${d.mkQuick}`); if (input) { input.value = d.v; input.focus(); } return; }
+  if (d.mkToggle) {
+    const id = Number(d.mkToggle);
+    if (marketUi.open.has(id)) marketUi.open.delete(id); else marketUi.open.add(id);
+    const card = document.getElementById(`marketCard_${id}`);
+    const attrs = document.getElementById(`marketAttrs_${id}`);
+    if (attrs) attrs.hidden = !marketUi.open.has(id);
+    t.setAttribute("aria-expanded", String(marketUi.open.has(id)));
+    t.innerHTML = `${marketUi.open.has(id) ? "Masquer" : "Voir"} les ${ATTRS.length} caractéristiques ${MK_CHEV}`;
+    if (!card) renderMarketListings();
+    return;
+  }
+  if (d.mkCompare) {
+    const l = league.transferListings.find(x => x.id === Number(d.mkCompare));
+    if (l) showPlayerComparePicker(l.sellerIdx, l.playerId);
+    return;
+  }
+  if (d.mkMtab) { marketUi.mineTab = d.mkMtab; renderMarketMine(); return; }
+  if (d.mkGoto) {
+    const id = Number(d.mkGoto);
+    mkResetFilters(); renderMarketCritPanel(); renderMarketListings();
+    const card = document.getElementById(`marketCard_${id}`);
+    if (card && card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "center" });
+    const input = document.getElementById(`bid_${id}`);
+    if (input) setTimeout(() => input.focus({ preventScroll: true }), 400);
+    return;
+  }
+  if (d.mkPos) { marketUi.pos = d.mkPos; renderMarketListings(); return; }
+  if (t.id === "marketDealBtn") { marketUi.deal = !marketUi.deal; renderMarketListings(); return; }
+  if (t.id === "marketHideMineBtn") { marketUi.hideMine = !marketUi.hideMine; renderMarketListings(); return; }
+  if (t.id === "marketCritBtn") {
+    marketUi.critOpen = !marketUi.critOpen;
+    if (marketUi.critOpen && !marketUi.crit.length) marketUi.crit.push({ key: "", min: 0, max: 99 });
+    renderMarketCritPanel(); renderMarketListings(); return;
+  }
+  if (d.mkCritAdd !== undefined) {
+    if (marketUi.crit.length < MK_CRIT_MAX) marketUi.crit.push({ key: "", min: 0, max: 99 });
+    renderMarketCritPanel(); renderMarketListings(); return;
+  }
+  if (d.mkCritDel !== undefined) {
+    marketUi.crit.splice(Number(d.mkCritDel), 1);
+    renderMarketCritPanel(); renderMarketListings(); return;
+  }
+  if (d.mkCritClear !== undefined) { marketUi.crit = [{ key: "", min: 0, max: 99 }]; renderMarketCritPanel(); renderMarketListings(); return; }
+  if (d.mkReset !== undefined) { mkResetFilters(); renderMarketCritPanel(); renderMarketListings(); return; }
+});
+document.getElementById("marcheSection").addEventListener("change", (e) => {
+  const el = e.target;
+  if (el.id === "marketSort") { marketUi.sort = el.value; renderMarketListings(); }
+  else if (el.id === "marketAge") { marketUi.age = el.value; renderMarketListings(); }
+  else if (el.id === "marketPot") { marketUi.pot = Number(el.value) || 0; renderMarketListings(); }
+  else if (el.id === "marketPrice") { marketUi.price = el.value; renderMarketListings(); }
+  else if (el.dataset && el.dataset.mkCritKey !== undefined) {
+    marketUi.crit[Number(el.dataset.mkCritKey)].key = el.value;
+    renderMarketCritPanel(); renderMarketListings();
+  }
+});
+document.getElementById("marcheSection").addEventListener("input", (e) => {
+  const el = e.target;
+  const cl = v => Math.max(0, Math.min(99, Math.round(Number(v) || 0)));
+  if (el.id === "marketSearch") { marketUi.q = el.value; renderMarketListings(); }
+  else if (el.dataset && el.dataset.mkCritMin !== undefined) { marketUi.crit[Number(el.dataset.mkCritMin)].min = cl(el.value); renderMarketListings(); }
+  else if (el.dataset && el.dataset.mkCritMax !== undefined) { marketUi.crit[Number(el.dataset.mkCritMax)].max = el.value === "" ? 99 : cl(el.value); renderMarketListings(); }
 });
 
 // ---------------------------------------------------------------------
