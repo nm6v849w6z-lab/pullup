@@ -48,6 +48,46 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   vus en clair (fin de saison, rattrapage, interviews, Scouting Pro).
   Reste : `git push`.
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ordres : temps de
+  jeu cible par poste** — retour utilisateur : "est ce qu'on pourrait dans
+  les ordres, choisir les temps de jeu des joueurs ? [...] meneur c'est 30
+  min, remplaçant 10 [...] ce serait un temps idéal à atteindre, qui en cas
+  de blessure ou fautes, devra être modifié automatiquement par le moteur",
+  puis "il faut aussi pouvoir donner des minutes au réserviste" et "on
+  mettra les minutes par poste". Données : lineup.minutes[poste][id]
+  (facultatif ; poste absent = rotation auto inchangée). Team :
+  slotPlayerIds/defaultSlotMinutes (28/12)/enableSlotMinutes/
+  clearSlotMinutes/setSlotMinutes/hasSlotMinutes/slotMinuteShares
+  (proportions, total ramené à 40) ; setStarter transmet les minutes au
+  nouveau titulaire, toggleBackupPosition ajoute (0 min)/retire ;
+  snapshotTactics/applyPlannedTacticsForRound/teamFromSave copient les
+  minutes (engine.js ET copie de moteurbasket3.html, + planProxyForRound).
+  Moteur (engine.js seulement, matchs simulés côté serveur) :
+  MatchEngine.substituteToTarget — un joueur sort quand son avance sur sa
+  cible dépasse celle du joueur le plus en retard du poste de
+  paceMarginSecs (120-220 s) après au moins minStintSecs (150-260 s) sur
+  le terrain ; blessure/5 fautes/exclusion = les autres se partagent le
+  reste ; 4 fautes avant le Q4 = assis jusqu'au Q4 (sauf "maintenir
+  malgré les fautes") ; fatigue ≥ 95 = souffle ; repli sur backupsForSlot
+  si personne de réglé n'est dispo. Mesuré (60-200 matchs) : cibles
+  tenues à ±1-3 min en moyenne (ex. 30→29,1 / 10→11,1 ; 34→31,5 à cause
+  des fautes/fatigue). Serveur : validateLineupBody valide minutes (0-40,
+  joueurs de l'effectif). UI : colonne Minutes de la carte Rotation
+  ("Temps de jeu : auto" + Régler ; une case par joueur du poste, total
+  x / 40 en orange si ≠ 40, bouton Auto) ; /api/lineup envoie minutes.
+  Tests : lineup_minutes_test.js (nouveau) + suite complète 144 fichiers :
+  tout vert sauf player_detail_test.js (échoue AUSSI sans ce chantier, voir
+  "À investiguer" ci-dessous) et calendrier_ordres_stale_live_redirect
+  (flaky connu, vert seul). Non fait : pas de vérification visuelle dans
+  un vrai navigateur (jsdom seulement) — à regarder sur le Mac. Reste :
+  `git push` + redéploiement.
+
+- **⏳ À INVESTIGUER — player_detail_test.js échoue systématiquement**
+  (constaté le 2026-09-26, sur HEAD sans les changements en cours aussi) :
+  "❌ (setup) la fiche équipe adverse devrait afficher des liens joueur
+  cliquables". Probablement lié à la refonte récente de la feuille de
+  stats / fiche équipe (commits 3e9b073 et suivants), pas creusé.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligue et
   Calendrier : logos un peu plus petits sur PC** — commentaire d'un joueur
   relayé : "sur PC les logos je les réduirais un poil". Classement

@@ -175,7 +175,28 @@ function validateLineupBody(team, raw) {
       if (positions.length) backupPositions[player.id] = [...positions];
     }
   }
-  return { ok: true, value: { starters, backupPositions } };
+  // Temps de jeu cible par poste (facultatif, voir Team.slotMinuteShares) :
+  // { poste: { id: minutes 0-40 } }. Un poste absent = rotation automatique.
+  let minutes = null;
+  if (raw.minutes != null) {
+    if (typeof raw.minutes !== "object") return { ok: false, error: "Temps de jeu invalides : objet { poste: { id: minutes } } attendu." };
+    minutes = {};
+    for (const [pos, m] of Object.entries(raw.minutes)) {
+      if (!POSITIONS.includes(pos)) return { ok: false, error: `Poste inconnu dans les temps de jeu : ${pos}.` };
+      if (!m || typeof m !== "object") return { ok: false, error: `Temps de jeu invalides pour le poste ${pos}.` };
+      const out = {};
+      for (const [idStr, v] of Object.entries(m)) {
+        const player = byId.get(Number(idStr));
+        if (!player) return { ok: false, error: `Joueur inconnu dans les temps de jeu : ${idStr}.` };
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 0 || n > 40) return { ok: false, error: `Temps de jeu hors limites (0-40 min) pour le joueur ${idStr}.` };
+        out[player.id] = Math.round(n);
+      }
+      minutes[pos] = out;
+    }
+    if (!Object.keys(minutes).length) minutes = null;
+  }
+  return { ok: true, value: minutes ? { starters, backupPositions, minutes } : { starters, backupPositions } };
 }
 
 // Feuille de match : titulaires (un par poste, ou null) + remplacements de

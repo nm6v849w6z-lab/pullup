@@ -546,6 +546,20 @@
     border:1px dashed var(--line); border-radius:999px; background:transparent; color:var(--ink-dim); cursor:pointer;
   }
   #prepSection .lineup-reserves{margin-top:0; font-size:12.5px;}
+  /* Temps de jeu cible par poste (carte Rotation). */
+  #prepSection .lineup-table .lt-minutes{padding-left:12px; text-align:right; white-space:nowrap;}
+  #prepSection .lt-minutes-auto{font-size:12px; color:var(--ink-dim); margin-right:8px;}
+  #prepSection .lt-minutes-list{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; justify-content:flex-end;}
+  #prepSection .lt-minutes-item{display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--ink-dim); margin:0;}
+  #prepSection .lt-minutes-item span{color:var(--ink); font-weight:600;}
+  #prepSection .lt-minutes-item input{width:46px; min-height:28px; padding:0 4px; margin:0; font-size:13px; text-align:center;}
+  #prepSection .lt-minutes-total{font-size:12px; font-weight:800; color:var(--ink);}
+  #prepSection .lt-minutes-total.off{color:var(--amber);}
+  #prepSection .lt-minutes-btn{min-height:28px; padding:0 10px; font-size:12px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--ink); cursor:pointer;}
+  @media(max-width:900px){
+    #prepSection .lineup-table .lt-minutes{white-space:normal; max-width:150px;}
+    #prepSection .lt-minutes-list{flex-direction:column; align-items:flex-end;}
+  }
 
   @media(max-width:1100px){
     .ordres-match-card{grid-template-columns:1fr;}
@@ -12550,6 +12564,85 @@ class Team {
     this.lineup = { starters, backupPositions };
   }
 
+  // ---------------------------------------------------------------------
+  // Temps de jeu cible par poste (retour utilisateur 2026-09-26 : "choisir
+  // les temps de jeu des joueurs [...] meneur c'est 30 min, remplaçant 10
+  // [...] un temps idéal à atteindre, qui en cas de blessure ou fautes,
+  // devra être modifié automatiquement par le moteur", "il faut aussi
+  // pouvoir donner des minutes au réserviste", "on mettra les minutes par
+  // poste").
+  //   lineup.minutes[poste] = { [id]: minutes } — facultatif : un poste sans
+  //   entrée garde la rotation automatique du moteur. Seuls comptent le
+  //   titulaire du poste et les remplaçants qui le couvrent (un réserviste
+  //   à qui l'on donne des minutes est d'abord ajouté comme remplaçant du
+  //   poste). Total visé : 40 min ; le moteur ramène de toute façon les
+  //   valeurs à des proportions (voir slotMinuteShares).
+  // ---------------------------------------------------------------------
+  slotPlayerIds(pos) {
+    const ids = [];
+    const s = this.lineup.starters[pos];
+    if (s != null) ids.push(s);
+    this.players.forEach(p => {
+      if (p.id !== s && (this.lineup.backupPositions[p.id] || []).includes(pos)) ids.push(p.id);
+    });
+    return ids;
+  }
+
+  // Répartition proposée quand on active le réglage d'un poste : 28 min au
+  // titulaire, 12 partagées entre les remplaçants (40 au titulaire seul).
+  defaultSlotMinutes(pos) {
+    const ids = this.slotPlayerIds(pos);
+    const starter = this.lineup.starters[pos];
+    const backups = ids.filter(id => id !== starter);
+    const out = {};
+    if (starter != null) out[starter] = backups.length ? 28 : 40;
+    const rest = starter != null ? (backups.length ? 12 : 0) : 40;
+    backups.forEach((id, i) => {
+      const base = Math.floor(rest / backups.length);
+      out[id] = base + (i < rest - base * backups.length ? 1 : 0);
+    });
+    return out;
+  }
+
+  enableSlotMinutes(pos) {
+    if (!this.lineup.minutes) this.lineup.minutes = {};
+    this.lineup.minutes[pos] = this.defaultSlotMinutes(pos);
+  }
+
+  clearSlotMinutes(pos) {
+    if (!this.lineup.minutes) return;
+    delete this.lineup.minutes[pos];
+    if (!Object.keys(this.lineup.minutes).length) delete this.lineup.minutes;
+  }
+
+  setSlotMinutes(pos, playerId, minutes) {
+    if (!this.lineup.minutes || !this.lineup.minutes[pos]) return;
+    if (!this.slotPlayerIds(pos).includes(playerId)) return;
+    const m = Math.round(Number(minutes));
+    this.lineup.minutes[pos][playerId] = Number.isFinite(m) ? clamp(m, 0, 40) : 0;
+  }
+
+  hasSlotMinutes(pos) {
+    return !!(this.lineup.minutes && this.lineup.minutes[pos]);
+  }
+
+  // Proportions de temps de jeu par joueur pour ce poste (somme = 1), ou
+  // null si le poste est en rotation automatique (ou si le réglage ne
+  // désigne plus personne de valide : joueur vendu, retiré du poste...).
+  slotMinuteShares(pos) {
+    if (!this.hasSlotMinutes(pos)) return null;
+    const raw = this.lineup.minutes[pos];
+    const shares = {};
+    let total = 0;
+    this.slotPlayerIds(pos).forEach(id => {
+      const v = Number(raw[id]) || 0;
+      if (v > 0) { shares[id] = v; total += v; }
+    });
+    if (total <= 0) return null;
+    Object.keys(shares).forEach(id => { shares[id] /= total; });
+    return shares;
+  }
+
   // Poste titulaire d'un joueur (ou null s'il n'est pas titulaire).
   starterPosition(playerId) {
     return POSITIONS.find(pos => this.lineup.starters[pos] === playerId) || null;
@@ -12560,6 +12653,23 @@ class Team {
   // pour ne jamais avoir un joueur titulaire ET remplaçant en même temps).
   // Retire aussi le nouveau titulaire de tous ses postes de remplaçant.
   setStarter(pos, playerId) {
+    // Temps de jeu cible (voir slotMinuteShares) : le nouveau titulaire
+    // reprend les minutes de l'ancien à ce poste ; ses éventuelles minutes
+    // de remplaçant ailleurs disparaissent avec ses postes de remplaçant.
+    const mins = this.lineup.minutes;
+    const previous = this.lineup.starters[pos];
+    if (mins && playerId) {
+      Object.keys(mins).forEach(p => {
+        if (p !== pos) {
+          delete mins[p][playerId];
+          if (this.lineup.starters[p] === playerId) delete mins[p];
+        }
+      });
+      if (mins[pos] && previous != null && previous !== playerId) {
+        if (mins[pos][playerId] == null) mins[pos][playerId] = mins[pos][previous] || 0;
+        delete mins[pos][previous];
+      }
+    }
     if (playerId) {
       // Un joueur ne peut être titulaire qu'à UN SEUL poste à la fois : s'il
       // était déjà titulaire ailleurs, ce poste-là redevient vacant (à
@@ -12579,6 +12689,10 @@ class Team {
     const list = this.lineup.backupPositions[playerId] || [];
     const has = list.includes(pos);
     if (on && !has) this.lineup.backupPositions[playerId] = [...list, pos];
+    if (this.lineup.minutes && this.lineup.minutes[pos]) {
+      if (on && this.lineup.minutes[pos][playerId] == null) this.lineup.minutes[pos][playerId] = 0;
+      if (!on) delete this.lineup.minutes[pos][playerId];
+    }
     if (!on && has) {
       const next = list.filter(p => p !== pos);
       if (next.length) this.lineup.backupPositions[playerId] = next;
@@ -12614,11 +12728,12 @@ class Team {
       offRebStyle: this.offRebStyle,
       endgameManagement: this.endgameManagement,
       lineup: {
-        starters: { ...this.lineup.starters },
-        backupPositions: Object.fromEntries(
-          Object.entries(this.lineup.backupPositions).map(([id, positions]) => [id, [...positions]])
-        ),
-      },
+      starters: { ...this.lineup.starters },
+      backupPositions: Object.fromEntries(
+        Object.entries(this.lineup.backupPositions).map(([id, positions]) => [id, [...positions]])
+      ),
+      ...(this.lineup.minutes ? { minutes: Object.fromEntries(Object.entries(this.lineup.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
+    },
     };
   }
 
@@ -12692,6 +12807,7 @@ class Team {
       backupPositions: Object.fromEntries(
         Object.entries(plan.lineup.backupPositions).map(([id, positions]) => [id, [...positions]])
       ),
+      ...(plan.lineup.minutes ? { minutes: Object.fromEntries(Object.entries(plan.lineup.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
     };
     delete this.plannedTactics[key];
   }
@@ -15854,6 +15970,22 @@ function teamFromSave(data) {
       if (p && Array.isArray(positions) && positions.length) backupPositions[p.id] = [...positions];
     });
     team.lineup = { starters, backupPositions };
+    // Temps de jeu cible par poste (voir Team.slotMinuteShares) : ids
+    // normalisés comme ci-dessus, entrées inconnues ignorées.
+    if (data.lineup.minutes && typeof data.lineup.minutes === "object") {
+      const minutes = {};
+      POSITIONS.forEach(pos => {
+        const m = data.lineup.minutes[pos];
+        if (!m || typeof m !== "object") return;
+        const out = {};
+        Object.entries(m).forEach(([idStr, v]) => {
+          const p = byStringId.get(idStr);
+          if (p && Number.isFinite(Number(v))) out[p.id] = clamp(Math.round(Number(v)), 0, 40);
+        });
+        minutes[pos] = out;
+      });
+      if (Object.keys(minutes).length) team.lineup.minutes = minutes;
+    }
   }
   // Journées futures préparées à l'avance (voir serializeTeam ci-dessus) ;
   // absent = sauvegarde d'avant cette fonctionnalité, {} par défaut
@@ -17803,7 +17935,7 @@ function syncLineupToServer() {
     fetchApi("/api/lineup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ starters: teamA.lineup.starters, backupPositions: teamA.lineup.backupPositions }),
+      body: JSON.stringify({ starters: teamA.lineup.starters, backupPositions: teamA.lineup.backupPositions, minutes: teamA.lineup.minutes || null }),
     })
       .then(res => { if (!res.ok) console.warn("Feuille de match refusée côté serveur.", res.status); })
       .catch(e => console.warn("Feuille de match : serveur indisponible :", e));
@@ -19674,6 +19806,10 @@ function planProxyForRound(round, competition) {
   proxy.setStarter = function (pos, playerId) { Team.prototype.setStarter.call(proxy, pos, playerId); };
   proxy.toggleBackupPosition = function (playerId, pos, on) { Team.prototype.toggleBackupPosition.call(proxy, playerId, pos, on); };
   proxy.starterPosition = function (playerId) { return Team.prototype.starterPosition.call(proxy, playerId); };
+  // Temps de jeu cible par poste (voir Team.slotMinuteShares) : mêmes
+  // méthodes que sur Team, appliquées au lineup du plan.
+  ["slotPlayerIds", "defaultSlotMinutes", "enableSlotMinutes", "clearSlotMinutes", "setSlotMinutes", "hasSlotMinutes", "slotMinuteShares"]
+    .forEach(m => { proxy[m] = function (...args) { return Team.prototype[m].apply(proxy, args); }; });
   return proxy;
 }
 
@@ -20157,7 +20293,7 @@ async function validateOrdresImpl() {
         fetchApi("/api/lineup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ starters: teamA.lineup.starters, backupPositions: teamA.lineup.backupPositions }),
+          body: JSON.stringify({ starters: teamA.lineup.starters, backupPositions: teamA.lineup.backupPositions, minutes: teamA.lineup.minutes || null }),
         }),
       ]);
       const failed = !tacticsRes.ok ? tacticsRes : (!lineupRes.ok ? lineupRes : null);
@@ -26999,7 +27135,7 @@ function renderLineupEditor(team, container, opts = {}) {
 
   const table = document.createElement("table");
   table.className = "lineup-table";
-  table.innerHTML = "<thead><tr><th>Poste</th><th>Titulaire</th><th>Remplaçants</th></tr></thead>";
+  table.innerHTML = "<thead><tr><th>Poste</th><th>Titulaire</th><th>Remplaçants</th><th>Minutes</th></tr></thead>";
   const tbody = document.createElement("tbody");
 
   POSITIONS.forEach(pos => {
@@ -27073,6 +27209,63 @@ function renderLineupEditor(team, container, opts = {}) {
     }
     backupsCell.appendChild(backupsList);
     row.appendChild(backupsCell);
+
+    // Temps de jeu cible du poste (voir Team.slotMinuteShares/
+    // MatchEngine.substituteToTarget) : "Auto" = rotation automatique du
+    // moteur ; "Régler" propose 28/12 puis chaque joueur du poste (titulaire,
+    // remplaçants, réserviste ajouté via "+ Ajouter") a sa case de minutes.
+    const minutesCell = document.createElement("td");
+    minutesCell.className = "lt-minutes";
+    const syncAndRerender = () => { if (team === teamA) syncLineupToServer(); rerender(); };
+    if (!team.hasSlotMinutes(pos)) {
+      const auto = document.createElement("span");
+      auto.className = "lt-minutes-auto";
+      auto.textContent = "Temps de jeu : auto";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "lt-minutes-btn";
+      btn.textContent = "Régler";
+      btn.setAttribute("aria-label", `Régler les minutes ${pos}`);
+      btn.addEventListener("click", () => { team.enableSlotMinutes(pos); syncAndRerender(); });
+      minutesCell.append(auto, btn);
+    } else {
+      const wrap = document.createElement("div");
+      wrap.className = "lt-minutes-list";
+      const mins = team.lineup.minutes[pos];
+      let total = 0;
+      team.slotPlayerIds(pos).forEach(id => {
+        const pl = team.players.find(x => x.id === id);
+        if (!pl) return;
+        const v = Number(mins[id]) || 0;
+        total += v;
+        const lab = document.createElement("label");
+        lab.className = "lt-minutes-item";
+        const name = document.createElement("span");
+        name.textContent = pl.name.split(" ").slice(-1)[0];
+        name.title = pl.name;
+        const inp = document.createElement("input");
+        inp.type = "number"; inp.min = "0"; inp.max = "40"; inp.step = "1";
+        inp.value = String(v);
+        inp.setAttribute("aria-label", `Minutes ${pl.name} au poste ${pos}`);
+        inp.addEventListener("change", () => { team.setSlotMinutes(pos, id, inp.value); syncAndRerender(); });
+        lab.append(name, inp, document.createTextNode("min"));
+        wrap.appendChild(lab);
+      });
+      const tot = document.createElement("span");
+      tot.className = "lt-minutes-total" + (total === 40 ? "" : " off");
+      tot.textContent = total === 40 ? "40 / 40" : `${total} / 40`;
+      if (total !== 40) tot.title = total > 0 ? "Le total sera ramené à 40 min en gardant ces proportions." : "Aucune minute : le poste repassera en rotation automatique.";
+      const reset = document.createElement("button");
+      reset.type = "button";
+      reset.className = "lt-minutes-btn";
+      reset.textContent = "Auto";
+      reset.title = "Revenir à la rotation automatique";
+      reset.setAttribute("aria-label", `Rotation automatique ${pos}`);
+      reset.addEventListener("click", () => { team.clearSlotMinutes(pos); syncAndRerender(); });
+      wrap.append(tot, reset);
+      minutesCell.appendChild(wrap);
+    }
+    row.appendChild(minutesCell);
 
     tbody.appendChild(row);
   });

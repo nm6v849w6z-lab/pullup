@@ -3114,6 +3114,14 @@ class Player {
     // jouées) repoussé de 7 à 12 min à chaque retour, pour qu'un titulaire
     // ne reste pas ensuite jusqu'au seuil de fatigue haut (~30 min d'affilée).
     this.nextRestAt = this.firstRestAt;
+    // Temps de jeu cible par poste (voir Team.slotMinuteShares et
+    // MatchEngine.substituteToTarget) : secondes jouées à la dernière
+    // entrée en jeu, durée minimale d'un passage et écart toléré à la cible
+    // avant de changer — tirés au sort pour que deux matchs ne donnent pas
+    // exactement les mêmes minutes.
+    this.stintStartSecs = 0;
+    this.minStintSecs = rand(150, 260);
+    this.paceMarginSecs = rand(120, 220);
     this.fouls = 0;
     this.disqualified = false;
     this.technicalFouls = 0;
@@ -5982,6 +5990,85 @@ class Team {
     this.lineup = { starters, backupPositions };
   }
 
+  // ---------------------------------------------------------------------
+  // Temps de jeu cible par poste (retour utilisateur 2026-09-26 : "choisir
+  // les temps de jeu des joueurs [...] meneur c'est 30 min, remplaçant 10
+  // [...] un temps idéal à atteindre, qui en cas de blessure ou fautes,
+  // devra être modifié automatiquement par le moteur", "il faut aussi
+  // pouvoir donner des minutes au réserviste", "on mettra les minutes par
+  // poste").
+  //   lineup.minutes[poste] = { [id]: minutes } — facultatif : un poste sans
+  //   entrée garde la rotation automatique du moteur. Seuls comptent le
+  //   titulaire du poste et les remplaçants qui le couvrent (un réserviste
+  //   à qui l'on donne des minutes est d'abord ajouté comme remplaçant du
+  //   poste). Total visé : 40 min ; le moteur ramène de toute façon les
+  //   valeurs à des proportions (voir slotMinuteShares).
+  // ---------------------------------------------------------------------
+  slotPlayerIds(pos) {
+    const ids = [];
+    const s = this.lineup.starters[pos];
+    if (s != null) ids.push(s);
+    this.players.forEach(p => {
+      if (p.id !== s && (this.lineup.backupPositions[p.id] || []).includes(pos)) ids.push(p.id);
+    });
+    return ids;
+  }
+
+  // Répartition proposée quand on active le réglage d'un poste : 28 min au
+  // titulaire, 12 partagées entre les remplaçants (40 au titulaire seul).
+  defaultSlotMinutes(pos) {
+    const ids = this.slotPlayerIds(pos);
+    const starter = this.lineup.starters[pos];
+    const backups = ids.filter(id => id !== starter);
+    const out = {};
+    if (starter != null) out[starter] = backups.length ? 28 : 40;
+    const rest = starter != null ? (backups.length ? 12 : 0) : 40;
+    backups.forEach((id, i) => {
+      const base = Math.floor(rest / backups.length);
+      out[id] = base + (i < rest - base * backups.length ? 1 : 0);
+    });
+    return out;
+  }
+
+  enableSlotMinutes(pos) {
+    if (!this.lineup.minutes) this.lineup.minutes = {};
+    this.lineup.minutes[pos] = this.defaultSlotMinutes(pos);
+  }
+
+  clearSlotMinutes(pos) {
+    if (!this.lineup.minutes) return;
+    delete this.lineup.minutes[pos];
+    if (!Object.keys(this.lineup.minutes).length) delete this.lineup.minutes;
+  }
+
+  setSlotMinutes(pos, playerId, minutes) {
+    if (!this.lineup.minutes || !this.lineup.minutes[pos]) return;
+    if (!this.slotPlayerIds(pos).includes(playerId)) return;
+    const m = Math.round(Number(minutes));
+    this.lineup.minutes[pos][playerId] = Number.isFinite(m) ? clamp(m, 0, 40) : 0;
+  }
+
+  hasSlotMinutes(pos) {
+    return !!(this.lineup.minutes && this.lineup.minutes[pos]);
+  }
+
+  // Proportions de temps de jeu par joueur pour ce poste (somme = 1), ou
+  // null si le poste est en rotation automatique (ou si le réglage ne
+  // désigne plus personne de valide : joueur vendu, retiré du poste...).
+  slotMinuteShares(pos) {
+    if (!this.hasSlotMinutes(pos)) return null;
+    const raw = this.lineup.minutes[pos];
+    const shares = {};
+    let total = 0;
+    this.slotPlayerIds(pos).forEach(id => {
+      const v = Number(raw[id]) || 0;
+      if (v > 0) { shares[id] = v; total += v; }
+    });
+    if (total <= 0) return null;
+    Object.keys(shares).forEach(id => { shares[id] /= total; });
+    return shares;
+  }
+
   // Poste titulaire d'un joueur (ou null s'il n'est pas titulaire).
   starterPosition(playerId) {
     return POSITIONS.find(pos => this.lineup.starters[pos] === playerId) || null;
@@ -5992,6 +6079,23 @@ class Team {
   // pour ne jamais avoir un joueur titulaire ET remplaçant en même temps).
   // Retire aussi le nouveau titulaire de tous ses postes de remplaçant.
   setStarter(pos, playerId) {
+    // Temps de jeu cible (voir slotMinuteShares) : le nouveau titulaire
+    // reprend les minutes de l'ancien à ce poste ; ses éventuelles minutes
+    // de remplaçant ailleurs disparaissent avec ses postes de remplaçant.
+    const mins = this.lineup.minutes;
+    const previous = this.lineup.starters[pos];
+    if (mins && playerId) {
+      Object.keys(mins).forEach(p => {
+        if (p !== pos) {
+          delete mins[p][playerId];
+          if (this.lineup.starters[p] === playerId) delete mins[p];
+        }
+      });
+      if (mins[pos] && previous != null && previous !== playerId) {
+        if (mins[pos][playerId] == null) mins[pos][playerId] = mins[pos][previous] || 0;
+        delete mins[pos][previous];
+      }
+    }
     if (playerId) {
       // Un joueur ne peut être titulaire qu'à UN SEUL poste à la fois : s'il
       // était déjà titulaire ailleurs, ce poste-là redevient vacant (à
@@ -6011,6 +6115,10 @@ class Team {
     const list = this.lineup.backupPositions[playerId] || [];
     const has = list.includes(pos);
     if (on && !has) this.lineup.backupPositions[playerId] = [...list, pos];
+    if (this.lineup.minutes && this.lineup.minutes[pos]) {
+      if (on && this.lineup.minutes[pos][playerId] == null) this.lineup.minutes[pos][playerId] = 0;
+      if (!on) delete this.lineup.minutes[pos][playerId];
+    }
     if (!on && has) {
       const next = list.filter(p => p !== pos);
       if (next.length) this.lineup.backupPositions[playerId] = next;
@@ -6046,11 +6154,12 @@ class Team {
       offRebStyle: this.offRebStyle,
       endgameManagement: this.endgameManagement,
       lineup: {
-        starters: { ...this.lineup.starters },
-        backupPositions: Object.fromEntries(
-          Object.entries(this.lineup.backupPositions).map(([id, positions]) => [id, [...positions]])
-        ),
-      },
+      starters: { ...this.lineup.starters },
+      backupPositions: Object.fromEntries(
+        Object.entries(this.lineup.backupPositions).map(([id, positions]) => [id, [...positions]])
+      ),
+      ...(this.lineup.minutes ? { minutes: Object.fromEntries(Object.entries(this.lineup.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
+    },
     };
   }
 
@@ -6128,6 +6237,7 @@ class Team {
       backupPositions: Object.fromEntries(
         Object.entries(plan.lineup.backupPositions).map(([id, positions]) => [id, [...positions]])
       ),
+      ...(plan.lineup.minutes ? { minutes: Object.fromEntries(Object.entries(plan.lineup.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
     };
     delete this.plannedTactics[key];
   }
@@ -10197,6 +10307,22 @@ function teamFromSave(data) {
       if (p && Array.isArray(positions) && positions.length) backupPositions[p.id] = [...positions];
     });
     team.lineup = { starters, backupPositions };
+    // Temps de jeu cible par poste (voir Team.slotMinuteShares) : ids
+    // normalisés comme ci-dessus, entrées inconnues ignorées.
+    if (data.lineup.minutes && typeof data.lineup.minutes === "object") {
+      const minutes = {};
+      POSITIONS.forEach(pos => {
+        const m = data.lineup.minutes[pos];
+        if (!m || typeof m !== "object") return;
+        const out = {};
+        Object.entries(m).forEach(([idStr, v]) => {
+          const p = byStringId.get(idStr);
+          if (p && Number.isFinite(Number(v))) out[p.id] = clamp(Math.round(Number(v)), 0, 40);
+        });
+        minutes[pos] = out;
+      });
+      if (Object.keys(minutes).length) team.lineup.minutes = minutes;
+    }
   }
   // Journées futures préparées à l'avance (voir serializeTeam ci-dessus) ;
   // absent = sauvegarde d'avant cette fonctionnalité, {} par défaut
@@ -10466,7 +10592,8 @@ class MatchEngine {
       // Player.returnStarterId/stintEndAt) : sans ça, un titulaire sorti pour
       // sa première pause ne revenait quasiment jamais (le remplaçant, tout
       // frais, restait jusqu'à son propre seuil de fatigue haut, ~30 min).
-      if (p.returnStarterId && p.secondsPlayed >= p.stintEndAt && !p.disqualified && !p.injured) {
+      if (p.returnStarterId && p.secondsPlayed >= p.stintEndAt && !p.disqualified && !p.injured &&
+          !(p.matchPosition && team.slotMinuteShares(p.matchPosition))) {
         const starter = team.players.find(x => x.id === p.returnStarterId);
         p.returnStarterId = null;
         if (starter && !starter.onCourt && !starter.disqualified && !starter.injured && !starter.matchInjuryLocked &&
@@ -10476,6 +10603,7 @@ class MatchEngine {
           starter.onCourt = true;
           starter.matchPosition = p.matchPosition;
           starter.nextRestAt = starter.secondsPlayed + rand(420, 720);
+          starter.stintStartSecs = starter.secondsPlayed;
           this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: starter.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: starter.name });
           continue;
         }
@@ -10493,6 +10621,15 @@ class MatchEngine {
       }
 
       const mustLeave = p.disqualified || p.injured;
+
+      // Poste réglé dans les Ordres (temps de jeu cible, voir
+      // Team.slotMinuteShares) : changements pilotés par l'écart entre temps
+      // joué et cible, pas par la rotation automatique ci-dessous.
+      const shares = p.matchPosition ? team.slotMinuteShares(p.matchPosition) : null;
+      if (shares) {
+        this.substituteToTarget(team, p, shares, mustLeave, quarter, clock, events);
+        continue;
+      }
       // p.firstRestThreshold/p.restThreshold (voir Player.resetForMatch)
       // remplacent la constante fixe à 82 utilisée avant ce correctif —
       // seuils individuels tirés au sort à chaque match. Seul un TITULAIRE
@@ -10524,6 +10661,7 @@ class MatchEngine {
         p.onCourt = false;
         replacement.onCourt = true;
         replacement.matchPosition = p.matchPosition;
+        replacement.stintStartSecs = replacement.secondsPlayed;
         // Pause d'un titulaire : le remplaçant ne fait qu'un relais de 2,5
         // à 5,5 min, puis le titulaire revient (voir le début de la boucle).
         if (isStarterFirstRest) {
@@ -10547,6 +10685,65 @@ class MatchEngine {
       }
       // Si ce n'est qu'une question de fatigue/fautes (pas obligatoire) et qu'aucun
       // remplaçant n'est disponible, le joueur reste simplement sur le terrain.
+    }
+  }
+
+  // Temps de jeu écoulé depuis le coup d'envoi (prolongations comprises).
+  elapsedSeconds(quarter, clock) {
+    const c = Math.max(0, clock);
+    if (quarter <= 4) return (quarter - 1) * QUARTER_SECONDS + (QUARTER_SECONDS - c);
+    return 4 * QUARTER_SECONDS + (quarter - 5) * OVERTIME_SECONDS + (OVERTIME_SECONDS - c);
+  }
+
+  // Temps de jeu cible par poste (retour utilisateur 2026-09-26 : "un temps
+  // idéal à atteindre, qui en cas de blessure ou fautes, devra être modifié
+  // automatiquement par le moteur"). Pour le joueur `p` qui occupe un poste
+  // réglé : chacun doit avoir joué À CE POSTE à peu près sa part × temps
+  // écoulé. `p` sort quand il a trop d'avance sur sa cible par rapport au
+  // joueur du poste le plus en retard (écart > paceMarginSecs) ET qu'il a
+  // joué au moins minStintSecs d'affilée — pas de changements toutes les 30
+  // secondes, et des minutes finales proches de la cible sans être au
+  // chiffre près. Blessure, 5 fautes ou exclusion : le joueur sort, les
+  // autres joueurs du poste se partagent ce qui reste (ils rattrapent leur
+  // retard). 4 fautes avant le 4e quart-temps (sauf « maintenir malgré les
+  // fautes ») : le joueur est mis de côté jusqu'au 4e quart-temps. Épuisé
+  // (fatigue ≥ 95) : il souffle quand même. Personne de réglé disponible :
+  // repli sur les remplaçants habituels du poste (backupsForSlot).
+  substituteToTarget(team, p, shares, mustLeave, quarter, clock, events) {
+    const pos = p.matchPosition;
+    const elapsed = this.elapsedSeconds(quarter, clock);
+    const ahead = x => (x.secondsPlayedByPosition[pos] || 0) - (shares[x.id] || 0) * elapsed;
+    const inFoulTrouble = x => x.fouls >= 4 && quarter < 4 && !team.maintainDespiteFouls.has(x.id);
+    const candidates = team.players.filter(x =>
+      (shares[x.id] || 0) > 0 && !x.onCourt && !x.disqualified && !x.injured && !x.matchInjuryLocked &&
+      !inFoulTrouble(x) && x.fatigue < 90
+    ).sort((a, b) => ahead(a) - ahead(b));
+
+    let leave = mustLeave || inFoulTrouble(p) || p.fatigue >= 95;
+    if (!leave && candidates.length) {
+      const c = candidates[0];
+      const stint = p.secondsPlayed - (p.stintStartSecs || 0);
+      if (!((shares[p.id] || 0) > 0)) {
+        // Entré en dépannage sans minutes prévues à ce poste : rend la main
+        // dès qu'un joueur réglé est disponible.
+        leave = stint >= 60;
+      } else {
+        leave = stint >= p.minStintSecs && ahead(c) < 0 && ahead(p) - ahead(c) >= p.paceMarginSecs;
+      }
+    }
+    if (!leave) return;
+
+    const replacement = candidates[0] || team.backupsForSlot(pos)[0] || null;
+    p.hasHadFirstRest = true;
+    if (replacement) {
+      p.onCourt = false;
+      replacement.onCourt = true;
+      replacement.matchPosition = pos;
+      replacement.stintStartSecs = replacement.secondsPlayed;
+      this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: replacement.name });
+    } else if (mustLeave) {
+      p.onCourt = false;
+      this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team), player: p.name });
     }
   }
 
