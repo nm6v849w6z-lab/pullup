@@ -1797,74 +1797,163 @@
      joueur (.pdp-attr-grid). Réutilise attrColorTier/les classes
      attr-tier-* déjà en place (voir .pdp-attr-value.attr-tier-* juste
      au-dessus) plutôt que de dupliquer l'échelle de couleur. */
-  .compare-heads{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; margin-bottom:14px;}
+  .compare-heads{display:grid; grid-template-columns:1fr auto 1fr; align-items:stretch; gap:18px; margin-bottom:10px;}
   .compare-player-head{
-    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-    padding:12px 16px; display:flex; align-items:center; gap:12px;
+    position:relative; overflow:hidden; background:var(--panel); border:1px solid var(--line);
+    border-radius:16px; padding:18px 22px; display:flex; align-items:center; gap:18px; min-height:112px;
   }
-  .compare-player-head.side-a{border-top:3px solid var(--teamA);}
-  .compare-player-head.side-b{border-top:3px solid var(--teamB); flex-direction:row-reverse; text-align:right;}
-  .compare-player-head .cph-name{font-size:14.5px; font-weight:800; margin-bottom:1px;}
-  .compare-player-head .cph-meta{font-size:11px; color:var(--ink-dim);}
-  .compare-player-head .cph-team{font-size:10.5px; color:var(--ink-faint); margin-top:2px;}
-  .compare-vs-badge{
-    font-size:11.5px; font-weight:800; color:var(--ink-faint); background:var(--panel-2);
-    border:1px solid var(--line); border-radius:999px; width:30px; height:30px; flex:0 0 auto;
-    display:flex; align-items:center; justify-content:center;
+  .compare-player-head.side-a{
+    background:radial-gradient(120% 140% at 0% 0%, rgba(51,180,161,.26), rgba(51,180,161,.05) 45%, transparent 70%), var(--panel);
+    border-color:rgba(51,180,161,.38);
   }
-  .compare-position-note{font-size:11px; color:var(--ink-faint); text-align:center; margin:-4px 0 16px; font-style:italic;}
+  .compare-player-head.side-b{
+    flex-direction:row-reverse; text-align:right;
+    background:radial-gradient(120% 140% at 100% 0%, rgba(226,105,79,.26), rgba(226,105,79,.05) 45%, transparent 70%), var(--panel);
+    border-color:rgba(226,105,79,.38);
+  }
+  /* Grande initiale en filigrane derrière le texte, pure décoration. */
+  .compare-player-head .cph-watermark{
+    position:absolute; bottom:-26px; font-size:118px; font-weight:900; letter-spacing:-.04em; line-height:1;
+    opacity:.045; pointer-events:none; user-select:none;
+  }
+  .compare-player-head.side-a .cph-watermark{right:14px; color:var(--teamA);}
+  .compare-player-head.side-b .cph-watermark{left:14px; color:var(--teamB);}
+  .compare-player-head .cph-body{position:relative; min-width:0;}
+  .compare-player-head .cph-name{font-size:21px; font-weight:800; letter-spacing:-.01em; margin-bottom:6px; line-height:1.1;}
+  .compare-player-head .cph-pos{
+    display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em;
+    padding:3px 9px; border-radius:999px; margin-bottom:6px;
+  }
+  .compare-player-head.side-a .cph-pos{background:var(--teamA-soft); color:#5fd6c4;}
+  .compare-player-head.side-b .cph-pos{background:var(--teamB-soft); color:#f0a292;}
+  .compare-player-head .cph-meta{font-size:12px; color:var(--ink-dim);}
+  .compare-player-head .cph-team{font-size:11px; color:var(--ink-faint); margin-top:3px;}
+  .compare-avatar{
+    position:relative; flex:0 0 auto; border-radius:16px; line-height:0; padding:3px;
+    box-shadow:0 10px 28px rgba(0,0,0,.45);
+  }
+  .compare-player-head.side-a .compare-avatar{background:linear-gradient(160deg, var(--teamA), rgba(51,180,161,.15));}
+  .compare-player-head.side-b .compare-avatar{background:linear-gradient(200deg, var(--teamB), rgba(226,105,79,.15));}
+  .compare-avatar .player-avatar{border-radius:13px !important; background:var(--panel-2);}
 
-  .compare-profile-strip{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px;}
-  .compare-profile-tile{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:9px 10px;}
+  .compare-duel{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-width:120px;}
+  .compare-vs-badge{
+    width:50px; height:50px; border-radius:50%; flex:0 0 auto; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:900; font-style:italic; letter-spacing:.02em; color:var(--ink);
+    background:conic-gradient(from 200deg, var(--teamA), var(--teamB), var(--teamA));
+    box-shadow:0 0 22px rgba(240,162,60,.18);
+  }
+  .compare-vs-badge::before{content:""; position:absolute; inset:3px; border-radius:50%; background:var(--bg);}
+  .compare-vs-badge span{position:relative;}
+  .compare-duel-score{font-size:24px; font-weight:900; letter-spacing:-.02em; line-height:1; white-space:nowrap;}
+  .compare-duel-score .a{color:var(--teamA);} .compare-duel-score .b{color:var(--teamB);}
+  .compare-duel-score .sep{color:var(--ink-faint); font-weight:600; margin:0 6px;}
+  .compare-duel-label{font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); font-weight:800; text-align:center; line-height:1.3;}
+
+  /* Barre de "tir à la corde" : part des caractéristiques dominées par
+     chacun (égalités au milieu, en gris). */
+  .compare-tug{display:flex; height:6px; border-radius:999px; overflow:hidden; background:var(--line-soft); margin:4px 0 10px;}
+  .compare-tug i{display:block; height:100%; transition:width .5s ease;}
+  .compare-tug .a{background:linear-gradient(90deg, rgba(51,180,161,.55), var(--teamA));}
+  .compare-tug .t{background:var(--line);}
+  .compare-tug .b{background:linear-gradient(90deg, var(--teamB), rgba(226,105,79,.55));}
+
+  .compare-position-note{font-size:11px; color:var(--ink-faint); text-align:center; margin:0 0 16px; font-style:italic;}
+
+  .compare-overview{display:grid; grid-template-columns:minmax(300px,380px) 1fr; gap:14px; margin-bottom:14px;}
+  @media (max-width:900px){.compare-overview{grid-template-columns:1fr;}}
+  .compare-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px;}
+  .compare-card-title{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);
+    font-weight:800; margin:0 0 8px; display:flex; align-items:center; justify-content:space-between; gap:8px;
+  }
+  .compare-radar-legend{display:flex; gap:10px; font-size:10.5px; text-transform:none; letter-spacing:0; font-weight:700;}
+  .compare-radar-legend span{display:inline-flex; align-items:center; gap:5px; color:var(--ink-dim);}
+  .compare-radar-legend i{width:10px; height:3px; border-radius:2px; display:inline-block;}
+  .compare-radar-card{display:flex; flex-direction:column;}
+  .compare-radar-card svg{display:block; width:100%; height:auto; flex:1 1 auto; min-height:0;}
+  .compare-radar-note{font-size:10.5px; color:var(--ink-faint); text-align:center; font-style:italic; margin-top:2px;}
+  .compare-overview-right{display:flex; flex-direction:column; gap:12px; min-width:0;}
+
+  .compare-profile-strip{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
+  .compare-profile-tile{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:11px 12px;
+    position:relative; overflow:hidden;
+  }
+  .compare-profile-tile::before{
+    content:""; position:absolute; left:0; right:0; top:0; height:2px;
+    background:linear-gradient(90deg, var(--teamA), transparent 35%, transparent 65%, var(--teamB)); opacity:.7;
+  }
   .compare-profile-tile .cpt-label{
-    font-size:9.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-faint);
-    font-weight:800; text-align:center; margin-bottom:6px;
+    font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);
+    font-weight:800; text-align:center; margin-bottom:7px;
   }
   .compare-profile-tile .cpt-vals{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:6px;}
-  .compare-profile-tile .cpt-val{text-align:center; font-weight:800; font-size:14px; padding:3px 2px; border-radius:6px;}
-  .compare-profile-tile .cpt-val.small{font-size:11px; font-weight:700;}
-  .compare-profile-tile .cpt-sep{color:var(--ink-faint); font-size:10px;}
-  .compare-profile-tile .cpt-val.win{background:rgba(62,207,103,.12); box-shadow:inset 0 0 0 1px rgba(62,207,103,.35);}
+  .compare-profile-tile .cpt-val{text-align:center; font-weight:900; font-size:20px; padding:4px 2px; border-radius:8px; letter-spacing:-.01em;}
+  .compare-profile-tile .cpt-val.small{font-size:12.5px; font-weight:800; letter-spacing:0;}
+  .compare-profile-tile .cpt-sep{color:var(--ink-faint); font-size:9.5px; font-weight:800; text-transform:uppercase;}
+  .compare-profile-tile .cpt-val.win{background:rgba(62,207,103,.10); box-shadow:inset 0 0 0 1px rgba(62,207,103,.35);}
   .compare-profile-tile .cpt-val.locked{color:var(--ink-faint); font-weight:600;}
   .compare-profile-tile .cpt-val.attr-tier-red{color:var(--attr-tier-red);}
   .compare-profile-tile .cpt-val.attr-tier-orange{color:var(--attr-tier-amber);}
   .compare-profile-tile .cpt-val.attr-tier-white{color:var(--ink);}
   .compare-profile-tile .cpt-val.attr-tier-green{color:#3ecf67;}
 
+  /* Moyennes par groupe (Fondamentaux / Physique / Mental), barres en
+     miroir depuis le centre — calculées UNIQUEMENT sur les caractéristiques
+     visibles des deux côtés (aucune fuite d'info de scoutisme). */
+  .compare-group-row{display:grid; grid-template-columns:34px 1fr 96px 1fr 34px; align-items:center; gap:8px; padding:6px 0;}
+  .compare-group-row + .compare-group-row{border-top:1px solid var(--line-soft);}
+  .compare-group-row .cg-label{text-align:center; font-size:11px; font-weight:800; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.04em;}
+  .compare-group-row .cg-val{text-align:center; font-weight:900; font-size:15px;}
+  .compare-group-row .cg-val.a{color:var(--teamA);} .compare-group-row .cg-val.b{color:var(--teamB);}
+  .compare-group-row .cg-val.locked{color:var(--ink-faint); font-weight:600;}
+
   .compare-attr-columns{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
-  @media (max-width:900px){.compare-attr-columns{grid-template-columns:1fr;}}
-  .compare-attr-col{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px 6px;}
+  @media (max-width:1100px){.compare-attr-columns{grid-template-columns:1fr;}}
+  .compare-attr-col{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 14px 8px;}
   .compare-attr-col h3{
-    font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-faint);
-    margin:0 0 6px; font-weight:800;
+    font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);
+    margin:0 0 8px; font-weight:800; display:flex; align-items:center; justify-content:space-between;
   }
+  .compare-attr-col h3 .cac-score{font-size:11px; letter-spacing:0; font-weight:800;}
+  .compare-attr-col h3 .cac-score .a{color:var(--teamA);} .compare-attr-col h3 .cac-score .b{color:var(--teamB);}
+  .compare-attr-col h3 .cac-score .sep{color:var(--ink-faint); margin:0 4px;}
   .compare-row{
-    display:grid; grid-template-columns:38px 1fr 38px; align-items:center;
-    gap:6px; padding:4.5px 0; border-bottom:1px solid var(--line-soft); font-size:11.5px;
+    display:grid; grid-template-columns:30px 1fr minmax(92px,auto) 1fr 30px; align-items:center;
+    gap:7px; padding:5px 4px; border-radius:8px; font-size:11.5px; transition:background .15s;
   }
-  .compare-row:last-child{border-bottom:none;}
-  .compare-row .cmp-label{text-align:center; color:var(--ink-dim); font-size:10.5px;}
-  .compare-row .cmp-val{text-align:center; font-weight:700; font-size:12px; padding:2px 0; border-radius:5px;}
-  /* Meilleure valeur des deux côtés sur une ligne donnée : léger liseré vert
-     en plus de la couleur de palier habituelle (attrColorTier) — jamais sur
-     une ligne où un des deux côtés est verrouillé/non scouté (pas
-     comparable), voir pdpCompareAttrRowHtml. */
-  .compare-row .cmp-val.win{background:rgba(62,207,103,.12); box-shadow:inset 0 0 0 1px rgba(62,207,103,.35);}
+  .compare-row:hover{background:var(--panel-2);}
+  .compare-row .cmp-label{text-align:center; color:var(--ink-dim); font-size:10.5px; white-space:nowrap;}
+  .compare-row .cmp-val{text-align:center; font-weight:800; font-size:13px; padding:2px 0; border-radius:6px;}
+  /* Meilleure valeur des deux côtés : liseré vert sur le chiffre + barre
+     pleine intensité (le perdant garde une barre atténuée) — jamais sur une
+     ligne où un des deux côtés est verrouillé (pas comparable), voir
+     pdpCompareAttrRowHtml. */
+  .compare-row .cmp-val.win{background:rgba(62,207,103,.10); box-shadow:inset 0 0 0 1px rgba(62,207,103,.35);}
   .compare-row .cmp-val.attr-tier-red{color:var(--attr-tier-red);}
   .compare-row .cmp-val.attr-tier-orange{color:var(--attr-tier-amber);}
   .compare-row .cmp-val.attr-tier-white{color:var(--ink);}
   .compare-row .cmp-val.attr-tier-green{color:#3ecf67;}
   .compare-row .cmp-val.locked{color:var(--ink-faint); font-weight:600;}
+  .cmp-bar{height:7px; border-radius:999px; background:var(--line-soft); display:flex; overflow:hidden;}
+  .cmp-bar.a{justify-content:flex-end;}
+  .cmp-bar i{display:block; height:100%; border-radius:999px; opacity:.38; transition:width .5s ease;}
+  .cmp-bar.a i{background:linear-gradient(90deg, rgba(51,180,161,.35), var(--teamA));}
+  .cmp-bar.b i{background:linear-gradient(90deg, var(--teamB), rgba(226,105,79,.35));}
+  .cmp-bar.lead i{opacity:1;}
+  .cmp-bar.even i{opacity:.7;}
+  .cmp-bar.locked{background:repeating-linear-gradient(135deg, var(--line-soft) 0 4px, transparent 4px 8px);}
 
   .compare-legend{display:flex; gap:16px; justify-content:center; margin:16px 0 0; font-size:11px; color:var(--ink-faint); flex-wrap:wrap;}
   .compare-legend span{display:inline-flex; align-items:center; gap:5px;}
   .compare-legend i{width:9px; height:9px; border-radius:50%; display:inline-block;}
-  .compare-avatar-circle{
-    width:44px; height:44px; border-radius:50%; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;
+  @media (max-width:760px){
+    .compare-heads{grid-template-columns:1fr; gap:10px;}
+    .compare-player-head.side-b{flex-direction:row; text-align:left;}
+    .compare-duel{flex-direction:row; gap:14px;}
   }
-  .compare-player-head.side-a .compare-avatar-circle{background:var(--teamA-soft); color:var(--teamA);}
-  .compare-player-head.side-b .compare-avatar-circle{background:var(--teamB-soft); color:var(--teamB);}
   /* playerCompareSection est dans WIDE_PAGE_IDS (.wrap.wrap-wide{max-width:
      none;}, voir plus haut) pour la même raison que playerDetailSection —
      mais contrairement à la fiche joueur (qui profite de toute la largeur
@@ -20124,10 +20213,8 @@ document.getElementById("compareSearchResults").addEventListener("click", (e) =>
   renderPlayerCompareView();
 });
 
-// Étiquette d'initiales pour l'avatar rond du comparateur (pas de vrai
-// avatar ici, contrairement à playerAvatarHtml sur la fiche joueur — juste
-// un repère visuel léger pour distinguer les deux côtés A/B, cohérent avec
-// le mockup validé).
+// Initiales du joueur (filigrane décoratif derrière l'en-tête du
+// comparateur, voir .cph-watermark).
 function compareInitials(name) {
   return (name || "").split(" ").map(s => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 }
@@ -20139,12 +20226,22 @@ function compareProfileTileHtml(label, aDisplay, bDisplay, aExtraClass, bExtraCl
     `<span class="cpt-val ${bExtraClass || ""}">${bDisplay}</span></div></div>`;
 }
 
+// Barre "papillon" d'un côté d'une ligne du comparateur (refonte visuelle,
+// retour utilisateur 2026-09-26 : "rends l'onglet comparaison un peu plus
+// sexy") : pousse depuis le centre vers l'extérieur, pleine intensité pour
+// le meilleur des deux, atténuée pour l'autre, hachurée si verrouillée.
+function compareBarHtml(side, value, state) {
+  if (value === null) return `<span class="cmp-bar ${side} locked"></span>`;
+  return `<span class="cmp-bar ${side} ${state}"><i style="width:${clamp(value, 0, 100)}%"></i></span>`;
+}
+
 // Une ligne de caractéristique du comparateur : même verrou "?" que
 // pdpAttrRowHtml sur la fiche joueur (chaque côté indépendamment, un
 // adversaire pas encore scouté peut très bien avoir CETTE caractéristique
 // verrouillée pendant que l'autre côté (le vôtre, ou un joueur du marché)
 // l'a révélée) — jamais de "meilleure valeur" mise en avant si un des deux
-// côtés est verrouillé, la comparaison n'aurait pas de sens.
+// côtés est verrouillé, la comparaison n'aurait pas de sens. Exactement
+// DEUX .cmp-val par ligne (A puis B), les barres sont des éléments à part.
 function pdpCompareAttrRowHtml(attr, playerA, visA, playerB, visB) {
   const label = TRAINING_LABELS[attr] || ATTR_SHORT[attr];
   const aVisible = visA.has(attr);
@@ -20156,9 +20253,87 @@ function pdpCompareAttrRowHtml(attr, playerA, visA, playerB, visB) {
   const bWin = bothVisible && bVal > aVal;
   const aClass = aVisible ? `cmp-val ${attrColorTier(aVal)}${aWin ? " win" : ""}` : "cmp-val locked";
   const bClass = bVisible ? `cmp-val ${attrColorTier(bVal)}${bWin ? " win" : ""}` : "cmp-val locked";
+  const barState = win => !bothVisible ? "" : (win ? "lead" : (aVal === bVal ? "even" : ""));
   return `<div class="compare-row"><span class="${aClass}">${aVisible ? aVal : "?"}</span>` +
+    compareBarHtml("a", aVal, barState(aWin)) +
     `<span class="cmp-label">${escapeHtml(label)}</span>` +
+    compareBarHtml("b", bVal, barState(bWin)) +
     `<span class="${bClass}">${bVisible ? bVal : "?"}</span></div>`;
+}
+
+// Bilan d'un groupe de caractéristiques : victoires UNIQUEMENT sur celles
+// visibles des deux côtés ; moyenne d'un côté seulement si TOUT le groupe
+// est visible de ce côté (null sinon — une moyenne partielle induirait en
+// erreur, et une moyenne complète d'un joueur non scouté fuiterait).
+function compareGroupStats(attrs, playerA, visA, playerB, visB) {
+  const common = attrs.filter(a => visA.has(a) && visB.has(a));
+  let winsA = 0, winsB = 0, ties = 0, sumA = 0, sumB = 0;
+  common.forEach(a => {
+    const x = playerA.attrs[a], y = playerB.attrs[a];
+    sumA += x; sumB += y;
+    if (x > y) winsA++; else if (y > x) winsB++; else ties++;
+  });
+  const fullAvg = (player, vis) => attrs.every(a => vis.has(a))
+    ? Math.round(attrs.reduce((acc, a) => acc + player.attrs[a], 0) / attrs.length) : null;
+  return {
+    count: common.length, winsA, winsB, ties,
+    avgA: fullAvg(playerA, visA),
+    avgB: fullAvg(playerB, visB),
+  };
+}
+
+// Radar superposé des deux joueurs (mêmes axes que la fiche joueur, voir
+// RADAR_AXES/playerRadarCategories). Un côté n'est tracé que s'il est
+// ENTIÈREMENT scouté (sinon les moyennes par axe révéleraient des
+// caractéristiques encore verrouillées). Échelle adaptée aux deux joueurs
+// (plafond arrondi à la dizaine au-dessus de leur meilleur axe, 50 au
+// minimum) : sur une échelle fixe 0-100, des joueurs autour de 30 donnaient
+// deux polygones minuscules et illisibles au centre.
+function compareRadarScaleMax(catsA, catsB) {
+  const vals = [catsA, catsB].filter(Boolean).flatMap(c => RADAR_AXES.map(ax => c[ax.key]));
+  const top = vals.length ? Math.max(...vals) : 100;
+  return clamp(Math.ceil((top + 5) / 10) * 10, 50, 100);
+}
+function compareRadarSvg(catsA, catsB) {
+  const cx = 150, cy = 128, maxR = 96, labelR = 112;
+  const scaleMax = compareRadarScaleMax(catsA, catsB);
+  const n = RADAR_AXES.length;
+  const pointAt = (i, r) => {
+    const ang = (Math.PI * 2 * i) / n - Math.PI / 2;
+    return [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
+  };
+  const poly = frac => RADAR_AXES.map((_, i) => pointAt(i, maxR * frac).map(v => v.toFixed(1)).join(",")).join(" ");
+  let svg = `<svg viewBox="-34 0 368 252" role="img" aria-label="Profils superposés des deux joueurs (échelle 0-${scaleMax})">`;
+  svg += `<defs>` +
+    `<radialGradient id="cmpRadarBg" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="var(--panel-2)"/><stop offset="100%" stop-color="var(--panel)"/></radialGradient>` +
+    `</defs>`;
+  svg += `<polygon points="${poly(1)}" fill="url(#cmpRadarBg)" stroke="var(--line)" stroke-width="1"/>`;
+  [0.8, 0.5, 0.2].forEach(f => {
+    svg += `<polygon points="${poly(f)}" fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="${f === 0.5 ? "0" : "2 3"}"/>`;
+  });
+  RADAR_AXES.forEach((_, i) => {
+    const [x, y] = pointAt(i, maxR);
+    svg += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`;
+  });
+  const shape = (cats, color) => {
+    const pts = RADAR_AXES.map((ax, i) => pointAt(i, (clamp(cats[ax.key], 0, scaleMax) / scaleMax) * maxR));
+    let s = `<polygon points="${pts.map(p => p.map(v => v.toFixed(1)).join(",")).join(" ")}" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="2.2" stroke-linejoin="round"/>`;
+    pts.forEach(([x, y]) => { s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${color}" stroke="var(--panel)" stroke-width="1.5"/>`; });
+    return s;
+  };
+  if (catsA) svg += shape(catsA, "var(--teamA)");
+  if (catsB) svg += shape(catsB, "var(--teamB)");
+  RADAR_AXES.forEach((ax, i) => {
+    const [x, y] = pointAt(i, labelR);
+    const cosA = Math.cos((Math.PI * 2 * i) / n - Math.PI / 2);
+    const anchor = cosA > 0.15 ? "start" : cosA < -0.15 ? "end" : "middle";
+    const vA = catsA ? `<tspan fill="var(--teamA)"> ${Math.round(catsA[ax.key])}</tspan>` : "";
+    const vB = catsB ? `<tspan fill="var(--teamB)"> ${Math.round(catsB[ax.key])}</tspan>` : "";
+    svg += `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="${anchor}" font-size="8.5" font-weight="800" letter-spacing="0.05em" fill="var(--ink-faint)">${escapeHtml(ax.label)}${vA}${vB}</text>`;
+  });
+  svg += `<text x="${cx + 4}" y="${(cy - maxR + 10).toFixed(1)}" font-size="7.5" fill="var(--ink-faint)" opacity="0.8">${scaleMax}</text>`;
+  svg += `</svg>`;
+  return svg;
 }
 
 function renderPlayerCompareView() {
@@ -20180,26 +20355,68 @@ function renderPlayerCompareView() {
 
   const visA = computePlayerVisibility(a.teamIdx, playerA);
   const visB = computePlayerVisibility(b.teamIdx, playerB);
+  const setA = visA.visibleAttrsSet, setB = visB.visibleAttrsSet;
   const teamLabel = (teamIdx, vis) => teamIdx === myTeamIndex
     ? "Votre équipe"
     : (vis.onMarket ? "Marché des transferts" : league.teams[teamIdx].name);
 
+  const groups = [
+    { key: "fund", label: "Fondamentaux", attrs: FUNDAMENTAL_ATTRS },
+    { key: "phys", label: "Physique", attrs: PHYSICAL_ATTRS },
+    { key: "ment", label: "Mental", attrs: MENTAL_ATTRS },
+  ].map(g => ({ ...g, stats: compareGroupStats(g.attrs, playerA, setA, playerB, setB) }));
+  const total = groups.reduce((acc, g) => ({
+    count: acc.count + g.stats.count, winsA: acc.winsA + g.stats.winsA,
+    winsB: acc.winsB + g.stats.winsB, ties: acc.ties + g.stats.ties,
+  }), { count: 0, winsA: 0, winsB: 0, ties: 0 });
+
+  const headHtml = (side, player, teamObj, teamIdx, vis) =>
+    `<div class="compare-player-head side-${side}">` +
+      `<span class="cph-watermark" aria-hidden="true">${escapeHtml(compareInitials(player.name))}</span>` +
+      `<div class="compare-avatar">${playerAvatarHtml(player, teamObj, 66)}</div>` +
+      `<div class="cph-body"><div class="cph-name">${escapeHtml(player.name)}</div>` +
+      `<span class="cph-pos">${escapeHtml(player.position)}</span>` +
+      `<div class="cph-meta">${player.age} ans · ${player.height} cm</div>` +
+      `<div class="cph-team">${escapeHtml(teamLabel(teamIdx, vis))}</div></div></div>`;
+
   let html = "";
   html += `<div class="compare-heads">`;
-  html += `<div class="compare-player-head side-a"><div class="compare-avatar-circle">${escapeHtml(compareInitials(playerA.name))}</div>` +
-    `<div><div class="cph-name">${escapeHtml(playerA.name)}</div>` +
-    `<div class="cph-meta">${escapeHtml(playerA.position)} · ${playerA.age} ans · ${playerA.height} cm</div>` +
-    `<div class="cph-team">${escapeHtml(teamLabel(a.teamIdx, visA))}</div></div></div>`;
-  html += `<div class="compare-vs-badge">VS</div>`;
-  html += `<div class="compare-player-head side-b"><div class="compare-avatar-circle">${escapeHtml(compareInitials(playerB.name))}</div>` +
-    `<div><div class="cph-name">${escapeHtml(playerB.name)}</div>` +
-    `<div class="cph-meta">${escapeHtml(playerB.position)} · ${playerB.age} ans · ${playerB.height} cm</div>` +
-    `<div class="cph-team">${escapeHtml(teamLabel(b.teamIdx, visB))}</div></div></div>`;
+  html += headHtml("a", playerA, teamObjA, a.teamIdx, visA);
+  html += `<div class="compare-duel"><div class="compare-vs-badge"><span>VS</span></div>`;
+  if (total.count > 0) {
+    html += `<div class="compare-duel-score"><span class="a">${total.winsA}</span><span class="sep">–</span><span class="b">${total.winsB}</span></div>` +
+      `<div class="compare-duel-label">caractéristiques<br>dominées</div>`;
+  }
+  html += `</div>`;
+  html += headHtml("b", playerB, teamObjB, b.teamIdx, visB);
   html += `</div>`; // compare-heads
+
+  if (total.count > 0) {
+    const pct = v => (v / total.count * 100).toFixed(1);
+    html += `<div class="compare-tug" title="${total.winsA} / ${total.ties} égalité(s) / ${total.winsB} sur ${total.count} caractéristiques comparables">` +
+      `<i class="a" style="width:${pct(total.winsA)}%"></i><i class="t" style="width:${pct(total.ties)}%"></i><i class="b" style="width:${pct(total.winsB)}%"></i></div>`;
+  }
 
   html += playerA.position === playerB.position
     ? `<p class="compare-position-note">Même poste (${escapeHtml(playerA.position)}) — comparaison directement pertinente.</p>`
     : `<p class="compare-position-note">Postes différents (${escapeHtml(playerA.position)} / ${escapeHtml(playerB.position)}) — à garder en tête pour cette comparaison.</p>`;
+
+  // ---- Vue d'ensemble : radar superposé | profil + moyennes par groupe ----
+  html += `<div class="compare-overview">`;
+  {
+    const catsA = visA.fullyVisible ? playerRadarCategories(playerA) : null;
+    const catsB = visB.fullyVisible ? playerRadarCategories(playerB) : null;
+    const firstName = p => escapeHtml((p.name || "").split(" ").slice(-1)[0]);
+    html += `<div class="compare-card compare-radar-card"><div class="compare-card-title"><span>Profil</span>` +
+      `<span class="compare-radar-legend"><span><i style="background:var(--teamA)"></i>${firstName(playerA)}</span>` +
+      `<span><i style="background:var(--teamB)"></i>${firstName(playerB)}</span></span></div>` +
+      compareRadarSvg(catsA, catsB);
+    if (!catsA || !catsB) {
+      html += `<div class="compare-radar-note">Profil de ${escapeHtml((!catsB ? playerB : playerA).name)} masqué tant qu'il n'est pas entièrement scouté.</div>`;
+    }
+    html += `</div>`;
+  }
+  html += `<div class="compare-overview-right">`;
 
   // ---- Bandeau de profil (4 mini-cartes) ----
   html += `<div class="compare-profile-strip">`;
@@ -20265,18 +20482,34 @@ function renderPlayerCompareView() {
   }
   html += `</div>`; // compare-profile-strip
 
+  // ---- Moyennes par groupe ----
+  html += `<div class="compare-card"><div class="compare-card-title"><span>Moyennes par groupe</span></div>`;
+  groups.forEach(g => {
+    const s = g.stats;
+    const both = s.avgA !== null && s.avgB !== null;
+    const st = !both ? ["lead", "lead"] : [s.avgA > s.avgB ? "lead" : (s.avgA === s.avgB ? "even" : ""), s.avgB > s.avgA ? "lead" : (s.avgA === s.avgB ? "even" : "")];
+    html += `<div class="compare-group-row">` +
+      `<span class="cg-val ${s.avgA === null ? "locked" : "a"}">${s.avgA === null ? "?" : s.avgA}</span>` +
+      compareBarHtml("a", s.avgA, st[0]) +
+      `<span class="cg-label">${escapeHtml(g.label)}</span>` +
+      compareBarHtml("b", s.avgB, st[1]) +
+      `<span class="cg-val ${s.avgB === null ? "locked" : "b"}">${s.avgB === null ? "?" : s.avgB}</span></div>`;
+  });
+  html += `</div>`;
+  html += `</div></div>`; // compare-overview-right, compare-overview
+
   // ---- 3 colonnes de caractéristiques côte à côte (coeur du format
   // "paysage" validé sur mockup) ----
   html += `<div class="compare-attr-columns">`;
-  html += `<div class="compare-attr-col"><h3>Fondamentaux</h3>` +
-    FUNDAMENTAL_ATTRS.map(a => pdpCompareAttrRowHtml(a, playerA, visA.visibleAttrsSet, playerB, visB.visibleAttrsSet)).join("") +
-    `</div>`;
-  html += `<div class="compare-attr-col"><h3>Physique</h3>` +
-    PHYSICAL_ATTRS.map(a => pdpCompareAttrRowHtml(a, playerA, visA.visibleAttrsSet, playerB, visB.visibleAttrsSet)).join("") +
-    `</div>`;
-  html += `<div class="compare-attr-col"><h3>Mental</h3>` +
-    MENTAL_ATTRS.map(a => pdpCompareAttrRowHtml(a, playerA, visA.visibleAttrsSet, playerB, visB.visibleAttrsSet)).join("") +
-    `</div>`;
+  groups.forEach(g => {
+    const s = g.stats;
+    const score = s.count > 0
+      ? `<span class="cac-score"><span class="a">${s.winsA}</span><span class="sep">–</span><span class="b">${s.winsB}</span></span>`
+      : "";
+    html += `<div class="compare-attr-col"><h3><span>${escapeHtml(g.label)}</span>${score}</h3>` +
+      g.attrs.map(attr => pdpCompareAttrRowHtml(attr, playerA, setA, playerB, setB)).join("") +
+      `</div>`;
+  });
   html += `</div>`; // compare-attr-columns
 
   html += `<div class="compare-legend">` +
@@ -20284,7 +20517,7 @@ function renderPlayerCompareView() {
     `<span><i style="background:var(--amber)"></i> 21-50</span>` +
     `<span><i style="background:var(--ink)"></i> 51-80</span>` +
     `<span><i style="background:#3ecf67"></i> 81+</span>` +
-    `<span><i style="background:rgba(62,207,103,.5)"></i> Meilleure valeur des deux</span>` +
+    `<span><i style="background:rgba(62,207,103,.5)"></i> Meilleure valeur des deux (barre pleine)</span>` +
     `</div>`;
 
   holder.innerHTML = html;

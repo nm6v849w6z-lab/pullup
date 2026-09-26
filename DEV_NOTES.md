@@ -33,16 +33,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   ligne (plus de cases EXEMPT), arbre Quarts → Finale. Reste : retours
   utilisateur sur la maquette, puis code (moteurbasket3.html, onglet Coupe).
 
-- **🚧 EN COURS (2026-09-26) — Comparateur de joueurs : refonte visuelle**
-  — retour utilisateur (capture Adama Brooks vs Adama Diallo) : "rends
-  l'onglet comparaison un peu plus sexy". En-têtes "héros" (vrais avatars
-  AvatarGen, dégradé couleur d'équipe, pastille de poste), score du duel au
-  centre (nb de caractéristiques dominées), radar superposé des deux
-  joueurs (côté B dessiné seulement s'il est entièrement scouté), barres
-  "papillon" de part et d'autre de chaque caractéristique, barres de
-  moyenne par groupe. Classes testées (.compare-row/.cmp-val/.cpt-val...)
-  conservées. Fichier : moteurbasket3.html (renderPlayerCompareView + CSS
-  .compare-*). Statut : en cours de code.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Comparateur de
+  joueurs : refonte visuelle** — retour utilisateur : "rends l'onglet
+  comparaison un peu plus sexy". En-têtes "héros" (vrais avatars AvatarGen,
+  dégradé couleur d'équipe, pastille de poste, initiales en filigrane),
+  score du duel au centre + barre de tir à la corde (caractéristiques
+  dominées, seulement sur celles visibles des deux côtés), radar superposé
+  à échelle adaptative (côté B tracé seulement s'il est entièrement
+  scouté), moyennes par groupe (seulement si le groupe est entièrement
+  visible de ce côté), barres "papillon" sur chaque caractéristique.
+  Classes testées conservées. Fichier : moteurbasket3.html
+  (renderPlayerCompareView, pdpCompareAttrRowHtml, compareRadarSvg,
+  compareGroupStats, CSS .compare-*). Tests player_compare,
+  attr_color_scheme_everywhere, radar_chart_colors, pdp_color_scheme,
+  player_detail_topbar_nav verts ; captures Playwright vérifiées (propre
+  effectif + adversaire non scouté). Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Calendrier :
   deux textes retirés** — retours utilisateur : "enlève: Ordres non
