@@ -72,9 +72,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   si personne de réglé n'est dispo. Mesuré (60-200 matchs) : cibles
   tenues à ±1-3 min en moyenne (ex. 30→29,1 / 10→11,1 ; 34→31,5 à cause
   des fautes/fatigue). Serveur : validateLineupBody valide minutes (0-40,
-  joueurs de l'effectif). UI : colonne Minutes de la carte Rotation
-  ("Temps de jeu : auto" + Régler ; une case par joueur du poste, total
-  x / 40 en orange si ≠ 40, bouton Auto) ; /api/lineup envoie minutes.
+  joueurs de l'effectif). UI (retour utilisateur : "je mettrai une
+  brique temps de jeu à part [...] pas dans les rotations", "tu pourras
+  mettre les temps de jeu en bas sous rotation") : carte « Temps de jeu »
+  (#ordresCardMinutes, renderPlayingTimeCard) sous la carte Rotation +
+  raccourci dans la barre des Ordres ; par poste "Automatique" + Régler,
+  ou une case par joueur (titulaire/remplaçants), « + Ajouter un joueur »
+  (réserviste ou remplaçant d'un autre poste, devient remplaçant du
+  poste), total x / 40 (orange si ≠ 40), bouton Automatique ; /api/lineup
+  envoie minutes. Même passe (captures utilisateur) : remplaçants de la
+  Rotation sur une ligne (« (poste) » affiché seulement hors poste
+  naturel, « + Ajouter » toujours en dessous), terrain du cinq réduit (max
+  420 px), menus des titulaires élargis (120-175 px, marqueurs de bord
+  alignés sur le bord). Vérifié visuellement (Chromium, bureau + 390 px) ;
+  sur téléphone un nom très long peut encore perdre son « (M) » final.
   Tests : lineup_minutes_test.js (nouveau) + suite complète 144 fichiers :
   tout vert sauf player_detail_test.js (échoue AUSSI sans ce chantier, voir
   "À investiguer" ci-dessous) et calendrier_ordres_stale_live_redirect

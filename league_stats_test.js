@@ -216,7 +216,8 @@ if (meRow.querySelector(".lg-you") || /\bTOI\b/.test(meRow.textContent)) throw n
 const race = doc2.querySelector("#standingsContent .lg-race");
 const myRank = teamRows.indexOf(meRow) + 1;
 if (!race || !race.querySelector(".lg-race-kpis b").textContent.startsWith(String(myRank))) throw new Error("❌ La carte « course » devrait afficher la position du club (" + myRank + ").");
-if (!/Journée 3 sur \d+ · 10 équipes/.test(doc2.querySelector("#standingsContent .lg-head small").textContent)) throw new Error("❌ L'en-tête devrait indiquer « Journée 3 sur N · 10 équipes ».");
+// Sur-titre « Journée N sur 18 · 10 équipes » retiré (retour utilisateur 2026-09-26).
+if (doc2.querySelector("#standingsContent .lg-head small")) throw new Error("❌ Le sur-titre « Journée N sur … · N équipes » a été retiré de la page Ligue.");
 console.log(`✅ Classement : 10 équipes, 3 séparateurs de zones, forme cohérente avec le bilan, ligne TOI, carte course (${myRank}e).`);
 
 await flush(dom2);

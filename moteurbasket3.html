@@ -2995,6 +2995,13 @@
   .lg-head{margin-bottom:20px;}
   .lg-head small{display:block; font-size:12.5px; font-weight:700; color:var(--amber); margin-bottom:4px;}
   .lg-head h1{font-family:var(--display); font-size:40px; font-weight:800; line-height:1; margin:0; letter-spacing:-.01em;}
+  /* Titres d'onglet harmonisés sur celui de la Ligue (retour utilisateur
+     2026-09-26 : "une fois le titre est en grand, une fois en petit [...]
+     harmonise tous les onglets avec des titres gros comme ligue") :
+     !important car plusieurs pages avaient leur propre règle (souvent par
+     id) sur ce même h2. */
+  h2.page-title{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif !important; font-size:40px !important; font-weight:800 !important; line-height:1 !important; letter-spacing:-.01em !important; margin:0 0 20px !important; color:var(--ink) !important; text-transform:none !important;}
+  @media (max-width: 860px){ h2.page-title{font-size:32px !important;} }
   .lg-top{display:grid; grid-template-columns:minmax(0,1.9fr) minmax(0,1fr); gap:20px; align-items:start;}
   .lg-panel{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 18px 14px; box-shadow:0 12px 30px -18px rgba(0,0,0,.6);}
   .lg-panel-title{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin:0 0 12px;}
@@ -5761,7 +5768,7 @@
     <div class="section tp-page">
       <div class="tp-head">
         <span class="tp-eyebrow">Entraînement</span>
-        <h2 id="trainingTitle" class="tp-title">Semaine</h2>
+        <h2 id="trainingTitle" class="tp-title page-title">Semaine</h2>
       </div>
 
       <div id="lastTrainingReportHolder"></div>
@@ -5860,7 +5867,7 @@
     <div class="section stf-page">
       <div class="stf-top">
         <div class="stf-top__titles">
-          <h2>Staff</h2>
+          <h2 class="page-title">Staff</h2>
         </div>
         <div class="stf-kpis">
           <div class="stf-kpi"><span class="stf-kpi__label">Budget club</span><span class="stf-kpi__value" id="staffBudget"></span></div>
@@ -5930,7 +5937,7 @@
       <div class="ac-head">
         <div>
           <div class="ac-kicker">Formation</div>
-          <h2>Académie de jeunes</h2>
+          <h2 class="page-title">Académie de jeunes</h2>
         </div>
         <div id="academyOverview" class="ac-kpis"></div>
       </div>
@@ -5967,7 +5974,7 @@
          economieTvRights, economieTransactions...) sont conservés : les
          tests existants s'appuient dessus. -->
     <div class="section eco-page">
-      <h2>Économie</h2>
+      <h2 class="page-title">Économie</h2>
       <p class="eco-title-sub" id="economieWeekSub"></p>
       <div id="economieDeficitBanner"></div>
       <div class="eco-hero">
@@ -6030,7 +6037,7 @@
 
   <div id="salleSection" class="hidden">
     <div class="section">
-      <h2>Salle</h2>
+      <h2 class="page-title">Salle</h2>
       <!-- Refonte visuelle (retour utilisateur, 2026-09-25 : "aide moi à
            rendre cette page plus sexy" puis "vas y ça me plait bien, code
            tout ça", sur la maquette proposée) : bandeau d'en-tête pleine
@@ -6075,14 +6082,14 @@
 
   <div id="calendrierSection" class="hidden">
     <div class="section">
-      <h2>Calendrier</h2>
+      <h2 class="page-title">Calendrier</h2>
       <div id="calendrierContent"></div>
     </div>
   </div>
 
   <div id="coupeSection" class="hidden">
     <div class="section">
-      <h2>Coupe</h2>
+      <h2 class="page-title">Coupe</h2>
       <div id="coupeContent"></div>
     </div>
   </div>
@@ -6099,7 +6106,7 @@
     <div class="section eff-page">
       <div class="eff-head">
         <div class="eff-title">
-          <h2>Effectif</h2>
+          <h2 class="page-title">Effectif</h2>
           <div class="eff-sub" id="rosterSubtitle"></div>
         </div>
         <div class="eff-kpis">
@@ -6207,7 +6214,7 @@
          [data-bid-listing]). Voir renderMarcheSection. -->
     <div class="section mk-page">
       <div class="mk-ph">
-        <h2>Marché des transferts</h2>
+        <h2 class="page-title">Marché des transferts</h2>
       </div>
       <div class="mk-kpis" id="marketKpis"></div>
       <section class="mk-card" aria-labelledby="marketMineTitle">
@@ -6267,7 +6274,7 @@
          season_objective_*_client_test.js). Voir renderHumeurSection. -->
     <div class="section hu-page">
       <div class="hu-head">
-        <h2>Humeur des supporters</h2>
+        <h2 class="page-title">Humeur des supporters</h2>
         <p class="eco-title-sub" id="humeurWeekSub"></p>
       </div>
       <section class="hu-hero">
@@ -6339,7 +6346,7 @@
        par semaine (toute la saison en cours), pas seulement la dernière. -->
   <div id="statsHebdoSection" class="hidden">
     <div class="section">
-      <h2>Stats hebdo</h2>
+      <h2 class="page-title">Stats hebdo</h2>
       <div class="week-nav" id="statsHebdoNav"></div>
       <div id="statsHebdoContent"></div>
     </div>
@@ -6357,7 +6364,7 @@
        pour la partie Entraînement, générée dynamiquement). -->
   <div id="guideSection" class="hidden">
     <div class="section gd">
-      <h2>Guide</h2>
+      <h2 class="page-title">Guide</h2>
       <!-- Guide structuré avec un sommaire (retour utilisateur 2026-09-26 :
            "ce serait bien de structurer le guide avec un menu, plutôt qu'un
            long texte" + "étoffe le guide avec toutes les dernières
@@ -20895,7 +20902,7 @@ function lgHeadKicker() {
 function renderLeagueTop() {
   const table = league.standings();
   document.getElementById("standingsContent").innerHTML =
-    `<div class="lg-head"><small>${lgHeadKicker()}</small><h1>Ligue</h1></div>` +
+    `<div class="lg-head"><h1>Ligue</h1></div>` /* "Journée N sur 18 · 10 équipes" retiré (retour utilisateur 2026-09-26) */ +
     `<div class="lg-top">` +
       `<section class="lg-panel" aria-labelledby="lgStandingsTitle">` +
         `<div class="lg-panel-title"><h2 id="lgStandingsTitle">Classement</h2><span>Victoire 2 pts · Défaite 1 pt</span></div>` +
@@ -33064,8 +33071,10 @@ function calendarRowHtml(row) {
   let opponentCell;
   if (row.opponentIdx != null) {
     const oppTeam = league.teams[row.opponentIdx];
-    opponentCell = `<div class="cal-opp"><span class="cal-opp-logo">${teamLogoHtml(oppTeam, 28)}</span>` +
-      `<span class="cal-opp-prefix" aria-hidden="true">${row.isHome ? "vs" : "@"}</span>${teamLinkHtml(row.opponentIdx, row.opponent)}</div>`;
+    // Ordre "vs/@ · écusson · nom" (retour utilisateur 2026-09-26 : "fais
+    // plutôt vs ou @ logo nom d'équipe").
+    opponentCell = `<div class="cal-opp"><span class="cal-opp-prefix" aria-hidden="true">${row.isHome ? "vs" : "@"}</span>` +
+      `<span class="cal-opp-logo">${teamLogoHtml(oppTeam, 28)}</span>${teamLinkHtml(row.opponentIdx, row.opponent)}</div>`;
   } else {
     opponentCell = `<div class="cal-opp cal-opp-bye">${escapeHtml(row.opponent)}</div>`;
   }
