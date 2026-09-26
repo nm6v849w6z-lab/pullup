@@ -151,6 +151,35 @@
   .guide-entry:first-of-type{border-top:none; padding-top:8px;}
   .guide-entry h3{font-size:13px; font-weight:700; margin:0 0 8px; color:var(--amber);}
   .guide-entry .training-intro{margin:0;}
+  /* Guide avec sommaire (2026-09-26, voir renderGuideSection) : sommaire à
+     gauche, une entrée affichée à la fois à droite. */
+  #guideSection .gd-layout{display:grid; grid-template-columns:230px minmax(0,1fr); gap:24px; align-items:start;}
+  #guideSection .gd-nav{position:sticky; top:76px; display:flex; flex-direction:column; gap:2px; background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; padding:12px 10px;}
+  #guideSection .gd-nav-group{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); padding:10px 8px 4px;}
+  #guideSection .gd-nav-group:first-child{padding-top:2px;}
+  #guideSection .gd-nav-btn{display:block; width:100%; text-align:left; background:none; border:1px solid transparent; border-radius:8px; color:var(--ink-dim); font:inherit; font-size:13.5px; font-weight:600; padding:7px 10px; cursor:pointer;}
+  #guideSection .gd-nav-btn:hover{color:var(--ink); background:var(--panel-2);}
+  #guideSection .gd-nav-btn.active{color:var(--amber); background:rgba(240,162,60,.10); border-color:rgba(240,162,60,.45);}
+  #guideSection .gd-nav-btn:focus-visible, #guideSection .gd-link:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  #guideSection .gd-body{background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; padding:20px 24px; min-width:0;}
+  #guideSection .gd-body .tour-launch-btn{margin:0 0 12px;}
+  #guideSection .guide-entry{border-top:none; padding:4px 0 0;}
+  #guideSection .guide-entry.gd-off{display:none;}
+  #guideSection .guide-entry h3{font-size:18px; color:var(--ink); margin:0 0 12px;}
+  #guideSection .guide-entry .training-intro{font-size:14px; line-height:1.6; max-width:72ch;}
+  #guideSection .gd-link{background:none; border:0; padding:0; font:inherit; color:var(--amber); cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
+  #guideSection .gd-table{border-collapse:separate; border-spacing:0; margin:10px 0 4px; min-width:min(520px,100%); background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; overflow:hidden; font-size:13.5px;}
+  #guideSection .gd-table th{text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; padding:9px 12px; border-bottom:1px solid var(--line-soft);}
+  #guideSection .gd-table td{padding:7px 12px; border-bottom:1px solid var(--line-soft); color:var(--ink-dim);}
+  #guideSection .gd-table tr:last-child td{border-bottom:none;}
+  #guideSection .gd-table td:first-child{font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
+  @media (max-width:760px){
+    #guideSection .gd-layout{grid-template-columns:1fr; gap:12px;}
+    #guideSection .gd-nav{position:static; flex-direction:row; overflow-x:auto; padding:8px; gap:6px;}
+    #guideSection .gd-nav-group{display:none;}
+    #guideSection .gd-nav-btn{flex:none; width:auto; white-space:nowrap; border-color:var(--line);}
+    #guideSection .gd-body{padding:16px;}
+  }
 
   /* ---- Scoreboard ---- */
   .board{
@@ -5987,131 +6016,199 @@
        auparavant éparpillés en haut de chaque onglet (voir renderGuideSection
        pour la partie Entraînement, générée dynamiquement). -->
   <div id="guideSection" class="hidden">
-    <div class="section">
+    <div class="section gd">
       <h2>Guide</h2>
-      <!-- Retour utilisateur (2026-09) : "mets le sur la vraie maquette du
-           jeu et on regarde comment ça rend" : lance le tutoriel d'accueil
-           directement sur les vraies pages du jeu (voir startRealTour tout
-           en bas de ce fichier). Placé ici plutôt que déclenché
-           automatiquement à l'ouverture du jeu : la mise en scène finale
-           (premier lancement automatique ? bouton permanent ?) reste à
-           décider, ce bouton sert pour l'instant à voir le rendu et le
-           revoir à volonté (une seule fois par club, voir
-           Team.onboardingTourCompleted). Les primes, elles, SONT réellement
-           créditées depuis le correctif "Mets les vrais primes sur le
-           tutoriel" (voir performTutorialRewardClaim/tourNext) : seul le
-           déclenchement du tutoriel reste à l'étape "aperçu", pas son
-           contenu économique. -->
-      <button type="button" class="tour-launch-btn" id="tourLaunchBtn">Lancer le tutoriel d'accueil (aperçu)</button>
+      <!-- Guide structuré avec un sommaire (retour utilisateur 2026-09-26 :
+           "ce serait bien de structurer le guide avec un menu, plutôt qu'un
+           long texte" + "étoffe le guide avec toutes les dernières
+           nouveautés [...] niveaux de potentiel [...] pros ou jeunes du
+           centre de formation"). Une entrée .guide-entry par sujet
+           (data-guide-id / data-guide-group) : le sommaire de gauche est
+           construit à partir de ces entrées (voir renderGuideSection), une
+           seule entrée affichée à la fois. Titres h3 conservés à
+           l'identique pour guide_content_test.js. Le bouton du tutoriel
+           d'accueil (#tourLaunchBtn, une seule fois par club, voir
+           Team.onboardingTourCompleted) reste en tête. -->
+      <div class="gd-layout">
+        <nav class="gd-nav" id="guideNav" aria-label="Sommaire du guide"></nav>
+        <div class="gd-body" id="guideBody">
+      <div class="guide-entry" data-guide-id="demarrer" data-guide-group="Bien démarrer">
+        <h3>Premiers pas</h3>
+        <button type="button" class="tour-launch-btn" id="tourLaunchBtn">Lancer le tutoriel d'accueil (aperçu)</button>
+        <p class="training-intro">Vous dirigez un club de basket en temps réel : les matchs se jouent tout seuls à l'heure prévue, que vous soyez connecté ou non. En championnat, deux journées par jour (<b>10:00</b> et <b>19:00</b>) ; en Coupe, un tour par jour à <b>15:00</b>. Entre deux matchs, votre travail : préparer les <b>Ordres</b>, régler l'<b>Entraînement</b>, gérer l'<b>Effectif</b> (marché, jeunes, staff) et les finances du club.</p>
+        <p class="training-intro" style="margin-top:10px;">La routine conseillée avant chaque match : vérifier la forme des joueurs (<button type="button" class="gd-link" data-guide-goto="forme">Forme et blessures</button>), composer le cinq et la tactique dans l'onglet Ordres, puis valider. Vous pouvez aussi préparer plusieurs journées à l'avance (voir <button type="button" class="gd-link" data-guide-goto="ordres">Ordres et tactiques</button>).</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Pendant votre absence</b> : à votre retour, un récapitulatif résume ce qui s'est passé (victoires et défaites, finances de la semaine, progression des joueurs, points à savoir). Le <b>Tableau de bord</b> montre ensuite le prochain match, les actions en attente de la semaine et le pouls du club (humeur des supporters, alchimie).</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Sur téléphone</b> : le site s'adapte automatiquement à l'écran (barre d'onglets en bas, menu en tiroir) et peut être ajouté à l'écran d'accueil comme une application.</p>
+      </div>
 
-      <div class="guide-entry">
+      <div class="guide-entry" data-guide-id="effectif" data-guide-group="Mon équipe">
         <h3>Effectif &amp; feuille de match</h3>
-        <p class="training-intro">Caractéristiques de tous les joueurs du club (0 à 99), colonne <b>Rôle</b> (Titulaire, Joueur de rotation ou Réserviste, d'après la feuille de match actuelle) et colonne <b>Marché</b> pour mettre un joueur aux enchères au prix de votre choix (voir l'onglet <b>Marché</b> pour suivre les enchères en cours, les vôtres et celles des adversaires ; la fiche d'un joueur que vous avez mis aux enchères affiche aussi le montant de l'enchère actuelle, sans avoir à changer d'onglet). Pour composer la feuille de match et donner les ordres avant le prochain match, direction l'onglet <b>Ordres</b>.</p>
+        <p class="training-intro">L'onglet <b>Effectif</b> affiche en tête l'alchimie, la masse salariale et le prochain match, puis vos joueurs groupés en <b>Cinq de départ</b>, <b>Rotation</b> et <b>Réserve</b>, d'après la feuille de match actuelle. Pour chacun : poste, potentiel, âge, taille, salaire, forme, motivation et évaluation des derniers matchs. Le menu <b>⋯</b> au bout de chaque ligne regroupe les actions (mettre en vente, etc.). Trois sous-onglets : Général, Caractéristiques (toutes les caracs de tous vos joueurs côte à côte, triables par colonne) et Statistiques.</p>
+        <p class="training-intro" style="margin-top:10px;">Cliquez sur un nom pour ouvrir la <b>fiche joueur</b> : note globale en anneau, profil en radar, saison en cours, caractéristiques détaillées, derniers matchs, et les boutons <b>Comparer</b> (face à n'importe quel autre joueur ; pour un adversaire, seules ses caractéristiques révélées sont comparées) et <b>Vendre</b>.</p>
         <p class="training-intro" style="margin-top:10px;">Les salaires (masse salariale visible sur l'onglet <b>Économie</b>) sont recalculés au début de chaque nouvelle saison, d'après le niveau de chaque joueur AU POSTE où ses caractéristiques le valorisent le mieux. Vous pouvez vendre l'intégralité de votre effectif si vous le souhaitez, mais un match sans assez de joueurs pour composer un cinq de départ est perdu par forfait (20-0).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>29 caractéristiques (0 à 99)</b> : Tir à mi-distance, Tir à 3 points, Jeu intérieur, Passe, Rebond, Contre, Dribble, Agilité, Défense extérieure, Défense intérieure, Mental, Endurance, Lancer franc, Pénétration, Création de tir, Interceptions, Puissance, Concentration, Anticipation, Leadership, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision. Sur chacune, plus le chiffre est élevé, mieux c'est, sans exception. La petite barre colorée sous chaque valeur donne le niveau en un coup d'œil (rouge en dessous de 45, grise de 45 à 64, verte de 65 à 79, dorée à partir de 80, niveau élite). Elles ne sont plus affichées directement dans le tableau <b>Effectif</b> (onglet Général, devenu trop chargé) : cliquez sur le nom d'un joueur pour ouvrir sa fiche et voir ses 29 caractéristiques en détail, ou passez par le sous-onglet <b>Caractéristiques</b> de l'Effectif pour les comparer d'un coup d'œil entre tous vos joueurs.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Quelles caractéristiques comptent selon le poste</b> : Meneur (Passe, Dribble, Agilité, Pénétration, Création de tir, Interceptions, Vitesse, Accélération), Arrière (Tir à 3 points, Tir à mi-distance, Dribble, Pénétration, Création de tir, Interceptions, Vitesse, Accélération), Ailier shooteur (Tir à 3 points, Défense extérieure, Création de tir), Ailier fort (Jeu intérieur, Rebond, Défense intérieure, Puissance, Force, Détente), Pivot (Jeu intérieur, Rebond, Contre, Défense intérieure, Puissance, Force, Détente). Mental, Endurance, Lancer franc, Concentration, Leadership, Décision, Sang-froid, Détermination, Discipline et Vision ne sont liées à aucun poste en particulier : ce sont des qualités générales, aussi utiles à un Meneur qu'à un Pivot. Pour juger si un joueur est bon À SON POSTE, comparez-le aux autres sur les caractéristiques propres à ce poste plutôt que sur l'ensemble des vingt-neuf. Sur la feuille de match (onglet <b>Ordres</b>), chaque joueur proposé comme remplaçant apparaît aussi avec un niveau global entre parenthèses (moyenne simple des vingt-neuf caractéristiques), pratique pour trancher vite entre deux joueurs au même poste.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Mental, Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership</b> : en plus de compter dans le niveau global comme les autres, chacune alimente aussi un mécanisme de match dédié. Le <b>Mental</b> améliore (ou dégrade) la réussite au tir dans le money time (dernières minutes d'un match serré), et limite les dégâts d'une mauvaise série de tirs manqués ou de pertes de balle consécutives pour le tireur concerné, un Mental élevé permettant d'encaisser une série sans s'enfoncer. L'<b>Endurance</b> ralentit l'accumulation de fatigue EN MATCH propre à ce joueur, comme un Espace bien-être personnel (voir <b>Salle</b>). Le <b>Lancer franc</b> détermine directement la réussite aux lancers francs, indépendamment du tir à mi-distance ; la <b>Concentration</b> l'améliore encore un peu plus. La <b>Puissance</b> augmente les fautes provoquées sur les tirs près du panier. L'<b>Anticipation</b> renforce la pression défensive de toute l'équipe sur les extérieurs adverses, aux côtés de la Défense extérieure. Le <b>Leadership</b> fonctionne différemment des six autres : c'est celui du MEILLEUR joueur du cinq en jeu (pas forcément le tireur en difficulté) qui compte, et il allège, pour TOUTE L'ÉQUIPE, le malus d'une mauvaise série de tirs manqués consécutifs (à partir de 3 d'affilée pour le tireur concerné).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Pénétration, Création de tir, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision</b> : elles aussi comptent dans le niveau global, et chacune alimente à son tour un mécanisme de match dédié. La <b>Pénétration</b> augmente les chances d'être choisi comme tireur près du cercle, et aide à se créer un accès à la raquette face à un défenseur solide. La <b>Création de tir</b> est désormais le facteur principal de la qualité d'ouverture d'un tir. Les <b>Interceptions</b> pèsent directement dans le choix du voleur de balle sur une perte de balle adverse, et dans la pression collective qui en provoque. La <b>Vitesse</b> et l'<b>Accélération</b> déclenchent des contre-attaques après une interception ou un rebond défensif, et aident à battre son défenseur au premier pas. La <b>Force</b> et la <b>Détente</b> renforcent le combat du rebond et la capacité à contrer un tir adverse. La <b>Décision</b> réduit les pertes de balle du porteur de balle ; la <b>Vision</b> améliore le choix du passeur et la conversion en passe décisive. Le <b>Sang-froid</b> et la <b>Détermination</b> agissent comme le Mental dans le money time et après une mauvaise série. La <b>Discipline</b> réduit les fautes provoquées en défense ; un défenseur peu discipliné risque en plus une faute antisportive (contact jugé excessif), et un défenseur peu serein (Sang-froid bas) une faute technique (dissipation) — deux fautes techniques, deux antisportives, ou une de chaque dans le même match valent exclusion, comme la vraie règle du basket.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Potentiel</b> : un nom de palier (10 paliers, de Débutant à Générationnel), jamais le chiffre exact. Il indique la marge de progression ENCORE POSSIBLE au-dessus du niveau actuel du joueur, pas sa qualité du moment : un jeune joueur encore faible mais à fort potentiel peut, bien entraîné (onglet <b>Entraînement</b>), dépasser largement un joueur déjà bon mais dont le potentiel est presque atteint. Survolez le nom du palier pour voir son rang exact (1 à 10).</p>
       </div>
 
-      <div class="guide-entry">
+      <div class="guide-entry" data-guide-id="caracs" data-guide-group="Mon équipe">
+        <h3>Caractéristiques</h3>
+        <p class="training-intro">29 caractéristiques (0 à 99) : Tir à mi-distance, Tir à 3 points, Jeu intérieur, Passe, Rebond, Contre, Dribble, Agilité, Défense extérieure, Défense intérieure, Mental, Endurance, Lancer franc, Pénétration, Création de tir, Interceptions, Puissance, Concentration, Anticipation, Leadership, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision. Sur chacune, plus le chiffre est élevé, mieux c'est, sans exception. La couleur donne le niveau en un coup d'œil : rouge en dessous de 45, grise de 45 à 64, verte de 65 à 79, dorée à partir de 80 (niveau élite).</p>
+        <p class="training-intro" style="margin-top:10px;">Quelles caractéristiques comptent selon le poste : <b>Meneur</b> (Passe, Dribble, Agilité, Pénétration, Création de tir, Interceptions, Vitesse, Accélération), <b>Arrière</b> (Tir à 3 points, Tir à mi-distance, Dribble, Pénétration, Création de tir, Interceptions, Vitesse, Accélération), <b>Ailier shooteur</b> (Tir à 3 points, Défense extérieure, Création de tir), <b>Ailier fort</b> (Jeu intérieur, Rebond, Défense intérieure, Puissance, Force, Détente), <b>Pivot</b> (Jeu intérieur, Rebond, Contre, Défense intérieure, Puissance, Force, Détente). Mental, Endurance, Lancer franc, Concentration, Leadership, Décision, Sang-froid, Détermination, Discipline et Vision sont des qualités générales, aussi utiles à un Meneur qu'à un Pivot. Pour juger un joueur À SON POSTE, comparez-le sur les caractéristiques propres à ce poste plutôt que sur l'ensemble des vingt-neuf.</p>
+        <p class="training-intro" style="margin-top:10px;">Mental, Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership alimentent chacune un mécanisme de match dédié. Le Mental améliore la réussite au tir dans le money time et limite les dégâts d'une mauvaise série. L'Endurance ralentit la fatigue EN MATCH du joueur. Le Lancer franc détermine directement la réussite aux lancers francs, la Concentration l'améliore encore un peu. La Puissance augmente les fautes provoquées près du panier. L'Anticipation renforce la pression défensive de toute l'équipe sur les extérieurs. Le Leadership du MEILLEUR joueur du cinq en jeu allège, pour toute l'équipe, le malus d'une mauvaise série de tirs manqués.</p>
+        <p class="training-intro" style="margin-top:10px;">Pénétration, Création de tir, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision ont elles aussi leur mécanisme. La Pénétration aide à se créer un accès à la raquette. La Création de tir est le facteur principal de la qualité d'ouverture d'un tir. Les Interceptions pèsent dans le choix du voleur de balle. La Vitesse et l'Accélération déclenchent des contre-attaques et aident à battre son défenseur au premier pas. La Force et la Détente renforcent le rebond et le contre. La Décision réduit les pertes de balle ; la Vision améliore le choix du passeur. Le Sang-froid et la Détermination agissent comme le Mental. La Discipline réduit les fautes en défense ; un défenseur peu discipliné risque une faute antisportive, un défenseur peu serein une faute technique : deux techniques, deux antisportives, ou une de chaque dans le même match valent exclusion.</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="potentiel" data-guide-group="Mon équipe">
+        <h3>Potentiel</h3>
+        <p class="training-intro">Le potentiel indique jusqu'où un joueur peut encore progresser, pas sa qualité du moment. Il ne s'affiche jamais en chiffre : seulement un <b>palier</b> (avec une petite jauge à 10 crans dans l'Effectif ; survolez le nom du palier pour voir son rang de 1 à 10). Un jeune joueur encore faible mais à fort potentiel peut, bien entraîné, dépasser largement un joueur déjà bon dont le potentiel est presque atteint.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Les 10 paliers d'un joueur pro</b>, du plus modeste au plus rare :</p>
+        <table class="gd-table">
+          <thead><tr><th>Rang</th><th>Palier</th><th>Ce que ça veut dire</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Débutant</td><td>Très peu de marge de progression.</td></tr>
+            <tr><td>2</td><td>Prospect</td><td>Petite marge, un joueur d'appoint.</td></tr>
+            <tr><td>3</td><td>Joueur correct</td><td>Peut devenir un bon remplaçant.</td></tr>
+            <tr><td>4</td><td>Solide</td><td>Un joueur de rotation fiable.</td></tr>
+            <tr><td>5</td><td>Starter</td><td>Peut devenir titulaire.</td></tr>
+            <tr><td>6</td><td>Très bon joueur</td><td>Un titulaire de bon niveau.</td></tr>
+            <tr><td>7</td><td>Star</td><td>Un des meilleurs joueurs de sa division.</td></tr>
+            <tr><td>8</td><td>All-Star</td><td>Un joueur qui peut porter une équipe.</td></tr>
+            <tr><td>9</td><td>Superstar</td><td>Rare : un joueur d'exception.</td></tr>
+            <tr><td>10</td><td>Générationnel</td><td>Très rare : tomber dessus est un événement.</td></tr>
+          </tbody>
+        </table>
+        <p class="training-intro" style="margin-top:10px;">La plupart des joueurs se situent dans les paliers médians (Starter à All-Star) ; Superstar et Générationnel restent volontairement rares.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Les jeunes du centre de formation</b> (onglet Académie de jeunes, candidats comme jeunes déjà signés) n'affichent qu'une estimation à <b>3 niveaux</b>, plus floue, alignée sur les mêmes paliers :</p>
+        <table class="gd-table">
+          <thead><tr><th>Estimation du jeune</th><th>Correspond aux paliers pro</th></tr></thead>
+          <tbody>
+            <tr><td>Espoir</td><td>1 à 5 (Débutant à Starter)</td></tr>
+            <tr><td>Grand espoir</td><td>6 à 8 (Très bon joueur à All-Star)</td></tr>
+            <tr><td>Prodige</td><td>9 à 10 (Superstar ou Générationnel)</td></tr>
+          </tbody>
+        </table>
+        <p class="training-intro" style="margin-top:10px;">Dès sa promotion dans l'effectif pro (à 18 ans), le jeune dévoile son vrai palier parmi les 10. Le potentiel des joueurs adverses reste inconnu.</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="forme" data-guide-group="Mon équipe">
         <h3>Forme physique, motivation, évaluation et blessures</h3>
-        <p class="training-intro"><b>Forme physique</b> (colonne <b>Forme</b> de l'Effectif, et sur chaque fiche joueur) : un état sur 5 paliers, du plus frais au plus fatigué : Pas de fatigue (90-100, aucun malus), Légèrement fatigué (75-89, malus quasi nul), Fatigué (60-74, petit malus), Très fatigué (40-59, gros malus) et Épuisé (0-39, gros malus et risque de blessure nettement accru). Elle baisse après chaque match selon le temps de jeu (environ -3 pour 5 minutes jouées, jusqu'à environ -25 pour 40 minutes) et remonte de 15 points par jour de repos sans match, plafonnée à 100. Totalement indépendante de l'entraînement : s'entraîner ne la fait pas baisser, et une forme basse ne bloque aucune séance.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Motivation</b> (colonne <b>Motivation</b> de l'Effectif, et sur la fiche de votre propre joueur) : la confiance du joueur, jamais liée à la fatigue. Alimentée par vos interviews, mais plus après chaque match : elles ne se déclenchent plus qu'à cinq moments clés de la saison (onglet <b>Humeur des supporters</b>) : début de saison, mi-saison, fin de saison régulière, demi-finale puis finale des play-offs. Chaque interview pose deux vraies questions, avec un ton à choisir pour chacune parmi Agressif, Mesuré ou Humble : Agressif amplifie le résultat (meilleur gain en cas de victoire, pire perte en cas de défaite), Mesuré reste un effet sûr et modéré, Humble plafonne le gain en cas de victoire mais est le seul ton qui tourne une défaite en effet net positif. Toute l'équipe voit sa motivation évoluer, pas seulement les joueurs ayant disputé le dernier match : une interview de jalon porte sur toute une période de la saison, elle est entendue par l'ensemble de l'effectif. Ignorer l'interview (possible pendant 3 jours réels avant qu'elle n'expire) n'a aucun effet. Le temps de jeu compte aussi : un remplaçant qui ne joue quasiment jamais perd un peu de motivation chaque semaine, nettement plus s'il note mieux que le titulaire actuellement aligné à son poste (il "mériterait" clairement de jouer), un titulaire ou un joueur blessé n'étant eux jamais concernés.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Évaluation</b> (colonne <b>Évaluation</b> de l'Effectif) : un petit carré par match parmi les 5 derniers joués, du rouge (mauvais match) au vert (excellent match), calculé sur la performance réelle du joueur (points, rebonds, passes, interceptions et contres, moins les tirs manqués, pertes de balle et fautes). Survolez un carré pour voir le score exact et la journée concernée. Un joueur qui n'a pas encore disputé 5 matchs affiche des cases vides pour les matchs manquants.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Blessures</b> : rares (l'écrasante majorité des matchs se jouent sans aucune blessure), mais nettement plus probables pour un joueur fatigué ou en petite forme physique qu'un joueur frais. Un joueur blessé quitte immédiatement le terrain pour le reste du match en cours, mais aussi pour tous les matchs suivants tant qu'il n'est pas rétabli : la blessure dure de quelques jours réels (une simple contusion) à plusieurs semaines (une blessure au genou), selon sa gravité. Sur l'Effectif, un joueur actuellement blessé apparaît avec une petite croix rouge devant son nom et toute sa ligne teintée de rouge ; survolez la croix pour voir le type de blessure et le nombre de jours restants avant son retour. Un titulaire encore blessé au moment d'un match est automatiquement remplacé par son remplaçant désigné (ou laisse l'équipe jouer en infériorité si aucun n'est disponible). La Salle de musculation (onglet <b>Salle</b>) réduit le risque qu'une blessure survienne, mais pas sa durée une fois qu'elle a eu lieu.</p>
+        <p class="training-intro"><b>Forme physique</b> : un état sur 5 paliers : Pas de fatigue (90-100, aucun malus), Légèrement fatigué (75-89, malus quasi nul), Fatigué (60-74, petit malus), Très fatigué (40-59, gros malus) et Épuisé (0-39, gros malus et risque de blessure nettement accru). Elle baisse après chaque match selon le temps de jeu (environ -3 pour 5 minutes jouées, jusqu'à environ -25 pour 40 minutes) et remonte de 10 points par jour sans match, 15 si l'entraînement collectif du jour est la <b>récupération</b> (voir Entraînement), plafonnée à 100. S'entraîner ne la fait pas baisser.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Motivation</b> : la confiance du joueur, jamais liée à la fatigue. Elle bouge surtout avec les <b>interviews de jalon</b> (cinq moments clés de la saison : début, mi-saison, fin de saison régulière, demi-finale puis finale des play-offs). Chaque interview pose deux questions, avec un ton à choisir pour chacune : Agressif amplifie le résultat (meilleur gain en cas de victoire, pire perte en cas de défaite), Mesuré reste sûr et modéré, Humble plafonne le gain en cas de victoire mais est le seul ton qui tourne une défaite en effet positif. Toute l'équipe est concernée. Ignorer l'interview (possible pendant 3 jours) n'a aucun effet. Un remplaçant qui ne joue quasiment jamais perd un peu de motivation chaque semaine, davantage s'il est meilleur que le titulaire de son poste.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Évaluation</b> : un carré par match parmi les 5 derniers, du rouge (mauvais match) au vert (excellent), calculé sur la performance réelle (points, rebonds, passes, interceptions et contres, moins les tirs manqués, pertes de balle et fautes). Survolez un carré pour voir le score exact.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Blessures</b> : rares, mais nettement plus probables pour un joueur fatigué. Un joueur blessé quitte le match en cours et manque les suivants tant qu'il n'est pas rétabli, de quelques jours à plusieurs semaines selon la gravité. Il apparaît avec une croix rouge sur l'Effectif (survolez-la pour la durée restante). Un titulaire blessé est remplacé automatiquement par son remplaçant désigné. La Salle de musculation réduit le risque de blessure, pas sa durée.</p>
       </div>
 
-      <div class="guide-entry">
+      <div class="guide-entry" data-guide-id="alchimie" data-guide-group="Mon équipe">
+        <h3>Alchimie d'équipe</h3>
+        <p class="training-intro">L'alchimie (0 à 100, visible sur le Tableau de bord et en tête de l'Effectif) mesure la cohésion du groupe. Elle agit sur TOUTE l'équipe en match, de -6 % (vestiaire fracturé) à +6 % (alchimie parfaite). Paliers : Vestiaire fracturé (moins de 25), Tensions dans le groupe (25-44), Cohésion correcte (45-64), Bonne cohésion (65-84), Alchimie parfaite (85 et plus).</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Ce qui la fait monter</b> : chaque match joué ensemble (<b>+1</b>), et <b>+1</b> de plus si le cinq de départ est le même qu'au match précédent. Sur une saison, un effectif stable gagne environ +40. Les interviews de jalon aussi : ton Humble +2 après une victoire, +1 après une défaite ; Mesuré +1 après une victoire.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Ce qui la fait baisser</b> : les transferts (un départ comme une arrivée), jusqu'à -8 pour le meilleur joueur de l'effectif et presque rien pour le 12e homme ; le ton Agressif en interview (-1 après une victoire, -2 après une défaite). Changer de tactique ne touche PAS l'alchimie (voir Connaissance tactique).</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="ordres" data-guide-group="Préparer les matchs">
         <h3>Ordres et tactiques</h3>
-        <p class="training-intro">Avant chaque match (ou pour une journée future, via le sélecteur de journée en haut de l'onglet <b>Ordres</b>), réglez trois choses pour votre équipe. Tout s'enregistre automatiquement à chaque changement, et le bouton "Valider les ordres", toujours visible dans la barre en haut de la page, confirme que l'enregistrement a bien eu lieu.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>3 priorités offensives</b> : choisissez exactement 3 styles parmi les 10 proposés (Équilibrée, Jeu intérieur, Jeu extérieur, Jeu en pénétration, Pick &amp; Roll, Post-up, Isolation, Jeu en mouvement, Transition rapide, Tirs rapides). Les 3 choix se combinent à parts égales pour déterminer la répartition des tirs de l'équipe entre l'intérieur, la mi-distance et le 3 points, ainsi que le rythme, le taux de passes décisives et le risque de perte de balle. Un jeu intérieur ou en Post-up privilégie les tirs proches du panier ; un jeu extérieur ou des Tirs rapides misent sur le 3 points ; la Transition rapide et le Jeu en pénétration augmentent le rythme (et les fautes provoquées pour la pénétration), au prix de plus de pertes de balle.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Défense</b> : un seul choix parmi 5 systèmes. Homme à homme est le réglage neutre. Zone press met la pression sur les extérieurs adverses, au prix d'une fatigue importante. Box and one cible spécifiquement le meilleur joueur adverse pour le freiner. Zone extérieure et Zone intérieure renforcent un secteur du terrain au détriment de l'autre.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Rythme</b> : Lent, Normal ou Rapide. Plus le rythme est élevé, plus il y a de possessions dans le match (donc plus d'occasions de marquer, des deux côtés), mais aussi plus de fatigue et plus de pertes de balle.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Feuille de match</b> : un titulaire par poste (5 postes obligatoires pour pouvoir jouer), et des remplaçants qui peuvent chacun couvrir plusieurs postes à la fois. Un match sans assez de joueurs disponibles pour aligner un cinq complet est perdu par forfait (20-0).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Niveau tactique</b> : Débutant ou Confirmé, dans la carte Attaque. Ce choix ne change QUE la complexité de l'interface affichée ici, jamais la façon dont un match se joue : une équipe restée en Débutant simule exactement comme avant, sans aucun désavantage. Confirmé révèle six réglages supplémentaires pour affiner encore le jeu.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Gestion de fin de match</b> (visible aux deux niveaux) : Standard garde le comportement habituel de fin de match. Adaptatif ajoute un vrai garbage time (moins de forcing sur votre meilleur joueur, un peu plus d'imprécision des deux côtés) dès 10 points d'écart ou plus à partir du 3e quart-temps, et accélère légèrement le rythme dans les 5 dernières minutes d'un match serré (écart de moins de 5 points).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Réglages du niveau Confirmé</b> : Défense sur écrans (Aucune consigne, Au-dessus, En-dessous, Switch, Prise à deux) ajuste la façon de défendre le Pick &amp; Roll adverse. Aide défensive (Faible, Moyenne, Forte) déplace le curseur entre protection du panier et tirs extérieurs bien gardés. Gestion du post-up (Aucune consigne, Pousser vers le fond, Pousser vers le centre, Prise à deux) ne concerne que les tirs près du panier. Close-out (Contrôlé, Agressif) échange un meilleur contest extérieur contre plus de vulnérabilité à la pénétration. Rebond offensif (Prudent, Normal, Agressif) échange plus de secondes chances contre un risque de contre-attaque adverse en cas d'échec. Surveiller (carte Adversaires) permet de cibler jusqu'à 3 joueurs adverses par leur poste, chacun avec un focus précis (empêcher le post-up, coller sur les pénétrations, harceler le tir extérieur, priorité au rebond, empêcher les entrées de balle) : un vrai avantage défensif ciblé, avec toujours une contrepartie quelque part.</p>
+        <p class="training-intro">Avant chaque match, réglez trois choses pour votre équipe dans l'onglet Ordres. Tout s'enregistre automatiquement à chaque changement, et le bouton "Valider les ordres", toujours visible en haut de la page, confirme l'enregistrement. Dans le Calendrier, un match aux ordres validés affiche "Modifier vos ordres".</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Préparer à l'avance</b> : le sélecteur de journée en haut de l'onglet Ordres permet de régler n'importe quel match à venir, championnat ou Coupe. Quand cette journée devient le prochain match, vos ordres préparés deviennent automatiquement vos ordres actuels, et restent modifiables jusqu'au coup d'envoi. La composition est verrouillée <b>5 minutes avant le coup d'envoi</b>, au moment où commence l'émission d'avant-match.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>3 priorités offensives</b> : choisissez exactement 3 styles parmi les 10 proposés (Équilibrée, Jeu intérieur, Jeu extérieur, Jeu en pénétration, Pick &amp; Roll, Post-up, Isolation, Jeu en mouvement, Transition rapide, Tirs rapides). Les 3 choix se combinent à parts égales pour déterminer la répartition des tirs entre l'intérieur, la mi-distance et le 3 points, ainsi que le rythme, le taux de passes décisives et le risque de perte de balle. Un jeu intérieur ou en Post-up privilégie les tirs proches du panier ; un jeu extérieur ou des Tirs rapides misent sur le 3 points ; la Transition rapide et le Jeu en pénétration augmentent le rythme, au prix de plus de pertes de balle.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Défense</b> : un seul choix parmi 5 systèmes. Homme à homme est le réglage neutre. Zone press met la pression sur les extérieurs adverses, au prix d'une fatigue importante. Box and one cible le meilleur joueur adverse. Zone extérieure et Zone intérieure renforcent un secteur du terrain au détriment de l'autre.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Rythme</b> : Lent, Normal ou Rapide. Plus le rythme est élevé, plus il y a de possessions (donc d'occasions de marquer, des deux côtés), mais aussi plus de fatigue et de pertes de balle.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Feuille de match</b> : un titulaire par poste (5 postes obligatoires), et des remplaçants qui peuvent chacun couvrir plusieurs postes. Sans cinq complet disponible, le match est perdu par forfait (20-0).</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Niveau tactique</b> : Débutant ou Confirmé, dans la carte Attaque. Ce choix ne change QUE la complexité de l'interface, jamais la façon dont un match se joue. Confirmé révèle six réglages supplémentaires : Défense sur écrans (Aucune consigne, Au-dessus, En-dessous, Switch, Prise à deux), Aide défensive (Faible, Moyenne, Forte), Gestion du post-up (Aucune consigne, Pousser vers le fond, Pousser vers le centre, Prise à deux), Close-out (Contrôlé, Agressif), Rebond offensif (Prudent, Normal, Agressif) et Surveiller (carte Adversaires : jusqu'à 3 joueurs adverses ciblés, chacun avec un focus précis, toujours avec une contrepartie).</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Gestion de fin de match</b> (aux deux niveaux) : Standard garde le comportement habituel. Adaptatif ajoute un vrai garbage time dès 10 points d'écart à partir du 3e quart-temps, et accélère légèrement le rythme dans les 5 dernières minutes d'un match serré.</p>
       </div>
 
-      <div class="guide-entry">
+      <div class="guide-entry" data-guide-id="connaissance" data-guide-group="Préparer les matchs">
+        <h3>Connaissance tactique</h3>
+        <p class="training-intro">Votre équipe maîtrise plus ou moins chaque option tactique : une jauge par priorité offensive, par défense et par rythme (visible dans le menu "Aspect travaillé" de l'Entraînement). La maîtrise des options que vous jouez agit sur toute l'équipe en match, jusqu'à +/-6 %, en plus de l'alchimie.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Jouer une option la fait monter</b>, de plus en plus vite si vous la gardez plusieurs matchs de suite : +6, +8, +10, puis +12 par match. L'entraînement collectif <b>Tactique</b> sur cette option ajoute +4 par jour d'entraînement avant le match.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Délaisser une option la fait baisser</b>, mais doucement : rien les 2 premiers matchs d'absence, puis -2, -4 et au maximum -6 par match. Revenir à une tactique délaissée la fait remonter progressivement, jamais d'un coup.</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="entrainement" data-guide-group="Préparer les matchs">
         <h3>Entraînement</h3>
         <div id="guideTrainingIntro"></div>
       </div>
 
-      <div class="guide-entry">
-        <h3>Staff · entraîneur</h3>
-        <p class="training-intro" id="guideStaffIntro"></p>
+      <div class="guide-entry" data-guide-id="direct" data-guide-group="Préparer les matchs">
+        <h3>Match en direct</h3>
+        <p class="training-intro">Chaque match se joue à son heure, que vous le regardiez ou non. Connecté, suivez-le depuis l'onglet <b>Live</b> (ou "Voir le direct" sur le Tableau de bord et le Calendrier) : tableau d'affichage avec la courbe d'écart, fil du match, carte des tirs filtrable, face-à-face des deux équipes et feuille de match. Une émission d'avant-match démarre 5 minutes avant le coup d'envoi, et à la mi-temps un bouton "Voir l'émission" ouvre l'émission de la pause. Pendant un direct, le Tableau de bord propose "Voir le live" à la place des ordres.</p>
+        <p class="training-intro" style="margin-top:10px;">Après le match, cliquez sur un score (Calendrier, Coupe, fiche joueur) pour ouvrir la feuille de match complète.</p>
       </div>
 
-      <div class="guide-entry">
-        <h3>Académie de jeunes</h3>
-        <p class="training-intro">Recrutez un recruteur dans l'onglet <b>Staff</b> pour faire remonter des prospects de 15 à 17 ans (une file de candidats se renouvelle régulièrement, propre à votre club). Chaque prospect signé rejoint l'académie (15 places maximum) et progresse automatiquement chaque jour, sans match ni choix d'entraînement tant qu'il a moins de 18 ans. Le Centre de formation, agrandissable palier par palier depuis cet onglet, accélère cette progression automatique. À ses 18 ans, une décision est requise pour chaque jeune concerné : le promouvoir dans l'effectif pro, ou le libérer définitivement. Sans décision avant la saison suivante, il est automatiquement libéré. Le potentiel d'un jeune reste caché derrière une estimation à 3 paliers jusqu'à sa promotion.</p>
-      </div>
-
-      <div class="guide-entry">
-        <h3>Marché des transferts</h3>
-        <p class="training-intro">Toutes les enchères en cours dans la ligue, les vôtres et celles des 9 adversaires. Enchères réelles sur 3 jours (temps réel, pas en semaines de jeu) : les 9 adversaires listent et enchérissent aussi. Incrément minimum entre deux enchères : le plus grand de 1 000 € ou 20 % de l'enchère actuelle. Pour mettre l'un de VOS joueurs aux enchères, direction l'onglet <b>Effectif</b> (colonne Marché, prix de votre choix) ou sa propre fiche joueur (même bouton). L'identité de l'enchérisseur en tête reste privée (vous ne voyez "Vous êtes en tête" que pour vos propres enchères) ; en revanche, une fois l'un de vos joueurs mis aux enchères, sa fiche affiche directement le montant de l'enchère actuelle et le temps restant, sans avoir besoin de revenir sur cet onglet. Revenez consulter le marché de temps en temps, les enchères CPU se déclenchent progressivement, pas en un coup.</p>
-      </div>
-
-      <div class="guide-entry">
+      <div class="guide-entry" data-guide-id="calendrier" data-guide-group="Compétitions">
         <h3>Calendrier et Coupe</h3>
-        <p class="training-intro">Le calendrier liste tous vos matchs de la saison, championnat et Coupe confondus, triés par date et heure réelle de coup d'envoi. Chaque match se joue tout seul à l'heure indiquée : connectez-vous à ce moment-là pour le suivre en direct depuis l'onglet <b>Live</b>, ou laissez-le se dérouler sans vous, le résultat sera calculé normalement. La Coupe (quand elle existe pour votre ligue) est un tableau à élimination directe visible dans son propre onglet ; vos matchs de Coupe apparaissent aussi dans le calendrier, à leur date réelle.</p>
+        <p class="training-intro">Le <b>Calendrier</b> liste tous vos matchs de la saison, championnat et Coupe confondus, groupés par mois et triés par date et heure réelle. Filtres Tous, Domicile, Extérieur et À venir ; "vs" devant l'adversaire signifie à domicile, "@" à l'extérieur. À droite : la carte du prochain match (compte à rebours et bouton des ordres) et le bilan de la saison (bilan, classement, différence de points, domicile/extérieur, forme sur les 5 derniers matchs). Les horaires restent fixes, même au changement d'heure.</p>
+        <p class="training-intro" style="margin-top:10px;">La <b>Coupe</b> (quand elle existe pour votre ligue) est un tableau à élimination directe, un tour par jour à 15:00. L'onglet Coupe montre votre parcours (tour atteint, victoires, pastille par tour), les matchs de chaque tour (boutons de tour en haut, filtres Tous et À jouer, votre match en premier, clubs exemptés résumés en une ligne) et l'arbre de la phase finale à partir des 8es de finale. Les ordres de Coupe se préparent comme ceux du championnat.</p>
       </div>
 
-      <div class="guide-entry">
+      <div class="guide-entry" data-guide-id="ligue" data-guide-group="Compétitions">
         <h3>Ligue</h3>
-        <p class="training-intro">Le classement se départage par victoires puis par différence de points marqués/encaissés. Sous le classement, un panneau récapitule le MVP de la dernière journée jouée et les meilleurs de la ligue dans plusieurs catégories statistiques (points, rebonds, passes, interceptions, contres, évaluation globale), toutes équipes confondues. Cliquez sur le nom de n'importe quel joueur, ici comme dans l'Effectif ou le scoutisme, pour ouvrir sa fiche : caractéristiques, moyennes de la saison et détail match par match.</p>
+        <p class="training-intro">Le classement se départage par victoires puis par différence de points. Il est découpé en zones : places 1 à 4 qualifiées pour les <b>play-offs</b>, 5 et 6 maintien direct, 7 et 8 <b>barrage</b> de relégation, 9 et 10 <b>relégation</b>. Chaque équipe affiche sa forme récente. Un panneau "course aux play-offs" résume votre position, votre bilan et l'écart avec les places clés.</p>
+        <p class="training-intro" style="margin-top:10px;">Sous le classement : le MVP de la dernière journée et les meilleurs de la ligue par catégorie (points, rebonds, passes, interceptions, contres, évaluation), en moyennes ou en totaux. Cliquez sur n'importe quel joueur pour ouvrir sa fiche, ou sur une équipe pour ouvrir sa fiche d'équipe.</p>
       </div>
 
-      <div class="guide-entry">
-        <h3>Humeur des supporters</h3>
-        <p class="training-intro">L'humeur des supporters (onglet dédié) influence le remplissage de base de votre salle et la tolérance au prix du billet. Elle évolue avec vos résultats en match et vos choix de ton lors des interviews de jalon (voir <b>Motivation</b> plus haut, le même mécanisme fait bouger les deux à la fois).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Objectif de saison</b> : en début de saison, le conseil d'administration fixe un objectif de classement (Maintien, Milieu de tableau, Qualification en play-offs, Finale des play-offs ou Titre de champion), d'autant plus ambitieux que votre effectif est fort par rapport aux 9 autres équipes du championnat. Le verdict tombe à l'issue de la saison, une fois la saison régulière, le barrage de relégation et les play-offs entièrement joués : le dépasser (par exemple atteindre le titre alors que seul le maintien était demandé) réjouit les supporters, le manquer (terminer relégué alors qu'une finale était espérée) les agace, d'autant plus fort que l'écart entre l'objectif et le résultat réel est grand. Retrouvez l'objectif en cours sur l'onglet <b>Humeur des supporters</b>, et le verdict complet sur l'écran de fin de saison. Deux signaux intermédiaires, plus modestes que le verdict final, tombent aussi en cours de route : un premier à la mi-saison, un second juste après la fin de la saison régulière (avant le barrage de relégation et les play-offs). Chacun compare votre classement provisoire du moment à l'objectif fixé, pour prévenir (ou rassurer) les supporters bien avant le verdict final ; le second, basé sur un classement de saison régulière définitif, pèse un peu plus lourd que le premier.</p>
-      </div>
-
-      <div class="guide-entry">
-        <h3>Stats hebdo</h3>
-        <p class="training-intro">Récapitulatif semaine par semaine de votre club : matchs joués, performances individuelles de l'effectif, finances et humeur des supporters. Naviguez d'une semaine à l'autre avec les flèches en haut de la page pour revoir toute la saison en cours.</p>
-      </div>
-
-      <div class="guide-entry">
-        <h3>Salle</h3>
-        <p class="training-intro">Agrandissez votre salle pour accueillir plus de spectateurs, et réglez le prix du billet CATÉGORIE PAR CATÉGORIE : gradins populaires, tribune couverte et loges VIP n'ont ni la même capacité, ni la même tolérance au prix (une loge reste pleine bien plus cher que des gradins). Seuls les matchs joués à domicile rapportent une recette de billetterie. L'humeur des supporters influence aussi bien le taux de remplissage de base que la tolérance au prix. D'autres infrastructures sont proposées à côté de la salle : Station TV (revenu fixe chaque semaine), Salle de musculation (réduit le risque de blessure en match) et Espace bien-être (réduit l'accumulation de fatigue en match), chacune sur 4 paliers.</p>
-      </div>
-
-      <div class="guide-entry">
-        <h3>Boutique des supporters</h3>
-        <p class="training-intro">Un investissement UNIQUE (comme la salle), mais qui rapporte ensuite un revenu FIXE chaque semaine, versé en même temps que le salaire du staff, indépendant de la fréquentation des matchs.</p>
-      </div>
-
-      <div class="guide-entry">
+      <div class="guide-entry" data-guide-id="scoutisme" data-guide-group="Compétitions">
         <h3>Scoutisme</h3>
-        <p class="training-intro">Depuis le classement, cliquez sur une équipe adverse pour ouvrir son panneau de scoutisme : nom, poste, taille et salaire de tous ses joueurs sont toujours visibles, mais leurs caractéristiques restent verrouillées tant qu'elles n'ont pas été révélées. Recrutez un analyste vidéo dans l'onglet <b>Staff</b> pour faire une séance vidéo sur un adversaire (une par jour, une seule fois par adversaire et par saison) : elle révèle définitivement une partie de ses caractéristiques, plus ou moins selon le niveau de l'analyste.</p>
+        <p class="training-intro">Cliquez sur une équipe adverse (classement, calendrier, Coupe) pour ouvrir sa <b>fiche d'équipe</b> : un aperçu (résumé, maillots, palmarès, dernière interview), ses résultats et son calendrier vus depuis ce club (vos matchs contre lui sont marqués "Contre vous"), son effectif et l'analyse d'équipe.</p>
+        <p class="training-intro" style="margin-top:10px;">Nom, poste, taille et salaire des joueurs adverses sont toujours visibles, mais leurs caractéristiques restent cachées tant qu'elles n'ont pas été révélées : l'onglet Caractéristiques de l'effectif adverse n'affiche QUE les caracs révélées. Recrutez un <b>analyste vidéo</b> (onglet Staff) pour faire une séance vidéo sur un adversaire (une par jour, une seule fois par adversaire et par saison) : elle révèle définitivement une partie de ses caractéristiques, plus ou moins selon le niveau de l'analyste. L'<b>analyse d'équipe</b> (style de jeu, zones de tir, cinq de départ suggéré, plan de match) est un rapport avancé.</p>
       </div>
 
-      <div class="guide-entry">
+      <div class="guide-entry" data-guide-id="statshebdo" data-guide-group="Compétitions">
+        <h3>Stats hebdo</h3>
+        <p class="training-intro">Récapitulatif semaine par semaine de votre club : matchs joués et performances individuelles de l'effectif. Naviguez d'une semaine à l'autre avec les flèches en haut de la page. Les finances sont dans l'onglet Économie, l'humeur des supporters dans son propre onglet.</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="staff" data-guide-group="Club et finances">
+        <h3>Staff · entraîneur</h3>
+        <div id="guideStaffIntro"></div>
+      </div>
+
+      <div class="guide-entry" data-guide-id="academie" data-guide-group="Club et finances">
+        <h3>Académie de jeunes</h3>
+        <p class="training-intro">Recrutez un <b>recruteur</b> dans l'onglet Staff pour faire remonter des prospects de 15 à 17 ans (une file de candidats propre à votre club, renouvelée régulièrement ; une proposition non traitée expire). Chaque candidat s'affiche en carte avec son estimation de potentiel (Espoir, Grand espoir ou Prodige, voir <button type="button" class="gd-link" data-guide-goto="potentiel">Potentiel</button>) et deux boutons, Recruter ou Ignorer. Un prospect signé rejoint l'académie (15 places maximum) et progresse automatiquement chaque jour, sans match ni choix d'entraînement.</p>
+        <p class="training-intro" style="margin-top:10px;">Le <b>Centre de formation</b>, agrandissable palier par palier depuis cet onglet, accélère cette progression. À ses 18 ans, une décision est requise pour chaque jeune : le promouvoir dans l'effectif pro (il dévoile alors son vrai palier de potentiel) ou le libérer définitivement. Sans décision avant la saison suivante, il est automatiquement libéré. L'historique des jeunes promus reste visible en bas de la page.</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="marche" data-guide-group="Club et finances">
+        <h3>Marché des transferts</h3>
+        <p class="training-intro">Toutes les enchères en cours dans la ligue, les vôtres et celles des adversaires. Chaque enchère dure <b>1 jour réel</b>. Incrément minimum entre deux enchères : le plus grand de 1 000 € ou 20 % de l'enchère actuelle. En haut : votre budget disponible (budget moins les enchères où vous êtes en tête) et vos places libres, puis <b>Mes enchères</b> (vos achats et vos ventes en cours, les enchères où vous avez été dépassé en premier).</p>
+        <p class="training-intro" style="margin-top:10px;">Recherche par poste, âge, potentiel, prix (dont "dans mon budget") et jusqu'à 5 critères de caractéristiques, avec plusieurs tris (fin d'enchère, note, potentiel, meilleure affaire, prix, âge). Chaque annonce affiche la note du joueur, ses points forts, une <b>valeur estimée</b> comparée au prix ("Bonne affaire", "Prix correct" ou "Au-dessus de sa valeur"), des montants d'enchère rapides, et un bouton <b>Comparer</b> avec votre effectif. Pour vendre l'un de vos joueurs : menu ⋯ de l'Effectif ou bouton Vendre de sa fiche. L'identité de l'enchérisseur en tête reste privée.</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="economie" data-guide-group="Club et finances">
+        <h3>Économie</h3>
+        <p class="training-intro">Budget du club et son évolution, masse salariale (joueurs et staff), revenus de la salle, de la boutique et des droits TV, et l'historique des transactions groupé par semaine. Un budget durablement sous le seuil d'alerte finit par mettre tout l'effectif en vente forcée à 1 € : surveillez la masse salariale.</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="salle" data-guide-group="Club et finances">
+        <h3>Salle</h3>
+        <p class="training-intro">Agrandissez votre salle pour accueillir plus de spectateurs, et réglez le prix du billet CATÉGORIE PAR CATÉGORIE : gradins populaires, tribune couverte et loges VIP n'ont ni la même capacité, ni la même tolérance au prix. Seuls les matchs à domicile rapportent une recette. L'humeur des supporters influence le remplissage et la tolérance au prix. D'autres infrastructures sont proposées, chacune sur 4 paliers : Station TV (revenu fixe chaque semaine), Salle de musculation (réduit le risque de blessure) et Espace bien-être (réduit la fatigue en match).</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="boutique" data-guide-group="Club et finances">
+        <h3>Boutique des supporters</h3>
+        <p class="training-intro">Un investissement UNIQUE (comme la salle), qui rapporte ensuite un revenu FIXE chaque semaine, versé en même temps que le salaire du staff, indépendant de la fréquentation des matchs.</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="humeur" data-guide-group="Club et finances">
         <h3>Humeur des supporters</h3>
-        <p class="training-intro">Des supporters contents viennent plus facilement aux matchs et tolèrent des prix de billet plus élevés ; des supporters mécontents désertent plus vite dès que le prix grimpe. L'humeur évolue avec chaque résultat (victoire/défaite, domicile ou extérieur) et dérive lentement selon que le prix des billets est jugé raisonnable ou non, semaine après semaine.</p>
+        <p class="training-intro">L'humeur des supporters (0 à 100, onglet dédié) influence le remplissage de votre salle et la tolérance au prix du billet : des supporters contents viennent plus facilement et acceptent des prix plus élevés. Elle évolue avec chaque résultat (victoire ou défaite, à domicile ou à l'extérieur), vos tons en interview de jalon, et dérive lentement selon que le prix des billets est jugé raisonnable ou non.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Objectif de saison</b> : en début de saison, le conseil d'administration fixe un objectif de classement (Maintien, Milieu de tableau, Qualification en play-offs, Finale des play-offs ou Titre de champion), d'autant plus ambitieux que votre effectif est fort. Le verdict tombe en fin de saison : le dépasser réjouit les supporters, le manquer les agace, d'autant plus que l'écart est grand. Deux signaux intermédiaires plus modestes tombent à la mi-saison et à la fin de la saison régulière.</p>
       </div>
 
-      <div class="guide-entry">
+      <div class="guide-entry" data-guide-id="outils" data-guide-group="Réglages">
         <h3>Outils de test (Économie)</h3>
         <p class="training-intro">Pratique après une session de test (effectif vendu, budget mis à mal exprès) : remet le club dans un état jouable sans toucher au classement ni au calendrier de la saison en cours.</p>
       </div>
 
       <!-- "Réinitialiser ma carrière" (déplacé depuis le bas de la page
-           Ordres, retour utilisateur 2026-09-25 : action destructrice juste
-           sous "Valider les ordres", un clic accidentel qui attend
-           d'arriver). Le jeu n'a pas de page Paramètres : dernière entrée du
-           Guide, toujours derrière la confirmation confirm(). Classe
-           .reset-career conservée : masquée pour tout manager avec un jeton
-           (seul l'organisateur peut réinitialiser, voir resetCareer). -->
-      <div class="guide-entry reset-career" id="guideResetCareerEntry">
+           Ordres, retour utilisateur 2026-09-25). Classe .reset-career
+           conservée : masquée pour tout manager avec un jeton (seul
+           l'organisateur peut réinitialiser, voir resetCareer). -->
+      <div class="guide-entry reset-career" id="guideResetCareerEntry" data-guide-id="reset" data-guide-group="Réglages">
         <h3>Réinitialiser la partie</h3>
         <p class="training-intro">Repart de zéro avec une équipe neuve : tout l'effectif entraîné est perdu. Une confirmation est demandée avant.</p>
         <p class="reset-career-action"><a href="#" id="resetCareerLink">Réinitialiser ma carrière</a></p>
+      </div>
+        </div>
       </div>
     </div>
   </div>
@@ -28351,7 +28448,7 @@ function trainingRulesHtml() {
   // détail du focus collectif était auparavant affiché directement sous le
   // sélecteur de l'onglet Entraînement) + "ne mets pas de chiffre dans le
   // guide par contre" : explication volontairement sans aucun chiffre ici.
-  const collective = `En plus de l'entraînement des fondamentaux ci-dessus, le club peut aussi consacrer un <b>focus collectif</b> chaque jour : soit préparer une nouvelle tactique, soit privilégier la récupération physique de l'équipe. <b>Préparer une tactique</b> : un seul aspect précis à la fois, une priorité offensive, une défense OU un rythme (jamais plusieurs en même temps), à choisir parmi tout ce qui peut être réglé sur l'onglet <b>Ordres</b>. Plus l'équipe enchaîne de jours de repos à s'entraîner sur ce même aspect avant le prochain match, moins ce changement pénalise l'alchimie d'équipe s'il est effectivement joué en match ; tout autre changement de dernière minute, non entraîné, reste pénalisé normalement. <b>Récupération</b> : accélère la remontée de la forme physique de l'équipe les jours sans match.`;
+  const collective = `En plus de l'entraînement des fondamentaux ci-dessus, le club peut aussi consacrer un <b>focus collectif</b> chaque jour : soit préparer une nouvelle tactique, soit privilégier la récupération physique de l'équipe. <b>Préparer une tactique</b> : un seul aspect précis à la fois, une priorité offensive, une défense OU un rythme (jamais plusieurs en même temps), à choisir parmi tout ce qui peut être réglé sur l'onglet <b>Ordres</b>. Chaque jour d'entraînement sur cet aspect ajoute +4 de connaissance tactique, crédités au prochain match où il est effectivement joué (voir Connaissance tactique). <b>Récupération</b> : la forme physique de l'équipe remonte de 15 points par jour sans match au lieu de 10.`;
   return `<p class="training-intro">${individual}</p><p class="training-intro" style="margin-top:10px;">${collective}</p>`;
 }
 
@@ -34609,7 +34706,36 @@ function showPlaceholder(key) {
 // Guide : regroupe tous les textes d'explication des mécaniques (retirés
 // des onglets individuels) — seule la partie Entraînement reste dynamique
 // (voir trainingRulesHtml, qui dépend de TRAINING_FULL_MATCH_SECONDS).
+let guideActiveId = null; // entrée du Guide affichée (null = la première)
+function guideShowEntry(id) {
+  const entries = [...document.querySelectorAll("#guideSection .guide-entry")];
+  const visible = entries.filter(e => !e.classList.contains("hidden"));
+  const target = visible.find(e => e.dataset.guideId === id) || visible[0];
+  if (!target) return;
+  guideActiveId = target.dataset.guideId;
+  entries.forEach(e => e.classList.toggle("gd-off", e !== target));
+  document.querySelectorAll("#guideNav .gd-nav-btn").forEach(b => {
+    const on = b.dataset.guideGoto === guideActiveId;
+    b.classList.toggle("active", on);
+    if (on) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current");
+  });
+}
 function renderGuideSection() {
+  // Sommaire construit depuis les entrées elles-mêmes (data-guide-id /
+  // data-guide-group) : ajouter une entrée au HTML suffit à l'y faire
+  // apparaître. Une entrée masquée (.hidden, ex. "Réinitialiser la partie"
+  // pour un manager avec jeton) n'y figure pas.
+  const nav = document.getElementById("guideNav");
+  if (nav) {
+    let html = "", group = null;
+    document.querySelectorAll("#guideSection .guide-entry").forEach(e => {
+      if (e.classList.contains("hidden") || !e.dataset.guideId) return;
+      if (e.dataset.guideGroup !== group) { group = e.dataset.guideGroup; html += `<div class="gd-nav-group">${escapeHtml(group || "")}</div>`; }
+      html += `<button type="button" class="gd-nav-btn" data-guide-goto="${e.dataset.guideId}">${escapeHtml(e.querySelector("h3").textContent)}</button>`;
+    });
+    nav.innerHTML = html;
+  }
+  guideShowEntry(guideActiveId);
   const trainingEl = document.getElementById("guideTrainingIntro");
   if (trainingEl) trainingEl.innerHTML = trainingRulesHtml();
   const staffEl = document.getElementById("guideStaffIntro");
@@ -34621,6 +34747,15 @@ function renderGuideSection() {
   const tourBtn = document.getElementById("tourLaunchBtn");
   if (tourBtn) tourBtn.classList.toggle("hidden", !!teamA.onboardingTourCompleted);
 }
+
+// Sommaire et liens internes du Guide ("voir Potentiel", etc.).
+document.getElementById("guideSection").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-guide-goto]");
+  if (!btn) return;
+  guideShowEntry(btn.dataset.guideGoto);
+  const body = document.getElementById("guideBody");
+  if (btn.classList.contains("gd-link") && body && body.scrollIntoView) body.scrollIntoView({ block: "start" });
+});
 
 const TAB_HANDLERS = {
   live: goToLiveTab,
@@ -34805,7 +34940,7 @@ const TOUR_STEPS = [
     kind: "spotlight", topic: "Entraînement", page: "entrainement",
     target: "#collectiveTrainingConfig",
     title: "Entraînement collectif",
-    text: "Un réglage séparé de l'entraînement des fondamentaux ci-dessus, les deux tournent en même temps : travailler une nouvelle tactique atténue le malus d'alchimie d'un changement de tactique en match (divisé par 2 par jour banqué), travailler la récupération accélère le retour de forme physique des joueurs qui ne jouent pas ce jour-là.",
+    text: "Un réglage séparé de l'entraînement des fondamentaux ci-dessus, les deux tournent en même temps : travailler une tactique fait monter plus vite sa maîtrise (connaissance tactique) quand elle est jouée en match, travailler la récupération accélère le retour de forme physique des joueurs qui ne jouent pas ce jour-là.",
     tip: "Le crédit de jours banqués reste utilisable même si vous repassez sur \"Aucun\" ou changez de focus entre-temps : pas besoin de s'y tenir sans interruption.",
     reward: TOUR_REWARD_BY_TOPIC["Entraînement"],
   },

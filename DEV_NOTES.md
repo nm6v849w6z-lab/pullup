@@ -20,6 +20,26 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Guide : sommaire
+  + contenu à jour** — retours utilisateur : "étoffe le guide avec toutes
+  les dernières nouveautés [...] niveaux de potentiel [...] pros ou jeunes
+  du centre de formation" puis "structurer le guide avec un menu, plutôt
+  qu'un long texte". Sommaire à gauche (groupes Bien démarrer / Mon équipe
+  / Préparer les matchs / Compétitions / Club et finances / Réglages,
+  construit depuis data-guide-id/data-guide-group des .guide-entry), une
+  entrée affichée à la fois, liens internes (.gd-link). Nouvelles entrées :
+  Premiers pas (avec le bouton du tutoriel), Caractéristiques, Potentiel
+  (10 paliers pro + Espoir/Grand espoir/Prodige des jeunes), Alchimie,
+  Connaissance tactique, Match en direct, Économie. Mises à jour : Effectif
+  (groupes, menu ⋯, fiche joueur, Comparer), Forme (10/j, 15 avec
+  récupération), Ordres (préparés à l'avance promus, verrou 5 min),
+  Calendrier et Coupe, Ligue (zones), Scoutisme (fiche équipe adverse),
+  Stats hebdo, Académie, Marché (1 jour, recherche, valeur estimée),
+  Humeur (2 entrées fusionnées). Texte d'entraînement collectif et étape du
+  tutoriel corrigés (parlaient encore d'alchimie). Tests :
+  guide_nav_test.js (nouveau), guide_content, onboarding_tour,
+  ordres_redesign, tabs verts. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — "Les ordres
   sautent"** — retour utilisateur (capture du calendrier : J7 à venir en
   "Ordres" alors que J8/J9 préparées affichent "Modifier vos ordres").
