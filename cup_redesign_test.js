@@ -61,10 +61,10 @@ if (!steps[0].classList.contains("is-bye") || !steps[1].classList.contains("is-p
   throw new Error("❌ Parcours attendu : exempté, à jouer, pas encore tiré… obtenu " + steps.map(s => s.className).join(" | "));
 }
 if (!/En course en quarts de finale/.test(q("#coupeContent .cp-pill").textContent)) throw new Error("❌ Pastille « En course en quarts de finale » attendue, obtenu : " + q("#coupeContent .cp-pill").textContent);
-const nextBtn = q("#coupeContent .cp-next .cp-btn");
+const nextBtn = q("#coupeContent .cal-next .cal-next-btn");
 if (!nextBtn || nextBtn.dataset.tab !== "ordres" || nextBtn.dataset.competition !== "cup" || nextBtn.dataset.round !== "1") throw new Error("❌ La carte Prochain match devrait ouvrir les Ordres de Coupe du tour 1.");
 const tabs = qa("#coupeContent .cp-rtab");
-if (tabs.length !== 4 || tabs.map(t => t.firstChild.textContent).join(",") !== "8es,Quarts,Demies,Finale") throw new Error("❌ Onglets attendus 8es/Quarts/Demies/Finale, obtenu " + tabs.map(t => t.firstChild.textContent).join(","));
+if (tabs.length !== 4 || tabs.map(t => t.firstChild.textContent.trim()).join(",") !== "8es,Quarts,Demies,Finale") throw new Error("❌ Onglets attendus 8es/Quarts/Demies/Finale, obtenu " + tabs.map(t => t.firstChild.textContent.trim()).join(","));
 if (!tabs[1].classList.contains("on")) throw new Error("❌ L'onglet du tour du club (Quarts) devrait être ouvert par défaut.");
 let rows = qa("#coupeContent .cp-m");
 if (rows.length !== 4 || !rows[0].classList.contains("mine")) throw new Error("❌ Quarts : 4 matchs attendus, le match du club épinglé en premier.");
@@ -117,6 +117,7 @@ if (!qa("#coupeContent .cp-rtab")[2].classList.contains("on")) throw new Error("
 rows = qa("#coupeContent .cp-m");
 if (rows.length !== 1) throw new Error(`❌ « Suivre » devrait filtrer sur le vainqueur : 1 match attendu, obtenu ${rows.length}.`);
 console.log("✅ B) élimination et « Suivre » corrects.");
+fs.writeFileSync("Claude outputs/cup_fix/snap_B.html", q("#coupeSection").outerHTML);
 
 // --- C) 12 tours, 2 048 matchs au 1er tour.
 const t0 = Date.now();
@@ -143,7 +144,7 @@ win.eval(`
   })()
 `);
 const ms = Date.now() - t0;
-const tabs12 = qa("#coupeContent .cp-rtab").map(t => t.firstChild.textContent);
+const tabs12 = qa("#coupeContent .cp-rtab").map(t => t.firstChild.textContent.trim());
 if (tabs12.length !== 12 || tabs12[0] !== "1er tour" || tabs12[1] !== "2e tour" || tabs12[7] !== "16es" || tabs12[8] !== "8es" || tabs12[11] !== "Finale") throw new Error("❌ Libellés des 12 tours incorrects : " + tabs12.join(","));
 rows = qa("#coupeContent .cp-m");
 if (rows.length !== 20) throw new Error(`❌ Pagination : 20 lignes attendues au 1er tour, obtenu ${rows.length}.`);

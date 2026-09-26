@@ -84,6 +84,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     12 tours / 2 048 matchs en 64 ms) ; cup_bracket_card_alignment,
     cup_bracket_order, cup_ordres_planning, server/cup_test, calendar_*
     verts. Rendu vérifié dans Chromium (1320 px et 390 px).
+  - Style aligné sur le reste du jeu (retour utilisateur 2026-09-26, captures
+    Tableau de bord + Calendrier : "essaie d'avoir un style plus proche du
+    reste du jeu sur l'onglet coupe") : mise en page du Calendrier
+    (.cal-layout, colonne de droite), filtres de tour en .cal-filter, carte
+    "Prochain match" = calendarNextMatchCardHtml réutilisée telle quelle,
+    carte "Parcours" bâtie comme "Saison" (tuiles Tour/Victoires/Tours,
+    barre "Tours franchis", pastilles V/D/E par tour), tableau des matchs
+    au look des tableaux de mois (écussons, en-tête panel-2), arbre dans un
+    bloc du même style. Frise horizontale supprimée. Tests : même suite verte.
   - Commit PARTIEL : d'autres sessions avaient des modifs non committées
     dans moteurbasket3.html (comparateur, académie…) — seules les lignes
     Coupe sont committées. Reste : `git push`.

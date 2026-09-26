@@ -1105,102 +1105,77 @@
      milieu des autres cartes de sa colonne. */
   .cup-match-bye-spacer{visibility:hidden;}
   .cup-champion-banner{text-align:center; font-size:16px; font-weight:700; color:var(--amber); margin:0 0 16px; padding:10px; border-radius:var(--radius); background:rgba(240,162,60,.12);}
-  /* ---- Onglet Coupe, refonte 2026-09-26 (maquette validée, voir
-     renderCoupeSection) : parcours du club, tour par tour, arbre à partir
-     des 8es. Tokens :root uniquement ; préfixe .cp-. ---- */
-  #coupeContent{display:flex; flex-direction:column; gap:16px;}
-  #coupeContent > *{min-width:0;}
-  .cp-facts{display:flex; flex-wrap:wrap; gap:6px 18px; color:var(--ink-dim); font-size:13px; font-variant-numeric:tabular-nums; margin-top:-6px;}
-  .cp-facts b{color:var(--ink); font-weight:700;}
-  #coupeContent .cup-champion-banner{margin:0;}
-  .cp-card{background:var(--panel); border:1px solid var(--line-soft); border-radius:14px; padding:18px 20px; min-width:0;}
-  .cp-card-title{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
-  .cp-card-title h3{margin:0; font-size:13px; letter-spacing:.09em; text-transform:uppercase; font-weight:700; color:var(--ink);}
-  .cp-muted{font-size:13px; color:var(--ink-dim);}
-  .cp-pill{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;}
+  /* ---- Onglet Coupe (refonte 2026-09-26, puis alignée sur le style du
+     Calendrier/Tableau de bord le même jour — voir renderCoupeSection) :
+     réutilise .cal-layout/.cal-card/.cal-filter/.cal-kpi/.cal-form ;
+     ne restent ici que les pièces propres à la Coupe (préfixe .cp-). ---- */
+  .cp-tools{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:-4px 0 14px;}
+  .cp-search{background:var(--panel); border:1px solid var(--line); border-radius:8px; color:var(--ink); font:inherit; font-size:13px; padding:7px 12px; width:240px; max-width:100%; margin-right:auto;}
+  .cp-search::placeholder{color:var(--ink-faint);}
+  .cp-search:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  .cp-rtab.mine:not(.active){border-color:rgba(240,162,60,.55); color:var(--ink);}
+
+  .cp-table{table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0; background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; overflow:hidden; margin-bottom:14px;}
+  .cp-table .cal-month-head th{text-align:left; padding:12px 16px 10px; background:var(--panel-2); border-bottom:1px solid var(--line-soft); font-weight:600;}
+  .cp-round-when{float:right; font-size:12px; font-weight:500; color:var(--ink-dim);}
+  .cp-col-score{width:110px;} .cp-col-tag{width:112px;}
+  .cp-table td{padding:10px 12px; border-bottom:1px solid var(--line-soft); vertical-align:middle; font-size:14px;}
+  .cp-table tbody tr:last-child td{border-bottom:none;}
+  .cp-table tr.cp-m:hover td{background:rgba(255,255,255,.025);}
+  .cp-table tr.cp-m.mine td{background:rgba(240,162,60,.07);}
+  .cp-table tr.cp-m.mine td:first-child{box-shadow:inset 3px 0 0 var(--amber);}
+  .cp-c-home{padding-left:16px !important;}
+  .cp-c-tag{text-align:right; padding-right:16px !important;}
+  .cp-t{display:flex; align-items:center; gap:10px; min-width:0;}
+  .cp-t.away{justify-content:flex-end;}
+  .cp-t .team-link{font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+  .cp-t.lose .team-link{color:var(--ink-dim);}
+  .cp-t.win .team-link{font-weight:700;}
+  .cp-t.me .team-link{color:var(--amber);}
+  .cp-rank{flex:none; font-size:11px; font-weight:700; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+  .cp-c-score{text-align:center;}
+  .cp-score{display:inline-flex; gap:5px; align-items:center; font:inherit; font-weight:700; font-size:13px; padding:3px 9px; border-radius:6px; background:var(--panel-2); color:var(--ink-dim); border:0; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  button.cp-score{cursor:pointer;}
+  button.cp-score:hover{color:var(--ink);}
+  .cp-score .w{color:var(--ok);}
+  .cp-score.is-pending{background:none; color:var(--ink-faint); font-weight:600;}
+  .cp-score.is-live{background:none; color:var(--danger);}
+  .cp-tag{display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:6px; white-space:nowrap;}
+  .cp-tag.upset{background:rgba(240,162,60,.14); color:var(--amber);}
+  .cp-tag.you{background:rgba(240,162,60,.14); color:var(--amber); font-weight:700;}
+  .cp-byes{color:var(--ink-faint); font-size:12.5px; padding-left:16px !important;}
+  .cp-empty{text-align:center; color:var(--ink-faint); padding:22px !important;}
+  .cp-more{margin:-4px 0 14px;}
+
+  .cp-path-head{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;}
+  .cp-pill{font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:6px;}
   .cp-pill.in{background:rgba(51,180,161,.15); color:var(--ok);}
   .cp-pill.out{background:rgba(226,105,79,.15); color:var(--danger);}
-  .cp-dot{width:7px; height:7px; border-radius:50%; background:currentColor;}
-
-  .cp-journey{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:20px; align-items:start;}
-  .cp-journey > *{min-width:0;}
-  .cp-track-wrap{overflow-x:auto; padding-bottom:4px;}
-  .cp-track{display:grid; grid-auto-flow:column; grid-auto-columns:minmax(64px,1fr); min-width:max-content;}
-  .cp-step{position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; padding:0 4px; text-align:center; cursor:pointer; background:none; border:0; font:inherit; color:inherit;}
-  .cp-step::before{content:""; position:absolute; top:13px; left:-50%; right:50%; height:2px; background:var(--line);}
-  .cp-step:first-child::before{display:none;}
-  .cp-step.is-win::before, .cp-step.is-bye::before, .cp-step.is-pending::before, .cp-step.is-live::before{background:var(--ok);}
-  .cp-step.is-loss::before{background:var(--danger);}
-  .cp-node{position:relative; z-index:1; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:10.5px; font-weight:800; background:var(--panel-2); border:2px solid var(--line); color:var(--ink-faint);}
-  .cp-step.is-win .cp-node{background:var(--ok); border-color:var(--ok); color:#06231f;}
-  .cp-step.is-loss .cp-node{background:var(--danger); border-color:var(--danger); color:#2c0d06;}
-  .cp-step.is-bye .cp-node{border-style:dashed; border-color:var(--ok); color:var(--ok);}
-  .cp-step.is-pending .cp-node, .cp-step.is-live .cp-node{background:var(--bg); border-color:var(--amber); color:var(--amber); box-shadow:0 0 0 4px rgba(240,162,60,.15);}
-  .cp-step.is-out{opacity:.45;}
-  .cp-step-name{font-size:12px; font-weight:700; color:var(--ink-dim); white-space:nowrap;}
-  .cp-step.is-pending .cp-step-name, .cp-step.is-live .cp-step-name{color:var(--amber);}
-  .cp-step-res{font-size:11.5px; color:var(--ink-faint); font-variant-numeric:tabular-nums; white-space:nowrap;}
-  .cp-step.is-win .cp-step-res, .cp-step.is-loss .cp-step-res{color:var(--ink-dim);}
+  .cp-track{display:flex; flex-wrap:wrap; gap:6px 6px; margin-top:6px;}
+  .cp-step{display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:0; padding:0; font:inherit; color:inherit; cursor:pointer;}
+  .cp-step:focus-visible{outline:2px solid var(--amber); outline-offset:2px; border-radius:7px;}
+  .cp-step-name{font-size:10.5px; color:var(--ink-faint); font-weight:600; font-variant-numeric:tabular-nums;}
   .cp-step:hover .cp-step-name{color:var(--ink);}
-  .cp-step:focus-visible{outline:2px solid var(--amber); outline-offset:2px; border-radius:8px;}
-  .cp-note{margin:14px 0 0; font-size:13px; color:var(--ink-dim);}
-  .cp-note b{color:var(--ink);}
+  .cp-form-bye{background:var(--panel-2); color:var(--ink-dim);}
+  .cp-form-next{border:2px solid var(--amber); box-shadow:0 0 0 3px rgba(240,162,60,.15);}
+  .cp-form-out{opacity:.45;}
+  .cp-best{grid-template-columns:1fr;}
+  .cp-best b .team-link{font-weight:700;}
+  .cp-best small{font-weight:500; color:var(--ink-faint); font-size:12px;}
+  .cp-out-team{display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; margin:16px 0 4px;}
+  .cp-out-team svg, .cp-out-team img{width:56px; height:56px; border-radius:50%;}
+  .cal-card.cal-next.cp-next-out{border-color:var(--line); background:var(--panel);}
+  .cal-card.cal-next.cp-next-out .cal-card-kicker{color:var(--danger);}
+  /* Filtres Tous/Surprises/À jouer : état actif neutre, pour ne pas
+     concurrencer le tour sélectionné (ambre). */
+  .cal-filter.cp-chip.on{background:var(--panel-2); border-color:var(--ink-faint); color:var(--ink);}
 
-  .cp-next{background:var(--panel-2); border:1px solid rgba(240,162,60,.45); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:10px;}
-  .cp-next.is-out{border-color:var(--line);}
-  .cp-next-k{font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--amber); font-weight:800;}
-  .cp-next.is-out .cp-next-k{color:var(--danger);}
-  .cp-next-opp{display:flex; align-items:center; gap:10px; min-width:0;}
-  .cp-crest{flex:none; display:inline-flex;}
-  .cp-crest svg, .cp-crest img{width:40px; height:40px; border-radius:50%;}
-  .cp-next-nm{font-size:16px; font-weight:800; overflow:hidden; text-overflow:ellipsis;}
-  .cp-next-sub, .cp-next-meta{font-size:13px; color:var(--ink-dim);}
-  .cp-next-ok{text-align:center; font-size:12px; color:var(--ok);}
-  .cp-btn{font:inherit; font-size:14px; font-weight:800; background:var(--amber); color:var(--amber-ink); border:0; border-radius:999px; padding:10px 16px; cursor:pointer;}
-  .cp-btn.is-live{background:var(--danger); color:#fff;}
-  .cp-btn.ghost{background:transparent; color:var(--ink); border:1px solid var(--line); font-weight:700;}
-  .cp-btn:focus-visible, .cp-rtab:focus-visible, .cp-chip:focus-visible, .cp-search:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
-
-  .cp-rounds{display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px;}
-  .cp-rtab{flex:none; font:inherit; font-size:13px; font-weight:700; color:var(--ink-dim); background:var(--bg); border:1px solid var(--line); border-radius:9px; padding:7px 12px; cursor:pointer; display:flex; flex-direction:column; align-items:flex-start; gap:1px; min-width:74px;}
-  .cp-rtab small{font-size:11px; font-weight:500; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
-  .cp-rtab.on{background:var(--amber); border-color:var(--amber); color:var(--amber-ink);}
-  .cp-rtab.on small{color:var(--amber-ink); opacity:.8;}
-  .cp-rtab.mine:not(.on){border-color:rgba(240,162,60,.5);}
-  .cp-rtab:hover:not(.on){color:var(--ink);}
-  .cp-tools{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px;}
-  .cp-search{background:var(--bg); border:1px solid var(--line); border-radius:9px; color:var(--ink); font:inherit; font-size:13px; padding:7px 12px; width:220px; max-width:100%; margin-right:auto;}
-  .cp-search::placeholder{color:var(--ink-faint);}
-  .cp-chip{font:inherit; font-size:12.5px; font-weight:600; color:var(--ink-dim); background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:6px 11px; cursor:pointer;}
-  .cp-chip.on{color:var(--ink); border-color:var(--ink-faint); background:var(--panel-2);}
-  .cp-round-sum{font-size:13px; color:var(--ink-dim); font-variant-numeric:tabular-nums; margin-bottom:10px;}
-  .cp-round-sum b{color:var(--ink);}
-  .cp-byes{font-size:12.5px; color:var(--ink-faint); margin:-4px 0 10px;}
-  .cp-mlist{display:flex; flex-direction:column; border:1px solid var(--line-soft); border-radius:12px; overflow:hidden;}
-  .cp-m{display:grid; grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr) 84px; align-items:center; gap:10px; padding:9px 14px; font-size:14px; border-top:1px solid var(--line-soft); background:var(--panel);}
-  .cp-m:first-child{border-top:0;}
-  .cp-m.mine{background:rgba(240,162,60,.08); box-shadow:inset 3px 0 0 var(--amber);}
-  .cp-t{display:flex; align-items:center; gap:8px; min-width:0;}
-  .cp-t.away{justify-content:flex-end; text-align:right;}
-  .cp-t .team-link{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink-dim); font-weight:600;}
-  .cp-t.win .team-link{color:var(--ink); font-weight:800;}
-  .cp-t.me .team-link{color:var(--amber);}
-  .cp-rank{flex:none; font-size:10.5px; font-weight:800; padding:2px 6px; border-radius:5px; background:var(--panel-2); color:var(--ink-faint); font-variant-numeric:tabular-nums;}
-  .cp-score{justify-self:center; text-align:center; font-weight:800; font-variant-numeric:tabular-nums; color:var(--ink); font-size:14px; background:none; border:0; font-family:inherit; padding:0; cursor:default;}
-  button.cp-score{cursor:pointer; text-decoration:underline dotted var(--ink-faint); text-underline-offset:3px;}
-  .cp-score .w{color:var(--ok);}
-  .cp-score.is-pending{color:var(--ink-faint); font-weight:600; font-size:12.5px;}
-  .cp-score.is-live{color:var(--danger); font-size:12.5px;}
-  .cp-tag{justify-self:end; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px; white-space:nowrap;}
-  .cp-tag.upset{background:rgba(240,162,60,.14); color:var(--amber);}
-  .cp-tag.you{background:var(--amber); color:var(--amber-ink);}
-  .cp-more{margin-top:12px;}
-  .cp-empty{padding:22px; text-align:center; color:var(--ink-faint); background:var(--panel);}
-
-  /* Arbre (classes .cup-* d'origine, restylées dans la carte Phase finale). */
-  .cp-bracket{gap:22px; margin:0; padding-bottom:6px;}
-  .cp-bracket .cup-round{flex:1 0 200px; min-width:200px;}
-  .cp-bracket .cup-round-matches{gap:14px;}
+  /* Phase finale : bloc au look des tableaux de mois, arbre dedans. */
+  .cp-final-wrap{background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; overflow:hidden;}
+  .cp-final-head{padding:12px 16px 10px; background:var(--panel-2); border-bottom:1px solid var(--line-soft);}
+  .cp-bracket{gap:16px; margin:0; padding:14px 16px 16px;}
+  .cp-bracket .cup-round{flex:1 0 180px; min-width:180px;}
+  .cp-bracket .cup-round-matches{gap:12px;}
   .cp-bracket .cup-match{background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:0; font-size:13.5px; overflow:hidden;}
   .cp-bracket .cup-match.cup-match-tbd{border-style:solid; opacity:1;}
   .cp-bracket .cup-match-team{padding:8px 12px;}
@@ -1208,26 +1183,30 @@
   .cp-bracket .cup-match-vs{display:none;}
   .cp-bracket .cup-match-vs.cup-match-bye-label{display:block; text-align:left; padding:8px 12px; border-top:1px solid var(--line-soft); font-size:12px; letter-spacing:.04em;}
   .cp-bracket .cup-match-bye-spacer{display:none;}
-  .cp-bracket .cup-match-team .team-link{color:var(--ink-dim); font-weight:600;}
-  .cp-bracket .cup-match-team.winner .team-link{color:var(--ink); font-weight:800;}
+  .cp-bracket .cup-match-team .team-link{color:var(--ink); font-weight:600;}
+  .cp-bracket .cup-match-team.winner .team-link{font-weight:800;}
   .cp-bracket .cup-match-team.me .team-link{color:var(--amber);}
-  .cp-bracket .cup-match-team.winner{color:var(--ok);}
+  .cp-bracket .cup-match-team.winner .cup-match-score{color:var(--ok);}
   .cp-bracket .cup-match-team.tbd{font-size:13px;}
-  .cp-bracket .cup-match.me-match, .cp-bracket .cup-match:has(.cup-match-team.me){border-color:rgba(240,162,60,.6);}
-  .cp-bracket .cp-final .cup-match{border-color:rgba(143,185,240,.5);}
+  .cp-bracket .cup-match:has(.cup-match-team.me){border-color:rgba(240,162,60,.6);}
   .cup-match-when{font-size:11px; color:var(--ink-faint); padding:0 12px 7px;}
 
-  @media (max-width:900px){
-    .cp-journey{grid-template-columns:1fr;}
-    .cp-next{order:-1;}
-  }
   @media (max-width:560px){
-    .cp-card{padding:14px;}
-    .cp-m{grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr); padding:9px 10px;}
-    .cp-m .cp-tag{grid-column:1 / -1; justify-self:start;}
-    .cp-m .cp-tag:empty{display:none;}
+    .cp-table colgroup{display:none;}
+    .cp-table, .cp-table tbody{display:block;}
+    .cp-table thead, .cp-table thead tr, .cp-table thead th{display:block;}
+    .cp-table tr.cp-m{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 8px; padding:10px 12px; border-bottom:1px solid var(--line-soft);}
+    .cp-table tr.cp-m td{display:block; padding:0 !important; border:0; box-shadow:none !important;}
+    .cp-table tr.cp-m .cp-c-home{grid-column:1; grid-row:1;}
+    .cp-table tr.cp-m .cp-c-away{grid-column:1; grid-row:2;}
+    .cp-table tr.cp-m .cp-t.away{flex-direction:row-reverse; justify-content:flex-end;}
+    .cp-table tr.cp-m .cp-c-score{grid-column:2; grid-row:1 / 3; align-self:center;}
+    .cp-table tr.cp-m .cp-c-tag{grid-column:1 / -1; text-align:left;}
+    .cp-table tr.cp-m .cp-c-tag:empty{display:none;}
+    .cp-table tr.cp-m.mine{background:rgba(240,162,60,.07); box-shadow:inset 3px 0 0 var(--amber);}
+    .cp-table tbody > tr:not(.cp-m){display:block;}
+    .cp-table tbody > tr:not(.cp-m) td{display:block;}
     .cp-search{width:100%; margin-right:0;}
-    .cp-rank{display:none;}
   }
 
   /* ---- Coquille FM/BM : menu latéral + barre du haut ----
@@ -31762,81 +31741,104 @@ function cupMyPath(cup) {
   return path;
 }
 
-function cupJourneyHtml(cup, path, ranks) {
+// Style aligné sur le reste du jeu (retour utilisateur 2026-09-26 : "essaie
+// d'avoir un style plus proche du reste du jeu sur l'onglet coupe", captures
+// Tableau de bord + Calendrier à l'appui) : même mise en page que le
+// Calendrier (.cal-layout : liste à gauche, colonne de droite), mêmes
+// filtres (.cal-filter), même carte "Prochain match" (calendarNextMatchCardHtml,
+// réutilisée telle quelle), carte "Parcours" bâtie comme la carte "Saison"
+// (tuiles .cal-kpi, barre .cal-progress, pastilles .cal-form), tableau des
+// matchs au look des tableaux de mois (en-tête panel-2, écussons).
+
+// Pastilles du parcours, une par tour (même forme que la "Forme" du
+// Calendrier) : V / D / E(xempté) / tour à jouer (ambre) / à venir.
+function cupPathChipsHtml(path) {
+  return path.map(p => {
+    const sc = p.m && !p.m.bye && p.m.resolved
+      ? (p.m.home === myTeamIndex ? `${p.m.scoreHome}-${p.m.scoreAway}` : `${p.m.scoreAway}-${p.m.scoreHome}`) : "";
+    const map = {
+      win: ["cal-form-win", "V", `victoire ${sc}`], loss: ["cal-form-loss", "D", `défaite ${sc}`], bye: ["cp-form-bye", "E", "exempté"],
+      pending: ["cp-form-next", "", "à jouer"], live: ["cp-form-next", "", "en direct"], future: ["cal-form-empty", "", "pas encore tiré"], out: ["cal-form-empty cp-form-out", "", "—"],
+    };
+    const [cls, letter, what] = map[p.state];
+    return `<button type="button" class="cp-step is-${p.state}" data-cup-round="${p.i}" title="${escapeHtml(cupRoundLabel(p.i))} : ${escapeHtml(what)}">` +
+      `<span class="cal-form ${cls}">${letter}</span><span class="cp-step-name">${escapeHtml(cupRoundShort(p.i))}</span></button>`;
+  }).join("");
+}
+
+function cupSideHtml(cup, path, ranks) {
   const lossStep = path.find(p => p.state === "loss");
   const current = path.find(p => p.state === "pending" || p.state === "live");
   const firstFuture = path.find(p => p.state === "future");
-  let pill;
-  if (cup.champion === myTeamIndex) pill = `<span class="cp-pill in"><span class="cp-dot"></span>Vainqueur de la Coupe</span>`;
-  else if (lossStep) pill = `<span class="cp-pill out"><span class="cp-dot"></span>Éliminé ${cupRoundPhrase(lossStep.i)}</span>`;
-  else if (current) pill = `<span class="cp-pill in"><span class="cp-dot"></span>En course ${cupRoundPhrase(current.i)}</span>`;
-  else if (firstFuture) pill = `<span class="cp-pill in"><span class="cp-dot"></span>Qualifié ${cupRoundPhrase(firstFuture.i)}</span>`;
-  else pill = "";
-
-  const steps = path.map(p => {
-    const mine = p.m && !p.m.bye ? (p.m.home === myTeamIndex ? [p.m.scoreHome, p.m.scoreAway] : [p.m.scoreAway, p.m.scoreHome]) : null;
-    const res = { win: `V ${mine && mine[0]}-${mine && mine[1]}`, loss: `D ${mine && mine[0]}-${mine && mine[1]}`, bye: "Exempté",
-      pending: "À jouer", live: "En direct", future: "—", out: "—" }[p.state];
-    const ico = { win: "✓", loss: "✕", bye: "E" }[p.state] || cupRoundShort(p.i);
-    return `<button type="button" class="cp-step is-${p.state}" data-cup-round="${p.i}" title="${escapeHtml(cupRoundLabel(p.i))}">` +
-      `<span class="cp-node">${escapeHtml(ico)}</span><span class="cp-step-name">${escapeHtml(cupRoundShort(p.i))}</span><span class="cp-step-res">${escapeHtml(res)}</span></button>`;
-  }).join("");
-
   const wins = path.filter(p => p.state === "win");
-  const byes = path.filter(p => p.state === "bye").length;
-  const beaten = wins.map(p => p.m.home === myTeamIndex ? p.m.away : p.m.home).sort((a, b) => (ranks.get(a) ?? 99) - (ranks.get(b) ?? 99));
-  const best = beaten[0];
-  const note = wins.length || byes
-    ? `<b>${wins.length} victoire${wins.length > 1 ? "s" : ""}</b>${byes ? `, ${byes} tour${byes > 1 ? "s" : ""} exempté${byes > 1 ? "s" : ""}` : ""}.` +
-      (best != null ? ` Meilleure victoire : <b>${escapeHtml(league.teams[best].name)}</b>${ranks.get(best) ? ` (${ranks.get(best)}${ranks.get(best) === 1 ? "er" : "e"} du championnat)` : ""}.` : "")
-    : "Premier match de Coupe à venir.";
-
-  // Carte de droite : prochain match, qualifié en attente du tirage,
-  // éliminé (avec "Suivre" le club qui nous a sortis) ou vainqueur.
-  let side;
+  const reached = [...path].reverse().find(p => p.state !== "future" && p.state !== "out");
   const oppOf = m => m.home === myTeamIndex ? m.away : m.home;
   const whenText = i => { const at = cupRoundAt(i); return at != null ? `${formatCalendarDayFr(at)} · ${formatCalendarTimeFr(at)}` : cupRoundLabel(i); };
+
+  // 1) Carte du haut : la MÊME que celle du Calendrier quand un match est à
+  // jouer ; sinon même habillage (.cal-card .cal-next) pour éliminé /
+  // qualifié en attente du tirage / vainqueur.
+  let top;
   if (current) {
     const opp = oppOf(current.m);
-    const planned = teamA.hasPlanForRound(current.i, "cup");
-    const btn = current.state === "live"
-      ? `<button type="button" class="cp-btn is-live" data-tab="live">Voir le direct</button>`
-      : `<button type="button" class="cp-btn" data-tab="ordres" data-round="${current.i}" data-competition="cup">${planned ? "Modifier les ordres" : "Donner les ordres"}</button>` +
-        (planned ? `<div class="cp-next-ok">Ordres enregistrés pour ce match</div>` : "");
-    side = `<div class="cp-next"><div class="cp-next-k">Prochain match · ${escapeHtml(cupRoundLabel(current.i))}</div>` +
-      `<div class="cp-next-opp"><span class="cp-crest">${teamLogoHtml(league.teams[opp], 40)}</span><div><div class="cp-next-nm">${current.m.home === myTeamIndex ? "vs" : "@"} ${teamLinkHtml(opp, league.teams[opp].name)}</div>` +
-      `<div class="cp-next-sub">${escapeHtml(calendarStandingLine(opp) || "Pas encore classé")}</div></div></div>` +
-      `<div class="cp-next-meta">${escapeHtml(whenText(current.i))} · ${current.m.home === myTeamIndex ? "Domicile" : "Extérieur"}</div>${btn}</div>`;
+    top = calendarNextMatchCardHtml({
+      competition: "cup", label: cupRoundLabel(current.i), isHome: current.m.home === myTeamIndex, opponentIdx: opp,
+      scheduledAt: cupRoundAt(current.i), location: current.m.home === myTeamIndex ? "Domicile" : "Extérieur",
+      isLive: current.state === "live", alreadyOrdered: teamA.hasPlanForRound(current.i, "cup"),
+      orderRound: current.i, orderCompetition: "cup",
+    });
   } else if (lossStep) {
     const opp = oppOf(lossStep.m);
     const sc = lossStep.m.home === myTeamIndex ? `${lossStep.m.scoreHome}-${lossStep.m.scoreAway}` : `${lossStep.m.scoreAway}-${lossStep.m.scoreHome}`;
-    side = `<div class="cp-next is-out"><div class="cp-next-k">Éliminé · ${escapeHtml(cupRoundLabel(lossStep.i))}</div>` +
-      `<div class="cp-next-opp"><span class="cp-crest">${teamLogoHtml(league.teams[opp], 40)}</span><div><div class="cp-next-nm">par ${teamLinkHtml(opp, league.teams[opp].name)}</div><div class="cp-next-sub">${escapeHtml(sc)}</div></div></div>` +
+    top = `<div class="cal-card cal-next cp-next-out"><div class="cal-card-kicker">Éliminé · ${escapeHtml(cupRoundLabel(lossStep.i))}</div>` +
+      `<div class="cp-out-team">${teamLogoHtml(league.teams[opp], 56)}<div class="cal-next-name">par ${teamLinkHtml(opp, league.teams[opp].name)}</div><div class="cal-next-rank">${escapeHtml(sc)}</div></div>` +
       (lossStep.i + 1 < cupTotalStages() && cup.champion == null
-        ? `<button type="button" class="cp-btn ghost" data-cup-follow="${opp}" data-cup-round-after="${lossStep.i + 1}">Suivre ${escapeHtml(league.teams[opp].name)}</button>` : "") +
+        ? `<button type="button" class="cal-next-btn cp-follow-btn" data-cup-follow="${opp}" data-cup-round-after="${lossStep.i + 1}">Suivre ${escapeHtml(league.teams[opp].name)}</button>` : "") +
       `</div>`;
   } else if (cup.champion === myTeamIndex) {
-    side = `<div class="cp-next"><div class="cp-next-k">Vainqueur de la Coupe</div><div class="cp-next-meta">Bravo : ${wins.length} victoire${wins.length > 1 ? "s" : ""} jusqu'au trophée.</div></div>`;
+    top = `<div class="cal-card cal-next"><div class="cal-card-kicker">Coupe</div><div class="cp-out-team"><div class="cal-next-count">Vainqueur</div><div class="cal-next-count-sub">${wins.length} victoire${wins.length > 1 ? "s" : ""} jusqu'au trophée</div></div></div>`;
   } else if (firstFuture) {
-    side = `<div class="cp-next"><div class="cp-next-k">Qualifié · ${escapeHtml(cupRoundLabel(firstFuture.i))}</div>` +
-      `<div class="cp-next-meta">Adversaire connu au tirage, une fois le tour en cours terminé.</div><div class="cp-next-meta">${escapeHtml(whenText(firstFuture.i))}</div></div>`;
+    top = `<div class="cal-card cal-next"><div class="cal-card-kicker">Prochain match · Coupe · ${escapeHtml(cupRoundLabel(firstFuture.i))}</div>` +
+      `<p class="cal-card-empty">Qualifié. Adversaire connu au tirage, une fois le tour en cours terminé.</p>` +
+      `<div class="cal-next-meta" style="margin-top:12px"><span>${escapeHtml(whenText(firstFuture.i))}</span></div></div>`;
   } else {
-    side = "";
+    top = "";
   }
 
-  return `<section class="cp-card"><div class="cp-card-title"><h3>Ton parcours</h3>${pill}</div>` +
-    `<div class="cp-journey"><div class="cp-journey-main"><div class="cp-track-wrap"><div class="cp-track">${steps}</div></div><p class="cp-note">${note}</p></div>${side}</div></section>`;
+  // 2) Carte "Parcours", bâtie comme la carte "Saison".
+  let status;
+  if (cup.champion === myTeamIndex) status = `<span class="cp-pill in">Vainqueur de la Coupe</span>`;
+  else if (lossStep) status = `<span class="cp-pill out">Éliminé ${cupRoundPhrase(lossStep.i)}</span>`;
+  else if (current) status = `<span class="cp-pill in">En course ${cupRoundPhrase(current.i)}</span>`;
+  else if (firstFuture) status = `<span class="cp-pill in">Qualifié ${cupRoundPhrase(firstFuture.i)}</span>`;
+  else status = "";
+  const cleared = path.filter(p => p.state === "win" || p.state === "bye").length;
+  const pct = Math.round(cleared / cupTotalStages() * 100);
+  const beaten = wins.map(p => oppOf(p.m)).sort((a, b) => (ranks.get(a) ?? 99) - (ranks.get(b) ?? 99));
+  const best = beaten[0];
+  const bestRank = best != null ? ranks.get(best) : null;
+  const card = `<div class="cal-card cp-path"><div class="cp-path-head"><div class="cal-card-kicker">Parcours</div>${status}</div>` +
+    `<div class="cal-kpis">` +
+      `<div class="cal-kpi"><div class="cal-kpi-label">Tour</div><div class="cal-kpi-value">${reached ? escapeHtml(cupRoundShort(reached.i)) : "–"}</div></div>` +
+      `<div class="cal-kpi"><div class="cal-kpi-label">Victoires</div><div class="cal-kpi-value">${wins.length}</div></div>` +
+      `<div class="cal-kpi"><div class="cal-kpi-label">Tours</div><div class="cal-kpi-value">${cupTotalStages()}</div></div>` +
+    `</div>` +
+    `<div class="cal-progress"><div class="cal-progress-head"><span>Tours franchis</span><span>${cleared} / ${cupTotalStages()}</span></div>` +
+      `<div class="cal-progress-track"><div class="cal-progress-fill" style="width:${pct}%"></div></div></div>` +
+    `<div class="cal-form-wrap"><div class="cal-kpi-label">Tour par tour</div><div class="cp-track">${cupPathChipsHtml(path)}</div></div>` +
+    (best != null ? `<div class="cal-split cp-best"><div><span>Meilleure victoire</span><b>${teamLinkHtml(best, league.teams[best].name)}${bestRank ? ` <small>${bestRank}${bestRank === 1 ? "er" : "e"}</small>` : ""}</b></div></div>` : "") +
+    `</div>`;
+  return top + card;
 }
 
-// --- Tour par tour ---
+// Filtres de tour, même bouton que les filtres du Calendrier.
 function cupRoundTabsHtml(cup, myStage) {
   let html = "";
   for (let i = 0; i < cupTotalStages(); i++) {
     const round = cup.rounds[i];
-    const n = round ? round.matches.filter(m => !m.bye).length : cupStageMatchCount(i);
-    const sub = round ? `${n} match${n > 1 ? "s" : ""}` : "à tirer";
-    html += `<button type="button" role="tab" aria-selected="${i === cupSelRound}" class="cp-rtab${i === cupSelRound ? " on" : ""}${i === myStage ? " mine" : ""}" data-cup-round="${i}">` +
-      `${escapeHtml(cupRoundLabel(i))}<small>${escapeHtml(sub)}</small></button>`;
+    const n = round ? round.matches.filter(m => !m.bye).length : null;
+    html += `<button type="button" role="tab" aria-selected="${i === cupSelRound}" class="cal-filter cp-rtab${i === cupSelRound ? " active on" : ""}${i === myStage ? " mine" : ""}" data-cup-round="${i}">` +
+      `${escapeHtml(cupRoundLabel(i))} <span class="cal-filter-count">${n == null ? "–" : n}</span></button>`;
   }
   return html;
 }
@@ -31845,47 +31847,49 @@ function cupMatchRowHtml(m, i, ranks) {
   const mine = cupIsMine(m);
   const side = (idx, away) => {
     const rank = ranks.get(idx);
-    const chip = rank ? `<span class="cp-rank" title="${rank}${rank === 1 ? "er" : "e"} du championnat">${rank}${rank === 1 ? "er" : "e"}</span>` : "";
-    const cls = ["cp-t", away ? "away" : "", m.resolved && m.winner === idx ? "win" : "", idx === myTeamIndex ? "me" : ""].filter(Boolean).join(" ");
-    return `<div class="${cls}">${away ? "" : chip}${teamLinkHtml(idx, league.teams[idx].name)}${away ? chip : ""}</div>`;
+    const rankHtml = rank ? `<span class="cp-rank">${rank}${rank === 1 ? "er" : "e"}</span>` : "";
+    const cls = ["cp-t", away ? "away" : "", m.resolved && m.winner === idx ? "win" : "", m.resolved && m.winner !== idx ? "lose" : "", idx === myTeamIndex ? "me" : ""].filter(Boolean).join(" ");
+    const logo = `<span class="cal-opp-logo">${teamLogoHtml(league.teams[idx], 28)}</span>`;
+    const name = teamLinkHtml(idx, league.teams[idx].name);
+    return `<div class="${cls}">${away ? `${rankHtml}${name}${logo}` : `${logo}${name}${rankHtml}`}</div>`;
   };
   let score;
   if (m.resolved) {
     score = `<button type="button" class="cp-score calendar-score-btn" data-boxscore-round="${i}" data-boxscore-competition="cup" data-boxscore-home="${m.home}" data-boxscore-away="${m.away}">` +
-      `<span class="${m.winner === m.home ? "w" : ""}">${m.scoreHome}</span> – <span class="${m.winner === m.away ? "w" : ""}">${m.scoreAway}</span></button>`;
+      `<span class="${m.winner === m.home ? "w" : ""}">${m.scoreHome}</span> - <span class="${m.winner === m.away ? "w" : ""}">${m.scoreAway}</span></button>`;
   } else if (cupIsLiveRound(i)) {
     score = `<span class="cp-score is-live">En direct</span>`;
   } else {
     const at = cupRoundAt(i);
     score = `<span class="cp-score is-pending">${at != null ? escapeHtml(formatCalendarTimeFr(at)) : "à jouer"}</span>`;
   }
-  const tag = mine ? `<span class="cp-tag you">Ton match</span>` : cupIsUpset(m, ranks) ? `<span class="cp-tag upset">Surprise</span>` : `<span class="cp-tag"></span>`;
-  return `<div class="cp-m${mine ? " mine" : ""}">${side(m.home, false)}${score}${side(m.away, true)}${tag}</div>`;
+  const tag = mine ? `<span class="cp-tag you">Ton match</span>` : cupIsUpset(m, ranks) ? `<span class="cp-tag upset">Surprise</span>` : "";
+  return `<tr class="cp-m${mine ? " mine me" : ""}"><td class="cp-c-home">${side(m.home, false)}</td><td class="cp-c-score">${score}</td>` +
+    `<td class="cp-c-away">${side(m.away, true)}</td><td class="cp-c-tag">${tag}</td></tr>`;
 }
 
 function cupRoundBodyHtml(cup, ranks) {
   const i = cupSelRound;
   const round = cup.rounds[i];
   const at = cupRoundAt(i);
-  const when = at != null ? ` · ${formatCalendarDayFr(at)}` : "";
+  const head = `<thead><tr class="cal-month-head"><th colspan="4"><span class="cal-month-title">${escapeHtml(cupRoundLabel(i))}</span>` +
+    (at != null ? `<span class="cp-round-when">${escapeHtml(formatCalendarDayFr(at))} · ${escapeHtml(formatCalendarTimeFr(at))}</span>` : "") + `</th></tr></thead>`;
+  const table = body => `<table class="cp-table"><colgroup><col><col class="cp-col-score"><col><col class="cp-col-tag"></colgroup>${head}<tbody>${body}</tbody></table>`;
   if (!round) {
-    const n = cupStageMatchCount(i);
-    return `<div class="cp-round-sum"><b>${escapeHtml(cupRoundLabel(i))}</b>${escapeHtml(when)} · ${n} match${n > 1 ? "s" : ""}, affiches connues après le tour précédent</div>` +
-      `<div class="cp-mlist"><div class="cp-empty">Tableau de ce tour pas encore tiré.</div></div>`;
+    return table(`<tr><td colspan="4" class="cp-empty">Tableau de ce tour pas encore tiré : affiches connues après le tour précédent.</td></tr>`);
   }
   const real = round.matches.filter(m => !m.bye);
   const byes = round.matches.length - real.length;
-  const done = real.filter(m => m.resolved).length;
-  const upsets = real.filter(m => cupIsUpset(m, ranks)).length;
   let list = real.filter(m => cupFilter === "all" || (cupFilter === "upset" && cupIsUpset(m, ranks)) || (cupFilter === "pending" && !m.resolved));
   const q = cupQuery.trim().toLowerCase();
   if (q) list = list.filter(m => league.teams[m.home].name.toLowerCase().includes(q) || league.teams[m.away].name.toLowerCase().includes(q));
   list = list.filter(cupIsMine).concat(list.filter(m => !cupIsMine(m)));
   const shown = list.slice(0, cupPage * CUP_PAGE_SIZE);
-  return `<div class="cp-round-sum"><b>${escapeHtml(cupRoundLabel(i))}</b>${escapeHtml(when)} · ${done} / ${real.length} joué${done > 1 ? "s" : ""}${upsets ? ` · ${upsets} surprise${upsets > 1 ? "s" : ""}` : ""}</div>` +
-    (byes ? `<p class="cp-byes">${byes} club${byes > 1 ? "s" : ""} exempté${byes > 1 ? "s" : ""} passe${byes > 1 ? "nt" : ""} directement ${i + 1 < cupTotalStages() ? cupRoundPhrase(i + 1) : "au tour suivant"} (non listé${byes > 1 ? "s" : ""}).</p>` : "") +
-    `<div class="cp-mlist">${shown.length ? shown.map(m => cupMatchRowHtml(m, i, ranks)).join("") : `<div class="cp-empty">Aucun match ne correspond.</div>`}</div>` +
-    (shown.length < list.length ? `<div class="cp-more"><button type="button" class="cp-chip" data-cup-more="1">Afficher ${Math.min(CUP_PAGE_SIZE, list.length - shown.length)} de plus</button></div>` : "");
+  const rows = shown.length ? shown.map(m => cupMatchRowHtml(m, i, ranks)).join("") : `<tr><td colspan="4" class="cp-empty">Aucun match ne correspond.</td></tr>`;
+  const byeRow = byes
+    ? `<tr><td colspan="4" class="cp-byes">${byes} club${byes > 1 ? "s" : ""} exempté${byes > 1 ? "s" : ""} passe${byes > 1 ? "nt" : ""} directement ${i + 1 < cupTotalStages() ? cupRoundPhrase(i + 1) : "au tour suivant"}.</td></tr>` : "";
+  return table(rows + byeRow) +
+    (shown.length < list.length ? `<div class="cp-more"><button type="button" class="cal-filter cp-chip" data-cup-more="1">Afficher ${Math.min(CUP_PAGE_SIZE, list.length - shown.length)} de plus</button></div>` : "");
 }
 
 function cupRenderRoundPanel() {
@@ -31904,7 +31908,7 @@ function cupRenderRoundPanel() {
     b.setAttribute("aria-pressed", String(on));
   });
   const active = tabs.querySelector(".cp-rtab.on");
-  if (active && active.scrollIntoView) active.scrollIntoView({ block: "nearest", inline: "center" });
+  if (active && active.scrollIntoView) active.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 function renderCoupeSection() {
@@ -31920,28 +31924,24 @@ function renderCoupeSection() {
     const cur = path.find(p => p.state === "pending" || p.state === "live") || [...path].reverse().find(p => p.round) || path[0];
     cupSelRound = cur ? cur.i : 0;
   }
-  const entrants = cup.rounds[0] ? new Set(cup.rounds[0].matches.flatMap(m => [m.home, m.away]).filter(x => x != null)).size : league.teams.length;
-  const finalAt = cupRoundAt(cupTotalStages() - 1);
-  let html = `<div class="cp-facts"><span><b>${entrants}</b> clubs</span><span><b>${cupTotalStages()}</b> tours</span>` +
-    (finalAt != null ? `<span>Finale le <b>${escapeHtml(formatCalendarDayFr(finalAt))}</b></span>` : "") + `</div>`;
+  let html = "";
   if (cup.champion != null) {
     const isMe = cup.champion === myTeamIndex;
     html += `<div class="cup-champion-banner">Champion de la Coupe : ${teamLinkHtml(cup.champion, league.teams[cup.champion].name)}${isMe ? " (c'est vous !)" : ""}</div>`;
   }
-  html += cupJourneyHtml(cup, path, ranks);
-
-  html += `<section class="cp-card"><div class="cp-card-title"><h3>Tour par tour</h3></div>` +
-    `<div class="cp-rounds" id="cupRoundTabs" role="tablist" aria-label="Tours de coupe"></div>` +
-    `<div class="cp-tools"><input id="cupSearch" class="cp-search" type="search" placeholder="Chercher un club…" aria-label="Chercher un club dans ce tour" value="${escapeHtml(cupQuery)}">` +
-    `<button type="button" class="cp-chip" data-cup-filter="all">Tous</button><button type="button" class="cp-chip" data-cup-filter="upset">Surprises</button><button type="button" class="cp-chip" data-cup-filter="pending">À jouer</button></div>` +
-    `<div id="cupRoundBody"></div></section>`;
+  html += `<div class="cal-layout cp-layout"><div class="cal-main">`;
+  html += `<div class="cal-toolbar cp-rounds" id="cupRoundTabs" role="tablist" aria-label="Tours de coupe"></div>`;
+  html += `<div class="cp-tools"><input id="cupSearch" class="cp-search" type="search" placeholder="Chercher un club…" aria-label="Chercher un club dans ce tour" value="${escapeHtml(cupQuery)}">` +
+    `<button type="button" class="cal-filter cp-chip" data-cup-filter="all">Tous</button><button type="button" class="cal-filter cp-chip" data-cup-filter="upset">Surprises</button><button type="button" class="cal-filter cp-chip" data-cup-filter="pending">À jouer</button></div>`;
+  html += `<div id="cupRoundBody"></div>`;
 
   // Phase finale : arbre des 4 derniers tours (à partir des 8es), mêmes
   // classes qu'avant (.cup-bracket/.cup-round/.cup-round-matches/.cup-match,
-  // voir cup_bracket_*_test.js et cupDisplayOrder pour l'alignement).
+  // voir cup_bracket_*_test.js et cupDisplayOrder pour l'alignement), dans
+  // un bloc au look des tableaux de mois.
   const displayOrder = cupDisplayOrder(cup);
   const first = Math.max(0, cupTotalStages() - 4);
-  html += `<section class="cp-card"><div class="cp-card-title"><h3>Phase finale</h3><span class="cp-muted">Arbre à partir des ${escapeHtml(cupRoundLabel(first).toLowerCase())}</span></div><div class='cup-bracket cp-bracket'>`;
+  html += `<div class="cp-final-wrap"><div class="cp-final-head"><span class="cal-month-title">Phase finale</span></div><div class='cup-bracket cp-bracket'>`;
   for (let stageIdx = first; stageIdx < cupTotalStages(); stageIdx++) {
     const matches = displayOrder[stageIdx];
     html += `<div class="cup-round${stageIdx === cupTotalStages() - 1 ? " cp-final" : ""}"><div class="cup-round-title">${escapeHtml(cupRoundLabel(stageIdx))}</div><div class="cup-round-matches">`;
@@ -31953,7 +31953,8 @@ function renderCoupeSection() {
     }
     html += "</div></div>";
   }
-  html += "</div></section>";
+  html += "</div></div>";
+  html += `</div><aside class="cal-side">${cupSideHtml(cup, path, ranks)}</aside></div>`;
   holder.innerHTML = html;
   cupRenderRoundPanel();
 }
