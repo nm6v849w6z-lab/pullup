@@ -56,7 +56,7 @@ if (txt(".sl-hero-title") !== win.eval("arenaInfo(1).name")) throw new Error("�
 if (!txt("#salleHeroKpis").includes("Affluence prévue")) throw new Error("❌ Sans match joué, le bandeau devrait afficher l'affluence PRÉVUE.");
 if (!txt("#salleHeroRing").includes("prévu")) throw new Error("❌ Sans match joué, l'anneau devrait indiquer un remplissage prévu.");
 const upgrade = doc.querySelector("#arenaCurrentPanel .sl-hero-upgrade");
-if (!upgrade || !upgrade.textContent.includes(win.eval("teamA.nextArenaLevel().name"))) throw new Error("❌ Le bouton d'agrandissement devrait nommer le palier suivant.");
+if (!upgrade || upgrade.textContent.trim() !== "Agrandir") throw new Error(`❌ Le bandeau ne devrait montrer que le bouton "Agrandir" (retour utilisateur 2026-09-26 : le nom/coût du palier suivant donnait l'impression d'avoir déjà la salle), obtenu "${upgrade && upgrade.textContent.trim()}".`);
 console.log("✅ Bandeau sans historique : niveau, nom, affluence prévue, bouton d'agrandissement.");
 
 // --- 1b. Bandeau avec historique ---

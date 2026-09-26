@@ -20,6 +20,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle : boutons
+  d'amélioration épurés** — retour utilisateur (captures) : "enlève le .
+  avant les sommes dans les briques amélioration des infrastructures" et
+  "dans le bouton agrandir la salle enlève Salle omnisports Niveau 3 ·
+  300 000 € [...] ça donne l'impression qu'on a déjà cette salle".
+  moteurbasket3.html : règle CSS .facility-upgrade-cost::before ("·")
+  supprimée (vaut aussi pour l'Académie) ; bandeau Salle : plus de nom/coût
+  du palier suivant, seul le bouton "Agrandir" (classe
+  .sl-hero-upgrade--btn-only), le détail reste dans la confirmation.
+  salle_redesign_test.js adapté. Tests salle_*, academie_*,
+  club_facilities, youth_academy, tabs verts. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Page live : la
   page saute (surtout sur les tirs)** — retour utilisateur (Safari) : "la
   page saute encore quand je suis tout en bas, ça saute notamment quand il

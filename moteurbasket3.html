@@ -3264,7 +3264,6 @@
     background:transparent; border:1px solid var(--amber); color:var(--amber); white-space:nowrap;}
   .facility-upgrade-btn .sl-fac-action-label{font-size:inherit; font-weight:inherit; color:inherit;}
   .facility-upgrade-btn .facility-upgrade-cost{font-weight:600; font-variant-numeric:tabular-nums;}
-  .facility-upgrade-btn .facility-upgrade-cost::before{content:"·"; margin-right:6px; opacity:.7;}
   .facility-upgrade-arrow.facility-upgrade-btn:hover{background:var(--amber); color:var(--amber-ink);}
   .facility-upgrade-arrow.facility-upgrade-btn--solid{background:var(--amber); color:var(--amber-ink);}
   .facility-upgrade-arrow.facility-upgrade-btn--solid:hover{filter:brightness(1.07);}
@@ -4834,6 +4833,11 @@
     border-radius:12px; text-align:left; cursor:pointer; background:linear-gradient(135deg, rgba(240,162,60,.22), rgba(240,162,60,.08)); border:1px solid rgba(240,162,60,.55);
     transition:background .15s, transform .15s;}
   #arenaCurrentPanel .sl-hero-upgrade:hover{background:linear-gradient(135deg, rgba(240,162,60,.32), rgba(240,162,60,.14)); transform:translateY(-1px);}
+  /* Retour utilisateur (2026-09-26) : le nom/coût du palier suivant à côté
+     du bouton donnait l'impression qu'on avait déjà cette salle -> le
+     bouton "Agrandir" seul, le détail n'apparaît que dans la confirmation. */
+  #arenaCurrentPanel .sl-hero-upgrade--btn-only{padding:0; gap:0; background:none; border:0;}
+  #arenaCurrentPanel .sl-hero-upgrade--btn-only:hover{background:none;}
   #arenaCurrentPanel .sl-hero-upgrade--max{cursor:default; background:rgba(20,28,41,.7); border-color:var(--line);}
   .sl-hero-upgrade-label{display:block; font-size:14px; font-weight:800; color:#fff;}
   .sl-hero-upgrade-next{display:block; font-size:12px; color:var(--ink-dim); margin-top:1px;}
@@ -35006,7 +35010,8 @@ function showUpgradeConfirm({ title, icon, beforeLabel, afterLabel, effectLabel,
 // de mettre des fleches qui monte pour améliorer les infrastructures ou la
 // salle, ce serait pas mieux un plus ? ou autre chose, tu peux proposer
 // (idem sur l'onglet academie des jeunes)" — option retenue : un vrai
-// bouton texte "Améliorer · 80 000 €" / "Construire · …" / "Agrandir"
+// bouton texte "Améliorer 80 000 €" / "Construire …" / "Agrandir"
+// (plus de "·" avant le montant depuis le 2026-09-26, retour utilisateur)
 // (`btnOpts` = { label, cost?, solid? }), plus de flèche. La classe
 // .facility-upgrade-arrow est conservée comme ancre des tests et du tutoriel.
 function buildUpgradeArrow(confirmOpts, btnOpts) {
@@ -35204,8 +35209,8 @@ function renderSalleHero(info, stats) {
     `<div class="sl-hero-sub">${escapeHtml(teamA.name)} · ${info.capacity.toLocaleString("fr-FR")} places${nextLine}</div>`;
 
   // Agrandissement : même flèche/confirmation qu'avant (buildUpgradeArrow),
-  // mise en avant comme bouton principal du bandeau. N'affiche que l'état
-  // ACTUEL et le NOM/COÛT du palier suivant, jamais sa capacité (voir
+  // mise en avant comme bouton principal du bandeau. N'affiche que le bouton
+  // "Agrandir" (ni nom, ni coût, ni capacité du palier suivant (voir
   // salle_upgrade_confirm_test.js : la capacité future n'apparaît que dans
   // la confirmation). La salle démarre au niveau 1, donc toujours
   // "Agrandir", jamais "Construire".
@@ -35220,8 +35225,10 @@ function renderSalleHero(info, stats) {
   const action = document.createElement("div");
   action.className = "facility-card-action";
   if (next) {
-    body.innerHTML = `<span class="sl-hero-upgrade-label">${escapeHtml(next.name)}</span>` +
-      `<span class="sl-hero-upgrade-next">Niveau ${next.level} · <b>${formatMoney(next.upgradeCost)}</b></span>`;
+    // Retour utilisateur (2026-09-26) : plus de "Salle omnisports / Niveau 3
+    // · 300 000 €" à côté du bouton ("ça donne l'impression qu'on a déjà
+    // cette salle") — ces infos restent dans la confirmation.
+    arenaCard.classList.add("sl-hero-upgrade--btn-only");
     action.appendChild(buildUpgradeArrow({
       title: `Agrandir la salle : ${next.name}`,
       icon: "",
@@ -35249,7 +35256,7 @@ function renderSalleHero(info, stats) {
     body.innerHTML = `<span class="sl-hero-upgrade-label">Salle au niveau maximum</span>`;
     action.innerHTML = `<span class="facility-max-badge">Max</span>`;
   }
-  arenaCard.appendChild(body);
+  if (!next) arenaCard.appendChild(body);
   arenaCard.appendChild(action);
   holder.appendChild(arenaCard);
 
