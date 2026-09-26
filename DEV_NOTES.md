@@ -97,6 +97,12 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   HM_LIVE_ASSET_VERSION 20260926-4. Vérifié dans Chromium sur un vrai
   direct ; live_view_game_style, dashboard_live_match, live_match_names,
   live_boxscore, tabs, spectate verts. Reste : `git push`.
+  ⚠️ Incident pendant ce commit (08:53) : une écriture ratée a vidé
+  moteurbasket3.html sur le Mac quelques secondes, et le commit 3243d71
+  (costume du présentateur, autre session) l'a enregistré vide. Rétabli
+  par 151e5aa (version de 7961232). Perdu : le code du costume
+  (AvatarGen outfit « suit », renderSuit, appel du présentateur) —
+  presenter_suit_test.js échoue tant qu'il n'est pas refait.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Rotation : les
   10 titulaires jouaient tout le 1er quart-temps** — retour utilisateur
