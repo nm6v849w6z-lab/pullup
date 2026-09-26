@@ -20,6 +20,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Calendrier :
+  plus de "À jouer"** — retour utilisateur : "page calendrier enlève À
+  jouer". calendarRowHtml : le prochain match affiche "–" comme les autres
+  matchs à venir. Tests calendrier verts. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle : plus
   d'encart sponsor dans le bandeau, même avec un sponsor signé** — retour
   utilisateur : "enlève: TR SPONSOR DE LA SALLE Transports Roux · 6 000 € /

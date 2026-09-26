@@ -34379,7 +34379,6 @@ function calendarRowHtml(row) {
   const venueKey = row.bye ? "none" : row.isHome ? "home" : "away";
   const status = row.played ? "played" : row.bye ? "bye" : "upcoming";
   const cls = ["cal-row", row.cls].filter(Boolean).join(" ");
-  const isNext = row.cls.split(" ").includes("me");
 
   const dateCell = row.scheduledAt != null
     ? `<div class="cal-day">${escapeHtml(formatCalendarDayFr(row.scheduledAt))}</div><div class="sub">${escapeHtml(formatCalendarTimeFr(row.scheduledAt))}</div>`
@@ -34433,7 +34432,9 @@ function calendarRowHtml(row) {
   } else if (row.bye) {
     resultCell = "";
   } else {
-    resultCell = `<span class="cal-result-pending">${isNext ? "À jouer" : "–"}</span>`;
+    // Plus de "À jouer" sur le prochain match (retour utilisateur
+    // 2026-09-26 : "page calendrier enlève À jouer") : "–" comme les autres.
+    resultCell = `<span class="cal-result-pending">–</span>`;
   }
 
   return `<tr class="${cls}" data-venue="${venueKey}" data-status="${status}">` +
