@@ -272,8 +272,11 @@ export function createLiveView(root, opts = {}) {
     const [A, B] = S.teams;
     const M = S.meta || {};
     const done = S.status === "final";
-    $("liveDot").classList.toggle("done", done);
-    $("kicker").textContent = [done ? "Match terminé" : "En direct", M.competition, M.round].filter(Boolean).join(" · ");
+    // "pregame" : page live ouverte avant le coup d'envoi (depuis l'émission
+    // d'avant-match), tout à zéro en attendant le début du direct.
+    const pregame = S.status === "pregame";
+    $("liveDot").classList.toggle("done", done || pregame);
+    $("kicker").textContent = [done ? "Match terminé" : pregame ? "Avant-match" : "En direct", M.competition, M.round].filter(Boolean).join(" · ");
     $("venue").textContent = M.venue || "";
     [0, 1].forEach(t => {
       const T = S.teams[t];
@@ -300,7 +303,9 @@ export function createLiveView(root, opts = {}) {
     $("clock").textContent = done ? "Final" : fmtClock(S.clock);
     $("clock").classList.toggle("final", done);
     const diff = A.score - B.score;
-    $("period").textContent = done ? (diff ? `Victoire ${de(S.teams[diff > 0 ? 0 : 1].name)}` : "Égalité") : S.status === "halftime" ? "Mi-temps" : S.quarter > 4 ? `Prolongation ${S.quarter - 4}` : quarterName(S.quarter);
+    $("period").textContent = done ? (diff ? `Victoire ${de(S.teams[diff > 0 ? 0 : 1].name)}` : "Égalité")
+      : pregame ? (S.kickoffIn > 0 ? `Coup d'envoi dans ${fmtClock(S.kickoffIn)}` : "Coup d'envoi imminent")
+      : S.status === "halftime" ? "Mi-temps" : S.quarter > 4 ? `Prolongation ${S.quarter - 4}` : quarterName(S.quarter);
 
     const nq = Math.max(4, A.quarterScores.length);
     let q = `<tr><th></th>${Array.from({ length: nq }, (_, i) => `<th>${i < 4 ? "Q" + (i + 1) : "P" + (i - 3)}</th>`).join("")}<th>Total</th></tr>`;

@@ -26227,7 +26227,7 @@ async function openHoopShow(kind) {
         .catch(() => {});
     },
     onExit: closeHoopShow,
-    onGoLive: closeHoopShow,
+    onGoLive: hoopShowGoLive,
     // Reprise/coup d'envoi atteint : le direct suit déjà son propre
     // minutage indépendant (schedulePlayback côté serveur, applyTimelineItem
     // côté client) — rien à forcer ici, l'utilisateur ferme quand il veut.
@@ -26290,6 +26290,54 @@ function hoopShowDressOpts() {
       return "";
     },
   };
+}
+
+// « Aller au direct » depuis l'émission d'avant-match (retour utilisateur,
+// 2026-09-26 : « le bouton aller au direct fais sortir de l'émission du
+// match. Il faudrait pouvoir aller sur le live avant mais avec tout affiché
+// à 0 comme il ne se passe rien », « si on sort, on peut apres relancer
+// l'emission de l'avant match, c'est un peu con ») : ferme l'émission et
+// ouvre la page live — le vrai direct s'il a déjà commencé, sinon la même
+// page à zéro qui bascule sur le direct au coup d'envoi.
+function hoopShowGoLive() {
+  closeHoopShow();
+  if (league && league.liveMatch && currentMatchAlreadyLive()) { goToLiveTab(); return; }
+  enterPrematchLive();
+}
+
+// Page live AVANT le coup d'envoi : mêmes équipes, feuilles de match à
+// zéro, horloge à 10:00, « Coup d'envoi dans m:ss ». Rien n'est simulé ici :
+// au coup d'envoi, startCountdown → refreshFromServerAndReenter charge le
+// vrai direct (league.liveMatch) et enterLiveMatch reprend la MÊME vue
+// (hmLiveSameMatch : même journée, même heure), sans saut de page.
+function enterPrematchLive() {
+  const kickoffAt = scheduledTimeForCurrentMatch();
+  if (!currentMatch || !teamB || !kickoffAt || Date.now() >= kickoffAt) { refreshFromServerAndReenter(); return; }
+  clearLiveTimers();
+  const placeholder = {
+    pregame: true, kickoffAt, round: currentMatch.round,
+    competition: currentMatch.competition === "cup" ? "cup" : "championship",
+    isHome: !!currentMatch.isHome, opponentIdx: currentMatch.opponent,
+    events: [], pauses: [], finalScore: { home: 0, away: 0 },
+  };
+  resetPlaybackTrackers();
+  resetLiveBoxScore();
+  document.getElementById("nameA").textContent = teamA.name;
+  document.getElementById("nameB").textContent = teamB.name;
+  document.getElementById("scoreA").textContent = "0";
+  document.getElementById("scoreB").textContent = "0";
+  document.getElementById("clockDisplay").textContent = "10:00";
+  document.getElementById("quarterLabel").textContent = "Avant-match";
+  document.getElementById("liveDot").classList.add("off");
+  document.getElementById("boardStatus").textContent = "Avant-match";
+  document.getElementById("feed").innerHTML = "";
+  resetQuarterBars();
+  document.getElementById("boxscoreSection").style.display = "none";
+  document.getElementById("liveBoxscoreSection").style.display = "";
+  hmLiveReset(placeholder);
+  showPage("liveSection");
+  setActiveTab("live");
+  startCountdown(); // bascule sur le vrai direct au coup d'envoi
 }
 
 function closeHoopShow() {
@@ -28535,7 +28583,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20260926-7";
+const HM_LIVE_ASSET_VERSION = "20260926-8";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -28602,11 +28650,14 @@ function hmLiveReset(liveMatch) {
     const section = document.getElementById("liveSection");
     const prev = hmLive;
     const keepView = !!(prev && prev.view && !liveMatch.forfeit && hmLiveSameMatch(prev.match, liveMatch));
+    if (prev && prev.pregameTimer) clearInterval(prev.pregameTimer);
     if (prev && prev.view && !keepView) { try { prev.view.destroy(); } catch (e) { /* rien */ } }
     hmLive = {
       match: liveMatch, view: keepView ? prev.view : null, final: false, scheduled: false, tickKey: "",
       events: [], shots: [], fouls: [], raw: [], seq: 0, possession: null, quarter: 1,
       dress: keepView ? prev.dress : undefined,
+      // Avant-match : redessine chaque seconde pour le compte à rebours.
+      pregameTimer: liveMatch.pregame ? setInterval(() => hmLiveSchedule(), 1000) : null,
     };
     if (!section) return;
     if (liveMatch.forfeit) { section.classList.remove("hm-live-on"); return; }
@@ -28830,7 +28881,7 @@ function hmLiveBuildState() {
         avatar: hmLiveAvatar(pObj, team),
         link: pObj && teamIdx !== null ? { team: teamIdx, id: pObj.id } : null,
         starter: !!(pObj && starterIds.has(pObj.id)),
-        onCourt: !hmLive.final && !!(liveCourtState && liveCourtState[key].has(row.name)),
+        onCourt: !hmLive.final && !hmLive.match.pregame && !!(liveCourtState && liveCourtState[key].has(row.name)),
         seconds,
         pts: row.pts, reb: row.reb, ast: row.ast, stl: row.stl, blk: row.blk, tov: row.tov, pf: row.pf,
         fg2m: row.fgm2, fg2a: row.fga2, fg3m: row.fgm3, fg3a: row.fga3, ftm: row.ftm, fta: row.fta,
@@ -28851,7 +28902,8 @@ function hmLiveBuildState() {
   });
 
   return {
-    status: hmLive.final ? "final" : half ? "halftime" : "live",
+    status: hmLive.final ? "final" : hmLive.match.pregame ? "pregame" : half ? "halftime" : "live",
+    kickoffIn: hmLive.match.pregame ? Math.max(0, Math.ceil((hmLive.match.kickoffAt - Date.now()) / 1000)) : null,
     quarter: hmLive.quarter,
     clock: hmLive.final ? 0 : (clockEl ? clockSecondsFromStr(clockEl.textContent) : QUARTER_SECONDS),
     possession: hmLive.possession,
@@ -36698,7 +36750,8 @@ document.addEventListener("visibilitychange", () => {
   const prepSection = document.getElementById("prepSection");
   const liveSection = document.getElementById("liveSection");
   const scheduledAt = scheduledTimeForCurrentMatch();
-  if (prepSection && !prepSection.classList.contains("hidden") && scheduledAt && Date.now() >= scheduledAt && !currentMatchAlreadyLive()) {
+  const prematchLiveShown = !!(liveSection && !liveSection.classList.contains("hidden") && hmLive && hmLive.match && hmLive.match.pregame);
+  if ((prematchLiveShown || (prepSection && !prepSection.classList.contains("hidden"))) && scheduledAt && Date.now() >= scheduledAt && !currentMatchAlreadyLive()) {
     refreshFromServerAndReenter();
   } else if (liveSection && !liveSection.classList.contains("hidden") && currentLiveMatch && !currentLiveMatch.forfeit && liveMatchHasEnded(currentLiveMatch)) {
     enterLiveMatch(currentLiveMatch); // rejoue tout ce qui reste (rien, désormais) et affiche l'issue finale sans animation
