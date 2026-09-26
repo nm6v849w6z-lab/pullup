@@ -109,7 +109,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   (AvatarGen outfit « suit », renderSuit, appel du présentateur) —
   presenter_suit_test.js échoue tant qu'il n'est pas refait.
   Puis : rond (halo) autour du dernier tir retiré ("c'est moche") ; seul
-  le tir lui-même clignote. HM_LIVE_ASSET_VERSION 20260926-5.
+  le tir lui-même clignote ; idem l'onde qui s'élargissait autour d'un
+  panier réussi ("idem autour du rond"). HM_LIVE_ASSET_VERSION 20260926-6.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Rotation : les
   10 titulaires jouaient tout le 1er quart-temps** — retour utilisateur

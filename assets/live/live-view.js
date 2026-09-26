@@ -408,7 +408,7 @@ export function createLiveView(root, opts = {}) {
     for (const s of list) {
       const x = s.x * 10, y = s.y * 10, c = COLOR(s.team);
       const last = s.id === lastId ? " last" : "";
-      if (s.made) g += `<g class="made${newShots.has(s.id) ? " shot-new" : ""}${last}"><circle class="ring" cx="${x}" cy="${y}" r="8" fill="none" stroke="${c}" stroke-width="3" opacity="0"/><circle class="dot" cx="${x}" cy="${y}" r="8" fill="${c}"/></g>`;
+      if (s.made) g += `<g class="made${last}"><circle class="dot" cx="${x}" cy="${y}" r="8" fill="${c}"/></g>`;
       else g += `<g class="miss${last}"><path d="M${x - 6} ${y - 6}l12 12M${x + 6} ${y - 6}l-12 12" stroke="${c}"/></g>`;
     }
     // Logo du club qui reçoit au rond central (S.courtLogo : SVG fourni par

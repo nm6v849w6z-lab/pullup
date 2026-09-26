@@ -161,8 +161,6 @@
 .hm-live .court .rim{fill:none;stroke:var(--accent);stroke-width:2.5}
 .hm-live .made .dot{stroke:var(--court);stroke-width:2}
 .hm-live .miss path{stroke-width:3;stroke-linecap:round;opacity:.55}
-.hm-live .shot-new .ring{animation:hmRing 1.2s ease-out forwards}
-@keyframes hmRing{from{r:8;opacity:.9}to{r:34;opacity:0}}
 .hm-live .court .last{animation:hmBlink 1s ease-in-out infinite}
 .hm-live .court .miss.last path{opacity:1;stroke-width:4}
 @keyframes hmBlink{50%{opacity:.2}}
