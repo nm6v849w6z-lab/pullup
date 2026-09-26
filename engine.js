@@ -1527,6 +1527,36 @@ const ARENA_LEVELS = [
   { level: 8, name: "Arena nationale", capacity: 45000, upgradeCost: 3600000 },
 ];
 
+// --- Trigramme et nom de salle personnalisés (retour communauté 2026-09) ---
+const TRIGRAM_CHANGE_COOLDOWN_MS = 30 * 24 * 3600 * 1000;
+const ARENA_NAME_MAX_LENGTH = 30;
+// Combinaisons refusées (insultes/sigles à éviter) — liste volontairement
+// courte, complétée au fil des signalements.
+const TRIGRAM_BANNED = new Set(["SEX", "FDP", "NTM", "KKK", "NIK", "CUL", "PUT", "BIT", "ZOB", "ASS", "FUK", "FCK", "DTC", "NAZ", "SS7"]);
+const NAME_BANNED_WORDS = ["pute", "salope", "encul", "nique", "niqu", "connard", "connasse", "fdp", "ntm", "batard", "bâtard", "nazi", "hitler", "pd ", "fuck", "shit", "bitch", "nigg", "cunt"];
+function isValidTrigram(value) {
+  return typeof value === "string" && /^[A-Z]{3}$/.test(value);
+}
+// Sigle par défaut depuis le nom : initiales des deux premiers mots ou 3
+// premières lettres (même règle historique que teamAbbrev côté navigateur).
+function defaultTrigramForName(name) {
+  const words = (name || "").trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return (words[0] || "?").slice(0, 3).toUpperCase();
+}
+function teamTrigram(team) {
+  if (!team) return "?";
+  return isValidTrigram(team.trigram) ? team.trigram : defaultTrigramForName(team.name);
+}
+function teamArenaName(team) {
+  if (team && typeof team.arenaName === "string" && team.arenaName.trim()) return team.arenaName.trim();
+  return arenaInfo(team ? team.arenaLevel : 1).name;
+}
+function containsBannedWord(text) {
+  const t = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return NAME_BANNED_WORDS.some(w => t.includes(w.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
+}
+
 function arenaInfo(level) {
   return ARENA_LEVELS.find(a => a.level === level) || ARENA_LEVELS[0];
 }
@@ -4232,6 +4262,17 @@ class Team {
     // toujours régénéré depuis le nom/la couleur de maillot du club, sans
     // rien stocker (voir teamLogoHtml côté moteurbasket3.html).
     this.isPaying = false;
+    // Trigramme personnalisé (retour communauté 2026-09 : "Pouvoir choisir
+    // son trigramme") : 3 lettres A-Z, unique dans la ligue, `null` = calculé
+    // depuis le nom (voir teamTrigram). trigramChangedAt limite les
+    // changements à un tous les TRIGRAM_CHANGE_COOLDOWN_MS (classements
+    // lisibles pour les autres managers).
+    this.trigram = null;
+    this.trigramChangedAt = null;
+    // Nom de salle personnalisé (retour communauté 2026-09 : "Modifier le
+    // nom de sa salle") : `null` = nom du palier ARENA_LEVELS (voir
+    // teamArenaName).
+    this.arenaName = null;
     // Premium TEMPORAIRE (voir DEV_NOTES.md point 11, "Hoop Shows" —
     // pronostics d'avant-match/mi-temps) : lot de fin de saison pour le
     // vainqueur du classement mondial des pronostics ("1 mois de Premium",
@@ -9844,6 +9885,9 @@ function serializeTeam(team) {
     // Identité du club (voir Team.isPaying/customLogoDataUrl/jerseyShape/
     // jerseyColor, JERSEY_COLORS/JERSEY_SHAPES plus haut).
     isPaying: !!team.isPaying,
+    trigram: team.trigram || null,
+    trigramChangedAt: typeof team.trigramChangedAt === "number" ? team.trigramChangedAt : null,
+    arenaName: team.arenaName || null,
     // Premium temporaire (voir Team.premiumUntil/hasActivePremium/
     // grantTemporaryPremium plus haut, DEV_NOTES.md point 11) : DOIT survivre
     // au rechargement comme isPaying ci-dessus, sinon le lot de fin de saison
@@ -10364,6 +10408,9 @@ function teamFromSave(data) {
   // défaut, club gratuit) plutôt que d'accepter n'importe quelle valeur
   // brute non validée venant de la sauvegarde.
   team.isPaying = !!data.isPaying;
+  team.trigram = isValidTrigram(data.trigram) ? data.trigram : null;
+  team.trigramChangedAt = typeof data.trigramChangedAt === "number" ? data.trigramChangedAt : null;
+  team.arenaName = typeof data.arenaName === "string" && data.arenaName.trim() ? data.arenaName.trim().slice(0, ARENA_NAME_MAX_LENGTH) : null;
   team.premiumUntil = typeof data.premiumUntil === "number" ? data.premiumUntil : null;
   team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
   if (JERSEY_SHAPES.includes(data.jerseyShape)) team.jerseyShape = data.jerseyShape;
@@ -12010,7 +12057,8 @@ return {
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
   tacticsSnapshotFor,
-  ARENA_LEVELS, arenaInfo, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
+  ARENA_LEVELS, arenaInfo,
+  TRIGRAM_CHANGE_COOLDOWN_MS, ARENA_NAME_MAX_LENGTH, TRIGRAM_BANNED, isValidTrigram, defaultTrigramForName, teamTrigram, teamArenaName, containsBannedWord, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel,
   JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, JERSEY_TWO_TONE_SETS, defaultAwayJerseyColor, MAX_TEAM_LOGO_DATA_URL_LENGTH,
   // Interviews de jalon + MVP automatique (retour utilisateur, 2026-09 : voir

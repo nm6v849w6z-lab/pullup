@@ -1006,6 +1006,48 @@ function setTeamPaying(team, teamIndex, league, body, now) {
   return { ok: true, isPaying: team.isPaying };
 }
 
+// Trigramme personnalisé (retour communauté 2026-09 : "Pouvoir choisir son
+// trigramme") : 3 lettres A-Z, pas d'insulte, unique dans la ligue (face aux
+// trigrammes choisis comme aux sigles calculés des autres clubs), un
+// changement tous les 30 jours. `null`/"" = retour au sigle calculé.
+function setTeamTrigram(team, teamIndex, league, body, now) {
+  const raw = body && body.trigram;
+  if (raw == null || raw === "") {
+    team.trigram = null;
+    return { ok: true, trigram: null };
+  }
+  const value = String(raw).trim().toUpperCase();
+  if (!Engine.isValidTrigram(value)) return fail("Le trigramme doit faire exactement 3 lettres (A-Z).");
+  if (Engine.TRIGRAM_BANNED.has(value)) return fail("Ce trigramme n'est pas autorisé.");
+  if (value === team.trigram) return { ok: true, trigram: value };
+  if (typeof team.trigramChangedAt === "number" && now - team.trigramChangedAt < Engine.TRIGRAM_CHANGE_COOLDOWN_MS) {
+    const days = Math.ceil((Engine.TRIGRAM_CHANGE_COOLDOWN_MS - (now - team.trigramChangedAt)) / (24 * 3600 * 1000));
+    return fail(`Trigramme déjà modifié récemment : prochain changement possible dans ${days} jour${days > 1 ? "s" : ""}.`);
+  }
+  const taken = league.teams.some((t, i) => i !== teamIndex && Engine.teamTrigram(t) === value);
+  if (taken) return fail("Ce trigramme est déjà utilisé par un autre club de la ligue.");
+  team.trigram = value;
+  team.trigramChangedAt = now;
+  return { ok: true, trigram: value };
+}
+
+// Nom de salle personnalisé (retour communauté 2026-09 : "Modifier le nom de
+// sa salle") : 3 à 30 caractères, lettres/chiffres/espaces/'-., pas
+// d'insulte. `null`/"" = retour au nom du palier.
+function setTeamArenaName(team, teamIndex, league, body, now) {
+  const raw = body && body.arenaName;
+  if (raw == null || String(raw).trim() === "") {
+    team.arenaName = null;
+    return { ok: true, arenaName: null };
+  }
+  const value = String(raw).replace(/\s+/g, " ").trim();
+  if (value.length < 3 || value.length > Engine.ARENA_NAME_MAX_LENGTH) return fail(`Le nom de la salle doit faire entre 3 et ${Engine.ARENA_NAME_MAX_LENGTH} caractères.`);
+  if (!/^[\p{L}\p{N} '\-.&]+$/u.test(value)) return fail("Le nom de la salle contient des caractères non autorisés.");
+  if (Engine.containsBannedWord(value)) return fail("Ce nom de salle n'est pas autorisé.");
+  team.arenaName = value;
+  return { ok: true, arenaName: value };
+}
+
 // Tutoriel d'accueil (retour utilisateur, 2026-09 : "on est d'accord qu'on
 // ne peut le faire qu'une fois ? [...] le bouton dans le guide doit
 // s'enlever") : nécessaire côté serveur pour la ligue partagée, où
@@ -1110,7 +1152,7 @@ module.exports = {
   discussTransferRequest,
   setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
   setTeamAwayJersey, setTeamAwayJerseyPattern, setTeamAwayJerseyTwoTone,
-  setTeamLogo, setTeamPaying,
+  setTeamLogo, setTeamPaying, setTeamTrigram, setTeamArenaName,
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/
   // claimTutorialReward) :
   setOnboardingTourCompleted, claimTutorialReward,

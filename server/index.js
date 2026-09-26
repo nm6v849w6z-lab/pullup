@@ -611,6 +611,8 @@ const ACTION_ROUTES = {
   "/api/club/set-away-jersey-two-tone": actions.setTeamAwayJerseyTwoTone,
   "/api/club/set-logo": actions.setTeamLogo,
   "/api/club/set-paying": actions.setTeamPaying,
+  "/api/club/set-trigram": actions.setTeamTrigram,
+  "/api/club/set-arena-name": actions.setTeamArenaName,
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/
   // claimTutorialReward et server/actions.js) :
   "/api/club/onboarding-tour-completed": actions.setOnboardingTourCompleted,

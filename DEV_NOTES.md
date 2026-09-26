@@ -20,6 +20,30 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Trigramme
+  personnalisé (7) + nom de salle (6)** — retours communauté relayés par
+  l'utilisateur : "Pouvoir choisir son trigramme -> facile à faire aussi",
+  "Modifier le nom de sa salle [...] ça se mettra à la place de gymnase
+  municipale". Moteur (engine.js ET copie HTML) : Team.trigram /
+  trigramChangedAt / arenaName sérialisés ; helpers teamTrigram (trigramme
+  choisi sinon sigle calculé, même règle que teamAbbrev), teamArenaName
+  (nom choisi sinon nom du palier), isValidTrigram, TRIGRAM_BANNED,
+  containsBannedWord, TRIGRAM_CHANGE_COOLDOWN_MS (30 j),
+  ARENA_NAME_MAX_LENGTH (30). Serveur : /api/club/set-trigram (3 lettres
+  A-Z, pas d'insulte, unique dans la ligue face aux trigrammes choisis ET
+  aux sigles calculés, un changement / 30 j, "" = retour au sigle) et
+  /api/club/set-arena-name (3-30 caractères lettres/chiffres/espaces/'-.&,
+  modération, "" = nom du palier). Client : champ Trigramme sous le logo
+  dans « Identité du club » (aperçu logo, Enregistrer, Par défaut,
+  verrouillé pendant le délai), logo type/classements/direct via
+  teamTrigram(team) ; page Salle : titre = teamArenaName, bouton
+  « Renommer la salle » → formulaire replié (Enregistrer / Nom par
+  défaut). Solo : validation locale + saveMyTeam. Test :
+  trigram_arena_name_test.js (nouveau) + salle_*, club_facilities,
+  sidebar_logo, live_court_home_logo, dashboard_e2e, away_jersey, tabs,
+  team_home_page, attendance_history, server actions/index/store verts.
+  Vérifié dans Chromium. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées
   (Premium)** — idées de la communauté relayées par l'utilisateur (Diablue,
   aszat) : "Ligues perso ? comme LP sur BB", "un truc à part qui ne joue pas
