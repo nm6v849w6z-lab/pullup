@@ -20,6 +20,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Entraînement :
+  bilan entièrement replié à l'ouverture** — retour utilisateur : "quand on
+  ouvre la page d'entrainement, l'onglet du premier s'ouvre tjrs, il
+  faudrait le laisser fermer comme ceux des autres [...] on ouvre en
+  cliquant dessus uniquement". renderLastTrainingReport :
+  trainingReportOpenKeys démarre vide. daily_training_cycle vert. Reste :
+  `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Connaissance
   tactique : perte adoucie** — remarque d'un joueur relayée par
   l'utilisateur : "la perte pour les entraînements collectifs est énorme

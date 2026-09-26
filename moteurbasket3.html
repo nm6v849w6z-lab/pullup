@@ -28501,7 +28501,10 @@ function renderLastTrainingReport() {
   const entries = Object.entries(report.players || {}).filter(([, e]) => e && (e.gains || []).length);
   if (trainingReportOpenWeek !== teamA.week || !trainingReportOpenKeys) {
     trainingReportOpenWeek = teamA.week;
-    trainingReportOpenKeys = new Set(entries.length ? [entries[0][0]] : []);
+    // Tous repliés à l'ouverture (retour utilisateur, 2026-09-26 : "quand
+    // on ouvre la page d'entrainement, l'onglet du premier s'ouvre tjrs, il
+    // faudrait le laisser fermer comme ceux des autres").
+    trainingReportOpenKeys = new Set();
   }
   let body = "";
   if (!entries.length) {
