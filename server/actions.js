@@ -1033,6 +1033,31 @@ function setTeamTrigram(team, teamIndex, league, body, now) {
   return { ok: true, trigram: value };
 }
 
+// Sponsors (voir le bloc SPONSORS côté moteur) : accepter/refuser une offre,
+// rompre un contrat (clause payée). Chaque réponse renvoie l'état sponsors du
+// club pour que la page Économie se mette à jour sans recharger.
+function sponsorsView(team) {
+  return {
+    sponsorOffers: team.sponsorOffers || [], sponsorContracts: team.sponsorContracts || [],
+    sponsorHistory: team.sponsorHistory || [], sponsorReputation: team.sponsorReputation, budget: team.budget,
+  };
+}
+function acceptSponsor(team, teamIndex, league, body, now) {
+  const r = Engine.acceptSponsorOffer(team, league, body && body.offerId, now);
+  if (!r.ok) return fail(r.error);
+  return { ok: true, ...sponsorsView(team) };
+}
+function declineSponsor(team, teamIndex, league, body, now) {
+  const r = Engine.declineSponsorOffer(team, body && body.offerId);
+  if (!r.ok) return fail(r.error);
+  return { ok: true, ...sponsorsView(team) };
+}
+function terminateSponsor(team, teamIndex, league, body, now) {
+  const r = Engine.terminateSponsorContract(team, body && body.contractId, now);
+  if (!r.ok) return fail(r.error);
+  return { ok: true, fee: r.fee, ...sponsorsView(team) };
+}
+
 // Nom de salle personnalisé (retour communauté 2026-09 : "Modifier le nom de
 // sa salle") : 3 à 30 caractères, lettres/chiffres/espaces/'-., pas
 // d'insulte. `null`/"" = retour au nom du palier.
@@ -1154,7 +1179,7 @@ module.exports = {
   discussTransferRequest,
   setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
   setTeamAwayJersey, setTeamAwayJerseyPattern, setTeamAwayJerseyTwoTone,
-  setTeamLogo, setTeamPaying, setTeamTrigram, setTeamArenaName,
+  setTeamLogo, setTeamPaying, setTeamTrigram, setTeamArenaName, acceptSponsor, declineSponsor, terminateSponsor,
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/
   // claimTutorialReward) :
   setOnboardingTourCompleted, claimTutorialReward,

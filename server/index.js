@@ -325,8 +325,28 @@ function tick(league, now) {
   // archivée sur chaque club humain dès que le champion est connu —
   // idempotent, donc sans risque de la répéter à chaque requête.
   if (league.isPlayoffsDone && league.isPlayoffsDone()) {
-    league.teams.forEach((t, i) => { if (t.isHuman) Engine.archiveSeasonForTeam(league, i, now); });
+    league.teams.forEach((t, i) => {
+      if (!t.isHuman) return;
+      // Sponsors d'abord (bonus/rupture selon l'objectif), puis archive.
+      Engine.settleSponsorsAtSeasonEnd(league, i, now);
+      Engine.archiveSeasonForTeam(league, i, now);
+    });
   }
+  // Sponsors : nouvelles offres pour les clubs humains (voir
+  // Engine.refreshSponsorOffers) + une entrée de fil d'actu quand il y en a.
+  league.teams.forEach(t => {
+    if (!t.isHuman) return;
+    const created = Engine.refreshSponsorOffers(t, league, now);
+    if (created.length && t.feed) {
+      const names = created.map(o => o.sponsorName).join(", ");
+      Engine.pushEntry(t.feed, {
+        key: `sponsor_offers_${now}`, category: "club", week: t.week,
+        title: created.length > 1 ? `${created.length} sponsors vous approchent` : `Un sponsor vous approche : ${created[0].sponsorName}`,
+        text: `${names} — offres valables une semaine. Acceptez ou refusez dans Économie › Sponsors.`,
+        action: { label: "Voir les offres", href: "/economie" },
+      });
+    }
+  });
   // Médias : purge toute interview de jalon en attente depuis plus de 3
   // jours, pour TOUTES les équipes humaines de la ligue (voir
   // Team.pruneExpiredInterviews/MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS
@@ -618,6 +638,9 @@ const ACTION_ROUTES = {
   "/api/club/set-logo": actions.setTeamLogo,
   "/api/club/set-paying": actions.setTeamPaying,
   "/api/club/set-trigram": actions.setTeamTrigram,
+  "/api/sponsors/accept": actions.acceptSponsor,
+  "/api/sponsors/decline": actions.declineSponsor,
+  "/api/sponsors/terminate": actions.terminateSponsor,
   "/api/club/set-arena-name": actions.setTeamArenaName,
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/
   // claimTutorialReward et server/actions.js) :
@@ -718,6 +741,7 @@ async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSav
       if (!t.isHuman) return;
       // Histoire du club : la saison qui s'achève est archivée sur l'ancien
       // club (idempotent si tick() l'a déjà fait), puis reportée ci-dessous.
+      Engine.settleSponsorsAtSeasonEnd(previous.league, i, now);
       Engine.archiveSeasonForTeam(previous.league, i, now);
       if (t.managerLinkToken) prevTokenByName.set(t.name, t.managerLinkToken);
       prevTeamByName.set(t.name, t);
@@ -738,6 +762,10 @@ async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSav
       t.trigram = prev.trigram || null;
       t.trigramChangedAt = typeof prev.trigramChangedAt === "number" ? prev.trigramChangedAt : null;
       t.arenaName = prev.arenaName || null;
+      // Sponsors : la réputation et l'historique suivent le club ; les
+      // contrats (une saison) viennent d'être réglés, les offres repartent.
+      t.sponsorReputation = typeof prev.sponsorReputation === "number" ? prev.sponsorReputation : Engine.SPONSOR_REPUTATION_DEFAULT;
+      t.sponsorHistory = Array.isArray(prev.sponsorHistory) ? prev.sponsorHistory : [];
     });
   }
   await store.saveMultiLeague(created.league, multiSavePath);

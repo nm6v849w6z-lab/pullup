@@ -52,6 +52,7 @@ const TEMPLATE = `
       <div class="crest" data-ref="crest${t}"></div>
       <div class="tinfo">
         <div class="tname" data-ref="name${t}"></div><div class="tshort" data-ref="short${t}"></div>
+        <div class="tsponsor" data-ref="sponsor${t}"></div>
         <div class="tmeta"><span data-ref="fouls${t}"></span><span class="dots" data-ref="tos${t}" title="Temps morts restants"></span></div>
       </div>
     </div>
@@ -381,6 +382,10 @@ export function createLiveView(root, opts = {}) {
       $("name" + t).textContent = T.name;
       $("short" + t).textContent = T.short;
       $("name" + t).classList.toggle("mine", !!T.mine);
+      // Sponsor maillot (voir Team.sponsorContracts côté jeu) : une ligne
+      // sous le nom, vide sans contrat.
+      $("sponsor" + t).textContent = T.sponsor ? `Maillot · ${T.sponsor}` : "";
+      $("sponsor" + t).classList.toggle("on", !!T.sponsor);
       $("score" + t).textContent = T.score;
       $("score" + t).classList.toggle("trail", S.teams[1 - t].score > T.score);
       $("fouls" + t).innerHTML = T.teamFouls >= BONUS ? `<span class="bonus">Fautes ${T.teamFouls} · bonus</span>` : `Fautes ${T.teamFouls}`;
@@ -534,9 +539,15 @@ export function createLiveView(root, opts = {}) {
     // Logo du club qui reçoit au rond central (S.courtLogo : SVG fourni par
     // le jeu, dessiné pour un cercle de 104 unités centré en 470,250).
     const court = $("court");
-    if (courtLogoKey !== (S.courtLogo || "")) {
-      courtLogoKey = S.courtLogo || "";
-      court.innerHTML = `<g class="base">${COURT_BASE}</g><g class="logo" opacity=".85">${courtLogoKey}</g><g class="marks"></g>`;
+    // Panneaux LED le long des lignes de touche : sponsor salle du club qui
+    // reçoit (S.arenaSponsor), sinon « HOOP MANAGER » en attendant.
+    const ledKey = (S.courtLogo || "") + "|" + (S.arenaSponsor || "");
+    if (courtLogoKey !== ledKey) {
+      courtLogoKey = ledKey;
+      const label = esc((S.arenaSponsor || "HOOP MANAGER").toUpperCase());
+      const led = y => `<rect class="led" x="0" y="${y}" width="940" height="22" rx="3"/>` +
+        [117, 352, 587, 822].map(x => `<text class="led-txt" x="${x}" y="${y + 15.5}" text-anchor="middle">${label}</text>`).join("");
+      court.innerHTML = `<g class="base">${COURT_BASE}</g><g class="logo" opacity=".85">${S.courtLogo || ""}</g><g class="leds">${led(3)}${led(475)}</g><g class="marks"></g>`;
     }
     court.querySelector(".marks").innerHTML = g;
 

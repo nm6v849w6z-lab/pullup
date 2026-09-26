@@ -4276,6 +4276,51 @@
   .eco-legend > div > span:first-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .eco-dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;}
   .eco-pill-tag{align-self:flex-start; padding:3px 10px; border-radius:999px; background:var(--panel-2); font-size:12.5px; font-weight:600; color:var(--ink-dim);}
+  /* ---- Sponsors (page Économie) — voir renderSponsorsPanel ---- */
+  .spo-section{margin:22px 0 26px; display:flex; flex-direction:column; gap:16px;}
+  .spo-head{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
+  .spo-head h3{margin:0; font-size:22px; font-weight:800;}
+  .spo-sub{margin:4px 0 0; color:var(--ink-dim); font-size:14px; max-width:620px;}
+  .spo-kicker{font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-faint);}
+  .spo-rep{box-sizing:border-box; width:300px; padding:14px 18px; border-radius:12px; background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column; gap:8px;}
+  .spo-rep-top{display:flex; justify-content:space-between; align-items:baseline;}
+  .spo-rep-num{font-size:22px; font-weight:800;} .spo-rep-num small{font-size:12px; color:var(--ink-dim); font-weight:600;}
+  .spo-rep-bar{height:8px; border-radius:4px; background:var(--panel-2); overflow:hidden;} .spo-rep-bar div{height:100%; background:var(--amber);}
+  .spo-rep-legend{display:flex; justify-content:space-between; font-size:11px; color:var(--ink-faint);} .spo-rep-legend .hi{color:var(--amber);}
+  .spo-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; align-items:start;}
+  .spo-card{box-sizing:border-box; padding:18px; border-radius:14px; background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column; gap:14px; min-width:0;}
+  .spo-card.has-offers{border-color:var(--amber);}
+  .spo-card-head{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .spo-card-title{font-size:20px; font-weight:800;}
+  .spo-tag{font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--ink-dim); border:1px solid var(--line); border-radius:4px; padding:2px 7px; white-space:nowrap;}
+  .spo-tag-ok{color:var(--ok); border-color:rgba(51,180,161,.5);} .spo-tag-amber{color:var(--amber); border-color:rgba(240,162,60,.5);}
+  .spo-note{margin:0; font-size:13px; color:var(--ink-dim);}
+  .spo-contract-id{display:flex; align-items:center; gap:14px;}
+  .spo-jersey svg{display:block;}
+  .spo-badge{width:56px; height:56px; border-radius:10px; background:#0b1f3a; border:1px solid #1f4a86; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; color:#8fd0ff; flex:none;}
+  .spo-contract-txt{display:flex; flex-direction:column; gap:3px; min-width:0;}
+  .spo-name{font-weight:700; font-size:17px;} .spo-meta{font-size:12px; color:var(--ink-dim);}
+  .spo-prudent{color:#8fb9f0;} .spo-normal{color:var(--ink);} .spo-ambitieux{color:#ffb4a8;}
+  .spo-nums{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px;}
+  .spo-nums > div{background:var(--panel-2); border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .spo-nums > div b{font-size:18px; font-weight:800; white-space:nowrap;} .spo-nums > div small{font-size:11px; color:var(--ink-dim);}
+  .spo-nums > div.hi{background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.4);} .spo-nums > div.hi b{color:var(--amber);}
+  .spo-lines{display:flex; flex-direction:column; gap:6px; font-size:13px;} .spo-lines > div{display:flex; justify-content:space-between; gap:10px;} .spo-lines > div > span:first-child{color:var(--ink-dim);}
+  .spo-btn-terminate{align-self:flex-start; font-size:13px;} .spo-btn-danger{color:var(--danger); border-color:var(--danger);}
+  .spo-offer{box-sizing:border-box; padding:14px; border-radius:10px; background:var(--panel-2); border:1px solid var(--line); display:flex; flex-direction:column; gap:10px;}
+  .spo-offer-head{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .spo-profile{font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; border-radius:4px; padding:3px 8px; background:var(--panel);}
+  .spo-profile.spo-prudent{background:rgba(57,135,229,.15);} .spo-profile.spo-ambitieux{background:rgba(226,105,79,.18);}
+  .spo-quote{margin:0; font-size:12.5px; color:var(--ink-dim); font-style:italic;}
+  .spo-offer-nums{display:flex; gap:14px; flex-wrap:wrap; font-size:13px; color:var(--ink-dim);} .spo-offer-nums b{font-size:17px; font-weight:800; color:var(--ink);} .spo-offer-nums b.hi{color:var(--amber);}
+  .spo-offer-actions{display:flex; gap:8px;}
+  .spo-accept{height:36px; padding:0 16px; border-radius:8px; border:none; background:var(--amber); color:var(--amber-ink); font:inherit; font-size:13px; font-weight:700; cursor:pointer;}
+  .spo-empty{box-sizing:border-box; padding:16px; border-radius:10px; background:var(--panel-2); border:1px dashed var(--line); display:flex; flex-direction:column; gap:4px; align-items:center; text-align:center; color:var(--ink-dim);} .spo-empty span{font-weight:600; color:var(--ink);} .spo-empty small{font-size:12px;}
+  .spo-history{display:flex; flex-wrap:wrap; gap:10px 24px; align-items:center; padding:12px 16px; border-radius:12px; background:var(--panel); border:1px solid var(--line-soft); font-size:13px;}
+  .spo-history .dim{color:var(--ink-faint);} .spo-history .ok{color:var(--ok);} .spo-history .bad{color:var(--danger);}
+  .spo-rules{display:flex; gap:24px; flex-wrap:wrap; padding:12px 16px; border-radius:12px; background:rgba(240,162,60,.08); border:1px solid rgba(240,162,60,.35); font-size:12.5px; color:var(--ink-dim);} .spo-rules-title{font-weight:800; color:var(--amber); white-space:nowrap;}
+  .spo-feedback{margin:0; font-size:13.5px; font-weight:600; padding:10px 14px; border-radius:8px;} .spo-feedback.ok{background:rgba(51,180,161,.15); color:var(--ok);} .spo-feedback.err{background:rgba(226,105,79,.15); color:var(--danger);}
+  @media(max-width:860px){ .spo-grid{grid-template-columns:1fr;} .spo-rep{width:100%;} .spo-nums{grid-template-columns:1fr 1fr;} }
   .eco-history-head{display:flex; justify-content:space-between; align-items:center; gap:12px; margin:0 0 12px; flex-wrap:wrap;}
   .eco-history-head h3{margin:0; font-family:var(--eco-display); font-size:22px; font-weight:800; letter-spacing:-.01em;}
   .eco-filters{display:flex; gap:4px; padding:4px; border-radius:999px; background:var(--panel); border:1px solid var(--line);}
@@ -4837,6 +4882,12 @@
   .sl-tier i span.on{background:var(--amber);}
   .sl-hero-title{margin:10px 0 2px; font-size:40px; line-height:1; font-weight:900; letter-spacing:-.01em; text-transform:uppercase; color:#fff; text-shadow:0 2px 18px rgba(0,0,0,.5); overflow-wrap:anywhere;}
   .sl-hero-sub{font-size:14px; color:#b9c4d8;}
+  .sl-sponsor{margin-top:12px; display:inline-flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; background:rgba(21,27,43,.9); border:1px solid rgba(255,255,255,.12); font-size:13px; color:#e6ebf5; max-width:460px;}
+  .sl-sponsor-empty{color:#b9c4d8;}
+  .sl-sponsor-badge{width:36px; height:36px; border-radius:8px; background:#0b1f3a; border:1px solid #1f4a86; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; color:#8fd0ff; flex:none;}
+  .sl-sponsor-txt{display:flex; flex-direction:column; gap:2px;}
+  .sl-sponsor-kicker{font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#9aa4bd;}
+  .sl-sponsor-link{background:none; border:none; color:var(--amber); font:inherit; font-size:13px; font-weight:600; cursor:pointer; padding:0; white-space:nowrap;}
   .sl-hero-sub b{color:#fff;}
   #arenaCurrentPanel .sl-hero-upgrade{display:inline-flex; align-items:center; gap:14px; width:max-content; max-width:100%; padding:8px 8px 8px 16px; margin:0;
     border-radius:12px; text-align:left; cursor:pointer; background:linear-gradient(135deg, rgba(240,162,60,.22), rgba(240,162,60,.08)); border:1px solid rgba(240,162,60,.55);
@@ -6182,6 +6233,8 @@
           <div id="economieTvSub" style="display:flex; flex-direction:column; gap:12px;"></div>
         </section>
       </div>
+      <!-- Sponsors (voir renderSponsorsPanel, bloc SPONSORS côté moteur). -->
+      <div id="economieSponsors" class="spo-section"></div>
       <div class="eco-history-head">
         <h3>Historique</h3>
         <div class="eco-filters" id="economieFilters" role="group" aria-label="Filtrer l'historique">
@@ -9578,6 +9631,15 @@ const ArenaGen = (function () {
     return `<text transform="matrix(${f1(0.866 * K)} ${f1(0.5 * K)} 0 ${f1(K)} ${f1(o[0])} ${f1(o[1])})" x="0" y="${f1(size * 0.92)}" font-size="${size}" font-weight="800" letter-spacing="0.08" text-anchor="middle" fill="${color}" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"${fit}>${esc(str)}</text>`;
   }
 
+  // Texte posé à plat sur une face verticale orientée vers +x (mur latéral
+  // droit) : lecture de l'arrière vers l'avant sans effet miroir (panneau du
+  // sponsor de la salle, voir options.sponsor).
+  function textOnFaceX(x, yCenter, zTop, str, size, color, maxWidth) {
+    const o = P(x, yCenter, zTop);
+    const fit = str.length * size * 0.62 > maxWidth ? ` textLength="${f1(maxWidth)}" lengthAdjust="spacingAndGlyphs"` : '';
+    return `<text transform="matrix(${f1(0.866 * K)} ${f1(-0.5 * K)} 0 ${f1(K)} ${f1(o[0])} ${f1(o[1])})" x="0" y="${f1(size * 0.92)}" font-size="${size}" font-weight="800" letter-spacing="0.1" text-anchor="middle" fill="${color}" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"${fit}>${esc(str)}</text>`;
+  }
+
   // Texte posé à plat sur le sol
   function textOnFloor(x, y, str, size, color) {
     const o = P(x, y, 0.07);
@@ -9715,6 +9777,9 @@ const ArenaGen = (function () {
     const [main, second] = options.teamColors || ['#1d4fa8', '#ffffff'];
     const attendance = Math.max(0, Math.min(1, options.attendance ?? 0));
     const name = options.name ? String(options.name).toUpperCase().slice(0, 16) : '';
+    // Sponsor de la salle (retour communauté 2026-09, "pancarte salle") :
+    // grand panneau sur le mur latéral, sous le bandeau vitré.
+    const sponsor = options.sponsor ? String(options.sponsor).toUpperCase().slice(0, 22) : '';
     const aspect = options.aspect || 1.9;
     const dusk = (options.mood || 'dusk') !== 'day';
     const r = rng(options.seed ?? 11);
@@ -9910,6 +9975,13 @@ const ArenaGen = (function () {
     // bandeau vitré latéral
     s += poly(faceX(W / 2, -D / 2 + 2, D / 2 - 2, H - 3.4, H - 1.4), '#4f6a82', 0.5);
     for (let y = -D / 2 + 4; y < D / 2 - 2; y += 2.5) s += line([[W / 2, y, H - 3.4], [W / 2, y, H - 1.4]], INK, 0.35);
+    // panneau du sponsor de la salle (voir options.sponsor)
+    if (sponsor) {
+      const sy0 = -D / 2 + 3, sy1 = D / 2 - 3, sz0 = H - 8.4, sz1 = H - 4.2;
+      s += poly(faceX(W / 2 + 0.06, sy0, sy1, sz0, sz1), dusk ? '#0b1f3a' : '#12305a', 0.5) +
+        flat(faceX(W / 2 + 0.08, sy0 + 0.5, sy1 - 0.5, sz0 + 0.4, sz1 - 0.4), dusk ? '#10315c' : '#1a4380');
+      s += textOnFaceX(W / 2 + 0.12, (sy0 + sy1) / 2, sz1 - 0.55, sponsor, Math.min(3.2, 1.6 + H * 0.09), dusk ? '#9fdcff' : '#e8f4ff', (sy1 - sy0) * 0.86);
+    }
     // mur-rideau vitré en façade avec reflets
     const gx = Math.min(15, W / 2 - 3), g0 = 0.9, g1 = H - 1.2;
     s += poly(faceY(-gx, gx, D / 2, g0, g1), '#5f7f98', 0.7);
@@ -11458,6 +11530,14 @@ class Team {
     // par saison archivée (la plus récente en premier), records et cumul
     // des joueurs passés par le club ; lastArchivedSeasonId rend
     // l'archivage idempotent.
+    // Sponsors (voir le bloc SPONSORS plus bas) : offres en attente,
+    // contrats actifs (une saison), historique, réputation 0-100 et date de
+    // la dernière vague d'offres.
+    this.sponsorOffers = [];
+    this.sponsorContracts = [];
+    this.sponsorHistory = [];
+    this.sponsorReputation = SPONSOR_REPUTATION_DEFAULT;
+    this.lastSponsorOfferAt = 0;
     this.seasonHistory = [];
     this.clubRecords = {};
     this.allTimePlayers = {};
@@ -12618,6 +12698,12 @@ class Team {
       tvRightsRevenue = TV_RIGHTS_WEEKLY_BY_LEVEL[divisionLevel];
       this.recordTransaction(`Droits TV (${divisionInfo(divisionLevel).name})`, tvRightsRevenue);
     }
+
+    // Sponsors : fixe de chaque contrat actif, même cadence que les droits
+    // TV (voir collectSponsorIncome ; la prime par victoire et le bonus
+    // d'objectif tombent ailleurs : applySponsorWinPrimes /
+    // settleSponsorsAtSeasonEnd).
+    const sponsorRevenue = collectSponsorIncome(this);
 
     // Station TV (voir CLUB_FACILITIES) : revenu hebdomadaire FIXE
     // supplémentaire, exactement comme la boutique des supporters ci-dessus
@@ -13919,6 +14005,231 @@ function worldRankForPlayer(league, teamIdx, playerId) {
   return worldPlayerRankings(league).find(r => r.teamIdx === teamIdx && r.playerId === playerId) || null;
 }
 
+
+// ---------------------------------------------------------------------
+// SPONSORS (retour communauté 2026-09 : "Système de sponsors ? ils nous
+// approchent et on dit oui ou non. Image sur maillot, pancarte salle [...]
+// Pénalité en cas de non résultats" ; Diablue : "si tu refuse, tu perds
+// direct le sponsor et les prochains ce seront les plus mauvais pendant un
+// moment" ; aszat : "le sponsor pourrait te demander de l'argent ? c'est
+// hard ça"). Choix de l'utilisateur (2026-09-26) : variante A — JAMAIS de
+// débit imposé — avec une part variable selon les résultats et trois profils
+// de sponsor (prudent / normal / ambitieux). L'emplacement "spot pub" est
+// volontairement ABSENT (réservé à une vraie régie publicitaire plus tard).
+//
+// - Deux emplacements : maillot (le plus rémunérateur) et panneaux de salle.
+// - Trois paliers (commerce local / marque régionale / marque nationale)
+//   débloqués par la division ET la réputation sponsors du club (0-100).
+// - Un contrat = fixe hebdomadaire + prime par victoire officielle
+//   (championnat, Coupe, play-offs) + bonus de fin de saison si l'objectif
+//   du contrat est atteint. Objectif = celui du CA (relatif au niveau réel
+//   du club, voir assignSeasonObjectives), un cran en dessous (prudent) ou
+//   au-dessus (ambitieux).
+// - Objectif raté : pas de bonus, contrat rompu, réputation −12 → seuls les
+//   petits sponsors approchent le club tant qu'elle n'est pas remontée.
+//   Objectif atteint : +4 / +6 / +12 selon le profil.
+// - Seule sortie d'argent : la clause de rupture, si le MANAGER quitte un
+//   contrat en cours (4 semaines de fixe).
+// - Les offres arrivent toutes seules (refreshSponsorOffers, appelée à
+//   chaque tick serveur), 2 max par emplacement libre, profils différents,
+//   expirent au bout d'une semaine. Un contrat dure une saison et se règle à
+//   la fin des play-offs (settleSponsorsAtSeasonEnd, idempotent).
+// ---------------------------------------------------------------------
+const SPONSOR_SLOTS = [
+  { key: "maillot", label: "Maillot", mult: 1.6 },
+  { key: "salle", label: "Panneaux de salle", mult: 1.0 },
+];
+const SPONSOR_TIERS = {
+  local: { label: "Commerce local", minReputation: 0, maxDivisionLevel: 99, baseWeekly: 3000 },
+  regional: { label: "Marque régionale", minReputation: 35, maxDivisionLevel: 3, baseWeekly: 8000 },
+  national: { label: "Marque nationale", minReputation: 60, maxDivisionLevel: 1, baseWeekly: 18000 },
+};
+const SPONSOR_PROFILES = {
+  prudent: { label: "Prudent", fixedMult: 1.3, primeMult: 0.5, objectiveShift: -1, bonusWeeks: 4, reputationMet: 4,
+    quotes: ["On cherche un partenaire stable, pas un feu de paille.", "Restez où vous êtes et on est contents.", "Pas de pression : un fixe solide, un objectif raisonnable."] },
+  normal: { label: "Normal", fixedMult: 1.0, primeMult: 1.0, objectiveShift: 0, bonusWeeks: 6, reputationMet: 6,
+    quotes: ["Faites ce que le CA attend de vous et tout le monde y gagne.", "Un partenariat classique, aux conditions du marché.", "On vous suit sur l'objectif de la saison."] },
+  ambitieux: { label: "Ambitieux", fixedMult: 0.7, primeMult: 2.0, objectiveShift: 1, bonusWeeks: 12, reputationMet: 12,
+    quotes: ["Moins de fixe, mais on paie les résultats.", "On veut vous voir plus haut que ce que le CA demande.", "Gagnez, et vous ne le regretterez pas."] },
+};
+const SPONSOR_PROFILE_KEYS = ["prudent", "normal", "ambitieux"];
+const SPONSOR_NAMES = {
+  local: ["Boulangerie Martin", "Garage Dupuis", "Pizzeria Da Marco", "Pharmacie du Centre", "Bar des Sports", "Auto-école Lefèvre", "Fleurs & Co", "Café de la Gare", "Menuiserie Roche", "Cycles Bertrand"],
+  regional: ["Brasserie du Nord", "Banque Régionale", "Fromagerie Bel Air", "Transports Roux", "Immo Sud-Ouest", "Énergie Plateau", "Coopérative Val d'Or", "Radio Horizon"],
+  national: ["Volt Énergie", "Nexo Télécom", "Atlas Assurances", "Mistral Airlines", "Kilo Sport", "Orion Banque", "Nova Boissons", "Zenith Auto"],
+};
+const SPONSOR_OFFER_TTL_MS = 7 * 24 * 3600 * 1000;
+const SPONSOR_OFFER_INTERVAL_MS = 3 * 24 * 3600 * 1000;
+const SPONSOR_MAX_OFFERS_PER_SLOT = 2;
+const SPONSOR_PRIME_BASE_RATIO = 0.15; // prime par victoire = 15 % du fixe "normal"
+const SPONSOR_REPUTATION_DEFAULT = 50;
+const SPONSOR_REPUTATION_MISS = -12;
+const SPONSOR_TERMINATION_WEEKS = 4;
+const SPONSOR_HISTORY_MAX = 20;
+const SEASON_OBJECTIVE_KEYS_ORDERED = ["maintien", "milieu-tableau", "playoffs", "finale", "titre"];
+
+function sponsorDivisionFactor(divisionLevel) {
+  const top = TV_RIGHTS_WEEKLY_BY_LEVEL[1] || 25000;
+  const mine = TV_RIGHTS_WEEKLY_BY_LEVEL[divisionLevel] || Math.round(top * 0.3);
+  return Math.max(0.3, mine / top);
+}
+function sponsorReputationOf(team) {
+  return typeof team.sponsorReputation === "number" ? team.sponsorReputation : SPONSOR_REPUTATION_DEFAULT;
+}
+function sponsorTiersAvailable(team, divisionLevel) {
+  const rep = sponsorReputationOf(team);
+  return Object.keys(SPONSOR_TIERS).filter(k => rep >= SPONSOR_TIERS[k].minReputation && (divisionLevel || 1) <= SPONSOR_TIERS[k].maxDivisionLevel);
+}
+function sponsorActiveContractForSlot(team, slotKey) {
+  return (team.sponsorContracts || []).find(c => c.slot === slotKey && c.status === "active") || null;
+}
+function sponsorNameForSlot(team, slotKey) {
+  const c = sponsorActiveContractForSlot(team, slotKey);
+  return c ? c.sponsorName : null;
+}
+function roundToHundred(v) { return Math.max(100, Math.round(v / 100) * 100); }
+
+function generateSponsorOffer(team, league, slotKey, profileKey, now) {
+  const divisionLevel = league.divisionLevel || 1;
+  const tiers = sponsorTiersAvailable(team, divisionLevel);
+  const tier = tiers.length > 1 && Math.random() < 0.35 ? tiers[Math.max(0, tiers.length - 2)] : tiers[tiers.length - 1];
+  const slot = SPONSOR_SLOTS.find(s => s.key === slotKey);
+  const profile = SPONSOR_PROFILES[profileKey];
+  const used = new Set([...(team.sponsorOffers || []), ...(team.sponsorContracts || [])].map(x => x.sponsorName));
+  const pool = SPONSOR_NAMES[tier].filter(n => !used.has(n));
+  const sponsorName = pool.length ? pool[Math.floor(Math.random() * pool.length)] : SPONSOR_NAMES[tier][Math.floor(Math.random() * SPONSOR_NAMES[tier].length)];
+  const baseKey = SEASON_OBJECTIVE_KEYS_ORDERED.includes(team.seasonObjective) ? team.seasonObjective : "maintien";
+  const idx = clamp(SEASON_OBJECTIVE_KEYS_ORDERED.indexOf(baseKey) + profile.objectiveShift, 0, SEASON_OBJECTIVE_KEYS_ORDERED.length - 1);
+  const objectiveKey = SEASON_OBJECTIVE_KEYS_ORDERED[idx];
+  const jitter = 0.9 + Math.random() * 0.2;
+  const normalWeekly = SPONSOR_TIERS[tier].baseWeekly * slot.mult * sponsorDivisionFactor(divisionLevel) * jitter;
+  const weekly = roundToHundred(normalWeekly * profile.fixedMult);
+  const winPrime = roundToHundred(normalWeekly * SPONSOR_PRIME_BASE_RATIO * profile.primeMult);
+  const bonus = weekly * profile.bonusWeeks;
+  const quote = profile.quotes[Math.floor(Math.random() * profile.quotes.length)];
+  return {
+    id: `spo_${uid()}`, sponsorName, tier, tierLabel: SPONSOR_TIERS[tier].label,
+    slot: slotKey, slotLabel: slot.label, profile: profileKey, profileLabel: profile.label, quote,
+    weekly, winPrime, bonus,
+    objectiveKey, objectiveTier: SEASON_OBJECTIVE_TIERS[objectiveKey], objectiveLabel: SEASON_OBJECTIVE_LABELS[objectiveKey],
+    createdAt: now, expiresAt: now + SPONSOR_OFFER_TTL_MS,
+  };
+}
+// Purge les offres expirées et en fait arriver de nouvelles sur les
+// emplacements libres : tout de suite si le club n'a jamais été approché,
+// sinon tous les 3 jours. Deux offres max par emplacement, de profils
+// différents. Renvoie les offres créées.
+function refreshSponsorOffers(team, league, now = Date.now()) {
+  if (!team || !league) return [];
+  team.sponsorOffers = (team.sponsorOffers || []).filter(o => o.expiresAt > now && !sponsorActiveContractForSlot(team, o.slot));
+  const firstTime = !team.lastSponsorOfferAt;
+  if (!firstTime && now - team.lastSponsorOfferAt < SPONSOR_OFFER_INTERVAL_MS) return [];
+  const created = [];
+  SPONSOR_SLOTS.forEach(slot => {
+    if (sponsorActiveContractForSlot(team, slot.key)) return;
+    const existing = team.sponsorOffers.filter(o => o.slot === slot.key);
+    if (existing.length >= SPONSOR_MAX_OFFERS_PER_SLOT) return;
+    if (!firstTime && existing.length > 0 && Math.random() < 0.5) return;
+    const usedProfiles = new Set(existing.map(o => o.profile));
+    const candidates = SPONSOR_PROFILE_KEYS.filter(k => !usedProfiles.has(k));
+    const want = Math.min(SPONSOR_MAX_OFFERS_PER_SLOT - existing.length, firstTime ? 2 : 1);
+    for (let i = 0; i < want && candidates.length; i++) {
+      const k = candidates.splice(Math.floor(Math.random() * candidates.length), 1)[0];
+      const offer = generateSponsorOffer(team, league, slot.key, k, now);
+      team.sponsorOffers.push(offer);
+      created.push(offer);
+    }
+  });
+  team.lastSponsorOfferAt = now;
+  return created;
+}
+function acceptSponsorOffer(team, league, offerId, now = Date.now()) {
+  const offer = (team.sponsorOffers || []).find(o => o.id === offerId);
+  if (!offer) return { ok: false, error: "Cette offre n'existe plus." };
+  if (offer.expiresAt <= now) { team.sponsorOffers = team.sponsorOffers.filter(o => o.id !== offerId); return { ok: false, error: "Cette offre a expiré." }; }
+  if (sponsorActiveContractForSlot(team, offer.slot)) return { ok: false, error: "Cet emplacement a déjà un sponsor." };
+  const contract = { ...offer, id: `spc_${uid()}`, offerId: offer.id, signedAt: now, signedWeek: team.week, seasonId: league.seasonId || null, status: "active", weeksPaid: 0, wins: 0, primesPaid: 0, settledSeasonId: null };
+  delete contract.expiresAt;
+  team.sponsorContracts = [...(team.sponsorContracts || []), contract];
+  team.sponsorOffers = team.sponsorOffers.filter(o => o.slot !== offer.slot);
+  return { ok: true, contract };
+}
+function declineSponsorOffer(team, offerId) {
+  const before = (team.sponsorOffers || []).length;
+  team.sponsorOffers = (team.sponsorOffers || []).filter(o => o.id !== offerId);
+  return team.sponsorOffers.length < before ? { ok: true } : { ok: false, error: "Cette offre n'existe plus." };
+}
+function sponsorTerminationFee(contract) { return contract.weekly * SPONSOR_TERMINATION_WEEKS; }
+// Clause de rupture : le manager PAIE pour quitter un contrat en cours (la
+// seule sortie d'argent liée aux sponsors). Aucun effet sur la réputation.
+function terminateSponsorContract(team, contractId, now = Date.now()) {
+  const contract = (team.sponsorContracts || []).find(c => c.id === contractId && c.status === "active");
+  if (!contract) return { ok: false, error: "Contrat introuvable." };
+  const fee = sponsorTerminationFee(contract);
+  if ((team.budget || 0) < fee) return { ok: false, error: `Budget insuffisant pour la clause de rupture (${fee.toLocaleString("fr-FR")} €).` };
+  team.recordTransaction(`Clause de rupture ${contract.sponsorName}`, -fee);
+  contract.status = "terminated"; contract.endedAt = now;
+  team.sponsorHistory = [{ ...contract }, ...(team.sponsorHistory || [])].slice(0, SPONSOR_HISTORY_MAX);
+  team.sponsorContracts = team.sponsorContracts.filter(c => c.id !== contractId);
+  return { ok: true, fee };
+}
+// Appelée par Team.trainWeek : fixe de chaque contrat actif.
+function collectSponsorIncome(team) {
+  let total = 0;
+  (team.sponsorContracts || []).forEach(c => {
+    if (c.status !== "active") return;
+    team.recordTransaction(`Sponsor ${c.sponsorName} (${c.slotLabel})`, c.weekly);
+    c.weeksPaid = (c.weeksPaid || 0) + 1;
+    total += c.weekly;
+  });
+  return total;
+}
+// Prime par victoire officielle : appelée par League.recordResult /
+// recordCupMatchResult / recordPlayoffGameResult pour le vainqueur (jamais
+// pour une ligue privée, qui ne passe pas par là).
+function applySponsorWinPrimes(team) {
+  if (!team || !team.isHuman && !team.sponsorContracts) return 0;
+  let total = 0;
+  (team.sponsorContracts || []).forEach(c => {
+    if (c.status !== "active" || !c.winPrime) return;
+    team.recordTransaction(`Prime de victoire ${c.sponsorName}`, c.winPrime);
+    c.wins = (c.wins || 0) + 1;
+    c.primesPaid = (c.primesPaid || 0) + c.winPrime;
+    total += c.winPrime;
+  });
+  return total;
+}
+// Règlement de fin de saison (idempotent par contrat) : objectif atteint →
+// bonus versé + réputation en hausse selon le profil ; raté → pas de bonus,
+// contrat rompu, réputation −12. Renvoie les verdicts.
+function settleSponsorsAtSeasonEnd(league, teamIdx, now = Date.now()) {
+  const team = league.teams[teamIdx];
+  if (!team) return [];
+  const achieved = seasonAchievementTier(league, teamIdx);
+  if (achieved == null) return [];
+  const seasonId = league.seasonId || `start:${league.calendarStartAt || 0}`;
+  const verdicts = [];
+  (team.sponsorContracts || []).forEach(c => {
+    if (c.status !== "active" || c.settledSeasonId === seasonId) return;
+    const met = achieved >= c.objectiveTier;
+    c.settledSeasonId = seasonId; c.endedAt = now;
+    const profile = SPONSOR_PROFILES[c.profile] || SPONSOR_PROFILES.normal;
+    if (met) {
+      team.recordTransaction(`Bonus d'objectif ${c.sponsorName} (${c.objectiveLabel})`, c.bonus);
+      c.status = "completed";
+      c.reputationDelta = profile.reputationMet;
+    } else {
+      c.status = "breached";
+      c.reputationDelta = SPONSOR_REPUTATION_MISS;
+    }
+    team.sponsorReputation = clamp(sponsorReputationOf(team) + c.reputationDelta, 0, 100);
+    verdicts.push({ contractId: c.id, sponsorName: c.sponsorName, slot: c.slot, met, bonus: met ? c.bonus : 0, reputationDelta: c.reputationDelta });
+    team.sponsorHistory = [{ ...c }, ...(team.sponsorHistory || [])].slice(0, SPONSOR_HISTORY_MAX);
+  });
+  team.sponsorContracts = (team.sponsorContracts || []).filter(c => c.status === "active");
+  return verdicts;
+}
+
 // Calendrier aller-retour par la "méthode du cercle" : une équipe reste
 // fixe, les (n-1) autres tournent autour d'elle à chaque journée. n doit
 // être pair (10 ici, donc jamais de journée de repos à gérer). Renvoie un
@@ -14248,6 +14559,7 @@ class League {
 
   recordResult(round, home, away, scoreHome, scoreAway) {
     this.results.push({ round, home, away, scoreHome, scoreAway });
+    applySponsorWinPrimes(this.teams[scoreHome > scoreAway ? home : away]);
   }
 
   // Classement : 2 points pour une victoire, 1 pour une défaite (pas de
@@ -14328,6 +14640,7 @@ class League {
     m.scoreAway = scoreAway;
     m.forfeit = forfeit;
     m.winner = scoreAway > scoreHome ? m.away : m.home;
+    applySponsorWinPrimes(this.teams[m.winner]);
     m.resolved = true;
   }
   advanceCup(now = Date.now()) {
@@ -14420,6 +14733,7 @@ class League {
     series.games.push({ home, away, scoreHome, scoreAway });
     const aWon = home === series.idxA ? scoreHome > scoreAway : scoreAway > scoreHome;
     if (aWon) series.winsA++; else series.winsB++;
+    applySponsorWinPrimes(this.teams[aWon ? series.idxA : series.idxB]);
     if (series.winsA < 2 && series.winsB < 2) return;
     series.resolved = true;
     series.winner = series.winsA === 2 ? series.idxA : series.idxB;
@@ -16046,6 +16360,11 @@ function serializeTeam(team) {
     // Objectif de saison du conseil d'administration (voir engine.js,
     // miroir identique).
     seasonObjective: team.seasonObjective || null,
+    sponsorOffers: Array.isArray(team.sponsorOffers) ? team.sponsorOffers : [],
+    sponsorContracts: Array.isArray(team.sponsorContracts) ? team.sponsorContracts : [],
+    sponsorHistory: Array.isArray(team.sponsorHistory) ? team.sponsorHistory : [],
+    sponsorReputation: typeof team.sponsorReputation === "number" ? team.sponsorReputation : SPONSOR_REPUTATION_DEFAULT,
+    lastSponsorOfferAt: typeof team.lastSponsorOfferAt === "number" ? team.lastSponsorOfferAt : 0,
     seasonHistory: Array.isArray(team.seasonHistory) ? team.seasonHistory : [],
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
@@ -16445,6 +16764,11 @@ function teamFromSave(data) {
   // Objectif de saison du conseil d'administration (voir engine.js, miroir
   // identique).
   if (typeof data.seasonObjective === "string") team.seasonObjective = data.seasonObjective;
+  team.sponsorOffers = Array.isArray(data.sponsorOffers) ? data.sponsorOffers : [];
+  team.sponsorContracts = Array.isArray(data.sponsorContracts) ? data.sponsorContracts : [];
+  team.sponsorHistory = Array.isArray(data.sponsorHistory) ? data.sponsorHistory : [];
+  team.sponsorReputation = typeof data.sponsorReputation === "number" ? clamp(data.sponsorReputation, 0, 100) : SPONSOR_REPUTATION_DEFAULT;
+  team.lastSponsorOfferAt = typeof data.lastSponsorOfferAt === "number" ? data.lastSponsorOfferAt : 0;
   team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
@@ -23970,7 +24294,9 @@ let jerseySvgUid = 0;
 // combinaison stockée (voir Team.jerseyColor vs Team.awayJerseyColor et
 // consorts, engine.js), donc l'appelant passe déjà les bonnes valeurs pour
 // le maillot voulu et cette fonction n'a plus besoin de rien dériver.
-function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone) {
+// `sponsor` (optionnel, retour communauté 2026-09 "image sur maillot") : nom
+// du sponsor maillot imprimé sur la poitrine, dans un cartouche clair.
+function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone, sponsor) {
   const color = JERSEY_COLORS[colorKey] || Object.values(JERSEY_COLORS)[0];
   const s = size || 72;
   const isAway = variant === "away";
@@ -24021,9 +24347,15 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone) {
     body += `<path d="M 86 30 L 84 90 L 74 90 L 76 32 Z" fill="${panelColor}"/>`;
     body += `<path d="M 14 30 L 16 90 L 26 90 L 24 32 Z" fill="${panelColor}"/>`;
   }
+  if (sponsor) {
+    const label = String(sponsor).toUpperCase().slice(0, 18);
+    const fit = label.length > 9 ? ` textLength="40" lengthAdjust="spacingAndGlyphs"` : "";
+    body += `<rect x="27" y="44" width="46" height="13" rx="2.5" fill="rgba(255,255,255,.92)"/>` +
+      `<text x="50" y="53.6" text-anchor="middle" font-size="8" font-weight="800" fill="#1a1200" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"${fit}>${escapeHtml(label)}</text>`;
+  }
   const shapeLabel = shape === "B" ? "col en V à bandes" : "col rond";
   const patternLabel = patternKey === "uni" ? "" : `, ${JERSEY_PATTERN_LABELS[patternKey].toLowerCase()}`;
-  return `<svg viewBox="0 0 100 100" width="${s}" height="${s}" role="img" aria-label="Maillot ${isAway ? "extérieur" : "domicile"} ${shapeLabel}${patternLabel}">` +
+  return `<svg viewBox="0 0 100 100" width="${s}" height="${s}" role="img" aria-label="Maillot ${isAway ? "extérieur" : "domicile"} ${shapeLabel}${patternLabel}${sponsor ? `, sponsor ${escapeHtml(String(sponsor))}` : ""}">` +
     (defs ? `<defs>${defs}</defs>` : "") + body + `</svg>`;
 }
 
@@ -24292,8 +24624,8 @@ function teamDetailApercuHtml(teamIdx) {
   if (isOwnTeam) html += `<p class="sub">Logo et maillots modifiables depuis le tableau de bord (onglet <b>Club</b>).</p>`;
   html += `</div>`;
   html += `<div class="jersey-mockups team-apercu-jerseys" aria-label="Maillots">` +
-    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 80, "home", jerseyPattern, jerseyTwoTone)}<p class="sub">Domicile</p></div>` +
-    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.awayJerseyColor, 80, "away", awayJerseyPattern, awayJerseyTwoTone)}<p class="sub">Extérieur</p></div>` +
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 80, "home", jerseyPattern, jerseyTwoTone, sponsorNameForSlot(team, "maillot"))}<p class="sub">Domicile</p></div>` +
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.awayJerseyColor, 80, "away", awayJerseyPattern, awayJerseyTwoTone, sponsorNameForSlot(team, "maillot"))}<p class="sub">Extérieur</p></div>` +
     `</div>`;
   html += `</div>`;
 
@@ -27295,6 +27627,7 @@ function renderSeasonEnd() {
 function startNewSeason() {
   // Histoire du club : archive la saison qui s'achève (idempotent, le
   // serveur l'a normalement déjà fait dès la fin des play-offs).
+  settleSponsorsAtSeasonEnd(league, 0, Date.now());
   archiveSeasonForTeam(league, 0, Date.now());
   const outcome = league.divisionOutcomeForUserTeam();
   // Prime de montée / de champion de Division I (voir seasonEndBonusFor,
@@ -29373,7 +29706,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20260926-10";
+const HM_LIVE_ASSET_VERSION = "20260926-11";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -29620,6 +29953,14 @@ function hmLiveDress() {
   // id de clipPath renommé : l'ancienne vue (masquée) garde le sien.
   try { d.courtLogo = homeTeam ? liveCourtHomeLogoSvg(homeTeam, 470, 250, 52).replace(/liveCourtLogoClip/g, "hmLiveCourtLogoClip") : ""; } catch (e) { /* pas de logo */ }
   try { d.meta = hmLiveMeta(); } catch (e) { d.meta = null; }
+  // Sponsors (voir le bloc SPONSORS côté moteur) : sponsor maillot de
+  // CHAQUE club (bandeau) et sponsor salle du club qui REÇOIT (panneaux LED
+  // du terrain 2D) — comme dans une vraie salle, à l'extérieur on voit les
+  // sponsors de l'adversaire.
+  try {
+    d.sponsors = [homeTeam, awayTeam].map(t => (t ? sponsorNameForSlot(t, "maillot") : null));
+    d.arenaSponsor = homeTeam ? sponsorNameForSlot(homeTeam, "salle") : null;
+  } catch (e) { d.sponsors = [null, null]; d.arenaSponsor = null; }
   hmLive.dress = d;
   return d;
 }
@@ -29679,7 +30020,8 @@ function hmLiveBuildState() {
     });
     return {
       name: team ? team.name : (t ? "Extérieur" : "Domicile"),
-      short: hmLiveShort(team && team.name),
+      short: team ? teamTrigram(team) : hmLiveShort(null),
+      sponsor: dress.sponsors ? dress.sponsors[t] : null,
       score: total[t],
       quarterScores: quarterScores[t],
       teamFouls: hmLive.fouls.filter(f => f.team === t && f.quarter === hmLive.quarter).length,
@@ -29700,6 +30042,7 @@ function hmLiveBuildState() {
     halftimeResumeIn: half ? half.resumeIn : null,
     meta: dress.meta,
     courtLogo: dress.courtLogo,
+    arenaSponsor: dress.arenaSponsor || null,
     teams,
     shots: hmLive.shots,
     events: hmLive.events,
@@ -32426,7 +32769,7 @@ function renderClubIdentityPanel() {
   // domicile [...] comme pour le maillot extérieur") : même .jersey-mockup
   // que l'aperçu extérieur plus bas, juste "home"/jerseyColor à la place de
   // "away"/awayJerseyColor.
-  html += `<div class="jersey-mockup">${jerseySvgHtml(teamA.jerseyShape, teamA.jerseyColor, 84, "home", dashboardJerseyPattern, dashboardJerseyTwoTone)}<p class="sub">Aperçu domicile</p></div>`;
+  html += `<div class="jersey-mockup">${jerseySvgHtml(teamA.jerseyShape, teamA.jerseyColor, 84, "home", dashboardJerseyPattern, dashboardJerseyTwoTone, sponsorNameForSlot(teamA, "maillot"))}<p class="sub">Aperçu domicile</p></div>`;
   html += `</div>`;
 
   // Maillot extérieur (retour utilisateur, 2026-09 : "sur les maillots, il y
@@ -32462,7 +32805,7 @@ function renderClubIdentityPanel() {
     html += `<p class="sub">Motif uni (club gratuit). Passez en club payant pour un motif personnalisé (rayures, dégradé, bandes sur les côtés...) et plus de couleurs.</p>`;
   }
   html += `</div>`;
-  html += `<div class="jersey-mockup">${jerseySvgHtml(teamA.jerseyShape, teamA.awayJerseyColor, 84, "away", dashboardAwayJerseyPattern, dashboardAwayJerseyTwoTone)}<p class="sub">Aperçu extérieur</p></div>`;
+  html += `<div class="jersey-mockup">${jerseySvgHtml(teamA.jerseyShape, teamA.awayJerseyColor, 84, "away", dashboardAwayJerseyPattern, dashboardAwayJerseyTwoTone, sponsorNameForSlot(teamA, "maillot"))}<p class="sub">Aperçu extérieur</p></div>`;
   html += `</div>`;
 
   html += `<p class="sub club-paying-row">Statut du club : <b>${teamA.isPaying ? "Payant" : "Gratuit"}</b> ` +
@@ -35138,6 +35481,7 @@ function renderEconomieSection() {
     ? `${ecoMoney(rec.tv)}<span class="unit">/sem.</span>`
     : "–";
   document.getElementById("economieTvSub").innerHTML = ecoTvHtml(rec);
+  renderSponsorsPanel();
 
   ecoRenderHistory();
 }
@@ -35785,6 +36129,14 @@ function renderSalleSection() {
 }
 
 // --- Bandeau d'en-tête -------------------------------------------------
+function salleSponsorEncartHtml() {
+  const c = sponsorActiveContractForSlot(teamA, "salle");
+  if (!c) return `<div class="sl-sponsor sl-sponsor-empty"><span class="sl-sponsor-kicker">Sponsor de la salle</span><span>Aucun · <button type="button" class="sl-sponsor-link" data-tab="economie">voir les offres</button></span></div>`;
+  return `<div class="sl-sponsor"><span class="sl-sponsor-badge">${escapeHtml(defaultTrigramForName(c.sponsorName))}</span>` +
+    `<span class="sl-sponsor-txt"><span class="sl-sponsor-kicker">Sponsor de la salle</span><span><b>${escapeHtml(c.sponsorName)}</b> · ${formatMoney(c.weekly)} / sem · objectif ${escapeHtml(c.objectiveLabel)}</span></span>` +
+    `<button type="button" class="sl-sponsor-link" data-tab="economie">Sponsors →</button></div>`;
+}
+
 function renderSalleHero(info, stats) {
   const projectedRate = teamA.projectedAttendanceRate();
   const history = teamA.attendanceHistory || [];
@@ -35797,6 +36149,7 @@ function renderSalleHero(info, stats) {
     teamColors: teamAvatarColors(teamA),
     attendance: stats.avgRate != null ? stats.avgRate : projectedRate,
     name: teamA.name,
+    sponsor: sponsorNameForSlot(teamA, "salle"),
     aspect: 2.3,
   }).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
   visualHolder.innerHTML = `<div class="arena-card">` +
@@ -35812,7 +36165,11 @@ function renderSalleHero(info, stats) {
     // 2026-09-26 : "enlève tout Gotham Knights · 8 000 places, le nombre
     // de places on l'a déjà dans une brique") ; seul le prochain match à
     // domicile reste affiché quand il y en a un.
-    (nm && nm.isHome ? `<div class="sl-hero-sub">Prochain match à domicile <b>vs ${escapeHtml(nm.name)}</b></div>` : "");
+    (nm && nm.isHome ? `<div class="sl-hero-sub">Prochain match à domicile <b>vs ${escapeHtml(nm.name)}</b></div>` : "") +
+    // Sponsor de la salle (voir le bloc SPONSORS côté moteur) : encart
+    // vers Économie › Sponsors ; le panneau lui-même est dessiné par
+    // ArenaGen (options.sponsor) sur le mur latéral.
+    salleSponsorEncartHtml();
 
   // Agrandissement : même flèche/confirmation qu'avant (buildUpgradeArrow),
   // mise en avant comme bouton principal du bandeau. N'affiche que le bouton
@@ -37179,6 +37536,128 @@ function hcWorldRankHtml(idx) {
     if (!link) return;
     e.preventDefault();
     showPlayerDetail(Number(link.dataset.playerTeam), Number(link.dataset.playerDetail));
+  });
+})();
+
+
+// ---------------------------------------------------------------------
+// SPONSORS — section de la page Économie (voir le bloc SPONSORS côté
+// moteur, maquettes validées le 2026-09-26) : deux emplacements (maillot,
+// panneaux de salle), chacun avec son contrat en cours OU ses offres
+// (profils prudent / normal / ambitieux), jauge de réputation, historique.
+// ---------------------------------------------------------------------
+let sponsorsUi = { feedback: null };
+
+function sponsorProfileClass(profile) {
+  return profile === "prudent" ? "spo-prudent" : profile === "ambitieux" ? "spo-ambitieux" : "spo-normal";
+}
+function sponsorObjectiveProgressText(contract) {
+  const rank = league.standings().findIndex(r => r.idx === myTeamIndex) + 1;
+  if (!rank) return "";
+  const tier = contract.objectiveTier;
+  const onTrack = (tier <= 1 && rank <= 8) || (tier === 2 && rank <= 6) || (tier >= 3 && rank <= 4);
+  return `Actuellement <b>${rank}${rank === 1 ? "er" : "e"}</b> : ${onTrack ? "en bonne voie" : "en retard sur l'objectif"}.`;
+}
+
+function renderSponsorsPanel() {
+  const holder = document.getElementById("economieSponsors");
+  if (!holder) return;
+  const rep = typeof teamA.sponsorReputation === "number" ? teamA.sponsorReputation : SPONSOR_REPUTATION_DEFAULT;
+  const offers = teamA.sponsorOffers || [];
+  let html = `<div class="spo-head"><div><h3>Sponsors</h3><p class="spo-sub">Deux emplacements : le maillot et les panneaux de la salle. Les sponsors vous approchent ; à vous d'accepter ou non. Un contrat dure une saison.</p></div>` +
+    `<div class="spo-rep"><div class="spo-rep-top"><span class="spo-kicker">Réputation sponsors</span><span class="spo-rep-num">${Math.round(rep)} <small>/ 100</small></span></div>` +
+    `<div class="spo-rep-bar"><div style="width:${Math.round(rep)}%"></div></div>` +
+    `<div class="spo-rep-legend"><span>Local</span><span>Régional ≥ ${SPONSOR_TIERS.regional.minReputation}</span><span class="hi">National ≥ ${SPONSOR_TIERS.national.minReputation}</span></div></div></div>`;
+  html += `<div class="spo-grid">`;
+  SPONSOR_SLOTS.forEach(slot => {
+    const contract = sponsorActiveContractForSlot(teamA, slot.key);
+    const slotOffers = offers.filter(o => o.slot === slot.key);
+    html += `<div class="spo-card${!contract && slotOffers.length ? " has-offers" : ""}"><div class="spo-card-head"><span class="spo-card-title">${escapeHtml(slot.label)}</span>` +
+      (contract ? `<span class="spo-tag spo-tag-ok">Contrat en cours</span>` : slotOffers.length ? `<span class="spo-tag spo-tag-amber">${slotOffers.length} offre${slotOffers.length > 1 ? "s" : ""}</span>` : `<span class="spo-tag">Libre</span>`) + `</div>`;
+    if (contract) {
+      html += sponsorContractHtml(contract, slot);
+    } else if (slotOffers.length) {
+      html += `<p class="spo-note">${slotOffers.length > 1 ? "Deux sponsors vous approchent." : "Un sponsor vous approche."} Offres valables jusqu'au ${formatCalendarDayFr(Math.min(...slotOffers.map(o => o.expiresAt)))}.</p>`;
+      slotOffers.forEach(o => { html += sponsorOfferHtml(o); });
+    } else {
+      html += `<div class="spo-empty"><span>Aucune offre pour le moment</span><small>Les sponsors reviennent tous les 3 jours. Une meilleure réputation attire de plus grandes marques.</small></div>`;
+    }
+    html += `</div>`;
+  });
+  html += `</div>`;
+  const history = (teamA.sponsorHistory || []).slice(0, 4);
+  if (history.length) {
+    html += `<div class="spo-history"><span class="spo-kicker">Historique</span>` + history.map(h => {
+      const verdict = h.status === "completed" ? `<b class="ok">Bonus versé · +${h.reputationDelta} rép.</b>` : h.status === "breached" ? `<b class="bad">Rompu · objectif raté · ${h.reputationDelta} rép.</b>` : `<b class="dim">Rompu par le club</b>`;
+      return `<span>${escapeHtml(h.sponsorName)} <span class="dim">· ${escapeHtml(h.slotLabel || h.slot)}</span> ${verdict}</span>`;
+    }).join("") + `</div>`;
+  }
+  html += `<div class="spo-rules"><span class="spo-rules-title">Comment ça marche</span><span>Fixe chaque semaine + prime par victoire officielle + bonus si l'objectif du contrat est atteint en fin de saison.</span><span>Objectif raté : pas de bonus, contrat rompu, réputation ${SPONSOR_REPUTATION_MISS}. Jamais d'argent réclamé.</span><span>Objectif atteint : +${SPONSOR_PROFILES.prudent.reputationMet} (prudent), +${SPONSOR_PROFILES.normal.reputationMet} (normal), +${SPONSOR_PROFILES.ambitieux.reputationMet} (ambitieux).</span></div>`;
+  if (sponsorsUi.feedback) html += `<p class="spo-feedback ${sponsorsUi.feedback.ok ? "ok" : "err"}">${escapeHtml(sponsorsUi.feedback.text)}</p>`;
+  holder.innerHTML = html;
+}
+
+function sponsorContractHtml(c, slot) {
+  const boardObjective = SEASON_OBJECTIVE_LABELS[teamA.seasonObjective] || "–";
+  const earned = (c.weeksPaid || 0) * c.weekly + (c.primesPaid || 0);
+  const fee = sponsorTerminationFee(c);
+  let html = `<div class="spo-contract-id">` +
+    (slot.key === "maillot" ? `<span class="spo-jersey">${jerseySvgHtml(teamA.jerseyShape, teamA.jerseyColor, 72, "home", teamA.isPaying ? teamA.jerseyPattern : "uni", teamA.jerseyTwoTone, c.sponsorName)}</span>` : `<span class="spo-badge">${escapeHtml(defaultTrigramForName(c.sponsorName))}</span>`) +
+    `<div class="spo-contract-txt"><span class="spo-name">${escapeHtml(c.sponsorName)}</span><span class="spo-meta">${escapeHtml(c.tierLabel)} · profil <b class="${sponsorProfileClass(c.profile)}">${escapeHtml(c.profileLabel)}</b></span><span class="spo-meta">Signé semaine ${c.signedWeek || 1}</span></div></div>`;
+  html += `<div class="spo-nums"><div><span class="spo-kicker">Fixe</span><b>${formatMoney(c.weekly)}</b><small>/ semaine</small></div>` +
+    `<div><span class="spo-kicker">Prime</span><b>${formatMoney(c.winPrime)}</b><small>/ victoire</small></div>` +
+    `<div class="hi"><span class="spo-kicker">Bonus</span><b>${formatMoney(c.bonus)}</b><small>si ${escapeHtml(c.objectiveLabel)}</small></div></div>`;
+  html += `<div class="spo-lines"><div><span>Objectif du CA</span><span>${escapeHtml(boardObjective)}</span></div>` +
+    `<div><span>Objectif du sponsor</span><span class="${sponsorProfileClass(c.profile)}">${escapeHtml(c.objectiveLabel)}</span></div>` +
+    `<div><span>Encaissé cette saison</span><span>${formatMoney(earned)} · ${c.wins || 0} victoire${(c.wins || 0) > 1 ? "s" : ""}</span></div></div>`;
+  html += `<p class="spo-note">${sponsorObjectiveProgressText(c)}</p>`;
+  html += `<button type="button" class="secondary spo-btn-terminate" data-sponsor-terminate="${c.id}" data-fee="${fee}">Rompre le contrat · clause ${formatMoney(fee)}</button>`;
+  return html;
+}
+
+function sponsorOfferHtml(o) {
+  return `<div class="spo-offer"><div class="spo-offer-head"><div class="spo-contract-txt"><span class="spo-name">${escapeHtml(o.sponsorName)}</span><span class="spo-meta">${escapeHtml(o.tierLabel)}</span></div>` +
+    `<span class="spo-profile ${sponsorProfileClass(o.profile)}">${escapeHtml(o.profileLabel)}</span></div>` +
+    `<p class="spo-quote">« ${escapeHtml(o.quote)} »</p>` +
+    `<div class="spo-offer-nums"><span><b>${formatMoney(o.weekly)}</b> / sem</span><span><b>${formatMoney(o.winPrime)}</b> / victoire</span><span><b class="hi">${formatMoney(o.bonus)}</b> si ${escapeHtml(o.objectiveLabel)}</span></div>` +
+    `<div class="spo-offer-actions"><button type="button" class="spo-accept" data-sponsor-accept="${o.id}">Accepter</button><button type="button" class="secondary" data-sponsor-decline="${o.id}">Refuser</button></div></div>`;
+}
+
+async function sponsorAction(path, body, okText) {
+  sponsorsUi.feedback = null;
+  if (managerToken) {
+    try {
+      const res = await fetchApi(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) { sponsorsUi.feedback = { ok: false, text: data.error || `Le serveur a refusé l'action (${res.status}).` }; renderSponsorsPanel(); return; }
+      teamA.sponsorOffers = data.sponsorOffers || []; teamA.sponsorContracts = data.sponsorContracts || [];
+      teamA.sponsorHistory = data.sponsorHistory || []; if (typeof data.sponsorReputation === "number") teamA.sponsorReputation = data.sponsorReputation;
+      if (typeof data.budget === "number") teamA.budget = data.budget;
+      if (typeof data.fee === "number" && data.state && data.state.team) teamA.transactions = teamA.transactions; // journal relu au prochain chargement
+    } catch (e) { sponsorsUi.feedback = { ok: false, text: "Serveur injoignable." }; renderSponsorsPanel(); return; }
+  } else {
+    let r;
+    if (path.endsWith("/accept")) r = acceptSponsorOffer(teamA, league, body.offerId, Date.now());
+    else if (path.endsWith("/decline")) r = declineSponsorOffer(teamA, body.offerId);
+    else r = terminateSponsorContract(teamA, body.contractId, Date.now());
+    if (!r.ok) { sponsorsUi.feedback = { ok: false, text: r.error }; renderSponsorsPanel(); return; }
+    saveMyTeam();
+  }
+  sponsorsUi.feedback = { ok: true, text: okText };
+  renderEconomieSection();
+}
+
+(function wireSponsorsPanel() {
+  document.addEventListener("click", (e) => {
+    const acc = e.target.closest("[data-sponsor-accept]");
+    if (acc) { sponsorAction("/api/sponsors/accept", { offerId: acc.dataset.sponsorAccept }, "Contrat signé. Le fixe tombe chaque semaine, la prime à chaque victoire."); return; }
+    const dec = e.target.closest("[data-sponsor-decline]");
+    if (dec) { sponsorAction("/api/sponsors/decline", { offerId: dec.dataset.sponsorDecline }, "Offre refusée."); return; }
+    const ter = e.target.closest("[data-sponsor-terminate]");
+    if (ter) {
+      if (ter.dataset.confirm !== "1") { ter.dataset.confirm = "1"; ter.textContent = `Confirmer la rupture · ${formatMoney(Number(ter.dataset.fee))} prélevés`; ter.classList.add("spo-btn-danger"); return; }
+      sponsorAction("/api/sponsors/terminate", { contractId: ter.dataset.sponsorTerminate }, "Contrat rompu, clause réglée. L'emplacement est libre.");
+    }
   });
 })();
 

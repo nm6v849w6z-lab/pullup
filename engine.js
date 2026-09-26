@@ -4340,6 +4340,14 @@ class Team {
     // par saison archivée (la plus récente en premier), records et cumul
     // des joueurs passés par le club ; lastArchivedSeasonId rend
     // l'archivage idempotent.
+    // Sponsors (voir le bloc SPONSORS plus bas) : offres en attente,
+    // contrats actifs (une saison), historique, réputation 0-100 et date de
+    // la dernière vague d'offres.
+    this.sponsorOffers = [];
+    this.sponsorContracts = [];
+    this.sponsorHistory = [];
+    this.sponsorReputation = SPONSOR_REPUTATION_DEFAULT;
+    this.lastSponsorOfferAt = 0;
     this.seasonHistory = [];
     this.clubRecords = {};
     this.allTimePlayers = {};
@@ -5815,6 +5823,12 @@ class Team {
       this.recordTransaction(`Droits TV (${divisionInfo(divisionLevel).name})`, tvRightsRevenue);
     }
 
+    // Sponsors : fixe de chaque contrat actif, même cadence que les droits
+    // TV (voir collectSponsorIncome ; la prime par victoire et le bonus
+    // d'objectif tombent ailleurs : applySponsorWinPrimes /
+    // settleSponsorsAtSeasonEnd).
+    const sponsorRevenue = collectSponsorIncome(this);
+
     // Station TV (voir CLUB_FACILITIES) : revenu hebdomadaire FIXE
     // supplémentaire, exactement comme la boutique des supporters ci-dessus
     // — la salle de musculation et l'espace bien-être n'agissent qu'EN MATCH
@@ -7228,6 +7242,231 @@ function worldRankForPlayer(league, teamIdx, playerId) {
   return worldPlayerRankings(league).find(r => r.teamIdx === teamIdx && r.playerId === playerId) || null;
 }
 
+
+// ---------------------------------------------------------------------
+// SPONSORS (retour communauté 2026-09 : "Système de sponsors ? ils nous
+// approchent et on dit oui ou non. Image sur maillot, pancarte salle [...]
+// Pénalité en cas de non résultats" ; Diablue : "si tu refuse, tu perds
+// direct le sponsor et les prochains ce seront les plus mauvais pendant un
+// moment" ; aszat : "le sponsor pourrait te demander de l'argent ? c'est
+// hard ça"). Choix de l'utilisateur (2026-09-26) : variante A — JAMAIS de
+// débit imposé — avec une part variable selon les résultats et trois profils
+// de sponsor (prudent / normal / ambitieux). L'emplacement "spot pub" est
+// volontairement ABSENT (réservé à une vraie régie publicitaire plus tard).
+//
+// - Deux emplacements : maillot (le plus rémunérateur) et panneaux de salle.
+// - Trois paliers (commerce local / marque régionale / marque nationale)
+//   débloqués par la division ET la réputation sponsors du club (0-100).
+// - Un contrat = fixe hebdomadaire + prime par victoire officielle
+//   (championnat, Coupe, play-offs) + bonus de fin de saison si l'objectif
+//   du contrat est atteint. Objectif = celui du CA (relatif au niveau réel
+//   du club, voir assignSeasonObjectives), un cran en dessous (prudent) ou
+//   au-dessus (ambitieux).
+// - Objectif raté : pas de bonus, contrat rompu, réputation −12 → seuls les
+//   petits sponsors approchent le club tant qu'elle n'est pas remontée.
+//   Objectif atteint : +4 / +6 / +12 selon le profil.
+// - Seule sortie d'argent : la clause de rupture, si le MANAGER quitte un
+//   contrat en cours (4 semaines de fixe).
+// - Les offres arrivent toutes seules (refreshSponsorOffers, appelée à
+//   chaque tick serveur), 2 max par emplacement libre, profils différents,
+//   expirent au bout d'une semaine. Un contrat dure une saison et se règle à
+//   la fin des play-offs (settleSponsorsAtSeasonEnd, idempotent).
+// ---------------------------------------------------------------------
+const SPONSOR_SLOTS = [
+  { key: "maillot", label: "Maillot", mult: 1.6 },
+  { key: "salle", label: "Panneaux de salle", mult: 1.0 },
+];
+const SPONSOR_TIERS = {
+  local: { label: "Commerce local", minReputation: 0, maxDivisionLevel: 99, baseWeekly: 3000 },
+  regional: { label: "Marque régionale", minReputation: 35, maxDivisionLevel: 3, baseWeekly: 8000 },
+  national: { label: "Marque nationale", minReputation: 60, maxDivisionLevel: 1, baseWeekly: 18000 },
+};
+const SPONSOR_PROFILES = {
+  prudent: { label: "Prudent", fixedMult: 1.3, primeMult: 0.5, objectiveShift: -1, bonusWeeks: 4, reputationMet: 4,
+    quotes: ["On cherche un partenaire stable, pas un feu de paille.", "Restez où vous êtes et on est contents.", "Pas de pression : un fixe solide, un objectif raisonnable."] },
+  normal: { label: "Normal", fixedMult: 1.0, primeMult: 1.0, objectiveShift: 0, bonusWeeks: 6, reputationMet: 6,
+    quotes: ["Faites ce que le CA attend de vous et tout le monde y gagne.", "Un partenariat classique, aux conditions du marché.", "On vous suit sur l'objectif de la saison."] },
+  ambitieux: { label: "Ambitieux", fixedMult: 0.7, primeMult: 2.0, objectiveShift: 1, bonusWeeks: 12, reputationMet: 12,
+    quotes: ["Moins de fixe, mais on paie les résultats.", "On veut vous voir plus haut que ce que le CA demande.", "Gagnez, et vous ne le regretterez pas."] },
+};
+const SPONSOR_PROFILE_KEYS = ["prudent", "normal", "ambitieux"];
+const SPONSOR_NAMES = {
+  local: ["Boulangerie Martin", "Garage Dupuis", "Pizzeria Da Marco", "Pharmacie du Centre", "Bar des Sports", "Auto-école Lefèvre", "Fleurs & Co", "Café de la Gare", "Menuiserie Roche", "Cycles Bertrand"],
+  regional: ["Brasserie du Nord", "Banque Régionale", "Fromagerie Bel Air", "Transports Roux", "Immo Sud-Ouest", "Énergie Plateau", "Coopérative Val d'Or", "Radio Horizon"],
+  national: ["Volt Énergie", "Nexo Télécom", "Atlas Assurances", "Mistral Airlines", "Kilo Sport", "Orion Banque", "Nova Boissons", "Zenith Auto"],
+};
+const SPONSOR_OFFER_TTL_MS = 7 * 24 * 3600 * 1000;
+const SPONSOR_OFFER_INTERVAL_MS = 3 * 24 * 3600 * 1000;
+const SPONSOR_MAX_OFFERS_PER_SLOT = 2;
+const SPONSOR_PRIME_BASE_RATIO = 0.15; // prime par victoire = 15 % du fixe "normal"
+const SPONSOR_REPUTATION_DEFAULT = 50;
+const SPONSOR_REPUTATION_MISS = -12;
+const SPONSOR_TERMINATION_WEEKS = 4;
+const SPONSOR_HISTORY_MAX = 20;
+const SEASON_OBJECTIVE_KEYS_ORDERED = ["maintien", "milieu-tableau", "playoffs", "finale", "titre"];
+
+function sponsorDivisionFactor(divisionLevel) {
+  const top = TV_RIGHTS_WEEKLY_BY_LEVEL[1] || 25000;
+  const mine = TV_RIGHTS_WEEKLY_BY_LEVEL[divisionLevel] || Math.round(top * 0.3);
+  return Math.max(0.3, mine / top);
+}
+function sponsorReputationOf(team) {
+  return typeof team.sponsorReputation === "number" ? team.sponsorReputation : SPONSOR_REPUTATION_DEFAULT;
+}
+function sponsorTiersAvailable(team, divisionLevel) {
+  const rep = sponsorReputationOf(team);
+  return Object.keys(SPONSOR_TIERS).filter(k => rep >= SPONSOR_TIERS[k].minReputation && (divisionLevel || 1) <= SPONSOR_TIERS[k].maxDivisionLevel);
+}
+function sponsorActiveContractForSlot(team, slotKey) {
+  return (team.sponsorContracts || []).find(c => c.slot === slotKey && c.status === "active") || null;
+}
+function sponsorNameForSlot(team, slotKey) {
+  const c = sponsorActiveContractForSlot(team, slotKey);
+  return c ? c.sponsorName : null;
+}
+function roundToHundred(v) { return Math.max(100, Math.round(v / 100) * 100); }
+
+function generateSponsorOffer(team, league, slotKey, profileKey, now) {
+  const divisionLevel = league.divisionLevel || 1;
+  const tiers = sponsorTiersAvailable(team, divisionLevel);
+  const tier = tiers.length > 1 && Math.random() < 0.35 ? tiers[Math.max(0, tiers.length - 2)] : tiers[tiers.length - 1];
+  const slot = SPONSOR_SLOTS.find(s => s.key === slotKey);
+  const profile = SPONSOR_PROFILES[profileKey];
+  const used = new Set([...(team.sponsorOffers || []), ...(team.sponsorContracts || [])].map(x => x.sponsorName));
+  const pool = SPONSOR_NAMES[tier].filter(n => !used.has(n));
+  const sponsorName = pool.length ? pool[Math.floor(Math.random() * pool.length)] : SPONSOR_NAMES[tier][Math.floor(Math.random() * SPONSOR_NAMES[tier].length)];
+  const baseKey = SEASON_OBJECTIVE_KEYS_ORDERED.includes(team.seasonObjective) ? team.seasonObjective : "maintien";
+  const idx = clamp(SEASON_OBJECTIVE_KEYS_ORDERED.indexOf(baseKey) + profile.objectiveShift, 0, SEASON_OBJECTIVE_KEYS_ORDERED.length - 1);
+  const objectiveKey = SEASON_OBJECTIVE_KEYS_ORDERED[idx];
+  const jitter = 0.9 + Math.random() * 0.2;
+  const normalWeekly = SPONSOR_TIERS[tier].baseWeekly * slot.mult * sponsorDivisionFactor(divisionLevel) * jitter;
+  const weekly = roundToHundred(normalWeekly * profile.fixedMult);
+  const winPrime = roundToHundred(normalWeekly * SPONSOR_PRIME_BASE_RATIO * profile.primeMult);
+  const bonus = weekly * profile.bonusWeeks;
+  const quote = profile.quotes[Math.floor(Math.random() * profile.quotes.length)];
+  return {
+    id: `spo_${uid()}`, sponsorName, tier, tierLabel: SPONSOR_TIERS[tier].label,
+    slot: slotKey, slotLabel: slot.label, profile: profileKey, profileLabel: profile.label, quote,
+    weekly, winPrime, bonus,
+    objectiveKey, objectiveTier: SEASON_OBJECTIVE_TIERS[objectiveKey], objectiveLabel: SEASON_OBJECTIVE_LABELS[objectiveKey],
+    createdAt: now, expiresAt: now + SPONSOR_OFFER_TTL_MS,
+  };
+}
+// Purge les offres expirées et en fait arriver de nouvelles sur les
+// emplacements libres : tout de suite si le club n'a jamais été approché,
+// sinon tous les 3 jours. Deux offres max par emplacement, de profils
+// différents. Renvoie les offres créées.
+function refreshSponsorOffers(team, league, now = Date.now()) {
+  if (!team || !league) return [];
+  team.sponsorOffers = (team.sponsorOffers || []).filter(o => o.expiresAt > now && !sponsorActiveContractForSlot(team, o.slot));
+  const firstTime = !team.lastSponsorOfferAt;
+  if (!firstTime && now - team.lastSponsorOfferAt < SPONSOR_OFFER_INTERVAL_MS) return [];
+  const created = [];
+  SPONSOR_SLOTS.forEach(slot => {
+    if (sponsorActiveContractForSlot(team, slot.key)) return;
+    const existing = team.sponsorOffers.filter(o => o.slot === slot.key);
+    if (existing.length >= SPONSOR_MAX_OFFERS_PER_SLOT) return;
+    if (!firstTime && existing.length > 0 && Math.random() < 0.5) return;
+    const usedProfiles = new Set(existing.map(o => o.profile));
+    const candidates = SPONSOR_PROFILE_KEYS.filter(k => !usedProfiles.has(k));
+    const want = Math.min(SPONSOR_MAX_OFFERS_PER_SLOT - existing.length, firstTime ? 2 : 1);
+    for (let i = 0; i < want && candidates.length; i++) {
+      const k = candidates.splice(Math.floor(Math.random() * candidates.length), 1)[0];
+      const offer = generateSponsorOffer(team, league, slot.key, k, now);
+      team.sponsorOffers.push(offer);
+      created.push(offer);
+    }
+  });
+  team.lastSponsorOfferAt = now;
+  return created;
+}
+function acceptSponsorOffer(team, league, offerId, now = Date.now()) {
+  const offer = (team.sponsorOffers || []).find(o => o.id === offerId);
+  if (!offer) return { ok: false, error: "Cette offre n'existe plus." };
+  if (offer.expiresAt <= now) { team.sponsorOffers = team.sponsorOffers.filter(o => o.id !== offerId); return { ok: false, error: "Cette offre a expiré." }; }
+  if (sponsorActiveContractForSlot(team, offer.slot)) return { ok: false, error: "Cet emplacement a déjà un sponsor." };
+  const contract = { ...offer, id: `spc_${uid()}`, offerId: offer.id, signedAt: now, signedWeek: team.week, seasonId: league.seasonId || null, status: "active", weeksPaid: 0, wins: 0, primesPaid: 0, settledSeasonId: null };
+  delete contract.expiresAt;
+  team.sponsorContracts = [...(team.sponsorContracts || []), contract];
+  team.sponsorOffers = team.sponsorOffers.filter(o => o.slot !== offer.slot);
+  return { ok: true, contract };
+}
+function declineSponsorOffer(team, offerId) {
+  const before = (team.sponsorOffers || []).length;
+  team.sponsorOffers = (team.sponsorOffers || []).filter(o => o.id !== offerId);
+  return team.sponsorOffers.length < before ? { ok: true } : { ok: false, error: "Cette offre n'existe plus." };
+}
+function sponsorTerminationFee(contract) { return contract.weekly * SPONSOR_TERMINATION_WEEKS; }
+// Clause de rupture : le manager PAIE pour quitter un contrat en cours (la
+// seule sortie d'argent liée aux sponsors). Aucun effet sur la réputation.
+function terminateSponsorContract(team, contractId, now = Date.now()) {
+  const contract = (team.sponsorContracts || []).find(c => c.id === contractId && c.status === "active");
+  if (!contract) return { ok: false, error: "Contrat introuvable." };
+  const fee = sponsorTerminationFee(contract);
+  if ((team.budget || 0) < fee) return { ok: false, error: `Budget insuffisant pour la clause de rupture (${fee.toLocaleString("fr-FR")} €).` };
+  team.recordTransaction(`Clause de rupture ${contract.sponsorName}`, -fee);
+  contract.status = "terminated"; contract.endedAt = now;
+  team.sponsorHistory = [{ ...contract }, ...(team.sponsorHistory || [])].slice(0, SPONSOR_HISTORY_MAX);
+  team.sponsorContracts = team.sponsorContracts.filter(c => c.id !== contractId);
+  return { ok: true, fee };
+}
+// Appelée par Team.trainWeek : fixe de chaque contrat actif.
+function collectSponsorIncome(team) {
+  let total = 0;
+  (team.sponsorContracts || []).forEach(c => {
+    if (c.status !== "active") return;
+    team.recordTransaction(`Sponsor ${c.sponsorName} (${c.slotLabel})`, c.weekly);
+    c.weeksPaid = (c.weeksPaid || 0) + 1;
+    total += c.weekly;
+  });
+  return total;
+}
+// Prime par victoire officielle : appelée par League.recordResult /
+// recordCupMatchResult / recordPlayoffGameResult pour le vainqueur (jamais
+// pour une ligue privée, qui ne passe pas par là).
+function applySponsorWinPrimes(team) {
+  if (!team || !team.isHuman && !team.sponsorContracts) return 0;
+  let total = 0;
+  (team.sponsorContracts || []).forEach(c => {
+    if (c.status !== "active" || !c.winPrime) return;
+    team.recordTransaction(`Prime de victoire ${c.sponsorName}`, c.winPrime);
+    c.wins = (c.wins || 0) + 1;
+    c.primesPaid = (c.primesPaid || 0) + c.winPrime;
+    total += c.winPrime;
+  });
+  return total;
+}
+// Règlement de fin de saison (idempotent par contrat) : objectif atteint →
+// bonus versé + réputation en hausse selon le profil ; raté → pas de bonus,
+// contrat rompu, réputation −12. Renvoie les verdicts.
+function settleSponsorsAtSeasonEnd(league, teamIdx, now = Date.now()) {
+  const team = league.teams[teamIdx];
+  if (!team) return [];
+  const achieved = seasonAchievementTier(league, teamIdx);
+  if (achieved == null) return [];
+  const seasonId = league.seasonId || `start:${league.calendarStartAt || 0}`;
+  const verdicts = [];
+  (team.sponsorContracts || []).forEach(c => {
+    if (c.status !== "active" || c.settledSeasonId === seasonId) return;
+    const met = achieved >= c.objectiveTier;
+    c.settledSeasonId = seasonId; c.endedAt = now;
+    const profile = SPONSOR_PROFILES[c.profile] || SPONSOR_PROFILES.normal;
+    if (met) {
+      team.recordTransaction(`Bonus d'objectif ${c.sponsorName} (${c.objectiveLabel})`, c.bonus);
+      c.status = "completed";
+      c.reputationDelta = profile.reputationMet;
+    } else {
+      c.status = "breached";
+      c.reputationDelta = SPONSOR_REPUTATION_MISS;
+    }
+    team.sponsorReputation = clamp(sponsorReputationOf(team) + c.reputationDelta, 0, 100);
+    verdicts.push({ contractId: c.id, sponsorName: c.sponsorName, slot: c.slot, met, bonus: met ? c.bonus : 0, reputationDelta: c.reputationDelta });
+    team.sponsorHistory = [{ ...c }, ...(team.sponsorHistory || [])].slice(0, SPONSOR_HISTORY_MAX);
+  });
+  team.sponsorContracts = (team.sponsorContracts || []).filter(c => c.status === "active");
+  return verdicts;
+}
+
 // Calendrier aller-retour par la "méthode du cercle" : une équipe reste
 // fixe, les (n-1) autres tournent autour d'elle à chaque journée. n doit
 // être pair (10 ici, donc jamais de journée de repos à gérer). Renvoie un
@@ -7869,6 +8108,7 @@ class League {
 
   recordResult(round, home, away, scoreHome, scoreAway) {
     this.results.push({ round, home, away, scoreHome, scoreAway });
+    applySponsorWinPrimes(this.teams[scoreHome > scoreAway ? home : away]);
   }
 
   // Classement : 2 points pour une victoire, 1 pour une défaite (pas de
@@ -7982,6 +8222,7 @@ class League {
     m.scoreAway = scoreAway;
     m.forfeit = forfeit;
     m.winner = scoreAway > scoreHome ? m.away : m.home;
+    applySponsorWinPrimes(this.teams[m.winner]);
     m.resolved = true;
   }
 
@@ -8124,6 +8365,7 @@ class League {
     series.games.push({ home, away, scoreHome, scoreAway });
     const aWon = home === series.idxA ? scoreHome > scoreAway : scoreAway > scoreHome;
     if (aWon) series.winsA++; else series.winsB++;
+    applySponsorWinPrimes(this.teams[aWon ? series.idxA : series.idxB]);
     if (series.winsA < 2 && series.winsB < 2) return; // série pas encore décidée
     series.resolved = true;
     series.winner = series.winsA === 2 ? series.idxA : series.idxB;
@@ -10037,6 +10279,11 @@ function serializeTeam(team) {
     // une sauvegarde d'avant cette fonctionnalité n'en a simplement pas
     // encore (voir teamFromSave plus bas).
     seasonObjective: team.seasonObjective || null,
+    sponsorOffers: Array.isArray(team.sponsorOffers) ? team.sponsorOffers : [],
+    sponsorContracts: Array.isArray(team.sponsorContracts) ? team.sponsorContracts : [],
+    sponsorHistory: Array.isArray(team.sponsorHistory) ? team.sponsorHistory : [],
+    sponsorReputation: typeof team.sponsorReputation === "number" ? team.sponsorReputation : SPONSOR_REPUTATION_DEFAULT,
+    lastSponsorOfferAt: typeof team.lastSponsorOfferAt === "number" ? team.lastSponsorOfferAt : 0,
     seasonHistory: Array.isArray(team.seasonHistory) ? team.seasonHistory : [],
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
@@ -10515,6 +10762,11 @@ function teamFromSave(data) {
   // ci-dessus) : `null` par défaut (constructeur), une sauvegarde d'avant
   // cette fonctionnalité n'en a simplement pas encore.
   if (typeof data.seasonObjective === "string") team.seasonObjective = data.seasonObjective;
+  team.sponsorOffers = Array.isArray(data.sponsorOffers) ? data.sponsorOffers : [];
+  team.sponsorContracts = Array.isArray(data.sponsorContracts) ? data.sponsorContracts : [];
+  team.sponsorHistory = Array.isArray(data.sponsorHistory) ? data.sponsorHistory : [];
+  team.sponsorReputation = typeof data.sponsorReputation === "number" ? clamp(data.sponsorReputation, 0, 100) : SPONSOR_REPUTATION_DEFAULT;
+  team.lastSponsorOfferAt = typeof data.lastSponsorOfferAt === "number" ? data.lastSponsorOfferAt : 0;
   team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
@@ -12286,6 +12538,8 @@ return {
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,
+  SPONSOR_SLOTS, SPONSOR_TIERS, SPONSOR_PROFILES, SPONSOR_PROFILE_KEYS, SPONSOR_NAMES, SPONSOR_OFFER_TTL_MS, SPONSOR_OFFER_INTERVAL_MS, SPONSOR_REPUTATION_DEFAULT, SPONSOR_REPUTATION_MISS, SPONSOR_TERMINATION_WEEKS,
+  sponsorTiersAvailable, sponsorActiveContractForSlot, sponsorNameForSlot, generateSponsorOffer, refreshSponsorOffers, acceptSponsorOffer, declineSponsorOffer, sponsorTerminationFee, terminateSponsorContract, collectSponsorIncome, applySponsorWinPrimes, settleSponsorsAtSeasonEnd,
   CLUB_RECORD_LABELS, cupResultForTeam, playoffResultForTeam, seasonPlayerTotalsForTeam, seasonSummaryForTeam, seasonRecordCandidatesForTeam, mergeClubRecords, liveClubRecords, liveAllTimePlayers, archiveSeasonForTeam, worldPlayerRankings, worldRankForPlayer,
   TRIGRAM_CHANGE_COOLDOWN_MS, ARENA_NAME_MAX_LENGTH, TRIGRAM_BANNED, isValidTrigram, defaultTrigramForName, teamTrigram, teamArenaName, containsBannedWord, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel,

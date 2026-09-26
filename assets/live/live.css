@@ -52,6 +52,8 @@
 .hm-live .tname.mine::after{content:"Mon club";display:inline-block;vertical-align:5px;margin-left:8px;font-size:10px;letter-spacing:1px;padding:3px 7px;border-radius:999px;background:#3A2508;color:#FFC06E}
 .hm-live .away .tname.mine::after{margin:0 8px 0 0;float:none}
 .hm-live .tshort{display:none;font-weight:800;font-size:16px;letter-spacing:.5px}
+.hm-live .tsponsor{display:none;margin-top:3px;font-size:12px;font-weight:700;letter-spacing:.3px;color:var(--amber,#f5a13a)}
+.hm-live .tsponsor.on{display:block}
 .hm-live .tmeta{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted);margin-top:6px}
 .hm-live .away .tmeta{justify-content:flex-end}
 .hm-live .dots{display:inline-flex;gap:3px}
@@ -186,6 +188,8 @@
 /* ---------- Carte des tirs ---------- */
 .hm-live .court{width:100%;height:auto;display:block;border-radius:12px;background:var(--court)}
 .hm-live .court .ln{fill:none;stroke:var(--courtLine);stroke-width:2}
+.hm-live .court .led{fill:#0b1f3a;stroke:#1f4a86;stroke-width:1.5}
+.hm-live .court .led-txt{fill:#8fd0ff;font:800 13px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:2.5px}
 .hm-live .court .rim{fill:none;stroke:var(--accent);stroke-width:2.5}
 .hm-live .made .dot{stroke:var(--court);stroke-width:2}
 .hm-live .miss path{stroke-width:3;stroke-linecap:round;opacity:.55}

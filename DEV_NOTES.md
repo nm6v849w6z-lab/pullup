@@ -20,6 +20,45 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ ET POUSSÉ (2026-09-26) — Sponsors (4)** — retours communauté
+  ("Système de sponsors ? ils nous approchent et on dit oui ou non. Image
+  sur maillot, pancarte salle, pub. Pénalité en cas de non résultats",
+  Diablue : rupture + mauvais sponsors ensuite, aszat : "le sponsor pourrait
+  te demander de l'argent ? c'est hard") ; choix de l'utilisateur :
+  variante A ("J'aime bien la A"), "un variable aussi selon les résultats",
+  profils "prudent normal ambitieux", "pour le sponsor pub, ça ne me plait
+  pas, parce qu'à terme ça pourrait être un emplacement pour un vrai
+  sponsor" → PAS d'emplacement pub. Maquettes validées (canvas "Sponsors —
+  maquettes"). Moteur (engine.js ET copie HTML, bloc SPONSORS) : 2
+  emplacements (maillot ×1,6 / salle ×1,0), 3 paliers (local / régional ≥
+  35 rép. et ≤ D3 / national ≥ 60 rép. et D1) avec montants indexés sur les
+  droits TV de la division, 3 profils (fixe ×1,3/1,0/0,7, prime par
+  victoire ×0,5/1/2, objectif du CA −1/0/+1 cran, bonus 4/6/12 semaines de
+  fixe, réputation +4/+6/+12 si atteint), offres automatiques (2 par
+  emplacement libre, profils différents, tous les 3 jours, expirent en 7 j),
+  fixe versé dans trainWeek, prime par victoire dans League.recordResult /
+  recordCupMatchResult / recordPlayoffGameResult, règlement idempotent à la
+  fin des play-offs (raté : pas de bonus, contrat rompu, réputation −12,
+  JAMAIS de débit ; clause de rupture 4 sem. de fixe seulement si le club
+  quitte le contrat), historique, Team.sponsorOffers/Contracts/History/
+  Reputation/lastSponsorOfferAt sérialisés. Serveur : offres + fil d'actu
+  au tick, règlement avant l'archive de saison, réputation et historique
+  reportés au reset ; routes /api/sponsors/accept|decline|terminate.
+  Client : section « Sponsors » dans Économie (renderSponsorsPanel :
+  jauge, 2 cartes, offres Accepter/Refuser, contrat avec maillot
+  sponsorisé et clause à double clic), nom du sponsor sur le maillot
+  (jerseySvgHtml 7e argument, aperçus Identité du club et fiche équipe),
+  page Salle : encart « Sponsor de la salle » + panneau dessiné par
+  ArenaGen sur le mur latéral (options.sponsor, textOnFaceX), direct :
+  ligne « Maillot · X » sous chaque club et panneaux LED du sponsor salle du
+  club qui reçoit (sinon HOOP MANAGER) — assets/live/live-view.js + live.css,
+  HM_LIVE_ASSET_VERSION 20260926-11 ; la vue live utilise désormais le
+  trigramme (teamTrigram). Test : sponsors_test.js (nouveau, moteur +
+  serveur + navigateur) + économie, salle, live_*, hoop_show, tabs,
+  dashboard, season_objective, end_to_end, full_run, tous les
+  server/*_test.js verts. Vérifié dans Chromium (Économie, Salle, direct).
+  Non fait : carton dans les émissions (pub retirée), tâche du tableau de
+  bord à l'arrivée d'une offre (fil d'actu seulement), Guide.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées :
   page d'accueil épurée + heure des matchs au choix** — retour utilisateur :
   enlever le titre jaune "LIGUES PRIVÉES" et le texte d'intro ("Une
