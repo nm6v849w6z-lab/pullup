@@ -37723,7 +37723,16 @@ function renderSponsorsPanel() {
   let html = `<div class="spo-head"><div><p class="spo-sub">Deux emplacements : le maillot et les panneaux de la salle. Les sponsors vous approchent ; à vous d'accepter ou non. Un contrat dure une saison.</p></div>` +
     `<div class="spo-rep"><div class="spo-rep-top"><span class="spo-kicker">Réputation sponsors</span><span class="spo-rep-num">${Math.round(rep)} <small>/ 100</small></span></div>` +
     `<div class="spo-rep-bar"><div style="width:${Math.round(rep)}%"></div></div>` +
-    `<div class="spo-rep-legend"><span>Local</span><span>Régional ≥ ${SPONSOR_TIERS.regional.minReputation}</span><span class="hi">National ≥ ${SPONSOR_TIERS.national.minReputation}</span></div></div></div>`;
+    // Paliers réellement débloqués (réputation ET division) en ambre, les
+    // autres en gris (retour utilisateur 2026-09-26 : "pourquoi national est
+    // en jaune alors que j'ai 50 ?").
+    `<div class="spo-rep-legend">${["local", "regional", "national"].map(k => {
+      const t = SPONSOR_TIERS[k];
+      const unlocked = rep >= t.minReputation && (league.divisionLevel || 1) <= t.maxDivisionLevel;
+      const label = k === "local" ? "Local" : k === "regional" ? `Régional ≥ ${t.minReputation}` : `National ≥ ${t.minReputation}`;
+      const divNote = k !== "local" && (league.divisionLevel || 1) > t.maxDivisionLevel ? ` (Division ${t.maxDivisionLevel === 1 ? "I" : "III max"})` : "";
+      return `<span class="${unlocked ? "hi" : ""}" title="${unlocked ? "Débloqué" : "Pas encore débloqué"}">${label}${divNote}</span>`;
+    }).join("")}</div></div></div>`;
   html += `<div class="spo-grid">`;
   SPONSOR_SLOTS.forEach(slot => {
     const contract = sponsorActiveContractForSlot(teamA, slot.key);
