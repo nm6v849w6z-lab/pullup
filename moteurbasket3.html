@@ -28053,6 +28053,11 @@ function finishPlayback() {
 let hmLive = null;
 let hmLiveModulePromise = null;
 
+// Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
+// copies gardées 24 h par les navigateurs (avant le passage en no-cache,
+// voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
+const HM_LIVE_ASSET_VERSION = "20260926-2";
+
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
     hmLiveModulePromise = (async () => {
@@ -28060,10 +28065,10 @@ function hmLiveLoadModule() {
         const link = document.createElement("link");
         link.id = "hmLiveCss";
         link.rel = "stylesheet";
-        link.href = "assets/live/live.css";
+        link.href = "assets/live/live.css?v=" + HM_LIVE_ASSET_VERSION;
         document.head.appendChild(link);
       }
-      return await import("./assets/live/live-view.js");
+      return await import("./assets/live/live-view.js?v=" + HM_LIVE_ASSET_VERSION);
     })().catch(err => {
       console.warn("Nouvelle vue live indisponible, ancienne vue conservée :", err && err.message);
       return null;

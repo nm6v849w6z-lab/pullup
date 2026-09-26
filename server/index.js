@@ -96,7 +96,10 @@ function serveAsset(res, pathname) {
     res.writeHead(200, {
       "Content-Type": contentType,
       "Content-Length": data.length,
-      "Cache-Control": "public, max-age=86400",
+      // Scripts et styles toujours revalidés (2026-09-26 : la nouvelle page
+      // live restait invisible, l'ancien live.css/live-view.js étant gardé
+      // 24 h par le navigateur) ; images et polices gardées 24 h.
+      "Cache-Control": /\.(js|css)$/i.test(relative) ? "no-cache" : "public, max-age=86400",
     });
     res.end(data);
   });

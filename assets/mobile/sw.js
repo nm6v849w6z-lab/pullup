@@ -4,9 +4,12 @@
    piloté par le serveur (calendrier réel, direct) :
    - /api/* : JAMAIS mis en cache (toujours le réseau) ;
    - la page "/" : réseau d'abord, copie de secours en cache si hors ligne ;
-   - /assets/* : cache d'abord (fichiers statiques, rafraîchis en fond).
+   - /assets/*.js et .css : réseau d'abord, cache seulement hors ligne
+     (2026-09-26 : en « cache d'abord », une mise à jour de la page live
+     restait invisible au premier chargement après un déploiement) ;
+   - autres /assets/* (images, polices) : cache d'abord, rafraîchis en fond.
    Changer CACHE_VERSION invalide les anciens caches au prochain passage. */
-const CACHE_VERSION = "hoop-v1";
+const CACHE_VERSION = "hoop-v2";
 const PRECACHE = [
   "/assets/mobile/mobile.css",
   "/assets/mobile/mobile.js",
@@ -47,6 +50,15 @@ self.addEventListener("fetch", (event) => {
           return res;
         })
         .catch(() => caches.match("/").then((hit) => hit || new Response(OFFLINE_HTML, { headers: { "Content-Type": "text/html; charset=utf-8" } })))
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith("/assets/") && /\.(js|css)$/.test(url.pathname)) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE_VERSION).then((c) => c.put(req, copy)); } return res; })
+        .catch(() => caches.match(req).then((hit) => hit || Response.error()))
     );
     return;
   }

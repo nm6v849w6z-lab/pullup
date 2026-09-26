@@ -59,7 +59,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   mi-temps, fin).
   Retouche : le fil du match prend la hauteur de la carte des tirs (plus de
   vide sous la carte ; défilement interne), hauteur fixe en une colonne.
-  Reste : `git push`.
+  Poussé par l'utilisateur mais « ça n'est pas passé » (capture : ancienne
+  vue sur hoop-manager.com) : live.css/live-view.js gardés en cache —
+  service worker en « cache d'abord » sur /assets/* et Cache-Control 24 h.
+  Correctif : .js/.css servis en no-cache (serveAsset), service worker en
+  réseau d'abord pour .js/.css (CACHE_VERSION hoop-v2), et ?v=
+  HM_LIVE_ASSET_VERSION sur les URL de la vue live pour contourner les
+  copies déjà en cache. Tests mobile_pwa, index, live_view_game_style,
+  dashboard_live_match, live_court_home_logo verts. Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Rotation : les
   10 titulaires jouaient tout le 1er quart-temps** — retour utilisateur
