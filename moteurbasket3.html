@@ -1158,7 +1158,12 @@
   .cp-form-bye{background:var(--panel-2); color:var(--ink-dim);}
   .cp-form-next{border:2px solid var(--amber); box-shadow:0 0 0 3px rgba(240,162,60,.15);}
   .cp-form-out{opacity:.45;}
-  .cp-best{grid-template-columns:1fr;}
+  /* Brique "Meilleure victoire" sur toute la largeur de la carte Parcours
+     (retour utilisateur 2026-09-26 : "ça fera un peu moins tassé") :
+     sélecteur double pour passer devant .cal-split (1fr 1fr), défini plus
+     bas dans la feuille. */
+  .cal-split.cp-best{grid-template-columns:1fr;}
+  .cal-split.cp-best > div{align-items:center; gap:12px;}
   .cp-best b .team-link{font-weight:700;}
   .cp-best small{font-weight:500; color:var(--ink-faint); font-size:12px;}
   .cp-out-team{display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; margin:16px 0 4px;}
