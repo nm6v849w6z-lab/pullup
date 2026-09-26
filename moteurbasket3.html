@@ -601,7 +601,6 @@
   #prepSection .lineup-reserves{margin-top:0; font-size:12.5px;}
   /* Carte « Temps de jeu » : blocs par poste disposés comme sur le terrain
      (M | A, AS | AF, P centré), compacts. */
-  #prepSection .pt-intro{margin:0 0 10px; font-size:12.5px; line-height:1.45; color:var(--ink-dim);}
   #prepSection .pt-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:start;}
   #prepSection .pt-block{border:1px solid var(--line-soft); border-radius:12px; padding:10px 12px; background:var(--panel-2); display:flex; flex-direction:column; gap:6px; min-width:0;}
   #prepSection .pt-block.pt-center{grid-column:1 / span 2; justify-self:center; width:calc(50% - 5px);}
@@ -27519,11 +27518,10 @@ function renderLineupEditor(team, container, opts = {}) {
 // ajoute un joueur hors rotation au poste (il y devient réserviste, 0 min).
 // Données/moteur : Team.slotMinuteShares, MatchEngine.substituteToTarget.
 function renderPlayingTimeCard(team, container, makeCard, rerender) {
-  const card = makeCard("ordresCardMinutes", "Temps de jeu", "Minutes visées par poste, sur 40");
-  const intro = document.createElement("p");
-  intro.className = "pt-intro";
-  intro.textContent = "Le moteur vise ces minutes et les ajuste seul en cas de blessure, de fautes ou de fatigue. En automatique, la rotation habituelle s'applique.";
-  card.appendChild(intro);
+  // Plus de sous-titre ni de texte d'intro (retour utilisateur 2026-09-26 :
+  // "enlève ça : Minutes visées par poste, sur 40 / Le moteur vise ces
+  // minutes…") — tout est dans le guide.
+  const card = makeCard("ordresCardMinutes", "Temps de jeu");
   const sync = () => { if (team === teamA) syncLineupToServer(); rerender(); };
   const starterIds = new Set(POSITIONS.map(pos => team.lineup.starters[pos]).filter(Boolean));
   const grid = document.createElement("div");

@@ -20,6 +20,23 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **À INVESTIGUER / DÉCISION UTILISATEUR (2026-09-26) — Scores bas en
+  Division VI (52-40, 44-34 en coupe)** — question utilisateur : "c'est dû
+  au niveau des joueurs ?". Mesuré avec simulate.js (copie temporaire, le
+  chemin /home/claude/basket/last_run.json n'existe pas sur le Mac) :
+  tier 0.85-1.15 (référence) → 83 pts/équipe, FG2 43 %, FG3 37 %, 0,6 % de
+  matchs < 45 ; tier 0.50-0.63 (= Division VI, tierMultiplier 0.55 ×
+  rand(0.9,1.15)) → 59 pts/équipe, FG2 30 %, FG3 22 %, FT 60 %, 16,6 % de
+  matchs < 45 ; tier 1.30-1.67 (Div I) → 98 pts, FG2 53 %, FG3 47 %.
+  Le rythme est bon partout (~97-100 possessions) : c'est l'EFFICACITÉ qui
+  chute linéairement avec les attributs (générés à ×0.55 en Div VI). Donc
+  oui, c'est le niveau des joueurs, via le mapping attributs → % de tir.
+  Pistes si on veut relever le plancher : (a) plancher sur les % de tir
+  (ex. FG2 ≥ ~38 %, FG3 ≥ ~28 %, FT ≥ ~65 %) indépendant des attributs, ou
+  (b) mapping attributs → réussite moins linéaire (compresser le bas de
+  l'échelle), ou (c) resserrer les tierMultiplier des divisions basses
+  (0.55 → ~0.75). Rien codé, en attente du choix utilisateur.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ordres : carte
   Défense tout en boutons** — retours utilisateur (capture, 11:06) : "dans
   défense, tu peux mettre que des boutons comme pour aide défensive et close
@@ -36,6 +53,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   next_match_cup_priority_ui ; onboarding_tour et end_to_end verts.
   Second commit : carte Temps de jeu, écart entre les blocs par poste 10 →
   18px ("aère un peu les briques dans temps de jeu, elles sont collées").
+  Troisième commit : sous-titre "Minutes visées par poste, sur 40" et texte
+  d'intro de la carte retirés ("enlève ça").
   Reste : `git push` + redéploiement.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle : boutons
