@@ -3297,13 +3297,19 @@ function tacticalKnowledgeGainForStreak(playStreak) {
 }
 
 // Courbe de perte, par match consécutif où une option reste délaissée :
-// AUCUNE perte au 1er match d'absence (un aller-retour d'un seul match ne
-// coûte rien), puis la perte accélère avant de plafonner.
-const TACTICAL_KNOWLEDGE_LOSS_STEP = 4; // += par match d'absence supplémentaire (à partir du 2e)
-const TACTICAL_KNOWLEDGE_LOSS_MAX = 16; // plafond (atteint au 5e match d'absence)
+// AUCUNE perte aux TACTICAL_KNOWLEDGE_LOSS_GRACE premiers matchs d'absence,
+// puis la perte accélère avant de plafonner.
+// Adoucie le 2026-09-26 (remarque d'un joueur relayée par l'utilisateur :
+// "la perte pour les entraînements collectifs est énorme non ?", option 1
+// retenue) : avant, 0/-4/-8/-12/-16 par match (plafond -16 > gain max +12),
+// soit -88 en 8 matchs d'absence — 4 jours à 2 matchs par jour. Désormais
+// 0/0/-2/-4/-6 (plafond -6, sous le gain max) : -30 en 8 matchs.
+const TACTICAL_KNOWLEDGE_LOSS_GRACE = 2; // matchs d'absence gratuits
+const TACTICAL_KNOWLEDGE_LOSS_STEP = 2; // += par match d'absence au-delà de la période de grâce
+const TACTICAL_KNOWLEDGE_LOSS_MAX = 6; // plafond (atteint au 5e match d'absence)
 function tacticalKnowledgeLossForStreak(awayStreak) {
-  if (awayStreak <= 1) return 0;
-  return Math.min(TACTICAL_KNOWLEDGE_LOSS_MAX, (awayStreak - 1) * TACTICAL_KNOWLEDGE_LOSS_STEP);
+  if (awayStreak <= TACTICAL_KNOWLEDGE_LOSS_GRACE) return 0;
+  return Math.min(TACTICAL_KNOWLEDGE_LOSS_MAX, (awayStreak - TACTICAL_KNOWLEDGE_LOSS_GRACE) * TACTICAL_KNOWLEDGE_LOSS_STEP);
 }
 
 // Gain quotidien de connaissance tactique par jour d'entraînement collectif
@@ -11568,7 +11574,7 @@ return {
   // Connaissance tactique (voir le grand commentaire au-dessus de
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
-  TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_DAILY_GAIN,
+  TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
   CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,

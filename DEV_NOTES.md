@@ -20,6 +20,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Connaissance
+  tactique : perte adoucie** — remarque d'un joueur relayée par
+  l'utilisateur : "la perte pour les entraînements collectifs est énorme
+  non ?", puis "ralentir la perte alors oui" (option 1 sur 3 proposées).
+  Avant : 0/-4/-8/-12/-16 par match d'absence (plafond -16 > gain max
+  +12), soit -88 en 8 matchs (4 jours à 2 matchs/jour). Après :
+  0/0/-2/-4/-6 (TACTICAL_KNOWLEDGE_LOSS_GRACE=2, STEP=2, MAX=6), soit -30
+  en 8 matchs. Fichiers : engine.js ET moteurbasket3.html (copie
+  navigateur), tactical_knowledge_test.js adapté (courbe, trajectoire,
+  retour après 5 matchs d'absence au lieu de 3). Tests verts :
+  tactical_knowledge, team_chemistry, trained_tactic_dropdown,
+  attr_color_scheme_everywhere. Non traité (proposé, pas retenu pour
+  l'instant) : bonus d'entraînement tactique compté par jour, quasi nul
+  au rythme de 2 matchs/jour ; plancher de maîtrise. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Entraînement :
   avatars des joueurs dans le bilan** — retour utilisateur (capture "Bilan
   de la semaine dernière") : "onglet entrainement, ajoute les avatars des

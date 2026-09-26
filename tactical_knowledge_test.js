@@ -81,22 +81,15 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
 //    d'absence ("après un match on n'oublie pas"), puis accélère.
 // ---------------------------------------------------------------------
 (function testLossCurveHasGracePeriodThenAccelerates() {
-  if (tacticalKnowledgeLossForStreak(1) !== 0) {
-    throw new Error("❌ Le 1er match d'absence ne devrait donner AUCUNE perte (période de grâce).");
+  // Courbe adoucie le 2026-09-26 : 0/0/-2/-4/-6, plafond -6 (sous le gain
+  // max, TACTICAL_KNOWLEDGE_GAIN_MAX).
+  const curve = [1, 2, 3, 4, 5, 6, 20].map(tacticalKnowledgeLossForStreak);
+  if (JSON.stringify(curve) !== JSON.stringify([0, 0, 2, 4, 6, 6, 6])) {
+    throw new Error(`❌ Courbe de perte attendue 0/0/2/4/6/6/6, obtenu ${curve.join("/")}.`);
   }
-  if (tacticalKnowledgeLossForStreak(2) !== TACTICAL_KNOWLEDGE_LOSS_STEP) {
-    throw new Error(`❌ Le 2e match d'absence devrait coûter exactement TACTICAL_KNOWLEDGE_LOSS_STEP (${TACTICAL_KNOWLEDGE_LOSS_STEP}).`);
+  if (TACTICAL_KNOWLEDGE_LOSS_MAX >= TACTICAL_KNOWLEDGE_GAIN_MAX) {
+    throw new Error("❌ La perte max par match doit rester inférieure au gain max (oublier ne doit pas aller plus vite qu'apprendre).");
   }
-  if (tacticalKnowledgeLossForStreak(3) !== 2 * TACTICAL_KNOWLEDGE_LOSS_STEP) {
-    throw new Error("❌ Le 3e match d'absence devrait coûter 2x plus que le 2e (accélération).");
-  }
-  if (tacticalKnowledgeLossForStreak(5) !== TACTICAL_KNOWLEDGE_LOSS_MAX) {
-    throw new Error(`❌ La perte devrait plafonner à TACTICAL_KNOWLEDGE_LOSS_MAX (${TACTICAL_KNOWLEDGE_LOSS_MAX}) au 5e match d'absence.`);
-  }
-  if (tacticalKnowledgeLossForStreak(20) !== TACTICAL_KNOWLEDGE_LOSS_MAX) {
-    throw new Error("❌ La perte ne devrait jamais dépasser le plafond, même très loin dans l'absence.");
-  }
-
   const home = generateStartingRoster("Loss Curve");
   generateLeague(home, 1, T0);
   home.defense = "Homme à homme";
@@ -107,9 +100,9 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
     recordMatchStatsForTeam(home, i, "championship", T0 + i * ONE_DAY);
     values.push(home.tacticalKnowledge.defense["Homme à homme"]);
   }
-  // 56 -> match1 d'absence: 0 perte (56) -> match2: -4 (52) -> match3: -8 (44)
-  // -> match4: -12 (32) -> match5: -16 (16, plafond).
-  const expected = [56, 52, 44, 32, 16];
+  // 56 -> matchs 1 et 2 d'absence : 0 perte (56, 56) -> match3 : -2 (54)
+  // -> match4 : -4 (50) -> match5 : -6 (44, plafond). Courbe 2026-09-26.
+  const expected = [56, 56, 54, 50, 44];
   if (JSON.stringify(values) !== JSON.stringify(expected)) {
     throw new Error(`❌ La perte progressive de l'option délaissée devrait suivre [${expected}], obtenu [${values}].`);
   }
@@ -264,27 +257,29 @@ function referenceTrajectory(matches) {
   }
   const masteryBeforeLeaving = home.tacticalKnowledge.defense["Homme à homme"]; // 56+8+10+12=86... via boucle réelle
 
-  // Part sur Zone extérieure pendant 3 matchs (une "presque toute la saison
-  // sur une tactique, 3-4 matchs sur une autre" comme décrit par l'utilisateur).
+  // Part sur Zone extérieure pendant 5 matchs (une "presque toute la saison
+  // sur une tactique, quelques matchs sur une autre" comme décrit par
+  // l'utilisateur ; 5 et non plus 3 depuis la courbe adoucie du 2026-09-26,
+  // où 3 matchs d'absence ne coûtent que 2 points).
   home.defense = "Zone extérieure";
-  for (let i = 4; i < 7; i++) {
+  for (let i = 4; i < 9; i++) {
     recordMatchStatsForTeam(home, i, "championship", T0 + i * ONE_DAY);
   }
   const masteryAfterAbsence = home.tacticalKnowledge.defense["Homme à homme"];
-  // 3 matchs d'absence : perte 0 (match1) puis -4 (match2) puis -8 (match3).
-  const expectedAfterAbsence = masteryBeforeLeaving - 0 - TACTICAL_KNOWLEDGE_LOSS_STEP - 2 * TACTICAL_KNOWLEDGE_LOSS_STEP;
+  // 5 matchs d'absence : pertes selon la courbe (0, 0, -2, -4, -6 depuis 2026-09-26).
+  const expectedAfterAbsence = masteryBeforeLeaving - [1, 2, 3, 4, 5].reduce((sum, k) => sum + tacticalKnowledgeLossForStreak(k), 0);
   if (masteryAfterAbsence !== expectedAfterAbsence) {
-    throw new Error(`❌ Après 3 matchs d'absence, la perte cumulée devrait être exactement celle de la courbe (attendu ${expectedAfterAbsence}, obtenu ${masteryAfterAbsence}).`);
+    throw new Error(`❌ Après 5 matchs d'absence, la perte cumulée devrait être exactement celle de la courbe (attendu ${expectedAfterAbsence}, obtenu ${masteryAfterAbsence}).`);
   }
   if (masteryAfterAbsence >= masteryBeforeLeaving) {
-    throw new Error("❌ 3 matchs d'absence consécutifs devraient avoir fait baisser la maîtrise.");
+    throw new Error("❌ 5 matchs d'absence consécutifs devraient avoir fait baisser la maîtrise.");
   }
 
   // Retour à Homme à homme : ne remonte PAS d'un coup à masteryBeforeLeaving,
   // le gain repart d'un streak=1 tout neuf (+TACTICAL_KNOWLEDGE_GAIN_BASE),
   // EXACTEMENT comme s'il s'agissait d'une tactique jamais jouée.
   home.defense = "Homme à homme";
-  recordMatchStatsForTeam(home, 7, "championship", T0 + 7 * ONE_DAY);
+  recordMatchStatsForTeam(home, 9, "championship", T0 + 9 * ONE_DAY);
   const afterReturn = home.tacticalKnowledge.defense["Homme à homme"];
   if (afterReturn !== masteryAfterAbsence + TACTICAL_KNOWLEDGE_GAIN_BASE) {
     throw new Error(`❌ Le retour après une absence de plusieurs matchs devrait rapporter EXACTEMENT le gain de base d'un 1er match (+${TACTICAL_KNOWLEDGE_GAIN_BASE}), comme un apprentissage neuf (attendu ${masteryAfterAbsence + TACTICAL_KNOWLEDGE_GAIN_BASE}, obtenu ${afterReturn}).`);
@@ -292,7 +287,7 @@ function referenceTrajectory(matches) {
   if (afterReturn >= masteryBeforeLeaving) {
     throw new Error("❌ Un seul match de retour ne devrait PAS suffire à retrouver la maîtrise d'avant le départ (ça doit remonter progressivement, pas d'un coup).");
   }
-  console.log(`✅ Revenir à une tactique délaissée 3 matchs de suite (${masteryBeforeLeaving} -> ${masteryAfterAbsence} -> ${afterReturn}) remonte progressivement, exactement comme un apprentissage neuf — plus jamais "tout ou rien".`);
+  console.log(`✅ Revenir à une tactique délaissée 5 matchs de suite (${masteryBeforeLeaving} -> ${masteryAfterAbsence} -> ${afterReturn}) remonte progressivement, exactement comme un apprentissage neuf — plus jamais "tout ou rien".`);
 })();
 
 (function testSingleMatchDetourIsFreeButResetsGainMomentum() {

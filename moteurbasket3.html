@@ -10011,11 +10011,14 @@ function tacticalKnowledgeGainForStreak(playStreak) {
   if (playStreak <= 0) return 0;
   return Math.min(TACTICAL_KNOWLEDGE_GAIN_MAX, TACTICAL_KNOWLEDGE_GAIN_BASE + (playStreak - 1) * TACTICAL_KNOWLEDGE_GAIN_STEP);
 }
-const TACTICAL_KNOWLEDGE_LOSS_STEP = 4;
-const TACTICAL_KNOWLEDGE_LOSS_MAX = 16;
+// Perte adoucie le 2026-09-26 (copie navigateur, même courbe qu'engine.js) :
+// 0/0/-2/-4/-6 par match d'absence, plafond -6.
+const TACTICAL_KNOWLEDGE_LOSS_GRACE = 2;
+const TACTICAL_KNOWLEDGE_LOSS_STEP = 2;
+const TACTICAL_KNOWLEDGE_LOSS_MAX = 6;
 function tacticalKnowledgeLossForStreak(awayStreak) {
-  if (awayStreak <= 1) return 0;
-  return Math.min(TACTICAL_KNOWLEDGE_LOSS_MAX, (awayStreak - 1) * TACTICAL_KNOWLEDGE_LOSS_STEP);
+  if (awayStreak <= TACTICAL_KNOWLEDGE_LOSS_GRACE) return 0;
+  return Math.min(TACTICAL_KNOWLEDGE_LOSS_MAX, (awayStreak - TACTICAL_KNOWLEDGE_LOSS_GRACE) * TACTICAL_KNOWLEDGE_LOSS_STEP);
 }
 // Gain quotidien direct par jour d'entraînement collectif "tactique" banqué
 // sur l'option EXACTEMENT en train d'être jouée (voir Team.trainedTactics).
