@@ -1218,6 +1218,9 @@
   .cp-bracket .cup-match-team.winner .team-link{font-weight:800;}
   .cp-bracket .cup-match-team.me .team-link{color:var(--amber);}
   .cp-bracket .cup-match-team.winner .cup-match-score{color:var(--ok);}
+  /* Score cliquable (ouvre la feuille de statistiques du match). */
+  .cp-bracket button.cup-match-score{font-weight:700; padding:2px 6px; margin:-2px -6px; border-radius:6px;}
+  .cp-bracket button.cup-match-score:hover, .cp-bracket button.cup-match-score:focus-visible{background:var(--panel-2); color:var(--amber); outline:none;}
   .cp-bracket .cup-match-team.tbd{font-size:13px;}
   .cp-bracket .cup-match:has(.cup-match-team.me){border-color:rgba(240,162,60,.6);}
   .cup-match-when{font-size:11px; color:var(--ink-faint); padding:0 12px 7px;}
@@ -32728,17 +32731,27 @@ document.getElementById("calendrierContent").addEventListener("click", (e) => {
 // le sien ni un adversaire (contrairement au Classement/Calendrier) - fixé
 // pour les deux à la fois ici, showTeamDetail gère déjà isOwnTeam
 // correctement (voir teamLinkHtml).
-function cupTeamRowHtml(idx, scoreText, isWinner) {
+// `boxscoreAttrs` (retour utilisateur, 2026-09-26 : "il faudrait pouvoir
+// cliquer et ouvrir les box scores des matchs directement dans les briques
+// des phases finales, en cliquant sur le score") : attributs
+// data-boxscore-* d'un match joué — le score devient alors un bouton,
+// ouvert par la délégation de #coupeContent (showMatchBoxscore), comme
+// dans la liste des matchs du tour juste au-dessus.
+function cupTeamRowHtml(idx, scoreText, isWinner, boxscoreAttrs) {
   if (idx == null) return "";
   const cls = ["cup-match-team"];
   if (idx === myTeamIndex) cls.push("me");
   if (isWinner) cls.push("winner");
-  return `<div class="${cls.join(" ")}">${teamLinkHtml(idx, league.teams[idx].name)}<span class="cup-match-score">${scoreText || ""}</span></div>`;
+  const score = boxscoreAttrs && scoreText
+    ? `<button type="button" class="cup-match-score calendar-score-btn" ${boxscoreAttrs} title="Voir la feuille de statistiques">${scoreText}</button>`
+    : `<span class="cup-match-score">${scoreText || ""}</span>`;
+  return `<div class="${cls.join(" ")}">${teamLinkHtml(idx, league.teams[idx].name)}${score}</div>`;
 }
 
 // `tbdLabels` (refonte 2026-09-26) : ["Vainqueur 1/8 n°1", …] au lieu de
 // "À déterminer" ; `when` : date/heure du tour sous la carte.
-function cupMatchCardHtml(m, tbdLabels, when) {
+// `roundIndex` : index du tour dans league.cup.rounds (pour le boxscore).
+function cupMatchCardHtml(m, tbdLabels, when, roundIndex) {
   const whenHtml = when ? `<div class="cup-match-when">${escapeHtml(when)}</div>` : "";
   if (!m) {
     const [l1, l2] = tbdLabels || ["À déterminer", "À déterminer"];
@@ -32764,10 +32777,13 @@ function cupMatchCardHtml(m, tbdLabels, when) {
   const awayWin = m.resolved && m.winner === m.away;
   const homeScore = m.resolved ? String(m.scoreHome) : "";
   const awayScore = m.resolved ? String(m.scoreAway) : "";
-  return `<div class="cup-match">` +
-    cupTeamRowHtml(m.home, homeScore, homeWin) +
+  const bx = m.resolved && roundIndex != null
+    ? `data-boxscore-round="${roundIndex}" data-boxscore-competition="cup" data-boxscore-home="${m.home}" data-boxscore-away="${m.away}"`
+    : "";
+  return `<div class="cup-match${bx ? " has-boxscore" : ""}">` +
+    cupTeamRowHtml(m.home, homeScore, homeWin, bx) +
     `<div class="cup-match-vs">vs</div>` +
-    cupTeamRowHtml(m.away, awayScore, awayWin) +
+    cupTeamRowHtml(m.away, awayScore, awayWin, bx) +
     whenHtml + `</div>`;
 }
 
@@ -33091,7 +33107,8 @@ function renderCoupeSection() {
     const when = at != null ? `${formatCalendarDayFr(at)} · ${formatCalendarTimeFr(at)}` : "";
     for (let k = 0; k < cupStageMatchCount(stageIdx); k++) {
       const prev = stageIdx > 0 ? cupRoundShort(stageIdx - 1) : "";
-      html += cupMatchCardHtml(matches ? matches[k] : null, prev ? [`Vainqueur ${prev} n°${2 * k + 1}`, `Vainqueur ${prev} n°${2 * k + 2}`] : null, when);
+      const roundIndex = cup.rounds[stageIdx] && typeof cup.rounds[stageIdx].index === "number" ? cup.rounds[stageIdx].index : stageIdx;
+      html += cupMatchCardHtml(matches ? matches[k] : null, prev ? [`Vainqueur ${prev} n°${2 * k + 1}`, `Vainqueur ${prev} n°${2 * k + 2}`] : null, when, roundIndex);
     }
     html += "</div></div>";
   }
