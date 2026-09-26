@@ -5417,22 +5417,16 @@
   .settings-note{margin:12px 0 0; font-size:12.5px; color:var(--ink-faint);}
 
   /* ---- Trigramme (identité du club) et nom de salle ---- */
-  .club-trigram-block{margin:4px 0 16px;}
-  .club-trigram-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
-  .club-trigram-preview svg, .club-trigram-preview img{width:40px; height:40px; border-radius:50%; display:block;}
   .club-trigram-input{width:92px; height:38px; box-sizing:border-box; padding:0 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:18px; font-weight:800; letter-spacing:.2em; text-transform:uppercase; text-align:center;}
   .club-trigram-input:focus{outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber);}
   .club-trigram-input:disabled{opacity:.5;}
   .club-trigram-note{margin-top:6px;}
-  .sl-rename{margin-top:12px;}
-  .sl-rename-form{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px;}
-  .sl-rename-form.hidden{display:none;}
-  .sl-rename-form .secondary, .sl-rename-toggle{background:var(--panel);}
-  .sl-rename-input{background:var(--panel);}
-  .sl-rename-input{flex:1 1 220px; max-width:320px; height:38px; box-sizing:border-box; padding:0 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:14px; font-weight:600;}
+  .settings-club-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .settings-club-logo svg, .settings-club-logo img{width:36px; height:36px; border-radius:50%; display:block;}
+  .sl-rename-input{flex:1 1 200px; height:38px; box-sizing:border-box; padding:0 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:14px; font-weight:600;}
   .sl-rename-input:focus{outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber);}
-  .sl-rename-note{flex-basis:100%; font-size:12px; color:var(--ink-dim);}
-  .sl-rename-feedback{flex-basis:100%; font-size:12.5px; font-weight:600;}
+  .settings-feedback{margin:6px 0 0; font-size:12.5px; font-weight:600; min-height:0;}
+  .settings-feedback:empty{display:none;}
   /* ---- Ligues privées (Premium) — voir renderLpSection ---- */
   #lpSection{--display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-size:14px;}
   #lpSection .pos{color:var(--ok);} #lpSection .neg{color:#f0a292;} #lpSection .dim{color:var(--ink-faint);}
@@ -8070,7 +8064,7 @@ const ARENA_NAME_MAX_LENGTH = 30;
 const TRIGRAM_BANNED = new Set(["SEX", "FDP", "NTM", "KKK", "NIK", "CUL", "PUT", "BIT", "ZOB", "ASS", "FUK", "FCK", "DTC", "NAZ", "SS7"]);
 const NAME_BANNED_WORDS = ["pute", "salope", "encul", "nique", "niqu", "connard", "connasse", "fdp", "ntm", "batard", "bâtard", "nazi", "hitler", "pd ", "fuck", "shit", "bitch", "nigg", "cunt"];
 function isValidTrigram(value) {
-  return typeof value === "string" && /^[A-Z]{3}$/.test(value);
+  return typeof value === "string" && /^[A-Z]{2,3}$/.test(value);
 }
 // Sigle par défaut depuis le nom : initiales des deux premiers mots ou 3
 // premières lettres (même règle historique que teamAbbrev côté navigateur).
@@ -11391,7 +11385,8 @@ class Team {
     // Identité du club : logo et maillots (voir engine.js, miroir identique).
     this.isPaying = false;
     // Trigramme personnalisé (retour communauté 2026-09 : "Pouvoir choisir
-    // son trigramme") : 3 lettres A-Z, unique dans la ligue, `null` = calculé
+    // son trigramme", "qui peut être que 2 lettres") : 2 ou 3 lettres A-Z,
+    // unique dans la ligue, `null` = calculé
     // depuis le nom (voir teamTrigram). trigramChangedAt limite les
     // changements à un tous les TRIGRAM_CHANGE_COOLDOWN_MS (classements
     // lisibles pour les autres managers).
@@ -32120,19 +32115,6 @@ function renderClubIdentityPanel() {
   const dashboardJerseyPattern = effectiveJerseyPattern(teamA);
   const dashboardJerseyTwoTone = effectiveJerseyTwoTone(teamA);
   html += `<div class="club-identity-jersey">`;
-  // Trigramme (retour communauté 2026-09 : "Pouvoir choisir son trigramme") :
-  // 3 lettres, unique dans la ligue, un changement tous les 30 jours (validé
-  // côté serveur en ligue partagée, voir actions.setTeamTrigram).
-  const trigramNow = teamTrigram(teamA);
-  const trigramCooldownLeft = typeof teamA.trigramChangedAt === "number" ? Math.max(0, TRIGRAM_CHANGE_COOLDOWN_MS - (Date.now() - teamA.trigramChangedAt)) : 0;
-  const trigramDays = Math.ceil(trigramCooldownLeft / (24 * 3600 * 1000));
-  html += `<div class="club-trigram-block"><p class="field-label" style="margin:0 0 6px">Trigramme</p>` +
-    `<div class="club-trigram-row"><span class="club-trigram-preview">${teamLogoHtml(teamA, 40)}</span>` +
-    `<input type="text" id="clubTrigramInput" class="club-trigram-input" maxlength="3" value="${escapeHtml(trigramNow)}" aria-label="Trigramme du club" autocomplete="off" spellcheck="false"${trigramCooldownLeft ? " disabled" : ""}>` +
-    `<button type="button" class="secondary" id="clubTrigramSaveBtn"${trigramCooldownLeft ? " disabled" : ""}>Enregistrer</button>` +
-    (teamA.trigram ? `<button type="button" class="secondary" id="clubTrigramResetBtn"${trigramCooldownLeft ? " disabled" : ""}>Par défaut (${escapeHtml(defaultTrigramForName(teamA.name))})</button>` : "") +
-    `</div><p class="sub club-trigram-note">3 lettres, uniques dans la ligue, affichées sur le logo type, les classements et le direct. ` +
-    (trigramCooldownLeft ? `Prochain changement possible dans ${trigramDays} jour${trigramDays > 1 ? "s" : ""}.` : "Un changement possible tous les 30 jours.") + `</p></div>`;
   html += `<p class="field-label" style="margin:0 0 6px">Forme du maillot</p>`;
   html += `<div class="jersey-shape-picker">` + JERSEY_SHAPES.map(shape =>
     `<button type="button" class="jersey-shape-btn${teamA.jerseyShape === shape ? " active" : ""}" data-jersey-shape="${shape}">` +
@@ -32318,12 +32300,13 @@ function showSettingsModal() {
   overlay.id = "settingsModalOverlay";
   overlay.innerHTML = `<div class="upgrade-confirm-box settings-modal-box" role="dialog" aria-labelledby="settingsModalTitle">` +
     `<h2 id="settingsModalTitle">Paramètres</h2>` +
-    `<p class="settings-sub">Réglages d'affichage de ce navigateur.</p>` +
+    `<p class="settings-sub">Affichage de ce navigateur et réglages du club.</p>` +
     `<div class="settings-row-label">Thème</div>` +
     `<div class="settings-theme" id="settingsThemeChoices">` +
     opt("dark", "Sombre", "is-dark") + opt("light", "Clair", "is-light") + opt("system", "Comme l'appareil", "is-system") +
     `</div>` +
     `<p class="settings-note">« Comme l'appareil » suit le mode clair ou sombre de ton ordinateur ou de ton téléphone.</p>` +
+    `<div id="settingsClubBlock">${settingsClubBlockHtml()}</div>` +
     `<button type="button" class="upgrade-confirm-cancel-btn" id="settingsModalCloseBtn" style="margin-top:18px; width:100%;">Fermer</button>` +
     `</div>`;
   document.body.appendChild(overlay);
@@ -32335,6 +32318,38 @@ function showSettingsModal() {
     overlay.querySelectorAll("[data-theme-choice]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
   });
   document.getElementById("settingsModalCloseBtn").addEventListener("click", closeSettingsModal);
+}
+
+// Paramètres du club (retour utilisateur 2026-09-26 : "le nom de la salle
+// est à modifier dans les parametres", "idem pour le trigramme") :
+// trigramme (3 lettres, unique dans la ligue, un changement / 30 j, voir
+// actions.setTeamTrigram) et nom de salle (voir actions.setTeamArenaName),
+// dans la fenêtre Paramètres (⚙) plutôt que dans Identité du club / Salle.
+function settingsClubBlockHtml() {
+  const info = arenaInfo(teamA.arenaLevel);
+  const trigramNow = teamTrigram(teamA);
+  const cooldownLeft = typeof teamA.trigramChangedAt === "number" ? Math.max(0, TRIGRAM_CHANGE_COOLDOWN_MS - (Date.now() - teamA.trigramChangedAt)) : 0;
+  const days = Math.ceil(cooldownLeft / (24 * 3600 * 1000));
+  const dis = cooldownLeft ? " disabled" : "";
+  return `<div class="settings-row-label" style="margin-top:22px">Trigramme du club</div>` +
+    `<div class="settings-club-row"><span class="settings-club-logo">${teamLogoHtml(teamA, 36)}</span>` +
+    `<input type="text" id="clubTrigramInput" class="club-trigram-input" maxlength="3" value="${escapeHtml(trigramNow)}" aria-label="Trigramme du club" autocomplete="off" spellcheck="false"${dis}>` +
+    `<button type="button" class="secondary" id="clubTrigramSaveBtn"${dis}>Enregistrer</button>` +
+    (teamA.trigram ? `<button type="button" class="secondary" id="clubTrigramResetBtn"${dis}>Par défaut (${escapeHtml(defaultTrigramForName(teamA.name))})</button>` : "") + `</div>` +
+    `<p class="settings-note">2 ou 3 lettres, uniques dans la ligue, affichées sur le logo type, les classements et le direct. ` +
+    (cooldownLeft ? `Prochain changement possible dans ${days} jour${days > 1 ? "s" : ""}.` : "Un changement possible tous les 30 jours.") + `</p>` +
+    `<p class="settings-feedback" id="settingsTrigramFeedback"></p>` +
+    `<div class="settings-row-label" style="margin-top:18px">Nom de la salle</div>` +
+    `<div class="settings-club-row">` +
+    `<input type="text" id="salleArenaNameInput" class="sl-rename-input" maxlength="${ARENA_NAME_MAX_LENGTH}" value="${escapeHtml(teamA.arenaName || "")}" placeholder="${escapeHtml(info.name)}" aria-label="Nom de la salle">` +
+    `<button type="button" class="secondary" id="salleArenaNameSaveBtn">Enregistrer</button>` +
+    (teamA.arenaName ? `<button type="button" class="secondary" id="salleArenaNameResetBtn">Par défaut</button>` : "") + `</div>` +
+    `<p class="settings-note">3 à ${ARENA_NAME_MAX_LENGTH} caractères. Vide = nom du palier (${escapeHtml(info.name)}). Actuellement : <b>${escapeHtml(teamArenaName(teamA))}</b>.</p>` +
+    `<p class="settings-feedback" id="settingsArenaFeedback"></p>`;
+}
+function refreshSettingsClubBlock() {
+  const block = document.getElementById("settingsClubBlock");
+  if (block) block.innerHTML = settingsClubBlockHtml();
 }
 
 function showClubIdentityModal() {
@@ -32413,72 +32428,62 @@ document.addEventListener("click", (e) => {
 // Trigramme : validation locale puis serveur (ligue partagée) ; en solo,
 // saveMyTeam() suffit (aucun autre club humain à qui être unique).
 async function applyTrigramChange(value) {
-  const feedback = document.getElementById("clubIdentityFeedback");
-  const showError = (msg) => { if (feedback) feedback.innerHTML = `<p class="sub" style="color:var(--danger)">${escapeHtml(msg)}</p>`; };
+  const showMsg = (msg, ok) => { const fb = document.getElementById("settingsTrigramFeedback"); if (fb) { fb.textContent = msg; fb.style.color = ok ? "var(--ok)" : "var(--danger)"; } };
   const trigram = value == null ? null : String(value).trim().toUpperCase();
-  if (trigram !== null && !isValidTrigram(trigram)) { showError("Le trigramme doit faire exactement 3 lettres (A-Z)."); return; }
-  if (trigram !== null && TRIGRAM_BANNED.has(trigram)) { showError("Ce trigramme n'est pas autorisé."); return; }
+  if (trigram !== null && !isValidTrigram(trigram)) { showMsg("Le trigramme doit faire 2 ou 3 lettres (A-Z)."); return; }
+  if (trigram !== null && TRIGRAM_BANNED.has(trigram)) { showMsg("Ce trigramme n'est pas autorisé."); return; }
   if (managerToken) {
     try {
       const res = await fetchApi("/api/club/set-trigram", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trigram }) });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) { showError(data.error || "Le serveur a refusé ce trigramme."); return; }
+      if (!res.ok || !data.ok) { showMsg(data.error || "Le serveur a refusé ce trigramme."); return; }
       teamA.trigram = data.trigram || null;
       if (data.trigram) teamA.trigramChangedAt = Date.now();
-    } catch (e) { showError("Serveur injoignable."); return; }
+    } catch (e) { showMsg("Serveur injoignable."); return; }
   } else {
-    if (trigram !== null && league.teams.some((t, i) => i !== myTeamIndex && teamTrigram(t) === trigram)) { showError("Ce trigramme est déjà utilisé par un autre club de la ligue."); return; }
+    if (trigram !== null && league.teams.some((t, i) => i !== myTeamIndex && teamTrigram(t) === trigram)) { showMsg("Ce trigramme est déjà utilisé par un autre club de la ligue."); return; }
     teamA.trigram = trigram;
     if (trigram) teamA.trigramChangedAt = Date.now();
     saveMyTeam();
   }
-  renderClubIdentityPanel();
+  refreshSettingsClubBlock();
   if (typeof updateTopbar === "function") updateTopbar();
-  const fb = document.getElementById("clubIdentityFeedback");
-  if (fb) fb.innerHTML = `<p class="sub" style="color:var(--ok)">Trigramme enregistré : ${escapeHtml(teamTrigram(teamA))}.</p>`;
+  if (document.getElementById("clubIdentityPanel")) renderClubIdentityPanel();
+  showMsg(`Trigramme enregistré : ${teamTrigram(teamA)}.`, true);
 }
-document.addEventListener("click", (e) => {
-  if (e.target.closest("#clubTrigramSaveBtn")) { const input = document.getElementById("clubTrigramInput"); applyTrigramChange(input ? input.value : ""); }
-  else if (e.target.closest("#clubTrigramResetBtn")) applyTrigramChange(null);
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && e.target && e.target.id === "clubTrigramInput") { e.preventDefault(); applyTrigramChange(e.target.value); }
-});
-document.addEventListener("input", (e) => {
-  if (e.target && e.target.id === "clubTrigramInput") e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
-});
-
-// Nom de salle (voir renderSalleHero) : serveur en ligue partagée, sinon
-// sauvegarde locale.
+// Nom de salle : serveur en ligue partagée, sinon sauvegarde locale.
 async function applyArenaNameChange(value) {
-  const fb = document.getElementById("salleRenameFeedback");
-  const showError = (msg) => { if (fb) { fb.textContent = msg; fb.style.color = "var(--danger)"; } };
+  const showMsg = (msg, ok) => { const fb = document.getElementById("settingsArenaFeedback"); if (fb) { fb.textContent = msg; fb.style.color = ok ? "var(--ok)" : "var(--danger)"; } };
   const arenaName = value == null ? null : String(value).replace(/\s+/g, " ").trim();
-  if (arenaName && (arenaName.length < 3 || arenaName.length > ARENA_NAME_MAX_LENGTH)) { showError(`Entre 3 et ${ARENA_NAME_MAX_LENGTH} caractères.`); return; }
-  if (arenaName && containsBannedWord(arenaName)) { showError("Ce nom n'est pas autorisé."); return; }
+  if (arenaName && (arenaName.length < 3 || arenaName.length > ARENA_NAME_MAX_LENGTH)) { showMsg(`Entre 3 et ${ARENA_NAME_MAX_LENGTH} caractères.`); return; }
+  if (arenaName && containsBannedWord(arenaName)) { showMsg("Ce nom n'est pas autorisé."); return; }
   if (managerToken) {
     try {
       const res = await fetchApi("/api/club/set-arena-name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ arenaName: arenaName || null }) });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) { showError(data.error || "Le serveur a refusé ce nom."); return; }
+      if (!res.ok || !data.ok) { showMsg(data.error || "Le serveur a refusé ce nom."); return; }
       teamA.arenaName = data.arenaName || null;
-    } catch (e) { showError("Serveur injoignable."); return; }
+    } catch (e) { showMsg("Serveur injoignable."); return; }
   } else {
     teamA.arenaName = arenaName || null;
     saveMyTeam();
   }
-  renderSalleSection();
+  refreshSettingsClubBlock();
+  if (!document.getElementById("salleSection").classList.contains("hidden")) renderSalleSection();
+  showMsg(`Nom de la salle enregistré : ${teamArenaName(teamA)}.`, true);
 }
 document.addEventListener("click", (e) => {
-  if (e.target.closest("#salleRenameToggle")) {
-    const form = document.getElementById("salleRenameForm");
-    if (form) { form.classList.toggle("hidden"); const input = document.getElementById("salleArenaNameInput"); if (!form.classList.contains("hidden") && input) input.focus(); }
-  } else if (e.target.closest("#salleArenaNameResetBtn")) {
-    applyArenaNameChange(null);
-  }
+  if (e.target.closest("#clubTrigramSaveBtn")) { const input = document.getElementById("clubTrigramInput"); applyTrigramChange(input ? input.value : ""); }
+  else if (e.target.closest("#clubTrigramResetBtn")) applyTrigramChange(null);
+  else if (e.target.closest("#salleArenaNameSaveBtn")) { const input = document.getElementById("salleArenaNameInput"); applyArenaNameChange(input ? input.value : ""); }
+  else if (e.target.closest("#salleArenaNameResetBtn")) applyArenaNameChange(null);
 });
-document.addEventListener("submit", (e) => {
-  if (e.target && e.target.id === "salleRenameForm") { e.preventDefault(); const input = document.getElementById("salleArenaNameInput"); applyArenaNameChange(input ? input.value : ""); }
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target && e.target.id === "clubTrigramInput") { e.preventDefault(); applyTrigramChange(e.target.value); }
+  if (e.key === "Enter" && e.target && e.target.id === "salleArenaNameInput") { e.preventDefault(); applyArenaNameChange(e.target.value); }
+});
+document.addEventListener("input", (e) => {
+  if (e.target && e.target.id === "clubTrigramInput") e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
 });
 
 document.addEventListener("change", async (e) => {
@@ -35531,17 +35536,7 @@ function renderSalleHero(info, stats) {
   document.getElementById("salleHeroHead").innerHTML =
     `<span class="sl-tier">Niveau ${info.level} / ${ARENA_LEVELS.length}<i>${pips}</i></span>` +
     `<h3 class="sl-hero-title">${escapeHtml(teamArenaName(teamA))}</h3>` +
-    `<div class="sl-hero-sub">${escapeHtml(teamA.name)} · ${info.capacity.toLocaleString("fr-FR")} places${nextLine}</div>` +
-    // Nom de salle personnalisé (retour communauté 2026-09 : "Modifier le
-    // nom de sa salle") : formulaire replié derrière « Renommer ».
-    `<div class="sl-rename" id="salleRenameBlock">` +
-    `<button type="button" class="secondary sl-rename-toggle" id="salleRenameToggle">Renommer la salle</button>` +
-    `<form class="sl-rename-form hidden" id="salleRenameForm">` +
-    `<input type="text" id="salleArenaNameInput" class="sl-rename-input" maxlength="${ARENA_NAME_MAX_LENGTH}" value="${escapeHtml(teamA.arenaName || "")}" placeholder="${escapeHtml(info.name)}" aria-label="Nom de la salle">` +
-    `<button type="submit" class="secondary" id="salleArenaNameSaveBtn">Enregistrer</button>` +
-    (teamA.arenaName ? `<button type="button" class="secondary" id="salleArenaNameResetBtn">Nom par défaut</button>` : "") +
-    `<span class="sl-rename-note">3 à ${ARENA_NAME_MAX_LENGTH} caractères. Laisser vide = nom du palier (${escapeHtml(info.name)}).</span>` +
-    `<span class="sl-rename-feedback" id="salleRenameFeedback"></span></form></div>`;
+    `<div class="sl-hero-sub">${escapeHtml(teamA.name)} · ${info.capacity.toLocaleString("fr-FR")} places${nextLine}</div>`;
 
   // Agrandissement : même flèche/confirmation qu'avant (buildUpgradeArrow),
   // mise en avant comme bouton principal du bandeau. N'affiche que le bouton

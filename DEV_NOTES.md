@@ -30,15 +30,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   (nom choisi sinon nom du palier), isValidTrigram, TRIGRAM_BANNED,
   containsBannedWord, TRIGRAM_CHANGE_COOLDOWN_MS (30 j),
   ARENA_NAME_MAX_LENGTH (30). Serveur : /api/club/set-trigram (3 lettres
-  A-Z, pas d'insulte, unique dans la ligue face aux trigrammes choisis ET
+  A-Z (2 ou 3), pas d'insulte, unique dans la ligue face aux trigrammes choisis ET
   aux sigles calculés, un changement / 30 j, "" = retour au sigle) et
   /api/club/set-arena-name (3-30 caractères lettres/chiffres/espaces/'-.&,
-  modération, "" = nom du palier). Client : champ Trigramme sous le logo
-  dans « Identité du club » (aperçu logo, Enregistrer, Par défaut,
-  verrouillé pendant le délai), logo type/classements/direct via
-  teamTrigram(team) ; page Salle : titre = teamArenaName, bouton
-  « Renommer la salle » → formulaire replié (Enregistrer / Nom par
-  défaut). Solo : validation locale + saveMyTeam. Test :
+  modération, "" = nom du palier). Puis retours utilisateur 11:49 : "le nom
+  de la salle est à modifier dans les parametres", "idem pour le
+  trigramme", "trigramme qui peut être que 2 lettres" → les DEUX champs
+  vivent dans la fenêtre Paramètres (⚙, settingsClubBlockHtml : aperçu
+  logo, Enregistrer, Par défaut, champ verrouillé pendant le délai), plus
+  rien dans Identité du club ni sur la page Salle ; trigramme = 2 OU 3
+  lettres (isValidTrigram). Logo type/classements/direct via
+  teamTrigram(team) ; page Salle : titre = teamArenaName. Solo :
+  validation locale + saveMyTeam. Test :
   trigram_arena_name_test.js (nouveau) + salle_*, club_facilities,
   sidebar_logo, live_court_home_logo, dashboard_e2e, away_jersey, tabs,
   team_home_page, attendance_history, server actions/index/store verts.

@@ -1535,7 +1535,7 @@ const ARENA_NAME_MAX_LENGTH = 30;
 const TRIGRAM_BANNED = new Set(["SEX", "FDP", "NTM", "KKK", "NIK", "CUL", "PUT", "BIT", "ZOB", "ASS", "FUK", "FCK", "DTC", "NAZ", "SS7"]);
 const NAME_BANNED_WORDS = ["pute", "salope", "encul", "nique", "niqu", "connard", "connasse", "fdp", "ntm", "batard", "bâtard", "nazi", "hitler", "pd ", "fuck", "shit", "bitch", "nigg", "cunt"];
 function isValidTrigram(value) {
-  return typeof value === "string" && /^[A-Z]{3}$/.test(value);
+  return typeof value === "string" && /^[A-Z]{2,3}$/.test(value);
 }
 // Sigle par défaut depuis le nom : initiales des deux premiers mots ou 3
 // premières lettres (même règle historique que teamAbbrev côté navigateur).
@@ -4263,7 +4263,8 @@ class Team {
     // rien stocker (voir teamLogoHtml côté moteurbasket3.html).
     this.isPaying = false;
     // Trigramme personnalisé (retour communauté 2026-09 : "Pouvoir choisir
-    // son trigramme") : 3 lettres A-Z, unique dans la ligue, `null` = calculé
+    // son trigramme", "qui peut être que 2 lettres") : 2 ou 3 lettres A-Z,
+    // unique dans la ligue, `null` = calculé
     // depuis le nom (voir teamTrigram). trigramChangedAt limite les
     // changements à un tous les TRIGRAM_CHANGE_COOLDOWN_MS (classements
     // lisibles pour les autres managers).

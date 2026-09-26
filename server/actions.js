@@ -1007,7 +1007,7 @@ function setTeamPaying(team, teamIndex, league, body, now) {
 }
 
 // Trigramme personnalisé (retour communauté 2026-09 : "Pouvoir choisir son
-// trigramme") : 3 lettres A-Z, pas d'insulte, unique dans la ligue (face aux
+// trigramme", "qui peut être que 2 lettres") : 2 ou 3 lettres A-Z, pas d'insulte, unique dans la ligue (face aux
 // trigrammes choisis comme aux sigles calculés des autres clubs), un
 // changement tous les 30 jours. `null`/"" = retour au sigle calculé.
 function setTeamTrigram(team, teamIndex, league, body, now) {
@@ -1017,7 +1017,7 @@ function setTeamTrigram(team, teamIndex, league, body, now) {
     return { ok: true, trigram: null };
   }
   const value = String(raw).trim().toUpperCase();
-  if (!Engine.isValidTrigram(value)) return fail("Le trigramme doit faire exactement 3 lettres (A-Z).");
+  if (!Engine.isValidTrigram(value)) return fail("Le trigramme doit faire 2 ou 3 lettres (A-Z).");
   if (Engine.TRIGRAM_BANNED.has(value)) return fail("Ce trigramme n'est pas autorisé.");
   if (value === team.trigram) return { ok: true, trigram: value };
   if (typeof team.trigramChangedAt === "number" && now - team.trigramChangedAt < Engine.TRIGRAM_CHANGE_COOLDOWN_MS) {
