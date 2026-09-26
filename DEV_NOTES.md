@@ -20,6 +20,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Titres d'onglet
+  harmonisés + Ligue/Calendrier** — retours utilisateur (captures Ligue /
+  Coupe) : "une fois le titre est en grand, une fois en petit [...]
+  harmonise tous les onglets avec des titres gros comme ligue", "sur la
+  page ligue enlève : Journée 6 sur 18 · 10 équipes", Calendrier "fais
+  plutôt vs ou @ logo nom d'équipe". Classe h2.page-title (40 px, 32 px
+  sous 860 px, !important car plusieurs pages avaient leur propre règle)
+  sur Coupe, Calendrier, Effectif, Marché, Staff, Académie, Économie,
+  Salle, Humeur, Stats hebdo, Guide et Entraînement ("Semaine N"). Non
+  concernés : Tableau de bord (en-tête club) et Ordres (titre dans la
+  barre fixe). Tests verts (league_stats adapté, calendar_*, cup_redesign,
+  guide_nav, tabs, effectif/economie/humeur/academie/salle, marché).
+  Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Version claire du
   jeu + bouton Paramètres** — retours utilisateur : "travaille sur une
   version claire du jeu", "un petit bouton paramètre à côté d'identité du
