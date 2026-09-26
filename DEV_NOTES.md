@@ -20,18 +20,35 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **🎨 MAQUETTE EN VALIDATION (2026-09-26) — Onglet Coupe : refonte pour
-  jusqu'à 12 tours** — retour utilisateur (capture) : "essaie d'améliorer
-  cet onglet, en sachant qu'en coupe on pourra avoir bcp plus d'équipes
-  (jusqu'à 12 tours)". Direction choisie : parcours du club + tour par
-  tour (+ arbre seulement à partir des quarts), maquette d'abord.
-  Maquette : https://claude.ai/artifact/WaKwxkuyohnJwHY6gYFAj1 (données
-  d'exemple, 3 000 clubs). Contenu : frise "Ton parcours" (12 tours,
-  V/D/exempté, prochain match ou "Éliminé" + suivre le vainqueur), onglets
-  par tour (nb de matchs), recherche de club, filtres Tous/Surprises/À
-  jouer, "Ton match" épinglé, pagination par 20, exemptés résumés en une
-  ligne (plus de cases EXEMPT), arbre Quarts → Finale. Reste : retours
-  utilisateur sur la maquette, puis code (moteurbasket3.html, onglet Coupe).
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Onglet Coupe :
+  refonte pour jusqu'à 12 tours** — retour utilisateur : "essaie
+  d'améliorer cet onglet, en sachant qu'en coupe on pourra avoir bcp plus
+  d'équipes (jusqu'à 12 tours)", maquette validée
+  (https://claude.ai/artifact/WaKwxkuyohnJwHY6gYFAj1 ; retouches : arbre à
+  partir des 8es, pas de "N sur N matchs affichés") puis "ok vas y integre".
+  - moteurbasket3.html : renderCoupeSection réécrit + cupJourneyHtml,
+    cupRoundTabsHtml, cupRoundBodyHtml, cupMatchRowHtml, cupRenderRoundPanel,
+    libellés génériques comptés depuis la finale (cupRoundLabel/Short/
+    Phrase : 1er tour… 32es, 16es, 8es, Quarts, Demies, Finale), délégation
+    sur #coupeContent (onglets, filtres, "Afficher 20 de plus", "Suivre",
+    boxscore). Parcours (frise V/D/exempté/à jouer, pastille En course/
+    Éliminé/Qualifié/Vainqueur, carte prochain match avec Ordres de Coupe ou
+    "Suivre" le club qui nous a sortis), Tour par tour (onglets, recherche
+    sans perte de focus, Tous/Surprises/À jouer, "Ton match" épinglé,
+    pagination par 20, exemptés résumés en une ligne, rang au championnat),
+    Phase finale = arbre des 4 derniers tours avec les classes .cup-*
+    d'origine (cupMatchCardHtml : "Vainqueur 1/8 n°k" + date). CSS .cp-*.
+    "Surprise" = vainqueur classé au moins max(4, n/3) places derrière.
+  - Moteur INCHANGÉ (CUP_STAGE_NAMES toujours 4 tours / 16 places) : l'UI
+    suit CUP_STAGE_NAMES.length, rien à reprendre côté affichage le jour où
+    la Coupe grandit.
+  - Tests : nouveau cup_redesign_test.js (4 tours, élimination + Suivre,
+    12 tours / 2 048 matchs en 64 ms) ; cup_bracket_card_alignment,
+    cup_bracket_order, cup_ordres_planning, server/cup_test, calendar_*
+    verts. Rendu vérifié dans Chromium (1320 px et 390 px).
+  - Commit PARTIEL : d'autres sessions avaient des modifs non committées
+    dans moteurbasket3.html (comparateur, académie…) — seules les lignes
+    Coupe sont committées. Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Comparateur de
   joueurs : refonte visuelle** — retour utilisateur : "rends l'onglet
