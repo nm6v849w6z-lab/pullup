@@ -187,6 +187,10 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
   const home = generateStartingRoster("Tactics No Longer Chemistry");
   generateLeague(home, 1, T0);
   home.chemistry = 60;
+  // Le gain "matchs joués ensemble" (2026-09-26) est neutralisé ici : on ne
+  // teste que l'absence d'effet des changements de TACTIQUE (le gain par
+  // match a son propre test, chemistry_gain_test.js).
+  home.updateChemistryAfterMatch = () => {};
   recordMatchStatsForTeam(home, 0, "championship", T0);
   if (home.chemistry !== 60) throw new Error("❌ Le tout premier match ne devrait donner aucun changement d'alchimie.");
 

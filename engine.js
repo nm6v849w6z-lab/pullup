@@ -3186,7 +3186,8 @@ function planKey(round, competition) {
 // d'impact que de changer le 12 homme (qui doit être très faible)").
 // `Team.chemistry` : 0-100, MÊME convention que Team.fanMorale (neutre à 50
 // à la création, voir le constructeur plus bas) — mais, contrairement à
-// fanMorale, ne bouge QUE par les 2 leviers explicitement listés ci-dessus,
+// fanMorale, ne bouge QUE par les leviers listés ci-dessous (le 3e, à la
+// hausse, ajouté le 2026-09-26 — voir CHEMISTRY_MATCH_TOGETHER_GAIN),
 // jamais de dérive naturelle dans le temps :
 //   1) Interviews de jalon (voir MILESTONE_INTERVIEW_TONES.chemistryWin/
 //      chemistryLoss, appliqué par Team.resolveInterview) : le ton choisi
@@ -3214,6 +3215,17 @@ function planKey(round, competition) {
 // particulier.
 const CHEMISTRY_ROSTER_CHANGE_MAX_RANK = 12; // "le 12 homme" (retour utilisateur, littéral)
 const CHEMISTRY_ROSTER_CHANGE_BASE = 8; // malus max, pour le tout meilleur joueur de l'effectif
+
+// Leviers À LA HAUSSE (retour utilisateur 2026-09-26 : "faisons la vivre
+// davantage à la hausse, ça tire trop vers le bas là" — seuls les 5
+// interviews de jalon pouvaient la faire monter, +2 max chacune, contre
+// jusqu'à -8 par transfert) : chaque match RÉELLEMENT joué ensemble soude un
+// peu le groupe, un peu plus encore si le cinq de départ est le même qu'au
+// match précédent (stabilité). Appliqué par Team.updateChemistryAfterMatch
+// (voir recordMatchStatsForTeam). Au rythme d'une saison (~40 matchs), un
+// effectif stable gagne ~+40, un effectif qui tourne ~+20.
+const CHEMISTRY_MATCH_TOGETHER_GAIN = 0.5; // par match joué
+const CHEMISTRY_SAME_FIVE_GAIN = 0.5; // en plus, si même cinq de départ qu'au match précédent
 
 // ---------------------------------------------------------------------
 // CONNAISSANCE TACTIQUE (retour utilisateur, 2026-09 : "sur la partie
@@ -3669,7 +3681,7 @@ function feedMoodEntry(feed, week, category, value, cfg) {
     key, zone, category,
     priority: zone === "low" ? "alert" : "normal",
     week, title,
-    text: fillTemplate(text, { v: value }),
+    text: fillTemplate(text, { v: Math.round(value) }),
     action: { label: "Détail", href: cfg.href },
   });
 }
@@ -4125,6 +4137,9 @@ class Team {
     // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : neutre au départ, comme
     // fanMorale.
     this.chemistry = 50;
+    // Cinq de départ du dernier match joué (ids triés, voir
+    // updateChemistryAfterMatch) : null tant qu'aucun match n'a été joué.
+    this.lastStartersKey = null;
     // Connaissance tactique (voir le grand commentaire CONNAISSANCE
     // TACTIQUE au-dessus de TACTICAL_KNOWLEDGE_GAIN_BASE plus haut) : neutre
     // au départ sur CHACUNE des 18 options possibles (10 priorités
@@ -4536,6 +4551,18 @@ class Team {
   // l'équipe, jamais un levier aussi fort que la forme physique ou la
   // fatigue d'UN joueur (voir CONDITION_STATES.perfFactor, qui va jusqu'à
   // -45%).
+  // Leviers à la hausse de l'alchimie (voir CHEMISTRY_MATCH_TOGETHER_GAIN/
+  // CHEMISTRY_SAME_FIVE_GAIN plus haut), une fois par match réellement joué.
+  updateChemistryAfterMatch() {
+    const starters = (this.lineup && this.lineup.starters) || {};
+    const ids = POSITIONS.map(pos => starters[pos]).filter(id => id != null).map(String).sort();
+    const key = ids.length === POSITIONS.length ? ids.join("|") : null;
+    let gain = CHEMISTRY_MATCH_TOGETHER_GAIN;
+    if (key && key === this.lastStartersKey) gain += CHEMISTRY_SAME_FIVE_GAIN;
+    this.lastStartersKey = key;
+    this.applyChemistryDelta(gain);
+  }
+
   chemistryFactor() {
     return 0.94 + (this.chemistry / 100) * 0.12;
   }
@@ -6868,6 +6895,8 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
   // fois par match RÉELLEMENT joué (pas par joueur), compare la tactique de
   // ce match à celle du précédent.
   if (team.updateTacticalKnowledge) team.updateTacticalKnowledge(now);
+  // Alchimie : jouer ensemble soude le groupe (voir updateChemistryAfterMatch).
+  if (team.updateChemistryAfterMatch) team.updateChemistryAfterMatch();
   team.players.forEach(p => {
     if (p.secondsPlayed > 0) {
       // Forme physique (voir CONDITION_STATES/conditionLossForMinutes plus
@@ -9479,6 +9508,7 @@ function serializeTeam(team) {
     // Alchimie d'équipe (voir le grand commentaire de
     // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : simple valeur 0-100.
     chemistry: team.chemistry,
+    lastStartersKey: team.lastStartersKey || null,
     // Connaissance tactique (voir le grand commentaire CONNAISSANCE
     // TACTIQUE plus haut) : maîtrise PAR OPTION (10 priorités offensives, 5
     // défenses, 3 rythmes), plus la série en cours par option
@@ -9949,6 +9979,7 @@ function teamFromSave(data) {
   // d'avant cette fonctionnalité) : on garde la valeur déjà posée par le
   // constructeur (chemistry neutre à 50).
   if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, 0, 100);
+  if (typeof data.lastStartersKey === "string") team.lastStartersKey = data.lastStartersKey;
   // Connaissance tactique (voir serializeTeam ci-dessus) : PAR OPTION depuis
   // cette révision (retour utilisateur, 2026-09 : "il faudrait qu'il y ait
   // une jauge par type d'attaque, une par rythme et une par défense") —
@@ -11568,7 +11599,7 @@ return {
   TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST, TRANSFER_REQUEST_QUOTES, transferRequestQuoteFor,
   // Alchimie d'équipe (voir le grand commentaire au-dessus de
   // CHEMISTRY_ROSTER_CHANGE_MAX_RANK) :
-  CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE,
+  CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE, CHEMISTRY_MATCH_TOGETHER_GAIN, CHEMISTRY_SAME_FIVE_GAIN,
   parisCalendarDayIndex,
   chemistryRosterImportance, rosterRankOf, chemistryLabel,
   // Connaissance tactique (voir le grand commentaire au-dessus de

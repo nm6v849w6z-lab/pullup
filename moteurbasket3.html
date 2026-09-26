@@ -10352,7 +10352,7 @@ function feedMoodEntry(feed, week, category, value, cfg) {
     key, zone, category,
     priority: zone === "low" ? "alert" : "normal",
     week, title,
-    text: fillTemplate(text, { v: value }),
+    text: fillTemplate(text, { v: Math.round(value) }),
     action: { label: "Détail", href: cfg.href },
   });
 }
@@ -30296,7 +30296,7 @@ function dashboardDataFromGameState() {
       avgLevel: dashboardTeamLevel(teamA),
     },
     supporters: { value: teamA.fanMorale },
-    chemistry: { value: teamA.chemistry },
+    chemistry: { value: Math.round(teamA.chemistry) },
   };
 }
 
@@ -34719,7 +34719,7 @@ const TOUR_STEPS = [
     // (2026-09-25, voir renderEffectifHeader).
     target: "#effectifSection .eff-kpi-chem",
     title: "Alchimie d'équipe",
-    text: "Une jauge collective, distincte de la forme/motivation individuelles, qui ne bouge que par 3 leviers précis, jamais de dérive naturelle dans le temps : le ton choisi en interview de jalon (voir l'onglet Humeur des supporters), les changements d'effectif au marché des transferts (toujours un malus, plus fort pour un joueur important) et les changements de tactique trop fréquents en match, atténuables en les travaillant à l'entraînement collectif.",
+    text: "Une jauge collective, distincte de la forme/motivation individuelles, qui monte au fil des matchs joués ensemble (un peu plus si vous gardez le même cinq de départ d'un match à l'autre) et avec le ton choisi en interview de jalon (voir l'onglet Humeur des supporters), et qui baisse avec les changements d'effectif au marché des transferts (plus fort pour un joueur important) ou un ton agressif en interview.",
     tip: "Une alchimie élevée profite à TOUTE l'équipe sur le terrain, un levier collectif à ne pas négliger face à un effectif individuellement plus fort mais moins soudé.",
     reward: TOUR_REWARD_BY_TOPIC["Effectif"],
   },
