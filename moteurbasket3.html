@@ -1978,7 +1978,11 @@
   .pdp2-chip{font-size:13px; padding:5px 12px; border-radius:999px; background:var(--panel-2); color:var(--ink-dim); white-space:nowrap;}
   .pdp2-chip .potential-tier{color:var(--ink); font-weight:700;}
 
-  .pdp2-cond{flex:0 0 280px; display:flex; flex-direction:column; justify-content:center; gap:12px; padding:0 26px; border-left:1px solid var(--line); border-right:1px solid var(--line);}
+  /* Retour utilisateur (2026-09-26) : "élargi un peu la colonne [Forme /
+     Motivation / citation] comme ça la citation n'aura pas 3 caractères sur
+     la ligne du dessous" — 280 → 340 px, et text-wrap:pretty sur la
+     citation pour éviter un mot seul sur la dernière ligne. */
+  .pdp2-cond{flex:0 0 340px; display:flex; flex-direction:column; justify-content:center; gap:12px; padding:0 26px; border-left:1px solid var(--line); border-right:1px solid var(--line);}
   .pdp2-form{display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:12px; border:1px solid var(--line); background:var(--panel-2);}
   .pdp2-form--ok{color:var(--ok); background:rgba(51,180,161,.10); border-color:rgba(51,180,161,.35);}
   .pdp2-form--mid{color:var(--amber); background:rgba(240,162,60,.10); border-color:rgba(240,162,60,.35);}
@@ -1989,7 +1993,7 @@
   .pdp2-kv{display:flex; justify-content:space-between; align-items:center; font-size:15px; color:var(--ink-dim);}
   /* Retour utilisateur (2026-09-25) : "mets Motivé en un peu plus gros". */
   .pdp2-kv .motivation-badge{font-size:14px; padding:4px 12px;}
-  .pdp2-quote{margin:0; font-size:12.5px; line-height:1.45; font-style:italic; color:var(--ink-dim);}
+  .pdp2-quote{margin:0; font-size:12.5px; line-height:1.45; font-style:italic; color:var(--ink-dim); text-wrap:pretty;}
 
   .pdp2-rating{flex:0 0 190px; display:flex; flex-direction:column; align-items:center; justify-content:space-between; gap:12px;}
   .pdp2-ring{position:relative; width:112px; height:112px;}
