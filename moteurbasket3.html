@@ -8850,13 +8850,16 @@ const AvatarGen = (function () {
   // du maillot, même trait encré que le reste. colors = [veste, cravate].
   function renderSuit(colors) {
     const [jacket, tie] = colors || ['#1F2A40', '#F5A13A'];
-    const body = 'M0 130 L0 118 Q6 104 26 100 Q38 97 45 89 L60 124 L75 89 Q82 97 94 100 Q114 104 120 118 L120 130Z';
-    const lapel = '<path d="M45 89 L51 106 L46.5 108.5 L60 126" stroke="' + INK + '" stroke-width="1.2" fill="none" stroke-linejoin="round"/>';
-    return `<path d="M44 88 L76 88 L60 124Z" fill="#e9eef5" ${LW}/>` +
-      `<path d="M52 88 L60 97 L68 88Z" fill="#c9d1dd" opacity="0.6"/>` +
+    // Col de chemise et veste montés jusqu'aux bords du cou (x 40–80, voir
+    // renderNeck) : sinon la base du cou dépasse de chaque côté du col
+    // (retour utilisateur : « on dirait que son cou dépasse du costume »).
+    const body = 'M0 130 L0 118 Q6 104 26 100 Q36 96 39.5 86 L60 124 L80.5 86 Q84 96 94 100 Q114 104 120 118 L120 130Z';
+    const lapel = '<path d="M39.5 86.5 L49.5 106 L45 108.5 L60 126" stroke="' + INK + '" stroke-width="1.2" fill="none" stroke-linejoin="round"/>';
+    return `<path d="M39 84 Q60 94 81 84 L81 90 L60 124 L39 90Z" fill="#e9eef5" ${LW}/>` +
+      `<path d="M50 90 Q60 96 70 90 L60 99Z" fill="#c9d1dd" opacity="0.6"/>` +
       `<path d="M57.4 95.5 L62.6 95.5 L61.6 100 L64.2 117 L60 123 L55.8 117 L58.4 100Z" fill="${tie}" ${LW}/>` +
       `<path d="M58.4 100 L61.6 100" stroke="${shade(tie, -35)}" stroke-width="0.8"/>` +
-      `<path d="M45 88.5 L55 97.5 L58 91Z M75 88.5 L65 97.5 L62 91Z" fill="#f7f9fc" ${LW}/>` +
+      `<path d="M39.5 84.5 Q48 90.5 57.5 91 L54.5 98.5Z M80.5 84.5 Q72 90.5 62.5 91 L65.5 98.5Z" fill="#f7f9fc" ${LW}/>` +
       `<path d="${body}" fill="${jacket}" ${LW}/>` +
       `<path d="M94 100 Q114 104 120 118 L120 130 L104 130 Q103 110 90 101Z" fill="${shade(jacket, -22)}"/>` +
       `<path d="M4 118 Q10 106 24 102 Q16 108 10 122Z" fill="#fff" opacity="0.08"/>` +
@@ -25922,7 +25925,11 @@ function hoopShowPresenterAvatar() {
   if (hoopShowPresenterSvg == null) {
     try {
       // Tête d'un avatar joueur (même générateur), mais en costume.
-      hoopShowPresenterSvg = AvatarGen.generateAvatar(HOOP_SHOW_PRESENTER_SEED, {
+      // Coiffure imposée (retour utilisateur : « ses cheveux sont bizarres »
+      // avec la raie de côté tirée par la graine) : coupe courte et nette.
+      const look = AvatarGen.generateAppearance(HOOP_SHOW_PRESENTER_SEED, {});
+      look.hairStyle = "undercut";
+      hoopShowPresenterSvg = AvatarGen.renderAvatar(look, {
         teamColors: ["#1F2A40", "#F5A13A"], outfit: "suit", suitColors: ["#1F2A40", "#F5A13A"],
       });
     } catch (e) { hoopShowPresenterSvg = ""; }

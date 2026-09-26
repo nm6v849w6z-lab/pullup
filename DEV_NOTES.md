@@ -44,7 +44,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   JERSEY_COLORS, avatars AvatarGen, logo de la barre latérale ; le
   présentateur s'appelle Nicolas Cosset ("ce serait mieux s'il est blanc",
   "on va l'appeler : Nicolas Cosset") = tête d'avatar AvatarGen graine 1388
-  (peau claire, brun), en costume — "utilise la tete de
+  (peau claire, brun, coupe « undercut » imposée : « ses cheveux sont
+  bizarres »), en costume au col monté jusqu'au cou (« on dirait que son
+  cou dépasse du costume ») — "utilise la tete de
   l'avatar mais mets lui un costume quand meme" : option AvatarGen
   `outfit: "suit"` (renderSuit : veste marine, chemise, cravate ambre ;
   joueurs inchangés)). Tests : hoop_show_player_test.js et
