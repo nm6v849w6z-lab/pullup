@@ -87,7 +87,12 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   (stale: true, "Cette offre n'existe plus — ne mets pas ça") ; retour
   visuel immédiat sur Accepter / Refuser / Rompre (bouton désactivé +
   « Signature… » / « Rupture en cours… », sponsorBusy — "le bouton [...]
-  met un peu de temps à répondre", "idem pour accepter"). Non fait :
+  met un peu de temps à répondre", "idem pour accepter") puis mise à jour
+  OPTIMISTE ("il y a tjrs un petit temps", "on ne sait pas si c'est le
+  bouton qui ne marche pas ou si c'est lent") : l'action est appliquée
+  localement avec la copie navigateur du moteur et la carte redessinée
+  aussitôt, la réponse serveur remplace ensuite les listes, refus/erreur
+  réseau = retour à l'instantané + message. Non fait :
   carton dans les émissions (pub retirée), Guide.
   Non fait : carton dans les émissions (pub retirée), tâche du tableau de
   bord à l'arrivée d'une offre (fil d'actu seulement), Guide.

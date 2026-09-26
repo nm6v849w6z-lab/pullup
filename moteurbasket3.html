@@ -38076,29 +38076,50 @@ function sponsorOfferHtml(o) {
     `<div class="spo-offer-actions"><button type="button" class="spo-accept" data-sponsor-accept="${o.id}">Accepter</button><button type="button" class="secondary" data-sponsor-decline="${o.id}">Refuser</button></div></div>`;
 }
 
+// Mise à jour OPTIMISTE (retour utilisateur 2026-09-26 : "il y a tjrs un
+// petit temps pour que ça se passe") : l'action est d'abord appliquée
+// localement avec la copie navigateur du moteur (mêmes règles que le
+// serveur), la carte se redessine tout de suite, puis la réponse du serveur
+// fait foi (listes remplacées). Si le serveur refuse, on restaure
+// l'instantané pris avant et on affiche son message.
+function sponsorSnapshot() {
+  return JSON.stringify({ o: teamA.sponsorOffers || [], c: teamA.sponsorContracts || [], h: teamA.sponsorHistory || [], r: teamA.sponsorReputation, b: teamA.budget, t: teamA.transactions || [] });
+}
+function sponsorRestore(snap) {
+  const d = JSON.parse(snap);
+  teamA.sponsorOffers = d.o; teamA.sponsorContracts = d.c; teamA.sponsorHistory = d.h; teamA.sponsorReputation = d.r; teamA.budget = d.b; teamA.transactions = d.t;
+}
+function sponsorApplyLocal(path, body) {
+  if (path.endsWith("/accept")) return acceptSponsorOffer(teamA, league, body.offerId, Date.now());
+  if (path.endsWith("/decline")) return declineSponsorOffer(teamA, body.offerId);
+  return terminateSponsorContract(teamA, body.contractId, Date.now());
+}
 async function sponsorAction(path, body, okText) {
   sponsorsUi.feedback = null;
-  if (managerToken) {
-    try {
-      const res = await fetchApi(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) { sponsorsUi.feedback = { ok: false, text: data.error || `Le serveur a refusé l'action (${res.status}).` }; renderSponsorsPanel(); return; }
-      teamA.sponsorOffers = data.sponsorOffers || []; teamA.sponsorContracts = data.sponsorContracts || [];
-      teamA.sponsorHistory = data.sponsorHistory || []; if (typeof data.sponsorReputation === "number") teamA.sponsorReputation = data.sponsorReputation;
-      if (typeof data.budget === "number") teamA.budget = data.budget;
-      if (data.stale) { sponsorsUi.feedback = null; renderSponsorsPanel(); return; } // offre déjà partie : liste rafraîchie, sans message
-    } catch (e) { sponsorsUi.feedback = { ok: false, text: "Serveur injoignable." }; renderSponsorsPanel(); return; }
-  } else {
-    let r;
-    if (path.endsWith("/accept")) r = acceptSponsorOffer(teamA, league, body.offerId, Date.now());
-    else if (path.endsWith("/decline")) r = declineSponsorOffer(teamA, body.offerId);
-    else r = terminateSponsorContract(teamA, body.contractId, Date.now());
-    if (!r.ok && /n'existe plus|expiré/.test(r.error)) { sponsorsUi.feedback = null; renderSponsorsPanel(); return; }
-    if (!r.ok) { sponsorsUi.feedback = { ok: false, text: r.error }; renderSponsorsPanel(); return; }
-    saveMyTeam();
-  }
-  sponsorsUi.feedback = { ok: true, text: okText };
+  const snap = sponsorSnapshot();
+  const local = sponsorApplyLocal(path, body);
+  if (!local.ok && !/n'existe plus|expiré/.test(local.error)) { sponsorsUi.feedback = { ok: false, text: local.error }; renderSponsorsPanel(); return; }
+  sponsorsUi.feedback = local.ok ? { ok: true, text: okText } : null;
   renderSponsorsPanel();
+  if (!managerToken) { saveMyTeam(); return; }
+  try {
+    const res = await fetchApi(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      sponsorRestore(snap);
+      sponsorsUi.feedback = { ok: false, text: data.error || `Le serveur a refusé l'action (${res.status}).` };
+      renderSponsorsPanel(); return;
+    }
+    teamA.sponsorOffers = data.sponsorOffers || []; teamA.sponsorContracts = data.sponsorContracts || [];
+    teamA.sponsorHistory = data.sponsorHistory || []; if (typeof data.sponsorReputation === "number") teamA.sponsorReputation = data.sponsorReputation;
+    if (typeof data.budget === "number") teamA.budget = data.budget;
+    if (data.stale) sponsorsUi.feedback = null;
+    renderSponsorsPanel();
+  } catch (e) {
+    sponsorRestore(snap);
+    sponsorsUi.feedback = { ok: false, text: "Serveur injoignable, action annulée." };
+    renderSponsorsPanel();
+  }
 }
 
 // Retour visuel immédiat (retour utilisateur 2026-09-26 : "le bouton pour
