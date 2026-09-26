@@ -659,7 +659,7 @@
      défilants sur une seule ligne) pour ne pas manger l'écran en restant
      collée en haut. */
   @media(max-width:768px){
-    .ordres-actionbar{gap:8px;}
+    .ordres-actionbar{gap:8px; margin-left:-12px; margin-right:-12px; padding-left:12px; padding-right:12px;} /* la page n'a que 12px de marge ici (16px débordait de 4px) */
     .oab-title{display:none;}
     .oab-left, .oab-tabs{flex-wrap:nowrap; width:100%;}
     .oab-tabs{overflow-x:auto; scrollbar-width:none;}
@@ -1362,11 +1362,11 @@
   .app-shell{display:flex; min-height:100vh; align-items:stretch;}
   .sidebar{
     width:236px; flex:0 0 236px; background:var(--panel); border-right:1px solid var(--line);
-    padding:18px 12px 24px; display:flex; flex-direction:column; gap:20px;
+    padding:0 12px 24px; display:flex; flex-direction:column; gap:20px;
     position:sticky; top:0; align-self:flex-start; height:100vh; overflow-y:auto;
   }
   .sidebar-brand{
-    display:flex; align-items:center; justify-content:center; gap:9px; padding:2px 8px 14px;
+    display:flex; align-items:center; justify-content:center; gap:9px; padding:14px 8px 14px;
     border-bottom:1px solid var(--line-soft); margin-bottom:2px;
     /* Retour utilisateur (2026-09) : "le logo ne se bloque tjrs pas sur le
        côté" — .sidebar a son propre défilement interne (overflow-y:auto,
@@ -5122,7 +5122,7 @@
   .eff-seg-btn.active{background:#2a3550; color:var(--ink); font-weight:600;}
   .eff-seg-btn:focus-visible, .eff-menu-btn:focus-visible, .eff-th:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
   .eff-hint{font-size:12.5px; color:var(--ink-dim);}
-  .eff-sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
+  .eff-sr{position:absolute; left:0; top:0; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;} /* left/top : sans eux, placé à sa position « naturelle » au bout du tableau (hors de la zone défilante), il élargissait toute la page sur téléphone → menu latéral plus haut que l'écran, impossible à faire défiler (retour 2026-09-26). */
 
   /* --- Tableaux (base commune) --- */
   .eff-table-wrap{margin-bottom:16px;}
@@ -37849,7 +37849,7 @@ function hcPalmaresHtml(team, idx) {
   html += `<div class="lg-table-wrap"><table class="lg-table hc-table"><thead><tr><th>Saison</th><th>Division</th><th>Championnat</th><th>Coupe</th><th class="lg-hide-sm">Meilleur marqueur</th></tr></thead><tbody>`;
   rows.forEach(s => {
     html += `<tr class="${s.current ? "hc-current" : ""}"><td><b>Saison ${s.seasonNo}</b>${s.current ? ` <span class="lp-tag">En cours</span>` : ""}</td>` +
-      `<td>${escapeHtml(s.divisionName)}</td>` +
+      `<td>${escapeHtml(String(s.divisionName || "").replace(/^Division\s+/, "D."))}</td>` +
       `<td>${s.champion ? `<span class="hc-win">🏆 Champion</span>` : escapeHtml(hcChampionshipLabel(s))}</td>` +
       `<td>${s.cupWinner ? `<span class="hc-win">🏆 Vainqueur</span>` : escapeHtml(s.cupResult || "–")}</td>` +
       `<td class="lg-hide-sm">${s.topScorer ? `${escapeHtml(s.topScorer.name)} <span class="dim">· ${s.topScorer.pts} pts</span>` : "–"}</td></tr>`;

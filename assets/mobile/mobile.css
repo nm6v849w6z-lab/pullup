@@ -18,9 +18,13 @@
     position: fixed; left: 0; top: 0; bottom: 0; height: auto; width: min(300px, 84vw);
     flex: none; z-index: 60; transform: translateX(-105%); transition: transform .22s ease;
     box-shadow: 12px 0 40px rgba(0,0,0,.45);
-    padding-top: calc(18px + env(safe-area-inset-top));
+    padding-top: 0;
     padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    /* Jamais plus haut que l'écran visible (sinon le bas du menu restait
+       inaccessible si une page débordait en largeur), défilement tactile. */
+    max-height: 100dvh; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   }
+  .sidebar-brand { padding-top: calc(14px + env(safe-area-inset-top)); }
   body.m-drawer-open .sidebar { transform: none; }
   .tab-btn.sidebar-link { font-size: 15px; padding: 12px 12px; }
   .m-drawer-backdrop {

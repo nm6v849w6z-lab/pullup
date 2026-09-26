@@ -20,6 +20,22 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Menu bloqué sur
+  téléphone, logo de la barre latérale, « D.I » dans le Palmarès** — retours
+  utilisateur : "Sur le tel le menu reste figé. Je ne peux pas descendre",
+  "le logo il est trop bas, quand on scrolle ça remonte au dessus", "mets
+  plutot D.I que division I". Cause du menu figé : le texte masqué « Actions »
+  (.eff-sr) du tableau Effectif sortait de la zone défilante et élargissait
+  la page (~980 px) → tiroir calé sur une page géante, bas inaccessible ;
+  corrigé (left/top:0) + barre d'action des Ordres (débordait de 4 px) +
+  garde-fou dans mobile.css (max-height:100dvh, overscroll contain). Logo :
+  plus de marge haute sur .sidebar (les boutons défilaient visibles dans
+  cette bande), l'espace est dans .sidebar-brand collant. Palmarès (Histoire
+  du club) : « Division I » → « D.I ». Vérifié dans Chromium (iPhone émulé :
+  le tiroir défile jusqu'à Guide ; PC : rien au-dessus du logo) ; tests
+  sidebar_logo, mobile_pwa, effectif_redesign, club_history, ordres_redesign,
+  tabs verts. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Calendrier :
   plus de "À jouer"** — retour utilisateur : "page calendrier enlève À
   jouer". calendarRowHtml : le prochain match affiche "–" comme les autres
