@@ -90,7 +90,7 @@ const DAY = 24 * 3600 * 1000;
   let res = await fetch(`${baseUrl}api/state`, { headers: { "X-TipIn-Token": token } });
   check(res.ok, "tick serveur");
   let { league: saved } = await store.loadMultiLeague(multiSavePath);
-  check(saved.teams[hIdx].sponsorOffers.length === 4 && saved.teams[hIdx].feed.entries.some(e => /sponsors? vous approche/.test(e.title)), "au premier tick : 4 offres et une entrée de fil d'actu");
+  check(saved.teams[hIdx].sponsorOffers.length === 4 && !saved.teams[hIdx].feed.entries.some(e => /sponsor/i.test(e.title)), "au premier tick : 4 offres, rien dans le fil d'actu (c'est une tâche du tableau de bord)");
   const offerId = saved.teams[hIdx].sponsorOffers[0].id;
   res = await fetch(`${baseUrl}api/sponsors/accept`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": token }, body: JSON.stringify({ offerId }) });
   const acc = await res.json();
@@ -101,6 +101,8 @@ const DAY = 24 * 3600 * 1000;
   // --- C : navigateur.
   const dom = await openGame(html, `${baseUrl}?m=${token}`);
   const doc = dom.window.document, win = dom.window;
+  const taskTxt = doc.getElementById("clubDashboardRoot").textContent;
+  check(/offres? de sponsors?/i.test(taskTxt) && /Voir les offres/.test(taskTxt), "tableau de bord : tâche « offres de sponsors » avec le bouton Voir les offres");
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "economie").click();
   const section = doc.getElementById("economieSponsors");
   check(section && section.querySelectorAll(".spo-card").length === 2, "page Économie : section Sponsors avec 2 emplacements");

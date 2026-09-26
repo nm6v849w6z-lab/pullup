@@ -57,6 +57,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   serveur + navigateur) + économie, salle, live_*, hoop_show, tabs,
   dashboard, season_objective, end_to_end, full_run, tous les
   server/*_test.js verts. Vérifié dans Chromium (Économie, Salle, direct).
+  Puis (retour 14:03 : "mets plutôt sur le tableau de bord que le fil
+  d'actu car c'est une tâche") : les offres en attente sont une TÂCHE du
+  tableau de bord (dashBuildTasks id "sponsors", badge = jours restants,
+  bouton « Voir les offres » → Économie), plus aucune entrée de fil
+  d'actu. Non fait : carton dans les émissions (pub retirée), Guide.
   Non fait : carton dans les émissions (pub retirée), tâche du tableau de
   bord à l'arrivée d'une offre (fil d'actu seulement), Guide.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées

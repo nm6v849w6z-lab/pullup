@@ -31767,6 +31767,21 @@ function dashBuildTasks(data) {
       cta: { label: "Ouvrir", href: "/ordres", style: "ghost" },
     });
   }
+  if (Array.isArray(data.sponsorOffers) && data.sponsorOffers.length) {
+    const offers = data.sponsorOffers;
+    const soonest = Math.min(...offers.map(o => o.expiresAt));
+    const daysLeft = Math.max(0, Math.ceil((soonest - Date.now()) / (24 * 3600 * 1000)));
+    const names = [...new Set(offers.map(o => o.sponsorName))];
+    tasks.push({
+      id: "sponsors",
+      icon: "sponsor",
+      title: offers.length > 1 ? `${offers.length} offres de sponsors` : `Offre de sponsor : ${offers[0].sponsorName}`,
+      text: `${dashJoinFr(names.slice(0, 3))}${names.length > 3 ? "…" : ""} — à accepter ou refuser.`,
+      badge: daysLeft <= 1 ? "Expire demain" : `${daysLeft} jours`,
+      tone: daysLeft <= 1 ? "warn" : "info",
+      cta: { label: "Voir les offres", href: "/economie", style: "ghost" },
+    });
+  }
   if (data.finances && data.finances.budget < 0) {
     tasks.push({
       id: "budget",
@@ -31807,6 +31822,7 @@ const DASH_TASK_ICONS = {
   staff: '<circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M18 8v5M18 16v.5"/>',
   orders: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
   money: '<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>',
+  sponsor: '<path d="M4 7h16v10H4zM4 12h16M9 7v10"/>',
 };
 const dashTaskIcon = (name, size = 36) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">${DASH_TASK_ICONS[name]}</svg>`;
@@ -32562,6 +32578,9 @@ function dashboardDataFromGameState() {
       analyst: staffRef(teamA.videoAnalyst),
       scout: staffRef(teamA.recruiter),
     },
+    // Offres de sponsors en attente (retour utilisateur 2026-09-26 : "mets
+    // plutôt sur le tableau de bord que le fil d'actu car c'est une tâche").
+    sponsorOffers: (teamA.sponsorOffers || []).filter(o => o.expiresAt > Date.now() && !sponsorActiveContractForSlot(teamA, o.slot)).map(o => ({ sponsorName: o.sponsorName, slotLabel: o.slotLabel, expiresAt: o.expiresAt })),
     finances: {
       budget: teamA.budget,
       weeklyWages: dashboardWeeklyWages(teamA),

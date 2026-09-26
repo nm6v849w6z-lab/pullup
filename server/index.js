@@ -333,20 +333,9 @@ function tick(league, now) {
     });
   }
   // Sponsors : nouvelles offres pour les clubs humains (voir
-  // Engine.refreshSponsorOffers) + une entrée de fil d'actu quand il y en a.
-  league.teams.forEach(t => {
-    if (!t.isHuman) return;
-    const created = Engine.refreshSponsorOffers(t, league, now);
-    if (created.length && t.feed) {
-      const names = created.map(o => o.sponsorName).join(", ");
-      Engine.pushEntry(t.feed, {
-        key: `sponsor_offers_${now}`, category: "club", week: t.week,
-        title: created.length > 1 ? `${created.length} sponsors vous approchent` : `Un sponsor vous approche : ${created[0].sponsorName}`,
-        text: `${names} — offres valables une semaine. Acceptez ou refusez dans Économie › Sponsors.`,
-        action: { label: "Voir les offres", href: "/economie" },
-      });
-    }
-  });
+  // Engine.refreshSponsorOffers). Signalées par une TÂCHE du tableau de bord
+  // (retour utilisateur 2026-09-26), pas par le fil d'actu.
+  league.teams.forEach(t => { if (t.isHuman) Engine.refreshSponsorOffers(t, league, now); });
   // Médias : purge toute interview de jalon en attente depuis plus de 3
   // jours, pour TOUTES les équipes humaines de la ligue (voir
   // Team.pruneExpiredInterviews/MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS
