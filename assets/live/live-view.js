@@ -96,7 +96,7 @@ const TEMPLATE = `
     <div class="zones" data-ref="zones"></div>
   </section>
 
-  <section class="panel">
+  <section class="panel feed-panel">
     <div class="phead">
       <h2>Fil du match</h2>
       <div class="seg" data-seg="feed"><button data-v="all" aria-pressed="true">Tout</button><button data-v="score">Paniers</button><button data-v="foul">Fautes et pertes</button></div>

@@ -40,7 +40,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   live_view_game_style_test.js (nouveau) ; live_boxscore, live_court_*,
   live_match_names, dashboard_live_match, spectate, tabs verts (sandbox et
   Mac). Rendu vérifié dans Chromium sur un vrai direct (1440 et 390 px,
-  mi-temps, fin). Reste : `git push`.
+  mi-temps, fin).
+  Retouche : le fil du match prend la hauteur de la carte des tirs (plus de
+  vide sous la carte ; défilement interne), hauteur fixe en une colonne.
+  Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Verrou des
   ordres à T-5 min + accès à l'émission d'avant-match** — retour
