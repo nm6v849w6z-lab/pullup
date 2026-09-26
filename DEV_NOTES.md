@@ -20,6 +20,32 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Page live :
+  mini-tableau de score collant** — retour utilisateur : "même si on
+  scrolle, on voit toujours le score et le temps restant et le quart
+  temps". assets/live/live-view.js + live.css : barre .mini (écussons,
+  sigles, scores, chrono, quart-temps) collée sous le topbar
+  (--topbar-h), qui glisse depuis le haut dès que le grand bandeau sort de
+  l'écran (écoute du scroll en capture, rAF) ; variantes téléphone
+  (<560 px) et thème clair. HM_LIVE_ASSET_VERSION 20260926-9. Vérifié dans
+  Chromium sur la démo (1200 et 390 px). Tests live_* / prematch_live_page
+  / spectate_live_match verts. Reste : `git push` + regarder dans le vrai
+  jeu.
+
+- **⏳ EN COURS (2026-09-26) — Traduction anglaise du jeu** — retour
+  utilisateur : "il faut maintenant traduire le jeu en anglais, on pourra
+  activer l'anglais en allant paramètre dans le tableau de bord". Périmètre
+  choisi : TOUT le jeu (interface, fil d'actus, commentaires du direct,
+  émissions, interviews, guide). Approche : couche de traduction à part
+  (assets/i18n/ : dictionnaire FR→EN + gabarits {n}, traduction du DOM à la
+  volée par MutationObserver, langue mémorisée en localStorage "hm-lang"),
+  pour ne presque pas toucher moteurbasket3.html. Une autre session modifiait
+  moteurbasket3.html au même moment (carte « Temps de jeu » des Ordres, non
+  committée à 10h07) : on N'Y TOUCHE PAS avant que ce chantier-là soit
+  committé (choix utilisateur). Statut : inventaire des textes (~2 900
+  unités) fait côté sandbox. Reste : moteur i18n, traduction, choix de
+  langue dans showSettingsModal, tests, vérif visuelle.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Titres d'onglet
   harmonisés + Ligue/Calendrier** — retours utilisateur (captures Ligue /
   Coupe) : "une fois le titre est en grand, une fois en petit [...]

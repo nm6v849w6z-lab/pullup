@@ -22,6 +22,23 @@ const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="t
 const TEMPLATE = `
 <div class="toast" data-ref="toast" role="status" aria-live="polite"></div>
 
+<!-- Mini-tableau d'affichage collé sous le topbar dès que le grand bandeau
+     sort de l'écran (retour utilisateur, 2026-09-26 : « même si on scrolle,
+     on voit toujours le score, le temps restant et le quart-temps »). -->
+<div class="mini" data-ref="mini" aria-hidden="true">
+  <div class="mini-in">
+    ${[0, 1].map(t => `
+    <div class="mteam ${t ? "away" : "home"}" style="order:${t ? 5 : 1}">
+      <span class="mcrest" data-ref="mcrest${t}"></span><span class="mshort" data-ref="mshort${t}"></span>
+    </div>
+    <div class="mscore" data-ref="mscore${t}" style="order:${t ? 4 : 2}">0</div>`).join("")}
+    <div class="mcenter" style="order:3">
+      <span class="mclock" data-ref="mclock">10:00</span>
+      <span class="mperiod" data-ref="mperiod"></span>
+    </div>
+  </div>
+</div>
+
 <header class="board">
   <div class="board-split" aria-hidden="true"></div>
   <svg class="board-court" width="600" height="300" viewBox="0 0 600 300" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="300" cy="150" r="90"/><circle cx="300" cy="150" r="30"/><line x1="300" y1="0" x2="300" y2="300"/></svg>
@@ -205,6 +222,26 @@ export function createLiveView(root, opts = {}) {
   $("newpill").addEventListener("click", () => { feed.scrollTop = 0; });
   $("showBtn").addEventListener("click", () => (opts.onShowHalftime ? opts.onShowHalftime(S) : openRecap()));
 
+  // Mini-tableau : visible quand le bas du grand bandeau (hors quarts-temps)
+  // passe sous le topbar collant du jeu (--topbar-h). Écoute en capture pour
+  // attraper le défilement de n'importe quel conteneur.
+  const mini = $("mini"), boardTop = root.querySelector(".board-top");
+  let miniRaf = 0;
+  const syncMini = () => {
+    miniRaf = 0;
+    if (!root.isConnected || !boardTop) return;
+    const top = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-h")) || 0;
+    const r = boardTop.getBoundingClientRect();
+    const show = !!S && r.height > 0 && r.bottom < top + 8;
+    mini.classList.toggle("show", show);
+    mini.setAttribute("aria-hidden", show ? "false" : "true");
+  };
+  const onScroll = () => { if (!miniRaf) miniRaf = requestAnimationFrame(syncMini); };
+  if (typeof window !== "undefined") {
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+  }
+
   // ---------- API ----------
   function update(state) {
     S = state;
@@ -232,7 +269,15 @@ export function createLiveView(root, opts = {}) {
     lastScore = S.teams.map(t => t.score);
   }
 
-  function destroy() { clearTimeout(toastTimer); root.innerHTML = ""; root.classList.remove("hm-live"); }
+  function destroy() {
+    clearTimeout(toastTimer);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("scroll", onScroll, { capture: true });
+      window.removeEventListener("resize", onScroll);
+    }
+    if (miniRaf) cancelAnimationFrame(miniRaf);
+    root.innerHTML = ""; root.classList.remove("hm-live");
+  }
 
   // ---------- rendu ----------
   function render(newEv, newShots) {
@@ -306,6 +351,22 @@ export function createLiveView(root, opts = {}) {
     $("period").textContent = done ? (diff ? `Victoire ${de(S.teams[diff > 0 ? 0 : 1].name)}` : "Égalité")
       : pregame ? (S.kickoffIn > 0 ? `Coup d'envoi dans ${fmtClock(S.kickoffIn)}` : "Coup d'envoi imminent")
       : S.status === "halftime" ? "Mi-temps" : S.quarter > 4 ? `Prolongation ${S.quarter - 4}` : quarterName(S.quarter);
+
+    // Mini-tableau (même contenu, en condensé)
+    [0, 1].forEach(t => {
+      const T = S.teams[t];
+      const mk = logoKey[t];
+      const mc = $("mcrest" + t);
+      if (mc.dataset.k !== mk) { mc.dataset.k = mk; mc.innerHTML = $("crest" + t).innerHTML; mc.classList.toggle("has-logo", !!T.logo); }
+      $("mshort" + t).textContent = T.short;
+      $("mshort" + t).classList.toggle("mine", !!T.mine);
+      $("mscore" + t).textContent = T.score;
+      $("mscore" + t).classList.toggle("trail", S.teams[1 - t].score > T.score);
+    });
+    $("mclock").textContent = $("clock").textContent;
+    $("mclock").classList.toggle("final", done);
+    $("mperiod").textContent = $("period").textContent;
+    if (typeof window !== "undefined") onScroll();
 
     const nq = Math.max(4, A.quarterScores.length);
     let q = `<tr><th></th>${Array.from({ length: nq }, (_, i) => `<th>${i < 4 ? "Q" + (i + 1) : "P" + (i - 3)}</th>`).join("")}<th>Total</th></tr>`;
