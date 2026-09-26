@@ -5884,7 +5884,7 @@
       <section class="stf-role" id="staffPanel" data-staff-role="coach" aria-labelledby="staffCoachTitle">
         <div class="stf-role__head">
           <div class="stf-role__titles">
-            <h3 id="staffCoachTitle">Candidats entraîneur</h3>
+            <h3 id="staffCoachTitle">Changer d'entraîneur</h3>
           </div>
           <button type="button" class="stf-ghost-btn" data-staff-toggle-role="coach" aria-controls="staffCoachBody"></button>
         </div>
@@ -5897,7 +5897,7 @@
       <section class="stf-role" id="staffAnalystPanel" data-staff-role="analyst" aria-labelledby="staffAnalystTitle">
         <div class="stf-role__head">
           <div class="stf-role__titles">
-            <h3 id="staffAnalystTitle">Candidats analyste vidéo</h3>
+            <h3 id="staffAnalystTitle">Changer d'analyste vidéo</h3>
           </div>
           <button type="button" class="stf-ghost-btn" data-staff-toggle-role="analyst" aria-controls="staffAnalystBody"></button>
         </div>
@@ -5910,7 +5910,7 @@
       <section class="stf-role" id="staffRecruiterPanel" data-staff-role="recruiter" aria-labelledby="staffRecruiterTitle">
         <div class="stf-role__head">
           <div class="stf-role__titles">
-            <h3 id="staffRecruiterTitle">Candidats recruteur</h3>
+            <h3 id="staffRecruiterTitle">Changer de recruteur</h3>
           </div>
           <button type="button" class="stf-ghost-btn" data-staff-toggle-role="recruiter" aria-controls="staffRecruiterBody"></button>
         </div>
@@ -30012,11 +30012,12 @@ const STAFF_ROLES = [
   },
 ];
 const STAFF_ROLE_BY_KEY = Object.fromEntries(STAFF_ROLES.map(r => [r.key, r]));
-// État d'affichage par rôle : section dépliée (seul l'entraîneur l'est
-// d'entrée, comme sur la maquette), filtre de niveau (0 = tous), liste
-// complète affichée ou non.
+// État d'affichage par rôle : section dépliée, filtre de niveau (0 = tous),
+// liste complète affichée ou non. Retour utilisateur (2026-09-26) : toutes
+// les sections sont repliées à l'ouverture de la page (l'entraîneur ne
+// s'ouvre plus tout seul), on ne les déplie qu'au clic.
 const staffUi = {
-  coach: { open: true, level: 0, expanded: false },
+  coach: { open: false, level: 0, expanded: false },
   analyst: { open: false, level: 0, expanded: false },
   recruiter: { open: false, level: 0, expanded: false },
 };
@@ -30080,6 +30081,18 @@ function renderStaffRole(role, now) {
   } else {
     currentHolder.innerHTML = `<p class="staff-none">${role.noneText}</p>`;
   }
+
+  // Titre de section (retour utilisateur 2026-09-26 : "Changer
+  // d'entraîneur" plutôt que "Candidats entraîneur") ; "Engager…" quand le
+  // poste est vacant.
+  const STAFF_SECTION_TITLES = {
+    coach: ["staffCoachTitle", "Changer d'entraîneur", "Engager un entraîneur"],
+    analyst: ["staffAnalystTitle", "Changer d'analyste vidéo", "Engager un analyste vidéo"],
+    recruiter: ["staffRecruiterTitle", "Changer de recruteur", "Engager un recruteur"],
+  };
+  const titleDef = STAFF_SECTION_TITLES[role.key];
+  const titleEl = titleDef && document.getElementById(titleDef[0]);
+  if (titleEl) titleEl.textContent = m ? titleDef[1] : titleDef[2];
 
   // En-tête : résumé + bouton replier/déplier.
   // Retour utilisateur (2026-09-25) : plus de phrase de description ni de
@@ -35991,7 +36004,7 @@ const TAB_HANDLERS = {
   amicaux: () => showPlaceholder("amicaux"),
   economie: () => { renderEconomieSection(); showPage("economieSection"); setActiveTab("economie"); },
   salle: () => { renderSalleSection(); showPage("salleSection"); setActiveTab("salle"); },
-  staff: () => { refreshCoachMarket(); refreshAnalystMarket(); refreshRecruiterMarket(); renderStaffPanel(); showPage("staffSection"); setActiveTab("staff"); },
+  staff: () => { for (const k in staffUi) staffUi[k].open = false; refreshCoachMarket(); refreshAnalystMarket(); refreshRecruiterMarket(); renderStaffPanel(); showPage("staffSection"); setActiveTab("staff"); },
   academie: () => { renderAcademieSection(); showPage("academieSection"); setActiveTab("academie"); },
   humeur: () => { renderHumeurSection(); showPage("humeurSection"); setActiveTab("humeur"); },
   ordres: goToOrdresTab,

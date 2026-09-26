@@ -20,6 +20,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Staff : sections
+  repliées à l'ouverture + titres « Changer d'… »** — retours utilisateur :
+  "la brique Candidats entraîneur s'ouvre automatique quand on ouvre la page,
+  il faut qu'elle soit masquée comme les autres", puis "mets plutôt : Changer
+  d'entraineur, changer d'analyste...". moteurbasket3.html : staffUi.coach
+  replié par défaut + toutes les sections refermées à chaque ouverture de
+  l'onglet (TAB_HANDLERS.staff) ; titres « Changer d'entraîneur / d'analyste
+  vidéo / de recruteur » (« Engager un … » si le poste est vacant, dans
+  renderStaffRole). Tests coach_market, analyst_market,
+  staff_market_persistence, client_scouting, tabs verts. Commit partiel :
+  les modifs Ordres non committées d'une autre session (ORDRES_TOP,
+  réservistes) sont laissées telles quelles dans l'arbre de travail.
+  Reste : `git push` + regarder dans le vrai jeu.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Page live :
   mini-tableau de score collant** — retour utilisateur : "même si on
   scrolle, on voit toujours le score et le temps restant et le quart
