@@ -24,11 +24,12 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   à la hausse** — retour utilisateur : "faisons la vivre davantage à la
   hausse, ça tire trop vers le bas là" (avant : seules les 5 interviews de
   jalon la faisaient monter, +2 max chacune, contre jusqu'à -8 par
-  transfert). Désormais +0,5 par match réellement joué
-  (CHEMISTRY_MATCH_TOGETHER_GAIN) et +0,5 de plus si le cinq de départ est
+  transfert). Désormais +1 par match réellement joué
+  (CHEMISTRY_MATCH_TOGETHER_GAIN) et +1 de plus si le cinq de départ est
   le même qu'au match précédent (CHEMISTRY_SAME_FIVE_GAIN,
-  Team.lastStartersKey sauvegardé) : ~+40/saison pour un effectif stable,
-  ~+20 s'il tourne. engine.js : Team.updateChemistryAfterMatch appelée par
+  Team.lastStartersKey sauvegardé) — valeurs doublées ("on a une vingtaine
+  de matchs par saison, double tes ratios") : ~+40/saison pour un effectif
+  stable, ~+20 s'il tourne. engine.js : Team.updateChemistryAfterMatch appelée par
   recordMatchStatsForTeam ; valeurs décimales arrondies à l'affichage
   (tableau de bord, fil d'actu). Guide (visite Effectif) mis à jour.
   Tests : chemistry_gain_test.js (nouveau), team_chemistry_test.js adapté

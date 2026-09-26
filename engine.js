@@ -3222,10 +3222,11 @@ const CHEMISTRY_ROSTER_CHANGE_BASE = 8; // malus max, pour le tout meilleur joue
 // jusqu'à -8 par transfert) : chaque match RÉELLEMENT joué ensemble soude un
 // peu le groupe, un peu plus encore si le cinq de départ est le même qu'au
 // match précédent (stabilité). Appliqué par Team.updateChemistryAfterMatch
-// (voir recordMatchStatsForTeam). Au rythme d'une saison (~40 matchs), un
-// effectif stable gagne ~+40, un effectif qui tourne ~+20.
-const CHEMISTRY_MATCH_TOGETHER_GAIN = 0.5; // par match joué
-const CHEMISTRY_SAME_FIVE_GAIN = 0.5; // en plus, si même cinq de départ qu'au match précédent
+// (voir recordMatchStatsForTeam). Doublé le 2026-09-26 ("on a une vingtaine
+// de matchs par saison, ce n'est pas assez. double tes ratios") : sur ~20
+// matchs, un effectif stable gagne ~+40, un effectif qui tourne ~+20.
+const CHEMISTRY_MATCH_TOGETHER_GAIN = 1; // par match joué
+const CHEMISTRY_SAME_FIVE_GAIN = 1; // en plus, si même cinq de départ qu'au match précédent
 
 // ---------------------------------------------------------------------
 // CONNAISSANCE TACTIQUE (retour utilisateur, 2026-09 : "sur la partie
