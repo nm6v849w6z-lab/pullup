@@ -51,6 +51,9 @@
    *   opts.team(id)    -> { logo(size) : html de l'écusson, color, altColor } | null
    *   opts.player(id)  -> html de l'avatar du joueur | ''
    *   opts.logo        -> URL du logo Hoop Manager
+   *   opts.sponsorLogo -> URL du logo du sponsor de l'émission (« Présenté
+   *                       par … ») ; prioritaire sur opts.logo, affiché seul
+   *                       (pas de pastille : le visuel porte déjà sa mention)
    *   opts.presenter   -> html de l'avatar du présentateur
    * Couleurs d'équipe : maillot du club qui reçoit, maillot extérieur de
    * l'autre en cas de même couleur, maillot trop sombre éclairci (même règle
@@ -178,6 +181,11 @@
 
   function logoBlock(ctx, big) {
     const sp = ctx.sponsor;
+    // Sponsor de l'émission (retour utilisateur 2026-09-26 : logo « Hoop
+    // Manager Premium », « l'émission est présentée par … »).
+    if (ctx.opts.sponsorLogo) {
+      return '<span class="' + (big ? 'hs-sponsor-big' : 'hs-sponsor-small') + ' hs-sponsor-has-img"><img class="hs-logo hs-sponsor-img" src="' + esc(ctx.opts.sponsorLogo) + '" alt="' + esc(sp.name + (sp.badge ? ' ' + sp.badge : '')) + '"></span>';
+    }
     if (ctx.opts.logo) {
       return '<span class="' + (big ? 'hs-sponsor-big' : 'hs-sponsor-small') + '"><img class="hs-logo" src="' + esc(ctx.opts.logo) + '" alt="' + esc(sp.name) + '">' +
         (sp.badge ? '<i>' + esc(sp.badge) + '</i>' : '') + '</span>';

@@ -119,6 +119,24 @@ function mountAt(show, i) {
   console.log("✅ Avant-match : avatars des joueurs dans les compos et le duel.");
 }
 {
+  // Sponsor de l'émission (retour utilisateur 2026-09-26 : « l'émission est
+  // présentée par » le logo Hoop Manager Premium) : générique ET bandeau du
+  // bas, sans pastille « PREMIUM » en plus (le visuel la porte déjà) — pour
+  // l'avant-match comme pour la mi-temps.
+  [prematch, halftime].forEach(show => {
+    const el = dom.window.document.getElementById("m");
+    const p = HSP.mount(el, show, Object.assign({}, dress, { sponsorLogo: "assets/brand/logo-hoop-manager-premium.png", now: () => Date.now(), onAd: () => new Promise(() => {}) }));
+    p.goTo(0);
+    const html = el.innerHTML;
+    p.destroy();
+    if ((html.match(/class="hs-logo hs-sponsor-img" src="assets\/brand\/logo-hoop-manager-premium.png"/g) || []).length < 2) fail("logo sponsor attendu au générique ET dans « Présenté par ».");
+    if (/hs-sponsor-(big|small)[^"]*"><img[^>]*><i>/.test(html)) fail("pas de pastille en plus du logo sponsor.");
+  });
+  if (!fs.existsSync(path.join(__dirname, "assets/brand/logo-hoop-manager-premium.png"))) fail("fichier du logo sponsor manquant.");
+  if (!/sponsorLogo: "assets\/brand\/logo-hoop-manager-premium.png"/.test(fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf8"))) fail("le jeu doit fournir le logo sponsor au lecteur.");
+  console.log("✅ Émissions « présentées par » le logo Hoop Manager Premium (avant-match et mi-temps).");
+}
+{
   // Sans habillage (autre intégration) : replis propres, aucune erreur.
   const el = dom.window.document.getElementById("m");
   halftime.segments.forEach((s, i) => { const p = HSP.mount(el, halftime, { onAd: () => new Promise(() => {}) }); p.goTo(i); p.destroy(); });

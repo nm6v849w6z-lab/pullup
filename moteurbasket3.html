@@ -27391,6 +27391,9 @@ function hoopShowDressOpts() {
   const logoImg = document.querySelector(".sidebar-brand .brand-logo-img");
   return {
     logo: logoImg ? logoImg.getAttribute("src") : "assets/brand/logo-hoop-manager.png",
+    // « L'émission est présentée par » Hoop Manager Premium (retour
+    // utilisateur 2026-09-26, logo fourni, fond rendu transparent).
+    sponsorLogo: "assets/brand/logo-hoop-manager-premium.png",
     presenter: hoopShowPresenterAvatar() || undefined,
     presenterName: HOOP_SHOW_PRESENTER_NAME,
     team: (id) => {

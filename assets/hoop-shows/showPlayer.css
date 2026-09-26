@@ -317,6 +317,11 @@
 .hs-sponsor-small b { font-weight: 800; letter-spacing: 1px; color: var(--hs-text); }
 .hs-sponsor-small .hs-logo { height: 30px; width: auto; display: block; }
 .hs-sponsor-small i { font-size: 10px; letter-spacing: 1px; padding: 2px 7px; }
+/* Logo du sponsor de l'émission (opts.sponsorLogo) : visuel complet, plus
+   haut que le simple logo pour que sa mention reste lisible. */
+.hs-sponsor-big.hs-sponsor-has-img { padding: 14px 26px; }
+.hs-sponsor-big .hs-sponsor-img { height: 120px; }
+.hs-sponsor-small .hs-sponsor-img { height: 44px; }
 .hs-nav { display: flex; gap: 10px; }
 .hs-btn-next { min-height: 44px; padding: 0 22px; border-radius: 99px; border: 0; background: var(--hs-accent); color: var(--hs-accent-ink); font-size: 14px; font-weight: 800; white-space: nowrap; }
 .hs-btn-next:disabled { background: var(--hs-line-strong); color: var(--hs-light); }

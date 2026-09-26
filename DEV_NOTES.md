@@ -20,6 +20,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Émissions
+  (avant-match, mi-temps) "présentées par" Hoop Manager Premium** — retour
+  utilisateur (logo fourni) : "intègre ce logo comme sponsor : l'émission
+  est présentée par ...". assets/brand/logo-hoop-manager-premium.png (fond
+  bleu nuit rendu transparent, recadré) ; showPlayer.js : nouvelle option
+  opts.sponsorLogo, prioritaire dans logoBlock (générique "PRÉSENTÉ PAR" +
+  bandeau du bas), sans pastille "PREMIUM" en plus ; showPlayer.css :
+  tailles 120 px / 44 px ; moteurbasket3.html (hoopShowDressOpts) fournit
+  le logo. hoop_show_player_test.js étendu, vert (+ tests avant-match/
+  émissions verts). Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle : plus
   d'encart "Sponsor de la salle — Aucun · voir les offres"** — retour
   utilisateur : "enleve ça sur l'onglet salle". salleSponsorEncartHtml ne
