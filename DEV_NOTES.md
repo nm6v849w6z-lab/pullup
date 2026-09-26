@@ -42,8 +42,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   questions numérotées + "Valider x/n", police Exo 2 plus chargée) ;
   moteurbasket3.html (hoopShowDressOpts : écussons teamLogoHtml, couleurs
   JERSEY_COLORS, avatars AvatarGen, logo de la barre latérale ; Max =
-  avatar AvatarGen graine 2441 aux couleurs Hoop Manager). Test :
-  hoop_show_player_test.js (nouveau) + hoop_shows, prematch_lock_ui,
+  tête d'avatar AvatarGen graine 2441, en costume — "utilise la tete de
+  l'avatar mais mets lui un costume quand meme" : option AvatarGen
+  `outfit: "suit"` (renderSuit : veste marine, chemise, cravate ambre ;
+  joueurs inchangés)). Tests : hoop_show_player_test.js et
+  presenter_suit_test.js (nouveaux) + hoop_shows, prematch_lock_ui,
   mvp_avatar, tabs, dashboard_e2e, live_view_game_style, server/actions,
   liveMatch, index verts. Rendu vérifié dans Chromium (1440 px). Note : une
   émission de mi-temps déjà publiée garde ses questions (publication
