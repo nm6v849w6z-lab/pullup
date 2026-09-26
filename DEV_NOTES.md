@@ -46,7 +46,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   attr_color_scheme_everywhere, dashboard_feed, tabs verts (aussi sur HEAD +
   ce seul changement, worktree isolé). Commit construit à partir de HEAD
   + ce seul patch (d'autres sessions ont des changements non commités
-  dans le même fichier, laissés intacts). Reste : `git push`.
+  dans le même fichier, laissés intacts). Puis retirés (retour
+  utilisateur) : sous-titre "Enchères de 1 jour · le plus offrant [...]"
+  et note de bas de page "Le potentiel affiché n'est qu'une estimation
+  [...]". Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Fiche équipe
   adverse : refonte des sous-onglets Effectif et Calendrier** — retour

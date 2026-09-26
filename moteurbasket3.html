@@ -1547,7 +1547,6 @@
   .mk-page{display:flex; flex-direction:column; gap:20px;}
   .mk-page [hidden]{display:none !important;}
   .mk-ph h2{margin:0; font-size:28px; font-weight:800; text-transform:uppercase; letter-spacing:.01em; line-height:1.05;}
-  .mk-ph p{margin:6px 0 0; color:var(--ink-dim); font-size:14px;}
   .mk-card{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:22px 24px; min-width:0;}
   .mk-card-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
   .mk-card-head h3{margin:0; font-size:18px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--ink);}
@@ -1716,7 +1715,6 @@
   .mk-arow .attr-cell .attr-val{min-width:26px; text-align:right; font-size:16px;}
   .mk-arow .attr-cell .attr-bar-track{width:80px; height:6px; margin-top:0; border-radius:999px; background:var(--bg);}
   .mk-arow .attr-cell .attr-bar-fill{border-radius:999px;}
-  .mk-foot-note{font-size:13px; color:var(--ink-faint); margin:0;}
   @media (max-width:1250px){
     .mk-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
@@ -5820,7 +5818,6 @@
     <div class="section mk-page">
       <div class="mk-ph">
         <h2>Marché des transferts</h2>
-        <p id="marketSub"></p>
       </div>
       <div class="mk-kpis" id="marketKpis"></div>
       <section class="mk-card" aria-labelledby="marketMineTitle">
@@ -5868,7 +5865,6 @@
       </section>
       <div id="marketFeedback" role="status" aria-live="polite"></div>
       <div id="marketListings"></div>
-      <p class="mk-foot-note">Le potentiel affiché n'est qu'une estimation par palier. La valeur estimée repose sur le salaire et l'âge du joueur, comme le prix de départ suggéré à la mise en vente. Les caractéristiques sont visibles pour tous les joueurs du marché, même adverses.</p>
     </div>
   </div>
 
@@ -31265,9 +31261,9 @@ function mkTimeLeft(closesAt, now) {
 function mkCritActive() { return marketUi.crit.filter(c => c.key); }
 
 function renderMarcheSection() {
-  const days = Math.max(1, Math.round(TRANSFER_AUCTION_DURATION_MS / 86400000));
-  const sub = document.getElementById("marketSub");
-  if (sub) sub.textContent = `Enchères de ${days} jour${days > 1 ? "s" : ""} · le plus offrant à la clôture l'emporte · caractéristiques visibles pour tous les joueurs du marché`;
+  // Sous-titre et note de bas de page retirés (retour utilisateur,
+  // 2026-09-26 : "enleve: Enchères de 1 jour · le plus offrant [...]" et
+  // "enleve: Le potentiel affiché n'est qu'une estimation [...]").
   renderMarketKpis();
   renderMarketMine();
   renderMarketCritPanel();
