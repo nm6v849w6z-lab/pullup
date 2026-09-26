@@ -156,15 +156,16 @@ function escapeForCheck(s) { return s.replace(/[&<>"']/g, () => ""); } // approx
   }
   console.log("✅ L'étiquette d'équipe (\"Votre équipe\") est correcte pour deux joueurs de son propre effectif.");
 
-  const posNote = content.querySelector(".compare-position-note").textContent;
-  const expectedSamePos = playerA.position === playerB.position;
-  if (expectedSamePos && !posNote.includes("Même poste")) {
-    throw new Error(`❌ Postes identiques (${playerA.position}) : la note devrait dire "Même poste", obtenu "${posNote}".`);
+  // Note "Même poste / Postes différents" retirée (retour utilisateur
+  // 2026-09-26 : "enlève") — la pastille de poste de chaque en-tête suffit.
+  if (content.querySelector(".compare-position-note")) {
+    throw new Error("❌ La note de poste (.compare-position-note) a été retirée, elle ne devrait plus apparaître.");
   }
-  if (!expectedSamePos && !posNote.includes("différents")) {
-    throw new Error(`❌ Postes différents (${playerA.position}/${playerB.position}) : la note devrait le signaler, obtenu "${posNote}".`);
+  const posPills = [...content.querySelectorAll(".cph-pos")].map(el => el.textContent.trim());
+  if (posPills[0] !== playerA.position || posPills[1] !== playerB.position) {
+    throw new Error(`❌ Chaque en-tête devrait afficher le poste de son joueur, obtenu ${JSON.stringify(posPills)}.`);
   }
-  console.log(`✅ La note de poste est cohérente avec les postes réels (${playerA.position} / ${playerB.position}).`);
+  console.log("✅ Plus de note de poste ; chaque en-tête affiche bien la pastille de poste de son joueur.");
 
   // --- Potentiel et Salaire : les DEUX visibles et comparables (propre effectif).
   const tiles = [...content.querySelectorAll(".compare-profile-tile")];

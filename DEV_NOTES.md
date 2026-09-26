@@ -51,20 +51,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     Coupe sont committées. Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Comparateur de
-  joueurs : refonte visuelle** — retour utilisateur : "rends l'onglet
-  comparaison un peu plus sexy". En-têtes "héros" (vrais avatars AvatarGen,
-  dégradé couleur d'équipe, pastille de poste, initiales en filigrane),
-  score du duel au centre + barre de tir à la corde (caractéristiques
-  dominées, seulement sur celles visibles des deux côtés), radar superposé
-  à échelle adaptative (côté B tracé seulement s'il est entièrement
-  scouté), moyennes par groupe (seulement si le groupe est entièrement
-  visible de ce côté), barres "papillon" sur chaque caractéristique.
-  Classes testées conservées. Fichier : moteurbasket3.html
-  (renderPlayerCompareView, pdpCompareAttrRowHtml, compareRadarSvg,
-  compareGroupStats, CSS .compare-*). Tests player_compare,
-  attr_color_scheme_everywhere, radar_chart_colors, pdp_color_scheme,
-  player_detail_topbar_nav verts ; captures Playwright vérifiées (propre
-  effectif + adversaire non scouté). Reste : `git push`.
+  joueurs : alignement sur le style du jeu** — la refonte dea27d3 (poussée)
+  jugée "mieux mais un peu éloignée de l'esprit des autres pages". Reprise
+  dans le langage de la fiche joueur (pdp2 : cartes, titres majuscules,
+  pastille de poste ambre, chips, barres par palier, légende en barre,
+  radar à anneaux) et du bandeau Prochain match (hm-hero : fond scindé,
+  cercle de terrain, gros VS ambre). Retirés sur demande : la note
+  "Postes différents / Même poste" et le libellé "caractéristiques
+  dominées" sous le score. player_compare_test adapté. Tests
+  player_compare, attr_color_scheme_everywhere, radar_chart_colors,
+  pdp_color_scheme, player_detail_topbar_nav verts. Commit isolé (les
+  changements non commités d'une autre session — Coupe/Académie/Marché —
+  restent dans l'arbre de travail). Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Calendrier :
   deux textes retirés** — retours utilisateur : "enlève: Ordres non

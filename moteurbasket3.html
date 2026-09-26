@@ -1921,102 +1921,70 @@
      joueur (.pdp-attr-grid). Réutilise attrColorTier/les classes
      attr-tier-* déjà en place (voir .pdp-attr-value.attr-tier-* juste
      au-dessus) plutôt que de dupliquer l'échelle de couleur. */
-  .compare-heads{display:grid; grid-template-columns:1fr auto 1fr; align-items:stretch; gap:18px; margin-bottom:10px;}
-  .compare-player-head{
-    position:relative; overflow:hidden; background:var(--panel); border:1px solid var(--line);
-    border-radius:16px; padding:18px 22px; display:flex; align-items:center; gap:18px; min-height:112px;
+  /* ---- Comparateur de joueurs, v2 (retour utilisateur 2026-09-26 : "c'est
+     mieux mais on est un peu éloigné de l'esprit des autres pages du
+     jeu") : même langage que le bandeau Prochain match du tableau de bord
+     (.hm-hero : fond scindé en diagonale, cercle de terrain, gros VS ambre
+     en italique, liserés latéraux) et que la fiche joueur (.pdp2 : cartes
+     16px, titres en majuscules, pastille de poste ambre, chips, barres
+     colorées par palier, légende en barre). */
+  .compare-v2{display:flex; flex-direction:column; gap:18px;}
+  .compare-hero{
+    position:relative; overflow:hidden; border-radius:22px; background:#121B2E; border:1px solid #22304A;
+    padding:30px 40px; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:20px;
   }
-  .compare-player-head.side-a{
-    background:radial-gradient(120% 140% at 0% 0%, rgba(51,180,161,.26), rgba(51,180,161,.05) 45%, transparent 70%), var(--panel);
-    border-color:rgba(51,180,161,.38);
-  }
-  .compare-player-head.side-b{
-    flex-direction:row-reverse; text-align:right;
-    background:radial-gradient(120% 140% at 100% 0%, rgba(226,105,79,.26), rgba(226,105,79,.05) 45%, transparent 70%), var(--panel);
-    border-color:rgba(226,105,79,.38);
-  }
-  /* Grande initiale en filigrane derrière le texte, pure décoration. */
-  .compare-player-head .cph-watermark{
-    position:absolute; bottom:-26px; font-size:118px; font-weight:900; letter-spacing:-.04em; line-height:1;
-    opacity:.045; pointer-events:none; user-select:none;
-  }
-  .compare-player-head.side-a .cph-watermark{right:14px; color:var(--teamA);}
-  .compare-player-head.side-b .cph-watermark{left:14px; color:var(--teamB);}
-  .compare-player-head .cph-body{position:relative; min-width:0;}
-  .compare-player-head .cph-name{font-size:21px; font-weight:800; letter-spacing:-.01em; margin-bottom:6px; line-height:1.1;}
-  .compare-player-head .cph-pos{
-    display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em;
-    padding:3px 9px; border-radius:999px; margin-bottom:6px;
-  }
-  .compare-player-head.side-a .cph-pos{background:var(--teamA-soft); color:#5fd6c4;}
-  .compare-player-head.side-b .cph-pos{background:var(--teamB-soft); color:#f0a292;}
-  .compare-player-head .cph-meta{font-size:12px; color:var(--ink-dim);}
-  .compare-player-head .cph-team{font-size:11px; color:var(--ink-faint); margin-top:3px;}
+  .compare-hero::before, .compare-hero::after{content:""; position:absolute; top:0; width:6px; height:100%; z-index:1;}
+  .compare-hero::before{left:0; background:var(--teamA);}
+  .compare-hero::after{right:0; background:var(--teamB);}
+  .compare-hero__split{position:absolute; inset:0 48% 0 0; background:#1E1A1C; clip-path:polygon(0 0,100% 0,88% 100%,0 100%);}
+  .compare-hero__court{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); color:var(--amber); opacity:.18;}
+  .compare-hero > :not(.compare-hero__split):not(.compare-hero__court){position:relative;}
+  .compare-player-head{display:flex; align-items:center; gap:20px; min-width:0;}
+  .compare-player-head.side-b{flex-direction:row-reverse; text-align:right;}
   .compare-avatar{
-    position:relative; flex:0 0 auto; border-radius:16px; line-height:0; padding:3px;
-    box-shadow:0 10px 28px rgba(0,0,0,.45);
+    flex:0 0 auto; width:104px; height:104px; border-radius:18px; overflow:hidden; background:var(--panel-2);
+    border:2px solid var(--line); display:flex; align-items:flex-end; justify-content:center; line-height:0;
   }
-  .compare-player-head.side-a .compare-avatar{background:linear-gradient(160deg, var(--teamA), rgba(51,180,161,.15));}
-  .compare-player-head.side-b .compare-avatar{background:linear-gradient(200deg, var(--teamB), rgba(226,105,79,.15));}
-  .compare-avatar .player-avatar{border-radius:13px !important; background:var(--panel-2);}
-
-  .compare-duel{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-width:120px;}
-  .compare-vs-badge{
-    width:50px; height:50px; border-radius:50%; flex:0 0 auto; position:relative;
-    display:flex; align-items:center; justify-content:center;
-    font-size:14px; font-weight:900; font-style:italic; letter-spacing:.02em; color:var(--ink);
-    background:conic-gradient(from 200deg, var(--teamA), var(--teamB), var(--teamA));
-    box-shadow:0 0 22px rgba(240,162,60,.18);
-  }
-  .compare-vs-badge::before{content:""; position:absolute; inset:3px; border-radius:50%; background:var(--bg);}
-  .compare-vs-badge span{position:relative;}
-  .compare-duel-score{font-size:24px; font-weight:900; letter-spacing:-.02em; line-height:1; white-space:nowrap;}
+  .compare-player-head.side-a .compare-avatar{border-color:var(--teamA);}
+  .compare-player-head.side-b .compare-avatar{border-color:var(--teamB);}
+  .compare-avatar .player-avatar{border-radius:0 !important;}
+  .compare-player-head .cph-body{display:flex; flex-direction:column; gap:10px; min-width:0;}
+  .compare-player-head.side-b .cph-body{align-items:flex-end;}
+  .compare-player-head .cph-top{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .compare-player-head.side-b .cph-top{justify-content:flex-end;}
+  .compare-player-head .cph-pos{font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--amber-ink); background:var(--amber); padding:3px 10px; border-radius:6px;}
+  .compare-player-head .cph-team{font-size:13.5px; color:var(--ink-dim);}
+  .compare-player-head .cph-name{font-size:32px; line-height:1.02; font-weight:800; text-transform:uppercase; letter-spacing:-.01em; color:var(--ink); overflow-wrap:anywhere;}
+  .compare-player-head .cph-chips{display:flex; gap:8px; flex-wrap:wrap;}
+  .compare-player-head.side-b .cph-chips{justify-content:flex-end;}
+  .compare-player-head .cph-chip{font-size:13px; padding:5px 12px; border-radius:999px; background:var(--panel-2); color:var(--ink-dim); white-space:nowrap;}
+  .compare-duel{display:flex; flex-direction:column; align-items:center; gap:8px;}
+  .compare-duel-vs{font-style:italic; font-weight:800; font-size:52px; line-height:.85; color:var(--amber);}
+  .compare-duel-score{font-size:20px; font-weight:800; letter-spacing:.5px; font-variant-numeric:tabular-nums; background:#121B2E; border:1px solid #22304A; border-radius:999px; padding:4px 14px;}
   .compare-duel-score .a{color:var(--teamA);} .compare-duel-score .b{color:var(--teamB);}
-  .compare-duel-score .sep{color:var(--ink-faint); font-weight:600; margin:0 6px;}
-  .compare-duel-label{font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); font-weight:800; text-align:center; line-height:1.3;}
+  .compare-duel-score .sep{color:var(--ink-faint); margin:0 8px;}
 
-  /* Barre de "tir à la corde" : part des caractéristiques dominées par
-     chacun (égalités au milieu, en gris). */
-  .compare-tug{display:flex; height:6px; border-radius:999px; overflow:hidden; background:var(--line-soft); margin:4px 0 10px;}
-  .compare-tug i{display:block; height:100%; transition:width .5s ease;}
-  .compare-tug .a{background:linear-gradient(90deg, rgba(51,180,161,.55), var(--teamA));}
-  .compare-tug .t{background:var(--line);}
-  .compare-tug .b{background:linear-gradient(90deg, var(--teamB), rgba(226,105,79,.55));}
-
-  .compare-position-note{font-size:11px; color:var(--ink-faint); text-align:center; margin:0 0 16px; font-style:italic;}
-
-  .compare-overview{display:grid; grid-template-columns:minmax(300px,380px) 1fr; gap:14px; margin-bottom:14px;}
-  @media (max-width:900px){.compare-overview{grid-template-columns:1fr;}}
-  .compare-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px;}
-  .compare-card-title{
-    font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);
-    font-weight:800; margin:0 0 8px; display:flex; align-items:center; justify-content:space-between; gap:8px;
-  }
-  .compare-radar-legend{display:flex; gap:10px; font-size:10.5px; text-transform:none; letter-spacing:0; font-weight:700;}
-  .compare-radar-legend span{display:inline-flex; align-items:center; gap:5px; color:var(--ink-dim);}
-  .compare-radar-legend i{width:10px; height:3px; border-radius:2px; display:inline-block;}
+  .compare-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px 22px; min-width:0;}
+  .compare-card-head{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
+  .compare-card-head h3{margin:0; font-size:15px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--ink);}
+  .compare-card-meta{font-size:12.5px; color:var(--ink-dim); display:flex; gap:14px; align-items:center;}
+  .compare-who{display:inline-flex; align-items:center; gap:6px;}
+  .compare-who i{width:10px; height:10px; border-radius:50%; display:inline-block;}
+  .compare-row-2{display:grid; grid-template-columns:420px minmax(0,1fr); gap:18px;}
+  @media (max-width:1100px){.compare-row-2{grid-template-columns:1fr;}}
   .compare-radar-card{display:flex; flex-direction:column;}
-  .compare-radar-card svg{display:block; width:100%; height:auto; flex:1 1 auto; min-height:0;}
-  .compare-radar-note{font-size:10.5px; color:var(--ink-faint); text-align:center; font-style:italic; margin-top:2px;}
-  .compare-overview-right{display:flex; flex-direction:column; gap:12px; min-width:0;}
+  .compare-radar-card svg{display:block; width:100%; height:auto; max-height:330px;}
+  .compare-radar-note{font-size:12px; color:var(--ink-faint); text-align:center; font-style:italic; margin-top:6px;}
 
-  .compare-profile-strip{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
-  .compare-profile-tile{
-    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:11px 12px;
-    position:relative; overflow:hidden;
-  }
-  .compare-profile-tile::before{
-    content:""; position:absolute; left:0; right:0; top:0; height:2px;
-    background:linear-gradient(90deg, var(--teamA), transparent 35%, transparent 65%, var(--teamB)); opacity:.7;
-  }
-  .compare-profile-tile .cpt-label{
-    font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);
-    font-weight:800; text-align:center; margin-bottom:7px;
-  }
+  .compare-profile-strip{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+  .compare-profile-tile{background:var(--bg); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:10px;}
+  .compare-profile-tile .cpt-label{font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim);}
   .compare-profile-tile .cpt-vals{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:6px;}
-  .compare-profile-tile .cpt-val{text-align:center; font-weight:900; font-size:20px; padding:4px 2px; border-radius:8px; letter-spacing:-.01em;}
-  .compare-profile-tile .cpt-val.small{font-size:12.5px; font-weight:800; letter-spacing:0;}
-  .compare-profile-tile .cpt-sep{color:var(--ink-faint); font-size:9.5px; font-weight:800; text-transform:uppercase;}
+  .compare-profile-tile .cpt-val{font-weight:800; font-size:30px; line-height:1; padding:4px 6px; border-radius:8px; font-variant-numeric:tabular-nums;}
+  .compare-profile-tile .cpt-val:last-child{text-align:right;}
+  .compare-profile-tile .cpt-val.small{font-size:14px; font-weight:700; line-height:1.3;}
+  .compare-profile-tile .cpt-val.small .condition-badge{font-size:12px;}
+  .compare-profile-tile .cpt-sep{color:var(--ink-faint); font-size:11px; text-transform:uppercase;}
   .compare-profile-tile .cpt-val.win{background:rgba(62,207,103,.10); box-shadow:inset 0 0 0 1px rgba(62,207,103,.35);}
   .compare-profile-tile .cpt-val.locked{color:var(--ink-faint); font-weight:600;}
   .compare-profile-tile .cpt-val.attr-tier-red{color:var(--attr-tier-red);}
@@ -2024,68 +1992,53 @@
   .compare-profile-tile .cpt-val.attr-tier-white{color:var(--ink);}
   .compare-profile-tile .cpt-val.attr-tier-green{color:#3ecf67;}
 
-  /* Moyennes par groupe (Fondamentaux / Physique / Mental), barres en
-     miroir depuis le centre — calculées UNIQUEMENT sur les caractéristiques
-     visibles des deux côtés (aucune fuite d'info de scoutisme). */
-  .compare-group-row{display:grid; grid-template-columns:34px 1fr 96px 1fr 34px; align-items:center; gap:8px; padding:6px 0;}
-  .compare-group-row + .compare-group-row{border-top:1px solid var(--line-soft);}
-  .compare-group-row .cg-label{text-align:center; font-size:11px; font-weight:800; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.04em;}
-  .compare-group-row .cg-val{text-align:center; font-weight:900; font-size:15px;}
-  .compare-group-row .cg-val.a{color:var(--teamA);} .compare-group-row .cg-val.b{color:var(--teamB);}
+  /* Moyennes par groupe, même gabarit que les barres de tir de la fiche
+     joueur (.pdp2-shot), en miroir : A à gauche, B à droite. */
+  .compare-groups{display:flex; flex-direction:column; gap:14px; margin-top:20px;}
+  .compare-group-row{display:grid; grid-template-columns:44px minmax(0,1fr) 130px minmax(0,1fr) 44px; align-items:center; gap:14px;}
+  .compare-group-row .cg-label{text-align:center; font-size:13.5px; font-weight:600; color:var(--ink);}
+  .compare-group-row .cg-val{font-size:18px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .compare-group-row .cg-val:first-child{text-align:left;} .compare-group-row .cg-val:last-child{text-align:right;}
   .compare-group-row .cg-val.locked{color:var(--ink-faint); font-weight:600;}
 
-  .compare-attr-columns{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
+  .compare-legend{display:flex; flex-direction:column; gap:6px; width:min(480px,100%);}
+  .compare-attr-columns{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px;}
   @media (max-width:1100px){.compare-attr-columns{grid-template-columns:1fr;}}
-  .compare-attr-col{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 14px 8px;}
-  .compare-attr-col h3{
-    font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);
-    margin:0 0 8px; font-weight:800; display:flex; align-items:center; justify-content:space-between;
+  .compare-attr-col{display:flex; flex-direction:column; gap:4px; min-width:0;}
+  .compare-attr-col h4{
+    display:flex; justify-content:space-between; align-items:baseline; margin:0 0 6px; padding-bottom:8px; border-bottom:1px solid var(--line);
+    font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink);
   }
-  .compare-attr-col h3 .cac-score{font-size:11px; letter-spacing:0; font-weight:800;}
-  .compare-attr-col h3 .cac-score .a{color:var(--teamA);} .compare-attr-col h3 .cac-score .b{color:var(--teamB);}
-  .compare-attr-col h3 .cac-score .sep{color:var(--ink-faint); margin:0 4px;}
-  .compare-row{
-    display:grid; grid-template-columns:30px 1fr minmax(92px,auto) 1fr 30px; align-items:center;
-    gap:7px; padding:5px 4px; border-radius:8px; font-size:11.5px; transition:background .15s;
-  }
-  .compare-row:hover{background:var(--panel-2);}
-  .compare-row .cmp-label{text-align:center; color:var(--ink-dim); font-size:10.5px; white-space:nowrap;}
-  .compare-row .cmp-val{text-align:center; font-weight:800; font-size:13px; padding:2px 0; border-radius:6px;}
-  /* Meilleure valeur des deux côtés : liseré vert sur le chiffre + barre
-     pleine intensité (le perdant garde une barre atténuée) — jamais sur une
-     ligne où un des deux côtés est verrouillé (pas comparable), voir
-     pdpCompareAttrRowHtml. */
+  .compare-attr-col h4 .cac-score{font-size:12.5px; letter-spacing:0; font-weight:700;}
+  .compare-attr-col h4 .cac-score .a{color:var(--teamA);} .compare-attr-col h4 .cac-score .b{color:var(--teamB);}
+  .compare-attr-col h4 .cac-score .sep{color:var(--ink-faint); margin:0 5px;}
+  .compare-row{display:grid; grid-template-columns:32px minmax(0,1fr) auto minmax(0,1fr) 32px; align-items:center; gap:10px; padding:5px 0;}
+  .compare-row .cmp-label{text-align:center; color:var(--ink); font-size:13px; white-space:nowrap; min-width:104px;}
+  .compare-row .cmp-val{text-align:center; font-weight:800; font-size:15px; padding:2px 0; border-radius:6px; font-variant-numeric:tabular-nums;}
+  /* Meilleure valeur des deux côtés : liseré vert sur le chiffre, barre à
+     pleine intensité (celle de l'autre côté atténuée) — jamais sur une
+     ligne où un des deux côtés est verrouillé, voir pdpCompareAttrRowHtml. */
   .compare-row .cmp-val.win{background:rgba(62,207,103,.10); box-shadow:inset 0 0 0 1px rgba(62,207,103,.35);}
   .compare-row .cmp-val.attr-tier-red{color:var(--attr-tier-red);}
   .compare-row .cmp-val.attr-tier-orange{color:var(--attr-tier-amber);}
   .compare-row .cmp-val.attr-tier-white{color:var(--ink);}
   .compare-row .cmp-val.attr-tier-green{color:#3ecf67;}
   .compare-row .cmp-val.locked{color:var(--ink-faint); font-weight:600;}
-  .cmp-bar{height:7px; border-radius:999px; background:var(--line-soft); display:flex; overflow:hidden;}
+  .cmp-bar{height:8px; border-radius:999px; background:var(--bg); display:flex; overflow:hidden;}
   .cmp-bar.a{justify-content:flex-end;}
-  .cmp-bar i{display:block; height:100%; border-radius:999px; opacity:.38; transition:width .5s ease;}
-  .cmp-bar.a i{background:linear-gradient(90deg, rgba(51,180,161,.35), var(--teamA));}
-  .cmp-bar.b i{background:linear-gradient(90deg, var(--teamB), rgba(226,105,79,.35));}
-  .cmp-bar.lead i{opacity:1;}
-  .cmp-bar.even i{opacity:.7;}
+  .cmp-bar i{display:block; height:100%; border-radius:999px; opacity:.4;}
+  .cmp-bar.lead i, .cmp-bar.even i{opacity:1;}
   .cmp-bar.locked{background:repeating-linear-gradient(135deg, var(--line-soft) 0 4px, transparent 4px 8px);}
-
-  .compare-legend{display:flex; gap:16px; justify-content:center; margin:16px 0 0; font-size:11px; color:var(--ink-faint); flex-wrap:wrap;}
-  .compare-legend span{display:inline-flex; align-items:center; gap:5px;}
-  .compare-legend i{width:9px; height:9px; border-radius:50%; display:inline-block;}
   @media (max-width:760px){
-    .compare-heads{grid-template-columns:1fr; gap:10px;}
-    .compare-player-head.side-b{flex-direction:row; text-align:left;}
-    .compare-duel{flex-direction:row; gap:14px;}
+    .compare-hero{grid-template-columns:1fr; padding:22px 20px; justify-items:center;}
+    .compare-hero__split{display:none;}
+    .compare-player-head, .compare-player-head.side-b{flex-direction:column; text-align:center;}
+    .compare-player-head .cph-body, .compare-player-head.side-b .cph-body{align-items:center;}
+    .compare-player-head .cph-name{font-size:24px;}
   }
   /* playerCompareSection est dans WIDE_PAGE_IDS (.wrap.wrap-wide{max-width:
-     none;}, voir plus haut) pour la même raison que playerDetailSection —
-     mais contrairement à la fiche joueur (qui profite de toute la largeur
-     disponible), le format "paysage" validé sur mockup n'a pas besoin de
-     s'étirer au-delà de sa largeur naturelle sur un très grand écran : on
-     re-plafonne ICI, sur le contenu lui-même plutôt que sur .wrap, pour ne
-     pas priver les autres pages larges (Effectif, Coupe...) de leur propre
-     comportement. */
+     none;}, voir plus haut) : re-plafonné ICI, sur le contenu lui-même, pour
+     ne pas s'étirer indéfiniment sur un très grand écran. */
   #playerCompareSection .section{max-width:1440px; margin-left:auto; margin-right:auto;}
   /* Nouvelle fiche joueur (retour utilisateur, 2026-09, exemple fourni pour
      "Adama Kovac") : grille à 2 colonnes pour les caractéristiques (voir
@@ -20337,12 +20290,6 @@ document.getElementById("compareSearchResults").addEventListener("click", (e) =>
   renderPlayerCompareView();
 });
 
-// Initiales du joueur (filigrane décoratif derrière l'en-tête du
-// comparateur, voir .cph-watermark).
-function compareInitials(name) {
-  return (name || "").split(" ").map(s => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
-}
-
 function compareProfileTileHtml(label, aDisplay, bDisplay, aExtraClass, bExtraClass) {
   return `<div class="compare-profile-tile"><div class="cpt-label">${escapeHtml(label)}</div>` +
     `<div class="cpt-vals"><span class="cpt-val ${aExtraClass || ""}">${aDisplay}</span>` +
@@ -20350,13 +20297,13 @@ function compareProfileTileHtml(label, aDisplay, bDisplay, aExtraClass, bExtraCl
     `<span class="cpt-val ${bExtraClass || ""}">${bDisplay}</span></div></div>`;
 }
 
-// Barre "papillon" d'un côté d'une ligne du comparateur (refonte visuelle,
-// retour utilisateur 2026-09-26 : "rends l'onglet comparaison un peu plus
-// sexy") : pousse depuis le centre vers l'extérieur, pleine intensité pour
-// le meilleur des deux, atténuée pour l'autre, hachurée si verrouillée.
+// Barre d'un côté d'une ligne du comparateur : pousse depuis le centre vers
+// l'extérieur, colorée par palier comme les barres de la fiche joueur
+// (radarTierColor), pleine intensité pour le meilleur des deux, atténuée
+// pour l'autre, hachurée si verrouillée.
 function compareBarHtml(side, value, state) {
   if (value === null) return `<span class="cmp-bar ${side} locked"></span>`;
-  return `<span class="cmp-bar ${side} ${state}"><i style="width:${clamp(value, 0, 100)}%"></i></span>`;
+  return `<span class="cmp-bar ${side} ${state}"><i style="width:${clamp(value, 0, 100)}%;background:${radarTierColor(value)}"></i></span>`;
 }
 
 // Une ligne de caractéristique du comparateur : même verrou "?" que
@@ -20377,7 +20324,7 @@ function pdpCompareAttrRowHtml(attr, playerA, visA, playerB, visB) {
   const bWin = bothVisible && bVal > aVal;
   const aClass = aVisible ? `cmp-val ${attrColorTier(aVal)}${aWin ? " win" : ""}` : "cmp-val locked";
   const bClass = bVisible ? `cmp-val ${attrColorTier(bVal)}${bWin ? " win" : ""}` : "cmp-val locked";
-  const barState = win => !bothVisible ? "" : (win ? "lead" : (aVal === bVal ? "even" : ""));
+  const barState = win => !bothVisible ? "lead" : (win ? "lead" : (aVal === bVal ? "even" : ""));
   return `<div class="compare-row"><span class="${aClass}">${aVisible ? aVal : "?"}</span>` +
     compareBarHtml("a", aVal, barState(aWin)) +
     `<span class="cmp-label">${escapeHtml(label)}</span>` +
@@ -20391,71 +20338,57 @@ function pdpCompareAttrRowHtml(attr, playerA, visA, playerB, visB) {
 // erreur, et une moyenne complète d'un joueur non scouté fuiterait).
 function compareGroupStats(attrs, playerA, visA, playerB, visB) {
   const common = attrs.filter(a => visA.has(a) && visB.has(a));
-  let winsA = 0, winsB = 0, ties = 0, sumA = 0, sumB = 0;
+  let winsA = 0, winsB = 0, ties = 0;
   common.forEach(a => {
     const x = playerA.attrs[a], y = playerB.attrs[a];
-    sumA += x; sumB += y;
     if (x > y) winsA++; else if (y > x) winsB++; else ties++;
   });
   const fullAvg = (player, vis) => attrs.every(a => vis.has(a))
     ? Math.round(attrs.reduce((acc, a) => acc + player.attrs[a], 0) / attrs.length) : null;
-  return {
-    count: common.length, winsA, winsB, ties,
-    avgA: fullAvg(playerA, visA),
-    avgB: fullAvg(playerB, visB),
-  };
+  return { count: common.length, winsA, winsB, ties, avgA: fullAvg(playerA, visA), avgB: fullAvg(playerB, visB) };
 }
 
-// Radar superposé des deux joueurs (mêmes axes que la fiche joueur, voir
-// RADAR_AXES/playerRadarCategories). Un côté n'est tracé que s'il est
-// ENTIÈREMENT scouté (sinon les moyennes par axe révéleraient des
-// caractéristiques encore verrouillées). Échelle adaptée aux deux joueurs
-// (plafond arrondi à la dizaine au-dessus de leur meilleur axe, 50 au
-// minimum) : sur une échelle fixe 0-100, des joueurs autour de 30 donnaient
-// deux polygones minuscules et illisibles au centre.
-function compareRadarScaleMax(catsA, catsB) {
-  const vals = [catsA, catsB].filter(Boolean).flatMap(c => RADAR_AXES.map(ax => c[ax.key]));
-  const top = vals.length ? Math.max(...vals) : 100;
-  return clamp(Math.ceil((top + 5) / 10) * 10, 50, 100);
-}
+// Radar superposé des deux joueurs : MÊME fond que le radar de la fiche
+// joueur (anneaux par palier, voir radarChartSvg, échelle 0-100), avec les
+// deux profils en couleur d'équipe par-dessus. Un côté n'est tracé que s'il
+// est ENTIÈREMENT scouté (sinon les moyennes par axe révéleraient des
+// caractéristiques encore verrouillées).
 function compareRadarSvg(catsA, catsB) {
-  const cx = 150, cy = 128, maxR = 96, labelR = 112;
-  const scaleMax = compareRadarScaleMax(catsA, catsB);
+  const cx = 150, cy = 124, maxR = 92, labelR = 106;
   const n = RADAR_AXES.length;
-  const pointAt = (i, r) => {
-    const ang = (Math.PI * 2 * i) / n - Math.PI / 2;
-    return [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
-  };
-  const poly = frac => RADAR_AXES.map((_, i) => pointAt(i, maxR * frac).map(v => v.toFixed(1)).join(",")).join(" ");
-  let svg = `<svg viewBox="-34 0 368 252" role="img" aria-label="Profils superposés des deux joueurs (échelle 0-${scaleMax})">`;
-  svg += `<defs>` +
-    `<radialGradient id="cmpRadarBg" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="var(--panel-2)"/><stop offset="100%" stop-color="var(--panel)"/></radialGradient>` +
-    `</defs>`;
-  svg += `<polygon points="${poly(1)}" fill="url(#cmpRadarBg)" stroke="var(--line)" stroke-width="1"/>`;
-  [0.8, 0.5, 0.2].forEach(f => {
-    svg += `<polygon points="${poly(f)}" fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="${f === 0.5 ? "0" : "2 3"}"/>`;
+  const angleFor = i => (Math.PI * 2 * i) / n - Math.PI / 2;
+  const pointAt = (i, r) => [cx + r * Math.cos(angleFor(i)), cy + r * Math.sin(angleFor(i))];
+  const ring = frac => `M ${RADAR_AXES.map((_, i) => pointAt(i, maxR * frac).map(v => v.toFixed(1)).join(",")).join(" L ")} Z`;
+  let svg = `<svg viewBox="-40 -6 380 256" role="img" aria-label="Profils superposés des deux joueurs">`;
+  [
+    { outer: 1.0, inner: 0.8, color: "#3ecf67" },
+    { outer: 0.8, inner: 0.5, color: "var(--ink)" },
+    { outer: 0.5, inner: 0.2, color: "var(--attr-tier-amber)" },
+    { outer: 0.2, inner: 0, color: "var(--attr-tier-red)" },
+  ].forEach(({ outer, inner, color }) => {
+    const d = inner > 0 ? `${ring(outer)} ${ring(inner)}` : ring(outer);
+    svg += `<path d="${d}" fill="${color}" fill-opacity="0.22" fill-rule="evenodd"/>`;
   });
   RADAR_AXES.forEach((_, i) => {
     const [x, y] = pointAt(i, maxR);
-    svg += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`;
+    svg += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--bg)" stroke-opacity="0.5"/>`;
   });
   const shape = (cats, color) => {
-    const pts = RADAR_AXES.map((ax, i) => pointAt(i, (clamp(cats[ax.key], 0, scaleMax) / scaleMax) * maxR));
-    let s = `<polygon points="${pts.map(p => p.map(v => v.toFixed(1)).join(",")).join(" ")}" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="2.2" stroke-linejoin="round"/>`;
-    pts.forEach(([x, y]) => { s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${color}" stroke="var(--panel)" stroke-width="1.5"/>`; });
+    const pts = RADAR_AXES.map((ax, i) => pointAt(i, (clamp(cats[ax.key], 0, 100) / 100) * maxR));
+    let s = `<polygon points="${pts.map(p => p.map(v => v.toFixed(1)).join(",")).join(" ")}" fill="${color}" fill-opacity="0.22" stroke="${color}" stroke-width="2.4" stroke-linejoin="round"/>`;
+    pts.forEach(([x, y]) => { s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.2" fill="${color}" stroke="var(--panel)" stroke-width="1.5"/>`; });
     return s;
   };
   if (catsA) svg += shape(catsA, "var(--teamA)");
   if (catsB) svg += shape(catsB, "var(--teamB)");
   RADAR_AXES.forEach((ax, i) => {
     const [x, y] = pointAt(i, labelR);
-    const cosA = Math.cos((Math.PI * 2 * i) / n - Math.PI / 2);
+    const cosA = Math.cos(angleFor(i));
     const anchor = cosA > 0.15 ? "start" : cosA < -0.15 ? "end" : "middle";
-    const vA = catsA ? `<tspan fill="var(--teamA)"> ${Math.round(catsA[ax.key])}</tspan>` : "";
-    const vB = catsB ? `<tspan fill="var(--teamB)"> ${Math.round(catsB[ax.key])}</tspan>` : "";
-    svg += `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="${anchor}" font-size="8.5" font-weight="800" letter-spacing="0.05em" fill="var(--ink-faint)">${escapeHtml(ax.label)}${vA}${vB}</text>`;
+    const vA = catsA ? ` <tspan fill="var(--teamA)" font-weight="800">${Math.round(catsA[ax.key])}</tspan>` : "";
+    const vB = catsB ? ` <tspan fill="var(--teamB)" font-weight="800">${Math.round(catsB[ax.key])}</tspan>` : "";
+    svg += `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="${anchor}" font-size="9.5" font-weight="700" letter-spacing="0.03em" fill="var(--ink-faint)">${escapeHtml(ax.label)}${vA}${vB}</text>`;
   });
-  svg += `<text x="${cx + 4}" y="${(cy - maxR + 10).toFixed(1)}" font-size="7.5" fill="var(--ink-faint)" opacity="0.8">${scaleMax}</text>`;
   svg += `</svg>`;
   return svg;
 }
@@ -20483,66 +20416,62 @@ function renderPlayerCompareView() {
   const teamLabel = (teamIdx, vis) => teamIdx === myTeamIndex
     ? "Votre équipe"
     : (vis.onMarket ? "Marché des transferts" : league.teams[teamIdx].name);
+  const lastName = p => (p.name || "").split(" ").slice(-1)[0];
 
   const groups = [
-    { key: "fund", label: "Fondamentaux", attrs: FUNDAMENTAL_ATTRS },
-    { key: "phys", label: "Physique", attrs: PHYSICAL_ATTRS },
-    { key: "ment", label: "Mental", attrs: MENTAL_ATTRS },
+    { label: "Fondamentaux", attrs: FUNDAMENTAL_ATTRS },
+    { label: "Physique", attrs: PHYSICAL_ATTRS },
+    { label: "Mental", attrs: MENTAL_ATTRS },
   ].map(g => ({ ...g, stats: compareGroupStats(g.attrs, playerA, setA, playerB, setB) }));
   const total = groups.reduce((acc, g) => ({
-    count: acc.count + g.stats.count, winsA: acc.winsA + g.stats.winsA,
-    winsB: acc.winsB + g.stats.winsB, ties: acc.ties + g.stats.ties,
-  }), { count: 0, winsA: 0, winsB: 0, ties: 0 });
+    count: acc.count + g.stats.count, winsA: acc.winsA + g.stats.winsA, winsB: acc.winsB + g.stats.winsB,
+  }), { count: 0, winsA: 0, winsB: 0 });
 
+  // En-tête d'un joueur, dans l'esprit de la fiche joueur (pastille de
+  // poste ambre, nom en majuscules, chips). La note "Postes différents /
+  // Même poste" a été retirée (retour utilisateur 2026-09-26 : "enlève"),
+  // la pastille de poste de chaque côté le montre déjà.
   const headHtml = (side, player, teamObj, teamIdx, vis) =>
     `<div class="compare-player-head side-${side}">` +
-      `<span class="cph-watermark" aria-hidden="true">${escapeHtml(compareInitials(player.name))}</span>` +
-      `<div class="compare-avatar">${playerAvatarHtml(player, teamObj, 66)}</div>` +
-      `<div class="cph-body"><div class="cph-name">${escapeHtml(player.name)}</div>` +
-      `<span class="cph-pos">${escapeHtml(player.position)}</span>` +
-      `<div class="cph-meta">${player.age} ans · ${player.height} cm</div>` +
-      `<div class="cph-team">${escapeHtml(teamLabel(teamIdx, vis))}</div></div></div>`;
+      `<div class="compare-avatar">${playerAvatarHtml(player, teamObj, 104)}</div>` +
+      `<div class="cph-body">` +
+        `<div class="cph-top"><span class="cph-pos">${escapeHtml(player.position)}</span><span class="cph-team">${escapeHtml(teamLabel(teamIdx, vis))}</span></div>` +
+        `<div class="cph-name">${escapeHtml(player.name)}</div>` +
+        `<div class="cph-chips"><span class="cph-chip">${player.age} ans</span><span class="cph-chip">${player.height} cm</span></div>` +
+      `</div></div>`;
 
-  let html = "";
-  html += `<div class="compare-heads">`;
+  let html = `<div class="compare-v2">`;
+  html += `<section class="compare-hero compare-heads">` +
+    `<div class="compare-hero__split" aria-hidden="true"></div>` +
+    `<svg class="compare-hero__court" width="600" height="300" viewBox="0 0 600 300" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="300" cy="150" r="90"/><circle cx="300" cy="150" r="30"/><line x1="300" y1="0" x2="300" y2="300"/></svg>`;
   html += headHtml("a", playerA, teamObjA, a.teamIdx, visA);
-  html += `<div class="compare-duel"><div class="compare-vs-badge"><span>VS</span></div>`;
-  if (total.count > 0) {
-    html += `<div class="compare-duel-score"><span class="a">${total.winsA}</span><span class="sep">–</span><span class="b">${total.winsB}</span></div>` +
-      `<div class="compare-duel-label">caractéristiques<br>dominées</div>`;
-  }
-  html += `</div>`;
+  // Libellé "caractéristiques dominées" sous le score retiré (retour
+  // utilisateur 2026-09-26 : "enlève aussi") — le détail reste dans le
+  // title au survol.
+  html += `<div class="compare-duel"><div class="compare-duel-vs">VS</div>` +
+    (total.count > 0
+      ? `<div class="compare-duel-score" title="Caractéristiques où chacun est meilleur (${total.count} comparables)"><span class="a">${total.winsA}</span><span class="sep">–</span><span class="b">${total.winsB}</span></div>`
+      : "") +
+    `</div>`;
   html += headHtml("b", playerB, teamObjB, b.teamIdx, visB);
-  html += `</div>`; // compare-heads
+  html += `</section>`;
 
-  if (total.count > 0) {
-    const pct = v => (v / total.count * 100).toFixed(1);
-    html += `<div class="compare-tug" title="${total.winsA} / ${total.ties} égalité(s) / ${total.winsB} sur ${total.count} caractéristiques comparables">` +
-      `<i class="a" style="width:${pct(total.winsA)}%"></i><i class="t" style="width:${pct(total.ties)}%"></i><i class="b" style="width:${pct(total.winsB)}%"></i></div>`;
-  }
+  const who = `<span class="compare-who"><i style="background:var(--teamA)"></i>${escapeHtml(lastName(playerA))}</span>` +
+    `<span class="compare-who"><i style="background:var(--teamB)"></i>${escapeHtml(lastName(playerB))}</span>`;
 
-  html += playerA.position === playerB.position
-    ? `<p class="compare-position-note">Même poste (${escapeHtml(playerA.position)}) — comparaison directement pertinente.</p>`
-    : `<p class="compare-position-note">Postes différents (${escapeHtml(playerA.position)} / ${escapeHtml(playerB.position)}) — à garder en tête pour cette comparaison.</p>`;
-
-  // ---- Vue d'ensemble : radar superposé | profil + moyennes par groupe ----
-  html += `<div class="compare-overview">`;
+  // ---- Profil (radar) | Résumé (4 mini-cartes + moyennes par groupe) ----
+  html += `<div class="compare-row-2">`;
   {
     const catsA = visA.fullyVisible ? playerRadarCategories(playerA) : null;
     const catsB = visB.fullyVisible ? playerRadarCategories(playerB) : null;
-    const firstName = p => escapeHtml((p.name || "").split(" ").slice(-1)[0]);
-    html += `<div class="compare-card compare-radar-card"><div class="compare-card-title"><span>Profil</span>` +
-      `<span class="compare-radar-legend"><span><i style="background:var(--teamA)"></i>${firstName(playerA)}</span>` +
-      `<span><i style="background:var(--teamB)"></i>${firstName(playerB)}</span></span></div>` +
+    html += `<div class="compare-card compare-radar-card"><div class="compare-card-head"><h3>Profil</h3><span class="compare-card-meta">${who}</span></div>` +
       compareRadarSvg(catsA, catsB);
     if (!catsA || !catsB) {
       html += `<div class="compare-radar-note">Profil de ${escapeHtml((!catsB ? playerB : playerA).name)} masqué tant qu'il n'est pas entièrement scouté.</div>`;
     }
     html += `</div>`;
   }
-  html += `<div class="compare-overview-right">`;
-
-  // ---- Bandeau de profil (4 mini-cartes) ----
+  html += `<div class="compare-card"><div class="compare-card-head"><h3>Résumé</h3><span class="compare-card-meta">${who}</span></div>`;
   html += `<div class="compare-profile-strip">`;
   // Évaluation globale : verrouillée tant qu'un des deux côtés n'est pas
   // ENTIÈREMENT scouté (même règle que la fiche joueur — overall() mélange
@@ -20606,43 +20535,34 @@ function renderPlayerCompareView() {
   }
   html += `</div>`; // compare-profile-strip
 
-  // ---- Moyennes par groupe ----
-  html += `<div class="compare-card"><div class="compare-card-title"><span>Moyennes par groupe</span></div>`;
+  html += `<div class="compare-groups">`;
   groups.forEach(g => {
     const s = g.stats;
     const both = s.avgA !== null && s.avgB !== null;
-    const st = !both ? ["lead", "lead"] : [s.avgA > s.avgB ? "lead" : (s.avgA === s.avgB ? "even" : ""), s.avgB > s.avgA ? "lead" : (s.avgA === s.avgB ? "even" : "")];
-    html += `<div class="compare-group-row">` +
-      `<span class="cg-val ${s.avgA === null ? "locked" : "a"}">${s.avgA === null ? "?" : s.avgA}</span>` +
-      compareBarHtml("a", s.avgA, st[0]) +
-      `<span class="cg-label">${escapeHtml(g.label)}</span>` +
-      compareBarHtml("b", s.avgB, st[1]) +
-      `<span class="cg-val ${s.avgB === null ? "locked" : "b"}">${s.avgB === null ? "?" : s.avgB}</span></div>`;
+    const stA = !both || s.avgA >= s.avgB ? "lead" : "";
+    const stB = !both || s.avgB >= s.avgA ? "lead" : "";
+    const val = v => v === null ? `<span class="cg-val locked">?</span>` : `<span class="cg-val ${attrColorTier(v)}" style="color:${radarTierColor(v)}">${v}</span>`;
+    html += `<div class="compare-group-row">${val(s.avgA)}${compareBarHtml("a", s.avgA, stA)}` +
+      `<span class="cg-label">${escapeHtml(g.label)}</span>${compareBarHtml("b", s.avgB, stB)}${val(s.avgB)}</div>`;
   });
-  html += `</div>`;
-  html += `</div></div>`; // compare-overview-right, compare-overview
+  html += `</div></div></div>`; // compare-groups, carte Résumé, compare-row-2
 
-  // ---- 3 colonnes de caractéristiques côte à côte (coeur du format
-  // "paysage" validé sur mockup) ----
+  // ---- Caractéristiques : une carte, 3 colonnes côte à côte ----
+  html += `<div class="compare-card"><div class="compare-card-head"><h3>Caractéristiques</h3>` +
+    `<div class="compare-legend"><div class="pdp2-legend-bar"><span class="r"></span><span class="o"></span><span class="w"></span><span class="g"></span></div>` +
+    `<div class="pdp2-legend-lbl"><span class="attr-tier-red">0-20</span><span class="attr-tier-orange">21-50</span><span class="attr-tier-white">51-80</span><span class="attr-tier-green">81+</span></div></div></div>`;
   html += `<div class="compare-attr-columns">`;
   groups.forEach(g => {
     const s = g.stats;
     const score = s.count > 0
       ? `<span class="cac-score"><span class="a">${s.winsA}</span><span class="sep">–</span><span class="b">${s.winsB}</span></span>`
       : "";
-    html += `<div class="compare-attr-col"><h3><span>${escapeHtml(g.label)}</span>${score}</h3>` +
+    html += `<div class="compare-attr-col"><h4><span>${escapeHtml(g.label)}</span>${score}</h4>` +
       g.attrs.map(attr => pdpCompareAttrRowHtml(attr, playerA, setA, playerB, setB)).join("") +
       `</div>`;
   });
-  html += `</div>`; // compare-attr-columns
-
-  html += `<div class="compare-legend">` +
-    `<span><i style="background:var(--danger)"></i> 0-20</span>` +
-    `<span><i style="background:var(--amber)"></i> 21-50</span>` +
-    `<span><i style="background:var(--ink)"></i> 51-80</span>` +
-    `<span><i style="background:#3ecf67"></i> 81+</span>` +
-    `<span><i style="background:rgba(62,207,103,.5)"></i> Meilleure valeur des deux (barre pleine)</span>` +
-    `</div>`;
+  html += `</div></div>`; // compare-attr-columns, carte Caractéristiques
+  html += `</div>`; // compare-v2
 
   holder.innerHTML = html;
 }
