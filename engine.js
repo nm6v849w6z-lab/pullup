@@ -4336,6 +4336,14 @@ class Team {
     // migration ponctuelle des sauvegardes antérieures à ce marqueur.
     this.foundedYearRealDate = true;
     this.trophies = [];
+    // Histoire du club (voir archiveSeasonForTeam plus bas) : une entrée
+    // par saison archivée (la plus récente en premier), records et cumul
+    // des joueurs passés par le club ; lastArchivedSeasonId rend
+    // l'archivage idempotent.
+    this.seasonHistory = [];
+    this.clubRecords = {};
+    this.allTimePlayers = {};
+    this.lastArchivedSeasonId = null;
 
     // Affluence des derniers matchs à domicile (retour utilisateur, 2026-09 :
     // "sur l'onglet salle, il n'y a tjrs pas l'affluence des matchs
@@ -7015,6 +7023,211 @@ function computeClubReputationStars(team, divisionLevel, now = Date.now()) {
   return clamp(Math.round(score), 1, 5);
 }
 
+
+// ---------------------------------------------------------------------
+// HISTOIRE DU CLUB (retour communauté 2026-09 : "Menu Historique du club ->
+// palmarès, records, meilleurs joueurs", "Classement mondial de nos
+// joueurs -> RB - Jean Bon - 54ème") : archive de chaque saison sur le
+// Team (seasonHistory), records du club (clubRecords), cumul des joueurs
+// passés par le club (allTimePlayers). archiveSeasonForTeam est appelée
+// quand les play-offs sont terminés (server/index.js:tick) et avant tout
+// nouveau départ de saison (startNewSeason côté navigateur, reset de la
+// ligue partagée côté serveur qui REPORTE ces champs sur le nouveau club
+// du même nom) — idempotente grâce à League.seasonId/lastArchivedSeasonId.
+// ---------------------------------------------------------------------
+const CLUB_HISTORY_CUP_LABELS = { huitiemes: "8es de finale", quarts: "Quarts de finale", demies: "Demi-finales", finale: "Finale" };
+const CLUB_HISTORY_MAX_SEASONS = 60;
+
+function cupResultForTeam(league, teamIdx) {
+  const cup = league.cup;
+  if (!cup || !Array.isArray(cup.rounds)) return null;
+  if (cup.champion === teamIdx) return { label: "Vainqueur", stage: "finale", won: true };
+  let last = null;
+  cup.rounds.forEach(round => {
+    (round.matches || []).forEach(m => {
+      if (m.home === teamIdx || m.away === teamIdx) last = { round, match: m };
+    });
+  });
+  if (!last) return null;
+  const label = CLUB_HISTORY_CUP_LABELS[last.round.name] || last.round.name;
+  if (last.match.resolved && last.match.winner !== teamIdx) return { label: last.round.name === "finale" ? "Finaliste" : `Éliminé en ${label.toLowerCase()}`, stage: last.round.name, won: false };
+  return { label: `En cours (${label.toLowerCase()})`, stage: last.round.name, won: false };
+}
+
+function playoffResultForTeam(league, teamIdx) {
+  const po = league.playoffs;
+  if (!po) return null;
+  if (po.champion === teamIdx) return "Champion";
+  if (po.finalSeries && (po.finalSeries.idxA === teamIdx || po.finalSeries.idxB === teamIdx)) return "Finaliste";
+  if ((po.series || []).some(sr => sr.idxA === teamIdx || sr.idxB === teamIdx)) return "Demi-finaliste";
+  return null;
+}
+
+// Totaux de la saison en cours par joueur (championnat + coupe), depuis
+// matchLog — base des "légendes" et du meilleur marqueur de la saison.
+function seasonPlayerTotalsForTeam(team) {
+  return (team.players || []).map(p => {
+    const log = (p.matchLog || []);
+    if (!log.length) return null;
+    const t = { id: p.id, name: p.name, position: p.position, games: log.length, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, min: 0 };
+    log.forEach(m => { t.pts += m.pts || 0; t.reb += m.reb || 0; t.ast += m.ast || 0; t.stl += m.stl || 0; t.blk += m.blk || 0; t.min += m.min || 0; });
+    return t;
+  }).filter(Boolean);
+}
+
+function seasonSummaryForTeam(league, teamIdx, now) {
+  const team = league.teams[teamIdx];
+  const table = league.standings();
+  const rankIdx = table.findIndex(r => r.idx === teamIdx);
+  const row = table[rankIdx] || { played: 0, wins: 0, losses: 0, pf: 0, pa: 0, points: 0 };
+  const info = divisionInfo(league.divisionLevel || 1);
+  const totals = seasonPlayerTotalsForTeam(team);
+  const top = totals.slice().sort((a, b) => b.pts - a.pts)[0] || null;
+  const cup = cupResultForTeam(league, teamIdx);
+  const playoff = playoffResultForTeam(league, teamIdx);
+  const trophies = (team.trophies || []).filter(t => league.seasonId ? t.seasonId === league.seasonId : (typeof t.at === "number" && now - t.at < 120 * 24 * 3600 * 1000));
+  return {
+    seasonId: league.seasonId || null,
+    seasonNo: (team.seasonHistory || []).length + 1,
+    endedAt: now,
+    divisionLevel: league.divisionLevel || 1,
+    divisionName: info.name,
+    rank: rankIdx >= 0 ? rankIdx + 1 : null,
+    teams: table.length,
+    played: row.played, wins: row.wins, losses: row.losses, pf: row.pf, pa: row.pa, points: row.points,
+    cupResult: cup ? cup.label : null,
+    playoffResult: playoff,
+    champion: playoff === "Champion",
+    cupWinner: !!(cup && cup.won),
+    topScorer: top ? { id: top.id, name: top.name, pts: top.pts, games: top.games } : null,
+    trophies: trophies.map(t => t.label),
+    budgetEnd: Math.round(team.budget || 0),
+  };
+}
+
+// Records du club sur la saison en cours (candidats), fusionnés ensuite
+// dans team.clubRecords (mergeClubRecords : on garde le meilleur).
+function seasonRecordCandidatesForTeam(league, teamIdx, seasonNo) {
+  const team = league.teams[teamIdx];
+  const c = {};
+  const nameOf = idx => (league.teams[idx] ? league.teams[idx].name : "?");
+  const mine = (league.results || []).filter(r => r.home === teamIdx || r.away === teamIdx).slice().sort((a, b) => a.round - b.round);
+  let streak = 0, bestStreak = 0;
+  mine.forEach(r => {
+    const home = r.home === teamIdx;
+    const pf = home ? r.scoreHome : r.scoreAway, pa = home ? r.scoreAway : r.scoreHome;
+    const opp = nameOf(home ? r.away : r.home);
+    const margin = pf - pa;
+    if (!c.biggestWin || margin > c.biggestWin.value) c.biggestWin = { value: margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
+    if (!c.biggestLoss || -margin > c.biggestLoss.value) c.biggestLoss = { value: -margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
+    if (!c.mostPoints || pf > c.mostPoints.value) c.mostPoints = { value: pf, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
+    if (!c.fewestConceded || pa < c.fewestConceded.value) c.fewestConceded = { value: pa, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
+    if (margin > 0) { streak++; bestStreak = Math.max(bestStreak, streak); } else streak = 0;
+  });
+  if (bestStreak > 0) c.winStreak = { value: bestStreak, text: `${bestStreak} victoire${bestStreak > 1 ? "s" : ""} d'affilée en championnat`, seasonNo };
+  const table = league.standings();
+  const row = table.find(r => r.idx === teamIdx);
+  if (row && row.played) c.seasonWins = { value: row.wins, text: `${row.wins} victoires en ${row.played} matchs`, seasonNo };
+  (team.players || []).forEach(p => {
+    (p.matchLog || []).forEach(m => {
+      const res = m.competition === "championship" ? (league.results || []).find(r => r.round === m.round && (r.home === teamIdx || r.away === teamIdx)) : null;
+      const opp = res ? nameOf(res.home === teamIdx ? res.away : res.home) : null;
+      const where = opp ? ` contre ${opp}` : "";
+      if (!c.playerPoints || (m.pts || 0) > c.playerPoints.value) c.playerPoints = { value: m.pts || 0, text: `${p.name} · ${m.pts || 0} pts${where}`, playerId: p.id, seasonNo };
+      if (!c.playerRebounds || (m.reb || 0) > c.playerRebounds.value) c.playerRebounds = { value: m.reb || 0, text: `${p.name} · ${m.reb || 0} rebonds${where}`, playerId: p.id, seasonNo };
+      if (!c.playerAssists || (m.ast || 0) > c.playerAssists.value) c.playerAssists = { value: m.ast || 0, text: `${p.name} · ${m.ast || 0} passes${where}`, playerId: p.id, seasonNo };
+    });
+  });
+  (team.attendanceHistory || []).forEach(h => {
+    if (!c.attendance || h.attendance > c.attendance.value) c.attendance = { value: h.attendance, text: `${h.attendance.toLocaleString("fr-FR")} spectateurs contre ${h.opponentName}`, seasonNo };
+  });
+  return c;
+}
+
+const CLUB_RECORD_LABELS = [
+  ["biggestWin", "Plus large victoire", "pts d'écart"],
+  ["biggestLoss", "Plus lourde défaite", "pts d'écart"],
+  ["mostPoints", "Record de points marqués", "pts"],
+  ["fewestConceded", "Meilleure défense en un match", "pts encaissés"],
+  ["winStreak", "Plus longue série de victoires", "matchs"],
+  ["seasonWins", "Meilleure saison", "victoires"],
+  ["playerPoints", "Points d'un joueur en un match", "pts"],
+  ["playerRebounds", "Rebonds d'un joueur en un match", "reb"],
+  ["playerAssists", "Passes d'un joueur en un match", "pd"],
+  ["attendance", "Record d'affluence", "spectateurs"],
+];
+
+function mergeClubRecords(records, candidates) {
+  const out = { ...(records || {}) };
+  Object.keys(candidates || {}).forEach(k => {
+    const cand = candidates[k];
+    if (!cand || !Number.isFinite(cand.value)) return;
+    if (!out[k] || cand.value > out[k].value) out[k] = { ...cand };
+  });
+  return out;
+}
+
+// Records "vivants" = records archivés fusionnés avec la saison en cours.
+function liveClubRecords(league, teamIdx) {
+  const team = league.teams[teamIdx];
+  const seasonNo = (team.seasonHistory || []).length + 1;
+  return mergeClubRecords(team.clubRecords, seasonRecordCandidatesForTeam(league, teamIdx, seasonNo));
+}
+
+function mergeAllTimePlayers(allTime, totals, seasonNo) {
+  const out = { ...(allTime || {}) };
+  totals.forEach(t => {
+    const prev = out[t.id] || { id: t.id, name: t.name, position: t.position, games: 0, pts: 0, reb: 0, ast: 0, seasons: [] };
+    out[t.id] = {
+      ...prev, name: t.name, position: t.position,
+      games: prev.games + t.games, pts: prev.pts + t.pts, reb: prev.reb + t.reb, ast: prev.ast + t.ast,
+      seasons: prev.seasons.includes(seasonNo) ? prev.seasons : [...prev.seasons, seasonNo],
+    };
+  });
+  return out;
+}
+
+// Légendes "vivantes" = cumul archivé + saison en cours.
+function liveAllTimePlayers(league, teamIdx) {
+  const team = league.teams[teamIdx];
+  const seasonNo = (team.seasonHistory || []).length + 1;
+  return Object.values(mergeAllTimePlayers(team.allTimePlayers, seasonPlayerTotalsForTeam(team), seasonNo));
+}
+
+function archiveSeasonForTeam(league, teamIdx, now = Date.now()) {
+  const team = league.teams[teamIdx];
+  if (!team) return false;
+  const seasonId = league.seasonId || `start:${league.calendarStartAt || 0}`;
+  if (team.lastArchivedSeasonId === seasonId) return false;
+  const summary = seasonSummaryForTeam(league, teamIdx, now);
+  team.seasonHistory = [summary, ...(team.seasonHistory || [])].slice(0, CLUB_HISTORY_MAX_SEASONS);
+  team.clubRecords = mergeClubRecords(team.clubRecords, seasonRecordCandidatesForTeam(league, teamIdx, summary.seasonNo));
+  team.allTimePlayers = mergeAllTimePlayers(team.allTimePlayers, seasonPlayerTotalsForTeam(team), summary.seasonNo);
+  team.lastArchivedSeasonId = seasonId;
+  return true;
+}
+
+// Classement "mondial" des joueurs = tous les joueurs de la ligue partagée
+// (humains et CPU), par note globale ; posRank = rang parmi les joueurs du
+// même poste. Calculé à la volée (quelques centaines de joueurs).
+function worldPlayerRankings(league) {
+  const rows = [];
+  league.teams.forEach((team, teamIdx) => {
+    (team.players || []).forEach(p => rows.push({ teamIdx, playerId: p.id, player: p, rating: p.overall(), position: p.position }));
+  });
+  rows.sort((a, b) => b.rating - a.rating || a.player.age - b.player.age);
+  const posCount = {};
+  rows.forEach((r, i) => {
+    r.rank = i + 1;
+    posCount[r.position] = (posCount[r.position] || 0) + 1;
+    r.posRank = posCount[r.position];
+  });
+  return rows;
+}
+function worldRankForPlayer(league, teamIdx, playerId) {
+  return worldPlayerRankings(league).find(r => r.teamIdx === teamIdx && r.playerId === playerId) || null;
+}
+
 // Calendrier aller-retour par la "méthode du cercle" : une équipe reste
 // fixe, les (n-1) autres tournent autour d'elle à chaque journée. n doit
 // être pair (10 ici, donc jamais de journée de repos à gérer). Renvoie un
@@ -7486,6 +7699,9 @@ class League {
     // UNE SEULE FOIS par le serveur dès l'heure du coup d'envoi, puis étalée
     // dans le temps réel jusqu'à sa clôture (voir MATCH_BROADCAST_DURATION_MS).
     this.liveMatches = {};
+    // Identifiant de SAISON (voir archiveSeasonForTeam) : posé par
+    // buildLeagueWithHumanTeams, restauré par leagueFromSave.
+    this.seasonId = null;
 
     // Stockage brut du service de pronostics des émissions avant-match/
     // mi-temps (voir serializeLeague/leagueFromSave, server/shows.js,
@@ -7807,7 +8023,7 @@ class League {
       ? `Vainqueur de la Coupe (${info.name})`
       : `Champion (${info.name})`;
     team.trophies = team.trophies || [];
-    team.trophies.unshift({ at: now, type, divisionLevel: this.divisionLevel || null, label });
+    team.trophies.unshift({ at: now, type, divisionLevel: this.divisionLevel || null, label, seasonId: this.seasonId || null });
     if (team.trophies.length > MAX_TEAM_TROPHIES) team.trophies.length = MAX_TEAM_TROPHIES;
   }
 
@@ -9533,6 +9749,7 @@ function buildLeagueWithHumanTeams(humanTeams, divisionLevel, now, calendarConfi
     return t;
   });
   const league = new League([...humanTeams, ...opponents]);
+  league.seasonId = randomHexToken(4);
   // Interview d'avant-saison (correctif 2026-09, voir le grand commentaire
   // de Team.queueSeasonPreviewInterview) : posée ici plutôt que dans
   // generateLeague/generateMultiManagerLeague séparément pour couvrir
@@ -9820,6 +10037,10 @@ function serializeTeam(team) {
     // une sauvegarde d'avant cette fonctionnalité n'en a simplement pas
     // encore (voir teamFromSave plus bas).
     seasonObjective: team.seasonObjective || null,
+    seasonHistory: Array.isArray(team.seasonHistory) ? team.seasonHistory : [],
+    clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
+    allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
+    lastArchivedSeasonId: team.lastArchivedSeasonId || null,
     // Voir Team.seasonObjectiveVerdictSettled plus haut (retour utilisateur,
     // 2026-09, "il ne faut pas qu'un signal et pas deux") : `false` par
     // défaut, une sauvegarde d'avant cette fonctionnalité n'en a simplement
@@ -10294,6 +10515,10 @@ function teamFromSave(data) {
   // ci-dessus) : `null` par défaut (constructeur), une sauvegarde d'avant
   // cette fonctionnalité n'en a simplement pas encore.
   if (typeof data.seasonObjective === "string") team.seasonObjective = data.seasonObjective;
+  team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
+  team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
+  team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
+  team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
   // Voir serializeTeam ci-dessus/Team.seasonObjectiveVerdictSettled plus
   // haut. Absent (sauvegarde d'avant cette fonctionnalité) : on garde la
   // valeur déjà posée par le constructeur (false).
@@ -10580,6 +10805,7 @@ function serializeLeague(lg) {
     // par match diffusé (voir Team.isHuman — plusieurs managers humains
     // peuvent chacun avoir la leur en même temps).
     liveMatches: lg.liveMatches || {},
+    seasonId: lg.seasonId || null,
     // Confort d'affichage résolu PAR L'APPELANT pour UN destinataire précis
     // (voir League.liveMatch ci-dessus et server/liveMatch.js:
     // viewLiveMatchForTeam) — `null` si l'appelant n'a rien résolu de
@@ -10642,6 +10868,7 @@ function leagueFromSave(data, userTeam = null) {
   // en cours reprise, comme avant ce champ.
   lg.liveMatches = data.liveMatches && typeof data.liveMatches === "object" ? data.liveMatches : {};
   lg.liveMatch = data.liveMatch || null;
+  lg.seasonId = typeof data.seasonId === "string" ? data.seasonId : null;
   // Émissions avant-match/mi-temps + pronostics (voir serializeLeague
   // ci-dessus) : absent = sauvegarde d'avant cette fonctionnalité, objet
   // vide (aucune émission publiée pour l'instant), même convention que
@@ -12059,6 +12286,7 @@ return {
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,
+  CLUB_RECORD_LABELS, cupResultForTeam, playoffResultForTeam, seasonPlayerTotalsForTeam, seasonSummaryForTeam, seasonRecordCandidatesForTeam, mergeClubRecords, liveClubRecords, liveAllTimePlayers, archiveSeasonForTeam, worldPlayerRankings, worldRankForPlayer,
   TRIGRAM_CHANGE_COOLDOWN_MS, ARENA_NAME_MAX_LENGTH, TRIGRAM_BANNED, isValidTrigram, defaultTrigramForName, teamTrigram, teamArenaName, containsBannedWord, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel,
   JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, JERSEY_TWO_TONE_SETS, defaultAwayJerseyColor, MAX_TEAM_LOGO_DATA_URL_LENGTH,

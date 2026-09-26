@@ -321,6 +321,12 @@ function tick(league, now) {
   // 21h30 dues, simulées sur des copies des équipes — indépendantes du
   // rattrapage officiel ci-dessus (rien en commun, ni saison ni play-offs).
   PrivateLeague.catchUpPrivateLeagues(Engine, league, now);
+  // Histoire du club (voir Engine.archiveSeasonForTeam) : la saison est
+  // archivée sur chaque club humain dès que le champion est connu —
+  // idempotent, donc sans risque de la répéter à chaque requête.
+  if (league.isPlayoffsDone && league.isPlayoffsDone()) {
+    league.teams.forEach((t, i) => { if (t.isHuman) Engine.archiveSeasonForTeam(league, i, now); });
+  }
   // Médias : purge toute interview de jalon en attente depuis plus de 3
   // jours, pour TOUTES les équipes humaines de la ligue (voir
   // Team.pruneExpiredInterviews/MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS
@@ -707,9 +713,31 @@ async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSav
   // choix.
   if (previous) {
     const prevTokenByName = new Map();
-    previous.league.teams.forEach(t => { if (t.isHuman && t.managerLinkToken) prevTokenByName.set(t.name, t.managerLinkToken); });
+    const prevTeamByName = new Map();
+    previous.league.teams.forEach((t, i) => {
+      if (!t.isHuman) return;
+      // Histoire du club : la saison qui s'achève est archivée sur l'ancien
+      // club (idempotent si tick() l'a déjà fait), puis reportée ci-dessous.
+      Engine.archiveSeasonForTeam(previous.league, i, now);
+      if (t.managerLinkToken) prevTokenByName.set(t.name, t.managerLinkToken);
+      prevTeamByName.set(t.name, t);
+    });
     created.league.teams.forEach(t => {
-      if (t.isHuman && prevTokenByName.has(t.name)) t.managerLinkToken = prevTokenByName.get(t.name);
+      if (!t.isHuman) return;
+      if (prevTokenByName.has(t.name)) t.managerLinkToken = prevTokenByName.get(t.name);
+      const prev = prevTeamByName.get(t.name);
+      if (!prev) return;
+      // Ce qui appartient au CLUB (pas à la saison) survit au nouveau départ :
+      // histoire, records, légendes, trophées, année de fondation, trigramme
+      // et nom de salle. L'effectif, lui, est régénéré comme avant.
+      t.seasonHistory = Array.isArray(prev.seasonHistory) ? prev.seasonHistory : [];
+      t.clubRecords = prev.clubRecords || {};
+      t.allTimePlayers = prev.allTimePlayers || {};
+      t.trophies = Array.isArray(prev.trophies) ? prev.trophies : [];
+      if (prev.foundedYear) t.foundedYear = prev.foundedYear;
+      t.trigram = prev.trigram || null;
+      t.trigramChangedAt = typeof prev.trigramChangedAt === "number" ? prev.trigramChangedAt : null;
+      t.arenaName = prev.arenaName || null;
     });
   }
   await store.saveMultiLeague(created.league, multiSavePath);

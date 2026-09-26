@@ -20,6 +20,42 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Onglet « Histoire
+  du club » : palmarès, records, légendes, classement mondial (1 & 3)** —
+  retours communauté relayés par l'utilisateur : "Classement mondial de
+  nos joueurs -> RB - Jean Bon - 54ème", "Menu Historique du club ->
+  palmarès, records, meilleurs joueurs", Diablue : "1 et 3 -> Nouvel
+  onglet Club ?". Moteur (engine.js ET copie HTML) : League.seasonId
+  (posé par buildLeagueWithHumanTeams, sérialisé) ; Team.seasonHistory /
+  clubRecords / allTimePlayers / lastArchivedSeasonId ; trophées marqués
+  du seasonId ; seasonSummaryForTeam (division, classement, bilan,
+  parcours Coupe via cupResultForTeam, play-offs via
+  playoffResultForTeam, meilleur marqueur), seasonRecordCandidatesForTeam
+  + mergeClubRecords (10 records : écart, points, défense, série, bilan,
+  points/rebonds/passes d'un joueur, affluence — CLUB_RECORD_LABELS),
+  mergeAllTimePlayers, liveClubRecords/liveAllTimePlayers (archivé +
+  saison en cours), archiveSeasonForTeam (idempotent),
+  worldPlayerRankings/worldRankForPlayer (tous les joueurs de la ligue par
+  note globale + rang au poste, calculé à la volée). Serveur : archivage
+  de chaque club humain au tick dès que les play-offs sont finis ;
+  performMultiLeagueReset archive puis REPORTE sur le nouveau club du
+  même nom : seasonHistory, clubRecords, allTimePlayers, trophies,
+  foundedYear, trigram(+ChangedAt), arenaName (effectif toujours
+  régénéré). Solo : startNewSeason archive avant generateLeague. Client :
+  onglet « Histoire du club » (sidebar, sous Tableau de bord, route
+  /histoire), page renderHistoireSection en 4 panneaux (Palmarès :
+  trophées + tableau saison en cours et archivées ; Records : tuiles ;
+  Légendes : top 10 cumulé, lien fiche joueur, badge Parti ; Classement
+  mondial : mes joueurs rang mondial + rang au poste + note) ; fiche
+  joueur (mon club) : puce « 54e mondial · 8e Meneur ». Test :
+  club_history_test.js (nouveau, moteur + serveur + navigateur) + tabs,
+  player_detail_topbar_nav, team_detail_page, league_stats,
+  season_objective, promotion, persistence, end_to_end, full_run,
+  dashboard_e2e, tous les server/*_test.js verts. Vérifié dans Chromium.
+  Non fait : flèche de progression du rang mondial (pas de snapshot
+  hebdo) ; le « monde » = la ligue partagée (10 clubs). Reste :
+  `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Trigramme
   personnalisé (7) + nom de salle (6)** — retours communauté relayés par
   l'utilisateur : "Pouvoir choisir son trigramme -> facile à faire aussi",

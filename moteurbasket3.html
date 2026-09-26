@@ -5427,6 +5427,36 @@
   .sl-rename-input:focus{outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber);}
   .settings-feedback{margin:6px 0 0; font-size:12.5px; font-weight:600; min-height:0;}
   .settings-feedback:empty{display:none;}
+  /* ---- Histoire du club — voir renderHistoireSection ---- */
+  #histoireSection{--display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-size:14px;}
+  #histoireSection .dim{color:var(--ink-faint);}
+  .hc-head{display:flex; align-items:center; gap:16px; margin-bottom:20px;}
+  .hc-logo svg, .hc-logo img{width:64px; height:64px; border-radius:50%; display:block;}
+  .hc-name{font-family:var(--display); font-size:28px; font-weight:800; line-height:1.1;}
+  .hc-sub{color:var(--ink-dim); font-size:14px; margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .hc-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:20px; align-items:start;}
+  .hc-panel{min-width:0;}
+  .hc-trophies{margin:0 0 14px;}
+  .hc-table td, .hc-table th{padding:8px 6px; white-space:normal; font-size:13px;}
+  .hc-table th{line-height:1.2;}
+  .hc-table td:first-child, .hc-table .lp-tag{white-space:nowrap;}
+  .hc-table .lg-rank{min-width:22px;}
+  .hc-table tr.hc-current td{background:rgba(240,162,60,.06);}
+  .hc-gold{color:var(--amber) !important; border-color:var(--amber) !important;}
+  .hc-top{color:var(--ok) !important;}
+  .hc-win{color:var(--amber); font-weight:700;}
+  .hc-records{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px;}
+  .hc-record{background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:3px; min-width:0;}
+  .hc-record-label{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);}
+  .hc-record-value{font-family:var(--display); font-size:24px; font-weight:800; line-height:1.1;}
+  .hc-record-value small{font-size:12px; font-weight:600; color:var(--ink-dim);}
+  .hc-record-text{font-size:13px; color:var(--ink); overflow-wrap:anywhere;}
+  .hc-record-season{font-size:11.5px; color:var(--ink-faint);}
+  .hc-world-intro{margin:0 0 10px; font-size:13px; color:var(--ink-dim);}
+  .hc-world-rank{display:inline-block; min-width:44px; text-align:center; font-weight:800; border:1px solid var(--line); border-radius:6px; padding:2px 6px;}
+  .pdp2-chip--world{color:var(--amber); border-color:rgba(240,162,60,.5);}
+  @media(max-width:980px){ .hc-grid{grid-template-columns:1fr;} }
+  @media(max-width:600px){ .hc-records{grid-template-columns:1fr;} #histoireSection .lg-hide-sm{display:none;} }
   /* ---- Ligues privées (Premium) — voir renderLpSection ---- */
   #lpSection{--display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-size:14px;}
   #lpSection .pos{color:var(--ok);} #lpSection .neg{color:#f0a292;} #lpSection .dim{color:var(--ink-faint);}
@@ -5578,6 +5608,7 @@
     <div class="sidebar-section">
       <div class="sidebar-section-label">Club</div>
       <button class="tab-btn sidebar-link" data-tab="club" id="tabClubName"><span class="sidebar-label">Tableau de bord</span></button>
+      <button class="tab-btn sidebar-link" data-tab="histoire"><span class="sidebar-label">Histoire du club</span></button>
       <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-label">Ligue</span></button>
       <button class="tab-btn sidebar-link" data-tab="coupe"><span class="sidebar-label">Coupe</span></button>
       <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-label">Calendrier</span></button>
@@ -6233,6 +6264,14 @@
     <div class="section">
       <h2 class="page-title">Coupe</h2>
       <div id="coupeContent"></div>
+    </div>
+  </div>
+
+  <!-- Histoire du club (palmarès, records, légendes, classement mondial) — voir renderHistoireSection. -->
+  <div id="histoireSection" class="hidden">
+    <div class="section">
+      <h2 class="page-title">Histoire du club</h2>
+      <div id="histoireContent"></div>
     </div>
   </div>
 
@@ -11416,6 +11455,14 @@ class Team {
     // Marqueur de migration (voir engine.js, miroir identique).
     this.foundedYearRealDate = true;
     this.trophies = [];
+    // Histoire du club (voir archiveSeasonForTeam plus bas) : une entrée
+    // par saison archivée (la plus récente en premier), records et cumul
+    // des joueurs passés par le club ; lastArchivedSeasonId rend
+    // l'archivage idempotent.
+    this.seasonHistory = [];
+    this.clubRecords = {};
+    this.allTimePlayers = {};
+    this.lastArchivedSeasonId = null;
 
     // Affluence des derniers matchs à domicile (voir engine.js, miroir
     // identique) : plafonné à 10 (demande explicite), alimenté par
@@ -13668,6 +13715,211 @@ function computeClubReputationStars(team, divisionLevel, now = Date.now()) {
   return clamp(Math.round(score), 1, 5);
 }
 
+
+// ---------------------------------------------------------------------
+// HISTOIRE DU CLUB (retour communauté 2026-09 : "Menu Historique du club ->
+// palmarès, records, meilleurs joueurs", "Classement mondial de nos
+// joueurs -> RB - Jean Bon - 54ème") : archive de chaque saison sur le
+// Team (seasonHistory), records du club (clubRecords), cumul des joueurs
+// passés par le club (allTimePlayers). archiveSeasonForTeam est appelée
+// quand les play-offs sont terminés (server/index.js:tick) et avant tout
+// nouveau départ de saison (startNewSeason côté navigateur, reset de la
+// ligue partagée côté serveur qui REPORTE ces champs sur le nouveau club
+// du même nom) — idempotente grâce à League.seasonId/lastArchivedSeasonId.
+// ---------------------------------------------------------------------
+const CLUB_HISTORY_CUP_LABELS = { huitiemes: "8es de finale", quarts: "Quarts de finale", demies: "Demi-finales", finale: "Finale" };
+const CLUB_HISTORY_MAX_SEASONS = 60;
+
+function cupResultForTeam(league, teamIdx) {
+  const cup = league.cup;
+  if (!cup || !Array.isArray(cup.rounds)) return null;
+  if (cup.champion === teamIdx) return { label: "Vainqueur", stage: "finale", won: true };
+  let last = null;
+  cup.rounds.forEach(round => {
+    (round.matches || []).forEach(m => {
+      if (m.home === teamIdx || m.away === teamIdx) last = { round, match: m };
+    });
+  });
+  if (!last) return null;
+  const label = CLUB_HISTORY_CUP_LABELS[last.round.name] || last.round.name;
+  if (last.match.resolved && last.match.winner !== teamIdx) return { label: last.round.name === "finale" ? "Finaliste" : `Éliminé en ${label.toLowerCase()}`, stage: last.round.name, won: false };
+  return { label: `En cours (${label.toLowerCase()})`, stage: last.round.name, won: false };
+}
+
+function playoffResultForTeam(league, teamIdx) {
+  const po = league.playoffs;
+  if (!po) return null;
+  if (po.champion === teamIdx) return "Champion";
+  if (po.finalSeries && (po.finalSeries.idxA === teamIdx || po.finalSeries.idxB === teamIdx)) return "Finaliste";
+  if ((po.series || []).some(sr => sr.idxA === teamIdx || sr.idxB === teamIdx)) return "Demi-finaliste";
+  return null;
+}
+
+// Totaux de la saison en cours par joueur (championnat + coupe), depuis
+// matchLog — base des "légendes" et du meilleur marqueur de la saison.
+function seasonPlayerTotalsForTeam(team) {
+  return (team.players || []).map(p => {
+    const log = (p.matchLog || []);
+    if (!log.length) return null;
+    const t = { id: p.id, name: p.name, position: p.position, games: log.length, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, min: 0 };
+    log.forEach(m => { t.pts += m.pts || 0; t.reb += m.reb || 0; t.ast += m.ast || 0; t.stl += m.stl || 0; t.blk += m.blk || 0; t.min += m.min || 0; });
+    return t;
+  }).filter(Boolean);
+}
+
+function seasonSummaryForTeam(league, teamIdx, now) {
+  const team = league.teams[teamIdx];
+  const table = league.standings();
+  const rankIdx = table.findIndex(r => r.idx === teamIdx);
+  const row = table[rankIdx] || { played: 0, wins: 0, losses: 0, pf: 0, pa: 0, points: 0 };
+  const info = divisionInfo(league.divisionLevel || 1);
+  const totals = seasonPlayerTotalsForTeam(team);
+  const top = totals.slice().sort((a, b) => b.pts - a.pts)[0] || null;
+  const cup = cupResultForTeam(league, teamIdx);
+  const playoff = playoffResultForTeam(league, teamIdx);
+  const trophies = (team.trophies || []).filter(t => league.seasonId ? t.seasonId === league.seasonId : (typeof t.at === "number" && now - t.at < 120 * 24 * 3600 * 1000));
+  return {
+    seasonId: league.seasonId || null,
+    seasonNo: (team.seasonHistory || []).length + 1,
+    endedAt: now,
+    divisionLevel: league.divisionLevel || 1,
+    divisionName: info.name,
+    rank: rankIdx >= 0 ? rankIdx + 1 : null,
+    teams: table.length,
+    played: row.played, wins: row.wins, losses: row.losses, pf: row.pf, pa: row.pa, points: row.points,
+    cupResult: cup ? cup.label : null,
+    playoffResult: playoff,
+    champion: playoff === "Champion",
+    cupWinner: !!(cup && cup.won),
+    topScorer: top ? { id: top.id, name: top.name, pts: top.pts, games: top.games } : null,
+    trophies: trophies.map(t => t.label),
+    budgetEnd: Math.round(team.budget || 0),
+  };
+}
+
+// Records du club sur la saison en cours (candidats), fusionnés ensuite
+// dans team.clubRecords (mergeClubRecords : on garde le meilleur).
+function seasonRecordCandidatesForTeam(league, teamIdx, seasonNo) {
+  const team = league.teams[teamIdx];
+  const c = {};
+  const nameOf = idx => (league.teams[idx] ? league.teams[idx].name : "?");
+  const mine = (league.results || []).filter(r => r.home === teamIdx || r.away === teamIdx).slice().sort((a, b) => a.round - b.round);
+  let streak = 0, bestStreak = 0;
+  mine.forEach(r => {
+    const home = r.home === teamIdx;
+    const pf = home ? r.scoreHome : r.scoreAway, pa = home ? r.scoreAway : r.scoreHome;
+    const opp = nameOf(home ? r.away : r.home);
+    const margin = pf - pa;
+    if (!c.biggestWin || margin > c.biggestWin.value) c.biggestWin = { value: margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
+    if (!c.biggestLoss || -margin > c.biggestLoss.value) c.biggestLoss = { value: -margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
+    if (!c.mostPoints || pf > c.mostPoints.value) c.mostPoints = { value: pf, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
+    if (!c.fewestConceded || pa < c.fewestConceded.value) c.fewestConceded = { value: pa, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
+    if (margin > 0) { streak++; bestStreak = Math.max(bestStreak, streak); } else streak = 0;
+  });
+  if (bestStreak > 0) c.winStreak = { value: bestStreak, text: `${bestStreak} victoire${bestStreak > 1 ? "s" : ""} d'affilée en championnat`, seasonNo };
+  const table = league.standings();
+  const row = table.find(r => r.idx === teamIdx);
+  if (row && row.played) c.seasonWins = { value: row.wins, text: `${row.wins} victoires en ${row.played} matchs`, seasonNo };
+  (team.players || []).forEach(p => {
+    (p.matchLog || []).forEach(m => {
+      const res = m.competition === "championship" ? (league.results || []).find(r => r.round === m.round && (r.home === teamIdx || r.away === teamIdx)) : null;
+      const opp = res ? nameOf(res.home === teamIdx ? res.away : res.home) : null;
+      const where = opp ? ` contre ${opp}` : "";
+      if (!c.playerPoints || (m.pts || 0) > c.playerPoints.value) c.playerPoints = { value: m.pts || 0, text: `${p.name} · ${m.pts || 0} pts${where}`, playerId: p.id, seasonNo };
+      if (!c.playerRebounds || (m.reb || 0) > c.playerRebounds.value) c.playerRebounds = { value: m.reb || 0, text: `${p.name} · ${m.reb || 0} rebonds${where}`, playerId: p.id, seasonNo };
+      if (!c.playerAssists || (m.ast || 0) > c.playerAssists.value) c.playerAssists = { value: m.ast || 0, text: `${p.name} · ${m.ast || 0} passes${where}`, playerId: p.id, seasonNo };
+    });
+  });
+  (team.attendanceHistory || []).forEach(h => {
+    if (!c.attendance || h.attendance > c.attendance.value) c.attendance = { value: h.attendance, text: `${h.attendance.toLocaleString("fr-FR")} spectateurs contre ${h.opponentName}`, seasonNo };
+  });
+  return c;
+}
+
+const CLUB_RECORD_LABELS = [
+  ["biggestWin", "Plus large victoire", "pts d'écart"],
+  ["biggestLoss", "Plus lourde défaite", "pts d'écart"],
+  ["mostPoints", "Record de points marqués", "pts"],
+  ["fewestConceded", "Meilleure défense en un match", "pts encaissés"],
+  ["winStreak", "Plus longue série de victoires", "matchs"],
+  ["seasonWins", "Meilleure saison", "victoires"],
+  ["playerPoints", "Points d'un joueur en un match", "pts"],
+  ["playerRebounds", "Rebonds d'un joueur en un match", "reb"],
+  ["playerAssists", "Passes d'un joueur en un match", "pd"],
+  ["attendance", "Record d'affluence", "spectateurs"],
+];
+
+function mergeClubRecords(records, candidates) {
+  const out = { ...(records || {}) };
+  Object.keys(candidates || {}).forEach(k => {
+    const cand = candidates[k];
+    if (!cand || !Number.isFinite(cand.value)) return;
+    if (!out[k] || cand.value > out[k].value) out[k] = { ...cand };
+  });
+  return out;
+}
+
+// Records "vivants" = records archivés fusionnés avec la saison en cours.
+function liveClubRecords(league, teamIdx) {
+  const team = league.teams[teamIdx];
+  const seasonNo = (team.seasonHistory || []).length + 1;
+  return mergeClubRecords(team.clubRecords, seasonRecordCandidatesForTeam(league, teamIdx, seasonNo));
+}
+
+function mergeAllTimePlayers(allTime, totals, seasonNo) {
+  const out = { ...(allTime || {}) };
+  totals.forEach(t => {
+    const prev = out[t.id] || { id: t.id, name: t.name, position: t.position, games: 0, pts: 0, reb: 0, ast: 0, seasons: [] };
+    out[t.id] = {
+      ...prev, name: t.name, position: t.position,
+      games: prev.games + t.games, pts: prev.pts + t.pts, reb: prev.reb + t.reb, ast: prev.ast + t.ast,
+      seasons: prev.seasons.includes(seasonNo) ? prev.seasons : [...prev.seasons, seasonNo],
+    };
+  });
+  return out;
+}
+
+// Légendes "vivantes" = cumul archivé + saison en cours.
+function liveAllTimePlayers(league, teamIdx) {
+  const team = league.teams[teamIdx];
+  const seasonNo = (team.seasonHistory || []).length + 1;
+  return Object.values(mergeAllTimePlayers(team.allTimePlayers, seasonPlayerTotalsForTeam(team), seasonNo));
+}
+
+function archiveSeasonForTeam(league, teamIdx, now = Date.now()) {
+  const team = league.teams[teamIdx];
+  if (!team) return false;
+  const seasonId = league.seasonId || `start:${league.calendarStartAt || 0}`;
+  if (team.lastArchivedSeasonId === seasonId) return false;
+  const summary = seasonSummaryForTeam(league, teamIdx, now);
+  team.seasonHistory = [summary, ...(team.seasonHistory || [])].slice(0, CLUB_HISTORY_MAX_SEASONS);
+  team.clubRecords = mergeClubRecords(team.clubRecords, seasonRecordCandidatesForTeam(league, teamIdx, summary.seasonNo));
+  team.allTimePlayers = mergeAllTimePlayers(team.allTimePlayers, seasonPlayerTotalsForTeam(team), summary.seasonNo);
+  team.lastArchivedSeasonId = seasonId;
+  return true;
+}
+
+// Classement "mondial" des joueurs = tous les joueurs de la ligue partagée
+// (humains et CPU), par note globale ; posRank = rang parmi les joueurs du
+// même poste. Calculé à la volée (quelques centaines de joueurs).
+function worldPlayerRankings(league) {
+  const rows = [];
+  league.teams.forEach((team, teamIdx) => {
+    (team.players || []).forEach(p => rows.push({ teamIdx, playerId: p.id, player: p, rating: p.overall(), position: p.position }));
+  });
+  rows.sort((a, b) => b.rating - a.rating || a.player.age - b.player.age);
+  const posCount = {};
+  rows.forEach((r, i) => {
+    r.rank = i + 1;
+    posCount[r.position] = (posCount[r.position] || 0) + 1;
+    r.posRank = posCount[r.position];
+  });
+  return rows;
+}
+function worldRankForPlayer(league, teamIdx, playerId) {
+  return worldPlayerRankings(league).find(r => r.teamIdx === teamIdx && r.playerId === playerId) || null;
+}
+
 // Calendrier aller-retour par la "méthode du cercle" : une équipe reste
 // fixe, les (n-1) autres tournent autour d'elle à chaque journée. n doit
 // être pair (10 ici, donc jamais de journée de repos à gérer). Renvoie un
@@ -13887,6 +14139,9 @@ class League {
     // navigateur, lui, ne consomme jamais ce champ directement — voir
     // `this.liveMatch` juste en dessous, déjà résolu POUR LUI par le serveur.
     this.liveMatches = {};
+    // Identifiant de SAISON (voir archiveSeasonForTeam) : posé par
+    // buildLeagueWithHumanTeams, restauré par leagueFromSave.
+    this.seasonId = null;
 
     // Stockage brut du service de pronostics des émissions avant-match/
     // mi-temps (voir engine.js, miroir identique, DEV_NOTES.md point 11).
@@ -14099,7 +14354,7 @@ class League {
       ? `Vainqueur de la Coupe (${info.name})`
       : `Champion (${info.name})`;
     team.trophies = team.trophies || [];
-    team.trophies.unshift({ at: now, type, divisionLevel: this.divisionLevel || null, label });
+    team.trophies.unshift({ at: now, type, divisionLevel: this.divisionLevel || null, label, seasonId: this.seasonId || null });
     if (team.trophies.length > MAX_TEAM_TROPHIES) team.trophies.length = MAX_TEAM_TROPHIES;
   }
 
@@ -15566,6 +15821,7 @@ function buildLeagueWithHumanTeams(humanTeams, divisionLevel, now, calendarConfi
     return t;
   });
   const league = new League([...humanTeams, ...opponents]);
+  league.seasonId = randomHexToken(4);
   // Interview d'avant-saison (voir engine.js, miroir identique) : couvre
   // uniformément nouvelle carrière solo, nouvelle saison solo (startNewSeason)
   // et création de ligue partagée, tous appelants de cette fonction.
@@ -15791,6 +16047,10 @@ function serializeTeam(team) {
     // Objectif de saison du conseil d'administration (voir engine.js,
     // miroir identique).
     seasonObjective: team.seasonObjective || null,
+    seasonHistory: Array.isArray(team.seasonHistory) ? team.seasonHistory : [],
+    clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
+    allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
+    lastArchivedSeasonId: team.lastArchivedSeasonId || null,
     // Voir engine.js, miroir identique.
     seasonObjectiveVerdictSettled: !!team.seasonObjectiveVerdictSettled,
     // Alchimie d'équipe (voir engine.js, miroir identique).
@@ -16186,6 +16446,10 @@ function teamFromSave(data) {
   // Objectif de saison du conseil d'administration (voir engine.js, miroir
   // identique).
   if (typeof data.seasonObjective === "string") team.seasonObjective = data.seasonObjective;
+  team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
+  team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
+  team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
+  team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
   // Voir engine.js, miroir identique.
   team.seasonObjectiveVerdictSettled = !!data.seasonObjectiveVerdictSettled;
   // Alchimie d'équipe (voir engine.js, miroir identique).
@@ -16416,6 +16680,7 @@ function serializeLeague(lg) {
     // une entrée par match diffusé (plusieurs managers humains peuvent
     // chacun avoir la leur en même temps).
     liveMatches: lg.liveMatches || {},
+    seasonId: lg.seasonId || null,
     // Confort d'affichage résolu PAR L'APPELANT pour UN destinataire précis
     // (voir League.liveMatch ci-dessus) — `null` si rien de particulier n'a
     // été résolu.
@@ -16462,6 +16727,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.privateLeagues = Array.isArray(data.privateLeagues) ? data.privateLeagues : [];
   lg.liveMatches = data.liveMatches && typeof data.liveMatches === "object" ? data.liveMatches : {};
   lg.liveMatch = data.liveMatch || null;
+  lg.seasonId = typeof data.seasonId === "string" ? data.seasonId : null;
   // Voir engine.js, miroir identique (DEV_NOTES.md point 11).
   lg.showsPronostics = data.showsPronostics && typeof data.showsPronostics === "object" ? data.showsPronostics : {};
   // Rétro-compatibilité (voir engine.js, miroir identique) : rattrape une
@@ -19024,7 +19290,7 @@ function refreshRecruiterMarket() {
 // ---------------------------------------------------------------------
 const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
-  "clubSection", "staffSection", "academieSection", "economieSection", "salleSection", "calendrierSection", "coupeSection", "lpSection",
+  "clubSection", "staffSection", "academieSection", "economieSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
   "guideSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
 ];
@@ -19065,7 +19331,7 @@ const PAGE_IDS = [
 // colonne de droite (prochain match, bilan) côte à côte.
 // "standingsSection" ajouté (refonte de la page Ligue, 2026-09-25) :
 // classement + colonne course/MVP côte à côte, leaders sur 3 colonnes.
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection"]);
+const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "histoireSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection"]);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
 // "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
@@ -22635,6 +22901,10 @@ function renderPlayerDetail(teamIdx, playerId) {
   if (isOwnTeam) {
     html += `<span class="pdp2-chip">Potentiel · <span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></span>` +
       `<span class="pdp2-chip">${formatMoney(player.salary)} / sem.</span>`;
+    // Classement mondial (retour communauté 2026-09 : "RB - Jean Bon -
+    // 54ème") : rang parmi tous les joueurs de la ligue, et au poste.
+    const wr = worldRankForPlayer(league, teamIdx, player.id);
+    if (wr) html += `<span class="pdp2-chip pdp2-chip--world" title="Classement parmi tous les joueurs de la ligue">${ordinalFr(wr.rank)} mondial · ${ordinalFr(wr.posRank)} ${escapeHtml(player.position)}</span>`;
   }
   html += `</div></div></div>`; // chips, id-text, id
 
@@ -27024,6 +27294,9 @@ function renderSeasonEnd() {
 // nouvelle division si le club est monté ou descendu), calendrier remis à
 // zéro. Le premier match de la nouvelle saison s'enchaîne directement.
 function startNewSeason() {
+  // Histoire du club : archive la saison qui s'achève (idempotent, le
+  // serveur l'a normalement déjà fait dès la fin des play-offs).
+  archiveSeasonForTeam(league, 0, Date.now());
   const outcome = league.divisionOutcomeForUserTeam();
   // Prime de montée / de champion de Division I (voir seasonEndBonusFor,
   // annoncée à l'écran de fin de saison — renderSeasonEnd) : versée ICI,
@@ -31961,6 +32234,7 @@ const DASH_ROUTE_TO_TAB = {
   "/marche": "marche", "/ligue": "ligue", "/coupe": "coupe",
   "/calendrier": "calendrier", "/entrainement": "entrainement",
   "/ligues-privees": "lp",
+  "/histoire": "histoire",
   "/academie": "academie", "/supporters": "humeur",
 };
 
@@ -36791,6 +37065,109 @@ async function lpAction(path, body, okText) {
   });
 })();
 
+
+// ---------------------------------------------------------------------
+// HISTOIRE DU CLUB (retour communauté 2026-09 : "Menu Historique du club ->
+// palmarès, records, meilleurs joueurs", "Classement mondial de nos
+// joueurs -> RB - Jean Bon - 54ème" ; Diablue : "1 et 3 -> Nouvel onglet
+// Club ?") : onglet dédié, données de Team.seasonHistory/clubRecords/
+// allTimePlayers (voir archiveSeasonForTeam côté moteur) FUSIONNÉES avec la
+// saison en cours (liveClubRecords/liveAllTimePlayers), classement
+// "mondial" des joueurs = toute la ligue (worldPlayerRankings).
+// ---------------------------------------------------------------------
+function ordinalFr(n) { return `${n}${n === 1 ? "er" : "e"}`; }
+
+function renderHistoireSection() {
+  const holder = document.getElementById("histoireContent");
+  if (!holder) return;
+  const team = teamA, idx = myTeamIndex;
+  const history = team.seasonHistory || [];
+  const stars = computeClubReputationStars(team, league.divisionLevel, Date.now());
+  const trophies = team.trophies || [];
+  let html = `<div class="hc-head"><span class="hc-logo">${teamLogoHtml(team, 64)}</span><div class="hc-head-txt">` +
+    `<div class="hc-name">${escapeHtml(team.name)}</div>` +
+    `<div class="hc-sub">Fondé en ${team.foundedYear || "?"} · ${history.length} saison${history.length > 1 ? "s" : ""} archivée${history.length > 1 ? "s" : ""} · ${trophies.length} trophée${trophies.length > 1 ? "s" : ""} · ${reputationStarsHtml(stars)}</div>` +
+    `</div></div>`;
+  html += `<div class="hc-grid">`;
+  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Palmarès</h2><span>Titres et parcours saison par saison</span></div>${hcPalmaresHtml(team, idx)}</section>`;
+  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
+  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Légendes du club</h2><span>Cumul de tous les matchs officiels</span></div>${hcLegendsHtml(idx)}</section>`;
+  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Classement mondial</h2><span>Nos joueurs parmi tous ceux de la ligue</span></div>${hcWorldRankHtml(idx)}</section>`;
+  html += `</div>`;
+  holder.innerHTML = html;
+}
+
+function hcPalmaresHtml(team, idx) {
+  const trophies = team.trophies || [];
+  const history = team.seasonHistory || [];
+  let html = trophies.length
+    ? `<ul class="trophy-list hc-trophies">` + trophies.slice(0, 12).map(t => `<li class="trophy-item">🏆 ${escapeHtml(t.label)}<span class="trophy-year">${new Date(t.at).getFullYear()}</span></li>`).join("") + `</ul>`
+    : `<p class="training-empty">Aucun trophée pour l'instant.</p>`;
+  // Saison en cours (non archivée) en tête, puis les saisons archivées.
+  const current = seasonSummaryForTeam(league, idx, Date.now());
+  const rows = [{ ...current, current: true }, ...history];
+  html += `<div class="lg-table-wrap"><table class="lg-table hc-table"><thead><tr><th>Saison</th><th>Division</th><th class="c">Class.</th><th class="c">Bilan</th><th>Coupe</th><th>Play-offs</th><th class="lg-hide-sm">Meilleur marqueur</th></tr></thead><tbody>`;
+  rows.forEach(s => {
+    html += `<tr class="${s.current ? "hc-current" : ""}"><td><b>Saison ${s.seasonNo}</b>${s.current ? ` <span class="lp-tag">En cours</span>` : ""}</td>` +
+      `<td>${escapeHtml(s.divisionName)}</td>` +
+      `<td class="c">${s.rank ? `<span class="lg-rank${s.rank === 1 ? " hc-gold" : ""}">${s.rank}</span>` : "–"}</td>` +
+      `<td class="c">${s.wins}-${s.losses}</td>` +
+      `<td>${s.cupWinner ? `<span class="hc-win">🏆 Vainqueur</span>` : escapeHtml(s.cupResult || "–")}</td>` +
+      `<td>${s.champion ? `<span class="hc-win">🏆 Champion</span>` : escapeHtml(s.playoffResult || "–")}</td>` +
+      `<td class="lg-hide-sm">${s.topScorer ? `${escapeHtml(s.topScorer.name)} <span class="dim">· ${s.topScorer.pts} pts</span>` : "–"}</td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+function hcRecordsHtml(idx) {
+  const records = liveClubRecords(league, idx);
+  const items = CLUB_RECORD_LABELS.filter(([k]) => records[k]);
+  if (!items.length) return `<p class="training-empty">Les records s'écriront dès le premier match joué.</p>`;
+  return `<div class="hc-records">` + items.map(([k, label, unit]) => {
+    const r = records[k];
+    return `<div class="hc-record"><div class="hc-record-label">${escapeHtml(label)}</div><div class="hc-record-value">${k === "attendance" ? r.value.toLocaleString("fr-FR") : r.value} <small>${escapeHtml(unit)}</small></div><div class="hc-record-text">${escapeHtml(r.text)}</div><div class="hc-record-season">Saison ${r.seasonNo}</div></div>`;
+  }).join("") + `</div>`;
+}
+
+function hcLegendsHtml(idx) {
+  const rows = liveAllTimePlayers(league, idx).sort((a, b) => b.pts - a.pts || b.games - a.games).slice(0, 10);
+  if (!rows.length) return `<p class="training-empty">Aucun match officiel joué pour l'instant.</p>`;
+  const stillHere = new Set(teamA.players.map(p => p.id));
+  let html = `<div class="lg-table-wrap"><table class="lg-table hc-table"><thead><tr><th>#</th><th>Joueur</th><th class="c">Matchs</th><th class="r">Pts</th><th class="r lg-hide-sm">Pts/m</th><th class="r lg-hide-sm">Reb</th><th class="r lg-hide-sm">Pd</th><th class="c">Saisons</th></tr></thead><tbody>`;
+  rows.forEach((r, i) => {
+    const link = stillHere.has(r.id) ? `<a href="#" class="team-link" data-player-detail="${r.id}" data-player-team="${idx}">${escapeHtml(r.name)}</a>` : escapeHtml(r.name);
+    html += `<tr><td><span class="lg-rank">${i + 1}</span></td><td>${link} <span class="dim">${escapeHtml(r.position)}</span>${stillHere.has(r.id) ? "" : ` <span class="lp-tag lp-tag-muted">Parti</span>`}</td>` +
+      `<td class="c">${r.games}</td><td class="r lg-pts">${r.pts}</td><td class="r lg-hide-sm">${(r.pts / r.games).toFixed(1)}</td><td class="r lg-hide-sm">${r.reb}</td><td class="r lg-hide-sm">${r.ast}</td><td class="c">${r.seasons.length}</td></tr>`;
+  });
+  return html + `</tbody></table></div>`;
+}
+
+function hcWorldRankHtml(idx) {
+  const all = worldPlayerRankings(league);
+  const mine = all.filter(r => r.teamIdx === idx).sort((a, b) => a.rank - b.rank);
+  if (!mine.length) return `<p class="training-empty">Aucun joueur.</p>`;
+  let html = `<p class="hc-world-intro">${all.length} joueurs classés dans la ligue · ${league.teams.length} clubs</p>`;
+  html += `<div class="lg-table-wrap"><table class="lg-table hc-table"><thead><tr><th class="c">Mondial</th><th>Joueur</th><th class="c">Poste</th><th class="c">Rang au poste</th><th class="r">Note</th></tr></thead><tbody>`;
+  mine.forEach(r => {
+    html += `<tr><td class="c"><span class="hc-world-rank${r.rank <= 10 ? " hc-gold" : r.rank <= 50 ? " hc-top" : ""}">${ordinalFr(r.rank)}</span></td>` +
+      `<td><a href="#" class="team-link" data-player-detail="${r.playerId}" data-player-team="${idx}">${escapeHtml(r.player.name)}</a></td>` +
+      `<td class="c">${escapeHtml(r.position)}</td><td class="c">${ordinalFr(r.posRank)}</td><td class="r lg-pts">${Math.round(r.rating)}</td></tr>`;
+  });
+  return html + `</tbody></table></div>`;
+}
+
+(function wireHistoireContent() {
+  const holder = document.getElementById("histoireContent");
+  if (!holder) return;
+  holder.addEventListener("click", (e) => {
+    const link = e.target.closest("[data-player-detail]");
+    if (!link) return;
+    e.preventDefault();
+    showPlayerDetail(Number(link.dataset.playerTeam), Number(link.dataset.playerDetail));
+  });
+})();
+
 const TAB_HANDLERS = {
   live: goToLiveTab,
   guide: () => { renderGuideSection(); showPage("guideSection"); setActiveTab("guide"); },
@@ -36800,6 +37177,7 @@ const TAB_HANDLERS = {
   calendrier: () => { renderCalendrierSection(); showPage("calendrierSection"); setActiveTab("calendrier"); },
   amicaux: () => showPlaceholder("amicaux"),
   lp: () => { renderLpSection(); showPage("lpSection"); setActiveTab("lp"); },
+  histoire: () => { renderHistoireSection(); showPage("histoireSection"); setActiveTab("histoire"); },
   economie: () => { renderEconomieSection(); showPage("economieSection"); setActiveTab("economie"); },
   salle: () => { renderSalleSection(); showPage("salleSection"); setActiveTab("salle"); },
   staff: () => { for (const k in staffUi) staffUi[k].open = false; refreshCoachMarket(); refreshAnalystMarket(); refreshRecruiterMarket(); renderStaffPanel(); showPage("staffSection"); setActiveTab("staff"); },
