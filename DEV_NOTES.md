@@ -371,28 +371,29 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   / spectate_live_match verts. Reste : `git push` + regarder dans le vrai
   jeu.
 
-- **⏳ EN COURS (2026-09-26) — Traduction anglaise du jeu** — retour
-  utilisateur : "il faut maintenant traduire le jeu en anglais, on pourra
-  activer l'anglais en allant paramètre dans le tableau de bord". Périmètre
-  choisi : TOUT le jeu (interface, fil d'actus, commentaires du direct,
-  émissions, interviews, guide). Approche : couche de traduction à part
-  (assets/i18n/ : dictionnaire FR→EN + gabarits {n}, traduction du DOM à la
-  volée par MutationObserver, langue mémorisée en localStorage "hm-lang"),
-  pour ne presque pas toucher moteurbasket3.html. Une autre session modifiait
-  moteurbasket3.html au même moment (carte « Temps de jeu » des Ordres, non
-  committée à 10h07) : on N'Y TOUCHE PAS avant que ce chantier-là soit
-  committé (choix utilisateur). Statut (11h40) : FAIT ET TESTÉ CÔTÉ
-  SANDBOX, rebasé sur 3165c4b — assets/i18n/i18n.js (defer ; en.js chargé
-  seulement en anglais ; exact + gabarits {n} avec élision d'/l', dates
-  « Lundi 28 septembre », postes M/A/AS/AF/P → PG/SG/SF/PF/C, lettres J/V/D
-  des tableaux, typo anglaise), assets/i18n/en.js (~2 800 entrées), petit
-  script en tête de page (dates/nombres "fr-FR" → en-GB en anglais), choix
-  Français/English dans Paramètres, i18n_english_test.js (vert). Suite
-  complète en français : aucune régression (player_detail_test.js déjà
-  cassé). Chromium 1440/390 px en anglais : propre. Reste : intégrer sur le
-  Mac quand l'autre session a fini (retraduire les textes ajoutés entre
-  temps), committer. Hors périmètre : page hors ligne du service worker et
-  mobile-app/www (restent en français).
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Traduction
+  anglaise du jeu** — retour utilisateur : "il faut maintenant traduire le
+  jeu en anglais, on pourra activer l'anglais en allant paramètre dans le
+  tableau de bord". Tout le jeu (interface, fil d'actus, commentaires du
+  direct, émissions, interviews, guide). Paramètres (⚙ du tableau de bord)
+  → Langue : Français / English, mémorisé en localStorage "hm-lang",
+  changement = rechargement. Couche à part, le code du jeu reste en
+  français : assets/i18n/i18n.js (defer ; traduit l'affichage via
+  MutationObserver : texte exact, gabarits {n} avec élision d'/l',
+  découpage « a · b », dates françaises, postes M/A/AS/AF/P →
+  PG/SG/SF/PF/C, lettres J/V/D des tableaux, typo anglaise ; en.js chargé
+  seulement en anglais), assets/i18n/en.js (dictionnaire FR → EN, ~3 000
+  entrées, éditable à la main), petit script en tête de page (dates et
+  nombres "fr-FR" → en-GB en anglais). **Pour tout nouveau texte ajouté au
+  jeu : ajouter sa traduction dans assets/i18n/en.js** (clé = texte
+  français affiché, {0}/{nom} pour les parties variables), sinon il
+  restera en français en mode anglais. Mode debug : localStorage
+  "hm-i18n-debug" = "1" → window.hmI18n.missing liste les textes non
+  traduits. Tests : i18n_english_test.js (nouveau) ; suite complète en
+  français sans régression (player_detail_test.js déjà cassé,
+  disciplinary_ejection flaky connu). Chromium 1440/390 px en anglais
+  propre. Hors périmètre : page hors ligne du service worker et
+  mobile-app/www (en français). Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Titres d'onglet
   harmonisés + Ligue/Calendrier** — retours utilisateur (captures Ligue /
