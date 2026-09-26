@@ -30840,6 +30840,9 @@ function dashRenderFeedEntry(entry) {
   text.textContent = dashFeedTidyNumbers(entry.text);
   const results = dashFeedRoundResults(entry);
   if (results) {
+    // « Journée 6 » seul (retour utilisateur : « enleve : 5 résultats »), la
+    // liste des matchs juste en dessous suffit.
+    title.textContent = String(entry.title || "").replace(/\s*:\s*\d+\s+résultats?\s*$/, "");
     // Résultats de journée : un match par ligne (retour utilisateur,
     // 2026-09-26 : « fais mieux que ça, un match une ligne ») au lieu de
     // « A 34-45 B · C 66-48 D… » tronqué après deux matchs.
