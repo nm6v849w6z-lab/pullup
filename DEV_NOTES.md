@@ -43,10 +43,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   moteurbasket3.html (hoopShowDressOpts : écussons teamLogoHtml, couleurs
   JERSEY_COLORS, avatars AvatarGen, logo de la barre latérale ; le
   présentateur s'appelle Nicolas Cosset ("ce serait mieux s'il est blanc",
-  "on va l'appeler : Nicolas Cosset") = tête d'avatar AvatarGen graine 1388
-  (peau claire, brun, coupe « undercut » imposée : « ses cheveux sont
-  bizarres »), en costume au col monté jusqu'au cou (« on dirait que son
-  cou dépasse du costume ») — "utilise la tete de
+  "on va l'appeler : Nicolas Cosset") = tête d'avatar AvatarGen graine 7413
+  (visage A choisi parmi 4 : pas de trait noir sur le front, coiffure
+  d'origine), en costume au col monté jusqu'au cou, revers larges crantés,
+  cravate large ambre, pochette blanche — "utilise la tete de
   l'avatar mais mets lui un costume quand meme" : option AvatarGen
   `outfit: "suit"` (renderSuit : veste marine, chemise, cravate ambre ;
   joueurs inchangés)). Tests : hoop_show_player_test.js et
