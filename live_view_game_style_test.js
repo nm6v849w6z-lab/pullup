@@ -77,7 +77,7 @@ function state(status) {
   view.update(withMiss);
   const lastMarks = root.querySelectorAll(".court .last");
   assert(lastMarks.length === 1 && lastMarks[0].classList.contains("miss"), "dernier tir (raté) clignote, un seul à la fois");
-  assert(root.querySelectorAll(".court .last-halo").length === 1, "halo autour du dernier tir");
+  assert(!root.querySelector(".court .last-halo"), "pas de rond autour du dernier tir");
 
   // Feuille de match : mon club d'abord, même s'il joue à l'extérieur.
   const dom2 = new JSDOM('<!doctype html><div id="root"></div>');

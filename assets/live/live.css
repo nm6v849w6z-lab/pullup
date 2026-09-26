@@ -165,9 +165,8 @@
 @keyframes hmRing{from{r:8;opacity:.9}to{r:34;opacity:0}}
 .hm-live .court .last{animation:hmBlink 1s ease-in-out infinite}
 .hm-live .court .miss.last path{opacity:1;stroke-width:4}
-.hm-live .court .last-halo{animation:hmHalo 1s ease-in-out infinite}
 @keyframes hmBlink{50%{opacity:.2}}
-@keyframes hmHalo{0%{opacity:.9}50%{opacity:0}100%{opacity:.9}}
+
 .hm-live .legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px;flex-wrap:wrap}
 .hm-live .legend span{display:inline-flex;align-items:center;gap:6px}
 .hm-live .legend b{margin-right:-2px}
