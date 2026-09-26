@@ -98,10 +98,18 @@ if (doc.querySelector("#prepSection .field-help")) throw new Error("❌ La page 
   const el = doc.getElementById(id);
   if (!el || !el.classList.contains("seg-control")) throw new Error(`❌ #${id} devrait être un groupe de boutons segmentés.`);
 });
-["ordresDefenseSelect", "ordresScreenDefenseSelect", "ordresPostDefenseSelect"].forEach(id => {
+// Carte Défense entièrement en boutons (retour utilisateur 2026-09-26) : les
+// listes à 4-5 valeurs prennent toute la largeur et peuvent passer à la ligne.
+[["ordresDefenseSelect", "DEF_LIST"], ["ordresScreenDefenseSelect", "SCREEN_DEFENSE_LIST"], ["ordresPostDefenseSelect", "POST_DEFENSE_LIST"]].forEach(([id, listName]) => {
   const el = doc.getElementById(id);
-  if (!el || el.tagName !== "SELECT") throw new Error(`❌ #${id} (plus de 3 valeurs) devrait rester un <select>.`);
+  if (!el || !el.classList.contains("seg-control") || !el.classList.contains("seg-wrap")) throw new Error(`❌ #${id} devrait être un groupe de boutons segmentés (seg-wrap).`);
+  if (!el.closest(".ordres-field").classList.contains("ordres-field-wide")) throw new Error(`❌ #${id} devrait occuper toute la largeur de la carte.`);
+  const vals = [...el.querySelectorAll(".seg-btn")].map(b => b.dataset.value);
+  if (JSON.stringify(vals) !== JSON.stringify(win.eval(listName))) throw new Error(`❌ Les boutons de #${id} devraient reprendre exactement ${listName}.`);
 });
+const zonePress = [...doc.querySelectorAll("#ordresDefenseSelect .seg-btn")].find(b => b.dataset.value === "Zone press");
+zonePress.dispatchEvent(new win.Event("click", { bubbles: true }));
+if (win.eval("teamA.defense") !== "Zone press") throw new Error("❌ Cliquer 'Zone press' devrait mettre teamA.defense à 'Zone press'.");
 const tierLabels = [...doc.querySelectorAll("#ordresTierToggle .seg-btn")].map(b => b.textContent);
 if (JSON.stringify(tierLabels) !== JSON.stringify(["Débutant", "Confirmé"])) throw new Error(`❌ Libellés du niveau tactique attendus Débutant/Confirmé, obtenu ${JSON.stringify(tierLabels)}.`);
 console.log("✅ Réglages à 2-3 valeurs en boutons segmentés (aide mise à jour), 'Confirmé' au masculin.");

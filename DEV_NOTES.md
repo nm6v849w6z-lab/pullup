@@ -20,6 +20,22 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ordres : carte
+  Défense tout en boutons** — retours utilisateur (capture, 11:06) : "dans
+  défense, tu peux mettre que des boutons comme pour aide défensive et close
+  out ? c'est bcp plus beau", puis "ne mets jamais un bouton seul sur une
+  ligne, fais plutôt 3 et 2 ou 2 et 2". moteurbasket3.html : Système
+  défensif, Défense sur écrans et Gestion du post-up passent de <select> à
+  addSegmented (option wrap → classe .seg-wrap + data-count, champ
+  .ordres-field-wide sur toute la largeur de la carte) ; CSS : grille à 6
+  pistes, 5 valeurs → 3 + 2, 4 valeurs → 2 + 2 ; addSelectField supprimé
+  (plus utilisé) ; ids historiques du tutoriel conservés. Tests adaptés :
+  ordres_redesign, confirmed_tactics, ordres_round_planning,
+  cup_ordres_planning (B6 : panneau verrouillé → écriture directe de
+  teamA.defense, ce que faisait de fait l'ancien contournement du select),
+  next_match_cup_priority_ui ; onboarding_tour et end_to_end verts.
+  Reste : `git push` + redéploiement.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Salle : boutons
   d'amélioration épurés** — retour utilisateur (captures) : "enlève le .
   avant les sommes dans les briques amélioration des infrastructures" et

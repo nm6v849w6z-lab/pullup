@@ -83,12 +83,13 @@ console.log(`✅ Le bouton Ordres de la journée ${targetRound + 1} ouvre bien C
 //    préparé pour la journée 5.
 // ---------------------------------------------------------------------
 const liveDefenseBefore = win.eval("teamA.defense");
-const defSel = doc.querySelector("#prepGrid select"); // 1er <select> du panneau = Défense
-if (!defSel) throw new Error("❌ Pas de <select> Défense dans le panneau de préparation.");
-const otherDefenseOption = [...defSel.options].find(o => o.value !== defSel.value);
+// Système défensif en boutons segmentés depuis le 2026-09-26 (data-value =
+// clé interne, .active = valeur courante).
+const defSel = doc.getElementById("ordresDefenseSelect");
+if (!defSel) throw new Error("❌ Pas de groupe de boutons Système défensif dans le panneau de préparation.");
+const otherDefenseOption = [...defSel.querySelectorAll(".seg-btn")].map(b => ({ value: b.dataset.value, el: b })).find(o => !o.el.classList.contains("active"));
 if (!otherDefenseOption) throw new Error("❌ Il faudrait au moins 2 options de défense pour ce test.");
-defSel.value = otherDefenseOption.value;
-defSel.dispatchEvent(new win.Event("change"));
+otherDefenseOption.el.dispatchEvent(new win.Event("click", { bubbles: true }));
 
 const liveDefenseAfter = win.eval("teamA.defense");
 // Team.plannedTactics est désormais indexé par une clé composite
@@ -118,10 +119,9 @@ if (preparedOptions.length < 1) throw new Error("❌ La journée éditée devrai
 //    suite (comportement historique inchangé), pas un plan.
 // ---------------------------------------------------------------------
 win.eval("selectOrdresRound(0);");
-const immediateDefSel = doc.querySelector("#prepGrid select");
-const immediateOtherOption = [...immediateDefSel.options].find(o => o.value !== immediateDefSel.value);
-immediateDefSel.value = immediateOtherOption.value;
-immediateDefSel.dispatchEvent(new win.Event("change"));
+const immediateDefSel = doc.getElementById("ordresDefenseSelect");
+const immediateOtherOption = [...immediateDefSel.querySelectorAll(".seg-btn")].map(b => ({ value: b.dataset.value, el: b })).find(o => !o.el.classList.contains("active"));
+immediateOtherOption.el.dispatchEvent(new win.Event("click", { bubbles: true }));
 const liveDefenseAfterImmediateEdit = win.eval("teamA.defense");
 console.log(`\nAprès changement de défense sur le round immédiat (0) — defense EN DIRECT :`, liveDefenseAfterImmediateEdit, "(attendu :", immediateOtherOption.value, ")");
 if (liveDefenseAfterImmediateEdit !== immediateOtherOption.value) throw new Error("❌ Éditer le round immédiat (prochain match) devrait modifier teamA.defense directement, comme avant cette fonctionnalité.");

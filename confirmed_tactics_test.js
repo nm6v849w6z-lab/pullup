@@ -164,9 +164,9 @@ const confirmedSelectFields = [
   ["Close-out", "closeoutStyle", "Agressif"],
   ["Rebond offensif", "offRebStyle", "Agressif"],
 ];
-// Refonte Ordres (2026-09-25) : les réglages à 2-3 valeurs (Aide défensive,
-// Close-out, Rebond offensif) sont des boutons segmentés (.seg-btn avec
-// data-value = valeur interne), les autres restent des <select>.
+// Refonte Ordres (2026-09-25, puis carte Défense tout en boutons le
+// 2026-09-26) : ces réglages sont des boutons segmentés (.seg-btn avec
+// data-value = valeur interne) ; la branche <select> est gardée par sûreté.
 confirmedSelectFields.forEach(([labelText, field, targetValue]) => {
   const label = confirmedParts.flatMap(el => [...el.querySelectorAll(".field-label")]).find(l => l.textContent === labelText);
   if (!label) throw new Error(`❌ Le champ "${labelText}" devrait être présent dans les réglages confirmée.`);
@@ -197,23 +197,24 @@ console.log("✅ Les 5 selects de réglages confirmée (écrans/aide défensive/
 //       changer.
 // ---------------------------------------------------------------------
 const postUpLabel = [...confirmedBlock.querySelectorAll(".field-label")].find(l => l.textContent === "Gestion du post-up");
+// Depuis le 2026-09-26 (carte Défense tout en boutons), ce sont des
+// .seg-btn : data-value = clé interne, textContent = libellé affiché.
 const postUpSel = postUpLabel.nextElementSibling;
-const classiqueOption = [...postUpSel.options].find(o => o.value === "Classique");
-console.log("\nOption interne 'Classique' du select post-up — texte affiché :", classiqueOption && classiqueOption.textContent);
-if (!classiqueOption) throw new Error("❌ Le select 'Gestion du post-up' devrait toujours proposer l'option de valeur interne 'Classique'.");
+const postUpBtns = [...postUpSel.querySelectorAll(".seg-btn")].map(b => ({ value: b.dataset.value, textContent: b.textContent, el: b }));
+const classiqueOption = postUpBtns.find(o => o.value === "Classique");
+console.log("\nBouton interne 'Classique' du post-up — texte affiché :", classiqueOption && classiqueOption.textContent);
+if (!classiqueOption) throw new Error("❌ 'Gestion du post-up' devrait toujours proposer le bouton de valeur interne 'Classique'.");
 if (classiqueOption.textContent !== "Aucune consigne") {
   throw new Error(`❌ L'option de valeur interne 'Classique' devrait s'afficher \"Aucune consigne\", obtenu "${classiqueOption.textContent}".`);
 }
-postUpSel.value = "Classique";
-postUpSel.dispatchEvent(new win.Event("change"));
+classiqueOption.el.dispatchEvent(new win.Event("click", { bubbles: true }));
 if (win.eval("teamA.postDefense") !== "Classique") {
   throw new Error("❌ Sélectionner l'option affichée 'Aucune consigne' devrait toujours enregistrer la valeur interne 'Classique' dans teamA.postDefense.");
 }
 console.log("✅ L'option 'Classique' s'affiche \"Aucune consigne\" mais conserve sa valeur interne 'Classique' (sauvegardes/moteur inchangés).");
 // Remet le select sur "Prise à deux" (valeur attendue par le test de
 // persistance ci-dessous, étape 5 plus haut) avant de poursuivre.
-postUpSel.value = "Prise à deux";
-postUpSel.dispatchEvent(new win.Event("change"));
+postUpBtns.find(o => o.value === "Prise à deux").el.dispatchEvent(new win.Event("click", { bubbles: true }));
 
 // ---------------------------------------------------------------------
 // 6) Surveiller : 3 lignes poste+focus, sélectionner l'une d'elles ajoute

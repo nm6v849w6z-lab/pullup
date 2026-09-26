@@ -188,12 +188,13 @@ console.log("✅ Le bouton Ordres de Coupe ouvre bien CE tour de Coupe (pas le p
 //    Coupe de ce tour (voir teamA.hasPlanForRound(round, "cup")).
 // ---------------------------------------------------------------------
 const liveDefenseBefore = win.eval("teamA.defense");
-const defSel = doc.querySelector("#prepGrid select"); // 1er <select> du panneau = Défense
-if (!defSel) throw new Error("❌ Pas de <select> Défense dans le panneau de préparation.");
-const otherDefenseOption = [...defSel.options].find(o => o.value !== defSel.value);
+// Système défensif en boutons segmentés depuis le 2026-09-26 (data-value =
+// clé interne, .active = valeur courante).
+const defSel = doc.getElementById("ordresDefenseSelect");
+if (!defSel) throw new Error("❌ Pas de groupe de boutons Système défensif dans le panneau de préparation.");
+const otherDefenseOption = [...defSel.querySelectorAll(".seg-btn")].map(b => ({ value: b.dataset.value, el: b })).find(o => !o.el.classList.contains("active"));
 if (!otherDefenseOption) throw new Error("❌ Il faudrait au moins 2 options de défense pour ce test.");
-defSel.value = otherDefenseOption.value;
-defSel.dispatchEvent(new win.Event("change"));
+otherDefenseOption.el.dispatchEvent(new win.Event("click", { bubbles: true }));
 
 const liveDefenseAfter = win.eval("teamA.defense");
 const hasCupPlan = win.eval(`teamA.hasPlanForRound(${round0.index}, "cup")`);
@@ -309,11 +310,24 @@ console.log("✅ Le plan de Coupe préparé via l'écran Ordres survit à un rec
 // ---------------------------------------------------------------------
 const doc2 = dom2.window.document;
 win2.eval("selectOrdresRound(0, 'championship');");
-const champDefSel = doc2.querySelector("#prepGrid select");
-const champOtherOption = [...champDefSel.options].find(o => o.value !== champDefSel.value && o.value !== otherDefenseOption.value);
+// Dans ce jeu d'essai, le round 0 de championnat est le match immédiat et
+// son coup d'envoi est déjà passé : le panneau Ordres est verrouillé
+// (editable:false). Avant le 2026-09-26 le <select> Défense était bien
+// désactivé mais le test forçait sa valeur puis dispatchait "change", ce
+// qui écrivait quand même teamA.defense ; avec les boutons segmentés un
+// clic sur un panneau verrouillé est refusé (c'est voulu). On écrit donc
+// directement la défense EN DIRECT de teamA, ce que faisait de fait
+// l'ancien contournement : ce qui est testé ici, c'est bien que le plan de
+// Coupe au même numéro de round n'est pas touché.
+const champDefSel = doc2.getElementById("ordresDefenseSelect");
+if (!champDefSel) throw new Error("❌ Pas de groupe de boutons Système défensif dans le panneau de préparation (championnat round 0).");
+const champOtherOption = [...champDefSel.querySelectorAll(".seg-btn")].map(b => ({ value: b.dataset.value, el: b })).find(o => !o.el.classList.contains("active") && o.value !== otherDefenseOption.value);
 if (!champOtherOption) throw new Error("❌ Il faudrait au moins 3 options de défense pour bien distinguer les 2 plans dans ce test.");
-champDefSel.value = champOtherOption.value;
-champDefSel.dispatchEvent(new win2.Event("change"));
+if (champOtherOption.el.disabled) {
+  win2.eval(`teamA.defense = ${JSON.stringify(champOtherOption.value)};`);
+} else {
+  champOtherOption.el.dispatchEvent(new win2.Event("click", { bubbles: true }));
+}
 
 const champPlanDefense = win2.eval(`teamA.getPlanForRound(0, "championship").defense`);
 const cupPlanStillThere = win2.eval(`teamA.hasPlanForRound(${round0.index}, "cup")`);

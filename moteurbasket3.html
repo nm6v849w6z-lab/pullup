@@ -512,6 +512,16 @@
   .seg-btn:hover:not(:disabled){color:var(--ink); background:var(--panel-2);}
   .seg-btn.active{background:var(--amber); color:var(--amber-ink);}
   .seg-btn:disabled{cursor:default; opacity:.7;}
+  /* Réglages à 4-5 valeurs (carte Défense, retour utilisateur 2026-09-26 :
+     "dans défense, tu peux mettre que des boutons comme pour aide défensive
+     et close out ? c'est bcp plus beau") : sur toute la largeur de la
+     carte, en rangées pleines et régulières : 4 valeurs → 2 + 2, 5 valeurs
+     → 3 + 2 (grille à 6 pistes, data-count posé par addSegmented). */
+  .ordres-settings-grid .ordres-field-wide{grid-column:1 / -1;}
+  .seg-control.seg-wrap{display:grid; grid-template-columns:repeat(6, minmax(0, 1fr));}
+  .seg-control.seg-wrap .seg-btn{grid-column:span 2; white-space:normal; line-height:1.2; padding:6px 8px;}
+  .seg-control.seg-wrap[data-count="4"] .seg-btn{grid-column:span 3;}
+  .seg-control.seg-wrap[data-count="5"] .seg-btn:nth-child(n+4){grid-column:span 3;}
 
   /* Priorités offensives : 3 puces numérotées, puis le reste en pilules. */
   .tactic-picker{display:flex; flex-direction:column; gap:12px; margin-top:10px;}
@@ -26875,9 +26885,10 @@ const TACTIC_VALUE_LABELS = { "Classique": "Aucune consigne", "débutant": "Déb
 //     À PARTS ÉGALES (Team.offenseProfile) : le numéro sert à montrer
 //     l'ordre choisi, seul le n°1 a un rôle à part (graphique des systèmes
 //     joués dans le scouting adverse, voir tacticsUsed côté moteur).
-//   - réglages à 2 ou 3 valeurs en boutons segmentés (Rythme, Niveau
-//     tactique, Fin de match, Rebond offensif, Aide défensive, Close-out),
-//     les autres restent des <select> ; chacun a sa ligne d'aide.
+//   - réglages en boutons segmentés (Rythme, Niveau tactique, Fin de match,
+//     Rebond offensif, et toute la carte Défense depuis le 2026-09-26 — les
+//     listes à 4-5 valeurs sur toute la largeur, boutons qui passent à la
+//     ligne) ; seul "Surveiller" garde des <select>.
 //   - le bloc "confirmé" est désormais réparti sur trois cartes : tous ses
 //     morceaux portent la classe .tactic-confirmee-block et sont
 //     masqués/révélés ensemble (celui de la carte Défense garde l'id
@@ -26909,7 +26920,7 @@ function buildTeamPanel(team, side, opts = {}) {
 
   const syncField = (field, value) => { if (editable && team === teamA) syncTacticsToServer({ [field]: value }); };
 
-  // --- petits gabarits locaux (carte, champ, aide, segmenté, select) ---
+  // --- petits gabarits locaux (carte, champ, aide, segmenté) ---
   const makeCard = (id, title, aside) => {
     const section = document.createElement("section");
     section.className = "ordres-card" + (id ? " area-" + id : "");
@@ -26940,7 +26951,8 @@ function buildTeamPanel(team, side, opts = {}) {
   const addSegmented = (parent, labelText, list, field, o = {}) => {
     const f = addField(parent, labelText, o.className);
     const group = document.createElement("div");
-    group.className = "seg-control";
+    group.className = "seg-control" + (o.wrap ? " seg-wrap" : "");
+    if (o.wrap) group.dataset.count = String(list.length);
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", labelText);
     if (isMain && o.id) group.id = o.id;
@@ -26970,25 +26982,6 @@ function buildTeamPanel(team, side, opts = {}) {
     paint();
     f.appendChild(group);
     return { field: f, group };
-  };
-  const addSelectField = (parent, labelText, list, field, o = {}) => {
-    const f = addField(parent, labelText, o.className);
-    const sel = document.createElement("select");
-    if (isMain && o.id) sel.id = o.id;
-    list.forEach(v => {
-      const opt = document.createElement("option");
-      opt.value = v; opt.textContent = TACTIC_VALUE_LABELS[v] || v;
-      if (v === team[field]) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    sel.disabled = !editable;
-    sel.addEventListener("change", () => {
-      team[field] = sel.value;
-      if (editable) onDirty();
-      syncField(field, team[field]);
-    });
-    f.appendChild(sel);
-    return { field: f, sel };
   };
 
   // Tous les morceaux "confirmé" (voir le commentaire de la fonction).
@@ -27156,15 +27149,19 @@ function buildTeamPanel(team, side, opts = {}) {
   const defenseGrid = document.createElement("div");
   defenseGrid.className = "ordres-settings-grid";
   defense.appendChild(defenseGrid);
-  addSelectField(defenseGrid, "Système défensif", DEF_LIST, "defense", { id: "ordresDefenseSelect" });
+  // Tout en boutons segmentés (retour utilisateur 2026-09-26 : "dans
+  // défense, tu peux mettre que des boutons comme pour aide défensive et
+  // close out ? c'est bcp plus beau") : les listes à 4-5 valeurs prennent
+  // toute la largeur (wrap) ; les ids historiques (tutoriel) sont conservés.
+  addSegmented(defenseGrid, "Système défensif", DEF_LIST, "defense", { id: "ordresDefenseSelect", className: "ordres-field-wide", wrap: true });
   const confirmedBlock = document.createElement("div");
   confirmedBlock.className = "tactic-confirmee-block ordres-settings-grid ordres-settings-grid-nested";
   if (isMain) confirmedBlock.id = "ordresConfirmedBlock";
   defense.appendChild(confirmedBlock);
   confirmedEls.push(confirmedBlock);
-  addSelectField(confirmedBlock, "Défense sur écrans", SCREEN_DEFENSE_LIST, "screenDefense", { id: "ordresScreenDefenseSelect" });
+  addSegmented(confirmedBlock, "Défense sur écrans", SCREEN_DEFENSE_LIST, "screenDefense", { id: "ordresScreenDefenseSelect", className: "ordres-field-wide", wrap: true });
+  addSegmented(confirmedBlock, "Gestion du post-up", POST_DEFENSE_LIST, "postDefense", { id: "ordresPostDefenseSelect", className: "ordres-field-wide", wrap: true });
   addSegmented(confirmedBlock, "Aide défensive", HELP_DEFENSE_LIST, "helpDefense", { id: "ordresHelpDefenseSelect" });
-  addSelectField(confirmedBlock, "Gestion du post-up", POST_DEFENSE_LIST, "postDefense", { id: "ordresPostDefenseSelect" });
   addSegmented(confirmedBlock, "Close-out", CLOSEOUT_STYLE_LIST, "closeoutStyle", { id: "ordresCloseoutSelect" });
 
   // =================== ADVERSAIRES (Surveiller) ===================

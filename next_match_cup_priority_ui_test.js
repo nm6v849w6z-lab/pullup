@@ -110,12 +110,13 @@ if (!ordersBtnBefore.includes("Donnez vos ordres")) {
 
 // Modifie la défense du tour de Coupe (même geste que cup_ordres_planning_test.js
 // B3) pour déclencher stagePlanForRound/hasPlanForRound sur CE tour.
-const defSel = doc.querySelector("#prepGrid select"); // 1er <select> du panneau = Défense
-if (!defSel) throw new Error("❌ Pas de <select> Défense dans le panneau de préparation.");
-const otherDefenseOption = [...defSel.options].find(o => o.value !== defSel.value);
+// Système défensif en boutons segmentés depuis le 2026-09-26 (data-value =
+// clé interne, .active = valeur courante).
+const defSel = doc.getElementById("ordresDefenseSelect");
+if (!defSel) throw new Error("❌ Pas de groupe de boutons Système défensif dans le panneau de préparation.");
+const otherDefenseOption = [...defSel.querySelectorAll(".seg-btn")].map(b => ({ value: b.dataset.value, el: b })).find(o => !o.el.classList.contains("active"));
 if (!otherDefenseOption) throw new Error("❌ Il faudrait au moins 2 options de défense pour ce test.");
-defSel.value = otherDefenseOption.value;
-defSel.dispatchEvent(new win.Event("change"));
+otherDefenseOption.el.dispatchEvent(new win.Event("click", { bubbles: true }));
 
 win.eval("updateTopbar();"); // même appel que renderPrep()/onDirty, voir buildTeamPanel
 const ordersBtnAfter = doc.getElementById("topbarOrdersBtn").textContent.trim();
