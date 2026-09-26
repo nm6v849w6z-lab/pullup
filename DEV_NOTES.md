@@ -125,7 +125,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   naturel, « + Ajouter » toujours en dessous), terrain du cinq réduit (max
   420 px), menus des titulaires élargis (120-175 px, marqueurs de bord
   alignés sur le bord). Vérifié visuellement (Chromium, bureau + 390 px) ;
-  sur téléphone un nom très long peut encore perdre son « (M) » final.
+  sur téléphone un nom très long peut encore perdre son « (M) » final. Puis (retours
+  utilisateur 10:19-10:20) : répartition proposée 28 / 8 / réservistes
+  4 à partager ("un temps de jeu plus faible pour le réserviste"),
+  remplaçants triés du mieux noté (Team.slotPlayerIds) — le 1er
+  "Remplaçant", les suivants "Réserviste" ; carte en blocs sur deux
+  colonnes M | A, AS | AF, P centré (une colonne sous 600 px), rôle sous le
+  nom ; terrain du cinq retourné dans les Ordres uniquement (meneur en
+  haut, pivot en bas, SVG en scaleY(-1), hauteurs ORDRES_TOP), la fiche
+  joueur garde son schéma. NB : la partie moteurbasket3.html de cette
+  passe est partie dans le commit b6fea21 (session "Page live" en
+  parallèle) ; engine.js + test dans le commit suivant.
   Tests : lineup_minutes_test.js (nouveau) + suite complète 144 fichiers :
   tout vert sauf player_detail_test.js (échoue AUSSI sans ce chantier, voir
   "À investiguer" ci-dessous) et calendrier_ordres_stale_live_redirect

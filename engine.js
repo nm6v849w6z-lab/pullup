@@ -6008,25 +6008,35 @@ class Team {
     const ids = [];
     const s = this.lineup.starters[pos];
     if (s != null) ids.push(s);
-    this.players.forEach(p => {
-      if (p.id !== s && (this.lineup.backupPositions[p.id] || []).includes(pos)) ids.push(p.id);
-    });
+    // Remplaçants du poste du mieux noté au moins bien noté : le premier est
+    // "le" remplaçant, les suivants des réservistes (carte Temps de jeu,
+    // répartition proposée par defaultSlotMinutes).
+    this.players
+      .filter(p => p.id !== s && (this.lineup.backupPositions[p.id] || []).includes(pos))
+      .sort((a, b) => b.overall() - a.overall())
+      .forEach(p => ids.push(p.id));
     return ids;
   }
 
-  // Répartition proposée quand on active le réglage d'un poste : 28 min au
-  // titulaire, 12 partagées entre les remplaçants (40 au titulaire seul).
+  // Répartition proposée quand on active le réglage d'un poste (retour
+  // utilisateur 2026-09-26 : "en automatique, pars plutôt sur un temps de
+  // jeu plus faible pour le réserviste") : 28 min au titulaire, 12 au
+  // remplaçant seul ; avec plusieurs remplaçants, 8 au premier (le mieux
+  // noté, voir slotPlayerIds) et 4 à partager entre les réservistes. 40 au
+  // titulaire seul.
   defaultSlotMinutes(pos) {
     const ids = this.slotPlayerIds(pos);
     const starter = this.lineup.starters[pos];
     const backups = ids.filter(id => id !== starter);
     const out = {};
     if (starter != null) out[starter] = backups.length ? 28 : 40;
-    const rest = starter != null ? (backups.length ? 12 : 0) : 40;
-    backups.forEach((id, i) => {
-      const base = Math.floor(rest / backups.length);
-      out[id] = base + (i < rest - base * backups.length ? 1 : 0);
+    const share = (list, total) => list.forEach((id, i) => {
+      const base = Math.floor(total / list.length);
+      out[id] = base + (i < total - base * list.length ? 1 : 0);
     });
+    if (starter == null) share(backups, 40);
+    else if (backups.length === 1) out[backups[0]] = 12;
+    else if (backups.length > 1) { out[backups[0]] = 8; share(backups.slice(1), 4); }
     return out;
   }
 

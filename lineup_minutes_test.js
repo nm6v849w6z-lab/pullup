@@ -28,6 +28,10 @@ assert(!team.slotMinuteShares(pos), "sans réglage, le poste doit rester en rota
 team.enableSlotMinutes(pos);
 const ids = team.slotPlayerIds(pos);
 assert(team.lineup.minutes[pos][starter] === (ids.length > 1 ? 28 : 40), "répartition proposée : 28 min au titulaire");
+if (ids.length >= 3) {
+  assert(team.lineup.minutes[pos][ids[1]] === 8, "répartition proposée : 8 min au remplaçant (le mieux noté)");
+  assert(ids.slice(2).every(id => team.lineup.minutes[pos][id] <= 4), "répartition proposée : peu de minutes pour les réservistes");
+}
 const total = ids.reduce((s, id) => s + team.lineup.minutes[pos][id], 0);
 assert(total === 40, `répartition proposée totale 40, obtenu ${total}`);
 // Un réserviste (ni titulaire ni remplaçant) : on en fabrique un à partir
@@ -127,7 +131,7 @@ const { server, savePath, baseUrl } = await startTestServer();
 const dom = await openGame(html, baseUrl);
 const doc = dom.window.document;
 const win = dom.window;
-const ptRow = p => doc.querySelector(`#ordresCardMinutes .pt-row[data-pos="${p}"]`);
+const ptRow = p => doc.querySelector(`#ordresCardMinutes .pt-block[data-pos="${p}"]`);
 assert(doc.getElementById("ordresCardMinutes"), "la carte « Temps de jeu » doit exister");
 assert(!doc.querySelector("#ordresCardRotation input[type=number]"), "la carte Rotation ne doit pas contenir de minutes");
 assert(/Automatique/.test(ptRow("Meneur").textContent), "le poste Meneur doit être en automatique au départ");
@@ -149,9 +153,9 @@ assert(ptRow("Meneur").querySelectorAll("input.pt-input").length === before + 1,
 await flush(dom);
 const saved = readRawSave(savePath).team.lineup;
 assert(saved.minutes && Object.values(saved.minutes.Meneur).includes(30), "les minutes saisies doivent être sauvegardées : " + JSON.stringify(saved.minutes));
-ptRow("Meneur").querySelector(".pt-side .pt-btn").click();
+ptRow("Meneur").querySelector(".pt-head .pt-btn").click();
 await flush(dom);
-assert(/Automatique/.test(ptRow("Meneur").querySelector(".pt-body").textContent), "« Automatique » doit rendre le poste à la rotation automatique");
+assert(ptRow("Meneur").querySelector(".pt-auto"), "« Automatique » doit rendre le poste à la rotation automatique");
 assert(!readRawSave(savePath).team.lineup.minutes, "« Automatique » doit effacer le réglage sauvegardé");
 console.log("✅ Carte « Temps de jeu » : Régler / saisie / ajout d'un joueur / Automatique, sauvegardés.");
 
