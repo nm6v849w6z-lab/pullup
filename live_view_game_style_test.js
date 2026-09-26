@@ -70,6 +70,15 @@ function state(status) {
   assert($(".box .pos").textContent === "M", "pastille de poste");
   assert($(".feed .chip.pts").textContent === "+12", "fil : pastille des points marqués");
 
+  // Dernier tir du match : dessiné au-dessus et clignotant (retour
+  // utilisateur, 2026-09-26), qu'il soit réussi ou raté.
+  const withMiss = state("live");
+  withMiss.shots.push({ id: 2, team: 1, quarter: 1, made: false, zone: "three", x: 20, y: 5 });
+  view.update(withMiss);
+  const lastMarks = root.querySelectorAll(".court .last");
+  assert(lastMarks.length === 1 && lastMarks[0].classList.contains("miss"), "dernier tir (raté) clignote, un seul à la fois");
+  assert(root.querySelectorAll(".court .last-halo").length === 1, "halo autour du dernier tir");
+
   // Feuille de match : mon club d'abord, même s'il joue à l'extérieur.
   const dom2 = new JSDOM('<!doctype html><div id="root"></div>');
   const root2 = dom2.window.document.getElementById("root");

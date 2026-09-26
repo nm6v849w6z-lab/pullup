@@ -80,7 +80,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   réseau d'abord pour .js/.css (CACHE_VERSION hoop-v2), et ?v=
   HM_LIVE_ASSET_VERSION sur les URL de la vue live pour contourner les
   copies déjà en cache. Tests mobile_pwa, index, live_view_game_style,
-  dashboard_live_match, live_court_home_logo verts. Reste : `git push`.
+  dashboard_live_match, live_court_home_logo verts.
+  Puis (captures du direct) : le dernier tir de la carte, réussi ou raté,
+  clignote avec un halo jusqu'au tir suivant ; pastille « Temps mort » du
+  fil passée sur deux lignes au lieu de déborder sur le texte.
+  live_view_game_style_test.js complété. Reste : `git push`.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Rotation : les
   10 titulaires jouaient tout le 1er quart-temps** — retour utilisateur

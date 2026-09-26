@@ -398,11 +398,18 @@ export function createLiveView(root, opts = {}) {
     const list = S.shots
       .filter(s => (ui.team === "all" || s.team == ui.team) && (ui.q === "all" || s.quarter == ui.q) && (ui.res === "all" || (ui.res === "made") === s.made))
       .sort((a, b) => a.made - b.made); // réussis dessinés par-dessus
+    // Dernier tir du match (réussi ou raté) : dessiné au-dessus des autres
+    // et clignotant jusqu'au tir suivant (retour utilisateur, 2026-09-26).
+    const lastId = S.shots.length ? S.shots[S.shots.length - 1].id : null; // tirs ajoutés dans l'ordre du match
+    const li = list.findIndex(s => s.id === lastId);
+    if (li >= 0) list.push(list.splice(li, 1)[0]);
     let g = "";
     for (const s of list) {
       const x = s.x * 10, y = s.y * 10, c = COLOR(s.team);
-      if (s.made) g += `<g class="made${newShots.has(s.id) ? " shot-new" : ""}"><circle class="ring" cx="${x}" cy="${y}" r="8" fill="none" stroke="${c}" stroke-width="3" opacity="0"/><circle class="dot" cx="${x}" cy="${y}" r="8" fill="${c}"/></g>`;
-      else g += `<g class="miss"><path d="M${x - 6} ${y - 6}l12 12M${x + 6} ${y - 6}l-12 12" stroke="${c}"/></g>`;
+      if (s.id === lastId) g += `<circle class="last-halo" cx="${x}" cy="${y}" r="16" fill="none" stroke="${c}" stroke-width="2.5"/>`;
+      const last = s.id === lastId ? " last" : "";
+      if (s.made) g += `<g class="made${newShots.has(s.id) ? " shot-new" : ""}${last}"><circle class="ring" cx="${x}" cy="${y}" r="8" fill="none" stroke="${c}" stroke-width="3" opacity="0"/><circle class="dot" cx="${x}" cy="${y}" r="8" fill="${c}"/></g>`;
+      else g += `<g class="miss${last}"><path d="M${x - 6} ${y - 6}l12 12M${x + 6} ${y - 6}l-12 12" stroke="${c}"/></g>`;
     }
     // Logo du club qui reçoit au rond central (S.courtLogo : SVG fourni par
     // le jeu, dessiné pour un cercle de 104 unités centré en 470,250).
