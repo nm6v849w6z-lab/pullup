@@ -38044,7 +38044,7 @@ function sponsorContractHtml(c, slot) {
   const fee = sponsorTerminationFee(c);
   let html = `<div class="spo-contract-id">` +
     (slot.key === "maillot" ? `<span class="spo-jersey">${jerseySvgHtml(teamA.jerseyShape, teamA.jerseyColor, 72, "home", teamA.isPaying ? teamA.jerseyPattern : "uni", teamA.jerseyTwoTone, c.sponsorName)}</span>` : `<span class="spo-badge">${escapeHtml(defaultTrigramForName(c.sponsorName))}</span>`) +
-    `<div class="spo-contract-txt"><span class="spo-name">${escapeHtml(c.sponsorName)}</span><span class="spo-meta">${escapeHtml(c.tierLabel)} · profil <b class="${sponsorProfileClass(c.profile)}">${escapeHtml(c.profileLabel)}</b></span><span class="spo-meta">Signé semaine ${c.signedWeek || 1}</span></div></div>`;
+    `<div class="spo-contract-txt"><span class="spo-name">${escapeHtml(c.sponsorName)}</span><span class="spo-meta">${escapeHtml(c.tierLabel)} · profil <b class="${sponsorProfileClass(c.profile)}">${escapeHtml(c.profileLabel)}</b></span><span class="spo-meta">Signé en semaine ${c.signedWeek || 1}</span></div></div>`;
   html += `<div class="spo-nums"><div><span class="spo-kicker">Fixe</span><b>${formatMoney(c.weekly)}</b><small>/ semaine</small></div>` +
     `<div><span class="spo-kicker">Prime</span><b>${formatMoney(c.winPrime)}</b><small>/ victoire</small></div>` +
     `<div class="hi"><span class="spo-kicker">Bonus</span><b>${formatMoney(c.bonus)}</b><small>si ${escapeHtml(c.objectiveLabel)}</small></div></div>`;
