@@ -34821,7 +34821,7 @@ const TOUR_STEPS = [
     kind: "spotlight", topic: "Effectif", page: "dashboard",
     target: '.tab-btn.sidebar-link[data-tab="effectif"]', pos: "right",
     title: "Votre effectif",
-    text: "Le roster complet du club : poste, attributs (physique, adresse, défense...), forme du jour et historique de matchs pour chaque joueur.",
+    text: "Le roster complet du club, groupé en Cinq de départ, Rotation et Réserve : poste, potentiel, âge, salaire, forme, motivation et évaluation des derniers matchs. Cliquez sur un nom pour ouvrir la fiche du joueur (caractéristiques, saison, Comparer, Vendre).",
     tip: "Un joueur peut couvrir plusieurs postes en tant que remplaçant, pratique en cas de blessure ou de suspension.",
   },
   // Forme physique/Motivation/Alchimie (retour utilisateur, 2026-09 :
@@ -34838,9 +34838,16 @@ const TOUR_STEPS = [
   // "il faut que le tuto permette de gagne 200K en tout").
   {
     kind: "spotlight", topic: "Effectif", page: "effectif",
+    target: 'th[data-sort="potential"]',
+    title: "Potentiel",
+    text: "Jusqu'où le joueur peut encore progresser, jamais en chiffre : un palier parmi 10, de Débutant à Générationnel (Prospect, Joueur correct, Solide, Starter, Très bon joueur, Star, All-Star, Superstar). Les jeunes de l'académie n'affichent qu'une estimation : Espoir, Grand espoir ou Prodige.",
+    tip: "Un jeune faible mais à fort potentiel, bien entraîné, peut dépasser un joueur déjà bon dont le potentiel est presque atteint. Le détail des paliers est dans le Guide.",
+  },
+  {
+    kind: "spotlight", topic: "Effectif", page: "effectif",
     target: 'th[data-sort="condition"]',
     title: "Forme physique",
-    text: "5 paliers, du plus frais (90-100) au plus épuisé (0-39, risque de blessure nettement accru). Baisse après chaque match selon le temps de jeu, remonte de 15 points par jour de repos sans match. Totalement indépendante de l'entraînement.",
+    text: "5 paliers, du plus frais (90-100) au plus épuisé (0-39, risque de blessure nettement accru). Baisse après chaque match selon le temps de jeu, remonte de 10 points par jour sans match (15 avec l'entraînement collectif Récupération).",
     tip: "Une forme basse ne bloque aucune séance d'entraînement, mais pénalise nettement la performance en match.",
   },
   {
@@ -34864,7 +34871,7 @@ const TOUR_STEPS = [
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresRoundDateTime",
     title: "Pour quel match ?",
     text: "En haut de la page, le prochain match auquel s'appliquent les ordres réglés ci-dessous. Si plusieurs journées sont à venir, le menu déroulant juste en dessous permet de préparer une AUTRE journée à l'avance.",
-    tip: "Une journée déjà préparée à l'avance affiche un petit indicateur ● dans ce menu.",
+    tip: "Une journée déjà préparée à l'avance affiche un petit indicateur ● dans ce menu. Quand elle devient le prochain match, ses ordres deviennent automatiquement vos ordres actuels. La composition est verrouillée 5 minutes avant le coup d'envoi.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresLineupEditor", wide: true,
     title: "La feuille de match",
@@ -34873,7 +34880,7 @@ const TOUR_STEPS = [
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresOffTacticsGrid", wide: true,
     title: "Priorités offensives",
-    text: "Choisissez jusqu'à 3 systèmes offensifs parmi 10 (Pick & Roll, Transition rapide, Post-up, Isolation...). Chacun modifie la répartition des tirs tentés (intérieur/mi-distance/3 points), les pertes de balle et le rythme.",
+    text: "Choisissez exactement 3 systèmes offensifs parmi 10 (Pick & Roll, Transition rapide, Post-up, Isolation...). Chacun modifie la répartition des tirs tentés (intérieur/mi-distance/3 points), les pertes de balle et le rythme.",
     tip: "Deux priorités complémentaires (par exemple Pick & Roll + Transition rapide) se combinent ; trois priorités trop opposées peuvent se neutraliser.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresDefenseSelect",
@@ -34921,9 +34928,30 @@ const TOUR_STEPS = [
     reward: TOUR_REWARD_BY_TOPIC["Ordres"],
   },
 
+  // Thème "Compétitions" (ajouté le 2026-09-26, retour utilisateur : "sur le
+  // tutoriel, il y a bien toutes les nouveautés ?") : Calendrier, Coupe et
+  // Ligue, SANS prime (absent de TOUR_REWARD_BY_TOPIC, comme l'Humeur des
+  // supporters). Une étape dont la cible n'existe pas (pas de Coupe dans
+  // cette ligue) est simplement sautée, voir tourShowStep.
+  { kind: "spotlight", topic: "Compétitions", page: "calendrier", target: "#calendrierContent .cal-next",
+    title: "Le calendrier",
+    text: "Tous vos matchs de la saison, championnat et Coupe, groupés par mois. Les matchs se jouent tout seuls à l'heure prévue (championnat à 10:00 et 19:00, Coupe à 15:00) : connectez-vous pour les suivre en direct, ou laissez-les se dérouler sans vous.",
+    tip: "Cette carte montre le prochain match avec un compte à rebours ; sur chaque ligne, le bouton Ordres (ou Modifier vos ordres) prépare le match correspondant.",
+  },
+  { kind: "spotlight", topic: "Compétitions", page: "coupe", target: "#coupeContent .cp-path",
+    title: "La Coupe",
+    text: "Un tableau à élimination directe, un tour par jour. Cette carte résume votre parcours ; à gauche, les matchs de chaque tour, et en bas l'arbre de la phase finale à partir des 8es.",
+    tip: "Les ordres de Coupe se préparent comme ceux du championnat, depuis le Calendrier ou le sélecteur de journée de l'onglet Ordres.",
+  },
+  { kind: "spotlight", topic: "Compétitions", page: "ligue", target: ".lg-race",
+    title: "La ligue",
+    text: "Le classement se départage par victoires puis par différence de points. Places 1 à 4 : play-offs ; 5 et 6 : maintien ; 7 et 8 : barrage ; 9 et 10 : relégation. Ce panneau résume votre position et l'écart avec les places clés.",
+    tip: "Cliquez sur une équipe adverse pour ouvrir sa fiche (effectif, calendrier, analyse) : c'est le point de départ du scoutisme.",
+  },
+
   { kind: "spotlight", topic: "Entraînement", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="entrainement"]', pos: "right",
     title: "Entraînement des fondamentaux",
-    text: "Chaque semaine, choisissez un programme parmi les 13 fondamentaux (tir à 3 points, rebond, défense extérieure...) et un ou plusieurs postes à qui l'appliquer. Cibler un seul poste donne le plein rendement ; l'étendre à toute l'équipe touche plus de joueurs mais dilue l'effet. Le Physique et le Mental évoluent, eux, tout seuls au fil de la carrière, indépendamment de ce programme.",
+    text: "Chaque jour, le club travaille un programme parmi les 13 fondamentaux (tir à 3 points, rebond, défense extérieure...) et un ou plusieurs postes à qui l'appliquer. Cibler un seul poste donne le plein rendement ; l'étendre à toute l'équipe touche plus de joueurs mais dilue l'effet. Le Physique et le Mental évoluent, eux, tout seuls au fil de la carrière, indépendamment de ce programme.",
     tip: "Un joueur qui n'a pas assez joué cette semaine progresse moins, même avec le bon programme : gardez un œil sur son temps de jeu cumulé.",
   },
   // Entraînement collectif (retour utilisateur, 2026-09 : "entrainement
@@ -34941,13 +34969,13 @@ const TOUR_STEPS = [
     target: "#collectiveTrainingConfig",
     title: "Entraînement collectif",
     text: "Un réglage séparé de l'entraînement des fondamentaux ci-dessus, les deux tournent en même temps : travailler une tactique fait monter plus vite sa maîtrise (connaissance tactique) quand elle est jouée en match, travailler la récupération accélère le retour de forme physique des joueurs qui ne jouent pas ce jour-là.",
-    tip: "Le crédit de jours banqués reste utilisable même si vous repassez sur \"Aucun\" ou changez de focus entre-temps : pas besoin de s'y tenir sans interruption.",
+    tip: "Connaissance tactique : chaque option jouée monte de +6 à +12 par match, +4 par jour d'entraînement dessus ; une option délaissée ne baisse qu'à partir du 3e match d'absence (-2, -4, puis -6 au maximum). Le détail est dans le Guide.",
     reward: TOUR_REWARD_BY_TOPIC["Entraînement"],
   },
   { kind: "spotlight", topic: "Marché", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="marche"]', pos: "right",
     title: "Le marché des transferts",
-    text: "Recrutez des joueurs libres ou mettez les vôtres aux enchères. Chaque enchère dure un temps limité, et les autres clubs peuvent surenchérir jusqu'au bout.",
-    tip: "Une enchère gagnée s'ajoute immédiatement à votre masse salariale : vérifiez votre budget avant de vous engager.",
+    text: "Achetez des joueurs aux enchères ou mettez les vôtres en vente. Chaque enchère dure 1 jour réel, et les autres clubs peuvent surenchérir jusqu'au bout. Filtres par poste, âge, potentiel, prix et caractéristiques, suivi de vos enchères en haut de page.",
+    tip: "Chaque annonce compare le prix à une valeur estimée (Bonne affaire, Prix correct, Au-dessus de sa valeur). Une enchère gagnée s'ajoute immédiatement à votre masse salariale : vérifiez votre budget avant de vous engager.",
     reward: TOUR_REWARD_BY_TOPIC["Marché"],
   },
   { kind: "spotlight", topic: "Staff", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="staff"]', pos: "right",
@@ -34965,7 +34993,7 @@ const TOUR_STEPS = [
   { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#youthCandidatesHolder",
     title: "Prospects du recruteur",
     text: "Un recruteur (onglet Staff) fait remonter des prospects de 15 à 17 ans : jusqu'à 5 propositions en attente à la fois, chacune expire si elle reste trop longtemps sans réponse.",
-    tip: "Chaque prospect signé rejoint directement l'académie : pas d'enchère ni de négociation, contrairement au marché des transferts.",
+    tip: "Chaque prospect affiche une estimation de potentiel (Espoir, Grand espoir ou Prodige) et se signe directement, sans enchère ni négociation, contrairement au marché des transferts.",
   },
   { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#youthRosterHolder",
     title: "Effectif jeunes",
@@ -35017,7 +35045,7 @@ const TOUR_STEPS = [
   },
   { kind: "spotlight", topic: "Salle", page: "salle", target: "#arenaCurrentPanel",
     title: "Palier et agrandissement",
-    text: "Le nom et la capacité de votre salle actuelle, avec une flèche pour l'agrandir au palier suivant quand vous en avez les moyens (8 paliers en tout, du Petit gymnase à l'Arena nationale).",
+    text: "Le nom et la capacité de votre salle actuelle, avec un bouton Agrandir pour passer au palier suivant quand vous en avez les moyens (8 paliers en tout, du Petit gymnase à l'Arena nationale).",
   },
   { kind: "spotlight", topic: "Salle", page: "salle", target: "#seatCategoriesHolder", wide: true,
     title: "Prix des billets",
@@ -35053,7 +35081,7 @@ const TOUR_STEPS = [
   },
 ];
 
-const TOUR_PAGE_KEY_TO_TAB = { dashboard: "club", ordres: "ordres", salle: "salle", academie: "academie", effectif: "effectif", humeur: "humeur", entrainement: "entrainement" };
+const TOUR_PAGE_KEY_TO_TAB = { dashboard: "club", ordres: "ordres", salle: "salle", academie: "academie", effectif: "effectif", humeur: "humeur", entrainement: "entrainement", calendrier: "calendrier", coupe: "coupe", ligue: "ligue" };
 let tourStepIdx = 0;
 let tourEarnedRewards = []; // { title, reward }, remis à zéro à chaque lancement
 let tourRootEl = null, tourToastEl = null;

@@ -45,7 +45,7 @@ while (true) {
   if (step.kind === "spotlight") {
     // La page réelle correspondante doit être vraiment affichée (pas une
     // maquette) : vérifie via les vrais id de section (showPage/PAGE_IDS).
-    const realPageId = { ordres: "prepSection", salle: "salleSection", academie: "academieSection", dashboard: "clubSection", effectif: "effectifSection", humeur: "humeurSection", entrainement: "trainingSection" }[step.page];
+    const realPageId = { ordres: "prepSection", salle: "salleSection", academie: "academieSection", dashboard: "clubSection", effectif: "effectifSection", humeur: "humeurSection", entrainement: "trainingSection", calendrier: "calendrierSection", coupe: "coupeSection", ligue: "standingsSection" }[step.page];
     const pageEl = doc.getElementById(realPageId);
     if (!pageEl) throw new Error(`❌ (setup) section réelle #${realPageId} introuvable.`);
     if (pageEl.classList.contains("hidden")) {
@@ -204,11 +204,13 @@ const doc2 = dom2.window.document;
 const win2 = dom2.window;
 [...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "guide").click();
 doc2.getElementById("tourLaunchBtn").click();
-// Le thème "Effectif" compte désormais 4 étapes (retour utilisateur,
+// Le thème "Effectif" compte désormais 5 étapes (Potentiel ajoutée le 2026-09-26) (retour utilisateur,
 // 2026-09, "entrainement collectif aussi" et les nouveautés forme/
 // motivation/alchimie) avant celle qui porte la prime (la dernière,
 // "Alchimie d'équipe") : il faut les parcourir toutes pour la valider.
 doc2.getElementById("tourNextBtn").dispatchEvent(new win2.Event("click", { bubbles: true })); // écran d'accueil -> étape "Votre effectif"
+await flushTourNext(dom2);
+doc2.getElementById("tourNextBtn").dispatchEvent(new win2.Event("click", { bubbles: true })); // -> étape "Potentiel" (ajoutée le 2026-09-26)
 await flushTourNext(dom2);
 doc2.getElementById("tourNextBtn").dispatchEvent(new win2.Event("click", { bubbles: true })); // -> étape "Forme physique"
 await flushTourNext(dom2);
@@ -275,6 +277,8 @@ doc3.getElementById("tourLaunchBtn").click();
 // Même remarque que dans le test solo ci-dessus : 4 étapes "Effectif" à
 // parcourir avant celle qui porte la prime.
 doc3.getElementById("tourNextBtn").dispatchEvent(new win3.Event("click", { bubbles: true })); // écran d'accueil -> "Votre effectif"
+await flushTourNext(dom3);
+doc3.getElementById("tourNextBtn").dispatchEvent(new win3.Event("click", { bubbles: true })); // -> "Potentiel" (ajoutée le 2026-09-26)
 await flushTourNext(dom3);
 doc3.getElementById("tourNextBtn").dispatchEvent(new win3.Event("click", { bubbles: true })); // -> "Forme physique"
 await flushTourNext(dom3);

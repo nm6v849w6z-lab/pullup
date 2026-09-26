@@ -20,6 +20,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Tutoriel
+  d'accueil à jour** — question utilisateur : "sur le tutoriel, il y a bien
+  toutes les nouveautés ? ça explique l'alchimie ?". L'alchimie y était
+  déjà (texte mis à jour avec les leviers à la hausse). Ajouts : étape
+  Potentiel (10 paliers + estimation des jeunes), thème Compétitions sans
+  prime (Calendrier, Coupe sautée si la ligue n'en a pas, Ligue et ses
+  zones ; TOUR_PAGE_KEY_TO_TAB étendu), connaissance tactique dans l'étape
+  Entraînement collectif. Corrections : Effectif (groupes, fiche),
+  forme (10/j, 15 avec récupération), priorités "exactement 3",
+  fondamentaux "chaque jour", ordres préparés promus + verrou 5 min,
+  Marché (1 jour, filtres, valeur estimée), prospects (Espoir/Grand
+  espoir/Prodige), Salle (bouton Agrandir). onboarding_tour_test.js adapté
+  (étape Potentiel en plus, pages calendrier/coupe/ligue). Tests verts :
+  onboarding_tour, guide_nav, guide_content. Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Guide : sommaire
   + contenu à jour** — retours utilisateur : "étoffe le guide avec toutes
   les dernières nouveautés [...] niveaux de potentiel [...] pros ou jeunes
