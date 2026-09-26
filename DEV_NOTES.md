@@ -20,6 +20,39 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ordres :
+  convocation (12 max) + grille alignée** — retours utilisateur (captures,
+  10:28) : "je baisserai un peu l'AS pour qu'il soit entre l'AR et l'AF",
+  "on a un énorme trou en dessous de Joueurs [...] à surveiller et on a
+  aucune brique alignée", "enlève ce texte : Réservistes : [...] dans la
+  brique rotation", "on pourrait ajouter un endroit où choisir les joueurs
+  qu'on convoque au match, on le mettrait au-dessus de la brique attaque,
+  et ça permettrait de tout aligner" ; choix (question posée) : 12 au
+  maximum, un convoqué sans rôle "dépanne si besoin". Données :
+  lineup.convoked (facultatif). Team (engine.js + copie HTML) :
+  CONVOCATION_MAX, convokedIds (défaut : titulaires, joueurs avec minutes,
+  1er remplaçant de chaque poste, autres remplaçants, reste ; figé dès le
+  premier setStarter/toggleBackupPosition), isConvoked, setConvoked
+  (retirer = plus de rôle), emergencyForSlot ; plans/sauvegarde/serveur
+  (validateLineupBody, 12 max). Moteur (engine.js) : convokedThisMatch
+  posé par Team.resetForMatch ; un non-convoqué ne joue jamais
+  (backupsForSlot, substituteToTarget) ; titulaire non convoqué/blessé →
+  remplaçant puis dépannage ; blessure/5 fautes sans remplaçant →
+  dépannage par un convoqué sans rôle au lieu de jouer à 4. UI : carte
+  Convocation (en tête de colonne gauche, compteur x / 12, rôle de chaque
+  joueur, "En tribune"), listes de titulaires/remplaçants/temps de jeu
+  limitées aux convoqués, remplaçant non convoqué barré dans la Rotation ;
+  grille alignée sur ordinateur (Convocation | Cinq, Attaque | Rotation,
+  Défense + Adversaires | Temps de jeu, via display:contents +
+  grid-template-areas, classes area-<id>) ; AS du terrain à mi-hauteur
+  entre A et AF ; ligne "Réservistes :" retirée ; cible du tutoriel
+  #ordresLineupEditor → #ordresCardCinq. Effet de bord assumé : une équipe
+  à 15 joueurs dont 10 remplaçants (CPU notamment) n'en convoque que 12,
+  les 3 derniers restent en tribune. Tests : convocation_test.js (nouveau)
+  + suite complète 147 fichiers verte (hors player_detail_test.js, déjà
+  en échec avant ; calendrier_ordres_stale_live_redirect vert seul).
+  Reste : `git push` + redéploiement.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Staff : sections
   repliées à l'ouverture + titres « Changer d'… »** — retours utilisateur :
   "la brique Candidats entraîneur s'ouvre automatique quand on ouvre la page,

@@ -196,7 +196,22 @@ function validateLineupBody(team, raw) {
     }
     if (!Object.keys(minutes).length) minutes = null;
   }
-  return { ok: true, value: minutes ? { starters, backupPositions, minutes } : { starters, backupPositions } };
+  // Convocation (facultative, voir Team.convokedIds) : 12 joueurs au maximum.
+  let convoked = null;
+  if (raw.convoked != null) {
+    if (!Array.isArray(raw.convoked)) return { ok: false, error: "Convocation invalide : liste d'ids attendue." };
+    convoked = [];
+    for (const idStr of raw.convoked) {
+      const player = byId.get(Number(idStr));
+      if (!player) return { ok: false, error: `Joueur inconnu dans la convocation : ${idStr}.` };
+      if (!convoked.includes(player.id)) convoked.push(player.id);
+    }
+    if (convoked.length > 12) return { ok: false, error: "Convocation : 12 joueurs au maximum." };
+  }
+  const value = { starters, backupPositions };
+  if (minutes) value.minutes = minutes;
+  if (convoked) value.convoked = convoked;
+  return { ok: true, value };
 }
 
 // Feuille de match : titulaires (un par poste, ou null) + remplacements de

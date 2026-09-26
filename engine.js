@@ -3773,6 +3773,9 @@ function seedSeasonStart(feed, state) {
 // ---------------------------------------------------------------------
 // ÉQUIPE
 // ---------------------------------------------------------------------
+// Convocation : nombre maximum de joueurs sur la feuille de match.
+const CONVOCATION_MAX = 12;
+
 class Team {
   constructor({ name, players }) {
     this.name = name;
@@ -6079,6 +6082,68 @@ class Team {
     return shares;
   }
 
+  // ---------------------------------------------------------------------
+  // Convocation (retour utilisateur 2026-09-26 : "on pourrait ajouter un
+  // endroit où choisir les joueurs qu'on convoque au match", 12 au maximum,
+  // "un convoqué sans rôle dépanne si besoin").
+  //   lineup.convoked = [id, ...] — facultatif. Absent : convocation par
+  //   défaut (titulaires, puis remplaçants du mieux noté, puis le reste,
+  //   dans la limite de 12). Un joueur non convoqué ne joue jamais ; un
+  //   convoqué sans rôle n'entre qu'en dépannage (blessure, 5 fautes,
+  //   exclusion sans remplaçant disponible, voir emergencyForSlot).
+  // ---------------------------------------------------------------------
+  convokedIds() {
+    // Aussi appelée sur un plan préparé à l'avance (objet { lineup } sans
+    // effectif) : la liste enregistrée est alors rendue telle quelle.
+    if (!Array.isArray(this.players)) return Array.isArray(this.lineup.convoked) ? [...this.lineup.convoked] : [];
+    const valid = new Set(this.players.map(p => p.id));
+    if (Array.isArray(this.lineup.convoked)) return this.lineup.convoked.filter(id => valid.has(id));
+    const out = [];
+    const push = id => { if (id != null && valid.has(id) && !out.includes(id) && out.length < CONVOCATION_MAX) out.push(id); };
+    // Ordre de priorité : titulaires, joueurs à qui des minutes sont
+    // données (carte Temps de jeu), le premier remplaçant de chaque poste,
+    // les autres remplaçants du mieux noté, puis le reste de l'effectif.
+    POSITIONS.forEach(pos => push(this.lineup.starters[pos]));
+    if (this.lineup.minutes) Object.values(this.lineup.minutes).forEach(m => {
+      Object.entries(m).filter(([, v]) => Number(v) > 0).forEach(([id]) => { const p = this.players.find(x => String(x.id) === String(id)); if (p) push(p.id); });
+    });
+    POSITIONS.forEach(pos => push(Team.prototype.slotPlayerIds.call(this, pos).find(id => id !== this.lineup.starters[pos])));
+    this.players.filter(p => (this.lineup.backupPositions[p.id] || []).length)
+      .sort((a, b) => b.overall() - a.overall()).forEach(p => push(p.id));
+    this.players.slice().sort((a, b) => b.overall() - a.overall()).forEach(p => push(p.id));
+    return out;
+  }
+
+  isConvoked(playerId) {
+    return this.convokedIds().includes(playerId);
+  }
+
+  // Convoque / retire de la convocation. Retirer un joueur lui enlève aussi
+  // ses rôles (titulaire, remplaçant, minutes) : il est en tribune.
+  setConvoked(playerId, on) {
+    const list = Team.prototype.convokedIds.call(this);
+    if (on) {
+      if (!list.includes(playerId) && list.length < CONVOCATION_MAX) list.push(playerId);
+    } else {
+      const i = list.indexOf(playerId);
+      if (i >= 0) list.splice(i, 1);
+      POSITIONS.forEach(pos => { if (this.lineup.starters[pos] === playerId) this.lineup.starters[pos] = null; });
+      delete this.lineup.backupPositions[playerId];
+      if (this.lineup.minutes) Object.values(this.lineup.minutes).forEach(m => { delete m[playerId]; });
+    }
+    this.lineup.convoked = list;
+  }
+
+  // Dépannage en match : un convoqué disponible, du même poste naturel
+  // d'abord, puis le mieux noté.
+  emergencyForSlot(pos) {
+    const pool = this.players.filter(p =>
+      p.convokedThisMatch === true && !p.onCourt && !p.disqualified && !p.injured && !p.matchInjuryLocked
+    );
+    pool.sort((a, b) => ((b.position === pos) - (a.position === pos)) || (b.overall() - a.overall()));
+    return pool[0] || null;
+  }
+
   // Poste titulaire d'un joueur (ou null s'il n'est pas titulaire).
   starterPosition(playerId) {
     return POSITIONS.find(pos => this.lineup.starters[pos] === playerId) || null;
@@ -6089,6 +6154,8 @@ class Team {
   // pour ne jamais avoir un joueur titulaire ET remplaçant en même temps).
   // Retire aussi le nouveau titulaire de tous ses postes de remplaçant.
   setStarter(pos, playerId) {
+    if (!Array.isArray(this.lineup.convoked) && Array.isArray(this.players)) this.lineup.convoked = Team.prototype.convokedIds.call(this);
+    if (playerId && Array.isArray(this.lineup.convoked) && !this.lineup.convoked.includes(playerId)) Team.prototype.setConvoked.call(this, playerId, true);
     // Temps de jeu cible (voir slotMinuteShares) : le nouveau titulaire
     // reprend les minutes de l'ancien à ce poste ; ses éventuelles minutes
     // de remplaçant ailleurs disparaissent avec ses postes de remplaçant.
@@ -6121,10 +6188,12 @@ class Team {
   // quelque part ne peut pas devenir remplaçant (il faut d'abord le retirer
   // du poste de titulaire) — no-op silencieux dans ce cas.
   toggleBackupPosition(playerId, pos, on) {
+    if (!Array.isArray(this.lineup.convoked) && Array.isArray(this.players)) this.lineup.convoked = Team.prototype.convokedIds.call(this);
     if (this.starterPosition(playerId)) return;
     const list = this.lineup.backupPositions[playerId] || [];
     const has = list.includes(pos);
     if (on && !has) this.lineup.backupPositions[playerId] = [...list, pos];
+    if (on && Array.isArray(this.lineup.convoked) && !this.lineup.convoked.includes(playerId)) Team.prototype.setConvoked.call(this, playerId, true);
     if (this.lineup.minutes && this.lineup.minutes[pos]) {
       if (on && this.lineup.minutes[pos][playerId] == null) this.lineup.minutes[pos][playerId] = 0;
       if (!on) delete this.lineup.minutes[pos][playerId];
@@ -6169,6 +6238,7 @@ class Team {
         Object.entries(this.lineup.backupPositions).map(([id, positions]) => [id, [...positions]])
       ),
       ...(this.lineup.minutes ? { minutes: Object.fromEntries(Object.entries(this.lineup.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
+      ...(Array.isArray(this.lineup.convoked) ? { convoked: [...this.lineup.convoked] } : {}),
     },
     };
   }
@@ -6248,6 +6318,7 @@ class Team {
         Object.entries(plan.lineup.backupPositions).map(([id, positions]) => [id, [...positions]])
       ),
       ...(plan.lineup.minutes ? { minutes: Object.fromEntries(Object.entries(plan.lineup.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
+      ...(Array.isArray(plan.lineup.convoked) ? { convoked: [...plan.lineup.convoked] } : {}),
     };
     delete this.plannedTactics[key];
   }
@@ -6346,6 +6417,9 @@ class Team {
       p.matchChemistryFactor = chemistryFactor;
       p.matchTacticalKnowledgeFactor = tacticalKnowledgeFactor;
     });
+    // Convocation (voir Team.convokedIds) : seuls les convoqués peuvent jouer.
+    const convokedNow = new Set(this.convokedIds());
+    this.players.forEach(p => { p.convokedThisMatch = convokedNow.has(p.id); });
     POSITIONS.forEach(pos => {
       const id = this.lineup.starters[pos];
       let p = id && this.players.find(x => x.id === id);
@@ -6359,8 +6433,8 @@ class Team {
       // cette seule raison tant qu'un remplaçant existe ; sinon (banc
       // épuisé), le poste reste vacant et l'équipe joue en infériorité,
       // comme une sortie en cours de match sans remplaçant disponible.
-      if (p && p.matchInjuryLocked) {
-        p = this.backupsForSlot(pos)[0] || null;
+      if (p && (p.matchInjuryLocked || !p.convokedThisMatch)) {
+        p = this.backupsForSlot(pos)[0] || this.emergencyForSlot(pos) || null;
       }
       if (p) {
         p.onCourt = true;
@@ -6394,7 +6468,7 @@ class Team {
   backupsForSlot(pos) {
     return this.players.filter(p =>
       (this.lineup.backupPositions[p.id] || []).includes(pos) &&
-      !p.onCourt && !p.disqualified && !p.injured && !p.matchInjuryLocked
+      !p.onCourt && !p.disqualified && !p.injured && !p.matchInjuryLocked && p.convokedThisMatch !== false
     ).sort((a, b) => a.fatigue - b.fatigue);
   }
 
@@ -10333,6 +10407,12 @@ function teamFromSave(data) {
       });
       if (Object.keys(minutes).length) team.lineup.minutes = minutes;
     }
+    // Convocation (voir Team.convokedIds) : ids normalisés, 12 au maximum.
+    if (Array.isArray(data.lineup.convoked)) {
+      team.lineup.convoked = data.lineup.convoked
+        .map(idStr => byStringId.get(String(idStr)))
+        .filter(Boolean).map(p => p.id).slice(0, CONVOCATION_MAX);
+    }
   }
   // Journées futures préparées à l'avance (voir serializeTeam ci-dessus) ;
   // absent = sauvegarde d'avant cette fonctionnalité, {} par défaut
@@ -10665,7 +10745,8 @@ class MatchEngine {
 
       // Remplaçant pour LE POSTE QUE p OCCUPAIT (matchPosition), pas
       // forcément son poste naturel — voir Team.backupsForSlot.
-      const replacement = team.backupsForSlot(p.matchPosition)[0];
+      // Dépannage par un convoqué sans rôle si le poste n'a plus de remplaçant.
+      const replacement = team.backupsForSlot(p.matchPosition)[0] || (mustLeave ? team.emergencyForSlot(p.matchPosition) : null);
 
       if (replacement) {
         p.onCourt = false;
@@ -10726,7 +10807,7 @@ class MatchEngine {
     const inFoulTrouble = x => x.fouls >= 4 && quarter < 4 && !team.maintainDespiteFouls.has(x.id);
     const candidates = team.players.filter(x =>
       (shares[x.id] || 0) > 0 && !x.onCourt && !x.disqualified && !x.injured && !x.matchInjuryLocked &&
-      !inFoulTrouble(x) && x.fatigue < 90
+      !inFoulTrouble(x) && x.fatigue < 90 && x.convokedThisMatch !== false
     ).sort((a, b) => ahead(a) - ahead(b));
 
     let leave = mustLeave || inFoulTrouble(p) || p.fatigue >= 95;
@@ -10743,7 +10824,7 @@ class MatchEngine {
     }
     if (!leave) return;
 
-    const replacement = candidates[0] || team.backupsForSlot(pos)[0] || null;
+    const replacement = candidates[0] || team.backupsForSlot(pos)[0] || (mustLeave ? team.emergencyForSlot(pos) : null) || null;
     p.hasHadFirstRest = true;
     if (replacement) {
       p.onCourt = false;
@@ -11906,7 +11987,7 @@ return {
   SCREEN_DEFENSES, HELP_DEFENSE_LEVELS, WATCH_FOCUS_EFFECTS, MAX_WATCH_ASSIGNMENTS,
   POST_DEFENSES, CLOSEOUT_STYLES, OFF_REBOUND_STYLES, ENDGAME_MANAGEMENT,
   clamp, rand, pick, weightedPick,
-  Player, Team, MatchEngine,
+  Player, Team, MatchEngine, CONVOCATION_MAX,
   heightForPosition, generateAttrsForPosition, generateRawYouthAttrs, generateRawAttrsInRange, generatePlayer, generateTeam,
   generateRookiePlayer, generateStartingRoster, FIRST_NAMES, LAST_NAMES,
   potentialHeadroom, growthFactorForAge, declineFactorForAge, YOUNG_PROSPECT_MAX_AGE, SEASON_LENGTH_WEEKS,
