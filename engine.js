@@ -4352,6 +4352,9 @@ class Team {
     this.clubRecords = {};
     this.allTimePlayers = {};
     this.lastArchivedSeasonId = null;
+    // Hall of Fame (voir Team.inductHallOfFame) : joueurs choisis par le
+    // manager, maillot éventuellement retiré (affiché dans la salle).
+    this.hallOfFame = [];
 
     // Affluence des derniers matchs à domicile (retour utilisateur, 2026-09 :
     // "sur l'onglet salle, il n'y a tjrs pas l'affluence des matchs
@@ -4880,6 +4883,47 @@ class Team {
       return { ok: false, error: "Passez en club payant pour un motif de maillot personnalisé." };
     }
     this.jerseyPattern = pattern;
+    return { ok: true };
+  }
+
+  // Hall of Fame (retour utilisateur, 2026-09-26 : "légende du club, mets
+  // plutôt un hall of famer, c'est plus sympa et on mettra les joueurs
+  // qu'on veut dedans", "quand un joueur voit son maillot retiré, il faut
+  // l'afficher sur le visuel de la salle") : le manager y fait entrer qui
+  // il veut parmi les joueurs ayant disputé un match officiel pour le club
+  // (entry = ligne de liveAllTimePlayers, vérifiée côté serveur) ; numéro
+  // de maillot retiré facultatif (0-99, unique), null = pas retiré.
+  inductHallOfFame(entry, now = Date.now()) {
+    if (!entry || !Number.isFinite(Number(entry.id))) return { ok: false, error: "Joueur inconnu." };
+    this.hallOfFame = Array.isArray(this.hallOfFame) ? this.hallOfFame : [];
+    const id = Number(entry.id);
+    if (this.hallOfFame.some(h => h.id === id)) return { ok: false, error: "Ce joueur est déjà au Hall of Fame." };
+    if (this.hallOfFame.length >= HALL_OF_FAME_MAX) return { ok: false, error: `Le Hall of Fame est plein (${HALL_OF_FAME_MAX} joueurs).` };
+    this.hallOfFame.push({
+      id, name: String(entry.name || "?"), position: entry.position || "",
+      games: entry.games || 0, pts: entry.pts || 0, reb: entry.reb || 0, ast: entry.ast || 0,
+      inductedAt: now, retiredNumber: null,
+    });
+    return { ok: true };
+  }
+
+  removeHallOfFame(playerId) {
+    const id = Number(playerId);
+    const before = (this.hallOfFame || []).length;
+    this.hallOfFame = (this.hallOfFame || []).filter(h => h.id !== id);
+    if (this.hallOfFame.length === before) return { ok: false, error: "Ce joueur n'est pas au Hall of Fame." };
+    return { ok: true };
+  }
+
+  setRetiredJersey(playerId, number) {
+    const id = Number(playerId);
+    const entry = (this.hallOfFame || []).find(h => h.id === id);
+    if (!entry) return { ok: false, error: "Seul un joueur du Hall of Fame peut voir son maillot retiré." };
+    if (number === null) { entry.retiredNumber = null; return { ok: true }; }
+    const n = Number(number);
+    if (!Number.isInteger(n) || n < 0 || n > 99) return { ok: false, error: "Numéro de maillot entre 0 et 99." };
+    if (this.hallOfFame.some(h => h.id !== id && h.retiredNumber === n)) return { ok: false, error: `Le numéro ${n} est déjà retiré.` };
+    entry.retiredNumber = n;
     return { ok: true };
   }
 
@@ -7051,6 +7095,7 @@ function computeClubReputationStars(team, divisionLevel, now = Date.now()) {
 // ---------------------------------------------------------------------
 const CLUB_HISTORY_CUP_LABELS = { huitiemes: "8es de finale", quarts: "Quarts de finale", demies: "Demi-finales", finale: "Finale" };
 const CLUB_HISTORY_MAX_SEASONS = 60;
+const HALL_OF_FAME_MAX = 30;
 
 function cupResultForTeam(league, teamIdx) {
   const cup = league.cup;
@@ -7132,10 +7177,13 @@ function seasonRecordCandidatesForTeam(league, teamIdx, seasonNo) {
     const pf = home ? r.scoreHome : r.scoreAway, pa = home ? r.scoreAway : r.scoreHome;
     const opp = nameOf(home ? r.away : r.home);
     const margin = pf - pa;
-    if (!c.biggestWin || margin > c.biggestWin.value) c.biggestWin = { value: margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
-    if (!c.biggestLoss || -margin > c.biggestLoss.value) c.biggestLoss = { value: -margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
-    if (!c.mostPoints || pf > c.mostPoints.value) c.mostPoints = { value: pf, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
-    if (!c.fewestConceded || pa < c.fewestConceded.value) c.fewestConceded = { value: pa, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
+    // match : de quoi rouvrir la feuille de match (tant que la saison est
+    // celle en cours, voir hcRecordsHtml côté navigateur).
+    const match = { seasonId: league.seasonId || null, round: r.round, competition: "championship", home: r.home, away: r.away };
+    if (!c.biggestWin || margin > c.biggestWin.value) c.biggestWin = { value: margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo, match };
+    if (!c.biggestLoss || -margin > c.biggestLoss.value) c.biggestLoss = { value: -margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo, match };
+    if (!c.mostPoints || pf > c.mostPoints.value) c.mostPoints = { value: pf, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo, match };
+    if (!c.fewestConceded || pa < c.fewestConceded.value) c.fewestConceded = { value: pa, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo, match };
     if (margin > 0) { streak++; bestStreak = Math.max(bestStreak, streak); } else streak = 0;
   });
   if (bestStreak > 0) c.winStreak = { value: bestStreak, text: `${bestStreak} victoire${bestStreak > 1 ? "s" : ""} d'affilée en championnat`, seasonNo };
@@ -7144,12 +7192,19 @@ function seasonRecordCandidatesForTeam(league, teamIdx, seasonNo) {
   if (row && row.played) c.seasonWins = { value: row.wins, text: `${row.wins} victoires en ${row.played} matchs`, seasonNo };
   (team.players || []).forEach(p => {
     (p.matchLog || []).forEach(m => {
-      const res = m.competition === "championship" ? (league.results || []).find(r => r.round === m.round && (r.home === teamIdx || r.away === teamIdx)) : null;
+      let res = null;
+      if (m.competition === "championship") {
+        res = (league.results || []).find(r => r.round === m.round && (r.home === teamIdx || r.away === teamIdx)) || null;
+      } else if (m.competition === "cup" && league.cup && Array.isArray(league.cup.rounds)) {
+        const cr = league.cup.rounds.find(x => x.index === m.round);
+        res = (cr && (cr.matches || []).find(x => x.home === teamIdx || x.away === teamIdx)) || null;
+      }
       const opp = res ? nameOf(res.home === teamIdx ? res.away : res.home) : null;
       const where = opp ? ` contre ${opp}` : "";
-      if (!c.playerPoints || (m.pts || 0) > c.playerPoints.value) c.playerPoints = { value: m.pts || 0, text: `${p.name} · ${m.pts || 0} pts${where}`, playerId: p.id, seasonNo };
-      if (!c.playerRebounds || (m.reb || 0) > c.playerRebounds.value) c.playerRebounds = { value: m.reb || 0, text: `${p.name} · ${m.reb || 0} rebonds${where}`, playerId: p.id, seasonNo };
-      if (!c.playerAssists || (m.ast || 0) > c.playerAssists.value) c.playerAssists = { value: m.ast || 0, text: `${p.name} · ${m.ast || 0} passes${where}`, playerId: p.id, seasonNo };
+      const match = res ? { seasonId: league.seasonId || null, round: m.round, competition: m.competition, home: res.home, away: res.away } : null;
+      if (!c.playerPoints || (m.pts || 0) > c.playerPoints.value) c.playerPoints = { value: m.pts || 0, text: `${p.name} · ${m.pts || 0} pts${where}`, playerId: p.id, seasonNo, match };
+      if (!c.playerRebounds || (m.reb || 0) > c.playerRebounds.value) c.playerRebounds = { value: m.reb || 0, text: `${p.name} · ${m.reb || 0} rebonds${where}`, playerId: p.id, seasonNo, match };
+      if (!c.playerAssists || (m.ast || 0) > c.playerAssists.value) c.playerAssists = { value: m.ast || 0, text: `${p.name} · ${m.ast || 0} passes${where}`, playerId: p.id, seasonNo, match };
     });
   });
   (team.attendanceHistory || []).forEach(h => {
@@ -10288,6 +10343,7 @@ function serializeTeam(team) {
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
     lastArchivedSeasonId: team.lastArchivedSeasonId || null,
+    hallOfFame: Array.isArray(team.hallOfFame) ? team.hallOfFame : [],
     // Voir Team.seasonObjectiveVerdictSettled plus haut (retour utilisateur,
     // 2026-09, "il ne faut pas qu'un signal et pas deux") : `false` par
     // défaut, une sauvegarde d'avant cette fonctionnalité n'en a simplement
@@ -10771,6 +10827,7 @@ function teamFromSave(data) {
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
   team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
+  team.hallOfFame = Array.isArray(data.hallOfFame) ? data.hallOfFame : [];
   // Voir serializeTeam ci-dessus/Team.seasonObjectiveVerdictSettled plus
   // haut. Absent (sauvegarde d'avant cette fonctionnalité) : on garde la
   // valeur déjà posée par le constructeur (false).
@@ -12540,7 +12597,7 @@ return {
   ARENA_LEVELS, arenaInfo,
   SPONSOR_SLOTS, SPONSOR_TIERS, SPONSOR_PROFILES, SPONSOR_PROFILE_KEYS, SPONSOR_NAMES, SPONSOR_OFFER_TTL_MS, SPONSOR_OFFER_INTERVAL_MS, SPONSOR_REPUTATION_DEFAULT, SPONSOR_REPUTATION_MISS, SPONSOR_TERMINATION_WEEKS,
   sponsorTiersAvailable, sponsorActiveContractForSlot, sponsorNameForSlot, generateSponsorOffer, refreshSponsorOffers, acceptSponsorOffer, declineSponsorOffer, sponsorTerminationFee, terminateSponsorContract, collectSponsorIncome, applySponsorWinPrimes, settleSponsorsAtSeasonEnd,
-  CLUB_RECORD_LABELS, cupResultForTeam, playoffResultForTeam, seasonPlayerTotalsForTeam, seasonSummaryForTeam, seasonRecordCandidatesForTeam, mergeClubRecords, liveClubRecords, liveAllTimePlayers, archiveSeasonForTeam, worldPlayerRankings, worldRankForPlayer,
+  CLUB_RECORD_LABELS, cupResultForTeam, playoffResultForTeam, seasonPlayerTotalsForTeam, seasonSummaryForTeam, seasonRecordCandidatesForTeam, mergeClubRecords, liveClubRecords, liveAllTimePlayers, archiveSeasonForTeam, HALL_OF_FAME_MAX, worldPlayerRankings, worldRankForPlayer,
   TRIGRAM_CHANGE_COOLDOWN_MS, ARENA_NAME_MAX_LENGTH, TRIGRAM_BANNED, isValidTrigram, defaultTrigramForName, teamTrigram, teamArenaName, containsBannedWord, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel,
   JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, JERSEY_TWO_TONE_SETS, defaultAwayJerseyColor, MAX_TEAM_LOGO_DATA_URL_LENGTH,

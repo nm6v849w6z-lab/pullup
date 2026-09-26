@@ -156,6 +156,21 @@ check(view[0].code === null && PL.sanitizePrivateLeaguesForViewer(league.private
   check(PL.normalizeTime(undefined).hour === 21 && PL.normalizeTime("08:00").hour === 8 && PL.normalizeTime("07:30") === null, "normalizeTime : défaut 21h30, 08h00 accepté, 07h30 refusé");
 }
 
+// 10c. Ligue à 4 équipes (retour utilisateur 2026-09-26) : lancement
+// automatique à la 4e adhésion, 6 journées de 2 matchs.
+{
+  const lg = Engine.generateMultiManagerLeague(names, names.length, T0, Calendar.dailyAnchoredCalendarConfig());
+  const hs = lg.teams.map((t, i) => (t.isHuman ? i : -1)).filter(i => i >= 0);
+  hs.forEach(i => { lg.teams[i].isPaying = true; });
+  let rr = PL.createPrivateLeague(Engine, lg.teams[hs[0]], hs[0], lg, { name: "Carré", size: 4, venue: "neutral" }, T0);
+  check(rr.ok, "création d'une ligue à 4 équipes acceptée");
+  const lp4 = lg.privateLeagues[0];
+  for (let k = 1; k <= 3; k++) rr = PL.joinPrivateLeague(Engine, lg.teams[hs[k]], hs[k], lg, { code: lp4.code }, T0);
+  check(rr.ok && rr.started && lp4.status === "running" && lp4.rounds.length === 6 && lp4.rounds.every(rd => rd.matches.length === 2), "4e adhésion → lancement automatique, 6 journées de 2 matchs");
+  rr = PL.joinPrivateLeague(Engine, lg.teams[hs[4]], hs[4], lg, { code: lp4.code }, T0);
+  check(!rr.ok, "5e club refusé (ligue à 4 complète et lancée)");
+}
+
 // 11. Aller-retour de sérialisation de la ligue.
 const rebuilt = Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.serializeLeague(league))));
 check(Array.isArray(rebuilt.privateLeagues) && rebuilt.privateLeagues[0].id === lp2.id, "privateLeagues survit à serializeLeague/leagueFromSave");

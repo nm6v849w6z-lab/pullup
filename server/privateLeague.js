@@ -20,7 +20,7 @@
 //   pour les ligues créées avant ce choix — retour utilisateur 2026-09-26 :
 //   "laisse le choix de l'heure des matchs"). Les matchs sont simulés sur
 //   des copies : aucun conflit possible avec les créneaux officiels.
-//   Aller-retour (generateRoundRobinSchedule), 6/8/10 équipes.
+//   Aller-retour (generateRoundRobinSchedule), 4/6/8/10 équipes.
 // - Les matchs sont simulés sur des COPIES des équipes (serializeTeam →
 //   teamFromSave) : MatchEngine.simulate a ses propres effets de bord
 //   (blessures, minutes d'entraînement, snapshots de forme), qui tombent avec
@@ -44,7 +44,7 @@
 
 const Calendar = require("./calendar.js");
 
-const PRIVATE_LEAGUE_SIZES = [6, 8, 10];
+const PRIVATE_LEAGUE_SIZES = [4, 6, 8, 10]; // 4 : retour utilisateur 2026-09-26
 const PRIVATE_LEAGUE_MIN_TEAMS_TO_START = 4;
 const PRIVATE_LEAGUE_VENUES = ["home", "neutral"];
 const PRIVATE_LEAGUE_WEEKDAY = 5; // vendredi (convention Date#getUTCDay)
@@ -139,7 +139,7 @@ function createPrivateLeague(Engine, team, teamIndex, league, body, now) {
   const name = normalizeName(body && body.name);
   if (!name) return fail(`Le nom de la ligue doit faire entre 2 et ${PRIVATE_LEAGUE_NAME_MAX} caractères.`);
   const size = Number(body && body.size);
-  if (!PRIVATE_LEAGUE_SIZES.includes(size)) return fail("Nombre d'équipes invalide (6, 8 ou 10).");
+  if (!PRIVATE_LEAGUE_SIZES.includes(size)) return fail("Nombre d'équipes invalide (4, 6, 8 ou 10).");
   const venue = body && body.venue;
   if (!PRIVATE_LEAGUE_VENUES.includes(venue)) return fail("Choix du terrain invalide.");
   const time = normalizeTime(body && body.time);

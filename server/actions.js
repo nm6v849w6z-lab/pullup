@@ -942,6 +942,33 @@ function setTeamJersey(team, teamIndex, league, body, now) {
 // ajoute des maillots avec des dessins particuliers (rayure, degrade...)") :
 // voir Team.setJerseyPattern pour la validation de fond (réservé aux clubs
 // `isPaying`, sauf retour à "uni" toujours autorisé).
+// Hall of Fame (retour utilisateur, 2026-09-26) : voir Team.inductHallOfFame.
+// Seul un joueur ayant disputé un match officiel pour le club (cumul
+// archivé + saison en cours) peut y entrer.
+function inductHallOfFame(team, teamIndex, league, body, now) {
+  if (!body || !Number.isFinite(Number(body.playerId))) return fail("'playerId' est requis.");
+  const entry = Engine.liveAllTimePlayers(league, teamIndex).find(p => p.id === Number(body.playerId));
+  if (!entry) return fail("Ce joueur n'a jamais joué de match officiel pour le club.");
+  const result = team.inductHallOfFame(entry, now);
+  if (!result.ok) return fail(result.error);
+  return { ok: true, hallOfFame: team.hallOfFame };
+}
+
+function removeHallOfFame(team, teamIndex, league, body, now) {
+  if (!body || !Number.isFinite(Number(body.playerId))) return fail("'playerId' est requis.");
+  const result = team.removeHallOfFame(body.playerId);
+  if (!result.ok) return fail(result.error);
+  return { ok: true, hallOfFame: team.hallOfFame };
+}
+
+// number : 0-99, ou null pour annuler le retrait du maillot.
+function setRetiredJersey(team, teamIndex, league, body, now) {
+  if (!body || !Number.isFinite(Number(body.playerId)) || !("number" in body)) return fail("'playerId' et 'number' sont requis.");
+  const result = team.setRetiredJersey(body.playerId, body.number === null ? null : body.number);
+  if (!result.ok) return fail(result.error);
+  return { ok: true, hallOfFame: team.hallOfFame };
+}
+
 function setTeamJerseyPattern(team, teamIndex, league, body, now) {
   if (!body || typeof body.pattern !== "string") return fail("'pattern' est requis.");
   const result = team.setJerseyPattern(body.pattern);
@@ -1178,6 +1205,7 @@ module.exports = {
   // TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur) :
   discussTransferRequest,
   setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
+  inductHallOfFame, removeHallOfFame, setRetiredJersey,
   setTeamAwayJersey, setTeamAwayJerseyPattern, setTeamAwayJerseyTwoTone,
   setTeamLogo, setTeamPaying, setTeamTrigram, setTeamArenaName, acceptSponsor, declineSponsor, terminateSponsor,
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/

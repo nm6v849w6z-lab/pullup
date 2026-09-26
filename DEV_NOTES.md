@@ -20,6 +20,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées
+  à 4 équipes** — retour utilisateur : "sur la ligue privée, on doit aussi
+  pouvoir mettre 4 équipes". PRIVATE_LEAGUE_SIZES (server/privateLeague.js)
+  et LP_SIZES (moteurbasket3.html) = [4, 6, 8, 10] ; à 4, la ligue se lance
+  toute seule à la 4e adhésion (6 journées). Tests server/private_league_test.js
+  et private_league_ui_test.js verts. Reste : `git push`.
+
 - **✅ COMMITTÉ ET POUSSÉ (2026-09-26) — Sponsors (4)** — retours communauté
   ("Système de sponsors ? ils nous approchent et on dit oui ou non. Image
   sur maillot, pancarte salle, pub. Pénalité en cas de non résultats",
@@ -85,6 +92,43 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   entre la fin du direct officiel et l'heure LP (ou hors saison).
   private_league_ui_test.js étendu, vert ; suite complète verte hors
   player_detail_test.js (déjà en échec avant). Reste : `git push`.
+
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Histoire du club :
+  réorganisation, records cliquables, classement mondial par stats, Hall
+  of Fame + maillots retirés dans la salle** — retour utilisateur (capture
+  13:38) : "c'est un peu vide sous palmarès", "cliquer sur le score ou la
+  stat et d'ouvrir le match", classement mondial : enlever "Nos joueurs
+  parmi tous ceux de la ligue" et "150 joueurs classés [...]", "c'est pour
+  les stats (meilleur marqueur, meilleur passeur, rebondeur, contreur...)",
+  "légende du club, mets plutôt un hall of famer [...] on mettra les
+  joueurs qu'on veut dedans", "quand un joueur voit son maillot retiré, il
+  faut l'afficher sur le visuel de la salle".
+  Fait : page en 2 colonnes indépendantes (.hc-col : Palmarès + Hall of
+  Fame + Classement mondial | Records) ; records : champ `match`
+  {seasonId, round, competition, home, away} posé par
+  seasonRecordCandidatesForTeam (engine.js + copie HTML, coupe comprise),
+  carte cliquable → showMatchBoxscore si le match est de la saison en
+  cours ("Voir le match") ; Classement mondial = pour pts/pd/reb/ctr/int,
+  notre meilleur joueur (moyenne championnat, même seuil de matchs que les
+  leaders Ligue), son rang parmi toute la ligue et le n°1 ; Hall of Fame :
+  Team.hallOfFame [{id, name, position, games, pts, reb, ast, inductedAt,
+  retiredNumber}] (sérialisé, reporté au reset de la ligue partagée),
+  Team.inductHallOfFame/removeHallOfFame/setRetiredJersey (0-99, unique,
+  30 joueurs max), routes /api/club/hall-of-fame/{induct,remove,
+  retire-jersey} (seul un joueur ayant joué un match officiel pour le club
+  peut entrer) ; UI : cartes avec maillot aux couleurs du club, liste
+  déroulante "Faire entrer", saisie du numéro + "Retirer le maillot" ;
+  Salle : bannières des maillots retirés suspendues en haut du dessin
+  (salleRetiredJerseysHtml, 8 max). La puce "mondial" de la fiche joueur
+  (rang par note) est inchangée. Tests : club_history_test.js étendu,
+  salle_redesign, actions, persistence, tabs, team_home_page verts ; suite
+  complète (151 fichiers) verte sur le Mac hors player_detail_test.js (déjà
+  en échec avant) — lancés en parallèle, quelques tests de direct sont
+  flaky (calendrier_ordres_stale_live_redirect, end_to_end, lineup,
+  spectate_live_match) : verts relancés seuls. NB : ces changements ont été
+  mis de côté (git stash) par un pull --rebase d'une autre session puis
+  réappliqués ; revérifiés après les commits Sponsors. Reste : `git push`
+  + redéploiement.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées :
   page d'accueil épurée + heure des matchs au choix** — retour utilisateur :

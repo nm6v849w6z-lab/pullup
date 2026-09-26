@@ -5485,7 +5485,11 @@
   .hc-logo svg, .hc-logo img{width:64px; height:64px; border-radius:50%; display:block;}
   .hc-name{font-family:var(--display); font-size:28px; font-weight:800; line-height:1.1;}
   .hc-sub{color:var(--ink-dim); font-size:14px; margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  /* Deux colonnes indépendantes (retour utilisateur, 2026-09-26 : "c'est un
+     peu vide sous palmarès") : Palmarès, Hall of Fame et Classement mondial
+     empilés à gauche, Records à droite — plus de trou sous un panneau court. */
   .hc-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:20px; align-items:start;}
+  .hc-col{display:flex; flex-direction:column; gap:20px; min-width:0;}
   .hc-panel{min-width:0;}
   .hc-trophies{margin:0 0 14px;}
   .hc-table td, .hc-table th{padding:8px 6px; white-space:normal; font-size:13px;}
@@ -5503,11 +5507,55 @@
   .hc-record-value small{font-size:12px; font-weight:600; color:var(--ink-dim);}
   .hc-record-text{font-size:13px; color:var(--ink); overflow-wrap:anywhere;}
   .hc-record-season{font-size:11.5px; color:var(--ink-faint);}
-  .hc-world-intro{margin:0 0 10px; font-size:13px; color:var(--ink-dim);}
+  /* Record rattaché à un match de la saison en cours : toute la carte
+     rouvre la feuille de match. */
+  button.hc-record{font:inherit; color:inherit; text-align:left; width:100%; cursor:pointer; transition:border-color .15s, background .15s;}
+  button.hc-record:hover, button.hc-record:focus-visible{border-color:rgba(240,162,60,.6); background:rgba(240,162,60,.06); outline:none;}
+  button.hc-record:hover .hc-record-text{color:var(--amber);}
+  .hc-record-go{font-size:11.5px; color:var(--amber); font-weight:700;}
+  /* Classement mondial par statistique. */
+  .hc-ws{display:flex; flex-direction:column;}
+  .hc-ws-row{display:grid; grid-template-columns:150px minmax(0,1fr) 64px 60px; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line-soft);}
+  .hc-ws-row:last-child{border-bottom:none;}
+  .hc-ws-cat{font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint);}
+  .hc-ws-who{min-width:0;}
+  .hc-ws-who .player-link{font-weight:700;}
+  .hc-ws-lead{display:block; font-size:12px; color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .hc-ws-val{text-align:right; font-weight:800; font-variant-numeric:tabular-nums;}
+  .hc-ws-val small{font-weight:600; color:var(--ink-faint); font-size:11px;}
+  .hc-ws-row .hc-world-rank{min-width:0; justify-self:end;}
+  /* Hall of Fame. */
+  .hc-hof{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px;}
+  .hc-hof-card{display:flex; gap:12px; align-items:flex-start; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:12px; min-width:0;}
+  .hc-hof-card.retired{border-color:rgba(240,162,60,.45);}
+  .hc-hof-jersey{flex:0 0 auto; width:44px;}
+  .hc-hof-jersey svg{width:44px; height:auto; display:block;}
+  .hc-hof-id{min-width:0; flex:1; display:flex; flex-direction:column; gap:3px;}
+  .hc-hof-name{font-weight:800; font-size:15px; overflow-wrap:anywhere;}
+  .hc-hof-stats{font-size:12.5px; color:var(--ink-dim);}
+  .hc-hof-badge{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--amber);}
+  .hc-hof-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px;}
+  .hc-hof-actions input{width:52px; height:28px; box-sizing:border-box; padding:0 6px; border-radius:6px; border:1px solid var(--line); background:var(--panel); color:var(--ink); font:inherit; font-size:13px;}
+  .hc-link-btn{background:none; border:0; padding:0; font:inherit; font-size:12.5px; font-weight:700; color:var(--amber); cursor:pointer;}
+  .hc-link-btn:hover{text-decoration:underline;}
+  .hc-link-btn.muted{color:var(--ink-faint); font-weight:600;}
+  .hc-hof-add{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px;}
+  .hc-hof-add select{flex:1 1 220px; min-width:0; height:38px;}
+  .hc-hof-add .cal-next-btn{display:inline-block; width:auto; margin-top:0; padding:9px 18px;}
+  .hc-feedback{margin:10px 0 0; font-size:12.5px; font-weight:600; color:var(--danger);}
+  /* Maillots retirés suspendus dans le dessin de la salle (page Salle). */
+  .sl-retired{position:absolute; top:0; left:50%; transform:translateX(-50%); display:flex; gap:10px; z-index:1; pointer-events:none;}
+  .sl-retired-banner{position:relative; width:46px; padding:12px 0 18px; display:flex; flex-direction:column; align-items:center; gap:2px;
+    background:var(--c1); color:#fff; box-shadow:0 6px 14px rgba(0,0,0,.45); clip-path:polygon(0 0,100% 0,100% 100%,50% 86%,0 100%);
+    border-top:3px solid var(--c2);}
+  .sl-retired-banner b{font-size:22px; font-weight:900; line-height:1; text-shadow:0 1px 3px rgba(0,0,0,.5);}
+  .sl-retired-banner span{font-size:7.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; max-width:42px; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 1px 2px rgba(0,0,0,.5);}
   .hc-world-rank{display:inline-block; min-width:44px; text-align:center; font-weight:800; border:1px solid var(--line); border-radius:6px; padding:2px 6px;}
   .pdp2-chip--world{color:var(--amber); border-color:rgba(240,162,60,.5);}
   @media(max-width:980px){ .hc-grid{grid-template-columns:1fr;} }
-  @media(max-width:600px){ .hc-records{grid-template-columns:1fr;} #histoireSection .lg-hide-sm{display:none;} }
+  @media(max-width:600px){ .hc-records, .hc-hof{grid-template-columns:1fr;} #histoireSection .lg-hide-sm{display:none;}
+    .hc-ws-row{grid-template-columns:minmax(0,1fr) 56px 52px;} .hc-ws-cat{grid-column:1 / -1;}
+    .sl-retired{gap:6px;} .sl-retired-banner{width:36px; padding:8px 0 14px;} .sl-retired-banner b{font-size:17px;} .sl-retired-banner span{display:none;} }
   /* ---- Ligues privées (Premium) — voir renderLpSection ---- */
   #lpSection{--display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-size:14px;}
   #lpSection .pos{color:var(--ok);} #lpSection .neg{color:#f0a292;} #lpSection .dim{color:var(--ink-faint);}
@@ -6328,7 +6376,7 @@
     </div>
   </div>
 
-  <!-- Histoire du club (palmarès, records, légendes, classement mondial) — voir renderHistoireSection. -->
+  <!-- Histoire du club (palmarès, records, Hall of Fame, classement mondial) — voir renderHistoireSection. -->
   <div id="histoireSection" class="hidden">
     <div class="section">
       <h2 class="page-title">Histoire du club</h2>
@@ -11551,6 +11599,9 @@ class Team {
     this.clubRecords = {};
     this.allTimePlayers = {};
     this.lastArchivedSeasonId = null;
+    // Hall of Fame (voir Team.inductHallOfFame) : joueurs choisis par le
+    // manager, maillot éventuellement retiré (affiché dans la salle).
+    this.hallOfFame = [];
 
     // Affluence des derniers matchs à domicile (voir engine.js, miroir
     // identique) : plafonné à 10 (demande explicite), alimenté par
@@ -11868,6 +11919,47 @@ class Team {
       return { ok: false, error: "Passez en club payant pour un motif de maillot personnalisé." };
     }
     this.jerseyPattern = pattern;
+    return { ok: true };
+  }
+
+  // Hall of Fame (retour utilisateur, 2026-09-26 : "légende du club, mets
+  // plutôt un hall of famer, c'est plus sympa et on mettra les joueurs
+  // qu'on veut dedans", "quand un joueur voit son maillot retiré, il faut
+  // l'afficher sur le visuel de la salle") : le manager y fait entrer qui
+  // il veut parmi les joueurs ayant disputé un match officiel pour le club
+  // (entry = ligne de liveAllTimePlayers, vérifiée côté serveur) ; numéro
+  // de maillot retiré facultatif (0-99, unique), null = pas retiré.
+  inductHallOfFame(entry, now = Date.now()) {
+    if (!entry || !Number.isFinite(Number(entry.id))) return { ok: false, error: "Joueur inconnu." };
+    this.hallOfFame = Array.isArray(this.hallOfFame) ? this.hallOfFame : [];
+    const id = Number(entry.id);
+    if (this.hallOfFame.some(h => h.id === id)) return { ok: false, error: "Ce joueur est déjà au Hall of Fame." };
+    if (this.hallOfFame.length >= HALL_OF_FAME_MAX) return { ok: false, error: `Le Hall of Fame est plein (${HALL_OF_FAME_MAX} joueurs).` };
+    this.hallOfFame.push({
+      id, name: String(entry.name || "?"), position: entry.position || "",
+      games: entry.games || 0, pts: entry.pts || 0, reb: entry.reb || 0, ast: entry.ast || 0,
+      inductedAt: now, retiredNumber: null,
+    });
+    return { ok: true };
+  }
+
+  removeHallOfFame(playerId) {
+    const id = Number(playerId);
+    const before = (this.hallOfFame || []).length;
+    this.hallOfFame = (this.hallOfFame || []).filter(h => h.id !== id);
+    if (this.hallOfFame.length === before) return { ok: false, error: "Ce joueur n'est pas au Hall of Fame." };
+    return { ok: true };
+  }
+
+  setRetiredJersey(playerId, number) {
+    const id = Number(playerId);
+    const entry = (this.hallOfFame || []).find(h => h.id === id);
+    if (!entry) return { ok: false, error: "Seul un joueur du Hall of Fame peut voir son maillot retiré." };
+    if (number === null) { entry.retiredNumber = null; return { ok: true }; }
+    const n = Number(number);
+    if (!Number.isInteger(n) || n < 0 || n > 99) return { ok: false, error: "Numéro de maillot entre 0 et 99." };
+    if (this.hallOfFame.some(h => h.id !== id && h.retiredNumber === n)) return { ok: false, error: `Le numéro ${n} est déjà retiré.` };
+    entry.retiredNumber = n;
     return { ok: true };
   }
 
@@ -13823,6 +13915,7 @@ function computeClubReputationStars(team, divisionLevel, now = Date.now()) {
 // ---------------------------------------------------------------------
 const CLUB_HISTORY_CUP_LABELS = { huitiemes: "8es de finale", quarts: "Quarts de finale", demies: "Demi-finales", finale: "Finale" };
 const CLUB_HISTORY_MAX_SEASONS = 60;
+const HALL_OF_FAME_MAX = 30;
 
 function cupResultForTeam(league, teamIdx) {
   const cup = league.cup;
@@ -13904,10 +13997,13 @@ function seasonRecordCandidatesForTeam(league, teamIdx, seasonNo) {
     const pf = home ? r.scoreHome : r.scoreAway, pa = home ? r.scoreAway : r.scoreHome;
     const opp = nameOf(home ? r.away : r.home);
     const margin = pf - pa;
-    if (!c.biggestWin || margin > c.biggestWin.value) c.biggestWin = { value: margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
-    if (!c.biggestLoss || -margin > c.biggestLoss.value) c.biggestLoss = { value: -margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
-    if (!c.mostPoints || pf > c.mostPoints.value) c.mostPoints = { value: pf, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
-    if (!c.fewestConceded || pa < c.fewestConceded.value) c.fewestConceded = { value: pa, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo };
+    // match : de quoi rouvrir la feuille de match (tant que la saison est
+    // celle en cours, voir hcRecordsHtml côté navigateur).
+    const match = { seasonId: league.seasonId || null, round: r.round, competition: "championship", home: r.home, away: r.away };
+    if (!c.biggestWin || margin > c.biggestWin.value) c.biggestWin = { value: margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo, match };
+    if (!c.biggestLoss || -margin > c.biggestLoss.value) c.biggestLoss = { value: -margin, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo, match };
+    if (!c.mostPoints || pf > c.mostPoints.value) c.mostPoints = { value: pf, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo, match };
+    if (!c.fewestConceded || pa < c.fewestConceded.value) c.fewestConceded = { value: pa, text: `${pf}-${pa} ${home ? "contre" : "chez"} ${opp}`, seasonNo, match };
     if (margin > 0) { streak++; bestStreak = Math.max(bestStreak, streak); } else streak = 0;
   });
   if (bestStreak > 0) c.winStreak = { value: bestStreak, text: `${bestStreak} victoire${bestStreak > 1 ? "s" : ""} d'affilée en championnat`, seasonNo };
@@ -13916,12 +14012,19 @@ function seasonRecordCandidatesForTeam(league, teamIdx, seasonNo) {
   if (row && row.played) c.seasonWins = { value: row.wins, text: `${row.wins} victoires en ${row.played} matchs`, seasonNo };
   (team.players || []).forEach(p => {
     (p.matchLog || []).forEach(m => {
-      const res = m.competition === "championship" ? (league.results || []).find(r => r.round === m.round && (r.home === teamIdx || r.away === teamIdx)) : null;
+      let res = null;
+      if (m.competition === "championship") {
+        res = (league.results || []).find(r => r.round === m.round && (r.home === teamIdx || r.away === teamIdx)) || null;
+      } else if (m.competition === "cup" && league.cup && Array.isArray(league.cup.rounds)) {
+        const cr = league.cup.rounds.find(x => x.index === m.round);
+        res = (cr && (cr.matches || []).find(x => x.home === teamIdx || x.away === teamIdx)) || null;
+      }
       const opp = res ? nameOf(res.home === teamIdx ? res.away : res.home) : null;
       const where = opp ? ` contre ${opp}` : "";
-      if (!c.playerPoints || (m.pts || 0) > c.playerPoints.value) c.playerPoints = { value: m.pts || 0, text: `${p.name} · ${m.pts || 0} pts${where}`, playerId: p.id, seasonNo };
-      if (!c.playerRebounds || (m.reb || 0) > c.playerRebounds.value) c.playerRebounds = { value: m.reb || 0, text: `${p.name} · ${m.reb || 0} rebonds${where}`, playerId: p.id, seasonNo };
-      if (!c.playerAssists || (m.ast || 0) > c.playerAssists.value) c.playerAssists = { value: m.ast || 0, text: `${p.name} · ${m.ast || 0} passes${where}`, playerId: p.id, seasonNo };
+      const match = res ? { seasonId: league.seasonId || null, round: m.round, competition: m.competition, home: res.home, away: res.away } : null;
+      if (!c.playerPoints || (m.pts || 0) > c.playerPoints.value) c.playerPoints = { value: m.pts || 0, text: `${p.name} · ${m.pts || 0} pts${where}`, playerId: p.id, seasonNo, match };
+      if (!c.playerRebounds || (m.reb || 0) > c.playerRebounds.value) c.playerRebounds = { value: m.reb || 0, text: `${p.name} · ${m.reb || 0} rebonds${where}`, playerId: p.id, seasonNo, match };
+      if (!c.playerAssists || (m.ast || 0) > c.playerAssists.value) c.playerAssists = { value: m.ast || 0, text: `${p.name} · ${m.ast || 0} passes${where}`, playerId: p.id, seasonNo, match };
     });
   });
   (team.attendanceHistory || []).forEach(h => {
@@ -16378,6 +16481,7 @@ function serializeTeam(team) {
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
     lastArchivedSeasonId: team.lastArchivedSeasonId || null,
+    hallOfFame: Array.isArray(team.hallOfFame) ? team.hallOfFame : [],
     // Voir engine.js, miroir identique.
     seasonObjectiveVerdictSettled: !!team.seasonObjectiveVerdictSettled,
     // Alchimie d'équipe (voir engine.js, miroir identique).
@@ -16782,6 +16886,7 @@ function teamFromSave(data) {
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
   team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
+  team.hallOfFame = Array.isArray(data.hallOfFame) ? data.hallOfFame : [];
   // Voir engine.js, miroir identique.
   team.seasonObjectiveVerdictSettled = !!data.seasonObjectiveVerdictSettled;
   // Alchimie d'équipe (voir engine.js, miroir identique).
@@ -36246,6 +36351,20 @@ function renderSalleSection() {
   renderSalleFacilities();
 }
 
+// Maillots retirés (Hall of Fame, retour utilisateur 2026-09-26 : "quand un
+// joueur voit son maillot retiré, il faut l'afficher sur le visuel de la
+// salle") : bannières suspendues au plafond, aux couleurs du club, par
+// numéro croissant.
+function salleRetiredJerseysHtml(team) {
+  const retired = (team.hallOfFame || []).filter(h => Number.isInteger(h.retiredNumber)).sort((a, b) => a.retiredNumber - b.retiredNumber);
+  if (!retired.length) return "";
+  const [c1, c2] = teamAvatarColors(team);
+  return `<div class="sl-retired" style="--c1:${c1}; --c2:${c2}">` + retired.slice(0, 8).map(h => {
+    const surname = String(h.name || "").split(" ").slice(-1)[0];
+    return `<div class="sl-retired-banner" title="${escapeHtml(h.name)} · maillot n°${h.retiredNumber} retiré"><b>${h.retiredNumber}</b><span>${escapeHtml(surname)}</span></div>`;
+  }).join("") + `</div>`;
+}
+
 // --- Bandeau d'en-tête -------------------------------------------------
 function salleSponsorEncartHtml() {
   const c = sponsorActiveContractForSlot(teamA, "salle");
@@ -36272,7 +36391,7 @@ function renderSalleHero(info, stats) {
   }).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
   visualHolder.innerHTML = `<div class="arena-card">` +
     `<div class="arena-visual-wrap" role="img" aria-label="${escapeHtml(teamArenaName(teamA))}, ${info.capacity.toLocaleString("fr-FR")} places">${arenaSvg}</div>` +
-    `</div>`;
+    `</div>` + salleRetiredJerseysHtml(teamA);
 
   const pips = ARENA_LEVELS.map(a => `<span class="${a.level <= info.level ? "on" : ""}"></span>`).join("");
   const nm = salleNextMatchInfo();
@@ -37258,13 +37377,13 @@ document.getElementById("guideSection").addEventListener("click", (e) => {
 // compétition à part entre clubs humains Premium d'une même ligue partagée,
 // jouée le vendredi soir sur des copies des équipes — aucun effet sur la
 // forme, l'entraînement, les blessures, les finances ni les stats de
-// carrière. Cette page : création (nom, 6/8/10 équipes, terrain), adhésion
+// carrière. Cette page : création (nom, 4/6/8/10 équipes, terrain), adhésion
 // par code, salle d'attente, puis classement + calendrier + feuilles de
 // match. Les données arrivent avec la sauvegarde (league.privateLeagues,
 // code d'invitation masqué hors membres) et sont rafraîchies par chaque
 // réponse d'action (result.privateLeagues).
 // ---------------------------------------------------------------------
-const LP_SIZES = [6, 8, 10];
+const LP_SIZES = [4, 6, 8, 10];
 let lpUi = { venue: "home", size: 8, time: "21:30", filter: "mine", feedback: null };
 // Heures proposées au créateur (mêmes valeurs que PRIVATE_LEAGUE_TIMES côté
 // serveur) : toutes les demi-heures de 08h00 à 23h30, 21h30 par défaut.
@@ -37615,12 +37734,16 @@ function renderHistoireSection() {
     `<div class="hc-name">${escapeHtml(team.name)}</div>` +
     `<div class="hc-sub">Fondé en ${team.foundedYear || "?"} · ${history.length} saison${history.length > 1 ? "s" : ""} archivée${history.length > 1 ? "s" : ""} · ${trophies.length} trophée${trophies.length > 1 ? "s" : ""} · ${reputationStarsHtml(stars)}</div>` +
     `</div></div>`;
-  html += `<div class="hc-grid">`;
+  // Deux colonnes indépendantes (voir .hc-col) : le Palmarès, court tant
+  // que le club est jeune, est suivi du Hall of Fame et du classement
+  // mondial au lieu de laisser un trou face aux Records.
+  html += `<div class="hc-grid"><div class="hc-col">`;
   html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Palmarès</h2><span>Titres et parcours saison par saison</span></div>${hcPalmaresHtml(team, idx)}</section>`;
+  html += `<section class="lg-panel hc-panel" id="hcHallOfFame"><div class="lg-panel-title"><h2>Hall of Fame</h2></div>${hcHallOfFameHtml(team, idx)}</section>`;
+  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Classement mondial</h2></div>${hcWorldStatsHtml(idx)}</section>`;
+  html += `</div><div class="hc-col">`;
   html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
-  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Légendes du club</h2><span>Cumul de tous les matchs officiels</span></div>${hcLegendsHtml(idx)}</section>`;
-  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Classement mondial</h2><span>Nos joueurs parmi tous ceux de la ligue</span></div>${hcWorldRankHtml(idx)}</section>`;
-  html += `</div>`;
+  html += `</div></div>`;
   holder.innerHTML = html;
 }
 
@@ -37647,41 +37770,130 @@ function hcPalmaresHtml(team, idx) {
   return html;
 }
 
+// Records (retour utilisateur, 2026-09-26 : "ce serait cool de pouvoir
+// cliquer sur le score ou la stat et d'ouvrir le match") : la carte
+// devient un bouton quand le record vient d'un match de la saison en
+// cours (les feuilles de match des saisons passées ne sont plus gardées).
+function hcRecordMatchKey(r, currentSeasonNo) {
+  const m = r && r.match;
+  if (!m || !Number.isFinite(m.round) || !Number.isFinite(m.home) || !Number.isFinite(m.away)) return null;
+  const sameSeason = m.seasonId ? m.seasonId === league.seasonId : r.seasonNo === currentSeasonNo;
+  if (!sameSeason || !league.teams[m.home] || !league.teams[m.away]) return null;
+  return `${m.competition === "cup" ? "cup" : "championship"}:${m.round}:${m.home}:${m.away}`;
+}
+
 function hcRecordsHtml(idx) {
   const records = liveClubRecords(league, idx);
   const items = CLUB_RECORD_LABELS.filter(([k]) => records[k]);
   if (!items.length) return `<p class="training-empty">Les records s'écriront dès le premier match joué.</p>`;
+  const currentSeasonNo = (teamA.seasonHistory || []).length + 1;
   return `<div class="hc-records">` + items.map(([k, label, unit]) => {
     const r = records[k];
-    return `<div class="hc-record"><div class="hc-record-label">${escapeHtml(label)}</div><div class="hc-record-value">${k === "attendance" ? r.value.toLocaleString("fr-FR") : r.value} <small>${escapeHtml(unit)}</small></div><div class="hc-record-text">${escapeHtml(r.text)}</div><div class="hc-record-season">Saison ${r.seasonNo}</div></div>`;
+    const key = hcRecordMatchKey(r, currentSeasonNo);
+    const inner = `<div class="hc-record-label">${escapeHtml(label)}</div><div class="hc-record-value">${k === "attendance" ? r.value.toLocaleString("fr-FR") : r.value} <small>${escapeHtml(unit)}</small></div><div class="hc-record-text">${escapeHtml(r.text)}</div><div class="hc-record-season">Saison ${r.seasonNo}${key ? ` · <span class="hc-record-go">Voir le match</span>` : ""}</div>`;
+    return key
+      ? `<button type="button" class="hc-record" data-hc-match="${key}" title="Voir la feuille de match">${inner}</button>`
+      : `<div class="hc-record">${inner}</div>`;
   }).join("") + `</div>`;
 }
 
-function hcLegendsHtml(idx) {
-  const rows = liveAllTimePlayers(league, idx).sort((a, b) => b.pts - a.pts || b.games - a.games).slice(0, 10);
-  if (!rows.length) return `<p class="training-empty">Aucun match officiel joué pour l'instant.</p>`;
-  const stillHere = new Set(teamA.players.map(p => p.id));
-  let html = `<div class="lg-table-wrap"><table class="lg-table hc-table"><thead><tr><th>#</th><th>Joueur</th><th class="c">Matchs</th><th class="r">Pts</th><th class="r lg-hide-sm">Pts/m</th><th class="r lg-hide-sm">Reb</th><th class="r lg-hide-sm">Pd</th><th class="c">Saisons</th></tr></thead><tbody>`;
-  rows.forEach((r, i) => {
-    const link = stillHere.has(r.id) ? `<a href="#" class="team-link" data-player-detail="${r.id}" data-player-team="${idx}">${escapeHtml(r.name)}</a>` : escapeHtml(r.name);
-    html += `<tr><td><span class="lg-rank">${i + 1}</span></td><td>${link} <span class="dim">${escapeHtml(r.position)}</span>${stillHere.has(r.id) ? "" : ` <span class="lp-tag lp-tag-muted">Parti</span>`}</td>` +
-      `<td class="c">${r.games}</td><td class="r lg-pts">${r.pts}</td><td class="r lg-hide-sm">${(r.pts / r.games).toFixed(1)}</td><td class="r lg-hide-sm">${r.reb}</td><td class="r lg-hide-sm">${r.ast}</td><td class="c">${r.seasons.length}</td></tr>`;
-  });
-  return html + `</tbody></table></div>`;
+// Petit maillot (Hall of Fame) aux couleurs du club, numéro retiré ou étoile.
+function hcJerseySvg(team, label) {
+  const [c1, c2] = teamAvatarColors(team);
+  return `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="M11 2h5q4 6 8 0h5l2 7q3 2 6 3v30H3V12q3-1 6-3z" fill="${c1}" stroke="${c2}" stroke-width="2" stroke-linejoin="round"/>` +
+    `<text x="20" y="32" text-anchor="middle" font-size="${String(label).length > 1 ? 13 : 15}" font-weight="800" fill="#fff" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">${escapeHtml(String(label))}</text></svg>`;
 }
 
-function hcWorldRankHtml(idx) {
-  const all = worldPlayerRankings(league);
-  const mine = all.filter(r => r.teamIdx === idx).sort((a, b) => a.rank - b.rank);
-  if (!mine.length) return `<p class="training-empty">Aucun joueur.</p>`;
-  let html = `<p class="hc-world-intro">${all.length} joueurs classés dans la ligue · ${league.teams.length} clubs</p>`;
-  html += `<div class="lg-table-wrap"><table class="lg-table hc-table"><thead><tr><th class="c">Mondial</th><th>Joueur</th><th class="c">Poste</th><th class="c">Rang au poste</th><th class="r">Note</th></tr></thead><tbody>`;
-  mine.forEach(r => {
-    html += `<tr><td class="c"><span class="hc-world-rank${r.rank <= 10 ? " hc-gold" : r.rank <= 50 ? " hc-top" : ""}">${ordinalFr(r.rank)}</span></td>` +
-      `<td><a href="#" class="team-link" data-player-detail="${r.playerId}" data-player-team="${idx}">${escapeHtml(r.player.name)}</a></td>` +
-      `<td class="c">${escapeHtml(r.position)}</td><td class="c">${ordinalFr(r.posRank)}</td><td class="r lg-pts">${Math.round(r.rating)}</td></tr>`;
+// Hall of Fame (retour utilisateur, 2026-09-26 : remplace "Légendes du
+// club", "on mettra les joueurs qu'on veut dedans") : le manager fait
+// entrer qui il veut parmi les joueurs passés par le club (au moins un
+// match officiel), et peut retirer son maillot — affiché ensuite dans la
+// salle (voir renderSalleHero / salleRetiredJerseysHtml).
+let hcFeedback = null;
+function hcHallOfFameHtml(team, idx) {
+  const hof = Array.isArray(team.hallOfFame) ? team.hallOfFame : [];
+  const allTime = liveAllTimePlayers(league, idx);
+  const byId = new Map(allTime.map(p => [p.id, p]));
+  const stillHere = new Set(team.players.map(p => p.id));
+  let html = "";
+  if (!hof.length) {
+    html += `<p class="training-empty">Aucun joueur au Hall of Fame pour l'instant.</p>`;
+  } else {
+    html += `<div class="hc-hof">` + hof.map(h => {
+      const st = byId.get(h.id) || h;
+      const retired = Number.isInteger(h.retiredNumber);
+      const name = stillHere.has(h.id)
+        ? `<a href="#" class="team-link" data-player-detail="${h.id}" data-player-team="${idx}">${escapeHtml(h.name)}</a>`
+        : escapeHtml(h.name);
+      const actions = retired
+        ? `<button type="button" class="hc-link-btn muted" data-hof-unretire="${h.id}">Annuler le retrait</button>`
+        : `<input type="number" min="0" max="99" step="1" inputmode="numeric" placeholder="n°" aria-label="Numéro de maillot" data-hof-num="${h.id}"><button type="button" class="hc-link-btn" data-hof-retire="${h.id}">Retirer le maillot</button>`;
+      return `<div class="hc-hof-card${retired ? " retired" : ""}">` +
+        `<span class="hc-hof-jersey">${hcJerseySvg(team, retired ? h.retiredNumber : "★")}</span>` +
+        `<div class="hc-hof-id">` +
+          (retired ? `<span class="hc-hof-badge">Maillot n°${h.retiredNumber} retiré</span>` : "") +
+          `<span class="hc-hof-name">${name} <span class="dim">${escapeHtml(h.position || "")}</span></span>` +
+          `<span class="hc-hof-stats">${st.games || 0} match${(st.games || 0) > 1 ? "s" : ""} · ${st.pts || 0} pts · ${st.reb || 0} reb · ${st.ast || 0} pd</span>` +
+          `<div class="hc-hof-actions">${actions}<button type="button" class="hc-link-btn muted" data-hof-remove="${h.id}">Sortir du Hall of Fame</button></div>` +
+        `</div></div>`;
+    }).join("") + `</div>`;
+  }
+  const inHof = new Set(hof.map(h => h.id));
+  const candidates = allTime.filter(p => !inHof.has(p.id)).sort((a, b) => b.pts - a.pts || b.games - a.games);
+  if (candidates.length && hof.length < HALL_OF_FAME_MAX) {
+    html += `<div class="hc-hof-add"><select id="hcHofSelect" aria-label="Joueur à faire entrer au Hall of Fame">` +
+      candidates.map(p => `<option value="${p.id}">${escapeHtml(p.name)} · ${escapeHtml(p.position || "")} · ${p.games} match${p.games > 1 ? "s" : ""}, ${p.pts} pts</option>`).join("") +
+      `</select><button type="button" class="cal-next-btn" id="hcHofInduct">Faire entrer</button></div>`;
+  }
+  if (hcFeedback) html += `<p class="hc-feedback">${escapeHtml(hcFeedback)}</p>`;
+  return html;
+}
+
+async function hcHofAction(path, body) {
+  hcFeedback = null;
+  try {
+    const res = await fetchApi(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) hcFeedback = data.error || `Le serveur a refusé l'action (${res.status}).`;
+    else if (Array.isArray(data.hallOfFame)) teamA.hallOfFame = data.hallOfFame;
+  } catch (e) {
+    hcFeedback = "Serveur injoignable.";
+  }
+  renderHistoireSection();
+}
+
+// Classement mondial (retour utilisateur, 2026-09-26 : "le classement
+// mondial c'est pour les stats (meilleur marqueur, meilleur passeur,
+// rebondeur, contreur ...)") : pour chaque stat, notre meilleur joueur et
+// son rang parmi TOUS les joueurs de la ligue (moyennes par match en
+// championnat, même seuil de matchs que les leaders de la page Ligue).
+const HC_WORLD_STATS = [
+  { key: "pts", label: "Meilleur marqueur", unit: "pts" },
+  { key: "ast", label: "Meilleur passeur", unit: "pd" },
+  { key: "reb", label: "Meilleur rebondeur", unit: "reb" },
+  { key: "blk", label: "Meilleur contreur", unit: "ctr" },
+  { key: "stl", label: "Meilleur intercepteur", unit: "int" },
+];
+function hcWorldStatsHtml(idx) {
+  const rows = computeSeasonPlayerStats();
+  const minGames = Math.max(1, Math.min(3, league.round));
+  const eligible = rows.filter(r => r.gp >= minGames);
+  const pool = eligible.length ? eligible : rows;
+  if (!pool.some(r => r.teamIdx === idx)) return `<p class="training-empty">Le classement s'affichera après les premiers matchs de championnat.</p>`;
+  let html = `<div class="hc-ws">`;
+  HC_WORLD_STATS.forEach(cat => {
+    const sorted = [...pool].sort((a, b) => b.perGame[cat.key] - a.perGame[cat.key]);
+    const rankIdx = sorted.findIndex(r => r.teamIdx === idx);
+    const mine = sorted[rankIdx];
+    const lead = sorted[0];
+    const rank = rankIdx + 1;
+    html += `<div class="hc-ws-row" data-hc-ws="${cat.key}"><span class="hc-ws-cat">${cat.label}</span>` +
+      `<span class="hc-ws-who">${playerLinkHtml(idx, mine.player.id, mine.player.name)}` +
+      (rank > 1 ? `<span class="hc-ws-lead">1er : ${escapeHtml(lead.player.name)} · ${lead.perGame[cat.key].toFixed(1)}</span>` : "") + `</span>` +
+      `<span class="hc-ws-val">${mine.perGame[cat.key].toFixed(1)} <small>${cat.unit}</small></span>` +
+      `<span class="hc-world-rank${rank <= 3 ? " hc-gold" : rank <= 10 ? " hc-top" : ""}">${ordinalFr(rank)}</span></div>`;
   });
-  return html + `</tbody></table></div>`;
+  return html + `</div>`;
 }
 
 (function wireHistoireContent() {
@@ -37689,9 +37901,42 @@ function hcWorldRankHtml(idx) {
   if (!holder) return;
   holder.addEventListener("click", (e) => {
     const link = e.target.closest("[data-player-detail]");
-    if (!link) return;
-    e.preventDefault();
-    showPlayerDetail(Number(link.dataset.playerTeam), Number(link.dataset.playerDetail));
+    if (link) {
+      e.preventDefault();
+      showPlayerDetail(Number(link.dataset.playerTeam), Number(link.dataset.playerDetail));
+      return;
+    }
+    const rec = e.target.closest("[data-hc-match]");
+    if (rec) {
+      const [competition, round, home, away] = rec.dataset.hcMatch.split(":");
+      showMatchBoxscore(Number(round), competition, Number(home), Number(away));
+      return;
+    }
+    if (e.target.closest("#hcHofInduct")) {
+      const sel = document.getElementById("hcHofSelect");
+      if (sel && sel.value !== "") hcHofAction("/api/club/hall-of-fame/induct", { playerId: Number(sel.value) });
+      return;
+    }
+    const retire = e.target.closest("[data-hof-retire]");
+    if (retire) {
+      const id = retire.dataset.hofRetire;
+      const input = holder.querySelector(`[data-hof-num="${id}"]`);
+      const raw = input ? input.value.trim() : "";
+      if (raw === "") { hcFeedback = "Indiquez le numéro de maillot à retirer (0 à 99)."; renderHistoireSection(); return; }
+      hcHofAction("/api/club/hall-of-fame/retire-jersey", { playerId: Number(id), number: Number(raw) });
+      return;
+    }
+    const unretire = e.target.closest("[data-hof-unretire]");
+    if (unretire) { hcHofAction("/api/club/hall-of-fame/retire-jersey", { playerId: Number(unretire.dataset.hofUnretire), number: null }); return; }
+    const remove = e.target.closest("[data-hof-remove]");
+    if (remove) { hcHofAction("/api/club/hall-of-fame/remove", { playerId: Number(remove.dataset.hofRemove) }); return; }
+  });
+  holder.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target && e.target.dataset && e.target.dataset.hofNum) {
+      e.preventDefault();
+      const b = holder.querySelector(`[data-hof-retire="${e.target.dataset.hofNum}"]`);
+      if (b) b.click();
+    }
   });
 })();
 

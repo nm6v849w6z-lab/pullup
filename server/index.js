@@ -631,6 +631,10 @@ const ACTION_ROUTES = {
   "/api/sponsors/decline": actions.declineSponsor,
   "/api/sponsors/terminate": actions.terminateSponsor,
   "/api/club/set-arena-name": actions.setTeamArenaName,
+  // Hall of Fame + maillots retirés (voir Team.inductHallOfFame).
+  "/api/club/hall-of-fame/induct": actions.inductHallOfFame,
+  "/api/club/hall-of-fame/remove": actions.removeHallOfFame,
+  "/api/club/hall-of-fame/retire-jersey": actions.setRetiredJersey,
   // Tutoriel d'accueil (voir engine.js:Team.markOnboardingTourCompleted/
   // claimTutorialReward et server/actions.js) :
   "/api/club/onboarding-tour-completed": actions.setOnboardingTourCompleted,
@@ -746,6 +750,7 @@ async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSav
       t.seasonHistory = Array.isArray(prev.seasonHistory) ? prev.seasonHistory : [];
       t.clubRecords = prev.clubRecords || {};
       t.allTimePlayers = prev.allTimePlayers || {};
+      t.hallOfFame = Array.isArray(prev.hallOfFame) ? prev.hallOfFame : [];
       t.trophies = Array.isArray(prev.trophies) ? prev.trophies : [];
       if (prev.foundedYear) t.foundedYear = prev.foundedYear;
       t.trigram = prev.trigram || null;

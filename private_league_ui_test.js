@@ -45,6 +45,7 @@ async function waitFor(fn, label, tries = 60) {
   docA.getElementById("lpNameInput").value = "Coupe des Potes";
   docA.getElementById("lpSizeSelect").value = "6";
   check(!docA.querySelector("#lpContent .lp-kicker") && !docA.querySelector(".lp-venue-sub") && !/récupèrent|Aucun bonus|Aller-retour dans la salle|Une compétition à part/.test(docA.getElementById("lpContent").textContent), "page d'accueil épurée : ni titre jaune, ni textes d'explication");
+  check([...docA.getElementById("lpSizeSelect").options].map(o => o.value).join(",") === "4,6,8,10" && /4 équipes · 6 journées/.test(docA.getElementById("lpSizeSelect").options[0].textContent), "nombre d'équipes : 4, 6, 8 ou 10");
   check(docA.getElementById("lpTimeSelect").value === "21:30" && docA.getElementById("lpTimeSelect").options.length === 32, "heure des matchs : 32 créneaux, 21h30 par défaut");
   docA.getElementById("lpTimeSelect").value = "20:00";
   docA.getElementById("lpCreateBtn").click();

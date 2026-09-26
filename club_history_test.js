@@ -52,6 +52,16 @@ function playWholeSeason(league, now) {
   check(league.isPlayoffsDone(), "saison jouée jusqu'au champion");
   const live = Engine.liveClubRecords(league, 0);
   check(live.biggestWin && live.playerPoints && live.seasonWins && live.mostPoints, "records vivants calculés pendant la saison (écart, points joueur, bilan, points marqués)");
+  check(live.biggestWin.match && live.biggestWin.match.seasonId === league.seasonId && live.biggestWin.match.competition === "championship" && Number.isFinite(live.biggestWin.match.round), "record : référence du match (saison, journée, équipes)");
+  check(live.playerPoints.match && [live.playerPoints.match.home, live.playerPoints.match.away].includes(0), "record joueur : référence du match");
+  // Hall of Fame (moteur).
+  const entry0 = Engine.liveAllTimePlayers(league, 0)[0];
+  check(team.inductHallOfFame(entry0, T0).ok && !team.inductHallOfFame(entry0, T0).ok, "Hall of Fame : entrée, pas de doublon");
+  check(!team.setRetiredJersey(entry0.id, 100).ok && team.setRetiredJersey(entry0.id, 7).ok && team.hallOfFame[0].retiredNumber === 7, "maillot retiré (0-99)");
+  check(!team.setRetiredJersey(123456789, 8).ok, "maillot retiré : seulement pour un membre du Hall of Fame");
+  const hofRebuilt = Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.serializeLeague(league))));
+  check(hofRebuilt.teams[0].hallOfFame.length === 1 && hofRebuilt.teams[0].hallOfFame[0].retiredNumber === 7, "Hall of Fame sérialisé");
+  check(team.removeHallOfFame(entry0.id).ok && team.hallOfFame.length === 0, "sortie du Hall of Fame");
   const legends = Engine.liveAllTimePlayers(league, 0);
   check(legends.length >= 8 && legends.every(l => l.games > 0 && l.seasons.length === 1), "légendes vivantes : joueurs ayant joué, 1 saison");
   const summaryLive = Engine.seasonSummaryForTeam(league, 0, T0);
@@ -98,7 +108,23 @@ function playWholeSeason(league, now) {
   check(fresh.managerLinkToken === token, "jeton manager conservé (comme avant)");
   check(Object.keys(fresh.allTimePlayers).length >= 8 && fresh.players.every(p => !fresh.allTimePlayers[p.id] || fresh.allTimePlayers[p.id].name === p.name), "légendes reportées, effectif régénéré");
 
-  // --- C : navigateur.
+  // --- C : navigateur. Quelques journées de la saison 2 jouées, records
+  // archivés effacés pour que les records "vivants" viennent de matchs de la
+  // saison en cours (donc cliquables).
+  {
+    const { league: L } = await store.loadMultiLeague(multiSavePath);
+    for (let k = 0; k < 3; k++) {
+      const round = L.round;
+      L.matchesForRound(round).forEach(m => {
+        const r = Engine.simulateOrForfeit(L.teams[m.home], L.teams[m.away], T0);
+        if (!r.forfeit) Engine.recordMatchStatsAndAwardMvp(L.teams[m.home], L.teams[m.away], round, "championship", T0, r.quarterScores, r.tacticsUsed);
+        L.recordResult(round, m.home, m.away, r.scoreHome, r.scoreAway);
+      });
+      L.advanceRound();
+    }
+    L.teams.find(t => t.managerLinkToken === token).clubRecords = {};
+    await store.saveMultiLeague(L, multiSavePath);
+  }
   const dom = await openGame(html, `${baseUrl}?m=${token}`);
   const doc = dom.window.document, win = dom.window;
   const tab = [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "histoire");
@@ -108,10 +134,52 @@ function playWholeSeason(league, now) {
   const txt = doc.getElementById("histoireContent").textContent;
   check(/Saison 1/.test(txt) && /Saison 2/.test(txt) && /En cours/.test(txt), "palmarès : saison 1 archivée + saison 2 en cours");
   check(doc.querySelectorAll(".hc-record").length >= 4, "records affichés");
-  check(doc.querySelectorAll(".hc-table").length === 3 && /mondial/i.test(txt), "légendes et classement mondial affichés");
-  const firstWorld = doc.querySelector(".hc-world-rank");
+  check(doc.querySelectorAll(".hc-table").length === 1 && !/Légendes du club/.test(txt), "plus de tableau Légendes (remplacé par le Hall of Fame)");
+  check(!/Nos joueurs parmi tous ceux de la ligue/.test(txt) && !/joueurs classés dans la ligue/.test(txt), "classement mondial : textes d'intro retirés");
+  const cols = doc.querySelectorAll("#histoireContent .hc-col");
+  check(cols.length === 2 && cols[0].querySelectorAll(".lg-panel").length === 3 && /Records du club/.test(cols[1].textContent), "mise en page : Palmarès + Hall of Fame + Classement mondial à gauche, Records à droite");
+  const wsRows = doc.querySelectorAll(".hc-ws-row");
+  check(wsRows.length === 5 && /Meilleur marqueur/.test(txt) && /Meilleur passeur/.test(txt) && /Meilleur rebondeur/.test(txt) && /Meilleur contreur/.test(txt), "classement mondial par stat (marqueur, passeur, rebondeur, contreur, intercepteur)");
+  const firstWorld = doc.querySelector(".hc-ws-row .hc-world-rank");
   check(firstWorld && /^\d+(er|e)$/.test(firstWorld.textContent.trim()), `rang mondial affiché (${firstWorld && firstWorld.textContent})`);
-  const link = doc.querySelector("#histoireContent [data-player-detail]");
+  // Records cliquables → feuille de match (saison en cours seulement).
+  const recBtn = doc.querySelector("button.hc-record[data-hc-match]");
+  check(!!recBtn, `un record de la saison en cours est cliquable (${recBtn && recBtn.dataset.hcMatch})`);
+  check([...doc.querySelectorAll("div.hc-record")].every(d => !d.dataset.hcMatch), "les records sans match (saison passée, affluence) ne sont pas cliquables");
+  recBtn.click();
+  check(!!doc.getElementById("matchBoxscoreOverlay"), "clic sur un record → feuille de match ouverte");
+  if (typeof win.closeMatchBoxscore === "function") win.closeMatchBoxscore();
+  // Hall of Fame : entrée, maillot retiré, affichage dans la salle.
+  check(/Aucun joueur au Hall of Fame/.test(txt) && doc.getElementById("hcHofSelect"), "Hall of Fame vide + liste des joueurs éligibles");
+  const sel = doc.getElementById("hcHofSelect");
+  const pickedId = Number(sel.value);
+  doc.getElementById("hcHofInduct").click();
+  await new Promise(r => setTimeout(r, 400));
+  check(doc.querySelectorAll(".hc-hof-card").length === 1, "joueur entré au Hall of Fame");
+  let input = doc.querySelector("[data-hof-num]");
+  input.value = "23";
+  doc.querySelector("[data-hof-retire]").click();
+  await new Promise(r => setTimeout(r, 400));
+  check(/Maillot n°23 retiré/.test(doc.getElementById("histoireContent").textContent), "maillot n°23 retiré");
+  ({ league: saved } = await store.loadMultiLeague(multiSavePath));
+  const savedTeam = saved.teams.find(t => t.managerLinkToken === token);
+  check(savedTeam.hallOfFame.length === 1 && savedTeam.hallOfFame[0].id === pickedId && savedTeam.hallOfFame[0].retiredNumber === 23, "Hall of Fame sauvegardé côté serveur");
+  let r2 = await fetch(`${baseUrl}api/club/hall-of-fame/induct`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": token }, body: JSON.stringify({ playerId: 999999999 }) });
+  check(r2.status === 400, "serveur : un joueur jamais passé par le club est refusé");
+  const tabSalle = [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "salle");
+  tabSalle.click();
+  const banner = doc.querySelector("#arenaVisualCard .sl-retired-banner");
+  check(banner && /23/.test(banner.textContent), "maillot retiré suspendu dans le visuel de la salle");
+  tab.click();
+  doc.querySelector("[data-hof-unretire]").click();
+  await new Promise(r => setTimeout(r, 400));
+  tabSalle.click();
+  check(!doc.querySelector("#arenaVisualCard .sl-retired-banner"), "retrait annulé → plus de bannière dans la salle");
+  tab.click();
+  doc.querySelector("[data-hof-remove]").click();
+  await new Promise(r => setTimeout(r, 400));
+  check(doc.querySelectorAll(".hc-hof-card").length === 0, "joueur sorti du Hall of Fame");
+  const link = doc.querySelector("#histoireContent .player-link, #histoireContent [data-player-detail]");
   link.click();
   check(!doc.getElementById("playerDetailSection").classList.contains("hidden"), "clic sur un joueur → fiche joueur");
   const chip = doc.querySelector(".pdp2-chip--world");
