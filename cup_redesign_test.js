@@ -8,8 +8,7 @@
 //    onglets de tour, "Ton match" épinglé en tête, exemptés résumés en une
 //    ligne (aucune ligne de match "exempt" listée), recherche et filtre
 //    "À jouer", arbre (4 colonnes .cup-round) ;
-// B) élimination : pastille "Éliminé", bouton "Suivre" qui ouvre le tour
-//    suivant filtré sur le vainqueur ;
+// B) élimination : pastille "Éliminé", plus de bouton "Suivre" ;
 // C) montée en charge : 12 tours (CUP_STAGE_NAMES allongé le temps du
 //    test), 2 048 matchs au 1er tour : libellés génériques (1er tour…
 //    8es…Finale), pagination par 20, arbre limité aux 4 derniers tours.
@@ -74,15 +73,8 @@ rows = qa("#coupeContent .cp-m");
 if (rows.length !== 4) throw new Error(`❌ 8es : 4 vrais matchs listés attendus (les 4 exemptés résumés), obtenu ${rows.length}.`);
 if (!/4 clubs exemptés passent directement en quarts de finale/.test(q("#coupeContent .cp-byes").textContent)) throw new Error("❌ Ligne des exemptés attendue, obtenu : " + (q("#coupeContent .cp-byes") || {}).textContent);
 if (!rows.every(r => r.querySelector("button.cp-score[data-boxscore-round]"))) throw new Error("❌ Chaque score joué devrait ouvrir le boxscore.");
-// Recherche.
-const name3 = win.eval("league.teams[league.teams.map((t,i)=>i).filter(i=>i!==myTeamIndex)[3]].name");
-const input = q("#cupSearch");
-input.value = name3.slice(0, 6);
-input.dispatchEvent(new win.Event("input", { bubbles: true }));
-rows = qa("#coupeContent .cp-m");
-if (!rows.length || !rows.every(r => r.textContent.toLowerCase().includes(name3.slice(0, 6).toLowerCase()))) throw new Error("❌ La recherche devrait ne garder que les matchs du club cherché.");
-if (q("#cupSearch") !== input) throw new Error("❌ Le champ de recherche ne doit pas être recréé pendant la saisie (perte du focus).");
-input.value = ""; input.dispatchEvent(new win.Event("input", { bubbles: true }));
+if (q("#cupSearch")) throw new Error("❌ Le champ « Chercher un club » a été retiré (retour utilisateur 2026-09-26).");
+if (q('#coupeContent [data-cup-filter="upset"]')) throw new Error("❌ Le filtre « Surprises » a été retiré (retour utilisateur 2026-09-26).");
 // Filtre "À jouer" sur un tour entièrement joué.
 q('#coupeContent [data-cup-filter="pending"]').click();
 if (qa("#coupeContent .cp-m").length !== 0 || !q("#coupeContent .cp-empty")) throw new Error("❌ Filtre « À jouer » sur les 8es (tout joué) : liste vide attendue.");
@@ -91,7 +83,7 @@ q('#coupeContent [data-cup-filter="all"]').click();
 const cols = qa("#coupeContent .cup-bracket .cup-round");
 if (cols.length !== 4) throw new Error(`❌ Arbre : 4 colonnes attendues, obtenu ${cols.length}.`);
 if (!/Vainqueur 1\/4 n°1/.test(cols[2].textContent)) throw new Error("❌ Demies pas encore tirées : « Vainqueur 1/4 n°1 » attendu.");
-console.log("✅ A) parcours, prochain match, onglets, exemptés résumés, recherche, filtres et arbre corrects.");
+console.log("✅ A) parcours, prochain match, onglets, exemptés résumés, filtres et arbre corrects.");
 fs.mkdirSync("Claude outputs/cup_fix", { recursive: true });
 fs.writeFileSync("Claude outputs/cup_fix/snap_A.html", q("#coupeSection").outerHTML);
 
@@ -110,13 +102,8 @@ win.eval(`
   })()
 `);
 if (!/Éliminé en quarts de finale/.test(q("#coupeContent .cp-pill").textContent)) throw new Error("❌ Pastille « Éliminé en quarts de finale » attendue.");
-const follow = q("#coupeContent [data-cup-follow]");
-if (!follow) throw new Error("❌ Bouton « Suivre » attendu une fois éliminé.");
-follow.click();
-if (!qa("#coupeContent .cp-rtab")[2].classList.contains("on")) throw new Error("❌ « Suivre » devrait ouvrir le tour suivant (Demies).");
-rows = qa("#coupeContent .cp-m");
-if (rows.length !== 1) throw new Error(`❌ « Suivre » devrait filtrer sur le vainqueur : 1 match attendu, obtenu ${rows.length}.`);
-console.log("✅ B) élimination et « Suivre » corrects.");
+if (q("#coupeContent [data-cup-follow]")) throw new Error("❌ Le bouton « Suivre » a été retiré (retour utilisateur 2026-09-26).");
+console.log("✅ B) élimination correcte, sans bouton « Suivre ».");
 fs.writeFileSync("Claude outputs/cup_fix/snap_B.html", q("#coupeSection").outerHTML);
 
 // --- C) 12 tours, 2 048 matchs au 1er tour.

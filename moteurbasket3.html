@@ -32406,8 +32406,8 @@ function cupSideHtml(cup, path, ranks) {
     const sc = lossStep.m.home === myTeamIndex ? `${lossStep.m.scoreHome}-${lossStep.m.scoreAway}` : `${lossStep.m.scoreAway}-${lossStep.m.scoreHome}`;
     top = `<div class="cal-card cal-next cp-next-out"><div class="cal-card-kicker">Éliminé · ${escapeHtml(cupRoundLabel(lossStep.i))}</div>` +
       `<div class="cp-out-team">${teamLogoHtml(league.teams[opp], 56)}<div class="cal-next-name">par ${teamLinkHtml(opp, league.teams[opp].name)}</div><div class="cal-next-rank">${escapeHtml(sc)}</div></div>` +
-      (lossStep.i + 1 < cupTotalStages() && cup.champion == null
-        ? `<button type="button" class="cal-next-btn cp-follow-btn" data-cup-follow="${opp}" data-cup-round-after="${lossStep.i + 1}">Suivre ${escapeHtml(league.teams[opp].name)}</button>` : "") +
+      // Bouton "Suivre <club>" retiré (retour utilisateur 2026-09-26 :
+      // "enlève: Suivre ZyF0x_").
       `</div>`;
   } else if (cup.champion === myTeamIndex) {
     top = `<div class="cal-card cal-next"><div class="cal-card-kicker">Coupe</div><div class="cp-out-team"><div class="cal-next-count">Vainqueur</div><div class="cal-next-count-sub">${wins.length} victoire${wins.length > 1 ? "s" : ""} jusqu'au trophée</div></div></div>`;
@@ -32545,8 +32545,8 @@ function renderCoupeSection() {
   }
   html += `<div class="cal-layout cp-layout"><div class="cal-main">`;
   html += `<div class="cal-toolbar cp-rounds" id="cupRoundTabs" role="tablist" aria-label="Tours de coupe"></div>`;
-  html += `<div class="cp-tools"><input id="cupSearch" class="cp-search" type="search" placeholder="Chercher un club…" aria-label="Chercher un club dans ce tour" value="${escapeHtml(cupQuery)}">` +
-    `<button type="button" class="cal-filter cp-chip" data-cup-filter="all">Tous</button><button type="button" class="cal-filter cp-chip" data-cup-filter="upset">Surprises</button><button type="button" class="cal-filter cp-chip" data-cup-filter="pending">À jouer</button></div>`;
+  html += `<div class="cp-tools">` + // champ "Chercher un club" retiré (retour utilisateur 2026-09-26)
+    `<button type="button" class="cal-filter cp-chip" data-cup-filter="all">Tous</button><button type="button" class="cal-filter cp-chip" data-cup-filter="pending">À jouer</button></div>`;
   html += `<div id="cupRoundBody"></div>`;
 
   // Phase finale : arbre des 4 derniers tours (à partir des 8es), mêmes
@@ -32580,18 +32580,6 @@ function renderCoupeSection() {
   const holder = document.getElementById("coupeContent");
   if (!holder) return;
   holder.addEventListener("click", (e) => {
-    const follow = e.target.closest("[data-cup-follow]");
-    if (follow) {
-      cupSelRound = Number(follow.dataset.cupRoundAfter);
-      cupQuery = league.teams[Number(follow.dataset.cupFollow)].name;
-      cupFilter = "all"; cupPage = 1;
-      const input = document.getElementById("cupSearch");
-      if (input) input.value = cupQuery;
-      cupRenderRoundPanel();
-      const tabs = document.getElementById("cupRoundTabs");
-      if (tabs && tabs.scrollIntoView) tabs.scrollIntoView({ block: "start" });
-      return;
-    }
     const roundBtn = e.target.closest("[data-cup-round]");
     if (roundBtn) {
       cupSelRound = Number(roundBtn.dataset.cupRound); cupPage = 1;
