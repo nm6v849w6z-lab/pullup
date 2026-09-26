@@ -20,6 +20,26 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Académie de
+  jeunes : refonte visuelle** — retour utilisateur (capture) : "améliore
+  l'onglet académie de jeunes" (code direct, pas de maquette). Bandeau de
+  synthèse (places x/15, stagiaires €/sem., recruteur + chance/jour,
+  promus), décision 18 ans en carte, prospects en CARTES (avatar, badge
+  potentiel 3 bandes, compte à rebours rouge < 12 h, moyennes Technique/
+  Physique/Mental, 3 points forts / 2 à travailler, 28 caracs repliées,
+  Recruter/Ignorer visibles — avant cachés au bout d'un tableau à
+  défilement horizontal), effectif jeunes en cartes (moyenne vers le
+  plafond 50, caracs au plafond, saisons avant la décision ; tri par âge,
+  jamais par potentiel), Centre de formation + historique des promus côte à
+  côte en bas, états vides utiles (bouton "Engager un recruteur" → Staff).
+  Visite guidée réordonnée dans l'ordre de la page (ids conservés).
+  Fichiers : moteurbasket3.html (renderAcademieSection & co, CSS .ac-*),
+  nouveau academie_redesign_test.js. Tests académie/tour/tabs verts ;
+  suite complète : seuls player_detail_test et training_progression_test
+  échouent, et ils échouent AUSSI sur HEAD (sans lien). Commit limité aux
+  hunks Académie (moteurbasket3.html contient d'autres chantiers en cours
+  d'autres sessions). Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Onglet Coupe :
   refonte pour jusqu'à 12 tours** — retour utilisateur : "essaie
   d'améliorer cet onglet, en sachant qu'en coupe on pourra avoir bcp plus

@@ -2621,6 +2621,91 @@
      #academyGraduatesHolder plutôt que sur .mvp-callout lui-même, pour
      matcher la carte Centre de formation juste en dessous
      (facility-card-center, elle aussi centrée). */
+  /* =====================================================================
+     Académie de jeunes, refonte 2026-09-26 (voir renderAcademieSection).
+     ===================================================================== */
+  .ac-page h2{margin:0 0 12px;}
+  .ac-head{display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-bottom:16px;}
+  .ac-kicker{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--amber); font-weight:700; margin-bottom:2px;}
+  .ac-head h2{margin:0;}
+  .ac-kpis{display:grid; grid-template-columns:repeat(4, minmax(130px, 1fr)); gap:10px; flex:1 1 560px; max-width:760px;}
+  .ac-kpi{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 14px; min-width:0;}
+  .ac-kpi .k{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); font-weight:700;}
+  .ac-kpi .v{font-size:20px; font-weight:800; color:var(--ink); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ac-kpi .v small{font-size:12px; color:var(--ink-dim); font-weight:600;}
+  .ac-kpi .s{font-size:12px; color:var(--ink-dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ac-kpi.warn{border-color:rgba(240,162,60,.55);}
+  .ac-kpi.warn .s{color:var(--amber);}
+  .ac-slots{display:flex; gap:3px; margin-top:6px;}
+  .ac-slots i{flex:1; height:5px; border-radius:2px; background:var(--line);}
+  .ac-slots i.on{background:var(--amber);}
+  .ac-section-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+  .ac-section-meta{font-size:13px; color:var(--ink-dim);}
+  .ac-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap:14px;}
+  .ac-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:12px; min-width:0; position:relative;}
+  .ac-card.is-prodige{border-color:rgba(240,162,60,.6); box-shadow:0 0 0 1px rgba(240,162,60,.15) inset;}
+  .ac-card-top{display:flex; gap:12px; align-items:center;}
+  .ac-id{min-width:0; flex:1;}
+  .ac-name{font-weight:800; font-size:15.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ac-sub{font-size:12.5px; color:var(--ink-dim); margin-top:2px; white-space:nowrap;}
+  .ac-pos{display:inline-block; min-width:22px; text-align:center; padding:1px 6px; border-radius:6px; background:var(--panel-2); border:1px solid var(--line); color:var(--ink); font-weight:800; font-size:11.5px; margin-right:6px;}
+  .ac-pot{display:inline-block; font-size:11.5px; font-weight:800; padding:3px 9px; border-radius:999px; white-space:nowrap; border:1px solid var(--line); color:var(--ink-dim); background:var(--panel-2);}
+  .ac-pot.pot-grand{color:var(--amber); border-color:rgba(240,162,60,.45); background:rgba(240,162,60,.10);}
+  .ac-pot.pot-prodige{color:var(--amber-ink); background:var(--amber); border-color:var(--amber);}
+  .ac-badges{display:flex; flex-direction:column; align-items:flex-end; gap:5px;}
+  .ac-timer{font-size:11.5px; color:var(--ink-dim); white-space:nowrap;}
+  .ac-timer.soon{color:var(--danger); font-weight:700;}
+  .ac-groups{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px;}
+  .ac-group{background:var(--panel-2); border-radius:10px; padding:8px 10px;}
+  .ac-group .k{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint); font-weight:700;}
+  .ac-group .attr-cell{margin-top:3px;}
+  .ac-traits{display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12.5px;}
+  .ac-traits .k{font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; margin-bottom:3px;}
+  .ac-traits .k.up{color:var(--ok);}
+  .ac-traits .k.down{color:var(--danger);}
+  .ac-traits ul{list-style:none; margin:0; padding:0;}
+  .ac-traits li{display:flex; justify-content:space-between; gap:6px; color:var(--ink-dim); padding:1px 0;}
+  .ac-traits li b{color:var(--ink);}
+  .ac-progress .row{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-dim); margin-bottom:4px;}
+  .ac-progress .row b{color:var(--ink);}
+  .ac-progress .track{height:7px; border-radius:4px; background:var(--line); overflow:hidden;}
+  .ac-progress .fill{height:100%; border-radius:4px; background:linear-gradient(90deg, #b8752e, var(--amber));}
+  .ac-note{font-size:12px; color:var(--ink-faint); line-height:1.45;}
+  .ac-note.hot{color:var(--amber); font-weight:700;}
+  .ac-card details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); list-style:none;}
+  .ac-card details summary::-webkit-details-marker{display:none;}
+  .ac-card details summary::before{content:"▸ ";}
+  .ac-card details[open] summary::before{content:"▾ ";}
+  .ac-card details summary:hover{color:var(--ink);}
+  .ac-all-attrs{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:2px 16px; margin-top:8px;}
+  .ac-attr-row{display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px; color:var(--ink-dim); padding:2px 0; border-bottom:1px solid var(--line-soft);}
+  .ac-attr-row b{font-weight:800;}
+  .ac-attr-row b.attr-tier-red{color:var(--attr-tier-red);} .ac-attr-row b.attr-tier-orange{color:var(--attr-tier-amber);} .ac-attr-row b.attr-tier-white{color:var(--ink);} .ac-attr-row b.attr-tier-green{color:#3ecf67;}
+  .ac-attr-row span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ac-actions{display:flex; gap:8px; margin-top:auto;}
+  .ac-actions button{flex:1; padding:10px 14px; font-size:13.5px; white-space:nowrap;}
+  .ac-actions button.primary:disabled{cursor:not-allowed;}
+  .ac-empty{background:var(--panel); border:1px dashed var(--line); border-radius:14px; padding:22px 18px; text-align:center; color:var(--ink-dim); font-size:14px; line-height:1.5;}
+  .ac-empty b{color:var(--ink);}
+  .ac-empty button{margin-top:12px;}
+  .ac-footnote{font-size:12.5px; color:var(--ink-faint); margin:10px 0 0;}
+  .ac-decision{display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:rgba(240,162,60,.08); border:1px solid rgba(240,162,60,.5); border-radius:14px; padding:12px 14px; margin-bottom:10px;}
+  .ac-decision .ac-id{min-width:200px;}
+  .ac-decision .ac-note{flex:2 1 260px;}
+  .ac-decision .ac-actions{margin-top:0; flex:0 0 auto;}
+  .ac-bottom{display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:18px; align-items:start;}
+  .ac-bottom #trainingCenterCurrentPanel .staff-hire-grid--single{grid-template-columns:1fr;}
+  .ac-history{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:6px 14px;}
+  .ac-history-row{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px;}
+  .ac-history-row:last-child{border-bottom:0;}
+  .ac-history-row .n{flex:1; min-width:0; color:var(--ink); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ac-history-row .d{color:var(--ink-faint); font-size:12px; white-space:nowrap;}
+  .ac-history-empty{padding:14px 0; color:var(--ink-dim); font-size:13.5px; text-align:center;}
+  @media (max-width: 860px){
+    .ac-kpis{grid-template-columns:repeat(2, minmax(0, 1fr)); flex-basis:100%;}
+    .ac-bottom{grid-template-columns:1fr;}
+    .ac-grid{grid-template-columns:1fr;}
+  }
   #academyGraduatesHolder .mvp-callout{text-align:center;}
   /* Liste des jeunes promus (voir Team.academyGraduatesHistory/
      renderAcademyGraduatesStat) : puces retirées (une liste à puces
@@ -5225,31 +5310,41 @@
        afficher ici (décision 18 ans, Centre de formation, effectif jeunes,
        prospects) pour le caser proprement ailleurs. -->
   <div id="academieSection" class="hidden">
-    <div class="section">
-      <h2>Académie de jeunes</h2>
-      <!-- Retour utilisateur (2026-09) : "le haut [de cette page] est
-           affreusement vide : on a une toute petite brique et c'est tout.
-           il faut trouver du contenu à ajouter" puis "l'historique du
-           centre de formation, c'est les joueurs qui étaient dans le
-           centre de formation et qui sont passés pro" : historique des
-           jeunes promus (voir
-           Team.academyGraduatesHistory/renderAcademyGraduatesStat), juste
-           sous le titre de la page, avant même la bannière de décision
-           18 ans. -->
-      <div id="academyGraduatesHolder"></div>
+    <!-- Refonte 2026-09-26 (retour utilisateur : "améliore l'onglet
+         académie de jeunes") : bandeau de synthèse (#academyOverview), puis
+         les blocs dans l'ordre où un manager doit les traiter — décisions
+         18 ans, prospects (cartes avec Recruter/Ignorer visibles, avant
+         cachés au bout d'un tableau à défilement horizontal), effectif
+         jeunes (cartes + progression vers le plafond 50), et en bas le
+         Centre de formation et l'historique des promus côte à côte. Les id
+         des conteneurs sont conservés (visite guidée, tests). -->
+    <div class="section ac-page">
+      <div class="ac-head">
+        <div>
+          <div class="ac-kicker">Formation</div>
+          <h2>Académie de jeunes</h2>
+        </div>
+        <div id="academyOverview" class="ac-kpis"></div>
+      </div>
       <div id="academiePendingBanner"></div>
     </div>
-    <div class="section">
-      <h2 style="margin-top:0;">Centre de formation</h2>
-      <div id="trainingCenterCurrentPanel"></div>
+    <div class="section ac-page">
+      <div class="ac-section-head"><h2>Prospects du recruteur</h2><span id="youthCandidatesMeta" class="ac-section-meta"></span></div>
+      <div id="youthCandidatesHolder"></div>
     </div>
-    <div class="section">
-      <h2 style="margin-top:0;">Effectif jeunes (académie)</h2>
+    <div class="section ac-page">
+      <div class="ac-section-head"><h2>Effectif jeunes</h2><span id="youthRosterMeta" class="ac-section-meta"></span></div>
       <div id="youthRosterHolder"></div>
     </div>
-    <div class="section">
-      <h2 style="margin-top:0;">Prospects du recruteur</h2>
-      <div id="youthCandidatesHolder"></div>
+    <div class="section ac-page ac-bottom">
+      <div>
+        <h2>Centre de formation</h2>
+        <div id="trainingCenterCurrentPanel"></div>
+      </div>
+      <div>
+        <h2>Historique des promus</h2>
+        <div id="academyGraduatesHolder"></div>
+      </div>
     </div>
   </div>
 
@@ -31967,11 +32062,70 @@ function renderEconomieSection() {
 // sont pas signés).
 // ---------------------------------------------------------------------
 function renderAcademieSection() {
+  renderAcademyOverview();
   renderAcademyGraduatesStat();
   renderAcademiePendingBanner();
   renderTrainingCenterPanel();
   renderYouthRoster();
   renderYouthCandidates();
+}
+
+// --- Refonte 2026-09-26 : petits composants partagés par les cartes ---
+// Classe CSS du badge de potentiel (3 bandes, voir youthProspectLabel).
+function acPotentialBadgeHtml(potential, title) {
+  const label = youthProspectLabel(potential);
+  const cls = label === "Prodige" ? "pot-prodige" : label === "Grand espoir" ? "pot-grand" : "pot-espoir";
+  return `<span class="ac-pot potential-tier ${cls}" title="${escapeHtml(title)}">${escapeHtml(label)}</span>`;
+}
+function acAvg(p, keys) {
+  return Math.round(keys.reduce((sum, a) => sum + (p.attrs[a] || 0), 0) / keys.length);
+}
+// Moyennes Fondamentaux / Physique / Mental (mêmes familles que l'Effectif).
+function acGroupsHtml(p) {
+  const groups = [["Technique", FUNDAMENTAL_ATTRS], ["Physique", PHYSICAL_ATTRS], ["Mental", MENTAL_ATTRS]];
+  return `<div class="ac-groups">` + groups.map(([label, keys]) =>
+    `<div class="ac-group"><div class="k" title="Moyenne ${label === "Technique" ? "des fondamentaux" : label.toLowerCase()}">${label}</div>${attrCellHtml(acAvg(p, keys))}</div>`).join("") + `</div>`;
+}
+// 3 points forts / 2 points faibles, toutes caractéristiques confondues.
+function acTraitsHtml(p) {
+  const sorted = [...ATTRS].sort((a, b) => p.attrs[b] - p.attrs[a]);
+  const li = a => `<li><span>${escapeHtml(TRAINING_LABELS[a] || ATTR_SHORT[a])}</span><b>${p.attrs[a]}</b></li>`;
+  return `<div class="ac-traits">` +
+    `<div><div class="k up">Points forts</div><ul>${sorted.slice(0, 3).map(li).join("")}</ul></div>` +
+    `<div><div class="k down">À travailler</div><ul>${sorted.slice(-2).reverse().map(li).join("")}</ul></div>` +
+    `</div>`;
+}
+// Toutes les caractéristiques, repliées par défaut (remplace les 28
+// colonnes de l'ancien tableau à défilement horizontal).
+function acAllAttrsHtml(p) {
+  return `<details><summary>Toutes les caractéristiques</summary><div class="ac-all-attrs">` +
+    ATTRS.map(a => `<div class="ac-attr-row"><span>${escapeHtml(TRAINING_LABELS[a] || ATTR_SHORT[a])}</span><b class="${attrColorTier(p.attrs[a])}">${p.attrs[a]}</b></div>`).join("") +
+    `</div></details>`;
+}
+function acIdentityHtml(p) {
+  return `${playerAvatarHtml(p, teamA, 44)}<div class="ac-id"><div class="ac-name">${escapeHtml(p.name)}</div>` +
+    `<div class="ac-sub"><span class="ac-pos">${POS_SHORT[p.position]}</span>${p.age} ans · ${p.height} cm</div></div>`;
+}
+
+// Bandeau de synthèse en haut de page : places, masse salariale des
+// stagiaires, recruteur, jeunes promus.
+function renderAcademyOverview() {
+  const holder = document.getElementById("academyOverview");
+  if (!holder) return;
+  const roster = teamA.youthPlayers || [];
+  const n = roster.length;
+  const slots = Array.from({ length: MAX_YOUTH_ROSTER_SIZE }, (_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("");
+  const rec = teamA.recruiter;
+  const chance = rec ? Math.round((YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL[rec.level] || 0) * 100) : 0;
+  const history = teamA.academyGraduatesHistory || [];
+  const last = history[history.length - 1];
+  holder.innerHTML =
+    `<div class="ac-kpi" data-kpi="places"><div class="k">Places</div><div class="v">${n}<small> / ${MAX_YOUTH_ROSTER_SIZE}</small></div><div class="ac-slots">${slots}</div></div>` +
+    `<div class="ac-kpi" data-kpi="salaires"><div class="k">Stagiaires</div><div class="v">${formatMoney(n * YOUTH_TRAINEE_WEEKLY_SALARY)}<small> /sem.</small></div><div class="s">${formatMoney(YOUTH_TRAINEE_WEEKLY_SALARY)} par jeune</div></div>` +
+    (rec
+      ? `<div class="ac-kpi" data-kpi="recruteur"><div class="k">Recruteur</div><div class="v">Niveau ${rec.level}</div><div class="s">≈ ${chance} % de chance / jour</div></div>`
+      : `<div class="ac-kpi warn" data-kpi="recruteur"><div class="k">Recruteur</div><div class="v">Aucun</div><div class="s">À engager (onglet Staff)</div></div>`) +
+    `<div class="ac-kpi" data-kpi="promus"><div class="k">Promus en pro</div><div class="v">${history.length}</div><div class="s">${last ? `Dernier : ${escapeHtml(last.name)}` : "Aucun pour l'instant"}</div></div>`;
 }
 
 // Historique du centre de formation (voir
@@ -31990,21 +32144,17 @@ function renderAcademyGraduatesStat() {
   if (!holder) return;
   const history = teamA.academyGraduatesHistory || [];
   if (history.length === 0) {
-    holder.innerHTML = `<div class="mvp-callout"><h4>Historique du centre de formation</h4>` +
-      `<p>Aucun jeune formé par l'académie n'a encore rejoint l'effectif pro.</p></div>`;
+    holder.innerHTML = `<div class="ac-history"><div class="ac-history-empty">Aucun jeune formé par l'académie n'a encore rejoint l'effectif pro.</div></div>`;
     return;
   }
-  // Retour utilisateur (2026-09) : "ajoute la date à laquelle le joueur est
-  // passé pro" (h.promotedAt, voir Team.promoteYouthPlayer) : absente pour
-  // une entrée restaurée d'avant ce champ (sauvegarde plus ancienne que
-  // cette fonctionnalité), affichée sans date plutôt qu'avec une date
-  // inventée (voir teamFromSave, aucune valeur de repli sur promotedAt).
-  const items = history.map(h =>
-    `<li>${escapeHtml(h.name)}${h.position ? ` <span class="academy-graduate-position">(${escapeHtml(h.position)})</span>` : ""}` +
-    `${typeof h.promotedAt === "number" ? `<span class="academy-graduate-date"> · ${formatDateFr(h.promotedAt)}</span>` : ""}</li>`
+  // Plus récent en premier. h.promotedAt absent pour une entrée restaurée
+  // d'avant ce champ : affichée sans date plutôt qu'avec une date inventée.
+  const rows = [...history].reverse().map(h =>
+    `<div class="ac-history-row">${h.position ? `<span class="ac-pos">${escapeHtml(POS_SHORT[h.position] || h.position)}</span>` : ""}` +
+    `<span class="n">${escapeHtml(h.name)}</span>` +
+    `${typeof h.promotedAt === "number" ? `<span class="d">${formatDateFr(h.promotedAt)}</span>` : ""}</div>`
   ).join("");
-  holder.innerHTML = `<div class="mvp-callout"><h4>Historique du centre de formation</h4>` +
-    `<ul class="academy-graduates-list">${items}</ul></div>`;
+  holder.innerHTML = `<div class="ac-history">${rows}</div>`;
 }
 
 function academieFeedback(message, ok) {
@@ -32023,24 +32173,17 @@ function academieFeedback(message, ok) {
 function renderAcademiePendingBanner() {
   const holder = document.getElementById("academiePendingBanner");
   const pendingIds = teamA.pendingYouthDecisions || [];
-  const feedbackHtml = `<div id="academieFeedback"></div>`;
-  if (!pendingIds.length) {
-    holder.innerHTML = feedbackHtml;
-    return;
-  }
-  let html = feedbackHtml;
+  let html = `<div id="academieFeedback"></div>`;
   pendingIds.forEach(id => {
     const player = (teamA.youthPlayers || []).find(p => p.id === id);
     if (!player) return;
-    // Potentiel encore caché ICI (label grossier à 3 bandes, voir
-    // youthProspectLabel) : le jeune n'est PAS ENCORE promu tant que le
-    // manager n'a pas cliqué "Promouvoir" ci-dessous — c'est CE clic qui
-    // l'expose enfin au palier fin normal (potentialTierLabel), comme
-    // n'importe quel autre pro (voir renderEffectifSection).
-    html += `<div class="deficit-banner warn"><b>${escapeHtml(player.name)}</b> (${POS_SHORT[player.position]}, potentiel : ${escapeHtml(youthProspectLabel(player.potential))}) vient de fêter ses 18 ans : ` +
-      `décision requise : promotion en effectif pro ou libération définitive. Sans décision avant la saison prochaine, il sera automatiquement libéré. ` +
-      `<button class="secondary" data-promote-youth="${player.id}">Promouvoir en effectif pro</button> ` +
-      `<button class="secondary" data-release-youth="${player.id}">Libérer</button></div>`;
+    // Potentiel encore caché ICI (3 bandes) : c'est le clic "Promouvoir" qui
+    // l'expose enfin au palier fin normal, comme n'importe quel pro.
+    html += `<div class="ac-decision">` +
+      `<div class="ac-card-top" style="flex:1 1 240px">${acIdentityHtml(player)}${acPotentialBadgeHtml(player.potential, "Potentiel encore caché, la promotion le révèlera")}</div>` +
+      `<div class="ac-note hot">Vient de fêter ses 18 ans : décision requise. Sans décision avant la saison prochaine, il sera automatiquement libéré.</div>` +
+      `<div class="ac-actions"><button class="primary" data-promote-youth="${player.id}">Promouvoir en pro</button>` +
+      `<button class="secondary" data-release-youth="${player.id}">Libérer</button></div></div>`;
   });
   holder.innerHTML = html;
 }
@@ -32159,29 +32302,36 @@ function renderTrainingCenterPanel() {
 // (bannière ci-dessus) agit sur cette liste.
 function renderYouthRoster() {
   const holder = document.getElementById("youthRosterHolder");
+  const meta = document.getElementById("youthRosterMeta");
   const roster = teamA.youthPlayers || [];
+  const mult = trainingCenterInfo(teamA.trainingCenterLevel).growthMultiplier;
+  if (meta) meta.textContent = roster.length ? `${roster.length}/${MAX_YOUTH_ROSTER_SIZE} · progression automatique x${mult}` : "";
   if (!roster.length) {
-    holder.innerHTML = "<p class='training-empty'>Aucun jeune signé pour l'instant, recrutez un recruteur (onglet Staff) puis signez des prospects ci-dessous.</p>";
+    holder.innerHTML = `<div class="ac-empty"><b>Aucun jeune à l'académie.</b><br>Signez un prospect ci-dessus : il progressera automatiquement chaque jour jusqu'à ses 18 ans, sans match ni entraînement à régler.</div>`;
     return;
   }
-  const sorted = [...roster].sort((a, b) => a.age - b.age || b.potential - a.potential);
-  let html = "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-    "<th>Nom</th><th>Poste</th><th>Âge</th><th>Taille</th><th>Potentiel</th><th>Salaire/sem.</th>" +
-    ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") + "</tr></thead><tbody>";
+  const pending = new Set(teamA.pendingYouthDecisions || []);
+  // Les plus proches de la décision de 18 ans d'abord (jamais trié par
+  // potentiel : l'ordre trahirait le potentiel caché).
+  const sorted = [...roster].sort((a, b) => b.age - a.age || acAvg(b, ATTRS) - acAvg(a, ATTRS));
+  let html = `<div class="ac-grid">`;
   sorted.forEach(p => {
-    // Potentiel : label GROSSIER à 3 bandes (voir youthProspectLabel côté
-    // moteur), jamais le chiffre exact ni même le potentialTierLabel normal
-    // à 10 paliers — signer ne lève AUCUN voile sur le potentiel, seule la
-    // PROMOTION en pro (voir la bannière de décision de 18 ans plus haut)
-    // l'expose enfin, comme pour n'importe quel joueur pro (renderEffectifSection).
-    html += `<tr><td>${escapeHtml(p.name)}</td><td>${POS_SHORT[p.position]}</td>` +
-      `<td>${p.age}</td><td>${p.height} cm</td>` +
-      `<td><span class="potential-tier" title="Potentiel encore caché, seule la promotion en effectif pro le révèlera">${escapeHtml(youthProspectLabel(p.potential))}</span></td>` +
-      `<td>${formatMoney(p.salary)}</td>` +
-      ATTRS.map(a => `<td>${attrCellHtml(p.attrs[a])}</td>`).join("") + `</tr>`;
+    const avg = acAvg(p, ATTRS);
+    const capped = ATTRS.filter(a => p.attrs[a] >= 50).length;
+    let note;
+    if (pending.has(p.id)) note = `<div class="ac-note hot">18 ans : décision à prendre (voir en haut de page).</div>`;
+    else if (p.age >= 17) note = `<div class="ac-note hot">Dernière saison à l'académie : décision à ses 18 ans.</div>`;
+    else note = `<div class="ac-note">Encore ${18 - p.age} saisons avant la décision de 18 ans.</div>`;
+    html += `<div class="ac-card" data-youth-id="${p.id}">` +
+      `<div class="ac-card-top">${acIdentityHtml(p)}<div class="ac-badges">${acPotentialBadgeHtml(p.potential, "Potentiel encore caché, seule la promotion en effectif pro le révèlera")}</div></div>` +
+      `<div class="ac-progress"><div class="row"><span>Moyenne générale</span><span><b>${avg}</b> / plafond académie 50</span></div>` +
+      `<div class="track"><div class="fill" style="width:${Math.min(100, avg * 2)}%"></div></div></div>` +
+      acGroupsHtml(p) + acTraitsHtml(p) +
+      (capped ? `<div class="ac-note">${capped} caractéristique${capped > 1 ? "s" : ""} déjà au plafond de 50 (débloqué à la promotion).</div>` : "") +
+      note + acAllAttrsHtml(p) + `</div>`;
   });
-  html += "</tbody></table></div>";
-  html += `<p class="lineup-reserves">${roster.length}/${MAX_YOUTH_ROSTER_SIZE} places occupées. Progression automatique chaque jour (accélérée par le Centre de formation ci-dessus, plafonnée à 50 par caractéristique tant qu'un jeune reste à l'académie), pas de match, pas de choix d'entraînement pour ces jeunes tant qu'ils ont moins de 18 ans.</p>`;
+  html += `</div>`;
+  html += `<p class="ac-footnote">Progression automatique chaque jour, accélérée par le Centre de formation et plafonnée à 50 par caractéristique tant que le jeune reste à l'académie. Salaire fixe de ${formatMoney(YOUTH_TRAINEE_WEEKLY_SALARY)}/sem. par stagiaire.</p>`;
   holder.innerHTML = html;
 }
 
@@ -32204,29 +32354,41 @@ function renderYouthRoster() {
 // marchés (timeLeftLabel).
 function renderYouthCandidates() {
   const holder = document.getElementById("youthCandidatesHolder");
+  const meta = document.getElementById("youthCandidatesMeta");
   const now = Date.now();
-  const candidates = (teamA.youthCandidates || []).filter(c => now < c.expiresAt);
+  const candidates = (teamA.youthCandidates || []).filter(c => now < c.expiresAt).sort((a, b) => a.expiresAt - b.expiresAt);
+  if (meta) meta.textContent = candidates.length ? `${candidates.length}/${YOUTH_CANDIDATE_QUEUE_MAX} en attente · expirent au bout de 3 jours` : "";
   if (!candidates.length) {
-    holder.innerHTML = "<p class='training-empty'>Aucun prospect en attente pour l'instant, un recruteur sous contrat en propose régulièrement (voir onglet Staff).</p>";
+    const rec = teamA.recruiter;
+    holder.innerHTML = rec
+      ? `<div class="ac-empty"><b>Aucun prospect en attente.</b><br>Votre recruteur (niveau ${rec.level}) a environ ${Math.round((YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL[rec.level] || 0) * 100)} % de chances par jour d'en proposer un nouveau. Un meilleur recruteur en trouve plus souvent, et de meilleurs.</div>`
+      : `<div class="ac-empty"><b>Pas de recruteur sous contrat.</b><br>C'est lui qui fait remonter des prospects de 15 à 17 ans : sans recruteur, aucun jeune ne vous sera proposé.<br><button class="primary" data-ac-goto="staff">Engager un recruteur</button></div>`;
     return;
   }
   const full = (teamA.youthPlayers || []).length >= MAX_YOUTH_ROSTER_SIZE;
-  let html = "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-    "<th>Nom</th><th>Poste</th><th>Âge</th><th>Taille</th><th>Potentiel</th><th>Expire dans</th>" +
-    ATTRS.map(a => `<th>${ATTR_SHORT[a]}</th>`).join("") + "<th></th></tr></thead><tbody>";
+  let html = `<div class="ac-grid">`;
   candidates.forEach(c => {
-    html += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(c, teamA, 24)}${escapeHtml(c.name)}</span></td><td>${POS_SHORT[c.position]}</td>` +
-      `<td>${c.age}</td><td>${c.height} cm</td>` +
-      `<td><span class="potential-tier" title="Potentiel encore caché, seule la promotion en effectif pro, après signature, le révèlera">${escapeHtml(youthProspectLabel(c.potential))}</span></td>` +
-      `<td>${escapeHtml(timeLeftLabel(c.expiresAt, now))}</td>` +
-      ATTRS.map(a => `<td>${attrCellHtml(c.attrs[a])}</td>`).join("") +
-      `<td><button class="secondary" data-sign-youth="${c.id}" ${full ? "disabled" : ""}>Recruter</button> ` +
-      `<button class="secondary" data-decline-youth="${c.id}">Ignorer</button></td></tr>`;
+    const soon = c.expiresAt - now < 12 * 60 * 60 * 1000;
+    const prodige = youthProspectLabel(c.potential) === "Prodige";
+    html += `<div class="ac-card${prodige ? " is-prodige" : ""}" data-candidate-id="${c.id}">` +
+      `<div class="ac-card-top">${acIdentityHtml(c)}<div class="ac-badges">` +
+      acPotentialBadgeHtml(c.potential, "Potentiel encore caché, seule la promotion en effectif pro, après signature, le révèlera") +
+      `<span class="ac-timer${soon ? " soon" : ""}" title="Expire si aucune décision d'ici là">⏱ ${escapeHtml(timeLeftLabel(c.expiresAt, now))}</span></div></div>` +
+      acGroupsHtml(c) + acTraitsHtml(c) + acAllAttrsHtml(c) +
+      `<div class="ac-actions"><button class="primary" data-sign-youth="${c.id}" ${full ? `disabled title="Effectif jeunes complet"` : ""}>Recruter</button>` +
+      `<button class="secondary" data-decline-youth="${c.id}">Ignorer</button></div></div>`;
   });
-  html += "</tbody></table></div>";
-  if (full) html += `<p class="lineup-reserves">Effectif jeunes déjà complet (${MAX_YOUTH_ROSTER_SIZE}/${MAX_YOUTH_ROSTER_SIZE}), libérez ou promouvez un jeune pour signer un nouveau prospect.</p>`;
+  html += `</div>`;
+  if (full) html += `<p class="ac-footnote">Effectif jeunes déjà complet (${MAX_YOUTH_ROSTER_SIZE}/${MAX_YOUTH_ROSTER_SIZE}), libérez ou promouvez un jeune pour signer un nouveau prospect.</p>`;
   holder.innerHTML = html;
 }
+
+document.getElementById("academieSection").addEventListener("click", (e) => {
+  const go = e.target.closest("[data-ac-goto]");
+  if (!go) return;
+  const btn = document.querySelector(`.tab-btn[data-tab="${go.dataset.acGoto}"]`);
+  if (btn) btn.click();
+});
 
 document.getElementById("youthCandidatesHolder").addEventListener("click", (e) => {
   const signBtn = e.target.closest("[data-sign-youth]");
@@ -33666,27 +33828,27 @@ const TOUR_STEPS = [
     reward: TOUR_REWARD_BY_TOPIC["Staff"],
   },
 
-  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#academyGraduatesHolder",
-    title: "Historique du centre de formation",
-    text: "La liste des jeunes formés dans votre académie qui sont ensuite passés pro : un aperçu de ce que votre filière de formation a déjà produit pour le club.",
-  },
   { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#academiePendingBanner",
     title: "La décision à 18 ans",
     text: "À ses 18 ans, un jeune de l'académie doit être soit promu dans l'effectif pro, soit libéré définitivement. Sans décision avant la saison suivante, il est automatiquement libéré.",
     tip: "Le vrai potentiel d'un jeune reste caché derrière une estimation à 3 paliers jusqu'à sa promotion : la décision comporte donc une part de pari.",
   },
-  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#trainingCenterCurrentPanel",
-    title: "Le centre de formation",
-    text: "Le même Centre de formation que dans l'onglet Salle, mais géré directement ici : agrandissable palier par palier, il accélère la progression automatique de tous vos jeunes tant qu'ils ont moins de 18 ans.",
+  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#youthCandidatesHolder",
+    title: "Prospects du recruteur",
+    text: "Un recruteur (onglet Staff) fait remonter des prospects de 15 à 17 ans : jusqu'à 5 propositions en attente à la fois, chacune expire si elle reste trop longtemps sans réponse.",
+    tip: "Chaque prospect signé rejoint directement l'académie : pas d'enchère ni de négociation, contrairement au marché des transferts.",
   },
   { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#youthRosterHolder",
     title: "Effectif jeunes",
     text: "15 places maximum. Un jeune signé progresse automatiquement chaque jour, sans match ni choix d'entraînement de votre part, tant qu'il n'a pas 18 ans.",
   },
-  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#youthCandidatesHolder",
-    title: "Prospects du recruteur",
-    text: "Un recruteur (onglet Staff) fait remonter des prospects de 15 à 17 ans : jusqu'à 5 propositions en attente à la fois, chacune expire si elle reste trop longtemps sans réponse.",
-    tip: "Chaque prospect signé rejoint directement l'académie : pas d'enchère ni de négociation, contrairement au marché des transferts.",
+  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#trainingCenterCurrentPanel",
+    title: "Le centre de formation",
+    text: "Le même Centre de formation que dans l'onglet Salle, mais géré directement ici : agrandissable palier par palier, il accélère la progression automatique de tous vos jeunes tant qu'ils ont moins de 18 ans.",
+  },
+  { kind: "spotlight", topic: "Académie de jeunes", page: "academie", target: "#academyGraduatesHolder",
+    title: "Historique du centre de formation",
+    text: "La liste des jeunes formés dans votre académie qui sont ensuite passés pro : un aperçu de ce que votre filière de formation a déjà produit pour le club.",
     reward: TOUR_REWARD_BY_TOPIC["Académie de jeunes"],
   },
 
