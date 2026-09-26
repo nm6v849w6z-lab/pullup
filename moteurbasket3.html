@@ -32477,14 +32477,13 @@ function renderAcademyOverview() {
   const n = roster.length;
   const slots = Array.from({ length: MAX_YOUTH_ROSTER_SIZE }, (_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("");
   const rec = teamA.recruiter;
-  const chance = rec ? Math.round((YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL[rec.level] || 0) * 100) : 0;
   const history = teamA.academyGraduatesHistory || [];
   const last = history[history.length - 1];
   holder.innerHTML =
     `<div class="ac-kpi" data-kpi="places"><div class="k">Places</div><div class="v">${n}<small> / ${MAX_YOUTH_ROSTER_SIZE}</small></div><div class="ac-slots">${slots}</div></div>` +
-    `<div class="ac-kpi" data-kpi="salaires"><div class="k">Stagiaires</div><div class="v">${formatMoney(n * YOUTH_TRAINEE_WEEKLY_SALARY)}<small> /sem.</small></div><div class="s">${formatMoney(YOUTH_TRAINEE_WEEKLY_SALARY)} par jeune</div></div>` +
+    `<div class="ac-kpi" data-kpi="salaires"><div class="k">Stagiaires</div><div class="v">${formatMoney(n * YOUTH_TRAINEE_WEEKLY_SALARY)}<small> /sem.</small></div></div>` +
     (rec
-      ? `<div class="ac-kpi" data-kpi="recruteur"><div class="k">Recruteur</div><div class="v">Niveau ${rec.level}</div><div class="s">≈ ${chance} % de chance / jour</div></div>`
+      ? `<div class="ac-kpi" data-kpi="recruteur"><div class="k">Recruteur</div><div class="v">Niveau ${rec.level}</div></div>`
       : `<div class="ac-kpi warn" data-kpi="recruteur"><div class="k">Recruteur</div><div class="v">Aucun</div><div class="s">À engager (onglet Staff)</div></div>`) +
     `<div class="ac-kpi" data-kpi="promus"><div class="k">Promus en pro</div><div class="v">${history.length}</div><div class="s">${last ? `Dernier : ${escapeHtml(last.name)}` : "Aucun pour l'instant"}</div></div>`;
 }
