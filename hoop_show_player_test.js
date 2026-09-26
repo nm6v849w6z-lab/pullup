@@ -93,6 +93,19 @@ function mountAt(show, i) {
   console.log("✅ Pronostics : questions numérotées, compteur de réponses.");
 }
 {
+  // Classement : plus de badge « Mon club » (retour utilisateur, 2026-09-26 :
+  // « enleve mon club dans l'avant match et show de la mi temps dans le
+  // classement ») — la ligne reste mise en évidence (hs-row-mine).
+  [halftime, prematch].forEach(show => {
+    const i = show.segments.findIndex(s => s.type === "table");
+    const { html } = mountAt(show, i);
+    const row = /<tr class="hs-row-mine">[\s\S]*?<\/tr>/.exec(html);
+    if (!row) fail("ligne de mon club attendue (mise en évidence) dans le classement.");
+    if (/Mon club/.test(row[0])) fail("plus de badge « Mon club » dans le classement des émissions.");
+  });
+  console.log("✅ Classement des émissions : ligne de mon club mise en évidence, sans badge « Mon club ».");
+}
+{
   const i = prematch.segments.findIndex(s => s.type === "lineups");
   const seg = prematch.segments[i];
   const mineSide = seg.home.isMine ? seg.home : seg.away;

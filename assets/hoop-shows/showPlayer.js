@@ -253,7 +253,7 @@
       return '<span class="hs-dim2">=</span>';
     };
     return head(seg) + '<div class="hs-card hs-table"><table><thead><tr><th>#</th><th>Équipe</th><th>V</th><th>D</th><th>%</th><th class="hs-right">' + (extra ? esc(seg.extraLabel) : 'Évolution') + '</th></tr></thead><tbody>' +
-      seg.rows.map((r) => '<tr class="' + (r.mine ? 'hs-row-mine' : r.opponentToday ? 'hs-row-opp' : '') + '"><td class="hs-dim2">' + r.pos + '</td><td><span class="hs-teamcell">' + D.crest(r.teamId, 26, r.name) + '<span>' + esc(r.name) + '</span>' + (r.mine ? '<span class="hs-mine-badge">Mon club</span>' : '') + '</span></td><td>' + r.w + '</td><td>' + r.l + '</td><td class="hs-dim2">' + r.pct + ' %</td><td class="hs-right">' + trend(r) + '</td></tr>').join('') +
+      seg.rows.map((r) => '<tr class="' + (r.mine ? 'hs-row-mine' : r.opponentToday ? 'hs-row-opp' : '') + '"><td class="hs-dim2">' + r.pos + '</td><td><span class="hs-teamcell">' + D.crest(r.teamId, 26, r.name) + '<span>' + esc(r.name) + '</span></span></td><td>' + r.w + '</td><td>' + r.l + '</td><td class="hs-dim2">' + r.pct + ' %</td><td class="hs-right">' + trend(r) + '</td></tr>').join('') +
       '</tbody></table></div>' + (seg.note ? '<div class="hs-note">' + esc(seg.note) + '</div>' : '');
   };
 
