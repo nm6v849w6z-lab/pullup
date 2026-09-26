@@ -104,6 +104,40 @@ async function waitFor(fn, label, tries = 60) {
   check(docA2.querySelectorAll(".lp-cal-row").length === 12, "filtre « Tous » : 12 matchs");
   check(!!docA2.querySelector(".cal-next .cal-card-kicker") && /J1/.test(docA2.querySelector(".cal-next .cal-card-kicker").textContent), "carte « Prochain match · J1 »");
 
+  // --- Calendrier principal, tableau de bord, barre du haut (retour
+  // utilisateur 2026-09-26 : "il faut que ça apparaisse dans le calendrier et
+  // que si c'est le prochain match, ça apparaisse sur le tableau de bord et
+  // dans la barre en haut").
+  {
+    const w = domA2.window, d = docA2;
+    w.eval("TAB_HANDLERS.calendrier()");
+    const lpRows = [...d.querySelectorAll("#calendrierContent tr.cal-row")].filter(tr => tr.querySelector(".cal-lp-badge"));
+    check(lpRows.length === 6, `Calendrier : 6 lignes de ligue privée (${lpRows.length})`);
+    check(/LP J1/.test(lpRows[0].textContent) && /20:00/.test(lpRows[0].textContent) && !!lpRows[0].querySelector("[data-tab='lp']"), "ligne LP J1 à 20:00 avec bouton vers la ligue privée");
+    // Match officiel du jour avant 20h00 : le prochain match reste l'officiel.
+    w.eval("updateTopbar()");
+    const officialFirst = !!w.eval("scheduledTimeForCurrentMatch() <= lpMyNextMatch().dueAt");
+    if (officialFirst) {
+      check(!/Ligue privée/.test(d.getElementById("topbarWeek").textContent), "barre du haut : match officiel quand il passe avant");
+    }
+    // Plus aucun match officiel avant le vendredi 20h00 : le match de ligue
+    // privée devient le prochain match partout.
+    w.eval("scheduledTimeForCurrentMatch = () => Date.now() + 30 * 86400000");
+    w.eval("updateTopbar()");
+    check(/Ligue privée · J1/.test(d.getElementById("topbarWeek").textContent) && d.getElementById("topbarOrdersBtn").textContent === "Voir la ligue privée", "barre du haut : adversaire de ligue privée + bouton « Voir la ligue privée »");
+    w.eval("TAB_HANDLERS.club()");
+    const hero = d.querySelector(".hm-hero");
+    check(!!hero && /Ligue privée/.test(hero.textContent) && /Coupe des Potes · J1/.test(hero.textContent) && !!hero.querySelector("[data-dash-href='/ligues-privees']"), "tableau de bord : bandeau Prochain match = ligue privée");
+    check(![...d.querySelectorAll(".hm-task__title")].some(t => new RegExp(w.eval("league.teams[lpMyNextMatch().oppIdx].name")).test(t.textContent) && /Ordres de match/.test(t.textContent)) || w.eval("league.teams[lpMyNextMatch().oppIdx].name === teamB.name"), "la tâche « Ordres de match » vise toujours le match officiel");
+    w.eval("TAB_HANDLERS.calendrier()");
+    // Carte "Prochain match" du Calendrier : elle suit l'ordre chronologique
+    // réel des lignes ; rendue ici directement pour une ligne de ligue privée.
+    const card = w.eval(`(() => { const n = lpMyNextMatch(); return calendarNextMatchCardHtml({ competition: "lp", label: "x", shortLabel: "J1", isHome: n.isHome, opponentIdx: n.oppIdx, location: "Domicile", scheduledAt: n.dueAt, isLive: false }); })()`);
+    check(/Prochain match · Ligue privée · J1/.test(card) && /data-tab="lp"/.test(card) && !/data-tab="ordres"/.test(card), "Calendrier : carte « Prochain match · Ligue privée · J1 » avec bouton vers la ligue privée");
+    d.getElementById("topbarOrdersBtn").click();
+    check(!d.getElementById("lpSection").classList.contains("hidden"), "le bouton de la barre du haut ouvre la page Ligues privées");
+  }
+
   // --- Vendredi 20h01 : la journée se joue au prochain accès.
   const friday = Calendar.parisEpochForLocalTime(2026, 10, 2, 20, 1);
   now = friday;
@@ -122,6 +156,15 @@ async function waitFor(fn, label, tries = 60) {
   // (L'isolement des équipes réelles est vérifié dans server/private_league_test.js :
   // ici le rechargement rattrape AUSSI les journées officielles de mercredi/jeudi.)
   check(after.teams[humans[0]].feed.entries.some(e => /Coupe des Potes/.test(e.title)), "entrée de fil d'actu pour le membre");
+
+  // Score de ligue privée cliquable aussi depuis le Calendrier principal.
+  overlay.classList.add("hidden");
+  domA3.window.eval("TAB_HANDLERS.calendrier()");
+  const calLpScore = docA3.querySelector("#calendrierContent .lp-cal-score");
+  check(!!calLpScore && /\d+ - \d+/.test(calLpScore.textContent), `Calendrier : score de ligue privée cliquable (${calLpScore && calLpScore.textContent})`);
+  calLpScore.click();
+  const overlay2 = docA3.getElementById("matchBoxscoreOverlay");
+  check(!!overlay2 && /Ligue privée/.test(overlay2.textContent), "Calendrier : le score ouvre la feuille de match de ligue privée");
 
   [domA, domB, domA2, domA3].forEach(d => d.window.close());
   server.close();

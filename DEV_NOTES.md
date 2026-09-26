@@ -59,6 +59,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   server/*_test.js verts. Vérifié dans Chromium (Économie, Salle, direct).
   Non fait : carton dans les émissions (pub retirée), tâche du tableau de
   bord à l'arrivée d'une offre (fil d'actu seulement), Guide.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées
+  dans le Calendrier, le tableau de bord et la barre du haut** — retour
+  utilisateur : "il faut que ça apparaisse dans le calendrier et que si
+  c'est le prochain match, ça apparaisse sur le tableau de bord et dans la
+  barre en haut". moteurbasket3.html : renderCalendrierSection ajoute mes
+  matchs de ligue privée (ligue en cours + ligues terminées de la saison),
+  badge "LP Jn", bouton "Ligue privée", score cliquable → feuille de match
+  LP ; exclus du bilan "Saison". lpNextMatchIfFirst() : le match LP est
+  "le prochain match" s'il passe avant le prochain match officiel (et
+  qu'aucun officiel n'est en direct) → barre du haut ("vs X · Ligue privée
+  · Jn", bouton "Voir la ligue privée") et bandeau du tableau de bord.
+  currentMatch/Ordres/verrou/émission restent sur le match OFFICIEL, et la
+  tâche "Ordres de match" aussi (data.officialNextMatch). NB : avec le
+  championnat quotidien à 19h, le match LP n'est "prochain" que le vendredi
+  entre la fin du direct officiel et l'heure LP (ou hors saison).
+  private_league_ui_test.js étendu, vert ; suite complète verte hors
+  player_detail_test.js (déjà en échec avant). Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées :
   page d'accueil épurée + heure des matchs au choix** — retour utilisateur :
   enlever le titre jaune "LIGUES PRIVÉES" et le texte d'intro ("Une

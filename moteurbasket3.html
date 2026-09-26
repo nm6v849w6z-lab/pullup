@@ -20241,7 +20241,13 @@ function updateTopbar() {
   if (nameEl && teamA) nameEl.innerHTML = teamLinkHtml(myTeamIndex, teamA.name);
   const oppEl = document.getElementById("topbarNextOpponent");
   const weekEl = document.getElementById("topbarWeek");
-  if (oppEl && weekEl) {
+  // Prochain match = match de ligue privée (voir lpNextMatchIfFirst) :
+  // adversaire + "Ligue privée · Jn", bouton vers la page Ligues privées.
+  const lpNext = lpNextMatchIfFirst();
+  if (oppEl && weekEl && lpNext) {
+    oppEl.innerHTML = `${lpNext.isHome ? "vs " : "@ "}${teamLinkHtml(lpNext.oppIdx, league.teams[lpNext.oppIdx].name)}`;
+    weekEl.textContent = `Ligue privée · J${lpNext.round.index + 1}`;
+  } else if (oppEl && weekEl) {
     if (currentMatch && teamB) {
       // Nom du prochain adversaire cliquable (retour utilisateur, 2026-09 :
       // "il faut que le nom de cette équipe soit cliquable aussi", même
@@ -20299,10 +20305,12 @@ function updateTopbar() {
       ? teamA.hasPlanForRound(currentMatch.round, "cup")
       : teamA.ordresValidatedRound === currentMatch.round);
     const locked = currentMatchLineupLocked();
-    ordersBtn.textContent = prematchShowAvailable() ? "Émission d'avant-match"
+    const prematch = prematchShowAvailable();
+    ordersBtn.textContent = prematch ? "Émission d'avant-match"
+      : lpNext ? "Voir la ligue privée"
       : locked ? "Ordres verrouillés"
       : validated ? "Modifier vos ordres" : "Donnez vos ordres";
-    ordersBtn.classList.toggle("topbar-cta-validated", !!validated && !locked);
+    ordersBtn.classList.toggle("topbar-cta-validated", !!validated && !locked && !(lpNext && !prematch));
   }
 }
 
@@ -31733,25 +31741,28 @@ function dashBuildTasks(data) {
       cta: { label: "Recruter", href: "/staff", style: "primary" },
     });
   }
-  if (data.nextMatch && !data.nextMatch.isLive && data.nextMatch.lineupLocked) {
+  // Tâche d'ordres : toujours le prochain match OFFICIEL (un match de ligue
+  // privée n'a pas d'ordres propres, voir lpNextMatchIfFirst).
+  const nm = data.officialNextMatch !== undefined ? data.officialNextMatch : data.nextMatch;
+  if (nm && !nm.isLive && nm.lineupLocked) {
     tasks.push({
       id: "orders",
       icon: "orders",
-      title: data.nextMatch.prematchShow ? `Émission d'avant-match vs ${data.nextMatch.opponent.name}` : `Ordres verrouillés vs ${data.nextMatch.opponent.name}`,
-      text: data.nextMatch.prematchShow ? "Ordres verrouillés. Pronostics ouverts jusqu'au coup d'envoi." : "Le coup d'envoi est imminent.",
+      title: nm.prematchShow ? `Émission d'avant-match vs ${nm.opponent.name}` : `Ordres verrouillés vs ${nm.opponent.name}`,
+      text: nm.prematchShow ? "Ordres verrouillés. Pronostics ouverts jusqu'au coup d'envoi." : "Le coup d'envoi est imminent.",
       badge: "En cours",
       tone: "warn",
-      cta: data.nextMatch.prematchShow
+      cta: nm.prematchShow
         ? { label: "Regarder", href: "/emission-avant-match", style: "primary" }
         : { label: "Voir", href: "/ordres", style: "ghost" },
     });
-  } else if (data.nextMatch && !data.ordersGiven && !data.nextMatch.isLive) {
+  } else if (nm && !data.ordersGiven && !nm.isLive) {
     tasks.push({
       id: "orders",
       icon: "orders",
-      title: `Ordres de match vs ${data.nextMatch.opponent.name}`,
+      title: `Ordres de match vs ${nm.opponent.name}`,
       text: "Tactique, cinq de départ et rotations.",
-      badge: data.nextMatch.deadlineLabel ?? "Avant le match",
+      badge: nm.deadlineLabel ?? "Avant le match",
       tone: "info",
       cta: { label: "Ouvrir", href: "/ordres", style: "ghost" },
     });
@@ -31923,7 +31934,7 @@ function dashRenderNextMatch(data) {
     <svg class="hm-hero__court" width="600" height="300" viewBox="0 0 600 300" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="300" cy="150" r="90"/><circle cx="300" cy="150" r="30"/><line x1="300" y1="0" x2="300" y2="300"/></svg>
     <div class="hm-hero__top">
       <span class="hm-hero__comp">${m.isLive ? '<span class="hm-hero__live-dot" aria-hidden="true"></span>En direct' : "Prochain match"} · ${dashEsc(m.competition)} · ${dashEsc(m.roundLabel || `Journée ${m.round}/${m.totalRounds}`)}</span>
-      <span>${m.home ? "À domicile" : "À l'extérieur"}${m.home && data.arena ? ` · ${dashEsc(data.arena.capacity.toLocaleString("fr-FR"))} places` : ""}</span>
+      <span>${m.venueLabel ? dashEsc(m.venueLabel) : m.home ? "À domicile" : "À l'extérieur"}${m.home && !m.privateLeague && data.arena ? ` · ${dashEsc(data.arena.capacity.toLocaleString("fr-FR"))} places` : ""}</span>
     </div>
     <div class="hm-hero__teams">
       <div class="hm-hero__team">
@@ -31940,7 +31951,10 @@ function dashRenderNextMatch(data) {
       </div>
     </div>
     <div class="hm-hero__actions">
-      ${m.isLive
+      ${m.privateLeague
+        ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ligues-privees">Voir la ligue privée</button>
+      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}">Scouter ${dashEsc(m.opponent.name)}</button>`
+        : m.isLive
         // Retour utilisateur (2026-09-25) : "quand le match est en cours, on
         // ne peut pas avoir le bouton donner vos ordres et scouter
         // l'adversaire, il faut que ce soit noté voir le live plutôt".
@@ -32465,6 +32479,34 @@ function dashboardDataFromGameState() {
     };
   }
 
+  // Le prochain match OFFICIEL reste la référence des tâches "Ordres de
+  // match" (voir dashBuildTasks) ; le bandeau, lui, montre le match de
+  // ligue privée s'il passe avant (voir lpNextMatchIfFirst).
+  const officialNextMatch = nextMatch;
+  const lpNext = lpNextMatchIfFirst();
+  if (lpNext) {
+    const d = new Date(lpNext.dueAt);
+    const oppTeam = league.teams[lpNext.oppIdx];
+    nextMatch = {
+      privateLeague: true,
+      competition: "Ligue privée",
+      round: lpNext.round.index + 1,
+      totalRounds: lpNext.lp.rounds.length,
+      roundLabel: `${lpNext.lp.name} · J${lpNext.round.index + 1}`,
+      dateLabel: dashCapitalize(d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })),
+      timeLabel: d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+      deadlineLabel: null,
+      home: lpNext.isHome,
+      venueLabel: lpNext.lp.venue === "neutral" ? "Terrain neutre" : null,
+      opponent: dashboardTeamRef(lpNext.oppIdx, oppTeam),
+      clubRecord: lpRecordOf(lpNext.lp, myTeamIndex),
+      opponentRecord: lpRecordOf(lpNext.lp, lpNext.oppIdx),
+      clubLevel: dashboardTeamLevel(teamA),
+      opponentLevel: dashboardTeamLevel(oppTeam),
+      isLive: false, lineupLocked: false, prematchShow: false,
+    };
+  }
+
   // Coupe (correctif 2026-09-24, DEV_NOTES.md point 12) : même choix que le
   // bouton d'ordres du topbar (voir updateTopbar) — teamA.ordresValidatedRound
   // suppose un round de championnat, réutilise donc teamA.hasPlanForRound
@@ -32512,7 +32554,7 @@ function dashboardDataFromGameState() {
       season: 1,
       week: teamA.week,
     },
-    nextMatch,
+    nextMatch, officialNextMatch,
     ordersGiven,
     interview,
     staff: {
@@ -34212,7 +34254,9 @@ function calendarRowHtml(row) {
   // en infobulle. La colonne "Compétition" a disparu, le mot "Coupe" reste
   // donc visible ici pour distinguer ses tours.
   const CUP_SHORT = { "Huitièmes": "1/8", "Quarts": "1/4", "Demies": "1/2" };
-  const roundCell = row.competition === "cup"
+  const roundCell = row.competition === "lp"
+    ? `<abbr class="cal-cup-badge cal-lp-badge" title="Ligue privée · ${escapeHtml(row.label)}">LP ${escapeHtml(row.shortLabel)}</abbr>`
+    : row.competition === "cup"
     ? `<abbr class="cal-cup-badge" title="Coupe · ${escapeHtml(row.label)}">${row.label === "Finale" ? "Finale" : `Coupe ${escapeHtml(CUP_SHORT[row.label] || row.label)}`}</abbr>`
     : `<abbr class="cal-round" title="${escapeHtml(row.label)}">${escapeHtml(row.shortLabel || row.label)}</abbr>`;
 
@@ -34241,7 +34285,9 @@ function calendarRowHtml(row) {
   if (row.played) {
     const tone = row.won ? "win" : row.lost ? "loss" : "draw";
     const letter = row.won ? "V" : row.lost ? "D" : "N";
-    const score = row.boxscore
+    const score = row.lpScore
+      ? `<button type="button" class="calendar-score-btn lp-cal-score" data-lp-id="${escapeHtml(row.lpScore.id)}" data-lp-round="${row.lpScore.round}" data-lp-home="${row.lpScore.home}" data-lp-away="${row.lpScore.away}">${row.scoreText}</button>`
+      : row.boxscore
       ? `<button type="button" class="calendar-score-btn" data-boxscore-round="${row.boxscore.round}" data-boxscore-competition="${row.boxscore.competition}" data-boxscore-home="${row.boxscore.homeIdx}" data-boxscore-away="${row.boxscore.awayIdx}">${row.scoreText}</button>`
       : row.scoreText;
     resultCell = `<span class="cal-result cal-result-${tone}"><span class="cal-result-letter">${letter}</span>${score}</span>`;
@@ -34279,12 +34325,14 @@ function calendarNextMatchCardHtml(row) {
   const awayIdx = row.isHome ? row.opponentIdx : myTeamIndex;
   const side = idx => {
     const t = league.teams[idx];
-    const line = row.competition === "cup" ? "" : calendarStandingLine(idx);
+    const line = row.competition !== "champ" ? "" : calendarStandingLine(idx);
     return `<div class="cal-next-team${idx === myTeamIndex ? " is-me" : ""}">${teamLogoHtml(t, 56)}` +
       `<div class="cal-next-name">${idx === myTeamIndex ? escapeHtml(t.name) : teamLinkHtml(idx, t.name)}</div>` +
       (line ? `<div class="cal-next-rank">${escapeHtml(line)}</div>` : "") + `</div>`;
   };
-  const kicker = row.competition === "cup" ? `Prochain match · Coupe · ${row.label}` : `Prochain match · ${row.label}`;
+  const kicker = row.competition === "cup" ? `Prochain match · Coupe · ${row.label}`
+    : row.competition === "lp" ? `Prochain match · Ligue privée · ${row.shortLabel}`
+    : `Prochain match · ${row.label}`;
   const when = row.scheduledAt != null
     ? `${formatCalendarDayFr(row.scheduledAt)} · ${formatCalendarTimeFr(row.scheduledAt)}`
     : row.label;
@@ -34300,6 +34348,8 @@ function calendarNextMatchCardHtml(row) {
   // même délégation [data-tab]/data-round que les lignes.
   const action = row.isLive
     ? `<button type="button" class="cal-next-btn is-live" data-tab="live">Voir le direct</button>`
+    : row.competition === "lp"
+    ? `<button type="button" class="cal-next-btn" data-tab="lp">Voir la ligue privée</button>`
     : `<button type="button" class="cal-next-btn" data-tab="ordres" data-round="${row.orderRound}" data-competition="${row.orderCompetition}">${row.alreadyOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>` +
       // "Ordres non définis pour ce match" retiré (retour utilisateur
       // 2026-09-26) : le bouton "Donner les ordres" le dit déjà.
@@ -34542,6 +34592,40 @@ function renderCalendrierSection() {
     });
   }
 
+  // Ligues privées (retour utilisateur 2026-09-26, voir lpMyNextMatch) : mes
+  // matchs de la ligue en cours et des ligues terminées de cette saison.
+  // Hors bilan de la saison (voir calendarSeasonCardHtml plus bas) ; pas
+  // d'ordres propres, le bouton mène à la page Ligues privées ; le score
+  // ouvre la feuille de match de ligue privée (showPrivateLeagueBoxscore).
+  (league.privateLeagues || []).forEach(lp => {
+    if (!lp.teamIndices.includes(myTeamIndex) || lp.status === "open") return;
+    (lp.rounds || []).forEach(round => {
+      if (lp.status === "finished" && typeof league.calendarStartAt === "number" && round.dueAt < league.calendarStartAt) return;
+      const m = round.matches.find(x => x.home === myTeamIndex || x.away === myTeamIndex);
+      if (!m || !league.teams[m.home] || !league.teams[m.away]) return;
+      const isHomeLp = m.home === myTeamIndex;
+      const oppIdxLp = isHomeLp ? m.away : m.home;
+      let scoreText = "–", cls = "";
+      if (m.played) {
+        const my = isHomeLp ? m.scoreHome : m.scoreAway;
+        const opp = isHomeLp ? m.scoreAway : m.scoreHome;
+        scoreText = `${my} - ${opp}`;
+        cls = my > opp ? "result-win" : my < opp ? "result-loss" : "";
+      }
+      rows.push({
+        competition: "lp", label: `${lp.name} · Journée ${round.index + 1}`, shortLabel: `J${round.index + 1}`,
+        opponent: league.teams[oppIdxLp].name, opponentIdx: oppIdxLp,
+        location: lp.venue === "neutral" ? "Terrain neutre" : isHomeLp ? "Domicile" : "Extérieur",
+        scoreText, boxscore: null,
+        lpScore: m.played && !m.forfeit ? { id: lp.id, round: round.index, home: m.home, away: m.away } : null,
+        cls, actionCell: m.played ? "" : `<button type="button" class="calendar-order-btn calendar-lp-btn" data-tab="lp">Ligue privée</button>`,
+        scheduledAt: round.dueAt, fallbackOrder: 100000 + round.index,
+        isHome: isHomeLp, played: !!m.played, won: cls === "result-win", lost: cls === "result-loss",
+        isLive: false, alreadyOrdered: false, isPrivate: true,
+      });
+    });
+  });
+
   // Tri chronologique : par horaire programmé quand il est connu (cas
   // normal), sinon par l'ordre de repli (numéro de journée/tour) pour ne
   // jamais planter sur une ancienne sauvegarde sans calendarStartAt.
@@ -34622,7 +34706,7 @@ function renderCalendrierSection() {
   html += `<p class="training-empty cal-filter-empty hidden">Aucun match ne correspond à ce filtre.</p>`;
   html += `</div><aside class="cal-side" aria-label="Résumé de la saison">`;
   html += calendarNextMatchCardHtml(nextRow);
-  html += calendarSeasonCardHtml(rows, playedRows);
+  html += calendarSeasonCardHtml(rows.filter(r => !r.isPrivate), playedRows.filter(r => !r.isPrivate));
   html += `</aside></div>`;
 
   holder.innerHTML = html;
@@ -34636,6 +34720,12 @@ document.getElementById("calendrierContent").addEventListener("click", (e) => {
   if (filterBtn) {
     calendarFilter = filterBtn.dataset.calFilter;
     calendarApplyFilter();
+    return;
+  }
+  const lpScoreBtn = e.target.closest(".lp-cal-score");
+  if (lpScoreBtn) {
+    const lp = (league.privateLeagues || []).find(l => l.id === lpScoreBtn.dataset.lpId);
+    if (lp) showPrivateLeagueBoxscore(lp, Number(lpScoreBtn.dataset.lpRound), Number(lpScoreBtn.dataset.lpHome), Number(lpScoreBtn.dataset.lpAway));
     return;
   }
   const boxscoreBtn = e.target.closest("[data-boxscore-round]");
@@ -37185,6 +37275,44 @@ function findLpById(id) { return (league.privateLeagues || []).find(lp => lp.id 
 function lpTeamName(idx) { const t = league.teams[idx]; return t ? t.name : "?"; }
 function lpVenueLabel(venue) { return venue === "neutral" ? "Terrain neutre" : "Domicile / extérieur"; }
 
+// Matchs de ligue privée dans le Calendrier, le tableau de bord et la barre
+// du haut (retour utilisateur 2026-09-26 : "il faut que ça apparaisse dans
+// le calendrier et que si c'est le prochain match, ça apparaisse sur le
+// tableau de bord et dans la barre en haut"). Purement AFFICHAGE : currentMatch
+// (et donc l'écran Ordres, le verrou d'avant-match, l'émission…) reste le
+// prochain match OFFICIEL — un match de ligue privée n'a pas d'ordres
+// propres, il est joué avec l'effectif et la tactique du moment.
+//
+// Prochain match non joué de mon club dans ma ligue privée en cours.
+function lpMyNextMatch() {
+  const lp = lpMyLeague();
+  if (!lp || lp.status !== "running") return null;
+  for (const round of lp.rounds || []) {
+    const m = round.matches.find(x => !x.played && (x.home === myTeamIndex || x.away === myTeamIndex));
+    if (m) {
+      const isHome = m.home === myTeamIndex;
+      return { lp, round, match: m, dueAt: round.dueAt, isHome, oppIdx: isHome ? m.away : m.home };
+    }
+  }
+  return null;
+}
+// Ce même match, mais seulement s'il passe AVANT le prochain match officiel
+// (et qu'aucun match officiel n'est en direct) : c'est alors lui "le
+// prochain match" du tableau de bord et de la barre du haut.
+function lpNextMatchIfFirst() {
+  if (!league || !league.calendarDailyAnchored || league.liveMatch) return null;
+  const n = lpMyNextMatch();
+  if (!n || !league.teams[n.oppIdx]) return null;
+  const official = currentMatch && teamB ? scheduledTimeForCurrentMatch() : null;
+  if (official != null && official <= n.dueAt) return null;
+  return n;
+}
+// Bilan "V-D" d'un club dans une ligue privée.
+function lpRecordOf(lp, idx) {
+  const row = lpStandings(lp).find(r => r.idx === idx);
+  return row ? `${row.wins}-${row.losses}` : "0-0";
+}
+
 function renderLpSection() {
   const holder = document.getElementById("lpContent");
   if (!holder) return;
@@ -38382,6 +38510,7 @@ document.getElementById("newMatchBtn").addEventListener("click", goToOrdresTab);
 // réutilise exactement la même logique que l'onglet Ordres (goToOrdresTab).
 document.getElementById("topbarOrdersBtn").addEventListener("click", () => {
   if (prematchShowAvailable()) { openHoopShow("prematch"); return; }
+  if (lpNextMatchIfFirst()) { TAB_HANDLERS.lp(); return; }
   goToOrdresTab();
 });
 
