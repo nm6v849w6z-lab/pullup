@@ -20,29 +20,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-25) — Nouveau logo +
-  dépôt remis au propre** — retour utilisateur : "intègre ce logo à la place
-  du orange (détouré comme il faut) et ensuite corrige le pb de code, on va
-  repartir sur qqch de propre".
-  - Logo : nouveau logo jaune (ballon + traînées) détouré (alpha par
-    dé-mélange de couleur, pas de liseré), intégré en data URI dans
-    `.brand-logo-img` (sidebar + écran de démarrage qui le recopie),
-    hauteur 50 px. Source : `assets/brand/logo-hoop-manager.png` (515x300).
-    Icônes PWA/favicon (assets/mobile/) NON changées.
-  - Nettoyage : l'arbre de travail contenait un `moteurbasket3.html`
-    PÉRIMÉ (réécrit ~19h05 depuis une vieille copie par une session
-    concurrente : il annulait plusieurs commits déjà poussés) + des modifs
-    anciennes de dashboard_e2e_test.js ; un `git am` (patch Interviews)
-    bloqué depuis 18h10 ; `livrer_dashboard_fixes.sh` obsolète. Tout a été
-    SAUVEGARDÉ dans `Claude outputs/sauvegarde-2026-09-25-avant-nettoyage/`,
-    puis arbre remis sur HEAD, `git am --quit`, `Claude outputs/` ajouté au
-    .gitignore. Entrées "committé, à pousser" déjà poussées retirées de ce
-    fichier (règle ci-dessus).
-  - ⚠️ Leçon : plusieurs sessions Claude écrivaient en même temps dans le
-    même dossier → copies périmées qui écrasent le travail. Une seule
-    session à la fois sur le dépôt, et toujours partir de `git status`
-    propre.
-  - Reste : `git push`.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Calendrier :
+  colonne Domicile/Extérieur retirée** — retour utilisateur : "enlève tous
+  les domicile et extérieur, on a déjà @ et vs, ça fait redite" / "ça
+  aérera un peu le calendrier". Fichiers : moteurbasket3.html
+  (calendarRowHtml, colgroup, colspan 5), assets/mobile/mobile.css
+  (nth-child des cartes décalés). data-venue garde les filtres
+  Domicile/Extérieur ; la carte "Prochain match" garde son "Domicile".
+  Tests verts : calendar_redesign, calendar_merge, calendar,
+  calendrier_boxscore, ordres_validated_badge. Reste : `git push`.
 
 - **⏳ À REPRENDRE — Tableau de bord : vrai logo d'un adversaire payant**
   (issu de `livrer_dashboard_fixes.sh`, jamais committé) :

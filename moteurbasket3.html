@@ -1949,7 +1949,7 @@
      colonne Action assez large pour "Modifier vos ordres" (il débordait
      et était coupé par le bord du tableau), un peu moins de vide entre
      l'adversaire et le lieu. */
-  .cal-col-date{width:112px;} .cal-col-round{width:84px;} .cal-col-venue{width:92px;} .cal-col-result{width:108px;} .cal-col-action{width:196px;}
+  .cal-col-date{width:112px;} .cal-col-round{width:84px;} .cal-col-result{width:108px;} .cal-col-action{width:196px;}
   .cal-c-date{white-space:nowrap; padding-left:16px !important;}
   .cal-day{font-weight:600; color:var(--ink);}
   .cal-row[data-status="played"] .cal-day{color:var(--ink-dim);}
@@ -30434,9 +30434,9 @@ function calendarRowHtml(row) {
     opponentCell = `<div class="cal-opp cal-opp-bye">${escapeHtml(row.opponent)}</div>`;
   }
 
-  const venueCell = row.location
-    ? `<span class="cal-venue cal-venue-${venueKey}">${escapeHtml(row.location)}</span>`
-    : "";
+  // Plus de colonne Lieu (retour utilisateur 2026-09-26 : "enlève tous les
+  // domicile et extérieur, on a déjà @ et vs, ça fait redite") : le "vs"/"@"
+  // devant l'adversaire suffit. data-venue reste sur la ligne (filtres).
 
   // Le score reste cliquable pour ouvrir le boxscore (retour utilisateur
   // 2026-09, voir showMatchBoxscore et le clic délégué plus bas), précédé
@@ -30459,7 +30459,7 @@ function calendarRowHtml(row) {
 
   return `<tr class="${cls}" data-venue="${venueKey}" data-status="${status}">` +
     `<td class="cal-c-date">${dateCell}</td><td class="cal-c-round">${roundCell}</td>` +
-    `<td class="cal-c-opp">${opponentCell}</td><td class="cal-c-venue">${venueCell}</td>` +
+    `<td class="cal-c-opp">${opponentCell}</td>` +
     `<td class="cal-c-result">${resultCell}</td><td class="cal-c-action">${row.actionCell}</td></tr>`;
 }
 
@@ -30813,8 +30813,8 @@ function renderCalendrierSection() {
     // <colgroup> + table-layout:fixed (voir CSS .cal-month) : mêmes largeurs
     // de colonnes dans chaque tableau de mois, sinon chaque mois calculait
     // les siennes et les colonnes ne s'alignaient pas d'un mois à l'autre.
-    html += `<table class="calendar-table cal-month"><colgroup><col class="cal-col-date"><col class="cal-col-round"><col><col class="cal-col-venue"><col class="cal-col-result"><col class="cal-col-action"></colgroup>` +
-      `<thead><tr class="cal-month-head"><th colspan="6">` +
+    html += `<table class="calendar-table cal-month"><colgroup><col class="cal-col-date"><col class="cal-col-round"><col><col class="cal-col-result"><col class="cal-col-action"></colgroup>` +
+      `<thead><tr class="cal-month-head"><th colspan="5">` +
       `<span class="cal-month-title">${escapeHtml(g.title)}</span><span class="cal-month-summary">${escapeHtml(summary)}</span>` +
       `</th></tr></thead><tbody>`;
     g.rows.forEach(row => { html += calendarRowHtml(row); });
