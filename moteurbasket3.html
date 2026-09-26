@@ -4307,6 +4307,7 @@
   .spo-nums > div.hi{background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.4);} .spo-nums > div.hi b{color:var(--amber);}
   .spo-lines{display:flex; flex-direction:column; gap:6px; font-size:13px;} .spo-lines > div{display:flex; justify-content:space-between; gap:10px;} .spo-lines > div > span:first-child{color:var(--ink-dim);}
   .spo-btn-terminate{align-self:flex-start; font-size:13px;} .spo-btn-danger{color:var(--danger); border-color:var(--danger);}
+  .spo-busy{opacity:.7; cursor:progress !important;} .spo-card button:disabled{cursor:default;}
   .spo-offer{box-sizing:border-box; padding:14px; border-radius:10px; background:var(--panel-2); border:1px solid var(--line); display:flex; flex-direction:column; gap:10px;}
   .spo-offer-head{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .spo-profile{font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; border-radius:4px; padding:3px 8px; background:var(--panel);}
@@ -38099,15 +38100,28 @@ async function sponsorAction(path, body, okText) {
   renderSponsorsPanel();
 }
 
+// Retour visuel immédiat (retour utilisateur 2026-09-26 : "le bouton pour
+// lâcher son sponsor met un peu de temps à répondre") : le bouton cliqué
+// passe aussitôt en état « en cours » (désactivé, libellé) le temps de
+// l'aller-retour serveur ; ses voisins de la même carte sont gelés aussi
+// pour éviter un double clic. Le panneau est re-rendu à la réponse.
+function sponsorBusy(btn, label) {
+  const card = btn.closest(".spo-offer, .spo-card") || btn.parentElement;
+  card.querySelectorAll("button").forEach(b => { b.disabled = true; });
+  btn.textContent = label;
+  btn.classList.add("spo-busy");
+}
 (function wireSponsorsPanel() {
   document.addEventListener("click", (e) => {
     const acc = e.target.closest("[data-sponsor-accept]");
-    if (acc) { sponsorAction("/api/sponsors/accept", { offerId: acc.dataset.sponsorAccept }, "Contrat signé. Le fixe tombe chaque semaine, la prime à chaque victoire."); return; }
+    if (acc) { if (acc.disabled) return; sponsorBusy(acc, "Signature…"); sponsorAction("/api/sponsors/accept", { offerId: acc.dataset.sponsorAccept }, "Contrat signé. Le fixe tombe chaque semaine, la prime à chaque victoire."); return; }
     const dec = e.target.closest("[data-sponsor-decline]");
-    if (dec) { sponsorAction("/api/sponsors/decline", { offerId: dec.dataset.sponsorDecline }, "Offre refusée."); return; }
+    if (dec) { if (dec.disabled) return; sponsorBusy(dec, "…"); sponsorAction("/api/sponsors/decline", { offerId: dec.dataset.sponsorDecline }, "Offre refusée."); return; }
     const ter = e.target.closest("[data-sponsor-terminate]");
     if (ter) {
+      if (ter.disabled) return;
       if (ter.dataset.confirm !== "1") { ter.dataset.confirm = "1"; ter.textContent = `Confirmer la rupture · ${formatMoney(Number(ter.dataset.fee))} prélevés`; ter.classList.add("spo-btn-danger"); return; }
+      sponsorBusy(ter, "Rupture en cours…");
       sponsorAction("/api/sponsors/terminate", { contractId: ter.dataset.sponsorTerminate }, "Contrat rompu, clause réglée. L'emplacement est libre.");
     }
   });

@@ -78,7 +78,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   palier (pickSponsorTier), la différence ne vient que du profil ("le
   sponsor normal propose plus que le sponsor ambitieux, c'est bizarre") ;
   une offre déjà partie (page pas à jour) rafraîchit la liste sans message
-  (stale: true, "Cette offre n'existe plus — ne mets pas ça"). Non fait :
+  (stale: true, "Cette offre n'existe plus — ne mets pas ça") ; retour
+  visuel immédiat sur Accepter / Refuser / Rompre (bouton désactivé +
+  « Signature… » / « Rupture en cours… », sponsorBusy — "le bouton [...]
+  met un peu de temps à répondre", "idem pour accepter"). Non fait :
   carton dans les émissions (pub retirée), Guide.
   Non fait : carton dans les émissions (pub retirée), tâche du tableau de
   bord à l'arrivée d'une offre (fil d'actu seulement), Guide.
