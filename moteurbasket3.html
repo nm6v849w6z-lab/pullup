@@ -4277,7 +4277,7 @@
   .eco-dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;}
   .eco-pill-tag{align-self:flex-start; padding:3px 10px; border-radius:999px; background:var(--panel-2); font-size:12.5px; font-weight:600; color:var(--ink-dim);}
   /* ---- Sponsors (page Économie) — voir renderSponsorsPanel ---- */
-  .spo-section{margin:22px 0 26px; display:flex; flex-direction:column; gap:16px;}
+  .spo-section{margin:0 0 26px; display:flex; flex-direction:column; gap:16px;}
   .spo-head{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
   .spo-head h3{margin:0; font-size:22px; font-weight:800;}
   .spo-sub{margin:4px 0 0; color:var(--ink-dim); font-size:14px; max-width:620px;}
@@ -5677,6 +5677,7 @@
     <div class="sidebar-section">
       <div class="sidebar-section-label">Club &amp; finances</div>
       <button class="tab-btn sidebar-link" data-tab="economie"><span class="sidebar-label">Économie</span></button>
+      <button class="tab-btn sidebar-link" data-tab="sponsors"><span class="sidebar-label">Sponsors</span></button>
       <button class="tab-btn sidebar-link" data-tab="salle"><span class="sidebar-label">Salle</span></button>
       <button class="tab-btn sidebar-link" data-tab="humeur"><span class="sidebar-label">Humeur des supporters</span></button>
       <button class="tab-btn sidebar-link" data-tab="statshebdo"><span class="sidebar-label">Stats hebdo</span></button>
@@ -6233,8 +6234,6 @@
           <div id="economieTvSub" style="display:flex; flex-direction:column; gap:12px;"></div>
         </section>
       </div>
-      <!-- Sponsors (voir renderSponsorsPanel, bloc SPONSORS côté moteur). -->
-      <div id="economieSponsors" class="spo-section"></div>
       <div class="eco-history-head">
         <h3>Historique</h3>
         <div class="eco-filters" id="economieFilters" role="group" aria-label="Filtrer l'historique">
@@ -6257,6 +6256,16 @@
           <button class="secondary" id="resetLeagueBtn" style="border-color:#d33;color:#d33;">Réinitialiser la ligue</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Sponsors (retour utilisateur 2026-09-26 : "les sponsors ne doivent
+       pas être dans économie mais dans un onglet ad hoc") — voir
+       renderSponsorsPanel et le bloc SPONSORS côté moteur. -->
+  <div id="sponsorsSection" class="hidden">
+    <div class="section">
+      <h2 class="page-title">Sponsors</h2>
+      <div id="economieSponsors" class="spo-section"></div>
     </div>
   </div>
 
@@ -19613,7 +19622,7 @@ function refreshRecruiterMarket() {
 // ---------------------------------------------------------------------
 const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
-  "clubSection", "staffSection", "academieSection", "economieSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "histoireSection",
+  "clubSection", "staffSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
   "guideSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
 ];
@@ -31779,7 +31788,7 @@ function dashBuildTasks(data) {
       text: `${dashJoinFr(names.slice(0, 3))}${names.length > 3 ? "…" : ""} — à accepter ou refuser.`,
       badge: daysLeft <= 1 ? "Expire demain" : `${daysLeft} jours`,
       tone: daysLeft <= 1 ? "warn" : "info",
-      cta: { label: "Voir les offres", href: "/economie", style: "ghost" },
+      cta: { label: "Voir les offres", href: "/sponsors", style: "ghost" },
     });
   }
   if (data.finances && data.finances.budget < 0) {
@@ -32637,6 +32646,7 @@ const DASH_ROUTE_TO_TAB = {
   "/marche": "marche", "/ligue": "ligue", "/coupe": "coupe",
   "/calendrier": "calendrier", "/entrainement": "entrainement",
   "/ligues-privees": "lp",
+  "/sponsors": "sponsors",
   "/histoire": "histoire",
   "/academie": "academie", "/supporters": "humeur",
 };
@@ -35590,7 +35600,6 @@ function renderEconomieSection() {
     ? `${ecoMoney(rec.tv)}<span class="unit">/sem.</span>`
     : "–";
   document.getElementById("economieTvSub").innerHTML = ecoTvHtml(rec);
-  renderSponsorsPanel();
 
   ecoRenderHistory();
 }
@@ -36240,10 +36249,10 @@ function renderSalleSection() {
 // --- Bandeau d'en-tête -------------------------------------------------
 function salleSponsorEncartHtml() {
   const c = sponsorActiveContractForSlot(teamA, "salle");
-  if (!c) return `<div class="sl-sponsor sl-sponsor-empty"><span class="sl-sponsor-kicker">Sponsor de la salle</span><span>Aucun · <button type="button" class="sl-sponsor-link" data-tab="economie">voir les offres</button></span></div>`;
+  if (!c) return `<div class="sl-sponsor sl-sponsor-empty"><span class="sl-sponsor-kicker">Sponsor de la salle</span><span>Aucun · <button type="button" class="sl-sponsor-link" data-tab="sponsors">voir les offres</button></span></div>`;
   return `<div class="sl-sponsor"><span class="sl-sponsor-badge">${escapeHtml(defaultTrigramForName(c.sponsorName))}</span>` +
     `<span class="sl-sponsor-txt"><span class="sl-sponsor-kicker">Sponsor de la salle</span><span><b>${escapeHtml(c.sponsorName)}</b> · ${formatMoney(c.weekly)} / sem · objectif ${escapeHtml(c.objectiveLabel)}</span></span>` +
-    `<button type="button" class="sl-sponsor-link" data-tab="economie">Sponsors →</button></div>`;
+    `<button type="button" class="sl-sponsor-link" data-tab="sponsors">Sponsors →</button></div>`;
 }
 
 function renderSalleHero(info, stats) {
@@ -37711,7 +37720,7 @@ function renderSponsorsPanel() {
   if (!holder) return;
   const rep = typeof teamA.sponsorReputation === "number" ? teamA.sponsorReputation : SPONSOR_REPUTATION_DEFAULT;
   const offers = teamA.sponsorOffers || [];
-  let html = `<div class="spo-head"><div><h3>Sponsors</h3><p class="spo-sub">Deux emplacements : le maillot et les panneaux de la salle. Les sponsors vous approchent ; à vous d'accepter ou non. Un contrat dure une saison.</p></div>` +
+  let html = `<div class="spo-head"><div><p class="spo-sub">Deux emplacements : le maillot et les panneaux de la salle. Les sponsors vous approchent ; à vous d'accepter ou non. Un contrat dure une saison.</p></div>` +
     `<div class="spo-rep"><div class="spo-rep-top"><span class="spo-kicker">Réputation sponsors</span><span class="spo-rep-num">${Math.round(rep)} <small>/ 100</small></span></div>` +
     `<div class="spo-rep-bar"><div style="width:${Math.round(rep)}%"></div></div>` +
     `<div class="spo-rep-legend"><span>Local</span><span>Régional ≥ ${SPONSOR_TIERS.regional.minReputation}</span><span class="hi">National ≥ ${SPONSOR_TIERS.national.minReputation}</span></div></div></div>`;
@@ -37791,7 +37800,7 @@ async function sponsorAction(path, body, okText) {
     saveMyTeam();
   }
   sponsorsUi.feedback = { ok: true, text: okText };
-  renderEconomieSection();
+  renderSponsorsPanel();
 }
 
 (function wireSponsorsPanel() {
@@ -37819,6 +37828,7 @@ const TAB_HANDLERS = {
   lp: () => { renderLpSection(); showPage("lpSection"); setActiveTab("lp"); },
   histoire: () => { renderHistoireSection(); showPage("histoireSection"); setActiveTab("histoire"); },
   economie: () => { renderEconomieSection(); showPage("economieSection"); setActiveTab("economie"); },
+  sponsors: () => { renderSponsorsPanel(); showPage("sponsorsSection"); setActiveTab("sponsors"); },
   salle: () => { renderSalleSection(); showPage("salleSection"); setActiveTab("salle"); },
   staff: () => { for (const k in staffUi) staffUi[k].open = false; refreshCoachMarket(); refreshAnalystMarket(); refreshRecruiterMarket(); renderStaffPanel(); showPage("staffSection"); setActiveTab("staff"); },
   academie: () => { renderAcademieSection(); showPage("academieSection"); setActiveTab("academie"); },

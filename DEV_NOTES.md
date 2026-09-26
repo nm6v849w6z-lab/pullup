@@ -61,7 +61,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   d'actu car c'est une tâche") : les offres en attente sont une TÂCHE du
   tableau de bord (dashBuildTasks id "sponsors", badge = jours restants,
   bouton « Voir les offres » → Économie), plus aucune entrée de fil
-  d'actu. Non fait : carton dans les émissions (pub retirée), Guide.
+  d'actu. Puis (14:10 : "les sponsors ne doivent pas être dans économie
+  mais dans un onglet ad hoc") : onglet « Sponsors » dédié (sidebar, Club
+  & finances, route /sponsors, #sponsorsSection), plus rien dans
+  Économie ; la tâche du tableau de bord et l'encart de la Salle y
+  renvoient. Non fait : carton dans les émissions (pub retirée), Guide.
   Non fait : carton dans les émissions (pub retirée), tâche du tableau de
   bord à l'arrivée d'une offre (fil d'actu seulement), Guide.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées
