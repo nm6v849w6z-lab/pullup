@@ -127,8 +127,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   flaky (calendrier_ordres_stale_live_redirect, end_to_end, lineup,
   spectate_live_match) : verts relancés seuls. NB : ces changements ont été
   mis de côté (git stash) par un pull --rebase d'une autre session puis
-  réappliqués ; revérifiés après les commits Sponsors. Reste : `git push`
-  + redéploiement.
+  réappliqués ; revérifiés après les commits Sponsors. Commit suivant :
+  ligne "Saison N · Voir le match" retirée des cartes de record ("enleve
+  dans la brique les saisons 1 · voir le match"). Reste : `git push` +
+  redéploiement.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées :
   page d'accueil épurée + heure des matchs au choix** — retour utilisateur :

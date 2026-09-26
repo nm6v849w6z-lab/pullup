@@ -146,6 +146,7 @@ function playWholeSeason(league, now) {
   const recBtn = doc.querySelector("button.hc-record[data-hc-match]");
   check(!!recBtn, `un record de la saison en cours est cliquable (${recBtn && recBtn.dataset.hcMatch})`);
   check([...doc.querySelectorAll("div.hc-record")].every(d => !d.dataset.hcMatch), "les records sans match (saison passée, affluence) ne sont pas cliquables");
+  check(![...doc.querySelectorAll(".hc-record")].some(c => /Saison \d|Voir le match/.test(c.textContent)), "cartes de record sans ligne « Saison N · Voir le match »");
   recBtn.click();
   check(!!doc.getElementById("matchBoxscoreOverlay"), "clic sur un record → feuille de match ouverte");
   if (typeof win.closeMatchBoxscore === "function") win.closeMatchBoxscore();
