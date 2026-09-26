@@ -5570,8 +5570,6 @@
   .msg-dash-banner b{color:var(--amber);}
   .msg-dash-banner .msg-dash-go{margin-left:auto; font-weight:700; color:var(--amber); white-space:nowrap;}
   #messagesSection{font-size:14px;}
-  .msg-lead{color:var(--ink-dim); margin:-4px 0 16px; max-width:680px; line-height:1.5;}
-  .msg-lead a{color:var(--amber);}
   .msg-layout{display:grid; grid-template-columns:300px minmax(0,1fr); gap:16px; align-items:stretch; min-height:520px;}
   .msg-col{background:var(--panel); border:1px solid var(--line); border-radius:14px; display:flex; flex-direction:column; min-width:0; overflow:hidden;}
   .msg-col-head{padding:14px 16px; border-bottom:1px solid var(--line-soft); display:flex; align-items:center; gap:10px;}
@@ -5627,7 +5625,6 @@
   #mTabMenu{position:relative;}
   #mTabMenu.msg-has-unread::after{content:""; position:absolute; top:6px; left:calc(50% + 8px); width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 0 2px var(--panel);}
   @media(max-width:760px){
-    #messagesContent.has-thread .msg-lead{display:none;}
     .msg-layout{grid-template-columns:1fr; min-height:0;}
     .msg-layout.has-thread .msg-col-list{display:none;}
     .msg-layout:not(.has-thread) .msg-col-thread{display:none;}
@@ -38450,7 +38447,6 @@ function renderMessagesSection() {
     return;
   }
   root.innerHTML =
-    `<p class="msg-lead">Discutez en privé avec les autres managers de la ligue : négociations, défis, trash talk. Pour les discussions ouvertes à tous, rendez-vous sur le Discord.</p>` +
     `<div class="msg-layout${msgUi.activeWith != null ? " has-thread" : ""}" id="msgLayout">` +
       `<section class="msg-col msg-col-list">` +
         `<div class="msg-col-head msg-new"><select id="msgNewSelect" aria-label="Écrire à un manager"></select></div>` +

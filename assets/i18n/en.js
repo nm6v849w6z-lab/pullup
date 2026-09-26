@@ -4144,7 +4144,6 @@ window.HM_I18N_EN = {
   "Manager bloqué.": "Manager blocked.",
   "Manager débloqué.": "Manager unblocked.",
   "Voir la fiche du club": "View club page",
-  "Discutez en privé avec les autres managers de la ligue : négociations, défis, trash talk. Pour les discussions ouvertes à tous, rendez-vous sur le Discord.": "Chat privately with the other managers in the league: negotiations, challenges, trash talk. For discussions open to everyone, head over to the Discord.",
   "La messagerie est réservée aux ligues partagées entre plusieurs managers.": "Messages are only available in leagues shared between several managers.",
   "Aucune conversation pour l'instant. Choisissez un manager ci-dessus pour lui écrire.": "No conversations yet. Pick a manager above to write to them.",
   "Aucun autre manager dans la ligue pour l'instant.": "No other managers in the league yet.",
