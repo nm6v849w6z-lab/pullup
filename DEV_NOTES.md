@@ -20,6 +20,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Fiche équipe
+  adverse : refonte des sous-onglets Effectif et Calendrier** — retour
+  utilisateur (captures Rennes/Devil May Care) : "améliore les pages
+  effectifs et calendrier des adversaires. à noter que sur les pages
+  effectifs, on peut être amené à voir certaines caracs des joueurs".
+  Effectif : bandeau KPI (+ jauge caracs révélées X/28), vues Général
+  (groupes Cinq/Rotation/Réserve, infos publiques + moyennes) /
+  Caractéristiques (UNIQUEMENT les caracs révélées, groupées Tir/Jeu/
+  Défense/Physique/Mental, liste des cachées ; encart vers Analyse si rien
+  n'est révélé) / Statistiques. Calendrier : briques du calendrier du club
+  vues depuis CETTE équipe (mois, V/D, filtres, cartes Prochain match +
+  Saison, "Contre vous" + carte "Contre votre club", bouton "Préparer ce
+  match"). Tests : team_detail_calendar_test.js (nouveau),
+  team_detail_effectif_sort_test.js et client_scouting_test.js adaptés,
+  + suites voisines vertes sur le Mac. Commit limité à ces hunks (le
+  chantier Coupe en cours d'une autre session reste non committé).
+  Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Académie de
   jeunes : refonte visuelle** — retour utilisateur (capture) : "améliore
   l'onglet académie de jeunes" (code direct, pas de maquette). Bandeau de

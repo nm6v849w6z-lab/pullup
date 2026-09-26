@@ -4572,7 +4572,7 @@
      jamais chargée dans ce projet). Couleurs : tokens :root du jeu +
      pastilles de poste propres à cet écran.
      ===================================================================== */
-  #effectifSection{--eff-row:#172031; --eff-row-2:#141c2b; --eff-sep:#222b3d; --eff-track:#243048;
+  #effectifSection, #teamDetailSection{--eff-row:#172031; --eff-row-2:#141c2b; --eff-sep:#222b3d; --eff-track:#243048;
     --eff-pos-m-bg:rgba(96,165,250,.16); --eff-pos-m:#9cc5fb;
     --eff-pos-a-bg:rgba(45,212,191,.15); --eff-pos-a:#6ee7d2;
     --eff-pos-as-bg:rgba(167,139,250,.18); --eff-pos-as:#c9bbfd;
@@ -4605,17 +4605,17 @@
 
   /* --- Tableaux (base commune) --- */
   .eff-table-wrap{margin-bottom:16px;}
-  #effectifSection table.eff-table{width:100%; background:transparent; border-radius:0; overflow:visible; border-collapse:separate; border-spacing:0; font-size:14px;}
-  #effectifSection table.eff-table th, #effectifSection table.eff-table td{padding:0 8px; border-bottom:0; text-align:left; white-space:nowrap;}
-  #effectifSection table.eff-table thead th{height:34px; font-size:12px; font-weight:600; text-transform:none; color:var(--ink-dim); letter-spacing:0;}
-  #effectifSection table.eff-table thead th.sorted{color:var(--amber);}
-  #effectifSection table.eff-table th.sortable-th:hover{color:var(--ink);}
-  #effectifSection table.eff-table th:first-child, #effectifSection table.eff-table td:first-child{padding-left:16px;}
-  #effectifSection table.eff-table th:last-child, #effectifSection table.eff-table td:last-child{padding-right:12px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table{width:100%; background:transparent; border-radius:0; overflow:visible; border-collapse:separate; border-spacing:0; font-size:14px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table th, :is(#effectifSection, #teamDetailSection) table.eff-table td{padding:0 8px; border-bottom:0; text-align:left; white-space:nowrap;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table thead th{height:34px; font-size:12px; font-weight:600; text-transform:none; color:var(--ink-dim); letter-spacing:0;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table thead th.sorted{color:var(--amber);}
+  :is(#effectifSection, #teamDetailSection) table.eff-table th.sortable-th:hover{color:var(--ink);}
+  :is(#effectifSection, #teamDetailSection) table.eff-table th:first-child, :is(#effectifSection, #teamDetailSection) table.eff-table td:first-child{padding-left:16px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table th:last-child, :is(#effectifSection, #teamDetailSection) table.eff-table td:last-child{padding-right:12px;}
   .eff-sort-ico{margin-left:3px; vertical-align:middle;}
   .eff-th.asc .eff-sort-ico{transform:rotate(180deg);}
   .eff-num{text-align:right !important;}
-  #effectifSection table.eff-table th.eff-th-age, #effectifSection table.eff-table th.eff-th-height, #effectifSection table.eff-table th.eff-th-salary{text-align:right;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table th.eff-th-age, :is(#effectifSection, #teamDetailSection) table.eff-table th.eff-th-height, :is(#effectifSection, #teamDetailSection) table.eff-table th.eff-th-salary{text-align:right;}
   .eff-player{display:inline-flex; align-items:center; gap:10px; min-width:0;}
   .eff-player .player-link{font-weight:600;}
   .eff-pos{display:inline-flex; min-width:34px; justify-content:center; padding:3px 8px; border-radius:6px; font-weight:800; font-size:13px; letter-spacing:.02em;}
@@ -4635,7 +4635,7 @@
   .eff-pips{display:inline-flex; gap:3px;}
   .eff-pip{width:12px; height:6px; border-radius:3px; background:#2a3550;}
   .eff-pip.on{background:var(--eff-tier);}
-  #effectifSection .eff-pot .potential-tier{font-size:13px; font-weight:500; color:var(--eff-tier); max-width:none; white-space:nowrap; text-align:left;}
+  :is(#effectifSection, #teamDetailSection) .eff-pot .potential-tier{font-size:13px; font-weight:500; color:var(--eff-tier); max-width:none; white-space:nowrap; text-align:left;}
 
   /* Forme : mini-barre + état. */
   .eff-cond{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-dim); --eff-c:var(--ok);}
@@ -4655,8 +4655,8 @@
   .eff-motiv.motiv-critical{--eff-c:var(--danger); color:var(--danger); font-weight:700;}
 
   /* --- Général : groupes Cinq de départ / Rotation / Réserve --- */
-  #effectifSection .eff-general tr.eff-group-row th{height:auto; padding:22px 0 10px 2px; text-align:left; background:transparent; font-weight:600; color:var(--ink); text-transform:none;}
-  #effectifSection .eff-general tbody:first-of-type tr.eff-group-row th{padding-top:6px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-group-row th{height:auto; padding:22px 0 10px 2px; text-align:left; background:transparent; font-weight:600; color:var(--ink); text-transform:none;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tbody:first-of-type tr.eff-group-row th{padding-top:6px;}
   .eff-group-title{font-size:18px; font-weight:700; margin-right:10px;}
   /* Largeurs de colonnes (retour utilisateur 2026-09-25, 3e essai : "il y a
      bcp de vide entre potentiel et âge et entre forme et motivation, ce
@@ -4665,30 +4665,30 @@
      fatigué ») et laissaient donc du vide quand l'équipe n'en a pas. Ici :
      chaque colonne se RESSERRE sur son contenu réel (width:1%), avec le
      même espacement partout, et seule Nom absorbe la place restante. */
-  #effectifSection table.eff-general th, #effectifSection table.eff-general td{width:1%; padding-left:14px; padding-right:14px;}
-  #effectifSection table.eff-general th.eff-th-name, #effectifSection table.eff-general td.eff-td-name{width:auto;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general th, :is(#effectifSection, #teamDetailSection) table.eff-general td{width:1%; padding-left:14px; padding-right:14px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general th.eff-th-name, :is(#effectifSection, #teamDetailSection) table.eff-general td.eff-td-name{width:auto;}
   /* Potentiel et Forme : libellé AU-DESSUS de sa jauge (retour utilisateur
      2026-09-25 : "on a toujours de gros écarts entre potentiel et âge et
      entre forme et motivation"). Côte à côte, la colonne prenait la largeur
      jauge + plus long libellé de l'effectif (« Joueur correct », «
      Légèrement fatigué ») et laissait un grand vide sur toutes les autres
      lignes ; empilés, elle ne fait plus que la largeur du libellé. */
-  #effectifSection table.eff-general .eff-pot, #effectifSection table.eff-general .eff-cond{flex-direction:column-reverse; align-items:flex-start; gap:5px;}
-  #effectifSection table.eff-general .eff-pot .potential-tier, #effectifSection table.eff-general .eff-cond-label{font-size:13px; line-height:1.2;}
-  #effectifSection table.eff-general .eff-cond .eff-meter{width:60px;}
-  #effectifSection .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
-  #effectifSection .eff-general .eff-group-starters tr.eff-row td{height:58px; background:var(--eff-row);}
-  #effectifSection .eff-general .eff-group-starters .eff-player .player-link{font-size:15px;}
-  #effectifSection .eff-general tr.eff-row td:first-child{border-left:1px solid var(--eff-sep);}
-  #effectifSection .eff-general tr.eff-row td:last-child{border-right:1px solid var(--eff-sep);}
-  #effectifSection .eff-general tr.eff-group-row + tr.eff-row td:first-child{border-top-left-radius:12px;}
-  #effectifSection .eff-general tr.eff-group-row + tr.eff-row td:last-child{border-top-right-radius:12px;}
-  #effectifSection .eff-general tr.eff-row:last-child td{border-bottom:1px solid var(--eff-sep);}
-  #effectifSection .eff-general tr.eff-row:last-child td:first-child{border-bottom-left-radius:12px;}
-  #effectifSection .eff-general tr.eff-row:last-child td:last-child{border-bottom-right-radius:12px;}
-  #effectifSection .eff-general tr.eff-row:hover td{background:#1c2638;}
-  #effectifSection .eff-general tr.eff-row.injured td{background:rgba(226,105,79,.12); color:var(--danger);}
-  #effectifSection .eff-listed{margin-left:6px; padding:1px 8px; font-size:10.5px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general .eff-pot, :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond{flex-direction:column-reverse; align-items:flex-start; gap:5px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general .eff-pot .potential-tier, :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond-label{font-size:13px; line-height:1.2;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond .eff-meter{width:60px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
+  :is(#effectifSection, #teamDetailSection) .eff-general .eff-group-starters tr.eff-row td{height:58px; background:var(--eff-row);}
+  :is(#effectifSection, #teamDetailSection) .eff-general .eff-group-starters .eff-player .player-link{font-size:15px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td:first-child{border-left:1px solid var(--eff-sep);}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td:last-child{border-right:1px solid var(--eff-sep);}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-group-row + tr.eff-row td:first-child{border-top-left-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-group-row + tr.eff-row td:last-child{border-top-right-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td{border-bottom:1px solid var(--eff-sep);}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td:first-child{border-bottom-left-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td:last-child{border-bottom-right-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:hover td{background:#1c2638;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row.injured td{background:rgba(226,105,79,.12); color:var(--danger);}
+  :is(#effectifSection, #teamDetailSection) .eff-listed{margin-left:6px; padding:1px 8px; font-size:10.5px;}
 
   /* Menu "⋯". */
   .eff-td-actions{position:relative; width:44px;}
@@ -4700,35 +4700,82 @@
   .eff-menu-item:hover{background:#243048;}
   .eff-menu-label{display:block; padding:8px 10px 4px; font-size:12px; color:var(--ink-dim);}
   .eff-menu-row{display:flex; gap:6px; padding:0 4px 6px;}
-  #effectifSection .eff-menu .market-price-input{flex:1 1 auto; width:auto; min-width:0; height:36px; padding:0 10px; border:1px solid #2e3b56; border-radius:7px; background:var(--panel); font-size:13px;}
+  :is(#effectifSection, #teamDetailSection) .eff-menu .market-price-input{flex:1 1 auto; width:auto; min-width:0; height:36px; padding:0 10px; border:1px solid #2e3b56; border-radius:7px; background:var(--panel); font-size:13px;}
   .eff-menu-cta{height:36px; padding:0 14px; border:0; border-radius:999px; background:var(--amber); color:var(--amber-ink); font:inherit; font-size:13px; font-weight:700; cursor:pointer;}
   .eff-menu-note{padding:8px 10px; font-size:12.5px; color:var(--ink-dim);}
-  #effectifSection .eff-menu .sell-btn.eff-menu-danger{margin:0; border:0; border-radius:7px; padding:9px 10px; font-size:13.5px; color:var(--danger);}
-  #effectifSection .eff-menu .sell-btn.eff-menu-danger:hover{background:rgba(226,105,79,.12);}
+  :is(#effectifSection, #teamDetailSection) .eff-menu .sell-btn.eff-menu-danger{margin:0; border:0; border-radius:7px; padding:9px 10px; font-size:13.5px; color:var(--danger);}
+  :is(#effectifSection, #teamDetailSection) .eff-menu .sell-btn.eff-menu-danger:hover{background:rgba(226,105,79,.12);}
 
   /* --- Caractéristiques --- */
-  #effectifSection .eff-table-wrap-caracs{overflow-x:auto; background:var(--eff-row-2); border:1px solid var(--eff-sep); border-radius:12px;}
-  #effectifSection .eff-caracs{font-size:13.5px;}
-  #effectifSection .eff-caracs tr.eff-family-row td{padding-top:14px; padding-bottom:0; height:auto;}
-  #effectifSection .eff-caracs td.eff-family{text-align:left !important; padding:14px 4px 0 !important;}
+  :is(#effectifSection, #teamDetailSection) .eff-table-wrap-caracs{overflow-x:auto; background:var(--eff-row-2); border:1px solid var(--eff-sep); border-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs{font-size:13.5px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs tr.eff-family-row td{padding-top:14px; padding-bottom:0; height:auto;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs td.eff-family{text-align:left !important; padding:14px 4px 0 !important;}
   .eff-family span{display:block; padding-bottom:5px; border-bottom:2px solid #2a3550; font-size:14px; font-weight:700; color:#c3cbd9;}
-  #effectifSection .eff-caracs thead tr:last-child th{border-bottom:1px solid var(--line); padding-bottom:4px;}
-  #effectifSection .eff-caracs th.eff-th-attr, #effectifSection .eff-caracs th.eff-th-avg{text-align:center; padding:0 2px; font-size:11px; white-space:normal; line-height:1.15; min-width:38px;}
-  #effectifSection .eff-caracs .eff-pot{gap:6px;}
-  #effectifSection .eff-caracs .eff-pip{width:8px;}
-  #effectifSection .eff-caracs .eff-pot .potential-tier{font-size:12px;}
-  #effectifSection .eff-caracs .eff-player{gap:8px;}
-  #effectifSection .eff-caracs td{height:44px; border-bottom:1px solid #1d2536;}
-  #effectifSection .eff-caracs tr:last-child td{border-bottom:0;}
-  #effectifSection .eff-caracs td:nth-child(n+4){text-align:center; padding:0 2px;}
-  #effectifSection .eff-caracs .eff-gstart{padding-left:12px !important;}
-  #effectifSection .eff-caracs tbody tr:hover td{background:#1a2333;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs thead tr:last-child th{border-bottom:1px solid var(--line); padding-bottom:4px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs th.eff-th-attr, :is(#effectifSection, #teamDetailSection) .eff-caracs th.eff-th-avg{text-align:center; padding:0 2px; font-size:11px; white-space:normal; line-height:1.15; min-width:38px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-pot{gap:6px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-pip{width:8px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-pot .potential-tier{font-size:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-player{gap:8px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs td{height:44px; border-bottom:1px solid #1d2536;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs tr:last-child td{border-bottom:0;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs td:nth-child(n+4){text-align:center; padding:0 2px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-gstart{padding-left:12px !important;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs tbody tr:hover td{background:#1a2333;}
   .eff-td-avg{font-size:15px; font-weight:800;}
-  #effectifSection .attr-cell.eff-attr{display:inline-flex; align-items:center; justify-content:center; width:36px; min-width:0; height:30px; margin:0; padding:0; border-radius:6px; background:transparent; gap:0;}
-  #effectifSection .attr-cell.eff-attr .attr-val{font-size:15px; font-weight:500;}
-  #effectifSection .attr-cell.eff-attr.eff-best{box-shadow:inset 0 0 0 1.5px rgba(244,246,250,.6);}
-  #effectifSection .attr-cell.eff-attr.eff-best .attr-val{font-weight:800;}
+  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr{display:inline-flex; align-items:center; justify-content:center; width:36px; min-width:0; height:30px; margin:0; padding:0; border-radius:6px; background:transparent; gap:0;}
+  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr .attr-val{font-size:15px; font-weight:500;}
+  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr.eff-best{box-shadow:inset 0 0 0 1.5px rgba(244,246,250,.6);}
+  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr.eff-best .attr-val{font-weight:800;}
 
+  /* ---- Fiche équipe > Effectif / Calendrier — refonte (retour utilisateur
+     2026-09-26 : "améliore les pages effectifs et calendrier des
+     adversaires"). Réutilise les classes .eff-* (étendues à
+     #teamDetailSection ci-dessus) et .cal-* ; seuls les ajouts propres à la
+     fiche équipe sont ici, préfixés .tde-. ---- */
+  .tde-kpis{margin-bottom:18px; flex-wrap:wrap; font-variant-numeric:tabular-nums;}
+  .tde-kpi-scout{flex:1 1 240px; min-width:220px;}
+  .tde-kpi-link{margin-left:auto; padding:0; border:0; background:none; color:var(--amber); font:inherit; font-size:13px; font-weight:600; cursor:pointer;}
+  .tde-kpi-link:hover{text-decoration:underline;}
+  .tde-seg-count{display:inline-block; margin-left:6px; padding:0 7px; border-radius:999px; background:var(--panel-2); color:var(--ink-dim); font-size:12px; font-weight:700;}
+  .eff-seg-btn.active .tde-seg-count{background:var(--amber); color:var(--amber-ink);}
+  .tde-group-count{font-size:13px; color:var(--ink-faint); font-weight:600;}
+  #teamDetailSection table.eff-general th.tde-th-stat{text-align:right;}
+  .tde-stat{color:var(--ink-dim);}
+  .tde-stat-main{color:var(--ink); font-weight:700;}
+  #teamDetailSection table.tde-stats{font-size:13.5px;}
+  #teamDetailSection table.tde-stats th.tde-th-stat{text-align:right; font-size:12px;}
+  #teamDetailSection table.tde-stats td{height:44px; border-bottom:1px solid #1d2536;}
+  #teamDetailSection table.tde-stats tr:last-child td{border-bottom:0;}
+  #teamDetailSection table.tde-stats tbody tr:hover td{background:#1a2333;}
+  .tde-lead{color:var(--amber) !important; font-weight:800;}
+  .tde-shot b{display:block; font-weight:600; color:var(--ink);}
+  .tde-shot span{display:block; font-size:11px; color:var(--ink-faint);}
+  .tde-shot.tde-lead b{color:var(--amber);}
+  .tde-locked-card{display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:22px; background:var(--panel); border:1px dashed var(--line); border-radius:12px;}
+  .tde-locked-ico{flex:none; width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--panel-2); color:var(--ink-dim);}
+  .tde-locked-text{flex:1 1 280px; min-width:0;}
+  .tde-locked-text h3{margin:0 0 4px; font-size:16px;}
+  .tde-locked-text p{margin:0; font-size:13.5px; color:var(--ink-dim); line-height:1.45;}
+  .tde-locked-btn{padding:10px 16px; border:0; border-radius:10px; background:var(--amber); color:var(--amber-ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer;}
+  .tde-hidden-attrs{margin-top:4px; padding:14px 16px; background:var(--panel); border:1px solid var(--line-soft); border-radius:12px;}
+  .tde-hidden-head{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--ink-dim); margin-bottom:10px;}
+  .tde-hidden-head svg{width:15px; height:15px;}
+  .tde-hidden-chips{display:flex; flex-wrap:wrap; gap:6px;}
+  .tde-chip{padding:4px 9px; border-radius:6px; background:var(--panel-2); color:var(--ink-faint); font-size:12px;}
+  .tde-col-action{width:110px;}
+  .tde-vs-me{display:inline-block; padding:3px 9px; border-radius:6px; background:rgba(240,162,60,.14); color:var(--amber); font-size:12px; font-weight:700;}
+  .calendar-table.cal-month tr.tde-row-vs-me td:first-child{box-shadow:inset 3px 0 0 var(--amber);}
+  .tde-h2h-row{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line-soft); font-size:13px;}
+  .tde-h2h-row:first-of-type{margin-top:8px;}
+  .tde-h2h-row:last-child{border-bottom:0; padding-bottom:0;}
+  .tde-h2h-label{flex:1; color:var(--ink); font-weight:600;}
+  .tde-h2h-where{color:var(--ink-faint); font-size:12px; white-space:nowrap;}
+  @media(max-width:768px){
+    .tde-kpis .eff-kpi-sep{display:none;}
+    .tde-kpis .eff-kpi{flex:1 1 45%; padding:10px 14px;}
+  }
   @media(max-width:1180px){
     .eff-table-wrap:not(.eff-table-wrap-caracs){overflow-x:auto; padding-bottom:140px; margin-bottom:-124px;}
     .eff-head{align-items:flex-start;}
@@ -21591,6 +21638,7 @@ function showTeamDetail(teamIdx) {
   }
   teamDetailIdx = teamIdx;
   teamDetailSubView = "apercu"; // repart toujours sur l'Aperçu à l'ouverture (même équipe ou pas)
+  teamDetailEffectifView = "general";
   renderTeamDetail(teamIdx);
   showPage("teamDetailSection");
 }
@@ -21667,118 +21715,302 @@ document.getElementById("teamDetailContent").addEventListener("click", (e) => {
 // module comme teamDetailIdx/teamDetailSubView, PAS remis à zéro en changeant
 // d'équipe consultée (comportement déjà établi pour rosterSortState).
 let teamDetailEffectifSortState = { key: null, dir: 1 };
+// ---------------------------------------------------------------------
+// Fiche équipe > Effectif — refonte (retour utilisateur, 2026-09-26 :
+// "améliore les pages effectifs et calendrier des adversaires. à noter que
+// sur les pages effectifs, on peut être amené à voir certaines caracs des
+// joueurs"). Même langage visuel que l'onglet Effectif du club (classes
+// .eff-*, voir renderEffectifSection) et trois vues :
+//  - Général : joueurs groupés Cinq de départ / Rotation / Réserve (voir
+//    playerRoleLabel, public), pastille de poste, âge, taille, salaire,
+//    forme, évaluation des 5 derniers matchs et moyennes de saison — rien
+//    qui ne soit déjà visible sur la fiche joueur d'un adversaire ;
+//  - Caractéristiques : pour un adversaire, UNIQUEMENT les colonnes
+//    révélées par les séances vidéo (teamA.scoutedAttrs), groupées Tir /
+//    Jeu / Défense / Physique / Mental, + la liste de celles encore cachées ;
+//    si rien n'est révélé, un encart renvoie vers "Analyse d'équipe" au lieu
+//    d'un tableau de cadenas vides (choix utilisateur) ;
+//  - Statistiques : moyennes de la saison (ancien tableau du bas).
+// Tri : même garde-fou anti-fuite qu'avant (teamDetailSortAllowed) — une
+// caractéristique non révélée n'est jamais triable, et un tri choisi sur une
+// autre équipe retombe sur le tri par défaut s'il n'est pas autorisé ici.
+// ---------------------------------------------------------------------
+let teamDetailEffectifView = "general"; // "general" | "caracs" | "stats"
 
-function teamDetailSortValue(p, key) {
+// Moyennes de saison d'un joueur (même agrégation que teamSeasonStatsRows).
+function teamDetailSeasonLine(p) {
+  const log = p.matchLog || [];
+  const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
+  log.forEach(m => { Object.keys(sum).forEach(k => { sum[k] += m[k] || 0; }); });
+  return { gp: log.length, sum };
+}
+const TDE_STAT_KEYS = ["gp", "min", "pts", "reb", "ast", "stl", "blk", "tov", "pf", "fg2", "fg3", "ft"];
+function teamDetailStatValue(p, key) {
+  const { gp, sum } = teamDetailSeasonLine(p);
+  if (key === "gp") return gp;
+  const pctOf = (m, a) => a > 0 ? m / a : -1;
+  if (key === "fg2") return pctOf(sum.fgm2, sum.fga2);
+  if (key === "fg3") return pctOf(sum.fgm3, sum.fga3);
+  if (key === "ft") return pctOf(sum.ftm, sum.fta);
+  return gp ? sum[key] / gp : 0;
+}
+
+function teamDetailSortValue(p, key, team) {
   switch (key) {
     case "name": return p.name;
     case "position": return POSITIONS.indexOf(p.position);
+    case "age": return p.age;
     case "height": return p.height;
     case "salary": return p.salary;
-    // Colonnes moyennées Physique/Mental (voir categoryAverageCellHtml) :
-    // même calcul que rosterSortValue ("physicalAvg"/"mentalAvg"), arrondi
-    // comme la valeur affichée.
+    case "condition": return currentCondition(p, Date.now(), (team || teamA).conditionRecoveryPerDay());
+    case "evaluation": {
+      const recent = (p.matchLog || []).slice(-5);
+      return recent.length ? recent.reduce((s, e) => s + statEvaluation(e), 0) / recent.length : 0;
+    }
     case "physicalAvg": return Math.round(PHYSICAL_ATTRS.reduce((s, a) => s + p.attrs[a], 0) / PHYSICAL_ATTRS.length);
     case "mentalAvg": return Math.round(MENTAL_ATTRS.reduce((s, a) => s + p.attrs[a], 0) / MENTAL_ATTRS.length);
-    default: return p.attrs[key];
+    default:
+      if (TDE_STAT_KEYS.includes(key)) return teamDetailStatValue(p, key);
+      return p.attrs[key];
   }
 }
-// Une colonne de caractéristique (brute ou moyennée) n'est triable que si sa
-// VALEUR RÉELLE est déjà visible à l'écran pour CE tableau précis — jamais
-// pour un adversaire non scouté (revealedSet vide/partiel) : trier révèle un
-// ORDRE, qui est lui-même de l'information sur des valeurs censées rester
-// cachées (même principe que le verrou d'affichage lui-même, voir
-// attr-locked). Nom/Poste/Taille/Salaire sont toujours visibles, donc
-// toujours triables. Physique/Mental (moyennes) : triables dès qu'AU MOINS
-// UNE caractéristique de la catégorie est révélée (categoryAverageCellHtml
-// affiche alors déjà une vraie valeur, pas un verrou).
+// Une colonne n'est triable que si sa VALEUR RÉELLE est visible à l'écran
+// pour CETTE équipe : trier une caractéristique cachée révélerait un ORDRE,
+// donc de l'information (même principe que le verrou d'affichage). Tout ce
+// qui est public (identité, forme, évaluation, stats de matchs joués) l'est
+// toujours. Physique/Mental (moyennes) : propre équipe uniquement — un
+// adversaire ne voit que ses caractéristiques révélées, une par une.
+const TDE_PUBLIC_SORT_KEYS = ["name", "position", "age", "height", "salary", "condition", "evaluation", ...TDE_STAT_KEYS];
 function teamDetailSortAllowed(key, isOwnTeam, revealedSet) {
-  if (["name", "position", "height", "salary"].includes(key)) return true;
+  if (TDE_PUBLIC_SORT_KEYS.includes(key)) return true;
   if (isOwnTeam) return true;
-  if (key === "physicalAvg") return PHYSICAL_ATTRS.some(a => revealedSet.has(a));
-  if (key === "mentalAvg") return MENTAL_ATTRS.some(a => revealedSet.has(a));
+  if (key === "physicalAvg" || key === "mentalAvg") return false;
   return revealedSet.has(key);
 }
-function teamDetailHeaderCellHtml(key, label, isOwnTeam, revealedSet) {
-  if (!teamDetailSortAllowed(key, isOwnTeam, revealedSet)) return `<th>${escapeHtml(label)}</th>`;
-  const active = teamDetailEffectifSortState.key === key;
-  const arrow = active ? (teamDetailEffectifSortState.dir === 1 ? " ▲" : " ▼") : "";
-  return `<th class="sortable-th${active ? " sorted" : ""}" data-team-sort="${key}">${escapeHtml(label)}${arrow}</th>`;
+function teamDetailHeaderCellHtml(key, label, isOwnTeam, revealedSet, opts = {}) {
+  const baseCls = ["eff-th", opts.cls || ""].filter(Boolean).join(" ");
+  const title = opts.title ? ` title="${escapeHtml(opts.title)}"` : "";
+  if (!teamDetailSortAllowed(key, isOwnTeam, revealedSet)) return `<th class="${baseCls}"${title}>${escapeHtml(label)}</th>`;
+  const active = opts.forceActive || teamDetailEffectifSortState.key === key;
+  const dir = opts.forceActive ? -1 : teamDetailEffectifSortState.dir;
+  const cls = ["sortable-th", baseCls, active ? "sorted" : "", active && dir === 1 ? "asc" : ""].filter(Boolean).join(" ");
+  return `<th class="${cls}" data-team-sort="${key}" aria-sort="${active ? (dir === 1 ? "ascending" : "descending") : "none"}"${title}>${escapeHtml(label)}${active ? effChevronSvg() : ""}</th>`;
+}
+// `columnKeys` : colonnes de la vue affichée — un tri choisi dans une autre
+// vue (ex. Taille, puis passage sur Caractéristiques) n'y est pas appliqué
+// en silence, on retombe sur l'ordre par défaut de la vue.
+function teamDetailSortPlayers(players, team, isOwnTeam, revealedSet, defaultCmp, columnKeys) {
+  const sortKey = teamDetailEffectifSortState.key;
+  if (!sortKey || !teamDetailSortAllowed(sortKey, isOwnTeam, revealedSet) || (columnKeys && !columnKeys.includes(sortKey))) return [...players].sort(defaultCmp);
+  return [...players].sort((a, b) => {
+    const va = teamDetailSortValue(a, sortKey, team), vb = teamDetailSortValue(b, sortKey, team);
+    const cmp = typeof va === "string" ? va.localeCompare(vb) : va - vb;
+    return cmp * teamDetailEffectifSortState.dir;
+  });
+}
+
+// Familles de la vue Caractéristiques d'un adversaire : les 28
+// caractéristiques, pour ne montrer QUE celles révélées, où qu'elles soient.
+const TDE_ATTR_FAMILIES = [
+  { label: "Tir", keys: ["midRange", "threePoint", "inside", "freeThrow"] },
+  { label: "Jeu", keys: ["pass", "dribble", "shotCreation", "penetration"] },
+  { label: "Défense", keys: ["defOutside", "defInside", "steal", "rebound", "block"] },
+  { label: "Physique", keys: PHYSICAL_ATTRS },
+  { label: "Mental", keys: MENTAL_ATTRS },
+];
+const TDE_LOCK_ICON = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>`;
+
+function teamDetailEffectifKpisHtml(team, isOwnTeam, revealedSet) {
+  const n = team.players.length;
+  const avg = f => n ? team.players.reduce((s, p) => s + f(p), 0) / n : 0;
+  const kpi = (label, num, unit) => `<div class="eff-kpi"><span class="eff-kpi-label">${label}</span><span class="eff-kpi-line"><span class="eff-kpi-num">${num}</span>${unit ? `<span class="eff-kpi-unit">${unit}</span>` : ""}</span></div>`;
+  let html = `<div class="eff-kpis tde-kpis">` +
+    kpi("Joueurs", n, "") + `<div class="eff-kpi-sep"></div>` +
+    kpi("Âge moyen", avg(p => p.age).toFixed(1).replace(".", ","), "ans") + `<div class="eff-kpi-sep"></div>` +
+    kpi("Taille moyenne", Math.round(avg(p => p.height)), "cm") + `<div class="eff-kpi-sep"></div>` +
+    kpi("Masse salariale", formatMoney(team.players.reduce((s, p) => s + p.salary, 0)), "/ sem.");
+  if (!isOwnTeam) {
+    const count = revealedSet.size;
+    const pct = Math.round(count / ATTRS.length * 100);
+    html += `<div class="eff-kpi-sep"></div><div class="eff-kpi tde-kpi-scout">` +
+      `<span class="eff-kpi-label">Caractéristiques révélées</span>` +
+      `<span class="eff-kpi-line"><span class="eff-kpi-num">${count}</span><span class="eff-kpi-unit">/ ${ATTRS.length}</span>` +
+      `<button type="button" class="tde-kpi-link" data-team-detail-subview="analyse">Séance vidéo →</button></span>` +
+      `<span class="eff-meter eff-meter-lg"><span class="eff-meter-fill" style="width:${pct}%"></span></span></div>`;
+  }
+  return html + `</div>`;
+}
+
+function teamDetailEffectifSubNavHtml(isOwnTeam, revealedSet) {
+  const caracCount = isOwnTeam ? "" : ` <span class="tde-seg-count">${revealedSet.size}</span>`;
+  const tabs = [
+    { key: "general", label: "Général" },
+    { key: "caracs", label: "Caractéristiques", extra: caracCount },
+    { key: "stats", label: "Statistiques" },
+  ];
+  return `<div class="eff-toolbar"><div class="eff-seg" role="tablist" aria-label="Vues de l'effectif">` +
+    tabs.map(t => `<button type="button" role="tab" aria-selected="${teamDetailEffectifView === t.key}" class="eff-seg-btn${teamDetailEffectifView === t.key ? " active" : ""}" data-team-effectif-view="${t.key}">${escapeHtml(t.label)}${t.extra || ""}</button>`).join("") +
+    `</div></div>`;
+}
+
+const TDE_GENERAL_KEYS = ["name", "position", "age", "height", "salary", "condition", "evaluation", "gp", "pts", "reb", "ast"];
+function teamDetailEffectifGeneralHtml(teamIdx, team, isOwnTeam, revealedSet) {
+  const now = Date.now();
+  const recovery = team.conditionRecoveryPerDay();
+  const H = (k, l, o) => teamDetailHeaderCellHtml(k, l, isOwnTeam, revealedSet, o);
+  const cols = [
+    H("name", "Nom", { cls: "eff-th-name" }), H("position", "Poste"), H("age", "Âge", { cls: "eff-th-age" }),
+    H("height", "Taille", { cls: "eff-th-height" }), H("salary", "Salaire/sem.", { cls: "eff-th-salary" }),
+    H("condition", "Forme"), H("evaluation", "Évaluation", { title: "Évaluation des 5 derniers matchs" }),
+    H("gp", "MJ", { cls: "tde-th-stat", title: "Matchs joués" }), H("pts", "Pts", { cls: "tde-th-stat", title: "Points par match" }),
+    H("reb", "Reb", { cls: "tde-th-stat", title: "Rebonds par match" }), H("ast", "Pas", { cls: "tde-th-stat", title: "Passes décisives par match" }),
+  ];
+  let html = `<div class="eff-table-wrap"><table class="roster-table eff-table eff-general tde-general"><thead><tr>${cols.join("")}</tr></thead>`;
+  const defaultCmp = (a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) ||
+    teamDetailStatValue(b, "pts") - teamDetailStatValue(a, "pts");
+  const fmt = v => v.toFixed(1).replace(".", ",");
+  EFF_ROLE_GROUPS.forEach(group => {
+    const members = team.players.filter(p => playerRoleLabel(team, p) === group.role);
+    if (!members.length) return;
+    const isStarters = group.role === "Titulaire";
+    html += `<tbody class="eff-group${isStarters ? " eff-group-starters" : ""}">` +
+      `<tr class="eff-group-row"><th colspan="${cols.length}" scope="rowgroup"><span class="eff-group-title">${escapeHtml(group.label)}</span><span class="tde-group-count">${members.length}</span></th></tr>`;
+    teamDetailSortPlayers(members, team, isOwnTeam, revealedSet, defaultCmp, TDE_GENERAL_KEYS).forEach(p => {
+      const cross = injuryCrossHtml(p, now);
+      const { gp, sum } = teamDetailSeasonLine(p);
+      const stat = k => gp ? fmt(sum[k] / gp) : "–";
+      html += `<tr class="eff-row${cross ? " injured" : ""}">` +
+        `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, isStarters ? 30 : 26)}${playerLinkHtml(teamIdx, p.id, p.name)}${cross || ""}</span></td>` +
+        `<td>${effPosBadgeHtml(p.position)}</td>` +
+        `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td><td class="eff-num">${formatMoney(p.salary)}</td>` +
+        `<td class="eff-td-condition">${effConditionHtml(p, now, recovery)}</td>` +
+        `<td>${evaluationSquaresHtml(p)}</td>` +
+        `<td class="eff-num tde-stat">${gp}</td><td class="eff-num tde-stat tde-stat-main">${stat("pts")}</td>` +
+        `<td class="eff-num tde-stat">${stat("reb")}</td><td class="eff-num tde-stat">${stat("ast")}</td></tr>`;
+    });
+    html += `</tbody>`;
+  });
+  return html + `</table></div>`;
+}
+
+function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
+  // Familles effectivement affichées : propre équipe = mêmes colonnes que
+  // l'onglet Effectif > Caractéristiques (13 fondamentaux + moyennes
+  // Physique/Mental) ; adversaire = uniquement les caractéristiques révélées.
+  const families = isOwnTeam
+    ? EFF_ATTR_GROUPS.map(g => ({ label: g.label, keys: g.keys }))
+    : TDE_ATTR_FAMILIES.map(f => ({ label: f.label, keys: f.keys.filter(k => revealedSet.has(k)) })).filter(f => f.keys.length);
+  if (!families.length) {
+    return `<div class="tde-locked-card"><div class="tde-locked-ico">${TDE_LOCK_ICON}</div>` +
+      `<div class="tde-locked-text"><h3>Aucune caractéristique révélée</h3>` +
+      `<p>Une séance vidéo révèle une partie des caractéristiques de TOUT l'effectif de ${escapeHtml(team.name)}, définitivement pour la saison. Plus votre analyste vidéo est bon, plus elle en révèle.</p></div>` +
+      `<button type="button" class="tde-locked-btn" data-team-detail-subview="analyse">Aller à l'Analyse d'équipe</button></div>`;
+  }
+  const keys = families.flatMap(f => f.keys);
+  const value = (p, k) => (k === "physicalAvg" || k === "mentalAvg") ? teamDetailSortValue(p, k, team) : p.attrs[k];
+  const best = {};
+  keys.forEach(k => { best[k] = Math.max(...team.players.map(p => value(p, k))); });
+  const H = (k, l, o) => teamDetailHeaderCellHtml(k, l, isOwnTeam, revealedSet, o);
+  const defaultCmp = (a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || a.name.localeCompare(b.name);
+  const sorted = teamDetailSortPlayers(team.players, team, isOwnTeam, revealedSet, defaultCmp, ["name", "position", ...keys]);
+
+  let html = `<div class="eff-table-wrap eff-table-wrap-caracs"><table class="roster-table eff-table eff-caracs tde-caracs"><thead>` +
+    `<tr class="eff-family-row"><td colspan="2"></td>` +
+    families.map(f => `<td colspan="${f.keys.length}" class="eff-family"><span>${escapeHtml(f.label)}</span></td>`).join("") + `</tr><tr>` +
+    H("name", "Nom", { cls: "eff-th-name" }) + H("position", "Poste") +
+    families.map((f, fi) => f.keys.map((k, ki) => H(k, EFF_AVG_LABELS[k] || ATTR_SHORT[k], {
+      cls: `eff-th-attr${ki === 0 && fi > 0 ? " eff-gstart" : ""}`,
+      title: EFF_AVG_LABELS[k] ? `Moyenne ${EFF_AVG_LABELS[k].toLowerCase()}` : TRAINING_LABELS[k],
+    })).join("")).join("") + `</tr></thead><tbody>`;
+  sorted.forEach(p => {
+    html += `<tr class="eff-row"><td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, 26)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${effPosBadgeHtml(p.position)}</td>`;
+    families.forEach((f, fi) => f.keys.forEach((k, ki) => {
+      const v = value(p, k);
+      const isBest = v === best[k];
+      html += `<td class="${ki === 0 && fi > 0 ? "eff-gstart" : ""}"><span class="attr-cell eff-attr ${attrColorTier(v)}${isBest ? " eff-best" : ""}"${isBest ? ` title="Meilleur de l'équipe"` : ""}><span class="attr-val">${v}</span></span></td>`;
+    }));
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div>`;
+  if (!isOwnTeam) {
+    const hidden = ATTRS.filter(a => !revealedSet.has(a));
+    if (hidden.length) {
+      html += `<div class="tde-hidden-attrs"><div class="tde-hidden-head">${TDE_LOCK_ICON}<span>Encore cachées · ${hidden.length}</span>` +
+        `<button type="button" class="tde-kpi-link" data-team-detail-subview="analyse">Séance vidéo →</button></div>` +
+        `<div class="tde-hidden-chips">${hidden.map(a => `<span class="tde-chip">${escapeHtml(TRAINING_LABELS[a])}</span>`).join("")}</div></div>`;
+    }
+  }
+  return html;
+}
+
+function teamDetailEffectifStatsHtml(teamIdx, team, isOwnTeam, revealedSet) {
+  const players = team.players.filter(p => (p.matchLog || []).length);
+  if (!players.length) return "<p class='training-empty'>Aucun match joué cette saison pour l'instant.</p>";
+  const H = (k, l, o) => teamDetailHeaderCellHtml(k, l, isOwnTeam, revealedSet, o);
+  const statCols = [
+    ["gp", "MJ", "Matchs joués"], ["min", "Min", "Minutes par match"], ["pts", "Pts", "Points par match"],
+    ["reb", "Reb", "Rebonds par match"], ["ast", "Pas", "Passes décisives par match"], ["stl", "Int", "Interceptions par match"],
+    ["blk", "Ctr", "Contres par match"], ["tov", "Perte", "Balles perdues par match"], ["pf", "Faute", "Fautes par match"],
+    ["fg2", "2 pts", "Tirs à 2 points"], ["fg3", "3 pts", "Tirs à 3 points"], ["ft", "LF", "Lancers francs"],
+  ];
+  const statKeys = ["name", "position", ...statCols.map(c => c[0])];
+  const noSortYet = !teamDetailEffectifSortState.key || !statKeys.includes(teamDetailEffectifSortState.key);
+  const defaultCmp = (a, b) => teamDetailStatValue(b, "pts") - teamDetailStatValue(a, "pts");
+  const sorted = teamDetailSortPlayers(players, team, isOwnTeam, revealedSet, defaultCmp, statKeys);
+  // Meilleur de l'équipe par colonne (moyennes : plus haut = mieux, sauf
+  // pertes/fautes où on ne met rien en avant).
+  const leaders = {};
+  ["min", "pts", "reb", "ast", "stl", "blk", "fg2", "fg3", "ft"].forEach(k => {
+    leaders[k] = Math.max(...players.map(p => teamDetailStatValue(p, k)));
+  });
+  let html = `<div class="eff-table-wrap eff-table-wrap-caracs"><table class="roster-table eff-table tde-stats"><thead><tr>` +
+    H("name", "Nom", { cls: "eff-th-name" }) + H("position", "Poste") +
+    statCols.map(([k, l, t]) => H(k, l, { cls: "tde-th-stat", title: t, forceActive: noSortYet && k === "pts" })).join("") +
+    `</tr></thead><tbody>`;
+  const pct = (m, a) => a > 0 ? `${Math.round(m / a * 100)}%` : "–";
+  sorted.forEach(p => {
+    const { gp, sum } = teamDetailSeasonLine(p);
+    const avgCell = k => {
+      const v = sum[k] / gp;
+      const lead = leaders[k] !== undefined && v > 0 && v === leaders[k];
+      return `<td class="eff-num tde-stat${lead ? " tde-lead" : ""}${k === "pts" ? " tde-stat-main" : ""}">${v.toFixed(1).replace(".", ",")}</td>`;
+    };
+    const shotCell = (k, m, a) => {
+      const lead = a > 0 && teamDetailStatValue(p, k) === leaders[k] && a >= 5;
+      return `<td class="eff-num tde-stat tde-shot${lead ? " tde-lead" : ""}"><b>${pct(m, a)}</b><span>${m}/${a}</span></td>`;
+    };
+    html += `<tr class="eff-row"><td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, 26)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${effPosBadgeHtml(p.position)}</td>` +
+      `<td class="eff-num tde-stat">${gp}</td>` +
+      ["min", "pts", "reb", "ast", "stl", "blk", "tov", "pf"].map(avgCell).join("") +
+      shotCell("fg2", sum.fgm2, sum.fga2) + shotCell("fg3", sum.fgm3, sum.fga3) + shotCell("ft", sum.ftm, sum.fta) + `</tr>`;
+  });
+  return html + `</tbody></table></div>`;
 }
 
 function teamDetailEffectifHtml(teamIdx) {
   const team = league.teams[teamIdx];
   const isOwnTeam = teamIdx === myTeamIndex;
-  const alreadyScoutedList = (teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || [];
-  const revealedSet = new Set(alreadyScoutedList);
-  // Ne trie sur teamDetailEffectifSortState QUE si la colonne visée est
-  // effectivement autorisée pour CETTE équipe précise (voir
-  // teamDetailSortAllowed) : sans ce garde-fou, un tri choisi sur une
-  // caractéristique révélée d'un premier adversaire resterait actif en
-  // consultant un second adversaire où elle ne l'est pas, triant alors
-  // silencieusement sur la vraie valeur cachée (fuite d'information),
-  // même si aucune en-tête cliquable ne le montre. Repli sur le tri par
-  // défaut (poste puis note globale) sinon, comme avant l'ajout du tri.
-  const sortKey = teamDetailEffectifSortState.key;
-  const sorted = sortKey && teamDetailSortAllowed(sortKey, isOwnTeam, revealedSet)
-    ? [...team.players].sort((a, b) => {
-        const va = teamDetailSortValue(a, sortKey), vb = teamDetailSortValue(b, sortKey);
-        const cmp = typeof va === "string" ? va.localeCompare(vb) : va - vb;
-        return cmp * teamDetailEffectifSortState.dir;
-      })
-    : [...team.players].sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall());
-  let html = "";
-
-  // Mêmes 13 colonnes Fondamentaux détaillées + 2 colonnes moyennées
-  // (Physique/Mental) que l'onglet Effectif > Caractéristiques (voir son
-  // grand commentaire, PHYSICAL_ATTRS/MENTAL_ATTRS/FUNDAMENTAL_ATTRS/
-  // categoryAverageCellHtml plus haut) : même tableau, propre équipe ou
-  // adversaire.
-  if (isOwnTeam) {
-    html += "<p class='training-intro'>Votre équipe : toutes les caractéristiques sont déjà visibles ici, comme sur l'onglet Effectif.</p>";
-    html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-      teamDetailHeaderCellHtml("name", "Nom", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("position", "Poste", isOwnTeam, revealedSet) +
-      teamDetailHeaderCellHtml("height", "Taille", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("salary", "Salaire/sem.", isOwnTeam, revealedSet) +
-      FUNDAMENTAL_ATTRS.map(a => teamDetailHeaderCellHtml(a, ATTR_SHORT[a], isOwnTeam, revealedSet)).join("") +
-      teamDetailHeaderCellHtml("physicalAvg", "Physique", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("mentalAvg", "Mental", isOwnTeam, revealedSet) +
-      "</tr></thead><tbody>";
-    sorted.forEach(p => {
-      html += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, team, 24)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
-      FUNDAMENTAL_ATTRS.forEach(a => { html += `<td>${attrCellHtml(p.attrs[a])}</td>`; });
-      html += `<td>${categoryAverageCellHtml(p, PHYSICAL_ATTRS, null)}</td><td>${categoryAverageCellHtml(p, MENTAL_ATTRS, null)}</td>`;
-      html += "</tr>";
-    });
-    html += "</tbody></table></div>";
-  } else {
-    html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-      teamDetailHeaderCellHtml("name", "Nom", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("position", "Poste", isOwnTeam, revealedSet) +
-      teamDetailHeaderCellHtml("height", "Taille", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("salary", "Salaire/sem.", isOwnTeam, revealedSet) +
-      FUNDAMENTAL_ATTRS.map(a => teamDetailHeaderCellHtml(a, ATTR_SHORT[a], isOwnTeam, revealedSet)).join("") +
-      teamDetailHeaderCellHtml("physicalAvg", "Physique", isOwnTeam, revealedSet) + teamDetailHeaderCellHtml("mentalAvg", "Mental", isOwnTeam, revealedSet) +
-      "</tr></thead><tbody>";
-    sorted.forEach(p => {
-      html += `<tr><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, team, 24)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${POS_SHORT[p.position]}</td><td>${p.height} cm</td><td>${formatMoney(p.salary)}</td>`;
-      FUNDAMENTAL_ATTRS.forEach(a => {
-        html += revealedSet.has(a)
-          ? `<td>${attrCellHtml(p.attrs[a])}</td>`
-          : `<td><div class="attr-cell attr-locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique"></div></td>`;
-      });
-      html += `<td>${categoryAverageCellHtml(p, PHYSICAL_ATTRS, revealedSet)}</td><td>${categoryAverageCellHtml(p, MENTAL_ATTRS, revealedSet)}</td>`;
-      html += "</tr>";
-    });
-    html += "</tbody></table></div>";
-  }
-
-  html += "<h3 class='field-label'>Statistiques de la saison</h3>";
-  html += teamSeasonStatsTableHtml(teamIdx);
-  return html;
+  const revealedSet = new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
+  let html = `<div class="tde-effectif">` + teamDetailEffectifKpisHtml(team, isOwnTeam, revealedSet) +
+    teamDetailEffectifSubNavHtml(isOwnTeam, revealedSet);
+  if (teamDetailEffectifView === "caracs") html += teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet);
+  else if (teamDetailEffectifView === "stats") html += teamDetailEffectifStatsHtml(teamIdx, team, isOwnTeam, revealedSet);
+  else html += teamDetailEffectifGeneralHtml(teamIdx, team, isOwnTeam, revealedSet);
+  return html + `</div>`;
 }
 document.getElementById("teamDetailContent").addEventListener("click", (e) => {
+  const viewBtn = e.target.closest("[data-team-effectif-view]");
+  if (viewBtn) {
+    teamDetailEffectifView = viewBtn.dataset.teamEffectifView;
+    renderTeamDetail(teamDetailIdx);
+    return;
+  }
   const th = e.target.closest("[data-team-sort]");
   if (!th) return;
   const key = th.dataset.teamSort;
   teamDetailEffectifSortState = teamDetailEffectifSortState.key === key
     ? { key, dir: teamDetailEffectifSortState.dir * -1 }
-    : { key, dir: key === "name" ? 1 : -1 };
+    : { key, dir: (key === "name" || key === "position") ? 1 : -1 };
   renderTeamDetail(teamDetailIdx);
 });
 
@@ -21838,18 +22070,27 @@ function teamSeasonStatsTableHtml(teamIdx) {
 // `teamIdx` quelconque au lieu de myTeamIndex, et SANS colonne d'action
 // (donner ses ordres n'a de sens que pour sa PROPRE équipe, déjà couvert par
 // l'onglet Calendrier principal).
-function teamCalendarTableHtml(teamIdx) {
+// ---------------------------------------------------------------------
+// Fiche équipe > Calendrier — refonte (retour utilisateur, 2026-09-26 :
+// "améliore les pages effectifs et calendrier des adversaires") : mêmes
+// briques que l'onglet Calendrier du club (renderCalendrierSection :
+// calendarRowHtml, mois, écussons, "vs"/"@", résultat V/D, filtres, cartes
+// Prochain match + Saison), mais vues depuis CETTE équipe : scores et V/D
+// sont les siens, pas de bouton Ordres sur les lignes (sauf rappel quand
+// elle affronte le club du manager, pastille "Contre vous").
+// ---------------------------------------------------------------------
+let teamDetailCalendarFilter = "all"; // "all" | "home" | "away" | "upcoming"
+
+function teamCalendarRows(teamIdx) {
   const rows = [];
+  const vsMeCell = `<span class="tde-vs-me">Contre vous</span>`;
   for (let r = 0; r < league.totalRounds; r++) {
     const m = league.schedule[r].find(x => x.home === teamIdx || x.away === teamIdx);
     if (!m) continue;
     const isHome = m.home === teamIdx;
     const oppIdx = isHome ? m.away : m.home;
-    const oppName = league.teams[oppIdx].name;
     const result = league.results.find(res => res.round === r && (res.home === teamIdx || res.away === teamIdx));
-    let scoreText = "–";
-    let cls = "";
-    let boxscore = null;
+    let scoreText = "–", cls = "", boxscore = null;
     if (result) {
       const myScore = result.home === teamIdx ? result.scoreHome : result.scoreAway;
       const oppScore = result.home === teamIdx ? result.scoreAway : result.scoreHome;
@@ -21857,10 +22098,14 @@ function teamCalendarTableHtml(teamIdx) {
       cls = myScore > oppScore ? "result-win" : myScore < oppScore ? "result-loss" : "";
       boxscore = { round: r, competition: "championship", homeIdx: result.home, awayIdx: result.away };
     }
+    const vsMe = oppIdx === myTeamIndex && teamIdx !== myTeamIndex;
     rows.push({
-      competition: "champ", label: `Journée ${r + 1}`, opponent: oppName, opponentIdx: oppIdx,
-      location: isHome ? "Domicile" : "Extérieur", scoreText, boxscore, cls,
+      competition: "champ", label: `Journée ${r + 1}`, shortLabel: `J${r + 1}`, opponent: league.teams[oppIdx].name, opponentIdx: oppIdx,
+      location: isHome ? "Domicile" : "Extérieur", scoreText, boxscore, cls, vsMe,
+      actionCell: vsMe ? vsMeCell : "",
       scheduledAt: scheduledTimeForChampionshipRound(r), fallbackOrder: r * 2,
+      isHome, played: !!result, won: cls === "result-win", lost: cls === "result-loss",
+      orderRound: r, orderCompetition: "championship",
     });
   }
   if (league.cup) {
@@ -21871,28 +22116,27 @@ function teamCalendarTableHtml(teamIdx) {
       const scheduledAt = scheduledTimeForCupRound(round.dayIndex);
       const fallbackOrder = round.index * 2 + 1;
       if (m.bye) {
-        rows.push({
-          competition: "cup", label, opponent: "Exempt, qualifié(e) directement", opponentIdx: null,
-          location: "", scoreText: "", boxscore: null, cls: "", scheduledAt, fallbackOrder,
-        });
+        rows.push({ competition: "cup", label, opponent: "Exempt, qualifié(e) directement", opponentIdx: null, location: "",
+          scoreText: "", boxscore: null, cls: "", actionCell: "", scheduledAt, fallbackOrder, bye: true });
         return;
       }
-      const isHomeCup = m.home === teamIdx;
-      const oppIdxCup = isHomeCup ? m.away : m.home;
-      const oppName = league.teams[oppIdxCup].name;
-      let scoreText = "–";
-      let cls = "";
-      let boxscore = null;
+      const isHome = m.home === teamIdx;
+      const oppIdx = isHome ? m.away : m.home;
+      let scoreText = "–", cls = "", boxscore = null;
       if (m.resolved) {
-        const myScore = isHomeCup ? m.scoreHome : m.scoreAway;
-        const oppScore = isHomeCup ? m.scoreAway : m.scoreHome;
+        const myScore = isHome ? m.scoreHome : m.scoreAway;
+        const oppScore = isHome ? m.scoreAway : m.scoreHome;
         scoreText = `${myScore} - ${oppScore}`;
         cls = myScore > oppScore ? "result-win" : myScore < oppScore ? "result-loss" : "";
         boxscore = { round: round.index, competition: "cup", homeIdx: m.home, awayIdx: m.away };
       }
+      const vsMe = oppIdx === myTeamIndex && teamIdx !== myTeamIndex;
       rows.push({
-        competition: "cup", label, opponent: oppName, opponentIdx: oppIdxCup,
-        location: isHomeCup ? "Domicile" : "Extérieur", scoreText, boxscore, cls, scheduledAt, fallbackOrder,
+        competition: "cup", label, opponent: league.teams[oppIdx].name, opponentIdx: oppIdx,
+        location: isHome ? "Domicile" : "Extérieur", scoreText, boxscore, cls, vsMe,
+        actionCell: vsMe ? vsMeCell : "", scheduledAt, fallbackOrder,
+        isHome, played: !!m.resolved, won: cls === "result-win", lost: cls === "result-loss",
+        orderRound: round.index, orderCompetition: "cup",
       });
     });
   }
@@ -21902,21 +22146,134 @@ function teamCalendarTableHtml(teamIdx) {
     if (b.scheduledAt != null) return 1;
     return a.fallbackOrder - b.fallbackOrder;
   });
-  if (!rows.length) return "<p class='training-empty'>Calendrier indisponible pour cette équipe.</p>";
-  let html = "<div class='table-scroll'><table class='standings-table calendar-table'><thead><tr>" +
-    "<th>Date</th><th>Compétition</th><th>Adversaire</th><th>Lieu</th><th>Score</th></tr></thead><tbody>";
-  rows.forEach(row => {
-    const dateCell = row.scheduledAt != null
-      ? `${escapeHtml(formatDateTimeFr(row.scheduledAt))}<div class="sub">${escapeHtml(row.label)}</div>`
-      : `–<div class="sub">${escapeHtml(row.label)}</div>`;
-    const compLabel = row.competition === "cup" ? "Coupe" : "Championnat";
-    const scoreCell = row.boxscore
-      ? `<button type="button" class="calendar-score-btn" data-boxscore-round="${row.boxscore.round}" data-boxscore-competition="${row.boxscore.competition}" data-boxscore-home="${row.boxscore.homeIdx}" data-boxscore-away="${row.boxscore.awayIdx}">${row.scoreText}</button>`
-      : row.scoreText;
-    const opponentCell = row.opponentIdx != null ? teamLinkHtml(row.opponentIdx, row.opponent) : escapeHtml(row.opponent);
-    html += `<tr class="${row.cls}"><td>${dateCell}</td><td>${compLabel}</td><td>${opponentCell}</td><td>${escapeHtml(row.location)}</td><td>${scoreCell}</td></tr>`;
+  return rows;
+}
+
+// Carte "Prochain match" de l'équipe consultée : même habillage que
+// calendarNextMatchCardHtml, sans compteur d'ordres ; quand l'adversaire
+// est le club du manager, bouton "Préparer ce match" (même délégation
+// [data-tab]/data-round que le calendrier du club).
+function teamCalendarNextCardHtml(teamIdx, row) {
+  if (!row) {
+    return `<div class="cal-card cal-next"><div class="cal-card-kicker">Prochain match</div>` +
+      `<p class="cal-card-empty">Plus aucun match à jouer cette saison.</p></div>`;
+  }
+  const homeIdx = row.isHome ? teamIdx : row.opponentIdx;
+  const awayIdx = row.isHome ? row.opponentIdx : teamIdx;
+  const side = idx => {
+    const t = league.teams[idx];
+    const line = row.competition === "cup" ? "" : calendarStandingLine(idx);
+    return `<div class="cal-next-team${idx === myTeamIndex ? " is-me" : ""}">${teamLogoHtml(t, 56)}` +
+      `<div class="cal-next-name">${idx === teamIdx ? escapeHtml(t.name) : teamLinkHtml(idx, t.name)}</div>` +
+      (line ? `<div class="cal-next-rank">${escapeHtml(line)}</div>` : "") + `</div>`;
+  };
+  const kicker = row.competition === "cup" ? `Prochain match · Coupe · ${row.label}` : `Prochain match · ${row.label}`;
+  const when = row.scheduledAt != null ? `${formatCalendarDayFr(row.scheduledAt)} · ${formatCalendarTimeFr(row.scheduledAt)}` : row.label;
+  const countdown = row.scheduledAt != null && row.scheduledAt > Date.now()
+    ? `<div class="cal-next-count">${escapeHtml(formatDuration(row.scheduledAt - Date.now()))}</div><div class="cal-next-count-sub">avant le coup d'envoi</div>`
+    : "";
+  const action = row.vsMe
+    ? `<button type="button" class="cal-next-btn" data-tab="ordres" data-round="${row.orderRound}" data-competition="${row.orderCompetition}">Préparer ce match</button>`
+    : "";
+  return `<div class="cal-card cal-next"><div class="cal-card-kicker">${escapeHtml(kicker)}</div>` +
+    `<div class="cal-next-teams">${side(homeIdx)}<div class="cal-next-vs">VS</div>${side(awayIdx)}</div>` +
+    `<div class="cal-next-meta"><span>${escapeHtml(when)}</span><span class="cal-next-sep" aria-hidden="true">|</span><span>${escapeHtml(row.location)}</span></div>` +
+    countdown + action + `</div>`;
+}
+
+// Face-à-face avec le club du manager cette saison (toutes compétitions) :
+// uniquement si les deux équipes se croisent au calendrier.
+function teamCalendarHeadToHeadHtml(rows) {
+  const mine = rows.filter(r => r.vsMe);
+  if (!mine.length) return "";
+  const items = mine.map(r => {
+    let res;
+    if (r.played) {
+      // Du point de vue du MANAGER (V = son club a gagné) : c'est ce qui
+      // l'intéresse dans ce bloc, contrairement au reste de la page.
+      const [a, b] = r.scoreText.split(" - ").map(Number);
+      const tone = b > a ? "win" : b < a ? "loss" : "draw";
+      res = `<span class="cal-result cal-result-${tone}"><span class="cal-result-letter">${tone === "win" ? "V" : tone === "loss" ? "D" : "N"}</span>${b} - ${a}</span>`;
+    } else {
+      res = `<span class="cal-result-pending">${r.scheduledAt != null ? escapeHtml(formatCalendarDayFr(r.scheduledAt)) : "À jouer"}</span>`;
+    }
+    const where = r.isHome ? "chez eux" : "chez vous";
+    return `<div class="tde-h2h-row"><span class="tde-h2h-label">${escapeHtml(r.competition === "cup" ? `Coupe · ${r.label}` : r.label)}</span><span class="tde-h2h-where">${where}</span>${res}</div>`;
+  }).join("");
+  return `<div class="cal-card tde-h2h"><div class="cal-card-kicker">Contre votre club</div>${items}</div>`;
+}
+
+function teamCalendarApplyFilter() {
+  const holder = document.getElementById("teamDetailContent");
+  const root = holder && holder.querySelector(".tde-calendar");
+  if (!root) return;
+  let visibleTotal = 0;
+  root.querySelectorAll("table.cal-month").forEach(table => {
+    let visible = 0;
+    table.querySelectorAll("tbody tr.cal-row").forEach(tr => {
+      const v = tr.dataset.venue, st = tr.dataset.status, f = teamDetailCalendarFilter;
+      const show = f === "all" || (f === "home" && v === "home") || (f === "away" && v === "away") || (f === "upcoming" && st === "upcoming");
+      tr.classList.toggle("hidden", !show);
+      if (show) visible++;
+    });
+    table.classList.toggle("hidden", visible === 0);
+    visibleTotal += visible;
   });
-  html += "</tbody></table></div>";
+  root.querySelectorAll("[data-tde-cal-filter]").forEach(b => {
+    const on = b.dataset.tdeCalFilter === teamDetailCalendarFilter;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+  const empty = root.querySelector(".cal-filter-empty");
+  if (empty) empty.classList.toggle("hidden", visibleTotal > 0);
+}
+document.getElementById("teamDetailContent").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-tde-cal-filter]");
+  if (!btn) return;
+  teamDetailCalendarFilter = btn.dataset.tdeCalFilter;
+  teamCalendarApplyFilter();
+});
+
+function teamCalendarTableHtml(teamIdx) {
+  const rows = teamCalendarRows(teamIdx);
+  if (!rows.length) return "<p class='training-empty'>Calendrier indisponible pour cette équipe.</p>";
+  const playedRows = rows.filter(r => r.played);
+  const upcomingRows = rows.filter(r => !r.played && !r.bye);
+  const nextRow = upcomingRows[0] || null;
+  if (nextRow) nextRow.cls = [nextRow.cls, "me"].filter(Boolean).join(" ");
+  rows.forEach(r => { if (r.vsMe) r.cls = [r.cls, "tde-row-vs-me"].filter(Boolean).join(" "); });
+
+  const groups = [];
+  rows.forEach(row => {
+    const key = row.scheduledAt != null ? calendarMonthKey(row.scheduledAt) : "saison";
+    let g = groups.find(x => x.key === key);
+    if (!g) { g = { key, title: row.scheduledAt != null ? calendarMonthTitle(row.scheduledAt) : "Saison", rows: [] }; groups.push(g); }
+    g.rows.push(row);
+  });
+  const counts = {
+    all: rows.filter(r => !r.bye).length,
+    home: rows.filter(r => !r.bye && r.isHome).length,
+    away: rows.filter(r => !r.bye && !r.isHome).length,
+    upcoming: upcomingRows.length,
+  };
+  const filterBtn = (key, label) =>
+    `<button type="button" class="cal-filter${teamDetailCalendarFilter === key ? " active" : ""}" data-tde-cal-filter="${key}" aria-pressed="${teamDetailCalendarFilter === key}">${label} <span class="cal-filter-count">${counts[key]}</span></button>`;
+
+  let html = `<div class="cal-layout tde-calendar"><div class="cal-main">`;
+  html += `<div class="cal-toolbar" role="group" aria-label="Filtrer les matchs">` +
+    filterBtn("all", "Tous") + filterBtn("home", "Domicile") + filterBtn("away", "Extérieur") + filterBtn("upcoming", "À venir") + `</div>`;
+  groups.forEach(g => {
+    html += `<table class="calendar-table cal-month"><colgroup><col class="cal-col-date"><col class="cal-col-round"><col><col class="cal-col-result"><col class="tde-col-action"></colgroup>` +
+      `<thead><tr class="cal-month-head"><th colspan="5"><span class="cal-month-title">${escapeHtml(g.title)}</span></th></tr></thead><tbody>`;
+    g.rows.forEach(row => { html += calendarRowHtml(row); });
+    html += `</tbody></table>`;
+  });
+  html += `<p class="training-empty cal-filter-empty hidden">Aucun match ne correspond à ce filtre.</p>`;
+  html += `</div><aside class="cal-side" aria-label="Résumé de la saison de l'équipe">`;
+  html += teamCalendarNextCardHtml(teamIdx, nextRow);
+  html += calendarSeasonCardHtml(rows, playedRows, teamIdx);
+  html += teamCalendarHeadToHeadHtml(rows);
+  html += `</aside></div>`;
   return html;
 }
 
@@ -22505,7 +22862,10 @@ function renderTeamDetail(teamIdx) {
   // `window.__lastLiveBannerCheck` (même convention que `window.__lastSave`
   // pour saveMyTeam) : permet aux tests d'attendre déterministiquement la
   // fin de cet aller-retour réseau asynchrone plutôt qu'un délai arbitraire.
-  if (teamDetailSubView === "calendrier") window.__lastLiveBannerCheck = refreshTeamDetailLiveBanner(teamIdx);
+  if (teamDetailSubView === "calendrier") {
+    teamCalendarApplyFilter();
+    window.__lastLiveBannerCheck = refreshTeamDetailLiveBanner(teamIdx);
+  }
   // Scouting Pro (voir teamDetailAnalyseHtml/refreshScoutingProPanel) :
   // uniquement pour un ADVERSAIRE (jamais sa propre équipe, qui reste sur
   // le rapport tactique gratuit seul, voir teamDetailAnalyseHtml).
@@ -30884,7 +31244,7 @@ function calendarNextMatchCardHtml(row) {
     countdown + action + `</div>`;
 }
 
-function calendarSeasonCardHtml(rows, playedRows) {
+function calendarSeasonCardHtml(rows, playedRows, teamIdx = myTeamIndex) {
   const record = list => `${list.filter(r => r.won).length}-${list.filter(r => r.lost).length}`;
   const homePlayed = playedRows.filter(r => r.isHome);
   const awayPlayed = playedRows.filter(r => !r.isHome);
@@ -30893,7 +31253,7 @@ function calendarSeasonCardHtml(rows, playedRows) {
   const pct = champTotal ? Math.round(champPlayed / champTotal * 100) : 0;
 
   const table = league.standings();
-  const pos = table.findIndex(s => s.idx === myTeamIndex);
+  const pos = table.findIndex(s => s.idx === teamIdx);
   const me = pos === -1 ? null : table[pos];
   const hasChamp = !!(me && me.played);
   const rankText = hasChamp ? `${pos + 1}<small>${pos === 0 ? "er" : "e"}</small>` : "–";

@@ -51,7 +51,7 @@ const ATTRS = getAttrs(win);
 const FUNDAMENTAL_ATTRS = win.eval("FUNDAMENTAL_ATTRS");
 const PHYSICAL_ATTRS = win.eval("PHYSICAL_ATTRS");
 const MENTAL_ATTRS = win.eval("MENTAL_ATTRS");
-const DENSE_ATTR_COLUMNS = FUNDAMENTAL_ATTRS.length + 2; // + Physique + Mental moyennés
+const ATTRS_COUNT = 28; // voir ATTRS (moteurbasket3.html)
 
 // ---------------------------------------------------------------------
 // Partie 1 : onglet Staff — section analyste vidéo, séparée de celle de
@@ -137,23 +137,25 @@ console.log("Retour vers le Classement après \"← Retour\" :", backOnStandings
 if (!backOnStandings) throw new Error("❌ \"← Retour\" depuis la fiche équipe devrait ramener vers l'écran d'origine (Classement).");
 opponentLink.click(); // rouvre la fiche pour la suite du test
 console.log("✅ La fiche équipe adverse s'ouvre comme une vraie page dédiée, et \"← Retour\" ramène bien vers son origine.");
-const headerTexts = [...scoutingTable.querySelectorAll("thead th")].map(th => th.textContent);
-console.log("Colonnes :", headerTexts);
-["Nom", "Poste", "Taille", "Salaire/sem."].forEach(col => {
-  if (!headerTexts.includes(col)) throw new Error(`❌ La colonne baseline '${col}' devrait toujours être présente.`);
+doc.querySelector('[data-team-detail-subview="effectif"]').click();
+const headerTexts = [...doc.querySelectorAll("#teamDetailContent table.roster-table thead th")].map(th => th.textContent.trim());
+console.log("Colonnes (vue Général) :", headerTexts);
+["Nom", "Poste", "Âge", "Taille", "Salaire/sem.", "Forme"].forEach(col => {
+  if (!headerTexts.includes(col)) throw new Error(`❌ La colonne publique '${col}' devrait toujours être présente.`);
 });
-if (headerTexts.length !== 4 + DENSE_ATTR_COLUMNS) {
-  throw new Error(`❌ Les colonnes de caractéristiques devraient TOUTES être présentes (verrouillées ou pas) : attendu ${4 + DENSE_ATTR_COLUMNS}, obtenu ${headerTexts.length}.`);
-}
-const firstRowCells = scoutingTable.querySelector("tbody tr");
+const firstRowCells = doc.querySelector("#teamDetailContent table.roster-table tbody tr.eff-row");
 if (!firstRowCells || !firstRowCells.cells[0].textContent.trim()) throw new Error("❌ Le nom du joueur adverse devrait toujours être visible.");
-const lockedCells = scoutingTable.querySelectorAll(".attr-locked").length;
-console.log("Cellules verrouillées (🔒) :", lockedCells, "(attendu : tous les joueurs × toutes les colonnes denses, aucune séance encore faite)");
-const opponentRosterSize = getLeague(win).teams[opponentIdx].players.length;
-if (lockedCells !== opponentRosterSize * DENSE_ATTR_COLUMNS) {
-  throw new Error(`❌ Sans séance vidéo, TOUTES les cellules de caractéristiques devraient être verrouillées : attendu ${opponentRosterSize * DENSE_ATTR_COLUMNS}, obtenu ${lockedCells}.`);
-}
-console.log("✅ Le panneau de scoutisme affiche toujours nom/poste/taille/salaire, et verrouille (au lieu d'omettre) les caractéristiques non révélées.");
+// Refonte 2026-09-26 (choix utilisateur : "Seulement les révélées") : la vue
+// Caractéristiques d'un adversaire jamais scouté n'affiche PLUS un tableau
+// de cadenas, mais un encart qui renvoie vers "Analyse d'équipe".
+doc.querySelector('[data-team-effectif-view="caracs"]').click();
+const lockedCard = doc.querySelector("#teamDetailContent .tde-locked-card");
+const caracsTableBefore = doc.querySelector("#teamDetailContent table.tde-caracs");
+console.log("Encart 'Aucune caractéristique révélée' :", !!lockedCard, "| tableau de caracs :", !!caracsTableBefore);
+if (!lockedCard || caracsTableBefore) throw new Error("❌ Sans séance vidéo, la vue Caractéristiques devrait afficher l'encart (et aucun tableau).");
+if (doc.querySelectorAll("#teamDetailContent .attr-cell").length) throw new Error("❌ Aucune valeur de caractéristique ne devrait apparaître sans séance vidéo.");
+if (!lockedCard.querySelector('[data-team-detail-subview="analyse"]')) throw new Error("❌ L'encart devrait proposer d'aller à l'Analyse d'équipe.");
+console.log("✅ La fiche adverse affiche toujours les infos publiques, et aucune caractéristique tant que rien n'est révélé (encart vers l'Analyse).");
 
 // Retour utilisateur (2026-09) : "il faudrait ajouter des boutons sur la
 // page d'une équipe (effectif [...] analyse de l'équipe)" — le bouton de
@@ -182,28 +184,23 @@ if (sessionResult.revealed.length !== 3) throw new Error(`❌ Niveau 3 devrait r
 // Les cellules verrouillées vivent sous le sous-onglet "Effectif" (voir
 // teamDetailEffectifHtml), pas "Analyse" où on se trouve depuis le clic
 // plus haut : bascule explicitement dessus avant de les compter.
-win.eval("teamDetailSubView = 'effectif';");
+win.eval("teamDetailSubView = 'effectif'; teamDetailEffectifView = 'caracs';");
 win.renderTeamDetail(opponentIdx);
-const lockedAfter = doc.getElementById("teamDetailContent").querySelectorAll(".attr-locked").length;
-// Colonnes denses désormais (13 Fondamentaux détaillés + moyennes
-// Physique/Mental, voir DENSE_ATTR_COLUMNS plus haut) : une caractéristique
-// Fondamentale révélée déverrouille sa PROPRE colonne, mais une seule
-// caractéristique Physique (ou Mentale) révélée déverrouille TOUTE la
-// moyenne de sa catégorie (categoryAverageCellHtml calcule la moyenne sur
-// les seules caractéristiques déjà révélées dès qu'il y en a au moins une,
-// voir son commentaire dans moteurbasket3.html) — donc le nombre de cellules
-// déverrouillées dépend de la répartition des 3 caractéristiques tirées au
-// sort entre les 3 catégories, pas d'un simple "-3".
 const revealed = sessionResult.revealed;
-const lockedFundamentalsPerPlayer = FUNDAMENTAL_ATTRS.filter(a => !revealed.includes(a)).length;
-const physicalLockedPerPlayer = PHYSICAL_ATTRS.some(a => revealed.includes(a)) ? 0 : 1;
-const mentalLockedPerPlayer = MENTAL_ATTRS.some(a => revealed.includes(a)) ? 0 : 1;
-const lockedPerPlayer = lockedFundamentalsPerPlayer + physicalLockedPerPlayer + mentalLockedPerPlayer;
-console.log("Cellules verrouillées après la séance :", lockedAfter, `(attendu : ${lockedPerPlayer} × ${opponentRosterSize} joueurs, révélé cette séance : ${revealed.join(", ")})`);
-if (lockedAfter !== opponentRosterSize * lockedPerPlayer) {
-  throw new Error(`❌ Après la séance, ${lockedPerPlayer} colonnes par joueur devraient rester verrouillées (13 Fondamentaux + Physique + Mental, moins celles touchées par les 3 caractéristiques révélées), obtenu ${lockedAfter} cellules verrouillées restantes (attendu ${opponentRosterSize * lockedPerPlayer}).`);
+const opponentRosterSize = getLeague(win).teams[opponentIdx].players.length;
+const caracsTable = doc.querySelector("#teamDetailContent table.tde-caracs");
+if (!caracsTable) throw new Error("❌ Après une séance, la vue Caractéristiques devrait afficher un tableau.");
+const attrHeaders = [...caracsTable.querySelectorAll("thead th.eff-th-attr")];
+console.log("Colonnes de caractéristiques affichées :", attrHeaders.map(th => th.textContent.trim()).join(", "), `(révélé : ${revealed.join(", ")})`);
+if (attrHeaders.length !== revealed.length) throw new Error(`❌ Seules les ${revealed.length} caractéristiques révélées devraient être affichées, obtenu ${attrHeaders.length}.`);
+if (!attrHeaders.every(th => th.hasAttribute("data-team-sort") && revealed.includes(th.dataset.teamSort))) {
+  throw new Error("❌ Chaque colonne affichée doit correspondre à une caractéristique révélée, et être triable.");
 }
-console.log("✅ Une séance vidéo réussie révèle bien le bon nombre de caractéristiques dans le panneau (niveau 3 -> 3/10), reflété dans les colonnes Fondamentaux/Physique/Mental.");
+const valueCells = caracsTable.querySelectorAll("tbody .attr-cell").length;
+if (valueCells !== opponentRosterSize * revealed.length) throw new Error(`❌ Attendu ${opponentRosterSize * revealed.length} valeurs, obtenu ${valueCells}.`);
+const hiddenChips = doc.querySelectorAll("#teamDetailContent .tde-hidden-attrs .tde-chip").length;
+if (hiddenChips !== ATTRS_COUNT - revealed.length) throw new Error(`❌ ${ATTRS_COUNT - revealed.length} caractéristiques devraient être listées comme encore cachées, obtenu ${hiddenChips}.`);
+console.log("✅ Une séance vidéo réussie révèle bien le bon nombre de caractéristiques (niveau 3 -> 3), et seules celles-là sont affichées.");
 
 // Adversaire déjà scouté (retour utilisateur, 2026-09 : un même adversaire
 // n'est scoutable qu'UNE FOIS PAR SAISON, pas un cooldown quotidien) :
