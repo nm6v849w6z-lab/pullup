@@ -72,7 +72,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   mais dans un onglet ad hoc") : onglet « Sponsors » dédié (sidebar, Club
   & finances, route /sponsors, #sponsorsSection), plus rien dans
   Économie ; la tâche du tableau de bord et l'encart de la Salle y
-  renvoient. Non fait : carton dans les émissions (pub retirée), Guide.
+  renvoient. Puis (14:11-14:20) : bloc « Comment ça marche » retiré ; jauge
+  de réputation : seuls les paliers réellement débloqués (réputation ET
+  division) en ambre ; les deux offres d'un emplacement partagent le MÊME
+  palier (pickSponsorTier), la différence ne vient que du profil ("le
+  sponsor normal propose plus que le sponsor ambitieux, c'est bizarre") ;
+  une offre déjà partie (page pas à jour) rafraîchit la liste sans message
+  (stale: true, "Cette offre n'existe plus — ne mets pas ça"). Non fait :
+  carton dans les émissions (pub retirée), Guide.
   Non fait : carton dans les émissions (pub retirée), tâche du tableau de
   bord à l'arrivée d'une offre (fil d'actu seulement), Guide.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Ligues privées

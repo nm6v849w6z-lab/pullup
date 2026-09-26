@@ -7380,10 +7380,18 @@ function sponsorNameForSlot(team, slotKey) {
 }
 function roundToHundred(v) { return Math.max(100, Math.round(v / 100) * 100); }
 
-function generateSponsorOffer(team, league, slotKey, profileKey, now) {
-  const divisionLevel = league.divisionLevel || 1;
+// Palier d'une vague d'offres pour un emplacement : le meilleur disponible
+// le plus souvent, parfois le cran en dessous — mais le MÊME pour toutes les
+// offres de l'emplacement (retour utilisateur 2026-09-26 : "le sponsor
+// normal propose plus que le sponsor ambitieux, c'est bizarre" — deux
+// paliers mélangés rendaient les profils illisibles).
+function pickSponsorTier(team, divisionLevel) {
   const tiers = sponsorTiersAvailable(team, divisionLevel);
-  const tier = tiers.length > 1 && Math.random() < 0.35 ? tiers[Math.max(0, tiers.length - 2)] : tiers[tiers.length - 1];
+  return tiers.length > 1 && Math.random() < 0.35 ? tiers[Math.max(0, tiers.length - 2)] : tiers[tiers.length - 1];
+}
+function generateSponsorOffer(team, league, slotKey, profileKey, now, tierKey = null) {
+  const divisionLevel = league.divisionLevel || 1;
+  const tier = tierKey && SPONSOR_TIERS[tierKey] ? tierKey : pickSponsorTier(team, divisionLevel);
   const slot = SPONSOR_SLOTS.find(s => s.key === slotKey);
   const profile = SPONSOR_PROFILES[profileKey];
   const used = new Set([...(team.sponsorOffers || []), ...(team.sponsorContracts || [])].map(x => x.sponsorName));
@@ -7424,9 +7432,12 @@ function refreshSponsorOffers(team, league, now = Date.now()) {
     const usedProfiles = new Set(existing.map(o => o.profile));
     const candidates = SPONSOR_PROFILE_KEYS.filter(k => !usedProfiles.has(k));
     const want = Math.min(SPONSOR_MAX_OFFERS_PER_SLOT - existing.length, firstTime ? 2 : 1);
+    // Même palier que les offres déjà présentes sur l'emplacement, sinon un
+    // palier tiré une fois pour toute la vague.
+    const tier = existing.length ? existing[0].tier : pickSponsorTier(team, league.divisionLevel || 1);
     for (let i = 0; i < want && candidates.length; i++) {
       const k = candidates.splice(Math.floor(Math.random() * candidates.length), 1)[0];
-      const offer = generateSponsorOffer(team, league, slot.key, k, now);
+      const offer = generateSponsorOffer(team, league, slot.key, k, now, tier);
       team.sponsorOffers.push(offer);
       created.push(offer);
     }

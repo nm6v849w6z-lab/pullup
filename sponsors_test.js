@@ -12,6 +12,7 @@ function check(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.lo
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function waitFor(fn, label, tries = 60) { for (let i = 0; i < tries; i++) { const v = fn(); if (v) return v; await sleep(50); } throw new Error("❌ délai dépassé : " + label); }
 const DAY = 24 * 3600 * 1000;
+const SPONSOR_ORDER = { prudent: 0, normal: 1, ambitieux: 2 };
 
 (async () => {
   const T0 = Calendar.parisEpochForLocalTime(2026, 9, 30, 9);
@@ -22,6 +23,8 @@ const DAY = 24 * 3600 * 1000;
   let created = Engine.refreshSponsorOffers(team, league, T0);
   check(created.length === 4 && ["maillot", "salle"].every(k => created.filter(o => o.slot === k).length === 2), "première vague : 2 offres par emplacement");
   check(["maillot", "salle"].every(k => new Set(created.filter(o => o.slot === k).map(o => o.profile)).size === 2), "deux profils différents par emplacement");
+  check(["maillot", "salle"].every(k => new Set(created.filter(o => o.slot === k).map(o => o.tier)).size === 1), "même palier pour les deux offres d'un emplacement");
+  check(["maillot", "salle"].every(k => { const [a, b] = created.filter(o => o.slot === k); const hi = SPONSOR_ORDER[a.profile] > SPONSOR_ORDER[b.profile] ? a : b, lo = hi === a ? b : a; return hi.weekly < lo.weekly && hi.winPrime > lo.winPrime && hi.bonus > lo.bonus; }), "le profil le plus ambitieux : moins de fixe, plus de prime, plus de bonus");
   check(created.every(o => o.tier !== "national"), "réputation 50 : pas encore de marque nationale");
   check(created.every(o => o.weekly > 0 && o.winPrime > 0 && o.bonus === o.weekly * Engine.SPONSOR_PROFILES[o.profile].bonusWeeks && o.quote), "fixe, prime, bonus et phrase du sponsor cohérents");
   const maillot = created.filter(o => o.slot === "maillot");
@@ -96,7 +99,8 @@ const DAY = 24 * 3600 * 1000;
   const acc = await res.json();
   check(res.ok && acc.ok && acc.sponsorContracts.length === 1, "acceptation par l'API");
   res = await fetch(`${baseUrl}api/sponsors/accept`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": token }, body: JSON.stringify({ offerId }) });
-  check(res.status === 400, "la même offre ne peut pas être acceptée deux fois");
+  const twice = await res.json();
+  check(res.ok && twice.stale === true && twice.sponsorContracts.length === 1, "offre déjà acceptée : pas d'erreur, l'état réel est renvoyé (stale)");
 
   // --- C : navigateur.
   const dom = await openGame(html, `${baseUrl}?m=${token}`);

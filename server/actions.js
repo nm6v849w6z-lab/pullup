@@ -1062,14 +1062,19 @@ function sponsorsView(team) {
     sponsorHistory: team.sponsorHistory || [], sponsorReputation: team.sponsorReputation, budget: team.budget,
   };
 }
+// Une offre introuvable/expirée (page pas à jour, retour utilisateur
+// 2026-09-26 : « Cette offre n'existe plus. — ne mets pas ça ») n'est pas
+// une erreur : on renvoie simplement l'état réel (stale: true), que le
+// navigateur affiche sans message.
 function acceptSponsor(team, teamIndex, league, body, now) {
   const r = Engine.acceptSponsorOffer(team, league, body && body.offerId, now);
+  if (!r.ok && /n'existe plus|expiré/.test(r.error)) return { ok: true, stale: true, ...sponsorsView(team) };
   if (!r.ok) return fail(r.error);
   return { ok: true, ...sponsorsView(team) };
 }
 function declineSponsor(team, teamIndex, league, body, now) {
   const r = Engine.declineSponsorOffer(team, body && body.offerId);
-  if (!r.ok) return fail(r.error);
+  if (!r.ok) return { ok: true, stale: true, ...sponsorsView(team) };
   return { ok: true, ...sponsorsView(team) };
 }
 function terminateSponsor(team, teamIndex, league, body, now) {
