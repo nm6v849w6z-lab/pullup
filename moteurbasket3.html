@@ -1132,7 +1132,6 @@
   .cp-t.lose .team-link{color:var(--ink-dim);}
   .cp-t.win .team-link{font-weight:700;}
   .cp-t.me .team-link{color:var(--amber);}
-  .cp-rank{flex:none; font-size:11px; font-weight:700; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
   .cp-c-score{text-align:center;}
   .cp-score{display:inline-flex; gap:5px; align-items:center; font:inherit; font-weight:700; font-size:13px; padding:3px 9px; border-radius:6px; background:var(--panel-2); color:var(--ink-dim); border:0; font-variant-numeric:tabular-nums; white-space:nowrap;}
   button.cp-score{cursor:pointer;}
@@ -1165,7 +1164,6 @@
   .cal-split.cp-best{grid-template-columns:1fr;}
   .cal-split.cp-best > div{align-items:center; gap:12px;}
   .cp-best b .team-link{font-weight:700;}
-  .cp-best small{font-weight:500; color:var(--ink-faint); font-size:12px;}
   .cp-out-team{display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; margin:16px 0 4px;}
   .cp-out-team svg, .cp-out-team img{width:56px; height:56px; border-radius:50%;}
   .cal-card.cal-next.cp-next-out{border-color:var(--line); background:var(--panel);}
@@ -32438,9 +32436,10 @@ function cupSideHtml(cup, path, ranks) {
   else status = "";
   const cleared = path.filter(p => p.state === "win" || p.state === "bye").length;
   const pct = Math.round(cleared / cupTotalStages() * 100);
-  const beaten = wins.map(p => oppOf(p.m)).sort((a, b) => (ranks.get(a) ?? 99) - (ranks.get(b) ?? 99));
-  const best = beaten[0];
-  const bestRank = best != null ? ranks.get(best) : null;
+  // Meilleure victoire = celle du tour le plus avancé. Plus de rang au
+  // championnat (retour utilisateur 2026-09-26 : "enlève le 10e, quand on
+  // aura plein de ligues, ça n'aura aucun sens") — ni ici ni sur les lignes.
+  const best = wins.length ? oppOf(wins[wins.length - 1].m) : null;
   const card = `<div class="cal-card cp-path"><div class="cp-path-head"><div class="cal-card-kicker">Parcours</div>${status}</div>` +
     `<div class="cal-kpis">` +
       `<div class="cal-kpi"><div class="cal-kpi-label">Tour</div><div class="cal-kpi-value">${reached ? escapeHtml(cupRoundShort(reached.i)) : "–"}</div></div>` +
@@ -32450,7 +32449,7 @@ function cupSideHtml(cup, path, ranks) {
     `<div class="cal-progress"><div class="cal-progress-head"><span>Tours franchis</span><span>${cleared} / ${cupTotalStages()}</span></div>` +
       `<div class="cal-progress-track"><div class="cal-progress-fill" style="width:${pct}%"></div></div></div>` +
     `<div class="cal-form-wrap"><div class="cal-kpi-label">Tour par tour</div><div class="cp-track">${cupPathChipsHtml(path)}</div></div>` +
-    (best != null ? `<div class="cal-split cp-best"><div><span>Meilleure victoire</span><b>${teamLinkHtml(best, league.teams[best].name)}${bestRank ? ` <small>${bestRank}${bestRank === 1 ? "er" : "e"}</small>` : ""}</b></div></div>` : "") +
+    (best != null ? `<div class="cal-split cp-best"><div><span>Meilleure victoire</span><b>${teamLinkHtml(best, league.teams[best].name)}</b></div></div>` : "") +
     `</div>`;
   return top + card;
 }
@@ -32470,12 +32469,10 @@ function cupRoundTabsHtml(cup, myStage) {
 function cupMatchRowHtml(m, i, ranks) {
   const mine = cupIsMine(m);
   const side = (idx, away) => {
-    const rank = ranks.get(idx);
-    const rankHtml = rank ? `<span class="cp-rank">${rank}${rank === 1 ? "er" : "e"}</span>` : "";
     const cls = ["cp-t", away ? "away" : "", m.resolved && m.winner === idx ? "win" : "", m.resolved && m.winner !== idx ? "lose" : "", idx === myTeamIndex ? "me" : ""].filter(Boolean).join(" ");
     const logo = `<span class="cal-opp-logo">${teamLogoHtml(league.teams[idx], 28)}</span>`;
     const name = teamLinkHtml(idx, league.teams[idx].name);
-    return `<div class="${cls}">${away ? `${rankHtml}${name}${logo}` : `${logo}${name}${rankHtml}`}</div>`;
+    return `<div class="${cls}">${away ? `${name}${logo}` : `${logo}${name}`}</div>`;
   };
   let score;
   if (m.resolved) {
