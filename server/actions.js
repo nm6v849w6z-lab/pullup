@@ -192,6 +192,8 @@ function validateLineupBody(team, raw) {
         if (!Number.isFinite(n) || n < 0 || n > 40) return { ok: false, error: `Temps de jeu hors limites (0-40 min) pour le joueur ${idStr}.` };
         out[player.id] = Math.round(n);
       }
+      const total = Object.values(out).reduce((a, b) => a + b, 0);
+      if (total > 40) return { ok: false, error: `Temps de jeu : ${total} min au poste ${pos}, 40 au maximum.` };
       minutes[pos] = out;
     }
     if (!Object.keys(minutes).length) minutes = null;

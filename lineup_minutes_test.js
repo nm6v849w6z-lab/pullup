@@ -41,12 +41,30 @@ assert(reservist, "l'effectif de départ devrait avoir un joueur hors du poste M
 (team.lineup.backupPositions[reservist.id] || []).slice().forEach(x => team.toggleBackupPosition(reservist.id, x, false));
 team.toggleBackupPosition(reservist.id, pos, true);
 assert(team.lineup.minutes[pos][reservist.id] === 0, "réserviste ajouté au poste : 0 min par défaut");
+// Plafond 40 min par poste (retour utilisateur 2026-09-26) : on libère
+// d'abord les minutes des autres remplaçants avant de monter le titulaire.
+team.slotPlayerIds(pos).filter(id => id !== starter && id !== reservist.id).forEach((id, i) => team.setSlotMinutes(pos, id, i === 0 ? 6 : 0));
 team.setSlotMinutes(pos, starter, 30);
 team.setSlotMinutes(pos, reservist.id, 4);
-team.slotPlayerIds(pos).filter(id => id !== starter && id !== reservist.id).forEach((id, i) => team.setSlotMinutes(pos, id, i === 0 ? 6 : 0));
 const shares = team.slotMinuteShares(pos);
 assert(Math.abs(shares[starter] - 0.75) < 1e-9, "part du titulaire = 30/40");
 assert(Math.abs(shares[reservist.id] - 0.1) < 1e-9, "part du réserviste = 4/40");
+// Plafond : impossible de dépasser 40 min au total sur le poste.
+assert(team.slotMinutesRoom(pos, starter) === 30, "marge du titulaire = 40 − minutes des autres");
+team.setSlotMinutes(pos, starter, 38);
+assert(team.lineup.minutes[pos][starter] === 30, "monter le titulaire au-delà de la marge doit être bloqué à 40 au total");
+const totalAfterCap = Object.values(team.lineup.minutes[pos]).reduce((a, b) => a + b, 0);
+assert(totalAfterCap === 40, `total plafonné à 40, obtenu ${totalAfterCap}`);
+// Rang : celui qui a le plus de minutes parmi les remplaçants devient "le"
+// remplaçant (1er de slotPlayerIds après le titulaire).
+const firstBackupBefore = team.slotPlayerIds(pos)[1];
+assert(firstBackupBefore !== reservist.id, "avant : le réserviste (4 min) n'est pas le premier remplaçant");
+team.setSlotMinutes(pos, firstBackupBefore, 0);
+team.setSlotMinutes(pos, reservist.id, 10);
+assert(team.slotPlayerIds(pos)[1] === reservist.id, "le réserviste avec le plus de minutes passe premier remplaçant");
+team.setSlotMinutes(pos, reservist.id, 4);
+team.setSlotMinutes(pos, firstBackupBefore, 6);
+assert(team.slotPlayerIds(pos)[1] === firstBackupBefore, "retour : l'ancien remplaçant reprend son rang");
 // Changement de titulaire : le nouveau reprend les minutes de l'ancien.
 const newStarter = team.slotPlayerIds(pos).find(id => id !== starter && id !== reservist.id);
 team.setStarter(pos, newStarter);
@@ -74,6 +92,11 @@ const ok = actions.setLineup(human, 0, lg, body);
 assert(ok.ok !== false && human.lineup.minutes && human.lineup.minutes.Pivot[human.lineup.starters.Pivot] === 32, "/api/lineup doit accepter et stocker les minutes : " + JSON.stringify(ok));
 const bad = actions.setLineup(human, 0, lg, { ...body, minutes: { Pivot: { [human.lineup.starters.Pivot]: 55 } } });
 assert(bad.ok === false || bad.error, "/api/lineup doit refuser plus de 40 min");
+const pivotBackup = human.players.find(p => p.id !== human.lineup.starters.Pivot && (human.lineup.backupPositions[p.id] || []).includes("Pivot"));
+if (pivotBackup) {
+  const bad2 = actions.setLineup(human, 0, lg, { ...body, minutes: { Pivot: { [human.lineup.starters.Pivot]: 30, [pivotBackup.id]: 12 } } });
+  assert(bad2.ok === false || bad2.error, "/api/lineup doit refuser un total de plus de 40 min sur un poste");
+}
 console.log("✅ Sauvegarde, plans et /api/lineup gèrent les minutes.");
 
 // --- 3. Moteur : cibles tenues ----------------------------------------
@@ -142,7 +165,18 @@ assert(ptRow("Meneur").querySelector(".pt-total").textContent.trim() === "40 / 4
 inputs[0].value = "30";
 inputs[0].dispatchEvent(new win.Event("change"));
 const totalTxt = ptRow("Meneur").querySelector(".pt-total").textContent.trim();
-assert(inputs.length === 1 || totalTxt === "42 / 40 min", `total mis à jour attendu 42 / 40 min, obtenu ${totalTxt}`);
+// Plafond 40 : 30 min au titulaire avec 12 min déjà données aux autres →
+// bloqué à 28, total inchangé à 40 (retour utilisateur 2026-09-26).
+assert(inputs.length === 1 || totalTxt === "40 / 40 min", `total plafonné attendu 40 / 40 min, obtenu ${totalTxt}`);
+assert(inputs.length === 1 || Number(inputs[0].max) === 28, `max de la case du titulaire attendu 28, obtenu ${inputs[0].max}`);
+const inputs2 = [...ptRow("Meneur").querySelectorAll("input.pt-input")];
+if (inputs2.length > 1) {
+  inputs2[1].value = "0";
+  inputs2[1].dispatchEvent(new win.Event("change"));
+  const inputs3 = [...ptRow("Meneur").querySelectorAll("input.pt-input")];
+  inputs3[0].value = "30";
+  inputs3[0].dispatchEvent(new win.Event("change"));
+}
 // Ajout d'un joueur hors du poste (réserviste ou remplaçant d'un autre poste).
 const add = ptRow("Meneur").querySelector("select.pt-add");
 assert(add && add.options.length > 1, "« + Ajouter un joueur » doit proposer des joueurs");

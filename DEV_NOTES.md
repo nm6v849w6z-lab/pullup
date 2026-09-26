@@ -20,7 +20,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **🔧 CODE FAIT, SUITE COMPLÈTE EN COURS (2026-09-26) — Temps de jeu :
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Temps de jeu :
   plafond 40 min par poste + rang Remplaçant/Réserviste selon les minutes**
   — retour utilisateur (capture 11:37, P à "39 / 40" avec 28/4/7) : "si je
   mets plus de minutes au réserviste, il doit passer automatiquement
@@ -36,8 +36,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   tapée est ramenée à la marge). Tests : lineup_minutes_test.js adapté
   (ne teste plus "42 / 40" mais le plafond, le rang, et le refus serveur) ;
   convocation, ordres_redesign, end_to_end, live_boxscore_minutes_totals,
-  server/actions_test verts. Reste : résultat de la suite complète,
-  commit, `git push` + redéploiement.
+  server/actions_test verts ; suite complète (129 fichiers) verte hors
+  player_detail_test.js (déjà en échec avant) et thirteen_attrs_test.js
+  (taux de lancers francs freeThrow=5 : 0.59 observé vs 0.52 attendu —
+  lié au commit b746a64 "planchers d'efficacité", pas au temps de jeu, à
+  regarder dans ce chantier-là). NB : engine.js / moteurbasket3.html de ce
+  point sont partis dans le commit b746a64 (autre session en parallèle),
+  le reste (server/actions.js, lineup_minutes_test.js) dans le commit
+  suivant. Reste : `git push` + redéploiement.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Moteur :
   planchers d'efficacité relevés (scores moches en Division VI)** — retour
