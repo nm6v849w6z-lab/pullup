@@ -233,7 +233,10 @@
       const d = Math.abs(x.hs - x.as);
       if (!biggest || d > biggest.d) biggest = { x, d };
     }
-    segments.push({
+    // Multiplex seulement s'il y a d'AUTRES matchs connus à la pause (seuls
+    // les matchs diffusés en direct le sont) : avec ton seul match, la
+    // rubrique ferait doublon avec « Ton match » (« 1 matchs »…).
+    if (ms.length > 1 || !mine) segments.push({
       type: 'multiplex', duration: 10, kicker: 'LA LIGUE', title: 'Multiplex',
       matches: ordered.map((x) => ({
         id: x.id, mine: x.mine,
@@ -470,6 +473,41 @@
         label: 'Qui gagne la 2e mi-temps de ton match ?',
         options: [{ id: mine.home, label: H.tshort(mine.home) }, { id: mine.away, label: H.tshort(mine.away) }],
       });
+      // Questions supplémentaires sur TON match (retour utilisateur,
+      // 2026-09-26 : « pourquoi il n'y a qu'une question dans le prono ? ») :
+      // à la mi-temps, seuls les matchs diffusés en direct sont connus (les
+      // matchs CPU contre CPU ne sont simulés qu'à la fin de la journée), donc
+      // les questions « ligue » ci-dessous manquent souvent. Ton match en
+      // fournit toujours trois de plus.
+      const gap = Math.abs(mine.hs - mine.as);
+      if (gap <= 15) {
+        qs.push({
+          id: showId + ':q:mywin', kind: 'matchWinner', matchId: mine.id,
+          label: 'Qui remporte ton match ?',
+          options: [{ id: mine.home, label: H.tshort(mine.home) }, { id: mine.away, label: H.tshort(mine.away) }],
+        });
+      } else {
+        qs.push({
+          id: showId + ':q:mymargin', kind: 'margin', matchId: mine.id,
+          label: 'Quel écart à la fin de ton match ?',
+          options: [{ id: '1-5', label: '1 à 5 points' }, { id: '6-10', label: '6 à 10 points' }, { id: '11+', label: '11 points ou plus' }],
+        });
+      }
+      const myLine = Math.round((mine.hs + mine.as) * 2) + 0.5;
+      qs.push({
+        id: showId + ':q:mytot', kind: 'totalPoints', matchId: mine.id, line: myLine,
+        label: 'Plus ou moins de ' + frNum(myLine) + ' points au total dans ton match ?',
+        options: [{ id: 'over', label: 'Plus' }, { id: 'under', label: 'Moins' }],
+      });
+      const scorers = Object.values(mine.b.players).filter((p) => p.pts > 0)
+        .sort((a, b) => b.pts - a.pts).slice(0, 3);
+      if (scorers.length >= 2) {
+        qs.push({
+          id: showId + ':q:mytop', kind: 'topScorer', matchId: mine.id,
+          label: 'Meilleur marqueur de ton match ?', note: 'Parmi les 3 meilleurs à la pause',
+          options: scorers.map((p) => ({ id: p.id, label: H.pname(p.id) + ' (' + p.pts + ')' })),
+        });
+      }
     }
     if (watch) {
       qs.push({
@@ -528,7 +566,7 @@
       type: 'intro', duration: 6, label: 'Générique',
       kicker: 'JOURNÉE ' + input.day + ' · AVANT-MATCH',
       title: 'L’AVANT-', titleAccent: 'MATCH',
-      versus: fx ? { home: H.tname(fx.homeId), away: H.tname(fx.awayId) } : null,
+      versus: fx ? { home: H.tname(fx.homeId), away: H.tname(fx.awayId), homeId: fx.homeId, awayId: fx.awayId } : null,
       bubble: fill('Bonsoir et bienvenue ! Journée {day} : on commence par ton match, puis on fait le tour de la ligue.', { day: input.day }),
     });
 
@@ -630,7 +668,7 @@
 
     segments.push({
       type: 'kickoff', duration: 0, label: 'Coup d\u2019envoi', kicker: 'COUP D’ENVOI DANS',
-      versus: fx ? { home: H.tname(fx.homeId), away: H.tname(fx.awayId) } : null,
+      versus: fx ? { home: H.tname(fx.homeId), away: H.tname(fx.awayId), homeId: fx.homeId, awayId: fx.awayId } : null,
       bubble: 'C’est bientôt l’heure ! Bon match à tous.',
     });
 

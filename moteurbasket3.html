@@ -5144,7 +5144,6 @@
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
      assets/hoop-shows/ (voir server/index.js pour le service statique). -->
-<link rel="stylesheet" href="assets/hoop-shows/fonts/exo2.css">
 <link rel="stylesheet" href="assets/hoop-shows/showPlayer.css">
 <!-- `defer` (retour d'un test automatisé, 2026-09 : régression massive de
      la suite *_test.js) : SANS defer, ce <script src> externe est
@@ -25848,7 +25847,7 @@ async function openHoopShow(kind) {
   const mount = document.getElementById("hoopShowMount");
   if (hoopShowPlayer) { hoopShowPlayer.destroy(); hoopShowPlayer = null; }
   section.classList.remove("hidden");
-  hoopShowPlayer = HoopShowPlayer.mount(mount, show, {
+  hoopShowPlayer = HoopShowPlayer.mount(mount, show, Object.assign(hoopShowDressOpts(), {
     premium: teamA.hasActivePremium(Date.now()),
     now: () => Date.now(),
     submission,
@@ -25874,7 +25873,53 @@ async function openHoopShow(kind) {
     // minutage indépendant (schedulePlayback côté serveur, applyTimelineItem
     // côté client) — rien à forcer ici, l'utilisateur ferme quand il veut.
     onClockEnd: () => {},
-  });
+  }));
+}
+
+// Habillage « esprit du jeu » des émissions (retour utilisateur, 2026-09-26 :
+// « mets un vrai petit avatar pour le journaliste », « pour l'avatar,
+// pioche dans ceux qu'on a pour les joueurs », « reprends le logo hoop
+// manager plutot qu'un fait maison », « reprends l'esprit de la DA des autres
+// pages du jeu ») : écussons et couleurs de maillot des clubs, avatars
+// AvatarGen des joueurs, logo de la barre latérale, et Max le présentateur
+// tiré du même générateur (graine fixe = toujours le même visage, maillot
+// aux couleurs Hoop Manager). Les ids d'équipe des émissions sont les index
+// de league.teams (voir server/showsAdapter.js), ceux des joueurs leurs
+// Player.id.
+const HOOP_SHOW_PRESENTER_SEED = 2441;
+let hoopShowPresenterSvg = null;
+function hoopShowPresenterAvatar() {
+  if (hoopShowPresenterSvg == null) {
+    try {
+      hoopShowPresenterSvg = AvatarGen.generateAvatar(HOOP_SHOW_PRESENTER_SEED, { teamColors: ["#1F2A40", "#F5A13A"] });
+    } catch (e) { hoopShowPresenterSvg = ""; }
+  }
+  return hoopShowPresenterSvg;
+}
+function hoopShowDressOpts() {
+  const teams = (typeof league !== "undefined" && league && league.teams) || [];
+  const teamOf = (id) => teams[Number(id)] || null;
+  const logoImg = document.querySelector(".sidebar-brand .brand-logo-img");
+  return {
+    logo: logoImg ? logoImg.getAttribute("src") : "assets/brand/logo-hoop-manager.png",
+    presenter: hoopShowPresenterAvatar() || undefined,
+    team: (id) => {
+      const t = teamOf(id);
+      if (!t) return null;
+      return {
+        logo: (size) => teamLogoHtml(t, size),
+        color: JERSEY_COLORS[t.jerseyColor] || null,
+        altColor: JERSEY_COLORS[t.awayJerseyColor] || null,
+      };
+    },
+    player: (id) => {
+      for (const t of teams) {
+        const p = t && t.players && t.players.find(pl => String(pl.id) === String(id));
+        if (p) return AvatarGen.generateAvatar(p.id, { teamColors: teamAvatarColors(t) });
+      }
+      return "";
+    },
+  };
 }
 
 function closeHoopShow() {

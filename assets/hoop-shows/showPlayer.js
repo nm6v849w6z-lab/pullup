@@ -12,6 +12,11 @@
  *     onGoLive: () => {},                      // bouton « Aller au direct » (avant-match)
  *     onClockEnd: () => {},                    // la reprise / le coup d'envoi est atteint
  *     now: () => Date.now(),                   // horloge (à caler sur l'heure serveur)
+ *     // Habillage du jeu (tous optionnels, voir makeDress) :
+ *     team: (id) => ({ logo: (size) => html, color, altColor }) | null,
+ *     player: (id, size) => html de l'avatar | '',
+ *     logo: 'url du logo Hoop Manager',
+ *     presenter: 'html de l'avatar du présentateur',
  *   });
  *   player.destroy();
  *
@@ -38,6 +43,81 @@
 
   const KICKER_TONE = { myMatch: 'mine', poster: 'mine', lineups: 'mine', duel: 'mine', ad: 'muted' };
 
+  /* ------------------------------------------------ habillage « du jeu »
+   * Retour utilisateur (2026-09-26) : « reprends l'esprit de la DA des autres
+   * pages du jeu pour le show d'avant-match et de la mi-temps ». Le jeu
+   * fournit (tous optionnels, repli propre sans) :
+   *   opts.team(id)    -> { logo(size) : html de l'écusson, color, altColor } | null
+   *   opts.player(id)  -> html de l'avatar du joueur | ''
+   *   opts.logo        -> URL du logo Hoop Manager
+   *   opts.presenter   -> html de l'avatar du présentateur
+   * Couleurs d'équipe : maillot du club qui reçoit, maillot extérieur de
+   * l'autre en cas de même couleur, maillot trop sombre éclairci (même règle
+   * que la page live, assets/live/live-view.js:readable).
+   * ------------------------------------------------------------------- */
+  const DEFAULT_COLORS = ['#F26B1D', '#3B8FE0'];
+  function hexRgb(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function readable(hex) {
+    const rgb = hexRgb(hex);
+    if (!rgb) return null;
+    const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
+    if (L >= 0.16) return hex;
+    const k = L < 0.03 ? 0.6 : 0.38;
+    return '#' + rgb.map((c) => Math.round(c + (255 - c) * k).toString(16).padStart(2, '0')).join('');
+  }
+  const initialsOf = (name) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+
+  function makeDress(opts) {
+    const teamCache = new Map(), avCache = new Map(), crestCache = new Map();
+    const team = (id) => {
+      if (id == null) return null;
+      if (!teamCache.has(id)) { let t = null; try { t = opts.team ? opts.team(String(id)) : null; } catch (e) { t = null; } teamCache.set(id, t); }
+      return teamCache.get(id);
+    };
+    return {
+      team,
+      crest(id, size, name) {
+        const key = id + '|' + size;
+        if (!crestCache.has(key)) {
+          const t = team(id);
+          let inner = '';
+          try { inner = t && t.logo ? t.logo(size) : ''; } catch (e) { inner = ''; }
+          crestCache.set(key, inner
+            ? '<span class="hs-crest" style="width:' + size + 'px;height:' + size + 'px">' + inner + '</span>'
+            : '<span class="hs-crest hs-crest-txt" style="width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.32) + 'px">' + esc(initialsOf(name)) + '</span>');
+        }
+        return crestCache.get(key);
+      },
+      avatar(id, name, size) {
+        const key = id + '|' + size;
+        if (!avCache.has(key)) {
+          let html = '';
+          try { html = opts.player && id != null ? opts.player(String(id), size) : ''; } catch (e) { html = ''; }
+          const h = Math.round(size * 130 / 120);
+          avCache.set(key, html
+            ? '<span class="hs-pav" style="width:' + size + 'px;height:' + h + 'px">' + html + '</span>'
+            : '<span class="hs-pav hs-pav-txt" style="width:' + size + 'px;height:' + h + 'px;font-size:' + Math.round(size * 0.34) + 'px">' + esc(initialsOf(name)) + '</span>');
+        }
+        return avCache.get(key);
+      },
+      // Variables CSS de couleur pour un duel domicile/extérieur.
+      pair(homeId, awayId) {
+        const h = team(homeId), a = team(awayId);
+        let c0 = (h && h.color) || null, c1 = (a && a.color) || null;
+        if (c0 && c1 && c0.toLowerCase() === c1.toLowerCase()) c1 = (a && a.altColor && a.altColor.toLowerCase() !== c0.toLowerCase()) ? a.altColor : null;
+        c0 = c0 || DEFAULT_COLORS[0]; c1 = c1 || DEFAULT_COLORS[1];
+        const i0 = readable(c0) || DEFAULT_COLORS[0], i1 = readable(c1) || DEFAULT_COLORS[1];
+        return ' style="--hs-stripe0:' + c0 + ';--hs-stripe1:' + c1 + ';--hs-home:' + i0 + ';--hs-away:' + i1 + '"';
+      },
+    };
+  }
+
   function head(seg) {
     const tone = KICKER_TONE[seg.type] || 'accent';
     return '<div class="hs-head"><span class="hs-kicker hs-tone-' + tone + '">' + esc(seg.kicker) + '</span>' +
@@ -45,101 +125,134 @@
       (seg.subtitle ? '<span class="hs-subtitle">' + esc(seg.subtitle) + '</span>' : '') + '</div>';
   }
 
-  function quarterBoxes(quarters) {
-    return '<div class="hs-quarters">' + [0, 1, 2, 3].map((i) => {
-      const q = quarters && quarters[i];
-      return '<div class="hs-q"><span>Q' + (i + 1) + '</span><b>' + (q ? esc(q[0]) + '–' + esc(q[1]) : '–') + '</b></div>';
-    }).join('') + '</div>';
+  function quarterTable(seg, D) {
+    const qs = [0, 1, 2, 3];
+    const cell = (i, side) => { const q = seg.quarters && seg.quarters[i]; return '<td>' + (q ? esc(q[side]) : '–') + '</td>'; };
+    const row = (t, side, cls) => '<tr><td><i class="hs-qdot ' + cls + '"></i>' + esc(t.name) + '</td>' + qs.map((i) => cell(i, side)).join('') + '<td class="hs-qtot">' + esc(t.score) + '</td></tr>';
+    return '<table class="hs-qt"><thead><tr><th></th>' + qs.map((i) => '<th>Q' + (i + 1) + '</th>').join('') + '<th>Total</th></tr></thead><tbody>' +
+      row(seg.home, 0, 'hs-bg-home') + row(seg.away, 1, 'hs-bg-away') + '</tbody></table>';
   }
 
-  function court(shots) {
+  // Bandeau façon « Prochain match » / page live : fond scindé, liserés aux
+  // couleurs de maillot, écussons, noms en capitales, badge « Mon club ».
+  function board(seg, D, o) {
+    const side = (t, cls) => '<div class="hs-bteam ' + cls + '">' + D.crest(t.id, 76, t.name) +
+      '<div class="hs-binfo"><div class="hs-bname">' + esc(t.name) + (t.isMine ? '<span class="hs-mine-badge">Mon club</span>' : '') + '</div>' +
+      (o.meta ? '<div class="hs-bmeta">' + o.meta(t) + '</div>' : '') + '</div></div>';
+    const lead = seg.home.score === seg.away.score ? null : seg.home.score > seg.away.score ? 'home' : 'away';
+    const score = (t, which) => o.noScore ? '' : '<div class="hs-bscore' + (lead && lead !== which ? ' hs-trail' : '') + '">' + esc(t.score) + '</div>';
+    return '<div class="hs-board"' + D.pair(seg.home.id, seg.away.id) + '><div class="hs-board-split"></div>' +
+      '<svg class="hs-board-court" viewBox="0 0 200 200" width="200" height="200" aria-hidden="true"><circle cx="100" cy="100" r="96" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="100" cy="100" r="30" fill="none" stroke="currentColor" stroke-width="3"/><path d="M100 0V200" stroke="currentColor" stroke-width="3"/></svg>' +
+      '<div class="hs-board-kicker"><span class="hs-comp">' + esc(o.kicker || '') + '</span><span>' + esc(o.kickerRight || '') + '</span></div>' +
+      '<div class="hs-board-top">' + side(seg.home, 'hs-home-side') + score(seg.home, 'home') +
+      '<div class="hs-bcenter"><div class="hs-bclock">' + esc(o.center) + '</div>' + (o.period ? '<div class="hs-bperiod">' + esc(o.period) + '</div>' : '') + '</div>' +
+      score(seg.away, 'away') + side(seg.away, 'hs-away-side') + '</div>' +
+      (o.bottom ? '<div class="hs-board-bottom">' + o.bottom + '</div>' : '') + '</div>';
+  }
+
+  function court(shots, D, homeId, homeName) {
     const W = 600, H = 300;
     let marks = '';
     for (const s of shots || []) {
       const x = (s.x * W).toFixed(1), y = (s.y * H).toFixed(1);
       const cls = s.side === 'home' ? 'hs-shot-home' : 'hs-shot-away';
       marks += s.made
-        ? '<circle class="' + cls + '" cx="' + x + '" cy="' + y + '" r="5"/>'
-        : '<path class="' + cls + '" d="M' + (x - 4) + ' ' + (y - 4) + 'l8 8M' + (+x + 4) + ' ' + (y - 4) + 'l-8 8"/>';
+        ? '<circle class="' + cls + ' hs-made" cx="' + x + '" cy="' + y + '" r="5.5"/>'
+        : '<path class="' + cls + ' hs-miss" d="M' + (x - 4) + ' ' + (y - 4) + 'l8 8M' + (+x + 4) + ' ' + (y - 4) + 'l-8 8"/>';
     }
-    return '<svg class="hs-court" viewBox="0 0 600 300" role="img" aria-label="Carte des tirs de la 1re mi-temps">' +
+    return '<div class="hs-court-wrap"><svg class="hs-court" viewBox="0 0 600 300" role="img" aria-label="Carte des tirs de la 1re mi-temps">' +
       '<g class="hs-court-lines"><rect x="1" y="1" width="598" height="298" rx="6"/><path d="M300 1V299"/>' +
       '<rect class="hs-paint-home" x="1" y="95" width="100" height="110"/><rect class="hs-paint-away" x="499" y="95" width="100" height="110"/>' +
       '<circle cx="101" cy="150" r="34"/><circle cx="499" cy="150" r="34"/>' +
       '<path d="M1 22L92 22A146 146 0 0 1 92 278L1 278"/><path d="M599 22L508 22A146 146 0 0 0 508 278L599 278"/>' +
       '<circle cx="20" cy="150" r="5"/><path d="M10 140V160"/><circle cx="580" cy="150" r="5"/><path d="M590 140V160"/>' +
       '<circle cx="300" cy="150" r="34"/></g>' +
-      '<g class="hs-shots">' + marks + '</g></svg>';
+      '<g class="hs-shots">' + marks + '</g></svg>' +
+      (homeId != null ? '<div class="hs-court-logo">' + D.crest(homeId, 60, homeName) + '</div>' : '') + '</div>';
   }
 
   /* ------------------------------------------------------------ rubriques */
 
   const R = {};
 
+  function logoBlock(ctx, big) {
+    const sp = ctx.sponsor;
+    if (ctx.opts.logo) {
+      return '<span class="' + (big ? 'hs-sponsor-big' : 'hs-sponsor-small') + '"><img class="hs-logo" src="' + esc(ctx.opts.logo) + '" alt="' + esc(sp.name) + '">' +
+        (sp.badge ? '<i>' + esc(sp.badge) + '</i>' : '') + '</span>';
+    }
+    return big
+      ? '<div class="hs-sponsor-big">' + ICON.ball + '<span><b>' + esc(sp.name) + '</b>' + (sp.badge ? '<i>' + esc(sp.badge) + '</i>' : '') + '</span></div>'
+      : '<span class="hs-sponsor-small"><b>' + esc(sp.name) + '</b>' + (sp.badge ? '<i>' + esc(sp.badge) + '</i>' : '') + '</span>';
+  }
+
+  function versus(v, D) {
+    if (!v) return '';
+    const ids = v.homeId != null ? [v.homeId, v.awayId] : [null, null];
+    return '<div class="hs-versus"' + (ids[0] != null ? D.pair(ids[0], ids[1]) : '') + '>' +
+      '<span class="hs-vteam">' + (ids[0] != null ? D.crest(ids[0], 44, v.home) : '') + '<span class="hs-c-home">' + esc(v.home) + '</span></span>' +
+      '<span class="hs-dim">vs</span>' +
+      '<span class="hs-vteam"><span class="hs-c-away">' + esc(v.away) + '</span>' + (ids[1] != null ? D.crest(ids[1], 44, v.away) : '') + '</span></div>';
+  }
+
   R.intro = (seg, st, ctx) =>
     '<div class="hs-center hs-intro">' +
     '<div class="hs-overline">' + esc(seg.kicker) + '</div>' +
     '<div class="hs-mega">' + esc(seg.title) + (seg.titleAccent ? (seg.title.endsWith('-') ? '' : '<br>') + '<span class="hs-accent">' + esc(seg.titleAccent) + '</span>' : '') + '</div>' +
-    (seg.versus ? '<div class="hs-versus"><span class="hs-c-home">' + esc(seg.versus.home) + '</span><span class="hs-dim">vs</span><span class="hs-c-away">' + esc(seg.versus.away) + '</span></div>' : '') +
+    versus(seg.versus, ctx.D) +
     (seg.subtitle ? '<div class="hs-lead">' + esc(seg.subtitle) + '</div>' : '') +
-    '<div class="hs-presented"><span>PRÉSENTÉ PAR</span>' + sponsorBig(ctx.sponsor) + '</div></div>';
+    '<div class="hs-presented"><span>PRÉSENTÉ PAR</span>' + logoBlock(ctx, true) + '</div></div>';
 
-  function sponsorBig(sp) {
-    return '<div class="hs-sponsor-big">' + ICON.ball + '<span><b>' + esc(sp.name) + '</b>' + (sp.badge ? '<i>' + esc(sp.badge) + '</i>' : '') + '</span></div>';
-  }
-  function sponsorSmall(sp) {
-    return '<span class="hs-sponsor-small"><b>' + esc(sp.name) + '</b>' + (sp.badge ? '<i>' + esc(sp.badge) + '</i>' : '') + '</span>';
-  }
+  R.myMatch = (seg, st, ctx) => {
+    const D = ctx.D;
+    const bp = seg.bestPlayer;
+    return head(seg) +
+      board(seg, D, { kicker: 'Championnat · Journée ' + ctx.show.day, kickerRight: seg.home.isMine ? 'À domicile' : 'À l’extérieur', center: 'Mi-temps', period: 'Reprise au 3e quart', bottom: quarterTable(seg, D) }) +
+      '<div class="hs-grid hs-grid-court"' + D.pair(seg.home.id, seg.away.id) + '>' +
+      '<div class="hs-card"><div class="hs-row-between"><span class="hs-label">Carte des tirs · 1re mi-temps</span><span class="hs-legend"><i class="hs-lg-made"></i>réussi <i class="hs-lg-miss">✕</i>raté</span></div>' + court(seg.shots, D, seg.home.id, seg.home.name) + '</div>' +
+      '<div class="hs-col">' +
+      '<div class="hs-card"><span class="hs-label">Faits marquants</span><ul class="hs-facts">' +
+      seg.facts.map((f) => '<li class="hs-tone-' + esc(f.tone) + '"><span>' + esc(f.text) + '</span></li>').join('') + '</ul></div>' +
+      (bp ? '<div class="hs-card hs-best"><span class="hs-label">Ton meilleur joueur</span><div class="hs-best-row">' + D.avatar(bp.id, bp.name, 56) +
+        '<div class="hs-col-tight"><b class="hs-lg">' + esc(bp.name) + '</b><span class="hs-small hs-light">' + esc(bp.line) + '</span></div></div></div>' : '') +
+      '</div></div>';
+  };
 
-  R.myMatch = (seg) =>
+  R.multiplex = (seg, st, ctx) => {
+    const D = ctx.D;
+    return head(seg) + '<div class="hs-grid hs-grid-2">' +
+      seg.matches.map((m) => {
+        const lead = m.home.score === m.away.score ? null : m.home.score > m.away.score ? 'home' : 'away';
+        return '<div class="hs-card hs-mx' + (m.mine ? ' hs-mine-border' : '') + '"' + D.pair(m.home.id, m.away.id) + '>' +
+          (m.mine ? '<span class="hs-mine-badge hs-mx-badge">Ton match</span>' : '') +
+          '<div class="hs-mx-line"><span class="hs-mx-team">' + D.crest(m.home.id, 34, m.home.name) + '<span class="hs-tname">' + esc(m.home.name) + '</span></span>' +
+          '<span class="hs-mx-score"><span class="' + (lead === 'away' ? 'hs-trail' : '') + '">' + esc(m.home.score) + '</span><span class="hs-dim"> – </span><span class="' + (lead === 'home' ? 'hs-trail' : '') + '">' + esc(m.away.score) + '</span></span>' +
+          '<span class="hs-mx-team hs-right"><span class="hs-tname">' + esc(m.away.name) + '</span>' + D.crest(m.away.id, 34, m.away.name) + '</span></div>' +
+          '<div class="hs-mx-sub">Q1 ' + esc(m.quarters[0][0]) + '–' + esc(m.quarters[0][1]) + ' · Q2 ' + esc(m.quarters[1][0]) + '–' + esc(m.quarters[1][1]) + '</div></div>';
+      }).join('') + '</div>';
+  };
+
+  R.matchToWatch = (seg, st, ctx) =>
     head(seg) +
-    '<div class="hs-card hs-score">' +
-    '<div class="hs-team"><span class="hs-tname">' + esc(seg.home.name) + '</span><span class="hs-big hs-c-home">' + esc(seg.home.score) + '</span></div>' +
-    '<div class="hs-mid"><span class="hs-label">MI-TEMPS</span>' + quarterBoxes(seg.quarters) + '</div>' +
-    '<div class="hs-team"><span class="hs-tname">' + esc(seg.away.name) + '</span><span class="hs-big hs-c-away">' + esc(seg.away.score) + '</span></div></div>' +
-    '<div class="hs-grid hs-grid-court">' +
-    '<div class="hs-card"><div class="hs-row-between"><span class="hs-label">CARTE DES TIRS · 1RE MI-TEMPS</span><span class="hs-legend">○ réussi · ✕ raté</span></div>' + court(seg.shots) + '</div>' +
-    '<div class="hs-col">' +
-    '<div class="hs-card"><span class="hs-label">FAITS MARQUANTS</span><ul class="hs-facts">' +
-    seg.facts.map((f) => '<li><i class="hs-dot hs-tone-' + esc(f.tone) + '"></i><span>' + esc(f.text) + '</span></li>').join('') + '</ul></div>' +
-    (seg.bestPlayer ? '<div class="hs-card hs-best"><div class="hs-avatar-initials hs-mine">' + esc(seg.bestPlayer.initials) + '</div><div class="hs-col-tight"><span class="hs-small">Ton meilleur joueur</span><b>' + esc(seg.bestPlayer.name) + '</b><span class="hs-small hs-light">' + esc(seg.bestPlayer.line) + '</span></div></div>' : '') +
-    '</div></div>';
-
-  R.multiplex = (seg) =>
-    head(seg) + '<div class="hs-grid hs-grid-2">' +
-    seg.matches.map((m) => {
-      const lead = m.home.score === m.away.score ? null : m.home.score > m.away.score ? 'home' : 'away';
-      const cH = m.mine ? 'hs-c-home' : lead === 'home' ? '' : 'hs-dim2';
-      const cA = m.mine ? 'hs-c-away' : lead === 'away' ? '' : 'hs-dim2';
-      return '<div class="hs-card hs-mx' + (m.mine ? ' hs-mine-border' : '') + '">' +
-        '<div class="hs-mx-line"><span class="hs-tname">' + esc(m.home.name) + '</span>' +
-        '<span class="hs-mx-score"><span class="' + cH + '">' + esc(m.home.score) + '</span><span class="hs-dim"> – </span><span class="' + cA + '">' + esc(m.away.score) + '</span></span>' +
-        '<span class="hs-tname hs-right">' + esc(m.away.name) + '</span></div>' +
-        '<div class="hs-mx-sub">Q1 ' + esc(m.quarters[0][0]) + '–' + esc(m.quarters[0][1]) + ' · Q2 ' + esc(m.quarters[1][0]) + '–' + esc(m.quarters[1][1]) +
-        (m.mine ? ' <b class="hs-c-home">· TON MATCH</b>' : '') + '</div></div>';
-    }).join('') + '</div>';
-
-  R.matchToWatch = (seg) =>
-    head(seg) +
-    '<div class="hs-card hs-feature"><span class="hs-tag">' + esc(seg.tag) + '</span>' +
-    '<div class="hs-feature-line"><span class="hs-tname-lg">' + esc(seg.home.name) + '</span><span class="hs-huge">' + esc(seg.home.score) + ' <span class="hs-dim">–</span> ' + esc(seg.away.score) + '</span><span class="hs-tname-lg">' + esc(seg.away.name) + '</span></div>' +
-    '<div class="hs-quarters">' + seg.quarters.map((q, i) => '<div class="hs-q"><span>Q' + (i + 1) + '</span><b>' + esc(q[0]) + '–' + esc(q[1]) + '</b></div>').join('') + '</div></div>' +
-    '<div class="hs-grid hs-grid-3">' + seg.stats.map((s) => '<div class="hs-card hs-col-tight"><span class="hs-small">' + esc(s.label) + '</span><b class="hs-lg">' + esc(s.value) + '</b></div>').join('') + '</div>';
+    board(seg, ctx.D, { kicker: seg.tag, kickerRight: 'Le match à suivre', center: 'Mi-temps',
+      bottom: '<div class="hs-quarters">' + seg.quarters.map((q, i) => '<div class="hs-q"><span>Q' + (i + 1) + '</span><b>' + esc(q[0]) + '–' + esc(q[1]) + '</b></div>').join('') + '</div>' }) +
+    '<div class="hs-grid hs-grid-3">' + seg.stats.map((s) => '<div class="hs-card hs-tile"><span class="hs-label">' + esc(s.label) + '</span><b class="hs-lg">' + esc(s.value) + '</b></div>').join('') + '</div>';
 
   R.oddStat = (seg) =>
     head(seg) + '<div class="hs-card hs-odd"><div class="hs-odd-big">' + esc(seg.big) + '</div><div class="hs-odd-text">' + esc(seg.text) + '</div><div class="hs-small">' + esc(seg.sub) + '</div></div>';
 
-  R.table = (seg) => {
+  R.table = (seg, st, ctx) => {
+    const D = ctx.D;
     const extra = !!seg.extraLabel;
     const trend = (r) => {
       if (extra) return '<span class="hs-small">' + esc(r.extra) + '</span>';
-      if (r.trend === 'suspended') return '<b class="hs-accent">En suspens</b>';
-      if (r.trend === 'up') return '<b class="hs-c-home">▲ ' + r.move + '</b>';
-      if (r.trend === 'down') return '<b class="hs-c-away">▼ ' + r.move + '</b>';
+      if (r.trend === 'suspended') return '<span class="hs-pill-sm hs-pill-amber">En suspens</span>';
+      if (r.trend === 'up') return '<span class="hs-pill-sm hs-pill-good">▲ ' + r.move + '</span>';
+      if (r.trend === 'down') return '<span class="hs-pill-sm hs-pill-bad">▼ ' + r.move + '</span>';
       return '<span class="hs-dim2">=</span>';
     };
-    return head(seg) + '<div class="hs-card hs-table"><table><thead><tr><th>#</th><th>ÉQUIPE</th><th>V</th><th>D</th><th>%</th><th class="hs-right">' + (extra ? esc(seg.extraLabel) : 'ÉVOLUTION') + '</th></tr></thead><tbody>' +
-      seg.rows.map((r) => '<tr class="' + (r.mine ? 'hs-row-mine' : r.opponentToday ? 'hs-row-opp' : '') + '"><td class="hs-dim2">' + r.pos + '</td><td class="hs-teamcell">' + esc(r.name) + '</td><td>' + r.w + '</td><td>' + r.l + '</td><td class="hs-dim2">' + r.pct + ' %</td><td class="hs-right">' + trend(r) + '</td></tr>').join('') +
+    return head(seg) + '<div class="hs-card hs-table"><table><thead><tr><th>#</th><th>Équipe</th><th>V</th><th>D</th><th>%</th><th class="hs-right">' + (extra ? esc(seg.extraLabel) : 'Évolution') + '</th></tr></thead><tbody>' +
+      seg.rows.map((r) => '<tr class="' + (r.mine ? 'hs-row-mine' : r.opponentToday ? 'hs-row-opp' : '') + '"><td class="hs-dim2">' + r.pos + '</td><td><span class="hs-teamcell">' + D.crest(r.teamId, 26, r.name) + '<span>' + esc(r.name) + '</span>' + (r.mine ? '<span class="hs-mine-badge">Mon club</span>' : '') + '</span></td><td>' + r.w + '</td><td>' + r.l + '</td><td class="hs-dim2">' + r.pct + ' %</td><td class="hs-right">' + trend(r) + '</td></tr>').join('') +
       '</tbody></table></div>' + (seg.note ? '<div class="hs-note">' + esc(seg.note) + '</div>' : '');
   };
 
@@ -151,12 +264,14 @@
     const p = ctx.pron;
     const locked = p.status === 'done' || ctx.clockOver;
     const lb = ctx.opts.leaderboard;
+    const n = seg.questions.length;
+    const answered = seg.questions.filter((q) => p.answers[q.id] != null).length;
     return head(seg) +
       '<div class="hs-grid hs-grid-2">' +
       '<div class="hs-card hs-row-between"><span class="hs-iconline">' + ICON.globe + 'Classement mondial des pronostiqueurs</span><b class="hs-accent hs-lg">' + (lb ? esc(lb.rank) + 'e · ' + esc(lb.points) + ' pts' : '—') + '</b></div>' +
       '<div class="hs-card hs-prize">' + ICON.trophy + '<span>' + esc(ctx.opts.prizeText || 'Le n°1 en fin de saison gagne 1 mois de Premium') + '</span></div></div>' +
-      '<div class="hs-grid hs-grid-3">' + seg.questions.map((q) =>
-        '<div class="hs-card hs-question"><b>' + esc(q.label) + '</b>' + (q.note ? '<span class="hs-small">' + esc(q.note) + '</span>' : '') +
+      '<div class="hs-grid hs-grid-q">' + seg.questions.map((q, qi) =>
+        '<div class="hs-card hs-question' + (p.answers[q.id] != null ? ' is-answered' : '') + '"><span class="hs-qnum">Question ' + (qi + 1) + '/' + n + '</span><b>' + esc(q.label) + '</b>' + (q.note ? '<span class="hs-small">' + esc(q.note) + '</span>' : '') +
         '<div class="hs-options">' + q.options.map((o) => {
           const sel = p.answers[q.id] === String(o.id);
           return '<button type="button" class="hs-opt' + (sel ? ' is-on' : '') + '"' + (locked ? ' disabled' : '') + ' data-hs-action="answer" data-q="' + esc(q.id) + '" data-o="' + esc(o.id) + '" aria-pressed="' + sel + '">' + esc(o.label) + '</button>';
@@ -165,50 +280,55 @@
       (p.status === 'done'
         ? '<span class="hs-ok">✓ Pronostics enregistrés</span>'
         : ctx.clockOver ? '<span class="hs-small">Pronostics verrouillés.</span>'
-          : '<button type="button" class="hs-btn-outline" data-hs-action="validate"' + (p.status === 'sending' ? ' disabled' : '') + '>Valider</button>') +
+          : '<button type="button" class="hs-btn-fill" data-hs-action="validate"' + (p.status === 'sending' ? ' disabled' : '') + '>Valider ' + answered + '/' + n + '</button>') +
       (p.error ? '<span class="hs-err">' + esc(p.error) + '</span>' : '') +
       '<span class="hs-small">+10 points par bon pronostic. Aucun effet sur ton club.</span></div>';
   };
 
-  R.poster = (seg) => {
-    const side = (t, cls) => '<div class="hs-team"><span class="hs-tname-lg">' + esc(t.name) + '</span><span class="hs-big ' + cls + '">' + (t.rank ? esc(ordinal(t.rank)) : '–') + '</span><span class="hs-small">' + t.w + ' victoire' + (t.w > 1 ? 's' : '') + ' · ' + t.l + ' défaite' + (t.l > 1 ? 's' : '') + '</span></div>';
-    const form = (t) => '<div class="hs-row-between"><b>' + esc(t.name) + '</b><span class="hs-form">' + (t.form.length ? t.form.map((r) => '<i class="' + (r === 'V' ? 'hs-w' : 'hs-l') + '">' + esc(r) + '</i>').join('') : '<span class="hs-small">—</span>') + '</span></div>';
+  R.poster = (seg, st, ctx) => {
+    const D = ctx.D;
+    const form = (t) => '<span class="hs-form">' + (t.form.length ? t.form.map((r) => '<i class="' + (r === 'V' ? 'hs-w' : 'hs-l') + '">' + esc(r) + '</i>').join('') : '<span class="hs-small">—</span>') + '</span>';
+    const meta = (t) => (t.rank ? '<b>' + esc(ordinal(t.rank)) + '</b> · ' : '') + t.w + ' V · ' + t.l + ' D';
     const lm = seg.lastMeeting;
     return head(seg) +
-      '<div class="hs-card hs-score hs-poster">' + side(seg.home, 'hs-c-home') + '<div class="hs-mid"><span class="hs-vs">VS</span><span class="hs-label">' + (seg.home.isMine ? 'À DOMICILE' : 'À L’EXTÉRIEUR') + '</span></div>' + side(seg.away, 'hs-c-away') + '</div>' +
-      '<div class="hs-grid hs-grid-2"><div class="hs-card hs-col"><span class="hs-label">FORME · 5 DERNIERS MATCHS</span>' + form(seg.home) + form(seg.away) + '</div>' +
-      (lm ? '<div class="hs-card hs-col"><span class="hs-label">' + esc(lm.label) + '</span><div class="hs-row-between"><b>' + esc(lm.home.name) + '</b><span class="hs-mx-score">' + esc(lm.home.score) + '<span class="hs-dim"> – </span>' + esc(lm.away.score) + '</span><b>' + esc(lm.away.name) + '</b></div><span class="hs-small hs-light">' + esc(lm.line) + '</span></div>'
-        : '<div class="hs-card hs-col"><span class="hs-label">DERNIÈRE CONFRONTATION</span><span class="hs-small">Première rencontre entre ces deux équipes.</span></div>') +
+      board(seg, D, { noScore: true, kicker: 'Championnat · Journée ' + ctx.show.day, kickerRight: seg.home.isMine ? 'À domicile' : 'À l’extérieur', center: 'VS', meta,
+        bottom: '<div class="hs-form-row"><span class="hs-label">Forme · 5 derniers matchs</span><span class="hs-form-side">' + form(seg.home) + '</span><span class="hs-form-side hs-right">' + form(seg.away) + '</span></div>' }) +
+      (lm ? '<div class="hs-card hs-lastmeet"' + D.pair(lm.home.id, lm.away.id) + '><span class="hs-label">' + esc(lm.label) + '</span><div class="hs-mx-line"><span class="hs-mx-team">' + D.crest(lm.home.id, 30, lm.home.name) + '<b>' + esc(lm.home.name) + '</b></span><span class="hs-mx-score">' + esc(lm.home.score) + '<span class="hs-dim"> – </span>' + esc(lm.away.score) + '</span><span class="hs-mx-team hs-right"><b>' + esc(lm.away.name) + '</b>' + D.crest(lm.away.id, 30, lm.away.name) + '</span></div><span class="hs-small hs-light">' + esc(lm.line) + '</span></div>'
+        : '<div class="hs-card"><span class="hs-label">Dernière confrontation</span><div class="hs-small" style="margin-top:6px">Première rencontre entre ces deux équipes.</div></div>');
+  };
+
+  R.lineups = (seg, st, ctx) => {
+    const D = ctx.D;
+    const revealed = st.elapsed >= (seg.revealAfter || 0) || st.revealAll;
+    const list = (t) => t.players.map((p) => '<li>' + D.avatar(p.id, p.name, 34) + '<span class="hs-pos">' + esc(p.pos) + '</span><b>' + esc(p.name) + '</b><span class="hs-ppg">' + esc(p.ppg) + '</span></li>').join('');
+    const block = (t, cls, hide) => '<div class="hs-card hs-lineup ' + cls + '"><div class="hs-row-between"><span class="hs-lu-team">' + D.crest(t.id, 36, t.name) + '<b>' + esc(t.name) + '</b>' + (t.isMine ? '<span class="hs-mine-badge">Mon club</span>' : '') + '</span><span class="hs-small">pts / match</span></div>' +
+      (hide ? '<div class="hs-reveal"><b data-hs-reveal>' + Math.max(1, Math.ceil((seg.revealAfter || 0) - st.elapsed)) + '</b><span class="hs-small">Révélation de la compo adverse…</span></div>' : '<ul>' + list(t) + '</ul>') + '</div>';
+    // La compo de MON équipe est visible tout de suite, celle de l'adversaire est « révélée ».
+    const hideHome = !revealed && !seg.home.isMine, hideAway = !revealed && !seg.away.isMine;
+    return head(seg) + '<div class="hs-grid hs-grid-2"' + D.pair(seg.home.id, seg.away.id) + '>' + block(seg.home, 'hs-side-home', hideHome) + block(seg.away, 'hs-side-away', hideAway) + '</div>' +
+      (seg.absents && seg.absents.length ? '<div class="hs-card hs-absents"' + D.pair(seg.home.id, seg.away.id) + '><span class="hs-label">Absents</span>' + seg.absents.map((a) => '<span class="hs-chip hs-chip-' + esc(a.side) + '">' + esc(a.name) + ' · ' + esc(a.reason) + '</span>').join('') + '</div>' : '');
+  };
+
+  R.duel = (seg, st, ctx) => {
+    const D = ctx.D;
+    return head(seg) + '<div class="hs-card hs-duel">' +
+      '<div class="hs-duel-top"><div class="hs-duel-p">' + D.avatar(seg.home.id, seg.home.name, 76) + '<div class="hs-col-tight"><b class="hs-duel-name">' + esc(seg.home.name) + '</b><span class="hs-small">' + esc(seg.home.pos) + ' · ' + esc(seg.home.team) + '</span></div></div>' +
+      '<span class="hs-vs">VS</span>' +
+      '<div class="hs-duel-p hs-rev"><div class="hs-col-tight hs-right"><b class="hs-duel-name">' + esc(seg.away.name) + '</b><span class="hs-small">' + esc(seg.away.pos) + ' · ' + esc(seg.away.team) + '</span></div>' + D.avatar(seg.away.id, seg.away.name, 76) + '</div></div>' +
+      seg.rows.map((r) => '<div class="hs-duel-row"><b class="' + (r.best === 'home' ? 'hs-accent' : 'hs-dim2') + '">' + esc(r.a) + '</b><span class="hs-bar hs-bar-l"><i style="width:' + r.wa + '%"></i></span><span class="hs-small hs-center-t">' + esc(r.label) + '</span><span class="hs-bar"><i style="width:' + r.wb + '%"></i></span><b class="hs-right ' + (r.best === 'away' ? 'hs-accent' : 'hs-dim2') + '">' + esc(r.b) + '</b></div>').join('') +
       '</div>';
   };
 
-  R.lineups = (seg, st) => {
-    const revealed = st.elapsed >= (seg.revealAfter || 0) || st.revealAll;
-    const list = (t) => t.players.map((p) => '<li><span class="hs-pos">' + esc(p.pos) + '</span><b>' + esc(p.name) + '</b><span>' + esc(p.ppg) + '</span></li>').join('');
-    const block = (t, cls, hide) => '<div class="hs-card hs-lineup ' + cls + '"><div class="hs-row-between"><b class="' + (cls === 'hs-side-home' ? 'hs-c-home' : 'hs-c-away') + '">' + esc(t.name) + '</b><span class="hs-small">pts / match</span></div>' +
-      (hide ? '<div class="hs-reveal"><b class="hs-c-away" data-hs-reveal>' + Math.max(1, Math.ceil((seg.revealAfter || 0) - st.elapsed)) + '</b><span class="hs-small">Révélation de la compo adverse…</span></div>' : '<ul>' + list(t) + '</ul>') + '</div>';
-    // La compo de MON équipe est visible tout de suite, celle de l'adversaire est « révélée ».
-    const hideHome = !revealed && !seg.home.isMine, hideAway = !revealed && !seg.away.isMine;
-    return head(seg) + '<div class="hs-grid hs-grid-2">' + block(seg.home, 'hs-side-home', hideHome) + block(seg.away, 'hs-side-away', hideAway) + '</div>' +
-      (seg.absents && seg.absents.length ? '<div class="hs-card hs-absents"><span class="hs-label">ABSENTS</span>' + seg.absents.map((a) => '<span class="hs-chip hs-chip-' + esc(a.side) + '">' + esc(a.name) + ' · ' + esc(a.reason) + '</span>').join('') + '</div>' : '');
-  };
-
-  R.duel = (seg) =>
-    head(seg) + '<div class="hs-card hs-duel">' +
-    '<div class="hs-duel-top"><div class="hs-duel-p"><div class="hs-avatar-initials hs-mine">' + esc(seg.home.initials) + '</div><div class="hs-col-tight"><b class="hs-lg">' + esc(seg.home.name) + '</b><span class="hs-small">' + esc(seg.home.pos) + ' · ' + esc(seg.home.team) + '</span></div></div>' +
-    '<span class="hs-vs">VS</span>' +
-    '<div class="hs-duel-p hs-rev"><div class="hs-col-tight hs-right"><b class="hs-lg">' + esc(seg.away.name) + '</b><span class="hs-small">' + esc(seg.away.pos) + ' · ' + esc(seg.away.team) + '</span></div><div class="hs-avatar-initials hs-opp">' + esc(seg.away.initials) + '</div></div></div>' +
-    seg.rows.map((r) => '<div class="hs-duel-row"><b class="' + (r.best === 'home' ? 'hs-c-home' : 'hs-dim2') + '">' + esc(r.a) + '</b><span class="hs-bar hs-bar-l"><i style="width:' + r.wa + '%"></i></span><span class="hs-small hs-center-t">' + esc(r.label) + '</span><span class="hs-bar"><i style="width:' + r.wb + '%"></i></span><b class="hs-right ' + (r.best === 'away' ? 'hs-c-away' : 'hs-dim2') + '">' + esc(r.b) + '</b></div>').join('') +
-    '</div>';
-
-  R.fixtures = (seg) =>
-    head(seg) + '<div class="hs-col">' + seg.fixtures.map((f) =>
+  R.fixtures = (seg, st, ctx) => {
+    const D = ctx.D;
+    return head(seg) + '<div class="hs-col">' + seg.fixtures.map((f) =>
       '<div class="hs-card hs-fixture' + (f.tag === 'CHOC AU SOMMET' ? ' hs-gold-border' : '') + '"><span>' + (f.tag ? '<span class="hs-tag hs-tag-sm">' + esc(f.tag) + '</span>' : '') + '</span>' +
-      '<span class="hs-right"><b>' + esc(f.home.name) + '</b> <span class="hs-dim2">' + esc(f.home.rank) + '</span></span><span class="hs-vs hs-vs-sm">VS</span><span><span class="hs-dim2">' + esc(f.away.rank) + '</span> <b>' + esc(f.away.name) + '</b></span></div>').join('') + '</div>';
+      '<span class="hs-mx-team hs-right"><span class="hs-dim2">' + esc(f.home.rank) + '</span><b>' + esc(f.home.name) + '</b>' + D.crest(f.home.id, 32, f.home.name) + '</span><span class="hs-vs hs-vs-sm">VS</span><span class="hs-mx-team">' + D.crest(f.away.id, 32, f.away.name) + '<b>' + esc(f.away.name) + '</b><span class="hs-dim2">' + esc(f.away.rank) + '</span></span></div>').join('') + '</div>';
+  };
 
   R.kickoff = (seg, st, ctx) =>
     '<div class="hs-center"><div class="hs-overline">' + esc(seg.kicker) + '</div><div class="hs-bigclock" data-hs-clock>' + esc(ctx.clockText) + '</div>' +
-    (seg.versus ? '<div class="hs-versus"><span class="hs-c-home">' + esc(seg.versus.home) + '</span><span class="hs-dim">vs</span><span class="hs-c-away">' + esc(seg.versus.away) + '</span></div>' : '') +
+    versus(seg.versus, ctx.D) +
     '<button type="button" class="hs-btn-live" data-hs-action="golive">Aller au direct</button></div>';
 
   /* -------------------------------------------------------------- montage */
@@ -224,6 +344,7 @@
     };
     let clockEndFired = false;
     const sponsor = show.sponsor || { name: 'HOOP MANAGER', badge: 'PREMIUM' };
+    const D = makeDress(opts);
 
     container.innerHTML = '';
     const rootEl = document.createElement('div');
@@ -235,9 +356,9 @@
       '<span class="hs-pill hs-mono" data-hs-topclock></span>' +
       '<button type="button" class="hs-btn-ghost" data-hs-action="exit">Quitter l’émission</button></div></header>' +
       '<main class="hs-stage"><div class="hs-inner" data-hs-body aria-live="polite"></div></main>' +
-      '<footer class="hs-bottom"><div class="hs-avatar">' + AVATAR + '</div>' +
+      '<footer class="hs-bottom"><div class="hs-avatar' + (opts.presenter ? ' hs-avatar-real' : '') + '">' + (opts.presenter || AVATAR) + '</div>' +
       '<div class="hs-bubble"><b>Max · présentateur</b><span data-hs-bubble></span></div>' +
-      '<div class="hs-presented-small"><span>Présenté par</span>' + sponsorSmall(sponsor) + '</div>' +
+      '<div class="hs-presented-small"><span>Présenté par</span>' + logoBlock({ opts, sponsor }, false) + '</div>' +
       '<div class="hs-nav"><button type="button" class="hs-btn-ghost" data-hs-action="prev">← Précédent</button><button type="button" class="hs-btn-next" data-hs-action="next"></button></div></footer>';
     container.appendChild(rootEl);
 
@@ -247,7 +368,7 @@
     function clockMs() { return show.clock && show.clock.at ? show.clock.at - now() : null; }
     function clockText() { const ms = clockMs(); return ms == null ? '--:--' : fmtClock(ms); }
 
-    function ctx() { const ms = clockMs(); return { opts, pron, sponsor, clockText: clockText(), clockOver: ms != null && ms <= 0 }; }
+    function ctx() { const ms = clockMs(); return { opts, pron, sponsor, D, show, clockText: clockText(), clockOver: ms != null && ms <= 0 }; }
 
     function render() {
       const seg = segs[st.i];

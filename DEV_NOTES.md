@@ -20,6 +20,35 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Émissions
+  avant-match / mi-temps dans l'esprit du jeu + pronostics de mi-temps** —
+  retour utilisateur (captures du show de la mi-temps Lyon-Rennes) : "mets
+  un vrai petit avatar pour le journaliste" puis "pour l'avatar, pioche dans
+  ceux qu'on a pour les joueurs", "reprends le logo hoop manager plutot
+  qu'un fait maison", "reprends l'esprit de la DA des autres pages du jeu",
+  "pourquoi il n'y a qu'une question dans le prono ?". Cause de la question
+  unique : à la mi-temps seuls les matchs DIFFUSÉS en direct sont connus
+  (CPU contre CPU simulés à la fin de la journée), donc pas de "match à
+  suivre" ni d'autres matchs → seule restait "Qui gagne la 2e mi-temps".
+  Livré : server/shows/showData.js (3 questions de plus sur TON match :
+  vainqueur si écart ≤ 15 sinon écart final, plus/moins de points projetés,
+  meilleur marqueur parmi les 3 meilleurs à la pause — types déjà résolus
+  par resolveShowQuestion ; multiplex retiré quand ton match est seul ;
+  versus avec ids d'équipes) ; assets/hoop-shows/showPlayer.js/.css
+  (palette/police du tableau de bord et du live, titres en capitales,
+  bandeau façon "Prochain match" avec écussons, liserés maillot et badge
+  Mon club, carte des tirs avec écusson au rond central, avatars joueurs
+  dans meilleur joueur/compos/duel, écussons multiplex/classement/affiches,
+  questions numérotées + "Valider x/n", police Exo 2 plus chargée) ;
+  moteurbasket3.html (hoopShowDressOpts : écussons teamLogoHtml, couleurs
+  JERSEY_COLORS, avatars AvatarGen, logo de la barre latérale ; Max =
+  avatar AvatarGen graine 2441 aux couleurs Hoop Manager). Test :
+  hoop_show_player_test.js (nouveau) + hoop_shows, prematch_lock_ui,
+  mvp_avatar, tabs, dashboard_e2e, live_view_game_style, server/actions,
+  liveMatch, index verts. Rendu vérifié dans Chromium (1440 px). Note : une
+  émission de mi-temps déjà publiée garde ses questions (publication
+  idempotente). Reste : `git push`.
+
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26, 3e9b073) —
   Feuille de statistiques refaite** — retours utilisateur : "améliore les
   feuilles de stats, elles ne sont pas très belles", "respecte plus
