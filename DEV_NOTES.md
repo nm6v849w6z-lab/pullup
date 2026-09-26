@@ -44,8 +44,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   JERSEY_COLORS, avatars AvatarGen, logo de la barre latérale ; le
   présentateur s'appelle Nicolas Cosset ("ce serait mieux s'il est blanc",
   "on va l'appeler : Nicolas Cosset") = tête d'avatar AvatarGen graine 7413
-  (visage A choisi parmi 4 : pas de trait noir sur le front, coiffure
-  d'origine), en costume au col monté jusqu'au cou, revers larges crantés,
+  (visage A choisi parmi 4), 30 ans, coupe dédiée « anchor » dans
+  renderHair (raie de côté, sans mèche sur le front ni reflet en zigzag :
+  « enleve la ride noir qu'il a sur le front », « ces cheveux sont quand
+  meme bizarres » ; jamais tirée pour un joueur), en costume au col monté jusqu'au cou, revers larges crantés,
   cravate large ambre, pochette blanche — "utilise la tete de
   l'avatar mais mets lui un costume quand meme" : option AvatarGen
   `outfit: "suit"` (renderSuit : veste marine, chemise, cravate ambre ;

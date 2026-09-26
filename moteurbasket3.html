@@ -8505,6 +8505,19 @@ const AvatarGen = (function () {
           `<path d="M36 48 Q39 36 47 32 Q54 27 61 32 Q73 27 79 36 Q84 41 84 48 Q80 39 75 35 Q66 31 62 34 Q54 29 47 34 Q40 38 36 48Z" fill="${hd}"/>` +
           strands(hc, 'M40 20 Q46 15 52 20 Q57 25 62 19 M38 30 Q45 25 50 29 M64 14 Q71 16 76 23 Q81 29 83 38 M62 24 Q70 23 74 30 M44 42 Q48 36 54 38', 1.1);
         break;
+      case 'anchor': {
+        // Coupe « présentateur télé » (réservée à Nicolas Cosset, jamais tirée
+        // pour un joueur) : raie sur le côté, mèche balayée, contour net, sans
+        // mèche sur le front ni reflet en zigzag (retour utilisateur : « enleve
+        // la ride noir qu'il a sur le front », « ces cheveux sont quand meme
+        // bizarres »).
+        const hl = shade(hc, 45);
+        front = `<path d="M35 50 Q30 17 49 9.5 Q66 4 81 11.5 Q91 20 85 50 Q84 36 77.5 30.5 Q69 25.5 57 27.5 Q48 28 43.5 31.5 Q37.5 37 35 50Z" fill="${hc}" ${LW}/>` +
+          `<path d="M37 46 Q39.5 35 46 31.5 Q52 28.5 59 28.5 Q71 27.5 78 32.5 Q82.5 37 83 46 Q79.5 37.5 74 34 Q66 30.5 57 31 Q47 31.5 42 36 Q38.5 40 37 46Z" fill="${hd}"/>` +
+          `<path d="M50.5 10.5 Q47 18 44.5 27" stroke="${hd}" stroke-width="1.6" fill="none" stroke-linecap="round"/>` +
+          `<path d="M53 13 Q67 10.5 79 18 M54.5 19 Q68 17.5 80.5 26 M49 24 Q57 21.5 66 22.5" stroke="${hl}" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.45"/>`;
+        break;
+      }
       case 'long':
         back = `<path d="M30 60 Q24 18 60 12 Q96 18 90 60 L92 94 Q86 101 80 97 L76 70 L44 70 L40 97 Q34 101 28 94Z" fill="${hc}" ${LW}/>` +
           `<path d="M34 70 L33 92 M86 70 L87 92 M38 74 L37 90 M82 74 L83 90" stroke="${shade(hc, 50)}" stroke-width="0.9" opacity="0.7"/>`;
@@ -25931,10 +25944,11 @@ function hoopShowPresenterAvatar() {
   if (hoopShowPresenterSvg == null) {
     try {
       // Tête d'un avatar joueur (même générateur), mais en costume.
-      // Visage choisi par l'utilisateur parmi 4 propositions (« c'est le trait
-      // noir sur son front qui va pas », « la coupe est affreuse ») : coiffure
-      // d'origine de la graine, sans trait de racine sur le front.
-      hoopShowPresenterSvg = AvatarGen.generateAvatar(HOOP_SHOW_PRESENTER_SEED, {
+      // Visage choisi par l'utilisateur parmi 4 propositions (graine 7413),
+      // coiffé de la coupe dédiée « anchor » ; 30 ans (pas de rides).
+      const look = AvatarGen.generateAppearance(HOOP_SHOW_PRESENTER_SEED, { age: 30 });
+      look.hairStyle = "anchor"; // coupe dédiée, voir renderHair
+      hoopShowPresenterSvg = AvatarGen.renderAvatar(look, {
         teamColors: ["#1F2A40", "#F5A13A"], outfit: "suit", suitColors: ["#1F2A40", "#F5A13A"],
       });
     } catch (e) { hoopShowPresenterSvg = ""; }
