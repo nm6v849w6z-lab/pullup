@@ -512,6 +512,9 @@
   #prepSection .ordres-settings-grid.ordres-divided{padding-top:18px; border-top:1px solid var(--line-soft);}
   #prepSection .ordres-card select{min-height:44px; font-size:14px; padding:0 12px; border-radius:10px;}
   #prepSection .tactic-confirmee-block:not(.ordres-card){border-top:none; margin-top:0; padding-top:0;}
+  /* Carte « Postes à surveiller » (aussi .tactic-confirmee-block) : pas de
+     marge en plus de l'écart de colonne (22px), comme les autres cartes. */
+  #prepSection .ordres-card.tactic-confirmee-block{margin-top:0;}
   #prepSection .ordres-settings-grid-nested.tactic-confirmee-block{padding-top:18px; border-top:1px solid var(--line-soft);}
 
   /* Boutons segmentés (réglages à 2-3 valeurs). */
@@ -37649,9 +37652,9 @@ function renderArenaBuild(feedback) {
   });
   const summary = added
     ? SEAT_CATEGORIES.filter(c => arenaBuildDraft[c.key]).map(c => `+${fmt(arenaBuildDraft[c.key])} en ${c.name}`).join(", ")
-    : "Choisissez le nombre de places à ajouter";
+    : "";
   const tooExpensive = cost > teamA.budget;
-  html += `<div class="sl-build-foot"><div><small>${escapeHtml(summary)}</small>` +
+  html += `<div class="sl-build-foot"><div>${summary ? `<small>${escapeHtml(summary)}</small>` : ""}` +
     `<b class="${tooExpensive ? "is-bad" : ""}">${fmt(cost)} €</b> <span class="sl-build-budget">· budget ${fmt(teamA.budget)} €</span></div>` +
     `<button type="button" class="stf-bid-btn" id="arenaBuildBtn"${!added || tooExpensive ? " disabled" : ""}>Construire</button></div>` +
     `<div id="arenaBuildFeedback" role="status">${feedback || ""}</div>`;
@@ -37737,8 +37740,6 @@ function buildSeatCategoryRow(cat) {
       `<div class="sl-track">` +
         `<div class="sl-track-bar"><div class="sl-track-red" style="left:${pct(zones.red)}%" title="Prix jugés trop élevés"></div>` +
         `<div class="sl-track-fill" data-track-fill style="background:${color}"></div></div>` +
-        `<div class="sl-track-ideal" style="left:${pct(zones.ideal)}%"></div>` +
-        `<div class="sl-track-ideal-label" style="left:${pct(zones.ideal)}%">idéal ${zones.ideal} €</div>` +
         `<input type="range" id="ticketPriceRange_${cat.key}" min="${cat.minPrice}" max="${cat.maxPrice}" step="1" value="${teamA.ticketPrices[cat.key]}" aria-label="Prix : ${escapeHtml(cat.name)}">` +
         `<div class="sl-knob" data-knob></div>` +
       `</div>` +
@@ -37805,6 +37806,7 @@ function updateSalleTicketingPreview() {
 // prix actuels), et seule la ligne du DERNIER match est visible par
 // défaut (les autres restent dans le DOM, dépliables).
 let salleHistoryExpanded = false;
+const SALLE_HISTORY_VISIBLE = 3;
 function renderAttendanceHistory() {
   const holder = document.getElementById("attendanceHistoryHolder");
   if (!holder) return;
@@ -37812,7 +37814,7 @@ function renderAttendanceHistory() {
   let html = `<div class="sl-card-head"><h3 class="sl-card-title">Affluence</h3></div>`;
   html += `<div class="sl-legend">` + SEAT_CATEGORIES.map(cat =>
     `<span><i style="background:${SEAT_CATEGORY_COLORS[cat.key]}"></i>${escapeHtml(cat.name)}</span>`).join("") +
-    `<span><i class="sl-legend-proj"></i>Prévision</span></div>`;
+    `</div>`;
   html += salleAttendanceChartSvg(history);
   if (!history.length) {
     holder.innerHTML = html + "<p class='training-empty'>Aucun match à domicile joué pour l'instant.</p>";
@@ -37824,7 +37826,10 @@ function renderAttendanceHistory() {
     const rate = capacity > 0 ? Math.round((entry.attendance / capacity) * 100) : null;
     // Retour utilisateur (2026-09-25) : "je ne mettrai que le dernier match et
     // je mettrai un petit bouton pour voir le reste" (colonnes alignées).
-    html += `<div class="gain-line attendance-line${i >= 1 ? " sl-history-extra" : ""}">` +
+    // Les 3 derniers matchs visibles d'emblée (retour utilisateur
+    // 2026-09-27 : "affiche directement l'affluence des 3 derniers matchs [...]
+    // et laisse le bouton voir plus (jusqu'à 10 derniers matchs)").
+    html += `<div class="gain-line attendance-line${i >= SALLE_HISTORY_VISIBLE ? " sl-history-extra" : ""}">` +
       `<div class="sl-history-main"><b>Semaine ${entry.week}, vs ${escapeHtml(entry.opponentName)}</b>`;
     if (Array.isArray(entry.breakdown) && entry.breakdown.length) {
       html += `<div class="attendance-breakdown">` +
@@ -37843,8 +37848,8 @@ function renderAttendanceHistory() {
       `<small class="sl-num">${entry.attendance.toLocaleString("fr-FR")} spectateurs${rate != null ? ` (${rate}%)` : ""}</small></div></div>`;
   });
   html += "</div>";
-  if (history.length > 1) {
-    const older = history.length - 1;
+  if (history.length > SALLE_HISTORY_VISIBLE) {
+    const older = history.length - SALLE_HISTORY_VISIBLE;
     html += `<button type="button" class="sl-history-toggle">${salleHistoryExpanded ? "Réduire" : `Voir ${older > 1 ? `les ${older} matchs précédents` : "le match précédent"}`}</button>`;
   }
   holder.innerHTML = html;
@@ -37865,16 +37870,10 @@ function salleAttendanceChartSvg(history) {
     legacy: !(Array.isArray(e.breakdown) && e.breakdown.length),
     capacity: e.capacity || 0,
   }));
-  // Prévision : prix ACTUELLEMENT enregistrés (voir commitSeatPrice, qui
-  // redessine ce graphique à chaque nouveau prix validé).
-  const proj = SEAT_CATEGORIES.map(cat => seatPreview(cat, teamA.ticketPrices[cat.key]));
-  bars.push({
-    label: "Prochain", proj: true,
-    total: proj.reduce((s, p) => s + p.attendance, 0),
-    revenue: proj.reduce((s, p) => s + p.revenue, 0),
-    parts: proj.map(p => p.attendance),
-    capacity: teamA.arenaCapacity(),
-  });
+  // Plus de barre "Prochain" (prévision aux prix actuels) : retour
+  // utilisateur 2026-09-27, "enlève [...] le remplissage projeté pour le
+  // prochain match". Seuls les matchs réellement joués sont dessinés.
+  if (!bars.length) return "";
   const W = 420, H = 210, top = 26, bottom = 40, left = 8, right = 8;
   const plotH = H - top - bottom;
   const maxCap = Math.max(...bars.map(b => b.capacity), 1);
