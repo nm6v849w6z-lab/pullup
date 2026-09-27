@@ -1420,7 +1420,6 @@
   }
   .tab-btn.sidebar-link:hover{background:var(--panel-2); color:var(--ink);}
   a.tab-btn.sidebar-link{text-decoration:none; box-sizing:border-box;}
-  .tab-btn.sidebar-link.sidebar-external::after{content:"↗"; margin-left:auto; font-size:12px; opacity:.55;}
   .tab-btn.sidebar-link.sidebar-logout{color:var(--ink-faint); margin-top:2px;}
   .tab-btn.sidebar-link.sidebar-logout:hover{color:var(--danger); background:rgba(226,105,79,.08);}
   .tab-btn.sidebar-link.active{background:rgba(240,162,60,.14); color:var(--amber); border-color:rgba(240,162,60,.35); font-weight:700;}
@@ -4635,6 +4634,11 @@
 .hm-hero__vs-text { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 48px; line-height: 0.85; color: var(--accent); }
 .hm-hero__date { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; text-align: center; }
 .hm-hero__actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+/* Retour utilisateur (2026-09-27) : "mets un fond au bouton scouter…" — le
+   bouton secondaire du bandeau n'est plus transparent (il chevauchait la
+   ligne médiane et les deux moitiés de couleur). */
+.hm-hero__actions .hm-btn--ghost { background: #1A2433; }
+.hm-hero__actions .hm-btn--ghost:hover { background: #22304A; }
 
 /* ---------- Cartes ---------- */
 .hm-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 22px 24px; }
@@ -5388,6 +5392,8 @@
   html[data-theme="light"] .compare-duel-score{background:#f3f5f9; border-color:#dbe2ec;}
   html[data-theme="light"] .hm-side{border-right-color:#dbe2ec;}
   html[data-theme="light"] .hm-side__link:hover, html[data-theme="light"] .hm-btn--ghost:hover{background:#eef2f7;}
+  html[data-theme="light"] .hm-hero__actions .hm-btn--ghost{background:#ffffff;}
+  html[data-theme="light"] .hm-hero__actions .hm-btn--ghost:hover{background:#eef2f7;}
   html[data-theme="light"] .hm-btn--primary:hover{background:#c47208;}
   html[data-theme="light"] .hm-btn--outline:hover{background:#fdf1e1;}
   html[data-theme="light"] .hm-task--urgent, html[data-theme="light"] .hm-feed__item.is-alert{background:#fdeeee; border-color:#f3c4c8;}
