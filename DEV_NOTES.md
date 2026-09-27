@@ -20,6 +20,28 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) —
+  Scouting Pro : « Appliquer à mes ordres » ouvre les Ordres du match
+  contre cet adversaire** — retour utilisateur (capture Santo Aleixo) : "il
+  faut que lorsque l'on clique sur appliquer à mes ordres, cela ouvre la
+  page donner vos ordres correspondant à cet adversaire avec les tactiques
+  proposées appliquées". Avant : défense + surveillances écrites dans les
+  ordres EN DIRECT (prochain match, quel que soit l'adversaire), on restait
+  sur la fiche équipe. moteurbasket3.html : nextOrdresRoundAgainst (prochain
+  match non verrouillé contre l'adversaire, championnat ou Coupe) ;
+  scoutingGamePlanPatch (défense, surveillances, + « Comment les battre » via
+  le nouveau champ `orders` des conseils de suggestOffensiveApproach :
+  pénétration / jeu extérieur en 1re priorité offensive, rythme Lent,
+  rebond offensif Agressif/Prudent ; niveau « confirmée » pour rendre
+  surveillances/rebond visibles) ; ordres en direct si match immédiat de
+  championnat, sinon plan préparé (stagePlanForRound + syncPlanToServer) ;
+  puis goToOrdresTab(round, competition), statut « Modifications à
+  valider » + message récapitulatif. Bouton actif aussi s'il n'y a que des
+  conseils offensifs. Test : scouting_apply_ordres_test.js (+ scouting_pro,
+  tactical_scouting_report, planned_tactics, tactic_presets,
+  ordres_redesign verts). Reste : push.
+
+
 - **✅ DÉPLOYÉ SUR LE MAC, À COMMITTER/POUSSER (2026-09-27) — Amicaux :
   formulaire de proposition** — retour utilisateur : "mets une barre de
   recherche plus sympa [...] la même que celle dans la barre de page tout en

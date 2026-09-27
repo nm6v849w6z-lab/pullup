@@ -26729,7 +26729,7 @@ function suggestOffensiveApproach(t) {
       tips.push({
         headline: `Défense qui commet beaucoup de fautes (${t.foulsPerGame} fautes/match)`,
         advice: "Conseil : forcez la pénétration balle en main et jouez agressif vers le cercle pour provoquer des fautes et aller sur la ligne des lancers francs.",
-        stat: t.foulsPerGame, statLabel: "fautes/match",
+        stat: t.foulsPerGame, statLabel: "fautes/match", orders: { offense: "Jeu en pénétration" },
       });
     } else if (t.foulsPerGame <= 6.5) {
       tips.push({
@@ -26744,13 +26744,13 @@ function suggestOffensiveApproach(t) {
       tips.push({
         headline: `Faible protection du cercle (${t.blocksPerGame} contres/match)`,
         advice: "Conseil : attaquez la raquette sans crainte, pénétrez et finissez au panier plutôt que de vous contenter du tir extérieur.",
-        stat: t.blocksPerGame, statLabel: "contres/match",
+        stat: t.blocksPerGame, statLabel: "contres/match", orders: { offense: "Jeu en pénétration" },
       });
     } else if (t.blocksPerGame >= 4.2) {
       tips.push({
         headline: `Protection du cercle solide (${t.blocksPerGame} contres/match)`,
         advice: "Conseil : évitez la finition en force au cercle, privilégiez le tir extérieur ou la passe après pénétration (kick-out) plutôt que le layup contesté.",
-        stat: t.blocksPerGame, statLabel: "contres/match",
+        stat: t.blocksPerGame, statLabel: "contres/match", orders: { offense: "Jeu extérieur" },
       });
     }
   }
@@ -26758,7 +26758,7 @@ function suggestOffensiveApproach(t) {
     tips.push({
       headline: `Défense très active sur les interceptions (${t.stealsPerGame} interceptions/match)`,
       advice: "Conseil : sécurisez la balle et limitez les passes risquées pour ne pas les lancer en contre-attaque.",
-      stat: t.stealsPerGame, statLabel: "interceptions/match",
+      stat: t.stealsPerGame, statLabel: "interceptions/match", orders: { rhythm: "Lent" },
     });
   }
   if (t.drebPerGame != null) {
@@ -26766,13 +26766,13 @@ function suggestOffensiveApproach(t) {
       tips.push({
         headline: `Rebond défensif perfectible (${t.drebPerGame} rebonds défensifs/match)`,
         advice: "Conseil : envoyez du monde au rebond offensif, les secondes chances seront disponibles.",
-        stat: t.drebPerGame, statLabel: "reb. déf./match",
+        stat: t.drebPerGame, statLabel: "reb. déf./match", orders: { offRebStyle: "Agressif" },
       });
     } else if (t.drebPerGame >= 23) {
       tips.push({
         headline: `Solides au rebond défensif (${t.drebPerGame} rebonds défensifs/match)`,
         advice: "Conseil : ne surinvestissez pas le rebond offensif, repliez-vous plus tôt pour limiter leur contre-attaque.",
-        stat: t.drebPerGame, statLabel: "reb. déf./match",
+        stat: t.drebPerGame, statLabel: "reb. déf./match", orders: { offRebStyle: "Prudent" },
       });
     }
   }
@@ -27996,6 +27996,49 @@ function sp2HeroHtml(report, oppTeam, adv) {
     `</header>`;
 }
 
+// "Appliquer à mes ordres" (retour utilisateur, 2026-09-27 : "cela ouvre la
+// page donner vos ordres correspondant à cet adversaire avec les tactiques
+// proposées appliquées") : le Plan de match traduit en réglages d'ordres
+// (patch au format Team.stagePlanForRound / /api/tactics). "À neutraliser"
+// = défense + surveillances (suggestTacticalSetup) ; "Comment les battre" =
+// le champ `orders` de chaque conseil (suggestOffensiveApproach) : priorité
+// offensive placée en tête (les autres gardées derrière, toujours 3),
+// rythme, rebond offensif. Niveau tactique passé à "confirmée" si une
+// surveillance ou un style de rebond est posé, sinon ces réglages seraient
+// invisibles dans les Ordres (le moteur les applique quel que soit le
+// niveau, voir engine.js). `base` : ordres de départ du match visé.
+function scoutingGamePlanPatch(opponent, base) {
+  const t = computeScoutingTendencies(opponent);
+  const setup = suggestTacticalSetup(t);
+  const tips = suggestOffensiveApproach(t);
+  if (!setup && !tips.length) return null;
+  const patch = {};
+  if (setup) {
+    patch.defense = setup.defense;
+    patch.watchAssignments = setup.assignments.map(a => ({ position: a.position, focus: a.focus }));
+  }
+  const offenses = [];
+  tips.forEach(tip => {
+    const o = tip.orders || {};
+    if (o.offense && !offenses.includes(o.offense)) offenses.push(o.offense);
+    if (o.rhythm) patch.rhythm = o.rhythm;
+    if (o.offRebStyle) patch.offRebStyle = o.offRebStyle;
+  });
+  if (offenses.length) {
+    const current = (base && base.offensivePriorities) || [];
+    const count = current.length || 3;
+    patch.offensivePriorities = [...offenses, ...current.filter(x => !offenses.includes(x))].slice(0, count);
+  }
+  if ((patch.watchAssignments && patch.watchAssignments.length) || patch.offRebStyle) patch.tacticalTier = "confirmée";
+  return { patch, setup, tips };
+}
+
+// Prochain match (championnat ou Coupe) du club du joueur contre
+// `opponentIdx` dont les ordres sont encore modifiables — null sinon.
+function nextOrdresRoundAgainst(opponentIdx, now = Date.now()) {
+  return upcomingRoundsForOrders().find(r => r.opponentIdx === opponentIdx && !ordresRoundLocked(r.round, r.competition, now)) || null;
+}
+
 // ---- Plan de match : "À neutraliser" = suggestTacticalSetup(t).assignments
 // (LA MÊME analyse que "Composition tactique recommandée" du rapport
 // tactique gratuit) ; "Comment les battre" = suggestOffensiveApproach(t)
@@ -28025,7 +28068,7 @@ function sp2PlanHtml(report, teamIdx, setup, attackTips) {
   };
   let html = `<section class="sp2-plan"><div class="sp2-plan-top"><h2>Plan de match</h2>` +
     `<div class="sp2-apply"><span class="sub">Préremplit tes ordres avec ces consignes</span>` +
-    `<button type="button" class="primary" id="scoutingApplyOrdresBtn" data-opponent-idx="${teamIdx}"${setup ? "" : " disabled"}>Appliquer à mes ordres</button></div></div>`;
+    `<button type="button" class="primary" id="scoutingApplyOrdresBtn" data-opponent-idx="${teamIdx}"${setup || keys.length ? "" : " disabled"}>Appliquer à mes ordres</button></div></div>`;
   html += `<div id="scoutingApplyOrdresFeedback" class="sub"></div>`;
   html += `<div class="sp2-plan-cols">`;
   html += `<div class="sp2-plan-col threat"><h3>À neutraliser</h3>` +
@@ -28840,39 +28883,61 @@ document.getElementById("teamDetailContent").addEventListener("click", async (e)
     })();
     return;
   }
-  // "Appliquer à mes ordres" (retour utilisateur, 2026-09-24, maquette
-  // "Scouting Pro v2" — sp2PlanHtml) : écrit directement la défense d'équipe
-  // + les consignes de surveillance suggérées (suggestTacticalSetup, MÊME
-  // fonction que "Composition tactique recommandée"/le "Plan de match" —
-  // jamais une logique séparée) dans les VRAIS réglages tactiques de MON
-  // équipe (teamA.defense/watchAssignments), recalculée à la volée depuis
-  // l'adversaire au moment du clic (jamais une valeur figée dans le DOM) —
-  // même mécanique de sauvegarde que buildTeamPanel (saveMyTeam en solo,
-  // syncTacticsToServer en ligue partagée) pour que l'écran Ordres reflète
-  // immédiatement le changement à sa prochaine ouverture.
+  // "Appliquer à mes ordres" (retour utilisateur, 2026-09-24 puis
+  // 2026-09-27 : "cela ouvre la page donner vos ordres correspondant à cet
+  // adversaire avec les tactiques proposées appliquées") : vise le PROCHAIN
+  // match contre cet adversaire (nextOrdresRoundAgainst), pas le prochain
+  // match tout court ; y écrit le Plan de match (scoutingGamePlanPatch,
+  // recalculé au moment du clic) par le même chemin que les Ordres —
+  // ordres en direct pour le match immédiat de championnat (voir
+  // renderOrdresGrid/isImmediate), plan préparé sinon (applyTacticPresetToOrders
+  // fait pareil) — puis ouvre l'écran Ordres sur ce match, marqué "à valider".
   const applyOrdresBtn = e.target.closest("#scoutingApplyOrdresBtn");
   if (applyOrdresBtn) {
     const opponentIdx = Number(applyOrdresBtn.dataset.opponentIdx);
     const feedbackEl = document.getElementById("scoutingApplyOrdresFeedback");
     const opponent = league.teams[opponentIdx];
-    const setup = opponent ? suggestTacticalSetup(computeScoutingTendencies(opponent)) : null;
-    if (!setup) {
+    const target = opponent ? nextOrdresRoundAgainst(opponentIdx) : null;
+    if (!target) {
+      if (feedbackEl) feedbackEl.textContent = `Aucun match à venir contre ${opponent ? opponent.name : "cet adversaire"} pour lequel tu peux encore donner tes ordres.`;
+      return;
+    }
+    const immediate = target.competition === "championship" &&
+      (!currentMatch || (currentMatch.competition !== "cup" && target.round === currentMatch.round));
+    const base = immediate ? teamA : teamA.getPlanForRound(target.round, target.competition);
+    const plan = scoutingGamePlanPatch(opponent, base);
+    if (!plan) {
       if (feedbackEl) feedbackEl.textContent = "Pas encore assez de données sur cet adversaire pour préremplir tes ordres.";
       return;
     }
-    applyOrdresBtn.disabled = true;
-    teamA.defense = setup.defense;
-    teamA.watchAssignments = setup.assignments.map(a => ({ position: a.position, focus: a.focus }));
-    saveMyTeam();
-    syncTacticsToServer({ defense: teamA.defense, watchAssignments: teamA.watchAssignments });
-    if (feedbackEl) {
-      // .textContent (jamais .innerHTML) : ce texte est du contenu brut, pas
-      // du HTML, escapeHtml serait ici hors-propos (échapperait "&"/"<" en
-      // entités visibles au lieu de rester du simple texte).
-      const targets = setup.assignments.map(a => a.target ? `${a.target} (${WATCH_FOCUS_LABELS[a.focus] || a.focus})` : (WATCH_FOCUS_LABELS[a.focus] || a.focus));
-      feedbackEl.textContent = `Appliqué : défense "${setup.defense}"` + (targets.length ? ` + surveillance sur ${targets.join(", ")}.` : ".") + " Modifiable dans l'onglet Ordres.";
+    const patch = plan.patch;
+    if (immediate) {
+      Object.keys(patch).forEach(k => {
+        teamA[k] = Array.isArray(patch[k]) ? patch[k].map(v => (v && typeof v === "object" ? { ...v } : v)) : patch[k];
+      });
+      saveMyTeam();
+      syncTacticsToServer(patch);
+    } else {
+      teamA.stagePlanForRound(target.round, patch, target.competition);
+      saveMyTeam();
+      syncPlanToServer(target.round, patch, target.competition);
     }
-    applyOrdresBtn.textContent = "Appliqué ✓";
+    goToOrdresTab(target.round, target.competition);
+    markOrdresDirty();
+    const ordresFeedback = document.getElementById("ordresValidateFeedback");
+    if (ordresFeedback) {
+      // .textContent : texte brut (noms de joueurs/clubs), jamais du HTML.
+      const parts = [];
+      if (patch.defense) parts.push(`défense « ${patch.defense} »`);
+      if (patch.watchAssignments && patch.watchAssignments.length) {
+        parts.push("surveillance sur " + plan.setup.assignments.map(a => `${a.target || a.position} (${WATCH_FOCUS_LABELS[a.focus] || a.focus})`).join(", "));
+      }
+      if (patch.offensivePriorities) parts.push(`attaque « ${patch.offensivePriorities[0]} » en priorité`);
+      if (patch.rhythm) parts.push(`rythme « ${patch.rhythm} »`);
+      if (patch.offRebStyle) parts.push(`rebond offensif « ${patch.offRebStyle} »`);
+      ordresFeedback.className = "ordres-validate-feedback ok";
+      ordresFeedback.textContent = `Plan de match contre ${opponent.name} appliqué : ${parts.join(" ; ")}. Vérifie puis valide tes ordres.`;
+    }
     return;
   }
 });
