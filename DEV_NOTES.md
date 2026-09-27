@@ -60,9 +60,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   j'ai gribouillé […] si le nom est trop long, sur 2 lignes" ; validé : "pas
   mal comme ça". assets/live/live-view.js : bandeaux LED des lignes de
   touche supprimés, nom du sponsor (S.arenaSponsor, sinon HOOP MANAGER)
-  peint dans les deux coins entre ligne de fond, raquette et ligne à 3 pts
-  (100,95 et 840,405), floorAdLines = 2 lignes au-delà de 12 caractères,
-  textLength si une ligne reste trop large. live.css : .led/.led-txt →
+  peint UNE fois au milieu du terrain sous le rond central, à mi-distance
+  du bas du rond et de la ligne de touche (470,404) — 2e retour : les pubs
+  dans les coins étaient "trop proche du bord". floorAdLines = 2 lignes
+  au-delà de 18 caractères,
+  textLength (320) si une ligne reste trop large. live.css : .led/.led-txt →
   .floor-ad (+ thème clair). Tests live_court_view / live_court_home_logo /
   live_court_shot_position_stability / sponsors verts (Mac).
   NB : un `.git/index.lock` orphelin traîne dans le dépôt (Claude n'a pas pu
