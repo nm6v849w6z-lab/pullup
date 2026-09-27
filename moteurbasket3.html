@@ -4605,8 +4605,15 @@
 .hm-hero::before, .hm-hero::after { content: ""; position: absolute; top: 0; width: 6px; height: 100%; }
 .hm-hero::before { left: 0; background: var(--home); }
 .hm-hero::after { right: 0; background: var(--away); }
-.hm-hero__split { position: absolute; inset: 0 48% 0 0; background: #1E1A1C; clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); }
-.hm-hero__court { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--accent); opacity: 0.18; }
+/* Retour joueur (2026-09-27) : "pourquoi le trait n'est pas centré et ne
+   passe pas au centre au milieu du terrain ?" — la séparation des deux
+   moitiés (avant : une diagonale décalée) suit désormais exactement la ligne
+   médiane, et le rond central est centré sur le bloc VS/date (le terrain est
+   dessiné DANS .hm-hero__vs, qui est au milieu de la grille à 3 colonnes
+   symétriques ; la ligne déborde en hauteur et est coupée par
+   l'overflow:hidden du bandeau). */
+.hm-hero__split { position: absolute; inset: 0 50% 0 0; background: #1E1A1C; }
+.hm-hero__court { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--accent); opacity: 0.18; pointer-events: none; }
 .hm-hero > :not(.hm-hero__split):not(.hm-hero__court) { position: relative; }
 .hm-hero__top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
 .hm-hero__comp { color: var(--accent); font-weight: 700; letter-spacing: 2px; }
@@ -4623,7 +4630,8 @@
 .hm-hero__team > div:not(.hm-crest) { min-width: 0; }
 .hm-hero__name { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1.05; text-transform: uppercase; overflow-wrap: break-word; }
 .hm-hero__sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
-.hm-hero__vs { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.hm-hero__vs { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.hm-hero__vs > :not(.hm-hero__court) { position: relative; }
 .hm-hero__vs-text { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 48px; line-height: 0.85; color: var(--accent); }
 .hm-hero__date { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; text-align: center; }
 .hm-hero__actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
@@ -32220,7 +32228,6 @@ function dashRenderNextMatch(data) {
 
   return `<section class="hm-hero" style="--home:${dashEsc((left.colors && left.colors.primary) || "#F26B1D")};--away:${dashEsc((right.colors && right.colors.primary) || "#D7263D")}" aria-label="Prochain match">
     <div class="hm-hero__split" aria-hidden="true"></div>
-    <svg class="hm-hero__court" width="600" height="300" viewBox="0 0 600 300" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="300" cy="150" r="90"/><circle cx="300" cy="150" r="30"/><line x1="300" y1="0" x2="300" y2="300"/></svg>
     <div class="hm-hero__top">
       <span class="hm-hero__comp">${m.isLive ? '<span class="hm-hero__live-dot" aria-hidden="true"></span>En direct' : "Prochain match"} · ${dashEsc(m.competition)} · ${dashEsc(m.roundLabel || `Journée ${m.round}/${m.totalRounds}`)}</span>
       <span>${m.venueLabel ? dashEsc(m.venueLabel) : m.home ? "À domicile" : "À l'extérieur"}${m.home && !m.privateLeague && data.arena ? ` · ${dashEsc(data.arena.capacity.toLocaleString("fr-FR"))} places` : ""}</span>
@@ -32231,6 +32238,7 @@ function dashRenderNextMatch(data) {
         <div><div class="hm-hero__name">${dashEsc(left.name)}</div><div class="hm-hero__sub">Bilan ${dashEsc(leftRec)}${lvl(leftLvl)}</div></div>
       </div>
       <div class="hm-hero__vs">
+        <svg class="hm-hero__court" width="600" height="1200" viewBox="0 0 600 1200" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="300" cy="600" r="90"/><circle cx="300" cy="600" r="30"/><line x1="300" y1="0" x2="300" y2="1200"/></svg>
         <div class="hm-hero__vs-text">VS</div>
         <div class="hm-hero__date">${dashEsc(m.dateLabel)}${m.timeLabel ? ` · ${dashEsc(m.timeLabel)}` : ""}</div>
       </div>
