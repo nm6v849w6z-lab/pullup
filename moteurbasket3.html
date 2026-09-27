@@ -3947,7 +3947,7 @@
   .sp2-callouts .scouting-profile-callout-value + .scouting-profile-callout-value{margin-top:4px;}
   .sp2-court{width:100% !important; max-width:260px; margin:0 auto; display:flex; justify-content:center;}
   /* Identité (voir sp2ProfileStyleHtml) : une bande, 5 colonnes égales. */
-  .sp2-ident{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); background:var(--panel); border:1px solid var(--line); border-radius:12px; margin:8px 0 12px;}
+  .sp2-ident{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); background:var(--panel); border:1px solid var(--line); border-radius:12px; margin:8px 0 12px;}
   .sp2-ident-item{padding:10px 12px; min-width:0; border-left:1px solid var(--line);}
   .sp2-ident-item:first-child{border-left:none;}
   .sp2-ident-label{display:block; font-size:10px; text-transform:uppercase; letter-spacing:.06em; font-weight:800; color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -3972,6 +3972,7 @@
   .sp2-strat-track{flex:1; height:8px; border-radius:999px; background:var(--panel-2); overflow:hidden;}
   .sp2-strat-fill{display:block; height:8px; border-radius:999px; background:var(--amber);}
   .sp2-strat.def .sp2-strat-fill{background:var(--ink-dim);}
+  .sp2-strat.rhy .sp2-strat-fill{background:#8fb9f0;}
   .sp2-strat-pct{font-size:12px; color:var(--ink-dim); font-variant-numeric:tabular-nums; white-space:nowrap;}
 
   /* Effectif */
@@ -5986,6 +5987,9 @@
   /* Matchs amicaux (voir renderAmicauxSection) — mêmes cartes que les ligues privées. */
   .fr-row{display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line-soft);}
   .fr-opp-field{position:relative;}
+  .fr-oe-vs{display:flex; align-items:center; gap:10px; min-height:44px;}
+  .fr-oe-vs b{display:block; font-size:15px;}
+  .fr-oe-vs small{display:block; color:var(--ink-dim); font-size:12.5px;}
   /* Même champ que la recherche du haut de page (.topbar-search-input),
      à la hauteur des menus voisins ; Adversaire, Jour et Heure sur une ligne. */
   .fr-opp-input{width:100%; box-sizing:border-box; height:44px; font-size:14px; padding:0 18px;}
@@ -27853,10 +27857,10 @@ function scoutingProTeaserHtml(access, opponentIdx) {
     : null;
   let html = `<div class="sp-lock">`;
   html += `<div class="sp-lock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>`;
-  html += `<h3>Analyse de ${escapeHtml(opp ? opp.name : "l'adversaire")}</h3>`;
+  html += `<h3>Analyse complète de ${escapeHtml(opp ? opp.name : "l'adversaire")}</h3>`;
   html += access.stale
     ? `<p class="sub">Cet adversaire a rejoué depuis ton dernier déblocage : les données ont changé.</p>`
-    : `<p class="sub">Plan de match, 5 de départ suggéré, profil et style de jeu, forme récente et effectif détaillé.</p>`;
+    : `<p class="sub">Débloquez aussi le plan de match, le 5 de départ suggéré, le profil et style de jeu, la forme récente et les joueurs clés.</p>`;
   html += `<div class="scouting-pro-actions">`;
   if (remaining > 0) {
     html += `<button class="primary" id="scoutingProWatchAdBtn" data-opponent-idx="${opponentIdx}">▶ Regarder une pub pour débloquer</button>`;
@@ -27978,8 +27982,10 @@ function scoutingIdentityChips(t, adv) {
   const jeuInt = adv.paintPointsSharePct != null
     ? (adv.paintPointsSharePct >= 35 ? "Principal" : adv.paintPointsSharePct <= 20 ? "Secondaire" : "Modéré")
     : "Non déterminé";
+  // Rythme retiré de l'identité (retour utilisateur 2026-09-27) : il est
+  // désormais dans « Stratégies utilisées » (rythme réellement choisi).
+  void rythme;
   return [
-    ["Rythme", rythme],
     ["Orientation", orientation],
     ["Dépendance 3 pts", dep3],
     ["Jeu intérieur", jeuInt],
@@ -28281,7 +28287,7 @@ function scoutingProReportHtmlLegacyV3(report) {
     html += `<h4 class="scouting-section-title">5 majeur</h4>`;
     const fiveHtml = scoutingStartingFiveCardHtml(oppTeam, report.opponentIdx, report.generatedAt || Date.now());
     html += fiveHtml || `<p class="sub">Composition d'équipe adverse non disponible.</p>`;
-    html += `<h4 class="scouting-section-title">Effectif complet — statistiques de la saison</h4>`;
+    html += `<h4 class="scouting-section-title">Statistiques par joueur</h4>`;
     html += teamSeasonStatsTableHtml(report.opponentIdx);
   }
   html += `</div>`;
@@ -28678,6 +28684,40 @@ function sp2PointDiffChartHtml(games) {
 // associe deux blocs de hauteur comparable. Mêmes données qu'avant
 // (report.recentForm/headToHead/strategyUsage, adv.recentVsSeason/homeAway/
 // halves), seule la présentation change.
+// Bloc « Stratégies utilisées » (attaque, défense, rythme) — partagé par le
+// rapport Scouting Pro (sp2FormContextHtml) et l'analyse gratuite
+// (scoutingFreeAnalysisHtml). "" si aucun match suivi.
+function sp2StrategyBlockHtml(su) {
+  if (!su || !su.totalMatches) return "";
+  // Plafonné à 3 lignes par côté + une ligne "Autres (n)" qui agrège le
+  // reste (retour utilisateur, 2026-09-25 : "si on a plus de stratégie
+  // joué que 3, ça va se comporter comment ?") — jusqu'à 5 défenses et
+  // autant de profils offensifs existent, la carte doublerait sinon de
+  // hauteur et casserait l'alignement avec "Domicile vs extérieur".
+  const SP2_STRAT_MAX_ROWS = 3;
+  const capStrat = list => {
+    if (list.length <= SP2_STRAT_MAX_ROWS + 1) return list;
+    const rest = list.slice(SP2_STRAT_MAX_ROWS);
+    return list.slice(0, SP2_STRAT_MAX_ROWS).concat([{
+      type: `Autres (${rest.length})`,
+      count: rest.reduce((n, r) => n + r.count, 0),
+      pct: rest.reduce((n, r) => n + r.pct, 0),
+      other: true,
+    }]);
+  };
+  const stratRows = (list, cls) => capStrat(list).map(r =>
+    `<div class="sp2-strat-row${r.other ? " other" : ""}"><span>${escapeHtml(r.type)}</span><span class="sp2-strat-bar"><span class="sp2-strat-track"><span class="sp2-strat-fill ${cls}" style="width:${Math.min(100, r.pct)}%"></span></span><span class="sp2-strat-pct">${Math.min(100, r.pct)}% · ${r.count} match${r.count > 1 ? "s" : ""}</span></span></div>`
+  ).join("");
+  let b = `<h3 class="sp2-h">Stratégies utilisées <span class="sp2-badge">${su.totalMatches} match${su.totalMatches > 1 ? "s" : ""} suivi${su.totalMatches > 1 ? "s" : ""}</span></h3><div class="sp2-strat-card">`;
+  if (su.offense.length) b += `<div class="sp2-strat"><h4>Attaque</h4>${stratRows(su.offense, "")}</div>`;
+  if (su.defense.length) b += `<div class="sp2-strat def"><h4>Défense</h4>${stratRows(su.defense, "def")}</div>`;
+  // Rythme (retour utilisateur 2026-09-27 : "je mettrai ici le rythme
+  // plutôt que dans identité") : rythme réellement choisi match par match.
+  if (su.rhythm && su.rhythm.length) b += `<div class="sp2-strat rhy"><h4>Rythme</h4>${stratRows(su.rhythm, "rhy")}</div>`;
+  b += `</div>`;
+  return b;
+}
+
 function sp2FormContextHtml(report, adv) {
   const blocks = [];
   const chronoForm = [...(report.recentForm || [])].reverse();
@@ -28721,33 +28761,8 @@ function sp2FormContextHtml(report, adv) {
     // le bas de cette carte par rapport à "Stratégies utilisées" à côté.
     blocks.push(b);
   }
-  if (report.strategyUsage && report.strategyUsage.totalMatches) {
-    const su = report.strategyUsage;
-    // Plafonné à 3 lignes par côté + une ligne "Autres (n)" qui agrège le
-    // reste (retour utilisateur, 2026-09-25 : "si on a plus de stratégie
-    // joué que 3, ça va se comporter comment ?") — jusqu'à 5 défenses et
-    // autant de profils offensifs existent, la carte doublerait sinon de
-    // hauteur et casserait l'alignement avec "Domicile vs extérieur".
-    const SP2_STRAT_MAX_ROWS = 3;
-    const capStrat = list => {
-      if (list.length <= SP2_STRAT_MAX_ROWS + 1) return list;
-      const rest = list.slice(SP2_STRAT_MAX_ROWS);
-      return list.slice(0, SP2_STRAT_MAX_ROWS).concat([{
-        type: `Autres (${rest.length})`,
-        count: rest.reduce((n, r) => n + r.count, 0),
-        pct: rest.reduce((n, r) => n + r.pct, 0),
-        other: true,
-      }]);
-    };
-    const stratRows = (list, cls) => capStrat(list).map(r =>
-      `<div class="sp2-strat-row${r.other ? " other" : ""}"><span>${escapeHtml(r.type)}</span><span class="sp2-strat-bar"><span class="sp2-strat-track"><span class="sp2-strat-fill ${cls}" style="width:${Math.min(100, r.pct)}%"></span></span><span class="sp2-strat-pct">${Math.min(100, r.pct)}% · ${r.count} match${r.count > 1 ? "s" : ""}</span></span></div>`
-    ).join("");
-    let b = `<h3 class="sp2-h">Stratégies utilisées <span class="sp2-badge">${su.totalMatches} match${su.totalMatches > 1 ? "s" : ""} suivi${su.totalMatches > 1 ? "s" : ""}</span></h3><div class="sp2-strat-card">`;
-    if (su.offense.length) b += `<div class="sp2-strat"><h4>Attaque</h4>${stratRows(su.offense, "")}</div>`;
-    if (su.defense.length) b += `<div class="sp2-strat def"><h4>Défense</h4>${stratRows(su.defense, "def")}</div>`;
-    b += `</div>`;
-    blocks.push(b);
-  }
+  const stratBlock = sp2StrategyBlockHtml(report.strategyUsage);
+  if (stratBlock) blocks.push(stratBlock);
 
   // Pastille "Face à toi" dans l'en-tête (voir commentaire ci-dessus).
   const h2hList = report.headToHead || [];
@@ -28873,7 +28888,7 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
   }
   const rowsData = teamSeasonStatsRows(teamIdx);
   if (rowsData.length) {
-    html += `<h3 class="sp2-h" style="margin-top:22px">Effectif complet</h3>` + sp2RosterTableHtml(teamIdx, rowsData);
+    html += `<h3 class="sp2-h" style="margin-top:22px">Statistiques par joueur</h3>` + sp2RosterTableHtml(teamIdx, rowsData);
   }
   return html ? `<section class="sp2-panel"><h2 class="sp2-panel-title">Effectif</h2>${html}</section>` : "";
 }
@@ -28920,6 +28935,26 @@ function scoutingProDowngradeHtml() {
   return "";
 }
 
+// Analyse d'équipe GRATUITE (retour utilisateur 2026-09-27 : "il faudrait
+// mettre en place l'analyse d'équipe pour les joueurs gratuits. je ne
+// laisserai que : Stratégies utilisées [...] et [...] statistiques par
+// joueur") : calculée côté navigateur depuis les journaux de match déjà
+// transmis (Player.matchLog), mêmes rendus que le rapport Pro, affichée
+// au-dessus de l'écran de déblocage.
+function scoutingFreeAnalysisHtml(teamIdx) {
+  const team = league.teams[teamIdx];
+  if (!team) return "";
+  const strat = sp2StrategyBlockHtml(scoutingLocalAggregateStrategyUsage(team));
+  const rowsData = teamSeasonStatsRows(teamIdx);
+  if (!strat && !rowsData.length) {
+    return `<section class="sp2-panel" id="scoutingFreeReport"><h2 class="sp2-panel-title">Analyse d'équipe</h2><p class="sub">${escapeHtml(team.name)} n'a pas encore joué de match cette saison.</p></section>`;
+  }
+  let html = `<section class="sp2-panel" id="scoutingFreeReport"><h2 class="sp2-panel-title">Analyse d'équipe</h2>`;
+  if (strat) html += `<div class="sp2-free-strat">${strat}</div>`;
+  if (rowsData.length) html += `<h3 class="sp2-h" style="margin-top:22px">Statistiques par joueur</h3>` + sp2RosterTableHtml(teamIdx, rowsData);
+  return html + `</section>`;
+}
+
 async function refreshScoutingProPanel(teamIdx) {
   const now = Date.now();
   const access = managerToken ? await fetchScoutingAccess(teamIdx) : scoutingLocalAccess(teamIdx, now);
@@ -28942,7 +28977,8 @@ async function refreshScoutingProPanel(teamIdx) {
     const freeReport = document.querySelector("#teamDetailContent .tactical-report");
     if (freeReport) freeReport.hidden = proOk && !!(report && report.gamesPlayed);
   } else {
-    holder.innerHTML = scoutingProTeaserHtml(access || { adsRemainingThisMonth: 0, monthlyCap: SCOUTING_MONTHLY_AD_CAP }, teamIdx);
+    holder.innerHTML = scoutingFreeAnalysisHtml(teamIdx) +
+      scoutingProTeaserHtml(access || { adsRemainingThisMonth: 0, monthlyCap: SCOUTING_MONTHLY_AD_CAP }, teamIdx);
     const freeReport = document.querySelector("#teamDetailContent .tactical-report");
     if (freeReport) freeReport.hidden = false;
   }
@@ -29897,6 +29933,14 @@ function buildTeamPanel(team, side, opts = {}) {
       const name = document.createElement("span");
       name.className = "conv-name";
       name.textContent = p.name;
+      // Ordres d'un amical (voir openFriendlyOrders) : les jeunes de
+      // l'académie sont marqués dans la convocation.
+      if ((teamA.youthPlayers || []).some(y => y.id === p.id)) {
+        const tag = document.createElement("span");
+        tag.className = "lp-tag fr-tag-youth";
+        tag.textContent = "Jeune";
+        name.appendChild(tag);
+      }
       const ovr = document.createElement("span");
       ovr.className = "conv-ovr";
       ovr.textContent = Math.round(p.overall());
@@ -39720,11 +39764,11 @@ function tqOrdersFromMatchLog(m) {
   return base;
 }
 
-function tqProxyFrom(orders) {
+function tqProxyFrom(orders, players = teamA.players) {
   // Joueurs partis retirés, même règle que Team.tacticPresetPatch.
-  const o = Team.prototype.tacticPresetPatch.call({ tacticPresets: [{ orders }], players: teamA.players }, 0);
+  const o = Team.prototype.tacticPresetPatch.call({ tacticPresets: [{ orders }], players }, 0);
   const proxy = {
-    name: teamA.name, players: teamA.players,
+    name: teamA.name, players,
     offensivePriorities: o.offensivePriorities || [...teamA.offensivePriorities], defense: o.defense || teamA.defense, rhythm: o.rhythm || teamA.rhythm,
     tacticalTier: o.tacticalTier ?? "débutant", screenDefense: o.screenDefense ?? "Aucune consigne", helpDefense: o.helpDefense ?? "Moyenne",
     watchAssignments: [], postDefense: o.postDefense ?? "Classique", closeoutStyle: o.closeoutStyle ?? "Contrôlé",
@@ -39753,9 +39797,36 @@ function openTacticEditor(slot) {
 }
 
 function closeTacticEditor() {
+  const wasFriendly = !!(tqEdit && tqEdit.kind === "friendly");
   tqEdit = null;
   renderTacticEditorBar();
-  TAB_HANDLERS.tactiques();
+  if (wasFriendly) TAB_HANDLERS.amicaux(); else TAB_HANDLERS.tactiques();
+}
+
+// Ordres d'un match amical (retour utilisateur 2026-09-27 : "pour le match
+// amical, il faut pouvoir avoir un vrai onglet ordres") : la page Ordres en
+// mode édition (comme une tactique, voir openTacticEditor), sur l'effectif
+// pro ET les jeunes de l'académie. Enregistré sur l'amical côté serveur
+// (POST /api/friendly/lineup { id, orders }), jamais appliqué aux ordres
+// des matchs officiels.
+function frOrdersPool() { return [...(teamA.players || []), ...(teamA.youthPlayers || [])]; }
+function frOrdersSources(f) {
+  const out = [];
+  const mine = f && f.orders && f.orders[myTeamIndex];
+  if (mine) out.push({ key: "friendly", label: "Ordres enregistrés pour cet amical", orders: mine });
+  out.push({ key: "club", label: "Ordres actuels du club", orders: teamA.snapshotTactics() });
+  tqOrdersSources().forEach(x => { if (x.key !== "current") out.push(x); });
+  return out;
+}
+function openFriendlyOrders(fid) {
+  const f = frList().find(x => x.id === fid);
+  if (!f) return;
+  const src = frOrdersSources(f)[0];
+  tqEdit = { kind: "friendly", friendlyId: fid, source: src.key, proxy: tqProxyFrom(src.orders, frOrdersPool()), dirty: false, feedback: null };
+  showPage("prepSection");
+  setActiveTab("amicaux");
+  renderOrdresGrid();
+  if (typeof window.scrollTo === "function") try { window.scrollTo(0, 0); } catch (e) { /* jsdom */ }
 }
 
 function renderTacticEditorBar() {
@@ -39765,6 +39836,21 @@ function renderTacticEditorBar() {
   if (!tqEdit) {
     bar.innerHTML = "";
     if (title) title.textContent = "Ordres de match";
+    return;
+  }
+  if (tqEdit.kind === "friendly") {
+    const f = frList().find(x => x.id === tqEdit.friendlyId);
+    const opp = f ? frOppIdx(f) : null;
+    if (title) title.textContent = "Ordres de l'amical";
+    const opts = frOrdersSources(f).map(x => `<option value="${escapeHtml(x.key)}"${x.key === tqEdit.source ? " selected" : ""}>${escapeHtml(x.label)}</option>`).join("");
+    const saved = !!(f && f.orders && f.orders[myTeamIndex]);
+    bar.innerHTML = `<div class="tq-editor-field fr-oe-match"><label>Match amical</label><div class="fr-oe-vs">` +
+        (f ? `<span class="fr-logo">${teamLogoHtml(league.teams[opp], 28)}</span><span><b>${f.homeIdx === myTeamIndex ? "vs" : "@"} ${escapeHtml(frTeamName(opp))}</b><small>${frWhenHtml(f)}</small></span>` : "") + `</div></div>` +
+      `<div class="tq-editor-field"><label for="tqEditorSource">Partir de</label><select id="tqEditorSource">${opts}</select></div>` +
+      `<div class="tq-editor-actions"><button type="button" class="cal-next-btn" id="tqEditorSave">Enregistrer les ordres</button>` +
+        (saved ? `<button type="button" class="tq-btn" id="frOrdersReset">Revenir aux ordres du club</button>` : "") +
+        `<button type="button" class="tq-btn" id="tqEditorCancel">Annuler</button></div>` +
+      `<p class="tq-editor-note">${tqEdit.feedback ? `<b class="${tqEdit.feedback.ok ? "gain-up" : "gain-down"}">${escapeHtml(tqEdit.feedback.text)}</b> ` : ""}Ces ordres ne valent que pour cet amical. Les jeunes de l'académie figurent dans l'effectif : convoquez-les comme les autres joueurs.</p>`;
     return;
   }
   const preset = (teamA.tacticPresets || [])[tqEdit.slot];
@@ -39783,15 +39869,34 @@ document.getElementById("tqEditorBar").addEventListener("input", (e) => {
 });
 document.getElementById("tqEditorBar").addEventListener("change", (e) => {
   if (!tqEdit || e.target.id !== "tqEditorSource") return;
-  const src = tqOrdersSources().find(x => x.key === e.target.value);
+  const isFr = tqEdit.kind === "friendly";
+  const src = (isFr ? frOrdersSources(frList().find(x => x.id === tqEdit.friendlyId)) : tqOrdersSources()).find(x => x.key === e.target.value);
   if (!src) return;
   tqEdit.source = src.key;
-  tqEdit.proxy = tqProxyFrom(src.orders);
+  tqEdit.proxy = isFr ? tqProxyFrom(src.orders, frOrdersPool()) : tqProxyFrom(src.orders);
   renderOrdresGrid();
 });
 document.getElementById("tqEditorBar").addEventListener("click", (e) => {
   if (!tqEdit) return;
   if (e.target.closest("#tqEditorCancel")) { closeTacticEditor(); return; }
+  if (tqEdit.kind === "friendly") {
+    const fid = tqEdit.friendlyId;
+    const reset = !!e.target.closest("#frOrdersReset");
+    if (!reset && !e.target.closest("#tqEditorSave")) return;
+    let body = { id: fid, reset: true };
+    if (!reset) {
+      const px = tqEdit.proxy;
+      const orders = { lineup: JSON.parse(JSON.stringify(px.lineup)) };
+      TACTIC_PRESET_FIELDS.forEach(k => { orders[k] = Array.isArray(px[k]) ? [...px[k]] : px[k]; });
+      body = { id: fid, orders };
+    }
+    window.__lastFriendlyOrdersSave = frAction("/api/friendly/lineup", body, reset ? "L'amical se jouera avec les ordres du club." : "Ordres de l'amical enregistrés.").then(ok => {
+      if (ok) { closeTacticEditor(); return true; }
+      if (tqEdit) { tqEdit.feedback = frUi.feedback; frUi.feedback = null; renderTacticEditorBar(); }
+      return false;
+    });
+    return;
+  }
   if (!e.target.closest("#tqEditorSave")) return;
   const px = tqEdit.proxy;
   const snap = { lineup: px.lineup };
@@ -41097,18 +41202,30 @@ function frStatusTagHtml(f) {
   return "";
 }
 
+// Joueurs cités dans des ordres d'amical (titulaires, remplaçants, convoqués).
+function frOrdersPlayerIds(o) {
+  const l = (o && o.lineup) || {};
+  const ids = new Set();
+  Object.values(l.starters || {}).forEach(id => { if (id != null) ids.add(Number(id)); });
+  Object.keys(l.backupPositions || {}).forEach(id => ids.add(Number(id)));
+  (l.convoked || []).forEach(id => ids.add(Number(id)));
+  return [...ids];
+}
+
 function frUpcomingRowHtml(f) {
   const opp = frOppIdx(f);
   const mine = f.lineups && f.lineups[myTeamIndex];
+  const myOrders = f.orders && f.orders[myTeamIndex];
   const youthIds = new Set((teamA.youthPlayers || []).map(p => p.id));
-  const youthCount = mine ? [...mine.starters, ...mine.bench].filter(id => youthIds.has(id)).length : 0;
-  const compoTxt = mine ? `Composition de l'amical${youthCount ? ` · ${youthCount} jeune${youthCount > 1 ? "s" : ""}` : ""}` : "Composition : ordres actuels du club";
+  const youthCount = myOrders ? frOrdersPlayerIds(myOrders).filter(id => youthIds.has(id)).length
+    : mine ? [...mine.starters, ...mine.bench].filter(id => youthIds.has(id)).length : 0;
+  const compoTxt = (myOrders || mine) ? `Ordres de l'amical enregistrés${youthCount ? ` · ${youthCount} jeune${youthCount > 1 ? "s" : ""}` : ""}` : "Ordres : ceux du club";
   const open = frUi.openLineupId === f.id;
   const cancelLabel = f.status === "pending" ? "Retirer l'invitation" : "Annuler";
   let html = `<div class="fr-row${open ? " open" : ""}"><span class="fr-logo">${teamLogoHtml(league.teams[opp], 32)}</span>` +
     `<span class="fr-row-main"><span class="fr-row-title"><span class="cal-opp-prefix">${f.homeIdx === myTeamIndex ? "vs" : "@"}</span> ${teamLinkHtml(opp, frTeamName(opp))}${frStatusTagHtml(f)}</span>` +
     `<span class="fr-row-sub">${frWhenHtml(f)} · ${escapeHtml(compoTxt)}</span></span>` +
-    `<span class="fr-row-actions"><button type="button" class="secondary fr-btn" data-fr-lineup="${f.id}" aria-expanded="${open}">${open ? "Fermer" : "Composition"}</button>` +
+    `<span class="fr-row-actions"><button type="button" class="cal-next-btn fr-btn" data-fr-orders="${f.id}">${(myOrders || mine) ? "Modifier les ordres" : "Donner les ordres"}</button>` +
     `<button type="button" class="secondary fr-btn fr-cancel" data-fr-cancel="${f.id}">${cancelLabel}</button></span></div>`;
   if (open) html += frLineupEditorHtml(f);
   return html;
@@ -41326,6 +41443,8 @@ async function frAction(path, body, okText) {
     if (dec) { frAction("/api/friendly/respond", { id: dec.dataset.frDecline, accept: false }, "Invitation refusée."); return; }
     const cancel = e.target.closest("[data-fr-cancel]");
     if (cancel) { frAction("/api/friendly/cancel", { id: cancel.dataset.frCancel }, "Amical annulé."); return; }
+    const ord = e.target.closest("[data-fr-orders]");
+    if (ord) { openFriendlyOrders(ord.dataset.frOrders); return; }
     const lu = e.target.closest("[data-fr-lineup]");
     if (lu) {
       const id = lu.dataset.frLineup;
@@ -42166,7 +42285,7 @@ const TAB_HANDLERS = {
   ligue: showStandings,
   coupe: () => { renderCoupeSection(); showPage("coupeSection"); setActiveTab("coupe"); },
   calendrier: () => { renderCalendrierSection(); showPage("calendrierSection"); setActiveTab("calendrier"); },
-  amicaux: () => { renderAmicauxSection(); showPage("amicauxSection"); setActiveTab("amicaux"); },
+  amicaux: () => { tqEdit = null; const ps = document.getElementById("prepSection"); if (ps) ps.classList.remove("tq-editing"); renderAmicauxSection(); showPage("amicauxSection"); setActiveTab("amicaux"); },
   lp: () => { renderLpSection(); showPage("lpSection"); setActiveTab("lp"); },
   messages: () => { window.__lastMsgNav = goToMessages(); },
   histoire: () => { renderHistoireSection(); showPage("histoireSection"); setActiveTab("histoire"); },

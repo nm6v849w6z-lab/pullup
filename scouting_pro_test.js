@@ -393,6 +393,13 @@ function request(server, method, urlPath, jsonBody) {
       const watchAdBtn = doc.getElementById("scoutingProWatchAdBtn");
       assertTrue(!!watchAdBtn, "C1: le bouton 'Regarder une pub' est affiché (verrouillé)");
       assertTrue(!doc.getElementById("scoutingProReport"), "C1: aucun contenu de rapport tant que verrouillé");
+      // Analyse gratuite (retour utilisateur 2026-09-27) : Stratégies
+      // utilisées (attaque, défense, rythme) + Statistiques par joueur,
+      // au-dessus de l'écran de déblocage.
+      const free = doc.getElementById("scoutingFreeReport");
+      assertTrue(!!free && /Stratégies utilisées/.test(free.textContent) && /Rythme/.test(free.textContent), "C1: analyse gratuite — Stratégies utilisées avec le rythme");
+      assertTrue(!!free && /Statistiques par joueur/.test(free.textContent) && !!free.querySelector(".sp2-roster"), "C1: analyse gratuite — Statistiques par joueur");
+      assertTrue(!!free && !/Plan de match|Zones de tir|5 majeur|Identité/.test(free.textContent), "C1: analyse gratuite limitée à ces deux blocs");
       // Mode gratuit retiré (retour utilisateur, 2026-09-25) : plus aucun
       // rapport tactique gratuit pour un adversaire, seulement l'écran
       // verrouillé (pub 1 fois/mois ou Passer Pro).
@@ -428,7 +435,9 @@ function request(server, method, urlPath, jsonBody) {
       assertTrue(!panelAfter.innerHTML.includes("Zones de tir :"), "C2bis: l'ancien paragraphe texte des zones de tir a disparu");
       assertTrue(panelAfter.querySelectorAll(".scouting-shot-court svg").length > 0, "C2bis: la carte du terrain (zones de tir, terrain FIBA réutilisé de .pdp-court/Ordres) est rendue en SVG");
       assertTrue(panelAfter.innerHTML.includes("5 majeur"), "C2bis: la carte '5 majeur' de l'adversaire est présente");
-      assertTrue(panelAfter.innerHTML.includes("Effectif complet"), "C2bis: le tableau complet du roster adverse est présent");
+      assertTrue(panelAfter.innerHTML.includes("Statistiques par joueur") && !panelAfter.innerHTML.includes("Effectif complet"), "C2bis: le tableau « Statistiques par joueur » (ex-« Effectif complet ») est présent");
+      assertTrue(/<h4>Rythme<\/h4>/.test(panelAfter.innerHTML), "C2bis: le rythme joué figure dans « Stratégies utilisées »");
+      assertTrue(![...panelAfter.querySelectorAll(".sp2-ident-label")].some(e => e.textContent === "Rythme"), "C2bis: plus de Rythme dans l'Identité");
       // Barres de stratégies : oppIdx2 a joué 3 journées (playRounds(lg2,3)
       // ci-dessus, qui capture désormais tacticsUsed, voir playRounds en
       // tête de ce fichier) — au moins une ligne de barre doit apparaître.

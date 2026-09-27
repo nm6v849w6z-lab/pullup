@@ -131,6 +131,28 @@ check(fFar.status === "pending", "encore en attente juste avant 3 jours");
 F.catchUpFriendlies(Engine, league, T0 + 3 * 24 * 3600 * 1000 + 1000);
 check(fFar.status === "expired", "invitation annulée au bout de 3 jours sans réponse");
 
+// 8bis. Ordres complets de l'amical (page Ordres) : tactiques + feuille,
+// jeune titulaire même si la convocation était pleine.
+{
+  const dO = F.availableDays(Engine, league, A, cpu2, T0).find(d => d.times.includes("19:00"));
+  const rO = F.proposeFriendly(Engine, teamA, A, league, { opponent: cpu2, day: dO.day, time: "19:00" }, T0);
+  const fO = league.friendlies.find(f => f.id === rO.friendlyId);
+  const snap = teamA.snapshotTactics();
+  const orders = { offensivePriorities: snap.offensivePriorities, defense: "Zone press", rhythm: snap.rhythm, lineup: JSON.parse(JSON.stringify(snap.lineup)) };
+  orders.lineup.starters.Meneur = youth.id;
+  orders.lineup.convoked = teamA.players.slice(0, 12).map(p => p.id);
+  let rr = F.setFriendlyLineup(Engine, teamA, A, league, { id: fO.id, orders: { ...orders, defense: "Défense imaginaire" } }, T0);
+  check(!rr.ok, "ordres d'amical invalides refusés");
+  rr = F.setFriendlyLineup(Engine, teamA, A, league, { id: fO.id, orders }, T0);
+  check(rr.ok && fO.orders[A].defense === "Zone press", "ordres complets enregistrés sur l'amical");
+  const shell = F.buildFriendlyTeam(Engine, teamA, null, fO.at, fO.orders[A]);
+  check(shell.defense === "Zone press" && teamA.defense !== undefined, "la coquille joue la défense de l'amical");
+  check(shell.players.some(p => p.id === youth.id) && shell.lineup.starters.Meneur === youth.id, "le jeune est titulaire dans la coquille");
+  check(shell.lineup.convoked.includes(youth.id) && shell.lineup.convoked.length <= 12, "titulaire toujours convoqué, 12 au plus");
+  check(shell.hasValidLineup(), "feuille de match valide");
+  check(!F.sanitizeFriendliesForViewer(league.friendlies, cpu2).some(f => f.orders && f.orders[A]), "ordres de l'amical jamais montrés à l'adversaire");
+}
+
 // 9. Sérialisation.
 const round = Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.serializeLeague(league))));
 check(Array.isArray(round.friendlies) && round.friendlies.length === league.friendlies.length, "League.friendlies survit à la sauvegarde");

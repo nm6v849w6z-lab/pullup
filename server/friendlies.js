@@ -198,13 +198,14 @@ function validateLineup(team, raw) {
 // Coquille d'équipe (tactiques, staff, installations du vrai club) garnie
 // des VRAIS joueurs retenus. Sans composition propre à l'amical : effectif
 // et feuille de match actuels du club (ordres du moment).
-function buildFriendlyTeam(Engine, real, lineup, at) {
+function buildFriendlyTeam(Engine, real, lineup, at, orders = null) {
   const shell = Engine.teamFromSave(Engine.serializeTeam(real));
   shell.recordInjury = (entry) => { if (typeof real.recordInjury === "function") real.recordInjury(entry); };
   // Journal de l'entraînement collectif : tenu par le VRAI club seulement —
   // sur la coquille, les jours « Récupération » seraient crédités une
   // seconde fois aux vrais joueurs (voir Team.applyRestDayRecovery).
   shell.syncCollectiveTrainingLog = () => {};
+  if (orders) return applyFriendlyOrders(Engine, shell, real, orders, at);
   if (!lineup) {
     shell.players = real.players.slice();
     return shell;
@@ -233,6 +234,61 @@ function buildFriendlyTeam(Engine, real, lineup, at) {
   bench.forEach(p => { backupPositions[p.id] = [POS.includes(p.position) ? p.position : POS[0]]; });
   shell.players = [...starters, ...bench];
   shell.lineup = { starters: posMap, backupPositions, convoked: shell.players.map(p => p.id) };
+  return shell;
+}
+
+// Ordres complets de l'amical (page Ordres) : tactiques + feuille de match
+// posées sur la coquille ; joueurs = pros + jeunes cités dans la feuille
+// (convocation, titulaires, remplaçants, temps de jeu). Un titulaire parti
+// depuis est remplacé par le meilleur joueur disponible (pas de forfait
+// évitable) ; un titulaire blessé est géré comme en match officiel.
+function applyFriendlyOrders(Engine, shell, real, orders, at) {
+  const POS = Engine.POSITIONS || FALLBACK_POSITIONS;
+  const FIELDS = Engine.TACTIC_PRESET_FIELDS || ["offensivePriorities", "defense", "rhythm", "tacticalTier", "screenDefense", "helpDefense", "postDefense", "closeoutStyle", "offRebStyle", "endgameManagement"];
+  FIELDS.forEach(k => { if (orders[k] !== undefined) shell[k] = Array.isArray(orders[k]) ? [...orders[k]] : orders[k]; });
+  shell.watchAssignments = [];
+  const pool = friendlyPool(real);
+  const byId = new Map(pool.map(p => [String(p.id), p]));
+  const src = orders.lineup || {};
+  const lineup = {
+    starters: {}, backupPositions: {},
+    ...(src.minutes ? { minutes: JSON.parse(JSON.stringify(src.minutes)) } : {}),
+  };
+  const used = new Set();
+  const addUsed = id => { if (byId.has(String(id))) used.add(String(id)); };
+  POS.forEach(pos => { const id = src.starters && src.starters[pos]; lineup.starters[pos] = id != null && byId.has(String(id)) ? byId.get(String(id)).id : null; if (id != null) addUsed(id); });
+  Object.entries(src.backupPositions || {}).forEach(([id, positions]) => { if (byId.has(String(id))) { lineup.backupPositions[byId.get(String(id)).id] = [...positions]; addUsed(id); } });
+  if (lineup.minutes) Object.values(lineup.minutes).forEach(m => Object.keys(m).forEach(id => { if (!byId.has(String(id))) delete m[id]; else addUsed(id); }));
+  if (Array.isArray(src.convoked)) { lineup.convoked = src.convoked.filter(id => byId.has(String(id))).map(id => byId.get(String(id)).id); src.convoked.forEach(addUsed); }
+  // Effectif de la coquille : les pros (comme un match officiel, la
+  // convocation décide qui joue) + les jeunes cités dans la feuille.
+  const youthIds = new Set((real.youthPlayers || []).map(p => String(p.id)));
+  shell.players = pool.filter(p => !youthIds.has(String(p.id)) || used.has(String(p.id)));
+  const fit = p => !(Engine.isCurrentlyInjured && Engine.isCurrentlyInjured(p, at));
+  const byOverall = (a, b) => (b.overall ? b.overall() : 0) - (a.overall ? a.overall() : 0);
+  POS.forEach(pos => {
+    if (lineup.starters[pos] != null) return;
+    const taken = new Set(Object.values(lineup.starters).filter(x => x != null).map(String));
+    const cand = shell.players.filter(p => fit(p) && !taken.has(String(p.id))).sort((a, b) => ((b.position === pos) - (a.position === pos)) || byOverall(a, b))[0];
+    if (cand) { lineup.starters[pos] = cand.id; if (lineup.convoked && !lineup.convoked.includes(cand.id)) lineup.convoked.push(cand.id); }
+  });
+  // Un titulaire est toujours convoqué (quitte à retirer le dernier convoqué
+  // sans rôle, puis le dernier remplaçant, pour rester à 12).
+  if (lineup.convoked) {
+    const starterIds = Object.values(lineup.starters).filter(x => x != null);
+    starterIds.forEach(id => { if (!lineup.convoked.includes(id)) lineup.convoked.push(id); });
+    const isStarter = id => starterIds.includes(id);
+    const isBackup = id => (lineup.backupPositions[id] || []).length > 0;
+    while (lineup.convoked.length > 12) {
+      let k = -1;
+      for (let i = lineup.convoked.length - 1; i >= 0 && k < 0; i--) if (!isStarter(lineup.convoked[i]) && !isBackup(lineup.convoked[i])) k = i;
+      for (let i = lineup.convoked.length - 1; i >= 0 && k < 0; i--) if (!isStarter(lineup.convoked[i])) k = i;
+      if (k < 0) break;
+      const [gone] = lineup.convoked.splice(k, 1);
+      delete lineup.backupPositions[gone];
+    }
+  }
+  shell.lineup = lineup;
   return shell;
 }
 
@@ -365,14 +421,27 @@ function cancelFriendly(Engine, team, teamIndex, league, body, now) {
   return { ok: true, friendlyId: f.id, status: f.status };
 }
 
-// POST /api/friendly/lineup  body: { id, starters: [id x5], bench: [id...] } | { id, reset: true }
+// POST /api/friendly/lineup  body: { id, orders } (ordres complets, page
+// Ordres — retour utilisateur 2026-09-27 : "pour le match amical, il faut
+// pouvoir avoir un vrai onglet ordres") | { id, starters, bench } (ancienne
+// composition simple) | { id, reset: true } (revenir aux ordres du club).
 function setFriendlyLineup(Engine, team, teamIndex, league, body, now) {
   const f = findById(league, body && body.id);
   if (!f || !involves(f, teamIndex)) return fail("Match amical introuvable.");
   if (!isUpcoming(f)) return fail("Ce match amical n'est plus à venir.");
   if (f.at <= now) return fail("Ce match amical a déjà commencé.");
   if (!f.lineups || typeof f.lineups !== "object") f.lineups = {};
+  if (!f.orders || typeof f.orders !== "object") f.orders = {};
   if (body && body.reset) {
+    delete f.lineups[teamIndex];
+    delete f.orders[teamIndex];
+    return { ok: true, friendlyId: f.id };
+  }
+  if (body && body.orders) {
+    const Actions = require("./actions.js");
+    const v = Actions.validateOrdersSnapshot({ players: friendlyPool(team) }, body.orders);
+    if (!v.ok) return fail(v.error);
+    f.orders[teamIndex] = v.value;
     delete f.lineups[teamIndex];
     return { ok: true, friendlyId: f.id };
   }
@@ -398,8 +467,9 @@ function simulateFriendly(Engine, league, f, now) {
     return;
   }
   const lineups = f.lineups || {};
-  const home = buildFriendlyTeam(Engine, homeReal, lineups[f.homeIdx] || null, at);
-  const away = buildFriendlyTeam(Engine, awayReal, lineups[f.awayIdx] || null, at);
+  const orders = f.orders || {};
+  const home = buildFriendlyTeam(Engine, homeReal, lineups[f.homeIdx] || null, at, orders[f.homeIdx] || null);
+  const away = buildFriendlyTeam(Engine, awayReal, lineups[f.awayIdx] || null, at, orders[f.awayIdx] || null);
   const youthIds = new Set([...(homeReal.youthPlayers || []), ...(awayReal.youthPlayers || [])].map(p => p.id));
   const players = [...home.players, ...away.players];
   const injuredBefore = new Map(players.map(p => [p.id, p.injuryUntil]));
@@ -491,7 +561,9 @@ function sanitizeFriendliesForViewer(list, viewerIdx) {
   return (list || []).filter(f => involves(f, viewerIdx)).map(f => {
     const lineups = {};
     if (f.lineups && f.lineups[viewerIdx]) lineups[viewerIdx] = f.lineups[viewerIdx];
-    return { ...f, lineups };
+    const orders = {};
+    if (f.orders && f.orders[viewerIdx]) orders[viewerIdx] = f.orders[viewerIdx];
+    return { ...f, lineups, orders };
   });
 }
 

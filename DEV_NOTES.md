@@ -20,6 +20,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Amicaux : vrai onglet Ordres** — retour utilisateur : "pour le match
+  amical, il faut pouvoir avoir un vrai onglet ordres". Bouton « Donner /
+  Modifier les ordres » → page Ordres en mode édition (même mécanisme que
+  l'éditeur de tactique, tqEdit.kind = "friendly", openFriendlyOrders),
+  effectif = pros + jeunes (étiquette « Jeune » dans la convocation),
+  « Partir de » (ordres de l'amical, ordres du club, tactiques, derniers
+  matchs), enregistrer / revenir aux ordres du club / annuler. Serveur :
+  POST /api/friendly/lineup { id, orders } validé par
+  actions.validateOrdersSnapshot (extrait de setTacticPresets), stocké
+  f.orders[teamIdx], appliqué par applyFriendlyOrders (tactiques + feuille,
+  titulaire toujours convoqué, titulaire parti remplacé). Ancienne compo
+  simple (lineups) encore lue. Tests : amicaux_ui_test.js,
+  server/friendlies_test.js (8bis).
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Premium, premier lot** — retours
   utilisateur : "il faut un onglet en dessous de guide [...] on y laissera
   le bouton passer en version payante (gratuitement) tout doit se passer
@@ -67,30 +82,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   - À voir : filtre par spécialité sur le marché, rappel de l'adjoint sur la
     page Entraînement.
 
-- **✅ CODÉ, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) — Vraies pubs
-  (Google H5 Games Ads) aux emplacements prévus** — demande : "ajouter les
-  pubs aux endroits prévus dans mon jeu hoop-manager.com" ; régie choisie :
-  H5 Games Ads ; pas encore d'ID éditeur.
-  - server/ads.js (nouveau) : ADSENSE_CLIENT (ca-pub-…) + ADSENSE_TEST=1 ;
-    injection avant </head> du jeu (window.HM_ADS + shim adBreak/adConfig +
-    adsbygoogle.js) et de /bienvenue (script seul, vérif. du site) ; route
-    /ads.txt (404 sans config). server/index.js branché.
-  - moteurbasket3.html : hmAdsEnabled/hmAdsShowBreak/hmAdsShowRewarded ;
-    Scouting Pro → showScoutingRealAdOverlay (ticket serveur inchangé,
-    bouton « Regarder la pub » = opt-in exigé par Google, complété
-    seulement sur adViewed ; messages « fermée » / « aucune pub ») ; Hoop
-    Shows → hoopShowOnAd = adBreak 'pause' hoopshow-prematch/halftime,
-    segment sauté si Google n'a rien. Sans ADSENSE_CLIENT ou dans l'appli
-    Capacitor (AdSense interdit en WebView) : écrans gris factices inchangés.
-  - Tests : ads_integration_test.js (nouveau) ; scouting_pro,
-    hoop_show_player, server/hoop_shows, server/index verts.
-  - Reste (utilisateur) : compte AdSense + inscription H5 Games Ads,
-    ADSENSE_CLIENT (+ ADSENSE_TEST=1 d'abord) sur Render, message RGPD dans
-    AdSense « Confidentialité et messages ». Reformuler « Aucune publicité »
-    dans assets/site/index.html (texte sur l'email). Appli stores : AdMob
-    plus tard. NB : moteurbasket3.html/server/index.js ont aussi des
-    modifs d'autres sessions non committées → commit par hunks.
-
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Forme : +10 par jour civil sans
   jouer ; amical = pas de jour de repos** — retours utilisateur : "la forme
   remonte par 10 uniquement s'ils n'ont pas joué" ("c'était le but qu'un
@@ -127,6 +118,41 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   tabs, daily_training_cycle, synergy_training, trained_tactic_dropdown
   verts). Reste : push.
 
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Analyse d'équipe gratuite + rythme dans Stratégies + « Statistiques par
+  joueur »** — retour utilisateur : "mettre en place l'analyse d'équipe
+  pour les joueurs gratuits [...] que Stratégies utilisées [...] le rythme
+  plutôt que dans identité (idem payant) [...] effectif complet à renommer
+  en statistiques par joueur (idem payant)". moteurbasket3.html :
+  sp2StrategyBlockHtml (attaque/défense/rythme, partagé Pro + gratuit),
+  scoutingFreeAnalysisHtml (#scoutingFreeReport, au-dessus du teaser
+  verrouillé, calculé depuis matchLog côté navigateur), Rythme retiré des
+  puces Identité (grille 4 colonnes), titres renommés. scouting_pro_test.js
+  adapté (C1 gratuit, C2bis rythme/renommage).
+
+- **✅ EN PROD (ae45239, ADSENSE_CLIENT posé sur Render, /ads.txt OK) — EN ATTENTE D'EXAMEN ADSENSE (2026-09-27) — Vraies pubs
+  (Google H5 Games Ads) aux emplacements prévus** — demande : "ajouter les
+  pubs aux endroits prévus dans mon jeu hoop-manager.com" ; régie choisie :
+  H5 Games Ads ; ID éditeur : ca-pub-1405059336303894 (à mettre dans ADSENSE_CLIENT sur Render).
+  - server/ads.js (nouveau) : ADSENSE_CLIENT (ca-pub-…) + ADSENSE_TEST=1 ;
+    injection avant </head> du jeu (window.HM_ADS + shim adBreak/adConfig +
+    adsbygoogle.js) et de /bienvenue (script seul, vérif. du site) ; route
+    /ads.txt (404 sans config). server/index.js branché.
+  - moteurbasket3.html : hmAdsEnabled/hmAdsShowBreak/hmAdsShowRewarded ;
+    Scouting Pro → showScoutingRealAdOverlay (ticket serveur inchangé,
+    bouton « Regarder la pub » = opt-in exigé par Google, complété
+    seulement sur adViewed ; messages « fermée » / « aucune pub ») ; Hoop
+    Shows → hoopShowOnAd = adBreak 'pause' hoopshow-prematch/halftime,
+    segment sauté si Google n'a rien. Sans ADSENSE_CLIENT ou dans l'appli
+    Capacitor (AdSense interdit en WebView) : écrans gris factices inchangés.
+  - Tests : ads_integration_test.js (nouveau) ; scouting_pro,
+    hoop_show_player, server/hoop_shows, server/index verts.
+  - Reste (utilisateur) : compte AdSense + inscription H5 Games Ads,
+    ADSENSE_CLIENT (+ ADSENSE_TEST=1 d'abord) sur Render, message RGPD dans
+    AdSense « Confidentialité et messages ». Reformuler « Aucune publicité »
+    dans assets/site/index.html (texte sur l'email). Appli stores : AdMob
+    plus tard. NB : moteurbasket3.html/server/index.js ont aussi des
+    modifs d'autres sessions non committées → commit par hunks.
 
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Play-offs mardi/jeudi/samedi +
   Récupération seulement les jours de repos** — retours utilisateur : "les
@@ -150,28 +176,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     + ~18 tests UI liés verts. Reste : push.
   - Question ouverte : un jour d'amical compte-t-il comme jour de repos pour
     l'entraînement collectif ? (aujourd'hui oui).
-
-- **✅ COMMITTÉ, À POUSSER (2026-09-27) —
-  Scouting Pro : « Appliquer à mes ordres » ouvre les Ordres du match
-  contre cet adversaire** — retour utilisateur (capture Santo Aleixo) : "il
-  faut que lorsque l'on clique sur appliquer à mes ordres, cela ouvre la
-  page donner vos ordres correspondant à cet adversaire avec les tactiques
-  proposées appliquées". Avant : défense + surveillances écrites dans les
-  ordres EN DIRECT (prochain match, quel que soit l'adversaire), on restait
-  sur la fiche équipe. moteurbasket3.html : nextOrdresRoundAgainst (prochain
-  match non verrouillé contre l'adversaire, championnat ou Coupe) ;
-  scoutingGamePlanPatch (défense, surveillances, + « Comment les battre » via
-  le nouveau champ `orders` des conseils de suggestOffensiveApproach :
-  pénétration / jeu extérieur en 1re priorité offensive, rythme Lent,
-  rebond offensif Agressif/Prudent ; niveau « confirmée » pour rendre
-  surveillances/rebond visibles) ; ordres en direct si match immédiat de
-  championnat, sinon plan préparé (stagePlanForRound + syncPlanToServer) ;
-  puis goToOrdresTab(round, competition), statut « Modifications à
-  valider » + message récapitulatif. Bouton actif aussi s'il n'y a que des
-  conseils offensifs. Test : scouting_apply_ordres_test.js (+ scouting_pro,
-  tactical_scouting_report, planned_tactics, tactic_presets,
-  ordres_redesign verts). Reste : push.
-
 
 - **✅ DÉPLOYÉ SUR LE MAC, À COMMITTER/POUSSER (2026-09-27) — Amicaux :
   formulaire de proposition** — retour utilisateur : "mets une barre de

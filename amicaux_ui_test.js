@@ -65,22 +65,29 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   docA.getElementById("frProposeBtn").click();
   await waitFor(() => docA.querySelector(".lp-feedback.ok"), "confirmation affichée");
   check(/Amical programmé/.test(docA.querySelector(".lp-feedback.ok").textContent), "amical contre le CPU programmé");
-  check(docA.querySelectorAll("[data-fr-lineup]").length === 1 && /Confirmé/.test(docA.getElementById("amicauxContent").textContent), "l'amical apparaît « Confirmé » dans À venir");
+  check(docA.querySelectorAll("[data-fr-orders]").length === 1 && /Confirmé/.test(docA.getElementById("amicauxContent").textContent), "l'amical apparaît « Confirmé » dans À venir, avec son bouton Ordres");
   const fId = winA.eval("league.friendlies[0].id");
 
-  // --- Composition : le jeune titulaire à la place du meneur.
-  docA.querySelector(`[data-fr-lineup='${fId}']`).click();
-  const youthSel = await waitFor(() => docA.querySelector(`[data-fr-role='${youth.id}']`), "le jeune apparaît dans la composition");
-  check(/Académie de jeunes/.test(docA.querySelector(".fr-lineup").textContent) && /Petit Jeune/.test(docA.querySelector(".fr-lineup").textContent), "section Académie de jeunes avec le jeune");
-  check(/Titulaires 5\/5/.test(docA.querySelector(".fr-lu-head").textContent), "composition par défaut : les 5 titulaires des ordres du club");
-  change(youthSel, "S");
-  check(docA.querySelector(`[data-fr-save='${fId}']`).disabled && /Titulaires 6\/5/.test(docA.querySelector(".fr-lu-head").textContent), "6 titulaires : enregistrement impossible");
-  const starterMeneur = winA.eval("teamA.lineup.starters['Meneur']");
-  change(docA.querySelector(`[data-fr-role='${starterMeneur}']`), "-");
-  check(/Titulaires 5\/5/.test(docA.querySelector(".fr-lu-head").textContent) && !docA.querySelector(`[data-fr-save='${fId}']`).disabled, "le meneur habituel en tribune : 5 titulaires, enregistrement possible");
-  docA.querySelector(`[data-fr-save='${fId}']`).click();
-  await waitFor(() => /Composition enregistrée/.test(docA.getElementById("amicauxContent").textContent), "composition enregistrée");
-  check(/1 jeune/.test(docA.getElementById("amicauxContent").textContent), "la ligne indique « 1 jeune » dans la composition");
+  // --- Vrai onglet Ordres pour l'amical (retour utilisateur 2026-09-27) :
+  //     la page Ordres en mode édition, effectif pro + jeunes ; le jeune
+  //     titulaire au poste de meneur.
+  docA.querySelector(`[data-fr-orders='${fId}']`).click();
+  const prep = docA.getElementById("prepSection");
+  check(!prep.classList.contains("hidden") && prep.classList.contains("tq-editing"), "« Donner les ordres » ouvre la page Ordres en mode édition");
+  check(/Ordres de l'amical/.test(docA.getElementById("ordresActionBar").textContent) && /Match amical/.test(docA.getElementById("tqEditorBar").textContent), "barre « Ordres de l'amical » avec le match");
+  check(/Petit Jeune/.test(prep.textContent), "le jeune de l'académie figure dans l'effectif des ordres");
+  const frTab = [...docA.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "amicaux");
+  check(frTab.classList.contains("active"), "l'onglet Matchs amicaux reste actif");
+  winA.eval(`tqEdit.proxy.setStarter("Meneur", ${youth.id}); renderOrdresGrid();`);
+  winA.eval(`tqEdit.proxy.defense = "Zone press";`);
+  docA.getElementById("tqEditorSave").click();
+  check(await winA.__lastFriendlyOrdersSave, "ordres de l'amical enregistrés");
+  await waitFor(() => !docA.getElementById("amicauxSection").classList.contains("hidden"), "retour à la page Matchs amicaux");
+  const savedOrders = winA.eval(`JSON.stringify(league.friendlies.find(f => f.id === '${fId}').orders[myTeamIndex])`);
+  const so = JSON.parse(savedOrders);
+  check(so.lineup.starters.Meneur === youth.id && so.defense === "Zone press", "ordres complets enregistrés sur l'amical (jeune titulaire, défense choisie)");
+  check(winA.eval("teamA.defense") !== "Zone press" || winA.eval("teamA.lineup.starters.Meneur") !== youth.id, "les ordres officiels du club ne sont pas modifiés");
+  check(/Ordres de l'amical enregistrés · 1 jeune/.test(docA.getElementById("amicauxContent").textContent) && /Modifier les ordres/.test(docA.getElementById("amicauxContent").textContent), "la ligne indique « Ordres de l'amical enregistrés · 1 jeune »");
 
   // --- A invite B (humain).
   pickOpp(B);

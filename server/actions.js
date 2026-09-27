@@ -324,6 +324,32 @@ function setTactics(team, teamIndex, league, body, now) {
 // (snapshotTactics), validé champ par champ avec les mêmes validateurs que
 // setTactics/setLineup. Aucun verrou d'avant-match : enregistrer une
 // tactique ne change pas les ordres du prochain match.
+// Jeu d'ordres complet (forme snapshotTactics, sans watchAssignments) :
+// tactiques + feuille de match, joueurs pris dans `team.players`. Partagé
+// par les tactiques enregistrées et les ordres d'un match amical (voir
+// server/friendlies.js, où `team` est l'effectif pro + jeunes de l'académie).
+function validateOrdersSnapshot(team, o) {
+  if (!o || typeof o !== "object") return { ok: false, error: "Ordres manquants." };
+  const checks = [
+    ["offensivePriorities", validateOffensivePriorities], ["defense", validateDefense], ["rhythm", validateRhythm],
+    ["tacticalTier", validateTacticalTier], ["screenDefense", validateScreenDefense], ["helpDefense", validateHelpDefense],
+    ["postDefense", validatePostDefense], ["closeoutStyle", validateCloseoutStyle], ["offRebStyle", validateOffRebStyle],
+    ["endgameManagement", validateEndgameManagement],
+  ];
+  const snap = {};
+  for (const [key, validate] of checks) {
+    if (o[key] === undefined) continue;
+    const v = validate(o[key]);
+    if (!v.ok) return { ok: false, error: v.error };
+    snap[key] = v.value;
+  }
+  if (!snap.offensivePriorities || !snap.defense || !snap.rhythm) return { ok: false, error: "Tactique incomplète : attaque, défense et rythme sont requis." };
+  const lv = validateLineupBody(team, o.lineup);
+  if (!lv.ok) return { ok: false, error: lv.error };
+  snap.lineup = lv.value;
+  return { ok: true, value: snap };
+}
+
 function setTacticPresets(team, teamIndex, league, body, now) {
   if (!body || typeof body !== "object") return fail("Requête invalide.");
   const max = Engine.TACTIC_PRESETS_MAX;
@@ -338,23 +364,9 @@ function setTacticPresets(team, teamIndex, league, body, now) {
     const o = body.orders;
     if (!o || typeof o !== "object") return fail("Ordres manquants.");
     if (slot > presets.length) return fail("Emplacement de tactique invalide.");
-    const checks = [
-      ["offensivePriorities", validateOffensivePriorities], ["defense", validateDefense], ["rhythm", validateRhythm],
-      ["tacticalTier", validateTacticalTier], ["screenDefense", validateScreenDefense], ["helpDefense", validateHelpDefense],
-      ["postDefense", validatePostDefense], ["closeoutStyle", validateCloseoutStyle], ["offRebStyle", validateOffRebStyle],
-      ["endgameManagement", validateEndgameManagement],
-    ];
-    const snap = {};
-    for (const [key, validate] of checks) {
-      if (o[key] === undefined) continue;
-      const v = validate(o[key]);
-      if (!v.ok) return fail(v.error);
-      snap[key] = v.value;
-    }
-    if (!snap.offensivePriorities || !snap.defense || !snap.rhythm) return fail("Tactique incomplète : attaque, défense et rythme sont requis.");
-    const lv = validateLineupBody(team, o.lineup);
-    if (!lv.ok) return fail(lv.error);
-    snap.lineup = lv.value;
+    const vo = validateOrdersSnapshot(team, o);
+    if (!vo.ok) return fail(vo.error);
+    const snap = vo.value;
     if (!team.saveTacticPreset(slot, body.name, snap, now)) return fail(`${team.tacticPresetsMax(now)} tactiques au maximum${team.hasActivePremium(now) ? "" : " (6 avec le Premium)"}.`);
   } else {
     return fail("Opération inconnue.");
@@ -1297,6 +1309,7 @@ function submitPronostics(team, teamIndex, league, body, now) {
 }
 
 module.exports = {
+  validateOrdersSnapshot,
   setLineup, setTactics, setTraining, setPlan, setTacticPresets, listPlayer, bidOnListing, bidOnCoachListing,
   upgradeArena, buildArenaSeats, setTicketPrices, upgradeFanShop, fireTrainer,
   bidOnAnalystListing, fireVideoAnalyst, runVideoSession,
