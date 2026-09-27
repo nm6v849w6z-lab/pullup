@@ -271,8 +271,8 @@ for (const role of ["doctor", "physio"]) {
 })();
 
 // ---------------------------------------------------------------------
-// 9) Navigateur : onglet Staff avec 5 postes, enchère puis embauche d'un
-//    médecin, tableau de bord sur 5 postes.
+// 9) Navigateur : onglet Staff avec 6 postes (entraîneur adjoint compris),
+//    enchère puis embauche d'un médecin, tableau de bord sur 6 postes.
 // ---------------------------------------------------------------------
 (async () => {
   const { startTestServer, openGame, flush } = require("./test_helpers.js");
@@ -285,7 +285,7 @@ for (const role of ["doctor", "physio"]) {
     const tab = [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "staff");
     tab.click();
     const slots = doc.querySelectorAll("#staffSlots .stf-slot");
-    if (slots.length !== 5) throw new Error(`❌ L'onglet Staff devrait afficher 5 postes (trouvé ${slots.length}).`);
+    if (slots.length !== 6) throw new Error(`❌ L'onglet Staff devrait afficher 6 postes (trouvé ${slots.length}).`);
     if (!doc.querySelector("#staffDoctorCurrent .staff-none") || !doc.querySelector("#staffPhysioCurrent .staff-none")) {
       throw new Error("❌ Sans staff médical, les messages 'Aucun médecin/kiné sous contrat' devraient s'afficher.");
     }
@@ -306,8 +306,8 @@ for (const role of ["doctor", "physio"]) {
     if (!doc.querySelector('[data-staff-fire="doctor"]')) throw new Error("❌ Un bouton Congédier devrait être proposé pour le médecin.");
 
     const dashRoles = win.eval("DASH_STAFF_ROLES.map(r => r.id).join(',')");
-    if (dashRoles !== "coach,analyst,scout,doctor,physio") throw new Error(`❌ Tableau de bord : postes ${dashRoles}.`);
-    console.log("✅ Navigateur : 5 postes dans l'onglet Staff, enchère puis embauche d'un médecin, tableau de bord sur 5 postes.");
+    if (dashRoles !== "coach,analyst,scout,doctor,physio,assistant") throw new Error(`❌ Tableau de bord : postes ${dashRoles}.`);
+    console.log("✅ Navigateur : 6 postes dans l'onglet Staff, enchère puis embauche d'un médecin, tableau de bord sur 6 postes.");
     dom.window.close();
   } finally {
     server.close();

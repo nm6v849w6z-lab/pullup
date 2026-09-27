@@ -144,6 +144,8 @@ function catchUpLeague(league, now) {
   // même logique/raison que les trois marchés de staff ci-dessus.
   league.refreshDoctorMarket(now);
   league.refreshPhysioMarket(now);
+  // Marché des entraîneurs adjoints (voir League.refreshAssistantCoachMarket).
+  if (league.refreshAssistantCoachMarket) league.refreshAssistantCoachMarket(now);
 
   catchUpPlayoffs(league, now, events);
 

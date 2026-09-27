@@ -836,6 +836,24 @@ const bidOnPhysioListing = makeMedicalBidAction("physio");
 const fireDoctor = makeMedicalFireAction("doctor", "médecin");
 const firePhysio = makeMedicalFireAction("physio", "kiné");
 
+// Entraîneur adjoint (voir League.placeAssistantCoachBid/
+// fireTeamAssistantCoach côté moteur) : même forme que le staff médical.
+function bidOnAssistantCoachListing(team, teamIndex, league, body, now) {
+  if (!body || (typeof body.listingId !== "number" && typeof body.listingId !== "string") || body.listingId === "") {
+    return fail("listingId requis.");
+  }
+  const listingId = typeof body.listingId === "string" && /^-?\d+$/.test(body.listingId) ? Number(body.listingId) : body.listingId;
+  if (typeof body.amount !== "number" || !(body.amount > 0)) return fail("amount doit être un nombre positif.");
+  const result = league.placeAssistantCoachBid(listingId, teamIndex, body.amount, now);
+  if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
+  return { ok: true, listing: result.listing };
+}
+function fireAssistantCoach(team, teamIndex, league, body, now) {
+  const result = league.fireTeamAssistantCoach(teamIndex, now);
+  if (!result.ok) return fail("Congédiement de l'entraîneur adjoint refusé.");
+  return { ok: true, relisted: result.relisted };
+}
+
 // Centre de formation : agrandissement d'UN palier — même forme que
 // upgradeArena/upgradeFanShop ci-dessus (voir Team.upgradeTrainingCenter/
 // nextTrainingCenterLevel côté moteur). Aucun corps de requête attendu.
@@ -1286,6 +1304,7 @@ module.exports = {
   // prospects, voir engine.js) :
   bidOnRecruiterListing, fireRecruiter, upgradeTrainingCenter,
   bidOnDoctorListing, fireDoctor, bidOnPhysioListing, firePhysio,
+  bidOnAssistantCoachListing, fireAssistantCoach,
   signYouthCandidate, declineYouthCandidate, promoteYouthPlayer, releaseYouthPlayer,
   // Autres infrastructures du club (station TV, salle de musculation, espace
   // bien-être, voir CLUB_FACILITIES côté moteur) :

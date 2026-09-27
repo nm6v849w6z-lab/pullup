@@ -1442,6 +1442,50 @@ const MEDICAL_STAFF_ROLES = {
 };
 
 // ---------------------------------------------------------------------
+// ENTRAÎNEUR ADJOINT (retour utilisateur, 2026-09-27) — "recruter des
+// assistants avec une spécialité [...] les joueurs progressent passivement
+// sur les attributs liés à la spécialité, sans programme d'entraînement
+// dédié" ; "1 adjoint par équipe" ; "si un adjoint a moins de carac sur
+// lesquelles il agit, elles doivent monter plus vite" ; accessible à tous
+// (jamais réservé aux Supporters, c'est un avantage sportif). Même marché
+// aux enchères que le reste du staff (voir League.refreshAssistantCoachMarket),
+// même salaire croissant (TRAINER_WEEKLY_GROWTH), barème de départ propre
+// (ASSISTANT_BASE_SALARY, ~60 % de l'entraîneur principal).
+// Effet : chaque lundi (Team.trainWeek), un poids d'entraînement s'AJOUTE à
+// celui du programme sur les caractéristiques de sa spécialité, pour tous
+// les joueurs non blessés, qu'ils aient joué ou non :
+//   ASSISTANT_WEIGHT_BY_LEVEL[niveau] × WEIGHT_BY_PROGRAM_SIZE[nb de carac]
+//   × aptitude du poste du joueur × gabarit
+// (mêmes tables que les programmes : moins de carac = chacune monte plus
+// vite). Multiplié ensuite par le bonus de l'entraîneur principal, comme
+// tout l'entraînement. Calibré à ~15 % d'un programme dédié par carac
+// (5★, 19 ans : +5 par carac et par saison pour le coach de tir, +7 pour
+// le coach défensif ; quasi rien après 25 ans).
+// ---------------------------------------------------------------------
+const ASSISTANT_SPECIALTIES = {
+  shooting:   { label: "Coach de tir", attrs: ["threePoint", "midRange", "freeThrow"] },
+  playmaking: { label: "Coach des meneurs", attrs: ["dribble", "pass", "shotCreation", "penetration"] },
+  inside:     { label: "Coach des intérieurs", attrs: ["inside", "rebound", "block", "defInside"] },
+  defense:    { label: "Coach défensif", attrs: ["defOutside", "steal"] },
+};
+const ASSISTANT_WEIGHT_BY_LEVEL = { 1: 0.12, 2: 0.16, 3: 0.20, 4: 0.24, 5: 0.28 };
+const ASSISTANT_BASE_SALARY = { 1: 500, 2: 1000, 3: 1800, 4: 3300, 5: 6000 };
+
+// Poids d'entraînement apporté par `assistant` ({ level, specialty }) à
+// `player` pour la semaine : { caractéristique: poids }. Vide si pas
+// d'adjoint ou spécialité inconnue.
+function assistantAttrWeightsFor(assistant, player) {
+  const spec = assistant && ASSISTANT_SPECIALTIES[assistant.specialty];
+  if (!spec) return {};
+  const base = (ASSISTANT_WEIGHT_BY_LEVEL[assistant.level] || 0) * (WEIGHT_BY_PROGRAM_SIZE[spec.attrs.length] || 0.3);
+  const out = {};
+  spec.attrs.forEach(attr => {
+    out[attr] = base * (positionEfficiencyForSkill(attr, player.position) / 100) * heightMultiplierForSkill(attr, player.height);
+  });
+  return out;
+}
+
+// ---------------------------------------------------------------------
 // ACADÉMIE DE JEUNES (retour utilisateur, 2026-09) — TROISIÈME rôle de staff,
 // le recruteur (voir Team.recruiter/League.recruiterListings plus bas, même
 // forme/marché aux enchères que l'entraîneur/l'analyste vidéo ci-dessus,
@@ -3849,11 +3893,11 @@ function handleGameEvent(feed, event, ctx) {
   }
 }
 
-const FEED_STAFF_LABELS = { coach: "entraîneur", analyst: "analyste vidéo", scout: "recruteur", doctor: "médecin", physio: "kiné" };
+const FEED_STAFF_LABELS = { coach: "entraîneur", analyst: "analyste vidéo", scout: "recruteur", doctor: "médecin", physio: "kiné", assistant: "entraîneur adjoint" };
 // Variante capitalisée (rôle "staff_hired" du contrat newsFeed.js, ex.
 // "Nouveau Entraîneur : Niveau 5") — mêmes 3 rôles que FEED_STAFF_LABELS
 // ci-dessus, juste la casse.
-const FEED_STAFF_ROLE_LABELS = { coach: "Entraîneur", analyst: "Analyste vidéo", scout: "Recruteur", doctor: "Médecin", physio: "Kiné" };
+const FEED_STAFF_ROLE_LABELS = { coach: "Entraîneur", analyst: "Analyste vidéo", scout: "Recruteur", doctor: "Médecin", physio: "Kiné", assistant: "Entraîneur adjoint" };
 // Le staff n'a pas de nom propre dans ce jeu (seulement un niveau, voir
 // Team.trainer/videoAnalyst/recruiter) — placeholder EXPLICITEMENT documenté
 // (voir DEV_NOTES.md point 10, question ouverte "staff nommé") plutôt que
@@ -4236,6 +4280,8 @@ class Team {
     // des blessures) et kiné (récupération + risque de blessure), même forme
     // que les trois rôles ci-dessus.
     this.doctor = null; // { level, weeksEmployed, baseSalary } ou null
+    // Entraîneur adjoint (voir ASSISTANT_SPECIALTIES) : un seul par club.
+    this.assistantCoach = null; // { level, weeksEmployed, baseSalary, specialty } ou null
     this.physio = null; // { level, weeksEmployed, baseSalary } ou null
 
     // Académie de jeunes — pipeline PRIVÉ de prospects (15-17 ans), jamais
@@ -5787,6 +5833,18 @@ class Team {
   fireDoctor() { this.fireMedicalStaff("doctor"); }
   firePhysio() { this.fireMedicalStaff("physio"); }
 
+  // Entraîneur adjoint (voir ASSISTANT_SPECIALTIES) — un seul par club :
+  // en engager un autre remplace le précédent.
+  assistantCoachSalary() {
+    const a = this.assistantCoach;
+    return a ? trainerWeeklySalary(a.level, a.weeksEmployed, a.baseSalary) : 0;
+  }
+  hireAssistantCoach(specialty, level, baseSalary) {
+    if (!ASSISTANT_SPECIALTIES[specialty] || !TRAINER_LEVELS.includes(level)) return;
+    this.assistantCoach = { level, weeksEmployed: 0, specialty, baseSalary: baseSalary != null ? baseSalary : (ASSISTANT_BASE_SALARY[level] || 0) };
+  }
+  fireAssistantCoach() { this.assistantCoach = null; }
+
   // Multiplicateur de durée d'une NOUVELLE blessure (voir rollInjury et
   // MatchEngine.applyFatigue) : 1 sans médecin, 0,65 avec un médecin 5★.
   doctorInjuryDurationMult() {
@@ -6148,6 +6206,17 @@ class Team {
         penalty = 1 - preview.finalPct / 100; // peut être négatif = bonus (grand gabarit bien placé)
       }
 
+      // Entraîneur adjoint (voir ASSISTANT_SPECIALTIES) : poids AJOUTÉ à celui
+      // du programme, pour tout joueur non blessé, minutes jouées ou pas —
+      // jamais compté comme une synergie (une carac travaillée par l'adjoint
+      // garde sa marge de progression pleine, voir Player.trainWeek).
+      if (this.assistantCoach && !isCurrentlyInjured(p, now != null ? now : Date.now())) {
+        Object.entries(assistantAttrWeightsFor(this.assistantCoach, p)).forEach(([attr, w]) => {
+          if (!(w > 0)) return;
+          attrWeights[attr] = (attrWeights[attr] || 0) + w;
+          synergyAttrs.delete(attr);
+        });
+      }
       const gains = p.trainWeek(attrWeights, trainerMult, synergyAttrs);
       report[p.id] = {
         name: p.name, position: p.position, height: p.height, gains,
@@ -6227,6 +6296,12 @@ class Team {
       physioSalaryPaid = this.physioSalary();
       this.recordTransaction(MEDICAL_STAFF_ROLES.physio.txLabel, -physioSalaryPaid);
       this.physio.weeksEmployed += 1;
+    }
+    let assistantCoachSalaryPaid = 0;
+    if (this.assistantCoach) {
+      assistantCoachSalaryPaid = this.assistantCoachSalary();
+      this.recordTransaction("Salaire du staff (entraîneur adjoint)", -assistantCoachSalaryPaid);
+      this.assistantCoach.weeksEmployed += 1;
     }
 
     // Masse salariale des joueurs : payée CHAQUE semaine (voir
@@ -6418,7 +6493,7 @@ class Team {
     }
 
     const result = {
-      players: report, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid, doctorSalaryPaid, physioSalaryPaid,
+      players: report, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid, doctorSalaryPaid, physioSalaryPaid, assistantCoachSalaryPaid,
       playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, tvStationRevenue, moraleDrift, salaryChanges,
       fanMorale: this.fanMorale, budget: this.budget, trainerMult,
       deficitAlert, forcedFireSale, deficitWeeks: this.deficitWeeks,
@@ -8371,6 +8446,8 @@ class League {
     // Marchés du staff médical (voir MEDICAL_STAFF_ROLES/refreshMedicalMarket).
     this.doctorListings = [];
     this.physioListings = [];
+    // Marché des entraîneurs adjoints (voir refreshAssistantCoachMarket).
+    this.assistantCoachListings = [];
 
     // Calendrier RÉEL (retour utilisateur, 2026-09 : "le jeu va être online,
     // donc il faudra mettre un calendrier réel / dans une vraie semaine, 2
@@ -9964,6 +10041,109 @@ class League {
   fireTeamPhysio(teamIndex, now) { return this.fireTeamMedicalStaff("physio", teamIndex, now); }
 
   // ---------------------------------------------------------------------
+  // Marché des entraîneurs adjoints (voir ASSISTANT_SPECIALTIES) — mêmes
+  // règles que le staff médical ci-dessus (enchère, CPU intéressés s'ils
+  // n'ont personne ou moins bien, plancher de candidats, congédiement
+  // relisté à -30 %) ; chaque candidat a en plus une SPÉCIALITÉ, tirée au
+  // hasard. Plancher doublé (4 spécialités au choix).
+  // ---------------------------------------------------------------------
+  _assistantCoachListings() {
+    if (!Array.isArray(this.assistantCoachListings)) this.assistantCoachListings = [];
+    return this.assistantCoachListings;
+  }
+  _makeAssistantCoachListing(now, level, specialty, startPrice) {
+    const listing = this._makeStaffListing(now, level, startPrice);
+    listing.specialty = specialty;
+    this._assistantCoachListings().push(listing);
+    return listing;
+  }
+  generateAssistantCoachCandidate(now, specialty = null) {
+    const weights = [40, 28, 18, 10, 4];
+    const total = weights.reduce((s, w) => s + w, 0);
+    let roll = Math.random() * total;
+    let level = TRAINER_LEVELS[TRAINER_LEVELS.length - 1];
+    for (let i = 0; i < weights.length; i++) {
+      if (roll < weights[i]) { level = i + 1; break; }
+      roll -= weights[i];
+    }
+    const keys = Object.keys(ASSISTANT_SPECIALTIES);
+    const spec = ASSISTANT_SPECIALTIES[specialty] ? specialty : keys[Math.floor(Math.random() * keys.length)];
+    return this._makeAssistantCoachListing(now, level, spec, ASSISTANT_BASE_SALARY[level] || 0);
+  }
+  placeAssistantCoachBid(listingId, bidderIdx, amount, now) {
+    const listing = this._assistantCoachListings().find(l => l.id === listingId);
+    if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
+    const bidder = this.teams[bidderIdx];
+    if (!bidder) return { ok: false, reason: "invalid-bidder" };
+    const minBid = minNextBidFor(listing);
+    if (amount < minBid) return { ok: false, reason: "too-low", minBid };
+    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    const rounded = Math.round(amount);
+    listing.currentBid = rounded;
+    listing.currentBidderIdx = bidderIdx;
+    listing.bids.push({ bidderIdx, amount: rounded, at: now });
+    return { ok: true, listing };
+  }
+  _resolveAssistantCoachListing(listing, now) {
+    listing.status = "closed";
+    if (listing.currentBidderIdx == null) { listing.result = "unsold"; return; }
+    const buyer = this.teams[listing.currentBidderIdx];
+    const amount = listing.currentBid;
+    if (!buyer || (buyer.isHuman && amount > buyer.budget)) { listing.result = "buyer-failed"; return; }
+    buyer.hireAssistantCoach(listing.specialty, listing.level, amount);
+    if (buyer.isHuman && buyer.feed) {
+      handleGameEvent(buyer.feed, {
+        type: "staff_hired", week: buyer.week,
+        name: feedStaffPlaceholderName(listing.level), role: FEED_STAFF_ROLE_LABELS.assistant,
+      }, { clubName: buyer.name });
+    }
+    listing.result = "sold";
+    listing.finalPrice = amount;
+  }
+  refreshAssistantCoachMarket(now) {
+    const listings = this._assistantCoachListings();
+    listings.forEach(listing => {
+      if (listing.status !== "open") return;
+      if (now - (listing.lastCpuCheckAt || listing.createdAt) < COACH_MARKET_GENERATE_CHECK_INTERVAL_MS) return;
+      listing.lastCpuCheckAt = now;
+      this.teams.forEach((team, idx) => {
+        if (team.isHuman) return;
+        if (idx === listing.currentBidderIdx) return;
+        const current = team.assistantCoach;
+        if (current && current.level >= listing.level) return;
+        if (Math.random() >= COACH_CPU_BID_CHANCE) return;
+        const minBid = minNextBidFor(listing);
+        const maxWilling = Math.round((ASSISTANT_BASE_SALARY[listing.level] || 0) * rand(1.0, 1.5));
+        if (minBid > maxWilling) return;
+        const bidAmount = Math.min(maxWilling, Math.round(minBid * rand(1, 1.15)));
+        listing.currentBid = bidAmount;
+        listing.currentBidderIdx = idx;
+        listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+      });
+    });
+    let openCount = listings.filter(l => l.status === "open").length;
+    const minOpen = 2 * this.staffMarketMinOpenListings();
+    while (openCount < minOpen) {
+      this.generateAssistantCoachCandidate(now);
+      openCount++;
+    }
+    listings
+      .filter(l => l.status === "open" && now >= l.closesAt)
+      .forEach(listing => this._resolveAssistantCoachListing(listing, now));
+  }
+  // Congédie l'adjoint et le remet sur le marché à 70 % de son salaire actuel.
+  fireTeamAssistantCoach(teamIndex, now) {
+    const team = this.teams[teamIndex];
+    if (!team) return { ok: false, relisted: false };
+    const fired = team.assistantCoach;
+    const currentSalary = team.assistantCoachSalary();
+    team.fireAssistantCoach();
+    if (!fired) return { ok: true, relisted: false };
+    this._makeAssistantCoachListing(now, fired.level, fired.specialty, Math.max(1, Math.round(currentSalary * 0.7)));
+    return { ok: true, relisted: true };
+  }
+
+  // ---------------------------------------------------------------------
   // Séance vidéo (retour utilisateur, 2026-09) : "il faudrait pouvoir
   // scouter l'effectif de son adversaire. L'idée est d'avoir une vue au
   // moins sur les salaires, taille, poste... mais pas sur les
@@ -11224,6 +11404,7 @@ function serializeTeam(team) {
     // Staff médical (voir MEDICAL_STAFF_ROLES) : même forme que recruiter.
     doctor: team.doctor ? { ...team.doctor } : null,
     physio: team.physio ? { ...team.physio } : null,
+    assistantCoach: team.assistantCoach ? { ...team.assistantCoach } : null,
     // Académie de jeunes (voir Team.youthCandidates/youthPlayers ci-dessus) :
     // mêmes enregistrements qu'un joueur normal (voir serializePlayerRecord)
     // — youthCandidates porte EN PLUS createdAt/expiresAt (fenêtre
@@ -11498,6 +11679,17 @@ function teamFromSave(data) {
       };
     }
   });
+  // Entraîneur adjoint (voir ASSISTANT_SPECIALTIES) : absent d'une sauvegarde
+  // plus ancienne = pas d'adjoint.
+  if (data.assistantCoach && TRAINER_LEVELS.includes(data.assistantCoach.level) && ASSISTANT_SPECIALTIES[data.assistantCoach.specialty]) {
+    const a = data.assistantCoach;
+    team.assistantCoach = {
+      level: a.level,
+      weeksEmployed: a.weeksEmployed || 0,
+      specialty: a.specialty,
+      baseSalary: a.baseSalary != null ? a.baseSalary : (ASSISTANT_BASE_SALARY[a.level] || 0),
+    };
+  }
   // Académie de jeunes (voir serializeTeam ci-dessus) : `[]`/`1` par défaut
   // (déjà les valeurs posées par le constructeur Team) pour une sauvegarde
   // d'avant cette fonctionnalité — aucun candidat/jeune, Centre de formation
@@ -11878,6 +12070,7 @@ function serializeLeague(lg) {
     // Marchés du staff médical (voir League.refreshMedicalMarket).
     doctorListings: lg.doctorListings || [],
     physioListings: lg.physioListings || [],
+    assistantCoachListings: lg.assistantCoachListings || [],
     // Calendrier réel (voir League.calendarStartAt/lastAutoTrainedWeek et
     // server/calendar.js) : absent (`null`/`-1`) pour une ligue qui tourne
     // encore uniquement "à la demande" (mode navigateur actuel, sans
@@ -11962,6 +12155,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.lastRecruiterGenerationCheckAt = typeof data.lastRecruiterGenerationCheckAt === "number" ? data.lastRecruiterGenerationCheckAt : 0;
   lg.doctorListings = Array.isArray(data.doctorListings) ? data.doctorListings : [];
   lg.physioListings = Array.isArray(data.physioListings) ? data.physioListings : [];
+  lg.assistantCoachListings = Array.isArray(data.assistantCoachListings) ? data.assistantCoachListings : [];
   lg.calendarStartAt = typeof data.calendarStartAt === "number" ? data.calendarStartAt : null;
   lg.lastAutoTrainedWeek = typeof data.lastAutoTrainedWeek === "number" ? data.lastAutoTrainedWeek : -1;
   lg.calendarWeekMs = typeof data.calendarWeekMs === "number" ? data.calendarWeekMs : null;
@@ -13412,6 +13606,7 @@ return {
   COACH_AUCTION_DURATION_MS, COACH_MARKET_GENERATE_CHECK_INTERVAL_MS, COACH_CPU_BID_CHANCE,
   STAFF_MARKET_LISTINGS_PER_MANAGER, staffMarketMinOpenListingsFor,
   // Staff médical (voir le grand commentaire au-dessus de MEDICAL_STAFF_ROLES) :
+  ASSISTANT_SPECIALTIES, ASSISTANT_WEIGHT_BY_LEVEL, ASSISTANT_BASE_SALARY, assistantAttrWeightsFor,
   MEDICAL_STAFF_ROLES, DOCTOR_INJURY_DURATION_REDUCTION_BY_LEVEL,
   PHYSIO_RECOVERY_BONUS_BY_LEVEL, PHYSIO_INJURY_RISK_MULT_BY_LEVEL,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor,

@@ -20,6 +20,30 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) — Entraîneur adjoint** — retours
+  utilisateur : "recruter des assistants avec une spécialité [...] les
+  joueurs progressent passivement sur les attributs liés à la spécialité",
+  "si un adjoint a moins de carac [...] elles doivent monter plus vite",
+  "1 adjoint par équipe", accessible à tous (pas Supporter).
+  - engine.js (+ miroir) : ASSISTANT_SPECIALTIES (tir 3 carac, meneurs 4,
+    intérieurs 4, défensif 2), ASSISTANT_WEIGHT_BY_LEVEL (0,12→0,28),
+    ASSISTANT_BASE_SALARY (500→6 000 €), assistantAttrWeightsFor (× taille de
+    spécialité WEIGHT_BY_PROGRAM_SIZE × poste × gabarit) ; Team.assistantCoach
+    (un seul) ; Team.trainWeek ajoute ce poids à tous les joueurs NON BLESSÉS,
+    minutes jouées ou non (choix par défaut, à confirmer), × bonus de
+    l'entraîneur principal ; paie hebdo « Salaire du staff (entraîneur
+    adjoint) » ; marché aux enchères League.assistantCoachListings
+    (spécialité tirée au hasard, plancher 2× celui des autres staffs, CPU,
+    congédiement relisté à 70 %).
+  - Serveur : /api/market/assistant-bid, /api/staff/fire-assistant,
+    refreshAssistantCoachMarket à chaque passage. Page Staff : 6e poste
+    (spécialité affichée sur chaque candidat et sur l'adjoint en poste),
+    tableau de bord N/6, Guide + visite guidée + en.js.
+  - Tests : assistant_coach_test.js (nouveau), medical_staff_test.js (6
+    postes) ; server/*_test.js + tests staff/entraînement/i18n verts.
+  - À voir : filtre par spécialité sur le marché, rappel de l'adjoint sur la
+    page Entraînement.
+
 - **✅ CODÉ, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) — Vraies pubs
   (Google H5 Games Ads) aux emplacements prévus** — demande : "ajouter les
   pubs aux endroits prévus dans mon jeu hoop-manager.com" ; régie choisie :

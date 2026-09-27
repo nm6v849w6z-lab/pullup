@@ -713,6 +713,8 @@ const ACTION_ROUTES = {
   "/api/staff/fire-doctor": actions.fireDoctor,
   "/api/market/physio-bid": actions.bidOnPhysioListing,
   "/api/staff/fire-physio": actions.firePhysio,
+  "/api/market/assistant-bid": actions.bidOnAssistantCoachListing,
+  "/api/staff/fire-assistant": actions.fireAssistantCoach,
   "/api/training-center": actions.upgradeTrainingCenter,
   "/api/youth/sign": actions.signYouthCandidate,
   "/api/youth/decline": actions.declineYouthCandidate,
