@@ -471,9 +471,11 @@
      dessous de Joueurs à surveiller et on a aucune brique alignée") : les
      cartes des deux colonnes partagent les mêmes rangées —
      Convocation | Cinq de départ, Attaque | Rotation,
-     Défense + Adversaires | Temps de jeu. */
+     Défense | Temps de jeu puis Postes à surveiller (retour utilisateur
+     2026-09-27 : "mets poste à surveiller en dessous des temps de jeu",
+     plus de vide sous Temps de jeu). Défense couvre les deux rangées. */
   @media(min-width:901px){
-    #prepSection .prep-columns{grid-template-areas:"conv cinq" "att rot" "def pt"; align-items:stretch; row-gap:22px;}
+    #prepSection .prep-columns{grid-template-areas:"conv cinq" "att rot" "def pt" "def adv"; align-items:stretch; row-gap:22px;}
     #prepSection .prep-def-stack{grid-area:def; display:flex; flex-direction:column; gap:22px;}
     #prepSection .prep-def-stack > .ordres-card:not(.hidden){flex:1 1 auto;}
     #prepSection .prep-col, #prepSection .prep-col .lineup-editor{display:contents;}
@@ -482,6 +484,7 @@
     #prepSection .area-ordresCardAttaque{grid-area:att;}
     #prepSection .area-ordresCardRotation{grid-area:rot;}
     #prepSection .area-ordresCardMinutes{grid-area:pt;}
+    #prepSection .area-ordresCardAdversaires{grid-area:adv;}
   }
   #prepSection .conv-list{display:flex; flex-direction:column;}
   #prepSection .prep-def-stack{display:flex; flex-direction:column; gap:22px;}
@@ -28768,9 +28771,8 @@ function buildTeamPanel(team, side, opts = {}) {
 
   // =================== DÉFENSE ===================
   const defense = makeCard("ordresCardDefense", "Défense");
-  // Défense + Adversaires empilées dans un même emplacement de la grille
-  // (voir .prep-def-stack) : elles s'étirent ensemble à la hauteur de la
-  // carte Temps de jeu, Adversaires masquée ou non.
+  // Défense seule dans .prep-def-stack (zone "def", sur deux rangées en
+  // face de Temps de jeu + Postes à surveiller).
   const defStack = document.createElement("div");
   defStack.className = "prep-def-stack";
   leftCol.appendChild(defStack);
@@ -28800,7 +28802,9 @@ function buildTeamPanel(team, side, opts = {}) {
   const adversaires = makeCard("ordresCardAdversaires",
     opponent && opponent.name ? `Postes de ${opponent.name} à surveiller` : "Postes adverses à surveiller", watchCount);
   adversaires.classList.add("tactic-confirmee-block");
-  defStack.appendChild(adversaires);
+  // Hors de .prep-def-stack : sur ordinateur, la grille la place sous
+  // Temps de jeu (zone "adv") ; sur téléphone elle reste sous Défense.
+  leftCol.appendChild(adversaires);
   confirmedEls.push(adversaires);
   const watchWrap = document.createElement("div");
   watchWrap.className = "watch-assignments";

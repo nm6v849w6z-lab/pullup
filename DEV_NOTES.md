@@ -39,6 +39,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   + nom), marges et cases réduites. Anciennes sauvegardes avec plus de
   remplaçants : gardées telles quelles. lineup_test et lineup_minutes_test
   adaptés. Reste : `git push` (+ `main:prod`) et coup d'œil dans le vrai jeu.
+  Suite (même jour) : carte « Postes à surveiller » déplacée SOUS Temps de
+  jeu (zone de grille "adv", Défense sur deux rangées) pour supprimer le
+  vide de la colonne de droite ; sur téléphone elle reste sous Défense.
 
 - **📋 PROCHAINS CHANTIERS PRÉVUS** — onglet Centre médical (indicateur de
   risque de blessure, suite du staff médical), puis Matchs amicaux.
