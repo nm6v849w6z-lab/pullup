@@ -22,7 +22,11 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
   check(team.hasActivePremium() && team.tacticPresetsMax() === 6 && team.setJerseyPattern("bandes").ok, "Premium temporaire (pronostics) : motif et 6 tactiques débloqués");
   const raw = JSON.parse(JSON.stringify(E.serializeTeam(team)));
   raw.premiumUntil = null; raw.isPaying = false; raw.scoutingPremium = true;
-  check(E.teamFromSave(raw).isPaying === true, "ancien « Passer Pro » (scoutingPremium) fusionné dans le Premium au chargement");
+  const merged = E.teamFromSave(raw);
+  check(merged.isPaying === true && merged.scoutingPremium === false, "ancien « Passer Pro » (scoutingPremium) fusionné dans le Premium au chargement");
+  merged.setPaying(false);
+  const again = E.teamFromSave(JSON.parse(JSON.stringify(E.serializeTeam(merged))));
+  check(!again.isPaying && !again.hasActivePremium(), "Premium arrêté : il ne revient pas au rechargement");
 }
 
 // 2) Serveur Scouting : le Premium unique donne l'accès complet.

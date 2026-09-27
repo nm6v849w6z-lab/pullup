@@ -158,9 +158,9 @@ function completeAdTicket(league, teamIndex, ticketId, now = Date.now()) {
 // Ancienne route « Passer Pro » : bascule désormais le Premium unique
 // (isPaying, voir l'onglet Premium) — gardée pour compatibilité.
 function setPremium(team, premium) {
-  team.scoutingPremium = !!premium;
   if (typeof team.setPaying === "function") team.setPaying(!!premium);
-  return { ok: true, premium: team.scoutingPremium };
+  else team.isPaying = !!premium;
+  return { ok: true, premium: !!premium };
 }
 
 // Agrège les tirs de `team` par zone (intérieur/mi-distance/3 points) sur

@@ -5367,6 +5367,7 @@ class Team {
   // qu'isPaying est faux, sans avoir besoin que ce champ soit vidé ici).
   setPaying(isPaying) {
     this.isPaying = !!isPaying;
+    this.scoutingPremium = false; // ancien interrupteur « Passer Pro », fusionné (voir teamFromSave)
     return { ok: true };
   }
 
@@ -11954,7 +11955,10 @@ function teamFromSave(data) {
   // Premium unique (retour utilisateur, 2026-09-27 : "tout doit se passer
   // par là [onglet Premium]") : l'ancien interrupteur « Passer Pro » propre
   // au Scouting Pro (scoutingPremium) est fusionné dans isPaying.
+  // Fusion faite UNE fois : scoutingPremium est aussitôt remis à false (sinon
+  // un club qui arrête le Premium le retrouvait au rechargement suivant).
   if (data.scoutingPremium) team.isPaying = true;
+  team.scoutingPremium = false;
   team.trigram = isValidTrigram(data.trigram) ? data.trigram : null;
   team.trigramChangedAt = typeof data.trigramChangedAt === "number" ? data.trigramChangedAt : null;
   team.arenaName = typeof data.arenaName === "string" && data.arenaName.trim() ? data.arenaName.trim().slice(0, ARENA_NAME_MAX_LENGTH) : null;
