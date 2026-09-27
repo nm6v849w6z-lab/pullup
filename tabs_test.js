@@ -127,18 +127,18 @@ console.log("✅ Chaque catégorie de places a un prix indépendant, et c'est bi
 // ACTUEL de la salle, seule sa flèche ⬆ (.facility-upgrade-arrow) ouvre la
 // confirmation, voir showUpgradeConfirm ; l'achat ne se fait qu'après le
 // clic sur "Valider"). ---
-const levelBefore = saved.team.arenaLevel;
-const upgradeArrow = doc.querySelector("#arenaCurrentPanel .facility-upgrade-arrow");
-if (!upgradeArrow) throw new Error("❌ La carte de la salle devrait avoir une flèche d'amélioration (.facility-upgrade-arrow).");
-upgradeArrow.click();
-const arenaConfirmDialog = doc.getElementById("upgradeConfirmOverlay");
-if (!arenaConfirmDialog) throw new Error("❌ Cliquer sur la flèche d'agrandissement de la salle devrait ouvrir une confirmation avant l'achat.");
-doc.getElementById("upgradeConfirmValidate").click();
+// Depuis le 2026-09-27 : agrandissement libre place par place (brique
+// « Agrandir la salle », voir arena_seats_test.js) — vérifié ici de bout en
+// bout jusqu'à la sauvegarde.
+const capBefore = win.eval("teamA.arenaCapacity()");
+doc.querySelector('[data-build-step="gradins:100"]').click();
+doc.getElementById("arenaBuildBtn").click();
 await flush(dom);
 saved = readRawSave(savePath);
-console.log("\nNiveau de salle :", levelBefore, "→", saved.team.arenaLevel);
-if (saved.team.arenaLevel !== levelBefore + 1) throw new Error("❌ L'agrandissement de la salle ne s'est pas comporté comme attendu.");
-console.log("✅ L'agrandissement de la salle passe par une confirmation puis fonctionne toujours avec le système de catégories.");
+const savedSeats = saved.team.seats;
+console.log("\nPlaces après construction :", savedSeats);
+if (!savedSeats || savedSeats.gradins + savedSeats.tribune + savedSeats.loge !== capBefore + 100) throw new Error("❌ Les 100 places construites devraient être sauvegardées.");
+console.log("✅ L'agrandissement de la salle (+100 places en gradins) fonctionne et est sauvegardé.");
 
 // --- Boutique des supporters : achat UNIQUE, puis revenu hebdomadaire fixe
 // payé pendant l'entraînement (indépendant de la fréquentation des matchs).

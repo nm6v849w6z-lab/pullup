@@ -116,23 +116,27 @@ for (const key of ["gradins", "tribune", "loge"]) {
   if (r.red < r.max && r.ideal >= r.red) throw new Error(`❌ ${key} : le prix idéal (${r.ideal} €) ne devrait jamais être dans la zone rouge (${r.red} €).`);
   console.log(`  ${key} : idéal ${r.ideal} €, zone rouge dès ${r.red} €`);
   if (r.red < r.max && r.cRed >= 0.6) throw new Error(`❌ ${key} : la zone rouge (${r.red} €) devrait commencer sous 60% de confort.`);
-  const label = txt(`[data-seat-key="${key}"] .sl-track-ideal-label`);
-  if (label !== `idéal ${r.ideal} €`) throw new Error(`❌ ${key} : repère attendu "idéal ${r.ideal} €", obtenu "${label}".`);
+  // Plus de repère "idéal" affiché (retour utilisateur 2026-09-27 : "enlève
+  // les prix idéal") ; le calcul reste utilisé pour la zone rouge.
+  if (doc.querySelector(`[data-seat-key="${key}"] .sl-track-ideal-label, [data-seat-key="${key}"] .sl-track-ideal`)) throw new Error(`❌ ${key} : le repère "idéal" ne devrait plus être affiché.`);
 }
-console.log("✅ Prix idéal = recette maximale hors zone rouge, zone rouge calée sur le vrai modèle.");
+console.log("✅ Prix idéal (calcul interne) = recette maximale hors zone rouge, repère plus affiché.");
 
 // --- 4. Graphique + liste repliée ---
 const histLen = win.eval("teamA.attendanceHistory.length");
 const labels = [...doc.querySelectorAll("#attendanceHistoryHolder .sl-chart-label")].map(t => t.textContent);
 console.log("Barres du graphique :", labels.join(", "));
-if (labels.length !== histLen + 1 || labels[labels.length - 1] !== "Prochain") throw new Error("❌ Le graphique devrait avoir une barre par match joué + une barre de prévision.");
-if (doc.querySelectorAll("#attendanceHistoryHolder .sl-bar-proj").length !== 3) throw new Error("❌ La barre de prévision devrait être empilée par catégorie (3 segments).");
+// Plus de barre "Prochain" (retour utilisateur 2026-09-27 : "enlève [...] le
+// remplissage projeté pour le prochain match").
+if (labels.length !== histLen || labels.includes("Prochain")) throw new Error("❌ Le graphique devrait avoir une barre par match joué, sans barre de prévision.");
+if (txt("#attendanceHistoryHolder").includes("Prévision")) throw new Error("❌ Plus de légende « Prévision ».");
 const lines = doc.querySelectorAll("#attendanceHistoryHolder .gain-line");
 const extra = doc.querySelectorAll("#attendanceHistoryHolder .gain-line.sl-history-extra");
-if (lines.length !== histLen || extra.length !== histLen - 1) throw new Error(`❌ Toutes les lignes devraient rester dans le DOM, seule celle du dernier match visible (${histLen - 1} repliées).`);
+// 3 derniers matchs visibles d'emblée (retour utilisateur 2026-09-27).
+if (lines.length !== histLen || extra.length !== Math.max(0, histLen - 3)) throw new Error(`❌ Toutes les lignes devraient rester dans le DOM, les 3 derniers matchs visibles (${Math.max(0, histLen - 3)} repliées).`);
 doc.querySelector(".sl-history-toggle").click();
 if (!doc.querySelector("#attendanceHistoryHolder .sl-history--open")) throw new Error("❌ 'Voir les N matchs' devrait déplier la liste.");
-console.log("✅ Graphique (matchs + prévision) et liste dépliable.");
+console.log("✅ Graphique (matchs joués seulement) et liste : 3 derniers visibles, reste dépliable.");
 
 // --- 5. Infrastructures ---
 win.eval("teamA.facilityLevels = { tvStation: 0, gym: 2, wellness: 0 }; renderSalleSection();");

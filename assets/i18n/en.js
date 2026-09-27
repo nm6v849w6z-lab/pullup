@@ -4293,7 +4293,6 @@ window.HM_I18N_EN = {
   "{0} (pressenti {1})": "{0} (expected: {1})",
   "Agrandir la salle": "Expand the arena",
   "Construction": "Construction",
-  "Choisissez le nombre de places à ajouter": "Choose how many seats to add",
   "Plafond de places atteint pour ce type de gradin.": "Seat limit reached for this stand type.",
   "Budget insuffisant.": "Insufficient budget.",
   "Aucune place à construire.": "No seats to build.",
