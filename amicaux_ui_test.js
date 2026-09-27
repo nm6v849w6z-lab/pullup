@@ -40,10 +40,22 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   const tab = [...docA.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "amicaux");
   tab.click();
   check(!docA.getElementById("amicauxSection").classList.contains("hidden") && docA.getElementById("placeholderSection").classList.contains("hidden"), "la page Matchs amicaux s'affiche (plus de page « à venir »)");
-  const oppSel = docA.getElementById("frOpponentSelect");
-  check(!!oppSel.querySelector("optgroup[label='Managers']") && !!oppSel.querySelector("optgroup[label='Équipes CPU']"), "adversaires : managers et équipes CPU");
+  // Adversaire : recherche (plus de menu déroulant).
+  const pickOpp = (idx) => {
+    const input = docA.getElementById("frOpponentSearch");
+    input.value = league.teams[idx].name.slice(0, 4);
+    input.dispatchEvent(new winA.Event("input", { bubbles: true }));
+    const opt = docA.querySelector(`#frOpponentResults [data-fr-opp='${idx}']`);
+    check(!!opt && docA.getElementById("frOpponentResults").classList.contains("open"), `recherche : « ${input.value} » propose ${league.teams[idx].name}`);
+    opt.click();
+  };
+  check(!docA.getElementById("frOpponentSelect") && !!docA.getElementById("frOpponentSearch"), "adversaire : champ de recherche au lieu du menu déroulant");
+  const s0 = docA.getElementById("frOpponentSearch");
+  s0.value = "zzzz"; s0.dispatchEvent(new winA.Event("input", { bubbles: true }));
+  check(/Aucun club trouvé/.test(docA.getElementById("frOpponentResults").textContent), "recherche sans résultat");
+  check(!/message privé et doit accepter/.test(docA.getElementById("amicauxContent").textContent), "plus de texte « Le manager reçoit un message privé… »");
   check(docA.getElementById("frProposeBtn").disabled, "« Proposer » désactivé tant qu'aucun adversaire n'est choisi");
-  change(oppSel, String(cpu));
+  pickOpp(cpu);
   await waitFor(() => docA.getElementById("frDaySelect") && !docA.getElementById("frDaySelect").disabled, "jours de repos chargés");
   const dayOptions = [...docA.getElementById("frDaySelect").options].map(o => o.value);
   const officialDays = new Set(require("./server/friendlies.js").officialMatchTimesFor(Engine, league, A).map(t => require("./server/friendlies.js").dayKeyOf(t)));
@@ -71,7 +83,7 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   check(/1 jeune/.test(docA.getElementById("amicauxContent").textContent), "la ligne indique « 1 jeune » dans la composition");
 
   // --- A invite B (humain).
-  change(docA.getElementById("frOpponentSelect"), String(B));
+  pickOpp(B);
   await waitFor(() => docA.getElementById("frDaySelect") && !docA.getElementById("frDaySelect").disabled && [...docA.getElementById("frDaySelect").options].length > 0, "jours communs avec B");
   const firstDay = winA.eval("league.friendlies[0].day");
   check(![...docA.getElementById("frDaySelect").options].some(o => o.value === firstDay), "le jour déjà pris par un amical n'est plus proposé");

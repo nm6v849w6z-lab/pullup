@@ -112,8 +112,24 @@ check(teamA.feed.entries.some(e => /^Amical : (victoire|défaite)/.test(e.title)
 const d3 = F.availableDays(Engine, league, A, B, T0).find(d => d.times.includes("12:00"));
 r = F.proposeFriendly(Engine, teamA, A, league, { opponent: B, day: d3.day, time: "12:00" }, T0);
 const fLate = league.friendlies.find(f => f.id === r.friendlyId);
-F.catchUpFriendlies(Engine, league, fLate.at + 1000);
-check(fLate.status === "expired", "invitation sans réponse périmée à l'heure du match");
+// Retours utilisateur 2026-09-27 : "si pas validé 1h avant le match, ça
+// s'annule", "l'invitation reste max 3 jours, et après elle s'annule".
+F.catchUpFriendlies(Engine, league, fLate.at - 61 * 60 * 1000);
+check(fLate.status === "pending", "invitation encore valable 61 min avant le match");
+r = F.respondFriendly(Engine, league.teams[B], B, league, { id: fLate.id, accept: true }, fLate.at - 59 * 60 * 1000);
+check(!r.ok && /Trop tard/.test(r.error), "impossible d'accepter moins d'1 h avant le match");
+F.catchUpFriendlies(Engine, league, fLate.at - 59 * 60 * 1000);
+check(fLate.status === "expired", "invitation annulée 1 h avant le match sans réponse");
+check(teamA.feed.entries.some(e => /1 h avant le match/.test(e.body || e.text || "") || /Invitation à un amical annulée/.test(e.title)), "le proposant est prévenu de l'annulation");
+// 3 jours max : invitation pour dans ~2 semaines, sans réponse.
+const dFar = F.availableDays(Engine, league, A, B, T0).filter(d => d.times.includes("20:00")).pop();
+r = F.proposeFriendly(Engine, teamA, A, league, { opponent: B, day: dFar.day, time: "20:00" }, T0);
+const fFar = league.friendlies.find(f => f.id === r.friendlyId);
+check(fFar.at - T0 > 4 * 24 * 3600 * 1000, "invitation lointaine (plus de 4 jours avant le match)");
+F.catchUpFriendlies(Engine, league, T0 + 3 * 24 * 3600 * 1000 - 60000);
+check(fFar.status === "pending", "encore en attente juste avant 3 jours");
+F.catchUpFriendlies(Engine, league, T0 + 3 * 24 * 3600 * 1000 + 1000);
+check(fFar.status === "expired", "invitation annulée au bout de 3 jours sans réponse");
 
 // 9. Sérialisation.
 const round = Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.serializeLeague(league))));

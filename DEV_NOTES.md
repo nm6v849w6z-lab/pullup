@@ -20,6 +20,23 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) — Matchs amicaux : recherche
+  d'adversaire + délais des invitations** — retours : "dans adversaire, il
+  faudrait plutôt que ce soit une recherche, qu'un menu déroulant", enlever
+  "Le manager reçoit un message privé et doit accepter avant l'heure du
+  match.", "l'invitation reste max 3 jours, et après elle s'annule", "si pas
+  validé 1h avant le match, ça s'annule aussi". Client : champ
+  #frOpponentSearch + suggestions (frOppResultsHtml : accents ignorés,
+  managers d'abord, 8 max), plus de #frOpponentSelect ni de texte d'aide ;
+  invitation reçue = « répondre avant le … » (frInviteDeadline). Serveur
+  (server/friendlies.js) : FRIENDLY_INVITE_TTL_MS (3 j),
+  FRIENDLY_ACCEPT_DEADLINE_MS (1 h), inviteDeadline ; catchUpFriendlies
+  annule les invitations dépassées (message au proposant), respondFriendly
+  refuse d'accepter après, proposeFriendly refuse un amical contre un
+  manager à moins d'1 h. Tests : server/friendlies_test.js (section 8),
+  amicaux_ui_test.js (recherche). friendlies_test a échoué 1 fois sur 6
+  lancé en parallèle d'autres tests (vert seul, 5/5) : à surveiller.
+
 - **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
   Salle : graphique d'affluence à l'échelle de la plus forte affluence** —
   retour utilisateur : "au dessus des barres de affluences, c'est pas un

@@ -45,6 +45,16 @@ const FRIENDLY_TIMES = [];
 for (let h = 8; h <= 23; h++) [0, 30].forEach(m => FRIENDLY_TIMES.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`));
 const FRIENDLY_DEFAULT_TIME = "20:00";
 const FRIENDLY_MIN_LEAD_MS = 30 * 60 * 1000; // au moins 30 min avant le coup d'envoi
+// Invitation à un club humain (retour utilisateur 2026-09-27 : "il faut que
+// l'invitation reste max 3 jours, et après elle s'annule", "si pas validé 1h
+// avant le match, ça s'annule aussi").
+const FRIENDLY_INVITE_TTL_MS = 3 * 24 * 3600 * 1000;
+const FRIENDLY_ACCEPT_DEADLINE_MS = 60 * 60 * 1000;
+// Heure limite pour accepter une invitation : 3 jours après l'envoi, et au
+// plus tard 1 h avant le coup d'envoi.
+function inviteDeadline(f) {
+  return Math.min((f.createdAt || 0) + FRIENDLY_INVITE_TTL_MS, f.at - FRIENDLY_ACCEPT_DEADLINE_MS);
+}
 const FRIENDLY_HORIZON_DAYS = 21; // jusqu'à 3 semaines à l'avance
 const FRIENDLY_MAX_UPCOMING = 5; // amicaux à venir (en attente + acceptés) par club
 const FRIENDLY_STARTERS = 5;
@@ -278,6 +288,7 @@ function proposeFriendly(Engine, team, teamIndex, league, body, now) {
   if (conflict) return fail(conflict);
   const upcoming = (league.friendlies || []).filter(f => isUpcoming(f) && involves(f, teamIndex)).length;
   if (upcoming >= FRIENDLY_MAX_UPCOMING) return fail(`${FRIENDLY_MAX_UPCOMING} matchs amicaux à venir au plus.`);
+  if (opp.isHuman && at - FRIENDLY_ACCEPT_DEADLINE_MS <= now) return fail("Contre un manager, le match doit être dans plus d'une heure : il doit accepter au plus tard 1 h avant.");
   const venue = body && body.venue === "away" ? "away" : "home";
 
   if (!Array.isArray(league.friendlies)) league.friendlies = [];
@@ -314,6 +325,7 @@ function respondFriendly(Engine, team, teamIndex, league, body, now) {
   if (f.proposerIdx === teamIndex) return fail("C'est à votre adversaire de répondre à cette invitation.");
   if (f.status !== "pending") return fail("Cette invitation n'est plus en attente.");
   if (f.at <= now) return fail("L'heure de ce match amical est passée.");
+  if (body && body.accept && now >= inviteDeadline(f)) return fail("Trop tard pour accepter : l'invitation a expiré.");
   const proposer = league.teams[f.proposerIdx];
   if (body && body.accept) {
     const conflict = dayConflict(Engine, league, teamIndex, f.proposerIdx, f.day, f.id);
@@ -430,12 +442,19 @@ function catchUpFriendlies(Engine, league, now) {
   const played = [];
   if (!league || !Array.isArray(league.friendlies) || !league.friendlies.length) return played;
   league.friendlies.slice().sort((a, b) => a.at - b.at).forEach(f => {
-    if (f.at > now) return;
-    if (f.status === "pending") {
+    // Invitation sans réponse : annulée 3 jours après l'envoi, ou 1 h avant
+    // le coup d'envoi (voir inviteDeadline).
+    if (f.status === "pending" && now >= inviteDeadline(f)) {
       f.status = "expired";
-      pushFeed(Engine, league.teams[f.proposerIdx], `friendly_answer_${f.id}`, "Invitation à un amical restée sans réponse",
-        `${(league.teams[f.proposerIdx === f.homeIdx ? f.awayIdx : f.homeIdx] || {}).name || "Votre adversaire"} n'a pas répondu à temps.`);
-    } else if (f.status === "accepted") {
+      const oppName = (league.teams[f.proposerIdx === f.homeIdx ? f.awayIdx : f.homeIdx] || {}).name || "Votre adversaire";
+      const why = (f.createdAt || 0) + FRIENDLY_INVITE_TTL_MS <= f.at - FRIENDLY_ACCEPT_DEADLINE_MS
+        ? "l'invitation est restée 3 jours sans réponse" : "elle n'a pas été acceptée 1 h avant le match";
+      pushFeed(Engine, league.teams[f.proposerIdx], `friendly_answer_${f.id}`, "Invitation à un amical annulée",
+        `${oppName} n'a pas répondu : ${why}.`);
+      return;
+    }
+    if (f.at > now) return;
+    if (f.status === "accepted") {
       simulateFriendly(Engine, league, f, now);
       played.push(f.id);
     }
@@ -461,7 +480,7 @@ function sanitizeFriendliesForViewer(list, viewerIdx) {
 }
 
 module.exports = {
-  FRIENDLY_TIMES, FRIENDLY_DEFAULT_TIME, FRIENDLY_MIN_LEAD_MS, FRIENDLY_HORIZON_DAYS, FRIENDLY_MAX_UPCOMING,
+  FRIENDLY_TIMES, FRIENDLY_DEFAULT_TIME, FRIENDLY_MIN_LEAD_MS, FRIENDLY_INVITE_TTL_MS, FRIENDLY_ACCEPT_DEADLINE_MS, inviteDeadline, FRIENDLY_HORIZON_DAYS, FRIENDLY_MAX_UPCOMING,
   FRIENDLY_STARTERS, FRIENDLY_BENCH_MAX,
   dayKeyOf, officialMatchTimesFor, availableDays, dayConflict,
   proposeFriendly, respondFriendly, cancelFriendly, setFriendlyLineup,
