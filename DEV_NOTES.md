@@ -28,38 +28,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   moteurbasket3.html + assertion négative dans dashboard_e2e_test.js.
   Reste : `git push`.
 
-- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
-  Calendrier au rythme hebdomadaire** — retours utilisateur : championnat
-  "mardi et samedi, la coupe le jeudi", "matchs à 20h", "l'économie est à
-  mettre à jour dans la nuit du dimanche au lundi (on paie donc le staff et
-  les joueurs à ce moment là)", "l'entrainement fondamental, c'est une fois
-  par semaine selon le temps de jeu", "l'entrainement collectif c'est sur
-  les jours de repos", play-offs "2 matchs par semaine" (mardi/samedi, le
-  jeudi reste à la coupe), vieillissement en fin de saison.
-  - Règle (server/calendar.js, copies identiques dans engine.js,
-    moteurbasket3.html, live_2d_demo.html) : `League.calendarWeeklyRhythm`
-    (+ `lastEconomyTick`), weeklyRhythm* : jour 0 = mardi 20h, journée r =
-    semaine floor(r/2) mardi/samedi 20h (play-offs compris), tour de coupe
-    k = jeudi de la semaine k 20h, mise à jour k = lundi 0h00.
-  - server/autoSim.js : catchUpWeeklyRhythm (championnat, coupe, play-offs
-    et mise à jour du lundi dans l'ordre chronologique ; Team.trainWeek =
-    économie + entraînement fondamental sur les minutes de la semaine ;
-    vieillissement inchangé à la semaine 10 = lundi après la dernière
-    journée). startPlayoffsPhase extrait de catchUpPlayoffs. Entraînement
-    collectif : déjà compté jour par jour sur les jours sans match
-    (syncCollectiveTrainingLog), rien à changer.
-  - IMPORTANT : seules les ligues CRÉÉES après ce changement ont le rythme
-    hebdomadaire (dailyAnchoredCalendarConfig renvoie weekly: true). La
-    ligue en ligne actuelle garde le rythme quotidien (dates recalculées
-    depuis calendarStartAt, les changer en cours de saison déplacerait tous
-    les matchs) → bascule au prochain reset de la ligue.
-  - Textes du guide/tutoriel + en.js mis à jour (statiques : ils décrivent
-    déjà le nouveau rythme même avant le reset).
-  - Tests : nouveau server/weekly_calendar_test.js (dates, DST, 4 copies
-    identiques, saison complète, paies, minutes hebdo) ; autoSim_test et
-    cup_test gardent l'ancien rythme quotidien ({ dailyAnchored: true }).
-  - Reste : committer/pousser, puis reset de la ligue pour activer.
-
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-27) — Ordres : carte
   « Temps de jeu » plus compacte + 3 joueurs max par poste** — retours
   utilisateur : "réduis la brique de droite [...] ça fait trop de place",
