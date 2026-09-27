@@ -38352,7 +38352,7 @@ const MEDICAL_RISK_TIERS = [
   { max: 1.5, key: "high", label: "Élevé" },
   { max: Infinity, key: "veryhigh", label: "Très élevé" },
 ];
-let medicalFilter = "all"; // "all" | "risk" | "history"
+let medicalFilter = "all"; // "all" | "injured" | "risk" | "history"
 function medicalRiskFor(team, player, now = Date.now()) {
   const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
   const condition = currentCondition(player, now, recovery);
@@ -38386,7 +38386,7 @@ function renderMedicalSection() {
   const seasonLog = (team.injuryLog || []).filter(e => e.seasonNo === seasonNo);
   const daysLost = seasonLog.reduce((s, e) => s + (e.days || 0), 0);
 
-  const counts = { all: players.length, risk: atRisk.length, history: seasonLog.length };
+  const counts = { all: players.length, injured: injured.length, risk: atRisk.length, history: seasonLog.length };
   const filterBtn = (key, label) =>
     `<button type="button" class="cal-filter${medicalFilter === key ? " active" : ""}" data-med-filter="${key}" aria-pressed="${medicalFilter === key}">${label} <span class="cal-filter-count">${counts[key]}</span></button>`;
   const pos = p => escapeHtml(POS_SHORT[p.position] || p.position || "");
@@ -38396,7 +38396,7 @@ function renderMedicalSection() {
   // filtres (retour utilisateur : "infirmerie ne doit pas monter au dessus
   // de joueurs disponibles").
   let html = `<div class="cal-layout med-layout"><div class="cal-toolbar med-bar" role="group" aria-label="Filtrer">` +
-    filterBtn("all", "Tous") + filterBtn("risk", "À risque") + filterBtn("history", "Historique") + `</div>`;
+    filterBtn("all", "Tous") + filterBtn("injured", "Blessés") + filterBtn("risk", "À risque") + filterBtn("history", "Historique") + `</div>`;
   html += `<div class="cal-main med-main">`;
 
   const tableOpen = (title, extra, view) =>
@@ -38500,7 +38500,7 @@ function medicalApplyFilter() {
     table.querySelectorAll("tbody tr.cal-row").forEach(tr => {
       const k = tr.dataset.medKind;
       const show = history ? isHistory
-        : !isHistory && (medicalFilter === "all" || (medicalFilter === "risk" && k === "risk"));
+        : !isHistory && (medicalFilter === "all" || (medicalFilter === "injured" && k === "injured") || (medicalFilter === "risk" && k === "risk"));
       tr.classList.toggle("hidden", !show);
       if (show) visible++;
     });
@@ -38515,7 +38515,7 @@ function medicalApplyFilter() {
   });
   const empty = holder.querySelector(".med-filter-empty");
   if (empty) {
-    empty.textContent = { risk: "Aucun joueur à risque élevé.", history: "Aucune blessure cette saison." }[medicalFilter] || "";
+    empty.textContent = { injured: "Aucun joueur blessé.", risk: "Aucun joueur à risque élevé.", history: "Aucune blessure cette saison." }[medicalFilter] || "";
     empty.classList.toggle("hidden", visibleTotal > 0 || medicalFilter === "all");
   }
 }
