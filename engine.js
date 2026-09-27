@@ -3449,6 +3449,8 @@ const CHEMISTRY_SAME_FIVE_GAIN = 1; // en plus, si même cinq de départ qu'au m
 // visent des joueurs d'un adversaire précis.
 const TACTIC_PRESETS_MAX = 3;
 const TACTIC_PRESET_NAME_MAX = 30;
+// Nombre de matchs dont on garde les ordres complets (Team.ordersHistory).
+const ORDERS_HISTORY_MAX = 10;
 const TACTIC_PRESET_FIELDS = ["offensivePriorities", "defense", "rhythm", "tacticalTier", "screenDefense", "helpDefense", "postDefense", "closeoutStyle", "offRebStyle", "endgameManagement"];
 // Copie profonde d'un jeu d'ordres (forme snapshotTactics) en tactique
 // enregistrable : sans watchAssignments.
@@ -3991,6 +3993,10 @@ class Team {
     this.plannedTactics = {};
     // Tactiques enregistrées (voir TACTIC_PRESETS_MAX) : [{ name, savedAt, orders }].
     this.tacticPresets = [];
+    // Ordres complets des derniers matchs joués (voir ORDERS_HISTORY_MAX,
+    // recordOrdersHistory) : « partir d'un match précédent » dans l'onglet
+    // Tactiques. Le plus récent en tête.
+    this.ordersHistory = [];
 
     // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
     // de FEED_CATEGORIES) : un fil par équipe, vide à la création — rempli
@@ -8105,7 +8111,28 @@ function awardMatchMvp(home, away, round, competition, now = Date.now()) {
 // PROPRE équipe, jamais celle de l'adversaire — contrairement à
 // quarterScores, qui reste volontairement le même objet {home,away} des
 // deux côtés pour l'affichage de la feuille de match).
+// Ordres complets d'un match qui vient d'être joué (onglet Tactiques :
+// « partir d'un match précédent »), clubs humains seulement. Appelé AVANT
+// toute application du plan de la journée suivante : les ordres en direct
+// sont bien ceux de ce match.
+function recordOrdersHistory(team, opponent, isHome, round, competition, now, quarterScores) {
+  if (!team || !team.isHuman || !team.snapshotTactics) return;
+  if (!Array.isArray(team.ordersHistory)) team.ordersHistory = [];
+  const sum = arr => Array.isArray(arr) ? arr.reduce((a, b) => a + (b || 0), 0) : null;
+  const qs = quarterScores || {};
+  const mine = sum(isHome ? qs.home : qs.away), theirs = sum(isHome ? qs.away : qs.home);
+  team.ordersHistory.unshift({
+    round, competition: competition || "championship", at: now,
+    opponentName: opponent ? opponent.name : null, isHome,
+    scoreFor: mine, scoreAgainst: theirs,
+    orders: tacticPresetOrdersFrom(team.snapshotTactics()),
+  });
+  if (team.ordersHistory.length > ORDERS_HISTORY_MAX) team.ordersHistory.length = ORDERS_HISTORY_MAX;
+}
+
 function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null) {
+  recordOrdersHistory(home, away, true, round, competition, now, quarterScores);
+  recordOrdersHistory(away, home, false, round, competition, now, quarterScores);
   recordMatchStatsForTeam(home, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.home);
   recordMatchStatsForTeam(away, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.away);
   return awardMatchMvp(home, away, round, competition, now);
@@ -11023,6 +11050,7 @@ function serializeTeam(team) {
     // JSON-safe (aucune classe/Set/Map à l'intérieur), transporté tel quel.
     plannedTactics: team.plannedTactics || {},
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
+    ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
     players: team.players.map(serializePlayerRecord),
     // Recruteur (voir Team.recruiter ci-dessus) : même forme/logique de
     // sauvegarde que trainer/videoAnalyst.
@@ -11571,6 +11599,9 @@ function teamFromSave(data) {
   team.tacticPresets = Array.isArray(data.tacticPresets)
     ? data.tacticPresets.filter(p => p && p.orders && typeof p.name === "string").slice(0, TACTIC_PRESETS_MAX)
       .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
+    : [];
+  team.ordersHistory = Array.isArray(data.ordersHistory)
+    ? data.ordersHistory.filter(h => h && h.orders).slice(0, ORDERS_HISTORY_MAX).map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) }))
     : [];
   team.injuryLog = Array.isArray(data.injuryLog) ? data.injuryLog : [];
   // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
@@ -13256,7 +13287,7 @@ return {
   // Connaissance tactique (voir le grand commentaire au-dessus de
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
-  TACTIC_PRESETS_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom,
+  TACTIC_PRESETS_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
   TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
   CLUB_FACILITIES, facilityInfo,

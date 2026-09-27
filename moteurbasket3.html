@@ -2560,6 +2560,18 @@
   .tq-on{display:inline-block; margin-left:6px; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; background:rgba(240,162,60,.14); color:var(--amber); vertical-align:middle;}
   .tq-opt-state{font-size:12px; color:var(--ink-dim); display:block; margin-top:4px;}
   .tq-opt .tq-track{margin-top:6px;}
+  /* Mode « édition de tactique » de la page Ordres (voir openTacticEditor) :
+     mêmes cartes que les Ordres, sans ce qui dépend d'un match précis. */
+  .tq-editor-bar{display:none;}
+  #prepSection.tq-editing .tq-editor-bar{display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; background:var(--panel); border:1px solid var(--amber); border-radius:12px; padding:16px 18px; margin:0 0 18px;}
+  #prepSection.tq-editing :is(.ordres-match-card, #ordresPresetsBar, .oab-right, #ordresValidateFeedback, #ordresLockNote, #ordresCardAdversaires, [data-ordres-jump="ordresCardAdversaires"]){display:none !important;}
+  .tq-editor-field{display:flex; flex-direction:column; gap:6px; flex:1; min-width:200px;}
+  .tq-editor-field label{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim);}
+  .tq-editor-field select{background:var(--panel-2); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:9px 10px; font:inherit; font-size:14px;}
+  .tq-editor-actions{display:flex; gap:8px;}
+  .tq-editor-actions .cal-next-btn{width:auto; margin-top:0; padding:10px 18px;}
+  .tq-editor-actions .tq-btn{padding:10px 14px; font-size:13px;}
+  .tq-editor-note{width:100%; font-size:12px; color:var(--ink-dim); margin:0;}
   .ordres-presets{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 14px;}
   .ordres-presets-label{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); margin-right:4px;}
   .ordres-presets .cal-filter[disabled]{opacity:.5; cursor:not-allowed;}
@@ -6193,6 +6205,7 @@
     </div>
     <p class="ordres-validate-feedback" id="ordresValidateFeedback" role="status"></p>
     <div class="ordres-presets" id="ordresPresetsBar" aria-label="Mes tactiques"></div>
+    <div class="tq-editor-bar" id="tqEditorBar" aria-label="Édition de la tactique"></div>
     <section class="ordres-match-card" aria-label="Match à préparer">
       <div class="omc-match">
         <div class="ordres-round-datetime" id="ordresRoundDateTime"></div>
@@ -11376,6 +11389,8 @@ function parisCalendarDayIndex(ms) {
 // visent des joueurs d'un adversaire précis.
 const TACTIC_PRESETS_MAX = 3;
 const TACTIC_PRESET_NAME_MAX = 30;
+// Nombre de matchs dont on garde les ordres complets (Team.ordersHistory).
+const ORDERS_HISTORY_MAX = 10;
 const TACTIC_PRESET_FIELDS = ["offensivePriorities", "defense", "rhythm", "tacticalTier", "screenDefense", "helpDefense", "postDefense", "closeoutStyle", "offRebStyle", "endgameManagement"];
 // Copie profonde d'un jeu d'ordres (forme snapshotTactics) en tactique
 // enregistrable : sans watchAssignments.
@@ -11870,6 +11885,10 @@ class Team {
     this.plannedTactics = {};
     // Tactiques enregistrées (voir TACTIC_PRESETS_MAX) : [{ name, savedAt, orders }].
     this.tacticPresets = [];
+    // Ordres complets des derniers matchs joués (voir ORDERS_HISTORY_MAX,
+    // recordOrdersHistory) : « partir d'un match précédent » dans l'onglet
+    // Tactiques. Le plus récent en tête.
+    this.ordersHistory = [];
 
     // Fil d'actualité du tableau de bord (voir MIROIR EXACT engine.js) : un
     // fil par équipe, vide à la création.
@@ -17516,6 +17535,7 @@ function serializeTeam(team) {
     // JSON-safe (aucune classe/Set/Map à l'intérieur), transporté tel quel.
     plannedTactics: team.plannedTactics || {},
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
+    ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
     players: team.players.map(serializePlayerRecord),
     // Recruteur (voir Team.recruiter ci-dessus) : même forme/logique de
     // sauvegarde que trainer/videoAnalyst.
@@ -17972,6 +17992,9 @@ function teamFromSave(data) {
   team.tacticPresets = Array.isArray(data.tacticPresets)
     ? data.tacticPresets.filter(p => p && p.orders && typeof p.name === "string").slice(0, TACTIC_PRESETS_MAX)
       .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
+    : [];
+  team.ordersHistory = Array.isArray(data.ordersHistory)
+    ? data.ordersHistory.filter(h => h && h.orders).slice(0, ORDERS_HISTORY_MAX).map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) }))
     : [];
   team.injuryLog = Array.isArray(data.injuryLog) ? data.injuryLog : [];
   // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
@@ -22198,6 +22221,16 @@ function renderOrdresGrid() {
   if (feedbackEl) {
     feedbackEl.textContent = "";
     feedbackEl.className = "ordres-validate-feedback";
+  }
+  // Mode « édition de tactique » (onglet Tactiques, voir openTacticEditor) :
+  // mêmes cartes que les Ordres, sur un brouillon (tqEdit.proxy).
+  const prepSectionEl = document.getElementById("prepSection");
+  if (prepSectionEl) prepSectionEl.classList.toggle("tq-editing", !!tqEdit);
+  renderTacticEditorBar();
+  if (tqEdit) {
+    grid.appendChild(buildTeamPanel(tqEdit.proxy, "a", { editable: true, onDirty: () => { tqEdit.dirty = true; } }));
+    updateOrdresSectionTabs();
+    return;
   }
   const round = selectedOrdresRound != null ? selectedOrdresRound : (currentMatch ? currentMatch.round : null);
   const competition = selectedOrdresCompetition || "championship";
@@ -38599,9 +38632,8 @@ function renderTactiquesSection() {
         continue;
       }
       html += `<div class="cal-card tq-card is-empty" data-tq-slot="${slot}"><div class="cal-card-kicker">Tactique ${slot + 1}</div>` +
-        `<p class="tq-empty-title">Emplacement libre</p><p class="tq-empty-sub">Réglez vos ordres pour le prochain match, puis enregistrez-les ici sous un nom.</p>` +
-        `<input type="text" class="tq-input" data-tq-name-input="${slot}" maxlength="${TACTIC_PRESET_NAME_MAX}" placeholder="Nom de la tactique">` +
-        `<button type="button" class="cal-next-btn" data-tq-save-new="${slot}">Enregistrer les ordres du prochain match</button>${fb}</div>`;
+        `<p class="tq-empty-title">Emplacement libre</p><p class="tq-empty-sub">Réglez une tactique comme dans les Ordres, en partant des ordres du prochain match, d'une autre tactique ou d'un match déjà joué.</p>` +
+        `<button type="button" class="cal-next-btn" data-tq-create="${slot}">Créer une tactique</button>${fb}</div>`;
       continue;
     }
     const o = preset.orders;
@@ -38636,7 +38668,7 @@ function renderTactiquesSection() {
             (tqConfirmDelete === slot
               ? `<button type="button" class="tq-btn is-danger" data-tq-delete-ok="${slot}">Confirmer</button>`
               : `<button type="button" class="tq-btn" data-tq-delete="${slot}">Supprimer</button>`) +
-            `<button type="button" class="tq-btn" data-tq-overwrite="${slot}" style="grid-column:1 / -1">Remplacer par les ordres du prochain match</button>`) +
+            `<button type="button" class="tq-btn" data-tq-edit="${slot}" style="grid-column:1 / -1">Modifier</button>`) +
       `</div>${fb}</div>`;
   }
   html += `</div>`;
@@ -38681,6 +38713,9 @@ document.getElementById("tactiquesContent").addEventListener("click", (e) => {
     const slot = Number(d.tqOverwrite);
     saveTacticPresetFrom(slot, teamA.tacticPresets[slot].name, teamA.snapshotTactics());
     tqFeedback = { slot, text: "Tactique remplacée par les ordres du prochain match." };
+  } else if (d.tqCreate != null || d.tqEdit != null) {
+    openTacticEditor(Number(d.tqCreate != null ? d.tqCreate : d.tqEdit));
+    return;
   } else if (d.tqApply != null) {
     const slot = Number(d.tqApply);
     const round = currentMatch && currentMatch.competition !== "cup" ? currentMatch.round : (currentMatch ? currentMatch.round : null);
@@ -38718,6 +38753,111 @@ document.getElementById("tactiquesContent").addEventListener("keydown", (e) => {
   const holder = document.getElementById("tactiquesContent");
   const b = r ? holder.querySelector(`[data-tq-rename-ok="${r.dataset.tqRenameInput}"]`) : n ? holder.querySelector(`[data-tq-save-new="${n.dataset.tqNameInput}"]`) : null;
   if (b) { e.preventDefault(); b.click(); }
+});
+
+// Éditeur de tactique (retour utilisateur 2026-09-27 : "quand on crée une
+// tactique, il faut qu'on puisse faire comme si on était sur les ordres et
+// pourquoi pas aussi choisir une tactique d'un des matchs précédents") : la
+// page Ordres elle-même, en mode « édition » (#prepSection.tq-editing), sur
+// un brouillon construit comme planProxyForRound. Point de départ au choix :
+// ordres du prochain match, une tactique enregistrée, ou les ordres complets
+// d'un des derniers matchs joués (Team.ordersHistory).
+var tqEdit = null; // { slot, name, source, proxy, dirty } — var : lu par renderOrdresGrid
+
+function tqOrdersSources() {
+  const out = [{ key: "next", label: "Ordres du prochain match", orders: teamA.snapshotTactics() }];
+  (teamA.tacticPresets || []).forEach((p, i) => out.push({ key: "preset:" + i, label: `Tactique « ${p.name} »`, orders: p.orders }));
+  (teamA.ordersHistory || []).forEach((h, i) => {
+    const comp = h.competition === "cup" ? "Coupe" : h.competition === "championship" ? `J${h.round + 1}` : "Match";
+    const res = h.scoreFor != null && h.scoreAgainst != null ? ` · ${h.scoreFor > h.scoreAgainst ? "V" : h.scoreFor < h.scoreAgainst ? "D" : "N"} ${h.scoreFor}-${h.scoreAgainst}` : "";
+    const date = h.at ? ` · ${formatCalendarDayFr(h.at)}` : "";
+    out.push({ key: "hist:" + i, label: `${comp} ${h.isHome ? "vs" : "@"} ${h.opponentName || "?"}${res}${date}`, orders: h.orders });
+  });
+  return out;
+}
+
+function tqProxyFrom(orders) {
+  // Joueurs partis retirés, même règle que Team.tacticPresetPatch.
+  const o = Team.prototype.tacticPresetPatch.call({ tacticPresets: [{ orders }], players: teamA.players }, 0);
+  const proxy = {
+    name: teamA.name, players: teamA.players,
+    offensivePriorities: o.offensivePriorities || [...teamA.offensivePriorities], defense: o.defense || teamA.defense, rhythm: o.rhythm || teamA.rhythm,
+    tacticalTier: o.tacticalTier ?? "débutant", screenDefense: o.screenDefense ?? "Aucune consigne", helpDefense: o.helpDefense ?? "Moyenne",
+    watchAssignments: [], postDefense: o.postDefense ?? "Classique", closeoutStyle: o.closeoutStyle ?? "Contrôlé",
+    offRebStyle: o.offRebStyle ?? "Normal", endgameManagement: o.endgameManagement ?? "Standard",
+    lineup: o.lineup,
+  };
+  proxy.setStarter = function (pos, playerId) { Team.prototype.setStarter.call(proxy, pos, playerId); };
+  proxy.toggleBackupPosition = function (playerId, pos, on) { Team.prototype.toggleBackupPosition.call(proxy, playerId, pos, on); };
+  proxy.starterPosition = function (playerId) { return Team.prototype.starterPosition.call(proxy, playerId); };
+  ["slotPlayerIds", "defaultSlotMinutes", "enableSlotMinutes", "clearSlotMinutes", "setSlotMinutes", "slotMinutesRoom", "hasSlotMinutes", "slotMinuteShares", "convokedIds", "isConvoked", "setConvoked"]
+    .forEach(m => { proxy[m] = function (...args) { return Team.prototype[m].apply(proxy, args); }; });
+  return proxy;
+}
+
+function openTacticEditor(slot) {
+  const preset = (teamA.tacticPresets || [])[slot];
+  const source = preset ? "preset:" + slot : "next";
+  const src = tqOrdersSources().find(x => x.key === source);
+  tqEdit = { slot, name: preset ? preset.name : "", source, proxy: tqProxyFrom(src.orders), dirty: false };
+  tqFeedback = null;
+  showPage("prepSection");
+  setActiveTab("tactiques");
+  renderOrdresGrid();
+  if (typeof window.scrollTo === "function") try { window.scrollTo(0, 0); } catch (e) { /* jsdom */ }
+}
+
+function closeTacticEditor() {
+  tqEdit = null;
+  renderTacticEditorBar();
+  TAB_HANDLERS.tactiques();
+}
+
+function renderTacticEditorBar() {
+  const bar = document.getElementById("tqEditorBar");
+  const title = document.querySelector("#ordresActionBar .oab-title");
+  if (!bar) return;
+  if (!tqEdit) {
+    bar.innerHTML = "";
+    if (title) title.textContent = "Ordres de match";
+    return;
+  }
+  const preset = (teamA.tacticPresets || [])[tqEdit.slot];
+  if (title) title.textContent = preset ? `Modifier « ${preset.name} »` : "Créer une tactique";
+  const options = tqOrdersSources().map(x => `<option value="${escapeHtml(x.key)}"${x.key === tqEdit.source ? " selected" : ""}>${escapeHtml(x.label)}</option>`).join("");
+  bar.innerHTML = `<div class="tq-editor-field"><label for="tqEditorName">Nom de la tactique</label>` +
+      `<input type="text" class="tq-input" id="tqEditorName" maxlength="${TACTIC_PRESET_NAME_MAX}" placeholder="Tactique ${tqEdit.slot + 1}" value="${escapeHtml(tqEdit.name)}"></div>` +
+    `<div class="tq-editor-field"><label for="tqEditorSource">Partir de</label><select id="tqEditorSource">${options}</select></div>` +
+    `<div class="tq-editor-actions"><button type="button" class="cal-next-btn" id="tqEditorSave">Enregistrer la tactique</button>` +
+      `<button type="button" class="tq-btn" id="tqEditorCancel">Annuler</button></div>` +
+    `<p class="tq-editor-note">Réglez tout comme dans les Ordres : attaque, défense, rythme, convocation, cinq, rotation et temps de jeu. Rien n'est appliqué au prochain match.${(teamA.ordersHistory || []).length ? "" : " Les ordres des matchs joués à partir de maintenant apparaîtront aussi dans « Partir de »."}</p>`;
+}
+
+document.getElementById("tqEditorBar").addEventListener("input", (e) => {
+  if (tqEdit && e.target.id === "tqEditorName") tqEdit.name = e.target.value;
+});
+document.getElementById("tqEditorBar").addEventListener("change", (e) => {
+  if (!tqEdit || e.target.id !== "tqEditorSource") return;
+  const src = tqOrdersSources().find(x => x.key === e.target.value);
+  if (!src) return;
+  tqEdit.source = src.key;
+  tqEdit.proxy = tqProxyFrom(src.orders);
+  renderOrdresGrid();
+});
+document.getElementById("tqEditorBar").addEventListener("click", (e) => {
+  if (!tqEdit) return;
+  if (e.target.closest("#tqEditorCancel")) { closeTacticEditor(); return; }
+  if (!e.target.closest("#tqEditorSave")) return;
+  const px = tqEdit.proxy;
+  const snap = { lineup: px.lineup };
+  TACTIC_PRESET_FIELDS.forEach(k => { snap[k] = px[k]; });
+  const slot = tqEdit.slot;
+  const preset = saveTacticPresetFrom(slot, tqEdit.name, snap);
+  tqFeedback = preset ? { slot, text: "Tactique enregistrée." } : { slot, text: "Impossible d'enregistrer cette tactique.", error: true };
+  closeTacticEditor();
+});
+document.getElementById("tqEditorBar").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.id === "tqEditorName") { e.preventDefault(); document.getElementById("tqEditorSave").click(); }
 });
 
 // Barre « Mes tactiques » des Ordres : applique une tactique enregistrée à
@@ -40643,8 +40783,8 @@ const TAB_HANDLERS = {
   medical: () => { renderMedicalSection(); showPage("medicalSection"); setActiveTab("medical"); },
   academie: () => { renderAcademieSection(); showPage("academieSection"); setActiveTab("academie"); },
   humeur: () => { renderHumeurSection(); showPage("humeurSection"); setActiveTab("humeur"); },
-  ordres: goToOrdresTab,
-  tactiques: () => { renderTactiquesSection(); showPage("tactiquesSection"); setActiveTab("tactiques"); },
+  ordres: () => { tqEdit = null; goToOrdresTab(); },
+  tactiques: () => { tqEdit = null; const ps = document.getElementById("prepSection"); if (ps) ps.classList.remove("tq-editing"); renderTactiquesSection(); showPage("tactiquesSection"); setActiveTab("tactiques"); },
   effectif: () => { renderEffectifSection(); showPage("effectifSection"); setActiveTab("effectif"); },
   marche: () => { refreshTransferMarket(); renderMarcheSection(); showPage("marcheSection"); setActiveTab("marche"); },
   statshebdo: showStatsHebdoSection,

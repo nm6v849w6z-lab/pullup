@@ -35,6 +35,17 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   assert(typeof t.tacticPresetKnowledge(0) === "number", "maîtrise moyenne d'une tactique");
   const back = E.teamFromSave(JSON.parse(JSON.stringify(E.serializeTeam(t))));
   assert(back.tacticPresets.length === 3 && back.tacticPresets[2].name === "C", "tactiques persistées");
+  // Ordres complets des derniers matchs (onglet Tactiques : « partir d'un match précédent »).
+  const [h1, h2] = lg.teams.slice(2, 4);
+  h1.isHuman = true;
+  for (let i = 0; i < 12; i++) {
+    const r = E.simulateOrForfeit(h1, h2, Date.now() + i);
+    E.recordMatchStatsAndAwardMvp(h1, h2, i, "championship", Date.now() + i, r.quarterScores, r.tacticsUsed);
+  }
+  assert(h1.ordersHistory.length === E.ORDERS_HISTORY_MAX && h1.ordersHistory[0].round === 11, "ordres des 10 derniers matchs gardés, le plus récent en tête");
+  assert(h1.ordersHistory[0].opponentName === h2.name && h1.ordersHistory[0].orders.lineup && h1.ordersHistory[0].isHome === true, "match précédent : adversaire, lieu, ordres complets");
+  assert(!h2.ordersHistory.length, "pas d'historique pour un club CPU");
+  assert(E.teamFromSave(JSON.parse(JSON.stringify(E.serializeTeam(h1)))).ordersHistory.length === 10, "historique des ordres persisté");
   // Serveur.
   const t2 = lg.teams[1];
   const s2 = t2.snapshotTactics();
@@ -71,14 +82,40 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   const onDef = content.querySelector(`[data-tq-group="Défense"] tr[data-tq-option="${team.defense}"]`);
   assert(onDef && onDef.textContent.includes("En place"), "l'option des ordres actuels est marquée « En place »");
 
-  // Enregistrer les ordres du prochain match sous un nom.
+  // Créer une tactique : la page Ordres en mode édition.
   const firstDefense = team.defense;
-  content.querySelector('[data-tq-name-input="0"]').value = "Défense de fer";
-  content.querySelector('[data-tq-save-new="0"]').click();
+  content.querySelector('[data-tq-create="0"]').click();
+  const prep = doc.getElementById("prepSection");
+  assert(!prep.classList.contains("hidden") && prep.classList.contains("tq-editing"), "« Créer une tactique » ouvre les Ordres en mode édition");
+  assert(doc.querySelector("#ordresActionBar .oab-title").textContent === "Créer une tactique", "titre du mode édition");
+  assert(doc.querySelector("#prepGrid .ordres-panel"), "mêmes cartes que les Ordres");
+  // Changer la défense dans le brouillon ne touche pas les ordres du match.
+  const draft = win.eval("tqEdit.proxy");
+  const zone = Object.keys(win.eval("DEFENSES")).find(d => d !== firstDefense);
+  draft.defense = zone;
+  doc.getElementById("tqEditorName").value = "Défense de fer";
+  doc.getElementById("tqEditorName").dispatchEvent(new win.Event("input", { bubbles: true }));
+  doc.getElementById("tqEditorSave").click();
   await flush(dom);
   assert(team.tacticPresets.length === 1 && team.tacticPresets[0].name === "Défense de fer", "tactique enregistrée avec son nom");
+  assert(team.tacticPresets[0].orders.defense === zone && team.defense === firstDefense, "le brouillon est enregistré, les ordres du match ne bougent pas");
+  assert(!doc.getElementById("tactiquesSection").classList.contains("hidden") && !prep.classList.contains("tq-editing"), "retour à l'onglet Tactiques");
   assert(readRawSave(savePath).team.tacticPresets[0].name === "Défense de fer", "tactique sauvegardée côté serveur");
   assert(content.querySelector(".tq-name").textContent === "Défense de fer", "la carte affiche le nom");
+
+  // Partir d'un match précédent (Team.ordersHistory).
+  team.ordersHistory = [{ round: 3, competition: "championship", at: Date.now() - 86400000, opponentName: "Gotham", isHome: false, scoreFor: 70, scoreAgainst: 65,
+    orders: { ...team.snapshotTactics(), rhythm: "Rapide" } }];
+  content.querySelector('[data-tq-create="1"]').click();
+  const sel = doc.getElementById("tqEditorSource");
+  const opt = [...sel.options].find(o => o.value === "hist:0");
+  assert(opt && opt.textContent.includes("J4 @ Gotham · V 70-65"), "les matchs précédents sont proposés comme point de départ");
+  sel.value = "hist:0";
+  sel.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert(win.eval("tqEdit.proxy.rhythm") === "Rapide", "le brouillon reprend les ordres de ce match");
+  doc.getElementById("tqEditorCancel").click();
+  assert(team.tacticPresets.length === 1, "Annuler n'enregistre rien");
+  team.defense = firstDefense;
 
   // Renommer.
   content.querySelector('[data-tq-rename="0"]').click();
@@ -87,17 +124,16 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   await flush(dom);
   assert(team.tacticPresets[0].name === "Mur", "renommage");
 
-  // Dans les Ordres : changer la défense puis remettre la tactique en 1 clic.
-  const other = Object.keys(win.eval("DEFENSES")).find(d => d !== firstDefense);
-  team.defense = other;
+  // Dans les Ordres : 1 clic met la tactique en place.
+  const other = zone;
   tab("ordres").click();
   const bar = doc.getElementById("ordresPresetsBar");
   const chip = bar.querySelector('[data-ordres-preset="0"]');
   assert(chip && chip.textContent === "Mur", "la tactique apparaît dans les Ordres");
   chip.click();
   await flush(dom);
-  assert(team.defense === firstDefense, "un clic remet la tactique en place");
-  assert(readRawSave(savePath).team.defense === firstDefense, "ordres appliqués sauvegardés");
+  assert(team.defense === zone, "un clic met la tactique en place");
+  assert(readRawSave(savePath).team.defense === zone, "ordres appliqués sauvegardés");
   assert(bar.textContent.includes("« Mur » mise en place."), "message de confirmation");
 
   // Enregistrer depuis les Ordres.

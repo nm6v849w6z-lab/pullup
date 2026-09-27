@@ -43,6 +43,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   end_to_end, onboarding_tour, dashboard_e2e, calendar_redesign,
   ordres_round_planning, tous les server/*_test.js (cup_ordres_planning
   échoue déjà avant, voir plus bas). Statut : committé, à pousser.
+  - 39f5e75 était CASSÉ (bloc mal placé par un découpage de hunks à la
+    main, page qui ne se chargeait plus) et a été poussé ; corrigé par
+    6f4abeb. Leçon : après un commit partiel, TOUJOURS vérifier la version
+    committée seule (git checkout-index -a --prefix=… puis tests).
+  - Éditeur (retour : "quand on crée une tactique, il faut qu'on puisse
+    faire comme si on était sur les ordres et pourquoi pas aussi choisir
+    une tactique d'un des matchs précédents") : « Créer une tactique » /
+    « Modifier » ouvrent la page Ordres en mode édition
+    (#prepSection.tq-editing, tqEdit, openTacticEditor/
+    renderTacticEditorBar, brouillon tqProxyFrom = même principe que
+    planProxyForRound) avec nom + « Partir de » (ordres du prochain match,
+    tactique enregistrée, ou un des 10 derniers matchs). Moteur :
+    Team.ordersHistory (ORDERS_HISTORY_MAX = 10, clubs humains) rempli par
+    recordOrdersHistory dans recordMatchStatsAndAwardMvp (championnat +
+    coupe ; pas les amicaux). Rempli à partir de ce commit seulement.
   NB : une autre session travaille en parallèle (Matchs amicaux, fichiers
   engine.js/moteurbasket3.html/server/index.js) — ne committer que mes
   hunks.
