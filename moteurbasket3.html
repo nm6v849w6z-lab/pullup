@@ -2530,16 +2530,18 @@
      tout décaler") : gabarit du Calendrier (.cal-layout/.cal-card/
      .calendar-table.cal-month/.cal-filter) ; les blessés sont des lignes de
      la liste principale, la colonne de droite garde une hauteur fixe. */
-  .med-col-player{width:auto;} .med-col-state{width:180px;} .med-col-risk{width:180px;} .med-col-end{width:140px;}
+  .med-col-player{width:auto;} .med-col-state{width:200px;} .med-col-end{width:230px;}
   .med-c-player{padding-left:16px !important;}
   .med-player{display:flex; align-items:center; gap:10px; min-width:0;}
   .med-player-text{display:flex; flex-direction:column; min-width:0;}
   .med-player-text .player-link{font-weight:600; font-size:14px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .med-player-text .sub{font-size:12px; color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .med-injury-tag{display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; font-size:12px; font-weight:700; padding:3px 9px; border-radius:6px; background:rgba(226,105,79,.15); color:var(--danger);}
-  .med-risk{display:flex; align-items:center; gap:10px;}
-  .med-risk-label{font-size:13px; font-weight:700; min-width:70px;}
-  .med-risk-track{flex:1; height:6px; border-radius:3px; background:var(--panel-2); overflow:hidden; max-width:90px;}
+  /* Palier + jauge alignés à droite, sous « Risque pour le prochain match » :
+     libellé et jauge de largeurs fixes, jauges alignées d'une ligne à l'autre. */
+  .med-risk{display:flex; align-items:center; justify-content:flex-end; gap:12px;}
+  .med-risk-label{font-size:13px; font-weight:700; min-width:76px; text-align:right;}
+  .med-risk-track{flex:none; width:110px; height:6px; border-radius:3px; background:var(--panel-2); overflow:hidden;}
   .med-risk-fill{height:100%; border-radius:3px; background:currentColor;}
   .med-risk-low{color:var(--ok);} .med-risk-normal{color:var(--ink-dim);} .med-risk-high{color:var(--amber);} .med-risk-veryhigh{color:var(--danger);}
   .med-c-end{text-align:right; padding-right:16px !important; white-space:nowrap;}
@@ -2569,19 +2571,19 @@
   .med-bar{grid-area:bar; margin-bottom:0;}
   .med-main{grid-area:main;}
   .med-layout > .cal-side{grid-area:side;}
-  .med-infirmary .cal-split > div{gap:8px;}
+  .med-infirmary .cal-split{grid-template-columns:1fr;} .med-infirmary .cal-split > div{gap:12px;}
   @media (max-width:1100px){
     .med-layout{grid-template-areas:"side" "bar" "main";}
   }
   .med-side-btns{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px;}
   .med-side-btns .calendar-order-btn{justify-content:center;}
   @media (max-width:760px){
-    .med-col-state{width:0;} .med-col-risk{width:78px;} .med-col-end{width:92px;}
+    .med-col-state{width:0;} .med-col-end{width:104px;}
     .calendar-table.cal-month td.med-c-state{padding:0; font-size:0;}
     .med-c-state > *{display:none;}
-    .med-row-injured .med-c-risk > *, .med-hist-row .med-c-risk > *, .med-risk-track, .med-month-count{display:none;}
+    .med-risk-track, .med-month-count{display:none;}
     .med-risk-label{min-width:0; font-size:12px;}
-    .med-c-end{white-space:normal;} .med-back{font-size:11px; line-height:1.3;} .med-col-end{width:100px;}
+    .med-c-end{white-space:normal;} .med-back{font-size:11px; line-height:1.3;}
     .calendar-table.cal-month.med-table td{padding-left:8px; padding-right:8px;}
   }
   /* ---- Humeur des supporters ---- */
@@ -38350,7 +38352,7 @@ const MEDICAL_RISK_TIERS = [
   { max: 1.5, key: "high", label: "Élevé" },
   { max: Infinity, key: "veryhigh", label: "Très élevé" },
 ];
-let medicalFilter = "all"; // "all" | "injured" | "risk" | "history"
+let medicalFilter = "all"; // "all" | "risk" | "history"
 function medicalRiskFor(team, player, now = Date.now()) {
   const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
   const condition = currentCondition(player, now, recovery);
@@ -38384,7 +38386,7 @@ function renderMedicalSection() {
   const seasonLog = (team.injuryLog || []).filter(e => e.seasonNo === seasonNo);
   const daysLost = seasonLog.reduce((s, e) => s + (e.days || 0), 0);
 
-  const counts = { all: players.length, injured: injured.length, risk: atRisk.length, history: seasonLog.length };
+  const counts = { all: players.length, risk: atRisk.length, history: seasonLog.length };
   const filterBtn = (key, label) =>
     `<button type="button" class="cal-filter${medicalFilter === key ? " active" : ""}" data-med-filter="${key}" aria-pressed="${medicalFilter === key}">${label} <span class="cal-filter-count">${counts[key]}</span></button>`;
   const pos = p => escapeHtml(POS_SHORT[p.position] || p.position || "");
@@ -38394,12 +38396,12 @@ function renderMedicalSection() {
   // filtres (retour utilisateur : "infirmerie ne doit pas monter au dessus
   // de joueurs disponibles").
   let html = `<div class="cal-layout med-layout"><div class="cal-toolbar med-bar" role="group" aria-label="Filtrer">` +
-    filterBtn("all", "Tous") + filterBtn("injured", "Blessés") + filterBtn("risk", "À risque") + filterBtn("history", "Historique") + `</div>`;
+    filterBtn("all", "Tous") + filterBtn("risk", "À risque") + filterBtn("history", "Historique") + `</div>`;
   html += `<div class="cal-main med-main">`;
 
   const tableOpen = (title, extra, view) =>
-    `<table class="calendar-table cal-month med-table" data-med-view="${view}"><colgroup><col class="med-col-player"><col class="med-col-state"><col class="med-col-risk"><col class="med-col-end"></colgroup>` +
-    `<thead><tr class="cal-month-head"><th colspan="4"><span class="cal-month-title">${escapeHtml(title)}</span>${extra ? `<span class="med-month-count">${escapeHtml(extra)}</span>` : ""}</th></tr></thead><tbody>`;
+    `<table class="calendar-table cal-month med-table" data-med-view="${view}"><colgroup><col class="med-col-player"><col class="med-col-state"><col class="med-col-end"></colgroup>` +
+    `<thead><tr class="cal-month-head"><th colspan="3"><span class="cal-month-title">${escapeHtml(title)}</span>${extra ? `<span class="med-month-count">${escapeHtml(extra)}</span>` : ""}</th></tr></thead><tbody>`;
 
   // Blessés (en tête, toujours visibles dans « Tous »).
   if (injured.length) {
@@ -38409,24 +38411,22 @@ function renderMedicalSection() {
       html += `<tr class="cal-row med-row-injured" data-player-row="${p.id}" data-med-kind="injured">` +
         `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
         `<td class="med-c-state"><span class="med-injury-tag" title="${escapeHtml(p.injuryType || "Blessure")}">${escapeHtml(p.injuryType || "Blessure")}</span></td>` +
-        `<td class="med-c-risk"><span class="med-risk-label med-risk-veryhigh">Indisponible</span></td>` +
         `<td class="med-c-end"><div class="med-days">${days} jour${days > 1 ? "s" : ""}</div><div class="med-back">retour ${escapeHtml(formatCalendarDayFr(p.injuryUntil))}</div></td></tr>`;
     });
     html += `</tbody></table>`;
   }
 
   // Joueurs disponibles, du plus exposé au moins exposé.
-  html += tableOpen("Joueurs disponibles", "Risque avant le prochain match", "roster");
-  if (!fit.length) html += `<tr><td colspan="4" class="training-empty">Aucun joueur disponible.</td></tr>`;
+  html += tableOpen("Joueurs disponibles", "Risque pour le prochain match", "roster");
+  if (!fit.length) html += `<tr><td colspan="3" class="training-empty">Aucun joueur disponible.</td></tr>`;
   fit.forEach(({ p, r }) => {
     const width = Math.max(6, Math.min(100, Math.round(r.mult / 2 * 100)));
     const risky = r.tier.key === "high" || r.tier.key === "veryhigh";
     html += `<tr class="cal-row" data-player-row="${p.id}" data-risk="${r.tier.key}" data-med-kind="${risky ? "risk" : "fit"}">` +
       `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
       `<td class="med-c-state">${conditionBadgeHtml(p, now, recovery)}</td>` +
-      `<td class="med-c-risk"><div class="med-risk med-risk-${r.tier.key}"><span class="med-risk-label">${r.tier.label}</span>` +
-      `<div class="med-risk-track"><div class="med-risk-fill" style="width:${width}%"></div></div></div></td>` +
-      `<td class="med-c-end"></td></tr>`;
+      `<td class="med-c-end"><div class="med-risk med-risk-${r.tier.key}"><span class="med-risk-label">${r.tier.label}</span>` +
+      `<div class="med-risk-track"><div class="med-risk-fill" style="width:${width}%"></div></div></div></td></tr>`;
   });
   html += `</tbody></table>`;
 
@@ -38442,12 +38442,12 @@ function renderMedicalSection() {
     html += tableOpen(g.title, `${g.rows.length} blessure${g.rows.length > 1 ? "s" : ""}`, "history");
     g.rows.forEach(e => {
       const p = players.find(x => x.id === e.playerId);
-      const who = p ? medicalPlayerCellHtml(p, team, `Semaine ${e.week}`)
-        : `<div class="med-player"><div class="med-player-text"><b>${escapeHtml(e.playerName)}</b><span class="sub">Semaine ${e.week} · a quitté le club</span></div></div>`;
+      const vs = e.opponentName ? ` · contre ${escapeHtml(e.opponentName)}` : "";
+      const who = p ? medicalPlayerCellHtml(p, team, `Semaine ${e.week}${vs}`)
+        : `<div class="med-player"><div class="med-player-text"><b>${escapeHtml(e.playerName)}</b><span class="sub">Semaine ${e.week}${vs} · a quitté le club</span></div></div>`;
       html += `<tr class="cal-row med-hist-row" data-med-kind="history">` +
         `<td class="med-c-player">${who}</td>` +
         `<td class="med-c-state"><span class="med-injury-tag">${escapeHtml(e.injuryType || "Blessure")}</span></td>` +
-        `<td class="med-c-risk"><span class="med-back">${e.opponentName ? `contre ${escapeHtml(e.opponentName)}` : ""}</span></td>` +
         `<td class="med-c-end"><div class="med-hist-dur">${e.days} jour${e.days > 1 ? "s" : ""}</div>${e.at ? `<div class="med-back">${escapeHtml(formatCalendarDayFr(e.at))}</div>` : ""}</td></tr>`;
     });
     html += `</tbody></table>`;
@@ -38500,7 +38500,7 @@ function medicalApplyFilter() {
     table.querySelectorAll("tbody tr.cal-row").forEach(tr => {
       const k = tr.dataset.medKind;
       const show = history ? isHistory
-        : !isHistory && (medicalFilter === "all" || (medicalFilter === "injured" && k === "injured") || (medicalFilter === "risk" && k === "risk"));
+        : !isHistory && (medicalFilter === "all" || (medicalFilter === "risk" && k === "risk"));
       tr.classList.toggle("hidden", !show);
       if (show) visible++;
     });
@@ -38515,7 +38515,7 @@ function medicalApplyFilter() {
   });
   const empty = holder.querySelector(".med-filter-empty");
   if (empty) {
-    empty.textContent = { injured: "Aucun joueur blessé.", risk: "Aucun joueur à risque élevé.", history: "Aucune blessure cette saison." }[medicalFilter] || "";
+    empty.textContent = { risk: "Aucun joueur à risque élevé.", history: "Aucune blessure cette saison." }[medicalFilter] || "";
     empty.classList.toggle("hidden", visibleTotal > 0 || medicalFilter === "all");
   }
 }

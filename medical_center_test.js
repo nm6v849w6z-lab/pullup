@@ -84,8 +84,7 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   const click = k => content.querySelector(`[data-med-filter="${k}"]`).click();
   click("history");
   assert(!hist[0].classList.contains("hidden") && hist[0].textContent.includes("Adversaire test") && r1.classList.contains("hidden"), "filtre Historique");
-  click("injured");
-  assert(!injRows[0].classList.contains("hidden") && r1.classList.contains("hidden"), "filtre Blessés");
+  assert(!content.querySelector('[data-med-filter="injured"]'), "pas de filtre Blessés (doublon avec l'Infirmerie)");
   click("risk");
   assert(injRows[0].classList.contains("hidden") && !r1.classList.contains("hidden"), "filtre À risque");
   click("all");

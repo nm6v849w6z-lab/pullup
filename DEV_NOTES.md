@@ -188,6 +188,12 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     ne doit pas monter au dessus de joueurs disponibles") : filtres sortis
     de la colonne principale, grille .med-layout (zones bar/main/side) ; sur
     mobile, cartes puis filtres puis liste.
+  - Tableau à 3 colonnes : palier + jauge alignés à droite sous « Risque
+    pour le prochain match » (ex « avant ») ; les blessures n'arrivent
+    qu'en match (rollInjury appelé seulement par applyFatigue) et un blessé
+    ne peut pas jouer (matchInjuryLocked). Filtre « Blessés » retiré
+    (doublon avec le bloc Infirmerie). « Jours perdus » / « Disponibles »
+    sur deux lignes pleine largeur (plus de texte collé).
   Reste : `git push`.
 - **📋 CHANTIER SUIVANT** — Matchs amicaux.
 

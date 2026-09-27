@@ -4321,7 +4321,7 @@ window.HM_I18N_EN = {
   "Risque": "Risk",
   "À risque": "At risk",
   "Joueurs disponibles": "Available players",
-  "Risque avant le prochain match": "Risk before the next match",
+  "Risque pour le prochain match": "Risk for the next match",
   "Indisponible": "Unavailable",
   "Jours perdus": "Days lost",
   "Disponibles": "Available",
