@@ -9,7 +9,7 @@
      restait invisible au premier chargement après un déploiement) ;
    - autres /assets/* (images, polices) : cache d'abord, rafraîchis en fond.
    Changer CACHE_VERSION invalide les anciens caches au prochain passage. */
-const CACHE_VERSION = "hoop-v2";
+const CACHE_VERSION = "hoop-v3"; // v3 : nouvelles icônes (logo jaune)
 const PRECACHE = [
   "/assets/mobile/mobile.css",
   "/assets/mobile/mobile.js",
