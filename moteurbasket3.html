@@ -492,7 +492,11 @@
        rubriques ("trop aéré, ça fait vide") — retours utilisateur 2026-09-27. */
     #prepSection .area-ordresCardDefense > .ordres-settings-grid{flex:2 1 auto;}
     #prepSection .area-ordresCardDefense > .ordres-settings-grid-nested:not(.hidden){flex:5 1 auto;}
-    #prepSection .area-ordresCardDefense .ordres-field > .seg-control{flex:1 1 auto;}
+    #prepSection .area-ordresCardDefense .ordres-field > .seg-control{flex:1 1 auto; max-height:54px;}
+    #prepSection .area-ordresCardDefense .ordres-field > .seg-control.seg-wrap{max-height:104px;}
+    /* Boutons plafonnés ("un peu épais") : le reste va entre les rubriques.
+       Dernière rangée (Aide / Close-out) calée en bas, jamais de vide dessous. */
+    #prepSection .area-ordresCardDefense .ordres-settings-grid-nested > .ordres-field:not(.ordres-field-wide){justify-content:flex-end;}
   }
   #prepSection .conv-list{display:flex; flex-direction:column;}
   #prepSection .prep-def-stack{display:flex; flex-direction:column; gap:22px;}
@@ -582,7 +586,8 @@
   #prepSection .tactic-count{margin-top:0; font-size:12px; color:var(--ink-faint);}
 
   /* Adversaires à surveiller. */
-  #prepSection .watch-assignments{gap:10px;}
+  #prepSection .watch-assignments{gap:8px;}
+  #prepSection .ordres-card .watch-row select{min-height:38px;}
   #prepSection .watch-row{grid-template-columns:24px minmax(0, 1fr) minmax(0, 1fr); gap:10px; align-items:center;}
   .watch-num{font-size:16px; font-weight:800; color:var(--ink-faint); text-align:center;}
   #prepSection .watch-row.is-empty select:first-of-type{border-style:dashed; color:var(--ink-dim);}
