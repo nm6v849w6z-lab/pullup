@@ -130,15 +130,6 @@
   .feat h3{font-size:23px; font-weight:700; text-transform:uppercase; margin-bottom:6px}
   .feat p{margin:0; color:var(--ink-dim); font-size:15px}
 
-  /* ---------- Déroulé d'une journée ---------- */
-  section.day{padding:10px 0 70px}
-  .timeline{display:grid; grid-template-columns:repeat(4,1fr); gap:0; border:1px solid var(--line-soft); border-radius:var(--radius); overflow:hidden; background:var(--panel)}
-  .timeline div{padding:20px; border-right:1px solid var(--line-soft)}
-  .timeline div:last-child{border-right:0}
-  .timeline time{display:block; font:800 30px/1 "Barlow Condensed",sans-serif; color:var(--amber); margin-bottom:8px}
-  .timeline b{display:block; margin-bottom:4px}
-  .timeline span{color:var(--ink-dim); font-size:14px}
-
   /* ---------- Communauté ---------- */
   section.community{padding:0 0 80px}
   .community-box{display:flex; align-items:center; gap:24px; background:linear-gradient(120deg,rgba(88,101,242,.22),rgba(88,101,242,.06)); border:1px solid rgba(88,101,242,.4); border-radius:var(--radius); padding:26px 28px}
@@ -155,9 +146,6 @@
     .hero{padding:32px 0 48px}
     .hero .wrap{grid-template-columns:1fr; gap:30px}
     .grid{grid-template-columns:1fr 1fr}
-    .timeline{grid-template-columns:1fr 1fr}
-    .timeline div:nth-child(2){border-right:0}
-    .timeline div:nth-child(-n+2){border-bottom:1px solid var(--line-soft)}
   }
   @media (max-width:560px){
     .wrap{padding:0 16px}
@@ -312,18 +300,6 @@
     </div>
   </section>
 
-  <section class="day">
-    <div class="wrap">
-      <h2 class="section-title" data-t="day.title">Une journée de manager</h2>
-      <p class="section-sub" data-t="day.sub">Quelques minutes par jour suffisent : le championnat avance tout seul, sur un vrai calendrier.</p>
-      <div class="timeline">
-        <div><time>10h</time><b data-t="d1.t">Championnat</b><span data-t="d1.p">Le premier match de la journée, en direct.</span></div>
-        <div><time>15h</time><b data-t="d2.t">Coupe</b><span data-t="d2.p">Les jours de coupe, un match à élimination directe.</span></div>
-        <div><time>19h</time><b data-t="d3.t">Championnat</b><span data-t="d3.p">Le match du soir, diffusé pendant 1 h 30.</span></div>
-        <div><time data-t="d4.h">24h/24</time><b data-t="d4.t">Gérer</b><span data-t="d4.p">Tactique, entraînement, transferts, sponsors : quand tu veux.</span></div>
-      </div>
-    </div>
-  </section>
 
   <section class="community" id="communitySection" hidden>
     <div class="wrap">
@@ -380,11 +356,6 @@
       "f4.t": "Auction market", "f4.p": "Players, coaches, analysts, scouts: everything is bid on in real time against the other managers.",
       "f5.t": "Arena & finances", "f5.p": "Expand your arena, set ticket prices, sign sponsors and keep an eye on your budget.",
       "f6.t": "Youth academy", "f6.p": "Spot 15-year-old gems, develop them and build the team that will lift the trophy a few seasons from now.",
-      "day.title": "A manager's day", "day.sub": "A few minutes a day is enough: the championship moves on by itself, on a real calendar.",
-      "d1.t": "League", "d1.p": "The day's first game, live.",
-      "d2.t": "Cup", "d2.p": "On cup days, a knockout game.",
-      "d3.t": "League", "d3.p": "The evening game, broadcast for 1h30.",
-      "d4.h": "24/7", "d4.t": "Manage", "d4.p": "Tactics, training, transfers, sponsors: whenever you like.",
       "com.title": "Join the community", "com.text": "News, help between managers, ideas and bug reports: it all happens on Discord.", "com.btn": "Join the Discord",
       "footer": "Made with passion for basketball fans.",
       "err.email-invalid": "This email address doesn't look valid.",

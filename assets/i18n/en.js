@@ -4205,4 +4205,6 @@ window.HM_I18N_EN = {
   "Jeu momentanément indisponible": "Game temporarily unavailable",
   "Le serveur ne trouve pas la ligue pour le moment. Réessaie dans quelques minutes : ton club n'est pas perdu.": "The server can't find the league right now. Try again in a few minutes: your club isn't lost.",
   "Réessayer": "Try again",
+  "Tu n'as pas encore d'identifiants : sans ton lien privé, tu ne pourras plus retrouver ton club. Te déconnecter quand même ?\n\n(Crée-les dans Paramètres → Mon compte.)": "You don't have a login yet: without your private link, you won't be able to get back to your club. Log out anyway?\n\n(Create one in Settings → My account.)",
+  "Se déconnecter": "Log out",
 };
