@@ -233,4 +233,28 @@ function paris(ms) {
   console.log("✅ Bascule en pleine saison : passé inchangé, suite le mardi 20:00 (match en cours préservé), sauvegarde et saison complète OK.");
 })();
 
+// ---------------------------------------------------------------------
+// 7) Remise à 100 de la forme physique, une seule fois (retour utilisateur,
+//    2026-09-27 : "peux-tu réinitialiser les formes des joueurs ?").
+// ---------------------------------------------------------------------
+(function testConditionResetOnce() {
+  const created = Date.UTC(2026, 8, 22, 12);
+  const at = Date.UTC(2026, 8, 27, 11);
+  const lg = E.generateMultiManagerLeague(["A", "B"], 1, created, { dailyAnchored: true });
+  A.catchUpLeague(lg, at);
+  E.migrateLeagueToWeeklyRhythm(lg, at);
+  const tired = lg.teams.flatMap(t => t.players).filter(p => p.condition < 100).length;
+  if (!tired) throw new Error("❌ (setup) des joueurs devraient être fatigués après 9 journées.");
+  const n = E.resetAllPlayerConditionsOnce(lg, "k", at);
+  const all = lg.teams.flatMap(t => t.players);
+  if (n !== all.length || all.some(p => p.condition !== 100 || p.conditionUpdatedAt !== at)) throw new Error("❌ Tous les joueurs devraient être remis à 100.");
+  all[0].condition = 50;
+  if (E.resetAllPlayerConditionsOnce(lg, "k", at + 1) !== 0 || all[0].condition !== 50) throw new Error("❌ La remise à 100 ne doit se faire qu'une fois.");
+  const back = E.leagueFromSave(JSON.parse(JSON.stringify(E.serializeLeague(lg))));
+  if (!back.maintenanceDone || !back.maintenanceDone.k) throw new Error("❌ Le drapeau « déjà fait » doit survivre à la sauvegarde.");
+  const src = fs.readFileSync(path.join(__dirname, "index.js"), "utf-8");
+  if (!src.includes('resetAllPlayerConditionsOnce(league, "conditionReset-2026-09-27", now)')) throw new Error("❌ server/index.js:tick devrait appeler la remise à 100.");
+  console.log(`✅ Forme physique : ${tired} joueurs fatigués remis à 100, une seule fois (drapeau sauvegardé).`);
+})();
+
 console.log("\n🏁 Tous les tests du rythme hebdomadaire sont passés.");

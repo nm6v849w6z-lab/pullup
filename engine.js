@@ -10362,6 +10362,27 @@ function weeklyRhythmEconomyTickAt(calendarStartAt, k) {
 // est déjà joué garde sa date ; un match dont le créneau quotidien a déjà
 // commencé (diffusion en cours) se termine à son heure d'origine ; tout le
 // reste repart du prochain mardi 20h. Renvoie le réglage appliqué ou null.
+// Remise à 100 de la forme physique de TOUS les joueurs (toutes les équipes,
+// humaines et CPU, pour rester équitable), en une seule fois par ligue —
+// retour utilisateur, 2026-09-27 : "peux-tu réinitialiser les formes des
+// joueurs ?" (fatigue accumulée pendant le rythme quotidien, 2 matchs par
+// jour, avant la bascule hebdomadaire). `key` identifie l'opération dans
+// League.maintenanceDone pour ne jamais la rejouer. Renvoie le nombre de
+// joueurs remis à neuf, ou 0 si déjà fait.
+function resetAllPlayerConditionsOnce(league, key, now = Date.now()) {
+  if (!league || !Array.isArray(league.teams)) return 0;
+  if (!league.maintenanceDone) league.maintenanceDone = {};
+  if (league.maintenanceDone[key]) return 0;
+  let n = 0;
+  league.teams.forEach(team => (team.players || []).forEach(p => {
+    p.condition = 100;
+    p.conditionUpdatedAt = now;
+    n++;
+  }));
+  league.maintenanceDone[key] = now;
+  return n;
+}
+
 function migrateLeagueToWeeklyRhythm(league, now = Date.now()) {
   if (!league || !league.calendarDailyAnchored || league.calendarWeeklyRhythm) return null;
   if (typeof league.calendarStartAt !== "number") return null;
@@ -11506,6 +11527,7 @@ function serializeLeague(lg) {
     calendarWeeklyRhythm: !!lg.calendarWeeklyRhythm,
     lastEconomyTick: typeof lg.lastEconomyTick === "number" ? lg.lastEconomyTick : 0,
     calendarWeeklySwitch: lg.calendarWeeklySwitch ? { ...lg.calendarWeeklySwitch } : null,
+    maintenanceDone: lg.maintenanceDone ? { ...lg.maintenanceDone } : {},
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
     cup: lg.cup || null,
     privateLeagues: Array.isArray(lg.privateLeagues) ? lg.privateLeagues : [],
@@ -11574,6 +11596,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarWeeklyRhythm = !!data.calendarWeeklyRhythm;
   lg.lastEconomyTick = typeof data.lastEconomyTick === "number" ? data.lastEconomyTick : 0;
   lg.calendarWeeklySwitch = data.calendarWeeklySwitch && typeof data.calendarWeeklySwitch.anchorAt === "number" ? { ...data.calendarWeeklySwitch } : null;
+  lg.maintenanceDone = data.maintenanceDone && typeof data.maintenanceDone === "object" ? { ...data.maintenanceDone } : {};
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
   lg.cup = data.cup || null;
   // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
@@ -13086,7 +13109,7 @@ return {
   WEEKLY_RHYTHM_CUP_DAY_OFFSET, WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET, WEEKLY_RHYTHM_ECONOMY_HOUR,
   weeklyRhythmCalendarStartAt, weeklyRhythmDayIndexForChampionshipRound,
   weeklyRhythmScheduledTimeForChampionshipRound, weeklyRhythmScheduledTimeForCupRound, weeklyRhythmEconomyTickAt,
-  migrateLeagueToWeeklyRhythm,
+  migrateLeagueToWeeklyRhythm, resetAllPlayerConditionsOnce,
   // Coupe (voir le bloc dédié au-dessus de generateCupBracket) :
   CUP_BRACKET_SIZE, CUP_STAGE_NAMES, generateCupBracket, buildNextCupRound, shuffleIndices,
   // Clé composite de Team.plannedTactics (voir le grand commentaire dédié

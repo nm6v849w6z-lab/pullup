@@ -375,6 +375,14 @@ function tick(league, now) {
     const sw = Engine.migrateLeagueToWeeklyRhythm(league, now);
     if (sw) console.log(`[calendrier] Ligue basculée au rythme hebdomadaire : journée ${sw.fromRound + 1} le ${new Date(sw.anchorAt).toISOString()}, coupe à partir du tour ${sw.fromCupRound + 1}.`);
   }
+  // Remise à 100 de la forme physique de tous les joueurs, une seule fois
+  // (retour utilisateur, 2026-09-27 : "peux-tu réinitialiser les formes des
+  // joueurs ?"), seulement pour la ligue partagée qui a connu le rythme
+  // quotidien — voir Engine.resetAllPlayerConditionsOnce.
+  if (Engine.resetAllPlayerConditionsOnce && league && league.calendarWeeklySwitch) {
+    const n = Engine.resetAllPlayerConditionsOnce(league, "conditionReset-2026-09-27", now);
+    if (n) console.log(`[maintenance] Forme physique remise à 100 pour ${n} joueurs.`);
+  }
   AutoSim.ensureLiveMatch(league, now);
   const events = AutoSim.catchUpLeague(league, now);
   // Ligues privées (voir server/privateLeague.js) : journées du vendredi
