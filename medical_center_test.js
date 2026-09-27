@@ -71,7 +71,7 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   assert(!content.querySelector(`tr[data-player-row="${p0.id}"][data-risk]`), "le blessé n'a pas de ligne de risque");
   const r1 = content.querySelector(`tr[data-player-row="${p1.id}"][data-risk]`);
   // Épuisé (×1,80) × kiné 3★ (×0,85) = ×1,53 → Très élevé, en tête.
-  assert(r1 && r1.dataset.risk === "veryhigh" && r1.textContent.includes("×1,53"), "joueur épuisé : risque Très élevé (×1,53 avec le kiné)");
+  assert(r1 && r1.dataset.risk === "veryhigh" && r1.textContent.includes("Très élevé") && !r1.textContent.includes("×"), "joueur épuisé : risque Très élevé (×1,53 avec le kiné), sans facteur affiché");
   assert(content.querySelector("tr[data-risk]") === r1, "les joueurs les plus exposés en tête");
   assert(doc.getElementById("medicalHighRiskCount").textContent === "1", "compteur de joueurs à risque");
 

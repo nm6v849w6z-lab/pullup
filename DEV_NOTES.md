@@ -180,6 +180,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     est un filtre, groupé par mois. Page ajoutée à WIDE_PAGE_IDS. La
     première partie de la refonte est partie dans le commit ec6479d
     (Effectif) d'une autre session ; le reste est committé à part.
+  - Facteurs de risque retirés de l'affichage (retour utilisateur : "je ne
+    mettrai pas les facteurs de risque") : plus de ×1,38 ni d'infobulle de
+    détail ni de note explicative ; seul le palier (Faible → Très élevé) et
+    sa barre restent.
   Reste : `git push`.
 - **📋 CHANTIER SUIVANT** — Matchs amicaux.
 

@@ -2543,14 +2543,12 @@
   .med-risk-fill{height:100%; border-radius:3px; background:currentColor;}
   .med-risk-low{color:var(--ok);} .med-risk-normal{color:var(--ink-dim);} .med-risk-high{color:var(--amber);} .med-risk-veryhigh{color:var(--danger);}
   .med-c-end{text-align:right; padding-right:16px !important; white-space:nowrap;}
-  .med-mult{font-size:13px; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
   .med-days{font-weight:800; color:var(--danger); font-variant-numeric:tabular-nums;}
   .med-back{font-size:12px; color:var(--ink-dim);}
   .calendar-table.cal-month tr.med-row-injured td{background:rgba(226,105,79,.05);}
   .calendar-table.cal-month tr.med-row-injured td:first-child{box-shadow:inset 3px 0 0 var(--danger);}
   .med-month-count{float:right; font-size:12px; font-weight:600; color:var(--ink-dim); letter-spacing:0; text-transform:none;}
   .med-hist-dur{font-weight:700; font-size:13px; font-variant-numeric:tabular-nums;}
-  .med-note{font-size:12px; color:var(--ink-faint); line-height:1.5; margin:4px 2px 0;}
   .med-infirmary .cal-kpi-value.is-neg{color:var(--danger);}
   .med-next-back{margin-top:14px; padding-top:12px; border-top:1px solid var(--line-soft); font-size:13px; color:var(--ink-dim); display:flex; justify-content:space-between; gap:10px;}
   .med-next-back b{color:var(--ink); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -38354,7 +38352,6 @@ function medicalRiskFor(team, player, now = Date.now()) {
   const tier = MEDICAL_RISK_TIERS.find(t => mult < t.max) || MEDICAL_RISK_TIERS[MEDICAL_RISK_TIERS.length - 1];
   return { mult, tier, condition, condMult, gymMult, physioMult };
 }
-function medicalMultLabel(m) { return "×" + m.toFixed(2).replace(".", ","); }
 function medicalPctLabel(delta) { return `${delta > 0 ? "+" : "−"}${Math.round(Math.abs(delta) * 100)} %`; }
 
 function medicalPlayerCellHtml(p, team, sub) {
@@ -38410,17 +38407,15 @@ function renderMedicalSection() {
   if (!fit.length) html += `<tr><td colspan="4" class="training-empty">Aucun joueur disponible.</td></tr>`;
   fit.forEach(({ p, r }) => {
     const width = Math.max(6, Math.min(100, Math.round(r.mult / 2 * 100)));
-    const detail = `Forme physique ${medicalMultLabel(r.condMult)} · Salle de musculation ${medicalMultLabel(r.gymMult)} · Kiné ${medicalMultLabel(r.physioMult)}`;
     const risky = r.tier.key === "high" || r.tier.key === "veryhigh";
     html += `<tr class="cal-row" data-player-row="${p.id}" data-risk="${r.tier.key}" data-med-kind="${risky ? "risk" : "fit"}">` +
       `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
       `<td class="med-c-state">${conditionBadgeHtml(p, now, recovery)}</td>` +
-      `<td class="med-c-risk"><div class="med-risk med-risk-${r.tier.key}" title="${escapeHtml(detail)}"><span class="med-risk-label">${r.tier.label}</span>` +
+      `<td class="med-c-risk"><div class="med-risk med-risk-${r.tier.key}"><span class="med-risk-label">${r.tier.label}</span>` +
       `<div class="med-risk-track"><div class="med-risk-fill" style="width:${width}%"></div></div></div></td>` +
-      `<td class="med-c-end"><span class="med-mult" title="${escapeHtml(detail)}">${medicalMultLabel(r.mult)}</span></td></tr>`;
+      `<td class="med-c-end"></td></tr>`;
   });
   html += `</tbody></table>`;
-  html += `<p class="med-note" data-med-view="roster">Risque ×1,00 = joueur en pleine forme, sans kiné ni salle de musculation. La fatigue accumulée pendant le match s'y ajoute pour tout le monde : faire tourner l'effectif limite les blessures.</p>`;
 
   // Historique de la saison, groupé par mois comme le Calendrier.
   const groups = [];
@@ -38500,7 +38495,6 @@ function medicalApplyFilter() {
     table.classList.toggle("hidden", visible === 0 && !(emptyRow && !history && medicalFilter === "all"));
     visibleTotal += visible;
   });
-  holder.querySelectorAll("p.med-note").forEach(n => n.classList.toggle("hidden", history));
   holder.querySelectorAll("[data-med-filter]").forEach(b => {
     const on = b.dataset.medFilter === medicalFilter;
     b.classList.toggle("active", on);
