@@ -184,6 +184,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     mettrai pas les facteurs de risque") : plus de ×1,38 ni d'infobulle de
     détail ni de note explicative ; seul le palier (Faible → Très élevé) et
     sa barre restent.
+  - Colonne de droite alignée sur le haut de la liste (retour : "infirmerie
+    ne doit pas monter au dessus de joueurs disponibles") : filtres sortis
+    de la colonne principale, grille .med-layout (zones bar/main/side) ; sur
+    mobile, cartes puis filtres puis liste.
   Reste : `git push`.
 - **📋 CHANTIER SUIVANT** — Matchs amicaux.
 

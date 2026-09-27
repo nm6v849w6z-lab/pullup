@@ -2551,7 +2551,8 @@
   .med-hist-dur{font-weight:700; font-size:13px; font-variant-numeric:tabular-nums;}
   .med-infirmary .cal-kpi-value.is-neg{color:var(--danger);}
   .med-next-back{margin-top:14px; padding-top:12px; border-top:1px solid var(--line-soft); font-size:13px; color:var(--ink-dim); display:flex; justify-content:space-between; gap:10px;}
-  .med-next-back b{color:var(--ink); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .med-next-back b{color:var(--ink); font-weight:600;}
+  .med-next-back{flex-direction:column; gap:2px;}
   .med-staff-list{display:flex; flex-direction:column; margin-top:10px;}
   .med-staff-row{padding:10px 0; border-bottom:1px solid var(--line-soft);}
   .med-staff-row:last-child{border-bottom:0; padding-bottom:0;}
@@ -2564,6 +2565,14 @@
   .med-staff-missing{font-size:13px; font-weight:700; color:var(--danger);}
   .med-staff-level{font-size:13px; font-weight:700; color:var(--ink-dim);}
   .med-staff-effect{font-size:12px; color:var(--ink-dim); margin:3px 0 0 16px; line-height:1.4;}
+  .med-layout{grid-template-areas:"bar ." "main side"; row-gap:14px;}
+  .med-bar{grid-area:bar; margin-bottom:0;}
+  .med-main{grid-area:main;}
+  .med-layout > .cal-side{grid-area:side;}
+  .med-infirmary .cal-split > div{gap:8px;}
+  @media (max-width:1100px){
+    .med-layout{grid-template-areas:"side" "bar" "main";}
+  }
   .med-side-btns{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px;}
   .med-side-btns .calendar-order-btn{justify-content:center;}
   @media (max-width:760px){
@@ -38380,9 +38389,13 @@ function renderMedicalSection() {
     `<button type="button" class="cal-filter${medicalFilter === key ? " active" : ""}" data-med-filter="${key}" aria-pressed="${medicalFilter === key}">${label} <span class="cal-filter-count">${counts[key]}</span></button>`;
   const pos = p => escapeHtml(POS_SHORT[p.position] || p.position || "");
 
-  let html = `<div class="cal-layout"><div class="cal-main">`;
-  html += `<div class="cal-toolbar" role="group" aria-label="Filtrer">` +
+  // Filtres HORS de la colonne principale (zone "bar" de .med-layout) : la
+  // colonne de droite démarre ainsi à la hauteur de la liste, pas des
+  // filtres (retour utilisateur : "infirmerie ne doit pas monter au dessus
+  // de joueurs disponibles").
+  let html = `<div class="cal-layout med-layout"><div class="cal-toolbar med-bar" role="group" aria-label="Filtrer">` +
     filterBtn("all", "Tous") + filterBtn("injured", "Blessés") + filterBtn("risk", "À risque") + filterBtn("history", "Historique") + `</div>`;
+  html += `<div class="cal-main med-main">`;
 
   const tableOpen = (title, extra, view) =>
     `<table class="calendar-table cal-month med-table" data-med-view="${view}"><colgroup><col class="med-col-player"><col class="med-col-state"><col class="med-col-risk"><col class="med-col-end"></colgroup>` +
