@@ -465,6 +465,7 @@
     return { rows, note, bubble };
   }
 
+  const MAX_QUESTIONS = 4;
   function halftimeQuestions(showId, mine, watch, ms, H) {
     const qs = [];
     if (mine) {
@@ -526,7 +527,19 @@
         options: [{ id: 'over', label: 'Plus' }, { id: 'under', label: 'Moins' }],
       });
     }
-    return qs;
+    // 4 questions au plus (retour utilisateur, 2026-09-27 : « limite à 4
+    // questions, c'est trop sinon ») : les 3 de base sur ton match, puis le
+    // match suivi en direct s'il existe, sinon le meilleur marqueur de ton
+    // match, sinon le total d'un autre match.
+    const rank = (q) => {
+      const tail = q.id.slice(showId.length);
+      if (tail === ':q:w2h' || tail === ':q:mywin' || tail === ':q:mymargin' || tail === ':q:mytot') return 0;
+      if (tail.startsWith(':q:win:')) return 1;
+      if (tail === ':q:mytop') return 2;
+      return 3;
+    };
+    return qs.map((q, i) => ({ q, i })).sort((a, b) => rank(a.q) - rank(b.q) || a.i - b.i)
+      .slice(0, MAX_QUESTIONS).sort((a, b) => a.i - b.i).map((x) => x.q);
   }
 
   /* ======================================================================

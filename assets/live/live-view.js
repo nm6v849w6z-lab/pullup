@@ -184,6 +184,10 @@ function readable(hex, light) {
  * @param {number} [opts.foulOutAt=5]        fautes personnelles d'exclusion
  * @param {(state)=>void} [opts.onShowHalftime]  clic sur « Voir l'émission ».
  *        Par défaut, ouvre un récapitulatif intégré.
+ * @param {()=>boolean} [opts.halftimeShowSeen]  vrai = émission déjà regardée :
+ *        le bouton « Voir l'émission » est masqué (retour utilisateur,
+ *        2026-09-27 : « quand on a déjà regardé l'émission de la mi temps, il
+ *        faut que le bouton s'enlève »).
  */
 export function createLiveView(root, opts = {}) {
   const QLEN = opts.quarterLength ?? 600;
@@ -464,6 +468,7 @@ export function createLiveView(root, opts = {}) {
     const on = S.status === "halftime";
     $("half").classList.toggle("show", on);
     if (!on) return;
+    $("showBtn").hidden = !!(opts.halftimeShowSeen && opts.halftimeShowSeen());
     const d = S.teams[0].score - S.teams[1].score;
     const who = d ? `${esc(S.teams[d > 0 ? 0 : 1].name)} mène de <b>${Math.abs(d)}</b>` : "<b>Égalité</b>";
     $("halfTxt").innerHTML = who + (S.halftimeResumeIn != null ? ` · reprise dans <b>${fmtClock(S.halftimeResumeIn)}</b>` : "");
@@ -519,10 +524,10 @@ export function createLiveView(root, opts = {}) {
       <circle class="ln" cx="470" cy="250" r="60"/>${half(false)}${half(true)}`;
   })();
 
-  // Découpe le nom du sponsor pour la pub au sol : une ligne jusqu'à 12
+  // Découpe le nom du sponsor pour la pub au sol : une ligne jusqu'à 18
   // caractères, sinon deux lignes coupées à l'espace le plus proche du milieu.
   function floorAdLines(name) {
-    if (name.length <= 12 || !name.includes(" ")) return [name];
+    if (name.length <= 18 || !name.includes(" ")) return [name];
     const words = name.split(/\s+/);
     let best = null;
     for (let i = 1; i < words.length; i++) {
@@ -554,21 +559,22 @@ export function createLiveView(root, opts = {}) {
     // le jeu, dessiné pour un cercle de 104 unités centré en 470,250).
     const court = $("court");
     // Pub du sponsor salle du club qui reçoit (S.arenaSponsor, sinon
-    // « HOOP MANAGER ») peinte sur le parquet, dans les deux coins entre la
-    // ligne de fond, la raquette et la ligne à 3 points (retour utilisateur,
-    // 2026-09-27 : « la pub sur le terrain ne va pas […] mets-la là où j'ai
-    // gribouillé », à la place des bandeaux LED le long des lignes de
-    // touche). Au-delà de 12 caractères, le nom passe sur 2 lignes.
+    // « HOOP MANAGER ») peinte sur le parquet, une seule fois, au milieu du
+    // terrain sous le rond central, à mi-distance entre le bas du rond
+    // (y=310) et la ligne de touche (y=498) (retours utilisateur 2026-09-27 :
+    // plus de bandeaux LED le long des lignes de touche, puis « trop proche
+    // du bord » pour les pubs dans les coins). Au-delà de 18 caractères, le
+    // nom passe sur 2 lignes.
     const ledKey = (S.courtLogo || "") + "|" + (S.arenaSponsor || "");
     if (courtLogoKey !== ledKey) {
       courtLogoKey = ledKey;
       const lines = floorAdLines((S.arenaSponsor || "HOOP MANAGER").toUpperCase());
       const ad = (cx, cy) => lines.map((l, i) => {
         const y = cy + (i - (lines.length - 1) / 2) * 24 + 7;
-        const fit = l.length * 17.5 > 190 ? ` textLength="190" lengthAdjust="spacingAndGlyphs"` : "";
+        const fit = l.length * 17.5 > 320 ? ` textLength="320" lengthAdjust="spacingAndGlyphs"` : "";
         return `<text class="floor-ad" x="${cx}" y="${y}" text-anchor="middle"${fit}>${esc(l)}</text>`;
       }).join("");
-      court.innerHTML = `<g class="base">${COURT_BASE}</g><g class="ads">${ad(100, 95)}${ad(840, 405)}</g><g class="logo" opacity=".85">${S.courtLogo || ""}</g><g class="marks"></g>`;
+      court.innerHTML = `<g class="base">${COURT_BASE}</g><g class="ads">${ad(470, 404)}</g><g class="logo" opacity=".85">${S.courtLogo || ""}</g><g class="marks"></g>`;
     }
     court.querySelector(".marks").innerHTML = g;
 

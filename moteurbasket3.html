@@ -7138,7 +7138,7 @@
      Version PC uniquement (largeur minimale ~1100px, comme le reste de
      l'appli — voir README.md) : aucune variante mobile construite. -->
 <div id="hoopShowSection" class="hidden">
-  <div id="hoopShowMount" style="height:100%;"></div>
+  <div id="hoopShowMount" style="height:100%; overflow:hidden;"></div>
 </div>
 
 <script>
@@ -27894,6 +27894,34 @@ const HOOP_SHOW_AD_WATCH_MS = 20000;
 // Lecteur actuellement monté (voir openHoopShow/closeHoopShow) — jamais
 // plus d'une émission ouverte à la fois.
 let hoopShowPlayer = null;
+// Émission ouverte ("prematch"/"halftime") — voir closeHoopShow.
+let hoopShowOpenKind = null;
+
+// Émission de mi-temps déjà regardée (retour utilisateur, 2026-09-27 :
+// « quand on a déjà regardé l'émission de la mi temps, il faut que le bouton
+// s'enlève ») : clé = le match en direct (même identité que
+// hmLiveSameMatch), mémorisée à la fermeture de l'émission. localStorage =
+// confort par appareil (repli en mémoire si indisponible).
+const HOOP_SHOW_HT_SEEN_KEY = "hm-ht-show-seen";
+let hoopShowHtSeenMem = null;
+function hoopShowHalftimeMatchKey() {
+  const m = hmLive && hmLive.match;
+  if (!m) return null;
+  return [m.competition || "championship", m.round, m.kickoffAt].join(":");
+}
+function hoopShowHalftimeSeen() {
+  const key = hoopShowHalftimeMatchKey();
+  if (!key) return false;
+  let stored = hoopShowHtSeenMem;
+  try { stored = localStorage.getItem(HOOP_SHOW_HT_SEEN_KEY) || stored; } catch (e) { /* rien */ }
+  return stored === key;
+}
+function hoopShowMarkHalftimeSeen() {
+  const key = hoopShowHalftimeMatchKey();
+  if (!key) return;
+  hoopShowHtSeenMem = key;
+  try { localStorage.setItem(HOOP_SHOW_HT_SEEN_KEY, key); } catch (e) { /* rien */ }
+}
 
 // Ouvre l'émission avant-match ("prematch") ou mi-temps ("halftime") en
 // plein écran (#hoopShowSection, voir son CSS : position:fixed par-dessus
@@ -27939,6 +27967,7 @@ async function openHoopShow(kind) {
   const mount = document.getElementById("hoopShowMount");
   if (hoopShowPlayer) { hoopShowPlayer.destroy(); hoopShowPlayer = null; }
   section.classList.remove("hidden");
+  hoopShowOpenKind = kind;
   hoopShowPlayer = HoopShowPlayer.mount(mount, show, Object.assign(hoopShowDressOpts(), {
     premium: teamA.hasActivePremium(Date.now()),
     now: () => Date.now(),
@@ -28079,6 +28108,13 @@ function enterPrematchLive() {
 function closeHoopShow() {
   if (hoopShowPlayer) { hoopShowPlayer.destroy(); hoopShowPlayer = null; }
   document.getElementById("hoopShowSection").classList.add("hidden");
+  if (hoopShowOpenKind === "halftime") {
+    hoopShowMarkHalftimeSeen();
+    const oldBtn = document.getElementById("hoopShowHalftimeBtn");
+    if (oldBtn) oldBtn.remove();
+    try { if (hmLive && hmLive.view) hmLiveRender(); } catch (e) { /* rien */ }
+  }
+  hoopShowOpenKind = null;
 }
 
 // Écran gris factice pour la pub du lecteur d'émission — même précédent que
@@ -29649,7 +29685,7 @@ function showPauseBanner(pause) {
   // a une émission côté server/shows.js:getHalftimeShow). `onclick` réattaché
   // à chaque banderole plutôt qu'un écouteur délégué : #pauseBanner est
   // entièrement réécrit ici à chaque pause, pas de risque de doublon.
-  el.innerHTML = pause.kind === "halftime"
+  el.innerHTML = pause.kind === "halftime" && !hoopShowHalftimeSeen()
     ? `<span>${escapeHtml(pause.label)}</span> <button type="button" class="secondary hoop-show-pause-btn" id="hoopShowHalftimeBtn">Voir l'émission</button>`
     : escapeHtml(pause.label);
   if (pause.kind === "halftime") {
@@ -30537,6 +30573,7 @@ function hmLiveReset(liveMatch) {
         state.view = mod.createLiveView(root, {
           quarterLength: QUARTER_SECONDS,
           onShowHalftime: () => openHoopShow("halftime"),
+          halftimeShowSeen: hoopShowHalftimeSeen,
         });
         section.classList.add("hm-live-on");
         hmLiveRender();
