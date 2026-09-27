@@ -4234,6 +4234,7 @@
      "Maîtrise actuelle" séparé (la jauge du déclencheur suffit), notes vides
      masquées, cartes Fondamentaux/Collectif à la même hauteur. */
   .tp-config .training-dilution-note:empty{display:none;}
+  #trainingSection .recovery-form-gauge{margin-top:4px;}
   /* Bilan de la semaine dernière */
   .tp-report-head{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line-soft);}
   .tp-report-title{display:flex; align-items:center; gap:10px;}
@@ -6459,14 +6460,13 @@
          profite des fondamentaux cette semaine" (légende plein/partiel/aucun,
          barre empilée, tableau des joueurs ayant joué au(x) poste(s)
          entraîné(s)). Ordre voulu inchangé sur le fond (retours 2026-09) :
-         bilan, réglages, joueurs concernés. -->
+         bilan, réglages, joueurs concernés — puis (2026-09-27) réglages, joueurs
+         concernés, bilan de la semaine dernière en dernier. -->
     <div class="section tp-page">
       <div class="tp-head">
         <span class="tp-eyebrow">Entraînement</span>
         <h2 id="trainingTitle" class="tp-title page-title">Semaine</h2>
       </div>
-
-      <div id="lastTrainingReportHolder"></div>
 
       <div class="tp-cols">
         <section class="tp-card tp-config" aria-labelledby="tpFondTitle">
@@ -6495,6 +6495,10 @@
           <label class="field-label" for="collectiveTrainingSelect">Focus collectif</label>
           <select id="collectiveTrainingSelect"></select>
           <div class="training-dilution-note" id="collectiveTrainingNote"></div>
+          <!-- Jauge "Forme moyenne de l'équipe", affichée UNIQUEMENT quand
+               collectiveTraining === "recuperation" (voir
+               renderRecoveryFormGauge). -->
+          <div id="recoveryFormGauge" class="recovery-form-gauge hidden"></div>
           <!-- Sous-panneau affiché UNIQUEMENT quand collectiveTraining ===
                "tactique" (voir renderTrainedTacticsPicker) : aspect travaillé
                (menu avec jauges) + jauge "Maîtrise actuelle". -->
@@ -6512,6 +6516,11 @@
              sur le cycle apparaissent (voir renderTrainingList). -->
         <div class="training-list" id="trainingList"></div>
       </section>
+
+      <!-- Retour utilisateur (2026-09-27) : "Bilan de la semaine dernière en
+           dessous des trois autres briques de la page. ça libèrera de la
+           place" — n'est plus en tête de page. -->
+      <div id="lastTrainingReportHolder"></div>
     </div>
   </div>
 
@@ -12492,14 +12501,13 @@ class Team {
       }
       log.push(snapshotEntry(todayIndex, this.collectiveTraining, this.trainedTactics));
     }
-    if (this.tacticsCycleStartDayIndex != null) {
     this.applyRestDayRecovery(todayIndex);
+    if (this.tacticsCycleStartDayIndex != null) {
       this.collectiveTrainingLog = this.collectiveTrainingLog.filter(e => e.dayIndex > this.tacticsCycleStartDayIndex);
     }
   }
 
   // Voir engine.js, miroir identique (Team.daysTrainedForTarget).
-  // `matchDayIndex` (optionnel, voir parisCalendarDayIndex) : jour du match
   // Focus collectif « Récupération » (retour utilisateur, 2026-09-27 :
   // "uniquement les jours de repos") : +CONDITION_RECOVERY_PER_DAY_TRAINED -
   // CONDITION_RECOVERY_PER_DAY (5) points de forme à tout l'effectif, une
@@ -12523,6 +12531,7 @@ class Team {
     });
   }
 
+  // `matchDayIndex` (optionnel, voir parisCalendarDayIndex) : jour du match
   // qui consomme le crédit — ce jour-là n'est PAS un jour de repos, il ne
   // compte donc jamais (retour utilisateur, 2026-09-27 : "les entrainements
   // collectifs eux, sont uniquement sur les jours de repos" ; avant, un
@@ -14324,9 +14333,9 @@ class Team {
   }
 
   resetForMatch(now = Date.now()) {
-    // Alchimie d'équipe (voir engine.js, miroir identique).
     // Jours de repos « Récupération » crédités avant le coup d'envoi (voir engine.js, miroir identique).
     if (this.isHuman && typeof this.syncCollectiveTrainingLog === "function") this.syncCollectiveTrainingLog(now);
+    // Alchimie d'équipe (voir engine.js, miroir identique).
     const chemistryFactor = this.chemistryFactor();
     // Connaissance tactique (voir engine.js, miroir identique).
     const tacticalKnowledgeFactor = this.tacticalKnowledgeFactor();
@@ -17309,8 +17318,8 @@ function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, wee
 const WEEKLY_RHYTHM_MATCH_HOUR = 20;
 const WEEKLY_RHYTHM_FIRST_MATCH_WEEKDAY = 2; // mardi (Date#getUTCDay)
 const WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS = [0, 4]; // mardi, samedi (depuis le mardi)
-const WEEKLY_RHYTHM_CUP_DAY_OFFSET = 2; // jeudi
 const WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS = [0, 2, 4]; // play-offs : mardi, jeudi, samedi
+const WEEKLY_RHYTHM_CUP_DAY_OFFSET = 2; // jeudi
 const WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET = 6; // lundi (fin de la nuit du dimanche)
 const WEEKLY_RHYTHM_ECONOMY_HOUR = 0;
 
@@ -17334,12 +17343,12 @@ function weeklyRhythmCalendarStartAt(now) {
 // tiennent donc toujours en 2 semaines (saison = 9 + 2 = 11 semaines).
 function weeklyRhythmDayIndexForChampionshipRound(round, poFromRound = null) {
   const n = WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS.length;
-  return 7 * Math.floor(round / n) + WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS[round % n];
   if (poFromRound != null && round >= poFromRound) {
     const m = WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS.length;
     const i = round - poFromRound;
     return 7 * (Math.ceil(poFromRound / n) + Math.floor(i / m)) + WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS[i % m];
   }
+  return 7 * Math.floor(round / n) + WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS[round % n];
 }
 function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound = null) {
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round, poFromRound), WEEKLY_RHYTHM_MATCH_HOUR);
@@ -17647,8 +17656,8 @@ function serializeTeam(team) {
         dayIndex: e.dayIndex,
         collectiveTraining: e.collectiveTraining || null,
         trainedTactics: e.trainedTactics ? { category: e.trainedTactics.category, value: e.trainedTactics.value } : null,
-      }))
         recoveryApplied: !!e.recoveryApplied,
+      }))
       : [],
     // Jour civil du dernier match réellement joué (voir engine.js, miroir
     // identique).
@@ -18118,8 +18127,8 @@ function teamFromSave(data) {
         trainedTactics: (e.trainedTactics && ["offense", "defense", "rhythm"].includes(e.trainedTactics.category) && typeof e.trainedTactics.value === "string")
           ? { category: e.trainedTactics.category, value: e.trainedTactics.value }
           : null,
-      }))
         recoveryApplied: !!e.recoveryApplied,
+      }))
     : [];
   team.tacticsCycleStartDayIndex = typeof data.tacticsCycleStartDayIndex === "number" ? data.tacticsCycleStartDayIndex : null;
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
@@ -32374,10 +32383,41 @@ function populateCollectiveTrainingSelect() {
     // banqués restent utilisables au prochain match, ET pour retrouver son
     // choix précédent si on repasse sur "tactique" plus tard.
     renderTrainedTacticsPicker();
+    renderRecoveryFormGauge();
     saveMyTeam();
     syncTrainingToServer();
   };
   renderTrainedTacticsPicker();
+  renderRecoveryFormGauge();
+}
+
+// Jauge "Forme moyenne de l'équipe" sous le focus collectif (retour
+// utilisateur, 2026-09-27 : "quand on met travailler la récupération, une
+// petite jauge en dessous avec la forme moyenne de l'équipe") : moyenne de
+// currentCondition (même valeur que le badge Forme de l'Effectif, jours de
+// repos rattrapés) sur tout l'effectif, libellé = CONDITION_STATES ; mêmes
+// seuils de couleur que conditionBadgeHtml. Visible seulement en
+// "recuperation".
+function teamAverageCondition(team, now = Date.now()) {
+  const players = (team && team.players) || [];
+  if (!players.length) return null;
+  const recovery = team.conditionRecoveryPerDay();
+  return Math.round(players.reduce((sum, p) => sum + currentCondition(p, now, recovery), 0) / players.length);
+}
+function renderRecoveryFormGauge() {
+  const holder = document.getElementById("recoveryFormGauge");
+  if (!holder) return;
+  const avg = teamA && teamA.collectiveTraining === "recuperation" ? teamAverageCondition(teamA) : null;
+  if (avg == null) {
+    holder.classList.add("hidden");
+    holder.innerHTML = "";
+    return;
+  }
+  const color = avg >= 75 ? "var(--ok)" : avg >= 60 ? "var(--amber)" : "var(--danger)";
+  holder.classList.remove("hidden");
+  holder.innerHTML = `<div class="tq-knowledge" title="Moyenne de la forme physique des ${teamA.players.length} joueurs de l'effectif">` +
+    `<div class="tq-knowledge-head"><span>Forme moyenne de l'équipe</span><b style="color:${color}">${escapeHtml(conditionStateFor(avg).label)} · ${avg}/100</b></div>` +
+    `<div class="tq-track"><div class="tq-fill" style="width:${Math.max(3, avg)}%;background:${color}"></div></div></div>`;
 }
 
 // Options du sélecteur unique de tactique précisément entraînée : une seule

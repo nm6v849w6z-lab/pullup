@@ -20,6 +20,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) —
+  Entraînement : jauge de forme moyenne sous
+  « Travailler la récupération » + bilan de la semaine dernière en bas** —
+  retour utilisateur (capture page Entraînement) : "quand on met travailler
+  la récupération, une petite jauge en dessous avec la forme moyenne de
+  l'équipe" ; "Bilan de la semaine dernière en dessous des trois autres
+  briques de la page". moteurbasket3.html : #recoveryFormGauge dans la
+  carte Collectif (renderRecoveryFormGauge, currentCondition moyenne avec
+  conditionRecoveryPerDay), #lastTrainingReportHolder déplacé après
+  « Qui profite… ». Test : training_recovery_gauge_test.js (+ onboarding_tour,
+  tabs, daily_training_cycle, synergy_training, trained_tactic_dropdown
+  verts). Reste : push.
+
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Play-offs mardi/jeudi/samedi +
   Récupération seulement les jours de repos** — retours utilisateur : "les
   PO doivent se jouer le mardi jeudi et samedi", "la coupe sera tjrs
