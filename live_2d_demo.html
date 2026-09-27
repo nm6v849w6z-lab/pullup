@@ -3139,6 +3139,7 @@ class League {
     // weeklyRhythmCalendarStartAt) : variante du calendrier ancré, fixée à la création.
     this.calendarWeeklyRhythm = false;
     this.lastEconomyTick = 0; // dernière mise à jour économique hebdomadaire réglée (k >= 1)
+    this.calendarWeeklySwitch = null; // bascule en pleine saison, voir dailyAnchoredScheduledTimeForChampionshipRound
     this.lastAutoTrainedDay = -1;
     this.cup = null;
 
@@ -4382,14 +4383,26 @@ function dailyAnchoredDayIndexForChampionshipRound(round) {
 function dailyAnchoredSlotIndexForChampionshipRound(round) {
   return round % CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS.length;
 }
-function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false) {
-  if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round);
+// Bascule EN PLEINE SAISON (retour utilisateur, 2026-09-27 : "bascule en
+// pleine saison oui") : une ligue lancée au rythme quotidien passe au rythme
+// hebdomadaire sans perdre ce qui est déjà joué. `sw` =
+// League.calendarWeeklySwitch = { fromRound, fromCupRound, anchorAt } : les
+// journées < fromRound (et tours de coupe < fromCupRound) gardent leur date
+// quotidienne d'origine ; la suite suit le rythme hebdomadaire à partir du
+// mardi `anchorAt` (journée fromRound = ce mardi, etc.). null pour une ligue
+// créée directement au rythme hebdomadaire.
+function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null) {
+  if (weekly && sw && typeof sw.anchorAt === "number") {
+    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound);
+  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round);
   const dayIndex = dailyAnchoredDayIndexForChampionshipRound(round);
   const hour = CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[dailyAnchoredSlotIndexForChampionshipRound(round)];
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
 }
-function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false) {
-  if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex);
+function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false, sw = null) {
+  if (weekly && sw && typeof sw.anchorAt === "number") {
+    if (cupDayIndex >= sw.fromCupRound) return weeklyRhythmScheduledTimeForCupRound(sw.anchorAt, cupDayIndex - sw.fromCupRound);
+  } else if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex);
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, cupDayIndex, CALENDAR_DAILY_ANCHORED_CUP_HOUR);
 }
 
@@ -4861,6 +4874,7 @@ function serializeLeague(lg) {
     calendarDailyAnchored: !!lg.calendarDailyAnchored,
     calendarWeeklyRhythm: !!lg.calendarWeeklyRhythm,
     lastEconomyTick: typeof lg.lastEconomyTick === "number" ? lg.lastEconomyTick : 0,
+    calendarWeeklySwitch: lg.calendarWeeklySwitch ? { ...lg.calendarWeeklySwitch } : null,
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
     cup: lg.cup || null,
     // Diffusions en direct en cours (voir League.liveMatches ci-dessus) :
@@ -4915,6 +4929,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarDailyAnchored = !!data.calendarDailyAnchored;
   lg.calendarWeeklyRhythm = !!data.calendarWeeklyRhythm;
   lg.lastEconomyTick = typeof data.lastEconomyTick === "number" ? data.lastEconomyTick : 0;
+  lg.calendarWeeklySwitch = data.calendarWeeklySwitch && typeof data.calendarWeeklySwitch.anchorAt === "number" ? { ...data.calendarWeeklySwitch } : null;
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
   lg.cup = data.cup || null;
   // Ancienne sauvegarde (avant liveMatches au pluriel) : `data.liveMatches`

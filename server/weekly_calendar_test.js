@@ -196,4 +196,41 @@ function paris(ms) {
   console.log("✅ Entraînement fondamental : minutes cumulées du mardi au samedi, remises à 0 le lundi.");
 })();
 
+// ---------------------------------------------------------------------
+// 6) Bascule EN PLEINE SAISON (retour utilisateur, 2026-09-27 : "bascule en
+//    pleine saison oui") : les journées jouées gardent leur date, la suite
+//    passe au mardi/samedi 20h à partir du prochain mardi ; un match déjà en
+//    cours de diffusion se termine à son heure d'origine.
+// ---------------------------------------------------------------------
+(function testMidSeasonSwitch() {
+  const created = Date.UTC(2026, 8, 22, 12); // ligue lancée mercredi 23/09 10h, rythme quotidien
+  for (const [label, at, expectFrom] of [
+    ["avant le match du soir", Date.UTC(2026, 8, 27, 10, 40), 9],
+    ["pendant le match du soir", Date.UTC(2026, 8, 27, 17, 30), 10],
+  ]) {
+    const lg = E.generateMultiManagerLeague(["A", "B"], 1, created, { dailyAnchored: true });
+    A.catchUpLeague(lg, at);
+    const past = [...Array(expectFrom).keys()].map(r => C.scheduledTimeForLeagueRound(lg, r));
+    const sw = E.migrateLeagueToWeeklyRhythm(lg, at);
+    if (!sw || sw.fromRound !== expectFrom) throw new Error(`❌ Bascule ${label} : la nouvelle règle devrait partir de la journée ${expectFrom + 1} (obtenu ${sw && sw.fromRound + 1}).`);
+    if (E.migrateLeagueToWeeklyRhythm(lg, at) !== null) throw new Error("❌ La bascule doit être idempotente.");
+    past.forEach((t, r) => { if (C.scheduledTimeForLeagueRound(lg, r) !== t) throw new Error(`❌ La journée ${r + 1} déjà programmée ne doit pas bouger.`); });
+    const first = paris(C.scheduledTimeForLeagueRound(lg, expectFrom));
+    if (first.weekday !== "Tue" || first.hm !== "20:00") throw new Error(`❌ Après la bascule, la journée ${expectFrom + 1} devrait être le mardi à 20:00 (obtenu ${first.weekday} ${first.hm}).`);
+    const second = paris(C.scheduledTimeForLeagueRound(lg, expectFrom + 1));
+    if (second.weekday !== "Sat") throw new Error("❌ La journée suivante devrait être le samedi.");
+    const back = E.leagueFromSave(JSON.parse(JSON.stringify(E.serializeLeague(lg))));
+    if (C.scheduledTimeForLeagueRound(back, expectFrom) !== C.scheduledTimeForLeagueRound(lg, expectFrom)) throw new Error("❌ La bascule doit survivre à la sauvegarde.");
+    let t = at;
+    const types = [];
+    for (let i = 0; i < 600 && !lg.isPlayoffsDone(); i++) { t += 3 * 3600 * 1000; A.catchUpLeague(lg, t).forEach(e => types.push(e.type)); }
+    if (!lg.isPlayoffsDone()) throw new Error("❌ La saison basculée devrait aller jusqu'au bout.");
+    if (!types.includes("training")) throw new Error("❌ Après la bascule, les mises à jour du lundi devraient avoir lieu.");
+  }
+  // tick() du serveur bascule automatiquement une ligue quotidienne.
+  const src = fs.readFileSync(path.join(__dirname, "index.js"), "utf-8");
+  if (!/migrateLeagueToWeeklyRhythm\(league, now\)/.test(src)) throw new Error("❌ server/index.js:tick devrait basculer les ligues au rythme quotidien.");
+  console.log("✅ Bascule en pleine saison : passé inchangé, suite le mardi 20:00 (match en cours préservé), sauvegarde et saison complète OK.");
+})();
+
 console.log("\n🏁 Tous les tests du rythme hebdomadaire sont passés.");

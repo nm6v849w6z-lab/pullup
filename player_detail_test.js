@@ -123,9 +123,8 @@ if (!detailContent.includes("3 matchs")) {
 // tableau "Match par match" (historique complet, journée par journée) a été
 // retiré du bas de la fiche joueur, remplacé par la fenêtre superposée
 // "Voir toute la saison" ouverte depuis la carte "Derniers matchs"
-// (n'apparaît que si plus de 5 matchs joués, voir
-// player_season_stats_modal_test.js pour cette fenêtre en détail — ce
-// fichier-ci n'en a que 3, pas assez pour que le bouton apparaisse). Il ne
+// (affichée dès le premier match joué depuis le 2026-09-27, voir
+// player_season_stats_modal_test.js pour cette fenêtre en détail). Il ne
 // reste donc plus qu'UNE SEULE table.roster-table sur la fiche : "Moyennes
 // de la saison" (remontée AU-DESSUS de "Mise en vente", retour utilisateur
 // "il faut remonter le bloc moyenne de la saison au dessus du bloc mise en

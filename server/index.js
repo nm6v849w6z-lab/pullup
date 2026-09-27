@@ -366,6 +366,15 @@ async function persistContext(ctx) {
 // coûte une écriture disque de plus par requête (fichier JSON minuscule),
 // largement acceptable pour la correction que ça garantit.
 function tick(league, now) {
+  // Bascule en pleine saison vers le rythme hebdomadaire (retour
+  // utilisateur, 2026-09-27 : "bascule en pleine saison oui") : toute ligue
+  // encore au rythme quotidien passe au rythme mardi/samedi (coupe le jeudi)
+  // dès la première requête, sans rien perdre de ce qui est déjà joué — voir
+  // Engine.migrateLeagueToWeeklyRhythm. No-op ensuite (idempotente).
+  if (Engine.migrateLeagueToWeeklyRhythm && league && league.calendarDailyAnchored && !league.calendarWeeklyRhythm) {
+    const sw = Engine.migrateLeagueToWeeklyRhythm(league, now);
+    if (sw) console.log(`[calendrier] Ligue basculée au rythme hebdomadaire : journée ${sw.fromRound + 1} le ${new Date(sw.anchorAt).toISOString()}, coupe à partir du tour ${sw.fromCupRound + 1}.`);
+  }
   AutoSim.ensureLiveMatch(league, now);
   const events = AutoSim.catchUpLeague(league, now);
   // Ligues privées (voir server/privateLeague.js) : journées du vendredi

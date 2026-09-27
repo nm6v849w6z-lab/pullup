@@ -14965,6 +14965,7 @@ class League {
     // weeklyRhythmCalendarStartAt) : variante du calendrier ancré, fixée à la création.
     this.calendarWeeklyRhythm = false;
     this.lastEconomyTick = 0; // dernière mise à jour économique hebdomadaire réglée (k >= 1)
+    this.calendarWeeklySwitch = null; // bascule en pleine saison, voir dailyAnchoredScheduledTimeForChampionshipRound
     this.lastAutoTrainedDay = -1;
     this.cup = null;
 
@@ -15086,9 +15087,9 @@ class League {
     if (!cup) return champ;
     if (typeof this.calendarStartAt !== "number") return champ;
     const champAt = this.calendarDailyAnchored
-      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round, !!this.calendarWeeklyRhythm)
+      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round, !!this.calendarWeeklyRhythm, this.calendarWeeklySwitch || null)
       : calendarScheduledTimeForRound(this.calendarStartAt, champ.round, this.calendarWeekMs || undefined, this.calendarSlotOffsetsMs || undefined);
-    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex, !!this.calendarWeeklyRhythm);
+    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex, !!this.calendarWeeklyRhythm, this.calendarWeeklySwitch || null);
     return cupAt <= champAt ? cup : champ;
   }
 
@@ -16773,14 +16774,26 @@ function dailyAnchoredDayIndexForChampionshipRound(round) {
 function dailyAnchoredSlotIndexForChampionshipRound(round) {
   return round % CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS.length;
 }
-function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false) {
-  if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round);
+// Bascule EN PLEINE SAISON (retour utilisateur, 2026-09-27 : "bascule en
+// pleine saison oui") : une ligue lancée au rythme quotidien passe au rythme
+// hebdomadaire sans perdre ce qui est déjà joué. `sw` =
+// League.calendarWeeklySwitch = { fromRound, fromCupRound, anchorAt } : les
+// journées < fromRound (et tours de coupe < fromCupRound) gardent leur date
+// quotidienne d'origine ; la suite suit le rythme hebdomadaire à partir du
+// mardi `anchorAt` (journée fromRound = ce mardi, etc.). null pour une ligue
+// créée directement au rythme hebdomadaire.
+function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null) {
+  if (weekly && sw && typeof sw.anchorAt === "number") {
+    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound);
+  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round);
   const dayIndex = dailyAnchoredDayIndexForChampionshipRound(round);
   const hour = CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[dailyAnchoredSlotIndexForChampionshipRound(round)];
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
 }
-function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false) {
-  if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex);
+function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false, sw = null) {
+  if (weekly && sw && typeof sw.anchorAt === "number") {
+    if (cupDayIndex >= sw.fromCupRound) return weeklyRhythmScheduledTimeForCupRound(sw.anchorAt, cupDayIndex - sw.fromCupRound);
+  } else if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex);
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, cupDayIndex, CALENDAR_DAILY_ANCHORED_CUP_HOUR);
 }
 
@@ -17747,6 +17760,7 @@ function serializeLeague(lg) {
     calendarDailyAnchored: !!lg.calendarDailyAnchored,
     calendarWeeklyRhythm: !!lg.calendarWeeklyRhythm,
     lastEconomyTick: typeof lg.lastEconomyTick === "number" ? lg.lastEconomyTick : 0,
+    calendarWeeklySwitch: lg.calendarWeeklySwitch ? { ...lg.calendarWeeklySwitch } : null,
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
     cup: lg.cup || null,
     privateLeagues: Array.isArray(lg.privateLeagues) ? lg.privateLeagues : [],
@@ -17798,6 +17812,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarDailyAnchored = !!data.calendarDailyAnchored;
   lg.calendarWeeklyRhythm = !!data.calendarWeeklyRhythm;
   lg.lastEconomyTick = typeof data.lastEconomyTick === "number" ? data.lastEconomyTick : 0;
+  lg.calendarWeeklySwitch = data.calendarWeeklySwitch && typeof data.calendarWeeklySwitch.anchorAt === "number" ? { ...data.calendarWeeklySwitch } : null;
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
   lg.cup = data.cup || null;
   // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
@@ -22209,7 +22224,7 @@ function scheduledTimeForCurrentMatch() {
 function scheduledTimeForChampionshipRound(round) {
   if (!league || typeof league.calendarStartAt !== "number") return null;
   if (league.calendarDailyAnchored) {
-    return dailyAnchoredScheduledTimeForChampionshipRound(league.calendarStartAt, round, !!league.calendarWeeklyRhythm);
+    return dailyAnchoredScheduledTimeForChampionshipRound(league.calendarStartAt, round, !!league.calendarWeeklyRhythm, league.calendarWeeklySwitch || null);
   }
   return calendarScheduledTimeForRound(
     league.calendarStartAt,
@@ -22225,7 +22240,7 @@ function scheduledTimeForChampionshipRound(round) {
 // Coupe (voir league.cup / renderCoupeSection) — renvoie null sinon.
 function scheduledTimeForCupRound(cupDayIndex) {
   if (!league || typeof league.calendarStartAt !== "number" || !league.calendarDailyAnchored) return null;
-  return dailyAnchoredScheduledTimeForCupRound(league.calendarStartAt, cupDayIndex, !!league.calendarWeeklyRhythm);
+  return dailyAnchoredScheduledTimeForCupRound(league.calendarStartAt, cupDayIndex, !!league.calendarWeeklyRhythm, league.calendarWeeklySwitch || null);
 }
 
 // Durée lisible ("2 j 3 h", "45 min", "12 s"), toujours au format le plus
@@ -24233,10 +24248,13 @@ function renderPlayerDetail(teamIdx, playerId) {
         `<td class="num"><span class="pdp2-eval ${evClass}">${ev > 0 ? "+" + ev : ev}</span></td></tr>`;
     });
     html += `</tbody></table>`;
-    // Bouton "Voir toute la saison" (retour utilisateur, 2026-09-24) :
-    // inchangé, voir showPlayerSeasonStatsModal. Affiché seulement s'il y a
-    // réellement plus de 5 matchs à voir.
-    if (log.length > 5) {
+    // Bouton "Voir toute la saison" (retour utilisateur, 2026-09-24, voir
+    // showPlayerSeasonStatsModal). Affiché dès le premier match joué (retour
+    // utilisateur 2026-09-27 : "il n'y a plus d'onglet sur la brique derniers
+    // matchs pour voir les stats de tous les matchs de la saison") : la
+    // fenêtre montre TOUTES les stats (pas seulement Pts/Reb/PD) et les
+    // moyennes, utile même avec 5 matchs ou moins.
+    if (log.length > 0) {
       html += `<button type="button" class="stats-leader-expand-btn" id="playerSeasonStatsOpenBtn" data-team-idx="${teamIdx}" data-player-id="${player.id}">Voir toute la saison (${log.length} matchs) ▾</button>`;
     }
   } else {

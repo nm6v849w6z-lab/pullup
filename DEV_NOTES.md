@@ -58,7 +58,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   - Tests : nouveau server/weekly_calendar_test.js (dates, DST, 4 copies
     identiques, saison complète, paies, minutes hebdo) ; autoSim_test et
     cup_test gardent l'ancien rythme quotidien ({ dailyAnchored: true }).
-  - Reste : committer/pousser, puis reset de la ligue pour activer.
+  - Bascule EN PLEINE SAISON (retour utilisateur : "bascule en pleine
+    saison oui") — DÉPLOYÉE SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER :
+    Engine.migrateLeagueToWeeklyRhythm, appelée par server/index.js:tick
+    pour toute ligue encore au rythme quotidien. League.calendarWeeklySwitch
+    = { fromRound, fromCupRound, anchorAt } : journées/tours déjà joués
+    gardent leur date, la suite repart du prochain mardi 20h (match en cours
+    de diffusion terminé à son heure). Si poussé avant 19h le 27/09 : J10
+    le mardi 29/09 20h, J11 samedi 3/10… J18 mardi 27/10, play-offs ensuite ;
+    1re mise à jour du lundi le 5/10 (pas de paie entre-temps). Plus besoin
+    de reset. Test : section 6 de server/weekly_calendar_test.js.
+  - À signaler à l'autre session : cup_ordres_planning_test.js échoue depuis
+    a2b0493 (« 3 joueurs max par poste » : plus de select « Ajouter un
+    remplaçant » au Pivot), sans rapport avec le calendrier.
 
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-27) — Ordres : carte
   « Temps de jeu » plus compacte + 3 joueurs max par poste** — retours

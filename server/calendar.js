@@ -141,7 +141,7 @@ function scheduledTimeForLeagueRound(league, round) {
   // simple référence de fonction (hissée par la déclaration `function`,
   // comme le reste de ce module).
   if (league.calendarDailyAnchored) {
-    return dailyAnchoredScheduledTimeForChampionshipRound(league.calendarStartAt, round, !!league.calendarWeeklyRhythm);
+    return dailyAnchoredScheduledTimeForChampionshipRound(league.calendarStartAt, round, !!league.calendarWeeklyRhythm, league.calendarWeeklySwitch || null);
   }
   return scheduledTimeForRound(
     league.calendarStartAt,
@@ -158,7 +158,7 @@ function scheduledTimeForLeagueRound(league, round) {
 // jamais de league.cup (voir generateMultiManagerLeague), donc cette
 // fonction n'est jamais appelée pour elle.
 function scheduledTimeForLeagueCupRound(league, cupDayIndex) {
-  return dailyAnchoredScheduledTimeForCupRound(league.calendarStartAt, cupDayIndex, !!league.calendarWeeklyRhythm);
+  return dailyAnchoredScheduledTimeForCupRound(league.calendarStartAt, cupDayIndex, !!league.calendarWeeklyRhythm, league.calendarWeeklySwitch || null);
 }
 
 // Instant de la k-ième mise à jour économique (k >= 1) d'une ligue au
@@ -166,7 +166,8 @@ function scheduledTimeForLeagueCupRound(league, cupDayIndex) {
 // autre calendrier (l'économie y suit toujours les matchs).
 function scheduledTimeForLeagueEconomyTick(league, k) {
   if (!league || !league.calendarDailyAnchored || !league.calendarWeeklyRhythm || typeof league.calendarStartAt !== "number") return null;
-  return weeklyRhythmEconomyTickAt(league.calendarStartAt, k);
+  const sw = league.calendarWeeklySwitch;
+  return weeklyRhythmEconomyTickAt(sw && typeof sw.anchorAt === "number" ? sw.anchorAt : league.calendarStartAt, k);
 }
 
 // Instant réel (epoch ms) de fin d'une semaine réelle donnée (utile pour
@@ -401,8 +402,18 @@ function dailyAnchoredDayIndexForChampionshipRound(round) {
 function dailyAnchoredSlotIndexForChampionshipRound(round) {
   return round % DAILY_ANCHORED_CHAMPIONSHIP_HOURS.length;
 }
-function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false) {
-  if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round);
+// Bascule EN PLEINE SAISON (retour utilisateur, 2026-09-27 : "bascule en
+// pleine saison oui") : une ligue lancée au rythme quotidien passe au rythme
+// hebdomadaire sans perdre ce qui est déjà joué. `sw` =
+// League.calendarWeeklySwitch = { fromRound, fromCupRound, anchorAt } : les
+// journées < fromRound (et tours de coupe < fromCupRound) gardent leur date
+// quotidienne d'origine ; la suite suit le rythme hebdomadaire à partir du
+// mardi `anchorAt` (journée fromRound = ce mardi, etc.). null pour une ligue
+// créée directement au rythme hebdomadaire.
+function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null) {
+  if (weekly && sw && typeof sw.anchorAt === "number") {
+    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound);
+  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round);
   const dayIndex = dailyAnchoredDayIndexForChampionshipRound(round);
   const hour = DAILY_ANCHORED_CHAMPIONSHIP_HOURS[dailyAnchoredSlotIndexForChampionshipRound(round)];
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
@@ -413,8 +424,10 @@ function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, 
 // ne sait rien lui-même de "un jour a-t-il un tour de coupe dû" — c'est
 // l'appelant (server/autoSim.js) qui ne consulte cette fonction que pour un
 // `cupDayIndex` correspondant à un tour réellement en attente.
-function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false) {
-  if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex);
+function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false, sw = null) {
+  if (weekly && sw && typeof sw.anchorAt === "number") {
+    if (cupDayIndex >= sw.fromCupRound) return weeklyRhythmScheduledTimeForCupRound(sw.anchorAt, cupDayIndex - sw.fromCupRound);
+  } else if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex);
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, cupDayIndex, DAILY_ANCHORED_CUP_HOUR);
 }
 
