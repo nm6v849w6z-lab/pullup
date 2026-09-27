@@ -2184,7 +2184,7 @@
   .pdp2-bar span{display:block; height:100%; border-radius:999px;}
   .pdp2 .pdp-attr-value{min-width:26px; font-size:16px; font-variant-numeric:tabular-nums;}
   .pdp2 .pdp-attr-row .pdp-pill.locked{min-width:26px; text-align:center;}
-  .pdp-attr-up{flex:0 0 12px; width:12px; margin-right:-6px; font-size:11px; line-height:1; text-align:center; color:#3ecf67;}
+  .pdp-attr-up{flex:0 0 12px; width:12px; margin-left:-6px; font-size:11px; line-height:1; text-align:center; color:#3ecf67;}
   /* Rapport de scouting mis en évidence (retour utilisateur, 2026-09-25 :
      "un peu plus gros [...] c'est un peu perdu") : encadré teinté accent. */
   .pdp2 .pdp-scouting{margin-top:20px; padding:14px 18px; border:1px solid rgba(240,162,60,.35); border-left-width:1px; border-radius:12px; background:rgba(240,162,60,.08); font-size:15px; line-height:1.5; color:var(--ink);}
@@ -23619,15 +23619,16 @@ function pdpAttrRowHtml(player, attr, visible, ups) {
   // Petit triangle vert si la caractéristique a progressé au dernier
   // entraînement (retour utilisateur 2026-09-27 : "quand le joueur a pris
   // un (ou plusieurs) ups, il faudrait une petite flèche vers le haut").
-  // Emplacement de largeur fixe, vide sinon, pour garder les barres alignées.
+  // À droite du nombre ("mieux à droite", même jour) ; emplacement de
+  // largeur fixe, vide sinon, pour garder les nombres alignés.
   const up = ups && ups[attr] > 0 ? ups[attr] : 0;
   const upHtml = up
     ? `<span class="pdp-attr-up" title="+${up} au dernier entraînement" aria-label="+${up} au dernier entraînement">▲</span>`
     : `<span class="pdp-attr-up" aria-hidden="true"></span>`;
   return `<div class="pdp-attr-row"><span class="lbl">${escapeHtml(label)}</span>` +
     `<span class="pdp2-bar"><span style="width:${clamp(value, 0, 100)}%;background:${radarTierColor(value)}"></span></span>` +
-    upHtml +
-    `<span class="pdp-attr-value ${attrColorTier(value)}">${value}</span></div>`;
+    `<span class="pdp-attr-value ${attrColorTier(value)}">${value}</span>` +
+    upHtml + `</div>`;
 }
 // Schéma de terrain compact (voir COURT_SVG/COURT_MARKER_POS plus haut,
 // déjà utilisés par la feuille de match/.lineup-court) : les 5 postes,
