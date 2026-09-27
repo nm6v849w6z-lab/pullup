@@ -143,13 +143,17 @@ function playWholeSeason(league, now) {
     && lab({ ...base, rank: 5 }) === "Milieu de tableau" && lab({ ...base, rank: 7 }) === "Barrage" && lab({ ...base, rank: 8, barrageLost: true }) === "Relégation" && lab({ ...base, rank: 10 }) === "Relégation",
     "parcours en championnat : champion, finale, play-offs, milieu de tableau, barrage, relégation");
   check(doc.querySelectorAll(".hc-table").length === 1 && !/Légendes du club/.test(txt), "plus de tableau Légendes (remplacé par le Hall of Fame)");
-  check(!/Nos joueurs parmi tous ceux de la ligue/.test(txt) && !/joueurs classés dans la ligue/.test(txt), "classement mondial : textes d'intro retirés");
   const cols = doc.querySelectorAll("#histoireContent .hc-col");
-  check(cols.length === 2 && cols[0].querySelectorAll(".lg-panel").length === 3 && /Records du club/.test(cols[1].textContent), "mise en page : Palmarès + Hall of Fame + Classement mondial à gauche, Records à droite");
-  const wsRows = doc.querySelectorAll(".hc-ws-row");
-  check(wsRows.length === 5 && /Meilleur marqueur/.test(txt) && /Meilleur passeur/.test(txt) && /Meilleur rebondeur/.test(txt) && /Meilleur contreur/.test(txt), "classement mondial par stat (marqueur, passeur, rebondeur, contreur, intercepteur)");
-  const firstWorld = doc.querySelector(".hc-ws-row .hc-world-rank");
+  check(cols.length === 2 && cols[0].querySelectorAll(".lg-panel").length === 2 && /Records du club/.test(cols[1].textContent), "mise en page : Palmarès + Hall of Fame à gauche, Records à droite");
+  check(!doc.querySelector("#histoireContent .hc-ws-row") && !/Classement mondial/.test(txt), "le Classement mondial n'est plus dans Histoire du club (déplacé dans Statistiques)");
+  // Classement mondial : désormais dans l'onglet Statistiques.
+  [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "statshebdo").click();
+  const wsTxt = doc.getElementById("statsWorldContent").textContent;
+  const wsRows = doc.querySelectorAll("#statsWorldContent .hc-ws-row");
+  check(wsRows.length === 5 && /Meilleur marqueur/.test(wsTxt) && /Meilleur passeur/.test(wsTxt) && /Meilleur rebondeur/.test(wsTxt) && /Meilleur contreur/.test(wsTxt), "Statistiques : classement mondial par stat (marqueur, passeur, rebondeur, contreur, intercepteur)");
+  const firstWorld = doc.querySelector("#statsWorldContent .hc-ws-row .hc-world-rank");
   check(firstWorld && /^\d+(er|e)$/.test(firstWorld.textContent.trim()), `rang mondial affiché (${firstWorld && firstWorld.textContent})`);
+  tab.click();
   // Records cliquables → feuille de match (saison en cours seulement).
   const recBtn = doc.querySelector("button.hc-record[data-hc-match]");
   check(!!recBtn, `un record de la saison en cours est cliquable (${recBtn && recBtn.dataset.hcMatch})`);
@@ -184,8 +188,9 @@ function playWholeSeason(league, now) {
   r2 = await fetch(`${baseUrl}api/club/hall-of-fame/retire-jersey`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": token }, body: JSON.stringify({ playerId: pickedId, number: null }) });
   const r3 = await fetch(`${baseUrl}api/club/hall-of-fame/remove`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": token }, body: JSON.stringify({ playerId: pickedId }) });
   check(r2.status === 400 && r3.status === 404, "serveur : ni annulation du retrait ni sortie du Hall of Fame");
-  tab.click();
-  const link = doc.querySelector("#histoireContent .player-link, #histoireContent [data-player-detail]");
+  // Lien joueur du Classement mondial (désormais dans l'onglet Statistiques).
+  [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "statshebdo").click();
+  const link = doc.querySelector("#statsWorldContent .player-link, #statsWorldContent [data-player-detail]");
   link.click();
   check(!doc.getElementById("playerDetailSection").classList.contains("hidden"), "clic sur un joueur → fiche joueur");
   const chip = doc.querySelector(".pdp2-chip--world");

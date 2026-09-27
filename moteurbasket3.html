@@ -21,7 +21,7 @@
      zoom 1:1 — cela permet aussi enfin aux media queries mobiles existantes
      de s'appliquer normalement. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pull Up · Basket Manager</title>
+<title>Hoop Manager</title>
 <!-- Application mobile (PWA, 2026-09-25 — retour utilisateur : "réfléchis à
      l'application mobile et prépare le code"). Tout le code mobile vit dans
      assets/mobile/ (barre d'onglets du bas, tiroir, service worker) ;
@@ -5548,6 +5548,16 @@
   button.hc-record:hover, button.hc-record:focus-visible{border-color:rgba(240,162,60,.6); background:rgba(240,162,60,.06); outline:none;}
   button.hc-record:hover .hc-record-text{color:var(--amber);}
   /* Classement mondial par statistique. */
+  /* ---- Statistiques (ex-Stats hebdo, 2026-09-27) ---- */
+  .st-page{display:flex; flex-direction:column; gap:20px;}
+  .st-page .page-title{margin-bottom:0;}
+  .st-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px; align-items:start;}
+  @media (max-width:1100px){ .st-grid{grid-template-columns:minmax(0,1fr);} }
+  .st-panel .field-label:first-child{margin-top:0;}
+  .st-sortable{cursor:pointer; user-select:none; white-space:nowrap;}
+  .st-sortable:hover, .st-sortable.is-sorted{color:var(--amber);}
+  .st-season-table td:nth-child(n+3), .st-season-table th:nth-child(n+3){text-align:right; font-variant-numeric:tabular-nums;}
+  .st-dnp td{opacity:.5;}
   .hc-ws{display:flex; flex-direction:column;}
   .hc-ws-row{display:grid; grid-template-columns:150px minmax(0,1fr) 64px 60px; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line-soft);}
   .hc-ws-row:last-child{border-bottom:none;}
@@ -5846,7 +5856,7 @@
       <button class="tab-btn sidebar-link" data-tab="sponsors"><span class="sidebar-label">Sponsors</span></button>
       <button class="tab-btn sidebar-link" data-tab="salle"><span class="sidebar-label">Salle</span></button>
       <button class="tab-btn sidebar-link" data-tab="humeur"><span class="sidebar-label">Humeur des supporters</span></button>
-      <button class="tab-btn sidebar-link" data-tab="statshebdo"><span class="sidebar-label">Stats hebdo</span></button>
+      <button class="tab-btn sidebar-link" data-tab="statshebdo"><span class="sidebar-label">Statistiques</span></button>
     </div>
     <!-- Guide : regroupe tous les textes d'explication des mécaniques du jeu
          retirés des onglets individuels (retour utilisateur 2026-09 :
@@ -6774,11 +6784,30 @@
        l'effectif du club (matchs joués, performances individuelles,
        finances, humeur) — voir renderStatsHebdoSection. Navigable semaine
        par semaine (toute la saison en cours), pas seulement la dernière. -->
+  <!-- Renommé "Statistiques" (retour utilisateur 2026-09-27 : "l'onglet
+       stats hebdo va être renommé statistiques, on va basculer la brique
+       classement mondial qui est dans histoire du club dans statistiques,
+       dans statistiques on mettra aussi les stats de la saison des joueurs
+       de son équipe"). L'identifiant interne (statshebdo/statsHebdoSection)
+       reste inchangé. -->
   <div id="statsHebdoSection" class="hidden">
-    <div class="section">
-      <h2 class="page-title">Stats hebdo</h2>
-      <div class="week-nav" id="statsHebdoNav"></div>
-      <div id="statsHebdoContent"></div>
+    <div class="section st-page">
+      <h2 class="page-title">Statistiques</h2>
+      <section class="lg-panel st-panel" id="statsSeasonPanel">
+        <div class="lg-panel-title"><h2>Saison en cours</h2><span id="statsSeasonSub">Moyennes par match · championnat et coupe</span></div>
+        <div id="statsSeasonContent"></div>
+      </section>
+      <div class="st-grid">
+        <section class="lg-panel st-panel" id="statsWorldPanel">
+          <div class="lg-panel-title"><h2>Classement mondial</h2></div>
+          <div id="statsWorldContent"></div>
+        </section>
+        <section class="lg-panel st-panel" id="statsWeekPanel">
+          <div class="lg-panel-title"><h2>Semaine par semaine</h2></div>
+          <div class="week-nav" id="statsHebdoNav"></div>
+          <div id="statsHebdoContent"></div>
+        </section>
+      </div>
     </div>
   </div>
 
@@ -6928,8 +6957,8 @@
       </div>
 
       <div class="guide-entry" data-guide-id="statshebdo" data-guide-group="Compétitions">
-        <h3>Stats hebdo</h3>
-        <p class="training-intro">Récapitulatif semaine par semaine de votre club : matchs joués et performances individuelles de l'effectif. Naviguez d'une semaine à l'autre avec les flèches en haut de la page. Les finances sont dans l'onglet Économie, l'humeur des supporters dans son propre onglet.</p>
+        <h3>Statistiques</h3>
+        <p class="training-intro">Les chiffres de votre club en trois blocs. <b>Saison en cours</b> : les moyennes par match de chaque joueur de l'effectif (championnat et coupe), triables en cliquant sur un en-tête de colonne. <b>Classement mondial</b> : pour chaque statistique (points, passes, rebonds, contres, interceptions), votre meilleur joueur et son rang parmi tous les joueurs de la ligue. <b>Semaine par semaine</b> : les matchs joués et les performances de l'effectif, semaine après semaine, avec les flèches pour naviguer. Les finances sont dans l'onglet Économie, l'humeur des supporters dans son propre onglet.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="staff" data-guide-group="Club et finances">
@@ -37481,6 +37510,9 @@ function showStatsHebdoSection() {
   // rouvert repart d'un état "propre", jamais une vieille semaine parcourue
   // lors d'une visite précédente.
   statsHebdoSelectedWeek = teamA.week;
+  renderStatsSeasonSection();
+  const world = document.getElementById("statsWorldContent");
+  if (world) world.innerHTML = hcWorldStatsHtml(myTeamIndex);
   renderStatsHebdoSection();
   showPage("statsHebdoSection");
   setActiveTab("statshebdo");
@@ -37529,6 +37561,80 @@ function computeWeekPlayerStats(week) {
   });
   return rows.sort((a, b) => b.sum.pts - a.sum.pts);
 }
+
+// Statistiques de la saison en cours de TOUT l'effectif (retour utilisateur
+// 2026-09-27 : "dans statistiques on mettra aussi les stats de la saison
+// des joueurs de son équipe") : moyennes par match sur les matchs officiels
+// (championnat + coupe — même base que "Moyennes de la saison" de la fiche
+// joueur, voir playerSeasonAveragesTableHtml). Tri au clic sur un en-tête.
+const STATS_SEASON_COLS = [
+  { key: "gp", label: "MJ", title: "Matchs joués", fmt: v => String(v) },
+  { key: "min", label: "Min", title: "Minutes par match" },
+  { key: "pts", label: "Pts", title: "Points par match" },
+  { key: "reb", label: "Reb", title: "Rebonds par match" },
+  { key: "ast", label: "Pas", title: "Passes décisives par match" },
+  { key: "stl", label: "Int", title: "Interceptions par match" },
+  { key: "blk", label: "Ctr", title: "Contres par match" },
+  { key: "tov", label: "Perte", title: "Pertes de balle par match" },
+  { key: "pct2", label: "2 pts", title: "Réussite à 2 points", fmt: v => (v == null ? "–" : `${Math.round(v * 100)}%`) },
+  { key: "pct3", label: "3 pts", title: "Réussite à 3 points", fmt: v => (v == null ? "–" : `${Math.round(v * 100)}%`) },
+  { key: "pctFt", label: "LF", title: "Réussite aux lancers francs", fmt: v => (v == null ? "–" : `${Math.round(v * 100)}%`) },
+  { key: "eval", label: "Éval", title: "Évaluation par match" },
+];
+let statsSeasonSort = { key: "pts", dir: -1 };
+
+function computeTeamSeasonPlayerStats(team) {
+  return team.players.map(p => {
+    const log = (p.matchLog || []).filter(m => m.competition === "championship" || m.competition === "cup");
+    const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
+    log.forEach(m => { Object.keys(sum).forEach(k => { sum[k] += m[k] || 0; }); });
+    const gp = log.length;
+    const avg = k => (gp ? sum[k] / gp : null);
+    return {
+      player: p, gp,
+      min: avg("min"), pts: avg("pts"), reb: avg("reb"), ast: avg("ast"), stl: avg("stl"), blk: avg("blk"), tov: avg("tov"),
+      pct2: sum.fga2 ? sum.fgm2 / sum.fga2 : null,
+      pct3: sum.fga3 ? sum.fgm3 / sum.fga3 : null,
+      pctFt: sum.fta ? sum.ftm / sum.fta : null,
+      eval: gp ? statEvaluation(sum) / gp : null,
+    };
+  });
+}
+
+function renderStatsSeasonSection() {
+  const holder = document.getElementById("statsSeasonContent");
+  if (!holder) return;
+  const rows = computeTeamSeasonPlayerStats(teamA);
+  if (!rows.some(r => r.gp > 0)) {
+    holder.innerHTML = "<p class='training-empty'>Les statistiques de la saison s'afficheront après les premiers matchs.</p>";
+    return;
+  }
+  const { key, dir } = statsSeasonSort;
+  // Joueurs sans match toujours en bas, quel que soit le tri.
+  rows.sort((a, b) => {
+    if (!a.gp !== !b.gp) return a.gp ? -1 : 1;
+    const va = a[key] == null ? -Infinity : a[key];
+    const vb = b[key] == null ? -Infinity : b[key];
+    return (va - vb) * dir || b.gp - a.gp;
+  });
+  const fmt1 = v => (v == null ? "–" : v.toFixed(1));
+  let html = "<div class='table-scroll'><table class='roster-table st-season-table'><thead><tr><th>Joueur</th><th>Poste</th>" +
+    STATS_SEASON_COLS.map(c => `<th class="st-sortable${c.key === key ? " is-sorted" : ""}" data-st-sort="${c.key}" title="${c.title}">${c.label}${c.key === key ? (dir < 0 ? " ▼" : " ▲") : ""}</th>`).join("") +
+    "</tr></thead><tbody>";
+  rows.forEach(r => {
+    html += `<tr${r.gp ? "" : " class='st-dnp'"}><td>${playerLinkHtml(myTeamIndex, r.player.id, r.player.name)}</td><td>${escapeHtml(r.player.position || "")}</td>` +
+      STATS_SEASON_COLS.map(c => `<td>${r.gp ? (c.fmt ? c.fmt(r[c.key]) : fmt1(r[c.key])) : (c.key === "gp" ? "0" : "–")}</td>`).join("") + "</tr>";
+  });
+  holder.innerHTML = html + "</tbody></table></div>";
+}
+
+document.getElementById("statsSeasonContent").addEventListener("click", (e) => {
+  const th = e.target.closest("[data-st-sort]");
+  if (!th) return;
+  const key = th.dataset.stSort;
+  statsSeasonSort = { key, dir: statsSeasonSort.key === key ? -statsSeasonSort.dir : -1 };
+  renderStatsSeasonSection();
+});
 
 function renderStatsHebdoSection() {
   const { min, max } = statsHebdoWeekRange();
@@ -38050,47 +38156,17 @@ function renderHistoireSection() {
     `<div class="hc-name">${escapeHtml(team.name)}</div>` +
     `<div class="hc-sub">Fondé en ${team.foundedYear || "?"} · ${history.length} saison${history.length > 1 ? "s" : ""} archivée${history.length > 1 ? "s" : ""} · ${trophies.length} trophée${trophies.length > 1 ? "s" : ""} · ${reputationStarsHtml(stars)}</div>` +
     `</div></div>`;
-  // Deux colonnes indépendantes (voir .hc-col) : le Palmarès, court tant
-  // que le club est jeune, est suivi du Hall of Fame et du classement
-  // mondial au lieu de laisser un trou face aux Records.
+  // Deux colonnes indépendantes (voir .hc-col) : Palmarès puis Hall of Fame
+  // à gauche, Records à droite. Le Classement mondial a déménagé dans
+  // l'onglet Statistiques (retour utilisateur 2026-09-27).
   html += `<div class="hc-grid"><div class="hc-col">`;
   html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Palmarès</h2></div>${hcPalmaresHtml(team, idx)}</section>`;
   html += `<section class="lg-panel hc-panel" id="hcHallOfFame"><div class="lg-panel-title"><h2>Hall of Fame</h2></div>${hcHallOfFameHtml(team, idx)}</section>`;
-  html += `<section class="lg-panel hc-panel" id="hcWorldPanel"><div class="lg-panel-title"><h2>Classement mondial</h2></div>${hcWorldStatsHtml(idx)}</section>`;
   html += `</div><div class="hc-col">`;
   html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
   html += `</div></div>`;
   holder.innerHTML = html;
-  hcBalanceColumns();
 }
-
-// Classement mondial à gauche sous le Hall of Fame tant qu'il y a la place ;
-// dès que Palmarès + Hall of Fame dépassent la colonne des Records, il passe
-// en bas à droite (retour utilisateur, 2026-09-26 : "lorsque les briques
-// palmarès et hall of fame sont trop grandes, il faut que la brique
-// classement mondial aille à droite en bas"). Seulement quand les deux
-// colonnes sont côte à côte (sur mobile, une seule colonne : reste à gauche).
-function hcBalanceColumns() {
-  const cols = document.querySelectorAll("#histoireContent .hc-col");
-  const world = document.getElementById("hcWorldPanel");
-  if (cols.length !== 2 || !world) return;
-  const [left, right] = cols;
-  if (world.parentNode !== left) left.appendChild(world);
-  const sideBySide = right.getBoundingClientRect().left > left.getBoundingClientRect().left + 10;
-  if (!sideBySide) return;
-  const gap = parseFloat(getComputedStyle(left).rowGap) || 20;
-  const leftWithout = left.getBoundingClientRect().height - world.getBoundingClientRect().height - gap;
-  const rightHeight = right.getBoundingClientRect().height;
-  if (leftWithout > rightHeight) right.appendChild(world);
-}
-let hcBalanceTimer = null;
-window.addEventListener("resize", () => {
-  clearTimeout(hcBalanceTimer);
-  hcBalanceTimer = setTimeout(() => {
-    const sec = document.getElementById("histoireSection");
-    if (sec && !sec.classList.contains("hidden")) hcBalanceColumns();
-  }, 120);
-});
 
 // Parcours en championnat (retour utilisateur, 2026-09-26 : "garde
 // uniquement championnat et coupe (championnat tu mettras relégation,
@@ -38894,7 +38970,7 @@ const TAB_HANDLERS = {
   amicaux: () => showPlaceholder("amicaux"),
   lp: () => { renderLpSection(); showPage("lpSection"); setActiveTab("lp"); },
   messages: () => { window.__lastMsgNav = goToMessages(); },
-  histoire: () => { renderHistoireSection(); showPage("histoireSection"); setActiveTab("histoire"); hcBalanceColumns(); },
+  histoire: () => { renderHistoireSection(); showPage("histoireSection"); setActiveTab("histoire"); },
   economie: () => { renderEconomieSection(); showPage("economieSection"); setActiveTab("economie"); },
   sponsors: () => { renderSponsorsPanel(); showPage("sponsorsSection"); setActiveTab("sponsors"); },
   salle: () => { renderSalleSection(); showPage("salleSection"); setActiveTab("salle"); },

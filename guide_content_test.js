@@ -32,7 +32,7 @@ const expectedNewHeadings = [
   "Académie de jeunes",
   "Calendrier et Coupe",
   "Ligue",
-  "Stats hebdo",
+  "Statistiques",
   "Scoutisme",
 ];
 const missing = expectedNewHeadings.filter(h => !headings.includes(h));

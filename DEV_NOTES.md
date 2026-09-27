@@ -20,6 +20,22 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ CODE ÉCRIT, À COMMITTER/POUSSER (2026-09-27) — Onglet
+  « Statistiques » (ex-Stats hebdo) + titre d'onglet « Hoop Manager »** —
+  retour utilisateur : "l'onglet stats hebdo va être renommé statistiques,
+  on va basculer la brique classement mondial qui est dans histoire du club
+  dans statistiques, dans statistiques on mettra aussi les stats de la
+  saison des joueurs de son équipe" + "dans le nom de l'onglet [...] on peut
+  remplacer par Hoop Manager". moteurbasket3.html : page statsHebdoSection
+  en 3 panneaux (Saison en cours = computeTeamSeasonPlayerStats/
+  renderStatsSeasonSection, moyennes championnat+coupe, tri au clic ;
+  Classement mondial = hcWorldStatsHtml ; Semaine par semaine = l'existant),
+  identifiant interne `statshebdo` inchangé ; Classement mondial retiré
+  d'Histoire du club (hcBalanceColumns supprimé) ; <title> Hoop Manager ;
+  guide mis à jour. en.js : entrées + "Pas" → "Ast" (était "Not").
+  Tests adaptés : stats_hebdo_test, club_history_test, guide_content_test
+  (verts, sandbox). player_detail_test échoue comme avant (déjà noté).
+
 - **✅ EN LIGNE (2026-09-27) — Inscription publique sur hoop-manager.com +
   séparation prod/test sur Render** (commit 8b8819d, poussé). Reste :
   - Correctif "404 ≠ lien invalide" (moteurbasket3.html

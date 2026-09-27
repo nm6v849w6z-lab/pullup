@@ -127,6 +127,23 @@ if (doc2.getElementById("statsHebdoContent").textContent.includes("Finances de l
 }
 console.log("✅ Le bloc \"Finances de la semaine\" a bien été retiré de l'onglet Stats hebdo (doublon avec l'onglet Économie).");
 
+// --- Onglet renommé "Statistiques" + stats de la saison de l'effectif +
+// classement mondial (retour utilisateur 2026-09-27). ---
+const tabLabel = [...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "statshebdo").textContent.trim();
+if (tabLabel !== "Statistiques") throw new Error(`❌ L'onglet devrait s'appeler « Statistiques », obtenu « ${tabLabel} ».`);
+const seasonRows = [...doc2.querySelectorAll("#statsSeasonContent table tbody tr")];
+const rosterSize = win2.eval("teamA.players.length");
+if (seasonRows.length !== rosterSize) throw new Error(`❌ Saison en cours : une ligne par joueur de l'effectif attendue (${rosterSize}), obtenu ${seasonRows.length}.`);
+const expectedPts = win2.eval(`(() => { const r = teamA.players.map(p => { const log = (p.matchLog || []).filter(m => m.competition === "championship" || m.competition === "cup"); return log.length ? log.reduce((s, m) => s + m.pts, 0) / log.length : -1; }); return Math.max(...r).toFixed(1); })()`);
+const ptsIdx = [...doc2.querySelectorAll("#statsSeasonContent thead th")].findIndex(th => th.dataset.stSort === "pts");
+if (seasonRows[0].children[ptsIdx].textContent !== expectedPts) throw new Error(`❌ Tri par défaut : le meilleur marqueur (${expectedPts} pts/m) devrait être en tête, obtenu ${seasonRows[0].children[ptsIdx].textContent}.`);
+doc2.querySelector('#statsSeasonContent [data-st-sort="reb"]').click();
+const rebIdx = [...doc2.querySelectorAll("#statsSeasonContent thead th")].findIndex(th => th.dataset.stSort === "reb");
+const rebVals = [...doc2.querySelectorAll("#statsSeasonContent tbody tr")].map(tr => tr.children[rebIdx].textContent).filter(v => v !== "–").map(Number);
+if (rebVals.some((v, i) => i && v > rebVals[i - 1])) throw new Error("❌ Le tri par rebonds (décroissant) ne fonctionne pas.");
+if (doc2.querySelectorAll("#statsWorldContent .hc-ws-row").length !== 5) throw new Error("❌ Le classement mondial (5 stats) devrait être affiché dans Statistiques.");
+console.log("✅ Statistiques : onglet renommé, saison en cours (une ligne par joueur, tri au clic), classement mondial présent.");
+
 // --- Un joueur y est bien cliquable (fiche joueur, voir #45). ---
 const weekPlayerLink = doc2.querySelector("#statsHebdoContent .player-link");
 if (!weekPlayerLink) throw new Error("❌ Les performances individuelles devraient être des liens joueur cliquables (fiche joueur).");
