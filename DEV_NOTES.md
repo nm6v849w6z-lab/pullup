@@ -171,6 +171,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   - Pistes v2 (non demandées) : ajouter le Centre médical au Guide et au
     tutoriel, alerte au tableau de bord quand un joueur passe en risque
     Très élevé, historique des saisons passées.
+  - Refonte (retour utilisateur, 2026-09-27 : "ça ne ressemble pas au
+    reste du site", "grand vide sous infirmerie", "si on a trop de monde,
+    ça va tout décaler") : gabarit du Calendrier (.cal-layout, filtres
+    Tous/Blessés/À risque/Historique, tableaux .cal-month, colonne
+    .cal-side de hauteur fixe : Infirmerie en chiffres + Encadrement
+    médical). Les blessés sont des lignes en tête de liste ; l'historique
+    est un filtre, groupé par mois. Page ajoutée à WIDE_PAGE_IDS. La
+    première partie de la refonte est partie dans le commit ec6479d
+    (Effectif) d'une autre session ; le reste est committé à part.
   Reste : `git push`.
 - **📋 CHANTIER SUIVANT** — Matchs amicaux.
 

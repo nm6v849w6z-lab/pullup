@@ -2530,7 +2530,7 @@
      tout décaler") : gabarit du Calendrier (.cal-layout/.cal-card/
      .calendar-table.cal-month/.cal-filter) ; les blessés sont des lignes de
      la liste principale, la colonne de droite garde une hauteur fixe. */
-  .med-col-player{width:auto;} .med-col-state{width:190px;} .med-col-risk{width:190px;} .med-col-end{width:150px;}
+  .med-col-player{width:auto;} .med-col-state{width:180px;} .med-col-risk{width:180px;} .med-col-end{width:140px;}
   .med-c-player{padding-left:16px !important;}
   .med-player{display:flex; align-items:center; gap:10px; min-width:0;}
   .med-player-text{display:flex; flex-direction:column; min-width:0;}
@@ -2569,9 +2569,13 @@
   .med-side-btns{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px;}
   .med-side-btns .calendar-order-btn{justify-content:center;}
   @media (max-width:760px){
-    .med-col-state{width:0;} .med-c-state{display:none;}
-    .med-col-risk{width:110px;} .med-risk-track{display:none;}
-    .med-col-end{width:92px;} .med-back{display:none;}
+    .med-col-state{width:0;} .med-col-risk{width:78px;} .med-col-end{width:92px;}
+    .calendar-table.cal-month td.med-c-state{padding:0; font-size:0;}
+    .med-c-state > *{display:none;}
+    .med-row-injured .med-c-risk > *, .med-hist-row .med-c-risk > *, .med-risk-track, .med-month-count{display:none;}
+    .med-risk-label{min-width:0; font-size:12px;}
+    .med-c-end{white-space:normal;} .med-back{font-size:11px; line-height:1.3;} .med-col-end{width:100px;}
+    .calendar-table.cal-month.med-table td{padding-left:8px; padding-right:8px;}
   }
   /* ---- Humeur des supporters ---- */
   .morale-value{text-align:center; font-size:40px; font-weight:800; line-height:1; margin-top:6px;}
@@ -20676,7 +20680,7 @@ const PAGE_IDS = [
 // colonne de droite (prochain match, bilan) côte à côte.
 // "standingsSection" ajouté (refonte de la page Ligue, 2026-09-25) :
 // classement + colonne course/MVP côte à côte, leaders sur 3 colonnes.
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "messagesSection", "histoireSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection"]);
+const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "messagesSection", "histoireSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection", "medicalSection"]);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
 // "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
@@ -38395,7 +38399,7 @@ function renderMedicalSection() {
       html += `<tr class="cal-row med-row-injured" data-player-row="${p.id}" data-med-kind="injured">` +
         `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
         `<td class="med-c-state"><span class="med-injury-tag" title="${escapeHtml(p.injuryType || "Blessure")}">${escapeHtml(p.injuryType || "Blessure")}</span></td>` +
-        `<td><span class="med-risk-label med-risk-veryhigh">Indisponible</span></td>` +
+        `<td class="med-c-risk"><span class="med-risk-label med-risk-veryhigh">Indisponible</span></td>` +
         `<td class="med-c-end"><div class="med-days">${days} jour${days > 1 ? "s" : ""}</div><div class="med-back">retour ${escapeHtml(formatCalendarDayFr(p.injuryUntil))}</div></td></tr>`;
     });
     html += `</tbody></table>`;
@@ -38411,7 +38415,7 @@ function renderMedicalSection() {
     html += `<tr class="cal-row" data-player-row="${p.id}" data-risk="${r.tier.key}" data-med-kind="${risky ? "risk" : "fit"}">` +
       `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
       `<td class="med-c-state">${conditionBadgeHtml(p, now, recovery)}</td>` +
-      `<td><div class="med-risk med-risk-${r.tier.key}" title="${escapeHtml(detail)}"><span class="med-risk-label">${r.tier.label}</span>` +
+      `<td class="med-c-risk"><div class="med-risk med-risk-${r.tier.key}" title="${escapeHtml(detail)}"><span class="med-risk-label">${r.tier.label}</span>` +
       `<div class="med-risk-track"><div class="med-risk-fill" style="width:${width}%"></div></div></div></td>` +
       `<td class="med-c-end"><span class="med-mult" title="${escapeHtml(detail)}">${medicalMultLabel(r.mult)}</span></td></tr>`;
   });
@@ -38435,7 +38439,7 @@ function renderMedicalSection() {
       html += `<tr class="cal-row med-hist-row" data-med-kind="history">` +
         `<td class="med-c-player">${who}</td>` +
         `<td class="med-c-state"><span class="med-injury-tag">${escapeHtml(e.injuryType || "Blessure")}</span></td>` +
-        `<td><span class="med-back">${e.opponentName ? `contre ${escapeHtml(e.opponentName)}` : ""}</span></td>` +
+        `<td class="med-c-risk"><span class="med-back">${e.opponentName ? `contre ${escapeHtml(e.opponentName)}` : ""}</span></td>` +
         `<td class="med-c-end"><div class="med-hist-dur">${e.days} jour${e.days > 1 ? "s" : ""}</div>${e.at ? `<div class="med-back">${escapeHtml(formatCalendarDayFr(e.at))}</div>` : ""}</td></tr>`;
     });
     html += `</tbody></table>`;
@@ -38451,7 +38455,7 @@ function renderMedicalSection() {
       `<div class="cal-kpi"><div class="cal-kpi-label">À risque</div><div class="cal-kpi-value${atRisk.length ? " is-neg" : ""}" id="medicalHighRiskCount">${atRisk.length}</div></div>` +
       `<div class="cal-kpi"><div class="cal-kpi-label">Saison</div><div class="cal-kpi-value" id="medicalSeasonCount">${seasonLog.length}</div></div>` +
     `</div>` +
-    `<div class="cal-split"><div><span>Jours perdus</span><b>${daysLost}</b></div><div><span>Effectif dispo</span><b>${players.length - injured.length}/${players.length}</b></div></div>` +
+    `<div class="cal-split"><div><span>Jours perdus</span><b>${daysLost}</b></div><div><span>Disponibles</span><b>${players.length - injured.length}/${players.length}</b></div></div>` +
     (nextBack ? `<div class="med-next-back"><span>Prochain retour</span><b>${escapeHtml(nextBack.name)} · ${escapeHtml(formatCalendarDayFr(nextBack.injuryUntil))}</b></div>`
       : `<div class="med-next-back"><span>Tout l'effectif est disponible.</span></div>`) +
     `</div>`;
