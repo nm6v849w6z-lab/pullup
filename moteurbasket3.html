@@ -23820,6 +23820,12 @@ function starRatingFromScore(score, max = 99) {
 }
 // Hausses du dernier entraînement (Team.lastTrainingReport.players[id].gains,
 // [{attr, before, after}]) : { attr: +N } pour les seules hausses.
+// Ordre d'affichage des 13 fondamentaux sur la fiche joueur (voir
+// attrBlockHtml dans renderPlayerDetail) : Tir (3 pts, mi-distance, lancer
+// franc, jeu intérieur), création (pénétration, création de tir, dribble,
+// passe), défense (extérieure, interceptions, intérieure, contre), rebond.
+const PDP_FUNDAMENTAL_ORDER = ["threePoint", "midRange", "freeThrow", "inside", "penetration", "shotCreation", "dribble",
+  "pass", "defOutside", "steal", "defInside", "block", "rebound"];
 function pdpLastTrainingUps(team, player) {
   const rep = team && team.lastTrainingReport && team.lastTrainingReport.players;
   const entry = rep && player && rep[player.id];
@@ -24393,7 +24399,14 @@ function renderPlayerDetail(teamIdx, playerId) {
   const attrBlockHtml = (title, attrs, wide) => {
     const shown = attrs.filter(a => visibleAttrsSet.has(a));
     const hidden = attrs.filter(a => !visibleAttrsSet.has(a));
-    const ordered = [...shown].sort((a, b) => player.attrs[b] - player.attrs[a]).concat(hidden);
+    // Fondamentaux dans un ordre FIXE, regroupés par thème (retour
+    // utilisateur 2026-09-27 : "réorganise l'ordre des fondamentaux pour que
+    // ce soit plus cohérent, mi-distance et trois points doivent être
+    // ensemble") : tir, puis création, puis défense et rebond — sur deux
+    // colonnes (7 + 6). Physique et Mental restent triés par valeur.
+    const ordered = title === "Fondamentaux"
+      ? PDP_FUNDAMENTAL_ORDER.filter(a => attrs.includes(a)).concat(attrs.filter(a => !PDP_FUNDAMENTAL_ORDER.includes(a)))
+      : [...shown].sort((a, b) => player.attrs[b] - player.attrs[a]).concat(hidden);
     const meta = shown.length === attrs.length
       ? `moy. <b>${(shown.reduce((s, a) => s + player.attrs[a], 0) / shown.length).toFixed(1)}</b>`
       : `${shown.length}/${attrs.length} révélées`;
