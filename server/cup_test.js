@@ -13,7 +13,10 @@ const { catchUpLeague, ensureLiveMatch } = require("./autoSim.js");
 const T0 = Date.UTC(2026, 8, 15, 7, 0, 0); // 15 septembre 2026, 09h Paris (CEST) — un jeudi arbitraire
 
 function freshMultiLeague(now = T0, names = ["Lyon Cup", "Marseille Cup"]) {
-  return generateMultiManagerLeague(names, 1, now, dailyAnchoredCalendarConfig());
+  // Ancien rythme QUOTIDIEN (coupe à 15h chaque jour) : toujours supporté pour
+  // les ligues créées avant le 2026-09-27 — le rythme hebdomadaire (coupe le
+  // jeudi) est couvert par server/weekly_calendar_test.js.
+  return generateMultiManagerLeague(names, 1, now, { dailyAnchored: true });
 }
 
 // ---------------------------------------------------------------------

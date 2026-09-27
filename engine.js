@@ -8093,6 +8093,10 @@ class League {
     // (retour utilisateur : "toutes les 3 matchs", lu comme "une fois par
     // jour civil, juste après le créneau de 19h" — voir server/autoSim.js).
     this.calendarDailyAnchored = false;
+    // Rythme hebdomadaire (mardi/samedi + coupe le jeudi, voir
+    // weeklyRhythmCalendarStartAt) : variante du calendrier ancré, fixée à la création.
+    this.calendarWeeklyRhythm = false;
+    this.lastEconomyTick = 0; // dernière mise à jour économique hebdomadaire réglée (k >= 1)
     this.lastAutoTrainedDay = -1;
 
     // Compétition de Coupe (retour utilisateur, 2026-09 — voir le grand
@@ -8288,9 +8292,9 @@ class League {
     // atypique).
     if (typeof this.calendarStartAt !== "number") return champ;
     const champAt = this.calendarDailyAnchored
-      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round)
+      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round, !!this.calendarWeeklyRhythm)
       : calendarScheduledTimeForRound(this.calendarStartAt, champ.round, this.calendarWeekMs || undefined, this.calendarSlotOffsetsMs || undefined);
-    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex);
+    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex, !!this.calendarWeeklyRhythm);
     return cupAt <= champAt ? cup : champ;
   }
 
@@ -10233,7 +10237,7 @@ function parisEpochForLocalTime(year, month, day, hour, minute = 0, second = 0) 
 }
 
 function dailyAnchoredCalendarConfig() {
-  return { dailyAnchored: true };
+  return { dailyAnchored: true, weekly: true };
 }
 
 // Nombre de jours civils entre `dateParts` et le prochain jour tombant sur
@@ -10252,7 +10256,8 @@ function daysUntilParisWeekday(dateParts, targetWeekday) {
 // passé, bascule sur le mercredi SUIVANT (+7 jours) plutôt que le lendemain
 // (jeudi) : le rythme reste toujours "championnat à partir d'un mercredi".
 // Copie de la même fonction côté serveur (server/calendar.js).
-function dailyAnchoredCalendarStartAt(now) {
+function dailyAnchoredCalendarStartAt(now, weekly = false) {
+  if (weekly) return weeklyRhythmCalendarStartAt(now);
   const today = parisLocalDateParts(now);
   const daysAhead = daysUntilParisWeekday(today, CALENDAR_DAILY_ANCHORED_FIRST_MATCH_WEEKDAY);
   const nextWednesday = daysAhead > 0 ? addParisCalendarDays(today, daysAhead) : today;
@@ -10274,13 +10279,67 @@ function dailyAnchoredDayIndexForChampionshipRound(round) {
 function dailyAnchoredSlotIndexForChampionshipRound(round) {
   return round % CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS.length;
 }
-function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round) {
+function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false) {
+  if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round);
   const dayIndex = dailyAnchoredDayIndexForChampionshipRound(round);
   const hour = CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[dailyAnchoredSlotIndexForChampionshipRound(round)];
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
 }
-function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex) {
+function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false) {
+  if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex);
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, cupDayIndex, CALENDAR_DAILY_ANCHORED_CUP_HOUR);
+}
+
+// ---------------------------------------------------------------------
+// RYTHME HEBDOMADAIRE (retour utilisateur, 2026-09-27 : "on va changer le
+// code pour que les matchs de championnat soient [...] mardi et samedi, la
+// coupe le jeudi", "matchs à 20h", "l'économie est à mettre à jour dans la
+// nuit du dimanche au lundi", play-offs "2 matchs par semaine" pour laisser
+// le jeudi à la coupe) — variante du calendrier ancré ci-dessus, activée par
+// League.calendarWeeklyRhythm (posé à la création de la ligue, jamais changé
+// en cours de saison : les dates sont recalculées à partir de calendarStartAt,
+// une ligue déjà lancée garde donc son rythme quotidien jusqu'au reset).
+//   - jour 0 = un MARDI à 20h (calendarStartAt) ;
+//   - journée r : semaine floor(r/2), mardi (r pair) ou samedi (r impair),
+//     20h — les play-offs (journées 18+) suivent la même règle ;
+//   - tour de coupe k : jeudi de la semaine k, 20h ;
+//   - mise à jour économique k (k >= 1) : lundi 0h00 de la semaine k (nuit
+//     du dimanche au lundi), voir server/autoSim.js:catchUpWeeklyRhythm.
+// CES COPIES DOIVENT RESTER IDENTIQUES (server/calendar.js, engine.js,
+// moteurbasket3.html, live_2d_demo.html).
+// ---------------------------------------------------------------------
+const WEEKLY_RHYTHM_MATCH_HOUR = 20;
+const WEEKLY_RHYTHM_FIRST_MATCH_WEEKDAY = 2; // mardi (Date#getUTCDay)
+const WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS = [0, 4]; // mardi, samedi (depuis le mardi)
+const WEEKLY_RHYTHM_CUP_DAY_OFFSET = 2; // jeudi
+const WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET = 6; // lundi (fin de la nuit du dimanche)
+const WEEKLY_RHYTHM_ECONOMY_HOUR = 0;
+
+// Prochain mardi à 20h (Paris) à compter de `now`, aujourd'hui compris si
+// l'on est mardi avant 20h.
+function weeklyRhythmCalendarStartAt(now) {
+  const today = parisLocalDateParts(now);
+  const weekday = new Date(Date.UTC(today.year, today.month - 1, today.day)).getUTCDay();
+  const daysAhead = (WEEKLY_RHYTHM_FIRST_MATCH_WEEKDAY - weekday + 7) % 7;
+  const day = daysAhead > 0 ? addParisCalendarDays(today, daysAhead) : today;
+  const first = parisEpochForLocalTime(day.year, day.month, day.day, WEEKLY_RHYTHM_MATCH_HOUR);
+  if (first > now) return first;
+  const next = addParisCalendarDays(today, daysAhead + 7);
+  return parisEpochForLocalTime(next.year, next.month, next.day, WEEKLY_RHYTHM_MATCH_HOUR);
+}
+function weeklyRhythmDayIndexForChampionshipRound(round) {
+  const n = WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS.length;
+  return 7 * Math.floor(round / n) + WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS[round % n];
+}
+function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round) {
+  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round), WEEKLY_RHYTHM_MATCH_HOUR);
+}
+function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex) {
+  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, 7 * cupRoundIndex + WEEKLY_RHYTHM_CUP_DAY_OFFSET, WEEKLY_RHYTHM_MATCH_HOUR);
+}
+// Instant de la k-ième mise à jour économique (k >= 1).
+function weeklyRhythmEconomyTickAt(calendarStartAt, k) {
+  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, 7 * (k - 1) + WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET, WEEKLY_RHYTHM_ECONOMY_HOUR);
 }
 
 // `calendarConfig` optionnel ({weekMs, slotOffsetsMs}) : le rythme de
@@ -10344,8 +10403,9 @@ function buildLeagueWithHumanTeams(humanTeams, divisionLevel, now, calendarConfi
   // calendarSlotOffsetsMs (qui restent `null` dans ce cas) — voir
   // generateMultiManagerLeague, seul appelant qui passe jamais ce marqueur.
   league.calendarDailyAnchored = !!(calendarConfig && calendarConfig.dailyAnchored);
+  league.calendarWeeklyRhythm = league.calendarDailyAnchored && !!(calendarConfig && calendarConfig.weekly);
   if (league.calendarDailyAnchored) {
-    league.calendarStartAt = dailyAnchoredCalendarStartAt(now);
+    league.calendarStartAt = dailyAnchoredCalendarStartAt(now, league.calendarWeeklyRhythm);
     league.calendarWeekMs = null;
     league.calendarSlotOffsetsMs = null;
   } else {
@@ -11393,6 +11453,8 @@ function serializeLeague(lg) {
     // ligue qui n'utilise pas ce rythme (carrière solo, ou ligue
     // multi-manager d'avant cette fonctionnalité) — rétro-compatible.
     calendarDailyAnchored: !!lg.calendarDailyAnchored,
+    calendarWeeklyRhythm: !!lg.calendarWeeklyRhythm,
+    lastEconomyTick: typeof lg.lastEconomyTick === "number" ? lg.lastEconomyTick : 0,
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
     cup: lg.cup || null,
     privateLeagues: Array.isArray(lg.privateLeagues) ? lg.privateLeagues : [],
@@ -11458,6 +11520,8 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarWeekMs = typeof data.calendarWeekMs === "number" ? data.calendarWeekMs : null;
   lg.calendarSlotOffsetsMs = Array.isArray(data.calendarSlotOffsetsMs) ? data.calendarSlotOffsetsMs : null;
   lg.calendarDailyAnchored = !!data.calendarDailyAnchored;
+  lg.calendarWeeklyRhythm = !!data.calendarWeeklyRhythm;
+  lg.lastEconomyTick = typeof data.lastEconomyTick === "number" ? data.lastEconomyTick : 0;
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
   lg.cup = data.cup || null;
   // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
@@ -12966,6 +13030,10 @@ return {
   dailyAnchoredCalendarConfig, dailyAnchoredCalendarStartAt, dailyAnchoredScheduledTimeForSlot,
   dailyAnchoredDayIndexForChampionshipRound, dailyAnchoredSlotIndexForChampionshipRound,
   dailyAnchoredScheduledTimeForChampionshipRound, dailyAnchoredScheduledTimeForCupRound,
+  WEEKLY_RHYTHM_MATCH_HOUR, WEEKLY_RHYTHM_FIRST_MATCH_WEEKDAY, WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS,
+  WEEKLY_RHYTHM_CUP_DAY_OFFSET, WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET, WEEKLY_RHYTHM_ECONOMY_HOUR,
+  weeklyRhythmCalendarStartAt, weeklyRhythmDayIndexForChampionshipRound,
+  weeklyRhythmScheduledTimeForChampionshipRound, weeklyRhythmScheduledTimeForCupRound, weeklyRhythmEconomyTickAt,
   // Coupe (voir le bloc dédié au-dessus de generateCupBracket) :
   CUP_BRACKET_SIZE, CUP_STAGE_NAMES, generateCupBracket, buildNextCupRound, shuffleIndices,
   // Clé composite de Team.plannedTactics (voir le grand commentaire dédié

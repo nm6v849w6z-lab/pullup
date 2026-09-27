@@ -486,13 +486,13 @@
     #prepSection .area-ordresCardMinutes{grid-area:pt;}
     #prepSection .area-ordresCardAdversaires{grid-area:adv;}
     /* Défense étirée à la hauteur de Temps de jeu + Postes à surveiller :
-       l'espace en trop est réparti à parts égales entre ses rubriques
-       (Système | Écrans | Post-up | Aide + Close-out) au lieu d'un vide en
-       bas de carte (retour utilisateur 2026-09-27 : "du vide sous les
-       boutons aide défensive et close out, pas harmonieux"). 1/3 avant le
-       séparateur, 2/3 entre les trois rangées du bloc confirmé. */
-    #prepSection .area-ordresCardDefense > .ordres-settings-grid{flex:1 1 auto; align-content:start;}
-    #prepSection .area-ordresCardDefense > .ordres-settings-grid-nested:not(.hidden){flex:2 1 auto; align-content:space-between;}
+       l'espace en trop agrandit les boutons (au prorata de leurs rangées :
+       2 pour le Système, 5 pour le bloc confirmé) au lieu d'un vide sous
+       Aide/Close-out ("pas harmonieux") ou de grands écarts entre les
+       rubriques ("trop aéré, ça fait vide") — retours utilisateur 2026-09-27. */
+    #prepSection .area-ordresCardDefense > .ordres-settings-grid{flex:2 1 auto;}
+    #prepSection .area-ordresCardDefense > .ordres-settings-grid-nested:not(.hidden){flex:5 1 auto;}
+    #prepSection .area-ordresCardDefense .ordres-field > .seg-control{flex:1 1 auto;}
   }
   #prepSection .conv-list{display:flex; flex-direction:column;}
   #prepSection .prep-def-stack{display:flex; flex-direction:column; gap:22px;}
@@ -2184,6 +2184,7 @@
   .pdp2-bar span{display:block; height:100%; border-radius:999px;}
   .pdp2 .pdp-attr-value{min-width:26px; font-size:16px; font-variant-numeric:tabular-nums;}
   .pdp2 .pdp-attr-row .pdp-pill.locked{min-width:26px; text-align:center;}
+  .pdp-attr-up{flex:0 0 12px; width:12px; margin-right:-6px; font-size:11px; line-height:1; text-align:center; color:#3ecf67;}
   /* Rapport de scouting mis en évidence (retour utilisateur, 2026-09-25 :
      "un peu plus gros [...] c'est un peu perdu") : encadré teinté accent. */
   .pdp2 .pdp-scouting{margin-top:20px; padding:14px 18px; border:1px solid rgba(240,162,60,.35); border-left-width:1px; border-radius:12px; background:rgba(240,162,60,.08); font-size:15px; line-height:1.5; color:var(--ink);}
@@ -6960,7 +6961,7 @@
       <div class="guide-entry" data-guide-id="demarrer" data-guide-group="Bien démarrer">
         <h3>Premiers pas</h3>
         <button type="button" class="tour-launch-btn" id="tourLaunchBtn">Lancer le tutoriel d'accueil (aperçu)</button>
-        <p class="training-intro">Vous dirigez un club de basket en temps réel : les matchs se jouent tout seuls à l'heure prévue, que vous soyez connecté ou non. En championnat, deux journées par jour (<b>10:00</b> et <b>19:00</b>) ; en Coupe, un tour par jour à <b>15:00</b>. Entre deux matchs, votre travail : préparer les <b>Ordres</b>, régler l'<b>Entraînement</b>, gérer l'<b>Effectif</b> (marché, jeunes, staff) et les finances du club.</p>
+        <p class="training-intro">Vous dirigez un club de basket en temps réel : les matchs se jouent tout seuls à l'heure prévue, que vous soyez connecté ou non. En championnat, deux journées par semaine, le <b>mardi</b> et le <b>samedi à 20:00</b> (play-offs compris) ; en Coupe, un tour chaque <b>jeudi à 20:00</b>. La mise à jour économique (salaires, recettes) et l'entraînement des fondamentaux ont lieu dans la nuit du dimanche au lundi. Entre deux matchs, votre travail : préparer les <b>Ordres</b>, régler l'<b>Entraînement</b>, gérer l'<b>Effectif</b> (marché, jeunes, staff) et les finances du club.</p>
         <p class="training-intro" style="margin-top:10px;">La routine conseillée avant chaque match : vérifier la forme des joueurs (<button type="button" class="gd-link" data-guide-goto="forme">Forme et blessures</button>), composer le cinq et la tactique dans l'onglet Ordres, puis valider. Vous pouvez aussi préparer plusieurs journées à l'avance (voir <button type="button" class="gd-link" data-guide-goto="ordres">Ordres et tactiques</button>).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Pendant votre absence</b> : à votre retour, un récapitulatif résume ce qui s'est passé (victoires et défaites, finances de la semaine, progression des joueurs, points à savoir). Le <b>Tableau de bord</b> montre ensuite le prochain match, les actions en attente de la semaine et le pouls du club (humeur des supporters, alchimie).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Sur téléphone</b> : le site s'adapte automatiquement à l'écran (barre d'onglets en bas, menu en tiroir) et peut être ajouté à l'écran d'accueil comme une application.</p>
@@ -7060,7 +7061,7 @@
       <div class="guide-entry" data-guide-id="calendrier" data-guide-group="Compétitions">
         <h3>Calendrier et Coupe</h3>
         <p class="training-intro">Le <b>Calendrier</b> liste tous vos matchs de la saison, championnat et Coupe confondus, groupés par mois et triés par date et heure réelle. Filtres Tous, Domicile, Extérieur et À venir ; "vs" devant l'adversaire signifie à domicile, "@" à l'extérieur. À droite : la carte du prochain match (compte à rebours et bouton des ordres) et le bilan de la saison (bilan, classement, différence de points, domicile/extérieur, forme sur les 5 derniers matchs). Les horaires restent fixes, même au changement d'heure.</p>
-        <p class="training-intro" style="margin-top:10px;">La <b>Coupe</b> (quand elle existe pour votre ligue) est un tableau à élimination directe, un tour par jour à 15:00. L'onglet Coupe montre votre parcours (tour atteint, victoires, pastille par tour), les matchs de chaque tour (boutons de tour en haut, filtres Tous et À jouer, votre match en premier, clubs exemptés résumés en une ligne) et l'arbre de la phase finale à partir des 8es de finale. Les ordres de Coupe se préparent comme ceux du championnat.</p>
+        <p class="training-intro" style="margin-top:10px;">La <b>Coupe</b> (quand elle existe pour votre ligue) est un tableau à élimination directe, un tour chaque jeudi à 20:00. L'onglet Coupe montre votre parcours (tour atteint, victoires, pastille par tour), les matchs de chaque tour (boutons de tour en haut, filtres Tous et À jouer, votre match en premier, clubs exemptés résumés en une ligne) et l'arbre de la phase finale à partir des 8es de finale. Les ordres de Coupe se préparent comme ceux du championnat.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="ligue" data-guide-group="Compétitions">
@@ -14955,6 +14956,10 @@ class League {
     // navigateur se contente de refléter ce qu'il reçoit (voir
     // leagueFromSave).
     this.calendarDailyAnchored = false;
+    // Rythme hebdomadaire (mardi/samedi + coupe le jeudi, voir
+    // weeklyRhythmCalendarStartAt) : variante du calendrier ancré, fixée à la création.
+    this.calendarWeeklyRhythm = false;
+    this.lastEconomyTick = 0; // dernière mise à jour économique hebdomadaire réglée (k >= 1)
     this.lastAutoTrainedDay = -1;
     this.cup = null;
 
@@ -15076,9 +15081,9 @@ class League {
     if (!cup) return champ;
     if (typeof this.calendarStartAt !== "number") return champ;
     const champAt = this.calendarDailyAnchored
-      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round)
+      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round, !!this.calendarWeeklyRhythm)
       : calendarScheduledTimeForRound(this.calendarStartAt, champ.round, this.calendarWeekMs || undefined, this.calendarSlotOffsetsMs || undefined);
-    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex);
+    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex, !!this.calendarWeeklyRhythm);
     return cupAt <= champAt ? cup : champ;
   }
 
@@ -16742,9 +16747,10 @@ function parisEpochForLocalTime(year, month, day, hour, minute = 0, second = 0) 
   return guess;
 }
 function dailyAnchoredCalendarConfig() {
-  return { dailyAnchored: true };
+  return { dailyAnchored: true, weekly: true };
 }
-function dailyAnchoredCalendarStartAt(now) {
+function dailyAnchoredCalendarStartAt(now, weekly = false) {
+  if (weekly) return weeklyRhythmCalendarStartAt(now);
   const today = parisLocalDateParts(now);
   const firstSlot = parisEpochForLocalTime(today.year, today.month, today.day, CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[0]);
   if (firstSlot > now) return firstSlot;
@@ -16762,13 +16768,67 @@ function dailyAnchoredDayIndexForChampionshipRound(round) {
 function dailyAnchoredSlotIndexForChampionshipRound(round) {
   return round % CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS.length;
 }
-function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round) {
+function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false) {
+  if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round);
   const dayIndex = dailyAnchoredDayIndexForChampionshipRound(round);
   const hour = CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[dailyAnchoredSlotIndexForChampionshipRound(round)];
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
 }
-function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex) {
+function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false) {
+  if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex);
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, cupDayIndex, CALENDAR_DAILY_ANCHORED_CUP_HOUR);
+}
+
+// ---------------------------------------------------------------------
+// RYTHME HEBDOMADAIRE (retour utilisateur, 2026-09-27 : "on va changer le
+// code pour que les matchs de championnat soient [...] mardi et samedi, la
+// coupe le jeudi", "matchs à 20h", "l'économie est à mettre à jour dans la
+// nuit du dimanche au lundi", play-offs "2 matchs par semaine" pour laisser
+// le jeudi à la coupe) — variante du calendrier ancré ci-dessus, activée par
+// League.calendarWeeklyRhythm (posé à la création de la ligue, jamais changé
+// en cours de saison : les dates sont recalculées à partir de calendarStartAt,
+// une ligue déjà lancée garde donc son rythme quotidien jusqu'au reset).
+//   - jour 0 = un MARDI à 20h (calendarStartAt) ;
+//   - journée r : semaine floor(r/2), mardi (r pair) ou samedi (r impair),
+//     20h — les play-offs (journées 18+) suivent la même règle ;
+//   - tour de coupe k : jeudi de la semaine k, 20h ;
+//   - mise à jour économique k (k >= 1) : lundi 0h00 de la semaine k (nuit
+//     du dimanche au lundi), voir server/autoSim.js:catchUpWeeklyRhythm.
+// CES COPIES DOIVENT RESTER IDENTIQUES (server/calendar.js, engine.js,
+// moteurbasket3.html, live_2d_demo.html).
+// ---------------------------------------------------------------------
+const WEEKLY_RHYTHM_MATCH_HOUR = 20;
+const WEEKLY_RHYTHM_FIRST_MATCH_WEEKDAY = 2; // mardi (Date#getUTCDay)
+const WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS = [0, 4]; // mardi, samedi (depuis le mardi)
+const WEEKLY_RHYTHM_CUP_DAY_OFFSET = 2; // jeudi
+const WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET = 6; // lundi (fin de la nuit du dimanche)
+const WEEKLY_RHYTHM_ECONOMY_HOUR = 0;
+
+// Prochain mardi à 20h (Paris) à compter de `now`, aujourd'hui compris si
+// l'on est mardi avant 20h.
+function weeklyRhythmCalendarStartAt(now) {
+  const today = parisLocalDateParts(now);
+  const weekday = new Date(Date.UTC(today.year, today.month - 1, today.day)).getUTCDay();
+  const daysAhead = (WEEKLY_RHYTHM_FIRST_MATCH_WEEKDAY - weekday + 7) % 7;
+  const day = daysAhead > 0 ? addParisCalendarDays(today, daysAhead) : today;
+  const first = parisEpochForLocalTime(day.year, day.month, day.day, WEEKLY_RHYTHM_MATCH_HOUR);
+  if (first > now) return first;
+  const next = addParisCalendarDays(today, daysAhead + 7);
+  return parisEpochForLocalTime(next.year, next.month, next.day, WEEKLY_RHYTHM_MATCH_HOUR);
+}
+function weeklyRhythmDayIndexForChampionshipRound(round) {
+  const n = WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS.length;
+  return 7 * Math.floor(round / n) + WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS[round % n];
+}
+function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round) {
+  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round), WEEKLY_RHYTHM_MATCH_HOUR);
+}
+function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex) {
+  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, 7 * cupRoundIndex + WEEKLY_RHYTHM_CUP_DAY_OFFSET, WEEKLY_RHYTHM_MATCH_HOUR);
+}
+// Instant de la k-ième mise à jour économique (k >= 1).
+function weeklyRhythmEconomyTickAt(calendarStartAt, k) {
+  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, 7 * (k - 1) + WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET, WEEKLY_RHYTHM_ECONOMY_HOUR);
 }
 
 // `calendarConfig` optionnel ({weekMs, slotOffsetsMs}) : le rythme de
@@ -16814,8 +16874,9 @@ function buildLeagueWithHumanTeams(humanTeams, divisionLevel, now, calendarConfi
   // TRANSFER_AUCTION_DURATION_MS) plutôt qu'un Date.now() implicite, pour
   // rester testable de façon déterministe.
   league.calendarDailyAnchored = !!(calendarConfig && calendarConfig.dailyAnchored);
+  league.calendarWeeklyRhythm = league.calendarDailyAnchored && !!(calendarConfig && calendarConfig.weekly);
   if (league.calendarDailyAnchored) {
-    league.calendarStartAt = dailyAnchoredCalendarStartAt(now);
+    league.calendarStartAt = dailyAnchoredCalendarStartAt(now, league.calendarWeeklyRhythm);
     league.calendarWeekMs = null;
     league.calendarSlotOffsetsMs = null;
   } else {
@@ -17679,6 +17740,8 @@ function serializeLeague(lg) {
     // lastAutoTrainedDay/cup ci-dessus) : `false`/`-1`/`null` pour toute
     // ligue qui n'utilise pas ce rythme.
     calendarDailyAnchored: !!lg.calendarDailyAnchored,
+    calendarWeeklyRhythm: !!lg.calendarWeeklyRhythm,
+    lastEconomyTick: typeof lg.lastEconomyTick === "number" ? lg.lastEconomyTick : 0,
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
     cup: lg.cup || null,
     privateLeagues: Array.isArray(lg.privateLeagues) ? lg.privateLeagues : [],
@@ -17728,6 +17791,8 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarWeekMs = typeof data.calendarWeekMs === "number" ? data.calendarWeekMs : null;
   lg.calendarSlotOffsetsMs = Array.isArray(data.calendarSlotOffsetsMs) ? data.calendarSlotOffsetsMs : null;
   lg.calendarDailyAnchored = !!data.calendarDailyAnchored;
+  lg.calendarWeeklyRhythm = !!data.calendarWeeklyRhythm;
+  lg.lastEconomyTick = typeof data.lastEconomyTick === "number" ? data.lastEconomyTick : 0;
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
   lg.cup = data.cup || null;
   // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
@@ -22139,7 +22204,7 @@ function scheduledTimeForCurrentMatch() {
 function scheduledTimeForChampionshipRound(round) {
   if (!league || typeof league.calendarStartAt !== "number") return null;
   if (league.calendarDailyAnchored) {
-    return dailyAnchoredScheduledTimeForChampionshipRound(league.calendarStartAt, round);
+    return dailyAnchoredScheduledTimeForChampionshipRound(league.calendarStartAt, round, !!league.calendarWeeklyRhythm);
   }
   return calendarScheduledTimeForRound(
     league.calendarStartAt,
@@ -22155,7 +22220,7 @@ function scheduledTimeForChampionshipRound(round) {
 // Coupe (voir league.cup / renderCoupeSection) — renvoie null sinon.
 function scheduledTimeForCupRound(cupDayIndex) {
   if (!league || typeof league.calendarStartAt !== "number" || !league.calendarDailyAnchored) return null;
-  return dailyAnchoredScheduledTimeForCupRound(league.calendarStartAt, cupDayIndex);
+  return dailyAnchoredScheduledTimeForCupRound(league.calendarStartAt, cupDayIndex, !!league.calendarWeeklyRhythm);
 }
 
 // Durée lisible ("2 j 3 h", "45 min", "12 s"), toujours au format le plus
@@ -23528,7 +23593,19 @@ function attrColorTier(value) {
 function starRatingFromScore(score, max = 99) {
   return clamp(Math.round((score / max) * 5), 1, 5);
 }
-function pdpAttrRowHtml(player, attr, visible) {
+// Hausses du dernier entraînement (Team.lastTrainingReport.players[id].gains,
+// [{attr, before, after}]) : { attr: +N } pour les seules hausses.
+function pdpLastTrainingUps(team, player) {
+  const rep = team && team.lastTrainingReport && team.lastTrainingReport.players;
+  const entry = rep && player && rep[player.id];
+  const ups = {};
+  ((entry && entry.gains) || []).forEach(g => {
+    const d = (Number(g.after) || 0) - (Number(g.before) || 0);
+    if (d > 0) ups[g.attr] = (ups[g.attr] || 0) + d;
+  });
+  return ups;
+}
+function pdpAttrRowHtml(player, attr, visible, ups) {
   // Refonte fiche joueur (2026-09-25) : libellé, mini-barre remplie au
   // barème rouge/orange/blanc/vert, puis le chiffre coloré (mêmes classes
   // .pdp-attr-value/.attr-tier-* qu'avant). Non révélée : barre vide + "?"
@@ -23539,8 +23616,17 @@ function pdpAttrRowHtml(player, attr, visible) {
       `<span class="pdp-pill locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique">?</span></div>`;
   }
   const value = player.attrs[attr];
+  // Petit triangle vert si la caractéristique a progressé au dernier
+  // entraînement (retour utilisateur 2026-09-27 : "quand le joueur a pris
+  // un (ou plusieurs) ups, il faudrait une petite flèche vers le haut").
+  // Emplacement de largeur fixe, vide sinon, pour garder les barres alignées.
+  const up = ups && ups[attr] > 0 ? ups[attr] : 0;
+  const upHtml = up
+    ? `<span class="pdp-attr-up" title="+${up} au dernier entraînement" aria-label="+${up} au dernier entraînement">▲</span>`
+    : `<span class="pdp-attr-up" aria-hidden="true"></span>`;
   return `<div class="pdp-attr-row"><span class="lbl">${escapeHtml(label)}</span>` +
     `<span class="pdp2-bar"><span style="width:${clamp(value, 0, 100)}%;background:${radarTierColor(value)}"></span></span>` +
+    upHtml +
     `<span class="pdp-attr-value ${attrColorTier(value)}">${value}</span></div>`;
 }
 // Schéma de terrain compact (voir COURT_SVG/COURT_MARKER_POS plus haut,
@@ -24077,6 +24163,7 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `</div>`; // row profile
 
   // == Caractéristiques ==
+  const lastUps = pdpLastTrainingUps(team, player);
   const attrBlockHtml = (title, attrs, wide) => {
     const shown = attrs.filter(a => visibleAttrsSet.has(a));
     const hidden = attrs.filter(a => !visibleAttrsSet.has(a));
@@ -24087,7 +24174,7 @@ function renderPlayerDetail(teamIdx, playerId) {
     const listStyle = wide ? ` style="grid-template-rows:repeat(${Math.ceil(attrs.length / 2)}, auto)"` : "";
     return `<div class="pdp-attr-block pdp2-attr-block${wide ? " wide" : ""}">` +
       `<div class="pdp2-attr-head"><h4>${title}</h4><span>${meta}</span></div>` +
-      `<div class="pdp2-attr-list${wide ? " two" : ""}"${listStyle}>${ordered.map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a))).join("")}</div>` +
+      `<div class="pdp2-attr-list${wide ? " two" : ""}"${listStyle}>${ordered.map(a => pdpAttrRowHtml(player, a, visibleAttrsSet.has(a), lastUps)).join("")}</div>` +
       `</div>`;
   };
   html += `<section class="pdp2-card">`;
@@ -31336,12 +31423,12 @@ function coachRulesHtml() {
 function trainingRulesHtml() {
   const fullMin = Math.round(TRAINING_FULL_MATCH_SECONDS / 60);
   const halfMin = Math.round(TRAINING_FULL_MATCH_SECONDS / 120);
-  const individual = `Chaque jour, le club choisit <b>une seule compétence parmi les 13 fondamentaux</b> (tir, passe, défense, etc.) à travailler et les postes concernés : ce n'est pas un choix joueur par joueur. Un joueur en profite s'il occupe l'un des postes choisis, proportionnellement au temps qu'il a joué à ce poste, CUMULÉ sur tous les matchs de la journée (jusqu'à 3 : 2 de championnat, 10h et 19h, plus 1 de coupe à 15h les jours où un tour est dû), pas seulement le dernier (${fullMin} minutes cumulées = 100% de l'entraînement, ${halfMin} minutes = 50%, etc.) ; s'il n'a pas joué au bon poste ce jour-là, aucun fondamental ne progresse (seul le déclin lié à l'âge continue de s'appliquer normalement). L'entraînement se déclenche automatiquement juste après le dernier match du jour (19h) : c'est à ce moment-là que les compteurs de temps de jeu de cet onglet repartent à 0 pour la journée suivante. Le poste (plus ou moins naturel pour la compétence) et le gabarit (un grand progresse plus vite en jeu intérieur/rebond/contre, un petit en dribble/agilité/tir extérieur/passe) influencent aussi la vitesse de progression. Étendre l'entraînement à plus de postes forme plus de joueurs mais dilue le rendement de tous. Le Physique et le Mental, eux, ne se travaillent plus directement : le Physique évolue à peine tout seul au fil de la carrière, tandis que le Mental progresse nettement et continuellement, jusqu'à un âge avancé — avec un petit coup de pouce quand un fondamental lié est entraîné (ex. le Jeu intérieur aide un peu la Force). Le staff (entraîneur) se gère depuis l'onglet <b>Staff</b>.`;
+  const individual = `Le club choisit <b>une seule compétence parmi les 13 fondamentaux</b> (tir, passe, défense, etc.) à travailler et les postes concernés : ce n'est pas un choix joueur par joueur. Un joueur en profite s'il occupe l'un des postes choisis, proportionnellement au temps qu'il a joué à ce poste, CUMULÉ sur tous les matchs de la semaine (mardi et samedi en championnat, plus le jeudi en Coupe), pas seulement le dernier (${fullMin} minutes cumulées = 100% de l'entraînement, ${halfMin} minutes = 50%, etc.) ; s'il n'a pas joué au bon poste de la semaine, aucun fondamental ne progresse (seul le déclin lié à l'âge continue de s'appliquer normalement). L'entraînement se déclenche automatiquement une fois par semaine, dans la nuit du dimanche au lundi (en même temps que la mise à jour économique) : c'est à ce moment-là que les compteurs de temps de jeu de cet onglet repartent à 0 pour la semaine suivante. Le poste (plus ou moins naturel pour la compétence) et le gabarit (un grand progresse plus vite en jeu intérieur/rebond/contre, un petit en dribble/agilité/tir extérieur/passe) influencent aussi la vitesse de progression. Étendre l'entraînement à plus de postes forme plus de joueurs mais dilue le rendement de tous. Le Physique et le Mental, eux, ne se travaillent plus directement : le Physique évolue à peine tout seul au fil de la carrière, tandis que le Mental progresse nettement et continuellement, jusqu'à un âge avancé — avec un petit coup de pouce quand un fondamental lié est entraîné (ex. le Jeu intérieur aide un peu la Force). Le staff (entraîneur) se gère depuis l'onglet <b>Staff</b>.`;
   // Retour utilisateur (2026-09) : "enleve ça, c'est pour le guide" (le
   // détail du focus collectif était auparavant affiché directement sous le
   // sélecteur de l'onglet Entraînement) + "ne mets pas de chiffre dans le
   // guide par contre" : explication volontairement sans aucun chiffre ici.
-  const collective = `En plus de l'entraînement des fondamentaux ci-dessus, le club peut aussi consacrer un <b>focus collectif</b> chaque jour : soit préparer une nouvelle tactique, soit privilégier la récupération physique de l'équipe. <b>Préparer une tactique</b> : un seul aspect précis à la fois, une priorité offensive, une défense OU un rythme (jamais plusieurs en même temps), à choisir parmi tout ce qui peut être réglé sur l'onglet <b>Ordres</b>. Chaque jour d'entraînement sur cet aspect ajoute +4 de connaissance tactique, crédités au prochain match où il est effectivement joué (voir Connaissance tactique). <b>Récupération</b> : la forme physique de l'équipe remonte de 15 points par jour sans match au lieu de 10.`;
+  const collective = `En plus de l'entraînement des fondamentaux ci-dessus, le club peut aussi consacrer un <b>focus collectif</b> à chaque jour de repos (jour sans match) : soit préparer une nouvelle tactique, soit privilégier la récupération physique de l'équipe. <b>Préparer une tactique</b> : un seul aspect précis à la fois, une priorité offensive, une défense OU un rythme (jamais plusieurs en même temps), à choisir parmi tout ce qui peut être réglé sur l'onglet <b>Ordres</b>. Chaque jour d'entraînement sur cet aspect ajoute +4 de connaissance tactique, crédités au prochain match où il est effectivement joué (voir Connaissance tactique). <b>Récupération</b> : la forme physique de l'équipe remonte de 15 points par jour sans match au lieu de 10.`;
   return `<p class="training-intro">${individual}</p><p class="training-intro" style="margin-top:10px;">${collective}</p>`;
 }
 
@@ -39799,12 +39886,12 @@ const TOUR_STEPS = [
   // cette ligue) est simplement sautée, voir tourShowStep.
   { kind: "spotlight", topic: "Compétitions", page: "calendrier", target: "#calendrierContent .cal-next",
     title: "Le calendrier",
-    text: "Tous vos matchs de la saison, championnat et Coupe, groupés par mois. Les matchs se jouent tout seuls à l'heure prévue (championnat à 10:00 et 19:00, Coupe à 15:00) : connectez-vous pour les suivre en direct, ou laissez-les se dérouler sans vous.",
+    text: "Tous vos matchs de la saison, championnat et Coupe, groupés par mois. Les matchs se jouent tout seuls à l'heure prévue (championnat le mardi et le samedi à 20:00, Coupe le jeudi à 20:00) : connectez-vous pour les suivre en direct, ou laissez-les se dérouler sans vous.",
     tip: "Cette carte montre le prochain match avec un compte à rebours ; sur chaque ligne, le bouton Ordres (ou Modifier vos ordres) prépare le match correspondant.",
   },
   { kind: "spotlight", topic: "Compétitions", page: "coupe", target: "#coupeContent .cp-path",
     title: "La Coupe",
-    text: "Un tableau à élimination directe, un tour par jour. Cette carte résume votre parcours ; à gauche, les matchs de chaque tour, et en bas l'arbre de la phase finale à partir des 8es.",
+    text: "Un tableau à élimination directe, un tour chaque jeudi. Cette carte résume votre parcours ; à gauche, les matchs de chaque tour, et en bas l'arbre de la phase finale à partir des 8es.",
     tip: "Les ordres de Coupe se préparent comme ceux du championnat, depuis le Calendrier ou le sélecteur de journée de l'onglet Ordres.",
   },
   { kind: "spotlight", topic: "Compétitions", page: "ligue", target: ".lg-race",

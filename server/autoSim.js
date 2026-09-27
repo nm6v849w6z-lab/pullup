@@ -35,7 +35,7 @@
 
 const {
   realWeekIndexForRound, isLastRoundOfRealWeek, scheduledTimeForLeagueRound,
-  scheduledTimeForLeagueCupRound, MATCH_BROADCAST_DURATION_MS,
+  scheduledTimeForLeagueCupRound, scheduledTimeForLeagueEconomyTick, MATCH_BROADCAST_DURATION_MS,
   dailyAnchoredDayIndexForChampionshipRound, dailyAnchoredSlotIndexForChampionshipRound,
   DAILY_ANCHORED_CHAMPIONSHIP_HOURS,
 } = Calendar;
@@ -105,7 +105,9 @@ function catchUpLeague(league, now) {
   // carrière solo historique passe TOUJOURS par la branche classique
   // (calendarDailyAnchored jamais vrai pour elle) — zéro changement de
   // comportement pour elle.
-  if (league.calendarDailyAnchored) {
+  if (league.calendarDailyAnchored && league.calendarWeeklyRhythm) {
+    catchUpWeeklyRhythm(league, now, events);
+  } else if (league.calendarDailyAnchored) {
     catchUpDailyAnchored(league, now, events);
   } else {
     catchUpClassic(league, now, events);
@@ -164,34 +166,7 @@ function catchUpLeague(league, now) {
 // têtes de série soient corrects).
 function catchUpPlayoffs(league, now, events) {
   if (!league.isRegularSeasonDone()) return;
-  if (!league.playoffs) {
-    league.startPlayoffsIfNeeded(now);
-    // Barrage de relégation (7e vs 8e de la saison régulière) : indépendant
-    // du résultat des play-offs (voir League.runRelegationBarrage/
-    // divisionOutcomeForUserTeam côté moteur), donc résolu ici, tout de
-    // suite, plutôt que d'attendre que la finale de play-offs (parfois
-    // plusieurs jours réels plus tard) soit jouée.
-    if (!league.relegationBarrage) league.runRelegationBarrage();
-    // Bonus de qualification surprise en play-offs (retour utilisateur,
-    // 2026-09 : "une équipe qui est en PO alors que le CA ne visait que le
-    // milieu de tableau/maintien doit avoir un petit surplus des
-    // supporters [...] au moment des PO pas à la fin de la saison" ; voir
-    // engine.js:seasonObjectiveSurprisePlayoffsBonus) : ce bloc `if
-    // (!league.playoffs)` ne s'exécute qu'UNE SEULE fois par saison (garde
-    // déjà en place pour l'événement "regular-season-end" ci-dessous),
-    // donc pas besoin d'un drapeau "déjà réglé" séparé comme pour le
-    // verdict d'objectif de saison. Pour CHAQUE équipe humaine parmi les 4
-    // têtes de série tout juste tirées au sort (league.playoffs.seeds),
-    // jamais pour une équipe CPU.
-    league.playoffs.seeds.forEach(teamIdx => {
-      const team = league.teams[teamIdx];
-      if (!team.isHuman) return;
-      const bonus = seasonObjectiveSurprisePlayoffsBonus(league, teamIdx);
-      if (!bonus) return;
-      team.recordMoraleEvent(bonus.label, bonus.delta);
-    });
-    events.push({ type: "regular-season-end" });
-  }
+  startPlayoffsPhase(league, now, events);
 
   while (!league.isPlayoffsDone()) {
     const round = league.playoffs.round;
@@ -220,6 +195,43 @@ function catchUpPlayoffs(league, now, events) {
       }
     }
     events.push({ type: "season-end" });
+  }
+}
+
+// Transition saison régulière -> play-offs (une seule fois par saison) :
+// tirage des têtes de série, barrage de relégation, bonus de qualification
+// surprise, événement "regular-season-end". Extrait de catchUpPlayoffs pour
+// être aussi appelé par catchUpWeeklyRhythm (qui intercale les play-offs
+// avec les mises à jour économiques du lundi, dans l'ordre chronologique).
+function startPlayoffsPhase(league, now, events) {
+  if (!league.isRegularSeasonDone()) return;
+  if (!league.playoffs) {
+    league.startPlayoffsIfNeeded(now);
+    // Barrage de relégation (7e vs 8e de la saison régulière) : indépendant
+    // du résultat des play-offs (voir League.runRelegationBarrage/
+    // divisionOutcomeForUserTeam côté moteur), donc résolu ici, tout de
+    // suite, plutôt que d'attendre que la finale de play-offs (parfois
+    // plusieurs jours réels plus tard) soit jouée.
+    if (!league.relegationBarrage) league.runRelegationBarrage();
+    // Bonus de qualification surprise en play-offs (retour utilisateur,
+    // 2026-09 : "une équipe qui est en PO alors que le CA ne visait que le
+    // milieu de tableau/maintien doit avoir un petit surplus des
+    // supporters [...] au moment des PO pas à la fin de la saison" ; voir
+    // engine.js:seasonObjectiveSurprisePlayoffsBonus) : ce bloc `if
+    // (!league.playoffs)` ne s'exécute qu'UNE SEULE fois par saison (garde
+    // déjà en place pour l'événement "regular-season-end" ci-dessous),
+    // donc pas besoin d'un drapeau "déjà réglé" séparé comme pour le
+    // verdict d'objectif de saison. Pour CHAQUE équipe humaine parmi les 4
+    // têtes de série tout juste tirées au sort (league.playoffs.seeds),
+    // jamais pour une équipe CPU.
+    league.playoffs.seeds.forEach(teamIdx => {
+      const team = league.teams[teamIdx];
+      if (!team.isHuman) return;
+      const bonus = seasonObjectiveSurprisePlayoffsBonus(league, teamIdx);
+      if (!bonus) return;
+      team.recordMoraleEvent(bonus.label, bonus.delta);
+    });
+    events.push({ type: "regular-season-end" });
   }
 }
 
@@ -321,6 +333,65 @@ function catchUpDailyAnchored(league, now, events) {
       if (cupDueAt + MATCH_BROADCAST_DURATION_MS > now) break;
       const cupEvent = finalizeCupRound(Engine, league);
       if (cupEvent) events.push(cupEvent);
+    }
+  }
+}
+
+// Boucle du RYTHME HEBDOMADAIRE (retour utilisateur, 2026-09-27, voir
+// League.calendarWeeklyRhythm et le bloc "RYTHME HEBDOMADAIRE" de
+// server/calendar.js) : championnat mardi et samedi à 20h, coupe le jeudi à
+// 20h, play-offs mardi et samedi, et UNE mise à jour économique par semaine,
+// dans la nuit du dimanche au lundi ("on paie donc le staff et les joueurs à
+// ce moment là") — Team.trainWeek, qui applique aussi l'entraînement
+// fondamental ("une fois par semaine selon le temps de jeu", minutes
+// cumulées sur les matchs de la semaine) et le vieillissement de fin de
+// saison régulière (semaine 10, voir SEASON_LENGTH_WEEKS). L'entraînement
+// collectif, lui, compte déjà jour par jour sur les jours sans match (voir
+// Team.syncCollectiveTrainingLog/conditionRecoveryPerDay), rien à faire ici.
+// À chaque itération, résout l'événement DÛ le plus ancien parmi : journée
+// de championnat, tour de coupe, match de play-offs, mise à jour du lundi.
+function catchUpWeeklyRhythm(league, now, events) {
+  for (;;) {
+    if (league.isRegularSeasonDone()) startPlayoffsPhase(league, now, events);
+    if (league.isPlayoffsDone()) break;
+    const champDone = league.isRegularSeasonDone();
+    const pendingCup = league.pendingCupRound ? league.pendingCupRound() : null;
+    const inPlayoffs = champDone && league.playoffs && !league.isPlayoffsDone();
+
+    const champAt = !champDone ? scheduledTimeForLeagueRound(league, league.round) : Infinity;
+    const playoffAt = inPlayoffs ? scheduledTimeForLeagueRound(league, league.playoffs.round) : Infinity;
+    const cupAt = pendingCup ? scheduledTimeForLeagueCupRound(league, pendingCup.dayIndex) : Infinity;
+    const tick = (league.lastEconomyTick || 0) + 1;
+    const ecoAt = scheduledTimeForLeagueEconomyTick(league, tick);
+
+    const next = Math.min(champAt, playoffAt, cupAt, ecoAt);
+    if (next === Infinity) break;
+
+    if (next === ecoAt) {
+      if (ecoAt > now) break;
+      const results = [];
+      league.teams.forEach((team, teamIdx) => {
+        if (!team.isHuman) return;
+        // Horodatage de la mise à jour elle-même (lundi 0h), pas `now` :
+        // un rattrapage groupé garde ainsi l'ordre réel des semaines.
+        results.push({ teamIdx, result: team.trainWeek(league.divisionLevel, ecoAt) });
+      });
+      league.trainCpuTeams();
+      league.lastEconomyTick = tick;
+      events.push({ type: "training", week: tick, results });
+      continue;
+    }
+    // Matchs : même garde-fou que les autres boucles, on laisse d'abord
+    // passer la fenêtre de diffusion en direct.
+    if (next + MATCH_BROADCAST_DURATION_MS > now) break;
+    if (next === champAt) {
+      events.push(finalizeRound(Engine, league, league.round, now));
+    } else if (next === cupAt) {
+      const cupEvent = finalizeCupRound(Engine, league);
+      if (cupEvent) events.push(cupEvent); else break;
+    } else {
+      const ev = finalizePlayoffRound(Engine, league, now);
+      if (ev) events.push(ev); else break;
     }
   }
 }

@@ -367,7 +367,7 @@ const T0 = Date.UTC(2026, 8, 7); // un lundi arbitraire, fixe pour tout le fichi
 {
   const { generateMultiManagerLeague } = E;
   const { dailyAnchoredCalendarConfig, scheduledTimeForLeagueRound: schedRound, scheduledTimeForLeagueCupRound } = require("./calendar.js");
-  const league = generateMultiManagerLeague(["Lyon Daily", "Marseille Daily"], 1, T0, dailyAnchoredCalendarConfig());
+  const league = generateMultiManagerLeague(["Lyon Daily", "Marseille Daily"], 1, T0, { dailyAnchored: true }); // ancien rythme QUOTIDIEN (ligues créées avant le 2026-09-27), toujours supporté
   if (!league.calendarDailyAnchored) throw new Error("❌ Prérequis du test : la ligue devrait être au calendrier ancré quotidien.");
   if (league.lastAutoTrainedDay !== -1) throw new Error("❌ lastAutoTrainedDay devrait démarrer à -1 (aucun jour encore traité).");
 
