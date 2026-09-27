@@ -2882,6 +2882,7 @@
   .stf-level:disabled{opacity:.45; cursor:not-allowed;}
   .stf-level__title{font-weight:700; font-size:14px;}
   .stf-level__meta{font-size:12px; color:var(--ink-dim);}
+  .stf-specialties__grid{grid-template-columns:repeat(5,minmax(0,1fr));}
 
   .stf-table-wrap{overflow-x:auto;}
   .stf-table{width:100%; border-collapse:collapse; min-width:860px;}
@@ -33157,7 +33158,7 @@ const staffUi = {
   recruiter: { open: false, level: 0, expanded: false },
   doctor: { open: false, level: 0, expanded: false },
   physio: { open: false, level: 0, expanded: false },
-  assistant: { open: false, level: 0, expanded: false },
+  assistant: { open: false, level: 0, expanded: false, specialty: "" },
 };
 
 function staffStarsHtml(level) {
@@ -33253,6 +33254,25 @@ function renderStaffListings(role, open, now) {
     holder.innerHTML = `<p class='training-empty'>Aucun candidat ${role.noun} aux enchères pour l'instant, revenez plus tard.</p>`;
     return;
   }
+  // Entraîneur adjoint (retour utilisateur, 2026-09-27 : "un filtre par
+  // spécialité sur le marché des adjoints ; oui ajoute") : filtre de
+  // spécialité AVANT le filtre de niveau (les niveaux proposés et leurs prix
+  // suivent la spécialité choisie). Même repli sur "Toutes" qu'un niveau vide.
+  let specialtyHtml = "";
+  if (role.key === "assistant") {
+    if (ui.specialty && !open.some(l => l.specialty === ui.specialty)) ui.specialty = "";
+    const specBtns = ["", ...Object.keys(ASSISTANT_SPECIALTIES)].map(key => {
+      const pool = key ? open.filter(l => l.specialty === key) : open;
+      const selected = ui.specialty === key;
+      const spec = ASSISTANT_SPECIALTIES[key];
+      return `<button type="button" class="stf-level${selected ? " is-selected" : ""}" data-staff-specialty="${role.key}:${key}" aria-pressed="${selected}"${pool.length ? "" : " disabled"}>` +
+        `<span class="stf-level__title">${key ? escapeHtml(spec.label) : "Toutes"}</span>` +
+        `<span class="stf-level__meta">${key ? escapeHtml(spec.attrs.map(a => TRAINING_LABELS[a] || a).join(", ")) : "Toutes les spécialités"}</span></button>`;
+    }).join("");
+    specialtyHtml = `<fieldset class="stf-levels stf-specialties"><legend><span>Quelle spécialité ?</span></legend>` +
+      `<div class="stf-levels__grid stf-specialties__grid">${specBtns}</div></fieldset>`;
+    if (ui.specialty) open = open.filter(l => l.specialty === ui.specialty);
+  }
   // Un filtre de niveau devenu vide (enchères closes entre-temps) retombe
   // sur "Tous" plutôt que d'afficher une liste vide.
   if (ui.level && !open.some(l => l.level === ui.level)) ui.level = 0;
@@ -33276,7 +33296,7 @@ function renderStaffListings(role, open, now) {
   // (carte poste, boutons de niveau, libellé de tri).
   const sortLabel = "Triés par fin d'enchère";
 
-  let html = `<fieldset class="stf-levels"><legend><span>Quel niveau voulez-vous recruter ?</span><span class="stf-levels__sort">${sortLabel}</span></legend>` +
+  let html = specialtyHtml + `<fieldset class="stf-levels"><legend><span>Quel niveau voulez-vous recruter ?</span><span class="stf-levels__sort">${sortLabel}</span></legend>` +
     `<div class="stf-levels__grid">${levelBtns}</div></fieldset>`;
 
   html += `<div class="stf-table-wrap"><table class="stf-table"><thead><tr>` +
@@ -33328,7 +33348,7 @@ function renderStaffListings(role, open, now) {
 // Un seul écouteur délégué pour toute la page Staff (cartes poste, replier/
 // déplier, filtre de niveau, ±100 €, enchérir, congédier, afficher plus).
 document.getElementById("staffSection").addEventListener("click", (e) => {
-  const t = e.target.closest("[data-staff-open-role],[data-staff-toggle-role],[data-staff-level],[data-staff-more],[data-staff-step],[data-staff-bid],[data-staff-fire]");
+  const t = e.target.closest("[data-staff-open-role],[data-staff-toggle-role],[data-staff-specialty],[data-staff-level],[data-staff-more],[data-staff-step],[data-staff-bid],[data-staff-fire]");
   if (!t || t.disabled) return;
   const d = t.dataset;
 
@@ -33341,6 +33361,14 @@ document.getElementById("staffSection").addEventListener("click", (e) => {
   }
   if (d.staffToggleRole) {
     staffUi[d.staffToggleRole].open = !staffUi[d.staffToggleRole].open;
+    renderStaffPanel();
+    return;
+  }
+  if (d.staffSpecialty != null) {
+    const [key, spec] = d.staffSpecialty.split(":");
+    staffUi[key].specialty = spec || "";
+    staffUi[key].level = 0;
+    staffUi[key].expanded = false;
     renderStaffPanel();
     return;
   }

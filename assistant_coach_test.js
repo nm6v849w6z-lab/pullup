@@ -124,4 +124,38 @@ check(Math.abs(tot.pass / N) < 0.5, "l'adjoint défensif ne touche pas la passe"
   check(html.includes('id="staffAssistantPanel"') && html.includes('key: "assistant", label: "Entraîneur adjoint"'), "section Entraîneur adjoint sur la page Staff");
 }
 
-console.log("\n🏁 assistant_coach_test.js : tout est vert");
+// 8) Navigateur : section Entraîneur adjoint, filtre par spécialité (retour
+//    utilisateur, 2026-09-27 : "un filtre par spécialité sur le marché des
+//    adjoints ; oui ajoute").
+(async () => {
+  const { startTestServer, openGame, flush } = require("./test_helpers.js");
+  const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+  const { server } = await startTestServer();
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const dom = await openGame(html, baseUrl);
+    const doc = dom.window.document;
+    const win = dom.window;
+    [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "staff").click();
+    doc.querySelector('[data-staff-toggle-role="assistant"]').click();
+    await flush(dom);
+    const specBtns = doc.querySelectorAll('#staffAssistantHireGrid [data-staff-specialty]');
+    check(specBtns.length === 5, "filtre de spécialité : Toutes + 4 spécialités");
+    const total = doc.querySelectorAll("#staffAssistantHireGrid table.stf-table tbody tr").length;
+    const target = [...specBtns].find(b => b.dataset.staffSpecialty !== "assistant:" && !b.disabled);
+    target.click();
+    await flush(dom);
+    const key = target.dataset.staffSpecialty.split(":")[1];
+    const rows = [...doc.querySelectorAll("#staffAssistantHireGrid table.stf-table tbody tr")];
+    const expected = win.eval(`league.assistantCoachListings.filter(l => l.status === "open" && l.specialty === "${key}").length`);
+    const label = ASSISTANT_SPECIALTIES[key].label;
+    check(rows.length === Math.min(expected, win.eval("STAFF_LISTINGS_COLLAPSED_COUNT")) && rows.every(r => r.textContent.includes(label)), `filtre « ${label} » : seuls ses candidats sont listés`);
+    doc.querySelector('[data-staff-specialty="assistant:"]').click();
+    await flush(dom);
+    check(doc.querySelectorAll("#staffAssistantHireGrid table.stf-table tbody tr").length === total, "« Toutes » réaffiche tous les candidats");
+    dom.window.close();
+  } finally {
+    server.close();
+  }
+  console.log("\n🏁 assistant_coach_test.js : tout est vert");
+})().catch(e => { console.error(e); process.exit(1); });
