@@ -15,7 +15,7 @@ const {
   generateTeam, generateLeague, serializeTeam, teamFromSave, serializeLeague, leagueFromSave,
   minNextBidFor, trainerWeeklySalary,
   TRAINER_LEVELS, TRAINER_BASE_SALARY,
-  COACH_AUCTION_DURATION_MS, COACH_MARKET_MIN_OPEN_LISTINGS, COACH_MARKET_GENERATE_CHECK_INTERVAL_MS,
+  COACH_AUCTION_DURATION_MS, COACH_MARKET_GENERATE_CHECK_INTERVAL_MS,
 } = E;
 
 function freshLeague(budget = 5000000) {
@@ -266,7 +266,7 @@ function withMockedRandom(value, fn) {
 
 // ---------------------------------------------------------------------
 // Partie 5 : le marché se renouvelle pour garder au moins
-// COACH_MARKET_MIN_OPEN_LISTINGS candidats ouverts en permanence.
+// le plancher du marché (2 × managers, League.staffMarketMinOpenListings) candidats ouverts en permanence.
 // ---------------------------------------------------------------------
 {
   const lg = freshLeague();
@@ -274,9 +274,9 @@ function withMockedRandom(value, fn) {
   if (lg.coachListings.length !== 0) throw new Error("❌ Une ligue fraîchement générée ne devrait avoir aucun candidat entraîneur avant le premier refreshCoachMarket.");
   lg.refreshCoachMarket(now);
   const openAfterFirst = lg.coachListings.filter(l => l.status === "open").length;
-  console.log(`\nAprès le premier refreshCoachMarket : ${openAfterFirst} candidat(s) ouvert(s) (attendu ${COACH_MARKET_MIN_OPEN_LISTINGS})`);
-  if (openAfterFirst !== COACH_MARKET_MIN_OPEN_LISTINGS) {
-    throw new Error(`❌ Le marché devrait se remplir jusqu'à COACH_MARKET_MIN_OPEN_LISTINGS (${COACH_MARKET_MIN_OPEN_LISTINGS}) candidats dès le premier appel.`);
+  console.log(`\nAprès le premier refreshCoachMarket : ${openAfterFirst} candidat(s) ouvert(s) (attendu ${lg.staffMarketMinOpenListings()})`);
+  if (openAfterFirst !== lg.staffMarketMinOpenListings()) {
+    throw new Error(`❌ Le marché devrait se remplir jusqu'au plancher du marché (${lg.staffMarketMinOpenListings()}) candidats dès le premier appel.`);
   }
 
   // Un appel trop rapproché (avant COACH_MARKET_GENERATE_CHECK_INTERVAL_MS)
@@ -311,18 +311,18 @@ function withMockedRandom(value, fn) {
   const later = now + 1;
   lg.refreshCoachMarket(later);
   const openAfterRefill = lg.coachListings.filter(l => l.status === "open").length;
-  console.log(`Après résolution d'un candidat puis nouveau refresh : ${openAfterRefill} candidat(s) ouvert(s) (attendu au moins ${COACH_MARKET_MIN_OPEN_LISTINGS})`);
-  if (openAfterRefill < COACH_MARKET_MIN_OPEN_LISTINGS) {
+  console.log(`Après résolution d'un candidat puis nouveau refresh : ${openAfterRefill} candidat(s) ouvert(s) (attendu au moins ${lg.staffMarketMinOpenListings()})`);
+  if (openAfterRefill < lg.staffMarketMinOpenListings()) {
     throw new Error("❌ Le marché devrait se reconstituer jusqu'au plancher après qu'un candidat a été résolu.");
   }
-  console.log("✅ Le marché se maintient bien à au moins COACH_MARKET_MIN_OPEN_LISTINGS candidats ouverts, avec throttle correct entre deux vérifications.");
+  console.log("✅ Le marché se maintient bien à au moins le plancher du marché (2 × managers, League.staffMarketMinOpenListings) candidats ouverts, avec throttle correct entre deux vérifications.");
 }
 
 // ---------------------------------------------------------------------
 // Partie 6 : League.fireTeamTrainer — retour utilisateur (2026-09) : "dès
 // qu'un staff est viré parce que devenu trop cher, il faut qu'il retourne
 // sur le marché avec un salaire baissé de 30%". Le renouvellement continu du
-// marché lui-même (COACH_MARKET_MIN_OPEN_LISTINGS, voir Partie 5 ci-dessus)
+// marché lui-même (plancher = 2 × managers, voir Partie 5 ci-dessus)
 // couvre déjà "génère régulièrement des personnels de staff" — cette partie
 // ne teste QUE le relistage au congédiement.
 // ---------------------------------------------------------------------

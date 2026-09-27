@@ -188,8 +188,7 @@
 /* ---------- Carte des tirs ---------- */
 .hm-live .court{width:100%;height:auto;display:block;border-radius:12px;background:var(--court)}
 .hm-live .court .ln{fill:none;stroke:var(--courtLine);stroke-width:2}
-.hm-live .court .led{fill:#0b1f3a;stroke:#1f4a86;stroke-width:1.5}
-.hm-live .court .led-txt{fill:#8fd0ff;font:800 13px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:2.5px}
+.hm-live .court .floor-ad{fill:rgba(245,161,58,.36);font:900 20px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:2px}
 .hm-live .court .rim{fill:none;stroke:var(--accent);stroke-width:2.5}
 .hm-live .made .dot{stroke:var(--court);stroke-width:2}
 .hm-live .miss path{stroke-width:3;stroke-linecap:round;opacity:.55}
@@ -367,6 +366,7 @@ html[data-theme="light"] .hm-live{
 html[data-theme="light"] .hm-live .board{background:#ffffff;border-color:#dbe2ec;box-shadow:0 14px 34px -24px rgba(20,32,51,.35)}
 html[data-theme="light"] .hm-live .board-split{background:#f8f0e4}
 html[data-theme="light"] .hm-live .board-court{opacity:.26}
+html[data-theme="light"] .hm-live .court .floor-ad{fill:rgba(180,104,14,.32)}
 html[data-theme="light"] .hm-live .board-bottom{background:rgba(243,245,249,.85);border-top-color:#e3e8f0}
 html[data-theme="light"] .hm-live .tname.mine::after{background:#fdebd1;color:#8a4f00}
 html[data-theme="light"] .hm-live .chip{background:#eef2f7}

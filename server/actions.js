@@ -753,6 +753,33 @@ function fireRecruiter(team, teamIndex, league, body, now) {
   return { ok: true, relisted: result.relisted };
 }
 
+// Staff médical (médecin/kiné, voir League.placeMedicalBid/
+// fireTeamMedicalStaff côté moteur) : même forme que bidOnRecruiterListing/
+// fireRecruiter ci-dessus, écrite une fois pour les deux rôles.
+function makeMedicalBidAction(role) {
+  return function (team, teamIndex, league, body, now) {
+    if (!body || (typeof body.listingId !== "number" && typeof body.listingId !== "string") || body.listingId === "") {
+      return fail("listingId requis.");
+    }
+    const listingId = typeof body.listingId === "string" && /^-?\d+$/.test(body.listingId) ? Number(body.listingId) : body.listingId;
+    if (typeof body.amount !== "number" || !(body.amount > 0)) return fail("amount doit être un nombre positif.");
+    const result = league.placeMedicalBid(role, listingId, teamIndex, body.amount, now);
+    if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
+    return { ok: true, listing: result.listing };
+  };
+}
+function makeMedicalFireAction(role, label) {
+  return function (team, teamIndex, league, body, now) {
+    const result = league.fireTeamMedicalStaff(role, teamIndex, now);
+    if (!result.ok) return fail(`Congédiement du ${label} refusé.`);
+    return { ok: true, relisted: result.relisted };
+  };
+}
+const bidOnDoctorListing = makeMedicalBidAction("doctor");
+const bidOnPhysioListing = makeMedicalBidAction("physio");
+const fireDoctor = makeMedicalFireAction("doctor", "médecin");
+const firePhysio = makeMedicalFireAction("physio", "kiné");
+
 // Centre de formation : agrandissement d'UN palier — même forme que
 // upgradeArena/upgradeFanShop ci-dessus (voir Team.upgradeTrainingCenter/
 // nextTrainingCenterLevel côté moteur). Aucun corps de requête attendu.
@@ -1202,6 +1229,7 @@ module.exports = {
   // Académie de jeunes (recruteur + centre de formation + pipeline privé de
   // prospects, voir engine.js) :
   bidOnRecruiterListing, fireRecruiter, upgradeTrainingCenter,
+  bidOnDoctorListing, fireDoctor, bidOnPhysioListing, firePhysio,
   signYouthCandidate, declineYouthCandidate, promoteYouthPlayer, releaseYouthPlayer,
   // Autres infrastructures du club (station TV, salle de musculation, espace
   // bien-être, voir CLUB_FACILITIES côté moteur) :

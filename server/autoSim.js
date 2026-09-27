@@ -135,6 +135,10 @@ function catchUpLeague(league, now) {
   // au serveur (saveMyTeam() est un no-op en ligue partagée), donc reparti
   // de zéro à CHAQUE ouverture de l'onglet Staff ou rechargement de page.
   league.refreshRecruiterMarket(now);
+  // Marchés du staff médical (médecin/kiné, voir League.refreshMedicalMarket) :
+  // même logique/raison que les trois marchés de staff ci-dessus.
+  league.refreshDoctorMarket(now);
+  league.refreshPhysioMarket(now);
 
   catchUpPlayoffs(league, now, events);
 

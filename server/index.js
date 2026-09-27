@@ -664,6 +664,11 @@ const ACTION_ROUTES = {
   // /api/training-center pour ce qui n'a pas d'équivalent staff-market.
   "/api/market/recruiter-bid": actions.bidOnRecruiterListing,
   "/api/staff/fire-recruiter": actions.fireRecruiter,
+  // Staff médical (médecin/kiné, voir server/actions.js makeMedicalBidAction).
+  "/api/market/doctor-bid": actions.bidOnDoctorListing,
+  "/api/staff/fire-doctor": actions.fireDoctor,
+  "/api/market/physio-bid": actions.bidOnPhysioListing,
+  "/api/staff/fire-physio": actions.firePhysio,
   "/api/training-center": actions.upgradeTrainingCenter,
   "/api/youth/sign": actions.signYouthCandidate,
   "/api/youth/decline": actions.declineYouthCandidate,

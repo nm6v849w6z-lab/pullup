@@ -519,6 +519,20 @@ export function createLiveView(root, opts = {}) {
       <circle class="ln" cx="470" cy="250" r="60"/>${half(false)}${half(true)}`;
   })();
 
+  // Découpe le nom du sponsor pour la pub au sol : une ligne jusqu'à 12
+  // caractères, sinon deux lignes coupées à l'espace le plus proche du milieu.
+  function floorAdLines(name) {
+    if (name.length <= 12 || !name.includes(" ")) return [name];
+    const words = name.split(/\s+/);
+    let best = null;
+    for (let i = 1; i < words.length; i++) {
+      const a = words.slice(0, i).join(" "), b = words.slice(i).join(" ");
+      const d = Math.max(a.length, b.length);
+      if (!best || d < best.d) best = { d, lines: [a, b] };
+    }
+    return best.lines;
+  }
+
   function renderCourt(newShots) {
     const list = S.shots
       .filter(s => (ui.team === "all" || s.team == ui.team) && (ui.q === "all" || s.quarter == ui.q) && (ui.res === "all" || (ui.res === "made") === s.made))
@@ -539,15 +553,22 @@ export function createLiveView(root, opts = {}) {
     // Logo du club qui reçoit au rond central (S.courtLogo : SVG fourni par
     // le jeu, dessiné pour un cercle de 104 unités centré en 470,250).
     const court = $("court");
-    // Panneaux LED le long des lignes de touche : sponsor salle du club qui
-    // reçoit (S.arenaSponsor), sinon « HOOP MANAGER » en attendant.
+    // Pub du sponsor salle du club qui reçoit (S.arenaSponsor, sinon
+    // « HOOP MANAGER ») peinte sur le parquet, dans les deux coins entre la
+    // ligne de fond, la raquette et la ligne à 3 points (retour utilisateur,
+    // 2026-09-27 : « la pub sur le terrain ne va pas […] mets-la là où j'ai
+    // gribouillé », à la place des bandeaux LED le long des lignes de
+    // touche). Au-delà de 12 caractères, le nom passe sur 2 lignes.
     const ledKey = (S.courtLogo || "") + "|" + (S.arenaSponsor || "");
     if (courtLogoKey !== ledKey) {
       courtLogoKey = ledKey;
-      const label = esc((S.arenaSponsor || "HOOP MANAGER").toUpperCase());
-      const led = y => `<rect class="led" x="0" y="${y}" width="940" height="22" rx="3"/>` +
-        [117, 352, 587, 822].map(x => `<text class="led-txt" x="${x}" y="${y + 15.5}" text-anchor="middle">${label}</text>`).join("");
-      court.innerHTML = `<g class="base">${COURT_BASE}</g><g class="logo" opacity=".85">${S.courtLogo || ""}</g><g class="leds">${led(3)}${led(475)}</g><g class="marks"></g>`;
+      const lines = floorAdLines((S.arenaSponsor || "HOOP MANAGER").toUpperCase());
+      const ad = (cx, cy) => lines.map((l, i) => {
+        const y = cy + (i - (lines.length - 1) / 2) * 24 + 7;
+        const fit = l.length * 17.5 > 190 ? ` textLength="190" lengthAdjust="spacingAndGlyphs"` : "";
+        return `<text class="floor-ad" x="${cx}" y="${y}" text-anchor="middle"${fit}>${esc(l)}</text>`;
+      }).join("");
+      court.innerHTML = `<g class="base">${COURT_BASE}</g><g class="ads">${ad(100, 95)}${ad(840, 405)}</g><g class="logo" opacity=".85">${S.courtLogo || ""}</g><g class="marks"></g>`;
     }
     court.querySelector(".marks").innerHTML = g;
 

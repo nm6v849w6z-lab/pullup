@@ -12,7 +12,7 @@ const {
   generateTeam, generateLeague, serializeTeam, teamFromSave, serializeLeague, leagueFromSave,
   minNextBidFor, trainerWeeklySalary,
   TRAINER_LEVELS, TRAINER_BASE_SALARY,
-  COACH_AUCTION_DURATION_MS, COACH_MARKET_MIN_OPEN_LISTINGS, COACH_MARKET_GENERATE_CHECK_INTERVAL_MS,
+  COACH_AUCTION_DURATION_MS, COACH_MARKET_GENERATE_CHECK_INTERVAL_MS,
   MAX_YOUTH_ROSTER_SIZE, YOUTH_TRAINEE_WEEKLY_SALARY, YOUTH_CANDIDATE_QUEUE_MAX, YOUTH_CANDIDATE_EXPIRY_MS,
   YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL, YOUTH_QUALITY_TIER_BY_LEVEL, YOUTH_STANDOUT_CHANCE_BY_LEVEL,
   generateYouthCandidate, TRAINING_CENTER_LEVELS, trainingCenterInfo,
@@ -233,14 +233,14 @@ function withMockedRandom(value, fn) {
 }
 {
   // Renouvellement continu du marché — même plancher que les autres marchés
-  // de staff (COACH_MARKET_MIN_OPEN_LISTINGS).
+  // de staff (2 × managers, League.staffMarketMinOpenListings).
   const lg = freshLeague();
   const now = Date.now();
   if (lg.recruiterListings.length !== 0) throw new Error("❌ (setup) aucune annonce avant le premier refreshRecruiterMarket.");
   lg.refreshRecruiterMarket(now);
   const open = lg.recruiterListings.filter(l => l.status === "open").length;
-  console.log(`\nAprès le premier refreshRecruiterMarket : ${open} candidat(s) ouvert(s) (attendu ${COACH_MARKET_MIN_OPEN_LISTINGS})`);
-  if (open !== COACH_MARKET_MIN_OPEN_LISTINGS) throw new Error("❌ Le marché des recruteurs devrait se remplir jusqu'au plancher dès le premier appel.");
+  console.log(`\nAprès le premier refreshRecruiterMarket : ${open} candidat(s) ouvert(s) (attendu ${lg.staffMarketMinOpenListings()})`);
+  if (open !== lg.staffMarketMinOpenListings()) throw new Error("❌ Le marché des recruteurs devrait se remplir jusqu'au plancher dès le premier appel.");
   console.log("✅ Le marché des recruteurs se maintient au même plancher que les autres marchés de staff.");
 }
 {

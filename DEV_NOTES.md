@@ -20,6 +20,54 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS MAC VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Staff médical (médecin + kiné) + marchés de staff à 2 × managers** —
+  retours utilisateur : "le médecin, qui réduit la durée des blessures, le
+  kiné qui améliore la récupération et le risque de blessure", "pas de
+  spécialité pour le médecin", "le kiné doit pouvoir suivre tout le monde",
+  "il faut les acheter au enchère", puis "le nombre de staff sur le marché
+  [...] croissant en fonction du nombre de manager (pour tous les staffs)
+  [...] x2 du nombre de managers pour le moment".
+  - Moteur (engine.js ET son miroir dans moteurbasket3.html, patchés à
+    l'identique) : `STAFF_MARKET_LISTINGS_PER_MANAGER = 2` +
+    `League.staffMarketMinOpenListings()` remplace l'ancien plancher fixe
+    COACH_MARKET_MIN_OPEN_LISTINGS (20, supprimé) sur les 5 marchés ;
+    `MEDICAL_STAFF_ROLES`, `Team.doctor/physio` (même forme que les autres
+    staffs, mêmes niveaux/grille de salaire croissante), marchés génériques
+    `League.refreshMedicalMarket/placeMedicalBid/fireTeamMedicalStaff(role, …)`
+    (+ raccourcis refreshDoctorMarket/…), paie dans trainWeek ("Salaire du
+    staff (médecin)" / "(kiné)"), sauvegarde/restauration.
+  - Effets : médecin = durée des NOUVELLES blessures −8 % à −35 %
+    (`rollInjury(now, durationMult)`, min 1 jour) ; kiné = +1 à +5 de
+    forme physique/jour (`conditionRecoveryPerDay`) et risque de blessure
+    en match ×0,95 à ×0,75 (cumulé avec la salle de musculation).
+  - Serveur : actions bidOnDoctorListing/fireDoctor/bidOnPhysioListing/
+    firePhysio, routes /api/market/{doctor,physio}-bid et
+    /api/staff/fire-{doctor,physio}, marchés rafraîchis dans catchUpLeague.
+  - Client : 2 entrées STAFF_ROLES + sections HTML (5 cartes poste : 3 puis
+    2), synchro serveur, tableau de bord Staff sur 5 postes, camembert des
+    salaires (Économie), guide + tutoriel mis à jour, en.js.
+  - Tests : nouveau medical_staff_test.js ; coach_market_test et
+    youth_academy_test adaptés au nouveau plancher. Suite complète sandbox :
+    seuls échecs = flaky connus (player_detail_test échoue comme avant).
+  - Reste : committer (bloqué côté Claude par le `.git/index.lock`
+    orphelin, voir entrée suivante) puis pousser (utilisateur). Suite prévue :
+    onglet Centre médical (indicateur de risque) puis Matchs amicaux.
+
+- **✅ CODE ÉCRIT, À COMMITTER/POUSSER (2026-09-27) — Pub sponsor salle
+  peinte sur le parquet de la carte des tirs** — retour utilisateur (capture
+  gribouillée) : "la pub sur le terrain ne va pas, tu peux la mettre là où
+  j'ai gribouillé […] si le nom est trop long, sur 2 lignes" ; validé : "pas
+  mal comme ça". assets/live/live-view.js : bandeaux LED des lignes de
+  touche supprimés, nom du sponsor (S.arenaSponsor, sinon HOOP MANAGER)
+  peint dans les deux coins entre ligne de fond, raquette et ligne à 3 pts
+  (100,95 et 840,405), floorAdLines = 2 lignes au-delà de 12 caractères,
+  textLength si une ligne reste trop large. live.css : .led/.led-txt →
+  .floor-ad (+ thème clair). Tests live_court_view / live_court_home_logo /
+  live_court_shot_position_stability / sponsors verts (Mac).
+  NB : un `.git/index.lock` orphelin traîne dans le dépôt (Claude n'a pas pu
+  le supprimer) — le retirer avant de committer si git se plaint.
+
 - **✅ CODE ÉCRIT, À COMMITTER/POUSSER (2026-09-27) — Refonte visuelle de
   « Statistiques » + tuiles Salle/Effectif/Staff du tableau de bord +
   « Vainqueur de la Coupe »** — visuels validés par l'utilisateur avant
