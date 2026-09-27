@@ -5260,6 +5260,7 @@
   .eff-pips{display:inline-flex; gap:3px;}
   .eff-pip{width:12px; height:6px; border-radius:3px; background:#2a3550;}
   .eff-pip.on{background:var(--eff-tier);}
+  .eff-pip.half{background:linear-gradient(90deg, var(--eff-tier) 50%, var(--eff-pip-off, #2a3550) 50%);}
   :is(#effectifSection, #teamDetailSection) .eff-pot .potential-tier{font-size:13px; font-weight:500; color:var(--eff-tier); max-width:none; white-space:nowrap; text-align:left;}
 
   /* Forme : mini-barre + état. */
@@ -5529,7 +5530,9 @@
   html[data-theme="light"] #salleSection .facility-card.sl-fac:hover{border-color:#aab6c8;}
   /* Effectif / fiche équipe */
   html[data-theme="light"] .eff-seg-btn.active{background:#142033; color:#ffffff;}
-  html[data-theme="light"] .eff-pip{background:#dfe5ee;}
+  html[data-theme="light"] .eff-pip{background:#dfe5ee; --eff-pip-off:#dfe5ee;}
+  html[data-theme="light"] .eff-pip.on{background:var(--eff-tier);}
+  html[data-theme="light"] .eff-pip.half{background:linear-gradient(90deg, var(--eff-tier) 50%, #dfe5ee 50%);}
   html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:hover td{background:#eef2f8;}
   html[data-theme="light"] .eff-menu-btn:hover, html[data-theme="light"] .eff-menu-btn[aria-expanded="true"], html[data-theme="light"] .eff-menu-item:hover{background:#eef2f7;}
   html[data-theme="light"] .eff-menu{background:#ffffff; border-color:#d8dfe9; box-shadow:0 12px 32px rgba(20,32,51,.18);}
@@ -34750,16 +34753,20 @@ function effPosBadgeHtml(position) {
   return `<span class="eff-pos eff-pos-${EFF_POS_CLASS[position] || "m"}" title="${escapeHtml(position)}">${POS_SHORT[position]}</span>`;
 }
 
-// Potentiel : 5 segments (palier 1-10 ramené sur 5) + nom du palier, teintés
+// Potentiel : 5 segments (palier 1-10 ramené sur 5, un palier impair donne
+// un demi-segment : 1 → 0,5, 3 → 1,5… 9 → 4,5 — retour utilisateur
+// 2026-09-27 « des demi barres remplies pour les nombres impairs ») + nom du palier, teintés
 // au barème des caractéristiques (palier × 10 → attrColorTier). Le nom du
 // palier reste dans .potential-tier (seul texte de la cellule), jamais le
 // chiffre caché 1-99.
 function effPotentialHtml(p) {
   const idx = potentialTierIndex(p.potential);
-  const lvl = Math.ceil(idx / 2);
   const tier = attrColorTier(idx * 10);
   let pips = "";
-  for (let i = 1; i <= 5; i++) pips += `<span class="eff-pip${i <= lvl ? " on" : ""}"></span>`;
+  for (let i = 1; i <= 5; i++) {
+    const state = idx >= 2 * i ? " on" : idx === 2 * i - 1 ? " half" : "";
+    pips += `<span class="eff-pip${state}"></span>`;
+  }
   return `<span class="eff-pot ${tier}" title="Palier de potentiel : ${idx}/10"><span class="eff-pips" aria-hidden="true">${pips}</span><span class="potential-tier">${escapeHtml(potentialTierLabel(p.potential))}</span></span>`;
 }
 

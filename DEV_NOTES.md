@@ -20,6 +20,16 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Effectif : demi-barres de potentiel pour les paliers impairs** — retour
+  utilisateur (capture Effectif) : "des demi barres remplies pour les
+  nombres impairs (1/3/5/7/9)". effPotentialHtml (moteurbasket3.html) :
+  palier 1 → 0,5 barre, 3 → 1,5 … 9 → 4,5 (classe .eff-pip.half, dégradé
+  moitié couleur du palier / moitié fond) ; au passage, en thème clair les
+  barres pleines n'étaient pas colorées (règle .eff-pip du thème clair plus
+  spécifique que .eff-pip.on) → corrigé. Test : potential_tier_test.js
+  vérifie pleines + demi par ligne. Reste : commit + push.
+
 - **✅ DÉPLOYÉ SUR LE MAC, À COMMITTER/POUSSER (2026-09-27) — Économie :
   mention « Journal limité aux 40 dernières opérations » retirée** — retour
   utilisateur (capture page Économie) : "enleve ça". moteurbasket3.html

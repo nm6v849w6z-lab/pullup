@@ -80,6 +80,17 @@ const { potentialTierLabel, POTENTIAL_TIERS } = E;
       if (!POTENTIAL_TIERS.some(t => t.label === cellText)) {
         throw new Error(`❌ [${label}] Ligne ${i} : la cellule Potentiel ("${cellText}") ne correspond à aucun nom de palier connu.`);
       }
+      // Segments : palier 1-10 sur 5 barres, palier impair = demi-barre
+      // (retour utilisateur 2026-09-27 : "des demi barres remplies pour les
+      // nombres impairs (1/3/5/7/9)").
+      const tierIdx = POTENTIAL_TIERS.findIndex(t => t.label === cellText) + 1;
+      const pips = [...tr.children[potIdx].querySelectorAll(".eff-pip")];
+      const on = pips.filter(el => el.classList.contains("on")).length;
+      const half = pips.filter(el => el.classList.contains("half")).length;
+      if (pips.length !== 5 || on !== Math.floor(tierIdx / 2) || half !== tierIdx % 2) {
+        throw new Error(`❌ [${label}] Ligne ${i} : palier ${tierIdx}/10 → attendu ${Math.floor(tierIdx / 2)} barre(s) pleine(s) + ${tierIdx % 2} demi, obtenu ${on} + ${half} (sur ${pips.length}).`);
+      }
+      if (half && !pips[on].classList.contains("half")) throw new Error(`❌ [${label}] Ligne ${i} : la demi-barre devrait suivre les barres pleines.`);
     });
     console.log(`✅ [${label}] Colonne "Potentiel" présente juste après "Poste" (${rows.length} lignes, palier nommé sur chacune, jamais le chiffre caché).`);
   }
