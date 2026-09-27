@@ -2888,6 +2888,8 @@
   .stf-level__title{font-weight:700; font-size:14px;}
   .stf-level__meta{font-size:12px; color:var(--ink-dim);}
   .stf-specialties__grid{grid-template-columns:repeat(5,minmax(0,1fr));}
+  .stf-specialties .stf-level{padding:10px 12px; gap:3px;}
+  .stf-spec-line{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 
   .stf-table-wrap{overflow-x:auto;}
   .stf-table{width:100%; border-collapse:collapse; min-width:860px;}
@@ -33438,6 +33440,16 @@ const STAFF_ROLES = [
     baseSalaryTable: ASSISTANT_BASE_SALARY,
   },
 ];
+// Caractéristiques d'une spécialité sur DEUX lignes au plus (retour
+// utilisateur, 2026-09-27 : "mettre Jeu intérieur, Rebond, Contre, Défense
+// intérieure sur deux lignes, comme ça on peut réduire toutes les briques"),
+// pour le filtre de spécialité du marché des adjoints.
+function assistantSpecialtyLinesHtml(spec) {
+  const labels = spec.attrs.map(a => TRAINING_LABELS[a] || a);
+  const cut = Math.ceil(labels.length / 2);
+  return [labels.slice(0, cut), labels.slice(cut)].filter(l => l.length)
+    .map(l => `<span class="stf-spec-line">${escapeHtml(l.join(", "))}</span>`).join("");
+}
 // Spécialité d'un entraîneur adjoint (candidat ou en poste) : libellé + caracs travaillées.
 function assistantSpecialtyHtml(specialty) {
   const spec = ASSISTANT_SPECIALTIES[specialty];
@@ -33564,7 +33576,7 @@ function renderStaffListings(role, open, now) {
       const spec = ASSISTANT_SPECIALTIES[key];
       return `<button type="button" class="stf-level${selected ? " is-selected" : ""}" data-staff-specialty="${role.key}:${key}" aria-pressed="${selected}"${pool.length ? "" : " disabled"}>` +
         `<span class="stf-level__title">${key ? escapeHtml(spec.label) : "Toutes"}</span>` +
-        `<span class="stf-level__meta">${key ? escapeHtml(spec.attrs.map(a => TRAINING_LABELS[a] || a).join(", ")) : "Toutes les spécialités"}</span></button>`;
+        `<span class="stf-level__meta">${key ? assistantSpecialtyLinesHtml(spec) : "Toutes les spécialités"}</span></button>`;
     }).join("");
     specialtyHtml = `<fieldset class="stf-levels stf-specialties"><legend><span>Quelle spécialité ?</span></legend>` +
       `<div class="stf-levels__grid stf-specialties__grid">${specBtns}</div></fieldset>`;
