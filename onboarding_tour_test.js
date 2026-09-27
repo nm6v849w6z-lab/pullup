@@ -327,6 +327,35 @@ console.log("✅ En ligue partagée aussi : bouton masqué et prime non retoucha
 dom4.window.close();
 server3.close();
 
+// --- Le jeu réel est TOUJOURS une ligue multi-manager (retour utilisateur
+// 2026-09-27 : « il faudrait montrer aussi la coupe non ? le mode solo
+// n'existe pas »). La carrière de test ci-dessus n'a pas de Coupe, donc
+// l'étape « La Coupe » y est sautée ; ici, en vraie ligue, AUCUNE étape ne
+// doit l'être (Coupe comprise). ---
+console.log("\n--- Test : tutoriel complet en ligue multi-manager, aucune étape sautée ---");
+const leagueFull = generateMultiManagerLeague(["Lyon TourFull"], 1, Date.now(), dailyAnchoredCalendarConfig());
+const { server: server5, multiSavePath: multiSavePath5, baseUrl: baseUrl5 } = await startTestServer();
+await store.saveMultiLeague(leagueFull, multiSavePath5);
+const dom5 = await openGame(html, `${baseUrl5}?m=${leagueFull.teams[0].managerLinkToken}`);
+const doc5 = dom5.window.document, win5 = dom5.window;
+if (!win5.eval("!!league.cup")) throw new Error("❌ (setup) la ligue multi-manager devrait avoir une Coupe.");
+[...doc5.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "guide").click();
+doc5.getElementById("tourLaunchBtn").click();
+const seenTitles5 = [];
+for (let i = 0; i < total + 5; i++) {
+  const st = win5.eval("TOUR_STEPS[tourStepIdx]");
+  seenTitles5.push(st.title);
+  if (st.kind === "center" && st.final) break;
+  doc5.getElementById("tourNextBtn").dispatchEvent(new win5.Event("click", { bubbles: true }));
+  await flushTourNext(dom5);
+}
+const skipped5 = win5.eval("TOUR_STEPS.map(s => s.title)").filter(t => !seenTitles5.includes(t));
+if (skipped5.length) throw new Error(`❌ En ligue multi-manager, aucune étape du tutoriel ne devrait être sautée, sautées : ${JSON.stringify(skipped5)}.`);
+if (!seenTitles5.includes("La Coupe")) throw new Error("❌ L'étape « La Coupe » devrait être montrée en ligue multi-manager.");
+console.log(`✅ En ligue multi-manager, les ${seenTitles5.length} étapes du tutoriel s'affichent toutes, Coupe comprise.`);
+dom5.window.close();
+server5.close();
+
 server.close();
 console.log("\n🏁 Tous les tests onboarding_tour_test.js sont passés.");
 

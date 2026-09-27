@@ -37,6 +37,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   traductions ajoutées pour ces textes (plus quelques textes des pages
   Tactiques/Amicaux jamais traduits). NB : cup_ordres_planning_test.js échoue
   déjà à HEAD (select « Ajouter un remplaçant » Pivot), sans lien.
+  Suite (retour utilisateur « il faudrait montrer aussi la coupe non ? le
+  mode solo n'existe pas ») : l'étape « La Coupe » s'affiche bien en ligue
+  multi-manager (seule la carrière de test sans Coupe la sautait) ;
+  onboarding_tour_test.js déroule maintenant tout le tutoriel dans une vraie
+  ligue multi-manager et vérifie qu'aucune étape n'est sautée (48/48).
 
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Premium, lot 3 : liste de suivi du
   marché + alertes** — retour utilisateur : "oui vas y".
