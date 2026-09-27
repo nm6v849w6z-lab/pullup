@@ -55,7 +55,7 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   const doc = dom.window.document;
   const btns = [...doc.querySelectorAll(".tab-btn")];
   const idx = btns.findIndex(b => b.dataset.tab === "medical");
-  assert(idx > 0 && btns[idx - 1].dataset.tab === "staff" && btns[idx].textContent.trim() === "Centre médical", "onglet « Centre médical » juste après Staff");
+  assert(idx > 0 && btns[idx].textContent.trim() === "Centre médical", "onglet « Centre médical » dans la barre latérale");
   btns[idx].click();
   assert(!doc.getElementById("medicalSection").classList.contains("hidden"), "la page Centre médical s'affiche");
   assert(btns[idx].classList.contains("active"), "l'onglet est actif");

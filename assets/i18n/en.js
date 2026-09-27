@@ -4323,7 +4323,7 @@ window.HM_I18N_EN = {
   "Joueurs disponibles": "Available players",
   "Risque pour le prochain match": "Risk for the next match",
   "Indisponible": "Unavailable",
-  "Jours perdus": "Days lost",
+  "Jours d'indisponibilité": "Days unavailable",
   "Disponibles": "Available",
   "Prochain retour": "Next return",
   "Musculation": "Weight room",

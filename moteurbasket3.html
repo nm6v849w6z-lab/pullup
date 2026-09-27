@@ -38463,7 +38463,7 @@ function renderMedicalSection() {
       `<div class="cal-kpi"><div class="cal-kpi-label">À risque</div><div class="cal-kpi-value${atRisk.length ? " is-neg" : ""}" id="medicalHighRiskCount">${atRisk.length}</div></div>` +
       `<div class="cal-kpi"><div class="cal-kpi-label">Saison</div><div class="cal-kpi-value" id="medicalSeasonCount">${seasonLog.length}</div></div>` +
     `</div>` +
-    `<div class="cal-split"><div><span>Jours perdus</span><b>${daysLost}</b></div><div><span>Disponibles</span><b>${players.length - injured.length}/${players.length}</b></div></div>` +
+    `<div class="cal-split"><div><span>Jours d'indisponibilité</span><b>${daysLost}</b></div><div><span>Disponibles</span><b>${players.length - injured.length}/${players.length}</b></div></div>` +
     (nextBack ? `<div class="med-next-back"><span>Prochain retour</span><b>${escapeHtml(nextBack.name)} · ${escapeHtml(formatCalendarDayFr(nextBack.injuryUntil))}</b></div>`
       : `<div class="med-next-back"><span>Tout l'effectif est disponible.</span></div>`) +
     `</div>`;
