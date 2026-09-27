@@ -5961,7 +5961,13 @@
   /* Matchs amicaux (voir renderAmicauxSection) — mêmes cartes que les ligues privées. */
   .fr-row{display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line-soft);}
   .fr-opp-field{position:relative;}
-  .fr-opp-input{width:100%; box-sizing:border-box;}
+  /* Même champ que la recherche du haut de page (.topbar-search-input),
+     à la hauteur des menus voisins ; Adversaire, Jour et Heure sur une ligne. */
+  .fr-opp-input{width:100%; box-sizing:border-box; height:44px; font-size:14px; padding:0 18px;}
+  .fr-propose-row{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,.7fr); gap:16px; align-items:end; margin-bottom:6px;}
+  .fr-propose-row .lp-field{min-width:0;}
+  .fr-propose-row .lp-field select{width:100%; min-width:0;}
+  @media (max-width: 640px){ .fr-propose-row{grid-template-columns:1fr 1fr;} .fr-propose-row .fr-opp-field{grid-column:1 / -1;} }
   .fr-opp-results{display:none; position:absolute; top:100%; left:0; right:0; z-index:30; margin-top:4px; background:var(--panel); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 28px rgba(0,0,0,.35); max-height:340px; overflow:auto; padding:4px;}
   .fr-opp-results.open{display:block;}
   .fr-opp-opt{display:flex; align-items:center; gap:10px; width:100%; background:none; border:0; border-radius:8px; padding:8px 10px; color:var(--ink); font:inherit; font-size:14px; text-align:left; cursor:pointer;}
@@ -40303,14 +40309,14 @@ function frProposeCardHtml() {
   // adversaire, il faudrait plutôt que ce soit une recherche, qu'un menu
   // déroulant") : champ texte + suggestions (voir frOppResultsHtml).
   const oppName = frUi.opponent != null ? frTeamName(frUi.opponent) : "";
-  let html = `<div class="lp-card fr-propose"><div class="lp-card-title">Proposer un amical</div><div class="lp-form-row">`;
+  let html = `<div class="lp-card fr-propose"><div class="lp-card-title">Proposer un amical</div><div class="lp-form-row fr-propose-row">`;
   html += `<div class="lp-field lp-field-grow fr-opp-field"><label class="field-label" for="frOpponentSearch">Adversaire</label>` +
-    `<input type="search" id="frOpponentSearch" class="fr-opp-input" autocomplete="off" placeholder="Rechercher un club…" value="${escapeHtml(oppName)}">` +
+    `<input type="text" id="frOpponentSearch" class="topbar-search-input fr-opp-input" autocomplete="off" placeholder="Rechercher un club…" aria-label="Rechercher un club" value="${escapeHtml(oppName)}">` +
     `<div class="fr-opp-results" id="frOpponentResults" role="listbox"></div></div>`;
   const days = frUi.daysFor === frUi.opponent && Array.isArray(frUi.days) ? frUi.days : null;
   const dayObj = days ? days.find(d => d.day === frUi.day) || null : null;
   const disDay = frUi.opponent == null || !days || !days.length ? " disabled" : "";
-  html += `<div class="lp-field"><label class="field-label" for="frDaySelect">Jour de repos</label><select id="frDaySelect"${disDay}>` +
+  html += `<div class="lp-field"><label class="field-label" for="frDaySelect">Jour</label><select id="frDaySelect"${disDay}>` +
     (frUi.opponent == null ? `<option>Choisissez d'abord l'adversaire</option>`
       : frUi.loadingDays ? `<option>Chargement…</option>`
       : !days ? `<option>${escapeHtml(frUi.daysError || "Indisponible")}</option>`
