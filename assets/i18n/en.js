@@ -4202,4 +4202,7 @@ window.HM_I18N_EN = {
   "Impossible de joindre Discord, réessaie dans un instant.": "Couldn't reach Discord, try again in a moment.",
   "Bienvenue à {0} !": "Welcome to {0}!",
   "Vous reprenez en cours de saison la place de {0} dans la ligue, avec un nouvel effectif à faire progresser.": "You take over {0}'s place in the league mid-season, with a new roster to develop.",
+  "Jeu momentanément indisponible": "Game temporarily unavailable",
+  "Le serveur ne trouve pas la ligue pour le moment. Réessaie dans quelques minutes : ton club n'est pas perdu.": "The server can't find the league right now. Try again in a few minutes: your club isn't lost.",
+  "Réessayer": "Try again",
 };

@@ -20,52 +20,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **✅ CODE ÉCRIT ET TESTÉ EN SANDBOX, À COMMITTER/POUSSER (2026-09-26) —
-  Inscription publique sur hoop-manager.com (comptes email/mot de passe +
-  Discord) + séparation prod/test sur Render** — retour utilisateur : "si
-  on tape hoop-manager.com, on doit tomber sur un site pour s'inscrire",
-  club attribué automatiquement, Discord + email, "un joueur qui reprend une
-  équipe doit avoir un effectif basique, joueurs entre 30 et 50 en niveau".
-  Décisions : prod = NOUVEAU service Render Starter (branche `prod`,
-  domaine hoop-manager.com, base Upstash `pullup` ACTUELLE — saison en cours
-  conservée, plan gratuit Upstash = 1 seule base) ; test = service gratuit
-  actuel, branche `main`, SANS Upstash (fichiers éphémères ; ou
-  `BASKET_REDIS_PREFIX=test` s'il faut un jour qu'il garde ses données).
-  Fait :
-  - server/accounts.js : comptes (bloc JSON clé `pullup:accounts`), mots de
-    passe scrypt, reprise du club CPU le plus faible (nom choisi, effectif
-    remplacé par 15 joueurs de niveau 30-50, annonces du club annulées,
-    message de bienvenue dans le fil).
-  - server/accountRoutes.js : /api/account/config|signup|login|status|me|
-    claim|discord-link-start|discord-complete, /auth/discord(+callback,
-    scope identify, état anti-CSRF en cookie), /api/admin/accounts(+
-    reset-password). Liste d'attente si plus aucun club CPU.
-  - server/index.js : VERROU de sauvegarde (les requêtes à état passent une
-    par une — deux requêtes simultanées pouvaient s'écraser la ligue) ;
-    BASKET_PUBLIC_SITE=1 (visiteur sans jeton → /bienvenue, /api/* sans
-    jeton → 401, plus de carrière solo publique) ; /bienvenue ; logs de
-    démarrage. store.js/messages.js : préfixe BASKET_REDIS_PREFIX.
-  - assets/site/index.html : page d'accueil FR/EN (même préférence hm-lang
-    que le jeu), inscription/connexion/Discord/liste d'attente.
-  - moteurbasket3.html : Paramètres → "Mon compte" (créer identifiants /
-    changer mot de passe, lier Discord, se déconnecter) ; retour de Discord
-    (#compte=/#erreur=) ; lien invalide en site public → /bienvenue.
-    assets/mobile/sw.js : /auth/ jamais intercepté, /bienvenue ne remplace
-    plus la page hors ligne. en.js : ~30 entrées.
-  - Tests : server/accounts_test.js (inscription, connexion, claim, admin,
-    site public, Discord simulé, verrou avec 5 inscriptions simultanées,
-    effectif 30-50, annonces annulées). Suite complète sandbox : tout vert
-    sauf player_detail_test.js (échoue aussi sans ce chantier). Parcours
-    vérifiés dans Chromium (inscription → jeu, connexion, déconnexion, Mon
-    compte FR/EN, accueil 1360/390 px).
-  Reste : commit + push (utilisateur), puis mise en ligne Render (branche
-  prod, nouveau service, domaine, variables — voir server/README.md
-  "Comptes joueurs") et appli Discord (Client ID/Secret, redirect
-  https://hoop-manager.com/auth/discord/callback, DISCORD_INVITE_URL).
-  Plus tard : envoi d'emails (mot de passe oublié automatique), page
-  politique de confidentialité, passage des comptes en base SQL au-delà de
-  quelques centaines de joueurs, plusieurs ligues.
-
+- **✅ EN LIGNE (2026-09-27) — Inscription publique sur hoop-manager.com +
+  séparation prod/test sur Render** (commit 8b8819d, poussé). Reste :
+  - Correctif "404 ≠ lien invalide" (moteurbasket3.html
+    showInvalidManagerLinkMessage + invalidManagerLinkStatus, en.js) :
+    copié sur le Mac, À COMMITTER/POUSSER (main puis `git push origin
+    main:prod`). En site public, le jeu n'efface plus le jeton rangé quand
+    le serveur répond 404 (aucune ligue), seulement sur 401.
+  - CNAME `www` chez IONOS → hoop-manager-test.onrender.com (adresse
+    technique de la PROD, malgré son nom).
+  - Ancien service Oregon (`hoopmanager-test`, pullup-030q.onrender.com) :
+    repasser en Free, redéployer avec ses variables de test.
+  - Plus tard : envoi d'emails (mot de passe oublié), politique de
+    confidentialité, comptes en base SQL et plusieurs ligues au-delà de
+    quelques centaines de joueurs.
 - **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-26) — Messagerie
   privée entre managers** — retour utilisateur : "il faut uniquement les discussions avec
   les autres managers du jeu (jeu online)", "les forums seront sur discord"
@@ -2955,6 +2923,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 ---
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)
+
+- **Hébergement (2026-09-27)** : PROD = service Render `hoop-manager`
+  (Frankfurt, Starter, branche `prod`, domaine hoop-manager.com, adresse
+  technique hoop-manager-test.onrender.com), base Upstash `pullup`
+  (Irlande, clés `pullup:*`), BASKET_PUBLIC_SITE=1, Discord activé. TEST =
+  service `hoopmanager-test` (Oregon, Free, branche `main`,
+  pullup-030q.onrender.com), SANS Upstash (fichiers éphémères). Livrer en
+  prod : `git push origin main:prod`. DNS chez IONOS (A @ → 216.24.57.1).
+  Variables : voir server/README.md "Comptes joueurs".
 
 - **Le push reste toujours fait par l'utilisateur** depuis son propre
   terminal Mac authentifié — Claude ne pousse jamais lui-même (le shell

@@ -18695,6 +18695,9 @@ let myTeamIndex = 0;
 // invalidManagerLink ne peut devenir vrai que si managerToken n'était pas
 // `null`.
 let invalidManagerLink = false;
+// Code HTTP du refus (401 = jeton inconnu, 404 = aucune ligue partagée sur ce
+// serveur) — voir showInvalidManagerLinkMessage.
+let invalidManagerLinkStatus = null;
 
 // ---------------------------------------------------------------------
 // IDENTITÉ MANAGER (retour utilisateur, 2026-09 : jusqu'à 10 vrais managers
@@ -19642,7 +19645,7 @@ async function runVideoSessionOnServer(opponentIdx) {
 // showInvalidManagerLinkMessage(), déclenchée depuis window.__gameReady une
 // fois initGame() résolu. Jamais atteint en mode solo (managerToken null).
 function flagInvalidManagerLinkIfNeeded(status) {
-  if (managerToken && (status === 401 || status === 404)) invalidManagerLink = true;
+  if (managerToken && (status === 401 || status === 404)) { invalidManagerLink = true; invalidManagerLinkStatus = status; }
 }
 
 async function loadMyTeam() {
@@ -19724,9 +19727,22 @@ function showInvalidManagerLinkMessage() {
   // Site public (hoop-manager.com, voir server/index.js:serveIndexHtml) : le
   // jeton rangé n'est plus valide (club repris, ligue réinitialisée…) — on
   // l'oublie et on renvoie vers l'accueil pour se reconnecter.
-  if (window.HM_PUBLIC_SITE) {
+  // SEULEMENT si le serveur dit "jeton inconnu" (401). Un 404 = "aucune
+  // ligue sur ce serveur" (mauvais service derrière le domaine, base
+  // injoignable…) : incident côté serveur, le jeton est sans doute bon —
+  // on le garde (correctif 2026-09-27, bascule prod/test sur Render : des
+  // testeurs avaient perdu leur lien enregistré pendant quelques minutes).
+  if (window.HM_PUBLIC_SITE && invalidManagerLinkStatus === 401) {
     try { window.localStorage.removeItem(MANAGER_TOKEN_STORAGE_KEY); } catch (e) { /* rien */ }
     window.location.replace("/bienvenue");
+    return;
+  }
+  if (window.HM_PUBLIC_SITE) {
+    document.body.innerHTML = `<div style="max-width:480px;margin:15vh auto;padding:24px;text-align:center;font-family:inherit;">
+    <h2 style="margin:0 0 12px;">Jeu momentanément indisponible</h2>
+    <p style="line-height:1.5;opacity:.75;">Le serveur ne trouve pas la ligue pour le moment. Réessaie dans quelques minutes : ton club n'est pas perdu.</p>
+    <p><a href="/" style="color:#f0a23c;font-weight:700;">Réessayer</a></p>
+  </div>`;
     return;
   }
   document.body.innerHTML = `<div style="max-width:480px;margin:15vh auto;padding:24px;text-align:center;font-family:inherit;">
