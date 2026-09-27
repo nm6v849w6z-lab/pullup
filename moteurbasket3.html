@@ -6045,6 +6045,7 @@
       <div class="sidebar-section-label">Équipe</div>
       <button class="tab-btn sidebar-link" data-tab="effectif"><span class="sidebar-label">Effectif</span></button>
       <button class="tab-btn sidebar-link active" data-tab="ordres" id="tabOrdres"><span class="sidebar-label">Ordres</span></button>
+      <button class="tab-btn sidebar-link" data-tab="tactiques"><span class="sidebar-label">Tactiques</span></button>
       <button class="tab-btn sidebar-link" data-tab="entrainement"><span class="sidebar-label">Entraînement</span></button>
       <button class="tab-btn sidebar-link" data-tab="medical"><span class="sidebar-label">Centre médical</span></button>
       <button class="tab-btn sidebar-link" data-tab="statshebdo"><span class="sidebar-label">Statistiques</span></button>
@@ -6087,7 +6088,6 @@
            déconnexion") — sans data-tab (ce n'est pas un onglet), affichée
            seulement pour un manager connecté (voir hmLogout). -->
       <button type="button" class="tab-btn sidebar-link sidebar-logout hidden" id="sidebarLogoutBtn"><span class="sidebar-label">Se déconnecter</span></button>
-      <button class="tab-btn sidebar-link" data-tab="tactiques"><span class="sidebar-label">Tactiques</span></button>
     </div>
   </nav>
   <div class="main-col">
@@ -6192,6 +6192,7 @@
       </div>
     </div>
     <p class="ordres-validate-feedback" id="ordresValidateFeedback" role="status"></p>
+    <div class="ordres-presets" id="ordresPresetsBar" aria-label="Mes tactiques"></div>
     <section class="ordres-match-card" aria-label="Match à préparer">
       <div class="omc-match">
         <div class="ordres-round-datetime" id="ordresRoundDateTime"></div>
@@ -6234,7 +6235,6 @@
       <div id="catchupContent"></div>
       <div class="actions">
         <button class="primary" id="catchupContinueBtn">Continuer →</button>
-    <div class="ordres-presets" id="ordresPresetsBar" aria-label="Mes tactiques"></div>
       </div>
     </div>
   </div>
@@ -6576,6 +6576,17 @@
        recrutement qui y est, pas l'académie elle-même) — il y a trop à
        afficher ici (décision 18 ans, Centre de formation, effectif jeunes,
        prospects) pour le caser proprement ailleurs. -->
+  <div id="tactiquesSection" class="hidden">
+    <!-- Tactiques (2026-09-27) : 3 tactiques enregistrées max (ordres
+         complets nommés, Team.tacticPresets) + maîtrise de chaque option.
+         Voir renderTactiquesSection ; application rapide dans les Ordres :
+         #ordresPresetsBar / renderOrdresPresetsBar. -->
+    <div class="section">
+      <h2 class="page-title">Tactiques</h2>
+      <div id="tactiquesContent"></div>
+    </div>
+  </div>
+
   <div id="medicalSection" class="hidden">
     <!-- Centre médical (2026-09-27) : même gabarit que le Calendrier (filtres,
          liste principale, colonne de résumé à droite). Voir
@@ -6618,17 +6629,6 @@
         <h2>Centre de formation</h2>
         <div id="trainingCenterCurrentPanel"></div>
       </div>
-  <div id="tactiquesSection" class="hidden">
-    <!-- Tactiques (2026-09-27) : 3 tactiques enregistrées max (ordres
-         complets nommés, Team.tacticPresets) + maîtrise de chaque option.
-         Voir renderTactiquesSection ; application rapide dans les Ordres :
-         #ordresPresetsBar / renderOrdresPresetsBar. -->
-    <div class="section">
-      <h2 class="page-title">Tactiques</h2>
-      <div id="tactiquesContent"></div>
-    </div>
-  </div>
-
       <div>
         <h2>Historique des promus</h2>
         <div id="academyGraduatesHolder"></div>
@@ -11366,6 +11366,32 @@ function parisCalendarDayIndex(ms) {
 // un match on n'oublie pas, après 2 on commence à oublier, après 3 encore
 // plus [...] on apprend mais on est pas direct au taquet") plutôt que
 // l'ancienne bascule binaire "tactique établie".
+// TACTIQUES ENREGISTRÉES (onglet Tactiques, demande du 2026-09-27 :
+// "pouvoir programmer 3 tactiques max, qu'on pourra retrouver très
+// facilement dans ordres et mettre en place en 1 seconde", "tout, joueurs
+// compris", "pouvoir donner un nom à la tactique") : Team.tacticPresets,
+// jusqu'à TACTIC_PRESETS_MAX ordres complets nommés (attaque, défense,
+// rythme, consignes confirmées, convocation, cinq, rotation, temps de jeu).
+// Les « postes à surveiller » (watchAssignments) n'en font PAS partie : ils
+// visent des joueurs d'un adversaire précis.
+const TACTIC_PRESETS_MAX = 3;
+const TACTIC_PRESET_NAME_MAX = 30;
+const TACTIC_PRESET_FIELDS = ["offensivePriorities", "defense", "rhythm", "tacticalTier", "screenDefense", "helpDefense", "postDefense", "closeoutStyle", "offRebStyle", "endgameManagement"];
+// Copie profonde d'un jeu d'ordres (forme snapshotTactics) en tactique
+// enregistrable : sans watchAssignments.
+function tacticPresetOrdersFrom(snap) {
+  const out = {};
+  TACTIC_PRESET_FIELDS.forEach(k => { if (snap[k] !== undefined) out[k] = Array.isArray(snap[k]) ? [...snap[k]] : snap[k]; });
+  const l = snap.lineup || {};
+  out.lineup = {
+    starters: { ...(l.starters || {}) },
+    backupPositions: Object.fromEntries(Object.entries(l.backupPositions || {}).map(([id, positions]) => [id, [...positions]])),
+    ...(l.minutes ? { minutes: Object.fromEntries(Object.entries(l.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
+    ...(Array.isArray(l.convoked) ? { convoked: [...l.convoked] } : {}),
+  };
+  return out;
+}
+
 const TACTICAL_KNOWLEDGE_GAIN_BASE = 6;
 const TACTICAL_KNOWLEDGE_GAIN_STEP = 2;
 const TACTICAL_KNOWLEDGE_GAIN_MAX = 12;
@@ -11416,32 +11442,6 @@ function chemistryLabel(chemistry) {
 // Fil d'actualité du tableau de bord (refonte "Soir de match", 2026-09-24)
 // MIROIR EXACT de engine.js (voir son commentaire complet) — toute modification ici DOIT être répercutée là-bas, et vice-versa.
 // — logique de fil d'actualité PURE (aucun accès DOM), portée depuis le
-// TACTIQUES ENREGISTRÉES (onglet Tactiques, demande du 2026-09-27 :
-// "pouvoir programmer 3 tactiques max, qu'on pourra retrouver très
-// facilement dans ordres et mettre en place en 1 seconde", "tout, joueurs
-// compris", "pouvoir donner un nom à la tactique") : Team.tacticPresets,
-// jusqu'à TACTIC_PRESETS_MAX ordres complets nommés (attaque, défense,
-// rythme, consignes confirmées, convocation, cinq, rotation, temps de jeu).
-// Les « postes à surveiller » (watchAssignments) n'en font PAS partie : ils
-// visent des joueurs d'un adversaire précis.
-const TACTIC_PRESETS_MAX = 3;
-const TACTIC_PRESET_NAME_MAX = 30;
-const TACTIC_PRESET_FIELDS = ["offensivePriorities", "defense", "rhythm", "tacticalTier", "screenDefense", "helpDefense", "postDefense", "closeoutStyle", "offRebStyle", "endgameManagement"];
-// Copie profonde d'un jeu d'ordres (forme snapshotTactics) en tactique
-// enregistrable : sans watchAssignments.
-function tacticPresetOrdersFrom(snap) {
-  const out = {};
-  TACTIC_PRESET_FIELDS.forEach(k => { if (snap[k] !== undefined) out[k] = Array.isArray(snap[k]) ? [...snap[k]] : snap[k]; });
-  const l = snap.lineup || {};
-  out.lineup = {
-    starters: { ...(l.starters || {}) },
-    backupPositions: Object.fromEntries(Object.entries(l.backupPositions || {}).map(([id, positions]) => [id, [...positions]])),
-    ...(l.minutes ? { minutes: Object.fromEntries(Object.entries(l.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
-    ...(Array.isArray(l.convoked) ? { convoked: [...l.convoked] } : {}),
-  };
-  return out;
-}
-
 // livrable prestataire `tableau-de-bord/newsFeed.js` (voir INTEGRATION.md et
 // DEV_NOTES.md point 10 pour le contexte complet). Un fil par équipe
 // (Team.feed, voir plus bas), sérialisé dans la sauvegarde comme le reste de
@@ -11868,6 +11868,8 @@ class Team {
     // (clé = bare round number, forcément championnat à l'époque) vers ce
     // nouveau format : voir teamFromSave plus bas.
     this.plannedTactics = {};
+    // Tactiques enregistrées (voir TACTIC_PRESETS_MAX) : [{ name, savedAt, orders }].
+    this.tacticPresets = [];
 
     // Fil d'actualité du tableau de bord (voir MIROIR EXACT engine.js) : un
     // fil par équipe, vide à la création.
@@ -11918,8 +11920,6 @@ class Team {
     this.tacticsCycleStartDayIndex = null;
 
     // Staff : l'entraîneur n'a d'effet QUE sur la vitesse d'entraînement
-    // Tactiques enregistrées (voir TACTIC_PRESETS_MAX) : [{ name, savedAt, orders }].
-    this.tacticPresets = [];
     // (jamais sur les matchs). Pas d'entraîneur par défaut.
     this.trainer = null; // { level, weeksEmployed } ou null
 
@@ -12408,6 +12408,55 @@ class Team {
   // Voir engine.js, miroir identique (Team.tacticalKnowledgeFactor) :
   // moyenne des 3 options ACTUELLEMENT jouées, pas des 18 dans leur
   // ensemble.
+  // Tactiques enregistrées (voir TACTIC_PRESETS_MAX). `slot` 0..2 : remplace
+  // la tactique de cet emplacement, ou l'ajoute à la suite.
+  saveTacticPreset(slot, name, snap, now = Date.now()) {
+    if (!Array.isArray(this.tacticPresets)) this.tacticPresets = [];
+    const clean = String(name || "").trim().slice(0, TACTIC_PRESET_NAME_MAX) || `Tactique ${slot + 1}`;
+    const preset = { name: clean, savedAt: now, orders: tacticPresetOrdersFrom(snap) };
+    if (slot < this.tacticPresets.length) this.tacticPresets[slot] = preset;
+    else if (this.tacticPresets.length < TACTIC_PRESETS_MAX) this.tacticPresets.push(preset);
+    else return null;
+    return preset;
+  }
+  renameTacticPreset(slot, name) {
+    const p = (this.tacticPresets || [])[slot];
+    const clean = String(name || "").trim().slice(0, TACTIC_PRESET_NAME_MAX);
+    if (!p || !clean) return false;
+    p.name = clean;
+    return true;
+  }
+  deleteTacticPreset(slot) {
+    if (!Array.isArray(this.tacticPresets) || !this.tacticPresets[slot]) return false;
+    this.tacticPresets.splice(slot, 1);
+    return true;
+  }
+  // Ordres prêts à appliquer (patch pour les ordres en direct ou
+  // stagePlanForRound) : copie profonde, joueurs partis retirés.
+  tacticPresetPatch(slot) {
+    const p = (this.tacticPresets || [])[slot];
+    if (!p) return null;
+    const patch = tacticPresetOrdersFrom(p.orders);
+    const ids = new Set((this.players || []).map(pl => pl.id));
+    const keep = id => ids.has(Number(id));
+    const l = patch.lineup;
+    Object.keys(l.starters).forEach(pos => { if (l.starters[pos] != null && !keep(l.starters[pos])) l.starters[pos] = null; });
+    Object.keys(l.backupPositions).forEach(id => { if (!keep(id)) delete l.backupPositions[id]; });
+    if (l.minutes) Object.values(l.minutes).forEach(m => Object.keys(m).forEach(id => { if (!keep(id)) delete m[id]; }));
+    if (l.convoked) l.convoked = l.convoked.filter(keep);
+    return patch;
+  }
+  // Maîtrise moyenne (0-100) des options d'une tactique enregistrée, même
+  // moyenne que tacticalKnowledgeFactor ci-dessous.
+  tacticPresetKnowledge(slot) {
+    const p = (this.tacticPresets || [])[slot];
+    if (!p) return null;
+    const k = this.tacticalKnowledge;
+    const off = (p.orders.offensivePriorities || []).map(x => k.offense[x] ?? 50);
+    const offAvg = off.length ? off.reduce((a, b) => a + b, 0) / off.length : 50;
+    return Math.round((offAvg + (k.defense[p.orders.defense] ?? 50) + (k.rhythm[p.orders.rhythm] ?? 50)) / 3);
+  }
+
   tacticalKnowledgeFactor() {
     const offenseValues = this.offensivePriorities.map(p => this.tacticalKnowledge.offense[p] ?? 50);
     const offenseAvg = offenseValues.length
@@ -12458,55 +12507,6 @@ class Team {
   // === "recuperation", sinon CONDITION_RECOVERY_PER_DAY.
   conditionRecoveryPerDay() {
     const base = this.collectiveTraining === "recuperation" ? CONDITION_RECOVERY_PER_DAY_TRAINED : CONDITION_RECOVERY_PER_DAY;
-  // Tactiques enregistrées (voir TACTIC_PRESETS_MAX). `slot` 0..2 : remplace
-  // la tactique de cet emplacement, ou l'ajoute à la suite.
-  saveTacticPreset(slot, name, snap, now = Date.now()) {
-    if (!Array.isArray(this.tacticPresets)) this.tacticPresets = [];
-    const clean = String(name || "").trim().slice(0, TACTIC_PRESET_NAME_MAX) || `Tactique ${slot + 1}`;
-    const preset = { name: clean, savedAt: now, orders: tacticPresetOrdersFrom(snap) };
-    if (slot < this.tacticPresets.length) this.tacticPresets[slot] = preset;
-    else if (this.tacticPresets.length < TACTIC_PRESETS_MAX) this.tacticPresets.push(preset);
-    else return null;
-    return preset;
-  }
-  renameTacticPreset(slot, name) {
-    const p = (this.tacticPresets || [])[slot];
-    const clean = String(name || "").trim().slice(0, TACTIC_PRESET_NAME_MAX);
-    if (!p || !clean) return false;
-    p.name = clean;
-    return true;
-  }
-  deleteTacticPreset(slot) {
-    if (!Array.isArray(this.tacticPresets) || !this.tacticPresets[slot]) return false;
-    this.tacticPresets.splice(slot, 1);
-    return true;
-  }
-  // Ordres prêts à appliquer (patch pour les ordres en direct ou
-  // stagePlanForRound) : copie profonde, joueurs partis retirés.
-  tacticPresetPatch(slot) {
-    const p = (this.tacticPresets || [])[slot];
-    if (!p) return null;
-    const patch = tacticPresetOrdersFrom(p.orders);
-    const ids = new Set((this.players || []).map(pl => pl.id));
-    const keep = id => ids.has(Number(id));
-    const l = patch.lineup;
-    Object.keys(l.starters).forEach(pos => { if (l.starters[pos] != null && !keep(l.starters[pos])) l.starters[pos] = null; });
-    Object.keys(l.backupPositions).forEach(id => { if (!keep(id)) delete l.backupPositions[id]; });
-    if (l.minutes) Object.values(l.minutes).forEach(m => Object.keys(m).forEach(id => { if (!keep(id)) delete m[id]; }));
-    if (l.convoked) l.convoked = l.convoked.filter(keep);
-    return patch;
-  }
-  // Maîtrise moyenne (0-100) des options d'une tactique enregistrée, même
-  // moyenne que tacticalKnowledgeFactor ci-dessous.
-  tacticPresetKnowledge(slot) {
-    const p = (this.tacticPresets || [])[slot];
-    if (!p) return null;
-    const k = this.tacticalKnowledge;
-    const off = (p.orders.offensivePriorities || []).map(x => k.offense[x] ?? 50);
-    const offAvg = off.length ? off.reduce((a, b) => a + b, 0) / off.length : 50;
-    return Math.round((offAvg + (k.defense[p.orders.defense] ?? 50) + (k.rhythm[p.orders.rhythm] ?? 50)) / 3);
-  }
-
     // Kiné (voir MEDICAL_STAFF_ROLES) : +1 à +5 par jour selon son niveau.
     return base + (this.physioRecoveryBonus ? this.physioRecoveryBonus() : 0);
   }
@@ -17515,6 +17515,7 @@ function serializeTeam(team) {
     // et stagePlanForRound/applyPlannedTacticsForRound) — déjà un objet
     // JSON-safe (aucune classe/Set/Map à l'intérieur), transporté tel quel.
     plannedTactics: team.plannedTactics || {},
+    tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     players: team.players.map(serializePlayerRecord),
     // Recruteur (voir Team.recruiter ci-dessus) : même forme/logique de
     // sauvegarde que trainer/videoAnalyst.
@@ -17569,7 +17570,6 @@ function playerFromSave(pdata) {
   // dérive de la moyenne des 10 caractéristiques d'origine du joueur (avec un
   // léger bruit aléatoire pour éviter que tous les joueurs migrés se
   // retrouvent avec exactement la même valeur), plutôt qu'une constante fixe,
-    tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
   // pour éviter un saut brutal d'overall/salaire au premier chargement après
   // mise à jour.
   // "mental" retiré de cette liste (retour utilisateur, 2026-09, voir le
@@ -17969,6 +17969,10 @@ function teamFromSave(data) {
   if (Array.isArray(data.trophies)) team.trophies = data.trophies.map(t => ({ ...t }));
   // Historique d'affluence (voir engine.js, miroir identique).
   team.attendanceHistory = Array.isArray(data.attendanceHistory) ? data.attendanceHistory : [];
+  team.tacticPresets = Array.isArray(data.tacticPresets)
+    ? data.tacticPresets.filter(p => p && p.orders && typeof p.name === "string").slice(0, TACTIC_PRESETS_MAX)
+      .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
+    : [];
   team.injuryLog = Array.isArray(data.injuryLog) ? data.injuryLog : [];
   // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
   // sur plusieurs postes) ; si absente (ancienne sauvegarde) ou invalide, la
@@ -18023,10 +18027,6 @@ function teamFromSave(data) {
   if (data.plannedTactics && typeof data.plannedTactics === "object") {
     // Migration (correctif 2026-09, voir planKey/Team.constructor) : une
     // sauvegarde antérieure à la clé composite "{compétition}:{journée}"
-  team.tacticPresets = Array.isArray(data.tacticPresets)
-    ? data.tacticPresets.filter(p => p && p.orders && typeof p.name === "string").slice(0, TACTIC_PRESETS_MAX)
-      .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
-    : [];
     // stockait plannedTactics avec une clé = simple numéro de journée de
     // championnat (Coupe n'avait alors AUCUNE planification à l'avance,
     // donc une telle clé ne pouvait être QUE du championnat). Une clé déjà
@@ -22160,6 +22160,7 @@ function renderOrdresStatus() {
   el.title = (kind === "dirty" || kind === "todo")
     ? "Chaque changement est déjà enregistré automatiquement. « Valider les ordres » confirme l'enregistrement auprès du serveur."
     : "";
+  renderOrdresPresetsBar();
 }
 
 // Onglet "Adversaires" masqué quand sa carte l'est (niveau Débutant, voir
@@ -22220,7 +22221,6 @@ function renderOrdresGrid() {
   // espace de numérotation à partir de 0 (voir Team.planKey), donc si
   // currentMatch est justement un tour de Coupe, une SÉLECTION de
   // championnat au même numéro ne doit surtout pas être prise à tort pour le
-  renderOrdresPresetsBar();
   // match immédiat sous prétexte que les rounds coïncident numériquement.
   const isImmediate = competition === "championship" &&
     (!currentMatch || (currentMatch.competition !== "cup" && round === currentMatch.round));
@@ -38511,107 +38511,6 @@ function humeurEventRowHtml(ev) {
 }
 
 // ---------------------------------------------------------------------
-// CENTRE MÉDICAL (demande du 2026-09-27) : même gabarit que le Calendrier
-// (retour utilisateur : "ça ne ressemble pas au reste du site") — filtres,
-// liste principale (blessés en tête, puis tout l'effectif avec son risque ;
-// ou l'historique de la saison groupé par mois), colonne de droite de
-// hauteur fixe (Infirmerie, Encadrement médical).
-// Le risque reprend EXACTEMENT les multiplicateurs de
-// MatchEngine.applyFatigue qui dépendent du joueur avant le match (forme
-// physique × salle de musculation × kiné) ; la fatigue EN match touche tout
-// le monde pareil et n'est pas connue d'avance. 1,00 = joueur en pleine
-// forme dans un club sans kiné ni salle de musculation.
-// ---------------------------------------------------------------------
-const MEDICAL_RISK_TIERS = [
-  { max: 0.85, key: "low", label: "Faible" },
-  { max: 1.15, key: "normal", label: "Normal" },
-  { max: 1.5, key: "high", label: "Élevé" },
-  { max: Infinity, key: "veryhigh", label: "Très élevé" },
-];
-let medicalFilter = "all"; // "all" | "injured" | "risk" | "history"
-function medicalRiskFor(team, player, now = Date.now()) {
-  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
-  const condition = currentCondition(player, now, recovery);
-  const condMult = conditionStateFor(condition).injuryMult;
-  const gymMult = team.facilityInjuryRiskMult ? team.facilityInjuryRiskMult() : 1;
-  const physioMult = team.physioInjuryRiskMult ? team.physioInjuryRiskMult() : 1;
-  const mult = condMult * gymMult * physioMult;
-  const tier = MEDICAL_RISK_TIERS.find(t => mult < t.max) || MEDICAL_RISK_TIERS[MEDICAL_RISK_TIERS.length - 1];
-  return { mult, tier, condition, condMult, gymMult, physioMult };
-}
-function medicalPctLabel(delta) { return `${delta > 0 ? "+" : "−"}${Math.round(Math.abs(delta) * 100)} %`; }
-
-function medicalPlayerCellHtml(p, team, sub) {
-  return `<div class="med-player">${playerAvatarHtml(p, team, 26)}<div class="med-player-text">` +
-    `${playerLinkHtml(myTeamIndex, p.id, p.name)}<span class="sub">${sub}</span></div></div>`;
-}
-
-function renderMedicalSection() {
-  const team = teamA;
-  const now = Date.now();
-  const holder = document.getElementById("medicalContent");
-  if (!holder) return;
-  const players = team.players || [];
-  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
-  const injured = players.filter(p => isCurrentlyInjured(p, now)).sort((a, b) => a.injuryUntil - b.injuryUntil);
-  const fit = players.filter(p => !isCurrentlyInjured(p, now))
-    .map(p => ({ p, r: medicalRiskFor(team, p, now) }))
-    .sort((a, b) => b.r.mult - a.r.mult || a.p.name.localeCompare(b.p.name));
-  const atRisk = fit.filter(x => x.r.tier.key === "high" || x.r.tier.key === "veryhigh");
-  const seasonNo = (team.seasonHistory || []).length + 1;
-  const seasonLog = (team.injuryLog || []).filter(e => e.seasonNo === seasonNo);
-  const daysLost = seasonLog.reduce((s, e) => s + (e.days || 0), 0);
-
-  const counts = { all: players.length, injured: injured.length, risk: atRisk.length, history: seasonLog.length };
-  const filterBtn = (key, label) =>
-    `<button type="button" class="cal-filter${medicalFilter === key ? " active" : ""}" data-med-filter="${key}" aria-pressed="${medicalFilter === key}">${label} <span class="cal-filter-count">${counts[key]}</span></button>`;
-  const pos = p => escapeHtml(POS_SHORT[p.position] || p.position || "");
-
-  // Filtres HORS de la colonne principale (zone "bar" de .med-layout) : la
-  // colonne de droite démarre ainsi à la hauteur de la liste, pas des
-  // filtres (retour utilisateur : "infirmerie ne doit pas monter au dessus
-  // de joueurs disponibles").
-  let html = `<div class="cal-layout med-layout"><div class="cal-toolbar med-bar" role="group" aria-label="Filtrer">` +
-    filterBtn("all", "Tous") + filterBtn("injured", "Blessés") + filterBtn("risk", "À risque") + filterBtn("history", "Historique") + `</div>`;
-  html += `<div class="cal-main med-main">`;
-
-  const tableOpen = (title, extra, view) =>
-    `<table class="calendar-table cal-month med-table" data-med-view="${view}"><colgroup><col class="med-col-player"><col class="med-col-state"><col class="med-col-end"></colgroup>` +
-    `<thead><tr class="cal-month-head"><th colspan="3"><span class="cal-month-title">${escapeHtml(title)}</span>${extra ? `<span class="med-month-count">${escapeHtml(extra)}</span>` : ""}</th></tr></thead><tbody>`;
-
-  // Blessés (en tête, toujours visibles dans « Tous »).
-  if (injured.length) {
-    html += tableOpen("Infirmerie", `${injured.length} blessé${injured.length > 1 ? "s" : ""}`, "roster");
-    injured.forEach(p => {
-      const days = injuryDaysRemaining(p, now);
-      html += `<tr class="cal-row med-row-injured" data-player-row="${p.id}" data-med-kind="injured">` +
-        `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
-        `<td class="med-c-state"><span class="med-injury-tag" title="${escapeHtml(p.injuryType || "Blessure")}">${escapeHtml(p.injuryType || "Blessure")}</span></td>` +
-        `<td class="med-c-end"><div class="med-days">${days} jour${days > 1 ? "s" : ""}</div><div class="med-back">retour ${escapeHtml(formatCalendarDayFr(p.injuryUntil))}</div></td></tr>`;
-    });
-    html += `</tbody></table>`;
-  }
-
-  // Joueurs disponibles, du plus exposé au moins exposé.
-  html += tableOpen("Joueurs disponibles", "Risque pour le prochain match", "roster");
-  if (!fit.length) html += `<tr><td colspan="3" class="training-empty">Aucun joueur disponible.</td></tr>`;
-  fit.forEach(({ p, r }) => {
-    const width = Math.max(6, Math.min(100, Math.round(r.mult / 2 * 100)));
-    const risky = r.tier.key === "high" || r.tier.key === "veryhigh";
-    html += `<tr class="cal-row" data-player-row="${p.id}" data-risk="${r.tier.key}" data-med-kind="${risky ? "risk" : "fit"}">` +
-      `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
-      `<td class="med-c-state">${conditionBadgeHtml(p, now, recovery)}</td>` +
-      `<td class="med-c-end"><div class="med-risk med-risk-${r.tier.key}"><span class="med-risk-label">${r.tier.label}</span>` +
-      `<div class="med-risk-track"><div class="med-risk-fill" style="width:${width}%"></div></div></div></td></tr>`;
-  });
-  html += `</tbody></table>`;
-
-  // Historique de la saison, groupé par mois comme le Calendrier.
-  const groups = [];
-  seasonLog.forEach(e => {
-    const key = e.at ? calendarMonthKey(e.at) : "saison";
-    let g = groups.find(x => x.key === key);
-// ---------------------------------------------------------------------
 // TACTIQUES ENREGISTRÉES (demande du 2026-09-27 : "pouvoir programmer 3
 // tactiques max, qu'on pourra retrouver très facilement dans ordres et
 // mettre en place en 1 seconde", "voir les tactiques maîtrisées", "tout,
@@ -38889,6 +38788,107 @@ document.getElementById("ordresPresetsBar").addEventListener("keydown", (e) => {
   }
 });
 
+// ---------------------------------------------------------------------
+// CENTRE MÉDICAL (demande du 2026-09-27) : même gabarit que le Calendrier
+// (retour utilisateur : "ça ne ressemble pas au reste du site") — filtres,
+// liste principale (blessés en tête, puis tout l'effectif avec son risque ;
+// ou l'historique de la saison groupé par mois), colonne de droite de
+// hauteur fixe (Infirmerie, Encadrement médical).
+// Le risque reprend EXACTEMENT les multiplicateurs de
+// MatchEngine.applyFatigue qui dépendent du joueur avant le match (forme
+// physique × salle de musculation × kiné) ; la fatigue EN match touche tout
+// le monde pareil et n'est pas connue d'avance. 1,00 = joueur en pleine
+// forme dans un club sans kiné ni salle de musculation.
+// ---------------------------------------------------------------------
+const MEDICAL_RISK_TIERS = [
+  { max: 0.85, key: "low", label: "Faible" },
+  { max: 1.15, key: "normal", label: "Normal" },
+  { max: 1.5, key: "high", label: "Élevé" },
+  { max: Infinity, key: "veryhigh", label: "Très élevé" },
+];
+let medicalFilter = "all"; // "all" | "injured" | "risk" | "history"
+function medicalRiskFor(team, player, now = Date.now()) {
+  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
+  const condition = currentCondition(player, now, recovery);
+  const condMult = conditionStateFor(condition).injuryMult;
+  const gymMult = team.facilityInjuryRiskMult ? team.facilityInjuryRiskMult() : 1;
+  const physioMult = team.physioInjuryRiskMult ? team.physioInjuryRiskMult() : 1;
+  const mult = condMult * gymMult * physioMult;
+  const tier = MEDICAL_RISK_TIERS.find(t => mult < t.max) || MEDICAL_RISK_TIERS[MEDICAL_RISK_TIERS.length - 1];
+  return { mult, tier, condition, condMult, gymMult, physioMult };
+}
+function medicalPctLabel(delta) { return `${delta > 0 ? "+" : "−"}${Math.round(Math.abs(delta) * 100)} %`; }
+
+function medicalPlayerCellHtml(p, team, sub) {
+  return `<div class="med-player">${playerAvatarHtml(p, team, 26)}<div class="med-player-text">` +
+    `${playerLinkHtml(myTeamIndex, p.id, p.name)}<span class="sub">${sub}</span></div></div>`;
+}
+
+function renderMedicalSection() {
+  const team = teamA;
+  const now = Date.now();
+  const holder = document.getElementById("medicalContent");
+  if (!holder) return;
+  const players = team.players || [];
+  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
+  const injured = players.filter(p => isCurrentlyInjured(p, now)).sort((a, b) => a.injuryUntil - b.injuryUntil);
+  const fit = players.filter(p => !isCurrentlyInjured(p, now))
+    .map(p => ({ p, r: medicalRiskFor(team, p, now) }))
+    .sort((a, b) => b.r.mult - a.r.mult || a.p.name.localeCompare(b.p.name));
+  const atRisk = fit.filter(x => x.r.tier.key === "high" || x.r.tier.key === "veryhigh");
+  const seasonNo = (team.seasonHistory || []).length + 1;
+  const seasonLog = (team.injuryLog || []).filter(e => e.seasonNo === seasonNo);
+  const daysLost = seasonLog.reduce((s, e) => s + (e.days || 0), 0);
+
+  const counts = { all: players.length, injured: injured.length, risk: atRisk.length, history: seasonLog.length };
+  const filterBtn = (key, label) =>
+    `<button type="button" class="cal-filter${medicalFilter === key ? " active" : ""}" data-med-filter="${key}" aria-pressed="${medicalFilter === key}">${label} <span class="cal-filter-count">${counts[key]}</span></button>`;
+  const pos = p => escapeHtml(POS_SHORT[p.position] || p.position || "");
+
+  // Filtres HORS de la colonne principale (zone "bar" de .med-layout) : la
+  // colonne de droite démarre ainsi à la hauteur de la liste, pas des
+  // filtres (retour utilisateur : "infirmerie ne doit pas monter au dessus
+  // de joueurs disponibles").
+  let html = `<div class="cal-layout med-layout"><div class="cal-toolbar med-bar" role="group" aria-label="Filtrer">` +
+    filterBtn("all", "Tous") + filterBtn("injured", "Blessés") + filterBtn("risk", "À risque") + filterBtn("history", "Historique") + `</div>`;
+  html += `<div class="cal-main med-main">`;
+
+  const tableOpen = (title, extra, view) =>
+    `<table class="calendar-table cal-month med-table" data-med-view="${view}"><colgroup><col class="med-col-player"><col class="med-col-state"><col class="med-col-end"></colgroup>` +
+    `<thead><tr class="cal-month-head"><th colspan="3"><span class="cal-month-title">${escapeHtml(title)}</span>${extra ? `<span class="med-month-count">${escapeHtml(extra)}</span>` : ""}</th></tr></thead><tbody>`;
+
+  // Blessés (en tête, toujours visibles dans « Tous »).
+  if (injured.length) {
+    html += tableOpen("Infirmerie", `${injured.length} blessé${injured.length > 1 ? "s" : ""}`, "roster");
+    injured.forEach(p => {
+      const days = injuryDaysRemaining(p, now);
+      html += `<tr class="cal-row med-row-injured" data-player-row="${p.id}" data-med-kind="injured">` +
+        `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
+        `<td class="med-c-state"><span class="med-injury-tag" title="${escapeHtml(p.injuryType || "Blessure")}">${escapeHtml(p.injuryType || "Blessure")}</span></td>` +
+        `<td class="med-c-end"><div class="med-days">${days} jour${days > 1 ? "s" : ""}</div><div class="med-back">retour ${escapeHtml(formatCalendarDayFr(p.injuryUntil))}</div></td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  // Joueurs disponibles, du plus exposé au moins exposé.
+  html += tableOpen("Joueurs disponibles", "Risque pour le prochain match", "roster");
+  if (!fit.length) html += `<tr><td colspan="3" class="training-empty">Aucun joueur disponible.</td></tr>`;
+  fit.forEach(({ p, r }) => {
+    const width = Math.max(6, Math.min(100, Math.round(r.mult / 2 * 100)));
+    const risky = r.tier.key === "high" || r.tier.key === "veryhigh";
+    html += `<tr class="cal-row" data-player-row="${p.id}" data-risk="${r.tier.key}" data-med-kind="${risky ? "risk" : "fit"}">` +
+      `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
+      `<td class="med-c-state">${conditionBadgeHtml(p, now, recovery)}</td>` +
+      `<td class="med-c-end"><div class="med-risk med-risk-${r.tier.key}"><span class="med-risk-label">${r.tier.label}</span>` +
+      `<div class="med-risk-track"><div class="med-risk-fill" style="width:${width}%"></div></div></div></td></tr>`;
+  });
+  html += `</tbody></table>`;
+
+  // Historique de la saison, groupé par mois comme le Calendrier.
+  const groups = [];
+  seasonLog.forEach(e => {
+    const key = e.at ? calendarMonthKey(e.at) : "saison";
+    let g = groups.find(x => x.key === key);
     if (!g) { g = { key, title: e.at ? calendarMonthTitle(e.at) : "Saison", rows: [] }; groups.push(g); }
     g.rows.push(e);
   });
@@ -40644,6 +40644,7 @@ const TAB_HANDLERS = {
   academie: () => { renderAcademieSection(); showPage("academieSection"); setActiveTab("academie"); },
   humeur: () => { renderHumeurSection(); showPage("humeurSection"); setActiveTab("humeur"); },
   ordres: goToOrdresTab,
+  tactiques: () => { renderTactiquesSection(); showPage("tactiquesSection"); setActiveTab("tactiques"); },
   effectif: () => { renderEffectifSection(); showPage("effectifSection"); setActiveTab("effectif"); },
   marche: () => { refreshTransferMarket(); renderMarcheSection(); showPage("marcheSection"); setActiveTab("marche"); },
   statshebdo: showStatsHebdoSection,
@@ -41105,7 +41106,6 @@ function tourRender() {
   document.getElementById("tourNextBtn").addEventListener("click", () => { window.__lastTourNext = tourNext(); });
 }
 
-  tactiques: () => { renderTactiquesSection(); showPage("tactiquesSection"); setActiveTab("tactiques"); },
 // Async depuis le correctif "Mets les vrais primes sur le tutoriel" (voir
 // performTutorialRewardClaim plus haut, AWAITED en ligue partagée) : un
 // thème à prime attend la confirmation (locale en solo, réseau sinon) avant

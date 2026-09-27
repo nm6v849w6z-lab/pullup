@@ -11022,11 +11022,11 @@ function serializeTeam(team) {
     // et stagePlanForRound/applyPlannedTacticsForRound) — déjà un objet
     // JSON-safe (aucune classe/Set/Map à l'intérieur), transporté tel quel.
     plannedTactics: team.plannedTactics || {},
+    tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     players: team.players.map(serializePlayerRecord),
     // Recruteur (voir Team.recruiter ci-dessus) : même forme/logique de
     // sauvegarde que trainer/videoAnalyst.
     recruiter: team.recruiter ? { ...team.recruiter } : null,
-    tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     // Staff médical (voir MEDICAL_STAFF_ROLES) : même forme que recruiter.
     doctor: team.doctor ? { ...team.doctor } : null,
     physio: team.physio ? { ...team.physio } : null,
@@ -11568,14 +11568,14 @@ function teamFromSave(data) {
   // Historique d'affluence (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
   team.attendanceHistory = Array.isArray(data.attendanceHistory) ? data.attendanceHistory : [];
-  team.injuryLog = Array.isArray(data.injuryLog) ? data.injuryLog : [];
-  // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
-  // sur plusieurs postes) ; si absente (ancienne sauvegarde) ou invalide, la
-  // feuille auto-assignée par défaut du constructeur reste en place.
   team.tacticPresets = Array.isArray(data.tacticPresets)
     ? data.tacticPresets.filter(p => p && p.orders && typeof p.name === "string").slice(0, TACTIC_PRESETS_MAX)
       .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
     : [];
+  team.injuryLog = Array.isArray(data.injuryLog) ? data.injuryLog : [];
+  // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
+  // sur plusieurs postes) ; si absente (ancienne sauvegarde) ou invalide, la
+  // feuille auto-assignée par défaut du constructeur reste en place.
   if (data.lineup && data.lineup.starters) {
     // Les clés d'objet JS sont toujours des chaînes (même écrites avec un id
     // numérique), donc Object.entries(...) renvoie des id-chaînes alors que
@@ -13256,6 +13256,7 @@ return {
   // Connaissance tactique (voir le grand commentaire au-dessus de
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
+  TACTIC_PRESETS_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom,
   TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
   CLUB_FACILITIES, facilityInfo,
@@ -13263,7 +13264,6 @@ return {
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,
   POSITION_ATTR_PROFILE, ATTR_CATEGORY_WEIGHT, weightedRatingForPosition, levelCoefficientFor,
   CARD_POSITION_BIAS, inferPosition, SALARY_PEAK_BONUS_THRESHOLD, SALARY_PEAK_BONUS_FACTOR, SALARY_PEAK_BONUS_MAX, peakBonusFor,
-  TACTIC_PRESETS_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom,
   trainerWeeklySalary,
   OFFENSE_PROFILES, DEFENSES, RHYTHMS,
   // Tactique confirmée (voir le grand commentaire au-dessus de
