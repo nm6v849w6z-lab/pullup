@@ -467,33 +467,16 @@
   #prepSection .team-panel.ordres-panel{background:none; border:none; border-radius:0; padding:0;}
   #prepSection .prep-columns{grid-template-columns:minmax(0, 1.15fr) minmax(0, 1fr); gap:22px;}
   #prepSection .prep-col{display:flex; flex-direction:column; gap:22px; min-width:0;}
-  /* Grille alignée (retour utilisateur 2026-09-26 : "on a un énorme trou en
-     dessous de Joueurs à surveiller et on a aucune brique alignée") : les
-     cartes des deux colonnes partagent les mêmes rangées —
-     Convocation | Cinq de départ, Attaque | Rotation,
-     Défense | Temps de jeu puis Postes à surveiller (retour utilisateur
-     2026-09-27 : "mets poste à surveiller en dessous des temps de jeu",
-     plus de vide sous Temps de jeu). Défense couvre les deux rangées. */
+  /* Deux colonnes INDÉPENDANTES (retour utilisateur 2026-09-27, maquette
+     validée : "c'est ok pour moi comme ça") — plus de rangées communes,
+     qui étiraient la plus courte des deux cartes (vide sous Pivot dans
+     Rotation, boutons de Défense qui grossissaient). Gauche : Convocation,
+     Attaque, Défense ; droite : Cinq de départ, Rotation, Temps de jeu,
+     Postes à surveiller. Chaque carte garde sa hauteur naturelle (pas de
+     grand vide dans Postes à surveiller quand les temps de jeu sont en
+     automatique, les colonnes finissent alors à des hauteurs différentes). */
   @media(min-width:901px){
-    #prepSection .prep-columns{grid-template-areas:"conv cinq" "att rot" "def pt" "def adv"; align-items:stretch; row-gap:22px;}
-    #prepSection .prep-def-stack{grid-area:def; display:flex; flex-direction:column; gap:22px;}
-    #prepSection .prep-def-stack > .ordres-card:not(.hidden){flex:1 1 auto;}
-    #prepSection .prep-col, #prepSection .prep-col .lineup-editor{display:contents;}
-    #prepSection .area-ordresCardConvocation{grid-area:conv;}
-    #prepSection .area-ordresCardCinq{grid-area:cinq;}
-    #prepSection .area-ordresCardAttaque{grid-area:att;}
-    #prepSection .area-ordresCardRotation{grid-area:rot;}
-    #prepSection .area-ordresCardMinutes{grid-area:pt;}
-    #prepSection .area-ordresCardAdversaires{grid-area:adv;}
-    /* Défense étirée à la hauteur de Temps de jeu + Postes à surveiller
-       (bas des briques alignés) : boutons à la MÊME taille que partout
-       ailleurs dans les Ordres (retour utilisateur 2026-09-27 : "essaie
-       d'avoir les mêmes tailles partout [...] mais de conserver
-       l'alignement des briques en bas") ; l'espace en trop va à parts
-       égales entre les rubriques (1/3 avant le séparateur, 2/3 entre les
-       trois rangées du bloc confirmé), la dernière rangée calée en bas. */
-    #prepSection .area-ordresCardDefense > .ordres-settings-grid{flex:1 1 auto; align-content:start;}
-    #prepSection .area-ordresCardDefense > .ordres-settings-grid-nested:not(.hidden){flex:2 1 auto; align-content:space-between;}
+    #prepSection .prep-columns{align-items:start;}
   }
   #prepSection .conv-list{display:flex; flex-direction:column;}
   #prepSection .prep-def-stack{display:flex; flex-direction:column; gap:22px;}
@@ -28928,7 +28911,8 @@ function buildTeamPanel(team, side, opts = {}) {
   adversaires.classList.add("tactic-confirmee-block");
   // Hors de .prep-def-stack : sur ordinateur, la grille la place sous
   // Temps de jeu (zone "adv") ; sur téléphone elle reste sous Défense.
-  leftCol.appendChild(adversaires);
+  // Ajoutée à la colonne de droite APRÈS l'éditeur de feuille de match
+  // (voir fin de buildTeamPanel) : sous Temps de jeu.
   confirmedEls.push(adversaires);
   const watchWrap = document.createElement("div");
   watchWrap.className = "watch-assignments";
@@ -29038,6 +29022,7 @@ function buildTeamPanel(team, side, opts = {}) {
     hint.appendChild(card);
   }
   rightCol.appendChild(hint);
+  rightCol.appendChild(adversaires);
 
   applyTierVisibility();
   return panel;

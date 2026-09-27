@@ -20,6 +20,23 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Salle : agrandissement libre, place par place** — retours utilisateur :
+  "ajouter librement les places dans les gradins et pas les constructions
+  par niveau", "plafonner le nombre de places", "le prix de construction
+  doit tjrs être le même, de la première à la dernière place", coûts façon
+  BuzzerBeater "100, 500, 5000 pour vip", loges plafonnées ("6500 place vip
+  ? ça paraît démentiel"), bouton Agrandir du bandeau retiré, billetterie
+  resserrée + brique « Agrandir la salle » juste dessous (maquette v3
+  validée). engine.js + miroir : SEAT_CATEGORY_MAX_SEATS (27 500 / 15 000 /
+  2 500 = 45 000), SEAT_BUILD_COST_PER_SEAT (100 / 500 / 5 000 €),
+  Team.seats/currentSeats/buildSeats, capacité = somme des places, nom de
+  salle selon la capacité (arenaLevelForCapacity) ; anciennes salles gardent
+  la répartition de leur palier. Serveur : /api/arena/build-seats.
+  Client : renderArenaBuild, salleArenaInfo. Tests : arena_seats_test.js ;
+  salle_redesign/salle_upgrade_confirm adaptés. NB : moteurbasket3.html
+  contient aussi, non committé, le travail Ordres d'une autre session.
+
 - **✅ COMMITTÉ (583219c), À POUSSER PAR L'UTILISATEUR (2026-09-27) —
   Tableau de bord : plus de tâche « Staff : N/5 postes pourvus »** — retour
   utilisateur : "si on ne veut pas prendre de médecin, rien n'y oblige".
@@ -107,6 +124,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   d'agrandissement des boutons, l'espace va entre les rubriques (bas aligné
   avec Postes à surveiller). Note : certains avatars existants changent
   légèrement (coiffure « receding » liée à l'âge, barbe des jeunes).
+
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-27) — Ordres : deux
+  colonnes indépendantes** (maquette validée par l'utilisateur : "c'est ok
+  pour moi comme ça"). Gauche : Convocation, Attaque, Défense ; droite :
+  Cinq, Rotation, Temps de jeu, Postes à surveiller. Plus de grille à
+  rangées communes (grid-template-areas supprimées) : aucune carte étirée,
+  boutons tous à la même taille, pas de vide sous Pivot dans Rotation ;
+  les colonnes peuvent finir à des hauteurs différentes (temps de jeu en
+  automatique). Remplace les réglages successifs de la journée sur Défense.
 
 - **📋 PROCHAINS CHANTIERS PRÉVUS** — onglet Centre médical (indicateur de
   risque de blessure, suite du staff médical), puis Matchs amicaux.
