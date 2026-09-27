@@ -2524,6 +2524,63 @@
     .cal-side{position:static; order:-1; display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
   }
 
+  /* ---- Centre médical (voir renderMedicalSection) ---- */
+  .med-kpis{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin-top:14px;}
+  .med-kpi .big.is-danger{color:var(--danger);} .med-kpi .big.is-ok{color:var(--ok);}
+  .med-grid{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:18px; margin-top:18px; align-items:start;}
+  .med-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden;}
+  .med-card + .med-card{margin-top:18px;}
+  .med-grid .med-card + .med-card{margin-top:0;}
+  .med-card-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:16px 22px; border-bottom:1px solid var(--line);}
+  .med-card-head h3{margin:0; font-size:15px; font-weight:700;}
+  .med-card-head span{font-size:12.5px; color:var(--ink-faint);}
+  .med-empty{padding:22px; font-size:13.5px; color:var(--ink-dim); text-align:center; margin:0;}
+  .med-row{display:flex; align-items:center; gap:14px; padding:12px 22px; border-bottom:1px solid var(--line-soft); font-size:14px;}
+  .med-row:last-child{border-bottom:0;}
+  .med-who{display:flex; align-items:center; gap:10px; min-width:0; flex:1;}
+  .med-who-text{display:flex; flex-direction:column; min-width:0;}
+  .med-who-text .player-link{font-weight:700; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .med-who-text small{font-size:12px; color:var(--ink-dim);}
+  .med-inj-when{display:flex; flex-direction:column; align-items:flex-end; gap:5px; min-width:130px;}
+  .med-inj-days{font-family:var(--display); font-size:18px; font-weight:800; color:var(--danger); font-variant-numeric:tabular-nums;}
+  .med-inj-days small{font-family:inherit; font-size:12px; font-weight:600; color:var(--ink-dim);}
+  .med-inj-back{font-size:12px; color:var(--ink-dim);}
+  .med-bar{position:relative; width:100%; height:6px; border-radius:3px; background:var(--panel-2); overflow:hidden;}
+  .med-bar i{position:absolute; left:0; top:0; bottom:0; border-radius:3px;}
+  .med-staff{display:flex; align-items:center; gap:14px; padding:14px 22px; border-bottom:1px solid var(--line-soft);}
+  .med-staff:last-of-type{border-bottom:0;}
+  .med-staff-ico{width:40px; height:40px; flex-shrink:0; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--panel-2); color:var(--ink-dim);}
+  .med-staff.is-on .med-staff-ico{background:rgba(51,180,161,.14); color:var(--ok);}
+  .med-staff-body{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;}
+  .med-staff-body b{font-size:14px;}
+  .med-staff-body span{font-size:12.5px; color:var(--ink-dim); line-height:1.45;}
+  .med-staff-body .stf-stars{font-size:13px;}
+  .med-actions{display:flex; gap:10px; padding:14px 22px; border-top:1px solid var(--line); flex-wrap:wrap;}
+  .med-actions button{flex:1; min-width:130px; background:transparent; border:1px solid var(--line); color:var(--ink); border-radius:999px; padding:9px 14px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;}
+  .med-actions button:hover{border-color:var(--ink-dim);}
+  .med-risk-table{width:100%; border-collapse:collapse; font-size:14px;}
+  .med-risk-table th{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); text-align:left; padding:10px 22px; border-bottom:1px solid var(--line);}
+  .med-risk-table td{padding:10px 22px; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
+  .med-risk-table tr:last-child td{border-bottom:0;}
+  .med-risk-table td.med-pos{color:var(--ink-dim); font-size:13px;}
+  .med-risk-cell{display:flex; align-items:center; gap:12px; min-width:220px;}
+  .med-risk-cell .med-bar{flex:1; max-width:160px;}
+  .med-risk-label{font-weight:700; font-size:13px; min-width:74px;}
+  .med-risk-mult{font-size:12.5px; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
+  .med-risk-low{color:var(--ok);} .med-risk-normal{color:var(--ink-dim);} .med-risk-high{color:var(--amber);} .med-risk-veryhigh{color:var(--danger);}
+  .med-legend{padding:12px 22px; font-size:12px; color:var(--ink-faint); border-top:1px solid var(--line); line-height:1.5; margin:0;}
+  .med-hist-week{display:flex; justify-content:space-between; padding:9px 22px; background:var(--panel-2); font-size:12px; font-weight:700; letter-spacing:.1em; color:var(--ink-dim); text-transform:uppercase;}
+  .med-hist-dur{font-family:var(--display); font-size:16px; font-weight:800; font-variant-numeric:tabular-nums; min-width:70px; text-align:right;}
+  @media (max-width:860px){
+    .med-grid{grid-template-columns:minmax(0,1fr);}
+    .med-row,.med-staff,.med-card-head,.med-actions,.med-legend,.med-hist-week{padding-left:16px; padding-right:16px;}
+    .med-risk-table th,.med-risk-table td{padding-left:12px; padding-right:12px;}
+    .med-risk-table .med-pos,.med-risk-table .med-cond{display:none;}
+    .med-kpis{grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px;}
+    .med-kpi{padding:14px 12px;} .med-kpi h3{font-size:10px; letter-spacing:.06em;} .med-kpi .big{font-size:32px;} .med-kpi .sub{display:none;}
+    .med-risk-cell{min-width:0;} .med-risk-cell .med-bar{display:none;}
+    .med-inj-when{min-width:0;}
+  }
   /* ---- Humeur des supporters ---- */
   .morale-value{text-align:center; font-size:40px; font-weight:800; line-height:1; margin-top:6px;}
   .morale-label{text-align:center; font-size:14px; color:var(--ink-dim); margin:4px 0 14px;}
@@ -5942,6 +5999,7 @@
       <button class="tab-btn sidebar-link" data-tab="entrainement"><span class="sidebar-label">Entraînement</span></button>
       <button class="tab-btn sidebar-link" data-tab="marche"><span class="sidebar-label">Marché</span></button>
       <button class="tab-btn sidebar-link" data-tab="staff"><span class="sidebar-label">Staff</span></button>
+      <button class="tab-btn sidebar-link" data-tab="medical"><span class="sidebar-label">Centre médical</span></button>
       <button class="tab-btn sidebar-link" data-tab="academie"><span class="sidebar-label">Académie de jeunes</span></button>
     </div>
     <div class="sidebar-section">
@@ -6450,6 +6508,21 @@
        recrutement qui y est, pas l'académie elle-même) — il y a trop à
        afficher ici (décision 18 ans, Centre de formation, effectif jeunes,
        prospects) pour le caser proprement ailleurs. -->
+  <div id="medicalSection" class="hidden">
+    <!-- Centre médical (2026-09-27, demande : "commence à travailler sur
+         l'onglet Centre médical") : infirmerie, risque de blessure par
+         joueur, encadrement médical (médecin, kiné, salle de musculation),
+         historique des blessures de la saison (Team.injuryLog). Contenu
+         produit par renderMedicalSection. -->
+    <div class="section med-page">
+      <div class="hu-head">
+        <h2 class="page-title">Centre médical</h2>
+        <p class="eco-title-sub" id="medicalWeekSub"></p>
+      </div>
+      <div id="medicalContent"></div>
+    </div>
+  </div>
+
   <div id="academieSection" class="hidden">
     <!-- Refonte 2026-09-26 (retour utilisateur : "améliore l'onglet
          académie de jeunes") : bandeau de synthèse (#academyOverview), puis
@@ -10734,6 +10807,9 @@ function transferRequestQuoteFor(playerName) {
 // Retour utilisateur, 2026-09 : "essaie de ne pas faire plus que 4 semaines
 // et une blessure au genou ça doit être 3 à 5% max des cas" (voir engine.js,
 // miroir identique).
+// Taille maximale du carnet des blessures d'une équipe (Team.injuryLog,
+// onglet Centre médical) : largement plus qu'une saison normale.
+const INJURY_LOG_MAX = 60;
 const INJURY_TYPES = [
   { label: "Contusion",             minDays: 2,  maxDays: 5,  weight: 44 },
   { label: "Entorse à la cheville", minDays: 5,  maxDays: 12, weight: 32 },
@@ -11991,6 +12067,10 @@ class Team {
     // identique) : plafonné à 10 (demande explicite), alimenté par
     // simulateHomeAttendance plus bas.
     this.attendanceHistory = [];
+    // Carnet des blessures (onglet Centre médical, retour utilisateur
+    // 2026-09-27) : une entrée par blessure survenue en match, la plus
+    // récente en tête, plafonné à INJURY_LOG_MAX (voir recordInjury).
+    this.injuryLog = [];
 
     // Semaines CONSÉCUTIVES où le budget est resté sous DEFICIT_ALERT_THRESHOLD
     // (voir trainWeek) — remis à zéro dès que le budget repasse au-dessus.
@@ -12852,6 +12932,15 @@ class Team {
   }
   // Points de forme physique récupérés EN PLUS chaque jour (voir
   // conditionRecoveryPerDay).
+  // Carnet des blessures (voir this.injuryLog au constructeur), alimenté par
+  // MatchEngine.applyFatigue au moment où la blessure survient. `seasonNo`
+  // suit la même convention que seasonPlayerTotalsForTeam
+  // (seasonHistory.length + 1) pour filtrer « la saison en cours ».
+  recordInjury(entry) {
+    if (!Array.isArray(this.injuryLog)) this.injuryLog = [];
+    this.injuryLog.unshift({ seasonNo: (this.seasonHistory || []).length + 1, week: this.week, ...entry });
+    if (this.injuryLog.length > INJURY_LOG_MAX) this.injuryLog.length = INJURY_LOG_MAX;
+  }
   physioRecoveryBonus() {
     return this.physio ? (PHYSIO_RECOVERY_BONUS_BY_LEVEL[this.physio.level] || 0) : 0;
   }
@@ -17260,6 +17349,7 @@ function serializeTeam(team) {
     trophies: Array.isArray(team.trophies) ? team.trophies.map(t => ({ ...t })) : [],
     // Historique d'affluence (voir engine.js, miroir identique).
     attendanceHistory: team.attendanceHistory,
+    injuryLog: Array.isArray(team.injuryLog) ? team.injuryLog.map(e => ({ ...e })) : [],
     deficitWeeks: team.deficitWeeks,
     // Identité manager (voir Team.isHuman/managerLinkToken) : `false`/`null`
     // pour une équipe CPU — DOIT survivre au rechargement, sinon un manager
@@ -17727,6 +17817,7 @@ function teamFromSave(data) {
   if (Array.isArray(data.trophies)) team.trophies = data.trophies.map(t => ({ ...t }));
   // Historique d'affluence (voir engine.js, miroir identique).
   team.attendanceHistory = Array.isArray(data.attendanceHistory) ? data.attendanceHistory : [];
+  team.injuryLog = Array.isArray(data.injuryLog) ? data.injuryLog : [];
   // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
   // sur plusieurs postes) ; si absente (ancienne sauvegarde) ou invalide, la
   // feuille auto-assignée par défaut du constructeur reste en place.
@@ -18754,6 +18845,15 @@ class MatchEngine {
           const rolled = rollInjury(this.matchNow ?? Date.now(), team.doctorInjuryDurationMult ? team.doctorInjuryDurationMult() : 1);
           p.injuryType = rolled.injuryType;
           p.injuryUntil = rolled.injuryUntil;
+          // Carnet des blessures (onglet Centre médical, voir Team.recordInjury).
+          if (team.recordInjury) {
+            const opponent = team === this.teamA ? this.teamB : this.teamA;
+            team.recordInjury({
+              at: this.matchNow ?? Date.now(), playerId: p.id, playerName: p.name, injuryType: rolled.injuryType,
+              days: Math.max(1, Math.round((rolled.injuryUntil - (this.matchNow ?? Date.now())) / CONDITION_DAY_MS)),
+              opponentName: opponent ? opponent.name : null,
+            });
+          }
           this.log(events, quarter, clock, say(PHRASES.injury, { player: p.name, team: team.name }), { type: "injury", team: this.teamKey(team) });
           // Fil d'actualité (voir MIROIR EXACT engine.js).
           if (team.isHuman && team.feed) {
@@ -20545,7 +20645,7 @@ function refreshMedicalMarkets() {
 // ---------------------------------------------------------------------
 const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
-  "clubSection", "staffSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "messagesSection", "histoireSection",
+  "clubSection", "staffSection", "medicalSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
   "guideSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
 ];
@@ -38227,6 +38327,146 @@ function humeurEventRowHtml(ev) {
   </div>`;
 }
 
+// ---------------------------------------------------------------------
+// CENTRE MÉDICAL (demande du 2026-09-27) : infirmerie, risque de blessure,
+// encadrement médical et historique de la saison. Le risque reprend
+// EXACTEMENT les multiplicateurs de MatchEngine.applyFatigue qui dépendent
+// du joueur avant le match (forme physique × salle de musculation × kiné) ;
+// la fatigue EN match (fatigueFactor) touche tout le monde pareil et n'est
+// pas connue d'avance, elle n'entre donc pas dans l'indicateur. 1,00 = un
+// joueur en pleine forme dans un club sans kiné ni salle de musculation.
+// ---------------------------------------------------------------------
+const MEDICAL_RISK_TIERS = [
+  { max: 0.85, key: "low", label: "Faible" },
+  { max: 1.15, key: "normal", label: "Normal" },
+  { max: 1.5, key: "high", label: "Élevé" },
+  { max: Infinity, key: "veryhigh", label: "Très élevé" },
+];
+function medicalRiskFor(team, player, now = Date.now()) {
+  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
+  const condition = currentCondition(player, now, recovery);
+  const condMult = conditionStateFor(condition).injuryMult;
+  const gymMult = team.facilityInjuryRiskMult ? team.facilityInjuryRiskMult() : 1;
+  const physioMult = team.physioInjuryRiskMult ? team.physioInjuryRiskMult() : 1;
+  const mult = condMult * gymMult * physioMult;
+  const tier = MEDICAL_RISK_TIERS.find(t => mult < t.max) || MEDICAL_RISK_TIERS[MEDICAL_RISK_TIERS.length - 1];
+  return { mult, tier, condition, condMult, gymMult, physioMult };
+}
+function medicalMultLabel(m) { return "×" + m.toFixed(2).replace(".", ","); }
+function medicalPctLabel(delta) { return `${delta > 0 ? "+" : "−"}${Math.round(Math.abs(delta) * 100)} %`; }
+
+function renderMedicalSection() {
+  const team = teamA;
+  const now = Date.now();
+  const holder = document.getElementById("medicalContent");
+  if (!holder) return;
+  const players = team.players || [];
+  const injured = players.filter(p => isCurrentlyInjured(p, now))
+    .sort((a, b) => a.injuryUntil - b.injuryUntil);
+  const fit = players.filter(p => !isCurrentlyInjured(p, now))
+    .map(p => ({ p, r: medicalRiskFor(team, p, now) }))
+    .sort((a, b) => b.r.mult - a.r.mult || a.p.name.localeCompare(b.p.name));
+  const seasonNo = (team.seasonHistory || []).length + 1;
+  const seasonLog = (team.injuryLog || []).filter(e => e.seasonNo === seasonNo);
+  const highRisk = fit.filter(x => x.r.tier.key === "high" || x.r.tier.key === "veryhigh").length;
+
+  const sub = document.getElementById("medicalWeekSub");
+  if (sub) sub.textContent = `Semaine ${team.week} · ${players.length} joueurs dans l'effectif`;
+
+  const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
+  let html = `<div class="med-kpis">` +
+    `<div class="hu-card med-kpi"><h3>Blessés</h3><div class="big ${injured.length ? "is-danger" : "is-ok"}" id="medicalInjuredCount">${injured.length}</div>` +
+      `<div class="sub">${injured.length ? "indisponible" + (injured.length > 1 ? "s" : "") + " pour les prochains matchs" : "Tout l'effectif est disponible"}</div></div>` +
+    `<div class="hu-card med-kpi"><h3>Risque élevé</h3><div class="big ${highRisk ? "is-danger" : ""}" id="medicalHighRiskCount">${highRisk}</div>` +
+      `<div class="sub">${highRisk ? "joueur" + (highRisk > 1 ? "s" : "") + " à ménager (forme physique basse)" : "Aucun joueur particulièrement exposé"}</div></div>` +
+    `<div class="hu-card med-kpi"><h3>Blessures cette saison</h3><div class="big" id="medicalSeasonCount">${seasonLog.length}</div>` +
+      `<div class="sub">${seasonLog.length ? plural(seasonLog.reduce((s, e) => s + (e.days || 0), 0), "jour", "jours") + " d'indisponibilité au total" : "Aucune blessure depuis le début de la saison"}</div></div>` +
+    `</div>`;
+
+  // Infirmerie + encadrement médical.
+  html += `<div class="med-grid"><section class="med-card" id="medicalInfirmary"><div class="med-card-head"><h3>Infirmerie</h3><span>${plural(injured.length, "joueur", "joueurs")}</span></div>`;
+  if (!injured.length) {
+    html += `<p class="med-empty">Aucun joueur blessé.</p>`;
+  } else {
+    injured.forEach(p => {
+      const days = injuryDaysRemaining(p, now);
+      const logged = (team.injuryLog || []).find(e => e.playerId === p.id); // la plus récente
+      const total = logged && logged.days ? logged.days : days;
+      const done = total > 0 ? Math.max(0, Math.min(100, Math.round((1 - days / total) * 100))) : 0;
+      html += `<div class="med-row med-injured-row" data-player-row="${p.id}">` +
+        `<div class="med-who">${playerAvatarHtml(p, team, 30)}<div class="med-who-text">${playerLinkHtml(myTeamIndex, p.id, p.name)}` +
+        `<small>${escapeHtml(POS_SHORT[p.position] || p.position || "")} · ${escapeHtml(p.injuryType || "Blessure")}</small></div></div>` +
+        `<div class="med-inj-when"><span class="med-inj-days">${days} <small>jour${days > 1 ? "s" : ""}</small></span>` +
+        `<div class="med-bar" title="Guérison : ${done} %"><i style="width:${done}%;background:var(--ok)"></i></div>` +
+        `<span class="med-inj-back">Retour prévu ${escapeHtml(formatCalendarDayFr(p.injuryUntil))}</span></div></div>`;
+    });
+  }
+  html += `</section>`;
+
+  const doctor = team.doctor, physio = team.physio;
+  const gymLevel = (team.facilityLevels && team.facilityLevels.gym) || 0;
+  const gym = facilityInfo("gym", gymLevel);
+  const staffBlock = (key, on, title, starsLevel, effect) =>
+    `<div class="med-staff ${on ? "is-on" : ""}" data-med-staff="${key}"><div class="med-staff-ico">${STAFF_ICONS[key] || STAFF_ICONS.physio}</div>` +
+    `<div class="med-staff-body"><b>${title}</b>${starsLevel ? staffStarsHtml(starsLevel) : ""}<span>${effect}</span></div></div>`;
+  html += `<section class="med-card" id="medicalStaffCard"><div class="med-card-head"><h3>Encadrement médical</h3></div>` +
+    staffBlock("doctor", !!doctor, doctor ? "Médecin" : "Aucun médecin", doctor ? doctor.level : 0,
+      doctor ? `Durée des blessures ${medicalPctLabel(-(DOCTOR_INJURY_DURATION_REDUCTION_BY_LEVEL[doctor.level] || 0))}` : "Un médecin raccourcit la durée des nouvelles blessures (jusqu'à −35 %).") +
+    staffBlock("physio", !!physio, physio ? "Kiné" : "Aucun kiné", physio ? physio.level : 0,
+      physio ? `Risque de blessure ${medicalPctLabel(team.physioInjuryRiskMult() - 1)} · +${team.physioRecoveryBonus()} de forme physique par jour` : "Un kiné réduit le risque de blessure (jusqu'à −25 %) et accélère la récupération.") +
+    `<div class="med-staff ${gymLevel ? "is-on" : ""}" data-med-staff="gym"><div class="med-staff-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"></path></svg></div>` +
+    `<div class="med-staff-body"><b>${escapeHtml(gym ? gym.name : "Aucune salle de musculation")}</b>` +
+    `<span>${gymLevel ? `Risque de blessure ${medicalPctLabel(gym.injuryRiskMult - 1)}` : "Une salle de musculation réduit le risque de blessure en match (jusqu'à −35 %)."}</span></div></div>` +
+    `<div class="med-actions"><button type="button" id="medicalGoStaff">Gérer le staff</button><button type="button" id="medicalGoSalle">Gérer les équipements</button></div>` +
+    `</section></div>`;
+
+  // Risque de blessure.
+  html += `<section class="med-card" id="medicalRisk" style="margin-top:18px"><div class="med-card-head"><h3>Risque de blessure</h3><span>Avant le prochain match</span></div>`;
+  if (!fit.length) {
+    html += `<p class="med-empty">Aucun joueur disponible.</p>`;
+  } else {
+    html += `<table class="med-risk-table"><thead><tr><th>Joueur</th><th class="med-pos">Poste</th><th class="med-cond">Forme physique</th><th>Risque</th></tr></thead><tbody>`;
+    fit.forEach(({ p, r }) => {
+      const width = Math.max(4, Math.min(100, Math.round(r.mult / 2 * 100)));
+      const detail = `Forme physique ${medicalMultLabel(r.condMult)} · Salle de musculation ${medicalMultLabel(r.gymMult)} · Kiné ${medicalMultLabel(r.physioMult)}`;
+      html += `<tr data-player-row="${p.id}" data-risk="${r.tier.key}"><td><div class="med-who">${playerAvatarHtml(p, team, 26)}<div class="med-who-text">${playerLinkHtml(myTeamIndex, p.id, p.name)}</div></div></td>` +
+        `<td class="med-pos">${escapeHtml(POS_SHORT[p.position] || p.position || "")}</td>` +
+        `<td class="med-cond">${conditionBadgeHtml(p, now, team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY)}</td>` +
+        `<td><div class="med-risk-cell" title="${escapeHtml(detail)}"><span class="med-risk-label med-risk-${r.tier.key}">${r.tier.label}</span>` +
+        `<div class="med-bar"><i style="width:${width}%;background:currentColor" class="med-risk-${r.tier.key}"></i></div>` +
+        `<span class="med-risk-mult">${medicalMultLabel(r.mult)}</span></div></td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+  html += `<p class="med-legend">×1,00 = joueur en pleine forme, sans kiné ni salle de musculation. La fatigue accumulée pendant le match s'ajoute pour tout le monde : faire tourner l'effectif limite les blessures.</p></section>`;
+
+  // Historique de la saison.
+  html += `<section class="med-card" id="medicalHistory" style="margin-top:18px"><div class="med-card-head"><h3>Historique de la saison</h3><span>${plural(seasonLog.length, "blessure", "blessures")}</span></div>`;
+  if (!seasonLog.length) {
+    html += `<p class="med-empty">Aucune blessure cette saison.</p>`;
+  } else {
+    let lastWeek = null;
+    seasonLog.forEach(e => {
+      if (e.week !== lastWeek) {
+        lastWeek = e.week;
+        html += `<div class="med-hist-week"><span>Semaine ${e.week}</span></div>`;
+      }
+      const stillHere = players.some(p => p.id === e.playerId);
+      const name = stillHere ? playerLinkHtml(myTeamIndex, e.playerId, e.playerName) : `<b>${escapeHtml(e.playerName)}</b>`;
+      html += `<div class="med-row med-hist-row"><div class="med-who"><div class="med-who-text">${name}` +
+        `<small>${escapeHtml(e.injuryType || "Blessure")}${e.opponentName ? ` · contre ${escapeHtml(e.opponentName)}` : ""}${e.at ? ` · ${escapeHtml(formatCalendarDayFr(e.at))}` : ""}</small></div></div>` +
+        `<span class="med-hist-dur">${e.days} j</span></div>`;
+    });
+  }
+  html += `</section>`;
+
+  holder.innerHTML = html;
+}
+document.getElementById("medicalContent").addEventListener("click", (e) => {
+  if (e.target.closest("#medicalGoStaff")) TAB_HANDLERS.staff();
+  else if (e.target.closest("#medicalGoSalle")) TAB_HANDLERS.salle();
+});
+
 function renderHumeurSection() {
   const morale = teamA.fanMorale;
   const color = moraleGaugeColor(morale);
@@ -39886,6 +40126,7 @@ const TAB_HANDLERS = {
   sponsors: () => { renderSponsorsPanel(); showPage("sponsorsSection"); setActiveTab("sponsors"); },
   salle: () => { renderSalleSection(); showPage("salleSection"); setActiveTab("salle"); },
   staff: () => { for (const k in staffUi) staffUi[k].open = false; refreshCoachMarket(); refreshAnalystMarket(); refreshRecruiterMarket(); refreshMedicalMarkets(); renderStaffPanel(); showPage("staffSection"); setActiveTab("staff"); },
+  medical: () => { renderMedicalSection(); showPage("medicalSection"); setActiveTab("medical"); },
   academie: () => { renderAcademieSection(); showPage("academieSection"); setActiveTab("academie"); },
   humeur: () => { renderHumeurSection(); showPage("humeurSection"); setActiveTab("humeur"); },
   ordres: goToOrdresTab,

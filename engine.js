@@ -2590,6 +2590,9 @@ function conditionLossForMinutes(minutesPlayed) {
 // (weight 10 -> 4 sur un total de 100), les 6 points retirés reversés à
 // Contusion (40 -> 44) et Entorse à la cheville (30 -> 32) au prorata de
 // leur poids d'origine.
+// Taille maximale du carnet des blessures d'une équipe (Team.injuryLog,
+// onglet Centre médical) : largement plus qu'une saison normale.
+const INJURY_LOG_MAX = 60;
 const INJURY_TYPES = [
   { label: "Contusion",             minDays: 2,  maxDays: 5,  weight: 44 },
   { label: "Entorse à la cheville", minDays: 5,  maxDays: 12, weight: 32 },
@@ -4443,6 +4446,10 @@ class Team {
     // par match à DOMICILE (jamais à l'extérieur, l'affluence de la salle
     // adverse n'est pas suivie ici).
     this.attendanceHistory = [];
+    // Carnet des blessures (onglet Centre médical, retour utilisateur
+    // 2026-09-27) : une entrée par blessure survenue en match, la plus
+    // récente en tête, plafonné à INJURY_LOG_MAX (voir recordInjury).
+    this.injuryLog = [];
 
     // Semaines CONSÉCUTIVES où le budget est resté sous DEFICIT_ALERT_THRESHOLD
     // (voir trainWeek) — remis à zéro dès que le budget repasse au-dessus.
@@ -5586,6 +5593,15 @@ class Team {
   }
   // Points de forme physique récupérés EN PLUS chaque jour (voir
   // conditionRecoveryPerDay).
+  // Carnet des blessures (voir this.injuryLog au constructeur), alimenté par
+  // MatchEngine.applyFatigue au moment où la blessure survient. `seasonNo`
+  // suit la même convention que seasonPlayerTotalsForTeam
+  // (seasonHistory.length + 1) pour filtrer « la saison en cours ».
+  recordInjury(entry) {
+    if (!Array.isArray(this.injuryLog)) this.injuryLog = [];
+    this.injuryLog.unshift({ seasonNo: (this.seasonHistory || []).length + 1, week: this.week, ...entry });
+    if (this.injuryLog.length > INJURY_LOG_MAX) this.injuryLog.length = INJURY_LOG_MAX;
+  }
   physioRecoveryBonus() {
     return this.physio ? (PHYSIO_RECOVERY_BONUS_BY_LEVEL[this.physio.level] || 0) : 0;
   }
@@ -10911,6 +10927,7 @@ function serializeTeam(team) {
     // juste au-dessus, sinon l'historique affiché sur l'onglet Salle
     // disparaîtrait à chaque rechargement de page.
     attendanceHistory: team.attendanceHistory,
+    injuryLog: Array.isArray(team.injuryLog) ? team.injuryLog.map(e => ({ ...e })) : [],
     deficitWeeks: team.deficitWeeks,
     // Identité manager (voir Team.isHuman/managerLinkToken ci-dessus) :
     // `false`/`null` pour une équipe CPU (comportement historique implicite,
@@ -11473,6 +11490,7 @@ function teamFromSave(data) {
   // Historique d'affluence (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
   team.attendanceHistory = Array.isArray(data.attendanceHistory) ? data.attendanceHistory : [];
+  team.injuryLog = Array.isArray(data.injuryLog) ? data.injuryLog : [];
   // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
   // sur plusieurs postes) ; si absente (ancienne sauvegarde) ou invalide, la
   // feuille auto-assignée par défaut du constructeur reste en place.
@@ -12865,6 +12883,15 @@ class MatchEngine {
           const rolled = rollInjury(this.matchNow ?? Date.now(), team.doctorInjuryDurationMult ? team.doctorInjuryDurationMult() : 1);
           p.injuryType = rolled.injuryType;
           p.injuryUntil = rolled.injuryUntil;
+          // Carnet des blessures (onglet Centre médical, voir Team.recordInjury).
+          if (team.recordInjury) {
+            const opponent = team === this.teamA ? this.teamB : this.teamA;
+            team.recordInjury({
+              at: this.matchNow ?? Date.now(), playerId: p.id, playerName: p.name, injuryType: rolled.injuryType,
+              days: Math.max(1, Math.round((rolled.injuryUntil - (this.matchNow ?? Date.now())) / CONDITION_DAY_MS)),
+              opponentName: opponent ? opponent.name : null,
+            });
+          }
           this.log(events, quarter, clock, say(PHRASES.injury, { player: p.name, team: team.name }), { type: "injury", team: this.teamKey(team), player: p.name });
           // Fil d'actualité (tableau de bord, voir FEED_CATEGORIES plus haut) :
           // uniquement pour une équipe humaine (`team.feed` existe pour toute

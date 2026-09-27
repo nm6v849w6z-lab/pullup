@@ -141,8 +141,28 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   les colonnes peuvent finir à des hauteurs différentes (temps de jeu en
   automatique). Remplace les réglages successifs de la journée sur Défense.
 
-- **📋 PROCHAINS CHANTIERS PRÉVUS** — onglet Centre médical (indicateur de
-  risque de blessure, suite du staff médical), puis Matchs amicaux.
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-27) — Onglet Centre
+  médical (v1)** — demande : "commence à travailler sur l'onglet Centre
+  médical". Contenu validé : Infirmerie, Risque de blessure, Encadrement
+  médical, Historique ; onglet dans Gestion après Staff.
+  - Moteur (engine.js + miroir moteurbasket3.html) : Team.injuryLog (60
+    entrées max, INJURY_LOG_MAX) alimenté par Team.recordInjury depuis
+    MatchEngine.applyFatigue (saison, semaine, date, joueur, type, durée,
+    adversaire), persisté par serializeTeam/teamFromSave.
+  - Page (moteurbasket3.html) : #medicalSection, renderMedicalSection,
+    medicalRiskFor (forme physique × salle de musculation × kiné, mêmes
+    multiplicateurs que applyFatigue ; paliers Faible <0,85 / Normal <1,15 /
+    Élevé <1,5 / Très élevé), CSS .med-*, version mobile (colonnes Poste et
+    Forme masquées). Traductions en.js ajoutées.
+  - Tests : medical_center_test.js (nouveau) ; verts aussi :
+    medical_staff, injury_duration, persistence, tabs, i18n_english,
+    sidebar_logo, player_condition, onboarding_tour, dashboard_e2e,
+    end_to_end, mobile_pwa, guide_nav, tous les server/*_test.js.
+  - Pistes v2 (non demandées) : ajouter le Centre médical au Guide et au
+    tutoriel, alerte au tableau de bord quand un joueur passe en risque
+    Très élevé, historique des saisons passées.
+  Reste : `git push`.
+- **📋 CHANTIER SUIVANT** — Matchs amicaux.
 
 - **📝 DÉCIDÉ, À CODER QUAND LES DIVISIONS MULTIPLES ARRIVERONT (2026-09-27)
   — Coupes nationales** — retours utilisateur :
