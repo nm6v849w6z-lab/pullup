@@ -3511,7 +3511,11 @@ const CHEMISTRY_SAME_FIVE_GAIN = 1; // en plus, si même cinq de départ qu'au m
 // rythme, consignes confirmées, convocation, cinq, rotation, temps de jeu).
 // Les « postes à surveiller » (watchAssignments) n'en font PAS partie : ils
 // visent des joueurs d'un adversaire précis.
-const TACTIC_PRESETS_MAX = 3;
+// Premium (retour utilisateur, 2026-09-27) : 6 tactiques enregistrées au
+// lieu de 3 (TACTIC_PRESETS_FREE_MAX) — voir Team.tacticPresetsMax. Une
+// tactique enregistrée pendant le Premium reste utilisable après.
+const TACTIC_PRESETS_MAX = 6;
+const TACTIC_PRESETS_FREE_MAX = 3;
 const TACTIC_PRESET_NAME_MAX = 30;
 // Nombre de matchs dont on garde les ordres complets (Team.ordersHistory).
 const ORDERS_HISTORY_MAX = 10;
@@ -5108,12 +5112,16 @@ class Team {
   // ensemble), un "petit plus/petit moins" d'ensemble sur TOUTE l'équipe.
   // Tactiques enregistrées (voir TACTIC_PRESETS_MAX). `slot` 0..2 : remplace
   // la tactique de cet emplacement, ou l'ajoute à la suite.
+  // Nombre de tactiques enregistrables : 6 en Premium, 3 sinon.
+  tacticPresetsMax(now = Date.now()) {
+    return this.hasActivePremium(now) ? TACTIC_PRESETS_MAX : TACTIC_PRESETS_FREE_MAX;
+  }
   saveTacticPreset(slot, name, snap, now = Date.now()) {
     if (!Array.isArray(this.tacticPresets)) this.tacticPresets = [];
     const clean = String(name || "").trim().slice(0, TACTIC_PRESET_NAME_MAX) || `Tactique ${slot + 1}`;
     const preset = { name: clean, savedAt: now, orders: tacticPresetOrdersFrom(snap) };
     if (slot < this.tacticPresets.length) this.tacticPresets[slot] = preset;
-    else if (this.tacticPresets.length < TACTIC_PRESETS_MAX) this.tacticPresets.push(preset);
+    else if (this.tacticPresets.length < this.tacticPresetsMax(now)) this.tacticPresets.push(preset);
     else return null;
     return preset;
   }
@@ -5219,8 +5227,8 @@ class Team {
   // (voir effectiveJerseyPattern côté moteurbasket3.html).
   setJerseyPattern(pattern) {
     if (!JERSEY_PATTERNS.includes(pattern)) return { ok: false, error: "Motif de maillot inconnu." };
-    if (pattern !== JERSEY_PATTERNS[0] && !this.isPaying) {
-      return { ok: false, error: "Passez en club payant pour un motif de maillot personnalisé." };
+    if (pattern !== JERSEY_PATTERNS[0] && !this.hasActivePremium()) {
+      return { ok: false, error: "Passez Premium pour un motif de maillot personnalisé." };
     }
     this.jerseyPattern = pattern;
     return { ok: true };
@@ -5274,8 +5282,8 @@ class Team {
   // moteurbasket3.html), même principe que jerseyPattern.
   setJerseyTwoTone(key) {
     if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
-    if (!this.isPaying) {
-      return { ok: false, error: "Passez en club payant pour choisir une combinaison de couleurs." };
+    if (!this.hasActivePremium()) {
+      return { ok: false, error: "Passez Premium pour choisir une combinaison de couleurs." };
     }
     this.jerseyTwoTone = key;
     return { ok: true };
@@ -5301,8 +5309,8 @@ class Team {
   // moteurbasket3.html).
   setAwayJerseyPattern(pattern) {
     if (!JERSEY_PATTERNS.includes(pattern)) return { ok: false, error: "Motif de maillot inconnu." };
-    if (pattern !== JERSEY_PATTERNS[0] && !this.isPaying) {
-      return { ok: false, error: "Passez en club payant pour un motif de maillot personnalisé." };
+    if (pattern !== JERSEY_PATTERNS[0] && !this.hasActivePremium()) {
+      return { ok: false, error: "Passez Premium pour un motif de maillot personnalisé." };
     }
     this.awayJerseyPattern = pattern;
     return { ok: true };
@@ -5315,8 +5323,8 @@ class Team {
   // effectiveAwayJerseyTwoTone côté moteurbasket3.html).
   setAwayJerseyTwoTone(key) {
     if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
-    if (!this.isPaying) {
-      return { ok: false, error: "Passez en club payant pour choisir une combinaison de couleurs." };
+    if (!this.hasActivePremium()) {
+      return { ok: false, error: "Passez Premium pour choisir une combinaison de couleurs." };
     }
     this.awayJerseyTwoTone = key;
     return { ok: true };
@@ -5331,7 +5339,7 @@ class Team {
   // déjà eu lieu côté client avant l'envoi (voir resizeImageFileToDataUrl
   // dans moteurbasket3.html), ceci n'est qu'un garde-fou serveur.
   setCustomLogo(dataUrl) {
-    if (!this.isPaying) return { ok: false, error: "Passez en club payant pour charger un logo personnalisé." };
+    if (!this.hasActivePremium()) return { ok: false, error: "Passez Premium pour charger un logo personnalisé." };
     if (dataUrl === null) {
       this.customLogoDataUrl = null;
       return { ok: true };
@@ -11916,6 +11924,10 @@ function teamFromSave(data) {
   // défaut, club gratuit) plutôt que d'accepter n'importe quelle valeur
   // brute non validée venant de la sauvegarde.
   team.isPaying = !!data.isPaying;
+  // Premium unique (retour utilisateur, 2026-09-27 : "tout doit se passer
+  // par là [onglet Premium]") : l'ancien interrupteur « Passer Pro » propre
+  // au Scouting Pro (scoutingPremium) est fusionné dans isPaying.
+  if (data.scoutingPremium) team.isPaying = true;
   team.trigram = isValidTrigram(data.trigram) ? data.trigram : null;
   team.trigramChangedAt = typeof data.trigramChangedAt === "number" ? data.trigramChangedAt : null;
   team.arenaName = typeof data.arenaName === "string" && data.arenaName.trim() ? data.arenaName.trim().slice(0, ARENA_NAME_MAX_LENGTH) : null;
@@ -13655,7 +13667,7 @@ return {
   // Connaissance tactique (voir le grand commentaire au-dessus de
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
-  TACTIC_PRESETS_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
+  TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
   FRIENDLY_TACTICAL_ROLE_WEIGHTS, TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
   CLUB_FACILITIES, facilityInfo,

@@ -5893,6 +5893,23 @@
     /* Fil + zone de saisie tiennent dans l'écran, au-dessus de la barre du bas. */
     .msg-messages{min-height:200px; max-height:calc(100vh - 330px); max-height:calc(100dvh - 330px);}
   }
+  /* ---- Premium — voir renderPremiumSection ---- */
+  .prm-status{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 22px; margin-bottom:10px;}
+  .prm-status.is-on{border-color:rgba(240,162,60,.6); background:rgba(240,162,60,.08);}
+  .prm-status__text{display:flex; flex-direction:column; gap:2px;}
+  .prm-status__kicker{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-dim);}
+  .prm-status__value{font-size:22px; color:var(--ink);}
+  .prm-status.is-on .prm-status__value{color:var(--amber);}
+  .prm-status__sub{font-size:13px; color:var(--ink-dim);}
+  .prm-h{margin:22px 0 10px;}
+  .prm-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;}
+  .prm-perk{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:6px;}
+  .prm-perk p{margin:0; font-size:13px; color:var(--ink-dim);}
+  .prm-perk__badge{align-self:flex-start; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--amber); background:rgba(240,162,60,.12); border-radius:999px; padding:2px 8px;}
+  .prm-soon{margin:0; padding-left:20px; color:var(--ink-dim); font-size:14px; line-height:1.7;}
+  .prm-note{margin-top:10px;}
+  .prm-lock{background:var(--panel); border:1px solid rgba(240,162,60,.45); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:10px; align-items:flex-start;}
+  @media (max-width:900px){ .prm-grid{grid-template-columns:1fr;} }
   /* ---- Ligues privées (Premium) — voir renderLpSection ---- */
   #lpSection{--display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-size:14px;}
   #lpSection .pos{color:var(--ok);} #lpSection .neg{color:#f0a292;} #lpSection .dim{color:var(--ink-faint);}
@@ -6157,6 +6174,7 @@
          en bas de la sidebar via margin-top:auto (voir .sidebar-section-bottom). -->
     <div class="sidebar-section sidebar-section-bottom">
       <button class="tab-btn sidebar-link" data-tab="guide"><span class="sidebar-label">Guide</span></button>
+      <button class="tab-btn sidebar-link" data-tab="premium"><span class="sidebar-label">Premium</span></button>
       <!-- Discord de la communauté (retour utilisateur 2026-09-27 : "il
            faudrait ajouter l'onglet Discord") — lien vers l'invitation
            DISCORD_INVITE_URL du serveur (voir /api/account/config), ouvert
@@ -7208,6 +7226,17 @@
     <div class="section">
       <h2 id="placeholderTitle"></h2>
       <p class="training-empty" id="placeholderText"></p>
+    </div>
+  </div>
+
+  <!-- Premium (retour utilisateur, 2026-09-27 : "il faut un onglet en
+       dessous de guide [...] on y laissera le bouton passer en version
+       payante (gratuitement) tout doit se passer par là maintenant") — voir
+       renderPremiumSection. -->
+  <div id="premiumSection" class="hidden">
+    <div class="section prm">
+      <h2 class="page-title">Premium</h2>
+      <div id="premiumContent"></div>
     </div>
   </div>
 
@@ -11554,7 +11583,11 @@ function parisCalendarDayIndex(ms) {
 // rythme, consignes confirmées, convocation, cinq, rotation, temps de jeu).
 // Les « postes à surveiller » (watchAssignments) n'en font PAS partie : ils
 // visent des joueurs d'un adversaire précis.
-const TACTIC_PRESETS_MAX = 3;
+// Premium (retour utilisateur, 2026-09-27) : 6 tactiques enregistrées au
+// lieu de 3 (TACTIC_PRESETS_FREE_MAX) — voir Team.tacticPresetsMax. Une
+// tactique enregistrée pendant le Premium reste utilisable après.
+const TACTIC_PRESETS_MAX = 6;
+const TACTIC_PRESETS_FREE_MAX = 3;
 const TACTIC_PRESET_NAME_MAX = 30;
 // Nombre de matchs dont on garde les ordres complets (Team.ordersHistory).
 const ORDERS_HISTORY_MAX = 10;
@@ -12697,12 +12730,16 @@ class Team {
   // ensemble.
   // Tactiques enregistrées (voir TACTIC_PRESETS_MAX). `slot` 0..2 : remplace
   // la tactique de cet emplacement, ou l'ajoute à la suite.
+  // Nombre de tactiques enregistrables : 6 en Premium, 3 sinon.
+  tacticPresetsMax(now = Date.now()) {
+    return this.hasActivePremium(now) ? TACTIC_PRESETS_MAX : TACTIC_PRESETS_FREE_MAX;
+  }
   saveTacticPreset(slot, name, snap, now = Date.now()) {
     if (!Array.isArray(this.tacticPresets)) this.tacticPresets = [];
     const clean = String(name || "").trim().slice(0, TACTIC_PRESET_NAME_MAX) || `Tactique ${slot + 1}`;
     const preset = { name: clean, savedAt: now, orders: tacticPresetOrdersFrom(snap) };
     if (slot < this.tacticPresets.length) this.tacticPresets[slot] = preset;
-    else if (this.tacticPresets.length < TACTIC_PRESETS_MAX) this.tacticPresets.push(preset);
+    else if (this.tacticPresets.length < this.tacticPresetsMax(now)) this.tacticPresets.push(preset);
     else return null;
     return preset;
   }
@@ -12823,8 +12860,8 @@ class Team {
   // Motif de maillot (voir engine.js, miroir identique).
   setJerseyPattern(pattern) {
     if (!JERSEY_PATTERNS.includes(pattern)) return { ok: false, error: "Motif de maillot inconnu." };
-    if (pattern !== JERSEY_PATTERNS[0] && !this.isPaying) {
-      return { ok: false, error: "Passez en club payant pour un motif de maillot personnalisé." };
+    if (pattern !== JERSEY_PATTERNS[0] && !this.hasActivePremium()) {
+      return { ok: false, error: "Passez Premium pour un motif de maillot personnalisé." };
     }
     this.jerseyPattern = pattern;
     return { ok: true };
@@ -12871,8 +12908,8 @@ class Team {
   // engine.js, miroir identique).
   setJerseyTwoTone(key) {
     if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
-    if (!this.isPaying) {
-      return { ok: false, error: "Passez en club payant pour choisir une combinaison de couleurs." };
+    if (!this.hasActivePremium()) {
+      return { ok: false, error: "Passez Premium pour choisir une combinaison de couleurs." };
     }
     this.jerseyTwoTone = key;
     return { ok: true };
@@ -12888,8 +12925,8 @@ class Team {
   // Motif du maillot extérieur (voir engine.js, miroir identique).
   setAwayJerseyPattern(pattern) {
     if (!JERSEY_PATTERNS.includes(pattern)) return { ok: false, error: "Motif de maillot inconnu." };
-    if (pattern !== JERSEY_PATTERNS[0] && !this.isPaying) {
-      return { ok: false, error: "Passez en club payant pour un motif de maillot personnalisé." };
+    if (pattern !== JERSEY_PATTERNS[0] && !this.hasActivePremium()) {
+      return { ok: false, error: "Passez Premium pour un motif de maillot personnalisé." };
     }
     this.awayJerseyPattern = pattern;
     return { ok: true };
@@ -12899,8 +12936,8 @@ class Team {
   // identique).
   setAwayJerseyTwoTone(key) {
     if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
-    if (!this.isPaying) {
-      return { ok: false, error: "Passez en club payant pour choisir une combinaison de couleurs." };
+    if (!this.hasActivePremium()) {
+      return { ok: false, error: "Passez Premium pour choisir une combinaison de couleurs." };
     }
     this.awayJerseyTwoTone = key;
     return { ok: true };
@@ -12909,7 +12946,7 @@ class Team {
   // Logo personnalisé, réservé aux clubs payants (voir engine.js, miroir
   // identique).
   setCustomLogo(dataUrl) {
-    if (!this.isPaying) return { ok: false, error: "Passez en club payant pour charger un logo personnalisé." };
+    if (!this.hasActivePremium()) return { ok: false, error: "Passez Premium pour charger un logo personnalisé." };
     if (dataUrl === null) {
       this.customLogoDataUrl = null;
       return { ok: true };
@@ -18427,6 +18464,10 @@ function teamFromSave(data) {
   team.lastMatchMvp = data.lastMatchMvp && typeof data.lastMatchMvp === "object" ? { ...data.lastMatchMvp } : null;
   // Identité du club (voir engine.js, miroir identique).
   team.isPaying = !!data.isPaying;
+  // Premium unique (retour utilisateur, 2026-09-27 : "tout doit se passer
+  // par là [onglet Premium]") : l'ancien interrupteur « Passer Pro » propre
+  // au Scouting Pro (scoutingPremium) est fusionné dans isPaying.
+  if (data.scoutingPremium) team.isPaying = true;
   team.trigram = isValidTrigram(data.trigram) ? data.trigram : null;
   team.trigramChangedAt = typeof data.trigramChangedAt === "number" ? data.trigramChangedAt : null;
   team.arenaName = typeof data.arenaName === "string" && data.arenaName.trim() ? data.arenaName.trim().slice(0, ARENA_NAME_MAX_LENGTH) : null;
@@ -21323,7 +21364,7 @@ const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
   "clubSection", "staffSection", "medicalSection", "tactiquesSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "amicauxSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
-  "guideSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
+  "guideSection", "premiumSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
 ];
 
 // Pages dont le contenu (tableau dense en colonnes) a besoin de toute la
@@ -25932,7 +25973,15 @@ function teamCalendarTableHtml(teamIdx) {
 function teamDetailAnalyseHtml(teamIdx) {
   const team = league.teams[teamIdx];
   const isOwnTeam = teamIdx === myTeamIndex;
-  if (isOwnTeam) return tacticalReportHtml(team);
+  // Analyse de sa propre équipe : avantage Premium (retour utilisateur,
+  // 2026-09-27 : "pour l'analyse de sa propre équipe c'est aussi un avantage
+  // premium").
+  if (isOwnTeam) {
+    if (teamIsPremium(teamA)) return tacticalReportHtml(team);
+    return `<div class="section"><div class="prm-lock"><h3 style="margin:0">Comment vos adversaires vous voient</h3>` +
+      `<p class="sub" style="margin:0">Vos tendances de jeu (tirs dans la raquette, à 3 points, rebonds offensifs, joueurs clés) et la défense qu'on vous conseillerait : réservé au Premium.</p>` +
+      premiumLinkHtml() + `</div></div>`;
+  }
 
   const alreadyScoutedList = (teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || [];
   const alreadyScouted = alreadyScoutedList.length > 0;
@@ -26146,7 +26195,7 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone, sponsor
 // jerseyPattern soit effacé pour ça, voir Team.setPaying) puisque ce choix
 // est refait à CHAQUE rendu.
 function effectiveJerseyPattern(team) {
-  return team.isPaying ? team.jerseyPattern : JERSEY_PATTERNS[0];
+  return teamIsPremium(team) ? team.jerseyPattern : JERSEY_PATTERNS[0];
 }
 
 // Combinaison de 2 couleurs réellement affichée pour un club (retour
@@ -26155,17 +26204,17 @@ function effectiveJerseyPattern(team) {
 // motif effectif retombe alors sur "uni" de toute façon, qui n'utilise
 // jamais `twoTone` dans jerseySvgHtml, mais autant rester explicite ici).
 function effectiveJerseyTwoTone(team) {
-  return team.isPaying ? (JERSEY_TWO_TONE_SETS[team.jerseyTwoTone] || null) : null;
+  return teamIsPremium(team) ? (JERSEY_TWO_TONE_SETS[team.jerseyTwoTone] || null) : null;
 }
 
 // Motif/combinaison réellement affichés pour le maillot EXTÉRIEUR d'un club
 // (voir effectiveJerseyPattern/effectiveJerseyTwoTone ci-dessus, même
 // principe, sur Team.awayJerseyPattern/awayJerseyTwoTone).
 function effectiveAwayJerseyPattern(team) {
-  return team.isPaying ? team.awayJerseyPattern : JERSEY_PATTERNS[0];
+  return teamIsPremium(team) ? team.awayJerseyPattern : JERSEY_PATTERNS[0];
 }
 function effectiveAwayJerseyTwoTone(team) {
-  return team.isPaying ? (JERSEY_TWO_TONE_SETS[team.awayJerseyTwoTone] || null) : null;
+  return teamIsPremium(team) ? (JERSEY_TWO_TONE_SETS[team.awayJerseyTwoTone] || null) : null;
 }
 
 // Logo type d'un club gratuit (retour utilisateur : "le logo de l'équipe
@@ -26198,7 +26247,7 @@ function defaultTeamLogoSvg(team, size) {
 // Team.setPaying) puisque ce choix est refait à CHAQUE rendu.
 function teamLogoHtml(team, size) {
   const s = size || 80;
-  if (team.isPaying && team.customLogoDataUrl) {
+  if (teamIsPremium(team) && team.customLogoDataUrl) {
     return `<img class="team-logo-img" src="${team.customLogoDataUrl}" alt="Logo de ${escapeHtml(team.name)}" width="${s}" height="${s}">`;
   }
   return defaultTeamLogoSvg(team, s);
@@ -26221,7 +26270,7 @@ function teamLogoHtml(team, size) {
 function liveCourtHomeLogoSvg(team, cx, cy, r) {
   const size = r * 2;
   const x = cx - r, y = cy - r;
-  if (team.isPaying && team.customLogoDataUrl) {
+  if (teamIsPremium(team) && team.customLogoDataUrl) {
     return `<g transform="translate(${x},${y})">` +
       `<clipPath id="liveCourtLogoClip"><circle cx="${r}" cy="${r}" r="${r}"/></clipPath>` +
       `<image href="${team.customLogoDataUrl}" x="0" y="0" width="${size}" height="${size}" ` +
@@ -27228,7 +27277,6 @@ function tacticalReportHtml(opponent) {
   const t = computeScoutingTendencies(opponent);
   let html = `<div class="section tactical-report">`;
   html += `<h3>Rapport tactique · ${escapeHtml(opponent.name)}</h3>`;
-  html += `<p class="sub">Accès gratuit pour l'instant (une version payante est prévue).</p>`;
   if (!t.gamesPlayed) {
     html += `<p class="sub">Pas encore assez de matchs disputés cette saison par ${escapeHtml(opponent.name)} pour établir un rapport tactique.</p></div>`;
     return html;
@@ -27329,7 +27377,7 @@ function scoutingLocalAccess(opponentIdx, now = Date.now()) {
   const team = teamA;
   const opponent = league.teams[opponentIdx];
   if (!team || !opponent) return { ok: false, error: "Adversaire invalide." };
-  const premium = !!team.scoutingPremium;
+  const premium = teamIsPremium(team);
   const unlock = (team.scoutingUnlocks || {})[opponentIdx];
   const currentGames = scoutingLocalGamesPlayedFor(opponent);
   const stale = !!unlock && typeof unlock.gamesPlayedAtUnlock === "number" && unlock.gamesPlayedAtUnlock !== currentGames;
@@ -27348,7 +27396,7 @@ function scoutingLocalCreateAdTicket(opponentIdx, now = Date.now()) {
   if (!Number.isInteger(opponentIdx) || opponentIdx < 0 || opponentIdx >= league.teams.length || opponentIdx === myTeamIndex) {
     return { ok: false, error: "Adversaire invalide." };
   }
-  if (team.scoutingPremium) return { ok: false, error: "Déjà Premium : aucune pub nécessaire." };
+  if (teamIsPremium(team)) return { ok: false, error: "Déjà Premium : aucune pub nécessaire." };
   const access = scoutingLocalAccess(opponentIdx, now);
   if (access.unlocked) return { ok: false, error: "Ce rapport est déjà débloqué et à jour." };
   if (scoutingLocalAdsWatchedThisMonth(team, now) >= SCOUTING_MONTHLY_AD_CAP) {
@@ -27815,11 +27863,11 @@ function scoutingProTeaserHtml(access, opponentIdx) {
   } else {
     html += `<button class="secondary" disabled title="Pub gratuite déjà utilisée ce mois-ci">▶ Regarder une pub pour débloquer</button>`;
   }
-  html += `<button class="secondary" id="scoutingProGoPremiumBtn">⭐ Passer Pro (test)</button>`;
+  html += `<button class="secondary" id="scoutingProGoPremiumBtn" data-tab="premium">⭐ Passer Premium</button>`;
   html += `</div>`;
   html += remaining > 0
-    ? `<p class="sp-lock-note">1 déblocage par pub par mois. Passe Pro pour un accès illimité à toutes les équipes.</p>`
-    : `<p class="sp-lock-note">Tu as déjà utilisé ta pub du mois${nextMonth ? ` — prochaine disponible le ${escapeHtml(nextMonth)}` : ""}. Passe Pro pour un accès illimité.</p>`;
+    ? `<p class="sp-lock-note">1 déblocage par pub par mois. Passe Premium pour un accès illimité à toutes les équipes.</p>`
+    : `<p class="sp-lock-note">Tu as déjà utilisé ta pub du mois${nextMonth ? ` — prochaine disponible le ${escapeHtml(nextMonth)}` : ""}. Passe Premium pour un accès illimité.</p>`;
   html += `<div id="scoutingProFeedback"></div></div>`;
   return html;
 }
@@ -28868,8 +28916,8 @@ function scoutingProReportHtml(report) {
 // inverse explicitement, mais nécessaire pour pouvoir retester/démontrer
 // l'écran verrouillé sans devoir régénérer une carrière entière).
 function scoutingProDowngradeHtml() {
-  if (!teamA.scoutingPremium) return "";
-  return `<p class="sub"><button class="secondary" id="scoutingProGoFreeBtn">Repasser en gratuit (test)</button></p>`;
+  // Premium unique (2026-09-27) : on arrête le Premium depuis l'onglet Premium.
+  return "";
 }
 
 async function refreshScoutingProPanel(teamIdx) {
@@ -29358,28 +29406,8 @@ document.getElementById("teamDetailContent").addEventListener("click", async (e)
     window.__lastScoutingAdOpen = showScoutingAdOverlay(opponentIdx);
     return;
   }
-  const goPremiumBtn = e.target.closest("#scoutingProGoPremiumBtn");
-  if (goPremiumBtn) {
-    goPremiumBtn.disabled = true;
-    window.__lastScoutingPremiumToggle = (async () => {
-      await scoutingSetPremium(true);
-      if (teamDetailSubView === "analyse" && teamDetailIdx != null) {
-        window.__lastScoutingProCheck = refreshScoutingProPanel(teamDetailIdx);
-      }
-    })();
-    return;
-  }
-  const goFreeBtn = e.target.closest("#scoutingProGoFreeBtn");
-  if (goFreeBtn) {
-    goFreeBtn.disabled = true;
-    window.__lastScoutingPremiumToggle = (async () => {
-      await scoutingSetPremium(false);
-      if (teamDetailSubView === "analyse" && teamDetailIdx != null) {
-        window.__lastScoutingProCheck = refreshScoutingProPanel(teamDetailIdx);
-      }
-    })();
-    return;
-  }
+  // « Passer Premium » (#scoutingProGoPremiumBtn) : simple lien vers l'onglet
+  // Premium (data-tab="premium"), géré par l'écouteur global des onglets.
   // "Appliquer à mes ordres" (retour utilisateur, 2026-09-24 puis
   // 2026-09-27 : "cela ouvre la page donner vos ordres correspondant à cet
   // adversaire avec les tactiques proposées appliquées") : vise le PROCHAIN
@@ -34720,7 +34748,7 @@ function dashboardDataFromGameState() {
         primary: JERSEY_COLORS[teamA.jerseyColor] || null,
         secondary: JERSEY_COLORS[teamA.awayJerseyColor] || null,
       },
-      logoUrl: (teamA.isPaying && teamA.customLogoDataUrl) ? teamA.customLogoDataUrl : null,
+      logoUrl: (teamIsPremium(teamA) && teamA.customLogoDataUrl) ? teamA.customLogoDataUrl : null,
       division: info.name,
       // Compteur de saison (question ouverte DEV_NOTES.md point 10) : AUCUN
       // champ `season` n'existe dans le modèle actuel — valeur par défaut
@@ -34951,14 +34979,14 @@ function renderClubIdentityPanel() {
   html += `<div class="club-identity-grid">`;
   html += `<div class="club-identity-logo">`;
   html += `<div class="club-logo-preview">${teamLogoHtml(teamA, 96)}</div>`;
-  if (teamA.isPaying) {
+  if (teamIsPremium(teamA)) {
     html += `<label class="secondary club-logo-upload-btn">Changer le logo` +
       `<input type="file" accept="image/png,image/jpeg,image/webp" id="clubLogoFileInput" style="display:none"></label>`;
     if (teamA.customLogoDataUrl) {
       html += `<button type="button" class="secondary" id="clubLogoResetBtn">Revenir au logo type</button>`;
     }
   } else {
-    html += `<p class="sub">Logo automatique (club gratuit). Passez en club payant pour charger votre propre image.</p>`;
+    html += `<p class="sub">Logo automatique (club gratuit). Passez Premium (onglet Premium) pour charger votre propre image.</p>`;
   }
   html += `</div>`;
 
@@ -34975,7 +35003,7 @@ function renderClubIdentityPanel() {
     `<button type="button" class="jersey-color-swatch${teamA.jerseyColor === key ? " active" : ""}" data-jersey-color="${key}" style="background:${JERSEY_COLORS[key]}" title="${key}" aria-label="Couleur ${key}"></button>`
   ).join("") + `</div>`;
   html += `<p class="field-label" style="margin:12px 0 6px">Motif du maillot domicile</p>`;
-  if (teamA.isPaying) {
+  if (teamIsPremium(teamA)) {
     html += `<div class="jersey-pattern-picker">` + JERSEY_PATTERNS.map(pattern =>
       `<button type="button" class="jersey-pattern-btn${teamA.jerseyPattern === pattern ? " active" : ""}" data-jersey-pattern="${pattern}">` +
       `${jerseySvgHtml(teamA.jerseyShape, teamA.jerseyColor, 56, "home", pattern, dashboardJerseyTwoTone)}<span>${JERSEY_PATTERN_LABELS[pattern]}</span></button>`
@@ -34996,7 +35024,7 @@ function renderClubIdentityPanel() {
       }).join("") + `</div>`;
     }
   } else {
-    html += `<p class="sub">Motif uni (club gratuit). Passez en club payant pour un motif personnalisé (rayures, dégradé, bandes sur les côtés...) et plus de couleurs.</p>`;
+    html += `<p class="sub">Motif uni (club gratuit). Passez Premium (onglet Premium) pour un motif personnalisé (rayures, dégradé, bandes sur les côtés...) et plus de couleurs.</p>`;
   }
   html += `</div>`;
   // Aperçu domicile (retour utilisateur, 2026-09 : "ajoute un aperçu maillot
@@ -35021,7 +35049,7 @@ function renderClubIdentityPanel() {
     `<button type="button" class="jersey-color-swatch${teamA.awayJerseyColor === key ? " active" : ""}" data-away-jersey-color="${key}" style="background:${JERSEY_COLORS[key]}" title="${key}" aria-label="Couleur ${key}"></button>`
   ).join("") + `</div>`;
   html += `<p class="field-label" style="margin:12px 0 6px">Motif du maillot extérieur</p>`;
-  if (teamA.isPaying) {
+  if (teamIsPremium(teamA)) {
     html += `<div class="jersey-pattern-picker">` + JERSEY_PATTERNS.map(pattern =>
       `<button type="button" class="jersey-pattern-btn${teamA.awayJerseyPattern === pattern ? " active" : ""}" data-away-jersey-pattern="${pattern}">` +
       `${jerseySvgHtml(teamA.jerseyShape, teamA.awayJerseyColor, 56, "away", pattern, dashboardAwayJerseyTwoTone)}<span>${JERSEY_PATTERN_LABELS[pattern]}</span></button>`
@@ -35036,15 +35064,15 @@ function renderClubIdentityPanel() {
       }).join("") + `</div>`;
     }
   } else {
-    html += `<p class="sub">Motif uni (club gratuit). Passez en club payant pour un motif personnalisé (rayures, dégradé, bandes sur les côtés...) et plus de couleurs.</p>`;
+    html += `<p class="sub">Motif uni (club gratuit). Passez Premium (onglet Premium) pour un motif personnalisé (rayures, dégradé, bandes sur les côtés...) et plus de couleurs.</p>`;
   }
   html += `</div>`;
   html += `<div class="jersey-mockup">${jerseySvgHtml(teamA.jerseyShape, teamA.awayJerseyColor, 84, "away", dashboardAwayJerseyPattern, dashboardAwayJerseyTwoTone, sponsorNameForSlot(teamA, "maillot"))}<p class="sub">Aperçu extérieur</p></div>`;
   html += `</div>`;
 
-  html += `<p class="sub club-paying-row">Statut du club : <b>${teamA.isPaying ? "Payant" : "Gratuit"}</b> ` +
-    `<button type="button" class="secondary" id="clubTogglePayingBtn">${teamA.isPaying ? "Repasser en gratuit" : "Passer en payant"}</button> ` +
-    `<span class="club-paying-note">(interrupteur manuel temporaire, en attendant un vrai système de paiement)</span></p>`;
+  // Premium (2026-09-27) : plus d'interrupteur ici, tout passe par l'onglet Premium.
+  html += `<p class="sub club-paying-row">Statut du club : <b>${teamIsPremium(teamA) ? "Premium" : "Gratuit"}</b> ` +
+    (teamIsPremium(teamA) ? "" : premiumLinkHtml()) + `</p>`;
   html += `<div id="clubIdentityFeedback"></div>`;
   holder.innerHTML = html;
 }
@@ -39448,10 +39476,17 @@ function renderTactiquesSection() {
   if (!holder || !teamA) return;
   const presets = teamA.tacticPresets || [];
   const lockedNow = typeof currentMatchLineupLocked === "function" && currentMatchLineupLocked();
-  let html = `<p class="tq-intro">Enregistrez jusqu'à ${TACTIC_PRESETS_MAX} tactiques complètes (attaque, défense, rythme, convocation, cinq, rotation et temps de jeu), puis mettez-les en place en un clic depuis les Ordres.</p>`;
+  const presetsMax = teamA.tacticPresetsMax();
+  let html = `<p class="tq-intro">Enregistrez jusqu'à ${presetsMax} tactiques complètes (attaque, défense, rythme, convocation, cinq, rotation et temps de jeu), puis mettez-les en place en un clic depuis les Ordres.${presetsMax < TACTIC_PRESETS_MAX ? ` ${TACTIC_PRESETS_MAX} avec le Premium.` : ""}</p>`;
   html += `<div class="tq-grid">`;
   for (let slot = 0; slot < TACTIC_PRESETS_MAX; slot++) {
     const preset = presets[slot];
+    // Emplacements 4 à 6 : Premium (voir Team.tacticPresetsMax).
+    if (!preset && slot >= presetsMax) {
+      html += `<div class="cal-card tq-card is-empty is-premium" data-tq-slot="${slot}"><div class="cal-card-kicker">Tactique ${slot + 1}</div>` +
+        `<p class="tq-empty-title">Emplacement Premium</p><p class="tq-empty-sub">Passez Premium pour enregistrer jusqu'à ${TACTIC_PRESETS_MAX} tactiques.</p>${premiumLinkHtml()}</div>`;
+      continue;
+    }
     const fb = tqFeedback && tqFeedback.slot === slot ? `<p class="tq-feedback${tqFeedback.error ? " is-error" : ""}">${escapeHtml(tqFeedback.text)}</p>` : "";
     if (!preset) {
       if (slot > presets.length) {
@@ -39792,7 +39827,7 @@ function renderOrdresPresetsBar() {
   if (ordresPresetsFormOpen) {
     const options = [];
     presets.forEach((p, slot) => options.push(`<option value="${slot}">Remplacer « ${escapeHtml(p.name)} »</option>`));
-    if (presets.length < TACTIC_PRESETS_MAX) options.unshift(`<option value="${presets.length}" selected>Nouvelle tactique</option>`);
+    if (presets.length < teamA.tacticPresetsMax()) options.unshift(`<option value="${presets.length}" selected>Nouvelle tactique</option>`);
     html += `<div class="ordres-presets-form"><input type="text" class="tq-input" id="ordresPresetName" maxlength="${TACTIC_PRESET_NAME_MAX}" placeholder="Nom de la tactique">` +
       `<select id="ordresPresetSlot">${options.join("")}</select>` +
       `<button type="button" class="tq-btn" data-ordres-preset-save>Enregistrer</button>` +
@@ -40617,6 +40652,70 @@ function lpRecordOf(lp, idx) {
   return row ? `${row.wins}-${row.losses}` : "0-0";
 }
 
+// ---------------------------------------------------------------------
+// PREMIUM (retour utilisateur, 2026-09-27 : "il faut un onglet en dessous
+// de guide [...] on y laissera le bouton passer en version payante
+// (gratuitement) tout doit se passer par là maintenant pour ensuite avoir
+// accès aux fonctionnalités payantes" ; "ne dis plus supporter mais
+// premium"). UN seul statut : Team.hasActivePremium() (isPaying, ou
+// Premium temporaire premiumUntil gagné aux pronostics). Plus aucun autre
+// bouton pour passer Premium ailleurs : les fonctions réservées renvoient
+// ici (data-tab="premium"). Aucun avantage sportif (règle validée).
+// ---------------------------------------------------------------------
+function teamIsPremium(team) {
+  if (!team) return false;
+  return typeof team.hasActivePremium === "function" ? team.hasActivePremium(Date.now()) : !!team.isPaying;
+}
+const PREMIUM_PERKS = [
+  { title: "Scouting Pro illimité", text: "L'analyse complète de n'importe quel adversaire, sans pub. En gratuit : une analyse par mois contre une pub." },
+  { title: "Analyse de votre équipe", text: "Comment vos adversaires vous voient : vos tendances de jeu et la défense qu'on vous conseillerait." },
+  { title: "Ligues privées", text: "Créer ou rejoindre une ligue privée entre managers." },
+  { title: "Maillots et logo", text: "Motifs, combinaisons de deux couleurs, maillot extérieur et logo personnalisé." },
+  { title: "6 tactiques enregistrées", text: "Au lieu de 3, dans l'onglet Tactiques." },
+  { title: "Sans pub", text: "Aucune pub, ni dans les émissions Hoop Shows ni ailleurs." },
+];
+const PREMIUM_SOON = [
+  "Liste de suivi du marché des transferts et alertes",
+  "Notifications sur mobile (fin d'enchère, blessure, match qui commence)",
+  "Courbe de progression de chaque joueur sur la saison",
+  "Historique de l'entraînement sur toute la saison",
+  "Statistiques avancées et export",
+  "Revoir le direct d'un match déjà joué",
+  "Salle personnalisée et avatars des jeunes de l'académie",
+  "Badge Premium à côté du nom du club",
+];
+function premiumLinkHtml(label) {
+  return `<button type="button" class="secondary prm-link" data-tab="premium">${escapeHtml(label || "⭐ Passer Premium")}</button>`;
+}
+function renderPremiumSection() {
+  const holder = document.getElementById("premiumContent");
+  if (!holder || !teamA) return;
+  const now = Date.now();
+  const active = teamIsPremium(teamA);
+  const tempOnly = active && !teamA.isPaying && typeof teamA.premiumUntil === "number";
+  const until = tempOnly ? new Date(teamA.premiumUntil).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" }) : null;
+  let html = `<div class="prm-status${active ? " is-on" : ""}">` +
+    `<div class="prm-status__text"><span class="prm-status__kicker">Statut du club</span>` +
+    `<b class="prm-status__value">${active ? "Premium" : "Gratuit"}</b>` +
+    (until ? `<span class="prm-status__sub">Premium offert jusqu'au ${escapeHtml(until)}</span>` : "") +
+    `</div>` +
+    `<button type="button" class="${teamA.isPaying ? "secondary" : "primary"}" id="premiumToggleBtn">${teamA.isPaying ? "Arrêter le Premium" : "⭐ Passer Premium"}</button>` +
+    `</div>`;
+  html += `<p class="sub prm-note">Pendant la phase de test, le Premium est gratuit : aucun paiement n'est demandé.</p>`;
+  html += `<h3 class="prm-h">Ce que comprend le Premium</h3><div class="prm-grid">` + PREMIUM_PERKS.map(p =>
+    `<div class="prm-perk"><span class="prm-perk__badge">${active ? "Inclus" : "Premium"}</span><b>${escapeHtml(p.title)}</b><p>${escapeHtml(p.text)}</p></div>`).join("") + `</div>`;
+  html += `<h3 class="prm-h">Bientôt</h3><ul class="prm-soon">` + PREMIUM_SOON.map(t => `<li>${escapeHtml(t)}</li>`).join("") + `</ul>`;
+  html += `<p class="sub prm-note">Le Premium ne donne aucun avantage sportif : ni progression plus rapide, ni argent, ni staff en plus.</p>`;
+  holder.innerHTML = html;
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#premiumToggleBtn") || !teamA) return;
+  teamA.setPaying(!teamA.isPaying);
+  saveMyTeam();
+  syncPayingToServer(teamA.isPaying);
+  renderPremiumSection();
+});
+
 function renderLpSection() {
   const holder = document.getElementById("lpContent");
   if (!holder) return;
@@ -40648,7 +40747,7 @@ function renderLpSection() {
 
 function lpPremiumNoteHtml(premium) {
   if (premium) return "";
-  return `<div class="lp-premium-note"><b>Réservé aux clubs Premium.</b> Il faut un compte Premium pour créer une ligue privée comme pour en rejoindre une (statut du club : onglet Tableau de bord).</div>`;
+  return `<div class="lp-premium-note"><b>Réservé aux clubs Premium.</b> Il faut un compte Premium pour créer une ligue privée comme pour en rejoindre une. ${premiumLinkHtml()}</div>`;
 }
 
 function lpHubHtml(premium) {
@@ -41539,7 +41638,7 @@ function sponsorContractHtml(c, slot) {
   const earned = (c.weeksPaid || 0) * c.weekly + (c.primesPaid || 0);
   const fee = sponsorTerminationFee(c);
   let html = `<div class="spo-contract-id">` +
-    (slot.key === "maillot" ? `<span class="spo-jersey">${jerseySvgHtml(teamA.jerseyShape, teamA.jerseyColor, 72, "home", teamA.isPaying ? teamA.jerseyPattern : "uni", teamA.jerseyTwoTone, c.sponsorName)}</span>` : `<span class="spo-badge">${escapeHtml(defaultTrigramForName(c.sponsorName))}</span>`) +
+    (slot.key === "maillot" ? `<span class="spo-jersey">${jerseySvgHtml(teamA.jerseyShape, teamA.jerseyColor, 72, "home", teamIsPremium(teamA) ? teamA.jerseyPattern : "uni", teamA.jerseyTwoTone, c.sponsorName)}</span>` : `<span class="spo-badge">${escapeHtml(defaultTrigramForName(c.sponsorName))}</span>`) +
     `<div class="spo-contract-txt"><span class="spo-name">${escapeHtml(c.sponsorName)}</span><span class="spo-meta">${escapeHtml(c.tierLabel)} · profil <b class="${sponsorProfileClass(c.profile)}">${escapeHtml(c.profileLabel)}</b></span><span class="spo-meta">Signé en semaine ${c.signedWeek || 1}</span></div></div>`;
   html += `<div class="spo-nums"><div><span class="spo-kicker">Fixe</span><b>${formatMoney(c.weekly)}</b><small>/ semaine</small></div>` +
     `<div><span class="spo-kicker">Prime</span><b>${formatMoney(c.winPrime)}</b><small>/ victoire</small></div>` +
@@ -42062,6 +42161,7 @@ async function msgSendReport() {
 const TAB_HANDLERS = {
   live: goToLiveTab,
   guide: () => { renderGuideSection(); showPage("guideSection"); setActiveTab("guide"); },
+  premium: () => { renderPremiumSection(); showPage("premiumSection"); setActiveTab("premium"); },
   club: () => { renderClubSection(); showPage("clubSection"); setActiveTab("club"); },
   ligue: showStandings,
   coupe: () => { renderCoupeSection(); showPage("coupeSection"); setActiveTab("coupe"); },

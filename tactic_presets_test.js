@@ -25,7 +25,13 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   assert(t.tacticPresets[0].orders.lineup && t.tacticPresets[0].orders.defense === t.defense, "ordres complets, joueurs compris");
   t.saveTacticPreset(1, "", snap); t.saveTacticPreset(2, "C", snap);
   assert(t.tacticPresets[1].name === "Tactique 2", "nom par défaut");
-  assert(t.saveTacticPreset(3, "D", snap) === null && t.tacticPresets.length === 3, "3 tactiques au maximum");
+  assert(t.saveTacticPreset(3, "D", snap) === null && t.tacticPresets.length === 3, "3 tactiques au maximum (club gratuit)");
+  // Premium (retour utilisateur, 2026-09-27) : 6 tactiques.
+  t.setPaying(true);
+  assert(t.tacticPresetsMax() === 6 && t.saveTacticPreset(3, "D", snap) && t.saveTacticPreset(4, "E", snap) && t.saveTacticPreset(5, "F", snap) && t.saveTacticPreset(6, "G", snap) === null && t.tacticPresets.length === 6, "Premium : 6 tactiques au maximum");
+  t.setPaying(false);
+  assert(t.tacticPresets.length === 6 && t.saveTacticPreset(5, "F2", snap) && t.tacticPresetsMax() === 3, "fin du Premium : les tactiques enregistrées restent");
+  t.tacticPresets = t.tacticPresets.slice(0, 3);
   assert(t.saveTacticPreset(0, "x".repeat(50), snap).name.length === E.TACTIC_PRESET_NAME_MAX, "nom limité à 30 caractères");
   // Joueur parti : retiré à l'application.
   const gone = t.tacticPresets[0].orders.lineup.starters["Meneur"];
@@ -73,7 +79,7 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   tab("tactiques").click();
   assert(!doc.getElementById("tactiquesSection").classList.contains("hidden"), "la page Tactiques s'affiche");
   const content = doc.getElementById("tactiquesContent");
-  assert(content.querySelectorAll(".tq-card").length === 3, "3 emplacements");
+  assert(content.querySelectorAll(".tq-card").length === 6 && content.querySelectorAll(".tq-card.is-premium").length === 3, "6 emplacements, dont 3 Premium (club gratuit)");
 
   // Maîtrise : 10 attaques, 5 défenses, 3 rythmes.
   const counts = [...content.querySelectorAll(".tq-mastery-table")].map(t => t.querySelectorAll("tr[data-tq-option]").length);

@@ -116,7 +116,8 @@ if (doc.querySelector("#clubIdentityPanel [data-away-jersey-pattern]")) {
 }
 console.log("✅ Le sélecteur de motif de maillot extérieur est bien masqué pour un club gratuit.");
 
-doc.getElementById("clubTogglePayingBtn").click();
+// Premium (2026-09-27) : plus d'interrupteur dans l'identité du club, bouton de l'onglet Premium.
+(win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderClubIdentityPanel()"));
 const awayBandesBtn = doc.querySelector('[data-away-jersey-pattern="bandes"]');
 if (!awayBandesBtn) throw new Error("❌ (setup) Bouton de motif extérieur \"bandes\" introuvable une fois le club payant.");
 awayBandesBtn.click();

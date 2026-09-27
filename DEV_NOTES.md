@@ -20,6 +20,29 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) — Premium, premier lot** — retours
+  utilisateur : "il faut un onglet en dessous de guide [...] on y laissera
+  le bouton passer en version payante (gratuitement) tout doit se passer
+  par là", "ne dis plus supporter mais premium", "pour l'analyse de sa
+  propre équipe c'est aussi un avantage premium", pas d'avantage sportif.
+  - Onglet Premium sous Guide (renderPremiumSection) : statut, bouton unique
+    « Passer Premium » / « Arrêter le Premium » (isPaying, route
+    /api/club/set-paying), 6 avantages, liste « Bientôt ».
+  - Un seul statut : Team.hasActivePremium() (isPaying ou premiumUntil) ;
+    scoutingPremium fusionné dans isPaying au chargement ; server/scouting.js
+    et le Scouting local lisent hasActivePremium ; maillots/logo aussi
+    (teamIsPremium côté page). Boutons « Passer en payant » (identité du
+    club) et « Passer Pro (test) » / « Repasser en gratuit » retirés →
+    liens data-tab="premium".
+  - Analyse de sa propre équipe : Premium (carte verrouillée sinon).
+  - Tactiques : 6 en Premium, 3 sinon (Team.tacticPresetsMax,
+    TACTIC_PRESETS_FREE_MAX) ; celles enregistrées restent après.
+  - Tests : premium_test.js (nouveau) ; scouting_pro_test C3,
+    tactic_presets, team_home_page, away_jersey, sidebar_order (Tactiques
+    manquait déjà), tactical_scouting_report adaptés.
+  - Reste (lots suivants) : badge Premium, historique d'entraînement de la
+    saison, liste de suivi du marché, notifications, courbes, stats, replay.
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Entraîneur adjoint** — retours
   utilisateur : "recruter des assistants avec une spécialité [...] les
   joueurs progressent passivement sur les attributs liés à la spécialité",

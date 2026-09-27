@@ -186,8 +186,10 @@ for (const forbidden of ["screenDefense", "helpDefense", "postDefense", "closeou
 }
 console.log("✅ Le rapport ne révèle aucun réglage tactique actuel de l'adversaire, uniquement des tendances chiffrées.");
 
-if (!reportText.includes("gratuit")) throw new Error("❌ Le rapport devrait signaler qu'il est temporairement gratuit (paiement pas encore en place).");
-console.log("✅ Le rapport signale bien son accès gratuit temporaire.");
+// Premium (retour utilisateur, 2026-09-27) : l'analyse de sa propre équipe
+// est un avantage Premium, la mention « accès gratuit pour l'instant » a disparu.
+if (reportText.includes("une version payante est prévue")) throw new Error("❌ Le rapport ne devrait plus annoncer d'accès gratuit temporaire (c'est un avantage Premium).");
+console.log("✅ Plus de mention d'accès gratuit temporaire (avantage Premium).");
 
 // Le nom des joueurs cités (pivot/meneur/tireur) doit correspondre aux VRAIS
 // joueurs de la fixture, pas un texte générique.

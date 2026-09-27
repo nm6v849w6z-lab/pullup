@@ -355,7 +355,7 @@ function setTacticPresets(team, teamIndex, league, body, now) {
     const lv = validateLineupBody(team, o.lineup);
     if (!lv.ok) return fail(lv.error);
     snap.lineup = lv.value;
-    if (!team.saveTacticPreset(slot, body.name, snap, now)) return fail(`${max} tactiques au maximum.`);
+    if (!team.saveTacticPreset(slot, body.name, snap, now)) return fail(`${team.tacticPresetsMax(now)} tactiques au maximum${team.hasActivePremium(now) ? "" : " (6 avec le Premium)"}.`);
   } else {
     return fail("Opération inconnue.");
   }

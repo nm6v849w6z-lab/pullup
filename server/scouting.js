@@ -86,7 +86,8 @@ function getScoutingAccess(league, teamIndex, opponentIdx, now = Date.now()) {
   const team = league.teams[teamIndex];
   const opponent = league.teams[opponentIdx];
   if (!team || !opponent) return fail("Équipe ou adversaire invalide.");
-  const premium = !!team.scoutingPremium;
+  // Premium unique (onglet Premium) : isPaying ou Premium temporaire.
+  const premium = typeof team.hasActivePremium === "function" ? team.hasActivePremium(now) : !!team.scoutingPremium;
   const unlock = (team.scoutingUnlocks || {})[opponentIdx];
   const currentGames = gamesPlayedFor(opponent);
   const stale = !!unlock && typeof unlock.gamesPlayedAtUnlock === "number" && unlock.gamesPlayedAtUnlock !== currentGames;
@@ -117,7 +118,7 @@ function createAdTicket(league, teamIndex, opponentIdx, now = Date.now()) {
   const team = league.teams[teamIndex];
   if (!team) return fail("Équipe invalide.");
   if (!validOpponentIdx(league, teamIndex, opponentIdx)) return fail("Adversaire invalide.");
-  if (team.scoutingPremium) return fail("Déjà Premium : aucune pub nécessaire.");
+  if (typeof team.hasActivePremium === "function" ? team.hasActivePremium(now) : team.scoutingPremium) return fail("Déjà Premium : aucune pub nécessaire.");
   const access = getScoutingAccess(league, teamIndex, opponentIdx, now);
   if (access.unlocked) return fail("Ce rapport est déjà débloqué et à jour.");
   if (adsWatchedThisMonth(team, now) >= MONTHLY_AD_UNLOCK_CAP) {
@@ -154,8 +155,11 @@ function completeAdTicket(league, teamIndex, ticketId, now = Date.now()) {
 
 // Bouton "Passer Pro" factice (voir Team.constructor/le grand commentaire en
 // tête de fichier) : bascule dev UNIQUEMENT, aucun paiement réel.
+// Ancienne route « Passer Pro » : bascule désormais le Premium unique
+// (isPaying, voir l'onglet Premium) — gardée pour compatibilité.
 function setPremium(team, premium) {
   team.scoutingPremium = !!premium;
+  if (typeof team.setPaying === "function") team.setPaying(!!premium);
   return { ok: true, premium: team.scoutingPremium };
 }
 

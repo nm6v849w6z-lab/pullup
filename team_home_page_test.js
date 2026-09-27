@@ -205,7 +205,8 @@ console.log("✅ Le choix de couleur de maillot est bien appliqué.");
 console.log("Statut club avant bascule :", win.eval("teamA.isPaying"));
 if (win.eval("teamA.isPaying")) throw new Error("❌ (setup) Le club devrait démarrer gratuit.");
 if (doc.getElementById("clubLogoFileInput")) throw new Error("❌ Le champ de chargement de logo ne devrait PAS être proposé à un club gratuit.");
-doc.getElementById("clubTogglePayingBtn").click();
+// Premium (2026-09-27) : plus d'interrupteur dans l'identité du club, bouton de l'onglet Premium.
+(win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderClubIdentityPanel()"));
 console.log("Statut club après bascule :", win.eval("teamA.isPaying"));
 if (!win.eval("teamA.isPaying")) throw new Error("❌ Cliquer sur \"Passer en payant\" devrait passer le club en payant.");
 if (!doc.getElementById("clubLogoFileInput")) throw new Error("❌ Le champ de chargement de logo devrait apparaître une fois le club payant.");
@@ -259,7 +260,8 @@ if (doc.querySelector("#clubIdentityPanel [data-jersey-pattern]")) {
 }
 console.log("✅ Le sélecteur de motif de maillot est bien masqué pour un club gratuit.");
 
-doc.getElementById("clubTogglePayingBtn").click();
+// Premium (2026-09-27) : plus d'interrupteur dans l'identité du club, bouton de l'onglet Premium.
+(win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderClubIdentityPanel()"));
 const degradeBtn = doc.querySelector('[data-jersey-pattern="degrade"]');
 if (!degradeBtn) throw new Error("❌ (setup) Bouton de motif \"degrade\" introuvable une fois le club payant.");
 degradeBtn.click();
@@ -303,7 +305,8 @@ if (doc.querySelector("#clubIdentityPanel [data-jersey-twotone]")) {
 }
 console.log("✅ Le sélecteur de combinaison de couleurs est bien masqué pour un club gratuit.");
 
-doc.getElementById("clubTogglePayingBtn").click();
+// Premium (2026-09-27) : plus d'interrupteur dans l'identité du club, bouton de l'onglet Premium.
+(win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderClubIdentityPanel()"));
 const twoToneSets = win.eval("JERSEY_TWO_TONE_SETS");
 const twoToneKeys = Object.keys(twoToneSets);
 console.log("Combinaisons de couleurs disponibles :", twoToneKeys.length, "(mets plus de choix)");

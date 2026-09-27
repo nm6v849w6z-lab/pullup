@@ -461,15 +461,22 @@ function request(server, method, urlPath, jsonBody) {
       win.showTeamDetail(oppIdx3);
       win.eval('document.querySelector("[data-team-detail-subview=\'analyse\']").dispatchEvent(new Event("click", {bubbles:true}));');
       await win.__lastScoutingProCheck;
+      // Premium unique (retour utilisateur, 2026-09-27 : "tout doit se passer
+      // par là") : « Passer Premium » mène à l'onglet Premium, où l'on active
+      // le Premium ; de retour sur l'adversaire, plus de teaser.
       const premiumBtn = doc.getElementById("scoutingProGoPremiumBtn");
-      assertTrue(!!premiumBtn, "C3: le bouton 'Passer Pro' est affiché");
+      assertTrue(!!premiumBtn && /Passer Premium/.test(premiumBtn.textContent), "C3: le bouton 'Passer Premium' est affiché");
       premiumBtn.dispatchEvent(new win.Event("click", { bubbles: true }));
-      await win.__lastScoutingPremiumToggle;
-      const panel3 = doc.getElementById("scoutingProPanel");
+      assertTrue(!doc.getElementById("premiumSection").classList.contains("hidden"), "C3: 'Passer Premium' ouvre l'onglet Premium");
+      doc.getElementById("premiumToggleBtn").dispatchEvent(new win.Event("click", { bubbles: true }));
+      assertTrue(win.eval("teamA.hasActivePremium()"), "C3: Premium activé depuis l'onglet Premium");
+      win.showTeamDetail(oppIdx3);
+      win.eval('document.querySelector("[data-team-detail-subview=\'analyse\']").dispatchEvent(new Event("click", {bubbles:true}));');
+      await win.__lastScoutingProCheck;
       assertTrue(!doc.getElementById("scoutingProWatchAdBtn"), "C3: plus de teaser verrouillé, Premium actif");
-      assertTrue(!!doc.getElementById("scoutingProGoFreeBtn"), "C3: un lien 'Repasser en gratuit (test)' est proposé une fois Premium actif");
+      assertTrue(!doc.getElementById("scoutingProGoFreeBtn"), "C3: plus de bouton 'Repasser en gratuit' ici (onglet Premium)");
 
-      console.log("✅ Partie C (navigateur, mode solo) : teaser verrouillé, écran gris de pub factice, déblocage effectif, 'Passer Pro' fonctionnel.");
+      console.log("✅ Partie C (navigateur, mode solo) : teaser verrouillé, écran gris de pub factice, déblocage effectif, 'Passer Premium' via l'onglet Premium.");
       // Ferme la fenêtre jsdom (arrête ses timers d'arrière-plan — horloge
       // live, sauvegarde différée...) AVANT de fermer le serveur, sinon le
       // process Node reste actif indéfiniment (voir spectate_live_match_test.js,
