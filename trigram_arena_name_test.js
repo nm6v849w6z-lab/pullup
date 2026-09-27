@@ -42,12 +42,16 @@ async function waitFor(fn, label, tries = 60) { for (let i = 0; i < tries; i++) 
   r = actions.setTeamTrigram(league.teams[a], a, league, { trigram: "KNG" }, T0);
   check(!r.ok && /déjà utilisé/.test(r.error), "A ne peut pas prendre KNG (déjà pris par B)");
   r = actions.setTeamTrigram(league.teams[a], a, league, { trigram: "BKG" }, T0);
-  check(r.ok && league.teams[a].trigram === "BKG" && league.teams[a].trigramChangedAt === T0, "A prend BKG");
+  check(r.ok && league.teams[a].trigram === "BKG" && league.teams[a].trigramChangedAt === 0, "A prend BKG : 1er changement libre (aucun délai lancé)");
   r = actions.setTeamTrigram(league.teams[a], a, league, { trigram: "BAD" }, T0 + 5 * 24 * 3600 * 1000);
-  check(!r.ok && /jour/.test(r.error), "second changement refusé avant 30 jours");
-  r = actions.setTeamTrigram(league.teams[a], a, league, { trigram: "BAD" }, T0 + 31 * 24 * 3600 * 1000);
+  check(r.ok && league.teams[a].trigram === "BAD" && league.teams[a].trigramChangedAt === T0 + 5 * 24 * 3600 * 1000, "2e changement accepté (le 1er était libre) : délai lancé");
+  r = actions.setTeamTrigram(league.teams[a], a, league, { trigram: "BDX" }, T0 + 10 * 24 * 3600 * 1000);
+  check(!r.ok && /jour/.test(r.error), "3e changement refusé avant 30 jours");
+  r = actions.setTeamTrigram(league.teams[a], a, league, { trigram: "bk" }, T0 + 10 * 24 * 3600 * 1000);
+  check(r.ok && league.teams[a].trigram === null && league.teams[a].trigramChangedAt === T0 + 5 * 24 * 3600 * 1000, "saisir le sigle par défaut (BK) = retour au défaut, possible pendant le délai, sans rien consommer");
+  r = actions.setTeamTrigram(league.teams[a], a, league, { trigram: "BAD" }, T0 + 36 * 24 * 3600 * 1000);
   check(r.ok && league.teams[a].trigram === "BAD", "changement accepté après 30 jours");
-  r = actions.setTeamTrigram(league.teams[a], a, league, { trigram: "" }, T0 + 31 * 24 * 3600 * 1000);
+  r = actions.setTeamTrigram(league.teams[a], a, league, { trigram: "" }, T0 + 36 * 24 * 3600 * 1000);
   check(r.ok && league.teams[a].trigram === null && Engine.teamTrigram(league.teams[a]) === "BK", "retour au sigle par défaut");
   // Unicité face au sigle CALCULÉ d'un autre club : "Rebond Sud" → RS.
   // (2 lettres, jamais en conflit avec un trigramme à 3 lettres) ; on force
@@ -95,7 +99,12 @@ async function waitFor(fn, label, tries = 60) { for (let i = 0; i < tries; i++) 
   await waitFor(() => win.eval("teamA.trigram") === "BKG", "trigramme appliqué côté client");
   await waitFor(() => /BKG/.test((doc.querySelector("#settingsClubBlock svg text") || {}).textContent || ""), "logo type mis à jour dans Paramètres");
   check(true, "le logo type affiche BKG");
-  check(doc.getElementById("clubTrigramInput").disabled && /jour/.test(doc.getElementById("settingsClubBlock").textContent), "champ verrouillé et délai affiché après changement");
+  check(!doc.getElementById("clubTrigramInput").disabled, "1er changement libre : le champ reste modifiable");
+  doc.getElementById("clubTrigramInput").value = "BKX";
+  doc.getElementById("clubTrigramSaveBtn").click();
+  await waitFor(() => win.eval("teamA.trigram") === "BKX", "2e changement appliqué côté client");
+  check(doc.getElementById("clubTrigramInput").disabled && /jour/.test(doc.getElementById("settingsClubBlock").textContent), "champ verrouillé et délai affiché après le 2e changement");
+  check(!doc.getElementById("clubTrigramResetBtn").disabled, "« Par défaut » reste possible pendant le délai");
 
   doc.getElementById("salleArenaNameInput").value = "Le Chaudron";
   doc.getElementById("salleArenaNameSaveBtn").click();
@@ -108,9 +117,9 @@ async function waitFor(fn, label, tries = 60) { for (let i = 0; i < tries; i++) 
   dom.window.close();
   dom = await openGame(html, `${baseUrl}?m=${token}`);
   doc = dom.window.document; win = dom.window;
-  check(win.eval("teamA.trigram") === "BKG" && win.eval("teamA.arenaName") === "Le Chaudron", "trigramme et nom de salle persistés après rechargement");
+  check(win.eval("teamA.trigram") === "BKX" && win.eval("teamA.arenaName") === "Le Chaudron", "trigramme et nom de salle persistés après rechargement");
   win.eval("TAB_HANDLERS.ligue()");
-  check(/BKG/.test(doc.querySelector("#standingsSection").innerHTML), "le classement utilise le trigramme BKG dans le logo type");
+  check(/BKX/.test(doc.querySelector("#standingsSection").innerHTML), "le classement utilise le trigramme BKX dans le logo type");
   dom.window.close(); server.close();
   console.log("\n✅ trigram_arena_name_test.js : tout est vert");
 })().catch(e => { console.error(e); process.exit(1); });

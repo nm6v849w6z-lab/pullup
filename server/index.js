@@ -408,6 +408,16 @@ function tick(league, now) {
   // journée devient le prochain match du club (voir
   // League.promoteImmediatePlan côté moteur — "les ordres sautent").
   if (league.promoteImmediatePlan) league.teams.forEach((t, i) => { if (t.isHuman) league.promoteImmediatePlan(i); });
+  // Trigramme (2026-09-27) : un trigramme "personnalisé" identique au
+  // trigramme par défaut n'en est pas un — on le remet à null et on annule
+  // le délai de 30 jours qu'il avait déclenché à tort (clubs bloqués avant
+  // le correctif de actions.setTeamTrigram).
+  league.teams.forEach(t => {
+    if (t.isHuman && t.trigram && t.trigram === Engine.defaultTrigramForName(t.name)) {
+      t.trigram = null;
+      t.trigramChangedAt = null;
+    }
+  });
   // `changed` : toujours `true` (voir le grand commentaire ci-dessus) —
   // ensureLiveMatch/catchUpLeague/pruneExpiredInterviews tournent tous les
   // trois SANS CONDITION à chaque appel et peuvent chacun muter `league`

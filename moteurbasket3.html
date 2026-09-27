@@ -5483,22 +5483,29 @@
   /* ---- Paramètres (bouton du tableau de bord + fenêtre) ---- */
   .hm-head__settings-btn{width:44px; padding:0; display:inline-flex; align-items:center; justify-content:center;}
   .hm-head__settings-btn svg{width:20px; height:20px;}
-  .settings-modal-box{max-width:460px;}
-  .settings-modal-box h2{margin:0 0 4px; font-size:20px; text-transform:uppercase; letter-spacing:.5px;}
+  .settings-modal-box{max-width:500px; width:calc(100vw - 32px); box-sizing:border-box;}
+  .settings-modal-box h2{margin:0; font-size:20px; text-transform:uppercase; letter-spacing:.5px;}
+  .settings-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;}
+  .settings-x{width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--ink-dim); font-size:14px; cursor:pointer; flex:none;}
+  .settings-x:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .settings-tabs{display:grid; background:var(--bg); border:1px solid var(--line-soft); border-radius:10px; padding:4px; margin-bottom:18px;}
+  .settings-tabs button{background:none; border:0; border-radius:7px; padding:9px 0; font:700 13.5px inherit; font-family:inherit; color:var(--ink-dim); cursor:pointer;}
+  .settings-tabs button[aria-selected="true"]{background:var(--panel-2); color:var(--ink);}
+  .settings-panel{min-height:150px;}
+  .settings-foot{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; padding-top:14px; border-top:1px solid var(--line-soft);}
+  .settings-foot .upgrade-confirm-cancel-btn{margin:0; width:auto; flex:none; min-width:110px; padding-left:22px; padding-right:22px;}
+  .settings-logout{background:none; border:0; padding:6px 0; color:var(--ink-faint); font:600 13px inherit; font-family:inherit; cursor:pointer;}
+  .settings-logout:hover{color:var(--danger);}
   .settings-modal-box .settings-sub{margin:0 0 18px; color:var(--ink-dim); font-size:13.5px;}
   .settings-row-label{font-size:11.5px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--ink-faint); margin-bottom:8px;}
   .settings-theme{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px;}
-  .settings-theme button{display:flex; flex-direction:column; align-items:center; gap:8px; padding:12px 8px 10px; border-radius:12px; border:1.5px solid var(--line); background:var(--panel-2); color:var(--ink); font:600 13.5px inherit; font-family:inherit; cursor:pointer;}
+  .settings-theme button{display:flex; flex-direction:row; align-items:center; justify-content:center; gap:8px; padding:9px 8px; border-radius:10px; border:1.5px solid var(--line); background:var(--panel-2); color:var(--ink); font:600 13.5px inherit; font-family:inherit; cursor:pointer;}
   .settings-theme button:hover{border-color:var(--ink-faint);}
   .settings-theme button[aria-pressed="true"]{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
-  .settings-theme-swatch{width:100%; height:46px; border-radius:8px; border:1px solid rgba(127,127,127,.3); display:grid; grid-template-columns:1fr 2.2fr; overflow:hidden;}
-  .settings-theme-swatch i{display:block;}
-  .settings-theme-swatch b{display:flex; flex-direction:column; gap:5px; padding:8px 7px;}
-  .settings-theme-swatch b span{display:block; height:6px; border-radius:3px;}
-  .settings-theme-swatch.is-dark{background:#0f1728;} .settings-theme-swatch.is-dark i{background:#0a101c;} .settings-theme-swatch.is-dark span{background:#26334a;} .settings-theme-swatch.is-dark span:first-child{background:#f0a23c; width:55%;}
-  .settings-theme-swatch.is-light{background:#ffffff;} .settings-theme-swatch.is-light i{background:#eef1f6;} .settings-theme-swatch.is-light span{background:#d8dfe9;} .settings-theme-swatch.is-light span:first-child{background:#d9800b; width:55%;}
+  .settings-theme-swatch{width:16px; height:12px; flex:none; border-radius:3px; border:1px solid rgba(127,127,127,.45); display:block; overflow:hidden;}
+  .settings-theme-swatch.is-dark{background:#0f1728;}
+  .settings-theme-swatch.is-light{background:#ffffff;}
   .settings-theme-swatch.is-system{background:linear-gradient(135deg,#0f1728 50%,#ffffff 50%);}
-  .settings-theme-swatch.is-system i{background:transparent;}
   .settings-note{margin:12px 0 0; font-size:12.5px; color:var(--ink-faint);}
 
   /* ---- Trigramme (identité du club) et nom de salle ---- */
@@ -5805,7 +5812,7 @@
   @media(max-width:760px){ .lp-venues, .lp-members{grid-template-columns:1fr;} .lp-cal-row{grid-template-columns:30px 60px minmax(0,1fr) 70px minmax(0,1fr); gap:6px; font-size:12px;} .lp-danger{margin-left:0;} }
   /* Langue (Paramètres) : deux gros boutons, même esprit que les thèmes. */
   .settings-lang{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
-  .settings-lang button{display:flex; align-items:center; justify-content:center; gap:10px; padding:12px 10px; border-radius:12px; border:1.5px solid var(--line); background:var(--panel-2); color:var(--ink); font:600 14px inherit; font-family:inherit; cursor:pointer;}
+  .settings-lang button{display:flex; align-items:center; justify-content:center; gap:10px; padding:9px 10px; border-radius:10px; border:1.5px solid var(--line); background:var(--panel-2); color:var(--ink); font:600 14px inherit; font-family:inherit; cursor:pointer;}
   .settings-lang button:hover{border-color:var(--ink-faint);}
   .settings-lang button[aria-pressed="true"]{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
   .settings-lang-code{display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:22px; padding:0 6px; border-radius:6px; background:var(--line); color:var(--ink); font-size:11px; font-weight:800; letter-spacing:.8px;}
@@ -33388,42 +33395,61 @@ function closeSettingsModal() {
   const existing = document.getElementById("settingsModalOverlay");
   if (existing) existing.remove();
 }
-function showSettingsModal() {
+// Fenêtre Paramètres en 3 onglets (retour utilisateur 2026-09-27 : "les
+// paramètres prennent trop de place sur l'affichage", maquette validée) :
+// Affichage (thème, langue), Club (trigramme, nom de salle), Compte
+// (identifiants, Discord). Tous les panneaux sont dans le DOM, seul l'onglet
+// actif est visible. « Se déconnecter » en bas, à côté de « Fermer ».
+let settingsModalTab = "display";
+function showSettingsModal(tab) {
   closeSettingsModal();
+  if (tab) settingsModalTab = tab;
+  if (settingsModalTab === "account" && !managerToken) settingsModalTab = "display";
   const pref = hmThemeGetPref();
   const opt = (value, label, cls) =>
     `<button type="button" data-theme-choice="${value}" aria-pressed="${pref === value}">` +
-    `<span class="settings-theme-swatch ${cls}"><i></i><b><span></span><span></span><span></span></b></span>${label}</button>`;
+    `<span class="settings-theme-swatch ${cls}"></span>${label}</button>`;
   const lang = window.hmI18n ? window.hmI18n.getLang() : "fr";
   const langOpt = (value, code, label) =>
     `<button type="button" data-lang-choice="${value}" aria-pressed="${lang === value}" lang="${value}">` +
     `<span class="settings-lang-code">${code}</span>${label}</button>`;
+  const tabs = [["display", "Affichage"], ["club", "Club"]].concat(managerToken ? [["account", "Compte"]] : []);
   const overlay = document.createElement("div");
   overlay.className = "upgrade-confirm-overlay settings-modal-overlay";
   overlay.id = "settingsModalOverlay";
   overlay.innerHTML = `<div class="upgrade-confirm-box settings-modal-box" role="dialog" aria-labelledby="settingsModalTitle">` +
-    `<h2 id="settingsModalTitle">Paramètres</h2>` +
-    `<p class="settings-sub">Affichage de ce navigateur et réglages du club.</p>` +
+    `<div class="settings-head"><h2 id="settingsModalTitle">Paramètres</h2>` +
+    `<button type="button" class="settings-x" id="settingsModalXBtn" aria-label="Fermer">✕</button></div>` +
+    `<div class="settings-tabs" role="tablist" style="grid-template-columns:repeat(${tabs.length},1fr)">` +
+    tabs.map(([k, l]) => `<button type="button" role="tab" data-settings-tab="${k}" aria-selected="${settingsModalTab === k}">${l}</button>`).join("") +
+    `</div>` +
+    `<div class="settings-panel${settingsModalTab === "display" ? "" : " hidden"}" data-settings-panel="display">` +
     `<div class="settings-row-label">Thème</div>` +
     `<div class="settings-theme" id="settingsThemeChoices">` +
-    opt("dark", "Sombre", "is-dark") + opt("light", "Clair", "is-light") + opt("system", "Comme l'appareil", "is-system") +
+    opt("dark", "Sombre", "is-dark") + opt("light", "Clair", "is-light") + opt("system", "Appareil", "is-system") +
     `</div>` +
-    `<p class="settings-note">« Comme l'appareil » suit le mode clair ou sombre de ton ordinateur ou de ton téléphone.</p>` +
-    // Langue (retour utilisateur 2026-09-26 : « traduire le jeu en anglais,
-    // on pourra activer l'anglais en allant paramètre dans le tableau de
-    // bord »). Libellés jamais traduits (data-no-i18n) : chacun reste écrit
-    // dans sa propre langue. Changer recharge la page (voir hmI18n.setLang).
-    `<div class="settings-row-label" style="margin-top:20px;">Langue</div>` +
+    // Langue (retour utilisateur 2026-09-26). Libellés jamais traduits
+    // (data-no-i18n). Changer recharge la page (voir hmI18n.setLang).
+    `<div class="settings-row-label" style="margin-top:16px;">Langue</div>` +
     `<div class="settings-lang" id="settingsLangChoices" data-no-i18n>` +
     langOpt("fr", "FR", "Français") + langOpt("en", "EN", "English") +
-    `</div>` +
-    `<div id="settingsClubBlock">${settingsClubBlockHtml()}</div>` +
-    (managerToken ? `<div id="settingsAccountBlock"><div class="settings-row-label" style="margin-top:22px">Mon compte</div><p class="settings-note">Chargement…</p></div>` : "") +
-    `<button type="button" class="upgrade-confirm-cancel-btn" id="settingsModalCloseBtn" style="margin-top:18px; width:100%;">Fermer</button>` +
+    `</div></div>` +
+    `<div class="settings-panel${settingsModalTab === "club" ? "" : " hidden"}" data-settings-panel="club"><div id="settingsClubBlock">${settingsClubBlockHtml()}</div></div>` +
+    (managerToken ? `<div class="settings-panel${settingsModalTab === "account" ? "" : " hidden"}" data-settings-panel="account"><div id="settingsAccountBlock"><p class="settings-note">Chargement…</p></div></div>` : "") +
+    `<div class="settings-foot">` +
+    (managerToken ? `<button type="button" class="settings-logout" id="settingsLogoutBtn">Se déconnecter</button>` : `<span></span>`) +
+    `<button type="button" class="upgrade-confirm-cancel-btn" id="settingsModalCloseBtn">Fermer</button></div>` +
     `</div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) { closeSettingsModal(); return; }
+    const t = e.target.closest("[data-settings-tab]");
+    if (t) {
+      settingsModalTab = t.dataset.settingsTab;
+      overlay.querySelectorAll("[data-settings-tab]").forEach(x => x.setAttribute("aria-selected", String(x === t)));
+      overlay.querySelectorAll("[data-settings-panel]").forEach(p => p.classList.toggle("hidden", p.dataset.settingsPanel !== settingsModalTab));
+      return;
+    }
     const l = e.target.closest("[data-lang-choice]");
     if (l) {
       overlay.querySelectorAll("[data-lang-choice]").forEach(x => x.setAttribute("aria-pressed", String(x === l)));
@@ -33436,6 +33462,9 @@ function showSettingsModal() {
     hmThemeSetPref(b.dataset.themeChoice);
     overlay.querySelectorAll("[data-theme-choice]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
   });
+  document.getElementById("settingsModalXBtn").addEventListener("click", closeSettingsModal);
+  const logout = document.getElementById("settingsLogoutBtn");
+  if (logout) logout.addEventListener("click", hmLogout);
   document.getElementById("settingsModalCloseBtn").addEventListener("click", closeSettingsModal);
   if (managerToken) hmAccountRefresh();
 }
@@ -33468,29 +33497,26 @@ function renderHmAccountBlock() {
   if (!block) return;
   const st = hmAccountState;
   const acc = st && st.account;
-  let html = `<div class="settings-row-label" style="margin-top:22px">Mon compte</div>`;
+  let html = "";
   if (!st) {
     html += `<p class="settings-note">Impossible de charger ton compte pour le moment.</p>`;
     block.innerHTML = html;
     return;
   }
-  if (acc && acc.email) {
-    html += `<p class="settings-account-line">Connexion par email : <b>${escapeHtml(acc.email)}</b></p>`;
-  } else {
-    html += `<p class="settings-note" style="margin-top:0">Crée tes identifiants pour retrouver ton club depuis n'importe quel appareil (sinon, seul ce navigateur s'en souvient).</p>`;
-  }
+  html += `<div class="settings-row-label">Connexion</div>`;
+  if (acc && acc.email) html += `<p class="settings-account-line">Email : <b>${escapeHtml(acc.email)}</b></p>`;
   html += `<form class="settings-account-form" id="hmAccountForm" novalidate>` +
     `<input type="email" id="hmAccountEmail" class="sl-rename-input" placeholder="Email" autocomplete="email" value="${escapeHtml((acc && acc.email) || "")}" aria-label="Email">` +
-    `<input type="password" id="hmAccountPw" class="sl-rename-input" placeholder="${acc && acc.hasPassword ? "Nouveau mot de passe" : "Mot de passe (8 caractères min.)"}" autocomplete="new-password" aria-label="Mot de passe">` +
+    `<input type="password" id="hmAccountPw" class="sl-rename-input" placeholder="${acc && acc.hasPassword ? "Nouveau mot de passe" : "Mot de passe"}" autocomplete="new-password" aria-label="Mot de passe">` +
     `<button type="submit" class="secondary">${acc && acc.hasPassword ? "Changer le mot de passe" : "Créer mes identifiants"}</button>` +
     `</form>`;
+  if (!(acc && acc.email)) html += `<p class="settings-note">Pour retrouver ton club depuis n'importe quel appareil.</p>`;
   if (st.discord) {
-    html += acc && acc.discordLinked
-      ? `<p class="settings-account-line">Discord : <b>${escapeHtml(acc.discordName || "lié")}</b> ✓</p>`
-      : `<div class="settings-club-row" style="margin-top:12px"><button type="button" class="secondary settings-discord-btn" id="hmAccountDiscordBtn">Lier mon compte Discord</button></div>`;
+    html += `<div class="settings-row-label" style="margin-top:16px">Discord</div>` + (acc && acc.discordLinked
+      ? `<p class="settings-account-line">Compte lié : <b>${escapeHtml(acc.discordName || "Discord")}</b> ✓</p>`
+      : `<div class="settings-club-row"><button type="button" class="secondary settings-discord-btn" id="hmAccountDiscordBtn">Lier mon compte Discord</button></div>`);
   }
-  html += `<p class="settings-feedback" id="hmAccountFeedback"></p>` +
-    `<div class="settings-club-row" style="margin-top:14px"><button type="button" class="secondary" id="hmAccountLogoutBtn">Se déconnecter de ce navigateur</button></div>`;
+  html += `<p class="settings-feedback" id="hmAccountFeedback"></p>`;
   block.innerHTML = html;
 
   const feedback = (text, ok) => { const fb = document.getElementById("hmAccountFeedback"); if (fb) { fb.textContent = text; fb.style.color = ok ? "var(--ok)" : "var(--danger)"; } };
@@ -33525,7 +33551,6 @@ function renderHmAccountBlock() {
       feedback("Connexion Discord indisponible pour le moment.", false);
     } catch (err) { feedback("Serveur injoignable, réessaie.", false); }
   });
-  document.getElementById("hmAccountLogoutBtn").addEventListener("click", hmLogout);
 }
 
 // Déconnexion (Paramètres → Mon compte, et bouton en bas du menu) : oublie
@@ -33566,7 +33591,7 @@ function hmAccountHandleReturnHash() {
   const m = messages[params.get("compte") || params.get("erreur")];
   if (!m || !managerToken) return;
   hmAccountFlash = { text: m[0], ok: m[1] };
-  showSettingsModal();
+  showSettingsModal("account");
 }
 
 // Paramètres du club (retour utilisateur 2026-09-26 : "le nom de la salle
@@ -33577,23 +33602,26 @@ function hmAccountHandleReturnHash() {
 function settingsClubBlockHtml() {
   const info = arenaInfo(teamA.arenaLevel);
   const trigramNow = teamTrigram(teamA);
-  const cooldownLeft = typeof teamA.trigramChangedAt === "number" ? Math.max(0, TRIGRAM_CHANGE_COOLDOWN_MS - (Date.now() - teamA.trigramChangedAt)) : 0;
+  // Voir actions.setTeamTrigram : 0 = premier changement déjà fait (libre),
+  // null = jamais changé ; le retour au défaut reste toujours possible.
+  const cooldownLeft = typeof teamA.trigramChangedAt === "number" && teamA.trigramChangedAt > 0 ? Math.max(0, TRIGRAM_CHANGE_COOLDOWN_MS - (Date.now() - teamA.trigramChangedAt)) : 0;
+  const neverChanged = typeof teamA.trigramChangedAt !== "number";
   const days = Math.ceil(cooldownLeft / (24 * 3600 * 1000));
   const dis = cooldownLeft ? " disabled" : "";
-  return `<div class="settings-row-label" style="margin-top:22px">Trigramme du club</div>` +
+  return `<div class="settings-row-label">Trigramme du club</div>` +
     `<div class="settings-club-row"><span class="settings-club-logo">${teamLogoHtml(teamA, 36)}</span>` +
     `<input type="text" id="clubTrigramInput" class="club-trigram-input" maxlength="3" value="${escapeHtml(trigramNow)}" aria-label="Trigramme du club" autocomplete="off" spellcheck="false"${dis}>` +
     `<button type="button" class="secondary" id="clubTrigramSaveBtn"${dis}>Enregistrer</button>` +
-    (teamA.trigram ? `<button type="button" class="secondary" id="clubTrigramResetBtn"${dis}>Par défaut (${escapeHtml(defaultTrigramForName(teamA.name))})</button>` : "") + `</div>` +
-    `<p class="settings-note">2 ou 3 lettres, uniques dans la ligue, affichées sur le logo type, les classements et le direct. ` +
-    (cooldownLeft ? `Prochain changement possible dans ${days} jour${days > 1 ? "s" : ""}.` : "Un changement possible tous les 30 jours.") + `</p>` +
+    (teamA.trigram ? `<button type="button" class="secondary" id="clubTrigramResetBtn" title="Revenir à ${escapeHtml(defaultTrigramForName(teamA.name))}">Par défaut</button>` : "") + `</div>` +
+    `<p class="settings-note">2 ou 3 lettres, uniques dans la ligue · ` +
+    (cooldownLeft ? `prochain changement dans ${days} jour${days > 1 ? "s" : ""} (retour au défaut toujours possible)` : neverChanged ? "1er changement libre, puis un tous les 30 jours" : "un changement tous les 30 jours") + `</p>` +
     `<p class="settings-feedback" id="settingsTrigramFeedback"></p>` +
-    `<div class="settings-row-label" style="margin-top:18px">Nom de la salle</div>` +
+    `<div class="settings-row-label" style="margin-top:16px">Nom de la salle</div>` +
     `<div class="settings-club-row">` +
     `<input type="text" id="salleArenaNameInput" class="sl-rename-input" maxlength="${ARENA_NAME_MAX_LENGTH}" value="${escapeHtml(teamA.arenaName || "")}" placeholder="${escapeHtml(info.name)}" aria-label="Nom de la salle">` +
     `<button type="button" class="secondary" id="salleArenaNameSaveBtn">Enregistrer</button>` +
     (teamA.arenaName ? `<button type="button" class="secondary" id="salleArenaNameResetBtn">Par défaut</button>` : "") + `</div>` +
-    `<p class="settings-note">3 à ${ARENA_NAME_MAX_LENGTH} caractères. Vide = nom du palier (${escapeHtml(info.name)}). Actuellement : <b>${escapeHtml(teamArenaName(teamA))}</b>.</p>` +
+    `<p class="settings-note">3 à ${ARENA_NAME_MAX_LENGTH} caractères · vide = ${escapeHtml(info.name)}</p>` +
     `<p class="settings-feedback" id="settingsArenaFeedback"></p>`;
 }
 function refreshSettingsClubBlock() {
@@ -33687,12 +33715,19 @@ async function applyTrigramChange(value) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) { showMsg(data.error || "Le serveur a refusé ce trigramme."); return; }
       teamA.trigram = data.trigram || null;
-      if (data.trigram) teamA.trigramChangedAt = Date.now();
+      teamA.trigramChangedAt = typeof data.trigramChangedAt === "number" ? data.trigramChangedAt : null;
     } catch (e) { showMsg("Serveur injoignable."); return; }
   } else {
     if (trigram !== null && league.teams.some((t, i) => i !== myTeamIndex && teamTrigram(t) === trigram)) { showMsg("Ce trigramme est déjà utilisé par un autre club de la ligue."); return; }
-    teamA.trigram = trigram;
-    if (trigram) teamA.trigramChangedAt = Date.now();
+    // Mêmes règles que actions.setTeamTrigram (voir son commentaire).
+    const isDefault = trigram === null || trigram === defaultTrigramForName(teamA.name);
+    const cooling = typeof teamA.trigramChangedAt === "number" && teamA.trigramChangedAt > 0 && Date.now() - teamA.trigramChangedAt < TRIGRAM_CHANGE_COOLDOWN_MS;
+    if (!isDefault && trigram !== teamA.trigram && cooling) { showMsg("Trigramme déjà modifié récemment."); return; }
+    if (isDefault) teamA.trigram = null;
+    else if (trigram !== teamA.trigram) {
+      teamA.trigram = trigram;
+      teamA.trigramChangedAt = typeof teamA.trigramChangedAt === "number" ? Date.now() : 0;
+    }
     saveMyTeam();
   }
   refreshSettingsClubBlock();

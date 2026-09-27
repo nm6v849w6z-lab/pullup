@@ -1032,25 +1032,35 @@ function setTeamPaying(team, teamIndex, league, body, now) {
 // trigramme", "qui peut être que 2 lettres") : 2 ou 3 lettres A-Z, pas d'insulte, unique dans la ligue (face aux
 // trigrammes choisis comme aux sigles calculés des autres clubs), un
 // changement tous les 30 jours. `null`/"" = retour au sigle calculé.
+// Règles (retour utilisateur 2026-09-27, après un club bloqué 30 jours pour
+// avoir "enregistré" son propre trigramme par défaut) :
+// - revenir au trigramme par défaut (champ vide, bouton « Par défaut », ou
+//   saisie identique au défaut) est TOUJOURS possible et ne compte pas ;
+// - le PREMIER vrai changement est libre : il ne lance pas le délai.
+//   Marqueur : trigramChangedAt = 0 (déjà "très ancien", donc aucun délai en
+//   cours, mais distinct de null = jamais changé) ;
+// - les changements suivants : un tous les 30 jours (TRIGRAM_CHANGE_COOLDOWN_MS).
 function setTeamTrigram(team, teamIndex, league, body, now) {
   const raw = body && body.trigram;
-  if (raw == null || raw === "") {
+  const view = () => ({ ok: true, trigram: team.trigram || null, trigramChangedAt: typeof team.trigramChangedAt === "number" ? team.trigramChangedAt : null });
+  const def = Engine.defaultTrigramForName(team.name);
+  const value = raw == null ? "" : String(raw).trim().toUpperCase();
+  if (value === "" || value === def) {
     team.trigram = null;
-    return { ok: true, trigram: null };
+    return view();
   }
-  const value = String(raw).trim().toUpperCase();
   if (!Engine.isValidTrigram(value)) return fail("Le trigramme doit faire 2 ou 3 lettres (A-Z).");
   if (Engine.TRIGRAM_BANNED.has(value)) return fail("Ce trigramme n'est pas autorisé.");
-  if (value === team.trigram) return { ok: true, trigram: value };
-  if (typeof team.trigramChangedAt === "number" && now - team.trigramChangedAt < Engine.TRIGRAM_CHANGE_COOLDOWN_MS) {
+  if (value === team.trigram) return view();
+  if (typeof team.trigramChangedAt === "number" && team.trigramChangedAt > 0 && now - team.trigramChangedAt < Engine.TRIGRAM_CHANGE_COOLDOWN_MS) {
     const days = Math.ceil((Engine.TRIGRAM_CHANGE_COOLDOWN_MS - (now - team.trigramChangedAt)) / (24 * 3600 * 1000));
     return fail(`Trigramme déjà modifié récemment : prochain changement possible dans ${days} jour${days > 1 ? "s" : ""}.`);
   }
   const taken = league.teams.some((t, i) => i !== teamIndex && Engine.teamTrigram(t) === value);
   if (taken) return fail("Ce trigramme est déjà utilisé par un autre club de la ligue.");
   team.trigram = value;
-  team.trigramChangedAt = now;
-  return { ok: true, trigram: value };
+  team.trigramChangedAt = typeof team.trigramChangedAt === "number" ? now : 0;
+  return view();
 }
 
 // Sponsors (voir le bloc SPONSORS côté moteur) : accepter/refuser une offre,
