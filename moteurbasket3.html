@@ -5958,6 +5958,47 @@
   .lp-finished-row{display:flex; align-items:center; gap:14px; padding:8px 0; border-top:1px solid var(--line-soft); font-size:13.5px;}
   .lp-finished-row:nth-child(2){border-top:none;}
   .lp-finished-name{font-weight:700;}
+  /* Matchs amicaux (voir renderAmicauxSection) — mêmes cartes que les ligues privées. */
+  .fr-row{display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line-soft);}
+  .lp-card-title + .fr-row{border-top:none;}
+  .fr-row.open{border-bottom:none;}
+  .fr-row.is-off{opacity:.62;}
+  .fr-logo{display:inline-flex; flex:none; width:32px; height:32px;}
+  .fr-logo svg, .fr-logo img{width:32px; height:32px; border-radius:50%;}
+  .fr-row-main{display:flex; flex-direction:column; gap:3px; min-width:0; flex:1;}
+  .fr-row-title{font-weight:700; font-size:14.5px; display:flex; align-items:center; gap:4px; flex-wrap:wrap;}
+  .fr-row-title .cal-opp-prefix{width:auto; margin-right:2px;}
+  .fr-row-sub{font-size:12.5px; color:var(--ink-dim);}
+  .fr-row-actions{display:flex; align-items:center; gap:8px; flex:none; flex-wrap:wrap; justify-content:flex-end;}
+  .fr-btn{padding:8px 14px; font-size:13px; margin:0; width:auto;}
+  .fr-row-actions .cal-next-btn{display:inline-block; margin-top:0;}
+  .fr-cancel{color:var(--danger); border-color:rgba(226,105,79,.55);}
+  .fr-tag-ok{color:var(--ok); border-color:rgba(51,180,161,.55);}
+  .fr-tag-youth{color:#8fb9f0; border-color:rgba(57,135,229,.5); margin-left:6px;}
+  .fr-tag-injured{color:var(--danger); border-color:rgba(226,105,79,.55); margin-left:6px;}
+  .fr-invites{border-color:rgba(240,162,60,.55); box-shadow:inset 3px 0 0 var(--amber);}
+  .fr-rules-off li::before{content:"–"; color:var(--ink-faint);}
+  .fr-lineup{background:var(--panel-2); border:1px solid var(--line-soft); border-radius:12px; padding:14px 16px; margin:0 0 12px;}
+  .fr-lu-head{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px;}
+  .fr-lu-count{font-weight:700; font-size:13px; color:var(--danger); font-variant-numeric:tabular-nums;}
+  .fr-lu-count.ok{color:var(--ok);}
+  .fr-lu-group{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin:14px 0 4px;}
+  .fr-lu-row{display:grid; grid-template-columns:minmax(0,1fr) 48px 64px 130px 132px; gap:10px; align-items:center; padding:6px 8px; border-radius:8px; font-size:13.5px;}
+  .fr-lu-row.is-starter{background:rgba(240,162,60,.09);}
+  .fr-lu-row.is-bench{background:rgba(255,255,255,.03);}
+  .fr-lu-row:not(.is-starter):not(.is-bench) .fr-lu-name, .fr-lu-row:not(.is-starter):not(.is-bench) .fr-lu-pos{opacity:.6;}
+  .fr-lu-name{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .fr-lu-age, .fr-lu-cond{color:var(--ink-dim); font-size:12.5px; white-space:nowrap;}
+  .fr-lu-role{height:34px; min-width:0; width:100%;}
+  .fr-lu-actions{margin-top:14px;}
+  .cal-fr-badge{background:rgba(51,180,161,.14); color:var(--ok);}
+  @media (max-width: 640px){
+    .fr-row{flex-wrap:wrap;}
+    .fr-row-actions{width:100%; justify-content:flex-start;}
+    .fr-lineup{padding:12px 10px;}
+    .fr-lu-row{grid-template-columns:minmax(0,1fr) 34px 116px; gap:8px; padding:6px 4px;}
+    .fr-lu-age, .fr-lu-cond{display:none;}
+  }
   .lp-finished-meta{color:var(--ink-dim); flex:1;}
   .lp-mbx-note{margin:0 22px; padding:9px 14px; border-radius:8px; background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.4); color:var(--ink); font-size:12.5px;}
   @media(max-width:600px){ #lpSection .lg-hide-sm, #lpSection .lp-table th:last-child, #lpSection .lp-table td:last-child{display:none;} #lpSection .lp-table td, #lpSection .lp-table th{padding-left:6px; padding-right:6px;} }
@@ -6067,7 +6108,7 @@
       <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-label">Calendrier</span></button>
       <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-label">Ligue</span></button>
       <button class="tab-btn sidebar-link" data-tab="coupe"><span class="sidebar-label">Coupe</span></button>
-      <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-label">Matchs amicaux</span></button>
+      <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-label">Matchs amicaux</span><span class="sidebar-badge hidden" id="amicauxBadge"></span></button>
       <button class="tab-btn sidebar-link" data-tab="lp"><span class="sidebar-label">Ligues privées</span></button>
     </div>
     <div class="sidebar-section">
@@ -6806,6 +6847,14 @@
   </div>
 
   <!-- Ligues privées (Premium) — voir renderLpSection et server/privateLeague.js. -->
+  <!-- Matchs amicaux — voir renderAmicauxSection et server/friendlies.js. -->
+  <div id="amicauxSection" class="hidden">
+    <div class="section">
+      <h2 class="page-title">Matchs amicaux</h2>
+      <div id="amicauxContent"></div>
+    </div>
+  </div>
+
   <div id="lpSection" class="hidden">
     <div class="section">
       <h2 class="page-title">Ligues privées</h2>
@@ -7244,6 +7293,12 @@
         <h3>Ligue</h3>
         <p class="training-intro">Le classement se départage par victoires puis par différence de points. Il est découpé en zones : places 1 à 4 qualifiées pour les <b>play-offs</b>, 5 et 6 maintien direct, 7 et 8 <b>barrage</b> de relégation, 9 et 10 <b>relégation</b>. Chaque équipe affiche sa forme récente. Un panneau "course aux play-offs" résume votre position, votre bilan et l'écart avec les places clés.</p>
         <p class="training-intro" style="margin-top:10px;">Sous le classement : le MVP de la dernière journée et les meilleurs de la ligue par catégorie (points, rebonds, passes, interceptions, contres, évaluation), en moyennes ou en totaux. Cliquez sur n'importe quel joueur pour ouvrir sa fiche, ou sur une équipe pour ouvrir sa fiche d'équipe.</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="amicaux" data-guide-group="Compétitions">
+        <h3>Matchs amicaux</h3>
+        <p class="training-intro">Un amical se joue un <b>jour de repos</b> des deux clubs (aucun match officiel ce jour-là), à l'heure de votre choix, jusqu'à 3 semaines à l'avance, et un seul par jour. Une équipe CPU accepte tout de suite ; un autre manager reçoit un message privé et doit accepter avant l'heure du match.</p>
+        <p class="training-intro" style="margin-top:10px;">C'est un vrai match pour les joueurs : fatigue, blessures possibles et minutes comptées pour l'entraînement. Il ne change rien au classement, aux finances ni aux stats de saison. Dans la <b>composition</b> de l'amical, vous pouvez aligner les jeunes de l'académie ; sans composition propre, l'amical se joue avec les ordres actuels du club.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="scoutisme" data-guide-group="Compétitions">
@@ -11419,6 +11474,12 @@ function tacticalKnowledgeGainForStreak(playStreak) {
 const TACTICAL_KNOWLEDGE_LOSS_GRACE = 2;
 const TACTICAL_KNOWLEDGE_LOSS_STEP = 2;
 const TACTICAL_KNOWLEDGE_LOSS_MAX = 6;
+// Plancher de connaissance tactique (retour utilisateur 2026-09-27 : "ça
+// reste des joueurs pro, peut être pas besoin de descendre aussi bas, sinon
+// on change jamais de tactique") : un système délaissé redescend au plus à
+// ce niveau (« Système encore hésitant »), jamais à « pas du tout assimilé ».
+// Les sauvegardes plus basses sont remontées au chargement.
+const TACTICAL_KNOWLEDGE_FLOOR = 40;
 function tacticalKnowledgeLossForStreak(awayStreak) {
   if (awayStreak <= TACTICAL_KNOWLEDGE_LOSS_GRACE) return 0;
   return Math.min(TACTICAL_KNOWLEDGE_LOSS_MAX, (awayStreak - TACTICAL_KNOWLEDGE_LOSS_GRACE) * TACTICAL_KNOWLEDGE_LOSS_STEP);
@@ -12511,7 +12572,7 @@ class Team {
         const streak = prevStreak < 0 ? prevStreak - 1 : -1;
         streaks[key] = streak;
         const loss = tacticalKnowledgeLossForStreak(-streak);
-        knowledge[key] = clamp(knowledge[key] - loss, 0, 100);
+        knowledge[key] = Math.max(Math.min(knowledge[key], TACTICAL_KNOWLEDGE_FLOOR), clamp(knowledge[key] - loss, TACTICAL_KNOWLEDGE_FLOOR, 100));
       }
     };
     Object.keys(OFFENSE_PROFILES).forEach(p => updateOne("offense", p, playedOffense.has(p)));
@@ -15322,6 +15383,10 @@ class League {
     // sérialisées telles quelles. Les matchs sont simulés sur des COPIES
     // des équipes : rien ici ne touche jamais les joueurs réels.
     this.privateLeagues = [];
+    // Matchs amicaux (demande utilisateur 2026-09-27, voir
+    // server/friendlies.js) : invitations et résultats, JSON brut sérialisé
+    // tel quel. Simulés au tick serveur sur les vrais joueurs.
+    this.friendlies = [];
 
     // Matchs en direct en cours de diffusion pour la journée courante (voir
     // server/liveMatch.js) : UNE entrée par match diffusé (plusieurs
@@ -17903,21 +17968,21 @@ function teamFromSave(data) {
         const saved = savedKnowledge[cat];
         if (!saved || typeof saved !== "object") return;
         Object.keys(team.tacticalKnowledge[cat]).forEach(key => {
-          if (typeof saved[key] === "number") team.tacticalKnowledge[cat][key] = clamp(saved[key], 0, 100);
+          if (typeof saved[key] === "number") team.tacticalKnowledge[cat][key] = clamp(saved[key], TACTICAL_KNOWLEDGE_FLOOR, 100);
         });
       });
     } else {
       if (typeof savedKnowledge.offense === "number") {
-        const v = clamp(savedKnowledge.offense, 0, 100);
+        const v = clamp(savedKnowledge.offense, TACTICAL_KNOWLEDGE_FLOOR, 100);
         team.offensivePriorities.forEach(p => {
           if (team.tacticalKnowledge.offense[p] !== undefined) team.tacticalKnowledge.offense[p] = v;
         });
       }
       if (typeof savedKnowledge.defense === "number" && team.tacticalKnowledge.defense[team.defense] !== undefined) {
-        team.tacticalKnowledge.defense[team.defense] = clamp(savedKnowledge.defense, 0, 100);
+        team.tacticalKnowledge.defense[team.defense] = clamp(savedKnowledge.defense, TACTICAL_KNOWLEDGE_FLOOR, 100);
       }
       if (typeof savedKnowledge.rhythm === "number" && team.tacticalKnowledge.rhythm[team.rhythm] !== undefined) {
-        team.tacticalKnowledge.rhythm[team.rhythm] = clamp(savedKnowledge.rhythm, 0, 100);
+        team.tacticalKnowledge.rhythm[team.rhythm] = clamp(savedKnowledge.rhythm, TACTICAL_KNOWLEDGE_FLOOR, 100);
       }
     }
   }
@@ -18126,6 +18191,7 @@ function serializeLeague(lg) {
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
     cup: lg.cup || null,
     privateLeagues: Array.isArray(lg.privateLeagues) ? lg.privateLeagues : [],
+    friendlies: Array.isArray(lg.friendlies) ? lg.friendlies : [],
     // Diffusions en direct en cours (voir League.liveMatches ci-dessus) :
     // une entrée par match diffusé (plusieurs managers humains peuvent
     // chacun avoir la leur en même temps).
@@ -18180,6 +18246,8 @@ function leagueFromSave(data, userTeam = null) {
   // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
   // d'avant cette fonctionnalité, aucune ligue.
   lg.privateLeagues = Array.isArray(data.privateLeagues) ? data.privateLeagues : [];
+  // Matchs amicaux (voir League.friendlies) : absent = aucun.
+  lg.friendlies = Array.isArray(data.friendlies) ? data.friendlies : [];
   lg.liveMatches = data.liveMatches && typeof data.liveMatches === "object" ? data.liveMatches : {};
   lg.liveMatch = data.liveMatch || null;
   lg.seasonId = typeof data.seasonId === "string" ? data.seasonId : null;
@@ -20824,7 +20892,7 @@ function refreshMedicalMarkets() {
 // ---------------------------------------------------------------------
 const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
-  "clubSection", "staffSection", "medicalSection", "tactiquesSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "messagesSection", "histoireSection",
+  "clubSection", "staffSection", "medicalSection", "tactiquesSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "amicauxSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
   "guideSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
 ];
@@ -20877,6 +20945,9 @@ const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "
 const NARROW_PAGE_IDS = new Set([]);
 
 function showPage(id) {
+  // Pastille « invitations à un amical » de la barre latérale (voir
+  // frUpdateBadge) : recalculée à chaque changement de page.
+  if (typeof frUpdateBadge === "function") { try { frUpdateBadge(); } catch (e) { /* ligue pas encore chargée */ } }
   PAGE_IDS.forEach(pid => {
     const el = document.getElementById(pid);
     if (el) el.classList.toggle("hidden", pid !== id);
@@ -31661,7 +31732,8 @@ function renderMatchBoxscoreTab(side) {
   if (!matchBoxscoreState) return;
   document.querySelectorAll("#matchBoxscoreOverlay .bs-tab").forEach(b => b.classList.toggle("active", b.dataset.team === side));
   const rows = side === "A" ? matchBoxscoreState.rowsHome : matchBoxscoreState.rowsAway;
-  const mvp = boxscoreMatchMvp(matchBoxscoreState.rowsHome, matchBoxscoreState.rowsAway);
+  // Pas de MVP pour un match amical (noMvp, voir showFriendlyBoxscore).
+  const mvp = matchBoxscoreState.noMvp ? null : boxscoreMatchMvp(matchBoxscoreState.rowsHome, matchBoxscoreState.rowsAway);
   const mvpHolder = document.getElementById("matchBoxscoreMvpHolder");
   if (mvpHolder) mvpHolder.innerHTML = mvp ? matchMvpCalloutHtml(mvp, matchBoxscoreState.teamHome, matchBoxscoreState.teamAway) : "";
   document.getElementById("matchBoxscoreHolder").innerHTML = rows.length
@@ -34032,6 +34104,7 @@ const DASH_ROUTE_TO_TAB = {
   "/marche": "marche", "/ligue": "ligue", "/coupe": "coupe",
   "/calendrier": "calendrier", "/entrainement": "entrainement",
   "/ligues-privees": "lp",
+  "/amicaux": "amicaux",
   "/messagerie": "messages",
   "/sponsors": "sponsors",
   "/histoire": "histoire",
@@ -35851,7 +35924,9 @@ function calendarRowHtml(row) {
   // en infobulle. La colonne "Compétition" a disparu, le mot "Coupe" reste
   // donc visible ici pour distinguer ses tours.
   const CUP_SHORT = { "Huitièmes": "1/8", "Quarts": "1/4", "Demies": "1/2" };
-  const roundCell = row.competition === "lp"
+  const roundCell = row.competition === "fr"
+    ? `<abbr class="cal-cup-badge cal-fr-badge" title="Match amical">Amical</abbr>`
+    : row.competition === "lp"
     ? `<abbr class="cal-cup-badge cal-lp-badge" title="Ligue privée · ${escapeHtml(row.label)}">LP ${escapeHtml(row.shortLabel)}</abbr>`
     : row.competition === "cup"
     ? `<abbr class="cal-cup-badge" title="Coupe · ${escapeHtml(row.label)}">${row.label === "Finale" ? "Finale" : `Coupe ${escapeHtml(CUP_SHORT[row.label] || row.label)}`}</abbr>`
@@ -35882,7 +35957,9 @@ function calendarRowHtml(row) {
   if (row.played) {
     const tone = row.won ? "win" : row.lost ? "loss" : "draw";
     const letter = row.won ? "V" : row.lost ? "D" : "N";
-    const score = row.lpScore
+    const score = row.frBox
+      ? `<button type="button" class="calendar-score-btn fr-cal-score" data-fr-box="${escapeHtml(row.frBox)}">${row.scoreText}</button>`
+      : row.lpScore
       ? `<button type="button" class="calendar-score-btn lp-cal-score" data-lp-id="${escapeHtml(row.lpScore.id)}" data-lp-round="${row.lpScore.round}" data-lp-home="${row.lpScore.home}" data-lp-away="${row.lpScore.away}">${row.scoreText}</button>`
       : row.boxscore
       ? `<button type="button" class="calendar-score-btn" data-boxscore-round="${row.boxscore.round}" data-boxscore-competition="${row.boxscore.competition}" data-boxscore-home="${row.boxscore.homeIdx}" data-boxscore-away="${row.boxscore.awayIdx}">${row.scoreText}</button>`
@@ -35931,6 +36008,7 @@ function calendarNextMatchCardHtml(row) {
   };
   const kicker = row.competition === "cup" ? `Prochain match · Coupe · ${row.label}`
     : row.competition === "lp" ? `Prochain match · Ligue privée · ${row.shortLabel}`
+    : row.competition === "fr" ? "Prochain match · Amical"
     : `Prochain match · ${row.label}`;
   const when = row.scheduledAt != null
     ? `${formatCalendarDayFr(row.scheduledAt)} · ${formatCalendarTimeFr(row.scheduledAt)}`
@@ -35949,6 +36027,8 @@ function calendarNextMatchCardHtml(row) {
     ? `<button type="button" class="cal-next-btn is-live" data-tab="live">Voir le direct</button>`
     : row.competition === "lp"
     ? `<button type="button" class="cal-next-btn" data-tab="lp">Voir la ligue privée</button>`
+    : row.competition === "fr"
+    ? `<button type="button" class="cal-next-btn" data-tab="amicaux">Voir les amicaux</button>`
     : `<button type="button" class="cal-next-btn" data-tab="ordres" data-round="${row.orderRound}" data-competition="${row.orderCompetition}">${row.alreadyOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>` +
       // "Ordres non définis pour ce match" retiré (retour utilisateur
       // 2026-09-26) : le bouton "Donner les ordres" le dit déjà.
@@ -36225,6 +36305,36 @@ function renderCalendrierSection() {
     });
   });
 
+  // Matchs amicaux (voir renderAmicauxSection) : à venir (confirmés ou en
+  // attente de réponse) et joués. Hors bilan de la saison, comme les ligues
+  // privées ; le score ouvre la feuille de match de l'amical.
+  (Array.isArray(league.friendlies) ? league.friendlies : []).forEach(f => {
+    if (!(f.status === "accepted" || f.status === "pending" || f.status === "played")) return;
+    if (f.status !== "played" && f.at <= Date.now()) return;
+    if (typeof league.calendarStartAt === "number" && f.status === "played" && f.at < league.calendarStartAt - 30 * 24 * 3600 * 1000) return;
+    const isHomeFr = f.homeIdx === myTeamIndex;
+    const oppIdxFr = isHomeFr ? f.awayIdx : f.homeIdx;
+    if (!league.teams[oppIdxFr]) return;
+    let scoreText = "–", cls = "";
+    const played = f.status === "played" && !!f.result;
+    if (played) {
+      const my = isHomeFr ? f.result.scoreHome : f.result.scoreAway;
+      const opp = isHomeFr ? f.result.scoreAway : f.result.scoreHome;
+      scoreText = `${my} - ${opp}`;
+      cls = my > opp ? "result-win" : my < opp ? "result-loss" : "";
+    }
+    rows.push({
+      competition: "fr", label: "Match amical", shortLabel: "Amical",
+      opponent: league.teams[oppIdxFr].name, opponentIdx: oppIdxFr,
+      location: isHomeFr ? "Domicile" : "Extérieur",
+      scoreText, boxscore: null, frBox: played && !f.result.forfeit ? f.id : null,
+      cls, actionCell: played ? "" : `<button type="button" class="calendar-order-btn calendar-fr-btn" data-tab="amicaux">${f.status === "pending" ? "En attente" : "Amical"}</button>`,
+      scheduledAt: f.at, fallbackOrder: 200000,
+      isHome: isHomeFr, played, won: cls === "result-win", lost: cls === "result-loss",
+      isLive: false, alreadyOrdered: false, isPrivate: true, frPending: f.status === "pending",
+    });
+  });
+
   // Tri chronologique : par horaire programmé quand il est connu (cas
   // normal), sinon par l'ordre de repli (numéro de journée/tour) pour ne
   // jamais planter sur une ancienne sauvegarde sans calendarStartAt.
@@ -36258,7 +36368,8 @@ function renderCalendrierSection() {
   // -------------------------------------------------------------------
   const playedRows = rows.filter(r => r.played);
   const upcomingRows = rows.filter(r => !r.played && !r.bye);
-  const nextRow = upcomingRows.find(r => r.isLive) || upcomingRows[0] || null;
+  // Une invitation à un amical pas encore acceptée n'est pas « le prochain match ».
+  const nextRow = upcomingRows.find(r => r.isLive) || upcomingRows.find(r => !r.frPending) || null;
 
   const groups = [];
   rows.forEach(row => {
@@ -36321,6 +36432,8 @@ document.getElementById("calendrierContent").addEventListener("click", (e) => {
     calendarApplyFilter();
     return;
   }
+  const frScoreBtn = e.target.closest(".fr-cal-score");
+  if (frScoreBtn) { showFriendlyBoxscore(frScoreBtn.dataset.frBox); return; }
   const lpScoreBtn = e.target.closest(".lp-cal-score");
   if (lpScoreBtn) {
     const lp = (league.privateLeagues || []).find(l => l.id === lpScoreBtn.dataset.lpId);
@@ -38764,16 +38877,98 @@ document.getElementById("tactiquesContent").addEventListener("keydown", (e) => {
 // d'un des derniers matchs joués (Team.ordersHistory).
 var tqEdit = null; // { slot, name, source, proxy, dirty } — var : lu par renderOrdresGrid
 
+// « Partir de » (retour utilisateur 2026-09-27 : "ajoute aussi les 5
+// derniers matchs en proposition. enlève le prochain match") : tactiques
+// enregistrées puis les TQ_SOURCE_MATCHES derniers matchs joués. Un match
+// de Team.ordersHistory apporte ses ordres complets ; un match plus ancien
+// (joué avant cet historique) est reconstitué depuis le journal des joueurs
+// (tqOrdersFromMatchLog) : attaque n°1/défense/rythme réellement joués, cinq
+// et rotation d'après les minutes.
+const TQ_SOURCE_MATCHES = 5;
 function tqOrdersSources() {
-  const out = [{ key: "next", label: "Ordres du prochain match", orders: teamA.snapshotTactics() }];
+  const out = [];
   (teamA.tacticPresets || []).forEach((p, i) => out.push({ key: "preset:" + i, label: `Tactique « ${p.name} »`, orders: p.orders }));
+  const label = (competition, round, isHome, oppName, pf, pa, at) => {
+    const comp = competition === "cup" ? "Coupe" : competition === "championship" ? `J${round + 1}` : "Match";
+    const res = pf != null && pa != null ? ` · ${pf > pa ? "V" : pf < pa ? "D" : "N"} ${pf}-${pa}` : "";
+    return `${comp} ${isHome ? "vs" : "@"} ${oppName || "?"}${res}${at ? ` · ${formatCalendarDayFr(at)}` : ""}`;
+  };
+  const matches = [];
+  const seen = new Set();
   (teamA.ordersHistory || []).forEach((h, i) => {
-    const comp = h.competition === "cup" ? "Coupe" : h.competition === "championship" ? `J${h.round + 1}` : "Match";
-    const res = h.scoreFor != null && h.scoreAgainst != null ? ` · ${h.scoreFor > h.scoreAgainst ? "V" : h.scoreFor < h.scoreAgainst ? "D" : "N"} ${h.scoreFor}-${h.scoreAgainst}` : "";
-    const date = h.at ? ` · ${formatCalendarDayFr(h.at)}` : "";
-    out.push({ key: "hist:" + i, label: `${comp} ${h.isHome ? "vs" : "@"} ${h.opponentName || "?"}${res}${date}`, orders: h.orders });
+    seen.add(`${h.competition || "championship"}:${h.round}`);
+    matches.push({ at: h.at || 0, key: "hist:" + i, label: label(h.competition, h.round, h.isHome, h.opponentName, h.scoreFor, h.scoreAgainst, h.at), orders: h.orders });
+  });
+  tqMatchLogMatches().forEach(m => {
+    if (seen.has(`${m.competition}:${m.round}`)) return;
+    matches.push({ at: m.at || 0, key: `log:${m.competition}:${m.round}`, label: label(m.competition, m.round, m.isHome, m.oppName, m.pf, m.pa, m.at), orders: tqOrdersFromMatchLog(m) });
+  });
+  matches.sort((a, b) => b.at - a.at).slice(0, TQ_SOURCE_MATCHES).forEach(m => out.push(m));
+  // Rien à proposer (aucune tactique, aucun match joué) : les réglages actuels.
+  if (!out.length) out.push({ key: "current", label: "Réglages actuels", orders: teamA.snapshotTactics() });
+  return out;
+}
+
+// Matchs officiels déjà joués par mon club, d'après Player.matchLog :
+// { competition, round, at, isHome, oppName, pf, pa, entries: [{player, log}] }.
+function tqMatchLogMatches() {
+  const byKey = new Map();
+  (teamA.players || []).forEach(p => (p.matchLog || []).forEach(e => {
+    if (e.competition !== "championship" && e.competition !== "cup") return;
+    const k = `${e.competition}:${e.round}`;
+    if (!byKey.has(k)) byKey.set(k, { competition: e.competition, round: e.round, entries: [] });
+    byKey.get(k).entries.push({ player: p, log: e });
+  }));
+  const out = [];
+  byKey.forEach(m => {
+    let at = null, isHome = true, oppIdx = null, pf = null, pa = null;
+    if (m.competition === "championship") {
+      const r = (league.results || []).find(x => x.round === m.round && (x.home === myTeamIndex || x.away === myTeamIndex));
+      if (r) { isHome = r.home === myTeamIndex; oppIdx = isHome ? r.away : r.home; pf = isHome ? r.scoreHome : r.scoreAway; pa = isHome ? r.scoreAway : r.scoreHome; }
+      try { at = scheduledTimeForChampionshipRound(m.round); } catch (e) { at = null; }
+    } else if (league.cup && Array.isArray(league.cup.rounds)) {
+      const round = league.cup.rounds.find(r => r.index === m.round);
+      const x = round && round.matches.find(mm => mm.home === myTeamIndex || mm.away === myTeamIndex);
+      if (x) { isHome = x.home === myTeamIndex; oppIdx = isHome ? x.away : x.home; pf = isHome ? x.scoreHome : x.scoreAway; pa = isHome ? x.scoreAway : x.scoreHome; }
+      try { at = round ? scheduledTimeForCupRound(round.dayIndex) : null; } catch (e) { at = null; }
+    }
+    const opp = oppIdx != null ? league.teams[oppIdx] : null;
+    out.push({ ...m, at: at || 0, isHome, oppName: opp ? opp.name : null, pf, pa });
   });
   return out;
+}
+
+// Ordres reconstitués d'un match joué avant Team.ordersHistory : tactique
+// réellement jouée (matchLog.tacticsUsed), titulaire de chaque poste = celui
+// qui a le plus joué à ce poste, les autres joueurs utilisés en rotation,
+// consignes confirmées actuelles pour le reste.
+function tqOrdersFromMatchLog(m) {
+  const base = teamA.snapshotTactics();
+  const used = (m.entries.find(x => x.log.tacticsUsed) || {}).log;
+  const t = used ? used.tacticsUsed : null;
+  if (t) {
+    if (t.defense) base.defense = t.defense;
+    if (t.rhythm) base.rhythm = t.rhythm;
+    if (t.offense) base.offensivePriorities = [t.offense, ...base.offensivePriorities.filter(o => o !== t.offense)].slice(0, base.offensivePriorities.length || 3);
+  }
+  const played = m.entries.filter(x => (x.log.min || 0) > 0).sort((a, b) => (b.log.min || 0) - (a.log.min || 0));
+  if (played.length >= POSITIONS.length) {
+    const starters = {};
+    const taken = new Set();
+    POSITIONS.forEach(pos => {
+      const x = played.find(y => y.player.position === pos && !taken.has(y.player.id));
+      if (x) { starters[pos] = x.player.id; taken.add(x.player.id); }
+    });
+    POSITIONS.forEach(pos => {
+      if (starters[pos] != null) return;
+      const x = played.find(y => !taken.has(y.player.id));
+      if (x) { starters[pos] = x.player.id; taken.add(x.player.id); }
+    });
+    const backupPositions = {};
+    played.filter(x => !taken.has(x.player.id)).forEach(x => { backupPositions[x.player.id] = [x.player.position]; });
+    base.lineup = { starters, backupPositions, convoked: played.map(x => x.player.id).slice(0, 12) };
+  }
+  return base;
 }
 
 function tqProxyFrom(orders) {
@@ -38797,8 +38992,9 @@ function tqProxyFrom(orders) {
 
 function openTacticEditor(slot) {
   const preset = (teamA.tacticPresets || [])[slot];
-  const source = preset ? "preset:" + slot : "next";
-  const src = tqOrdersSources().find(x => x.key === source);
+  const sources = tqOrdersSources();
+  const src = (preset && sources.find(x => x.key === "preset:" + slot)) || sources.find(x => !x.key.startsWith("preset:")) || sources[0];
+  const source = src.key;
   tqEdit = { slot, name: preset ? preset.name : "", source, proxy: tqProxyFrom(src.orders), dirty: false };
   tqFeedback = null;
   showPage("prepSection");
@@ -38830,7 +39026,7 @@ function renderTacticEditorBar() {
     `<div class="tq-editor-field"><label for="tqEditorSource">Partir de</label><select id="tqEditorSource">${options}</select></div>` +
     `<div class="tq-editor-actions"><button type="button" class="cal-next-btn" id="tqEditorSave">Enregistrer la tactique</button>` +
       `<button type="button" class="tq-btn" id="tqEditorCancel">Annuler</button></div>` +
-    `<p class="tq-editor-note">Réglez tout comme dans les Ordres : attaque, défense, rythme, convocation, cinq, rotation et temps de jeu. Rien n'est appliqué au prochain match.${(teamA.ordersHistory || []).length ? "" : " Les ordres des matchs joués à partir de maintenant apparaîtront aussi dans « Partir de »."}</p>`;
+    `<p class="tq-editor-note">Réglez tout comme dans les Ordres : attaque, défense, rythme, convocation, cinq, rotation et temps de jeu. Rien n'est appliqué au prochain match.</p>`;
 }
 
 document.getElementById("tqEditorBar").addEventListener("input", (e) => {
@@ -39548,7 +39744,6 @@ document.getElementById("statsHebdoNav").addEventListener("click", (e) => {
 // "supprime l'onglet draft et supervision qui ne sert à rien".)
 // ---------------------------------------------------------------------
 const PLACEHOLDER_TEXT = {
-  amicaux: ["Matchs amicaux", "Pas encore disponibles, ils permettront de continuer à faire jouer (et progresser) l'équipe une fois éliminée de la Coupe, en dehors du calendrier de championnat."],
 };
 
 function showPlaceholder(key) {
@@ -39956,6 +40151,360 @@ async function lpAction(path, body, okText) {
   holder.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && e.target && e.target.id === "lpCodeInput") { e.preventDefault(); const b = document.getElementById("lpJoinBtn"); if (b && !b.disabled) b.click(); }
     if (e.key === "Enter" && e.target && e.target.id === "lpNameInput") { e.preventDefault(); const b = document.getElementById("lpCreateBtn"); if (b && !b.disabled) b.click(); }
+  });
+})();
+
+// ---------------------------------------------------------------------
+// MATCHS AMICAUX (demande utilisateur 2026-09-27 : "on doit pouvoir les
+// faire quand on veut sur les jours de repos. on doit pouvoir faire jouer
+// les jeunes. quand quelqu'un propose un match amical, on devrait recevoir
+// un petit message privé.") — règles et simulation : server/friendlies.js.
+// Cette page : invitations reçues (accepter/refuser), proposition (adversaire,
+// terrain, jour de repos commun, heure), amicaux à venir avec leur
+// composition (pros ET jeunes de l'académie), résultats. Données :
+// league.friendlies (seulement les miens, compo adverse masquée), rafraîchies
+// par chaque réponse d'action (result.friendlies).
+// ---------------------------------------------------------------------
+const FR_STARTERS = 5;
+const FR_BENCH_MAX = 7;
+let frUi = { opponent: null, venue: "home", day: null, time: "20:00", days: null, daysFor: null, daysError: null, loadingDays: false, feedback: null, openLineupId: null, draft: null };
+
+function frList() { return Array.isArray(league.friendlies) ? league.friendlies : []; }
+function frIsUpcoming(f) { return f.status === "pending" || f.status === "accepted"; }
+function frOppIdx(f) { return f.homeIdx === myTeamIndex ? f.awayIdx : f.homeIdx; }
+function frTeamName(idx) { const t = league.teams[idx]; return t ? t.name : "?"; }
+function frWhenHtml(f) { return `${escapeHtml(formatCalendarDayFr(f.at))} · ${escapeHtml(formatCalendarTimeFr(f.at))}`; }
+function frPendingReceived() {
+  const now = Date.now();
+  return frList().filter(f => f.status === "pending" && f.proposerIdx !== myTeamIndex && f.at > now);
+}
+
+// Pastille de la barre latérale : invitations reçues en attente de réponse.
+function frUpdateBadge() {
+  const badge = document.getElementById("amicauxBadge");
+  if (!badge || !league) return;
+  const n = frPendingReceived().length;
+  badge.textContent = String(n);
+  badge.classList.toggle("hidden", !n);
+}
+
+function renderAmicauxSection() {
+  const holder = document.getElementById("amicauxContent");
+  if (!holder) return;
+  frUpdateBadge();
+  if (typeof league.calendarStartAt !== "number") {
+    holder.innerHTML = "<p class='training-empty'>Les matchs amicaux ne sont pas disponibles dans cette partie.</p>";
+    return;
+  }
+  const now = Date.now();
+  const list = frList();
+  const received = frPendingReceived();
+  const upcoming = list.filter(f => frIsUpcoming(f) && f.at > now && !received.includes(f)).sort((a, b) => a.at - b.at);
+  const past = list.filter(f => !frIsUpcoming(f) || f.at <= now).sort((a, b) => b.at - a.at);
+  let html = `<div class="fr-layout">`;
+  if (received.length) {
+    html += `<div class="lp-card fr-invites"><div class="lp-card-title">Invitations reçues</div>` +
+      received.map(f => {
+        const opp = frOppIdx(f);
+        const where = f.homeIdx === myTeamIndex ? "à domicile" : `chez ${escapeHtml(frTeamName(opp))}`;
+        return `<div class="fr-row fr-row-invite"><span class="fr-logo">${teamLogoHtml(league.teams[opp], 32)}</span>` +
+          `<span class="fr-row-main"><span class="fr-row-title">${teamLinkHtml(opp, frTeamName(opp))} vous invite</span>` +
+          `<span class="fr-row-sub">${frWhenHtml(f)} · ${where}</span></span>` +
+          `<span class="fr-row-actions"><button type="button" class="cal-next-btn fr-btn" data-fr-accept="${f.id}">Accepter</button>` +
+          `<button type="button" class="secondary fr-btn" data-fr-decline="${f.id}">Refuser</button></span></div>`;
+      }).join("") + `</div>`;
+  }
+  html += frProposeCardHtml();
+  html += `<div class="lp-card"><div class="lp-card-title">À venir</div>`;
+  html += upcoming.length ? upcoming.map(frUpcomingRowHtml).join("") : `<p class="cal-card-empty">Aucun match amical programmé.</p>`;
+  html += `</div>`;
+  if (past.length) {
+    html += `<div class="lp-card"><div class="lp-card-title">Derniers amicaux</div>` + past.map(frPastRowHtml).join("") + `</div>`;
+  }
+  if (frUi.feedback) html += `<p class="lp-feedback ${frUi.feedback.ok ? "ok" : "err"}">${escapeHtml(frUi.feedback.text)}</p>`;
+  html += `</div>`;
+  holder.innerHTML = html;
+}
+
+function frProposeCardHtml() {
+  const humans = [], cpus = [];
+  league.teams.forEach((t, i) => { if (i === myTeamIndex || !t) return; (t.isHuman ? humans : cpus).push(i); });
+  const byName = (a, b) => frTeamName(a).localeCompare(frTeamName(b), "fr");
+  humans.sort(byName); cpus.sort(byName);
+  const opt = i => `<option value="${i}"${frUi.opponent === i ? " selected" : ""}>${escapeHtml(frTeamName(i))}</option>`;
+  let html = `<div class="lp-card fr-propose"><div class="lp-card-title">Proposer un amical</div><div class="lp-form-row">`;
+  html += `<div class="lp-field lp-field-grow"><label class="field-label" for="frOpponentSelect">Adversaire</label><select id="frOpponentSelect">` +
+    `<option value=""${frUi.opponent == null ? " selected" : ""}>Choisir un club…</option>` +
+    (humans.length ? `<optgroup label="Managers">${humans.map(opt).join("")}</optgroup>` : "") +
+    (cpus.length ? `<optgroup label="Équipes CPU">${cpus.map(opt).join("")}</optgroup>` : "") + `</select></div>`;
+  const days = frUi.daysFor === frUi.opponent && Array.isArray(frUi.days) ? frUi.days : null;
+  const dayObj = days ? days.find(d => d.day === frUi.day) || null : null;
+  const disDay = frUi.opponent == null || !days || !days.length ? " disabled" : "";
+  html += `<div class="lp-field"><label class="field-label" for="frDaySelect">Jour de repos</label><select id="frDaySelect"${disDay}>` +
+    (frUi.opponent == null ? `<option>Choisissez d'abord l'adversaire</option>`
+      : frUi.loadingDays ? `<option>Chargement…</option>`
+      : !days ? `<option>${escapeHtml(frUi.daysError || "Indisponible")}</option>`
+      : !days.length ? `<option>Aucun jour de repos commun</option>`
+      : days.map(d => `<option value="${d.day}"${d.day === frUi.day ? " selected" : ""}>${escapeHtml(d.label.charAt(0).toUpperCase() + d.label.slice(1))}</option>`).join("")) +
+    `</select></div>`;
+  const times = dayObj ? dayObj.times : [];
+  html += `<div class="lp-field"><label class="field-label" for="frTimeSelect">Heure</label><select id="frTimeSelect"${times.length ? "" : " disabled"}>` +
+    (times.length ? times.map(t => `<option value="${t}"${t === frUi.time ? " selected" : ""}>${t.replace(":", "h")}</option>`).join("") : `<option>–</option>`) +
+    `</select></div></div>`;
+  html += `<p class="field-label">Terrain</p><div class="lp-venues fr-venues">` +
+    `<button type="button" class="lp-venue${frUi.venue === "home" ? " on" : ""}" data-fr-venue="home" aria-pressed="${frUi.venue === "home"}"><span class="lp-venue-title">À domicile</span></button>` +
+    `<button type="button" class="lp-venue${frUi.venue === "away" ? " on" : ""}" data-fr-venue="away" aria-pressed="${frUi.venue === "away"}"><span class="lp-venue-title">À l'extérieur</span></button></div>`;
+  const oppTeam = frUi.opponent != null ? league.teams[frUi.opponent] : null;
+  const can = !!(oppTeam && dayObj && times.includes(frUi.time));
+  html += `<div class="lp-actions"><button type="button" class="cal-next-btn lp-btn" id="frProposeBtn"${can ? "" : " disabled"}>${oppTeam && !oppTeam.isHuman ? "Programmer l'amical" : "Envoyer l'invitation"}</button>` +
+    `<span class="lp-hint">${oppTeam && oppTeam.isHuman ? "Le manager reçoit un message privé et doit accepter avant l'heure du match." : "Une équipe CPU accepte tout de suite. Un manager reçoit un message privé et doit accepter."}</span></div></div>`;
+  return html;
+}
+
+function frStatusTagHtml(f) {
+  if (f.status === "pending") return `<span class="lp-tag lp-tag-muted">${f.proposerIdx === myTeamIndex ? "En attente de réponse" : "À confirmer"}</span>`;
+  if (f.status === "accepted") return `<span class="lp-tag fr-tag-ok">Confirmé</span>`;
+  return "";
+}
+
+function frUpcomingRowHtml(f) {
+  const opp = frOppIdx(f);
+  const mine = f.lineups && f.lineups[myTeamIndex];
+  const youthIds = new Set((teamA.youthPlayers || []).map(p => p.id));
+  const youthCount = mine ? [...mine.starters, ...mine.bench].filter(id => youthIds.has(id)).length : 0;
+  const compoTxt = mine ? `Composition de l'amical${youthCount ? ` · ${youthCount} jeune${youthCount > 1 ? "s" : ""}` : ""}` : "Composition : ordres actuels du club";
+  const open = frUi.openLineupId === f.id;
+  const cancelLabel = f.status === "pending" ? "Retirer l'invitation" : "Annuler";
+  let html = `<div class="fr-row${open ? " open" : ""}"><span class="fr-logo">${teamLogoHtml(league.teams[opp], 32)}</span>` +
+    `<span class="fr-row-main"><span class="fr-row-title"><span class="cal-opp-prefix">${f.homeIdx === myTeamIndex ? "vs" : "@"}</span> ${teamLinkHtml(opp, frTeamName(opp))}${frStatusTagHtml(f)}</span>` +
+    `<span class="fr-row-sub">${frWhenHtml(f)} · ${escapeHtml(compoTxt)}</span></span>` +
+    `<span class="fr-row-actions"><button type="button" class="secondary fr-btn" data-fr-lineup="${f.id}" aria-expanded="${open}">${open ? "Fermer" : "Composition"}</button>` +
+    `<button type="button" class="secondary fr-btn fr-cancel" data-fr-cancel="${f.id}">${cancelLabel}</button></span></div>`;
+  if (open) html += frLineupEditorHtml(f);
+  return html;
+}
+
+// Composition proposée par défaut : la feuille de match actuelle du club
+// (titulaires + convoqués), sans jeune.
+function frDefaultDraft() {
+  const roles = {};
+  const starters = POSITIONS.map(pos => teamA.lineup && teamA.lineup.starters ? teamA.lineup.starters[pos] : null).filter(id => id != null);
+  starters.forEach(id => { roles[id] = "S"; });
+  const convoked = typeof teamA.convokedIds === "function" ? teamA.convokedIds() : [];
+  convoked.filter(id => roles[id] !== "S").slice(0, FR_BENCH_MAX).forEach(id => { roles[id] = "B"; });
+  return roles;
+}
+
+function frDraftFor(f) {
+  if (frUi.draft && frUi.draft.id === f.id) return frUi.draft.roles;
+  const mine = f.lineups && f.lineups[myTeamIndex];
+  let roles;
+  if (mine) {
+    roles = {};
+    mine.starters.forEach(id => { roles[id] = "S"; });
+    mine.bench.forEach(id => { roles[id] = "B"; });
+  } else {
+    roles = frDefaultDraft();
+  }
+  frUi.draft = { id: f.id, roles };
+  return roles;
+}
+
+function frLineupEditorHtml(f) {
+  const roles = frDraftFor(f);
+  const now = Date.now();
+  const count = r => Object.values(roles).filter(v => v === r).length;
+  const nS = count("S"), nB = count("B");
+  const valid = nS === FR_STARTERS && nB <= FR_BENCH_MAX;
+  const row = (p, youth) => {
+    const injured = isCurrentlyInjured(p, now);
+    const cond = currentCondition(p, now);
+    const role = roles[p.id] || "-";
+    return `<div class="fr-lu-row${role === "S" ? " is-starter" : role === "B" ? " is-bench" : ""}">` +
+      `<span class="fr-lu-name">${escapeHtml(p.name)}${youth ? `<span class="lp-tag fr-tag-youth">Jeune</span>` : ""}${injured ? `<span class="lp-tag fr-tag-injured">Blessé</span>` : ""}</span>` +
+      `<span class="fr-lu-pos">${effPosBadgeHtml(p.position)}</span>` +
+      `<span class="fr-lu-age">${p.age} ans</span>` +
+      `<span class="fr-lu-cond">${escapeHtml(conditionStateFor(cond).label)}</span>` +
+      `<select class="fr-lu-role" data-fr-role="${p.id}" aria-label="Rôle de ${escapeHtml(p.name)}">` +
+      [["S", "Titulaire"], ["B", "Remplaçant"], ["-", "Tribune"]].map(([v, l]) => `<option value="${v}"${role === v ? " selected" : ""}>${l}</option>`).join("") +
+      `</select></div>`;
+  };
+  const pros = (teamA.players || []).slice().sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position));
+  const youths = (teamA.youthPlayers || []).slice().sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position));
+  let html = `<div class="fr-lineup" data-fr-lineup-for="${f.id}">`;
+  html += `<div class="fr-lu-head"><span class="fr-lu-count${nS === FR_STARTERS ? " ok" : ""}">Titulaires ${nS}/${FR_STARTERS}</span>` +
+    `<span class="fr-lu-count${nB <= FR_BENCH_MAX ? " ok" : ""}">Remplaçants ${nB}/${FR_BENCH_MAX}</span>` +
+    `<span class="lp-hint">Les titulaires sont placés à leur poste ; les remplaçants entrent selon la rotation automatique.</span></div>`;
+  html += `<div class="fr-lu-group">Effectif</div>` + pros.map(p => row(p, false)).join("");
+  html += `<div class="fr-lu-group">Académie de jeunes</div>` +
+    (youths.length ? youths.map(p => row(p, true)).join("") : `<p class="cal-card-empty">Aucun jeune signé à l'académie pour l'instant.</p>`);
+  html += `<div class="lp-actions fr-lu-actions"><button type="button" class="cal-next-btn lp-btn" data-fr-save="${f.id}"${valid ? "" : " disabled"}>Enregistrer la composition</button>` +
+    (f.lineups && f.lineups[myTeamIndex] ? `<button type="button" class="secondary lp-btn" data-fr-reset="${f.id}">Revenir aux ordres du club</button>` : "") +
+    (valid ? "" : `<span class="lp-hint">Il faut exactement ${FR_STARTERS} titulaires et ${FR_BENCH_MAX} remplaçants au plus.</span>`) + `</div></div>`;
+  return html;
+}
+
+function frPastRowHtml(f) {
+  const opp = frOppIdx(f);
+  let mid, sub;
+  if (f.status === "played" && f.result) {
+    const r = f.result;
+    const my = f.homeIdx === myTeamIndex ? r.scoreHome : r.scoreAway;
+    const their = f.homeIdx === myTeamIndex ? r.scoreAway : r.scoreHome;
+    const tone = my > their ? "win" : my < their ? "loss" : "draw";
+    const score = `${my} - ${their}`;
+    mid = `<span class="cal-result cal-result-${tone}"><span class="cal-result-letter">${my > their ? "V" : "D"}</span>` +
+      (r.forfeit ? score : `<button type="button" class="calendar-score-btn fr-score" data-fr-box="${f.id}">${score}</button>`) + `</span>`;
+    const hurt = (r.injuries || []).filter(i => i.teamIdx === myTeamIndex).map(i => i.name);
+    sub = r.forfeit ? "Forfait (cinq incomplet)" : hurt.length ? `Blessé${hurt.length > 1 ? "s" : ""} : ${hurt.join(", ")}` : "Aucun blessé";
+  } else {
+    const label = { declined: "Refusé", cancelled: "Annulé", expired: "Sans réponse" }[f.status] || "–";
+    mid = `<span class="lp-tag lp-tag-muted">${label}</span>`;
+    sub = f.cancelReason || (f.status === "declined" ? `${frTeamName(opp)} a décliné l'invitation.` : f.status === "expired" ? "Invitation restée sans réponse." : "");
+  }
+  return `<div class="fr-row fr-row-past${f.status === "played" ? "" : " is-off"}"><span class="fr-logo">${teamLogoHtml(league.teams[opp], 32)}</span>` +
+    `<span class="fr-row-main"><span class="fr-row-title"><span class="cal-opp-prefix">${f.homeIdx === myTeamIndex ? "vs" : "@"}</span> ${teamLinkHtml(opp, frTeamName(opp))}</span>` +
+    `<span class="fr-row-sub">${frWhenHtml(f)}${sub ? ` · ${escapeHtml(sub)}` : ""}</span></span>` +
+    `<span class="fr-row-actions">${mid}</span></div>`;
+}
+
+// Feuille de match d'un amical : lignes stockées avec l'amical (voir
+// server/friendlies.js:compactBoxScore), jamais matchLog. Les jeunes y
+// sont marqués d'un « (J) ».
+function showFriendlyBoxscore(id) {
+  const f = frList().find(x => x.id === id);
+  if (!f || f.status !== "played" || !f.result) return;
+  closeMatchBoxscore();
+  const homeTeam = league.teams[f.homeIdx], awayTeam = league.teams[f.awayIdx];
+  if (!homeTeam || !awayTeam) return;
+  const rows = list => (list || []).map(r => ({ ...r, name: r.youth ? `${r.name} (J)` : r.name, isMvp: false }));
+  matchBoxscoreState = {
+    rowsHome: rows(f.result.boxScoreHome), rowsAway: rows(f.result.boxScoreAway),
+    nameHome: homeTeam.name, nameAway: awayTeam.name, teamHome: homeTeam, teamAway: awayTeam,
+    quarterScores: f.result.quarterScores || null,
+    noMvp: true,
+  };
+  openMatchBoxscoreModal(homeTeam, awayTeam, f.homeIdx, f.awayIdx, {
+    kicker: "Match amical",
+    whenText: `${formatCalendarDayFr(f.at)} · ${formatCalendarTimeFr(f.at)}`,
+    scoreHome: f.result.scoreHome, scoreAway: f.result.scoreAway,
+    noteHtml: `<div class="lp-mbx-note">Match amical : fatigue, blessures et progression comme un vrai match ; aucun effet sur le classement, les finances ni les stats de saison. (J) = jeune de l'académie.</div>`,
+  });
+}
+
+async function frLoadDays(oppIdx) {
+  frUi.loadingDays = true;
+  frUi.daysFor = oppIdx;
+  frUi.days = null;
+  frUi.daysError = null;
+  renderAmicauxSection();
+  try {
+    const res = await fetchApi(`/api/friendly/days?opponent=${oppIdx}`);
+    const data = await res.json().catch(() => ({}));
+    if (frUi.daysFor !== oppIdx) return;
+    if (!res.ok || !data.ok) { frUi.daysError = data.error || "Jours indisponibles"; }
+    else {
+      frUi.days = data.days;
+      const keep = frUi.days.find(d => d.day === frUi.day);
+      frUi.day = keep ? keep.day : (frUi.days[0] ? frUi.days[0].day : null);
+      frFixTime();
+    }
+  } catch (e) {
+    frUi.daysError = "Serveur injoignable";
+  }
+  frUi.loadingDays = false;
+  renderAmicauxSection();
+}
+
+// Garde l'heure choisie si elle existe encore ce jour-là, sinon 20h00, sinon
+// la première heure possible.
+function frFixTime() {
+  const d = (frUi.days || []).find(x => x.day === frUi.day);
+  if (!d) return;
+  if (!d.times.includes(frUi.time)) frUi.time = d.times.includes("20:00") ? "20:00" : d.times[0];
+}
+
+async function frAction(path, body, okText) {
+  frUi.feedback = null;
+  let ok = false;
+  try {
+    const res = await fetchApi(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      frUi.feedback = { ok: false, text: data.error || `Le serveur a refusé l'action (${res.status}).` };
+    } else {
+      if (Array.isArray(data.friendlies)) league.friendlies = data.friendlies;
+      frUi.feedback = okText ? { ok: true, text: typeof okText === "function" ? okText(data) : okText } : null;
+      ok = true;
+    }
+  } catch (e) {
+    frUi.feedback = { ok: false, text: "Serveur injoignable." };
+  }
+  renderAmicauxSection();
+  return ok;
+}
+
+(function wireAmicauxContent() {
+  const holder = document.getElementById("amicauxContent");
+  if (!holder) return;
+  holder.addEventListener("change", (e) => {
+    const t = e.target;
+    if (t.id === "frOpponentSelect") {
+      frUi.opponent = t.value === "" ? null : Number(t.value);
+      frUi.feedback = null;
+      if (frUi.opponent != null) frLoadDays(frUi.opponent); else renderAmicauxSection();
+      return;
+    }
+    if (t.id === "frDaySelect") { frUi.day = t.value; frFixTime(); renderAmicauxSection(); return; }
+    if (t.id === "frTimeSelect") { frUi.time = t.value; renderAmicauxSection(); return; }
+    if (t.dataset && t.dataset.frRole && frUi.draft) {
+      const id = Number(t.dataset.frRole);
+      const key = Number.isFinite(id) && String(id) === t.dataset.frRole ? id : t.dataset.frRole;
+      if (t.value === "-") delete frUi.draft.roles[key]; else frUi.draft.roles[key] = t.value;
+      renderAmicauxSection();
+    }
+  });
+  holder.addEventListener("click", async (e) => {
+    const venue = e.target.closest("[data-fr-venue]");
+    if (venue) { frUi.venue = venue.dataset.frVenue; renderAmicauxSection(); return; }
+    const box = e.target.closest("[data-fr-box]");
+    if (box) { showFriendlyBoxscore(box.dataset.frBox); return; }
+    if (e.target.closest("#frProposeBtn")) {
+      const opp = league.teams[frUi.opponent];
+      const ok = await frAction("/api/friendly/propose", { opponent: frUi.opponent, day: frUi.day, time: frUi.time, venue: frUi.venue },
+        data => data.status === "accepted" ? `Amical programmé contre ${opp ? opp.name : "?"}.` : `Invitation envoyée à ${opp ? opp.name : "?"} (message privé).`);
+      if (ok) { frUi.days = null; frUi.daysFor = null; frUi.opponent = null; frUi.day = null; renderAmicauxSection(); }
+      return;
+    }
+    const acc = e.target.closest("[data-fr-accept]");
+    if (acc) { frAction("/api/friendly/respond", { id: acc.dataset.frAccept, accept: true }, "Amical accepté."); return; }
+    const dec = e.target.closest("[data-fr-decline]");
+    if (dec) { frAction("/api/friendly/respond", { id: dec.dataset.frDecline, accept: false }, "Invitation refusée."); return; }
+    const cancel = e.target.closest("[data-fr-cancel]");
+    if (cancel) { frAction("/api/friendly/cancel", { id: cancel.dataset.frCancel }, "Amical annulé."); return; }
+    const lu = e.target.closest("[data-fr-lineup]");
+    if (lu) {
+      const id = lu.dataset.frLineup;
+      frUi.openLineupId = frUi.openLineupId === id ? null : id;
+      frUi.draft = null;
+      renderAmicauxSection();
+      return;
+    }
+    const save = e.target.closest("[data-fr-save]");
+    if (save && !save.disabled && frUi.draft) {
+      const roles = frUi.draft.roles;
+      const starters = Object.keys(roles).filter(k => roles[k] === "S");
+      const bench = Object.keys(roles).filter(k => roles[k] === "B");
+      const toId = k => { const n = Number(k); return Number.isFinite(n) && String(n) === k ? n : k; };
+      const ok = await frAction("/api/friendly/lineup", { id: save.dataset.frSave, starters: starters.map(toId), bench: bench.map(toId) }, "Composition enregistrée.");
+      if (ok) { frUi.openLineupId = null; frUi.draft = null; renderAmicauxSection(); }
+      return;
+    }
+    const reset = e.target.closest("[data-fr-reset]");
+    if (reset) {
+      const ok = await frAction("/api/friendly/lineup", { id: reset.dataset.frReset, reset: true }, "L'amical se jouera avec les ordres actuels du club.");
+      if (ok) { frUi.draft = null; renderAmicauxSection(); }
+    }
   });
 })();
 
@@ -40772,7 +41321,7 @@ const TAB_HANDLERS = {
   ligue: showStandings,
   coupe: () => { renderCoupeSection(); showPage("coupeSection"); setActiveTab("coupe"); },
   calendrier: () => { renderCalendrierSection(); showPage("calendrierSection"); setActiveTab("calendrier"); },
-  amicaux: () => showPlaceholder("amicaux"),
+  amicaux: () => { renderAmicauxSection(); showPage("amicauxSection"); setActiveTab("amicaux"); },
   lp: () => { renderLpSection(); showPage("lpSection"); setActiveTab("lp"); },
   messages: () => { window.__lastMsgNav = goToMessages(); },
   histoire: () => { renderHistoireSection(); showPage("histoireSection"); setActiveTab("histoire"); },

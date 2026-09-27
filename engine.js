@@ -3486,6 +3486,12 @@ function tacticalKnowledgeGainForStreak(playStreak) {
 const TACTICAL_KNOWLEDGE_LOSS_GRACE = 2; // matchs d'absence gratuits
 const TACTICAL_KNOWLEDGE_LOSS_STEP = 2; // += par match d'absence au-delà de la période de grâce
 const TACTICAL_KNOWLEDGE_LOSS_MAX = 6; // plafond (atteint au 5e match d'absence)
+// Plancher de connaissance tactique (retour utilisateur 2026-09-27 : "ça
+// reste des joueurs pro, peut être pas besoin de descendre aussi bas, sinon
+// on change jamais de tactique") : un système délaissé redescend au plus à
+// ce niveau (« Système encore hésitant »), jamais à « pas du tout assimilé ».
+// Les sauvegardes plus basses sont remontées au chargement.
+const TACTICAL_KNOWLEDGE_FLOOR = 40;
 function tacticalKnowledgeLossForStreak(awayStreak) {
   if (awayStreak <= TACTICAL_KNOWLEDGE_LOSS_GRACE) return 0;
   return Math.min(TACTICAL_KNOWLEDGE_LOSS_MAX, (awayStreak - TACTICAL_KNOWLEDGE_LOSS_GRACE) * TACTICAL_KNOWLEDGE_LOSS_STEP);
@@ -4918,7 +4924,7 @@ class Team {
         const streak = prevStreak < 0 ? prevStreak - 1 : -1;
         streaks[key] = streak;
         const loss = tacticalKnowledgeLossForStreak(-streak);
-        knowledge[key] = clamp(knowledge[key] - loss, 0, 100);
+        knowledge[key] = Math.max(Math.min(knowledge[key], TACTICAL_KNOWLEDGE_FLOOR), clamp(knowledge[key] - loss, TACTICAL_KNOWLEDGE_FLOOR, 100));
       }
     };
     Object.keys(OFFENSE_PROFILES).forEach(p => updateOne("offense", p, playedOffense.has(p)));
@@ -8306,6 +8312,10 @@ class League {
     // sérialisées telles quelles. Les matchs sont simulés sur des COPIES
     // des équipes : rien ici ne touche jamais les joueurs réels.
     this.privateLeagues = [];
+    // Matchs amicaux (demande utilisateur 2026-09-27, voir
+    // server/friendlies.js) : invitations et résultats, JSON brut sérialisé
+    // tel quel. Simulés au tick serveur sur les vrais joueurs.
+    this.friendlies = [];
 
     // Matchs en direct en cours de diffusion pour la journée courante (voir
     // server/liveMatch.js) : UNE entrée par match diffusé, indexée par une
@@ -11471,23 +11481,23 @@ function teamFromSave(data) {
         const saved = savedKnowledge[cat];
         if (!saved || typeof saved !== "object") return;
         Object.keys(team.tacticalKnowledge[cat]).forEach(key => {
-          if (typeof saved[key] === "number") team.tacticalKnowledge[cat][key] = clamp(saved[key], 0, 100);
+          if (typeof saved[key] === "number") team.tacticalKnowledge[cat][key] = clamp(saved[key], TACTICAL_KNOWLEDGE_FLOOR, 100);
         });
       });
     } else {
       // Ancien format scalaire : seule la valeur ACTUELLEMENT jouée de
       // chaque catégorie peut raisonnablement en hériter.
       if (typeof savedKnowledge.offense === "number") {
-        const v = clamp(savedKnowledge.offense, 0, 100);
+        const v = clamp(savedKnowledge.offense, TACTICAL_KNOWLEDGE_FLOOR, 100);
         team.offensivePriorities.forEach(p => {
           if (team.tacticalKnowledge.offense[p] !== undefined) team.tacticalKnowledge.offense[p] = v;
         });
       }
       if (typeof savedKnowledge.defense === "number" && team.tacticalKnowledge.defense[team.defense] !== undefined) {
-        team.tacticalKnowledge.defense[team.defense] = clamp(savedKnowledge.defense, 0, 100);
+        team.tacticalKnowledge.defense[team.defense] = clamp(savedKnowledge.defense, TACTICAL_KNOWLEDGE_FLOOR, 100);
       }
       if (typeof savedKnowledge.rhythm === "number" && team.tacticalKnowledge.rhythm[team.rhythm] !== undefined) {
-        team.tacticalKnowledge.rhythm[team.rhythm] = clamp(savedKnowledge.rhythm, 0, 100);
+        team.tacticalKnowledge.rhythm[team.rhythm] = clamp(savedKnowledge.rhythm, TACTICAL_KNOWLEDGE_FLOOR, 100);
       }
     }
   }
@@ -11735,6 +11745,7 @@ function serializeLeague(lg) {
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
     cup: lg.cup || null,
     privateLeagues: Array.isArray(lg.privateLeagues) ? lg.privateLeagues : [],
+    friendlies: Array.isArray(lg.friendlies) ? lg.friendlies : [],
     // Diffusions en direct en cours (voir League.liveMatches ci-dessus) :
     // doivent survivre à un rechargement de page/redémarrage du serveur en
     // plein milieu d'un match, sinon reprendre "là où on en est" (retour
@@ -11806,6 +11817,8 @@ function leagueFromSave(data, userTeam = null) {
   // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
   // d'avant cette fonctionnalité, aucune ligue.
   lg.privateLeagues = Array.isArray(data.privateLeagues) ? data.privateLeagues : [];
+  // Matchs amicaux (voir League.friendlies) : absent = aucun.
+  lg.friendlies = Array.isArray(data.friendlies) ? data.friendlies : [];
   // Ancienne sauvegarde (avant liveMatches au pluriel) : `data.liveMatches`
   // absent, {} par défaut (constructeur) reste en place — aucune diffusion
   // en cours reprise, comme avant ce champ.
@@ -13288,7 +13301,7 @@ return {
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
   TACTIC_PRESETS_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
-  TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_DAILY_GAIN,
+  TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
   CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,

@@ -47,6 +47,8 @@ const Scouting = require("./scouting.js");
 const Shows = require("./shows.js");
 // Ligues privées (Premium) — voir server/privateLeague.js.
 const PrivateLeague = require("./privateLeague.js");
+// Matchs amicaux — voir server/friendlies.js.
+const Friendlies = require("./friendlies.js");
 // Messagerie privée entre managers (2026-09-26) — voir server/messages.js.
 const Messages = require("./messages.js");
 // Comptes joueurs + connexion Discord (2026-09-26) — voir server/accounts.js
@@ -389,6 +391,9 @@ function tick(league, now) {
   // (heure choisie par le créateur) dues, simulées sur des copies des équipes — indépendantes du
   // rattrapage officiel ci-dessus (rien en commun, ni saison ni play-offs).
   PrivateLeague.catchUpPrivateLeagues(Engine, league, now);
+  // Matchs amicaux (voir server/friendlies.js) : joués à l'heure choisie,
+  // sur les vrais joueurs (fatigue, blessures, progression).
+  Friendlies.catchUpFriendlies(Engine, league, now);
   // Histoire du club (voir Engine.archiveSeasonForTeam) : la saison est
   // archivée sur chaque club humain dès que le champion est connu —
   // idempotent, donc sans risque de la répéter à chaque requête.
@@ -634,7 +639,23 @@ function privateLeagueAction(fn) {
   };
 }
 
+// Matchs amicaux (voir server/friendlies.js) : même principe que les ligues
+// privées, chaque réponse renvoie la liste des amicaux de CE manager.
+// `notify` (invitation à un club humain) est traité par le gestionnaire
+// générique plus bas : message privé envoyé de la part du club qui invite.
+function friendlyAction(fn) {
+  return (team, teamIndex, league, body, now) => {
+    const result = fn(Engine, team, teamIndex, league, body, now);
+    if (!result.ok) return result;
+    return { ...result, friendlies: Friendlies.sanitizeFriendliesForViewer(league.friendlies, teamIndex) };
+  };
+}
+
 const ACTION_ROUTES = {
+  "/api/friendly/propose": friendlyAction(Friendlies.proposeFriendly),
+  "/api/friendly/respond": friendlyAction(Friendlies.respondFriendly),
+  "/api/friendly/cancel": friendlyAction(Friendlies.cancelFriendly),
+  "/api/friendly/lineup": friendlyAction(Friendlies.setFriendlyLineup),
   "/api/lineup": actions.setLineup,
   "/api/private-league/create": privateLeagueAction(PrivateLeague.createPrivateLeague),
   "/api/private-league/join": privateLeagueAction(PrivateLeague.joinPrivateLeague),
@@ -643,6 +664,7 @@ const ACTION_ROUTES = {
   "/api/tactics": actions.setTactics,
   "/api/training": actions.setTraining,
   "/api/plan": actions.setPlan,
+  "/api/tactic-presets": actions.setTacticPresets,
   "/api/market/list": actions.listPlayer,
   "/api/market/bid": actions.bidOnListing,
   "/api/market/coach-bid": actions.bidOnCoachListing,
@@ -664,7 +686,6 @@ const ACTION_ROUTES = {
   "/api/staff/video-session": actions.runVideoSession,
   // Scouting Pro (voir server/scouting.js et le grand commentaire de
   // Team.scoutingPremium/scoutingUnlocks dans engine.js) : les 2 routes
-  "/api/tactic-presets": actions.setTacticPresets,
   // GET (accès/rapport) sont gérées à part plus bas, comme /api/live-status
   // et /api/spectate ci-dessus (lecture pure, jamais de mutation).
   "/api/scouting/ad-ticket": actions.createScoutingAdTicket,
@@ -1119,6 +1140,8 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         delete payload.league.liveMatches;
         // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
         payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex);
+        // Matchs amicaux : seulement les siens, sans la compo de l'adversaire.
+        payload.league.friendlies = Friendlies.sanitizeFriendliesForViewer(payload.league.friendlies, ctx.teamIndex);
         sendJson(res, 200, payload);
         return;
       }
@@ -1253,6 +1276,19 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // ad-ticket/ad-complete/set-premium ci-dessus, gérées par
       // ACTION_ROUTES) — pas de persistContext nécessaire au-delà du tick
       // déjà fait par resolvePlayerContext/tick.
+      // Matchs amicaux : jours de repos communs avec un adversaire (et heures
+      // encore possibles), pour le formulaire de proposition.
+      if (route.pathname === "/api/friendly/days" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        const opp = Number(route.searchParams.get("opponent"));
+        if (!Number.isInteger(opp) || !ctx.league.teams[opp] || opp === ctx.teamIndex) { sendJson(res, 400, { ok: false, error: "Adversaire invalide." }); return; }
+        sendJson(res, 200, { ok: true, days: Friendlies.availableDays(Engine, ctx.league, ctx.teamIndex, opp, now) });
+        return;
+      }
+
       if (route.pathname === "/api/scouting/access" && req.method === "GET") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
@@ -1438,6 +1474,14 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // l'échéance suivante), mais on sauvegarde immédiatement pour ne
         // rien perdre si le process redémarre avant le prochain accès.
         await persistContext(ctx);
+        // Petit message privé de la part du manager qui agit (invitation à un
+        // match amical, voir server/friendlies.js) — ligue partagée seulement ;
+        // un échec (destinataire qui a bloqué l'expéditeur...) n'annule rien.
+        const notify = result.notify;
+        delete result.notify;
+        if (notify && ctx.isMulti) {
+          try { await messages.send(ctx.league, ctx.teamIndex, notify, now); } catch (e) { /* message facultatif */ }
+        }
         sendJson(res, 200, { ...result, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
         return;
       }

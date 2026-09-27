@@ -20,6 +20,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Tactiques : « Partir de » + plancher de connaissance tactique** —
+  retours utilisateur : "dans partir de : ajoute aussi les 5 derniers
+  matchs en proposition. enlève le prochain match" ; "ça reste des joueurs
+  pro, peut être pas besoin de descendre aussi bas, sinon on change jamais
+  de tactique".
+  - moteurbasket3.html (tqOrdersSources) : plus d'« Ordres du prochain
+    match » ; tactiques enregistrées + les 5 derniers matchs joués
+    (TQ_SOURCE_MATCHES). Team.ordersHistory (ordres complets) complété par
+    les matchs plus anciens reconstitués depuis matchLog
+    (tqMatchLogMatches/tqOrdersFromMatchLog : tactique jouée, cinq et
+    rotation d'après les minutes). Repli « Réglages actuels » si rien.
+  - engine.js + miroir html : TACTICAL_KNOWLEDGE_FLOOR = 40 (« Système
+    encore hésitant ») : la perte s'arrête à 40, sauvegardes plus basses
+    remontées au chargement. tactical_knowledge_test.js adapté (oracle +
+    2 valeurs de round-trip).
+  - Reste : commit + push.
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Onglet Tactiques (tactiques enregistrées +
   maîtrise)** — demande : "pouvoir programmer 3 tactiques max, qu'on pourra
   retrouver très facilement dans ordres et mettre en place en 1 seconde",
@@ -61,6 +79,43 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   NB : une autre session travaille en parallèle (Matchs amicaux, fichiers
   engine.js/moteurbasket3.html/server/index.js) — ne committer que mes
   hunks.
+
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Matchs amicaux** — demande : "on doit pouvoir les faire quand on veut sur
+  les jours de repos. on doit pouvoir faire jouer les jeunes. quand
+  quelqu'un propose un match amical, on devrait recevoir un petit message
+  privé." Choix validés : humains (invitation à accepter) + CPU (acceptent
+  tout de suite) ; jour de repos ET heure au choix (demi-heures 08h-23h30,
+  Paris) ; "comme un vrai match" (fatigue, blessures, minutes
+  d'entraînement) mais rien sur classement/économie/matchLog/MVP ; 1 amical
+  par jour par club.
+  - server/friendlies.js (nouveau) : League.friendlies (JSON brut, miroir
+    engine.js + moteurbasket3.html), jours de repos = jours sans
+    championnat/play-offs (si qualifié)/coupe (si encore en lice)/ligue
+    privée, pour les 2 clubs ; routes /api/friendly/propose|respond|cancel|
+    lineup + GET /api/friendly/days ; catchUpFriendlies au tick (joue à
+    l'heure, périme les invitations sans réponse, annule si un officiel
+    tombe le même jour) ; simulation dans une coquille d'équipe garnie des
+    VRAIS joueurs (pros + jeunes de la compo), entrée matchLog "friendly"
+    retirée après coup, blessures reportées dans le carnet du vrai club.
+  - Message privé : action → `notify` → messages.send dans le gestionnaire
+    générique de server/index.js (ligue partagée seulement).
+  - Client : onglet Matchs amicaux (remplace le placeholder), pastille des
+    invitations reçues, composition (Titulaire/Remplaçant/Tribune, section
+    Académie), feuille de match (jeunes « (J) »), lignes « Amical » dans le
+    Calendrier (hors bilan de saison), entrée du Guide.
+  - PAS de direct pour un amical (résultat + feuille de match à l'heure
+    prévue, comme les ligues privées) — à proposer si l'utilisateur le veut.
+  - Tests : server/friendlies_test.js, server/friendlies_http_test.js,
+    amicaux_ui_test.js ; tabs_test.js adapté. NB : les tests UI qui
+    affichent des heures doivent tourner avec TZ=Europe/Paris
+    (private_league_ui_test.js échoue sinon, sans rapport).
+  - Suite lancée : tous les tests server/ + ~20 tests UI liés verts.
+    `cup_ordres_planning_test.js` échoue ("Pas de <select> Ajouter un
+    remplaçant pour le poste Pivot") MAIS échoue aussi sur le HEAD sans ce
+    chantier (vérifié sur une copie git archive) → à investiguer côté
+    Ordres/Tactiques, sans rapport avec les amicaux.
+  - Reste : commit + push (main puis prod).
 
 - **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
   Barre latérale réorganisée** — proposition validée ("vas y fais comme

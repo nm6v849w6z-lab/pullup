@@ -142,7 +142,7 @@ function referenceTrajectory(matches) {
       } else {
         const s = prev < 0 ? prev - 1 : -1;
         streaks[cat][key] = s;
-        knowledge[cat][key] = Math.min(100, Math.max(0, knowledge[cat][key] - tacticalKnowledgeLossForStreak(-s)));
+        knowledge[cat][key] = Math.min(100, Math.max(40, knowledge[cat][key] - tacticalKnowledgeLossForStreak(-s))); // plancher TACTICAL_KNOWLEDGE_FLOOR (2026-09-27)
       }
     };
     categories.offense.forEach(k => applyOne("offense", k, playedOffense.has(k)));
@@ -424,7 +424,7 @@ function referenceTrajectory(matches) {
   }
 
   const reloaded = teamFromSave(saved);
-  if (reloaded.tacticalKnowledge.offense["Équilibrée"] !== 63 || reloaded.tacticalKnowledge.defense["Zone press"] !== 28
+  if (reloaded.tacticalKnowledge.offense["Équilibrée"] !== 63 || reloaded.tacticalKnowledge.defense["Zone press"] !== 40 /* 28 sauvegardé, remonté au plancher TACTICAL_KNOWLEDGE_FLOOR */
     || reloaded.tacticalKnowledge.rhythm["Rapide"] !== 91) {
     throw new Error("❌ teamFromSave devrait restaurer tacticalKnowledge, PAR OPTION, à l'identique.");
   }
@@ -496,8 +496,8 @@ function referenceTrajectory(matches) {
       throw new Error(`❌ Chaque priorité ACTUELLEMENT jouée (${p}) devrait hériter de l'ancienne valeur scalaire offense (72).`);
     }
   });
-  if (reloaded.tacticalKnowledge.defense["Zone press"] !== 30) {
-    throw new Error("❌ La défense ACTUELLEMENT jouée devrait hériter de l'ancienne valeur scalaire defense (30).");
+  if (reloaded.tacticalKnowledge.defense["Zone press"] !== 40) {
+    throw new Error("❌ La défense ACTUELLEMENT jouée devrait hériter de l'ancienne valeur scalaire defense (30, remontée au plancher de 40).");
   }
   if (reloaded.tacticalKnowledge.rhythm["Lent"] !== 88) {
     throw new Error("❌ Le rythme ACTUELLEMENT joué devrait hériter de l'ancienne valeur scalaire rhythm (88).");

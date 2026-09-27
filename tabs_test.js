@@ -25,7 +25,7 @@ function clickTab(key) {
 function visiblePageId() {
   const ids = ["prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
     "clubSection", "staffSection", "economieSection", "salleSection", "calendrierSection", "coupeSection",
-    "effectifSection", "humeurSection", "placeholderSection", "statsHebdoSection"];
+    "effectifSection", "humeurSection", "placeholderSection", "statsHebdoSection", "amicauxSection"];
   return ids.find(id => !doc.getElementById(id).classList.contains("hidden"));
 }
 
@@ -44,7 +44,7 @@ if (!clubBtnActive) throw new Error("❌ L'onglet Club devrait être actif par d
 // --- Chaque onglet affiche bien SA page (et une seule) — vérifie les 13 onglets. ---
 const TAB_TO_PAGE = {
   club: "clubSection", ligue: "standingsSection", coupe: "coupeSection",
-  calendrier: "calendrierSection", amicaux: "placeholderSection", economie: "economieSection",
+  calendrier: "calendrierSection", amicaux: "amicauxSection", economie: "economieSection",
   salle: "salleSection", staff: "staffSection", humeur: "humeurSection", ordres: "prepSection",
   effectif: "effectifSection", statshebdo: "statsHebdoSection", entrainement: "trainingSection",
 };
