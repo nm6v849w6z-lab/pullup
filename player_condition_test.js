@@ -65,7 +65,7 @@ const T0 = Date.UTC(2026, 8, 21);
   player.conditionUpdatedAt = now;
   if (player.condition !== 75) throw new Error(`❌ Après un match de 40 min, attendu 75, obtenu ${player.condition}.`);
 
-  now += CONDITION_DAY_MS;
+  now += 2 * CONDITION_DAY_MS; // match le jour J, repos J+1, match J+2 (jours civils, voir conditionRestDays)
   let recovered = currentCondition(player, now, CONDITION_RECOVERY_PER_DAY_TRAINED);
   if (recovered !== 90) throw new Error(`❌ Après 1 jour de repos (entraînement récupération), attendu 90, obtenu ${recovered}.`);
   player.condition = recovered;
@@ -75,7 +75,7 @@ const T0 = Date.UTC(2026, 8, 21);
   player.conditionUpdatedAt = now;
   if (player.condition !== 72) throw new Error(`❌ Après un match de 30 min, attendu 72, obtenu ${player.condition}.`);
 
-  now += CONDITION_DAY_MS;
+  now += 2 * CONDITION_DAY_MS;
   recovered = currentCondition(player, now, CONDITION_RECOVERY_PER_DAY_TRAINED);
   if (recovered !== 87) throw new Error(`❌ Après 1 jour de repos (entraînement récupération), attendu 87, obtenu ${recovered}.`);
 
@@ -94,7 +94,7 @@ const T0 = Date.UTC(2026, 8, 21);
   player.condition = player.condition - conditionLossForMinutes(40);
   player.conditionUpdatedAt = now;
 
-  now += CONDITION_DAY_MS;
+  now += 2 * CONDITION_DAY_MS;
   let recovered = currentCondition(player, now); // taux par défaut = CONDITION_RECOVERY_PER_DAY
   const expectedAfterOneDay = Math.min(100, 75 + CONDITION_RECOVERY_PER_DAY);
   if (recovered !== expectedAfterOneDay) {
@@ -106,7 +106,7 @@ const T0 = Date.UTC(2026, 8, 21);
   player.condition = player.condition - conditionLossForMinutes(30);
   player.conditionUpdatedAt = now;
 
-  now += CONDITION_DAY_MS;
+  now += 2 * CONDITION_DAY_MS;
   recovered = currentCondition(player, now);
   const expectedAfterTwoDays = Math.min(100, player.condition + CONDITION_RECOVERY_PER_DAY);
   if (recovered !== expectedAfterTwoDays) {
@@ -127,7 +127,16 @@ const T0 = Date.UTC(2026, 8, 21);
   const halfDay = currentCondition({ condition: 50, conditionUpdatedAt: now - CONDITION_DAY_MS / 2 }, now);
   if (halfDay !== 50) throw new Error(`❌ Moins d'un jour écoulé ne devrait donner aucune récupération, obtenu ${halfDay}.`);
 
-  console.log("✅ Plafond à 100 respecté, et aucune récupération avant un jour plein écoulé.");
+  // Jours CIVILS (Paris) entièrement écoulés sans jouer (retour utilisateur,
+  // 2026-09-27 : "la forme remonte par 10 uniquement s'ils n'ont pas joué") :
+  // match mardi 20h puis jeudi 20h → seul le mercredi compte (+10, pas +20) ;
+  // mardi puis samedi → mercredi, jeudi, vendredi (+30).
+  const tue = Date.UTC(2026, 8, 29, 18), thu = Date.UTC(2026, 9, 1, 18), sat = Date.UTC(2026, 9, 3, 18);
+  const wedEvening = Date.UTC(2026, 8, 30, 21);
+  if (currentCondition({ condition: 50, conditionUpdatedAt: tue }, thu) !== 60) throw new Error("❌ Mardi → jeudi : +10 attendu (mercredi seul).");
+  if (currentCondition({ condition: 50, conditionUpdatedAt: tue }, sat) !== 80) throw new Error("❌ Mardi → samedi : +30 attendu.");
+  if (currentCondition({ condition: 50, conditionUpdatedAt: tue }, wedEvening) !== 50) throw new Error("❌ Le mercredi n'est crédité qu'une fois terminé.");
+  console.log("✅ Plafond à 100 respecté ; récupération par jour civil entièrement écoulé sans jouer (mardi → jeudi = +10, mardi → samedi = +30).");
 })();
 
 // ---------------------------------------------------------------------
@@ -201,7 +210,7 @@ const T0 = Date.UTC(2026, 8, 21);
   p.condition = 60;
   p.conditionUpdatedAt = T0;
 
-  const twoDaysLater = T0 + 2 * CONDITION_DAY_MS;
+  const twoDaysLater = T0 + 3 * CONDITION_DAY_MS; // 2 jours civils pleins entre les deux
   p.resetForMatch(twoDaysLater);
   const expected = Math.min(100, 60 + 2 * CONDITION_RECOVERY_PER_DAY);
   if (p.matchCondition !== expected) {
@@ -226,7 +235,7 @@ const T0 = Date.UTC(2026, 8, 21);
   p.condition = 60;
   p.conditionUpdatedAt = T0;
 
-  const matchTime = T0 + 2 * CONDITION_DAY_MS;
+  const matchTime = T0 + 3 * CONDITION_DAY_MS; // 2 jours civils pleins sans jouer
   // Appel DIRECT sur le joueur (pas via Team.resetForMatch) : utilise le
   // taux par défaut CONDITION_RECOVERY_PER_DAY (voir Player.resetForMatch).
   const matchConditionBefore = Math.min(100, 60 + 2 * CONDITION_RECOVERY_PER_DAY);

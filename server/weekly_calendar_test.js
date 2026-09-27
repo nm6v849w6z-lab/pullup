@@ -387,4 +387,71 @@ function paris(ms) {
   console.log(`✅ Récupération : +${bonus} par jour de repos écoulé, une fois, jamais le jour du match (taux continu ${E.CONDITION_RECOVERY_PER_DAY}/jour).`);
 })();
 
+// ---------------------------------------------------------------------
+// 12) Jour d'amical (retour utilisateur, 2026-09-27) : pas un jour de repos,
+//     donc ni entraînement collectif tactique ni récupération ce jour-là ;
+//     l'aperçu de la page Entraînement ne compte pas un jour de match.
+// ---------------------------------------------------------------------
+(function testFriendlyDayIsNotRestDay() {
+  const lg = E.generateMultiManagerLeague(["A"], 1, Date.UTC(2026, 8, 27, 9), C.dailyAnchoredCalendarConfig());
+  const team = lg.teams.find(t => t.isHuman);
+  const target = { category: "defense", value: Object.keys(E.DEFENSES)[1] };
+  team.trainedTactics = target;
+  team.collectiveTraining = "tactique";
+  team.updateTacticalKnowledge(Date.UTC(2026, 8, 29, 18)); // match mardi
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 8, 30, 8)); // mercredi : amical à 15h
+  team.markFriendlyDay(E.parisCalendarDayIndex(Date.UTC(2026, 8, 30, 13)));
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 8)); // jeudi
+  if (team.daysTrainedForTarget(target, E.parisCalendarDayIndex(Date.UTC(2026, 9, 1, 18))) !== 0) throw new Error("❌ Un jour d'amical ne doit pas compter comme jour d'entraînement tactique.");
+  team.collectiveTraining = "recuperation";
+  team.collectiveTrainingLog.forEach(e => { e.collectiveTraining = "recuperation"; });
+  team.players.forEach(p => { p.condition = 50; });
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 9));
+  if (team.players[0].condition !== 50) throw new Error("❌ Un jour d'amical ne doit pas donner le bonus de récupération.");
+  const back = E.teamFromSave(JSON.parse(JSON.stringify(E.serializeTeam(team))));
+  if (!back.isFriendlyDay(E.parisCalendarDayIndex(Date.UTC(2026, 8, 30, 13)))) throw new Error("❌ Les jours d'amical doivent survivre à la sauvegarde.");
+  const fsrc = fs.readFileSync(path.join(__dirname, "friendlies.js"), "utf-8");
+  if (!/markFriendlyDay\(friendlyDay\)/.test(fsrc)) throw new Error("❌ server/friendlies.js doit marquer le jour d'amical sur les vrais clubs.");
+  const html = fs.readFileSync(path.join(__dirname, "..", "moteurbasket3.html"), "utf-8");
+  if (!html.includes("daysTrainedForTarget(teamA.trainedTactics, matchToday ? todayIdx : null)")) throw new Error("❌ L'aperçu de la page Entraînement doit exclure un jour de match.");
+  console.log("✅ Jour d'amical : ni tactique ni récupération collective ; aperçu sans le jour de match.");
+})();
+
+// ---------------------------------------------------------------------
+// 13) Connaissance tactique en amical (retour utilisateur, 2026-09-27) :
+//     gain d'un match × part des minutes pondérées par le rôle (Titulaire 1,
+//     rotation 0,5, réserviste/jeune 0) ; jamais de perte ni de séries.
+// ---------------------------------------------------------------------
+(function testFriendlyTacticalGainByRole() {
+  const lg = E.generateMultiManagerLeague(["A"], 1, Date.UTC(2026, 8, 27, 9), C.dailyAnchoredCalendarConfig());
+  const team = lg.teams.find(t => t.isHuman);
+  const starters = Object.values(team.lineup.starters).filter(id => id != null);
+  const rotation = team.players.map(p => p.id).filter(id => !starters.includes(id) && (team.lineup.backupPositions[id] || []).length);
+  const reserve = team.players.map(p => p.id).find(id => !starters.includes(id) && !(team.lineup.backupPositions[id] || []).length);
+  if (starters.length !== 5 || !rotation.length) throw new Error("❌ (setup) compo attendue avec 5 titulaires et des remplaçants.");
+  const def = team.defense;
+  const base = E.tacticalKnowledgeGainForStreak(1);
+  const run = (secs) => {
+    team.tacticalKnowledge.defense[def] = 50;
+    team.tacticalKnowledgeStreaks.defense[def] = 0;
+    const other = Object.keys(E.DEFENSES).find(d => d !== def);
+    team.tacticalKnowledge.defense[other] = 50;
+    const share = team.gainTacticalKnowledgeFromFriendly(secs);
+    if (team.tacticalKnowledge.defense[other] !== 50) throw new Error("❌ Un amical ne doit jamais faire perdre de maîtrise.");
+    if (team.tacticalKnowledgeStreaks.defense[def] !== 0) throw new Error("❌ Un amical ne doit pas toucher aux séries.");
+    return { share, gain: team.tacticalKnowledge.defense[def] - 50 };
+  };
+  let r = run(Object.fromEntries(starters.map(id => [id, 40 * 60])));
+  if (r.share !== 1 || Math.abs(r.gain - base) > 0.05) throw new Error(`❌ Cinq titulaires 40 min : gain d'un match attendu (${base}), obtenu ${r.gain}.`);
+  const mixed = Object.fromEntries(starters.map(id => [id, 30 * 60]));
+  mixed[rotation[0]] = 50 * 60;
+  r = run(mixed);
+  if (Math.abs(r.share - 0.875) > 1e-9) throw new Error(`❌ 150 min titulaires + 50 min rotation : part 87,5 % attendue, obtenu ${r.share}.`);
+  r = run({ [reserve]: 100 * 60, youth1: 100 * 60 });
+  if (r.share !== 0 || r.gain !== 0) throw new Error("❌ Réservistes et jeunes seulement : aucun gain.");
+  const fsrc = fs.readFileSync(path.join(__dirname, "friendlies.js"), "utf-8");
+  if (!fsrc.includes("t.gainTacticalKnowledgeFromFriendly(secs)")) throw new Error("❌ server/friendlies.js doit appliquer le gain tactique sur les vrais clubs.");
+  console.log("✅ Amical : gain tactique × part des minutes pondérées par le rôle (100 % / 87,5 % / 0 %), sans perte.");
+})();
+
 console.log("\n🏁 Tous les tests du rythme hebdomadaire sont passés.");

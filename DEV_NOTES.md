@@ -20,6 +20,29 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) — Forme : +10 par jour civil sans
+  jouer ; amical = pas de jour de repos** — retours utilisateur : "la forme
+  remonte par 10 uniquement s'ils n'ont pas joué" ("c'était le but qu'un
+  joueur fatigue bien et qu'il ne puisse pas être titulaire à 35 min sur 3
+  matchs par semaine sans conséquence") ; un amical "empêche de faire
+  l'entraînement collectif tactique ou de récupération".
+  - engine.js (+ miroir) : conditionRestDays/currentCondition = jours civils
+    (Paris) entièrement écoulés depuis le jour du dernier match joué, ce
+    jour et aujourd'hui exclus (mardi → jeudi = +10, avant +20).
+    Team.friendlyDayIndexes/markFriendlyDay/isFriendlyDay (sauvegardé),
+    exclus de daysTrainedForTarget et applyRestDayRecovery ;
+    server/friendlies.js marque le jour sur les vrais clubs.
+  - Page Entraînement : l'aperçu « jours banqués » ne compte plus
+    aujourd'hui si un match officiel ou un amical accepté a lieu aujourd'hui.
+  - Tests : player_condition_test.js adapté, weekly_calendar_test.js
+    (test 12) ; server/*_test.js + 12 tests liés verts. Reste : push.
+  - Amical → connaissance tactique (validé : "oui c'est top comme ça") :
+    Team.gainTacticalKnowledgeFromFriendly — gain d'un match × part des
+    minutes pondérées par le rôle (Titulaire 1, Joueur de rotation 0,5,
+    Réserviste/jeune 0, FRIENDLY_TACTICAL_ROLE_WEIGHTS), sans perte ni
+    séries, jours d'entraînement accumulés intacts. « banqué » remplacé par
+    « jours d'entraînement tactique depuis le dernier match » (+ en.js).
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) —
   Entraînement : jauge de forme moyenne sous
   « Travailler la récupération » + bilan de la semaine dernière en bas** —

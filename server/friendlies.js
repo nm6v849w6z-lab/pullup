@@ -422,6 +422,18 @@ function simulateFriendly(Engine, league, f, now) {
     Engine.recordMatchStatsForTeam(home, -1, "friendly", at, null, tacticsUsed.home);
     Engine.recordMatchStatsForTeam(away, -1, "friendly", at, null, tacticsUsed.away);
     players.forEach(p => { if (Array.isArray(p.matchLog)) p.matchLog = p.matchLog.filter(e => e.competition !== "friendly"); });
+    // Retour utilisateur (2026-09-27) : un amical "empêche de faire
+    // l'entraînement collectif tactique ou de récupération" ce jour-là (jour
+    // marqué) et fait gagner un peu de connaissance tactique selon les
+    // minutes des joueurs habituels (rôles) — sur les VRAIS clubs, la
+    // coquille ci-dessus est jetée.
+    const friendlyDay = Engine.parisCalendarDayIndex(at);
+    [[homeReal, home], [awayReal, away]].forEach(([t, shell]) => {
+      if (typeof t.markFriendlyDay === "function") t.markFriendlyDay(friendlyDay);
+      const secs = {};
+      shell.players.forEach(p => { if (p.secondsPlayed > 0) secs[p.id] = p.secondsPlayed; });
+      if (typeof t.gainTacticalKnowledgeFromFriendly === "function") t.gainTacticalKnowledgeFromFriendly(secs);
+    });
     players.forEach(p => {
       if (p.injuryUntil && p.injuryUntil !== injuredBefore.get(p.id)) {
         res.injuries.push({ teamIdx: home.players.includes(p) ? f.homeIdx : f.awayIdx, playerId: p.id, name: p.name });

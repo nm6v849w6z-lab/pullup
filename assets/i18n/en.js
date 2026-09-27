@@ -246,7 +246,7 @@ window.HM_I18N_EN = {
   "{0} h {1} min": "{0} h {1} min",
   "{0} joueur{1} · {2} hausse{3}{4}": "{0} player{1} · {2} rise{3}{4}",
   "{0} jour{1}": "{0} day{1}",
-  "{0} jour{1} de repos déjà banqué{2} sur ce choix depuis le dernier match (+{3} au prochain match où cette option est jouée).": "{0} day{1} of rest already banked{2} on this choice since the last match (+{3} at the next match where this option is used).",
+  "{0} jour{1} d'entraînement tactique sur ce choix depuis le dernier match (+{2} au prochain match où cette option est jouée).": "{0} day{1} of tactical training on this choice since the last match (+{2} at the next match where this option is used).",
   "{0} journées au programme. {1} ouvre {2} face à {3} {4}.": "{0} matchdays scheduled. {1} opens {2} against {3} {4}.",
   "{0} jours": "{0} days",
   "{0} les {1} caractéristiques {2}": "{0} the {1} attributes {2}",

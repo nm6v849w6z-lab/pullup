@@ -2552,8 +2552,22 @@ const CONDITION_RECOVERY_PER_DAY_TRAINED = 15;
 // coup d'envoi d'un match (snapshot, voir Player.resetForMatch) puis juste
 // après (perte selon les minutes jouées, voir recordMatchStatsForTeam plus
 // bas).
+// Jours de repos = jours CIVILS (Paris) entièrement écoulés depuis le jour
+// du dernier match joué, ce jour-là exclu, aujourd'hui exclu tant qu'il
+// n'est pas terminé (retour utilisateur, 2026-09-27 : "la forme remonte
+// par 10 uniquement s'ils n'ont pas joué" — "c'était le but qu'un joueur
+// fatigue bien et qu'il ne puisse pas être titulaire à 35 min sur 3 matchs
+// par semaine sans conséquence"). Avant : tranches de 24 h depuis la fin du
+// match, soit +20 entre un match le mardi et un le jeudi ; désormais +10
+// (le mercredi seulement). Un joueur qui ne joue pas n'a pas de nouveau
+// conditionUpdatedAt : tous ses jours comptent, jours de match compris.
+function conditionRestDays(player, now = Date.now()) {
+  const from = parisCalendarDayIndex(player.conditionUpdatedAt || now);
+  const to = parisCalendarDayIndex(now);
+  return Math.max(0, Math.round((to - from) / CONDITION_DAY_MS) - 1);
+}
 function currentCondition(player, now = Date.now(), recoveryPerDay = CONDITION_RECOVERY_PER_DAY) {
-  const daysRested = Math.floor((now - (player.conditionUpdatedAt || now)) / CONDITION_DAY_MS);
+  const daysRested = conditionRestDays(player, now);
   if (daysRested <= 0) return player.condition;
   return clamp(player.condition + daysRested * recoveryPerDay, 0, 100);
 }
@@ -3510,6 +3524,9 @@ function tacticalKnowledgeLossForStreak(awayStreak) {
 // version de cette fonctionnalité ("l'entrainement augmente la
 // connaissance tactique", littéralement).
 const TACTICAL_KNOWLEDGE_DAILY_GAIN = 4;
+// Amical : poids d'une minute jouée selon le rôle du joueur (voir
+// Team.gainTacticalKnowledgeFromFriendly).
+const FRIENDLY_TACTICAL_ROLE_WEIGHTS = { starter: 1, rotation: 0.5, reserve: 0 };
 
 // Construit la forme imbriquée par défaut de Team.tacticalKnowledge/
 // tacticalKnowledgeStreaks (une entrée par option possible des 3
@@ -4095,6 +4112,10 @@ class Team {
     // s'applique littéralement, jamais un historique plus ancien. `null`
     // tant qu'aucun match n'a encore été joué.
     this.tacticsCycleStartDayIndex = null;
+    // Jours civils (parisCalendarDayIndex) où le club a joué un AMICAL (voir
+    // Team.markFriendlyDay) : pas des jours de repos, donc ni entraînement
+    // collectif tactique ni récupération ces jours-là.
+    this.friendlyDayIndexes = [];
 
     // Staff : l'entraîneur n'a d'effet QUE sur la vitesse d'entraînement
     // (jamais sur les matchs). Pas d'entraîneur par défaut.
@@ -4870,12 +4891,66 @@ class Team {
   // syncCollectiveTrainingLog, elle-même appelée juste avant chaque match
   // (voir Team.resetForMatch) pour que la forme au coup d'envoi en tienne
   // compte.
+  // Match amical (retour utilisateur, 2026-09-27 : "un amical permet
+  // d'engranger de la connaissance tactique, mais empêche de faire
+  // l'entraînement collectif tactique ou de récupération") : le jour de
+  // l'amical n'est plus un jour de repos (voir daysTrainedForTarget/
+  // applyRestDayRecovery). Appelée par server/friendlies.js sur le VRAI club.
+  markFriendlyDay(dayIndex) {
+    if (!Array.isArray(this.friendlyDayIndexes)) this.friendlyDayIndexes = [];
+    if (!this.friendlyDayIndexes.includes(dayIndex)) this.friendlyDayIndexes.push(dayIndex);
+    if (this.friendlyDayIndexes.length > 30) this.friendlyDayIndexes = this.friendlyDayIndexes.slice(-30);
+  }
+  isFriendlyDay(dayIndex) {
+    return Array.isArray(this.friendlyDayIndexes) && this.friendlyDayIndexes.includes(dayIndex);
+  }
+  // Connaissance tactique gagnée en AMICAL (retour utilisateur, 2026-09-27 :
+  // "si l'amical ne sert qu'à faire jouer les jeunes, c'est bizarre que ça
+  // impacte fortement la tactique pour toute l'équipe" → gain réduit selon
+  // les minutes des joueurs habituels, "base-toi sur les rôles des
+  // joueurs") : chaque minute jouée pèse selon le rôle du joueur dans la
+  // compo officielle actuelle — Titulaire 1, Joueur de rotation 0,5,
+  // Réserviste ou jeune de l'académie 0 (FRIENDLY_TACTICAL_ROLE_WEIGHTS).
+  // Pour chaque option jouée : gain d'un match (tacticalKnowledgeGainForStreak,
+  // comme au prochain match de sa série) × cette part. Jamais de perte pour
+  // les options non jouées, séries et jours d'entraînement collectif
+  // accumulés inchangés (réservés au prochain match officiel).
+  // `secondsByPlayerId` : secondes jouées dans l'amical par joueur (pros et
+  // jeunes). Renvoie la part retenue (0 à 1).
+  gainTacticalKnowledgeFromFriendly(secondsByPlayerId) {
+    let total = 0, weighted = 0;
+    const backups = (this.lineup && this.lineup.backupPositions) || {};
+    Object.entries(secondsByPlayerId || {}).forEach(([id, secs]) => {
+      if (!(secs > 0)) return;
+      total += secs;
+      const p = (this.players || []).find(pl => String(pl.id) === String(id));
+      if (!p) return; // jeune de l'académie : poids 0
+      const w = this.starterPosition(p.id) ? FRIENDLY_TACTICAL_ROLE_WEIGHTS.starter
+        : ((backups[p.id] || []).length ? FRIENDLY_TACTICAL_ROLE_WEIGHTS.rotation : FRIENDLY_TACTICAL_ROLE_WEIGHTS.reserve);
+      weighted += secs * w;
+    });
+    const share = total > 0 ? clamp(weighted / total, 0, 1) : 0;
+    if (share <= 0) return 0;
+    const apply = (cat, key) => {
+      const knowledge = this.tacticalKnowledge && this.tacticalKnowledge[cat];
+      if (!knowledge || !(key in knowledge)) return;
+      const streak = ((this.tacticalKnowledgeStreaks || {})[cat] || {})[key] || 0;
+      const gain = tacticalKnowledgeGainForStreak(streak > 0 ? streak + 1 : 1) * share;
+      knowledge[key] = clamp(Math.round((knowledge[key] + gain) * 10) / 10, 0, 100);
+    };
+    new Set(this.offensivePriorities || []).forEach(p => apply("offense", p));
+    apply("defense", this.defense);
+    apply("rhythm", this.rhythm);
+    return share;
+  }
+
   applyRestDayRecovery(todayIndex) {
     const bonus = CONDITION_RECOVERY_PER_DAY_TRAINED - CONDITION_RECOVERY_PER_DAY;
     const cycleStart = this.tacticsCycleStartDayIndex;
     (this.collectiveTrainingLog || []).forEach(e => {
       if (e.recoveryApplied || e.dayIndex >= todayIndex) return;
       if (cycleStart != null && e.dayIndex <= cycleStart) return;
+      if (this.isFriendlyDay(e.dayIndex)) return;
       if (e.collectiveTraining !== "recuperation") return;
       e.recoveryApplied = true;
       (this.players || []).forEach(p => { p.condition = clamp(p.condition + bonus, 0, 100); });
@@ -4894,6 +4969,7 @@ class Team {
     return this.collectiveTrainingLog.filter(e => {
       if (cycleStart != null && e.dayIndex <= cycleStart) return false;
       if (matchDayIndex != null && e.dayIndex >= matchDayIndex) return false;
+      if (this.isFriendlyDay(e.dayIndex)) return false;
       return e.collectiveTraining === "tactique" && e.trainedTactics
         && e.trainedTactics.category === target.category && e.trainedTactics.value === target.value;
     }).length;
@@ -11076,6 +11152,7 @@ function serializeTeam(team) {
     // Team.tacticsCycleStartDayIndex ci-dessus) : DOIT survivre au
     // rechargement, même raisonnement que collectiveTrainingLog ci-dessus.
     tacticsCycleStartDayIndex: typeof team.tacticsCycleStartDayIndex === "number" ? team.tacticsCycleStartDayIndex : null,
+    friendlyDayIndexes: Array.isArray(team.friendlyDayIndexes) ? team.friendlyDayIndexes.slice() : [],
     // Interviews en attente (voir Team.pendingInterviews/applyMoraleForResult) :
     // même forme de persistance que pendingYouthDecisions plus bas, simple
     // copie superficielle de chaque entrée (objets plats, jamais de
@@ -11633,6 +11710,7 @@ function teamFromSave(data) {
       }))
     : [];
   team.tacticsCycleStartDayIndex = typeof data.tacticsCycleStartDayIndex === "number" ? data.tacticsCycleStartDayIndex : null;
+  team.friendlyDayIndexes = Array.isArray(data.friendlyDayIndexes) ? data.friendlyDayIndexes.filter(d => typeof d === "number") : [];
   // Interviews en attente (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde [] (déjà posé par le constructeur).
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
@@ -13357,7 +13435,7 @@ return {
   MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars,
   // Forme physique (voir le grand commentaire au-dessus de CONDITION_STATES) :
   CONDITION_STATES, conditionStateFor, currentCondition, conditionLossForMinutes,
-  CONDITION_DAY_MS, CONDITION_RECOVERY_PER_DAY, CONDITION_RECOVERY_PER_DAY_TRAINED,
+  CONDITION_DAY_MS, CONDITION_RECOVERY_PER_DAY, CONDITION_RECOVERY_PER_DAY_TRAINED, conditionRestDays,
   // Blessures persistantes (voir le grand commentaire au-dessus d'INJURY_TYPES) :
   INJURY_TYPES, rollInjury, isCurrentlyInjured, injuryDaysRemaining,
   // Motivation du joueur (voir le commentaire de motivationLabel au-dessus
@@ -13383,7 +13461,7 @@ return {
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
   TACTIC_PRESETS_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
-  TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
+  FRIENDLY_TACTICAL_ROLE_WEIGHTS, TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
   CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,
