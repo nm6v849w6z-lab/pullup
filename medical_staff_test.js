@@ -201,7 +201,9 @@ for (const role of ["doctor", "physio"]) {
     team.collectiveTraining = null;
     if (team.conditionRecoveryPerDay() !== CONDITION_RECOVERY_PER_DAY + PHYSIO_RECOVERY_BONUS_BY_LEVEL[lv]) throw new Error(`❌ Kiné ${lv}★ : récupération ${team.conditionRecoveryPerDay()}.`);
     team.collectiveTraining = "recuperation";
-    if (team.conditionRecoveryPerDay() !== CONDITION_RECOVERY_PER_DAY_TRAINED + PHYSIO_RECOVERY_BONUS_BY_LEVEL[lv]) throw new Error(`❌ Kiné ${lv}★ + entraînement récupération : ${team.conditionRecoveryPerDay()}.`);
+    // « Récupération » ne touche plus le taux continu (crédité jour de repos
+    // par jour de repos, voir Team.applyRestDayRecovery) : kiné seul.
+    if (team.conditionRecoveryPerDay() !== CONDITION_RECOVERY_PER_DAY + PHYSIO_RECOVERY_BONUS_BY_LEVEL[lv]) throw new Error(`❌ Kiné ${lv}★ + entraînement récupération : ${team.conditionRecoveryPerDay()}.`);
     if (team.physioInjuryRiskMult() !== PHYSIO_INJURY_RISK_MULT_BY_LEVEL[lv]) throw new Error(`❌ Kiné ${lv}★ : risque ×${team.physioInjuryRiskMult()}.`);
   }
   team.collectiveTraining = null;

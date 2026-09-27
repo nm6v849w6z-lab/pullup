@@ -20,6 +20,29 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) — Play-offs mardi/jeudi/samedi +
+  Récupération seulement les jours de repos** — retours utilisateur : "les
+  PO doivent se jouer le mardi jeudi et samedi", "la coupe sera tjrs
+  terminée pour les PO car max 512 équipes", bonus « Récupération »
+  "uniquement les jours de repos".
+  - Calendrier (4 copies identiques : server/calendar.js, engine.js,
+    moteurbasket3.html, live_2d_demo.html) : journées >= totalRounds (PO)
+    = mardi/jeudi/samedi à partir du mardi qui suit la saison régulière
+    (WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS, paramètre poFromRound) → 2 semaines
+    de PO max, saison = 11 semaines pile. scheduledTimeForLeagueRound
+    (serveur + page) passe league.totalRounds.
+  - Récupération : taux continu = 10/jour (+ kiné) quoi qu'il arrive ; +5 à
+    tout l'effectif une fois par jour de repos ÉCOULÉ passé en
+    « récupération » (Team.applyRestDayRecovery, entrée du journal marquée
+    recoveryApplied, sauvegardée), appelée par syncCollectiveTrainingLog,
+    elle-même appelée juste avant chaque match (Team.resetForMatch, équipes
+    humaines) ; coquille d'amical neutralisée (server/friendlies.js).
+  - Tests : server/weekly_calendar_test.js (tests 10 et 11 + saison = 11
+    lundis pile), medical_staff_test.js adapté ; tous les server/*_test.js
+    + ~18 tests UI liés verts. Reste : push.
+  - Question ouverte : un jour d'amical compte-t-il comme jour de repos pour
+    l'entraînement collectif ? (aujourd'hui oui).
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) —
   Scouting Pro : « Appliquer à mes ordres » ouvre les Ordres du match
   contre cet adversaire** — retour utilisateur (capture Santo Aleixo) : "il

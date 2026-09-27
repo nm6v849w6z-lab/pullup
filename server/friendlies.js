@@ -201,6 +201,10 @@ function validateLineup(team, raw) {
 function buildFriendlyTeam(Engine, real, lineup, at) {
   const shell = Engine.teamFromSave(Engine.serializeTeam(real));
   shell.recordInjury = (entry) => { if (typeof real.recordInjury === "function") real.recordInjury(entry); };
+  // Journal de l'entraînement collectif : tenu par le VRAI club seulement —
+  // sur la coquille, les jours « Récupération » seraient crédités une
+  // seconde fois aux vrais joueurs (voir Team.applyRestDayRecovery).
+  shell.syncCollectiveTrainingLog = () => {};
   if (!lineup) {
     shell.players = real.players.slice();
     return shell;

@@ -68,6 +68,7 @@ function paris(ms) {
     const start = lib.weeklyRhythmCalendarStartAt(created);
     const out = [start];
     for (let r = 0; r < 24; r++) out.push(lib.weeklyRhythmScheduledTimeForChampionshipRound(start, r));
+    for (let r = 0; r < 24; r++) out.push(lib.weeklyRhythmScheduledTimeForChampionshipRound(start, r, 18));
     for (let k = 0; k < 13; k++) out.push(lib.weeklyRhythmScheduledTimeForCupRound(start, k));
     for (let k = 1; k < 14; k++) out.push(lib.weeklyRhythmEconomyTickAt(start, k));
     return out.join(",");
@@ -154,9 +155,9 @@ function paris(ms) {
   // Salaires : une ligne "Salaire du staff" par mise à jour du lundi, jamais ailleurs.
   const staffLines = staffPayments.length;
   if (staffLines !== trainings.length) throw new Error(`❌ ${staffLines} paies de l'entraîneur pour ${trainings.length} mises à jour du lundi.`);
-  // Une mise à jour par semaine : 9 semaines de saison régulière + 2 (ou 3
-  // si les séries vont au 3e match) semaines de play-offs = 11 (ou 12).
-  if (trainings.length < 11 || trainings.length > 12) throw new Error(`❌ ${trainings.length} mises à jour sur la saison, attendu 11 (12 si les séries vont au bout).`);
+  // Une mise à jour par semaine : 9 semaines de saison régulière + 2
+  // semaines de play-offs (mardi/jeudi/samedi) = 11, toujours.
+  if (trainings.length !== 11) throw new Error(`❌ ${trainings.length} mises à jour sur la saison, attendu 11.`);
   const last = trainings[trainings.length - 1];
   if (!last.ev.seasonEnd || trainings.slice(0, -1).some(x => x.ev.seasonEnd)) throw new Error("❌ Seule la dernière mise à jour (lundi après la finale) doit clore la saison.");
   const finalAt = log.filter(x => x.ev.type === "playoff-match").pop().t;
@@ -173,7 +174,7 @@ function paris(ms) {
   if (!playoffs.length) throw new Error("❌ Les play-offs devraient être joués.");
   playoffs.forEach(({ ev }) => {
     const d = paris(C.scheduledTimeForLeagueRound(lg, ev.round));
-    if (!(d.weekday === "Tue" || d.weekday === "Sat")) throw new Error(`❌ Match de play-offs ${ev.round} un ${d.weekday}, attendu mardi ou samedi.`);
+    if (!(d.weekday === "Tue" || d.weekday === "Thu" || d.weekday === "Sat")) throw new Error(`❌ Match de play-offs ${ev.round} un ${d.weekday}, attendu mardi, jeudi ou samedi.`);
   });
   const order = log.map(x => x.ev.type);
   const regEnd = order.indexOf("regular-season-end");
@@ -184,7 +185,7 @@ function paris(ms) {
   if (agesAtChampion.some((a, i) => ages0[i] != null && a !== ages0[i])) throw new Error("❌ Personne ne doit vieillir avant la fin des play-offs.");
   const aged = user.players.filter((p, i) => ages0[i] != null && p.age === ages0[i] + 1).length;
   if (aged !== user.players.filter((_, i) => ages0[i] != null).length) throw new Error("❌ Tous les joueurs d'origine auraient dû prendre exactement un an.");
-  console.log(`✅ Saison complète : ${matches.length} journées (mar/sam), ${cups.length} tours de coupe (jeudi), ${playoffs.length} matchs de play-offs (mar/sam), ${trainings.length} mises à jour du lundi, vieillissement une fois.`);
+  console.log(`✅ Saison complète : ${matches.length} journées (mar/sam), ${cups.length} tours de coupe (jeudi), ${playoffs.length} matchs de play-offs (mar/jeu/sam), ${trainings.length} mises à jour du lundi, vieillissement une fois.`);
 })();
 
 // ---------------------------------------------------------------------
@@ -316,6 +317,74 @@ function paris(ms) {
   const gain = team.tacticalKnowledge.defense[target.value] - before;
   if (Math.abs(gain - Math.min(expectedGain, 100 - before)) > 1e-9) throw new Error(`❌ Seul le mercredi (repos) doit compter : gain ${gain}, attendu ${expectedGain}.`);
   console.log("✅ Entraînement collectif : le jour du match ne compte pas, seuls les jours de repos.");
+})();
+
+// ---------------------------------------------------------------------
+// 10) Play-offs mardi/jeudi/samedi (retour utilisateur, 2026-09-27) : les
+//     6 matchs possibles (demies puis finale au 3e match) tiennent dans les
+//     2 semaines qui suivent la saison régulière, y compris pour une ligue
+//     basculée en pleine saison.
+// ---------------------------------------------------------------------
+(function testPlayoffDays() {
+  const start = C.weeklyRhythmCalendarStartAt(Date.UTC(2026, 8, 27, 9));
+  const lastReg = C.weeklyRhythmScheduledTimeForChampionshipRound(start, 17, 18);
+  const want = ["Tue", "Thu", "Sat", "Tue", "Thu", "Sat"];
+  const week = 7 * 24 * 3600 * 1000;
+  for (let i = 0; i < 6; i++) {
+    const at = C.weeklyRhythmScheduledTimeForChampionshipRound(start, 18 + i, 18);
+    const d = paris(at);
+    if (d.weekday !== want[i] || d.hm !== "20:00") throw new Error(`❌ Match de play-offs ${i + 1} : ${d.weekday} ${d.hm}, attendu ${want[i]} 20:00.`);
+    if (!(at > lastReg)) throw new Error("❌ Les play-offs doivent suivre la saison régulière.");
+  }
+  const lastPo = C.weeklyRhythmScheduledTimeForChampionshipRound(start, 23, 18);
+  if (lastPo > C.weeklyRhythmEconomyTickAt(start, 11)) throw new Error("❌ Le 6e match de play-offs doit précéder la 11e mise à jour du lundi.");
+  if (lastPo < C.weeklyRhythmEconomyTickAt(start, 10)) throw new Error("❌ (setup) le 6e match de play-offs tombe en semaine 11.");
+  // Ligue basculée à la journée 10 (fromRound impair) : play-offs du mardi qui suit la dernière journée.
+  const sw = { fromRound: 9, fromCupRound: 4, anchorAt: start };
+  const reg = C.dailyAnchoredScheduledTimeForChampionshipRound(0, 17, true, sw, 18);
+  const po0 = C.dailyAnchoredScheduledTimeForChampionshipRound(0, 18, true, sw, 18);
+  const d0 = paris(po0);
+  if (!(po0 > reg) || d0.weekday !== "Tue") throw new Error(`❌ Ligue basculée : 1er match de play-offs ${d0.weekday}, attendu le mardi qui suit la saison régulière.`);
+  if (po0 - reg > week) throw new Error("❌ Ligue basculée : pas de semaine vide avant les play-offs.");
+  // Le serveur passe bien la première journée de play-offs.
+  const lg = E.generateMultiManagerLeague(["A"], 1, Date.UTC(2026, 8, 27, 9), C.dailyAnchoredCalendarConfig());
+  if (paris(C.scheduledTimeForLeagueRound(lg, lg.totalRounds + 1)).weekday !== "Thu") throw new Error("❌ scheduledTimeForLeagueRound : le 2e match de play-offs doit tomber un jeudi.");
+  console.log("✅ Play-offs mardi/jeudi/samedi, 2 semaines max (ligue basculée comprise).");
+})();
+
+// ---------------------------------------------------------------------
+// 11) « Récupération » uniquement les jours de repos (retour utilisateur,
+//     2026-09-27) : +5 par jour de repos écoulé, une seule fois, jamais le
+//     jour du match ; le taux continu reste 10/jour.
+// ---------------------------------------------------------------------
+(function testRecoveryRestDaysOnly() {
+  const lg = E.generateMultiManagerLeague(["A"], 1, Date.UTC(2026, 8, 27, 9), C.dailyAnchoredCalendarConfig());
+  const team = lg.teams.find(t => t.isHuman);
+  const bonus = E.CONDITION_RECOVERY_PER_DAY_TRAINED - E.CONDITION_RECOVERY_PER_DAY;
+  team.collectiveTraining = "recuperation";
+  if (team.conditionRecoveryPerDay() !== E.CONDITION_RECOVERY_PER_DAY) throw new Error("❌ « Récupération » ne doit plus changer le taux continu.");
+  team.players.forEach(p => { p.condition = 50; });
+  team.updateTacticalKnowledge(Date.UTC(2026, 8, 29, 18)); // match mardi 20h
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 8, 30, 8)); // mercredi (repos, pas encore écoulé)
+  if (team.players[0].condition !== 50) throw new Error("❌ Un jour de repos n'est crédité qu'une fois écoulé.");
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 8)); // jeudi matin : mercredi écoulé
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 12));
+  if (team.players[0].condition !== 50 + bonus) throw new Error(`❌ Mercredi (repos) : +${bonus} une seule fois attendu (obtenu ${team.players[0].condition - 50}).`);
+  const back = E.teamFromSave(JSON.parse(JSON.stringify(E.serializeTeam(team))));
+  back.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 13));
+  if (back.players[0].condition !== 50 + bonus) throw new Error("❌ Le crédit du mercredi ne doit pas être rejoué après rechargement.");
+  team.resetForMatch(Date.UTC(2026, 9, 1, 18)); // coupe jeudi 20h
+  team.updateTacticalKnowledge(Date.UTC(2026, 9, 1, 18));
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 2, 8)); // vendredi : jeudi (match) écoulé
+  if (team.players[0].condition !== 50 + bonus) throw new Error("❌ Le jour du match ne doit jamais être crédité.");
+  // Un jour de repos non encore synchronisé est crédité au coup d'envoi.
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 2, 20)); // vendredi soir
+  team.resetForMatch(Date.UTC(2026, 9, 3, 18)); // samedi 20h, sans requête entre-temps
+  if (team.players[0].condition !== 50 + 2 * bonus) throw new Error("❌ Le vendredi (repos) doit être crédité avant le coup d'envoi du samedi.");
+  // Coquille d'amical : ne crédite rien aux vrais joueurs.
+  const src = fs.readFileSync(path.join(__dirname, "friendlies.js"), "utf-8");
+  if (!src.includes("shell.syncCollectiveTrainingLog = () => {};")) throw new Error("❌ La coquille d'amical ne doit pas tenir le journal collectif.");
+  console.log(`✅ Récupération : +${bonus} par jour de repos écoulé, une fois, jamais le jour du match (taux continu ${E.CONDITION_RECOVERY_PER_DAY}/jour).`);
 })();
 
 console.log("\n🏁 Tous les tests du rythme hebdomadaire sont passés.");

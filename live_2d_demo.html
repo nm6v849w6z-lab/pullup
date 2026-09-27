@@ -4391,10 +4391,15 @@ function dailyAnchoredSlotIndexForChampionshipRound(round) {
 // quotidienne d'origine ; la suite suit le rythme hebdomadaire à partir du
 // mardi `anchorAt` (journée fromRound = ce mardi, etc.). null pour une ligue
 // créée directement au rythme hebdomadaire.
-function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null) {
+// `poFromRound` (optionnel) : première journée de play-offs (= nombre de
+// journées de saison régulière, League.totalRounds) — au rythme
+// hebdomadaire, les play-offs se jouent mardi, jeudi et samedi (voir
+// weeklyRhythmDayIndexForChampionshipRound). Absent : même règle que la
+// saison régulière (mardi/samedi).
+function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null, poFromRound = null) {
   if (weekly && sw && typeof sw.anchorAt === "number") {
-    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound);
-  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round);
+    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound, poFromRound != null ? Math.max(0, poFromRound - sw.fromRound) : null);
+  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound);
   const dayIndex = dailyAnchoredDayIndexForChampionshipRound(round);
   const hour = CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[dailyAnchoredSlotIndexForChampionshipRound(round)];
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
@@ -4417,7 +4422,8 @@ function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, wee
 // une ligue déjà lancée garde donc son rythme quotidien jusqu'au reset).
 //   - jour 0 = un MARDI à 20h (calendarStartAt) ;
 //   - journée r : semaine floor(r/2), mardi (r pair) ou samedi (r impair),
-//     20h — les play-offs (journées 18+) suivent la même règle ;
+//     20h ; play-offs (journées >= totalRounds) : mardi, jeudi et samedi à
+//     partir du mardi suivant (voir weeklyRhythmDayIndexForChampionshipRound) ;
 //   - tour de coupe k : jeudi de la semaine k, 20h ;
 //   - mise à jour économique k (k >= 1) : lundi 0h00 de la semaine k (nuit
 //     du dimanche au lundi), voir server/autoSim.js:catchUpWeeklyRhythm.
@@ -4427,6 +4433,7 @@ function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, wee
 const WEEKLY_RHYTHM_MATCH_HOUR = 20;
 const WEEKLY_RHYTHM_FIRST_MATCH_WEEKDAY = 2; // mardi (Date#getUTCDay)
 const WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS = [0, 4]; // mardi, samedi (depuis le mardi)
+const WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS = [0, 2, 4]; // play-offs : mardi, jeudi, samedi
 const WEEKLY_RHYTHM_CUP_DAY_OFFSET = 2; // jeudi
 const WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET = 6; // lundi (fin de la nuit du dimanche)
 const WEEKLY_RHYTHM_ECONOMY_HOUR = 0;
@@ -4443,12 +4450,23 @@ function weeklyRhythmCalendarStartAt(now) {
   const next = addParisCalendarDays(today, daysAhead + 7);
   return parisEpochForLocalTime(next.year, next.month, next.day, WEEKLY_RHYTHM_MATCH_HOUR);
 }
-function weeklyRhythmDayIndexForChampionshipRound(round) {
+// Play-offs (retour utilisateur, 2026-09-27 : "les PO doivent se jouer le
+// mardi jeudi et samedi" ; "la coupe sera tjrs terminée pour les PO car max
+// 512 équipes") : à partir de `poFromRound`, 3 matchs par semaine (mardi,
+// jeudi, samedi) en commençant le mardi qui suit la dernière journée de
+// saison régulière — demi-finales puis finale en deux matchs gagnants
+// tiennent donc toujours en 2 semaines (saison = 9 + 2 = 11 semaines).
+function weeklyRhythmDayIndexForChampionshipRound(round, poFromRound = null) {
   const n = WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS.length;
+  if (poFromRound != null && round >= poFromRound) {
+    const m = WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS.length;
+    const i = round - poFromRound;
+    return 7 * (Math.ceil(poFromRound / n) + Math.floor(i / m)) + WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS[i % m];
+  }
   return 7 * Math.floor(round / n) + WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS[round % n];
 }
-function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round) {
-  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round), WEEKLY_RHYTHM_MATCH_HOUR);
+function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound = null) {
+  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round, poFromRound), WEEKLY_RHYTHM_MATCH_HOUR);
 }
 function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex) {
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, 7 * cupRoundIndex + WEEKLY_RHYTHM_CUP_DAY_OFFSET, WEEKLY_RHYTHM_MATCH_HOUR);

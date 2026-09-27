@@ -12493,12 +12493,36 @@ class Team {
       log.push(snapshotEntry(todayIndex, this.collectiveTraining, this.trainedTactics));
     }
     if (this.tacticsCycleStartDayIndex != null) {
+    this.applyRestDayRecovery(todayIndex);
       this.collectiveTrainingLog = this.collectiveTrainingLog.filter(e => e.dayIndex > this.tacticsCycleStartDayIndex);
     }
   }
 
   // Voir engine.js, miroir identique (Team.daysTrainedForTarget).
   // `matchDayIndex` (optionnel, voir parisCalendarDayIndex) : jour du match
+  // Focus collectif « Récupération » (retour utilisateur, 2026-09-27 :
+  // "uniquement les jours de repos") : +CONDITION_RECOVERY_PER_DAY_TRAINED -
+  // CONDITION_RECOVERY_PER_DAY (5) points de forme à tout l'effectif, une
+  // fois par jour de repos ÉCOULÉ (dayIndex < aujourd'hui) passé sur ce
+  // focus depuis le dernier match — un jour de match n'est jamais un jour de
+  // repos : il est purgé du journal dès que le match est joué (voir
+  // tacticsCycleStartDayIndex), avant d'être écoulé. Chaque jour n'est
+  // crédité qu'une fois (recoveryApplied, sauvegardé). Appelée par
+  // syncCollectiveTrainingLog, elle-même appelée juste avant chaque match
+  // (voir Team.resetForMatch) pour que la forme au coup d'envoi en tienne
+  // compte.
+  applyRestDayRecovery(todayIndex) {
+    const bonus = CONDITION_RECOVERY_PER_DAY_TRAINED - CONDITION_RECOVERY_PER_DAY;
+    const cycleStart = this.tacticsCycleStartDayIndex;
+    (this.collectiveTrainingLog || []).forEach(e => {
+      if (e.recoveryApplied || e.dayIndex >= todayIndex) return;
+      if (cycleStart != null && e.dayIndex <= cycleStart) return;
+      if (e.collectiveTraining !== "recuperation") return;
+      e.recoveryApplied = true;
+      (this.players || []).forEach(p => { p.condition = clamp(p.condition + bonus, 0, 100); });
+    });
+  }
+
   // qui consomme le crédit — ce jour-là n'est PAS un jour de repos, il ne
   // compte donc jamais (retour utilisateur, 2026-09-27 : "les entrainements
   // collectifs eux, sont uniquement sur les jours de repos" ; avant, un
@@ -12616,7 +12640,11 @@ class Team {
   // identique) : CONDITION_RECOVERY_PER_DAY_TRAINED si collectiveTraining
   // === "recuperation", sinon CONDITION_RECOVERY_PER_DAY.
   conditionRecoveryPerDay() {
-    const base = this.collectiveTraining === "recuperation" ? CONDITION_RECOVERY_PER_DAY_TRAINED : CONDITION_RECOVERY_PER_DAY;
+    // Le focus « Récupération » n'agit plus sur ce taux continu (retour
+    // utilisateur, 2026-09-27 : "uniquement les jours de repos") : ses +5
+    // sont crédités jour de repos par jour de repos, voir
+    // Team.applyRestDayRecovery (appelée par syncCollectiveTrainingLog).
+    const base = CONDITION_RECOVERY_PER_DAY;
     // Kiné (voir MEDICAL_STAFF_ROLES) : +1 à +5 par jour selon son niveau.
     return base + (this.physioRecoveryBonus ? this.physioRecoveryBonus() : 0);
   }
@@ -14297,6 +14325,8 @@ class Team {
 
   resetForMatch(now = Date.now()) {
     // Alchimie d'équipe (voir engine.js, miroir identique).
+    // Jours de repos « Récupération » crédités avant le coup d'envoi (voir engine.js, miroir identique).
+    if (this.isHuman && typeof this.syncCollectiveTrainingLog === "function") this.syncCollectiveTrainingLog(now);
     const chemistryFactor = this.chemistryFactor();
     // Connaissance tactique (voir engine.js, miroir identique).
     const tacticalKnowledgeFactor = this.tacticalKnowledgeFactor();
@@ -17237,10 +17267,15 @@ function dailyAnchoredSlotIndexForChampionshipRound(round) {
 // quotidienne d'origine ; la suite suit le rythme hebdomadaire à partir du
 // mardi `anchorAt` (journée fromRound = ce mardi, etc.). null pour une ligue
 // créée directement au rythme hebdomadaire.
-function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null) {
+// `poFromRound` (optionnel) : première journée de play-offs (= nombre de
+// journées de saison régulière, League.totalRounds) — au rythme
+// hebdomadaire, les play-offs se jouent mardi, jeudi et samedi (voir
+// weeklyRhythmDayIndexForChampionshipRound). Absent : même règle que la
+// saison régulière (mardi/samedi).
+function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null, poFromRound = null) {
   if (weekly && sw && typeof sw.anchorAt === "number") {
-    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound);
-  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round);
+    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound, poFromRound != null ? Math.max(0, poFromRound - sw.fromRound) : null);
+  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound);
   const dayIndex = dailyAnchoredDayIndexForChampionshipRound(round);
   const hour = CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[dailyAnchoredSlotIndexForChampionshipRound(round)];
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
@@ -17263,7 +17298,8 @@ function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, wee
 // une ligue déjà lancée garde donc son rythme quotidien jusqu'au reset).
 //   - jour 0 = un MARDI à 20h (calendarStartAt) ;
 //   - journée r : semaine floor(r/2), mardi (r pair) ou samedi (r impair),
-//     20h — les play-offs (journées 18+) suivent la même règle ;
+//     20h ; play-offs (journées >= totalRounds) : mardi, jeudi et samedi à
+//     partir du mardi suivant (voir weeklyRhythmDayIndexForChampionshipRound) ;
 //   - tour de coupe k : jeudi de la semaine k, 20h ;
 //   - mise à jour économique k (k >= 1) : lundi 0h00 de la semaine k (nuit
 //     du dimanche au lundi), voir server/autoSim.js:catchUpWeeklyRhythm.
@@ -17274,6 +17310,7 @@ const WEEKLY_RHYTHM_MATCH_HOUR = 20;
 const WEEKLY_RHYTHM_FIRST_MATCH_WEEKDAY = 2; // mardi (Date#getUTCDay)
 const WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS = [0, 4]; // mardi, samedi (depuis le mardi)
 const WEEKLY_RHYTHM_CUP_DAY_OFFSET = 2; // jeudi
+const WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS = [0, 2, 4]; // play-offs : mardi, jeudi, samedi
 const WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET = 6; // lundi (fin de la nuit du dimanche)
 const WEEKLY_RHYTHM_ECONOMY_HOUR = 0;
 
@@ -17289,12 +17326,23 @@ function weeklyRhythmCalendarStartAt(now) {
   const next = addParisCalendarDays(today, daysAhead + 7);
   return parisEpochForLocalTime(next.year, next.month, next.day, WEEKLY_RHYTHM_MATCH_HOUR);
 }
-function weeklyRhythmDayIndexForChampionshipRound(round) {
+// Play-offs (retour utilisateur, 2026-09-27 : "les PO doivent se jouer le
+// mardi jeudi et samedi" ; "la coupe sera tjrs terminée pour les PO car max
+// 512 équipes") : à partir de `poFromRound`, 3 matchs par semaine (mardi,
+// jeudi, samedi) en commençant le mardi qui suit la dernière journée de
+// saison régulière — demi-finales puis finale en deux matchs gagnants
+// tiennent donc toujours en 2 semaines (saison = 9 + 2 = 11 semaines).
+function weeklyRhythmDayIndexForChampionshipRound(round, poFromRound = null) {
   const n = WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS.length;
   return 7 * Math.floor(round / n) + WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS[round % n];
+  if (poFromRound != null && round >= poFromRound) {
+    const m = WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS.length;
+    const i = round - poFromRound;
+    return 7 * (Math.ceil(poFromRound / n) + Math.floor(i / m)) + WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS[i % m];
+  }
 }
-function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round) {
-  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round), WEEKLY_RHYTHM_MATCH_HOUR);
+function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound = null) {
+  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round, poFromRound), WEEKLY_RHYTHM_MATCH_HOUR);
 }
 function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex) {
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, 7 * cupRoundIndex + WEEKLY_RHYTHM_CUP_DAY_OFFSET, WEEKLY_RHYTHM_MATCH_HOUR);
@@ -17600,6 +17648,7 @@ function serializeTeam(team) {
         collectiveTraining: e.collectiveTraining || null,
         trainedTactics: e.trainedTactics ? { category: e.trainedTactics.category, value: e.trainedTactics.value } : null,
       }))
+        recoveryApplied: !!e.recoveryApplied,
       : [],
     // Jour civil du dernier match réellement joué (voir engine.js, miroir
     // identique).
@@ -18070,6 +18119,7 @@ function teamFromSave(data) {
           ? { category: e.trainedTactics.category, value: e.trainedTactics.value }
           : null,
       }))
+        recoveryApplied: !!e.recoveryApplied,
     : [];
   team.tacticsCycleStartDayIndex = typeof data.tacticsCycleStartDayIndex === "number" ? data.tacticsCycleStartDayIndex : null;
   team.pendingInterviews = Array.isArray(data.pendingInterviews) ? data.pendingInterviews.map(i => ({ ...i })) : [];
@@ -22725,7 +22775,7 @@ function scheduledTimeForCurrentMatch() {
 function scheduledTimeForChampionshipRound(round) {
   if (!league || typeof league.calendarStartAt !== "number") return null;
   if (league.calendarDailyAnchored) {
-    return dailyAnchoredScheduledTimeForChampionshipRound(league.calendarStartAt, round, !!league.calendarWeeklyRhythm, league.calendarWeeklySwitch || null);
+    return dailyAnchoredScheduledTimeForChampionshipRound(league.calendarStartAt, round, !!league.calendarWeeklyRhythm, league.calendarWeeklySwitch || null, typeof league.totalRounds === "number" ? league.totalRounds : null);
   }
   return calendarScheduledTimeForRound(
     league.calendarStartAt,
