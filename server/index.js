@@ -664,6 +664,7 @@ const ACTION_ROUTES = {
   "/api/staff/video-session": actions.runVideoSession,
   // Scouting Pro (voir server/scouting.js et le grand commentaire de
   // Team.scoutingPremium/scoutingUnlocks dans engine.js) : les 2 routes
+  "/api/tactic-presets": actions.setTacticPresets,
   // GET (accès/rapport) sont gérées à part plus bas, comme /api/live-status
   // et /api/spectate ci-dessus (lecture pure, jamais de mutation).
   "/api/scouting/ad-ticket": actions.createScoutingAdTicket,

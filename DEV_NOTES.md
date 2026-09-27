@@ -20,6 +20,33 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) — Onglet Tactiques (tactiques enregistrées +
+  maîtrise)** — demande : "pouvoir programmer 3 tactiques max, qu'on pourra
+  retrouver très facilement dans ordres et mettre en place en 1 seconde",
+  "voir les tactiques maîtrisées", contenu = "tout, joueurs compris",
+  "pouvoir donner un nom à la tactique". Moteur (engine.js + miroir) :
+  Team.tacticPresets (3 max, nom 30 car.), save/rename/delete/
+  tacticPresetPatch (joueurs partis retirés)/tacticPresetKnowledge ;
+  postes à surveiller exclus (propres à un adversaire). Serveur :
+  setTacticPresets (/api/tactic-presets, op save/rename/delete, mêmes
+  validateurs que setTactics/setLineup). Client : onglet Tactiques (Équipe,
+  après Ordres) = 3 cartes (nom, maîtrise, résumé des ordres, Appliquer au
+  prochain match / Renommer / Supprimer en 2 clics / Remplacer) + «
+  Tactiques maîtrisées » (jauge par option 10/5/3, « En place ») ; barre «
+  Mes tactiques » en haut des Ordres (1 clic = tactique appliquée à la
+  journée affichée, ordres en direct ou plan ; « + Enregistrer ces ordres »
+  avec nom + emplacement). Boutons en classe .tq-btn (PAS
+  .calendar-order-btn : tabs_test prend le 1er .calendar-order-btn de la
+  page). Tests : tactic_presets_test.js (nouveau) ; verts aussi : tabs,
+  ordres_redesign, planned_tactics, confirmed_tactics, persistence,
+  i18n_english, ordres_validate_without_edit, tactical_knowledge,
+  end_to_end, onboarding_tour, dashboard_e2e, calendar_redesign,
+  ordres_round_planning, tous les server/*_test.js (cup_ordres_planning
+  échoue déjà avant, voir plus bas). Statut : committé, à pousser.
+  NB : une autre session travaille en parallèle (Matchs amicaux, fichiers
+  engine.js/moteurbasket3.html/server/index.js) — ne committer que mes
+  hunks.
+
 - **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
   Barre latérale réorganisée** — proposition validée ("vas y fais comme
   ça") : accueil sans titre (Tableau de bord, Messagerie) ; Équipe

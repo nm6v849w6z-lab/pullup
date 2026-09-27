@@ -2524,6 +2524,54 @@
     .cal-side{position:static; order:-1; display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
   }
 
+  /* ---- Tactiques enregistrées (voir renderTactiquesSection/renderOrdresPresetsBar) ---- */
+  .tq-intro{color:var(--ink-dim); font-size:14px; margin:0 0 16px; max-width:760px; line-height:1.5;}
+  .tq-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; align-items:stretch;}
+  .tq-card{display:flex; flex-direction:column; gap:12px;}
+  .tq-card.is-empty{border-style:dashed;}
+  .tq-name{margin:4px 0 0; font-size:20px; font-weight:800; overflow-wrap:anywhere;}
+  .tq-knowledge{display:flex; flex-direction:column; gap:6px;}
+  .tq-knowledge-head{display:flex; justify-content:space-between; gap:8px; font-size:12px; color:var(--ink-dim);}
+  .tq-knowledge-head b{font-weight:700;}
+  .tq-track{height:6px; border-radius:3px; background:var(--panel-2); overflow:hidden;}
+  .tq-fill{height:100%; border-radius:3px;}
+  .tq-rows{display:flex; flex-direction:column; border-top:1px solid var(--line-soft);}
+  .tq-row{display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--line-soft); font-size:13px;}
+  .tq-row span{color:var(--ink-dim); flex:none;}
+  .tq-row b{font-weight:600; text-align:right; overflow-wrap:anywhere;}
+  .tq-warn{font-size:12px; color:var(--amber); margin:0;}
+  .tq-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:auto;}
+  .tq-actions .cal-next-btn{grid-column:1 / -1; margin-top:0;}
+  .tq-btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; background:transparent; border:1px solid var(--line); color:var(--ink-dim); font:inherit; font-size:12px; font-weight:600; padding:6px 11px; border-radius:8px; cursor:pointer;}
+  .tq-btn:hover{border-color:var(--amber); color:var(--amber);}
+  .tq-btn:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  .tq-btn.is-danger{border-color:var(--danger); color:var(--danger);}
+  .tq-input{width:100%; box-sizing:border-box; background:var(--panel-2); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:9px 12px; font:inherit; font-size:14px;}
+  .tq-input:focus{outline:2px solid var(--amber); outline-offset:1px;}
+  .tq-empty-title{font-size:15px; font-weight:700; margin:4px 0 0;}
+  .tq-empty-sub{font-size:13px; color:var(--ink-dim); margin:0; line-height:1.45;}
+  .tq-feedback{font-size:12px; color:var(--ok); margin:0;}
+  .tq-feedback.is-error{color:var(--danger);}
+  .tq-section-title{margin:28px 0 6px; font-size:18px;}
+  .tq-mastery{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; align-items:start; margin-top:10px;}
+  .tq-mastery .calendar-table.cal-month{margin-bottom:0;}
+  .tq-opt{padding-left:16px !important;}
+  .tq-opt b{font-weight:600;}
+  .tq-on{display:inline-block; margin-left:6px; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; background:rgba(240,162,60,.14); color:var(--amber); vertical-align:middle;}
+  .tq-opt-state{font-size:12px; color:var(--ink-dim); display:block; margin-top:4px;}
+  .tq-opt .tq-track{margin-top:6px;}
+  .ordres-presets{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 14px;}
+  .ordres-presets-label{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); margin-right:4px;}
+  .ordres-presets .cal-filter[disabled]{opacity:.5; cursor:not-allowed;}
+  .ordres-presets-empty{font-size:13px; color:var(--ink-dim);}
+  .ordres-presets-form{display:flex; flex-wrap:wrap; gap:8px; align-items:center; width:100%;}
+  .ordres-presets-form .tq-input{width:auto; flex:1; min-width:180px; padding:7px 12px;}
+  .ordres-presets-form select{background:var(--panel-2); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:7px 10px; font:inherit; font-size:13px;}
+  .ordres-presets-msg{font-size:12px; color:var(--ok);}
+  .ordres-presets-msg.is-error{color:var(--danger);}
+  @media (max-width:1100px){
+    .tq-grid, .tq-mastery{grid-template-columns:minmax(0,1fr);}
+  }
   /* ---- Centre médical (voir renderMedicalSection) ----
      Refonte (retour utilisateur, 2026-09-27 : "ça ne ressemble pas au reste
      du site", "un grand vide sous infirmerie", "si on a trop de monde, ça va
@@ -6039,6 +6087,7 @@
            déconnexion") — sans data-tab (ce n'est pas un onglet), affichée
            seulement pour un manager connecté (voir hmLogout). -->
       <button type="button" class="tab-btn sidebar-link sidebar-logout hidden" id="sidebarLogoutBtn"><span class="sidebar-label">Se déconnecter</span></button>
+      <button class="tab-btn sidebar-link" data-tab="tactiques"><span class="sidebar-label">Tactiques</span></button>
     </div>
   </nav>
   <div class="main-col">
@@ -6185,6 +6234,7 @@
       <div id="catchupContent"></div>
       <div class="actions">
         <button class="primary" id="catchupContinueBtn">Continuer →</button>
+    <div class="ordres-presets" id="ordresPresetsBar" aria-label="Mes tactiques"></div>
       </div>
     </div>
   </div>
@@ -6568,6 +6618,17 @@
         <h2>Centre de formation</h2>
         <div id="trainingCenterCurrentPanel"></div>
       </div>
+  <div id="tactiquesSection" class="hidden">
+    <!-- Tactiques (2026-09-27) : 3 tactiques enregistrées max (ordres
+         complets nommés, Team.tacticPresets) + maîtrise de chaque option.
+         Voir renderTactiquesSection ; application rapide dans les Ordres :
+         #ordresPresetsBar / renderOrdresPresetsBar. -->
+    <div class="section">
+      <h2 class="page-title">Tactiques</h2>
+      <div id="tactiquesContent"></div>
+    </div>
+  </div>
+
       <div>
         <h2>Historique des promus</h2>
         <div id="academyGraduatesHolder"></div>
@@ -11355,6 +11416,32 @@ function chemistryLabel(chemistry) {
 // Fil d'actualité du tableau de bord (refonte "Soir de match", 2026-09-24)
 // MIROIR EXACT de engine.js (voir son commentaire complet) — toute modification ici DOIT être répercutée là-bas, et vice-versa.
 // — logique de fil d'actualité PURE (aucun accès DOM), portée depuis le
+// TACTIQUES ENREGISTRÉES (onglet Tactiques, demande du 2026-09-27 :
+// "pouvoir programmer 3 tactiques max, qu'on pourra retrouver très
+// facilement dans ordres et mettre en place en 1 seconde", "tout, joueurs
+// compris", "pouvoir donner un nom à la tactique") : Team.tacticPresets,
+// jusqu'à TACTIC_PRESETS_MAX ordres complets nommés (attaque, défense,
+// rythme, consignes confirmées, convocation, cinq, rotation, temps de jeu).
+// Les « postes à surveiller » (watchAssignments) n'en font PAS partie : ils
+// visent des joueurs d'un adversaire précis.
+const TACTIC_PRESETS_MAX = 3;
+const TACTIC_PRESET_NAME_MAX = 30;
+const TACTIC_PRESET_FIELDS = ["offensivePriorities", "defense", "rhythm", "tacticalTier", "screenDefense", "helpDefense", "postDefense", "closeoutStyle", "offRebStyle", "endgameManagement"];
+// Copie profonde d'un jeu d'ordres (forme snapshotTactics) en tactique
+// enregistrable : sans watchAssignments.
+function tacticPresetOrdersFrom(snap) {
+  const out = {};
+  TACTIC_PRESET_FIELDS.forEach(k => { if (snap[k] !== undefined) out[k] = Array.isArray(snap[k]) ? [...snap[k]] : snap[k]; });
+  const l = snap.lineup || {};
+  out.lineup = {
+    starters: { ...(l.starters || {}) },
+    backupPositions: Object.fromEntries(Object.entries(l.backupPositions || {}).map(([id, positions]) => [id, [...positions]])),
+    ...(l.minutes ? { minutes: Object.fromEntries(Object.entries(l.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
+    ...(Array.isArray(l.convoked) ? { convoked: [...l.convoked] } : {}),
+  };
+  return out;
+}
+
 // livrable prestataire `tableau-de-bord/newsFeed.js` (voir INTEGRATION.md et
 // DEV_NOTES.md point 10 pour le contexte complet). Un fil par équipe
 // (Team.feed, voir plus bas), sérialisé dans la sauvegarde comme le reste de
@@ -11831,6 +11918,8 @@ class Team {
     this.tacticsCycleStartDayIndex = null;
 
     // Staff : l'entraîneur n'a d'effet QUE sur la vitesse d'entraînement
+    // Tactiques enregistrées (voir TACTIC_PRESETS_MAX) : [{ name, savedAt, orders }].
+    this.tacticPresets = [];
     // (jamais sur les matchs). Pas d'entraîneur par défaut.
     this.trainer = null; // { level, weeksEmployed } ou null
 
@@ -12369,6 +12458,55 @@ class Team {
   // === "recuperation", sinon CONDITION_RECOVERY_PER_DAY.
   conditionRecoveryPerDay() {
     const base = this.collectiveTraining === "recuperation" ? CONDITION_RECOVERY_PER_DAY_TRAINED : CONDITION_RECOVERY_PER_DAY;
+  // Tactiques enregistrées (voir TACTIC_PRESETS_MAX). `slot` 0..2 : remplace
+  // la tactique de cet emplacement, ou l'ajoute à la suite.
+  saveTacticPreset(slot, name, snap, now = Date.now()) {
+    if (!Array.isArray(this.tacticPresets)) this.tacticPresets = [];
+    const clean = String(name || "").trim().slice(0, TACTIC_PRESET_NAME_MAX) || `Tactique ${slot + 1}`;
+    const preset = { name: clean, savedAt: now, orders: tacticPresetOrdersFrom(snap) };
+    if (slot < this.tacticPresets.length) this.tacticPresets[slot] = preset;
+    else if (this.tacticPresets.length < TACTIC_PRESETS_MAX) this.tacticPresets.push(preset);
+    else return null;
+    return preset;
+  }
+  renameTacticPreset(slot, name) {
+    const p = (this.tacticPresets || [])[slot];
+    const clean = String(name || "").trim().slice(0, TACTIC_PRESET_NAME_MAX);
+    if (!p || !clean) return false;
+    p.name = clean;
+    return true;
+  }
+  deleteTacticPreset(slot) {
+    if (!Array.isArray(this.tacticPresets) || !this.tacticPresets[slot]) return false;
+    this.tacticPresets.splice(slot, 1);
+    return true;
+  }
+  // Ordres prêts à appliquer (patch pour les ordres en direct ou
+  // stagePlanForRound) : copie profonde, joueurs partis retirés.
+  tacticPresetPatch(slot) {
+    const p = (this.tacticPresets || [])[slot];
+    if (!p) return null;
+    const patch = tacticPresetOrdersFrom(p.orders);
+    const ids = new Set((this.players || []).map(pl => pl.id));
+    const keep = id => ids.has(Number(id));
+    const l = patch.lineup;
+    Object.keys(l.starters).forEach(pos => { if (l.starters[pos] != null && !keep(l.starters[pos])) l.starters[pos] = null; });
+    Object.keys(l.backupPositions).forEach(id => { if (!keep(id)) delete l.backupPositions[id]; });
+    if (l.minutes) Object.values(l.minutes).forEach(m => Object.keys(m).forEach(id => { if (!keep(id)) delete m[id]; }));
+    if (l.convoked) l.convoked = l.convoked.filter(keep);
+    return patch;
+  }
+  // Maîtrise moyenne (0-100) des options d'une tactique enregistrée, même
+  // moyenne que tacticalKnowledgeFactor ci-dessous.
+  tacticPresetKnowledge(slot) {
+    const p = (this.tacticPresets || [])[slot];
+    if (!p) return null;
+    const k = this.tacticalKnowledge;
+    const off = (p.orders.offensivePriorities || []).map(x => k.offense[x] ?? 50);
+    const offAvg = off.length ? off.reduce((a, b) => a + b, 0) / off.length : 50;
+    return Math.round((offAvg + (k.defense[p.orders.defense] ?? 50) + (k.rhythm[p.orders.rhythm] ?? 50)) / 3);
+  }
+
     // Kiné (voir MEDICAL_STAFF_ROLES) : +1 à +5 par jour selon son niveau.
     return base + (this.physioRecoveryBonus ? this.physioRecoveryBonus() : 0);
   }
@@ -17431,6 +17569,7 @@ function playerFromSave(pdata) {
   // dérive de la moyenne des 10 caractéristiques d'origine du joueur (avec un
   // léger bruit aléatoire pour éviter que tous les joueurs migrés se
   // retrouvent avec exactement la même valeur), plutôt qu'une constante fixe,
+    tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
   // pour éviter un saut brutal d'overall/salaire au premier chargement après
   // mise à jour.
   // "mental" retiré de cette liste (retour utilisateur, 2026-09, voir le
@@ -17884,6 +18023,10 @@ function teamFromSave(data) {
   if (data.plannedTactics && typeof data.plannedTactics === "object") {
     // Migration (correctif 2026-09, voir planKey/Team.constructor) : une
     // sauvegarde antérieure à la clé composite "{compétition}:{journée}"
+  team.tacticPresets = Array.isArray(data.tacticPresets)
+    ? data.tacticPresets.filter(p => p && p.orders && typeof p.name === "string").slice(0, TACTIC_PRESETS_MAX)
+      .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
+    : [];
     // stockait plannedTactics avec une clé = simple numéro de journée de
     // championnat (Coupe n'avait alors AUCUNE planification à l'avance,
     // donc une telle clé ne pouvait être QUE du championnat). Une clé déjà
@@ -20658,7 +20801,7 @@ function refreshMedicalMarkets() {
 // ---------------------------------------------------------------------
 const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
-  "clubSection", "staffSection", "medicalSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "messagesSection", "histoireSection",
+  "clubSection", "staffSection", "medicalSection", "tactiquesSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
   "guideSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
 ];
@@ -20699,7 +20842,7 @@ const PAGE_IDS = [
 // colonne de droite (prochain match, bilan) côte à côte.
 // "standingsSection" ajouté (refonte de la page Ligue, 2026-09-25) :
 // classement + colonne course/MVP côte à côte, leaders sur 3 colonnes.
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "messagesSection", "histoireSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection", "medicalSection"]);
+const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "messagesSection", "histoireSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection", "medicalSection", "tactiquesSection"]);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
 // "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
@@ -22077,6 +22220,7 @@ function renderOrdresGrid() {
   // espace de numérotation à partir de 0 (voir Team.planKey), donc si
   // currentMatch est justement un tour de Coupe, une SÉLECTION de
   // championnat au même numéro ne doit surtout pas être prise à tort pour le
+  renderOrdresPresetsBar();
   // match immédiat sous prétexte que les rounds coïncident numériquement.
   const isImmediate = competition === "championship" &&
     (!currentMatch || (currentMatch.competition !== "cup" && round === currentMatch.round));
@@ -38458,6 +38602,284 @@ function renderMedicalSection() {
   seasonLog.forEach(e => {
     const key = e.at ? calendarMonthKey(e.at) : "saison";
     let g = groups.find(x => x.key === key);
+// ---------------------------------------------------------------------
+// TACTIQUES ENREGISTRÉES (demande du 2026-09-27 : "pouvoir programmer 3
+// tactiques max, qu'on pourra retrouver très facilement dans ordres et
+// mettre en place en 1 seconde", "voir les tactiques maîtrisées", "tout,
+// joueurs compris", "pouvoir donner un nom à la tactique") — voir
+// Team.tacticPresets (moteur), /api/tactic-presets (serveur).
+// ---------------------------------------------------------------------
+let tqRenaming = null;       // emplacement en cours de renommage
+let tqConfirmDelete = null;  // emplacement dont la suppression attend confirmation
+let tqFeedback = null;       // { slot, text, error }
+let ordresPresetsFormOpen = false;
+let ordresPresetsMsg = null; // { text, error }
+
+function syncTacticPresetsToServer(body) {
+  if (!managerToken) { saveMyTeam(); return; }
+  let p;
+  try {
+    p = fetchApi("/api/tactic-presets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+      .then(res => { if (!res.ok) console.warn("Tactique enregistrée refusée côté serveur.", res.status); })
+      .catch(e => console.warn("Tactiques enregistrées : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Tactiques enregistrées : serveur indisponible :", e);
+    p = Promise.resolve();
+  }
+  window.__lastSave = p;
+}
+
+// Enregistre des ordres (forme snapshotTactics) dans l'emplacement `slot`.
+function saveTacticPresetFrom(slot, name, snap) {
+  const preset = teamA.saveTacticPreset(slot, name, snap);
+  if (!preset) return null;
+  syncTacticPresetsToServer({ op: "save", slot, name: preset.name, orders: preset.orders });
+  return preset;
+}
+
+// Applique la tactique `slot` à la journée `round`/`competition` : ordres
+// en direct pour le match immédiat, plan préparé sinon (même chemin que
+// les modifications faites à la main dans les Ordres).
+function applyTacticPresetToOrders(slot, round, competition, immediate) {
+  const patch = teamA.tacticPresetPatch(slot);
+  if (!patch) return false;
+  if (immediate) {
+    const tactics = {};
+    TACTIC_PRESET_FIELDS.forEach(k => { if (patch[k] !== undefined) { teamA[k] = patch[k]; tactics[k] = patch[k]; } });
+    teamA.lineup = patch.lineup;
+    saveMyTeam();
+    syncTacticsToServer(tactics);
+    syncLineupToServer();
+  } else {
+    teamA.stagePlanForRound(round, patch, competition);
+    saveMyTeam();
+    syncPlanToServer(round, patch, competition);
+  }
+  return true;
+}
+
+function tacticPresetMissingPlayers(preset) {
+  const ids = new Set(teamA.players.map(p => p.id));
+  const l = preset.orders.lineup || {};
+  const all = new Set([...Object.values(l.starters || {}).filter(x => x != null), ...Object.keys(l.backupPositions || {}), ...(l.convoked || [])].map(Number));
+  return [...all].filter(id => !ids.has(id)).length;
+}
+
+function tacticKnowledgeGaugeHtml(value, label) {
+  const color = moraleGaugeColor(value);
+  return `<div class="tq-knowledge"><div class="tq-knowledge-head"><span>${escapeHtml(label)}</span><b style="color:${color}">${escapeHtml(tacticalKnowledgeLabel(value))}</b></div>` +
+    `<div class="tq-track"><div class="tq-fill" style="width:${Math.max(3, Math.round(value))}%;background:${color}"></div></div></div>`;
+}
+
+function renderTactiquesSection() {
+  const holder = document.getElementById("tactiquesContent");
+  if (!holder || !teamA) return;
+  const presets = teamA.tacticPresets || [];
+  const lockedNow = typeof currentMatchLineupLocked === "function" && currentMatchLineupLocked();
+  let html = `<p class="tq-intro">Enregistrez jusqu'à ${TACTIC_PRESETS_MAX} tactiques complètes (attaque, défense, rythme, convocation, cinq, rotation et temps de jeu), puis mettez-les en place en un clic depuis les Ordres.</p>`;
+  html += `<div class="tq-grid">`;
+  for (let slot = 0; slot < TACTIC_PRESETS_MAX; slot++) {
+    const preset = presets[slot];
+    const fb = tqFeedback && tqFeedback.slot === slot ? `<p class="tq-feedback${tqFeedback.error ? " is-error" : ""}">${escapeHtml(tqFeedback.text)}</p>` : "";
+    if (!preset) {
+      if (slot > presets.length) {
+        html += `<div class="cal-card tq-card is-empty" data-tq-slot="${slot}"><div class="cal-card-kicker">Tactique ${slot + 1}</div><p class="tq-empty-sub">Emplacement libre.</p></div>`;
+        continue;
+      }
+      html += `<div class="cal-card tq-card is-empty" data-tq-slot="${slot}"><div class="cal-card-kicker">Tactique ${slot + 1}</div>` +
+        `<p class="tq-empty-title">Emplacement libre</p><p class="tq-empty-sub">Réglez vos ordres pour le prochain match, puis enregistrez-les ici sous un nom.</p>` +
+        `<input type="text" class="tq-input" data-tq-name-input="${slot}" maxlength="${TACTIC_PRESET_NAME_MAX}" placeholder="Nom de la tactique">` +
+        `<button type="button" class="cal-next-btn" data-tq-save-new="${slot}">Enregistrer les ordres du prochain match</button>${fb}</div>`;
+      continue;
+    }
+    const o = preset.orders;
+    const l = o.lineup || {};
+    const starters = POSITIONS.map(pos => {
+      const pl = teamA.players.find(x => x.id === Number(l.starters && l.starters[pos]));
+      return pl ? pl.name.split(" ").slice(-1)[0] : "–";
+    }).join(" · ");
+    const missing = tacticPresetMissingPlayers(preset);
+    const hasMinutes = l.minutes && Object.values(l.minutes).some(m => Object.keys(m).length);
+    const knowledge = teamA.tacticPresetKnowledge(slot);
+    const nameHtml = tqRenaming === slot
+      ? `<input type="text" class="tq-input" data-tq-rename-input="${slot}" maxlength="${TACTIC_PRESET_NAME_MAX}" value="${escapeHtml(preset.name)}">`
+      : `<h3 class="tq-name">${escapeHtml(preset.name)}</h3>`;
+    html += `<div class="cal-card tq-card" data-tq-slot="${slot}"><div class="cal-card-kicker">Tactique ${slot + 1}</div>${nameHtml}` +
+      tacticKnowledgeGaugeHtml(knowledge, "Maîtrise") +
+      `<div class="tq-rows">` +
+        `<div class="tq-row"><span>Attaque</span><b>${escapeHtml((o.offensivePriorities || []).join(" · "))}</b></div>` +
+        `<div class="tq-row"><span>Défense</span><b>${escapeHtml(o.defense)}</b></div>` +
+        `<div class="tq-row"><span>Rythme</span><b>${escapeHtml(o.rhythm)}</b></div>` +
+        `<div class="tq-row"><span>Niveau</span><b>${o.tacticalTier === "confirmée" ? "Confirmé" : "Débutant"}</b></div>` +
+        `<div class="tq-row"><span>Cinq</span><b>${escapeHtml(starters)}</b></div>` +
+        `<div class="tq-row"><span>Convocation</span><b>${Array.isArray(l.convoked) ? `${l.convoked.length} joueurs` : "Tout l'effectif"}</b></div>` +
+        `<div class="tq-row"><span>Temps de jeu</span><b>${hasMinutes ? "Réglé à la main" : "Automatique"}</b></div>` +
+      `</div>` +
+      (missing ? `<p class="tq-warn">${missing} joueur${missing > 1 ? "s ne sont" : " n'est"} plus au club : ${missing > 1 ? "ils seront retirés" : "il sera retiré"} à l'application.</p>` : "") +
+      `<div class="tq-actions">` +
+        `<button type="button" class="cal-next-btn" data-tq-apply="${slot}"${lockedNow ? " disabled title=\"Compositions verrouillées : le coup d'envoi est imminent.\"" : ""}>Appliquer au prochain match</button>` +
+        (tqRenaming === slot
+          ? `<button type="button" class="tq-btn" data-tq-rename-ok="${slot}">OK</button><button type="button" class="tq-btn" data-tq-rename-cancel="${slot}">Annuler</button>`
+          : `<button type="button" class="tq-btn" data-tq-rename="${slot}">Renommer</button>` +
+            (tqConfirmDelete === slot
+              ? `<button type="button" class="tq-btn is-danger" data-tq-delete-ok="${slot}">Confirmer</button>`
+              : `<button type="button" class="tq-btn" data-tq-delete="${slot}">Supprimer</button>`) +
+            `<button type="button" class="tq-btn" data-tq-overwrite="${slot}" style="grid-column:1 / -1">Remplacer par les ordres du prochain match</button>`) +
+      `</div>${fb}</div>`;
+  }
+  html += `</div>`;
+
+  // Tactiques maîtrisées : une jauge par option (voir Team.tacticalKnowledge).
+  const k = teamA.tacticalKnowledge;
+  const groups = [
+    ["Attaque", Object.keys(OFFENSE_PROFILES), k.offense, x => (teamA.offensivePriorities || []).includes(x)],
+    ["Défense", Object.keys(DEFENSES), k.defense, x => teamA.defense === x],
+    ["Rythme", Object.keys(RHYTHMS), k.rhythm, x => teamA.rhythm === x],
+  ];
+  html += `<h3 class="tq-section-title">Tactiques maîtrisées</h3>` +
+    `<p class="tq-intro">La maîtrise monte quand l'option est jouée en match (et plus vite avec l'entraînement tactique), et redescend doucement quand on la délaisse. « En place » = ordres du prochain match.</p>`;
+  html += `<div class="tq-mastery">`;
+  groups.forEach(([title, keys, values, isOn]) => {
+    const rows = keys.map(key => ({ key, v: values[key] ?? 50 })).sort((a, b) => b.v - a.v || a.key.localeCompare(b.key));
+    html += `<table class="calendar-table cal-month tq-mastery-table" data-tq-group="${escapeHtml(title)}"><thead><tr class="cal-month-head"><th><span class="cal-month-title">${escapeHtml(title)}</span></th></tr></thead><tbody>`;
+    rows.forEach(({ key, v }) => {
+      const color = moraleGaugeColor(v);
+      html += `<tr class="cal-row" data-tq-option="${escapeHtml(key)}"><td class="tq-opt"><b>${escapeHtml(key)}</b>${isOn(key) ? `<span class="tq-on">En place</span>` : ""}` +
+        `<span class="tq-opt-state" style="color:${color}">${escapeHtml(tacticalKnowledgeLabel(v))}</span>` +
+        `<div class="tq-track"><div class="tq-fill" style="width:${Math.max(3, Math.round(v))}%;background:${color}"></div></div></td></tr>`;
+    });
+    html += `</tbody></table>`;
+  });
+  html += `</div>`;
+  holder.innerHTML = html;
+}
+
+document.getElementById("tactiquesContent").addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn || btn.disabled) return;
+  const d = btn.dataset;
+  const holder = document.getElementById("tactiquesContent");
+  tqFeedback = null;
+  if (d.tqSaveNew != null) {
+    const slot = Number(d.tqSaveNew);
+    const input = holder.querySelector(`[data-tq-name-input="${slot}"]`);
+    const preset = saveTacticPresetFrom(slot, input ? input.value : "", teamA.snapshotTactics());
+    tqFeedback = preset ? { slot, text: "Tactique enregistrée." } : { slot, text: "Impossible d'enregistrer cette tactique.", error: true };
+  } else if (d.tqOverwrite != null) {
+    const slot = Number(d.tqOverwrite);
+    saveTacticPresetFrom(slot, teamA.tacticPresets[slot].name, teamA.snapshotTactics());
+    tqFeedback = { slot, text: "Tactique remplacée par les ordres du prochain match." };
+  } else if (d.tqApply != null) {
+    const slot = Number(d.tqApply);
+    const round = currentMatch && currentMatch.competition !== "cup" ? currentMatch.round : (currentMatch ? currentMatch.round : null);
+    const competition = currentMatch && currentMatch.competition === "cup" ? "cup" : "championship";
+    applyTacticPresetToOrders(slot, round, competition, competition === "championship");
+    tqFeedback = { slot, text: `« ${teamA.tacticPresets[slot].name} » est en place pour le prochain match.` };
+  } else if (d.tqRename != null) {
+    tqRenaming = Number(d.tqRename); tqConfirmDelete = null;
+  } else if (d.tqRenameCancel != null) {
+    tqRenaming = null;
+  } else if (d.tqRenameOk != null) {
+    const slot = Number(d.tqRenameOk);
+    const input = holder.querySelector(`[data-tq-rename-input="${slot}"]`);
+    if (teamA.renameTacticPreset(slot, input ? input.value : "")) {
+      syncTacticPresetsToServer({ op: "rename", slot, name: teamA.tacticPresets[slot].name });
+      tqRenaming = null;
+    } else {
+      tqFeedback = { slot, text: "Donnez un nom à la tactique.", error: true };
+    }
+  } else if (d.tqDelete != null) {
+    tqConfirmDelete = Number(d.tqDelete);
+  } else if (d.tqDeleteOk != null) {
+    const slot = Number(d.tqDeleteOk);
+    if (teamA.deleteTacticPreset(slot)) syncTacticPresetsToServer({ op: "delete", slot });
+    tqConfirmDelete = null;
+  } else {
+    return;
+  }
+  renderTactiquesSection();
+});
+document.getElementById("tactiquesContent").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const r = e.target.closest("[data-tq-rename-input]");
+  const n = e.target.closest("[data-tq-name-input]");
+  const holder = document.getElementById("tactiquesContent");
+  const b = r ? holder.querySelector(`[data-tq-rename-ok="${r.dataset.tqRenameInput}"]`) : n ? holder.querySelector(`[data-tq-save-new="${n.dataset.tqNameInput}"]`) : null;
+  if (b) { e.preventDefault(); b.click(); }
+});
+
+// Barre « Mes tactiques » des Ordres : applique une tactique enregistrée à
+// la journée affichée (1 clic), ou enregistre les ordres affichés.
+function ordresDisplayedRound() {
+  const round = selectedOrdresRound != null ? selectedOrdresRound : (currentMatch ? currentMatch.round : null);
+  const competition = selectedOrdresCompetition || "championship";
+  return { round, competition, immediate: ordresSelectionIsImmediate() };
+}
+function renderOrdresPresetsBar() {
+  const bar = document.getElementById("ordresPresetsBar");
+  if (!bar || !teamA) return;
+  const presets = teamA.tacticPresets || [];
+  const msg = ordresPresetsMsg ? `<span class="ordres-presets-msg${ordresPresetsMsg.error ? " is-error" : ""}">${escapeHtml(ordresPresetsMsg.text)}</span>` : "";
+  let html = `<span class="ordres-presets-label">Mes tactiques</span>`;
+  if (!presets.length) html += `<span class="ordres-presets-empty">Aucune tactique enregistrée.</span>`;
+  presets.forEach((p, slot) => {
+    html += `<button type="button" class="cal-filter" data-ordres-preset="${slot}"${ordresPanelLocked ? " disabled" : ""} title="Mettre en place « ${escapeHtml(p.name)} »">${escapeHtml(p.name)}</button>`;
+  });
+  html += `<button type="button" class="tq-btn" data-ordres-preset-open>+ Enregistrer ces ordres</button>` +
+    `<button type="button" class="tq-btn" data-tab="tactiques">Gérer</button>${msg}`;
+  if (ordresPresetsFormOpen) {
+    const options = [];
+    presets.forEach((p, slot) => options.push(`<option value="${slot}">Remplacer « ${escapeHtml(p.name)} »</option>`));
+    if (presets.length < TACTIC_PRESETS_MAX) options.unshift(`<option value="${presets.length}" selected>Nouvelle tactique</option>`);
+    html += `<div class="ordres-presets-form"><input type="text" class="tq-input" id="ordresPresetName" maxlength="${TACTIC_PRESET_NAME_MAX}" placeholder="Nom de la tactique">` +
+      `<select id="ordresPresetSlot">${options.join("")}</select>` +
+      `<button type="button" class="tq-btn" data-ordres-preset-save>Enregistrer</button>` +
+      `<button type="button" class="tq-btn" data-ordres-preset-cancel>Annuler</button></div>`;
+  }
+  bar.innerHTML = html;
+}
+document.getElementById("ordresPresetsBar").addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn || btn.disabled) return;
+  if (btn.dataset.tab) return; // « Gérer » : géré par l'écouteur global des onglets
+  const { round, competition, immediate } = ordresDisplayedRound();
+  ordresPresetsMsg = null;
+  if (btn.dataset.ordresPreset != null) {
+    const slot = Number(btn.dataset.ordresPreset);
+    if (applyTacticPresetToOrders(slot, round, competition, immediate)) {
+      renderOrdresGrid();
+      if (!immediate) renderOrdresRoundSelector();
+      ordresPresetsMsg = { text: `« ${teamA.tacticPresets[slot].name} » mise en place.` };
+      markOrdresDirty();
+    }
+    return;
+  }
+  if (btn.dataset.ordresPresetOpen != null) { ordresPresetsFormOpen = true; }
+  else if (btn.dataset.ordresPresetCancel != null) { ordresPresetsFormOpen = false; }
+  else if (btn.dataset.ordresPresetSave != null) {
+    const name = document.getElementById("ordresPresetName").value;
+    const slot = Number(document.getElementById("ordresPresetSlot").value);
+    const snap = immediate ? teamA.snapshotTactics() : teamA.getPlanForRound(round, competition);
+    const preset = saveTacticPresetFrom(slot, name, snap);
+    ordresPresetsFormOpen = false;
+    ordresPresetsMsg = preset ? { text: `Tactique « ${preset.name} » enregistrée.` } : { text: "Impossible d'enregistrer cette tactique.", error: true };
+  } else return;
+  renderOrdresPresetsBar();
+  const input = document.getElementById("ordresPresetName");
+  if (input) input.focus();
+});
+document.getElementById("ordresPresetsBar").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.id === "ordresPresetName") {
+    e.preventDefault();
+    const b = document.querySelector("#ordresPresetsBar [data-ordres-preset-save]");
+    if (b) b.click();
+  }
+});
+
     if (!g) { g = { key, title: e.at ? calendarMonthTitle(e.at) : "Saison", rows: [] }; groups.push(g); }
     g.rows.push(e);
   });
@@ -40674,6 +41096,7 @@ function tourRender() {
   document.getElementById("tourNextBtn").addEventListener("click", () => { window.__lastTourNext = tourNext(); });
 }
 
+  tactiques: () => { renderTactiquesSection(); showPage("tactiquesSection"); setActiveTab("tactiques"); },
 // Async depuis le correctif "Mets les vrais primes sur le tutoriel" (voir
 // performTutorialRewardClaim plus haut, AWAITED en ligue partagée) : un
 // thème à prime attend la confirmation (locale en solo, réseau sinon) avant

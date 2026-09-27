@@ -318,6 +318,50 @@ function setTactics(team, teamIndex, league, body, now) {
   };
 }
 
+// Tactiques enregistrées (onglet Tactiques, voir Team.tacticPresets/
+// TACTIC_PRESETS_MAX côté moteur) : body { op: "save"|"rename"|"delete",
+// slot, name?, orders? }. `orders` (op "save") : même forme qu'un plan
+// (snapshotTactics), validé champ par champ avec les mêmes validateurs que
+// setTactics/setLineup. Aucun verrou d'avant-match : enregistrer une
+// tactique ne change pas les ordres du prochain match.
+function setTacticPresets(team, teamIndex, league, body, now) {
+  if (!body || typeof body !== "object") return fail("Requête invalide.");
+  const max = Engine.TACTIC_PRESETS_MAX;
+  const slot = Number(body.slot);
+  if (!Number.isInteger(slot) || slot < 0 || slot >= max) return fail(`Emplacement de tactique invalide (0 à ${max - 1}).`);
+  const presets = Array.isArray(team.tacticPresets) ? team.tacticPresets : (team.tacticPresets = []);
+  if (body.op === "delete") {
+    if (!team.deleteTacticPreset(slot)) return fail("Aucune tactique à cet emplacement.");
+  } else if (body.op === "rename") {
+    if (!team.renameTacticPreset(slot, body.name)) return fail("Nom de tactique invalide.");
+  } else if (body.op === "save") {
+    const o = body.orders;
+    if (!o || typeof o !== "object") return fail("Ordres manquants.");
+    if (slot > presets.length) return fail("Emplacement de tactique invalide.");
+    const checks = [
+      ["offensivePriorities", validateOffensivePriorities], ["defense", validateDefense], ["rhythm", validateRhythm],
+      ["tacticalTier", validateTacticalTier], ["screenDefense", validateScreenDefense], ["helpDefense", validateHelpDefense],
+      ["postDefense", validatePostDefense], ["closeoutStyle", validateCloseoutStyle], ["offRebStyle", validateOffRebStyle],
+      ["endgameManagement", validateEndgameManagement],
+    ];
+    const snap = {};
+    for (const [key, validate] of checks) {
+      if (o[key] === undefined) continue;
+      const v = validate(o[key]);
+      if (!v.ok) return fail(v.error);
+      snap[key] = v.value;
+    }
+    if (!snap.offensivePriorities || !snap.defense || !snap.rhythm) return fail("Tactique incomplète : attaque, défense et rythme sont requis.");
+    const lv = validateLineupBody(team, o.lineup);
+    if (!lv.ok) return fail(lv.error);
+    snap.lineup = lv.value;
+    if (!team.saveTacticPreset(slot, body.name, snap, now)) return fail(`${max} tactiques au maximum.`);
+  } else {
+    return fail("Opération inconnue.");
+  }
+  return { ok: true, tacticPresets: team.tacticPresets };
+}
+
 // Une journée valide pour une PRÉPARATION À L'AVANCE (voir setPlan plus bas) :
 // un entier dans les bornes du calendrier, pour laquelle CETTE équipe a
 // effectivement un match programmé, pas encore résolu — exactement la même
@@ -1235,7 +1279,7 @@ function submitPronostics(team, teamIndex, league, body, now) {
 }
 
 module.exports = {
-  setLineup, setTactics, setTraining, setPlan, listPlayer, bidOnListing, bidOnCoachListing,
+  setLineup, setTactics, setTraining, setPlan, setTacticPresets, listPlayer, bidOnListing, bidOnCoachListing,
   upgradeArena, buildArenaSeats, setTicketPrices, upgradeFanShop, fireTrainer,
   bidOnAnalystListing, fireVideoAnalyst, runVideoSession,
   // Académie de jeunes (recruteur + centre de formation + pipeline privé de

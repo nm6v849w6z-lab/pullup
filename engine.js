@@ -3439,6 +3439,32 @@ const CHEMISTRY_SAME_FIVE_GAIN = 1; // en plus, si même cinq de départ qu'au m
 // progressivement puis plafonne (jamais un saut direct au maximum, même en
 // restant indéfiniment sur la même tactique : l'entraînement ciblé reste le
 // seul moyen d'accélérer, voir TACTICAL_KNOWLEDGE_DAILY_GAIN ci-dessous).
+// TACTIQUES ENREGISTRÉES (onglet Tactiques, demande du 2026-09-27 :
+// "pouvoir programmer 3 tactiques max, qu'on pourra retrouver très
+// facilement dans ordres et mettre en place en 1 seconde", "tout, joueurs
+// compris", "pouvoir donner un nom à la tactique") : Team.tacticPresets,
+// jusqu'à TACTIC_PRESETS_MAX ordres complets nommés (attaque, défense,
+// rythme, consignes confirmées, convocation, cinq, rotation, temps de jeu).
+// Les « postes à surveiller » (watchAssignments) n'en font PAS partie : ils
+// visent des joueurs d'un adversaire précis.
+const TACTIC_PRESETS_MAX = 3;
+const TACTIC_PRESET_NAME_MAX = 30;
+const TACTIC_PRESET_FIELDS = ["offensivePriorities", "defense", "rhythm", "tacticalTier", "screenDefense", "helpDefense", "postDefense", "closeoutStyle", "offRebStyle", "endgameManagement"];
+// Copie profonde d'un jeu d'ordres (forme snapshotTactics) en tactique
+// enregistrable : sans watchAssignments.
+function tacticPresetOrdersFrom(snap) {
+  const out = {};
+  TACTIC_PRESET_FIELDS.forEach(k => { if (snap[k] !== undefined) out[k] = Array.isArray(snap[k]) ? [...snap[k]] : snap[k]; });
+  const l = snap.lineup || {};
+  out.lineup = {
+    starters: { ...(l.starters || {}) },
+    backupPositions: Object.fromEntries(Object.entries(l.backupPositions || {}).map(([id, positions]) => [id, [...positions]])),
+    ...(l.minutes ? { minutes: Object.fromEntries(Object.entries(l.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
+    ...(Array.isArray(l.convoked) ? { convoked: [...l.convoked] } : {}),
+  };
+  return out;
+}
+
 const TACTICAL_KNOWLEDGE_GAIN_BASE = 6; // 1er match consécutif sur cette option
 const TACTICAL_KNOWLEDGE_GAIN_STEP = 2; // += par match consécutif supplémentaire
 const TACTICAL_KNOWLEDGE_GAIN_MAX = 12; // plafond (atteint au 4e match consécutif)
@@ -3963,6 +3989,8 @@ class Team {
     // (clé = bare round number, forcément championnat à l'époque) vers ce
     // nouveau format : voir teamFromSave plus bas.
     this.plannedTactics = {};
+    // Tactiques enregistrées (voir TACTIC_PRESETS_MAX) : [{ name, savedAt, orders }].
+    this.tacticPresets = [];
 
     // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
     // de FEED_CATEGORIES) : un fil par équipe, vide à la création — rempli
@@ -4907,6 +4935,55 @@ class Team {
   // moyenne des 3 options ACTUELLEMENT jouées (les 3 priorités offensives +
   // la défense + le rythme en cours, PAS les 18 options dans leur
   // ensemble), un "petit plus/petit moins" d'ensemble sur TOUTE l'équipe.
+  // Tactiques enregistrées (voir TACTIC_PRESETS_MAX). `slot` 0..2 : remplace
+  // la tactique de cet emplacement, ou l'ajoute à la suite.
+  saveTacticPreset(slot, name, snap, now = Date.now()) {
+    if (!Array.isArray(this.tacticPresets)) this.tacticPresets = [];
+    const clean = String(name || "").trim().slice(0, TACTIC_PRESET_NAME_MAX) || `Tactique ${slot + 1}`;
+    const preset = { name: clean, savedAt: now, orders: tacticPresetOrdersFrom(snap) };
+    if (slot < this.tacticPresets.length) this.tacticPresets[slot] = preset;
+    else if (this.tacticPresets.length < TACTIC_PRESETS_MAX) this.tacticPresets.push(preset);
+    else return null;
+    return preset;
+  }
+  renameTacticPreset(slot, name) {
+    const p = (this.tacticPresets || [])[slot];
+    const clean = String(name || "").trim().slice(0, TACTIC_PRESET_NAME_MAX);
+    if (!p || !clean) return false;
+    p.name = clean;
+    return true;
+  }
+  deleteTacticPreset(slot) {
+    if (!Array.isArray(this.tacticPresets) || !this.tacticPresets[slot]) return false;
+    this.tacticPresets.splice(slot, 1);
+    return true;
+  }
+  // Ordres prêts à appliquer (patch pour les ordres en direct ou
+  // stagePlanForRound) : copie profonde, joueurs partis retirés.
+  tacticPresetPatch(slot) {
+    const p = (this.tacticPresets || [])[slot];
+    if (!p) return null;
+    const patch = tacticPresetOrdersFrom(p.orders);
+    const ids = new Set((this.players || []).map(pl => pl.id));
+    const keep = id => ids.has(Number(id));
+    const l = patch.lineup;
+    Object.keys(l.starters).forEach(pos => { if (l.starters[pos] != null && !keep(l.starters[pos])) l.starters[pos] = null; });
+    Object.keys(l.backupPositions).forEach(id => { if (!keep(id)) delete l.backupPositions[id]; });
+    if (l.minutes) Object.values(l.minutes).forEach(m => Object.keys(m).forEach(id => { if (!keep(id)) delete m[id]; }));
+    if (l.convoked) l.convoked = l.convoked.filter(keep);
+    return patch;
+  }
+  // Maîtrise moyenne (0-100) des options d'une tactique enregistrée, même
+  // moyenne que tacticalKnowledgeFactor ci-dessous.
+  tacticPresetKnowledge(slot) {
+    const p = (this.tacticPresets || [])[slot];
+    if (!p) return null;
+    const k = this.tacticalKnowledge;
+    const off = (p.orders.offensivePriorities || []).map(x => k.offense[x] ?? 50);
+    const offAvg = off.length ? off.reduce((a, b) => a + b, 0) / off.length : 50;
+    return Math.round((offAvg + (k.defense[p.orders.defense] ?? 50) + (k.rhythm[p.orders.rhythm] ?? 50)) / 3);
+  }
+
   tacticalKnowledgeFactor() {
     const offenseValues = this.offensivePriorities.map(p => this.tacticalKnowledge.offense[p] ?? 50);
     const offenseAvg = offenseValues.length
@@ -10949,6 +11026,7 @@ function serializeTeam(team) {
     // Recruteur (voir Team.recruiter ci-dessus) : même forme/logique de
     // sauvegarde que trainer/videoAnalyst.
     recruiter: team.recruiter ? { ...team.recruiter } : null,
+    tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     // Staff médical (voir MEDICAL_STAFF_ROLES) : même forme que recruiter.
     doctor: team.doctor ? { ...team.doctor } : null,
     physio: team.physio ? { ...team.physio } : null,
@@ -11494,6 +11572,10 @@ function teamFromSave(data) {
   // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
   // sur plusieurs postes) ; si absente (ancienne sauvegarde) ou invalide, la
   // feuille auto-assignée par défaut du constructeur reste en place.
+  team.tacticPresets = Array.isArray(data.tacticPresets)
+    ? data.tacticPresets.filter(p => p && p.orders && typeof p.name === "string").slice(0, TACTIC_PRESETS_MAX)
+      .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
+    : [];
   if (data.lineup && data.lineup.starters) {
     // Les clés d'objet JS sont toujours des chaînes (même écrites avec un id
     // numérique), donc Object.entries(...) renvoie des id-chaînes alors que
@@ -13181,6 +13263,7 @@ return {
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,
   POSITION_ATTR_PROFILE, ATTR_CATEGORY_WEIGHT, weightedRatingForPosition, levelCoefficientFor,
   CARD_POSITION_BIAS, inferPosition, SALARY_PEAK_BONUS_THRESHOLD, SALARY_PEAK_BONUS_FACTOR, SALARY_PEAK_BONUS_MAX, peakBonusFor,
+  TACTIC_PRESETS_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom,
   trainerWeeklySalary,
   OFFENSE_PROFILES, DEFENSES, RHYTHMS,
   // Tactique confirmée (voir le grand commentaire au-dessus de
