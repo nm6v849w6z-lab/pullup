@@ -5584,7 +5584,6 @@
   .msg-col{background:var(--panel); border:1px solid var(--line); border-radius:14px; display:flex; flex-direction:column; min-width:0; overflow:hidden;}
   .msg-col-head{padding:14px 16px; border-bottom:1px solid var(--line-soft); display:flex; align-items:center; gap:10px;}
   .msg-col-title{font-weight:700; font-size:15px;}
-  .msg-new select{width:100%; height:40px; margin-top:0;}
   .msg-list{list-style:none; margin:0; padding:6px; overflow-y:auto; flex:1;}
   .msg-conv{display:flex; flex-direction:column; gap:3px; width:100%; text-align:left; padding:11px 12px; border-radius:10px; border:1px solid transparent; background:transparent; color:var(--ink); font:inherit; cursor:pointer;}
   .msg-conv:hover{background:var(--panel-2);}
@@ -38623,7 +38622,6 @@ function renderMessagesSection() {
   root.innerHTML =
     `<div class="msg-layout${msgUi.activeWith != null ? " has-thread" : ""}" id="msgLayout">` +
       `<section class="msg-col msg-col-list">` +
-        `<div class="msg-col-head msg-new"><select id="msgNewSelect" aria-label="Écrire à un manager"></select></div>` +
         `<ul class="msg-list" id="msgList"></ul>` +
       `</section>` +
       `<section class="msg-col msg-col-thread" id="msgThreadCol"></section>` +
@@ -38634,17 +38632,13 @@ function renderMessagesSection() {
 
 function renderMsgList() {
   const list = document.getElementById("msgList");
-  const select = document.getElementById("msgNewSelect");
+  // Retour utilisateur (2026-09-27) : plus de menu « Nouveau message » ici —
+  // pour écrire à un manager, on passe par la page de son club (bouton
+  // « Envoyer un message », data-msg-open).
   if (!list || !msgUi.summary) return;
   const s = msgUi.summary;
-  if (select) {
-    const opts = s.managers.filter(m => !m.blocked);
-    select.innerHTML = `<option value="">Nouveau message…</option>` +
-      opts.map(m => `<option value="${m.teamIndex}" data-no-i18n>${escapeHtml(m.name)}</option>`).join("");
-    select.disabled = !opts.length;
-  }
   if (!s.conversations.length) {
-    list.innerHTML = `<li class="msg-empty">${s.managers.length ? "Aucune conversation pour l'instant. Choisissez un manager ci-dessus pour lui écrire." : "Aucun autre manager dans la ligue pour l'instant."}</li>`;
+    list.innerHTML = `<li class="msg-empty">${s.managers.length ? "Aucune conversation pour l'instant. Pour écrire à un manager, ouvrez la page de son club puis « Envoyer un message »." : "Aucun autre manager dans la ligue pour l'instant."}</li>`;
     return;
   }
   list.innerHTML = s.conversations.map(c => {
@@ -38689,7 +38683,7 @@ function renderMsgThread(opts) {
   const content = document.getElementById("messagesContent");
   if (content) content.classList.toggle("has-thread", msgUi.activeWith != null);
   if (msgUi.activeWith == null) {
-    col.innerHTML = `<p class="msg-empty">Sélectionnez une conversation, ou écrivez à un manager.</p>`;
+    col.innerHTML = `<p class="msg-empty">Sélectionnez une conversation.</p>`;
     return;
   }
   const t = msgUi.thread;
@@ -38848,9 +38842,6 @@ async function msgSendReport() {
     if (e.target.closest("[data-msg-report-send]")) { window.__lastMsgAction = msgSendReport(); return; }
   });
   document.addEventListener("change", (e) => {
-    if (e.target && e.target.id === "msgNewSelect" && e.target.value !== "") {
-      window.__lastMsgNav = msgOpenConversation(Number(e.target.value));
-    }
   });
   document.addEventListener("submit", (e) => {
     if (e.target && e.target.id === "msgComposeForm") { e.preventDefault(); window.__lastMsgAction = msgSend(); }

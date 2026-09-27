@@ -48,12 +48,11 @@ function typeAndSend(win, doc, text) {
     tab.click();
     await winA.__lastMsgNav;
     check(!docA.getElementById("messagesSection").classList.contains("hidden"), "la page Messagerie s'affiche");
-    const optionNames = [...docA.getElementById("msgNewSelect").options].slice(1).map(o => o.textContent);
-    check(optionNames.length === 2 && optionNames.includes("Bravo MSG") && !optionNames.includes("Alpha MSG"), "« Nouveau message » propose les 2 autres managers");
+    check(!docA.getElementById("msgNewSelect"), "plus de menu « Nouveau message » sur la page Messagerie");
     check(!!docA.querySelector("#msgList .msg-empty"), "liste vide au départ");
-    const sel = docA.getElementById("msgNewSelect");
-    sel.value = String(iB);
-    sel.dispatchEvent(new winA.Event("change", { bubbles: true }));
+    // On écrit à un manager depuis la page de son club.
+    winA.eval(`showTeamDetail(${iB})`);
+    docA.querySelector("#teamDetailContent .msg-team-cta button").click();
     await winA.__lastMsgNav;
     check(docA.querySelector(".msg-thread-name").textContent === "Bravo MSG", "conversation avec Bravo ouverte");
     check(docA.getElementById("msgSendBtn").disabled, "« Envoyer » désactivé tant que le message est vide");
