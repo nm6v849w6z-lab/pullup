@@ -69,7 +69,7 @@ const prevDisabledAtMin = doc2.getElementById("statsHebdoPrevBtn").disabled;
 console.log(`${prevDisabledAtMin ? "✅" : "❌"} '← Semaine précédente' désactivé une fois la 1ère semaine atteinte.`);
 if (!prevDisabledAtMin) throw new Error("❌ Le bouton précédent devrait se désactiver à la semaine 1 (la plus ancienne).");
 
-const matchRows = [...doc2.querySelectorAll("#statsHebdoContent table.standings-table tbody tr")];
+const matchRows = [...doc2.querySelectorAll("#statsHebdoContent .st-game")];
 console.log("Matchs affichés pour la semaine 1 :", matchRows.length, "(attendu 2, une par journée de la semaine)");
 if (matchRows.length !== 2) throw new Error("❌ La semaine 1 (journées 1 et 2) devrait afficher 2 matchs, obtenu : " + matchRows.length);
 if (!matchRows[0].textContent.includes("Journée 1") || !matchRows[1].textContent.includes("Journée 2")) {
@@ -86,7 +86,7 @@ const independentRound0 = win2.eval(`
   })()
 `);
 console.log("Score journée 1 affiché :", matchRows[0].textContent.replace(/\s+/g, " "), "| calculé indépendamment :", independentRound0);
-if (!matchRows[0].textContent.includes(`${independentRound0.my} - ${independentRound0.opp}`)) {
+if (!matchRows[0].querySelector(".st-game-score").textContent.includes(`${independentRound0.my}-${independentRound0.opp}`)) {
   throw new Error("❌ Le score affiché pour la journée 1 ne correspond pas au résultat réel (league.results).");
 }
 console.log("✅ Les matchs de la semaine 1 (2 journées) s'affichent avec le bon score, dans le bon ordre.");

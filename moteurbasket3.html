@@ -4690,6 +4690,10 @@
 .hm-kpi-flows b.is-down { color: #f58a76; }
 .hm-kpi-flows__net { border-top: 1px solid var(--border); padding-top: 5px; margin-top: 2px; color: var(--text) !important; font-weight: 600; }
 .hm-kpi-flows__note { font-size: 11.5px; }
+.hm-kpi-staff > div > span { display: inline-flex; align-items: center; gap: 8px; }
+.hm-slot--sm { width: 10px !important; height: 10px !important; flex: none; }
+.hm-staff-stars { color: var(--accent); letter-spacing: 1px; font-size: 13px; }
+.hm-staff-stars em { font-style: normal; color: var(--border-strong); }
 .hm-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .hm-chips span { font-size: 12px; background: #1A2439; padding: 4px 8px; border-radius: 8px; }
 .hm-bar { display: flex; align-items: center; gap: 10px; }
@@ -5109,7 +5113,7 @@
      jamais chargée dans ce projet). Couleurs : tokens :root du jeu +
      pastilles de poste propres à cet écran.
      ===================================================================== */
-  #effectifSection, #teamDetailSection{--eff-row:#172031; --eff-row-2:#141c2b; --eff-sep:#222b3d; --eff-track:#243048;
+  #effectifSection, #teamDetailSection, #statsHebdoSection{--eff-row:#172031; --eff-row-2:#141c2b; --eff-sep:#222b3d; --eff-track:#243048;
     --eff-pos-m-bg:rgba(96,165,250,.16); --eff-pos-m:#9cc5fb;
     --eff-pos-a-bg:rgba(45,212,191,.15); --eff-pos-a:#6ee7d2;
     --eff-pos-as-bg:rgba(167,139,250,.18); --eff-pos-as:#c9bbfd;
@@ -5370,7 +5374,7 @@
     --hm-surface:#ffffff; --hm-card:#f3f5f9; --hm-border:#dbe2ec;
     --hm-text:#142033; --hm-muted:#5d6b80; --hm-faint:#7a869a; --hm-accent:#d9800b;
   }
-  html[data-theme="light"] #effectifSection, html[data-theme="light"] #teamDetailSection{
+  html[data-theme="light"] #effectifSection, html[data-theme="light"] #teamDetailSection, html[data-theme="light"] #statsHebdoSection{
     --eff-row:#f6f8fb; --eff-row-2:#ffffff; --eff-sep:#e3e8f0; --eff-track:#e3e8f0;
     --eff-pos-m-bg:rgba(59,130,246,.12); --eff-pos-m:#2563c9;
     --eff-pos-a-bg:rgba(20,184,166,.13); --eff-pos-a:#0f8a79;
@@ -5548,16 +5552,72 @@
   button.hc-record:hover, button.hc-record:focus-visible{border-color:rgba(240,162,60,.6); background:rgba(240,162,60,.06); outline:none;}
   button.hc-record:hover .hc-record-text{color:var(--amber);}
   /* Classement mondial par statistique. */
-  /* ---- Statistiques (ex-Stats hebdo, 2026-09-27) ---- */
-  .st-page{display:flex; flex-direction:column; gap:20px;}
-  .st-page .page-title{margin-bottom:0;}
-  .st-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px; align-items:start;}
-  @media (max-width:1100px){ .st-grid{grid-template-columns:minmax(0,1fr);} }
-  .st-panel .field-label:first-child{margin-top:0;}
-  .st-sortable{cursor:pointer; user-select:none; white-space:nowrap;}
-  .st-sortable:hover, .st-sortable.is-sorted{color:var(--amber);}
-  .st-season-table td:nth-child(n+3), .st-season-table th:nth-child(n+3){text-align:right; font-variant-numeric:tabular-nums;}
-  .st-dnp td{opacity:.5;}
+  /* ---- Statistiques (ex-Stats hebdo, 2026-09-27 ; DA alignée sur
+     Effectif/Ligue : bandeau de chiffres clés, lignes-cartes, cartes de
+     leaders) ---- */
+  .st-page{display:flex; flex-direction:column; gap:30px; font-variant-numeric:tabular-nums;}
+  .st-head{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
+  .st-head .page-title{margin-bottom:6px;}
+  .st-sub{font-size:14px; color:var(--ink-dim);}
+  .st-kpis .eff-kpi{padding:12px 20px;}
+  .eff-kpi-num.st-pos{color:var(--ok);} .eff-kpi-num.st-neg{color:var(--danger);}
+  .st-block-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin:0 0 14px;}
+  .st-block-head h2{font-family:var(--display); font-size:24px; font-weight:800; margin:0;}
+  .st-block-head span{font-size:12.5px; color:var(--ink-faint);}
+  .st-empty{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; margin:0;}
+  /* Cartes de leaders */
+  .hc-ws.st-leads{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px;}
+  @media (max-width:1280px){ .hc-ws.st-leads{grid-template-columns:repeat(3,minmax(0,1fr));} }
+  @media (max-width:760px){ .hc-ws.st-leads{grid-template-columns:minmax(0,1fr);} }
+  .hc-ws-row.st-lead{display:flex; flex-direction:column; align-items:stretch; text-align:left; gap:12px; padding:16px; border:1px solid var(--line); border-radius:14px;
+    background:linear-gradient(160deg, rgba(240,162,60,.08), rgba(240,162,60,0) 55%), var(--panel); box-shadow:0 12px 30px -18px rgba(0,0,0,.6);}
+  .st-lead .hc-ws-cat{font-size:11.5px; color:var(--amber); letter-spacing:.08em;}
+  .st-lead-id{display:flex; align-items:center; gap:10px; min-width:0;}
+  .st-lead-av{flex:none; line-height:0;}
+  .st-lead .hc-ws-who{display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0;}
+  .st-lead .hc-ws-who .player-link{font-size:15px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .st-lead-pos .eff-pos{font-size:11px; padding:2px 6px; min-width:28px;}
+  .st-lead-val{display:flex; align-items:baseline; gap:6px;}
+  .st-lead-val b{font-family:var(--display); font-size:36px; font-weight:800; line-height:1; color:var(--ink);}
+  .st-lead-val small{font-size:12px; color:var(--ink-dim);}
+  .st-lead-foot{display:flex; flex-direction:column; gap:6px; padding-top:10px; border-top:1px solid var(--line-soft); margin-top:auto;}
+  .st-lead-rank{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--ink-dim);}
+  .st-lead .hc-world-rank{font-size:14px;}
+  .st-lead .hc-ws-lead{white-space:normal;}
+  .st-lead-top{color:var(--amber) !important; font-weight:700;}
+  /* Tableau de la saison (lignes-cartes façon Effectif) */
+  .st-table-wrap{background:var(--eff-row-2); border:1px solid var(--eff-sep); border-radius:14px; padding:4px 0;}
+  #statsHebdoSection table.st-season-table, #statsHebdoSection #statsHebdoContent table.roster-table{width:100%; background:transparent; border-collapse:separate; border-spacing:0; font-size:14px; box-shadow:none; border-radius:0;}
+  #statsHebdoSection table.st-season-table th, #statsHebdoSection #statsHebdoContent table.roster-table th{height:40px; padding:0 10px; font-size:12px; font-weight:600; text-transform:none; letter-spacing:0; color:var(--ink-dim); background:transparent; border-bottom:1px solid var(--eff-sep); text-align:right; white-space:nowrap;}
+  #statsHebdoSection table.st-season-table td, #statsHebdoSection #statsHebdoContent table.roster-table td{height:48px; padding:0 10px; border-bottom:1px solid var(--eff-sep); text-align:right; white-space:nowrap; background:transparent;}
+  #statsHebdoSection table.st-season-table tr:last-child td, #statsHebdoSection #statsHebdoContent table.roster-table tr:last-child td{border-bottom:0;}
+  #statsHebdoSection table.st-season-table th:first-child, #statsHebdoSection table.st-season-table td:first-child,
+  #statsHebdoSection #statsHebdoContent table.roster-table th:first-child, #statsHebdoSection #statsHebdoContent table.roster-table td:first-child{text-align:left; padding-left:16px;}
+  #statsHebdoSection table.st-season-table th:nth-child(2), #statsHebdoSection table.st-season-table td:nth-child(2){text-align:left;}
+  #statsHebdoSection table td:last-child, #statsHebdoSection table th:last-child{padding-right:16px;}
+  #statsHebdoSection tr.st-row:hover td{background:var(--eff-row);}
+  .st-sortable{cursor:pointer; user-select:none;}
+  .st-sortable:hover{color:var(--ink) !important;}
+  .st-sortable.is-sorted{color:var(--amber) !important;}
+  td.st-sorted{background:rgba(240,162,60,.05) !important;}
+  td.st-best{color:var(--amber); font-weight:800;}
+  .st-dnp td{color:var(--ink-faint);} .st-dnp .eff-player{opacity:.55;}
+  .st-pct{display:inline-flex; flex-direction:column; align-items:flex-end; gap:4px;}
+  .st-pct i{display:block; width:42px; height:4px; border-radius:2px; background:var(--eff-track); overflow:hidden;}
+  .st-pct i b{display:block; height:100%; background:var(--ok);}
+  td.st-best .st-pct i b{background:var(--amber);}
+  /* Semaine par semaine */
+  #statsWeekPanel{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px;}
+  .st-week-nav{margin-bottom:6px;}
+  #statsHebdoContent .field-label{margin-top:18px;}
+  #statsHebdoContent .table-scroll{background:var(--eff-row-2); border:1px solid var(--eff-sep); border-radius:12px;}
+  .st-games{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px;}
+  .st-game{display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--eff-row-2); border:1px solid var(--eff-sep); border-radius:12px;}
+  .st-game-txt{display:flex; flex-direction:column; min-width:0; flex:1;}
+  .st-game-txt small{font-size:11.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em; font-weight:700;}
+  .st-game-txt b{font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .st-game-score{font-family:var(--display); font-size:22px; font-weight:800;}
+  .st-game-score i{font-style:normal; color:var(--ink-faint); margin:0 4px;}
   .hc-ws{display:flex; flex-direction:column;}
   .hc-ws-row{display:grid; grid-template-columns:150px minmax(0,1fr) 64px 60px; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line-soft);}
   .hc-ws-row:last-child{border-bottom:none;}
@@ -6792,22 +6852,31 @@
        reste inchangé. -->
   <div id="statsHebdoSection" class="hidden">
     <div class="section st-page">
-      <h2 class="page-title">Statistiques</h2>
-      <section class="lg-panel st-panel" id="statsSeasonPanel">
-        <div class="lg-panel-title"><h2>Saison en cours</h2><span id="statsSeasonSub">Moyennes par match · championnat et coupe</span></div>
+      <!-- Refonte visuelle (retour utilisateur 2026-09-27 : "rendre ça un peu
+           plus sympa et que ça corresponde au reste de la DA du jeu") : même
+           grammaire que l'Effectif (titre + bandeau de chiffres clés,
+           tableau en lignes-cartes avec avatar et pastille de poste) et que
+           la Ligue (cartes de leaders, pastilles V/D). -->
+      <div class="st-head">
+        <div>
+          <h2 class="page-title">Statistiques</h2>
+          <div class="st-sub" id="statsHeadSub"></div>
+        </div>
+        <div class="eff-kpis st-kpis" id="statsKpis"></div>
+      </div>
+      <section class="st-block" id="statsWorldPanel">
+        <div class="st-block-head"><h2>Classement mondial</h2><span>Ton meilleur joueur dans chaque catégorie, et son rang parmi tous les joueurs de la ligue</span></div>
+        <div id="statsWorldContent"></div>
+      </section>
+      <section class="st-block" id="statsSeasonPanel">
+        <div class="st-block-head"><h2>Saison en cours</h2><span id="statsSeasonSub">Moyennes par match · championnat et coupe · clique sur une colonne pour trier</span></div>
         <div id="statsSeasonContent"></div>
       </section>
-      <div class="st-grid">
-        <section class="lg-panel st-panel" id="statsWorldPanel">
-          <div class="lg-panel-title"><h2>Classement mondial</h2></div>
-          <div id="statsWorldContent"></div>
-        </section>
-        <section class="lg-panel st-panel" id="statsWeekPanel">
-          <div class="lg-panel-title"><h2>Semaine par semaine</h2></div>
-          <div class="week-nav" id="statsHebdoNav"></div>
-          <div id="statsHebdoContent"></div>
-        </section>
-      </div>
+      <section class="st-block" id="statsWeekPanel">
+        <div class="st-block-head"><h2>Semaine par semaine</h2></div>
+        <div class="week-nav st-week-nav" id="statsHebdoNav"></div>
+        <div id="statsHebdoContent"></div>
+      </section>
     </div>
   </div>
 
@@ -32369,6 +32438,24 @@ function dashBudgetLastWeekHtml(finances) {
       <div class="hm-muted hm-kpi-flows__note">Semaine ${dashEsc(lw.week)} (billetterie comprise)</div>`;
 }
 
+// Tuile Salle : affluence moyenne (avec taux de remplissage en barre) et
+// dernier match à domicile — mêmes lignes libellé/valeur que la tuile Budget.
+function dashArenaRowsHtml(arena) {
+  if (!arena.avgAttendance) {
+    return `<div class="hm-kpi-flows"><div><span>Salle</span><b>${dashEsc(arena.levelName || "")}</b></div></div>` +
+      `<div class="hm-muted hm-kpi-flows__note">Aucun match à domicile joué pour l'instant</div>`;
+  }
+  const rate = arena.avgAttendance.rate;
+  const rateColor = rate == null ? "var(--muted)" : moraleGaugeColor(rate);
+  const last = arena.lastHome;
+  return `${rate != null ? `<div class="hm-bar"><span class="hm-muted" style="color:${dashEsc(rateColor)}">Remplie à ${dashEsc(rate)}%</span><div class="hm-bar__track"><div class="hm-bar__fill" style="width:${Math.max(0, Math.min(100, rate))}%;background:${dashEsc(rateColor)}"></div></div></div>` : ""}
+      <div class="hm-kpi-flows">
+        <div><span>Affluence moyenne</span><b>${dashEsc(arena.avgAttendance.value.toLocaleString("fr-FR"))}</b></div>
+        ${last ? `<div><span>Dernier match</span><b>${dashEsc((last.attendance || 0).toLocaleString("fr-FR"))}</b></div>
+        <div><span>Recette billetterie</span><b class="is-up">+${dashEsc(dashFormatEuros(last.revenue || 0))}</b></div>` : ""}
+      </div>`;
+}
+
 function dashRenderKpis(data) {
   const filled = dashStaffFilled(data.staff);
   const lvl = Math.max(0, Math.min(100, data.squad.avgLevel));
@@ -32392,19 +32479,28 @@ function dashRenderKpis(data) {
     <a class="hm-card hm-kpi" href="/salle" data-dash-href="/salle">
       <div class="hm-kpi__label">Salle</div>
       <div class="hm-kpi__value">${dashEsc(data.arena.capacity.toLocaleString("fr-FR"))} <small>places</small></div>
-      <div class="hm-muted">${data.arena.avgAttendance
-        ? `Affluence moyenne : ${dashEsc(data.arena.avgAttendance.value.toLocaleString("fr-FR"))}${data.arena.avgAttendance.rate != null ? ` (${dashEsc(data.arena.avgAttendance.rate)}%)` : ""}`
-        : "Aucun match à domicile joué"}</div>
+      ${dashArenaRowsHtml(data.arena)}
     </a>
     <a class="hm-card hm-kpi" href="/effectif" data-dash-href="/effectif">
       <div class="hm-kpi__label">Effectif</div>
       <div class="hm-kpi__value">${dashEsc(data.squad.count)} <small>joueurs</small></div>
       <div class="hm-bar"><span class="hm-muted" style="color:${dashEsc(levelColor)}">Niveau ${dashEsc(data.squad.avgLevel)}</span><div class="hm-bar__track"><div class="hm-bar__fill" style="width:${lvl}%;background:${dashEsc(levelColor)}"></div></div></div>
+      <div class="hm-kpi-flows">
+        <div><span>Âge moyen</span><b>${data.squad.avgAge == null ? "–" : `${dashEsc(data.squad.avgAge.toFixed(1).replace(".", ","))} ans`}</b></div>
+        <div><span>Masse salariale</span><b>${data.finances.weeklyWages == null ? "–" : `${dashEsc(dashFormatEuros(data.finances.weeklyWages))} / sem.`}</b></div>
+        <div><span>Blessés</span><b class="${data.squad.injured ? "is-down" : "is-up"}">${data.squad.injured ? dashEsc(data.squad.injured) : "Aucun"}</b></div>
+      </div>
     </a>
     <a class="hm-card hm-kpi" href="/staff" data-dash-href="/staff">
       <div class="hm-kpi__label">Staff</div>
-      <div class="hm-kpi__value" style="color:${dashEsc(staffColor)}">${filled}/${DASH_STAFF_ROLES.length}</div>
-      <div class="hm-slots">${DASH_STAFF_ROLES.map((r) => `<span class="hm-slot${data.staff[r.id] ? " is-filled" : ""}" style="${data.staff[r.id] ? `background:${dashEsc(staffColor)};` : ""}" title="${dashEsc(r.label)}${data.staff[r.id] ? ` : ${dashEsc(data.staff[r.id].name)}` : " : non recruté"}"></span>`).join("")}</div>
+      <div class="hm-kpi__value" style="color:${dashEsc(staffColor)}">${filled}/${DASH_STAFF_ROLES.length} <small>postes pourvus</small></div>
+      <div class="hm-kpi-flows hm-kpi-staff">${DASH_STAFF_ROLES.map((r) => {
+        const st = data.staff[r.id];
+        return `<div><span><i class="hm-slot hm-slot--sm${st ? " is-filled" : ""}" style="${st ? `background:${dashEsc(staffColor)};` : ""}"></i>${dashEsc(r.label)}</span>` +
+          (st && st.level != null
+            ? `<b class="hm-staff-stars" title="Niveau ${dashEsc(st.level)} sur 5">${"★".repeat(st.level)}<em>${"★".repeat(Math.max(0, 5 - st.level))}</em></b>`
+            : st ? `<b>${dashEsc(st.name)}</b>` : `<b class="is-down">À recruter</b>`) + `</div>`;
+      }).join("")}</div>
     </a>
   </div>`;
 }
@@ -32866,7 +32962,7 @@ function dashboardDataFromGameState() {
   // `level`) — placeholder EXPLICITEMENT documenté "Niveau N", cohérent avec
   // le même placeholder utilisé côté fil d'actualité (voir
   // feedStaffPlaceholderName côté moteur, MIROIR EXACT).
-  const staffRef = (role) => (role ? { name: `Niveau ${role.level}` } : null);
+  const staffRef = (role) => (role ? { name: `Niveau ${role.level}`, level: role.level } : null);
 
   return {
     club: {
@@ -32918,6 +33014,11 @@ function dashboardDataFromGameState() {
       // Team.simulateHomeAttendance) — aucune donnée inventée, `null` tant
       // qu'aucun match à domicile n'a encore été joué (voir son propre repli
       // "Aucun match à domicile joué pour l'instant.").
+      // Tuile Salle étoffée (retour utilisateur 2026-09-27 : "les tuiles
+      // salle, staff et effectif sont un peu vides par rapport à l'autre à
+      // côté") : palier de salle + dernier match à domicile.
+      levelName: arenaInfo(teamA.arenaLevel).name,
+      lastHome: (teamA.attendanceHistory || [])[0] || null,
       avgAttendance: (() => {
         const history = teamA.attendanceHistory || [];
         if (!history.length) return null;
@@ -32932,6 +33033,9 @@ function dashboardDataFromGameState() {
     squad: {
       count: teamA.players.length,
       avgLevel: dashboardTeamLevel(teamA),
+      avgAge: teamA.players.length ? teamA.players.reduce((sum, p) => sum + p.age, 0) / teamA.players.length : null,
+      injured: teamA.players.filter(p => isCurrentlyInjured(p)).length,
+      starters: teamA.players.filter(p => p.overall() >= 50).length,
     },
     supporters: { value: teamA.fanMorale },
     chemistry: { value: Math.round(teamA.chemistry) },
@@ -35597,7 +35701,7 @@ function renderCoupeSection() {
   let html = "";
   if (cup.champion != null) {
     const isMe = cup.champion === myTeamIndex;
-    html += `<div class="cup-champion-banner">Champion de la Coupe : ${teamLinkHtml(cup.champion, league.teams[cup.champion].name)}${isMe ? " (c'est vous !)" : ""}</div>`;
+    html += `<div class="cup-champion-banner">Vainqueur de la Coupe : ${teamLinkHtml(cup.champion, league.teams[cup.champion].name)}${isMe ? " (c'est vous !)" : ""}</div>`;
   }
   html += `<div class="cal-layout cp-layout"><div class="cal-main">`;
   html += `<div class="cal-toolbar cp-rounds" id="cupRoundTabs" role="tablist" aria-label="Tours de coupe"></div>`;
@@ -37510,9 +37614,10 @@ function showStatsHebdoSection() {
   // rouvert repart d'un état "propre", jamais une vieille semaine parcourue
   // lors d'une visite précédente.
   statsHebdoSelectedWeek = teamA.week;
+  renderStatsHeader();
   renderStatsSeasonSection();
   const world = document.getElementById("statsWorldContent");
-  if (world) world.innerHTML = hcWorldStatsHtml(myTeamIndex);
+  if (world) world.innerHTML = statsWorldCardsHtml(myTeamIndex);
   renderStatsHebdoSection();
   showPage("statsHebdoSection");
   setActiveTab("statshebdo");
@@ -37576,9 +37681,9 @@ const STATS_SEASON_COLS = [
   { key: "stl", label: "Int", title: "Interceptions par match" },
   { key: "blk", label: "Ctr", title: "Contres par match" },
   { key: "tov", label: "Perte", title: "Pertes de balle par match" },
-  { key: "pct2", label: "2 pts", title: "Réussite à 2 points", fmt: v => (v == null ? "–" : `${Math.round(v * 100)}%`) },
-  { key: "pct3", label: "3 pts", title: "Réussite à 3 points", fmt: v => (v == null ? "–" : `${Math.round(v * 100)}%`) },
-  { key: "pctFt", label: "LF", title: "Réussite aux lancers francs", fmt: v => (v == null ? "–" : `${Math.round(v * 100)}%`) },
+  { key: "pct2", label: "2 pts", title: "Réussite à 2 points", pctCol: true, pct: "att2" },
+  { key: "pct3", label: "3 pts", title: "Réussite à 3 points", pctCol: true, pct: "att3" },
+  { key: "pctFt", label: "LF", title: "Réussite aux lancers francs", pctCol: true, pct: "attFt" },
   { key: "eval", label: "Éval", title: "Évaluation par match" },
 ];
 let statsSeasonSort = { key: "pts", dir: -1 };
@@ -37593,6 +37698,7 @@ function computeTeamSeasonPlayerStats(team) {
     return {
       player: p, gp,
       min: avg("min"), pts: avg("pts"), reb: avg("reb"), ast: avg("ast"), stl: avg("stl"), blk: avg("blk"), tov: avg("tov"),
+      att2: sum.fga2, att3: sum.fga3, attFt: sum.fta,
       pct2: sum.fga2 ? sum.fgm2 / sum.fga2 : null,
       pct3: sum.fga3 ? sum.fgm3 / sum.fga3 : null,
       pctFt: sum.fta ? sum.ftm / sum.fta : null,
@@ -37601,12 +37707,78 @@ function computeTeamSeasonPlayerStats(team) {
   });
 }
 
+// En-tête : bilan et moyennes de points du club sur la saison (championnat
+// + coupe), dans le même bandeau de chiffres clés que l'Effectif.
+function statsTeamSeasonTotals() {
+  let played = 0, wins = 0, pf = 0, pa = 0;
+  const add = (mine, opp) => { played++; pf += mine; pa += opp; if (mine > opp) wins++; };
+  (league.results || []).forEach(r => {
+    if (r.home === myTeamIndex) add(r.scoreHome, r.scoreAway);
+    else if (r.away === myTeamIndex) add(r.scoreAway, r.scoreHome);
+  });
+  ((league.cup && league.cup.rounds) || []).forEach(round => (round.matches || []).forEach(m => {
+    if (!m.resolved || m.bye) return;
+    if (m.home === myTeamIndex) add(m.scoreHome, m.scoreAway);
+    else if (m.away === myTeamIndex) add(m.scoreAway, m.scoreHome);
+  }));
+  return { played, wins, losses: played - wins, pf, pa };
+}
+
+function renderStatsHeader() {
+  const t = statsTeamSeasonTotals();
+  const sub = document.getElementById("statsHeadSub");
+  if (sub) sub.textContent = `${teamA.name} · ${t.played} match${t.played > 1 ? "s" : ""} officiel${t.played > 1 ? "s" : ""} joué${t.played > 1 ? "s" : ""} cette saison`;
+  const kpis = document.getElementById("statsKpis");
+  if (!kpis) return;
+  const avg = v => (t.played ? (v / t.played).toFixed(1) : "–");
+  const diff = t.played ? (t.pf - t.pa) / t.played : null;
+  const kpi = (label, num, unit, cls = "") =>
+    `<div class="eff-kpi"><span class="eff-kpi-label">${label}</span><span class="eff-kpi-line"><span class="eff-kpi-num${cls}">${num}</span>${unit ? `<span class="eff-kpi-unit">${unit}</span>` : ""}</span></div>`;
+  kpis.innerHTML = [
+    kpi("Bilan", `${t.wins}-${t.losses}`, ""),
+    kpi("Points marqués", avg(t.pf), "/ match"),
+    kpi("Points encaissés", avg(t.pa), "/ match"),
+    kpi("Écart moyen", diff == null ? "–" : `${diff > 0 ? "+" : ""}${diff.toFixed(1)}`, "", diff == null ? "" : diff >= 0 ? " st-pos" : " st-neg"),
+  ].join('<span class="eff-kpi-sep"></span>');
+}
+
+// Classement mondial en cartes (même calcul que l'ancien bloc d'Histoire du
+// club, voir HC_WORLD_STATS) : ton meilleur joueur par catégorie, sa
+// moyenne, son rang parmi TOUS les joueurs de la ligue et le leader.
+const ST_WORLD_UNITS = { pts: "pts", ast: "passes", reb: "rebonds", blk: "contres", stl: "int." };
+const ST_WORLD_LABELS = { pts: "Marqueur", ast: "Passeur", reb: "Rebondeur", blk: "Contreur", stl: "Intercepteur" };
+function statsWorldCardsHtml(idx) {
+  const rows = computeSeasonPlayerStats();
+  const minGames = Math.max(1, Math.min(3, league.round));
+  const eligible = rows.filter(r => r.gp >= minGames);
+  const pool = eligible.length ? eligible : rows;
+  if (!pool.some(r => r.teamIdx === idx)) return `<p class="training-empty st-empty">Le classement s'affichera après les premiers matchs de championnat.</p>`;
+  let html = `<div class="hc-ws st-leads">`;
+  HC_WORLD_STATS.forEach(cat => {
+    const sorted = [...pool].sort((a, b) => b.perGame[cat.key] - a.perGame[cat.key]);
+    const rankIdx = sorted.findIndex(r => r.teamIdx === idx);
+    const mine = sorted[rankIdx];
+    const lead = sorted[0];
+    const rank = rankIdx + 1;
+    const tier = rank <= 3 ? " hc-gold" : rank <= 10 ? " hc-top" : "";
+    html += `<div class="hc-ws-row st-lead" data-hc-ws="${cat.key}">` +
+      `<span class="hc-ws-cat" title="${cat.label}">${ST_WORLD_LABELS[cat.key]}</span>` +
+      `<div class="st-lead-id"><span class="st-lead-av">${playerAvatarHtml(mine.player, teamA, 44)}</span>` +
+      `<span class="hc-ws-who">${playerLinkHtml(idx, mine.player.id, mine.player.name)}<span class="st-lead-pos">${effPosBadgeHtml(mine.player.position)}</span></span></div>` +
+      `<div class="st-lead-val"><b>${mine.perGame[cat.key].toFixed(1)}</b><small>${ST_WORLD_UNITS[cat.key]} / match</small></div>` +
+      `<div class="st-lead-foot"><span class="st-lead-rank${tier}"><span class="hc-world-rank${tier}">${ordinalFr(rank)}</span> mondial</span>` +
+      (rank > 1 ? `<span class="hc-ws-lead">1er : ${escapeHtml(lead.player.name)} · ${lead.perGame[cat.key].toFixed(1)}</span>` : `<span class="hc-ws-lead st-lead-top">Numéro 1 de la ligue</span>`) +
+      `</div></div>`;
+  });
+  return html + `</div>`;
+}
+
 function renderStatsSeasonSection() {
   const holder = document.getElementById("statsSeasonContent");
   if (!holder) return;
   const rows = computeTeamSeasonPlayerStats(teamA);
   if (!rows.some(r => r.gp > 0)) {
-    holder.innerHTML = "<p class='training-empty'>Les statistiques de la saison s'afficheront après les premiers matchs.</p>";
+    holder.innerHTML = "<p class='training-empty st-empty'>Les statistiques de la saison s'afficheront après les premiers matchs.</p>";
     return;
   }
   const { key, dir } = statsSeasonSort;
@@ -37617,13 +37789,29 @@ function renderStatsSeasonSection() {
     const vb = b[key] == null ? -Infinity : b[key];
     return (va - vb) * dir || b.gp - a.gp;
   });
+  // Meilleure valeur de l'effectif par colonne (hors pertes, où moins = mieux,
+  // et hors matchs joués), mise en avant comme "Meilleur de l'équipe" dans
+  // l'Effectif. Pourcentages : seulement avec un minimum de tentatives.
+  const best = {};
+  STATS_SEASON_COLS.forEach(c => {
+    if (c.key === "gp" || c.key === "tov") return;
+    const vals = rows.filter(r => r.gp && r[c.key] != null && (!c.pct || r[c.pct] >= 5)).map(r => r[c.key]);
+    if (vals.length && Math.max(...vals) > 0) best[c.key] = Math.max(...vals);
+  });
   const fmt1 = v => (v == null ? "–" : v.toFixed(1));
-  let html = "<div class='table-scroll'><table class='roster-table st-season-table'><thead><tr><th>Joueur</th><th>Poste</th>" +
-    STATS_SEASON_COLS.map(c => `<th class="st-sortable${c.key === key ? " is-sorted" : ""}" data-st-sort="${c.key}" title="${c.title}">${c.label}${c.key === key ? (dir < 0 ? " ▼" : " ▲") : ""}</th>`).join("") +
+  const pctCell = v => (v == null ? "–" : `<span class="st-pct"><span>${Math.round(v * 100)}%</span><i><b style="width:${Math.round(Math.min(1, v) * 100)}%"></b></i></span>`);
+  let html = "<div class='table-scroll st-table-wrap'><table class='roster-table st-season-table'><thead><tr><th class='st-th-name'>Joueur</th><th>Poste</th>" +
+    STATS_SEASON_COLS.map(c => `<th class="st-sortable st-num${c.key === key ? " is-sorted" : ""}" data-st-sort="${c.key}" title="${c.title}">${c.label}${c.key === key ? (dir < 0 ? " ▾" : " ▴") : ""}</th>`).join("") +
     "</tr></thead><tbody>";
   rows.forEach(r => {
-    html += `<tr${r.gp ? "" : " class='st-dnp'"}><td>${playerLinkHtml(myTeamIndex, r.player.id, r.player.name)}</td><td>${escapeHtml(r.player.position || "")}</td>` +
-      STATS_SEASON_COLS.map(c => `<td>${r.gp ? (c.fmt ? c.fmt(r[c.key]) : fmt1(r[c.key])) : (c.key === "gp" ? "0" : "–")}</td>`).join("") + "</tr>";
+    html += `<tr class="st-row${r.gp ? "" : " st-dnp"}"><td class="st-td-name"><span class="eff-player">${playerAvatarHtml(r.player, teamA, 28)}${playerLinkHtml(myTeamIndex, r.player.id, r.player.name)}</span></td><td>${effPosBadgeHtml(r.player.position)}</td>` +
+      STATS_SEASON_COLS.map(c => {
+        if (!r.gp) return `<td class="st-num">${c.key === "gp" ? "0" : "–"}</td>`;
+        const v = r[c.key];
+        const isBest = best[c.key] != null && v === best[c.key] && (!c.pct || r[c.pct] >= 5);
+        const txt = c.pctCol ? pctCell(v) : c.fmt ? c.fmt(v) : fmt1(v);
+        return `<td class="st-num${c.key === key ? " st-sorted" : ""}${isBest ? " st-best" : ""}"${isBest ? ` title="Meilleur de l'équipe"` : ""}>${txt}</td>`;
+      }).join("") + "</tr>";
   });
   holder.innerHTML = html + "</tbody></table></div>";
 }
@@ -37666,14 +37854,16 @@ function renderStatsHebdoSection() {
   if (!roundsThisWeek.length) {
     html += "<p class='training-empty'>Aucun match joué lors de cette semaine.</p>";
   } else {
-    html += "<table class='standings-table'><thead><tr><th>Compétition</th><th>Adversaire</th><th>Score</th></tr></thead><tbody>";
+    html += "<div class='st-games'>";
     roundsThisWeek.forEach(({ competition, round }) => {
       const summary = ownMatchSummaryForRound(competition, round);
       if (!summary) return;
-      const cls = summary.myScore > summary.oppScore ? "result-win" : summary.myScore < summary.oppScore ? "result-loss" : "";
-      html += `<tr class="${cls}"><td>${summary.label}</td><td>${escapeHtml(summary.oppName)}</td><td>${summary.myScore} - ${summary.oppScore}</td></tr>`;
+      const win = summary.myScore > summary.oppScore;
+      html += `<div class="st-game"><span class="lg-f ${win ? "w" : "l"}">${win ? "V" : "D"}</span>` +
+        `<span class="st-game-txt"><small>${escapeHtml(summary.label)}</small><b>${escapeHtml(summary.oppName)}</b></span>` +
+        `<span class="st-game-score">${summary.myScore}<i>-</i>${summary.oppScore}</span></div>`;
     });
-    html += "</tbody></table>";
+    html += "</div>";
   }
 
   // Performances individuelles de la semaine (tout l'effectif ayant joué).
@@ -37685,7 +37875,7 @@ function renderStatsHebdoSection() {
     html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
       "<th>Joueur</th><th>Matchs</th><th>Min</th><th>Pts</th><th>Reb</th><th>Pas</th><th>Int</th><th>Ctr</th></tr></thead><tbody>";
     weekRows.forEach(r => {
-      html += `<tr><td>${playerLinkHtml(myTeamIndex, r.player.id, r.player.name)}</td><td>${r.gp}</td>` +
+      html += `<tr class="st-row"><td class="st-td-name"><span class="eff-player">${playerAvatarHtml(r.player, teamA, 24)}${playerLinkHtml(myTeamIndex, r.player.id, r.player.name)}</span></td><td>${r.gp}</td>` +
         `<td>${r.sum.min}</td><td>${r.sum.pts}</td><td>${r.sum.reb}</td><td>${r.sum.ast}</td><td>${r.sum.stl}</td><td>${r.sum.blk}</td></tr>`;
     });
     html += "</tbody></table></div>";
@@ -38307,27 +38497,6 @@ const HC_WORLD_STATS = [
   { key: "blk", label: "Meilleur contreur", unit: "ctr" },
   { key: "stl", label: "Meilleur intercepteur", unit: "int" },
 ];
-function hcWorldStatsHtml(idx) {
-  const rows = computeSeasonPlayerStats();
-  const minGames = Math.max(1, Math.min(3, league.round));
-  const eligible = rows.filter(r => r.gp >= minGames);
-  const pool = eligible.length ? eligible : rows;
-  if (!pool.some(r => r.teamIdx === idx)) return `<p class="training-empty">Le classement s'affichera après les premiers matchs de championnat.</p>`;
-  let html = `<div class="hc-ws">`;
-  HC_WORLD_STATS.forEach(cat => {
-    const sorted = [...pool].sort((a, b) => b.perGame[cat.key] - a.perGame[cat.key]);
-    const rankIdx = sorted.findIndex(r => r.teamIdx === idx);
-    const mine = sorted[rankIdx];
-    const lead = sorted[0];
-    const rank = rankIdx + 1;
-    html += `<div class="hc-ws-row" data-hc-ws="${cat.key}"><span class="hc-ws-cat">${cat.label}</span>` +
-      `<span class="hc-ws-who">${playerLinkHtml(idx, mine.player.id, mine.player.name)}` +
-      (rank > 1 ? `<span class="hc-ws-lead">1er : ${escapeHtml(lead.player.name)} · ${lead.perGame[cat.key].toFixed(1)}</span>` : "") + `</span>` +
-      `<span class="hc-ws-val">${mine.perGame[cat.key].toFixed(1)} <small>${cat.unit}</small></span>` +
-      `<span class="hc-world-rank${rank <= 3 ? " hc-gold" : rank <= 10 ? " hc-top" : ""}">${ordinalFr(rank)}</span></div>`;
-  });
-  return html + `</div>`;
-}
 
 (function wireHistoireContent() {
   const holder = document.getElementById("histoireContent");

@@ -20,7 +20,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **✅ CODE ÉCRIT, À COMMITTER/POUSSER (2026-09-27) — Onglet
+- **✅ CODE ÉCRIT, À COMMITTER/POUSSER (2026-09-27) — Refonte visuelle de
+  « Statistiques » + tuiles Salle/Effectif/Staff du tableau de bord +
+  « Vainqueur de la Coupe »** — visuels validés par l'utilisateur avant
+  livraison (règle 2026-09-27 : "fais des visuels avant de coder").
+  Statistiques : bandeau de chiffres clés (bilan, pts marqués/encaissés,
+  écart ; renderStatsHeader), Classement mondial en 5 cartes
+  (statsWorldCardsHtml, remplace hcWorldStatsHtml supprimé), tableau de
+  saison en lignes-cartes façon Effectif (avatar, pastille de poste,
+  meilleure valeur de l'équipe en orange, barres sous les % de tir),
+  matchs de la semaine en cartes V/D (.st-game). Tableau de bord
+  (dashRenderKpis) : Salle = barre de remplissage + affluence moyenne,
+  dernier match, recette (dashArenaRowsHtml) ; Effectif = âge moyen, masse
+  salariale, blessés ; Staff = niveau en étoiles par poste ou « À
+  recruter ». Coupe : bandeau « Vainqueur de la Coupe : … ». Tests
+  stats_hebdo/club_history adaptés, suites tableau de bord/Salle/i18n/
+  thème clair vertes (sandbox).
+
+- **✅ POUSSÉ (92ca5e2, 2026-09-27) — Onglet
   « Statistiques » (ex-Stats hebdo) + titre d'onglet « Hoop Manager »** —
   retour utilisateur : "l'onglet stats hebdo va être renommé statistiques,
   on va basculer la brique classement mondial qui est dans histoire du club

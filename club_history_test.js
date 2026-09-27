@@ -150,7 +150,7 @@ function playWholeSeason(league, now) {
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "statshebdo").click();
   const wsTxt = doc.getElementById("statsWorldContent").textContent;
   const wsRows = doc.querySelectorAll("#statsWorldContent .hc-ws-row");
-  check(wsRows.length === 5 && /Meilleur marqueur/.test(wsTxt) && /Meilleur passeur/.test(wsTxt) && /Meilleur rebondeur/.test(wsTxt) && /Meilleur contreur/.test(wsTxt), "Statistiques : classement mondial par stat (marqueur, passeur, rebondeur, contreur, intercepteur)");
+  check(wsRows.length === 5 && /Marqueur/.test(wsTxt) && /Passeur/.test(wsTxt) && /Rebondeur/.test(wsTxt) && /Contreur/.test(wsTxt) && /Intercepteur/.test(wsTxt), "Statistiques : classement mondial par stat (marqueur, passeur, rebondeur, contreur, intercepteur)");
   const firstWorld = doc.querySelector("#statsWorldContent .hc-ws-row .hc-world-rank");
   check(firstWorld && /^\d+(er|e)$/.test(firstWorld.textContent.trim()), `rang mondial affiché (${firstWorld && firstWorld.textContent})`);
   tab.click();
