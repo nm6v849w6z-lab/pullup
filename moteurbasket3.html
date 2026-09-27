@@ -485,6 +485,14 @@
     #prepSection .area-ordresCardRotation{grid-area:rot;}
     #prepSection .area-ordresCardMinutes{grid-area:pt;}
     #prepSection .area-ordresCardAdversaires{grid-area:adv;}
+    /* Défense étirée à la hauteur de Temps de jeu + Postes à surveiller :
+       l'espace en trop est réparti à parts égales entre ses rubriques
+       (Système | Écrans | Post-up | Aide + Close-out) au lieu d'un vide en
+       bas de carte (retour utilisateur 2026-09-27 : "du vide sous les
+       boutons aide défensive et close out, pas harmonieux"). 1/3 avant le
+       séparateur, 2/3 entre les trois rangées du bloc confirmé. */
+    #prepSection .area-ordresCardDefense > .ordres-settings-grid{flex:1 1 auto; align-content:start;}
+    #prepSection .area-ordresCardDefense > .ordres-settings-grid-nested:not(.hidden){flex:2 1 auto; align-content:space-between;}
   }
   #prepSection .conv-list{display:flex; flex-direction:column;}
   #prepSection .prep-def-stack{display:flex; flex-direction:column; gap:22px;}

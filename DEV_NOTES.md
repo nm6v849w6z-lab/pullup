@@ -42,6 +42,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   Suite (même jour) : carte « Postes à surveiller » déplacée SOUS Temps de
   jeu (zone de grille "adv", Défense sur deux rangées) pour supprimer le
   vide de la colonne de droite ; sur téléphone elle reste sous Défense.
+  Puis : carte Défense étirée → espace réparti entre ses rubriques (flex
+  1/2, align-content:space-between) au lieu d'un vide sous Aide/Close-out.
 
 - **📋 PROCHAINS CHANTIERS PRÉVUS** — onglet Centre médical (indicateur de
   risque de blessure, suite du staff médical), puis Matchs amicaux.
