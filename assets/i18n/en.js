@@ -1257,6 +1257,8 @@ window.HM_I18N_EN = {
   "Compétence travaillée": "Skill worked on",
   "Compétition": "Competition",
   "Compétitions": "Competitions",
+  "Recrutement": "Recruitment",
+  "Discord ↗": "Discord ↗",
   "Compos verrouillées": "Lineups locked",
   "Composition d'équipe adverse non disponible.": "Opponent lineup not available.",
   "Composition tactique recommandée": "Recommended tactical lineup",

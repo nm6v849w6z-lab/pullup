@@ -21,6 +21,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 ## À faire
 
 - **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Barre latérale réorganisée** — proposition validée ("vas y fais comme
+  ça") : accueil sans titre (Tableau de bord, Messagerie) ; Équipe
+  (Effectif, Ordres, Entraînement, Centre médical, Statistiques — ce sont
+  les stats hebdo de l'effectif) ; Compétitions (Calendrier, Ligue, Coupe,
+  Matchs amicaux, Ligues privées) ; Recrutement (Marché, Staff, Académie) ;
+  Club (Économie, Sponsors, Salle, Supporters, Histoire du club) ; en bas
+  Guide, Discord ↗, Se déconnecter. moteurbasket3.html (HTML de la
+  sidebar seul, data-tab inchangés), en.js (+ Recrutement, Discord ↗).
+  Test : sidebar_order_test.js. Reste : commit + push (main puis prod).
+
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
   Effectif : demi-barres de potentiel pour les paliers impairs** — retour
   utilisateur (capture Effectif) : "des demi barres remplies pour les
   nombres impairs (1/3/5/7/9)". effPotentialHtml (moteurbasket3.html) :

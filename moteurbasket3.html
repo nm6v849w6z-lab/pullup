@@ -5983,40 +5983,45 @@
          droite") : le mini bandeau #topbarLiveStrip (voir
          syncTopbarLiveStrip, même data-tab="live") reste le seul accès
          rapide au direct depuis les autres pages. -->
+    <!-- Réorganisation de la barre latérale (retour utilisateur 2026-09-27,
+         proposition validée "vas y fais comme ça") : classement par usage —
+         accueil sans titre (Tableau de bord + Messagerie), Équipe (ce qu'on
+         touche avant chaque match), Compétitions, Recrutement, Club ; Discord
+         (lien externe) descend avec Guide. -->
     <div class="sidebar-section">
-      <div class="sidebar-section-label">Club</div>
       <button class="tab-btn sidebar-link" data-tab="club" id="tabClubName"><span class="sidebar-label">Tableau de bord</span></button>
-      <button class="tab-btn sidebar-link" data-tab="histoire"><span class="sidebar-label">Histoire du club</span></button>
-      <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-label">Ligue</span></button>
-      <button class="tab-btn sidebar-link" data-tab="coupe"><span class="sidebar-label">Coupe</span></button>
-      <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-label">Calendrier</span></button>
-      <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-label">Matchs amicaux</span></button>
-      <button class="tab-btn sidebar-link" data-tab="lp"><span class="sidebar-label">Ligues privées</span></button>
       <!-- Messagerie privée entre managers (ligue partagée uniquement, voir msgUpdateBadge) -->
       <button class="tab-btn sidebar-link hidden" data-tab="messages" id="tabMessages"><span class="sidebar-label">Messagerie</span><span class="sidebar-badge hidden" id="messagesBadge"></span></button>
-      <!-- Discord de la communauté (retour utilisateur 2026-09-27 : "il
-           faudrait ajouter l'onglet Discord") — lien vers l'invitation
-           DISCORD_INVITE_URL du serveur (voir /api/account/config), ouvert
-           dans un nouvel onglet ; masqué si le serveur n'en a pas. -->
-      <a class="tab-btn sidebar-link sidebar-external hidden" id="sidebarDiscordLink" href="#" target="_blank" rel="noopener"><span class="sidebar-label">Discord</span></a>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-label">Gestion</div>
+      <div class="sidebar-section-label">Équipe</div>
       <button class="tab-btn sidebar-link" data-tab="effectif"><span class="sidebar-label">Effectif</span></button>
       <button class="tab-btn sidebar-link active" data-tab="ordres" id="tabOrdres"><span class="sidebar-label">Ordres</span></button>
       <button class="tab-btn sidebar-link" data-tab="entrainement"><span class="sidebar-label">Entraînement</span></button>
+      <button class="tab-btn sidebar-link" data-tab="medical"><span class="sidebar-label">Centre médical</span></button>
+      <button class="tab-btn sidebar-link" data-tab="statshebdo"><span class="sidebar-label">Statistiques</span></button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Compétitions</div>
+      <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-label">Calendrier</span></button>
+      <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-label">Ligue</span></button>
+      <button class="tab-btn sidebar-link" data-tab="coupe"><span class="sidebar-label">Coupe</span></button>
+      <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-label">Matchs amicaux</span></button>
+      <button class="tab-btn sidebar-link" data-tab="lp"><span class="sidebar-label">Ligues privées</span></button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Recrutement</div>
       <button class="tab-btn sidebar-link" data-tab="marche"><span class="sidebar-label">Marché</span></button>
       <button class="tab-btn sidebar-link" data-tab="staff"><span class="sidebar-label">Staff</span></button>
-      <button class="tab-btn sidebar-link" data-tab="medical"><span class="sidebar-label">Centre médical</span></button>
       <button class="tab-btn sidebar-link" data-tab="academie"><span class="sidebar-label">Académie de jeunes</span></button>
     </div>
     <div class="sidebar-section">
-      <div class="sidebar-section-label">Club &amp; finances</div>
+      <div class="sidebar-section-label">Club</div>
       <button class="tab-btn sidebar-link" data-tab="economie"><span class="sidebar-label">Économie</span></button>
       <button class="tab-btn sidebar-link" data-tab="sponsors"><span class="sidebar-label">Sponsors</span></button>
       <button class="tab-btn sidebar-link" data-tab="salle"><span class="sidebar-label">Salle</span></button>
-      <button class="tab-btn sidebar-link" data-tab="humeur"><span class="sidebar-label">Humeur des supporters</span></button>
-      <button class="tab-btn sidebar-link" data-tab="statshebdo"><span class="sidebar-label">Statistiques</span></button>
+      <button class="tab-btn sidebar-link" data-tab="humeur"><span class="sidebar-label">Supporters</span></button>
+      <button class="tab-btn sidebar-link" data-tab="histoire"><span class="sidebar-label">Histoire du club</span></button>
     </div>
     <!-- Guide : regroupe tous les textes d'explication des mécaniques du jeu
          retirés des onglets individuels (retour utilisateur 2026-09 :
@@ -6025,6 +6030,11 @@
          en bas de la sidebar via margin-top:auto (voir .sidebar-section-bottom). -->
     <div class="sidebar-section sidebar-section-bottom">
       <button class="tab-btn sidebar-link" data-tab="guide"><span class="sidebar-label">Guide</span></button>
+      <!-- Discord de la communauté (retour utilisateur 2026-09-27 : "il
+           faudrait ajouter l'onglet Discord") — lien vers l'invitation
+           DISCORD_INVITE_URL du serveur (voir /api/account/config), ouvert
+           dans un nouvel onglet (flèche ↗) ; masqué si le serveur n'en a pas. -->
+      <a class="tab-btn sidebar-link sidebar-external hidden" id="sidebarDiscordLink" href="#" target="_blank" rel="noopener"><span class="sidebar-label">Discord ↗</span></a>
       <!-- Déconnexion (retour utilisateur 2026-09-27 : "il manque un bouton
            déconnexion") — sans data-tab (ce n'est pas un onglet), affichée
            seulement pour un manager connecté (voir hmLogout). -->
