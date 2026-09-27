@@ -20,6 +20,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ DÉPLOYÉ SUR LE MAC, À COMMITTER/POUSSER (2026-09-27) — Amicaux :
+  formulaire de proposition** — retour utilisateur : "mets une barre de
+  recherche plus sympa [...] la même que celle dans la barre de page tout en
+  haut" + "adversaire, jour (enlève de repos) et heure sur la même ligne".
+  moteurbasket3.html : champ adversaire = .topbar-search-input (pilule),
+  libellé « Jour », ligne .fr-propose-row en grille 3 colonnes (2 sur
+  mobile, adversaire pleine largeur). amicaux_ui_test.js vert.
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Matchs amicaux : recherche
   d'adversaire + délais des invitations** — retours : "dans adversaire, il
   faudrait plutôt que ce soit une recherche, qu'un menu déroulant", enlever
@@ -46,28 +54,35 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   140 px jusqu'à 7 000 spectateurs puis jusqu'à 280 px vers 30 000 ; ligne
   de capacité seulement si elle tient dans l'échelle. Reste : commit + push.
 
-- **🔧 EN COURS (2026-09-27) — Saison à 11 semaines + entraînement collectif
-  hors jours de match** — retours utilisateur : "une saison devrait plutôt
-  faire 11 que 10 semaines (9 semaines de championnat + 2 de PO)",
-  "corrige sur la ligue actuelle, si l'entrainement des fondamentaux est
-  par jour de match, ça doit aussi être dans la nuit du dimanche au lundi",
-  "les matchs de coupe et PO doivent avoir le même impact que les matchs de
-  saison régulière. Idem pour les amicaux", "les entrainements collectifs
-  eux, sont uniquement sur les jours de repos".
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) — Saison à 11 semaines +
+  entraînement collectif hors jours de match** — retours utilisateur : "une
+  saison devrait plutôt faire 11 que 10 semaines (9 semaines de championnat
+  + 2 de PO)", "corrige sur la ligue actuelle, si l'entrainement des
+  fondamentaux est par jour de match, ça doit aussi être dans la nuit du
+  dimanche au lundi", "les matchs de coupe et PO doivent avoir le même
+  impact que les matchs de saison régulière. Idem pour les amicaux", "les
+  entrainements collectifs eux, sont uniquement sur les jours de repos".
   - Vérifié, rien à changer : la ligue en ligne est déjà basculée au rythme
     hebdomadaire (8770250, en prod) → fondamentaux le lundi 0h ; minutes de
     coupe, play-offs et amicaux déjà comptées comme le championnat.
-  - À faire : SEASON_LENGTH_WEEKS = 11 ; ligue hebdo : vieillissement +
-    salaires + remise à zéro des stats à la mise à jour du lundi QUI SUIT LA
-    FINALE (avant : 9e lundi, AVANT les play-offs ; et ligue basculée en
-    pleine saison : team.week garde les jours quotidiens → vieillissement en
-    pleine saison) ; cette mise à jour de fin de saison n'avait jamais lieu
-    (boucle arrêtée au champion). Entraînement collectif : le jour d'un
-    match ne compte plus comme jour d'entraînement.
-  - NB : une autre session a des changements non committés (amicaux) dans
-    engine.js/moteurbasket3.html/server/index.js — ne committer que mes
-    hunks.
-
+  - engine.js (+ miroir moteurbasket3.html, committé par erreur avec
+    d29f93c par l'autre session) : SEASON_LENGTH_WEEKS = 11 ;
+    Team.trainWeek(divisionLevel, now, { seasonEnd }) — seasonEnd explicite
+    remplace le modulo team.week ; League.seasonEndTickDone (sauvegardé) ;
+    daysTrainedForTarget(target, matchDayIndex) : le jour du match ne compte
+    plus comme jour d'entraînement collectif.
+  - server/autoSim.js : runWeeklyEconomyTick ; lundis de saison
+    seasonEnd:false ; lundi qui suit la finale = seasonEnd:true
+    (vieillissement, salaires, stats remises à zéro), puis plus rien.
+    Avant : vieillissement au 9e lundi AVANT les play-offs, en pleine saison
+    pour la ligue basculée, et la dernière mise à jour n'avait jamais lieu.
+  - Tests : server/weekly_calendar_test.js (saison complète 11 lundis,
+    ligue basculée, jour de match) + tous les server/*_test.js et ~20 tests
+    liés verts (club_history/end_to_end : flaky sous charge, verts seuls).
+  - Limites connues : play-offs sur 3 semaines si séries au 3e match ; bonus
+    « Récupération » de la forme appliqué en continu (jours de match
+    compris) ; l'aperçu « jours banqués » de la page Entraînement compte
+    encore aujourd'hui un jour de match. Reste : push.
 - **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
   Tactiques : « Partir de » + plancher de connaissance tactique** —
   retours utilisateur : "dans partir de : ajoute aussi les 5 derniers

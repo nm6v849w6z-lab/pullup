@@ -85,7 +85,10 @@ function catchUpLeague(league, now) {
     // ce n'est pas une erreur, juste un no-op.
     return events;
   }
-  if (league.isPlayoffsDone()) {
+  // Rythme hebdomadaire : la mise à jour du lundi qui suit la finale reste
+  // à régler (fin de saison, voir runWeeklyEconomyTick plus bas).
+  const weeklySeasonEndPending = league.calendarDailyAnchored && league.calendarWeeklyRhythm && !league.seasonEndTickDone;
+  if (league.isPlayoffsDone() && !weeklySeasonEndPending) {
     // Saison réelle déjà arrivée à son terme (champion de play-offs connu,
     // voir League.isPlayoffsDone) : on attend un nouveau départ de saison
     // (voir l'API admin new-multi-league/reset-multi-league), voir le
@@ -344,16 +347,49 @@ function catchUpDailyAnchored(league, now, events) {
 // dans la nuit du dimanche au lundi ("on paie donc le staff et les joueurs à
 // ce moment là") — Team.trainWeek, qui applique aussi l'entraînement
 // fondamental ("une fois par semaine selon le temps de jeu", minutes
-// cumulées sur les matchs de la semaine) et le vieillissement de fin de
-// saison régulière (semaine 10, voir SEASON_LENGTH_WEEKS). L'entraînement
+// cumulées sur les matchs de la semaine, coupe, play-offs et amicaux
+// compris). Le vieillissement a lieu au lundi qui suit la finale des
+// play-offs (voir runWeeklyEconomyTick ci-dessus). L'entraînement
 // collectif, lui, compte déjà jour par jour sur les jours sans match (voir
 // Team.syncCollectiveTrainingLog/conditionRecoveryPerDay), rien à faire ici.
 // À chaque itération, résout l'événement DÛ le plus ancien parmi : journée
 // de championnat, tour de coupe, match de play-offs, mise à jour du lundi.
+// Fin de saison (retour utilisateur, 2026-09-27 : "une saison devrait
+// plutôt faire 11 que 10 semaines (9 semaines de championnat + 2 de PO)") :
+// une fois le champion connu, la mise à jour du lundi SUIVANT a encore lieu
+// (salaires, entraînement sur les minutes des play-offs) et c'est ELLE qui
+// clôt la saison (vieillissement, salaires recalculés, stats remises à zéro
+// — `seasonEnd: true`, voir Team.trainWeek) ; les lundis de la saison
+// passent `seasonEnd: false` (avant : vieillissement au 9e lundi, AVANT les
+// play-offs, et cette dernière mise à jour n'avait jamais lieu). Ensuite
+// plus rien jusqu'à la saison suivante (League.seasonEndTickDone).
+function runWeeklyEconomyTick(league, tick, ecoAt, seasonEnd, events) {
+  const results = [];
+  league.teams.forEach((team, teamIdx) => {
+    if (!team.isHuman) return;
+    // Horodatage de la mise à jour elle-même (lundi 0h), pas `now` :
+    // un rattrapage groupé garde ainsi l'ordre réel des semaines.
+    results.push({ teamIdx, result: team.trainWeek(league.divisionLevel, ecoAt, { seasonEnd }) });
+  });
+  league.trainCpuTeams();
+  league.lastEconomyTick = tick;
+  events.push(seasonEnd ? { type: "training", week: tick, results, seasonEnd: true } : { type: "training", week: tick, results });
+}
+
 function catchUpWeeklyRhythm(league, now, events) {
   for (;;) {
     if (league.isRegularSeasonDone()) startPlayoffsPhase(league, now, events);
-    if (league.isPlayoffsDone()) break;
+    if (league.isPlayoffsDone()) {
+      if (!league.seasonEndTickDone) {
+        const tick = (league.lastEconomyTick || 0) + 1;
+        const ecoAt = scheduledTimeForLeagueEconomyTick(league, tick);
+        if (ecoAt != null && ecoAt <= now) {
+          runWeeklyEconomyTick(league, tick, ecoAt, true, events);
+          league.seasonEndTickDone = true;
+        }
+      }
+      break;
+    }
     const champDone = league.isRegularSeasonDone();
     const pendingCup = league.pendingCupRound ? league.pendingCupRound() : null;
     const inPlayoffs = champDone && league.playoffs && !league.isPlayoffsDone();
@@ -369,16 +405,7 @@ function catchUpWeeklyRhythm(league, now, events) {
 
     if (next === ecoAt) {
       if (ecoAt > now) break;
-      const results = [];
-      league.teams.forEach((team, teamIdx) => {
-        if (!team.isHuman) return;
-        // Horodatage de la mise à jour elle-même (lundi 0h), pas `now` :
-        // un rattrapage groupé garde ainsi l'ordre réel des semaines.
-        results.push({ teamIdx, result: team.trainWeek(league.divisionLevel, ecoAt) });
-      });
-      league.trainCpuTeams();
-      league.lastEconomyTick = tick;
-      events.push({ type: "training", week: tick, results });
+      runWeeklyEconomyTick(league, tick, ecoAt, false, events);
       continue;
     }
     // Matchs : même garde-fou que les autres boucles, on laisse d'abord

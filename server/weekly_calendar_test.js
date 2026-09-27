@@ -130,11 +130,18 @@ function paris(ms) {
   const ages0 = user.players.map(p => p.age);
   const log = [];
   let t = now;
-  for (let i = 0; i < 600 && !lg.isPlayoffsDone(); i++) {
+  let agesAtChampion = null;
+  for (let i = 0; i < 700 && !lg.seasonEndTickDone; i++) {
     t += 4 * 3600 * 1000;
     A.catchUpLeague(lg, t).forEach(ev => log.push({ ev, t }));
+    if (lg.isPlayoffsDone() && !agesAtChampion) agesAtChampion = user.players.map(p => p.age);
   }
   if (!lg.isPlayoffsDone()) throw new Error("❌ La saison (play-offs compris) aurait dû se terminer.");
+  if (!lg.seasonEndTickDone) throw new Error("❌ La mise à jour du lundi qui suit la finale aurait dû avoir lieu.");
+  // Plus aucune mise à jour ensuite (intersaison) : un mois plus tard, rien de neuf.
+  const nTrainBefore = log.filter(x => x.ev.type === "training").length;
+  A.catchUpLeague(lg, t + 30 * 24 * 3600 * 1000).forEach(ev => log.push({ ev, t }));
+  if (log.filter(x => x.ev.type === "training").length !== nTrainBefore) throw new Error("❌ Aucune mise à jour après celle de fin de saison.");
 
   const trainings = log.filter(x => x.ev.type === "training");
   if (!trainings.length) throw new Error("❌ Aucune mise à jour économique.");
@@ -147,8 +154,13 @@ function paris(ms) {
   // Salaires : une ligne "Salaire du staff" par mise à jour du lundi, jamais ailleurs.
   const staffLines = staffPayments.length;
   if (staffLines !== trainings.length) throw new Error(`❌ ${staffLines} paies de l'entraîneur pour ${trainings.length} mises à jour du lundi.`);
-  // Au plus une mise à jour par semaine : 9 semaines de saison régulière + play-offs.
-  if (trainings.length < 9 || trainings.length > 12) throw new Error(`❌ ${trainings.length} mises à jour sur la saison, attendu entre 9 et 12.`);
+  // Une mise à jour par semaine : 9 semaines de saison régulière + 2 (ou 3
+  // si les séries vont au 3e match) semaines de play-offs = 11 (ou 12).
+  if (trainings.length < 11 || trainings.length > 12) throw new Error(`❌ ${trainings.length} mises à jour sur la saison, attendu 11 (12 si les séries vont au bout).`);
+  const last = trainings[trainings.length - 1];
+  if (!last.ev.seasonEnd || trainings.slice(0, -1).some(x => x.ev.seasonEnd)) throw new Error("❌ Seule la dernière mise à jour (lundi après la finale) doit clore la saison.");
+  const finalAt = log.filter(x => x.ev.type === "playoff-match").pop().t;
+  if (!(last.t >= finalAt)) throw new Error("❌ La mise à jour de fin de saison doit suivre la finale.");
   if (user.week !== trainings.length + 1) throw new Error(`❌ team.week devrait compter les semaines réelles (${user.week} pour ${trainings.length} mises à jour).`);
 
   // Aucune mise à jour entre deux matchs d'une même semaine : chaque lundi
@@ -167,8 +179,9 @@ function paris(ms) {
   const regEnd = order.indexOf("regular-season-end");
   if (regEnd < 0 || order.indexOf("playoff-match") < regEnd) throw new Error("❌ Les play-offs doivent suivre la fin de la saison régulière.");
 
-  // Vieillissement : une seule fois, à la 9e mise à jour (lundi qui suit la
-  // dernière journée de saison régulière, semaine 10).
+  // Vieillissement : une seule fois, au lundi qui suit la finale (jamais
+  // pendant la saison ni les play-offs).
+  if (agesAtChampion.some((a, i) => ages0[i] != null && a !== ages0[i])) throw new Error("❌ Personne ne doit vieillir avant la fin des play-offs.");
   const aged = user.players.filter((p, i) => ages0[i] != null && p.age === ages0[i] + 1).length;
   if (aged !== user.players.filter((_, i) => ages0[i] != null).length) throw new Error("❌ Tous les joueurs d'origine auraient dû prendre exactement un an.");
   console.log(`✅ Saison complète : ${matches.length} journées (mar/sam), ${cups.length} tours de coupe (jeudi), ${playoffs.length} matchs de play-offs (mar/sam), ${trainings.length} mises à jour du lundi, vieillissement une fois.`);
@@ -255,6 +268,54 @@ function paris(ms) {
   const src = fs.readFileSync(path.join(__dirname, "index.js"), "utf-8");
   if (!src.includes('resetAllPlayerConditionsOnce(league, "conditionReset-2026-09-27", now)')) throw new Error("❌ server/index.js:tick devrait appeler la remise à 100.");
   console.log(`✅ Forme physique : ${tired} joueurs fatigués remis à 100, une seule fois (drapeau sauvegardé).`);
+})();
+
+// ---------------------------------------------------------------------
+// 8) Ligue basculée EN PLEINE SAISON : team.week garde les jours du rythme
+//    quotidien, mais personne ne vieillit avant le lundi qui suit la finale.
+// ---------------------------------------------------------------------
+(function testMigratedLeagueAgesAtSeasonEnd() {
+  const created = Date.UTC(2026, 8, 22, 12);
+  const at = Date.UTC(2026, 8, 27, 10, 40);
+  const lg = E.generateMultiManagerLeague(["A", "B"], 1, created, { dailyAnchored: true });
+  A.catchUpLeague(lg, at);
+  E.migrateLeagueToWeeklyRhythm(lg, at);
+  const user = lg.teams.find(t => t.isHuman);
+  const ages0 = user.players.map(p => p.age);
+  let t = at, agedBeforeEnd = false;
+  for (let i = 0; i < 700 && !lg.seasonEndTickDone; i++) {
+    t += 4 * 3600 * 1000;
+    A.catchUpLeague(lg, t);
+    if (!lg.seasonEndTickDone && user.players.some((p, j) => ages0[j] != null && p.age !== ages0[j])) agedBeforeEnd = true;
+  }
+  if (agedBeforeEnd) throw new Error("❌ Ligue basculée : des joueurs ont vieilli en cours de saison.");
+  if (!lg.seasonEndTickDone) throw new Error("❌ Ligue basculée : la fin de saison aurait dû être réglée.");
+  if (!user.players.every((p, j) => ages0[j] == null || p.age === ages0[j] + 1)) throw new Error("❌ Ligue basculée : tout le monde doit prendre un an, une seule fois.");
+  const back = E.leagueFromSave(JSON.parse(JSON.stringify(E.serializeLeague(lg))));
+  if (!back.seasonEndTickDone) throw new Error("❌ seasonEndTickDone doit survivre à la sauvegarde.");
+  console.log("✅ Ligue basculée en pleine saison : un an de plus, une seule fois, au lundi qui suit la finale.");
+})();
+
+// ---------------------------------------------------------------------
+// 9) Entraînement collectif : uniquement les jours de repos — le jour d'un
+//    match (ici la coupe du jeudi) ne compte jamais.
+// ---------------------------------------------------------------------
+(function testCollectiveTrainingRestDaysOnly() {
+  const team = E.generateMultiManagerLeague(["A"], 1, Date.UTC(2026, 8, 27, 9), C.dailyAnchoredCalendarConfig()).teams.find(t => t.isHuman);
+  const target = { category: "defense", value: Object.keys(E.DEFENSES)[1] };
+  team.collectiveTraining = "tactique";
+  team.trainedTactics = target;
+  team.defense = target.value;
+  team.updateTacticalKnowledge(Date.UTC(2026, 8, 29, 18)); // match mardi 20h
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 8, 30, 8)); // mercredi (repos)
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 8)); // jeudi matin, match de coupe à 20h
+  const before = team.tacticalKnowledge.defense[target.value];
+  const expectedGain = E.tacticalKnowledgeGainForStreak(1) + E.TACTICAL_KNOWLEDGE_DAILY_GAIN * 1;
+  team.tacticalKnowledgeStreaks.defense[target.value] = 0;
+  team.updateTacticalKnowledge(Date.UTC(2026, 9, 1, 18));
+  const gain = team.tacticalKnowledge.defense[target.value] - before;
+  if (Math.abs(gain - Math.min(expectedGain, 100 - before)) > 1e-9) throw new Error(`❌ Seul le mercredi (repos) doit compter : gain ${gain}, attendu ${expectedGain}.`);
+  console.log("✅ Entraînement collectif : le jour du match ne compte pas, seuls les jours de repos.");
 })();
 
 console.log("\n🏁 Tous les tests du rythme hebdomadaire sont passés.");

@@ -730,11 +730,17 @@ function youthProspectLabel(potential) {
   return "Prodige";
 }
 
-// Une saison = environ 10 semaines (championnat à 10 équipes en aller-retour
-// = 18 matchs à raison de 2/semaine, + play-offs des 4 premiers en deux
-// matchs gagnants). Les joueurs prennent une année d'âge par saison (voir
-// Team.trainWeek), pas par semaine calendaire.
-const SEASON_LENGTH_WEEKS = 10;
+// Une saison = 11 semaines (retour utilisateur, 2026-09-27 : "une saison
+// devrait plutôt faire 11 que 10 semaines (9 semaines de championnat + 2 de
+// PO)") : championnat à 10 équipes en aller-retour = 18 matchs à raison de
+// 2/semaine, + play-offs des 4 premiers en deux matchs gagnants. Les joueurs
+// prennent une année d'âge par saison (voir Team.trainWeek), pas par
+// semaine calendaire. Ligue au rythme hebdomadaire : le vieillissement ne
+// dépend plus de ce compteur mais de la mise à jour du lundi qui suit la
+// finale des play-offs (voir server/autoSim.js:catchUpWeeklyRhythm et
+// l'option `seasonEnd` de Team.trainWeek) ; ce nombre reste la règle des
+// autres calendriers (carrière solo, calendrier classique).
+const SEASON_LENGTH_WEEKS = 11;
 
 // Vitesse de progression hebdomadaire selon l'âge (les jeunes apprennent vite).
 // Calibré (2026-09) pour qu'un prospect à fort potentiel, bien placé et bien
@@ -4852,11 +4858,18 @@ class Team {
   // utilisateur, 2026-09 : "si le vendredi on fait entrainement récup
   // [...] on doit quand même avoir le malus divisé par deux du mercredi et
   // par deux encore une fois le jeudi").
-  daysTrainedForTarget(target) {
+  // `matchDayIndex` (optionnel, voir parisCalendarDayIndex) : jour du match
+  // qui consomme le crédit — ce jour-là n'est PAS un jour de repos, il ne
+  // compte donc jamais (retour utilisateur, 2026-09-27 : "les entrainements
+  // collectifs eux, sont uniquement sur les jours de repos" ; avant, un
+  // match de coupe le jeudi comptait le jeudi lui-même comme un jour
+  // d'entraînement si le manager s'était connecté ce jour-là).
+  daysTrainedForTarget(target, matchDayIndex = null) {
     if (!target || !Array.isArray(this.collectiveTrainingLog)) return 0;
     const cycleStart = this.tacticsCycleStartDayIndex;
     return this.collectiveTrainingLog.filter(e => {
       if (cycleStart != null && e.dayIndex <= cycleStart) return false;
+      if (matchDayIndex != null && e.dayIndex >= matchDayIndex) return false;
       return e.collectiveTraining === "tactique" && e.trainedTactics
         && e.trainedTactics.category === target.category && e.trainedTactics.value === target.value;
     }).length;
@@ -4899,7 +4912,7 @@ class Team {
     // RÉELLEMENT banqués dans collectiveTrainingLog (voir
     // daysTrainedForTarget) détermine le bonus ci-dessous.
     const target = this.trainedTactics;
-    const daysTrained = target ? this.daysTrainedForTarget(target) : 0;
+    const daysTrained = target ? this.daysTrainedForTarget(target, parisCalendarDayIndex(now)) : 0;
     const trainingBonus = TACTICAL_KNOWLEDGE_DAILY_GAIN * daysTrained;
 
     // Applique le mouvement (gain ou perte) d'UNE option précise : `cat` la
@@ -5935,7 +5948,16 @@ class Team {
     return { ok: true, success, formBefore, formAfter: p.form };
   }
 
-  trainWeek(divisionLevel, now) {
+  // `opts.seasonEnd` (optionnel, booléen) : décide EXPLICITEMENT si cette
+  // mise à jour clôt la saison (vieillissement, salaires recalculés, stats
+  // de saison remises à zéro...). Passé par la ligue au rythme hebdomadaire
+  // (voir server/autoSim.js:catchUpWeeklyRhythm) : `false` à chaque lundi de
+  // la saison, `true` au lundi qui suit la finale des play-offs — jamais
+  // plus le compteur team.week, faussé dans une ligue basculée en pleine
+  // saison (il garde les jours du rythme quotidien). Absent : règle
+  // historique, tous les SEASON_LENGTH_WEEKS (carrière solo, calendrier
+  // classique).
+  trainWeek(divisionLevel, now, opts = null) {
     const skill = this.trainingSkill; // clé de TRAINING_PROGRAMS, ou null
     const program = skill ? TRAINING_PROGRAMS[skill] : null;
     const dilution = this.trainingDilution();
@@ -6195,14 +6217,17 @@ class Team {
     }
 
     this.week++;
-    // Une année d'âge par SAISON (~10 semaines), pas par 52 semaines
-    // calendaires : voir SEASON_LENGTH_WEEKS. La grille salariale est
-    // recalculée à la même cadence (voir salaryForOverall) : un joueur qui a
-    // progressé (ou décliné) pendant la saison écoulée voit son salaire
-    // ajusté à son NOUVEAU niveau pour la saison suivante — pas chaque
-    // semaine, ce qui serait illisible.
+    // Une année d'âge par SAISON (11 semaines), pas par 52 semaines
+    // calendaires : voir SEASON_LENGTH_WEEKS et `opts.seasonEnd` plus haut.
+    // La grille salariale est recalculée à la même cadence (voir
+    // salaryForOverall) : un joueur qui a progressé (ou décliné) pendant la
+    // saison écoulée voit son salaire ajusté à son NOUVEAU niveau pour la
+    // saison suivante — pas chaque semaine, ce qui serait illisible.
+    const seasonEnd = opts && typeof opts.seasonEnd === "boolean"
+      ? opts.seasonEnd
+      : this.week % SEASON_LENGTH_WEEKS === 0;
     let salaryChanges = null;
-    if (this.week % SEASON_LENGTH_WEEKS === 0) {
+    if (seasonEnd) {
       this.players.forEach(p => { p.age += 1; });
       salaryChanges = this.recalculateSalaries();
 
@@ -8289,6 +8314,10 @@ class League {
     // weeklyRhythmCalendarStartAt) : variante du calendrier ancré, fixée à la création.
     this.calendarWeeklyRhythm = false;
     this.lastEconomyTick = 0; // dernière mise à jour économique hebdomadaire réglée (k >= 1)
+    // Mise à jour du lundi qui suit la finale des play-offs (fin de saison :
+    // vieillissement, salaires...) déjà réglée — voir
+    // server/autoSim.js:catchUpWeeklyRhythm. Une seule par saison.
+    this.seasonEndTickDone = false;
     this.calendarWeeklySwitch = null; // bascule en pleine saison, voir dailyAnchoredScheduledTimeForChampionshipRound
     this.lastAutoTrainedDay = -1;
 
@@ -11740,6 +11769,7 @@ function serializeLeague(lg) {
     calendarDailyAnchored: !!lg.calendarDailyAnchored,
     calendarWeeklyRhythm: !!lg.calendarWeeklyRhythm,
     lastEconomyTick: typeof lg.lastEconomyTick === "number" ? lg.lastEconomyTick : 0,
+    seasonEndTickDone: !!lg.seasonEndTickDone,
     calendarWeeklySwitch: lg.calendarWeeklySwitch ? { ...lg.calendarWeeklySwitch } : null,
     maintenanceDone: lg.maintenanceDone ? { ...lg.maintenanceDone } : {},
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
@@ -11810,6 +11840,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarDailyAnchored = !!data.calendarDailyAnchored;
   lg.calendarWeeklyRhythm = !!data.calendarWeeklyRhythm;
   lg.lastEconomyTick = typeof data.lastEconomyTick === "number" ? data.lastEconomyTick : 0;
+  lg.seasonEndTickDone = !!data.seasonEndTickDone;
   lg.calendarWeeklySwitch = data.calendarWeeklySwitch && typeof data.calendarWeeklySwitch.anchorAt === "number" ? { ...data.calendarWeeklySwitch } : null;
   lg.maintenanceDone = data.maintenanceDone && typeof data.maintenanceDone === "object" ? { ...data.maintenanceDone } : {};
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
