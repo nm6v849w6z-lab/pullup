@@ -45,7 +45,7 @@ while (true) {
   if (step.kind === "spotlight") {
     // La page réelle correspondante doit être vraiment affichée (pas une
     // maquette) : vérifie via les vrais id de section (showPage/PAGE_IDS).
-    const realPageId = { ordres: "prepSection", salle: "salleSection", academie: "academieSection", dashboard: "clubSection", effectif: "effectifSection", humeur: "humeurSection", entrainement: "trainingSection", calendrier: "calendrierSection", coupe: "coupeSection", ligue: "standingsSection" }[step.page];
+    const realPageId = { ordres: "prepSection", salle: "salleSection", academie: "academieSection", dashboard: "clubSection", effectif: "effectifSection", humeur: "humeurSection", entrainement: "trainingSection", calendrier: "calendrierSection", coupe: "coupeSection", ligue: "standingsSection", tactiques: "tactiquesSection", amicaux: "amicauxSection", lp: "lpSection", premium: "premiumSection" }[step.page];
     const pageEl = doc.getElementById(realPageId);
     if (!pageEl) throw new Error(`❌ (setup) section réelle #${realPageId} introuvable.`);
     if (pageEl.classList.contains("hidden")) {

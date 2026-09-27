@@ -20,6 +20,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) — Guide et tutoriel mis à jour avec
+  les nouveautés** (retour utilisateur : « mets à jour le tutoriel avec toutes
+  les nouveautés et aussi le guide »). Guide : Premiers pas (saison de 11
+  semaines, PO mardi/jeudi/samedi, mise à jour du lundi, fin de saison), Forme
+  (+10/journée sans jouer, +5 récupération les jours de repos), Connaissance
+  tactique (jours de repos, amicaux pondérés par rôle), Calendrier (format PO),
+  Amicaux, Scoutisme (analyse gratuite / Scouting Pro / propre équipe Premium),
+  Marché (suivi et alertes), textes d'entraînement (minutes de la semaine tous
+  matchs confondus, adjoint, historique Premium) ; nouvelles entrées Tactiques
+  enregistrées, Ligues privées, Sponsors, Histoire du club et groupe Premium.
+  Tutoriel : textes Forme/Calendrier/Fondamentaux/Collectif/Marché/Staff
+  revus ; nouvelles étapes SANS prime (prime totale toujours 200 000 €) :
+  Tactiques, Amicaux, Ligues privées, Premium (TOUR_PAGE_KEY_TO_TAB étendu,
+  onboarding_tour_test.js connaît les nouvelles sections). en.js : ~110
+  traductions ajoutées pour ces textes (plus quelques textes des pages
+  Tactiques/Amicaux jamais traduits). NB : cup_ordres_planning_test.js échoue
+  déjà à HEAD (select « Ajouter un remplaçant » Pivot), sans lien.
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Premium, lot 3 : liste de suivi du
   marché + alertes** — retour utilisateur : "oui vas y".
   - engine.js (+ miroir) : Team.marketWatchlist [{playerId, since}] (30 max),
