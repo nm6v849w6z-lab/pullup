@@ -20,6 +20,32 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-27) — Tableau de bord :
+  plus de tâche « Staff : N/5 postes pourvus »** — retour utilisateur :
+  "si on ne veut pas prendre de médecin, rien n'y oblige". dashBuildTasks
+  ne crée plus la tâche staff (ni la pastille « ! » sur Staff dans la barre
+  latérale) ; la carte KPI Staff N/5 reste. moteurbasket3.html +
+  assertion négative dans dashboard_e2e_test.js (tests dashboard_* et
+  medical_staff verts sur le Mac).
+
+- **📝 DÉCIDÉ, À CODER QUAND LES DIVISIONS MULTIPLES ARRIVERONT (2026-09-27)
+  — Coupes nationales** — retours utilisateur :
+  - Coupe nationale limitée à 512 équipes ("on ira jusqu'à 5 division ou 6
+    pour faire les 512, les autres iront dans la coupe de france amateur") :
+    9 tours = 9 jeudis, tient dans la saison régulière. Suggestion Claude à
+    valider : fixer la limite en nombre de places (les 512 meilleures de la
+    pyramide, exemptions au 1er tour pour les divisions supérieures si ça ne
+    tombe pas pile) ; vainqueur de la Coupe de France amateur qualifié pour
+    la coupe nationale suivante. Même créneau (jeudi 20h) pour les deux
+    coupes. Si la coupe amateur dépasse 512 équipes : la découper par région.
+  - Handicap : "+7 points par division d'écart", plafonné à +21 ("oui
+    plafonne l'écart à +21"). Points au tableau d'affichage dès le coup
+    d'envoi pour l'équipe de division inférieure, ligne « Handicap +N » dans
+    le résumé/box score, jamais comptés dans les stats joueurs ni les
+    records. Calibrage à vérifier par simulation (écart de score moyen entre
+    deux divisions) avant de figer les 7 points.
+  - Aujourd'hui : coupe à 10 équipes d'une seule division, rien à faire.
+
 - **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
   Ordres > « Postes de X à surveiller »** — retour utilisateur : la
   surveillance vise un POSTE (celui qui l'occupe sur le terrain, titulaire

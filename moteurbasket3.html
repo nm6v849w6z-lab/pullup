@@ -11516,9 +11516,9 @@ function checkThresholds(feed, state) {
   // alert_staff / alert_budget : retirés du fil (retour utilisateur,
   // 2026-09-25, même correctif que "interview" ci-dessus, voir
   // DEV_NOTES.md point 14) — dashBuildTasks (tableau de bord) affiche déjà
-  // "Staff : N/3 postes pourvus" et "Budget dans le rouge" dans la carte
-  // "Cette semaine", mêmes conditions exactement (missing.length > 0 /
-  // budget < 0). Le nettoyage reste INCONDITIONNEL (plus de branche
+  // "Budget dans le rouge" dans la carte "Cette semaine" (budget < 0) ; le
+  // staff incomplet n'est plus signalé du tout (retour utilisateur
+  // 2026-09-27, poste vacant = choix légitime). Le nettoyage reste INCONDITIONNEL (plus de branche
   // `else`) pour retirer, dès le prochain passage, toute entrée déjà
   // poussée avant ce correctif sur une sauvegarde existante.
   removeByKey(feed, "alert_staff");
@@ -32530,8 +32530,6 @@ function dashStaffFilled(staff) {
  */
 function dashBuildTasks(data) {
   const tasks = [];
-  const missing = DASH_STAFF_ROLES.filter((r) => !(data.staff && data.staff[r.id]));
-
   if (data.interview) {
     tasks.push({
       id: "interview",
@@ -32543,17 +32541,10 @@ function dashBuildTasks(data) {
       cta: { label: "Répondre", href: `/interview/${data.interview.id}`, style: "outline" },
     });
   }
-  if (missing.length > 0) {
-    tasks.push({
-      id: "staff",
-      icon: "staff",
-      title: `Staff : ${DASH_STAFF_ROLES.length - missing.length}/${DASH_STAFF_ROLES.length} postes pourvus`,
-      text: `${dashCapitalize(dashJoinFr(missing.map((r) => r.label.toLowerCase())))} à recruter.`,
-      badge: "Urgent",
-      tone: "urgent",
-      cta: { label: "Recruter", href: "/staff", style: "primary" },
-    });
-  }
+  // Plus de tâche "Staff : N/5 postes pourvus" (retour utilisateur,
+  // 2026-09-27 : "si on ne veut pas prendre de médecin, rien n'y oblige") :
+  // un poste de staff vacant est un choix légitime, pas une action à faire.
+  // La carte KPI Staff (plus bas) continue d'afficher N/5.
   // Tâche d'ordres : toujours le prochain match OFFICIEL (un match de ligue
   // privée n'a pas d'ordres propres, voir lpNextMatchIfFirst).
   const nm = data.officialNextMatch !== undefined ? data.officialNextMatch : data.nextMatch;
@@ -32708,7 +32699,7 @@ const DASH_NAV = [
 ];
 
 function dashRenderSidebar(data) {
-  const alertStaff = dashStaffFilled(data.staff) < DASH_STAFF_ROLES.length;
+  // Plus de pastille "!" sur Staff : un poste vacant n'est pas une action requise (2026-09-27).
   return `<nav class="hm-side" aria-label="Navigation principale">
     <div class="hm-side__logo">HOOP<span>MGR</span></div>
     ${DASH_NAV.map((g) => `
@@ -32716,7 +32707,7 @@ function dashRenderSidebar(data) {
         <div class="hm-side__label">${dashEsc(g.group)}</div>
         ${g.items.map((it) => `
           <a href="${dashEsc(it.href)}" data-dash-href="${dashEsc(it.href)}" class="hm-side__link${it.id === "dashboard" ? " is-active" : ""}"${it.id === "dashboard" ? ' aria-current="page"' : ""}>
-            ${dashEsc(it.label)}${it.id === "staff" && alertStaff ? '<span class="hm-side__alert" aria-label="Action requise">!</span>' : ""}
+            ${dashEsc(it.label)}
           </a>`).join("")}
       </div>`).join("")}
   </nav>`;

@@ -107,6 +107,12 @@ const interviewOverlay = doc.getElementById("interviewModalOverlay");
 console.log("Modale d'interview ouverte depuis \"Cette semaine\" :", !!interviewOverlay);
 if (!interviewOverlay) throw new Error("❌ Le clic sur la tâche \"interview\" de \"Cette semaine\" devrait ouvrir la VRAIE modale d'interview (showInterviewModal).");
 win.eval("closeInterviewModal()");
+// Staff vide à ce stade : AUCUNE tâche "Staff : N/5 postes pourvus" ne doit
+// apparaître dans "Cette semaine" (retour utilisateur 2026-09-27 : "si on ne
+// veut pas prendre de médecin, rien n'y oblige").
+if ([...doc.querySelectorAll(".hm-task__title")].some(t => /postes pourvus/.test(t.textContent))) throw new Error("❌ Un staff incomplet ne doit plus créer de tâche dans \"Cette semaine\".");
+if (doc.querySelector(".hm-side__alert")) throw new Error("❌ Plus de pastille \"!\" sur Staff quand un poste est vacant.");
+console.log("✅ Staff incomplet : aucune tâche \"postes pourvus\" ni pastille dans la barre latérale.");
 console.log("✅ L'interview de début de saison n'est plus dupliquée dans le fil ; \"Cette semaine\" reste la seule action, et route vers le vrai écran (dashResolveNavigate).");
 
 // ---------------------------------------------------------------------
