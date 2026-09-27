@@ -119,13 +119,23 @@ console.log("✅ Réglages à 2-3 valeurs en boutons segmentés (aide mise à jo
   .dispatchEvent(new win.Event("click", { bubbles: true }));
 const row0 = doc.querySelectorAll("#ordresWatchAssignments .watch-row")[0];
 const [playerSel, focusSel] = row0.querySelectorAll("select");
-if (playerSel.options[0].textContent !== "Choisir un joueur…") throw new Error("❌ Le 1er menu de Surveiller devrait proposer 'Choisir un joueur…'.");
+if (playerSel.options[0].textContent !== "Choisir un poste…") throw new Error("❌ Le 1er menu de Surveiller devrait proposer 'Choisir un poste…'.");
+// Surveillance par poste (2026-09-27) : "Pivot (pressenti Léo Dupont)" —
+// le poste d'abord, le titulaire adverse actuel en simple pronostic.
+{
+  const opts = [...playerSel.options].slice(1).map(o => o.textContent);
+  const POS = win.eval("POSITIONS");
+  opts.forEach((t, i) => {
+    if (!(t === POS[i] || t.startsWith(`${POS[i]} (pressenti `))) throw new Error(`❌ Option Surveiller inattendue : "${t}" (attendu "${POS[i]}" ou "${POS[i]} (pressenti …)").`);
+  });
+  if (!opts.some(t => t.includes("(pressenti "))) throw new Error("❌ Le titulaire adverse pressenti devrait être indiqué à côté du poste.");
+}
 if (focusSel.options[0].textContent !== "Consigne") throw new Error("❌ Le 2e menu de Surveiller devrait proposer 'Consigne'.");
 if (!focusSel.disabled) throw new Error("❌ 'Consigne' devrait être désactivé tant qu'aucun joueur n'est choisi.");
 const oppPivot = win.eval("(() => { const id = teamB.lineup.starters['Pivot']; const p = teamB.players.find(x => x.id === id); return p ? p.name : null; })()");
 const pivotOpt = [...playerSel.options].find(o => o.value === "Pivot");
 console.log("Option Pivot de Surveiller :", pivotOpt.textContent, "(titulaire adverse :", oppPivot + ")");
-if (oppPivot && pivotOpt.textContent !== `${oppPivot} (P)`) throw new Error("❌ L'option Pivot devrait afficher le titulaire adverse à ce poste.");
+if (oppPivot && pivotOpt.textContent !== `Pivot (pressenti ${oppPivot})`) throw new Error("❌ L'option Pivot devrait afficher « Pivot (pressenti <titulaire adverse>) ».");
 playerSel.value = "Pivot";
 playerSel.dispatchEvent(new win.Event("change"));
 if (focusSel.disabled) throw new Error("❌ 'Consigne' devrait s'activer une fois un joueur choisi.");

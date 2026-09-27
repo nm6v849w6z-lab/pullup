@@ -7023,7 +7023,7 @@
         <p class="training-intro" style="margin-top:10px;"><b>Défense</b> : un seul choix parmi 5 systèmes. Homme à homme est le réglage neutre. Zone press met la pression sur les extérieurs adverses, au prix d'une fatigue importante. Box and one cible le meilleur joueur adverse. Zone extérieure et Zone intérieure renforcent un secteur du terrain au détriment de l'autre.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Rythme</b> : Lent, Normal ou Rapide. Plus le rythme est élevé, plus il y a de possessions (donc d'occasions de marquer, des deux côtés), mais aussi plus de fatigue et de pertes de balle.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Feuille de match</b> : un titulaire par poste (5 postes obligatoires), et des remplaçants qui peuvent chacun couvrir plusieurs postes. Sans cinq complet disponible, le match est perdu par forfait (20-0).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Niveau tactique</b> : Débutant ou Confirmé, dans la carte Attaque. Ce choix ne change QUE la complexité de l'interface, jamais la façon dont un match se joue. Confirmé révèle six réglages supplémentaires : Défense sur écrans (Aucune consigne, Au-dessus, En-dessous, Switch, Prise à deux), Aide défensive (Faible, Moyenne, Forte), Gestion du post-up (Aucune consigne, Pousser vers le fond, Pousser vers le centre, Prise à deux), Close-out (Contrôlé, Agressif), Rebond offensif (Prudent, Normal, Agressif) et Surveiller (carte Adversaires : jusqu'à 3 joueurs adverses ciblés, chacun avec un focus précis, toujours avec une contrepartie).</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Niveau tactique</b> : Débutant ou Confirmé, dans la carte Attaque. Ce choix ne change QUE la complexité de l'interface, jamais la façon dont un match se joue. Confirmé révèle six réglages supplémentaires : Défense sur écrans (Aucune consigne, Au-dessus, En-dessous, Switch, Prise à deux), Aide défensive (Faible, Moyenne, Forte), Gestion du post-up (Aucune consigne, Pousser vers le fond, Pousser vers le centre, Prise à deux), Close-out (Contrôlé, Agressif), Rebond offensif (Prudent, Normal, Agressif) et Surveiller (carte Adversaires : jusqu'à 3 postes adverses ciblés, chacun avec un focus précis, toujours avec une contrepartie ; la consigne vise celui qui occupe ce poste sur le terrain, titulaire ou remplaçant).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Gestion de fin de match</b> (aux deux niveaux) : Standard garde le comportement habituel. Adaptatif ajoute un vrai garbage time dès 10 points d'écart à partir du 3e quart-temps, et accélère légèrement le rythme dans les 5 dernières minutes d'un match serré.</p>
       </div>
 
@@ -28504,7 +28504,7 @@ const TACTIC_VALUE_LABELS = { "Classique": "Aucune consigne", "débutant": "Déb
 //     morceaux portent la classe .tactic-confirmee-block et sont
 //     masqués/révélés ensemble (celui de la carte Défense garde l'id
 //     historique #ordresConfirmedBlock, utilisé par le tutoriel).
-//   - "Surveiller" : "Choisir un joueur…" puis "Consigne" (désactivée tant
+//   - "Surveiller" : "Choisir un poste…" puis "Consigne" (désactivée tant
 //     qu'aucun joueur n'est choisi). La consigne vise toujours un POSTE côté
 //     moteur (watchAssignments {position, focus}, inchangé) : le menu affiche
 //     le titulaire actuel de l'adversaire à ce poste quand on le connaît
@@ -28780,7 +28780,7 @@ function buildTeamPanel(team, side, opts = {}) {
   // inchangé, voir WATCH_FOCUS_EFFECTS) : tableau vide = aucun effet.
   const watchCount = makeAside();
   const adversaires = makeCard("ordresCardAdversaires",
-    opponent && opponent.name ? `Joueurs de ${opponent.name} à surveiller` : "Joueurs adverses à surveiller", watchCount);
+    opponent && opponent.name ? `Postes de ${opponent.name} à surveiller` : "Postes adverses à surveiller", watchCount);
   adversaires.classList.add("tactic-confirmee-block");
   defStack.appendChild(adversaires);
   confirmedEls.push(adversaires);
@@ -28788,9 +28788,14 @@ function buildTeamPanel(team, side, opts = {}) {
   watchWrap.className = "watch-assignments";
   if (isMain) watchWrap.id = "ordresWatchAssignments";
   adversaires.appendChild(watchWrap);
-  // Titulaire actuel de l'adversaire à un poste, si on le connaît (sinon
-  // simple nom du poste) — purement informatif, voir le commentaire de la
-  // fonction.
+  // Surveillance PAR POSTE (retour utilisateur 2026-09-27 : "ne mettons pas
+  // les noms, mettons plutôt meneur, pivot...") : la consigne s'applique à
+  // celui qui occupe ce poste sur le terrain à chaque instant (titulaire ou
+  // remplaçant, voir MatchEngine, w.position === shooter.matchPosition) —
+  // afficher le nom du titulaire adverse laissait croire qu'on ciblait ce
+  // joueur-là en particulier. Retour suivant : "ou encore mieux, mets :
+  // pivot (pressenti Léo Dupont)" — le titulaire adverse actuel reste
+  // indiqué, mais comme simple pronostic à côté du poste.
   const opponentStarterName = (pos) => {
     if (!opponent || !opponent.lineup || !opponent.lineup.starters || !Array.isArray(opponent.players)) return null;
     const id = opponent.lineup.starters[pos];
@@ -28812,15 +28817,15 @@ function buildTeamPanel(team, side, opts = {}) {
       row.appendChild(num);
 
       const posSel = document.createElement("select");
-      posSel.setAttribute("aria-label", `Joueur surveillé ${i + 1}`);
+      posSel.setAttribute("aria-label", `Poste surveillé ${i + 1}`);
       const posNone = document.createElement("option");
-      posNone.value = ""; posNone.textContent = "Choisir un joueur…";
+      posNone.value = ""; posNone.textContent = "Choisir un poste…";
       posSel.appendChild(posNone);
       POSITIONS.forEach(pos => {
         const o = document.createElement("option");
         o.value = pos;
         const starter = opponentStarterName(pos);
-        o.textContent = starter ? `${starter} (${POS_SHORT[pos]})` : pos;
+        o.textContent = starter ? `${pos} (pressenti ${starter})` : pos;
         if (current && current.position === pos) o.selected = true;
         posSel.appendChild(o);
       });

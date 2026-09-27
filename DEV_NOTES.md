@@ -20,6 +20,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Ordres > « Postes de X à surveiller »** — retour utilisateur : la
+  surveillance vise un POSTE (celui qui l'occupe sur le terrain, titulaire
+  ou remplaçant), pas un joueur ; "mets : pivot (pressenti Léo Dupont)".
+  moteurbasket3.html (options « Pivot (pressenti …) », « Choisir un
+  poste… », titre de carte), guide + en.js, ordres_redesign_test adapté.
+
 - **✅ DÉPLOYÉ SUR LE MAC, TESTS MAC VERTS, À COMMITTER/POUSSER (2026-09-27) —
   Staff médical (médecin + kiné) + marchés de staff à 2 × managers** —
   retours utilisateur : "le médecin, qui réduit la durée des blessures, le
