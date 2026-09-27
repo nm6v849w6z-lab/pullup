@@ -443,3 +443,49 @@ restreint en mode partagé (410), et le navigateur enfin rebranché sur les
 routes d'actions validées d'`actions.js` pour feuille de match/tactiques/
 entraînement/marché — est désormais FAIT, voir plus haut dans ce fichier et
 `moteurbasket3.html`.)
+
+## Comptes joueurs, site public et Discord (2026-09-26)
+
+`hoop-manager.com` s'ouvre sur une page d'accueil (`assets/site/index.html`,
+servie sur `/bienvenue`) : présentation du jeu, inscription (email + mot de
+passe, ou Discord) et connexion. S'inscrire fait reprendre au nouveau
+manager un club CPU de la ligue partagée (le plus faible, voir
+`server/accounts.js:takeOverCpuClub`) ; plus aucun club CPU libre = liste
+d'attente, le club est attribué dès qu'une place se libère.
+
+Un compte ne remplace pas l'identité manager existante (le jeton
+`Team.managerLinkToken`) : il sert à la retrouver. Se connecter renvoie ce
+jeton, que le navigateur range comme un lien `?m=` reçu à la main. Les
+managers arrivés par un lien privé se créent des identifiants (ou lient
+Discord) depuis **Paramètres → Mon compte**.
+
+Code : `server/accounts.js` (modèle, mots de passe scrypt), 
+`server/accountRoutes.js` (routes), `server/accounts_test.js` (tests).
+
+Toutes les requêtes qui touchent une sauvegarde passent désormais **une par
+une** (verrou en mémoire dans `server/index.js`) : deux requêtes simultanées
+ne peuvent plus s'écraser mutuellement la ligue.
+
+### Variables d'environnement
+
+| Variable | Prod | Test | Rôle |
+|---|---|---|---|
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | base `pullup` | (absentes : fichiers éphémères) | sauvegardes |
+| `BASKET_REDIS_PREFIX` | **(absente)** | `test` si le test utilise la même base Upstash | le test écrit sous `test:pullup:…`, jamais sur les clés prod |
+| `BASKET_PUBLIC_SITE` | `1` | `1` (conseillé) | accueil/inscription, carrière solo fermée sans jeton |
+| `BASKET_ADMIN_TOKEN` | secret A | secret B | routes `/api/admin/*` |
+| `BASKET_FAST_CALENDAR` | **(absente)** | `1` si voulu | calendrier accéléré |
+| `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | appli « Hoop Manager » | appli « Hoop Manager Test » | connexion Discord (absentes = boutons masqués) |
+| `DISCORD_REDIRECT_URI` | `https://hoop-manager.com/auth/discord/callback` | `https://<test>.onrender.com/auth/discord/callback` | optionnelle (déduite de l'adresse sinon) |
+| `DISCORD_INVITE_URL` | lien d'invitation permanent | idem | encart « Rejoindre le Discord » de l'accueil |
+
+### Admin
+
+```bash
+# Liste des comptes
+curl -H "X-Admin-Token: $SECRET" https://hoop-manager.com/api/admin/accounts
+# Mot de passe oublié
+curl -X POST -H "X-Admin-Token: $SECRET" -H "Content-Type: application/json" \
+  -d '{"email":"joueur@exemple.fr","newPassword":"provisoire-1234"}' \
+  https://hoop-manager.com/api/admin/accounts/reset-password
+```

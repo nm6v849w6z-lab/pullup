@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hoop Manager · Jeu de gestion de basket en ligne</title>
+<meta name="description" content="Dirige ton club de basket en ligne : matchs diffusés en direct, ligue de 10 managers, entraînement, transferts aux enchères. Gratuit, dans le navigateur.">
+<meta name="theme-color" content="#0d131d">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/mobile/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/mobile/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  Page d'accueil publique de hoop-manager.com (2026-09-26) : présentation
+  du jeu + inscription (email/mot de passe ou Discord) + connexion.
+  Servie par server/index.js sur /bienvenue ; en site public
+  (BASKET_PUBLIC_SITE=1), tout visiteur sans jeton manager y est envoyé.
+  Routes appelées : voir server/accountRoutes.js.
+  Langue : même préférence que le jeu (localStorage "hm-lang"), textes
+  FR/EN dans TEXTS ci-dessous. Jeton : même clé que le jeu
+  (MANAGER_TOKEN_STORAGE_KEY = "tipinManagerToken_v1").
+-->
+<style>
+  :root{
+    --bg:#0d131d; --panel:#141c29; --panel-2:#1a2433; --line:#26334a; --line-soft:#1e2939;
+    --ink:#eef2f7; --ink-dim:#9aa8bd; --ink-faint:#6b7a92;
+    --amber:#f0a23c; --amber-hi:#ffb85a; --amber-ink:#2a1a04;
+    --danger:#ef7a61; --ok:#3cc3ae; --discord:#5865f2;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+    min-height:100vh; overflow-x:hidden;
+  }
+  a{color:var(--amber)}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 20px}
+  h1,h2,h3{font-family:"Barlow Condensed","DM Sans",sans-serif; letter-spacing:.2px; margin:0}
+
+  /* ---------- Barre du haut ---------- */
+  header{position:sticky; top:0; z-index:10; background:rgba(13,19,29,.86); backdrop-filter:blur(10px); border-bottom:1px solid var(--line-soft)}
+  header .wrap{display:flex; align-items:center; gap:14px; height:64px}
+  .brand{display:flex; align-items:center; gap:10px; text-decoration:none; margin-right:auto}
+  .brand img{height:38px; width:auto; display:block}
+  .lang{display:flex; border:1px solid var(--line); border-radius:999px; overflow:hidden}
+  .lang button{background:none; border:0; color:var(--ink-dim); font:600 12px/1 "DM Sans",sans-serif; padding:7px 10px; cursor:pointer}
+  .lang button[aria-pressed="true"]{background:var(--panel-2); color:var(--ink)}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; border-radius:10px; border:1px solid transparent;
+       font:700 15px/1 "DM Sans",sans-serif; padding:13px 18px; cursor:pointer; text-decoration:none; transition:transform .08s, background .15s, border-color .15s}
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--amber); color:var(--amber-ink)}
+  .btn-primary:hover{background:var(--amber-hi)}
+  .btn-ghost{background:transparent; color:var(--ink); border-color:var(--line)}
+  .btn-ghost:hover{border-color:var(--ink-faint)}
+  .btn-discord{background:var(--discord); color:#fff; width:100%}
+  .btn-discord:hover{filter:brightness(1.08)}
+  .btn-discord svg{width:22px; height:22px; flex:none}
+  .btn[disabled]{opacity:.6; cursor:wait}
+  header .btn{padding:9px 14px; font-size:14px}
+
+  /* ---------- Bandeau "déjà connecté" ---------- */
+  .resume{display:none; background:linear-gradient(90deg,rgba(240,162,60,.16),rgba(240,162,60,.04)); border-bottom:1px solid rgba(240,162,60,.3)}
+  .resume .wrap{display:flex; align-items:center; gap:14px; padding-top:10px; padding-bottom:10px; flex-wrap:wrap}
+  .resume p{margin:0; margin-right:auto; color:var(--ink)}
+  .resume .btn{padding:9px 14px; font-size:14px}
+
+  /* ---------- Hero ---------- */
+  .hero{position:relative; padding:56px 0 64px; overflow:hidden}
+  .hero::before{content:""; position:absolute; inset:-20% -10% auto auto; width:760px; height:760px; border-radius:50%;
+    background:radial-gradient(closest-side, rgba(240,162,60,.20), rgba(240,162,60,0)); pointer-events:none}
+  .court-lines{position:absolute; right:-120px; top:40px; width:620px; opacity:.09; pointer-events:none}
+  .hero .wrap{position:relative; display:grid; grid-template-columns:1.1fr .9fr; gap:48px; align-items:start}
+  .kicker{display:inline-flex; align-items:center; gap:8px; font:700 12px/1 "DM Sans",sans-serif; letter-spacing:1.4px; text-transform:uppercase;
+    color:var(--amber); background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.25); padding:7px 11px; border-radius:999px}
+  .kicker i{width:8px; height:8px; border-radius:50%; background:var(--danger); box-shadow:0 0 0 0 rgba(239,122,97,.6); animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(239,122,97,.55)}70%{box-shadow:0 0 0 9px rgba(239,122,97,0)}100%{box-shadow:0 0 0 0 rgba(239,122,97,0)}}
+  .hero h1{font-size:clamp(44px,6.4vw,76px); line-height:.95; font-weight:800; font-style:italic; text-transform:uppercase; margin:18px 0 18px}
+  .hero h1 em{font-style:italic; color:var(--amber)}
+  .lead{font-size:18px; color:var(--ink-dim); max-width:540px; margin:0 0 26px}
+  .facts{display:flex; flex-wrap:wrap; gap:10px 22px; margin:0 0 30px; padding:0; list-style:none; color:var(--ink-dim); font-size:15px}
+  .facts li{display:flex; align-items:center; gap:8px}
+  .facts b{color:var(--ink)}
+  .facts svg{width:18px; height:18px; color:var(--amber); flex:none}
+  .slots{display:inline-flex; align-items:baseline; gap:10px; padding:14px 18px; border-radius:12px; background:var(--panel); border:1px solid var(--line)}
+  .slots strong{font:800 34px/1 "Barlow Condensed",sans-serif; color:var(--amber)}
+  .slots span{color:var(--ink-dim); font-size:15px}
+
+  /* ---------- Carte d'inscription ---------- */
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; box-shadow:0 30px 80px -30px rgba(0,0,0,.6)}
+  .tabs{display:grid; grid-template-columns:1fr 1fr; background:var(--bg); border:1px solid var(--line-soft); border-radius:10px; padding:4px; margin-bottom:20px}
+  .tabs button{background:none; border:0; color:var(--ink-dim); font:700 14px/1 "DM Sans",sans-serif; padding:11px 8px; border-radius:7px; cursor:pointer}
+  .tabs button[aria-selected="true"]{background:var(--panel-2); color:var(--ink)}
+  .card h2{font-size:28px; font-weight:800; text-transform:uppercase; font-style:italic; margin-bottom:4px}
+  .card .sub{color:var(--ink-dim); font-size:14px; margin:0 0 18px}
+  label{display:block; font-size:13px; font-weight:600; color:var(--ink-dim); margin:0 0 6px}
+  .field{margin-bottom:14px}
+  input[type=text],input[type=email],input[type=password]{
+    width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:9px;
+    font:500 16px/1.2 "DM Sans",sans-serif; padding:12px 13px; outline:none; transition:border-color .15s, box-shadow .15s}
+  input:focus{border-color:var(--amber); box-shadow:0 0 0 3px rgba(240,162,60,.18)}
+  .hint{font-size:12px; color:var(--ink-faint); margin-top:5px}
+  .pw{position:relative}
+  .pw input{padding-right:64px}
+  .pw button{position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:0; color:var(--ink-dim); font:600 12px "DM Sans",sans-serif; cursor:pointer; padding:8px}
+  form .btn-primary{width:100%; margin-top:6px}
+  .or{display:flex; align-items:center; gap:12px; color:var(--ink-faint); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin:18px 0}
+  .or::before,.or::after{content:""; flex:1; height:1px; background:var(--line)}
+  .msg{display:none; font-size:14px; border-radius:9px; padding:10px 12px; margin:0 0 14px}
+  .msg.is-error{display:block; background:rgba(239,122,97,.1); border:1px solid rgba(239,122,97,.35); color:#ffc1b3}
+  .msg.is-ok{display:block; background:rgba(60,195,174,.1); border:1px solid rgba(60,195,174,.35); color:#b5efe5}
+  .legal{font-size:12px; color:var(--ink-faint); margin:16px 0 0}
+  .panel-view{display:none}
+  .panel-view.is-active{display:block}
+  .waiting{text-align:center; padding:8px 0}
+  .waiting .ball{width:54px; height:54px; margin:6px auto 14px; animation:bounce 1.1s infinite cubic-bezier(.5,0,.5,1)}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+
+  /* ---------- Fonctionnalités ---------- */
+  section.features{padding:64px 0; border-top:1px solid var(--line-soft); background:linear-gradient(180deg,rgba(20,28,41,.5),rgba(13,19,29,0))}
+  .section-title{font-size:clamp(32px,4vw,44px); font-weight:800; text-transform:uppercase; font-style:italic; margin-bottom:8px}
+  .section-sub{color:var(--ink-dim); max-width:620px; margin:0 0 34px}
+  .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+  .feat{background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:22px}
+  .feat .ic{width:42px; height:42px; border-radius:10px; display:grid; place-items:center; background:rgba(240,162,60,.12); color:var(--amber); margin-bottom:14px}
+  .feat .ic svg{width:22px; height:22px}
+  .feat h3{font-size:23px; font-weight:700; text-transform:uppercase; margin-bottom:6px}
+  .feat p{margin:0; color:var(--ink-dim); font-size:15px}
+
+  /* ---------- Déroulé d'une journée ---------- */
+  section.day{padding:10px 0 70px}
+  .timeline{display:grid; grid-template-columns:repeat(4,1fr); gap:0; border:1px solid var(--line-soft); border-radius:var(--radius); overflow:hidden; background:var(--panel)}
+  .timeline div{padding:20px; border-right:1px solid var(--line-soft)}
+  .timeline div:last-child{border-right:0}
+  .timeline time{display:block; font:800 30px/1 "Barlow Condensed",sans-serif; color:var(--amber); margin-bottom:8px}
+  .timeline b{display:block; margin-bottom:4px}
+  .timeline span{color:var(--ink-dim); font-size:14px}
+
+  /* ---------- Communauté ---------- */
+  section.community{padding:0 0 80px}
+  .community-box{display:flex; align-items:center; gap:24px; background:linear-gradient(120deg,rgba(88,101,242,.22),rgba(88,101,242,.06)); border:1px solid rgba(88,101,242,.4); border-radius:var(--radius); padding:26px 28px}
+  .community-box svg{width:52px; height:52px; color:#aab2ff; flex:none}
+  .community-box div{margin-right:auto}
+  .community-box h3{font-size:28px; text-transform:uppercase; font-style:italic}
+  .community-box p{margin:4px 0 0; color:var(--ink-dim)}
+  .community-box .btn{background:var(--discord); color:#fff; white-space:nowrap}
+
+  footer{border-top:1px solid var(--line-soft); padding:26px 0 40px; color:var(--ink-faint); font-size:13px}
+  footer .wrap{display:flex; gap:16px; flex-wrap:wrap; justify-content:space-between}
+
+  @media (max-width:900px){
+    .hero{padding:32px 0 48px}
+    .hero .wrap{grid-template-columns:1fr; gap:30px}
+    .grid{grid-template-columns:1fr 1fr}
+    .timeline{grid-template-columns:1fr 1fr}
+    .timeline div:nth-child(2){border-right:0}
+    .timeline div:nth-child(-n+2){border-bottom:1px solid var(--line-soft)}
+  }
+  @media (max-width:560px){
+    .wrap{padding:0 16px}
+    header .wrap{gap:8px}
+    .brand img{height:32px}
+    #headerLoginBtn{display:none}
+    .grid{grid-template-columns:1fr}
+    .card{padding:20px 16px}
+    .community-box{flex-direction:column; align-items:flex-start}
+    .court-lines{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){ .kicker i,.waiting .ball{animation:none} }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-discord" viewBox="0 0 24 24"><path fill="currentColor" d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.4 18.4 0 0 0-5.5 0L8.6 3a19.7 19.7 0 0 0-4.9 1.5C.6 9.1-.3 13.7.1 18.2a19.9 19.9 0 0 0 6 3l1.3-2.1a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1l1.3 2.1a19.8 19.8 0 0 0 6-3c.5-5.2-.8-9.8-3.6-13.8ZM8 15.4c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z"/></symbol>
+  <symbol id="i-live" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></g></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16.5 14.6c2.6.2 4.4 1.9 5 4.9"/></g></symbol>
+  <symbol id="i-gavel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m14 4 6 6M11 7l6 6M12.5 5.5l-4 4 6 6 4-4M9.5 11.5 3 18l3 3 6.5-6.5M3 21h9"/></g></symbol>
+  <symbol id="i-cone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 3h6l4.5 16h-15z"/><path d="M7.4 10h9.2M6 15h12M2.5 21h19"/></g></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8M9 18h6"/></g></symbol>
+  <symbol id="i-arena" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 10 12 4l9 6"/><path d="M5 10v9M19 10v9M9 19v-5h6v5M3 19h18"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-ball" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="#f0a23c"/><g fill="none" stroke="#2a1a04" stroke-width="2.6"><circle cx="32" cy="32" r="28"/><path d="M4 32h56M32 4v56M12 12c9 8 9 32 0 40M52 12c-9 8-9 32 0 40"/></g></symbol>
+</svg>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="/bienvenue" aria-label="Hoop Manager"><img src="/assets/brand/logo-hoop-manager.png" alt="Hoop Manager"></a>
+    <div class="lang" role="group" aria-label="Langue / Language">
+      <button type="button" data-lang="fr" aria-pressed="true">FR</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+    <button type="button" class="btn btn-ghost" id="headerLoginBtn" data-t="login.tab">Se connecter</button>
+  </div>
+</header>
+
+<div class="resume" id="resumeBar">
+  <div class="wrap">
+    <p data-t="resume.text">Tu es déjà connecté sur ce navigateur.</p>
+    <a class="btn btn-primary" id="resumeBtn" href="/" data-t="resume.go">Reprendre ma partie</a>
+    <button type="button" class="btn btn-ghost" id="logoutBtn" data-t="resume.logout">Se déconnecter</button>
+  </div>
+</div>
+
+<main>
+  <section class="hero">
+    <svg class="court-lines" viewBox="0 0 150 140" aria-hidden="true"><g fill="none" stroke="#f0a23c" stroke-width="1.2"><rect x="1" y="1" width="148" height="138" rx="3"/><rect x="51.5" y="1" width="49" height="58"/><circle cx="76" cy="59" r="18"/><path d="M63.5 13a12.5 12.5 0 0 0 25 0"/><path d="M10 1v26.2a67.5 67.5 0 0 0 132 0V1"/></g></svg>
+    <div class="wrap">
+      <div>
+        <span class="kicker"><i></i><span data-t="hero.kicker">Jeu de gestion de basket en ligne</span></span>
+        <h1 data-t-html="hero.title">Prends les rênes<br>de ton <em>club</em>.</h1>
+        <p class="lead" data-t="hero.lead">Recrute, entraîne, fixe ta tactique… puis regarde ton équipe jouer en direct face aux autres managers. Gratuit, dans le navigateur, sur ordinateur comme sur téléphone.</p>
+        <ul class="facts">
+          <li><svg><use href="#i-check"/></svg><span data-t-html="hero.fact1"><b>Matchs en direct</b> à heure fixe</span></li>
+          <li><svg><use href="#i-check"/></svg><span data-t-html="hero.fact2"><b>10 managers</b> par ligue</span></li>
+          <li><svg><use href="#i-check"/></svg><span data-t-html="hero.fact3"><b>Gratuit</b>, sans installation</span></li>
+        </ul>
+        <div class="slots" id="slotsBox" hidden><strong id="slotsCount">–</strong><span id="slotsLabel"></span></div>
+      </div>
+
+      <div class="card" id="authCard">
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" id="tabSignup" aria-selected="true" data-t="signup.tab">Créer mon club</button>
+          <button type="button" role="tab" id="tabLogin" aria-selected="false" data-t="login.tab">Se connecter</button>
+        </div>
+
+        <!-- Inscription -->
+        <div class="panel-view is-active" id="viewSignup">
+          <h2 data-t="signup.title">Ton club t'attend</h2>
+          <p class="sub" data-t="signup.sub">Choisis un nom : tu reprends un club de la ligue en cours et tu joues dès ce soir.</p>
+          <div class="msg" id="signupMsg" role="alert"></div>
+          <div class="discord-only">
+            <button type="button" class="btn btn-discord" data-discord-login><svg><use href="#i-discord"/></svg><span data-t="discord.signup">S'inscrire avec Discord</span></button>
+            <div class="or" data-t="or">ou</div>
+          </div>
+          <form id="signupForm" novalidate>
+            <div class="field"><label for="suClub" data-t="field.club">Nom de ton club</label>
+              <input type="text" id="suClub" autocomplete="organization" maxlength="24" required placeholder="Annecy Hoops">
+              <div class="hint" data-t="field.clubHint">2 à 24 caractères. Visible par les autres managers.</div></div>
+            <div class="field"><label for="suEmail" data-t="field.email">Email</label>
+              <input type="email" id="suEmail" autocomplete="email" required placeholder="toi@exemple.fr"></div>
+            <div class="field"><label for="suPw" data-t="field.password">Mot de passe</label>
+              <div class="pw"><input type="password" id="suPw" autocomplete="new-password" minlength="8" required>
+              <button type="button" data-toggle-pw="suPw" data-t="pw.show">Voir</button></div>
+              <div class="hint" data-t="field.pwHint">8 caractères minimum.</div></div>
+            <button type="submit" class="btn btn-primary" data-t="signup.submit">Créer mon club</button>
+          </form>
+          <p class="legal" data-t="legal">Ton email (ou ton identifiant Discord) sert uniquement à te connecter au jeu. Aucune publicité, aucune revente.</p>
+        </div>
+
+        <!-- Connexion -->
+        <div class="panel-view" id="viewLogin">
+          <h2 data-t="login.title">Content de te revoir</h2>
+          <p class="sub" data-t="login.sub">Connecte-toi pour retrouver ton club.</p>
+          <div class="msg" id="loginMsg" role="alert"></div>
+          <div class="discord-only">
+            <button type="button" class="btn btn-discord" data-discord-login><svg><use href="#i-discord"/></svg><span data-t="discord.login">Se connecter avec Discord</span></button>
+            <div class="or" data-t="or">ou</div>
+          </div>
+          <form id="loginForm" novalidate>
+            <div class="field"><label for="liEmail" data-t="field.email">Email</label>
+              <input type="email" id="liEmail" autocomplete="email" required></div>
+            <div class="field"><label for="liPw" data-t="field.password">Mot de passe</label>
+              <div class="pw"><input type="password" id="liPw" autocomplete="current-password" required>
+              <button type="button" data-toggle-pw="liPw" data-t="pw.show">Voir</button></div></div>
+            <button type="submit" class="btn btn-primary" data-t="login.submit">Se connecter</button>
+          </form>
+          <p class="legal" data-t-html="login.forgot">Mot de passe oublié ? Écris-nous sur le Discord du jeu, on te le réinitialise.</p>
+        </div>
+
+        <!-- 1re connexion Discord : choix du nom de club -->
+        <div class="panel-view" id="viewDiscordClub">
+          <h2 data-t="dclub.title">Bienvenue !</h2>
+          <p class="sub" id="dclubSub"></p>
+          <div class="msg" id="dclubMsg" role="alert"></div>
+          <form id="dclubForm" novalidate>
+            <div class="field"><label for="dcClub" data-t="field.club">Nom de ton club</label>
+              <input type="text" id="dcClub" maxlength="24" required>
+              <div class="hint" data-t="field.clubHint">2 à 24 caractères. Visible par les autres managers.</div></div>
+            <button type="submit" class="btn btn-primary" data-t="signup.submit">Créer mon club</button>
+          </form>
+        </div>
+
+        <!-- Liste d'attente -->
+        <div class="panel-view" id="viewWaiting">
+          <div class="waiting">
+            <svg class="ball" aria-hidden="true"><use href="#i-ball"/></svg>
+            <h2 data-t="wait.title">Tu es sur la liste</h2>
+            <p class="sub" data-t="wait.text">Ton compte est créé, mais tous les clubs de la ligue sont déjà pris. Dès qu'une place se libère, ton club t'est attribué automatiquement : reviens sur cette page, on vérifie à chaque visite.</p>
+            <button type="button" class="btn btn-ghost" id="waitCheckBtn" data-t="wait.check">Vérifier maintenant</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="wrap">
+      <h2 class="section-title" data-t="feat.title">Tout un club à faire grandir</h2>
+      <p class="section-sub" data-t="feat.sub">Ce n'est pas qu'une question de tactique : sponsors, salle, staff et jeunes talents comptent autant que ton cinq de départ.</p>
+      <div class="grid">
+        <div class="feat"><div class="ic"><svg><use href="#i-live"/></svg></div><h3 data-t="f1.t">Matchs en direct</h3><p data-t="f1.p">Chaque match est diffusé en temps réel : action par action, temps morts, mi-temps et émissions d'avant-match. Tu peux le rejoindre en cours, jamais l'accélérer.</p></div>
+        <div class="feat"><div class="ic"><svg><use href="#i-users"/></svg></div><h3 data-t="f2.t">Une vraie ligue</h3><p data-t="f2.p">Jusqu'à 10 managers humains dans le même championnat, avec classement, playoffs, montées et descentes. Plus une coupe l'après-midi.</p></div>
+        <div class="feat"><div class="ic"><svg><use href="#i-cone"/></svg></div><h3 data-t="f3.t">Entraînement & tactique</h3><p data-t="f3.p">Choisis tes axes de travail, fais progresser tes joueurs, prépare le plan de jeu de chaque match à l'avance.</p></div>
+        <div class="feat"><div class="ic"><svg><use href="#i-gavel"/></svg></div><h3 data-t="f4.t">Marché aux enchères</h3><p data-t="f4.p">Joueurs, entraîneurs, analystes, recruteurs : tout se négocie aux enchères en temps réel face aux autres managers.</p></div>
+        <div class="feat"><div class="ic"><svg><use href="#i-arena"/></svg></div><h3 data-t="f5.t">Salle & économie</h3><p data-t="f5.p">Agrandis ta salle, fixe le prix des billets, signe des sponsors et garde un œil sur ton budget.</p></div>
+        <div class="feat"><div class="ic"><svg><use href="#i-trophy"/></svg></div><h3 data-t="f6.t">Académie de jeunes</h3><p data-t="f6.p">Repère des pépites de 15 ans, fais-les grandir et construis l'équipe qui soulèvera le trophée dans quelques saisons.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="day">
+    <div class="wrap">
+      <h2 class="section-title" data-t="day.title">Une journée de manager</h2>
+      <p class="section-sub" data-t="day.sub">Quelques minutes par jour suffisent : le championnat avance tout seul, sur un vrai calendrier.</p>
+      <div class="timeline">
+        <div><time>10h</time><b data-t="d1.t">Championnat</b><span data-t="d1.p">Le premier match de la journée, en direct.</span></div>
+        <div><time>15h</time><b data-t="d2.t">Coupe</b><span data-t="d2.p">Les jours de coupe, un match à élimination directe.</span></div>
+        <div><time>19h</time><b data-t="d3.t">Championnat</b><span data-t="d3.p">Le match du soir, diffusé pendant 1 h 30.</span></div>
+        <div><time data-t="d4.h">24h/24</time><b data-t="d4.t">Gérer</b><span data-t="d4.p">Tactique, entraînement, transferts, sponsors : quand tu veux.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="community" id="communitySection" hidden>
+    <div class="wrap">
+      <div class="community-box">
+        <svg aria-hidden="true"><use href="#i-discord"/></svg>
+        <div><h3 data-t="com.title">Rejoins la communauté</h3><p data-t="com.text">Annonces, entraide entre managers, idées et signalements de bugs : tout se passe sur le Discord.</p></div>
+        <a class="btn" id="communityLink" href="#" target="_blank" rel="noopener" data-t="com.btn">Rejoindre le Discord</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© <span id="year"></span> Hoop Manager</span>
+    <span data-t="footer">Fait avec passion pour les fans de basket.</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var TOKEN_KEY = "tipinManagerToken_v1";   // même clé que le jeu
+  var ACCOUNT_KEY = "hm-account-key";       // compte en liste d'attente
+  var LANG_KEY = "hm-lang";                 // même préférence que le jeu
+
+  var TEXTS = {
+    en: {
+      "login.tab": "Log in", "signup.tab": "Create my club",
+      "resume.text": "You're already logged in on this browser.", "resume.go": "Back to my club", "resume.logout": "Log out",
+      "hero.kicker": "Online basketball management game",
+      "hero.title": "Take charge<br>of your <em>club</em>.",
+      "hero.lead": "Sign players, train them, set your tactics… then watch your team play live against other managers. Free, in your browser, on desktop and mobile.",
+      "hero.fact1": "<b>Live games</b> at set times", "hero.fact2": "<b>10 managers</b> per league", "hero.fact3": "<b>Free</b>, nothing to install",
+      "slots.one": "club still available in the current league", "slots.many": "clubs still available in the current league",
+      "slots.none": "The league is full: sign up to join the waiting list.",
+      "signup.title": "Your club awaits", "signup.sub": "Pick a name: you take over a club in the current league and play tonight.",
+      "discord.signup": "Sign up with Discord", "discord.login": "Log in with Discord", "or": "or",
+      "field.club": "Your club's name", "field.clubHint": "2 to 24 characters. Visible to other managers.",
+      "field.email": "Email", "field.password": "Password", "field.pwHint": "At least 8 characters.",
+      "pw.show": "Show", "pw.hide": "Hide",
+      "signup.submit": "Create my club",
+      "legal": "Your email (or Discord ID) is only used to log you into the game. No ads, never sold.",
+      "login.title": "Welcome back", "login.sub": "Log in to get back to your club.", "login.submit": "Log in",
+      "login.forgot": "Forgot your password? Message us on the game's Discord and we'll reset it.",
+      "dclub.title": "Welcome!", "dclub.sub": "Hi {name}! One last step: pick your club's name.",
+      "wait.title": "You're on the list",
+      "wait.text": "Your account is created, but every club in the league is taken. As soon as a spot opens up, a club is assigned to you automatically: come back to this page, we check on every visit.",
+      "wait.check": "Check now", "wait.still": "Still full for now. Try again later!",
+      "feat.title": "A whole club to build", "feat.sub": "It's not just tactics: sponsors, arena, staff and young talent matter as much as your starting five.",
+      "f1.t": "Live games", "f1.p": "Every game is broadcast in real time: play by play, timeouts, half-time and pre-game shows. You can join mid-game, never fast-forward.",
+      "f2.t": "A real league", "f2.p": "Up to 10 human managers in the same championship, with standings, playoffs, promotion and relegation. Plus an afternoon cup.",
+      "f3.t": "Training & tactics", "f3.p": "Choose what to work on, develop your players, prepare each game plan in advance.",
+      "f4.t": "Auction market", "f4.p": "Players, coaches, analysts, scouts: everything is bid on in real time against the other managers.",
+      "f5.t": "Arena & finances", "f5.p": "Expand your arena, set ticket prices, sign sponsors and keep an eye on your budget.",
+      "f6.t": "Youth academy", "f6.p": "Spot 15-year-old gems, develop them and build the team that will lift the trophy a few seasons from now.",
+      "day.title": "A manager's day", "day.sub": "A few minutes a day is enough: the championship moves on by itself, on a real calendar.",
+      "d1.t": "League", "d1.p": "The day's first game, live.",
+      "d2.t": "Cup", "d2.p": "On cup days, a knockout game.",
+      "d3.t": "League", "d3.p": "The evening game, broadcast for 1h30.",
+      "d4.h": "24/7", "d4.t": "Manage", "d4.p": "Tactics, training, transfers, sponsors: whenever you like.",
+      "com.title": "Join the community", "com.text": "News, help between managers, ideas and bug reports: it all happens on Discord.", "com.btn": "Join the Discord",
+      "footer": "Made with passion for basketball fans.",
+      "err.email-invalid": "This email address doesn't look valid.",
+      "err.password-too-short": "Your password must be at least 8 characters.",
+      "err.password-invalid": "This password isn't valid.",
+      "err.club-invalid": "Club name: 2 to 24 characters (letters, numbers, spaces, - ' .).",
+      "err.club-taken": "This club name is already taken. Try another one!",
+      "err.email-taken": "An account already exists with this email. Log in instead?",
+      "err.bad-credentials": "Wrong email or password.",
+      "err.rate-limited": "Too many attempts. Wait a few minutes and try again.",
+      "err.discord-expired": "The Discord login expired. Please try again.",
+      "err.discord-cancelled": "Discord login cancelled.",
+      "err.discord-failed": "Couldn't reach Discord. Please try again in a moment.",
+      "err.discord-disabled": "Discord login isn't available right now.",
+      "err.network": "Can't reach the server. Check your connection and try again.",
+      "err.generic": "Something went wrong. Please try again.",
+      "err.fill": "Please fill in every field."
+    },
+    fr: {
+      "pw.hide": "Masquer",
+      "slots.one": "club encore disponible dans la ligue en cours", "slots.many": "clubs encore disponibles dans la ligue en cours",
+      "slots.none": "La ligue est complète : inscris-toi pour rejoindre la liste d'attente.",
+      "dclub.sub": "Salut {name} ! Dernière étape : choisis le nom de ton club.",
+      "wait.still": "Toujours complet pour l'instant. Réessaie plus tard !",
+      "err.email-invalid": "Cette adresse email ne semble pas valide.",
+      "err.password-too-short": "Ton mot de passe doit faire au moins 8 caractères.",
+      "err.password-invalid": "Ce mot de passe n'est pas valide.",
+      "err.club-invalid": "Nom de club : 2 à 24 caractères (lettres, chiffres, espaces, - ' .).",
+      "err.club-taken": "Ce nom de club est déjà pris. Essaie-en un autre !",
+      "err.email-taken": "Un compte existe déjà avec cet email. Tu veux plutôt te connecter ?",
+      "err.bad-credentials": "Email ou mot de passe incorrect.",
+      "err.rate-limited": "Trop de tentatives. Attends quelques minutes avant de réessayer.",
+      "err.discord-expired": "La connexion Discord a expiré. Réessaie.",
+      "err.discord-cancelled": "Connexion Discord annulée.",
+      "err.discord-failed": "Impossible de joindre Discord. Réessaie dans un instant.",
+      "err.discord-disabled": "La connexion Discord n'est pas disponible pour le moment.",
+      "err.network": "Impossible de joindre le serveur. Vérifie ta connexion et réessaie.",
+      "err.generic": "Une erreur est survenue. Réessaie.",
+      "err.fill": "Remplis tous les champs."
+    }
+  };
+
+  function store(key, value) { try { if (value == null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (e) {} }
+  function read(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+
+  // --- Langue ---------------------------------------------------------
+  var lang = read(LANG_KEY) === "en" ? "en" : (read(LANG_KEY) === "fr" ? "fr" : ((navigator.language || "fr").slice(0, 2) === "fr" ? "fr" : "en"));
+  var FR_DEFAULTS = {};
+  document.querySelectorAll("[data-t]").forEach(function (el) { FR_DEFAULTS[el.dataset.t] = el.textContent; });
+  document.querySelectorAll("[data-t-html]").forEach(function (el) { FR_DEFAULTS[el.dataset.tHtml] = el.innerHTML; });
+  function t(key) {
+    var dict = TEXTS[lang] || {};
+    if (dict[key] != null) return dict[key];
+    if (TEXTS.fr[key] != null) return TEXTS.fr[key];
+    return FR_DEFAULTS[key] != null ? FR_DEFAULTS[key] : key;
+  }
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll("[data-t]").forEach(function (el) { el.textContent = t(el.dataset.t); });
+    document.querySelectorAll("[data-t-html]").forEach(function (el) { el.innerHTML = t(el.dataset.tHtml); });
+    document.querySelectorAll("[data-lang]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.lang === lang)); });
+    document.querySelectorAll(".msg").forEach(function (m) { if (m.dataset.code) showMsg(m, m.dataset.code, m.classList.contains("is-ok")); });
+    renderSlots();
+    if (discordPendingName) document.getElementById("dclubSub").textContent = t("dclub.sub").replace("{name}", discordPendingName);
+  }
+  document.querySelectorAll("[data-lang]").forEach(function (b) {
+    b.addEventListener("click", function () { lang = b.dataset.lang; store(LANG_KEY, lang); applyLang(); });
+  });
+
+  // --- Vues -----------------------------------------------------------
+  var views = ["viewSignup", "viewLogin", "viewDiscordClub", "viewWaiting"];
+  function show(id) {
+    views.forEach(function (v) { document.getElementById(v).classList.toggle("is-active", v === id); });
+    var tabs = document.querySelector(".tabs");
+    tabs.style.display = (id === "viewSignup" || id === "viewLogin") ? "" : "none";
+    document.getElementById("tabSignup").setAttribute("aria-selected", String(id === "viewSignup"));
+    document.getElementById("tabLogin").setAttribute("aria-selected", String(id === "viewLogin"));
+  }
+  document.getElementById("tabSignup").addEventListener("click", function () { show("viewSignup"); });
+  document.getElementById("tabLogin").addEventListener("click", function () { show("viewLogin"); });
+  document.getElementById("headerLoginBtn").addEventListener("click", function () {
+    show("viewLogin");
+    document.getElementById("authCard").scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(function () { document.getElementById("liEmail").focus(); }, 300);
+  });
+  document.querySelectorAll("[data-toggle-pw]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var input = document.getElementById(b.dataset.togglePw);
+      var showing = input.type === "text";
+      input.type = showing ? "password" : "text";
+      b.dataset.t = showing ? "pw.show" : "pw.hide";
+      b.textContent = t(b.dataset.t);
+    });
+  });
+
+  function showMsg(el, code, ok) {
+    el.dataset.code = code;
+    el.textContent = code.indexOf(".") > 0 ? t(code) : t("err." + code);
+    el.className = "msg " + (ok ? "is-ok" : "is-error");
+  }
+  function clearMsg(el) { delete el.dataset.code; el.className = "msg"; el.textContent = ""; }
+
+  // --- Appels serveur -------------------------------------------------
+  function api(method, url, body, headers) {
+    var opts = { method: method, headers: Object.assign({ "Content-Type": "application/json" }, headers || {}) };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    return fetch(url, opts).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) { data._status = res.status; return data; });
+    });
+  }
+
+  function enterGame(token) {
+    store(TOKEN_KEY, token);
+    store(ACCOUNT_KEY, null);
+    window.location.href = "/?m=" + encodeURIComponent(token);
+  }
+
+  function handleSession(data, msgEl) {
+    if (data && data.ok && data.status === "active" && data.managerToken) { enterGame(data.managerToken); return true; }
+    if (data && data.ok && data.status === "waiting" && data.accountKey) {
+      store(ACCOUNT_KEY, data.accountKey);
+      show("viewWaiting");
+      return true;
+    }
+    showMsg(msgEl, (data && data.code) || "generic");
+    return false;
+  }
+
+  function submitWith(form, msgEl, fn) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      clearMsg(msgEl);
+      var btn = form.querySelector("[type=submit]");
+      btn.disabled = true;
+      Promise.resolve(fn()).catch(function () { showMsg(msgEl, "network"); })
+        .then(function () { btn.disabled = false; });
+    });
+  }
+
+  var signupMsg = document.getElementById("signupMsg");
+  submitWith(document.getElementById("signupForm"), signupMsg, function () {
+    var club = document.getElementById("suClub").value.trim();
+    var email = document.getElementById("suEmail").value.trim();
+    var pw = document.getElementById("suPw").value;
+    if (!club || !email || !pw) { showMsg(signupMsg, "fill"); return; }
+    return api("POST", "/api/account/signup", { clubName: club, email: email, password: pw }).then(function (d) {
+      if (d.code === "email-taken") { showMsg(signupMsg, "email-taken"); document.getElementById("liEmail").value = email; return; }
+      handleSession(d, signupMsg);
+    });
+  });
+
+  var loginMsg = document.getElementById("loginMsg");
+  submitWith(document.getElementById("loginForm"), loginMsg, function () {
+    var email = document.getElementById("liEmail").value.trim();
+    var pw = document.getElementById("liPw").value;
+    if (!email || !pw) { showMsg(loginMsg, "fill"); return; }
+    return api("POST", "/api/account/login", { email: email, password: pw }).then(function (d) { handleSession(d, loginMsg); });
+  });
+
+  var discordPending = null, discordPendingName = null;
+  var dclubMsg = document.getElementById("dclubMsg");
+  submitWith(document.getElementById("dclubForm"), dclubMsg, function () {
+    var club = document.getElementById("dcClub").value.trim();
+    if (!club) { showMsg(dclubMsg, "fill"); return; }
+    return api("POST", "/api/account/discord-complete", { pending: discordPending, clubName: club }).then(function (d) {
+      if (d.code === "discord-expired") { show("viewSignup"); showMsg(signupMsg, "discord-expired"); return; }
+      handleSession(d, dclubMsg);
+    });
+  });
+
+  document.querySelectorAll("[data-discord-login]").forEach(function (b) {
+    b.addEventListener("click", function () { window.location.href = "/auth/discord?intent=login"; });
+  });
+
+  function checkWaiting(manual) {
+    var key = read(ACCOUNT_KEY);
+    if (!key) return Promise.resolve();
+    return api("GET", "/api/account/status", undefined, { "X-Account-Key": key }).then(function (d) {
+      if (d.ok && d.status === "active") { enterGame(d.managerToken); return; }
+      if (d.ok && d.status === "waiting") {
+        show("viewWaiting");
+        if (manual) { var btn = document.getElementById("waitCheckBtn"); btn.textContent = t("wait.still"); setTimeout(function () { btn.textContent = t("wait.check"); }, 3000); }
+        return;
+      }
+      store(ACCOUNT_KEY, null);
+    }).catch(function () {});
+  }
+  document.getElementById("waitCheckBtn").addEventListener("click", function () { checkWaiting(true); });
+
+  // --- Déjà connecté ? --------------------------------------------------
+  var existingToken = read(TOKEN_KEY);
+  if (existingToken) {
+    document.getElementById("resumeBar").style.display = "block";
+    document.getElementById("resumeBtn").href = "/?m=" + encodeURIComponent(existingToken);
+  }
+  document.getElementById("logoutBtn").addEventListener("click", function () {
+    store(TOKEN_KEY, null); store(ACCOUNT_KEY, null);
+    document.getElementById("resumeBar").style.display = "none";
+  });
+
+  // --- Places restantes / Discord ----------------------------------------
+  var config = null;
+  function renderSlots() {
+    if (!config) return;
+    var box = document.getElementById("slotsBox");
+    box.hidden = false;
+    if (config.openSlots > 0) {
+      document.getElementById("slotsCount").textContent = String(config.openSlots);
+      document.getElementById("slotsCount").style.display = "";
+      document.getElementById("slotsLabel").textContent = t(config.openSlots === 1 ? "slots.one" : "slots.many");
+    } else {
+      document.getElementById("slotsCount").style.display = "none";
+      document.getElementById("slotsLabel").textContent = t("slots.none");
+    }
+  }
+  api("GET", "/api/account/config").then(function (c) {
+    if (!c || !c.ok) return;
+    config = c;
+    document.querySelectorAll(".discord-only").forEach(function (el) { el.style.display = c.discord ? "" : "none"; });
+    if (c.discordInvite) {
+      document.getElementById("communitySection").hidden = false;
+      document.getElementById("communityLink").href = c.discordInvite;
+    }
+    renderSlots();
+  }).catch(function () {});
+  document.querySelectorAll(".discord-only").forEach(function (el) { el.style.display = "none"; });
+
+  // --- Retours de Discord (fragment d'URL) --------------------------------
+  var frag = new URLSearchParams((location.hash || "").slice(1));
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  if (frag.get("discord")) {
+    discordPending = frag.get("discord");
+    discordPendingName = frag.get("nom") || "";
+    show("viewDiscordClub");
+    setTimeout(function () { document.getElementById("dcClub").focus(); }, 50);
+  } else if (frag.get("attente")) {
+    store(ACCOUNT_KEY, frag.get("attente"));
+    checkWaiting(false);
+  } else if (frag.get("erreur")) {
+    showMsg(signupMsg, frag.get("erreur"));
+  } else if (read(ACCOUNT_KEY)) {
+    checkWaiting(false);
+  }
+
+  document.getElementById("year").textContent = String(new Date().getFullYear());
+  applyLang();
+})();
+</script>
+</body>
+</html>

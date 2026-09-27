@@ -49,6 +49,9 @@ const Shows = require("./shows.js");
 const PrivateLeague = require("./privateLeague.js");
 // Messagerie privée entre managers (2026-09-26) — voir server/messages.js.
 const Messages = require("./messages.js");
+// Comptes joueurs + connexion Discord (2026-09-26) — voir server/accounts.js
+// et server/accountRoutes.js.
+const AccountRoutes = require("./accountRoutes.js");
 const Engine = require("../engine.js");
 
 // MODE ACCÉLÉRÉ (tests/démo) — voir le commentaire détaillé dans
@@ -186,12 +189,58 @@ function serveIndexHtml(res) {
     sendJson(res, 500, { error: `Impossible de lire moteurbasket3.html : ${e.message}` });
     return;
   }
+  // Site public (BASKET_PUBLIC_SITE=1, prod hoop-manager.com) : un visiteur
+  // SANS jeton manager (ni `?m=` dans l'URL, ni jeton déjà rangé par ce
+  // navigateur) est envoyé vers la page d'accueil/inscription au lieu de
+  // tomber sur la carrière solo. Script placé tout en haut de <head> pour
+  // partir avant le moindre affichage. Même clé localStorage que le jeu
+  // (MANAGER_TOKEN_STORAGE_KEY dans moteurbasket3.html).
+  if (AccountRoutes.isPublicSite()) {
+    const guard = `<script>window.HM_PUBLIC_SITE=true;(function(){try{if(new URLSearchParams(location.search).get("m"))return;if(localStorage.getItem("tipinManagerToken_v1"))return;}catch(e){}location.replace("/bienvenue");})();</script>`;
+    html = html.replace(/<head([^>]*)>/i, m => `${m}${guard}`);
+  }
   const body = Buffer.from(html, "utf-8");
   res.writeHead(200, {
     "Content-Type": "text/html; charset=utf-8",
     "Content-Length": body.length,
   });
   res.end(body);
+}
+
+// Page d'accueil / inscription (assets/site/index.html) — voir
+// server/accountRoutes.js pour les routes qu'elle appelle.
+const SITE_HTML_PATH = path.join(ASSETS_DIR, "site", "index.html");
+function serveSiteHtml(res) {
+  let body;
+  try {
+    body = fs.readFileSync(SITE_HTML_PATH);
+  } catch (e) {
+    sendJson(res, 500, { error: `Impossible de lire la page d'accueil : ${e.message}` });
+    return;
+  }
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Content-Length": body.length, "Cache-Control": "no-cache" });
+  res.end(body);
+}
+
+// ---------------------------------------------------------------------
+// VERROU DE SAUVEGARDE (2026-09-26) : chaque requête qui touche une
+// sauvegarde fait "charger toute la ligue -> modifier -> tout réécrire".
+// Deux requêtes simultanées (deux managers, ou deux onglets) pouvaient donc
+// s'écraser : la seconde réécrivait une copie qui ne contenait pas la
+// modification de la première. Les requêtes à état passent désormais une
+// par une (un seul process Node : un simple verrou en mémoire suffit). Les
+// fichiers statiques (page, images, sw.js) ne sont jamais bloqués.
+// ---------------------------------------------------------------------
+let saveLockTail = Promise.resolve();
+function acquireSaveLock() {
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  const previous = saveLockTail;
+  saveLockTail = saveLockTail.then(() => held);
+  return previous.then(() => {
+    let done = false;
+    return () => { if (!done) { done = true; release(); } };
+  });
 }
 
 // Lit et parse le corps JSON d'une requête POST. Rejette (via l'erreur) un
@@ -770,10 +819,14 @@ async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSav
 // Fabrique le handler HTTP. `savePath`/`multiSavePath` et `nowFn`
 // injectables — indispensable pour tester ce serveur sans dépendre du vrai
 // disque/de la vraie horloge (voir server/index_test.js).
-function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, multiSavePath = store.defaultMultiLeaguePath()) {
+function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, multiSavePath = store.defaultMultiLeaguePath(), accountsPath = store.defaultAccountsPath()) {
   // Messagerie : stockée à côté de la ligue partagée (voir server/messages.js).
   const messages = Messages.createService(Messages.messagesPathFor(multiSavePath));
+  const handleAccountRoutes = AccountRoutes.createAccountRouter({
+    sendJson, readJsonBody, getManagerToken, originFor, isAdminAuthorized, multiSavePath, accountsPath,
+  });
   return async function handler(req, res) {
+    let releaseSaveLock = null;
     try {
       let route;
       try {
@@ -812,7 +865,28 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Page d'accueil / inscription (voir serveSiteHtml).
+      if ((route.pathname === "/bienvenue" || route.pathname === "/welcome") && req.method === "GET") {
+        serveSiteHtml(res);
+        return;
+      }
+
+      releaseSaveLock = await acquireSaveLock();
       const now = nowFn();
+
+      // Comptes joueurs + Discord (voir server/accountRoutes.js).
+      if (await handleAccountRoutes(req, res, route, now)) return;
+
+      // Site public : plus de carrière solo accessible sans jeton manager
+      // (sinon n'importe quel visiteur jouerait dans la carrière solo du
+      // serveur). Seules restent ouvertes sans jeton : /api/health, les
+      // routes admin (secret X-Admin-Token) et les comptes (ci-dessus).
+      if (AccountRoutes.isPublicSite() && route.pathname.startsWith("/api/")
+          && route.pathname !== "/api/health" && !route.pathname.startsWith("/api/admin/")
+          && !getManagerToken(req)) {
+        sendJson(res, 401, { ok: false, code: "login-required", error: "Connexion requise." });
+        return;
+      }
 
       // Simple sonde de vie : ne touche à AUCUNE sauvegarde (ni lecture ni
       // création) — sinon un load-balancer/orchestrateur qui ping
@@ -1336,7 +1410,9 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
 
       sendJson(res, 404, { error: "Route inconnue", path: route.pathname });
     } catch (e) {
-      sendJson(res, 500, { error: `Erreur serveur inattendue : ${e.message}` });
+      if (!res.headersSent) sendJson(res, 500, { error: `Erreur serveur inattendue : ${e.message}` });
+    } finally {
+      if (releaseSaveLock) releaseSaveLock();
     }
   };
 }
@@ -1347,6 +1423,11 @@ function startServer(port = DEFAULT_PORT, savePath = store.defaultSavePath(), mu
     console.log(`Serveur basket (calendrier réel) démarré sur http://localhost:${port}`);
     console.log(`Sauvegarde solo : ${savePath}`);
     console.log(`Sauvegarde multi-manager : ${multiSavePath}`);
+    if (store.upstashConfigured()) {
+      console.log(`Sauvegardes sur Upstash, clés « ${store.redisKey("multiLeague")} », « ${store.redisKey("accounts")} »...`);
+    }
+    if (AccountRoutes.isPublicSite()) console.log("SITE PUBLIC (BASKET_PUBLIC_SITE=1) : visiteurs sans compte envoyés vers /bienvenue, carrière solo fermée.");
+    console.log(`Connexion Discord : ${AccountRoutes.discordConfigured() ? "activée" : "désactivée (DISCORD_CLIENT_ID/DISCORD_CLIENT_SECRET absents)"}.`);
     if (!process.env.BASKET_ADMIN_TOKEN) {
       console.log("BASKET_ADMIN_TOKEN non défini : les routes /api/admin/* sont désactivées (toute requête sera refusée).");
     }

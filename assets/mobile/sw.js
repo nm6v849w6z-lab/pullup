@@ -41,12 +41,16 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return; // toujours le réseau
+  // Connexion Discord (redirections vers discord.com) : jamais interceptée.
+  if (url.pathname.startsWith("/auth/")) return;
 
   if (req.mode === "navigate" || url.pathname === "/") {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (res.ok) { const copy = res.clone(); caches.open(CACHE_VERSION).then((c) => c.put("/", copy)); }
+          // Seule la page du jeu ("/") sert de page hors ligne : la page
+          // d'accueil /bienvenue ne doit jamais la remplacer dans le cache.
+          if (res.ok && url.pathname === "/") { const copy = res.clone(); caches.open(CACHE_VERSION).then((c) => c.put("/", copy)); }
           return res;
         })
         .catch(() => caches.match("/").then((hit) => hit || new Response(OFFLINE_HTML, { headers: { "Content-Type": "text/html; charset=utf-8" } })))

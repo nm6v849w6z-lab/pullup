@@ -78,7 +78,20 @@ function _setFetchImplForTests(fn) {
 // ci-dessus) — un seul espace de clés partagé par tout déploiement pointé
 // vers la même base Upstash, exactement comme un seul fichier
 // league.json/multi-league.json local pour un seul serveur.
-const REDIS_KEYS = { league: "pullup:league", multiLeague: "pullup:multi-league" };
+// `accounts` (2026-09-26, inscription publique sur hoop-manager.com) : les
+// comptes joueurs (email/mot de passe, Discord), voir server/accounts.js.
+const REDIS_KEYS = { league: "pullup:league", multiLeague: "pullup:multi-league", accounts: "pullup:accounts" };
+
+// Préfixe de clés (2026-09-26) : le plan gratuit d'Upstash n'autorise
+// qu'UNE base. Le serveur de TEST partage donc la base de la prod, mais
+// sous des clés préfixées (BASKET_REDIS_PREFIX=test -> "test:pullup:..."),
+// jamais celles de la prod. La prod, elle, ne définit PAS cette variable
+// (clés historiques inchangées, rien à migrer).
+function redisKey(name) {
+  const raw = (process.env.BASKET_REDIS_PREFIX || "").trim();
+  const prefix = raw ? `${raw.replace(/:+$/, "")}:` : "";
+  return prefix + REDIS_KEYS[name];
+}
 
 function upstashConfigured() {
   return !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
@@ -200,7 +213,7 @@ function deserializeMultiLeague(data) {
 async function loadMultiLeague(savePath = defaultMultiLeaguePath()) {
   if (upstashConfigured()) {
     try {
-      const raw = await redisGet(REDIS_KEYS.multiLeague);
+      const raw = await redisGet(redisKey("multiLeague"));
       if (raw == null) return null;
       const data = JSON.parse(raw);
       if (!data || data.version !== MULTI_SAVE_VERSION || !data.league || data.team) return null;
@@ -244,7 +257,7 @@ async function loadMultiLeague(savePath = defaultMultiLeaguePath()) {
 async function saveMultiLeague(league, savePath = defaultMultiLeaguePath()) {
   if (upstashConfigured()) {
     try {
-      await redisSet(REDIS_KEYS.multiLeague, JSON.stringify(serializeMultiLeague(league)));
+      await redisSet(redisKey("multiLeague"), JSON.stringify(serializeMultiLeague(league)));
     } catch (e) {
       console.warn("Écriture Redis (Upstash) de la ligue multi-manager échouée :", e.message);
     }
@@ -312,7 +325,7 @@ function deserialize(data) {
 async function load(savePath = defaultSavePath()) {
   if (upstashConfigured()) {
     try {
-      const raw = await redisGet(REDIS_KEYS.league);
+      const raw = await redisGet(redisKey("league"));
       if (raw == null) return null;
       const data = JSON.parse(raw);
       if (!data || data.version !== SAVE_VERSION || !data.team || !data.league) return null;
@@ -343,7 +356,7 @@ async function load(savePath = defaultSavePath()) {
 async function save(team, league, savePath = defaultSavePath()) {
   if (upstashConfigured()) {
     try {
-      await redisSet(REDIS_KEYS.league, JSON.stringify(serialize(team, league)));
+      await redisSet(redisKey("league"), JSON.stringify(serialize(team, league)));
     } catch (e) {
       console.warn("Écriture Redis (Upstash) de la carrière solo échouée :", e.message);
     }
@@ -353,6 +366,33 @@ async function save(team, league, savePath = defaultSavePath()) {
   const tmpPath = `${savePath}.tmp-${process.pid}-${Date.now()}`;
   fs.writeFileSync(tmpPath, JSON.stringify(serialize(team, league)), "utf-8");
   fs.renameSync(tmpPath, savePath);
+}
+
+// ---------------------------------------------------------------------
+// COMPTES JOUEURS (2026-09-26, voir server/accounts.js) — un simple bloc
+// JSON (chaîne brute, sérialisée/validée par accounts.js), même bascule
+// fichier local / Upstash que le reste. DIFFÉRENCE VOLONTAIRE avec
+// loadMultiLeague : une lecture Redis qui ÉCHOUE lève une exception au lieu
+// de renvoyer `null` — sinon une inscription pendant une panne d'Upstash
+// repartirait d'une liste vide et ÉCRASERAIT tous les comptes existants.
+// `null` veut donc TOUJOURS dire "aucun compte n'a encore été créé".
+// ---------------------------------------------------------------------
+function defaultAccountsPath() {
+  return path.join(__dirname, "data", "accounts.json");
+}
+
+async function loadAccountsRaw(filePath = defaultAccountsPath()) {
+  if (upstashConfigured()) return redisGet(redisKey("accounts"));
+  if (!fs.existsSync(filePath)) return null;
+  return fs.readFileSync(filePath, "utf-8");
+}
+
+async function saveAccountsRaw(raw, filePath = defaultAccountsPath()) {
+  if (upstashConfigured()) { await redisSet(redisKey("accounts"), raw); return; }
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const tmpPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmpPath, raw, "utf-8");
+  fs.renameSync(tmpPath, filePath);
 }
 
 async function loadOrCreate(savePath = defaultSavePath(), now = Date.now()) {
@@ -370,9 +410,11 @@ module.exports = {
   MULTI_SAVE_VERSION, defaultMultiLeaguePath, createMultiManagerCareer,
   serializeMultiLeague, deserializeMultiLeague, loadMultiLeague, saveMultiLeague,
   resolveManagerTeam,
+  // Comptes joueurs (voir server/accounts.js) :
+  defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,
   // Backend Redis (Upstash) optionnel (voir grand commentaire dédié plus
   // haut) — exposé pour server/upstash_store_test.js UNIQUEMENT :
   // `_setFetchImplForTests` pour intercepter les appels réseau,
   // `REDIS_KEYS`/`upstashConfigured` pour vérifier la bonne clé/bascule.
-  REDIS_KEYS, upstashConfigured, _setFetchImplForTests,
+  REDIS_KEYS, redisKey, upstashConfigured, _setFetchImplForTests,
 };

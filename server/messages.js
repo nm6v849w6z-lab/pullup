@@ -27,6 +27,12 @@ const crypto = require("crypto");
 
 const MESSAGES_VERSION = 1;
 const REDIS_KEY = "pullup:messages";
+// Même préfixe que server/store.js (BASKET_REDIS_PREFIX, serveur de test
+// partageant la base Upstash de la prod — voir store.redisKey).
+function redisKeyName() {
+  const raw = (process.env.BASKET_REDIS_PREFIX || "").trim();
+  return (raw ? `${raw.replace(/:+$/, "")}:` : "") + REDIS_KEY;
+}
 const MAX_TEXT_LENGTH = 1000;
 const MAX_MESSAGES_PER_CONVERSATION = 300;
 // Anti-spam : au plus RATE_MAX messages sur RATE_WINDOW_MS glissantes par
@@ -78,7 +84,7 @@ function messagesPathFor(multiSavePath) {
 async function loadData(filePath) {
   if (upstashConfigured()) {
     try {
-      const res = await fetchImpl(`${process.env.UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(REDIS_KEY)}`, {
+      const res = await fetchImpl(`${process.env.UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(redisKeyName())}`, {
         headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -101,7 +107,7 @@ async function loadData(filePath) {
 async function saveData(filePath, data) {
   const raw = JSON.stringify(data);
   if (upstashConfigured()) {
-    const res = await fetchImpl(`${process.env.UPSTASH_REDIS_REST_URL}/set/${encodeURIComponent(REDIS_KEY)}`, {
+    const res = await fetchImpl(`${process.env.UPSTASH_REDIS_REST_URL}/set/${encodeURIComponent(redisKeyName())}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
       body: raw,
