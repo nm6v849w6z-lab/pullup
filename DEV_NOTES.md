@@ -21,6 +21,37 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 ## À faire
 
 - **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Salle : graphique d'affluence à l'échelle de la plus forte affluence** —
+  retour utilisateur : "au dessus des barres de affluences, c'est pas un
+  peu vide ? [...] si ça venait à être trop haut [...] il faut que la
+  brique soit plus grande automatiquement". salleAttendanceChartSvg :
+  échelle = affluence max × 1,08 (au lieu de la capacité), hauteur du tracé
+  140 px jusqu'à 7 000 spectateurs puis jusqu'à 280 px vers 30 000 ; ligne
+  de capacité seulement si elle tient dans l'échelle. Reste : commit + push.
+
+- **🔧 EN COURS (2026-09-27) — Saison à 11 semaines + entraînement collectif
+  hors jours de match** — retours utilisateur : "une saison devrait plutôt
+  faire 11 que 10 semaines (9 semaines de championnat + 2 de PO)",
+  "corrige sur la ligue actuelle, si l'entrainement des fondamentaux est
+  par jour de match, ça doit aussi être dans la nuit du dimanche au lundi",
+  "les matchs de coupe et PO doivent avoir le même impact que les matchs de
+  saison régulière. Idem pour les amicaux", "les entrainements collectifs
+  eux, sont uniquement sur les jours de repos".
+  - Vérifié, rien à changer : la ligue en ligne est déjà basculée au rythme
+    hebdomadaire (8770250, en prod) → fondamentaux le lundi 0h ; minutes de
+    coupe, play-offs et amicaux déjà comptées comme le championnat.
+  - À faire : SEASON_LENGTH_WEEKS = 11 ; ligue hebdo : vieillissement +
+    salaires + remise à zéro des stats à la mise à jour du lundi QUI SUIT LA
+    FINALE (avant : 9e lundi, AVANT les play-offs ; et ligue basculée en
+    pleine saison : team.week garde les jours quotidiens → vieillissement en
+    pleine saison) ; cette mise à jour de fin de saison n'avait jamais lieu
+    (boucle arrêtée au champion). Entraînement collectif : le jour d'un
+    match ne compte plus comme jour d'entraînement.
+  - NB : une autre session a des changements non committés (amicaux) dans
+    engine.js/moteurbasket3.html/server/index.js — ne committer que mes
+    hunks.
+
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
   Tactiques : « Partir de » + plancher de connaissance tactique** —
   retours utilisateur : "dans partir de : ajoute aussi les 5 derniers
   matchs en proposition. enlève le prochain match" ; "ça reste des joueurs
