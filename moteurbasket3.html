@@ -23970,6 +23970,13 @@ function starRatingFromScore(score, max = 99) {
 // passe), défense (extérieure, interceptions, intérieure, contre), rebond.
 const PDP_FUNDAMENTAL_ORDER = ["threePoint", "midRange", "freeThrow", "inside", "penetration", "shotCreation", "dribble",
   "pass", "defOutside", "steal", "defInside", "block", "rebound"];
+// Physique : vitesse/explosivité, puis puissance, puis endurance. Mental :
+// lecture du jeu, puis sang-froid, puis caractère.
+const PDP_ATTR_ORDER = {
+  Fondamentaux: PDP_FUNDAMENTAL_ORDER,
+  Physique: ["speed", "acceleration", "agility", "vertical", "strength", "power", "endurance"],
+  Mental: ["decision", "vision", "anticipation", "focus", "composure", "determination", "discipline", "leadership"],
+};
 function pdpLastTrainingUps(team, player) {
   const rep = team && team.lastTrainingReport && team.lastTrainingReport.players;
   const entry = rep && player && rep[player.id];
@@ -24548,9 +24555,11 @@ function renderPlayerDetail(teamIdx, playerId) {
     // ce soit plus cohérent, mi-distance et trois points doivent être
     // ensemble") : tir, puis création, puis défense et rebond — sur deux
     // colonnes (7 + 6). Physique et Mental restent triés par valeur.
-    const ordered = title === "Fondamentaux"
-      ? PDP_FUNDAMENTAL_ORDER.filter(a => attrs.includes(a)).concat(attrs.filter(a => !PDP_FUNDAMENTAL_ORDER.includes(a)))
-      : [...shown].sort((a, b) => player.attrs[b] - player.attrs[a]).concat(hidden);
+    // Physique et Mental aussi dans un ordre FIXE (même jour : "ne trie pas
+    // par valeur mental et physique, il faut que ça reste statique, sinon
+    // on cherche toujours où est quoi").
+    const fixedOrder = PDP_ATTR_ORDER[title] || attrs;
+    const ordered = fixedOrder.filter(a => attrs.includes(a)).concat(attrs.filter(a => !fixedOrder.includes(a)));
     const meta = shown.length === attrs.length
       ? `moy. <b>${(shown.reduce((s, a) => s + player.attrs[a], 0) / shown.length).toFixed(1)}</b>`
       : `${shown.length}/${attrs.length} révélées`;
