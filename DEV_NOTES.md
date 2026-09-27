@@ -20,6 +20,30 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ CODÉ, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) — Vraies pubs
+  (Google H5 Games Ads) aux emplacements prévus** — demande : "ajouter les
+  pubs aux endroits prévus dans mon jeu hoop-manager.com" ; régie choisie :
+  H5 Games Ads ; pas encore d'ID éditeur.
+  - server/ads.js (nouveau) : ADSENSE_CLIENT (ca-pub-…) + ADSENSE_TEST=1 ;
+    injection avant </head> du jeu (window.HM_ADS + shim adBreak/adConfig +
+    adsbygoogle.js) et de /bienvenue (script seul, vérif. du site) ; route
+    /ads.txt (404 sans config). server/index.js branché.
+  - moteurbasket3.html : hmAdsEnabled/hmAdsShowBreak/hmAdsShowRewarded ;
+    Scouting Pro → showScoutingRealAdOverlay (ticket serveur inchangé,
+    bouton « Regarder la pub » = opt-in exigé par Google, complété
+    seulement sur adViewed ; messages « fermée » / « aucune pub ») ; Hoop
+    Shows → hoopShowOnAd = adBreak 'pause' hoopshow-prematch/halftime,
+    segment sauté si Google n'a rien. Sans ADSENSE_CLIENT ou dans l'appli
+    Capacitor (AdSense interdit en WebView) : écrans gris factices inchangés.
+  - Tests : ads_integration_test.js (nouveau) ; scouting_pro,
+    hoop_show_player, server/hoop_shows, server/index verts.
+  - Reste (utilisateur) : compte AdSense + inscription H5 Games Ads,
+    ADSENSE_CLIENT (+ ADSENSE_TEST=1 d'abord) sur Render, message RGPD dans
+    AdSense « Confidentialité et messages ». Reformuler « Aucune publicité »
+    dans assets/site/index.html (texte sur l'email). Appli stores : AdMob
+    plus tard. NB : moteurbasket3.html/server/index.js ont aussi des
+    modifs d'autres sessions non committées → commit par hunks.
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Forme : +10 par jour civil sans
   jouer ; amical = pas de jour de repos** — retours utilisateur : "la forme
   remonte par 10 uniquement s'ils n'ont pas joué" ("c'était le but qu'un

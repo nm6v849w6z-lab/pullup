@@ -28659,6 +28659,114 @@ async function refreshScoutingProPanel(teamIdx) {
   }
 }
 
+// =====================================================================
+// VRAIES PUBS — Google H5 Games Ads (voir server/ads.js). Le serveur
+// n'injecte window.HM_ADS + adBreak/adConfig QUE si ADSENSE_CLIENT est
+// défini : sinon (dev, tests, sauvegardes locales) on garde les écrans gris
+// factices ci-dessous, inchangés. Jamais dans l'appli native (Capacitor) :
+// AdSense interdit les WebViews d'applis (il faudra AdMob là-bas).
+// Avec la vraie régie, la pub s'affiche en PLEIN ÉCRAN par-dessus le jeu
+// (c'est Google qui la dessine), pas dans nos blocs gris.
+// =====================================================================
+let hmAdsConfigured = false;
+function hmAdsEnabled() {
+  if (!window.HM_ADS || typeof window.adBreak !== "function") return false;
+  try { if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return false; } catch (e) { /* rien */ }
+  if (!hmAdsConfigured) {
+    hmAdsConfigured = true;
+    try { window.adConfig({ preloadAdBreaks: "on", sound: "on" }); } catch (e) { /* rien */ }
+  }
+  return true;
+}
+// Coupure pub (Hoop Shows) : résout TOUJOURS, avec le breakStatus de Google
+// ("viewed", "frequencyCapped", "notReady", "timeout"…). Garde-fou 45 s si
+// Google ne rappelle jamais (script bloqué par un bloqueur de pub, etc.).
+function hmAdsShowBreak(name) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (status) => { if (!done) { done = true; clearTimeout(guard); resolve(status); } };
+    const guard = setTimeout(() => finish("timeout"), 45000);
+    try {
+      window.adBreak({ type: "pause", name, adBreakDone: (info) => finish((info && info.breakStatus) || "unknown") });
+    } catch (e) { finish("error"); }
+  });
+}
+// Pub récompensée : `onOffer(showAdFn)` est appelé quand Google a une pub
+// prête (le joueur doit alors cliquer lui-même pour la lancer — règle H5
+// Games Ads). Résout "viewed" (récompense due), "dismissed" (pub fermée
+// avant la fin) ou "unavailable" (aucune pub, bloqueur, quota Google…).
+function hmAdsShowRewarded(name, onOffer) {
+  return new Promise((resolve) => {
+    let outcome = null, done = false;
+    const finish = (status) => { if (!done) { done = true; clearTimeout(guard); resolve(status); } };
+    const guard = setTimeout(() => finish(outcome || "unavailable"), 20000);
+    try {
+      window.adBreak({
+        type: "reward", name,
+        beforeReward: (showAdFn) => { clearTimeout(guard); onOffer(showAdFn); },
+        adDismissed: () => { outcome = "dismissed"; },
+        adViewed: () => { outcome = "viewed"; },
+        adBreakDone: () => finish(outcome || "unavailable"),
+      });
+    } catch (e) { finish("unavailable"); }
+  });
+}
+
+// Scouting Pro avec la vraie régie : même ticket serveur que l'écran
+// factice (quota mensuel vérifié AVANT d'afficher quoi que ce soit), ticket
+// complété seulement si Google confirme la pub vue en entier (adViewed).
+async function showScoutingRealAdOverlay(opponentIdx) {
+  const feedback = document.getElementById("scoutingProFeedback");
+  const reenable = () => { const b = document.getElementById("scoutingProWatchAdBtn"); if (b) b.disabled = false; };
+  const ticketResult = await scoutingCreateAdTicket(opponentIdx);
+  if (!ticketResult.ok) {
+    if (feedback) feedback.innerHTML = `<div class="gain-line gain-down">${escapeHtml(ticketResult.error || "Impossible de lancer la pub.")}</div>`;
+    reenable();
+    return;
+  }
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay scouting-ad-overlay";
+  overlay.id = "scoutingAdOverlay";
+  overlay.innerHTML = `<div class="upgrade-confirm-box scouting-ad-box">` +
+    `<h3>🔍 Scouting Pro</h3>` +
+    `<p class="sub" id="scoutingAdStatus">Recherche d'une pub…</p>` +
+    `<div class="upgrade-confirm-actions">` +
+    `<button type="button" class="upgrade-confirm-cancel-btn" id="scoutingAdCancel">Annuler</button>` +
+    `<button type="button" class="upgrade-confirm-validate-btn" id="scoutingAdPlay" disabled>▶ Regarder la pub</button>` +
+    `</div></div>`;
+  document.body.appendChild(overlay);
+  let cancelled = false;
+  overlay.querySelector("#scoutingAdCancel").addEventListener("click", () => { cancelled = true; overlay.remove(); reenable(); });
+
+  const status = await hmAdsShowRewarded("scouting-pro", (showAdFn) => {
+    if (cancelled) return;
+    const st = overlay.querySelector("#scoutingAdStatus");
+    if (st) st.textContent = "Regarde la pub jusqu'au bout et ton scout t'envoie le rapport complet.";
+    const play = overlay.querySelector("#scoutingAdPlay");
+    if (play) {
+      play.disabled = false;
+      play.addEventListener("click", () => { play.disabled = true; showAdFn(); }, { once: true });
+    }
+  });
+  if (cancelled) return;
+  overlay.remove();
+  if (status === "viewed") {
+    const result = await scoutingCompleteAdTicket(ticketResult.ticketId);
+    if (result.ok && teamDetailIdx === opponentIdx && teamDetailSubView === "analyse") {
+      window.__lastScoutingProCheck = refreshScoutingProPanel(opponentIdx);
+    } else if (!result.ok && feedback) {
+      feedback.innerHTML = `<div class="gain-line gain-down">${escapeHtml(result.error || "Rapport indisponible.")}</div>`;
+    }
+    return;
+  }
+  if (feedback) {
+    feedback.innerHTML = `<div class="gain-line gain-down">${status === "dismissed"
+      ? "Pub fermée avant la fin : rapport non débloqué."
+      : "Aucune pub disponible pour le moment, réessaie un peu plus tard."}</div>`;
+  }
+  reenable();
+}
+
 // Écran gris factice représentant une pub récompensée (retour utilisateur :
 // "Pour le moment mets un écran gris avec pub. On connectera comme il faut
 // plus tard.") — décompte de SCOUTING_AD_WATCH_MS calé sur Date.now() (même
@@ -28668,6 +28776,7 @@ async function refreshScoutingProPanel(teamIdx) {
 // ticket est créé AVANT d'afficher l'écran (voir scoutingCreateAdTicket) :
 // un ticket refusé (quota atteint entre-temps, etc.) n'ouvre jamais l'écran.
 async function showScoutingAdOverlay(opponentIdx) {
+  if (hmAdsEnabled()) return showScoutingRealAdOverlay(opponentIdx);
   const feedback = document.getElementById("scoutingProFeedback");
   const ticketResult = await scoutingCreateAdTicket(opponentIdx);
   if (!ticketResult.ok) {
@@ -28971,7 +29080,14 @@ function closeHoopShow() {
 // — résiste à un onglet mis en arrière-plan). `element` est déjà fourni par
 // le lecteur (voir showPlayer.js R.ad, [data-hs-ad-slot]) : on y écrit
 // directement le placeholder, la Promise résolue rend la main au lecteur.
-function hoopShowOnAd({ element }) {
+function hoopShowOnAd({ element, slot }) {
+  // Vraie régie (voir hmAds*) : coupure plein écran de Google ; si Google
+  // n'a rien à montrer (plafond de fréquence, pas de pub…), on passe
+  // directement au segment suivant plutôt que d'afficher un écran vide.
+  if (hmAdsEnabled()) {
+    if (element) element.innerHTML = `<div class="hoop-show-ad-block"><span>Page de pub</span></div>`;
+    return hmAdsShowBreak(`hoopshow-${slot || "break"}`).then(() => undefined);
+  }
   return new Promise((resolve) => {
     if (!element) { resolve(); return; }
     const endsAt = Date.now() + HOOP_SHOW_AD_WATCH_MS;

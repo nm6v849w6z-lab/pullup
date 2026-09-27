@@ -54,6 +54,7 @@ const Messages = require("./messages.js");
 // Comptes joueurs + connexion Discord (2026-09-26) — voir server/accounts.js
 // et server/accountRoutes.js.
 const AccountRoutes = require("./accountRoutes.js");
+const Ads = require("./ads.js");
 const Engine = require("../engine.js");
 
 // MODE ACCÉLÉRÉ (tests/démo) — voir le commentaire détaillé dans
@@ -201,6 +202,8 @@ function serveIndexHtml(res) {
     const guard = `<script>window.HM_PUBLIC_SITE=true;(function(){try{if(new URLSearchParams(location.search).get("m"))return;if(localStorage.getItem("tipinManagerToken_v1"))return;}catch(e){}location.replace("/bienvenue");})();</script>`;
     html = html.replace(/<head([^>]*)>/i, m => `${m}${guard}`);
   }
+  // Vraies pubs (voir server/ads.js) : rien sans ADSENSE_CLIENT.
+  html = Ads.injectHead(html, Ads.adsConfig());
   const body = Buffer.from(html, "utf-8");
   res.writeHead(200, {
     "Content-Type": "text/html; charset=utf-8",
@@ -215,7 +218,8 @@ const SITE_HTML_PATH = path.join(ASSETS_DIR, "site", "index.html");
 function serveSiteHtml(res) {
   let body;
   try {
-    body = fs.readFileSync(SITE_HTML_PATH);
+    // Script AdSense seul (vérification du site par Google), sans API de jeu.
+    body = Buffer.from(Ads.injectHead(fs.readFileSync(SITE_HTML_PATH, "utf-8"), Ads.adsConfig(), { withApi: false }), "utf-8");
   } catch (e) {
     sendJson(res, 500, { error: `Impossible de lire la page d'accueil : ${e.message}` });
     return;
@@ -917,6 +921,16 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // une image n'a aucune raison de toucher à une carrière.
       if (route.pathname.startsWith("/assets/") && req.method === "GET") {
         serveAsset(res, route.pathname);
+        return;
+      }
+
+      // ads.txt (voir server/ads.js) : 404 tant qu'ADSENSE_CLIENT n'est pas défini.
+      if (route.pathname === "/ads.txt" && req.method === "GET") {
+        const txt = Ads.adsTxt(Ads.adsConfig());
+        if (!txt) { sendJson(res, 404, { error: "Aucune pub configurée." }); return; }
+        const body = Buffer.from(txt, "utf-8");
+        res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Content-Length": body.length, "Cache-Control": "public, max-age=3600" });
+        res.end(body);
         return;
       }
 
