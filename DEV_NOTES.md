@@ -20,6 +20,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ DÉPLOYÉ SUR LE MAC, À COMMITTER/POUSSER (2026-09-27) — Économie :
+  mention « Journal limité aux 40 dernières opérations » retirée** — retour
+  utilisateur (capture page Économie) : "enleve ça". moteurbasket3.html
+  (bas de l'Historique) : le span de gauche reste vide quand le journal est
+  incomplet ; « Total du journal » reste à droite. Aucun test ne portait sur
+  ce texte (clé i18n en.js laissée, inutilisée). Reste : commit + push.
+
 - **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
   Salle : agrandissement libre, place par place** — retours utilisateur :
   "ajouter librement les places dans les gradins et pas les constructions

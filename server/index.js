@@ -647,6 +647,7 @@ const ACTION_ROUTES = {
   "/api/market/bid": actions.bidOnListing,
   "/api/market/coach-bid": actions.bidOnCoachListing,
   "/api/arena": actions.upgradeArena,
+  "/api/arena/build-seats": actions.buildArenaSeats,
   "/api/ticket-prices": actions.setTicketPrices,
   "/api/fan-shop": actions.upgradeFanShop,
   // Autres infrastructures du club (station TV, salle de musculation, espace

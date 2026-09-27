@@ -1596,6 +1596,32 @@ function containsBannedWord(text) {
   return NAME_BANNED_WORDS.some(w => t.includes(w.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
 }
 
+// ---------------------------------------------------------------------
+// Agrandissement LIBRE de la salle (retour utilisateur, 2026-09-27 : "il faut
+// que l'on puisse ajouter librement les places dans les gradins et pas les
+// constructions par niveau", "il faut quand même plafonner le nombre de
+// places", "le prix de construction doit tjrs être le même, de la première à
+// la dernière place") : le manager achète des places par type de gradin
+// (Team.buildSeats), à un prix FIXE par place, dans la limite d'un plafond
+// par type (45 000 places au total, loges VIP limitées à 2 500 — "6500 place
+// vip ? ça paraît démentiel"). ARENA_LEVELS ne sert plus qu'à nommer la salle
+// selon sa capacité totale (voir arenaLevelForCapacity).
+// ---------------------------------------------------------------------
+const SEAT_CATEGORY_MAX_SEATS = { gradins: 27500, tribune: 15000, loge: 2500 };
+const SEAT_BUILD_COST_PER_SEAT = { gradins: 100, tribune: 500, loge: 5000 }; // retour utilisateur 2026-09-27 : "regarde les coûts de construction sur buzzerbeater [...] on pourrait mettre 100, 500, 5000 pour vip"
+const ARENA_MAX_CAPACITY = SEAT_CATEGORY_MAX_SEATS.gradins + SEAT_CATEGORY_MAX_SEATS.tribune + SEAT_CATEGORY_MAX_SEATS.loge;
+// Palier (et donc nom par défaut) correspondant à une capacité totale : le
+// plus grand palier dont la capacité est atteinte.
+function arenaLevelForCapacity(capacity) {
+  let level = 1;
+  ARENA_LEVELS.forEach(a => { if (capacity >= a.capacity) level = Math.max(level, a.level); });
+  return level;
+}
+// Coût d'un lot de places { gradins, tribune, loge } (prix fixe par place).
+function seatBuildCost(add) {
+  return SEAT_CATEGORIES.reduce((s, c) => s + Math.max(0, Math.floor(Number(add && add[c.key]) || 0)) * (SEAT_BUILD_COST_PER_SEAT[c.key] || 0), 0);
+}
+
 function arenaInfo(level) {
   return ARENA_LEVELS.find(a => a.level === level) || ARENA_LEVELS[0];
 }
@@ -4219,6 +4245,7 @@ class Team {
     // journal des transactions (recettes/dépenses les plus récentes, pour
     // l'écran "Économie") — voir recordTransaction().
     this.arenaLevel = 1;
+    this.seats = null; // { gradins, tribune, loge } une fois la salle agrandie librement (voir buildSeats)
     this.ticketPrices = {};
     SEAT_CATEGORIES.forEach(cat => { this.ticketPrices[cat.key] = cat.defaultPrice; });
     this.fanShopLevel = 0;
@@ -5191,8 +5218,45 @@ class Team {
     return true;
   }
 
+  // Capacité totale = somme des places des 3 types de gradins (voir
+  // Team.seats / categoryCapacity).
   arenaCapacity() {
-    return arenaInfo(this.arenaLevel).capacity;
+    return SEAT_CATEGORIES.reduce((s, cat) => s + this.categoryCapacity(cat.key), 0);
+  }
+
+  // Places par type, figées à la première construction libre. Avant ça (ou
+  // pour une sauvegarde d'avant ce changement), on reprend la répartition
+  // historique du palier de la salle (SEAT_CATEGORIES.shareOfCapacity).
+  currentSeats() {
+    if (this.seats) return { ...this.seats };
+    const cap = arenaInfo(this.arenaLevel).capacity;
+    const out = {};
+    SEAT_CATEGORIES.forEach(c => { out[c.key] = Math.round(cap * c.shareOfCapacity); });
+    return out;
+  }
+
+  // Ajoute des places (retour utilisateur 2026-09-27, voir
+  // SEAT_CATEGORY_MAX_SEATS) : `add` = { gradins, tribune, loge } (entiers
+  // >= 0). Refuse tout ou rien : { ok: false, reason: "empty" | "cap" |
+  // "insufficient-budget", category? } ; sinon { ok: true, cost, added }.
+  buildSeats(add) {
+    const cur = this.currentSeats();
+    const clean = {};
+    let added = 0;
+    for (const c of SEAT_CATEGORIES) {
+      const n = Math.max(0, Math.floor(Number(add && add[c.key]) || 0));
+      if (cur[c.key] + n > SEAT_CATEGORY_MAX_SEATS[c.key]) return { ok: false, reason: "cap", category: c.key };
+      clean[c.key] = n;
+      added += n;
+    }
+    if (!added) return { ok: false, reason: "empty" };
+    const cost = seatBuildCost(clean);
+    if (this.budget < cost) return { ok: false, reason: "insufficient-budget", cost };
+    this.recordTransaction(`Agrandissement de la salle (+${added.toLocaleString("fr-FR")} places)`, -cost);
+    SEAT_CATEGORIES.forEach(c => { cur[c.key] += clean[c.key]; });
+    this.seats = cur;
+    this.arenaLevel = arenaLevelForCapacity(this.arenaCapacity());
+    return { ok: true, cost, added };
   }
 
   nextArenaLevel() {
@@ -5234,7 +5298,9 @@ class Team {
   // Capacité de la salle réservée à une catégorie de place donnée (part
   // fixe de la capacité totale — voir SEAT_CATEGORIES.shareOfCapacity).
   categoryCapacity(categoryKey) {
-    return Math.round(this.arenaCapacity() * seatCategoryInfo(categoryKey).shareOfCapacity);
+    const key = seatCategoryInfo(categoryKey).key;
+    if (this.seats && typeof this.seats[key] === "number") return this.seats[key];
+    return Math.round(arenaInfo(this.arenaLevel).capacity * seatCategoryInfo(key).shareOfCapacity);
   }
 
   setTicketPrice(categoryKey, price) {
@@ -10722,6 +10788,7 @@ function serializeTeam(team) {
     ordresValidatedRound: typeof team.ordresValidatedRound === "number" ? team.ordresValidatedRound : null,
     budget: team.budget,
     arenaLevel: team.arenaLevel,
+    seats: team.seats ? { ...team.seats } : null,
     ticketPrices: { ...team.ticketPrices },
     fanShopLevel: team.fanShopLevel,
     // Autres infrastructures (voir CLUB_FACILITIES/Team.facilityLevels
@@ -11201,6 +11268,12 @@ function teamFromSave(data) {
   if (typeof data.budget === "number") team.budget = data.budget;
   if (typeof data.deficitWeeks === "number") team.deficitWeeks = data.deficitWeeks;
   if (ARENA_LEVELS.some(a => a.level === data.arenaLevel)) team.arenaLevel = data.arenaLevel;
+  // Places par type (agrandissement libre, voir Team.buildSeats) : absent
+  // d'une ancienne sauvegarde -> répartition du palier (currentSeats).
+  if (data.seats && SEAT_CATEGORIES.every(c => Number.isInteger(data.seats[c.key]) && data.seats[c.key] >= 0)) {
+    team.seats = {};
+    SEAT_CATEGORIES.forEach(c => { team.seats[c.key] = Math.min(data.seats[c.key], SEAT_CATEGORY_MAX_SEATS[c.key]); });
+  }
   // Sauvegarde à jour (prix par catégorie de place) : on prend ce qui est
   // là et on comble les catégories manquantes avec leur défaut. Ancienne
   // sauvegarde (avant l'introduction des catégories, un seul "ticketPrice")
@@ -13032,6 +13105,7 @@ return {
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,
+  SEAT_CATEGORY_MAX_SEATS, SEAT_BUILD_COST_PER_SEAT, ARENA_MAX_CAPACITY, arenaLevelForCapacity, seatBuildCost,
   SPONSOR_SLOTS, SPONSOR_TIERS, SPONSOR_PROFILES, SPONSOR_PROFILE_KEYS, SPONSOR_NAMES, SPONSOR_OFFER_TTL_MS, SPONSOR_OFFER_INTERVAL_MS, SPONSOR_REPUTATION_DEFAULT, SPONSOR_REPUTATION_MISS, SPONSOR_TERMINATION_WEEKS,
   sponsorTiersAvailable, sponsorActiveContractForSlot, sponsorNameForSlot, generateSponsorOffer, refreshSponsorOffers, acceptSponsorOffer, declineSponsorOffer, sponsorTerminationFee, terminateSponsorContract, collectSponsorIncome, applySponsorWinPrimes, settleSponsorsAtSeasonEnd,
   CLUB_RECORD_LABELS, cupResultForTeam, playoffResultForTeam, seasonPlayerTotalsForTeam, seasonSummaryForTeam, seasonRecordCandidatesForTeam, mergeClubRecords, liveClubRecords, liveAllTimePlayers, archiveSeasonForTeam, HALL_OF_FAME_MAX, worldPlayerRankings, worldRankForPlayer,

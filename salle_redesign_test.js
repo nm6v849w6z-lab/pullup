@@ -55,9 +55,13 @@ if (doc.querySelectorAll(".sl-tier i span.on").length !== 1) throw new Error("�
 if (txt(".sl-hero-title") !== win.eval("arenaInfo(1).name")) throw new Error("❌ Le titre du bandeau devrait être le nom de la salle actuelle.");
 if (!txt("#salleHeroKpis").includes("Affluence prévue")) throw new Error("❌ Sans match joué, le bandeau devrait afficher l'affluence PRÉVUE.");
 if (!txt("#salleHeroRing").includes("prévu")) throw new Error("❌ Sans match joué, l'anneau devrait indiquer un remplissage prévu.");
-const upgrade = doc.querySelector("#arenaCurrentPanel .sl-hero-upgrade");
-if (!upgrade || upgrade.textContent.trim() !== "Agrandir") throw new Error(`❌ Le bandeau ne devrait montrer que le bouton "Agrandir" (retour utilisateur 2026-09-26 : le nom/coût du palier suivant donnait l'impression d'avoir déjà la salle), obtenu "${upgrade && upgrade.textContent.trim()}".`);
-console.log("✅ Bandeau sans historique : niveau, nom, affluence prévue, bouton d'agrandissement.");
+// Plus de bouton "Agrandir" dans le bandeau (retour utilisateur 2026-09-27 :
+// "tu pourras enlever le bouton agrandir en haut") : la construction se fait
+// dans la brique « Agrandir la salle » sous la billetterie.
+if (doc.querySelector("#arenaCurrentPanel button, #arenaCurrentPanel .sl-hero-upgrade")) throw new Error("❌ Le bandeau ne devrait plus avoir de bouton Agrandir.");
+const buildCard = doc.querySelector(".sl-main #seatCategoriesHolder + #arenaBuildHolder");
+if (!buildCard || !buildCard.textContent.includes("Agrandir la salle")) throw new Error("❌ La brique « Agrandir la salle » devrait suivre la billetterie dans la colonne de gauche.");
+console.log("✅ Bandeau sans historique : niveau, nom, affluence prévue ; agrandissement sous la billetterie.");
 
 // --- 1b. Bandeau avec historique ---
 win.eval(`teamA.week = 1; ["Venomous", "ZyF0x_", "Brest", "Toulouse", "Nantes"].forEach(o => { teamA.week++; teamA.simulateHomeAttendance(o); });`);

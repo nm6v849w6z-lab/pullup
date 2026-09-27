@@ -34,74 +34,10 @@ function clickTab(key) {
 }
 clickTab("salle");
 
-// ---------------------------------------------------------------------
-// 1) Cliquer sur la carte d'agrandissement de la salle ouvre une confirmation
-//    avec le coût, le niveau avant/après et la capacité avant/après.
-// ---------------------------------------------------------------------
-const arenaLevelBefore = win.eval("teamA.arenaLevel");
-const arenaCapBefore = win.eval("arenaInfo(teamA.arenaLevel).capacity");
-const arenaNextCost = win.eval("teamA.nextArenaLevel().upgradeCost");
-const arenaNextCap = win.eval("teamA.nextArenaLevel().capacity");
-win.eval(`teamA.budget = ${arenaNextCost + 1000000};`); // large budget, cas "abordable"
-const arenaCard = doc.querySelector("#arenaCurrentPanel .staff-hire-card");
-if (!arenaCard) throw new Error("❌ (setup) carte de la salle introuvable.");
-if (arenaCard.textContent.includes(arenaNextCap.toLocaleString("fr-FR"))) {
-  throw new Error("❌ La carte de la salle ne devrait afficher que l'état ACTUEL, jamais la capacité du prochain palier.");
-}
-const arenaArrow = arenaCard.querySelector(".facility-upgrade-arrow");
-if (!arenaArrow) throw new Error("❌ (setup) flèche d'amélioration de la salle introuvable.");
-arenaArrow.click();
-
-let overlay = doc.getElementById("upgradeConfirmOverlay");
-if (!overlay) throw new Error("❌ Cliquer sur la carte d'agrandissement de la salle devrait ouvrir une confirmation.");
-console.log("Contenu de la confirmation (salle) :", overlay.textContent.replace(/\s+/g, " ").trim());
-if (!overlay.textContent.includes(String(arenaCapBefore).length ? arenaCapBefore.toLocaleString("fr-FR") : "")) {
-  // Vérification directe plus bas (regex trop fragile sur le formatage) ; le vrai test est sur le montant/la capacité suivants.
-}
-if (!overlay.textContent.includes(arenaNextCap.toLocaleString("fr-FR"))) {
-  throw new Error("❌ La confirmation devrait afficher la capacité APRÈS l'agrandissement.");
-}
-const validateBtn = doc.getElementById("upgradeConfirmValidate");
-if (validateBtn.disabled) throw new Error("❌ Avec un budget suffisant, le bouton Valider ne devrait PAS être désactivé.");
-console.log("✅ La confirmation d'agrandissement de la salle affiche coût/capacité avant-après, Valider actif (budget suffisant).");
-
-// --- Annuler : ferme la confirmation, n'achète rien. ---
-doc.getElementById("upgradeConfirmCancel").click();
-if (doc.getElementById("upgradeConfirmOverlay")) throw new Error("❌ 'Annuler' devrait fermer la confirmation.");
-if (win.eval("teamA.arenaLevel") !== arenaLevelBefore) throw new Error("❌ 'Annuler' ne devrait PAS avoir agrandi la salle.");
-console.log("✅ 'Annuler' ferme la confirmation sans rien acheter.");
-
-// ---------------------------------------------------------------------
-// 2) Fonds insuffisants : le bouton Valider est désactivé, le montant
-//    manquant est affiché, et cliquer dessus (au cas où) n'achète rien.
-// ---------------------------------------------------------------------
-win.eval(`teamA.budget = ${arenaNextCost - 1};`); // juste en dessous du coût
-arenaArrow.click();
-overlay = doc.getElementById("upgradeConfirmOverlay");
-if (!overlay) throw new Error("❌ (setup) la confirmation devrait s'ouvrir même sans budget suffisant.");
-const missing = 1;
-console.log("Confirmation avec budget insuffisant :", overlay.textContent.replace(/\s+/g, " ").trim());
-if (!overlay.textContent.includes("Il manque")) {
-  throw new Error("❌ Avec un budget insuffisant, la confirmation devrait afficher le montant manquant (\"Il manque X €\").");
-}
-if (!doc.getElementById("upgradeConfirmValidate").disabled) {
-  throw new Error("❌ Avec un budget insuffisant, le bouton Valider devrait être désactivé.");
-}
-doc.getElementById("upgradeConfirmValidate").click(); // ne devrait rien faire (disabled)
-if (win.eval("teamA.arenaLevel") !== arenaLevelBefore) throw new Error("❌ Un budget insuffisant ne devrait jamais permettre l'achat, même en forçant le clic.");
-console.log("✅ Fonds insuffisants : bouton Valider désactivé, montant manquant affiché, aucun achat possible.");
-doc.getElementById("upgradeConfirmCancel").click();
-
-// ---------------------------------------------------------------------
-// 3) Palier déjà maximum : un badge "Max" remplace la carte d'action, sans
-//    ouvrir de confirmation au clic (plus de carte cliquable du tout).
-// ---------------------------------------------------------------------
-win.eval("teamA.budget = 100000000; teamA.arenaLevel = ARENA_LEVELS[ARENA_LEVELS.length - 1].level;");
-win.eval("renderSalleSection();");
-const arenaMaxBadge = doc.querySelector("#arenaCurrentPanel .facility-max-badge");
-if (!arenaMaxBadge) throw new Error("❌ Au niveau maximum, un badge 'Max' devrait remplacer la carte d'agrandissement de la salle.");
-if (arenaMaxBadge.textContent.trim() !== "Max") throw new Error(`❌ Le badge de niveau maximum devrait afficher \"Max\", obtenu \"${arenaMaxBadge.textContent.trim()}\".`);
-console.log("✅ Salle au niveau maximum : badge 'Max' affiché, plus de carte d'action cliquable.");
+// Agrandissement de la salle : plus de palier ni de confirmation depuis le
+// 2026-09-27 (places ajoutées librement par type de gradin, voir
+// arena_seats_test.js). Ce fichier ne couvre plus que les autres
+// infrastructures.
 
 // ---------------------------------------------------------------------
 // 4) Infrastructure jamais construite (niveau 0, ex. gym) : le libellé

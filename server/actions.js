@@ -639,6 +639,18 @@ function upgradeArena(team, teamIndex, league, body, now) {
   return { ok: true, arenaLevel: team.arenaLevel, budget: team.budget };
 }
 
+// Agrandissement LIBRE de la salle (retour utilisateur 2026-09-27, voir
+// Team.buildSeats côté moteur) : body.add = { gradins, tribune, loge }.
+function buildArenaSeats(team, teamIndex, league, body, now) {
+  if (!body || typeof body.add !== "object" || !body.add) return fail("add requis ({ gradins, tribune, loge }).");
+  const res = team.buildSeats(body.add);
+  if (!res.ok) {
+    const msg = { empty: "Aucune place à construire.", cap: "Plafond de places atteint pour ce type de gradin.", "insufficient-budget": "Budget insuffisant." };
+    return fail(msg[res.reason] || "Construction refusée.");
+  }
+  return { ok: true, seats: team.currentSeats(), budget: team.budget, cost: res.cost };
+}
+
 // Prix des billets : mise à jour partielle (une ou plusieurs catégories à
 // la fois, voir SEAT_CATEGORIES) — même forme que setTactics ci-dessus (ne
 // touche que ce qui est explicitement fourni). Aucun coût, donc pas de
@@ -1224,7 +1236,7 @@ function submitPronostics(team, teamIndex, league, body, now) {
 
 module.exports = {
   setLineup, setTactics, setTraining, setPlan, listPlayer, bidOnListing, bidOnCoachListing,
-  upgradeArena, setTicketPrices, upgradeFanShop, fireTrainer,
+  upgradeArena, buildArenaSeats, setTicketPrices, upgradeFanShop, fireTrainer,
   bidOnAnalystListing, fireVideoAnalyst, runVideoSession,
   // Académie de jeunes (recruteur + centre de formation + pipeline privé de
   // prospects, voir engine.js) :

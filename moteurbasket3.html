@@ -4989,7 +4989,28 @@
   /* Billetterie épurée (prix seuls) : les 3 lignes se répartissent la hauteur
      de la carte, alignée sur la colonne chiffres clés + Affluence. */
   #seatCategoriesHolder{display:flex; flex-direction:column;}
-  #slSeatRows{flex:1; display:flex; flex-direction:column; justify-content:space-evenly;}
+  /* Resserrée (retour utilisateur 2026-09-27 : "enlève le vide") : les lignes
+     restent groupées en haut, la construction prend la place restante. */
+  #slSeatRows{display:flex; flex-direction:column;}
+  #seatCategoriesHolder .sl-card-head{margin-bottom:4px;}
+  #salleSection #seatCategoriesHolder .seat-category-card.sl-seat-row{padding:8px 0 10px; row-gap:4px;}
+  .sl-main #arenaBuildHolder{flex:1;}
+  .sl-build-row{display:grid; grid-template-columns:minmax(120px,170px) minmax(0,1fr) auto; gap:14px; align-items:center; padding:8px 0; border-top:1px solid var(--line-soft);}
+  .sl-build-row b{font-size:14px; color:var(--ink);}
+  .sl-build-row small{display:block; font-size:12px; color:var(--ink-faint);}
+  .sl-build-bar{position:relative; height:8px; border-radius:4px; background:rgba(255,255,255,.07); overflow:hidden;}
+  .sl-build-bar i{position:absolute; top:0; bottom:0; left:0; border-radius:4px;}
+  .sl-build-bar i.add{border-radius:0; opacity:.9; background-image:repeating-linear-gradient(45deg, rgba(0,0,0,.35) 0 3px, transparent 3px 6px);}
+  .sl-build-count{margin-top:4px; font-size:12px; color:var(--ink-dim);}
+  .sl-build-row .stf-stepper{height:36px;}
+  .sl-build-row .stf-amount{width:70px;}
+  .sl-build-foot{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; padding-top:10px; border-top:1px solid var(--line-soft);}
+  .sl-build-foot small{display:block; font-size:12.5px; color:var(--ink-dim);}
+  .sl-build-foot b{font-size:20px; color:var(--ink);}
+  .sl-build-foot .sl-build-budget{font-size:12px; color:var(--ink-faint);}
+  .sl-build-foot .is-bad{color:var(--danger);}
+  #arenaBuildFeedback{min-height:0; font-size:12.5px; margin-top:8px;}
+  @media (max-width:640px){ .sl-build-row{grid-template-columns:minmax(0,1fr) auto;} .sl-build-row > div:nth-child(2){grid-column:1 / -1; grid-row:2;} }
   .sl-seat-name{display:flex; align-items:center; gap:11px; min-width:0;}
   .sl-seat-name > div{min-width:0;}
   .sl-seat-name h4{margin:0; font-size:14px; color:var(--ink);}
@@ -6568,7 +6589,14 @@
       </div>
 
       <div class="sl-grid">
-        <div class="sl-card" id="seatCategoriesHolder"></div>
+        <!-- Retour utilisateur (2026-09-27) : billetterie resserrée, puis
+             « Agrandir la salle » juste en dessous (places par type de
+             gradin, voir renderArenaBuild), alignées sur la colonne de
+             droite (chiffres clés + Affluence). -->
+        <div class="sl-side sl-main">
+          <div class="sl-card" id="seatCategoriesHolder"></div>
+          <div class="sl-card" id="arenaBuildHolder"></div>
+        </div>
         <!-- Retour utilisateur (2026-09) : "sur l'onglet salle, il n'y a tjrs
              pas l'affluence des matchs précédents (jusqu'à 10 matchs)" : voir
              Team.attendanceHistory/simulateHomeAttendance (engine.js) et
@@ -7090,7 +7118,7 @@
 
       <div class="guide-entry" data-guide-id="salle" data-guide-group="Club et finances">
         <h3>Salle</h3>
-        <p class="training-intro">Agrandissez votre salle pour accueillir plus de spectateurs, et réglez le prix du billet CATÉGORIE PAR CATÉGORIE : gradins populaires, tribune couverte et loges VIP n'ont ni la même capacité, ni la même tolérance au prix. Seuls les matchs à domicile rapportent une recette. L'humeur des supporters influence le remplissage et la tolérance au prix. D'autres infrastructures sont proposées, chacune sur 4 paliers : Station TV (revenu fixe chaque semaine), Salle de musculation (réduit le risque de blessure) et Espace bien-être (réduit la fatigue en match).</p>
+        <p class="training-intro">Agrandissez votre salle place par place pour accueillir plus de spectateurs (brique Agrandir la salle : chaque type de gradin a son prix par place et son nombre maximum de places), et réglez le prix du billet CATÉGORIE PAR CATÉGORIE : gradins populaires, tribune couverte et loges VIP n'ont ni la même capacité, ni la même tolérance au prix. Seuls les matchs à domicile rapportent une recette. L'humeur des supporters influence le remplissage et la tolérance au prix. D'autres infrastructures sont proposées, chacune sur 4 paliers : Station TV (revenu fixe chaque semaine), Salle de musculation (réduit le risque de blessure) et Espace bien-être (réduit la fatigue en match).</p>
       </div>
 
       <div class="guide-entry" data-guide-id="boutique" data-guide-group="Club et finances">
@@ -8537,6 +8565,32 @@ function teamArenaName(team) {
 function containsBannedWord(text) {
   const t = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return NAME_BANNED_WORDS.some(w => t.includes(w.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
+}
+
+// ---------------------------------------------------------------------
+// Agrandissement LIBRE de la salle (retour utilisateur, 2026-09-27 : "il faut
+// que l'on puisse ajouter librement les places dans les gradins et pas les
+// constructions par niveau", "il faut quand même plafonner le nombre de
+// places", "le prix de construction doit tjrs être le même, de la première à
+// la dernière place") : le manager achète des places par type de gradin
+// (Team.buildSeats), à un prix FIXE par place, dans la limite d'un plafond
+// par type (45 000 places au total, loges VIP limitées à 2 500 — "6500 place
+// vip ? ça paraît démentiel"). ARENA_LEVELS ne sert plus qu'à nommer la salle
+// selon sa capacité totale (voir arenaLevelForCapacity).
+// ---------------------------------------------------------------------
+const SEAT_CATEGORY_MAX_SEATS = { gradins: 27500, tribune: 15000, loge: 2500 };
+const SEAT_BUILD_COST_PER_SEAT = { gradins: 100, tribune: 500, loge: 5000 }; // retour utilisateur 2026-09-27 : "regarde les coûts de construction sur buzzerbeater [...] on pourrait mettre 100, 500, 5000 pour vip"
+const ARENA_MAX_CAPACITY = SEAT_CATEGORY_MAX_SEATS.gradins + SEAT_CATEGORY_MAX_SEATS.tribune + SEAT_CATEGORY_MAX_SEATS.loge;
+// Palier (et donc nom par défaut) correspondant à une capacité totale : le
+// plus grand palier dont la capacité est atteinte.
+function arenaLevelForCapacity(capacity) {
+  let level = 1;
+  ARENA_LEVELS.forEach(a => { if (capacity >= a.capacity) level = Math.max(level, a.level); });
+  return level;
+}
+// Coût d'un lot de places { gradins, tribune, loge } (prix fixe par place).
+function seatBuildCost(add) {
+  return SEAT_CATEGORIES.reduce((s, c) => s + Math.max(0, Math.floor(Number(add && add[c.key]) || 0)) * (SEAT_BUILD_COST_PER_SEAT[c.key] || 0), 0);
 }
 
 function arenaInfo(level) {
@@ -11833,6 +11887,7 @@ class Team {
     // journal des transactions (recettes/dépenses les plus récentes, pour
     // l'écran "Économie") — voir recordTransaction().
     this.arenaLevel = 1;
+    this.seats = null; // { gradins, tribune, loge } une fois la salle agrandie librement (voir buildSeats)
     this.ticketPrices = {};
     SEAT_CATEGORIES.forEach(cat => { this.ticketPrices[cat.key] = cat.defaultPrice; });
     this.fanShopLevel = 0;
@@ -12437,8 +12492,45 @@ class Team {
     return true;
   }
 
+  // Capacité totale = somme des places des 3 types de gradins (voir
+  // Team.seats / categoryCapacity).
   arenaCapacity() {
-    return arenaInfo(this.arenaLevel).capacity;
+    return SEAT_CATEGORIES.reduce((s, cat) => s + this.categoryCapacity(cat.key), 0);
+  }
+
+  // Places par type, figées à la première construction libre. Avant ça (ou
+  // pour une sauvegarde d'avant ce changement), on reprend la répartition
+  // historique du palier de la salle (SEAT_CATEGORIES.shareOfCapacity).
+  currentSeats() {
+    if (this.seats) return { ...this.seats };
+    const cap = arenaInfo(this.arenaLevel).capacity;
+    const out = {};
+    SEAT_CATEGORIES.forEach(c => { out[c.key] = Math.round(cap * c.shareOfCapacity); });
+    return out;
+  }
+
+  // Ajoute des places (retour utilisateur 2026-09-27, voir
+  // SEAT_CATEGORY_MAX_SEATS) : `add` = { gradins, tribune, loge } (entiers
+  // >= 0). Refuse tout ou rien : { ok: false, reason: "empty" | "cap" |
+  // "insufficient-budget", category? } ; sinon { ok: true, cost, added }.
+  buildSeats(add) {
+    const cur = this.currentSeats();
+    const clean = {};
+    let added = 0;
+    for (const c of SEAT_CATEGORIES) {
+      const n = Math.max(0, Math.floor(Number(add && add[c.key]) || 0));
+      if (cur[c.key] + n > SEAT_CATEGORY_MAX_SEATS[c.key]) return { ok: false, reason: "cap", category: c.key };
+      clean[c.key] = n;
+      added += n;
+    }
+    if (!added) return { ok: false, reason: "empty" };
+    const cost = seatBuildCost(clean);
+    if (this.budget < cost) return { ok: false, reason: "insufficient-budget", cost };
+    this.recordTransaction(`Agrandissement de la salle (+${added.toLocaleString("fr-FR")} places)`, -cost);
+    SEAT_CATEGORIES.forEach(c => { cur[c.key] += clean[c.key]; });
+    this.seats = cur;
+    this.arenaLevel = arenaLevelForCapacity(this.arenaCapacity());
+    return { ok: true, cost, added };
   }
 
   nextArenaLevel() {
@@ -12480,7 +12572,9 @@ class Team {
   // Capacité de la salle réservée à une catégorie de place donnée (part
   // fixe de la capacité totale — voir SEAT_CATEGORIES.shareOfCapacity).
   categoryCapacity(categoryKey) {
-    return Math.round(this.arenaCapacity() * seatCategoryInfo(categoryKey).shareOfCapacity);
+    const key = seatCategoryInfo(categoryKey).key;
+    if (this.seats && typeof this.seats[key] === "number") return this.seats[key];
+    return Math.round(arenaInfo(this.arenaLevel).capacity * seatCategoryInfo(key).shareOfCapacity);
   }
 
   setTicketPrice(categoryKey, price) {
@@ -17078,6 +17172,7 @@ function serializeTeam(team) {
     ordresValidatedRound: typeof team.ordresValidatedRound === "number" ? team.ordresValidatedRound : null,
     budget: team.budget,
     arenaLevel: team.arenaLevel,
+    seats: team.seats ? { ...team.seats } : null,
     ticketPrices: { ...team.ticketPrices },
     fanShopLevel: team.fanShopLevel,
     // Autres infrastructures (voir CLUB_FACILITIES/Team.facilityLevels
@@ -17477,6 +17572,12 @@ function teamFromSave(data) {
   if (typeof data.budget === "number") team.budget = data.budget;
   if (typeof data.deficitWeeks === "number") team.deficitWeeks = data.deficitWeeks;
   if (ARENA_LEVELS.some(a => a.level === data.arenaLevel)) team.arenaLevel = data.arenaLevel;
+  // Places par type (agrandissement libre, voir Team.buildSeats) : absent
+  // d'une ancienne sauvegarde -> répartition du palier (currentSeats).
+  if (data.seats && SEAT_CATEGORIES.every(c => Number.isInteger(data.seats[c.key]) && data.seats[c.key] >= 0)) {
+    team.seats = {};
+    SEAT_CATEGORIES.forEach(c => { team.seats[c.key] = Math.min(data.seats[c.key], SEAT_CATEGORY_MAX_SEATS[c.key]); });
+  }
   // Sauvegarde à jour (prix par catégorie de place) : on prend ce qui est
   // là et on comble les catégories manquantes avec leur défaut. Ancienne
   // sauvegarde (avant l'introduction des catégories, un seul "ticketPrice")
@@ -30861,7 +30962,7 @@ function hmLiveMeta() {
   const homeTeam = m.isHome ? teamA : teamB;
   let venue = m.isHome ? "À domicile" : "À l'extérieur";
   try {
-    const cap = arenaInfo(homeTeam.arenaLevel).capacity;
+    const cap = homeTeam.arenaCapacity ? homeTeam.arenaCapacity() : arenaInfo(homeTeam.arenaLevel).capacity;
     if (cap) venue += ` · ${cap.toLocaleString("fr-FR")} places`;
   } catch (e) { /* salle inconnue : on s'en passe */ }
   return { competition, round, venue };
@@ -33558,7 +33659,7 @@ function dashboardDataFromGameState() {
       lastWeek: dashboardLastWeekFlows(teamA),
     },
     arena: {
-      capacity: arenaInfo(teamA.arenaLevel).capacity,
+      capacity: teamA.arenaCapacity(),
       prices: {
         stands: teamA.ticketPrices.gradins,
         tribune: teamA.ticketPrices.tribune,
@@ -36671,7 +36772,7 @@ function ecoRenderHistory() {
     const total = transactions.reduce((s, t) => s + t.amount, 0);
     const complete = transactions.length < 40 && Math.min(...transactions.map(t => t.week)) === 1;
     html += `<div class="gain-line-total ${total >= 0 ? "gain-up" : "gain-down"}">` +
-      `<span>${complete ? `Budget initial : ${ecoMoney(CLUB_STARTING_BUDGET)}` : "Journal limité aux 40 dernières opérations"}</span>` +
+      `<span>${complete ? `Budget initial : ${ecoMoney(CLUB_STARTING_BUDGET)}` : ""}</span>` +
       `<span>${complete ? "Total depuis le début" : "Total du journal"} : <b>${ecoSigned(total)}</b></span></div>`;
   }
   list.innerHTML = html;
@@ -37388,11 +37489,21 @@ function seatPreview(cat, price) {
   return { capacity, rate, attendance, revenue: attendance * price, comfort };
 }
 
+// Palier (nom, niveau) + capacité RÉELLE (somme des places par type, voir
+// Team.arenaCapacity/buildSeats) — la capacité ne suit plus les paliers
+// depuis l'agrandissement libre (2026-09-27).
+function salleArenaInfo() {
+  const capacity = teamA.arenaCapacity();
+  const lv = arenaLevelForCapacity(capacity);
+  return { ...arenaInfo(lv), level: lv, capacity };
+}
+
 function renderSalleSection() {
-  const info = arenaInfo(teamA.arenaLevel);
+  const info = salleArenaInfo();
   const stats = arenaAttendanceStats(info);
   renderSalleHero(info, stats);
   renderSalleTicketing();
+  renderArenaBuild();
   renderAttendanceHistory();
   renderSalleFacilities();
 }
@@ -37452,51 +37563,10 @@ function renderSalleHero(info, stats) {
   // salle_upgrade_confirm_test.js : la capacité future n'apparaît que dans
   // la confirmation). La salle démarre au niveau 1, donc toujours
   // "Agrandir", jamais "Construire".
-  const holder = document.getElementById("arenaCurrentPanel");
-  holder.innerHTML = "";
-  const next = teamA.nextArenaLevel();
-  const arenaCard = document.createElement("div");
-  arenaCard.className = "staff-hire-card facility-card sl-hero-upgrade";
-  arenaCard.dataset.arenaCard = "1";
-  const body = document.createElement("div");
-  body.className = "facility-card-body";
-  const action = document.createElement("div");
-  action.className = "facility-card-action";
-  if (next) {
-    // Retour utilisateur (2026-09-26) : plus de "Salle omnisports / Niveau 3
-    // · 300 000 €" à côté du bouton ("ça donne l'impression qu'on a déjà
-    // cette salle") — ces infos restent dans la confirmation.
-    arenaCard.classList.add("sl-hero-upgrade--btn-only");
-    action.appendChild(buildUpgradeArrow({
-      title: `Agrandir la salle : ${next.name}`,
-      icon: "",
-      beforeLabel: `${info.name} (niveau ${info.level})`,
-      afterLabel: `${next.name} (niveau ${next.level})`,
-      effectLabel: "Capacité",
-      effectBefore: `${info.capacity.toLocaleString("fr-FR")} places`,
-      effectAfter: `${next.capacity.toLocaleString("fr-FR")} places`,
-      cost: next.upgradeCost,
-      onConfirm: () => {
-        if (teamA.upgradeArena()) {
-          saveMyTeam();
-          syncArenaUpgradeToServer();
-          renderSalleSection();
-        }
-      },
-    }, { label: "Agrandir", solid: true }));
-    // Toute la pastille est cliquable (pas seulement la petite flèche).
-    arenaCard.addEventListener("click", () => {
-      const arrow = arenaCard.querySelector(".facility-upgrade-arrow");
-      if (arrow) arrow.click();
-    });
-  } else {
-    arenaCard.classList.add("sl-hero-upgrade--max");
-    body.innerHTML = `<span class="sl-hero-upgrade-label">Salle au niveau maximum</span>`;
-    action.innerHTML = `<span class="facility-max-badge">Max</span>`;
-  }
-  if (!next) arenaCard.appendChild(body);
-  arenaCard.appendChild(action);
-  holder.appendChild(arenaCard);
+  // Plus de bouton "Agrandir" dans le bandeau (retour utilisateur,
+  // 2026-09-27 : "tu pourras enlever le bouton agrandir en haut") :
+  // l'agrandissement se fait place par place, voir renderArenaBuild.
+  document.getElementById("arenaCurrentPanel").innerHTML = "";
 
   // Chiffres clés.
   const kpi = (label, value, extra = "", title = "") =>
@@ -37543,6 +37613,90 @@ function renderSalleHero(info, stats) {
     `<circle cx="54" cy="54" r="46" class="sl-ring-value" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${(circ * (1 - clamp(ringRate, 0, 1))).toFixed(1)}" transform="rotate(-90 54 54)"/></svg>` +
     `<div><b class="sl-num">${Math.round(ringRate * 100)}%</b><small>${stats.avgRate != null ? "remplissage" : "prévu"}</small></div>`;
 }
+
+// --- Agrandir la salle (retour utilisateur 2026-09-27) --------------------
+// Une ligne par type de gradin : prix fixe de la place, barre de remplissage
+// par rapport au plafond (places ajoutées hachurées avant validation), et un
+// sélecteur de places à ajouter (±100). "Construire" débite le budget tout de
+// suite (Team.buildSeats), synchronisé côté serveur en ligue partagée.
+const arenaBuildDraft = { gradins: 0, tribune: 0, loge: 0 };
+function renderArenaBuild(feedback) {
+  const holder = document.getElementById("arenaBuildHolder");
+  if (!holder) return;
+  const cur = teamA.currentSeats();
+  const total = SEAT_CATEGORIES.reduce((s, c) => s + cur[c.key], 0);
+  SEAT_CATEGORIES.forEach(c => { arenaBuildDraft[c.key] = clamp(Math.floor(arenaBuildDraft[c.key] || 0), 0, SEAT_CATEGORY_MAX_SEATS[c.key] - cur[c.key]); });
+  const cost = seatBuildCost(arenaBuildDraft);
+  const added = SEAT_CATEGORIES.reduce((s, c) => s + arenaBuildDraft[c.key], 0);
+  const fmt = n => n.toLocaleString("fr-FR");
+  let html = `<div class="sl-card-head"><div><div class="sl-eyebrow">Construction</div><h3 class="sl-card-title">Agrandir la salle</h3></div>` +
+    `<span class="sl-pill">${fmt(total)} / ${fmt(ARENA_MAX_CAPACITY)} places</span></div>`;
+  SEAT_CATEGORIES.forEach(c => {
+    const max = SEAT_CATEGORY_MAX_SEATS[c.key];
+    const n = arenaBuildDraft[c.key];
+    const room = max - cur[c.key];
+    const pct = cur[c.key] / max * 100, addPct = n / max * 100;
+    html += `<div class="sl-build-row" data-build-row="${c.key}">` +
+      `<div><b>${escapeHtml(c.name)}</b><small>${fmt(SEAT_BUILD_COST_PER_SEAT[c.key])} € la place</small></div>` +
+      `<div><div class="sl-build-bar"><i style="width:${pct.toFixed(2)}%; background:${SEAT_CATEGORY_COLORS[c.key]}"></i>` +
+      `<i class="add" style="left:${pct.toFixed(2)}%; width:${addPct.toFixed(2)}%; background-color:${SEAT_CATEGORY_COLORS[c.key]}"></i></div>` +
+      `<div class="sl-build-count">${fmt(cur[c.key] + n)} / ${fmt(max)} places</div></div>` +
+      `<div class="stf-stepper">` +
+        `<button type="button" class="stf-step" data-build-step="${c.key}:-100" aria-label="100 places de moins"${n <= 0 ? " disabled" : ""}>−</button>` +
+        `<input type="number" class="stf-amount" data-build-input="${c.key}" value="${n}" min="0" max="${room}" step="100" aria-label="Places à ajouter : ${escapeHtml(c.name)}">` +
+        `<button type="button" class="stf-step" data-build-step="${c.key}:100" aria-label="100 places de plus"${n >= room ? " disabled" : ""}>+</button>` +
+      `</div></div>`;
+  });
+  const summary = added
+    ? SEAT_CATEGORIES.filter(c => arenaBuildDraft[c.key]).map(c => `+${fmt(arenaBuildDraft[c.key])} en ${c.name}`).join(", ")
+    : "Choisissez le nombre de places à ajouter";
+  const tooExpensive = cost > teamA.budget;
+  html += `<div class="sl-build-foot"><div><small>${escapeHtml(summary)}</small>` +
+    `<b class="${tooExpensive ? "is-bad" : ""}">${fmt(cost)} €</b> <span class="sl-build-budget">· budget ${fmt(teamA.budget)} €</span></div>` +
+    `<button type="button" class="stf-bid-btn" id="arenaBuildBtn"${!added || tooExpensive ? " disabled" : ""}>Construire</button></div>` +
+    `<div id="arenaBuildFeedback" role="status">${feedback || ""}</div>`;
+  holder.innerHTML = html;
+}
+function syncArenaSeatsToServer(add) {
+  if (!managerToken) return;
+  try {
+    fetchApi("/api/arena/build-seats", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ add }) })
+      .then(res => { if (!res.ok) console.warn("Agrandissement de la salle refusé côté serveur.", res.status); })
+      .catch(e => console.warn("Agrandissement de la salle : serveur indisponible :", e));
+  } catch (e) {
+    console.warn("Agrandissement de la salle : serveur indisponible :", e);
+  }
+}
+document.addEventListener("click", (e) => {
+  const step = e.target.closest("[data-build-step]");
+  if (step && !step.disabled) {
+    const [key, delta] = step.dataset.buildStep.split(":");
+    arenaBuildDraft[key] = (arenaBuildDraft[key] || 0) + Number(delta);
+    renderArenaBuild();
+    return;
+  }
+  const btn = e.target.closest("#arenaBuildBtn");
+  if (btn && !btn.disabled) {
+    const add = { ...arenaBuildDraft };
+    const res = teamA.buildSeats(add);
+    if (res.ok) {
+      SEAT_CATEGORIES.forEach(c => { arenaBuildDraft[c.key] = 0; });
+      saveMyTeam();
+      syncArenaSeatsToServer(add);
+      renderSalleSection();
+      renderArenaBuild(`<span class="sl-up">+${res.added.toLocaleString("fr-FR")} places construites (${formatMoney(res.cost)}).</span>`);
+    } else {
+      const msg = { cap: "Plafond de places atteint pour ce type de gradin.", "insufficient-budget": "Budget insuffisant.", empty: "Aucune place à construire." };
+      renderArenaBuild(`<span class="sl-down">${msg[res.reason] || "Construction refusée."}</span>`);
+    }
+  }
+});
+document.addEventListener("change", (e) => {
+  const input = e.target.closest("[data-build-input]");
+  if (!input) return;
+  arenaBuildDraft[input.dataset.buildInput] = Math.floor(Number(input.value) || 0);
+  renderArenaBuild();
+});
 
 // --- Billetterie -------------------------------------------------------
 function renderSalleTicketing() {
@@ -40008,9 +40162,9 @@ const TOUR_STEPS = [
     title: "Votre salle actuelle",
     text: "L'image de votre salle actuelle. Une salle plus grande accueille plus de spectateurs à chaque match à domicile, donc plus de recettes de billetterie.",
   },
-  { kind: "spotlight", topic: "Salle", page: "salle", target: "#arenaCurrentPanel",
-    title: "Palier et agrandissement",
-    text: "Le nom et la capacité de votre salle actuelle, avec un bouton Agrandir pour passer au palier suivant quand vous en avez les moyens (8 paliers en tout, du Petit gymnase à l'Arena nationale).",
+  { kind: "spotlight", topic: "Salle", page: "salle", target: "#arenaBuildHolder", wide: true,
+    title: "Agrandir la salle",
+    text: "Ajoutez des places type par type (gradins, tribune, loges VIP), au nombre que vous voulez : chaque place a un prix fixe, et chaque type de gradin a un nombre maximum de places. Le nom de la salle évolue avec sa capacité.",
   },
   { kind: "spotlight", topic: "Salle", page: "salle", target: "#seatCategoriesHolder", wide: true,
     title: "Prix des billets",
