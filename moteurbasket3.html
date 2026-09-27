@@ -5902,7 +5902,14 @@
   /* ---- Premium — voir renderPremiumSection ---- */
   .prm-status{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 22px; margin-bottom:10px;}
   .prm-status.is-on{border-color:rgba(240,162,60,.6); background:rgba(240,162,60,.08);}
-  .prm-status__text{display:flex; flex-direction:column; gap:2px;}
+  .prm-cta{display:inline-flex; align-items:center; gap:10px; font:inherit; font-weight:700; font-size:14px; color:var(--amber); background:#020b1c; border:1px solid rgba(240,162,60,.55); border-radius:12px; padding:6px 14px 6px 8px; cursor:pointer; line-height:1;}
+  .prm-cta:hover{border-color:var(--amber); background:#07142b;}
+  .prm-cta:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  .prm-cta__logo{height:34px; width:auto; display:block; flex:none;}
+  .prm-cta--big{font-size:16px; padding:8px 18px 8px 10px;}
+  .prm-cta--big .prm-cta__logo{height:48px;}
+  .prm-status__logo{height:72px; width:auto; flex:none;}
+  .prm-status__text{display:flex; flex-direction:column; gap:2px; margin-right:auto;}
   .prm-status__kicker{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-dim);}
   .prm-status__value{font-size:22px; color:var(--ink);}
   .prm-status.is-on .prm-status__value{color:var(--amber);}
@@ -28062,7 +28069,7 @@ function scoutingProTeaserHtml(access, opponentIdx) {
   } else {
     html += `<button class="secondary" disabled title="Pub gratuite déjà utilisée ce mois-ci">▶ Regarder une pub pour débloquer</button>`;
   }
-  html += `<button class="secondary" id="scoutingProGoPremiumBtn" data-tab="premium">⭐ Passer Premium</button>`;
+  html += `<button type="button" class="prm-cta" id="scoutingProGoPremiumBtn" data-tab="premium">${PREMIUM_LOGO_IMG}<span>Passer Premium</span></button>`;
   html += `</div>`;
   html += remaining > 0
     ? `<p class="sp-lock-note">1 déblocage par pub par mois. Passe Premium pour un accès illimité à toutes les équipes.</p>`
@@ -41101,8 +41108,12 @@ function premiumBadgeHtml(team) {
   if (!teamIsPremium(team)) return "";
   return `<span class="prm-badge" title="Club Premium" aria-label="Club Premium">★</span>`;
 }
+// Logo Premium (retour utilisateur, 2026-09-27 : "plutôt que passe en mode
+// premium avec un emoji, t'arriverais pas à mettre [le logo] partout où
+// c'est mis") : assets/brand/logo-hoop-manager-premium.png, déjà détouré.
+const PREMIUM_LOGO_IMG = `<img class="prm-cta__logo" src="assets/brand/logo-hoop-manager-premium.png" alt="" aria-hidden="true">`;
 function premiumLinkHtml(label) {
-  return `<button type="button" class="secondary prm-link" data-tab="premium">${escapeHtml(label || "⭐ Passer Premium")}</button>`;
+  return `<button type="button" class="prm-cta prm-link" data-tab="premium">${PREMIUM_LOGO_IMG}<span>${escapeHtml(label || "Passer Premium")}</span></button>`;
 }
 function renderPremiumSection() {
   const holder = document.getElementById("premiumContent");
@@ -41112,11 +41123,14 @@ function renderPremiumSection() {
   const tempOnly = active && !teamA.isPaying && typeof teamA.premiumUntil === "number";
   const until = tempOnly ? new Date(teamA.premiumUntil).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" }) : null;
   let html = `<div class="prm-status${active ? " is-on" : ""}">` +
+    `<img class="prm-status__logo" src="assets/brand/logo-hoop-manager-premium.png" alt="Hoop Manager Premium">` +
     `<div class="prm-status__text"><span class="prm-status__kicker">Statut du club</span>` +
     `<b class="prm-status__value">${active ? "Premium" : "Gratuit"}</b>` +
     (until ? `<span class="prm-status__sub">Premium offert jusqu'au ${escapeHtml(until)}</span>` : "") +
     `</div>` +
-    `<button type="button" class="${teamA.isPaying ? "secondary" : "primary"}" id="premiumToggleBtn">${teamA.isPaying ? "Arrêter le Premium" : "⭐ Passer Premium"}</button>` +
+    (teamA.isPaying
+      ? `<button type="button" class="secondary" id="premiumToggleBtn">Arrêter le Premium</button>`
+      : `<button type="button" class="prm-cta prm-cta--big" id="premiumToggleBtn">${PREMIUM_LOGO_IMG}<span>Passer Premium</span></button>`) +
     `</div>`;
   html += `<p class="sub prm-note">Pendant la phase de test, le Premium est gratuit : aucun paiement n'est demandé.</p>`;
   html += `<h3 class="prm-h">Ce que comprend le Premium</h3><div class="prm-grid">` + PREMIUM_PERKS.map(p =>

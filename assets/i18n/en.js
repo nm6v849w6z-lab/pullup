@@ -3033,7 +3033,7 @@ window.HM_I18N_EN = {
   "Première rencontre entre ces deux équipes.": "First meeting between these two teams.",
   "Premiers pas": "First steps",
   "Premium": "Premium",
-  "⭐ Passer Premium": "⭐ Go Premium",
+  "Passer Premium": "Go Premium",
   "Arrêter le Premium": "Stop Premium",
   "Statut du club": "Club status",
   "Premium offert jusqu'au {0}": "Premium gifted until {0}",
