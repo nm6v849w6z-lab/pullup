@@ -55,7 +55,7 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "premium").click();
     check(!doc.getElementById("premiumSection").classList.contains("hidden"), "la page Premium s'affiche");
     const content = doc.getElementById("premiumContent");
-    check(/Gratuit/.test(content.querySelector(".prm-status").textContent) && content.querySelectorAll(".prm-perk").length === 8, "statut Gratuit et 8 avantages listés");
+    check(/Gratuit/.test(content.querySelector(".prm-status").textContent) && content.querySelectorAll(".prm-perk").length === 9, "statut Gratuit et 9 avantages listés");
     // Analyse de sa propre équipe : verrouillée en gratuit.
     win.showTeamDetail(win.eval("myTeamIndex"));
     win.eval('document.querySelector("[data-team-detail-subview=\'analyse\']").dispatchEvent(new Event("click", {bubbles:true}));');

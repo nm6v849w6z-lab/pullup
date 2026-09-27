@@ -848,6 +848,30 @@ const bidOnPhysioListing = makeMedicalBidAction("physio");
 const fireDoctor = makeMedicalFireAction("doctor", "médecin");
 const firePhysio = makeMedicalFireAction("physio", "kiné");
 
+// Marché — liste de suivi et alertes (Premium, voir Team.setMarketWatch/
+// saveMarketAlert côté moteur). body { playerId, watch } ;
+// body { op: "save", alert } | { op: "delete", id }.
+function setMarketWatch(team, teamIndex, league, body, now) {
+  if (!body || body.playerId == null || typeof body.watch !== "boolean") return fail("playerId et watch (booléen) requis.");
+  const playerId = typeof body.playerId === "string" && /^-?\d+$/.test(body.playerId) ? Number(body.playerId) : body.playerId;
+  const r = team.setMarketWatch(playerId, body.watch, now);
+  if (!r.ok) return fail(r.error);
+  return { ok: true, watching: r.watching, marketWatchlist: team.marketWatchlist };
+}
+function setMarketAlert(team, teamIndex, league, body, now) {
+  if (!body || typeof body !== "object") return fail("Requête invalide.");
+  if (body.op === "delete") {
+    if (!team.deleteMarketAlert(String(body.id || ""))) return fail("Alerte introuvable.");
+    return { ok: true, marketAlerts: team.marketAlerts };
+  }
+  if (body.op === "save") {
+    const r = team.saveMarketAlert(body.alert, now);
+    if (!r.ok) return fail(r.error);
+    return { ok: true, alert: r.alert, marketAlerts: team.marketAlerts };
+  }
+  return fail("Opération inconnue.");
+}
+
 // Entraîneur adjoint (voir League.placeAssistantCoachBid/
 // fireTeamAssistantCoach côté moteur) : même forme que le staff médical.
 function bidOnAssistantCoachListing(team, teamIndex, league, body, now) {
@@ -1318,6 +1342,7 @@ module.exports = {
   bidOnRecruiterListing, fireRecruiter, upgradeTrainingCenter,
   bidOnDoctorListing, fireDoctor, bidOnPhysioListing, firePhysio,
   bidOnAssistantCoachListing, fireAssistantCoach,
+  setMarketWatch, setMarketAlert,
   signYouthCandidate, declineYouthCandidate, promoteYouthPlayer, releaseYouthPlayer,
   // Autres infrastructures du club (station TV, salle de musculation, espace
   // bien-être, voir CLUB_FACILITIES côté moteur) :

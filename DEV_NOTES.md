@@ -20,6 +20,22 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) — Premium, lot 3 : liste de suivi du
+  marché + alertes** — retour utilisateur : "oui vas y".
+  - engine.js (+ miroir) : Team.marketWatchlist [{playerId, since}] (30 max),
+    Team.marketAlerts (3 max, filtres poste/âge/potentiel/prix/carac,
+    sanitizeMarketAlert/marketAlertMatches/marketAlertLabel),
+    Team.marketAlertSeen ; League.checkMarketAlerts(now) → fil d'actualité
+    « marche » : joueur suivi mis en vente (après le suivi), fin d'enchère
+    < 1 h, nouvelle annonce (après l'alerte) correspondant à une alerte.
+  - Serveur : /api/market/watch, /api/market/alert ; checkMarketAlerts
+    après refreshMarket (autoSim). Page Marché : « ☆ Suivre » sur chaque
+    annonce, filtre « ★ Joueurs suivis », « 🔔 Créer une alerte avec ces
+    filtres », barre « Mes alertes ». Gratuit → liens vers l'onglet Premium.
+  - NB : la partie page (moteurbasket3.html) est partie dans 33b5fee de
+    l'autre session ; le reste dans ce commit.
+  - Tests : market_watch_test.js (nouveau), premium_test.js (9 avantages).
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-27) — Premium, lot 2 : badge +
   historique de l'entraînement** — retour utilisateur : "oui vas y".
   - Badge ★ (premiumBadgeHtml) à côté du nom d'un club Premium : classements

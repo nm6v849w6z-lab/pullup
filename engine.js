@@ -4098,6 +4098,10 @@ class Team {
     // les TRAINING_HISTORY_MAX derniers bilans hebdomadaires, allégés (seuls
     // les joueurs dont une caractéristique a bougé) — voir trainWeek.
     this.trainingHistory = [];
+    // Marché (Premium) : liste de suivi et alertes, voir MARKET_WATCHLIST_MAX.
+    this.marketWatchlist = []; // [{ playerId, since }]
+    this.marketAlerts = []; // [{ id, createdAt, pos, age, pot, price, crit }]
+    this.marketAlertSeen = {}; // { listingId: 1 (annonce signalée) | 2 (fin proche signalée) }
     // Entraînement hebdomadaire à la BuzzerBeater : UNE compétence pour tout
     // le club, appliquée à un ensemble de postes (1 à 5). Ce n'est pas un
     // choix joueur par joueur : chaque joueur profite (ou pas) de la semaine
@@ -5117,6 +5121,38 @@ class Team {
   // Tactiques enregistrées (voir TACTIC_PRESETS_MAX). `slot` 0..2 : remplace
   // la tactique de cet emplacement, ou l'ajoute à la suite.
   // Nombre de tactiques enregistrables : 6 en Premium, 3 sinon.
+  // Marché — liste de suivi (Premium). Renvoie { ok, watching } ou { ok:false, error }.
+  isWatchingPlayer(playerId) {
+    return (this.marketWatchlist || []).some(w => String(w.playerId) === String(playerId));
+  }
+  setMarketWatch(playerId, watch, now = Date.now()) {
+    if (!this.hasActivePremium(now)) return { ok: false, error: "La liste de suivi du marché est réservée au Premium." };
+    if (!Array.isArray(this.marketWatchlist)) this.marketWatchlist = [];
+    const exists = this.isWatchingPlayer(playerId);
+    if (watch && !exists) {
+      if (this.marketWatchlist.length >= MARKET_WATCHLIST_MAX) return { ok: false, error: `${MARKET_WATCHLIST_MAX} joueurs suivis au maximum.` };
+      this.marketWatchlist.push({ playerId, since: now });
+    } else if (!watch && exists) {
+      this.marketWatchlist = this.marketWatchlist.filter(w => String(w.playerId) !== String(playerId));
+    }
+    return { ok: true, watching: this.isWatchingPlayer(playerId) };
+  }
+  // Marché — alertes (recherches enregistrées, Premium).
+  saveMarketAlert(raw, now = Date.now()) {
+    if (!this.hasActivePremium(now)) return { ok: false, error: "Les alertes du marché sont réservées au Premium." };
+    const clean = sanitizeMarketAlert(raw);
+    if (!clean) return { ok: false, error: "Choisissez au moins un filtre pour créer une alerte." };
+    if (!Array.isArray(this.marketAlerts)) this.marketAlerts = [];
+    if (this.marketAlerts.length >= MARKET_ALERTS_MAX) return { ok: false, error: `${MARKET_ALERTS_MAX} alertes au maximum.` };
+    const alert = { id: `al_${now}_${this.marketAlerts.length}`, createdAt: now, ...clean };
+    this.marketAlerts.push(alert);
+    return { ok: true, alert };
+  }
+  deleteMarketAlert(id) {
+    const before = (this.marketAlerts || []).length;
+    this.marketAlerts = (this.marketAlerts || []).filter(a => a.id !== id);
+    return this.marketAlerts.length !== before;
+  }
   tacticPresetsMax(now = Date.now()) {
     return this.hasActivePremium(now) ? TACTIC_PRESETS_MAX : TACTIC_PRESETS_FREE_MAX;
   }
@@ -9350,6 +9386,56 @@ class League {
   // vivre le marché (nouvelles annonces CPU, enchères CPU sur les annonces
   // ouvertes, au rythme de TRANSFER_CPU_CHECK_INTERVAL_MS) et résout toute
   // enchère dont l'échéance (3 jours réels) est dépassée.
+  // Alertes du marché (Premium, voir MARKET_WATCHLIST_MAX) : parcourt les
+  // annonces ouvertes pour chaque club humain Premium et pousse dans son fil
+  // d'actualité — joueur suivi mis en vente, fin d'enchère proche d'un joueur
+  // suivi, nouvelle annonce correspondant à une alerte. Chaque annonce n'est
+  // signalée qu'une fois par type (Team.marketAlertSeen, purgé des annonces
+  // closes). Renvoie le nombre d'entrées ajoutées.
+  checkMarketAlerts(now) {
+    let pushed = 0;
+    this.teams.forEach((team, idx) => {
+      if (!team || !team.isHuman || !team.feed || typeof team.hasActivePremium !== "function" || !team.hasActivePremium(now)) return;
+      const watch = new Map((team.marketWatchlist || []).map(w => [String(w.playerId), w.since || 0]));
+      const alerts = team.marketAlerts || [];
+      if (!watch.size && !alerts.length) return;
+      if (!team.marketAlertSeen || typeof team.marketAlertSeen !== "object") team.marketAlertSeen = {};
+      const seen = team.marketAlertSeen;
+      const openIds = new Set();
+      const push = (key, title, text) => {
+        pushEntry(team.feed, { key, category: "marche", week: team.week, createdAt: now, title, text, action: { label: "Marché", href: "/marche" } });
+        pushed++;
+      };
+      this.transferListings.forEach(l => {
+        if (l.status !== "open" || l.sellerIdx === idx) return;
+        const k = String(l.id);
+        openIds.add(k);
+        const seller = this.teams[l.sellerIdx];
+        const player = seller && seller.players.find(p => p.id === l.playerId);
+        if (!player) return;
+        const since = watch.get(String(player.id));
+        if (since != null) {
+          if (!seen[k] && (l.createdAt || 0) >= since) {
+            push(`mkt_watch_${k}`, `Joueur suivi en vente : ${player.name}`, `${player.name} (${player.position}, ${player.age} ans) est aux enchères, départ à ${Math.round(l.startPrice).toLocaleString("fr-FR")} €.`);
+          }
+          if (!seen[k]) seen[k] = 1;
+          if (seen[k] < 2 && l.closesAt - now <= MARKET_ALERT_ENDING_MS && l.closesAt > now) {
+            push(`mkt_end_${k}`, `Fin d'enchère proche : ${player.name}`, `L'enchère sur ${player.name}, joueur que vous suivez, se termine dans moins d'une heure.`);
+            seen[k] = 2;
+          }
+          return;
+        }
+        if (seen[k]) return;
+        const alert = alerts.find(a => (l.createdAt || 0) >= (a.createdAt || 0) && marketAlertMatches(a, player, l, team.budget));
+        if (!alert) return;
+        push(`mkt_alert_${k}`, `Alerte marché : ${player.name}`, `${player.name} (${player.position}, ${player.age} ans) correspond à votre alerte « ${marketAlertLabel(alert)} ».`);
+        seen[k] = 1;
+      });
+      Object.keys(seen).forEach(k => { if (!openIds.has(k)) delete seen[k]; });
+    });
+    return pushed;
+  }
+
   refreshMarket(now) {
     this.transferListings = this.transferListings || [];
 
@@ -11205,6 +11291,62 @@ function serializePlayerRecord(p) {
 // Historique de l'entraînement (voir Team.trainingHistory) : une saison
 // (11 semaines) plus une marge pour les semaines de play-offs prolongées.
 const TRAINING_HISTORY_MAX = 13;
+// ---------------------------------------------------------------------
+// MARCHÉ — LISTE DE SUIVI ET ALERTES (Premium, retour utilisateur,
+// 2026-09-27 : « Liste de suivi du marché des transferts et alertes »).
+// - Team.marketWatchlist : [{ playerId, since }] (MARKET_WATCHLIST_MAX) :
+//   alerte quand un joueur suivi est mis en vente APRÈS son ajout, puis
+//   quand son enchère se termine dans moins d'une heure.
+// - Team.marketAlerts : recherches enregistrées (MARKET_ALERTS_MAX), mêmes
+//   filtres que la page Marché (poste, âge, potentiel, prix, caractéristiques) :
+//   alerte pour chaque NOUVELLE annonce (créée après l'alerte) qui correspond.
+// Les alertes arrivent dans le fil d'actualité (catégorie « marche »), voir
+// League.checkMarketAlerts, appelée par le serveur à chaque passage.
+// ---------------------------------------------------------------------
+const MARKET_WATCHLIST_MAX = 30;
+const MARKET_ALERTS_MAX = 3;
+const MARKET_ALERT_AGES = ["all", "u21", "22-25", "26-29", "30+"];
+const MARKET_ALERT_ENDING_MS = 3600 * 1000;
+function sanitizeMarketAlert(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const pos = raw.pos && POSITIONS.includes(raw.pos) ? raw.pos : "all";
+  const age = MARKET_ALERT_AGES.includes(raw.age) ? raw.age : "all";
+  const pot = Number.isFinite(Number(raw.pot)) ? clamp(Math.round(Number(raw.pot)), 0, 99) : 0;
+  const price = raw.price === "budget" ? "budget" : (Number(raw.price) > 0 ? String(Math.round(Number(raw.price))) : "0");
+  const crit = (Array.isArray(raw.crit) ? raw.crit : [])
+    .filter(c => c && ATTRS.includes(c.key))
+    .slice(0, 5)
+    .map(c => ({ key: c.key, min: clamp(Math.round(Number(c.min) || 0), 0, 99), max: clamp(Math.round(Number(c.max) || 99), 0, 99) }));
+  if (pos === "all" && age === "all" && !pot && price === "0" && !crit.length) return null; // aucune condition : trop large
+  return { pos, age, pot, price, crit };
+}
+function marketAlertMatches(alert, player, listing, budget = Infinity) {
+  if (!alert || !player || !listing) return false;
+  if (alert.pos && alert.pos !== "all" && player.position !== alert.pos) return false;
+  if (alert.age === "u21" && player.age > 21) return false;
+  if (alert.age === "22-25" && (player.age < 22 || player.age > 25)) return false;
+  if (alert.age === "26-29" && (player.age < 26 || player.age > 29)) return false;
+  if (alert.age === "30+" && player.age < 30) return false;
+  if (alert.pot && potentialTierIndex(player.potential) < potentialTierIndex(alert.pot)) return false;
+  const minBid = minNextBidFor(listing);
+  if (alert.price === "budget" && minBid > budget) return false;
+  if (alert.price && alert.price !== "0" && alert.price !== "budget" && minBid > Number(alert.price)) return false;
+  for (const c of alert.crit || []) { const v = player.attrs[c.key]; if (v < c.min || v > c.max) return false; }
+  return true;
+}
+function marketAlertLabel(alert) {
+  if (!alert) return "";
+  const ages = { u21: "21 ans et moins", "22-25": "22–25 ans", "26-29": "26–29 ans", "30+": "30 ans et plus" };
+  const parts = [];
+  if (alert.pos && alert.pos !== "all") parts.push(alert.pos);
+  if (ages[alert.age]) parts.push(ages[alert.age]);
+  if (alert.pot) parts.push(`${potentialTierLabel(alert.pot)} et plus`);
+  if (alert.price === "budget") parts.push("dans mon budget");
+  else if (alert.price && alert.price !== "0") parts.push(`jusqu'à ${Number(alert.price).toLocaleString("fr-FR")} €`);
+  (alert.crit || []).forEach(c => parts.push(`${TRAINING_LABELS[c.key] || c.key} ${c.min}–${c.max}`));
+  return parts.join(" · ");
+}
+
 function cloneTrainingHistory(list) {
   return (Array.isArray(list) ? list : []).filter(h => h && typeof h.week === "number").map(h => {
     const players = {};
@@ -11467,6 +11609,9 @@ function serializeTeam(team) {
     // Entraînement redeviendrait vide à chaque redémarrage du serveur.
     lastTrainingReport: cloneTrainingReport(team.lastTrainingReport),
     trainingHistory: cloneTrainingHistory(team.trainingHistory),
+    marketWatchlist: (team.marketWatchlist || []).map(w => ({ playerId: w.playerId, since: w.since })),
+    marketAlerts: (team.marketAlerts || []).map(a => ({ ...a, crit: (a.crit || []).map(c => ({ ...c })) })),
+    marketAlertSeen: { ...(team.marketAlertSeen || {}) },
     // Décisions manager en attente pour un jeune de 18 ans (voir
     // Team.pendingYouthDecisions ci-dessus) : simple tableau d'id de
     // joueurs, DOIT survivre au rechargement (sinon un manager perdrait la
@@ -11762,6 +11907,13 @@ function teamFromSave(data) {
   // été jouée.
   team.lastTrainingReport = cloneTrainingReport(data.lastTrainingReport);
   team.trainingHistory = cloneTrainingHistory(data.trainingHistory);
+  team.marketWatchlist = (Array.isArray(data.marketWatchlist) ? data.marketWatchlist : [])
+    .filter(w => w && w.playerId != null).slice(0, MARKET_WATCHLIST_MAX)
+    .map(w => ({ playerId: w.playerId, since: typeof w.since === "number" ? w.since : 0 }));
+  team.marketAlerts = (Array.isArray(data.marketAlerts) ? data.marketAlerts : []).slice(0, MARKET_ALERTS_MAX)
+    .map(a => { const c = sanitizeMarketAlert(a); return c && typeof a.id === "string" ? { id: a.id, createdAt: typeof a.createdAt === "number" ? a.createdAt : 0, ...c } : null; })
+    .filter(Boolean);
+  team.marketAlertSeen = data.marketAlertSeen && typeof data.marketAlertSeen === "object" ? { ...data.marketAlertSeen } : {};
   team.pendingYouthDecisions = Array.isArray(data.pendingYouthDecisions) ? [...data.pendingYouthDecisions] : [];
   // Scoutisme (voir Team.scoutedAttrs/lastVideoSessionAt ci-dessus) :
   // `{}`/`null` par défaut (déjà la valeur posée par le constructeur Team)
@@ -13698,6 +13850,7 @@ return {
   // Connaissance tactique (voir le grand commentaire au-dessus de
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
+  MARKET_WATCHLIST_MAX, MARKET_ALERTS_MAX, sanitizeMarketAlert, marketAlertMatches, marketAlertLabel,
   TRAINING_HISTORY_MAX, TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
   FRIENDLY_TACTICAL_ROLE_WEIGHTS, TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,

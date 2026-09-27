@@ -121,6 +121,9 @@ function catchUpLeague(league, now) {
   // calendrier de championnat — toujours rafraîchi, même une semaine sans
   // aucune journée due (une enchère peut se conclure un jour sans match).
   league.refreshMarket(now);
+  // Alertes du marché (Premium : liste de suivi, recherches enregistrées),
+  // voir League.checkMarketAlerts.
+  if (league.checkMarketAlerts) league.checkMarketAlerts(now);
   // Marché des entraîneurs (voir League.refreshCoachMarket) : même logique
   // et même raison — sinon un candidat resterait aux enchères indéfiniment,
   // et un club ne recevrait jamais de nouveaux candidats, pendant toute une
