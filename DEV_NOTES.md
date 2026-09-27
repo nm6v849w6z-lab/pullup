@@ -20,6 +20,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-27) — Premium, lot 2 : badge +
+  historique de l'entraînement** — retour utilisateur : "oui vas y".
+  - Badge ★ (premiumBadgeHtml) à côté du nom d'un club Premium : classements
+    (standingsTableHtml, lgStandingsTableHtml) et fiche équipe.
+  - Team.trainingHistory (TRAINING_HISTORY_MAX = 13 bilans allégés, sauvegardé,
+    alimenté par trainWeek) ; page Entraînement : boutons « Semaine N » en
+    Premium, note verrouillée sinon. Avantages listés dans l'onglet Premium.
+  - Tests : premium_test.js étendu. Reste : liste de suivi du marché +
+    alertes (lot suivant).
+
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
+  Amicaux : invitation invisible sans recharger** — retour d'un joueur :
+  "j'ai reçu la notification pour le match amical mais pas d'invitation
+  dans match amical" (league.friendlies chargé une seule fois). GET
+  /api/friendly/list (lecture seule) ; frRefreshList à l'ouverture de
+  l'onglet + toutes les 30 s (page visible), pastille et page mises à jour.
+  amicaux_ui_test.js : scénario page déjà ouverte.
+
 - **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-27) —
   Amicaux : vrai onglet Ordres** — retour utilisateur : "pour le match
   amical, il faut pouvoir avoir un vrai onglet ordres". Bouton « Donner /

@@ -133,6 +133,20 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   check(badges.length === 2, `2 lignes « Amical » dans le Calendrier (${badges.length})`);
   check(!!docA3.querySelector("#calendrierSection .fr-cal-score"), "le score de l'amical joué ouvre sa feuille de match depuis le Calendrier");
 
+  // --- Invitation reçue page déjà ouverte (retour d'un joueur 2026-09-27 :
+  //     "j'ai reçu la notification pour le match amical mais pas
+  //     d'invitation dans match amical") : la liste est rechargée à
+  //     l'ouverture de l'onglet.
+  const daysAB = await (await fetch(`${baseUrl}api/friendly/days?opponent=${B}`, { headers: { "X-TipIn-Token": tokens[0] } })).json();
+  const dLate = daysAB.days.find(d => d.times.length);
+  const inv2 = await (await fetch(`${baseUrl}api/friendly/propose`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": tokens[0] }, body: JSON.stringify({ opponent: B, day: dLate.day, time: dLate.times[dLate.times.length - 1] }) })).json();
+  check(inv2.ok && inv2.status === "pending", "nouvelle invitation envoyée pendant que la page de B est ouverte");
+  check(!winB.eval(`league.friendlies.some(f => f.id === '${inv2.friendlyId}')`), "(avant) la page de B ne la connaît pas encore");
+  [...docB.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "amicaux").click();
+  check(await winB.__lastFrRefresh, "liste des amicaux rechargée à l'ouverture de l'onglet");
+  check(/Invitations reçues/.test(docB.getElementById("amicauxContent").textContent) && !!docB.querySelector(`[data-fr-accept='${inv2.friendlyId}']`), "B voit la nouvelle invitation sans recharger la page");
+  check(docB.getElementById("amicauxBadge").textContent === "1" && !docB.getElementById("amicauxBadge").classList.contains("hidden"), "pastille remise à jour");
+
   [domA, domB, domA3].forEach(d => d.window.close());
   server.close();
   console.log("\n✅ amicaux_ui_test.js : tout est vert");

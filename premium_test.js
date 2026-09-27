@@ -51,13 +51,21 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "premium").click();
     check(!doc.getElementById("premiumSection").classList.contains("hidden"), "la page Premium s'affiche");
     const content = doc.getElementById("premiumContent");
-    check(/Gratuit/.test(content.querySelector(".prm-status").textContent) && content.querySelectorAll(".prm-perk").length === 6, "statut Gratuit et 6 avantages listés");
+    check(/Gratuit/.test(content.querySelector(".prm-status").textContent) && content.querySelectorAll(".prm-perk").length === 8, "statut Gratuit et 8 avantages listés");
     // Analyse de sa propre équipe : verrouillée en gratuit.
     win.showTeamDetail(win.eval("myTeamIndex"));
     win.eval('document.querySelector("[data-team-detail-subview=\'analyse\']").dispatchEvent(new Event("click", {bubbles:true}));');
     await flush(dom);
     const detail = doc.getElementById("teamDetailContent");
     check(!!detail.querySelector(".prm-lock [data-tab='premium']") && !detail.querySelector(".tactical-report"), "analyse de sa propre équipe réservée au Premium (lien vers l'onglet)");
+    // Historique de l'entraînement : verrouillé en gratuit.
+    win.eval(`teamA.trainingHistory = [
+      { week: 1, at: null, players: { [teamA.players[0].id]: { name: teamA.players[0].name, position: teamA.players[0].position, gains: [{ attr: "pass", before: 30, after: 31 }] } } },
+      { week: 2, at: null, players: { [teamA.players[1].id]: { name: teamA.players[1].name, position: teamA.players[1].position, gains: [{ attr: "rebound", before: 40, after: 41 }] } } },
+    ]; teamA.week = 3; teamA.lastTrainingReport = { players: teamA.trainingHistory[1].players };`);
+    [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "entrainement").click();
+    check(!!doc.querySelector("#lastTrainingReportHolder .tp-hist-lock [data-tab='premium']") && !doc.querySelector("[data-training-week]"), "historique de l'entraînement réservé au Premium");
+    check(!doc.querySelector(".lg-tname .prm-badge, #teamDetailName .prm-badge"), "pas de badge Premium pour un club gratuit");
     // Passer Premium depuis l'onglet.
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "premium").click();
     doc.getElementById("premiumToggleBtn").click();
@@ -66,6 +74,16 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     win.eval('document.querySelector("[data-team-detail-subview=\'analyse\']").dispatchEvent(new Event("click", {bubbles:true}));');
     await flush(dom);
     check(!!doc.querySelector("#teamDetailContent .tactical-report") && !/version payante est prévue/.test(doc.getElementById("teamDetailContent").textContent), "Premium : analyse de sa propre équipe affichée");
+    // Historique : choix de la semaine.
+    [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "entrainement").click();
+    const weekBtns = doc.querySelectorAll("#lastTrainingReportHolder [data-training-week]");
+    check(weekBtns.length === 2 && /Bilan de la semaine dernière/.test(doc.getElementById("tpReportTitle").textContent), "Premium : historique des semaines, bilan de la dernière par défaut");
+    doc.querySelector('#lastTrainingReportHolder [data-training-week="1"]').click();
+    check(/Bilan de la semaine$/.test(doc.getElementById("tpReportTitle").textContent) && doc.getElementById("lastTrainingReportHolder").textContent.includes(win.eval("teamA.players[0].name")), "Premium : bilan d'une semaine précédente");
+    // Badge Premium : fiche équipe.
+    win.showTeamDetail(win.eval("myTeamIndex"));
+    check(!!doc.querySelector("#teamDetailName .prm-badge"), "badge Premium sur la fiche du club");
+    check(win.eval("standingsTableHtml(league.standings()).includes('prm-badge')"), "badge Premium dans le classement");
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "tactiques").click();
     check(doc.querySelectorAll("#tactiquesContent .tq-card").length === 6 && !doc.querySelector("#tactiquesContent .tq-card.is-premium"), "Premium : 6 emplacements de tactiques ouverts");
     dom.window.close();

@@ -1294,6 +1294,18 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // déjà fait par resolvePlayerContext/tick.
       // Matchs amicaux : jours de repos communs avec un adversaire (et heures
       // encore possibles), pour le formulaire de proposition.
+      // Matchs amicaux : liste à jour de MES amicaux (retour d'un joueur
+      // 2026-09-27 : "j'ai reçu la notification pour le match amical mais
+      // pas d'invitation dans match amical" — la page gardait la liste
+      // chargée à l'ouverture du jeu). Lecture seule, sans rattrapage de la
+      // ligue (appelée régulièrement, comme la messagerie).
+      if (route.pathname === "/api/friendly/list" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        sendJson(res, 200, { ok: true, friendlies: Friendlies.sanitizeFriendliesForViewer(ctx.league.friendlies, ctx.teamIndex) });
+        return;
+      }
+
       if (route.pathname === "/api/friendly/days" && req.method === "GET") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }

@@ -5909,6 +5909,11 @@
   .prm-perk__badge{align-self:flex-start; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--amber); background:rgba(240,162,60,.12); border-radius:999px; padding:2px 8px;}
   .prm-soon{margin:0; padding-left:20px; color:var(--ink-dim); font-size:14px; line-height:1.7;}
   .prm-note{margin-top:10px;}
+  .prm-badge{display:inline-flex; align-items:center; justify-content:center; margin-left:6px; width:18px; height:18px; border-radius:999px; font-size:11px; line-height:1; color:#1a1206; background:var(--amber); vertical-align:middle; flex:none;}
+  .tp-hist{display:flex; flex-wrap:wrap; gap:6px; padding:0 20px 12px;}
+  .tp-hist-btn{font:inherit; font-size:12.5px; font-weight:600; color:var(--ink-dim); background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:4px 10px; cursor:pointer;}
+  .tp-hist-btn.is-selected{color:var(--amber); border-color:var(--amber); background:rgba(240,162,60,.10);}
+  .tp-hist-lock{padding:0 20px 12px; font-size:13px; color:var(--ink-dim); display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
   .prm-lock{background:var(--panel); border:1px solid rgba(240,162,60,.45); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:10px; align-items:flex-start;}
   @media (max-width:900px){ .prm-grid{grid-template-columns:1fr;} }
   /* ---- Ligues privées (Premium) — voir renderLpSection ---- */
@@ -12119,6 +12124,10 @@ class Team {
     // sauvegardé). `null` tant qu'aucune semaine d'entraînement n'a encore
     // été jouée.
     this.lastTrainingReport = null;
+    // Historique de l'entraînement (Premium, retour utilisateur 2026-09-27) :
+    // les TRAINING_HISTORY_MAX derniers bilans hebdomadaires, allégés (seuls
+    // les joueurs dont une caractéristique a bougé) — voir trainWeek.
+    this.trainingHistory = [];
     // Entraînement hebdomadaire à la BuzzerBeater : UNE compétence pour tout
     // le club, appliquée à un ensemble de postes (1 à 5). Ce n'est pas un
     // choix joueur par joueur : chaque joueur profite (ou pas) de la semaine
@@ -14033,6 +14042,15 @@ class Team {
     // seul conservé à la fois ("la derniere semaine", pas un historique
     // multi-semaines).
     this.lastTrainingReport = result;
+    // Historique de la saison (Premium) : `week` = semaine qui vient de
+    // s'achever (même numéro que le bilan « semaine N » de la page).
+    const compactPlayers = {};
+    Object.entries(report).forEach(([id, e]) => {
+      if (e && (e.gains || []).length) compactPlayers[id] = { name: e.name, position: e.position, gains: e.gains.map(g => ({ ...g })) };
+    });
+    if (!Array.isArray(this.trainingHistory)) this.trainingHistory = [];
+    this.trainingHistory.push({ week: this.week - 1, at: now != null ? now : null, players: compactPlayers });
+    if (this.trainingHistory.length > TRAINING_HISTORY_MAX) this.trainingHistory = this.trainingHistory.slice(-TRAINING_HISTORY_MAX);
     return result;
   }
 
@@ -17861,6 +17879,18 @@ function serializePlayerRecord(p) {
 // sauvegarde reste un instantané figé. `null` inchangé (aucune semaine
 // d'entraînement jouée pour l'instant, ou sauvegarde d'avant cette
 // fonctionnalité).
+// Historique de l'entraînement (voir Team.trainingHistory) : une saison
+// (11 semaines) plus une marge pour les semaines de play-offs prolongées.
+const TRAINING_HISTORY_MAX = 13;
+function cloneTrainingHistory(list) {
+  return (Array.isArray(list) ? list : []).filter(h => h && typeof h.week === "number").map(h => {
+    const players = {};
+    Object.entries(h.players || {}).forEach(([id, p]) => {
+      players[id] = { name: p.name, position: p.position, gains: (p.gains || []).map(g => ({ ...g })) };
+    });
+    return { week: h.week, at: typeof h.at === "number" ? h.at : null, players };
+  }).slice(-TRAINING_HISTORY_MAX);
+}
 function cloneTrainingReport(report) {
   if (!report) return null;
   const players = {};
@@ -18060,6 +18090,7 @@ function serializeTeam(team) {
     // rechargement comme le reste, sinon le bilan affiché sur l'onglet
     // Entraînement redeviendrait vide à chaque redémarrage du serveur.
     lastTrainingReport: cloneTrainingReport(team.lastTrainingReport),
+    trainingHistory: cloneTrainingHistory(team.trainingHistory),
     // Décisions manager en attente pour un jeune de 18 ans (voir
     // Team.pendingYouthDecisions ci-dessus) : simple tableau d'id de
     // joueurs, DOIT survivre au rechargement (sinon un manager perdrait la
@@ -18319,6 +18350,7 @@ function teamFromSave(data) {
   // fonctionnalité, ou tant qu'aucune semaine d'entraînement n'a encore
   // été jouée.
   team.lastTrainingReport = cloneTrainingReport(data.lastTrainingReport);
+  team.trainingHistory = cloneTrainingHistory(data.trainingHistory);
   team.pendingYouthDecisions = Array.isArray(data.pendingYouthDecisions) ? [...data.pendingYouthDecisions] : [];
   // Scoutisme (voir Team.scoutedAttrs/lastVideoSessionAt ci-dessus) :
   // `{}`/`null` par défaut (déjà la valeur posée par le constructeur Team)
@@ -23405,7 +23437,7 @@ function standingsTableHtml(table) {
     const zone = standingsRowZone(i + 1, table.length);
     const isMe = t.idx === myTeamIndex;
     const cls = [isMe ? "me" : "", zone].filter(Boolean).join(" ");
-    const nameCell = teamLinkHtml(t.idx, t.name);
+    const nameCell = teamLinkHtml(t.idx, t.name) + premiumBadgeHtml(league.teams[t.idx]);
     html += `<tr class="${cls}"><td>${i + 1}</td><td>${nameCell}</td>` +
       `<td>${t.played}</td><td>${t.wins}</td><td>${t.losses}</td><td>${t.points}</td>` +
       `<td>${diff >= 0 ? "+" : ""}${diff}</td></tr>`;
@@ -23511,7 +23543,7 @@ function lgStandingsTableHtml(table) {
     html += `<tr class="${cls}" data-lg-team="${t.idx}">` +
       `<td><span class="lg-rank">${rank}</span></td>` +
       `<td><div class="lg-team"><span class="lg-badge">${team ? teamLogoHtml(team, 32) : ""}</span>` +
-        `<span class="lg-tname" title="${escapeHtml(t.name)}">${teamLinkHtml(t.idx, t.name)}</span>` +
+        `<span class="lg-tname" title="${escapeHtml(t.name)}">${teamLinkHtml(t.idx, t.name)}${premiumBadgeHtml(league.teams[t.idx])}</span>` +
         `</div></td>` +
       `<td class="c dim lg-hide-sm">${t.played}</td><td class="c">${t.wins}</td><td class="c">${t.losses}</td>` +
       `<td class="r dim lg-hide-sm">${t.played ? lgSignedText(perGame, 1) : "–"}</td>` +
@@ -26546,7 +26578,7 @@ function renderTeamDetail(teamIdx) {
     holder.innerHTML = "<p class='training-empty'>Cette équipe n'existe plus.</p>";
     return;
   }
-  nameHeader.textContent = `${team.name}`;
+  nameHeader.innerHTML = escapeHtml(team.name) + premiumBadgeHtml(team);
 
   let html = teamDetailSubNavHtml();
   // Messagerie : écrire au manager de ce club (ligue partagée, club humain).
@@ -32751,11 +32783,29 @@ function trainingReportAvatarHtml(playerKey, entry) {
   return `<span class="tp-avatar" aria-hidden="true">${escapeHtml(initials)}</span>`;
 }
 
+// Historique de l'entraînement sur la saison (Premium, retour utilisateur
+// 2026-09-27) : semaine affichée dans le bilan (null = la dernière).
+let trainingReportSelectedWeek = null;
 function renderLastTrainingReport() {
   const holder = document.getElementById("lastTrainingReportHolder");
   if (!holder) return;
-  const report = teamA.lastTrainingReport;
+  const history = Array.isArray(teamA.trainingHistory) ? teamA.trainingHistory : [];
+  const premium = teamIsPremium(teamA);
+  const lastWeek = teamA.week - 1;
+  let shownWeek = lastWeek;
+  let report = teamA.lastTrainingReport;
+  if (premium && trainingReportSelectedWeek != null && trainingReportSelectedWeek !== lastWeek) {
+    const h = history.find(x => x.week === trainingReportSelectedWeek);
+    if (h) { report = h; shownWeek = h.week; } else trainingReportSelectedWeek = null;
+  }
   if (!report) { holder.innerHTML = ""; return; }
+  let histHtml = "";
+  if (premium && history.length > 1) {
+    histHtml = `<div class="tp-hist" role="group" aria-label="Semaine affichée">` + history.slice().reverse().map(h =>
+      `<button type="button" class="tp-hist-btn${h.week === shownWeek ? " is-selected" : ""}" data-training-week="${h.week}" aria-pressed="${h.week === shownWeek}">Semaine ${h.week}</button>`).join("") + `</div>`;
+  } else if (!premium && history.length > 1) {
+    histHtml = `<div class="tp-hist-lock">Historique de toute la saison : réservé au Premium. ${premiumLinkHtml()}</div>`;
+  }
   // Refonte de la page (retour utilisateur, 2026-09-25 : "code la page") :
   // bilan GROUPÉ PAR JOUEUR (une ligne repliable par joueur, pastille du
   // nombre de progressions/baisses), le détail classé Fondamentaux /
@@ -32764,8 +32814,8 @@ function renderLastTrainingReport() {
   // relatif aux up et down des joueurs") ; les notes de progression manquée
   // (trainingReportNotesHtml) restent affichées en dessous.
   const entries = Object.entries(report.players || {}).filter(([, e]) => e && (e.gains || []).length);
-  if (trainingReportOpenWeek !== teamA.week || !trainingReportOpenKeys) {
-    trainingReportOpenWeek = teamA.week;
+  if (trainingReportOpenWeek !== shownWeek || !trainingReportOpenKeys) {
+    trainingReportOpenWeek = shownWeek;
     // Tous repliés à l'ouverture (retour utilisateur, 2026-09-26 : "quand
     // on ouvre la page d'entrainement, l'onglet du premier s'ouvre tjrs, il
     // faudrait le laisser fermer comme ceux des autres").
@@ -32795,9 +32845,14 @@ function renderLastTrainingReport() {
     body += `</div>`;
   });
   holder.innerHTML = `<section class="tp-card tp-report" aria-labelledby="tpReportTitle">` +
-    `<div class="tp-report-head"><div class="tp-report-title"><h3 id="tpReportTitle">Bilan de la semaine dernière</h3>` +
-    `<span class="tp-chip">semaine ${teamA.week - 1}</span></div></div>` +
+    `<div class="tp-report-head"><div class="tp-report-title"><h3 id="tpReportTitle">${shownWeek === lastWeek ? "Bilan de la semaine dernière" : "Bilan de la semaine"}</h3>` +
+    `<span class="tp-chip">semaine ${shownWeek}</span></div></div>` + histHtml +
     `<div class="tp-report-body">${body}</div></section>`;
+  holder.querySelectorAll("[data-training-week]").forEach(btn => btn.addEventListener("click", () => {
+    const w = Number(btn.dataset.trainingWeek);
+    trainingReportSelectedWeek = w === lastWeek ? null : w;
+    renderLastTrainingReport();
+  }));
   holder.querySelectorAll(".tp-rp-toggle").forEach(btn => btn.addEventListener("click", () => {
     const idx = Number(btn.dataset.reportIdx);
     const key = entries[idx][0];
@@ -40778,17 +40833,24 @@ const PREMIUM_PERKS = [
   { title: "Maillots et logo", text: "Motifs, combinaisons de deux couleurs, maillot extérieur et logo personnalisé." },
   { title: "6 tactiques enregistrées", text: "Au lieu de 3, dans l'onglet Tactiques." },
   { title: "Sans pub", text: "Aucune pub, ni dans les émissions Hoop Shows ni ailleurs." },
+  { title: "Badge Premium", text: "Une étoile à côté du nom de votre club, dans les classements et sur sa fiche." },
+  { title: "Historique de l'entraînement", text: "Le bilan de chaque semaine de la saison dans l'onglet Entraînement, pas seulement celui de la dernière." },
 ];
 const PREMIUM_SOON = [
   "Liste de suivi du marché des transferts et alertes",
   "Notifications sur mobile (fin d'enchère, blessure, match qui commence)",
   "Courbe de progression de chaque joueur sur la saison",
-  "Historique de l'entraînement sur toute la saison",
   "Statistiques avancées et export",
   "Revoir le direct d'un match déjà joué",
   "Salle personnalisée et avatars des jeunes de l'académie",
-  "Badge Premium à côté du nom du club",
 ];
+// Badge Premium à côté du nom d'un club (retour utilisateur, 2026-09-27 :
+// avantage « Badge Premium à côté du nom du club ») : classements, fiche
+// équipe.
+function premiumBadgeHtml(team) {
+  if (!teamIsPremium(team)) return "";
+  return `<span class="prm-badge" title="Club Premium" aria-label="Club Premium">★</span>`;
+}
 function premiumLinkHtml(label) {
   return `<button type="button" class="secondary prm-link" data-tab="premium">${escapeHtml(label || "⭐ Passer Premium")}</button>`;
 }
@@ -41096,6 +41158,32 @@ function frPendingReceived() {
   const now = Date.now();
   return frList().filter(f => f.status === "pending" && f.proposerIdx !== myTeamIndex && f.at > now);
 }
+
+// Liste des amicaux rafraîchie depuis le serveur (retour d'un joueur
+// 2026-09-27 : "j'ai reçu la notification pour le match amical mais pas
+// d'invitation dans match amical" — la liste n'était chargée qu'à
+// l'ouverture du jeu) : à l'ouverture de l'onglet puis toutes les 30 s tant
+// que la page du navigateur est visible. Ne redessine la page Matchs
+// amicaux que si elle est affichée et qu'on n'y est pas en train de saisir.
+const FR_POLL_MS = 30 * 1000;
+async function frRefreshList() {
+  if (typeof managerToken === "undefined" || !managerToken) return false;
+  try {
+    const res = await fetchApi("/api/friendly/list");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok || !Array.isArray(data.friendlies)) return false;
+    const before = JSON.stringify(league.friendlies || []);
+    league.friendlies = data.friendlies;
+    frUpdateBadge();
+    const sec = document.getElementById("amicauxSection");
+    const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#amicauxContent");
+    if (before !== JSON.stringify(data.friendlies) && sec && !sec.classList.contains("hidden") && !typing) renderAmicauxSection();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+setInterval(() => { if (document.visibilityState !== "hidden") frRefreshList(); }, FR_POLL_MS);
 
 // Pastille de la barre latérale : invitations reçues en attente de réponse.
 function frUpdateBadge() {
@@ -42285,7 +42373,7 @@ const TAB_HANDLERS = {
   ligue: showStandings,
   coupe: () => { renderCoupeSection(); showPage("coupeSection"); setActiveTab("coupe"); },
   calendrier: () => { renderCalendrierSection(); showPage("calendrierSection"); setActiveTab("calendrier"); },
-  amicaux: () => { tqEdit = null; const ps = document.getElementById("prepSection"); if (ps) ps.classList.remove("tq-editing"); renderAmicauxSection(); showPage("amicauxSection"); setActiveTab("amicaux"); },
+  amicaux: () => { tqEdit = null; const ps = document.getElementById("prepSection"); if (ps) ps.classList.remove("tq-editing"); renderAmicauxSection(); showPage("amicauxSection"); setActiveTab("amicaux"); window.__lastFrRefresh = frRefreshList(); },
   lp: () => { renderLpSection(); showPage("lpSection"); setActiveTab("lp"); },
   messages: () => { window.__lastMsgNav = goToMessages(); },
   histoire: () => { renderHistoireSection(); showPage("histoireSection"); setActiveTab("histoire"); },

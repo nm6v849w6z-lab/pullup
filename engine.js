@@ -4094,6 +4094,10 @@ class Team {
     // sauvegardé). `null` tant qu'aucune semaine d'entraînement n'a encore
     // été jouée.
     this.lastTrainingReport = null;
+    // Historique de l'entraînement (Premium, retour utilisateur 2026-09-27) :
+    // les TRAINING_HISTORY_MAX derniers bilans hebdomadaires, allégés (seuls
+    // les joueurs dont une caractéristique a bougé) — voir trainWeek.
+    this.trainingHistory = [];
     // Entraînement hebdomadaire à la BuzzerBeater : UNE compétence pour tout
     // le club, appliquée à un ensemble de postes (1 à 5). Ce n'est pas un
     // choix joueur par joueur : chaque joueur profite (ou pas) de la semaine
@@ -6511,6 +6515,15 @@ class Team {
     // seul conservé à la fois ("la derniere semaine", pas un historique
     // multi-semaines).
     this.lastTrainingReport = result;
+    // Historique de la saison (Premium) : `week` = semaine qui vient de
+    // s'achever (même numéro que le bilan « semaine N » de la page).
+    const compactPlayers = {};
+    Object.entries(report).forEach(([id, e]) => {
+      if (e && (e.gains || []).length) compactPlayers[id] = { name: e.name, position: e.position, gains: e.gains.map(g => ({ ...g })) };
+    });
+    if (!Array.isArray(this.trainingHistory)) this.trainingHistory = [];
+    this.trainingHistory.push({ week: this.week - 1, at: now != null ? now : null, players: compactPlayers });
+    if (this.trainingHistory.length > TRAINING_HISTORY_MAX) this.trainingHistory = this.trainingHistory.slice(-TRAINING_HISTORY_MAX);
     return result;
   }
 
@@ -11188,6 +11201,18 @@ function serializePlayerRecord(p) {
 // sauvegarde reste un instantané figé. `null` inchangé (aucune semaine
 // d'entraînement jouée pour l'instant, ou sauvegarde d'avant cette
 // fonctionnalité).
+// Historique de l'entraînement (voir Team.trainingHistory) : une saison
+// (11 semaines) plus une marge pour les semaines de play-offs prolongées.
+const TRAINING_HISTORY_MAX = 13;
+function cloneTrainingHistory(list) {
+  return (Array.isArray(list) ? list : []).filter(h => h && typeof h.week === "number").map(h => {
+    const players = {};
+    Object.entries(h.players || {}).forEach(([id, p]) => {
+      players[id] = { name: p.name, position: p.position, gains: (p.gains || []).map(g => ({ ...g })) };
+    });
+    return { week: h.week, at: typeof h.at === "number" ? h.at : null, players };
+  }).slice(-TRAINING_HISTORY_MAX);
+}
 function cloneTrainingReport(report) {
   if (!report) return null;
   const players = {};
@@ -11440,6 +11465,7 @@ function serializeTeam(team) {
     // rechargement comme le reste, sinon le bilan affiché sur l'onglet
     // Entraînement redeviendrait vide à chaque redémarrage du serveur.
     lastTrainingReport: cloneTrainingReport(team.lastTrainingReport),
+    trainingHistory: cloneTrainingHistory(team.trainingHistory),
     // Décisions manager en attente pour un jeune de 18 ans (voir
     // Team.pendingYouthDecisions ci-dessus) : simple tableau d'id de
     // joueurs, DOIT survivre au rechargement (sinon un manager perdrait la
@@ -11734,6 +11760,7 @@ function teamFromSave(data) {
   // fonctionnalité, ou tant qu'aucune semaine d'entraînement n'a encore
   // été jouée.
   team.lastTrainingReport = cloneTrainingReport(data.lastTrainingReport);
+  team.trainingHistory = cloneTrainingHistory(data.trainingHistory);
   team.pendingYouthDecisions = Array.isArray(data.pendingYouthDecisions) ? [...data.pendingYouthDecisions] : [];
   // Scoutisme (voir Team.scoutedAttrs/lastVideoSessionAt ci-dessus) :
   // `{}`/`null` par défaut (déjà la valeur posée par le constructeur Team)
@@ -13667,7 +13694,7 @@ return {
   // Connaissance tactique (voir le grand commentaire au-dessus de
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
-  TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
+  TRAINING_HISTORY_MAX, TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
   FRIENDLY_TACTICAL_ROLE_WEIGHTS, TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
   CLUB_FACILITIES, facilityInfo,
