@@ -97,6 +97,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   l'autre session (elle a committé tout moteurbasket3.html). Reste :
   `git push` (+ `main:prod`).
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-27) — Avatars à l'âge
+  réel + boutons de Défense à taille normale** — retours : "il a 15 ans et
+  déjà des cheveux et la barbe grise", "les mêmes tailles partout [...] mais
+  conserver l'alignement des briques en bas". playerAvatarHtml et le
+  résolveur d'avatars des émissions passent `age: player.age` à AvatarGen
+  (avant : âge tiré au hasard 19-35 depuis l'id) ; pas de barbe (ni ombre)
+  avant 18 ans, barbe de quelques jours au plus avant 21 ans. Défense : plus
+  d'agrandissement des boutons, l'espace va entre les rubriques (bas aligné
+  avec Postes à surveiller). Note : certains avatars existants changent
+  légèrement (coiffure « receding » liée à l'âge, barbe des jeunes).
+
 - **📋 PROCHAINS CHANTIERS PRÉVUS** — onglet Centre médical (indicateur de
   risque de blessure, suite du staff médical), puis Matchs amicaux.
 

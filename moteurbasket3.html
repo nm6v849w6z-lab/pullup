@@ -485,18 +485,15 @@
     #prepSection .area-ordresCardRotation{grid-area:rot;}
     #prepSection .area-ordresCardMinutes{grid-area:pt;}
     #prepSection .area-ordresCardAdversaires{grid-area:adv;}
-    /* Défense étirée à la hauteur de Temps de jeu + Postes à surveiller :
-       l'espace en trop agrandit les boutons (au prorata de leurs rangées :
-       2 pour le Système, 5 pour le bloc confirmé) au lieu d'un vide sous
-       Aide/Close-out ("pas harmonieux") ou de grands écarts entre les
-       rubriques ("trop aéré, ça fait vide") — retours utilisateur 2026-09-27. */
-    #prepSection .area-ordresCardDefense > .ordres-settings-grid{flex:2 1 auto;}
-    #prepSection .area-ordresCardDefense > .ordres-settings-grid-nested:not(.hidden){flex:5 1 auto;}
-    #prepSection .area-ordresCardDefense .ordres-field > .seg-control{flex:1 1 auto; max-height:54px;}
-    #prepSection .area-ordresCardDefense .ordres-field > .seg-control.seg-wrap{max-height:104px;}
-    /* Boutons plafonnés ("un peu épais") : le reste va entre les rubriques.
-       Dernière rangée (Aide / Close-out) calée en bas, jamais de vide dessous. */
-    #prepSection .area-ordresCardDefense .ordres-settings-grid-nested > .ordres-field:not(.ordres-field-wide){justify-content:flex-end;}
+    /* Défense étirée à la hauteur de Temps de jeu + Postes à surveiller
+       (bas des briques alignés) : boutons à la MÊME taille que partout
+       ailleurs dans les Ordres (retour utilisateur 2026-09-27 : "essaie
+       d'avoir les mêmes tailles partout [...] mais de conserver
+       l'alignement des briques en bas") ; l'espace en trop va à parts
+       égales entre les rubriques (1/3 avant le séparateur, 2/3 entre les
+       trois rangées du bloc confirmé), la dernière rangée calée en bas. */
+    #prepSection .area-ordresCardDefense > .ordres-settings-grid{flex:1 1 auto; align-content:start;}
+    #prepSection .area-ordresCardDefense > .ordres-settings-grid-nested:not(.hidden){flex:2 1 auto; align-content:space-between;}
   }
   #prepSection .conv-list{display:flex; flex-direction:column;}
   #prepSection .prep-def-stack{display:flex; flex-direction:column; gap:22px;}
@@ -9791,6 +9788,12 @@ const AvatarGen = (function () {
     };
     // cheveux longs ou attachés : on force une barbe pour que la lecture reste masculine
     if (['long', 'bun', 'topknot'].includes(spec.hairStyle) && spec.beard === 'none') spec.beard = 'stubble';
+    // Âge réel du joueur (options.age, voir playerAvatarHtml) : pas de barbe
+    // avant 18 ans, au plus une barbe de quelques jours avant 21 ans (retour
+    // utilisateur 2026-09-27 : "il a 15 ans et déjà des cheveux et la barbe
+    // grise"). Les cheveux gris restent réservés aux 34 ans et plus.
+    if (age < 18) spec.beard = 'none';
+    else if (age < 21 && !['none', 'stubble', 'mustache', 'soulpatch'].includes(spec.beard)) spec.beard = 'stubble';
     const t = r();
     spec.neckTattoo = t < 0.08 ? 'script' : t < 0.14 ? 'star' : t < 0.2 ? 'tribal' : 'none';
     spec.chain = r() < 0.15 ? (r() < 0.5 ? '#e9b949' : '#d9d9d6') : null;
@@ -9828,7 +9831,7 @@ const AvatarGen = (function () {
       `</defs>`;
     const w = FACE_SHAPES[a.faceShape % FACE_SHAPES.length].w;
     const hair = a.durag ? renderDurag(a.durag, w) : a.hairStyle === 'bald' ? { back: '', front: '' } : renderHair(a.hairStyle, a.hairColor, w, a.seed || 1);
-    const beard = a.beard && a.beard !== 'none' ? renderBeard(a.beard, a.hairColor, a.faceShape, tid) : renderBeard('shadow', a.hairColor, a.faceShape, tid);
+    const beard = a.beard && a.beard !== 'none' ? renderBeard(a.beard, a.hairColor, a.faceShape, tid) : a.age < 18 ? { body: '', mustache: '' } : renderBeard('shadow', a.hairColor, a.faceShape, tid);
     const TATTOO = '#1f2a44';
     let tattoo = '';
     if (a.neckTattoo === 'script') tattoo = `<g stroke="${TATTOO}" stroke-width="1.1" fill="none" opacity="0.6" stroke-linecap="round"><path d="M66 90 q2 -2 4 0 t4 0"/><path d="M66 94 q2 -2 4 0 t3 0"/><path d="M67 98 q2 -2 4 0"/></g>`;
@@ -9935,7 +9938,9 @@ function teamAvatarColors(team) {
 function playerAvatarHtml(player, team, size) {
   size = size || 28;
   if (!player) return '';
-  const svg = AvatarGen.generateAvatar(player.id, { teamColors: teamAvatarColors(team) });
+  // Âge réel du joueur (sinon l'avatar tirait un âge de 19 à 35 ans au
+  // hasard : cheveux gris / barbe sur un jeune de 15 ans).
+  const svg = AvatarGen.generateAvatar(player.id, { teamColors: teamAvatarColors(team), age: Number.isFinite(player.age) ? player.age : undefined });
   const h = Math.round(size * 130 / 120);
   return `<span class="player-avatar" style="display:inline-block;flex:none;width:${size}px;height:${h}px;border-radius:${Math.round(size * 0.18)}px;overflow:hidden;vertical-align:middle;line-height:0">${svg}</span>`;
 }
@@ -28190,7 +28195,7 @@ function hoopShowDressOpts() {
     player: (id) => {
       for (const t of teams) {
         const p = t && t.players && t.players.find(pl => String(pl.id) === String(id));
-        if (p) return AvatarGen.generateAvatar(p.id, { teamColors: teamAvatarColors(t) });
+        if (p) return AvatarGen.generateAvatar(p.id, { teamColors: teamAvatarColors(t), age: Number.isFinite(p.age) ? p.age : undefined });
       }
       return "";
     },
