@@ -28,6 +28,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   moteurbasket3.html + assertion négative dans dashboard_e2e_test.js.
   Reste : `git push`.
 
+- **✅ COMMITTÉ, À POUSSER PAR L'UTILISATEUR (2026-09-27) — Ordres : carte
+  « Temps de jeu » plus compacte + 3 joueurs max par poste** — retours
+  utilisateur : "réduis la brique de droite [...] ça fait trop de place",
+  "limite à 3 joueurs par poste (titu, remplacant, reserviste)".
+  Team.backupCountAt + MAX_BACKUPS_PER_POSITION = 2 (engine.js, miroirs
+  moteurbasket3.html et live_2d_demo.html) : toggleBackupPosition refuse un
+  3e remplaçant ; « + Ajouter » masqué dans Rotation et Temps de jeu quand
+  le poste est plein. Carte : une ligne par joueur (pastille T / R / Rés
+  + nom), marges et cases réduites. Anciennes sauvegardes avec plus de
+  remplaçants : gardées telles quelles. lineup_test et lineup_minutes_test
+  adaptés. Reste : `git push` (+ `main:prod`) et coup d'œil dans le vrai jeu.
+
 - **📋 PROCHAINS CHANTIERS PRÉVUS** — onglet Centre médical (indicateur de
   risque de blessure, suite du staff médical), puis Matchs amicaux.
 

@@ -1418,6 +1418,8 @@ class Player {
 // ---------------------------------------------------------------------
 // ÉQUIPE
 // ---------------------------------------------------------------------
+const MAX_BACKUPS_PER_POSITION = 2;
+
 class Team {
   constructor({ name, players }) {
     this.name = name;
@@ -2395,6 +2397,14 @@ class Team {
     this.lineup.starters[pos] = playerId || null;
   }
 
+  // Nombre de remplaçants couvrant `pos`, hors titulaire (3 joueurs max
+  // par poste, voir engine.js).
+  backupCountAt(pos) {
+    const s = this.lineup.starters[pos];
+    return Object.entries(this.lineup.backupPositions || {})
+      .filter(([id, list]) => String(id) !== String(s) && (list || []).includes(pos)).length;
+  }
+
   // Coche/décoche un poste de remplaçant pour un joueur. Un joueur titulaire
   // quelque part ne peut pas devenir remplaçant (il faut d'abord le retirer
   // du poste de titulaire) — no-op silencieux dans ce cas.
@@ -2402,6 +2412,7 @@ class Team {
     if (this.starterPosition(playerId)) return;
     const list = this.lineup.backupPositions[playerId] || [];
     const has = list.includes(pos);
+    if (on && !has && Team.prototype.backupCountAt.call(this, pos) >= MAX_BACKUPS_PER_POSITION) return;
     if (on && !has) this.lineup.backupPositions[playerId] = [...list, pos];
     if (!on && has) {
       const next = list.filter(p => p !== pos);

@@ -67,6 +67,14 @@ if (lineupBlocked()) throw new Error("❌ La feuille de match devrait être de n
 function addSelectFor(pos) { return rowByPos(pos).querySelector(".lineup-add-select"); }
 function assignedChipsFor(pos) { return [...rowByPos(pos).querySelectorAll(".lineup-backup-chip")]; }
 
+// 3 joueurs max par poste (titulaire + 2 remplaçants, retour utilisateur
+// 2026-09-27) : l'effectif de départ remplit déjà les 2 places, donc plus
+// de « + Ajouter » ; on libère une place sur A et AS en retirant un chip.
+for (const p of ["Arrière", "Ailier shooteur"]) {
+  if (assignedChipsFor(p).length >= 2 && addSelectFor(p)) throw new Error(`❌ Poste ${p} plein : « + Ajouter » ne devrait plus apparaître.`);
+  while (assignedChipsFor(p).length >= 2) assignedChipsFor(p).slice(-1)[0].querySelector(".lineup-chip-remove").click();
+}
+console.log("✅ Poste plein (2 remplaçants) : plus de « + Ajouter » ; place libérée en retirant un remplaçant.");
 const arriereAddSel = addSelectFor("Arrière");
 if (!arriereAddSel || arriereAddSel.options.length < 2) throw new Error("❌ Aucun remplaçant disponible pour Arrière.");
 const firstOption = arriereAddSel.options[1];

@@ -618,24 +618,25 @@
   #prepSection .lineup-reserves{margin-top:0; font-size:12.5px;}
   /* Carte « Temps de jeu » : blocs par poste disposés comme sur le terrain
      (M | A, AS | AF, P centré), compacts. */
-  #prepSection .pt-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:start;}
-  #prepSection .pt-block{border:1px solid var(--line-soft); border-radius:12px; padding:10px 12px; background:var(--panel-2); display:flex; flex-direction:column; gap:6px; min-width:0;}
-  #prepSection .pt-block.pt-center{grid-column:1 / span 2; justify-self:center; width:calc(50% - 5px);}
-  #prepSection .pt-head{display:flex; align-items:center; gap:8px;}
-  #prepSection .pt-pos{font-weight:800; color:var(--amber); font-size:14px; min-width:26px;}
-  #prepSection .pt-auto{flex:1; font-size:12.5px; color:var(--ink-dim);}
-  #prepSection .pt-total{flex:1; font-size:12.5px; font-weight:800; color:var(--ink); white-space:nowrap;}
+  #prepSection .pt-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:start;}
+  #prepSection .pt-block{border:1px solid var(--line-soft); border-radius:10px; padding:7px 9px; background:var(--panel-2); display:flex; flex-direction:column; gap:3px; min-width:0;}
+  #prepSection .pt-block.pt-center{grid-column:1 / span 2; justify-self:center; width:calc(50% - 4px);}
+  #prepSection .pt-head{display:flex; align-items:center; gap:6px;}
+  #prepSection .pt-pos{font-weight:800; color:var(--amber); font-size:13px; min-width:22px;}
+  #prepSection .pt-auto{flex:1; font-size:12px; color:var(--ink-dim);}
+  #prepSection .pt-total{flex:1; font-size:12px; font-weight:800; color:var(--ink); white-space:nowrap;}
   #prepSection .pt-total.off{color:var(--amber);}
-  #prepSection .pt-btn{min-height:26px; padding:0 10px; font-size:12px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; white-space:nowrap;}
-  #prepSection .pt-player{display:grid; grid-template-columns:minmax(0,1fr) 46px 22px; align-items:center; column-gap:6px; margin:0;}
-  #prepSection .pt-who{display:flex; flex-direction:column; min-width:0; line-height:1.2;}
-  #prepSection .pt-name{font-size:13px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #prepSection .pt-btn{min-height:22px; padding:0 8px; font-size:11px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; white-space:nowrap;}
+  #prepSection .pt-player{display:grid; grid-template-columns:minmax(0,1fr) 40px 20px; align-items:center; column-gap:5px; margin:0;}
+  #prepSection .pt-who{display:flex; align-items:center; gap:6px; min-width:0; line-height:1.2;}
+  #prepSection .pt-name{font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   #prepSection .pt-player.starter .pt-name{font-weight:800;}
-  #prepSection .pt-role{font-size:10.5px; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  #prepSection input.pt-input{width:46px; min-height:28px; height:28px; margin:0; padding:0 2px; font-size:13px; font-weight:700; text-align:center; border-radius:7px;}
-  #prepSection .pt-unit{font-size:11px; color:var(--ink-dim);}
+  #prepSection .pt-role{flex:none; min-width:24px; padding:1px 4px; border-radius:5px; background:var(--line-soft); font-size:10px; font-weight:700; text-align:center; color:var(--ink-dim);}
+  #prepSection .pt-player.starter .pt-role{color:var(--amber);}
+  #prepSection input.pt-input{width:40px; min-height:24px; height:24px; margin:0; padding:0 2px; font-size:12.5px; font-weight:700; text-align:center; border-radius:6px;}
+  #prepSection .pt-unit{font-size:10.5px; color:var(--ink-dim);}
   #prepSection .ordres-card select.pt-add{
-    display:inline-block; align-self:flex-start; width:auto; max-width:100%; margin:0; min-height:26px; font-size:12px; padding:0 22px 0 10px;
+    display:inline-block; align-self:flex-start; width:auto; max-width:100%; margin:0; min-height:22px; font-size:11px; padding:0 20px 0 8px;
     border:1px dashed var(--line); border-radius:999px; background:transparent; color:var(--ink-dim); cursor:pointer;
   }
   @media(max-width:600px){
@@ -11561,6 +11562,10 @@ function seedSeasonStart(feed, state) {
 // Convocation : nombre maximum de joueurs sur la feuille de match.
 const CONVOCATION_MAX = 12;
 
+// Remplaçants max par poste (1 remplaçant + 1 réserviste), voir
+// Team.toggleBackupPosition.
+const MAX_BACKUPS_PER_POSITION = 2;
+
 class Team {
   constructor({ name, players }) {
     this.name = name;
@@ -13603,6 +13608,14 @@ class Team {
     this.lineup.starters[pos] = playerId || null;
   }
 
+  // Nombre de remplaçants (remplaçant + réservistes) couvrant `pos`, hors
+  // titulaire du poste.
+  backupCountAt(pos) {
+    const s = this.lineup.starters[pos];
+    return Object.entries(this.lineup.backupPositions || {})
+      .filter(([id, list]) => String(id) !== String(s) && (list || []).includes(pos)).length;
+  }
+
   // Coche/décoche un poste de remplaçant pour un joueur. Un joueur titulaire
   // quelque part ne peut pas devenir remplaçant (il faut d'abord le retirer
   // du poste de titulaire) — no-op silencieux dans ce cas.
@@ -13611,6 +13624,11 @@ class Team {
     if (this.starterPosition(playerId)) return;
     const list = this.lineup.backupPositions[playerId] || [];
     const has = list.includes(pos);
+    // 3 joueurs max par poste : titulaire + remplaçant + réserviste (retour
+    // utilisateur 2026-09-27 : "limite à 3 joueurs par poste (titu,
+    // remplacant, reserviste)") — ajout refusé en silence au-delà. Les
+    // anciennes sauvegardes qui en ont plus restent jouables telles quelles.
+    if (on && !has && Team.prototype.backupCountAt.call(this, pos) >= MAX_BACKUPS_PER_POSITION) return;
     if (on && !has) this.lineup.backupPositions[playerId] = [...list, pos];
     if (on && Array.isArray(this.lineup.convoked) && !this.lineup.convoked.includes(playerId)) Team.prototype.setConvoked.call(this, playerId, true);
     if (this.lineup.minutes && this.lineup.minutes[pos]) {
@@ -29081,7 +29099,9 @@ function renderLineupEditor(team, container, opts = {}) {
 
     const convokedNow = new Set(team.convokedIds());
     const addable = eligibleBackups.filter(p => !assignedBackups.includes(p) && convokedNow.has(p.id));
-    if (addable.length) {
+    // 3 joueurs max par poste (titulaire + remplaçant + réserviste) :
+    // plus de « + Ajouter » une fois les 2 places de remplaçant prises.
+    if (addable.length && Team.prototype.backupCountAt.call(team, pos) < MAX_BACKUPS_PER_POSITION) {
       const addSel = document.createElement("select");
       addSel.className = "lineup-add-select";
       addSel.setAttribute("aria-label", `Ajouter un remplaçant ${pos}`);
@@ -29180,9 +29200,14 @@ function renderPlayingTimeCard(team, container, makeCard, rerender) {
         name.className = "pt-name";
         name.textContent = pl.name;
         name.title = `${pl.name} · ${pl.position}`;
+        // Rôle en pastille courte sur la même ligne que le nom (carte plus
+        // basse, retour utilisateur 2026-09-27 : "réduis la brique de
+        // droite") ; poste naturel ajouté au nom s'il joue hors poste.
         const roleEl = document.createElement("span");
         roleEl.className = "pt-role";
-        roleEl.textContent = role + (pl.position !== pos ? ` · ${POS_SHORT[pl.position]}` : "");
+        roleEl.textContent = { Titulaire: "T", Remplaçant: "R", Réserviste: "Rés" }[role];
+        roleEl.title = role;
+        if (pl.position !== pos) name.textContent = `${pl.name} (${POS_SHORT[pl.position]})`;
         const inp = document.createElement("input");
         inp.type = "number"; inp.min = "0"; inp.max = String(team.slotMinutesRoom(pos, id)); inp.step = "1";
         inp.className = "pt-input";
@@ -29194,14 +29219,14 @@ function renderPlayingTimeCard(team, container, makeCard, rerender) {
         unit.textContent = "min";
         const who = document.createElement("span");
         who.className = "pt-who";
-        who.append(name, roleEl);
+        who.append(roleEl, name);
         line.append(who, inp, unit);
         block.appendChild(line);
       });
       const inSlot = new Set(team.slotPlayerIds(pos));
       const convSet = new Set(team.convokedIds());
       const addable = team.players.filter(x => !starterIds.has(x.id) && !inSlot.has(x.id) && convSet.has(x.id));
-      if (addable.length) {
+      if (addable.length && Team.prototype.backupCountAt.call(team, pos) < MAX_BACKUPS_PER_POSITION) {
         const add = document.createElement("select");
         add.className = "pt-add";
         add.setAttribute("aria-label", `Ajouter un joueur au temps de jeu ${pos}`);

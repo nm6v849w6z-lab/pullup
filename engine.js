@@ -3855,6 +3855,10 @@ function seedSeasonStart(feed, state) {
 // Convocation : nombre maximum de joueurs sur la feuille de match.
 const CONVOCATION_MAX = 12;
 
+// Remplaçants max par poste (1 remplaçant + 1 réserviste), voir
+// Team.toggleBackupPosition.
+const MAX_BACKUPS_PER_POSITION = 2;
+
 class Team {
   constructor({ name, players }) {
     this.name = name;
@@ -6414,6 +6418,14 @@ class Team {
     this.lineup.starters[pos] = playerId || null;
   }
 
+  // Nombre de remplaçants (remplaçant + réservistes) couvrant `pos`, hors
+  // titulaire du poste.
+  backupCountAt(pos) {
+    const s = this.lineup.starters[pos];
+    return Object.entries(this.lineup.backupPositions || {})
+      .filter(([id, list]) => String(id) !== String(s) && (list || []).includes(pos)).length;
+  }
+
   // Coche/décoche un poste de remplaçant pour un joueur. Un joueur titulaire
   // quelque part ne peut pas devenir remplaçant (il faut d'abord le retirer
   // du poste de titulaire) — no-op silencieux dans ce cas.
@@ -6422,6 +6434,11 @@ class Team {
     if (this.starterPosition(playerId)) return;
     const list = this.lineup.backupPositions[playerId] || [];
     const has = list.includes(pos);
+    // 3 joueurs max par poste : titulaire + remplaçant + réserviste (retour
+    // utilisateur 2026-09-27 : "limite à 3 joueurs par poste (titu,
+    // remplacant, reserviste)") — ajout refusé en silence au-delà. Les
+    // anciennes sauvegardes qui en ont plus restent jouables telles quelles.
+    if (on && !has && Team.prototype.backupCountAt.call(this, pos) >= MAX_BACKUPS_PER_POSITION) return;
     if (on && !has) this.lineup.backupPositions[playerId] = [...list, pos];
     if (on && Array.isArray(this.lineup.convoked) && !this.lineup.convoked.includes(playerId)) Team.prototype.setConvoked.call(this, playerId, true);
     if (this.lineup.minutes && this.lineup.minutes[pos]) {

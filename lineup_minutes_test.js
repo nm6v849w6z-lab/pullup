@@ -39,6 +39,8 @@ assert(total === 40, `répartition proposée totale 40, obtenu ${total}`);
 const reservist = team.players.find(p => !team.starterPosition(p.id) && !(team.lineup.backupPositions[p.id] || []).includes(pos));
 assert(reservist, "l'effectif de départ devrait avoir un joueur hors du poste Meneur");
 (team.lineup.backupPositions[reservist.id] || []).slice().forEach(x => team.toggleBackupPosition(reservist.id, x, false));
+// 3 joueurs max par poste : on libère une place si le poste est plein.
+while (team.backupCountAt(pos) >= 2) team.toggleBackupPosition(team.slotPlayerIds(pos).slice(-1)[0], pos, false);
 team.toggleBackupPosition(reservist.id, pos, true);
 assert(team.lineup.minutes[pos][reservist.id] === 0, "réserviste ajouté au poste : 0 min par défaut");
 // Plafond 40 min par poste (retour utilisateur 2026-09-26) : on libère
@@ -177,13 +179,39 @@ if (inputs2.length > 1) {
   inputs3[0].value = "30";
   inputs3[0].dispatchEvent(new win.Event("change"));
 }
-// Ajout d'un joueur hors du poste (réserviste ou remplaçant d'un autre poste).
-const add = ptRow("Meneur").querySelector("select.pt-add");
-assert(add && add.options.length > 1, "« + Ajouter un joueur » doit proposer des joueurs");
-const before = ptRow("Meneur").querySelectorAll("input.pt-input").length;
-add.value = add.options[1].value;
-add.dispatchEvent(new win.Event("change"));
-assert(ptRow("Meneur").querySelectorAll("input.pt-input").length === before + 1, "le joueur ajouté doit avoir sa case de minutes");
+// Ajout d'un joueur hors du poste (réserviste ou remplaçant d'un autre poste)
+// — possible seulement tant que le poste a moins de 3 joueurs (titulaire +
+// remplaçant + réserviste, retour utilisateur 2026-09-27).
+{
+  const tA = win.eval("teamA");
+  const pos = "Meneur";
+  // Vider les remplaçants du poste pour repartir de "titulaire seul".
+  tA.players.forEach(p => tA.toggleBackupPosition(p.id, pos, false));
+  win.eval("renderPrep && renderPrep()");
+}
+const addOnce = () => {
+  const add = ptRow("Meneur").querySelector("select.pt-add");
+  assert(add && add.options.length > 1, "« + Ajouter » doit proposer des joueurs tant que le poste n'est pas plein");
+  const before = ptRow("Meneur").querySelectorAll("input.pt-input").length;
+  add.value = add.options[1].value;
+  add.dispatchEvent(new win.Event("change"));
+  assert(ptRow("Meneur").querySelectorAll("input.pt-input").length === before + 1, "le joueur ajouté doit avoir sa case de minutes");
+};
+if (ptRow("Meneur").querySelector(".pt-auto")) ptRow("Meneur").querySelector(".pt-btn").click();
+while (ptRow("Meneur").querySelectorAll("input.pt-input").length < 3) addOnce();
+assert(ptRow("Meneur").querySelectorAll("input.pt-input").length === 3, "3 joueurs max au poste");
+assert(!ptRow("Meneur").querySelector("select.pt-add"), "plus de « + Ajouter » à 3 joueurs (titulaire, remplaçant, réserviste)");
+assert([...ptRow("Meneur").querySelectorAll(".pt-role")].map(e => e.textContent).join(",") === "T,R,Rés", "pastilles de rôle T / R / Rés");
+{
+  const extra = win.eval("teamA").players.find(p => !win.eval("teamA").starterPosition(p.id) && !(win.eval("teamA").lineup.backupPositions[p.id] || []).includes("Meneur"));
+  if (extra) {
+    win.eval("teamA").toggleBackupPosition(extra.id, "Meneur", true);
+    assert(!(win.eval("teamA").lineup.backupPositions[extra.id] || []).includes("Meneur"), "le moteur refuse un 3e remplaçant au même poste");
+  }
+}
+const mIn = [...ptRow("Meneur").querySelectorAll("input.pt-input")];
+mIn[0].value = "30"; mIn[0].dispatchEvent(new win.Event("change"));
+console.log("✅ 3 joueurs max par poste (titulaire, remplaçant, réserviste) ; pastilles T / R / Rés.");
 await flush(dom);
 const saved = readRawSave(savePath).team.lineup;
 assert(saved.minutes && Object.values(saved.minutes.Meneur).includes(30), "les minutes saisies doivent être sauvegardées : " + JSON.stringify(saved.minutes));
