@@ -78,3 +78,23 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// Notifications (Premium, voir server/push.js) : affichage et clic.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { title: "Hoop Manager", body: event.data ? event.data.text() : "" }; }
+  event.waitUntil(self.registration.showNotification(data.title || "Hoop Manager", {
+    body: data.body || "", tag: data.tag || undefined, icon: "/assets/mobile/icon-192.png", badge: "/assets/mobile/favicon-32.png",
+    data: { url: data.url || "/" },
+  }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+    const open = list.find((c) => new URL(c.url).origin === self.location.origin);
+    if (open) return open.focus();
+    return self.clients.openWindow(url);
+  }));
+});

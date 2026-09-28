@@ -187,6 +187,17 @@ function schedulePlayback(events, kickoffAt, homeName = "Domicile", awayName = "
 
 // Clé stable d'un match dans league.liveMatches — une journée (round) donnée
 // ne joue jamais deux fois le même duel home/away, donc ce triplet suffit.
+// Premium « Revoir le direct d'un match déjà joué » : la diffusion d'un
+// match terminé est mise de côté (league.pendingReplays, jamais sauvegardé
+// avec la ligue) puis rangée à part par store.saveMultiLeague (données
+// « replays » du championnat, 60 derniers matchs). Voir /api/replay.
+function archiveReplay(league, key) {
+  const e = league && league.liveMatches && league.liveMatches[key];
+  if (!e || e.forfeit || !Array.isArray(e.events) || !e.events.length) return;
+  if (!league.pendingReplays) Object.defineProperty(league, "pendingReplays", { value: [], writable: true, enumerable: false, configurable: true });
+  league.pendingReplays.push({ key: `${league.seasonNumber || 1}:${key}`, season: league.seasonNumber || 1, savedAt: Date.now(), entry: e });
+}
+
 function liveMatchKey(round, homeIdx, awayIdx) {
   return `${round}:${homeIdx}:${awayIdx}`;
 }
@@ -403,6 +414,7 @@ function finalizeCupRound(Engine, league) {
       forfeit = live.forfeit;
       quarterScores = live.quarterScores || null;
       tacticsUsed = live.tacticsUsed || null;
+      archiveReplay(league, key);
       delete league.liveMatches[key];
     } else {
       // Jamais démarré en direct (CPU-vs-CPU, ou tour rattrapé d'un coup) :
@@ -549,6 +561,7 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
       forfeit = live.forfeit;
       quarterScores = live.quarterScores || null;
       tacticsUsed = live.tacticsUsed || null;
+      archiveReplay(league, key);
       delete league.liveMatches[key];
     } else {
       // Jamais démarré en direct (CPU-vs-CPU, ou tour rattrapé d'un coup) :
@@ -705,6 +718,7 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
       forfeit = live.forfeit;
       quarterScores = live.quarterScores || null;
       tacticsUsed = live.tacticsUsed || null;
+      archiveReplay(league, key);
       delete league.liveMatches[key];
     } else {
       // Jamais démarré en direct (CPU-vs-CPU, ou journée rattrapée d'un
@@ -993,7 +1007,7 @@ function liveMatchesLiteFor(league) {
 module.exports = {
   HALFTIME_BREAK_MS, QUARTER_BREAK_MS, OVERTIME_BREAK_MS, TIMEOUT_BREAK_MS, TIMEOUTS_PER_QUARTER,
   SECONDS_SCALE_MS, MIN_EVENT_GAP_MS,
-  schedulePlayback, liveMatchKey, computeLiveMatch, computeLiveMatchForTeams, ensureLiveMatchStarted, finalizeRound, viewLiveMatchForTeam,
+  archiveReplay, schedulePlayback, liveMatchKey, computeLiveMatch, computeLiveMatchForTeams, ensureLiveMatchStarted, finalizeRound, viewLiveMatchForTeam,
   liveMatchesLiteFor,
   // Coupe (voir le bloc dédié plus haut) :
   cupLiveMatchKey, ensureCupLiveMatchStarted, finalizeCupRound,

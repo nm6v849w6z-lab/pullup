@@ -4371,7 +4371,7 @@ function handleGameEvent(feed, event, ctx) {
 
     case "transfer_in":
       return pushEntry(feed, Object.assign({
-        category: "marche",
+        category: "marche", push: true,
         week: w,
         action: { label: "Voir le joueur", href: `/joueur/${event.playerId}` },
       }, feedFromTemplate("arrivee", {
@@ -4380,7 +4380,7 @@ function handleGameEvent(feed, event, ctx) {
 
     case "transfer_out":
       return pushEntry(feed, Object.assign({
-        category: "marche",
+        category: "marche", push: true,
         week: w,
       }, feedFromTemplate("depart", {
         joueur: event.playerName, destination: event.to, montant: feedEuros(event.fee),
@@ -7165,6 +7165,14 @@ class Team {
         staff: { coach: !!this.trainer, analyst: !!this.videoAnalyst, scout: !!this.recruiter },
       });
     }
+
+    // Courbe de progression (Premium) : note globale de chaque joueur à la
+    // fin de chaque semaine d'entraînement (PLAYER_PROGRESS_MAX dernières).
+    this.players.forEach(p => {
+      if (!Array.isArray(p.progressLog)) p.progressLog = [];
+      p.progressLog.push({ week: this.week - 1, at: now != null ? now : null, ovr: Math.round(p.overall() * 10) / 10 });
+      if (p.progressLog.length > PLAYER_PROGRESS_MAX) p.progressLog = p.progressLog.slice(-PLAYER_PROGRESS_MAX);
+    });
 
     const result = {
       players: report, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid, doctorSalaryPaid, physioSalaryPaid, assistantCoachSalaryPaid,
@@ -12517,6 +12525,7 @@ function serializePlayerRecord(p) {
     // awardSeasonHonours).
     awards: Array.isArray(p.awards) ? p.awards.map(a => ({ ...a })) : [],
     careerSeasons: Array.isArray(p.careerSeasons) ? p.careerSeasons.map(c => ({ ...c })) : [],
+    progressLog: Array.isArray(p.progressLog) ? p.progressLog.map(x => ({ ...x })) : [],
     // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
     retiringAfterSeason: !!p.retiringAfterSeason,
     retirementWeeks: p.retirementWeeks || 0,
@@ -12540,6 +12549,7 @@ function serializePlayerRecord(p) {
 // Historique de l'entraînement (voir Team.trainingHistory) : une saison
 // (11 semaines) plus une marge pour les semaines de play-offs prolongées.
 const TRAINING_HISTORY_MAX = 13;
+const PLAYER_PROGRESS_MAX = 30;
 // ---------------------------------------------------------------------
 // MARCHÉ — LISTE DE SUIVI ET ALERTES (Premium, retour utilisateur,
 // 2026-09-27 : « Liste de suivi du marché des transferts et alertes »).
@@ -12825,6 +12835,10 @@ function serializeTeam(team) {
     // Dernière visite du manager (managers inactifs, voir server/world.js:
     // releaseInactiveManagers).
     lastSeenAt: typeof team.lastSeenAt === "number" ? team.lastSeenAt : null,
+    // Notifications (Premium, voir server/push.js).
+    pushSubscriptions: Array.isArray(team.pushSubscriptions) ? team.pushSubscriptions.map(x => ({ ...x, keys: { ...(x.keys || {}) } })) : [],
+    pushCursor: typeof team.pushCursor === "number" ? team.pushCursor : null,
+    pushKickoffKeys: Array.isArray(team.pushKickoffKeys) ? team.pushKickoffKeys.slice(-10) : [],
     lineup: team.lineup,
     // Journées futures déjà préparées à l'avance (voir Team.plannedTactics
     // et stagePlanForRound/applyPlannedTacticsForRound) — déjà un objet
@@ -13023,6 +13037,7 @@ function playerFromSave(pdata) {
   if (typeof pdata.transferRequestDiscussed === "boolean") p.transferRequestDiscussed = pdata.transferRequestDiscussed;
   p.awards = Array.isArray(pdata.awards) ? pdata.awards.map(a => ({ ...a })) : [];
   p.careerSeasons = Array.isArray(pdata.careerSeasons) ? pdata.careerSeasons.map(c => ({ ...c })) : [];
+  p.progressLog = Array.isArray(pdata.progressLog) ? pdata.progressLog.map(x => ({ ...x })) : [];
   if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
@@ -13047,6 +13062,9 @@ function teamFromSave(data) {
   // (déjà la valeur posée par le constructeur Team).
   team.isAdmin = !!data.isAdmin;
   team.lastSeenAt = typeof data.lastSeenAt === "number" ? data.lastSeenAt : null;
+  team.pushSubscriptions = Array.isArray(data.pushSubscriptions) ? data.pushSubscriptions.filter(x => x && x.endpoint && x.keys) : [];
+  team.pushCursor = typeof data.pushCursor === "number" ? data.pushCursor : null;
+  team.pushKickoffKeys = Array.isArray(data.pushKickoffKeys) ? data.pushKickoffKeys : [];
   if (data.offensivePriorities) team.offensivePriorities = data.offensivePriorities;
   if (data.defense) team.defense = data.defense;
   if (data.rhythm) team.rhythm = data.rhythm;

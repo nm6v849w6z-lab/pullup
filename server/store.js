@@ -329,6 +329,12 @@ async function loadMultiLeague(savePath = defaultMultiLeaguePath(), leagueId = H
 // server/world.js:catchUpWorld, qui compare avant/après pour n'écrire que
 // les championnats modifiés).
 async function saveMultiLeague(league, savePath = defaultMultiLeaguePath(), body = null) {
+  // Directs terminés à garder pour « Revoir le direct » (voir
+  // LiveMatch.archiveReplay) : rangés à part, jamais dans la ligue.
+  if (league && Array.isArray(league.pendingReplays) && league.pendingReplays.length) {
+    const items = league.pendingReplays.splice(0);
+    try { await appendReplays(league.leagueId, items, savePath); } catch (e) { console.warn("Enregistrement des directs à revoir échoué :", e.message); }
+  }
   const where = leagueStorage(league && league.leagueId, savePath);
   savePath = where.file;
   if (upstashConfigured()) {
@@ -343,6 +349,40 @@ async function saveMultiLeague(league, savePath = defaultMultiLeaguePath(), body
   const tmpPath = `${savePath}.tmp-${process.pid}-${Date.now()}`;
   fs.writeFileSync(tmpPath, body || JSON.stringify(serializeMultiLeague(league)), "utf-8");
   fs.renameSync(tmpPath, savePath);
+}
+
+// Directs à revoir (Premium) d'un championnat : { version, list: [{ key,
+// season, savedAt, entry }] }, les REPLAYS_MAX plus récents.
+const REPLAYS_MAX = 60;
+function replayStorage(leagueId, savePath) {
+  const id = leagueId || HISTORIC_LEAGUE_ID;
+  if (!/^[a-z]{2}-[0-9](\.[0-9]{1,3})?$/.test(id)) throw new Error(`Identifiant de championnat invalide : ${id}`);
+  return { redis: `${redisPrefix()}pullup:replays:${id}`, file: savePath.replace(/\.json$/, "") + `.replays.${id}.json` };
+}
+async function loadReplays(leagueId, savePath = defaultMultiLeaguePath()) {
+  const where = replayStorage(leagueId, savePath);
+  try {
+    if (upstashConfigured()) {
+      const raw = await redisGet(where.redis);
+      return raw == null ? { version: 1, list: [] } : JSON.parse(raw);
+    }
+    if (!fs.existsSync(where.file)) return { version: 1, list: [] };
+    return JSON.parse(fs.readFileSync(where.file, "utf-8"));
+  } catch (e) {
+    return { version: 1, list: [] };
+  }
+}
+async function appendReplays(leagueId, items, savePath = defaultMultiLeaguePath()) {
+  const data = await loadReplays(leagueId, savePath);
+  items.forEach(it => { data.list = data.list.filter(x => x.key !== it.key); data.list.push(it); });
+  data.list = data.list.slice(-REPLAYS_MAX);
+  const where = replayStorage(leagueId, savePath);
+  const body = JSON.stringify(data);
+  if (upstashConfigured()) { await redisSet(where.redis, body); return; }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, body, "utf-8");
+  fs.renameSync(tmp, where.file);
 }
 
 // Données annexes du monde (index du marché mondial…) : une clé/fichier par
@@ -521,6 +561,7 @@ module.exports = {
   resolveManagerTeam,
   // Championnats par pays (voir server/world.js) :
   HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, stampHistoricLeague, loadWorldAuxRaw, saveWorldAuxRaw,
+  loadReplays, appendReplays, REPLAYS_MAX,
   // Comptes joueurs (voir server/accounts.js) :
   defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,
   // Backend Redis (Upstash) optionnel (voir grand commentaire dédié plus

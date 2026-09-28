@@ -20,6 +20,31 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Premium : les 4 « Bientôt »
+  livrés** (reste en « Bientôt » : salle personnalisée / avatars des jeunes)
+  - Notifications : server/webpush.js (Web Push sans dépendance : RFC 8291
+    aes128gcm + VAPID ES256), server/push.js (coup d'envoi des matchs en
+    direct, blessures, arrivées/départs, fins d'enchère des joueurs suivis ;
+    envoyées à chaque sauvegarde d'un championnat, Premium seulement,
+    abonnements expirés retirés ; coups d'envoi de championnat ajoutés aux
+    échéances du monde), routes /api/push/config|subscribe|unsubscribe,
+    service worker (push, notificationclick), Paramètres → Mon compte →
+    Notifications. **À configurer par l'utilisateur** : générer les clés
+    avec `node server/webpush.js --generate` puis mettre VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY (et VAPID_SUBJECT=mailto:…) dans Render. Sur iPhone :
+    iOS 16.4+ et jeu ajouté à l'écran d'accueil.
+  - Courbe de progression : Player.progressLog (note à chaque trainWeek,
+    30 semaines), carte « Progression » de la fiche (joueurs de son club).
+  - Statistiques avancées + export CSV : onglet Statistiques (TS%, eFG%,
+    3PA%, LF%, PD/BP, par 36 min, +/-, éval), bouton CSV (séparateur « ; »,
+    BOM pour Excel).
+  - Revoir le direct : LiveMatch.archiveReplay met de côté chaque direct
+    terminé (league.pendingReplays, non sérialisé) ; store.saveMultiLeague
+    le range dans « replays » du championnat (60 derniers) ; GET /api/replay
+    (Premium, clubs du match, horaires recalés à maintenant) ; bouton
+    « ▶ Revoir le direct » dans la feuille de statistiques.
+  - Tests : premium_features_test.js (+ premium_test : 13 avantages).
+
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Comptes : mot de passe
   oublié, suppression du compte, confidentialité, anti-triche**
   - Mot de passe oublié : /api/account/password-forgot (réponse identique

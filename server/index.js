@@ -56,6 +56,8 @@ const Messages = require("./messages.js");
 // et server/accountRoutes.js.
 const AccountRoutes = require("./accountRoutes.js");
 const Accounts = require("./accounts.js");
+const Push = require("./push.js");
+const WebPush = require("./webpush.js");
 const Ads = require("./ads.js");
 const Site = require("./site.js");
 const Engine = require("../engine.js");
@@ -473,6 +475,7 @@ function worldRefOf(world, leagueId, league, idx) {
 // `async` — voir resolvePlayerContext juste au-dessus, même raison.
 async function persistContext(ctx) {
   if (ctx.isMulti) {
+    try { await Push.flushLeague(ctx.league, Date.now()); } catch (e) { console.warn("[notifications]", e.message); }
     await store.saveMultiLeague(ctx.league, ctx.savePath);
     return;
   }
@@ -1391,7 +1394,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // pouvait se faire passer pour un autre. Seul SON propre jeton est
         // renvoyé désormais — le navigateur n'utilise jamais ceux des autres.
         if (ctx.isMulti && payload.league && Array.isArray(payload.league.teams)) {
-          payload.league.teams.forEach((t, i) => { if (t && i !== ctx.teamIndex) t.managerLinkToken = null; });
+          payload.league.teams.forEach((t, i) => { if (t && i !== ctx.teamIndex) { t.managerLinkToken = null; t.pushSubscriptions = []; } });
         }
         payload.league.liveMatch = LiveMatch.viewLiveMatchForTeam(ctx.league, ctx.teamIndex);
         delete payload.league.liveMatches;
@@ -1596,6 +1599,64 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const opp = Number(route.searchParams.get("opponent"));
         if (!Number.isInteger(opp) || !ctx.league.teams[opp] || opp === ctx.teamIndex) { sendJson(res, 400, { ok: false, error: "Adversaire invalide." }); return; }
         sendJson(res, 200, { ok: true, days: Friendlies.availableDays(Engine, ctx.league, ctx.teamIndex, opp, now) });
+        return;
+      }
+
+      // Premium « Revoir le direct d'un match déjà joué » (voir
+      // LiveMatch.archiveReplay) : ?key=… ou ?round=&competition=&home=&away=
+      // (match de la feuille de statistiques). Même vue que le direct (repère
+      // du club qui regarde), horaires décalés pour démarrer maintenant.
+      // Notifications (Premium, server/push.js / server/webpush.js).
+      if (route.pathname === "/api/push/config" && req.method === "GET") {
+        const v = WebPush.vapidConfig();
+        sendJson(res, 200, { ok: true, enabled: !!v, publicKey: v ? v.publicKey : null });
+        return;
+      }
+      if ((route.pathname === "/api/push/subscribe" || route.pathname === "/api/push/unsubscribe") && req.method === "POST") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        if (!ctx.isMulti) { sendJson(res, 404, { ok: false, error: "Indisponible en carrière solo." }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const team = ctx.league.teams[ctx.teamIndex];
+        if (route.pathname === "/api/push/unsubscribe") {
+          Push.removeSubscription(team, body && body.endpoint);
+        } else {
+          if (!WebPush.vapidConfig()) { sendJson(res, 400, { ok: false, code: "push-disabled", error: "Notifications indisponibles sur ce serveur." }); return; }
+          if (!Push.isPremium(team, now)) { sendJson(res, 403, { ok: false, code: "premium-required", error: "Les notifications sont réservées au Premium." }); return; }
+          if (!Push.addSubscription(team, body && body.subscription, now)) { sendJson(res, 400, { ok: false, error: "Abonnement invalide." }); return; }
+        }
+        await store.saveMultiLeague(ctx.league, multiSavePath);
+        sendJson(res, 200, { ok: true, devices: (team.pushSubscriptions || []).length });
+        return;
+      }
+
+      if (route.pathname === "/api/replay" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        if (!ctx.isMulti) { sendJson(res, 404, { ok: false, error: "Indisponible en carrière solo." }); return; }
+        const team = ctx.league.teams[ctx.teamIndex];
+        const data = await store.loadReplays(ctx.leagueId, multiSavePath);
+        const q = route.searchParams;
+        const mine = e => e.homeIdx === ctx.teamIndex || e.awayIdx === ctx.teamIndex;
+        let item = null;
+        if (q.get("key")) item = data.list.find(x => x.key === q.get("key")) || null;
+        else {
+          const round = Number(q.get("round")), home = Number(q.get("home")), away = Number(q.get("away"));
+          const comp = q.get("competition") === "cup" ? "cup" : "championship";
+          item = data.list.slice().reverse().find(x => x.entry.round === round && (x.entry.competition || "championship") === comp && x.entry.homeIdx === home && x.entry.awayIdx === away) || null;
+        }
+        if (!item || !mine(item.entry)) { sendJson(res, 404, { ok: false, error: "Ce direct n'est plus disponible." }); return; }
+        const premium = typeof team.hasActivePremium === "function" ? team.hasActivePremium(now) : !!team.isPaying;
+        if (!premium) { sendJson(res, 403, { ok: false, code: "premium-required", error: "Revoir un direct est réservé au Premium." }); return; }
+        const view = LiveMatch.viewLiveMatchForTeam({ liveMatches: { [item.key]: item.entry } }, ctx.teamIndex);
+        const delta = now + 2000 - item.entry.kickoffAt;
+        view.kickoffAt += delta;
+        view.events = view.events.map(ev => (typeof ev.airAt === "number" ? { ...ev, airAt: ev.airAt + delta } : ev));
+        view.pauses = (view.pauses || []).map(pz => (typeof pz.airAt === "number" ? { ...pz, airAt: pz.airAt + delta } : pz));
+        view.replay = true;
+        const guest = item.entry.guest ? { ...item.entry.guest, localIdx: view.opponentIdx } : null;
+        sendJson(res, 200, { ok: true, key: item.key, live: view, guest });
         return;
       }
 

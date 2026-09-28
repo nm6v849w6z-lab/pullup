@@ -241,7 +241,7 @@ function step({ Engine, Calendar, LiveMatch }, cup, leagues, refLeague, now, eve
       [[home, m.home, away, true, totalHome, totalAway], [away, m.away, home, false, totalAway, totalHome]].forEach(([team, ref, opp, isHome, pf, pa]) => {
         if (!team) return;
         const lg = leagues.get(ref.leagueId);
-        if (lg && lg.liveMatches) delete lg.liveMatches[liveKey(cup, round, m)];
+        if (lg && lg.liveMatches) { LiveMatch.archiveReplay(lg, liveKey(cup, round, m)); delete lg.liveMatches[liveKey(cup, round, m)]; }
         if (team.isHuman && team.feed && opp) {
           Engine.handleGameEvent(team.feed, {
             type: "match_played", week: team.week, matchId: `ncup:${cup.season}:${round.index}:${m.id}`,
@@ -368,7 +368,7 @@ function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events 
   [[home, sc.home, away, true, totalHome, totalAway], [away, sc.away, home, false, totalAway, totalHome]].forEach(([team, ref, opp, isHome, pf, pa]) => {
     if (!team) return;
     const lg = leagues.get(ref.leagueId);
-    if (lg && lg.liveMatches) delete lg.liveMatches[superCupLiveKey(sc)];
+    if (lg && lg.liveMatches) { LiveMatch.archiveReplay(lg, superCupLiveKey(sc)); delete lg.liveMatches[superCupLiveKey(sc)]; }
     if (team.isHuman && team.feed && opp) {
       Engine.pushEntry(team.feed, {
         key: `scup_${sc.season}_${ref.leagueId}_${ref.idx}`, category: "ligue", week: team.week, createdAt: now,

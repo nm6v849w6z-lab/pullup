@@ -1280,6 +1280,15 @@
   .cp-byes{color:var(--ink-faint); font-size:12.5px; padding-left:16px !important;}
   .settings-delete summary{cursor:pointer; color:var(--danger);}
   .settings-danger-btn{border-color:var(--danger) !important; color:var(--danger) !important;}
+  .pp-chart{position:relative; height:140px; margin:4px 0 6px; border-left:1px solid var(--line); border-bottom:1px solid var(--line);}
+  .pp-chart svg{width:100%; height:100%; display:block;}
+  .pp-lbl{position:absolute; left:4px; font-size:11px; color:var(--ink-faint);}
+  .pp-lbl-hi{top:2px;} .pp-lbl-lo{bottom:2px;}
+  .pp-foot{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-faint);}
+  .pp-up{color:#3ecf67;} .pp-down{color:var(--danger);}
+  .st-adv-actions{margin-top:10px; display:flex; justify-content:flex-end;}
+  .mbx-replay{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:6px 0 4px;}
+  .mbx-replay-fb{font-size:12.5px; color:var(--ink-faint);}
   .aw-list{display:flex; flex-direction:column; gap:6px;}
   .aw-row{display:grid; grid-template-columns:minmax(150px,1.1fr) minmax(140px,1.2fr) 1fr; gap:8px; align-items:baseline; padding:6px 8px; border-radius:8px; background:var(--panel-2, rgba(255,255,255,.03)); font-size:13px;}
   .aw-row.is-mine{outline:1px solid rgba(240,162,60,.45);}
@@ -7359,6 +7368,10 @@
         <div class="st-block-head"><h2>Saison en cours</h2><span id="statsSeasonSub">Moyennes par match · championnat et coupe · clique sur une colonne pour trier</span></div>
         <div id="statsSeasonContent"></div>
       </section>
+      <section class="st-block" id="statsAdvancedPanel">
+        <div class="st-block-head"><h2>Statistiques avancées</h2><span>Efficacité, par 36 minutes, export du tableau</span></div>
+        <div id="statsAdvancedContent"></div>
+      </section>
       <section class="st-block" id="statsWeekPanel">
         <div class="st-block-head"><h2>Semaine par semaine</h2></div>
         <div class="week-nav st-week-nav" id="statsHebdoNav"></div>
@@ -7624,7 +7637,7 @@
 
       <div class="guide-entry" data-guide-id="premium" data-guide-group="Premium">
         <h3>Premium</h3>
-        <p class="training-intro">Tout passe par l'onglet <b>Premium</b>, sous le Guide : votre statut et le bouton pour passer Premium (gratuit pendant la phase de test). Le Premium comprend le Scouting Pro illimité et sans pub, l'analyse de votre propre équipe, les ligues privées, les maillots et le logo personnalisés, 6 tactiques enregistrées, aucune pub, le badge Premium à côté du nom du club, l'historique de l'entraînement sur toute la saison, et la liste de suivi du marché avec ses alertes.</p>
+        <p class="training-intro">Tout passe par l'onglet <b>Premium</b>, sous le Guide : votre statut et le bouton pour passer Premium (gratuit pendant la phase de test). Le Premium comprend le Scouting Pro illimité et sans pub, l'analyse de votre propre équipe, les ligues privées, les maillots et le logo personnalisés, 6 tactiques enregistrées, aucune pub, le badge Premium à côté du nom du club, l'historique de l'entraînement sur toute la saison, la liste de suivi du marché avec ses alertes, la courbe de progression de chaque joueur (sur sa fiche), les statistiques avancées avec export CSV (onglet Statistiques), « Revoir le direct » d'un match déjà joué (depuis sa feuille de statistiques) et les notifications (Paramètres → Mon compte : coup d'envoi, blessures, transferts, fins d'enchère).</p>
         <p class="training-intro" style="margin-top:10px;">Le Premium ne donne <b>aucun avantage sportif</b> : ni progression plus rapide, ni argent, ni staff en plus. Un mois de Premium est aussi offert au meilleur pronostiqueur des émissions Hoop Shows en fin de saison.</p>
       </div>
 
@@ -19067,6 +19080,7 @@ function serializePlayerRecord(p) {
     // awardSeasonHonours).
     awards: Array.isArray(p.awards) ? p.awards.map(a => ({ ...a })) : [],
     careerSeasons: Array.isArray(p.careerSeasons) ? p.careerSeasons.map(c => ({ ...c })) : [],
+    progressLog: Array.isArray(p.progressLog) ? p.progressLog.map(x => ({ ...x })) : [],
     // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
     retiringAfterSeason: !!p.retiringAfterSeason,
     retirementWeeks: p.retirementWeeks || 0,
@@ -19491,6 +19505,7 @@ function playerFromSave(pdata) {
   if (typeof pdata.transferRequestDiscussed === "boolean") p.transferRequestDiscussed = pdata.transferRequestDiscussed;
   p.awards = Array.isArray(pdata.awards) ? pdata.awards.map(a => ({ ...a })) : [];
   p.careerSeasons = Array.isArray(pdata.careerSeasons) ? pdata.careerSeasons.map(c => ({ ...c })) : [];
+  p.progressLog = Array.isArray(pdata.progressLog) ? pdata.progressLog.map(x => ({ ...x })) : [];
   if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
@@ -26831,6 +26846,7 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `</section>`;
   html += `</div>`; // side
   html += `</div>`; // row games
+  if (isOwnTeam) html += playerProgressHtml(player);
   html += playerCareerHtml(player);
   html += `</div>`; // pdp2
 
@@ -34457,7 +34473,36 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
   };
   const st = matchBoxscoreState;
   const ctx = matchBoxscoreContext(round, competition, homeIdx, awayIdx, st.quarterScores, st.rowsHome, st.rowsAway);
+  // Premium « Revoir le direct » : seulement ses propres matchs, en ligue partagée.
+  if (managerToken && (homeIdx === myTeamIndex || awayIdx === myTeamIndex)) ctx.replay = { round, competition, home: homeIdx, away: awayIdx };
   openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx);
+}
+
+// Revoir le direct d'un match déjà joué (Premium, voir /api/replay) : même
+// écran que le direct, horaires recalés pour démarrer maintenant.
+async function startMatchReplay(params, feedbackEl) {
+  const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])).toString();
+  let res, data;
+  try {
+    res = await fetchApi(`/api/replay?${qs}`);
+    data = await res.json().catch(() => ({}));
+  } catch (e) { if (feedbackEl) feedbackEl.textContent = "Serveur injoignable."; return false; }
+  if (!res.ok || !data.ok) {
+    if (feedbackEl) {
+      feedbackEl.innerHTML = data.code === "premium-required"
+        ? `Revoir un direct est réservé au Premium. ${premiumLinkHtml("Passer Premium")}`
+        : escapeHtml(data.error || "Ce direct n'est plus disponible.");
+    }
+    return false;
+  }
+  if (data.guest) installGuestTeams(league, [data.guest]);
+  closeMatchBoxscore();
+  teamB = league.teams[data.live.opponentIdx];
+  if (!teamB) return false;
+  enterLiveMatch(data.live);
+  const status = document.getElementById("boardStatus");
+  if (status) status.dataset.replay = "1";
+  return true;
 }
 
 // Construit et affiche la fenêtre de feuille de statistiques à partir de
@@ -34497,6 +34542,7 @@ function openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx) {
     teamSide(awayTeam, "Extérieur", awayWon, "away") +
     `</div>` +
     `<div id="matchBoxscoreQuartersHolder" class="mbx-quarters">${boxscoreQuarterScoresHtml(st.quarterScores, homeTeam.name, awayTeam.name)}</div>` +
+    (ctx.replay ? `<div class="mbx-replay"><button type="button" class="secondary" id="matchReplayBtn">▶ Revoir le direct</button>${teamIsPremium(teamA) ? "" : ` <span class="prm-badge" title="Premium">★</span>`}<span class="mbx-replay-fb" id="matchReplayFeedback"></span></div>` : "") +
     (ctx.noteHtml || "") +
     `<div class="mbx-body">` +
     `<div id="matchBoxscoreMvpHolder"></div>` +
@@ -34514,6 +34560,8 @@ function openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx) {
   document.getElementById("matchBoxscoreCloseBtn").addEventListener("click", closeMatchBoxscore);
   document.getElementById("matchBoxscoreCloseX").addEventListener("click", closeMatchBoxscore);
   overlay.querySelectorAll(".bs-tab").forEach(b => b.addEventListener("click", () => renderMatchBoxscoreTab(b.dataset.team)));
+  const replayBtn = document.getElementById("matchReplayBtn");
+  if (replayBtn && ctx.replay) replayBtn.addEventListener("click", () => startMatchReplay(ctx.replay, document.getElementById("matchReplayFeedback")));
   renderMatchBoxscoreTab("A");
 }
 
@@ -37274,6 +37322,47 @@ function showSettingsModal(tab) {
 // - Se déconnecter : oublie le jeton de CE navigateur, retour à l'accueil.
 // ---------------------------------------------------------------------
 let hmAccountState = null;
+// Notifications (Premium, voir server/push.js) : configuration du serveur
+// (clé publique VAPID) et abonnement de CET appareil.
+let hmPushConfig = null;
+let hmPushSubscribed = false;
+function hmPushSupported() { return typeof navigator !== "undefined" && "serviceWorker" in navigator && typeof window.PushManager !== "undefined" && typeof window.Notification !== "undefined"; }
+async function hmPushCurrentSubscription() {
+  if (!hmPushSupported()) return null;
+  try { const reg = await navigator.serviceWorker.getRegistration("/"); return reg ? await reg.pushManager.getSubscription() : null; } catch (e) { return null; }
+}
+function hmUrlB64ToBytes(b64) {
+  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+async function hmPushEnable() {
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") return { ok: false, text: "Notifications refusées dans le navigateur." };
+  const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(() => navigator.serviceWorker.ready);
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: hmUrlB64ToBytes(hmPushConfig.publicKey) });
+  const res = await fetchApi("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub }) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) return { ok: false, text: data.error || "Activation impossible." };
+  return { ok: true, text: "Notifications activées sur cet appareil." };
+}
+async function hmPushDisable() {
+  const sub = await hmPushCurrentSubscription();
+  if (sub) {
+    try { await fetchApi("/api/push/unsubscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) }); } catch (e) { /* rien */ }
+    try { await sub.unsubscribe(); } catch (e) { /* rien */ }
+  }
+  return { ok: true, text: "Notifications désactivées sur cet appareil." };
+}
+function hmPushSectionHtml() {
+  let html = `<div class="settings-row-label" style="margin-top:16px">Notifications</div>`;
+  if (!teamIsPremium(teamA)) return html + `<p class="settings-note">Coup d'envoi de vos matchs, blessures, fins d'enchère : réservé au Premium. ${premiumLinkHtml("Passer Premium")}</p>`;
+  if (!hmPushConfig || !hmPushConfig.enabled) return html + `<p class="settings-note">Les notifications ne sont pas encore disponibles sur ce serveur.</p>`;
+  if (!hmPushSupported()) return html + `<p class="settings-note">Ce navigateur ne gère pas les notifications. Sur iPhone, ajoute d'abord le jeu à l'écran d'accueil (Partager → Sur l'écran d'accueil).</p>`;
+  return html + `<p class="settings-note">Coup d'envoi de vos matchs, blessures, arrivées et départs, fins d'enchère des joueurs suivis.</p>` +
+    `<div class="settings-club-row"><button type="button" class="secondary" id="hmPushBtn">${hmPushSubscribed ? "Désactiver sur cet appareil" : "Activer sur cet appareil"}</button></div>` +
+    `<p class="settings-feedback" id="hmPushFeedback"></p>`;
+}
 let hmAccountFlash = null; // { text, ok } affiché une fois (retour de Discord)
 
 async function hmAccountRefresh() {
@@ -37284,6 +37373,11 @@ async function hmAccountRefresh() {
     const data = await res.json();
     hmAccountState = res.ok && data && data.ok ? data : null;
   } catch (e) { hmAccountState = null; }
+  try {
+    const pc = await fetchApi("/api/push/config");
+    hmPushConfig = pc.ok ? await pc.json() : null;
+    hmPushSubscribed = await hmPushCurrentSubscription() != null;
+  } catch (e) { hmPushConfig = null; }
   renderHmAccountBlock();
 }
 
@@ -37312,6 +37406,7 @@ function renderHmAccountBlock() {
       : `<div class="settings-club-row"><button type="button" class="secondary settings-discord-btn" id="hmAccountDiscordBtn">Lier mon compte Discord</button></div>`);
   }
   html += `<p class="settings-feedback" id="hmAccountFeedback"></p>`;
+  html += hmPushSectionHtml();
   // Suppression du compte (liste de la nuit du 2026-09-28) : le club est
   // rendu à l'IA, le compte effacé (voir /api/account/delete).
   html += `<details class="settings-delete"><summary class="settings-row-label" style="margin-top:16px">Supprimer mon compte</summary>` +
@@ -37345,6 +37440,16 @@ function renderHmAccountBlock() {
       hmAccountState.account = data.account;
       renderHmAccountBlock();
     } catch (err) { feedback("Serveur injoignable, réessaie.", false); }
+  });
+  const pushBtn = document.getElementById("hmPushBtn");
+  if (pushBtn) pushBtn.addEventListener("click", async () => {
+    pushBtn.disabled = true;
+    let r;
+    try { r = hmPushSubscribed ? await hmPushDisable() : await hmPushEnable(); } catch (err) { r = { ok: false, text: "Activation impossible sur ce navigateur." }; }
+    if (r.ok) hmPushSubscribed = !hmPushSubscribed;
+    renderHmAccountBlock();
+    const fbp = document.getElementById("hmPushFeedback");
+    if (fbp) { fbp.textContent = r.text; fbp.style.color = r.ok ? "var(--ok)" : "var(--danger)"; }
   });
   document.getElementById("hmDeleteForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -42649,6 +42754,7 @@ function showStatsHebdoSection() {
   statsHebdoSelectedWeek = teamA.week;
   renderStatsHeader();
   renderStatsSeasonSection();
+  renderStatsAdvancedSection();
   const world = document.getElementById("statsWorldContent");
   if (world) world.innerHTML = statsWorldCardsHtml(myTeamIndex);
   renderStatsHebdoSection();
@@ -42804,6 +42910,70 @@ function statsWorldCardsHtml(idx) {
       `</div></div>`;
   });
   return html + `</div>`;
+}
+
+// Statistiques avancées + export CSV (Premium) : saison en cours, tous
+// matchs officiels (matchLog), par joueur de son effectif.
+function advancedStatsRows(team) {
+  return (team.players || []).map(p => {
+    const log = (p.matchLog || []).filter(m => m.competition !== "friendly");
+    const g = log.length;
+    const sum = k => log.reduce((a, m) => a + (m[k] || 0), 0);
+    const min = sum("min"), pts = sum("pts"), fga = sum("fga2") + sum("fga3"), fgm = sum("fgm2") + sum("fgm3");
+    const fta = sum("fta"), ftm = sum("ftm"), fga3 = sum("fga3"), fgm3 = sum("fgm3"), tov = sum("tov"), ast = sum("ast"), reb = sum("reb");
+    const r = (x, d = 1) => (x == null || !isFinite(x) ? null : Math.round(x * 10 ** d) / 10 ** d);
+    return {
+      id: p.id, name: p.name, position: p.position, gp: g, min: g ? r(min / g) : null,
+      ts: fga + fta ? r(pts / (2 * (fga + 0.44 * fta)) * 100) : null,
+      efg: fga ? r((fgm + 0.5 * fgm3) / fga * 100) : null,
+      threeRate: fga ? r(fga3 / fga * 100) : null,
+      ftPct: fta ? r(ftm / fta * 100) : null,
+      astTov: tov ? r(ast / tov, 2) : (ast ? r(ast, 2) : null),
+      pts36: min ? r(pts / min * 36) : null, reb36: min ? r(reb / min * 36) : null, ast36: min ? r(ast / min * 36) : null,
+      plusMinus: g ? sum("plusMinus") : null,
+      eval: g ? r(log.reduce((a, m) => a + (m.pts || 0) + (m.reb || 0) + (m.ast || 0) + (m.stl || 0) + (m.blk || 0) - (m.tov || 0) - (((m.fga2 || 0) + (m.fga3 || 0)) - ((m.fgm2 || 0) + (m.fgm3 || 0))) - ((m.fta || 0) - (m.ftm || 0)), 0) / g) : null,
+    };
+  }).filter(r => r.gp > 0).sort((a, b) => (b.eval || 0) - (a.eval || 0));
+}
+const ADV_COLS = [
+  ["gp", "MJ", "Matchs joués"], ["min", "Min", "Minutes par match"], ["ts", "TS%", "True shooting % (tirs + lancers)"],
+  ["efg", "eFG%", "Réussite effective (le 3 points compte 1,5)"], ["threeRate", "3PA%", "Part des tirs pris à 3 points"],
+  ["ftPct", "LF%", "Lancers francs réussis"], ["astTov", "PD/BP", "Passes décisives par balle perdue"],
+  ["pts36", "Pts/36", "Points par 36 minutes"], ["reb36", "Reb/36", "Rebonds par 36 minutes"], ["ast36", "PD/36", "Passes par 36 minutes"],
+  ["plusMinus", "+/-", "Écart de points avec le joueur sur le terrain (saison)"], ["eval", "Éval", "Évaluation moyenne"],
+];
+function renderStatsAdvancedSection() {
+  const holder = document.getElementById("statsAdvancedContent");
+  if (!holder) return;
+  if (!teamIsPremium(teamA)) {
+    holder.innerHTML = `<p class="training-empty st-empty">True shooting, réussite effective, stats par 36 minutes, +/- de la saison et export du tableau (CSV) : réservé au Premium. ${premiumLinkHtml("Passer Premium")}</p>`;
+    return;
+  }
+  const rows = advancedStatsRows(teamA);
+  if (!rows.length) { holder.innerHTML = "<p class='training-empty st-empty'>Les statistiques avancées s'afficheront après les premiers matchs.</p>"; return; }
+  const cell = v => (v == null ? "–" : String(v).replace(".", ","));
+  holder.innerHTML = `<div class='table-scroll st-table-wrap'><table class='roster-table st-season-table st-adv-table'><thead><tr><th class='st-th-name'>Joueur</th><th>Poste</th>` +
+    ADV_COLS.map(([, l, t]) => `<th class="st-num" title="${escapeHtml(t)}">${escapeHtml(l)}</th>`).join("") + `</tr></thead><tbody>` +
+    rows.map(r => `<tr><td class="st-th-name">${playerLinkHtml(myTeamIndex, r.id, r.name)}</td><td>${escapeHtml(POS_SHORT[r.position] || r.position)}</td>` +
+      ADV_COLS.map(([k]) => `<td class="st-num">${cell(r[k])}</td>`).join("") + `</tr>`).join("") +
+    `</tbody></table></div><div class="st-adv-actions"><button type="button" class="secondary" id="statsExportCsvBtn">⬇ Exporter (CSV)</button></div>`;
+  document.getElementById("statsExportCsvBtn").addEventListener("click", () => exportAdvancedStatsCsv(rows));
+}
+function exportAdvancedStatsCsv(rows) {
+  const head = ["Joueur", "Poste", ...ADV_COLS.map(c => c[1])];
+  const esc = v => { const x = v == null ? "" : String(v); return /[";\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; };
+  const lines = [head.map(esc).join(";")].concat(rows.map(r => [r.name, r.position, ...ADV_COLS.map(([k]) => (r[k] == null ? "" : String(r[k]).replace(".", ",")))].map(esc).join(";")));
+  const csv = "\ufeff" + lines.join("\r\n");
+  window.__lastCsvExport = csv;
+  try {
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(teamA.name || "club").replace(/[^A-Za-z0-9À-ÿ_-]+/g, "_")}_stats_saison.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  } catch (e) { console.warn("Export CSV indisponible dans ce navigateur :", e); }
 }
 
 function renderStatsSeasonSection() {
@@ -43128,12 +43298,12 @@ const PREMIUM_PERKS = [
   { title: "Badge Premium", text: "Une étoile à côté du nom de votre club, dans les classements et sur sa fiche." },
   { title: "Historique de l'entraînement", text: "Le bilan de chaque semaine de la saison dans l'onglet Entraînement, pas seulement celui de la dernière." },
   { title: "Suivi du marché et alertes", text: "Suivez jusqu'à 30 joueurs et enregistrez jusqu'à 3 recherches : le fil d'actualité vous prévient des mises en vente, des fins d'enchère et des nouvelles annonces qui correspondent." },
+  { title: "Courbe de progression", text: "La note de chacun de vos joueurs semaine après semaine, sur sa fiche." },
+  { title: "Statistiques avancées et export", text: "True shooting, réussite effective, stats par 36 minutes, +/- de la saison, et export du tableau en CSV (onglet Statistiques)." },
+  { title: "Revoir le direct", text: "Rejouer le direct de vos matchs déjà joués, depuis leur feuille de statistiques (60 derniers matchs du championnat)." },
+  { title: "Notifications", text: "Une notification de votre navigateur (ou de l'application installée sur votre téléphone) quand votre match commence, qu'un joueur se blesse ou qu'une enchère se termine." },
 ];
 const PREMIUM_SOON = [
-  "Notifications sur mobile (fin d'enchère, blessure, match qui commence)",
-  "Courbe de progression de chaque joueur sur la saison",
-  "Statistiques avancées et export",
-  "Revoir le direct d'un match déjà joué",
   "Salle personnalisée et avatars des jeunes de l'académie",
 ];
 // Badge Premium à côté du nom d'un club (retour utilisateur, 2026-09-27 :
@@ -44005,6 +44175,31 @@ function managerAchievementsHtml(team) {
     return `<div class="ach${a ? " on" : ""}" title="${escapeHtml(desc)}"><span class="ach-icon">${a ? "🏅" : "🔒"}</span>` +
       `<span class="ach-txt"><b>${escapeHtml(label)}</b><small>${escapeHtml(desc)}${a ? ` · saison ${a.seasonNumber}` : ""}</small></span></div>`;
   }).join("") + `</div><p class="sub" style="margin:8px 0 0">${got.size} / ${MANAGER_ACHIEVEMENTS_CLIENT.length} succès débloqués.</p>`;
+}
+
+// Courbe de progression (Premium) : note globale à la fin de chaque semaine
+// d'entraînement (Player.progressLog, voir Team.trainWeek côté moteur).
+function playerProgressHtml(player) {
+  const log = (player.progressLog || []).filter(x => typeof x.ovr === "number");
+  let body;
+  if (!teamIsPremium(teamA)) {
+    body = `<p class="pdp-locked-note">La courbe de progression de chaque joueur, semaine par semaine, est réservée au Premium. ${premiumLinkHtml("Passer Premium")}</p>`;
+  } else if (log.length < 2) {
+    body = `<p class="pdp-locked-note">La courbe apparaîtra après deux semaines d'entraînement.</p>`;
+  } else {
+    const vals = log.map(x => x.ovr);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    if (hi - lo < 2) { lo -= 1; hi += 1; }
+    const W = 100, Hh = 100, n = log.length;
+    const pts = log.map((x, i) => `${((i / (n - 1)) * W).toFixed(2)},${((1 - (x.ovr - lo) / (hi - lo)) * Hh).toFixed(2)}`);
+    const first = vals[0], last = vals[vals.length - 1];
+    const delta = Math.round((last - first) * 10) / 10;
+    body = `<div class="pp-chart" role="img" aria-label="Note globale de ${escapeHtml(player.name)} : de ${first} à ${last} sur ${n} semaines">` +
+      `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.join(" ")}" fill="none" stroke="#f0a23c" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>` +
+      `<span class="pp-lbl pp-lbl-hi">${hi.toFixed(1)}</span><span class="pp-lbl pp-lbl-lo">${lo.toFixed(1)}</span></div>` +
+      `<div class="pp-foot"><span>Semaine ${log[0].week} → ${log[n - 1].week}</span><b class="${delta >= 0 ? "pp-up" : "pp-down"}">${delta >= 0 ? "+" : ""}${delta} de note</b></div>`;
+  }
+  return `<div class="pdp2-row pdp2-row--progress"><section class="pdp2-card"><div class="pdp2-head"><h3>Progression</h3><span class="pdp2-meta">note globale par semaine</span></div>${body}</section></div>`;
 }
 
 function playerCareerHtml(player) {

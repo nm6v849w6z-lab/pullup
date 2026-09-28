@@ -530,7 +530,7 @@ function stepRelegationBarrage(league, now, events = []) {
     }
   }
   if (now < windowEnd) return events;
-  if (league.liveMatches) delete league.liveMatches[key];
+  if (league.liveMatches) { LiveMatch.archiveReplay(league, key); delete league.liveMatches[key]; }
   const r = b.live || { scoreHome: 0, scoreAway: 0 };
   delete b.live;
   delete b.started;

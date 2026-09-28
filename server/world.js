@@ -32,6 +32,7 @@ const LiveMatch = require("./liveMatch.js");
 const NationalCup = require("./nationalCup.js");
 const WorldMarket = require("./worldMarket.js");
 const WorldFriendlies = require("./worldFriendlies.js");
+const Push = require("./push.js");
 
 const WORLD_VERSION = 1;
 const DEFAULT_COUNTRY = "fr";
@@ -612,6 +613,16 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
   if (kick != null && (nextDeadlineAt == null || kick < nextDeadlineAt)) nextDeadlineAt = kick;
   const closing = WorldMarket.nextForeignClosing(index, now);
   if (closing != null && (nextDeadlineAt == null || closing < nextDeadlineAt)) nextDeadlineAt = closing + 1000;
+  // Notifications (Premium, server/push.js) : envoyées avant la sauvegarde
+  // (curseurs mis à jour) ; prochain coup d'envoi de championnat comme
+  // échéance pour les clubs abonnés.
+  for (const [, lg] of allLeagues) {
+    try { await Push.flushLeague(lg, now); } catch (e) { console.warn("[notifications]", e.message); }
+    if (lg.teams.some(t => t.isHuman && (t.pushSubscriptions || []).length) && !lg.isRegularSeasonDone()) {
+      const at = Calendar.scheduledTimeForLeagueRound(lg, lg.round);
+      if (at != null && at > now && (nextDeadlineAt == null || at < nextDeadlineAt)) nextDeadlineAt = at + 30 * 1000;
+    }
+  }
   let saved = 0;
   for (const [id, lg] of allLeagues) {
     if (leagueFingerprint(lg) === fingerprints.get(id)) continue;
