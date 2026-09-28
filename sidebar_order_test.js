@@ -18,9 +18,9 @@ const expected = [
   "Compétitions: Calendrier, Ligue, Coupe, Matchs amicaux, Ligues privées",
   "Recrutement: Marché, Staff, Académie de jeunes",
   "Club: Économie, Sponsors, Salle, Supporters, Histoire du club",
-  ": Guide, Premium, Discord ↗, Se déconnecter",
+  ": Planète Hoop, Guide, Premium, Discord ↗, Se déconnecter",
 ];
 if (JSON.stringify(got) !== JSON.stringify(expected)) {
   throw new Error("❌ Barre latérale inattendue :\n" + got.join("\n") + "\n\nattendu :\n" + expected.join("\n"));
 }
-console.log("✅ Barre latérale : Tableau de bord/Messagerie, Équipe, Compétitions, Recrutement, Club, puis Guide/Premium/Discord/Déconnexion.");
+console.log("✅ Barre latérale : Tableau de bord/Messagerie, Équipe, Compétitions, Recrutement, Club, puis Planète Hoop/Guide/Premium/Discord/Déconnexion.");

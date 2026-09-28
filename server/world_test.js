@@ -72,24 +72,24 @@ function wallClock(ms, tz) {
   for (let i = 0; i < 8; i++) placed.push(await World.assignClub(w, multi, { country: "fr", clubName: `Club FR ${i}`, now }));
   assert.ok(placed.every(r => r.ok && r.leagueId === "fr-1"), "les 8 bots de la Division I sont repris d'abord");
   const ninth = await World.assignClub(w, multi, { country: "fr", clubName: "Club FR 8", now });
-  assert.strictEqual(ninth.leagueId, "fr-2a", "Division I pleine -> Division II, groupe A");
-  const d2 = await World.loadLeague(w, "fr-2a", multi);
+  assert.strictEqual(ninth.leagueId, "fr-2.1", "Division I pleine -> Division II.1");
+  const d2 = await World.loadLeague(w, "fr-2.1", multi);
   assert.strictEqual(d2.divisionLevel, 2); assert.strictEqual(d2.timeZone, "Europe/Paris");
   const frNames = new Set((await World.loadLeague(w, "fr-1", multi)).teams.map(t => t.name));
   assert.ok(!d2.teams.some(t => frNames.has(t.name)), "aucun nom de club en double dans le pays");
   const usPlaced = await World.assignClub(w, multi, { country: "us", clubName: "Club US", now });
   assert.strictEqual(usPlaced.leagueId, "us-1");
-  // Ordre d'ouverture : 2a, 2b, 2c puis 3a.
+  // Ordre d'ouverture : II.2, II.3 puis III.1.
   const slots = [];
   const fake = { leagues: [{ country: "fr", level: 1, group: 0 }, { country: "fr", level: 2, group: 0 }] };
-  for (let i = 0; i < 3; i++) { const s = World.nextSlot(fake, "fr"); slots.push(`${s.level}${String.fromCharCode(97 + s.group)}`); fake.leagues.push({ country: "fr", ...s }); }
-  assert.deepStrictEqual(slots, ["2b", "2c", "3a"]);
-  assert.strictEqual(Engine.worldLeagueId("fr", 3, 0), "fr-3a");
-  console.log("✅ Placement : Division I d'abord, puis Division II (groupe A) ouverte à la demande ; ordre 2b, 2c, 3a.");
+  for (let i = 0; i < 3; i++) { const s = World.nextSlot(fake, "fr"); slots.push(`${s.level}.${s.group + 1}`); fake.leagues.push({ country: "fr", ...s }); }
+  assert.deepStrictEqual(slots, ["2.2", "2.3", "3.1"]);
+  assert.strictEqual(Engine.worldLeagueId("fr", 3, 0), "fr-3.1");
+  console.log("✅ Placement : Division I d'abord, puis Division II.1 ouverte à la demande ; ordre II.2, II.3, III.1.");
 
   // 5. Le jeton d'un manager placé en Division II est retrouvé.
   const found = await World.findTeamByToken(w, ninth.token, multi);
-  assert.strictEqual(found.leagueId, "fr-2a");
+  assert.strictEqual(found.leagueId, "fr-2.1");
   assert.strictEqual(found.league.teams[found.teamIndex].name, "Club FR 8");
   console.log("✅ Jeton manager -> bon championnat.");
 

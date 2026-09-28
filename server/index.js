@@ -1162,6 +1162,56 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // (voir resolvePlayerContext, en tête de fichier).
       // ---------------------------------------------------------------
 
+      // Planète Hoop (voir server/world.js) : pays, championnats et clubs du
+      // monde, en lecture seule. Réservé aux managers d'une ligue partagée.
+      if (route.pathname.startsWith("/api/world/") && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        if (!ctx.world) { sendJson(res, 404, { ok: false, error: "Planète Hoop n'est disponible qu'en ligue partagée." }); return; }
+        const world = ctx.world;
+        const q = route.searchParams;
+        if (route.pathname === "/api/world/overview") {
+          const myCountry = ctx.league.country || World.DEFAULT_COUNTRY;
+          const country = World.isOpenCountry(q.get("country")) ? q.get("country") : myCountry;
+          const countries = World.publicCountries().map(c => {
+            const st = (world.countryStats || {})[c.code];
+            return { ...c, managers: st ? st.managers : 0, leagueCount: World.leaguesOfCountry(world, c.code).length };
+          });
+          sendJson(res, 200, { ok: true, myCountry, myLeagueId: ctx.leagueId, country, countries,
+            stats: (world.countryStats || {})[country] || null, history: ((world.history || {})[country]) || [] });
+          return;
+        }
+        if (route.pathname === "/api/world/league") {
+          const id = q.get("id") || ctx.leagueId;
+          const entry = world.leagues.find(e => e.id === id);
+          if (!entry) { sendJson(res, 404, { ok: false, error: "Championnat introuvable." }); return; }
+          let summary = (world.summaries || {})[id];
+          if (!summary) {
+            const lg = await World.loadLeague(world, id, multiSavePath);
+            summary = lg ? World.leagueSummary(entry, lg) : null;
+          }
+          if (!summary) { sendJson(res, 404, { ok: false, error: "Championnat introuvable." }); return; }
+          sendJson(res, 200, { ok: true, league: summary, mine: id === ctx.leagueId });
+          return;
+        }
+        if (route.pathname === "/api/world/club") {
+          const id = q.get("league");
+          const idx = Number(q.get("idx"));
+          const entry = world.leagues.find(e => e.id === id);
+          const lg = entry ? await World.loadLeague(world, id, multiSavePath) : null;
+          const roster = lg && Number.isInteger(idx) ? World.clubRoster(lg, idx) : null;
+          if (!roster) { sendJson(res, 404, { ok: false, error: "Club introuvable." }); return; }
+          sendJson(res, 200, { ok: true, club: { ...roster, leagueId: id, label: World.divisionLabel(entry.level, entry.group) } });
+          return;
+        }
+        if (route.pathname === "/api/world/search") {
+          sendJson(res, 200, { ok: true, ...World.searchWorld(world, q.get("q") || "") });
+          return;
+        }
+        sendJson(res, 404, { ok: false, error: "Route inconnue." });
+        return;
+      }
+
       if (route.pathname === "/api/state" && req.method === "GET") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }

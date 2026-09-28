@@ -12086,7 +12086,8 @@ function generateCountryLeague(country, divisionLevel = 1, group = 0, now = Date
 // (lettre du groupe dès qu'une division compte plusieurs championnats ; la
 // Division I n'en a qu'un). "fr-1" est la ligue partagée historique.
 function worldLeagueId(country, divisionLevel, group = 0) {
-  return divisionLevel === 1 ? `${country}-1` : `${country}-${divisionLevel}${String.fromCharCode(97 + group)}`;
+  // Numérotation BuzzerBeater (2026-09-28) : fr-1, fr-2.1, fr-2.2… fr-6.243.
+  return divisionLevel === 1 ? `${country}-1` : `${country}-${divisionLevel}.${group + 1}`;
 }
 
 function generateMultiManagerLeague(managerTeamNames, divisionLevel = 1, now = Date.now(), calendarConfig = null) {

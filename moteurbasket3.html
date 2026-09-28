@@ -1462,6 +1462,40 @@
     max-height:380px; overflow-y:auto; z-index:20; padding:6px;
   }
   .topbar-search-results.hidden{display:none;}
+  /* Planète Hoop (voir renderPlaneteSection). */
+  .ph-countries{display:flex; gap:10px; flex-wrap:wrap; margin:4px 0 18px;}
+  .ph-country{display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; border:1px solid var(--line-soft); background:var(--panel); color:var(--ink); cursor:pointer; font:inherit; text-align:left;}
+  .ph-country.active{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
+  .ph-country .nat-flag{width:26px; height:auto; border-radius:3px;}
+  .ph-country b{display:block; font-size:15px;}
+  .ph-country small{display:block; color:var(--ink-dim); font-size:12px;}
+  .ph-grid{display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:18px; align-items:start;}
+  @media (max-width: 900px){ .ph-grid{grid-template-columns:1fr;} }
+  .ph-card{background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; padding:18px; margin-bottom:18px;}
+  .ph-card h3{margin:0 0 10px; font-size:16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .ph-card h3 .nat-flag{width:22px; height:auto; border-radius:3px;}
+  .ph-sub{color:var(--ink-dim); font-size:13px; margin:-4px 0 12px;}
+  .ph-pill{display:inline-block; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:700; background:rgba(224,168,74,.15); color:var(--amber); border:1px solid rgba(224,168,74,.35);}
+  .ph-table{width:100%; border-collapse:collapse; font-size:14px;}
+  .ph-table th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); text-align:left; padding:6px 6px; border-bottom:1px solid var(--line-soft);}
+  .ph-table td{padding:7px 6px; border-bottom:1px solid var(--line-soft);}
+  .ph-table td.num, .ph-table th.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .ph-table tr.mine td{background:rgba(224,168,74,.08);}
+  .ph-club{background:none; border:none; padding:0; color:var(--ink); font:inherit; cursor:pointer; text-align:left;}
+  .ph-club:hover{text-decoration:underline;}
+  .ph-club.human{font-weight:700;}
+  .ph-mgr{font-size:10.5px; color:var(--amber); margin-left:6px; font-weight:700;}
+  .ph-results{list-style:none; margin:0; padding:0;}
+  .ph-results li{display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--line-soft); font-size:14px;}
+  .ph-chips{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 12px;}
+  .ph-chip{padding:3px 10px; border-radius:999px; border:1px solid var(--line-soft); background:transparent; color:var(--ink); font:inherit; font-size:12.5px; cursor:pointer;}
+  .ph-chip.active{border-color:var(--amber); color:var(--amber);}
+  .ph-leader{display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--line-soft); font-size:14px;}
+  .ph-leader .nat-flag{width:18px; height:auto; border-radius:2px;}
+  .ph-leader .who{flex:1; min-width:0;}
+  .ph-leader .who small{display:block; color:var(--ink-dim); font-size:12px;}
+  .ph-leader .val{font-weight:800; font-variant-numeric:tabular-nums;}
+  .ph-roster td .nat-flag{width:18px; height:auto; border-radius:2px; margin-right:6px; vertical-align:middle;}
   .topbar-search-group-label{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); padding:8px 10px 3px;}
   .topbar-search-result{
     display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
@@ -6254,6 +6288,9 @@
          Guide [...] en bas des autres dans la colonne de gauche") — épinglé
          en bas de la sidebar via margin-top:auto (voir .sidebar-section-bottom). -->
     <div class="sidebar-section sidebar-section-bottom">
+      <!-- Planète Hoop (retour utilisateur 2026-09-28) : les championnats et
+           les chiffres de tous les pays, en lecture seule. -->
+      <button class="tab-btn sidebar-link" data-tab="planete"><span class="sidebar-label">Planète Hoop</span></button>
       <button class="tab-btn sidebar-link" data-tab="guide"><span class="sidebar-label">Guide</span></button>
       <button class="tab-btn sidebar-link" data-tab="premium"><span class="sidebar-label">Premium</span></button>
       <!-- Discord de la communauté (retour utilisateur 2026-09-27 : "il
@@ -7316,6 +7353,13 @@
        dessous de guide [...] on y laissera le bouton passer en version
        payante (gratuitement) tout doit se passer par là maintenant") — voir
        renderPremiumSection. -->
+  <div id="planeteSection" class="hidden">
+    <div class="section ph">
+      <h2 class="page-title">Planète Hoop</h2>
+      <div id="planeteContent"></div>
+    </div>
+  </div>
+
   <div id="premiumSection" class="hidden">
     <div class="section prm">
       <h2 class="page-title">Premium</h2>
@@ -7479,6 +7523,13 @@
         <h3>Ligues privées</h3>
         <p class="training-intro">Une compétition entre managers, à côté de la saison officielle et réservée aux clubs <button type="button" class="gd-link" data-guide-goto="premium">Premium</button>. Le créateur choisit le nom, le nombre d'équipes, l'heure des matchs (le <b>vendredi</b>) et le terrain (domicile / extérieur ou neutre), puis transmet le code d'invitation. La ligue démarre dès qu'elle est complète, ou quand son créateur la lance (4 clubs minimum). Un club ne participe qu'à une ligue privée à la fois.</p>
         <p class="training-intro" style="margin-top:10px;">Les matchs se jouent sur des copies de vos équipes : ils ne touchent ni à la fatigue, ni aux blessures, ni au classement, ni aux finances de la saison officielle.</p>
+      </div>
+
+      <div class="guide-entry" data-guide-id="planete" data-guide-group="Compétitions">
+        <h3>Pays, divisions et Planète Hoop</h3>
+        <p class="training-intro">Chaque pays (France, USA) a sa pyramide : <b>Division I</b>, puis <b>II.1 à II.3</b>, <b>III.1 à III.9</b>… Un nouveau manager arrive dans la division la plus haute où il reste un club de l'IA ; quand tout est plein, le championnat suivant s'ouvre tout seul. Les matchs se jouent à 20:00 heure locale (Paris ou New York), et tous les pays suivent les mêmes semaines.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Montées et descentes</b>, décidées le lundi d'intersaison et appliquées à la reprise : le champion des play-offs de chaque championnat monte ; en face, le 10e descend, puis le 9e, puis le perdant du barrage (7e contre 8e), autant qu'il y a de championnats ouverts juste en dessous. Une prime de montée est versée au club promu.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Planète Hoop</b> (en bas du menu) : choisissez un pays (le vôtre par défaut) pour voir ses divisions ouvertes, son palmarès et les meilleurs joueurs de la saison. Pour afficher un autre championnat ou un club, tapez son nom dans la barre de recherche du haut (« II.2 », « Division III », un nom de club…) : classement, derniers résultats et effectif en lecture seule.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="scoutisme" data-guide-group="Compétitions">
@@ -22610,7 +22661,7 @@ const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
   "clubSection", "staffSection", "medicalSection", "tactiquesSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "amicauxSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
-  "guideSection", "premiumSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
+  "guideSection", "premiumSection", "planeteSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
 ];
 
 // Pages dont le contenu (tableau dense en colonnes) a besoin de toute la
@@ -24879,7 +24930,8 @@ function lgHeadKicker() {
 function leagueCompetitionLabel(lg = league) {
   const name = divisionInfo((lg && lg.divisionLevel) || 1).name;
   const level = (lg && lg.divisionLevel) || 1;
-  return level > 1 ? `${name} · Groupe ${String.fromCharCode(65 + ((lg && lg.divisionGroup) || 0))}` : name;
+  // Numérotation BuzzerBeater : Division II.1, II.2… VI.243.
+  return level > 1 ? `${name}.${((lg && lg.divisionGroup) || 0) + 1}` : name;
 }
 function leagueCountryHtml(lg = league) {
   const code = (lg && lg.country) || "fr";
@@ -28062,8 +28114,193 @@ function renderTopbarSearchResults(rawQuery) {
     }
   }
 
+  html += `<div id="topbarWorldResults"></div>`;
   box.innerHTML = html;
   box.classList.remove("hidden");
+  scheduleTopbarWorldSearch(rawQuery);
+}
+
+// ---------------------------------------------------------------------
+// PLANÈTE HOOP (retour utilisateur 2026-09-28 : "un nom dans l'esprit reste
+// du monde", "en bas du menu avec le guide et premium", "choisir le pays
+// (son pays par défaut)", un autre championnat se cherche "via la barre de
+// recherche en haut", "un peu de stats par pays, champion, vainqueur coupe,
+// meilleures stats de la saison"). Données : /api/world/* (server/world.js),
+// en lecture seule ; ligue partagée uniquement.
+// ---------------------------------------------------------------------
+const planeteState = { country: null, leagueId: null, clubIdx: null, statTab: "pts", overview: null, league: null, leagueMine: false, club: null };
+const PLANETE_STAT_LABELS = { pts: "Points", reb: "Rebonds", ast: "Passes", eval: "Évaluation" };
+const PLANETE_CHIPS_MAX = 12;
+
+function openPlaneteAt(opts) {
+  Object.assign(planeteState, { clubIdx: null }, opts || {});
+  TAB_HANDLERS.planete();
+}
+
+async function planeteFetch(url) {
+  const res = await fetchApi(url);
+  const data = await res.json().catch(() => null);
+  if (!data || !data.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+  return data;
+}
+
+async function renderPlaneteSection() {
+  const box = document.getElementById("planeteContent");
+  if (!box) return;
+  if (!managerToken) {
+    box.innerHTML = `<p class="training-empty">Planète Hoop réunit les championnats de tous les pays : disponible en ligue partagée.</p>`;
+    return;
+  }
+  if (!planeteState.overview) box.innerHTML = `<p class="sub">Chargement…</p>`;
+  try {
+    const ov = await planeteFetch(`/api/world/overview${planeteState.country ? `?country=${encodeURIComponent(planeteState.country)}` : ""}`);
+    planeteState.overview = ov;
+    planeteState.country = ov.country;
+    let leagueId = planeteState.leagueId;
+    const inCountry = id => ov.stats && ov.stats.divisions.some(d => d.leagues.some(l => l.id === id));
+    if (!leagueId || !inCountry(leagueId)) {
+      leagueId = ov.country === ov.myCountry ? ov.myLeagueId : (ov.stats && ov.stats.divisions[0] ? ov.stats.divisions[0].leagues[0].id : null);
+      if (!inCountry(leagueId) && ov.stats && ov.stats.divisions[0]) leagueId = ov.stats.divisions[0].leagues[0].id;
+    }
+    planeteState.league = null; planeteState.club = null;
+    if (leagueId) {
+      const lr = await planeteFetch(`/api/world/league?id=${encodeURIComponent(leagueId)}`);
+      planeteState.league = lr.league; planeteState.leagueMine = !!lr.mine; planeteState.leagueId = lr.league.id;
+      if (planeteState.clubIdx != null) {
+        const cr = await planeteFetch(`/api/world/club?league=${encodeURIComponent(leagueId)}&idx=${planeteState.clubIdx}`).catch(() => null);
+        planeteState.club = cr ? cr.club : null;
+      }
+    }
+  } catch (e) {
+    console.warn("Planète Hoop :", e);
+    box.innerHTML = `<p class="training-empty">Planète Hoop est indisponible pour l'instant.</p>`;
+    return;
+  }
+  box.innerHTML = planeteHtml();
+}
+
+function planeteHtml() {
+  const ov = planeteState.overview;
+  const st = ov.stats;
+  let html = `<div class="ph-countries">` + ov.countries.map(c =>
+    `<button type="button" class="ph-country${c.code === ov.country ? " active" : ""}" data-ph-country="${escapeHtml(c.code)}">${nationFlagHtml(c.code)}` +
+    `<span><b>${escapeHtml(c.name)}</b><small>${c.managers} manager${c.managers > 1 ? "s" : ""} · ${c.leagueCount} championnat${c.leagueCount > 1 ? "s" : ""}</small></span></button>`).join("") + `</div>`;
+  html += `<div class="ph-grid"><div class="ph-main">${planeteLeagueHtml()}${planeteClubHtml()}</div><aside class="ph-side">${planeteCountryHtml(st)}</aside></div>`;
+  return html;
+}
+
+function planeteLeagueHtml() {
+  const lg = planeteState.league;
+  if (!lg) return `<div class="ph-card"><p class="training-empty">Aucun championnat à afficher.</p></div>`;
+  const myName = teamA && teamA.name;
+  let html = `<div class="ph-card"><h3>${nationFlagHtml(lg.country)}${escapeHtml(lg.label)}${planeteState.leagueMine ? ` <span class="ph-pill">Votre championnat</span>` : ""}</h3>`;
+  html += `<p class="ph-sub">Saison ${lg.seasonNumber}${lg.playoffsDone && lg.champion ? ` · Champion : ${escapeHtml(lg.champion)}` : ` · Journée ${Math.min(lg.round + 1, 18)}`} · ${lg.humans} manager${lg.humans > 1 ? "s" : ""}</p>`;
+  html += `<table class="ph-table"><thead><tr><th>#</th><th>Club</th><th class="num">J</th><th class="num">V</th><th class="num">D</th><th class="num">+/-</th></tr></thead><tbody>`;
+  lg.standings.forEach(r => {
+    const diff = r.pf - r.pa;
+    html += `<tr${planeteState.leagueMine && r.name === myName ? ` class="mine"` : ""}><td>${r.rank}</td>` +
+      `<td><button type="button" class="ph-club${r.isHuman ? " human" : ""}" data-ph-club="${r.idx}">${escapeHtml(r.name)}</button>${r.isHuman ? `<span class="ph-mgr">Manager</span>` : ""}</td>` +
+      `<td class="num">${r.played}</td><td class="num">${r.wins}</td><td class="num">${r.losses}</td><td class="num">${diff > 0 ? "+" : ""}${diff}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  if (lg.lastResults && lg.lastResults.length) {
+    html += `<h3 style="margin-top:16px">Derniers résultats</h3><ul class="ph-results">` + lg.lastResults.map(r =>
+      `<li><span>${escapeHtml(r.home)} – ${escapeHtml(r.away)}</span><b>${r.scoreHome}-${r.scoreAway}</b></li>`).join("") + `</ul>`;
+  }
+  return html + `</div>`;
+}
+
+function planeteClubHtml() {
+  const c = planeteState.club;
+  if (!c) return "";
+  let html = `<div class="ph-card ph-roster-card"><h3>${escapeHtml(c.name)} <span class="ph-sub" style="margin:0">${escapeHtml(c.label)}</span>` +
+    `<button type="button" class="ph-chip" data-ph-close-club style="margin-left:auto">Fermer</button></h3>`;
+  html += `<table class="ph-table ph-roster"><thead><tr><th>Poste</th><th>Joueur</th><th class="num">Âge</th><th class="num">Taille</th></tr></thead><tbody>`;
+  c.players.forEach(p => {
+    html += `<tr><td>${escapeHtml(POS_SHORT[p.position] || p.position)}</td><td>${p.nationality ? nationFlagHtml(p.nationality) : ""}${escapeHtml(p.name)}</td><td class="num">${p.age}</td><td class="num">${p.height ? p.height + " cm" : ""}</td></tr>`;
+  });
+  html += `</tbody></table><p class="ph-sub" style="margin:10px 0 0">Caractéristiques visibles uniquement quand le joueur est mis en vente sur le marché.</p>`;
+  return html + `</div>`;
+}
+
+function planeteCountryHtml(st) {
+  const ov = planeteState.overview;
+  const country = ov.countries.find(c => c.code === ov.country) || { name: ov.country };
+  let html = `<div class="ph-card"><h3>${nationFlagHtml(ov.country)}${escapeHtml(country.name)} en chiffres</h3>`;
+  if (!st) return html + `<p class="training-empty">Les chiffres arrivent dans quelques minutes.</p></div>`;
+  html += `<p class="ph-sub">Saison ${st.seasonNumber} · ${st.managers} manager${st.managers > 1 ? "s" : ""} · ${st.leagueCount} championnat${st.leagueCount > 1 ? "s" : ""}</p>`;
+  st.divisions.forEach(d => {
+    html += `<div><b>${escapeHtml(d.name)}</b><div class="ph-chips">`;
+    d.leagues.slice(0, PLANETE_CHIPS_MAX).forEach(l => {
+      html += `<button type="button" class="ph-chip${l.id === planeteState.leagueId ? " active" : ""}" data-ph-league="${escapeHtml(l.id)}">${escapeHtml(l.label)}</button>`;
+    });
+    if (d.leagues.length > PLANETE_CHIPS_MAX) html += `<span class="ph-sub" style="margin:4px 0 0">… et ${d.leagues.length - PLANETE_CHIPS_MAX} autres : utilisez la recherche en haut.</span>`;
+    html += `</div></div>`;
+  });
+  html += `</div>`;
+  html += `<div class="ph-card"><h3>Palmarès</h3>`;
+  const hist = ov.history || [];
+  html += hist.length
+    ? `<ul class="ph-results">` + hist.map(h => `<li><span>Saison ${h.season}</span><b>${escapeHtml(h.champion)}</b></li>`).join("") + `</ul>`
+    : `<p class="ph-sub" style="margin:0">Premier champion de Division I à l'issue de cette saison.</p>`;
+  html += `</div>`;
+  const tab = planeteState.statTab;
+  html += `<div class="ph-card"><h3>Meilleurs de la saison</h3><div class="ph-chips">` + Object.keys(PLANETE_STAT_LABELS).map(k =>
+    `<button type="button" class="ph-chip${k === tab ? " active" : ""}" data-ph-stat="${k}">${escapeHtml(PLANETE_STAT_LABELS[k])}</button>`).join("") + `</div>`;
+  const rows = (st.leaders && st.leaders[tab]) || [];
+  html += rows.length ? rows.map((r, i) =>
+    `<div class="ph-leader"><span>${i + 1}.</span>${r.nationality ? nationFlagHtml(r.nationality) : ""}<span class="who">${escapeHtml(r.name)}<small>${escapeHtml(r.team)} · ${escapeHtml(r.label)}</small></span><span class="val">${r.value}</span></div>`).join("")
+    : `<p class="ph-sub" style="margin:0">Pas encore assez de matchs joués.</p>`;
+  html += `<p class="ph-sub" style="margin:10px 0 0">Moyennes par match de championnat, au moins la moitié des matchs de son équipe.</p></div>`;
+  return html;
+}
+
+// Délégation (une seule fois) sur le conteneur de Planète Hoop.
+(function wirePlanete() {
+  const box = document.getElementById("planeteContent");
+  if (!box) return;
+  box.addEventListener("click", (e) => {
+    const c = e.target.closest("[data-ph-country]");
+    if (c) { planeteState.country = c.dataset.phCountry; planeteState.leagueId = null; planeteState.clubIdx = null; renderPlaneteSection(); return; }
+    const l = e.target.closest("[data-ph-league]");
+    if (l) { planeteState.leagueId = l.dataset.phLeague; planeteState.clubIdx = null; renderPlaneteSection(); return; }
+    const cl = e.target.closest("[data-ph-club]");
+    if (cl) { planeteState.clubIdx = Number(cl.dataset.phClub); renderPlaneteSection(); return; }
+    if (e.target.closest("[data-ph-close-club]")) { planeteState.clubIdx = null; planeteState.club = null; box.innerHTML = planeteHtml(); return; }
+    const s = e.target.closest("[data-ph-stat]");
+    if (s) { planeteState.statTab = s.dataset.phStat; box.innerHTML = planeteHtml(); }
+  });
+})();
+
+// Recherche mondiale (barre du haut) : championnats et clubs de tous les
+// pays, via /api/world/search — ajoutés sous les résultats locaux, après
+// une courte pause de frappe. Un clic ouvre Planète Hoop sur ce championnat
+// (et l'effectif du club choisi).
+let topbarWorldSearchTimer = null;
+let topbarWorldSearchSeq = 0;
+function scheduleTopbarWorldSearch(rawQuery) {
+  clearTimeout(topbarWorldSearchTimer);
+  const q = (rawQuery || "").trim();
+  if (!managerToken || q.length < 2) return;
+  const seq = ++topbarWorldSearchSeq;
+  topbarWorldSearchTimer = setTimeout(async () => {
+    let data = null;
+    try { data = await planeteFetch(`/api/world/search?q=${encodeURIComponent(q)}`); } catch (e) { return; }
+    const slot = document.getElementById("topbarWorldResults");
+    if (!slot || seq !== topbarWorldSearchSeq) return;
+    const myLeagueId = league && league.leagueId;
+    const clubs = (data.clubs || []).filter(c => c.leagueId !== myLeagueId);
+    let html = "";
+    if (data.leagues && data.leagues.length) {
+      html += `<div class="topbar-search-group-label">Championnats</div>` + data.leagues.map(l =>
+        `<button type="button" class="topbar-search-result" data-world-league="${escapeHtml(l.id)}" data-world-country="${escapeHtml(l.country)}"><span class="tsr-name">${nationFlagHtml(l.country)} ${escapeHtml(l.label)}</span><span class="tsr-meta">${l.humans} manager${l.humans > 1 ? "s" : ""}</span></button>`).join("");
+    }
+    if (clubs.length) {
+      html += `<div class="topbar-search-group-label">Clubs du monde</div>` + clubs.map(c =>
+        `<button type="button" class="topbar-search-result" data-world-league="${escapeHtml(c.leagueId)}" data-world-country="${escapeHtml(c.country)}" data-world-club="${c.idx}"><span class="tsr-name">${nationFlagHtml(c.country)} ${escapeHtml(c.name)}</span><span class="tsr-meta">${escapeHtml(c.label)} · ${c.rank}e${c.isHuman ? " · manager" : ""}</span></button>`).join("");
+    }
+    slot.innerHTML = html;
+  }, 250);
 }
 
 function hideTopbarSearchResults() {
@@ -43933,6 +44170,7 @@ const TAB_HANDLERS = {
   live: goToLiveTab,
   guide: () => { renderGuideSection(); showPage("guideSection"); setActiveTab("guide"); },
   premium: () => { renderPremiumSection(); showPage("premiumSection"); setActiveTab("premium"); },
+  planete: () => { showPage("planeteSection"); setActiveTab("planete"); renderPlaneteSection(); },
   club: () => { renderClubSection(); showPage("clubSection"); setActiveTab("club"); },
   ligue: showStandings,
   coupe: () => { renderCoupeSection(); showPage("coupeSection"); setActiveTab("coupe"); },
@@ -44702,9 +44940,17 @@ document.getElementById("topbarOrdersBtn").addEventListener("click", () => {
   }
   if (topbarSearchResultsBox) {
     topbarSearchResultsBox.addEventListener("click", (e) => {
-      if (!e.target.closest(".topbar-search-result")) return;
+      const item = e.target.closest(".topbar-search-result");
+      if (!item) return;
       hideTopbarSearchResults();
       if (topbarSearchInput) topbarSearchInput.value = "";
+      if (item.dataset.worldLeague) {
+        openPlaneteAt({
+          country: item.dataset.worldCountry || null,
+          leagueId: item.dataset.worldLeague,
+          clubIdx: item.dataset.worldClub != null ? Number(item.dataset.worldClub) : null,
+        });
+      }
     });
   }
   document.addEventListener("click", (e) => {

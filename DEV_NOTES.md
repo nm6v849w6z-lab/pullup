@@ -51,9 +51,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     d'intersaison « vous jouerez en … ».
   - Tests : server/world_test.js, server/world_season_test.js,
     server/timezone_test.js ; new_season_ui_test (horloge serveur figée).
-  - RESTE : page « Planète Hoop » (nom à confirmer) en bas du menu : pays →
-    division/groupe → classement, résultats, fiches ; stats par pays
-    (champion, Coupe, meilleurs de la saison) ; marché des transferts
+  - Planète Hoop (retours : nom validé, « en bas du menu avec le guide et
+    premium », « choisir le pays (son pays par défaut) », un autre
+    championnat se trouve « via la barre de recherche en haut ») : onglet
+    data-tab="planete" ; pays (drapeaux), le pays en chiffres (divisions
+    ouvertes en liens, palmarès = champion de D I par saison, meilleurs de
+    la saison pts/reb/pas/éval), championnat affiché (le sien par défaut) :
+    classement, derniers résultats, effectif d'un club en lecture seule ;
+    barre de recherche du haut étendue au monde (championnats + clubs).
+    Serveur : /api/world/overview|league|club|search ; résumés, stats et
+    palmarès tenus dans le registre par catchUpWorld. Numérotation
+    BuzzerBeater des groupes : fr-2.1 / « Division II.1 » … VI.243.
+    Guide « Pays, divisions et Planète Hoop », en.js, planete_hoop_test.js.
+  - RESTE : marché des transferts
     MONDIAL ; Coupe nationale (512) et Supercoupe D I ; barrage en direct ;
     amicaux entre pays ; optimisation (ne sauvegarder que les ligues
     modifiées dans catchUpWorld) ; Postgres plus tard si besoin.

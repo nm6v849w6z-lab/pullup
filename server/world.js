@@ -215,6 +215,8 @@ async function assignClub(world, savePath, { country, clubName, now }) {
     if (!taken.ok) continue;
     league.teams[taken.teamIndex].country = code;
     await store.saveMultiLeague(league, savePath);
+    world.summaries = world.summaries || {};
+    world.summaries[entry.id] = leagueSummary(entry, league);
     world.tokens[taken.token] = entry.id;
     await saveWorld(world, savePath);
     return { ok: true, token: taken.token, leagueId: entry.id, teamIndex: taken.teamIndex };
@@ -226,6 +228,8 @@ async function assignClub(world, savePath, { country, clubName, now }) {
   if (!taken.ok) return { ok: false, reason: taken.reason };
   league.teams[taken.teamIndex].country = code;
   await store.saveMultiLeague(league, savePath);
+  world.summaries = world.summaries || {};
+  world.summaries[league.leagueId] = leagueSummary(world.leagues.find(e => e.id === league.leagueId), league);
   world.tokens[taken.token] = league.leagueId;
   await saveWorld(world, savePath);
   return { ok: true, token: taken.token, leagueId: league.leagueId, teamIndex: taken.teamIndex };
@@ -260,7 +264,7 @@ async function assignClub(world, savePath, { country, clubName, now }) {
 // ---------------------------------------------------------------------
 function divisionLabel(level, group) {
   const name = Engine.divisionInfo(level).name;
-  return level > 1 ? `${name} · Groupe ${String.fromCharCode(65 + (group || 0))}` : name;
+  return level > 1 ? `${name}.${(group || 0) + 1}` : name;
 }
 
 function childrenEntries(world, entry) {
@@ -397,6 +401,7 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
       world.seasons = world.seasons || {};
       const state = world.seasons[country] || {};
       if (state.movesSeason !== seasonNumber) {
+        recordCountryHonours(world, country, leagues);
         state.moves = computeCountryMoves(world, country, leagues, now);
         state.movesSeason = seasonNumber;
         world.seasons[country] = state;
@@ -420,10 +425,145 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
       worldDirty = true;
       events.push({ type: "country-new-season", country, seasonNumber: next, at: ecoAt });
     }
+    refreshCountrySummaries(world, country, leagues);
+    worldDirty = true;
     for (const lg of leagues.values()) await store.saveMultiLeague(lg, savePath);
   }
   if (worldDirty) await saveWorld(world, savePath);
   return events;
+}
+
+// ---------------------------------------------------------------------
+// PLANÈTE HOOP (retour utilisateur, 2026-09-28 : page en bas du menu avec
+// Guide/Premium ; pays, puis le championnat cherché — trouvé via la barre de
+// recherche du haut ; « un peu de stats par pays, champion, vainqueur coupe,
+// meilleures stats de la saison »). Résumés tenus à jour dans le registre
+// par catchUpWorld (et à chaque ouverture de championnat / arrivée d'un
+// manager), pour répondre sans recharger toutes les ligues.
+// ---------------------------------------------------------------------
+const LEADER_STATS = ["pts", "reb", "ast", "eval"];
+const LEADERS_TOP = 5;
+
+function leagueSummary(entry, league) {
+  const table = typeof league.standings === "function" ? league.standings() : [];
+  const lastRound = (league.results || []).reduce((m, r) => Math.max(m, r.round), -1);
+  return {
+    id: entry.id, country: entry.country, level: entry.level, group: entry.group,
+    label: divisionLabel(entry.level, entry.group),
+    humans: league.teams.filter(t => t.isHuman).length,
+    seasonNumber: league.seasonNumber || 1,
+    round: league.round || 0,
+    playoffsDone: typeof league.isPlayoffsDone === "function" ? league.isPlayoffsDone() : false,
+    champion: league.playoffs && league.playoffs.champion != null ? league.teams[league.playoffs.champion].name : null,
+    standings: table.map((r, i) => ({
+      rank: i + 1, idx: r.idx, name: league.teams[r.idx].name, isHuman: !!league.teams[r.idx].isHuman,
+      played: r.played, wins: r.wins, losses: r.losses, pf: r.pf, pa: r.pa,
+    })),
+    lastResults: (league.results || []).filter(r => r.round === lastRound).map(r => ({
+      home: league.teams[r.home].name, away: league.teams[r.away].name, scoreHome: r.scoreHome, scoreAway: r.scoreAway,
+    })),
+  };
+}
+
+// Meilleurs joueurs de la saison d'une ligue (moyennes par match, au moins
+// la moitié des matchs de son équipe).
+function leagueLeaderCandidates(entry, league) {
+  const out = [];
+  league.teams.forEach((team, teamIdx) => {
+    (team.players || []).forEach(p => {
+      const log = (p.matchLog || []).filter(m => (m.competition || "championship") === "championship");
+      if (!log.length) return;
+      const teamGames = (league.results || []).filter(r => r.home === teamIdx || r.away === teamIdx).length;
+      if (log.length < Math.max(2, Math.ceil(teamGames / 2))) return;
+      const sum = { pts: 0, reb: 0, ast: 0, eval: 0 };
+      log.forEach(m => { sum.pts += m.pts || 0; sum.reb += m.reb || 0; sum.ast += m.ast || 0; sum.eval += Engine.statEvaluation(m); });
+      const row = { name: p.name, nationality: p.nationality || null, position: p.position, team: team.name, isHuman: !!team.isHuman, leagueId: entry.id, label: divisionLabel(entry.level, entry.group), games: log.length };
+      LEADER_STATS.forEach(k => { row[k] = Math.round((sum[k] / log.length) * 10) / 10; });
+      out.push(row);
+    });
+  });
+  return out;
+}
+
+function countryStats(world, country, leagues) {
+  const entries = leaguesOfCountry(world, country);
+  let candidates = [];
+  let managers = 0;
+  entries.forEach(e => {
+    const lg = leagues.get(e.id);
+    if (!lg) return;
+    managers += lg.teams.filter(t => t.isHuman).length;
+    candidates = candidates.concat(leagueLeaderCandidates(e, lg));
+  });
+  const leaders = {};
+  LEADER_STATS.forEach(k => {
+    leaders[k] = candidates.slice().sort((a, b) => b[k] - a[k] || b.games - a.games).slice(0, LEADERS_TOP)
+      .map(c => ({ name: c.name, nationality: c.nationality, position: c.position, team: c.team, isHuman: c.isHuman, leagueId: c.leagueId, label: c.label, games: c.games, value: c[k] }));
+  });
+  const divisions = [...new Set(entries.map(e => e.level))].sort((a, b) => a - b)
+    .map(level => ({ level, name: Engine.divisionInfo(level).name, leagues: entries.filter(e => e.level === level).map(e => ({ id: e.id, label: divisionLabel(e.level, e.group) })) }));
+  const first = leagues.get(entries[0] && entries[0].id);
+  return { country, managers, leagueCount: entries.length, divisions, leaders, seasonNumber: (first && first.seasonNumber) || 1 };
+}
+
+// Met à jour résumés + statistiques du pays dans le registre.
+function refreshCountrySummaries(world, country, leagues) {
+  world.summaries = world.summaries || {};
+  world.countryStats = world.countryStats || {};
+  leaguesOfCountry(world, country).forEach(e => {
+    const lg = leagues.get(e.id);
+    if (lg) world.summaries[e.id] = leagueSummary(e, lg);
+  });
+  world.countryStats[country] = countryStats(world, country, leagues);
+}
+
+// Palmarès du pays : champion de Division I (et plus tard Coupe), noté au
+// lundi d'intersaison.
+function recordCountryHonours(world, country, leagues) {
+  const top = leaguesOfCountry(world, country)[0];
+  const lg = top && leagues.get(top.id);
+  if (!lg || !lg.playoffs || lg.playoffs.champion == null) return;
+  const season = lg.seasonNumber || 1;
+  world.history = world.history || {};
+  const list = world.history[country] = world.history[country] || [];
+  if (list.some(h => h.season === season)) return;
+  const team = lg.teams[lg.playoffs.champion];
+  list.unshift({ season, champion: team.name, isHuman: !!team.isHuman, cupWinner: null });
+}
+
+// Recherche (barre du haut) : championnats (libellé, pays) et clubs de tous
+// les pays, depuis les résumés. `q` insensible à la casse et aux accents.
+function normalizeSearch(s) {
+  return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+function searchWorld(world, q, limit = 8) {
+  const needle = normalizeSearch(q);
+  if (needle.length < 2) return { leagues: [], clubs: [] };
+  const summaries = Object.values(world.summaries || {});
+  const countryName = code => (Engine.WORLD_COUNTRIES[code] || {}).name || code;
+  const leagues = summaries
+    .filter(sm => normalizeSearch(`${sm.label} ${countryName(sm.country)} ${sm.id}`).includes(needle))
+    .sort((a, b) => a.level - b.level || a.group - b.group)
+    .slice(0, limit)
+    .map(sm => ({ id: sm.id, country: sm.country, label: sm.label, humans: sm.humans }));
+  const clubs = [];
+  summaries.forEach(sm => sm.standings.forEach(r => {
+    if (clubs.length < limit * 3 && normalizeSearch(r.name).includes(needle)) clubs.push({ name: r.name, isHuman: r.isHuman, idx: r.idx, leagueId: sm.id, country: sm.country, label: sm.label, rank: r.rank });
+  }));
+  clubs.sort((a, b) => (normalizeSearch(a.name).startsWith(needle) ? 0 : 1) - (normalizeSearch(b.name).startsWith(needle) ? 0 : 1) || a.name.localeCompare(b.name));
+  return { leagues, clubs: clubs.slice(0, limit) };
+}
+
+// Effectif d'un club d'un autre championnat, en lecture seule (sans
+// caractéristiques, comme un adversaire non scouté).
+function clubRoster(league, idx) {
+  const team = league.teams[idx];
+  if (!team) return null;
+  return {
+    name: team.name, isHuman: !!team.isHuman, country: team.country || league.country || "fr",
+    players: (team.players || []).map(p => ({ name: p.name, position: p.position, age: p.age, height: p.height, nationality: p.nationality || null }))
+      .sort((a, b) => Engine.POSITIONS.indexOf(a.position) - Engine.POSITIONS.indexOf(b.position) || a.age - b.age),
+  };
 }
 
 // Résumé public des pays ouverts (page d'inscription).
@@ -436,5 +576,5 @@ module.exports = {
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,
   isOpenCountry, publicCountries,
-  divisionLabel, syncCalendarTo, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
+  divisionLabel, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
 };

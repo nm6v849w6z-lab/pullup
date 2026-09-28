@@ -107,7 +107,7 @@ function redisPrefix() {
 const HISTORIC_LEAGUE_ID = "fr-1";
 function leagueStorage(leagueId, savePath) {
   if (!leagueId || leagueId === HISTORIC_LEAGUE_ID) return { redis: redisKey("multiLeague"), file: savePath };
-  if (!/^[a-z]{2}-[0-9][a-z]?$/.test(leagueId)) throw new Error(`Identifiant de championnat invalide : ${leagueId}`);
+  if (!/^[a-z]{2}-[0-9](\.[0-9]{1,3})?$/.test(leagueId)) throw new Error(`Identifiant de championnat invalide : ${leagueId}`);
   return { redis: `${redisPrefix()}pullup:league:${leagueId}`, file: savePath.replace(/\.json$/, "") + `.${leagueId}.json` };
 }
 function worldStorage(savePath) {

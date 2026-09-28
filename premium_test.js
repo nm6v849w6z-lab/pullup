@@ -50,7 +50,7 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     const doc = dom.window.document;
     const win = dom.window;
     const bottom = [...doc.querySelectorAll(".sidebar-section-bottom .sidebar-link")].map(b => b.dataset.tab || b.id);
-    check(bottom[0] === "guide" && bottom[1] === "premium", "onglet Premium juste sous Guide");
+    check(bottom.indexOf("premium") === bottom.indexOf("guide") + 1, "onglet Premium juste sous Guide");
     check(!doc.getElementById("clubTogglePayingBtn") && !/Passer Pro \(test\)|Passer en payant/.test(html.replace(/\/\/.*$/gm, "")), "plus aucun autre bouton pour passer Premium");
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "premium").click();
     check(!doc.getElementById("premiumSection").classList.contains("hidden"), "la page Premium s'affiche");

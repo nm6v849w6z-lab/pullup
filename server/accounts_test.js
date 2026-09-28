@@ -153,7 +153,7 @@ async function main() {
       assert.strictEqual(second.body.status, "active", "un nouveau championnat s'ouvre");
       const save = await request(server, "GET", "/api/save", undefined, { "X-TipIn-Token": second.body.managerToken });
       assert.strictEqual(save.body.league.teams[save.body.myTeamIndex].teamName, "Nouveau Venu");
-      assert.strictEqual(save.body.league.leagueId, "fr-2a");
+      assert.strictEqual(save.body.league.leagueId, "fr-2.1");
       assert.strictEqual(save.body.league.divisionLevel, 2);
       const historic = await store.loadMultiLeague(paths.multi);
       assert.ok(!historic.league.teams.some(t => t.name === "Nouveau Venu"), "la Division I n'est pas touchée");
