@@ -24,7 +24,8 @@ function paris(ms) {
 }
 
 // ---------------------------------------------------------------------
-// 1) Dates : mardi/samedi 20h, coupe jeudi 20h, économie lundi 0h, y compris
+// 1) Dates : mardi/samedi 20h, coupe jeudi 20h, économie lundi 6h (heure
+//    unique pour tous les pays, validé 2026-09-28), y compris
 //    autour du passage à l'heure d'hiver (25 octobre 2026).
 // ---------------------------------------------------------------------
 (function testDates() {
@@ -44,7 +45,7 @@ function paris(ms) {
   for (let k = 1; k < 14; k++) {
     const t = C.weeklyRhythmEconomyTickAt(start, k);
     const d = paris(t);
-    if (d.weekday !== "Mon" || d.hm !== "00:00") throw new Error(`❌ Mise à jour économique ${k} : ${d.weekday} ${d.hm}, attendu lundi 00:00.`);
+    if (d.weekday !== "Mon" || d.hm !== "06:00") throw new Error(`❌ Mise à jour économique ${k} : ${d.weekday} ${d.hm}, attendu lundi 06:00.`);
     const prevSat = C.weeklyRhythmScheduledTimeForChampionshipRound(start, 2 * k - 1);
     const nextTue = C.weeklyRhythmScheduledTimeForChampionshipRound(start, 2 * k);
     if (!(prevSat < t && t < nextTue)) throw new Error(`❌ La mise à jour ${k} doit tomber entre le samedi et le mardi suivant.`);
@@ -54,7 +55,7 @@ function paris(ms) {
   if (C.weeklyRhythmCalendarStartAt(tueMorning) !== start) throw new Error("❌ Créée un mardi matin, la ligue devrait démarrer le soir même.");
   const tueLate = Date.UTC(2026, 8, 29, 19); // 21h Paris
   if (C.weeklyRhythmCalendarStartAt(tueLate) - start !== 7 * 24 * 3600 * 1000) throw new Error("❌ Créée un mardi après 20h, la ligue devrait démarrer le mardi suivant.");
-  console.log("✅ Dates : mardi/samedi 20:00, coupe jeudi 20:00, économie lundi 00:00 (heure d'hiver comprise).");
+  console.log("✅ Dates : mardi/samedi 20:00, coupe jeudi 20:00, économie lundi 06:00 (heure d'hiver comprise).");
 })();
 
 // ---------------------------------------------------------------------

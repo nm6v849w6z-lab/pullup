@@ -7345,7 +7345,7 @@
       <div class="guide-entry" data-guide-id="demarrer" data-guide-group="Bien démarrer">
         <h3>Premiers pas</h3>
         <button type="button" class="tour-launch-btn" id="tourLaunchBtn">Lancer le tutoriel d'accueil (aperçu)</button>
-        <p class="training-intro">Vous dirigez un club de basket en temps réel : les matchs se jouent tout seuls à l'heure prévue, que vous soyez connecté ou non. Une saison dure <b>11 semaines</b> : 9 semaines de championnat, deux journées par semaine le <b>mardi</b> et le <b>samedi à 20:00</b>, puis 2 semaines de <b>play-offs</b> le mardi, le jeudi et le samedi à 20:00 ; en Coupe, un tour chaque <b>jeudi à 20:00</b>. Chaque nuit du dimanche au lundi a lieu la mise à jour de la semaine : salaires et recettes, et entraînement des fondamentaux. Celle qui suit la finale des play-offs clôt la saison (les joueurs prennent un an, les salaires sont recalculés, les retraités s'en vont, la forme repart à 100) et ouvre une <b>semaine d'intersaison</b> : marché ouvert et amicaux possibles, puis la saison suivante démarre toute seule, avec votre effectif. Entre deux matchs, votre travail : préparer les <b>Ordres</b>, régler l'<b>Entraînement</b>, gérer l'<b>Effectif</b> (marché, jeunes, staff) et les finances du club.</p>
+        <p class="training-intro">Vous dirigez un club de basket en temps réel : les matchs se jouent tout seuls à l'heure prévue, que vous soyez connecté ou non. Une saison dure <b>11 semaines</b> : 9 semaines de championnat, deux journées par semaine le <b>mardi</b> et le <b>samedi à 20:00</b>, puis 2 semaines de <b>play-offs</b> le mardi, le jeudi et le samedi à 20:00 ; en Coupe, un tour chaque <b>jeudi à 20:00</b>. Chaque lundi à 6h (heure de Paris) a lieu la mise à jour de la semaine : salaires et recettes, et entraînement des fondamentaux. Celle qui suit la finale des play-offs clôt la saison (les joueurs prennent un an, les salaires sont recalculés, les retraités s'en vont, la forme repart à 100) et ouvre une <b>semaine d'intersaison</b> : marché ouvert et amicaux possibles, puis la saison suivante démarre toute seule, avec votre effectif. Entre deux matchs, votre travail : préparer les <b>Ordres</b>, régler l'<b>Entraînement</b>, gérer l'<b>Effectif</b> (marché, jeunes, staff) et les finances du club.</p>
         <p class="training-intro" style="margin-top:10px;">La routine conseillée avant chaque match : vérifier la forme des joueurs (<button type="button" class="gd-link" data-guide-goto="forme">Forme et blessures</button>), composer le cinq et la tactique dans l'onglet Ordres, puis valider. Vous pouvez aussi préparer plusieurs journées à l'avance (voir <button type="button" class="gd-link" data-guide-goto="ordres">Ordres et tactiques</button>).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Pendant votre absence</b> : à votre retour, un récapitulatif résume ce qui s'est passé (victoires et défaites, finances de la semaine, progression des joueurs, points à savoir). Le <b>Tableau de bord</b> montre ensuite le prochain match, les actions en attente de la semaine et le pouls du club (humeur des supporters, alchimie).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Sur téléphone</b> : le site s'adapte automatiquement à l'écran (barre d'onglets en bas, menu en tiroir) et peut être ajouté à l'écran d'accueil comme une application.</p>
@@ -16531,9 +16531,9 @@ class League {
     if (!cup) return champ;
     if (typeof this.calendarStartAt !== "number") return champ;
     const champAt = this.calendarDailyAnchored
-      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round, !!this.calendarWeeklyRhythm, this.calendarWeeklySwitch || null)
+      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round, !!this.calendarWeeklyRhythm, this.calendarWeeklySwitch || null, typeof this.totalRounds === "number" ? this.totalRounds : null, this.timeZone || null)
       : calendarScheduledTimeForRound(this.calendarStartAt, champ.round, this.calendarWeekMs || undefined, this.calendarSlotOffsetsMs || undefined);
-    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex, !!this.calendarWeeklyRhythm, this.calendarWeeklySwitch || null);
+    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex, !!this.calendarWeeklyRhythm, this.calendarWeeklySwitch || null, this.timeZone || null);
     return cupAt <= champAt ? cup : champ;
   }
 
@@ -17016,7 +17016,7 @@ class League {
     this.lastAutoTrainedWeek = -1;
     this.lastAutoTrainedDay = -1;
     if (this.calendarDailyAnchored) {
-      this.calendarStartAt = dailyAnchoredCalendarStartAt(now, this.calendarWeeklyRhythm);
+      this.calendarStartAt = dailyAnchoredCalendarStartAt(now, this.calendarWeeklyRhythm, this.timeZone || null);
       this.cup = { rounds: [generateCupBracket(this.teams.map((_, i) => i))], champion: null };
     }
     this.teams.forEach(t => {
@@ -18551,11 +18551,52 @@ function parisEpochForLocalTime(year, month, day, hour, minute = 0, second = 0) 
   }
   return guess;
 }
+
+// Fuseau horaire d'un pays (retour utilisateur 2026-09-28 : matchs à 20:00
+// heure locale, "oui heure de new york" pour les USA ; la mise à jour
+// hebdomadaire reste, elle, à une heure UNIQUE pour tous : lundi 6h à
+// Paris). Mêmes principes que parisLocalDateParts/parisEpochForLocalTime
+// ci-dessus, pour n'importe quel fuseau IANA. `timeZone` absent = Paris.
+function zonedLocalDateParts(utcMs, timeZone) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: timeZone || "Europe/Paris", hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const map = {};
+  dtf.formatToParts(new Date(utcMs)).forEach(p => { if (p.type !== "literal") map[p.type] = p.value; });
+  return {
+    year: Number(map.year), month: Number(map.month), day: Number(map.day),
+    hour: Number(map.hour), minute: Number(map.minute), second: Number(map.second),
+  };
+}
+function zonedEpochForLocalTime(timeZone, year, month, day, hour, minute = 0, second = 0) {
+  const wall = Date.UTC(year, month - 1, day, hour, minute, second);
+  let guess = wall;
+  for (let i = 0; i < 4; i++) {
+    const p = zonedLocalDateParts(guess, timeZone);
+    const offset = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - guess;
+    const candidate = wall - offset;
+    if (candidate === guess) return candidate;
+    guess = candidate;
+  }
+  return guess;
+}
+// Jour civil `dayIndex` après celui de `calendarStartAt`, à l'heure `hour`,
+// dans le fuseau `timeZone` (Paris si absent : même résultat que
+// dailyAnchoredScheduledTimeForSlot).
+function zonedScheduledTimeForSlot(calendarStartAt, dayIndex, hour, timeZone) {
+  if (!timeZone || timeZone === "Europe/Paris") return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
+  const day0 = zonedLocalDateParts(calendarStartAt, timeZone);
+  const target = dayIndex > 0 ? addParisCalendarDays(day0, dayIndex) : day0;
+  return zonedEpochForLocalTime(timeZone, target.year, target.month, target.day, hour);
+}
+
 function dailyAnchoredCalendarConfig() {
   return { dailyAnchored: true, weekly: true };
 }
-function dailyAnchoredCalendarStartAt(now, weekly = false) {
-  if (weekly) return weeklyRhythmCalendarStartAt(now);
+function dailyAnchoredCalendarStartAt(now, weekly = false, timeZone = null) {
+  if (weekly) return weeklyRhythmCalendarStartAt(now, timeZone);
   const today = parisLocalDateParts(now);
   const firstSlot = parisEpochForLocalTime(today.year, today.month, today.day, CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[0]);
   if (firstSlot > now) return firstSlot;
@@ -18586,18 +18627,18 @@ function dailyAnchoredSlotIndexForChampionshipRound(round) {
 // hebdomadaire, les play-offs se jouent mardi, jeudi et samedi (voir
 // weeklyRhythmDayIndexForChampionshipRound). Absent : même règle que la
 // saison régulière (mardi/samedi).
-function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null, poFromRound = null) {
+function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null, poFromRound = null, timeZone = null) {
   if (weekly && sw && typeof sw.anchorAt === "number") {
-    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound, poFromRound != null ? Math.max(0, poFromRound - sw.fromRound) : null);
-  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound);
+    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound, poFromRound != null ? Math.max(0, poFromRound - sw.fromRound) : null, timeZone);
+  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound, timeZone);
   const dayIndex = dailyAnchoredDayIndexForChampionshipRound(round);
   const hour = CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[dailyAnchoredSlotIndexForChampionshipRound(round)];
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
 }
-function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false, sw = null) {
+function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false, sw = null, timeZone = null) {
   if (weekly && sw && typeof sw.anchorAt === "number") {
-    if (cupDayIndex >= sw.fromCupRound) return weeklyRhythmScheduledTimeForCupRound(sw.anchorAt, cupDayIndex - sw.fromCupRound);
-  } else if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex);
+    if (cupDayIndex >= sw.fromCupRound) return weeklyRhythmScheduledTimeForCupRound(sw.anchorAt, cupDayIndex - sw.fromCupRound, timeZone);
+  } else if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex, timeZone);
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, cupDayIndex, CALENDAR_DAILY_ANCHORED_CUP_HOUR);
 }
 
@@ -18626,19 +18667,20 @@ const WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS = [0, 4]; // mardi, samedi (depuis 
 const WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS = [0, 2, 4]; // play-offs : mardi, jeudi, samedi
 const WEEKLY_RHYTHM_CUP_DAY_OFFSET = 2; // jeudi
 const WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET = 6; // lundi (fin de la nuit du dimanche)
-const WEEKLY_RHYTHM_ECONOMY_HOUR = 0;
+const WEEKLY_RHYTHM_ECONOMY_HOUR = 6; // lundi 6h à Paris, pour tous les pays (validé 2026-09-28)
 
 // Prochain mardi à 20h (Paris) à compter de `now`, aujourd'hui compris si
 // l'on est mardi avant 20h.
-function weeklyRhythmCalendarStartAt(now) {
-  const today = parisLocalDateParts(now);
+function weeklyRhythmCalendarStartAt(now, timeZone = null) {
+  const tz = timeZone || "Europe/Paris";
+  const today = zonedLocalDateParts(now, tz);
   const weekday = new Date(Date.UTC(today.year, today.month - 1, today.day)).getUTCDay();
   const daysAhead = (WEEKLY_RHYTHM_FIRST_MATCH_WEEKDAY - weekday + 7) % 7;
   const day = daysAhead > 0 ? addParisCalendarDays(today, daysAhead) : today;
-  const first = parisEpochForLocalTime(day.year, day.month, day.day, WEEKLY_RHYTHM_MATCH_HOUR);
+  const first = zonedEpochForLocalTime(tz, day.year, day.month, day.day, WEEKLY_RHYTHM_MATCH_HOUR);
   if (first > now) return first;
   const next = addParisCalendarDays(today, daysAhead + 7);
-  return parisEpochForLocalTime(next.year, next.month, next.day, WEEKLY_RHYTHM_MATCH_HOUR);
+  return zonedEpochForLocalTime(tz, next.year, next.month, next.day, WEEKLY_RHYTHM_MATCH_HOUR);
 }
 // Play-offs (retour utilisateur, 2026-09-27 : "les PO doivent se jouer le
 // mardi jeudi et samedi" ; "la coupe sera tjrs terminée pour les PO car max
@@ -18655,15 +18697,21 @@ function weeklyRhythmDayIndexForChampionshipRound(round, poFromRound = null) {
   }
   return 7 * Math.floor(round / n) + WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS[round % n];
 }
-function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound = null) {
-  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round, poFromRound), WEEKLY_RHYTHM_MATCH_HOUR);
+function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound = null, timeZone = null) {
+  return zonedScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round, poFromRound), WEEKLY_RHYTHM_MATCH_HOUR, timeZone);
 }
-function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex) {
-  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, 7 * cupRoundIndex + WEEKLY_RHYTHM_CUP_DAY_OFFSET, WEEKLY_RHYTHM_MATCH_HOUR);
+function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex, timeZone = null) {
+  return zonedScheduledTimeForSlot(calendarStartAt, 7 * cupRoundIndex + WEEKLY_RHYTHM_CUP_DAY_OFFSET, WEEKLY_RHYTHM_MATCH_HOUR, timeZone);
 }
 // Instant de la k-ième mise à jour économique (k >= 1).
-function weeklyRhythmEconomyTickAt(calendarStartAt, k) {
-  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, 7 * (k - 1) + WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET, WEEKLY_RHYTHM_ECONOMY_HOUR);
+// Heure UNIQUE pour tous les pays (lundi 6h à Paris, soit minuit à New
+// York) : le lundi est pris dans le fuseau de la ligue (celui de son mardi
+// de départ), l'heure à Paris — toutes les ligues du monde basculent donc au
+// même instant, sans joueur qui vieillit deux fois ou pas du tout.
+function weeklyRhythmEconomyTickAt(calendarStartAt, k, timeZone = null) {
+  const day0 = zonedLocalDateParts(calendarStartAt, timeZone || "Europe/Paris");
+  const monday = addParisCalendarDays(day0, 7 * (k - 1) + WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET);
+  return parisEpochForLocalTime(monday.year, monday.month, monday.day, WEEKLY_RHYTHM_ECONOMY_HOUR);
 }
 
 // `calendarConfig` optionnel ({weekMs, slotOffsetsMs}) : le rythme de
@@ -19671,6 +19719,8 @@ function serializeLeague(lg) {
     playoffs: lg.playoffs,
     relegationBarrage: lg.relegationBarrage || null,
     divisionLevel: lg.divisionLevel || 1,
+    // Fuseau des matchs (20:00 heure locale) ; null = Paris.
+    timeZone: lg.timeZone || null,
     // Marché des transferts (voir League.transferListings/refreshMarket) :
     // doit survivre à un rechargement de page, les enchères se déroulant en
     // temps RÉEL (3 jours) — bien plus long qu'une simple session de jeu.
@@ -19756,6 +19806,7 @@ function leagueFromSave(data, userTeam = null) {
   // montée/descente) : un club "pas encore attribué" prend la place la plus
   // haute disponible, donc Division I par défaut (voir generateLeague).
   lg.divisionLevel = data.divisionLevel || 1;
+  lg.timeZone = typeof data.timeZone === "string" ? data.timeZone : null;
   lg.transferListings = Array.isArray(data.transferListings) ? data.transferListings : [];
   lg.lastCpuListingCheckAt = typeof data.lastCpuListingCheckAt === "number" ? data.lastCpuListingCheckAt : null;
   lg.coachListings = Array.isArray(data.coachListings) ? data.coachListings : [];
@@ -24292,7 +24343,7 @@ function scheduledTimeForCurrentMatch() {
 function scheduledTimeForChampionshipRound(round) {
   if (!league || typeof league.calendarStartAt !== "number") return null;
   if (league.calendarDailyAnchored) {
-    return dailyAnchoredScheduledTimeForChampionshipRound(league.calendarStartAt, round, !!league.calendarWeeklyRhythm, league.calendarWeeklySwitch || null, typeof league.totalRounds === "number" ? league.totalRounds : null);
+    return dailyAnchoredScheduledTimeForChampionshipRound(league.calendarStartAt, round, !!league.calendarWeeklyRhythm, league.calendarWeeklySwitch || null, typeof league.totalRounds === "number" ? league.totalRounds : null, league.timeZone || null);
   }
   return calendarScheduledTimeForRound(
     league.calendarStartAt,
@@ -24308,7 +24359,7 @@ function scheduledTimeForChampionshipRound(round) {
 // Coupe (voir league.cup / renderCoupeSection) — renvoie null sinon.
 function scheduledTimeForCupRound(cupDayIndex) {
   if (!league || typeof league.calendarStartAt !== "number" || !league.calendarDailyAnchored) return null;
-  return dailyAnchoredScheduledTimeForCupRound(league.calendarStartAt, cupDayIndex, !!league.calendarWeeklyRhythm, league.calendarWeeklySwitch || null);
+  return dailyAnchoredScheduledTimeForCupRound(league.calendarStartAt, cupDayIndex, !!league.calendarWeeklyRhythm, league.calendarWeeklySwitch || null, league.timeZone || null);
 }
 
 // Durée lisible ("2 j 3 h", "45 min", "12 s"), toujours au format le plus
@@ -30919,11 +30970,11 @@ function intersaisonNoticeHtml() {
   const n = typeof league.seasonNumber === "number" ? league.seasonNumber : 1;
   let html = `<div class="intersaison-notice training-intro">`;
   if (typeof league.intersaisonStartedAt === "number") {
-    const firstMatch = weeklyRhythmCalendarStartAt(league.intersaisonStartedAt + 7 * DAY);
+    const firstMatch = weeklyRhythmCalendarStartAt(league.intersaisonStartedAt + 7 * DAY, league.timeZone || null);
     html += `<b>Intersaison</b> : la saison ${n + 1} démarre le ${escapeHtml(formatCalendarDayFr(firstMatch))} à ${escapeHtml(formatCalendarTimeFr(firstMatch))}, avec votre effectif actuel. ` +
       `Le marché des transferts reste ouvert et vous pouvez jouer des matchs amicaux (ils comptent pour l'entraînement des fondamentaux).`;
   } else {
-    html += `<b>Fin de saison</b> : lundi à 0h, mise à jour de fin de saison (un an de plus pour les joueurs, départs à la retraite, forme remise à 100), puis une semaine d'intersaison avant la saison ${n + 1}, avec votre effectif actuel.`;
+    html += `<b>Fin de saison</b> : lundi à 6h, mise à jour de fin de saison (un an de plus pour les joueurs, départs à la retraite, forme remise à 100), puis une semaine d'intersaison avant la saison ${n + 1}, avec votre effectif actuel.`;
   }
   return html + `</div>`;
 }
@@ -33973,7 +34024,7 @@ function coachRulesHtml() {
 function trainingRulesHtml() {
   const fullMin = Math.round(TRAINING_FULL_MATCH_SECONDS / 60);
   const halfMin = Math.round(TRAINING_FULL_MATCH_SECONDS / 120);
-  const individual = `Le club choisit <b>une seule compétence parmi les 13 fondamentaux</b> (tir, passe, défense, etc.) à travailler et les postes concernés : ce n'est pas un choix joueur par joueur. Un joueur en profite s'il occupe l'un des postes choisis, proportionnellement au temps qu'il a joué à ce poste, CUMULÉ sur tous les matchs de la semaine, du lundi au dimanche (championnat, Coupe, play-offs et matchs amicaux comptent tous pareil), pas seulement le dernier (${fullMin} minutes cumulées = 100% de l'entraînement, ${halfMin} minutes = 50%, etc.) ; s'il n'a pas joué au bon poste de la semaine, aucun fondamental ne progresse (seul le déclin lié à l'âge continue de s'appliquer normalement). L'entraînement se déclenche automatiquement une fois par semaine, dans la nuit du dimanche au lundi (en même temps que la mise à jour économique) : c'est à ce moment-là que les compteurs de temps de jeu de cet onglet repartent à 0 pour la semaine suivante. Le poste (plus ou moins naturel pour la compétence) et le gabarit (un grand progresse plus vite en jeu intérieur/rebond/contre, un petit en dribble/agilité/tir extérieur/passe) influencent aussi la vitesse de progression. Étendre l'entraînement à plus de postes forme plus de joueurs mais dilue le rendement de tous. Le Physique et le Mental, eux, ne se travaillent plus directement : le Physique évolue à peine tout seul au fil de la carrière, tandis que le Mental progresse nettement et continuellement, jusqu'à un âge avancé — avec un petit coup de pouce quand un fondamental lié est entraîné (ex. le Jeu intérieur aide un peu la Force). Le staff (entraîneur et entraîneur adjoint, qui fait progresser un peu toute l'équipe sur sa spécialité) se gère depuis l'onglet <b>Staff</b>. Avec le Premium, le bilan de chaque semaine de la saison reste consultable en bas de l'onglet Entraînement.`;
+  const individual = `Le club choisit <b>une seule compétence parmi les 13 fondamentaux</b> (tir, passe, défense, etc.) à travailler et les postes concernés : ce n'est pas un choix joueur par joueur. Un joueur en profite s'il occupe l'un des postes choisis, proportionnellement au temps qu'il a joué à ce poste, CUMULÉ sur tous les matchs de la semaine, du lundi au dimanche (championnat, Coupe, play-offs et matchs amicaux comptent tous pareil), pas seulement le dernier (${fullMin} minutes cumulées = 100% de l'entraînement, ${halfMin} minutes = 50%, etc.) ; s'il n'a pas joué au bon poste de la semaine, aucun fondamental ne progresse (seul le déclin lié à l'âge continue de s'appliquer normalement). L'entraînement se déclenche automatiquement une fois par semaine, le lundi à 6h, heure de Paris (en même temps que la mise à jour économique) : c'est à ce moment-là que les compteurs de temps de jeu de cet onglet repartent à 0 pour la semaine suivante. Le poste (plus ou moins naturel pour la compétence) et le gabarit (un grand progresse plus vite en jeu intérieur/rebond/contre, un petit en dribble/agilité/tir extérieur/passe) influencent aussi la vitesse de progression. Étendre l'entraînement à plus de postes forme plus de joueurs mais dilue le rendement de tous. Le Physique et le Mental, eux, ne se travaillent plus directement : le Physique évolue à peine tout seul au fil de la carrière, tandis que le Mental progresse nettement et continuellement, jusqu'à un âge avancé — avec un petit coup de pouce quand un fondamental lié est entraîné (ex. le Jeu intérieur aide un peu la Force). Le staff (entraîneur et entraîneur adjoint, qui fait progresser un peu toute l'équipe sur sa spécialité) se gère depuis l'onglet <b>Staff</b>. Avec le Premium, le bilan de chaque semaine de la saison reste consultable en bas de l'onglet Entraînement.`;
   // Retour utilisateur (2026-09) : "enleve ça, c'est pour le guide" (le
   // détail du focus collectif était auparavant affiché directement sous le
   // sélecteur de l'onglet Entraînement) + "ne mets pas de chiffre dans le
@@ -44019,7 +44070,7 @@ const TOUR_STEPS = [
 
   { kind: "spotlight", topic: "Entraînement", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="entrainement"]', pos: "right",
     title: "Entraînement des fondamentaux",
-    text: "Chaque semaine (dans la nuit du dimanche au lundi), le club travaille un programme parmi les 13 fondamentaux (tir à 3 points, rebond, défense extérieure...) et un ou plusieurs postes à qui l'appliquer. Cibler un seul poste donne le plein rendement ; l'étendre à toute l'équipe touche plus de joueurs mais dilue l'effet. Le Physique et le Mental évoluent, eux, tout seuls au fil de la carrière, indépendamment de ce programme.",
+    text: "Chaque semaine (le lundi à 6h), le club travaille un programme parmi les 13 fondamentaux (tir à 3 points, rebond, défense extérieure...) et un ou plusieurs postes à qui l'appliquer. Cibler un seul poste donne le plein rendement ; l'étendre à toute l'équipe touche plus de joueurs mais dilue l'effet. Le Physique et le Mental évoluent, eux, tout seuls au fil de la carrière, indépendamment de ce programme.",
     tip: "Seules comptent les minutes jouées au poste entraîné pendant la semaine (championnat, Coupe, play-offs et amicaux) : un joueur qui a peu joué progresse moins, même avec le bon programme.",
   },
   // Entraînement collectif (retour utilisateur, 2026-09 : "entrainement

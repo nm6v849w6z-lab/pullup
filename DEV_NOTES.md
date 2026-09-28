@@ -138,6 +138,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   NB 2 : calendrier_ordres_stale_live_redirect_test.js est instable
   (passe 1 fois sur 2, déjà avant ce lot).
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-28) — Fuseau horaire par ligue et mise à
+  jour hebdomadaire UNIQUE** (décision utilisateur : « garde ce que t'as pour
+  le point 4 ») — League.timeZone (null = Paris ; « America/New_York » aux
+  USA : matchs à 20:00 heure locale), passé EXPLICITEMENT aux fonctions du
+  calendrier dans les 4 copies (zonedLocalDateParts/zonedEpochForLocalTime/
+  zonedScheduledTimeForSlot ; weeklyRhythm*(…, timeZone)) ; la mise à jour
+  hebdomadaire et de fin de saison tombe au MÊME instant pour tous les pays :
+  lundi 6h à Paris (WEEKLY_RHYTHM_ECONOMY_HOUR = 6, s'applique aussi à la
+  ligue actuelle), sinon joueurs qui vieillissent deux fois ou pas du tout.
+  ⚠️ Pour les championnats par pays (server/world.js) : poser
+  `league.timeZone` à la création d'une ligue américaine, et NE PAS passer
+  par un fuseau global (setCalendarTimeZone) qui changerait aussi l'heure de
+  la mise à jour unique. Textes guide/tutoriel/en.js (« lundi à 6h »).
+  Montées/descentes par pyramide : en attente (seront rebranchées sur le
+  système de championnats par pays de l'autre session : ouverture à la
+  demande calée sur le calendrier du pays, montées/descentes au prorata des
+  ligues filles ouvertes, reprise commune après l'intersaison).
+
 - **📝 DÉCIDÉ, À CODER (2026-09-28) — Nouvelle saison qui garde les effectifs
   + divisions / pays / montées-descentes** — décisions utilisateur :
   - Pays : France ET USA au lancement (une pyramide chacun + Coupe

@@ -9332,9 +9332,9 @@ class League {
     // atypique).
     if (typeof this.calendarStartAt !== "number") return champ;
     const champAt = this.calendarDailyAnchored
-      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round, !!this.calendarWeeklyRhythm, this.calendarWeeklySwitch || null)
+      ? dailyAnchoredScheduledTimeForChampionshipRound(this.calendarStartAt, champ.round, !!this.calendarWeeklyRhythm, this.calendarWeeklySwitch || null, typeof this.totalRounds === "number" ? this.totalRounds : null, this.timeZone || null)
       : calendarScheduledTimeForRound(this.calendarStartAt, champ.round, this.calendarWeekMs || undefined, this.calendarSlotOffsetsMs || undefined);
-    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex, !!this.calendarWeeklyRhythm, this.calendarWeeklySwitch || null);
+    const cupAt = dailyAnchoredScheduledTimeForCupRound(this.calendarStartAt, cupRound.dayIndex, !!this.calendarWeeklyRhythm, this.calendarWeeklySwitch || null, this.timeZone || null);
     return cupAt <= champAt ? cup : champ;
   }
 
@@ -9933,7 +9933,7 @@ class League {
     this.lastAutoTrainedWeek = -1;
     this.lastAutoTrainedDay = -1;
     if (this.calendarDailyAnchored) {
-      this.calendarStartAt = dailyAnchoredCalendarStartAt(now, this.calendarWeeklyRhythm);
+      this.calendarStartAt = dailyAnchoredCalendarStartAt(now, this.calendarWeeklyRhythm, this.timeZone || null);
       this.cup = { rounds: [generateCupBracket(this.teams.map((_, i) => i))], champion: null };
     }
     this.teams.forEach(t => {
@@ -11631,6 +11631,47 @@ function parisEpochForLocalTime(year, month, day, hour, minute = 0, second = 0) 
   return guess;
 }
 
+// Fuseau horaire d'un pays (retour utilisateur 2026-09-28 : matchs à 20:00
+// heure locale, "oui heure de new york" pour les USA ; la mise à jour
+// hebdomadaire reste, elle, à une heure UNIQUE pour tous : lundi 6h à
+// Paris). Mêmes principes que parisLocalDateParts/parisEpochForLocalTime
+// ci-dessus, pour n'importe quel fuseau IANA. `timeZone` absent = Paris.
+function zonedLocalDateParts(utcMs, timeZone) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: timeZone || "Europe/Paris", hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const map = {};
+  dtf.formatToParts(new Date(utcMs)).forEach(p => { if (p.type !== "literal") map[p.type] = p.value; });
+  return {
+    year: Number(map.year), month: Number(map.month), day: Number(map.day),
+    hour: Number(map.hour), minute: Number(map.minute), second: Number(map.second),
+  };
+}
+function zonedEpochForLocalTime(timeZone, year, month, day, hour, minute = 0, second = 0) {
+  const wall = Date.UTC(year, month - 1, day, hour, minute, second);
+  let guess = wall;
+  for (let i = 0; i < 4; i++) {
+    const p = zonedLocalDateParts(guess, timeZone);
+    const offset = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - guess;
+    const candidate = wall - offset;
+    if (candidate === guess) return candidate;
+    guess = candidate;
+  }
+  return guess;
+}
+// Jour civil `dayIndex` après celui de `calendarStartAt`, à l'heure `hour`,
+// dans le fuseau `timeZone` (Paris si absent : même résultat que
+// dailyAnchoredScheduledTimeForSlot).
+function zonedScheduledTimeForSlot(calendarStartAt, dayIndex, hour, timeZone) {
+  if (!timeZone || timeZone === "Europe/Paris") return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
+  const day0 = zonedLocalDateParts(calendarStartAt, timeZone);
+  const target = dayIndex > 0 ? addParisCalendarDays(day0, dayIndex) : day0;
+  return zonedEpochForLocalTime(timeZone, target.year, target.month, target.day, hour);
+}
+
+
 function dailyAnchoredCalendarConfig() {
   return { dailyAnchored: true, weekly: true };
 }
@@ -11651,8 +11692,8 @@ function daysUntilParisWeekday(dateParts, targetWeekday) {
 // passé, bascule sur le mercredi SUIVANT (+7 jours) plutôt que le lendemain
 // (jeudi) : le rythme reste toujours "championnat à partir d'un mercredi".
 // Copie de la même fonction côté serveur (server/calendar.js).
-function dailyAnchoredCalendarStartAt(now, weekly = false) {
-  if (weekly) return weeklyRhythmCalendarStartAt(now);
+function dailyAnchoredCalendarStartAt(now, weekly = false, timeZone = null) {
+  if (weekly) return weeklyRhythmCalendarStartAt(now, timeZone);
   const today = parisLocalDateParts(now);
   const daysAhead = daysUntilParisWeekday(today, CALENDAR_DAILY_ANCHORED_FIRST_MATCH_WEEKDAY);
   const nextWednesday = daysAhead > 0 ? addParisCalendarDays(today, daysAhead) : today;
@@ -11687,18 +11728,18 @@ function dailyAnchoredSlotIndexForChampionshipRound(round) {
 // hebdomadaire, les play-offs se jouent mardi, jeudi et samedi (voir
 // weeklyRhythmDayIndexForChampionshipRound). Absent : même règle que la
 // saison régulière (mardi/samedi).
-function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null, poFromRound = null) {
+function dailyAnchoredScheduledTimeForChampionshipRound(calendarStartAt, round, weekly = false, sw = null, poFromRound = null, timeZone = null) {
   if (weekly && sw && typeof sw.anchorAt === "number") {
-    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound, poFromRound != null ? Math.max(0, poFromRound - sw.fromRound) : null);
-  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound);
+    if (round >= sw.fromRound) return weeklyRhythmScheduledTimeForChampionshipRound(sw.anchorAt, round - sw.fromRound, poFromRound != null ? Math.max(0, poFromRound - sw.fromRound) : null, timeZone);
+  } else if (weekly) return weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound, timeZone);
   const dayIndex = dailyAnchoredDayIndexForChampionshipRound(round);
   const hour = CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS[dailyAnchoredSlotIndexForChampionshipRound(round)];
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
 }
-function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false, sw = null) {
+function dailyAnchoredScheduledTimeForCupRound(calendarStartAt, cupDayIndex, weekly = false, sw = null, timeZone = null) {
   if (weekly && sw && typeof sw.anchorAt === "number") {
-    if (cupDayIndex >= sw.fromCupRound) return weeklyRhythmScheduledTimeForCupRound(sw.anchorAt, cupDayIndex - sw.fromCupRound);
-  } else if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex);
+    if (cupDayIndex >= sw.fromCupRound) return weeklyRhythmScheduledTimeForCupRound(sw.anchorAt, cupDayIndex - sw.fromCupRound, timeZone);
+  } else if (weekly) return weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupDayIndex, timeZone);
   return dailyAnchoredScheduledTimeForSlot(calendarStartAt, cupDayIndex, CALENDAR_DAILY_ANCHORED_CUP_HOUR);
 }
 
@@ -11727,19 +11768,20 @@ const WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS = [0, 4]; // mardi, samedi (depuis 
 const WEEKLY_RHYTHM_PLAYOFF_DAY_OFFSETS = [0, 2, 4]; // play-offs : mardi, jeudi, samedi
 const WEEKLY_RHYTHM_CUP_DAY_OFFSET = 2; // jeudi
 const WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET = 6; // lundi (fin de la nuit du dimanche)
-const WEEKLY_RHYTHM_ECONOMY_HOUR = 0;
+const WEEKLY_RHYTHM_ECONOMY_HOUR = 6; // lundi 6h à Paris, pour tous les pays (validé 2026-09-28)
 
 // Prochain mardi à 20h (Paris) à compter de `now`, aujourd'hui compris si
 // l'on est mardi avant 20h.
-function weeklyRhythmCalendarStartAt(now) {
-  const today = parisLocalDateParts(now);
+function weeklyRhythmCalendarStartAt(now, timeZone = null) {
+  const tz = timeZone || "Europe/Paris";
+  const today = zonedLocalDateParts(now, tz);
   const weekday = new Date(Date.UTC(today.year, today.month - 1, today.day)).getUTCDay();
   const daysAhead = (WEEKLY_RHYTHM_FIRST_MATCH_WEEKDAY - weekday + 7) % 7;
   const day = daysAhead > 0 ? addParisCalendarDays(today, daysAhead) : today;
-  const first = parisEpochForLocalTime(day.year, day.month, day.day, WEEKLY_RHYTHM_MATCH_HOUR);
+  const first = zonedEpochForLocalTime(tz, day.year, day.month, day.day, WEEKLY_RHYTHM_MATCH_HOUR);
   if (first > now) return first;
   const next = addParisCalendarDays(today, daysAhead + 7);
-  return parisEpochForLocalTime(next.year, next.month, next.day, WEEKLY_RHYTHM_MATCH_HOUR);
+  return zonedEpochForLocalTime(tz, next.year, next.month, next.day, WEEKLY_RHYTHM_MATCH_HOUR);
 }
 // Play-offs (retour utilisateur, 2026-09-27 : "les PO doivent se jouer le
 // mardi jeudi et samedi" ; "la coupe sera tjrs terminée pour les PO car max
@@ -11756,15 +11798,21 @@ function weeklyRhythmDayIndexForChampionshipRound(round, poFromRound = null) {
   }
   return 7 * Math.floor(round / n) + WEEKLY_RHYTHM_CHAMPIONSHIP_DAY_OFFSETS[round % n];
 }
-function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound = null) {
-  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round, poFromRound), WEEKLY_RHYTHM_MATCH_HOUR);
+function weeklyRhythmScheduledTimeForChampionshipRound(calendarStartAt, round, poFromRound = null, timeZone = null) {
+  return zonedScheduledTimeForSlot(calendarStartAt, weeklyRhythmDayIndexForChampionshipRound(round, poFromRound), WEEKLY_RHYTHM_MATCH_HOUR, timeZone);
 }
-function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex) {
-  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, 7 * cupRoundIndex + WEEKLY_RHYTHM_CUP_DAY_OFFSET, WEEKLY_RHYTHM_MATCH_HOUR);
+function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex, timeZone = null) {
+  return zonedScheduledTimeForSlot(calendarStartAt, 7 * cupRoundIndex + WEEKLY_RHYTHM_CUP_DAY_OFFSET, WEEKLY_RHYTHM_MATCH_HOUR, timeZone);
 }
 // Instant de la k-ième mise à jour économique (k >= 1).
-function weeklyRhythmEconomyTickAt(calendarStartAt, k) {
-  return dailyAnchoredScheduledTimeForSlot(calendarStartAt, 7 * (k - 1) + WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET, WEEKLY_RHYTHM_ECONOMY_HOUR);
+// Heure UNIQUE pour tous les pays (lundi 6h à Paris, soit minuit à New
+// York) : le lundi est pris dans le fuseau de la ligue (celui de son mardi
+// de départ), l'heure à Paris — toutes les ligues du monde basculent donc au
+// même instant, sans joueur qui vieillit deux fois ou pas du tout.
+function weeklyRhythmEconomyTickAt(calendarStartAt, k, timeZone = null) {
+  const day0 = zonedLocalDateParts(calendarStartAt, timeZone || "Europe/Paris");
+  const monday = addParisCalendarDays(day0, 7 * (k - 1) + WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET);
+  return parisEpochForLocalTime(monday.year, monday.month, monday.day, WEEKLY_RHYTHM_ECONOMY_HOUR);
 }
 
 // Bascule EN PLEINE SAISON d'une ligue au rythme quotidien vers le rythme
@@ -13031,6 +13079,8 @@ function serializeLeague(lg) {
     playoffs: lg.playoffs,
     relegationBarrage: lg.relegationBarrage || null,
     divisionLevel: lg.divisionLevel || 1,
+    // Fuseau des matchs (20:00 heure locale) ; null = Paris.
+    timeZone: lg.timeZone || null,
     // Marché des transferts (voir League.transferListings/refreshMarket) :
     // doit survivre à un rechargement de page, les enchères se déroulant en
     // temps RÉEL (3 jours) — bien plus long qu'une simple session de jeu.
@@ -13134,6 +13184,7 @@ function leagueFromSave(data, userTeam = null) {
   // montée/descente) : un club "pas encore attribué" prend la place la plus
   // haute disponible, donc Division I par défaut (voir generateLeague).
   lg.divisionLevel = data.divisionLevel || 1;
+  lg.timeZone = typeof data.timeZone === "string" ? data.timeZone : null;
   lg.transferListings = Array.isArray(data.transferListings) ? data.transferListings : [];
   lg.lastCpuListingCheckAt = typeof data.lastCpuListingCheckAt === "number" ? data.lastCpuListingCheckAt : null;
   lg.coachListings = Array.isArray(data.coachListings) ? data.coachListings : [];

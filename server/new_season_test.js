@@ -46,7 +46,7 @@ assert.ok(lg.isPlayoffsDone(), "play-offs terminés");
 assert.ok(!lg.seasonEndTickDone);
 // Juste avant le lundi : rien n'a bougé côté âges.
 const endTick = C.weeklyRhythmEconomyTickAt(lg.calendarStartAt, (lg.lastEconomyTick || 0) + 1);
-assert.strictEqual(paris(endTick), "Mon 00:00");
+assert.strictEqual(paris(endTick), "Mon 06:00");
 assert.ok(endTick - start1 <= 11 * 7 * D, "fin de saison au plus tard le lundi de la semaine 12");
 ok(`saison complète jouée, mise à jour de fin de saison ${new Date(endTick).toISOString().slice(0, 10)} (${paris(endTick)})`);
 
@@ -99,7 +99,7 @@ assert.strictEqual(lg.seasonEndTickDone, false);
 assert.strictEqual(lg.lastEconomyTick, 0);
 assert.ok(lg.cup && lg.cup.champion == null && lg.cup.rounds.length === 1, "nouvelle Coupe");
 assert.strictEqual(paris(lg.calendarStartAt), "Tue 20:00");
-assert.strictEqual(lg.calendarStartAt - restart, D + 20 * H, "reprise le mardi à 20:00, le lendemain");
+assert.strictEqual(lg.calendarStartAt - restart, D + 14 * H, "reprise le mardi à 20:00, le lendemain");
 assert.deepStrictEqual(human.players.map(p => p.id).sort(), humanIds.filter(id => id !== leaver.id).sort(), "même effectif (moins le retraité)");
 assert.strictEqual(lg.teams.length, 10);
 assert.ok(human.players.every(p => (p.matchLog || []).length === 0), "stats de saison remises à zéro");
