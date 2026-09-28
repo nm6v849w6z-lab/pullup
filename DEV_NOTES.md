@@ -92,6 +92,57 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     automatiques = Désactivé, s'inscrire à H5 Games Ads, retirer
     ADSENSE_TEST sur Render.
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-28) — Retraite des joueurs + une seule
+  discussion par demande de transfert** — retours utilisateur : annonce une
+  saison à l'avance, « il faudrait pouvoir le convaincre de jouer un peu
+  plus », « 3 par saisons c'est bien, au début, à la moitié, à la fin »,
+  « gratuit », indice plutôt que pourcentage ; demande de transfert : « il
+  faut pouvoir le faire une seule fois, sinon c'est abusé ».
+  - Moteur (engine.js + miroir) : RETIREMENT_* ; annonce à la mise à jour de
+    fin de saison APRÈS vieillissement (34 ans 10 %, 35 25 %, 36 45 %, 37
+    65 %, 38 85 %, 39 certain ; titulaire ×2/3, réserviste ×1,5) ;
+    Team.retirementTalkStatus/talkRetirement (1 tentative par tiers de
+    saison, 4 semaines chacun ; chance 30 % + Mental jusqu'à +20 % + rôle
+    +15/+5/-10 % + motivation +10/-15 % - 10 %/an au-delà de 36 ; 0 à 39
+    ans) ; League.retireAnnouncedPlayers (AVANT vieillissement, enchère
+    annulée, IA remplacée par un jeune 20-23 ans de niveau comparable,
+    humain complété à MIN_ROSTER_SIZE), ageCpuPlayers (l'IA ne vieillissait
+    jamais), announceRetirements. Player.transferRequestDiscussed.
+  - Serveur : autoSim.runWeeklyEconomyTick (fin de saison), route
+    /api/player/retirement-talk.
+  - UI : pastille « Dernière saison » (effectif, fiche adverse, marché),
+    encadré fiche joueur (citation, indice, bouton), guide « Demandes de
+    transfert et retraite », en.js.
+  - Tests : retirement_test.js, retirement_ui_test.js.
+  - NB : n'a d'effet réel qu'avec une nouvelle saison qui GARDE les
+    effectifs (aujourd'hui le reset régénère tout).
+
+- **📝 DÉCIDÉ, À CODER (2026-09-28) — Nouvelle saison qui garde les effectifs
+  + divisions / pays / montées-descentes** — décisions utilisateur :
+  - Pays : France ET USA au lancement (une pyramide chacun + Coupe
+    nationale + Supercoupe) ; matchs à l'heure locale (20:00 Paris / 20:00
+    New York) ; marché des transferts MONDIAL ; un manager choisit
+    librement son pays (un Italien va où il veut ; ouvrir un pays plus tard
+    selon la demande).
+  - 10 clubs par ligue, pyramide ×3 (DIVISIONS existant), divisions I à III
+    au lancement (13 ligues par pays, complétées par l'IA).
+  - Montées/descentes : champion des PO monte ; 9e et 10e descendent ;
+    barrage 7e-8e en UN match sec (proposition : mardi de la semaine 10),
+    le perdant descend.
+  - Mise à jour hebdomadaire ET de fin de saison à une heure UNIQUE pour
+    tous les pays : lundi 6h00 Paris (sinon joueurs qui vieillissent deux
+    fois ou pas du tout) ; garde-fou par joueur (dernière saison de
+    vieillissement).
+  - Cycle de 12 semaines : 9 championnat + 2 PO + 1 semaine d'INTERSAISON
+    (lundi : vieillissement, salaires, retraites, montées/descentes,
+    nouvelles ligues, sponsors, archive ; forme physique remise à 100 ;
+    marché ouvert ; amicaux possibles et comptés pour l'entraînement des
+    fondamentaux ; samedi : Supercoupe du pays, Division I seulement,
+    champion vs vainqueur de Coupe).
+  - Motivation ramenée à « Neutre » (55) pour ceux qui sont en dessous, à
+    l'intersaison (validé 2026-09-28) ; les demandes de transfert en cours
+    se referment donc aussi.
+
 - **✅ EN PROD (ae45239, ADSENSE_CLIENT posé sur Render, /ads.txt OK) — EN ATTENTE D'EXAMEN ADSENSE (2026-09-27) — Vraies pubs
   (Google H5 Games Ads) aux emplacements prévus** — demande : "ajouter les
   pubs aux endroits prévus dans mon jeu hoop-manager.com" ; régie choisie :

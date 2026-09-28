@@ -3117,6 +3117,81 @@ function nationName(code) {
   return NATION_BY_CODE[code]?.name || "";
 }
 
+// ---------------------------------------------------------------------
+// Retraite des joueurs (retour utilisateur, 2026-09-28 : "comment tu
+// gérerais ça", puis "comme pour le joueur qui souhaite partir parce qu'il
+// est démotivé, il faudrait pouvoir le convaincre de jouer un peu plus",
+// "3 par saison c'est bien, au début, à la moitié, à la fin", "gratuit").
+// 1) ANNONCE : à la mise à jour qui clôt une saison (voir
+//    League.announceRetirements, appelée après le vieillissement), un
+//    vétéran peut annoncer que la saison qui commence sera sa dernière —
+//    chance selon l'âge (RETIREMENT_ANNOUNCE_CHANCE_BY_AGE), réduite pour un
+//    titulaire, augmentée pour un réserviste ; certaine à 39 ans (personne
+//    ne joue au-delà de 40 ans).
+// 2) DISCUSSION : pendant cette dernière saison, le manager peut tenter de
+//    le convaincre de continuer (Team.talkRetirement), une fois par tiers
+//    de saison (début / milieu / fin, RETIREMENT_TALK_PERIOD_WEEKS), soit 3
+//    tentatives au plus, gratuitement. Pas de pourcentage affiché, un indice
+//    (Team.retirementTalkStatus). Réussite : il joue une saison de plus et
+//    repasse le tirage de l'annonce l'année suivante, un an plus vieux.
+// 3) DÉPART : à la mise à jour de fin de saison suivante (League.
+//    retireAnnouncedPlayers, AVANT le vieillissement), il quitte l'effectif
+//    (enchère en cours annulée). Un club de l'IA le remplace aussitôt par un
+//    jeune de niveau comparable ; un club humain qui tomberait sous
+//    MIN_ROSTER_SIZE reçoit des joueurs de complément.
+// ---------------------------------------------------------------------
+const RETIREMENT_ANNOUNCE_CHANCE_BY_AGE = { 34: 0.10, 35: 0.25, 36: 0.45, 37: 0.65, 38: 0.85 };
+const RETIREMENT_FORCED_AGE = 39; // annonce certaine, et plus aucune discussion possible
+const RETIREMENT_ROLE_ANNOUNCE_FACTOR = { starter: 2 / 3, rotation: 1, reserve: 1.5 };
+const RETIREMENT_TALK_BASE_CHANCE = 0.30;
+const RETIREMENT_TALK_MENTAL_BONUS = 0.20; // jusqu'à +20 % pour un Mental à 100
+const RETIREMENT_TALK_ROLE_BONUS = { starter: 0.15, rotation: 0.05, reserve: -0.10 };
+const RETIREMENT_TALK_MOTIVATED_BONUS = 0.10; // motivation >= 85 (Très motivé)
+const RETIREMENT_TALK_DEMOTIVATED_MALUS = 0.15; // motivation < 25 (Démotivé)
+const RETIREMENT_TALK_AGE_PENALTY = 0.10; // par an au-delà de 36 ans
+const RETIREMENT_TALK_MAX_CHANCE = 0.90;
+const RETIREMENT_TALK_PERIOD_WEEKS = 4; // semaines 1-4, 5-8, 9-11
+const RETIREMENT_TALK_PERIODS = 3;
+const RETIREMENT_TALK_PERIOD_LABELS = ["début de saison", "milieu de saison", "fin de saison"];
+const RETIREMENT_TALK_HOPEFUL_CHANCE = 0.45; // au-dessus : « Il hésite encore »
+const RETIREMENT_ANNOUNCE_QUOTES = [
+  "\"Cette saison sera ma dernière, je veux la vivre à fond\", annonce {player}.",
+  "\"Le corps commence à dire stop. Je raccrocherai à la fin de la saison\", confie {player}.",
+  "\"J'ai tout donné à ce sport, il est temps de penser à la suite après cette saison\", déclare {player}.",
+  "\"Une dernière saison, et après je laisse la place aux jeunes\", sourit {player}.",
+];
+
+function retirementAnnounceQuoteFor(playerName) {
+  return pick(RETIREMENT_ANNOUNCE_QUOTES).replace("{player}", playerName);
+}
+
+// Chance d'annoncer sa dernière saison à l'âge atteint (après le
+// vieillissement de fin de saison) et selon son rôle dans la compo.
+function retirementAnnounceChance(age, role) {
+  if (age >= RETIREMENT_FORCED_AGE) return 1;
+  const base = RETIREMENT_ANNOUNCE_CHANCE_BY_AGE[age] || 0;
+  return clamp(base * (RETIREMENT_ROLE_ANNOUNCE_FACTOR[role] || 1), 0, 1);
+}
+
+// Tiers de la dernière saison (0 début, 1 milieu, 2 fin) d'après les mises
+// à jour hebdomadaires écoulées depuis l'annonce (Player.retirementWeeks).
+function retirementTalkPeriod(player) {
+  return Math.min(RETIREMENT_TALK_PERIODS - 1, Math.floor((player.retirementWeeks || 0) / RETIREMENT_TALK_PERIOD_WEEKS));
+}
+
+// Chance qu'une discussion le convainque de continuer (jamais affichée
+// telle quelle : voir Team.retirementTalkStatus).
+function retirementTalkChance(player, role) {
+  if (player.age >= RETIREMENT_FORCED_AGE) return 0;
+  let chance = RETIREMENT_TALK_BASE_CHANCE
+    + (mentalAverage(player) / 100) * RETIREMENT_TALK_MENTAL_BONUS
+    + (RETIREMENT_TALK_ROLE_BONUS[role] || 0);
+  if (player.form >= 85) chance += RETIREMENT_TALK_MOTIVATED_BONUS;
+  else if (player.form < 25) chance -= RETIREMENT_TALK_DEMOTIVATED_MALUS;
+  chance -= RETIREMENT_TALK_AGE_PENALTY * Math.max(0, player.age - 36);
+  return clamp(chance, 0, RETIREMENT_TALK_MAX_CHANCE);
+}
+
 class Player {
   constructor({ name, position, height, age, attrs, aggressiveness, nationality }) {
     this.id = uid();
@@ -3325,6 +3400,22 @@ class Player {
     this.weeksAtLowMotivation = 0;
     this.transferRequestActive = false;
     this.transferRequestQuote = null;
+    // Une seule discussion par demande de transfert (retour utilisateur,
+    // 2026-09-28 : "il faut pouvoir le faire une seule fois, sinon c'est
+    // abusé") : passe à `true` après une discussion ratée, remis à `false`
+    // quand la demande se referme ou qu'une nouvelle démarre.
+    this.transferRequestDiscussed = false;
+
+    // Retraite (voir le grand commentaire de RETIREMENT_ANNOUNCE_CHANCE_BY_AGE) :
+    // `retiringAfterSeason` = a annoncé que la saison en cours est sa
+    // dernière ; `retirementWeeks` = mises à jour hebdomadaires écoulées
+    // depuis l'annonce (donne le tiers de saison) ; `retirementTalks` = tiers
+    // (0/1/2) où une discussion a déjà échoué ; `retirementQuote` = citation
+    // de presse figée à l'annonce.
+    this.retiringAfterSeason = false;
+    this.retirementWeeks = 0;
+    this.retirementTalks = [];
+    this.retirementQuote = null;
   }
 
   // Applique une semaine d'entraînement. `attrWeights` est une map
@@ -6477,6 +6568,7 @@ class Team {
         p.weeksAtLowMotivation = (p.weeksAtLowMotivation || 0) + 1;
         if (!p.transferRequestActive && p.weeksAtLowMotivation >= TRANSFER_REQUEST_WEEKS_THRESHOLD) {
           p.transferRequestActive = true;
+          p.transferRequestDiscussed = false;
           p.transferRequestQuote = transferRequestQuoteFor(p.name);
           this.recordMoraleEvent(`${p.name} demande son transfert dans la presse`, 0, { transferRequestPlayerId: p.id });
         }
@@ -6486,6 +6578,7 @@ class Team {
           p.transferRequestActive = false;
           p.transferRequestQuote = null;
         }
+        p.transferRequestDiscussed = false;
       }
     });
   }
@@ -6508,6 +6601,7 @@ class Team {
     const p = this.players.find(pl => pl.id === playerId);
     if (!p) return { ok: false, reason: "not-found" };
     if (!p.transferRequestActive) return { ok: false, reason: "not-requesting" };
+    if (p.transferRequestDiscussed) return { ok: false, reason: "already-discussed" };
     // "mental" n'est plus stocké individuellement (retour utilisateur,
     // 2026-09, voir mentalAverage() au-dessus de PHYSICAL_ATTRS) : on
     // utilise ici la moyenne des 8 traits de MENTAL_ATTRS.
@@ -6519,9 +6613,78 @@ class Team {
       p.weeksAtLowMotivation = 0;
       p.transferRequestActive = false;
       p.transferRequestQuote = null;
+      p.transferRequestDiscussed = false;
       this.recordMoraleEvent(`Discussion réussie avec ${p.name}, la demande de transfert est retirée`, 0, { transferRequestPlayerId: p.id });
+    } else {
+      p.transferRequestDiscussed = true;
     }
     return { ok: true, success, formBefore, formAfter: p.form };
+  }
+
+  // Rôle d'un joueur dans la compo officielle actuelle : "starter"
+  // (titulaire), "rotation" (remplaçant d'au moins un poste) ou "reserve".
+  playerRoleKey(playerId) {
+    if (this.starterPosition(playerId)) return "starter";
+    const backups = (this.lineup && this.lineup.backupPositions) || {};
+    return (backups[playerId] || []).length ? "rotation" : "reserve";
+  }
+
+  // Où en est la discussion avec un joueur qui a annoncé sa dernière
+  // saison (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE). `null` s'il n'a rien
+  // annoncé. `hint` : "hopeful" (Il hésite encore), "decided" (Il semble
+  // décidé) ou "final" (Sa décision est prise : plus aucune tentative
+  // possible cette saison, ou 39 ans et plus). `canTalk` : une tentative
+  // est possible MAINTENANT (tiers en cours pas encore utilisé).
+  retirementTalkStatus(playerId) {
+    const p = this.players.find(pl => pl.id === playerId);
+    if (!p || !p.retiringAfterSeason) return null;
+    const talks = Array.isArray(p.retirementTalks) ? p.retirementTalks : [];
+    const period = retirementTalkPeriod(p);
+    const chance = retirementTalkChance(p, this.playerRoleKey(p.id));
+    let remaining = 0;
+    for (let i = period; i < RETIREMENT_TALK_PERIODS; i++) if (!talks.includes(i)) remaining++;
+    const final = chance <= 0 || remaining === 0;
+    const canTalk = !final && !talks.includes(period);
+    const hint = final ? "final" : chance >= RETIREMENT_TALK_HOPEFUL_CHANCE ? "hopeful" : "decided";
+    const hintLabel = { hopeful: "Il hésite encore", decided: "Il semble décidé", final: "Sa décision est prise" }[hint];
+    const nextPeriod = canTalk ? period : (final ? null : period + 1);
+    return {
+      period, periodLabel: RETIREMENT_TALK_PERIOD_LABELS[period], canTalk, hint, hintLabel,
+      attemptsUsed: talks.length, remaining,
+      nextPeriodLabel: nextPeriod != null && nextPeriod < RETIREMENT_TALK_PERIODS ? RETIREMENT_TALK_PERIOD_LABELS[nextPeriod] : null,
+    };
+  }
+
+  // Tente de convaincre un joueur de repousser sa retraite d'un an (voir
+  // retirementTalkStatus). Gratuit ; une tentative par tiers de saison.
+  // Renvoie { ok, success } ou { ok:false, reason } — "not-found",
+  // "not-retiring", "decision-final", "already-talked".
+  talkRetirement(playerId, now = Date.now(), rng = Math.random) {
+    const p = this.players.find(pl => pl.id === playerId);
+    if (!p) return { ok: false, reason: "not-found" };
+    const status = this.retirementTalkStatus(playerId);
+    if (!status) return { ok: false, reason: "not-retiring" };
+    if (status.hint === "final") return { ok: false, reason: "decision-final" };
+    if (!status.canTalk) return { ok: false, reason: "already-talked" };
+    const chance = retirementTalkChance(p, this.playerRoleKey(p.id));
+    const success = rng() < chance;
+    if (success) {
+      p.retiringAfterSeason = false;
+      p.retirementWeeks = 0;
+      p.retirementTalks = [];
+      p.retirementQuote = null;
+      if (this.feed) {
+        pushEntry(this.feed, {
+          key: `retiring_${p.id}`, category: "presse", week: this.week, createdAt: now,
+          title: `${p.name} repousse sa retraite d'un an`,
+          text: `Convaincu par le club, ${p.name} (${p.age} ans) jouera une saison de plus.`,
+          action: { label: "Effectif", href: "/effectif" },
+        });
+      }
+    } else {
+      p.retirementTalks = [...(Array.isArray(p.retirementTalks) ? p.retirementTalks : []), status.period];
+    }
+    return { ok: true, success, status: this.retirementTalkStatus(playerId) };
   }
 
   // `opts.seasonEnd` (optionnel, booléen) : décide EXPLICITEMENT si cette
@@ -6548,6 +6711,10 @@ class Team {
     // cette semaine (malus du banc inclus) pour décider qui franchit le
     // seuil de motivation "proche de 0".
     this.updateTransferRequests(now);
+    // Retraite : une semaine de plus depuis l'annonce (donne le tiers de
+    // saison des discussions, voir retirementTalkPeriod). Les partants de
+    // fin de saison ont déjà quitté l'effectif (League.retireAnnouncedPlayers).
+    this.players.forEach(p => { if (p.retiringAfterSeason) p.retirementWeeks = (p.retirementWeeks || 0) + 1; });
 
     this.players.forEach(p => {
       // Le focus se base sur le temps RÉELLEMENT joué aux poste(s) entraînés
@@ -7874,6 +8041,24 @@ function generateRookiePlayer(position, usedLastNames) {
   });
 }
 
+// Remplaçant d'un retraité dans un club de l'IA (voir League.
+// retireAnnouncedPlayers) : un jeune de 20 à 23 ans au même poste, ramené au
+// niveau moyen actuel de l'effectif (légèrement en dessous), avec de la
+// marge de progression, pour que la ligue garde son niveau.
+function generateRetirementReplacement(team, position) {
+  const p = generateRookiePlayer(position);
+  p.age = Math.round(rand(20, 23));
+  p.attrs = generateAttrsForPosition(position, 1);
+  const target = Math.max(20, (typeof team.averageOverall === "function" ? team.averageOverall() : p.overall()) * rand(0.88, 0.98));
+  for (let pass = 0; pass < 2; pass++) {
+    const scale = target / Math.max(p.overall(), 1);
+    ATTRS.forEach(a => { p.attrs[a] = clamp(Math.round(p.attrs[a] * scale), 1, 99); });
+  }
+  p.potential = clamp(Math.round(p.overall() + rand(4, 12)), 1, 99);
+  if (typeof salaryForOverall === "function") p.salary = salaryForOverall(p.overall());
+  return p;
+}
+
 function generateStartingRoster(name) {
   const players = [];
   const usedLastNames = new Set();
@@ -9197,6 +9382,98 @@ class League {
   // pour rester représentatif quand plusieurs managers réels coexistent.
   // Se réduit exactement au comportement historique avec un seul manager
   // humain, à l'index 0.
+  // Retraite (voir le grand commentaire de RETIREMENT_ANNOUNCE_CHANCE_BY_AGE),
+  // à la mise à jour qui clôt la saison, AVANT le vieillissement : les
+  // joueurs qui avaient annoncé leur dernière saison quittent leur club.
+  // Enchère en cours annulée ; un club de l'IA reçoit un jeune de niveau
+  // comparable ; un club humain sous MIN_ROSTER_SIZE reçoit des joueurs de
+  // complément. Renvoie la liste des retraités.
+  retireAnnouncedPlayers(now = Date.now()) {
+    const retired = [];
+    this.teams.forEach((team, idx) => {
+      if (!team || !Array.isArray(team.players)) return;
+      const leaving = team.players.filter(p => p.retiringAfterSeason);
+      if (!leaving.length) return;
+      leaving.forEach(p => {
+        (this.transferListings || []).forEach(l => {
+          if (l.status === "open" && l.playerId === p.id) { l.status = "cancelled"; l.result = "retired"; }
+        });
+        const i = team.players.findIndex(x => x.id === p.id);
+        if (i !== -1) team.players.splice(i, 1);
+        if (team.isHuman) team.handleStarterDeparture(p.id);
+        retired.push({ teamIdx: idx, playerId: p.id, name: p.name, age: p.age, position: p.position });
+        if (team.isHuman && team.feed) {
+          pushEntry(team.feed, {
+            key: `retiring_${p.id}`, category: "club", week: team.week, createdAt: now,
+            title: `${p.name} prend sa retraite`,
+            text: `À ${p.age} ans, ${p.name} raccroche après sa dernière saison. Il reste dans l'histoire du club.`,
+            action: { label: "Effectif", href: "/effectif" },
+          });
+        }
+        if (!team.isHuman) team.players.push(generateRetirementReplacement(team, p.position));
+      });
+      if (!team.isHuman) {
+        team.autoAssignLineup();
+      } else {
+        while (team.players.length < MIN_ROSTER_SIZE) {
+          const pos = POSITIONS.find(ps => !team.players.some(x => x.position === ps)) || POSITIONS[team.players.length % POSITIONS.length];
+          const rookie = generateRookiePlayer(pos);
+          rookie.age = 19;
+          team.players.push(rookie);
+          if (team.feed) {
+            pushEntry(team.feed, {
+              key: `retire_filler_${rookie.id}`, category: "club", week: team.week, createdAt: now,
+              title: `${rookie.name} rejoint l'effectif`,
+              text: `Après les départs à la retraite, la ligue complète votre effectif avec un jeune ${pos.toLowerCase()}.`,
+              action: { label: "Effectif", href: "/effectif" },
+            });
+          }
+        }
+      }
+    });
+    return retired;
+  }
+
+  // Les joueurs des clubs de l'IA vieillissent eux aussi d'un an à chaque
+  // fin de saison (les clubs humains le font dans Team.trainWeek), sans quoi
+  // aucun d'eux n'atteindrait jamais l'âge de la retraite.
+  ageCpuPlayers() {
+    this.teams.forEach(t => {
+      if (!t || t.isHuman) return;
+      t.players.forEach(p => { p.age += 1; });
+      if (typeof t.recalculateSalaries === "function") t.recalculateSalaries();
+    });
+  }
+
+  // Annonces de dernière saison, APRÈS le vieillissement de fin de saison.
+  // Renvoie la liste des annonces. `rng` injectable pour les tests.
+  announceRetirements(now = Date.now(), rng = Math.random) {
+    const announced = [];
+    this.teams.forEach((team, idx) => {
+      if (!team || !Array.isArray(team.players)) return;
+      team.players.forEach(p => {
+        if (p.retiringAfterSeason) return;
+        const chance = retirementAnnounceChance(p.age, team.playerRoleKey(p.id));
+        if (!(chance > 0) || rng() >= chance) return;
+        p.retiringAfterSeason = true;
+        p.retirementWeeks = 0;
+        p.retirementTalks = [];
+        p.retirementQuote = retirementAnnounceQuoteFor(p.name);
+        announced.push({ teamIdx: idx, playerId: p.id, name: p.name, age: p.age });
+        if (team.isHuman && team.feed) {
+          const canTalk = p.age < RETIREMENT_FORCED_AGE;
+          pushEntry(team.feed, {
+            key: `retiring_${p.id}`, category: "presse", week: team.week, createdAt: now,
+            title: `${p.name} annonce sa dernière saison`,
+            text: p.retirementQuote + (canTalk ? " Vous pouvez tenter de le convaincre de continuer depuis sa fiche." : ""),
+            action: { label: "Effectif", href: "/effectif" },
+          });
+        }
+      });
+    });
+    return announced;
+  }
+
   trainCpuTeams() {
     const humanTeams = this.teams.filter(t => t.isHuman);
     const userAvg = humanTeams.length
@@ -9738,6 +10015,7 @@ class League {
     player.weeksAtLowMotivation = 0;
     player.transferRequestActive = false;
     player.transferRequestQuote = null;
+    player.transferRequestDiscussed = false;
     if (!buyer.isHuman) buyer.autoAssignLineup();
     // Alchimie d'équipe (suite) : le rang du joueur DANS L'EFFECTIF
     // ACHETEUR, calculé APRÈS le push() ci-dessus (il y figure désormais).
@@ -11646,6 +11924,12 @@ function serializePlayerRecord(p) {
     weeksAtLowMotivation: p.weeksAtLowMotivation || 0,
     transferRequestActive: !!p.transferRequestActive,
     transferRequestQuote: p.transferRequestQuote ?? null,
+    transferRequestDiscussed: !!p.transferRequestDiscussed,
+    // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
+    retiringAfterSeason: !!p.retiringAfterSeason,
+    retirementWeeks: p.retirementWeeks || 0,
+    retirementTalks: Array.isArray(p.retirementTalks) ? p.retirementTalks.slice() : [],
+    retirementQuote: p.retirementQuote ?? null,
   };
 }
 
@@ -12132,6 +12416,11 @@ function playerFromSave(pdata) {
   if (typeof pdata.weeksAtLowMotivation === "number") p.weeksAtLowMotivation = pdata.weeksAtLowMotivation;
   if (typeof pdata.transferRequestActive === "boolean") p.transferRequestActive = pdata.transferRequestActive;
   if (typeof pdata.transferRequestQuote === "string") p.transferRequestQuote = pdata.transferRequestQuote;
+  if (typeof pdata.transferRequestDiscussed === "boolean") p.transferRequestDiscussed = pdata.transferRequestDiscussed;
+  if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
+  if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
+  if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
+  if (typeof pdata.retirementQuote === "string") p.retirementQuote = pdata.retirementQuote;
   return p;
 }
 
@@ -14251,6 +14540,8 @@ return {
   TRANSFER_REQUEST_MOTIVATION_THRESHOLD, TRANSFER_REQUEST_WEEKS_THRESHOLD,
   TRANSFER_REQUEST_DISCUSS_BASE_CHANCE, TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS,
   TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST, TRANSFER_REQUEST_QUOTES, transferRequestQuoteFor,
+  RETIREMENT_ANNOUNCE_CHANCE_BY_AGE, RETIREMENT_FORCED_AGE, RETIREMENT_TALK_PERIOD_WEEKS, RETIREMENT_TALK_PERIODS,
+  retirementAnnounceChance, retirementTalkChance, retirementTalkPeriod, generateRetirementReplacement,
   // Alchimie d'équipe (voir le grand commentaire au-dessus de
   // CHEMISTRY_ROSTER_CHANGE_MAX_RANK) :
   CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE, CHEMISTRY_MATCH_TOGETHER_GAIN, CHEMISTRY_SAME_FIVE_GAIN,

@@ -731,6 +731,9 @@ const ACTION_ROUTES = {
   // Demande de transfert (voir server/actions.js et le grand commentaire
   // au-dessus de TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur).
   "/api/media/transfer-request-discuss": actions.discussTransferRequest,
+  // Retraite : convaincre un joueur de repousser sa retraite d'un an (voir
+  // server/actions.js et RETIREMENT_ANNOUNCE_CHANCE_BY_AGE côté moteur).
+  "/api/player/retirement-talk": actions.talkRetirement,
   "/api/club/set-jersey": actions.setTeamJersey,
   "/api/club/set-jersey-pattern": actions.setTeamJerseyPattern,
   "/api/club/set-jersey-two-tone": actions.setTeamJerseyTwoTone,

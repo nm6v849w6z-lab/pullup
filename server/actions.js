@@ -1051,10 +1051,33 @@ function discussTransferRequest(team, teamIndex, league, body, now) {
     const reasons = {
       "not-found": "Joueur introuvable dans cet effectif.",
       "not-requesting": "Ce joueur n'a pas demandé son transfert.",
+      "already-discussed": "Vous avez déjà discuté avec lui : il reste sur sa position.",
     };
     return fail(reasons[result.reason] || "Discussion refusée.");
   }
   return { ok: true, success: result.success, formBefore: result.formBefore, formAfter: result.formAfter };
+}
+
+// Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE côté moteur, retour
+// utilisateur 2026-09-28) : tenter de convaincre un joueur qui a annoncé sa
+// dernière saison de continuer un an de plus. Tirage côté serveur, comme la
+// discussion d'une demande de transfert.
+function talkRetirement(team, teamIndex, league, body, now) {
+  if (!body || (typeof body.playerId !== "number" && typeof body.playerId !== "string") || body.playerId === "") {
+    return fail("playerId requis.");
+  }
+  const playerId = typeof body.playerId === "string" && /^-?\d+$/.test(body.playerId) ? Number(body.playerId) : body.playerId;
+  const result = team.talkRetirement(playerId, now);
+  if (!result.ok) {
+    const reasons = {
+      "not-found": "Joueur introuvable dans cet effectif.",
+      "not-retiring": "Ce joueur n'a pas annoncé sa retraite.",
+      "decision-final": "Sa décision est prise.",
+      "already-talked": "Vous avez déjà discuté avec lui sur cette période de la saison.",
+    };
+    return fail(reasons[result.reason] || "Discussion refusée.");
+  }
+  return { ok: true, success: result.success, status: result.status };
 }
 
 // ---------------------------------------------------------------------
@@ -1353,6 +1376,7 @@ module.exports = {
   // Demande de transfert (voir le grand commentaire au-dessus de
   // TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur) :
   discussTransferRequest,
+  talkRetirement,
   setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
   inductHallOfFame, setRetiredJersey,
   setTeamAwayJersey, setTeamAwayJerseyPattern, setTeamAwayJerseyTwoTone,

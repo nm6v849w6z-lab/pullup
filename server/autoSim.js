@@ -370,6 +370,10 @@ function catchUpDailyAnchored(league, now, events) {
 // plus rien jusqu'à la saison suivante (League.seasonEndTickDone).
 function runWeeklyEconomyTick(league, tick, ecoAt, seasonEnd, events) {
   const results = [];
+  // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE côté moteur) : les
+  // joueurs qui avaient annoncé leur dernière saison partent AVANT le
+  // vieillissement de fin de saison.
+  const retired = seasonEnd && typeof league.retireAnnouncedPlayers === "function" ? league.retireAnnouncedPlayers(ecoAt) : [];
   league.teams.forEach((team, teamIdx) => {
     if (!team.isHuman) return;
     // Horodatage de la mise à jour elle-même (lundi 0h), pas `now` :
@@ -377,8 +381,15 @@ function runWeeklyEconomyTick(league, tick, ecoAt, seasonEnd, events) {
     results.push({ teamIdx, result: team.trainWeek(league.divisionLevel, ecoAt, { seasonEnd }) });
   });
   league.trainCpuTeams();
+  // Fin de saison : l'IA vieillit aussi, puis les vétérans peuvent annoncer
+  // leur dernière saison (âge atteint APRÈS ce vieillissement).
+  let retirementsAnnounced = [];
+  if (seasonEnd && typeof league.announceRetirements === "function") {
+    league.ageCpuPlayers();
+    retirementsAnnounced = league.announceRetirements(ecoAt);
+  }
   league.lastEconomyTick = tick;
-  events.push(seasonEnd ? { type: "training", week: tick, results, seasonEnd: true } : { type: "training", week: tick, results });
+  events.push(seasonEnd ? { type: "training", week: tick, results, seasonEnd: true, retired, retirementsAnnounced } : { type: "training", week: tick, results });
 }
 
 function catchUpWeeklyRhythm(league, now, events) {
@@ -457,6 +468,8 @@ function ensureLiveMatch(league, now) {
 
 return {
   catchUpLeague, ensureLiveMatch,
+  // Exporté pour les tests (voir retirement_test.js).
+  runWeeklyEconomyTick,
   finalizeRound: (league, round, now) => finalizeRound(Engine, league, round, now),
   finalizeCupRound: (league) => finalizeCupRound(Engine, league),
   finalizePlayoffRound: (league, now) => finalizePlayoffRound(Engine, league, now),
