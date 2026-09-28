@@ -36,6 +36,25 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   trouvaille : en carrière solo, après 4 journées rattrapées,
   goToOrdresTab → renderPrep plante (teamB indéfini) — à investiguer.
 
+- **🛠 CODÉ, TESTS VERTS, À POUSSER (2026-09-28) — AdSense refusé :
+  « annonces sur des pages sans contenu d'éditeur »** — un visiteur sans
+  compte ne voyait que /bienvenue (inscription) et la coquille du jeu.
+  - server/site.js (nouveau) : pages publiques /le-jeu, /guide (+ 24
+    /guide/<id> lues dans #guideSection de moteurbasket3.html, une seule
+    source), /faq, /a-propos, /contact, /confidentialite,
+    /mentions-legales (éditeur Antony Szatmari, contact@hoop-manager.com),
+    robots.txt, sitemap.xml. ~7 000 mots. Script AdSense sur ces pages
+    seulement.
+  - server/ads.js : le jeu ne reçoit plus que window.HM_ADS + shim ;
+    adsbygoogle.js chargé par hmAdsLoadScript (moteurbasket3.html) une fois
+    le manager connecté. /bienvenue sans script, avec liens vers le contenu
+    + pied de page ; « Aucune publicité » retiré.
+  - Tests : site_pages_test.js (nouveau), ads_integration_test.js adapté ;
+    scouting_pro, hoop_show_player, server/index, server/accounts verts.
+  - Reste (utilisateur) : push ; créer l'adresse contact@hoop-manager.com ;
+    AdSense : vérifier Annonces automatiques DÉSACTIVÉES, puis redemander
+    l'examen.
+
 - **✅ EN PROD (ae45239, ADSENSE_CLIENT posé sur Render, /ads.txt OK) — EN ATTENTE D'EXAMEN ADSENSE (2026-09-27) — Vraies pubs
   (Google H5 Games Ads) aux emplacements prévus** — demande : "ajouter les
   pubs aux endroits prévus dans mon jeu hoop-manager.com" ; régie choisie :

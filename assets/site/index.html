@@ -141,6 +141,15 @@
 
   footer{border-top:1px solid var(--line-soft); padding:26px 0 40px; color:var(--ink-faint); font-size:13px}
   footer .wrap{display:flex; gap:16px; flex-wrap:wrap; justify-content:space-between}
+  .foot-links{display:flex; gap:8px 16px; flex-wrap:wrap; width:100%}
+  .foot-links a{color:var(--ink-dim); text-decoration:none}
+  .foot-links a:hover{color:var(--ink)}
+  .discover{padding:10px 0 50px}
+  .disc-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-top:18px}
+  .disc{display:block; background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:18px 20px; text-decoration:none; color:var(--ink)}
+  .disc:hover{border-color:var(--line)}
+  .disc h3{font-size:22px; margin:0 0 6px; color:var(--amber)}
+  .disc p{margin:0; color:var(--ink-dim); font-size:15px}
 
   @media (max-width:900px){
     .hero{padding:32px 0 48px}
@@ -236,7 +245,7 @@
               <div class="hint" data-t="field.pwHint">8 caractères minimum.</div></div>
             <button type="submit" class="btn btn-primary" data-t="signup.submit">Créer mon club</button>
           </form>
-          <p class="legal" data-t="legal">Ton email (ou ton identifiant Discord) sert uniquement à te connecter au jeu. Aucune publicité, aucune revente.</p>
+          <p class="legal" data-t-html="legal">Ton email (ou ton identifiant Discord) sert uniquement à te connecter au jeu. Jamais revendu. <a href="/confidentialite">Confidentialité</a></p>
         </div>
 
         <!-- Connexion -->
@@ -301,6 +310,17 @@
   </section>
 
 
+  <section class="discover">
+    <div class="wrap">
+      <h2 class="section-title" data-t="disc.title">Découvrir le jeu avant de signer</h2>
+      <div class="disc-grid">
+        <a class="disc" href="/le-jeu"><h3 data-t="disc1.t">Comment ça marche</h3><p data-t="disc1.p">Le calendrier, les matchs en direct, la préparation tactique et la vie d'un club, expliqués en détail.</p></a>
+        <a class="disc" href="/guide"><h3 data-t="disc2.t">Le guide complet</h3><p data-t="disc2.p">Effectif, caractéristiques, ordres, marché, économie, académie : le guide du jeu, section par section.</p></a>
+        <a class="disc" href="/faq"><h3 data-t="disc3.t">Questions fréquentes</h3><p data-t="disc3.p">Prix, horaires des matchs, temps à y consacrer, compte : les réponses aux questions les plus posées.</p></a>
+      </div>
+    </div>
+  </section>
+
   <section class="community" id="communitySection" hidden>
     <div class="wrap">
       <div class="community-box">
@@ -316,6 +336,10 @@
   <div class="wrap">
     <span>© <span id="year"></span> Hoop Manager</span>
     <span data-t="footer">Fait avec passion pour les fans de basket.</span>
+    <nav class="foot-links" aria-label="Pages du site">
+      <a href="/le-jeu" data-t="nav.game">Le jeu</a><a href="/guide" data-t="nav.guide">Guide</a><a href="/faq">FAQ</a><a href="/a-propos" data-t="nav.about">À propos</a>
+      <a href="/contact">Contact</a><a href="/confidentialite" data-t="nav.privacy">Confidentialité</a><a href="/mentions-legales" data-t="nav.legal">Mentions légales</a>
+    </nav>
   </div>
 </footer>
 
@@ -342,13 +366,18 @@
       "field.email": "Email", "field.password": "Password", "field.pwHint": "At least 8 characters.",
       "pw.show": "Show", "pw.hide": "Hide",
       "signup.submit": "Create my club",
-      "legal": "Your email (or Discord ID) is only used to log you into the game. No ads, never sold.",
+      "legal": "Your email (or Discord ID) is only used to log you into the game. Never sold. <a href=\"/confidentialite\">Privacy</a>",
       "login.title": "Welcome back", "login.sub": "Log in to get back to your club.", "login.submit": "Log in",
       "login.forgot": "Forgot your password? Message us on the game's Discord and we'll reset it.",
       "dclub.title": "Welcome!", "dclub.sub": "Hi {name}! One last step: pick your club's name.",
       "wait.title": "You're on the list",
       "wait.text": "Your account is created, but every club in the league is taken. As soon as a spot opens up, a club is assigned to you automatically: come back to this page, we check on every visit.",
       "wait.check": "Check now", "wait.still": "Still full for now. Try again later!",
+      "disc.title": "Discover the game before signing up",
+      "disc1.t": "How it works", "disc1.p": "The calendar, live games, tactical preparation and club life, explained in detail (in French).",
+      "disc2.t": "The full guide", "disc2.p": "Roster, ratings, orders, market, economy, academy: the game guide, section by section (in French).",
+      "disc3.t": "FAQ", "disc3.p": "Price, match times, time commitment, account: answers to the most common questions (in French).",
+      "nav.game": "The game", "nav.guide": "Guide", "nav.about": "About", "nav.privacy": "Privacy", "nav.legal": "Legal notice",
       "feat.title": "A whole club to build", "feat.sub": "It's not just tactics: sponsors, arena, staff and young talent matter as much as your starting five.",
       "f1.t": "Live games", "f1.p": "Every game is broadcast in real time: play by play, timeouts, half-time and pre-game shows. You can join mid-game, never fast-forward.",
       "f2.t": "A real league", "f2.p": "Up to 10 human managers in the same championship, with standings, playoffs, promotion and relegation. Plus an afternoon cup.",

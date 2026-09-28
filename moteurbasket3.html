@@ -29236,9 +29236,30 @@ async function refreshScoutingProPanel(teamIdx) {
 // (c'est Google qui la dessine), pas dans nos blocs gris.
 // =====================================================================
 let hmAdsConfigured = false;
+let hmAdsScriptLoaded = false;
+function hmAdsNativeShell() {
+  try { return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); } catch (e) { return false; }
+}
+// Le serveur ne pose plus adsbygoogle.js dans la page (refus AdSense du
+// 2026-09-28, voir server/ads.js) : le jeu le charge lui-même, seulement
+// pour un manager connecté (jamais sur l'écran de lien invalide).
+function hmAdsLoadScript() {
+  if (hmAdsScriptLoaded || !window.HM_ADS || !managerToken || hmAdsNativeShell()) return;
+  hmAdsScriptLoaded = true;
+  const cfg = window.HM_ADS;
+  const tag = document.createElement("script");
+  tag.async = true;
+  tag.crossOrigin = "anonymous";
+  tag.setAttribute("data-ad-client", cfg.client);
+  if (cfg.test) tag.setAttribute("data-adbreak-test", "on");
+  tag.setAttribute("data-ad-frequency-hint", "120s");
+  tag.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(cfg.client)}`;
+  document.head.appendChild(tag);
+}
 function hmAdsEnabled() {
   if (!window.HM_ADS || typeof window.adBreak !== "function") return false;
-  try { if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return false; } catch (e) { /* rien */ }
+  if (hmAdsNativeShell()) return false;
+  hmAdsLoadScript();
   if (!hmAdsConfigured) {
     hmAdsConfigured = true;
     try { window.adConfig({ preloadAdBreaks: "on", sound: "on" }); } catch (e) { /* rien */ }
@@ -43629,6 +43650,7 @@ window.__gameReady = (async () => {
   }
   document.getElementById("topbarClubName").innerHTML = teamLinkHtml(myTeamIndex, teamA.name);
   hmAccountHandleReturnHash();
+  hmAdsLoadScript(); // vraies pubs : seulement une fois le manager identifié (voir hmAds*)
   fetch("/api/account/config").then(r => (r.ok ? r.json() : null)).then(cfg => {
     const link = document.getElementById("sidebarDiscordLink");
     if (!link || !cfg || !cfg.discordInvite) return;

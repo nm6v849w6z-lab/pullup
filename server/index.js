@@ -55,6 +55,7 @@ const Messages = require("./messages.js");
 // et server/accountRoutes.js.
 const AccountRoutes = require("./accountRoutes.js");
 const Ads = require("./ads.js");
+const Site = require("./site.js");
 const Engine = require("../engine.js");
 
 // MODE ACCÉLÉRÉ (tests/démo) — voir le commentaire détaillé dans
@@ -218,8 +219,9 @@ const SITE_HTML_PATH = path.join(ASSETS_DIR, "site", "index.html");
 function serveSiteHtml(res) {
   let body;
   try {
-    // Script AdSense seul (vérification du site par Google), sans API de jeu.
-    body = Buffer.from(Ads.injectHead(fs.readFileSync(SITE_HTML_PATH, "utf-8"), Ads.adsConfig(), { withApi: false }), "utf-8");
+    // Plus de script AdSense ici (écran d'inscription = pas de contenu
+    // d'éditeur, refus AdSense du 2026-09-28) : voir server/site.js.
+    body = fs.readFileSync(SITE_HTML_PATH);
   } catch (e) {
     sendJson(res, 500, { error: `Impossible de lire la page d'accueil : ${e.message}` });
     return;
@@ -936,6 +938,17 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Content-Length": body.length, "Cache-Control": "public, max-age=3600" });
         res.end(body);
         return;
+      }
+
+      // Pages publiques de contenu + robots.txt/sitemap.xml (server/site.js).
+      if (req.method === "GET") {
+        const page = Site.render(route.pathname, { discordInvite: process.env.DISCORD_INVITE_URL || null });
+        if (page) {
+          const body = Buffer.from(page.body, "utf-8");
+          res.writeHead(page.status, { "Content-Type": page.contentType, "Content-Length": body.length, "Cache-Control": "public, max-age=600" });
+          res.end(body);
+          return;
+        }
       }
 
       // Page d'accueil / inscription (voir serveSiteHtml).

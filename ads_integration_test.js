@@ -48,8 +48,9 @@ async function get(baseUrl, p) {
   assertTrue(cfg && cfg.client === "ca-pub-1234567890123456" && cfg.test === true, "A: config lue (ID + test)");
   assertTrue(Ads.adsTxt(cfg) === "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n", "A: ads.txt");
   const injected = Ads.injectHead("<html><head><title>x</title></head><body></body></html>", cfg);
-  assertTrue(/window\.HM_ADS=.*<\/script><script async data-ad-client="ca-pub-1234567890123456" data-adbreak-test="on"[^>]*><\/script><\/head>/.test(injected), "A: script + API injectés avant </head>");
-  assertTrue(!Ads.injectHead("<head></head>", cfg, { withApi: false }).includes("HM_ADS"), "A: page d'accueil = script seul");
+  assertTrue(/window\.HM_ADS=.*<\/script><\/head>/.test(injected) && !injected.includes("adsbygoogle.js"), "A: jeu = config + shim, SANS le script (chargé après connexion)");
+  const content = Ads.injectHead("<head></head>", cfg, { withApi: false });
+  assertTrue(!content.includes("HM_ADS") && /data-ad-client="ca-pub-1234567890123456" data-adbreak-test="on"[^>]*adsbygoogle\.js\?client=ca-pub-1234567890123456/.test(content), "A: pages de contenu = script seul");
   assertTrue(Ads.injectHead("<head></head>", null) === "<head></head>", "A: rien sans config");
   console.log("✅ A : server/ads.js");
 
@@ -66,20 +67,24 @@ async function get(baseUrl, p) {
   try {
     delete process.env.ADSENSE_CLIENT; delete process.env.ADSENSE_TEST;
     let r = await get(baseUrl, "/");
-    assertTrue(r.status === 200 && !r.text.includes("adsbygoogle.js") && !r.text.includes("window.HM_ADS={"), "B1: sans ADSENSE_CLIENT, aucune pub injectée");
+    assertTrue(r.status === 200 && !r.text.includes("data-ad-client=\"ca-pub") && !r.text.includes("window.HM_ADS={"), "B1: sans ADSENSE_CLIENT, aucune pub injectée");
     r = await get(baseUrl, "/ads.txt");
     assertTrue(r.status === 404, "B1: /ads.txt en 404 sans config");
 
     process.env.ADSENSE_CLIENT = "ca-pub-1234567890123456";
     r = await get(baseUrl, "/");
-    assertTrue(r.text.includes("window.HM_ADS={") && r.text.includes('data-ad-client="ca-pub-1234567890123456"') && !r.text.includes("data-adbreak-test"), "B2: jeu = API + script (sans mode test)");
+    assertTrue(r.text.includes('window.HM_ADS={"client":"ca-pub-1234567890123456","test":false}') && !r.text.includes('data-ad-client="ca-pub'), "B2: jeu = config seule, pas de script AdSense dans la coquille");
     r = await get(baseUrl, "/bienvenue");
-    assertTrue(r.status === 200 && r.text.includes("adsbygoogle.js") && !r.text.includes("window.HM_ADS={"), "B2: page d'accueil = script seul");
+    assertTrue(r.status === 200 && !r.text.includes("adsbygoogle.js?client") && !r.text.includes("window.HM_ADS={"), "B2: écran d'inscription sans AdSense");
+    r = await get(baseUrl, "/le-jeu");
+    assertTrue(r.status === 200 && r.text.includes('adsbygoogle.js?client=ca-pub-1234567890123456'), "B2: pages de contenu avec le script AdSense");
     r = await get(baseUrl, "/ads.txt");
     assertTrue(r.status === 200 && r.text.trim() === "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0", "B2: /ads.txt servi");
     process.env.ADSENSE_TEST = "1";
     r = await get(baseUrl, "/");
-    assertTrue(r.text.includes('data-adbreak-test="on"'), "B3: ADSENSE_TEST=1 → pubs de test");
+    assertTrue(r.text.includes('"test":true'), "B3: ADSENSE_TEST=1 → pubs de test (jeu)");
+    r = await get(baseUrl, "/faq");
+    assertTrue(r.text.includes('data-adbreak-test="on"'), "B3: ADSENSE_TEST=1 → pubs de test (pages)");
     console.log("✅ B : routes HTTP");
   } finally {
     if (prevClient === undefined) delete process.env.ADSENSE_CLIENT; else process.env.ADSENSE_CLIENT = prevClient;
@@ -122,6 +127,7 @@ async function get(baseUrl, p) {
       throw new Error(`❌ ${label} (délai dépassé)`);
     }
 
+    assertTrue(!doc.querySelector('script[src*="adsbygoogle"]'), "C0: sans jeton manager, adsbygoogle.js n'est pas chargé");
     await openAnalyse();
     // C1) Aucune pub disponible → message, bouton réactivé, rien débloqué.
     fake.mode = "unavailable";

@@ -23,19 +23,26 @@ function adsConfig(env = process.env) {
   return { client, test };
 }
 
-// Balises à placer dans <head>. `withApi` : ajoute la config lue par le jeu
-// (window.HM_ADS) + le shim adBreak/adConfig recommandé par Google. La page
-// d'accueil n'a besoin que du script (vérification du site par AdSense).
-// `?client=` dans l'URL = forme exacte donnée par la console AdSense pour
-// valider le site ; data-ad-client = forme lue par H5 Games Ads.
+// Balises à placer dans <head>.
+// - Jeu (`withApi: true`) : config window.HM_ADS + shim adBreak/adConfig
+//   recommandé par Google, SANS le script adsbygoogle.js : celui-ci n'est
+//   chargé par le jeu (hmAdsLoadScript, moteurbasket3.html) qu'une fois le
+//   manager connecté. Refus AdSense du 2026-09-28 : « annonces diffusées sur
+//   des écrans sans contenu d'éditeur » — plus de script sur la coquille du
+//   jeu ni sur l'écran d'inscription.
+// - Pages de contenu (`withApi: false`, server/site.js) : le script seul.
+//   `?client=` dans l'URL = forme donnée par la console AdSense ;
+//   data-ad-client = forme lue par H5 Games Ads.
+function scriptTag(config) {
+  const testAttr = config.test ? ` data-adbreak-test="on"` : "";
+  return `<script async data-ad-client="${config.client}"${testAttr} data-ad-frequency-hint="120s" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${config.client}" crossorigin="anonymous"></script>`;
+}
+
 function headSnippet(config, { withApi = true } = {}) {
   if (!config) return "";
-  const testAttr = config.test ? ` data-adbreak-test="on"` : "";
-  const script = `<script async data-ad-client="${config.client}"${testAttr} data-ad-frequency-hint="120s" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${config.client}" crossorigin="anonymous"></script>`;
-  if (!withApi) return script;
-  const api = `<script>window.HM_ADS=${JSON.stringify({ client: config.client, test: config.test })};` +
+  if (!withApi) return scriptTag(config);
+  return `<script>window.HM_ADS=${JSON.stringify({ client: config.client, test: config.test })};` +
     `window.adsbygoogle=window.adsbygoogle||[];window.adBreak=window.adConfig=function(o){window.adsbygoogle.push(o);};</script>`;
-  return api + script;
 }
 
 function injectHead(html, config, opts) {
