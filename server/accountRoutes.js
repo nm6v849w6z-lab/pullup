@@ -120,6 +120,17 @@ async function tryAssignClub(account, multiSavePath, now) {
   if (account.managerToken) return false;
   const world = await World.loadWorld(multiSavePath, now);
   if (!world) return false;
+  // Club rendu à l'IA pendant une longue absence (voir
+  // World.releaseInactiveManagers) : récupéré s'il est toujours à l'IA.
+  if (account.releasedClub) {
+    const token = await World.reclaimClub(world, multiSavePath, account.releasedClub, now);
+    account.releasedClub = null;
+    if (token) {
+      account.managerToken = token;
+      account.assignedAt = now;
+      return true;
+    }
+  }
   let name = account.requestedClubName;
   // Nom pris entre-temps par un autre club : on ajoute un numéro plutôt que
   // de bloquer le joueur.

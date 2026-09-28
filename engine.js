@@ -12599,6 +12599,9 @@ function serializeTeam(team) {
     // logique que isHuman — `false` par défaut, DOIT survivre au rechargement
     // sinon l'admin perdrait ce droit au premier redémarrage du serveur.
     isAdmin: !!team.isAdmin,
+    // Dernière visite du manager (managers inactifs, voir server/world.js:
+    // releaseInactiveManagers).
+    lastSeenAt: typeof team.lastSeenAt === "number" ? team.lastSeenAt : null,
     lineup: team.lineup,
     // Journées futures déjà préparées à l'avance (voir Team.plannedTactics
     // et stagePlanForRound/applyPlannedTacticsForRound) — déjà un objet
@@ -12818,6 +12821,7 @@ function teamFromSave(data) {
   // = sauvegarde d'avant ce champ (ou équipe non-admin) — `false` par défaut
   // (déjà la valeur posée par le constructeur Team).
   team.isAdmin = !!data.isAdmin;
+  team.lastSeenAt = typeof data.lastSeenAt === "number" ? data.lastSeenAt : null;
   if (data.offensivePriorities) team.offensivePriorities = data.offensivePriorities;
   if (data.defense) team.defense = data.defense;
   if (data.rhythm) team.rhythm = data.rhythm;

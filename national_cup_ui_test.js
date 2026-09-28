@@ -7,6 +7,8 @@
 // clubs, handicap) ; clic sur le club invité → Planète Hoop.
 // Voir server/nationalCup.js (projectForLeague, pendingViewFor, roundMatches)
 // et renderNationalCupSection / installGuestTeams (moteurbasket3.html).
+// Saison entière simulée sans visite des managers : pas de libération des clubs inactifs ici.
+process.env.BASKET_INACTIVE_RELEASE_DAYS = process.env.BASKET_INACTIVE_RELEASE_DAYS || "100000";
 const fs = require("fs");
 const store = require("./server/store.js");
 const World = require("./server/world.js");

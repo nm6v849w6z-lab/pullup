@@ -5,6 +5,8 @@
 // palmarès du pays. Voir server/nationalCup.js (createSuperCup,
 // stepSuperCup, projectSuperCup), server/world.js (catchUpWorld) et
 // superCupCardHtml (moteurbasket3.html).
+// Saison entière simulée sans visite des managers : pas de libération des clubs inactifs ici.
+process.env.BASKET_INACTIVE_RELEASE_DAYS = process.env.BASKET_INACTIVE_RELEASE_DAYS || "100000";
 const assert = require("assert");
 const fs = require("fs");
 const store = require("./server/store.js");

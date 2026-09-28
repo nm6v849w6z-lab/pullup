@@ -2,6 +2,8 @@
 // Championnats par pays : saisons synchronisées, montées/descentes et reprise
 // commune (retour utilisateur 2026-09-28). Voir server/world.js
 // (createLeague, computeCountryMoves, applyCountryMoves, catchUpWorld).
+// Saison entière simulée sans visite des managers : pas de libération des clubs inactifs ici.
+process.env.BASKET_INACTIVE_RELEASE_DAYS = process.env.BASKET_INACTIVE_RELEASE_DAYS || "100000";
 const assert = require("assert");
 const fs = require("fs");
 const os = require("os");

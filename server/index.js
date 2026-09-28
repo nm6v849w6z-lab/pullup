@@ -55,6 +55,7 @@ const Messages = require("./messages.js");
 // Comptes joueurs + connexion Discord (2026-09-26) — voir server/accounts.js
 // et server/accountRoutes.js.
 const AccountRoutes = require("./accountRoutes.js");
+const Accounts = require("./accounts.js");
 const Ads = require("./ads.js");
 const Site = require("./site.js");
 const Engine = require("../engine.js");
@@ -264,7 +265,7 @@ const lastWorldCatchUpAt = new Map();
 // diffusion) : rattrapage forcé dès qu'elle est passée, pour que le direct
 // démarre à l'heure et pas jusqu'à 10 minutes plus tard.
 const nextWorldDeadlineAt = new Map();
-async function maybeCatchUpWorld(multiSavePath, now, force = false) {
+async function maybeCatchUpWorld(multiSavePath, now, force = false, accountsPath = store.defaultAccountsPath()) {
   const last = lastWorldCatchUpAt.get(multiSavePath) || 0;
   const deadline = nextWorldDeadlineAt.get(multiSavePath);
   const due = deadline != null && now >= deadline;
@@ -273,6 +274,23 @@ async function maybeCatchUpWorld(multiSavePath, now, force = false) {
   try {
     const events = await World.catchUpWorld(multiSavePath, now, { tickLeague: (lg, t) => tick(lg, t).events });
     nextWorldDeadlineAt.set(multiSavePath, events.nextDeadlineAt == null ? null : events.nextDeadlineAt);
+    // Clubs rendus à l'IA (managers inactifs) : le compte garde la trace du
+    // club pour le lui rendre s'il revient (voir World.reclaimClub).
+    const released = events.filter(e => e.type === "club-released" && e.token);
+    if (released.length) {
+      try {
+        const data = await Accounts.loadAccounts(accountsPath);
+        let dirty = false;
+        released.forEach(ev => {
+          const acc = Accounts.findByManagerToken(data, ev.token);
+          if (!acc) return;
+          acc.managerToken = null;
+          acc.releasedClub = { leagueId: ev.leagueId, idx: ev.idx, name: ev.name, at: ev.at, reason: ev.reason };
+          dirty = true;
+        });
+        if (dirty) await Accounts.saveAccounts(data, accountsPath);
+      } catch (e) { console.warn("[monde] mise à jour des comptes après libération de clubs échouée :", e.message); }
+    }
     return events;
   } catch (e) {
     console.warn("[monde] rattrapage des championnats échoué :", e.message);
@@ -362,6 +380,15 @@ async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
   // qui fait redémarrer toutes les ligues d'un pays ensemble.
   found.league.autoNextSeason = false;
   World.useLeagueTimeZone(found.league);
+  // Dernière visite du manager (managers inactifs, voir
+  // World.releaseInactiveManagers) : enregistrée au plus toutes les 6 h.
+  {
+    const me = found.league.teams[found.teamIndex];
+    if (me && (typeof me.lastSeenAt !== "number" || now - me.lastSeenAt > 6 * 3600 * 1000)) {
+      me.lastSeenAt = now;
+      await store.saveMultiLeague(found.league, multiSavePath);
+    }
+  }
   // Coupe nationale : tour en attente du club (ordres préparés, verrou).
   {
     const cup = (world.cups || {})[found.league.country || World.DEFAULT_COUNTRY];
@@ -1078,7 +1105,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
 
       releaseSaveLock = await acquireSaveLock();
       const now = nowFn();
-      if (getManagerToken(req)) await maybeCatchUpWorld(multiSavePath, now);
+      if (getManagerToken(req)) await maybeCatchUpWorld(multiSavePath, now, false, accountsPath);
 
       // Comptes joueurs + Discord (voir server/accountRoutes.js).
       if (await handleAccountRoutes(req, res, route, now)) return;

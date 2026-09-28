@@ -20,6 +20,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Managers inactifs** :
+  Team.lastSeenAt (enregistré par resolvePlayerContext au plus toutes les
+  6 h) ; World.releaseInactiveManagers (catchUpWorld) rend le club à l'IA
+  après INACTIVE_RELEASE_DAYS = 28 jours (**valeur choisie par Claude, à
+  valider** ; variable d'environnement BASKET_INACTIVE_RELEASE_DAYS) : nom,
+  effectif, palmarès gardés, jeton supprimé, amicaux et enchères en tête
+  annulés ; le compte garde releasedClub → à la reconnexion,
+  World.reclaimClub lui rend son club s'il est toujours à l'IA (sinon
+  nouveau club, flux habituel). Un club jamais vu depuis ce déploiement
+  démarre son horloge au premier rattrapage. Guide + en.js. Test :
+  server/inactive_manager_test.js (les tests qui simulent une saison entière
+  sans visite fixent BASKET_INACTIVE_RELEASE_DAYS très haut).
+
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Amicaux entre championnats
   et entre pays** : server/worldFriendlies.js (données annexes du monde
   « friendlies », mêmes règles que server/friendlies.js : jour de repos des

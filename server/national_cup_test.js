@@ -5,6 +5,8 @@
 // déposée dans la ligue de chaque manager (adversaire d'un autre championnat
 // = « club invité »), stats/MVP des deux côtés, primes par match gagné,
 // champion au palmarès. Voir server/nationalCup.js et server/world.js.
+// Saison entière simulée sans visite des managers : pas de libération des clubs inactifs ici.
+process.env.BASKET_INACTIVE_RELEASE_DAYS = process.env.BASKET_INACTIVE_RELEASE_DAYS || "100000";
 const assert = require("assert");
 const fs = require("fs");
 const os = require("os");

@@ -4763,6 +4763,11 @@ window.HM_I18N_EN = {
   "Barrage (7e contre 8e), en direct : {0} reçoit {1} {2} à {3}.": "Play-in (7th vs 8th), live: {0} host {1} on {2} at {3}.",
   "Barrage (7e contre 8e) : {0} {1}-{2} {3}. Le club évite la place de barragiste relégable.": "Play-in (7th vs 8th): {0} {1}-{2} {3}. The club avoids the relegation spot.",
   "Barrage (7e contre 8e) : {0} {1}-{2} {3}. Le club pourra être relégué si le championnat du dessous est ouvert.": "Play-in (7th vs 8th): {0} {1}-{2} {3}. The club may be relegated if the league below is open.",
+  // Managers inactifs (2026-09-28).
+  "Longue absence": "Long absence",
+  ": sans aucune visite pendant 28 jours, votre club est confié à l'IA (effectif, nom et palmarès conservés). Reconnectez-vous à votre compte pour le récupérer, s'il n'a pas été repris entre-temps par un autre manager ; sinon un nouveau club vous est attribué.": ": after 28 days without a single visit, your club is handed to the AI (roster, name and honours kept). Log back into your account to get it back, unless another manager has taken it over in the meantime; otherwise you're given a new club.",
+  "Bon retour à {0} !": "Welcome back to {0}!",
+  "Pendant votre absence, le club a été géré par l'IA. Vérifiez votre effectif, vos ordres et votre budget.": "While you were away, the club was run by the AI. Check your roster, your orders and your budget.",
   // Amicaux entre championnats (2026-09-28).
   "Contre un club d'un autre championnat": "Against a club from another league",
   ", même d'un autre pays : tapez son nom dans la recherche d'adversaire, les clubs du monde entier apparaissent sous ceux de votre ligue (drapeau et division). Mêmes règles : jour de repos des deux clubs, heure de Paris, invitation à accepter contre un manager (il est prévenu dans son fil d'actualité).": ", even from another country: type its name in the opponent search, clubs from all over the world show up below those of your league (flag and division). Same rules: a rest day for both clubs, Paris time, an invitation to accept against a manager (they're notified in their news feed).",

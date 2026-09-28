@@ -390,6 +390,81 @@ function leagueFingerprint(lg) {
   return JSON.stringify(data);
 }
 
+// =====================================================================
+// MANAGERS INACTIFS (liste de la nuit du 2026-09-28 : « rendre le club à
+// l'IA après X jours ») : sans visite depuis INACTIVE_RELEASE_DAYS jours
+// (Team.lastSeenAt, mis à jour par server/index.js:resolvePlayerContext),
+// le club redevient un club de l'IA (effectif, nom et palmarès gardés). Le
+// compte du manager garde la trace du club (server/index.js met à jour les
+// comptes) : s'il revient et que le club est toujours à l'IA, il le
+// récupère (reclaimClub) ; sinon il reçoit un nouveau club.
+// =====================================================================
+const INACTIVE_RELEASE_DAYS = Number(process.env.BASKET_INACTIVE_RELEASE_DAYS) > 0 ? Number(process.env.BASKET_INACTIVE_RELEASE_DAYS) : 28;
+
+function releaseClubToCpu(world, league, idx, now, reason) {
+  const team = league.teams[idx];
+  if (!team || !team.isHuman) return null;
+  const token = team.managerLinkToken;
+  if (token && world.tokens) delete world.tokens[token];
+  team.isHuman = false;
+  team.isAdmin = false;
+  team.managerLinkToken = null;
+  team.plannedTactics = {};
+  team.ordresValidatedRound = null;
+  if (typeof team.autoAssignLineup === "function") team.autoAssignLineup();
+  // Amicaux à venir et enchères en tête : annulés (plus personne pour les jouer/payer).
+  (league.friendlies || []).forEach(f => {
+    if ((f.status === "pending" || f.status === "accepted") && (f.homeIdx === idx || f.awayIdx === idx)) { f.status = "cancelled"; f.cancelReason = "Le club n'a plus de manager."; }
+  });
+  (league.transferListings || []).forEach(l => {
+    if (l.status !== "open" || l.currentBidderIdx !== idx) return;
+    l.bids = (l.bids || []).filter(b => b.bidderIdx !== idx);
+    const last = l.bids[l.bids.length - 1];
+    l.currentBid = last ? last.amount : null;
+    l.currentBidderIdx = last ? last.bidderIdx : null;
+    l.currentBidderRef = last && last.bidderRef ? { ...last.bidderRef } : null;
+  });
+  return { type: "club-released", token, leagueId: league.leagueId, idx, name: team.name, reason, at: now };
+}
+
+function releaseInactiveManagers(world, leagues, now, events) {
+  const limit = INACTIVE_RELEASE_DAYS * 24 * 3600 * 1000;
+  for (const [, lg] of leagues) {
+    lg.teams.forEach((t, idx) => {
+      if (!t.isHuman) return;
+      // Club d'avant ce suivi : l'horloge démarre maintenant.
+      if (typeof t.lastSeenAt !== "number") { t.lastSeenAt = now; return; }
+      if (now - t.lastSeenAt < limit) return;
+      const ev = releaseClubToCpu(world, lg, idx, now, "inactive");
+      if (ev) events.push(ev);
+    });
+  }
+}
+
+// Un manager revient (connexion à son compte) : il récupère son ancien
+// club s'il est toujours à l'IA sous le même nom. Renvoie le jeton ou null.
+async function reclaimClub(world, savePath, ref, now) {
+  if (!ref || !world.leagues.some(e => e.id === ref.leagueId)) return null;
+  const lg = await loadLeague(world, ref.leagueId, savePath);
+  const team = lg && lg.teams[ref.idx];
+  if (!team || team.isHuman || team.name !== ref.name) return null;
+  team.isHuman = true;
+  team.managerLinkToken = Engine.randomHexToken(24);
+  team.lastSeenAt = now;
+  if (!team.feed) team.feed = Engine.createFeed();
+  try {
+    Engine.pushEntry(team.feed, {
+      key: `club_reclaimed_${now}`, category: "club", priority: "alert", week: team.week,
+      title: `Bon retour à ${team.name} !`,
+      text: "Pendant votre absence, le club a été géré par l'IA. Vérifiez votre effectif, vos ordres et votre budget.",
+    });
+  } catch (e) { /* confort */ }
+  world.tokens[team.managerLinkToken] = ref.leagueId;
+  await store.saveMultiLeague(lg, savePath);
+  await saveWorld(world, savePath);
+  return team.managerLinkToken;
+}
+
 async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = {}) {
   const world = await loadWorld(savePath, now);
   if (!world) return [];
@@ -519,6 +594,10 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
     refreshCountrySummaries(world, country, leagues);
     worldDirty = true;
   }
+  // Managers inactifs : club rendu à l'IA (voir releaseInactiveManagers).
+  const releasedBefore = events.length;
+  releaseInactiveManagers(world, allLeagues, now, events);
+  if (events.length !== releasedBefore) worldDirty = true;
   // Marché mondial (server/worldMarket.js) : transferts conclus entre deux
   // championnats, puis index des annonces ouvertes de tout le monde.
   WorldMarket.resolveForeignTransfers(allLeagues, now, events);
@@ -707,5 +786,6 @@ module.exports = {
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,
   isOpenCountry, publicCountries,
-  NationalCup, WorldMarket, WorldFriendlies, divisionLabel, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
+  NationalCup, WorldMarket, WorldFriendlies, divisionLabel,
+  INACTIVE_RELEASE_DAYS, releaseClubToCpu, releaseInactiveManagers, reclaimClub, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
 };
