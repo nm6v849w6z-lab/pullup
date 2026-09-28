@@ -20,6 +20,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-28) — Ordres (iPhone) : onglets sous
+  l'heure/la batterie** — retour « Tjrs ce bug » (capture). Le commit
+  6791d2d portait le bon titre mais ne contenait QUE les largeurs de
+  colonnes d'Effectif : le correctif n'avait jamais été committé. Cause :
+  topbar masqué sur Ordres → --topbar-h = 0 → barre d'action collée à top:0
+  sous la barre d'état ; seul le topbar réservait env(safe-area-inset-top).
+  moteurbasket3.html (bloc ≤768px des Ordres) : padding-top +
+  safe-area quand .topbar-hidden-on-page ; ordres_notch_test.js.
+  RESTE : pousser, vérifier sur l'iPhone. Test flaky connu :
+  mobile_viewport_meta_test.js échoue en sandbox (fetch failed) avec ou
+  sans ce changement.
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-28) — Championnats par pays (France/USA),
   divisions ouvertes à la demande, montées/descentes, saisons synchronisées**
   — reprise du travail d'une autre session (arrêtée par l'utilisateur) +
