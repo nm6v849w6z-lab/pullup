@@ -36,6 +36,29 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   trouvaille : en carrière solo, après 4 journées rattrapées,
   goToOrdresTab → renderPrep plante (teamB indéfini) — à investiguer.
 
+- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-28) —
+  Scouting : « Comment ils marquent » + contre-attaques recalibrées** —
+  retours utilisateur : "comment ils marquent leur point" puis, sur la
+  maquette validée, deux blocs "par type de tir" (raquette / mi-distance /
+  3 pts / lancers francs, total 100 %, mêmes zones que la carte des tirs)
+  et "par situation" (sur passe décisive, sur action individuelle, seconde
+  chance, contre-attaque — cumulables ; seconde chance et contre-attaque
+  jamais cumulées entre elles, lancers francs de la possession compris).
+  Moteur (engine.js + miroir html) : Player.stats ptsPaint/ptsMid/pts3,
+  ptsAssisted/ptsSolo, ptsSecondChance (drapeau _secondChance posé sur
+  rebond offensif) / ptsTransition, via this._possSituation (relu par
+  freeThrows) ; copiés dans matchLog. transitionChanceFromSpeed recalibré
+  ((vitesse-50)/250 + 0.22, bornes 0.12-0.40) : ~10 % des points en
+  contre-attaque (4 % avant, 0,5 % pour les effectifs de départ ; ~6 %
+  désormais pour eux), ~+3 pts/match. Client : computeScoringOrigins /
+  sp2ScoringOriginsHtml (Profil et style, sous les zones de tir). Tests :
+  scoring_origins_test.js, scouting_pro_test.js (C2bis).
+  + Secondes chances réduites (retour utilisateur : "réduis les secondes
+  chances") : OFF_REBOUND_BASE_WEIGHT = 0.5 sur l'effort de rebond
+  offensif (engine.js + miroir) : 45 % → ~29 % de rebonds offensifs
+  (18 → ~11,5 par équipe et par match), secondes chances 20 % → ~13 % des
+  points ; points/match inchangés (~91), contre-attaques ~11 %.
+
 - **🛠 CODÉ, TESTS VERTS, À POUSSER (2026-09-28) — AdSense refusé :
   « annonces sur des pages sans contenu d'éditeur »** — un visiteur sans
   compte ne voyait que /bienvenue (inscription) et la coquille du jeu.
@@ -117,28 +140,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   « saute » plus sur les tirs (Safari) ; version claire sur les écrans
   rares (fin de saison, rattrapage, interviews, Scouting Pro).
 
-- **⏳ PAS COMMENCÉ — idée à scoper : détail de "comment ils marquent leurs
-  points" dans le rapport tactique gratuit** — retour utilisateur
-  (2026-09-24), en réaction aux jauges de "Tendances observées" : "ce qui
-  serait mieux, ce serait de dire comment ils larquent leur point : après
-  rebond offensif, après pénétration du meneur, après prise de position au
-  poste du pivot...". **PAS réalisable avec les données actuellement
-  trackées** : `Player.emptyStats()`/`matchLog` (engine.js) suit déjà
-  fga2/fga3/paintAtt/pts/oreb/dreb/ast/ftm/fta PAR MATCH, mais ne tague
-  JAMAIS l'ORIGINE d'un panier précis (putback après rebond offensif,
-  panier après pénétration, panier après prise de position poste...) —
-  contrairement à `tacticsUsed` (capturé au moment de la simulation, voir
-  Engine.tacticsSnapshotFor), rien d'équivalent n'existe pour "ce shot
-  vient d'où". Implémenter ça demanderait une VRAIE instrumentation du
-  moteur de simulation (taguer chaque tir généré avec son origine au
-  moment où `MatchEngine` le génère), pas juste une nouvelle agrégation
-  côté UI comme tout ce qui a été fait jusqu'ici pour Scouting Pro/le
-  rapport tactique — chantier plus lourd, à scoper avec l'utilisateur
-  (quelles origines de tir le moteur peut distinguer aujourd'hui dans sa
-  logique de génération de tirs ? lesquelles vaudrait-il la peine
-  d'exposer ?) avant de coder quoi que ce soit. Ne PAS fabriquer une fausse
-  version de cette stat avec les champs existants.
-
 - **💡 Idées pour plus tard (non faites)** :
   - Sponsors : carton dans les émissions, section dans le Guide.
   - Messagerie : cartes « offre de transfert » dans le fil, notification
@@ -146,6 +147,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ### À investiguer
 
+- **lineup_minutes_test.js** : échec ponctuel constaté le 2026-09-28
+  ("Arrière : titulaire trop loin de sa cible"), repassé 3/3 ensuite —
+  aléatoire du moteur, flaky.
 - **cup_ordres_planning_test.js échoue** (constaté le 2026-09-27, aussi sur
   une copie git archive du HEAD d'alors, donc antérieur aux amicaux) :
   "❌ Pas de <select> « Ajouter un remplaçant » pour le poste Pivot" — écran

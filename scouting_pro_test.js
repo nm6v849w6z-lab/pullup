@@ -438,6 +438,13 @@ function request(server, method, urlPath, jsonBody) {
       assertTrue(panelAfter.innerHTML.includes("Statistiques par joueur") && !panelAfter.innerHTML.includes("Effectif complet"), "C2bis: le tableau « Statistiques par joueur » (ex-« Effectif complet ») est présent");
       assertTrue(/<h4>Rythme<\/h4>/.test(panelAfter.innerHTML), "C2bis: le rythme joué figure dans « Stratégies utilisées »");
       assertTrue(![...panelAfter.querySelectorAll(".sp2-ident-label")].some(e => e.textContent === "Rythme"), "C2bis: plus de Rythme dans l'Identité");
+      // Origine des points (retour utilisateur 2026-09-28) : section « Comment
+      // ils marquent », lignes tirées des champs enregistrés par le moteur.
+      assertTrue(/Comment ils marquent/.test(panelAfter.textContent) && /Par type de tir/.test(panelAfter.textContent) && /Par situation/.test(panelAfter.textContent), "C2bis: « Comment ils marquent » en deux blocs (type de tir, situation)");
+      const typePcts = [...panelAfter.querySelectorAll(".sp2-origins:not(.sp2-origins-sit) .sp2-origin-pct")].map(e => parseFloat(e.textContent.replace(",", ".")));
+      assertTrue(typePcts.length === 4 && Math.abs(typePcts.reduce((a, b) => a + b, 0) - 100) < 1.5, "C2bis: par type de tir, 4 lignes qui totalisent 100 %");
+      const sitLabels = [...panelAfter.querySelectorAll(".sp2-origins-sit .sp2-origin-label")].map(e => e.textContent);
+      assertTrue(["Sur passe décisive", "Sur action individuelle", "Seconde chance", "Contre-attaque"].every(l => sitLabels.includes(l)), "C2bis: par situation, les 4 situations");
       // Barres de stratégies : oppIdx2 a joué 3 journées (playRounds(lg2,3)
       // ci-dessus, qui capture désormais tacticsUsed, voir playRounds en
       // tête de ce fichier) — au moins une ligne de barre doit apparaître.

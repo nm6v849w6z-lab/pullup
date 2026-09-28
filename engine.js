@@ -3183,6 +3183,16 @@ class Player {
       // un adversaire tourné vers l'intérieur d'un adversaire de périmètre),
       // voir computeScoutingTendencies dans moteurbasket3.html.
       paintAtt: 0, paintMade: 0,
+      // Origine des points marqués (retour utilisateur 2026-09-24, repris
+      // le 2026-09-28 : "comment ils marquent leurs points"), classée par le
+      // moteur au moment du panier (voir playPossession) :
+      // - par type de tir (chaque point une fois, avec ftm) : ptsPaint
+      //   (raquette), ptsMid, pts3 ;
+      // - par situation (cumulables) : ptsSecondChance (après rebond
+      //   offensif) ou ptsTransition (contre-attaque), jamais les deux,
+      //   lancers francs de la possession compris ; ptsAssisted / ptsSolo
+      //   (panier sur passe décisive ou non, hors lancers francs).
+      ptsPaint: 0, ptsMid: 0, pts3: 0, ptsSecondChance: 0, ptsTransition: 0, ptsAssisted: 0, ptsSolo: 0,
       // +/- (retour utilisateur, 2026-09 : "ajouté les colonnes de stats :
       // évaluation et +/- [...] dans les box score (match terminé et aussi
       // sur les live)") : différentiel de points marqués/encaissés pendant
@@ -8294,6 +8304,10 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
         // en zone "inside". `|| 0` de rigueur pour tout matchLog déjà persisté
         // avant cette fonctionnalité (jamais lu par du code plus ancien).
         paintAtt: p.stats.paintAtt || 0, paintMade: p.stats.paintMade || 0,
+        // Origine des points (voir emptyStats), absente des matchs d'avant.
+        ptsPaint: p.stats.ptsPaint || 0, ptsMid: p.stats.ptsMid || 0, pts3: p.stats.pts3 || 0,
+        ptsSecondChance: p.stats.ptsSecondChance || 0, ptsTransition: p.stats.ptsTransition || 0,
+        ptsAssisted: p.stats.ptsAssisted || 0, ptsSolo: p.stats.ptsSolo || 0,
         // +/- (voir MatchEngine.applyPlusMinusForPoints/emptyStats plus haut) :
         // figé ici pour survivre à la remise à zéro de p.stats au prochain
         // match (resetForMatch), tout comme le reste de cette entrée.
@@ -12409,6 +12423,10 @@ const HOME_ADVANTAGE_FACTOR = 1.02;
 // Prolongation standard : 5 minutes, plus courte qu'un quart-temps normal.
 const OVERTIME_SECONDS = 5 * 60;
 
+// Voir playPossession (bloc rebond) : poids commun appliqué à l'effort de
+// rebond offensif, calibré le 2026-09-28 (100 matchs simulés).
+const OFF_REBOUND_BASE_WEIGHT = 0.5;
+
 class MatchEngine {
   // `options.homeAdvantage` (ligues privées, voir simulatePrivateLeagueMatch)
   // : teamA reçoit, teamB se déplace ; +/- HOME_ADVANTAGE_FACTOR sur toutes
@@ -12479,7 +12497,11 @@ class MatchEngine {
     const onCourt = team.onCourtPlayers();
     if (!onCourt.length) return 0;
     const avgSpeed = onCourt.reduce((s, p) => s + (p.eff("speed") + p.eff("acceleration")) / 2, 0) / onCourt.length;
-    return clamp((avgSpeed - 50) / 180 + 0.04, 0.02, 0.28);
+    // Recalibré le 2026-09-28 (retour utilisateur : "c'est clair que le
+    // chiffre de contre-attaque est un peu faible") : ~0,5 à 4 % des points
+    // en transition avant, ~10 % visés désormais (100 matchs simulés) ;
+    // les équipes rapides en profitent toujours davantage.
+    return clamp((avgSpeed - 50) / 250 + 0.22, 0.12, 0.40);
   }
 
   matchupDefender(defTeam, offPlayer, zone) {
@@ -12685,7 +12707,12 @@ class MatchEngine {
     let made = 0;
     for (let i = 0; i < n; i++) {
       shooter.stats.fta++;
-      if (Math.random() < ftPct) { made++; shooter.stats.ftm++; shooter.stats.pts++; }
+      if (Math.random() < ftPct) {
+        made++; shooter.stats.ftm++; shooter.stats.pts++;
+        // Origine des points (voir emptyStats) : lancers obtenus sur une
+        // seconde chance ou une contre-attaque.
+        if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + 1;
+      }
     }
     if (made > 0) {
       this.applyPlusMinusForPoints(team, made);
@@ -12827,6 +12854,14 @@ class MatchEngine {
     // style "Agressif" (transitionRisk = 0, le flag n'est jamais posé).
     const transitionBoost = !!offTeam._transitionBoost;
     if (transitionBoost) delete offTeam._transitionBoost;
+    // Seconde chance : cette possession suit un rebond offensif (voir la fin
+    // de playPossession, qui pose le drapeau). Consommé une seule fois.
+    const secondChance = !!offTeam._secondChance;
+    if (secondChance) delete offTeam._secondChance;
+    // Situation de cette possession pour l'origine des points (voir
+    // emptyStats) : seconde chance prioritaire, jamais cumulée avec la
+    // contre-attaque. Relue par freeThrows pour les lancers obtenus.
+    this._possSituation = secondChance ? "ptsSecondChance" : transitionBoost ? "ptsTransition" : null;
 
     // --- Money time : faute intentionnelle de l'équipe menée, en défense ---
     // Dans la dernière minute environ, une équipe menée d'un écart rattrapable
@@ -13381,6 +13416,13 @@ class MatchEngine {
         assistCandidate.stats.ast++;
         assistedBy = assistCandidate.name;
       }
+      // Origine des points (voir emptyStats) — classée ici, où le moteur sait
+      // réellement d'où vient le panier.
+      const typeKey = zone === "inside" ? "ptsPaint" : zone === "mid" ? "ptsMid" : "pts3";
+      shooter.stats[typeKey] = (shooter.stats[typeKey] || 0) + points;
+      const creationKey = assistedBy ? "ptsAssisted" : "ptsSolo";
+      shooter.stats[creationKey] = (shooter.stats[creationKey] || 0) + points;
+      if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + points;
       this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, assister: assistedBy, possession: this.teamKey(offTeam) });
 
       if (shootingFoul) {
@@ -13441,6 +13483,14 @@ class MatchEngine {
         if (target) offReb -= (target.eff("rebound") + target.height / 20) * (eff.offRebWeightPenalty || 0);
         defReb += eff.defRebTeamBonus || 0;
       }
+      // Poids de base du rebond offensif (retour utilisateur 2026-09-28 :
+      // "réduis les secondes chances") : ~45 % des rebonds sur tirs ratés
+      // étaient offensifs (~18 par équipe et par match) et ~20 % des points
+      // venaient de secondes chances ; ramené à ~29 % de rebonds offensifs
+      // (~12 % des points en seconde chance), proche du haut niveau. Les
+      // styles Prudent/Normal/Agressif et Force/Détente gardent leur écart
+      // relatif (multiplicateur commun).
+      offReb *= OFF_REBOUND_BASE_WEIGHT;
       offReb = Math.max(offReb, 1);
       const offensiveRebound = Math.random() < offReb / (offReb + defReb);
 
@@ -13477,6 +13527,7 @@ class MatchEngine {
         { shooter: shooter.name, rebounder: rebounder.name }
       ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, rebounder: rebounder.name, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
+      if (offensiveRebound) offTeam._secondChance = true;
       return { possessionOffense: offensiveRebound };
     }
   }

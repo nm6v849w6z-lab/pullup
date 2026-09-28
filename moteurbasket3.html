@@ -4029,6 +4029,20 @@
   .sp2-bf-d{display:block; font-size:11px; font-weight:800; color:var(--ink-faint);}
   .sp2-bf-d.big{color:var(--amber);}
   .sp2-zones{display:flex; flex-direction:column; gap:12px; margin-top:14px;}
+  .sp2-origins{display:flex; flex-direction:column; gap:11px; margin-top:12px;}
+  .sp2-origin-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:13.5px;}
+  .sp2-origin-label{font-weight:700; color:var(--ink);}
+  .sp2-origin-label small{font-weight:500; color:var(--ink-faint); margin-left:6px; font-size:12px;}
+  .sp2-origin-pct{font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .sp2-origin-pct small{font-weight:500; color:var(--ink-dim);}
+  .sp2-origin-track{height:8px; border-radius:999px; background:var(--panel); border:1px solid var(--line); margin-top:5px; overflow:hidden;}
+  .sp2-origin-track span{display:block; height:100%; background:var(--amber); border-radius:999px;}
+  .sp2-origins-sit .sp2-origin-track span{background:#5b8fd9;}
+  .sp2-origin-key{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:7px;}
+  .sp2-origin-block{font-size:12.5px; color:var(--ink-faint); margin:12px 0 0;}
+  .sp2-origin-block b{color:var(--ink);}
+  .sp2-origin-sep{height:1px; background:var(--line); margin:18px 0 4px;}
+  .sp2-origin-top-player{font-size:12px; color:var(--ink-dim); margin-top:3px;}
   .sp2-zone-top{display:flex; justify-content:space-between; align-items:baseline; font-size:13px; font-weight:700;}
   .sp2-zone-ppt{font-size:18px; font-weight:800; font-variant-numeric:tabular-nums; font-family:var(--display); letter-spacing:.01em;}
   .sp2-zone-ppt small{font-size:11px; color:var(--ink-faint); font-weight:700; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}
@@ -11538,6 +11552,16 @@ class Player {
       // de fga2/fgm2 pour les tirs en zone "inside" uniquement, ajout
       // strictement additif.
       paintAtt: 0, paintMade: 0,
+      // Origine des points marqués (retour utilisateur 2026-09-24, repris
+      // le 2026-09-28 : "comment ils marquent leurs points"), classée par le
+      // moteur au moment du panier (voir playPossession) :
+      // - par type de tir (chaque point une fois, avec ftm) : ptsPaint
+      //   (raquette), ptsMid, pts3 ;
+      // - par situation (cumulables) : ptsSecondChance (après rebond
+      //   offensif) ou ptsTransition (contre-attaque), jamais les deux,
+      //   lancers francs de la possession compris ; ptsAssisted / ptsSolo
+      //   (panier sur passe décisive ou non, hors lancers francs).
+      ptsPaint: 0, ptsMid: 0, pts3: 0, ptsSecondChance: 0, ptsTransition: 0, ptsAssisted: 0, ptsSolo: 0,
       // +/- : voir engine.js (miroir identique, MatchEngine.applyPlusMinusForPoints).
       plusMinus: 0,
     };
@@ -18958,6 +18982,10 @@ const HOME_ADVANTAGE_FACTOR = 1.02;
 // Prolongation standard : 5 minutes, plus courte qu'un quart-temps normal.
 const OVERTIME_SECONDS = 5 * 60;
 
+// Voir playPossession (bloc rebond) : poids commun appliqué à l'effort de
+// rebond offensif, calibré le 2026-09-28 (100 matchs simulés).
+const OFF_REBOUND_BASE_WEIGHT = 0.5;
+
 class MatchEngine {
   // `options.homeAdvantage` (ligues privées, voir simulatePrivateLeagueMatch)
   // : teamA reçoit, teamB se déplace ; +/- HOME_ADVANTAGE_FACTOR sur toutes
@@ -19013,7 +19041,11 @@ class MatchEngine {
     const onCourt = team.onCourtPlayers();
     if (!onCourt.length) return 0;
     const avgSpeed = onCourt.reduce((s, p) => s + (p.eff("speed") + p.eff("acceleration")) / 2, 0) / onCourt.length;
-    return clamp((avgSpeed - 50) / 180 + 0.04, 0.02, 0.28);
+    // Recalibré le 2026-09-28 (retour utilisateur : "c'est clair que le
+    // chiffre de contre-attaque est un peu faible") : ~0,5 à 4 % des points
+    // en transition avant, ~10 % visés désormais (100 matchs simulés) ;
+    // les équipes rapides en profitent toujours davantage.
+    return clamp((avgSpeed - 50) / 250 + 0.22, 0.12, 0.40);
   }
 
   matchupDefender(defTeam, offPlayer, zone) {
@@ -19090,7 +19122,12 @@ class MatchEngine {
     let made = 0;
     for (let i = 0; i < n; i++) {
       shooter.stats.fta++;
-      if (Math.random() < ftPct) { made++; shooter.stats.ftm++; shooter.stats.pts++; }
+      if (Math.random() < ftPct) {
+        made++; shooter.stats.ftm++; shooter.stats.pts++;
+        // Origine des points (voir emptyStats) : lancers obtenus sur une
+        // seconde chance ou une contre-attaque.
+        if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + 1;
+      }
     }
     if (made > 0) {
       this.applyPlusMinusForPoints(team, made);
@@ -19178,6 +19215,14 @@ class MatchEngine {
     // style "Agressif" (transitionRisk = 0, le flag n'est jamais posé).
     const transitionBoost = !!offTeam._transitionBoost;
     if (transitionBoost) delete offTeam._transitionBoost;
+    // Seconde chance : cette possession suit un rebond offensif (voir la fin
+    // de playPossession, qui pose le drapeau). Consommé une seule fois.
+    const secondChance = !!offTeam._secondChance;
+    if (secondChance) delete offTeam._secondChance;
+    // Situation de cette possession pour l'origine des points (voir
+    // emptyStats) : seconde chance prioritaire, jamais cumulée avec la
+    // contre-attaque. Relue par freeThrows pour les lancers obtenus.
+    this._possSituation = secondChance ? "ptsSecondChance" : transitionBoost ? "ptsTransition" : null;
 
     // --- Money time : faute intentionnelle de l'équipe menée, en défense ---
     // Dans la dernière minute environ, une équipe menée d'un écart rattrapable
@@ -19627,6 +19672,13 @@ class MatchEngine {
         assistCandidate.stats.ast++;
         assistedBy = assistCandidate.name;
       }
+      // Origine des points (voir emptyStats) — classée ici, où le moteur sait
+      // réellement d'où vient le panier.
+      const typeKey = zone === "inside" ? "ptsPaint" : zone === "mid" ? "ptsMid" : "pts3";
+      shooter.stats[typeKey] = (shooter.stats[typeKey] || 0) + points;
+      const creationKey = assistedBy ? "ptsAssisted" : "ptsSolo";
+      shooter.stats[creationKey] = (shooter.stats[creationKey] || 0) + points;
+      if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + points;
       this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, assister: assistedBy, possession: this.teamKey(offTeam) });
 
       if (shootingFoul) {
@@ -19687,6 +19739,14 @@ class MatchEngine {
         if (target) offReb -= (target.eff("rebound") + target.height / 20) * (eff.offRebWeightPenalty || 0);
         defReb += eff.defRebTeamBonus || 0;
       }
+      // Poids de base du rebond offensif (retour utilisateur 2026-09-28 :
+      // "réduis les secondes chances") : ~45 % des rebonds sur tirs ratés
+      // étaient offensifs (~18 par équipe et par match) et ~20 % des points
+      // venaient de secondes chances ; ramené à ~29 % de rebonds offensifs
+      // (~12 % des points en seconde chance), proche du haut niveau. Les
+      // styles Prudent/Normal/Agressif et Force/Détente gardent leur écart
+      // relatif (multiplicateur commun).
+      offReb *= OFF_REBOUND_BASE_WEIGHT;
       offReb = Math.max(offReb, 1);
       const offensiveRebound = Math.random() < offReb / (offReb + defReb);
 
@@ -19723,6 +19783,7 @@ class MatchEngine {
         { shooter: shooter.name, rebounder: rebounder.name }
       ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, rebounder: rebounder.name, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
+      if (offensiveRebound) offTeam._secondChance = true;
       return { possessionOffense: offensiveRebound };
     }
   }
@@ -28780,6 +28841,76 @@ function sp2SuggestedFiveHtml(setup) {
 // MÊME analyse que "Profil <équipe>" de l'ancien design — donc MÊME analyse
 // que le "Plan de match" ci-dessus, tous dérivés de `t`/`adv`) + zones de
 // tir (terrain réel réutilisé via scoutingShotZoneCourtHtml). -------------
+// « Comment ils marquent » (retour utilisateur 2026-09-24, repris et
+// précisé le 2026-09-28) : origine de chaque panier enregistrée par le
+// moteur au moment du tir (voir emptyStats côté engine.js). Deux blocs :
+// par type de tir (raquette, mi-distance, 3 pts, lancers francs — chaque
+// point une fois, total 100 %, mêmes zones que la carte des tirs) et par
+// situation (seconde chance, contre-attaque, sur passe décisive, sur
+// action individuelle — cumulables). Seuls les matchs joués depuis cet
+// enregistrement comptent (marqueur : champ ptsPaint présent dans
+// matchLog) : jamais de valeur reconstituée après coup.
+const SCORING_BY_TYPE = [
+  ["ptsPaint", "Raquette", "#c8732f"],
+  ["ptsMid", "Mi-distance", "var(--amber)"],
+  ["pts3", "3 pts", "#3b82f6"],
+  ["ftm", "Lancers francs", "#9aa8bd"],
+];
+const SCORING_BY_SITUATION = [
+  ["ptsAssisted", "Sur passe décisive"],
+  ["ptsSolo", "Sur action individuelle"],
+  ["ptsSecondChance", "Seconde chance"],
+  ["ptsTransition", "Contre-attaque"],
+];
+function computeScoringOrigins(team) {
+  if (!team) return null;
+  const keys = [...SCORING_BY_TYPE, ...SCORING_BY_SITUATION].map(x => x[0]);
+  const games = new Set();
+  const totals = {}, byPlayer = {};
+  keys.forEach(k => { totals[k] = 0; byPlayer[k] = new Map(); });
+  let total = 0;
+  (team.players || []).forEach(p => (p.matchLog || []).forEach(m => {
+    if (m.competition !== "championship" && m.competition !== "cup") return;
+    if (m.ptsPaint === undefined) return; // match joué avant l'enregistrement de l'origine
+    games.add(`${m.competition}|${m.round}`);
+    total += Number(m.pts) || 0;
+    keys.forEach(k => {
+      const v = Number(m[k]) || 0;
+      if (!v) return;
+      totals[k] += v;
+      byPlayer[k].set(p, (byPlayer[k].get(p) || 0) + v);
+    });
+  }));
+  const rowFor = ([k, label, color]) => {
+    let top = null;
+    byPlayer[k].forEach((v, p) => { if (!top || v > top.pts) top = { name: p.name, pts: v }; });
+    return { key: k, label, color, pts: totals[k], pct: total ? Math.round(totals[k] / total * 1000) / 10 : 0,
+      perGame: games.size ? Math.round(totals[k] / games.size * 10) / 10 : 0,
+      top: top && totals[k] ? { name: top.name, pct: Math.round(top.pts / totals[k] * 100) } : null };
+  };
+  return { games: games.size, total, byType: SCORING_BY_TYPE.map(rowFor), bySituation: SCORING_BY_SITUATION.map(rowFor) };
+}
+function sp2ScoringOriginsHtml(team) {
+  const o = computeScoringOrigins(team);
+  if (!o) return "";
+  let html = `<h3 class="sp2-h" style="margin-top:22px">Comment ils marquent <span class="sp2-badge">${o.games} match${o.games > 1 ? "s" : ""} analysé${o.games > 1 ? "s" : ""}</span></h3>`;
+  if (!o.total) {
+    return html + `<p class="sp2-note">L'origine des paniers est enregistrée depuis le 28 septembre : rien à analyser tant que ${escapeHtml(team.name)} n'a pas rejoué.</p>`;
+  }
+  const fmt = v => String(v).replace(".", ",");
+  const row = (r, width, color) => `<div class="sp2-origin"><div class="sp2-origin-top"><span class="sp2-origin-label">` +
+    (color ? `<span class="sp2-origin-key" style="background:${color}"></span>` : "") + `${escapeHtml(r.label)}</span>` +
+    `<span class="sp2-origin-pct">${fmt(r.pct)}%<small> · ${fmt(r.perGame)} pts/match</small></span></div>` +
+    `<div class="sp2-origin-track"><span style="width:${width}%${color ? `;background:${color}` : ""}"></span></div>` +
+    (r.top && r.top.pct >= 30 ? `<div class="sp2-origin-top-player">surtout ${escapeHtml(r.top.name)} (${r.top.pct}%)</div>` : "") + `</div>`;
+  const maxType = Math.max(...o.byType.map(r => r.pct), 1);
+  html += `<p class="sp2-origin-block"><b>Par type de tir</b> · chaque point compté une fois (total 100 %)</p><div class="sp2-origins">` +
+    o.byType.map(r => row(r, Math.round(r.pct / maxType * 100), r.color)).join("") + `</div>`;
+  html += `<div class="sp2-origin-sep"></div><p class="sp2-origin-block"><b>Par situation</b> · une même action peut compter dans plusieurs situations</p>` +
+    `<div class="sp2-origins sp2-origins-sit">` + o.bySituation.map(r => row(r, Math.min(100, r.pct), null)).join("") + `</div>`;
+  return html;
+}
+
 function sp2ProfileStyleHtml(report, t, adv) {
   if (!adv) return "";
   let left = "";
@@ -28853,6 +28984,8 @@ function sp2ProfileStyleHtml(report, t, adv) {
       right += `<p class="sp2-note">Leur tir le plus rentable est ${escapeHtml(bestZone.label.toLowerCase())} (${bestZone.ptsPerShot} pt/tir)${isMostUsed ? "." : ", mais ils le prennent moins que d'autres zones."}</p>`;
     }
   }
+
+  right += sp2ScoringOriginsHtml(league.teams[report.opponentIdx]);
 
   if (!left && !right) return "";
   return `<section class="sp2-panel"><h2 class="sp2-panel-title">Profil et style de jeu</h2>` +
