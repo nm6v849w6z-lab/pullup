@@ -5391,6 +5391,33 @@
   :is(#effectifSection, #teamDetailSection) table.eff-general th, :is(#effectifSection, #teamDetailSection) table.eff-general td{width:auto; padding-left:14px; padding-right:14px;}
   :is(#effectifSection, #teamDetailSection) table.eff-general th.eff-th-name, :is(#effectifSection, #teamDetailSection) table.eff-general td.eff-td-name{width:24%; min-width:200px;}
   :is(#effectifSection, #teamDetailSection) table.eff-general th:last-child, :is(#effectifSection, #teamDetailSection) table.eff-general td:last-child{width:1%;}
+  /* Largeurs FIXES par colonne sur ordinateur (retour 2026-09-28 : "c'est un
+     peu mal réparti sur la page effectif encore") : en répartition
+     automatique, l'espace suivait la longueur du contenu (Âge/Taille/Salaire
+     collés, grands vides ailleurs). Somme = 100 %. */
+  @media (min-width:1000px){
+    #effectifSection table.eff-general, #teamDetailSection table.eff-general{table-layout:fixed; width:100%;}
+    #effectifSection table.eff-general :is(th.eff-th-name){width:22%;}
+    #effectifSection table.eff-general th.eff-th-position{width:8%;}
+    #effectifSection table.eff-general th.eff-th-potential{width:12%;}
+    #effectifSection table.eff-general th.eff-th-age{width:6%;}
+    #effectifSection table.eff-general th.eff-th-height{width:7%;}
+    #effectifSection table.eff-general th.eff-th-salary{width:9%;}
+    #effectifSection table.eff-general th.eff-th-condition{width:12%;}
+    #effectifSection table.eff-general th.eff-th-motivation{width:11%;}
+    #effectifSection table.eff-general th.eff-th-evaluation{width:10%;}
+    #effectifSection table.eff-general th.eff-th-actions{width:3%; min-width:0;}
+    #teamDetailSection table.eff-general tr:first-child > th:nth-child(1){width:22%;}
+    #teamDetailSection table.eff-general tr:first-child > th:nth-child(2){width:8%;}
+    #teamDetailSection table.eff-general tr:first-child > th:nth-child(3){width:6%;}
+    #teamDetailSection table.eff-general tr:first-child > th:nth-child(4){width:7%;}
+    #teamDetailSection table.eff-general tr:first-child > th:nth-child(5){width:10%;}
+    #teamDetailSection table.eff-general tr:first-child > th:nth-child(6){width:12%;}
+    #teamDetailSection table.eff-general tr:first-child > th:nth-child(7){width:11%;}
+    #teamDetailSection table.eff-general tr:first-child > th:nth-child(n+8){width:6%;}
+    :is(#effectifSection, #teamDetailSection) table.eff-general td.eff-td-name{width:auto; min-width:0;}
+    :is(#effectifSection, #teamDetailSection) table.eff-general td{overflow:hidden; text-overflow:ellipsis;}
+  }
   /* Potentiel et Forme : libellé AU-DESSUS de sa jauge (retour utilisateur
      2026-09-25 : "on a toujours de gros écarts entre potentiel et âge et
      entre forme et motivation"). Côte à côte, la colonne prenait la largeur
