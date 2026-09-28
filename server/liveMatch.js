@@ -918,7 +918,7 @@ function viewLiveMatchForTeam(league, teamIndex) {
 
   // Coupe nationale (server/nationalCup.js) : handicap vu depuis le club
   // suivi (mine/opp) et repères du tour ; absents ailleurs.
-  const national = entry.nationalCup
+  const national = entry.barrage ? { barrage: true } : entry.nationalCup
     ? { nationalCup: entry.nationalCup, guestName: entry.guest && entry.guest.team ? entry.guest.team.name : null, handicap: entry.handicap ? { mine: isHome ? entry.handicap.home : entry.handicap.away, opp: isHome ? entry.handicap.away : entry.handicap.home } : null }
     : {};
 

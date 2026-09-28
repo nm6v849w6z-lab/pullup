@@ -9956,14 +9956,43 @@ class League {
   // les équipes reléguées (voir relegatedTeamIndexes) — le 9e et le 10e,
   // eux, descendent toujours directement, sans barrage.
   runRelegationBarrage() {
+    // Barrage programmé en direct (voir scheduleRelegationBarrage) pas
+    // encore joué : simulé tout de suite (rattrapage tardif, montées et
+    // descentes à calculer).
+    const pending = this.relegationBarrage && this.relegationBarrage.pending ? this.relegationBarrage : null;
     const table = this.standings();
-    const idx7 = table[6].idx, idx8 = table[7].idx; // 7e et 8e (0-indexé)
+    const idx7 = pending ? pending.idx7 : table[6].idx, idx8 = pending ? pending.idx8 : table[7].idx; // 7e et 8e (0-indexé)
     const result = simulateOrForfeit(this.teams[idx7], this.teams[idx8]);
+    if (pending) return this.resolveRelegationBarrage(result.scoreHome, result.scoreAway);
     const scoreHome = result.scoreHome, scoreAway = result.scoreAway;
     const loser = scoreHome > scoreAway ? idx8 : idx7;
     const winner = loser === idx7 ? idx8 : idx7;
     this.relegationBarrage = { idx7, idx8, scoreHome, scoreAway, winner, loser };
     return this.relegationBarrage;
+  }
+
+  // Barrage EN DIRECT (retour utilisateur 2026-09-28 : « barrage en 1 match
+  // sec », en direct comme les autres matchs) : programmé à `at` (premier
+  // créneau des play-offs, les 7e et 8e n'y jouent pas), le 7e reçoit ;
+  // joué par server/autoSim.js:stepRelegationBarrage.
+  scheduleRelegationBarrage(at) {
+    const table = this.standings();
+    this.relegationBarrage = {
+      idx7: table[6].idx, idx8: table[7].idx, at,
+      scoreHome: null, scoreAway: null, winner: null, loser: null, pending: true, started: false,
+    };
+    return this.relegationBarrage;
+  }
+
+  resolveRelegationBarrage(scoreHome, scoreAway) {
+    const b = this.relegationBarrage;
+    if (!b) return null;
+    b.scoreHome = scoreHome;
+    b.scoreAway = scoreAway;
+    b.loser = scoreHome > scoreAway ? b.idx8 : b.idx7;
+    b.winner = b.loser === b.idx7 ? b.idx8 : b.idx7;
+    b.pending = false;
+    return b;
   }
 
   // Indices (dans this.teams) des équipes reléguées cette saison : le 9e et
@@ -9973,7 +10002,7 @@ class League {
   relegatedTeamIndexes() {
     const table = this.standings();
     const auto = [table[8].idx, table[9].idx]; // 9e, 10e (0-indexé : rangs 8,9)
-    return this.relegationBarrage ? [...auto, this.relegationBarrage.loser] : auto;
+    return this.relegationBarrage && this.relegationBarrage.loser != null ? [...auto, this.relegationBarrage.loser] : auto;
   }
 
   // Résultat de promotion/relégation pour le club du joueur (index 0) dans

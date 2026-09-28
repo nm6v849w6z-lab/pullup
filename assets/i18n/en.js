@@ -4755,6 +4755,14 @@ window.HM_I18N_EN = {
   "256es": "1/256 finals",
   "Seizièmes": "1/16 finals",
   "Supercoupe": "Super Cup",
+  // Barrage en direct (2026-09-28).
+  "Barrage (7e contre 8e)": "Play-in (7th vs 8th)",
+  "Préparer le barrage": "Prepare the play-in",
+  "Barrage gagné !": "Play-in won!",
+  "Barrage perdu": "Play-in lost",
+  "Barrage (7e contre 8e), en direct : {0} reçoit {1} {2} à {3}.": "Play-in (7th vs 8th), live: {0} host {1} on {2} at {3}.",
+  "Barrage (7e contre 8e) : {0} {1}-{2} {3}. Le club évite la place de barragiste relégable.": "Play-in (7th vs 8th): {0} {1}-{2} {3}. The club avoids the relegation spot.",
+  "Barrage (7e contre 8e) : {0} {1}-{2} {3}. Le club pourra être relégué si le championnat du dessous est ouvert.": "Play-in (7th vs 8th): {0} {1}-{2} {3}. The club may be relegated if the league below is open.",
   // Marché mondial (2026-09-28).
   "Monde entier": "Whole world",
   "Mon pays": "My country",

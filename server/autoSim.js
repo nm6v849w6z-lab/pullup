@@ -114,6 +114,7 @@ function catchUpLeague(league, now) {
   // comportement pour elle.
   if (league.calendarDailyAnchored && league.calendarWeeklyRhythm) {
     catchUpWeeklyRhythm(league, now, events);
+    stepRelegationBarrage(league, now, events);
   } else if (league.calendarDailyAnchored) {
     catchUpDailyAnchored(league, now, events);
   } else {
@@ -224,7 +225,15 @@ function startPlayoffsPhase(league, now, events) {
     // divisionOutcomeForUserTeam côté moteur), donc résolu ici, tout de
     // suite, plutôt que d'attendre que la finale de play-offs (parfois
     // plusieurs jours réels plus tard) soit jouée.
-    if (!league.relegationBarrage) league.runRelegationBarrage();
+    // Rythme hebdomadaire : barrage EN DIRECT au premier créneau des
+    // play-offs (voir stepRelegationBarrage) ; ailleurs, simulé tout de suite.
+    if (!league.relegationBarrage) {
+      if (league.calendarDailyAnchored && league.calendarWeeklyRhythm && typeof league.scheduleRelegationBarrage === "function") {
+        league.scheduleRelegationBarrage(scheduledTimeForLeagueRound(league, league.totalRounds));
+      } else {
+        league.runRelegationBarrage();
+      }
+    }
     // Bonus de qualification surprise en play-offs (retour utilisateur,
     // 2026-09 : "une équipe qui est en PO alors que le CA ne visait que le
     // milieu de tableau/maintien doit avoir un petit surplus des
@@ -493,7 +502,55 @@ function catchUpWeeklyRhythm(league, now, events) {
 // LiveMatch.liveMatchKey/cupLiveMatchKey, les play-offs réutilisant
 // liveMatchKey sans collision possible, voir son commentaire) cohabitent
 // sans collision dans le même league.liveMatches.
+// Barrage de relégation en direct (7e contre 8e, un match sec, voir
+// League.scheduleRelegationBarrage) : au coup d'envoi, diffusion déposée
+// dans league.liveMatches (clé « barrage:<saison> ») si un manager joue ;
+// à la fin de la fenêtre de diffusion (ou tout de suite si en retard / sans
+// manager), résultat, fil d'actualité. Idempotent.
+const BARRAGE_LIVE_ROUND_OFFSET = 0; // même numéro que le 1er tour de play-offs (les 7e et 8e n'y jouent pas)
+function barrageLiveKey(league) { return `barrage:${league.seasonNumber || 1}`; }
+function stepRelegationBarrage(league, now, events = []) {
+  const b = league.relegationBarrage;
+  if (!b || !b.pending || typeof b.at !== "number" || now < b.at) return events;
+  const home = league.teams[b.idx7], away = league.teams[b.idx8];
+  const windowEnd = b.at + MATCH_BROADCAST_DURATION_MS;
+  const key = barrageLiveKey(league);
+  if (!b.started) {
+    b.started = true;
+    if ((home.isHuman || away.isHuman) && now < windowEnd) {
+      const live = LiveMatch.computeLiveMatch(Engine, league, league.totalRounds + BARRAGE_LIVE_ROUND_OFFSET, b.idx7, b.idx8, b.at, "championship");
+      if (!league.liveMatches) league.liveMatches = {};
+      league.liveMatches[key] = { ...live, barrage: true };
+      b.live = { scoreHome: live.finalScore.home, scoreAway: live.finalScore.away };
+    } else {
+      const sim = Engine.simulateOrForfeit(home, away, b.at);
+      b.live = { scoreHome: sim.scoreHome, scoreAway: sim.scoreAway };
+    }
+  }
+  if (now < windowEnd) return events;
+  if (league.liveMatches) delete league.liveMatches[key];
+  const r = b.live || { scoreHome: 0, scoreAway: 0 };
+  delete b.live;
+  delete b.started;
+  delete b.at;
+  league.resolveRelegationBarrage(r.scoreHome, r.scoreAway);
+  [[home, true], [away, false]].forEach(([team, isHome]) => {
+    if (!team.isHuman || !team.feed) return;
+    const pf = isHome ? r.scoreHome : r.scoreAway, pa = isHome ? r.scoreAway : r.scoreHome;
+    const opp = isHome ? away : home;
+    Engine.pushEntry(team.feed, {
+      key: `barrage_${league.seasonNumber || 1}`, category: "ligue", week: team.week, createdAt: now,
+      title: pf > pa ? "Barrage gagné !" : "Barrage perdu",
+      text: `Barrage (7e contre 8e) : ${team.name} ${pf}-${pa} ${opp.name}.${pf > pa ? " Le club évite la place de barragiste relégable." : " Le club pourra être relégué si le championnat du dessous est ouvert."}`,
+      action: { label: "Classement", href: "/ligue" },
+    });
+  });
+  events.push({ type: "relegation-barrage", winner: b.winner, loser: b.loser, scoreHome: r.scoreHome, scoreAway: r.scoreAway });
+  return events;
+}
+
 function ensureLiveMatch(league, now) {
+  if (league.relegationBarrage && league.relegationBarrage.pending) stepRelegationBarrage(league, now);
   const championshipKeys = ensureLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueRound);
   const cupKeys = league.cup ? ensureCupLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueCupRound) : [];
   const playoffKeys = league.playoffs ? ensurePlayoffLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueRound) : [];
@@ -501,7 +558,7 @@ function ensureLiveMatch(league, now) {
 }
 
 return {
-  catchUpLeague, ensureLiveMatch,
+  catchUpLeague, ensureLiveMatch, stepRelegationBarrage, barrageLiveKey,
   // Exporté pour les tests (voir retirement_test.js).
   runWeeklyEconomyTick,
   finalizeRound: (league, round, now) => finalizeRound(Engine, league, round, now),

@@ -17003,14 +17003,43 @@ class League {
   // les équipes reléguées (voir relegatedTeamIndexes) — le 9e et le 10e,
   // eux, descendent toujours directement, sans barrage.
   runRelegationBarrage() {
+    // Barrage programmé en direct (voir scheduleRelegationBarrage) pas
+    // encore joué : simulé tout de suite (rattrapage tardif, montées et
+    // descentes à calculer).
+    const pending = this.relegationBarrage && this.relegationBarrage.pending ? this.relegationBarrage : null;
     const table = this.standings();
-    const idx7 = table[6].idx, idx8 = table[7].idx; // 7e et 8e (0-indexé)
+    const idx7 = pending ? pending.idx7 : table[6].idx, idx8 = pending ? pending.idx8 : table[7].idx; // 7e et 8e (0-indexé)
     const result = simulateOrForfeit(this.teams[idx7], this.teams[idx8]);
+    if (pending) return this.resolveRelegationBarrage(result.scoreHome, result.scoreAway);
     const scoreHome = result.scoreHome, scoreAway = result.scoreAway;
     const loser = scoreHome > scoreAway ? idx8 : idx7;
     const winner = loser === idx7 ? idx8 : idx7;
     this.relegationBarrage = { idx7, idx8, scoreHome, scoreAway, winner, loser };
     return this.relegationBarrage;
+  }
+
+  // Barrage EN DIRECT (retour utilisateur 2026-09-28 : « barrage en 1 match
+  // sec », en direct comme les autres matchs) : programmé à `at` (premier
+  // créneau des play-offs, les 7e et 8e n'y jouent pas), le 7e reçoit ;
+  // joué par server/autoSim.js:stepRelegationBarrage.
+  scheduleRelegationBarrage(at) {
+    const table = this.standings();
+    this.relegationBarrage = {
+      idx7: table[6].idx, idx8: table[7].idx, at,
+      scoreHome: null, scoreAway: null, winner: null, loser: null, pending: true, started: false,
+    };
+    return this.relegationBarrage;
+  }
+
+  resolveRelegationBarrage(scoreHome, scoreAway) {
+    const b = this.relegationBarrage;
+    if (!b) return null;
+    b.scoreHome = scoreHome;
+    b.scoreAway = scoreAway;
+    b.loser = scoreHome > scoreAway ? b.idx8 : b.idx7;
+    b.winner = b.loser === b.idx7 ? b.idx8 : b.idx7;
+    b.pending = false;
+    return b;
   }
 
   // Indices (dans this.teams) des équipes reléguées cette saison : le 9e et
@@ -17020,7 +17049,7 @@ class League {
   relegatedTeamIndexes() {
     const table = this.standings();
     const auto = [table[8].idx, table[9].idx]; // 9e, 10e (0-indexé : rangs 8,9)
-    return this.relegationBarrage ? [...auto, this.relegationBarrage.loser] : auto;
+    return this.relegationBarrage && this.relegationBarrage.loser != null ? [...auto, this.relegationBarrage.loser] : auto;
   }
 
   // Résultat de promotion/relégation pour le club du joueur (index 0) dans
@@ -22937,6 +22966,8 @@ function enterNextMatchOrShowSeasonEnd(opts) {
       // étant currentMatch quand c'est un match de Coupe, au lieu de le
       // traiter à tort comme un championnat au même numéro de round.
       ...(league.liveMatch.competition === "cup" ? { competition: "cup" } : {}),
+      // Barrage de relégation en direct (voir server/autoSim.js).
+      ...(league.liveMatch.barrage ? { barrage: true } : {}),
     };
     enterLiveMatch(league.liveMatch);
     return true;
@@ -22986,6 +23017,24 @@ function enterNextMatchOrShowSeasonEnd(opts) {
     // (éliminée, ou pas qualifiée), rien à préparer, juste un écran
     // d'attente montrant la progression des play-offs.
     const nextPO = league.nextUserPlayoffMatch(myTeamIndex);
+    // Barrage de relégation à venir (7e contre 8e, en direct) : même écran
+    // de préparation qu'un match de championnat (ordres du moment).
+    const bar = league.relegationBarrage;
+    if (!nextPO && bar && bar.pending && (bar.idx7 === myTeamIndex || bar.idx8 === myTeamIndex)) {
+      const isHome = bar.idx7 === myTeamIndex;
+      currentMatch = { round: league.totalRounds, isHome, opponent: isHome ? bar.idx8 : bar.idx7, barrage: true };
+      teamB = league.teams[currentMatch.opponent];
+      renderPrep();
+      if (landOnDashboard) {
+        renderClubSection();
+        showPage("clubSection");
+        setActiveTab("club");
+      } else {
+        showPage("prepSection");
+        setActiveTab("ordres");
+      }
+      return true;
+    }
     if (nextPO) {
       currentMatch = { round: nextPO.round, isHome: nextPO.isHome, opponent: nextPO.opponent, seriesId: nextPO.seriesId };
       teamB = league.teams[nextPO.opponent];
@@ -23427,7 +23476,8 @@ function updateTopbar() {
       // raisonnement, "Journée X/18" n'a pas de sens pour un tour de Coupe
       // (numérotation à part, voir Team.planKey) — libellé du tour
       // (cupStageLabelForRoundIndex, ex. "Quarts") comme pour les play-offs.
-      weekEl.textContent = currentMatch.seriesId
+      weekEl.textContent = currentMatch.barrage ? "Barrage (7e contre 8e)"
+        : currentMatch.seriesId
         ? (currentMatch.seriesId === "final" ? "Finale" : "Demi-finale")
         : currentMatch.competition === "cup"
           ? `Coupe · ${cupStageLabelForRoundIndex(currentMatch.round)}`
@@ -31443,7 +31493,9 @@ function renderSeasonEnd() {
     const barrage = league.relegationBarrage;
     if (barrage) {
       html += "<h3>Relégation</h3>";
-      html += `<p class="gain-note">Barrage (7e vs 8e) : ${escapeHtml(nameOf(barrage.idx7))} vs ${escapeHtml(nameOf(barrage.idx8))} (${barrage.scoreHome}-${barrage.scoreAway}) → ${escapeHtml(nameOf(barrage.winner))} maintenu(e), ${escapeHtml(nameOf(barrage.loser))} relégué(e).</p>`;
+      html += barrage.pending
+        ? `<p class="gain-note">Barrage (7e contre 8e), en direct : ${escapeHtml(nameOf(barrage.idx7))} reçoit ${escapeHtml(nameOf(barrage.idx8))}${typeof barrage.at === "number" ? ` ${escapeHtml(formatCalendarDayFr(barrage.at))} à ${escapeHtml(formatCalendarTimeFr(barrage.at))}` : ""}.</p>`
+        : `<p class="gain-note">Barrage (7e vs 8e) : ${escapeHtml(nameOf(barrage.idx7))} vs ${escapeHtml(nameOf(barrage.idx8))} (${barrage.scoreHome}-${barrage.scoreAway}) → ${escapeHtml(nameOf(barrage.winner))} maintenu(e), ${escapeHtml(nameOf(barrage.loser))} relégué(e).</p>`;
     }
     html += "<p class=\"sub\">Les play-offs sont en cours, sur plusieurs jours réels. Revenez pour votre prochain match, ou suivez leur progression ici.</p>";
     document.getElementById("seasonEndContent").innerHTML = html;
@@ -31466,7 +31518,7 @@ function renderSeasonEnd() {
   const barrage = hasDivisionMoves ? league.relegationBarrage : null;
   if (barrage) {
     html += "<h3>Relégation</h3>";
-    html += `<p class="gain-note">Barrage (7e vs 8e) : ${escapeHtml(nameOf(barrage.idx7))} vs ${escapeHtml(nameOf(barrage.idx8))} (${barrage.scoreHome}-${barrage.scoreAway}) → ${escapeHtml(nameOf(barrage.winner))} maintenu(e), ${escapeHtml(nameOf(barrage.loser))} relégué(e).</p>`;
+    if (!barrage.pending) html += `<p class="gain-note">Barrage (7e vs 8e) : ${escapeHtml(nameOf(barrage.idx7))} vs ${escapeHtml(nameOf(barrage.idx8))} (${barrage.scoreHome}-${barrage.scoreAway}) → ${escapeHtml(nameOf(barrage.winner))} maintenu(e), ${escapeHtml(nameOf(barrage.loser))} relégué(e).</p>`;
     const relegated = league.relegatedTeamIndexes().map(nameOf);
     html += `<p class="gain-note">Descendent en ${info.level < MAX_DIVISION_LEVEL ? escapeHtml(divisionInfo(info.level + 1).name) : "division inférieure"} : ${relegated.map(escapeHtml).join(", ")}.</p>`;
   }
@@ -38799,6 +38851,8 @@ function calendarNextMatchCardHtml(row) {
     ? `<button type="button" class="cal-next-btn is-live" data-tab="live">Voir le direct</button>`
     : row.superCup
     ? `<button type="button" class="cal-next-btn" data-tab="coupe">Voir la Supercoupe</button>`
+    : row.barrage
+    ? `<button type="button" class="cal-next-btn" data-tab="ordres">Préparer le barrage</button>`
     : row.competition === "lp"
     ? `<button type="button" class="cal-next-btn" data-tab="lp">Voir la ligue privée</button>`
     : row.competition === "fr"
@@ -39042,6 +39096,26 @@ function renderCalendrierSection() {
         isHome: isHomeCup, played: !!m.resolved, won: cls === "result-win", lost: cls === "result-loss",
         isLive: isCupLive, alreadyOrdered: cupAlreadyPlanned, orderRound: round.index, orderCompetition: "cup",
       });
+    });
+  }
+  // Barrage de relégation (7e contre 8e, un match sec en direct).
+  const bar = league.relegationBarrage;
+  if (bar && (bar.idx7 === myTeamIndex || bar.idx8 === myTeamIndex) && (!bar.pending || typeof bar.at === "number")) {
+    const isHomeB = bar.idx7 === myTeamIndex;
+    const oppB = isHomeB ? bar.idx8 : bar.idx7;
+    let scoreText = "–", cls = "";
+    if (!bar.pending && bar.scoreHome != null) {
+      const my = isHomeB ? bar.scoreHome : bar.scoreAway, opp = isHomeB ? bar.scoreAway : bar.scoreHome;
+      scoreText = `${my} - ${opp}`;
+      cls = my > opp ? "result-win" : my < opp ? "result-loss" : "";
+    }
+    const isBLive = !!(league.liveMatch && league.liveMatch.barrage);
+    rows.push({
+      competition: "champ", barrage: true, label: "Barrage", shortLabel: "Barrage", opponent: league.teams[oppB].name, opponentIdx: oppB,
+      location: isHomeB ? "Domicile" : "Extérieur", scoreText, boxscore: null, cls,
+      actionCell: isBLive ? `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>` : "",
+      scheduledAt: bar.pending ? bar.at : null, fallbackOrder: 998, isHome: isHomeB, played: !bar.pending, won: cls === "result-win", lost: cls === "result-loss",
+      isLive: isBLive, isPrivate: true,
     });
   }
   // Supercoupe (samedi d'intersaison) : se joue avec les ordres du moment.

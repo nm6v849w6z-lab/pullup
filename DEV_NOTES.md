@@ -20,6 +20,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Barrage (7e contre 8e) en
+  direct** : rythme hebdomadaire → League.scheduleRelegationBarrage au
+  premier créneau des play-offs (mardi 20:00, les 7e et 8e n'y jouent pas),
+  le 7e reçoit ; server/autoSim.js:stepRelegationBarrage (appelé par
+  ensureLiveMatch et catchUpLeague) : diffusion « barrage:<saison> » si un
+  manager joue, résultat à la fin de la fenêtre (ou d'un coup si en retard),
+  fil d'actualité ; runRelegationBarrage résout un barrage en attente avec
+  les mêmes clubs (montées/descentes). Navigateur : écran de préparation
+  « Barrage (7e contre 8e) » (ordres du moment), ligne au calendrier, texte
+  de fin de saison « en direct … ». Pas de stats de joueurs (comme avant).
+  Test : barrage_live_test.js.
+
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Marché des transferts
   mondial + rattrapage du monde qui n'écrit que les ligues modifiées**
   - server/worldMarket.js : index de toutes les annonces ouvertes du monde

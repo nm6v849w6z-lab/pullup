@@ -299,7 +299,7 @@ function computeCountryMoves(world, country, leagues, now) {
     // saison : ni montée ni descente pour elle cette fois.
     const kids = childrenEntries(world, entry).filter(k => leagues.get(k.id) && (k.createdAt || 0) < intersaisonAt);
     if (!kids.length) return;
-    if (!parent.relegationBarrage && kids.length >= 3 && parent.isRegularSeasonDone()) parent.runRelegationBarrage();
+    if ((!parent.relegationBarrage || parent.relegationBarrage.pending) && kids.length >= 3 && parent.isRegularSeasonDone()) parent.runRelegationBarrage();
     const down = relegationOrder(parent);
     kids.forEach((kidEntry, k) => {
       const kid = leagues.get(kidEntry.id);
