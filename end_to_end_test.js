@@ -113,7 +113,11 @@ console.log("Toujours sur l'écran Ordres à J-3h (pas de bascule prématurée) 
 if (!stillOnPrepAt3h) throw new Error("❌ La page n'aurait pas dû basculer sur le direct 3h avant le coup d'envoi.");
 
 clock.now = scheduledAt + 500; // coup d'envoi atteint
+// Au moins un tick du minuteur (1/seconde réelle), puis la bascule (aller-
+// retour serveur) : attendue jusqu'à 10 s, la machine peut être chargée
+// quand toute la suite tourne en parallèle.
 await realDelay(1100);
+for (let i = 0; i < 45 && doc.getElementById("liveSection").classList.contains("hidden"); i++) await realDelay(200);
 const liveVisibleAuto = !doc.getElementById("liveSection").classList.contains("hidden");
 console.log("Bascule automatique sur le direct au coup d'envoi (sans action du joueur) :", liveVisibleAuto);
 if (!liveVisibleAuto) throw new Error("❌ Le minuteur interne aurait dû basculer tout seul sur le direct à l'heure programmée.");

@@ -39,7 +39,9 @@ doc.getElementById("catchupContinueBtn").click();
 
 const myTeamIdx = win.eval("myTeamIndex");
 const team = win.eval("league.teams[myTeamIndex]");
-const player = team.players[0];
+// Un joueur qui a disputé toutes les journées (le premier de l'effectif
+// pouvait être blessé ou resté sur le banc : 0 match, test instable).
+const player = team.players.slice().sort((a, b) => (b.matchLog || []).length - (a.matchLog || []).length)[0];
 win.showPlayerDetail(myTeamIdx, player.id);
 
 const gp = win.eval(`league.teams[myTeamIndex].players.find(p => p.id === ${player.id}).matchLog.length`);

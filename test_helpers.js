@@ -54,6 +54,13 @@ function tmpMultiSavePath() {
 function startTestServer(nowFn = Date.now, savePath = tmpSavePath(), multiSavePath = tmpMultiSavePath()) {
   return new Promise((resolve) => {
     const server = http.createServer(createHandler(savePath, nowFn, multiSavePath));
+    // Tests lancés en parallèle (machine chargée) : le serveur fermait les
+    // connexions « keep-alive » inactives au bout de 5 s (défaut de Node)
+    // pendant que fetch (undici) les réutilisait → « read ECONNRESET »
+    // aléatoires (onboarding_tour, post_match_interview_button,
+    // player_season_stats_modal…). Délai porté au-delà de celui d'undici.
+    server.keepAliveTimeout = 65 * 1000;
+    server.headersTimeout = 70 * 1000;
     server.listen(0, "127.0.0.1", () => {
       const { port } = server.address();
       resolve({ server, savePath, multiSavePath, baseUrl: `http://127.0.0.1:${port}/` });

@@ -195,6 +195,8 @@ if (noInterviewYetOnClient) throw new Error("❌ (setup) teamA ne devrait pas en
 clickTab(doc, "ordres");
 await new Promise(r => setTimeout(r, 300));
 await flush(dom);
+// Rafraîchissement serveur : attendu jusqu'à 10 s (suite complète en parallèle).
+for (let i = 0; i < 50 && !win.eval("teamA.pendingInterviews.some(i => i.milestone === 'mi-saison')"); i++) await new Promise(r => setTimeout(r, 200));
 
 const interviewKnownAfterRefresh = win.eval("teamA.pendingInterviews.some(i => i.milestone === 'mi-saison')");
 console.log("Interview de mi-saison connue de teamA après retour sur Ordres (rafraîchissement serveur) :", interviewKnownAfterRefresh);

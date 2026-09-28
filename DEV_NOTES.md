@@ -482,10 +482,16 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   avant de tester l'ajout), player_detail_test.js (la fiche équipe s'ouvre
   sur « Aperçu », les liens joueur sont dans « Effectif »),
   calendrier_ordres_stale_live_redirect_test.js (attente de l'aller-retour
-  serveur au lieu d'un délai fixe de 300 ms). Restent instables SOUS
-  CHARGE seulement (suite lancée en parallèle, passent seuls) :
-  onboarding_tour, post_match_interview_button, end_to_end,
-  player_season_stats_modal — même cause probable (délais fixes).
+  serveur au lieu d'un délai fixe de 300 ms).
+- ✅ RÉGLÉ (nuit du 2026-09-28) : les 4 tests instables sous charge.
+  Cause principale : « read ECONNRESET » — le serveur de test fermait les
+  connexions keep-alive inactives après 5 s (défaut Node) pendant que
+  fetch (undici) les réutilisait ; test_helpers.startTestServer porte
+  keepAliveTimeout à 65 s (onboarding_tour, post_match_interview_button,
+  et tous les tests qui passent par startTestServer). end_to_end et
+  post_match_interview_button : attente par sondage (jusqu'à 10 s) au lieu
+  d'un délai fixe. player_season_stats_modal : le joueur testé est celui
+  qui a joué le plus (le premier de l'effectif pouvait avoir 0 match).
 
 ---
 
