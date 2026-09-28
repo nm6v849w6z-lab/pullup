@@ -82,7 +82,13 @@ const T0 = Date.UTC(2026, 8, 22, 7, 0, 0); // 22 septembre 2026, mardi arbitrair
   if (!targetBtn) throw new Error(`❌ (setup) bouton Ordres introuvable pour le round ${targetRound}.`);
 
   targetBtn.click();
-  await new Promise(r => setTimeout(r, 300));
+  // Le rattrapage passe par un aller-retour serveur (refreshFromServerAndReenter) :
+  // on attend qu'il aboutisse plutôt qu'un délai fixe de 300 ms, trop court
+  // quand la machine est chargée (test instable, 1 échec sur 2 en parallèle).
+  for (let i = 0; i < 100; i++) {
+    await new Promise(r => setTimeout(r, 50));
+    if (win1.eval("selectedOrdresRound") === targetRound && !doc1.getElementById("prepSection").classList.contains("hidden")) break;
+  }
 
   const landedRound = win1.eval("selectedOrdresRound");
   console.log(`Round demandé : ${targetRound} | round où le joueur a atterri après clic (avec direct périmé en attente) : ${landedRound}`);

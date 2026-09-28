@@ -302,16 +302,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 - **lineup_minutes_test.js** : échec ponctuel constaté le 2026-09-28
   ("Arrière : titulaire trop loin de sa cible"), repassé 3/3 ensuite —
   aléatoire du moteur, flaky.
-- **cup_ordres_planning_test.js échoue** (constaté le 2026-09-27, aussi sur
-  une copie git archive du HEAD d'alors, donc antérieur aux amicaux) :
-  "❌ Pas de <select> « Ajouter un remplaçant » pour le poste Pivot" — écran
-  Ordres (refonte cinq/rotation/convocation), pas creusé.
-
-- **player_detail_test.js échoue systématiquement** (constaté le
-  2026-09-26, sur HEAD sans les changements en cours aussi) : "❌ (setup) la
-  fiche équipe adverse devrait afficher des liens joueur cliquables".
-  Probablement lié à la refonte de la feuille de stats / fiche équipe
-  (commits 3e9b073 et suivants), pas creusé.
+- ✅ RÉGLÉ (2026-09-28) : cup_ordres_planning_test.js (test antérieur à la
+  règle « 3 joueurs max par poste » : libère une place de remplaçant Pivot
+  avant de tester l'ajout), player_detail_test.js (la fiche équipe s'ouvre
+  sur « Aperçu », les liens joueur sont dans « Effectif »),
+  calendrier_ordres_stale_live_redirect_test.js (attente de l'aller-retour
+  serveur au lieu d'un délai fixe de 300 ms). Restent instables SOUS
+  CHARGE seulement (suite lancée en parallèle, passent seuls) :
+  onboarding_tour, post_match_interview_button, end_to_end,
+  player_season_stats_modal — même cause probable (délais fixes).
 
 ---
 

@@ -185,6 +185,10 @@ if (!standingsVisibleAfterBack || !ligueTabActiveAfterBack) {
 const opponentRow = doc2.querySelector("#standingsContent [data-team-idx]");
 if (!opponentRow) throw new Error("❌ (setup) au moins un nom d'équipe adverse devrait être cliquable pour ouvrir sa fiche équipe.");
 opponentRow.click();
+// La fiche équipe s'ouvre sur « Aperçu » (refonte) : les liens joueur sont
+// dans la sous-vue « Effectif ».
+const effectifSubview = doc2.querySelector('#teamDetailContent [data-team-detail-subview="effectif"]');
+if (effectifSubview) effectifSubview.click();
 const opponentPlayerLink = doc2.querySelector("#teamDetailContent .player-link");
 if (!opponentPlayerLink) throw new Error("❌ (setup) la fiche équipe adverse devrait afficher des liens joueur cliquables.");
 const oppName = opponentPlayerLink.textContent;

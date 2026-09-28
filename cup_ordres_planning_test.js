@@ -250,8 +250,19 @@ console.log("✅ Le bouton du calendrier reflète bien l'état \"déjà prépar�
 win.eval(`selectOrdresRound(${round0.index}, "cup");`);
 const prepGridBackup = doc.querySelector("#prepGrid");
 if (!prepGridBackup) throw new Error("❌ Pas de #prepGrid après re-sélection du tour de Coupe.");
-const pivotRow = [...prepGridBackup.querySelectorAll(".lineup-add-select")]
+// Règle « 3 joueurs max par poste » (titulaire + 2 remplaçants, voir
+// MAX_BACKUPS_PER_POSITION) : l'effectif généré a déjà 2 remplaçants Pivot,
+// donc pas de « + Ajouter » tant qu'on n'en a pas retiré un — on libère une
+// place (sur CE plan de Coupe) avant de tester l'ajout.
+const findPivotAddSelect = () => [...doc.querySelector("#prepGrid").querySelectorAll(".lineup-add-select")]
   .find(sel => { const tr = sel.closest("tr"); return tr && tr.querySelector(".lt-pos").textContent === "P"; });
+if (!findPivotAddSelect()) {
+  const pivotTr = [...prepGridBackup.querySelectorAll("tr")].find(tr => tr.querySelector(".lt-pos") && tr.querySelector(".lt-pos").textContent === "P");
+  const rm = pivotTr && pivotTr.querySelector(".lineup-chip-remove");
+  if (!rm) throw new Error("❌ (setup) aucun remplaçant Pivot à retirer pour libérer une place.");
+  rm.click();
+}
+const pivotRow = findPivotAddSelect();
 if (!pivotRow) throw new Error("❌ Pas de <select> \"Ajouter un remplaçant\" pour le poste Pivot.");
 const backupCandidate = pivotRow.options[1];
 if (!backupCandidate) throw new Error("❌ Aucun candidat remplaçant disponible pour le poste Pivot dans ce test.");
