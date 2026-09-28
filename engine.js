@@ -2766,10 +2766,365 @@ function transferRequestQuoteFor(playerName) {
   return pick(TRANSFER_REQUEST_QUOTES).replace("{player}", playerName);
 }
 
+// ---------------------------------------------------------------------
+// NATIONALITÉS (retour utilisateur, 2026-09 : "ajouter les nationalités aux
+// joueurs, un petit drapeau sur la fiche joueur [...] étoffe la liste des
+// pays, il faut la Chine quand même et même les petits pays, on pourra
+// faire des équipes nationales pour les petits pays").
+//
+// Player.nationality = code ISO 3166-1 alpha-2 en minuscules (le nom du
+// fichier du drapeau dans assets/flags/, voir nationFlagHtml côté client) ;
+// "xk" pour le Kosovo (code d'usage, comme la FIBA).
+//
+// `weight` : poids RELATIF parmi les joueurs ÉTRANGERS ; la France, elle,
+// pèse FRANCE_SHARE (60 %) du total quel que soit le reste de la liste
+// (voir NATION_TOTAL_WEIGHT) — on peut donc ajouter un pays sans toucher à
+// la part de joueurs français du championnat.
+// `pool` : réservoir de prénoms/noms (NAME_POOLS) utilisé pour générer un
+// joueur de ce pays, et pour retrouver la nationalité la plus plausible
+// d'un joueur d'une ancienne sauvegarde d'après son nom (nationalityFromName).
+// ---------------------------------------------------------------------
+const FRANCE_SHARE = 0.6;
+const NATIONS = [
+  { code: "fr", name: "France", pool: "fr", weight: 0 },
+  // Amérique du Nord / monde anglophone
+  { code: "us", name: "États-Unis", pool: "anglo", weight: 100 },
+  { code: "ca", name: "Canada", pool: "anglo", weight: 10 },
+  { code: "gb", name: "Royaume-Uni", pool: "anglo", weight: 6 },
+  { code: "ie", name: "Irlande", pool: "anglo", weight: 2 },
+  { code: "au", name: "Australie", pool: "anglo", weight: 8 },
+  { code: "nz", name: "Nouvelle-Zélande", pool: "anglo", weight: 3 },
+  { code: "bs", name: "Bahamas", pool: "anglo", weight: 2 },
+  { code: "jm", name: "Jamaïque", pool: "anglo", weight: 2 },
+  // Monde hispanique
+  { code: "es", name: "Espagne", pool: "hisp", weight: 18 },
+  { code: "ad", name: "Andorre", pool: "hisp", weight: 1 },
+  { code: "ar", name: "Argentine", pool: "hisp", weight: 8 },
+  { code: "mx", name: "Mexique", pool: "hisp", weight: 4 },
+  { code: "pr", name: "Porto Rico", pool: "hisp", weight: 3 },
+  { code: "do", name: "République dominicaine", pool: "hisp", weight: 4 },
+  { code: "cu", name: "Cuba", pool: "hisp", weight: 2 },
+  { code: "ve", name: "Venezuela", pool: "hisp", weight: 3 },
+  { code: "uy", name: "Uruguay", pool: "hisp", weight: 2 },
+  { code: "co", name: "Colombie", pool: "hisp", weight: 2 },
+  { code: "cl", name: "Chili", pool: "hisp", weight: 1 },
+  { code: "pa", name: "Panama", pool: "hisp", weight: 1 },
+  // Monde lusophone
+  { code: "pt", name: "Portugal", pool: "luso", weight: 4 },
+  { code: "br", name: "Brésil", pool: "luso", weight: 7 },
+  { code: "cv", name: "Cap-Vert", pool: "luso", weight: 2 },
+  { code: "ao", name: "Angola", pool: "luso", weight: 2 },
+  // Afrique
+  { code: "sn", name: "Sénégal", pool: "westaf", weight: 10 },
+  { code: "ml", name: "Mali", pool: "westaf", weight: 7 },
+  { code: "ci", name: "Côte d'Ivoire", pool: "westaf", weight: 6 },
+  { code: "gn", name: "Guinée", pool: "westaf", weight: 3 },
+  { code: "bf", name: "Burkina Faso", pool: "westaf", weight: 2 },
+  { code: "bj", name: "Bénin", pool: "westaf", weight: 2 },
+  { code: "cm", name: "Cameroun", pool: "centraf", weight: 7 },
+  { code: "ga", name: "Gabon", pool: "centraf", weight: 1 },
+  { code: "cg", name: "Congo", pool: "centraf", weight: 2 },
+  { code: "cd", name: "RD Congo", pool: "centraf", weight: 4 },
+  { code: "rw", name: "Rwanda", pool: "centraf", weight: 1 },
+  { code: "ng", name: "Nigeria", pool: "nigeria", weight: 6 },
+  { code: "ss", name: "Soudan du Sud", pool: "sudan", weight: 3 },
+  { code: "eg", name: "Égypte", pool: "arab", weight: 2 },
+  { code: "tn", name: "Tunisie", pool: "arab", weight: 2 },
+  { code: "ma", name: "Maroc", pool: "arab", weight: 3 },
+  { code: "dz", name: "Algérie", pool: "arab", weight: 3 },
+  // Caraïbes francophones
+  { code: "ht", name: "Haïti", pool: "haiti", weight: 2 },
+  // Moyen-Orient
+  { code: "lb", name: "Liban", pool: "arab", weight: 2 },
+  { code: "jo", name: "Jordanie", pool: "arab", weight: 1 },
+  { code: "qa", name: "Qatar", pool: "arab", weight: 1 },
+  { code: "ir", name: "Iran", pool: "iran", weight: 1 },
+  { code: "il", name: "Israël", pool: "israel", weight: 3 },
+  { code: "tr", name: "Turquie", pool: "turkish", weight: 6 },
+  // Europe
+  { code: "rs", name: "Serbie", pool: "balkan", weight: 14 },
+  { code: "hr", name: "Croatie", pool: "balkan", weight: 6 },
+  { code: "si", name: "Slovénie", pool: "balkan", weight: 5 },
+  { code: "ba", name: "Bosnie-Herzégovine", pool: "balkan", weight: 3 },
+  { code: "me", name: "Monténégro", pool: "balkan", weight: 3 },
+  { code: "mk", name: "Macédoine du Nord", pool: "balkan", weight: 2 },
+  { code: "xk", name: "Kosovo", pool: "albanian", weight: 1 },
+  { code: "al", name: "Albanie", pool: "albanian", weight: 1 },
+  { code: "gr", name: "Grèce", pool: "greek", weight: 8 },
+  { code: "cy", name: "Chypre", pool: "greek", weight: 1 },
+  { code: "it", name: "Italie", pool: "italian", weight: 10 },
+  { code: "mt", name: "Malte", pool: "malta", weight: 1 },
+  { code: "mc", name: "Monaco", pool: "fr", weight: 1 },
+  { code: "be", name: "Belgique", pool: "dutch", weight: 8 },
+  { code: "nl", name: "Pays-Bas", pool: "dutch", weight: 3 },
+  { code: "lu", name: "Luxembourg", pool: "german", weight: 1 },
+  { code: "de", name: "Allemagne", pool: "german", weight: 10 },
+  { code: "at", name: "Autriche", pool: "german", weight: 2 },
+  { code: "ch", name: "Suisse", pool: "german", weight: 3 },
+  { code: "lt", name: "Lituanie", pool: "baltic", weight: 8 },
+  { code: "lv", name: "Lettonie", pool: "baltic", weight: 4 },
+  { code: "ee", name: "Estonie", pool: "baltic", weight: 2 },
+  { code: "pl", name: "Pologne", pool: "slavic", weight: 4 },
+  { code: "cz", name: "Tchéquie", pool: "slavic", weight: 3 },
+  { code: "sk", name: "Slovaquie", pool: "slavic", weight: 1 },
+  { code: "ua", name: "Ukraine", pool: "slavic", weight: 3 },
+  { code: "bg", name: "Bulgarie", pool: "slavic", weight: 2 },
+  { code: "ro", name: "Roumanie", pool: "romanian", weight: 2 },
+  { code: "md", name: "Moldavie", pool: "romanian", weight: 1 },
+  { code: "hu", name: "Hongrie", pool: "hungarian", weight: 2 },
+  { code: "ge", name: "Géorgie", pool: "georgian", weight: 3 },
+  { code: "am", name: "Arménie", pool: "armenian", weight: 1 },
+  { code: "fi", name: "Finlande", pool: "nordic", weight: 3 },
+  { code: "se", name: "Suède", pool: "nordic", weight: 3 },
+  { code: "no", name: "Norvège", pool: "nordic", weight: 1 },
+  { code: "dk", name: "Danemark", pool: "nordic", weight: 2 },
+  { code: "is", name: "Islande", pool: "nordic", weight: 1 },
+  // Asie / Océanie
+  { code: "cn", name: "Chine", pool: "chinese", weight: 4 },
+  { code: "jp", name: "Japon", pool: "japanese", weight: 3 },
+  { code: "kr", name: "Corée du Sud", pool: "korean", weight: 2 },
+  { code: "ph", name: "Philippines", pool: "filipino", weight: 2 },
+  { code: "in", name: "Inde", pool: "indian", weight: 1 },
+];
+// Poids de la France calculé pour qu'elle pèse exactement FRANCE_SHARE du
+// total (voir le commentaire au-dessus de NATIONS).
+{
+  const foreignWeight = NATIONS.reduce((s, n) => s + (n.code === "fr" ? 0 : n.weight), 0);
+  NATIONS[0].weight = Math.round(foreignWeight * FRANCE_SHARE / (1 - FRANCE_SHARE));
+}
+const NATION_BY_CODE = Object.fromEntries(NATIONS.map(n => [n.code, n]));
+const NATION_TOTAL_WEIGHT = NATIONS.reduce((s, n) => s + n.weight, 0);
+
+const NAME_POOLS = {
+  fr: {
+    first: ["Léo", "Hugo", "Nathan", "Malik", "Yanis", "Théo", "Amir", "Kevin", "Rayan", "Bastien",
+      "Enzo", "Souleymane", "Sacha", "Tom", "Adama", "Noé", "Elias", "Baptiste", "Milo", "Quentin",
+      "Lucas", "Louis", "Mathis", "Axel", "Maxime", "Antoine", "Moussa", "Ibrahim", "Nolan", "Evan",
+      "Killian", "Mamadou", "Timothé", "Jordan", "Karim", "Marc", "Bilal", "Clément", "Victor", "Andrew"],
+    last: ["Dupont", "Martin", "Petit", "Bernard", "Moreau", "Lefevre", "Fontaine", "Girard", "Fournier",
+      "Chevalier", "Durand", "Leroy", "Simon", "Laurent", "Michel", "Legrand", "Roux", "Vidal", "Caron",
+      "Perrin", "Morel", "Gauthier", "Renard", "Blanchard", "Guerin", "Garcia", "Lopez", "Barros",
+      "N'Diaye", "Traoré", "Diallo", "Keita", "Cissé", "Toure", "Kone", "Mbaye", "Sow", "Camara",
+      "Fofana", "Kante", "Diakite", "Sanogo", "Coulibaly", "Lambert", "Bonnet", "Mercier", "Faure",
+      "Rousseau", "Blanc", "Garnier", "Chauvin", "Lemoine", "Masson", "Marchand", "Duval", "Collin",
+      "Boucher", "Riviere", "Lacroix", "Hamon", "Tessier", "Poirier", "Charpentier", "Benali", "Haddad"],
+  },
+  anglo: {
+    first: ["James", "Tyler", "Jalen", "Marcus", "DeShawn", "Brandon", "Chris", "Michael", "Isaiah",
+      "Trey", "Darius", "Caleb", "Tyrese", "Justin", "Andre", "Jaylen", "Ryan", "Kyle", "Dillon", "Zach"],
+    last: ["Johnson", "Brooks", "Cooper", "Bennett", "Wright", "Murphy", "Walsh", "Kelly", "O'Brien",
+      "Williams", "Jackson", "Robinson", "Harris", "Thompson", "Carter", "Mitchell", "Washington",
+      "Coleman", "Henderson", "Bryant", "Hayes", "Stewart", "Reed", "Morgan", "Turner", "Parker",
+      "Davis", "Miller", "Anderson", "Wilson", "Taylor", "Moore", "White", "Clarke", "Hughes"],
+  },
+  hisp: {
+    first: ["Alejandro", "Sergio", "Pablo", "Javier", "Diego", "Carlos", "Mateo", "Álvaro", "Nicolás",
+      "Facundo", "Santiago", "Luis", "Jorge", "Rafael", "Marc", "Andrés", "Emilio", "Gabriel"],
+    last: ["Garcia", "Lopez", "Hernandez", "Gonzalez", "Rodriguez", "Fernandez", "Morales", "Castillo",
+      "Ramos", "Vidal", "Martinez", "Sanchez", "Perez", "Gomez", "Diaz", "Torres", "Ruiz", "Navarro",
+      "Jimenez", "Vargas", "Romero", "Herrera", "Medina", "Ortiz"],
+  },
+  luso: {
+    first: ["João", "Pedro", "Tiago", "Rafael", "Bruno", "Gustavo", "Lucas", "Mateus", "Leandro",
+      "Anderson", "Vinícius", "Rui", "Nuno", "Edson", "Adilson"],
+    last: ["Silva", "Costa", "Ferreira", "Santos", "Oliveira", "Pereira", "Alves", "Nunes", "Almeida",
+      "Barros", "Souza", "Rodrigues", "Carvalho", "Gomes", "Lima", "Ribeiro", "Monteiro", "Tavares", "Mendes"],
+  },
+  westaf: {
+    first: ["Moussa", "Mamadou", "Ibrahima", "Cheikh", "Ousmane", "Abdoulaye", "Souleymane", "Adama",
+      "Boubacar", "Lamine", "Seydou", "Aliou", "Modibo", "Youssouf", "Bakary", "Issa"],
+    last: ["N'Diaye", "Traoré", "Diallo", "Keita", "Cissé", "Toure", "Ouedraogo", "Kone", "Mbaye", "Sow",
+      "Ndiaye", "Camara", "Fofana", "Kante", "Sy", "Diakite", "Sanogo", "Coulibaly", "Diop", "Fall",
+      "Gueye", "Sarr", "Diarra", "Bamba", "Kaboré", "Sidibé"],
+  },
+  centraf: {
+    first: ["Christian", "Joël", "Patrick", "Serge", "Landry", "Junior", "Emmanuel", "Hervé", "Jean",
+      "Rodrigue", "Didier", "Yannick"],
+    last: ["Mbala", "Kabongo", "Mukendi", "Ilunga", "Mbemba", "Nkounkou", "Eto'o", "Mboumba", "Ondo",
+      "Ngoy", "Tshibanda", "Kalala", "Nsimba", "Ngando", "Mvogo", "Habimana", "Niyonzima"],
+  },
+  nigeria: {
+    first: ["Chinedu", "Emeka", "Obinna", "Tunde", "Femi", "Ikechukwu", "Chukwuemeka", "Olumide", "Uche", "Ayo"],
+    last: ["Okafor", "Adebayo", "Okonkwo", "Eze", "Nwosu", "Adeyemi", "Obi", "Okeke", "Balogun", "Olawale", "Achiuwa"],
+  },
+  sudan: {
+    first: ["Deng", "Akech", "Majok", "Garang", "Wol", "Nuni", "Kuol", "Chol"],
+    last: ["Deng", "Mayen", "Majok", "Garang", "Bol", "Akec", "Kuany", "Makuach", "Ajak", "Ring"],
+  },
+  arab: {
+    first: ["Youssef", "Omar", "Mehdi", "Karim", "Ahmed", "Hamza", "Nassim", "Walid", "Samir", "Rami",
+      "Tarek", "Anis", "Fadi", "Ziad"],
+    last: ["Benali", "Haddad", "El Amrani", "Mansour", "Bouazizi", "Khalil", "Saleh", "Hassan", "Nasser",
+      "Benkirane", "Boudjema", "Chahine", "Fakhoury", "Mahmoud", "Zidane", "Kassab"],
+  },
+  haiti: {
+    first: ["Jean", "Wesley", "Ricardo", "Stanley", "Fritz", "Jeff", "Kervens", "Wilfried"],
+    last: ["Jean-Baptiste", "Pierre", "Joseph", "Louis", "Charles", "Saint-Fleur", "Désir", "Augustin", "Dorsainvil"],
+  },
+  iran: {
+    first: ["Arsalan", "Hamed", "Mohammad", "Behnam", "Samad", "Reza"],
+    last: ["Haddadi", "Kazemi", "Nikkhah", "Yakhchali", "Jamshidi", "Rezaei", "Mohammadi"],
+  },
+  israel: {
+    first: ["Omri", "Yam", "Guy", "Tamir", "Lior", "Itay", "Deni", "Yovel"],
+    last: ["Cohen", "Levi", "Mizrahi", "Peretz", "Avdija", "Friedman", "Blatt", "Ben-David", "Halperin"],
+  },
+  turkish: {
+    first: ["Cedi", "Emre", "Burak", "Mehmet", "Alperen", "Furkan", "Ömer", "Kerem", "Berk", "Hakan"],
+    last: ["Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Öztürk", "Aydın", "Arslan", "Korkmaz", "Doğan", "Turkoglu"],
+  },
+  balkan: {
+    first: ["Nikola", "Stefan", "Luka", "Marko", "Bogdan", "Vasilije", "Nemanja", "Miloš", "Dario",
+      "Mario", "Jusuf", "Aleksa", "Filip", "Dragan", "Ivan", "Nikša"],
+    last: ["Kovac", "Horvat", "Novakovic", "Jankovic", "Jokic", "Petrovic", "Nikolic", "Markovic",
+      "Jovanovic", "Bogdanovic", "Dragic", "Saric", "Vucevic", "Nurkic", "Simonovic", "Bjelica",
+      "Kalinic", "Radulovic", "Pavlovic", "Stojanovic"],
+  },
+  albanian: {
+    first: ["Arben", "Driton", "Besnik", "Valon", "Leotrim", "Ermal", "Kushtrim"],
+    last: ["Hoxha", "Krasniqi", "Berisha", "Gashi", "Shala", "Morina", "Kelmendi", "Bytyqi"],
+  },
+  greek: {
+    first: ["Giannis", "Kostas", "Nikos", "Georgios", "Vasilis", "Dimitris", "Thanasis", "Panagiotis", "Andreas"],
+    last: ["Papadopoulos", "Papanikolaou", "Printezis", "Sloukas", "Calathes", "Georgiou", "Dimitriou",
+      "Papagiannis", "Mitoglou", "Larentzakis", "Christodoulou"],
+  },
+  italian: {
+    first: ["Marco", "Luca", "Alessandro", "Simone", "Matteo", "Nicolò", "Danilo", "Stefano", "Giampaolo", "Andrea"],
+    last: ["Rossi", "Rossetti", "Bianchi", "Ferrari", "Ricci", "Marino", "Greco", "Conti", "Gallinari",
+      "Belinelli", "Melli", "Fontecchio", "Spissu", "Esposito", "Romano", "Colombo"],
+  },
+  malta: {
+    first: ["Samuel", "Matthew", "Luke", "Kurt", "Jean"],
+    last: ["Borg", "Camilleri", "Vella", "Farrugia", "Zammit", "Galea"],
+  },
+  dutch: {
+    first: ["Sam", "Jesse", "Thijs", "Bram", "Ruben", "Niels", "Emmanuel", "Retin", "Kevin", "Pierre"],
+    last: ["De Jong", "Janssens", "Peeters", "Maes", "De Smet", "Van Rossom", "Hertel", "Van den Berg",
+      "Bakker", "Visser", "Smits", "Claes", "Willems", "Mulder", "Dekker"],
+  },
+  german: {
+    first: ["Dennis", "Franz", "Moritz", "Daniel", "Maximilian", "Johannes", "Andreas", "Isaac", "Clint", "Lukas"],
+    last: ["Muller", "Weber", "Schmidt", "Fischer", "Hoffmann", "Wagner", "Schroder", "Becker", "Theis",
+      "Voigtmann", "Hartenstein", "Richter", "Neumann", "Zimmermann", "Keller"],
+  },
+  baltic: {
+    first: ["Jonas", "Domantas", "Rokas", "Mindaugas", "Arvydas", "Kristaps", "Dāvis", "Rolands", "Kaspar", "Martin"],
+    last: ["Valanciunas", "Sabonis", "Jokubaitis", "Kuzminskas", "Motiejunas", "Porzingis", "Bertans",
+      "Strelnieks", "Kurucs", "Treier", "Kullamae", "Tamm", "Kazlauskas", "Petrauskas"],
+  },
+  slavic: {
+    first: ["Jakub", "Mateusz", "Tomáš", "Ondřej", "Oleksandr", "Sviatoslav", "Aleksander", "Ivan", "Dmytro", "Georgi"],
+    last: ["Kowalski", "Nowak", "Ivanov", "Petrov", "Popov", "Dimitrov", "Balcerowski", "Satoransky",
+      "Vesely", "Len", "Mykhailiuk", "Ponitka", "Novotny", "Horak", "Georgiev"],
+  },
+  romanian: {
+    first: ["Andrei", "Mihai", "Vlad", "Alexandru", "Radu", "Ion"],
+    last: ["Popescu", "Ionescu", "Dumitru", "Stan", "Munteanu", "Rusu", "Ciobanu"],
+  },
+  hungarian: {
+    first: ["Ádám", "Dávid", "Bence", "Zoltán", "Péter", "Márton"],
+    last: ["Nagy", "Kovács", "Tóth", "Szabó", "Horváth", "Varga", "Hanga"],
+  },
+  georgian: {
+    first: ["Tornike", "Giorgi", "Goga", "Levan", "Zaza", "Sandro"],
+    last: ["Shengelia", "Bitadze", "Mamukelashvili", "Tsintsadze", "Gelashvili", "Beridze", "Kapanadze"],
+  },
+  armenian: {
+    first: ["Aram", "Tigran", "Davit", "Narek", "Armen"],
+    last: ["Petrosyan", "Hakobyan", "Sargsyan", "Grigoryan", "Harutyunyan"],
+  },
+  nordic: {
+    first: ["Lauri", "Mikael", "Erik", "Oskar", "Anders", "Jonas", "Tryggvi", "Elias", "Sasu", "Gustav"],
+    last: ["Andersson", "Nilsson", "Larsen", "Hansen", "Markkanen", "Salin", "Johansson", "Jensen",
+      "Virtanen", "Lindqvist", "Hlinason", "Karlsson", "Berg"],
+  },
+  chinese: {
+    first: ["Wei", "Yi", "Zhou", "Hao", "Jian", "Lei", "Ming", "Jun", "Kai", "Zhiwei"],
+    last: ["Wang", "Li", "Zhang", "Liu", "Chen", "Yang", "Zhao", "Huang", "Zhou", "Wu", "Guo", "Hu", "Sun"],
+  },
+  japanese: {
+    first: ["Yuta", "Rui", "Yuki", "Kai", "Ren", "Haruto", "Makoto", "Daiki", "Kenta"],
+    last: ["Nakamura", "Sato", "Kobayashi", "Yamada", "Watanabe", "Suzuki", "Hachimura", "Tabuse",
+      "Takahashi", "Tanaka", "Ito"],
+  },
+  korean: {
+    first: ["Ji-hoon", "Min-soo", "Seung-hyun", "Jun-ho", "Dong-hyun", "Hyun-woo"],
+    last: ["Kim", "Lee", "Park", "Choi", "Jung", "Kang", "Yoon", "Ha"],
+  },
+  filipino: {
+    first: ["Kai", "Jordan", "Paolo", "Mark", "Junmar", "Dwight", "Rhenz", "CJ"],
+    last: ["Sotto", "Fajardo", "Clarkson", "Ramos", "Castro", "Abueva", "Aguilar", "Santos", "Reyes", "Dela Cruz"],
+  },
+  indian: {
+    first: ["Satnam", "Amjyot", "Arjun", "Vishesh", "Rohan", "Prince"],
+    last: ["Singh", "Sharma", "Bhriguvanshi", "Patel", "Kumar", "Reddy"],
+  },
+};
+
+// Hash FNV-1a 32 bits : tirage DÉTERMINISTE (même nom → même résultat sur
+// le serveur et dans le navigateur), voir nationalityFromName.
+function nationHash(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+// Tirage pondéré parmi `nations` avec `r` ∈ [0, 1).
+function pickWeightedNation(nations, r) {
+  const total = nations.reduce((s, n) => s + n.weight, 0);
+  let x = r * total;
+  for (const n of nations) {
+    x -= n.weight;
+    if (x < 0) return n;
+  }
+  return nations[nations.length - 1];
+}
+
+function randomNationality() {
+  return pickWeightedNation(NATIONS, Math.random()).code;
+}
+
+// Nationalité d'un joueur qui n'en a pas encore (sauvegarde d'avant les
+// nationalités) : parmi les pays dont le réservoir de noms contient son
+// nom de famille (un "Nakamura" sera japonais, un "Jokic" des Balkans…),
+// pondérés comme d'habitude — sinon parmi tous les pays. Tirage
+// DÉTERMINISTE (hash du nom complet), de sorte que le serveur et le
+// navigateur tombent d'accord sans migration ; la valeur est ensuite
+// sauvegardée avec le joueur et ne bouge plus jamais.
+function nationalityFromName(name) {
+  const full = String(name || "");
+  const lastName = full.split(" ").slice(1).join(" ");
+  const candidates = NATIONS.filter(n => (NAME_POOLS[n.pool]?.last || []).includes(lastName));
+  const r = nationHash(full) / 4294967296;
+  return pickWeightedNation(candidates.length ? candidates : NATIONS, r).code;
+}
+
+// Identité complète d'un NOUVEAU joueur : nationalité tirée d'abord, puis
+// prénom/nom dans le réservoir de ce pays. `usedLastNames` (Set optionnel,
+// voir pickUniqueLastName) évite les doublons de nom dans un même effectif.
+function generatePlayerIdentity(usedLastNames) {
+  const nationality = randomNationality();
+  const pool = NAME_POOLS[NATION_BY_CODE[nationality].pool] || NAME_POOLS.fr;
+  const lastName = usedLastNames ? pickUniqueLastName(pool.last, usedLastNames) : pick(pool.last);
+  return { name: `${pick(pool.first)} ${lastName}`, nationality };
+}
+
+function nationName(code) {
+  return NATION_BY_CODE[code]?.name || "";
+}
+
 class Player {
-  constructor({ name, position, height, age, attrs, aggressiveness }) {
+  constructor({ name, position, height, age, attrs, aggressiveness, nationality }) {
     this.id = uid();
     this.name = name;
+    // Nationalité (voir NATIONS) : fournie par generatePlayerIdentity pour un
+    // nouveau joueur, ou par la sauvegarde ; à défaut (ancienne sauvegarde),
+    // déduite du nom une fois pour toutes (nationalityFromName).
+    this.nationality = NATION_BY_CODE[nationality] ? nationality : nationalityFromName(name);
     this.position = position;
     this.height = height;
     this.age = age;
@@ -7469,14 +7824,14 @@ function generateRawYouthAttrs(tier, position) {
 // isolé, hors génération d'effectif complet), on retombe sur un tirage
 // classique.
 function generatePlayer(position, tier, usedLastNames) {
-  const lastName = usedLastNames ? pickUniqueLastName(LAST_NAMES, usedLastNames) : pick(LAST_NAMES);
-  const name = `${pick(FIRST_NAMES)} ${lastName}`;
+  const { name, nationality } = generatePlayerIdentity(usedLastNames);
   const age = Math.round(rand(18, 33));
   const attrs = age <= YOUNG_PROSPECT_MAX_AGE
     ? generateRawYouthAttrs(tier, position)
     : generateAttrsForPosition(position, tier);
   return new Player({
     name,
+    nationality,
     position,
     height: heightForPosition(position),
     age,
@@ -7506,11 +7861,11 @@ function generateTeam(name, tier = 1) {
 // gratuitement à la création).
 // `usedLastNames` optionnel, même rôle que dans generatePlayer ci-dessus.
 function generateRookiePlayer(position, usedLastNames) {
-  const lastName = usedLastNames ? pickUniqueLastName(LAST_NAMES, usedLastNames) : pick(LAST_NAMES);
-  const name = `${pick(FIRST_NAMES)} ${lastName}`;
+  const { name, nationality } = generatePlayerIdentity(usedLastNames);
   const age = Math.round(rand(18, 33));
   return new Player({
     name,
+    nationality,
     position,
     height: heightForPosition(position),
     age,
@@ -7558,8 +7913,10 @@ function generateYouthCandidate(now, recruiterLevel) {
       attrs[a] = clamp(Math.round(rand(31, 40) * tier), 1, 99);
     });
   }
+  const identity = generatePlayerIdentity();
   const candidate = new Player({
-    name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+    name: identity.name,
+    nationality: identity.nationality,
     position,
     height: heightForPosition(position),
     age,
@@ -11202,7 +11559,7 @@ function generateMultiManagerLeague(managerTeamNames, divisionLevel = 1, now = D
 // la restauration (même logique de repli, partagée elle aussi).
 function serializePlayerRecord(p) {
   return {
-    name: p.name, position: p.position, height: p.height, age: p.age,
+    name: p.name, nationality: p.nationality, position: p.position, height: p.height, age: p.age,
     attrs: { ...p.attrs }, potential: p.potential, salary: p.salary,
     // Plafonds physique/mental, caractéristique par caractéristique (voir
     // Player.physicalPotential/mentalPotential, retour utilisateur 2026-09 :
@@ -11638,6 +11995,7 @@ function playerFromSave(pdata) {
   const p = new Player({
     name: pdata.name, position: pdata.position, height: pdata.height,
     age: pdata.age, attrs: { ...pdata.attrs }, aggressiveness: pdata.aggressiveness,
+    nationality: pdata.nationality,
   });
   // Migration : sauvegardes d'avant l'ajout de mental/endurance/freeThrow aux
   // ATTRS (voir le grand commentaire au-dessus d'ATTRS) - ces 3 caractéristiques
@@ -13922,6 +14280,7 @@ return {
   Player, Team, MatchEngine, CONVOCATION_MAX,
   heightForPosition, generateAttrsForPosition, generateRawYouthAttrs, generateRawAttrsInRange, generatePlayer, generateTeam,
   generateRookiePlayer, generateStartingRoster, FIRST_NAMES, LAST_NAMES,
+  NATIONS, NATION_BY_CODE, NAME_POOLS, nationName, nationalityFromName, generatePlayerIdentity, randomNationality,
   potentialHeadroom, growthFactorForAge, declineFactorForAge, YOUNG_PROSPECT_MAX_AGE, SEASON_LENGTH_WEEKS,
   POTENTIAL_TIERS, potentialTierLabel, potentialTierIndex,
   QUARTER_SECONDS, OVERTIME_SECONDS,

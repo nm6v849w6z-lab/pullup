@@ -20,6 +20,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🛠 CODÉ, TESTS VERTS, À COMMITTER/POUSSER (2026-09-28) — Nationalités + drapeaux** — retours
+  utilisateur : "un petit drapeau sur la fiche joueur", "étoffe la liste
+  des pays, il faut la Chine et même les petits pays (équipes nationales
+  plus tard)". ~90 pays (NATIONS, engine.js + miroir html), France = 60 %
+  des nouveaux joueurs, prénom/nom tirés dans le réservoir du pays
+  (NAME_POOLS). Joueurs existants : nationalityFromName (hash du nom,
+  pays dont le réservoir contient le nom de famille), puis sauvegardée.
+  Drapeaux : assets/flags/xx.png (64×48, générés depuis flag-icons, MIT).
+  Affichage : fiche joueur (drapeau + pastille du pays), Effectif et
+  effectif d'un autre club, Marché (nom du pays au survol) ; noms des pays
+  traduits dans assets/i18n/en.js. Test : nationality_test.js. Suite :
+  équipes nationales / divisions par pays (à discuter).
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-28) — Toutes les pages en pleine
   largeur** — retours : "certaines pages ne prennent pas toute la largeur à
   l'écran", "il faudra faire attention à tout bien paramétrer", Effectif :
@@ -36,7 +49,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   trouvaille : en carrière solo, après 4 journées rattrapées,
   goToOrdresTab → renderPrep plante (teamB indéfini) — à investiguer.
 
-- **✅ DÉPLOYÉ SUR LE MAC, TESTS VERTS, À COMMITTER/POUSSER (2026-09-28) —
+- **✅ COMMITTÉ (b792edd), À POUSSER SI PAS FAIT (2026-09-28) —
   Scouting : « Comment ils marquent » + contre-attaques recalibrées** —
   retours utilisateur : "comment ils marquent leur point" puis, sur la
   maquette validée, deux blocs "par type de tir" (raquette / mi-distance /
@@ -59,7 +72,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   (18 → ~11,5 par équipe et par match), secondes chances 20 % → ~13 % des
   points ; points/match inchangés (~91), contre-attaques ~11 %.
 
-- **🛠 CODÉ, TESTS VERTS, À POUSSER (2026-09-28) — AdSense refusé :
+- **✅ EN PROD (bde7bed, poussé) — EN ATTENTE DU 2e EXAMEN ADSENSE (2026-09-28) — AdSense refusé :
   « annonces sur des pages sans contenu d'éditeur »** — un visiteur sans
   compte ne voyait que /bienvenue (inscription) et la coquille du jeu.
   - server/site.js (nouveau) : pages publiques /le-jeu, /guide (+ 24
@@ -74,9 +87,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     + pied de page ; « Aucune publicité » retiré.
   - Tests : site_pages_test.js (nouveau), ads_integration_test.js adapté ;
     scouting_pro, hoop_show_player, server/index, server/accounts verts.
-  - Reste (utilisateur) : push ; créer l'adresse contact@hoop-manager.com ;
-    AdSense : vérifier Annonces automatiques DÉSACTIVÉES, puis redemander
-    l'examen.
+  - Fait (utilisateur, 2026-09-28) : contact@hoop-manager.com (IONOS, reçu
+    OK) ; 2e examen AdSense demandé. Après approbation : vérifier Annonces
+    automatiques = Désactivé, s'inscrire à H5 Games Ads, retirer
+    ADSENSE_TEST sur Render.
 
 - **✅ EN PROD (ae45239, ADSENSE_CLIENT posé sur Render, /ads.txt OK) — EN ATTENTE D'EXAMEN ADSENSE (2026-09-27) — Vraies pubs
   (Google H5 Games Ads) aux emplacements prévus** — demande : "ajouter les
