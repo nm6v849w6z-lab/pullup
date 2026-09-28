@@ -547,6 +547,8 @@ function tick(league, now) {
   // archivée sur chaque club humain dès que le champion est connu —
   // idempotent, donc sans risque de la répéter à chaque requête.
   if (league.isPlayoffsDone && league.isPlayoffsDone()) {
+    // Récompenses de fin de saison, carrière, succès (idempotent).
+    if (Engine.awardSeasonHonours) Engine.awardSeasonHonours(league, now);
     league.teams.forEach((t, i) => {
       if (!t.isHuman) return;
       // Sponsors d'abord (bonus/rupture selon l'objectif), puis archive.

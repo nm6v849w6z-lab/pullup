@@ -1278,6 +1278,20 @@
   .cp-tag{display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:6px; white-space:nowrap;}
   .cp-tag.you{background:rgba(240,162,60,.14); color:var(--amber); font-weight:700;}
   .cp-byes{color:var(--ink-faint); font-size:12.5px; padding-left:16px !important;}
+  .aw-list{display:flex; flex-direction:column; gap:6px;}
+  .aw-row{display:grid; grid-template-columns:minmax(150px,1.1fr) minmax(140px,1.2fr) 1fr; gap:8px; align-items:baseline; padding:6px 8px; border-radius:8px; background:var(--panel-2, rgba(255,255,255,.03)); font-size:13px;}
+  .aw-row.is-mine{outline:1px solid rgba(240,162,60,.45);}
+  .aw-label{font-weight:700;}
+  .aw-team{color:var(--ink-faint); font-size:12px;}
+  .aw-detail{color:var(--ink-faint); font-size:12px;}
+  .pdp2-card .aw-row{grid-template-columns:1fr;}
+  .ach-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px;}
+  .ach{display:flex; gap:8px; align-items:flex-start; padding:8px; border-radius:10px; border:1px solid var(--line); opacity:.55;}
+  .ach.on{opacity:1; border-color:rgba(240,162,60,.5);}
+  .ach-icon{font-size:18px; line-height:1;}
+  .ach-txt{display:flex; flex-direction:column; gap:2px; font-size:13px;}
+  .ach-txt small{color:var(--ink-faint); font-size:11.5px;}
+  @media (max-width:640px){ .aw-row{grid-template-columns:1fr;} }
   .ncup-intro{color:var(--ink-soft, var(--ink-faint)); font-size:13px; margin:0 0 12px;}
   .ncup-lvl{display:inline-block; font-size:11px; font-weight:600; color:var(--ink-faint); margin-left:4px; white-space:nowrap;}
   .ncup-hc{display:inline-block; font-size:11px; font-weight:700; color:var(--amber); background:rgba(240,162,60,.14); border-radius:5px; padding:1px 5px; margin-left:4px;}
@@ -19047,6 +19061,10 @@ function serializePlayerRecord(p) {
     transferRequestActive: !!p.transferRequestActive,
     transferRequestQuote: p.transferRequestQuote ?? null,
     transferRequestDiscussed: !!p.transferRequestDiscussed,
+    // Distinctions de fin de saison et carrière saison par saison (voir
+    // awardSeasonHonours).
+    awards: Array.isArray(p.awards) ? p.awards.map(a => ({ ...a })) : [],
+    careerSeasons: Array.isArray(p.careerSeasons) ? p.careerSeasons.map(c => ({ ...c })) : [],
     // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
     retiringAfterSeason: !!p.retiringAfterSeason,
     retirementWeeks: p.retirementWeeks || 0,
@@ -19217,6 +19235,8 @@ function serializeTeam(team) {
     seasonHistory: Array.isArray(team.seasonHistory) ? team.seasonHistory : [],
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
+    // Succès du manager (voir awardSeasonHonours / MANAGER_ACHIEVEMENTS).
+    achievements: Array.isArray(team.achievements) ? team.achievements.map(a => ({ ...a })) : [],
     lastArchivedSeasonId: team.lastArchivedSeasonId || null,
     hallOfFame: Array.isArray(team.hallOfFame) ? team.hallOfFame : [],
     // Voir engine.js, miroir identique.
@@ -19467,6 +19487,8 @@ function playerFromSave(pdata) {
   if (typeof pdata.transferRequestActive === "boolean") p.transferRequestActive = pdata.transferRequestActive;
   if (typeof pdata.transferRequestQuote === "string") p.transferRequestQuote = pdata.transferRequestQuote;
   if (typeof pdata.transferRequestDiscussed === "boolean") p.transferRequestDiscussed = pdata.transferRequestDiscussed;
+  p.awards = Array.isArray(pdata.awards) ? pdata.awards.map(a => ({ ...a })) : [];
+  p.careerSeasons = Array.isArray(pdata.careerSeasons) ? pdata.careerSeasons.map(c => ({ ...c })) : [];
   if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
@@ -19683,6 +19705,7 @@ function teamFromSave(data) {
   team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
+  team.achievements = Array.isArray(data.achievements) ? data.achievements.map(a => ({ ...a })) : [];
   team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
   team.hallOfFame = Array.isArray(data.hallOfFame) ? data.hallOfFame : [];
   // Voir engine.js, miroir identique.
@@ -19889,6 +19912,7 @@ function serializeLeague(lg) {
     results: lg.results,
     playoffs: lg.playoffs,
     relegationBarrage: lg.relegationBarrage || null,
+    seasonAwards: lg.seasonAwards || null,
     divisionLevel: lg.divisionLevel || 1,
     // Pays/divisions (2026-09-28, voir WORLD_COUNTRIES) : identité de CE
     // championnat dans le monde (pays, fuseau horaire, groupe de sa division).
@@ -20015,6 +20039,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.results = Array.isArray(data.results) ? data.results : [];
   lg.playoffs = data.playoffs || null;
   lg.relegationBarrage = data.relegationBarrage || null;
+  lg.seasonAwards = data.seasonAwards && Array.isArray(data.seasonAwards.awards) ? data.seasonAwards : null;
   // Ancienne sauvegarde sans pyramide de divisions (avant l'ajout de la
   // montée/descente) : un club "pas encore attribué" prend la place la plus
   // haute disponible, donc Division I par défaut (voir generateLeague).
@@ -26804,6 +26829,7 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `</section>`;
   html += `</div>`; // side
   html += `</div>`; // row games
+  html += playerCareerHtml(player);
   html += `</div>`; // pdp2
 
   // ---- Mise en vente : reprend EXACTEMENT le mécanisme déjà en place
@@ -31515,6 +31541,9 @@ function renderSeasonEnd() {
 
   const championIsUser = po.champion === myTeamIndex;
   html += `<p class="season-champion">Champion : ${escapeHtml(nameOf(po.champion))}${championIsUser ? " (c'est vous !)" : ""}</p>`;
+  if (league.seasonAwards && league.seasonAwards.awards && league.seasonAwards.awards.length) {
+    html += "<h3>Récompenses de la saison</h3>" + seasonAwardsHtml();
+  }
 
   // Ligue partagée sans pyramide de divisions (une seule ligue) : pas de
   // montée ni de descente réelles, donc ni barrage ni verdict de division
@@ -43888,6 +43917,8 @@ function renderHistoireSection() {
   html += `<section class="lg-panel hc-panel" id="hcHallOfFame"><div class="lg-panel-title"><h2>Hall of Fame</h2></div>${hcHallOfFameHtml(team, idx)}</section>`;
   html += `</div><div class="hc-col">`;
   html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
+  html += `<section class="lg-panel hc-panel" id="hcSeasonAwards"><div class="lg-panel-title"><h2>Récompenses de la saison</h2>${league.seasonAwards ? `<span>Saison ${league.seasonAwards.seasonNumber} · ${escapeHtml(league.seasonAwards.divisionLabel || "")}</span>` : ""}</div>${seasonAwardsHtml()}</section>`;
+  if (team.isHuman) html += `<section class="lg-panel hc-panel" id="hcAchievements"><div class="lg-panel-title"><h2>Succès du manager</h2></div>${managerAchievementsHtml(team)}</section>`;
   html += `</div></div>`;
   holder.innerHTML = html;
 }
@@ -43909,6 +43940,65 @@ function hcChampionshipLabel(s) {
     if (s.rank >= 7) return "Barrage";
   }
   return "Milieu de tableau";
+}
+
+// ---------------------------------------------------------------------
+// Récompenses de fin de saison, carrière des joueurs, succès du manager
+// (voir awardSeasonHonours / MANAGER_ACHIEVEMENTS côté moteur).
+// ---------------------------------------------------------------------
+const MANAGER_ACHIEVEMENTS_CLIENT = [
+  ["firstSeason", "Première saison", "Terminer une saison complète."],
+  ["playoffs", "Dans le dernier carré", "Se qualifier pour les play-offs."],
+  ["champion", "Champion", "Remporter les play-offs de son championnat."],
+  ["champion1", "Au sommet", "Être champion de Division I."],
+  ["promoted", "Ça monte !", "Obtenir une montée."],
+  ["cupWinner", "Coupe en poche", "Remporter la Coupe."],
+  ["superCup", "Supercoupe", "Remporter la Supercoupe."],
+  ["wins15", "Rouleau compresseur", "Gagner au moins 15 matchs de saison régulière."],
+  ["unbeatenHome", "Forteresse", "Gagner tous ses matchs à domicile en saison régulière."],
+  ["mvpPlayer", "Faiseur de MVP", "Avoir le MVP de la saison dans son effectif."],
+  ["youngTalent", "Dénicheur de talents", "Avoir le meilleur jeune de la saison dans son effectif."],
+  ["seasons3", "Fidèle au poste", "Diriger le même club trois saisons."],
+  ["seasons10", "Monument du club", "Diriger le même club dix saisons."],
+  ["wins100", "Centenaire", "Atteindre 100 victoires de championnat avec son club."],
+];
+
+function seasonAwardsHtml() {
+  const sa = league && league.seasonAwards;
+  if (!sa || !sa.awards || !sa.awards.length) return `<p class="training-empty">Les récompenses (MVP, cinq majeur, meilleur jeune…) sont décernées quand le champion est connu.</p>`;
+  const row = a => `<div class="aw-row${a.teamIdx === myTeamIndex ? " is-mine" : ""}"><span class="aw-label">${escapeHtml(a.label)}</span>` +
+    `<span class="aw-who">${playerLinkHtml(a.teamIdx, a.playerId, a.playerName)} <span class="aw-team">${escapeHtml(a.teamName)}</span></span>` +
+    `<span class="aw-detail">${escapeHtml(a.detail || "")}</span></div>`;
+  return `<div class="aw-list">${sa.awards.map(row).join("")}</div>`;
+}
+
+function managerAchievementsHtml(team) {
+  const got = new Map((team.achievements || []).map(a => [a.key, a]));
+  return `<div class="ach-grid">` + MANAGER_ACHIEVEMENTS_CLIENT.map(([key, label, desc]) => {
+    const a = got.get(key);
+    return `<div class="ach${a ? " on" : ""}" title="${escapeHtml(desc)}"><span class="ach-icon">${a ? "🏅" : "🔒"}</span>` +
+      `<span class="ach-txt"><b>${escapeHtml(label)}</b><small>${escapeHtml(desc)}${a ? ` · saison ${a.seasonNumber}` : ""}</small></span></div>`;
+  }).join("") + `</div><p class="sub" style="margin:8px 0 0">${got.size} / ${MANAGER_ACHIEVEMENTS_CLIENT.length} succès débloqués.</p>`;
+}
+
+function playerCareerHtml(player) {
+  const awards = player.awards || [];
+  const career = player.careerSeasons || [];
+  if (!awards.length && !career.length) return "";
+  let html = `<div class="pdp2-row pdp2-row--career">`;
+  if (career.length) {
+    html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Carrière</h3><span class="pdp2-meta">moyennes par match</span></div>` +
+      `<table class="pdp-games pdp-career"><thead><tr><th>Saison</th><th>Club</th><th class="num">MJ</th><th class="num">Pts</th><th class="num">Reb</th><th class="num">PD</th><th class="num">Éval</th></tr></thead><tbody>` +
+      career.map(c => `<tr><td class="round">S${c.seasonNumber}</td><td class="strong">${escapeHtml(c.teamName)} <span class="aw-team">${escapeHtml(c.divisionLabel || "")}</span></td>` +
+        `<td class="num">${c.games}</td><td class="num">${c.pts}</td><td class="num">${c.reb}</td><td class="num">${c.ast}</td><td class="num">${c.eval}</td></tr>`).join("") +
+      `</tbody></table></section>`;
+  }
+  if (awards.length) {
+    html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Distinctions</h3></div><div class="aw-list">` +
+      awards.map(a => `<div class="aw-row"><span class="aw-label">🏆 ${escapeHtml(a.label)}</span><span class="aw-team">Saison ${a.seasonNumber} · ${escapeHtml(a.teamName)} · ${escapeHtml(a.divisionLabel || "")}</span></div>`).join("") +
+      `</div></section>`;
+  }
+  return html + `</div>`;
 }
 
 function hcPalmaresHtml(team, idx) {

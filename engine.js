@@ -8524,6 +8524,212 @@ function archiveSeasonForTeam(league, teamIdx, now = Date.now()) {
   return true;
 }
 
+// ---------------------------------------------------------------------
+// RÉCOMPENSES DE FIN DE SAISON, CARRIÈRE DES JOUEURS, SUCCÈS DU MANAGER
+// (liste de la nuit du 2026-09-28 : « MVP, cinq majeur, meilleur jeune…,
+// stats de carrière des joueurs, succès des managers »). awardSeasonHonours
+// est appelée quand le champion est connu (server/index.js:tick) et au
+// lundi de fin de saison (server/autoSim.js), AVANT que les stats de saison
+// ne soient remises à zéro ; idempotente (league.seasonAwards.seasonId).
+//  - league.seasonAwards = { seasonId, seasonNumber, awards: [award] } ;
+//    award = { key, label, teamIdx, teamName, playerId, playerName,
+//    position, age, value, detail } — saison régulière seulement, au moins
+//    la moitié des matchs de son équipe.
+//  - Player.awards : distinctions du joueur (toutes saisons, 20 au plus).
+//  - Player.careerSeasons : une ligne par saison (club, division, matchs,
+//    moyennes), 20 au plus.
+//  - Team.achievements : succès débloqués par le manager (clubs humains).
+// ---------------------------------------------------------------------
+const SEASON_AWARD_LABELS = {
+  mvp: "MVP de la saison",
+  youngPlayer: "Meilleur jeune (21 ans et moins)",
+  topScorer: "Meilleur marqueur",
+  topRebounder: "Meilleur rebondeur",
+  topPasser: "Meilleur passeur",
+  bestDefender: "Meilleur défenseur",
+  allStar: "Cinq majeur de la saison",
+};
+const SEASON_AWARD_YOUNG_MAX_AGE = 21;
+const PLAYER_AWARDS_MAX = 20;
+const PLAYER_CAREER_MAX = 20;
+
+function matchLogEval(m) {
+  const fga = (m.fga2 || 0) + (m.fga3 || 0), fgm = (m.fgm2 || 0) + (m.fgm3 || 0);
+  return (m.pts || 0) + (m.reb || 0) + (m.ast || 0) + (m.stl || 0) + (m.blk || 0) - (m.tov || 0) - (fga - fgm) - ((m.fta || 0) - (m.ftm || 0));
+}
+
+// Moyennes de saison régulière de chaque joueur de la ligue.
+function regularSeasonLines(league) {
+  const lines = [];
+  const regular = m => m.competition === "championship" && typeof m.round === "number" && m.round < (league.totalRounds || Infinity);
+  const gamesOf = idx => (league.results || []).filter(r => r.home === idx || r.away === idx).length;
+  league.teams.forEach((team, teamIdx) => {
+    const teamGames = Math.max(1, gamesOf(teamIdx));
+    (team.players || []).forEach(p => {
+      const log = (p.matchLog || []).filter(regular);
+      if (!log.length || log.length < Math.ceil(teamGames / 2)) return;
+      const sum = k => log.reduce((a, m) => a + (m[k] || 0), 0);
+      const g = log.length;
+      lines.push({
+        teamIdx, teamName: team.name, player: p, games: g,
+        pts: sum("pts") / g, reb: sum("reb") / g, ast: sum("ast") / g, stl: sum("stl") / g, blk: sum("blk") / g,
+        eval: log.reduce((a, m) => a + matchLogEval(m), 0) / g,
+      });
+    });
+  });
+  return lines;
+}
+
+function awardOf(key, line, value, detail) {
+  return {
+    key, label: SEASON_AWARD_LABELS[key], teamIdx: line.teamIdx, teamName: line.teamName,
+    playerId: line.player.id, playerName: line.player.name, position: line.player.position, age: line.player.age,
+    value: Math.round(value * 10) / 10, detail,
+  };
+}
+
+function computeSeasonAwards(league) {
+  const lines = regularSeasonLines(league);
+  if (!lines.length) return [];
+  const best = (arr, k) => arr.slice().sort((a, b) => b[k] - a[k] || b.eval - a.eval)[0] || null;
+  const out = [];
+  const f1 = x => (Math.round(x * 10) / 10).toLocaleString("fr-FR");
+  const mvp = best(lines, "eval");
+  if (mvp) out.push(awardOf("mvp", mvp, mvp.eval, `${f1(mvp.eval)} d'évaluation, ${f1(mvp.pts)} pts par match`));
+  const young = best(lines.filter(l => l.player.age <= SEASON_AWARD_YOUNG_MAX_AGE), "eval");
+  if (young) out.push(awardOf("youngPlayer", young, young.eval, `${young.player.age} ans · ${f1(young.eval)} d'évaluation`));
+  const sc = best(lines, "pts"); if (sc) out.push(awardOf("topScorer", sc, sc.pts, `${f1(sc.pts)} pts par match`));
+  const rb = best(lines, "reb"); if (rb) out.push(awardOf("topRebounder", rb, rb.reb, `${f1(rb.reb)} rebonds par match`));
+  const as = best(lines, "ast"); if (as) out.push(awardOf("topPasser", as, as.ast, `${f1(as.ast)} passes par match`));
+  lines.forEach(l => { l.def = l.stl + l.blk; });
+  const df = best(lines, "def"); if (df) out.push(awardOf("bestDefender", df, df.def, `${f1(df.stl)} interceptions et ${f1(df.blk)} contres par match`));
+  // Cinq majeur : le meilleur de chaque poste (évaluation).
+  (typeof POSITIONS !== "undefined" ? POSITIONS : []).forEach(pos => {
+    const b = best(lines.filter(l => l.player.position === pos), "eval");
+    if (b) out.push({ ...awardOf("allStar", b, b.eval, `${pos} · ${f1(b.eval)} d'évaluation`), label: `${SEASON_AWARD_LABELS.allStar} (${pos})` });
+  });
+  return out;
+}
+
+// Succès du manager : { key, label, description } évalués à la fin de
+// chaque saison sur le club (humain) ; débloqués une seule fois.
+const MANAGER_ACHIEVEMENTS = [
+  { key: "firstSeason", label: "Première saison", description: "Terminer une saison complète." },
+  { key: "playoffs", label: "Dans le dernier carré", description: "Se qualifier pour les play-offs." },
+  { key: "champion", label: "Champion", description: "Remporter les play-offs de son championnat." },
+  { key: "champion1", label: "Au sommet", description: "Être champion de Division I." },
+  { key: "promoted", label: "Ça monte !", description: "Obtenir une montée." },
+  { key: "cupWinner", label: "Coupe en poche", description: "Remporter la Coupe." },
+  { key: "superCup", label: "Supercoupe", description: "Remporter la Supercoupe." },
+  { key: "wins15", label: "Rouleau compresseur", description: "Gagner au moins 15 matchs de saison régulière." },
+  { key: "unbeatenHome", label: "Forteresse", description: "Gagner tous ses matchs à domicile en saison régulière." },
+  { key: "mvpPlayer", label: "Faiseur de MVP", description: "Avoir le MVP de la saison dans son effectif." },
+  { key: "youngTalent", label: "Dénicheur de talents", description: "Avoir le meilleur jeune de la saison dans son effectif." },
+  { key: "seasons3", label: "Fidèle au poste", description: "Diriger le même club trois saisons." },
+  { key: "seasons10", label: "Monument du club", description: "Diriger le même club dix saisons." },
+  { key: "wins100", label: "Centenaire", description: "Atteindre 100 victoires de championnat avec son club." },
+];
+const MANAGER_ACHIEVEMENT_BY_KEY = Object.fromEntries(MANAGER_ACHIEVEMENTS.map(a => [a.key, a]));
+
+function unlockAchievement(team, key, seasonNumber, now) {
+  const def = MANAGER_ACHIEVEMENT_BY_KEY[key];
+  if (!def) return false;
+  team.achievements = team.achievements || [];
+  if (team.achievements.some(a => a.key === key)) return false;
+  team.achievements.push({ key, label: def.label, description: def.description, seasonNumber, at: now });
+  if (team.feed) {
+    try {
+      pushEntry(team.feed, {
+        key: `achievement_${key}`, category: "club", week: team.week, createdAt: now,
+        title: `Succès débloqué : ${def.label}`, text: def.description,
+        action: { label: "Histoire du club", href: "/histoire" },
+      });
+    } catch (e) { /* confort */ }
+  }
+  return true;
+}
+
+function evaluateManagerAchievements(league, teamIdx, awards, now) {
+  const team = league.teams[teamIdx];
+  const seasonNumber = league.seasonNumber || 1;
+  const unlocked = [];
+  const u = key => { if (unlockAchievement(team, key, seasonNumber, now)) unlocked.push(key); };
+  const table = league.standings();
+  const row = table.find(r => r.idx === teamIdx) || { wins: 0 };
+  u("firstSeason");
+  const po = league.playoffs;
+  if (po && Array.isArray(po.seeds) && po.seeds.includes(teamIdx)) u("playoffs");
+  if (po && po.champion === teamIdx) { u("champion"); if ((league.divisionLevel || 1) === 1) u("champion1"); }
+  if (team.pendingDivisionMove && team.pendingDivisionMove.kind === "promoted") u("promoted");
+  if ((team.trophies || []).some(t => t.type === "cup" || t.type === "national-cup")) u("cupWinner");
+  if ((team.trophies || []).some(t => t.type === "super-cup")) u("superCup");
+  if (row.wins >= 15) u("wins15");
+  const home = (league.results || []).filter(r => r.home === teamIdx && r.round < (league.totalRounds || Infinity));
+  if (home.length >= 4 && home.every(r => r.scoreHome > r.scoreAway)) u("unbeatenHome");
+  if (awards.some(a => a.key === "mvp" && a.teamIdx === teamIdx)) u("mvpPlayer");
+  if (awards.some(a => a.key === "youngPlayer" && a.teamIdx === teamIdx)) u("youngTalent");
+  const seasons = (team.seasonHistory || []).length + (team.lastArchivedSeasonId === (league.seasonId || `start:${league.calendarStartAt || 0}`) ? 0 : 1);
+  if (seasons >= 3) u("seasons3");
+  if (seasons >= 10) u("seasons10");
+  const pastWins = (team.seasonHistory || []).reduce((a, h) => a + (h.wins || 0), 0);
+  const curWins = team.lastArchivedSeasonId === (league.seasonId || `start:${league.calendarStartAt || 0}`) ? 0 : row.wins;
+  if (pastWins + curWins >= 100) u("wins100");
+  return unlocked;
+}
+
+function awardSeasonHonours(league, now = Date.now()) {
+  const seasonId = league.seasonId || `start:${league.calendarStartAt || 0}`;
+  if (league.seasonAwards && league.seasonAwards.seasonId === seasonId) return league.seasonAwards;
+  const seasonNumber = league.seasonNumber || 1;
+  const info = divisionInfo(league.divisionLevel || 1);
+  const level = league.divisionLevel || 1;
+  const divLabel = level > 1 && league.leagueId ? `${info.name}.${(league.divisionGroup || 0) + 1}` : info.name;
+  const awards = computeSeasonAwards(league);
+  league.seasonAwards = { seasonId, seasonNumber, divisionLabel: divLabel, awards };
+  // Distinctions sur les joueurs.
+  awards.forEach(a => {
+    const team = league.teams[a.teamIdx];
+    const p = team && team.players.find(x => x.id === a.playerId);
+    if (!p) return;
+    p.awards = [{ seasonNumber, key: a.key, label: a.label, teamName: a.teamName, divisionLabel: divLabel, detail: a.detail }, ...(p.awards || [])].slice(0, PLAYER_AWARDS_MAX);
+  });
+  // Carrière saison par saison (tous les joueurs ayant joué).
+  const table = league.standings();
+  league.teams.forEach((team, teamIdx) => {
+    const rank = table.findIndex(r => r.idx === teamIdx) + 1;
+    (team.players || []).forEach(p => {
+      const log = p.matchLog || [];
+      if (!log.length) return;
+      if ((p.careerSeasons || []).some(c => c.seasonId === seasonId)) return;
+      const g = log.length;
+      const sum = k => log.reduce((a, m) => a + (m[k] || 0), 0);
+      const r1 = x => Math.round(x * 10) / 10;
+      p.careerSeasons = [{
+        seasonId, seasonNumber, teamName: team.name, divisionLabel: divLabel, age: p.age, games: g, rank: rank || null,
+        min: r1(sum("min") / g), pts: r1(sum("pts") / g), reb: r1(sum("reb") / g), ast: r1(sum("ast") / g),
+        stl: r1(sum("stl") / g), blk: r1(sum("blk") / g), eval: r1(log.reduce((a, m) => a + matchLogEval(m), 0) / g),
+      }, ...(p.careerSeasons || [])].slice(0, PLAYER_CAREER_MAX);
+    });
+  });
+  // Succès des managers, et fil d'actualité des récompenses de leurs joueurs.
+  league.teams.forEach((team, teamIdx) => {
+    if (!team.isHuman) return;
+    evaluateManagerAchievements(league, teamIdx, awards, now);
+    const mine = awards.filter(a => a.teamIdx === teamIdx);
+    if (mine.length && team.feed) {
+      try {
+        pushEntry(team.feed, {
+          key: `season_awards_${seasonId}`, category: "ligue", week: team.week, createdAt: now,
+          title: "Récompenses de fin de saison",
+          text: mine.map(a => `${a.playerName} : ${a.label}`).join(" · "),
+          action: { label: "Classement", href: "/ligue" },
+        });
+      } catch (e) { /* confort */ }
+    }
+  });
+  return league.seasonAwards;
+}
+
 // Classement "mondial" des joueurs = tous les joueurs de la ligue partagée
 // (humains et CPU), par note globale ; posRank = rang parmi les joueurs du
 // même poste. Calculé à la volée (quelques centaines de joueurs).
@@ -12296,6 +12502,10 @@ function serializePlayerRecord(p) {
     transferRequestActive: !!p.transferRequestActive,
     transferRequestQuote: p.transferRequestQuote ?? null,
     transferRequestDiscussed: !!p.transferRequestDiscussed,
+    // Distinctions de fin de saison et carrière saison par saison (voir
+    // awardSeasonHonours).
+    awards: Array.isArray(p.awards) ? p.awards.map(a => ({ ...a })) : [],
+    careerSeasons: Array.isArray(p.careerSeasons) ? p.careerSeasons.map(c => ({ ...c })) : [],
     // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
     retiringAfterSeason: !!p.retiringAfterSeason,
     retirementWeeks: p.retirementWeeks || 0,
@@ -12480,6 +12690,8 @@ function serializeTeam(team) {
     seasonHistory: Array.isArray(team.seasonHistory) ? team.seasonHistory : [],
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
+    // Succès du manager (voir awardSeasonHonours / MANAGER_ACHIEVEMENTS).
+    achievements: Array.isArray(team.achievements) ? team.achievements.map(a => ({ ...a })) : [],
     lastArchivedSeasonId: team.lastArchivedSeasonId || null,
     hallOfFame: Array.isArray(team.hallOfFame) ? team.hallOfFame : [],
     // Voir Team.seasonObjectiveVerdictSettled plus haut (retour utilisateur,
@@ -12798,6 +13010,8 @@ function playerFromSave(pdata) {
   if (typeof pdata.transferRequestActive === "boolean") p.transferRequestActive = pdata.transferRequestActive;
   if (typeof pdata.transferRequestQuote === "string") p.transferRequestQuote = pdata.transferRequestQuote;
   if (typeof pdata.transferRequestDiscussed === "boolean") p.transferRequestDiscussed = pdata.transferRequestDiscussed;
+  p.awards = Array.isArray(pdata.awards) ? pdata.awards.map(a => ({ ...a })) : [];
+  p.careerSeasons = Array.isArray(pdata.careerSeasons) ? pdata.careerSeasons.map(c => ({ ...c })) : [];
   if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
@@ -13029,6 +13243,7 @@ function teamFromSave(data) {
   team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
+  team.achievements = Array.isArray(data.achievements) ? data.achievements.map(a => ({ ...a })) : [];
   team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
   team.hallOfFame = Array.isArray(data.hallOfFame) ? data.hallOfFame : [];
   // Voir serializeTeam ci-dessus/Team.seasonObjectiveVerdictSettled plus
@@ -13287,6 +13502,7 @@ function serializeLeague(lg) {
     results: lg.results,
     playoffs: lg.playoffs,
     relegationBarrage: lg.relegationBarrage || null,
+    seasonAwards: lg.seasonAwards || null,
     // Coupe nationale (server/nationalCup.js) : clubs de CETTE ligue encore
     // en course et tours restants, pour les amicaux (jeudis réservés).
     nationalCupAlive: lg.nationalCupAlive || null,
@@ -13394,6 +13610,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.results = Array.isArray(data.results) ? data.results : [];
   lg.playoffs = data.playoffs || null;
   lg.relegationBarrage = data.relegationBarrage || null;
+  lg.seasonAwards = data.seasonAwards && Array.isArray(data.seasonAwards.awards) ? data.seasonAwards : null;
   lg.nationalCupAlive = data.nationalCupAlive && Array.isArray(data.nationalCupAlive.teams) ? data.nationalCupAlive : null;
   // Ancienne sauvegarde sans pyramide de divisions (avant l'ajout de la
   // montée/descente) : un club "pas encore attribué" prend la place la plus
@@ -15005,6 +15222,7 @@ return {
   // sérialisation), plutôt que de dupliquer cette formule dans le test.
   planKey,
   serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave,
+  SEASON_AWARD_LABELS, MANAGER_ACHIEVEMENTS, unlockAchievement, computeSeasonAwards, awardSeasonHonours, evaluateManagerAchievements, matchLogEval,
   // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
   // de FEED_CATEGORIES) : exportées pour server/actions.js, server/liveMatch.js
   // et les tests.

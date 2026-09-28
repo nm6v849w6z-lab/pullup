@@ -316,6 +316,7 @@ function computeCountryMoves(world, country, leagues, now) {
     const upTeam = leagues.get(m.up.leagueId).teams[m.up.idx];
     const downTeam = leagues.get(m.down.leagueId).teams[m.down.idx];
     upTeam.pendingDivisionMove = { kind: "promoted", toLevel: m.up.toLevel, toLeagueId: m.up.toLeagueId, toLabel: m.up.toLabel };
+    if (upTeam.isHuman && typeof Engine.unlockAchievement === "function") Engine.unlockAchievement(upTeam, "promoted", leagues.get(m.up.leagueId) ? leagues.get(m.up.leagueId).seasonNumber || 1 : 1, now);
     downTeam.pendingDivisionMove = { kind: "relegated", toLevel: m.down.toLevel, toLeagueId: m.down.toLeagueId, toLabel: m.down.toLabel };
     if (upTeam.isHuman) {
       const bonus = Engine.seasonEndBonusFor({ outcome: "promoted", toLevel: m.up.toLevel });

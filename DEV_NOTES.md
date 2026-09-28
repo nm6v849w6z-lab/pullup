@@ -20,6 +20,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Récompenses de fin de
+  saison, carrière des joueurs, succès du manager** : Engine.
+  awardSeasonHonours (appelée quand le champion est connu et au lundi de
+  fin de saison, idempotente) : league.seasonAwards (MVP à l'évaluation,
+  meilleur jeune ≤ 21 ans, meilleurs marqueur / rebondeur / passeur /
+  défenseur, cinq majeur par poste ; saison régulière, au moins la moitié
+  des matchs), Player.awards, Player.careerSeasons (une ligne par saison :
+  club, division, moyennes), Team.achievements (14 succès, MANAGER_
+  ACHIEVEMENTS ; montée débloquée par computeCountryMoves, Coupe nationale
+  et Supercoupe par server/nationalCup.js), fil d'actualité. Navigateur :
+  Histoire du club (Récompenses de la saison, Succès du manager), fiche
+  joueur (Carrière, Distinctions), écran de fin de saison. Test :
+  season_awards_test.js.
+
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Managers inactifs** :
   Team.lastSeenAt (enregistré par resolvePlayerContext au plus toutes les
   6 h) ; World.releaseInactiveManagers (catchUpWorld) rend le club à l'IA

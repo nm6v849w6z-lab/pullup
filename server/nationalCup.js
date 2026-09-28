@@ -256,6 +256,7 @@ function step({ Engine, Calendar, LiveMatch }, cup, leagues, refLeague, now, eve
       const champ = teamOf(cup.champion);
       events.push({ type: "national-cup-champion", country: cup.country, season: cup.season, champion: cup.champion.name });
       if (champ) addTrophy(champ, leagues.get(cup.champion.leagueId), "national-cup", `Vainqueur de la Coupe nationale (${countryName(cup.country)})`, now);
+      if (champ && champ.isHuman && typeof Engine.unlockAchievement === "function") Engine.unlockAchievement(champ, "cupWinner", cup.season, now);
       if (champ && champ.isHuman && champ.feed) {
         Engine.pushEntry(champ.feed, {
           key: `ncup_champion_${cup.season}`, category: "ligue", week: champ.week, createdAt: now,
@@ -362,6 +363,7 @@ function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events 
       winTeam.recordTransaction("Prime de Supercoupe", SUPERCUP_WIN_BONUS);
     }
     addTrophy(winTeam, leagues.get(winRef.leagueId), "super-cup", `Vainqueur de la Supercoupe (${countryName(sc.country)})`, now);
+    if (winTeam.isHuman && typeof Engine.unlockAchievement === "function") Engine.unlockAchievement(winTeam, "superCup", sc.season, now);
   }
   [[home, sc.home, away, true, totalHome, totalAway], [away, sc.away, home, false, totalAway, totalHome]].forEach(([team, ref, opp, isHome, pf, pa]) => {
     if (!team) return;

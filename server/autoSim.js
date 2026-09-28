@@ -388,6 +388,8 @@ function runWeeklyEconomyTick(league, tick, ecoAt, seasonEnd, events) {
     // Histoire du club et sponsors AVANT que la mise à jour de fin de saison
     // ne remette à zéro les stats de saison des joueurs (idempotent : déjà
     // fait si server/index.js:tick est passé entre la finale et ce lundi).
+    // Récompenses de fin de saison, carrière des joueurs, succès (idempotent).
+    if (Engine.awardSeasonHonours) Engine.awardSeasonHonours(league, ecoAt);
     league.teams.forEach((t, i) => {
       if (!t.isHuman) return;
       if (Engine.settleSponsorsAtSeasonEnd) Engine.settleSponsorsAtSeasonEnd(league, i, ecoAt);
