@@ -6198,6 +6198,7 @@
   .fr-lu-role{height:34px; min-width:0; width:100%;}
   .fr-lu-actions{margin-top:14px;}
   .cal-fr-badge{background:rgba(51,180,161,.14); color:var(--ok);}
+  .calendar-fr-progress{font-size:13px; color:var(--ink-faint);}
   @media (max-width: 640px){
     .fr-row{flex-wrap:wrap;}
     .fr-row-actions{width:100%; justify-content:flex-start;}
@@ -39366,7 +39367,12 @@ function renderCalendrierSection() {
   // privées ; le score ouvre la feuille de match de l'amical.
   (Array.isArray(league.friendlies) ? league.friendlies : []).forEach(f => {
     if (!(f.status === "accepted" || f.status === "pending" || f.status === "played")) return;
-    if (f.status !== "played" && f.at <= Date.now()) return;
+    // Invitation jamais acceptée dont l'heure est passée : elle a expiré.
+    // Un amical ACCEPTÉ reste affiché après le coup d'envoi (« Joué, résultat
+    // à venir ») jusqu'à ce que le serveur renvoie son résultat — il
+    // disparaissait du calendrier dans cet intervalle.
+    if (f.status === "pending" && f.at <= Date.now()) return;
+    const frInProgress = f.status === "accepted" && f.at <= Date.now();
     if (typeof league.calendarStartAt === "number" && f.status === "played" && f.at < league.calendarStartAt - 30 * 24 * 3600 * 1000) return;
     const isHomeFr = f.homeIdx === myTeamIndex;
     const oppIdxFr = isHomeFr ? f.awayIdx : f.homeIdx;
@@ -39384,7 +39390,7 @@ function renderCalendrierSection() {
       opponent: league.teams[oppIdxFr].name, opponentIdx: oppIdxFr,
       location: isHomeFr ? "Domicile" : "Extérieur",
       scoreText, boxscore: null, frBox: played && !f.result.forfeit ? f.id : null,
-      cls, actionCell: played ? "" : `<button type="button" class="calendar-order-btn calendar-fr-btn" data-tab="amicaux">${f.status === "pending" ? "En attente" : "Amical"}</button>`,
+      cls, actionCell: played ? "" : frInProgress ? `<span class="calendar-fr-progress">Résultat à venir</span>` : `<button type="button" class="calendar-order-btn calendar-fr-btn" data-tab="amicaux">${f.status === "pending" ? "En attente" : "Amical"}</button>`,
       scheduledAt: f.at, fallbackOrder: 200000,
       isHome: isHomeFr, played, won: cls === "result-win", lost: cls === "result-loss",
       isLive: false, alreadyOrdered: false, isPrivate: true, frPending: f.status === "pending",
@@ -43675,6 +43681,9 @@ async function frRefreshList() {
     const sec = document.getElementById("amicauxSection");
     const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#amicauxContent");
     if (before !== JSON.stringify(data.friendlies) && sec && !sec.classList.contains("hidden") && !typing) renderAmicauxSection();
+    // Calendrier ouvert : l'amical (nouveau, accepté, joué) y apparaît aussi.
+    const cal = document.getElementById("calendrierSection");
+    if (before !== JSON.stringify(data.friendlies) && cal && !cal.classList.contains("hidden")) renderCalendrierSection();
     return true;
   } catch (e) {
     return false;

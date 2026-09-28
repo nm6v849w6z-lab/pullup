@@ -4870,4 +4870,5 @@ window.HM_I18N_EN = {
   "{0} · handicap +{1}": "{0} · handicap +{1}",
   "{0} · handicap +{1} · vainqueur": "{0} · handicap +{1} · winner",
   "{0} · vainqueur": "{0} · winner",
+  "Résultat à venir": "Result to come",
 };
