@@ -8783,6 +8783,24 @@ function generateRoundRobinSchedule(n) {
 // 15h reste alors simplement VIDE ce jour-là (voir server/liveMatch.js).
 const CUP_BRACKET_SIZE = 16;
 const CUP_STAGE_NAMES = ["huitiemes", "quarts", "demies", "finale"];
+// Primes de Coupe (retour utilisateur 2026-09-28 : inspiré de BuzzerBeater,
+// « modifie un peu le barème, ne fais pas un copié-collé ») :
+// versée au club humain qui GAGNE un match de Coupe, selon le tour
+// (distance à la finale : 0 = finale, 1 = demi-finale…). Un exempt ne
+// rapporte rien.
+const CUP_WIN_BONUS_BY_STAGE_FROM_END = [400000, 200000, 130000, 100000, 80000, 65000];
+const CUP_WIN_BONUS_FLOOR = 50000; // 64e de finale et avant
+const CUP_STAGE_LABELS_FROM_END = ["finale", "demi-finale", "quart de finale", "huitième de finale", "seizième de finale", "32e de finale", "64e de finale", "128e de finale", "256e de finale"];
+function cupWinBonusFor(stageFromEnd) {
+  return stageFromEnd >= 0 && stageFromEnd < CUP_WIN_BONUS_BY_STAGE_FROM_END.length ? CUP_WIN_BONUS_BY_STAGE_FROM_END[stageFromEnd] : CUP_WIN_BONUS_FLOOR;
+}
+function payCupWinBonus(team, stageFromEnd) {
+  if (!team || !team.isHuman || typeof team.recordTransaction !== "function") return 0;
+  const amount = cupWinBonusFor(stageFromEnd);
+  team.recordTransaction(`Prime de Coupe (${CUP_STAGE_LABELS_FROM_END[stageFromEnd] || "tour"})`, amount);
+  return amount;
+}
+
 function cupNextStageName(name) {
   return CUP_STAGE_NAMES[CUP_STAGE_NAMES.indexOf(name) + 1] || null;
 }
@@ -9620,6 +9638,9 @@ class League {
     m.forfeit = forfeit;
     m.winner = scoreAway > scoreHome ? m.away : m.home;
     applySponsorWinPrimes(this.teams[m.winner]);
+    // Prime de Coupe par match gagné (retour utilisateur 2026-09-28), selon
+    // la distance à la finale.
+    payCupWinBonus(this.teams[m.winner], CUP_STAGE_NAMES.length - 1 - CUP_STAGE_NAMES.indexOf(round.name));
     m.resolved = true;
   }
 
@@ -14865,7 +14886,7 @@ return {
   TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST, TRANSFER_REQUEST_QUOTES, transferRequestQuoteFor,
   RETIREMENT_ANNOUNCE_CHANCE_BY_AGE, RETIREMENT_FORCED_AGE, RETIREMENT_TALK_PERIOD_WEEKS, RETIREMENT_TALK_PERIODS,
   retirementAnnounceChance, retirementTalkChance, retirementTalkPeriod, generateRetirementReplacement,
-  INTERSAISON_MOTIVATION_FLOOR,
+  INTERSAISON_MOTIVATION_FLOOR, CUP_WIN_BONUS_BY_STAGE_FROM_END, CUP_WIN_BONUS_FLOOR, cupWinBonusFor, payCupWinBonus,
   // Alchimie d'équipe (voir le grand commentaire au-dessus de
   // CHEMISTRY_ROSTER_CHANGE_MAX_RANK) :
   CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE, CHEMISTRY_MATCH_TOGETHER_GAIN, CHEMISTRY_SAME_FIVE_GAIN,

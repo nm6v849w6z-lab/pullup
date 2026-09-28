@@ -536,13 +536,31 @@ function recordCountryHonours(world, country, leagues) {
 function normalizeSearch(s) {
   return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }
+// Raccourcis de division (retour utilisateur 2026-09-28 : « D.I » ne
+// trouvait rien) : « D1 », « D.I », « DI », « Div 2 », « D2.1 », « II.1 »,
+// « 2.1 », « D III 4 »… → { level, group|null }.
+const COUNTRY_SEARCH_ALIASES = { us: "usa us etats-unis amerique america", fr: "fra france" };
+const ROMAN = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6 };
+function parseDivisionQuery(needle) {
+  const m = needle.replace(/\s+/g, " ").match(/^(?:d(?:iv(?:ision)?)?\s*\.?\s*)?(vi|v|iv|iii|ii|i|[1-6])(?:\s*[.\s-]\s*(\d{1,3}))?$/);
+  if (!m) return null;
+  const hasPrefix = /^d/.test(needle);
+  const level = ROMAN[m[1]] || Number(m[1]);
+  if (!level) return null;
+  // « i »/« v » seuls sans préfixe sont trop ambigus (une lettre d'un nom).
+  if (!hasPrefix && !m[2] && /^[iv]+$/.test(m[1])) return null;
+  return { level, group: m[2] ? Number(m[2]) - 1 : null };
+}
+
 function searchWorld(world, q, limit = 8) {
   const needle = normalizeSearch(q);
   if (needle.length < 2) return { leagues: [], clubs: [] };
   const summaries = Object.values(world.summaries || {});
   const countryName = code => (Engine.WORLD_COUNTRIES[code] || {}).name || code;
+  const div = parseDivisionQuery(needle);
   const leagues = summaries
-    .filter(sm => normalizeSearch(`${sm.label} ${countryName(sm.country)} ${sm.id}`).includes(needle))
+    .filter(sm => (div && sm.level === div.level && (div.group == null || sm.group === div.group))
+      || normalizeSearch(`${sm.label} ${countryName(sm.country)} ${sm.id} ${COUNTRY_SEARCH_ALIASES[sm.country] || ""}`).includes(needle))
     .sort((a, b) => a.level - b.level || a.group - b.group)
     .slice(0, limit)
     .map(sm => ({ id: sm.id, country: sm.country, label: sm.label, humans: sm.humans }));
@@ -576,5 +594,5 @@ module.exports = {
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,
   isOpenCountry, publicCountries,
-  divisionLabel, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
+  divisionLabel, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
 };
