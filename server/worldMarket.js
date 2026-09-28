@@ -29,7 +29,17 @@ const Engine = require("../engine.js");
 const FOREIGN = Engine.FOREIGN_BIDDER_IDX;
 const MARKET_GUEST_SELLER_IDX = 1000;
 const MARKET_GUEST_BIDDER_IDX = 2000;
-const MARKET_PROJECTION_LIMIT = 200;
+const MARKET_PROJECTION_LIMIT = 150;
+
+// Joueur en vente, allégé (sans journal de matchs ni progression interne) :
+// l'index est relu à chaque chargement du jeu par tous les managers.
+function leanPlayerRecord(player) {
+  const r = Engine.serializePlayerRecord(player);
+  r.matchLog = [];
+  r.progressLog = [];
+  delete r._trainProgress;
+  return r;
+}
 
 function refOfBid(league, leagueId, b) {
   if (b.bidderIdx === FOREIGN && b.bidderRef) return { ...b.bidderRef };
@@ -61,7 +71,7 @@ function buildIndex(prev, worldLeagues, leagues, now, labelOf) {
       entries.push({
         gid: gids[key], leagueId: e.id, country: e.country, label: labelOf(e), listingId: l.id,
         sellerIdx: l.sellerIdx, sellerName: seller.name, sellerHuman: !!seller.isHuman,
-        player: Engine.serializePlayerRecord(player),
+        player: leanPlayerRecord(player),
         startPrice: l.startPrice, currentBid: l.currentBid, currentBidder: leader,
         bids: (l.bids || []).map(b => ({ ref: refOfBid(lg, e.id, b), amount: b.amount, at: b.at })).filter(b => b.ref),
         createdAt: l.createdAt, closesAt: l.closesAt,

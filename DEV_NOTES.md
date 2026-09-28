@@ -128,7 +128,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     (données annexes « market », store.loadWorldAuxRaw/saveWorldAuxRaw),
     reconstruit à chaque catchUpWorld ; identifiant global stable (gid) ;
     GET /api/save ajoute au marché de chaque manager les annonces des AUTRES
-    championnats (200 au plus, les plus proches de la clôture + celles où il
+    championnats (150 au plus, joueurs allégés, les plus proches de la clôture + celles où il
     a enchéri ; id = −gid, vendeur = club invité léger 1000 + k) et montre
     les enchérisseurs d'ailleurs sur ses propres annonces (invités 2000 + k).
   - Enchère sur une annonce d'ailleurs : POST /api/market/bid avec id
