@@ -10022,7 +10022,9 @@ class League {
     this.lastAutoTrainedDay = -1;
     if (this.calendarDailyAnchored) {
       this.calendarStartAt = dailyAnchoredCalendarStartAt(now, this.calendarWeeklyRhythm, this.timeZone || null);
-      this.cup = { rounds: [generateCupBracket(this.teams.map((_, i) => i))], champion: null };
+      // Championnats du monde (leagueId posé, voir server/world.js) : la
+      // Coupe est NATIONALE (server/nationalCup.js), plus de Coupe interne.
+      this.cup = this.leagueId ? null : { rounds: [generateCupBracket(this.teams.map((_, i) => i))], champion: null };
     }
     this.teams.forEach(t => {
       // Stats de saison : la saison écoulée est déjà archivée (histoire du
@@ -13230,6 +13232,9 @@ function serializeLeague(lg) {
     results: lg.results,
     playoffs: lg.playoffs,
     relegationBarrage: lg.relegationBarrage || null,
+    // Coupe nationale (server/nationalCup.js) : clubs de CETTE ligue encore
+    // en course et tours restants, pour les amicaux (jeudis réservés).
+    nationalCupAlive: lg.nationalCupAlive || null,
     divisionLevel: lg.divisionLevel || 1,
     // Pays/divisions (2026-09-28, voir WORLD_COUNTRIES) : identité de CE
     // championnat dans le monde (pays, fuseau horaire, groupe de sa division).
@@ -13334,6 +13339,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.results = Array.isArray(data.results) ? data.results : [];
   lg.playoffs = data.playoffs || null;
   lg.relegationBarrage = data.relegationBarrage || null;
+  lg.nationalCupAlive = data.nationalCupAlive && Array.isArray(data.nationalCupAlive.teams) ? data.nationalCupAlive : null;
   // Ancienne sauvegarde sans pyramide de divisions (avant l'ajout de la
   // montée/descente) : un club "pas encore attribué" prend la place la plus
   // haute disponible, donc Division I par défaut (voir generateLeague).

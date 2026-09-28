@@ -20,6 +20,44 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Coupe nationale en direct
+  (option (b) « tout d'un coup avec le direct »)**
+  - server/nationalCup.js : une Coupe PAR PAYS (world.cups[country]) qui
+    remplace la Coupe interne des championnats du monde à partir de la
+    saison suivant la création du monde ; 512 clubs max (divisions les plus
+    hautes d'abord), tableau à la puissance de 2, exempts aux divisions les
+    plus hautes ; handicap +7/division d'écart (plafond +21) ajouté au score
+    (et au tableau d'affichage du direct, withHandicap) ; un tour le jeudi
+    20:00 (tour k = semaine k) ; au coup d'envoi, match calculé une fois,
+    diffusion déposée dans la ligue de CHAQUE manager concerné (clé
+    « ncup:… »), adversaire d'une autre ligue = club invité (index 100 +
+    numéro du tour) ; fin de diffusion : stats/MVP des deux côtés, primes,
+    fil, tour suivant ; champion au palmarès (history.cupWinner).
+  - server/world.js : step de la Coupe dans catchUpWorld, nouvelle Coupe à
+    la reprise commune, League.nationalCupAlive (clubs en course → jeudis
+    réservés pour les amicaux, server/friendlies.js), échéance suivante
+    (events.nextDeadlineAt) → server/index.js relance le rattrapage pile au
+    coup d'envoi / à la fin de diffusion (minuterie de fond toutes les
+    minutes, rattrapage réel toutes les 10 min sinon).
+  - server/index.js : GET /api/save projette la Coupe nationale dans la
+    forme de la Coupe interne (NationalCup.projectForLeague : le match du
+    club à chaque tour, scores handicap compris) + guestTeams ;
+    resolvePlayerContext pose league.nationalCupPending (ordres préparés du
+    tour, verrou T − 5 min, server/actions.js) ; routes /api/world/cup et
+    /api/world/cup/round (tableau complet d'un tour, pagination, « à jouer ») ;
+    scouting Pro du club invité (attachNationalCupGuests, rapport tiré de
+    son propre championnat) ; /api/spectate tolère l'invité.
+  - Navigateur : installGuestTeams (league.teams devient un Proxy qui ne
+    répond aux index invités qu'en lecture directe : longueur/boucles
+    inchangées) ; clic sur un club invité → Planète Hoop ; page Coupe
+    nationale (renderNationalCupSection : intro handicap, onglets de tours
+    jusqu'aux 256es, tableau du tour demandé au serveur avec niveau D.x et
+    pastille +7, exempts, phase finale alignée) ; rappel du handicap sous le
+    score du direct ; guide + en.js.
+  - Tests : server/national_cup_test.js, national_cup_ui_test.js.
+  - Reste (étape 4) : Supercoupe (samedi d'intersaison, champion de D I contre
+    vainqueur de la Coupe ou finaliste).
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-28) — Championnats par pays (France/USA),
   divisions ouvertes à la demande, montées/descentes, saisons synchronisées**
   — reprise du travail d'une autre session (arrêtée par l'utilisateur) +

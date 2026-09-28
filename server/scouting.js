@@ -54,8 +54,17 @@ function fail(error) {
   return { ok: false, error };
 }
 
+// Adversaire : un club de la ligue, ou le club invité de la Coupe nationale
+// (league.guestTeamsByIdx, index ≥ 100, voir server/index.js:
+// attachNationalCupGuests) — jamais sauvegardé avec la ligue.
+function teamAt(league, idx) {
+  if (!Number.isInteger(idx) || idx < 0) return null;
+  if (idx < league.teams.length) return league.teams[idx];
+  return (league.guestTeamsByIdx && league.guestTeamsByIdx.get(idx)) || null;
+}
+
 function validOpponentIdx(league, teamIndex, opponentIdx) {
-  return Number.isInteger(opponentIdx) && opponentIdx >= 0 && opponentIdx < league.teams.length && opponentIdx !== teamIndex;
+  return Number.isInteger(opponentIdx) && opponentIdx !== teamIndex && !!teamAt(league, opponentIdx);
 }
 
 // Combien de pubs ce club a déjà "regardé" CE MOIS-CI (mois civil Paris) —
@@ -84,7 +93,7 @@ function gamesPlayedFor(team) {
 // de péremption "données changées" plutôt que "délai/horaire figé".
 function getScoutingAccess(league, teamIndex, opponentIdx, now = Date.now()) {
   const team = league.teams[teamIndex];
-  const opponent = league.teams[opponentIdx];
+  const opponent = teamAt(league, opponentIdx);
   if (!team || !opponent) return fail("Équipe ou adversaire invalide.");
   // Premium unique (onglet Premium) : isPaying ou Premium temporaire.
   const premium = typeof team.hasActivePremium === "function" ? team.hasActivePremium(now) : !!team.scoutingPremium;
@@ -142,7 +151,7 @@ function completeAdTicket(league, teamIndex, ticketId, now = Date.now()) {
   const ticket = team.scoutingAdTickets && team.scoutingAdTickets[ticketId];
   if (!ticket) return fail("Ticket de pub inconnu, déjà utilisé, ou expiré.");
   delete team.scoutingAdTickets[ticketId];
-  const opponent = league.teams[ticket.opponentIdx];
+  const opponent = teamAt(league, ticket.opponentIdx);
   if (!opponent) return fail("Adversaire invalide.");
   team.scoutingAdWatchLog = team.scoutingAdWatchLog || [];
   team.scoutingAdWatchLog.push(now);
@@ -342,8 +351,20 @@ function standingFor(league, teamIdx) {
 // GET /api/scouting/report) : ce module ne revérifie PAS lui-même l'accès,
 // pour rester une simple fonction de lecture, testable indépendamment.
 function buildScoutingReport(league, teamIdx, opponentIdx, now = Date.now()) {
-  const opponent = league.teams[opponentIdx];
+  const opponent = teamAt(league, opponentIdx);
   if (!opponent) return fail("Adversaire invalide.");
+  // Club invité (Coupe nationale) : classement, forme et bilans pris dans
+  // SON championnat ; pas de confrontation directe.
+  if (opponent.guestLeague) {
+    const gl = opponent.guestLeague, gi = opponent.guestIdx;
+    return {
+      ok: true, opponentIdx, opponentName: opponent.name, generatedAt: now, guest: true,
+      gamesPlayed: gamesPlayedFor(opponent),
+      standing: standingFor(gl, gi), recentForm: recentFormFor(gl, gi), homeAwayRecord: homeAwayRecordFor(gl, gi),
+      streak: streakFor(gl, gi), headToHead: [],
+      shotZones: aggregateShotZones(opponent), strategyUsage: aggregateStrategyUsage(opponent), keyPlayers: keyPlayersFor(opponent, now),
+    };
+  }
   return {
     ok: true,
     opponentIdx,
@@ -363,7 +384,7 @@ function buildScoutingReport(league, teamIdx, opponentIdx, now = Date.now()) {
 
 module.exports = {
   MONTHLY_AD_UNLOCK_CAP, parisMonthKey, adsWatchedThisMonth,
-  getScoutingAccess, createAdTicket, completeAdTicket, setPremium,
+  getScoutingAccess, createAdTicket, completeAdTicket, setPremium, teamAt,
   buildScoutingReport,
   // Exportées pour les tests (vérification indépendante, voir
   // scouting_pro_test.js) plutôt que de dupliquer ces formules dans le test.

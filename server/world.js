@@ -28,6 +28,8 @@ const Calendar = require("./calendar.js");
 const store = require("./store.js");
 const Accounts = require("./accounts.js");
 const AutoSim = require("./autoSim.js");
+const LiveMatch = require("./liveMatch.js");
+const NationalCup = require("./nationalCup.js");
 
 const WORLD_VERSION = 1;
 const DEFAULT_COUNTRY = "fr";
@@ -381,6 +383,7 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
   const events = [];
   const tick = tickLeague || ((lg, t) => AutoSim.catchUpLeague(lg, t));
   let worldDirty = false;
+  let nextDeadlineAt = null;
   for (const country of countryCodes()) {
     const entries = leaguesOfCountry(world, country);
     const leagues = new Map();
@@ -395,6 +398,19 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
         (tick(lg, now) || []).forEach(ev => events.push({ leagueId: id, ...ev }));
       }
       useLeagueTimeZone(null);
+      // Coupe nationale du pays (voir server/nationalCup.js).
+      const refEntry = leaguesOfCountry(world, country)[0];
+      const refLeague = refEntry && leagues.get(refEntry.id);
+      const cup = (world.cups || {})[country];
+      if (cup && refLeague) {
+        useLeagueTimeZone(refLeague);
+        const before = events.length;
+        NationalCup.step({ Engine, Calendar, LiveMatch }, cup, leagues, refLeague, now, events);
+        useLeagueTimeZone(null);
+        if (events.length !== before || cup.rounds.some(r => r.matches.some(m => m.started && !m.resolved))) worldDirty = true;
+        const alive = NationalCup.aliveByLeague(cup);
+        for (const [id, lg] of leagues) lg.nationalCupAlive = alive[id] || null;
+      }
       const all = [...leagues.values()];
       if (!all.length || !all.every(lg => lg.isPlayoffsDone() && lg.seasonEndTickDone)) break;
       const seasonNumber = all[0].seasonNumber || 1;
@@ -422,14 +438,38 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
       let next = null;
       for (const lg of all) { next = lg.startNextSeason(ecoAt); }
       state.moves = [];
+      // Nouvelle Coupe nationale (l'ancienne est terminée depuis longtemps :
+      // ses tours ont lieu pendant les 9 semaines de championnat).
+      world.cups = world.cups || {};
+      if (world.cups[country] && !world.cups[country].champion && refLeague) {
+        NationalCup.step({ Engine, Calendar, LiveMatch }, world.cups[country], leagues, refLeague, ecoAt, events);
+      }
+      world.cups[country] = NationalCup.createNationalCup(country, leaguesOfCountry(world, country), leagues, next);
       worldDirty = true;
       events.push({ type: "country-new-season", country, seasonNumber: next, at: ecoAt });
+    }
+    // Prochaine échéance de la Coupe (coup d'envoi ou fin de diffusion) :
+    // server/index.js relance le rattrapage à cet instant précis plutôt
+    // qu'au prochain passage de la minuterie.
+    {
+      const cup = (world.cups || {})[country];
+      const refEntry = leaguesOfCountry(world, country)[0];
+      const refLeague = refEntry && leagues.get(refEntry.id);
+      const round = cup && refLeague ? NationalCup.pendingRound(cup) : null;
+      if (round) {
+        const kickoff = Calendar.scheduledTimeForLeagueCupRound(refLeague, round.index);
+        if (kickoff != null) {
+          const due = round.matches.some(m => !m.bye && m.started) ? kickoff + Calendar.MATCH_BROADCAST_DURATION_MS : kickoff;
+          if (due > now && (nextDeadlineAt == null || due < nextDeadlineAt)) nextDeadlineAt = due;
+        }
+      }
     }
     refreshCountrySummaries(world, country, leagues);
     worldDirty = true;
     for (const lg of leagues.values()) await store.saveMultiLeague(lg, savePath);
   }
   if (worldDirty) await saveWorld(world, savePath);
+  events.nextDeadlineAt = nextDeadlineAt;
   return events;
 }
 
@@ -528,7 +568,9 @@ function recordCountryHonours(world, country, leagues) {
   const list = world.history[country] = world.history[country] || [];
   if (list.some(h => h.season === season)) return;
   const team = lg.teams[lg.playoffs.champion];
-  list.unshift({ season, champion: team.name, isHuman: !!team.isHuman, cupWinner: null });
+  const cup = (world.cups || {})[country];
+  const cupWinner = cup && cup.season === season && cup.champion ? cup.champion.name : null;
+  list.unshift({ season, champion: team.name, isHuman: !!team.isHuman, cupWinner });
 }
 
 // Recherche (barre du haut) : championnats (libellé, pays) et clubs de tous
@@ -594,5 +636,5 @@ module.exports = {
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,
   isOpenCountry, publicCountries,
-  divisionLabel, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
+  NationalCup, divisionLabel, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
 };

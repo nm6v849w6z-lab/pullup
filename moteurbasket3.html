@@ -1278,6 +1278,10 @@
   .cp-tag{display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:6px; white-space:nowrap;}
   .cp-tag.you{background:rgba(240,162,60,.14); color:var(--amber); font-weight:700;}
   .cp-byes{color:var(--ink-faint); font-size:12.5px; padding-left:16px !important;}
+  .ncup-intro{color:var(--ink-soft, var(--ink-faint)); font-size:13px; margin:0 0 12px;}
+  .ncup-lvl{display:inline-block; font-size:11px; font-weight:600; color:var(--ink-faint); margin-left:4px; white-space:nowrap;}
+  .ncup-hc{display:inline-block; font-size:11px; font-weight:700; color:var(--amber); background:rgba(240,162,60,.14); border-radius:5px; padding:1px 5px; margin-left:4px;}
+  .live-handicap-note{text-align:center; font-size:12.5px; color:var(--amber); margin:4px 0 0;}
   .cp-empty{text-align:center; color:var(--ink-faint); padding:22px !important;}
   .cp-more{margin:-4px 0 14px;}
 
@@ -7505,6 +7509,7 @@
         <p class="training-intro">Le <b>Calendrier</b> liste tous vos matchs de la saison, championnat et Coupe confondus, groupés par mois et triés par date et heure réelle. Filtres Tous, Domicile, Extérieur et À venir ; "vs" devant l'adversaire signifie à domicile, "@" à l'extérieur. À droite : la carte du prochain match (compte à rebours et bouton des ordres) et le bilan de la saison (bilan, classement, différence de points, domicile/extérieur, forme sur les 5 derniers matchs). Les horaires restent fixes, même au changement d'heure.</p>
         <p class="training-intro" style="margin-top:10px;">Les <b>play-offs</b> réunissent les 4 premiers : demi-finales puis finale, chacune en deux matchs gagnants, le mardi, le jeudi et le samedi à 20:00 pendant les 2 semaines qui suivent le championnat.</p>
         <p class="training-intro" style="margin-top:10px;">La <b>Coupe</b> (quand elle existe pour votre ligue) est un tableau à élimination directe, un tour chaque jeudi à 20:00. L'onglet Coupe montre votre parcours (tour atteint, victoires, pastille par tour), les matchs de chaque tour (boutons de tour en haut, filtres Tous et À jouer, votre match en premier, clubs exemptés résumés en une ligne) et l'arbre de la phase finale à partir des 8es de finale. Les ordres de Coupe se préparent comme ceux du championnat.</p>
+        <p class="training-intro" style="margin-top:10px;">Dans les championnats par pays, c'est la <b>Coupe nationale</b> : tous les clubs du pays (512 au plus), avec des exempts au premier tour pour les divisions les plus hautes si le tableau n'est pas plein. Le club de la division inférieure part avec <b>+7 points par division d'écart</b> (au plus +21), déjà au tableau d'affichage. Un adversaire d'un autre championnat se prépare comme les autres (Ordres, scouting) et sa fiche s'ouvre dans Planète Hoop. Chaque match de Coupe gagné rapporte une prime, de 50 000 € aux premiers tours à 400 000 € pour la finale.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="ligue" data-guide-group="Compétitions">
@@ -16324,7 +16329,9 @@ function generateRoundRobinSchedule(n) {
 // qu'afficher l'état déjà résolu, jamais avancer la coupe lui-même.
 const CUP_BRACKET_SIZE = 16;
 const CUP_STAGE_NAMES = ["huitiemes", "quarts", "demies", "finale"];
-const CUP_STAGE_LABELS = { huitiemes: "Huitièmes", quarts: "Quarts", demies: "Demies", finale: "Finale" };
+const CUP_STAGE_LABELS = { huitiemes: "Huitièmes", quarts: "Quarts", demies: "Demies", finale: "Finale",
+  // Coupe nationale (server/nationalCup.js) : tours supplémentaires.
+  seiziemes: "Seizièmes", "32es": "32es", "64es": "64es", "128es": "128es", "256es": "256es" };
 // Primes de Coupe (retour utilisateur 2026-09-28 : inspiré de BuzzerBeater,
 // « modifie un peu le barème, ne fais pas un copié-collé ») :
 // versée au club humain qui GAGNE un match de Coupe, selon le tour
@@ -17115,7 +17122,9 @@ class League {
     this.lastAutoTrainedDay = -1;
     if (this.calendarDailyAnchored) {
       this.calendarStartAt = dailyAnchoredCalendarStartAt(now, this.calendarWeeklyRhythm, this.timeZone || null);
-      this.cup = { rounds: [generateCupBracket(this.teams.map((_, i) => i))], champion: null };
+      // Championnats du monde (leagueId posé, voir server/world.js) : la
+      // Coupe est NATIONALE (server/nationalCup.js), plus de Coupe interne.
+      this.cup = this.leagueId ? null : { rounds: [generateCupBracket(this.teams.map((_, i) => i))], champion: null };
     }
     this.teams.forEach(t => {
       // Stats de saison : la saison écoulée est déjà archivée (histoire du
@@ -19915,6 +19924,39 @@ function serializeLeague(lg) {
 // seul objet Team, jamais une copie, sinon l'entraînement et la progression
 // se désynchroniseraient du reste de l'état. Omis (ou `null`) : TOUTES les
 // équipes sont reconstruites à l'identique via teamFromSave.
+// Clubs invités de la Coupe nationale (server/nationalCup.js,
+// projectForLeague) : adversaires venus d'un autre championnat, rangés à un
+// index ≥ 100 (100 + numéro du tour) qui n'existe pas dans league.teams.
+// Plutôt que d'agrandir le tableau (toutes les boucles sur league.teams —
+// classement, marché, stats — les verraient), league.teams devient un
+// Proxy qui ne répond à ces index-là QUE sur lecture directe
+// (league.teams[idx]) : longueur, forEach, map… restent ceux des 10 clubs.
+function installGuestTeams(lg, guests) {
+  const map = new Map();
+  (Array.isArray(guests) ? guests : []).forEach(g => {
+    if (!g || !g.team || typeof g.localIdx !== "number") return;
+    let t;
+    try { t = teamFromSave(g.team); } catch (e) { return; }
+    t.isGuest = true;
+    t.guestLeagueId = g.leagueId;
+    t.guestIdx = g.idx;
+    t.guestLevel = g.level;
+    map.set(g.localIdx, t);
+  });
+  lg.guestTeamsByIdx = map;
+  if (!map.size) return;
+  const base = lg.teams;
+  lg.teams = new Proxy(base, {
+    get(target, prop, receiver) {
+      if (typeof prop === "string" && /^[0-9]+$/.test(prop)) {
+        const i = Number(prop);
+        if (i >= target.length && map.has(i)) return map.get(i);
+      }
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+}
+
 function leagueFromSave(data, userTeam = null) {
   const teams = data.teams.map((t, i) => (i === 0 && userTeam ? userTeam : teamFromSave(t)));
   const lg = new League(teams);
@@ -19955,6 +19997,8 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarWeeklySwitch = data.calendarWeeklySwitch && typeof data.calendarWeeklySwitch.anchorAt === "number" ? { ...data.calendarWeeklySwitch } : null;
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
   lg.cup = data.cup || null;
+  // Coupe nationale : adversaires d'un autre championnat (« clubs invités »).
+  installGuestTeams(lg, data.guestTeams);
   // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
   // d'avant cette fonctionnalité, aucune ligue.
   lg.privateLeagues = Array.isArray(data.privateLeagues) ? data.privateLeagues : [];
@@ -26776,6 +26820,12 @@ document.getElementById("closeTeamDetailBtn").addEventListener("click", hideTeam
 document.addEventListener("click", (e) => {
   const link = e.target.closest("[data-team-idx]");
   if (!link) return;
+  const guest = league && league.teams[Number(link.dataset.teamIdx)];
+  if (guest && guest.isGuest) {
+    // Club invité (Coupe nationale) : sa fiche est dans Planète Hoop.
+    openPlaneteAt({ country: league.country || null, leagueId: guest.guestLeagueId, clubIdx: guest.guestIdx });
+    return;
+  }
   showTeamDetail(Number(link.dataset.teamIdx));
 });
 
@@ -32612,6 +32662,22 @@ function enterLiveMatch(liveMatch, opts) {
   // enterLiveMatch), donc un simple set direct suffit, comme renderPrep().
   document.getElementById("nameA").textContent = teamA.name;
   document.getElementById("nameB").textContent = teamB.name;
+  // Coupe nationale : handicap déjà au tableau d'affichage, rappelé ici.
+  {
+    let note = document.getElementById("liveHandicapNote");
+    const hc = liveMatch.handicap;
+    if (hc && (hc.mine || hc.opp) && scoreRowEl) {
+      if (!note) {
+        note = document.createElement("div");
+        note.id = "liveHandicapNote";
+        note.className = "live-handicap-note";
+        scoreRowEl.insertAdjacentElement("afterend", note);
+      }
+      note.textContent = `Coupe nationale · handicap : +${hc.mine || hc.opp} pour ${hc.mine ? teamA.name : teamB.name} (division inférieure), déjà au score`;
+    } else if (note) {
+      note.remove();
+    }
+  }
   // Mêmes onglets .bs-tab que renderPrep() (boxscore de fin/forfait affiché
   // plus bas dans CETTE fonction, et à la fin d'un direct via
   // finishPlayback) : mise à jour ici pour la même raison que nameA/nameB
@@ -39231,16 +39297,16 @@ let cupFilter = "all";    // "all" | "pending"
 let cupQuery = "";
 let cupPage = 1;
 
-function cupTotalStages() { return CUP_STAGE_NAMES.length; }
+function cupTotalStages() { return (league && league.cup && league.cup.totalRounds) || CUP_STAGE_NAMES.length; }
 function cupFromEnd(i) { return cupTotalStages() - 1 - i; }
 function cupRoundLabel(i) {
-  return ["Finale", "Demies", "Quarts", "8es", "16es", "32es"][cupFromEnd(i)] || (i === 0 ? "1er tour" : `${i + 1}e tour`);
+  return ["Finale", "Demies", "Quarts", "8es", "16es", "32es", "64es", "128es", "256es"][cupFromEnd(i)] || (i === 0 ? "1er tour" : `${i + 1}e tour`);
 }
 function cupRoundShort(i) {
-  return ["F", "1/2", "1/4", "1/8", "1/16", "1/32"][cupFromEnd(i)] || `T${i + 1}`;
+  return ["F", "1/2", "1/4", "1/8", "1/16", "1/32", "1/64", "1/128", "1/256"][cupFromEnd(i)] || `T${i + 1}`;
 }
 function cupRoundPhrase(i) {
-  return ["en finale", "en demi-finale", "en quarts de finale", "en 8es de finale", "en 16es de finale", "en 32es de finale"][cupFromEnd(i)] ||
+  return ["en finale", "en demi-finale", "en quarts de finale", "en 8es de finale", "en 16es de finale", "en 32es de finale", "en 64es de finale", "en 128es de finale", "en 256es de finale"][cupFromEnd(i)] ||
     (i === 0 ? "au 1er tour" : `au ${i + 1}e tour`);
 }
 function cupStageMatchCount(i) { return 2 ** cupFromEnd(i); }
@@ -39377,7 +39443,7 @@ function cupRoundTabsHtml(cup, myStage) {
   let html = "";
   for (let i = 0; i < cupTotalStages(); i++) {
     const round = cup.rounds[i];
-    const n = round ? round.matches.filter(m => !m.bye).length : null;
+    const n = round ? (typeof round.matchCount === "number" ? round.matchCount : round.matches.filter(m => !m.bye).length) : null;
     html += `<button type="button" role="tab" aria-selected="${i === cupSelRound}" class="cal-filter cp-rtab${i === cupSelRound ? " active on" : ""}${i === myStage ? " mine" : ""}" data-cup-round="${i}">` +
       `${escapeHtml(cupRoundLabel(i))} <span class="cal-filter-count">${n == null ? "–" : n}</span></button>`;
   }
@@ -39433,6 +39499,7 @@ function cupRoundBodyHtml(cup, ranks) {
 
 function cupRenderRoundPanel() {
   const cup = league.cup;
+  if (cup && cup.national) { ncupRenderRoundPanel(); return; }
   const ranks = cupRankMap();
   const path = cupMyPath(cup);
   const cur = path.find(p => p.state === "pending" || p.state === "live" || p.state === "future");
@@ -39450,8 +39517,173 @@ function cupRenderRoundPanel() {
   if (active && active.scrollIntoView) active.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
+// ---------------------------------------------------------------------
+// Coupe nationale (server/nationalCup.js) : tous les clubs du pays, donc
+// league.cup n'est ici qu'une PROJECTION (le match du club à chaque tour,
+// voir NationalCup.projectForLeague) ; le tableau complet d'un tour et la
+// phase finale sont demandés au serveur (/api/world/cup/round). Parcours,
+// carte « Prochain match » et onglets de tours réutilisent le rendu de la
+// Coupe interne. Handicap : +7 par division d'écart (plafond +21), déjà
+// compris dans les scores affichés.
+// ---------------------------------------------------------------------
+const NCUP_ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
+function ncupLevelTag(level) { return `D.${NCUP_ROMAN[level] || level}`; }
+function ncupIsMineRef(ref) { return !!(ref && ref.leagueId === league.leagueId && ref.idx === myTeamIndex); }
+function ncupClubHtml(ref) {
+  if (!ref) return "";
+  const name = ref.leagueId === league.leagueId
+    ? teamLinkHtml(ref.idx, ref.name)
+    : `<button type="button" class="team-link" data-ncup-league="${escapeHtml(ref.leagueId)}" data-ncup-club="${ref.idx}">${escapeHtml(ref.name)}</button>`;
+  return `${name} <span class="ncup-lvl">${escapeHtml(ncupLevelTag(ref.level))}</span>`;
+}
+function ncupHandicapHtml(n) { return n ? `<span class="ncup-hc" title="Handicap : +${n} points (division inférieure)">+${n}</span>` : ""; }
+async function ncupFetchRound(i, opts) {
+  const o = opts || {};
+  const qs = `round=${i}&limit=${o.limit || 100}${o.pending ? "&pending=1" : ""}`;
+  const res = await fetchApi(`/api/world/cup/round?${qs}`);
+  const data = await res.json().catch(() => null);
+  if (!data || !data.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+  return data.round;
+}
+function ncupMatchRowHtml(m, i) {
+  const side = (ref, hc, away, won) => {
+    const cls = ["cp-t", away ? "away" : "", m.resolved && won ? "win" : "", m.resolved && !won ? "lose" : "", ncupIsMineRef(ref) ? "me" : ""].filter(Boolean).join(" ");
+    const body = `${ncupClubHtml(ref)}${ncupHandicapHtml(hc)}`;
+    return `<div class="${cls}">${body}</div>`;
+  };
+  let score;
+  if (m.resolved && m.score) {
+    score = `<span class="cp-score"><span class="${m.winner === "home" ? "w" : ""}">${m.score.home}</span> - <span class="${m.winner === "away" ? "w" : ""}">${m.score.away}</span></span>`;
+  } else if (m.started) {
+    score = `<span class="cp-score is-live">En direct</span>`;
+  } else {
+    const at = cupRoundAt(i);
+    score = `<span class="cp-score is-pending">${at != null ? escapeHtml(formatCalendarTimeFr(at)) : "à jouer"}</span>`;
+  }
+  const tag = m.mine ? `<span class="cp-tag you">Ton match</span>` : "";
+  return `<tr class="cp-m${m.mine ? " mine me" : ""}"><td class="cp-c-home">${side(m.home, m.handicap.home, false, m.winner === "home")}</td><td class="cp-c-score">${score}</td>` +
+    `<td class="cp-c-away">${side(m.away, m.handicap.away, true, m.winner === "away")}</td><td class="cp-c-tag">${tag}</td></tr>`;
+}
+let ncupRenderSeq = 0;
+async function ncupRenderRoundPanel() {
+  const cup = league.cup;
+  const path = cupMyPath(cup);
+  const cur = path.find(p => p.state === "pending" || p.state === "live" || p.state === "future");
+  const tabs = document.getElementById("cupRoundTabs");
+  const body = document.getElementById("cupRoundBody");
+  if (!tabs || !body) return;
+  tabs.innerHTML = cupRoundTabsHtml(cup, cur ? cur.i : -1);
+  document.querySelectorAll("#coupeContent [data-cup-filter]").forEach(b => {
+    const on = b.dataset.cupFilter === cupFilter;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+  const i = cupSelRound;
+  const at = cupRoundAt(i);
+  const head = `<thead><tr class="cal-month-head"><th colspan="4"><span class="cal-month-title">${escapeHtml(cupRoundLabel(i))}</span>` +
+    (at != null ? `<span class="cp-round-when">${escapeHtml(formatCalendarDayFr(at))} · ${escapeHtml(formatCalendarTimeFr(at))}</span>` : "") + `</th></tr></thead>`;
+  const table = rows => `<table class="cp-table"><colgroup><col><col class="cp-col-score"><col><col class="cp-col-tag"></colgroup>${head}<tbody>${rows}</tbody></table>`;
+  if (!cup.rounds[i]) {
+    body.innerHTML = table(`<tr><td colspan="4" class="cp-empty">Tableau de ce tour pas encore tiré : affiches connues après le tour précédent.</td></tr>`);
+    return;
+  }
+  const seq = ++ncupRenderSeq;
+  if (!body.querySelector(".cp-table")) body.innerHTML = table(`<tr><td colspan="4" class="cp-empty">Chargement du tableau…</td></tr>`);
+  let round;
+  try {
+    round = await ncupFetchRound(i, { limit: cupPage * CUP_PAGE_SIZE, pending: cupFilter === "pending" });
+  } catch (e) {
+    if (seq === ncupRenderSeq) body.innerHTML = table(`<tr><td colspan="4" class="cp-empty">Tableau indisponible (${escapeHtml(e.message)}).</td></tr>`);
+    return;
+  }
+  if (seq !== ncupRenderSeq) return;
+  const rows = round.matches.length ? round.matches.map(m => ncupMatchRowHtml(m, i)).join("") : `<tr><td colspan="4" class="cp-empty">Aucun match ne correspond.</td></tr>`;
+  const byeRow = round.byes
+    ? `<tr><td colspan="4" class="cp-byes">${round.byes} club${round.byes > 1 ? "s" : ""} exempté${round.byes > 1 ? "s" : ""} (divisions les plus hautes) passe${round.byes > 1 ? "nt" : ""} directement ${i + 1 < cupTotalStages() ? cupRoundPhrase(i + 1) : "au tour suivant"}.</td></tr>` : "";
+  body.innerHTML = table(rows + byeRow) +
+    (round.matches.length < round.total ? `<div class="cp-more"><button type="button" class="cal-filter cp-chip" data-cup-more="1">Afficher ${Math.min(CUP_PAGE_SIZE, round.total - round.matches.length)} de plus</button></div>` : "");
+}
+// Phase finale (4 derniers tours) : colonnes de cartes, alignées comme
+// cupDisplayOrder (chaque duel entre les deux duels qui l'alimentent).
+async function ncupRenderFinalPhase() {
+  const box = document.getElementById("ncupFinal");
+  if (!box) return;
+  const cup = league.cup;
+  const total = cupTotalStages();
+  const first = Math.max(0, total - 4);
+  const rounds = [];
+  for (let i = first; i < total; i++) {
+    if (!cup.rounds[i]) { rounds.push(null); continue; }
+    try { rounds.push(await ncupFetchRound(i, { limit: 100 })); } catch (e) { rounds.push(null); }
+  }
+  if (!document.body.contains(box)) return;
+  const winnerKey = m => { const r = m.winner === "away" ? m.away : m.home; return r ? `${r.leagueId}#${r.idx}` : null; };
+  const refKey = r => r ? `${r.leagueId}#${r.idx}` : null;
+  const order = rounds.map(r => r ? r.matches.slice() : null);
+  for (let k = order.length - 1; k >= 1; k--) {
+    if (!order[k] || !order[k - 1]) continue;
+    const earlier = order[k - 1].slice(), used = new Set(), out = [];
+    order[k].forEach(lm => [lm.home, lm.away].forEach(ref => {
+      const src = earlier.find(em => !used.has(em) && em.resolved && winnerKey(em) === refKey(ref));
+      if (src) { out.push(src); used.add(src); }
+    }));
+    earlier.forEach(em => { if (!used.has(em)) out.push(em); });
+    order[k - 1] = out;
+  }
+  let html = "";
+  for (let k = 0; k < order.length; k++) {
+    const stageIdx = first + k;
+    const at = cupRoundAt(stageIdx);
+    const when = at != null ? `${formatCalendarDayFr(at)} · ${formatCalendarTimeFr(at)}` : "";
+    html += `<div class="cup-round${stageIdx === total - 1 ? " cp-final" : ""}"><div class="cup-round-title">${escapeHtml(cupRoundLabel(stageIdx))}</div><div class="cup-round-matches">`;
+    const count = 2 ** cupFromEnd(stageIdx);
+    for (let j = 0; j < count; j++) {
+      const m = order[k] ? order[k][j] : null;
+      if (!m) {
+        const prev = stageIdx > 0 ? cupRoundShort(stageIdx - 1) : "";
+        html += cupMatchCardHtml(null, prev ? [`Vainqueur ${prev} n°${2 * j + 1}`, `Vainqueur ${prev} n°${2 * j + 2}`] : null, when, null);
+        continue;
+      }
+      const row = (ref, sc, win, hc) => `<div class="cup-match-team${win ? " winner" : ""}${ncupIsMineRef(ref) ? " is-me" : ""}">${ncupClubHtml(ref)}${ncupHandicapHtml(hc)}<span class="cup-match-score">${sc}</span></div>`;
+      html += `<div class="cup-match">` +
+        row(m.home, m.score ? m.score.home : "", m.resolved && m.winner === "home", m.handicap.home) +
+        `<div class="cup-match-vs">vs</div>` +
+        row(m.away, m.score ? m.score.away : "", m.resolved && m.winner === "away", m.handicap.away) +
+        (when ? `<div class="cup-match-when">${escapeHtml(when)}</div>` : "") + `</div>`;
+    }
+    html += `</div></div>`;
+  }
+  box.innerHTML = html;
+}
+function renderNationalCupSection(holder) {
+  const cup = league.cup;
+  const path = cupMyPath(cup);
+  if (cupSelRound == null || cupSelRound >= cupTotalStages()) {
+    const cur = path.find(p => p.state === "pending" || p.state === "live") || [...path].reverse().find(p => p.round && p.m) || path[0];
+    cupSelRound = cur ? cur.i : 0;
+  }
+  const countryName = { fr: "France", us: "États-Unis" }[league.country] || "";
+  let html = "";
+  if (cup.championName) {
+    const isMe = cup.champion === myTeamIndex;
+    html += `<div class="cup-champion-banner">Vainqueur de la Coupe nationale : ${escapeHtml(cup.championName)}${isMe ? " (c'est vous !)" : ""}</div>`;
+  }
+  html += `<div class="ncup-intro">Coupe nationale${countryName ? ` · ${escapeHtml(countryName)}` : ""} · saison ${cup.season} : tous les clubs du pays, un tour chaque jeudi. ` +
+    `Le club de division inférieure part avec <b>+7 points par division d'écart</b> (au plus +21), compris dans les scores.</div>`;
+  html += `<div class="cal-layout cp-layout"><div class="cal-main">`;
+  html += `<div class="cal-toolbar cp-rounds" id="cupRoundTabs" role="tablist" aria-label="Tours de coupe"></div>`;
+  html += `<div class="cp-tools"><button type="button" class="cal-filter cp-chip" data-cup-filter="all">Tous</button><button type="button" class="cal-filter cp-chip" data-cup-filter="pending">À jouer</button></div>`;
+  html += `<div id="cupRoundBody"></div>`;
+  html += `<div class="cp-final-wrap"><div class="cp-final-head"><span class="cal-month-title">Phase finale</span></div><div class='cup-bracket cp-bracket' id="ncupFinal"></div></div>`;
+  html += `</div><aside class="cal-side">${cupSideHtml(cup, path, cupRankMap())}</aside></div>`;
+  holder.innerHTML = html;
+  ncupRenderRoundPanel();
+  ncupRenderFinalPhase();
+}
+
 function renderCoupeSection() {
   const holder = document.getElementById("coupeContent");
+  if (league.cup && league.cup.national) { renderNationalCupSection(holder); return; }
   if (!league.cup) {
     holder.innerHTML = "<p class='training-empty'>La Coupe n'existe que pour la ligue multi-manager (elle n'est pas jouée en carrière solo pour l'instant).</p>";
     return;
@@ -39506,6 +39738,11 @@ function renderCoupeSection() {
   const holder = document.getElementById("coupeContent");
   if (!holder) return;
   holder.addEventListener("click", (e) => {
+    const worldClub = e.target.closest("[data-ncup-league]");
+    if (worldClub) {
+      openPlaneteAt({ country: league.country || null, leagueId: worldClub.dataset.ncupLeague, clubIdx: Number(worldClub.dataset.ncupClub) });
+      return;
+    }
     const roundBtn = e.target.closest("[data-cup-round]");
     if (roundBtn) {
       cupSelRound = Number(roundBtn.dataset.cupRound); cupPage = 1;

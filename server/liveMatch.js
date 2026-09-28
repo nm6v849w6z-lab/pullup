@@ -218,8 +218,13 @@ function POSITIONS_MISSING(team) {
 // tel quel dans l'entrée renvoyée pour que l'affichage sache distinguer un
 // direct de championnat d'un direct de coupe — ne change rien au calcul.
 function computeLiveMatch(Engine, league, round, homeIdx, awayIdx, kickoffAt, competition = "championship") {
-  const home = league.teams[homeIdx];
-  const away = league.teams[awayIdx];
+  return computeLiveMatchForTeams(Engine, league.teams[homeIdx], league.teams[awayIdx], round, homeIdx, awayIdx, kickoffAt, competition);
+}
+
+// Même calcul, à partir des deux objets Team directement (Coupe nationale :
+// les deux clubs peuvent venir de deux championnats différents, voir
+// server/nationalCup.js).
+function computeLiveMatchForTeams(Engine, home, away, round, homeIdx, awayIdx, kickoffAt, competition = "championship") {
 
   const homeCannotField = POSITIONS_MISSING(home);
   const awayCannotField = POSITIONS_MISSING(away);
@@ -911,8 +916,15 @@ function viewLiveMatchForTeam(league, teamIndex) {
   // défaut, comme c'était implicitement le cas.
   const competition = entry.competition || "championship";
 
+  // Coupe nationale (server/nationalCup.js) : handicap vu depuis le club
+  // suivi (mine/opp) et repères du tour ; absents ailleurs.
+  const national = entry.nationalCup
+    ? { nationalCup: entry.nationalCup, guestName: entry.guest && entry.guest.team ? entry.guest.team.name : null, handicap: entry.handicap ? { mine: isHome ? entry.handicap.home : entry.handicap.away, opp: isHome ? entry.handicap.away : entry.handicap.home } : null }
+    : {};
+
   if (isHome) {
     return {
+      ...national,
       round: entry.round, kickoffAt: entry.kickoffAt, isHome: true, opponentIdx, competition,
       forfeit: entry.forfeit, finalScore: entry.finalScore,
       events: entry.events, pauses: entry.pauses, totalDurationMs: entry.totalDurationMs,
@@ -949,6 +961,7 @@ function viewLiveMatchForTeam(league, teamIndex) {
   }));
 
   return {
+    ...national,
     round: entry.round, kickoffAt: entry.kickoffAt, isHome: false, opponentIdx, competition,
     forfeit: entry.forfeit, finalScore: entry.finalScore,
     events, pauses: entry.pauses, totalDurationMs: entry.totalDurationMs,
@@ -980,7 +993,7 @@ function liveMatchesLiteFor(league) {
 module.exports = {
   HALFTIME_BREAK_MS, QUARTER_BREAK_MS, OVERTIME_BREAK_MS, TIMEOUT_BREAK_MS, TIMEOUTS_PER_QUARTER,
   SECONDS_SCALE_MS, MIN_EVENT_GAP_MS,
-  schedulePlayback, liveMatchKey, computeLiveMatch, ensureLiveMatchStarted, finalizeRound, viewLiveMatchForTeam,
+  schedulePlayback, liveMatchKey, computeLiveMatch, computeLiveMatchForTeams, ensureLiveMatchStarted, finalizeRound, viewLiveMatchForTeam,
   liveMatchesLiteFor,
   // Coupe (voir le bloc dédié plus haut) :
   cupLiveMatchKey, ensureCupLiveMatchStarted, finalizeCupRound,

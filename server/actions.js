@@ -399,7 +399,9 @@ function isValidFutureRoundForTeam(league, teamIndex, round) {
 // résolu à la création du tour) pas encore résolu.
 function isValidFutureCupRoundForTeam(league, teamIndex, round) {
   if (!Number.isInteger(round) || !league.pendingCupRound) return false;
-  const pending = league.pendingCupRound();
+  // Coupe nationale (server/nationalCup.js) : tour en attente fourni par
+  // resolvePlayerContext (league.nationalCupPending, jamais sauvegardé).
+  const pending = league.pendingCupRound() || league.nationalCupPending || null;
   if (!pending || pending.index !== round) return false;
   const match = pending.matches.find(m => (m.home === teamIndex || m.away === teamIndex) && !m.bye);
   if (!match) return false;

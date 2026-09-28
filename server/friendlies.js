@@ -128,6 +128,12 @@ function officialMatchTimesFor(Engine, league, teamIdx) {
       for (let k = 0; k < remaining; k++) out.push(Calendar.scheduledTimeForLeagueCupRound(league, cupRound.dayIndex + k));
     }
   }
+  // Coupe nationale (server/nationalCup.js, League.nationalCupAlive) :
+  // tous les jeudis de Coupe restants tant que le club est en course.
+  const nc = league.nationalCupAlive;
+  if (nc && league.calendarDailyAnchored && (nc.teams || []).includes(teamIdx)) {
+    for (let k = nc.nextRound; k < nc.totalRounds; k++) out.push(Calendar.scheduledTimeForLeagueCupRound(league, k));
+  }
   (league.privateLeagues || []).forEach(lp => {
     if (lp.status !== "running") return;
     (lp.rounds || []).forEach(r => {

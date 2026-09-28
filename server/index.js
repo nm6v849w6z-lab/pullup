@@ -260,12 +260,20 @@ function acquireSaveLock() {
 // startServer).
 const WORLD_CATCHUP_INTERVAL_MS = 10 * 60 * 1000;
 const lastWorldCatchUpAt = new Map();
+// Échéance de Coupe nationale (coup d'envoi du jeudi 20:00, fin de
+// diffusion) : rattrapage forcé dès qu'elle est passée, pour que le direct
+// démarre à l'heure et pas jusqu'à 10 minutes plus tard.
+const nextWorldDeadlineAt = new Map();
 async function maybeCatchUpWorld(multiSavePath, now, force = false) {
   const last = lastWorldCatchUpAt.get(multiSavePath) || 0;
-  if (!force && now - last < WORLD_CATCHUP_INTERVAL_MS && now >= last) return [];
+  const deadline = nextWorldDeadlineAt.get(multiSavePath);
+  const due = deadline != null && now >= deadline;
+  if (!force && !due && now - last < WORLD_CATCHUP_INTERVAL_MS && now >= last) return [];
   lastWorldCatchUpAt.set(multiSavePath, now);
   try {
-    return await World.catchUpWorld(multiSavePath, now, { tickLeague: (lg, t) => tick(lg, t).events });
+    const events = await World.catchUpWorld(multiSavePath, now, { tickLeague: (lg, t) => tick(lg, t).events });
+    nextWorldDeadlineAt.set(multiSavePath, events.nextDeadlineAt == null ? null : events.nextDeadlineAt);
+    return events;
   } catch (e) {
     console.warn("[monde] rattrapage des championnats échoué :", e.message);
     return [];
@@ -354,7 +362,54 @@ async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
   // qui fait redémarrer toutes les ligues d'un pays ensemble.
   found.league.autoNextSeason = false;
   World.useLeagueTimeZone(found.league);
+  // Coupe nationale : tour en attente du club (ordres préparés, verrou).
+  {
+    const cup = (world.cups || {})[found.league.country || World.DEFAULT_COUNTRY];
+    found.league.nationalCupPending = cup && !found.league.cup && cup.season === (found.league.seasonNumber || 1)
+      ? World.NationalCup.pendingViewFor(cup, found.leagueId, found.teamIndex) : null;
+  }
   return { ok: true, league: found.league, teamIndex: found.teamIndex, isMulti: true, savePath: multiSavePath, world, leagueId: found.leagueId };
+}
+
+// Coupe nationale du pays d'un manager, projetée pour sa ligue (voir
+// NationalCup.projectForLeague) — null hors ligue du monde ou sans Coupe
+// pour la saison en cours.
+async function nationalCupProjection(ctx, multiSavePath) {
+  const world = ctx.world;
+  const country = ctx.league.country || World.DEFAULT_COUNTRY;
+  const cup = world && (world.cups || {})[country];
+  if (!cup || cup.season !== (ctx.league.seasonNumber || 1)) return null;
+  const cache = new Map([[ctx.leagueId, ctx.league]]);
+  const loadTeam = async ref => {
+    if (!cache.has(ref.leagueId)) cache.set(ref.leagueId, await World.loadLeague(world, ref.leagueId, multiSavePath));
+    const lg = cache.get(ref.leagueId);
+    return lg ? lg.teams[ref.idx] || null : null;
+  };
+  return World.NationalCup.projectForLeague(Engine, cup, ctx.leagueId, ctx.teamIndex, loadTeam);
+}
+
+// Clubs invités de la Coupe nationale pour le scouting (routes
+// /api/scouting/*) : l'adversaire d'un autre championnat du tour en attente,
+// rangé dans ctx.league.guestTeamsByIdx (jamais sauvegardé) avec sa ligue
+// d'origine (classement, forme) — voir server/scouting.js:teamAt.
+async function attachNationalCupGuests(ctx, multiSavePath) {
+  const pending = ctx.league && ctx.league.nationalCupPending;
+  const m = pending && pending.matches[0];
+  if (!m || m.bye) return;
+  const guestIdx = World.NationalCup.guestIdxForRound(pending.index);
+  if (m.home !== guestIdx && m.away !== guestIdx) return;
+  const cup = (ctx.world.cups || {})[ctx.league.country || World.DEFAULT_COUNTRY];
+  const round = cup && cup.rounds[pending.index];
+  const mine = ref => ref && ref.leagueId === ctx.leagueId && ref.idx === ctx.teamIndex;
+  const real = round && round.matches.find(x => mine(x.home) || mine(x.away));
+  const oppRef = real && (mine(real.home) ? real.away : real.home);
+  if (!oppRef) return;
+  const lg = await World.loadLeague(ctx.world, oppRef.leagueId, multiSavePath);
+  const team = lg && lg.teams[oppRef.idx];
+  if (!team) return;
+  team.guestLeague = lg;
+  team.guestIdx = oppRef.idx;
+  ctx.league.guestTeamsByIdx = new Map([[guestIdx, team]]);
 }
 
 // `async` — voir resolvePlayerContext juste au-dessus, même raison.
@@ -1204,6 +1259,33 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           sendJson(res, 200, { ok: true, club: { ...roster, leagueId: id, label: World.divisionLabel(entry.level, entry.group) } });
           return;
         }
+        // Coupe nationale (server/nationalCup.js) : parcours du manager + tours,
+        // et matchs d'un tour (tableau complet, recherche, pagination).
+        if (route.pathname === "/api/world/cup") {
+          const country = ctx.league.country || World.DEFAULT_COUNTRY;
+          const cup = (world.cups || {})[country] || null;
+          if (!cup) { sendJson(res, 200, { ok: true, cup: null }); return; }
+          const leagues = new Map([[ctx.leagueId, ctx.league]]);
+          const mine = ref => ref && ref.leagueId === ctx.leagueId && ref.idx === ctx.teamIndex;
+          for (const r of cup.rounds) {
+            const m = r.matches.find(x => !x.resolved && (mine(x.home) || mine(x.away)));
+            const opp = m && (mine(m.home) ? m.away : m.home);
+            if (opp && !leagues.has(opp.leagueId)) leagues.set(opp.leagueId, await World.loadLeague(world, opp.leagueId, multiSavePath));
+          }
+          sendJson(res, 200, { ok: true, cup: World.NationalCup.viewForTeam(Engine, cup, leagues, ctx.leagueId, ctx.teamIndex) });
+          return;
+        }
+        if (route.pathname === "/api/world/cup/round") {
+          const country = World.isOpenCountry(q.get("country")) ? q.get("country") : (ctx.league.country || World.DEFAULT_COUNTRY);
+          const cup = (world.cups || {})[country] || null;
+          const data = cup && World.NationalCup.roundMatches(cup, Number(q.get("round") || 0), {
+            offset: Number(q.get("offset") || 0), limit: Math.min(100, Number(q.get("limit") || 40)), q: q.get("q") || "",
+            pendingOnly: q.get("pending") === "1", first: { leagueId: ctx.leagueId, idx: ctx.teamIndex },
+          });
+          if (!data) { sendJson(res, 404, { ok: false, error: "Tour introuvable." }); return; }
+          sendJson(res, 200, { ok: true, round: data });
+          return;
+        }
         if (route.pathname === "/api/world/search") {
           sendJson(res, 200, { ok: true, ...World.searchWorld(world, q.get("q") || "") });
           return;
@@ -1253,6 +1335,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
         payload.league.liveMatch = LiveMatch.viewLiveMatchForTeam(ctx.league, ctx.teamIndex);
         delete payload.league.liveMatches;
+        // Coupe nationale (server/nationalCup.js) : projetée dans la forme de
+        // la Coupe interne, avec les clubs invités (adversaires d'un autre
+        // championnat) joints à part.
+        if (ctx.world && !ctx.league.cup) {
+          const national = await nationalCupProjection(ctx, multiSavePath);
+          if (national) { payload.league.cup = national.cup; payload.league.guestTeams = national.guests; }
+        }
         // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
         payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex);
         // Matchs amicaux : seulement les siens, sans la compo de l'adversaire.
@@ -1380,7 +1469,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
         const watchedTeam = ctx.league.teams[teamIdx];
         const opponent = ctx.league.teams[live.opponentIdx];
-        sendJson(res, 200, { ok: true, teamName: watchedTeam.name, opponentName: opponent.name, live });
+        sendJson(res, 200, { ok: true, teamName: watchedTeam.name, opponentName: opponent ? opponent.name : (live.guestName || "Club invité"), live });
         return;
       }
 
@@ -1421,6 +1510,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
         const { changed } = tick(ctx.league, now);
         if (changed) await persistContext(ctx);
+        if (ctx.world) await attachNationalCupGuests(ctx, multiSavePath);
         const opponentParam = route.searchParams.get("opponent");
         const opponentIdx = opponentParam === null ? NaN : Number(opponentParam);
         const access = Scouting.getScoutingAccess(ctx.league, ctx.teamIndex, opponentIdx, now);
@@ -1434,6 +1524,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
         const { changed } = tick(ctx.league, now);
         if (changed) await persistContext(ctx);
+        if (ctx.world) await attachNationalCupGuests(ctx, multiSavePath);
         const opponentParam = route.searchParams.get("opponent");
         const opponentIdx = opponentParam === null ? NaN : Number(opponentParam);
         const access = Scouting.getScoutingAccess(ctx.league, ctx.teamIndex, opponentIdx, now);
@@ -1589,6 +1680,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           return;
         }
 
+        if (ctx.world && route.pathname.startsWith("/api/scouting/")) await attachNationalCupGuests(ctx, multiSavePath);
         const result = actionFn(ctx.league.teams[ctx.teamIndex], ctx.teamIndex, ctx.league, body, now);
         if (!result.ok) {
           sendJson(res, 400, result);
@@ -1627,8 +1719,10 @@ function startServer(port = DEFAULT_PORT, savePath = store.defaultSavePath(), mu
   // Tâche de fond : les ligues du monde avancent même sans visite.
   const worldTimer = setInterval(async () => {
     const release = await acquireSaveLock();
-    try { await maybeCatchUpWorld(multiSavePath, Date.now(), true); } finally { release(); }
-  }, WORLD_CATCHUP_INTERVAL_MS);
+    // Toutes les minutes : ne fait réellement quelque chose que toutes les
+    // 10 minutes, ou dès qu'une échéance de Coupe nationale est passée.
+    try { await maybeCatchUpWorld(multiSavePath, Date.now()); } finally { release(); }
+  }, 60 * 1000);
   if (worldTimer.unref) worldTimer.unref();
   server.on("close", () => clearInterval(worldTimer));
   server.listen(port, () => {
