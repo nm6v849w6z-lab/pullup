@@ -20,6 +20,22 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-28) — Toutes les pages en pleine
+  largeur** — retours : "certaines pages ne prennent pas toute la largeur à
+  l'écran", "il faudra faire attention à tout bien paramétrer", Effectif :
+  "les colonnes sont toutes entassées à droite sauf celle des noms".
+  WIDE_PAGE_IDS = new Set(PAGE_IDS) (plus de gabarit 960px) ; plafonds
+  retirés : Ligue (#standingsSection 1180px), Ordres (#prepSection
+  1240px), Comparateur (1440px) ; Effectif/fiche équipe : nom ≈ 24 % (min
+  200px), autres colonnes réparties, « … » au plus juste. Restent plafonnés
+  exprès : direct (live.css, 1180px, maquette dédiée) et écran de
+  rattrapage (760px, texte court). Vérifié en capture à 1920 et 1366 px sur
+  22 pages, aucun débordement horizontal. NB : player_detail_test.js échoue
+  AUSSI sur HEAD sans ce changement ("la fiche équipe adverse devrait
+  afficher des liens joueur cliquables") → à investiguer à part. Autre
+  trouvaille : en carrière solo, après 4 journées rattrapées,
+  goToOrdresTab → renderPrep plante (teamB indéfini) — à investiguer.
+
 - **✅ EN PROD (ae45239, ADSENSE_CLIENT posé sur Render, /ads.txt OK) — EN ATTENTE D'EXAMEN ADSENSE (2026-09-27) — Vraies pubs
   (Google H5 Games Ads) aux emplacements prévus** — demande : "ajouter les
   pubs aux endroits prévus dans mon jeu hoop-manager.com" ; régie choisie :

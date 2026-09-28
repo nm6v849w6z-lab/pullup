@@ -407,7 +407,7 @@
      chargées dans ce projet, voir le correctif polices du tableau de bord).
      Tout est préfixé #prepSection pour ne rien toucher ailleurs.
      ===================================================================== */
-  #prepSection{max-width:1240px; margin:0 auto;}
+  #prepSection{margin:0 auto;} /* pleine largeur comme les autres pages (2026-09-28) */
   #prepSection .prep-grid{max-width:none; margin:0 0 18px;}
   #prepSection .field-help{font-size:12px; line-height:1.4; color:var(--ink-dim); margin-top:6px;}
 
@@ -2365,7 +2365,6 @@
   /* playerCompareSection est dans WIDE_PAGE_IDS (.wrap.wrap-wide{max-width:
      none;}, voir plus haut) : re-plafonné ICI, sur le contenu lui-même, pour
      ne pas s'étirer indéfiniment sur un très grand écran. */
-  #playerCompareSection .section{max-width:1440px; margin-left:auto; margin-right:auto;}
   /* Nouvelle fiche joueur (retour utilisateur, 2026-09, exemple fourni pour
      "Adama Kovac") : grille à 2 colonnes pour les caractéristiques (voir
      renderPlayerDetail) plutôt que l'ancien tableau à une seule ligne
@@ -3193,7 +3192,6 @@
        "mon équipe". */
     --zone-po:var(--ok); --zone-mid:var(--ink-faint); --zone-bar:#e8c547; --zone-rel:var(--danger);
   }
-  #standingsSection > .section{max-width:1180px; margin-left:auto; margin-right:auto;}
   .lg-head{margin-bottom:20px;}
   .lg-head small{display:block; font-size:12.5px; font-weight:700; color:var(--amber); margin-bottom:4px;}
   .lg-head h1{font-family:var(--display); font-size:40px; font-weight:800; line-height:1; margin:0; letter-spacing:-.01em;}
@@ -5372,8 +5370,13 @@
      fatigué ») et laissaient donc du vide quand l'équipe n'en a pas. Ici :
      chaque colonne se RESSERRE sur son contenu réel (width:1%), avec le
      même espacement partout, et seule Nom absorbe la place restante. */
-  :is(#effectifSection, #teamDetailSection) table.eff-general th, :is(#effectifSection, #teamDetailSection) table.eff-general td{width:1%; padding-left:14px; padding-right:14px;}
-  :is(#effectifSection, #teamDetailSection) table.eff-general th.eff-th-name, :is(#effectifSection, #teamDetailSection) table.eff-general td.eff-td-name{width:auto;}
+  /* Pleine largeur (2026-09-28, capture : "les colonnes sont toutes
+     entassées à droite sauf celle des noms") : le nom garde environ un quart
+     de la largeur, l'espace restant se répartit entre les autres colonnes ;
+     seule la colonne d'actions « … » reste au plus juste. */
+  :is(#effectifSection, #teamDetailSection) table.eff-general th, :is(#effectifSection, #teamDetailSection) table.eff-general td{width:auto; padding-left:14px; padding-right:14px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general th.eff-th-name, :is(#effectifSection, #teamDetailSection) table.eff-general td.eff-td-name{width:24%; min-width:200px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general th:last-child, :is(#effectifSection, #teamDetailSection) table.eff-general td:last-child{width:1%;}
   /* Potentiel et Forme : libellé AU-DESSUS de sa jauge (retour utilisateur
      2026-09-25 : "on a toujours de gros écarts entre potentiel et âge et
      entre forme et motivation"). Côte à côte, la colonne prenait la largeur
@@ -21642,7 +21645,11 @@ const PAGE_IDS = [
 // colonne de droite (prochain match, bilan) côte à côte.
 // "standingsSection" ajouté (refonte de la page Ligue, 2026-09-25) :
 // classement + colonne course/MVP côte à côte, leaders sur 3 colonnes.
-const WIDE_PAGE_IDS = new Set(["effectifSection", "coupeSection", "lpSection", "messagesSection", "histoireSection", "prepSection", "playerDetailSection", "playerCompareSection", "clubSection", "calendrierSection", "standingsSection", "medicalSection", "tactiquesSection"]);
+// Toutes les pages en pleine largeur (retour utilisateur 2026-09-28 :
+// "certaines pages ne prennent pas toute la largeur à l'écran", "il faudra
+// faire attention à tout bien paramétrer") : plus de gabarit « lecture » à
+// 960px, chaque page gère elle-même la répartition de sa largeur.
+const WIDE_PAGE_IDS = new Set(PAGE_IDS);
 
 // Pages dont le contenu réel est nettement plus étroit que le gabarit
 // "lecture" à 960px, voir .wrap.wrap-narrow en CSS. Pas l'inverse de
