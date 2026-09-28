@@ -20,6 +20,44 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-28) — Championnats par pays (France/USA),
+  divisions ouvertes à la demande, montées/descentes, saisons synchronisées**
+  — reprise du travail d'une autre session (arrêtée par l'utilisateur) +
+  décisions utilisateur : « on va dans la division la plus haute où il y a un
+  bot », divisions ouvertes quand la précédente est pleine, champion des PO
+  monte, 9e/10e + perdant du barrage descendent, mise à jour unique lundi 6h
+  Paris, une semaine d'intersaison.
+  - server/world.js : registre du monde (pays, championnats, jeton → ligue),
+    fr-1 = ligue historique (même clé/fichier), us-1 créée automatiquement,
+    une sauvegarde PAR championnat (store.leagueStorage/worldStorage) ;
+    assignClub (division la plus haute avec un club de l'IA, sinon ouverture
+    du championnat suivant : 2a, 2b, 2c, 3a…) ; createLeague CALE la nouvelle
+    ligue sur le calendrier du pays (et tous les pays sur les mêmes semaines,
+    syncCalendarTo), journées passées simulées avant l'arrivée du manager ;
+    computeCountryMoves (autant de descentes que de ligues filles ouvertes :
+    10e, 9e, perdant du barrage ; champion de chaque fille monte ; prime de
+    montée ; fil ; pendingDivisionMove) ; applyCountryMoves (échange à index
+    égal, annonces/amicaux annulés, jetons mis à jour) ; catchUpWorld (toutes
+    les ligues avancent, reprise commune de tout le pays le lundi 6h).
+  - server/index.js : maybeCatchUpWorld au plus toutes les 10 min (requête
+    avec jeton + minuterie de fond), resolvePlayerContext charge SEULEMENT le
+    championnat du manager ; autoNextSeason = false sur les ligues du monde.
+  - Fuseau : League.timeZone explicite pour les horaires ET la mise à jour
+    unique (zoned* ; la mise à jour est calculée en heure de Paris quoi
+    qu'il arrive) ; le fuseau « courant » (setCalendarTimeZone/
+    useLeagueTimeZone) reste pour les calculs au jour près (repos, amicaux).
+  - Inscription : choix du pays (site), nom de club unique dans le monde.
+  - UI : page Ligue « drapeau · Division II · Groupe B » ; encadré
+    d'intersaison « vous jouerez en … ».
+  - Tests : server/world_test.js, server/world_season_test.js,
+    server/timezone_test.js ; new_season_ui_test (horloge serveur figée).
+  - RESTE : page « Planète Hoop » (nom à confirmer) en bas du menu : pays →
+    division/groupe → classement, résultats, fiches ; stats par pays
+    (champion, Coupe, meilleurs de la saison) ; marché des transferts
+    MONDIAL ; Coupe nationale (512) et Supercoupe D I ; barrage en direct ;
+    amicaux entre pays ; optimisation (ne sauvegarder que les ligues
+    modifiées dans catchUpWorld) ; Postgres plus tard si besoin.
+
 - **🛠 CODÉ, TESTS VERTS, À COMMITTER/POUSSER (2026-09-28) — Nationalités + drapeaux** — retours
   utilisateur : "un petit drapeau sur la fiche joueur", "étoffe la liste
   des pays, il faut la Chine et même les petits pays (équipes nationales

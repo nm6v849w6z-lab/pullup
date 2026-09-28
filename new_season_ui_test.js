@@ -22,7 +22,10 @@ const ok = m => console.log("✅ " + m);
   for (let i = 0; i < 2000 && !lg.seasonEndTickDone; i++) { t += 3 * H; A.catchUpLeague(lg, t); }
   if (!lg.seasonEndTickDone || typeof lg.intersaisonStartedAt !== "number") fail("(setup) intersaison non atteinte.");
   const meIdx = 1; // deuxième club humain : vérifie qu'on n'utilise plus l'index 0
-  const { server, multiSavePath, baseUrl } = await startTestServer();
+  // Horloge du serveur figée en pleine intersaison (le monde, voir
+  // server/world.js, relancerait sinon la saison suivante).
+  const serverNow = lg.intersaisonStartedAt + 2 * 24 * H;
+  const { server, multiSavePath, baseUrl } = await startTestServer(() => serverNow);
   await store.saveMultiLeague(lg, multiSavePath);
   const dom = await openGame(html, `${baseUrl}?m=${lg.teams[meIdx].managerLinkToken}`);
   const win = dom.window, doc = win.document;

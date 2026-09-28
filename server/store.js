@@ -88,9 +88,59 @@ const REDIS_KEYS = { league: "pullup:league", multiLeague: "pullup:multi-league"
 // jamais celles de la prod. La prod, elle, ne définit PAS cette variable
 // (clés historiques inchangées, rien à migrer).
 function redisKey(name) {
+  return redisPrefix() + REDIS_KEYS[name];
+}
+function redisPrefix() {
   const raw = (process.env.BASKET_REDIS_PREFIX || "").trim();
-  const prefix = raw ? `${raw.replace(/:+$/, "")}:` : "";
-  return prefix + REDIS_KEYS[name];
+  return raw ? `${raw.replace(/:+$/, "")}:` : "";
+}
+
+// ---------------------------------------------------------------------
+// CHAMPIONNATS PAR PAYS (2026-09-28, voir server/world.js) : chaque
+// championnat est une ligue à part, sauvegardée sous sa propre clé/son
+// propre fichier. "fr-1" (Division I française) EST la ligue partagée
+// historique : même clé Redis/même fichier qu'avant, rien à migrer. Les
+// autres vivent à côté : clé "pullup:league:<id>", fichier
+// "<multi-league>.<id>.json" (dans le même dossier que la ligue historique,
+// ce qui isole naturellement les tests qui passent leur propre chemin).
+// ---------------------------------------------------------------------
+const HISTORIC_LEAGUE_ID = "fr-1";
+function leagueStorage(leagueId, savePath) {
+  if (!leagueId || leagueId === HISTORIC_LEAGUE_ID) return { redis: redisKey("multiLeague"), file: savePath };
+  if (!/^[a-z]{2}-[0-9][a-z]?$/.test(leagueId)) throw new Error(`Identifiant de championnat invalide : ${leagueId}`);
+  return { redis: `${redisPrefix()}pullup:league:${leagueId}`, file: savePath.replace(/\.json$/, "") + `.${leagueId}.json` };
+}
+function worldStorage(savePath) {
+  return { redis: `${redisPrefix()}pullup:world`, file: savePath.replace(/\.json$/, "") + ".world.json" };
+}
+
+// Registre du monde (voir server/world.js) : JSON brut, sans version de
+// moteur — `null` si absent ou illisible.
+async function loadWorldRaw(savePath = defaultMultiLeaguePath()) {
+  const where = worldStorage(savePath);
+  try {
+    if (upstashConfigured()) {
+      const raw = await redisGet(where.redis);
+      return raw == null ? null : JSON.parse(raw);
+    }
+    if (!fs.existsSync(where.file)) return null;
+    return JSON.parse(fs.readFileSync(where.file, "utf-8"));
+  } catch (e) {
+    console.warn("Registre du monde illisible :", e.message);
+    return null;
+  }
+}
+async function saveWorldRaw(world, savePath = defaultMultiLeaguePath()) {
+  const where = worldStorage(savePath);
+  const body = JSON.stringify(world);
+  if (upstashConfigured()) {
+    try { await redisSet(where.redis, body); } catch (e) { console.warn("Écriture Redis du registre du monde échouée :", e.message); }
+    return;
+  }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmpPath = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmpPath, body, "utf-8");
+  fs.renameSync(tmpPath, where.file);
 }
 
 function upstashConfigured() {
@@ -182,6 +232,7 @@ function createMultiManagerCareer(managerTeamNames, now = Date.now(), adminTeamN
     : managerTeamNames[0];
   const adminTeam = league.teams.find(t => t.isHuman && t.name === targetName);
   if (adminTeam) adminTeam.isAdmin = true;
+  stampHistoricLeague(league);
   return { league };
 }
 
@@ -195,13 +246,26 @@ function serializeMultiLeague(league) {
 // (deserialize ci-dessous), il n'y a plus UNE SEULE équipe "locale"
 // privilégiée à reconstruire à part : voir Engine.leagueFromSave (userTeam
 // omis).
+// La ligue partagée historique devient la Division I française (voir
+// HISTORIC_LEAGUE_ID) : identité posée au chargement si elle manque.
+function stampHistoricLeague(league) {
+  if (!league.leagueId) league.leagueId = HISTORIC_LEAGUE_ID;
+  if (league.leagueId === HISTORIC_LEAGUE_ID) {
+    league.country = league.country || "fr";
+    league.timeZone = league.timeZone || "Europe/Paris";
+  }
+  return league;
+}
+
 function deserializeMultiLeague(data) {
   // Même précaution que deserialize() ci-dessus, pour la ligue partagée
   // (c'est d'ailleurs très exactement ce chemin-ci qui a révélé le bug :
   // marché de staff/transferts en ligue partagée, voir le commentaire sur
   // Engine.reseedUidFromSave).
   Engine.reseedUidFromSave(data);
-  return { league: leagueFromSave(data.league) };
+  const league = leagueFromSave(data.league);
+  if (!league.leagueId) stampHistoricLeague(league);
+  return { league };
 }
 
 // `async` (voir grand commentaire "BACKEND REDIS" plus haut) : même
@@ -210,10 +274,14 @@ function deserializeMultiLeague(data) {
 // `savePath` reste accepté (compatibilité) mais IGNORÉ quand Redis est actif
 // (voir upstashConfigured()) : la clé fixe REDIS_KEYS.multiLeague est
 // utilisée à la place, jamais dérivée de ce chemin.
-async function loadMultiLeague(savePath = defaultMultiLeaguePath()) {
+// `leagueId` (2026-09-28) : championnat à charger (voir leagueStorage) —
+// omis = la ligue partagée historique ("fr-1"), comme avant.
+async function loadMultiLeague(savePath = defaultMultiLeaguePath(), leagueId = HISTORIC_LEAGUE_ID) {
+  const where = leagueStorage(leagueId, savePath);
+  savePath = where.file;
   if (upstashConfigured()) {
     try {
-      const raw = await redisGet(redisKey("multiLeague"));
+      const raw = await redisGet(where.redis);
       if (raw == null) return null;
       const data = JSON.parse(raw);
       if (!data || data.version !== MULTI_SAVE_VERSION || !data.league || data.team) return null;
@@ -254,10 +322,15 @@ async function loadMultiLeague(savePath = defaultMultiLeaguePath()) {
 // de remonter et faire planter tout le serveur : un échec d'écriture
 // PASSAGER ne doit jamais interrompre la partie de TOUS les managers pour
 // une seule requête — voir aussi save() ci-dessous, même logique.
+// Sauvegarde sous l'identité du championnat (league.leagueId, voir
+// leagueStorage) : `savePath` reste le chemin de la ligue historique, dont
+// les autres championnats dérivent le leur.
 async function saveMultiLeague(league, savePath = defaultMultiLeaguePath()) {
+  const where = leagueStorage(league && league.leagueId, savePath);
+  savePath = where.file;
   if (upstashConfigured()) {
     try {
-      await redisSet(redisKey("multiLeague"), JSON.stringify(serializeMultiLeague(league)));
+      await redisSet(where.redis, JSON.stringify(serializeMultiLeague(league)));
     } catch (e) {
       console.warn("Écriture Redis (Upstash) de la ligue multi-manager échouée :", e.message);
     }
@@ -410,6 +483,8 @@ module.exports = {
   MULTI_SAVE_VERSION, defaultMultiLeaguePath, createMultiManagerCareer,
   serializeMultiLeague, deserializeMultiLeague, loadMultiLeague, saveMultiLeague,
   resolveManagerTeam,
+  // Championnats par pays (voir server/world.js) :
+  HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, stampHistoricLeague,
   // Comptes joueurs (voir server/accounts.js) :
   defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,
   // Backend Redis (Upstash) optionnel (voir grand commentaire dédié plus

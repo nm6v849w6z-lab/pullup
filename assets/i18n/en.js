@@ -4679,4 +4679,12 @@ window.HM_I18N_EN = {
   "La saison {0} est lancée": "Season {0} is underway",
   "Nouveau calendrier, nouvelle Coupe : premier match mardi à 20:00. Votre effectif est conservé.": "New schedule, new Cup: first match on Tuesday at 20:00. Your roster is kept.",
   "Tous vos matchs de la saison, championnat et Coupe, groupés par mois. Les matchs se jouent tout seuls à l'heure prévue (championnat le mardi et le samedi à 20:00, Coupe le jeudi à 20:00, play-offs le mardi, le jeudi et le samedi) : connectez-vous pour les suivre en direct, ou laissez-les se dérouler sans vous. Une saison dure 11 semaines, puis une semaine d'intersaison avant la suivante.": "All your season's matches, league and Cup, grouped by month. Matches play themselves at the scheduled time (league on Tuesday and Saturday at 20:00, Cup on Thursday at 20:00, playoffs on Tuesday, Thursday and Saturday): log in to follow them live, or let them play out without you. A season lasts 11 weeks, followed by an off-season week before the next one.",
+  // Championnats par pays : montées/descentes (2026-09-28).
+  "La saison prochaine, vous jouerez en {0} !": "Next season, you'll play in {0}!",
+  "La saison prochaine, vous jouerez en {0}.": "Next season, you'll play in {0}.",
+  "Montée en {0} !": "Promoted to {0}!",
+  "Relégation en {0}": "Relegated to {0}",
+  "Champion de sa ligue, {0} jouera en {1} la saison prochaine (prime de montée : {2} €). Profitez de l'intersaison pour renforcer l'effectif.": "League champions, {0} will play in {1} next season (promotion bonus: €{2}). Use the off-season to strengthen the roster.",
+  "Champion de sa ligue, {0} jouera en {1} la saison prochaine. Profitez de l'intersaison pour renforcer l'effectif.": "League champions, {0} will play in {1} next season. Use the off-season to strengthen the roster.",
+  "{0} jouera en {1} la saison prochaine.": "{0} will play in {1} next season.",
 };

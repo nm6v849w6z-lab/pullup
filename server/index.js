@@ -38,6 +38,7 @@ const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
 const store = require("./store.js");
+const World = require("./world.js");
 const AutoSim = require("./autoSim.js");
 const Calendar = require("./calendar.js");
 const LiveMatch = require("./liveMatch.js");
@@ -251,6 +252,26 @@ function acquireSaveLock() {
   });
 }
 
+// Monde (championnats par pays, voir server/world.js:catchUpWorld) : fait
+// avancer TOUTES les ligues (même sans manager connecté) et bascule les
+// saisons de chaque pays ensemble (montées/descentes, reprise). Au plus une
+// fois toutes les WORLD_CATCHUP_INTERVAL_MS par fichier de ligue ; appelée
+// sous le verrou de sauvegarde (requête avec jeton, ou minuterie de
+// startServer).
+const WORLD_CATCHUP_INTERVAL_MS = 10 * 60 * 1000;
+const lastWorldCatchUpAt = new Map();
+async function maybeCatchUpWorld(multiSavePath, now, force = false) {
+  const last = lastWorldCatchUpAt.get(multiSavePath) || 0;
+  if (!force && now - last < WORLD_CATCHUP_INTERVAL_MS && now >= last) return [];
+  lastWorldCatchUpAt.set(multiSavePath, now);
+  try {
+    return await World.catchUpWorld(multiSavePath, now, { tickLeague: (lg, t) => tick(lg, t).events });
+  } catch (e) {
+    console.warn("[monde] rattrapage des championnats échoué :", e.message);
+    return [];
+  }
+}
+
 // Lit et parse le corps JSON d'une requête POST. Rejette (via l'erreur) un
 // corps trop volumineux ou du JSON invalide plutôt que de planter le
 // serveur — chaque route appelante décide ensuite du code HTTP à renvoyer.
@@ -314,17 +335,26 @@ async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
   const token = getManagerToken(req);
   if (!token) {
     const state = await store.loadOrCreate(legacySavePath, now);
+    World.useLeagueTimeZone(null); // carrière solo : heure de Paris
     return { ok: true, league: state.league, teamIndex: 0, isMulti: false, savePath: legacySavePath };
   }
-  const multi = await store.loadMultiLeague(multiSavePath);
-  if (!multi) {
+  // Championnats par pays (2026-09-28, voir server/world.js) : le jeton
+  // désigne un club dans UN des championnats du monde (Division I
+  // française = la ligue partagée historique) ; seul celui-là est chargé,
+  // et le calendrier passe dans le fuseau horaire de son pays.
+  const world = await World.loadWorld(multiSavePath, now);
+  if (!world) {
     return { ok: false, status: 404, error: "Aucune ligue multi-manager n'existe encore (voir /api/admin/new-multi-league)." };
   }
-  const resolved = store.resolveManagerTeam(multi.league, token);
-  if (!resolved) {
+  const found = await World.findTeamByToken(world, token, multiSavePath);
+  if (!found) {
     return { ok: false, status: 401, error: "Jeton de manager inconnu ou invalide." };
   }
-  return { ok: true, league: multi.league, teamIndex: resolved.teamIndex, isMulti: true, savePath: multiSavePath };
+  // Ligues du monde : c'est server/world.js:catchUpWorld (tâche de fond)
+  // qui fait redémarrer toutes les ligues d'un pays ensemble.
+  found.league.autoNextSeason = false;
+  World.useLeagueTimeZone(found.league);
+  return { ok: true, league: found.league, teamIndex: found.teamIndex, isMulti: true, savePath: multiSavePath, world, leagueId: found.leagueId };
 }
 
 // `async` — voir resolvePlayerContext juste au-dessus, même raison.
@@ -962,6 +992,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
 
       releaseSaveLock = await acquireSaveLock();
       const now = nowFn();
+      if (getManagerToken(req)) await maybeCatchUpWorld(multiSavePath, now);
 
       // Comptes joueurs + Discord (voir server/accountRoutes.js).
       if (await handleAccountRoutes(req, res, route, now)) return;
@@ -1543,6 +1574,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
 
 function startServer(port = DEFAULT_PORT, savePath = store.defaultSavePath(), multiSavePath = store.defaultMultiLeaguePath()) {
   const server = http.createServer(createHandler(savePath, Date.now, multiSavePath));
+  // Tâche de fond : les ligues du monde avancent même sans visite.
+  const worldTimer = setInterval(async () => {
+    const release = await acquireSaveLock();
+    try { await maybeCatchUpWorld(multiSavePath, Date.now(), true); } finally { release(); }
+  }, WORLD_CATCHUP_INTERVAL_MS);
+  if (worldTimer.unref) worldTimer.unref();
+  server.on("close", () => clearInterval(worldTimer));
   server.listen(port, () => {
     console.log(`Serveur basket (calendrier réel) démarré sur http://localhost:${port}`);
     console.log(`Sauvegarde solo : ${savePath}`);
@@ -1567,6 +1605,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  createHandler, buildStateSnapshot, tick, startServer,
+  createHandler, buildStateSnapshot, tick, startServer, maybeCatchUpWorld,
   personalizeEventsForTeam, resolvePlayerContext, getManagerToken, mobileManifest,
 };

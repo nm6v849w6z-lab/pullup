@@ -152,6 +152,8 @@ function createAccount(data, fields, now) {
     discordName: fields.discordName || null,
     managerToken: fields.managerToken || null,
     requestedClubName: fields.requestedClubName || null,
+    // Pays choisi à l'inscription (2026-09-28, championnats par pays).
+    requestedCountry: fields.requestedCountry || null,
     createdAt: now,
     lastLoginAt: now,
   };
@@ -196,8 +198,8 @@ function teamAverageOverall(team) {
 // autour du niveau visé puis recalés dans la fourchette. Construit en une
 // fois (le constructeur de Player déduit salaire et potentiel des
 // attributs).
-function generateBasicPlayer(position, usedLastNames) {
-  const base = Engine.generateRookiePlayer(position, usedLastNames);
+function generateBasicPlayer(position, usedLastNames, country = "fr") {
+  const base = Engine.generateRookiePlayer(position, usedLastNames, country);
   const target = BASIC_PLAYER_MIN_LEVEL + Math.random() * (BASIC_PLAYER_MAX_LEVEL - BASIC_PLAYER_MIN_LEVEL);
   const attrs = Engine.generateRawAttrsInRange(position, Math.max(1, target - 12), Math.min(99, target + 12), 1);
   const keys = Object.keys(attrs);
@@ -209,14 +211,14 @@ function generateBasicPlayer(position, usedLastNames) {
     keys.forEach(k => { attrs[k] = Math.max(1, Math.min(99, attrs[k] + shift)); });
   }
   return new Engine.Player({
-    name: base.name, position, height: base.height, age: base.age, attrs, aggressiveness: base.aggressiveness,
+    name: base.name, nationality: base.nationality, position, height: base.height, age: base.age, attrs, aggressiveness: base.aggressiveness,
   });
 }
 
-function generateBasicRoster() {
+function generateBasicRoster(country = "fr") {
   const used = new Set();
   const players = [];
-  Engine.POSITIONS.forEach(pos => { for (let i = 0; i < 3; i++) players.push(generateBasicPlayer(pos, used)); });
+  Engine.POSITIONS.forEach(pos => { for (let i = 0; i < 3; i++) players.push(generateBasicPlayer(pos, used, country)); });
   return players;
 }
 
@@ -224,7 +226,7 @@ function generateBasicRoster() {
 // ligue, et tout ce qui pointait vers eux sur le marché des transferts est
 // annulé (annonces de vente de ce club, enchères de ce club — personne ne
 // paie ni n'encaisse quoi que ce soit pour ces joueurs-là).
-function replaceRoster(league, teamIndex) {
+function replaceRoster(league, teamIndex, country = (league && league.country) || "fr") {
   const team = league.teams[teamIndex];
   const oldIds = new Set((team.players || []).map(p => p.id));
   (league.transferListings || []).forEach(l => {
@@ -239,7 +241,7 @@ function replaceRoster(league, teamIndex) {
       l.currentBidderIdx = last ? (last.bidderIdx != null ? last.bidderIdx : last.teamIdx) : null;
     }
   });
-  team.players = generateBasicRoster();
+  team.players = generateBasicRoster(country);
   if (typeof team.autoAssignLineup === "function") team.autoAssignLineup();
 }
 

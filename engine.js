@@ -3087,8 +3087,17 @@ function pickWeightedNation(nations, r) {
   return nations[nations.length - 1];
 }
 
-function randomNationality() {
-  return pickWeightedNation(NATIONS, Math.random()).code;
+const HOME_NATIONALITY_SHARE = 0.6;
+const YOUTH_HOME_NATIONALITY_SHARE = 0.85;
+const FRANCE_FOREIGN_WEIGHT = 12;
+function randomNationality(homeCountry = "fr") {
+  if (!homeCountry || homeCountry === "fr" || !NATION_BY_CODE[homeCountry]) {
+    return pickWeightedNation(NATIONS, Math.random()).code;
+  }
+  if (Math.random() < HOME_NATIONALITY_SHARE) return homeCountry;
+  const others = NATIONS.filter(n => n.code !== homeCountry)
+    .map(n => n.code === "fr" ? { ...n, weight: FRANCE_FOREIGN_WEIGHT } : n);
+  return pickWeightedNation(others, Math.random()).code;
 }
 
 // Nationalité d'un joueur qui n'en a pas encore (sauvegarde d'avant les
@@ -3109,8 +3118,13 @@ function nationalityFromName(name) {
 // Identité complète d'un NOUVEAU joueur : nationalité tirée d'abord, puis
 // prénom/nom dans le réservoir de ce pays. `usedLastNames` (Set optionnel,
 // voir pickUniqueLastName) évite les doublons de nom dans un même effectif.
-function generatePlayerIdentity(usedLastNames) {
-  const nationality = randomNationality();
+// `homeCountry` (2026-09-28, pays des championnats) : pays du CLUB qui
+// génère ce joueur — HOME_NATIONALITY_SHARE (60 %) de joueurs de ce pays,
+// le reste tiré parmi les autres pays (la France n'y pèse alors plus que
+// FRANCE_FOREIGN_WEIGHT, comme n'importe quelle nation de basket). Pour un
+// club français, c'est exactement le tirage historique (France 60 %).
+function generatePlayerIdentity(usedLastNames, homeCountry = "fr") {
+  const nationality = randomNationality(homeCountry);
   const pool = NAME_POOLS[NATION_BY_CODE[nationality].pool] || NAME_POOLS.fr;
   const lastName = usedLastNames ? pickUniqueLastName(pool.last, usedLastNames) : pick(pool.last);
   return { name: `${pick(pool.first)} ${lastName}`, nationality };
@@ -4453,8 +4467,12 @@ const CONVOCATION_MAX = 12;
 const MAX_BACKUPS_PER_POSITION = 2;
 
 class Team {
-  constructor({ name, players }) {
+  constructor({ name, players, country }) {
     this.name = name;
+    // Pays du club (2026-09-28, championnats par pays) : celui de son
+    // championnat ; pilote la nationalité des jeunes de son centre de
+    // formation (voir generateYouthCandidate). "fr" pour tout club d'avant.
+    this.country = country || "fr";
     this.players = players; // 15 joueurs (3 par poste)
 
     this.autoAssignLineup();
@@ -6399,7 +6417,7 @@ class Team {
     if (this.youthCandidates.length >= YOUTH_CANDIDATE_QUEUE_MAX) return; // file déjà pleine
     const chance = YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL[this.recruiter.level] || 0;
     if (Math.random() >= chance) return;
-    this.youthCandidates.push(generateYouthCandidate(now, this.recruiter.level));
+    this.youthCandidates.push(generateYouthCandidate(now, this.recruiter.level, this.country));
   }
 
   // Signe un candidat en attente : le déplace de youthCandidates vers
@@ -8006,8 +8024,8 @@ function generateRawYouthAttrs(tier, position) {
 // famille au sein d'une même équipe (pickUniqueLastName) — absent (appel
 // isolé, hors génération d'effectif complet), on retombe sur un tirage
 // classique.
-function generatePlayer(position, tier, usedLastNames) {
-  const { name, nationality } = generatePlayerIdentity(usedLastNames);
+function generatePlayer(position, tier, usedLastNames, country = "fr") {
+  const { name, nationality } = generatePlayerIdentity(usedLastNames, country);
   const age = Math.round(rand(18, 33));
   const attrs = age <= YOUNG_PROSPECT_MAX_AGE
     ? generateRawYouthAttrs(tier, position)
@@ -8023,13 +8041,13 @@ function generatePlayer(position, tier, usedLastNames) {
   });
 }
 
-function generateTeam(name, tier = 1) {
+function generateTeam(name, tier = 1, country = "fr") {
   const players = [];
   const usedLastNames = new Set();
   POSITIONS.forEach(pos => {
-    for (let i = 0; i < 3; i++) players.push(generatePlayer(pos, tier * rand(0.9, 1.1), usedLastNames));
+    for (let i = 0; i < 3; i++) players.push(generatePlayer(pos, tier * rand(0.9, 1.1), usedLastNames, country));
   });
-  return new Team({ name, players });
+  return new Team({ name, players, country });
 }
 
 // Effectif de TOUTE NOUVELLE carrière (voir initGame) : contrairement aux
@@ -8043,8 +8061,8 @@ function generateTeam(name, tier = 1) {
 // une telle caractéristique doit se mériter par le jeu, pas être offerte
 // gratuitement à la création).
 // `usedLastNames` optionnel, même rôle que dans generatePlayer ci-dessus.
-function generateRookiePlayer(position, usedLastNames) {
-  const { name, nationality } = generatePlayerIdentity(usedLastNames);
+function generateRookiePlayer(position, usedLastNames = null, country = "fr") {
+  const { name, nationality } = generatePlayerIdentity(usedLastNames, country);
   const age = Math.round(rand(18, 33));
   return new Player({
     name,
@@ -8075,13 +8093,14 @@ function generateRetirementReplacement(team, position) {
   return p;
 }
 
-function generateStartingRoster(name) {
+function generateStartingRoster(name, country = "fr") {
+
   const players = [];
   const usedLastNames = new Set();
   POSITIONS.forEach(pos => {
-    for (let i = 0; i < 3; i++) players.push(generateRookiePlayer(pos, usedLastNames));
+    for (let i = 0; i < 3; i++) players.push(generateRookiePlayer(pos, usedLastNames, country));
   });
-  return new Team({ name, players });
+  return new Team({ name, players, country });
 }
 
 // ---------------------------------------------------------------------
@@ -8091,7 +8110,7 @@ function generateStartingRoster(name) {
 // et la chance d'un "outil brut" (YOUTH_STANDOUT_CHANCE_BY_LEVEL) — voir ces
 // deux constantes plus haut pour le détail du calibrage.
 // ---------------------------------------------------------------------
-function generateYouthCandidate(now, recruiterLevel) {
+function generateYouthCandidate(now, recruiterLevel, country = "fr") {
   const position = pick(POSITIONS);
   const age = pick([15, 16, 17]);
   const tier = YOUTH_QUALITY_TIER_BY_LEVEL[recruiterLevel] || 1;
@@ -8114,7 +8133,13 @@ function generateYouthCandidate(now, recruiterLevel) {
       attrs[a] = clamp(Math.round(rand(31, 40) * tier), 1, 99);
     });
   }
-  const identity = generatePlayerIdentity();
+  // Centre de formation : surtout des jeunes du pays du club (85 %).
+  const identity = generatePlayerIdentity(null, country);
+  if (country && NATION_BY_CODE[country] && Math.random() < YOUTH_HOME_NATIONALITY_SHARE && identity.nationality !== country) {
+    const pool = NAME_POOLS[NATION_BY_CODE[country].pool] || NAME_POOLS.fr;
+    identity.nationality = country;
+    identity.name = `${pick(pool.first)} ${pick(pool.last)}`;
+  }
   const candidate = new Player({
     name: identity.name,
     nationality: identity.nationality,
@@ -8153,6 +8178,48 @@ function generateYouthCandidate(now, recruiterLevel) {
 // gagnants) pour une saison d'environ 10 semaines au total (voir
 // SEASON_LENGTH_WEEKS).
 const CPU_TEAM_NAMES = ["Paris", "Marseille", "Toulouse", "Nice", "Nantes", "Strasbourg", "Bordeaux", "Lille", "Rennes"];
+
+// ---------------------------------------------------------------------
+// PAYS DES CHAMPIONNATS (retour utilisateur, 2026-09-28 : "partons sur
+// France et US pour voir comment ça marche", "chaque pays a ses propres
+// horaires", "on va dans la division la plus haute où il y a un bot").
+// Chaque pays a sa propre pyramide de championnats (voir server/world.js),
+// ses horaires dans SON fuseau (setCalendarTimeZone), ses clubs CPU nommés
+// d'après ses villes (COUNTRY_CPU_TEAM_NAMES, tirées sans doublon dans tout
+// le pays) et ~60 % de joueurs du pays dans ses effectifs générés
+// (generatePlayerIdentity, `homeCountry`).
+// ---------------------------------------------------------------------
+const WORLD_COUNTRIES = {
+  fr: { code: "fr", name: "France", timeZone: "Europe/Paris" },
+  us: { code: "us", name: "États-Unis", timeZone: "America/New_York" },
+};
+const COUNTRY_CPU_TEAM_NAMES = {
+  fr: [...CPU_TEAM_NAMES, "Montpellier", "Reims", "Le Havre", "Saint-Étienne", "Toulon", "Grenoble", "Dijon",
+    "Angers", "Nîmes", "Villeurbanne", "Clermont-Ferrand", "Le Mans", "Aix-en-Provence", "Brest", "Tours",
+    "Amiens", "Limoges", "Annecy", "Perpignan", "Boulogne", "Metz", "Besançon", "Orléans", "Rouen", "Mulhouse",
+    "Caen", "Nancy", "Argenteuil", "Montreuil", "Roubaix", "Tourcoing", "Avignon", "Dunkerque", "Poitiers",
+    "Pau", "La Rochelle", "Calais", "Cannes", "Antibes", "Béziers", "Colmar", "Bourges", "Quimper", "Valence",
+    "Chalon-sur-Saône", "Cholet", "Gravelines", "Roanne", "Le Portel", "Monaco", "Châlons", "Blois", "Vichy",
+    "Évreux", "Saint-Quentin", "Fos-sur-Mer", "Denain", "Orchies", "Lorient", "Vannes", "Saint-Brieuc",
+    "Chartres", "Troyes", "Niort", "Angoulême", "Bayonne", "Tarbes", "Albi", "Lens", "Charleville", "Laval",
+    "Arras", "Beauvais", "Saint-Malo", "Épinal", "Ajaccio", "Bastia", "Carcassonne", "Montauban", "Agen",
+    "Périgueux", "Brive", "Aurillac", "Mâcon", "Belfort", "Vienne", "Chambéry", "Gap", "Sète", "Narbonne"],
+  us: ["Chicago", "Boston", "Seattle", "Denver", "Atlanta", "Dallas", "Houston", "Miami", "Phoenix",
+    "Detroit", "Portland", "Memphis", "Oakland", "San Diego", "Baltimore", "Nashville", "Kansas City",
+    "St. Louis", "Pittsburgh", "Cincinnati", "Cleveland", "Milwaukee", "Minneapolis", "Indianapolis",
+    "Louisville", "Las Vegas", "Salt Lake City", "Sacramento", "San Antonio", "Austin", "Tampa", "Orlando",
+    "Charlotte", "Raleigh", "Richmond", "Columbus", "Buffalo", "Omaha", "Tulsa", "Albuquerque", "Tucson",
+    "El Paso", "New Orleans", "Birmingham", "Honolulu", "Anchorage", "Boise", "Spokane", "Fresno", "Reno",
+    "Des Moines", "Wichita", "Little Rock", "Jacksonville", "Savannah", "Charleston", "Norfolk", "Hartford",
+    "Providence", "Albany", "Syracuse", "Rochester", "Newark", "Philadelphia", "Brooklyn", "Queens",
+    "Harlem", "Long Beach", "Anaheim", "San Jose", "Tacoma", "Madison", "Green Bay", "Lexington", "Knoxville",
+    "Chattanooga", "Mobile", "Baton Rouge", "Shreveport", "Oklahoma City", "Lincoln", "Fargo", "Sioux Falls",
+    "Billings", "Cheyenne", "Santa Fe", "Colorado Springs", "Scottsdale", "Durham", "Greensboro", "Akron",
+    "Dayton", "Toledo", "Grand Rapids", "Flint", "Gary", "Peoria", "Springfield", "Worcester", "Burlington"],
+};
+function countryInfo(code) {
+  return WORLD_COUNTRIES[code] || WORLD_COUNTRIES.fr;
+}
 
 // ---------------------------------------------------------------------
 // PYRAMIDE DE DIVISIONS — à la BuzzerBeater : 6 niveaux, le nombre de
@@ -11559,6 +11626,17 @@ function anchoredCalendarStartAt(now, calendarConfig) {
 // des dates choisies de part et d'autre d'un changement d'heure à Paris).
 // ---------------------------------------------------------------------
 const CALENDAR_PARIS_TIME_ZONE = "Europe/Paris";
+
+// Fuseau horaire du calendrier (retour utilisateur, 2026-09-28 : "chaque pays
+// a ses propres horaires") : celui de la ligue en cours de traitement — Paris
+// par défaut (toutes les ligues d'avant les pays). Posé par le serveur pour
+// chaque requête (une seule à la fois, voir le verrou de server/index.js) et
+// par le navigateur au chargement de sa ligue (leagueFromSave). Les noms
+// "paris…" des fonctions ci-dessous sont historiques : elles travaillent
+// dans CE fuseau.
+let calendarTimeZone = CALENDAR_PARIS_TIME_ZONE;
+function setCalendarTimeZone(tz) { calendarTimeZone = tz || CALENDAR_PARIS_TIME_ZONE; }
+function getCalendarTimeZone() { return calendarTimeZone; }
 const CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS = [10, 19];
 const CALENDAR_DAILY_ANCHORED_CUP_HOUR = 15;
 
@@ -11578,7 +11656,7 @@ function parisUtcOffsetMs(utcMs) {
 
 function parisLocalDateParts(utcMs) {
   const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: CALENDAR_PARIS_TIME_ZONE, hourCycle: "h23",
+    timeZone: calendarTimeZone, hourCycle: "h23",
     year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", second: "2-digit",
   });
@@ -11665,10 +11743,12 @@ function zonedEpochForLocalTime(timeZone, year, month, day, hour, minute = 0, se
 // dans le fuseau `timeZone` (Paris si absent : même résultat que
 // dailyAnchoredScheduledTimeForSlot).
 function zonedScheduledTimeForSlot(calendarStartAt, dayIndex, hour, timeZone) {
-  if (!timeZone || timeZone === "Europe/Paris") return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
-  const day0 = zonedLocalDateParts(calendarStartAt, timeZone);
+  // Toujours le fuseau EXPLICITE de la ligue (jamais le fuseau « courant »
+  // réglé par setCalendarTimeZone, quand il existe) : Paris si absent.
+  const tz = timeZone || "Europe/Paris";
+  const day0 = zonedLocalDateParts(calendarStartAt, tz);
   const target = dayIndex > 0 ? addParisCalendarDays(day0, dayIndex) : day0;
-  return zonedEpochForLocalTime(timeZone, target.year, target.month, target.day, hour);
+  return zonedEpochForLocalTime(tz, target.year, target.month, target.day, hour);
 }
 
 
@@ -11812,7 +11892,7 @@ function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex, ti
 function weeklyRhythmEconomyTickAt(calendarStartAt, k, timeZone = null) {
   const day0 = zonedLocalDateParts(calendarStartAt, timeZone || "Europe/Paris");
   const monday = addParisCalendarDays(day0, 7 * (k - 1) + WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET);
-  return parisEpochForLocalTime(monday.year, monday.month, monday.day, WEEKLY_RHYTHM_ECONOMY_HOUR);
+  return zonedEpochForLocalTime("Europe/Paris", monday.year, monday.month, monday.day, WEEKLY_RHYTHM_ECONOMY_HOUR);
 }
 
 // Bascule EN PLEINE SAISON d'une ligue au rythme quotidien vers le rythme
@@ -11891,14 +11971,21 @@ function migrateLeagueToWeeklyRhythm(league, now = Date.now()) {
 // IDENTIQUES sur tout ce qui ne concerne pas la construction de l'équipe
 // humaine elle-même : génération des adversaires CPU, calendrier réel...
 // — un seul endroit à faire évoluer si ça change.
-function buildLeagueWithHumanTeams(humanTeams, divisionLevel, now, calendarConfig) {
-  if (!Array.isArray(humanTeams) || humanTeams.length < 1 || humanTeams.length > 10) {
+// `opts` (2026-09-28, championnats par pays, voir generateCountryLeague) :
+// { country, cpuNames } — pays du championnat (joueurs et clubs CPU) et noms
+// des clubs CPU à utiliser ; `humanTeams` peut alors être vide (championnat
+// entièrement CPU, en attente de managers).
+function buildLeagueWithHumanTeams(humanTeams, divisionLevel, now, calendarConfig, opts = {}) {
+  const allowEmpty = !!opts.country;
+  if (!Array.isArray(humanTeams) || humanTeams.length < (allowEmpty ? 0 : 1) || humanTeams.length > 10) {
     throw new Error("humanTeams doit contenir entre 1 et 10 équipes.");
   }
+  const country = opts.country || "fr";
   const info = divisionInfo(divisionLevel);
   const cpuCount = 10 - humanTeams.length;
-  const opponents = CPU_TEAM_NAMES.slice(0, cpuCount).map(name => {
-    const t = generateTeam(name, info.tierMultiplier * rand(0.9, 1.15));
+  const cpuNames = Array.isArray(opts.cpuNames) ? opts.cpuNames : CPU_TEAM_NAMES;
+  const opponents = cpuNames.slice(0, cpuCount).map(name => {
+    const t = generateTeam(name, info.tierMultiplier * rand(0.9, 1.15), country);
     t.offensivePriorities = pick([
       ["Jeu extérieur", "Jeu en mouvement", "Équilibrée"],
       ["Jeu en pénétration", "Pick & Roll", "Transition rapide"],
@@ -11922,6 +12009,7 @@ function buildLeagueWithHumanTeams(humanTeams, divisionLevel, now, calendarConfi
   // seul moment où l'on peut comparer leur niveau les unes aux autres.
   assignSeasonObjectives(league);
   league.divisionLevel = info.level;
+  league.country = country;
   // Le calendrier réel d'une nouvelle saison démarre maintenant (voir
   // League.calendarStartAt ci-dessus, et server/calendar.js pour le détail
   // du rythme réel qui s'appuie dessus) — `now` explicite (comme
@@ -11936,7 +12024,7 @@ function buildLeagueWithHumanTeams(humanTeams, divisionLevel, now, calendarConfi
   league.calendarDailyAnchored = !!(calendarConfig && calendarConfig.dailyAnchored);
   league.calendarWeeklyRhythm = league.calendarDailyAnchored && !!(calendarConfig && calendarConfig.weekly);
   if (league.calendarDailyAnchored) {
-    league.calendarStartAt = dailyAnchoredCalendarStartAt(now, league.calendarWeeklyRhythm);
+    league.calendarStartAt = dailyAnchoredCalendarStartAt(now, league.calendarWeeklyRhythm, (opts && opts.timeZone) || null);
     league.calendarWeekMs = null;
     league.calendarSlotOffsetsMs = null;
   } else {
@@ -11966,6 +12054,41 @@ function generateLeague(userTeam, divisionLevel = 1, now = Date.now(), calendarC
 // atteindre 10 équipes au total. Partage tout le reste (adversaires CPU,
 // calendrier réel) avec generateLeague via buildLeagueWithHumanTeams
 // ci-dessus.
+// Championnat ENTIÈREMENT CPU d'un pays (2026-09-28, voir WORLD_COUNTRIES et
+// server/world.js) : 10 clubs CPU du pays, au niveau `divisionLevel`, groupe
+// `group` (0 = A, 1 = B… quand la division compte plusieurs championnats).
+// `usedNames` (Set) : noms de clubs déjà pris dans le pays, jamais réutilisés.
+// Le calendrier (rythme hebdomadaire de la ligue partagée) est calculé dans
+// le fuseau du pays : l'appelant n'a rien à régler.
+function generateCountryLeague(country, divisionLevel = 1, group = 0, now = Date.now(), usedNames = new Set(), calendarConfig = { dailyAnchored: true, weekly: true }) {
+  const info = countryInfo(country);
+  const pool = COUNTRY_CPU_TEAM_NAMES[info.code] || [];
+  const names = pool.filter(n => !usedNames.has(n));
+  let k = 2;
+  while (names.length < 10) names.push(`${pool[names.length % pool.length] || "Club"} ${k++}`);
+  const chosen = names.slice(0, 10);
+  chosen.forEach(n => usedNames.add(n));
+  const previousTz = getCalendarTimeZone();
+  setCalendarTimeZone(info.timeZone);
+  try {
+    const league = buildLeagueWithHumanTeams([], divisionLevel, now, calendarConfig, { country: info.code, cpuNames: chosen, timeZone: info.timeZone });
+    league.timeZone = info.timeZone;
+    league.divisionGroup = group;
+    league.leagueId = worldLeagueId(info.code, divisionLevel, group);
+    if (league.calendarDailyAnchored) league.cup = null; // coupe nationale : plus tard (réunit tout le pays)
+    return league;
+  } finally {
+    setCalendarTimeZone(previousTz);
+  }
+}
+
+// Identifiant stable d'un championnat du monde : "fr-1", "fr-2b", "us-3c"…
+// (lettre du groupe dès qu'une division compte plusieurs championnats ; la
+// Division I n'en a qu'un). "fr-1" est la ligue partagée historique.
+function worldLeagueId(country, divisionLevel, group = 0) {
+  return divisionLevel === 1 ? `${country}-1` : `${country}-${divisionLevel}${String.fromCharCode(97 + group)}`;
+}
+
 function generateMultiManagerLeague(managerTeamNames, divisionLevel = 1, now = Date.now(), calendarConfig = null) {
   if (!Array.isArray(managerTeamNames) || managerTeamNames.length < 1 || managerTeamNames.length > 10) {
     throw new Error("generateMultiManagerLeague : managerTeamNames doit contenir entre 1 et 10 noms.");
@@ -12203,6 +12326,7 @@ function serializeTeam(team) {
     version: 1,
     week: team.week,
     teamName: team.name,
+    country: team.country || "fr",
     offensivePriorities: team.offensivePriorities,
     defense: team.defense,
     rhythm: team.rhythm,
@@ -12288,6 +12412,10 @@ function serializeTeam(team) {
     // défaut, une sauvegarde d'avant cette fonctionnalité n'en a simplement
     // pas encore (voir teamFromSave plus bas).
     seasonObjectiveVerdictSettled: !!team.seasonObjectiveVerdictSettled,
+    // Montée/descente décidée à l'intersaison, appliquée à la reprise (voir
+    // server/world.js) : { kind: "promoted"|"relegated", toLevel, toLeagueId }.
+    pendingDivisionMove: team.pendingDivisionMove ? { ...team.pendingDivisionMove } : null,
+    lastSeasonBonusSeasonId: team.lastSeasonBonusSeasonId || null,
     // Alchimie d'équipe (voir le grand commentaire de
     // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : simple valeur 0-100.
     chemistry: team.chemistry,
@@ -12602,7 +12730,7 @@ function playerFromSave(pdata) {
 
 function teamFromSave(data) {
   const players = data.players.map(playerFromSave);
-  const team = new Team({ name: data.teamName, players });
+  const team = new Team({ name: data.teamName, players, country: data.country });
   team.week = data.week || 1;
   // Identité manager (voir serializeTeam ci-dessus) : absente = sauvegarde
   // d'avant ce champ (ou équipe CPU, qui ne l'a jamais eu) — `false`/`null`
@@ -12828,6 +12956,8 @@ function teamFromSave(data) {
   // haut. Absent (sauvegarde d'avant cette fonctionnalité) : on garde la
   // valeur déjà posée par le constructeur (false).
   team.seasonObjectiveVerdictSettled = !!data.seasonObjectiveVerdictSettled;
+  team.pendingDivisionMove = data.pendingDivisionMove && typeof data.pendingDivisionMove === "object" ? { ...data.pendingDivisionMove } : null;
+  team.lastSeasonBonusSeasonId = typeof data.lastSeasonBonusSeasonId === "string" ? data.lastSeasonBonusSeasonId : null;
   // Alchimie d'équipe (voir serializeTeam ci-dessus). Absent (sauvegarde
   // d'avant cette fonctionnalité) : on garde la valeur déjà posée par le
   // constructeur (chemistry neutre à 50).
@@ -13079,8 +13209,10 @@ function serializeLeague(lg) {
     playoffs: lg.playoffs,
     relegationBarrage: lg.relegationBarrage || null,
     divisionLevel: lg.divisionLevel || 1,
-    // Fuseau des matchs (20:00 heure locale) ; null = Paris.
-    timeZone: lg.timeZone || null,
+    // Pays/divisions (2026-09-28, voir WORLD_COUNTRIES) : identité de CE
+    // championnat dans le monde (pays, fuseau horaire, groupe de sa division).
+    leagueId: lg.leagueId || null, country: lg.country || "fr",
+    timeZone: lg.timeZone || null, divisionGroup: lg.divisionGroup || 0,
     // Marché des transferts (voir League.transferListings/refreshMarket) :
     // doit survivre à un rechargement de page, les enchères se déroulant en
     // temps RÉEL (3 jours) — bien plus long qu'une simple session de jeu.
@@ -13184,7 +13316,10 @@ function leagueFromSave(data, userTeam = null) {
   // montée/descente) : un club "pas encore attribué" prend la place la plus
   // haute disponible, donc Division I par défaut (voir generateLeague).
   lg.divisionLevel = data.divisionLevel || 1;
-  lg.timeZone = typeof data.timeZone === "string" ? data.timeZone : null;
+  lg.leagueId = data.leagueId || null;
+  lg.country = data.country || "fr";
+  lg.timeZone = data.timeZone || null;
+  lg.divisionGroup = data.divisionGroup || 0;
   lg.transferListings = Array.isArray(data.transferListings) ? data.transferListings : [];
   lg.lastCpuListingCheckAt = typeof data.lastCpuListingCheckAt === "number" ? data.lastCpuListingCheckAt : null;
   lg.coachListings = Array.isArray(data.coachListings) ? data.coachListings : [];
@@ -14763,12 +14898,12 @@ return {
   potentialHeadroom, growthFactorForAge, declineFactorForAge, YOUNG_PROSPECT_MAX_AGE, SEASON_LENGTH_WEEKS,
   POTENTIAL_TIERS, potentialTierLabel, potentialTierIndex,
   QUARTER_SECONDS, OVERTIME_SECONDS,
-  CPU_TEAM_NAMES, generateRoundRobinSchedule, League, generateLeague, generateMultiManagerLeague,
+  CPU_TEAM_NAMES, WORLD_COUNTRIES, COUNTRY_CPU_TEAM_NAMES, countryInfo, generateCountryLeague, worldLeagueId, generateRoundRobinSchedule, League, generateLeague, generateMultiManagerLeague,
   randomHexToken,
   CALENDAR_DAY_MS, CALENDAR_WEEK_MS, CALENDAR_CHAMPIONSHIP_SLOT_OFFSETS_MS, CALENDAR_ROUNDS_PER_REAL_WEEK,
   calendarScheduledTimeForRound, anchoredCalendarStartAt,
   // Calendrier ancré quotidien (voir le bloc dédié ci-dessus) :
-  CALENDAR_PARIS_TIME_ZONE, CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS, CALENDAR_DAILY_ANCHORED_CUP_HOUR,
+  CALENDAR_PARIS_TIME_ZONE, setCalendarTimeZone, getCalendarTimeZone, CALENDAR_DAILY_ANCHORED_CHAMPIONSHIP_HOURS, CALENDAR_DAILY_ANCHORED_CUP_HOUR,
   parisUtcOffsetMs, parisLocalDateParts, addParisCalendarDays, parisEpochForLocalTime, sameParisCalendarDay,
   dailyAnchoredCalendarConfig, dailyAnchoredCalendarStartAt, dailyAnchoredScheduledTimeForSlot,
   dailyAnchoredDayIndexForChampionshipRound, dailyAnchoredSlotIndexForChampionshipRound,

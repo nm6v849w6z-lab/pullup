@@ -35,6 +35,7 @@
 const crypto = require("crypto");
 const store = require("./store.js");
 const Accounts = require("./accounts.js");
+const World = require("./world.js");
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const PENDING_SIGNUP_TTL_MS = 30 * 60 * 1000;
@@ -109,21 +110,27 @@ function sessionPayload(account) {
 }
 
 // Donne un club à un compte qui n'en a pas encore (inscription, ou compte
-// en liste d'attente qui revient). Modifie `multi.league` en place ; c'est
-// l'appelant qui sauvegarde ligue ET comptes.
-function tryAssignClub(account, multi, now) {
-  if (account.managerToken || !multi) return false;
+// en liste d'attente qui revient) — championnats par pays (2026-09-28, voir
+// server/world.js) : dans le pays choisi, le championnat le PLUS HAUT qui a
+// encore un club CPU ; si le pays est plein, un nouveau championnat est
+// ouvert (plus de liste d'attente tant que la pyramide n'est pas complète).
+// Sauvegarde elle-même le championnat et le registre ; l'appelant
+// sauvegarde les comptes.
+async function tryAssignClub(account, multiSavePath, now) {
+  if (account.managerToken) return false;
+  const world = await World.loadWorld(multiSavePath, now);
+  if (!world) return false;
   let name = account.requestedClubName;
   // Nom pris entre-temps par un autre club : on ajoute un numéro plutôt que
   // de bloquer le joueur.
-  if (!name || Accounts.isClubNameTaken(name, multi.league)) {
+  if (!name || await World.isClubNameTakenInWorld(world, multiSavePath, name)) {
     const base = (name || "Club").slice(0, Accounts.CLUB_NAME_MAX_LENGTH - 3);
     for (let i = 2; i < 100; i++) {
       const candidate = `${base} ${i}`;
-      if (!Accounts.isClubNameTaken(candidate, multi.league)) { name = candidate; break; }
+      if (!await World.isClubNameTakenInWorld(world, multiSavePath, candidate)) { name = candidate; break; }
     }
   }
-  const taken = Accounts.takeOverCpuClub(multi.league, name);
+  const taken = await World.assignClub(world, multiSavePath, { country: account.requestedCountry || World.DEFAULT_COUNTRY, clubName: name, now });
   if (!taken.ok) return false;
   account.managerToken = taken.token;
   account.assignedAt = now;
@@ -140,17 +147,18 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
     try { return await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, code: "bad-request", error: e.message }); return null; }
   }
 
+  // Places libres : avec les championnats par pays, un nouveau championnat
+  // s'ouvre dès qu'un pays est plein — il y a donc toujours de la place tant
+  // qu'un monde existe (et pas du tout sans ligue partagée).
   function openSlots(multi) {
-    return multi ? multi.league.teams.filter(t => !t.isHuman).length : 0;
+    return multi ? Math.max(1, multi.league.teams.filter(t => !t.isHuman).length) : 0;
   }
 
   // Finalise une inscription (email ou Discord) : crée le compte, tente
   // l'attribution d'un club, sauvegarde. `fields` déjà validés.
   async function registerAccount(data, fields, now) {
-    const multi = await store.loadMultiLeague(multiSavePath);
     const account = Accounts.createAccount(data, fields, now);
-    const assigned = tryAssignClub(account, multi, now);
-    if (assigned) await store.saveMultiLeague(multi.league, multiSavePath);
+    await tryAssignClub(account, multiSavePath, now);
     await Accounts.saveAccounts(data, accountsPath);
     return account;
   }
@@ -159,8 +167,8 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
   async function checkClubName(raw) {
     const name = Accounts.normalizeClubName(raw);
     if (!name) return { code: "club-invalid" };
-    const multi = await store.loadMultiLeague(multiSavePath);
-    if (Accounts.isClubNameTaken(name, multi && multi.league)) return { code: "club-taken" };
+    const world = await World.loadWorld(multiSavePath);
+    if (await World.isClubNameTakenInWorld(world, multiSavePath, name)) return { code: "club-taken" };
     return { value: name };
   }
 
@@ -179,6 +187,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         discordInvite: process.env.DISCORD_INVITE_URL || null,
         publicSite: isPublicSite(),
         openSlots: openSlots(multi),
+        countries: World.publicCountries(),
         passwordMinLength: Accounts.PASSWORD_MIN_LENGTH,
         clubNameMaxLength: Accounts.CLUB_NAME_MAX_LENGTH,
       });
@@ -197,7 +206,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       if (club.code) { sendJson(res, 400, { ok: false, code: club.code }); return true; }
       await withAccounts(async data => {
         if (Accounts.findByEmail(data, email)) { sendJson(res, 409, { ok: false, code: "email-taken" }); return; }
-        const account = await registerAccount(data, { email, passwordHash: Accounts.hashPassword(pw.value), requestedClubName: club.value }, now);
+        const account = await registerAccount(data, { email, passwordHash: Accounts.hashPassword(pw.value), requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
         sendJson(res, 200, sessionPayload(account));
       });
       return true;
@@ -216,8 +225,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         }
         account.lastLoginAt = now;
         if (!account.managerToken) {
-          const multi = await store.loadMultiLeague(multiSavePath);
-          if (tryAssignClub(account, multi, now)) await store.saveMultiLeague(multi.league, multiSavePath);
+          await tryAssignClub(account, multiSavePath, now);
         }
         await Accounts.saveAccounts(data, accountsPath);
         sendJson(res, 200, sessionPayload(account));
@@ -232,11 +240,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         const account = Accounts.findByAccountKey(data, key);
         if (!account) { sendJson(res, 401, { ok: false, code: "unknown-account" }); return; }
         if (!account.managerToken) {
-          const multi = await store.loadMultiLeague(multiSavePath);
-          if (tryAssignClub(account, multi, now)) {
-            await store.saveMultiLeague(multi.league, multiSavePath);
-            await Accounts.saveAccounts(data, accountsPath);
-          }
+          if (await tryAssignClub(account, multiSavePath, now)) await Accounts.saveAccounts(data, accountsPath);
         }
         sendJson(res, 200, { ...sessionPayload(account), account: Accounts.publicView(account) });
       });
@@ -260,8 +264,8 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       if (rateLimited(req, now)) { sendJson(res, 429, { ok: false, code: "rate-limited" }); return true; }
       const token = getManagerToken(req);
       if (!token) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
-      const multi = await store.loadMultiLeague(multiSavePath);
-      if (!multi || !store.resolveManagerTeam(multi.league, token)) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
+      const claimWorld = await World.loadWorld(multiSavePath, now);
+      if (!await World.findTeamByToken(claimWorld, token, multiSavePath)) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
       const b = await body(req, res); if (!b) return true;
       const email = Accounts.normalizeEmail(b.email);
       if (!email) { sendJson(res, 400, { ok: false, code: "email-invalid" }); return true; }
@@ -287,8 +291,8 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
 
     if (p === "/api/account/discord-link-start" && req.method === "POST") {
       const token = getManagerToken(req);
-      const multi = token ? await store.loadMultiLeague(multiSavePath) : null;
-      if (!multi || !store.resolveManagerTeam(multi.league, token)) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
+      const linkWorld = token ? await World.loadWorld(multiSavePath, now) : null;
+      if (!linkWorld || !await World.findTeamByToken(linkWorld, token, multiSavePath)) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
       const nonce = randomHex(16);
       oauthStates.set(nonce, { intent: "link", managerToken: token, createdAt: now });
       sendJson(res, 200, { ok: true, url: `/auth/discord?n=${nonce}` });
@@ -368,8 +372,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
           existing.discordName = discordUser.name;
           existing.lastLoginAt = now;
           if (!existing.managerToken) {
-            const multi = await store.loadMultiLeague(multiSavePath);
-            if (tryAssignClub(existing, multi, now)) await store.saveMultiLeague(multi.league, multiSavePath);
+            await tryAssignClub(existing, multiSavePath, now);
           }
           await Accounts.saveAccounts(data, accountsPath);
           redirect(res, existing.managerToken ? `/?m=${existing.managerToken}` : `/bienvenue#attente=${existing.accountKey}`, clearCookie);
@@ -392,7 +395,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       await withAccounts(async data => {
         let account = Accounts.findByDiscordId(data, pending.discordId);
         if (!account) {
-          account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, requestedClubName: club.value }, now);
+          account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
         }
         pendingDiscordSignups.delete(b.pending);
         sendJson(res, 200, sessionPayload(account));
@@ -403,16 +406,20 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
     // ---------------- Admin ----------------
     if (p === "/api/admin/accounts" && req.method === "GET") {
       if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return true; }
-      const multi = await store.loadMultiLeague(multiSavePath);
+      // Tous championnats confondus (voir server/world.js).
+      const world = await World.loadWorld(multiSavePath, now);
+      const clubByToken = new Map();
+      for (const entry of (world ? world.leagues : [])) {
+        const league = await World.loadLeague(world, entry.id, multiSavePath);
+        (league ? league.teams : []).forEach(t => { if (t.isHuman && t.managerLinkToken) clubByToken.set(t.managerLinkToken, { name: t.name, leagueId: entry.id }); });
+      }
       await withAccounts(async data => {
-        const clubOf = token => {
-          const r = multi && token ? store.resolveManagerTeam(multi.league, token) : null;
-          return r ? r.team.name : null;
-        };
+        const clubOf = token => (token && clubByToken.has(token) ? clubByToken.get(token).name : null);
         sendJson(res, 200, {
           ok: true,
           accounts: data.accounts.map(a => ({
             email: a.email, discordName: a.discordName, club: clubOf(a.managerToken),
+            leagueId: a.managerToken && clubByToken.has(a.managerToken) ? clubByToken.get(a.managerToken).leagueId : null,
             waiting: !a.managerToken, requestedClubName: a.requestedClubName,
             createdAt: a.createdAt, lastLoginAt: a.lastLoginAt,
           })),

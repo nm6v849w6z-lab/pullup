@@ -4392,10 +4392,12 @@ function zonedEpochForLocalTime(timeZone, year, month, day, hour, minute = 0, se
 // dans le fuseau `timeZone` (Paris si absent : même résultat que
 // dailyAnchoredScheduledTimeForSlot).
 function zonedScheduledTimeForSlot(calendarStartAt, dayIndex, hour, timeZone) {
-  if (!timeZone || timeZone === "Europe/Paris") return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
-  const day0 = zonedLocalDateParts(calendarStartAt, timeZone);
+  // Toujours le fuseau EXPLICITE de la ligue (jamais le fuseau « courant »
+  // réglé par setCalendarTimeZone, quand il existe) : Paris si absent.
+  const tz = timeZone || "Europe/Paris";
+  const day0 = zonedLocalDateParts(calendarStartAt, tz);
   const target = dayIndex > 0 ? addParisCalendarDays(day0, dayIndex) : day0;
-  return zonedEpochForLocalTime(timeZone, target.year, target.month, target.day, hour);
+  return zonedEpochForLocalTime(tz, target.year, target.month, target.day, hour);
 }
 
 
@@ -4521,7 +4523,7 @@ function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex, ti
 function weeklyRhythmEconomyTickAt(calendarStartAt, k, timeZone = null) {
   const day0 = zonedLocalDateParts(calendarStartAt, timeZone || "Europe/Paris");
   const monday = addParisCalendarDays(day0, 7 * (k - 1) + WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET);
-  return parisEpochForLocalTime(monday.year, monday.month, monday.day, WEEKLY_RHYTHM_ECONOMY_HOUR);
+  return zonedEpochForLocalTime("Europe/Paris", monday.year, monday.month, monday.day, WEEKLY_RHYTHM_ECONOMY_HOUR);
 }
 
 // `calendarConfig` optionnel ({weekMs, slotOffsetsMs}) : le rythme de

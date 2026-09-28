@@ -268,6 +268,17 @@ function getDefaultCalendarConfig() {
 // ---------------------------------------------------------------------
 const PARIS_TIME_ZONE = "Europe/Paris";
 
+// Fuseau horaire du calendrier (retour utilisateur, 2026-09-28 : "chaque pays
+// a ses propres horaires") : celui de la ligue en cours de traitement — Paris
+// par défaut (toutes les ligues d'avant les pays). Posé par le serveur pour
+// chaque requête (une seule à la fois, voir le verrou de server/index.js) et
+// par le navigateur au chargement de sa ligue (leagueFromSave). Les noms
+// "paris…" des fonctions ci-dessous sont historiques : elles travaillent
+// dans CE fuseau.
+let calendarTimeZone = PARIS_TIME_ZONE;
+function setCalendarTimeZone(tz) { calendarTimeZone = tz || PARIS_TIME_ZONE; }
+function getCalendarTimeZone() { return calendarTimeZone; }
+
 // Heures civiles (Paris) des 3 créneaux quotidiens — jamais concernées par
 // le changement d'heure elles-mêmes (celui-ci a toujours lieu entre 1h et 3h
 // du matin, heure locale, loin de 10h/15h/19h), donc jamais ambiguës ni
@@ -301,7 +312,7 @@ function parisUtcOffsetMs(utcMs) {
 // qu'affichés à Paris — pur formatage, aucune arithmétique de fuseau ici.
 function parisLocalDateParts(utcMs) {
   const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: PARIS_TIME_ZONE, hourCycle: "h23",
+    timeZone: calendarTimeZone, hourCycle: "h23",
     year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", second: "2-digit",
   });
@@ -379,10 +390,12 @@ function zonedEpochForLocalTime(timeZone, year, month, day, hour, minute = 0, se
 // dans le fuseau `timeZone` (Paris si absent : même résultat que
 // dailyAnchoredScheduledTimeForSlot).
 function zonedScheduledTimeForSlot(calendarStartAt, dayIndex, hour, timeZone) {
-  if (!timeZone || timeZone === "Europe/Paris") return dailyAnchoredScheduledTimeForSlot(calendarStartAt, dayIndex, hour);
-  const day0 = zonedLocalDateParts(calendarStartAt, timeZone);
+  // Toujours le fuseau EXPLICITE de la ligue (jamais le fuseau « courant »
+  // réglé par setCalendarTimeZone, quand il existe) : Paris si absent.
+  const tz = timeZone || "Europe/Paris";
+  const day0 = zonedLocalDateParts(calendarStartAt, tz);
   const target = dayIndex > 0 ? addParisCalendarDays(day0, dayIndex) : day0;
-  return zonedEpochForLocalTime(timeZone, target.year, target.month, target.day, hour);
+  return zonedEpochForLocalTime(tz, target.year, target.month, target.day, hour);
 }
 
 
@@ -546,7 +559,7 @@ function weeklyRhythmScheduledTimeForCupRound(calendarStartAt, cupRoundIndex, ti
 function weeklyRhythmEconomyTickAt(calendarStartAt, k, timeZone = null) {
   const day0 = zonedLocalDateParts(calendarStartAt, timeZone || "Europe/Paris");
   const monday = addParisCalendarDays(day0, 7 * (k - 1) + WEEKLY_RHYTHM_ECONOMY_DAY_OFFSET);
-  return parisEpochForLocalTime(monday.year, monday.month, monday.day, WEEKLY_RHYTHM_ECONOMY_HOUR);
+  return zonedEpochForLocalTime("Europe/Paris", monday.year, monday.month, monday.day, WEEKLY_RHYTHM_ECONOMY_HOUR);
 }
 
 return {
@@ -557,7 +570,7 @@ return {
   FAST_MATCH_INTERVAL_MS, FAST_WEEK_MS, FAST_CHAMPIONSHIP_SLOT_OFFSETS_MS,
   setFastTestMode, isFastTestModeEnabled, getDefaultCalendarConfig,
   // Calendrier ancré quotidien (voir bloc dédié ci-dessus) :
-  PARIS_TIME_ZONE, DAILY_ANCHORED_CHAMPIONSHIP_HOURS, DAILY_ANCHORED_CUP_HOUR,
+  PARIS_TIME_ZONE, setCalendarTimeZone, getCalendarTimeZone, DAILY_ANCHORED_CHAMPIONSHIP_HOURS, DAILY_ANCHORED_CUP_HOUR,
   DAILY_ANCHORED_FIRST_MATCH_WEEKDAY,
   parisUtcOffsetMs, parisLocalDateParts, addParisCalendarDays, parisEpochForLocalTime,
   daysUntilParisWeekday,

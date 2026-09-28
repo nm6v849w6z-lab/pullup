@@ -98,6 +98,12 @@
   .card .sub{color:var(--ink-dim); font-size:14px; margin:0 0 18px}
   label{display:block; font-size:13px; font-weight:600; color:var(--ink-dim); margin:0 0 6px}
   .field{margin-bottom:14px}
+  .lbl{display:block; font-size:13px; font-weight:600; color:var(--ink-dim); margin:0 0 6px}
+  /* Choix du pays (championnats par pays, 2026-09-28). */
+  .country-pick{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .country-pick button{display:flex; align-items:center; justify-content:center; gap:9px; background:var(--bg); color:var(--ink-dim); border:1px solid var(--line); border-radius:9px; font:600 15px/1 "DM Sans",sans-serif; padding:12px 10px; cursor:pointer; transition:border-color .15s, color .15s}
+  .country-pick button img{width:22px; height:16.5px; border-radius:2px; box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+  .country-pick button[aria-checked="true"]{border-color:var(--amber); color:var(--ink); box-shadow:0 0 0 3px rgba(240,162,60,.14)}
   input[type=text],input[type=email],input[type=password]{
     width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:9px;
     font:500 16px/1.2 "DM Sans",sans-serif; padding:12px 13px; outline:none; transition:border-color .15s, box-shadow .15s}
@@ -234,6 +240,12 @@
             <div class="or" data-t="or">ou</div>
           </div>
           <form id="signupForm" novalidate>
+            <div class="field"><span class="lbl" data-t="field.country">Ton pays</span>
+              <div class="country-pick" role="radiogroup" data-country-pick="su">
+                <button type="button" role="radio" aria-checked="true" data-country="fr"><img src="/assets/flags/fr.png" alt=""><span data-t="country.fr">France</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="us"><img src="/assets/flags/us.png" alt=""><span data-t="country.us">États-Unis</span></button>
+              </div>
+              <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (heure de Paris ou de New York).</div></div>
             <div class="field"><label for="suClub" data-t="field.club">Nom de ton club</label>
               <input type="text" id="suClub" autocomplete="organization" maxlength="24" required placeholder="Annecy Hoops">
               <div class="hint" data-t="field.clubHint">2 à 24 caractères. Visible par les autres managers.</div></div>
@@ -274,6 +286,12 @@
           <p class="sub" id="dclubSub"></p>
           <div class="msg" id="dclubMsg" role="alert"></div>
           <form id="dclubForm" novalidate>
+            <div class="field"><span class="lbl" data-t="field.country">Ton pays</span>
+              <div class="country-pick" role="radiogroup" data-country-pick="dc">
+                <button type="button" role="radio" aria-checked="true" data-country="fr"><img src="/assets/flags/fr.png" alt=""><span data-t="country.fr">France</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="us"><img src="/assets/flags/us.png" alt=""><span data-t="country.us">États-Unis</span></button>
+              </div>
+              <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (heure de Paris ou de New York).</div></div>
             <div class="field"><label for="dcClub" data-t="field.club">Nom de ton club</label>
               <input type="text" id="dcClub" maxlength="24" required>
               <div class="hint" data-t="field.clubHint">2 à 24 caractères. Visible par les autres managers.</div></div>
@@ -362,6 +380,8 @@
       "slots.none": "The league is full: sign up to join the waiting list.",
       "signup.title": "Your club awaits", "signup.sub": "Pick a name: you take over a club in the current league and play tonight.",
       "discord.signup": "Sign up with Discord", "discord.login": "Log in with Discord", "or": "or",
+      "field.country": "Your country", "country.fr": "France", "country.us": "United States",
+      "field.countryHint": "Your league and its schedule (Paris or New York time).",
       "field.club": "Your club's name", "field.clubHint": "2 to 24 characters. Visible to other managers.",
       "field.email": "Email", "field.password": "Password", "field.pwHint": "At least 8 characters.",
       "pw.show": "Show", "pw.hide": "Hide",
@@ -524,13 +544,26 @@
     });
   }
 
+  // Choix du pays (voir .country-pick) : valeur lue au moment d'envoyer.
+  function pickedCountry(pre) {
+    var on = document.querySelector('[data-country-pick="' + pre + '"] [aria-checked="true"]');
+    return on ? on.getAttribute("data-country") : "fr";
+  }
+  document.querySelectorAll("[data-country-pick]").forEach(function (group) {
+    group.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-country]");
+      if (!b) return;
+      group.querySelectorAll("[data-country]").forEach(function (x) { x.setAttribute("aria-checked", x === b ? "true" : "false"); });
+    });
+  });
+
   var signupMsg = document.getElementById("signupMsg");
   submitWith(document.getElementById("signupForm"), signupMsg, function () {
     var club = document.getElementById("suClub").value.trim();
     var email = document.getElementById("suEmail").value.trim();
     var pw = document.getElementById("suPw").value;
     if (!club || !email || !pw) { showMsg(signupMsg, "fill"); return; }
-    return api("POST", "/api/account/signup", { clubName: club, email: email, password: pw }).then(function (d) {
+    return api("POST", "/api/account/signup", { clubName: club, email: email, password: pw, country: pickedCountry("su") }).then(function (d) {
       if (d.code === "email-taken") { showMsg(signupMsg, "email-taken"); document.getElementById("liEmail").value = email; return; }
       handleSession(d, signupMsg);
     });
@@ -549,7 +582,7 @@
   submitWith(document.getElementById("dclubForm"), dclubMsg, function () {
     var club = document.getElementById("dcClub").value.trim();
     if (!club) { showMsg(dclubMsg, "fill"); return; }
-    return api("POST", "/api/account/discord-complete", { pending: discordPending, clubName: club }).then(function (d) {
+    return api("POST", "/api/account/discord-complete", { pending: discordPending, clubName: club, country: pickedCountry("dc") }).then(function (d) {
       if (d.code === "discord-expired") { show("viewSignup"); showMsg(signupMsg, "discord-expired"); return; }
       handleSession(d, dclubMsg);
     });

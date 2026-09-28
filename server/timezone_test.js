@@ -24,6 +24,19 @@ for (let k = 1; k < 9; k++) {
   assert.strictEqual(fmt(a, "Europe/Paris"), "Mon 06:00");
   assert.ok(b > C.scheduledTimeForLeagueRound(us, 2 * k - 1) && b < C.scheduledTimeForLeagueRound(us, 2 * k));
 }
+// Le fuseau « courant » réglé pour une ligue américaine (voir
+// World.useLeagueTimeZone) ne change ni les horaires explicites ni l'heure
+// unique de la mise à jour (lundi 6h à Paris).
+if (C.setCalendarTimeZone) {
+  const before = [1, 5, 9].map(k => [C.scheduledTimeForLeagueEconomyTick(us, k), C.scheduledTimeForLeagueRound(fr, 2 * k)]);
+  C.setCalendarTimeZone("America/New_York"); if (E.setCalendarTimeZone) E.setCalendarTimeZone("America/New_York");
+  try {
+    [1, 5, 9].forEach((k, i) => {
+      assert.strictEqual(C.scheduledTimeForLeagueEconomyTick(us, k), before[i][0]);
+      assert.strictEqual(C.scheduledTimeForLeagueRound(fr, 2 * k), before[i][1]);
+    });
+  } finally { C.setCalendarTimeZone(null); if (E.setCalendarTimeZone) E.setCalendarTimeZone(null); }
+}
 // Nouvelle saison : reste à l'heure de New York.
 us.startNextSeason(C.scheduledTimeForLeagueEconomyTick(us, 12));
 assert.strictEqual(fmt(us.calendarStartAt, "America/New_York"), "Tue 20:00");

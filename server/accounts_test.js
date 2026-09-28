@@ -138,7 +138,10 @@ async function main() {
     } finally { server.close(); }
   }
 
-  // 2) Ligue pleine -> liste d'attente, puis attribution quand une place existe.
+  // 2) Championnats par pays (2026-09-28, voir server/world.js) : Division I
+  // française pleine -> un nouveau championnat (Division II, groupe A) est
+  // ouvert pour le nouveau manager, plus de liste d'attente ; un manager qui
+  // choisit les États-Unis reprend un bot de la Division I américaine.
   {
     const names = ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9"];
     const { paths } = await freshSetup(names);
@@ -146,20 +149,28 @@ async function main() {
     try {
       const first = await request(server, "POST", "/api/account/signup", { email: "un@x.fr", password: "motdepasse1", clubName: "Dernier Club" });
       assert.strictEqual(first.body.status, "active", "le 10e club CPU est encore libre");
-      const second = await request(server, "POST", "/api/account/signup", { email: "deux@x.fr", password: "motdepasse1", clubName: "En Attente" });
-      assert.strictEqual(second.body.status, "waiting");
-      const key = second.body.accountKey;
-      const status = await request(server, "GET", "/api/account/status", undefined, { "X-Account-Key": key });
-      assert.strictEqual(status.body.status, "waiting");
-      // Une place se libère (simulé : un club redevient CPU).
-      const multi = await store.loadMultiLeague(paths.multi);
-      const t = multi.league.teams.find(x => x.name === "A9");
-      t.isHuman = false; t.managerLinkToken = null;
-      await store.saveMultiLeague(multi.league, paths.multi);
-      const status2 = await request(server, "GET", "/api/account/status", undefined, { "X-Account-Key": key });
-      assert.strictEqual(status2.body.status, "active");
-      const save = await request(server, "GET", "/api/save", undefined, { "X-TipIn-Token": status2.body.managerToken });
-      assert.strictEqual(save.body.league.teams[save.body.myTeamIndex].teamName, "En Attente");
+      const second = await request(server, "POST", "/api/account/signup", { email: "deux@x.fr", password: "motdepasse1", clubName: "Nouveau Venu" });
+      assert.strictEqual(second.body.status, "active", "un nouveau championnat s'ouvre");
+      const save = await request(server, "GET", "/api/save", undefined, { "X-TipIn-Token": second.body.managerToken });
+      assert.strictEqual(save.body.league.teams[save.body.myTeamIndex].teamName, "Nouveau Venu");
+      assert.strictEqual(save.body.league.leagueId, "fr-2a");
+      assert.strictEqual(save.body.league.divisionLevel, 2);
+      const historic = await store.loadMultiLeague(paths.multi);
+      assert.ok(!historic.league.teams.some(t => t.name === "Nouveau Venu"), "la Division I n'est pas touchée");
+
+      const us = await request(server, "POST", "/api/account/signup", { email: "us@x.fr", password: "motdepasse1", clubName: "Yankees", country: "us" });
+      assert.strictEqual(us.body.status, "active");
+      const usSave = await request(server, "GET", "/api/save", undefined, { "X-TipIn-Token": us.body.managerToken });
+      assert.strictEqual(usSave.body.league.leagueId, "us-1");
+      assert.strictEqual(usSave.body.league.timeZone, "America/New_York");
+      const usTeam = usSave.body.league.teams[usSave.body.myTeamIndex];
+      assert.strictEqual(usTeam.teamName, "Yankees");
+      const usPlayers = usTeam.players.filter(p => p.nationality === "us").length;
+      assert.ok(usPlayers >= 4, `effectif repris aux États-Unis : ${usPlayers} Américains sur 15`);
+
+      // Nom déjà pris dans un AUTRE championnat : refusé aussi.
+      const dup = await request(server, "POST", "/api/account/signup", { email: "trois@x.fr", password: "motdepasse1", clubName: "Yankees" });
+      assert.strictEqual(dup.body.code, "club-taken");
     } finally { server.close(); }
   }
 
