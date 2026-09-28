@@ -1278,6 +1278,8 @@
   .cp-tag{display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:6px; white-space:nowrap;}
   .cp-tag.you{background:rgba(240,162,60,.14); color:var(--amber); font-weight:700;}
   .cp-byes{color:var(--ink-faint); font-size:12.5px; padding-left:16px !important;}
+  .settings-delete summary{cursor:pointer; color:var(--danger);}
+  .settings-danger-btn{border-color:var(--danger) !important; color:var(--danger) !important;}
   .aw-list{display:flex; flex-direction:column; gap:6px;}
   .aw-row{display:grid; grid-template-columns:minmax(150px,1.1fr) minmax(140px,1.2fr) 1fr; gap:8px; align-items:baseline; padding:6px 8px; border-radius:8px; background:var(--panel-2, rgba(255,255,255,.03)); font-size:13px;}
   .aw-row.is-mine{outline:1px solid rgba(240,162,60,.45);}
@@ -37310,6 +37312,15 @@ function renderHmAccountBlock() {
       : `<div class="settings-club-row"><button type="button" class="secondary settings-discord-btn" id="hmAccountDiscordBtn">Lier mon compte Discord</button></div>`);
   }
   html += `<p class="settings-feedback" id="hmAccountFeedback"></p>`;
+  // Suppression du compte (liste de la nuit du 2026-09-28) : le club est
+  // rendu à l'IA, le compte effacé (voir /api/account/delete).
+  html += `<details class="settings-delete"><summary class="settings-row-label" style="margin-top:16px">Supprimer mon compte</summary>` +
+    `<p class="settings-note">Ton club sera confié à l'IA et ton compte effacé définitivement. Cette action est irréversible.</p>` +
+    `<form class="settings-account-form" id="hmDeleteForm" novalidate>` +
+    `<input type="text" id="hmDeleteConfirm" class="sl-rename-input" placeholder="Tape SUPPRIMER" autocomplete="off" aria-label="Confirmation">` +
+    (acc && acc.hasPassword ? `<input type="password" id="hmDeletePw" class="sl-rename-input" placeholder="Mot de passe" autocomplete="current-password" aria-label="Mot de passe">` : "") +
+    `<button type="submit" class="secondary settings-danger-btn">Supprimer définitivement</button></form>` +
+    `<p class="settings-feedback" id="hmDeleteFeedback"></p></details>`;
   block.innerHTML = html;
 
   const feedback = (text, ok) => { const fb = document.getElementById("hmAccountFeedback"); if (fb) { fb.textContent = text; fb.style.color = ok ? "var(--ok)" : "var(--danger)"; } };
@@ -37334,6 +37345,21 @@ function renderHmAccountBlock() {
       hmAccountState.account = data.account;
       renderHmAccountBlock();
     } catch (err) { feedback("Serveur injoignable, réessaie.", false); }
+  });
+  document.getElementById("hmDeleteForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fb = document.getElementById("hmDeleteFeedback");
+    const say = (text) => { if (fb) { fb.textContent = text; fb.style.color = "var(--danger)"; } };
+    const confirmText = document.getElementById("hmDeleteConfirm").value.trim().toUpperCase();
+    if (confirmText !== "SUPPRIMER") { say("Tape SUPPRIMER pour confirmer."); return; }
+    const pwEl = document.getElementById("hmDeletePw");
+    try {
+      const res = await fetchApi("/api/account/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: confirmText, password: pwEl ? pwEl.value : undefined }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) { say(data.code === "bad-credentials" ? "Mot de passe incorrect." : "Suppression impossible pour le moment, réessaie."); return; }
+      try { window.localStorage.removeItem(MANAGER_TOKEN_STORAGE_KEY); } catch (err) { /* rien */ }
+      window.location.href = "/bienvenue";
+    } catch (err) { say("Serveur injoignable, réessaie."); }
   });
   const discordBtn = document.getElementById("hmAccountDiscordBtn");
   if (discordBtn) discordBtn.addEventListener("click", async () => {

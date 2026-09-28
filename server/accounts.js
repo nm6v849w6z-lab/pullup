@@ -278,7 +278,25 @@ function takeOverCpuClub(league, clubName) {
   return { ok: true, teamIndex, token: team.managerLinkToken, previousName };
 }
 
+// Anti-triche : transferts suspects entre clubs de managers (League.
+// humanTransferLog) — prix inférieur à 40 % de la valeur estimée, ou au
+// moins 3 ventes entre les deux mêmes clubs sur 30 jours.
+function suspiciousTransfers(list, now) {
+  const out = [];
+  (list || []).forEach(x => {
+    if (x.value > 0 && x.price < 0.4 * x.value) out.push({ ...x, reason: `prix ${Math.round(100 * x.price / x.value)} % de la valeur estimée` });
+  });
+  const pairs = new Map();
+  (list || []).filter(x => now - x.at < 30 * 24 * 3600 * 1000).forEach(x => {
+    const key = [x.sellerName, x.buyerName].sort().join(" ↔ ");
+    pairs.set(key, (pairs.get(key) || []).concat([x]));
+  });
+  pairs.forEach((xs, key) => { if (xs.length >= 3) out.push({ pair: key, count: xs.length, reason: `${xs.length} transferts entre ces deux clubs en 30 jours` }); });
+  return out;
+}
+
 module.exports = {
+  suspiciousTransfers,
   ACCOUNTS_VERSION, PASSWORD_MIN_LENGTH, CLUB_NAME_MAX_LENGTH,
   loadAccounts, saveAccounts,
   normalizeEmail, validatePassword, normalizeClubName, isClubNameTaken,

@@ -10474,7 +10474,18 @@ class League {
     const amount = listing.currentBid;
     const res = transferPlayerBetweenTeams(seller, buyer, listing.playerId, amount, now);
     listing.result = res.result;
-    if (res.result === "sold") listing.finalPrice = amount;
+    if (res.result === "sold") {
+      listing.finalPrice = amount;
+      if (seller.isHuman && buyer.isHuman) this.logHumanTransfer(seller.name, buyer.name, res.player, amount, now);
+    }
+  }
+
+  // Anti-triche (voir /api/admin/accounts/anticheat) : ventes entre deux
+  // clubs de managers, avec la valeur estimée du joueur (200 dernières).
+  logHumanTransfer(sellerName, buyerName, player, price, now) {
+    this.humanTransferLog = this.humanTransferLog || [];
+    this.humanTransferLog.push({ at: now, sellerName, buyerName, playerName: player.name, price, value: Math.round(estimateMarketValue(player)) });
+    if (this.humanTransferLog.length > 200) this.humanTransferLog = this.humanTransferLog.slice(-200);
   }
 
   // Marché mondial (2026-09-28, « marché des transferts mondial ») :
@@ -13503,6 +13514,7 @@ function serializeLeague(lg) {
     playoffs: lg.playoffs,
     relegationBarrage: lg.relegationBarrage || null,
     seasonAwards: lg.seasonAwards || null,
+    humanTransferLog: Array.isArray(lg.humanTransferLog) ? lg.humanTransferLog : [],
     // Coupe nationale (server/nationalCup.js) : clubs de CETTE ligue encore
     // en course et tours restants, pour les amicaux (jeudis réservés).
     nationalCupAlive: lg.nationalCupAlive || null,
@@ -13611,6 +13623,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.playoffs = data.playoffs || null;
   lg.relegationBarrage = data.relegationBarrage || null;
   lg.seasonAwards = data.seasonAwards && Array.isArray(data.seasonAwards.awards) ? data.seasonAwards : null;
+  lg.humanTransferLog = Array.isArray(data.humanTransferLog) ? data.humanTransferLog : [];
   lg.nationalCupAlive = data.nationalCupAlive && Array.isArray(data.nationalCupAlive.teams) ? data.nationalCupAlive : null;
   // Ancienne sauvegarde sans pyramide de divisions (avant l'ajout de la
   // montée/descente) : un club "pas encore attribué" prend la place la plus

@@ -20,6 +20,29 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Comptes : mot de passe
+  oublié, suppression du compte, confidentialité, anti-triche**
+  - Mot de passe oublié : /api/account/password-forgot (réponse identique
+    que le compte existe ou non) → lien /bienvenue#reinit=… à usage unique,
+    1 h (empreinte SHA-256 sur le compte) ; /api/account/password-reset →
+    connexion directe. Envoi par email via server/mailer.js (Resend) **à
+    configurer par l'utilisateur** : RESEND_API_KEY + MAIL_FROM (domaine à
+    vérifier chez Resend). Sans ça : lien écrit dans les journaux Render et
+    POST /api/admin/accounts/password-reset-link {email} (X-Admin-Token)
+    pour le transmettre à la main ; le site affiche « écris-nous sur
+    Discord ». Site : « Mot de passe oublié ? », vues viewForgot/viewReset.
+  - Suppression : Paramètres → Mon compte → « Supprimer mon compte »
+    (SUPPRIMER + mot de passe) → /api/account/delete : compte effacé, club
+    confié à l'IA (World.releaseClubToCpu).
+  - Confidentialité : politique mise à jour (empreinte IP, journal des
+    transferts, suppression, inactivité, Resend) ; FAQ mise à jour.
+  - Anti-triche : empreinte d'IP (sel ANTI_CHEAT_SALT, jamais l'IP en clair,
+    5 dernières par compte), League.humanTransferLog (ventes entre managers,
+    prix + valeur estimée), GET /api/admin/accounts/anticheat : comptes
+    partageant une IP, ventes < 40 % de la valeur, ≥ 3 ventes entre deux
+    clubs en 30 jours. Signalement seulement, aucune sanction automatique.
+  - Tests : server/account_security_test.js, site_password_reset_test.js.
+
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Récompenses de fin de
   saison, carrière des joueurs, succès du manager** : Engine.
   awardSeasonHonours (appelée quand le champion est connu et au lundi de

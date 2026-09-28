@@ -178,6 +178,7 @@ function resolveForeignTransfers(leagues, now, events = []) {
       l.result = res.result;
       if (res.result === "sold") {
         l.finalPrice = l.currentBid;
+        if (seller.isHuman && buyer.isHuman && typeof lg.logHumanTransfer === "function") lg.logHumanTransfer(seller.name, `${buyer.name} (${ref.leagueId})`, res.player, l.currentBid, now);
         events.push({ type: "world-transfer", from: id, to: ref.leagueId, player: res.player.name, fee: l.currentBid });
       }
     });

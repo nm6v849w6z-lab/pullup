@@ -4763,6 +4763,14 @@ window.HM_I18N_EN = {
   "Barrage (7e contre 8e), en direct : {0} reçoit {1} {2} à {3}.": "Play-in (7th vs 8th), live: {0} host {1} on {2} at {3}.",
   "Barrage (7e contre 8e) : {0} {1}-{2} {3}. Le club évite la place de barragiste relégable.": "Play-in (7th vs 8th): {0} {1}-{2} {3}. The club avoids the relegation spot.",
   "Barrage (7e contre 8e) : {0} {1}-{2} {3}. Le club pourra être relégué si le championnat du dessous est ouvert.": "Play-in (7th vs 8th): {0} {1}-{2} {3}. The club may be relegated if the league below is open.",
+  // Suppression du compte (2026-09-28).
+  "Supprimer mon compte": "Delete my account",
+  "Ton club sera confié à l'IA et ton compte effacé définitivement. Cette action est irréversible.": "Your club will be handed to the AI and your account permanently erased. This can't be undone.",
+  "Supprimer définitivement": "Delete permanently",
+  "Tape SUPPRIMER": "Type SUPPRIMER",
+  "Tape SUPPRIMER pour confirmer.": "Type SUPPRIMER to confirm.",
+  "Mot de passe incorrect.": "Wrong password.",
+  "Suppression impossible pour le moment, réessaie.": "Can't delete right now, please try again.",
   // Récompenses, carrière, succès (2026-09-28).
   "Récompenses de la saison": "Season awards",
   "Succès du manager": "Manager achievements",

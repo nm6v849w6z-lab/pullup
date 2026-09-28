@@ -36,6 +36,29 @@ const crypto = require("crypto");
 const store = require("./store.js");
 const Accounts = require("./accounts.js");
 const World = require("./world.js");
+const Mailer = require("./mailer.js");
+
+// Mot de passe oublié (liste de la nuit du 2026-09-28) : lien valable 1 h,
+// seul son empreinte SHA-256 est gardée sur le compte.
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+function sha256(x) { return crypto.createHash("sha256").update(String(x)).digest("hex"); }
+function createPasswordReset(account, now) {
+  const raw = crypto.randomBytes(24).toString("hex");
+  account.passwordReset = { hash: sha256(raw), expiresAt: now + PASSWORD_RESET_TTL_MS };
+  return raw;
+}
+
+// Anti-triche (comptes en double) : empreinte de l'adresse IP (jamais
+// l'adresse elle-même), 5 dernières par compte — voir /api/admin/accounts/anticheat.
+function ipFingerprint(req) {
+  return sha256(`${process.env.ANTI_CHEAT_SALT || "hoop-manager"}:${clientIp(req)}`).slice(0, 16);
+}
+function recordIp(account, req, now) {
+  const fp = ipFingerprint(req);
+  const list = (account.ipSeen || []).filter(x => x.fp !== fp);
+  list.unshift({ fp, at: now });
+  account.ipSeen = list.slice(0, 5);
+}
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const PENDING_SIGNUP_TTL_MS = 30 * 60 * 1000;
@@ -200,6 +223,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         openSlots: openSlots(multi),
         countries: World.publicCountries(),
         passwordMinLength: Accounts.PASSWORD_MIN_LENGTH,
+        passwordResetByMail: Mailer.mailConfigured(),
         clubNameMaxLength: Accounts.CLUB_NAME_MAX_LENGTH,
       });
       return true;
@@ -218,6 +242,8 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       await withAccounts(async data => {
         if (Accounts.findByEmail(data, email)) { sendJson(res, 409, { ok: false, code: "email-taken" }); return; }
         const account = await registerAccount(data, { email, passwordHash: Accounts.hashPassword(pw.value), requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
+        recordIp(account, req, now);
+        await Accounts.saveAccounts(data, accountsPath);
         sendJson(res, 200, sessionPayload(account));
       });
       return true;
@@ -235,6 +261,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
           return;
         }
         account.lastLoginAt = now;
+        recordIp(account, req, now);
         if (!account.managerToken) {
           await tryAssignClub(account, multiSavePath, now);
         }
@@ -264,6 +291,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       if (!token) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
       await withAccounts(async data => {
         const account = Accounts.findByManagerToken(data, token);
+        if (account && !(account.ipSeen || []).some(x => x.fp === ipFingerprint(req))) { recordIp(account, req, now); await Accounts.saveAccounts(data, accountsPath); }
         sendJson(res, 200, { ok: true, account: account ? Accounts.publicView(account) : null, discord: discordConfigured() });
       });
       return true;
@@ -291,6 +319,81 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         account.passwordHash = Accounts.hashPassword(pw.value);
         await Accounts.saveAccounts(data, accountsPath);
         sendJson(res, 200, { ok: true, account: Accounts.publicView(account) });
+      });
+      return true;
+    }
+
+    // ---------------- Mot de passe oublié ----------------
+    // Réponse identique que le compte existe ou non (ne révèle pas quels
+    // emails sont inscrits).
+    if (p === "/api/account/password-forgot" && req.method === "POST") {
+      if (rateLimited(req, now)) { sendJson(res, 429, { ok: false, code: "rate-limited" }); return true; }
+      const b = await body(req, res); if (!b) return true;
+      const email = Accounts.normalizeEmail(b.email);
+      if (!email) { sendJson(res, 400, { ok: false, code: "email-invalid" }); return true; }
+      let link = null;
+      await withAccounts(async data => {
+        const account = Accounts.findByEmail(data, email);
+        if (!account) return;
+        const raw = createPasswordReset(account, now);
+        await Accounts.saveAccounts(data, accountsPath);
+        link = `${originFor(req)}/bienvenue#reinit=${raw}`;
+      });
+      if (link) {
+        const sent = await Mailer.sendMail({
+          to: email, subject: "Hoop Manager : réinitialiser ton mot de passe",
+          text: `Bonjour,\n\nPour choisir un nouveau mot de passe, ouvre ce lien (valable 1 heure) :\n${link}\n\nSi tu n'as rien demandé, ignore cet email : ton mot de passe ne change pas.\n\nHoop Manager`,
+        });
+        if (!sent.ok) console.log(`[comptes] lien de réinitialisation pour ${email} (email non envoyé : ${sent.error}) : ${link}`);
+      }
+      sendJson(res, 200, { ok: true, byMail: Mailer.mailConfigured() });
+      return true;
+    }
+
+    if (p === "/api/account/password-reset" && req.method === "POST") {
+      if (rateLimited(req, now)) { sendJson(res, 429, { ok: false, code: "rate-limited" }); return true; }
+      const b = await body(req, res); if (!b) return true;
+      const pw = Accounts.validatePassword(b.password);
+      if (pw.error) { sendJson(res, 400, { ok: false, code: pw.error }); return true; }
+      const hash = typeof b.token === "string" && b.token ? sha256(b.token) : null;
+      await withAccounts(async data => {
+        const account = hash ? data.accounts.find(a => a.passwordReset && a.passwordReset.hash === hash) : null;
+        if (!account || account.passwordReset.expiresAt < now) { sendJson(res, 400, { ok: false, code: "reset-expired" }); return; }
+        account.passwordHash = Accounts.hashPassword(pw.value);
+        delete account.passwordReset;
+        account.lastLoginAt = now;
+        recordIp(account, req, now);
+        if (!account.managerToken) await tryAssignClub(account, multiSavePath, now);
+        await Accounts.saveAccounts(data, accountsPath);
+        sendJson(res, 200, sessionPayload(account));
+      });
+      return true;
+    }
+
+    // ---------------- Suppression du compte ----------------
+    // Depuis le jeu (Paramètres → Mon compte) : confirmation écrite
+    // « SUPPRIMER » (+ mot de passe si le compte en a un). Le club est rendu
+    // à l'IA (World.releaseClubToCpu), le compte est effacé.
+    if (p === "/api/account/delete" && req.method === "POST") {
+      if (rateLimited(req, now)) { sendJson(res, 429, { ok: false, code: "rate-limited" }); return true; }
+      const token = getManagerToken(req);
+      if (!token) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
+      const b = await body(req, res); if (!b) return true;
+      if (String(b.confirm || "").trim().toUpperCase() !== "SUPPRIMER") { sendJson(res, 400, { ok: false, code: "confirm-required" }); return true; }
+      const world = await World.loadWorld(multiSavePath, now);
+      const found = world ? await World.findTeamByToken(world, token, multiSavePath) : null;
+      if (!found) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
+      await withAccounts(async data => {
+        const account = Accounts.findByManagerToken(data, token);
+        if (account && account.passwordHash && !Accounts.verifyPassword(b.password, account.passwordHash)) { sendJson(res, 401, { ok: false, code: "bad-credentials" }); return; }
+        World.releaseClubToCpu(world, found.league, found.teamIndex, now, "deleted");
+        await store.saveMultiLeague(found.league, multiSavePath);
+        await World.saveWorld(world, multiSavePath);
+        if (account) {
+          data.accounts = data.accounts.filter(a => a !== account);
+          await Accounts.saveAccounts(data, accountsPath);
+        }
+        sendJson(res, 200, { ok: true });
       });
       return true;
     }
@@ -435,6 +538,48 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
             createdAt: a.createdAt, lastLoginAt: a.lastLoginAt,
           })),
         });
+      });
+      return true;
+    }
+
+    // Lien de réinitialisation à transmettre à la main (sans envoi d'email).
+    if (p === "/api/admin/accounts/password-reset-link" && req.method === "POST") {
+      if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return true; }
+      const b = await body(req, res); if (!b) return true;
+      const email = Accounts.normalizeEmail(b.email);
+      await withAccounts(async data => {
+        const account = Accounts.findByEmail(data, email);
+        if (!account) { sendJson(res, 404, { ok: false, error: "Aucun compte avec cet email." }); return; }
+        const raw = createPasswordReset(account, now);
+        await Accounts.saveAccounts(data, accountsPath);
+        sendJson(res, 200, { ok: true, link: `${originFor(req)}/bienvenue#reinit=${raw}`, expiresInMinutes: PASSWORD_RESET_TTL_MS / 60000 });
+      });
+      return true;
+    }
+
+    // Anti-triche : comptes qui partagent une adresse IP (empreinte), et
+    // transferts suspects entre clubs de managers (voir League.
+    // humanTransferLog : prix très bas, ou ventes répétées entre deux clubs).
+    if (p === "/api/admin/accounts/anticheat" && req.method === "GET") {
+      if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return true; }
+      const world = await World.loadWorld(multiSavePath, now);
+      const clubByToken = new Map();
+      const transfers = [];
+      for (const entry of (world ? world.leagues : [])) {
+        const league = await World.loadLeague(world, entry.id, multiSavePath);
+        if (!league) continue;
+        league.teams.forEach(t => { if (t.isHuman && t.managerLinkToken) clubByToken.set(t.managerLinkToken, `${t.name} (${entry.id})`); });
+        (league.humanTransferLog || []).forEach(x => transfers.push({ leagueId: entry.id, ...x }));
+      }
+      await withAccounts(async data => {
+        const byFp = new Map();
+        data.accounts.forEach(a => (a.ipSeen || []).forEach(x => {
+          if (!byFp.has(x.fp)) byFp.set(x.fp, new Set());
+          byFp.get(x.fp).add(a);
+        }));
+        const label = a => ({ email: a.email, discordName: a.discordName, club: clubByToken.get(a.managerToken) || null });
+        const sharedIp = [...byFp.values()].filter(set => set.size > 1).map(set => [...set].map(label));
+        sendJson(res, 200, { ok: true, sharedIp, suspiciousTransfers: Accounts.suspiciousTransfers(transfers, now) });
       });
       return true;
     }

@@ -249,7 +249,8 @@ const FAQ = [
   ["Comment recruter de nouveaux joueurs ?", "Par le marché des transferts, où tous les joueurs mis en vente sont disputés aux enchères en temps réel, ou par l'académie de jeunes, qui fait remonter des prospects de 15 à 17 ans grâce à tes recruteurs."],
   ["Que se passe-t-il si mon club n'a plus d'argent ?", "Un budget durablement sous le seuil d'alerte finit par mettre tout l'effectif en vente forcée : le jeu te prévient avant, et l'onglet Économie permet de surveiller la masse salariale. Les recettes viennent de la billetterie, des droits TV, des sponsors et de la boutique."],
   ["Pourquoi y a-t-il des publicités ?", "Les publicités financent l'hébergement du jeu. Elles n'apparaissent qu'à quelques endroits précis : une courte coupure pendant les émissions d'avant-match et de mi-temps, et une publicité facultative à regarder pour débloquer un rapport de scoutisme. Elles n'interrompent jamais l'action d'un match, et les abonnés Premium n'en voient aucune."],
-  ["J'ai oublié mon mot de passe, que faire ?", `Écris-nous sur le serveur Discord du jeu ou à <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> depuis l'adresse de ton compte : nous réinitialiserons ton mot de passe.`],
+  ["J'ai oublié mon mot de passe, que faire ?", `Sur la page d'accueil, onglet « Se connecter », clique sur « Mot de passe oublié ? » : un lien pour en choisir un nouveau est envoyé à l'adresse de ton compte (valable 1 heure). Pas reçu ? Écris-nous sur le serveur Discord du jeu ou à <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> depuis l'adresse de ton compte.`],
+  ["Comment supprimer mon compte ?", `Dans le jeu : Paramètres → Mon compte → « Supprimer mon compte ». Ton compte est effacé et ton club est confié à l'IA.`],
   ["Comment supprimer mon compte ?", `Envoie un message à <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> depuis l'adresse de ton compte (ou sur Discord pour un compte Discord). Ton compte et les données associées seront supprimés.`],
   ["Le jeu existe-t-il en anglais ?", "Oui, l'interface du jeu est disponible en français et en anglais."],
 ];
@@ -312,6 +313,7 @@ function pageConfidentialite() {
 <li><b>Données de jeu</b> : tout ce que vous faites dans le jeu (ordres, transferts, messages envoyés aux autres managers…), nécessaire à son fonctionnement.</li>
 <li><b>Stockage local du navigateur</b> : un jeton de connexion et vos préférences (langue, thème) sont enregistrés dans votre navigateur pour vous garder connecté.</li>
 <li><b>Journaux techniques</b> : l'hébergeur enregistre les requêtes (adresse IP, date, page demandée) pour la sécurité et le bon fonctionnement du service.</li>
+<li><b>Lutte contre la triche</b> : une empreinte chiffrée de l'adresse IP (jamais l'adresse elle-même) est gardée avec les 5 dernières connexions du compte, pour repérer les comptes multiples ; les transferts entre clubs de managers sont journalisés (prix, valeur estimée du joueur) pour repérer les ventes arrangées.</li>
 </ul>
 <h2>Pourquoi</h2>
 <p>Ces données servent uniquement à faire fonctionner le jeu (vous connecter, sauvegarder votre club, faire jouer les matchs) et à vous répondre lorsque vous nous écrivez. Base légale : l'exécution du service que vous avez demandé en créant un compte. Votre adresse email n'est jamais vendue ni utilisée pour de la prospection commerciale.</p>
@@ -321,6 +323,7 @@ function pageConfidentialite() {
 <h2>Destinataires et hébergement</h2>
 <p>Les données sont hébergées par Render Services, Inc. (serveurs du jeu) et Upstash, Inc. (base de données), et peuvent donc être traitées hors de l'Union européenne, dans le cadre des garanties prévues par ces prestataires (clauses contractuelles types). Discord reçoit les informations nécessaires si vous choisissez la connexion par Discord. Google reçoit les données décrites ci-dessus pour la publicité.</p>
 <h2>Durée de conservation</h2>
+<p>Tu peux supprimer ton compte toi-même à tout moment dans le jeu (Paramètres → Mon compte → Supprimer mon compte) : le compte est effacé et le club confié à l'IA. Sans aucune visite pendant 28 jours, le club est confié à l'IA ; il te sera rendu à ta prochaine connexion s'il n'a pas été repris par un autre manager. Pour un mot de passe oublié, un lien de réinitialisation valable 1 heure est envoyé à l'adresse du compte (service d'envoi : Resend, Inc.).</p>
 <p>Les données du compte et du club sont conservées tant que le compte existe. Un compte supprimé est effacé avec les données qui lui sont rattachées, sauf les résultats sportifs déjà intégrés à l'historique de la ligue (scores, classements), qui ne permettent pas de vous identifier directement.</p>
 <h2>Vos droits</h2>
 <p>Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de vos données. Pour les exercer, écrivez à <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> depuis l'adresse de votre compte. Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la CNIL (<a href="https://www.cnil.fr" rel="noopener">cnil.fr</a>).</p>

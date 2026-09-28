@@ -277,7 +277,34 @@
               <button type="button" data-toggle-pw="liPw" data-t="pw.show">Voir</button></div></div>
             <button type="submit" class="btn btn-primary" data-t="login.submit">Se connecter</button>
           </form>
-          <p class="legal" data-t-html="login.forgot">Mot de passe oublié ? Écris-nous sur le Discord du jeu, on te le réinitialise.</p>
+          <p class="legal"><a href="#" id="forgotLink" data-t="login.forgotLink">Mot de passe oublié ?</a></p>
+        </div>
+
+        <!-- Mot de passe oublié -->
+        <div class="panel-view" id="viewForgot">
+          <h2 data-t="forgot.title">Mot de passe oublié</h2>
+          <p class="sub" data-t="forgot.sub">Indique l'email de ton compte : tu recevras un lien pour choisir un nouveau mot de passe.</p>
+          <div class="msg" id="forgotMsg" role="alert"></div>
+          <form id="forgotForm" novalidate>
+            <div class="field"><label for="fgEmail" data-t="field.email">Email</label>
+              <input type="email" id="fgEmail" autocomplete="email" required></div>
+            <button type="submit" class="btn btn-primary" data-t="forgot.submit">Recevoir le lien</button>
+          </form>
+          <p class="legal"><a href="#" data-back-login data-t="forgot.back">Retour à la connexion</a></p>
+        </div>
+
+        <!-- Nouveau mot de passe (lien reçu par email) -->
+        <div class="panel-view" id="viewReset">
+          <h2 data-t="reset.title">Nouveau mot de passe</h2>
+          <p class="sub" data-t="reset.sub">Choisis ton nouveau mot de passe : tu seras connecté directement.</p>
+          <div class="msg" id="resetMsg" role="alert"></div>
+          <form id="resetForm" novalidate>
+            <div class="field"><label for="rsPw" data-t="field.password">Mot de passe</label>
+              <div class="pw"><input type="password" id="rsPw" autocomplete="new-password" minlength="8" required>
+              <button type="button" data-toggle-pw="rsPw" data-t="pw.show">Voir</button></div>
+              <div class="hint" data-t="field.pwHint">8 caractères minimum.</div></div>
+            <button type="submit" class="btn btn-primary" data-t="reset.submit">Enregistrer et me connecter</button>
+          </form>
         </div>
 
         <!-- 1re connexion Discord : choix du nom de club -->
@@ -389,6 +416,13 @@
       "legal": "Your email (or Discord ID) is only used to log you into the game. Never sold. <a href=\"/confidentialite\">Privacy</a>",
       "login.title": "Welcome back", "login.sub": "Log in to get back to your club.", "login.submit": "Log in",
       "login.forgot": "Forgot your password? Message us on the game's Discord and we'll reset it.",
+      "login.forgotLink": "Forgot your password?",
+      "forgot.title": "Forgot password", "forgot.sub": "Enter your account's email: you'll receive a link to choose a new password.",
+      "forgot.submit": "Send me the link", "forgot.back": "Back to login",
+      "forgot.sent": "If an account exists with this email, a link has been sent to it (valid for 1 hour). Check your spam folder too.",
+      "forgot.nomail": "Emails can't be sent right now: message us on the game's Discord and we'll send you a reset link.",
+      "reset.title": "New password", "reset.sub": "Choose your new password: you'll be logged in right away.", "reset.submit": "Save and log in",
+      "err.reset-expired": "This link has expired or was already used. Request a new one.",
       "dclub.title": "Welcome!", "dclub.sub": "Hi {name}! One last step: pick your club's name.",
       "wait.title": "You're on the list",
       "wait.text": "Your account is created, but every club in the league is taken. As soon as a spot opens up, a club is assigned to you automatically: come back to this page, we check on every visit.",
@@ -443,6 +477,9 @@
       "err.discord-disabled": "La connexion Discord n'est pas disponible pour le moment.",
       "err.network": "Impossible de joindre le serveur. Vérifie ta connexion et réessaie.",
       "err.generic": "Une erreur est survenue. Réessaie.",
+      "forgot.sent": "Si un compte existe avec cet email, un lien vient de lui être envoyé (valable 1 heure). Pense à regarder dans les indésirables.",
+      "forgot.nomail": "L'envoi d'emails n'est pas encore disponible : écris-nous sur le Discord du jeu, on t'envoie un lien de réinitialisation.",
+      "err.reset-expired": "Ce lien a expiré ou a déjà servi. Demandes-en un nouveau.",
       "err.fill": "Remplis tous les champs."
     }
   };
@@ -475,7 +512,7 @@
   });
 
   // --- Vues -----------------------------------------------------------
-  var views = ["viewSignup", "viewLogin", "viewDiscordClub", "viewWaiting"];
+  var views = ["viewSignup", "viewLogin", "viewDiscordClub", "viewWaiting", "viewForgot", "viewReset"];
   function show(id) {
     views.forEach(function (v) { document.getElementById(v).classList.toggle("is-active", v === id); });
     var tabs = document.querySelector(".tabs");
@@ -577,6 +614,30 @@
     return api("POST", "/api/account/login", { email: email, password: pw }).then(function (d) { handleSession(d, loginMsg); });
   });
 
+  // Mot de passe oublié / nouveau mot de passe.
+  document.getElementById("forgotLink").addEventListener("click", function (e) {
+    e.preventDefault();
+    document.getElementById("fgEmail").value = document.getElementById("liEmail").value;
+    show("viewForgot");
+  });
+  document.querySelectorAll("[data-back-login]").forEach(function (a) { a.addEventListener("click", function (e) { e.preventDefault(); show("viewLogin"); }); });
+  var forgotMsg = document.getElementById("forgotMsg");
+  submitWith(document.getElementById("forgotForm"), forgotMsg, function () {
+    var email = document.getElementById("fgEmail").value.trim();
+    if (!email) { showMsg(forgotMsg, "fill"); return; }
+    return api("POST", "/api/account/password-forgot", { email: email }).then(function (d) {
+      if (!d.ok) { showMsg(forgotMsg, d.code || "generic"); return; }
+      showMsg(forgotMsg, d.byMail ? "forgot.sent" : "forgot.nomail", !!d.byMail);
+    });
+  });
+  var resetToken = null;
+  var resetMsg = document.getElementById("resetMsg");
+  submitWith(document.getElementById("resetForm"), resetMsg, function () {
+    var pw = document.getElementById("rsPw").value;
+    if (!pw) { showMsg(resetMsg, "fill"); return; }
+    return api("POST", "/api/account/password-reset", { token: resetToken, password: pw }).then(function (d) { handleSession(d, resetMsg); });
+  });
+
   var discordPending = null, discordPendingName = null;
   var dclubMsg = document.getElementById("dclubMsg");
   submitWith(document.getElementById("dclubForm"), dclubMsg, function () {
@@ -648,7 +709,10 @@
   // --- Retours de Discord (fragment d'URL) --------------------------------
   var frag = new URLSearchParams((location.hash || "").slice(1));
   if (location.hash) history.replaceState(null, "", location.pathname + location.search);
-  if (frag.get("discord")) {
+  if (frag.get("reinit")) {
+    resetToken = frag.get("reinit");
+    show("viewReset");
+  } else if (frag.get("discord")) {
     discordPending = frag.get("discord");
     discordPendingName = frag.get("nom") || "";
     show("viewDiscordClub");
