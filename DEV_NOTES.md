@@ -20,6 +20,32 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Marché des transferts
+  mondial + rattrapage du monde qui n'écrit que les ligues modifiées**
+  - server/worldMarket.js : index de toutes les annonces ouvertes du monde
+    (données annexes « market », store.loadWorldAuxRaw/saveWorldAuxRaw),
+    reconstruit à chaque catchUpWorld ; identifiant global stable (gid) ;
+    GET /api/save ajoute au marché de chaque manager les annonces des AUTRES
+    championnats (200 au plus, les plus proches de la clôture + celles où il
+    a enchéri ; id = −gid, vendeur = club invité léger 1000 + k) et montre
+    les enchérisseurs d'ailleurs sur ses propres annonces (invités 2000 + k).
+  - Enchère sur une annonce d'ailleurs : POST /api/market/bid avec id
+    négatif → League.placeForeignBid dans la ligue du vendeur
+    (currentBidderIdx = Engine.FOREIGN_BIDDER_IDX, currentBidderRef) ;
+    clôture → « foreign-pending » puis transfert au rattrapage suivant
+    (resolveForeignTransfers, Engine.transferPlayerBetweenTeams, extrait de
+    _resolveListing), déclenché pile à la clôture (échéance du monde).
+  - catchUpWorld garde toutes les ligues en main et ne réécrit que celles
+    dont la sérialisation a changé (hors horodatages informatifs des marchés
+    de staff) → point 5 de la liste fait.
+  - Navigateur : filtre « Monde entier / Mon pays / Mon championnat »,
+    drapeau + division du vendeur sur la carte, refus serveur affiché puis
+    état rechargé (reloadLeagueOnly) ; guide + en.js.
+  - Test : world_market_test.js.
+  - Limites : index rafraîchi au plus toutes les 10 min (une nouvelle
+    annonce d'un autre championnat peut mettre ce temps à apparaître) ; pas
+    d'enchère CPU d'un championnat sur l'annonce d'un autre.
+
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Coupe nationale en direct
   + Supercoupe (option (b) « tout d'un coup avec le direct »)**
   - server/nationalCup.js : une Coupe PAR PAYS (world.cups[country]) qui

@@ -30,6 +30,7 @@ const Accounts = require("./accounts.js");
 const AutoSim = require("./autoSim.js");
 const LiveMatch = require("./liveMatch.js");
 const NationalCup = require("./nationalCup.js");
+const WorldMarket = require("./worldMarket.js");
 
 const WORLD_VERSION = 1;
 const DEFAULT_COUNTRY = "fr";
@@ -377,6 +378,17 @@ function applyCountryMoves(world, moves, leagues) {
 // complet d'une ligue (server/index.js:tick — matchs, amicaux, ligues
 // privées, sponsors…) ; par défaut AutoSim.catchUpLeague. Sauvegarde les
 // ligues et le registre. Renvoie les événements.
+// Empreinte d'un championnat pour savoir s'il faut le réécrire : sa
+// sérialisation, sans les horodatages purement informatifs que chaque
+// passage met à jour (voir League.refreshCoachMarket & co : « ne conditionne
+// plus rien »).
+const FINGERPRINT_IGNORED = ["lastCoachGenerationCheckAt", "lastAnalystGenerationCheckAt", "lastRecruiterGenerationCheckAt"];
+function leagueFingerprint(lg) {
+  const data = store.serializeMultiLeague(lg);
+  FINGERPRINT_IGNORED.forEach(k => { delete data.league[k]; });
+  return JSON.stringify(data);
+}
+
 async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = {}) {
   const world = await loadWorld(savePath, now);
   if (!world) return [];
@@ -384,12 +396,20 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
   const tick = tickLeague || ((lg, t) => AutoSim.catchUpLeague(lg, t));
   let worldDirty = false;
   let nextDeadlineAt = null;
+  // Toutes les ligues restent en main jusqu'à la fin (transferts du marché
+  // mondial entre deux championnats) ; seules celles qui ont changé sont
+  // réécrites (empreinte de la sérialisation au chargement).
+  const allLeagues = new Map();
+  const fingerprints = new Map();
   for (const country of countryCodes()) {
     const entries = leaguesOfCountry(world, country);
     const leagues = new Map();
     for (const e of entries) {
       const lg = await loadLeague(world, e.id, savePath);
-      if (lg) leagues.set(e.id, lg);
+      if (!lg) continue;
+      leagues.set(e.id, lg);
+      allLeagues.set(e.id, lg);
+      fingerprints.set(e.id, leagueFingerprint(lg));
     }
     for (let guard = 0; guard < 10; guard++) {
       for (const [id, lg] of leagues) {
@@ -497,8 +517,22 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
     }
     refreshCountrySummaries(world, country, leagues);
     worldDirty = true;
-    for (const lg of leagues.values()) await store.saveMultiLeague(lg, savePath);
   }
+  // Marché mondial (server/worldMarket.js) : transferts conclus entre deux
+  // championnats, puis index des annonces ouvertes de tout le monde.
+  WorldMarket.resolveForeignTransfers(allLeagues, now, events);
+  const prevIndex = await store.loadWorldAuxRaw("market", savePath);
+  const index = WorldMarket.buildIndex(prevIndex, world.leagues, allLeagues, now, e => divisionLabel(e.level, e.group));
+  await store.saveWorldAuxRaw("market", index, savePath);
+  const closing = WorldMarket.nextForeignClosing(index, now);
+  if (closing != null && (nextDeadlineAt == null || closing < nextDeadlineAt)) nextDeadlineAt = closing + 1000;
+  let saved = 0;
+  for (const [id, lg] of allLeagues) {
+    if (leagueFingerprint(lg) === fingerprints.get(id)) continue;
+    await store.saveMultiLeague(lg, savePath);
+    saved++;
+  }
+  events.savedLeagues = saved;
   if (worldDirty) await saveWorld(world, savePath);
   events.nextDeadlineAt = nextDeadlineAt;
   return events;
@@ -667,5 +701,5 @@ module.exports = {
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,
   isOpenCountry, publicCountries,
-  NationalCup, divisionLabel, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
+  NationalCup, WorldMarket, divisionLabel, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
 };

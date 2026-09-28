@@ -7208,6 +7208,9 @@
             <div class="mk-poscells" id="marketPos" role="group" aria-label="Poste"></div>
           </div>
           <div class="mk-frow">
+            <select class="mk-sel" id="marketOrigin" aria-label="Championnat du vendeur">
+              <option value="all">Monde entier</option><option value="country">Mon pays</option><option value="league">Mon championnat</option>
+            </select>
             <select class="mk-sel" id="marketAge" aria-label="Âge">
               <option value="all">Tous âges</option><option value="u21">21 ans et moins</option><option value="22-25">22–25 ans</option><option value="26-29">26–29 ans</option><option value="30+">30 ans et plus</option>
             </select>
@@ -7566,6 +7569,7 @@
         <p class="training-intro">Toutes les enchères en cours dans la ligue, les vôtres et celles des adversaires. Chaque enchère dure <b>1 jour réel</b>. Incrément minimum entre deux enchères : le plus grand de 1 000 € ou 20 % de l'enchère actuelle. En haut : votre budget disponible (budget moins les enchères où vous êtes en tête) et vos places libres, puis <b>Mes enchères</b> (vos achats et vos ventes en cours, les enchères où vous avez été dépassé en premier).</p>
         <p class="training-intro" style="margin-top:10px;">Recherche par poste, âge, potentiel, prix (dont "dans mon budget") et jusqu'à 5 critères de caractéristiques, avec plusieurs tris (fin d'enchère, note, potentiel, meilleure affaire, prix, âge). Chaque annonce affiche la note du joueur, ses points forts, une <b>valeur estimée</b> comparée au prix ("Bonne affaire", "Prix correct" ou "Au-dessus de sa valeur"), des montants d'enchère rapides, et un bouton <b>Comparer</b> avec votre effectif. Pour vendre l'un de vos joueurs : menu ⋯ de l'Effectif ou bouton Vendre de sa fiche. L'identité de l'enchérisseur en tête reste privée.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Suivi et alertes</b> (<button type="button" class="gd-link" data-guide-goto="premium">Premium</button>) : « Suivre » sur une annonce ajoute le joueur à votre liste de suivi (filtre « Joueurs suivis ») ; « Créer une alerte avec ces filtres » enregistre une recherche. Le fil d'actualité vous prévient quand un joueur suivi est mis en vente, quand son enchère se termine bientôt, et quand une nouvelle annonce correspond à une de vos alertes.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Marché mondial</b> : les annonces de tous les championnats, dans tous les pays, apparaissent aussi (drapeau et division du vendeur sur la carte ; filtre « Monde entier », « Mon pays » ou « Mon championnat »). On y enchérit de la même façon ; le joueur rejoint votre club à la clôture de l'enchère. Les annonces des autres championnats se mettent à jour toutes les quelques minutes : si quelqu'un a surenchéri entre-temps, votre enchère est refusée et le prix actualisé.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="economie" data-guide-group="Club et finances">
@@ -17168,6 +17172,13 @@ class League {
       const p = team.players.find(pl => pl.id === playerId);
       if (p) return p;
     }
+    // Clubs invités (marché mondial, Coupe nationale) : voir installGuestTeams.
+    if (this.guestTeamsByIdx) {
+      for (const team of this.guestTeamsByIdx.values()) {
+        const p = team.players.find(pl => pl.id === playerId);
+        if (p) return p;
+      }
+    }
     return null;
   }
 
@@ -19936,9 +19947,13 @@ function serializeLeague(lg) {
 function installGuestTeams(lg, guests) {
   const map = new Map();
   (Array.isArray(guests) ? guests : []).forEach(g => {
-    if (!g || !g.team || typeof g.localIdx !== "number") return;
+    if (!g || (!g.team && !g.light) || typeof g.localIdx !== "number") return;
     let t;
-    try { t = teamFromSave(g.team); } catch (e) { return; }
+    try {
+      t = g.team ? teamFromSave(g.team)
+        // Invité « léger » (marché mondial) : nom + joueurs en vente seulement.
+        : new Team({ name: g.light.name, country: g.light.country || null, players: (g.light.players || []).map(playerFromSave) });
+    } catch (e) { return; }
     t.isGuest = true;
     t.guestLeagueId = g.leagueId;
     t.guestIdx = g.idx;
@@ -22035,18 +22050,39 @@ function syncMarketListToServer(playerId, price) {
   }
 }
 
-function syncMarketBidToServer(listingId, amount) {
-  if (!managerToken) return;
+// Recharge seulement l'état de la ligue (GET /api/save), sans toucher aux
+// événements d'absence ni à la page affichée.
+async function reloadLeagueOnly() {
   try {
-    fetchApi("/api/market/bid", {
+    const res = await fetchApi("/api/save");
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data || !data.league || data.team) return false;
+    reseedUidFromSave(data);
+    const lg = leagueFromSave(data.league);
+    league = lg;
+    teamA = lg.teams[myTeamIndex];
+    return true;
+  } catch (e) { return false; }
+}
+
+function syncMarketBidToServer(listingId, amount) {
+  if (!managerToken) return Promise.resolve(null);
+  try {
+    return fetchApi("/api/market/bid", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, amount }),
     })
-      .then(res => { if (!res.ok) console.warn("Enchère refusée côté serveur.", res.status); })
-      .catch(e => console.warn("Enchère : serveur indisponible :", e));
+      .then(async res => {
+        const data = await res.json().catch(() => null);
+        if (!res.ok) console.warn("Enchère refusée côté serveur.", res.status);
+        return { ok: res.ok, data };
+      })
+      .catch(e => { console.warn("Enchère : serveur indisponible :", e); return null; });
   } catch (e) {
     console.warn("Enchère : serveur indisponible :", e);
+    return Promise.resolve(null);
   }
 }
 
@@ -26828,7 +26864,7 @@ document.addEventListener("click", (e) => {
   const guest = league && league.teams[Number(link.dataset.teamIdx)];
   if (guest && guest.isGuest) {
     // Club invité (Coupe nationale) : sa fiche est dans Planète Hoop.
-    openPlaneteAt({ country: league.country || null, leagueId: guest.guestLeagueId, clubIdx: guest.guestIdx });
+    openPlaneteAt({ country: String(guest.guestLeagueId || "").slice(0, 2) || league.country || null, leagueId: guest.guestLeagueId, clubIdx: guest.guestIdx });
     return;
   }
   showTeamDetail(Number(link.dataset.teamIdx));
@@ -38041,7 +38077,7 @@ const MK_CLOCK = `<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="t
 // État d'affichage (filtres, tri, cartes dépliées) : purement local à
 // l'écran, jamais sauvegardé — comme les tris de l'Effectif.
 const marketUi = {
-  pos: "all", q: "", age: "all", pot: 0, price: "0", deal: false, hideMine: false,
+  pos: "all", q: "", age: "all", pot: 0, price: "0", deal: false, hideMine: false, origin: "all",
   sort: "ends", mineTab: "all", open: new Set(), crit: [], critOpen: false, watched: false,
 };
 
@@ -38281,6 +38317,9 @@ function mkFilteredListings() {
   const q = normalizeSearchTextSafe(u.q);
   const rows = mkOpenListings().map(l => ({ l, player: league.playerById(l.playerId) })).filter(({ l, player }) => {
     if (!player) return false;
+    // Marché mondial : annonces d'un autre championnat (l.foreign).
+    if (u.origin === "league" && l.foreign) return false;
+    if (u.origin === "country" && l.foreign && l.foreign.country !== (league.country || "fr")) return false;
     if (u.pos !== "all" && player.position !== u.pos) return false;
     if (q) {
       const seller = league.teams[l.sellerIdx];
@@ -38388,6 +38427,7 @@ function mkListingCardHtml(l, player, now) {
             `<span class="mk-chip">Potentiel · ${potentialCell}</span>` +
             `<span class="mk-chip">${formatMoney(player.salary)} / sem.</span>` +
             `<span class="mk-chip">Vendeur : ${isMine ? "<b>Vous</b>" : teamLinkHtml(l.sellerIdx, seller.name)}</span>` +
+            (l.foreign ? `<span class="mk-chip mk-chip-origin" title="Marché mondial : club d'un autre championnat">${nationFlagHtml(l.foreign.country)} ${escapeHtml(l.foreign.label)}</span>` : "") +
             critChips +
           `</div>` +
         `</div>` +
@@ -38422,7 +38462,7 @@ function renderMarketListings() {
   const total = mkOpenListings().length;
   const rows = mkFilteredListings();
   const u = marketUi;
-  const active = u.pos !== "all" || u.q || u.age !== "all" || u.pot || u.price !== "0" || u.deal || u.hideMine || u.watched || mkCritActive().length > 0;
+  const active = u.pos !== "all" || u.q || u.origin !== "all" || u.age !== "all" || u.pot || u.price !== "0" || u.deal || u.hideMine || u.watched || mkCritActive().length > 0;
   const count = document.getElementById("marketResCount");
   if (count) {
     // Alertes (Premium) : enregistrer les filtres actuels (poste, âge,
@@ -38447,9 +38487,9 @@ function renderMarketListings() {
 }
 
 function mkResetFilters() {
-  Object.assign(marketUi, { pos: "all", q: "", age: "all", pot: 0, price: "0", deal: false, hideMine: false, watched: false, crit: [], critOpen: false });
+  Object.assign(marketUi, { pos: "all", q: "", origin: "all", age: "all", pot: 0, price: "0", deal: false, hideMine: false, watched: false, crit: [], critOpen: false });
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-  set("marketSearch", ""); set("marketAge", "all"); set("marketPot", "0"); set("marketPrice", "0");
+  set("marketSearch", ""); set("marketOrigin", "all"); set("marketAge", "all"); set("marketPot", "0"); set("marketPrice", "0");
 }
 
 let marketFeedbackTimer = null;
@@ -38474,7 +38514,20 @@ function mkPlaceBid(id) {
   clearTimeout(marketFeedbackTimer);
   marketFeedbackTimer = setTimeout(() => marketFeedback("", true), 4000);
   saveMyTeam();
-  if (res.ok) syncMarketBidToServer(id, amount);
+  if (res.ok) {
+    const sync = syncMarketBidToServer(id, amount);
+    // Annonce d'un autre championnat (marché mondial, id négatif) : l'état
+    // local n'est qu'une copie, le serveur tranche (enchère dépassée entre-
+    // temps…) — en cas de refus, message et rechargement de l'état.
+    if (id < 0 && sync) {
+      sync.then(r => {
+        if (r && !r.ok) {
+          marketFeedback((r.data && r.data.error) || "Enchère refusée.", false);
+          reloadLeagueOnly().then(ok => { if (ok && currentVisiblePageId() === "marcheSection") renderMarcheSection(); });
+        }
+      });
+    }
+  }
   renderMarcheSection();
 }
 
@@ -38556,6 +38609,7 @@ document.getElementById("marcheSection").addEventListener("change", (e) => {
   const el = e.target;
   if (el.id === "marketSort") { marketUi.sort = el.value; renderMarketListings(); }
   else if (el.id === "marketAge") { marketUi.age = el.value; renderMarketListings(); }
+  else if (el.id === "marketOrigin") { marketUi.origin = el.value; renderMarketListings(); }
   else if (el.id === "marketPot") { marketUi.pot = Number(el.value) || 0; renderMarketListings(); }
   else if (el.id === "marketPrice") { marketUi.price = el.value; renderMarketListings(); }
   else if (el.dataset && el.dataset.mkCritKey !== undefined) {

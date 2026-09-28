@@ -4755,6 +4755,12 @@ window.HM_I18N_EN = {
   "256es": "1/256 finals",
   "Seizièmes": "1/16 finals",
   "Supercoupe": "Super Cup",
+  // Marché mondial (2026-09-28).
+  "Monde entier": "Whole world",
+  "Mon pays": "My country",
+  "Mon championnat": "My league",
+  "Marché mondial": "World market",
+  ": les annonces de tous les championnats, dans tous les pays, apparaissent aussi (drapeau et division du vendeur sur la carte ; filtre « Monde entier », « Mon pays » ou « Mon championnat »). On y enchérit de la même façon ; le joueur rejoint votre club à la clôture de l'enchère. Les annonces des autres championnats se mettent à jour toutes les quelques minutes : si quelqu'un a surenchéri entre-temps, votre enchère est refusée et le prix actualisé.": ": listings from every league, in every country, show up too (the seller's flag and division on the card; “Whole world”, “My country” or “My league” filter). You bid the same way; the player joins your club when the auction closes. Listings from other leagues refresh every few minutes: if someone outbid you in the meantime, your bid is refused and the price updated.",
   "Voir la Supercoupe": "See the Super Cup",
   "Supercoupe · saison {0} · champion de Division I contre vainqueur de la Coupe": "Super Cup · season {0} · Division I champion vs Cup winner",
   "Vainqueur : {0}": "Winner: {0}",

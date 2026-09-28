@@ -1574,6 +1574,65 @@ function estimateMarketValue(player) {
 function transferMinIncrement(amount) {
   return Math.max(TRANSFER_MIN_INCREMENT_FLAT, Math.round(amount * TRANSFER_MIN_INCREMENT_PCT));
 }
+// Marché mondial : index « enchérisseur d'un autre championnat » dans
+// listing.currentBidderIdx / bids[].bidderIdx (jamais un vrai index de club,
+// voir League.placeForeignBid) — la référence est dans currentBidderRef.
+const FOREIGN_BIDDER_IDX = -1;
+
+// Transfert d'un joueur de `seller` à `buyer` au prix `amount` (enchère
+// conclue) : contrôles de dernière minute (effectif, budget), départ/arrivée
+// dans les compositions, transactions, fils d'actualité, motivation,
+// alchimie. Commun aux enchères d'un même championnat (League._resolveListing)
+// et du marché mondial (server/world.js). Renvoie { result: "sold" |
+// "buyer-failed" | "player-missing", player? }.
+function transferPlayerBetweenTeams(seller, buyer, playerId, amount, now) {
+  // Revérifie au moment de la clôture que l'acheteur a toujours les
+  // moyens ET la place (son budget/effectif a pu changer entre-temps) —
+  // simplification volontaire : pas de "repêchage" du 2e enchérisseur si
+  // le 1er échoue, l'enchère est simplement perdue pour tout le monde.
+  if (!buyer || !seller || buyer.players.length >= MAX_ROSTER_SIZE || (buyer.isHuman && amount > buyer.budget)) {
+    return { result: "buyer-failed" };
+  }
+  const idx = seller.players.findIndex(p => p.id === playerId);
+  if (idx === -1) return { result: "player-missing" };
+  // Alchimie d'équipe (voir chemistryRosterImportance/rosterRankOf) : le
+  // rang du joueur DANS L'EFFECTIF VENDEUR, calculé AVANT le splice().
+  const sellerImportance = chemistryRosterImportance(rosterRankOf(seller.players, playerId));
+  const [player] = seller.players.splice(idx, 1);
+  // Titulaire vendu : club humain → le remplaçant désigné prend sa place
+  // (voir Team.handleStarterDeparture) ; club CPU → feuille reconstruite.
+  if (seller.isHuman) seller.handleStarterDeparture(playerId);
+  else seller.autoAssignLineup();
+  if (buyer.isHuman) buyer.recordTransaction(`Achat de ${player.name} (enchères)`, -amount);
+  if (seller.isHuman) seller.recordTransaction(`Vente de ${player.name} (enchères)`, amount);
+  // Fils d'actualité : chaque côté humain reçoit sa propre entrée.
+  if (buyer.isHuman && buyer.feed) {
+    handleGameEvent(buyer.feed, {
+      type: "transfer_in", week: buyer.week, playerId: player.id, playerName: player.name,
+      from: seller.name, fee: amount,
+    }, { clubName: buyer.name });
+  }
+  if (seller.isHuman && seller.feed) {
+    handleGameEvent(seller.feed, {
+      type: "transfer_out", week: seller.week, playerName: player.name, to: buyer.name, fee: amount,
+    }, { clubName: seller.name });
+  }
+  buyer.players.push(player);
+  // Voir TRANSFER_NEW_CLUB_MOTIVATION_FLOOR : un vrai changement de club
+  // relève la motivation jusqu'à ce plancher, referme toute demande de
+  // transfert active.
+  if (player.form < TRANSFER_NEW_CLUB_MOTIVATION_FLOOR) player.form = TRANSFER_NEW_CLUB_MOTIVATION_FLOOR;
+  player.weeksAtLowMotivation = 0;
+  player.transferRequestActive = false;
+  player.transferRequestQuote = null;
+  player.transferRequestDiscussed = false;
+  if (!buyer.isHuman) buyer.autoAssignLineup();
+  const buyerImportance = chemistryRosterImportance(rosterRankOf(buyer.players, player.id));
+  seller.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * sellerImportance);
+  buyer.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * buyerImportance);
+  return { result: "sold", player };
+}
+
 function minNextBidFor(listing) {
   if (!listing.currentBid) return listing.startPrice;
   return listing.currentBid + transferMinIncrement(listing.currentBid);
@@ -10140,6 +10199,7 @@ class League {
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
+    listing.currentBidderRef = null; // marché mondial : plus d'enchérisseur d'ailleurs en tête
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
     return { ok: true, listing };
   }
@@ -10166,82 +10226,43 @@ class League {
       listing.result = "unsold";
       return;
     }
+    // Enchérisseur d'un AUTRE championnat (marché mondial, voir
+    // placeForeignBid) : le transfert se fait au niveau du monde, qui seul
+    // a les deux ligues en main (server/world.js:resolveForeignTransfers).
+    if (listing.currentBidderIdx === FOREIGN_BIDDER_IDX) {
+      listing.result = "foreign-pending";
+      return;
+    }
     const buyerIdx = listing.currentBidderIdx;
     const buyer = this.teams[buyerIdx];
     const seller = this.teams[listing.sellerIdx];
     const amount = listing.currentBid;
-    // Revérifie au moment de la clôture que l'acheteur a toujours les
-    // moyens ET la place (son budget/effectif a pu changer entre-temps) —
-    // simplification volontaire : pas de "repêchage" du 2e enchérisseur si
-    // le 1er échoue, l'enchère est simplement perdue pour tout le monde.
-    if (buyer.players.length >= MAX_ROSTER_SIZE || (buyer.isHuman && amount > buyer.budget)) {
-      listing.result = "buyer-failed";
-      return;
-    }
-    const idx = seller.players.findIndex(p => p.id === listing.playerId);
-    if (idx === -1) { listing.result = "player-missing"; return; }
-    // Alchimie d'équipe (voir chemistryRosterImportance/rosterRankOf plus
-    // haut, levier 2 des 3) : le rang du joueur DANS L'EFFECTIF VENDEUR,
-    // calculé AVANT le splice() ci-dessous (tant qu'il y figure encore).
-    const sellerImportance = chemistryRosterImportance(rosterRankOf(seller.players, listing.playerId));
-    const [player] = seller.players.splice(idx, 1);
-    // Retour utilisateur (2026-09) : "en cas d'indisponibilité pour vente
-    // d'un joueur, qui avait été mis dans la composition, il doit être
-    // enlevé de la composition [...] si un titulaire est vendu, qu'il y a 4
-    // joueurs titu et au moins un remplaçant, [...] le remplaçant doit être
-    // aligné comme titu sur le poste laissé en blanc, il ne faut pas mettre
-    // un forfait dans ce type de cas" (voir le même correctif/commentaire
-    // détaillé sur Team.sellPlayer/handleStarterDeparture plus haut) — pour
-    // une équipe HUMAINE (n'importe laquelle, voir Team.isHuman — plus
-    // seulement l'index 0), promeut le remplaçant déjà désigné pour le poste
-    // du titulaire vendu s'il y en a un, sinon laisse le trou, plutôt que de
-    // reconstruire automatiquement TOUTE la feuille de match ; les clubs
-    // CPU, eux, n'ont personne pour la retoucher manuellement, donc on
-    // continue de la reconstruire entièrement pour eux comme avant (sinon
-    // ils s'effondreraient en forfaits après le moindre transfert). Idem
-    // côté acheteur : un joueur d'un club HUMAIN nouvellement acquis rejoint
-    // le banc plutôt que d'être auto-titularisé (ce qui pourrait sinon
-    // déloger un titulaire déjà choisi manuellement).
-    if (seller.isHuman) seller.handleStarterDeparture(listing.playerId);
-    else seller.autoAssignLineup();
-    if (buyer.isHuman) buyer.recordTransaction(`Achat de ${player.name} (enchères)`, -amount);
-    if (seller.isHuman) seller.recordTransaction(`Vente de ${player.name} (enchères)`, amount);
-    // Fil d'actualité du tableau de bord (voir FEED_CATEGORIES plus haut) :
-    // les DEUX côtés humains d'un même transfert reçoivent chacun leur propre
-    // entrée (transfer_in pour l'acheteur, transfer_out pour le vendeur) dans
-    // LEUR fil respectif — jamais le même événement des deux côtés.
-    if (buyer.isHuman && buyer.feed) {
-      handleGameEvent(buyer.feed, {
-        type: "transfer_in", week: buyer.week, playerId: player.id, playerName: player.name,
-        from: seller.name, fee: amount,
-      }, { clubName: buyer.name });
-    }
-    if (seller.isHuman && seller.feed) {
-      handleGameEvent(seller.feed, {
-        type: "transfer_out", week: seller.week, playerName: player.name, to: buyer.name, fee: amount,
-      }, { clubName: seller.name });
-    }
-    buyer.players.push(player);
-    // Voir le grand commentaire de TRANSFER_NEW_CLUB_MOTIVATION_FLOOR plus
-    // haut : un vrai changement de club (ce transfert-ci) relève la
-    // motivation jusqu'à ce plancher si besoin, referme toute demande de
-    // transfert active (elle visait l'ancien club), jamais l'inverse.
-    if (player.form < TRANSFER_NEW_CLUB_MOTIVATION_FLOOR) player.form = TRANSFER_NEW_CLUB_MOTIVATION_FLOOR;
-    player.weeksAtLowMotivation = 0;
-    player.transferRequestActive = false;
-    player.transferRequestQuote = null;
-    player.transferRequestDiscussed = false;
-    if (!buyer.isHuman) buyer.autoAssignLineup();
-    // Alchimie d'équipe (suite) : le rang du joueur DANS L'EFFECTIF
-    // ACHETEUR, calculé APRÈS le push() ci-dessus (il y figure désormais).
-    // Malus des DEUX côtés (jamais de bonus, voir le grand commentaire de
-    // CHEMISTRY_ROSTER_CHANGE_MAX_RANK) : partir ET arriver perturbent
-    // chacun la cohésion déjà en place dans leur effectif respectif.
-    const buyerImportance = chemistryRosterImportance(rosterRankOf(buyer.players, player.id));
-    seller.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * sellerImportance);
-    buyer.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * buyerImportance);
-    listing.result = "sold";
-    listing.finalPrice = amount;
+    const res = transferPlayerBetweenTeams(seller, buyer, listing.playerId, amount, now);
+    listing.result = res.result;
+    if (res.result === "sold") listing.finalPrice = amount;
+  }
+
+  // Marché mondial (2026-09-28, « marché des transferts mondial ») :
+  // enchère d'un club d'un AUTRE championnat sur une annonce de celui-ci.
+  // `bidderRef` = { leagueId, idx, name } ; `bidder` = son objet Team (chargé
+  // par le serveur dans sa propre ligue) pour les mêmes contrôles que
+  // placeBid (effectif, budget). L'annonce retient l'enchérisseur par sa
+  // référence (currentBidderIdx = FOREIGN_BIDDER_IDX).
+  placeForeignBid(listingId, bidderRef, bidder, amount, now) {
+    const listing = this.transferListings.find(l => l.id === listingId);
+    if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
+    if (!bidder || !bidderRef) return { ok: false, reason: "invalid-bidder" };
+    if (bidder.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
+    const minBid = minNextBidFor(listing);
+    if (amount < minBid) return { ok: false, reason: "too-low", minBid };
+    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    const rounded = Math.round(amount);
+    const ref = { leagueId: bidderRef.leagueId, idx: bidderRef.idx, name: bidderRef.name || bidder.name };
+    listing.currentBid = rounded;
+    listing.currentBidderIdx = FOREIGN_BIDDER_IDX;
+    listing.currentBidderRef = ref;
+    listing.bids.push({ bidderIdx: FOREIGN_BIDDER_IDX, bidderRef: ref, amount: rounded, at: now });
+    return { ok: true, listing };
   }
 
   // À appeler à intervalles réguliers côté UI (chargement de la page,
@@ -10322,6 +10343,7 @@ class League {
         const bidAmount = Math.min(maxWilling, Math.round(minBid * rand(1, 1.15)));
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
+        listing.currentBidderRef = null;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
       });
     });
@@ -14852,7 +14874,7 @@ return {
   ASSISTANT_SPECIALTIES, ASSISTANT_WEIGHT_BY_LEVEL, ASSISTANT_BASE_SALARY, assistantAttrWeightsFor,
   MEDICAL_STAFF_ROLES, DOCTOR_INJURY_DURATION_REDUCTION_BY_LEVEL,
   PHYSIO_RECOVERY_BONUS_BY_LEVEL, PHYSIO_INJURY_RISK_MULT_BY_LEVEL,
-  MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor,
+  MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, transferPlayerBetweenTeams,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,

@@ -1356,6 +1356,15 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             payload.league.superCup = national.superCup || null;
           }
         }
+        // Marché mondial (server/worldMarket.js) : annonces des autres
+        // championnats + enchérisseurs d'ailleurs sur les siennes.
+        if (ctx.world) {
+          const own = World.WorldMarket.projectOwnForeignBidders(payload.league.transferListings);
+          const index = await store.loadWorldAuxRaw("market", multiSavePath);
+          const foreign = World.WorldMarket.projectForLeague(index, ctx.leagueId, ctx.teamIndex, now);
+          payload.league.transferListings = own.listings.concat(foreign.listings);
+          payload.league.guestTeams = (payload.league.guestTeams || []).concat(own.guests, foreign.guests);
+        }
         // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
         payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex);
         // Matchs amicaux : seulement les siens, sans la compo de l'adversaire.
@@ -1681,17 +1690,49 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Marché mondial : enchère sur l'annonce d'un AUTRE championnat (id
+      // négatif = −identifiant global, voir server/worldMarket.js).
+      if (route.pathname === "/api/market/bid" && req.method === "POST") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const rawId = body && body.listingId;
+        const numId = typeof rawId === "string" && /^-?\d+$/.test(rawId) ? Number(rawId) : rawId;
+        if (ctx.world && typeof numId === "number" && numId < 0) {
+          if (typeof body.amount !== "number" || !(body.amount > 0)) { sendJson(res, 400, { ok: false, error: "amount doit être un nombre positif." }); return; }
+          const index = await store.loadWorldAuxRaw("market", multiSavePath);
+          const team = ctx.league.teams[ctx.teamIndex];
+          const out = await World.WorldMarket.placeForeignBid({
+            index, leagueId: ctx.leagueId, teamIdx: ctx.teamIndex, team, gid: -numId, amount: body.amount, now,
+            loadLeague: id => World.loadLeague(ctx.world, id, multiSavePath),
+            saveLeague: lg => store.saveMultiLeague(lg, multiSavePath),
+            saveIndex: ix => store.saveWorldAuxRaw("market", ix, multiSavePath),
+          });
+          if (!out.ok) { sendJson(res, 400, { ok: false, error: `Enchère refusée : ${out.reason}${out.minBid ? ` (minimum ${out.minBid})` : ""}.`, reason: out.reason, minBid: out.minBid || null }); return; }
+          // Rattrapage du monde dès la clôture (transfert entre championnats).
+          const closesAt = out.entry.closesAt;
+          const cur = nextWorldDeadlineAt.get(multiSavePath);
+          if (cur == null || closesAt + 1000 < cur) nextWorldDeadlineAt.set(multiSavePath, closesAt + 1000);
+          sendJson(res, 200, { ok: true, foreign: true, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
+          return;
+        }
+        req.__parsedBody = body;
+      }
+
       const actionFn = req.method === "POST" ? ACTION_ROUTES[route.pathname] : null;
       if (actionFn) {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
 
-        let body;
-        try {
-          body = await readJsonBody(req);
-        } catch (e) {
-          sendJson(res, 400, { ok: false, error: e.message });
-          return;
+        let body = req.__parsedBody;
+        if (body === undefined) {
+          try {
+            body = await readJsonBody(req);
+          } catch (e) {
+            sendJson(res, 400, { ok: false, error: e.message });
+            return;
+          }
         }
 
         if (ctx.world && route.pathname.startsWith("/api/scouting/")) await attachNationalCupGuests(ctx, multiSavePath);

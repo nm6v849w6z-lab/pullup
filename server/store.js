@@ -325,12 +325,15 @@ async function loadMultiLeague(savePath = defaultMultiLeaguePath(), leagueId = H
 // Sauvegarde sous l'identité du championnat (league.leagueId, voir
 // leagueStorage) : `savePath` reste le chemin de la ligue historique, dont
 // les autres championnats dérivent le leur.
-async function saveMultiLeague(league, savePath = defaultMultiLeaguePath()) {
+// `body` (facultatif) : sérialisation JSON déjà calculée (voir
+// server/world.js:catchUpWorld, qui compare avant/après pour n'écrire que
+// les championnats modifiés).
+async function saveMultiLeague(league, savePath = defaultMultiLeaguePath(), body = null) {
   const where = leagueStorage(league && league.leagueId, savePath);
   savePath = where.file;
   if (upstashConfigured()) {
     try {
-      await redisSet(where.redis, JSON.stringify(serializeMultiLeague(league)));
+      await redisSet(where.redis, body || JSON.stringify(serializeMultiLeague(league)));
     } catch (e) {
       console.warn("Écriture Redis (Upstash) de la ligue multi-manager échouée :", e.message);
     }
@@ -338,8 +341,41 @@ async function saveMultiLeague(league, savePath = defaultMultiLeaguePath()) {
   }
   fs.mkdirSync(path.dirname(savePath), { recursive: true });
   const tmpPath = `${savePath}.tmp-${process.pid}-${Date.now()}`;
-  fs.writeFileSync(tmpPath, JSON.stringify(serializeMultiLeague(league)), "utf-8");
+  fs.writeFileSync(tmpPath, body || JSON.stringify(serializeMultiLeague(league)), "utf-8");
   fs.renameSync(tmpPath, savePath);
+}
+
+// Données annexes du monde (index du marché mondial…) : une clé/fichier par
+// nom, à côté du registre — chargées seulement quand on en a besoin.
+function worldAuxStorage(name, savePath) {
+  if (!/^[a-z]+$/.test(name)) throw new Error(`Nom de données du monde invalide : ${name}`);
+  return { redis: `${redisPrefix()}pullup:world:${name}`, file: savePath.replace(/\.json$/, "") + `.world.${name}.json` };
+}
+async function loadWorldAuxRaw(name, savePath = defaultMultiLeaguePath()) {
+  const where = worldAuxStorage(name, savePath);
+  try {
+    if (upstashConfigured()) {
+      const raw = await redisGet(where.redis);
+      return raw == null ? null : JSON.parse(raw);
+    }
+    if (!fs.existsSync(where.file)) return null;
+    return JSON.parse(fs.readFileSync(where.file, "utf-8"));
+  } catch (e) {
+    console.warn(`Données du monde « ${name} » illisibles :`, e.message);
+    return null;
+  }
+}
+async function saveWorldAuxRaw(name, data, savePath = defaultMultiLeaguePath()) {
+  const where = worldAuxStorage(name, savePath);
+  const body = JSON.stringify(data);
+  if (upstashConfigured()) {
+    try { await redisSet(where.redis, body); } catch (e) { console.warn(`Écriture Redis des données du monde « ${name} » échouée :`, e.message); }
+    return;
+  }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, body, "utf-8");
+  fs.renameSync(tmp, where.file);
 }
 
 // Résout le manager qui a fait CETTE requête à partir de son jeton privé
@@ -484,7 +520,7 @@ module.exports = {
   serializeMultiLeague, deserializeMultiLeague, loadMultiLeague, saveMultiLeague,
   resolveManagerTeam,
   // Championnats par pays (voir server/world.js) :
-  HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, stampHistoricLeague,
+  HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, stampHistoricLeague, loadWorldAuxRaw, saveWorldAuxRaw,
   // Comptes joueurs (voir server/accounts.js) :
   defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,
   // Backend Redis (Upstash) optionnel (voir grand commentaire dédié plus

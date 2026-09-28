@@ -239,6 +239,7 @@ function replaceRoster(league, teamIndex, country = (league && league.country) |
       const last = l.bids[l.bids.length - 1];
       l.currentBid = last ? last.amount : null;
       l.currentBidderIdx = last ? (last.bidderIdx != null ? last.bidderIdx : last.teamIdx) : null;
+      l.currentBidderRef = last && last.bidderRef ? { ...last.bidderRef } : null;
     }
   });
   team.players = generateBasicRoster(country);

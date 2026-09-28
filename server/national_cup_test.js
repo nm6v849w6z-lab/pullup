@@ -61,6 +61,13 @@ const fmt = (ms, tz) => new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday
   const leagues = new Map();
   for (const e of World.leaguesOfCountry(w, "fr")) leagues.set(e.id, await World.loadLeague(w, e.id, multi));
   w.cups = { fr: NC.createNationalCup("fr", World.leaguesOfCountry(w, "fr"), leagues, 1) };
+  {
+    // Rennes (seul manager hors Division I) joue le 1er tour plutôt que d'être exempt.
+    const ms = w.cups.fr.rounds[0].matches;
+    const mine = ms.find(m => m.home.leagueId === "fr-2.1" && m.home.name === "Rennes Coupe" && m.bye);
+    const other = ms.find(m => !m.bye && m.home.level === 2);
+    if (mine && other) { const tmp = mine.home; mine.home = other.home; other.home = tmp; }
+  }
   await World.saveWorld(w, multi);
   const cup0 = w.cups.fr;
   assert.strictEqual(cup0.totalRounds, 5);
