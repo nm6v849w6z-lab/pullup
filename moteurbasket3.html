@@ -7527,6 +7527,7 @@
         <h3>Matchs amicaux</h3>
         <p class="training-intro">Un amical se joue un <b>jour de repos</b> des deux clubs (aucun match officiel ce jour-là), à l'heure de votre choix, jusqu'à 3 semaines à l'avance, et un seul par jour. Une équipe CPU accepte tout de suite ; un autre manager reçoit un message privé et doit accepter avant l'heure du match.</p>
         <p class="training-intro" style="margin-top:10px;">C'est un vrai match pour les joueurs : fatigue, blessures possibles et minutes comptées pour l'entraînement des fondamentaux, comme en championnat. Le jour d'un amical n'est pas un jour de repos : pas d'entraînement collectif ce jour-là (ni tactique, ni récupération). L'amical fait un peu progresser la connaissance tactique selon les minutes de vos titulaires et joueurs de rotation. Il ne change rien au classement, aux finances ni aux stats de saison. Dans la <b>composition</b> de l'amical, vous pouvez aligner les jeunes de l'académie ; sans composition propre, l'amical se joue avec les ordres actuels du club.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Contre un club d'un autre championnat</b>, même d'un autre pays : tapez son nom dans la recherche d'adversaire, les clubs du monde entier apparaissent sous ceux de votre ligue (drapeau et division). Mêmes règles : jour de repos des deux clubs, heure de Paris, invitation à accepter contre un manager (il est prévenu dans son fil d'actualité).</p>
       </div>
 
       <div class="guide-entry" data-guide-id="lp" data-guide-group="Compétitions">
@@ -19974,7 +19975,9 @@ function serializeLeague(lg) {
 // Proxy qui ne répond à ces index-là QUE sur lecture directe
 // (league.teams[idx]) : longueur, forEach, map… restent ceux des 10 clubs.
 function installGuestTeams(lg, guests) {
-  const map = new Map();
+  // Appel répété (liste d'amicaux rafraîchie…) : ajoute au même dictionnaire.
+  const existing = lg.guestTeamsByIdx instanceof Map ? lg.guestTeamsByIdx : null;
+  const map = existing || new Map();
   (Array.isArray(guests) ? guests : []).forEach(g => {
     if (!g || (!g.team && !g.light) || typeof g.localIdx !== "number") return;
     let t;
@@ -19990,7 +19993,8 @@ function installGuestTeams(lg, guests) {
     map.set(g.localIdx, t);
   });
   lg.guestTeamsByIdx = map;
-  if (!map.size) return;
+  if (!map.size || lg.__guestProxy) return;
+  lg.__guestProxy = true;
   const base = lg.teams;
   lg.teams = new Proxy(base, {
     get(target, prop, receiver) {
@@ -43386,9 +43390,13 @@ async function lpAction(path, body, okText) {
 // ---------------------------------------------------------------------
 const FR_STARTERS = 5;
 const FR_BENCH_MAX = 7;
-let frUi = { opponent: null, venue: "home", day: null, time: "20:00", days: null, daysFor: null, daysError: null, loadingDays: false, feedback: null, openLineupId: null, draft: null };
+let frUi = { opponent: null, opponentRef: null, worldResults: null, venue: "home", day: null, time: "20:00", days: null, daysFor: null, daysError: null, loadingDays: false, feedback: null, openLineupId: null, draft: null };
 
 function frList() { return Array.isArray(league.friendlies) ? league.friendlies : []; }
+// Adversaire choisi : club de sa ligue (frUi.opponent) ou d'un autre
+// championnat (frUi.opponentRef, amicaux entre championnats).
+function frOppKey() { return frUi.opponentRef ? `${frUi.opponentRef.leagueId}:${frUi.opponentRef.idx}` : frUi.opponent; }
+function frOppChosenName() { return frUi.opponentRef ? frUi.opponentRef.name : frUi.opponent != null ? frTeamName(frUi.opponent) : ""; }
 function frIsUpcoming(f) { return f.status === "pending" || f.status === "accepted"; }
 function frOppIdx(f) { return f.homeIdx === myTeamIndex ? f.awayIdx : f.homeIdx; }
 function frTeamName(idx) { const t = league.teams[idx]; return t ? t.name : "?"; }
@@ -43412,6 +43420,7 @@ async function frRefreshList() {
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok || !Array.isArray(data.friendlies)) return false;
     const before = JSON.stringify(league.friendlies || []);
+    if (Array.isArray(data.guestTeams)) installGuestTeams(league, data.guestTeams);
     league.friendlies = data.friendlies;
     frUpdateBadge();
     const sec = document.getElementById("amicauxSection");
@@ -43453,7 +43462,7 @@ function renderAmicauxSection() {
         const opp = frOppIdx(f);
         const where = f.homeIdx === myTeamIndex ? "à domicile" : `chez ${escapeHtml(frTeamName(opp))}`;
         return `<div class="fr-row fr-row-invite"><span class="fr-logo">${teamLogoHtml(league.teams[opp], 32)}</span>` +
-          `<span class="fr-row-main"><span class="fr-row-title">${teamLinkHtml(opp, frTeamName(opp))} vous invite</span>` +
+          `<span class="fr-row-main"><span class="fr-row-title">${teamLinkHtml(opp, frTeamName(opp))}${frRemoteTagHtml(f)} vous invite</span>` +
           `<span class="fr-row-sub">${frWhenHtml(f)} · ${where} · répondre avant le ${escapeHtml(formatCalendarDayFr(frInviteDeadline(f)))} à ${escapeHtml(formatCalendarTimeFr(frInviteDeadline(f)))}</span></span>` +
           `<span class="fr-row-actions"><button type="button" class="cal-next-btn fr-btn" data-fr-accept="${f.id}">Accepter</button>` +
           `<button type="button" class="secondary fr-btn" data-fr-decline="${f.id}">Refuser</button></span></div>`;
@@ -43479,13 +43488,38 @@ function frOppResultsHtml(query) {
   const list = [];
   league.teams.forEach((t, i) => { if (i !== myTeamIndex && t && (!q || norm(frTeamName(i)).includes(q))) list.push(i); });
   list.sort((a, b) => (league.teams[b].isHuman ? 1 : 0) - (league.teams[a].isHuman ? 1 : 0) || frTeamName(a).localeCompare(frTeamName(b), "fr"));
-  if (!list.length) return `<p class="fr-opp-none">Aucun club trouvé.</p>`;
+  // Clubs des autres championnats (recherche du monde, voir frSearchWorld).
+  const world = (frUi.worldResults && frUi.worldResults.q === q ? frUi.worldResults.clubs : [])
+    .filter(c => c.leagueId !== league.leagueId).slice(0, 6);
+  if (!list.length && !world.length) return `<p class="fr-opp-none">Aucun club trouvé.</p>`;
   return list.slice(0, 8).map(i => `<button type="button" class="fr-opp-opt" data-fr-opp="${i}" role="option">` +
     `<span class="fr-logo">${teamLogoHtml(league.teams[i], 24)}</span><span class="fr-opp-name">${escapeHtml(frTeamName(i))}</span>` +
-    `<span class="fr-opp-kind">${league.teams[i].isHuman ? "Manager" : "CPU"}</span></button>`).join("");
+    `<span class="fr-opp-kind">${league.teams[i].isHuman ? "Manager" : "CPU"}</span></button>`).join("") +
+    world.map(c => `<button type="button" class="fr-opp-opt fr-opp-world" data-fr-opp-world="${escapeHtml(c.leagueId)}" data-fr-opp-idx="${c.idx}" data-fr-opp-name="${escapeHtml(c.name)}" data-fr-opp-human="${c.isHuman ? 1 : 0}" role="option">` +
+      `<span class="fr-logo">${nationFlagHtml(c.country)}</span><span class="fr-opp-name">${escapeHtml(c.name)}</span>` +
+      `<span class="fr-opp-kind">${escapeHtml(c.label)} · ${c.isHuman ? "Manager" : "CPU"}</span></button>`).join("");
 }
 // Heure limite pour accepter une invitation (miroir de inviteDeadline,
 // server/friendlies.js) : 3 jours après l'envoi, au plus tard 1 h avant.
+// Recherche des clubs des autres championnats (amicaux entre championnats) :
+// /api/world/search, à partir de 2 lettres ; résultat gardé pour le texte tapé.
+let frWorldSearchSeq = 0;
+async function frSearchWorld(query) {
+  const norm = x => String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const q = norm(query).trim();
+  if (!managerToken || q.length < 2) return;
+  const seq = ++frWorldSearchSeq;
+  try {
+    const res = await fetchApi(`/api/world/search?q=${encodeURIComponent(query)}`);
+    const data = await res.json().catch(() => null);
+    if (seq !== frWorldSearchSeq || !data || !data.ok) return;
+    frUi.worldResults = { q, clubs: Array.isArray(data.clubs) ? data.clubs : [] };
+    const box = document.getElementById("frOpponentResults");
+    const input = document.getElementById("frOpponentSearch");
+    if (box && input && norm(input.value).trim() === q) { box.innerHTML = frOppResultsHtml(input.value); box.classList.add("open"); }
+  } catch (e) { /* recherche du monde indisponible : clubs de la ligue seulement */ }
+}
+
 function frInviteDeadline(f) {
   return Math.min((f.createdAt || 0) + 3 * 24 * 3600 * 1000, f.at - 3600 * 1000);
 }
@@ -43494,16 +43528,17 @@ function frProposeCardHtml() {
   // Recherche d'adversaire (retour utilisateur 2026-09-27 : "dans
   // adversaire, il faudrait plutôt que ce soit une recherche, qu'un menu
   // déroulant") : champ texte + suggestions (voir frOppResultsHtml).
-  const oppName = frUi.opponent != null ? frTeamName(frUi.opponent) : "";
+  const oppName = frOppChosenName();
   let html = `<div class="lp-card fr-propose"><div class="lp-card-title">Proposer un amical</div><div class="lp-form-row fr-propose-row">`;
   html += `<div class="lp-field lp-field-grow fr-opp-field"><label class="field-label" for="frOpponentSearch">Adversaire</label>` +
     `<input type="text" id="frOpponentSearch" class="topbar-search-input fr-opp-input" autocomplete="off" placeholder="Rechercher un club…" aria-label="Rechercher un club" value="${escapeHtml(oppName)}">` +
     `<div class="fr-opp-results" id="frOpponentResults" role="listbox"></div></div>`;
-  const days = frUi.daysFor === frUi.opponent && Array.isArray(frUi.days) ? frUi.days : null;
+  const chosen = frOppKey() != null;
+  const days = frUi.daysFor === frOppKey() && Array.isArray(frUi.days) ? frUi.days : null;
   const dayObj = days ? days.find(d => d.day === frUi.day) || null : null;
-  const disDay = frUi.opponent == null || !days || !days.length ? " disabled" : "";
+  const disDay = !chosen || !days || !days.length ? " disabled" : "";
   html += `<div class="lp-field"><label class="field-label" for="frDaySelect">Jour</label><select id="frDaySelect"${disDay}>` +
-    (frUi.opponent == null ? `<option>Choisissez d'abord l'adversaire</option>`
+    (!chosen ? `<option>Choisissez d'abord l'adversaire</option>`
       : frUi.loadingDays ? `<option>Chargement…</option>`
       : !days ? `<option>${escapeHtml(frUi.daysError || "Indisponible")}</option>`
       : !days.length ? `<option>Aucun jour de repos commun</option>`
@@ -43516,11 +43551,17 @@ function frProposeCardHtml() {
   html += `<p class="field-label">Terrain</p><div class="lp-venues fr-venues">` +
     `<button type="button" class="lp-venue${frUi.venue === "home" ? " on" : ""}" data-fr-venue="home" aria-pressed="${frUi.venue === "home"}"><span class="lp-venue-title">À domicile</span></button>` +
     `<button type="button" class="lp-venue${frUi.venue === "away" ? " on" : ""}" data-fr-venue="away" aria-pressed="${frUi.venue === "away"}"><span class="lp-venue-title">À l'extérieur</span></button></div>`;
-  const oppTeam = frUi.opponent != null ? league.teams[frUi.opponent] : null;
+  const oppTeam = frUi.opponentRef ? { name: frUi.opponentRef.name, isHuman: frUi.opponentRef.isHuman } : frUi.opponent != null ? league.teams[frUi.opponent] : null;
   const can = !!(oppTeam && dayObj && times.includes(frUi.time));
   html += `<div class="lp-actions"><button type="button" class="cal-next-btn lp-btn" id="frProposeBtn"${can ? "" : " disabled"}>${oppTeam && !oppTeam.isHuman ? "Programmer l'amical" : "Envoyer l'invitation"}</button>` +
+    (frUi.opponentRef ? `<span class="lp-hint">Club d'un autre championnat (${escapeHtml(frUi.opponentRef.label || "")}) : l'amical se joue à la même heure (Paris) pour les deux clubs.</span>` : "") +
     `</div></div>`;
   return html;
+}
+
+// Amical contre un club d'un autre championnat : drapeau + division.
+function frRemoteTagHtml(f) {
+  return f.remote ? ` <span class="lp-tag lp-tag-muted fr-tag-remote">${f.remote.country ? nationFlagHtml(f.remote.country) + " " : ""}${escapeHtml(f.remote.label || "Autre championnat")}</span>` : "";
 }
 
 function frStatusTagHtml(f) {
@@ -43550,7 +43591,7 @@ function frUpcomingRowHtml(f) {
   const open = frUi.openLineupId === f.id;
   const cancelLabel = f.status === "pending" ? "Retirer l'invitation" : "Annuler";
   let html = `<div class="fr-row${open ? " open" : ""}"><span class="fr-logo">${teamLogoHtml(league.teams[opp], 32)}</span>` +
-    `<span class="fr-row-main"><span class="fr-row-title"><span class="cal-opp-prefix">${f.homeIdx === myTeamIndex ? "vs" : "@"}</span> ${teamLinkHtml(opp, frTeamName(opp))}${frStatusTagHtml(f)}</span>` +
+    `<span class="fr-row-main"><span class="fr-row-title"><span class="cal-opp-prefix">${f.homeIdx === myTeamIndex ? "vs" : "@"}</span> ${teamLinkHtml(opp, frTeamName(opp))}${frRemoteTagHtml(f)}${frStatusTagHtml(f)}</span>` +
     `<span class="fr-row-sub">${frWhenHtml(f)} · ${escapeHtml(compoTxt)}</span></span>` +
     `<span class="fr-row-actions"><button type="button" class="cal-next-btn fr-btn" data-fr-orders="${f.id}">${(myOrders || mine) ? "Modifier les ordres" : "Donner les ordres"}</button>` +
     `<button type="button" class="secondary fr-btn fr-cancel" data-fr-cancel="${f.id}">${cancelLabel}</button></span></div>`;
@@ -43667,15 +43708,17 @@ function showFriendlyBoxscore(id) {
 }
 
 async function frLoadDays(oppIdx) {
+  const key = frOppKey();
   frUi.loadingDays = true;
-  frUi.daysFor = oppIdx;
+  frUi.daysFor = key;
   frUi.days = null;
   frUi.daysError = null;
   renderAmicauxSection();
   try {
-    const res = await fetchApi(`/api/friendly/days?opponent=${oppIdx}`);
+    const ref = frUi.opponentRef;
+    const res = await fetchApi(ref ? `/api/friendly/days?league=${encodeURIComponent(ref.leagueId)}&club=${ref.idx}` : `/api/friendly/days?opponent=${oppIdx}`);
     const data = await res.json().catch(() => ({}));
-    if (frUi.daysFor !== oppIdx) return;
+    if (frUi.daysFor !== key) return;
     if (!res.ok || !data.ok) { frUi.daysError = data.error || "Jours indisponibles"; }
     else {
       frUi.days = data.days;
@@ -43707,6 +43750,7 @@ async function frAction(path, body, okText) {
     if (!res.ok || !data.ok) {
       frUi.feedback = { ok: false, text: data.error || `Le serveur a refusé l'action (${res.status}).` };
     } else {
+      if (Array.isArray(data.guestTeams)) installGuestTeams(league, data.guestTeams);
       if (Array.isArray(data.friendlies)) league.friendlies = data.friendlies;
       frUi.feedback = okText ? { ok: true, text: typeof okText === "function" ? okText(data) : okText } : null;
       ok = true;
@@ -43735,10 +43779,10 @@ async function frAction(path, body, okText) {
   const showOppResults = (input) => {
     const box = document.getElementById("frOpponentResults");
     if (!box) return;
-    box.innerHTML = frOppResultsHtml(input.value === (frUi.opponent != null ? frTeamName(frUi.opponent) : null) ? "" : input.value);
+    box.innerHTML = frOppResultsHtml(input.value === (frOppKey() != null ? frOppChosenName() : null) ? "" : input.value);
     box.classList.add("open");
   };
-  holder.addEventListener("input", (e) => { if (e.target.id === "frOpponentSearch") showOppResults(e.target); });
+  holder.addEventListener("input", (e) => { if (e.target.id === "frOpponentSearch") { showOppResults(e.target); frSearchWorld(e.target.value); } });
   holder.addEventListener("focusin", (e) => { if (e.target.id === "frOpponentSearch") showOppResults(e.target); });
   document.addEventListener("click", (e) => {
     if (e.target.closest(".fr-opp-field")) return;
@@ -43746,9 +43790,20 @@ async function frAction(path, body, okText) {
     if (box) box.classList.remove("open");
   });
   holder.addEventListener("click", async (e) => {
+    const worldBtn = e.target.closest("[data-fr-opp-world]");
+    if (worldBtn) {
+      const d = worldBtn.dataset;
+      const c = ((frUi.worldResults && frUi.worldResults.clubs) || []).find(x => x.leagueId === d.frOppWorld && String(x.idx) === d.frOppIdx);
+      frUi.opponent = null;
+      frUi.opponentRef = { leagueId: d.frOppWorld, idx: Number(d.frOppIdx), name: d.frOppName, isHuman: d.frOppHuman === "1", label: c ? c.label : "", country: c ? c.country : null };
+      frUi.feedback = null;
+      frLoadDays(null);
+      return;
+    }
     const oppBtn = e.target.closest("[data-fr-opp]");
     if (oppBtn) {
       frUi.opponent = Number(oppBtn.dataset.frOpp);
+      frUi.opponentRef = null;
       frUi.feedback = null;
       frLoadDays(frUi.opponent);
       return;
@@ -43758,10 +43813,13 @@ async function frAction(path, body, okText) {
     const box = e.target.closest("[data-fr-box]");
     if (box) { showFriendlyBoxscore(box.dataset.frBox); return; }
     if (e.target.closest("#frProposeBtn")) {
-      const opp = league.teams[frUi.opponent];
-      const ok = await frAction("/api/friendly/propose", { opponent: frUi.opponent, day: frUi.day, time: frUi.time, venue: frUi.venue },
-        data => data.status === "accepted" ? `Amical programmé contre ${opp ? opp.name : "?"}.` : `Invitation envoyée à ${opp ? opp.name : "?"} (message privé).`);
-      if (ok) { frUi.days = null; frUi.daysFor = null; frUi.opponent = null; frUi.day = null; renderAmicauxSection(); }
+      const ref = frUi.opponentRef;
+      const opp = ref ? { name: ref.name } : league.teams[frUi.opponent];
+      const body = ref ? { opponentRef: { leagueId: ref.leagueId, idx: ref.idx }, day: frUi.day, time: frUi.time, venue: frUi.venue }
+        : { opponent: frUi.opponent, day: frUi.day, time: frUi.time, venue: frUi.venue };
+      const ok = await frAction("/api/friendly/propose", body,
+        data => data.status === "accepted" ? `Amical programmé contre ${opp ? opp.name : "?"}.` : `Invitation envoyée à ${opp ? opp.name : "?"}${ref ? "" : " (message privé)"}.`);
+      if (ok) { frUi.days = null; frUi.daysFor = null; frUi.opponent = null; frUi.opponentRef = null; frUi.day = null; renderAmicauxSection(); }
       return;
     }
     const acc = e.target.closest("[data-fr-accept]");

@@ -4763,6 +4763,13 @@ window.HM_I18N_EN = {
   "Barrage (7e contre 8e), en direct : {0} reçoit {1} {2} à {3}.": "Play-in (7th vs 8th), live: {0} host {1} on {2} at {3}.",
   "Barrage (7e contre 8e) : {0} {1}-{2} {3}. Le club évite la place de barragiste relégable.": "Play-in (7th vs 8th): {0} {1}-{2} {3}. The club avoids the relegation spot.",
   "Barrage (7e contre 8e) : {0} {1}-{2} {3}. Le club pourra être relégué si le championnat du dessous est ouvert.": "Play-in (7th vs 8th): {0} {1}-{2} {3}. The club may be relegated if the league below is open.",
+  // Amicaux entre championnats (2026-09-28).
+  "Contre un club d'un autre championnat": "Against a club from another league",
+  ", même d'un autre pays : tapez son nom dans la recherche d'adversaire, les clubs du monde entier apparaissent sous ceux de votre ligue (drapeau et division). Mêmes règles : jour de repos des deux clubs, heure de Paris, invitation à accepter contre un manager (il est prévenu dans son fil d'actualité).": ", even from another country: type its name in the opponent search, clubs from all over the world show up below those of your league (flag and division). Same rules: a rest day for both clubs, Paris time, an invitation to accept against a manager (they're notified in their news feed).",
+  "Club d'un autre championnat ({0}) : l'amical se joue à la même heure (Paris) pour les deux clubs.": "Club from another league ({0}): the friendly is played at the same time (Paris) for both clubs.",
+  "Autre championnat": "Another league",
+  "Un des deux clubs a changé de championnat.": "One of the two clubs changed leagues.",
+  "Adversaire du même championnat : passez par la liste habituelle.": "Opponent from the same league: use the usual list.",
   // Marché mondial (2026-09-28).
   "Monde entier": "Whole world",
   "Mon pays": "My country",

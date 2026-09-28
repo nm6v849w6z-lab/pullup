@@ -148,7 +148,12 @@ function officialDaysFor(Engine, league, teamIdx) {
 }
 
 function friendlyDaysFor(league, teamIdx, exceptId = null) {
-  return new Set((league.friendlies || []).filter(f => isUpcoming(f) && involves(f, teamIdx) && f.id !== exceptId).map(f => f.day));
+  const days = new Set((league.friendlies || []).filter(f => isUpcoming(f) && involves(f, teamIdx) && f.id !== exceptId).map(f => f.day));
+  // Amicaux contre un club d'un autre championnat (server/worldFriendlies.js),
+  // posés par server/index.js avant les actions d'amicaux (jamais sauvegardé).
+  const extra = league.worldFriendlyDays && league.worldFriendlyDays.get(teamIdx);
+  if (extra) extra.forEach(d => days.add(d));
+  return days;
 }
 
 // Pourquoi ce jour n'est PAS possible pour ces deux clubs (null = possible).
@@ -474,14 +479,27 @@ function simulateFriendly(Engine, league, f, now) {
   }
   const lineups = f.lineups || {};
   const orders = f.orders || {};
-  const home = buildFriendlyTeam(Engine, homeReal, lineups[f.homeIdx] || null, at, orders[f.homeIdx] || null);
-  const away = buildFriendlyTeam(Engine, awayReal, lineups[f.awayIdx] || null, at, orders[f.awayIdx] || null);
+  f.status = "played";
+  const res = playFriendlyMatch(Engine, homeReal, awayReal,
+    { lineup: lineups[f.homeIdx] || null, orders: orders[f.homeIdx] || null },
+    { lineup: lineups[f.awayIdx] || null, orders: orders[f.awayIdx] || null }, at, now);
+  res.injuries = res.injuries.map(i => ({ teamIdx: i.side === "home" ? f.homeIdx : f.awayIdx, playerId: i.playerId, name: i.name }));
+  f.result = res;
+  friendlyResultFeeds(Engine, f.id, homeReal, awayReal, res, i => i.teamIdx === f.homeIdx);
+}
+
+// Match amical entre deux VRAIS clubs (même championnat ou non, voir
+// server/worldFriendlies.js) : coquilles garnies des vrais joueurs, fatigue,
+// blessures, progression, jour d'amical marqué. `setup` = { lineup, orders }
+// propres à l'amical (ou null : ordres du club). Renvoie le résultat
+// (injuries[].side = "home"|"away").
+function playFriendlyMatch(Engine, homeReal, awayReal, homeSetup, awaySetup, at, now) {
+  const home = buildFriendlyTeam(Engine, homeReal, homeSetup.lineup, at, homeSetup.orders);
+  const away = buildFriendlyTeam(Engine, awayReal, awaySetup.lineup, at, awaySetup.orders);
   const youthIds = new Set([...(homeReal.youthPlayers || []), ...(awayReal.youthPlayers || [])].map(p => p.id));
   const players = [...home.players, ...away.players];
   const injuredBefore = new Map(players.map(p => [p.id, p.injuryUntil]));
-  f.status = "played";
   const res = { scoreHome: 0, scoreAway: 0, forfeit: null, quarterScores: null, boxScoreHome: null, boxScoreAway: null, injuries: [], playedAt: now };
-  f.result = res;
   const homeOk = home.hasValidLineup();
   const awayOk = away.hasValidLineup();
   if (homeOk && awayOk) {
@@ -512,18 +530,23 @@ function simulateFriendly(Engine, league, f, now) {
     });
     players.forEach(p => {
       if (p.injuryUntil && p.injuryUntil !== injuredBefore.get(p.id)) {
-        res.injuries.push({ teamIdx: home.players.includes(p) ? f.homeIdx : f.awayIdx, playerId: p.id, name: p.name });
+        res.injuries.push({ side: home.players.includes(p) ? "home" : "away", playerId: p.id, name: p.name });
       }
     });
   } else if (!homeOk && !awayOk) { res.forfeit = "both"; }
   else if (!homeOk) { res.forfeit = "home"; res.scoreAway = Engine.FORFEIT_SCORE; }
   else { res.forfeit = "away"; res.scoreHome = Engine.FORFEIT_SCORE; }
+  return res;
+}
 
-  [[homeReal, f.homeIdx, awayReal, res.scoreHome, res.scoreAway], [awayReal, f.awayIdx, homeReal, res.scoreAway, res.scoreHome]].forEach(([t, idx, opp, pf, pa]) => {
-    const hurt = res.injuries.filter(i => i.teamIdx === idx).map(i => i.name);
+// Fil d'actualité des deux clubs après un amical. `isHomeInjury(i)` : la
+// blessure i concerne-t-elle le club qui reçoit ?
+function friendlyResultFeeds(Engine, id, homeReal, awayReal, res, isHomeInjury) {
+  [[homeReal, awayReal, res.scoreHome, res.scoreAway, true], [awayReal, homeReal, res.scoreAway, res.scoreHome, false]].forEach(([t, opp, pf, pa, isHome]) => {
+    const hurt = res.injuries.filter(i => isHomeInjury(i) === isHome).map(i => i.name);
     const text = res.forfeit ? "Match décidé par forfait (cinq incomplet)."
       : `Match amical : aucun effet sur le classement ni les finances.${hurt.length ? ` Blessé${hurt.length > 1 ? "s" : ""} : ${hurt.join(", ")}.` : ""}`;
-    pushFeed(Engine, t, `friendly_result_${f.id}_${idx}`, `Amical : ${pf > pa ? "victoire" : "défaite"} ${pf}-${pa} contre ${opp.name}`, text);
+    pushFeed(Engine, t, `friendly_result_${id}_${isHome ? "h" : "a"}`, `Amical : ${pf > pa ? "victoire" : "défaite"} ${pf}-${pa} contre ${opp.name}`, text);
   });
 }
 
@@ -576,7 +599,9 @@ function sanitizeFriendliesForViewer(list, viewerIdx) {
 module.exports = {
   FRIENDLY_TIMES, FRIENDLY_DEFAULT_TIME, FRIENDLY_MIN_LEAD_MS, FRIENDLY_INVITE_TTL_MS, FRIENDLY_ACCEPT_DEADLINE_MS, inviteDeadline, FRIENDLY_HORIZON_DAYS, FRIENDLY_MAX_UPCOMING,
   FRIENDLY_STARTERS, FRIENDLY_BENCH_MAX,
-  dayKeyOf, officialMatchTimesFor, availableDays, dayConflict,
+  dayKeyOf, officialMatchTimesFor, officialDaysFor, friendlyDaysFor, availableDays, dayConflict, parseDayKey, slotEpoch, dayLabelFr, whenLabel, pushFeed,
+  inviteDeadlineOf: inviteDeadline, validateLineup, friendlyPool, playFriendlyMatch, friendlyResultFeeds,
+  FRIENDLY_PLAYED_RETENTION_MS, FRIENDLY_CLOSED_RETENTION_MS,
   proposeFriendly, respondFriendly, cancelFriendly, setFriendlyLineup,
   buildFriendlyTeam, simulateFriendly, catchUpFriendlies, sanitizeFriendliesForViewer,
 };

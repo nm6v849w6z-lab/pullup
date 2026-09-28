@@ -20,6 +20,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Amicaux entre championnats
+  et entre pays** : server/worldFriendlies.js (données annexes du monde
+  « friendlies », mêmes règles que server/friendlies.js : jour de repos des
+  deux clubs, heure de Paris, invitation 3 jours / 1 h avant, un amical par
+  jour — jours « monde » ajoutés aux conflits via league.worldFriendlyDays),
+  joués par catchUpWorld (Friendlies.playFriendlyMatch, extrait de
+  simulateFriendly) ; routes /api/friendly/* : proposition avec
+  opponentRef {leagueId, idx}, actions sur un id « w… », jours
+  ?league=&club= ; liste fusionnée + clubs invités légers (3000 + k).
+  Navigateur : la recherche d'adversaire interroge aussi /api/world/search
+  (clubs des autres championnats, drapeau et division), étiquette de
+  championnat sur les lignes. Test : world_friendly_test.js. Limite : pas
+  de message privé (messagerie par championnat), l'adversaire est prévenu
+  dans son fil d'actualité.
+
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Barrage (7e contre 8e) en
   direct** : rythme hebdomadaire → League.scheduleRelegationBarrage au
   premier créneau des play-offs (mardi 20:00, les 7e et 8e n'y jouent pas),

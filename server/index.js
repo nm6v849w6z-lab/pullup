@@ -422,6 +422,27 @@ async function attachNationalCupGuests(ctx, multiSavePath) {
   ctx.league.guestTeamsByIdx = new Map([[guestIdx, team]]);
 }
 
+// Amicaux entre championnats (server/worldFriendlies.js) : données annexes
+// du monde, jours d'amicaux « monde » posés sur la ligue (conflits), liste
+// fusionnée pour le navigateur.
+async function loadWorldFriendlies(multiSavePath) {
+  return (await store.loadWorldAuxRaw("friendlies", multiSavePath)) || World.WorldFriendlies.emptyStore();
+}
+function attachWorldFriendlyDays(league, leagueId, fstore) {
+  league.worldFriendlyDays = World.WorldFriendlies.friendlyDaysByIdx(fstore, leagueId);
+}
+function mergedFriendlies(ctx, fstore) {
+  const own = Friendlies.sanitizeFriendliesForViewer(ctx.league.friendlies, ctx.teamIndex);
+  if (!ctx.world || !fstore) return { friendlies: own, guests: [] };
+  const w = World.WorldFriendlies.projectForViewer(fstore, ctx.leagueId, ctx.teamIndex);
+  return { friendlies: own.concat(w.friendlies), guests: w.guests };
+}
+function worldRefOf(world, leagueId, league, idx) {
+  const e = world.leagues.find(x => x.id === leagueId);
+  const t = league.teams[idx];
+  return { leagueId, idx, name: t ? t.name : "?", country: league.country || (e && e.country) || "fr", label: e ? World.divisionLabel(e.level, e.group) : "" };
+}
+
 // `async` — voir resolvePlayerContext juste au-dessus, même raison.
 async function persistContext(ctx) {
   if (ctx.isMulti) {
@@ -1356,6 +1377,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             payload.league.superCup = national.superCup || null;
           }
         }
+        // Amicaux entre championnats (server/worldFriendlies.js).
+        if (ctx.world) {
+          const fstore = await loadWorldFriendlies(multiSavePath);
+          const merged = mergedFriendlies(ctx, fstore);
+          payload.league.friendlies = merged.friendlies;
+          payload.league.guestTeams = (payload.league.guestTeams || []).concat(merged.guests);
+        }
         // Marché mondial (server/worldMarket.js) : annonces des autres
         // championnats + enchérisseurs d'ailleurs sur les siennes.
         if (ctx.world) {
@@ -1513,7 +1541,9 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       if (route.pathname === "/api/friendly/list" && req.method === "GET") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
-        sendJson(res, 200, { ok: true, friendlies: Friendlies.sanitizeFriendliesForViewer(ctx.league.friendlies, ctx.teamIndex) });
+        const fstore = ctx.world ? await loadWorldFriendlies(multiSavePath) : null;
+        const merged = mergedFriendlies(ctx, fstore);
+        sendJson(res, 200, { ok: true, friendlies: merged.friendlies, guestTeams: merged.guests });
         return;
       }
 
@@ -1522,6 +1552,18 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
         const { changed } = tick(ctx.league, now);
         if (changed) await persistContext(ctx);
+        const fstore = ctx.world ? await loadWorldFriendlies(multiSavePath) : null;
+        if (fstore) attachWorldFriendlyDays(ctx.league, ctx.leagueId, fstore);
+        // Adversaire d'un autre championnat : ?league=<id>&club=<index>.
+        const otherLeague = route.searchParams.get("league");
+        if (ctx.world && otherLeague && otherLeague !== ctx.leagueId) {
+          const club = Number(route.searchParams.get("club"));
+          const oppLg = ctx.world.leagues.some(e => e.id === otherLeague) ? await World.loadLeague(ctx.world, otherLeague, multiSavePath) : null;
+          if (!oppLg || !Number.isInteger(club) || !oppLg.teams[club]) { sendJson(res, 400, { ok: false, error: "Adversaire invalide." }); return; }
+          attachWorldFriendlyDays(oppLg, otherLeague, fstore);
+          sendJson(res, 200, { ok: true, days: World.WorldFriendlies.availableDays(Engine, ctx.league, ctx.teamIndex, oppLg, club, now) });
+          return;
+        }
         const opp = Number(route.searchParams.get("opponent"));
         if (!Number.isInteger(opp) || !ctx.league.teams[opp] || opp === ctx.teamIndex) { sendJson(res, 400, { ok: false, error: "Adversaire invalide." }); return; }
         sendJson(res, 200, { ok: true, days: Friendlies.availableDays(Engine, ctx.league, ctx.teamIndex, opp, now) });
@@ -1690,6 +1732,61 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Amicaux entre championnats (server/worldFriendlies.js) : proposition
+      // à un club d'une autre ligue (opponentRef) ou action sur un amical
+      // « monde » (id « w… »).
+      const FRIENDLY_ROUTES = ["/api/friendly/propose", "/api/friendly/respond", "/api/friendly/cancel", "/api/friendly/lineup"];
+      if (FRIENDLY_ROUTES.includes(route.pathname) && req.method === "POST") {
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        req.__parsedBody = body;
+        const isWorld = (route.pathname === "/api/friendly/propose" && body && body.opponentRef) || (body && World.WorldFriendlies.isWorldId(body.id));
+        if (isWorld) {
+          const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+          if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+          if (!ctx.world) { sendJson(res, 400, { ok: false, error: "Amicaux entre championnats : ligue partagée seulement." }); return; }
+          const WF = World.WorldFriendlies;
+          const fstore = await loadWorldFriendlies(multiSavePath);
+          attachWorldFriendlyDays(ctx.league, ctx.leagueId, fstore);
+          const me = { league: ctx.league, idx: ctx.teamIndex, ref: worldRefOf(ctx.world, ctx.leagueId, ctx.league, ctx.teamIndex) };
+          // Ligue de l'adversaire (chargée pour les conflits de jours et son fil).
+          let oppLeagueId = null, oppIdx = null;
+          if (route.pathname === "/api/friendly/propose") {
+            oppLeagueId = String(body.opponentRef.leagueId || "");
+            oppIdx = Number(body.opponentRef.idx);
+          } else {
+            const f = fstore.list.find(x => WF.ID_PREFIX + x.id === body.id);
+            const side = f && WF.sideOf(f, ctx.leagueId, ctx.teamIndex);
+            if (side) { const o = f[side === "home" ? "away" : "home"]; oppLeagueId = o.leagueId; oppIdx = o.idx; }
+          }
+          const oppLg = oppLeagueId && oppLeagueId !== ctx.leagueId && ctx.world.leagues.some(e => e.id === oppLeagueId)
+            ? await World.loadLeague(ctx.world, oppLeagueId, multiSavePath) : null;
+          if (oppLg) attachWorldFriendlyDays(oppLg, oppLeagueId, fstore);
+          let result;
+          if (route.pathname === "/api/friendly/propose") {
+            if (!oppLg || !Number.isInteger(oppIdx) || !oppLg.teams[oppIdx]) { sendJson(res, 400, { ok: false, error: "Adversaire introuvable." }); return; }
+            result = WF.propose(Engine, fstore, me, { league: oppLg, idx: oppIdx, ref: worldRefOf(ctx.world, oppLeagueId, oppLg, oppIdx) }, body, now);
+            if (result.ok) delete result.entry;
+          } else if (route.pathname === "/api/friendly/respond") {
+            result = WF.respond(Engine, fstore, me, oppLg, body, now);
+          } else if (route.pathname === "/api/friendly/cancel") {
+            result = WF.cancel(Engine, fstore, me, oppLg, body, now);
+          } else {
+            result = WF.setLineup(Engine, fstore, me, body, now);
+          }
+          if (!result.ok) { sendJson(res, 400, result); return; }
+          await store.saveWorldAuxRaw("friendlies", fstore, multiSavePath);
+          delete ctx.league.worldFriendlyDays;
+          if (oppLg) { delete oppLg.worldFriendlyDays; await store.saveMultiLeague(oppLg, multiSavePath); }
+          const kick = WF.nextKickoff(fstore, now);
+          const cur = nextWorldDeadlineAt.get(multiSavePath);
+          if (kick != null && (cur == null || kick < cur)) nextWorldDeadlineAt.set(multiSavePath, kick);
+          const merged = mergedFriendlies(ctx, fstore);
+          sendJson(res, 200, { ...result, friendlies: merged.friendlies, guestTeams: merged.guests, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
+          return;
+        }
+      }
+
       // Marché mondial : enchère sur l'annonce d'un AUTRE championnat (id
       // négatif = −identifiant global, voir server/worldMarket.js).
       if (route.pathname === "/api/market/bid" && req.method === "POST") {
@@ -1736,7 +1833,15 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
 
         if (ctx.world && route.pathname.startsWith("/api/scouting/")) await attachNationalCupGuests(ctx, multiSavePath);
+        const fstoreForFriendly = ctx.world && route.pathname.startsWith("/api/friendly/") ? await loadWorldFriendlies(multiSavePath) : null;
+        if (fstoreForFriendly) attachWorldFriendlyDays(ctx.league, ctx.leagueId, fstoreForFriendly);
         const result = actionFn(ctx.league.teams[ctx.teamIndex], ctx.teamIndex, ctx.league, body, now);
+        delete ctx.league.worldFriendlyDays;
+        if (fstoreForFriendly && result.ok && Array.isArray(result.friendlies)) {
+          const merged = mergedFriendlies(ctx, fstoreForFriendly);
+          result.friendlies = merged.friendlies;
+          result.guestTeams = merged.guests;
+        }
         if (!result.ok) {
           sendJson(res, 400, result);
           return;

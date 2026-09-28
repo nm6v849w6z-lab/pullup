@@ -31,6 +31,7 @@ const AutoSim = require("./autoSim.js");
 const LiveMatch = require("./liveMatch.js");
 const NationalCup = require("./nationalCup.js");
 const WorldMarket = require("./worldMarket.js");
+const WorldFriendlies = require("./worldFriendlies.js");
 
 const WORLD_VERSION = 1;
 const DEFAULT_COUNTRY = "fr";
@@ -524,6 +525,11 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
   const prevIndex = await store.loadWorldAuxRaw("market", savePath);
   const index = WorldMarket.buildIndex(prevIndex, world.leagues, allLeagues, now, e => divisionLabel(e.level, e.group));
   await store.saveWorldAuxRaw("market", index, savePath);
+  // Amicaux entre championnats (server/worldFriendlies.js).
+  const fstore = (await store.loadWorldAuxRaw("friendlies", savePath)) || WorldFriendlies.emptyStore();
+  if (WorldFriendlies.catchUp(Engine, fstore, allLeagues, now, events)) await store.saveWorldAuxRaw("friendlies", fstore, savePath);
+  const kick = WorldFriendlies.nextKickoff(fstore, now);
+  if (kick != null && (nextDeadlineAt == null || kick < nextDeadlineAt)) nextDeadlineAt = kick;
   const closing = WorldMarket.nextForeignClosing(index, now);
   if (closing != null && (nextDeadlineAt == null || closing < nextDeadlineAt)) nextDeadlineAt = closing + 1000;
   let saved = 0;
@@ -701,5 +707,5 @@ module.exports = {
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,
   isOpenCountry, publicCountries,
-  NationalCup, WorldMarket, divisionLabel, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
+  NationalCup, WorldMarket, WorldFriendlies, divisionLabel, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
 };
