@@ -20,17 +20,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **✅ COMMITTÉ, À POUSSER (2026-09-28) — Ordres (iPhone) : onglets sous
-  l'heure/la batterie** — retour « Tjrs ce bug » (capture). Le commit
-  6791d2d portait le bon titre mais ne contenait QUE les largeurs de
-  colonnes d'Effectif : le correctif n'avait jamais été committé. Cause :
-  topbar masqué sur Ordres → --topbar-h = 0 → barre d'action collée à top:0
-  sous la barre d'état ; seul le topbar réservait env(safe-area-inset-top).
-  moteurbasket3.html (bloc ≤768px des Ordres) : padding-top +
-  safe-area quand .topbar-hidden-on-page ; ordres_notch_test.js.
-  RESTE : pousser, vérifier sur l'iPhone. Test flaky connu :
-  mobile_viewport_meta_test.js échoue en sandbox (fetch failed) avec ou
-  sans ce changement.
+- **✅ COMMITTÉ, À POUSSER (2026-09-28) — iPhone : encoche (suite) + logo de
+  l'adversaire payant sur le tableau de bord** — Hoop Show plein écran et
+  message de la visite guidée réservent env(safe-area-inset-top/bottom)
+  (ordres_notch_test.js étendu) ; dashboardTeamRef transmet logoUrl
+  (teamIsPremium + customLogoDataUrl), test dans dashboard_e2e_test.js
+  (partie 5 ter, après le marquage « lu »). RESTE : pousser, vérifier sur
+  l'iPhone (Ordres, Hoop Show). Test flaky connu : mobile_viewport_meta_test.js
+  échoue en sandbox (fetch failed), avec ou sans ces changements.
+
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Premium : les 4 « Bientôt »
   livrés** (reste en « Bientôt » : salle personnalisée / avatars des jeunes)
   - Notifications : server/webpush.js (Web Push sans dépendance : RFC 8291
@@ -457,12 +455,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     records. Calibrage à vérifier par simulation (écart de score moyen entre
     deux divisions) avant de figer les 7 points.
   - Aujourd'hui : coupe à 10 équipes d'une seule division, rien à faire.
-
-- **⏳ À REPRENDRE — Tableau de bord : vrai logo d'un adversaire payant** :
-  `dashboardTeamRef()` ne résout pas `logoUrl` pour l'adversaire, donc un
-  adversaire isPaying avec `customLogoDataUrl` affiche le ballon générique
-  au lieu de son logo (toujours le cas sur HEAD au 2026-09-27). Ajouter le
-  test correspondant dans dashboard_e2e_test.js.
 
 - **🌐 Hébergement — à vérifier/faire côté utilisateur** :
   - CNAME `www` chez IONOS → hoop-manager-test.onrender.com (adresse

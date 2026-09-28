@@ -19,4 +19,11 @@ console.log("✅ Barre d'action des Ordres : place réservée pour l'encoche / l
 assert(/topbarEl\.classList\.toggle\("topbar-hidden-on-page", id === "prepSection"\)/.test(html),
   "le topbar doit toujours être masqué sur la page Ordres (sinon la règle ne s'applique plus)");
 console.log("✅ Topbar masqué sur Ordres uniquement (la règle s'applique bien).");
-console.log("\n🏁 Ordres mobile : plus rien sous l'encoche.");
+
+// Autres éléments plein écran / collés en haut (même session, 2026-09-28).
+const hs = html.match(/#hoopShowSection\{position:fixed;[^}]*\}/);
+assert(hs && /padding:env\(safe-area-inset-top/.test(hs[0]), "Hoop Show plein écran : env(safe-area-inset-top) manquant");
+assert(/\.tour-toast\{\s*position:fixed; top:calc\(20px \+ env\(safe-area-inset-top/.test(html), "toast de la visite guidée : env(safe-area-inset-top) manquant");
+console.log("✅ Hoop Show et message de la visite guidée : place réservée pour l'encoche.");
+
+console.log("\n🏁 iPhone : plus rien sous l'encoche (Ordres, Hoop Show, visite guidée).");

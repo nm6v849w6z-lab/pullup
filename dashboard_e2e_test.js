@@ -199,6 +199,7 @@ heroCrests.forEach((el) => {
 });
 console.log("✅ Les écussons du club et de l'adversaire affichent tous deux le logo générique \"ballon\" (cohérent avec le reste du jeu), aria-label correct pour chacun.");
 
+
 // ---------------------------------------------------------------------
 // Partie 6 : quitter le tableau de bord marque le fil comme lu (voir
 // clubDashboardMounted + markAllRead dans la délégation [data-tab]).
@@ -212,6 +213,20 @@ const unreadAfter = dom2.window.eval("unreadCount(teamA.feed)");
 console.log("Non-lus après avoir quitté le tableau de bord pour l'onglet Staff :", unreadAfter);
 if (unreadAfter !== 0) throw new Error("❌ Quitter le tableau de bord devrait marquer tout le fil comme lu (markAllRead).");
 console.log("✅ Quitter le tableau de bord marque bien tout le fil comme lu.");
+
+// Partie 5 ter : un adversaire PAYANT (autre manager humain) avec un logo
+// personnalisé doit l'afficher dans le bandeau, comme partout ailleurs
+// (teamLogoHtml) — dashboardTeamRef ne transmettait pas logoUrl.
+const oppLogo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+dom2.window.eval(`teamB.isPaying = true; teamB.customLogoDataUrl = ${JSON.stringify(oppLogo)};`);
+clickTab2("staff");
+clickTab2("club");
+await flush(dom2);
+const heroImgs = [...doc2.querySelectorAll(".hm-hero__team .hm-crest img")];
+if (heroImgs.length !== 1) throw new Error(`❌ Seul l'adversaire payant devrait afficher un <img> (trouvé : ${heroImgs.length}).`);
+if (heroImgs[0].getAttribute("src") !== oppLogo) throw new Error("❌ L'écusson de l'adversaire payant devrait afficher SON logo personnalisé.");
+dom2.window.eval("teamB.isPaying = false; teamB.customLogoDataUrl = null;");
+console.log("✅ Adversaire payant : son logo personnalisé s'affiche dans le bandeau \"Prochain match\".");
 
 await flush(dom2);
 dom2.window.close();

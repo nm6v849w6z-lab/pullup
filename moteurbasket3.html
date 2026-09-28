@@ -3936,7 +3936,11 @@
      du lecteur du prestataire calée en JS sur 100% de ce conteneur (voir
      openHoopShow). z-index sous .boot-splash(999) mais au-dessus de tout
      le reste de l'appli (comparer aux z-index existants juste au-dessus). */
-  #hoopShowSection{position:fixed; inset:0; z-index:700; background:var(--bg);}
+  #hoopShowSection{position:fixed; inset:0; z-index:700; background:var(--bg);
+    /* iPhone (2026-09-28) : plein écran → réserve l'heure/la batterie en haut
+       et la barre d'accueil en bas (0 hors iPhone), #hoopShowMount garde
+       height:100% de ce qui reste. */
+    box-sizing:border-box; padding:env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);}
   #hoopShowSection.hidden{display:none;}
   /* Réutilise .scouting-ad-gray-block (retour utilisateur, Scouting Pro :
      "Pour le moment mets un écran gris avec pub") pour le placeholder de
@@ -4725,7 +4729,7 @@
   .tour-total{margin-top:12px; padding:12px; background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.35); border-radius:8px; color:var(--amber); font-weight:800; font-size:15px;}
   .tour-center-box .tour-btn{margin-top:18px; width:100%; padding:11px;}
   .tour-toast{
-    position:fixed; top:20px; left:50%; transform:translate(-50%,-16px); z-index:620;
+    position:fixed; top:calc(20px + env(safe-area-inset-top, 0px)); left:50%; transform:translate(-50%,-16px); z-index:620; /* sous l'encoche (2026-09-28) */
     background:var(--ok); color:#04241f; font-weight:800; font-size:13px; padding:9px 16px;
     border-radius:999px; opacity:0; transition:opacity .25s, transform .25s; pointer-events:none;
   }
@@ -36652,6 +36656,11 @@ function dashboardTeamRef(idx, team) {
       primary: JERSEY_COLORS[team.jerseyColor] || null,
       secondary: JERSEY_COLORS[team.awayJerseyColor] || null,
     },
+    // Logo personnalisé d'un adversaire payant (autre manager humain de la
+    // ligue) : même règle que pour son propre club (voir club.logoUrl dans
+    // le modèle du tableau de bord) — sans ça, dashCrest affichait le ballon
+    // générique alors que teamLogoHtml montre son logo partout ailleurs.
+    logoUrl: (teamIsPremium(team) && team.customLogoDataUrl) ? team.customLogoDataUrl : null,
   };
 }
 
