@@ -139,10 +139,12 @@ function paris(ms) {
   }
   if (!lg.isPlayoffsDone()) throw new Error("❌ La saison (play-offs compris) aurait dû se terminer.");
   if (!lg.seasonEndTickDone) throw new Error("❌ La mise à jour du lundi qui suit la finale aurait dû avoir lieu.");
-  // Plus aucune mise à jour ensuite (intersaison) : un mois plus tard, rien de neuf.
+  // Semaine d'intersaison (retour utilisateur 2026-09-28) : aucune mise à
+  // jour avant le lundi suivant, qui relance une nouvelle saison (voir
+  // server/new_season_test.js pour la suite).
   const nTrainBefore = log.filter(x => x.ev.type === "training").length;
-  A.catchUpLeague(lg, t + 30 * 24 * 3600 * 1000).forEach(ev => log.push({ ev, t }));
-  if (log.filter(x => x.ev.type === "training").length !== nTrainBefore) throw new Error("❌ Aucune mise à jour après celle de fin de saison.");
+  A.catchUpLeague(lg, t + 3 * 24 * 3600 * 1000).forEach(ev => log.push({ ev, t }));
+  if (log.filter(x => x.ev.type === "training").length !== nTrainBefore) throw new Error("❌ Aucune mise à jour pendant la semaine d'intersaison.");
 
   const trainings = log.filter(x => x.ev.type === "training");
   if (!trainings.length) throw new Error("❌ Aucune mise à jour économique.");

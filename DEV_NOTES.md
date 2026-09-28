@@ -117,6 +117,27 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   - NB : n'a d'effet réel qu'avec une nouvelle saison qui GARDE les
     effectifs (aujourd'hui le reset régénère tout).
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-28) — Lot A : nouvelle saison automatique
+  qui garde les effectifs** — League.startIntersaison (forme 100,
+  motivation >= 55, demandes de transfert refermées), paySeasonEndBonuses
+  (champion de D1), startNextSeason (saison n+1, nouveau calendrier le mardi
+  20h, nouvelle Coupe, classement/PO/stats remis à zéro, objectifs,
+  interview d'avant-saison, fil « La saison N est lancée »),
+  divisionOutcomeForTeam ; garde-fou de vieillissement par numéro de saison
+  (Player.lastAgedSeasonNo, opts.seasonNo de trainWeek/ageCpuPlayers) ;
+  League.seasonNumber/intersaisonStartedAt/autoNextSeason (false = ancien
+  comportement) sérialisés. server/autoSim.js : archive + sponsors AVANT la
+  remise à zéro des stats, puis intersaison ; lundi suivant : mise à jour
+  normale puis startNextSeason ; les marchés tournent pendant l'intersaison.
+  UI : écran de fin de saison en ligue partagée (plus de bouton « Démarrer
+  une nouvelle saison », encadré d'intersaison, verdict pour myTeamIndex,
+  pas de montée/descente sans pyramide) ; guide + tutoriel + en.js. Tests :
+  server/new_season_test.js, new_season_ui_test.js ; weekly_calendar_test
+  adapté (intersaison). NB : la légende du classement affiche encore
+  « Relégation directe (9e, 10e) » en ligue unique (vrai avec la pyramide).
+  NB 2 : calendrier_ordres_stale_live_redirect_test.js est instable
+  (passe 1 fois sur 2, déjà avant ce lot).
+
 - **📝 DÉCIDÉ, À CODER (2026-09-28) — Nouvelle saison qui garde les effectifs
   + divisions / pays / montées-descentes** — décisions utilisateur :
   - Pays : France ET USA au lancement (une pyramide chacun + Coupe

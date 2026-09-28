@@ -7345,7 +7345,7 @@
       <div class="guide-entry" data-guide-id="demarrer" data-guide-group="Bien démarrer">
         <h3>Premiers pas</h3>
         <button type="button" class="tour-launch-btn" id="tourLaunchBtn">Lancer le tutoriel d'accueil (aperçu)</button>
-        <p class="training-intro">Vous dirigez un club de basket en temps réel : les matchs se jouent tout seuls à l'heure prévue, que vous soyez connecté ou non. Une saison dure <b>11 semaines</b> : 9 semaines de championnat, deux journées par semaine le <b>mardi</b> et le <b>samedi à 20:00</b>, puis 2 semaines de <b>play-offs</b> le mardi, le jeudi et le samedi à 20:00 ; en Coupe, un tour chaque <b>jeudi à 20:00</b>. Chaque nuit du dimanche au lundi a lieu la mise à jour de la semaine : salaires et recettes, et entraînement des fondamentaux. Celle qui suit la finale des play-offs clôt la saison (les joueurs prennent un an, les salaires sont recalculés). Entre deux matchs, votre travail : préparer les <b>Ordres</b>, régler l'<b>Entraînement</b>, gérer l'<b>Effectif</b> (marché, jeunes, staff) et les finances du club.</p>
+        <p class="training-intro">Vous dirigez un club de basket en temps réel : les matchs se jouent tout seuls à l'heure prévue, que vous soyez connecté ou non. Une saison dure <b>11 semaines</b> : 9 semaines de championnat, deux journées par semaine le <b>mardi</b> et le <b>samedi à 20:00</b>, puis 2 semaines de <b>play-offs</b> le mardi, le jeudi et le samedi à 20:00 ; en Coupe, un tour chaque <b>jeudi à 20:00</b>. Chaque nuit du dimanche au lundi a lieu la mise à jour de la semaine : salaires et recettes, et entraînement des fondamentaux. Celle qui suit la finale des play-offs clôt la saison (les joueurs prennent un an, les salaires sont recalculés, les retraités s'en vont, la forme repart à 100) et ouvre une <b>semaine d'intersaison</b> : marché ouvert et amicaux possibles, puis la saison suivante démarre toute seule, avec votre effectif. Entre deux matchs, votre travail : préparer les <b>Ordres</b>, régler l'<b>Entraînement</b>, gérer l'<b>Effectif</b> (marché, jeunes, staff) et les finances du club.</p>
         <p class="training-intro" style="margin-top:10px;">La routine conseillée avant chaque match : vérifier la forme des joueurs (<button type="button" class="gd-link" data-guide-goto="forme">Forme et blessures</button>), composer le cinq et la tactique dans l'onglet Ordres, puis valider. Vous pouvez aussi préparer plusieurs journées à l'avance (voir <button type="button" class="gd-link" data-guide-goto="ordres">Ordres et tactiques</button>).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Pendant votre absence</b> : à votre retour, un récapitulatif résume ce qui s'est passé (victoires et défaites, finances de la semaine, progression des joueurs, points à savoir). Le <b>Tableau de bord</b> montre ensuite le prochain match, les actions en attente de la semaine et le pouls du club (humeur des supporters, alchimie).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Sur téléphone</b> : le site s'adapte automatiquement à l'écran (barre d'onglets en bas, menu en tiroir) et peut être ajouté à l'écran d'accueil comme une application.</p>
@@ -11183,6 +11183,7 @@ function motivationLabel(form) {
 // engine.js, miroir identique, grand commentaire au-dessus de
 // TRANSFER_NEW_CLUB_MOTIVATION_FLOOR).
 const TRANSFER_NEW_CLUB_MOTIVATION_FLOOR = 55;
+const INTERSAISON_MOTIVATION_FLOOR = 55; // intersaison, voir League.startIntersaison
 
 // Demande de transfert (voir engine.js, miroir identique, grand commentaire
 // au-dessus de TRANSFER_REQUEST_MOTIVATION_THRESHOLD).
@@ -14638,7 +14639,20 @@ class Team {
       : this.week % SEASON_LENGTH_WEEKS === 0;
     let salaryChanges = null;
     if (seasonEnd) {
-      this.players.forEach(p => { p.age += 1; });
+      // Garde-fou (retour utilisateur 2026-09-28 : "il faut une heure unique
+      // pour tous, sinon on va avoir des joueurs qui ne vieillissent pas ou
+      // qui vieillissent deux fois") : un joueur ne vieillit qu'UNE fois par
+      // numéro de saison (opts.seasonNo, voir League.seasonNumber), même s'il
+      // change de club ou de ligue pendant la bascule.
+      const seasonNo = opts && typeof opts.seasonNo === "number" ? opts.seasonNo : null;
+      const ageUp = p => {
+        if (seasonNo != null) {
+          if (p.lastAgedSeasonNo === seasonNo) return;
+          p.lastAgedSeasonNo = seasonNo;
+        }
+        p.age += 1;
+      };
+      this.players.forEach(ageUp);
       salaryChanges = this.recalculateSalaries();
 
       // Journal de matchs (voir Player.matchLog/recordMatchStatsForTeam) :
@@ -14650,7 +14664,7 @@ class Team {
 
       // Académie de jeunes : les stagiaires vieillissent au même rythme que
       // l'effectif pro (une année d'âge par saison — voir plus haut).
-      (this.youthPlayers || []).forEach(p => { p.age += 1; });
+      (this.youthPlayers || []).forEach(ageUp);
 
       // Décisions en attente laissées SANS RÉPONSE depuis la saison
       // précédente : auto-LIBÉRATION par défaut (retour utilisateur
@@ -16625,10 +16639,16 @@ class League {
   // Les joueurs des clubs de l'IA vieillissent eux aussi d'un an à chaque
   // fin de saison (les clubs humains le font dans Team.trainWeek), sans quoi
   // aucun d'eux n'atteindrait jamais l'âge de la retraite.
-  ageCpuPlayers() {
+  ageCpuPlayers(seasonNo = null) {
     this.teams.forEach(t => {
       if (!t || t.isHuman) return;
-      t.players.forEach(p => { p.age += 1; });
+      t.players.forEach(p => {
+        if (seasonNo != null) {
+          if (p.lastAgedSeasonNo === seasonNo) return;
+          p.lastAgedSeasonNo = seasonNo;
+        }
+        p.age += 1;
+      });
       if (typeof t.recalculateSalaries === "function") t.recalculateSalaries();
     });
   }
@@ -16900,13 +16920,18 @@ class League {
   // Division VI, la plus basse). Renvoie { outcome: "promoted"|"relegated"|
   // "stay", fromLevel, toLevel }.
   divisionOutcomeForUserTeam() {
+    return this.divisionOutcomeForTeam(0);
+  }
+
+  // Même calcul pour n'importe quelle équipe de la ligue (multi-manager).
+  divisionOutcomeForTeam(teamIdx) {
     const fromLevel = this.divisionLevel || MAX_DIVISION_LEVEL;
     const champion = this.playoffs ? this.playoffs.champion : null;
     let outcome = "stay", toLevel = fromLevel;
-    if (champion === 0 && fromLevel > 1) {
+    if (champion === teamIdx && fromLevel > 1) {
       outcome = "promoted";
       toLevel = fromLevel - 1;
-    } else if (this.relegatedTeamIndexes().includes(0) && fromLevel < MAX_DIVISION_LEVEL) {
+    } else if (this.relegatedTeamIndexes().includes(teamIdx) && fromLevel < MAX_DIVISION_LEVEL) {
       outcome = "relegated";
       toLevel = fromLevel + 1;
     }
@@ -16914,8 +16939,106 @@ class League {
     // la pyramide), mais mérite quand même sa propre prime (voir
     // CHAMPION_BONUS_DIVISION_I / seasonEndBonusFor) — à détecter à part,
     // puisque l'outcome ci-dessus reste "stay" dans ce cas précis.
-    const championDivisionI = champion === 0 && fromLevel === 1;
+    const championDivisionI = champion === teamIdx && fromLevel === 1;
     return { outcome, fromLevel, toLevel, championDivisionI };
+  }
+
+  // ---------------------------------------------------------------------
+  // NOUVELLE SAISON AUTOMATIQUE (retour utilisateur 2026-09-28 : effectifs
+  // conservés d'une saison à l'autre, "laisser une semaine d'intersaison
+  // [...] on a le temps de faire ses changements de joueurs", "à
+  // l'intersaison les formes doivent être remises à 0", motivation ramenée
+  // à « Neutre » pour ceux qui sont en dessous). Cycle de 12 semaines :
+  // 9 de championnat + 2 de play-offs + 1 d'intersaison.
+  //  - Lundi qui suit la finale (mise à jour de fin de saison, voir
+  //    server/autoSim.js:runWeeklyEconomyTick) : vieillissement, salaires,
+  //    retraites, primes de fin de saison, puis startIntersaison ci-dessous.
+  //  - Lundi suivant : mise à jour hebdomadaire normale (salaires de la
+  //    semaine, entraînement sur les minutes des amicaux d'intersaison),
+  //    puis startNextSeason : nouveau calendrier, nouvelle Coupe, classement
+  //    remis à zéro, MÊMES clubs et MÊMES effectifs.
+  // ---------------------------------------------------------------------
+
+  // Début d'intersaison : forme physique de TOUS les joueurs remise à 100,
+  // motivation relevée à INTERSAISON_MOTIVATION_FLOOR pour ceux qui sont en
+  // dessous (les demandes de transfert en cours se referment donc).
+  startIntersaison(now = Date.now()) {
+    this.intersaisonStartedAt = now;
+    this.teams.forEach(t => {
+      (t.players || []).forEach(p => {
+        p.condition = 100;
+        p.conditionUpdatedAt = now;
+        if (p.form < INTERSAISON_MOTIVATION_FLOOR) p.form = INTERSAISON_MOTIVATION_FLOOR;
+        p.weeksAtLowMotivation = 0;
+        p.transferRequestActive = false;
+        p.transferRequestQuote = null;
+        p.transferRequestDiscussed = false;
+      });
+    });
+  }
+
+  // Primes de fin de saison pour chaque club humain (champion de Division I ;
+  // prime de montée quand la montée est réellement appliquée, voir la
+  // pyramide). Une seule fois par saison et par club (seasonId).
+  paySeasonEndBonuses(now = Date.now()) {
+    const paid = [];
+    const seasonId = this.seasonId || `start:${this.calendarStartAt || 0}`;
+    this.teams.forEach((t, idx) => {
+      if (!t || !t.isHuman || t.lastSeasonBonusSeasonId === seasonId) return;
+      t.lastSeasonBonusSeasonId = seasonId;
+      const outcome = this.divisionOutcomeForTeam(idx);
+      if (!outcome.championDivisionI) return; // montées : voir la pyramide
+      const bonus = seasonEndBonusFor(outcome);
+      if (!bonus) return;
+      t.recordTransaction(bonus.label, bonus.amount);
+      paid.push({ teamIdx: idx, ...bonus });
+    });
+    return paid;
+  }
+
+  // Nouvelle saison avec les MÊMES clubs et effectifs. `now` = lundi 0h de
+  // la reprise ; le championnat reprend le mardi suivant à 20h (même rythme
+  // hebdomadaire). Renvoie le numéro de la nouvelle saison.
+  startNextSeason(now = Date.now()) {
+    this.seasonNumber = (typeof this.seasonNumber === "number" ? this.seasonNumber : 1) + 1;
+    this.seasonId = randomHexToken(4);
+    this.schedule = generateRoundRobinSchedule(this.teams.length);
+    this.round = 0;
+    this.results = [];
+    this.playoffs = null;
+    this.relegationBarrage = null;
+    this.liveMatches = {};
+    this.liveMatch = null;
+    this.seasonEndTickDone = false;
+    this.intersaisonStartedAt = null;
+    this.calendarWeeklySwitch = null;
+    this.lastEconomyTick = 0;
+    this.lastAutoTrainedWeek = -1;
+    this.lastAutoTrainedDay = -1;
+    if (this.calendarDailyAnchored) {
+      this.calendarStartAt = dailyAnchoredCalendarStartAt(now, this.calendarWeeklyRhythm);
+      this.cup = { rounds: [generateCupBracket(this.teams.map((_, i) => i))], champion: null };
+    }
+    this.teams.forEach(t => {
+      // Stats de saison : la saison écoulée est déjà archivée (histoire du
+      // club) ; les amicaux d'intersaison ne comptent pas dans la nouvelle.
+      (t.players || []).forEach(p => { p.matchLog = []; });
+      if (!t.isHuman) t.autoAssignLineup();
+    });
+    assignSeasonObjectives(this);
+    this.teams.forEach(t => {
+      if (!t.isHuman) return;
+      if (typeof t.queueSeasonPreviewInterview === "function") t.queueSeasonPreviewInterview(now);
+      if (t.feed) {
+        pushEntry(t.feed, {
+          key: "season_start", category: "ligue", week: t.week, createdAt: now,
+          title: `La saison ${this.seasonNumber} est lancée`,
+          text: "Nouveau calendrier, nouvelle Coupe : premier match mardi à 20:00. Votre effectif est conservé.",
+          action: { label: "Calendrier", href: "/calendrier" },
+        });
+      }
+    });
+    return this.seasonNumber;
   }
 
   // ---------------------------------------------------------------------
@@ -18717,6 +18840,8 @@ function serializePlayerRecord(p) {
     retirementWeeks: p.retirementWeeks || 0,
     retirementTalks: Array.isArray(p.retirementTalks) ? p.retirementTalks.slice() : [],
     retirementQuote: p.retirementQuote ?? null,
+    // Garde-fou de vieillissement (voir Team.trainWeek, opts.seasonNo).
+    lastAgedSeasonNo: typeof p.lastAgedSeasonNo === "number" ? p.lastAgedSeasonNo : null,
   };
 }
 
@@ -19129,6 +19254,7 @@ function playerFromSave(pdata) {
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
   if (typeof pdata.retirementQuote === "string") p.retirementQuote = pdata.retirementQuote;
+  if (typeof pdata.lastAgedSeasonNo === "number") p.lastAgedSeasonNo = pdata.lastAgedSeasonNo;
   return p;
 }
 
@@ -19599,6 +19725,11 @@ function serializeLeague(lg) {
     // chacun avoir la leur en même temps).
     liveMatches: lg.liveMatches || {},
     seasonId: lg.seasonId || null,
+    // Nouvelle saison automatique (voir League.startNextSeason).
+    seasonNumber: typeof lg.seasonNumber === "number" ? lg.seasonNumber : 1,
+    intersaisonStartedAt: typeof lg.intersaisonStartedAt === "number" ? lg.intersaisonStartedAt : null,
+    // false = pas de nouvelle saison automatique (attente d'un reset manuel).
+    autoNextSeason: lg.autoNextSeason === false ? false : true,
     // Confort d'affichage résolu PAR L'APPELANT pour UN destinataire précis
     // (voir League.liveMatch ci-dessus) — `null` si rien de particulier n'a
     // été résolu.
@@ -19655,6 +19786,9 @@ function leagueFromSave(data, userTeam = null) {
   lg.liveMatches = data.liveMatches && typeof data.liveMatches === "object" ? data.liveMatches : {};
   lg.liveMatch = data.liveMatch || null;
   lg.seasonId = typeof data.seasonId === "string" ? data.seasonId : null;
+  lg.seasonNumber = typeof data.seasonNumber === "number" ? data.seasonNumber : 1;
+  lg.intersaisonStartedAt = typeof data.intersaisonStartedAt === "number" ? data.intersaisonStartedAt : null;
+  lg.autoNextSeason = data.autoNextSeason === false ? false : true;
   // Voir engine.js, miroir identique (DEV_NOTES.md point 11).
   lg.showsPronostics = data.showsPronostics && typeof data.showsPronostics === "object" ? data.showsPronostics : {};
   // Rétro-compatibilité (voir engine.js, miroir identique) : rattrape une
@@ -30776,6 +30910,24 @@ function playoffSeriesLineHtml(label, s, nameOf) {
   return `<p class="gain-note">${escapeHtml(label)} : ${escapeHtml(nameOf(s.idxA))} vs ${escapeHtml(nameOf(s.idxB))} (${scores}) ${status}</p>`;
 }
 
+// Encadré d'intersaison (ligue partagée, voir League.startIntersaison/
+// startNextSeason) : le lundi qui suit la finale, mise à jour de fin de
+// saison ; une semaine plus tard, reprise automatique avec les mêmes
+// effectifs, premier match le mardi à 20:00.
+function intersaisonNoticeHtml() {
+  const DAY = 24 * 3600 * 1000;
+  const n = typeof league.seasonNumber === "number" ? league.seasonNumber : 1;
+  let html = `<div class="intersaison-notice training-intro">`;
+  if (typeof league.intersaisonStartedAt === "number") {
+    const firstMatch = weeklyRhythmCalendarStartAt(league.intersaisonStartedAt + 7 * DAY);
+    html += `<b>Intersaison</b> : la saison ${n + 1} démarre le ${escapeHtml(formatCalendarDayFr(firstMatch))} à ${escapeHtml(formatCalendarTimeFr(firstMatch))}, avec votre effectif actuel. ` +
+      `Le marché des transferts reste ouvert et vous pouvez jouer des matchs amicaux (ils comptent pour l'entraînement des fondamentaux).`;
+  } else {
+    html += `<b>Fin de saison</b> : lundi à 0h, mise à jour de fin de saison (un an de plus pour les joueurs, départs à la retraite, forme remise à 100), puis une semaine d'intersaison avant la saison ${n + 1}, avec votre effectif actuel.`;
+  }
+  return html + `</div>`;
+}
+
 function renderSeasonEnd() {
   const po = league.playoffs;
   const nameOf = i => league.teams[i].name;
@@ -30826,10 +30978,14 @@ function renderSeasonEnd() {
     return;
   }
 
-  const championIsUser = po.champion === 0;
+  const championIsUser = po.champion === myTeamIndex;
   html += `<p class="season-champion">Champion : ${escapeHtml(nameOf(po.champion))}${championIsUser ? " (c'est vous !)" : ""}</p>`;
 
-  const barrage = league.relegationBarrage;
+  // Ligue partagée sans pyramide de divisions (une seule ligue) : pas de
+  // montée ni de descente réelles, donc ni barrage ni verdict de division
+  // affichés (voir la pyramide, League.pyramid).
+  const hasDivisionMoves = !managerToken || !!league.pyramid;
+  const barrage = hasDivisionMoves ? league.relegationBarrage : null;
   if (barrage) {
     html += "<h3>Relégation</h3>";
     html += `<p class="gain-note">Barrage (7e vs 8e) : ${escapeHtml(nameOf(barrage.idx7))} vs ${escapeHtml(nameOf(barrage.idx8))} (${barrage.scoreHome}-${barrage.scoreAway}) → ${escapeHtml(nameOf(barrage.winner))} maintenu(e), ${escapeHtml(nameOf(barrage.loser))} relégué(e).</p>`;
@@ -30837,8 +30993,10 @@ function renderSeasonEnd() {
     html += `<p class="gain-note">Descendent en ${info.level < MAX_DIVISION_LEVEL ? escapeHtml(divisionInfo(info.level + 1).name) : "division inférieure"} : ${relegated.map(escapeHtml).join(", ")}.</p>`;
   }
 
-  const outcome = league.divisionOutcomeForUserTeam();
-  if (outcome.outcome === "promoted") {
+  const outcome = league.divisionOutcomeForTeam ? league.divisionOutcomeForTeam(myTeamIndex) : league.divisionOutcomeForUserTeam();
+  if (!hasDivisionMoves) {
+    // rien : une seule ligue, tout le monde y reste
+  } else if (outcome.outcome === "promoted") {
     html += `<p class="season-division-outcome promoted">${escapeHtml(teamA.name)} est promu(e) en ${escapeHtml(divisionInfo(outcome.toLevel).name)} !</p>`;
   } else if (outcome.outcome === "relegated") {
     html += `<p class="season-division-outcome relegated">${escapeHtml(teamA.name)} est relégué(e) en ${escapeHtml(divisionInfo(outcome.toLevel).name)}.</p>`;
@@ -30859,14 +31017,23 @@ function renderSeasonEnd() {
   // PURE, purement en lecture ici (même patron que seasonEndBonusFor
   // juste au-dessus) : l'impact réel sur l'humeur des supporters n'est
   // appliqué qu'au clic sur "Nouvelle saison" (voir startNewSeason).
-  const objectiveVerdict = seasonObjectiveVerdict(league, 0);
+  const objectiveVerdict = seasonObjectiveVerdict(league, myTeamIndex);
   if (objectiveVerdict) {
     const cls = objectiveVerdict.gap > 0 ? "missed" : objectiveVerdict.gap === 0 ? "met" : "exceeded";
     html += `<p class="season-objective-verdict ${cls}">${escapeHtml(objectiveVerdict.label)}</p>`;
   }
 
-  document.getElementById("seasonEndContent").innerHTML = html;
-  if (newSeasonBtn) newSeasonBtn.classList.remove("hidden");
+  // Ligue partagée : la saison suivante démarre TOUTE SEULE (voir
+  // League.startNextSeason / server/autoSim.js) — jamais de bouton
+  // « Démarrer une nouvelle saison » (qui régénérerait une ligue locale).
+  if (managerToken) {
+    html += intersaisonNoticeHtml();
+    document.getElementById("seasonEndContent").innerHTML = html;
+    if (newSeasonBtn) newSeasonBtn.classList.add("hidden");
+  } else {
+    document.getElementById("seasonEndContent").innerHTML = html;
+    if (newSeasonBtn) newSeasonBtn.classList.remove("hidden");
+  }
 
   // Interview de jalon "finale de PO" (le plus probable à ce stade, le
   // champion vient d'être décidé) ou, à défaut, "demi-finale de PO" (retour
@@ -43827,7 +43994,7 @@ const TOUR_STEPS = [
   // cette ligue) est simplement sautée, voir tourShowStep.
   { kind: "spotlight", topic: "Compétitions", page: "calendrier", target: "#calendrierContent .cal-next",
     title: "Le calendrier",
-    text: "Tous vos matchs de la saison, championnat et Coupe, groupés par mois. Les matchs se jouent tout seuls à l'heure prévue (championnat le mardi et le samedi à 20:00, Coupe le jeudi à 20:00, play-offs le mardi, le jeudi et le samedi) : connectez-vous pour les suivre en direct, ou laissez-les se dérouler sans vous. Une saison dure 11 semaines.",
+    text: "Tous vos matchs de la saison, championnat et Coupe, groupés par mois. Les matchs se jouent tout seuls à l'heure prévue (championnat le mardi et le samedi à 20:00, Coupe le jeudi à 20:00, play-offs le mardi, le jeudi et le samedi) : connectez-vous pour les suivre en direct, ou laissez-les se dérouler sans vous. Une saison dure 11 semaines, puis une semaine d'intersaison avant la suivante.",
     tip: "Cette carte montre le prochain match avec un compte à rebours ; sur chaque ligne, le bouton Ordres (ou Modifier vos ordres) prépare le match correspondant.",
   },
   { kind: "spotlight", topic: "Compétitions", page: "coupe", target: "#coupeContent .cp-path",

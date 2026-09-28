@@ -87,8 +87,12 @@ function catchUpLeague(league, now) {
   }
   // Rythme hebdomadaire : la mise à jour du lundi qui suit la finale reste
   // à régler (fin de saison, voir runWeeklyEconomyTick plus bas).
-  const weeklySeasonEndPending = league.calendarDailyAnchored && league.calendarWeeklyRhythm && !league.seasonEndTickDone;
-  if (league.isPlayoffsDone() && !weeklySeasonEndPending) {
+  // Rythme hebdomadaire : la fin de saison, l'intersaison ET la nouvelle
+  // saison automatique sont gérées par catchUpWeeklyRhythm (voir
+  // League.startNextSeason) — et les marchés continuent de tourner pendant
+  // l'intersaison.
+  const weeklyRhythm = league.calendarDailyAnchored && league.calendarWeeklyRhythm;
+  if (league.isPlayoffsDone() && !weeklyRhythm) {
     // Saison réelle déjà arrivée à son terme (champion de play-offs connu,
     // voir League.isPlayoffsDone) : on attend un nouveau départ de saison
     // (voir l'API admin new-multi-league/reset-multi-league), voir le
@@ -370,6 +374,17 @@ function catchUpDailyAnchored(league, now, events) {
 // plus rien jusqu'à la saison suivante (League.seasonEndTickDone).
 function runWeeklyEconomyTick(league, tick, ecoAt, seasonEnd, events) {
   const results = [];
+  const seasonNo = typeof league.seasonNumber === "number" ? league.seasonNumber : 1;
+  if (seasonEnd) {
+    // Histoire du club et sponsors AVANT que la mise à jour de fin de saison
+    // ne remette à zéro les stats de saison des joueurs (idempotent : déjà
+    // fait si server/index.js:tick est passé entre la finale et ce lundi).
+    league.teams.forEach((t, i) => {
+      if (!t.isHuman) return;
+      if (Engine.settleSponsorsAtSeasonEnd) Engine.settleSponsorsAtSeasonEnd(league, i, ecoAt);
+      if (Engine.archiveSeasonForTeam) Engine.archiveSeasonForTeam(league, i, ecoAt);
+    });
+  }
   // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE côté moteur) : les
   // joueurs qui avaient annoncé leur dernière saison partent AVANT le
   // vieillissement de fin de saison.
@@ -378,18 +393,23 @@ function runWeeklyEconomyTick(league, tick, ecoAt, seasonEnd, events) {
     if (!team.isHuman) return;
     // Horodatage de la mise à jour elle-même (lundi 0h), pas `now` :
     // un rattrapage groupé garde ainsi l'ordre réel des semaines.
-    results.push({ teamIdx, result: team.trainWeek(league.divisionLevel, ecoAt, { seasonEnd }) });
+    results.push({ teamIdx, result: team.trainWeek(league.divisionLevel, ecoAt, { seasonEnd, seasonNo }) });
   });
   league.trainCpuTeams();
   // Fin de saison : l'IA vieillit aussi, puis les vétérans peuvent annoncer
-  // leur dernière saison (âge atteint APRÈS ce vieillissement).
+  // leur dernière saison (âge atteint APRÈS ce vieillissement) ; primes de
+  // fin de saison ; début de l'intersaison (forme 100, motivation « Neutre »
+  // au minimum, voir League.startIntersaison).
   let retirementsAnnounced = [];
-  if (seasonEnd && typeof league.announceRetirements === "function") {
-    league.ageCpuPlayers();
-    retirementsAnnounced = league.announceRetirements(ecoAt);
+  let bonuses = [];
+  if (seasonEnd) {
+    if (typeof league.ageCpuPlayers === "function") league.ageCpuPlayers(seasonNo);
+    if (typeof league.announceRetirements === "function") retirementsAnnounced = league.announceRetirements(ecoAt);
+    if (typeof league.paySeasonEndBonuses === "function") bonuses = league.paySeasonEndBonuses(ecoAt);
+    if (typeof league.startIntersaison === "function") league.startIntersaison(ecoAt);
   }
   league.lastEconomyTick = tick;
-  events.push(seasonEnd ? { type: "training", week: tick, results, seasonEnd: true, retired, retirementsAnnounced } : { type: "training", week: tick, results });
+  events.push(seasonEnd ? { type: "training", week: tick, results, seasonEnd: true, retired, retirementsAnnounced, bonuses } : { type: "training", week: tick, results });
 }
 
 function catchUpWeeklyRhythm(league, now, events) {
@@ -402,9 +422,23 @@ function catchUpWeeklyRhythm(league, now, events) {
         if (ecoAt != null && ecoAt <= now) {
           runWeeklyEconomyTick(league, tick, ecoAt, true, events);
           league.seasonEndTickDone = true;
+          continue; // la semaine d'intersaison a peut-être déjà passé aussi
         }
+        break;
       }
-      break;
+      // Intersaison (voir League.startNextSeason côté moteur) : le lundi
+      // suivant, mise à jour hebdomadaire normale (salaires, entraînement
+      // sur les amicaux d'intersaison), puis nouvelle saison avec les mêmes
+      // clubs et effectifs. `league.autoNextSeason === false` : ancien
+      // comportement (on attend un reset manuel).
+      if (league.autoNextSeason === false || typeof league.startNextSeason !== "function") break;
+      const tick = (league.lastEconomyTick || 0) + 1;
+      const ecoAt = scheduledTimeForLeagueEconomyTick(league, tick);
+      if (ecoAt == null || ecoAt > now) break;
+      runWeeklyEconomyTick(league, tick, ecoAt, false, events);
+      const seasonNumber = league.startNextSeason(ecoAt);
+      events.push({ type: "new-season", seasonNumber, at: ecoAt });
+      continue;
     }
     const champDone = league.isRegularSeasonDone();
     const pendingCup = league.pendingCupRound ? league.pendingCupRound() : null;

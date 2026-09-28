@@ -2727,6 +2727,9 @@ function motivationLabel(form) {
 // son constructeur plus haut) : la forme physique est indépendante du
 // club, la motivation, elle, est éminemment contextuelle.
 const TRANSFER_NEW_CLUB_MOTIVATION_FLOOR = 55; // milieu de la fourchette "Neutre" (45-64)
+// Intersaison (voir League.startIntersaison) : motivation relevée à ce
+// niveau (« Neutre ») pour ceux qui sont en dessous (validé 2026-09-28).
+const INTERSAISON_MOTIVATION_FLOOR = 55;
 
 // ---------------------------------------------------------------------
 // Retour utilisateur (2026-09) : "un joueur très frustré (motivation proche
@@ -6988,7 +6991,20 @@ class Team {
       : this.week % SEASON_LENGTH_WEEKS === 0;
     let salaryChanges = null;
     if (seasonEnd) {
-      this.players.forEach(p => { p.age += 1; });
+      // Garde-fou (retour utilisateur 2026-09-28 : "il faut une heure unique
+      // pour tous, sinon on va avoir des joueurs qui ne vieillissent pas ou
+      // qui vieillissent deux fois") : un joueur ne vieillit qu'UNE fois par
+      // numéro de saison (opts.seasonNo, voir League.seasonNumber), même s'il
+      // change de club ou de ligue pendant la bascule.
+      const seasonNo = opts && typeof opts.seasonNo === "number" ? opts.seasonNo : null;
+      const ageUp = p => {
+        if (seasonNo != null) {
+          if (p.lastAgedSeasonNo === seasonNo) return;
+          p.lastAgedSeasonNo = seasonNo;
+        }
+        p.age += 1;
+      };
+      this.players.forEach(ageUp);
       salaryChanges = this.recalculateSalaries();
 
       // Journal de matchs (voir Player.matchLog/recordMatchStatsForTeam) :
@@ -7000,7 +7016,7 @@ class Team {
 
       // Académie de jeunes : les stagiaires vieillissent au même rythme que
       // l'effectif pro (une année d'âge par saison — voir plus haut).
-      (this.youthPlayers || []).forEach(p => { p.age += 1; });
+      (this.youthPlayers || []).forEach(ageUp);
 
       // Décisions en attente laissées SANS RÉPONSE depuis la saison
       // précédente : auto-LIBÉRATION par défaut (retour utilisateur
@@ -9437,10 +9453,16 @@ class League {
   // Les joueurs des clubs de l'IA vieillissent eux aussi d'un an à chaque
   // fin de saison (les clubs humains le font dans Team.trainWeek), sans quoi
   // aucun d'eux n'atteindrait jamais l'âge de la retraite.
-  ageCpuPlayers() {
+  ageCpuPlayers(seasonNo = null) {
     this.teams.forEach(t => {
       if (!t || t.isHuman) return;
-      t.players.forEach(p => { p.age += 1; });
+      t.players.forEach(p => {
+        if (seasonNo != null) {
+          if (p.lastAgedSeasonNo === seasonNo) return;
+          p.lastAgedSeasonNo = seasonNo;
+        }
+        p.age += 1;
+      });
       if (typeof t.recalculateSalaries === "function") t.recalculateSalaries();
     });
   }
@@ -9815,13 +9837,18 @@ class League {
   // Division VI, la plus basse). Renvoie { outcome: "promoted"|"relegated"|
   // "stay", fromLevel, toLevel }.
   divisionOutcomeForUserTeam() {
+    return this.divisionOutcomeForTeam(0);
+  }
+
+  // Même calcul pour n'importe quelle équipe de la ligue (multi-manager).
+  divisionOutcomeForTeam(teamIdx) {
     const fromLevel = this.divisionLevel || MAX_DIVISION_LEVEL;
     const champion = this.playoffs ? this.playoffs.champion : null;
     let outcome = "stay", toLevel = fromLevel;
-    if (champion === 0 && fromLevel > 1) {
+    if (champion === teamIdx && fromLevel > 1) {
       outcome = "promoted";
       toLevel = fromLevel - 1;
-    } else if (this.relegatedTeamIndexes().includes(0) && fromLevel < MAX_DIVISION_LEVEL) {
+    } else if (this.relegatedTeamIndexes().includes(teamIdx) && fromLevel < MAX_DIVISION_LEVEL) {
       outcome = "relegated";
       toLevel = fromLevel + 1;
     }
@@ -9829,8 +9856,106 @@ class League {
     // la pyramide), mais mérite quand même sa propre prime (voir
     // CHAMPION_BONUS_DIVISION_I / seasonEndBonusFor) — à détecter à part,
     // puisque l'outcome ci-dessus reste "stay" dans ce cas précis.
-    const championDivisionI = champion === 0 && fromLevel === 1;
+    const championDivisionI = champion === teamIdx && fromLevel === 1;
     return { outcome, fromLevel, toLevel, championDivisionI };
+  }
+
+  // ---------------------------------------------------------------------
+  // NOUVELLE SAISON AUTOMATIQUE (retour utilisateur 2026-09-28 : effectifs
+  // conservés d'une saison à l'autre, "laisser une semaine d'intersaison
+  // [...] on a le temps de faire ses changements de joueurs", "à
+  // l'intersaison les formes doivent être remises à 0", motivation ramenée
+  // à « Neutre » pour ceux qui sont en dessous). Cycle de 12 semaines :
+  // 9 de championnat + 2 de play-offs + 1 d'intersaison.
+  //  - Lundi qui suit la finale (mise à jour de fin de saison, voir
+  //    server/autoSim.js:runWeeklyEconomyTick) : vieillissement, salaires,
+  //    retraites, primes de fin de saison, puis startIntersaison ci-dessous.
+  //  - Lundi suivant : mise à jour hebdomadaire normale (salaires de la
+  //    semaine, entraînement sur les minutes des amicaux d'intersaison),
+  //    puis startNextSeason : nouveau calendrier, nouvelle Coupe, classement
+  //    remis à zéro, MÊMES clubs et MÊMES effectifs.
+  // ---------------------------------------------------------------------
+
+  // Début d'intersaison : forme physique de TOUS les joueurs remise à 100,
+  // motivation relevée à INTERSAISON_MOTIVATION_FLOOR pour ceux qui sont en
+  // dessous (les demandes de transfert en cours se referment donc).
+  startIntersaison(now = Date.now()) {
+    this.intersaisonStartedAt = now;
+    this.teams.forEach(t => {
+      (t.players || []).forEach(p => {
+        p.condition = 100;
+        p.conditionUpdatedAt = now;
+        if (p.form < INTERSAISON_MOTIVATION_FLOOR) p.form = INTERSAISON_MOTIVATION_FLOOR;
+        p.weeksAtLowMotivation = 0;
+        p.transferRequestActive = false;
+        p.transferRequestQuote = null;
+        p.transferRequestDiscussed = false;
+      });
+    });
+  }
+
+  // Primes de fin de saison pour chaque club humain (champion de Division I ;
+  // prime de montée quand la montée est réellement appliquée, voir la
+  // pyramide). Une seule fois par saison et par club (seasonId).
+  paySeasonEndBonuses(now = Date.now()) {
+    const paid = [];
+    const seasonId = this.seasonId || `start:${this.calendarStartAt || 0}`;
+    this.teams.forEach((t, idx) => {
+      if (!t || !t.isHuman || t.lastSeasonBonusSeasonId === seasonId) return;
+      t.lastSeasonBonusSeasonId = seasonId;
+      const outcome = this.divisionOutcomeForTeam(idx);
+      if (!outcome.championDivisionI) return; // montées : voir la pyramide
+      const bonus = seasonEndBonusFor(outcome);
+      if (!bonus) return;
+      t.recordTransaction(bonus.label, bonus.amount);
+      paid.push({ teamIdx: idx, ...bonus });
+    });
+    return paid;
+  }
+
+  // Nouvelle saison avec les MÊMES clubs et effectifs. `now` = lundi 0h de
+  // la reprise ; le championnat reprend le mardi suivant à 20h (même rythme
+  // hebdomadaire). Renvoie le numéro de la nouvelle saison.
+  startNextSeason(now = Date.now()) {
+    this.seasonNumber = (typeof this.seasonNumber === "number" ? this.seasonNumber : 1) + 1;
+    this.seasonId = randomHexToken(4);
+    this.schedule = generateRoundRobinSchedule(this.teams.length);
+    this.round = 0;
+    this.results = [];
+    this.playoffs = null;
+    this.relegationBarrage = null;
+    this.liveMatches = {};
+    this.liveMatch = null;
+    this.seasonEndTickDone = false;
+    this.intersaisonStartedAt = null;
+    this.calendarWeeklySwitch = null;
+    this.lastEconomyTick = 0;
+    this.lastAutoTrainedWeek = -1;
+    this.lastAutoTrainedDay = -1;
+    if (this.calendarDailyAnchored) {
+      this.calendarStartAt = dailyAnchoredCalendarStartAt(now, this.calendarWeeklyRhythm);
+      this.cup = { rounds: [generateCupBracket(this.teams.map((_, i) => i))], champion: null };
+    }
+    this.teams.forEach(t => {
+      // Stats de saison : la saison écoulée est déjà archivée (histoire du
+      // club) ; les amicaux d'intersaison ne comptent pas dans la nouvelle.
+      (t.players || []).forEach(p => { p.matchLog = []; });
+      if (!t.isHuman) t.autoAssignLineup();
+    });
+    assignSeasonObjectives(this);
+    this.teams.forEach(t => {
+      if (!t.isHuman) return;
+      if (typeof t.queueSeasonPreviewInterview === "function") t.queueSeasonPreviewInterview(now);
+      if (t.feed) {
+        pushEntry(t.feed, {
+          key: "season_start", category: "ligue", week: t.week, createdAt: now,
+          title: `La saison ${this.seasonNumber} est lancée`,
+          text: "Nouveau calendrier, nouvelle Coupe : premier match mardi à 20:00. Votre effectif est conservé.",
+          action: { label: "Calendrier", href: "/calendrier" },
+        });
+      }
+    });
+    return this.seasonNumber;
   }
 
   // ---------------------------------------------------------------------
@@ -11930,6 +12055,8 @@ function serializePlayerRecord(p) {
     retirementWeeks: p.retirementWeeks || 0,
     retirementTalks: Array.isArray(p.retirementTalks) ? p.retirementTalks.slice() : [],
     retirementQuote: p.retirementQuote ?? null,
+    // Garde-fou de vieillissement (voir Team.trainWeek, opts.seasonNo).
+    lastAgedSeasonNo: typeof p.lastAgedSeasonNo === "number" ? p.lastAgedSeasonNo : null,
   };
 }
 
@@ -12421,6 +12548,7 @@ function playerFromSave(pdata) {
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
   if (typeof pdata.retirementQuote === "string") p.retirementQuote = pdata.retirementQuote;
+  if (typeof pdata.lastAgedSeasonNo === "number") p.lastAgedSeasonNo = pdata.lastAgedSeasonNo;
   return p;
 }
 
@@ -12962,6 +13090,11 @@ function serializeLeague(lg) {
     // peuvent chacun avoir la leur en même temps).
     liveMatches: lg.liveMatches || {},
     seasonId: lg.seasonId || null,
+    // Nouvelle saison automatique (voir League.startNextSeason).
+    seasonNumber: typeof lg.seasonNumber === "number" ? lg.seasonNumber : 1,
+    intersaisonStartedAt: typeof lg.intersaisonStartedAt === "number" ? lg.intersaisonStartedAt : null,
+    // false = pas de nouvelle saison automatique (attente d'un reset manuel).
+    autoNextSeason: lg.autoNextSeason === false ? false : true,
     // Confort d'affichage résolu PAR L'APPELANT pour UN destinataire précis
     // (voir League.liveMatch ci-dessus et server/liveMatch.js:
     // viewLiveMatchForTeam) — `null` si l'appelant n'a rien résolu de
@@ -13035,6 +13168,9 @@ function leagueFromSave(data, userTeam = null) {
   lg.liveMatches = data.liveMatches && typeof data.liveMatches === "object" ? data.liveMatches : {};
   lg.liveMatch = data.liveMatch || null;
   lg.seasonId = typeof data.seasonId === "string" ? data.seasonId : null;
+  lg.seasonNumber = typeof data.seasonNumber === "number" ? data.seasonNumber : 1;
+  lg.intersaisonStartedAt = typeof data.intersaisonStartedAt === "number" ? data.intersaisonStartedAt : null;
+  lg.autoNextSeason = data.autoNextSeason === false ? false : true;
   // Émissions avant-match/mi-temps + pronostics (voir serializeLeague
   // ci-dessus) : absent = sauvegarde d'avant cette fonctionnalité, objet
   // vide (aucune émission publiée pour l'instant), même convention que
@@ -14542,6 +14678,7 @@ return {
   TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST, TRANSFER_REQUEST_QUOTES, transferRequestQuoteFor,
   RETIREMENT_ANNOUNCE_CHANCE_BY_AGE, RETIREMENT_FORCED_AGE, RETIREMENT_TALK_PERIOD_WEEKS, RETIREMENT_TALK_PERIODS,
   retirementAnnounceChance, retirementTalkChance, retirementTalkPeriod, generateRetirementReplacement,
+  INTERSAISON_MOTIVATION_FLOOR,
   // Alchimie d'équipe (voir le grand commentaire au-dessus de
   // CHEMISTRY_ROSTER_CHANGE_MAX_RANK) :
   CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE, CHEMISTRY_MATCH_TOGETHER_GAIN, CHEMISTRY_SAME_FIVE_GAIN,
