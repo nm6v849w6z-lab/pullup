@@ -21,7 +21,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 ## À faire
 
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Coupe nationale en direct
-  (option (b) « tout d'un coup avec le direct »)**
+  + Supercoupe (option (b) « tout d'un coup avec le direct »)**
   - server/nationalCup.js : une Coupe PAR PAYS (world.cups[country]) qui
     remplace la Coupe interne des championnats du monde à partir de la
     saison suivant la création du monde ; 512 clubs max (divisions les plus
@@ -54,9 +54,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     jusqu'aux 256es, tableau du tour demandé au serveur avec niveau D.x et
     pastille +7, exempts, phase finale alignée) ; rappel du handicap sous le
     score du direct ; guide + en.js.
-  - Tests : server/national_cup_test.js, national_cup_ui_test.js.
-  - Reste (étape 4) : Supercoupe (samedi d'intersaison, champion de D I contre
-    vainqueur de la Coupe ou finaliste).
+  - Supercoupe (world.superCups[country]) : programmée à l'intersaison
+    (samedi 20:00 heure locale avant la reprise), champion de D I contre
+    vainqueur de la Coupe (finaliste si même club), direct (competition
+    "cup", tour SUPERCUP_ROUND = 99, invité 199), handicap, prime 200 000 €
+    (montant choisi par Claude, à valider), trophées Coupe nationale et
+    Supercoupe, palmarès du pays (history.cupWinner/superCupWinner, affichés
+    dans Planète Hoop) ; carte en tête de la page Coupe, ligne au calendrier.
+  - Tests : server/national_cup_test.js, national_cup_ui_test.js,
+    super_cup_test.js.
+  - Limites connues : pas de stats de joueurs pour la Supercoupe (match de
+    gala, pas de feuille de match après coup) ; pas d'ordres préparés pour
+    la Supercoupe (ordres du moment).
 
 - **✅ COMMITTÉ, À POUSSER (2026-09-28) — Championnats par pays (France/USA),
   divisions ouvertes à la demande, montées/descentes, saisons synchronisées**

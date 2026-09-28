@@ -428,6 +428,32 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
       // pour toutes les ligues du pays.
       const first = all[0];
       const ecoAt = Calendar.scheduledTimeForLeagueEconomyTick(first, (first.lastEconomyTick || 0) + 1);
+      // Supercoupe (server/nationalCup.js) : samedi 20:00 de l'intersaison,
+      // champion de Division I contre vainqueur de la Coupe (ou finaliste).
+      if (ecoAt != null) {
+        world.superCups = world.superCups || {};
+        const d1Entry = leaguesOfCountry(world, country)[0];
+        const d1 = d1Entry && leagues.get(d1Entry.id);
+        let sc = world.superCups[country];
+        if (d1 && !(sc && sc.season === seasonNumber)) {
+          const at = NationalCup.superCupKickoff(Calendar, ecoAt, d1.timeZone || null);
+          sc = NationalCup.createSuperCup(country, seasonNumber, d1Entry, d1, (world.cups || {})[country], at) || { country, season: seasonNumber, none: true };
+          world.superCups[country] = sc;
+          worldDirty = true;
+          if (!sc.none) events.push({ type: "super-cup-scheduled", country, season: seasonNumber, at, home: sc.home.name, away: sc.away.name });
+        }
+        if (sc && !sc.none && sc.season === seasonNumber && !sc.resolved) {
+          useLeagueTimeZone(d1);
+          const before = events.length;
+          NationalCup.stepSuperCup({ Engine, Calendar, LiveMatch }, sc, leagues, now, events);
+          useLeagueTimeZone(null);
+          if (events.length !== before) worldDirty = true;
+          if (sc.resolved) {
+            const h = ((world.history || {})[country] || []).find(x => x.season === seasonNumber);
+            if (h) h.superCupWinner = sc.winner === "away" ? sc.away.name : sc.home.name;
+          }
+        }
+      }
       if (ecoAt == null || ecoAt > now) break;
       for (const lg of all) {
         useLeagueTimeZone(lg);
@@ -452,6 +478,11 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
     // server/index.js relance le rattrapage à cet instant précis plutôt
     // qu'au prochain passage de la minuterie.
     {
+      const sc = (world.superCups || {})[country];
+      if (sc && !sc.none && !sc.resolved) {
+        const due = sc.started ? sc.at + Calendar.MATCH_BROADCAST_DURATION_MS : sc.at;
+        if (due > now && (nextDeadlineAt == null || due < nextDeadlineAt)) nextDeadlineAt = due;
+      }
       const cup = (world.cups || {})[country];
       const refEntry = leaguesOfCountry(world, country)[0];
       const refLeague = refEntry && leagues.get(refEntry.id);

@@ -377,15 +377,25 @@ async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
 async function nationalCupProjection(ctx, multiSavePath) {
   const world = ctx.world;
   const country = ctx.league.country || World.DEFAULT_COUNTRY;
+  const season = ctx.league.seasonNumber || 1;
   const cup = world && (world.cups || {})[country];
-  if (!cup || cup.season !== (ctx.league.seasonNumber || 1)) return null;
+  const sc = world && (world.superCups || {})[country];
+  const hasCup = cup && cup.season === season;
+  const hasSc = sc && !sc.none && sc.season === season;
+  if (!hasCup && !hasSc) return null;
   const cache = new Map([[ctx.leagueId, ctx.league]]);
   const loadTeam = async ref => {
     if (!cache.has(ref.leagueId)) cache.set(ref.leagueId, await World.loadLeague(world, ref.leagueId, multiSavePath));
     const lg = cache.get(ref.leagueId);
     return lg ? lg.teams[ref.idx] || null : null;
   };
-  return World.NationalCup.projectForLeague(Engine, cup, ctx.leagueId, ctx.teamIndex, loadTeam);
+  const out = hasCup ? await World.NationalCup.projectForLeague(Engine, cup, ctx.leagueId, ctx.teamIndex, loadTeam) : { cup: null, guests: [] };
+  if (hasSc) {
+    const p = await World.NationalCup.projectSuperCup(Engine, sc, ctx.leagueId, ctx.teamIndex, loadTeam);
+    out.superCup = p.superCup;
+    if (p.guest) out.guests.push(p.guest);
+  }
+  return out;
 }
 
 // Clubs invités de la Coupe nationale pour le scouting (routes
@@ -1340,7 +1350,11 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // championnat) joints à part.
         if (ctx.world && !ctx.league.cup) {
           const national = await nationalCupProjection(ctx, multiSavePath);
-          if (national) { payload.league.cup = national.cup; payload.league.guestTeams = national.guests; }
+          if (national) {
+            if (national.cup) payload.league.cup = national.cup;
+            payload.league.guestTeams = national.guests;
+            payload.league.superCup = national.superCup || null;
+          }
         }
         // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
         payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex);

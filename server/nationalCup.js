@@ -142,6 +142,16 @@ function withHandicap(live, handicap) {
   };
 }
 
+const COUNTRY_NAMES = { fr: "France", us: "États-Unis" };
+function countryName(code) { return COUNTRY_NAMES[code] || String(code || "").toUpperCase(); }
+const MAX_TROPHIES = 40;
+function addTrophy(team, league, type, label, now) {
+  team.trophies = team.trophies || [];
+  if (team.trophies.some(t => t.type === type && league && t.seasonId === (league.seasonId || null) && t.label === label)) return;
+  team.trophies.unshift({ at: now, type, divisionLevel: league ? league.divisionLevel || null : null, label, seasonId: league ? league.seasonId || null : null });
+  if (team.trophies.length > MAX_TROPHIES) team.trophies.length = MAX_TROPHIES;
+}
+
 function liveKey(cup, round, m) { return `ncup:${cup.season}:${round.index}:${m.id}`; }
 
 // Copie « invitée » d'un club pour la ligue d'un manager (diffusion, Ordres,
@@ -245,6 +255,7 @@ function step({ Engine, Calendar, LiveMatch }, cup, leagues, refLeague, now, eve
     if (cup.champion) {
       const champ = teamOf(cup.champion);
       events.push({ type: "national-cup-champion", country: cup.country, season: cup.season, champion: cup.champion.name });
+      if (champ) addTrophy(champ, leagues.get(cup.champion.leagueId), "national-cup", `Vainqueur de la Coupe nationale (${countryName(cup.country)})`, now);
       if (champ && champ.isHuman && champ.feed) {
         Engine.pushEntry(champ.feed, {
           key: `ncup_champion_${cup.season}`, category: "ligue", week: champ.week, createdAt: now,
@@ -256,6 +267,144 @@ function step({ Engine, Calendar, LiveMatch }, cup, leagues, refLeague, now, eve
     }
   }
   return events;
+}
+
+// =====================================================================
+// SUPERCOUPE (retour utilisateur 2026-09-28 : « supercoupes », Division I
+// seulement) : le samedi 20:00 (heure locale) de la semaine d'intersaison,
+// champion de Division I (play-offs) contre vainqueur de la Coupe nationale
+// — ou le finaliste si c'est le même club. Match sec, en direct, handicap
+// comme en Coupe, prime au vainqueur, trophée. world.superCups[country] :
+//   { country, season, at, home: ref, away: ref, handicap, started, result,
+//     winner: "home"|"away"|null, resolved }
+// Côté ligues : même mécanique de diffusion que la Coupe (competition
+// "cup", tour SUPERCUP_ROUND, club invité 100 + SUPERCUP_ROUND).
+// =====================================================================
+const SUPERCUP_ROUND = 99;
+const SUPERCUP_WIN_BONUS = 200000;
+
+function superCupKickoff(Calendar, restartAt, timeZone) {
+  // Samedi précédant la reprise (lundi 6h Paris = lundi 0h à New York) : la
+  // date locale de « reprise − 2 jours » est ce samedi dans les deux pays.
+  const parts = Calendar.zonedLocalDateParts(restartAt - 2 * 24 * 3600 * 1000, timeZone || "Europe/Paris");
+  return Calendar.zonedEpochForLocalTime(timeZone || "Europe/Paris", parts.year, parts.month, parts.day, Calendar.WEEKLY_RHYTHM_MATCH_HOUR || 20);
+}
+
+// Finaliste malheureux de la Coupe (perdant de la finale).
+function cupFinalist(cup) {
+  const last = cup && cup.rounds[cup.rounds.length - 1];
+  const m = last && last.matches.length === 1 ? last.matches[0] : null;
+  if (!m || !m.resolved || m.bye) return null;
+  return m.winner === "home" ? m.away : m.home;
+}
+
+function createSuperCup(country, season, d1Entry, d1League, cup, at) {
+  if (!d1League || !d1League.playoffs || d1League.playoffs.champion == null) return null;
+  if (!cup || cup.season !== season || !cup.champion) return null;
+  const idx = d1League.playoffs.champion;
+  const home = { leagueId: d1Entry.id, idx, name: d1League.teams[idx].name, level: d1Entry.level || 1 };
+  let away = cup.champion;
+  if (away.leagueId === home.leagueId && away.idx === home.idx) away = cupFinalist(cup);
+  if (!away) return null;
+  return {
+    country, season, at, home, away: { ...away }, handicap: handicapFor(home, away),
+    started: false, result: null, winner: null, resolved: false,
+  };
+}
+
+function superCupLiveKey(sc) { return `scup:${sc.season}`; }
+
+function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events = []) {
+  if (!sc || sc.resolved || now < sc.at) return events;
+  const teamOf = ref => { const lg = leagues.get(ref.leagueId); return lg ? lg.teams[ref.idx] : null; };
+  const home = teamOf(sc.home), away = teamOf(sc.away);
+  const windowEnd = sc.at + Calendar.MATCH_BROADCAST_DURATION_MS;
+  const late = now >= windowEnd;
+  if (!sc.started) {
+    if (!home || !away) {
+      sc.result = { scoreHome: home ? Engine.FORFEIT_SCORE : 0, scoreAway: away ? Engine.FORFEIT_SCORE : 0, forfeit: true, quarterScores: null };
+    } else if ((home.isHuman || away.isHuman) && !late) {
+      const live = LiveMatch.computeLiveMatchForTeams(Engine, home, away, SUPERCUP_ROUND, sc.home.idx, sc.away.idx, sc.at, "cup");
+      sc.result = { scoreHome: live.finalScore.home, scoreAway: live.finalScore.away, forfeit: live.forfeit, quarterScores: live.quarterScores };
+      [["home", home, sc.home, away, sc.away], ["away", away, sc.away, home, sc.home]].forEach(([side, team, ref, opp, oppRef]) => {
+        if (!team.isHuman) return;
+        const lg = leagues.get(ref.leagueId);
+        if (!lg) return;
+        if (!lg.liveMatches) lg.liveMatches = {};
+        const sameLeague = oppRef.leagueId === ref.leagueId;
+        const oppIdx = sameLeague ? oppRef.idx : guestIdxForRound(SUPERCUP_ROUND);
+        lg.liveMatches[superCupLiveKey(sc)] = {
+          ...withHandicap(live, sc.handicap),
+          homeIdx: side === "home" ? ref.idx : oppIdx,
+          awayIdx: side === "away" ? ref.idx : oppIdx,
+          handicap: sc.handicap,
+          nationalCup: { season: sc.season, round: SUPERCUP_ROUND, superCup: true },
+          guest: sameLeague ? null : guestForTeam(Engine, opp, oppRef),
+        };
+      });
+    } else {
+      const sim = Engine.simulateOrForfeit(home, away, sc.at);
+      sc.result = { scoreHome: sim.scoreHome, scoreAway: sim.scoreAway, forfeit: sim.forfeit, quarterScores: sim.quarterScores || null };
+    }
+    sc.started = true;
+    events.push({ type: "super-cup-kickoff", country: sc.country, season: sc.season });
+  }
+  if (now < windowEnd) return events;
+  const r = sc.result;
+  const totalHome = r.scoreHome + (r.forfeit ? 0 : sc.handicap.home);
+  const totalAway = r.scoreAway + (r.forfeit ? 0 : sc.handicap.away);
+  sc.winner = totalAway > totalHome ? "away" : "home";
+  sc.resolved = true;
+  const winRef = sc.winner === "home" ? sc.home : sc.away;
+  const winTeam = sc.winner === "home" ? home : away;
+  if (winTeam) {
+    if (winTeam.isHuman && typeof winTeam.recordTransaction === "function") {
+      winTeam.recordTransaction("Prime de Supercoupe", SUPERCUP_WIN_BONUS);
+    }
+    addTrophy(winTeam, leagues.get(winRef.leagueId), "super-cup", `Vainqueur de la Supercoupe (${countryName(sc.country)})`, now);
+  }
+  [[home, sc.home, away, true, totalHome, totalAway], [away, sc.away, home, false, totalAway, totalHome]].forEach(([team, ref, opp, isHome, pf, pa]) => {
+    if (!team) return;
+    const lg = leagues.get(ref.leagueId);
+    if (lg && lg.liveMatches) delete lg.liveMatches[superCupLiveKey(sc)];
+    if (team.isHuman && team.feed && opp) {
+      Engine.pushEntry(team.feed, {
+        key: `scup_${sc.season}_${ref.leagueId}_${ref.idx}`, category: "ligue", week: team.week, createdAt: now,
+        title: pf > pa ? "Supercoupe remportée !" : "Supercoupe perdue",
+        text: `Supercoupe : ${isHome ? `${team.name} ${pf}-${pa} ${opp.name}` : `${opp.name} ${pa}-${pf} ${team.name}`}${pf > pa ? `. Prime de ${SUPERCUP_WIN_BONUS.toLocaleString("fr-FR")} €.` : "."}`,
+        action: { label: "Coupe", href: "/coupe" },
+      });
+    }
+  });
+  events.push({ type: "super-cup-winner", country: sc.country, season: sc.season, winner: winRef.name });
+  return events;
+}
+
+// Vue de la Supercoupe pour la ligue d'un manager (sauvegarde) : noms,
+// niveaux, index local (club de la ligue) ou invité, score handicap compris.
+async function projectSuperCup(Engine, sc, leagueId, teamIdx, loadTeam) {
+  if (!sc) return null;
+  const mine = ref => ref && ref.leagueId === leagueId && ref.idx === teamIdx;
+  const local = ref => (ref.leagueId === leagueId ? ref.idx : guestIdxForRound(SUPERCUP_ROUND));
+  const isMine = mine(sc.home) || mine(sc.away);
+  const r = sc.result;
+  const view = {
+    season: sc.season, at: sc.at, round: SUPERCUP_ROUND, mine: isMine,
+    home: { name: sc.home.name, level: sc.home.level, leagueId: sc.home.leagueId, refIdx: sc.home.idx, idx: isMine ? local(sc.home) : (sc.home.leagueId === leagueId ? sc.home.idx : null) },
+    away: { name: sc.away.name, level: sc.away.level, leagueId: sc.away.leagueId, refIdx: sc.away.idx, idx: isMine ? local(sc.away) : (sc.away.leagueId === leagueId ? sc.away.idx : null) },
+    handicap: sc.handicap, started: sc.started, resolved: sc.resolved,
+    score: sc.resolved && r ? { home: r.scoreHome + (r.forfeit ? 0 : sc.handicap.home), away: r.scoreAway + (r.forfeit ? 0 : sc.handicap.away) } : null,
+    winner: sc.resolved ? sc.winner : null,
+  };
+  let guest = null;
+  if (isMine) {
+    const oppRef = mine(sc.home) ? sc.away : sc.home;
+    if (oppRef.leagueId !== leagueId) {
+      const team = await loadTeam(oppRef);
+      if (team) guest = { ...guestForTeam(Engine, team, oppRef), localIdx: guestIdxForRound(SUPERCUP_ROUND), name: oppRef.name };
+    }
+  }
+  return { superCup: view, guest };
 }
 
 // Vue d'un manager (navigateur) : son parcours et le tour en cours, avec les
@@ -406,6 +555,7 @@ function roundMatches(cup, roundIndex, { offset = 0, limit = 40, q = "", pending
 
 module.exports = {
   NATIONAL_CUP_MAX_CLUBS, NATIONAL_CUP_HANDICAP_PER_DIVISION, NATIONAL_CUP_HANDICAP_MAX, NATIONAL_CUP_GUEST_IDX,
+  SUPERCUP_ROUND, SUPERCUP_WIN_BONUS, superCupKickoff, cupFinalist, createSuperCup, stepSuperCup, projectSuperCup, superCupLiveKey,
   aliveByLeague, guestIdxForRound, withHandicap, projectForLeague, pendingViewFor, makeMatch,
   stageKey, stageLabel, handicapFor, createNationalCup, pendingRound, advance, liveKey, guestForTeam, step, viewForTeam, roundMatches,
 };

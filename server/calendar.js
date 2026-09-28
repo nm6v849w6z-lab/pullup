@@ -585,6 +585,8 @@ return {
   weeklyRhythmCalendarStartAt, weeklyRhythmDayIndexForChampionshipRound,
   weeklyRhythmScheduledTimeForChampionshipRound, weeklyRhythmScheduledTimeForCupRound,
   weeklyRhythmEconomyTickAt, scheduledTimeForLeagueEconomyTick,
+  // Fuseaux explicites (Supercoupe, server/nationalCup.js) :
+  zonedLocalDateParts, zonedEpochForLocalTime,
 };
 
 });

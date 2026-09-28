@@ -1281,6 +1281,8 @@
   .ncup-intro{color:var(--ink-soft, var(--ink-faint)); font-size:13px; margin:0 0 12px;}
   .ncup-lvl{display:inline-block; font-size:11px; font-weight:600; color:var(--ink-faint); margin-left:4px; white-space:nowrap;}
   .ncup-hc{display:inline-block; font-size:11px; font-weight:700; color:var(--amber); background:rgba(240,162,60,.14); border-radius:5px; padding:1px 5px; margin-left:4px;}
+  .scup-card{margin:0 0 14px;}
+  .ph-sub-honour span{padding-left:12px; color:var(--ink-faint);}
   .live-handicap-note{text-align:center; font-size:12.5px; color:var(--amber); margin:4px 0 0;}
   .cp-empty{text-align:center; color:var(--ink-faint); padding:22px !important;}
   .cp-more{margin:-4px 0 14px;}
@@ -7509,7 +7511,7 @@
         <p class="training-intro">Le <b>Calendrier</b> liste tous vos matchs de la saison, championnat et Coupe confondus, groupés par mois et triés par date et heure réelle. Filtres Tous, Domicile, Extérieur et À venir ; "vs" devant l'adversaire signifie à domicile, "@" à l'extérieur. À droite : la carte du prochain match (compte à rebours et bouton des ordres) et le bilan de la saison (bilan, classement, différence de points, domicile/extérieur, forme sur les 5 derniers matchs). Les horaires restent fixes, même au changement d'heure.</p>
         <p class="training-intro" style="margin-top:10px;">Les <b>play-offs</b> réunissent les 4 premiers : demi-finales puis finale, chacune en deux matchs gagnants, le mardi, le jeudi et le samedi à 20:00 pendant les 2 semaines qui suivent le championnat.</p>
         <p class="training-intro" style="margin-top:10px;">La <b>Coupe</b> (quand elle existe pour votre ligue) est un tableau à élimination directe, un tour chaque jeudi à 20:00. L'onglet Coupe montre votre parcours (tour atteint, victoires, pastille par tour), les matchs de chaque tour (boutons de tour en haut, filtres Tous et À jouer, votre match en premier, clubs exemptés résumés en une ligne) et l'arbre de la phase finale à partir des 8es de finale. Les ordres de Coupe se préparent comme ceux du championnat.</p>
-        <p class="training-intro" style="margin-top:10px;">Dans les championnats par pays, c'est la <b>Coupe nationale</b> : tous les clubs du pays (512 au plus), avec des exempts au premier tour pour les divisions les plus hautes si le tableau n'est pas plein. Le club de la division inférieure part avec <b>+7 points par division d'écart</b> (au plus +21), déjà au tableau d'affichage. Un adversaire d'un autre championnat se prépare comme les autres (Ordres, scouting) et sa fiche s'ouvre dans Planète Hoop. Chaque match de Coupe gagné rapporte une prime, de 50 000 € aux premiers tours à 400 000 € pour la finale.</p>
+        <p class="training-intro" style="margin-top:10px;">Dans les championnats par pays, c'est la <b>Coupe nationale</b> : tous les clubs du pays (512 au plus), avec des exempts au premier tour pour les divisions les plus hautes si le tableau n'est pas plein. Le club de la division inférieure part avec <b>+7 points par division d'écart</b> (au plus +21), déjà au tableau d'affichage. Un adversaire d'un autre championnat se prépare comme les autres (Ordres, scouting) et sa fiche s'ouvre dans Planète Hoop. Chaque match de Coupe gagné rapporte une prime, de 50 000 € aux premiers tours à 400 000 € pour la finale. À l'intersaison, la <b>Supercoupe</b> oppose le samedi à 20:00 le champion de Division I au vainqueur de la Coupe (ou au finaliste si c'est le même club), en direct et avec le même handicap : 200 000 € pour le vainqueur.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="ligue" data-guide-group="Compétitions">
@@ -19999,6 +20001,8 @@ function leagueFromSave(data, userTeam = null) {
   lg.cup = data.cup || null;
   // Coupe nationale : adversaires d'un autre championnat (« clubs invités »).
   installGuestTeams(lg, data.guestTeams);
+  // Supercoupe (server/nationalCup.js, projectSuperCup) : vue du pays.
+  lg.superCup = data.superCup || null;
   // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
   // d'avant cette fonctionnalité, aucune ligue.
   lg.privateLeagues = Array.isArray(data.privateLeagues) ? data.privateLeagues : [];
@@ -25929,6 +25933,7 @@ document.addEventListener("click", (e) => {
 // en repli générique si ce tour n'est plus dans league.cup.rounds (ancienne
 // sauvegarde, ou coupe déjà terminée et rechargée sans historique des tours).
 function cupStageLabelForRoundIndex(roundIndex) {
+  if (roundIndex === SUPERCUP_ROUND) return "Supercoupe";
   const round = league.cup && league.cup.rounds.find(r => r.index === roundIndex);
   return round ? (CUP_STAGE_LABELS[round.name] || round.name) : "Coupe";
 }
@@ -28312,7 +28317,9 @@ function planeteCountryHtml(st) {
   html += `<div class="ph-card"><h3>Palmarès</h3>`;
   const hist = ov.history || [];
   html += hist.length
-    ? `<ul class="ph-results">` + hist.map(h => `<li><span>Saison ${h.season}</span><b>${escapeHtml(h.champion)}</b></li>`).join("") + `</ul>`
+    ? `<ul class="ph-results">` + hist.map(h => `<li><span>Saison ${h.season}</span><b>${escapeHtml(h.champion)}</b></li>` +
+      (h.cupWinner ? `<li class="ph-sub-honour"><span>Coupe</span><b>${escapeHtml(h.cupWinner)}</b></li>` : "") +
+      (h.superCupWinner ? `<li class="ph-sub-honour"><span>Supercoupe</span><b>${escapeHtml(h.superCupWinner)}</b></li>` : "")).join("") + `</ul>`
     : `<p class="ph-sub" style="margin:0">Premier champion de Division I à l'issue de cette saison.</p>`;
   html += `</div>`;
   const tab = planeteState.statTab;
@@ -32673,7 +32680,7 @@ function enterLiveMatch(liveMatch, opts) {
         note.className = "live-handicap-note";
         scoreRowEl.insertAdjacentElement("afterend", note);
       }
-      note.textContent = `Coupe nationale · handicap : +${hc.mine || hc.opp} pour ${hc.mine ? teamA.name : teamB.name} (division inférieure), déjà au score`;
+      note.textContent = `${liveMatch.nationalCup && liveMatch.nationalCup.superCup ? "Supercoupe" : "Coupe nationale"} · handicap : +${hc.mine || hc.opp} pour ${hc.mine ? teamA.name : teamB.name} (division inférieure), déjà au score`;
     } else if (note) {
       note.remove();
     }
@@ -38736,6 +38743,8 @@ function calendarNextMatchCardHtml(row) {
   // même délégation [data-tab]/data-round que les lignes.
   const action = row.isLive
     ? `<button type="button" class="cal-next-btn is-live" data-tab="live">Voir le direct</button>`
+    : row.superCup
+    ? `<button type="button" class="cal-next-btn" data-tab="coupe">Voir la Supercoupe</button>`
     : row.competition === "lp"
     ? `<button type="button" class="cal-next-btn" data-tab="lp">Voir la ligue privée</button>`
     : row.competition === "fr"
@@ -38979,6 +38988,26 @@ function renderCalendrierSection() {
         isHome: isHomeCup, played: !!m.resolved, won: cls === "result-win", lost: cls === "result-loss",
         isLive: isCupLive, alreadyOrdered: cupAlreadyPlanned, orderRound: round.index, orderCompetition: "cup",
       });
+    });
+  }
+  // Supercoupe (samedi d'intersaison) : se joue avec les ordres du moment.
+  const sc = league.superCup;
+  if (sc && sc.mine) {
+    const isHomeSc = sc.home.idx === myTeamIndex;
+    const oppIdxSc = isHomeSc ? sc.away.idx : sc.home.idx;
+    let scoreText = "–", cls = "";
+    if (sc.resolved && sc.score) {
+      const my = isHomeSc ? sc.score.home : sc.score.away, opp = isHomeSc ? sc.score.away : sc.score.home;
+      scoreText = `${my} - ${opp}`;
+      cls = my > opp ? "result-win" : my < opp ? "result-loss" : "";
+    }
+    const isScLive = !!(league.liveMatch && league.liveMatch.competition === "cup" && league.liveMatch.round === SUPERCUP_ROUND);
+    rows.push({
+      competition: "cup", superCup: true, label: "Supercoupe", opponent: (league.teams[oppIdxSc] || (isHomeSc ? sc.away : sc.home)).name, opponentIdx: oppIdxSc,
+      location: isHomeSc ? "Domicile" : "Extérieur", scoreText, boxscore: null, cls,
+      actionCell: isScLive ? `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>` : "",
+      scheduledAt: sc.at, fallbackOrder: 999, isHome: isHomeSc, played: !!sc.resolved, won: cls === "result-win", lost: cls === "result-loss",
+      isLive: isScLive,
     });
   }
 
@@ -39526,6 +39555,7 @@ function cupRenderRoundPanel() {
 // Coupe interne. Handicap : +7 par division d'écart (plafond +21), déjà
 // compris dans les scores affichés.
 // ---------------------------------------------------------------------
+const SUPERCUP_ROUND = 99; // voir server/nationalCup.js
 const NCUP_ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
 function ncupLevelTag(level) { return `D.${NCUP_ROMAN[level] || level}`; }
 function ncupIsMineRef(ref) { return !!(ref && ref.leagueId === league.leagueId && ref.idx === myTeamIndex); }
@@ -39655,6 +39685,27 @@ async function ncupRenderFinalPhase() {
   }
   box.innerHTML = html;
 }
+// Supercoupe : carte en tête de la page Coupe pendant l'intersaison.
+function superCupCardHtml() {
+  const sc = league.superCup;
+  if (!sc) return "";
+  const at = sc.at;
+  const when = at != null ? `${formatCalendarDayFr(at)} · ${formatCalendarTimeFr(at)}` : "";
+  const club = (ref, hc, won) => `<div class="cal-next-team${ref.idx === myTeamIndex && sc.mine ? " is-me" : ""}">` +
+    `<div class="cal-next-name">${ref.idx != null && league.teams[ref.idx] ? teamLinkHtml(ref.idx, ref.name) : `<button type="button" class="team-link" data-ncup-league="${escapeHtml(ref.leagueId)}" data-ncup-club="${ref.refIdx}">${escapeHtml(ref.name)}</button>`}</div>` +
+    `<div class="cal-next-rank">${escapeHtml(ncupLevelTag(ref.level))}${hc ? ` · handicap +${hc}` : ""}${won ? " · vainqueur" : ""}</div></div>`;
+  let middle;
+  if (sc.resolved && sc.score) middle = `<div class="cal-next-vs">${sc.score.home} - ${sc.score.away}</div>`;
+  else middle = `<div class="cal-next-vs">VS</div>`;
+  const isLive = !!(league.liveMatch && league.liveMatch.competition === "cup" && league.liveMatch.round === SUPERCUP_ROUND);
+  const status = sc.resolved ? `Vainqueur : ${sc.winner === "away" ? sc.away.name : sc.home.name}`
+    : isLive ? "En direct" : sc.started ? "En cours" : `${when}`;
+  return `<div class="cal-card cal-next scup-card"><div class="cal-card-kicker">Supercoupe · saison ${sc.season} · champion de Division I contre vainqueur de la Coupe</div>` +
+    `<div class="cal-next-teams">${club(sc.home, sc.handicap.home, sc.resolved && sc.winner === "home")}${middle}${club(sc.away, sc.handicap.away, sc.resolved && sc.winner === "away")}</div>` +
+    `<div class="cal-next-meta"><span>${escapeHtml(status)}</span></div>` +
+    (isLive && sc.mine ? `<button type="button" class="cal-next-btn is-live" data-tab="live">Voir le direct</button>` : "") + `</div>`;
+}
+
 function renderNationalCupSection(holder) {
   const cup = league.cup;
   const path = cupMyPath(cup);
@@ -39668,6 +39719,7 @@ function renderNationalCupSection(holder) {
     const isMe = cup.champion === myTeamIndex;
     html += `<div class="cup-champion-banner">Vainqueur de la Coupe nationale : ${escapeHtml(cup.championName)}${isMe ? " (c'est vous !)" : ""}</div>`;
   }
+  html += superCupCardHtml();
   html += `<div class="ncup-intro">Coupe nationale${countryName ? ` · ${escapeHtml(countryName)}` : ""} · saison ${cup.season} : tous les clubs du pays, un tour chaque jeudi. ` +
     `Le club de division inférieure part avec <b>+7 points par division d'écart</b> (au plus +21), compris dans les scores.</div>`;
   html += `<div class="cal-layout cp-layout"><div class="cal-main">`;
