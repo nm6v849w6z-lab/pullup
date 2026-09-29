@@ -107,29 +107,6 @@ chantiers marqués « committé, à pousser » étaient en fait en prod et ont
 été retirés (l'historique Git les garde). Restent ci-dessous uniquement les
 points réellement ouverts.
 
-- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Premium « personnalisation »**
-  (choix de l'utilisateur : « fais 1 et 2 », puis « pour les numéros de
-  maillot, je ne les afficherai que sur les pages des joueurs ») :
-  - Parquet aux couleurs du club : Team.courtStyle {wood, paint}
-    (COURT_WOODS, JERSEY_COLORS), courtStyleFor (Premium seulement) ;
-    terrain du direct du club qui REÇOIT (hmLiveDress → S.courtStyle →
-    assets/live/live-view.js : bois, lames, lignes, raquettes et rond
-    central) ; carte « Votre terrain » de la page Salle (aperçu + réglages,
-    aperçu seul sans Premium) ; POST /api/club/set-court-style.
-  - Apparence des jeunes formés au club : Player.look {hairStyle,
-    hairColor, beard, headband} (PLAYER_LOOK_OPTIONS), homegrownClub posé à
-    la promotion (repli : academyGraduatesHistory), canCustomizePlayerLook ;
-    AvatarGen.applyLook / playerAvatarSvg (fiche, effectif, émissions…) ;
-    carte « Personnalisation » de la fiche joueur avec aperçu en direct ;
-    POST /api/player/set-look. Pas de barbe avant 18 ans.
-  - Numéros de maillot : Player.number (0-99, unique, jamais un numéro
-    retiré au Hall of Fame), ensureJerseyNumbers au chargement et à la
-    promotion ; affiché UNIQUEMENT sur la fiche du joueur ; Premium peut
-    le changer (POST /api/player/set-jersey-number).
-  - PREMIUM_PERKS : 3 avantages ajoutés (16), bloc « Bientôt » masqué car
-    vide ; guide Premium ; en.js. premium_personalization_test.js.
-  RESTE : pousser.
-
 - **Valeurs validées (2026-09-29)** : derby = affluence ×1,15 et humeur
   ×1,5 ; note des managers départ 1500, K = 24.
 
