@@ -72,8 +72,13 @@ points réellement ouverts.
   1. ✅ Légende/zones du classement selon les divisions réellement ouvertes
      (World.divisionMovesFor → league.divisionMoves dans GET /api/save ;
      leagueDivisionMoves/standingsRowZone/standingsLegendItems côté jeu ;
-     standings_zones_test.js). ⚠️ Le barrage 7e-8e est toujours JOUÉ
-     (autoSim) même sans enjeu (< 3 championnats dessous) : question posée.
+     standings_zones_test.js). Barrage 7e-8e supprimé quand il n'a pas
+     d'enjeu (< 3 championnats ouverts dessous, décision utilisateur) :
+     league.barrageHasStakes (transitoire, posé par catchUpWorld et
+     resolvePlayerContext), autoSim ne le programme pas / annule un barrage
+     programmé non commencé. barrage_stakes_test.js ; barrage_live_test.js
+     déclare 3 championnats dessous.
+     ⚠️ Rien n'est poussé : l'utilisateur veut UN SEUL push à la fin du lot.
   2. ✅ Chargement mobile : 8 visuels de salle → assets/arena/niveau-N.jpg,
      logo → /assets/brand/logo-hoop-manager.png (page 4,8 → 2,9 Mo) ;
      compression brotli/gzip (server/index.js sendBody : HTML, JS, CSS,

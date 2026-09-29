@@ -455,6 +455,8 @@ async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
     found.league.nationalCupPending = cup && !found.league.cup && cup.season === (found.league.seasonNumber || 1)
       ? World.NationalCup.pendingViewFor(cup, found.leagueId, found.teamIndex) : null;
   }
+  // Barrage 7e-8e seulement s'il a un enjeu (voir World.divisionMovesFor).
+  found.league.barrageHasStakes = World.divisionMovesFor(world, found.leagueId).barrage;
   return { ok: true, league: found.league, teamIndex: found.teamIndex, isMulti: true, savePath: multiSavePath, world, leagueId: found.leagueId };
 }
 
