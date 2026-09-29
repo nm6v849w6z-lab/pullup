@@ -2,7 +2,8 @@
 // clubs identiques (mêmes joueurs copiés) sauf la modification testée. Les
 // seuils sont larges (c'est de l'aléatoire, 160 matchs par test) mais
 // attrapent une régression franche : une caractéristique qui ne compte plus,
-// une qui écrase tout, un banc qui ne fatigue plus, une tactique gratuite.
+// une qui écrase tout, un banc qui ne fatigue plus, une tactique gratuite,
+// une Isolation ou un Box and one qui ne dépendraient plus d'une vraie star.
 const E = require("./engine.js");
 const N = +process.argv[2] || 160;
 function fail(msg) { throw new Error("❌ " + msg); }
@@ -57,5 +58,20 @@ for (const k of Object.keys(E.DEFENSES)) {
 for (const k of ["Jeu intérieur", "Jeu extérieur", "Isolation", "Post-up", "Transition rapide", "Tirs rapides"]) {
   r = series(a => { a.offensivePriorities = [k, k, k]; }, b => { b.offensivePriorities = ["Équilibrée", "Équilibrée", "Équilibrée"]; });
   ok(`Priorité « ${k} »`, Math.abs(r.diff) <= 6.5, `écart ${r.diff.toFixed(1)}`);
+}
+// Isolation et Box and one avec une vraie star (audit 2026-09-29) : ces
+// deux réglages doivent briller face à / avec une star et coûter sans.
+{
+  const withStar = t => { const st = t.players.find(p => p.id === Object.values(t.lineup.starters)[1]); E.ATTRS.forEach(a => { st.attrs[a] = Math.min(99, st.attrs[a] + 25); }); t.autoAssignLineup(); return t; };
+  const iso = t => { t.offensivePriorities = ["Isolation", "Isolation", "Isolation"]; };
+  const bal = t => { t.offensivePriorities = ["Équilibrée", "Équilibrée", "Équilibrée"]; };
+  const twice = (a, b) => { const x = series(a, b), y = series(a, b); return (x.diff + y.diff) / 2; };
+  const isoPlain = twice(iso, bal) - twice(bal, bal);
+  const isoStar = twice(a => { withStar(a); iso(a); }, bal) - twice(a => { withStar(a); bal(a); }, bal);
+  ok("Isolation : paie avec une star, coûte sans", isoStar - isoPlain >= 2 && isoPlain <= 1.5, `sans star ${isoPlain.toFixed(1)}, avec star ${isoStar.toFixed(1)}`);
+  const box = b => { b.defense = "Box and one"; }, man = b => { b.defense = "Homme à homme"; };
+  const boxPlain = twice(() => {}, box) - twice(() => {}, man);
+  const boxStar = twice(withStar, box) - twice(withStar, man);
+  ok("Box and one : gêne une star, coûte sans", boxPlain - boxStar >= 3 && boxPlain >= -1, `écart de l'attaque sans star ${boxPlain >= 0 ? "+" : ""}${boxPlain.toFixed(1)}, avec star ${boxStar.toFixed(1)}`);
 }
 console.log("✅ Batterie d'équilibrage passée.");

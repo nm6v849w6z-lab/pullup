@@ -194,7 +194,7 @@ const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
   "Jeu intérieur":     { inside: .60, mid: .25, three: .15, tov: -.01, assist: 0,   tempo: -.05 },
   "Jeu extérieur":     { inside: .15, mid: .30, three: .55, tov: 0,    assist: .02, tempo: 0 },
-  "Isolation":         { inside: .30, mid: .40, three: .30, tov: .02,  assist: -.05,tempo: -.03 },
+  "Isolation":         { inside: .33, mid: .37, three: .30, tov: .015, assist: -.05,tempo: -.03 },
   "Pick & Roll":       { inside: .40, mid: .30, three: .30, tov: 0,    assist: .05, tempo: 0 },
   "Post-up":           { inside: .60, mid: .30, three: .10, tov: 0,    assist: -.02,tempo: -.08 },
   "Jeu en pénétration":{ inside: .50, mid: .35, three: .15, tov: .03,  assist: 0,   tempo: .05, drawFoul: .04 },
@@ -206,7 +206,9 @@ const OFFENSE_PROFILES = {
 const DEFENSES = {
   "Homme à homme":   { insideDef: 0,   perimDef: 0,   pressure: 0,   fatigueCost: 0 },
   "Zone press":      { insideDef: -.06,perimDef: 0,   pressure: .07, fatigueCost: .35 },
-  "Box and one":     { insideDef: .01, perimDef: .01, pressure: .01, fatigueCost: .12, shutdownStar: true },
+  // Box and one (audit 2026-09-29) : gratuit face à un cinq homogène (+2 pts)
+  // — les quatre défenseurs en zone laissent désormais des trous (−0,06).
+  "Box and one":     { insideDef: -.06,perimDef: -.06,pressure: 0,   fatigueCost: .12, shutdownStar: true },
   "Zone extérieure": { insideDef: -.08,perimDef: .07, pressure: .01, fatigueCost: -.05 },
   "Zone intérieure": { insideDef: .10, perimDef: -.05,pressure: .01, fatigueCost: -.05 },
 };
@@ -14444,6 +14446,10 @@ const TIMEOUT_RUN_CHANCE = 0.7;
 const TIMEOUT_FATIGUE_RECOVERY = 2.5;
 const SET_PLAY_SHOT_BONUS = 0.03;
 const SET_PLAY_TOV_BONUS = 0.02;
+// Voir boxStarMalus dans playPossession.
+const BOX_AND_ONE_STAR_MALUS_PER_POINT = 0.008;
+// Voir l'Isolation dans playPossession (réussite de la star).
+const ISOLATION_STAR_BONUS_PER_POINT = 0.005;
 
 // Voir playPossession (bloc rebond) : poids commun appliqué à l'effort de
 // rebond offensif, calibré le 2026-09-28 (100 matchs simulés).
@@ -15179,8 +15185,13 @@ class MatchEngine {
     // désormais le tir sur la star du cinq, proportionnellement à son poids
     // dans les priorités — profite aux équipes qui ont un vrai joueur
     // au-dessus du lot, pénalise les autres.
-    const isoWeight = offTeam.offensivePriorities.includes("Isolation") ? 1 / offTeam.offensivePriorities.length : 0;
+    // Poids = part RÉELLE d'Isolation dans les priorités (audit 2026-09-29 :
+    // 1/3 que l'Isolation soit choisie une ou trois fois, alors que ses
+    // inconvénients, eux, s'additionnaient).
+    const isoWeight = offTeam.offensivePriorities.filter(k => k === "Isolation").length / Math.max(1, offTeam.offensivePriorities.length);
     const heroMult = (clutch ? 1.7 : 1) * (1 + isoWeight * 1.2);
+    // Box and one : la star, collée, touche moins de ballons.
+    const boxDeny = defense.shutdownStar ? 0.85 : 1;
     // Gestion de fin de match "Adaptatif" : en garbage time (écart >= seuil, dès
     // le Q3), l'équipe qui mène (ou est menée) large ne force plus autant
     // le jeu sur sa star — MULTIPLICATEUR SÉPARÉ du hero-ball clutch
@@ -15200,7 +15211,7 @@ class MatchEngine {
     // intérieure.
     const penetrationBonus = zone === "inside" ? p => 1 + p.eff("penetration") / 200 : () => 1;
     const shooter = weightedPick(onCourtOff, p =>
-      Math.pow(p.eff(statForZone), 2.1) * penetrationBonus(p) * (star && p.id === star.id ? heroMult * blowoutHeroMult : 1)
+      Math.pow(p.eff(statForZone), 2.1) * penetrationBonus(p) * (star && p.id === star.id ? heroMult * blowoutHeroMult * boxDeny : 1)
     );
     const defender = this.matchupDefender(defTeam, shooter, zone);
 
@@ -15252,6 +15263,8 @@ class MatchEngine {
 
     const defStat = zone === "inside" ? defender.eff("defInside") : defender.eff("defOutside");
     let defBoost = zone === "inside" ? defense.insideDef : defense.perimDef;
+    // Box and one : défenseur dédié sur la star (voir aussi boxDeny, moins
+    // de ballons, et boxStarMalus, sur la réussite même du tir).
     if (defense.shutdownStar && star && shooter.id === star.id) defBoost += 0.10;
 
     // --- Aide défensive (Faible/Moyenne/Forte) : déplace le curseur
@@ -15515,6 +15528,29 @@ class MatchEngine {
     // l'urgence, rarement réussi — avant l'audit 2026-09-29, une possession
     // d'une seconde valait une attaque complète.
     if (this._buzzerHeave) prob = Math.min(prob, 0.18);
+    // Box and one (audit 2026-09-29) : la star marquée de près tire moins
+    // bien, même quand son tir reste « ouvert » — un tir de star est souvent
+    // déjà au plus haut niveau d'ouverture, où un simple bonus défensif ne
+    // changeait plus rien.
+    // Gêne proportionnelle à la domination de la star sur ses coéquipiers
+    // (note générale) : forte sur un vrai leader, presque nulle sur un
+    // « meilleur joueur » à peine au-dessus des autres.
+    const starDominance = () => {
+      const mates = onCourtOff.filter(p => p.id !== star.id);
+      return star.overall() - mates.reduce((s, p) => s + p.overall(), 0) / Math.max(1, mates.length);
+    };
+    if (defense.shutdownStar && star && shooter.id === star.id) {
+      prob = clamp(prob - clamp(starDominance() * BOX_AND_ONE_STAR_MALUS_PER_POINT, 0, 0.18), 0.10, 0.75);
+    }
+    // Isolation (audit 2026-09-29, mesurée avec une vraie star : ne payait
+    // jamais) : on écarte le jeu pour laisser la star défier son défenseur —
+    // sa réussite monte en proportion de sa domination sur ses coéquipiers,
+    // dans la part d'Isolation choisie. Un cinq sans joueur au-dessus du
+    // lot n'y gagne rien et garde les inconvénients du profil (pertes de
+    // balle, mi-distance).
+    if (isoWeight > 0 && star && shooter.id === star.id) {
+      prob = clamp(prob + isoWeight * clamp(starDominance() * ISOLATION_STAR_BONUS_PER_POINT, 0, 0.12), 0.10, 0.80);
+    }
     // Finition en contre-attaque (audit 2026-09-29) : une fois le tir
     // « ouvert », la vitesse n'ajoutait plus rien ; le cinq le plus rapide
     // finit désormais plus souvent son débordement (jusqu'à +10 pts de %).
