@@ -485,7 +485,8 @@ function simulateFriendly(Engine, league, f, now) {
     { lineup: lineups[f.awayIdx] || null, orders: orders[f.awayIdx] || null }, at, now);
   res.injuries = res.injuries.map(i => ({ teamIdx: i.side === "home" ? f.homeIdx : f.awayIdx, playerId: i.playerId, name: i.name }));
   f.result = res;
-  friendlyResultFeeds(Engine, f.id, homeReal, awayReal, res, i => i.teamIdx === f.homeIdx);
+  // Résultat annoncé plus tard (voir catchUpFriendlies), à revealAt.
+  f.announced = false;
 }
 
 // Match amical entre deux VRAIS clubs (même championnat ou non, voir
@@ -499,7 +500,14 @@ function playFriendlyMatch(Engine, homeReal, awayReal, homeSetup, awaySetup, at,
   const youthIds = new Set([...(homeReal.youthPlayers || []), ...(awayReal.youthPlayers || [])].map(p => p.id));
   const players = [...home.players, ...away.players];
   const injuredBefore = new Map(players.map(p => [p.id, p.injuryUntil]));
-  const res = { scoreHome: 0, scoreAway: 0, forfeit: null, quarterScores: null, boxScoreHome: null, boxScoreAway: null, injuries: [], playedAt: now };
+  // Huis clos, pas de direct (retour utilisateur 2026-09-28 : "tu devrais
+  // mettre le meme temps que pour les autres matchs pour dévoiler le score
+  // de l'amical, mais pas besoin de mettre de live, le huis clos est bien") :
+  // joué au coup d'envoi, résultat caché aux managers jusqu'à revealAt (la
+  // durée d'un match officiel diffusé), puis annoncé dans le fil — voir
+  // isRevealed, hideUnrevealedFriendly, catchUpFriendlies et
+  // server/worldFriendlies.js:catchUp.
+  const res = { scoreHome: 0, scoreAway: 0, forfeit: null, quarterScores: null, boxScoreHome: null, boxScoreAway: null, injuries: [], playedAt: now, revealAt: at + Calendar.MATCH_BROADCAST_DURATION_MS };
   const homeOk = home.hasValidLineup();
   const awayOk = away.hasValidLineup();
   if (homeOk && awayOk) {
@@ -574,6 +582,14 @@ function catchUpFriendlies(Engine, league, now) {
       played.push(f.id);
     }
   });
+  // Huis clos : résultats annoncés dans le fil à revealAt (voir
+  // playFriendlyMatch). Un amical joué sans ce champ a déjà été annoncé.
+  league.friendlies.forEach(f => {
+    if (f.status !== "played" || f.announced !== false || !isRevealed(f, now)) return;
+    f.announced = true;
+    const homeReal = league.teams[f.homeIdx], awayReal = league.teams[f.awayIdx];
+    if (homeReal && awayReal && f.result) friendlyResultFeeds(Engine, f.id, homeReal, awayReal, f.result, i => i.teamIdx === f.homeIdx);
+  });
   league.friendlies = league.friendlies.filter(f => {
     if (isUpcoming(f)) return true;
     const keep = f.status === "played" ? FRIENDLY_PLAYED_RETENTION_MS : FRIENDLY_CLOSED_RETENTION_MS;
@@ -584,15 +600,26 @@ function catchUpFriendlies(Engine, league, now) {
 
 // --- Lecture -----------------------------------------------------------------
 
+// Score dévoilé ? (huis clos : pas avant revealAt, voir playFriendlyMatch).
+function isRevealed(f, now) {
+  return !(f && f.result && typeof f.result.revealAt === "number" && now < f.result.revealAt);
+}
+// Vue manager d'un amical joué mais pas encore dévoilé : un amical accepté
+// dont l'heure est passée, sans résultat (« Résultat à venir »).
+function hideUnrevealedFriendly(view, f, now) {
+  if (f.status !== "played" || isRevealed(f, now)) return view;
+  return { ...view, status: "accepted", result: null, revealAt: f.result.revealAt };
+}
+
 // Un manager ne voit que SES amicaux, et que SA composition (celle de
 // l'adversaire reste secrète jusqu'au match — la feuille de match suffit).
-function sanitizeFriendliesForViewer(list, viewerIdx) {
+function sanitizeFriendliesForViewer(list, viewerIdx, now = Date.now()) {
   return (list || []).filter(f => involves(f, viewerIdx)).map(f => {
     const lineups = {};
     if (f.lineups && f.lineups[viewerIdx]) lineups[viewerIdx] = f.lineups[viewerIdx];
     const orders = {};
     if (f.orders && f.orders[viewerIdx]) orders[viewerIdx] = f.orders[viewerIdx];
-    return { ...f, lineups, orders };
+    return hideUnrevealedFriendly({ ...f, lineups, orders }, f, now);
   });
 }
 
@@ -603,5 +630,5 @@ module.exports = {
   inviteDeadlineOf: inviteDeadline, validateLineup, friendlyPool, playFriendlyMatch, friendlyResultFeeds,
   FRIENDLY_PLAYED_RETENTION_MS, FRIENDLY_CLOSED_RETENTION_MS,
   proposeFriendly, respondFriendly, cancelFriendly, setFriendlyLineup,
-  buildFriendlyTeam, simulateFriendly, catchUpFriendlies, sanitizeFriendliesForViewer,
+  buildFriendlyTeam, simulateFriendly, catchUpFriendlies, sanitizeFriendliesForViewer, isRevealed, hideUnrevealedFriendly,
 };

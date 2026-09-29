@@ -460,10 +460,10 @@ async function loadWorldFriendlies(multiSavePath) {
 function attachWorldFriendlyDays(league, leagueId, fstore) {
   league.worldFriendlyDays = World.WorldFriendlies.friendlyDaysByIdx(fstore, leagueId);
 }
-function mergedFriendlies(ctx, fstore) {
-  const own = Friendlies.sanitizeFriendliesForViewer(ctx.league.friendlies, ctx.teamIndex);
+function mergedFriendlies(ctx, fstore, now = Date.now()) {
+  const own = Friendlies.sanitizeFriendliesForViewer(ctx.league.friendlies, ctx.teamIndex, now);
   if (!ctx.world || !fstore) return { friendlies: own, guests: [] };
-  const w = World.WorldFriendlies.projectForViewer(fstore, ctx.leagueId, ctx.teamIndex);
+  const w = World.WorldFriendlies.projectForViewer(fstore, ctx.leagueId, ctx.teamIndex, now);
   return { friendlies: own.concat(w.friendlies), guests: w.guests };
 }
 function worldRefOf(world, leagueId, league, idx) {
@@ -801,7 +801,7 @@ function friendlyAction(fn) {
   return (team, teamIndex, league, body, now) => {
     const result = fn(Engine, team, teamIndex, league, body, now);
     if (!result.ok) return result;
-    return { ...result, friendlies: Friendlies.sanitizeFriendliesForViewer(league.friendlies, teamIndex) };
+    return { ...result, friendlies: Friendlies.sanitizeFriendliesForViewer(league.friendlies, teamIndex, now) };
   };
 }
 
@@ -1412,7 +1412,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // Amicaux entre championnats (server/worldFriendlies.js).
         if (ctx.world) {
           const fstore = await loadWorldFriendlies(multiSavePath);
-          const merged = mergedFriendlies(ctx, fstore);
+          const merged = mergedFriendlies(ctx, fstore, now);
           payload.league.friendlies = merged.friendlies;
           payload.league.guestTeams = (payload.league.guestTeams || []).concat(merged.guests);
         }
@@ -1428,7 +1428,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
         payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex);
         // Matchs amicaux : seulement les siens, sans la compo de l'adversaire.
-        payload.league.friendlies = Friendlies.sanitizeFriendliesForViewer(payload.league.friendlies, ctx.teamIndex);
+        payload.league.friendlies = Friendlies.sanitizeFriendliesForViewer(payload.league.friendlies, ctx.teamIndex, now);
         sendJson(res, 200, payload);
         return;
       }
@@ -1574,7 +1574,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
         const fstore = ctx.world ? await loadWorldFriendlies(multiSavePath) : null;
-        const merged = mergedFriendlies(ctx, fstore);
+        const merged = mergedFriendlies(ctx, fstore, now);
         sendJson(res, 200, { ok: true, friendlies: merged.friendlies, guestTeams: merged.guests });
         return;
       }
@@ -1871,7 +1871,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           const kick = WF.nextKickoff(fstore, now);
           const cur = nextWorldDeadlineAt.get(multiSavePath);
           if (kick != null && (cur == null || kick < cur)) nextWorldDeadlineAt.set(multiSavePath, kick);
-          const merged = mergedFriendlies(ctx, fstore);
+          const merged = mergedFriendlies(ctx, fstore, now);
           sendJson(res, 200, { ...result, friendlies: merged.friendlies, guestTeams: merged.guests, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
           return;
         }
@@ -1928,7 +1928,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const result = actionFn(ctx.league.teams[ctx.teamIndex], ctx.teamIndex, ctx.league, body, now);
         delete ctx.league.worldFriendlyDays;
         if (fstoreForFriendly && result.ok && Array.isArray(result.friendlies)) {
-          const merged = mergedFriendlies(ctx, fstoreForFriendly);
+          const merged = mergedFriendlies(ctx, fstoreForFriendly, now);
           result.friendlies = merged.friendlies;
           result.guestTeams = merged.guests;
         }

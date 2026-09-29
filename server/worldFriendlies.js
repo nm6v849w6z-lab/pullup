@@ -200,7 +200,7 @@ function setLineup(Engine, store, me, body, now) {
 
 // Amicaux « monde » d'un manager, dans le repère de sa ligue (voir le
 // commentaire de tête). Renvoie { friendlies, guests }.
-function projectForViewer(store, leagueId, idx) {
+function projectForViewer(store, leagueId, idx, now = Date.now()) {
   const guests = [];
   const byKey = new Map();
   const guestIdx = ref => {
@@ -228,7 +228,11 @@ function projectForViewer(store, leagueId, idx) {
       result: f.result ? { ...f.result, injuries: (f.result.injuries || []).map(i => ({ teamIdx: local(i.side), playerId: i.playerId, name: i.name })) } : null,
       remote: { leagueId: f[other(side)].leagueId, label: f[other(side)].label || null, country: f[other(side)].country || null },
     };
-  }).filter(Boolean);
+  }).filter(Boolean).map(v => {
+    // Huis clos : score caché jusqu'à revealAt (voir Friendlies.playFriendlyMatch).
+    const f = store.list.find(x => ID_PREFIX + x.id === v.id);
+    return f ? Friendlies.hideUnrevealedFriendly(v, f, now) : v;
+  });
   return { friendlies, guests };
 }
 
@@ -266,8 +270,17 @@ function catchUp(Engine, store, leagues, now, events = []) {
       { lineup: (f.lineups || {}).home || null, orders: (f.orders || {}).home || null },
       { lineup: (f.lineups || {}).away || null, orders: (f.orders || {}).away || null }, f.at, now);
     f.result = res;
-    Friendlies.friendlyResultFeeds(Engine, f.id, homeReal, awayReal, res, i => i.side === "home");
+    // Résultat annoncé à revealAt (huis clos, voir plus bas).
+    f.announced = false;
     events.push({ type: "world-friendly", id: f.id, home: f.home.name, away: f.away.name, scoreHome: res.scoreHome, scoreAway: res.scoreAway });
+  });
+  // Huis clos : résultats annoncés dans le fil à revealAt.
+  store.list.forEach(f => {
+    if (f.status !== "played" || f.announced !== false || !Friendlies.isRevealed(f, now)) return;
+    f.announced = true;
+    changed = true;
+    const homeReal = teamOf(f.home), awayReal = teamOf(f.away);
+    if (homeReal && awayReal && f.result) Friendlies.friendlyResultFeeds(Engine, f.id, homeReal, awayReal, f.result, i => i.side === "home");
   });
   const before = store.list.length;
   store.list = store.list.filter(f => {
@@ -283,6 +296,9 @@ function nextKickoff(store, now) {
   let next = null;
   ((store && store.list) || []).forEach(f => {
     if (f.status === "accepted" && f.at > now && (next == null || f.at < next)) next = f.at;
+    // Résultat à annoncer (huis clos) : échéance aussi.
+    const rv = f.result && f.result.revealAt;
+    if (f.status === "played" && f.announced === false && typeof rv === "number" && rv > now && (next == null || rv < next)) next = rv;
   });
   return next;
 }
