@@ -74,4 +74,21 @@ for (const k of ["Jeu intérieur", "Jeu extérieur", "Isolation", "Post-up", "Tr
   const boxStar = twice(withStar, box) - twice(withStar, man);
   ok("Box and one : gêne une star, coûte sans", boxPlain - boxStar >= 3 && boxPlain >= -1, `écart de l'attaque sans star ${boxPlain >= 0 ? "+" : ""}${boxPlain.toFixed(1)}, avec star ${boxStar.toFixed(1)}`);
 }
+// Réglages « confirmés » (audit 2026-09-29) : chacun doit être un
+// compromis — meilleur face à l'attaque qu'il vise que face à l'inverse.
+{
+  const conf = f => t => { t.tacticalTier = "confirmée"; f(t); };
+  const off = k => t => { t.offensivePriorities = [k, k, k]; };
+  const gain = (field, value, neutral, opp) => {
+    const one = () => series(conf(a => { a[field] = value; }), off(opp)).diff - series(conf(a => { a[field] = neutral; }), off(opp)).diff;
+    return (one() + one()) / 2;
+  };
+  const trade = (label, field, value, neutral, good, bad) => {
+    const g = gain(field, value, neutral, good), b = gain(field, value, neutral, bad);
+    ok(label, g - b >= 1, `face au ${good} ${g >= 0 ? "+" : ""}${g.toFixed(1)}, face au ${bad} ${b >= 0 ? "+" : ""}${b.toFixed(1)}`);
+  };
+  trade("Aide « Forte »", "helpDefense", "Forte", "Moyenne", "Jeu intérieur", "Jeu extérieur");
+  trade("Post-up « Prise à deux »", "postDefense", "Prise à deux", "Classique", "Post-up", "Jeu extérieur");
+  trade("Close-out « Agressif »", "closeoutStyle", "Agressif", "Contrôlé", "Jeu extérieur", "Jeu en pénétration");
+}
 console.log("✅ Batterie d'équilibrage passée.");

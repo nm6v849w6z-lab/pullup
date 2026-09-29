@@ -55,7 +55,7 @@ console.log("✅ MAX_WATCH_ASSIGNMENTS identique des deux côtés :", win.eval("
 const standardChecks = [
   ["SCREEN_DEFENSES['Aucune consigne']", { ballCreationMod: 0, rollOpennessMod: 0 }],
   ["HELP_DEFENSE_LEVELS['Moyenne']", { insideDef: 0, perimDef: 0 }],
-  ["POST_DEFENSES['Classique']", { insideDef: 0, tovMod: 0, assistOpenMod: 0, foulMod: 0 }],
+  ["POST_DEFENSES['Classique']", { insideDef: 0, tovMod: 0, assistOpenMod: 0, foulMod: 0, perimLeak: 0 }],
   ["CLOSEOUT_STYLES['Contrôlé']", { perimDefMod: 0, insideMismatchMod: 0 }],
   ["OFF_REBOUND_STYLES['Normal']", { offRebWeightMod: 0, transitionRisk: 0 }],
   ["ENDGAME_MANAGEMENT['Standard']", { blowoutThreshold: null, blowoutHeroMod: 0, blowoutTovMod: 0, closeGameTempoMod: 0 }],

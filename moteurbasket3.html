@@ -7651,11 +7651,11 @@
         <p class="training-intro">Avant chaque match, réglez trois choses pour votre équipe dans l'onglet Ordres. Tout s'enregistre automatiquement à chaque changement, et le bouton "Valider les ordres", toujours visible en haut de la page, confirme l'enregistrement. Dans le Calendrier, un match aux ordres validés affiche "Modifier vos ordres".</p>
         <p class="training-intro" style="margin-top:10px;"><b>Préparer à l'avance</b> : le sélecteur de journée en haut de l'onglet Ordres permet de régler n'importe quel match à venir, championnat ou Coupe. Quand cette journée devient le prochain match, vos ordres préparés deviennent automatiquement vos ordres actuels, et restent modifiables jusqu'au coup d'envoi. La composition est verrouillée <b>5 minutes avant le coup d'envoi</b>, au moment où commence l'émission d'avant-match.</p>
         <p class="training-intro" style="margin-top:10px;"><b>3 priorités offensives</b> : choisissez exactement 3 styles parmi les 10 proposés (Équilibrée, Jeu intérieur, Jeu extérieur, Jeu en pénétration, Pick &amp; Roll, Post-up, Isolation, Jeu en mouvement, Transition rapide, Tirs rapides). Les 3 choix se combinent à parts égales pour déterminer la répartition des tirs entre l'intérieur, la mi-distance et le 3 points, ainsi que le rythme, le taux de passes décisives et le risque de perte de balle. Un jeu intérieur ou en Post-up privilégie les tirs proches du panier ; un jeu extérieur ou des Tirs rapides misent sur le 3 points ; la Transition rapide et le Jeu en pénétration augmentent le rythme, au prix de plus de pertes de balle.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Défense</b> : un seul choix parmi 5 systèmes. Homme à homme est le réglage neutre. Zone press met la pression sur les extérieurs adverses, au prix d'une fatigue importante. Box and one cible le meilleur joueur adverse. Zone extérieure et Zone intérieure renforcent un secteur du terrain au détriment de l'autre.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Défense</b> : un seul choix parmi 5 systèmes. Homme à homme est le réglage neutre. Zone press met la pression sur les extérieurs adverses, au prix d'une fatigue importante. Box and one colle un défenseur au meilleur joueur adverse : redoutable face à une vraie star, coûteux face à un cinq homogène (les quatre autres défendent en zone). Zone extérieure et Zone intérieure renforcent un secteur du terrain au détriment de l'autre.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Rythme</b> : Lent, Normal ou Rapide. Plus le rythme est élevé, plus il y a de possessions (donc d'occasions de marquer, des deux côtés), mais aussi plus de fatigue et de pertes de balle.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Feuille de match</b> : un titulaire par poste (5 postes obligatoires), et des remplaçants qui peuvent chacun couvrir plusieurs postes. Sans cinq complet disponible, le match est perdu par forfait (20-0).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Niveau tactique</b> : Débutant ou Confirmé, dans la carte Attaque. Ce choix ne change QUE la complexité de l'interface, jamais la façon dont un match se joue. Confirmé révèle six réglages supplémentaires : Défense sur écrans (Aucune consigne, Au-dessus, En-dessous, Switch, Prise à deux), Aide défensive (Faible, Moyenne, Forte), Gestion du post-up (Aucune consigne, Pousser vers le fond, Pousser vers le centre, Prise à deux), Close-out (Contrôlé, Agressif), Rebond offensif (Prudent, Normal, Agressif) et Surveiller (carte Adversaires : jusqu'à 3 postes adverses ciblés, chacun avec un focus précis, toujours avec une contrepartie ; la consigne vise celui qui occupe ce poste sur le terrain, titulaire ou remplaçant).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Gestion de fin de match</b> (aux deux niveaux) : Standard garde le comportement habituel. Adaptatif ajoute un vrai garbage time dès 10 points d'écart à partir du 3e quart-temps, et accélère légèrement le rythme dans les 5 dernières minutes d'un match serré.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Gestion de fin de match</b> (aux deux niveaux) : Standard garde le comportement habituel. Adaptatif ajoute un vrai garbage time dès 10 points d'écart à partir du 3e quart-temps (au 4e quart-temps, à 18 points d'écart, les titulaires sortent pour ménager leur forme), et accélère légèrement le rythme dans les 5 dernières minutes d'un match serré.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="tactiques" data-guide-group="Préparer les matchs">
@@ -7953,21 +7953,23 @@ const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
   "Jeu intérieur":     { inside: .60, mid: .25, three: .15, tov: -.01, assist: 0,   tempo: -.05 },
   "Jeu extérieur":     { inside: .15, mid: .30, three: .55, tov: 0,    assist: .02, tempo: 0 },
-  "Isolation":         { inside: .30, mid: .40, three: .30, tov: .04,  assist: -.05,tempo: -.03 },
+  "Isolation":         { inside: .33, mid: .37, three: .30, tov: .015, assist: -.05,tempo: -.03 },
   "Pick & Roll":       { inside: .40, mid: .30, three: .30, tov: 0,    assist: .05, tempo: 0 },
-  "Post-up":           { inside: .65, mid: .25, three: .10, tov: -.02, assist: -.02,tempo: -.08 },
+  "Post-up":           { inside: .60, mid: .30, three: .10, tov: 0,    assist: -.02,tempo: -.08 },
   "Jeu en pénétration":{ inside: .50, mid: .35, three: .15, tov: .03,  assist: 0,   tempo: .05, drawFoul: .04 },
   "Jeu en mouvement":  { inside: .30, mid: .30, three: .40, tov: -.01, assist: .06, tempo: .02 },
-  "Transition rapide": { inside: .45, mid: .25, three: .30, tov: .05,  assist: .02, tempo: .18 },
-  "Tirs rapides":      { inside: .20, mid: .35, three: .45, tov: .04,  assist: -.03,tempo: .12 },
+  "Transition rapide": { inside: .45, mid: .25, three: .30, tov: .02,  assist: .02, tempo: .18 },
+  "Tirs rapides":      { inside: .20, mid: .30, three: .50, tov: .02,  assist: -.03,tempo: .12 },
 };
 
 const DEFENSES = {
   "Homme à homme":   { insideDef: 0,   perimDef: 0,   pressure: 0,   fatigueCost: 0 },
-  "Zone press":      { insideDef: 0,   perimDef: .02, pressure: .09, fatigueCost: .35 },
-  "Box and one":     { insideDef: .01, perimDef: .01, pressure: .02, fatigueCost: .10, shutdownStar: true },
-  "Zone extérieure": { insideDef: -.06,perimDef: .09, pressure: .01, fatigueCost: -.05 },
-  "Zone intérieure": { insideDef: .09, perimDef: -.06,pressure: .01, fatigueCost: -.05 },
+  "Zone press":      { insideDef: -.06,perimDef: 0,   pressure: .07, fatigueCost: .35 },
+  // Box and one (audit 2026-09-29) : gratuit face à un cinq homogène (+2 pts)
+  // — les quatre défenseurs en zone laissent désormais des trous (−0,06).
+  "Box and one":     { insideDef: -.06,perimDef: -.06,pressure: 0,   fatigueCost: .12, shutdownStar: true },
+  "Zone extérieure": { insideDef: -.08,perimDef: .07, pressure: .01, fatigueCost: -.05 },
+  "Zone intérieure": { insideDef: .10, perimDef: -.05,pressure: .01, fatigueCost: -.05 },
 };
 
 const RHYTHMS = {
@@ -7997,9 +7999,11 @@ const SCREEN_DEFENSES = {
 };
 
 const HELP_DEFENSE_LEVELS = {
-  "Faible":  { insideDef: -.045, perimDef: .035 },
+  // Recalibré le 2026-09-29 (mesuré : « Faible » gagnait partout, même
+  // face au jeu intérieur ; « Forte » n'aidait pas contre lui).
+  "Faible":  { insideDef: -.07,  perimDef: .025 },
   "Moyenne": { insideDef: 0,     perimDef: 0 },
-  "Forte":   { insideDef: .045,  perimDef: -.035 },
+  "Forte":   { insideDef: .07,   perimDef: -.03 },
 };
 
 // Retour utilisateur (2026-09) : denyThree et denyPassingLanes retirés de la
@@ -8027,26 +8031,35 @@ const WATCH_FOCUS_LABELS = {
 };
 
 const POST_DEFENSES = {
-  "Classique":              { insideDef: 0,    tovMod: 0,    assistOpenMod: 0,    foulMod: 0 },
-  "Pousser vers le fond":   { insideDef: .05,  tovMod: 0,    assistOpenMod: -.03, foulMod: .015 },
-  "Pousser vers le centre": { insideDef: .025, tovMod: 0,    assistOpenMod: .05,  foulMod: 0 },
-  "Prise à deux":           { insideDef: .11,  tovMod: .05,  assistOpenMod: .08,  foulMod: 0 },
+  "Classique":              { insideDef: 0,    tovMod: 0,    assistOpenMod: 0,    foulMod: 0,    perimLeak: 0 },
+  "Pousser vers le fond":   { insideDef: .04,  tovMod: 0,    assistOpenMod: -.03, foulMod: .015, perimLeak: .015 },
+  "Pousser vers le centre": { insideDef: .025, tovMod: 0,    assistOpenMod: .05,  foulMod: 0,    perimLeak: .01 },
+  "Prise à deux":           { insideDef: .09,  tovMod: .03,  assistOpenMod: .08,  foulMod: 0,    perimLeak: .07 },
 };
 
 const CLOSEOUT_STYLES = {
   "Contrôlé": { perimDefMod: 0,   insideMismatchMod: 0 },
-  "Agressif": { perimDefMod: .05, insideMismatchMod: 5 },
+  // Recalibré le 2026-09-29 (mesuré : gagnant partout, même face au jeu
+  // en pénétration) : la pénétration derrière la fermeture coûte plus cher.
+  "Agressif": { perimDefMod: .04, insideMismatchMod: 14 },
 };
 
 const OFF_REBOUND_STYLES = {
-  "Prudent":  { offRebWeightMod: -.22, transitionRisk: 0 },
+  // `transitionGuard` (audit 2026-09-29 : « Prudent » coûtait 2 pts sans
+  // contrepartie) : joueurs déjà repliés, moins de contre-attaques adverses
+  // après un rebond défensif.
+  "Prudent":  { offRebWeightMod: -.15, transitionRisk: 0, transitionGuard: .22 },
   "Normal":   { offRebWeightMod: 0,    transitionRisk: 0 },
   "Agressif": { offRebWeightMod: .28,  transitionRisk: .40 },
 };
 
 const ENDGAME_MANAGEMENT = {
   "Standard":  { blowoutThreshold: null, blowoutHeroMod: 0,    blowoutTovMod: 0,    closeGameTempoMod: 0 },
-  "Adaptatif": { blowoutThreshold: 10,   blowoutHeroMod: -.35, blowoutTovMod: .015, closeGameTempoMod: .10 },
+  // Audit 2026-09-29 : coûtait 1,5 pt sans contrepartie (pertes de balle en
+  // garbage time) — plus de malus de pertes ; les titulaires sont mis au
+  // repos dans un match plié (voir restStartersInBlowout), ce qui ménage
+  // leur forme physique pour les matchs suivants.
+  "Adaptatif": { blowoutThreshold: 10,   blowoutHeroMod: -.35, blowoutTovMod: 0,    closeGameTempoMod: .10, restStartersLead: 18 },
 };
 
 // Listes pratiques pour l'UI (voir buildTeamPanel) — dérivées des tables
@@ -46038,7 +46051,7 @@ const TOUR_STEPS = [
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresEndgameSelect",
     title: "Gestion de fin de match",
-    text: "Ce réglage est toujours visible, quel que soit votre niveau tactique. En Adaptatif, l'équipe qui mène large lève le pied dès le 3e quart-temps, et le rythme s'accélère légèrement dans les 5 dernières minutes d'un match serré.",
+    text: "Ce réglage est toujours visible, quel que soit votre niveau tactique. En Adaptatif, l'équipe qui mène large lève le pied dès le 3e quart-temps, les titulaires sortent au 4e quart-temps à 18 points d'écart (forme ménagée), et le rythme s'accélère légèrement dans les 5 dernières minutes d'un match serré.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresTierToggle",
     title: "Débutant ou confirmé",
@@ -46063,7 +46076,7 @@ const TOUR_STEPS = [
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresOffRebSelect",
     title: "Rebond offensif",
-    text: "Prudent limite les rebonds offensifs tentés, sans jamais donner de bonus de transition à l'adversaire en cas d'échec. Agressif en capte davantage, mais un échec laisse la défense adverse repartir plus vite en contre-attaque.",
+    text: "Prudent limite les rebonds offensifs tentés, mais vos joueurs se replient : l'adversaire part moins souvent en contre-attaque. Agressif en capte davantage, mais un échec laisse la défense adverse repartir plus vite en contre-attaque.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresWatchAssignments", wide: true,
     title: "Surveiller un joueur adverse",

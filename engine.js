@@ -269,9 +269,11 @@ const SCREEN_DEFENSES = {
 // (meilleure protection du panier, mais plus de tirs à 3 points ouverts) —
 // exactement le compromis décrit par l'utilisateur.
 const HELP_DEFENSE_LEVELS = {
-  "Faible":  { insideDef: -.045, perimDef: .035 },
+  // Recalibré le 2026-09-29 (mesuré : « Faible » gagnait partout, même
+  // face au jeu intérieur ; « Forte » n'aidait pas contre lui).
+  "Faible":  { insideDef: -.07,  perimDef: .025 },
   "Moyenne": { insideDef: 0,     perimDef: 0 },
-  "Forte":   { insideDef: .045,  perimDef: -.035 },
+  "Forte":   { insideDef: .07,   perimDef: -.03 },
 };
 
 // Surveiller — jusqu'à 3 affectations { position, focus } sur Team.watchAssignments
@@ -330,11 +332,17 @@ const MAX_WATCH_ASSIGNMENTS = 3;
 
 // Gestion du post-up — s'applique aux tirs en zone "inside" uniquement.
 // "Classique" = comportement actuel (delta zéro).
+// Audit 2026-09-29 (mesuré : « Prise à deux » et « Pousser vers le fond »
+// gagnaient 2 à 3 pts même face à une équipe qui ne joue pas au poste,
+// tovMod n'était lu nulle part, assistOpenMod ne change que le crédit de la
+// passe) : `perimLeak` = défense extérieure en moins sur les tirs mi-distance
+// et à 3 pts (le défenseur qui double laisse un tireur), `tovMod` = pertes
+// de balle en plus pour l'attaque, au prorata de son jeu intérieur.
 const POST_DEFENSES = {
-  "Classique":              { insideDef: 0,    tovMod: 0,    assistOpenMod: 0,    foulMod: 0 },
-  "Pousser vers le fond":   { insideDef: .05,  tovMod: 0,    assistOpenMod: -.03, foulMod: .015 },
-  "Pousser vers le centre": { insideDef: .025, tovMod: 0,    assistOpenMod: .05,  foulMod: 0 },
-  "Prise à deux":           { insideDef: .11,  tovMod: .05,  assistOpenMod: .08,  foulMod: 0 },
+  "Classique":              { insideDef: 0,    tovMod: 0,    assistOpenMod: 0,    foulMod: 0,    perimLeak: 0 },
+  "Pousser vers le fond":   { insideDef: .04,  tovMod: 0,    assistOpenMod: -.03, foulMod: .015, perimLeak: .015 },
+  "Pousser vers le centre": { insideDef: .025, tovMod: 0,    assistOpenMod: .05,  foulMod: 0,    perimLeak: .01 },
+  "Prise à deux":           { insideDef: .09,  tovMod: .03,  assistOpenMod: .08,  foulMod: 0,    perimLeak: .07 },
 };
 
 // Close-out — "Contrôlé" = comportement actuel (delta zéro). Agressif :
@@ -344,7 +352,9 @@ const POST_DEFENSES = {
 // l'utilisateur.
 const CLOSEOUT_STYLES = {
   "Contrôlé": { perimDefMod: 0,   insideMismatchMod: 0 },
-  "Agressif": { perimDefMod: .05, insideMismatchMod: 5 },
+  // Recalibré le 2026-09-29 (mesuré : gagnant partout, même face au jeu
+  // en pénétration) : la pénétration derrière la fermeture coûte plus cher.
+  "Agressif": { perimDefMod: .04, insideMismatchMod: 14 },
 };
 
 // Rebond offensif — "Normal" = comportement actuel (delta zéro). Agressif :
@@ -355,7 +365,10 @@ const CLOSEOUT_STYLES = {
 // des contre-attaques"). Prudent : l'inverse, moins de rebonds offensifs
 // mais jamais de bonus de transition donné à l'adversaire.
 const OFF_REBOUND_STYLES = {
-  "Prudent":  { offRebWeightMod: -.22, transitionRisk: 0 },
+  // `transitionGuard` (audit 2026-09-29 : « Prudent » coûtait 2 pts sans
+  // contrepartie) : joueurs déjà repliés, moins de contre-attaques adverses
+  // après un rebond défensif.
+  "Prudent":  { offRebWeightMod: -.15, transitionRisk: 0, transitionGuard: .22 },
   "Normal":   { offRebWeightMod: 0,    transitionRisk: 0 },
   "Agressif": { offRebWeightMod: .28,  transitionRisk: .40 },
 };
@@ -375,7 +388,11 @@ const OFF_REBOUND_STYLES = {
 // minutes de match quand l'écart repasse sous les 5 points.
 const ENDGAME_MANAGEMENT = {
   "Standard":  { blowoutThreshold: null, blowoutHeroMod: 0,    blowoutTovMod: 0,    closeGameTempoMod: 0 },
-  "Adaptatif": { blowoutThreshold: 10,   blowoutHeroMod: -.35, blowoutTovMod: .015, closeGameTempoMod: .10 },
+  // Audit 2026-09-29 : coûtait 1,5 pt sans contrepartie (pertes de balle en
+  // garbage time) — plus de malus de pertes ; les titulaires sont mis au
+  // repos dans un match plié (voir restStartersInBlowout), ce qui ménage
+  // leur forme physique pour les matchs suivants.
+  "Adaptatif": { blowoutThreshold: 10,   blowoutHeroMod: -.35, blowoutTovMod: 0,    closeGameTempoMod: .10, restStartersLead: 18 },
 };
 
 // Probabilité de base de blessure, par joueur sur le terrain et par possession
@@ -14580,6 +14597,7 @@ class MatchEngine {
     // Corrigé : on détermine d'abord si le joueur DOIT sortir (fauté out / blessé) ou
     // DEVRAIT sortir (fatigue / entre dans les problèmes de fautes), puis on ne touche
     // à onCourt qu'une fois qu'on sait si un remplaçant est disponible.
+    const blowoutRest = this.restStartersInBlowout(team, quarter);
     for (const p of team.onCourtPlayers()) {
       if (!p.onCourt) continue; // déjà sorti plus tôt dans cette même passe
 
@@ -14587,7 +14605,7 @@ class MatchEngine {
       // Player.returnStarterId/stintEndAt) : sans ça, un titulaire sorti pour
       // sa première pause ne revenait quasiment jamais (le remplaçant, tout
       // frais, restait jusqu'à son propre seuil de fatigue haut, ~30 min).
-      if (p.returnStarterId && p.secondsPlayed >= p.stintEndAt && !p.disqualified && !p.injured &&
+      if (!blowoutRest && p.returnStarterId && p.secondsPlayed >= p.stintEndAt && !p.disqualified && !p.injured &&
           !(p.matchPosition && team.slotMinuteShares(p.matchPosition))) {
         const starter = team.players.find(x => x.id === p.returnStarterId);
         p.returnStarterId = null;
@@ -14638,6 +14656,7 @@ class MatchEngine {
       // Première pause planifiée dans le temps (voir Player.firstRestAt).
       const plannedFirstRest = p.isStarterThisMatch && p.secondsPlayed >= p.nextRestAt;
       const shouldRest = !mustLeave && (
+        (blowoutRest && p.isStarterThisMatch) ||
         ((p.fatigue >= fatigueThreshold || plannedFirstRest) && !team.maintainDespiteFouls.has(p.id)) ||
         // 4 fautes : mis de côté jusqu'aux 5 dernières minutes du match
         // (FOUL_TROUBLE_RETURN_CLOCK) ; ensuite il joue, quitte à sortir
@@ -14687,6 +14706,17 @@ class MatchEngine {
       // Si ce n'est qu'une question de fatigue/fautes (pas obligatoire) et qu'aucun
       // remplaçant n'est disponible, le joueur reste simplement sur le terrain.
     }
+  }
+
+  // Gestion de fin de match « Adaptatif » : au 4e quart-temps, écart d'au
+  // moins restStartersLead points (dans un sens ou dans l'autre), le coach
+  // sort ses titulaires et ne les fait plus revenir.
+  restStartersInBlowout(team, quarter) {
+    const mgmt = ENDGAME_MANAGEMENT[team.endgameManagement] || ENDGAME_MANAGEMENT.Standard;
+    if (mgmt.restStartersLead == null || quarter < 4) return false;
+    const other = team === this.teamA ? this.teamB : this.teamA;
+    const pts = t => t.players.reduce((s, p) => s + p.stats.pts, 0);
+    return Math.abs(pts(team) - pts(other)) >= mgmt.restStartersLead;
   }
 
   // Fautes d'équipe du quart-temps en cours (fautes personnelles cumulées de
@@ -14894,7 +14924,20 @@ class MatchEngine {
     // disponible, cette possession ne peut objectivement pas être jouée —
     // on la neutralise (aucun évènement, la balle change juste de main)
     // plutôt que de laisser planter toute la simulation.
-    if (!onCourtOff.length || !onCourtDef.length) return { possessionOffense: false };
+    if (!onCourtOff.length) return { possessionOffense: false };
+    // Défense sans aucun joueur (banc à 5, exclusions et blessures) : panier
+    // sans opposition — sinon plus rien ne se marquait et le match
+    // enchaînait des prolongations à 0-0 jusqu'au garde-fou (audit
+    // 2026-09-29, plus fréquent depuis que les exclusions sont réalistes).
+    if (!onCourtDef.length) {
+      const scorer = weightedPick(onCourtOff, p => p.eff("inside"));
+      scorer.stats.fga2++; scorer.stats.fgm2++; scorer.stats.pts += 2;
+      scorer.stats.paintAtt = (scorer.stats.paintAtt || 0) + 1; scorer.stats.paintMade = (scorer.stats.paintMade || 0) + 1;
+      scorer.stats.ptsPaint = (scorer.stats.ptsPaint || 0) + 2; scorer.stats.ptsSolo = (scorer.stats.ptsSolo || 0) + 2;
+      this.applyPlusMinusForPoints(offTeam, 2);
+      this.log(events, quarter, clock, say(PHRASES.madeShot.inside, { shooter: scorer.name, quality: "ouvert", team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone: "inside", made: true, shooter: scorer.name, shooterId: scorer.id, assister: null, assisterId: null, possession: this.teamKey(offTeam) });
+      return { possessionOffense: false, scored: true };
+    }
 
     // --- Tactique confirmée (voir le grand commentaire au-dessus de
     // SCREEN_DEFENSES, plus haut dans ce fichier) : lookup une fois par
@@ -15019,6 +15062,7 @@ class MatchEngine {
     // avant le clamp, comme le reste des composantes de tovChance. "Standard"
     // partout => ces deux termes valent 0, tovChance inchangé.
     tovChance += (screen.tovMod || 0) * prWeight;
+    tovChance += (postD.tovMod || 0) * (offense.inside || 0);
     if (inBlowout) tovChance += endgameMgmt.blowoutTovMod;
     // Surveiller "couper les entrées de balle" (face-guard, voir
     // WATCH_FOCUS_EFFECTS) : bonus de tov CIBLÉ si le porteur actuel occupe
@@ -15273,6 +15317,7 @@ class MatchEngine {
     // --- Gestion du post-up, uniquement en zone "inside" — "Classique" =
     // delta zéro. ---
     if (zone === "inside") defBoost += postD.insideDef;
+    else defBoost -= postD.perimLeak || 0;
     // --- Close-out, uniquement en zone extérieure (mid/3pts) — "Contrôlé"
     // = delta zéro. ---
     if (zone !== "inside") defBoost += closeout.perimDefMod;
@@ -15718,7 +15763,7 @@ class MatchEngine {
       // `defTeam` qui devient offensif à la possession suivante
       // (possessionOffense vaut `offensiveRebound`, donc false ici).
       if (!offensiveRebound) {
-        if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
+        if (rand01() < this.transitionChanceFromSpeed(defTeam) - (offRebStyle.transitionGuard || 0)) defTeam._transitionBoost = true;
       }
 
       const rebounder = weightedPick(
