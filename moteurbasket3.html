@@ -43930,6 +43930,11 @@ function frPastRowHtml(f) {
       (r.forfeit ? score : `<button type="button" class="calendar-score-btn fr-score" data-fr-box="${f.id}">${score}</button>`) + `</span>`;
     const hurt = (r.injuries || []).filter(i => i.teamIdx === myTeamIndex).map(i => i.name);
     sub = r.forfeit ? "Forfait (cinq incomplet)" : hurt.length ? `Blessé${hurt.length > 1 ? "s" : ""} : ${hurt.join(", ")}` : "Aucun blessé";
+  } else if (f.status === "accepted") {
+    // Joué à huis clos, score dévoilé après la durée d'un match officiel
+    // (voir server/friendlies.js:revealAt).
+    mid = `<span class="lp-tag lp-tag-muted">Résultat à venir</span>`;
+    sub = `Score dévoilé à ${formatCalendarTimeFr(typeof f.revealAt === "number" ? f.revealAt : f.at + 90 * 60 * 1000)}`;
   } else {
     const label = { declined: "Refusé", cancelled: "Annulé", expired: "Sans réponse" }[f.status] || "–";
     mid = `<span class="lp-tag lp-tag-muted">${label}</span>`;
