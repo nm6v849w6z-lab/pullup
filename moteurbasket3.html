@@ -666,6 +666,20 @@
     .oab-tab{white-space:nowrap; padding:6px 10px;}
     .oab-right{width:100%; justify-content:space-between; flex-wrap:nowrap;}
     #prepSection .ordres-validate-btn{min-height:40px; padding:0 16px;}
+    /* Encoche / barre d'état de l'iPhone (retour utilisateur 2026-09-28,
+       capture : "Tjrs ce bug" — les onglets Attaque/Défense passaient sous
+       l'heure et la batterie). Sur cette page le topbar est masqué, donc
+       --topbar-h = 0 et la barre se collait à top:0, SOUS la barre d'état
+       (viewport-fit=cover + StatusBar overlaysWebView dans l'appli). Le
+       topbar réservait seul env(safe-area-inset-top) : la barre d'action
+       le reprend quand il est masqué. (Le commit 6791d2d, censé corriger
+       ça, ne contenait en fait que les largeurs de colonnes d'Effectif.) */
+    .topbar-hidden-on-page ~ .content-scroll .ordres-actionbar{
+      top:0; padding-top:calc(10px + env(safe-area-inset-top, 0px));
+    }
+    .topbar-hidden-on-page ~ .content-scroll #prepSection .ordres-card{
+      scroll-margin-top:calc(env(safe-area-inset-top, 0px) + 120px);
+    }
   }
 
   /* "Réinitialiser ma carrière", désormais en bas du Guide. */
