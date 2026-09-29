@@ -72,11 +72,31 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   50 / mi-distance 42 / 3 pts 32 %, OREB 28 %, 20 LF, domicile ≈57-63 %.
   Tests ajoutés : engine_invariants_test.js (cas limites, invariants),
   engine_balance_test.js (A–H + tactiques, seuils larges).
-  RESTE (voir le doc, section Priorités) : recalibrage admin des clubs
-  IA des ligues déjà créées (toujours ≈63), ids de joueurs dans les
-  événements, plancher de eff(), exclusions pour 5 fautes (0,05/équipe),
-  Isolation/Box and one avec une vraie star, mesure des 6 réglages
-  « confirmés », poids du Mental (Vision, Vitesse…).
+  RESTE de l'audit : rien (voir l'entrée « fin de l'audit » ci-dessous).
+
+- **🟡 CODÉ, BRANCHE claude/vibrant-curie-xbaxxw, À POUSSER (2026-09-29) —
+  Moteur, fin de l'audit** (points 2, 3, 7, 8, 9, 10, 11) :
+  - Ids de joueurs dans les événements (shooterId, playerId…) ; feuille en
+    direct, vue spectateur et émissions (showsAdapter) lisent les ids,
+    repli sur le nom pour un vieux direct. Le terrain 2D (Mac) peut
+    utiliser ces ids (ev.shooterId…).
+  - Exclusions 5 fautes 0,05 → ≈0,17/équipe (fautes simples selon
+    Discipline et poste, 4 fautes : retour dans les 5 dernières minutes).
+  - Plancher de Player.eff à 50 % (EFF_FACTOR_FLOOR).
+  - Mental : Concentration (fatigue), Vision (création du tir), Sang-froid
+    (pertes sous pression), Vitesse (contre-attaques) : ≈0 → +0,7 à +1,7 pt
+    pour +20.
+  - Isolation / Box and one mesurés avec une star : Isolation −1,5 sans
+    star, +4,9 avec ; Box and one −3,3 sans star, +4,6 face à une star.
+  - Six réglages confirmés mesurés : Aide, Post-up (perimLeak, tovMod
+    branché), Close-out, Rebond Prudent (transitionGuard), Adaptatif (repos
+    des titulaires à 18 pts) rééquilibrés ; écrans inchangés. Tables
+    miroir HTML et textes d'aide FR/EN à jour.
+  - Recalibrage admin : POST /api/admin/recalibrate-cpu (X-Admin-Token),
+    dryRun par défaut, { "dryRun": false } pour appliquer.
+  - Tests : engine_seed_timeouts_test.js (ids, fautes, plancher),
+    engine_balance_test.js (star, compromis), server/recalibrate_cpu_test.js.
+  RESTE : pousser, puis lancer le recalibrage en prod (dryRun d'abord).
 
 - **Note moteur (poussé le 2026-09-29)** : graine par match (rand01,
   `seed` dans matchLog/résultats/directs), temps morts simulés, rotation
