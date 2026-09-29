@@ -8591,6 +8591,65 @@ function divisionInfo(level) {
   return DIVISIONS.find(d => d.level === level) || DIVISIONS[DIVISIONS.length - 1];
 }
 
+// ---------------------------------------------------------------------
+// RECALIBRAGE DES CLUBS DE L'IA (audit moteur 2026-09-29) : le niveau des
+// clubs IA a été abaissé à la GÉNÉRATION (DIVISIONS.tierMultiplier, 1,45 →
+// 0,92 en Division I…), mais les clubs IA des ligues déjà créées gardaient
+// leur effectif (≈63 de moyenne en Division I, contre ≈42 pour un club IA
+// généré aujourd'hui) : deux jeux différents selon la date d'inscription.
+// recalibrateCpuTeams ramène chaque club IA trop fort au niveau qu'aurait un
+// club IA généré aujourd'hui dans la même division — mêmes joueurs, mêmes
+// noms, même historique ; caractéristiques et potentiel mis à l'échelle
+// (comme le rattrapage à la hausse de Team.trainWeekCPU). Jamais un club de
+// manager, jamais à la hausse (le rattrapage hebdomadaire s'en charge).
+// ---------------------------------------------------------------------
+// Tolérance au-dessus de la cible avant de recalibrer (le hasard de la
+// génération donne déjà ±10 %).
+const CPU_RECALIBRATION_TOLERANCE = 0.08;
+const CPU_TARGET_SAMPLE_SEED = 20260929;
+const cpuTargetCache = new Map();
+// Note moyenne attendue d'un club IA généré aujourd'hui en division `level`
+// (échantillon de 24 clubs tirés avec une graine fixe : même cible à chaque
+// appel, sur tous les serveurs).
+function expectedCpuTeamOverall(level) {
+  const info = divisionInfo(level);
+  if (!cpuTargetCache.has(info.level)) {
+    const avg = withSeededRandom(CPU_TARGET_SAMPLE_SEED + info.level, () => {
+      let sum = 0;
+      for (let i = 0; i < 24; i++) sum += generateTeam("Échantillon", info.tierMultiplier * rand(0.9, 1.15)).averageOverall();
+      return sum / 24;
+    });
+    cpuTargetCache.set(info.level, avg);
+  }
+  return cpuTargetCache.get(info.level);
+}
+
+// `dryRun` : calcule le rapport sans rien modifier. Renvoie
+// { divisionLevel, target, teams: [{ idx, name, before, after, changed }] }.
+function recalibrateCpuTeams(league, { dryRun = false } = {}) {
+  const level = divisionInfo(league.divisionLevel || MAX_DIVISION_LEVEL).level;
+  const target = expectedCpuTeamOverall(level);
+  const round1 = v => Math.round(v * 10) / 10;
+  const teams = [];
+  league.teams.forEach((t, idx) => {
+    if (t.isHuman) return;
+    const before = t.averageOverall();
+    if (before <= target * (1 + CPU_RECALIBRATION_TOLERANCE)) {
+      teams.push({ idx, name: t.name, before: round1(before), after: round1(before), changed: false });
+      return;
+    }
+    const scale = target / before;
+    if (!dryRun) {
+      t.players.forEach(p => {
+        ATTRS.forEach(a => { p.attrs[a] = clamp(Math.round(p.attrs[a] * scale), 1, 99); });
+        p.potential = clamp(Math.round(p.potential * scale), 1, 99);
+      });
+    }
+    teams.push({ idx, name: t.name, before: round1(before), after: round1(dryRun ? target : t.averageOverall()), changed: true });
+  });
+  return { divisionLevel: level, target: round1(target), teams };
+}
+
 // "Renommée" du club (retour utilisateur, 2026-09 : "on pourrait ajouter les
 // petites infos comme [...] renommée [...] du club") : DÉLIBÉRÉMENT non
 // persistée (contrairement à foundedYear/trophies) : recalculée à chaque
@@ -16373,7 +16432,7 @@ return {
   // et les tests.
   FEED_CATEGORIES, FEED_MAX_ENTRIES, createFeed, serializeFeed, pushEntry, removeByKey,
   markAllRead, unreadCount, getVisibleEntries, handleGameEvent, checkThresholds, seedSeasonStart,
-  DIVISIONS, MAX_DIVISION_LEVEL, divisionInfo,
+  DIVISIONS, MAX_DIVISION_LEVEL, divisionInfo, expectedCpuTeamOverall, recalibrateCpuTeams,
 };
 
 });
