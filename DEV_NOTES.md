@@ -20,34 +20,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Favicon toujours orange** (retour
-  utilisateur). Le favicon du site était déjà jaune (6c4e9fd) mais : icônes
-  de l'appli Capacitor (mobile-app/www/icon.png, resources/icon-source-512.png)
-  restées orange → remplacées par icon-512 jaune ; /favicon.ico n'existait
-  pas (Safari gardait l'ancien) → route ajoutée (server/index.js) ; ?v=3 sur
-  toutes les icônes, cache du service worker hoop-v4. Test : favicon_test.js.
-  RESTE : pousser (main puis prod) ; l'appli iPhone Capacitor devra être
-  reconstruite pour prendre la nouvelle icône ; Safari peut garder l'ancien
-  favicon en cache (Développement → Vider les caches).
-
-- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Entraînement des fondamentaux :
-  aptitudes par poste reprises du tableau de l'utilisateur** (13 purs + 7
-  polyvalents, M/A/AS/AF/P). TRAINING_POSITION_EFFICIENCY (engine.js +
-  miroir html) ; positionEfficiencyForSkill/ForProgram lisent le tableau
-  (ancienne formule −10 %/poste gardée pour les caractéristiques hors
-  tableau : synergies, adjoint) ; cas particulier allroundDef supprimé ;
-  trainWeek applique la ligne du PROGRAMME à chacune de ses
-  caractéristiques (avant : moyenne des lignes individuelles) ; % affichés
-  sans arrondi à la dizaine. Poste par défaut d'un programme = premier à
-  100 % dans l'ordre M → P (ex. Tir à 3 pts : Meneur, avant Arrière).
-  Test : training_table_test.js. RESTE : pousser.
-
-- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Page d'accueil (/bienvenue) : compteur
-  « clubs encore disponibles dans la ligue en cours » retiré** (retour : « t'enlèveras
-  ça sur la page d'accueil ») — assets/site/index.html : encadré, style,
-  traductions FR/EN et renderSlots supprimés ; openSlots reste renvoyé par
-  /api/account/config (non utilisé par le site). RESTE : pousser.
-
 - **🟡 CODÉ, À POUSSER (2026-09-29) — Ajouts aux récompenses + amicaux à huis
   clos** — par-dessus awardSeasonHonours (autre session) : récompenses
   décernées dès la fin de la saison régulière (awardRegularSeasonAwards,
@@ -509,6 +481,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   - Plus tard : envoi d'emails (mot de passe oublié), politique de
     confidentialité, comptes en base SQL et plusieurs ligues au-delà de
     quelques centaines de joueurs.
+
+- **📱 Appli iPhone (Capacitor) à reconstruire** pour la nouvelle icône jaune
+  (mobile-app/resources/icon-source-512.png, en prod depuis ec3f722).
 
 - **👀 À vérifier visuellement dans le vrai jeu** (testés en jsdom/Chromium
   seulement) : Ordres > temps de jeu cible par poste ; page live qui ne
