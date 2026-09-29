@@ -20,6 +20,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Entraînement des fondamentaux :
+  aptitudes par poste reprises du tableau de l'utilisateur** (13 purs + 7
+  polyvalents, M/A/AS/AF/P). TRAINING_POSITION_EFFICIENCY (engine.js +
+  miroir html) ; positionEfficiencyForSkill/ForProgram lisent le tableau
+  (ancienne formule −10 %/poste gardée pour les caractéristiques hors
+  tableau : synergies, adjoint) ; cas particulier allroundDef supprimé ;
+  trainWeek applique la ligne du PROGRAMME à chacune de ses
+  caractéristiques (avant : moyenne des lignes individuelles) ; % affichés
+  sans arrondi à la dizaine. Poste par défaut d'un programme = premier à
+  100 % dans l'ordre M → P (ex. Tir à 3 pts : Meneur, avant Arrière).
+  Test : training_table_test.js. RESTE : pousser.
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-29) — Page d'accueil (/bienvenue) : compteur
   « clubs encore disponibles dans la ligue en cours » retiré** (retour : « t'enlèveras
   ça sur la page d'accueil ») — assets/site/index.html : encadré, style,
@@ -500,6 +512,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ### À investiguer
 
+- **training_progression_test.js** : échec ponctuel le 2026-09-29 (nombre
+  de lignes « aucune minute » 3 au lieu de 4), repassé 3/3 ensuite — flaky.
 - **lineup_minutes_test.js** : échec ponctuel constaté le 2026-09-28
   ("Arrière : titulaire trop loin de sa cible"), repassé 3/3 ensuite —
   aléatoire du moteur, flaky.
