@@ -78,39 +78,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   Isolation/Box and one avec une vraie star, mesure des 6 réglages
   « confirmés », poids du Mental (Vision, Vitesse…).
 
-- **🟡 CODÉ, BRANCHE claude/vibrant-curie-xbaxxw (2026-09-29) — Moteur :
-  graine, temps morts, rotation, fins de match** (priorités 1, 4, 5, 6 de
-  l'audit) :
-  - Graine par match : tout le hasard de engine.js passe par rand01()
-    (Math.random hors match, mulberry32 pendant MatchEngine.simulate) ;
-    `seed` renvoyée par simulate()/simulateOrForfeit, stockée dans le
-    journal de match des joueurs (matchLog[].seed), league.results, les
-    directs (liveMatches[].seed, donc les replays), Coupe nationale,
-    Supercoupe, amicaux, ligues privées. Rejouer = état d'avant-match +
-    même `now` + `new MatchEngine(a, b, { homeAdvantage, seed })`. LIMITE :
-    l'état d'avant-match des équipes n'est pas stocké (il faut une
-    sauvegarde d'avant le match pour rejouer un signalement).
-  - Temps morts simulés (MatchEngine.maybeCallTimeout) : FIBA 2/3/1,
-    appelés sur série adverse de 7-0, en fin de match (menée, ballon
-    avancé ≈5 s), en fin de mi-temps (préparation) ou « tactique » (rare) ;
-    effets : fatigue −2,5 pour les 10 sur le terrain, tilt effacé,
-    combinaison préparée (tir +3 pts de %, pertes −2). ≈2,5 par équipe.
-    server/liveMatch.js : les pauses « timeout » viennent de ces
-    événements (plus de temps morts inventés), avec `remaining` ;
-    navigateur (moteurbasket3.html, hmLiveTimeouts) : pastilles du
-    bandeau alimentées.
-  - Rotation : relais du remplaçant 4-7 min, titulaire revenu rejoue
-    11-17 min → 26 → ≈20 changements/équipe, cinq majeur ≈28 min.
-  - Fin de match : l'équipe menée joue vite (7-14 s) dans les 2 dernières
-    minutes, cherche le 3 pts à −3, garde le dernier tir (≤24 s, égalité
-    ou −1 à −3), faute intentionnelle à −1/−3 seulement sous 24 s (fenêtre
-    60 s sinon), tir au buzzer < 4 s plafonné à 18 %. Prolongations ≈2 %
-    → ≈4-5 %, matchs finis à ≤3 pts ≈14 % → ≈16 %.
-  - Test : engine_seed_timeouts_test.js ; liveMatch_test.js adapté.
-  - Le moteur miroir de moteurbasket3.html (MatchEngine du navigateur)
-    n'est PAS mis à jour : le jeu est uniquement en ligne, les matchs sont
-    simulés par le serveur.
-  RESTE : revue par l'utilisateur, pousser en prod.
+- **Note moteur (poussé le 2026-09-29)** : graine par match (rand01,
+  `seed` dans matchLog/résultats/directs), temps morts simulés, rotation
+  ≈20 changements, fins de match plus serrées — voir l'historique Git.
+  Limite : l'état d'avant-match n'est pas stocké (il faut une sauvegarde
+  d'avant le match pour rejouer un signalement). Le MatchEngine miroir de
+  moteurbasket3.html n'est plus tenu à jour (matchs simulés côté serveur).
+  Le terrain 2D (Mac) touchera hmLiveOnPause/hmLiveTimeouts : fusion à
+  surveiller.
 
 - **⏳ EN ATTENTE DE VALIDATION VISUELLE (2026-09-27) — Émissions sans
   défilement** (assets/hoop-shows/showPlayer.js/.css, stash sandbox) :
