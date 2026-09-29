@@ -20,6 +20,45 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **⏳ À REVOIR PAR L'UTILISATEUR AVANT PUSH (2026-09-29) — Terrain 2D animé
+  du direct** (« je veux revoir avant que tu pousses quoi que ce soit »).
+  Fichiers dans le dossier Mac, PAS committés : assets/live/court2d.js
+  (nouveau), assets/live/live-view.js, assets/live/live.css,
+  live_court2d_test.js, et dans moteurbasket3.html la partie hmLiveOnEvent
+  (kind/zone/made/offensive/shot/actors « clé:nom », HM_LIVE_ASSET_VERSION
+  20260929-1). Sprites = vrais avatars des joueurs, formations attaque/
+  défense selon la possession, chorégraphies par événement (passe →
+  tireur → tir en cloche → +2 / rebond, interception, faute, LF avec
+  alignement, remise en jeu après panier, temps mort, remplacements),
+  commentaire sous le terrain ; remplace la carte des tirs avec bascule
+  « Terrain / Carte des tirs » (applyView, toggleAttribute car un <svg>
+  n'a pas .hidden), terrain pleine largeur et fil du match en dessous
+  (.grid.view-2d). court2d importé avec ?v=20260929-1 dans live-view.js
+  (à incrémenter s'il change). Demandé ensuite : une vidéo de démo avec le
+  fil du match et la feuille de match pour vérifier la cohérence.
+  Moteur (audit + niveau IA + avantage du terrain + faute intentionnelle)
+  poussé séparément le 2026-09-29 soir — voir l'historique Git ; mesures
+  après : ≈82 pts/équipe en D1 (moyenne ≈42), FG2 52 %, FG3 37 %,
+  intérieur 55 / mi-distance 42 / 3 pts 37 %, OREB 28 %, 14-16 LF, domicile
+  ≈58-60 %. Les clubs IA des ligues DÉJÀ créées gardent leur ancien niveau
+  (≈63) — recalibrage admin non fait, à décider.
+
+- **⏳ EN ATTENTE DE VALIDATION VISUELLE (2026-09-27) — Émissions sans
+  défilement** (assets/hoop-shows/showPlayer.js/.css, stash sandbox) :
+  mise à l'échelle façon TV sous 1200×720 (fit), « Ton meilleur joueur »
+  dans la bande basse du bandeau, carte des tirs à la hauteur restante.
+  Visuel envoyé, pas de réponse → ne pas livrer avant le feu vert.
+  Livrés à part et à pousser : bouton « Voir l'émission » masqué une fois
+  l'émission vue (hoopShowHalftimeSeen, localStorage hm-ht-show-seen),
+  4 pronostics max à la mi-temps (showData.js MAX_QUESTIONS).
+
+- **🔎 À INVESTIGUER — Discord sur iPhone (Safari) : page discord.com
+  blanche** au clic sur « Lier Discord ». Le jeu ne fait que rediriger vers
+  discord.com/oauth2/authorize ; tests demandés à l'utilisateur (recharger,
+  navigation privée, bloqueur de contenu, version iOS, app Discord
+  installée). Piste côté jeu si retour dans un autre navigateur : assouplir
+  le contrôle du cookie hm_oauth pour l'intent « link » uniquement.
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-29) — Suivre ses enchères (joueurs ET staff)**
   (retour : « il faudrait un endroit où on peut suivre ses enchères […] si
   qqun a surenchéri, comment je retrouve rapidement ? » puis « ou le marché
@@ -139,6 +178,9 @@ points réellement ouverts.
 
 ### À investiguer
 
+- **persistence_test.js** : échoue le 2026-09-29 sur origin/main AUSSI
+  (« Les postes entraînés n'ont pas été sauvegardés correctement »,
+  ligne 123) — sans rapport avec l'audit moteur/le live 2D, à regarder.
 - **training_progression_test.js** : échec ponctuel le 2026-09-29 (nombre
   de lignes « aucune minute » 3 au lieu de 4), repassé 3/3 ensuite — flaky.
 - **lineup_minutes_test.js** : échec ponctuel constaté le 2026-09-28

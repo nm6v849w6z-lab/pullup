@@ -273,7 +273,12 @@ function computeLiveMatchForTeams(Engine, home, away, round, homeIdx, awayIdx, k
   // que le manager ne puisse les changer pour son prochain match pendant que
   // celui-ci est encore en cours de diffusion (voir Engine.tacticsSnapshotFor).
   const tacticsUsed = { home: Engine.tacticsSnapshotFor(home), away: Engine.tacticsSnapshotFor(away) };
-  const engine = new Engine.MatchEngine(home, away);
+  // Avantage du terrain (décision utilisateur, 2026-09-29 : le direct affiche
+  // « À domicile » et la salle compte, mais championnat et Coupe se jouaient
+  // sans le moindre avantage — réservé jusque-là aux ligues privées) :
+  // ±HOME_ADVANTAGE_FACTOR sur les caractéristiques effectives, comme en
+  // ligue privée. Mesuré : ≈60 % de victoires à domicile entre clubs égaux.
+  const engine = new Engine.MatchEngine(home, away, { homeAdvantage: true });
   const result = engine.simulate();
   const { events, pauses, totalDurationMs } = schedulePlayback(result.events, kickoffAt, home.name, away.name);
 

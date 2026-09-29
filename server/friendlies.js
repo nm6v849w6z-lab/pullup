@@ -512,7 +512,7 @@ function playFriendlyMatch(Engine, homeReal, awayReal, homeSetup, awaySetup, at,
   const awayOk = away.hasValidLineup();
   if (homeOk && awayOk) {
     const tacticsUsed = { home: Engine.tacticsSnapshotFor(home), away: Engine.tacticsSnapshotFor(away) };
-    const result = new Engine.MatchEngine(home, away).simulate(at);
+    const result = new Engine.MatchEngine(home, away, { homeAdvantage: true }).simulate(at);
     res.scoreHome = result.finalScore.A;
     res.scoreAway = result.finalScore.B;
     res.quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };

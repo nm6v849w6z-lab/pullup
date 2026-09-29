@@ -212,9 +212,14 @@ const DEFENSES = {
 };
 
 const RHYTHMS = {
-  "Lent":   { possessionsPerQuarter: 41, fatigueMult: .85, tovMult: .92 },
-  "Normal": { possessionsPerQuarter: 45, fatigueMult: 1,   tovMult: 1 },
-  "Rapide": { possessionsPerQuarter: 49, fatigueMult: 1.18,tovMult: 1.08 },
+  // Possessions par quart-temps (les deux équipes confondues) : recalées à
+  // l'audit moteur du 2026-09-29 (41/45/49 avant) — après les correctifs de
+  // ce jour (bonus de lancers francs, tir intérieur, rebonds), le rythme
+  // ramène la moyenne à ≈85-87 points par équipe pour des clubs de référence
+  // (repère utilisateur : Euroleague ≈87), soit ≈75 possessions par équipe.
+  "Lent":   { possessionsPerQuarter: 37.5, fatigueMult: .85, tovMult: .92 },
+  "Normal": { possessionsPerQuarter: 41,   fatigueMult: 1,   tovMult: 1 },
+  "Rapide": { possessionsPerQuarter: 44.5, fatigueMult: 1.18,tovMult: 1.08 },
 };
 
 // ---------------------------------------------------------------------
@@ -3954,12 +3959,13 @@ class Player {
     // plus bas) : même snapshot d'ÉQUIPE, SÉPARÉ de chemistryFactor
     // ci-dessus (les deux se cumulent), `?? 1` même filet de sécurité.
     const tacticalKnowledgeFactor = this.matchTacticalKnowledgeFactor ?? 1;
-    // Avantage du terrain (ligues privées, retour communauté 2026-09 :
-    // "avantage d'être à domicile, à l'exterieur desavantage") : snapshot
-    // posé par MatchEngine.simulate quand l'option homeAdvantage est active
+    // Avantage du terrain (retour communauté 2026-09 : "avantage d'être à
+    // domicile, à l'exterieur desavantage") : snapshot posé par
+    // MatchEngine.simulate quand l'option homeAdvantage est active
     // (HOME_ADVANTAGE_FACTOR pour l'équipe qui reçoit, l'inverse pour celle
-    // qui se déplace), `?? 1` partout ailleurs — championnat et Coupe n'en
-    // ont toujours aucun (voir server/liveMatch.js).
+    // qui se déplace), `?? 1` sur terrain neutre. Depuis le 2026-09-29,
+    // actif en championnat, Coupe, play-offs et amicaux, plus seulement en
+    // ligue privée (voir server/liveMatch.js:computeLiveMatch).
     const venueFactor = this.matchVenueFactor ?? 1;
     return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor * tacticalKnowledgeFactor * venueFactor, 1, 130);
   }
@@ -8380,13 +8386,23 @@ function countryInfo(code) {
 // sert qu'à calibrer la force des 9 adversaires générés (tierMultiplier) et
 // le nom affiché — les centaines d'autres championnats de la pyramide ne
 // sont pas simulés, seul le parcours du joueur l'est.
+// Niveau des clubs de l'IA abaissé (décision utilisateur, 2026-09-29 :
+// « baisser le niveau des IA ») : avec 1,45/1,27/1,09/0,91/0,73/0,55, un
+// club repris à l'inscription (effectif « basique » 30-50, moyenne ≈40, voir
+// server/accounts.js:generateBasicRoster) perdait de 49 points en moyenne
+// contre un club de Division I (moyenne ≈63) et n'en battait aucun. Mesuré
+// après (50 matchs par palier) : Division I ≈42 de moyenne, le club repris
+// perd de ≈10 points et gagne ≈1 match sur 4, puis progresse à
+// l'entraînement. Ne touche que les clubs GÉNÉRÉS à partir de maintenant
+// (nouvelles ligues, remplaçants de retraités suivent la moyenne du club) —
+// les clubs de l'IA déjà en place gardent leur effectif.
 const DIVISIONS = [
-  { level: 1, name: "Division I", leagueCount: 1, tierMultiplier: 1.45 },
-  { level: 2, name: "Division II", leagueCount: 3, tierMultiplier: 1.27 },
-  { level: 3, name: "Division III", leagueCount: 9, tierMultiplier: 1.09 },
-  { level: 4, name: "Division IV", leagueCount: 27, tierMultiplier: 0.91 },
-  { level: 5, name: "Division V", leagueCount: 81, tierMultiplier: 0.73 },
-  { level: 6, name: "Division VI", leagueCount: 243, tierMultiplier: 0.55 },
+  { level: 1, name: "Division I", leagueCount: 1, tierMultiplier: 0.92 },
+  { level: 2, name: "Division II", leagueCount: 3, tierMultiplier: 0.86 },
+  { level: 3, name: "Division III", leagueCount: 9, tierMultiplier: 0.80 },
+  { level: 4, name: "Division IV", leagueCount: 27, tierMultiplier: 0.74 },
+  { level: 5, name: "Division V", leagueCount: 81, tierMultiplier: 0.68 },
+  { level: 6, name: "Division VI", leagueCount: 243, tierMultiplier: 0.62 },
 ];
 const MAX_DIVISION_LEVEL = DIVISIONS.length; // 6 = division la plus basse de la pyramide
 function divisionInfo(level) {
@@ -9669,7 +9685,9 @@ function simulateOrForfeit(teamHome, teamAway, now = Date.now()) {
     // — simulate() ne les modifie jamais, mais autant figer l'instantané au
     // plus près du moment qui compte vraiment.
     const tacticsUsed = { home: tacticsSnapshotFor(teamHome), away: tacticsSnapshotFor(teamAway) };
-    const result = new MatchEngine(teamHome, teamAway).simulate(now);
+    // Avantage du terrain aussi pour les matchs joués « en différé » (voir
+    // server/liveMatch.js:computeLiveMatch pour la version en direct).
+    const result = new MatchEngine(teamHome, teamAway, { homeAdvantage: true }).simulate(now);
     // quarterScores (retour Discord d'Ariane, relayé par l'utilisateur,
     // 2026-09-24 : "afficher le score par quart-temps sur la boxscore du
     // match" — voir DEV_NOTES.md) : MatchEngine.simulate() la calcule déjà
@@ -14215,11 +14233,16 @@ function leagueFromSave(data, userTeam = null) {
 // MOTEUR DE MATCH
 // ---------------------------------------------------------------------
 const QUARTER_SECONDS = 10 * 60;
-// Avantage du terrain des ligues privées (option homeAdvantage de MatchEngine)
+// Avantage du terrain (option homeAdvantage de MatchEngine, voir ci-dessous)
 // : +2 % de caractéristiques effectives pour l'équipe qui reçoit, -2 % pour
 // celle qui se déplace, soit ~4 % d'écart — de l'ordre des 3 points
 // d'avantage habituellement mesurés à domicile en basket.
 const HOME_ADVANTAGE_FACTOR = 1.02;
+// Bonus de lancers francs : dès la 5e faute d'équipe du quart-temps (règle
+// FIBA), toute faute hors tir donne 2 lancers francs — voir playPossession
+// et MatchEngine.teamFoulsThisQuarter. Même seuil que l'affichage « bonus »
+// de la page du direct (assets/live/live-view.js, bonusAt).
+const TEAM_FOUL_BONUS_AT = 5;
 // Prolongation standard : 5 minutes, plus courte qu'un quart-temps normal.
 const OVERTIME_SECONDS = 5 * 60;
 
@@ -14228,10 +14251,11 @@ const OVERTIME_SECONDS = 5 * 60;
 const OFF_REBOUND_BASE_WEIGHT = 0.5;
 
 class MatchEngine {
-  // `options.homeAdvantage` (ligues privées, voir simulatePrivateLeagueMatch)
-  // : teamA reçoit, teamB se déplace ; +/- HOME_ADVANTAGE_FACTOR sur toutes
-  // les caractéristiques effectives (voir Player.eff). Absent/false =
-  // aucun avantage, comportement historique du championnat et de la Coupe.
+  // `options.homeAdvantage` : teamA reçoit, teamB se déplace ; +/-
+  // HOME_ADVANTAGE_FACTOR sur toutes les caractéristiques effectives (voir
+  // Player.eff). Depuis le 2026-09-29, activé partout où un club reçoit
+  // (championnat, Coupe, play-offs, amicaux, ligues privées « home ») ;
+  // absent/false = terrain neutre (All-Star Game, ligue privée « neutral »).
   constructor(teamA, teamB, options = {}) {
     this.teamA = teamA;
     this.teamB = teamB;
@@ -14429,6 +14453,15 @@ class MatchEngine {
     }
   }
 
+  // Fautes d'équipe du quart-temps en cours (fautes personnelles cumulées de
+  // tous les joueurs, moins le total relevé au début du quart-temps par
+  // simulate() — voir quarterFoulBase). Sert au bonus (TEAM_FOUL_BONUS_AT).
+  teamFoulsThisQuarter(team) {
+    const total = team.players.reduce((s, p) => s + (p.fouls || 0), 0);
+    const base = this.quarterFoulBase ? (this.quarterFoulBase[this.teamKey(team)] || 0) : 0;
+    return total - base;
+  }
+
   // Temps de jeu écoulé depuis le coup d'envoi (prolongations comprises).
   elapsedSeconds(quarter, clock) {
     const c = Math.max(0, clock);
@@ -14514,10 +14547,13 @@ class MatchEngine {
         if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + 1;
       }
     }
-    if (made > 0) {
-      this.applyPlusMinusForPoints(team, made);
-      this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, made, attempts: n, possession: this.teamKey(team) });
-    }
+    if (made > 0) this.applyPlusMinusForPoints(team, made);
+    // Toujours journalisé, même 0/2 (audit moteur 2026-09-29 : ~5 % des
+    // lancers francs, ceux des séries entièrement manquées, n'apparaissaient
+    // ni dans le fil du direct ni dans la feuille de match en direct, qui se
+    // reconstruit événement par événement — la feuille finale, elle, les
+    // comptait, d'où un écart de tentatives entre les deux).
+    this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, made, attempts: n, possession: this.teamKey(team) });
     return made;
   }
 
@@ -14670,13 +14706,22 @@ class MatchEngine {
     const shouldFoulIntentionally = inFoulWindow && scoreDiff >= 1 && scoreDiff <= 9 && Math.random() < 0.75;
 
     if (shouldFoulIntentionally) {
+      // La faute est commise dès la remise en jeu : la possession ne dure que
+      // 2 à 5 secondes (audit moteur 2026-09-29 — elle consommait jusque-là
+      // une possession entière, ≈13 s, ce qui vidait la dernière minute en
+      // 3-4 fautes). `clockUsed` est relu par simulate(), qui rend au chrono
+      // la différence avec la durée de possession déjà décomptée.
+      const clockUsed = rand(2, 5);
+      // Journalisée au chrono réel de la faute (le chrono reçu a déjà été
+      // décompté d'une possession entière, voir simulate()).
+      const foulClock = clock + Math.max(0, (this.currentPossessionLength || 0) - clockUsed);
       const ballHandler = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass"));
       // On évite si possible de faire fauter un joueur déjà proche de l'exclusion.
       const defender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
       defender.stats.pf++; defender.fouls++;
-      this.log(events, quarter, clock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, possession: this.teamKey(offTeam) });
-      this.freeThrows(ballHandler, 2, events, quarter, clock, offTeam);
-      return { possessionOffense: false, scored: true, intentionalFoul: true };
+      this.log(events, quarter, foulClock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, possession: this.teamKey(offTeam) });
+      this.freeThrows(ballHandler, 2, events, quarter, foulClock, offTeam);
+      return { possessionOffense: false, scored: true, intentionalFoul: true, clockUsed };
     }
 
     // --- Perte de balle ---
@@ -14696,7 +14741,9 @@ class MatchEngine {
     // poids mineur (0.15), un bon lecteur de jeu aide la pression collective
     // sans jamais la dominer.
     const pressure = onCourtDef.reduce((s, p) => s + p.eff("defOutside") * 0.7 + p.eff("steal") * 0.3 + p.eff("anticipation") * 0.15, 0) / 5;
-    let tovChance = 0.12 + offense.tov + defense.pressure + (pressure - ballHandler.eff("dribble")) / 400;
+    // Base 0.12 → 0.135 (audit moteur 2026-09-29 : 9,5 pertes par équipe et par
+    // match mesurées, contre ≈12-13 en vrai).
+    let tovChance = 0.135 + offense.tov + defense.pressure + (pressure - ballHandler.eff("dribble")) / 400;
     tovChance *= rhythmOff.tovMult;
     // Décision (retour utilisateur, 2026-09 : "Décision/Vision → pertes de
     // balle et passes décisives") : un porteur qui lit bien le jeu perd moins
@@ -14820,8 +14867,20 @@ class MatchEngine {
       this.log(events, quarter, clock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", team: this.teamKey(defTeam), defender: commonFoulDefender.name, possession: this.teamKey(offTeam) });
       this.maybeEjectForComposure(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
       this.maybeCommitUnsportsmanlikeFoul(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
-      // Pas de `return` ici — voir le grand commentaire ci-dessus : l'action
-      // continue directement vers le tir, dans cette même itération.
+      // Bonus (audit moteur 2026-09-29) : la page du direct affichait déjà
+      // « Fautes 5 · bonus » dès la 5e faute d'équipe du quart-temps, mais le
+      // moteur n'en tirait aucune conséquence — les lancers francs venaient
+      // uniquement des fautes sur tir (≈12 LF/match, contre ≈18-20 en vrai).
+      // Règle FIBA : à partir de la 5e faute d'équipe du quart-temps, toute
+      // faute hors tir donne 2 lancers francs et la possession se termine
+      // (c'est l'équivalent d'un tir, comme la faute intentionnelle plus
+      // haut) ; avant, l'action continue simplement (remise en jeu).
+      if (this.teamFoulsThisQuarter(defTeam) >= TEAM_FOUL_BONUS_AT) {
+        this.freeThrows(foulTarget, 2, events, quarter, clock, offTeam);
+        return { possessionOffense: false, scored: true, bonusFreeThrows: true };
+      }
+      // Sinon pas de `return` ici — voir le grand commentaire ci-dessus :
+      // l'action continue directement vers le tir, dans cette même itération.
     }
 
     const zoneRoll = Math.random();
@@ -15061,7 +15120,13 @@ class MatchEngine {
     // la même tentative.
     const shootingFoul = !blocked && Math.random() < clamp(foulDrawBase - defBoost, 0.01, 0.35);
 
-    const base = { inside: 0.50, mid: 0.40, three: 0.335 }[zone];
+    // Audit moteur 2026-09-29 : mesuré intérieur 42,6 %, mi-distance 47,1 %,
+    // 3 pts 40,4 % — l'ordre était INVERSÉ par rapport au vrai basket
+    // (intérieur ≈58-62 %, mi-distance ≈40-42 %, 3 pts ≈35-37 %) : le tir
+    // près du cercle, plus contesté et plus souvent contré, finissait le
+    // moins rentable des trois, et le jeu intérieur/les pivots étaient
+    // pénalisés. Bases recalées (mesuré après : ≈57 / 41 / 36 %).
+    const base = { inside: 0.65, mid: 0.36, three: 0.30 }[zone];
     const effStat = shooter.eff(statForZone);
     // Pente compressée sous 60 (retour utilisateur, 2026-09-26 : "relève un
     // peu les planchers, parce que ça fait plusieurs matchs moches, le but
@@ -15500,6 +15565,13 @@ class MatchEngine {
         this.log(events, q, clock, `Début ${isOvertime ? "de la" : "du"} ${label}`, { type: "quarterStart" });
       }
       const startScoreA = score.A, startScoreB = score.B;
+      // Fautes d'équipe remises à zéro à chaque quart-temps (bonus, voir
+      // teamFoulsThisQuarter) ; en prolongation, la règle FIBA garde le
+      // compteur du 4e quart-temps — ici on le remet aussi à zéro, simple.
+      this.quarterFoulBase = {
+        A: this.teamA.players.reduce((s, p) => s + (p.fouls || 0), 0),
+        B: this.teamB.players.reduce((s, p) => s + (p.fouls || 0), 0),
+      };
 
       while (clock > 0) {
         const offTeam = possessionTeam === "A" ? this.teamA : this.teamB;
@@ -15552,7 +15624,17 @@ class MatchEngine {
         clock -= possessionLength;
         clock = Math.max(clock, 0);
 
+        this.currentPossessionLength = possessionLength;
         const result = this.playPossession(offTeam, defTeam, q, clock, events, scoreDiff);
+
+        // Possession écourtée (faute intentionnelle de fin de match, voir
+        // playPossession, qui journalise ses événements au chrono réel) : on
+        // rend au chrono le temps non consommé.
+        if (typeof result.clockUsed === "number" && result.clockUsed < possessionLength) {
+          const refund = possessionLength - result.clockUsed;
+          clock = Math.min(clock + refund, isOvertime ? OVERTIME_SECONDS : QUARTER_SECONDS);
+          possessionLength = result.clockUsed;
+        }
 
         score.A = this.teamA.players.reduce((s, p) => s + p.stats.pts, 0);
         score.B = this.teamB.players.reduce((s, p) => s + p.stats.pts, 0);
