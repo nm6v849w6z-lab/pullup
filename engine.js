@@ -468,13 +468,43 @@ function randomHexToken(byteLength) {
   return out;
 }
 
+// Hasard du moteur (audit 2026-09-29, « une graine par match ») : tout le
+// hasard de engine.js passe par rand01(). Hors match, c'est Math.random()
+// (lu à chaque appel : les tests qui figent Math.random continuent de
+// marcher). Pendant MatchEngine.simulate(), c'est un générateur à graine
+// (mulberry32, voir withSeededRandom) : même graine + mêmes équipes + même
+// instant => exactement le même match, événement par événement.
+let seededRandom = null;
+function rand01() { return seededRandom ? seededRandom() : Math.random(); }
+// Générateur 32 bits déterministe, rapide et suffisant pour un jeu.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// Graine neuve (entier 32 bits non signé), tirée hors de tout générateur à
+// graine pour que deux matchs ne partagent jamais la même par construction.
+function newMatchSeed() { return Math.floor(Math.random() * 4294967296) >>> 0; }
+// Exécute fn() avec rand01() branché sur la graine `seed`, puis restaure le
+// générateur précédent (même en cas d'exception). Synchrone uniquement.
+function withSeededRandom(seed, fn) {
+  const previous = seededRandom;
+  seededRandom = mulberry32(seed);
+  try { return fn(); } finally { seededRandom = previous; }
+}
+
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-function rand(lo, hi) { return lo + Math.random() * (hi - lo); }
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function rand(lo, hi) { return lo + rand01() * (hi - lo); }
+function pick(arr) { return arr[Math.floor(rand01() * arr.length)]; }
 function weightedPick(items, weightFn) {
   const weights = items.map(weightFn).map(w => Math.max(w, 0.0001));
   const total = weights.reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
+  let r = rand01() * total;
   for (let i = 0; i < items.length; i++) {
     r -= weights[i];
     if (r <= 0) return items[i];
@@ -645,6 +675,20 @@ const PHRASES = {
   ],
   clockMilking: [
     "⏳ {team} fait tourner le ballon pour dérouler le chrono.",
+  ],
+  // Temps morts (voir MatchEngine.maybeCallTimeout). Commencent tous par
+  // « Temps mort demandé par {team} », le libellé historique du direct.
+  timeoutRun: [
+    "Temps mort demandé par {team} après une série de {run}-0.",
+    "Temps mort demandé par {team} : il faut stopper ce {run}-0.",
+  ],
+  timeoutTactical: [
+    "Temps mort demandé par {team}.",
+    "Temps mort demandé par {team} : le coach rassemble ses joueurs.",
+  ],
+  timeoutEndgame: [
+    "Temps mort demandé par {team} pour préparer la possession.",
+    "Temps mort demandé par {team} : ballon remonté, dernière consigne.",
   ],
 };
 
@@ -3326,12 +3370,12 @@ const YOUTH_HOME_NATIONALITY_SHARE = 0.85;
 const FRANCE_FOREIGN_WEIGHT = 12;
 function randomNationality(homeCountry = "fr") {
   if (!homeCountry || homeCountry === "fr" || !NATION_BY_CODE[homeCountry]) {
-    return pickWeightedNation(NATIONS, Math.random()).code;
+    return pickWeightedNation(NATIONS, rand01()).code;
   }
-  if (Math.random() < HOME_NATIONALITY_SHARE) return homeCountry;
+  if (rand01() < HOME_NATIONALITY_SHARE) return homeCountry;
   const others = NATIONS.filter(n => n.code !== homeCountry)
     .map(n => n.code === "fr" ? { ...n, weight: FRANCE_FOREIGN_WEIGHT } : n);
-  return pickWeightedNation(others, Math.random()).code;
+  return pickWeightedNation(others, rand01()).code;
 }
 
 // Nationalité d'un joueur qui n'en a pas encore (sauvegarde d'avant les
@@ -3976,14 +4020,15 @@ class Player {
     // fatigue : ~65 % entre 4,5 et 9,5 min, ~35 % "gros temps de jeu" qui
     // enchaînent tout le Q1 (10-14 min) — un ou deux titulaires qui jouent
     // tout le Q1 reste donc possible, les cinq quasiment jamais.
-    this.firstRestAt = Math.random() < 0.35 ? rand(600, 840) : rand(270, 570);
+    this.firstRestAt = rand01() < 0.35 ? rand(600, 840) : rand(270, 570);
     // Relais court d'un remplaçant entré pendant la première pause d'un
     // titulaire (voir MatchEngine.substituteIfNeeded) : id du titulaire à
     // faire revenir et secondes jouées au bout desquelles il revient.
     this.returnStarterId = null;
     this.stintEndAt = Infinity;
     // Pauses suivantes d'un titulaire revenu en jeu : nextRestAt (secondes
-    // jouées) repoussé de 7 à 12 min à chaque retour, pour qu'un titulaire
+    // jouées) repoussé de 11 à 17 min à chaque retour (7 à 12 avant l'audit
+    // 2026-09-29 : 26 changements par équipe, 15-20 en vrai), pour qu'un titulaire
     // ne reste pas ensuite jusqu'au seuil de fatigue haut (~30 min d'affilée).
     this.nextRestAt = this.firstRestAt;
     // Temps de jeu cible par poste (voir Team.slotMinuteShares et
@@ -6665,7 +6710,7 @@ class Team {
     if (!this.recruiter) return; // aucune proposition sans recruteur sous contrat
     if (this.youthCandidates.length >= YOUTH_CANDIDATE_QUEUE_MAX) return; // file déjà pleine
     const chance = YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL[this.recruiter.level] || 0;
-    if (Math.random() >= chance) return;
+    if (rand01() >= chance) return;
     this.youthCandidates.push(generateYouthCandidate(now, this.recruiter.level, this.country));
   }
 
@@ -6879,7 +6924,7 @@ class Team {
     // 2026-09, voir mentalAverage() au-dessus de PHYSICAL_ATTRS) : on
     // utilise ici la moyenne des 8 traits de MENTAL_ATTRS.
     const chance = TRANSFER_REQUEST_DISCUSS_BASE_CHANCE + (mentalAverage(p) / 100) * TRANSFER_REQUEST_DISCUSS_MENTAL_BONUS;
-    const success = Math.random() < chance;
+    const success = rand01() < chance;
     const formBefore = p.form;
     if (success) {
       p.form = clamp(Math.round(p.form + TRANSFER_REQUEST_DISCUSS_SUCCESS_FORM_BOOST), 1, 100);
@@ -8387,15 +8432,15 @@ function generateYouthCandidate(now, recruiterLevel, country = "fr") {
   // haut (31-40 avant tier) pour représenter un talent déjà repéré par le
   // recruteur — voir YOUTH_STANDOUT_CHANCE_BY_LEVEL.
   const standoutChance = YOUTH_STANDOUT_CHANCE_BY_LEVEL[recruiterLevel] || 0.2;
-  if (Math.random() < standoutChance) {
-    const count = Math.random() < 0.5 ? 1 : 2;
+  if (rand01() < standoutChance) {
+    const count = rand01() < 0.5 ? 1 : 2;
     shuffleIndices(ATTRS).slice(0, count).forEach(a => {
       attrs[a] = clamp(Math.round(rand(31, 40) * tier), 1, 99);
     });
   }
   // Centre de formation : surtout des jeunes du pays du club (85 %).
   const identity = generatePlayerIdentity(null, country);
-  if (country && NATION_BY_CODE[country] && Math.random() < YOUTH_HOME_NATIONALITY_SHARE && identity.nationality !== country) {
+  if (country && NATION_BY_CODE[country] && rand01() < YOUTH_HOME_NATIONALITY_SHARE && identity.nationality !== country) {
     const pool = NAME_POOLS[NATION_BY_CODE[country].pool] || NAME_POOLS.fr;
     identity.nationality = country;
     identity.name = `${pick(pool.first)} ${pick(pool.last)}`;
@@ -9222,7 +9267,7 @@ function roundToHundred(v) { return Math.max(100, Math.round(v / 100) * 100); }
 // paliers mélangés rendaient les profils illisibles).
 function pickSponsorTier(team, divisionLevel) {
   const tiers = sponsorTiersAvailable(team, divisionLevel);
-  return tiers.length > 1 && Math.random() < 0.35 ? tiers[Math.max(0, tiers.length - 2)] : tiers[tiers.length - 1];
+  return tiers.length > 1 && rand01() < 0.35 ? tiers[Math.max(0, tiers.length - 2)] : tiers[tiers.length - 1];
 }
 function generateSponsorOffer(team, league, slotKey, profileKey, now, tierKey = null) {
   const divisionLevel = league.divisionLevel || 1;
@@ -9231,16 +9276,16 @@ function generateSponsorOffer(team, league, slotKey, profileKey, now, tierKey = 
   const profile = SPONSOR_PROFILES[profileKey];
   const used = new Set([...(team.sponsorOffers || []), ...(team.sponsorContracts || [])].map(x => x.sponsorName));
   const pool = SPONSOR_NAMES[tier].filter(n => !used.has(n));
-  const sponsorName = pool.length ? pool[Math.floor(Math.random() * pool.length)] : SPONSOR_NAMES[tier][Math.floor(Math.random() * SPONSOR_NAMES[tier].length)];
+  const sponsorName = pool.length ? pool[Math.floor(rand01() * pool.length)] : SPONSOR_NAMES[tier][Math.floor(rand01() * SPONSOR_NAMES[tier].length)];
   const baseKey = SEASON_OBJECTIVE_KEYS_ORDERED.includes(team.seasonObjective) ? team.seasonObjective : "maintien";
   const idx = clamp(SEASON_OBJECTIVE_KEYS_ORDERED.indexOf(baseKey) + profile.objectiveShift, 0, SEASON_OBJECTIVE_KEYS_ORDERED.length - 1);
   const objectiveKey = SEASON_OBJECTIVE_KEYS_ORDERED[idx];
-  const jitter = 0.9 + Math.random() * 0.2;
+  const jitter = 0.9 + rand01() * 0.2;
   const normalWeekly = SPONSOR_TIERS[tier].baseWeekly * slot.mult * sponsorDivisionFactor(divisionLevel) * jitter;
   const weekly = roundToHundred(normalWeekly * profile.fixedMult);
   const winPrime = roundToHundred(normalWeekly * SPONSOR_PRIME_BASE_RATIO * profile.primeMult);
   const bonus = weekly * profile.bonusWeeks;
-  const quote = profile.quotes[Math.floor(Math.random() * profile.quotes.length)];
+  const quote = profile.quotes[Math.floor(rand01() * profile.quotes.length)];
   return {
     id: `spo_${uid()}`, sponsorName, tier, tierLabel: SPONSOR_TIERS[tier].label,
     slot: slotKey, slotLabel: slot.label, profile: profileKey, profileLabel: profile.label, quote,
@@ -9263,7 +9308,7 @@ function refreshSponsorOffers(team, league, now = Date.now()) {
     if (sponsorActiveContractForSlot(team, slot.key)) return;
     const existing = team.sponsorOffers.filter(o => o.slot === slot.key);
     if (existing.length >= SPONSOR_MAX_OFFERS_PER_SLOT) return;
-    if (!firstTime && existing.length > 0 && Math.random() < 0.5) return;
+    if (!firstTime && existing.length > 0 && rand01() < 0.5) return;
     const usedProfiles = new Set(existing.map(o => o.profile));
     const candidates = SPONSOR_PROFILE_KEYS.filter(k => !usedProfiles.has(k));
     const want = Math.min(SPONSOR_MAX_OFFERS_PER_SLOT - existing.length, firstTime ? 2 : 1);
@@ -9271,7 +9316,7 @@ function refreshSponsorOffers(team, league, now = Date.now()) {
     // palier tiré une fois pour toute la vague.
     const tier = existing.length ? existing[0].tier : pickSponsorTier(team, league.divisionLevel || 1);
     for (let i = 0; i < want && candidates.length; i++) {
-      const k = candidates.splice(Math.floor(Math.random() * candidates.length), 1)[0];
+      const k = candidates.splice(Math.floor(rand01() * candidates.length), 1)[0];
       const offer = generateSponsorOffer(team, league, slot.key, k, now, tier);
       team.sponsorOffers.push(offer);
       created.push(offer);
@@ -9457,7 +9502,7 @@ function cupNextStageName(name) {
 function shuffleIndices(arr) {
   const out = [...arr];
   for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rand01() * (i + 1));
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
@@ -9543,7 +9588,7 @@ function buildNextCupRound(prevRound, winners) {
 // pour tout appelant qui ne la fournit pas encore (aucune régression sur les
 // matchs déjà persistés avant ce correctif, ni sur les appels de test qui
 // ne s'en soucient pas).
-function recordMatchStatsForTeam(team, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null) {
+function recordMatchStatsForTeam(team, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null, seed = null) {
   // Connaissance tactique (voir Team.updateTacticalKnowledge) : une seule
   // fois par match RÉELLEMENT joué (pas par joueur), compare la tactique de
   // ce match à celle du précédent.
@@ -9625,6 +9670,9 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
         tacticsUsed: tacticsUsed || null,
         // Titulaire sur ce match (6e homme, voir computeSeasonAwards).
         starter: !!p.isStarterThisMatch,
+        // Graine du match (voir MatchEngine.simulate) : permet de rejouer
+        // à l'identique un match signalé. Absente des anciens matchs.
+        ...(seed != null ? { seed } : null),
       });
     }
   });
@@ -9760,12 +9808,12 @@ function recordHumanRivalry(home, away, competition, now, quarterScores) {
   away.managerRatedGames = (away.managerRatedGames || 0) + 1;
 }
 
-function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null) {
+function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null, seed = null) {
   recordHumanRivalry(home, away, competition, now, quarterScores);
   recordOrdersHistory(home, away, true, round, competition, now, quarterScores);
   recordOrdersHistory(away, home, false, round, competition, now, quarterScores);
-  recordMatchStatsForTeam(home, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.home);
-  recordMatchStatsForTeam(away, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.away);
+  recordMatchStatsForTeam(home, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.home, seed);
+  recordMatchStatsForTeam(away, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.away, seed);
   return awardMatchMvp(home, away, round, competition, now);
 }
 
@@ -9802,7 +9850,7 @@ function simulateOrForfeit(teamHome, teamAway, now = Date.now()) {
     // AndAwardMvp -> matchLog -> boxscoreRowsFromMatchLog côté client)
     // n'ait plus jamais besoin de connaître A/B, seulement home/away.
     const quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
-    return { scoreHome: result.finalScore.A, scoreAway: result.finalScore.B, forfeit: null, quarterScores, tacticsUsed };
+    return { scoreHome: result.finalScore.A, scoreAway: result.finalScore.B, forfeit: null, quarterScores, tacticsUsed, seed: result.seed };
   }
   // Forfait : aucun quart-temps réellement joué, voir recordMatchStatsForTeam
   // (jamais appelée pour un forfait) — quarterScores/tacticsUsed restent
@@ -10196,8 +10244,8 @@ class League {
     return cupAt <= champAt ? cup : champ;
   }
 
-  recordResult(round, home, away, scoreHome, scoreAway) {
-    this.results.push({ round, home, away, scoreHome, scoreAway });
+  recordResult(round, home, away, scoreHome, scoreAway, seed = null) {
+    this.results.push({ round, home, away, scoreHome, scoreAway, ...(seed != null ? { seed } : null) });
     applySponsorWinPrimes(this.teams[scoreHome > scoreAway ? home : away]);
   }
 
@@ -10234,7 +10282,7 @@ class League {
     this.matchesForRound(r).forEach(m => {
       if (this.teams[m.home].isHuman || this.teams[m.away].isHuman) return;
       const result = simulateOrForfeit(this.teams[m.home], this.teams[m.away]);
-      this.recordResult(r, m.home, m.away, result.scoreHome, result.scoreAway);
+      this.recordResult(r, m.home, m.away, result.scoreHome, result.scoreAway, result.seed);
     });
   }
 
@@ -10658,7 +10706,7 @@ class League {
       matches.forEach(m => {
         const result = simulateOrForfeit(this.teams[m.home], this.teams[m.away], now);
         if (!result.forfeit) {
-          recordMatchStatsAndAwardMvp(this.teams[m.home], this.teams[m.away], round, "championship", now, result.quarterScores);
+          recordMatchStatsAndAwardMvp(this.teams[m.home], this.teams[m.away], round, "championship", now, result.quarterScores, result.tacticsUsed, result.seed);
         }
         this.recordPlayoffGameResult(m.seriesId, m.home, m.away, result.scoreHome, result.scoreAway, now);
       });
@@ -11185,7 +11233,7 @@ class League {
         if (idx === listing.sellerIdx || idx === listing.currentBidderIdx) return;
         if (team.players.length >= MAX_ROSTER_SIZE) return;
         if (!this._cpuWantsPlayer(idx, player)) return;
-        if (Math.random() >= TRANSFER_CPU_BID_CHANCE) return;
+        if (rand01() >= TRANSFER_CPU_BID_CHANCE) return;
         const minBid = minNextBidFor(listing);
         const maxWilling = Math.round(estimateMarketValue(player) * rand(0.9, 1.35));
         if (minBid > maxWilling) return; // déjà trop cher pour cette équipe
@@ -11207,7 +11255,7 @@ class League {
         if (team.isHuman) return;
         if (team.players.length <= MIN_ROSTER_SIZE) return;
         if (this.transferListings.some(l => l.status === "open" && l.sellerIdx === idx)) return; // une annonce à la fois par CPU
-        if (Math.random() >= TRANSFER_CPU_LIST_CHANCE) return;
+        if (rand01() >= TRANSFER_CPU_LIST_CHANCE) return;
         const weakest = team.players.reduce((w, p) => (p.overall() < w.overall() ? p : w), team.players[0]);
         this.listPlayerForSale(idx, weakest.id, estimateMarketValue(weakest), now);
       });
@@ -11286,7 +11334,7 @@ class League {
   generateCoachCandidate(now) {
     const weights = [40, 28, 18, 10, 4]; // poids des niveaux 1 à 5
     const total = weights.reduce((s, w) => s + w, 0);
-    let roll = Math.random() * total;
+    let roll = rand01() * total;
     let level = TRAINER_LEVELS[TRAINER_LEVELS.length - 1];
     for (let i = 0; i < weights.length; i++) {
       if (roll < weights[i]) { level = i + 1; break; }
@@ -11375,7 +11423,7 @@ class League {
         if (idx === listing.currentBidderIdx) return;
         const interested = !team.trainer || team.trainer.level < listing.level;
         if (!interested) return;
-        if (Math.random() >= COACH_CPU_BID_CHANCE) return;
+        if (rand01() >= COACH_CPU_BID_CHANCE) return;
         const minBid = minNextBidFor(listing);
         const maxWilling = Math.round((TRAINER_BASE_SALARY[listing.level] || 0) * rand(1.0, 1.5));
         if (minBid > maxWilling) return; // déjà trop cher pour cette équipe
@@ -11479,7 +11527,7 @@ class League {
   generateAnalystCandidate(now) {
     const weights = [40, 28, 18, 10, 4]; // même biais vers les niveaux bas que generateCoachCandidate
     const total = weights.reduce((s, w) => s + w, 0);
-    let roll = Math.random() * total;
+    let roll = rand01() * total;
     let level = TRAINER_LEVELS[TRAINER_LEVELS.length - 1];
     for (let i = 0; i < weights.length; i++) {
       if (roll < weights[i]) { level = i + 1; break; }
@@ -11552,7 +11600,7 @@ class League {
         if (idx === listing.currentBidderIdx) return;
         const interested = !team.videoAnalyst || team.videoAnalyst.level < listing.level;
         if (!interested) return;
-        if (Math.random() >= COACH_CPU_BID_CHANCE) return;
+        if (rand01() >= COACH_CPU_BID_CHANCE) return;
         const minBid = minNextBidFor(listing);
         const maxWilling = Math.round((TRAINER_BASE_SALARY[listing.level] || 0) * rand(1.0, 1.5));
         if (minBid > maxWilling) return; // déjà trop cher pour cette équipe
@@ -11628,7 +11676,7 @@ class League {
   generateRecruiterCandidate(now) {
     const weights = [40, 28, 18, 10, 4]; // même biais vers les niveaux bas que generateCoachCandidate
     const total = weights.reduce((s, w) => s + w, 0);
-    let roll = Math.random() * total;
+    let roll = rand01() * total;
     let level = TRAINER_LEVELS[TRAINER_LEVELS.length - 1];
     for (let i = 0; i < weights.length; i++) {
       if (roll < weights[i]) { level = i + 1; break; }
@@ -11700,7 +11748,7 @@ class League {
         if (idx === listing.currentBidderIdx) return;
         const interested = !team.recruiter || team.recruiter.level < listing.level;
         if (!interested) return;
-        if (Math.random() >= COACH_CPU_BID_CHANCE) return;
+        if (rand01() >= COACH_CPU_BID_CHANCE) return;
         const minBid = minNextBidFor(listing);
         const maxWilling = Math.round((TRAINER_BASE_SALARY[listing.level] || 0) * rand(1.0, 1.5));
         if (minBid > maxWilling) return; // déjà trop cher pour cette équipe
@@ -11783,7 +11831,7 @@ class League {
   generateMedicalCandidate(role, now) {
     const weights = [40, 28, 18, 10, 4]; // poids des niveaux 1 à 5, comme les autres rôles
     const total = weights.reduce((s, w) => s + w, 0);
-    let roll = Math.random() * total;
+    let roll = rand01() * total;
     let level = TRAINER_LEVELS[TRAINER_LEVELS.length - 1];
     for (let i = 0; i < weights.length; i++) {
       if (roll < weights[i]) { level = i + 1; break; }
@@ -11847,7 +11895,7 @@ class League {
         const current = team[role];
         const interested = !current || current.level < listing.level;
         if (!interested) return;
-        if (Math.random() >= COACH_CPU_BID_CHANCE) return;
+        if (rand01() >= COACH_CPU_BID_CHANCE) return;
         const minBid = minNextBidFor(listing);
         const maxWilling = Math.round((TRAINER_BASE_SALARY[listing.level] || 0) * rand(1.0, 1.5));
         if (minBid > maxWilling) return;
@@ -11912,14 +11960,14 @@ class League {
   generateAssistantCoachCandidate(now, specialty = null) {
     const weights = [40, 28, 18, 10, 4];
     const total = weights.reduce((s, w) => s + w, 0);
-    let roll = Math.random() * total;
+    let roll = rand01() * total;
     let level = TRAINER_LEVELS[TRAINER_LEVELS.length - 1];
     for (let i = 0; i < weights.length; i++) {
       if (roll < weights[i]) { level = i + 1; break; }
       roll -= weights[i];
     }
     const keys = Object.keys(ASSISTANT_SPECIALTIES);
-    const spec = ASSISTANT_SPECIALTIES[specialty] ? specialty : keys[Math.floor(Math.random() * keys.length)];
+    const spec = ASSISTANT_SPECIALTIES[specialty] ? specialty : keys[Math.floor(rand01() * keys.length)];
     return this._makeAssistantCoachListing(now, level, spec, ASSISTANT_BASE_SALARY[level] || 0);
   }
   placeAssistantCoachBid(listingId, bidderIdx, amount, now) {
@@ -11964,7 +12012,7 @@ class League {
         if (idx === listing.currentBidderIdx) return;
         const current = team.assistantCoach;
         if (current && current.level >= listing.level) return;
-        if (Math.random() >= COACH_CPU_BID_CHANCE) return;
+        if (rand01() >= COACH_CPU_BID_CHANCE) return;
         const minBid = minNextBidFor(listing);
         const maxWilling = Math.round((ASSISTANT_BASE_SALARY[listing.level] || 0) * rand(1.0, 1.5));
         if (minBid > maxWilling) return;
@@ -13544,7 +13592,7 @@ function playerFromSave(pdata) {
   if (missingNewAttrs.length) {
     const legacyAvg = legacyAttrKeys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / legacyAttrKeys.length;
     missingNewAttrs.forEach(k => {
-      p.attrs[k] = clamp(Math.round(legacyAvg + (Math.random() * 10 - 5)), 1, 99);
+      p.attrs[k] = clamp(Math.round(legacyAvg + (rand01() * 10 - 5)), 1, 99);
     });
   }
   // Même migration pour les 7 caractéristiques ajoutées ensuite (Pénétration/
@@ -13558,7 +13606,7 @@ function playerFromSave(pdata) {
   if (missingAttrs20.length) {
     const avg13 = attrs13Keys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / attrs13Keys.length;
     missingAttrs20.forEach(k => {
-      p.attrs[k] = clamp(Math.round(avg13 + (Math.random() * 10 - 5)), 1, 99);
+      p.attrs[k] = clamp(Math.round(avg13 + (rand01() * 10 - 5)), 1, 99);
     });
   }
   // Même migration pour les 9 dernières caractéristiques (Vitesse/
@@ -13573,7 +13621,7 @@ function playerFromSave(pdata) {
   if (missingAttrs29.length) {
     const avg20 = attrs20Keys.reduce((sum, k) => sum + (p.attrs[k] || 0), 0) / attrs20Keys.length;
     missingAttrs29.forEach(k => {
-      p.attrs[k] = clamp(Math.round(avg20 + (Math.random() * 10 - 5)), 1, 99);
+      p.attrs[k] = clamp(Math.round(avg20 + (rand01() * 10 - 5)), 1, 99);
     });
   }
   // Le potentiel est fixé une fois pour toutes à la création du joueur : on
@@ -14364,6 +14412,25 @@ const TEAM_FOUL_BONUS_AT = 5;
 // Prolongation standard : 5 minutes, plus courte qu'un quart-temps normal.
 const OVERTIME_SECONDS = 5 * 60;
 
+// Temps morts simulés (audit 2026-09-29 : le serveur les plaçait après coup,
+// toujours pour l'équipe menée, sans le moindre effet sur le jeu). Règle
+// FIBA : 2 en 1re mi-temps, 3 en 2e mi-temps (dont 2 au plus dans les deux
+// dernières minutes du 4e quart-temps), 1 par prolongation ; non reportés.
+// Voir MatchEngine.timeoutsLeft/maybeCallTimeout.
+const TIMEOUT_ALLOWANCE = { firstHalf: 2, secondHalf: 3, secondHalfLast2Min: 2, overtime: 1 };
+// Série adverse sans réponse (points) à partir de laquelle le coach arrête
+// le jeu, et probabilité qu'il le fasse (pas systématique : certains coachs
+// laissent jouer).
+const TIMEOUT_RUN_POINTS = 7;
+const TIMEOUT_RUN_CHANCE = 0.7;
+// Effets d'un temps mort : les dix joueurs sur le terrain soufflent
+// (≈100 s de banc, voir applyFatigue), l'équipe qui l'a demandé efface la
+// série de ratés (tilt, voir consecutiveMisses) et joue une combinaison
+// préparée à sa possession suivante (voir _setPlay dans playPossession).
+const TIMEOUT_FATIGUE_RECOVERY = 2.5;
+const SET_PLAY_SHOT_BONUS = 0.03;
+const SET_PLAY_TOV_BONUS = 0.02;
+
 // Voir playPossession (bloc rebond) : poids commun appliqué à l'effort de
 // rebond offensif, calibré le 2026-09-28 (100 matchs simulés).
 const OFF_REBOUND_BASE_WEIGHT = 0.5;
@@ -14374,10 +14441,13 @@ class MatchEngine {
   // Player.eff). Depuis le 2026-09-29, activé partout où un club reçoit
   // (championnat, Coupe, play-offs, amicaux, ligues privées « home ») ;
   // absent/false = terrain neutre (All-Star Game, ligue privée « neutral »).
+  // `options.seed` (entier 32 bits, optionnel) : graine du match, voir
+  // simulate(). Absente = graine neuve tirée au hasard.
   constructor(teamA, teamB, options = {}) {
     this.teamA = teamA;
     this.teamB = teamB;
     this.homeAdvantage = !!(options && options.homeAdvantage);
+    this.seed = options && Number.isInteger(options.seed) ? options.seed >>> 0 : null;
   }
 
   fmtClock(sec) {
@@ -14484,7 +14554,7 @@ class MatchEngine {
           p.onCourt = false;
           starter.onCourt = true;
           starter.matchPosition = p.matchPosition;
-          starter.nextRestAt = starter.secondsPlayed + rand(420, 720);
+          starter.nextRestAt = starter.secondsPlayed + rand(660, 1020);
           starter.stintStartSecs = starter.secondsPlayed;
           this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: starter.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: starter.name });
           continue;
@@ -14545,11 +14615,12 @@ class MatchEngine {
         replacement.onCourt = true;
         replacement.matchPosition = p.matchPosition;
         replacement.stintStartSecs = replacement.secondsPlayed;
-        // Pause d'un titulaire : le remplaçant ne fait qu'un relais de 2,5
-        // à 5,5 min, puis le titulaire revient (voir le début de la boucle).
+        // Pause d'un titulaire : le remplaçant fait un relais de 4 à 7 min
+        // (2,5 à 5,5 avant l'audit 2026-09-29), puis le titulaire revient
+        // (voir le début de la boucle).
         if (isStarterFirstRest) {
           replacement.returnStarterId = p.id;
-          replacement.stintEndAt = replacement.secondsPlayed + rand(150, 330);
+          replacement.stintEndAt = replacement.secondsPlayed + rand(240, 420);
         }
         // Annoncé pour TOUT changement désormais, pas seulement les
         // volontaires (`!mustLeave`) comme avant ce correctif — un fauté-out
@@ -14658,7 +14729,7 @@ class MatchEngine {
     let made = 0;
     for (let i = 0; i < n; i++) {
       shooter.stats.fta++;
-      if (Math.random() < ftPct) {
+      if (rand01() < ftPct) {
         made++; shooter.stats.ftm++; shooter.stats.pts++;
         // Origine des points (voir emptyStats) : lancers obtenus sur une
         // seconde chance ou une contre-attaque.
@@ -14712,7 +14783,7 @@ class MatchEngine {
   maybeEjectForComposure(defender, defTeam, offTeam, ftShooter, quarter, clock, events) {
     if (defender.disqualified || defender.attrs.composure >= 50) return;
     const technicalChance = clamp((50 - defender.attrs.composure) * 0.001, 0, 0.05);
-    if (Math.random() >= technicalChance) return;
+    if (rand01() >= technicalChance) return;
     defender.technicalFouls = (defender.technicalFouls || 0) + 1;
     if (this.shouldEjectForFouls(defender)) {
       defender.disqualified = true;
@@ -14743,7 +14814,7 @@ class MatchEngine {
   maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, ftShooter, quarter, clock, events) {
     if (defender.disqualified || defender.attrs.discipline >= 50) return;
     const unsportsmanlikeChance = clamp((50 - defender.attrs.discipline) * 0.0006, 0, 0.03);
-    if (Math.random() >= unsportsmanlikeChance) return;
+    if (rand01() >= unsportsmanlikeChance) return;
     defender.unsportsmanlikeFouls = (defender.unsportsmanlikeFouls || 0) + 1;
     if (this.shouldEjectForFouls(defender)) {
       defender.disqualified = true;
@@ -14812,6 +14883,11 @@ class MatchEngine {
     // de playPossession, qui pose le drapeau). Consommé une seule fois.
     const secondChance = !!offTeam._secondChance;
     if (secondChance) delete offTeam._secondChance;
+    // Combinaison préparée pendant un temps mort (voir maybeCallTimeout) :
+    // un peu moins de pertes de balle, un tir un peu meilleur. Consommée une
+    // seule fois, même si la possession finit sur une faute intentionnelle.
+    const setPlay = !!offTeam._setPlay;
+    if (setPlay) delete offTeam._setPlay;
     // Situation de cette possession pour l'origine des points (voir
     // emptyStats) : seconde chance prioritaire, jamais cumulée avec la
     // contre-attaque. Relue par freeThrows pour les lancers obtenus.
@@ -14820,11 +14896,16 @@ class MatchEngine {
     // --- Money time : faute intentionnelle de l'équipe menée, en défense ---
     // Dans la dernière minute environ, une équipe menée d'un écart rattrapable
     // a intérêt à stopper le chrono plutôt que de laisser filer une possession.
-    const inFoulWindow = quarter >= 4 && clock <= 50 && clock > 3;
+    const inFoulWindow = quarter >= 4 && clock <= 60 && clock > 3;
     // Retard rattrapable seulement (audit 2026-09-29) : ≈3 points + 1 par
     // 6 secondes restantes (mené de 9 à 50 s : oui ; mené de 9 à 10 s : non).
     const recoverable = scoreDiff <= 3 + clock / 6;
-    const shouldFoulIntentionally = inFoulWindow && scoreDiff >= 1 && scoreDiff <= 9 && recoverable && Math.random() < 0.7;
+    // Menée de 1 à 3 seulement : on défend tant qu'on est sûr de récupérer
+    // le ballon (plus de 24 s), on ne fait faute qu'ensuite — comme en vrai,
+    // où la faute sur une équipe à +2 avec 50 s à jouer offre juste deux
+    // lancers francs de plus.
+    const foulNeeded = scoreDiff >= 4 || clock <= 24;
+    const shouldFoulIntentionally = inFoulWindow && foulNeeded && scoreDiff >= 1 && scoreDiff <= 9 && recoverable && rand01() < 0.7;
 
     if (shouldFoulIntentionally) {
       // La faute est commise dès la remise en jeu : la possession ne dure que
@@ -14908,9 +14989,10 @@ class MatchEngine {
         watchGamblePenalty += eff.defBoostPenalty || 0;
       }
     }
+    if (setPlay) tovChance -= SET_PLAY_TOV_BONUS;
     tovChance = clamp(tovChance, 0.03, 0.35);
 
-    if (Math.random() < tovChance) {
+    if (rand01() < tovChance) {
       ballHandler.stats.tov++;
       // Mental / tilt (voir consecutiveMisses et le grand commentaire
       // au-dessus d'ATTRS) : une perte de balle compte comme un raté pour la
@@ -14928,7 +15010,7 @@ class MatchEngine {
       const stealer = weightedPick(onCourtDef, p =>
         p.eff("agility") + p.eff("defOutside") + p.eff("steal") * 1.5 + (p.eff("speed") + p.eff("acceleration")) * 0.35
       );
-      if (Math.random() < 0.55) {
+      if (rand01() < 0.55) {
         stealer.stats.stl++;
         this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, stealer: stealer.name, possession: this.teamKey(offTeam) });
         // Contre-attaque (retour utilisateur, 2026-09 : "Vitesse/Accélération
@@ -14942,7 +15024,7 @@ class MatchEngine {
         // une seule fois en tête de playPossession) plutôt qu'un système
         // séparé : sémantiquement, c'est la même chose (prochaine possession
         // de cette équipe face à une défense pas replacée).
-        if (Math.random() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
+        if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
       } else {
         this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, stealer: null, possession: this.teamKey(offTeam) });
       }
@@ -14988,7 +15070,7 @@ class MatchEngine {
     // pace INCHANGÉS par rapport à la mesure sans ce correctif (~66-68
     // pts/équipe, ~76-77 de pace dans les deux cas).
     const nonShootingFoulChance = 0.125;
-    if (Math.random() < nonShootingFoulChance) {
+    if (rand01() < nonShootingFoulChance) {
       const foulTarget = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass") + 1);
       const commonFoulDefender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
       commonFoulDefender.stats.pf++; commonFoulDefender.fouls++;
@@ -15025,8 +15107,16 @@ class MatchEngine {
     const zMean = (zi + zm + zt) / 3;
     const wIn = Math.max(0.05, offense.inside * (1 + (zi - zMean) / 150));
     const wMid = Math.max(0.05, offense.mid * (1 + (zm - zMean) / 150));
-    const wThree = Math.max(0.05, offense.three * (1 + (zt - zMean) / 150));
-    const zoneRoll = Math.random() * (wIn + wMid + wThree);
+    let wThree = Math.max(0.05, offense.three * (1 + (zt - zMean) / 150));
+    // Fin de match : menée de 3 dans les 40 dernières secondes, l'équipe
+    // cherche presque toujours le tir à 3 pts pour égaliser ; menée de 4 à 9
+    // dans les 90 dernières, un peu plus souvent (audit 2026-09-29 : trop
+    // peu de prolongations, ≈2 % contre ≈5 % en vrai).
+    if (quarter >= 4 && scoreDiff < 0) {
+      if (scoreDiff === -3 && clock <= 40) wThree *= 5;
+      else if (scoreDiff <= -4 && scoreDiff >= -9 && clock <= 90) wThree *= 1.6;
+    }
+    const zoneRoll = rand01() * (wIn + wMid + wThree);
     let zone;
     if (zoneRoll < wIn) zone = "inside";
     else if (zoneRoll < wIn + wMid) zone = "mid";
@@ -15239,7 +15329,7 @@ class MatchEngine {
       (blockBase + (defender.eff("block") - 50) * 0.0012 + (defender.eff("vertical") - 50) * 0.0006 - (shooter.eff(statForZone) - 50) * 0.0004) * blockContestMult,
       0, 0.28
     );
-    const blocked = Math.random() < blockChance;
+    const blocked = rand01() < blockChance;
 
     const assistCandidate = creator;
     // --- Bonus d'assist ciblé : écran "Prise à deux" (kick-out après double
@@ -15267,7 +15357,7 @@ class MatchEngine {
     // !blocked : un tir contré ne peut pas aussi être une faute sur le tir
     // (voir `blocked` plus haut) — évite de cumuler les deux évènements sur
     // la même tentative.
-    const shootingFoul = !blocked && Math.random() < clamp(foulDrawBase - defBoost, 0.01, 0.35);
+    const shootingFoul = !blocked && rand01() < clamp(foulDrawBase - defBoost, 0.01, 0.35);
 
     // Audit moteur 2026-09-29 : mesuré intérieur 42,6 %, mi-distance 47,1 %,
     // 3 pts 40,4 % — l'ordre était INVERSÉ par rapport au vrai basket
@@ -15367,11 +15457,15 @@ class MatchEngine {
     const clutchComposure = (shooter.attrs.composure + shooter.attrs.determination) / 2;
     const composureRelief = shooter.consecutiveMisses >= 3
       ? clamp((clutchComposure - 50) * 0.0008, 0, 0.05) : 0;
-    prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty + leadershipRelief + composureRelief, 0.10, 0.75);
+    prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty + leadershipRelief + composureRelief + (setPlay ? SET_PLAY_SHOT_BONUS : 0), 0.10, 0.75);
+    // Tir au buzzer (moins de 4 s à jouer, voir simulate()) : lancé dans
+    // l'urgence, rarement réussi — avant l'audit 2026-09-29, une possession
+    // d'une seconde valait une attaque complète.
+    if (this._buzzerHeave) prob = Math.min(prob, 0.18);
 
     // !blocked : un tir contré est toujours un tir manqué, jamais soumis au
     // tirage de réussite ci-dessus (voir `blocked` plus haut).
-    const made = !blocked && Math.random() < prob;
+    const made = !blocked && rand01() < prob;
     const points = zone === "three" ? 3 : 2;
 
     if (zone === "three") { shooter.stats.fga3++; } else { shooter.stats.fga2++; }
@@ -15431,7 +15525,7 @@ class MatchEngine {
       // (choix du passeur, juste avant le calcul de `creation`).
       const assistChanceByQuality = quality === "ouvert" ? 0.78 : quality === "contesté" ? 0.42 : 0.12;
       let assistedBy = null;
-      if (assistCandidate && Math.random() < clamp(assistChanceByQuality + offense.assist + assistOpenBonus + visionAssistBonus, 0.05, 0.95)) {
+      if (assistCandidate && rand01() < clamp(assistChanceByQuality + offense.assist + assistOpenBonus + visionAssistBonus, 0.05, 0.95)) {
         assistCandidate.stats.ast++;
         assistedBy = assistCandidate.name;
       }
@@ -15511,7 +15605,7 @@ class MatchEngine {
       // relatif (multiplicateur commun).
       offReb *= OFF_REBOUND_BASE_WEIGHT;
       offReb = Math.max(offReb, 1);
-      const offensiveRebound = Math.random() < offReb / (offReb + defReb);
+      const offensiveRebound = rand01() < offReb / (offReb + defReb);
 
       // --- Contrepartie du style "Agressif" (retour utilisateur, "risque
       // de prendre des contre-attaques") : si le rebond offensif est
@@ -15520,7 +15614,7 @@ class MatchEngine {
       // tête de fonction) — jamais posé pour "Normal"/"Prudent"
       // (transitionRisk = 0), donc sans effet pour qui ne joue pas agressif
       // au rebond offensif. ---
-      if (!offensiveRebound && offRebStyle.transitionRisk && Math.random() < offRebStyle.transitionRisk) {
+      if (!offensiveRebound && offRebStyle.transitionRisk && rand01() < offRebStyle.transitionRisk) {
         defTeam._transitionBoost = true;
       }
       // Contre-attaque sur rebond défensif (retour utilisateur, 2026-09 :
@@ -15531,7 +15625,7 @@ class MatchEngine {
       // `defTeam` qui devient offensif à la possession suivante
       // (possessionOffense vaut `offensiveRebound`, donc false ici).
       if (!offensiveRebound) {
-        if (Math.random() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
+        if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
       }
 
       const rebounder = weightedPick(
@@ -15604,7 +15698,7 @@ class MatchEngine {
         // Kiné (voir MEDICAL_STAFF_ROLES) : cumulé avec la salle de musculation.
         const physioRiskMult = team.physioInjuryRiskMult ? team.physioInjuryRiskMult() : 1;
         const injuryChance = BASE_INJURY_RATE * (seconds / 12) * fatigueFactor * injuryRiskMult * conditionInjuryMult * physioRiskMult;
-        if (Math.random() < injuryChance) {
+        if (rand01() < injuryChance) {
           p.injured = true;
           // PAS de `p.onCourt = false` ICI (bug corrigé le 2026-09-24, trouvé
           // en travaillant sur le box score en direct — retour Discord
@@ -15670,7 +15764,91 @@ class MatchEngine {
     });
   }
 
+  // Temps morts encore disponibles pour `key` ("A"/"B") à cet instant, selon
+  // TIMEOUT_ALLOWANCE (période = mi-temps, ou prolongation).
+  timeoutsLeft(key, quarter, clock) {
+    const used = this.timeoutsUsed[key];
+    if (quarter <= 2) return TIMEOUT_ALLOWANCE.firstHalf - used.firstHalf;
+    if (quarter <= 4) {
+      const left = TIMEOUT_ALLOWANCE.secondHalf - used.secondHalf;
+      return quarter === 4 && clock <= 120 ? Math.min(left, TIMEOUT_ALLOWANCE.secondHalfLast2Min - used.last2Min) : left;
+    }
+    return TIMEOUT_ALLOWANCE.overtime - (used.overtime[quarter] || 0);
+  }
+
+  // Temps mort éventuel de `team`, appelé par simulate() sur ballon mort
+  // (panier ou lancers francs adverses) juste avant que `team` ne remonte
+  // le ballon. Deux raisons, comme un vrai coach :
+  // - « série » : l'adversaire vient d'enchaîner TIMEOUT_RUN_POINTS points
+  //   sans réponse (hors garbage time) ;
+  // - « fin de match » : 4e quart-temps ou prolongation, 2 dernières
+  //   minutes, menée d'un écart encore rattrapable — le ballon est alors
+  //   remis en jeu dans le camp adverse (≈5 s gagnées, voir _advanceBall) ;
+  // - « préparation » : fin du 2e ou du 4e quart-temps, temps morts qui
+  //   seraient perdus — on prépare la dernière attaque ;
+  // - « tactique » : de temps en temps, cinq fatigué ou écart qui se creuse.
+  // Renvoie true si le temps mort a été pris.
+  maybeCallTimeout(team, quarter, clock, score, run, events) {
+    const key = this.teamKey(team);
+    const other = key === "A" ? "B" : "A";
+    const left = this.timeoutsLeft(key, quarter, clock);
+    if (left <= 0 || clock <= 1) return false;
+    const diff = score[key] - score[other];
+    const lastMinutes = quarter >= 4 && clock <= 120;
+    let reason = null;
+    if (lastMinutes && diff < 0 && -diff <= 3 + clock / 8) {
+      if (rand01() < 0.85) reason = "endgame";
+    } else if (run.team === other && run.points >= TIMEOUT_RUN_POINTS && !(quarter >= 4 && Math.abs(diff) >= 20)) {
+      if (rand01() < TIMEOUT_RUN_CHANCE) reason = "run";
+    } else if ((quarter === 2 || quarter === 4) && clock <= 40 && left >= 2 && Math.abs(diff) < 15) {
+      // Temps mort qui serait perdu à la mi-temps / en fin de match : on
+      // le prend pour préparer la dernière attaque du quart-temps.
+      if (rand01() < 0.35) reason = "setup";
+    } else if (!lastMinutes && rand01() < 0.08) {
+      // Cinq fatigué ou adversaire en réussite : arrêt de jeu « de
+      // confort », plus rare (≈1 par match).
+      const five = team.onCourtPlayers();
+      const tired = five.length && five.reduce((s, p) => s + p.fatigue, 0) / five.length >= 45;
+      if (tired || diff < -6) reason = "tactical";
+    }
+    if (!reason) return false;
+
+    const used = this.timeoutsUsed[key];
+    if (quarter <= 2) used.firstHalf++;
+    else if (quarter <= 4) { used.secondHalf++; if (quarter === 4 && clock <= 120) used.last2Min++; }
+    else used.overtime[quarter] = (used.overtime[quarter] || 0) + 1;
+    used.total++;
+
+    [this.teamA, this.teamB].forEach(t => t.onCourtPlayers().forEach(p => {
+      p.fatigue = clamp(p.fatigue - TIMEOUT_FATIGUE_RECOVERY, 0, 100);
+    }));
+    team.players.forEach(p => { p.consecutiveMisses = 0; });
+    team._setPlay = true;
+    if (reason === "endgame") team._advanceBall = true;
+
+    const remaining = this.timeoutsLeft(key, quarter, clock);
+    const text = reason === "run" ? say(PHRASES.timeoutRun, { team: team.name, run: run.points })
+      : reason === "tactical" ? say(PHRASES.timeoutTactical, { team: team.name })
+      : say(PHRASES.timeoutEndgame, { team: team.name });
+    this.log(events, quarter, clock, text, { type: "timeout", team: key, reason, remaining, possession: key });
+    return true;
+  }
+
+  // Graine par match (audit 2026-09-29) : tout le hasard du match (seuils
+  // de repos tirés dans resetForMatch compris) vient de la graine, renvoyée
+  // dans le résultat (`seed`) et stockée avec lui. Rejouer un match signalé
+  // = mêmes équipes (état d'avant-match) + même `now` + même graine :
+  // new MatchEngine(a, b, { homeAdvantage, seed }).simulate(now) redonne le
+  // même match à l'identique.
   simulate(now = Date.now()) {
+    const seed = this.seed != null ? this.seed : newMatchSeed();
+    this.seed = seed;
+    const result = withSeededRandom(seed, () => this._simulate(now));
+    result.seed = seed;
+    return result;
+  }
+
+  _simulate(now) {
     // Conservé sur l'instance (plutôt que reponduit dans la signature de
     // chaque méthode appelée depuis ici) : quelques mécanismes ponctuels ont
     // besoin de "maintenant" en dehors de resetForMatch (voir rollInjury
@@ -15686,7 +15864,13 @@ class MatchEngine {
     const events = [];
     const quarterScores = { A: [0, 0, 0, 0], B: [0, 0, 0, 0] };
     let score = { A: 0, B: 0 };
-    let possessionTeam = Math.random() < 0.5 ? "A" : "B";
+    // Temps morts (voir maybeCallTimeout) et série en cours (points
+    // marqués sans réponse par `team`).
+    const freshTimeouts = () => ({ firstHalf: 0, secondHalf: 0, last2Min: 0, overtime: {}, total: 0 });
+    this.timeoutsUsed = { A: freshTimeouts(), B: freshTimeouts() };
+    let run = { team: null, points: 0 };
+    [this.teamA, this.teamB].forEach(t => { delete t._setPlay; delete t._advanceBall; });
+    let possessionTeam = rand01() < 0.5 ? "A" : "B";
 
     // Retour utilisateur : "début du premier quart temps, faut le mettre
     // avan[t] l'entre deux est remporté par..." — le marqueur "Début du 1er
@@ -15770,6 +15954,26 @@ class MatchEngine {
         const closeGame = endgameMgmtOff.closeGameTempoMod > 0 && q >= 4 && clock <= 300 && Math.abs(scoreDiff) < 5;
         if (closeGame && !offIsMilkingClock) possessionLength *= (1 - endgameMgmtOff.closeGameTempoMod);
 
+        // Équipe menée dans les 2 dernières minutes : elle cherche un tir
+        // rapide (audit 2026-09-29, fins de match trop vite pliées).
+        const offIsChasing = q >= 4 && clock <= 120 && scoreDiff < 0 && -scoreDiff <= 10;
+        if (offIsChasing) possessionLength = Math.min(possessionLength, rand(7, 14));
+        // Dernier tir : à égalité ou mené de 1 à 3 avec moins d'une
+        // possession à jouer (24 s), l'équipe garde le ballon jusqu'au bout
+        // pour ne laisser aucune réplique — un raté à égalité mène donc en
+        // prolongation, comme en vrai.
+        const lastShot = q >= 4 && clock <= 24 && scoreDiff <= 0 && scoreDiff >= -3;
+        if (lastShot) possessionLength = clock;
+        // Moins de 4 s à jouer en fin de période : tir de la dernière chance
+        // (voir _buzzerHeave dans playPossession), pas une attaque placée.
+        this._buzzerHeave = clock < 4;
+        // Remise en jeu dans le camp adverse après un temps mort de fin de
+        // match (voir maybeCallTimeout) : quelques secondes gagnées.
+        if (offTeam._advanceBall) {
+          delete offTeam._advanceBall;
+          possessionLength = Math.max(3, possessionLength - rand(4, 7));
+        }
+
         possessionLength = Math.min(possessionLength, clock);
 
         // Retour utilisateur : "on ne peut pas avoir un tir marqué à 10:00,
@@ -15803,8 +16007,16 @@ class MatchEngine {
           possessionLength = result.clockUsed;
         }
 
+        const prevScore = { A: score.A, B: score.B };
         score.A = this.teamA.players.reduce((s, p) => s + p.stats.pts, 0);
         score.B = this.teamB.players.reduce((s, p) => s + p.stats.pts, 0);
+        // Série en cours (voir maybeCallTimeout) : points sans réponse.
+        const gainA = score.A - prevScore.A, gainB = score.B - prevScore.B;
+        if (gainA > 0 && gainB > 0) run = { team: null, points: 0 };
+        else if (gainA > 0 || gainB > 0) {
+          const scorer = gainA > 0 ? "A" : "B";
+          run = run.team === scorer ? { team: scorer, points: run.points + gainA + gainB } : { team: scorer, points: gainA + gainB };
+        }
 
         // Rythme réel du match = moyenne des deux rythmes (comme avgPossessions
         // ci-dessus) : la fatigue du tempo est partagée, voir applyFatigue.
@@ -15817,6 +16029,13 @@ class MatchEngine {
 
         if (!result.possessionOffense) {
           possessionTeam = possessionTeam === "A" ? "B" : "A";
+          // Ballon mort après des points encaissés : l'équipe qui va
+          // remonter le ballon peut demander un temps mort.
+          const conceded = possessionTeam === "A" ? gainB : gainA;
+          if (conceded > 0 && clock > 0) {
+            const caller = possessionTeam === "A" ? this.teamA : this.teamB;
+            if (this.maybeCallTimeout(caller, q, clock, score, run, events)) run = { team: null, points: 0 };
+          }
         }
       }
 
@@ -15835,6 +16054,8 @@ class MatchEngine {
     return {
       finalScore: score,
       quarterScores,
+      // Temps morts pris par chaque équipe sur le match.
+      timeoutsUsed: { A: this.timeoutsUsed.A.total, B: this.timeoutsUsed.B.total },
       events,
       boxScoreA: this.buildBoxScore(this.teamA),
       boxScoreB: this.buildBoxScore(this.teamB),
@@ -15975,7 +16196,7 @@ return {
   // tables plutôt que de dupliquer les noms en dur.
   SCREEN_DEFENSES, HELP_DEFENSE_LEVELS, WATCH_FOCUS_EFFECTS, MAX_WATCH_ASSIGNMENTS,
   POST_DEFENSES, CLOSEOUT_STYLES, OFF_REBOUND_STYLES, ENDGAME_MANAGEMENT,
-  clamp, rand, pick, weightedPick,
+  clamp, rand, pick, weightedPick, rand01, mulberry32, newMatchSeed, withSeededRandom,
   Player, Team, MatchEngine, CONVOCATION_MAX,
   heightForPosition, generateAttrsForPosition, generateRawYouthAttrs, generateRawAttrsInRange, generatePlayer, generateTeam,
   generateRookiePlayer, generateStartingRoster, FIRST_NAMES, LAST_NAMES,
