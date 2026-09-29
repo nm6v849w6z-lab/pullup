@@ -68,7 +68,7 @@ chantiers marqués « committé, à pousser » étaient en fait en prod et ont
 été retirés (l'historique Git les garde). Restent ci-dessous uniquement les
 points réellement ouverts.
 
-- **🛠 EN COURS (2026-09-29, cette session) — lot demandé par l'utilisateur** :
+- **✅ COMMITTÉ, À POUSSER EN UNE FOIS (2026-09-29) — lot demandé par l'utilisateur** (suite complète : 206 tests verts) :
   1. ✅ Légende/zones du classement selon les divisions réellement ouvertes
      (World.divisionMovesFor → league.divisionMoves dans GET /api/save ;
      leagueDivisionMoves/standingsRowZone/standingsLegendItems côté jeu ;
@@ -102,7 +102,8 @@ points réellement ouverts.
      leagueSummary.managers → World.managerRanking → GET
      /api/world/managers ; carte « Classement mondial des managers » en tête
      de Planète Hoop (10 premiers + sa place). rivalry_ranking_test.js.
-  5. Propositions Premium : salle personnalisée, avatars des jeunes.
+  5. Propositions Premium (salle personnalisée, avatars des jeunes) faites à
+     l'utilisateur le 2026-09-29, en attente de son choix : rien de codé.
 
 - **🌐 Côté utilisateur (hébergement, services)** :
   - Google Search Console : domaine validé par TXT chez IONOS le
