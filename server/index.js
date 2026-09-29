@@ -165,9 +165,9 @@ function mobileManifest(token) {
     background_color: "#0d131d",
     theme_color: "#0f1728",
     icons: [
-      { src: "/assets/mobile/icon-192.png?v=2", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/assets/mobile/icon-512.png?v=2", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/assets/mobile/icon-maskable-512.png?v=2", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/assets/mobile/icon-192.png?v=3", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/assets/mobile/icon-512.png?v=3", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/assets/mobile/icon-maskable-512.png?v=3", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
@@ -1066,6 +1066,18 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // comme "/", aucune sauvegarde touchée.
       if (route.pathname === "/sw.js" && req.method === "GET") {
         serveServiceWorker(res);
+        return;
+      }
+      // /favicon.ico (2026-09-29, retour « le favicon est toujours orange ») :
+      // Safari et d'autres navigateurs le demandent d'office et gardent
+      // l'ancien en cache tant que cette adresse ne répond rien. On y sert le
+      // favicon jaune (PNG, accepté par tous les navigateurs actuels).
+      if (route.pathname === "/favicon.ico" && req.method === "GET") {
+        fs.readFile(path.join(ASSETS_DIR, "mobile", "favicon-32.png"), (err, data) => {
+          if (err) { sendJson(res, 404, { error: "Fichier introuvable" }); return; }
+          res.writeHead(200, { "Content-Type": "image/png", "Content-Length": data.length, "Cache-Control": "public, max-age=86400" });
+          res.end(data);
+        });
         return;
       }
       if (route.pathname === "/manifest.webmanifest" && req.method === "GET") {

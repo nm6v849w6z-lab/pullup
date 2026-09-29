@@ -20,6 +20,16 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Favicon toujours orange** (retour
+  utilisateur). Le favicon du site était déjà jaune (6c4e9fd) mais : icônes
+  de l'appli Capacitor (mobile-app/www/icon.png, resources/icon-source-512.png)
+  restées orange → remplacées par icon-512 jaune ; /favicon.ico n'existait
+  pas (Safari gardait l'ancien) → route ajoutée (server/index.js) ; ?v=3 sur
+  toutes les icônes, cache du service worker hoop-v4. Test : favicon_test.js.
+  RESTE : pousser (main puis prod) ; l'appli iPhone Capacitor devra être
+  reconstruite pour prendre la nouvelle icône ; Safari peut garder l'ancien
+  favicon en cache (Développement → Vider les caches).
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-29) — Entraînement des fondamentaux :
   aptitudes par poste reprises du tableau de l'utilisateur** (13 purs + 7
   polyvalents, M/A/AS/AF/P). TRAINING_POSITION_EFFICIENCY (engine.js +
