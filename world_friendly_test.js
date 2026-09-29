@@ -74,6 +74,11 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (await c
   const played = (await store.loadWorldAuxRaw("friendlies", multiSavePath)).list.find(x => "w" + x.id === fid);
   assert.strictEqual(played.status, "played");
   assert.ok(played.result && (played.result.forfeit || (played.result.boxScoreHome.length && played.result.boxScoreAway.length)));
+  // Huis clos : score caché aux managers pendant la durée d'un match officiel.
+  const during = (await api("/api/save", lyon.managerLinkToken)).body.league.friendlies.find(f => f.id === fid);
+  assert.ok(during && during.status === "accepted" && during.result === null, "score caché pendant 1h30");
+  clock.now = f0.at + 91 * 60 * 1000;
+  await World.catchUpWorld(multiSavePath, clock.now);
   const saveL = (await api("/api/save", lyon.managerLinkToken)).body;
   const pL = saveL.league.friendlies.find(f => f.id === fid);
   assert.ok(pL && pL.status === "played" && pL.result.scoreHome === played.result.scoreHome);

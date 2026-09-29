@@ -67,6 +67,10 @@ async function main() {
 
     // Le match se joue à l'heure dite, au premier passage du serveur après.
     now = fr[0].at + 60 * 1000;
+    const during = await request(server, "GET", "/api/save", undefined, M.Lyon.h);
+    const hiddenFr = during.body.league.friendlies.find(f => f.id === id);
+    check(hiddenFr.status === "accepted" && hiddenFr.result === null, "huis clos : score caché pendant la durée d'un match");
+    now = fr[0].at + 90 * 60 * 1000 + 60 * 1000;
     const after = await request(server, "GET", "/api/save", undefined, M.Lyon.h);
     const played = after.body.league.friendlies.find(f => f.id === id);
     check(played.status === "played" && played.result && played.result.boxScoreHome.length > 0, `amical joué : ${played.result.scoreHome}-${played.result.scoreAway}`);

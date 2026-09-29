@@ -121,6 +121,22 @@ function catchUpLeague(league, now) {
     catchUpClassic(league, now, events);
   }
 
+  // All-Star Game de mi-saison (2026-09-28, voir Engine.simulateAllStarGame) :
+  // une fois par saison, le dimanche 20h (heure de la ligue) qui suit la
+  // journée de mi-saison, sur des copies des joueurs.
+  if (Engine.simulateAllStarGame && league.calendarDailyAnchored && !league.isRegularSeasonDone()) {
+    const key = league.seasonId || `start:${league.calendarStartAt || 0}`;
+    if (!league.allStarGame || league.allStarGame.seasonId !== key) {
+      const tz = league.timeZone || null;
+      const zone = tz && Calendar.zonedLocalDateParts ? { parts: ms => Calendar.zonedLocalDateParts(ms, tz), epoch: (y, m, d, h) => Calendar.zonedEpochForLocalTime(tz, y, m, d, h) } : null;
+      const dueAt = Engine.allStarGameDueAt(league, scheduledTimeForLeagueRound, zone);
+      if (dueAt != null && now >= dueAt) {
+        const asg = Engine.simulateAllStarGame(league, dueAt);
+        if (asg) events.push({ type: "all-star-game", score: asg.teams.map(t => t.score), mvp: asg.mvp });
+      }
+    }
+  }
+
   // Marché des transferts : ses enchères tournent sur leur PROPRE horloge
   // réelle (3 jours, voir TRANSFER_AUCTION_DURATION_MS), indépendante du
   // calendrier de championnat — toujours rafraîchi, même une semaine sans
