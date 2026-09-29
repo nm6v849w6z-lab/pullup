@@ -1074,7 +1074,7 @@ function rankedPositionsForSkill(skill) {
   return [...POSITIONS].sort((a, b) => {
     const diff = positionEfficiencyForSkill(skill, b) - positionEfficiencyForSkill(skill, a);
     if (diff !== 0) return diff;
-    return POSITIONS.indexOf(a) - POSITIONS.indexOf(b);
+    return trainingTieBreak(skill, a, b);
   });
 }
 
@@ -1221,11 +1221,28 @@ function positionEfficiencyForProgram(programKey, position) {
   return totalW ? sum / totalW : 100;
 }
 
+// Départage de postes à égalité d'aptitude (2026-09-29) : le tableau de
+// l'utilisateur met souvent plusieurs postes à 100 % ; le poste proposé par
+// défaut reste alors le poste « naturel » d'avant (TRAINING_HOME_POSITION :
+// Pivot pour le jeu intérieur, Arrière pour le tir à 3 points…), puis le
+// plus proche de lui, puis l'ordre M → P.
+function trainingTieBreak(key, a, b) {
+  const program = TRAINING_PROGRAMS[key];
+  const homeKey = program && program.attrs.length === 1 ? program.attrs[0].attr : key;
+  const home = TRAINING_HOME_POSITION[homeKey];
+  if (home) {
+    const h = POSITIONS.indexOf(home);
+    const d = Math.abs(POSITIONS.indexOf(a) - h) - Math.abs(POSITIONS.indexOf(b) - h);
+    if (d !== 0) return d;
+  }
+  return POSITIONS.indexOf(a) - POSITIONS.indexOf(b);
+}
+
 function rankedPositionsForProgram(programKey) {
   return [...POSITIONS].sort((a, b) => {
     const diff = positionEfficiencyForProgram(programKey, b) - positionEfficiencyForProgram(programKey, a);
     if (diff !== 0) return diff;
-    return POSITIONS.indexOf(a) - POSITIONS.indexOf(b);
+    return trainingTieBreak(programKey, a, b);
   });
 }
 

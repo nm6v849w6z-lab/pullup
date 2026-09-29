@@ -74,7 +74,14 @@ points réellement ouverts.
      leagueDivisionMoves/standingsRowZone/standingsLegendItems côté jeu ;
      standings_zones_test.js). ⚠️ Le barrage 7e-8e est toujours JOUÉ
      (autoSim) même sans enjeu (< 3 championnats dessous) : question posée.
-  2. Chargement mobile (images base64 hors du HTML, compression).
+  2. ✅ Chargement mobile : 8 visuels de salle → assets/arena/niveau-N.jpg,
+     logo → /assets/brand/logo-hoop-manager.png (page 4,8 → 2,9 Mo) ;
+     compression brotli/gzip (server/index.js sendBody : HTML, JS, CSS,
+     JSON ; version compressée des fichiers gardée en mémoire) → 0,65 Mo
+     transférés. load_size_test.js. Au passage : départage des postes à
+     égalité d'aptitude à l'entraînement = poste « naturel » d'avant
+     (trainingTieBreak ; jeu intérieur → Pivot, 3 pts → Arrière), le
+     tableau du 2026-09-29 avait rendu Ailier fort/Meneur par défaut.
   3. Rivalités (bilan face à face entre managers humains + Derby).
   4. Classement mondial des managers (Planète Hoop).
   5. Propositions Premium : salle personnalisée, avatars des jeunes.
