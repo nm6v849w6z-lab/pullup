@@ -85,9 +85,6 @@
   .facts li{display:flex; align-items:center; gap:8px}
   .facts b{color:var(--ink)}
   .facts svg{width:18px; height:18px; color:var(--amber); flex:none}
-  .slots{display:inline-flex; align-items:baseline; gap:10px; padding:14px 18px; border-radius:12px; background:var(--panel); border:1px solid var(--line)}
-  .slots strong{font:800 34px/1 "Barlow Condensed",sans-serif; color:var(--amber)}
-  .slots span{color:var(--ink-dim); font-size:15px}
 
   /* ---------- Carte d'inscription ---------- */
   .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; box-shadow:0 30px 80px -30px rgba(0,0,0,.6)}
@@ -221,7 +218,6 @@
           <li><svg><use href="#i-check"/></svg><span data-t-html="hero.fact2"><b>10 managers</b> par ligue</span></li>
           <li><svg><use href="#i-check"/></svg><span data-t-html="hero.fact3"><b>Gratuit</b>, sans installation</span></li>
         </ul>
-        <div class="slots" id="slotsBox" hidden><strong id="slotsCount">–</strong><span id="slotsLabel"></span></div>
       </div>
 
       <div class="card" id="authCard">
@@ -403,8 +399,6 @@
       "hero.title": "Take charge<br>of your <em>club</em>.",
       "hero.lead": "Sign players, train them, set your tactics… then watch your team play live against other managers. Free, in your browser, on desktop and mobile.",
       "hero.fact1": "<b>Live games</b> at set times", "hero.fact2": "<b>10 managers</b> per league", "hero.fact3": "<b>Free</b>, nothing to install",
-      "slots.one": "club still available in the current league", "slots.many": "clubs still available in the current league",
-      "slots.none": "The league is full: sign up to join the waiting list.",
       "signup.title": "Your club awaits", "signup.sub": "Pick a name: you take over a club in the current league and play tonight.",
       "discord.signup": "Sign up with Discord", "discord.login": "Log in with Discord", "or": "or",
       "field.country": "Your country", "country.fr": "France", "country.us": "United States",
@@ -459,8 +453,6 @@
     },
     fr: {
       "pw.hide": "Masquer",
-      "slots.one": "club encore disponible dans la ligue en cours", "slots.many": "clubs encore disponibles dans la ligue en cours",
-      "slots.none": "La ligue est complète : inscris-toi pour rejoindre la liste d'attente.",
       "dclub.sub": "Salut {name} ! Dernière étape : choisis le nom de ton club.",
       "wait.still": "Toujours complet pour l'instant. Réessaie plus tard !",
       "err.email-invalid": "Cette adresse email ne semble pas valide.",
@@ -504,7 +496,6 @@
     document.querySelectorAll("[data-t-html]").forEach(function (el) { el.innerHTML = t(el.dataset.tHtml); });
     document.querySelectorAll("[data-lang]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.lang === lang)); });
     document.querySelectorAll(".msg").forEach(function (m) { if (m.dataset.code) showMsg(m, m.dataset.code, m.classList.contains("is-ok")); });
-    renderSlots();
     if (discordPendingName) document.getElementById("dclubSub").textContent = t("dclub.sub").replace("{name}", discordPendingName);
   }
   document.querySelectorAll("[data-lang]").forEach(function (b) {
@@ -679,21 +670,8 @@
     document.getElementById("resumeBar").style.display = "none";
   });
 
-  // --- Places restantes / Discord ----------------------------------------
+  // --- Discord ----------------------------------------
   var config = null;
-  function renderSlots() {
-    if (!config) return;
-    var box = document.getElementById("slotsBox");
-    box.hidden = false;
-    if (config.openSlots > 0) {
-      document.getElementById("slotsCount").textContent = String(config.openSlots);
-      document.getElementById("slotsCount").style.display = "";
-      document.getElementById("slotsLabel").textContent = t(config.openSlots === 1 ? "slots.one" : "slots.many");
-    } else {
-      document.getElementById("slotsCount").style.display = "none";
-      document.getElementById("slotsLabel").textContent = t("slots.none");
-    }
-  }
   api("GET", "/api/account/config").then(function (c) {
     if (!c || !c.ok) return;
     config = c;
@@ -702,7 +680,6 @@
       document.getElementById("communitySection").hidden = false;
       document.getElementById("communityLink").href = c.discordInvite;
     }
-    renderSlots();
   }).catch(function () {});
   document.querySelectorAll(".discord-only").forEach(function (el) { el.style.display = "none"; });
 

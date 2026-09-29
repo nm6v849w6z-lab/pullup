@@ -20,14 +20,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **✅ COMMITTÉ, À POUSSER (2026-09-28) — iPhone : encoche (suite) + logo de
-  l'adversaire payant sur le tableau de bord** — Hoop Show plein écran et
-  message de la visite guidée réservent env(safe-area-inset-top/bottom)
-  (ordres_notch_test.js étendu) ; dashboardTeamRef transmet logoUrl
-  (teamIsPremium + customLogoDataUrl), test dans dashboard_e2e_test.js
-  (partie 5 ter, après le marquage « lu »). RESTE : pousser, vérifier sur
-  l'iPhone (Ordres, Hoop Show). Test flaky connu : mobile_viewport_meta_test.js
-  échoue en sandbox (fetch failed), avec ou sans ces changements.
+- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Page d'accueil (/bienvenue) : compteur
+  « clubs encore disponibles dans la ligue en cours » retiré** (retour : « t'enlèveras
+  ça sur la page d'accueil ») — assets/site/index.html : encadré, style,
+  traductions FR/EN et renderSlots supprimés ; openSlots reste renvoyé par
+  /api/account/config (non utilisé par le site). RESTE : pousser.
 
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Premium : les 4 « Bientôt »
   livrés** (reste en « Bientôt » : salle personnalisée / avatars des jeunes)
