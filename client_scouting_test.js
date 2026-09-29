@@ -13,7 +13,7 @@
 // rechargement complet de la page (nouvelle session JSDOM, comme
 // persistence_test.js).
 const fs = require("fs");
-const { startTestServer, openGame, flush, readRawSave } = require("./test_helpers.js");
+const { startTestServer, openGame, flush, readRawSave, editSave } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
 (async () => {
@@ -73,6 +73,8 @@ console.log("✅ L'onglet Staff affiche bien une section analyste vidéo sépar�
 // analyst_market_test.js) : on ne re-teste pas le marché ici, juste son
 // branchement dans l'UI Staff.
 getLeague(win).teams[getMyTeamIndex(win)].hireVideoAnalyst(3, 5000);
+// Même embauche côté serveur (la séance vidéo y est vérifiée).
+editSave(savePath, t => t.hireVideoAnalyst(3, 5000));
 win.renderStaffPanel();
 const analystCurrentInfo = doc.querySelector("#staffAnalystCurrent .staff-current-info");
 console.log("\nBloc 'analyste en poste' après embauche :", analystCurrentInfo && analystCurrentInfo.textContent);

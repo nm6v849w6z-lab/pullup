@@ -105,8 +105,7 @@ console.log("✅ Aucune prime versée en cas de relégation.");
 // ---------------------------------------------------------------------
 // Partie 2 : parcours UI complet (comme cpu_training_test.js) — on gonfle
 // fortement le club du joueur pour garantir une montée, on joue toute la
-// saison, on vérifie que le budget encaisse EXACTEMENT la prime attendue au
-// clic sur "Nouvelle saison" (voir startNewSeason côté UI).
+// saison, on vérifie que l'écran de fin de saison annonce la prime.
 // ---------------------------------------------------------------------
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const ATTRS = ["midRange", "threePoint", "inside", "pass", "rebound", "block", "dribble", "agility", "defOutside", "defInside"];
@@ -203,30 +202,14 @@ const budgetBefore = beforeSeasonEnd.team.budget;
 const expectedBonus = fromLevel > 1 ? PROMOTION_BONUS_BY_LEVEL[fromLevel - 1] : CHAMPION_BONUS_DIVISION_I;
 console.log("Budget avant la prime :", budgetBefore, "| Prime attendue :", expectedBonus);
 
-doc2.getElementById("newSeasonBtn").click();
-await flush(dom2);
-const afterSeasonEnd = readRawSave(savePath);
-const budgetAfter = afterSeasonEnd.team.budget;
-console.log("Budget après clic sur 'Nouvelle saison' :", budgetAfter);
-
-const delta = budgetAfter - budgetBefore;
-console.log(`${delta === expectedBonus ? "✅" : "❌"} La prime versée (${delta}) correspond exactement au montant attendu (${expectedBonus}).`);
-if (delta !== expectedBonus) {
-  throw new Error(`❌ La prime versée (${delta}) ne correspond pas au montant attendu (${expectedBonus}).`);
-}
-
-// --- La transaction correspondante doit apparaître dans le journal
-// (onglet Économie), avec le bon libellé. ---
-const expectedLabel = fromLevel > 1
-  ? `Prime de montée (${E.divisionInfo(fromLevel - 1).name})`
-  : "Prime de champion (Division I)";
-const tx = afterSeasonEnd.team.transactions.find(t => t.label === expectedLabel && t.amount === expectedBonus);
-console.log("Transaction trouvée dans le journal :", tx);
-if (!tx) throw new Error(`❌ Une transaction "${expectedLabel}" de ${expectedBonus} € devrait apparaître dans le journal.`);
-console.log("✅ La transaction de la prime apparaît correctement dans le journal des transactions.");
+// Plus de bouton « Nouvelle saison » (carrière solo supprimée) : la prime
+// est versée par le serveur à la fin de la saison (League.
+// paySeasonEndBonuses, voir new_season_test.js) ; seule l'annonce est
+// vérifiée ici.
+void budgetBefore;
 
 win2.close();
 server.close();
-console.log("\n✅ Primes de fin de saison vérifiées : détection du champion de Division I, calcul du bon montant (montée ou titre), annonce à l'écran de fin de saison, versement exact au budget, et journal des transactions.");
+console.log("\n✅ Primes de fin de saison vérifiées : détection du champion de Division I, calcul du bon montant (montée ou titre), annonce à l'écran de fin de saison.");
 
 })().catch(e => { console.error(e); process.exit(1); });

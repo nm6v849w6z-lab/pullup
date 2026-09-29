@@ -86,6 +86,8 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (cond())
   // 2) Page Coupe : tableau complet du tour demandé au serveur.
   let dom = await openGame(html, `${baseUrl}?m=${rennes.token}`, win => patchDateNow(win, () => clock.now));
   let win = dom.window, doc = win.document;
+  // Récapitulatif d'absence (matchs joués pendant le rattrapage) : on le ferme.
+  if (!doc.getElementById("catchupSection").classList.contains("hidden")) doc.getElementById("catchupContinueBtn").click();
   if (!win.eval("league.teams.length === 10 && league.teams[100] && league.teams[100].isGuest && league.teams[100].name === 'Lyon Coupe'")) fail("club invité non installé (league.teams[100]).");
   if (win.eval("league.teams.map(t => t.name).includes('Lyon Coupe')")) fail("le club invité ne doit pas apparaître dans les boucles sur league.teams.");
   // Tableau de bord, calendrier et Ordres affichent le match de Coupe contre le club invité.

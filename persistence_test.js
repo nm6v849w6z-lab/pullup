@@ -4,7 +4,7 @@
 // ayant assez joué progressent plus vite. Vérifie aussi que tout survit à
 // une sauvegarde / rechargement complet de la page (nouvelle instance jsdom).
 const fs = require("fs");
-const { startTestServer, openGame, flush, readRawSave, fastForwardCalendar } = require("./test_helpers.js");
+const { startTestServer, openGame, flush, readRawSave, fastForwardCalendar, editSave } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
 // Depuis le passage au calendrier réel (tâche #21), l'entraînement
@@ -53,7 +53,15 @@ win1.eval("TAB_HANDLERS.entrainement();");
 // directement une enchère gagnée (même méthode Team.hireTrainer qu'utilise
 // League._resolveCoachListing une fois une enchère conclue), pour rester
 // focalisé sur ce que ce test vérifie réellement.
-win1.eval('teamA.hireTrainer(4, 5000); saveMyTeam(); renderStaffPanel();');
+// Plus de sauvegarde brute depuis le navigateur (carrière solo supprimée) :
+// l'enchère gagnée est appliquée côté serveur, puis la page rechargée.
+editSave(savePath, t => t.hireTrainer(4, 5000));
+await flush(dom1);
+win1.close();
+dom1 = await openGame(html, baseUrl);
+doc1 = dom1.window.document;
+win1 = dom1.window;
+win1.eval("TAB_HANDLERS.entrainement(); renderStaffPanel();");
 console.log("Staff après recrutement niveau 4 :", doc1.getElementById("staffCurrent").textContent.replace(/\s+/g, " "));
 console.log("Budget après recrutement (salaire pas encore prélevé) :", doc1.getElementById("staffBudget").textContent);
 

@@ -58,7 +58,8 @@ async function get(baseUrl, p) {
   const lg = freshLeagueWithRounds(3);
   const savePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "basket-ads-test-")), "league.json");
   const multiPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "basket-ads-test-multi-")), "multi-league.json");
-  await store.save(lg.teams[0], lg, savePath);
+  // Ligue en ligne d'un seul manager (plus de carrière solo).
+  await store.saveMultiLeague(lg, multiPath);
   const clock = { now: T0 + 60000 };
   const server = http.createServer(createHandler(savePath, () => clock.now, multiPath));
   await new Promise(r => server.listen(0, "127.0.0.1", r));
@@ -96,7 +97,7 @@ async function get(baseUrl, p) {
     const m = lg.matchesForRound(0).find(x => x.home === 0 || x.away === 0);
     const oppIdx = m.home === 0 ? m.away : m.home;
     const fake = { mode: "unavailable", calls: [] };
-    const dom = await openGame(html, baseUrl, (window) => {
+    const dom = await openGame(html, `${baseUrl}?m=${lg.teams[0].managerLinkToken}`, (window) => {
       patchDateNow(window, () => clock.now);
       window.HM_ADS = { client: "ca-pub-1234567890123456", test: true };
       window.adConfig = (o) => fake.calls.push({ config: o });
@@ -127,7 +128,9 @@ async function get(baseUrl, p) {
       throw new Error(`❌ ${label} (délai dépassé)`);
     }
 
-    assertTrue(!doc.querySelector('script[src*="adsbygoogle"]'), "C0: sans jeton manager, adsbygoogle.js n'est pas chargé");
+    // Manager identifié (plus de carrière solo sans jeton) : le script AdSense
+    // est chargé une fois la page prête.
+    assertTrue(!!doc.querySelector('script[src*="adsbygoogle"]'), "C0: manager identifié, adsbygoogle.js chargé");
     await openAnalyse();
     // C1) Aucune pub disponible → message, bouton réactivé, rien débloqué.
     fake.mode = "unavailable";

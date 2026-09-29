@@ -53,7 +53,7 @@
 // PLUS jamais l'interview à la place du manager : elle reste en attente,
 // reprenable via ce même bouton.
 const fs = require("fs");
-const { startTestServer, openGame, flush, patchDateNow } = require("./test_helpers.js");
+const { startTestServer, openGame, flush, patchDateNow, readRawSave } = require("./test_helpers.js");
 const { scheduledTimeForRound, MATCH_BROADCAST_DURATION_MS } = require("./server/calendar.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
@@ -141,7 +141,7 @@ await dom.window.close();
 // Vérifie que le nouveau panneau du tableau de bord (#clubInterviewPanel)
 // comble bien ce trou, sans repasser par un bouton dédié au direct.
 // ---------------------------------------------------------------------
-const savedAfterPart1 = JSON.parse(fs.readFileSync(savePath, "utf-8"));
+const savedAfterPart1 = readRawSave(savePath);
 // Avance directement jusqu'à la journée 9 (mi-saison) côté serveur, en
 // rattrapant chaque journée intermédiaire SANS jamais suivre son direct
 // (comme n'importe quel manager occasionnel) : ouvre puis referme
@@ -149,7 +149,7 @@ const savedAfterPart1 = JSON.parse(fs.readFileSync(savePath, "utf-8"));
 // chaque journée, jusqu'à atteindre la journée voulue.
 let round = savedAfterPart1.league.round;
 while (round < 9) {
-  const savedNow = JSON.parse(fs.readFileSync(savePath, "utf-8"));
+  const savedNow = readRawSave(savePath);
   const at = scheduledTimeForRound(savedNow.league.calendarStartAt, savedNow.league.round);
   clock.now = at + MATCH_BROADCAST_DURATION_MS + 5000;
   const d = await openGame(html, baseUrl, (window) => patchDateNow(window, () => clock.now));
@@ -165,13 +165,13 @@ while (round < 9) {
     await flush(d);
   }
   await d.window.close();
-  const after = JSON.parse(fs.readFileSync(savePath, "utf-8"));
+  const after = readRawSave(savePath);
   round = after.league.round;
 }
 console.log("\nJournée atteinte après rattrapage des journées précédentes :", round);
 if (round !== 9) throw new Error(`❌ (setup) devrait avoir atteint la journée 9 (mi-saison), obtenu ${round}.`);
 
-const savedAtRound9 = JSON.parse(fs.readFileSync(savePath, "utf-8"));
+const savedAtRound9 = readRawSave(savePath);
 const scheduledAt9 = scheduledTimeForRound(savedAtRound9.league.calendarStartAt, savedAtRound9.league.round);
 clock.now = scheduledAt9 + Math.round(MATCH_BROADCAST_DURATION_MS / 2);
 dom = await openGame(html, baseUrl, (window) => patchDateNow(window, () => clock.now));

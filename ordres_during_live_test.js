@@ -12,7 +12,7 @@
 // match (retour utilisateur, 2026-09 : l'onglet Live séparé de la sidebar,
 // lui, a depuis été retiré, redondant avec ce bandeau, voir goToLiveTab).
 const fs = require("fs");
-const { startTestServer, openGame, flush, patchDateNow } = require("./test_helpers.js");
+const { startTestServer, openGame, flush, patchDateNow, readRawSave } = require("./test_helpers.js");
 const { scheduledTimeForRound, MATCH_BROADCAST_DURATION_MS } = require("./server/calendar.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
@@ -25,7 +25,7 @@ patchDateNow(dom.window, () => clock.now);
 await flush(dom);
 
 const fs2 = require("fs");
-const saved = JSON.parse(fs2.readFileSync(savePath, "utf-8"));
+const saved = readRawSave(savePath);
 const scheduledAt = scheduledTimeForRound(saved.league.calendarStartAt, saved.league.round);
 await dom.window.close();
 

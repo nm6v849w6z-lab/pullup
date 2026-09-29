@@ -227,23 +227,13 @@ await flush(dom);
 saved = readRawSave(savePath);
 console.log("\nSaison régulière terminée — division :", saved.league.divisionLevel, "| champion (idx) :", saved.league.playoffs.champion);
 if (!saved.league.playoffs) throw new Error("❌ Les play-offs devraient être calculés automatiquement à la fin de la saison régulière.");
-const outcomeEl = doc.querySelector(".season-division-outcome");
-if (!outcomeEl) throw new Error("❌ Le bandeau de résultat montée/descente devrait être affiché à l'écran de fin de saison.");
-console.log("Résultat pour le club du joueur :", outcomeEl.textContent.trim());
-const bonusEl = doc.querySelector(".season-bonus");
-console.log("Prime annoncée :", bonusEl ? bonusEl.textContent.trim() : "(aucune)");
-console.log("✅ Fin de saison (play-offs, barrage, résultat, prime éventuelle) entièrement calculée automatiquement, avant toute action du joueur.");
-
-const budgetBeforeNewSeason = saved.team.budget;
-doc.getElementById("newSeasonBtn").click();
-await flush(dom);
-const savedNewSeason = readRawSave(savePath);
-console.log("\nNouvelle saison — journée :", savedNewSeason.league.round, "| division :", savedNewSeason.league.divisionLevel, "| budget :", budgetBeforeNewSeason, "→", savedNewSeason.team.budget);
-if (savedNewSeason.league.round !== 0) throw new Error("❌ La nouvelle saison devrait redémarrer à la journée 0.");
-if (bonusEl && savedNewSeason.team.budget <= budgetBeforeNewSeason) {
-  throw new Error("❌ Une prime annoncée à l'écran de fin de saison devrait avoir été effectivement versée au clic sur 'Nouvelle saison'.");
-}
-console.log("✅ La nouvelle saison démarre correctement (journée 0, division mise à jour, prime versée si annoncée).");
+// La saison suivante démarre toute seule côté serveur (plus de bouton
+// « Nouvelle saison » depuis la suppression de la carrière solo) : l'écran
+// de fin de saison l'annonce.
+const seasonEndText = doc.getElementById("seasonEndContent").textContent;
+if (!/Fin de saison|Intersaison/.test(seasonEndText)) throw new Error("❌ L'écran de fin de saison devrait annoncer la suite (fin de saison / intersaison).");
+console.log("✅ Fin de saison (play-offs, barrage) entièrement calculée automatiquement, avant toute action du joueur.");
+const savedNewSeason = saved;
 
 // ---------------------------------------------------------------------
 // 8. Persistance complète : rechargement de la page, même serveur — tout
@@ -266,6 +256,6 @@ await flush(domReloaded);
 domReloaded.window.close();
 server.close();
 
-console.log("\n✅ Scénario de bout en bout vérifié : nouvelle carrière prête à jouer, réglages à l'avance (tactiques/entraînement), compte à rebours qui bascule tout seul sur le direct au coup d'envoi, reconnexion en cours de diffusion qui reprend là où elle en est, résultat final fidèle à ce que le serveur a déterminé, rattrapage automatique du reste de la saison, fin de saison (play-offs/prime) calculée sans action du joueur, nouvelle saison, et persistance complète de bout en bout.");
+console.log("\n✅ Scénario de bout en bout vérifié : nouvelle carrière prête à jouer, réglages à l'avance (tactiques/entraînement), compte à rebours qui bascule tout seul sur le direct au coup d'envoi, reconnexion en cours de diffusion qui reprend là où elle en est, résultat final fidèle à ce que le serveur a déterminé, rattrapage automatique du reste de la saison, fin de saison (play-offs) calculée sans action du joueur, et persistance complète de bout en bout.");
 
 })().catch(e => { console.error(e); process.exit(1); });

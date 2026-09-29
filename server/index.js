@@ -253,13 +253,15 @@ function serveIndexHtml(res) {
     sendJson(res, 500, { error: `Impossible de lire moteurbasket3.html : ${e.message}` });
     return;
   }
-  // Site public (BASKET_PUBLIC_SITE=1, prod hoop-manager.com) : un visiteur
-  // SANS jeton manager (ni `?m=` dans l'URL, ni jeton déjà rangé par ce
-  // navigateur) est envoyé vers la page d'accueil/inscription au lieu de
-  // tomber sur la carrière solo. Script placé tout en haut de <head> pour
-  // partir avant le moindre affichage. Même clé localStorage que le jeu
-  // (MANAGER_TOKEN_STORAGE_KEY dans moteurbasket3.html).
-  if (AccountRoutes.isPublicSite()) {
+  // Un visiteur SANS jeton manager (ni `?m=` dans l'URL, ni jeton déjà
+  // rangé par ce navigateur) est envoyé vers la page d'accueil/inscription.
+  // Script placé tout en haut de <head> pour partir avant le moindre
+  // affichage. Même clé localStorage que le jeu (MANAGER_TOKEN_STORAGE_KEY
+  // dans moteurbasket3.html).
+  // Plus de carrière solo (retour utilisateur 2026-09-29 : "le jeu n'a pas a
+  // etre un jeu solo mais un jeu online contre d'autres managers") : tout
+  // visiteur sans jeton est envoyé vers l'inscription, partout.
+  {
     const guard = `<script>window.HM_PUBLIC_SITE=true;(function(){try{if(new URLSearchParams(location.search).get("m"))return;if(localStorage.getItem("tipinManagerToken_v1"))return;}catch(e){}location.replace("/bienvenue");})();</script>`;
     html = html.replace(/<head([^>]*)>/i, m => `${m}${guard}`);
 
@@ -335,7 +337,7 @@ async function maybeCatchUpWorld(multiSavePath, now, force = false, accountsPath
   if (!force && !due && now - last < WORLD_CATCHUP_INTERVAL_MS && now >= last) return [];
   lastWorldCatchUpAt.set(multiSavePath, now);
   try {
-    const events = await World.catchUpWorld(multiSavePath, now, { tickLeague: (lg, t) => tick(lg, t).events });
+    const events = await World.catchUpWorld(multiSavePath, now, { tickLeague: (lg, t) => { const evs = tick(lg, t).events; stashRecapEvents(lg, evs); return evs; } });
     nextWorldDeadlineAt.set(multiSavePath, events.nextDeadlineAt == null ? null : events.nextDeadlineAt);
     // Clubs rendus à l'IA (managers inactifs) : le compte garde la trace du
     // club pour le lui rendre s'il revient (voir World.reclaimClub).
@@ -419,11 +421,7 @@ function getManagerToken(req) {
 // ligne) : tous les appelants ci-dessous `await`ent déjà cette fonction.
 async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
   const token = getManagerToken(req);
-  if (!token) {
-    const state = await store.loadOrCreate(legacySavePath, now);
-    World.useLeagueTimeZone(null); // carrière solo : heure de Paris
-    return { ok: true, league: state.league, teamIndex: 0, isMulti: false, savePath: legacySavePath };
-  }
+  if (!token) return { ok: false, status: 401, error: "Connexion requise." };
   // Championnats par pays (2026-09-28, voir server/world.js) : le jeton
   // désigne un club dans UN des championnats du monde (Division I
   // française = la ligue partagée historique) ; seul celui-là est chargé,
@@ -534,21 +532,8 @@ function worldRefOf(world, leagueId, league, idx) {
 
 // `async` — voir resolvePlayerContext juste au-dessus, même raison.
 async function persistContext(ctx) {
-  if (ctx.isMulti) {
-    try { await Push.flushLeague(ctx.league, Date.now()); } catch (e) { console.warn("[notifications]", e.message); }
-    await store.saveMultiLeague(ctx.league, ctx.savePath);
-    return;
-  }
-  // Confort historique (mode solo UNIQUEMENT) : contrairement au mode
-  // multi-manager (où stocker un `liveMatch` résolu pour UN destinataire sur
-  // l'objet ligue PARTAGÉ serait ambigu — lequel des N managers ?), le solo
-  // n'a jamais qu'UN SEUL match en direct pertinent (teams[0]) — on le
-  // reflète aussi sur l'objet ligue persisté (pas seulement dans la réponse
-  // HTTP, voir /api/save), pour rester fidèle à la forme historique de
-  // server/data/league.json que d'anciens outils/tests peuvent inspecter
-  // directement.
-  ctx.league.liveMatch = LiveMatch.viewLiveMatchForTeam(ctx.league, 0);
-  await store.save(ctx.league.teams[0], ctx.league, ctx.savePath);
+  try { await Push.flushLeague(ctx.league, Date.now()); } catch (e) { console.warn("[notifications]", e.message); }
+  await store.saveMultiLeague(ctx.league, ctx.savePath);
 }
 
 // Rattrape la ligue jusqu'à `now` (matchs dus, entraînement hebdomadaire,
@@ -672,6 +657,29 @@ function tick(league, now) {
 // changement requis côté navigateur pour ce point précis. Un match/une
 // semaine qui ne concerne pas du tout `teamIndex` est simplement omis de SON
 // récapitulatif (mais reste bien résolu pour tout le monde par ailleurs).
+// Récapitulatif d'absence (écran « Pendant votre absence ») : les
+// évènements joués par un rattrapage de FOND (maybeCatchUpWorld, sans
+// requête du manager) sont gardés sur chaque club humain et rendus à sa
+// prochaine requête /api/state — sinon ils étaient perdus et le manager ne
+// voyait jamais le résumé de ce qui s'était joué en son absence.
+const PENDING_RECAP_MAX = 60;
+function stashRecapEvents(league, events) {
+  if (!league || !Array.isArray(events) || !events.length) return;
+  league.teams.forEach((team, idx) => {
+    if (!team || !team.isHuman) return;
+    const mine = personalizeEventsForTeam(events, idx);
+    if (!mine.length) return;
+    team.pendingRecapEvents = [...(team.pendingRecapEvents || []), ...mine].slice(-PENDING_RECAP_MAX);
+  });
+}
+function takePendingRecapEvents(league, teamIndex) {
+  const team = league && league.teams[teamIndex];
+  if (!team || !Array.isArray(team.pendingRecapEvents) || !team.pendingRecapEvents.length) return [];
+  const out = team.pendingRecapEvents;
+  team.pendingRecapEvents = [];
+  return out;
+}
+
 function personalizeEventsForTeam(events, teamIndex) {
   const out = [];
   events.forEach(ev => {
@@ -880,6 +888,7 @@ const ACTION_ROUTES = {
   "/api/plan": actions.setPlan,
   "/api/tactic-presets": actions.setTacticPresets,
   "/api/market/list": actions.listPlayer,
+  "/api/roster/sell-listed": actions.sellListedPlayer,
   "/api/market/bid": actions.bidOnListing,
   "/api/market/coach-bid": actions.bidOnCoachListing,
   // Enchère automatique (plafond), tous marchés — voir actions.setAutoBid.
@@ -1191,11 +1200,10 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // Comptes joueurs + Discord (voir server/accountRoutes.js).
       if (await handleAccountRoutes(req, res, route, now)) return;
 
-      // Site public : plus de carrière solo accessible sans jeton manager
-      // (sinon n'importe quel visiteur jouerait dans la carrière solo du
-      // serveur). Seules restent ouvertes sans jeton : /api/health, les
-      // routes admin (secret X-Admin-Token) et les comptes (ci-dessus).
-      if (AccountRoutes.isPublicSite() && route.pathname.startsWith("/api/")
+      // Plus de carrière solo (2026-09-29) : sans jeton manager, seules
+      // restent ouvertes /api/health, les routes admin (secret
+      // X-Admin-Token) et les comptes (ci-dessus).
+      if (route.pathname.startsWith("/api/")
           && route.pathname !== "/api/health" && !route.pathname.startsWith("/api/admin/")
           && !getManagerToken(req)) {
         sendJson(res, 401, { ok: false, code: "login-required", error: "Connexion requise." });
@@ -1447,8 +1455,9 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
         const { events, changed } = tick(ctx.league, now);
-        if (changed) await persistContext(ctx);
-        sendJson(res, 200, { ...buildStateSnapshot(ctx.league, ctx.teamIndex, now), events: personalizeEventsForTeam(events, ctx.teamIndex) });
+        const pending = takePendingRecapEvents(ctx.league, ctx.teamIndex);
+        if (changed || pending.length) await persistContext(ctx);
+        sendJson(res, 200, { ...buildStateSnapshot(ctx.league, ctx.teamIndex, now), events: [...pending, ...personalizeEventsForTeam(events, ctx.teamIndex)] });
         return;
       }
 
@@ -1470,16 +1479,14 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
         const { changed } = tick(ctx.league, now);
         if (changed) await persistContext(ctx);
-        const payload = ctx.isMulti
-          ? store.serializeMultiLeague(ctx.league)
-          : store.serialize(ctx.league.teams[0], ctx.league);
+        const payload = store.serializeMultiLeague(ctx.league);
         payload.myTeamIndex = ctx.teamIndex;
         // SÉCURITÉ (2026-09-26, relevé en codant la messagerie) : la
         // sauvegarde complète contenait le jeton privé de TOUS les managers
         // (serializeTeam → managerLinkToken), donc n'importe quel manager
         // pouvait se faire passer pour un autre. Seul SON propre jeton est
         // renvoyé désormais — le navigateur n'utilise jamais ceux des autres.
-        if (ctx.isMulti && payload.league && Array.isArray(payload.league.teams)) {
+        if (payload.league && Array.isArray(payload.league.teams)) {
           payload.league.teams.forEach((t, i) => { if (t && i !== ctx.teamIndex) { t.managerLinkToken = null; t.pushSubscriptions = []; } });
         }
         payload.league.liveMatch = LiveMatch.viewLiveMatchForTeam(ctx.league, ctx.teamIndex);
@@ -1524,69 +1531,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
-      // Remplace INTÉGRALEMENT la sauvegarde SOLO par celle envoyée par le
-      // client — filet de secours temporaire pour ce qui n'a pas encore son
-      // propre point d'entrée validé (staff, salle, budget, vente de
-      // joueur...), voir README.md "Prochaines étapes". SUPPRIMÉ pour une
-      // ligue PARTAGÉE (retour explicite, 2026-09) : n'importe quel appelant
-      // pourrait sinon écraser l'état de TOUS les autres managers — toute
-      // requête porteuse d'un jeton manager est donc refusée ici, quel que
-      // soit son contenu ; SANS jeton, le comportement reste EXACTEMENT
-      // celui d'avant (carrière solo, jamais concernée par le risque
-      // ci-dessus).
-      if (route.pathname === "/api/save-raw" && req.method === "POST") {
-        if (getManagerToken(req)) {
-          sendJson(res, 410, {
-            ok: false,
-            error: "Supprimé pour une ligue partagée : utilisez les points d'entrée dédiés (/api/lineup, /api/tactics, /api/training, /api/market/...).",
-          });
-          return;
-        }
-        let body;
-        try {
-          body = await readJsonBody(req);
-        } catch (e) {
-          sendJson(res, 400, { ok: false, error: e.message });
-          return;
-        }
-        let restored;
-        try {
-          if (!body || typeof body !== "object" || !body.team || !body.league) {
-            throw new Error("'team' et 'league' sont requis.");
-          }
-          restored = store.deserialize(body);
-        } catch (e) {
-          sendJson(res, 400, { ok: false, error: `Sauvegarde invalide : ${e.message}` });
-          return;
-        }
-        await store.save(restored.team, restored.league, savePath);
-        sendJson(res, 200, { ok: true, state: buildStateSnapshot(restored.league, 0, now) });
-        return;
-      }
-
-      // Réinitialise la carrière SOLO (voir resetCareer() côté navigateur) :
-      // remplace la sauvegarde solo par une toute nouvelle. Pour une ligue
-      // PARTAGÉE, seul l'organisateur peut la réinitialiser (voir
-      // /api/admin/reset-multi-league) — une requête porteuse d'un jeton
-      // manager est donc refusée ici plutôt que de silencieusement
-      // réinitialiser la carrière solo (qui n'a rien à voir avec elle).
-      if (route.pathname === "/api/new-career" && req.method === "POST") {
-        if (getManagerToken(req)) {
-          sendJson(res, 403, { ok: false, error: "Seul l'organisateur peut réinitialiser une ligue partagée (voir /api/admin/reset-multi-league)." });
-          return;
-        }
-        const created = store.createNewCareer(now);
-        await store.save(created.team, created.league, savePath);
-        sendJson(res, 200, store.serialize(created.team, created.league));
-        return;
-      }
-
       if (route.pathname === "/api/simulate-tick" && req.method === "POST") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
         const { events, changed } = tick(ctx.league, now);
-        if (changed) await persistContext(ctx);
-        sendJson(res, 200, { events: personalizeEventsForTeam(events, ctx.teamIndex), state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
+        const pending = takePendingRecapEvents(ctx.league, ctx.teamIndex);
+        if (changed || pending.length) await persistContext(ctx);
+        sendJson(res, 200, { events: [...pending, ...personalizeEventsForTeam(events, ctx.teamIndex)], state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
         return;
       }
 
@@ -1720,7 +1671,6 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       if ((route.pathname === "/api/push/subscribe" || route.pathname === "/api/push/unsubscribe") && req.method === "POST") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
-        if (!ctx.isMulti) { sendJson(res, 404, { ok: false, error: "Indisponible en carrière solo." }); return; }
         let body;
         try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
         const team = ctx.league.teams[ctx.teamIndex];
@@ -1739,7 +1689,6 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       if (route.pathname === "/api/replay" && req.method === "GET") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
-        if (!ctx.isMulti) { sendJson(res, 404, { ok: false, error: "Indisponible en carrière solo." }); return; }
         const team = ctx.league.teams[ctx.teamIndex];
         const data = await store.loadReplays(ctx.leagueId, multiSavePath);
         const q = route.searchParams;
@@ -1880,11 +1829,6 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       if (route.pathname.startsWith("/api/messages/")) {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
-        if (!ctx.isMulti) {
-          if (route.pathname === "/api/messages/summary") { sendJson(res, 200, { ok: true, available: false, unread: 0, conversations: [], managers: [] }); return; }
-          sendJson(res, 404, { ok: false, error: "La messagerie n'existe que dans une ligue partagée." });
-          return;
-        }
         let out = null;
         try {
           if (req.method === "GET" && route.pathname === "/api/messages/summary") {
@@ -2080,7 +2024,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // un échec (destinataire qui a bloqué l'expéditeur...) n'annule rien.
         const notify = result.notify;
         delete result.notify;
-        if (notify && ctx.isMulti) {
+        if (notify) {
           try { await messages.send(ctx.league, ctx.teamIndex, notify, now); } catch (e) { /* message facultatif */ }
         }
         sendJson(res, 200, { ...result, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
@@ -2109,12 +2053,10 @@ function startServer(port = DEFAULT_PORT, savePath = store.defaultSavePath(), mu
   server.on("close", () => clearInterval(worldTimer));
   server.listen(port, () => {
     console.log(`Serveur basket (calendrier réel) démarré sur http://localhost:${port}`);
-    console.log(`Sauvegarde solo : ${savePath}`);
     console.log(`Sauvegarde multi-manager : ${multiSavePath}`);
     if (store.upstashConfigured()) {
       console.log(`Sauvegardes sur Upstash, clés « ${store.redisKey("multiLeague")} », « ${store.redisKey("accounts")} »...`);
     }
-    if (AccountRoutes.isPublicSite()) console.log("SITE PUBLIC (BASKET_PUBLIC_SITE=1) : visiteurs sans compte envoyés vers /bienvenue, carrière solo fermée.");
     console.log(`Connexion Discord : ${AccountRoutes.discordConfigured() ? "activée" : "désactivée (DISCORD_CLIENT_ID/DISCORD_CLIENT_SECRET absents)"}.`);
     if (!process.env.BASKET_ADMIN_TOKEN) {
       console.log("BASKET_ADMIN_TOKEN non défini : les routes /api/admin/* sont désactivées (toute requête sera refusée).");

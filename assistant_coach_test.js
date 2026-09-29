@@ -99,7 +99,9 @@ check(Math.abs(tot.pass / N) < 0.5, "l'adjoint défensif ne touche pas la passe"
   check(open.length >= 2 * lg.staffMarketMinOpenListings() && open.every(l => ASSISTANT_SPECIALTIES[l.specialty]), `marché : ${open.length} candidats ouverts, chacun avec une spécialité`);
   const idx = lg.teams.findIndex(t => t.isHuman);
   const listing = open[0];
-  const r = lg.placeAssistantCoachBid(listing.id, idx, E.minNextBidFor(listing), now + 1000);
+  // Mise nettement au-dessus du minimum : un club IA surenchérit parfois
+  // (environ 7 % des tirages), ce qui rendait ce test aléatoire.
+  const r = lg.placeAssistantCoachBid(listing.id, idx, E.minNextBidFor(listing) * 3, now + 1000);
   check(r.ok, "enchère acceptée");
   lg.refreshAssistantCoachMarket(listing.closesAt + 1);
   const team = lg.teams[idx];

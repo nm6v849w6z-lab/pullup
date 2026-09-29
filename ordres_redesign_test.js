@@ -12,7 +12,7 @@
 //      "Consigne", désactivée tant qu'aucun joueur n'est choisi ;
 //   6) l'alerte "remplaçant listé à plusieurs postes" ;
 //   7) l'état "Modifications à valider" puis "Ordres validés" ;
-//   8) "Réinitialiser ma carrière" n'est plus sur la page Ordres (déplacé en
+//   8) "Réinitialiser ma carrière" n'existe plus (auparavant déplacé en
 //      bas du Guide).
 const fs = require("fs");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
@@ -181,13 +181,12 @@ console.log("État après validation puis réouverture :", statusText());
 if (statusText() !== "Ordres validés") throw new Error(`❌ Après validation, l'état devrait être 'Ordres validés', obtenu '${statusText()}'.`);
 console.log("✅ État 'Ordres validés' après un clic sur Valider les ordres.");
 
-// 8) Réinitialiser ma carrière
-if (prep.querySelector("#resetCareerLink") || prep.textContent.includes("Réinitialiser ma carrière")) {
-  throw new Error("❌ 'Réinitialiser ma carrière' ne devrait plus être sur la page Ordres.");
+// 8) Plus de « Réinitialiser ma carrière » nulle part (carrière solo
+// supprimée, 2026-09-29).
+if (doc.getElementById("resetCareerLink") || doc.body.textContent.includes("Réinitialiser ma carrière")) {
+  throw new Error("❌ 'Réinitialiser ma carrière' ne devrait plus exister.");
 }
-const link = doc.getElementById("resetCareerLink");
-if (!link || !doc.getElementById("guideSection").contains(link)) throw new Error("❌ 'Réinitialiser ma carrière' devrait se trouver dans le Guide.");
-console.log("✅ 'Réinitialiser ma carrière' retiré de la page Ordres, présent en bas du Guide.");
+console.log("✅ 'Réinitialiser ma carrière' n'existe plus.");
 
 // 9) Bandeau global (club, recherche, "Donnez vos ordres") masqué sur la
 // page Ordres UNIQUEMENT (retour utilisateur 2026-09-25 : infos en doublon).

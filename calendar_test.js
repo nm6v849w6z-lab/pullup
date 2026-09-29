@@ -109,28 +109,17 @@ const standingsRows = [...doc2.querySelectorAll("#seasonEndContent table.standin
 const allPlayed18 = standingsRows.every(r => r.children[2].textContent === "18");
 console.log(`${allPlayed18 && standingsRows.length === 10 ? "✅" : "❌"} Les 10 équipes ont chacune joué 18 matchs de saison régulière.`);
 
-// --- Nouvelle saison : le calendrier redémarre à la journée 1, avec 9
-// nouveaux adversaires (mêmes noms de villes, forces re-tirées), l'effectif
-// du joueur (potentiel/progression/staff) restant inchangé.
-doc2.getElementById("newSeasonBtn").click();
-const backToPrep = !doc2.getElementById("prepSection").classList.contains("hidden") &&
-  doc2.getElementById("seasonEndSection").classList.contains("hidden");
-console.log("\nRound après 'Nouvelle saison' (0-indexé) :", dom2.window.eval("currentMatch.round"));
-console.log(`${backToPrep ? "✅" : "❌"} Retour à l'écran de préparation.`);
-// Même remarque que plus haut : #matchupContext n'existe plus depuis le
-// retrait du bandeau du haut de l'écran Ordres (2026-09), on vérifie le
-// round sous-jacent.
-const newSeasonRoundOk = dom2.window.eval("currentMatch.round") === 0;
-console.log(`${newSeasonRoundOk ? "✅" : "❌"} Le calendrier de la nouvelle saison redémarre à la journée 1/18.`);
+// (Plus de bouton « Nouvelle saison » : la saison suivante démarre toute
+// seule côté serveur, voir new_season_test.js.)
 
 if (!standingsVisible || !prepHiddenNow || rowsBefore !== 10 || !catchupVisible || !roundsOk || !seasonEndVisible ||
-    !hasChampion || !hasPlayoffs || !allPlayed18 || !backToPrep || !newSeasonRoundOk) {
+    !hasChampion || !hasPlayoffs || !allPlayed18) {
   process.exit(1);
 }
 
 await flush(dom2);
 dom2.window.close();
 server.close();
-console.log("\n✅ Calendrier de saison vérifié : classement, rattrapage automatique de toute une saison après une longue absence (récapitulatif dans l'ordre), fin de saison (play-offs + champion), et nouvelle saison.");
+console.log("\n✅ Calendrier de saison vérifié : classement, rattrapage automatique de toute une saison après une longue absence (récapitulatif dans l'ordre), et fin de saison (play-offs + champion).");
 
 })().catch(e => { console.error(e); process.exit(1); });

@@ -11,7 +11,7 @@
 // chiffres d'affluence eux-mêmes (déjà couverte ailleurs indirectement via
 // les transactions de billetterie).
 const fs = require("fs");
-const { startTestServer, openGame, flush, readRawSave } = require("./test_helpers.js");
+const { startTestServer, openGame, flush, readRawSave, editSave } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
 (async () => {
@@ -120,7 +120,10 @@ win.eval("renderAttendanceHistory();");
 // Partie 3 : persistance à travers un rechargement complet de la page
 // (nouvelle session JSDOM, même serveur).
 // ---------------------------------------------------------------------
-win.eval("saveMyTeam();");
+// Plus de sauvegarde brute depuis le navigateur : l'historique calculé ici
+// est écrit côté serveur, puis relu tel quel (sérialisation Team).
+const localHistory = JSON.parse(win.eval("JSON.stringify(teamA.attendanceHistory)"));
+editSave(savePath, t => { t.attendanceHistory = localHistory; });
 await flush(dom);
 const saved = readRawSave(savePath);
 console.log("\nSauvegarde brute, longueur de attendanceHistory :", (saved.team.attendanceHistory || []).length, "(attendu 10)");

@@ -38,11 +38,11 @@ async function main() {
   const server = http.createServer(createHandler(path.join(dir, "league.json"), () => now, multiSavePath));
   await new Promise(r => server.listen(0, "127.0.0.1", r));
   try {
-    // --- Solo (aucun jeton) : messagerie indisponible, sans erreur.
+    // --- Sans jeton : connexion requise (plus de carrière solo).
     let r = await request(server, "GET", "/api/messages/summary");
-    check(r.status === 200 && r.body.available === false, "solo : summary renvoie available:false");
+    check(r.status === 401, "sans jeton : summary refusé (401)");
     r = await request(server, "POST", "/api/messages/send", { to: 1, text: "coucou" });
-    check(r.status === 404, "solo : envoi refusé (404)");
+    check(r.status === 401, "sans jeton : envoi refusé (401)");
 
     // --- Ligue partagée à 3 managers.
     const boot = await request(server, "POST", "/api/admin/new-multi-league", { teamNames: ["Lyon", "Paris", "Nice"] }, { "X-Admin-Token": "admin-msg-test" });

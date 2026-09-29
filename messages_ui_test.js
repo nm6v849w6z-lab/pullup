@@ -3,7 +3,7 @@
 // Ligue partagée à 3 clubs humains : A écrit à B depuis l'onglet
 // Messagerie, B voit le compteur (barre latérale + tableau de bord), lit,
 // répond, signale et bloque ; bouton "Envoyer un message" sur la fiche
-// d'un club humain uniquement ; onglet absent en solo.
+// d'un club humain uniquement .
 const fs = require("fs");
 const Engine = require("./engine.js");
 const Calendar = require("./server/calendar.js");
@@ -121,10 +121,6 @@ function typeAndSend(win, doc, text) {
     docA.querySelector("[data-msg-back]").click();
     check(!docA.getElementById("msgLayout").classList.contains("has-thread"), "« ← » revient à la liste des conversations");
 
-    // --- Solo : pas d'onglet, aucun appel.
-    const domSolo = await openGame(html, baseUrl); doms.push(domSolo);
-    await sleep(100);
-    check(tabOf(domSolo.window.document, "messages").classList.contains("hidden"), "solo : onglet Messagerie masqué");
   } finally {
     doms.forEach(d => d.window.close());
     server.close();

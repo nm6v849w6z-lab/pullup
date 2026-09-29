@@ -193,57 +193,14 @@ Calendar.setFastTestMode(true);
     throw new Error("❌ Désactiver le mode accéléré globalement ne devrait jamais changer le rythme d'une ligue déjà créée.");
   }
 
-  // Rattrape toute la saison régulière (18 journées, un match toutes les 3h
-  // → ~54h au total) d'un coup, en avançant l'horloge (le serveur ET le
-  // navigateur de concert) très loin dans le futur plutôt que de rejouer
-  // chaque journée une par une — seul le résultat final (fin de saison
-  // atteinte) nous intéresse ici, pas le détail journée par journée (déjà
-  // couvert par end_to_end_test.js).
-  clock.now = saved.league.calendarStartAt + 30 * DAY_MS; // largement au-delà des ~54h (2-3 jours) d'une saison accélérée complète
-  await dom.window.close();
-  dom = await openGame(html, baseUrl, (window) => patchDateNow(window, () => clock.now));
-  let doc = dom.window.document;
-  let win = dom.window;
-  await flush(dom);
-
-  const afterCatchup = readRawSave(savePath);
-  if (!afterCatchup.league.playoffs) {
-    throw new Error("❌ La saison régulière (18 journées en mode accéléré) aurait dû être entièrement rattrapée et les play-offs calculés.");
-  }
-  console.log("✅ Une saison complète en mode accéléré (18 journées, ~54h) se rattrape correctement d'un coup, exactement comme en calendrier classique.");
-
-  // Récapitulatif d'absence (toute la saison rattrapée d'un coup) avant
-  // l'écran de fin de saison — même flux qu'une absence classique.
-  const catchupVisible = !doc.getElementById("catchupSection").classList.contains("hidden");
-  if (!catchupVisible) throw new Error("❌ Le récapitulatif d'absence devrait s'afficher après une saison entière rattrapée automatiquement.");
-  doc.getElementById("catchupContinueBtn").click();
-  await flush(dom);
-
-  // Écran de fin de saison affiché : clique sur "Nouvelle saison" alors que
-  // le réglage GLOBAL est désormais classique (setFastTestMode(false)
-  // ci-dessus) — la nouvelle ligue doit malgré tout hériter du rythme
-  // ACCÉLÉRÉ de la saison précédente, jamais retomber sur le classique.
-  const seasonEndVisible = !doc.getElementById("seasonEndSection").classList.contains("hidden");
-  if (!seasonEndVisible) throw new Error("❌ L'écran de fin de saison aurait dû être affiché après rattrapage complet de la saison régulière.");
-  doc.getElementById("newSeasonBtn").click();
-  await flush(dom);
-
-  const newSeasonSave = readRawSave(savePath);
-  if (newSeasonSave.league.round !== 0) throw new Error("❌ La nouvelle saison devrait redémarrer à la journée 0.");
-  if (newSeasonSave.league.calendarWeekMs !== FAST_WEEK_MS) {
-    throw new Error(`❌ La nouvelle saison devrait HÉRITER du rythme accéléré de la saison précédente (calendarWeekMs=${FAST_WEEK_MS}), obtenu ${newSeasonSave.league.calendarWeekMs} — jamais retomber sur le réglage global courant (classique ici).`);
-  }
-  if (JSON.stringify(newSeasonSave.league.calendarSlotOffsetsMs) !== JSON.stringify(FAST_CHAMPIONSHIP_SLOT_OFFSETS_MS)) {
-    throw new Error("❌ La nouvelle saison devrait hériter des créneaux horaires accélérés (3h/6h) de la saison précédente.");
-  }
-  console.log("✅ Une nouvelle saison hérite bien du rythme accéléré de la précédente, même si le réglage global du serveur est entre-temps redevenu classique.");
-
+  // (Plus de passage manuel à la saison suivante depuis la suppression de
+  // la carrière solo : la saison suivante démarre toute seule côté serveur.)
   await dom.window.close();
   server.close();
 }
 
 Calendar.setFastTestMode(false); // ne doit jamais fuiter en dehors de ce fichier de test.
 
-console.log("\n✅ Mode accéléré du calendrier (tests/démo solo) vérifié : nouvelle carrière créée avec le bon rythme (un match toutes les 3h, intervalle glissant depuis la création), compte à rebours navigateur cohérent, saison complète rattrapée correctement, et rythme toujours conservé par ligue (jamais relu dynamiquement depuis le réglage global, ni à la création ni au changement de saison).");
+console.log("\n✅ Mode accéléré du calendrier (tests/démo solo) vérifié : nouvelle carrière créée avec le bon rythme (un match toutes les 3h, intervalle glissant depuis la création), compte à rebours navigateur cohérent, et rythme toujours conservé par ligue (jamais relu dynamiquement depuis le réglage global).");
 
 })().catch(e => { console.error(e); process.exit(1); });

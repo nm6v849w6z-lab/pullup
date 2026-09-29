@@ -691,7 +691,6 @@
 
   /* "Réinitialiser ma carrière", désormais en bas du Guide. */
   #guideResetCareerEntry{text-align:left; margin-top:0;}
-  #guideResetCareerEntry .reset-career-action{margin:10px 0 0;}
   #guideResetCareerEntry a{color:var(--danger); font-size:13px; text-decoration:underline; cursor:pointer;}
 
   /* "Pendant votre absence…" — refonte (retour utilisateur, 2026-09-25 :
@@ -1099,9 +1098,6 @@
     text-align:center; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
     color:var(--amber); margin:-6px 0 16px;
   }
-  .reset-career{text-align:center; margin-top:4px;}
-  .reset-career a{color:var(--ink-faint); font-size:12px; text-decoration:underline; cursor:pointer;}
-  .reset-career a:hover{color:var(--ink-dim);}
   .matchup-context{text-align:center; font-size:14px; color:var(--ink-dim); margin:-10px 0 18px;}
 
   /* ---- Classement / fin de saison ---- */
@@ -6831,9 +6827,6 @@
       <h2>Fin de saison</h2>
       <div id="seasonEndContent"></div>
       <div id="seasonEndInterviewPanel"></div>
-      <div class="actions">
-        <button class="primary" id="newSeasonBtn">Démarrer une nouvelle saison</button>
-      </div>
     </div>
   </div>
 
@@ -7777,15 +7770,6 @@
         <p class="training-intro">Pratique après une session de test (effectif vendu, budget mis à mal exprès) : remet le club dans un état jouable sans toucher au classement ni au calendrier de la saison en cours.</p>
       </div>
 
-      <!-- "Réinitialiser ma carrière" (déplacé depuis le bas de la page
-           Ordres, retour utilisateur 2026-09-25). Classe .reset-career
-           conservée : masquée pour tout manager avec un jeton (seul
-           l'organisateur peut réinitialiser, voir resetCareer). -->
-      <div class="guide-entry reset-career" id="guideResetCareerEntry" data-guide-id="reset" data-guide-group="Réglages">
-        <h3>Réinitialiser la partie</h3>
-        <p class="training-intro">Repart de zéro avec une équipe neuve : tout l'effectif entraîné est perdu. Une confirmation est demandée avant.</p>
-        <p class="reset-career-action"><a href="#" id="resetCareerLink">Réinitialiser ma carrière</a></p>
-      </div>
         </div>
       </div>
     </div>
@@ -22226,19 +22210,12 @@ let managerToken = null;
   const fromUrl = readManagerTokenFromUrl();
   if (fromUrl) { managerToken = fromUrl; persistManagerToken(fromUrl); }
   else managerToken = loadPersistedManagerToken();
-}
-
-// Retour utilisateur (2026-09) : "enleve le petit bouton reinitialiser la
-// carriere pour les users autres que moi". resetCareer() refusait déjà la
-// remise à zéro pour tout manager ayant un jeton (voir son garde-fou
-// "Seul l'organisateur de la ligue peut la réinitialiser"), mais le lien
-// restait visible pour tout le monde, invitant les autres managers à
-// cliquer pour rien. Masqué ici pour quiconque accède via un jeton manager
-// (managerToken non nul) ; seul l'organisateur (aucun jeton, l'élément du
-// DOM existe déjà à ce point du script) continue de le voir.
-if (managerToken) {
-  const resetCareerEl = document.querySelector(".reset-career");
-  if (resetCareerEl) resetCareerEl.classList.add("hidden");
+  // Jeu en ligne uniquement (retour utilisateur 2026-09-29 : "le jeu n'a pas
+  // a etre un jeu solo mais un jeu online contre d'autres managers") : sans
+  // jeton de manager, direction l'inscription.
+  if (!managerToken) {
+    try { window.location.replace("/bienvenue"); } catch (e) { /* rien */ }
+  }
 }
 
 // Remplace tout fetch("/api/...") direct : attache le jeton manager (s'il y
@@ -22249,7 +22226,16 @@ function fetchApi(input, init) {
   if (managerToken) {
     opts.headers = { ...(opts.headers || {}), "X-TipIn-Token": managerToken };
   }
-  return fetch(input, opts);
+  const p = fetch(input, opts);
+  // `window.__lastSave` : toutes les écritures envoyées au serveur (POST…)
+  // encore en cours, pour les tests automatisés (test_helpers.js:flush) qui
+  // doivent attendre qu'elles aient atteint le serveur avant de relire la
+  // sauvegarde. Sans effet en usage normal.
+  if (String(opts.method || "GET").toUpperCase() !== "GET") {
+    const settled = Promise.resolve(p).then(() => null, () => null);
+    window.__lastSave = Promise.all([window.__lastSave, settled]);
+  }
+  return p;
 }
 
 // Événements survenus automatiquement côté serveur (match(s) joué(s),
@@ -22445,93 +22431,12 @@ function updateLiveClockTick() {
 // fetch() vers lui pour des raisons de sécurité navigateur.
 // ---------------------------------------------------------------------
 
-// Sauvegarde "brute" : envoie l'intégralité de team+league telle quelle (voir
-// le commentaire sur /api/save-raw côté serveur — un filet de secours
-// temporaire tant que chaque action n'a pas son propre point d'entrée
-// validé). Fire-and-forget comme l'ancien localStorage.setItem : les 25+
-// points d'appel existants n'attendent pas cette sauvegarde pour continuer
-// (l'affichage local est déjà à jour, la sauvegarde suit en arrière-plan).
-// File d'attente des sauvegardes "brutes" (voir saveMyTeam ci-dessous) :
-// plusieurs points d'appel (25+, tous fire-and-forget) peuvent chacun
-// déclencher leur PROPRE requête /api/save-raw en rafale, sans jamais
-// s'attendre les uns les autres (ex. initGame() enchaîne
-// refreshTransferMarket/refreshCoachMarket/refreshAnalystMarket, chacun
-// appelant saveMyTeam() séparément). Si ces requêtes sont envoyées TOUTES EN
-// PARALLÈLE, rien ne garantit qu'elles arrivent au serveur, et donc s'écrivent
-// sur le fichier de sauvegarde, DANS L'ORDRE où elles ont été déclenchées —
-// une requête plus ancienne (état plus périmé) peut très bien répondre APRÈS
-// une requête plus récente et écraser sur disque un état plus à jour avec un
-// état plus vieux (constaté avec les primes de fin de saison : le budget
-// revenait silencieusement en arrière après "Nouvelle saison"). `saveChain`
-// sérialise ces envois : chaque nouvel appel n'est ENVOYÉ qu'une fois le
-// précédent terminé (succès ou échec, voir `.catch(() => {})` ci-dessous qui
-// empêche un échec de bloquer définitivement la file), garantissant que le
-// serveur reçoit — et écrit — les sauvegardes strictement dans l'ordre où
-// elles ont été déclenchées côté navigateur.
-let saveChain = Promise.resolve();
-
+// Plus de sauvegarde « brute » (carrière solo supprimée, 2026-09-29) :
+// chaque action passe par son propre point d'entrée serveur. saveMyTeam()
+// ne fait plus rien ; `window.__lastSave` reste une promesse résolue pour
+// les tests (voir test_helpers.js:flush).
 function saveMyTeam() {
-  // Ligue PARTAGÉE (un jeton manager est actif) : /api/save-raw est
-  // SUPPRIMÉ pour ce mode (voir server/index.js — n'importe quel appelant
-  // pourrait sinon écraser l'état de tous les autres managers) — mieux vaut
-  // ne PAS tenter un appel voué à échouer (410) à chaque fois. Les écrans
-  // Salle/prix des billets/boutique des supporters ont leur propre point
-  // d'entrée dédié appelé À CÔTÉ de saveMyTeam() (voir
-  // syncArenaUpgradeToServer/syncTicketPriceToServer/
-  // syncFanShopUpgradeToServer juste plus bas) ; tout le reste (feuille de
-  // match, tactiques, entraînement, marché, staff...) reste pour l'instant
-  // local à ce chargement de page tant que CES écrans-là n'ont pas encore
-  // leur propre appel réseau côté navigateur, malgré le point d'entrée déjà
-  // prêt côté serveur (voir server/actions.js — portée d'une étape
-  // ultérieure, README.md "Prochaines étapes").
-  if (managerToken) return;
-  // Le corps de la requête est sérialisé MAINTENANT (état de teamA/league au
-  // moment de CET appel), même si son ENVOI réel est différé jusqu'à ce que
-  // la sauvegarde précédente de la file soit terminée (voir saveChain
-  // ci-dessus) — sinon un appel plus tardif capturerait un état encore plus
-  // récent que celui voulu par CET appel-ci au moment où il a été déclenché.
-  let body;
-  try {
-    body = JSON.stringify({
-      version: 2,
-      team: serializeTeam(teamA),
-      league: serializeLeague(league),
-    });
-  } catch (e) {
-    console.warn("Sauvegarde serveur : échec de sérialisation :", e);
-    return;
-  }
-  // `fetch(...)` lui-même peut lancer de façon SYNCHRONE (pas seulement
-  // rejeter sa promesse) si `fetch` n'existe pas du tout dans cet
-  // environnement (ex. tests automatisés sous JSDOM, sans vrai navigateur) —
-  // d'où le try/catch autour de l'appel, en plus du .catch() sur la promesse
-  // pour les échecs réseau normaux. Sans ça, le moindre appel à
-  // saveMyTeam() (25+ points d'appel, tous non gardés) ferait planter
-  // l'appelant.
-  const send = () => {
-    try {
-      return fetchApi("/api/save-raw", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-      }).then(res => {
-        if (!res.ok) console.warn("Sauvegarde serveur refusée (voir /api/save-raw).", res.status);
-      }).catch(e => {
-        console.warn("Sauvegarde serveur indisponible :", e);
-      });
-    } catch (e) {
-      console.warn("Sauvegarde serveur indisponible :", e);
-      return Promise.resolve();
-    }
-  };
-  // `window.__lastSave` expose la promesse de CETTE sauvegarde (une fois son
-  // tour venu dans la file) : purement pour les tests automatisés (voir
-  // test_helpers.js), qui doivent pouvoir attendre qu'une sauvegarde
-  // "fire-and-forget" ait bien atteint le serveur avant de relire le
-  // fichier, plutôt que d'espérer un délai arbitraire. Sans effet en usage
-  // normal (rien ne lit cette variable en dehors des tests).
-  saveChain = saveChain.then(send, send);
-  window.__lastSave = saveChain;
+  /* plus rien : voir fetchApi (window.__lastSave) */
 }
 
 // Salle / prix des billets / boutique des supporters — persistance MULTI-
@@ -22551,7 +22456,6 @@ function saveMyTeam() {
 // mode solo (managerToken null) — la sauvegarde locale passe alors par
 // saveMyTeam()/`/api/save-raw` comme avant, ces fonctions ne font rien.
 function syncArenaUpgradeToServer() {
-  if (!managerToken) return;
   try {
     fetchApi("/api/arena", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
       .then(res => { if (!res.ok) console.warn("Agrandissement de la salle refusé côté serveur.", res.status); })
@@ -22562,7 +22466,6 @@ function syncArenaUpgradeToServer() {
 }
 
 function syncTicketPriceToServer(categoryKey, price) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/ticket-prices", {
       method: "POST",
@@ -22577,7 +22480,6 @@ function syncTicketPriceToServer(categoryKey, price) {
 }
 
 function syncFanShopUpgradeToServer() {
-  if (!managerToken) return;
   try {
     fetchApi("/api/fan-shop", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
       .then(res => { if (!res.ok) console.warn("Achat de la boutique des supporters refusé côté serveur.", res.status); })
@@ -22593,7 +22495,6 @@ function syncFanShopUpgradeToServer() {
 // les trois (voir server/actions.js:upgradeFacility), `key` précise
 // laquelle.
 function syncFacilityUpgradeToServer(key) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/facility", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ facility: key }) })
       .then(res => { if (!res.ok) console.warn(`Achat de l'infrastructure (${key}) refusé côté serveur.`, res.status); })
@@ -22628,7 +22529,6 @@ function syncFacilityUpgradeToServer(key) {
 // jamais ces fonctions : ce mécanisme de plan est purement local, "consommé"
 // côté serveur au moment programmé du match, voir Team.applyPlannedTacticsForRound).
 function syncLineupToServer() {
-  if (!managerToken) return;
   try {
     fetchApi("/api/lineup", {
       method: "POST",
@@ -22643,7 +22543,6 @@ function syncLineupToServer() {
 }
 
 function syncTacticsToServer(patch) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/tactics", {
       method: "POST",
@@ -22670,7 +22569,6 @@ function syncTacticsToServer(patch) {
 // nécessaire pour distinguer un tour de Coupe d'une journée de championnat de
 // même numéro (voir Team.planKey côté moteur).
 function syncPlanToServer(round, patch, competition) {
-  if (!managerToken) return;
   // `window.__lastSave` (voir saveMyTeam ci-dessus pour le mécanisme
   // d'origine, réservé au mode solo) : réutilisé ici pour le même besoin,
   // côté ligue partagée cette fois, où saveMyTeam() est un no-op : sans ça,
@@ -22691,18 +22589,19 @@ function syncPlanToServer(round, patch, competition) {
     console.warn("Plan (préparation à l'avance) : serveur indisponible :", e);
     p = Promise.resolve();
   }
-  window.__lastSave = p;
+  // window.__lastSave : voir fetchApi.
 }
 
 function syncTrainingToServer() {
-  if (!managerToken) return;
   try {
     fetchApi("/api/training", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         trainingSkill: teamA.trainingSkill,
-        trainingPositions: teamA.trainingPositions,
+        // Aucun poste encore choisi (club neuf) : ne pas l'envoyer, sinon le
+        // serveur refuse tout le réglage (tactique travaillée comprise).
+        trainingPositions: Array.isArray(teamA.trainingPositions) && teamA.trainingPositions.length ? teamA.trainingPositions : undefined,
         collectiveTraining: teamA.collectiveTraining,
         trainedTactics: teamA.trainedTactics,
       }),
@@ -22715,7 +22614,6 @@ function syncTrainingToServer() {
 }
 
 function syncMarketListToServer(playerId, price) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/market/list", {
       method: "POST",
@@ -22746,7 +22644,6 @@ async function reloadLeagueOnly() {
 }
 
 function syncMarketBidToServer(listingId, amount) {
-  if (!managerToken) return Promise.resolve(null);
   try {
     return fetchApi("/api/market/bid", {
       method: "POST",
@@ -22766,7 +22663,6 @@ function syncMarketBidToServer(listingId, amount) {
 }
 
 function syncCoachBidToServer(listingId, amount) {
-  if (!managerToken) return;
   try {
     return fetchApi("/api/market/coach-bid", {
       method: "POST",
@@ -22791,7 +22687,6 @@ function syncCoachBidToServer(listingId, amount) {
 // le serveur refait lui-même tout le calcul (league.fireTeamTrainer) à
 // partir de SON état, jamais d'un prix envoyé par le client.
 function syncFireTrainerToServer() {
-  if (!managerToken) return;
   try {
     fetchApi("/api/staff/fire-trainer", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
       .then(res => { if (!res.ok) console.warn("Congédiement de l'entraîneur refusé côté serveur.", res.status); })
@@ -22806,7 +22701,6 @@ function syncFireTrainerToServer() {
 // managerToken) : DEUXIÈME rôle de staff, même trou de persistance à combler
 // en mode multi-manager.
 function syncAnalystBidToServer(listingId, amount) {
-  if (!managerToken) return;
   try {
     return fetchApi("/api/market/analyst-bid", {
       method: "POST",
@@ -22821,7 +22715,6 @@ function syncAnalystBidToServer(listingId, amount) {
 }
 
 function syncFireAnalystToServer() {
-  if (!managerToken) return;
   try {
     fetchApi("/api/staff/fire-analyst", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
       .then(res => { if (!res.ok) console.warn("Congédiement de l'analyste vidéo refusé côté serveur.", res.status); })
@@ -22836,7 +22729,6 @@ function syncFireAnalystToServer() {
 // managerToken) : TROISIÈME rôle de staff, même trou de persistance à
 // combler en mode multi-manager.
 function syncRecruiterBidToServer(listingId, amount) {
-  if (!managerToken) return;
   try {
     return fetchApi("/api/market/recruiter-bid", {
       method: "POST",
@@ -22851,7 +22743,6 @@ function syncRecruiterBidToServer(listingId, amount) {
 }
 
 function syncFireRecruiterToServer() {
-  if (!managerToken) return;
   try {
     fetchApi("/api/staff/fire-recruiter", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
       .then(res => { if (!res.ok) console.warn("Congédiement du recruteur refusé côté serveur.", res.status); })
@@ -22884,7 +22775,6 @@ function syncMedicalBidToServer(role, listingId, amount) {
 // Entraîneur adjoint : routes /api/market/assistant-bid et
 // /api/staff/fire-assistant, mêmes conventions que le staff médical.
 function syncAssistantCoachBidToServer(listingId, amount) {
-  if (!managerToken) return;
   try {
     return fetchApi("/api/market/assistant-bid", {
       method: "POST",
@@ -22898,7 +22788,6 @@ function syncAssistantCoachBidToServer(listingId, amount) {
   }
 }
 function syncFireAssistantCoachToServer() {
-  if (!managerToken) return;
   try {
     fetchApi("/api/staff/fire-assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
       .then(res => { if (!res.ok) console.warn("Congédiement de l'entraîneur adjoint refusé côté serveur.", res.status); })
@@ -22930,7 +22819,6 @@ function syncFireMedicalToServer(role) {
 // round-trip ATTENDU de performVideoSession (qui, lui, doit attendre une
 // information que le client n'a pas encore).
 function syncTrainingCenterUpgradeToServer() {
-  if (!managerToken) return;
   try {
     fetchApi("/api/training-center", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
       .then(res => { if (!res.ok) console.warn("Agrandissement du Centre de formation refusé côté serveur.", res.status); })
@@ -22941,7 +22829,6 @@ function syncTrainingCenterUpgradeToServer() {
 }
 
 function syncSignYouthCandidateToServer(candidateId) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/youth/sign", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ candidateId }) })
       .then(res => { if (!res.ok) console.warn("Signature du candidat refusée côté serveur.", res.status); })
@@ -22952,7 +22839,6 @@ function syncSignYouthCandidateToServer(candidateId) {
 }
 
 function syncDeclineYouthCandidateToServer(candidateId) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/youth/decline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ candidateId }) })
       .then(res => { if (!res.ok) console.warn("Refus du candidat refusé côté serveur.", res.status); })
@@ -22963,7 +22849,6 @@ function syncDeclineYouthCandidateToServer(candidateId) {
 }
 
 function syncPromoteYouthPlayerToServer(playerId) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/youth/promote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) })
       .then(res => { if (!res.ok) console.warn("Promotion du jeune refusée côté serveur.", res.status); })
@@ -22974,7 +22859,6 @@ function syncPromoteYouthPlayerToServer(playerId) {
 }
 
 function syncReleaseYouthPlayerToServer(playerId) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/youth/release", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) })
       .then(res => { if (!res.ok) console.warn("Libération du jeune refusée côté serveur.", res.status); })
@@ -22993,7 +22877,6 @@ function syncReleaseYouthPlayerToServer(playerId) {
 // envoyé sous cette clé au serveur, voir server/actions.js:respondToInterview
 // qui accepte aussi `tone` (chaîne unique) en compatibilité ascendante.
 function syncInterviewToServer(id, tones) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/media/interview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, tones }) })
       .then(res => { if (!res.ok) console.warn("Réponse à l'interview refusée côté serveur.", res.status); })
@@ -23004,7 +22887,6 @@ function syncInterviewToServer(id, tones) {
 }
 
 function syncSkipInterviewToServer(id) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/media/interview-skip", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
       .then(res => { if (!res.ok) console.warn("Passage de l'interview refusé côté serveur.", res.status); })
@@ -23018,7 +22900,6 @@ function syncSkipInterviewToServer(id) {
 // Team.setJersey/setCustomLogo/setPaying plus bas), mêmes conventions
 // fire-and-forget que les fonctions sync*ToServer ci-dessus.
 function syncJerseyToServer(shape, color) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/club/set-jersey", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shape, color }) })
       .then(res => { if (!res.ok) console.warn("Changement de maillot refusé côté serveur.", res.status); })
@@ -23032,7 +22913,6 @@ function syncJerseyToServer(shape, color) {
 // maillots avec des dessins particuliers (rayure, degrade...)"), même
 // convention fire-and-forget que syncJerseyToServer ci-dessus.
 function syncJerseyPatternToServer(pattern) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/club/set-jersey-pattern", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pattern }) })
       .then(res => { if (!res.ok) console.warn("Changement de motif de maillot refusé côté serveur.", res.status); })
@@ -23046,7 +22926,6 @@ function syncJerseyPatternToServer(pattern) {
 // de 2 couleurs") : même convention fire-and-forget que syncJerseyToServer/
 // syncJerseyPatternToServer ci-dessus.
 function syncJerseyTwoToneToServer(key) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/club/set-jersey-two-tone", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) })
       .then(res => { if (!res.ok) console.warn("Changement de couleurs de maillot refusé côté serveur.", res.status); })
@@ -23061,7 +22940,6 @@ function syncJerseyTwoToneToServer(key) {
 // syncJerseyToServer/syncJerseyPatternToServer/syncJerseyTwoToneToServer
 // ci-dessus, sur les routes /api/club/set-away-jersey-*.
 function syncAwayJerseyColorToServer(color) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/club/set-away-jersey", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ color }) })
       .then(res => { if (!res.ok) console.warn("Changement de maillot extérieur refusé côté serveur.", res.status); })
@@ -23072,7 +22950,6 @@ function syncAwayJerseyColorToServer(color) {
 }
 
 function syncAwayJerseyPatternToServer(pattern) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/club/set-away-jersey-pattern", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pattern }) })
       .then(res => { if (!res.ok) console.warn("Changement de motif de maillot extérieur refusé côté serveur.", res.status); })
@@ -23083,7 +22960,6 @@ function syncAwayJerseyPatternToServer(pattern) {
 }
 
 function syncAwayJerseyTwoToneToServer(key) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/club/set-away-jersey-two-tone", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) })
       .then(res => { if (!res.ok) console.warn("Changement de couleurs de maillot extérieur refusé côté serveur.", res.status); })
@@ -23094,7 +22970,6 @@ function syncAwayJerseyTwoToneToServer(key) {
 }
 
 function syncLogoToServer(dataUrl) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/club/set-logo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dataUrl }) })
       .then(res => { if (!res.ok) console.warn("Changement de logo refusé côté serveur.", res.status); })
@@ -23105,7 +22980,6 @@ function syncLogoToServer(dataUrl) {
 }
 
 function syncPayingToServer(isPaying) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/club/set-paying", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isPaying }) })
       .then(res => { if (!res.ok) console.warn("Changement de statut club refusé côté serveur.", res.status); })
@@ -23124,7 +22998,6 @@ function syncPayingToServer(isPaying) {
 // rechargement de page pour un manager de ligue partagée, malgré le
 // tutoriel déjà terminé.
 function syncOnboardingTourCompletedToServer() {
-  if (!managerToken) return;
   try {
     fetchApi("/api/club/onboarding-tour-completed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
       .then(res => { if (!res.ok) console.warn("Fin de tutoriel refusée côté serveur.", res.status); })
@@ -23149,11 +23022,6 @@ function syncOnboardingTourCompletedToServer() {
 // client : protège contre un joueur qui recommencerait le tutoriel après
 // l'avoir abandonné en cours de route pour retoucher une prime déjà gagnée.
 async function performTutorialRewardClaim(topic) {
-  if (!managerToken) {
-    const result = teamA.claimTutorialReward(topic);
-    saveMyTeam();
-    return result;
-  }
   try {
     const res = await fetchApi("/api/club/claim-tutorial-reward", {
       method: "POST",
@@ -23287,45 +23155,32 @@ async function loadMyTeam() {
 // solo historique (invalidManagerLink ne peut devenir vrai que si un jeton a
 // été fourni ET refusé, voir loadMyTeam).
 function showInvalidManagerLinkMessage() {
-  // Site public (hoop-manager.com, voir server/index.js:serveIndexHtml) : le
-  // jeton rangé n'est plus valide (club repris, ligue réinitialisée…) — on
-  // l'oublie et on renvoie vers l'accueil pour se reconnecter.
-  // SEULEMENT si le serveur dit "jeton inconnu" (401). Un 404 = "aucune
-  // ligue sur ce serveur" (mauvais service derrière le domaine, base
-  // injoignable…) : incident côté serveur, le jeton est sans doute bon —
-  // on le garde (correctif 2026-09-27, bascule prod/test sur Render : des
-  // testeurs avaient perdu leur lien enregistré pendant quelques minutes).
-  if (window.HM_PUBLIC_SITE && invalidManagerLinkStatus === 401) {
+  // Jeton rangé plus valide (club repris, ligue réinitialisée…) : on
+  // l'oublie et on renvoie vers l'accueil pour se reconnecter — SEULEMENT si
+  // le serveur dit "jeton inconnu" (401). Sinon (404 = aucune ligue sur ce
+  // serveur, serveur injoignable…) : incident côté serveur, le jeton est
+  // sans doute bon, on le garde (correctif 2026-09-27, bascule prod/test sur
+  // Render : des testeurs avaient perdu leur lien pendant quelques minutes).
+  if (invalidManagerLinkStatus === 401) {
     try { window.localStorage.removeItem(MANAGER_TOKEN_STORAGE_KEY); } catch (e) { /* rien */ }
-    window.location.replace("/bienvenue");
-    return;
-  }
-  if (window.HM_PUBLIC_SITE) {
-    document.body.innerHTML = `<div style="max-width:480px;margin:15vh auto;padding:24px;text-align:center;font-family:inherit;">
-    <h2 style="margin:0 0 12px;">Jeu momentanément indisponible</h2>
-    <p style="line-height:1.5;opacity:.75;">Le serveur ne trouve pas la ligue pour le moment. Réessaie dans quelques minutes : ton club n'est pas perdu.</p>
-    <p><a href="/" style="color:#f0a23c;font-weight:700;">Réessayer</a></p>
-  </div>`;
+    try { window.location.replace("/bienvenue"); } catch (e) { /* rien */ }
     return;
   }
   document.body.innerHTML = `<div style="max-width:480px;margin:15vh auto;padding:24px;text-align:center;font-family:inherit;">
-    <div style="font-size:40px;margin-bottom:12px;"></div>
-    <h2 style="margin:0 0 12px;">Lien invalide</h2>
-    <p style="color:#666;line-height:1.5;">Ce lien n'est pas valide : demande un nouveau lien privé à l'organisateur de la ligue.</p>
+    <h2 style="margin:0 0 12px;">Jeu momentanément indisponible</h2>
+    <p style="line-height:1.5;opacity:.75;">Le serveur ne trouve pas la ligue pour le moment. Réessaie dans quelques minutes : ton club n'est pas perdu.</p>
+    <p><a href="/" style="color:#f0a23c;font-weight:700;">Réessayer</a></p>
   </div>`;
 }
 
 async function initGame() {
   const loaded = await loadMyTeam();
   if (loaded) { teamA = loaded.team; league = loaded.league; pendingEvents = loaded.events || []; }
-  else if (invalidManagerLink) {
-    return; // voir window.__gameReady, qui affiche showInvalidManagerLinkMessage() et s'arrête là
-  }
   else {
-    teamA = generateStartingRoster("Lyon");
-    teamA.offensivePriorities = ["Jeu en pénétration", "Pick & Roll", "Transition rapide"];
-    league = generateLeague(teamA);
-    pendingEvents = [];
+    // Jeton inconnu (401) ou serveur injoignable : jamais de partie locale
+    // (plus de carrière solo), voir showInvalidManagerLinkMessage.
+    if (!invalidManagerLink) { invalidManagerLink = true; invalidManagerLinkStatus = invalidManagerLinkStatus || 503; }
+    return;
   }
   // Zone "Administration de la ligue" (voir POST /api/reset-multi-league) :
   // affichée UNIQUEMENT pour le manager qui porte Team.isAdmin (voir
@@ -23378,9 +23233,7 @@ async function initGame() {
 // Inchangé en solo (managerToken null) : rien d'autre ne rafraîchit ces
 // marchés pour une carrière solo.
 function refreshTransferMarket() {
-  if (!league || managerToken) return;
-  league.refreshMarket(Date.now());
-  saveMyTeam();
+  // Le serveur fait vivre ce marché à chaque requête (plus de carrière solo).
 }
 
 // Fait vivre le marché des entraîneurs (voir League.refreshCoachMarket) et
@@ -23391,9 +23244,7 @@ function refreshTransferMarket() {
 // (voir son commentaire) : c'est d'ailleurs très exactement ce marché-ci qui
 // a révélé le problème (candidats entraîneurs).
 function refreshCoachMarket() {
-  if (!league || managerToken) return;
-  league.refreshCoachMarket(Date.now());
-  saveMyTeam();
+  // Le serveur fait vivre ce marché à chaque requête (plus de carrière solo).
 }
 
 // Fait vivre le marché des analystes vidéo (voir League.refreshAnalystMarket)
@@ -23402,9 +23253,7 @@ function refreshCoachMarket() {
 // commentaire de refreshTransferMarket) : même mécanique de marché, même
 // risque de collision d'id.
 function refreshAnalystMarket() {
-  if (!league || managerToken) return;
-  league.refreshAnalystMarket(Date.now());
-  saveMyTeam();
+  // Le serveur fait vivre ce marché à chaque requête (plus de carrière solo).
 }
 
 // Fait vivre le marché des recruteurs (voir League.refreshRecruiterMarket)
@@ -23413,20 +23262,13 @@ function refreshAnalystMarket() {
 // `managerToken` (voir le commentaire de refreshTransferMarket) : même
 // mécanique de marché, même risque de collision d'id.
 function refreshRecruiterMarket() {
-  if (!league || managerToken) return;
-  league.refreshRecruiterMarket(Date.now());
-  saveMyTeam();
+  // Le serveur fait vivre ce marché à chaque requête (plus de carrière solo).
 }
 
 // Marchés du staff médical (médecin/kiné) — même garde/même cadence que
 // refreshRecruiterMarket ci-dessus.
 function refreshMedicalMarkets() {
-  if (!league || managerToken) return;
-  const now = Date.now();
-  league.refreshMedicalMarket("doctor", now);
-  league.refreshMedicalMarket("physio", now);
-  league.refreshAssistantCoachMarket(now);
-  saveMyTeam();
+  // Le serveur fait vivre ce marché à chaque requête (plus de carrière solo).
 }
 
 // ---------------------------------------------------------------------
@@ -23536,42 +23378,6 @@ function showPage(id) {
 
 function setActiveTab(key) {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === key));
-}
-
-// Réinitialise la carrière : demande au serveur de remplacer intégralement
-// la sauvegarde par une toute nouvelle (POST /api/new-career), reconstruit
-// les objets locaux à partir de ce qu'il renvoie (plutôt que de refaire un
-// aller-retour via loadMyTeam()), puis reprend le fil du jeu normalement.
-async function resetCareer() {
-  // Ligue PARTAGÉE (un jeton manager est actif) : seul l'organisateur peut
-  // la réinitialiser (voir /api/admin/reset-multi-league côté serveur) — un
-  // manager individuel ne doit surtout pas pouvoir repartir de zéro à la
-  // place de tout le monde.
-  if (managerToken) {
-    alert("Seul l'organisateur de la ligue peut la réinitialiser.");
-    return;
-  }
-  try {
-    const res = await fetchApi("/api/new-career", { method: "POST" });
-    if (!res.ok) throw new Error(`serveur : ${res.status}`);
-    const data = await res.json();
-    teamA = teamFromSave(data.team);
-    league = leagueFromSave(data.league, teamA);
-  } catch (e) {
-    console.warn("Impossible de réinitialiser la carrière via le serveur, nouvelle carrière locale non persistée :", e);
-    teamA = generateStartingRoster("Lyon");
-    teamA.offensivePriorities = ["Jeu en pénétration", "Pick & Roll", "Transition rapide"];
-    league = generateLeague(teamA);
-  }
-  pendingEvents = []; // nouvelle carrière : rien à récapituler d'une carrière précédente
-  refreshTransferMarket();
-  refreshCoachMarket();
-  // Nom du club cliquable en haut (voir teamLinkHtml/showTeamDetail, retour
-  // utilisateur, 2026-09 : "rends cliquable le nom de sa propre équipe [...]
-  // en haut").
-  document.getElementById("topbarClubName").innerHTML = teamLinkHtml(myTeamIndex, teamA.name);
-  renderStaffPanel();
-  enterNextMatchOrShowSeasonEnd();
 }
 
 // Cherche le prochain match du calendrier pour le club du joueur et prépare
@@ -25130,46 +24936,6 @@ async function validateOrdresImpl() {
   const isImmediate = competition === "championship" &&
     (!currentMatch || (currentMatch.competition !== "cup" && round === currentMatch.round));
 
-  if (!managerToken) {
-    // Solo : rien à attendre côté réseau, l'état affiché est déjà l'état
-    // réel, mais teamA.ordresValidatedRound doit quand même être persisté
-    // (saveMyTeam() n'est PAS un no-op en solo, voir son commentaire) pour
-    // que le badge "Modifier vos ordres" survive à un rechargement.
-    if (isImmediate) {
-      teamA.ordresValidatedRound = round;
-      saveMyTeam();
-      updateTopbar();
-    } else {
-      // Bug corrigé (retour utilisateur, 2026-09, voir le commentaire
-      // jumeau plus bas dans la branche ligue partagée) : cliquer "Valider
-      // les ordres" pour une journée future SANS avoir modifié le moindre
-      // champ avant (le formulaire part déjà rempli par snapshotTactics(),
-      // voir getPlanForRound) ne déclenche jamais commit()/onDirty, le seul
-      // endroit qui appelait stagePlanForRound jusqu'ici : "Ordres
-      // enregistrés." s'affichait donc à tort, sans que rien ne soit
-      // réellement enregistré (même le round IMMÉDIAT a son propre
-      // traitement ci-dessus, cette journée future n'en avait aucun). On
-      // fige et persiste explicitement ce que le formulaire affiche déjà,
-      // exactement ce que la confirmation prétend avoir fait.
-      teamA.stagePlanForRound(round, teamA.getPlanForRound(round, competition), competition);
-      saveMyTeam();
-    }
-    setFeedback("Ordres enregistrés.", "ok");
-    ordresDirty = false;
-    renderOrdresStatus();
-    // Retour utilisateur (2026-09 : "obligé encore de refresh complet la
-    // page sinon ça ne se modifie pas [...] il faudrait qu'une fois qu'on
-    // ait validé les ordres, on revienne sur la page calendrier directement
-    // avec le bouton modifier vos ordres qui apparaisse sur le match") :
-    // renderCalendrierSection() recalcule déjà correctement le badge à
-    // chaque affichage (voir son commentaire), le vrai manque était de n'y
-    // ramener PERSONNE après validation. On y retourne directement plutôt
-    // que de laisser le manager sur l'écran Ordres se demander si ça a
-    // fonctionné, ou pire, recharger toute la page pour vérifier.
-    TAB_HANDLERS.calendrier();
-    return;
-  }
-
   if (btn) btn.disabled = true;
   setFeedback("Enregistrement en cours…", "pending");
   try {
@@ -25529,9 +25295,9 @@ function rosterCannotFieldLineup(team) {
 // la IV s'ouvre). 1 championnat dessous → 10e ; 2 → 9e et 10e ; 3 → + barrage.
 function leagueDivisionMoves(lg = league) {
   let dm = lg && lg.divisionMoves;
-  // Ancienne pyramide locale (hors univers partagé, sans info serveur) :
+  // Pyramide sans info serveur (divisionMoves absent) :
   // mêmes règles qu'avant (9e-10e + barrage), sauf en dernière division.
-  if (!dm && lg && (lg.pyramid || (typeof managerToken !== "undefined" && !managerToken))) {
+  if (!dm && lg && lg.pyramid) {
     const level = lg.divisionLevel || 1;
     const bottom = level >= MAX_DIVISION_LEVEL;
     dm = { promotes: level > 1, relegations: bottom ? 0 : 3, barrage: !bottom, upperLabel: null };
@@ -26732,8 +26498,6 @@ async function retirementTalkAction(playerId) {
       console.warn("Retraite : serveur indisponible, résolution locale de secours :", e);
       result = teamA.talkRetirement(playerId, Date.now());
     }
-  } else {
-    result = teamA.talkRetirement(playerId, Date.now());
   }
   if (!result || !result.ok) {
     playerDetailTransferRequestFeedback("Impossible de discuter avec ce joueur pour l'instant.", false);
@@ -26794,8 +26558,6 @@ async function discussTransferRequestAction(playerId) {
       console.warn("Discuter avec le joueur : serveur indisponible, résolution locale de secours :", e);
       result = applyLocalResolution();
     }
-  } else {
-    result = applyLocalResolution();
   }
   if (!result) {
     playerDetailTransferRequestFeedback("Impossible de discuter avec ce joueur pour l'instant.", false);
@@ -29280,10 +29042,6 @@ async function planeteFetch(url) {
 async function renderPlaneteSection() {
   const box = document.getElementById("planeteContent");
   if (!box) return;
-  if (!managerToken) {
-    box.innerHTML = `<p class="training-empty">Planète Hoop réunit les championnats de tous les pays : disponible en ligue partagée.</p>`;
-    return;
-  }
   if (!planeteState.overview) box.innerHTML = `<p class="sub">Chargement…</p>`;
   try {
     const ov = await planeteFetch(`/api/world/overview${planeteState.country ? `?country=${encodeURIComponent(planeteState.country)}` : ""}`);
@@ -30099,11 +29857,6 @@ function tacticalReportHtml(opponent) {
 // réellement GATED côté serveur (jamais envoyé avant déblocage, contrairement
 // au rapport tactique gratuit déjà transporté tel quel dans /api/save).
 //
-// Mode SOLO (managerToken null, pas de serveur multi-manager) : tout tourne
-// en local sur `league`/`teamA`, via les fonctions scoutingLocal* ci-dessous
-// — copie mirroir EXACTE de la logique de server/scouting.js (même
-// convention que le reste de ce fichier pour le moteur, voir son en-tête),
-// jamais de vraie notion de "serveur" à consulter dans ce mode.
 // =========================================================================
 // 1 pub par MOIS civil (Paris) — retour utilisateur 2026-09-25 : "on ne doit
 // pouvoir le faire qu'une fois par mois" (était 3 par jour). Miroir de
@@ -30111,101 +29864,12 @@ function tacticalReportHtml(opponent) {
 const SCOUTING_MONTHLY_AD_CAP = 1;
 const SCOUTING_AD_WATCH_MS = 15000; // durée de l'écran gris (voir showScoutingAdOverlay plus bas)
 
-function scoutingLocalGamesPlayedFor(team) {
-  const keys = new Set();
-  team.players.forEach(p => { (p.matchLog || []).forEach(m => keys.add(`${m.round}|${m.competition}`)); });
-  return keys.size;
-}
 
-function scoutingParisMonthKey(ms) {
-  const d = new Date(parisCalendarDayIndex(ms));
-  return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`;
-}
-function scoutingNextParisMonthStart(ms) {
-  const d = new Date(parisCalendarDayIndex(ms));
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
-}
-function scoutingLocalAdsWatchedThisMonth(team, now) {
-  const key = scoutingParisMonthKey(now);
-  return (team.scoutingAdWatchLog || []).filter(ts => scoutingParisMonthKey(ts) === key).length;
-}
 
-function scoutingLocalAccess(opponentIdx, now = Date.now()) {
-  const team = teamA;
-  const opponent = league.teams[opponentIdx];
-  if (!team || !opponent) return { ok: false, error: "Adversaire invalide." };
-  const premium = teamIsPremium(team);
-  const unlock = (team.scoutingUnlocks || {})[opponentIdx];
-  const currentGames = scoutingLocalGamesPlayedFor(opponent);
-  const stale = !!unlock && typeof unlock.gamesPlayedAtUnlock === "number" && unlock.gamesPlayedAtUnlock !== currentGames;
-  const unlocked = !!unlock && !stale;
-  const adsMonth = scoutingLocalAdsWatchedThisMonth(team, now);
-  return {
-    ok: true, opponentIdx, level: premium || unlocked ? "full" : "locked", premium, unlocked, stale,
-    unlockedAt: unlock ? unlock.unlockedAt : null, unlockedSource: unlock ? unlock.source : null,
-    adsWatchedThisMonth: adsMonth, adsRemainingThisMonth: Math.max(0, SCOUTING_MONTHLY_AD_CAP - adsMonth), monthlyCap: SCOUTING_MONTHLY_AD_CAP,
-    nextAdAvailableAt: scoutingNextParisMonthStart(now),
-  };
-}
 
-function scoutingLocalCreateAdTicket(opponentIdx, now = Date.now()) {
-  const team = teamA;
-  if (!Number.isInteger(opponentIdx) || opponentIdx < 0 || opponentIdx >= league.teams.length || opponentIdx === myTeamIndex) {
-    return { ok: false, error: "Adversaire invalide." };
-  }
-  if (teamIsPremium(team)) return { ok: false, error: "Déjà Premium : aucune pub nécessaire." };
-  const access = scoutingLocalAccess(opponentIdx, now);
-  if (access.unlocked) return { ok: false, error: "Ce rapport est déjà débloqué et à jour." };
-  if (scoutingLocalAdsWatchedThisMonth(team, now) >= SCOUTING_MONTHLY_AD_CAP) {
-    return { ok: false, error: "Pub gratuite déjà utilisée ce mois-ci. Revenez le mois prochain, ou passez Pro." };
-  }
-  const ticketId = randomHexToken(12);
-  team.scoutingAdTickets = team.scoutingAdTickets || {};
-  team.scoutingAdTickets[ticketId] = { opponentIdx, createdAt: now };
-  saveMyTeam();
-  return { ok: true, ticketId, opponentIdx };
-}
 
-function scoutingLocalCompleteAdTicket(ticketId, now = Date.now()) {
-  const team = teamA;
-  const ticket = team.scoutingAdTickets && team.scoutingAdTickets[ticketId];
-  if (!ticket) return { ok: false, error: "Ticket de pub inconnu, déjà utilisé, ou expiré." };
-  delete team.scoutingAdTickets[ticketId];
-  const opponent = league.teams[ticket.opponentIdx];
-  if (!opponent) return { ok: false, error: "Adversaire invalide." };
-  team.scoutingAdWatchLog = team.scoutingAdWatchLog || [];
-  team.scoutingAdWatchLog.push(now);
-  team.scoutingUnlocks = team.scoutingUnlocks || {};
-  team.scoutingUnlocks[ticket.opponentIdx] = { level: "full", unlockedAt: now, source: "ad", gamesPlayedAtUnlock: scoutingLocalGamesPlayedFor(opponent) };
-  saveMyTeam();
-  return { ok: true, opponentIdx: ticket.opponentIdx };
-}
 
-function scoutingLocalSetPremium(premium) {
-  teamA.scoutingPremium = !!premium;
-  saveMyTeam();
-  return { ok: true, premium: teamA.scoutingPremium };
-}
 
-function scoutingLocalAggregateShotZones(team) {
-  const z = { inside: { att: 0, made: 0 }, mid: { att: 0, made: 0 }, three: { att: 0, made: 0 } };
-  team.players.forEach(p => {
-    (p.matchLog || []).forEach(m => {
-      const paintAtt = m.paintAtt || 0, paintMade = m.paintMade || 0;
-      const fga2 = m.fga2 || 0, fgm2 = m.fgm2 || 0;
-      z.inside.att += paintAtt; z.inside.made += paintMade;
-      z.mid.att += Math.max(0, fga2 - paintAtt); z.mid.made += Math.max(0, fgm2 - paintMade);
-      z.three.att += m.fga3 || 0; z.three.made += m.fgm3 || 0;
-    });
-  });
-  const totalAtt = z.inside.att + z.mid.att + z.three.att;
-  const zoneStats = key => ({
-    attempts: z[key].att, made: z[key].made,
-    sharePct: totalAtt > 0 ? Math.round((z[key].att / totalAtt) * 100) : null,
-    fgPct: z[key].att > 0 ? Math.round((z[key].made / z[key].att) * 100) : null,
-  });
-  return { inside: zoneStats("inside"), mid: zoneStats("mid"), three: zoneStats("three"), totalAttempts: totalAtt };
-}
 
 // Copie mirroir EXACTE de server/scouting.js:aggregateStrategyUsage (voir son
 // grand commentaire côté serveur pour le raisonnement complet — dédoublonnage
@@ -30239,98 +29903,17 @@ function scoutingLocalAggregateStrategyUsage(team) {
   };
 }
 
-function scoutingLocalRecentForm(teamIdx, limit = 5) {
-  const games = league.results.filter(r => r.home === teamIdx || r.away === teamIdx).sort((a, b) => b.round - a.round);
-  return games.slice(0, limit).map(r => {
-    const isHome = r.home === teamIdx;
-    const scoreFor = isHome ? r.scoreHome : r.scoreAway, scoreAgainst = isHome ? r.scoreAway : r.scoreHome;
-    const opponentIdx = isHome ? r.away : r.home;
-    return { round: r.round, isHome, opponentIdx, opponentName: league.teams[opponentIdx] ? league.teams[opponentIdx].name : "?", scoreFor, scoreAgainst, win: scoreFor > scoreAgainst };
-  });
-}
 
-function scoutingLocalHomeAwayRecord(teamIdx) {
-  const rec = { home: { wins: 0, losses: 0 }, away: { wins: 0, losses: 0 } };
-  league.results.forEach(r => {
-    if (r.home === teamIdx) { if (r.scoreHome > r.scoreAway) rec.home.wins++; else rec.home.losses++; }
-    else if (r.away === teamIdx) { if (r.scoreAway > r.scoreHome) rec.away.wins++; else rec.away.losses++; }
-  });
-  return rec;
-}
 
-function scoutingLocalStreak(teamIdx) {
-  const games = league.results.filter(r => r.home === teamIdx || r.away === teamIdx).sort((a, b) => b.round - a.round);
-  if (!games.length) return { type: null, length: 0 };
-  const winAt = r => (r.home === teamIdx ? r.scoreHome > r.scoreAway : r.scoreAway > r.scoreHome);
-  const firstWin = winAt(games[0]);
-  let length = 0;
-  for (const g of games) { if (winAt(g) !== firstWin) break; length++; }
-  return { type: firstWin ? "W" : "L", length };
-}
 
-function scoutingLocalHeadToHead(teamIdx, opponentIdx) {
-  return league.results
-    .filter(r => (r.home === teamIdx && r.away === opponentIdx) || (r.away === teamIdx && r.home === opponentIdx))
-    .sort((a, b) => b.round - a.round)
-    .map(r => {
-      const isHome = r.home === teamIdx;
-      const scoreFor = isHome ? r.scoreHome : r.scoreAway, scoreAgainst = isHome ? r.scoreAway : r.scoreHome;
-      return { round: r.round, isHome, scoreFor, scoreAgainst, win: scoreFor > scoreAgainst };
-    });
-}
 
-function scoutingLocalKeyPlayers(team, now, limit = 3) {
-  const rows = team.players.map(p => {
-    const log = p.matchLog || [];
-    const games = log.length;
-    const totalPts = log.reduce((s, m) => s + (m.pts || 0), 0);
-    const totalReb = log.reduce((s, m) => s + (m.reb || 0), 0);
-    const totalAst = log.reduce((s, m) => s + (m.ast || 0), 0);
-    const injured = !!(p.injuryUntil && p.injuryUntil > now);
-    return {
-      // `id` (retour utilisateur, 2026-09-24 : "rebosse ça [...] regarde
-      // comment c'est sur football manager") : nécessaire pour générer
-      // l'avatar du joueur (playerAvatarHtml) dans la carte "meilleurs
-      // marqueurs" — même ajout que server/scouting.js:keyPlayersFor.
-      id: p.id, name: p.name, position: p.position, games,
-      ppg: games ? Math.round((totalPts / games) * 10) / 10 : 0,
-      rpg: games ? Math.round((totalReb / games) * 10) / 10 : 0,
-      apg: games ? Math.round((totalAst / games) * 10) / 10 : 0,
-      condition: typeof p.condition === "number" ? p.condition : null,
-      injured, injuryReturnAt: injured ? p.injuryUntil : null,
-    };
-  }).filter(r => r.games > 0);
-  rows.sort((a, b) => b.ppg - a.ppg);
-  return rows.slice(0, limit);
-}
 
-function scoutingLocalStanding(teamIdx) {
-  const table = league.standings();
-  const row = table.find(r => r.idx === teamIdx);
-  if (!row) return null;
-  return { rank: table.indexOf(row) + 1, ...row };
-}
 
-function scoutingLocalBuildReport(opponentIdx, now = Date.now()) {
-  const opponent = league.teams[opponentIdx];
-  if (!opponent) return { ok: false, error: "Adversaire invalide." };
-  return {
-    ok: true, opponentIdx, opponentName: opponent.name, generatedAt: now,
-    gamesPlayed: scoutingLocalGamesPlayedFor(opponent),
-    standing: scoutingLocalStanding(opponentIdx),
-    recentForm: scoutingLocalRecentForm(opponentIdx),
-    homeAwayRecord: scoutingLocalHomeAwayRecord(opponentIdx),
-    streak: scoutingLocalStreak(opponentIdx),
-    headToHead: scoutingLocalHeadToHead(myTeamIndex, opponentIdx),
-    shotZones: scoutingLocalAggregateShotZones(opponent),
-    strategyUsage: scoutingLocalAggregateStrategyUsage(opponent),
-    keyPlayers: scoutingLocalKeyPlayers(opponent, now),
-  };
-}
 
 // ---- Aller-retours réseau (ligue partagée uniquement) ------------------
 async function fetchScoutingAccess(opponentIdx) {
-  const res = await fetchApi(`/api/scouting/access?opponent=${opponentIdx}`);
+  let res;
+  try { res = await fetchApi(`/api/scouting/access?opponent=${opponentIdx}`); } catch (e) { res = { ok: false, json: async () => null }; }
   const data = await res.json().catch(() => null);
   if (!res.ok || !data || data.ok === false) {
     return { ok: false, level: "locked", premium: false, unlocked: false, stale: false, adsWatchedThisMonth: 0, adsRemainingThisMonth: 0, monthlyCap: SCOUTING_MONTHLY_AD_CAP };
@@ -30338,15 +29921,15 @@ async function fetchScoutingAccess(opponentIdx) {
   return data;
 }
 async function fetchScoutingReport(opponentIdx) {
-  const res = await fetchApi(`/api/scouting/report?opponent=${opponentIdx}`);
+  let res;
+  try { res = await fetchApi(`/api/scouting/report?opponent=${opponentIdx}`); } catch (e) { return { ok: false, error: "Serveur injoignable." }; }
   const data = await res.json().catch(() => null);
   if (!data) return { ok: false, error: `Erreur serveur (${res.status}).` };
   return data;
 }
 
-// ---- Actions (marchent en solo ET en ligue partagée) --------------------
+// ---- Actions (serveur) ----------------------------------------------------
 async function scoutingSetPremium(premium) {
-  if (!managerToken) return scoutingLocalSetPremium(premium);
   const res = await fetchApi("/api/scouting/set-premium", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ premium }),
   });
@@ -30355,7 +29938,6 @@ async function scoutingSetPremium(premium) {
   return data || { ok: false, error: `Erreur serveur (${res.status}).` };
 }
 async function scoutingCreateAdTicket(opponentIdx) {
-  if (!managerToken) return scoutingLocalCreateAdTicket(opponentIdx, Date.now());
   const res = await fetchApi("/api/scouting/ad-ticket", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ opponent: opponentIdx }),
   });
@@ -30364,7 +29946,6 @@ async function scoutingCreateAdTicket(opponentIdx) {
   return data;
 }
 async function scoutingCompleteAdTicket(ticketId) {
-  if (!managerToken) return scoutingLocalCompleteAdTicket(ticketId, Date.now());
   const res = await fetchApi("/api/scouting/ad-complete", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticketId }),
   });
@@ -31782,7 +31363,7 @@ function scoutingFreeAnalysisHtml(teamIdx) {
 
 async function refreshScoutingProPanel(teamIdx) {
   const now = Date.now();
-  const access = managerToken ? await fetchScoutingAccess(teamIdx) : scoutingLocalAccess(teamIdx, now);
+  const access = await fetchScoutingAccess(teamIdx);
   // Garde-fou (même patron que refreshTeamDetailLiveBanner juste au-dessus) :
   // le manager a pu changer de fiche/sous-onglet pendant l'aller-retour
   // réseau — ne jamais réinjecter du HTML périmé dans une page qu'il a déjà
@@ -31791,7 +31372,7 @@ async function refreshScoutingProPanel(teamIdx) {
   const holder = document.getElementById("scoutingProPanel");
   if (!holder) return;
   if (access && access.level === "full") {
-    const report = managerToken ? await fetchScoutingReport(teamIdx) : scoutingLocalBuildReport(teamIdx, now);
+    const report = await fetchScoutingReport(teamIdx);
     if (teamDetailIdx !== teamIdx || teamDetailSubView !== "analyse") return;
     const holder2 = document.getElementById("scoutingProPanel");
     if (!holder2) return;
@@ -32387,11 +31968,6 @@ document.getElementById("teamDetailContent").addEventListener("click", async (e)
 // serveur en premier), puis le résultat renvoyé est appliqué en local pour
 // que l'écran se mette à jour sans recharger toute la sauvegarde.
 async function performVideoSession(opponentIdx) {
-  if (!managerToken) {
-    const result = league.runVideoSession(myTeamIndex, opponentIdx, Date.now());
-    saveMyTeam();
-    return result;
-  }
   const result = await runVideoSessionOnServer(opponentIdx);
   if (result.ok) {
     teamA.scoutedAttrs = teamA.scoutedAttrs || {};
@@ -32456,7 +32032,6 @@ function renderSeasonEnd() {
   const po = league.playoffs;
   const nameOf = i => league.teams[i].name;
   const info = divisionInfo(league.divisionLevel || MAX_DIVISION_LEVEL);
-  const newSeasonBtn = document.getElementById("newSeasonBtn");
 
   let html = `<h3>${escapeHtml(info.name)} : classement final de la saison régulière</h3>` + standingsTableHtml(league.standings());
   html += "<h3>Play-offs (top 4, deux matchs gagnants)</h3>";
@@ -32468,7 +32043,6 @@ function renderSeasonEnd() {
     // mais les play-offs n'ont pas encore été posés côté client.
     html += "<p class=\"sub\">Les play-offs vont commencer.</p>";
     document.getElementById("seasonEndContent").innerHTML = html;
-    if (newSeasonBtn) newSeasonBtn.classList.add("hidden");
     const panel = document.getElementById("seasonEndInterviewPanel");
     if (panel) panel.innerHTML = "";
     return;
@@ -32495,7 +32069,6 @@ function renderSeasonEnd() {
     }
     html += "<p class=\"sub\">Les play-offs sont en cours, sur plusieurs jours réels. Revenez pour votre prochain match, ou suivez leur progression ici.</p>";
     document.getElementById("seasonEndContent").innerHTML = html;
-    if (newSeasonBtn) newSeasonBtn.classList.add("hidden");
     const panel = document.getElementById("seasonEndInterviewPanel");
     if (panel) {
       const semiInterview = (teamA.pendingInterviews || []).find(i => i.milestone === "demi-finale-po");
@@ -32513,7 +32086,7 @@ function renderSeasonEnd() {
   // Ligue partagée sans pyramide de divisions (une seule ligue) : pas de
   // montée ni de descente réelles, donc ni barrage ni verdict de division
   // affichés (voir la pyramide, League.pyramid).
-  const hasDivisionMoves = !managerToken || !!league.pyramid;
+  const hasDivisionMoves = !!league.pyramid;
   const barrage = hasDivisionMoves ? league.relegationBarrage : null;
   if (barrage) {
     html += "<h3>Relégation</h3>";
@@ -32534,8 +32107,8 @@ function renderSeasonEnd() {
   }
 
   // Prime de fin de saison (montée ou titre de champion de Division I — voir
-  // seasonEndBonusFor côté moteur) : annoncée ici, versée au clic sur
-  // "Nouvelle saison" (voir startNewSeason).
+  // seasonEndBonusFor côté moteur) : annoncée ici, versée par le serveur à
+  // la fin de la saison (League.paySeasonEndBonuses).
   const bonus = seasonEndBonusFor(outcome);
   if (bonus) {
     html += `<p class="season-bonus">${escapeHtml(bonus.label)} : +${formatMoney(bonus.amount)}</p>`;
@@ -32545,24 +32118,17 @@ function renderSeasonEnd() {
   // grand commentaire de SEASON_OBJECTIVE_TIERS côté moteur) : fonction
   // PURE, purement en lecture ici (même patron que seasonEndBonusFor
   // juste au-dessus) : l'impact réel sur l'humeur des supporters n'est
-  // appliqué qu'au clic sur "Nouvelle saison" (voir startNewSeason).
+  // appliqué que par le serveur, à la fin de la saison.
   const objectiveVerdict = seasonObjectiveVerdict(league, myTeamIndex);
   if (objectiveVerdict) {
     const cls = objectiveVerdict.gap > 0 ? "missed" : objectiveVerdict.gap === 0 ? "met" : "exceeded";
     html += `<p class="season-objective-verdict ${cls}">${escapeHtml(objectiveVerdict.label)}</p>`;
   }
 
-  // Ligue partagée : la saison suivante démarre TOUTE SEULE (voir
-  // League.startNextSeason / server/autoSim.js) — jamais de bouton
-  // « Démarrer une nouvelle saison » (qui régénérerait une ligue locale).
-  if (managerToken) {
-    html += intersaisonNoticeHtml();
-    document.getElementById("seasonEndContent").innerHTML = html;
-    if (newSeasonBtn) newSeasonBtn.classList.add("hidden");
-  } else {
-    document.getElementById("seasonEndContent").innerHTML = html;
-    if (newSeasonBtn) newSeasonBtn.classList.remove("hidden");
-  }
+  // La saison suivante démarre TOUTE SEULE (voir League.startNextSeason /
+  // server/autoSim.js).
+  html += intersaisonNoticeHtml();
+  document.getElementById("seasonEndContent").innerHTML = html;
 
   // Interview de jalon "finale de PO" (le plus probable à ce stade, le
   // champion vient d'être décidé) ou, à défaut, "demi-finale de PO" (retour
@@ -32585,53 +32151,6 @@ function renderSeasonEnd() {
 // budget conservés), 9 nouveaux adversaires générés (calibrés sur la
 // nouvelle division si le club est monté ou descendu), calendrier remis à
 // zéro. Le premier match de la nouvelle saison s'enchaîne directement.
-function startNewSeason() {
-  // Histoire du club : archive la saison qui s'achève (idempotent, le
-  // serveur l'a normalement déjà fait dès la fin des play-offs).
-  settleSponsorsAtSeasonEnd(league, 0, Date.now());
-  archiveSeasonForTeam(league, 0, Date.now());
-  const outcome = league.divisionOutcomeForUserTeam();
-  // Prime de montée / de champion de Division I (voir seasonEndBonusFor,
-  // annoncée à l'écran de fin de saison — renderSeasonEnd) : versée ICI,
-  // AVANT de régénérer la ligue, pendant que league.divisionLevel reflète
-  // encore la saison qui vient de se terminer.
-  const bonus = seasonEndBonusFor(outcome);
-  if (bonus) teamA.recordTransaction(bonus.label, bonus.amount);
-  // Verdict de l'objectif de saison du conseil d'administration (voir le
-  // grand commentaire de SEASON_OBJECTIVE_TIERS côté moteur, déjà annoncé en
-  // lecture seule sur l'écran de fin de saison, voir renderSeasonEnd) :
-  // appliqué ICI pour la même raison que la prime juste au-dessus, AVANT de
-  // régénérer la ligue (`league` doit encore être celle de la saison qui
-  // vient de se terminer, seasonObjective de teamA sera de toute façon
-  // réassigné pour la nouvelle saison par assignSeasonObjectives, voir
-  // generateLeague -> buildLeagueWithHumanTeams juste plus bas).
-  // Retour utilisateur (2026-09) : "il ne faut pas qu'un signal et pas
-  // deux [...] la fin de la saison régulière correspond à la fin de la
-  // saison pour ces équipes là" : une équipe de milieu de tableau ou
-  // reléguée directement (voir server/liveMatch.js:finalizeRound côté
-  // serveur, seul appelant réel en pratique) a déjà reçu CE MÊME verdict
-  // dès la fin de la saison régulière (Team.seasonObjectiveVerdictSettled)
-  // : ne jamais le réappliquer une seconde fois ici.
-  const objectiveVerdict = seasonObjectiveVerdict(league, 0);
-  if (objectiveVerdict && !teamA.seasonObjectiveVerdictSettled) {
-    teamA.recordMoraleEvent(objectiveVerdict.label, objectiveVerdict.delta);
-    teamA.seasonObjectiveVerdictSettled = true;
-  }
-  // Hérite du rythme de calendrier de la saison qui vient de se terminer
-  // (classique, ou accéléré si la carrière tournait déjà en mode accéléré —
-  // voir League.calendarWeekMs/calendarSlotOffsetsMs) : une nouvelle saison
-  // ne doit jamais silencieusement revenir au calendrier classique, ni
-  // dépendre du réglage ACTUEL du serveur (qui a pu changer depuis, voir le
-  // commentaire sur generateLeague côté engine.js).
-  const previousCalendarConfig = {
-    weekMs: league.calendarWeekMs,
-    slotOffsetsMs: league.calendarSlotOffsetsMs,
-  };
-  league = generateLeague(teamA, outcome.toLevel, Date.now(), previousCalendarConfig);
-  saveMyTeam();
-  document.getElementById("seasonEndSection").classList.add("hidden");
-  enterNextMatchOrShowSeasonEnd();
-}
 
 // `team` peut être teamA elle-même (ordres EN DIRECT, le cas de toujours)
 // OU un léger "proxy de plan" — voir planProxyForRound — représentant les
@@ -38674,18 +38193,6 @@ async function applyTrigramChange(value) {
       teamA.trigram = data.trigram || null;
       teamA.trigramChangedAt = typeof data.trigramChangedAt === "number" ? data.trigramChangedAt : null;
     } catch (e) { showMsg("Serveur injoignable."); return; }
-  } else {
-    if (trigram !== null && league.teams.some((t, i) => i !== myTeamIndex && teamTrigram(t) === trigram)) { showMsg("Ce trigramme est déjà utilisé par un autre club de la ligue."); return; }
-    // Mêmes règles que actions.setTeamTrigram (voir son commentaire).
-    const isDefault = trigram === null || trigram === defaultTrigramForName(teamA.name);
-    const cooling = typeof teamA.trigramChangedAt === "number" && teamA.trigramChangedAt > 0 && Date.now() - teamA.trigramChangedAt < TRIGRAM_CHANGE_COOLDOWN_MS;
-    if (!isDefault && trigram !== teamA.trigram && cooling) { showMsg("Trigramme déjà modifié récemment."); return; }
-    if (isDefault) teamA.trigram = null;
-    else if (trigram !== teamA.trigram) {
-      teamA.trigram = trigram;
-      teamA.trigramChangedAt = typeof teamA.trigramChangedAt === "number" ? Date.now() : 0;
-    }
-    saveMyTeam();
   }
   refreshSettingsClubBlock();
   if (typeof updateTopbar === "function") updateTopbar();
@@ -38705,9 +38212,6 @@ async function applyArenaNameChange(value) {
       if (!res.ok || !data.ok) { showMsg(data.error || "Le serveur a refusé ce nom."); return; }
       teamA.arenaName = data.arenaName || null;
     } catch (e) { showMsg("Serveur injoignable."); return; }
-  } else {
-    teamA.arenaName = arenaName || null;
-    saveMyTeam();
   }
   refreshSettingsClubBlock();
   if (!document.getElementById("salleSection").classList.contains("hidden")) renderSalleSection();
@@ -39170,7 +38674,12 @@ function rosterMarketFeedback(message, ok) {
 // la feuille de match — un joueur vendu ne peut plus être titulaire/remplaçant.
 function sellRosterPlayer(playerId) {
   if (!teamA.sellPlayer(playerId)) return;
-  saveMyTeam();
+  // Vente enregistrée côté serveur (voir server/actions.js:sellListedPlayer).
+  try {
+    fetchApi("/api/roster/sell-listed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) })
+      .then(res => { if (!res.ok) console.warn("Vente refusée côté serveur.", res.status); })
+      .catch(e => console.warn("Vente : serveur indisponible :", e));
+  } catch (e) { console.warn("Vente : serveur indisponible :", e); }
   renderEffectifSection();
 }
 // Ferme les menus "⋯" de l'Effectif sur un clic ailleurs ou sur Échap.
@@ -39430,7 +38939,6 @@ function renderMarketAlertsBar() {
     `<span class="mk-crit-tag mk-alert-tag">${escapeHtml(marketAlertLabel(a))}<button type="button" data-mk-alert-del="${escapeHtml(a.id)}" aria-label="Supprimer cette alerte">×</button></span>`).join("");
 }
 function syncMarketWatchToServer(playerId, watch) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/market/watch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId, watch }) })
       .then(res => { if (!res.ok) console.warn("Liste de suivi : refusée côté serveur.", res.status); })
@@ -39438,7 +38946,6 @@ function syncMarketWatchToServer(playerId, watch) {
   } catch (e) { console.warn("Liste de suivi : serveur indisponible :", e); }
 }
 function syncMarketAlertToServer(body) {
-  if (!managerToken) return Promise.resolve(null);
   try {
     return fetchApi("/api/market/alert", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then(res => res.json().catch(() => null))
@@ -39675,11 +39182,6 @@ function myAutoMaxOf(l) {
 }
 async function setAutoBidFor(field, id, max) {
   const now = Date.now();
-  if (!managerToken) {
-    const r = league.setAutoBid(field, id, myTeamIndex, max, now);
-    saveMyTeam();
-    return r.ok ? { ok: true, leading: r.leading, removed: !!r.removed } : { ok: false, reason: r.reason, minBid: r.minBid };
-  }
   try {
     const res = await fetchApi("/api/market/auto-bid", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -41304,7 +40806,7 @@ function renderCoupeSection() {
   const holder = document.getElementById("coupeContent");
   if (league.cup && league.cup.national) { renderNationalCupSection(holder); return; }
   if (!league.cup) {
-    holder.innerHTML = "<p class='training-empty'>La Coupe n'existe que pour la ligue multi-manager (elle n'est pas jouée en carrière solo pour l'instant).</p>";
+    holder.innerHTML = "<p class='training-empty'>Pas de Coupe pour ce championnat.</p>";
     return;
   }
   const cup = league.cup;
@@ -42667,7 +42169,6 @@ function renderArenaBuild(feedback) {
   holder.innerHTML = html;
 }
 function syncArenaSeatsToServer(add) {
-  if (!managerToken) return;
   try {
     fetchApi("/api/arena/build-seats", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ add }) })
       .then(res => { if (!res.ok) console.warn("Agrandissement de la salle refusé côté serveur.", res.status); })
@@ -43258,7 +42759,6 @@ let ordresPresetsFormOpen = false;
 let ordresPresetsMsg = null; // { text, error }
 
 function syncTacticPresetsToServer(body) {
-  if (!managerToken) { saveMyTeam(); return; }
   let p;
   try {
     p = fetchApi("/api/tactic-presets", {
@@ -43272,7 +42772,7 @@ function syncTacticPresetsToServer(body) {
     console.warn("Tactiques enregistrées : serveur indisponible :", e);
     p = Promise.resolve();
   }
-  window.__lastSave = p;
+  // window.__lastSave : voir fetchApi.
 }
 
 // Enregistre des ordres (forme snapshotTactics) dans l'emplacement `slot`.
@@ -44709,7 +44209,7 @@ function renderLpSection() {
   const holder = document.getElementById("lpContent");
   if (!holder) return;
   if (!league.calendarDailyAnchored) {
-    holder.innerHTML = "<p class='training-empty'>Les ligues privées n'existent que dans la ligue partagée entre managers (pas en carrière solo).</p>";
+    holder.innerHTML = "<p class='training-empty'>Les ligues privées ne sont pas disponibles pour ce championnat.</p>";
     return;
   }
   const premium = typeof teamA.hasActivePremium === "function" && teamA.hasActivePremium(Date.now());
@@ -45862,7 +45362,6 @@ async function sponsorAction(path, body, okText) {
   if (!local.ok && !/n'existe plus|expiré/.test(local.error)) { sponsorsUi.feedback = { ok: false, text: local.error }; renderSponsorsPanel(); return; }
   sponsorsUi.feedback = local.ok ? { ok: true, text: okText } : null;
   renderSponsorsPanel();
-  if (!managerToken) { saveMyTeam(); return; }
   try {
     const res = await fetchApi(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const data = await res.json().catch(() => ({}));
@@ -47070,14 +46569,6 @@ document.getElementById("ordresValidateBtn").addEventListener("click", validateO
 }
 
 document.getElementById("closeStandingsBtn").addEventListener("click", hideStandings);
-document.getElementById("newSeasonBtn").addEventListener("click", startNewSeason);
-
-document.getElementById("resetCareerLink").addEventListener("click", (e) => {
-  e.preventDefault();
-  if (confirm("Réinitialiser votre carrière ? Tout l'effectif entraîné sera perdu et remplacé par une équipe neuve.")) {
-    resetCareer();
-  }
-});
 
 document.getElementById("newMatchBtn").addEventListener("click", goToOrdresTab);
 // Barre du haut : raccourci "Donnez vos ordres" pour le PROCHAIN match

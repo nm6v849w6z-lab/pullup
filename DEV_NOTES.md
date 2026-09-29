@@ -20,6 +20,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODÉ, À POUSSER (2026-09-29) — Plus de carrière solo : le jeu est
+  uniquement en ligne** (retour : « le jeu n'a pas à être un jeu solo mais
+  un jeu online contre d'autres managers, même seul face à 9 bots ») —
+  serveur : /api/* sans jeton → 401 (sauf santé, admin, comptes),
+  /api/save-raw et /api/new-career supprimés, sauvegarde toujours
+  multi-ligue ; navigateur : sans jeton → /bienvenue, plus de bouton
+  « Nouvelle saison » ni « Recommencer », plus de marchés/scouting calculés
+  en local ; anciennes sauvegardes solo ignorées (store.js garde les
+  fonctions solo pour les scripts/tests existants). Corrigés au passage :
+  récapitulatif d'absence gardé sur l'équipe (team.pendingRecapEvents)
+  quand le rattrapage de fond du monde simule les ticks, vente forcée
+  persistée côté serveur (/api/roster/sell-listed), trainingPositions vide
+  n'est plus envoyé. Tests : aides de test sur une ligue multi (jeton
+  injecté), save_ordering_test et promotion_test supprimés. RESTE : pousser.
+
 - **⏳ À REVOIR PAR L'UTILISATEUR AVANT PUSH (2026-09-29) — Terrain 2D animé
   du direct** (« je veux revoir avant que tu pousses quoi que ce soit »).
   Fichiers dans le dossier Mac, PAS committés : assets/live/court2d.js
@@ -64,6 +79,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   navigation privée, bloqueur de contenu, version iOS, app Discord
   installée). Piste côté jeu si retour dans un autre navigateur : assouplir
   le contrôle du cookie hm_oauth pour l'intent « link » uniquement.
+
 
 - **✅ COMMITTÉ, À POUSSER (2026-09-29) — Suivre ses enchères (joueurs ET staff)**
   (retour : « il faudrait un endroit où on peut suivre ses enchères […] si

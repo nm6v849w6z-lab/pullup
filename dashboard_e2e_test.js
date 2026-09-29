@@ -8,7 +8,7 @@
 // vrai petit serveur local que lineup_test.js/away_jersey_test.js (pas de
 // canvas, win.eval() pour lire l'état réel du jeu).
 const fs = require("fs");
-const { startTestServer, openGame, flush } = require("./test_helpers.js");
+const { startTestServer, openGame, flush, editSave } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
 (async () => {
@@ -147,7 +147,13 @@ win.eval(`Math.random = window.__origRandom;`);
 // utilisé par le vrai bouton du marché du staff) appelle saveMyTeam()
 // derrière ; on le fait ici explicitement pour que la persistance soit
 // testée fidèlement.
-win.eval(`saveMyTeam();`);
+// Plus de sauvegarde brute depuis le navigateur : la même enchère gagnée
+// est appliquée côté serveur (recrutement + entrée « staff_hired » du fil).
+editSave(savePath, t => {
+  const E = require("./engine.js");
+  t.hireTrainer(1, 1000);
+  E.handleGameEvent(t.feed, { type: "staff_hired", week: t.week, name: "Nouveau Entraîneur", role: "Entraîneur" }, { clubName: t.name });
+});
 const coachHired = win.eval("!!teamA.trainer");
 console.log("Entraîneur recruté via enchère réelle :", coachHired);
 if (!coachHired) throw new Error("❌ Scénario cassé : l'enchère d'entraîneur devrait avoir été gagnée par l'humain.");

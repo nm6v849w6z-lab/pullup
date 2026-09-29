@@ -13324,6 +13324,9 @@ function serializeTeam(team) {
     achievements: Array.isArray(team.achievements) ? team.achievements.map(a => ({ ...a })) : [],
     lastArchivedSeasonId: team.lastArchivedSeasonId || null,
     hallOfFame: Array.isArray(team.hallOfFame) ? team.hallOfFame : [],
+    // Récapitulatif d'absence en attente (voir server/index.js:
+    // stashRecapEvents) : ce qui s'est joué pendant un rattrapage de fond.
+    pendingRecapEvents: Array.isArray(team.pendingRecapEvents) ? team.pendingRecapEvents : [],
     // Voir Team.seasonObjectiveVerdictSettled plus haut (retour utilisateur,
     // 2026-09, "il ne faut pas qu'un signal et pas deux") : `false` par
     // défaut, une sauvegarde d'avant cette fonctionnalité n'en a simplement
@@ -13895,6 +13898,7 @@ function teamFromSave(data) {
   team.achievements = Array.isArray(data.achievements) ? data.achievements.map(a => ({ ...a })) : [];
   team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
   team.hallOfFame = Array.isArray(data.hallOfFame) ? data.hallOfFame : [];
+  team.pendingRecapEvents = Array.isArray(data.pendingRecapEvents) ? data.pendingRecapEvents : [];
   // Voir serializeTeam ci-dessus/Team.seasonObjectiveVerdictSettled plus
   // haut. Absent (sauvegarde d'avant cette fonctionnalité) : on garde la
   // valeur déjà posée par le constructeur (false).

@@ -643,6 +643,18 @@ function listPlayer(team, teamIndex, league, body, now) {
   return { ok: true, listing };
 }
 
+// Vente forcée pour 1 € d'un joueur listé par la mise en vente forcée
+// (déficit prolongé, voir Team.sellPlayer) — bouton « Vendre pour 1 € » de
+// l'Effectif. Passait avant par la sauvegarde brute de la carrière solo.
+function sellListedPlayer(team, teamIndex, league, body) {
+  if (!body || typeof body.playerId !== "number") return fail("playerId requis.");
+  const p = team.players.find(x => x.id === body.playerId);
+  if (!p) return fail(`Joueur inconnu dans cet effectif : ${body.playerId}.`);
+  if (!p.forSale) return fail("Ce joueur n'est pas en vente forcée.");
+  if (!team.sellPlayer(body.playerId)) return fail("Vente impossible.");
+  return { ok: true };
+}
+
 // Marché : enchérir sur une annonce ouverte (la sienne ou celle d'un
 // adversaire — voir League.placeBid pour le détail des refus possibles).
 // `listingId` est un id numérique (voir uid() côté moteur) — accepté aussi
@@ -1423,7 +1435,7 @@ function submitPronostics(team, teamIndex, league, body, now) {
 module.exports = {
   setTeamCourtStyle, setPlayerJerseyNumber, setPlayerLook,
   validateOrdersSnapshot,
-  setLineup, setTactics, setTraining, setPlan, setTacticPresets, listPlayer, bidOnListing, bidOnCoachListing, setAutoBid, viewListing,
+  setLineup, setTactics, setTraining, setPlan, setTacticPresets, listPlayer, sellListedPlayer, bidOnListing, bidOnCoachListing, setAutoBid, viewListing,
   upgradeArena, buildArenaSeats, setTicketPrices, upgradeFanShop, fireTrainer,
   bidOnAnalystListing, fireVideoAnalyst, runVideoSession,
   // Académie de jeunes (recruteur + centre de formation + pipeline privé de

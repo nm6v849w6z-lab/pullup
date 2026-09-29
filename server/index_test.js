@@ -16,8 +16,31 @@ function tmpMultiSavePath() {
   return path.join(fs.mkdtempSync(path.join(os.tmpdir(), "basket-server-test-multi-")), "multi-league.json");
 }
 
-function startTestServer(savePath, nowFn, multiSavePath) {
-  const server = http.createServer(createHandler(savePath, nowFn, multiSavePath || tmpMultiSavePath()));
+// Plus de carrière solo (2026-09-29) : sans `multiSavePath` fourni, le
+// serveur de test démarre avec une ligue en ligne d'un seul manager (même
+// effectif et calendrier que l'ancienne carrière neuve) et les requêtes sans
+// jeton reçoivent le sien.
+const store = require("./store.js");
+const seededLeagues = new Map(); // savePath -> { multiSavePath, token } (redémarrage = même ligue)
+async function startTestServer(savePath, nowFn, multiSavePath) {
+  let token = null;
+  if (!multiSavePath) {
+    let seeded = seededLeagues.get(savePath);
+    if (!seeded) {
+      seeded = { multiSavePath: tmpMultiSavePath() };
+      const league = store.createNewCareer(nowFn()).league;
+      seeded.token = league.teams[0].managerLinkToken;
+      await store.saveMultiLeague(league, seeded.multiSavePath);
+      seededLeagues.set(savePath, seeded);
+    }
+    multiSavePath = seeded.multiSavePath;
+    token = seeded.token;
+  }
+  const handler = createHandler(savePath, nowFn, multiSavePath);
+  const server = http.createServer((req, res) => {
+    if (token && !req.headers["x-tipin-token"]) req.headers["x-tipin-token"] = token;
+    handler(req, res);
+  });
   return new Promise((resolve) => {
     server.listen(0, "127.0.0.1", () => resolve(server));
   });
@@ -86,8 +109,7 @@ async function main() {
       if (!s.league || s.league.totalRounds !== 18) throw new Error(`❌ Le championnat devrait compter 18 journées, obtenu ${s.league && s.league.totalRounds}.`);
       if (!s.league.nextMatch) throw new Error("❌ Un prochain match devrait être annoncé pour une carrière neuve.");
       if (typeof s.league.nextMatch.scheduledAt !== "number") throw new Error("❌ Le prochain match devrait avoir un horaire programmé (calendrier réel).");
-      if (!fs.existsSync(savePath)) throw new Error("❌ /api/state aurait dû créer le fichier de sauvegarde pour une carrière neuve.");
-      console.log("✅ /api/state crée une carrière neuve et renvoie un instantané cohérent (effectif, calendrier, prochain match).");
+      console.log("✅ /api/state renvoie un instantané cohérent (effectif, calendrier, prochain match).");
     } finally {
       server.close();
     }
@@ -132,11 +154,13 @@ async function main() {
     const server = await startTestServer(savePath, () => localNow);
     try {
       await request(server, "GET", "/api/state"); // crée la carrière
-      localNow = T0 + 30 * 24 * 60 * 60 * 1000; // un mois plus tard
+      // 20 jours plus tard (au-delà de 28 jours sans visite, le club serait
+      // rendu à l'IA, voir World.releaseInactiveManagers).
+      localNow = T0 + 20 * 24 * 60 * 60 * 1000;
       const res = await request(server, "POST", "/api/simulate-tick");
       if (res.statusCode !== 200) throw new Error(`❌ POST /api/simulate-tick devrait répondre 200, obtenu ${res.statusCode}.`);
       if (!Array.isArray(res.body.events) || res.body.events.length === 0) {
-        throw new Error("❌ Après un mois écoulé, POST /api/simulate-tick devrait rattraper des événements.");
+        throw new Error("❌ Après 20 jours écoulés, POST /api/simulate-tick devrait rattraper des événements.");
       }
       console.log(`✅ POST /api/simulate-tick force le rattrapage sur demande (${res.body.events.length} événement(s)).`);
     } finally {
@@ -198,66 +222,6 @@ async function main() {
       }
     } finally {
       try { server.close(); } catch (e) { /* déjà fermé plus haut */ }
-    }
-  }
-
-  // -------------------------------------------------------------------
-  // 4quater) GET /api/save, POST /api/save-raw, POST /api/new-career : la
-  //    bascule complète navigateur -> serveur (voir moteurbasket3.html,
-  //    saveMyTeam/loadMyTeam/resetCareer) repose sur ces trois routes.
-  // -------------------------------------------------------------------
-  {
-    const savePath = tmpSavePath();
-    const server = await startTestServer(savePath, nowFn);
-    try {
-      const saved1 = await request(server, "GET", "/api/save");
-      if (saved1.statusCode !== 200) throw new Error(`❌ GET /api/save devrait répondre 200, obtenu ${saved1.statusCode}.`);
-      if (!saved1.body.team || !saved1.body.league) throw new Error("❌ GET /api/save devrait renvoyer 'team' et 'league' (forme de store.serialize).");
-      if (!Array.isArray(saved1.body.team.players) || saved1.body.team.players.length !== 15) {
-        throw new Error("❌ GET /api/save devrait renvoyer un effectif complet (15 joueurs sérialisés), pas un résumé.");
-      }
-      console.log("✅ GET /api/save renvoie la sauvegarde complète (reconstructible via teamFromSave/leagueFromSave).");
-
-      // Le client modifie sa copie locale (ex. un surnom d'équipe) puis la
-      // renvoie intégralement.
-      const mutated = JSON.parse(JSON.stringify(saved1.body));
-      mutated.team.teamName = "Lyon Renommé"; // voir serializeTeam : le champ sérialisé est 'teamName', pas 'name'.
-      mutated.team.budget = 999999;
-      const rawSave = await request(server, "POST", "/api/save-raw", mutated);
-      if (rawSave.statusCode !== 200 || !rawSave.body.ok) throw new Error(`❌ POST /api/save-raw valide devrait répondre 200/ok, obtenu ${rawSave.statusCode} ${JSON.stringify(rawSave.body)}.`);
-      if (rawSave.body.state.team.name !== "Lyon Renommé" || rawSave.body.state.team.budget !== 999999) {
-        throw new Error("❌ POST /api/save-raw devrait remplacer intégralement la sauvegarde par celle envoyée.");
-      }
-      console.log("✅ POST /api/save-raw remplace la sauvegarde par celle du client.");
-
-      // Persiste réellement sur disque (pas juste en mémoire pour cette requête).
-      const reReadAfterRaw = await request(server, "GET", "/api/state");
-      if (reReadAfterRaw.body.team.name !== "Lyon Renommé") throw new Error("❌ POST /api/save-raw devrait persister sur disque (relu ensuite via /api/state).");
-      console.log("✅ La sauvegarde brute persiste sur disque, relisible ensuite.");
-
-      // Corps invalide (pas de 'league') -> 400 propre.
-      const badRaw = await request(server, "POST", "/api/save-raw", { team: mutated.team });
-      if (badRaw.statusCode !== 400 || badRaw.body.ok) throw new Error(`❌ POST /api/save-raw sans 'league' devrait répondre 400, obtenu ${badRaw.statusCode}.`);
-      console.log("✅ POST /api/save-raw rejette un corps incomplet avec 400 (pas un plantage).");
-
-      // Corps structurellement présent mais qui ne désérialise pas -> 400
-      // (pas un crash serveur), voir teamFromSave/leagueFromSave.
-      const garbageRaw = await request(server, "POST", "/api/save-raw", { team: { not: "valid" }, league: { not: "valid" } });
-      if (garbageRaw.statusCode !== 400) throw new Error(`❌ Une sauvegarde brute illisible devrait répondre 400, obtenu ${garbageRaw.statusCode}.`);
-      console.log("✅ POST /api/save-raw rejette une sauvegarde illisible avec 400 (pas un plantage).");
-
-      // Nouvelle carrière : écrase par un effectif neuf.
-      const fresh = await request(server, "POST", "/api/new-career");
-      if (fresh.statusCode !== 200) throw new Error(`❌ POST /api/new-career devrait répondre 200, obtenu ${fresh.statusCode}.`);
-      if (fresh.body.team.name === "Lyon Renommé") throw new Error("❌ POST /api/new-career devrait remplacer la carrière précédente par une toute nouvelle.");
-      if (!Array.isArray(fresh.body.team.players) || fresh.body.team.players.length !== 15) throw new Error("❌ POST /api/new-career devrait créer un effectif complet de 15 joueurs.");
-      const afterReset = await request(server, "GET", "/api/state");
-      if (afterReset.body.team.name === "Lyon Renommé" || afterReset.body.team.budget === 999999) {
-        throw new Error("❌ POST /api/new-career devrait persister sur disque (l'ancienne carrière ne devrait plus être relue ensuite).");
-      }
-      console.log("✅ POST /api/new-career remplace la carrière par une toute nouvelle, persistée.");
-    } finally {
-      server.close();
     }
   }
 
@@ -353,13 +317,10 @@ async function main() {
       const managerA = bootstrap.body.managers.find(m => m.name === "Lyon M");
       const managerB = bootstrap.body.managers.find(m => m.name === "Marseille M");
 
-      // --- /api/state SANS jeton : comportement solo historique, totalement
-      // indépendant de la ligue partagée (fichier distinct).
-      const soloState = await request(server, "GET", "/api/state");
-      if (soloState.statusCode !== 200 || soloState.body.team.name === "Lyon M") {
-        throw new Error("❌ /api/state sans jeton devrait continuer de servir la carrière solo (fichier distinct), jamais la ligue partagée.");
-      }
-      console.log("✅ /api/state sans jeton continue de servir la carrière solo, indépendamment de la ligue partagée.");
+      // --- /api/state SANS jeton : plus de carrière solo, connexion requise.
+      const noTokenState = await request(server, "GET", "/api/state");
+      if (noTokenState.statusCode !== 401) throw new Error(`❌ /api/state sans jeton devrait répondre 401 (plus de carrière solo), obtenu ${noTokenState.statusCode}.`);
+      console.log("✅ /api/state sans jeton répond 401 (plus de carrière solo).");
 
       // --- /api/state avec un jeton INCONNU -> 401.
       const unknownToken = await request(server, "GET", "/api/state", undefined, { "X-TipIn-Token": "jeton-inconnu" });
@@ -427,15 +388,11 @@ async function main() {
       }
       console.log("✅ POST /api/training-center agrandit bien le Centre de formation d'un palier (route bien branchée dans ACTION_ROUTES).");
 
-      // --- /api/save-raw refusé pour un appelant porteur d'un jeton manager.
-      const sharedSaveRaw = await request(server, "POST", "/api/save-raw", { team: {}, league: {} }, { "X-TipIn-Token": managerA.token });
-      if (sharedSaveRaw.statusCode !== 410) throw new Error(`❌ POST /api/save-raw avec un jeton manager devrait être refusé (410), obtenu ${sharedSaveRaw.statusCode}.`);
-      console.log("✅ POST /api/save-raw est bien supprimé pour une ligue partagée (410) — jamais de risque d'écraser l'état de tous les managers.");
-
-      // --- /api/new-career refusé pour un appelant porteur d'un jeton manager.
-      const sharedNewCareer = await request(server, "POST", "/api/new-career", undefined, { "X-TipIn-Token": managerA.token });
-      if (sharedNewCareer.statusCode !== 403) throw new Error(`❌ POST /api/new-career avec un jeton manager devrait être refusé (403), obtenu ${sharedNewCareer.statusCode}.`);
-      console.log("✅ POST /api/new-career est refusé pour un manager individuel d'une ligue partagée (403) — seul /api/admin/reset-multi-league le peut.");
+      // --- Routes de la carrière solo supprimées.
+      const goneSaveRaw = await request(server, "POST", "/api/save-raw", { team: {}, league: {} }, { "X-TipIn-Token": managerA.token });
+      const goneNewCareer = await request(server, "POST", "/api/new-career", undefined, { "X-TipIn-Token": managerA.token });
+      if (goneSaveRaw.statusCode !== 404 || goneNewCareer.statusCode !== 404) throw new Error(`❌ /api/save-raw et /api/new-career ne devraient plus exister (404), obtenu ${goneSaveRaw.statusCode}/${goneNewCareer.statusCode}.`);
+      console.log("✅ /api/save-raw et /api/new-career (carrière solo) n'existent plus.");
 
       // --- GET /api/save (multi-manager) : myTeamIndex + liveMatch résolu
       // pour CE manager, jamais liveMatches (le pluriel) exposé.
@@ -445,14 +402,6 @@ async function main() {
       if (saveA.body.league.liveMatches !== undefined) throw new Error("❌ GET /api/save ne devrait JAMAIS exposer league.liveMatches (le pluriel, toutes les diffusions) à un manager donné.");
       if (saveA.body.team) throw new Error("❌ GET /api/save en mode multi-manager ne devrait pas transporter un 'team' séparé (toutes les équipes vivent dans league.teams).");
       console.log("✅ GET /api/save (multi-manager) transporte myTeamIndex et un league.liveMatch résolu pour CE manager, sans jamais exposer les diffusions des autres.");
-
-      // --- Persistance : le fichier solo n'a JAMAIS été touché par tout ce
-      // qui précède (garde-fou le plus important de cette section).
-      const legacyRaw = JSON.parse(fs.readFileSync(legacySavePath, "utf-8"));
-      if (legacyRaw.team.name === "Lyon M" || legacyRaw.team.defense === "Zone extérieure") {
-        throw new Error("❌ La sauvegarde solo (fichier distinct) n'aurait jamais dû être modifiée par les actions multi-manager.");
-      }
-      console.log("✅ Le fichier de sauvegarde solo reste totalement intact après toutes les actions multi-manager ci-dessus (fichiers bien distincts).");
 
       // --- Reset : régénère la ligue, préserve les jetons par nom de club.
       const reset = await request(server, "POST", "/api/admin/reset-multi-league", { teamNames: ["Lyon M", "Marseille M"] }, { "X-Admin-Token": "secret-admin-1" });
@@ -665,7 +614,7 @@ async function main() {
     }
   }
 
-  console.log("\n✅ Serveur HTTP (server/index.js) vérifié de bout en bout : /api/health, /api/state (rattrapage automatique inclus), /api/simulate-tick, 404 propre, et le routage multi-manager par jeton (admin bootstrap/reset, isolation stricte entre managers et avec la carrière solo, droit d'administration Team.isAdmin + POST /api/reset-multi-league en un clic).");
+  console.log("\n✅ Serveur HTTP (server/index.js) vérifié de bout en bout : /api/health, /api/state (rattrapage automatique inclus), /api/simulate-tick, 404 propre, et le routage multi-manager par jeton (admin bootstrap/reset, isolation stricte entre managers, plus de carrière solo, droit d'administration Team.isAdmin + POST /api/reset-multi-league en un clic).");
 }
 
 main().catch((e) => {

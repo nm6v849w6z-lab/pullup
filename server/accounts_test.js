@@ -228,11 +228,12 @@ async function main() {
       const cfg = await request(server, "GET", "/api/account/config");
       assert.strictEqual(cfg.body.publicSite, true);
     } finally { server.close(); delete process.env.BASKET_PUBLIC_SITE; }
-    // Hors site public, "/" reste la page du jeu, sans redirection.
+    // Plus de carrière solo (2026-09-29) : même hors site public, un
+    // visiteur sans jeton est envoyé vers l'inscription.
     const server2 = await start(paths, nowFn);
     try {
       const home = await request(server2, "GET", "/");
-      assert.ok(!home.raw.includes("window.HM_PUBLIC_SITE=true"));
+      assert.ok(home.raw.includes("location.replace(\"/bienvenue\")"));
     } finally { server2.close(); }
   }
 

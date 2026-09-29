@@ -12,7 +12,7 @@
 //      quotidien, péremption ("l'adversaire a rejoué depuis"), idempotence
 //      de la complétion d'un ticket de pub, contenu du rapport vérifié par
 //      reconstruction indépendante depuis league.results/matchLog.
-//   B) SERVEUR (server/index.js, de vraies requêtes HTTP, mode solo) :
+//   B) SERVEUR (server/index.js, de vraies requêtes HTTP, ligue d'un seul manager) :
 //      verrouillé -> pub -> débloqué -> rapport accessible ; 403 si
 //      verrouillé ; Premium contourne tout ; quota quotidien réellement
 //      appliqué bout en bout.
@@ -272,7 +272,7 @@ function assertTrue(cond, label) {
 })();
 
 // =========================================================================
-// PARTIE B : SERVEUR (server/index.js), de vraies requêtes HTTP, mode SOLO.
+// PARTIE B : SERVEUR (server/index.js), de vraies requêtes HTTP, ligue d'un seul manager.
 // =========================================================================
 function request(server, method, urlPath, jsonBody) {
   const { port } = server.address();
@@ -303,9 +303,14 @@ function request(server, method, urlPath, jsonBody) {
 
   const os = require("os"), path = require("path");
   const solo = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "basket-scouting-test-")), "league.json");
-  await store.save(lg.teams[0], lg, solo);
-
-  const server = http.createServer(createHandler(solo, () => T0 + 30000));
+  // Ligue en ligne d'un seul manager (plus de carrière solo) : chaque
+  // requête porte son jeton.
+  const multi = solo.replace(/league\.json$/, "multi-league.json");
+  lg.teams[0].isHuman = true;
+  if (!lg.teams[0].managerLinkToken) lg.teams[0].managerLinkToken = "tok-scouting-b-0123456789abcdef";
+  await store.saveMultiLeague(lg, multi);
+  const handlerB = createHandler(solo, () => T0 + 30000, multi);
+  const server = http.createServer((req, res) => { req.headers["x-tipin-token"] = req.headers["x-tipin-token"] || lg.teams[0].managerLinkToken; handlerB(req, res); });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   try {
     // B1) Verrouillé au départ.
@@ -352,13 +357,13 @@ function request(server, method, urlPath, jsonBody) {
     const reportPremium = await request(server, "GET", "/api/scouting/report?opponent=6");
     assertEqual(reportPremium.statusCode, 200, "B5: rapport Premium accessible sans aucune pub");
 
-    console.log("✅ Partie B (serveur, mode solo) : accès verrouillé/débloqué/gaté correctement, quota mensuel respecté, Premium contourne tout.");
+    console.log("✅ Partie B (serveur, ligue d'un seul manager) : accès verrouillé/débloqué/gaté correctement, quota mensuel respecté, Premium contourne tout.");
   } finally {
     server.close();
   }
 
   // =======================================================================
-  // PARTIE C : NAVIGATEUR (moteurbasket3.html, jsdom), mode SOLO.
+  // PARTIE C : NAVIGATEUR (moteurbasket3.html, jsdom), ligue d'un seul manager.
   // =======================================================================
   {
     const lg2 = freshLeague();
@@ -367,14 +372,17 @@ function request(server, method, urlPath, jsonBody) {
     const oppIdx2 = m2.home === 0 ? m2.away : m2.home;
     const clock = { now: T0 + 60000 };
     const solo2 = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "basket-scouting-test-c-")), "league.json");
-    await store.save(lg2.teams[0], lg2, solo2);
+    const multi2 = solo2.replace(/league\.json$/, "multi-league.json");
+    lg2.teams[0].isHuman = true;
+    if (!lg2.teams[0].managerLinkToken) lg2.teams[0].managerLinkToken = "tok-scouting-c-0123456789abcdef";
+    await store.saveMultiLeague(lg2, multi2);
 
-    const server2 = http.createServer(createHandler(solo2, () => clock.now));
+    const server2 = http.createServer(createHandler(solo2, () => clock.now, multi2));
     await new Promise((resolve) => server2.listen(0, "127.0.0.1", resolve));
     const { port } = server2.address();
     const baseUrl = `http://127.0.0.1:${port}/`;
     try {
-      const dom = await openGame(html, baseUrl, (window) => patchDateNow(window, () => clock.now));
+      const dom = await openGame(html, `${baseUrl}?m=${lg2.teams[0].managerLinkToken}`, (window) => patchDateNow(window, () => clock.now));
       const win = dom.window;
       const doc = win.document;
 
@@ -417,6 +425,7 @@ function request(server, method, urlPath, jsonBody) {
       clock.now += 16000; // au-delà de SCOUTING_AD_WATCH_MS (15s)
       win.__scoutingAdTickForTests();
       await win.__lastScoutingAdComplete;
+      await win.__lastScoutingProCheck; // rapport rechargé depuis le serveur
 
       assertTrue(!doc.getElementById("scoutingAdOverlay"), "C2: l'écran gris se referme après complétion");
       const panelAfter = doc.getElementById("scoutingProPanel");
@@ -492,7 +501,7 @@ function request(server, method, urlPath, jsonBody) {
       assertTrue(!doc.getElementById("scoutingProWatchAdBtn"), "C3: plus de teaser verrouillé, Premium actif");
       assertTrue(!doc.getElementById("scoutingProGoFreeBtn"), "C3: plus de bouton 'Repasser en gratuit' ici (onglet Premium)");
 
-      console.log("✅ Partie C (navigateur, mode solo) : teaser verrouillé, écran gris de pub factice, déblocage effectif, 'Passer Premium' via l'onglet Premium.");
+      console.log("✅ Partie C (navigateur, ligue d'un seul manager) : teaser verrouillé, écran gris de pub factice, déblocage effectif, 'Passer Premium' via l'onglet Premium.");
       // Ferme la fenêtre jsdom (arrête ses timers d'arrière-plan — horloge
       // live, sauvegarde différée...) AVANT de fermer le serveur, sinon le
       // process Node reste actif indéfiniment (voir spectate_live_match_test.js,
