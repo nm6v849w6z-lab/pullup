@@ -401,7 +401,7 @@ function leagueFingerprint(lg) {
 // comptes) : s'il revient et que le club est toujours à l'IA, il le
 // récupère (reclaimClub) ; sinon il reçoit un nouveau club.
 // =====================================================================
-const INACTIVE_RELEASE_DAYS = Number(process.env.BASKET_INACTIVE_RELEASE_DAYS) > 0 ? Number(process.env.BASKET_INACTIVE_RELEASE_DAYS) : 28;
+const INACTIVE_RELEASE_DAYS = Number(process.env.BASKET_INACTIVE_RELEASE_DAYS) > 0 ? Number(process.env.BASKET_INACTIVE_RELEASE_DAYS) : 45; // 45 jours validés par l'utilisateur (2026-09-29, au lieu de 28)
 
 function releaseClubToCpu(world, league, idx, now, reason) {
   const team = league.teams[idx];
