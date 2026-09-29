@@ -4842,7 +4842,7 @@ window.HM_I18N_EN = {
   "Atteindre 100 victoires de championnat avec son club.": "Reach 100 league wins with your club.",
   // Managers inactifs (2026-09-28).
   "Longue absence": "Long absence",
-  ": sans aucune visite pendant 28 jours, votre club est confié à l'IA (effectif, nom et palmarès conservés). Reconnectez-vous à votre compte pour le récupérer, s'il n'a pas été repris entre-temps par un autre manager ; sinon un nouveau club vous est attribué.": ": after 28 days without a single visit, your club is handed to the AI (roster, name and honours kept). Log back into your account to get it back, unless another manager has taken it over in the meantime; otherwise you're given a new club.",
+  ": sans aucune visite pendant 45 jours, votre club est confié à l'IA (effectif, nom et palmarès conservés). Reconnectez-vous à votre compte pour le récupérer, s'il n'a pas été repris entre-temps par un autre manager ; sinon un nouveau club vous est attribué.": ": after 45 days without a single visit, your club is handed to the AI (roster, name and honours kept). Log back into your account to get it back, unless another manager has taken it over in the meantime; otherwise you're given a new club.",
   "Bon retour à {0} !": "Welcome back to {0}!",
   "Pendant votre absence, le club a été géré par l'IA. Vérifiez votre effectif, vos ordres et votre budget.": "While you were away, the club was run by the AI. Check your roster, your orders and your budget.",
   // Amicaux entre championnats (2026-09-28).
