@@ -3370,12 +3370,12 @@ const YOUTH_HOME_NATIONALITY_SHARE = 0.85;
 const FRANCE_FOREIGN_WEIGHT = 12;
 function randomNationality(homeCountry = "fr") {
   if (!homeCountry || homeCountry === "fr" || !NATION_BY_CODE[homeCountry]) {
-    return pickWeightedNation(NATIONS, rand01()).code;
+    return pickWeightedNation(NATIONS, Math.random()).code;
   }
-  if (rand01() < HOME_NATIONALITY_SHARE) return homeCountry;
+  if (Math.random() < HOME_NATIONALITY_SHARE) return homeCountry;
   const others = NATIONS.filter(n => n.code !== homeCountry)
     .map(n => n.code === "fr" ? { ...n, weight: FRANCE_FOREIGN_WEIGHT } : n);
-  return pickWeightedNation(others, rand01()).code;
+  return pickWeightedNation(others, Math.random()).code;
 }
 
 // Nationalité d'un joueur qui n'en a pas encore (sauvegarde d'avant les
