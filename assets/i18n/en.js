@@ -18,6 +18,8 @@ window.HM_I18N_EN = {
   "Visage d'origine rétabli.": "Original face restored.",
   "Apparence enregistrée.": "Appearance saved.",
   "N° {0}": "No. {0}",
+  "Résultats de la journée {0}": "Matchday {0} results",
+  "Cliquez sur un match pour la feuille de match": "Click a game for its box score",
   "Parquet": "Court",
   "Votre terrain": "Your court",
   "Bois": "Wood",
