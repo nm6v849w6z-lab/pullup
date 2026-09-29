@@ -3290,6 +3290,70 @@
   @media (max-width: 860px){ h2.page-title{font-size:32px !important;} }
   .lg-top{display:grid; grid-template-columns:minmax(0,1.9fr) minmax(0,1fr); gap:20px; align-items:start;}
   .lg-panel{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 18px 14px; box-shadow:0 12px 30px -18px rgba(0,0,0,.6);}
+  /* Récompenses, All-Star Game, carrière, succès, profil du manager
+     (2026-09-28, voir renderLeagueHonorsPanel). Sans émoji. */
+  .hn-panel{margin-bottom:18px;}
+  .hn-eyebrow{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:4px 0 8px;}
+  .hn-note{font-size:12.5px; color:var(--ink-faint); margin:12px 0 0;}
+  .hn-sub{font-size:12px; color:var(--ink-faint);}
+  .hn-awards{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-bottom:14px;}
+  .hn-award--wait{border-style:dashed;}
+  .hn-award--wait b{color:var(--ink-dim);}
+  .hn-award{display:flex; gap:12px; align-items:center; padding:12px; border-radius:12px; background:var(--panel-2); border:1px solid var(--line); min-width:0;}
+  .hn-award > div{min-width:0;}
+  .hn-award small{display:block; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint);}
+  .hn-award b{display:block; color:var(--ink); font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .hn-award span{font-size:12.5px; color:var(--ink-dim);}
+  .hn-ic{width:42px; height:42px; border-radius:50%; display:grid; place-items:center; background:rgba(240,162,60,.15); color:var(--amber); flex:none;}
+  .hn-mine{outline:2px solid var(--amber); outline-offset:-1px;}
+  .hn-five{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px;}
+  .hn-five-p{display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 8px; border-radius:12px; background:var(--panel-2); border:1px solid var(--line); text-align:center; min-width:0;}
+  .hn-five-p em{font-style:normal; font-weight:800; font-size:12px; color:var(--amber-ink); background:var(--amber); border-radius:6px; padding:2px 7px;}
+  .hn-five-p b{color:var(--ink); font-size:14px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .hn-five-p span{font-size:12px; color:var(--ink-dim);}
+  .hn-asg{display:grid; grid-template-columns:1fr auto 1fr; gap:16px; align-items:start;}
+  .hn-asg-side > b{display:block; color:var(--ink); font-size:16px; text-align:center; margin-bottom:6px;}
+  .hn-asg-side ol{list-style:none; margin:0; padding:0;}
+  .hn-asg-side li{display:flex; align-items:center; gap:8px; padding:4px 0; font-size:13px; border-bottom:1px solid var(--line-soft);}
+  .hn-asg-side li.hn-mine-row .hn-asg-n{color:var(--amber);}
+  .hn-asg-n{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink);}
+  .hn-asg-n small{display:block; font-size:11px; color:var(--ink-faint);}
+  .hn-asg-pts{font-variant-numeric:tabular-nums; color:var(--ink-dim); font-size:12.5px; min-width:44px; text-align:right;}
+  .hn-asg-score{padding-top:48px; text-align:center;}
+  .hn-asg-score b{display:block; font-size:34px; color:var(--ink); font-family:var(--display); white-space:nowrap;}
+  .hn-asg-score span{font-size:12.5px; color:var(--ink-dim);}
+  .hn-table-wrap{overflow-x:auto;}
+  table.hn-t{width:100%; border-collapse:collapse; font-size:13.5px;}
+  table.hn-t th{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  table.hn-t td{padding:9px 6px; border-bottom:1px solid var(--line-soft); color:var(--ink); white-space:nowrap;}
+  table.hn-t .num{text-align:right; font-variant-numeric:tabular-nums;}
+  table.hn-t tr.tot td{font-weight:800; border-top:2px solid var(--line);}
+  table.hn-t tr.cur td{color:var(--ink-dim);}
+  .hn-badge{display:inline-block; font-size:11px; padding:2px 7px; border-radius:999px; background:rgba(240,162,60,.15); color:var(--amber); margin-left:4px;}
+  .hn-career{margin-top:16px;}
+  .hn-achs{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
+  .hn-ach{padding:14px; border-radius:12px; background:var(--panel-2); border:1px solid var(--line); min-width:0;}
+  .hn-ach-ic{width:40px; height:40px; border-radius:10px; display:grid; place-items:center; background:var(--line-soft); color:var(--ink-faint);}
+  .hn-ach.on .hn-ach-ic{background:rgba(240,162,60,.15); color:var(--amber);}
+  .hn-ach b{display:block; color:var(--ink-dim); margin-top:8px;}
+  .hn-ach.on b{color:var(--ink);}
+  .hn-ach > span{font-size:12px; color:var(--ink-dim);}
+  .hn-ach em{display:block; font-style:normal; font-size:11.5px; color:var(--ok); margin-top:6px;}
+  .hn-bar{height:6px; border-radius:3px; background:var(--line); margin-top:8px; overflow:hidden;}
+  .hn-bar i{display:block; height:100%; background:var(--amber);}
+  #hcAchievements{margin-top:18px;}
+  @media (max-width:900px){
+    .hn-achs{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .hn-five{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .hn-asg{grid-template-columns:1fr;}
+    .hn-asg-score{padding-top:0; order:-1;}
+  }
+  @media (max-width:520px){
+    .hn-awards{grid-template-columns:1fr;}
+    .hn-five{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  .ach-icon{display:grid; place-items:center; width:28px; height:28px; border-radius:8px; background:var(--line-soft); color:var(--ink-faint); flex:none;}
+  .ach.on .ach-icon{background:rgba(240,162,60,.15); color:var(--amber);}
   .lg-panel-title{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin:0 0 12px;}
   .lg-panel-title h2{font-family:var(--display); font-size:22px; font-weight:800; margin:0;}
   .lg-panel-title span{font-size:12px; color:var(--ink-faint);}
@@ -6198,6 +6262,7 @@
   .fr-lu-role{height:34px; min-width:0; width:100%;}
   .fr-lu-actions{margin-top:14px;}
   .cal-fr-badge{background:rgba(51,180,161,.14); color:var(--ok);}
+  .calendar-fr-progress{font-size:13px; color:var(--ink-faint);}
   @media (max-width: 640px){
     .fr-row{flex-wrap:wrap;}
     .fr-row-actions{width:100%; justify-content:flex-start;}
@@ -6510,6 +6575,8 @@
       <div id="standingsContent"></div>
       <!-- Leaders de la ligue (voir renderLeagueStatsPanel), alimentés par
            Player.matchLog (journal de matchs de la saison). -->
+      <!-- Récompenses de la saison + All-Star Game (renderLeagueHonorsPanel). -->
+      <div id="leagueHonorsPanel"></div>
       <div id="leagueStatsPanel"></div>
       <div class="actions">
         <button class="secondary" id="closeStandingsBtn">← Retour</button>
@@ -16927,6 +16994,8 @@ class League {
       champion: null,
       semiPlayerIds: {},
     };
+    // Récompenses de la saison régulière (voir awardRegularSeasonAwards).
+    if (typeof awardRegularSeasonAwards === "function") awardRegularSeasonAwards(this, now);
     return this.playoffs;
   }
 
@@ -19948,6 +20017,8 @@ function serializeLeague(lg) {
     playoffs: lg.playoffs,
     relegationBarrage: lg.relegationBarrage || null,
     seasonAwards: lg.seasonAwards || null,
+    seasonHonoursId: lg.seasonHonoursId || null,
+    allStarGame: lg.allStarGame || null,
     divisionLevel: lg.divisionLevel || 1,
     // Pays/divisions (2026-09-28, voir WORLD_COUNTRIES) : identité de CE
     // championnat dans le monde (pays, fuseau horaire, groupe de sa division).
@@ -20075,6 +20146,8 @@ function leagueFromSave(data, userTeam = null) {
   lg.playoffs = data.playoffs || null;
   lg.relegationBarrage = data.relegationBarrage || null;
   lg.seasonAwards = data.seasonAwards && Array.isArray(data.seasonAwards.awards) ? data.seasonAwards : null;
+  lg.seasonHonoursId = typeof data.seasonHonoursId === "string" ? data.seasonHonoursId : null;
+  lg.allStarGame = data.allStarGame && Array.isArray(data.allStarGame.teams) ? data.allStarGame : null;
   // Ancienne sauvegarde sans pyramide de divisions (avant l'ajout de la
   // montée/descente) : un club "pas encore attribué" prend la place la plus
   // haute disponible, donc Division I par défaut (voir generateLeague).
@@ -23441,6 +23514,19 @@ function showCatchupSummaryIfAny() {
         }
       }
       html += `</div>`;
+    } else if (ev.type === "all-star-game") {
+      // All-Star Game de mi-saison (voir server/autoSim.js, 2026-09-28).
+      const asg = league.allStarGame;
+      const score = Array.isArray(ev.score) ? ev.score : (asg ? asg.teams.map(t => t.score) : null);
+      const names = asg ? asg.teams.map(t => t.name) : ["Nationaux", "Monde"];
+      const mineAsg = asg ? asg.teams.flatMap(t => t.players).filter(p => p.teamIdx === myTeamIndex).map(p => p.name) : [];
+      html += `<div class="catchup-item">` + headHtml({
+        badge: honorIconHtml("star"), badgeClass: "info",
+        title: `All-Star Game · ${escapeHtml(names[0])} ${score ? score[0] : ""} – ${score ? score[1] : ""} ${escapeHtml(names[1])}`,
+        sub: (ev.mvp ? `MVP : ${escapeHtml(ev.mvp.name)} (${ev.mvp.pts} pts). ` : "") +
+          (mineAsg.length ? `Sélectionné${mineAsg.length > 1 ? "s" : ""} de votre club : ${mineAsg.map(escapeHtml).join(", ")}. ` : "") +
+          "Tous les détails dans l'onglet Ligue.",
+      }) + `</div>`;
     } else if (ev.type === "season-end") {
       html += `<div class="catchup-item">` + headHtml({
         badge: ICON_FLAG, badgeClass: "info", title: "Fin des play-offs",
@@ -25173,6 +25259,7 @@ function renderLeagueTop() {
 
 function showStandings() {
   renderLeagueTop();
+  renderLeagueHonorsPanel();
   renderLeagueStatsPanel();
   showPage("standingsSection");
   setActiveTab("ligue");
@@ -25288,6 +25375,145 @@ function computeLastMatchdayMvp() {
 // leagueStatsExpandedCats : survit aux re-rendus, repart en "avg" à chaque
 // rechargement) — le tri suit le mode affiché.
 let leagueStatsMode = "avg";
+
+
+// =====================================================================
+// AFFICHAGE : récompenses de fin de saison, All-Star Game, carrière des
+// joueurs, succès et profil du manager (retour utilisateur, 2026-09-28 :
+// maquettes validées « pas d'émoji et ajoute les avatars des joueurs »).
+// Données : League.seasonAwards / League.allStarGame, Player.careerHistory
+// (playerCareerTable), Team.achievements (MANAGER_ACHIEVEMENTS,
+// achievementProgress), managerProfileForTeam — voir le bloc moteur.
+// Icônes : SVG au trait (clé `icon` des succès), jamais d'émoji.
+// =====================================================================
+const HONOR_ICON_PATHS = {
+  ball: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6c3 3 3 9.8 0 12.8M18.4 5.6c-3 3-3 9.8 0 12.8"/>',
+  flame: '<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1 1 2 2 3-3z"/>',
+  bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+  medal: '<circle cx="12" cy="15" r="6"/><path d="M8.5 10 6 3h4l2 5 2-5h4l-2.5 7"/>',
+  "arrow-up": '<path d="M12 19V5M5 12l7-7 7 7"/>',
+  sprout: '<path d="M12 21v-9M12 12c0-4-3-6-7-6 0 4 3 6 7 6zM12 12c0-4 3-6 7-6 0 4-3 6-7 6z"/>',
+  arena: '<ellipse cx="12" cy="8" rx="9" ry="3"/><path d="M3 8v8c0 1.7 4 3 9 3s9-1.3 9-3V8"/>',
+  star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+  shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>',
+  coins: '<ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4c0 1.7 2.7 3 6 3s6-1.3 6-3V7M9 14v4c0 1.7 2.7 3 6 3s6-1.3 6-3v-4c0-1.7-2.7-3-6-3"/>',
+  cap: '<path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/>',
+  chart: '<path d="M4 19h16M6 15l4-4 3 3 5-6"/>',
+};
+function honorIconHtml(key, size = 20) {
+  const d = HONOR_ICON_PATHS[key] || HONOR_ICON_PATHS.star;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+}
+// Nationalité : drapeau (image, voir nationFlagHtml — jamais d'émoji).
+function natPillHtml(code) {
+  return code ? nationFlagHtml(code, "hn-flag") : "";
+}
+function hnNum(v) {
+  return (Math.round((v || 0) * 10) / 10).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+const HN_POS_SHORT = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ailier fort": "AF", "Pivot": "P" };
+
+// Joueur d'une récompense : le vrai joueur s'il est toujours dans ce club,
+// sinon un substitut (id + âge suffisent à l'avatar).
+function hnAwardPlayer(ref) {
+  const team = league.teams[ref.teamIdx];
+  const p = team && team.players.find(x => x.id === (ref.playerId != null ? ref.playerId : ref.id));
+  return { team, player: p || { id: ref.playerId != null ? ref.playerId : ref.id, age: ref.age, name: ref.name }, live: !!p };
+}
+function hnNameHtml(ref) {
+  const r = hnAwardPlayer(ref);
+  return r.live ? playerLinkHtml(ref.teamIdx, r.player.id, ref.name) : escapeHtml(ref.name);
+}
+function hnAvatarHtml(ref, size) {
+  const r = hnAwardPlayer(ref);
+  return playerAvatarHtml(r.player, r.team, size);
+}
+function hnParisDateLabel(ms) {
+  try {
+    const d = new Date(ms);
+    const day = d.toLocaleDateString("fr-FR", { timeZone: "Europe/Paris", weekday: "long", day: "numeric", month: "long" });
+    const time = d.toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
+    return `${day.charAt(0).toUpperCase()}${day.slice(1)} · ${time}`;
+  } catch (e) { return ""; }
+}
+
+// ---- Ligue : récompenses de la saison (saison en cours) + All-Star Game ----
+// Format de league.seasonAwards : voir awardSeasonHonours côté moteur.
+function hnAwardRef(a) { return { teamIdx: a.teamIdx, playerId: a.playerId, name: a.playerName, age: a.age }; }
+function seasonAwardsCardHtml(sa) {
+  const awards = (sa && sa.awards) || [];
+  if (!awards.length) return "";
+  const by = key => awards.find(a => a.key === key) || null;
+  const mine = a => (a && a.teamIdx === myTeamIndex ? " hn-mine" : "");
+  const card = (a, label) => a
+    ? `<div class="hn-award${mine(a)}">${hnAvatarHtml(hnAwardRef(a), 44)}<div><small>${escapeHtml(label)}</small><b>${hnNameHtml(hnAwardRef(a))}</b><span>${escapeHtml(a.teamName)} · ${escapeHtml(a.detail || "")}</span></div></div>`
+    : "";
+  const po = by("playoffsMvp");
+  const poCard = po ? card(po, "MVP des play-offs")
+    : `<div class="hn-award hn-award--wait"><span class="hn-ic">${honorIconHtml("trophy")}</span><div><small>MVP des play-offs</small><b>À désigner</b><span>Après la finale, dans l'équipe championne</span></div></div>`;
+  const cards = card(by("mvp"), "MVP") + poCard + card(by("youngPlayer"), "Meilleur jeune") + card(by("sixthMan"), "6e homme") +
+    card(by("bestDefender"), "Meilleur défenseur") + card(by("topScorer"), "Meilleur marqueur") + card(by("topRebounder"), "Meilleur rebondeur") + card(by("topPasser"), "Meilleur passeur");
+  const five = awards.filter(a => a.key === "allStar").map(a =>
+    `<div class="hn-five-p${mine(a)}">${hnAvatarHtml(hnAwardRef(a), 48)}<em>${HN_POS_SHORT[a.position] || ""}</em><b>${hnNameHtml(hnAwardRef(a))}</b><span>${escapeHtml(a.teamName)}</span></div>`).join("");
+  return `<section class="lg-panel hn-panel" id="seasonAwardsCard">` +
+    `<div class="lg-panel-title"><h2>Récompenses de la saison</h2><span>${escapeHtml(sa.divisionLabel || "")} · saison régulière</span></div>` +
+    `<div class="hn-awards">${cards}</div>` +
+    (five ? `<div class="hn-eyebrow">Cinq majeur de la saison</div><div class="hn-five">${five}</div>` : "") +
+    `</section>`;
+}
+
+function allStarCardHtml(asg) {
+  if (!asg || !Array.isArray(asg.teams) || asg.teams.length !== 2) return "";
+  const home = league.country || "fr";
+  const side = t => {
+    const rows = t.players.slice().sort((a, b) => (b.pts - a.pts) || (b.eval - a.eval)).map(p =>
+      `<li class="${p.teamIdx === myTeamIndex ? "hn-mine-row" : ""}">${hnAvatarHtml(p, 26)}<span class="hn-asg-n">${hnNameHtml(p)}<small>${escapeHtml(p.teamName)}</small></span>${natPillHtml(p.nationality)}<span class="hn-asg-pts">${p.pts} pts</span></li>`).join("");
+    return `<div class="hn-asg-side"><b>${escapeHtml(t.name)}</b><ol>${rows}</ol></div>`;
+  };
+  const [a, b] = asg.teams;
+  return `<section class="lg-panel hn-panel" id="allStarCard">` +
+    `<div class="lg-panel-title"><h2>All-Star Game · ${escapeHtml(a.name)} contre ${escapeHtml(b.name)}</h2><span>${escapeHtml(hnParisDateLabel(asg.playedAt))}</span></div>` +
+    `<div class="hn-asg">${side(a)}<div class="hn-asg-score"><b>${a.score} – ${b.score}</b>` +
+    (asg.mvp ? `<span>MVP : ${escapeHtml(asg.mvp.name)} (${asg.mvp.pts} pts)</span>` : "") + `</div>${side(b)}</div>` +
+    `<p class="hn-note">Les 10 meilleurs joueurs ${escapeHtml(nationName(home) ? `nationaux (${nationName(home)})` : "nationaux")} contre les 10 meilleurs étrangers de la première moitié de saison. Match d'exhibition : aucun effet sur le classement ni sur la forme des joueurs.</p>` +
+    `</section>`;
+}
+
+function renderLeagueHonorsPanel() {
+  const holder = document.getElementById("leagueHonorsPanel");
+  if (!holder) return;
+  const key = league.seasonId || `start:${league.calendarStartAt || 0}`;
+  const sa = league.seasonAwards && league.seasonAwards.seasonId === key ? league.seasonAwards : null;
+  const asg = league.allStarGame && league.allStarGame.seasonId === key ? league.allStarGame : null;
+  holder.innerHTML = seasonAwardsCardHtml(sa) + allStarCardHtml(asg);
+}
+
+// ---- Fiche d'un club humain : profil public du manager ----
+function managerProfileCardHtml(team) {
+  if (!team || !team.isHuman) return "";
+  const hist = team.seasonHistory || [];
+  const trophies = team.trophies || [];
+  const wins = hist.reduce((s, h) => s + (h.wins || 0), 0), losses = hist.reduce((s, h) => s + (h.losses || 0), 0);
+  const titles = trophies.filter(t => t.type === "championship");
+  const cups = trophies.filter(t => t.type === "cup" || t.type === "national-cup");
+  const ach = (team.achievements || []).slice().sort((x, y) => (y.at || 0) - (x.at || 0));
+  const total = typeof MANAGER_ACHIEVEMENTS_CLIENT !== "undefined" ? MANAGER_ACHIEVEMENTS_CLIENT.length : ach.length;
+  const stat = (icon, label, value, sub) => `<div class="hn-award"><span class="hn-ic">${honorIconHtml(icon)}</span><div><small>${label}</small><b>${value}</b><span>${sub}</span></div></div>`;
+  let html = `<section class="lg-panel hn-panel" id="managerProfileCard"><div class="lg-panel-title"><h2>Profil du manager</h2><span>${hist.length ? `${hist.length} saison${hist.length > 1 ? "s" : ""} terminée${hist.length > 1 ? "s" : ""}` : "Première saison en cours"}</span></div>`;
+  html += `<div class="hn-awards">` +
+    stat("trophy", "Titres", titles.length, titles.length ? escapeHtml(titles[0].label || "") : "Aucun pour l'instant") +
+    stat("medal", "Coupes", cups.length, cups.length ? escapeHtml(cups[0].label || "") : "Aucune pour l'instant") +
+    stat("chart", "Bilan en carrière", `${wins} V – ${losses} D`, wins + losses ? `${Math.round(wins / (wins + losses) * 100)} % de victoires` : "Saisons terminées uniquement") +
+    stat("star", "Succès", `${ach.length} / ${total}`, ach.length ? `dernier : ${escapeHtml(ach[0].label || "")}` : "Aucun pour l'instant") +
+    `</div>`;
+  if (hist.length) {
+    html += `<div class="hn-table-wrap"><table class="hn-t"><thead><tr><th>Saison</th><th>Division</th><th class="num">Classement</th><th class="num">Bilan</th><th>Play-offs</th><th>Coupe</th></tr></thead><tbody>` +
+      hist.slice().reverse().map(s => `<tr><td>Saison ${s.seasonNo || "?"}</td><td>${escapeHtml(s.divisionName || "")}</td><td class="num">${s.rank ? ordinalFr(s.rank) : "–"}</td><td class="num">${s.wins || 0}–${s.losses || 0}</td><td>${escapeHtml(s.playoffResult || "–")}</td><td>${escapeHtml(s.cupResult || "–")}</td></tr>`).join("") +
+      `</tbody></table></div>`;
+  }
+  return html + `</section>`;
+}
 
 function renderLeagueStatsPanel() {
   const holder = document.getElementById("leagueStatsPanel");
@@ -28165,6 +28391,8 @@ function teamDetailApercuHtml(teamIdx) {
     `<span class="apercu-foot-trophies"><span class="apercu-foot-label">Palmarès</span>${trophyText}</span>` +
     `<span><span class="apercu-foot-label">Interviews</span>${interviewText}</span>` +
     `</div>`;
+  // Profil public du manager (club humain, voir managerProfileCardHtml).
+  html += managerProfileCardHtml(team);
   return html;
 }
 
@@ -39366,7 +39594,12 @@ function renderCalendrierSection() {
   // privées ; le score ouvre la feuille de match de l'amical.
   (Array.isArray(league.friendlies) ? league.friendlies : []).forEach(f => {
     if (!(f.status === "accepted" || f.status === "pending" || f.status === "played")) return;
-    if (f.status !== "played" && f.at <= Date.now()) return;
+    // Invitation jamais acceptée dont l'heure est passée : elle a expiré.
+    // Un amical ACCEPTÉ reste affiché après le coup d'envoi (« Joué, résultat
+    // à venir ») jusqu'à ce que le serveur renvoie son résultat — il
+    // disparaissait du calendrier dans cet intervalle.
+    if (f.status === "pending" && f.at <= Date.now()) return;
+    const frInProgress = f.status === "accepted" && f.at <= Date.now();
     if (typeof league.calendarStartAt === "number" && f.status === "played" && f.at < league.calendarStartAt - 30 * 24 * 3600 * 1000) return;
     const isHomeFr = f.homeIdx === myTeamIndex;
     const oppIdxFr = isHomeFr ? f.awayIdx : f.homeIdx;
@@ -39384,7 +39617,7 @@ function renderCalendrierSection() {
       opponent: league.teams[oppIdxFr].name, opponentIdx: oppIdxFr,
       location: isHomeFr ? "Domicile" : "Extérieur",
       scoreText, boxscore: null, frBox: played && !f.result.forfeit ? f.id : null,
-      cls, actionCell: played ? "" : `<button type="button" class="calendar-order-btn calendar-fr-btn" data-tab="amicaux">${f.status === "pending" ? "En attente" : "Amical"}</button>`,
+      cls, actionCell: played ? "" : frInProgress ? `<span class="calendar-fr-progress">Résultat à venir</span>` : `<button type="button" class="calendar-order-btn calendar-fr-btn" data-tab="amicaux">${f.status === "pending" ? "En attente" : "Amical"}</button>`,
       scheduledAt: f.at, fallbackOrder: 200000,
       isHome: isHomeFr, played, won: cls === "result-win", lost: cls === "result-loss",
       isLive: false, alreadyOrdered: false, isPrivate: true, frPending: f.status === "pending",
@@ -43675,6 +43908,9 @@ async function frRefreshList() {
     const sec = document.getElementById("amicauxSection");
     const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#amicauxContent");
     if (before !== JSON.stringify(data.friendlies) && sec && !sec.classList.contains("hidden") && !typing) renderAmicauxSection();
+    // Calendrier ouvert : l'amical (nouveau, accepté, joué) y apparaît aussi.
+    const cal = document.getElementById("calendrierSection");
+    if (before !== JSON.stringify(data.friendlies) && cal && !cal.classList.contains("hidden")) renderCalendrierSection();
     return true;
   } catch (e) {
     return false;
@@ -43921,6 +44157,11 @@ function frPastRowHtml(f) {
       (r.forfeit ? score : `<button type="button" class="calendar-score-btn fr-score" data-fr-box="${f.id}">${score}</button>`) + `</span>`;
     const hurt = (r.injuries || []).filter(i => i.teamIdx === myTeamIndex).map(i => i.name);
     sub = r.forfeit ? "Forfait (cinq incomplet)" : hurt.length ? `Blessé${hurt.length > 1 ? "s" : ""} : ${hurt.join(", ")}` : "Aucun blessé";
+  } else if (f.status === "accepted") {
+    // Joué à huis clos, score dévoilé après la durée d'un match officiel
+    // (voir server/friendlies.js:revealAt).
+    mid = `<span class="lp-tag lp-tag-muted">Résultat à venir</span>`;
+    sub = `Score dévoilé à ${formatCalendarTimeFr(typeof f.revealAt === "number" ? f.revealAt : f.at + 90 * 60 * 1000)}`;
   } else {
     const label = { declined: "Refusé", cancelled: "Annulé", expired: "Sans réponse" }[f.status] || "–";
     mid = `<span class="lp-tag lp-tag-muted">${label}</span>`;
@@ -43952,7 +44193,8 @@ function showFriendlyBoxscore(id) {
     kicker: "Match amical",
     whenText: `${formatCalendarDayFr(f.at)} · ${formatCalendarTimeFr(f.at)}`,
     scoreHome: f.result.scoreHome, scoreAway: f.result.scoreAway,
-    noteHtml: `<div class="lp-mbx-note">Match amical : fatigue, blessures et progression comme un vrai match ; aucun effet sur le classement, les finances ni les stats de saison. (J) = jeune de l'académie.</div>`,
+    // Pas de note explicative sous la feuille de match (retour utilisateur
+    // 2026-09-29 : "enleve ça sur le boxscore des amicaux").
   });
 }
 
@@ -44184,7 +44426,7 @@ const MANAGER_ACHIEVEMENTS_CLIENT = [
 
 function seasonAwardsHtml() {
   const sa = league && league.seasonAwards;
-  if (!sa || !sa.awards || !sa.awards.length) return `<p class="training-empty">Les récompenses (MVP, cinq majeur, meilleur jeune…) sont décernées quand le champion est connu.</p>`;
+  if (!sa || !sa.awards || !sa.awards.length) return `<p class="training-empty">Les récompenses (MVP, cinq majeur, meilleur jeune…) sont décernées à la fin de la saison régulière, le MVP des play-offs après la finale.</p>`;
   const row = a => `<div class="aw-row${a.teamIdx === myTeamIndex ? " is-mine" : ""}"><span class="aw-label">${escapeHtml(a.label)}</span>` +
     `<span class="aw-who">${playerLinkHtml(a.teamIdx, a.playerId, a.playerName)} <span class="aw-team">${escapeHtml(a.teamName)}</span></span>` +
     `<span class="aw-detail">${escapeHtml(a.detail || "")}</span></div>`;
@@ -44195,7 +44437,7 @@ function managerAchievementsHtml(team) {
   const got = new Map((team.achievements || []).map(a => [a.key, a]));
   return `<div class="ach-grid">` + MANAGER_ACHIEVEMENTS_CLIENT.map(([key, label, desc]) => {
     const a = got.get(key);
-    return `<div class="ach${a ? " on" : ""}" title="${escapeHtml(desc)}"><span class="ach-icon">${a ? "🏅" : "🔒"}</span>` +
+    return `<div class="ach${a ? " on" : ""}" title="${escapeHtml(desc)}"><span class="ach-icon">${honorIconHtml(a ? "medal" : "shield", 16)}</span>` +
       `<span class="ach-txt"><b>${escapeHtml(label)}</b><small>${escapeHtml(desc)}${a ? ` · saison ${a.seasonNumber}` : ""}</small></span></div>`;
   }).join("") + `</div><p class="sub" style="margin:8px 0 0">${got.size} / ${MANAGER_ACHIEVEMENTS_CLIENT.length} succès débloqués.</p>`;
 }
@@ -44239,7 +44481,7 @@ function playerCareerHtml(player) {
   }
   if (awards.length) {
     html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Distinctions</h3></div><div class="aw-list">` +
-      awards.map(a => `<div class="aw-row"><span class="aw-label">🏆 ${escapeHtml(a.label)}</span><span class="aw-team">Saison ${a.seasonNumber} · ${escapeHtml(a.teamName)} · ${escapeHtml(a.divisionLabel || "")}</span></div>`).join("") +
+      awards.map(a => `<div class="aw-row"><span class="aw-label">${escapeHtml(a.label)}</span><span class="aw-team">Saison ${a.seasonNumber} · ${escapeHtml(a.teamName)} · ${escapeHtml(a.divisionLabel || "")}</span></div>`).join("") +
       `</div></section>`;
   }
   return html + `</div>`;

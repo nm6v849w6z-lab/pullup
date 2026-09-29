@@ -106,7 +106,16 @@ const starterPro = teamA.players.find(p => p.id === starters[1]);
 check(starterPro.condition < 100, `fatigue appliquée à un titulaire pro (forme ${starterPro.condition})`);
 check(teamA.players.every((p, i) => (p.matchLog || []).length === matchLogLen[i]), "rien dans le journal de saison (matchLog)");
 check(league.results.length === resultsBefore, "rien dans le classement");
-check(teamA.feed.entries.some(e => /^Amical : (victoire|défaite)/.test(e.title)), "résultat dans le fil d'actualité");
+// Huis clos : score caché jusqu'à la fin de la durée d'un match officiel.
+check(!teamA.feed.entries.some(e => /^Amical : (victoire|défaite)/.test(e.title)), "résultat pas encore dans le fil juste après le coup d'envoi");
+const hidden = F.sanitizeFriendliesForViewer(league.friendlies, A, fCpu.at + 1000).find(f => f.id === fCpu.id);
+check(hidden.status === "accepted" && hidden.result === null && hidden.revealAt === fCpu.at + 90 * 60 * 1000, "vu par le manager : score caché jusqu'à la fin (1h30)");
+F.catchUpFriendlies(Engine, league, fCpu.at + 90 * 60 * 1000 + 1000);
+check(teamA.feed.entries.some(e => /^Amical : (victoire|défaite)/.test(e.title)), "résultat dans le fil d'actualité après 1h30");
+check(F.sanitizeFriendliesForViewer(league.friendlies, A, fCpu.at + 90 * 60 * 1000 + 1000).find(f => f.id === fCpu.id).status === "played", "score dévoilé après 1h30");
+const feedCount = teamA.feed.entries.filter(e => /^Amical : /.test(e.title)).length;
+F.catchUpFriendlies(Engine, league, fCpu.at + 100 * 60 * 1000);
+check(teamA.feed.entries.filter(e => /^Amical : /.test(e.title)).length === feedCount, "résultat annoncé une seule fois");
 
 // 8. Invitation restée sans réponse → périmée.
 const d3 = F.availableDays(Engine, league, A, B, T0).find(d => d.times.includes("12:00"));

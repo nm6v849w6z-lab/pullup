@@ -8556,7 +8556,13 @@ const SEASON_AWARD_LABELS = {
   topPasser: "Meilleur passeur",
   bestDefender: "Meilleur défenseur",
   allStar: "Cinq majeur de la saison",
+  // Retour utilisateur 2026-09-28 : "il faut aussi un MVP des PO", 6e homme,
+  // All-Star Game de mi-saison.
+  sixthMan: "6e homme",
+  playoffsMvp: "MVP des play-offs",
+  allStarMvp: "MVP du All-Star Game",
 };
+const SIXTH_MAN_MAX_STARTER_SHARE = 0.3;
 const SEASON_AWARD_YOUNG_MAX_AGE = 21;
 const PLAYER_AWARDS_MAX = 20;
 const PLAYER_CAREER_MAX = 20;
@@ -8578,8 +8584,9 @@ function regularSeasonLines(league) {
       if (!log.length || log.length < Math.ceil(teamGames / 2)) return;
       const sum = k => log.reduce((a, m) => a + (m[k] || 0), 0);
       const g = log.length;
+      const starts = log.filter(m => (typeof m.starter === "boolean" ? m.starter : (m.min || 0) >= 24)).length;
       lines.push({
-        teamIdx, teamName: team.name, player: p, games: g,
+        teamIdx, teamName: team.name, player: p, games: g, starterShare: starts / g,
         pts: sum("pts") / g, reb: sum("reb") / g, ast: sum("ast") / g, stl: sum("stl") / g, blk: sum("blk") / g,
         eval: log.reduce((a, m) => a + matchLogEval(m), 0) / g,
       });
@@ -8604,6 +8611,10 @@ function computeSeasonAwards(league) {
   const f1 = x => (Math.round(x * 10) / 10).toLocaleString("fr-FR");
   const mvp = best(lines, "eval");
   if (mvp) out.push(awardOf("mvp", mvp, mvp.eval, `${f1(mvp.eval)} d'évaluation, ${f1(mvp.pts)} pts par match`));
+  // 6e homme : surtout remplaçant (titulaire dans 30 % de ses matchs au
+  // plus), jamais le MVP lui-même.
+  const sixth = best(lines.filter(l => l !== mvp && l.starterShare <= SIXTH_MAN_MAX_STARTER_SHARE), "eval");
+  if (sixth) out.push(awardOf("sixthMan", sixth, sixth.eval, `${f1(sixth.pts)} pts par match en sortie de banc`));
   const young = best(lines.filter(l => l.player.age <= SEASON_AWARD_YOUNG_MAX_AGE), "eval");
   if (young) out.push(awardOf("youngPlayer", young, young.eval, `${young.player.age} ans · ${f1(young.eval)} d'évaluation`));
   const sc = best(lines, "pts"); if (sc) out.push(awardOf("topScorer", sc, sc.pts, `${f1(sc.pts)} pts par match`));
@@ -8685,22 +8696,96 @@ function evaluateManagerAchievements(league, teamIdx, awards, now) {
   return unlocked;
 }
 
-function awardSeasonHonours(league, now = Date.now()) {
-  const seasonId = league.seasonId || `start:${league.calendarStartAt || 0}`;
-  if (league.seasonAwards && league.seasonAwards.seasonId === seasonId) return league.seasonAwards;
-  const seasonNumber = league.seasonNumber || 1;
+function seasonDivisionLabel(league) {
   const info = divisionInfo(league.divisionLevel || 1);
   const level = league.divisionLevel || 1;
-  const divLabel = level > 1 && league.leagueId ? `${info.name}.${(league.divisionGroup || 0) + 1}` : info.name;
+  return level > 1 && league.leagueId ? `${info.name}.${(league.divisionGroup || 0) + 1}` : info.name;
+}
+function giveAwardToPlayer(league, a, seasonNumber, divLabel) {
+  const team = league.teams[a.teamIdx];
+  const p = team && team.players.find(x => x.id === a.playerId);
+  if (!p) return;
+  if ((p.awards || []).some(x => x.seasonNumber === seasonNumber && x.key === a.key && x.label === a.label)) return;
+  p.awards = [{ seasonNumber, key: a.key, label: a.label, teamName: a.teamName, divisionLabel: divLabel, detail: a.detail }, ...(p.awards || [])].slice(0, PLAYER_AWARDS_MAX);
+}
+
+// Récompenses de la SAISON RÉGULIÈRE (retour utilisateur 2026-09-28 : "c'est
+// à mettre à la fin de la saison régulière") : décernées dès la dernière
+// journée (appelée par League.startPlayoffsIfNeeded), idempotente. Le MVP
+// des play-offs s'y ajoute quand le champion est connu (awardSeasonHonours).
+function awardRegularSeasonAwards(league, now = Date.now()) {
+  const seasonId = league.seasonId || `start:${league.calendarStartAt || 0}`;
+  if (league.seasonAwards && league.seasonAwards.seasonId === seasonId) return league.seasonAwards;
+  if (typeof league.isRegularSeasonDone === "function" && !league.isRegularSeasonDone()) return null;
+  const seasonNumber = league.seasonNumber || 1;
+  const divLabel = seasonDivisionLabel(league);
   const awards = computeSeasonAwards(league);
-  league.seasonAwards = { seasonId, seasonNumber, divisionLabel: divLabel, awards };
-  // Distinctions sur les joueurs.
-  awards.forEach(a => {
-    const team = league.teams[a.teamIdx];
-    const p = team && team.players.find(x => x.id === a.playerId);
-    if (!p) return;
-    p.awards = [{ seasonNumber, key: a.key, label: a.label, teamName: a.teamName, divisionLabel: divLabel, detail: a.detail }, ...(p.awards || [])].slice(0, PLAYER_AWARDS_MAX);
+  league.seasonAwards = { seasonId, seasonNumber, divisionLabel: divLabel, awards, awardedAt: now };
+  awards.forEach(a => giveAwardToPlayer(league, a, seasonNumber, divLabel));
+  league.teams.forEach((team, teamIdx) => {
+    if (!team.isHuman || !team.feed) return;
+    const mine = awards.filter(a => a.teamIdx === teamIdx);
+    if (!mine.length) return;
+    try {
+      pushEntry(team.feed, {
+        key: `season_awards_${seasonId}`, category: "ligue", week: team.week, createdAt: now,
+        title: "Récompenses de la saison",
+        text: mine.map(a => `${a.playerName} : ${a.label}`).join(" · "),
+        action: { label: "Voir les récompenses", href: "/ligue" },
+      });
+    } catch (e) { /* confort */ }
   });
+  return league.seasonAwards;
+}
+
+// MVP des play-offs (retour utilisateur 2026-09-28 : "il faut aussi un MVP
+// des PO") : comme un MVP des finales, le joueur de l'équipe CHAMPIONNE au
+// meilleur total d'évaluation sur ses matchs de play-offs.
+function computePlayoffsMvp(league) {
+  const champIdx = league.playoffs && league.playoffs.champion;
+  if (champIdx == null) return null;
+  const team = league.teams[champIdx];
+  if (!team) return null;
+  const f1 = x => (Math.round(x * 10) / 10).toLocaleString("fr-FR");
+  let bestLine = null;
+  (team.players || []).forEach(p => {
+    const log = (p.matchLog || []).filter(m => m.competition === "championship" && typeof m.round === "number" && m.round >= (league.totalRounds || Infinity));
+    if (!log.length) return;
+    const g = log.length;
+    const evalTot = log.reduce((a, m) => a + matchLogEval(m), 0);
+    const pts = log.reduce((a, m) => a + (m.pts || 0), 0);
+    const line = { teamIdx: champIdx, teamName: team.name, player: p, games: g, evalTot, pts: pts / g, eval: evalTot / g };
+    if (!bestLine || evalTot > bestLine.evalTot || (evalTot === bestLine.evalTot && line.pts > bestLine.pts)) bestLine = line;
+  });
+  return bestLine ? awardOf("playoffsMvp", bestLine, bestLine.eval, `${f1(bestLine.pts)} pts et ${f1(bestLine.eval)} d'évaluation par match en play-offs`) : null;
+}
+
+function awardSeasonHonours(league, now = Date.now()) {
+  const seasonId = league.seasonId || `start:${league.calendarStartAt || 0}`;
+  if (league.seasonHonoursId === seasonId) return league.seasonAwards;
+  const seasonNumber = league.seasonNumber || 1;
+  const divLabel = seasonDivisionLabel(league);
+  awardRegularSeasonAwards(league, now);
+  if (!league.seasonAwards || league.seasonAwards.seasonId !== seasonId) {
+    league.seasonAwards = { seasonId, seasonNumber, divisionLabel: divLabel, awards: [], awardedAt: now };
+  }
+  const awards = league.seasonAwards.awards;
+  const poMvp = awards.some(a => a.key === "playoffsMvp") ? null : computePlayoffsMvp(league);
+  if (poMvp) {
+    awards.push(poMvp);
+    giveAwardToPlayer(league, poMvp, seasonNumber, divLabel);
+    const t = league.teams[poMvp.teamIdx];
+    if (t && t.isHuman && t.feed) {
+      try {
+        pushEntry(t.feed, {
+          key: `playoffs_mvp_${seasonId}`, category: "ligue", week: t.week, createdAt: now,
+          title: "MVP des play-offs", text: `${poMvp.playerName} est élu MVP des play-offs.`,
+          action: { label: "Voir les récompenses", href: "/ligue" },
+        });
+      } catch (e) { /* confort */ }
+    }
+  }
+  league.seasonHonoursId = seasonId;
   // Carrière saison par saison (tous les joueurs ayant joué).
   const table = league.standings();
   league.teams.forEach((team, teamIdx) => {
@@ -8719,23 +8804,107 @@ function awardSeasonHonours(league, now = Date.now()) {
       }, ...(p.careerSeasons || [])].slice(0, PLAYER_CAREER_MAX);
     });
   });
-  // Succès des managers, et fil d'actualité des récompenses de leurs joueurs.
+  // Succès des managers (le fil des récompenses est parti à la fin de la
+  // saison régulière, voir awardRegularSeasonAwards).
   league.teams.forEach((team, teamIdx) => {
     if (!team.isHuman) return;
     evaluateManagerAchievements(league, teamIdx, awards, now);
-    const mine = awards.filter(a => a.teamIdx === teamIdx);
-    if (mine.length && team.feed) {
-      try {
-        pushEntry(team.feed, {
-          key: `season_awards_${seasonId}`, category: "ligue", week: team.week, createdAt: now,
-          title: "Récompenses de fin de saison",
-          text: mine.map(a => `${a.playerName} : ${a.label}`).join(" · "),
-          action: { label: "Classement", href: "/ligue" },
-        });
-      } catch (e) { /* confort */ }
-    }
   });
   return league.seasonAwards;
+}
+
+// ---------------------------------------------------------------------
+// ALL-STAR GAME de mi-saison (retour utilisateur 2026-09-28 : "prendre les
+// 20 meilleurs joueurs (10 dans chaque équipe) [...] match nationaux contre
+// monde") : joueurs du pays du championnat (League.country) contre tous les
+// autres, 10 chacun (2 par poste si possible, puis les meilleurs restants),
+// choisis sur l'évaluation moyenne en saison régulière. Joué sur des COPIES
+// (aucun effet sur la forme, les blessures, les stats ni le classement), le
+// dimanche 20h qui suit la journée de mi-saison (server/autoSim.js).
+// League.allStarGame = { seasonId, playedAt, teams: [{ name, score,
+// players: [{ id, teamIdx, teamName, name, position, nationality, min, pts,
+// reb, ast, eval }] }], mvp: { id, teamIdx, name, teamName, pts } }.
+// ---------------------------------------------------------------------
+const ALL_STAR_TEAM_NAMES = ["Nationaux", "Monde"];
+const ALL_STAR_SQUAD_SIZE = 10;
+
+function selectAllStars(league) {
+  const home = league.country || "fr";
+  const regular = m => m.competition === "championship" && typeof m.round === "number" && m.round < (league.totalRounds || Infinity);
+  const cands = [];
+  league.teams.forEach((team, teamIdx) => {
+    (team.players || []).forEach(p => {
+      const log = (p.matchLog || []).filter(regular);
+      if (!log.length) return;
+      const g = log.length;
+      cands.push({ teamIdx, team, player: p, eval: log.reduce((a, m) => a + matchLogEval(m), 0) / g, pts: log.reduce((a, m) => a + (m.pts || 0), 0) / g });
+    });
+  });
+  cands.sort((a, b) => (b.eval - a.eval) || (b.pts - a.pts));
+  const squadFor = pool => {
+    const picked = [];
+    (typeof POSITIONS !== "undefined" ? POSITIONS : []).forEach(pos => pool.filter(c => c.player.position === pos).slice(0, 2).forEach(c => picked.push(c)));
+    pool.forEach(c => { if (picked.length < ALL_STAR_SQUAD_SIZE && !picked.includes(c)) picked.push(c); });
+    return picked.slice(0, ALL_STAR_SQUAD_SIZE);
+  };
+  return [squadFor(cands.filter(c => c.player.nationality === home)), squadFor(cands.filter(c => c.player.nationality !== home))];
+}
+
+function simulateAllStarGame(league, now = Date.now()) {
+  const key = league.seasonId || `start:${league.calendarStartAt || 0}`;
+  if (league.allStarGame && league.allStarGame.seasonId === key) return league.allStarGame;
+  const squads = selectAllStars(league);
+  if (squads.some(s => s.length < 5)) return null;
+  const clone = c => {
+    const copy = playerFromSave(JSON.parse(JSON.stringify(serializePlayerRecord(c.player))));
+    copy.matchLog = []; copy.condition = 100; copy.conditionUpdatedAt = now;
+    copy.injuryUntil = null; copy.injuryType = null; copy.pendingMatchBoost = 0;
+    return copy;
+  };
+  const teams = squads.map((s, i) => {
+    const t = new Team({ name: ALL_STAR_TEAM_NAMES[i], players: s.map(clone) });
+    t.autoAssignLineup();
+    // Exhibition : tout le monde joue, temps partagé à parts égales par poste.
+    t.lineup.minutes = {};
+    (typeof POSITIONS !== "undefined" ? POSITIONS : []).forEach(pos => {
+      const ids = t.slotPlayerIds(pos);
+      if (!ids.length) return;
+      const m = {};
+      ids.forEach((id, k) => { m[id] = Math.floor(40 / ids.length) + (k < 40 % ids.length ? 1 : 0); });
+      t.lineup.minutes[pos] = m;
+    });
+    return t;
+  });
+  const result = new MatchEngine(teams[0], teams[1]).simulate(now);
+  const side = (t, s, score) => ({
+    name: t.name, score,
+    players: t.players.map((p, i) => ({
+      id: s[i].player.id, teamIdx: s[i].teamIdx, teamName: s[i].team.name, name: p.name, position: p.position, nationality: p.nationality,
+      min: Math.round((p.secondsPlayed || 0) / 60), pts: (p.stats && p.stats.pts) || 0, reb: (p.stats && p.stats.reb) || 0, ast: (p.stats && p.stats.ast) || 0,
+      eval: statEvaluation(p.stats || {}),
+    })),
+  });
+  const sides = [side(teams[0], squads[0], result.finalScore.A), side(teams[1], squads[1], result.finalScore.B)];
+  const mvp = sides.flatMap(s => s.players).sort((a, b) => (b.eval - a.eval) || (b.pts - a.pts))[0];
+  league.allStarGame = { seasonId: key, playedAt: now, teams: sides, mvp: { id: mvp.id, teamIdx: mvp.teamIdx, name: mvp.name, teamName: mvp.teamName, pts: mvp.pts } };
+  giveAwardToPlayer(league, { key: "allStarMvp", label: SEASON_AWARD_LABELS.allStarMvp, teamIdx: mvp.teamIdx, teamName: mvp.teamName, playerId: mvp.id, detail: `${mvp.pts} pts` }, league.seasonNumber || 1, seasonDivisionLabel(league));
+  return league.allStarGame;
+}
+
+// Instant du All-Star Game : le dimanche 20h qui suit la journée de
+// mi-saison (rythme hebdomadaire), dans le fuseau de la ligue (`zone` :
+// { parts(ms), epoch(y, m, d, h) }, Paris à défaut) ; sinon 12 h après.
+function allStarGameDueAt(league, scheduledTimeForRound, zone = null) {
+  if (typeof league.totalRounds !== "number" || typeof scheduledTimeForRound !== "function") return null;
+  const midAt = scheduledTimeForRound(league, midSeasonRound(league.totalRounds));
+  if (typeof midAt !== "number") return null;
+  if (league.calendarWeeklyRhythm) {
+    const p = zone ? zone.parts(midAt) : parisLocalDateParts(midAt);
+    const weekday = new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay();
+    const d = addParisCalendarDays(p, (7 - weekday) % 7 || 7);
+    return zone ? zone.epoch(d.year, d.month, d.day, 20) : parisEpochForLocalTime(d.year, d.month, d.day, 20);
+  }
+  return midAt + 12 * 3600 * 1000;
 }
 
 // Classement "mondial" des joueurs = tous les joueurs de la ligue partagée
@@ -9251,6 +9420,8 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
         // été réellement mise en œuvre) ou pour tout matchLog déjà persisté
         // avant cette fonctionnalité.
         tacticsUsed: tacticsUsed || null,
+        // Titulaire sur ce match (6e homme, voir computeSeasonAwards).
+        starter: !!p.isStarterThisMatch,
       });
     }
   });
@@ -9999,6 +10170,8 @@ class League {
       // termine, jamais en bloc à la fin comme l'ancienne v1 synchrone.
       semiPlayerIds: {},
     };
+    // Récompenses de la saison régulière (voir awardRegularSeasonAwards).
+    if (typeof awardRegularSeasonAwards === "function") awardRegularSeasonAwards(this, now);
     return this.playoffs;
   }
 
@@ -13536,6 +13709,8 @@ function serializeLeague(lg) {
     playoffs: lg.playoffs,
     relegationBarrage: lg.relegationBarrage || null,
     seasonAwards: lg.seasonAwards || null,
+    seasonHonoursId: lg.seasonHonoursId || null,
+    allStarGame: lg.allStarGame || null,
     humanTransferLog: Array.isArray(lg.humanTransferLog) ? lg.humanTransferLog : [],
     // Coupe nationale (server/nationalCup.js) : clubs de CETTE ligue encore
     // en course et tours restants, pour les amicaux (jeudis réservés).
@@ -13645,6 +13820,8 @@ function leagueFromSave(data, userTeam = null) {
   lg.playoffs = data.playoffs || null;
   lg.relegationBarrage = data.relegationBarrage || null;
   lg.seasonAwards = data.seasonAwards && Array.isArray(data.seasonAwards.awards) ? data.seasonAwards : null;
+  lg.seasonHonoursId = typeof data.seasonHonoursId === "string" ? data.seasonHonoursId : null;
+  lg.allStarGame = data.allStarGame && Array.isArray(data.allStarGame.teams) ? data.allStarGame : null;
   lg.humanTransferLog = Array.isArray(data.humanTransferLog) ? data.humanTransferLog : [];
   lg.nationalCupAlive = data.nationalCupAlive && Array.isArray(data.nationalCupAlive.teams) ? data.nationalCupAlive : null;
   // Ancienne sauvegarde sans pyramide de divisions (avant l'ajout de la
@@ -15258,6 +15435,7 @@ return {
   planKey,
   serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave,
   SEASON_AWARD_LABELS, MANAGER_ACHIEVEMENTS, unlockAchievement, computeSeasonAwards, awardSeasonHonours, evaluateManagerAchievements, matchLogEval,
+  awardRegularSeasonAwards, computePlayoffsMvp, selectAllStars, simulateAllStarGame, allStarGameDueAt, ALL_STAR_TEAM_NAMES,
   // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
   // de FEED_CATEGORIES) : exportées pour server/actions.js, server/liveMatch.js
   // et les tests.

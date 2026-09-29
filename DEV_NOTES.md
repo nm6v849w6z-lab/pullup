@@ -26,6 +26,32 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   traductions FR/EN et renderSlots supprimés ; openSlots reste renvoyé par
   /api/account/config (non utilisé par le site). RESTE : pousser.
 
+- **🟡 CODÉ, À POUSSER (2026-09-29) — Ajouts aux récompenses + amicaux à huis
+  clos** — par-dessus awardSeasonHonours (autre session) : récompenses
+  décernées dès la fin de la saison régulière (awardRegularSeasonAwards,
+  appelée par League.startPlayoffsIfNeeded ; carrière et succès toujours à
+  la clôture, league.seasonHonoursId), 6e homme (matchLog.starter), MVP des
+  play-offs (équipe championne), All-Star Game de mi-saison (nationaux du
+  pays de la ligue contre étrangers, 10 contre 10, dimanche 20h heure de la
+  ligue, sur des copies : League.allStarGame, server/autoSim.js), cartes
+  « Récompenses de la saison » et « All-Star Game » sur la page Ligue,
+  profil du manager sur la fiche d'un club humain, succès sans émoji.
+  Amicaux (ligue et monde) : score caché jusqu'à coup d'envoi + 1h30
+  (revealAt), résultat annoncé à ce moment-là, « Résultat à venir » ;
+  calendrier ; plus de note sous la feuille de match. Tests :
+  season_honors_extra_test.js, season_honors_extra_ui_test.js, tests amicaux.
+
+- **✅ COMMITTÉ, À POUSSER (2026-09-28) — Ordres (iPhone) : onglets sous
+  l'heure/la batterie** — retour « Tjrs ce bug » (capture). Le commit
+  6791d2d portait le bon titre mais ne contenait QUE les largeurs de
+  colonnes d'Effectif : le correctif n'avait jamais été committé. Cause :
+  topbar masqué sur Ordres → --topbar-h = 0 → barre d'action collée à top:0
+  sous la barre d'état ; seul le topbar réservait env(safe-area-inset-top).
+  moteurbasket3.html (bloc ≤768px des Ordres) : padding-top +
+  safe-area quand .topbar-hidden-on-page ; ordres_notch_test.js.
+  RESTE : pousser, vérifier sur l'iPhone. Test flaky connu :
+  mobile_viewport_meta_test.js échoue en sandbox (fetch failed) avec ou
+  sans ce changement.
 - **✅ COMMITTÉ, À POUSSER (nuit du 2026-09-28) — Premium : les 4 « Bientôt »
   livrés** (reste en « Bientôt » : salle personnalisée / avatars des jeunes)
   - Notifications : server/webpush.js (Web Push sans dépendance : RFC 8291

@@ -84,9 +84,20 @@ async function openGame(html, baseUrl, extraBeforeParse) {
       // courant — il lui faut une URL absolue. On la résout nous-mêmes via
       // `window.location.href` (celle passée à `url:` ci-dessus) avant de
       // déléguer au vrai fetch de Node.
-      window.fetch = (input, init) => {
+      window.fetch = async (input, init) => {
         const url = typeof input === "string" ? new URL(input, window.location.href).href : input;
-        return fetch(url, init);
+        // Sous charge (tests en parallèle), une connexion réutilisée peut
+        // être coupée (ECONNRESET / "other side closed") avant que la
+        // requête ne soit traitée : une seule nouvelle tentative, sur ces
+        // erreurs de connexion uniquement.
+        try {
+          return await fetch(url, init);
+        } catch (e) {
+          const code = e && e.cause && (e.cause.code || e.cause.name);
+          if (!/ECONNRESET|UND_ERR_SOCKET|SocketError|EPIPE/.test(String(code))) throw e;
+          await new Promise(r => setTimeout(r, 50));
+          return fetch(url, init);
+        }
       };
       if (extraBeforeParse) extraBeforeParse(window);
     },

@@ -116,6 +116,16 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   // --- Le match contre le CPU se joue à l'heure dite.
   const fAt = winA.eval("league.friendlies.find(f => f.id === '" + fId + "').at");
   now = fAt + 60 * 1000;
+  const domA2b = await openGame(html, `${baseUrl}?m=${tokens[0]}`);
+  const during = domA2b.window.eval(`league.friendlies.find(f => f.id === '${fId}')`);
+  check(during.status === "accepted" && during.result === null, "huis clos : score caché côté navigateur pendant la durée d'un match");
+  // Page Matchs amicaux à l'heure du match (horloge du navigateur calée
+  // sur celle du serveur de test) : « Résultat à venir ».
+  domA2b.window.Date.now = () => now;
+  [...domA2b.window.document.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "amicaux").click();
+  check(/Résultat à venir/.test(domA2b.window.document.getElementById("amicauxContent").textContent), "« Résultat à venir » dans Derniers amicaux");
+  domA2b.window.close();
+  now = fAt + 91 * 60 * 1000;
   const domA3 = await openGame(html, `${baseUrl}?m=${tokens[0]}`);
   const docA3 = domA3.window.document, winA3 = domA3.window;
   [...docA3.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "amicaux").click();
