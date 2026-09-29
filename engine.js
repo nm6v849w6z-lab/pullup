@@ -12839,6 +12839,8 @@ function serializeTeam(team) {
     pushSubscriptions: Array.isArray(team.pushSubscriptions) ? team.pushSubscriptions.map(x => ({ ...x, keys: { ...(x.keys || {}) } })) : [],
     pushCursor: typeof team.pushCursor === "number" ? team.pushCursor : null,
     pushKickoffKeys: Array.isArray(team.pushKickoffKeys) ? team.pushKickoffKeys.slice(-10) : [],
+    pushAuctionKeys: Array.isArray(team.pushAuctionKeys) ? team.pushAuctionKeys.slice(-60) : [],
+    pushSince: typeof team.pushSince === "number" ? team.pushSince : null,
     lineup: team.lineup,
     // Journées futures déjà préparées à l'avance (voir Team.plannedTactics
     // et stagePlanForRound/applyPlannedTacticsForRound) — déjà un objet
@@ -13065,6 +13067,8 @@ function teamFromSave(data) {
   team.pushSubscriptions = Array.isArray(data.pushSubscriptions) ? data.pushSubscriptions.filter(x => x && x.endpoint && x.keys) : [];
   team.pushCursor = typeof data.pushCursor === "number" ? data.pushCursor : null;
   team.pushKickoffKeys = Array.isArray(data.pushKickoffKeys) ? data.pushKickoffKeys : [];
+  team.pushAuctionKeys = Array.isArray(data.pushAuctionKeys) ? data.pushAuctionKeys : [];
+  team.pushSince = typeof data.pushSince === "number" ? data.pushSince : null;
   if (data.offensivePriorities) team.offensivePriorities = data.offensivePriorities;
   if (data.defense) team.defense = data.defense;
   if (data.rhythm) team.rhythm = data.rhythm;

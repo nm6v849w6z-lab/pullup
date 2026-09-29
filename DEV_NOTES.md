@@ -30,7 +30,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   livrés** (reste en « Bientôt » : salle personnalisée / avatars des jeunes)
   - Notifications : server/webpush.js (Web Push sans dépendance : RFC 8291
     aes128gcm + VAPID ES256), server/push.js (coup d'envoi des matchs en
-    direct, blessures, arrivées/départs, fins d'enchère des joueurs suivis ;
+    direct, blessures, arrivées/départs, fins d'enchère des joueurs suivis,
+    et (retour utilisateur 2026-09-29) toutes les enchères du club, joueurs
+    ET staff : moins d'une heure restante (en tête / dépassé), puis
+    remportée / perdue / annulée faute de budget (push.auctionNotes) ;
     envoyées à chaque sauvegarde d'un championnat, Premium seulement,
     abonnements expirés retirés ; coups d'envoi de championnat ajoutés aux
     échéances du monde), routes /api/push/config|subscribe|unsubscribe,

@@ -85,7 +85,31 @@ function decrypt(body, uaEcdh, authSecret) {
   Engine.handleGameEvent(lyon.feed, { type: "transfer_out", week: 1, playerName: "Parti", to: "Paris", fee: 1 }, { clubName: lyon.name });
   assert.strictEqual(await Push.flushLeague(league, now + 3000, { send: async () => ({ ok: true }) }), 0, "pas de notification sans Premium");
   lyon.setPaying(true);
-  ok("notifications : coup d'envoi, blessure, arrivée d'un joueur (pas les autres entrées), jamais deux fois, abonnement expiré retiré, Premium seulement");
+  // Enchères du club (joueurs et staff) : fin proche, puis résultat.
+  {
+    const lg = Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.serializeLeague(league))));
+    const me = lg.teams[0];
+    me.pushSince = now - 1000; me.pushAuctionKeys = []; me.marketWatchlist = [];
+    const coach = lg.generateCoachCandidate(now);
+    assert.ok(lg.placeCoachBid(coach.id, 0, coach.startPrice, now).ok, "enchère sur un entraîneur");
+    const doc = lg.generateDoctorCandidate ? lg.generateDoctorCandidate(now) : null;
+    coach.closesAt = now + 30 * 60 * 1000;
+    let notes = Push.auctionNotes(lg, 0, now);
+    assert.ok(notes.some(n => /Fin d'enchère dans moins d'une heure : l'entraîneur/.test(n.title) && /en tête/.test(n.body)), JSON.stringify(notes));
+    assert.strictEqual(Push.auctionNotes(lg, 0, now + 1000).length, 0, "pas deux fois");
+    lg._resolveCoachListing(coach, coach.closesAt);
+    notes = Push.auctionNotes(lg, 0, coach.closesAt + 1000);
+    assert.ok(notes.some(n => /Enchère remportée : l'entraîneur/.test(n.title)), JSON.stringify(notes));
+    // Enchère perdue sur un joueur (un autre club surenchérit).
+    const seller = lg.teams[5];
+    const l = lg.listPlayerForSale(5, seller.players[0].id, 1000, now);
+    assert.ok(lg.placeBid(l.id, 0, 1000, now).ok && lg.placeBid(l.id, 1, 5000, now).ok);
+    lg._resolveListing(l, l.closesAt);
+    notes = Push.auctionNotes(lg, 0, l.closesAt + 1000);
+    assert.ok(notes.some(n => n.title === `Enchère perdue : ${seller.players.concat(lg.teams[1].players).find(p => p.id === l.playerId).name}`), JSON.stringify(notes));
+    void doc;
+  }
+  ok("notifications : coup d'envoi, blessure, arrivée d'un joueur (pas les autres entrées), fin d'enchère et résultat (joueurs ET staff), jamais deux fois, abonnement expiré retiré, Premium seulement");
 
   // 3) Courbe de progression : une note par semaine d'entraînement.
   const t2 = Engine.teamFromSave(Engine.serializeTeam(lyon));

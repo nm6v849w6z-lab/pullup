@@ -9,7 +9,11 @@
 //  - le coup d'envoi d'un de leurs matchs en direct (15 premières minutes) ;
 //  - les nouvelles entrées du fil d'actualité « à notifier » : blessure
 //    (injury_…), fin d'enchère proche d'un joueur suivi (mkt_end_…),
-//    arrivée ou départ d'un joueur (push: true).
+//    arrivée ou départ d'un joueur (push: true) ;
+//  - les enchères du club, joueurs ET staff (entraîneur, adjoint, analyste,
+//    recruteur, médecin, kiné) : fin dans moins d'une heure (en tête ou
+//    dépassé), puis résultat (staff remporté, enchère perdue, annulée faute
+//    de budget) — retour utilisateur 2026-09-29.
 // Sans clés VAPID (server/webpush.js), rien n'est envoyé ni modifié.
 // =====================================================================
 
@@ -29,6 +33,7 @@ function addSubscription(team, sub, now) {
   team.pushSubscriptions.push({ endpoint: sub.endpoint, keys: { p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) }, createdAt: now });
   team.pushSubscriptions = team.pushSubscriptions.slice(-MAX_SUBSCRIPTIONS);
   if (typeof team.pushCursor !== "number") team.pushCursor = team.feed ? (team.feed.nextId || 1) - 1 : 0;
+  if (typeof team.pushSince !== "number") team.pushSince = now;
   return true;
 }
 
@@ -36,6 +41,66 @@ function removeSubscription(team, endpoint) {
   const before = (team.pushSubscriptions || []).length;
   team.pushSubscriptions = (team.pushSubscriptions || []).filter(x => x.endpoint !== endpoint);
   return team.pushSubscriptions.length !== before;
+}
+
+const AUCTION_MARKETS = [
+  ["transferListings", null],
+  ["coachListings", "l'entraîneur"],
+  ["assistantCoachListings", "l'entraîneur adjoint"],
+  ["analystListings", "l'analyste vidéo"],
+  ["recruiterListings", "le recruteur"],
+  ["doctorListings", "le médecin"],
+  ["physioListings", "le kiné"],
+];
+const AUCTION_ENDING_MS = 60 * 60 * 1000;
+const AUCTION_RESULT_WINDOW_MS = 24 * 3600 * 1000;
+
+function euros(n) { return `${Math.round(n || 0).toLocaleString("fr-FR")} €`; }
+
+// Enchères du club : fin proche puis résultat (voir l'en-tête).
+function auctionNotes(league, teamIdx, now) {
+  const team = league.teams[teamIdx];
+  const out = [];
+  const since = typeof team.pushSince === "number" ? team.pushSince : 0;
+  const seen = new Set(team.pushAuctionKeys || []);
+  const mark = key => { seen.add(key); team.pushAuctionKeys = [...seen].slice(-60); };
+  const watched = new Set((team.marketWatchlist || []).map(w => String(w.playerId)));
+  AUCTION_MARKETS.forEach(([field, staffLabel]) => {
+    (league[field] || []).forEach(l => {
+      if (!l || !(l.bids || []).some(b => b.bidderIdx === teamIdx)) return;
+      if (l.closesAt < since) return;
+      const player = !staffLabel && typeof league.playerById === "function" ? league.playerById(l.playerId) : null;
+      const what = staffLabel ? `${staffLabel} (niveau ${l.level})` : (player ? player.name : "un joueur");
+      const lead = l.currentBidderIdx === teamIdx;
+      if (l.status === "open") {
+        if (l.closesAt <= now || l.closesAt - now > AUCTION_ENDING_MS) return;
+        if (!staffLabel && watched.has(String(l.playerId))) return; // déjà prévenu (joueur suivi, mkt_end_)
+        const key = `end:${field}:${l.id}`;
+        if (seen.has(key)) return;
+        mark(key);
+        out.push({
+          title: `Fin d'enchère dans moins d'une heure : ${what}`,
+          body: lead ? `Vous êtes en tête à ${euros(l.currentBid)}.` : `Vous avez été dépassé (${euros(l.currentBid)}). Il est encore temps de surenchérir.`,
+          url: "/", tag: key,
+        });
+        return;
+      }
+      if (now - l.closesAt > AUCTION_RESULT_WINDOW_MS) return;
+      const key = `res:${field}:${l.id}`;
+      if (seen.has(key)) return;
+      mark(key);
+      const won = lead && (l.result === "sold");
+      if (won && !staffLabel) return; // arrivée du joueur : déjà notifiée (fil, push: true)
+      if (lead && l.result === "buyer-failed") {
+        out.push({ title: `Enchère annulée : ${what}`, body: "Budget insuffisant au moment de la clôture.", url: "/", tag: key });
+      } else if (won) {
+        out.push({ title: `Enchère remportée : ${what}`, body: `Recruté pour ${euros(l.finalPrice)}.`, url: "/", tag: key });
+      } else if (!lead) {
+        out.push({ title: `Enchère perdue : ${what}`, body: l.finalPrice ? `Parti pour ${euros(l.finalPrice)}.` : "Un autre club a remporté l'enchère.", url: "/", tag: key });
+      }
+    });
+  });
+  return out;
 }
 
 function entryNumber(e) { const m = /^evt_(\d+)$/.exec(e.id || ""); return m ? Number(m[1]) : 0; }
@@ -54,6 +119,7 @@ function collect(league, teamIdx, now) {
     const opp = league.teams[oppIdx] || (m.guest && m.guest.team ? { name: m.guest.team.teamName } : null);
     out.push({ title: "Votre match commence !", body: `${team.name} contre ${opp ? opp.name : "votre adversaire"} : c'est parti, en direct.`, url: "/", tag: `kickoff-${key}` });
   });
+  auctionNotes(league, teamIdx, now).forEach(n => out.push(n));
   const cursor = typeof team.pushCursor === "number" ? team.pushCursor : 0;
   const fresh = ((team.feed && team.feed.entries) || []).filter(e => entryNumber(e) > cursor)
     .filter(e => e.push === true || /^injury_|^mkt_end_/.test(e.key || ""))
@@ -81,4 +147,4 @@ async function flushLeague(league, now, { send = WebPush.sendPush } = {}) {
   return sent;
 }
 
-module.exports = { MAX_SUBSCRIPTIONS, addSubscription, removeSubscription, collect, flushLeague, isPremium };
+module.exports = { auctionNotes, MAX_SUBSCRIPTIONS, addSubscription, removeSubscription, collect, flushLeague, isPremium };

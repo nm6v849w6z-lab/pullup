@@ -7655,7 +7655,7 @@
 
       <div class="guide-entry" data-guide-id="premium" data-guide-group="Premium">
         <h3>Premium</h3>
-        <p class="training-intro">Tout passe par l'onglet <b>Premium</b>, sous le Guide : votre statut et le bouton pour passer Premium (gratuit pendant la phase de test). Le Premium comprend le Scouting Pro illimité et sans pub, l'analyse de votre propre équipe, les ligues privées, les maillots et le logo personnalisés, 6 tactiques enregistrées, aucune pub, le badge Premium à côté du nom du club, l'historique de l'entraînement sur toute la saison, la liste de suivi du marché avec ses alertes, la courbe de progression de chaque joueur (sur sa fiche), les statistiques avancées avec export CSV (onglet Statistiques), « Revoir le direct » d'un match déjà joué (depuis sa feuille de statistiques) et les notifications (Paramètres → Mon compte : coup d'envoi, blessures, transferts, fins d'enchère).</p>
+        <p class="training-intro">Tout passe par l'onglet <b>Premium</b>, sous le Guide : votre statut et le bouton pour passer Premium (gratuit pendant la phase de test). Le Premium comprend le Scouting Pro illimité et sans pub, l'analyse de votre propre équipe, les ligues privées, les maillots et le logo personnalisés, 6 tactiques enregistrées, aucune pub, le badge Premium à côté du nom du club, l'historique de l'entraînement sur toute la saison, la liste de suivi du marché avec ses alertes, la courbe de progression de chaque joueur (sur sa fiche), les statistiques avancées avec export CSV (onglet Statistiques), « Revoir le direct » d'un match déjà joué (depuis sa feuille de statistiques) et les notifications (Paramètres → Mon compte : coup d'envoi, blessures, transferts, fins d'enchère des joueurs et du staff).</p>
         <p class="training-intro" style="margin-top:10px;">Le Premium ne donne <b>aucun avantage sportif</b> : ni progression plus rapide, ni argent, ni staff en plus. Un mois de Premium est aussi offert au meilleur pronostiqueur des émissions Hoop Shows en fin de saison.</p>
       </div>
 
@@ -37382,7 +37382,7 @@ function hmPushSectionHtml() {
   if (!teamIsPremium(teamA)) return html + `<p class="settings-note">Coup d'envoi de vos matchs, blessures, fins d'enchère : réservé au Premium. ${premiumLinkHtml("Passer Premium")}</p>`;
   if (!hmPushConfig || !hmPushConfig.enabled) return html + `<p class="settings-note">Les notifications ne sont pas encore disponibles sur ce serveur.</p>`;
   if (!hmPushSupported()) return html + `<p class="settings-note">Ce navigateur ne gère pas les notifications. Sur iPhone, ajoute d'abord le jeu à l'écran d'accueil (Partager → Sur l'écran d'accueil).</p>`;
-  return html + `<p class="settings-note">Coup d'envoi de vos matchs, blessures, arrivées et départs, fins d'enchère des joueurs suivis.</p>` +
+  return html + `<p class="settings-note">Coup d'envoi de vos matchs, blessures, arrivées et départs, et vos enchères (joueurs et staff) : fin dans moins d'une heure, puis remportée ou perdue.</p>` +
     `<div class="settings-club-row"><button type="button" class="secondary" id="hmPushBtn">${hmPushSubscribed ? "Désactiver sur cet appareil" : "Activer sur cet appareil"}</button></div>` +
     `<p class="settings-feedback" id="hmPushFeedback"></p>`;
 }
@@ -43324,7 +43324,7 @@ const PREMIUM_PERKS = [
   { title: "Courbe de progression", text: "La note de chacun de vos joueurs semaine après semaine, sur sa fiche." },
   { title: "Statistiques avancées et export", text: "True shooting, réussite effective, stats par 36 minutes, +/- de la saison, et export du tableau en CSV (onglet Statistiques)." },
   { title: "Revoir le direct", text: "Rejouer le direct de vos matchs déjà joués, depuis leur feuille de statistiques (60 derniers matchs du championnat)." },
-  { title: "Notifications", text: "Une notification de votre navigateur (ou de l'application installée sur votre téléphone) quand votre match commence, qu'un joueur se blesse ou qu'une enchère se termine." },
+  { title: "Notifications", text: "Une notification de votre navigateur (ou de l'application installée sur votre téléphone) quand votre match commence, qu'un joueur se blesse ou qu'une de vos enchères (joueur ou staff) se termine." },
 ];
 const PREMIUM_SOON = [
   "Salle personnalisée et avatars des jeunes de l'académie",
