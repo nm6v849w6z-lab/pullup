@@ -685,6 +685,35 @@ function leagueSummary(entry, league) {
     lastResults: (league.results || []).filter(r => r.round === lastRound).map(r => ({
       home: league.teams[r.home].name, away: league.teams[r.away].name, scoreHome: r.scoreHome, scoreAway: r.scoreAway,
     })),
+    // Note des managers (Engine.recordHumanRivalry) pour le classement
+    // mondial (managerRanking).
+    managers: league.teams.map((t, idx) => (t && t.isHuman ? {
+      idx, name: t.name, rating: Engine.managerRatingOf(t), games: t.managerRatedGames || 0,
+    } : null)).filter(Boolean),
+  };
+}
+
+// Classement mondial des managers (2026-09-29) : tous les clubs humains du
+// monde, d'après les résumés de championnat (rafraîchis par catchUpWorld,
+// donc à 10 min près). Seuls les managers ayant joué au moins un match
+// officiel contre un autre manager sont classés. `me` : { leagueId, idx }.
+const MANAGER_RANKING_TOP = 50;
+function managerRanking(world, me = null, limit = MANAGER_RANKING_TOP) {
+  const rows = [];
+  let mine = null;
+  Object.values((world && world.summaries) || {}).forEach(sm => {
+    (sm.managers || []).forEach(m => {
+      const row = { name: m.name, rating: m.rating, games: m.games, country: sm.country, label: sm.label, leagueId: sm.id, idx: m.idx };
+      if (me && sm.id === me.leagueId && m.idx === me.idx) mine = row;
+      if (m.games > 0) rows.push(row);
+    });
+  });
+  rows.sort((a, b) => b.rating - a.rating || b.games - a.games || a.name.localeCompare(b.name, "fr"));
+  rows.forEach((r, i) => { r.rank = i + 1; });
+  return {
+    top: rows.slice(0, limit),
+    total: rows.length,
+    me: mine ? { ...mine, rank: mine.games > 0 ? mine.rank : null } : null,
   };
 }
 
@@ -815,6 +844,7 @@ function publicCountries() {
 }
 
 module.exports = {
+  managerRanking, MANAGER_RANKING_TOP,
   divisionMovesFor,
   WORLD_VERSION, DEFAULT_COUNTRY,
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,

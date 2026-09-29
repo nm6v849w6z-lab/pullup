@@ -4681,6 +4681,10 @@ class Team {
     // recordOrdersHistory) : « partir d'un match précédent » dans l'onglet
     // Tactiques. Le plus récent en tête.
     this.ordersHistory = [];
+    // Rivalités et note des managers (voir recordHumanRivalry).
+    this.rivalries = {};
+    this.managerRating = null;
+    this.managerRatedGames = 0;
 
     // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
     // de FEED_CATEGORIES) : un fil par équipe, vide à la création — rempli
@@ -9573,7 +9577,64 @@ function recordOrdersHistory(team, opponent, isHome, round, competition, now, qu
   if (team.ordersHistory.length > ORDERS_HISTORY_MAX) team.ordersHistory.length = ORDERS_HISTORY_MAX;
 }
 
+// ---------------------------------------------------------------------
+// RIVALITÉS ET NOTE DES MANAGERS (2026-09-29, retour utilisateur : « un bilan
+// face à face entre deux managers humains […] une émission Derby » et « un
+// classement mondial des managers […] contre des adversaires humains »).
+// À chaque match OFFICIEL (championnat, play-offs, barrage, Coupe, Coupe
+// nationale, Supercoupe ; jamais les amicaux, qui passent ailleurs) entre
+// deux clubs de managers humains :
+// - Team.rivalries[clé du club adverse] : bilan V/D, points pour/contre et
+//   les RIVALRY_RECENT_MAX derniers matchs ; clé = nom du club en minuscules
+//   (unique dans le monde et jamais modifié après l'inscription) ;
+// - Team.managerRating : note Elo (départ 1500, K = 24), managerRatedGames.
+// Le score vient des quarts-temps (sans le handicap de Coupe nationale).
+// Miroir identique engine.js ⇄ moteurbasket3.html.
+// ---------------------------------------------------------------------
+const RIVALRY_RECENT_MAX = 5;
+const DERBY_MIN_GAMES = 3;
+const MANAGER_RATING_START = 1500;
+const MANAGER_RATING_K = 24;
+function rivalryKeyFor(team) { return String((team && team.name) || "").trim().toLowerCase(); }
+function rivalryBetween(team, opponent) {
+  if (!team || !opponent || !team.rivalries) return null;
+  return team.rivalries[rivalryKeyFor(opponent)] || null;
+}
+function isDerbyBetween(team, opponent) {
+  const r = rivalryBetween(team, opponent);
+  return !!(r && (r.w + r.l) >= DERBY_MIN_GAMES);
+}
+function managerRatingOf(team) { return team && typeof team.managerRating === "number" ? team.managerRating : MANAGER_RATING_START; }
+function recordHumanRivalry(home, away, competition, now, quarterScores) {
+  if (!home || !away || home === away || !home.isHuman || !away.isHuman) return;
+  if (competition === "friendly") return;
+  const sum = arr => Array.isArray(arr) ? arr.reduce((a, b) => a + (b || 0), 0) : null;
+  const qs = quarterScores || {};
+  const sh = sum(qs.home), sa = sum(qs.away);
+  if (sh == null || sa == null || sh === sa) return;
+  const one = (team, opp, pf, pa, isHome) => {
+    if (!team.rivalries || typeof team.rivalries !== "object") team.rivalries = {};
+    const key = rivalryKeyFor(opp);
+    const r = team.rivalries[key] || { name: opp.name, w: 0, l: 0, pf: 0, pa: 0, recent: [] };
+    r.name = opp.name;
+    if (pf > pa) r.w += 1; else r.l += 1;
+    r.pf += pf; r.pa += pa;
+    r.recent = [{ at: now, competition: competition || "championship", pf, pa, isHome }].concat(r.recent || []).slice(0, RIVALRY_RECENT_MAX);
+    team.rivalries[key] = r;
+  };
+  one(home, away, sh, sa, true);
+  one(away, home, sa, sh, false);
+  const ra = managerRatingOf(home), rb = managerRatingOf(away);
+  const expectedHome = 1 / (1 + Math.pow(10, (rb - ra) / 400));
+  const scoreHome = sh > sa ? 1 : 0;
+  home.managerRating = Math.round(ra + MANAGER_RATING_K * (scoreHome - expectedHome));
+  away.managerRating = Math.round(rb + MANAGER_RATING_K * ((1 - scoreHome) - (1 - expectedHome)));
+  home.managerRatedGames = (home.managerRatedGames || 0) + 1;
+  away.managerRatedGames = (away.managerRatedGames || 0) + 1;
+}
+
 function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null) {
+  recordHumanRivalry(home, away, competition, now, quarterScores);
   recordOrdersHistory(home, away, true, round, competition, now, quarterScores);
   recordOrdersHistory(away, home, false, round, competition, now, quarterScores);
   recordMatchStatsForTeam(home, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.home);
@@ -13196,6 +13257,9 @@ function serializeTeam(team) {
     plannedTactics: team.plannedTactics || {},
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
+    rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
+    managerRating: typeof team.managerRating === "number" ? team.managerRating : null,
+    managerRatedGames: team.managerRatedGames || 0,
     players: team.players.map(serializePlayerRecord),
     // Recruteur (voir Team.recruiter ci-dessus) : même forme/logique de
     // sauvegarde que trainer/videoAnalyst.
@@ -13797,6 +13861,9 @@ function teamFromSave(data) {
     ? data.tacticPresets.filter(p => p && p.orders && typeof p.name === "string").slice(0, TACTIC_PRESETS_MAX)
       .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
     : [];
+  team.rivalries = data.rivalries && typeof data.rivalries === "object" && !Array.isArray(data.rivalries) ? data.rivalries : {};
+  team.managerRating = typeof data.managerRating === "number" ? data.managerRating : null;
+  team.managerRatedGames = typeof data.managerRatedGames === "number" ? data.managerRatedGames : 0;
   team.ordersHistory = Array.isArray(data.ordersHistory)
     ? data.ordersHistory.filter(h => h && h.orders).slice(0, ORDERS_HISTORY_MAX).map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) }))
     : [];
@@ -15513,6 +15580,7 @@ return {
   PHYSIO_RECOVERY_BONUS_BY_LEVEL, PHYSIO_INJURY_RISK_MULT_BY_LEVEL,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, AUTO_BID_FIELDS, autoBidKey, transferPlayerBetweenTeams,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
+  RIVALRY_RECENT_MAX, DERBY_MIN_GAMES, MANAGER_RATING_START, MANAGER_RATING_K, rivalryKeyFor, rivalryBetween, isDerbyBetween, managerRatingOf, recordHumanRivalry,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,
   SEAT_CATEGORY_MAX_SEATS, SEAT_BUILD_COST_PER_SEAT, ARENA_MAX_CAPACITY, arenaLevelForCapacity, seatBuildCost,

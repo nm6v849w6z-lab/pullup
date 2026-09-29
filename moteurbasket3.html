@@ -449,6 +449,13 @@
   .omc-meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--ink-dim);}
   .omc-badge{background:rgba(240,162,60,.14); color:var(--amber); padding:4px 10px; border-radius:999px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; font-size:12px;}
   .omc-teams{display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-top:10px;}
+  /* Bilan face à face entre managers (rivalryLineHtml, 2026-09-29). */
+  .rivalry-line{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; font-size:13px; font-weight:600; color:var(--ink-dim);}
+  .rivalry-line b{color:var(--ink);}
+  .rivalry-derby{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#04241f; background:var(--amber); border-radius:999px; padding:3px 9px;}
+  .rivalry-new{color:var(--amber);}
+  .rivalry-last{white-space:nowrap;}
+  .rivalry-last::before{content:"·"; margin-right:8px;}
   .omc-team{font-size:32px; font-weight:800; line-height:1.05; color:var(--ink); letter-spacing:-.01em;}
   .omc-team a{color:inherit; text-decoration:none;}
   .omc-team a:hover{color:var(--amber);}
@@ -1538,6 +1545,8 @@
   .ph-leader{display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--line-soft); font-size:14px;}
   .ph-leader .nat-flag{width:18px; height:auto; border-radius:2px;}
   .ph-leader .who{flex:1; min-width:0;}
+  .ph-leader.mine{background:rgba(240,162,60,.08); box-shadow:inset 3px 0 0 var(--amber); padding-left:8px;}
+  .ph-managers-me{margin-top:8px; padding-top:8px; border-top:1px dashed var(--line);}
   .ph-leader .who small{display:block; color:var(--ink-dim); font-size:12px;}
   .ph-leader .val{font-weight:800; font-variant-numeric:tabular-nums;}
   .ph-roster td .nat-flag{width:18px; height:auto; border-radius:2px; margin-right:6px; vertical-align:middle;}
@@ -4936,6 +4945,7 @@
 .hm-hero__comp { color: var(--accent); font-weight: 700; letter-spacing: 2px; }
 .hm-hero__teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; }
 .hm-hero__team { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.hm-hero__rivalry { justify-content: center; text-align: center; margin-top: 14px; }
 .hm-hero__team--right { justify-content: flex-end; text-align: right; }
 .hm-hero__team .hm-crest--lg { flex-shrink: 0; }
 /* Le wrapper (nom + bilan) doit pouvoir descendre sous sa largeur "min-content"
@@ -12960,6 +12970,10 @@ class Team {
     // recordOrdersHistory) : « partir d'un match précédent » dans l'onglet
     // Tactiques. Le plus récent en tête.
     this.ordersHistory = [];
+    // Rivalités et note des managers (voir recordHumanRivalry).
+    this.rivalries = {};
+    this.managerRating = null;
+    this.managerRatedGames = 0;
 
     // Fil d'actualité du tableau de bord (voir MIROIR EXACT engine.js) : un
     // fil par équipe, vide à la création.
@@ -19459,6 +19473,62 @@ function cloneTrainingReport(report) {
   };
 }
 
+// ---------------------------------------------------------------------
+// RIVALITÉS ET NOTE DES MANAGERS (2026-09-29, retour utilisateur : « un bilan
+// face à face entre deux managers humains […] une émission Derby » et « un
+// classement mondial des managers […] contre des adversaires humains »).
+// À chaque match OFFICIEL (championnat, play-offs, barrage, Coupe, Coupe
+// nationale, Supercoupe ; jamais les amicaux, qui passent ailleurs) entre
+// deux clubs de managers humains :
+// - Team.rivalries[clé du club adverse] : bilan V/D, points pour/contre et
+//   les RIVALRY_RECENT_MAX derniers matchs ; clé = nom du club en minuscules
+//   (unique dans le monde et jamais modifié après l'inscription) ;
+// - Team.managerRating : note Elo (départ 1500, K = 24), managerRatedGames.
+// Le score vient des quarts-temps (sans le handicap de Coupe nationale).
+// Miroir identique engine.js ⇄ moteurbasket3.html.
+// ---------------------------------------------------------------------
+const RIVALRY_RECENT_MAX = 5;
+const DERBY_MIN_GAMES = 3;
+const MANAGER_RATING_START = 1500;
+const MANAGER_RATING_K = 24;
+function rivalryKeyFor(team) { return String((team && team.name) || "").trim().toLowerCase(); }
+function rivalryBetween(team, opponent) {
+  if (!team || !opponent || !team.rivalries) return null;
+  return team.rivalries[rivalryKeyFor(opponent)] || null;
+}
+function isDerbyBetween(team, opponent) {
+  const r = rivalryBetween(team, opponent);
+  return !!(r && (r.w + r.l) >= DERBY_MIN_GAMES);
+}
+function managerRatingOf(team) { return team && typeof team.managerRating === "number" ? team.managerRating : MANAGER_RATING_START; }
+function recordHumanRivalry(home, away, competition, now, quarterScores) {
+  if (!home || !away || home === away || !home.isHuman || !away.isHuman) return;
+  if (competition === "friendly") return;
+  const sum = arr => Array.isArray(arr) ? arr.reduce((a, b) => a + (b || 0), 0) : null;
+  const qs = quarterScores || {};
+  const sh = sum(qs.home), sa = sum(qs.away);
+  if (sh == null || sa == null || sh === sa) return;
+  const one = (team, opp, pf, pa, isHome) => {
+    if (!team.rivalries || typeof team.rivalries !== "object") team.rivalries = {};
+    const key = rivalryKeyFor(opp);
+    const r = team.rivalries[key] || { name: opp.name, w: 0, l: 0, pf: 0, pa: 0, recent: [] };
+    r.name = opp.name;
+    if (pf > pa) r.w += 1; else r.l += 1;
+    r.pf += pf; r.pa += pa;
+    r.recent = [{ at: now, competition: competition || "championship", pf, pa, isHome }].concat(r.recent || []).slice(0, RIVALRY_RECENT_MAX);
+    team.rivalries[key] = r;
+  };
+  one(home, away, sh, sa, true);
+  one(away, home, sa, sh, false);
+  const ra = managerRatingOf(home), rb = managerRatingOf(away);
+  const expectedHome = 1 / (1 + Math.pow(10, (rb - ra) / 400));
+  const scoreHome = sh > sa ? 1 : 0;
+  home.managerRating = Math.round(ra + MANAGER_RATING_K * (scoreHome - expectedHome));
+  away.managerRating = Math.round(rb + MANAGER_RATING_K * ((1 - scoreHome) - (1 - expectedHome)));
+  home.managerRatedGames = (home.managerRatedGames || 0) + 1;
+  away.managerRatedGames = (away.managerRatedGames || 0) + 1;
+}
+
 function serializeTeam(team) {
   return {
     version: 1,
@@ -19618,6 +19688,9 @@ function serializeTeam(team) {
     plannedTactics: team.plannedTactics || {},
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
+    rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
+    managerRating: typeof team.managerRating === "number" ? team.managerRating : null,
+    managerRatedGames: team.managerRatedGames || 0,
     players: team.players.map(serializePlayerRecord),
     // Recruteur (voir Team.recruiter ci-dessus) : même forme/logique de
     // sauvegarde que trainer/videoAnalyst.
@@ -20121,6 +20194,9 @@ function teamFromSave(data) {
     ? data.tacticPresets.filter(p => p && p.orders && typeof p.name === "string").slice(0, TACTIC_PRESETS_MAX)
       .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
     : [];
+  team.rivalries = data.rivalries && typeof data.rivalries === "object" && !Array.isArray(data.rivalries) ? data.rivalries : {};
+  team.managerRating = typeof data.managerRating === "number" ? data.managerRating : null;
+  team.managerRatedGames = typeof data.managerRatedGames === "number" ? data.managerRatedGames : 0;
   team.ordersHistory = Array.isArray(data.ordersHistory)
     ? data.ordersHistory.filter(h => h && h.orders).slice(0, ORDERS_HISTORY_MAX).map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) }))
     : [];
@@ -24292,7 +24368,21 @@ function renderOrdresRoundDateTime() {
   const them = `<span class="omc-team">${teamLinkHtml(selected.opponentIdx, opp.name)}</span>`;
   el.innerHTML = `
     <div class="omc-meta"><span class="omc-badge">${escapeHtml(badge)}</span>${quand ? `<span>${escapeHtml(quand)}</span><span aria-hidden="true">·</span>` : ""}<span>${lieu}</span></div>
-    <div class="omc-teams">${selected.isHome ? me : them}<span class="omc-vs">vs</span>${selected.isHome ? them : me}</div>`;
+    <div class="omc-teams">${selected.isHome ? me : them}<span class="omc-vs">vs</span>${selected.isHome ? them : me}</div>${rivalryLineHtml(opp, "omc-rivalry")}`;
+}
+
+// Bilan face à face avec un autre manager (voir recordHumanRivalry) :
+// « Face à face : 3 V – 1 D · dernier match : V 80-72 », badge « Derby » à
+// partir de DERBY_MIN_GAMES matchs. « Première confrontation entre
+// managers » si l'adversaire est humain sans historique ; rien contre l'IA.
+function rivalryLineHtml(opp, cls) {
+  if (!opp || typeof teamA === "undefined" || !teamA) return "";
+  const r = rivalryBetween(teamA, opp);
+  if (!r) return opp.isHuman ? `<div class="${cls} rivalry-line"><span class="rivalry-new">Première confrontation entre managers</span></div>` : "";
+  const last = (r.recent || [])[0];
+  const lastTxt = last ? `dernier match : ${last.pf > last.pa ? "V" : "D"} ${last.pf}-${last.pa}` : "";
+  const derby = (r.w + r.l) >= DERBY_MIN_GAMES ? `<span class="rivalry-derby">Derby</span>` : "";
+  return `<div class="${cls} rivalry-line">${derby}<span>Face à face : <b>${r.w} V – ${r.l} D</b></span>${lastTxt ? `<span class="rivalry-last">${escapeHtml(lastTxt)}</span>` : ""}</div>`;
 }
 
 // Léger "proxy de plan" pour une journée future : mêmes champs qu'une
@@ -28838,6 +28928,8 @@ async function renderPlaneteSection() {
     const ov = await planeteFetch(`/api/world/overview${planeteState.country ? `?country=${encodeURIComponent(planeteState.country)}` : ""}`);
     planeteState.overview = ov;
     planeteState.country = ov.country;
+    // Classement mondial des managers (World.managerRanking), tous pays.
+    planeteState.managers = await planeteFetch(`/api/world/managers`).catch(() => null);
     let leagueId = planeteState.leagueId;
     const inCountry = id => ov.stats && ov.stats.divisions.some(d => d.leagues.some(l => l.id === id));
     if (!leagueId || !inCountry(leagueId)) {
@@ -28867,7 +28959,7 @@ function planeteHtml() {
   let html = `<div class="ph-countries">` + ov.countries.map(c =>
     `<button type="button" class="ph-country${c.code === ov.country ? " active" : ""}" data-ph-country="${escapeHtml(c.code)}">${nationFlagHtml(c.code)}` +
     `<span><b>${escapeHtml(c.name)}</b><small>${c.managers} manager${c.managers > 1 ? "s" : ""} · ${c.leagueCount} championnat${c.leagueCount > 1 ? "s" : ""}</small></span></button>`).join("") + `</div>`;
-  html += `<div class="ph-grid"><div class="ph-main">${planeteLeagueHtml()}${planeteClubHtml()}</div><aside class="ph-side">${planeteCountryHtml(st)}</aside></div>`;
+  html += `<div class="ph-grid"><div class="ph-main">${planeteLeagueHtml()}${planeteClubHtml()}</div><aside class="ph-side">${planeteManagersHtml()}${planeteCountryHtml(st)}</aside></div>`;
   return html;
 }
 
@@ -28903,6 +28995,29 @@ function planeteClubHtml() {
   });
   html += `</tbody></table><p class="ph-sub" style="margin:10px 0 0">Caractéristiques visibles uniquement quand le joueur est mis en vente sur le marché.</p>`;
   return html + `</div>`;
+}
+
+// Classement mondial des managers (2026-09-29) : note Elo gagnée ou perdue
+// contre d'autres managers humains en match officiel (recordHumanRivalry),
+// tous pays confondus ; 10 premiers + sa propre place.
+const PLANETE_MANAGERS_SHOWN = 10;
+function planeteManagersHtml() {
+  const mr = planeteState.managers;
+  let html = `<div class="ph-card ph-managers"><h3>Classement mondial des managers</h3>`;
+  if (!mr) return html + `<p class="ph-sub" style="margin:0">Indisponible pour l'instant.</p></div>`;
+  const row = (r, mine) => `<div class="ph-leader${mine ? " mine" : ""}"><span>${r.rank != null ? r.rank + "." : "–"}</span>${nationFlagHtml(r.country)}` +
+    `<span class="who">${escapeHtml(r.name)}<small>${escapeHtml(r.label)} · ${r.games} match${r.games > 1 ? "s" : ""}</small></span><span class="val">${r.rating}</span></div>`;
+  const me = mr.me;
+  const top = (mr.top || []).slice(0, PLANETE_MANAGERS_SHOWN);
+  html += top.length ? top.map(r => row(r, me && r.leagueId === me.leagueId && r.idx === me.idx)).join("")
+    : `<p class="ph-sub" style="margin:0">Aucun manager classé pour l'instant : il faut un premier match officiel entre deux managers.</p>`;
+  if (me && (me.rank == null || me.rank > PLANETE_MANAGERS_SHOWN)) {
+    html += `<div class="ph-managers-me">${me.rank == null
+      ? `<p class="ph-sub" style="margin:0">Votre note : <b>${me.rating}</b>. Vous serez classé après votre premier match officiel contre un autre manager.</p>`
+      : row(me, true)}</div>`;
+  }
+  html += `<p class="ph-sub" style="margin:10px 0 0">Note de départ 1500, qui monte ou descend à chaque match officiel contre un autre manager (plus l'adversaire est bien noté, plus la victoire rapporte). Les matchs contre l'IA et les amicaux ne comptent pas. ${mr.total} manager${mr.total > 1 ? "s" : ""} classé${mr.total > 1 ? "s" : ""}.</p></div>`;
+  return html;
 }
 
 function planeteCountryHtml(st) {
@@ -36725,6 +36840,7 @@ function dashRenderNextMatch(data) {
         ${dashCrest(right, "lg")}
       </div>
     </div>
+    ${m.rivalryHtml || ""}
     <div class="hm-hero__actions">
       ${m.privateLeague
         ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ligues-privees">Voir la ligue privée</button>
@@ -37270,6 +37386,8 @@ function dashboardDataFromGameState() {
       dateLabel, timeLabel, deadlineLabel,
       home: currentMatch.isHome,
       opponent: dashboardTeamRef(currentMatch.opponent, teamB),
+      // Bilan face à face entre managers (rivalryLineHtml).
+      rivalryHtml: rivalryLineHtml(teamB, "hm-hero__rivalry"),
       clubRecord: dashboardTeamRecord(myTeamIndex),
       opponentRecord: dashboardTeamRecord(currentMatch.opponent),
       clubLevel: dashboardTeamLevel(teamA),

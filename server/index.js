@@ -1372,6 +1372,16 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             stats: (world.countryStats || {})[country] || null, history: ((world.history || {})[country]) || [] });
           return;
         }
+        if (route.pathname === "/api/world/managers") {
+          // Classement mondial des managers (World.managerRanking). Son propre
+          // championnat est relu à l'instant (les résumés ont jusqu'à 10 min).
+          if (world.summaries && world.summaries[ctx.leagueId]) {
+            const entry = world.leagues.find(e => e.id === ctx.leagueId);
+            if (entry) world.summaries[ctx.leagueId] = World.leagueSummary(entry, ctx.league);
+          }
+          sendJson(res, 200, { ok: true, ...World.managerRanking(world, { leagueId: ctx.leagueId, idx: ctx.teamIndex }) });
+          return;
+        }
         if (route.pathname === "/api/world/league") {
           const id = q.get("id") || ctx.leagueId;
           const entry = world.leagues.find(e => e.id === id);

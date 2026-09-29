@@ -87,8 +87,21 @@ points réellement ouverts.
      égalité d'aptitude à l'entraînement = poste « naturel » d'avant
      (trainingTieBreak ; jeu intérieur → Pivot, 3 pts → Arrière), le
      tableau du 2026-09-29 avait rendu Ailier fort/Meneur par défaut.
-  3. Rivalités (bilan face à face entre managers humains + Derby).
-  4. Classement mondial des managers (Planète Hoop).
+  3. ✅ Rivalités : Engine.recordHumanRivalry (appelé par
+     recordMatchStatsAndAwardMvp, donc tous les matchs officiels ; amicaux
+     et IA exclus) → Team.rivalries[nom du club en minuscules] {w,l,pf,pa,
+     recent (5)} ; ligne « Face à face : 3 V – 1 D · dernier match » +
+     badge « Derby » (≥ DERBY_MIN_GAMES = 3, valeur choisie par Claude) sur
+     la carte du match des Ordres et le bandeau du tableau de bord
+     (rivalryLineHtml) ; « Première confrontation entre managers » ;
+     émission d'avant-match « LE DERBY » + bilan dans la bulle
+     (showsAdapter rivalry → showData). Score = quarts-temps (sans le
+     handicap de Coupe nationale).
+  4. ✅ Classement mondial des managers : Team.managerRating (Elo, départ
+     1500, K = 24, valeurs choisies par Claude), managerRatedGames ;
+     leagueSummary.managers → World.managerRanking → GET
+     /api/world/managers ; carte « Classement mondial des managers » en tête
+     de Planète Hoop (10 premiers + sa place). rivalry_ranking_test.js.
   5. Propositions Premium : salle personnalisée, avatars des jeunes.
 
 - **🌐 Côté utilisateur (hébergement, services)** :

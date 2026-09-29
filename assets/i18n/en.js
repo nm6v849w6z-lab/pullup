@@ -2,6 +2,19 @@
    français tel qu'affiché ({0}, {player}… = parties variables), valeur =
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
+  "Première confrontation entre managers": "First meeting between managers",
+  "Face à face :": "Head to head:",
+  "dernier match : V {0}-{1}": "last game: W {0}-{1}",
+  "dernier match : D {0}-{1}": "last game: L {0}-{1}",
+  "Classement mondial des managers": "World manager ranking",
+  "Indisponible pour l'instant.": "Unavailable for now.",
+  "Aucun manager classé pour l'instant : il faut un premier match officiel entre deux managers.": "No ranked manager yet: it takes a first official game between two managers.",
+  "Votre note :": "Your rating:",
+  ". Vous serez classé après votre premier match officiel contre un autre manager.": ". You will be ranked after your first official game against another manager.",
+  "{0} · {1} match": "{0} · {1} game",
+  "{0} · {1} matchs": "{0} · {1} games",
+  "Note de départ 1500, qui monte ou descend à chaque match officiel contre un autre manager (plus l'adversaire est bien noté, plus la victoire rapporte). Les matchs contre l'IA et les amicaux ne comptent pas. {0} manager classé.": "Starting rating 1500, going up or down with every official game against another manager (the higher the opponent's rating, the more a win is worth). Games against the AI and friendlies don't count. {0} ranked manager.",
+  "Note de départ 1500, qui monte ou descend à chaque match officiel contre un autre manager (plus l'adversaire est bien noté, plus la victoire rapporte). Les matchs contre l'IA et les amicaux ne comptent pas. {0} managers classés.": "Starting rating 1500, going up or down with every official game against another manager (the higher the opponent's rating, the more a win is worth). Games against the AI and friendlies don't count. {0} ranked managers.",
   "Le classement se départage par victoires puis par différence de points. Places 1 à 4 : play-offs. Barrage et relégation seulement s'il existe un championnat juste en dessous (couleurs et légende l'indiquent). Ce panneau résume votre position et l'écart avec les places clés.": "Standings are ranked by wins then by point difference. Places 1 to 4: playoffs. Play-in and relegation only apply when a league exists just below (shown by the colors and legend). This panel summarizes your position and the gap to the key places.",
   " ; s'il existe un championnat ouvert juste en dessous, le 10e est ": "; if a league is open just below, 10th is ",
   "relégué": "relegated",
