@@ -68,54 +68,13 @@ chantiers marqués « committé, à pousser » étaient en fait en prod et ont
 été retirés (l'historique Git les garde). Restent ci-dessous uniquement les
 points réellement ouverts.
 
-- **✅ COMMITTÉ, À POUSSER EN UNE FOIS (2026-09-29) — lot demandé par l'utilisateur** (suite complète : 207 tests verts) :
-  1. ✅ Légende/zones du classement selon les divisions réellement ouvertes
-     (World.divisionMovesFor → league.divisionMoves dans GET /api/save ;
-     leagueDivisionMoves/standingsRowZone/standingsLegendItems côté jeu ;
-     standings_zones_test.js). Barrage 7e-8e supprimé quand il n'a pas
-     d'enjeu (< 3 championnats ouverts dessous, décision utilisateur) :
-     league.barrageHasStakes (transitoire, posé par catchUpWorld et
-     resolvePlayerContext), autoSim ne le programme pas / annule un barrage
-     programmé non commencé. barrage_stakes_test.js ; barrage_live_test.js
-     déclare 3 championnats dessous.
-     ⚠️ Rien n'est poussé : l'utilisateur veut UN SEUL push à la fin du lot.
-  2. ✅ Chargement mobile : 8 visuels de salle → assets/arena/niveau-N.jpg,
-     logo → /assets/brand/logo-hoop-manager.png (page 4,8 → 2,9 Mo) ;
-     compression brotli/gzip (server/index.js sendBody : HTML, JS, CSS,
-     JSON ; version compressée des fichiers gardée en mémoire) → 0,65 Mo
-     transférés. load_size_test.js. Au passage : départage des postes à
-     égalité d'aptitude à l'entraînement = poste « naturel » d'avant
-     (trainingTieBreak ; jeu intérieur → Pivot, 3 pts → Arrière), le
-     tableau du 2026-09-29 avait rendu Ailier fort/Meneur par défaut.
-  3. ✅ Rivalités et derbys (règle revue par l'utilisateur le 2026-09-29 :
-     « chaque équipe doit avoir son rival […] deux max par saison (hors po
-     et barrage) », « managers entre eux d'abord », « affluence et humeur ») :
-     - League.ensureRivalPairs / rivalOf / isDerbyMatch (engine.js + miroir
-       html) : paires fixées par saison (rivalPairs {season, pairs[{a,b,
-       names}]}, sauvegardé), gardées si mêmes clubs, managers appariés entre
-       eux d'abord, mélange déterministe ; posées par autoSim.catchUpLeague.
-       Reprise d'un club de l'IA en cours de saison : le manager prend sa
-       place et son rival tout de suite (paires par index), et la paire
-       continue la saison suivante (noms mémorisés mis à jour).
-     - Derby = match de CHAMPIONNAT saison régulière contre son rival (2 par
-       saison) ; jamais Coupe, play-offs, barrage. Effets (server/liveMatch.js)
-       : humeur ×DERBY_MORALE_MULT 1,5 (« Derby gagné/perdu contre X »),
-       affluence ×DERBY_ATTENDANCE_BOOST 1,15 (« Billetterie (derby) »).
-     - Affichage : badge « Derby » (isRegularSeasonDerby + rivalryLineHtml)
-       sur la carte du match des Ordres et le bandeau du tableau de bord,
-       « Votre rival du championnat » contre l'IA, « Votre rival (derbys) »
-       dans la carte « Ta course » de la page Ligue ; émission « LE DERBY ».
-     - Bilan face à face entre managers humains (Engine.recordHumanRivalry,
-       Team.rivalries, tous matchs officiels, amicaux et IA exclus) affiché
-       à côté, indépendant du derby. derby_rivals_test.js,
-       rivalry_ranking_test.js.
-  4. ✅ Classement mondial des managers : Team.managerRating (Elo, départ
-     1500, K = 24, valeurs choisies par Claude), managerRatedGames ;
-     leagueSummary.managers → World.managerRanking → GET
-     /api/world/managers ; carte « Classement mondial des managers » en tête
-     de Planète Hoop (10 premiers + sa place). rivalry_ranking_test.js.
-  5. Propositions Premium (salle personnalisée, avatars des jeunes) faites à
-     l'utilisateur le 2026-09-29, en attente de son choix : rien de codé.
+- **💡 Premium « Bientôt » — propositions faites le 2026-09-29, en attente du
+  choix de l'utilisateur (rien de codé)** : salle (nom de la salle, parquet
+  aux couleurs du club sur la Salle et le direct, variantes de visuel par
+  palier) ; jeunes de l'académie (apparence personnalisée, numéro de
+  maillot, « photo de signature » au passage pro).
+- **Valeurs validées (2026-09-29)** : derby = affluence ×1,15 et humeur
+  ×1,5 ; note des managers départ 1500, K = 24.
 
 - **🌐 Côté utilisateur (hébergement, services)** :
   - Google Search Console : domaine validé par TXT chez IONOS le
