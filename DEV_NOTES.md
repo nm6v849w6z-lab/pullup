@@ -119,6 +119,11 @@ points réellement ouverts.
   chose ; aujourd'hui logo Hoop Manager Premium (sponsorLogo dans
   hoopShowDressOpts) en attendant l'annonceur.
 
+- **Rappel produit — pas de coaching pendant le direct** (décision du
+  2026-09-29, « surtout pas ») : ni temps morts, ni changements, ni
+  réglages pendant un match en direct. Tout se décide dans les Ordres
+  avant le match. Ne plus le proposer.
+
 - **Rappel produit** : il n'y a PAS de carrière solo. Le jeu est toujours
   multijoueur dans l'univers partagé (une ligue peut être complétée par des
   clubs de l'IA faute de managers). Ne pas investiguer de bugs « carrière
