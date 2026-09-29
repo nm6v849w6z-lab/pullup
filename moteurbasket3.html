@@ -43961,7 +43961,8 @@ function showFriendlyBoxscore(id) {
     kicker: "Match amical",
     whenText: `${formatCalendarDayFr(f.at)} · ${formatCalendarTimeFr(f.at)}`,
     scoreHome: f.result.scoreHome, scoreAway: f.result.scoreAway,
-    noteHtml: `<div class="lp-mbx-note">Match amical : fatigue, blessures et progression comme un vrai match ; aucun effet sur le classement, les finances ni les stats de saison. (J) = jeune de l'académie.</div>`,
+    // Pas de note explicative sous la feuille de match (retour utilisateur
+    // 2026-09-29 : "enleve ça sur le boxscore des amicaux").
   });
 }
 
