@@ -20,6 +20,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODÉ, À FUSIONNER (2026-09-29) — Transmettre le club d'un bêta-testeur à un
+  remplaçant** (« j'ai des beta testers qui ne sont pas suffisamment dispo
+  donc je vais les remplacer » ; choix : club transmis tel quel, ancien
+  compte supprimé). Nouvelle route POST /api/admin/accounts/transfer-club
+  (X-Admin-Token, {club, newName?, leagueId?}) dans server/accountRoutes.js :
+  nouveau jeton/lien privé (l'ancien ne marche plus), renommage (références
+  par nom mises à jour : enchères d'ailleurs, amicaux entre ligues, coupes),
+  tutoriel d'accueil relancé, trigramme/nom de salle par défaut, compte(s)
+  de l'ancien testeur supprimé(s). Test : server/transfer_club_test.js
+  (vert, ainsi que accounts, account_security, world, inactive_manager,
+  index). Poussé sur la branche claude/upbeat-mccarthy-rarl9a. RESTE :
+  fusionner, déployer, puis appeler la route pour chaque testeur remplacé.
+
 - **🟡 CODÉ, À POUSSER (2026-09-29) — Plus de carrière solo : le jeu est
   uniquement en ligne** (retour : « le jeu n'a pas à être un jeu solo mais
   un jeu online contre d'autres managers, même seul face à 9 bots ») —
