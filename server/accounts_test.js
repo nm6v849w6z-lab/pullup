@@ -348,6 +348,31 @@ async function main() {
     } finally { server.close(); }
   }
 
+  // 6bis) Code d'invitation (BASKET_INVITE_CODE) : exigé pour s'inscrire,
+  // annoncé par /api/account/config, jamais pour se connecter.
+  {
+    const { paths } = await freshSetup();
+    const server = await start(paths, nowFn);
+    process.env.BASKET_INVITE_CODE = "Hoop2026, AMIS";
+    try {
+      const cfg = await request(server, "GET", "/api/account/config");
+      assert.strictEqual(cfg.body.inviteRequired, true);
+      const none = await request(server, "POST", "/api/account/signup", { email: "inv@x.fr", password: "motdepasse1", clubName: "Club Invite" });
+      assert.strictEqual(none.statusCode, 403); assert.strictEqual(none.body.code, "invite-invalid");
+      const bad = await request(server, "POST", "/api/account/signup", { email: "inv@x.fr", password: "motdepasse1", clubName: "Club Invite", inviteCode: "nope" });
+      assert.strictEqual(bad.body.code, "invite-invalid");
+      const ok = await request(server, "POST", "/api/account/signup", { email: "inv@x.fr", password: "motdepasse1", clubName: "Club Invite", inviteCode: "  hoop2026 " });
+      assert.strictEqual(ok.body.status, "active", JSON.stringify(ok.body));
+      const ok2 = await request(server, "POST", "/api/account/signup", { email: "inv2@x.fr", password: "motdepasse1", clubName: "Club Invite Deux", inviteCode: "amis" });
+      assert.strictEqual(ok2.body.status, "active", JSON.stringify(ok2.body));
+      const login = await request(server, "POST", "/api/account/login", { email: "inv@x.fr", password: "motdepasse1" });
+      assert.strictEqual(login.statusCode, 200, "connexion sans code");
+      delete process.env.BASKET_INVITE_CODE;
+      const cfg2 = await request(server, "GET", "/api/account/config");
+      assert.strictEqual(cfg2.body.inviteRequired, false);
+    } finally { server.close(); delete process.env.BASKET_INVITE_CODE; }
+  }
+
   // 7) Préfixe de clés Redis (serveur de test partageant la base prod).
   {
     assert.strictEqual(store.redisKey("multiLeague"), "pullup:multi-league");

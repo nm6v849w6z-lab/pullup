@@ -474,6 +474,7 @@ ne peuvent plus s'écraser mutuellement la ligue.
 | `BASKET_REDIS_PREFIX` | **(absente)** | `test` si le test utilise la même base Upstash | le test écrit sous `test:pullup:…`, jamais sur les clés prod |
 | `BASKET_PUBLIC_SITE` | `1` | `1` (conseillé) | accueil/inscription, carrière solo fermée sans jeton |
 | `BASKET_ADMIN_TOKEN` | secret A | secret B | routes `/api/admin/*` |
+| `BASKET_INVITE_CODE` | code(s) d'invitation, séparés par des virgules | idem ou absente | inscriptions sur invitation (email et 1re connexion Discord) ; absente = inscriptions ouvertes ; lien `/?invite=CODE` prérempli |
 | `BASKET_FAST_CALENDAR` | **(absente)** | `1` si voulu | calendrier accéléré |
 | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | appli « Hoop Manager » | appli « Hoop Manager Test » | connexion Discord (absentes = boutons masqués) |
 | `DISCORD_REDIRECT_URI` | `https://hoop-manager.com/auth/discord/callback` | `https://<test>.onrender.com/auth/discord/callback` | optionnelle (déduite de l'adresse sinon) |
