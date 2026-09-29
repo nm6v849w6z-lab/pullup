@@ -36,6 +36,18 @@ league.ensureRivalPairs();
 const hh2 = league.teams.map((t, i) => t.isHuman && league.teams[league.rivalOf(i)].isHuman).filter(Boolean).length;
 assert.strictEqual(hh2, 4, "4 managers → 2 paires de managers");
 console.log("✅ Paires gardées d'une saison à l'autre ; un 4e manager est apparié avec le 3e.");
+// Reprise d'un club de l'IA en cours de saison : même rival tout de suite,
+// et la paire continue la saison suivante si elle réunit deux managers.
+{
+  const lg3 = store.createMultiManagerCareer(["Zeta Derby", "Eta Derby", "Theta Derby"], created, "Zeta Derby").league;
+  const lone = lg3.teams.findIndex((t, i) => t.isHuman && !lg3.teams[lg3.rivalOf(i)].isHuman);
+  const cpuRival = lg3.rivalOf(lone);
+  lg3.teams[cpuRival].name = "Iota Derby"; lg3.teams[cpuRival].isHuman = true; // reprise en cours de saison
+  assert.strictEqual(lg3.rivalOf(cpuRival), lone, "le nouveau manager hérite tout de suite du rival du club repris");
+  lg3.seasonNumber = (lg3.seasonNumber || 1) + 1;
+  assert.strictEqual(lg3.rivalOf(cpuRival), lone, "saison suivante : la rivalité héritée (deux managers) continue");
+  console.log("✅ Reprise d'un club de l'IA : le nouveau manager prend sa place et son rival, qui reste le même ensuite.");
+}
 // Sauvegarde.
 const back = store.deserializeMultiLeague(JSON.parse(JSON.stringify(store.serializeMultiLeague(league)))).league;
 assert.deepStrictEqual(back.rivalPairs, league.rivalPairs);

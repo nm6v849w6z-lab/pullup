@@ -9879,7 +9879,14 @@ class League {
     const n = this.teams.length;
     const cur = this.rivalPairs;
     const inRange = p => p && Number.isInteger(p.a) && Number.isInteger(p.b) && p.a >= 0 && p.b >= 0 && p.a < n && p.b < n && p.a !== p.b;
-    if (cur && cur.season === season && Array.isArray(cur.pairs) && cur.pairs.every(inRange)) return cur;
+    if (cur && cur.season === season && Array.isArray(cur.pairs) && cur.pairs.every(inRange)) {
+      // En cours de saison, un manager qui reprend un club de l'IA prend sa
+      // place telle quelle : même rival, derbys restants compris. Les noms
+      // mémorisés suivent (reprise = nouveau nom), pour que la paire soit
+      // reconnue comme « les deux mêmes clubs » à la saison suivante.
+      cur.pairs.forEach(p => { p.names = [this.teams[p.a].name, this.teams[p.b].name]; });
+      return cur;
+    }
     const human = i => !!(this.teams[i] && this.teams[i].isHuman);
     const sameClubs = p => inRange(p) && Array.isArray(p.names) && this.teams[p.a].name === p.names[0] && this.teams[p.b].name === p.names[1];
     const used = new Set();

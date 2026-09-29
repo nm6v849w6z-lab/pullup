@@ -94,6 +94,9 @@ points réellement ouverts.
        html) : paires fixées par saison (rivalPairs {season, pairs[{a,b,
        names}]}, sauvegardé), gardées si mêmes clubs, managers appariés entre
        eux d'abord, mélange déterministe ; posées par autoSim.catchUpLeague.
+       Reprise d'un club de l'IA en cours de saison : le manager prend sa
+       place et son rival tout de suite (paires par index), et la paire
+       continue la saison suivante (noms mémorisés mis à jour).
      - Derby = match de CHAMPIONNAT saison régulière contre son rival (2 par
        saison) ; jamais Coupe, play-offs, barrage. Effets (server/liveMatch.js)
        : humeur ×DERBY_MORALE_MULT 1,5 (« Derby gagné/perdu contre X »),
