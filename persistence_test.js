@@ -66,7 +66,7 @@ skillSel.dispatchEvent(new win1.Event("change"));
 const posBtns = (doc) => [...doc.querySelectorAll("#trainingPositionsToggles .tp-pos")];
 const pressedPositions = (doc) => posBtns(doc).filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.pos);
 console.log("Boutons de postes pour 'Jeu intérieur' :", posBtns(doc1).map(b => b.textContent));
-// Par défaut, le poste "naturel" seul (Pivot, 100%).
+// Par défaut, le mieux classé seul (100 %).
 console.log("Postes sélectionnés par défaut :", pressedPositions(doc1));
 console.log("Note de dilution :", doc1.getElementById("trainingDilutionNote").textContent);
 
@@ -89,11 +89,15 @@ console.log(`\n${pivots(doc1).length} pivots trouvés.`);
 
 // Étend à 2 postes (Pivot + Ailier fort) pour vérifier la dilution + la
 // couverture de plus de joueurs.
-const afBtn = posBtns(doc1).find(b => b.dataset.pos === "Ailier fort");
-if (afBtn && afBtn.getAttribute("aria-pressed") !== "true") {
-  afBtn.click();
-  console.log("\nAprès extension à 2 postes :", pressedPositions(doc1), "| note :", doc1.getElementById("trainingDilutionNote").textContent);
+// Le poste proposé par défaut est le MIEUX classé pour le programme
+// (rankedPositionsForProgram, tableau d'aptitudes de l'utilisateur du
+// 2026-09-29 : Ailier fort pour « Jeu intérieur », plus Pivot) : on coche
+// donc celui des deux qui manque, quel que soit l'ordre du tableau.
+for (const pos of ["Pivot", "Ailier fort"]) {
+  const btn = posBtns(doc1).find(b => b.dataset.pos === pos);
+  if (btn && btn.getAttribute("aria-pressed") !== "true") btn.click();
 }
+console.log("\nAprès extension à 2 postes :", pressedPositions(doc1), "| note :", doc1.getElementById("trainingDilutionNote").textContent);
 
 // --- Avance le calendrier de WEEKS semaines réelles complètes (ROUNDS
 // journées) : une seule requête au serveur rattrape tout d'un coup (matchs +
