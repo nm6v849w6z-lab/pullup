@@ -616,8 +616,8 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
   // Notifications (Premium, server/push.js) : envoyées avant la sauvegarde
   // (curseurs mis à jour) ; prochain coup d'envoi de championnat comme
   // échéance pour les clubs abonnés.
-  for (const [, lg] of allLeagues) {
-    try { await Push.flushLeague(lg, now); } catch (e) { console.warn("[notifications]", e.message); }
+  for (const [id, lg] of allLeagues) {
+    try { await Push.flushLeague(lg, now, { leagueId: id, leagues: allLeagues }); } catch (e) { console.warn("[notifications]", e.message); }
     if (lg.teams.some(t => t.isHuman && (t.pushSubscriptions || []).length) && !lg.isRegularSeasonDone()) {
       const at = Calendar.scheduledTimeForLeagueRound(lg, lg.round);
       if (at != null && at > now && (nextDeadlineAt == null || at < nextDeadlineAt)) nextDeadlineAt = at + 30 * 1000;

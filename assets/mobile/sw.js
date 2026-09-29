@@ -94,7 +94,9 @@ self.addEventListener("notificationclick", (event) => {
   const url = (event.notification.data && event.notification.data.url) || "/";
   event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
     const open = list.find((c) => new URL(c.url).origin === self.location.origin);
-    if (open) return open.focus();
+    // Page déjà ouverte : on la prévient du lien (ex. « /#encheres » ouvre
+    // « Mes enchères », voir mkHandleAuctionsHash) plutôt que de la recharger.
+    if (open) { if (url !== "/") open.postMessage({ type: "hm-open", url }); return open.focus(); }
     return self.clients.openWindow(url);
   }));
 });

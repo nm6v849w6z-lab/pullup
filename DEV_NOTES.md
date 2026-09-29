@@ -20,6 +20,30 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Suivre ses enchères (joueurs ET staff)**
+  (retour : « il faudrait un endroit où on peut suivre ses enchères […] si
+  qqun a surenchéri, comment je retrouve rapidement ? » puis « ou le marché
+  des staffs ») :
+  - « Mes enchères » (page Marché) : onglets Tout / Joueurs / Staff / Ventes,
+    staff inclus (mkStaffBids), dépassées en premier ; « Relancer » d'une
+    ligne staff → page Staff, rôle déplié, filtré sur le niveau (et la
+    spécialité) du candidat, champ d'offre sélectionné (mkGotoStaff) ;
+  - pastille rouge sur « Marché » dans le menu = nombre d'enchères dépassées
+    (mkUpdateBadge, myOutbidAuctions) ;
+  - tableau de bord « Cette semaine » : une tâche « Dépassé sur … » par
+    enchère (2–3 au plus + renvoi), CTA /enchere/joueur/:id ou
+    /enchere/staff/:role/:id, /encheres ;
+  - notification Premium « Enchère dépassée : … » à chaque surenchère d'un
+    autre club (server/push.js auctionNotes, clé out:<champ>:<id>:<nb
+    d'offres>), y compris sur une annonce d'un autre championnat (via
+    catchUpWorld, flushLeague(lg, now, { leagueId, leagues })) ; lien
+    /#encheres (mkHandleAuctionsHash ; sw.js prévient une page déjà ouverte
+    par postMessage « hm-open ») ;
+  - GET /api/auctions/mine (server/myAuctions.js), interrogé toutes les 60 s
+    et au retour sur la page (myAuctionsRefresh) : met à jour les champs
+    d'enchère des annonces déjà connues.
+  - Test : my_auctions_test.js. RESTE : pousser.
+
 - **✅ COMMITTÉ, À POUSSER (2026-09-29) — Page d'accueil (/bienvenue) : compteur
   « clubs encore disponibles dans la ligue en cours » retiré** (retour : « t'enlèveras
   ça sur la page d'accueil ») — assets/site/index.html : encadré, style,

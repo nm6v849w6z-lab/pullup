@@ -57,6 +57,7 @@ const Messages = require("./messages.js");
 const AccountRoutes = require("./accountRoutes.js");
 const Accounts = require("./accounts.js");
 const Push = require("./push.js");
+const MyAuctions = require("./myAuctions.js");
 const WebPush = require("./webpush.js");
 const Ads = require("./ads.js");
 const Site = require("./site.js");
@@ -1576,6 +1577,20 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const fstore = ctx.world ? await loadWorldFriendlies(multiSavePath) : null;
         const merged = mergedFriendlies(ctx, fstore, now);
         sendJson(res, 200, { ok: true, friendlies: merged.friendlies, guestTeams: merged.guests });
+        return;
+      }
+
+      // « Mes enchères » à jour (retour utilisateur 2026-09-29 : « si qqun a
+      // surenchéri, comment je retrouve rapidement ? ») : les annonces où le
+      // club a misé — joueurs de sa ligue et des autres championnats, staff —
+      // pour la pastille rouge de Marché et la liste « Mes enchères ».
+      // Lecture seule, sans rattrapage (appelée régulièrement, comme la liste
+      // des amicaux). Voir server/myAuctions.js.
+      if (route.pathname === "/api/auctions/mine" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const index = ctx.world ? await store.loadWorldAuxRaw("market", multiSavePath) : null;
+        sendJson(res, 200, { ok: true, now, ...MyAuctions.collect(ctx.league, ctx.teamIndex, now, index ? { index, leagueId: ctx.leagueId } : null) });
         return;
       }
 

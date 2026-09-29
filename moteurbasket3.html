@@ -1797,6 +1797,8 @@
   .mk-tasks{display:flex; flex-direction:column; gap:10px;}
   .mk-task{display:grid; grid-template-columns:48px minmax(0,1fr) auto auto auto; align-items:center; gap:16px; background:var(--bg); border-radius:14px; padding:12px 16px;}
   .mk-task-av{width:48px; height:48px; border-radius:12px; overflow:hidden; display:flex; align-items:flex-end; justify-content:center; background:var(--panel-2);}
+  .mk-task-av--staff{align-items:center; color:var(--muted);}
+  .mk-task-t .stf-stars{font-size:12px; margin-left:4px;}
   .mk-task-t{min-width:0;}
   .mk-task-t b{display:block; font-size:16px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .mk-task-t span{color:var(--ink-dim); font-size:13.5px;}
@@ -6039,6 +6041,8 @@
     .sl-retired{gap:6px;} .sl-retired-banner{width:36px; padding:8px 0 14px;} .sl-retired-banner b{font-size:17px;} .sl-retired-banner span{display:none;} }
   /* ---- Messagerie privée entre managers (2026-09-26) — voir renderMessagesSection ---- */
   .sidebar-badge{margin-left:auto; min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--amber); color:var(--amber-ink); font-size:11px; font-weight:800; line-height:18px; text-align:center; font-variant-numeric:tabular-nums;}
+  /* Enchères dépassées (joueurs et staff, voir mkUpdateBadge) : pastille rouge. */
+  .sidebar-badge--alert{background:var(--danger); color:#fff;}
   .msg-dash-banner{display:flex; align-items:center; gap:12px; width:100%; margin:0 0 16px; padding:12px 16px; border-radius:12px; border:1px solid rgba(240,162,60,.45); background:rgba(240,162,60,.1); color:var(--ink); font:inherit; font-size:14px; text-align:left; cursor:pointer;}
   .msg-dash-banner:hover{background:rgba(240,162,60,.16);}
   .msg-dash-banner b{color:var(--amber);}
@@ -6384,7 +6388,7 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Recrutement</div>
-      <button class="tab-btn sidebar-link" data-tab="marche"><span class="sidebar-label">Marché</span></button>
+      <button class="tab-btn sidebar-link" data-tab="marche"><span class="sidebar-label">Marché</span><span class="sidebar-badge sidebar-badge--alert hidden" id="marcheBadge" title="Enchères où vous avez été dépassé"></span></button>
       <button class="tab-btn sidebar-link" data-tab="staff"><span class="sidebar-label">Staff</span></button>
       <button class="tab-btn sidebar-link" data-tab="academie"><span class="sidebar-label">Académie de jeunes</span></button>
     </div>
@@ -22991,6 +22995,8 @@ function showPage(id) {
   // Pastille « invitations à un amical » de la barre latérale (voir
   // frUpdateBadge) : recalculée à chaque changement de page.
   if (typeof frUpdateBadge === "function") { try { frUpdateBadge(); } catch (e) { /* ligue pas encore chargée */ } }
+  // Idem pour la pastille « enchères dépassées » de Marché (mkUpdateBadge).
+  if (typeof mkUpdateBadge === "function") { try { mkUpdateBadge(); } catch (e) { /* ligue pas encore chargée */ } }
   PAGE_IDS.forEach(pid => {
     const el = document.getElementById(pid);
     if (el) el.classList.toggle("hidden", pid !== id);
@@ -35526,6 +35532,7 @@ function renderStaffPanel() {
   const now = Date.now();
   document.getElementById("staffSlots").innerHTML = STAFF_ROLES.map(r => staffSlotHtml(r, now)).join("");
   STAFF_ROLES.forEach(r => renderStaffRole(r, now));
+  mkUpdateBadge();
 }
 
 // Carte "poste" en haut de page : vacant / enchère en tête / en poste.
@@ -36259,6 +36266,37 @@ function dashBuildTasks(data) {
       cta: { label: "Voir les offres", href: "/sponsors", style: "ghost" },
     });
   }
+  // Enchères dépassées, joueurs et staff (retour utilisateur 2026-09-29 :
+  // « si qqun a surenchéri, comment je retrouve rapidement ? ») : une tâche
+  // par enchère (3 au plus, puis un renvoi vers « Mes enchères »).
+  if (Array.isArray(data.outbidAuctions) && data.outbidAuctions.length) {
+    const list = data.outbidAuctions;
+    const shown = list.length > 3 ? list.slice(0, 2) : list;
+    shown.forEach(a => {
+      const msLeft = a.closesAt - Date.now();
+      tasks.push({
+        id: `outbid-${a.kind}-${a.role || ""}-${a.id}`,
+        icon: "auction",
+        title: `Dépassé sur ${a.label}`,
+        text: `Meilleure offre : ${dashFormatEuros(a.currentBid)}. Relance dès ${dashFormatEuros(a.minNext)}.`,
+        badge: `Reste ${a.timeLeft}`,
+        tone: msLeft < 3600 * 1000 ? "urgent" : "warn",
+        cta: { label: "Relancer", href: a.kind === "staff" ? `/enchere/staff/${a.role}/${a.id}` : `/enchere/joueur/${a.id}`, style: "primary" },
+      });
+    });
+    if (list.length > shown.length) {
+      const rest = list.length - shown.length;
+      tasks.push({
+        id: "outbid-more",
+        icon: "auction",
+        title: `${rest} autres enchères dépassées`,
+        text: "Joueurs et staff : tout est dans « Mes enchères ».",
+        badge: `${list.length} au total`,
+        tone: "warn",
+        cta: { label: "Mes enchères", href: "/encheres", style: "ghost" },
+      });
+    }
+  }
   if (data.finances && data.finances.budget < 0) {
     tasks.push({
       id: "budget",
@@ -36300,6 +36338,7 @@ const DASH_TASK_ICONS = {
   orders: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
   money: '<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>',
   sponsor: '<path d="M4 7h16v10H4zM4 12h16M9 7v10"/>',
+  auction: '<path d="M14 4l6 6M11 7l6 6M12.5 5.5l-4 4M18.5 11.5l-4 4M9.5 11.5L3 18l3 3 6.5-6.5M3 21h9"/>',
 };
 const dashTaskIcon = (name, size = 36) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">${DASH_TASK_ICONS[name]}</svg>`;
@@ -37093,6 +37132,11 @@ function dashboardDataFromGameState() {
     // Offres de sponsors en attente (retour utilisateur 2026-09-26 : "mets
     // plutôt sur le tableau de bord que le fil d'actu car c'est une tâche").
     sponsorOffers: (teamA.sponsorOffers || []).filter(o => o.expiresAt > Date.now() && !sponsorActiveContractForSlot(teamA, o.slot)).map(o => ({ sponsorName: o.sponsorName, slotLabel: o.slotLabel, expiresAt: o.expiresAt })),
+    // Enchères où l'on a été dépassé (voir myOutbidAuctions).
+    outbidAuctions: myOutbidAuctions().map(x => ({
+      kind: x.kind, id: x.l.id, role: x.role ? x.role.key : null, label: myAuctionLabel(x),
+      currentBid: x.l.currentBid, minNext: minNextBidFor(x.l), closesAt: x.l.closesAt, timeLeft: mkTimeLeft(x.l.closesAt, Date.now()),
+    })),
     finances: {
       budget: teamA.budget,
       weeklyWages: dashboardWeeklyWages(teamA),
@@ -37180,6 +37224,17 @@ function dashResolveNavigate(href) {
     // bord [...] pas d'écran de paramètres dédié") : pas de nouvel écran de
     // paramètres créé, juste relocalisé depuis le tableau de bord.
     showClubIdentityModal();
+    return;
+  }
+  if (href === "/encheres") { mkGotoMine("all"); return; }
+  if (href.startsWith("/enchere/joueur/")) {
+    TAB_HANDLERS.marche();
+    mkGotoListing(Number(href.slice("/enchere/joueur/".length)));
+    return;
+  }
+  if (href.startsWith("/enchere/staff/")) {
+    const [role, id] = href.slice("/enchere/staff/".length).split("/");
+    mkGotoStaff(role, Number(id));
     return;
   }
   if (href.startsWith("/interview/")) {
@@ -38563,6 +38618,44 @@ function mkStatus(l) {
   if (mkIsOutbid(l)) return "out";
   return null;
 }
+// Enchères STAFF où l'on a misé, encore ouvertes (retour utilisateur
+// 2026-09-29 : « il faudrait un endroit où on peut suivre ses enchères […]
+// ou le marché des staffs »). { role, l, st: "lead" | "out" }.
+function mkStaffBids(now = Date.now()) {
+  const out = [];
+  if (!league) return out;
+  STAFF_ROLES.forEach(role => (league[role.listKey] || []).forEach(l => {
+    if (l.status !== "open" || l.closesAt <= now) return;
+    const lead = l.currentBidderIdx === myTeamIndex;
+    if (!lead && !(l.bids || []).some(b => b.bidderIdx === myTeamIndex)) return;
+    out.push({ role, l, st: lead ? "lead" : "out" });
+  }));
+  return out;
+}
+// Toutes les enchères où l'on a été dépassé (joueurs, y compris des autres
+// championnats, et staff), de la plus proche clôture à la plus lointaine :
+// pastille rouge du menu, tâches du tableau de bord.
+function myOutbidAuctions(now = Date.now()) {
+  if (!league) return [];
+  const players = mkOpenListings().filter(l => l.closesAt > now && mkIsOutbid(l)).map(l => ({ kind: "player", l }));
+  const staff = mkStaffBids(now).filter(x => x.st === "out").map(x => ({ kind: "staff", role: x.role, l: x.l }));
+  return players.concat(staff).sort((a, b) => a.l.closesAt - b.l.closesAt);
+}
+function myAuctionLabel(x) {
+  if (x.kind === "player") { const p = league.playerById(x.l.playerId); return p ? p.name : "un joueur"; }
+  const spec = x.l.specialty && typeof ASSISTANT_SPECIALTIES !== "undefined" ? ASSISTANT_SPECIALTIES[x.l.specialty] : null;
+  return `${x.role.label} niveau ${x.l.level}${spec ? ` (${spec.label})` : ""}`;
+}
+// Pastille rouge sur « Marché » : nombre d'enchères dépassées.
+function mkUpdateBadge() {
+  const badge = document.getElementById("marcheBadge");
+  if (!badge) return;
+  let n = 0;
+  try { n = myOutbidAuctions().length; } catch (e) { n = 0; }
+  badge.textContent = String(n);
+  badge.classList.toggle("hidden", !n);
+  badge.setAttribute("aria-label", n ? `${n} enchère${n > 1 ? "s" : ""} dépassée${n > 1 ? "s" : ""}` : "");
+}
 // Somme des enchères où l'on est en tête (hors `exceptId`). Indicatif : le
 // moteur ne réserve pas ces montants (placeBid ne compare qu'au budget
 // réel), mais c'est ce que coûterait le fait de toutes les remporter.
@@ -38673,50 +38766,170 @@ function renderMarketKpis() {
 function renderMarketMine() {
   const tabsEl = document.getElementById("marketMineTabs");
   const listEl = document.getElementById("marketMineList");
+  mkUpdateBadge();
   if (!tabsEl || !listEl) return;
   const now = Date.now();
   const open = mkOpenListings();
-  const buy = open.filter(l => mkStatus(l) === "lead" || mkStatus(l) === "out");
-  const sell = open.filter(l => l.sellerIdx === myTeamIndex);
-  const tabs = [["all", "Tout", buy.length + sell.length], ["buy", "Achats", buy.length], ["sell", "Ventes", sell.length]];
+  const buy = open.filter(l => mkStatus(l) === "lead" || mkStatus(l) === "out").map(l => ({ kind: "player", l, st: mkStatus(l) }));
+  const staff = mkStaffBids(now).map(x => ({ kind: "staff", role: x.role, l: x.l, st: x.st }));
+  const sell = open.filter(l => l.sellerIdx === myTeamIndex).map(l => ({ kind: "player", l, st: "sale" }));
+  const tabs = [["all", "Tout", buy.length + staff.length + sell.length], ["buy", "Joueurs", buy.length], ["staff", "Staff", staff.length], ["sell", "Ventes", sell.length]];
+  if (!tabs.some(([k]) => k === marketUi.mineTab)) marketUi.mineTab = "all";
   tabsEl.innerHTML = tabs.map(([k, t, n]) => `<button type="button" class="mk-tab ${marketUi.mineTab === k ? "on" : ""}" role="tab" aria-selected="${marketUi.mineTab === k}" data-mk-mtab="${k}">${t}<span class="n">${n}</span></button>`).join("");
-  let rows = marketUi.mineTab === "buy" ? buy : marketUi.mineTab === "sell" ? sell : [...buy, ...sell];
-  rows = rows.slice().sort((a, b) => (mkStatus(b) === "out") - (mkStatus(a) === "out") || a.closesAt - b.closesAt);
+  let rows = marketUi.mineTab === "buy" ? buy : marketUi.mineTab === "staff" ? staff : marketUi.mineTab === "sell" ? sell : [...buy, ...staff, ...sell];
+  rows = rows.slice().sort((a, b) => (b.st === "out") - (a.st === "out") || a.l.closesAt - b.l.closesAt);
   if (!rows.length) {
-    listEl.innerHTML = `<div class="mk-empty">${marketUi.mineTab === "sell" ? "Aucun joueur en vente. Mettez un joueur aux enchères depuis l'onglet Effectif ou sa fiche." : "Aucune enchère en cours."}</div>`;
+    listEl.innerHTML = `<div class="mk-empty">${marketUi.mineTab === "sell" ? "Aucun joueur en vente. Mettez un joueur aux enchères depuis l'onglet Effectif ou sa fiche."
+      : marketUi.mineTab === "staff" ? "Aucune enchère en cours sur le marché du staff." : "Aucune enchère en cours."}</div>`;
     return;
   }
-  listEl.innerHTML = rows.map(l => {
-    const player = league.playerById(l.playerId);
-    if (!player) return "";
-    const seller = league.teams[l.sellerIdx];
-    const st = mkStatus(l);
+  const btnFor = (st, attr) => st === "out"
+    ? `<button type="button" class="mk-btn mk-btn--danger mk-btn--sm" ${attr}>Relancer</button>`
+    : `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" ${attr}>Ouvrir</button>`;
+  listEl.innerHTML = rows.map(({ kind, role, l, st }) => {
     const urgent = l.closesAt - now < 3600000;
-    let badge, amt, sub, btn;
+    const timer = `<span class="${urgent ? "mk-timer urgent" : ""}">clôture dans ${escapeHtml(mkTimeLeft(l.closesAt, now))}</span>`;
+    let badge, amt, sub;
     if (st === "lead") {
       badge = `<span class="mk-badge lead">En tête</span>`; amt = formatMoney(l.currentBid); sub = "votre enchère";
-      btn = `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-goto="${l.id}">Ouvrir</button>`;
     } else if (st === "out") {
       badge = `<span class="mk-badge out">Dépassé</span>`; amt = formatMoney(l.currentBid); sub = `relance dès ${formatMoney(minNextBidFor(l))}`;
-      btn = `<button type="button" class="mk-btn mk-btn--danger mk-btn--sm" data-mk-goto="${l.id}">Relancer</button>`;
     } else if (l.currentBid) {
       const n = (l.bids || []).length;
       const leader = league.teams[l.currentBidderIdx];
       badge = `<span class="mk-badge sale">En vente</span>`; amt = formatMoney(l.currentBid);
       sub = `${n} offre${n > 1 ? "s" : ""}${leader ? " · " + escapeHtml(leader.name) : ""}`;
-      btn = `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-goto="${l.id}">Ouvrir</button>`;
     } else {
       badge = `<span class="mk-badge mute">Aucune offre</span>`; amt = formatMoney(l.startPrice); sub = "prix de départ";
-      btn = `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-goto="${l.id}">Ouvrir</button>`;
     }
+    if (kind === "staff") {
+      const spec = l.specialty && ASSISTANT_SPECIALTIES[l.specialty];
+      return `<div class="mk-task" data-mk-staff-task="${role.key}:${l.id}">` +
+        `<div class="mk-task-av mk-task-av--staff">${STAFF_ICONS[role.key] || ""}</div>` +
+        `<div class="mk-task-t"><b>${escapeHtml(role.label)} ${staffStarsHtml(l.level)}</b><span>${spec ? escapeHtml(spec.label) + " · " : ""}Staff · ${timer}</span></div>` +
+        badge +
+        `<div class="mk-task-amt"><b>${amt}</b><span>${sub}</span></div>` +
+        btnFor(st, `data-staff-goto="${role.key}:${l.id}"`) +
+      `</div>`;
+    }
+    const player = league.playerById(l.playerId);
+    if (!player) return "";
+    const seller = league.teams[l.sellerIdx];
     return `<div class="mk-task" data-mk-task="${l.id}">` +
       `<div class="mk-task-av">${playerAvatarHtml(player, seller, 44)}</div>` +
-      `<div class="mk-task-t"><b>${escapeHtml(player.name)}</b><span>${escapeHtml(player.position)} · ${player.age} ans · <span class="${urgent ? "mk-timer urgent" : ""}">clôture dans ${escapeHtml(mkTimeLeft(l.closesAt, now))}</span></span></div>` +
+      `<div class="mk-task-t"><b>${escapeHtml(player.name)}</b><span>${escapeHtml(player.position)} · ${player.age} ans · ${timer}</span></div>` +
       badge +
       `<div class="mk-task-amt"><b>${amt}</b><span>${sub}</span></div>` +
-      btn +
+      btnFor(st, `data-mk-goto="${l.id}"`) +
     `</div>`;
   }).join("");
+}
+
+// « Relancer » / « Ouvrir » sur une annonce joueur de « Mes enchères » (ou
+// depuis le tableau de bord) : filtres remis à zéro, carte de l'annonce,
+// champ d'enchère sélectionné.
+function mkGotoListing(id) {
+  mkResetFilters(); renderMarketCritPanel(); renderMarketListings();
+  const card = document.getElementById(`marketCard_${id}`);
+  if (card && card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "center" });
+  const input = document.getElementById(`bid_${id}`);
+  if (input) setTimeout(() => input.focus({ preventScroll: true }), 400);
+}
+// Page Marché ouverte sur « Mes enchères » (lien des notifications
+// « Tu as été dépassé », #encheres, et du tableau de bord).
+function mkGotoMine(tab) {
+  TAB_HANDLERS.marche();
+  marketUi.mineTab = tab || "all";
+  renderMarketMine();
+  const card = document.getElementById("marketMineTitle");
+  const box = card && card.closest("section");
+  if (box && box.scrollIntoView) box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// « Relancer » / « Ouvrir » sur une enchère staff de « Mes enchères » : page
+// Staff, rôle déplié et filtré sur le niveau (et la spécialité) du candidat,
+// liste complète, champ d'offre sélectionné.
+function mkGotoStaff(roleKey, id) {
+  const role = STAFF_ROLE_BY_KEY[roleKey];
+  const l = role && (league[role.listKey] || []).find(x => x.id === id);
+  TAB_HANDLERS.staff();
+  if (!role) return;
+  const ui = staffUi[roleKey];
+  ui.open = true;
+  ui.expanded = true;
+  if (l) { ui.level = l.level || 0; if (roleKey === "assistant") ui.specialty = l.specialty || ""; }
+  renderStaffPanel();
+  const input = document.getElementById(`${role.inputPrefix}${id}`);
+  const target = (input && input.closest("tr")) || document.querySelector(`.stf-role[data-staff-role="${roleKey}"]`);
+  if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (input) setTimeout(() => { input.focus({ preventScroll: true }); if (input.select) input.select(); }, 400);
+}
+
+// « Mes enchères » rafraîchies depuis le serveur (GET /api/auctions/mine,
+// voir server/myAuctions.js) : toutes les 60 s tant que la page est
+// visible, et au retour sur la page (clic sur une notification « Enchère
+// dépassée »…). Seuls les champs d'enchère des annonces déjà connues sont
+// mis à jour ; les écrans Marché / Staff affichés sont redessinés si
+// quelque chose a changé et qu'on n'y est pas en train de saisir une offre.
+const MY_AUCTIONS_POLL_MS = 60 * 1000;
+const MY_AUCTION_FIELDS = ["status", "result", "finalPrice", "startPrice", "currentBid", "currentBidderIdx", "currentBidderRef", "bids", "closesAt"];
+function myAuctionsMerge(list, fresh) {
+  let changed = false;
+  (fresh || []).forEach(f => {
+    const l = (list || []).find(x => x.id === f.id);
+    if (!l) return;
+    MY_AUCTION_FIELDS.forEach(k => {
+      if (!(k in f)) return;
+      if (JSON.stringify(l[k]) === JSON.stringify(f[k])) return;
+      l[k] = f[k];
+      changed = true;
+    });
+  });
+  return changed;
+}
+async function myAuctionsRefresh() {
+  if (typeof managerToken === "undefined" || !managerToken || !league) return false;
+  try {
+    const res = await fetchApi("/api/auctions/mine");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) return false;
+    let changed = myAuctionsMerge(league.transferListings, data.transferListings);
+    Object.entries(data.staff || {}).forEach(([field, arr]) => { if (myAuctionsMerge(league[field], arr)) changed = true; });
+    // Annonce d'un autre championnat où l'on a misé, disparue de l'index : close.
+    const alive = new Set(data.foreignIds || []);
+    (league.transferListings || []).forEach(l => {
+      if (l.id < 0 && l.status === "open" && !alive.has(l.id) && (l.bids || []).some(b => b.bidderIdx === myTeamIndex)) { l.status = "closed"; changed = true; }
+    });
+    mkUpdateBadge();
+    if (!changed) return true;
+    const typingIn = sel => document.activeElement && document.activeElement.closest && document.activeElement.closest(sel);
+    const visible = id => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); };
+    if (visible("marcheSection")) { renderMarketKpis(); renderMarketMine(); if (!typingIn("#marcheSection")) renderMarketListings(); }
+    if (visible("staffSection") && !typingIn("#staffSection")) renderStaffPanel();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+setInterval(() => { if (document.visibilityState !== "hidden") myAuctionsRefresh(); }, MY_AUCTIONS_POLL_MS);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") myAuctionsRefresh(); });
+
+// Lien #encheres (notifications d'enchère, voir server/push.js) : Marché,
+// « Mes enchères ». Au chargement, sur changement d'ancre, et sur message du
+// service worker quand la page était déjà ouverte (assets/mobile/sw.js).
+function mkHandleAuctionsHash() {
+  if ((window.location.hash || "") !== "#encheres" || !league) return false;
+  try { history.replaceState(null, "", window.location.pathname + window.location.search); } catch (e) { /* rien */ }
+  mkGotoMine("all");
+  myAuctionsRefresh();
+  return true;
+}
+window.addEventListener("hashchange", mkHandleAuctionsHash);
+if (typeof navigator !== "undefined" && navigator.serviceWorker && navigator.serviceWorker.addEventListener) {
+  navigator.serviceWorker.addEventListener("message", (e) => {
+    const d = e.data || {};
+    if (d.type === "hm-open" && typeof d.url === "string" && /#encheres$/.test(d.url) && league) { mkGotoMine("all"); myAuctionsRefresh(); }
+  });
 }
 
 function renderMarketFilterControls() {
@@ -39022,15 +39235,8 @@ document.getElementById("marcheSection").addEventListener("click", (e) => {
     return;
   }
   if (d.mkMtab) { marketUi.mineTab = d.mkMtab; renderMarketMine(); return; }
-  if (d.mkGoto) {
-    const id = Number(d.mkGoto);
-    mkResetFilters(); renderMarketCritPanel(); renderMarketListings();
-    const card = document.getElementById(`marketCard_${id}`);
-    if (card && card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "center" });
-    const input = document.getElementById(`bid_${id}`);
-    if (input) setTimeout(() => input.focus({ preventScroll: true }), 400);
-    return;
-  }
+  if (d.staffGoto) { const [k, id] = d.staffGoto.split(":"); mkGotoStaff(k, Number(id)); return; }
+  if (d.mkGoto) { mkGotoListing(Number(d.mkGoto)); return; }
   if (d.mkPos) { marketUi.pos = d.mkPos; renderMarketListings(); return; }
   if (t.id === "marketDealBtn") { marketUi.deal = !marketUi.deal; renderMarketListings(); return; }
   if (t.id === "marketHideMineBtn") { marketUi.hideMine = !marketUi.hideMine; renderMarketListings(); return; }
@@ -46198,6 +46404,8 @@ window.__gameReady = (async () => {
   }
   document.getElementById("topbarClubName").innerHTML = teamLinkHtml(myTeamIndex, teamA.name);
   hmAccountHandleReturnHash();
+  mkHandleAuctionsHash();
+  mkUpdateBadge();
   hmAdsLoadScript(); // vraies pubs : seulement une fois le manager identifié (voir hmAds*)
   fetch("/api/account/config").then(r => (r.ok ? r.json() : null)).then(cfg => {
     const link = document.getElementById("sidebarDiscordLink");

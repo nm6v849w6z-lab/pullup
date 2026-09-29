@@ -13012,7 +13012,7 @@ function serializeTeam(team) {
     pushSubscriptions: Array.isArray(team.pushSubscriptions) ? team.pushSubscriptions.map(x => ({ ...x, keys: { ...(x.keys || {}) } })) : [],
     pushCursor: typeof team.pushCursor === "number" ? team.pushCursor : null,
     pushKickoffKeys: Array.isArray(team.pushKickoffKeys) ? team.pushKickoffKeys.slice(-10) : [],
-    pushAuctionKeys: Array.isArray(team.pushAuctionKeys) ? team.pushAuctionKeys.slice(-60) : [],
+    pushAuctionKeys: Array.isArray(team.pushAuctionKeys) ? team.pushAuctionKeys.slice(-100) : [],
     pushSince: typeof team.pushSince === "number" ? team.pushSince : null,
     lineup: team.lineup,
     // Journées futures déjà préparées à l'avance (voir Team.plannedTactics
