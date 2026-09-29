@@ -166,9 +166,9 @@ function mobileManifest(token) {
     background_color: "#0d131d",
     theme_color: "#0f1728",
     icons: [
-      { src: "/assets/mobile/icon-192.png?v=2", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/assets/mobile/icon-512.png?v=2", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/assets/mobile/icon-maskable-512.png?v=2", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/assets/mobile/icon-192.png?v=3", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/assets/mobile/icon-512.png?v=3", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/assets/mobile/icon-maskable-512.png?v=3", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
@@ -207,6 +207,15 @@ function serveIndexHtml(res) {
   if (AccountRoutes.isPublicSite()) {
     const guard = `<script>window.HM_PUBLIC_SITE=true;(function(){try{if(new URLSearchParams(location.search).get("m"))return;if(localStorage.getItem("tipinManagerToken_v1"))return;}catch(e){}location.replace("/bienvenue");})();</script>`;
     html = html.replace(/<head([^>]*)>/i, m => `${m}${guard}`);
+
+    // Référencement (2026-09-29, retour : Google affichait encore « Pull Up ·
+    // Basket Manager » et le texte du jeu pour hoop-manager.com) : « / » est
+    // le jeu, pas une page à indexer. On désigne la page d'accueil comme
+    // page officielle (canonical) et on donne le bon nom + une description.
+    const seo = `<link rel="canonical" href="https://hoop-manager.com/bienvenue">` +
+      `<meta name="description" content="Hoop Manager : jeu de gestion de basket en ligne. Matchs diffusés en direct, ligue de 10 managers, entraînement, transferts aux enchères. Gratuit, dans le navigateur.">` +
+      `<meta property="og:site_name" content="Hoop Manager"><meta property="og:title" content="Hoop Manager">`;
+    html = html.replace(/<\/head>/i, `${seo}</head>`);
   }
   // Vraies pubs (voir server/ads.js) : rien sans ADSENSE_CLIENT.
   html = Ads.injectHead(html, Ads.adsConfig());
@@ -1067,6 +1076,18 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // comme "/", aucune sauvegarde touchée.
       if (route.pathname === "/sw.js" && req.method === "GET") {
         serveServiceWorker(res);
+        return;
+      }
+      // /favicon.ico (2026-09-29, retour « le favicon est toujours orange ») :
+      // Safari et d'autres navigateurs le demandent d'office et gardent
+      // l'ancien en cache tant que cette adresse ne répond rien. On y sert le
+      // favicon jaune (PNG, accepté par tous les navigateurs actuels).
+      if (route.pathname === "/favicon.ico" && req.method === "GET") {
+        fs.readFile(path.join(ASSETS_DIR, "mobile", "favicon-32.png"), (err, data) => {
+          if (err) { sendJson(res, 404, { error: "Fichier introuvable" }); return; }
+          res.writeHead(200, { "Content-Type": "image/png", "Content-Length": data.length, "Cache-Control": "public, max-age=86400" });
+          res.end(data);
+        });
         return;
       }
       if (route.pathname === "/manifest.webmanifest" && req.method === "GET") {

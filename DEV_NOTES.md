@@ -44,11 +44,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     d'enchère des annonces déjà connues.
   - Test : my_auctions_test.js. RESTE : pousser.
 
-- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Page d'accueil (/bienvenue) : compteur
-  « clubs encore disponibles dans la ligue en cours » retiré** (retour : « t'enlèveras
-  ça sur la page d'accueil ») — assets/site/index.html : encadré, style,
-  traductions FR/EN et renderSlots supprimés ; openSlots reste renvoyé par
-  /api/account/config (non utilisé par le site). RESTE : pousser.
+- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Google affiche « Pull Up · Basket
+  Manager »** (retour : « il faut avoir Hoop Manager »). Titre du jeu déjà
+  « Hoop Manager » (92ca5e2) : Google montre une vieille copie de « / » (le
+  jeu). Sur le site public, « / » porte maintenant canonical →
+  /bienvenue + description + og:site_name ; /bienvenue : canonical, og:*,
+  JSON-LD WebSite « Hoop Manager » (nom du site dans Google). RESTE :
+  pousser en prod ; côté utilisateur, Google Search Console → Inspection
+  de l'URL → Demander une indexation (https://hoop-manager.com/ et /bienvenue).
 
 - **🟡 CODÉ, À POUSSER (2026-09-29) — Ajouts aux récompenses + amicaux à huis
   clos** — par-dessus awardSeasonHonours (autre session) : récompenses
@@ -515,6 +518,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     confidentialité, comptes en base SQL et plusieurs ligues au-delà de
     quelques centaines de joueurs.
 
+- **📱 Appli iPhone (Capacitor) à reconstruire** pour la nouvelle icône jaune
+  (mobile-app/resources/icon-source-512.png, en prod depuis ec3f722).
+
 - **👀 À vérifier visuellement dans le vrai jeu** (testés en jsdom/Chromium
   seulement) : Ordres > temps de jeu cible par poste ; page live qui ne
   « saute » plus sur les tirs (Safari) ; version claire sur les écrans
@@ -527,6 +533,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ### À investiguer
 
+- **training_progression_test.js** : échec ponctuel le 2026-09-29 (nombre
+  de lignes « aucune minute » 3 au lieu de 4), repassé 3/3 ensuite — flaky.
 - **lineup_minutes_test.js** : échec ponctuel constaté le 2026-09-28
   ("Arrière : titulaire trop loin de sa cible"), repassé 3/3 ensuite —
   aléatoire du moteur, flaky.

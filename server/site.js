@@ -89,8 +89,8 @@ function layout({ pathName, title, description, body }) {
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="${SITE_URL}${pathName}">
 <meta name="theme-color" content="#0d131d">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/mobile/favicon-32.png?v=2">
-<link rel="apple-touch-icon" href="/assets/mobile/apple-touch-icon.png?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/mobile/favicon-32.png?v=3">
+<link rel="apple-touch-icon" href="/assets/mobile/apple-touch-icon.png?v=3">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">

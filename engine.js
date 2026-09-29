@@ -1002,6 +1002,45 @@ const TRAINING_HOME_POSITION = {
 // (1 poste = plein rendement, 2 = -15%, 3 = -30%, toute l'équipe = -50%).
 const TRAINING_DILUTION_BY_POSITION_COUNT = { 1: 0, 2: 0.15, 3: 0.30, 4: 0.40, 5: 0.50 };
 
+// Aptitude de chaque poste pour chaque entraînement des fondamentaux (retour
+// utilisateur, 2026-09-29 : tableau fourni, « reprends ces chiffres pour les
+// entraînements des fondamentaux dans le jeu »). Ordre : Meneur, Arrière,
+// Ailier shooteur, Ailier fort, Pivot. Remplace, pour ces 20 programmes, la
+// formule « poste de prédilection −10 % par poste d'écart »
+// (TRAINING_HOME_POSITION ne sert plus qu'aux caractéristiques hors de ce
+// tableau : synergies et adjoint). Pour un entraînement polyvalent, la ligne
+// du programme s'applique à TOUTES ses caractéristiques (voir trainWeek),
+// plus de moyenne des lignes individuelles. Miroir identique engine.js ⇄
+// moteurbasket3.html.
+const TRAINING_POSITION_EFFICIENCY = {
+  threePoint:   [100, 100, 100,  60,  20],
+  midRange:     [100, 100, 100,  80,  40],
+  inside:       [ 20,  30,  50, 100, 100],
+  pass:         [100,  90,  75,  60,  40],
+  rebound:      [ 20,  30,  60, 100, 100],
+  block:        [ 10,  20,  40,  90, 100],
+  dribble:      [100, 100,  90,  60,  30],
+  defOutside:   [100, 100, 100,  50,  20],
+  defInside:    [ 20,  30,  50, 100, 100],
+  freeThrow:    [100, 100, 100,  80,  60],
+  penetration:  [100, 100, 100,  60,  30],
+  shotCreation: [100, 100, 100,  60,  30],
+  steal:        [100, 100, 100,  50,  30],
+  // Entraînements polyvalents
+  outsideShot:      [100, 100, 100,  70,  30],
+  playmaking:       [100,  90,  85,  55,  25],
+  allroundDef:      [ 60,  65,  75,  90, 100],
+  quickShots:       [100, 100,  95,  75,  45],
+  creativeScoring:  [100, 100, 100,  60,  30],
+  perimeterDefense: [100, 100, 100,  45,  20],
+  rimAttack:        [100, 100, 100,  65,  40],
+};
+function tableEfficiency(key, position) {
+  const row = TRAINING_POSITION_EFFICIENCY[key];
+  const i = POSITIONS.indexOf(position);
+  return row && i >= 0 ? row[i] : null;
+}
+
 // Caractéristiques "naturelles" (fortes) de chaque poste — reprend les mêmes
 // spécialités que generateAttrsForPosition (voir plus bas). Sert de base à
 // la progression hebdomadaire simplifiée des équipes adverses (voir
@@ -1020,6 +1059,8 @@ const POSITION_STRONG_ATTRS = {
 };
 
 function positionEfficiencyForSkill(skill, position) {
+  const fromTable = tableEfficiency(skill, position);
+  if (fromTable != null) return fromTable;
   const home = TRAINING_HOME_POSITION[skill];
   if (!home) return 100;
   const dist = Math.abs(POSITIONS.indexOf(position) - POSITIONS.indexOf(home));
@@ -1168,20 +1209,10 @@ const TRAINING_PROGRAMS = {
 function positionEfficiencyForProgram(programKey, position) {
   const program = TRAINING_PROGRAMS[programKey];
   if (!program) return 100;
-  // Défense polyvalente : cas particulier (retour utilisateur : "100% AS,
-  // 90% AR ou AF, 80% M ou Pivot"). La moyenne défense extérieure/intérieure
-  // ci-dessous donnerait une égalité à 4 postes sur 5 (Arrière, Ailier
-  // shooteur, Ailier fort et Pivot tous à 85%, seul le Meneur en dessous) :
-  // pas assez lisible pour choisir un poste. On récompense à la place le
-  // poste le plus polyvalent au centre du spectre (Ailier shooteur, à
-  // mi-chemin entre extérieur et intérieur), avec la même pente de -10% par
-  // poste d'écart que positionEfficiencyForSkill ci-dessus, mais symétrique
-  // vers les deux extrêmes (Meneur et Pivot, également désavantagés).
-  if (programKey === "allroundDef") {
-    const center = POSITIONS.indexOf("Ailier shooteur");
-    const dist = Math.abs(POSITIONS.indexOf(position) - center);
-    return clamp(100 - dist * 10, 1, 100);
-  }
+  // Tableau utilisateur (voir TRAINING_POSITION_EFFICIENCY) ; la
+  // moyenne ci-dessous ne sert plus qu'à un programme absent du tableau.
+  const fromTable = tableEfficiency(programKey, position);
+  if (fromTable != null) return fromTable;
   let sum = 0, totalW = 0;
   program.attrs.forEach(({ attr, weight }) => {
     sum += positionEfficiencyForSkill(attr, position) * weight;
@@ -6830,7 +6861,7 @@ class Team {
         // couvrir plusieurs des postes entraînés au fil du match).
         const posEffFor = attr => {
           let sum = 0;
-          Object.entries(trainedByPosition).forEach(([pos, secs]) => { sum += positionEfficiencyForSkill(attr, pos) * secs; });
+          Object.entries(trainedByPosition).forEach(([pos, secs]) => { sum += positionEfficiencyForProgram(skill, pos) * secs; }); // ligne du PROGRAMME (tableau utilisateur 2026-09-29), la même pour chacune de ses caractéristiques
           return sum / trainedSeconds;
         };
         // Poids RÉEL de chaque caractéristique du programme pour CE joueur :
