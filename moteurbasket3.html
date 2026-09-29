@@ -5637,6 +5637,14 @@
   :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:hover td{background:#1c2638;}
   :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row.injured td{background:rgba(226,105,79,.12); color:var(--danger);}
   :is(#effectifSection, #teamDetailSection) .eff-listed{margin-left:6px; padding:1px 8px; font-size:10.5px;}
+  /* Pastille « $ » (joueur aux enchères) : pièce dorée, relief léger. */
+  .eff-listed-coin{
+    flex:none; display:inline-grid; place-items:center; width:20px; height:20px; margin-left:8px; border-radius:50%;
+    font:800 12px/1 var(--display, system-ui); color:#3b2503;
+    background:radial-gradient(circle at 35% 30%, #ffe7a3 0%, #f5b942 45%, #c9861b 100%);
+    box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35), inset 0 -2px 0 rgba(0,0,0,.18), 0 1px 3px rgba(0,0,0,.35);
+    text-shadow:0 1px 0 rgba(255,255,255,.35); cursor:help;
+  }
 
   /* Menu "⋯". */
   .eff-td-actions{position:relative; width:44px;}
@@ -38660,7 +38668,10 @@ function renderEffectifSection() {
       const cross = injuryCrossHtml(p, now);
       const badges = (cross || "") + (transferRequestBadgeHtml(p) || "") + retirementBadgeHtml(p) +
         (p.forSale ? `<span class="forsale-badge">En vente : 1 €</span>` : "") +
-        (isListed ? `<span class="market-listed-badge eff-listed">Aux enchères</span>` : "");
+        // Pastille « $ » au lieu du texte « Aux enchères », qui débordait sur
+        // la colonne Poste (retour utilisateur 2026-09-29 : "mettre un $ à
+        // la place qui prend moins de place, mets un beau dollar").
+        (isListed ? `<span class="eff-listed-coin" title="Aux enchères" aria-label="Aux enchères">$</span>` : "");
       html += `<tr class="eff-row${cross ? " injured" : ""}">` +
         `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, teamA, isStarters ? 30 : 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(myTeamIndex, p.id, p.name)}${badges}</span></td>` +
         `<td>${posCell}</td><td>${effPotentialHtml(p)}</td>` +
