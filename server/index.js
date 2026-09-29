@@ -206,6 +206,15 @@ function serveIndexHtml(res) {
   if (AccountRoutes.isPublicSite()) {
     const guard = `<script>window.HM_PUBLIC_SITE=true;(function(){try{if(new URLSearchParams(location.search).get("m"))return;if(localStorage.getItem("tipinManagerToken_v1"))return;}catch(e){}location.replace("/bienvenue");})();</script>`;
     html = html.replace(/<head([^>]*)>/i, m => `${m}${guard}`);
+
+    // Référencement (2026-09-29, retour : Google affichait encore « Pull Up ·
+    // Basket Manager » et le texte du jeu pour hoop-manager.com) : « / » est
+    // le jeu, pas une page à indexer. On désigne la page d'accueil comme
+    // page officielle (canonical) et on donne le bon nom + une description.
+    const seo = `<link rel="canonical" href="https://hoop-manager.com/bienvenue">` +
+      `<meta name="description" content="Hoop Manager : jeu de gestion de basket en ligne. Matchs diffusés en direct, ligue de 10 managers, entraînement, transferts aux enchères. Gratuit, dans le navigateur.">` +
+      `<meta property="og:site_name" content="Hoop Manager"><meta property="og:title" content="Hoop Manager">`;
+    html = html.replace(/<\/head>/i, `${seo}</head>`);
   }
   // Vraies pubs (voir server/ads.js) : rien sans ADSENSE_CLIENT.
   html = Ads.injectHead(html, Ads.adsConfig());

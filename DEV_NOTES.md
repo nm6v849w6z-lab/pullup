@@ -20,6 +20,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Google affiche « Pull Up · Basket
+  Manager »** (retour : « il faut avoir Hoop Manager »). Titre du jeu déjà
+  « Hoop Manager » (92ca5e2) : Google montre une vieille copie de « / » (le
+  jeu). Sur le site public, « / » porte maintenant canonical →
+  /bienvenue + description + og:site_name ; /bienvenue : canonical, og:*,
+  JSON-LD WebSite « Hoop Manager » (nom du site dans Google). RESTE :
+  pousser en prod ; côté utilisateur, Google Search Console → Inspection
+  de l'URL → Demander une indexation (https://hoop-manager.com/ et /bienvenue).
+
 - **🟡 CODÉ, À POUSSER (2026-09-29) — Ajouts aux récompenses + amicaux à huis
   clos** — par-dessus awardSeasonHonours (autre session) : récompenses
   décernées dès la fin de la saison régulière (awardRegularSeasonAwards,
