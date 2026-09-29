@@ -1087,8 +1087,8 @@
      inline juste après .brand-logo-img (voir le body) : léger effet de
      pulsation pour montrer que ça charge, sans avoir besoin d'un vrai
      spinner (aucune convention de chargement préexistante dans le jeu). */
-  .boot-splash-logo{width:88px; height:auto; animation:boot-splash-pulse 1.4s ease-in-out infinite;}
-  .boot-splash-text{margin:14px 0 0; color:var(--ink-faint); font-size:14px;}
+  .boot-splash-logo{width:min(240px, 60vw); height:auto; animation:boot-splash-pulse 1.4s ease-in-out infinite;}
+  .boot-splash-text{margin:18px 0 0; color:var(--ink-faint); font-size:16px;}
   @keyframes boot-splash-pulse{0%, 100%{opacity:1; transform:scale(1);} 50%{opacity:.7; transform:scale(.94);}}
   ::-webkit-scrollbar{width:8px;}
   ::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
@@ -4957,7 +4957,19 @@
 .hm-hero__vs > :not(.hm-hero__court) { position: relative; }
 .hm-hero__vs-text { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 48px; line-height: 0.85; color: var(--accent); }
 .hm-hero__date { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; text-align: center; }
-.hm-hero__actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+/* Retour utilisateur (2026-09-29) : "plus le nom d'équipe est grand plus ça
+   décale le bouton donner vos ordres à gauche" : les deux boutons ont
+   désormais la même largeur (l'espace entre eux reste sur la ligne médiane),
+   un nom trop long est coupé par des points de suspension (nom complet en
+   infobulle). */
+.hm-hero__actions { display: flex; justify-content: center; gap: 12px; }
+.hm-hero__actions > .hm-btn { flex: 0 1 280px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Téléphone : pas la place pour deux boutons côte à côte sans couper les
+   libellés : empilés, pleine largeur, centrés. */
+@media (max-width: 560px) {
+  .hm-hero__actions { flex-direction: column; align-items: center; }
+  .hm-hero__actions > .hm-btn { flex: 0 0 auto; width: 100%; max-width: 340px; }
+}
 /* Retour utilisateur (2026-09-27) : "mets un fond au bouton scouter…" — le
    bouton secondaire du bandeau n'est plus transparent (il chevauchait la
    ligne médiane et les deux moitiés de couleur). */
@@ -36729,7 +36741,7 @@ function dashRenderNextMatch(data) {
     <div class="hm-hero__actions">
       ${m.privateLeague
         ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ligues-privees">Voir la ligue privée</button>
-      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}">Scouter ${dashEsc(m.opponent.name)}</button>`
+      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}" title="Scouter ${dashEsc(m.opponent.name)}">Scouter ${dashEsc(m.opponent.name)}</button>`
         : m.isLive
         // Retour utilisateur (2026-09-25) : "quand le match est en cours, on
         // ne peut pas avoir le bouton donner vos ordres et scouter
@@ -36741,7 +36753,7 @@ function dashRenderNextMatch(data) {
         : m.lineupLocked
         ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/ordres">Ordres verrouillés</button>`
         : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ordres">Préparer le match</button>
-      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}">Scouter ${dashEsc(m.opponent.name)}</button>`}
+      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}" title="Scouter ${dashEsc(m.opponent.name)}">Scouter ${dashEsc(m.opponent.name)}</button>`}
     </div>
   </section>`;
 }
