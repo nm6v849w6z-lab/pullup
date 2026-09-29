@@ -7644,7 +7644,7 @@
 
       <div class="guide-entry" data-guide-id="ligue" data-guide-group="Compétitions">
         <h3>Ligue</h3>
-        <p class="training-intro">Le classement se départage par victoires puis par différence de points. Il est découpé en zones : places 1 à 4 qualifiées pour les <b>play-offs</b>, 5 et 6 maintien direct, 7 et 8 <b>barrage</b> de relégation, 9 et 10 <b>relégation</b>. Chaque équipe affiche sa forme récente. Un panneau "course aux play-offs" résume votre position, votre bilan et l'écart avec les places clés.</p>
+        <p class="training-intro">Le classement se départage par victoires puis par différence de points. Il est découpé en zones : places 1 à 4 qualifiées pour les <b>play-offs</b> ; s'il existe un championnat ouvert juste en dessous, le 10e est <b>relégué</b>, puis le 9e, et avec trois championnats en dessous le 7e et le 8e jouent un <b>barrage</b>. Seules les zones réellement en jeu sont colorées. Chaque équipe affiche sa forme récente. Un panneau "course aux play-offs" résume votre position, votre bilan et l'écart avec les places clés.</p>
         <p class="training-intro" style="margin-top:10px;">Sous le classement : le MVP de la dernière journée et les meilleurs de la ligue par catégorie (points, rebonds, passes, interceptions, contres, évaluation), en moyennes ou en totaux. Cliquez sur n'importe quel joueur pour ouvrir sa fiche, ou sur une équipe pour ouvrir sa fiche d'équipe.</p>
       </div>
 
@@ -20355,6 +20355,10 @@ function leagueFromSave(data, userTeam = null) {
   installGuestTeams(lg, data.guestTeams);
   // Supercoupe (server/nationalCup.js, projectSuperCup) : vue du pays.
   lg.superCup = data.superCup || null;
+  // Zones réellement en jeu (server/world.js divisionMovesFor) : absent =
+  // aucune division au-dessus ni en dessous → ni montée, ni barrage, ni
+  // relégation affichés.
+  lg.divisionMoves = data.divisionMoves && typeof data.divisionMoves === "object" ? { ...data.divisionMoves } : null;
   // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
   // d'avant cette fonctionnalité, aucune ligue.
   lg.privateLeagues = Array.isArray(data.privateLeagues) ? data.privateLeagues : [];
@@ -25154,12 +25158,39 @@ function rosterCannotFieldLineup(team) {
 // match : top 4 = qualifiés play-offs (promotion possible pour le champion),
 // 7e-8e = barrage de relégation, 9e-10e = relégation directe. Seulement pour
 // une ligue à 10 équipes (toujours le cas ici).
+// Zones du classement (2026-09-29) : barrage et relégation seulement s'il
+// existe VRAIMENT un championnat ouvert juste en dessous (voir
+// league.divisionMoves, recalculé par le serveur à chaque chargement : une
+// division III sans division IV n'affiche rien, et tout apparaît le jour où
+// la IV s'ouvre). 1 championnat dessous → 10e ; 2 → 9e et 10e ; 3 → + barrage.
+function leagueDivisionMoves(lg = league) {
+  let dm = lg && lg.divisionMoves;
+  // Ancienne pyramide locale (hors univers partagé, sans info serveur) :
+  // mêmes règles qu'avant (9e-10e + barrage), sauf en dernière division.
+  if (!dm && lg && (lg.pyramid || (typeof managerToken !== "undefined" && !managerToken))) {
+    const level = lg.divisionLevel || 1;
+    const bottom = level >= MAX_DIVISION_LEVEL;
+    dm = { promotes: level > 1, relegations: bottom ? 0 : 3, barrage: !bottom, upperLabel: null };
+  }
+  const n = dm ? Math.max(0, Math.min(3, Number(dm.relegations) || 0)) : 0;
+  return { promotes: !!(dm && dm.promotes), relegations: n, barrage: !!(dm && dm.barrage) && n >= 3, upperLabel: (dm && dm.upperLabel) || null };
+}
 function standingsRowZone(rank, total) {
   if (total !== 10) return "";
   if (rank <= 4) return "zone-promo";
-  if (rank === 7 || rank === 8) return "zone-barrage";
-  if (rank === 9 || rank === 10) return "zone-relegation";
+  const dm = leagueDivisionMoves();
+  if (dm.barrage && (rank === 7 || rank === 8)) return "zone-barrage";
+  if (dm.relegations >= 1 && rank === 10) return "zone-relegation";
+  if (dm.relegations >= 2 && rank === 9) return "zone-relegation";
   return "";
+}
+// Libellés de légende, suivant ce qui est réellement en jeu.
+function standingsLegendItems() {
+  const dm = leagueDivisionMoves();
+  const items = [{ zone: "po", text: dm.promotes ? `Play-offs · le champion monte${dm.upperLabel ? ` en ${dm.upperLabel}` : ""}` : "Play-offs" }];
+  if (dm.barrage) items.push({ zone: "bar", text: "Barrage de relégation (7e contre 8e)" });
+  if (dm.relegations >= 1) items.push({ zone: "rel", text: `Relégation directe (${dm.relegations >= 2 ? "9e, 10e" : "10e"})` });
+  return items;
 }
 
 // Noms d'équipes cliquables (voir renderTeamDetail plus bas), retour
@@ -25186,11 +25217,9 @@ function standingsTableHtml(table) {
       `<td>${diff >= 0 ? "+" : ""}${diff}</td></tr>`;
   });
   html += "</tbody></table>";
-  html += `<p class="standings-legend">
-    <span class="legend-item"><span class="legend-dot promo"></span>Play-offs (le champion peut monter de division)</span>
-    <span class="legend-item"><span class="legend-dot barrage"></span>Barrage de relégation (7e vs 8e)</span>
-    <span class="legend-item"><span class="legend-dot relegation"></span>Relégation directe (9e, 10e)</span>
-  </p>`;
+  const dotCls = { po: "promo", bar: "barrage", rel: "relegation" };
+  html += `<p class="standings-legend">${standingsLegendItems().map(it =>
+    `<span class="legend-item"><span class="legend-dot ${dotCls[it.zone]}"></span>${escapeHtml(it.text)}</span>`).join("")}</p>`;
   return html;
 }
 
@@ -25296,10 +25325,8 @@ function lgStandingsTableHtml(table) {
   });
   html += `</tbody></table></div>`;
   if (total === 10) {
-    html += `<div class="lg-legend">` +
-      `<span><i class="lg-z-po"></i>Play-offs · le champion peut monter</span>` +
-      `<span><i class="lg-z-bar"></i>Barrage de relégation (7e contre 8e)</span>` +
-      `<span><i class="lg-z-rel"></i>Relégation directe (9e, 10e)</span></div>`;
+    html += `<div class="lg-legend">` + standingsLegendItems().map(it =>
+      `<span><i class="lg-z-${it.zone}"></i>${escapeHtml(it.text)}</span>`).join("") + `</div>`;
   }
   return html;
 }
@@ -25314,7 +25341,10 @@ function lgRaceCardHtml(table) {
   const rank = pos + 1;
   const total = table.length;
   const diff = me.pf - me.pa;
-  const title = total === 10 && rank >= 7 ? "Ta course au maintien" : "Ta course aux play-offs";
+  const dmv = leagueDivisionMoves();
+  // Premier rang menacé (barrage ou relégation), null si rien n'est en jeu.
+  const dangerStart = dmv.barrage ? 7 : dmv.relegations >= 2 ? 9 : dmv.relegations === 1 ? 10 : null;
+  const title = total === 10 && dangerStart && rank >= dangerStart ? "Ta course au maintien" : "Ta course aux play-offs";
   const zone = lgZoneOf(rank, total);
   const zoneColor = { "zone-promo": "var(--amber)", "zone-mid": "var(--ink)", "zone-barrage": "var(--zone-bar)", "zone-relegation": "var(--danger)" }[zone] || "var(--amber)";
   const pts = n => `${n} pt${Math.abs(n) > 1 ? "s" : ""}`;
@@ -25327,15 +25357,17 @@ function lgRaceCardHtml(table) {
       lines.push({ label: "Retard sur la 1re place", value: pts(gapTo(1)) });
     }
     if (total === 10) {
-      if (rank <= 4) lines.push({ label: "Avance sur la 5e (hors play-offs)", value: pts(me.points - table[4].points), warn: me.points - table[4].points <= 1 });
-      else if (rank <= 6) {
+      const relStart = dmv.relegations >= 2 ? 9 : dmv.relegations === 1 ? 10 : null;
+      const ahead = r => ({ value: pts(me.points - table[r - 1].points), warn: me.points - table[r - 1].points <= 1 });
+      if (rank <= 4) lines.push({ label: "Avance sur la 5e (hors play-offs)", ...ahead(5) });
+      else if (!dangerStart || rank < dangerStart) {
         lines.push({ label: "Retard sur la 4e (play-offs)", value: pts(gapTo(4)) });
-        lines.push({ label: "Avance sur la 7e (barrage)", value: pts(me.points - table[6].points), warn: me.points - table[6].points <= 1 });
-      } else if (rank <= 8) {
+        if (dangerStart) lines.push({ label: `Avance sur la ${dangerStart}e (${dangerStart === 7 ? "barrage" : "relégation"})`, ...ahead(dangerStart) });
+      } else if (dmv.barrage && rank <= 8) {
         lines.push({ label: "Retard sur la 6e (maintien direct)", value: pts(gapTo(6)) });
-        lines.push({ label: "Avance sur la 9e (relégation)", value: pts(me.points - table[8].points), warn: me.points - table[8].points <= 1 });
+        if (relStart) lines.push({ label: `Avance sur la ${relStart}e (relégation)`, ...ahead(relStart) });
       } else {
-        lines.push({ label: "Retard sur la 8e (barrage)", value: pts(gapTo(8)) });
+        lines.push({ label: `Retard sur la ${dangerStart === 7 ? 8 : dangerStart - 1}e (${dangerStart === 7 ? "barrage" : "maintien"})`, value: pts(gapTo(dangerStart === 7 ? 8 : dangerStart - 1)) });
       }
     }
   }
@@ -45923,7 +45955,7 @@ const TOUR_STEPS = [
   },
   { kind: "spotlight", topic: "Compétitions", page: "ligue", target: ".lg-race",
     title: "La ligue",
-    text: "Le classement se départage par victoires puis par différence de points. Places 1 à 4 : play-offs ; 5 et 6 : maintien ; 7 et 8 : barrage ; 9 et 10 : relégation. Ce panneau résume votre position et l'écart avec les places clés.",
+    text: "Le classement se départage par victoires puis par différence de points. Places 1 à 4 : play-offs. Barrage et relégation seulement s'il existe un championnat juste en dessous (couleurs et légende l'indiquent). Ce panneau résume votre position et l'écart avec les places clés.",
     tip: "Cliquez sur une équipe adverse pour ouvrir sa fiche (effectif, calendrier, analyse) : c'est le point de départ du scoutisme.",
   },
   { kind: "spotlight", topic: "Compétitions", page: "amicaux", target: "#amicauxContent",

@@ -1451,6 +1451,9 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
         // Enchères automatiques : plafonds des autres clubs secrets.
         MyAuctions.sanitizeAutoBids(payload.league, ctx.teamIndex);
+        // Zones du classement réellement en jeu (montée / barrage / descentes),
+        // voir World.divisionMovesFor. Absent = aucune division autour.
+        if (ctx.world) payload.league.divisionMoves = World.divisionMovesFor(ctx.world, ctx.leagueId);
         // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
         payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex);
         // Matchs amicaux : seulement les siens, sans la compo de l'adversaire.

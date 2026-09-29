@@ -2,6 +2,18 @@
    français tel qu'affiché ({0}, {player}… = parties variables), valeur =
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
+  "Le classement se départage par victoires puis par différence de points. Places 1 à 4 : play-offs. Barrage et relégation seulement s'il existe un championnat juste en dessous (couleurs et légende l'indiquent). Ce panneau résume votre position et l'écart avec les places clés.": "Standings are ranked by wins then by point difference. Places 1 to 4: playoffs. Play-in and relegation only apply when a league exists just below (shown by the colors and legend). This panel summarizes your position and the gap to the key places.",
+  " ; s'il existe un championnat ouvert juste en dessous, le 10e est ": "; if a league is open just below, 10th is ",
+  "relégué": "relegated",
+  ", puis le 9e, et avec trois championnats en dessous le 7e et le 8e jouent un ": ", then 9th, and with three leagues below, 7th and 8th play a ",
+  ". Seules les zones réellement en jeu sont colorées. Chaque équipe affiche sa forme récente. Un panneau \"course aux play-offs\" résume votre position, votre bilan et l'écart avec les places clés.": ". Only the zones actually at stake are colored. Each team shows its recent form. A “playoff race” panel sums up your position, your record and the gap to the key places.",
+  "Play-offs · le champion monte": "Playoffs · the champion moves up",
+  "Play-offs · le champion monte en {0}": "Playoffs · the champion moves up to {0}",
+  "Relégation directe (10e)": "Direct relegation (10th)",
+  "Avance sur la {0}e (barrage)": "Lead over {0}th (play-in)",
+  "Avance sur la {0}e (relégation)": "Lead over {0}th (relegation)",
+  "Retard sur la {0}e (barrage)": "Behind {0}th (play-in)",
+  "Retard sur la {0}e (maintien)": "Behind {0}th (safety)",
   "-0 pour": "-0 for",
   "— {0}% des points": "— {0}% of the points",
   "— non pourvu —": "— vacant —",

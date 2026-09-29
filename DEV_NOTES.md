@@ -68,6 +68,17 @@ chantiers marqués « committé, à pousser » étaient en fait en prod et ont
 été retirés (l'historique Git les garde). Restent ci-dessous uniquement les
 points réellement ouverts.
 
+- **🛠 EN COURS (2026-09-29, cette session) — lot demandé par l'utilisateur** :
+  1. ✅ Légende/zones du classement selon les divisions réellement ouvertes
+     (World.divisionMovesFor → league.divisionMoves dans GET /api/save ;
+     leagueDivisionMoves/standingsRowZone/standingsLegendItems côté jeu ;
+     standings_zones_test.js). ⚠️ Le barrage 7e-8e est toujours JOUÉ
+     (autoSim) même sans enjeu (< 3 championnats dessous) : question posée.
+  2. Chargement mobile (images base64 hors du HTML, compression).
+  3. Rivalités (bilan face à face entre managers humains + Derby).
+  4. Classement mondial des managers (Planète Hoop).
+  5. Propositions Premium : salle personnalisée, avatars des jeunes.
+
 - **🌐 Côté utilisateur (hébergement, services)** :
   - Google Search Console : domaine validé par TXT chez IONOS le
     2026-09-29 ; envoyer sitemap.xml, demander l'indexation de / et

@@ -278,6 +278,25 @@ function childrenEntries(world, entry) {
     .sort((a, b) => a.group - b.group);
 }
 
+// Ce que le classement d'un championnat met réellement en jeu (2026-09-29,
+// retour : « uniquement quand il y a une division inférieure […] le jour où
+// on ouvre à plus de monde »). Calculé à chaque lecture, jamais figé : dès
+// qu'un championnat s'ouvre juste en dessous, les zones apparaissent.
+// Même règle que computeCountryMoves : autant de descentes que de
+// championnats ouverts juste en dessous (10e, puis 9e, puis perdant du
+// barrage 7e-8e) ; le champion monte s'il existe une division au-dessus.
+function divisionMovesFor(world, leagueId) {
+  const entry = world && (world.leagues || []).find(e => e.id === leagueId);
+  if (!entry) return { promotes: false, relegations: 0, barrage: false, upperLabel: null };
+  const kids = childrenEntries(world, entry).length;
+  return {
+    promotes: entry.level > 1,
+    relegations: Math.min(kids, 3),
+    barrage: kids >= 3,
+    upperLabel: entry.level > 1 ? divisionLabel(entry.level - 1, Math.floor(entry.group / 3)) : null,
+  };
+}
+
 // Ordre de descente : 10e, 9e, puis perdant du barrage (7e-8e).
 function relegationOrder(league) {
   const table = league.standings();
@@ -794,6 +813,7 @@ function publicCountries() {
 }
 
 module.exports = {
+  divisionMovesFor,
   WORLD_VERSION, DEFAULT_COUNTRY,
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,
