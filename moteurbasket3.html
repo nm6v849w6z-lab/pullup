@@ -2302,7 +2302,10 @@
   .pdp2-pips{display:flex; gap:4px;}
   .pdp2-pips span{width:20px; height:8px; border-radius:2px; background:var(--line);}
   .pdp2-pips span.on{background:var(--amber);}
-  #pdpSaleCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
+  #pdpSaleCard, #pdpPersoCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
+  .pdp2-jersey{flex:0 0 auto; margin-left:auto; display:flex; flex-direction:column; align-items:center; gap:2px;}
+  .pdp2-jersey svg{display:block; filter:drop-shadow(0 4px 10px rgba(0,0,0,.35));}
+  .pdp2-jersey-lbl{font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--ink-dim);}
 
   @media (max-width:1180px){
     .pdp2-hero{flex-wrap:wrap;}
@@ -2316,6 +2319,7 @@
     .pdp2-hero{padding:18px 16px; gap:18px;}
     .pdp2-id{gap:14px;}
     .pdp2-avatar{width:80px; height:80px;}
+    .pdp2-jersey svg{width:76px; height:76px;}
     .pdp2-name{font-size:30px;}
     .pdp2-cond{flex-basis:100%; padding:0; border-right:none;}
     .pdp2-rating{flex-basis:100%; flex-direction:row; justify-content:flex-start;}
@@ -5941,7 +5945,6 @@
   .pdp-perso-fields{display:grid; grid-template-columns:repeat(2, minmax(150px, 1fr)); gap:10px 14px; flex:1 1 300px;}
   .pdp-perso-fields label{display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:700; color:var(--ink-dim);}
   .pdp-perso-actions{margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
-  .pdp2-chip--num{font-weight:800; color:var(--amber);}
   .prm-tag{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#04241f; background:var(--amber); border-radius:999px; padding:2px 8px; margin-left:6px; vertical-align:middle;}
   .linkish{background:none; border:0; padding:0; color:var(--ink-dim); text-decoration:underline; cursor:pointer; font:inherit; font-size:13px;}
   @media (max-width:560px){ .pdp-perso-fields{grid-template-columns:1fr;} }
@@ -27279,8 +27282,6 @@ function renderPlayerDetail(teamIdx, playerId) {
     `<div class="pdp2-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>${teamLinkHtml(teamIdx, team.name)}</div>` +
     `<h3 class="pdp2-name">${nationFlagHtml(player.nationality, "nat-flag--name")}${escapeHtml(player.name)}</h3>` +
     `<div class="pdp2-chips">` +
-    // Numéro de maillot (affiché sur la fiche du joueur uniquement).
-    (Number.isInteger(player.number) ? `<span class="pdp2-chip pdp2-chip--num">N° ${player.number}</span>` : "") +
     (nationName(player.nationality) ? `<span class="pdp2-chip">${escapeHtml(nationName(player.nationality))}</span>` : "") +
     `<span class="pdp2-chip">${player.age} ans</span>` +
     `<span class="pdp2-chip">${player.height} cm</span>` +
@@ -27293,7 +27294,15 @@ function renderPlayerDetail(teamIdx, playerId) {
     const wr = worldRankForPlayer(league, teamIdx, player.id);
     if (wr) html += `<span class="pdp2-chip pdp2-chip--world" title="Classement parmi tous les joueurs de la ligue">${ordinalFr(wr.rank)} mondial · ${ordinalFr(wr.posRank)} ${escapeHtml(player.position)}</span>`;
   }
-  html += `</div></div></div>`; // chips, id-text, id
+  html += `</div></div>`; // chips, id-text
+  // Numéro de maillot (affiché sur la fiche du joueur uniquement) : en grand
+  // sur le maillot domicile du club, avec ses vraies couleurs/motif.
+  if (Number.isInteger(player.number)) {
+    html += `<div class="pdp2-jersey" title="Maillot n°${player.number}">` +
+      jerseySvgHtml(team.jerseyShape, team.jerseyColor, 112, "home", effectiveJerseyPattern(team), effectiveJerseyTwoTone(team), null, player.number) +
+      `<span class="pdp2-jersey-lbl">N° ${player.number}</span></div>`;
+  }
+  html += `</div>`; // id
 
   const condValue = currentCondition(player, now, team.conditionRecoveryPerDay());
   const condBox = condValue >= 75 ? "ok" : condValue >= 60 ? "mid" : "bad";
@@ -28491,7 +28500,7 @@ let jerseySvgUid = 0;
 // le maillot voulu et cette fonction n'a plus besoin de rien dériver.
 // `sponsor` (optionnel, retour communauté 2026-09 "image sur maillot") : nom
 // du sponsor maillot imprimé sur la poitrine, dans un cartouche clair.
-function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone, sponsor) {
+function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone, sponsor, number) {
   const color = JERSEY_COLORS[colorKey] || Object.values(JERSEY_COLORS)[0];
   const s = size || 72;
   const isAway = variant === "away";
@@ -28548,9 +28557,23 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone, sponsor
     body += `<rect x="27" y="44" width="46" height="13" rx="2.5" fill="rgba(255,255,255,.92)"/>` +
       `<text x="50" y="53.6" text-anchor="middle" font-size="8" font-weight="800" fill="#1a1200" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"${fit}>${escapeHtml(label)}</text>`;
   }
+  // Numéro floqué (fiche joueur, retour utilisateur 2026-09-29 : « on le
+  // voit à peine, il faudrait que ce soit plus gros sur un maillot de
+  // l'équipe aux bonnes couleurs ») : gros chiffres centrés sur le buste,
+  // clairs sur un maillot foncé et inversement, avec un contour pour rester
+  // lisibles sur les rayures/bandes/dégradés.
+  if (Number.isInteger(number)) {
+    const hex = /^#[0-9a-f]{6}$/i.test(primary) ? primary : "#3a3a40";
+    const lum = (0.299 * parseInt(hex.slice(1, 3), 16) + 0.587 * parseInt(hex.slice(3, 5), 16) + 0.114 * parseInt(hex.slice(5, 7), 16)) / 255;
+    const ink = lum > 0.6 ? "#14161c" : "#ffffff";
+    const edge = lum > 0.6 ? "rgba(255,255,255,.75)" : "rgba(0,0,0,.45)";
+    const y = sponsor ? 82 : 76;
+    const fs = sponsor ? 26 : 38;
+    body += `<text class="jersey-number" x="50" y="${y}" text-anchor="middle" font-size="${fs}" font-weight="900" fill="${ink}" stroke="${edge}" stroke-width="2" paint-order="stroke" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">${number}</text>`;
+  }
   const shapeLabel = shape === "B" ? "col en V à bandes" : "col rond";
   const patternLabel = patternKey === "uni" ? "" : `, ${JERSEY_PATTERN_LABELS[patternKey].toLowerCase()}`;
-  return `<svg viewBox="0 0 100 100" width="${s}" height="${s}" role="img" aria-label="Maillot ${isAway ? "extérieur" : "domicile"} ${shapeLabel}${patternLabel}${sponsor ? `, sponsor ${escapeHtml(String(sponsor))}` : ""}">` +
+  return `<svg viewBox="0 0 100 100" width="${s}" height="${s}" role="img" aria-label="Maillot ${isAway ? "extérieur" : "domicile"} ${shapeLabel}${patternLabel}${sponsor ? `, sponsor ${escapeHtml(String(sponsor))}` : ""}${Number.isInteger(number) ? `, numéro ${number}` : ""}">` +
     (defs ? `<defs>${defs}</defs>` : "") + body + `</svg>`;
 }
 
