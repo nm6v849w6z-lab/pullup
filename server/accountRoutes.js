@@ -18,6 +18,7 @@
 //   GET  /auth/discord/callback          retour de Discord
 //   GET  /api/admin/accounts             X-Admin-Token
 //   POST /api/admin/accounts/reset-password X-Admin-Token + {email, newPassword}
+//   POST /api/admin/accounts/transfer-club X-Admin-Token + {club, newName?, leagueId?}
 //
 // Réponse d'une connexion/inscription réussie :
 //   {ok:true, status:"active", managerToken}  -> le navigateur range le jeton
@@ -37,6 +38,7 @@ const store = require("./store.js");
 const Accounts = require("./accounts.js");
 const World = require("./world.js");
 const Mailer = require("./mailer.js");
+const Engine = require("../engine.js");
 
 // Mot de passe oublié (liste de la nuit du 2026-09-28) : lien valable 1 h,
 // seul son empreinte SHA-256 est gardée sur le compte.
@@ -169,6 +171,23 @@ async function tryAssignClub(account, multiSavePath, now) {
   account.managerToken = taken.token;
   account.assignedAt = now;
   return true;
+}
+
+// Met à jour le nom de toutes les références { leagueId, idx, name } à un
+// club dans `obj` (tableaux et objets simples, en profondeur). Renvoie true
+// si au moins une a changé.
+function renameClubRefs(obj, leagueId, idx, name, seen = new Set()) {
+  if (!obj || typeof obj !== "object" || seen.has(obj)) return false;
+  seen.add(obj);
+  let changed = false;
+  if (obj.leagueId === leagueId && obj.idx === idx && typeof obj.name === "string" && obj.name !== name) {
+    obj.name = name;
+    changed = true;
+  }
+  for (const v of Array.isArray(obj) ? obj : Object.values(obj)) {
+    if (renameClubRefs(v, leagueId, idx, name, seen)) changed = true;
+  }
+  return changed;
 }
 
 function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFor, isAdminAuthorized, multiSavePath, accountsPath }) {
@@ -584,6 +603,99 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       return true;
     }
 
+    // Transmission d'un club à un nouveau manager (retour utilisateur,
+    // 2026-09-29 : « j'ai des beta testers qui ne sont pas suffisamment
+    // dispo donc je vais les remplacer ») : le club est gardé TEL QUEL
+    // (effectif, budget, palmarès), seul son manager change. Nouveau jeton
+    // privé (l'ancien lien ne marche plus, ses messages privés restent
+    // attachés à l'ancien jeton), nouveau nom facultatif, tutoriel d'accueil
+    // relancé, trigramme et nom de salle remis par défaut (ils reprennent
+    // en général l'ancien nom), compte(s) de l'ancien manager supprimé(s).
+    // Le lien renvoyé est à transmettre au remplaçant, qui se crée ensuite
+    // ses identifiants (Paramètres → Mon compte, /api/account/claim).
+    // Body : { club, newName?, leagueId? } — `leagueId` seulement si deux
+    // clubs de managers portent le même nom dans deux championnats.
+    if (p === "/api/admin/accounts/transfer-club" && req.method === "POST") {
+      if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return true; }
+      const b = await body(req, res); if (!b) return true;
+      if (typeof b.club !== "string" || !b.club.trim()) { sendJson(res, 400, { ok: false, error: "'club' (nom actuel du club) requis." }); return true; }
+      const world = await World.loadWorld(multiSavePath, now);
+      if (!world) { sendJson(res, 404, { ok: false, error: "Aucune ligue partagée n'existe encore." }); return true; }
+      const key = b.club.trim().toLocaleLowerCase("fr");
+      const matches = [];
+      const leagues = [];
+      for (const entry of world.leagues) {
+        const league = await World.loadLeague(world, entry.id, multiSavePath);
+        if (!league) continue;
+        leagues.push(league);
+        if (b.leagueId && entry.id !== b.leagueId) continue;
+        league.teams.forEach((t, idx) => {
+          if (t.isHuman && (t.name || "").toLocaleLowerCase("fr") === key) matches.push({ league, idx, leagueId: entry.id });
+        });
+      }
+      if (!matches.length) { sendJson(res, 404, { ok: false, error: `Aucun club de manager nommé "${b.club.trim()}".` }); return true; }
+      if (matches.length > 1) { sendJson(res, 409, { ok: false, error: "Plusieurs clubs portent ce nom : précisez 'leagueId'.", leagueIds: matches.map(m => m.leagueId) }); return true; }
+      const { league, idx, leagueId } = matches[0];
+      const team = league.teams[idx];
+      const previousName = team.name;
+      let newName = previousName;
+      if (b.newName != null && b.newName !== "") {
+        newName = Accounts.normalizeClubName(b.newName);
+        if (!newName) { sendJson(res, 400, { ok: false, error: "Nom de club invalide (lettres, chiffres, espaces, tirets, apostrophes)." }); return true; }
+        const sameClub = newName.toLocaleLowerCase("fr") === previousName.toLocaleLowerCase("fr");
+        if (!sameClub && await World.isClubNameTakenInWorld(world, multiSavePath, newName)) { sendJson(res, 409, { ok: false, error: `Le nom "${newName}" est déjà pris.` }); return true; }
+      }
+
+      const oldToken = team.managerLinkToken;
+      if (oldToken && world.tokens) delete world.tokens[oldToken];
+      team.managerLinkToken = Engine.randomHexToken(24);
+      world.tokens[team.managerLinkToken] = leagueId;
+      team.lastSeenAt = now;
+      team.onboardingTourCompleted = false;
+      team.trigram = null;
+      team.trigramChangedAt = null;
+      team.arenaName = null;
+      let friendliesChanged = false;
+      const dirty = new Set([league]);
+      if (newName !== previousName) {
+        team.name = newName;
+        // Références à ce club rangées par nom ailleurs (voir
+        // World.reclaimClub, WorldMarket.resolveForeignTransfers,
+        // WorldFriendlies.catchUp) : sans ça, une enchère ou un amical en
+        // cours avec un autre championnat serait annulé.
+        const rename = obj => renameClubRefs(obj, leagueId, idx, newName);
+        leagues.forEach(lg => Object.keys(lg).forEach(k => { if (/Listings$/.test(k) && rename(lg[k])) dirty.add(lg); }));
+        rename(world.cups);
+        rename(world.superCups);
+        const fstore = await store.loadWorldAuxRaw("friendlies", multiSavePath);
+        if (fstore && rename(fstore)) {
+          await store.saveWorldAuxRaw("friendlies", fstore, multiSavePath);
+          friendliesChanged = true;
+        }
+        try {
+          Engine.pushEntry(team.feed, {
+            key: `club_renamed_${now}`, category: "club", priority: "info", week: team.week,
+            title: `Le club s'appelle désormais ${newName}`,
+            text: `Anciennement ${previousName}.`,
+          });
+        } catch (e) { /* le fil d'actus est un confort, jamais bloquant */ }
+      }
+      for (const lg of dirty) await store.saveMultiLeague(lg, multiSavePath);
+      await World.saveWorld(world, multiSavePath);
+      await withAccounts(async data => {
+        const removed = oldToken ? data.accounts.filter(a => a.managerToken === oldToken) : [];
+        data.accounts = data.accounts.filter(a => !removed.includes(a));
+        await Accounts.saveAccounts(data, accountsPath);
+        sendJson(res, 200, {
+          ok: true, leagueId, previousName, club: team.name,
+          deletedAccounts: removed.map(a => a.email || a.discordName || "(sans identifiant)"),
+          friendliesUpdated: friendliesChanged,
+          link: `${originFor(req)}/?m=${team.managerLinkToken}`,
+        });
+      });
+      return true;
+    }
+
     if (p === "/api/admin/accounts/reset-password" && req.method === "POST") {
       if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return true; }
       const b = await body(req, res); if (!b) return true;
@@ -605,4 +717,4 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
   };
 }
 
-module.exports = { createAccountRouter, discordConfigured, isPublicSite, _setFetchImplForTests, _resetMemoryForTests };
+module.exports = { createAccountRouter, discordConfigured, isPublicSite, _setFetchImplForTests, _resetMemoryForTests, _renameClubRefsForTests: renameClubRefs };
