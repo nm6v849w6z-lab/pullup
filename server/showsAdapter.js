@@ -182,7 +182,10 @@ function convertEvents(rawEvents, homeIdx, awayIdx) {
     const team = league_teamsCache.get(idx);
     if (team) team.players.forEach(p => { nameToId[idx][p.name] = p.id; });
   });
-  const idFor = (name, idx) => (name != null && nameToId[idx] && nameToId[idx][name] != null) ? String(nameToId[idx][name]) : null;
+  // Id porté par l'événement (shooterId…, audit moteur 2026-09-29 : deux
+  // homonymes ne se confondent plus) ; repli sur le nom pour un vieux direct.
+  const idFor = (name, idx, id = null) => id != null ? String(id)
+    : (name != null && nameToId[idx] && nameToId[idx][name] != null) ? String(nameToId[idx][name]) : null;
 
   const out = [];
   (rawEvents || []).forEach(ev => {
@@ -192,31 +195,31 @@ function convertEvents(rawEvents, homeIdx, awayIdx) {
       case "shot": {
         const p = randomPointForZone(ev.team, ev.zone, ev.airAt);
         const evOut = {
-          q: ev.quarter, type: "shot", teamId, playerId: idFor(ev.shooter, idx),
+          q: ev.quarter, type: "shot", teamId, playerId: idFor(ev.shooter, idx, ev.shooterId),
           pts: ev.zone === "three" ? 3 : 2, made: !!ev.made, x: p.x, y: p.y,
         };
-        if (ev.made && ev.assister) evOut.assistId = idFor(ev.assister, idx);
+        if (ev.made && ev.assister) evOut.assistId = idFor(ev.assister, idx, ev.assisterId);
         out.push(evOut);
         break;
       }
       case "freeThrow": {
         const n = ev.attempts || 0, made = ev.made || 0;
         for (let i = 0; i < n; i++) {
-          out.push({ q: ev.quarter, type: "ft", teamId, playerId: idFor(ev.shooter, idx), made: i < made });
+          out.push({ q: ev.quarter, type: "ft", teamId, playerId: idFor(ev.shooter, idx, ev.shooterId), made: i < made });
         }
         break;
       }
       case "rebound":
-        out.push({ q: ev.quarter, type: "rebound", teamId, playerId: idFor(ev.rebounder, idx) });
+        out.push({ q: ev.quarter, type: "rebound", teamId, playerId: idFor(ev.rebounder, idx, ev.rebounderId) });
         break;
       case "turnover":
-        out.push({ q: ev.quarter, type: "turnover", teamId, playerId: idFor(ev.player, idx) });
+        out.push({ q: ev.quarter, type: "turnover", teamId, playerId: idFor(ev.player, idx, ev.playerId) });
         break;
       case "foul":
         // `ev.defender` : celui qui commet la faute (voir engine.js log("foul")) —
         // showData interprète `teamId` comme "l'équipe qui commet la faute",
         // déjà exactement ev.team ici (teamKey(defTeam)).
-        out.push({ q: ev.quarter, type: "foul", teamId, playerId: idFor(ev.defender, idx) });
+        out.push({ q: ev.quarter, type: "foul", teamId, playerId: idFor(ev.defender, idx, ev.defenderId) });
         break;
       default:
         break; // type sans équivalent, ignoré (voir commentaire de fonction)

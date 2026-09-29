@@ -3487,6 +3487,9 @@ function retirementTalkChance(player, role) {
   return clamp(chance, 0, RETIREMENT_TALK_MAX_CHANCE);
 }
 
+// Voir Player.eff : plancher du produit des facteurs de forme du moment.
+const EFF_FACTOR_FLOOR = 0.5;
+
 class Player {
   constructor({ name, position, height, age, attrs, aggressiveness, nationality }) {
     this.id = uid();
@@ -4111,7 +4114,13 @@ class Player {
     // actif en championnat, Coupe, play-offs et amicaux, plus seulement en
     // ligue privée (voir server/liveMatch.js:computeLiveMatch).
     const venueFactor = this.matchVenueFactor ?? 1;
-    return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor * tacticalKnowledgeFactor * venueFactor, 1, 130);
+    // Plancher (audit 2026-09-29) : cumulés, fatigue, méforme, forme
+    // physique « épuisé », alchimie et connaissance tactique au plus bas
+    // pouvaient ramener un joueur à ≈35 % de sa valeur — des matchs
+    // grotesques pour un club mal géré. La sanction reste forte (jusqu'à
+    // −50 %), mais jamais au-delà ; les bonus ne sont pas concernés.
+    const factor = Math.max(EFF_FACTOR_FLOOR, formFactor * fatigueFactor * conditionFactor * chemistryFactor * tacticalKnowledgeFactor * venueFactor);
+    return clamp(base * factor, 1, 130);
   }
 }
 
@@ -14435,6 +14444,22 @@ const SET_PLAY_TOV_BONUS = 0.02;
 // rebond offensif, calibré le 2026-09-28 (100 matchs simulés).
 const OFF_REBOUND_BASE_WEIGHT = 0.5;
 
+// Qui commet une faute « simple » (hors tir) : un joueur peu discipliné et
+// un intérieur (pivot, ailier fort) en commettent davantage, un joueur déjà
+// chargé de fautes lève un peu le pied. Avant l'audit 2026-09-29, seul le
+// nombre de fautes comptait (poids 6 − fautes) : les fautes se
+// répartissaient presque uniformément et un joueur n'était quasiment jamais
+// exclu (0,05 par équipe et par match, 0,1-0,2 en vrai).
+const FOUL_POSITION_MULT = { Pivot: 1.3, "Ailier fort": 1.15 };
+// Chrono du 4e quart-temps (ou d'une prolongation) à partir duquel un
+// joueur à 4 fautes revient en jeu (voir substituteIfNeeded).
+const FOUL_TROUBLE_RETURN_CLOCK = 300;
+function foulProneness(p) {
+  const base = (115 - (p.attrs.discipline ?? 50)) * (FOUL_POSITION_MULT[p.matchPosition] || 1);
+  const caution = p.fouls >= 4 ? 0.6 : p.fouls === 3 ? 0.85 : 1;
+  return Math.max(base * caution, 1);
+}
+
 class MatchEngine {
   // `options.homeAdvantage` : teamA reçoit, teamB se déplace ; +/-
   // HOME_ADVANTAGE_FACTOR sur toutes les caractéristiques effectives (voir
@@ -14457,6 +14482,10 @@ class MatchEngine {
 
   // `meta` (optionnel) porte des champs structurés en plus du texte narratif
   // (type/team/zone/made...) — voir playPossession et consorts plus bas.
+  // Chaque joueur nommé (shooter, assister, defender, player, replacement,
+  // stealer, rebounder, blocker) est accompagné de son id (shooterId, …) :
+  // deux homonymes d'une même équipe (transfert, académie) ne se confondent
+  // plus (audit 2026-09-29) — le navigateur peut encore lire les noms.
   // Utilisé par le client pour animer une vue 2D du terrain (position du
   // ballon/marqueur) en plus du fil de texte existant, SANS toucher au
   // mécanisme de diffusion (airAt/schedulePlayback) qui se contente déjà de
@@ -14550,13 +14579,13 @@ class MatchEngine {
         p.returnStarterId = null;
         if (starter && !starter.onCourt && !starter.disqualified && !starter.injured && !starter.matchInjuryLocked &&
             starter.fatigue < starter.restThreshold - 15 &&
-            (starter.fouls < 4 || team.maintainDespiteFouls.has(starter.id))) {
+            (starter.fouls < 4 || (quarter >= 4 && clock <= FOUL_TROUBLE_RETURN_CLOCK) || team.maintainDespiteFouls.has(starter.id))) {
           p.onCourt = false;
           starter.onCourt = true;
           starter.matchPosition = p.matchPosition;
           starter.nextRestAt = starter.secondsPlayed + rand(660, 1020);
           starter.stintStartSecs = starter.secondsPlayed;
-          this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: starter.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: starter.name });
+          this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: starter.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, playerId: p.id, replacement: starter.name, replacementId: starter.id });
           continue;
         }
       }
@@ -14569,7 +14598,7 @@ class MatchEngine {
         // interpolé, mais jamais exposé séparément jusqu'ici — nécessaire
         // côté client pour reconstituer QUI sort à quel instant (voir
         // liveMinutesFromEvents dans moteurbasket3.html).
-        this.log(events, quarter, clock, say(PHRASES.foulOut, { player: p.name, team: team.name }), { type: "foulOut", team: this.teamKey(team), player: p.name });
+        this.log(events, quarter, clock, say(PHRASES.foulOut, { player: p.name, team: team.name }), { type: "foulOut", team: this.teamKey(team), player: p.name, playerId: p.id });
       }
 
       const mustLeave = p.disqualified || p.injured;
@@ -14596,7 +14625,11 @@ class MatchEngine {
       const plannedFirstRest = p.isStarterThisMatch && p.secondsPlayed >= p.nextRestAt;
       const shouldRest = !mustLeave && (
         ((p.fatigue >= fatigueThreshold || plannedFirstRest) && !team.maintainDespiteFouls.has(p.id)) ||
-        (p.fouls >= 4 && !team.maintainDespiteFouls.has(p.id))
+        // 4 fautes : mis de côté jusqu'aux 5 dernières minutes du match
+        // (FOUL_TROUBLE_RETURN_CLOCK) ; ensuite il joue, quitte à sortir
+        // pour 5 fautes (audit 2026-09-29 : 0,05 exclusion par équipe et
+        // par match, 0,1-0,2 en vrai).
+        (p.fouls >= 4 && !(quarter >= 4 && clock <= FOUL_TROUBLE_RETURN_CLOCK) && !team.maintainDespiteFouls.has(p.id))
       );
       if (!mustLeave && !shouldRest) continue;
       // Posé dès QU'une sortie a lieu pour ce joueur (fatigue, fautes, ou
@@ -14631,11 +14664,11 @@ class MatchEngine {
         // désormais systématique à chaque changement de joueur sur le
         // terrain, qui permet au client de reconstruire les minutes jouées
         // de CHAQUE joueur, remplacement obligatoire compris.
-        this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: replacement.name });
+        this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, playerId: p.id, replacement: replacement.name, replacementId: replacement.id });
       } else if (mustLeave) {
         // Banc épuisé (rare) : le joueur sort quand même, l'équipe joue en infériorité.
         p.onCourt = false;
-        this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team), player: p.name });
+        this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team), player: p.name, playerId: p.id });
       }
       // Si ce n'est qu'une question de fatigue/fautes (pas obligatoire) et qu'aucun
       // remplaçant n'est disponible, le joueur reste simplement sur le terrain.
@@ -14703,10 +14736,10 @@ class MatchEngine {
       replacement.onCourt = true;
       replacement.matchPosition = pos;
       replacement.stintStartSecs = replacement.secondsPlayed;
-      this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: replacement.name });
+      this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, playerId: p.id, replacement: replacement.name, replacementId: replacement.id });
     } else if (mustLeave) {
       p.onCourt = false;
-      this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team), player: p.name });
+      this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team), player: p.name, playerId: p.id });
     }
   }
 
@@ -14742,7 +14775,7 @@ class MatchEngine {
     // ni dans le fil du direct ni dans la feuille de match en direct, qui se
     // reconstruit événement par événement — la feuille finale, elle, les
     // comptait, d'où un écart de tentatives entre les deux).
-    this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, made, attempts: n, possession: this.teamKey(team) });
+    this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, shooterId: shooter.id, made, attempts: n, possession: this.teamKey(team) });
     return made;
   }
 
@@ -14787,9 +14820,9 @@ class MatchEngine {
     defender.technicalFouls = (defender.technicalFouls || 0) + 1;
     if (this.shouldEjectForFouls(defender)) {
       defender.disqualified = true;
-      this.log(events, quarter, clock, say(PHRASES.technicalEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam) });
+      this.log(events, quarter, clock, say(PHRASES.technicalEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     } else {
-      this.log(events, quarter, clock, say(PHRASES.technicalFoul, { player: defender.name, team: defTeam.name }), { type: "technicalFoul", team: this.teamKey(defTeam) });
+      this.log(events, quarter, clock, say(PHRASES.technicalFoul, { player: defender.name, team: defTeam.name }), { type: "technicalFoul", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     }
     this.freeThrows(ftShooter, 1, events, quarter, clock, offTeam);
   }
@@ -14818,9 +14851,9 @@ class MatchEngine {
     defender.unsportsmanlikeFouls = (defender.unsportsmanlikeFouls || 0) + 1;
     if (this.shouldEjectForFouls(defender)) {
       defender.disqualified = true;
-      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam) });
+      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     } else {
-      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeFoul, { player: defender.name, team: defTeam.name }), { type: "unsportsmanlikeFoul", team: this.teamKey(defTeam) });
+      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeFoul, { player: defender.name, team: defTeam.name }), { type: "unsportsmanlikeFoul", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     }
     this.freeThrows(ftShooter, 2, events, quarter, clock, offTeam);
   }
@@ -14921,7 +14954,7 @@ class MatchEngine {
       // On évite si possible de faire fauter un joueur déjà proche de l'exclusion.
       const defender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
       defender.stats.pf++; defender.fouls++;
-      this.log(events, quarter, foulClock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, foulClock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
       this.freeThrows(ballHandler, 2, events, quarter, foulClock, offTeam);
       return { possessionOffense: false, scored: true, intentionalFoul: true, clockUsed };
     }
@@ -15012,7 +15045,7 @@ class MatchEngine {
       );
       if (rand01() < 0.55) {
         stealer.stats.stl++;
-        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, stealer: stealer.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: stealer.name, stealerId: stealer.id, possession: this.teamKey(offTeam) });
         // Contre-attaque (retour utilisateur, 2026-09 : "Vitesse/Accélération
         // → contre-attaques") : une interception donne le ballon à l'équipe
         // qui défendait, qui devient offensive à la possession suivante (voir
@@ -15026,7 +15059,7 @@ class MatchEngine {
         // de cette équipe face à une défense pas replacée).
         if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
       } else {
-        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, stealer: null, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: null, stealerId: null, possession: this.teamKey(offTeam) });
       }
       return { possessionOffense: false };
     }
@@ -15072,9 +15105,9 @@ class MatchEngine {
     const nonShootingFoulChance = 0.125;
     if (rand01() < nonShootingFoulChance) {
       const foulTarget = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass") + 1);
-      const commonFoulDefender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
+      const commonFoulDefender = weightedPick(onCourtDef, p => foulProneness(p));
       commonFoulDefender.stats.pf++; commonFoulDefender.fouls++;
-      this.log(events, quarter, clock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", team: this.teamKey(defTeam), defender: commonFoulDefender.name, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", team: this.teamKey(defTeam), defender: commonFoulDefender.name, defenderId: commonFoulDefender.id, possession: this.teamKey(offTeam) });
       this.maybeEjectForComposure(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
       this.maybeCommitUnsportsmanlikeFoul(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
       // Bonus (audit moteur 2026-09-29) : la page du direct affichait déjà
@@ -15536,11 +15569,11 @@ class MatchEngine {
       const creationKey = assistedBy ? "ptsAssisted" : "ptsSolo";
       shooter.stats[creationKey] = (shooter.stats[creationKey] || 0) + points;
       if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + points;
-      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, assister: assistedBy, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, shooterId: shooter.id, assister: assistedBy, assisterId: assistedBy ? assistCandidate.id : null, possession: this.teamKey(offTeam) });
 
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, 1, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
         this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
@@ -15558,11 +15591,11 @@ class MatchEngine {
       // tir raté normal.
       if (blocked) {
         defender.stats.blk++;
-        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, blocker: defender.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, shooterId: shooter.id, blocker: defender.name, blockerId: defender.id, possession: this.teamKey(offTeam) });
       }
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, defender: defender.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, shooterId: shooter.id, defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
         this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
@@ -15638,7 +15671,7 @@ class MatchEngine {
       this.log(events, quarter, clock, say(
         offensiveRebound ? (rebounder === shooter ? PHRASES.reboundOwn : PHRASES.reboundOff) : PHRASES.reboundDef,
         { shooter: shooter.name, rebounder: rebounder.name }
-      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, rebounder: rebounder.name, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
+      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, shooterId: shooter.id, rebounder: rebounder.name, rebounderId: rebounder.id, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
       if (offensiveRebound) offTeam._secondChance = true;
       return { possessionOffense: offensiveRebound };
@@ -15739,7 +15772,7 @@ class MatchEngine {
               opponentName: opponent ? opponent.name : null,
             });
           }
-          this.log(events, quarter, clock, say(PHRASES.injury, { player: p.name, team: team.name }), { type: "injury", team: this.teamKey(team), player: p.name });
+          this.log(events, quarter, clock, say(PHRASES.injury, { player: p.name, team: team.name }), { type: "injury", team: this.teamKey(team), player: p.name, playerId: p.id });
           // Fil d'actualité (tableau de bord, voir FEED_CATEGORIES plus haut) :
           // uniquement pour une équipe humaine (`team.feed` existe pour toute
           // équipe, mais seule une équipe humaine consulte un tableau de bord).
