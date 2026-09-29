@@ -4090,7 +4090,12 @@ class Player {
   eff(stat) {
     const base = this.attrs[stat] + (this.pendingMatchBoost || 0);
     const formFactor = 0.85 + (this.form / 100) * 0.30;      // 0.85 → 1.15
-    const fatigueFactor = 1 - (this.fatigue / 100) * 0.35;   // jusqu'à -35%
+    // Concentration (audit 2026-09-29 : ne jouait que sur les lancers
+    // francs) : un joueur concentré reste lucide quand la fatigue monte —
+    // de −28 % (Concentration 100) à −42 % (Concentration 0) à fatigue
+    // maximale, −35 % à 50 comme avant.
+    const focusMult = 1.2 - ((this.attrs.focus ?? 50) / 100) * 0.4;
+    const fatigueFactor = 1 - (this.fatigue / 100) * 0.35 * focusMult;
     // Forme physique (voir CONDITION_STATES plus haut) : lit matchCondition
     // (snapshot posé par resetForMatch), jamais Player.condition directement
     // (pas encore rattrapé/perdu pour CE match tant que resetForMatch n'est
@@ -14537,12 +14542,15 @@ class MatchEngine {
   transitionChanceFromSpeed(team) {
     const onCourt = team.onCourtPlayers();
     if (!onCourt.length) return 0;
-    const avgSpeed = onCourt.reduce((s, p) => s + (p.eff("speed") + p.eff("acceleration")) / 2, 0) / onCourt.length;
+    const avgSpeed = onCourt.reduce((s, p) => s + p.eff("speed") * 0.65 + p.eff("acceleration") * 0.35, 0) / onCourt.length;
     // Recalibré le 2026-09-28 (retour utilisateur : "c'est clair que le
     // chiffre de contre-attaque est un peu faible") : ~0,5 à 4 % des points
     // en transition avant, ~10 % visés désormais (100 matchs simulés) ;
     // les équipes rapides en profitent toujours davantage.
-    return clamp((avgSpeed - 50) / 250 + 0.22, 0.12, 0.40);
+    // Sensibilité portée de /250 à /100 (audit 2026-09-29 : +20 de Vitesse
+    // ne changeait rien au score) et Vitesse pondérée 0,65 contre 0,35 à
+    // l'Accélération, déjà présente dans le duel au premier pas.
+    return clamp((avgSpeed - 50) / 100 + 0.22, 0.08, 0.45);
   }
 
   matchupDefender(defTeam, offPlayer, zone) {
@@ -14995,6 +15003,10 @@ class MatchEngine {
     // mettre en regard du plancher/plafond 0.03-0.35 posé par le clamp plus
     // bas).
     tovChance -= (ballHandler.attrs.decision - 50) * 0.0006;
+    // Sang-froid (audit 2026-09-29 : ne jouait qu'en fin de match serrée et
+    // sur les fautes techniques) : un porteur calme garde le ballon sous
+    // pression, d'autant plus face à une défense qui presse.
+    tovChance -= (ballHandler.attrs.composure - 50) * (0.0005 + Math.max(0, defense.pressure || 0) * 0.01);
     // Défense sur écrans "Prise à deux" (double sur le porteur au screen,
     // pondéré par prWeight — voir plus haut) et garbage time "Adaptatif"
     // (imprécision des deux côtés en fin de match déséquilibrée) : ajoutés
@@ -15228,7 +15240,11 @@ class MatchEngine {
     // pour ne pas invalider tout l'existant d'un coup. Diviseur ajusté pour
     // rester sur la même échelle moyenne (0-100, comme les autres `eff()`)
     // qu'avant ce correctif.
-    let creation = (shooter.eff("shotCreation") * 1.5 + shooter.eff("dribble") + shooter.eff("agility") * 0.7 + (creator ? creator.eff("pass") * 0.8 : 0)) / (creator ? 4.0 : 3.2);
+    // Vision (audit 2026-09-29 : ne pesait rien en moyenne, seulement sur le
+    // crédit de la passe décisive) : le passeur qui lit le jeu trouve un
+    // meilleur tir, et la Passe y pèse davantage (1,0 au lieu de 0,8).
+    // Diviseur ajusté pour garder la même échelle moyenne.
+    let creation = (shooter.eff("shotCreation") * 1.5 + shooter.eff("dribble") + shooter.eff("agility") * 0.7 + (creator ? creator.eff("pass") * 1.0 + creator.eff("vision") * 0.8 : 0)) / (creator ? 5.0 : 3.2);
     // Défense sur écrans : n'affecte que la fraction de possessions
     // "Pick & Roll" (prWeight) — gêne (ou pas) la création du porteur selon
     // le choix du coach défenseur. "Aucune consigne" => ballCreationMod = 0.
@@ -15329,7 +15345,11 @@ class MatchEngine {
     // --- Rebond offensif agressif de la possession précédente : contre-
     // attaque, défense pas replacée — bonus d'ouverture ponctuel, consommé
     // une seule fois (voir transitionBoost plus haut). ---
-    const transitionOpenness = transitionBoost ? 14 : 0;
+    // Vitesse (audit 2026-09-29) : en contre-attaque, l'avance de vitesse du
+    // cinq qui attaque sur celui qui se replie ouvre (ou referme) le tir.
+    const fiveSpeed = five => five.reduce((s, p) => s + p.eff("speed"), 0) / Math.max(1, five.length);
+    const transitionSpeedEdge = transitionBoost ? fiveSpeed(onCourtOff) - fiveSpeed(onCourtDef) : 0;
+    const transitionOpenness = transitionBoost ? clamp(14 + transitionSpeedEdge * 0.5, 4, 26) : 0;
 
     const screenOpennessBonus = zone === "inside"
       ? (screen.rollOpennessMod || 0) * prWeight
@@ -15495,6 +15515,10 @@ class MatchEngine {
     // l'urgence, rarement réussi — avant l'audit 2026-09-29, une possession
     // d'une seconde valait une attaque complète.
     if (this._buzzerHeave) prob = Math.min(prob, 0.18);
+    // Finition en contre-attaque (audit 2026-09-29) : une fois le tir
+    // « ouvert », la vitesse n'ajoutait plus rien ; le cinq le plus rapide
+    // finit désormais plus souvent son débordement (jusqu'à +10 pts de %).
+    if (transitionBoost) prob = clamp(prob + clamp(0.03 + transitionSpeedEdge * 0.003, 0, 0.10), 0.10, 0.80);
 
     // !blocked : un tir contré est toujours un tir manqué, jamais soumis au
     // tirage de réussite ci-dessus (voir `blocked` plus haut).
