@@ -565,16 +565,27 @@ export function createLiveView(root, opts = {}) {
     // plus de bandeaux LED le long des lignes de touche, puis « trop proche
     // du bord » pour les pubs dans les coins). Au-delà de 18 caractères, le
     // nom passe sur 2 lignes.
-    const ledKey = (S.courtLogo || "") + "|" + (S.arenaSponsor || "");
+    const cs = S.courtStyle || null;
+    const ledKey = (S.courtLogo || "") + "|" + (S.arenaSponsor || "") + "|" + (cs ? [cs.floor, cs.line, cs.paint].join(",") : "");
     if (courtLogoKey !== ledKey) {
       courtLogoKey = ledKey;
+      // Parquet aux couleurs du club qui reçoit (S.courtStyle, Premium) :
+      // teinte du bois, lames, lignes, raquettes et rond central peints.
+      court.style.background = cs ? cs.floor : "";
+      court.style.setProperty("--courtLine", cs ? cs.line : "");
+      if (!cs) court.style.removeProperty("--courtLine");
+      let planks = "";
+      if (cs) {
+        for (let y = 25; y < 500; y += 25) planks += `<line x1="0" y1="${y}" x2="940" y2="${y}" stroke="${cs.grain}" stroke-width="3"/>`;
+        if (cs.paint) planks += `<rect x="0" y="170" width="190" height="160" fill="${cs.paint}" opacity=".75"/><rect x="750" y="170" width="190" height="160" fill="${cs.paint}" opacity=".75"/><circle cx="470" cy="250" r="60" fill="${cs.paint}" opacity=".65"/>`;
+      }
       const lines = floorAdLines((S.arenaSponsor || "HOOP MANAGER").toUpperCase());
       const ad = (cx, cy) => lines.map((l, i) => {
         const y = cy + (i - (lines.length - 1) / 2) * 24 + 7;
         const fit = l.length * 17.5 > 320 ? ` textLength="320" lengthAdjust="spacingAndGlyphs"` : "";
         return `<text class="floor-ad" x="${cx}" y="${y}" text-anchor="middle"${fit}>${esc(l)}</text>`;
       }).join("");
-      court.innerHTML = `<g class="base">${COURT_BASE}</g><g class="ads">${ad(470, 404)}</g><g class="logo" opacity=".85">${S.courtLogo || ""}</g><g class="marks"></g>`;
+      court.innerHTML = `<g class="floor">${planks}</g><g class="base">${COURT_BASE}</g><g class="ads">${ad(470, 404)}</g><g class="logo" opacity=".85">${S.courtLogo || ""}</g><g class="marks"></g>`;
     }
     court.querySelector(".marks").innerHTML = g;
 

@@ -1298,6 +1298,43 @@ function setTeamArenaName(team, teamIndex, league, body, now) {
   return { ok: true, arenaName: value };
 }
 
+// PREMIUM « personnalisation » (2026-09-29, voir le bloc du même nom dans
+// engine.js) : parquet aux couleurs du club, numéro de maillot, apparence
+// des jeunes formés au club. Réservé aux clubs Premium.
+function requirePremium(team, now) {
+  return typeof team.hasActivePremium === "function" && team.hasActivePremium(now);
+}
+function setTeamCourtStyle(team, teamIndex, league, body, now) {
+  if (!requirePremium(team, now)) return fail("Le parquet aux couleurs du club est réservé au Premium.");
+  const raw = body && body.courtStyle;
+  if (raw != null && (typeof raw !== "object" || (raw.wood != null && !Engine.COURT_WOODS[raw.wood]) || (raw.paint != null && raw.paint !== "" && !Engine.JERSEY_COLORS[raw.paint]))) {
+    return fail("Style de parquet invalide.");
+  }
+  team.courtStyle = Engine.normalizeCourtStyle(raw);
+  return { ok: true, courtStyle: team.courtStyle };
+}
+function setPlayerJerseyNumber(team, teamIndex, league, body, now) {
+  if (!requirePremium(team, now)) return fail("Choisir les numéros de maillot est réservé au Premium.");
+  const player = team.players.find(p => String(p.id) === String(body && body.playerId));
+  if (!player) return fail("Joueur introuvable dans votre effectif.");
+  const n = Number(body && body.number);
+  if (!Number.isInteger(n) || n < 0 || n > 99) return fail("Le numéro doit être compris entre 0 et 99.");
+  if ((team.hallOfFame || []).some(h => h && h.retiredNumber === n)) return fail(`Le numéro ${n} est retiré au Hall of Fame.`);
+  const taken = team.players.find(p => p !== player && p.number === n);
+  if (taken) return fail(`Le numéro ${n} est déjà porté par ${taken.name}.`);
+  player.number = n;
+  return { ok: true, playerId: player.id, number: n };
+}
+function setPlayerLook(team, teamIndex, league, body, now) {
+  if (!requirePremium(team, now)) return fail("Personnaliser l'apparence des jeunes est réservé au Premium.");
+  const id = body && body.playerId;
+  const player = team.players.find(p => String(p.id) === String(id)) || (team.youthPlayers || []).find(p => String(p.id) === String(id));
+  if (!player) return fail("Joueur introuvable dans votre club.");
+  if (!Engine.canCustomizePlayerLook(team, player)) return fail("Seuls les joueurs formés au club peuvent être personnalisés.");
+  player.look = body.look == null ? null : Engine.normalizePlayerLook(body.look);
+  return { ok: true, playerId: player.id, look: player.look };
+}
+
 // Tutoriel d'accueil (retour utilisateur, 2026-09 : "on est d'accord qu'on
 // ne peut le faire qu'une fois ? [...] le bouton dans le guide doit
 // s'enlever") : nécessaire côté serveur pour la ligue partagée, où
@@ -1384,6 +1421,7 @@ function submitPronostics(team, teamIndex, league, body, now) {
 }
 
 module.exports = {
+  setTeamCourtStyle, setPlayerJerseyNumber, setPlayerLook,
   validateOrdersSnapshot,
   setLineup, setTactics, setTraining, setPlan, setTacticPresets, listPlayer, bidOnListing, bidOnCoachListing, setAutoBid, viewListing,
   upgradeArena, buildArenaSeats, setTicketPrices, upgradeFanShop, fireTrainer,

@@ -2469,6 +2469,105 @@ const JERSEY_COLORS = {
   jaune:  "#e8c93f",
 };
 
+// ---------------------------------------------------------------------
+// PREMIUM « personnalisation » (2026-09-29, validé par l'utilisateur :
+// « fais 1 et 2 », puis « pour les numéros de maillot, je ne les afficherai
+// que sur les pages des joueurs »). Miroir identique engine.js ⇄
+// moteurbasket3.html.
+// 1) Parquet aux couleurs du club : Team.courtStyle { wood, paint } (null =
+//    parquet par défaut du jeu), appliqué au terrain du DIRECT quand ce club
+//    reçoit, et montré sur la page Salle. Effectif seulement si le club est
+//    Premium (courtStyleFor).
+// 2) Apparence des jeunes formés au club : Player.look { hairStyle,
+//    hairColor, beard, headband } (null = visage tiré au hasard, inchangé),
+//    pour un jeune de l'académie ou un joueur promu par ce club
+//    (canCustomizePlayerLook), Premium seulement pour la modifier.
+// 3) Numéros de maillot : Player.number (0-99, unique dans l'effectif pro),
+//    attribué automatiquement (ensureJerseyNumbers), affiché sur la fiche
+//    du joueur uniquement ; un club Premium peut le changer.
+// ---------------------------------------------------------------------
+const COURT_WOODS = {
+  nuit:   { label: "Nuit (parquet du jeu)", floor: "#131d33", grain: "#16223b", line: "rgba(245,161,58,.28)" },
+  erable: { label: "Érable clair", floor: "#d9a86b", grain: "#c99659", line: "rgba(255,255,255,.92)" },
+  chene:  { label: "Chêne", floor: "#a5703f", grain: "#946236", line: "rgba(255,255,255,.9)" },
+  noyer:  { label: "Noyer foncé", floor: "#5b3a24", grain: "#4f321f", line: "rgba(255,255,255,.82)" },
+  ardoise:{ label: "Ardoise", floor: "#2b2f36", grain: "#262a30", line: "rgba(255,255,255,.75)" },
+};
+function normalizeCourtStyle(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const wood = COURT_WOODS[raw.wood] ? raw.wood : "nuit";
+  const paint = raw.paint && JERSEY_COLORS[raw.paint] ? raw.paint : null;
+  if (wood === "nuit" && !paint) return null;
+  return { wood, paint };
+}
+// Couleurs effectives du parquet d'un club (null = parquet par défaut).
+function courtStyleFor(team, now = Date.now()) {
+  if (!team || !team.courtStyle || typeof team.hasActivePremium !== "function" || !team.hasActivePremium(now)) return null;
+  const st = normalizeCourtStyle(team.courtStyle);
+  if (!st) return null;
+  const w = COURT_WOODS[st.wood];
+  return { wood: st.wood, floor: w.floor, grain: w.grain, line: w.line, paint: st.paint ? JERSEY_COLORS[st.paint] : null };
+}
+
+const PLAYER_LOOK_OPTIONS = {
+  hairStyle: ["buzz", "short", "sidepart", "slick", "wavy", "long", "bun", "fade", "curlytop", "afro", "twists", "cornrows",
+    "mohawk", "frohawk", "hightop", "undercut", "topknot", "waves", "buzzdesign", "bald"],
+  hairColor: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  beard: ["none", "stubble", "short", "goatee", "boxed", "full", "circle", "vandyke", "mustache", "soulpatch"],
+  headband: ["none", "blanc", "noir", "rouge", "bleu", "orange", "vert"],
+};
+const PLAYER_LOOK_LABELS = {
+  hairStyle: { buzz: "Rasé court", short: "Court", sidepart: "Raie sur le côté", slick: "Plaqué", wavy: "Ondulé", long: "Long", bun: "Chignon",
+    fade: "Dégradé", curlytop: "Boucles", afro: "Afro", twists: "Twists", cornrows: "Tresses", mohawk: "Crête", frohawk: "Crête afro",
+    hightop: "High-top", undercut: "Undercut", topknot: "Chignon haut", waves: "Waves", buzzdesign: "Rasé à motif", bald: "Chauve" },
+  beard: { none: "Aucune", stubble: "Quelques jours", short: "Courte", goatee: "Bouc", boxed: "Taillée", full: "Fournie", circle: "Collier",
+    vandyke: "Van Dyke", mustache: "Moustache", soulpatch: "Mouche" },
+  headband: { none: "Aucun", blanc: "Blanc", noir: "Noir", rouge: "Rouge", bleu: "Bleu", orange: "Orange", vert: "Vert" },
+};
+function normalizePlayerLook(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const out = {};
+  if (PLAYER_LOOK_OPTIONS.hairStyle.includes(raw.hairStyle)) out.hairStyle = raw.hairStyle;
+  if (PLAYER_LOOK_OPTIONS.hairColor.includes(raw.hairColor)) out.hairColor = raw.hairColor;
+  if (PLAYER_LOOK_OPTIONS.beard.includes(raw.beard)) out.beard = raw.beard;
+  if (PLAYER_LOOK_OPTIONS.headband.includes(raw.headband)) out.headband = raw.headband;
+  return Object.keys(out).length ? out : null;
+}
+// Jeune de l'académie du club, ou joueur promu par ce club (homegrownClub,
+// posé à la promotion ; repli sur l'historique des promus pour les joueurs
+// promus avant ce champ).
+function canCustomizePlayerLook(team, player) {
+  if (!team || !player) return false;
+  if ((team.youthPlayers || []).some(p => p.id === player.id)) return true;
+  if (!(team.players || []).some(p => p.id === player.id)) return false;
+  if (player.homegrownClub) return player.homegrownClub === String(team.name || "").trim().toLowerCase();
+  return (team.academyGraduatesHistory || []).some(h => h && h.name === player.name && h.position === player.position);
+}
+
+function jerseyNumberSeed(id) {
+  let h = 2166136261;
+  for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  return h;
+}
+// Numéros uniques dans l'effectif pro ; les joueurs sans numéro valide (ou
+// en doublon, ex. après un transfert) en reçoivent un, tiré de leur id.
+function ensureJerseyNumbers(team) {
+  if (!team || !Array.isArray(team.players)) return;
+  // Numéros retirés au Hall of Fame (Team.setRetiredJersey) : plus jamais portés.
+  const used = new Set((team.hallOfFame || []).map(h => h && h.retiredNumber).filter(Number.isInteger));
+  team.players.forEach(p => {
+    if (Number.isInteger(p.number) && p.number >= 0 && p.number <= 99 && !used.has(p.number)) used.add(p.number);
+    else p.number = null;
+  });
+  team.players.forEach(p => {
+    if (p.number != null) return;
+    let n = (jerseyNumberSeed(p.id) % 99) + 1;
+    for (let k = 0; k < 100 && used.has(n); k++) n = (n % 99) + 1;
+    p.number = n; used.add(n);
+  });
+}
+
+
 // Luminosité perçue d'une couleur de JERSEY_COLORS (0 = noir, 1 = blanc),
 // formule YIQ standard. Sert uniquement à choisir une couleur de maillot
 // EXTÉRIEUR par défaut qui contraste avec le maillot domicile (voir
@@ -4689,6 +4788,8 @@ class Team {
     this.ordersHistory = [];
     // Rivalités et note des managers (voir recordHumanRivalry).
     this.rivalries = {};
+    // Parquet aux couleurs du club (Premium, voir courtStyleFor).
+    this.courtStyle = null;
     this.managerRating = null;
     this.managerRatedGames = 0;
 
@@ -6650,7 +6751,10 @@ class Team {
     const [player] = this.youthPlayers.splice(idx, 1);
     this.pendingYouthDecisions = (this.pendingYouthDecisions || []).filter(id => id !== playerId);
     player.salary = salaryForOverall(player.overall());
+    // Club formateur (apparence personnalisable, voir canCustomizePlayerLook).
+    player.homegrownClub = String(this.name || "").trim().toLowerCase();
     this.players.push(player);
+    ensureJerseyNumbers(this);
     // Palmarès du club (voir this.academyGraduates au constructeur) : cette
     // promotion EST l'évènement qui compte pour ce compteur, incrémenté
     // uniquement ici (jamais à la signature du candidat, ni pendant la
@@ -12937,6 +13041,9 @@ function serializePlayerRecord(p) {
   return {
     name: p.name, nationality: p.nationality, position: p.position, height: p.height, age: p.age,
     attrs: { ...p.attrs }, potential: p.potential, salary: p.salary,
+    // Numéro de maillot, apparence choisie, club formateur (voir le bloc
+    // PREMIUM « personnalisation »).
+    number: Number.isInteger(p.number) ? p.number : null, look: normalizePlayerLook(p.look), homegrownClub: p.homegrownClub || null,
     // Plafonds physique/mental, caractéristique par caractéristique (voir
     // Player.physicalPotential/mentalPotential, retour utilisateur 2026-09 :
     // "le physique ne bouge qu'un peu [...] le mental peut bien évoluer") :
@@ -13351,6 +13458,7 @@ function serializeTeam(team) {
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
     rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
+    courtStyle: normalizeCourtStyle(team.courtStyle),
     managerRating: typeof team.managerRating === "number" ? team.managerRating : null,
     managerRatedGames: team.managerRatedGames || 0,
     players: team.players.map(serializePlayerRecord),
@@ -13406,6 +13514,9 @@ function playerFromSave(pdata) {
     age: pdata.age, attrs: { ...pdata.attrs }, aggressiveness: pdata.aggressiveness,
     nationality: pdata.nationality,
   });
+  p.number = Number.isInteger(pdata.number) && pdata.number >= 0 && pdata.number <= 99 ? pdata.number : null;
+  p.look = normalizePlayerLook(pdata.look);
+  p.homegrownClub = typeof pdata.homegrownClub === "string" ? pdata.homegrownClub : null;
   // Migration : sauvegardes d'avant l'ajout de mental/endurance/freeThrow aux
   // ATTRS (voir le grand commentaire au-dessus d'ATTRS) - ces 3 caractéristiques
   // manquent alors totalement dans pdata.attrs, ce qui rendrait overall() (et
@@ -13955,6 +14066,7 @@ function teamFromSave(data) {
       .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
     : [];
   team.rivalries = data.rivalries && typeof data.rivalries === "object" && !Array.isArray(data.rivalries) ? data.rivalries : {};
+  team.courtStyle = normalizeCourtStyle(data.courtStyle);
   team.managerRating = typeof data.managerRating === "number" ? data.managerRating : null;
   team.managerRatedGames = typeof data.managerRatedGames === "number" ? data.managerRatedGames : 0;
   team.ordersHistory = Array.isArray(data.ordersHistory)
@@ -14029,6 +14141,8 @@ function teamFromSave(data) {
     });
     team.plannedTactics = migrated;
   }
+  // Numéros de maillot (voir ensureJerseyNumbers).
+  ensureJerseyNumbers(team);
   return team;
 }
 
@@ -15739,6 +15853,7 @@ return {
   PHYSIO_RECOVERY_BONUS_BY_LEVEL, PHYSIO_INJURY_RISK_MULT_BY_LEVEL,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, AUTO_BID_FIELDS, autoBidKey, transferPlayerBetweenTeams,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
+  COURT_WOODS, normalizeCourtStyle, courtStyleFor, PLAYER_LOOK_OPTIONS, PLAYER_LOOK_LABELS, normalizePlayerLook, canCustomizePlayerLook, ensureJerseyNumbers,
   RIVALRY_RECENT_MAX, DERBY_MORALE_MULT, DERBY_ATTENDANCE_BOOST, MANAGER_RATING_START, MANAGER_RATING_K, rivalryKeyFor, rivalryBetween, managerRatingOf, recordHumanRivalry,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,

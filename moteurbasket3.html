@@ -5292,6 +5292,16 @@
   .sl-grid{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:18px; margin-bottom:18px; align-items:stretch;}
   .sl-side #attendanceHistoryHolder{flex:1;}
   .sl-card{min-width:0; padding:20px; border-radius:16px; background:var(--panel); border:1px solid var(--line);}
+  /* Parquet aux couleurs du club (renderSalleCourt, 2026-09-29). */
+  .sl-court-svg{width:100%; height:auto; display:block; border-radius:10px; margin-top:12px;}
+  .sl-court-row{display:flex; flex-direction:column; gap:6px; margin-top:12px;}
+  .sl-court-lbl{font-size:12px; font-weight:700; color:var(--ink-dim);}
+  .sl-court-swatches{display:flex; flex-wrap:wrap; gap:6px;}
+  .sl-court-sw{width:30px; height:30px; border-radius:8px; border:2px solid var(--line); cursor:pointer; padding:0; position:relative;}
+  .sl-court-sw span{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);}
+  .sl-court-sw.on{border-color:var(--amber); box-shadow:0 0 0 2px var(--amber);}
+  .sl-court-sw--none{background:repeating-linear-gradient(45deg, var(--panel-2), var(--panel-2) 5px, var(--line) 5px, var(--line) 7px);}
+  .sl-court-actions{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px;}
   .sl-card-head{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:8px 12px; margin-bottom:16px;}
   .sl-eyebrow{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);}
   .sl-card-title{margin:3px 0 0; font-size:17px; font-weight:800; color:var(--ink);}
@@ -5906,6 +5916,19 @@
   .club-trigram-note{margin-top:6px;}
   .settings-club-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .settings-club-logo svg, .settings-club-logo img{width:36px; height:36px; border-radius:50%; display:block;}
+  /* Fiche joueur : personnalisation Premium (2026-09-29). */
+  .pdp-perso-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:6px 0 12px;}
+  .pdp-perso-lbl{font-size:13px; font-weight:700; color:var(--ink-dim); flex:1 1 100%;}
+  .pdp-num-input{width:90px;}
+  .pdp-perso-look{display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap;}
+  .pdp-perso-preview{flex:none;}
+  .pdp-perso-fields{display:grid; grid-template-columns:repeat(2, minmax(150px, 1fr)); gap:10px 14px; flex:1 1 300px;}
+  .pdp-perso-fields label{display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:700; color:var(--ink-dim);}
+  .pdp-perso-actions{margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
+  .pdp2-chip--num{font-weight:800; color:var(--amber);}
+  .prm-tag{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#04241f; background:var(--amber); border-radius:999px; padding:2px 8px; margin-left:6px; vertical-align:middle;}
+  .linkish{background:none; border:0; padding:0; color:var(--ink-dim); text-decoration:underline; cursor:pointer; font:inherit; font-size:13px;}
+  @media (max-width:560px){ .pdp-perso-fields{grid-template-columns:1fr;} }
   .sl-rename-input{flex:1 1 200px; height:38px; box-sizing:border-box; padding:0 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:14px; font-weight:600;}
   .sl-rename-input:focus{outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber);}
   .settings-feedback{margin:6px 0 0; font-size:12.5px; font-weight:600; min-height:0;}
@@ -7131,6 +7154,8 @@
         <div class="sl-side">
           <div id="salleHeroKpis"></div>
           <div class="sl-card" id="attendanceHistoryHolder"></div>
+          <!-- Parquet aux couleurs du club (Premium, 2026-09-29), voir renderSalleCourt. -->
+          <div class="sl-card" id="salleCourtHolder"></div>
         </div>
       </div>
 
@@ -7743,6 +7768,7 @@
       <div class="guide-entry" data-guide-id="premium" data-guide-group="Premium">
         <h3>Premium</h3>
         <p class="training-intro">Tout passe par l'onglet <b>Premium</b>, sous le Guide : votre statut et le bouton pour passer Premium (gratuit pendant la phase de test). Le Premium comprend le Scouting Pro illimité et sans pub, l'analyse de votre propre équipe, les ligues privées, les maillots et le logo personnalisés, 6 tactiques enregistrées, aucune pub, le badge Premium à côté du nom du club, l'historique de l'entraînement sur toute la saison, la liste de suivi du marché avec ses alertes, la courbe de progression de chaque joueur (sur sa fiche), les statistiques avancées avec export CSV (onglet Statistiques), « Revoir le direct » d'un match déjà joué (depuis sa feuille de statistiques) et les notifications (Paramètres → Mon compte : coup d'envoi, blessures, transferts, fins d'enchère des joueurs et du staff).</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Personnalisation</b> : parquet aux couleurs du club dans le direct quand vous recevez (page Salle, carte « Votre terrain »), apparence des joueurs formés à votre académie et numéro de maillot de chaque joueur (carte « Personnalisation » de leur fiche). Tous les joueurs ont un numéro, visible sur leur fiche ; les numéros retirés au Hall of Fame ne sont plus portés.</p>
         <p class="training-intro" style="margin-top:10px;">Le Premium ne donne <b>aucun avantage sportif</b> : ni progression plus rapide, ni argent, ni staff en plus. Un mois de Premium est aussi offert au meilleur pronostiqueur des émissions Hoop Shows en fin de saison.</p>
       </div>
 
@@ -9825,6 +9851,105 @@ const JERSEY_COLORS = {
   jaune:  "#e8c93f",
 };
 
+// ---------------------------------------------------------------------
+// PREMIUM « personnalisation » (2026-09-29, validé par l'utilisateur :
+// « fais 1 et 2 », puis « pour les numéros de maillot, je ne les afficherai
+// que sur les pages des joueurs »). Miroir identique engine.js ⇄
+// moteurbasket3.html.
+// 1) Parquet aux couleurs du club : Team.courtStyle { wood, paint } (null =
+//    parquet par défaut du jeu), appliqué au terrain du DIRECT quand ce club
+//    reçoit, et montré sur la page Salle. Effectif seulement si le club est
+//    Premium (courtStyleFor).
+// 2) Apparence des jeunes formés au club : Player.look { hairStyle,
+//    hairColor, beard, headband } (null = visage tiré au hasard, inchangé),
+//    pour un jeune de l'académie ou un joueur promu par ce club
+//    (canCustomizePlayerLook), Premium seulement pour la modifier.
+// 3) Numéros de maillot : Player.number (0-99, unique dans l'effectif pro),
+//    attribué automatiquement (ensureJerseyNumbers), affiché sur la fiche
+//    du joueur uniquement ; un club Premium peut le changer.
+// ---------------------------------------------------------------------
+const COURT_WOODS = {
+  nuit:   { label: "Nuit (parquet du jeu)", floor: "#131d33", grain: "#16223b", line: "rgba(245,161,58,.28)" },
+  erable: { label: "Érable clair", floor: "#d9a86b", grain: "#c99659", line: "rgba(255,255,255,.92)" },
+  chene:  { label: "Chêne", floor: "#a5703f", grain: "#946236", line: "rgba(255,255,255,.9)" },
+  noyer:  { label: "Noyer foncé", floor: "#5b3a24", grain: "#4f321f", line: "rgba(255,255,255,.82)" },
+  ardoise:{ label: "Ardoise", floor: "#2b2f36", grain: "#262a30", line: "rgba(255,255,255,.75)" },
+};
+function normalizeCourtStyle(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const wood = COURT_WOODS[raw.wood] ? raw.wood : "nuit";
+  const paint = raw.paint && JERSEY_COLORS[raw.paint] ? raw.paint : null;
+  if (wood === "nuit" && !paint) return null;
+  return { wood, paint };
+}
+// Couleurs effectives du parquet d'un club (null = parquet par défaut).
+function courtStyleFor(team, now = Date.now()) {
+  if (!team || !team.courtStyle || typeof team.hasActivePremium !== "function" || !team.hasActivePremium(now)) return null;
+  const st = normalizeCourtStyle(team.courtStyle);
+  if (!st) return null;
+  const w = COURT_WOODS[st.wood];
+  return { wood: st.wood, floor: w.floor, grain: w.grain, line: w.line, paint: st.paint ? JERSEY_COLORS[st.paint] : null };
+}
+
+const PLAYER_LOOK_OPTIONS = {
+  hairStyle: ["buzz", "short", "sidepart", "slick", "wavy", "long", "bun", "fade", "curlytop", "afro", "twists", "cornrows",
+    "mohawk", "frohawk", "hightop", "undercut", "topknot", "waves", "buzzdesign", "bald"],
+  hairColor: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  beard: ["none", "stubble", "short", "goatee", "boxed", "full", "circle", "vandyke", "mustache", "soulpatch"],
+  headband: ["none", "blanc", "noir", "rouge", "bleu", "orange", "vert"],
+};
+const PLAYER_LOOK_LABELS = {
+  hairStyle: { buzz: "Rasé court", short: "Court", sidepart: "Raie sur le côté", slick: "Plaqué", wavy: "Ondulé", long: "Long", bun: "Chignon",
+    fade: "Dégradé", curlytop: "Boucles", afro: "Afro", twists: "Twists", cornrows: "Tresses", mohawk: "Crête", frohawk: "Crête afro",
+    hightop: "High-top", undercut: "Undercut", topknot: "Chignon haut", waves: "Waves", buzzdesign: "Rasé à motif", bald: "Chauve" },
+  beard: { none: "Aucune", stubble: "Quelques jours", short: "Courte", goatee: "Bouc", boxed: "Taillée", full: "Fournie", circle: "Collier",
+    vandyke: "Van Dyke", mustache: "Moustache", soulpatch: "Mouche" },
+  headband: { none: "Aucun", blanc: "Blanc", noir: "Noir", rouge: "Rouge", bleu: "Bleu", orange: "Orange", vert: "Vert" },
+};
+function normalizePlayerLook(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const out = {};
+  if (PLAYER_LOOK_OPTIONS.hairStyle.includes(raw.hairStyle)) out.hairStyle = raw.hairStyle;
+  if (PLAYER_LOOK_OPTIONS.hairColor.includes(raw.hairColor)) out.hairColor = raw.hairColor;
+  if (PLAYER_LOOK_OPTIONS.beard.includes(raw.beard)) out.beard = raw.beard;
+  if (PLAYER_LOOK_OPTIONS.headband.includes(raw.headband)) out.headband = raw.headband;
+  return Object.keys(out).length ? out : null;
+}
+// Jeune de l'académie du club, ou joueur promu par ce club (homegrownClub,
+// posé à la promotion ; repli sur l'historique des promus pour les joueurs
+// promus avant ce champ).
+function canCustomizePlayerLook(team, player) {
+  if (!team || !player) return false;
+  if ((team.youthPlayers || []).some(p => p.id === player.id)) return true;
+  if (!(team.players || []).some(p => p.id === player.id)) return false;
+  if (player.homegrownClub) return player.homegrownClub === String(team.name || "").trim().toLowerCase();
+  return (team.academyGraduatesHistory || []).some(h => h && h.name === player.name && h.position === player.position);
+}
+
+function jerseyNumberSeed(id) {
+  let h = 2166136261;
+  for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  return h;
+}
+// Numéros uniques dans l'effectif pro ; les joueurs sans numéro valide (ou
+// en doublon, ex. après un transfert) en reçoivent un, tiré de leur id.
+function ensureJerseyNumbers(team) {
+  if (!team || !Array.isArray(team.players)) return;
+  // Numéros retirés au Hall of Fame (Team.setRetiredJersey) : plus jamais portés.
+  const used = new Set((team.hallOfFame || []).map(h => h && h.retiredNumber).filter(Number.isInteger));
+  team.players.forEach(p => {
+    if (Number.isInteger(p.number) && p.number >= 0 && p.number <= 99 && !used.has(p.number)) used.add(p.number);
+    else p.number = null;
+  });
+  team.players.forEach(p => {
+    if (p.number != null) return;
+    let n = (jerseyNumberSeed(p.id) % 99) + 1;
+    for (let k = 0; k < 100 && used.has(n); k++) n = (n % 99) + 1;
+    p.number = n; used.add(n);
+  });
+}
+
+
 // ---------------------------------------------------------------- avatars des joueurs
 // Generateur d'avatars SVG proceduraux (retour utilisateur 2026-09 :
 // "recupere ces visuels la pour mettre des avatars pour les joueurs"),
@@ -10704,8 +10829,32 @@ const AvatarGen = (function () {
   function generateAvatar(seed, options = {}) {
     return renderAvatar(generateAppearance(seed, options), options);
   }
-  return { generateAppearance, renderAvatar, generateAvatar };
+  // Couleurs d'une apparence choisie (Player.look, Premium) : index de
+  // HAIR_COLORS, nom de bandeau → couleur.
+  const LOOK_HEADBAND = { blanc: '#ffffff', noir: '#1b1b1e', rouge: '#b8262b', bleu: '#1d4fa8', orange: '#e9a23b', vert: '#1f7a43' };
+  function applyLook(spec, look) {
+    if (!look) return spec;
+    // Une apparence choisie montre toujours la coiffure (pas de durag tiré
+    // au hasard par-dessus).
+    const out = { ...spec, durag: null };
+    if (look.hairStyle) out.hairStyle = look.hairStyle;
+    if (Number.isInteger(look.hairColor) && HAIR_COLORS[look.hairColor]) out.hairColor = HAIR_COLORS[look.hairColor];
+    if (look.beard) out.beard = look.beard;
+    if (look.headband) { out.headband = look.headband !== 'none'; out.headbandColor = LOOK_HEADBAND[look.headband] || null; }
+    // Même règle d'âge que generateAppearance : pas de barbe avant 18 ans.
+    if (out.age < 18) out.beard = 'none';
+    return out;
+  }
+  return { generateAppearance, renderAvatar, generateAvatar, applyLook, HAIR_COLORS };
 })();
+
+// Avatar d'un joueur : visage tiré de son id, puis apparence choisie par le
+// club (Player.look, Premium) par-dessus.
+function playerAvatarSvg(player, team) {
+  const opts = { teamColors: teamAvatarColors(team), age: Number.isFinite(player.age) ? player.age : undefined };
+  const spec = AvatarGen.applyLook(AvatarGen.generateAppearance(player.id, opts), player.look || null);
+  return AvatarGen.renderAvatar(spec, opts);
+}
 
 /** [couleur principale, couleur de lisere] reelles de l'equipe pour l'avatar (voir JERSEY_COLORS/team.jerseyColor/team.awayJerseyColor). */
 function teamAvatarColors(team) {
@@ -10719,7 +10868,7 @@ function playerAvatarHtml(player, team, size) {
   if (!player) return '';
   // Âge réel du joueur (sinon l'avatar tirait un âge de 19 à 35 ans au
   // hasard : cheveux gris / barbe sur un jeune de 15 ans).
-  const svg = AvatarGen.generateAvatar(player.id, { teamColors: teamAvatarColors(team), age: Number.isFinite(player.age) ? player.age : undefined });
+  const svg = playerAvatarSvg(player, team);
   const h = Math.round(size * 130 / 120);
   return `<span class="player-avatar" style="display:inline-block;flex:none;width:${size}px;height:${h}px;border-radius:${Math.round(size * 0.18)}px;overflow:hidden;vertical-align:middle;line-height:0">${svg}</span>`;
 }
@@ -12972,6 +13121,8 @@ class Team {
     this.ordersHistory = [];
     // Rivalités et note des managers (voir recordHumanRivalry).
     this.rivalries = {};
+    // Parquet aux couleurs du club (Premium, voir courtStyleFor).
+    this.courtStyle = null;
     this.managerRating = null;
     this.managerRatedGames = 0;
 
@@ -14467,7 +14618,10 @@ class Team {
     const [player] = this.youthPlayers.splice(idx, 1);
     this.pendingYouthDecisions = (this.pendingYouthDecisions || []).filter(id => id !== playerId);
     player.salary = salaryForOverall(player.overall());
+    // Club formateur (apparence personnalisable, voir canCustomizePlayerLook).
+    player.homegrownClub = String(this.name || "").trim().toLowerCase();
     this.players.push(player);
+    ensureJerseyNumbers(this);
     // Palmarès du club (voir this.academyGraduates au constructeur) : cette
     // promotion EST l'évènement qui compte pour ce compteur, incrémenté
     // uniquement ici (jamais à la signature du candidat, ni pendant la
@@ -19381,6 +19535,9 @@ function serializePlayerRecord(p) {
   return {
     name: p.name, nationality: p.nationality, position: p.position, height: p.height, age: p.age,
     attrs: { ...p.attrs }, potential: p.potential, salary: p.salary,
+    // Numéro de maillot, apparence choisie, club formateur (voir le bloc
+    // PREMIUM « personnalisation »).
+    number: Number.isInteger(p.number) ? p.number : null, look: normalizePlayerLook(p.look), homegrownClub: p.homegrownClub || null,
     // Plafonds physique/mental, caractéristique par caractéristique (voir
     // Player.physicalPotential/mentalPotential, retour utilisateur 2026-09 :
     // "le physique ne bouge qu'un peu [...] le mental peut bien évoluer") :
@@ -19764,6 +19921,7 @@ function serializeTeam(team) {
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
     rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
+    courtStyle: normalizeCourtStyle(team.courtStyle),
     managerRating: typeof team.managerRating === "number" ? team.managerRating : null,
     managerRatedGames: team.managerRatedGames || 0,
     players: team.players.map(serializePlayerRecord),
@@ -19819,6 +19977,9 @@ function playerFromSave(pdata) {
     age: pdata.age, attrs: { ...pdata.attrs }, aggressiveness: pdata.aggressiveness,
     nationality: pdata.nationality,
   });
+  p.number = Number.isInteger(pdata.number) && pdata.number >= 0 && pdata.number <= 99 ? pdata.number : null;
+  p.look = normalizePlayerLook(pdata.look);
+  p.homegrownClub = typeof pdata.homegrownClub === "string" ? pdata.homegrownClub : null;
   // Migration : sauvegardes d'avant l'ajout de mental/endurance/freeThrow aux
   // ATTRS (voir le grand commentaire au-dessus d'ATTRS) - ces 3 caractéristiques
   // manquent alors totalement dans pdata.attrs, ce qui rendrait overall() (et
@@ -20270,6 +20431,7 @@ function teamFromSave(data) {
       .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
     : [];
   team.rivalries = data.rivalries && typeof data.rivalries === "object" && !Array.isArray(data.rivalries) ? data.rivalries : {};
+  team.courtStyle = normalizeCourtStyle(data.courtStyle);
   team.managerRating = typeof data.managerRating === "number" ? data.managerRating : null;
   team.managerRatedGames = typeof data.managerRatedGames === "number" ? data.managerRatedGames : 0;
   team.ordersHistory = Array.isArray(data.ordersHistory)
@@ -20344,6 +20506,8 @@ function teamFromSave(data) {
     });
     team.plannedTactics = migrated;
   }
+  // Numéros de maillot (voir ensureJerseyNumbers).
+  ensureJerseyNumbers(team);
   return team;
 }
 
@@ -26667,6 +26831,7 @@ document.getElementById("playerDetailContent").addEventListener("click", (e) => 
     }
     return;
   }
+  if (handlePlayerPersonalizationClick(e)) return;
   const retirementBtn = e.target.closest("[data-retirement-talk]");
   if (retirementBtn) {
     retirementTalkAction(Number(retirementBtn.dataset.retirementTalk));
@@ -27291,6 +27456,8 @@ function renderPlayerDetail(teamIdx, playerId) {
     `<div class="pdp2-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>${teamLinkHtml(teamIdx, team.name)}</div>` +
     `<h3 class="pdp2-name">${nationFlagHtml(player.nationality, "nat-flag--name")}${escapeHtml(player.name)}</h3>` +
     `<div class="pdp2-chips">` +
+    // Numéro de maillot (affiché sur la fiche du joueur uniquement).
+    (Number.isInteger(player.number) ? `<span class="pdp2-chip pdp2-chip--num">N° ${player.number}</span>` : "") +
     (nationName(player.nationality) ? `<span class="pdp2-chip">${escapeHtml(nationName(player.nationality))}</span>` : "") +
     `<span class="pdp2-chip">${player.age} ans</span>` +
     `<span class="pdp2-chip">${player.height} cm</span>` +
@@ -27506,6 +27673,7 @@ function renderPlayerDetail(teamIdx, playerId) {
   // encapsulée dans une carte .pdp-card tout en bas, réservée à isOwnTeam.
   // Ajoute la valorisation par ventes comparables (comparableSalesValuation
   // ci-dessus) quand le joueur n'est pas déjà en vente. ----
+  if (isOwnTeam) html += playerPersonalizationCardHtml(team, player);
   if (isOwnTeam) {
     html += `<div class="pdp-card" id="pdpSaleCard"><h3>Mise en vente</h3>`;
     if (onMarket) {
@@ -27537,6 +27705,107 @@ function renderPlayerDetail(teamIdx, playerId) {
 
   holder.innerHTML = html;
 }
+
+// ---------------------------------------------------------------------
+// Fiche joueur : carte « Personnalisation » (Premium, 2026-09-29) — numéro
+// de maillot et apparence des joueurs formés au club (voir le bloc PREMIUM
+// « personnalisation » côté moteur, /api/player/set-jersey-number et
+// /api/player/set-look). Sans Premium : ce qui est possible, en aperçu.
+// ---------------------------------------------------------------------
+let pdpLookDraft = null; // { playerId, look } en cours d'édition
+function playerPersonalizationCardHtml(team, player) {
+  const premium = teamIsPremium(team);
+  const custom = canCustomizePlayerLook(team, player);
+  let html = `<div class="pdp-card pdp-perso" id="pdpPersoCard"><h3>Personnalisation <span class="prm-tag">Premium</span></h3>`;
+  // Numéro
+  html += `<div class="pdp-perso-row"><span class="pdp-perso-lbl">Numéro de maillot</span>`;
+  html += premium
+    ? `<input type="number" class="market-price-input pdp-num-input" id="pdpNumberInput" min="0" max="99" step="1" value="${Number.isInteger(player.number) ? player.number : ""}"> <button type="button" class="secondary" data-pdp-number="${player.id}">Changer</button>`
+    : `<b>${Number.isInteger(player.number) ? player.number : "–"}</b> <span class="sub">· avec Premium, choisissez le numéro de vos joueurs.</span>`;
+  html += `</div>`;
+  // Apparence
+  if (custom) {
+    const look = pdpLookDraft && pdpLookDraft.playerId === player.id ? pdpLookDraft.look : (player.look || {});
+    const base = AvatarGen.generateAppearance(player.id, { age: Number.isFinite(player.age) ? player.age : undefined });
+    const cur = AvatarGen.applyLook(base, look);
+    const hbCur = look.headband || (cur.headband ? "" : "none");
+    const opt = (key, values, current, labelOf) => values.map(v => `<option value="${escapeHtml(String(v))}"${String(v) === String(current) ? " selected" : ""}>${escapeHtml(labelOf(v))}</option>`).join("");
+    const hairIdx = AvatarGen.HAIR_COLORS.indexOf(cur.hairColor);
+    html += `<div class="pdp-perso-look"><div class="pdp-perso-preview" id="pdpLookPreview">${playerAvatarHtml({ ...player, look }, team, 96)}</div><div class="pdp-perso-fields">`;
+    const dis = premium ? "" : " disabled";
+    html += `<label>Coiffure<select data-pdp-look="hairStyle"${dis}>${opt("hairStyle", PLAYER_LOOK_OPTIONS.hairStyle, cur.hairStyle === undefined ? "" : cur.hairStyle, v => PLAYER_LOOK_LABELS.hairStyle[v] || v)}</select></label>`;
+    html += `<label>Couleur des cheveux<select data-pdp-look="hairColor"${dis}>${opt("hairColor", PLAYER_LOOK_OPTIONS.hairColor, hairIdx, v => ["Noir", "Brun foncé", "Châtain foncé", "Châtain", "Auburn", "Roux", "Blond foncé", "Blond", "Gris", "Blanc"][v])}</select></label>`;
+    html += player.age < 18
+      ? `<label>Barbe<select disabled><option>Pas avant 18 ans</option></select></label>`
+      : `<label>Barbe<select data-pdp-look="beard"${dis}>${opt("beard", PLAYER_LOOK_OPTIONS.beard, cur.beard, v => PLAYER_LOOK_LABELS.beard[v] || v)}</select></label>`;
+    html += `<label>Bandeau<select data-pdp-look="headband"${dis}>${opt("headband", PLAYER_LOOK_OPTIONS.headband, hbCur || "none", v => PLAYER_LOOK_LABELS.headband[v] || v)}</select></label>`;
+    html += `</div></div>`;
+    html += premium
+      ? `<div class="pdp-perso-actions"><button type="button" class="secondary" data-pdp-look-save="${player.id}">Enregistrer l'apparence</button>` +
+        (player.look ? ` <button type="button" class="linkish" data-pdp-look-reset="${player.id}">Revenir au visage d'origine</button>` : "") + `</div>`
+      : `<p class="sub">Formé au club : avec Premium, choisissez sa coiffure, sa barbe et son bandeau.</p>`;
+  } else {
+    html += `<p class="sub">Apparence personnalisable pour les joueurs formés à votre académie.</p>`;
+  }
+  html += `<div id="pdpPersoFeedback" class="sub" role="status"></div></div>`;
+  return html;
+}
+async function pdpPostPersonalization(url, body, okText) {
+  const fb = document.getElementById("pdpPersoFeedback");
+  try {
+    const res = await fetchApi(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || `Erreur serveur (${res.status}).`);
+    return data;
+  } catch (err) {
+    if (fb) fb.textContent = err.message || "Enregistrement impossible.";
+    return null;
+  } finally { if (okText && fb && !fb.textContent) fb.textContent = okText; }
+}
+function handlePlayerPersonalizationClick(e) {
+  const ref = currentPlayerDetailRef;
+  if (!ref) return false;
+  const team = league.teams[ref.teamIdx];
+  const player = team && (team.players.find(p => p.id === ref.playerId) || (team.youthPlayers || []).find(p => p.id === ref.playerId));
+  const numBtn = e.target.closest("[data-pdp-number]");
+  if (numBtn && player) {
+    const n = Number((document.getElementById("pdpNumberInput") || {}).value);
+    pdpPostPersonalization("/api/player/set-jersey-number", { playerId: player.id, number: n }).then(d => {
+      if (!d) return;
+      player.number = d.number;
+      renderPlayerDetail(ref.teamIdx, ref.playerId);
+      const fb = document.getElementById("pdpPersoFeedback"); if (fb) fb.textContent = `Numéro ${d.number} enregistré.`;
+    });
+    return true;
+  }
+  const saveBtn = e.target.closest("[data-pdp-look-save]");
+  const resetBtn = e.target.closest("[data-pdp-look-reset]");
+  if ((saveBtn || resetBtn) && player) {
+    const look = resetBtn ? null : (pdpLookDraft && pdpLookDraft.playerId === player.id ? pdpLookDraft.look : player.look);
+    pdpPostPersonalization("/api/player/set-look", { playerId: player.id, look }).then(d => {
+      if (!d) return;
+      player.look = d.look; pdpLookDraft = null;
+      renderPlayerDetail(ref.teamIdx, ref.playerId);
+      const fb = document.getElementById("pdpPersoFeedback"); if (fb) fb.textContent = resetBtn ? "Visage d'origine rétabli." : "Apparence enregistrée.";
+    });
+    return true;
+  }
+  return false;
+}
+// Aperçu en direct pendant qu'on choisit (sans enregistrer).
+document.addEventListener("change", (e) => {
+  const sel = e.target.closest && e.target.closest("[data-pdp-look]");
+  if (!sel || !currentPlayerDetailRef) return;
+  const ref = currentPlayerDetailRef;
+  const team = league.teams[ref.teamIdx];
+  const player = team && (team.players.find(p => p.id === ref.playerId) || (team.youthPlayers || []).find(p => p.id === ref.playerId));
+  if (!player) return;
+  if (!pdpLookDraft || pdpLookDraft.playerId !== player.id) pdpLookDraft = { playerId: player.id, look: { ...(player.look || {}) } };
+  const key = sel.dataset.pdpLook;
+  pdpLookDraft.look[key] = key === "hairColor" ? Number(sel.value) : sel.value;
+  const prev = document.getElementById("pdpLookPreview");
+  if (prev) prev.innerHTML = playerAvatarHtml({ ...player, look: pdpLookDraft.look }, team, 96);
+});
 
 function hideStandings() {
   showPage("prepSection");
@@ -31907,7 +32176,7 @@ function hoopShowDressOpts() {
     player: (id) => {
       for (const t of teams) {
         const p = t && t.players && t.players.find(pl => String(pl.id) === String(id));
-        if (p) return AvatarGen.generateAvatar(p.id, { teamColors: teamAvatarColors(t), age: Number.isFinite(p.age) ? p.age : undefined });
+        if (p) return playerAvatarSvg(p, t);
       }
       return "";
     },
@@ -34693,6 +34962,8 @@ function hmLiveDress() {
     d.sponsors = [homeTeam, awayTeam].map(t => (t ? sponsorNameForSlot(t, "maillot") : null));
     d.arenaSponsor = homeTeam ? sponsorNameForSlot(homeTeam, "salle") : null;
   } catch (e) { d.sponsors = [null, null]; d.arenaSponsor = null; }
+  // Parquet aux couleurs du club qui reçoit (Premium, courtStyleFor).
+  try { d.courtStyle = courtStyleFor(homeTeam); } catch (e) { d.courtStyle = null; }
   hmLive.dress = d;
   return d;
 }
@@ -34775,6 +35046,7 @@ function hmLiveBuildState() {
     meta: dress.meta,
     courtLogo: dress.courtLogo,
     arenaSponsor: dress.arenaSponsor || null,
+    courtStyle: dress.courtStyle || null,
     teams,
     shots: hmLive.shots,
     events: hmLive.events,
@@ -42166,8 +42438,84 @@ function renderSalleSection() {
   renderSalleTicketing();
   renderArenaBuild();
   renderAttendanceHistory();
+  renderSalleCourt();
   renderSalleFacilities();
 }
+
+// ---------------------------------------------------------------------
+// Parquet aux couleurs du club (Premium, 2026-09-29) : aperçu du terrain
+// tel qu'il apparaît dans le direct quand le club reçoit, choix du bois et
+// de la couleur des raquettes (/api/club/set-court-style). Sans Premium :
+// aperçu seulement.
+// ---------------------------------------------------------------------
+let salleCourtDraft = null;
+function courtPreviewSvg(style) {
+  const w = style ? COURT_WOODS[style.wood] || COURT_WOODS.nuit : COURT_WOODS.nuit;
+  const paint = style && style.paint ? JERSEY_COLORS[style.paint] : null;
+  let planks = "";
+  if (style && style.wood !== "nuit") for (let y = 25; y < 500; y += 25) planks += `<line x1="0" y1="${y}" x2="940" y2="${y}" stroke="${w.grain}" stroke-width="3"/>`;
+  const keys = paint
+    ? `<rect x="0" y="170" width="190" height="160" fill="${paint}" opacity=".75"/><rect x="750" y="170" width="190" height="160" fill="${paint}" opacity=".75"/><circle cx="470" cy="250" r="60" fill="${paint}" opacity=".65"/>`
+    : "";
+  const ln = `fill="none" stroke="${w.line}" stroke-width="3"`;
+  const half = flip => {
+    const X = x => (flip ? 940 - x : x), sw = flip ? 0 : 1;
+    return `<rect x="${flip ? 750 : 0}" y="170" width="190" height="160" ${ln}/><circle cx="${X(190)}" cy="250" r="60" ${ln}/>` +
+      `<path d="M${X(0)} 30 L${X(141.5)} 30 A237.5 237.5 0 0 ${sw} ${X(141.5)} 470 L${X(0)} 470" ${ln}/>`;
+  };
+  const logo = (() => { try { return liveCourtHomeLogoSvg(teamA, 470, 250, 52).replace(/liveCourtLogoClip/g, "salleCourtLogoClip"); } catch (e) { return ""; } })();
+  return `<svg class="sl-court-svg" viewBox="0 0 940 500" role="img" aria-label="Aperçu du parquet" style="background:${w.floor}">` +
+    planks + keys + `<rect x="2" y="2" width="936" height="496" rx="4" ${ln}/><line x1="470" y1="2" x2="470" y2="498" stroke="${w.line}" stroke-width="3"/>` +
+    `<circle cx="470" cy="250" r="60" ${ln}/>${half(false)}${half(true)}<g opacity=".85">${logo}</g></svg>`;
+}
+function renderSalleCourt() {
+  const holder = document.getElementById("salleCourtHolder");
+  if (!holder) return;
+  const premium = teamIsPremium(teamA);
+  const saved = normalizeCourtStyle(teamA.courtStyle) || { wood: "nuit", paint: null };
+  const cur = salleCourtDraft || saved;
+  let html = `<div class="sl-card-head"><div><div class="sl-eyebrow">Parquet <span class="prm-tag">Premium</span></div><h3 class="sl-card-title">Votre terrain</h3></div></div>`;
+  html += courtPreviewSvg(premium ? cur : { wood: "chene", paint: teamA.jerseyColor || "rouge" });
+  html += `<p class="sub" style="margin:10px 0">${premium
+    ? "C'est le terrain du direct quand vous recevez : vos adversaires le voient aussi."
+    : "Aperçu : avec Premium, le terrain du direct prend les couleurs de votre club quand vous recevez, et vos adversaires le voient aussi."}</p>`;
+  if (premium) {
+    html += `<div class="sl-court-row"><span class="sl-court-lbl">Bois</span><div class="sl-court-swatches">` + Object.keys(COURT_WOODS).map(k =>
+      `<button type="button" class="sl-court-sw${cur.wood === k ? " on" : ""}" data-court-wood="${k}" title="${escapeHtml(COURT_WOODS[k].label)}" style="background:${COURT_WOODS[k].floor}"><span>${escapeHtml(COURT_WOODS[k].label)}</span></button>`).join("") + `</div></div>`;
+    html += `<div class="sl-court-row"><span class="sl-court-lbl">Raquettes et rond central</span><div class="sl-court-swatches">` +
+      `<button type="button" class="sl-court-sw sl-court-sw--none${!cur.paint ? " on" : ""}" data-court-paint="" title="Sans couleur"><span>Aucune</span></button>` +
+      Object.keys(JERSEY_COLORS).map(k => `<button type="button" class="sl-court-sw${cur.paint === k ? " on" : ""}" data-court-paint="${k}" title="${escapeHtml(k)}" style="background:${JERSEY_COLORS[k]}"><span>${escapeHtml(k)}</span></button>`).join("") + `</div></div>`;
+    const dirty = salleCourtDraft && (salleCourtDraft.wood !== saved.wood || (salleCourtDraft.paint || null) !== (saved.paint || null));
+    html += `<div class="sl-court-actions"><button type="button" class="secondary" id="salleCourtSaveBtn"${dirty ? "" : " disabled"}>Enregistrer le parquet</button><span class="sub" id="salleCourtFeedback" role="status"></span></div>`;
+  } else {
+    html += `<button type="button" class="prm-cta" data-tab="premium">${typeof PREMIUM_LOGO_IMG !== "undefined" ? PREMIUM_LOGO_IMG : ""}<span>Passer Premium</span></button>`;
+  }
+  holder.innerHTML = html;
+}
+document.addEventListener("click", async (e) => {
+  const wood = e.target.closest("[data-court-wood]");
+  const paint = e.target.closest("[data-court-paint]");
+  if (wood || paint) {
+    const base = salleCourtDraft || normalizeCourtStyle(teamA.courtStyle) || { wood: "nuit", paint: null };
+    salleCourtDraft = { ...base, ...(wood ? { wood: wood.dataset.courtWood } : { paint: paint.dataset.courtPaint || null }) };
+    renderSalleCourt();
+    return;
+  }
+  if (e.target.closest("#salleCourtSaveBtn") && salleCourtDraft) {
+    const fb = () => document.getElementById("salleCourtFeedback");
+    try {
+      const res = await fetchApi("/api/club/set-court-style", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courtStyle: salleCourtDraft }) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || `Erreur serveur (${res.status}).`);
+      teamA.courtStyle = data.courtStyle;
+      salleCourtDraft = null;
+      renderSalleCourt();
+      if (fb()) fb().textContent = "Parquet enregistré : il sera visible à votre prochain match à domicile.";
+    } catch (err) {
+      if (fb()) fb().textContent = err.message || "Enregistrement impossible.";
+    }
+  }
+});
 
 // Maillots retirés (Hall of Fame, retour utilisateur 2026-09-26 : "quand un
 // joueur voit son maillot retiré, il faut l'afficher sur le visuel de la
@@ -44303,11 +44651,14 @@ const PREMIUM_PERKS = [
   { title: "Courbe de progression", text: "La note de chacun de vos joueurs semaine après semaine, sur sa fiche." },
   { title: "Statistiques avancées et export", text: "True shooting, réussite effective, stats par 36 minutes, +/- de la saison, et export du tableau en CSV (onglet Statistiques)." },
   { title: "Revoir le direct", text: "Rejouer le direct de vos matchs déjà joués, depuis leur feuille de statistiques (60 derniers matchs du championnat)." },
+  { title: "Parquet aux couleurs du club", text: "Le terrain du direct prend vos couleurs quand vous recevez (bois, raquettes, rond central), et vos adversaires le voient aussi. Réglage sur la page Salle." },
+  { title: "Apparence des jeunes formés au club", text: "Coiffure, couleur des cheveux, barbe et bandeau des joueurs issus de votre académie, sur leur fiche." },
+  { title: "Numéros de maillot", text: "Choisissez le numéro de chacun de vos joueurs, affiché sur sa fiche." },
   { title: "Notifications", text: "Une notification de votre navigateur (ou de l'application installée sur votre téléphone) quand votre match commence, qu'un joueur se blesse ou qu'une de vos enchères (joueur ou staff) se termine." },
 ];
-const PREMIUM_SOON = [
-  "Salle personnalisée et avatars des jeunes de l'académie",
-];
+// Livré le 2026-09-29 : parquet aux couleurs du club, apparence des jeunes
+// formés au club, numéros de maillot (voir PREMIUM_PERKS ci-dessus).
+const PREMIUM_SOON = [];
 // Badge Premium à côté du nom d'un club (retour utilisateur, 2026-09-27 :
 // avantage « Badge Premium à côté du nom du club ») : classements, fiche
 // équipe.
@@ -44342,7 +44693,7 @@ function renderPremiumSection() {
   html += `<p class="sub prm-note">Pendant la phase de test, le Premium est gratuit : aucun paiement n'est demandé.</p>`;
   html += `<h3 class="prm-h">Ce que comprend le Premium</h3><div class="prm-grid">` + PREMIUM_PERKS.map(p =>
     `<div class="prm-perk"><span class="prm-perk__badge">${active ? "Inclus" : "Premium"}</span><b>${escapeHtml(p.title)}</b><p>${escapeHtml(p.text)}</p></div>`).join("") + `</div>`;
-  html += `<h3 class="prm-h">Bientôt</h3><ul class="prm-soon">` + PREMIUM_SOON.map(t => `<li>${escapeHtml(t)}</li>`).join("") + `</ul>`;
+  if (PREMIUM_SOON.length) html += `<h3 class="prm-h">Bientôt</h3><ul class="prm-soon">` + PREMIUM_SOON.map(t => `<li>${escapeHtml(t)}</li>`).join("") + `</ul>`;
   html += `<p class="sub prm-note">Le Premium ne donne aucun avantage sportif : ni progression plus rapide, ni argent, ni staff en plus.</p>`;
   holder.innerHTML = html;
 }

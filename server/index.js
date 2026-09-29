@@ -960,6 +960,9 @@ const ACTION_ROUTES = {
   "/api/sponsors/decline": actions.declineSponsor,
   "/api/sponsors/terminate": actions.terminateSponsor,
   "/api/club/set-arena-name": actions.setTeamArenaName,
+  "/api/club/set-court-style": actions.setTeamCourtStyle,
+  "/api/player/set-jersey-number": actions.setPlayerJerseyNumber,
+  "/api/player/set-look": actions.setPlayerLook,
   // Hall of Fame + maillots retirés (voir Team.inductHallOfFame).
   "/api/club/hall-of-fame/induct": actions.inductHallOfFame,
   "/api/club/hall-of-fame/retire-jersey": actions.setRetiredJersey,
