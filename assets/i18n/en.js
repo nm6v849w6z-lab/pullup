@@ -2,6 +2,12 @@
    français tel qu'affiché ({0}, {player}… = parties variables), valeur =
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
+  "Votre rival du championnat": "Your league rival",
+  "Votre rival (derbys)": "Your rival (derbies)",
+  "Derby": "Derby",
+  "Derby gagné contre {0}": "Derby won against {0}",
+  "Derby perdu contre {0}": "Derby lost against {0}",
+  "Billetterie (derby) vs {0} ({1} spect.)": "Ticketing (derby) vs {0} ({1} spect.)",
   "Première confrontation entre managers": "First meeting between managers",
   "Face à face :": "Head to head:",
   "dernier match : V {0}-{1}": "last game: W {0}-{1}",

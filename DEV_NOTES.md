@@ -68,7 +68,7 @@ chantiers marqués « committé, à pousser » étaient en fait en prod et ont
 été retirés (l'historique Git les garde). Restent ci-dessous uniquement les
 points réellement ouverts.
 
-- **✅ COMMITTÉ, À POUSSER EN UNE FOIS (2026-09-29) — lot demandé par l'utilisateur** (suite complète : 206 tests verts) :
+- **✅ COMMITTÉ, À POUSSER EN UNE FOIS (2026-09-29) — lot demandé par l'utilisateur** (suite complète : 207 tests verts) :
   1. ✅ Légende/zones du classement selon les divisions réellement ouvertes
      (World.divisionMovesFor → league.divisionMoves dans GET /api/save ;
      leagueDivisionMoves/standingsRowZone/standingsLegendItems côté jeu ;
@@ -87,16 +87,25 @@ points réellement ouverts.
      égalité d'aptitude à l'entraînement = poste « naturel » d'avant
      (trainingTieBreak ; jeu intérieur → Pivot, 3 pts → Arrière), le
      tableau du 2026-09-29 avait rendu Ailier fort/Meneur par défaut.
-  3. ✅ Rivalités : Engine.recordHumanRivalry (appelé par
-     recordMatchStatsAndAwardMvp, donc tous les matchs officiels ; amicaux
-     et IA exclus) → Team.rivalries[nom du club en minuscules] {w,l,pf,pa,
-     recent (5)} ; ligne « Face à face : 3 V – 1 D · dernier match » +
-     badge « Derby » (≥ DERBY_MIN_GAMES = 3, valeur choisie par Claude) sur
-     la carte du match des Ordres et le bandeau du tableau de bord
-     (rivalryLineHtml) ; « Première confrontation entre managers » ;
-     émission d'avant-match « LE DERBY » + bilan dans la bulle
-     (showsAdapter rivalry → showData). Score = quarts-temps (sans le
-     handicap de Coupe nationale).
+  3. ✅ Rivalités et derbys (règle revue par l'utilisateur le 2026-09-29 :
+     « chaque équipe doit avoir son rival […] deux max par saison (hors po
+     et barrage) », « managers entre eux d'abord », « affluence et humeur ») :
+     - League.ensureRivalPairs / rivalOf / isDerbyMatch (engine.js + miroir
+       html) : paires fixées par saison (rivalPairs {season, pairs[{a,b,
+       names}]}, sauvegardé), gardées si mêmes clubs, managers appariés entre
+       eux d'abord, mélange déterministe ; posées par autoSim.catchUpLeague.
+     - Derby = match de CHAMPIONNAT saison régulière contre son rival (2 par
+       saison) ; jamais Coupe, play-offs, barrage. Effets (server/liveMatch.js)
+       : humeur ×DERBY_MORALE_MULT 1,5 (« Derby gagné/perdu contre X »),
+       affluence ×DERBY_ATTENDANCE_BOOST 1,15 (« Billetterie (derby) »).
+     - Affichage : badge « Derby » (isRegularSeasonDerby + rivalryLineHtml)
+       sur la carte du match des Ordres et le bandeau du tableau de bord,
+       « Votre rival du championnat » contre l'IA, « Votre rival (derbys) »
+       dans la carte « Ta course » de la page Ligue ; émission « LE DERBY ».
+     - Bilan face à face entre managers humains (Engine.recordHumanRivalry,
+       Team.rivalries, tous matchs officiels, amicaux et IA exclus) affiché
+       à côté, indépendant du derby. derby_rivals_test.js,
+       rivalry_ranking_test.js.
   4. ✅ Classement mondial des managers : Team.managerRating (Elo, départ
      1500, K = 24, valeurs choisies par Claude), managerRatedGames ;
      leagueSummary.managers → World.managerRanking → GET

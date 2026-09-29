@@ -291,14 +291,15 @@ function buildPrematchInput(league, myTeamIdx, round, kickoffAt) {
     absents = absentsFor(league, fx.home, fx.away, kickoffAt);
     headToHead = headToHeadRaw(league, fx.home, fx.away);
   }
-  // Rivalité entre deux managers humains (Engine.recordHumanRivalry) :
-  // bilan de toutes les confrontations officielles, toutes saisons et
-  // compétitions confondues ; « derby » à partir de DERBY_MIN_GAMES matchs.
+  // Derby = match de championnat contre son rival (League.isDerbyMatch) ;
+  // bilan entre deux managers humains (Engine.recordHumanRivalry), toutes
+  // saisons et compétitions officielles confondues.
   let rivalry = null;
   if (fx) {
     const th = league.teams[fx.home], ta = league.teams[fx.away];
     const r = th && ta && th.isHuman && ta.isHuman ? Engine.rivalryBetween(th, ta) : null;
-    if (r) rivalry = { homeWins: r.w, awayWins: r.l, games: r.w + r.l, derby: (r.w + r.l) >= Engine.DERBY_MIN_GAMES };
+    const derby = typeof league.isDerbyMatch === "function" && round < league.totalRounds && league.isDerbyMatch(fx.home, fx.away);
+    if (r || derby) rivalry = { homeWins: r ? r.w : 0, awayWins: r ? r.l : 0, games: r ? r.w + r.l : 0, derby };
   }
 
   return {

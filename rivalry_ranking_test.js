@@ -25,11 +25,10 @@ Engine.recordHumanRivalry(lyon, paris, "friendly", 5, qs(100, 50));
 const r = Engine.rivalryBetween(lyon, paris);
 assert.deepStrictEqual([r.w, r.l, r.pf, r.pa, r.recent.length], [2, 1, 242, 236, 3]);
 assert.deepStrictEqual([Engine.rivalryBetween(paris, lyon).w, Engine.rivalryBetween(paris, lyon).l], [1, 2]);
-assert(Engine.isDerbyBetween(lyon, paris), "3 matchs officiels = derby");
 assert.strictEqual(Engine.rivalryBetween(lyon, cpu), null, "rien contre l'IA");
 assert.strictEqual(lyon.managerRatedGames, 3); assert.strictEqual(paris.managerRatedGames, 3);
 assert(lyon.managerRating > 1500 && paris.managerRating < 1500 && lyon.managerRating + paris.managerRating === 3000);
-console.log(`✅ Moteur : bilan 2-1, derby, note ${lyon.managerRating} / ${paris.managerRating} ; IA et amicaux ignorés.`);
+console.log(`✅ Moteur : bilan 2-1, note ${lyon.managerRating} / ${paris.managerRating} ; IA et amicaux ignorés.`);
 // Passage par recordMatchStatsAndAwardMvp (chemin réel des matchs).
 Engine.recordMatchStatsAndAwardMvp(lyon, paris, 5, "championship", 6, qs(60, 70));
 assert.strictEqual(Engine.rivalryBetween(lyon, paris).l, 2);
@@ -49,18 +48,19 @@ assert.strictEqual(rk.top[0].name, best);
 assert.strictEqual(rk.me.rank, best === "Paris Rival" ? 1 : 2);
 assert(rk.top[0].rating >= rk.top[1].rating);
 console.log(`✅ Classement mondial : ${best} en tête, place du manager connue.`);
-// Émission : derby.
-const input = Adapter.buildPrematchInput(league, L, 0, Date.now() + 3600e3);
-const fxLP = input.fixtures.find(f => [f.homeId, f.awayId].includes(String(L)));
-if (fxLP && [fxLP.homeId, fxLP.awayId].includes(String(P))) {
-  const show = ShowData.buildPrematchShow(input);
-  assert.strictEqual(show.segments[0].titleAccent, "DERBY");
-  console.log("✅ Émission d'avant-match : « Le Derby ».");
-} else {
-  const show = ShowData.buildPrematchShow({ ...input, rivalry: { homeWins: 2, awayWins: 1, games: 3, derby: true } });
-  assert.strictEqual(show.segments[0].titleAccent, "DERBY");
-  assert.strictEqual(show.brand, "LE DERBY");
-  console.log("✅ Émission d'avant-match : « Le Derby » quand la rivalité compte 3 matchs.");
+// Émission : « Le Derby » seulement contre le rival du championnat.
+{
+  const show = ShowData.buildPrematchShow({ ...Adapter.buildPrematchInput(league, L, 0, Date.now() + 3600e3), rivalry: { homeWins: 2, awayWins: 1, games: 3, derby: true } });
+  assert.strictEqual(show.segments[0].titleAccent, "DERBY"); assert.strictEqual(show.brand, "LE DERBY");
+  const plain = ShowData.buildPrematchShow({ ...Adapter.buildPrematchInput(league, L, 0, Date.now() + 3600e3), rivalry: { homeWins: 2, awayWins: 1, games: 3, derby: false } });
+  assert.strictEqual(plain.segments[0].titleAccent, "MATCH", "un bilan entre managers ne fait pas un derby");
+  let derbyRound = null;
+  for (let r = 0; r < league.totalRounds && derbyRound == null; r++) {
+    if (league.matchesForRound(r).some(m => !m.bye && (m.home === L || m.away === L) && league.isDerbyMatch(m.home, m.away))) derbyRound = r;
+  }
+  assert(derbyRound != null);
+  assert.strictEqual(Adapter.buildPrematchInput(league, L, derbyRound, Date.now()).rivalry.derby, true);
+  console.log("✅ Émission : « Le Derby » le jour du match contre son rival, pas pour un simple bilan.");
 }
 
 (async () => {
@@ -68,8 +68,12 @@ if (fxLP && [fxLP.homeId, fxLP.awayId].includes(String(P))) {
   const dom = await openGame(html, baseUrl);
   const win = dom.window;
   win.eval(`teamB.isHuman = true; teamA.rivalries = {}; teamA.rivalries[rivalryKeyFor(teamB)] = { name: teamB.name, w: 3, l: 1, pf: 320, pa: 300, recent: [{ at: 1, competition: "championship", pf: 80, pa: 72, isHome: true }] };`);
-  const line = win.eval(`rivalryLineHtml(teamB, "omc-rivalry")`);
+  const line = win.eval(`rivalryLineHtml(teamB, "omc-rivalry", true)`);
   assert(/Derby/.test(line) && /3 V – 1 D/.test(line) && /V 80-72/.test(line), line);
+  assert(!/Derby/.test(win.eval(`rivalryLineHtml(teamB, "omc-rivalry", false)`)), "pas de badge Derby hors rival");
+  win.eval(`teamA.rivalries = {}; teamB.isHuman = false;`);
+  assert(/Votre rival du championnat/.test(win.eval(`rivalryLineHtml(teamB, "x", true)`)));
+  win.eval(`teamB.isHuman = true;`);
   win.eval(`teamA.rivalries = {};`);
   assert(/Première confrontation/.test(win.eval(`rivalryLineHtml(teamB, "x")`)));
   win.eval(`teamB.isHuman = false;`);

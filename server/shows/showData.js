@@ -584,7 +584,9 @@
       title: isDerby ? 'LE ' : 'L’AVANT-', titleAccent: isDerby ? 'DERBY' : 'MATCH',
       versus: fx ? { home: H.tname(fx.homeId), away: H.tname(fx.awayId), homeId: fx.homeId, awayId: fx.awayId } : null,
       bubble: isDerby
-        ? fill('Bonsoir et bienvenue ! Journée {day}, et ce soir c’est un derby : {n} confrontations déjà entre ces deux managers.', { day: input.day, n: riv.games })
+        ? (riv.games
+          ? fill('Bonsoir et bienvenue ! Journée {day}, et ce soir c’est le derby : {n} confrontation(s) déjà entre ces deux managers.', { day: input.day, n: riv.games })
+          : fill('Bonsoir et bienvenue ! Journée {day}, et ce soir c’est le derby entre deux rivaux du championnat.', { day: input.day }))
         : fill('Bonsoir et bienvenue ! Journée {day} : on commence par ton match, puis on fait le tour de la ligue.', { day: input.day }),
     });
 

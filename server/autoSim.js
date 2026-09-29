@@ -85,6 +85,9 @@ function catchUpLeague(league, now) {
     // ce n'est pas une erreur, juste un no-op.
     return events;
   }
+  // Rivaux du championnat de la saison (League.ensureRivalPairs) : posés
+  // dès maintenant pour que le navigateur les reçoive avec la sauvegarde.
+  if (typeof league.ensureRivalPairs === "function") league.ensureRivalPairs();
   // Rythme hebdomadaire : la mise à jour du lundi qui suit la finale reste
   // à régler (fin de saison, voir runWeeklyEconomyTick plus bas).
   // Rythme hebdomadaire : la fin de saison, l'intersaison ET la nouvelle
