@@ -4157,7 +4157,6 @@ window.HM_I18N_EN = {
   "Vous êtes exempt cette semaine.": "You have a bye this week.",
   "Vous menez · {0}": "You're leading · {0}",
   "Vous menez {0} enchère{1}": "You're leading {0} bid{1}",
-  "Vous pouvez encore augmenter votre offre": "You can still increase your offer",
   "Vous recevez : avantage du terrain.": "You get: home-court advantage.",
   "vs": "vs",
   "VS": "VS",

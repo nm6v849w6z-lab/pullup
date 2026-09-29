@@ -35827,7 +35827,9 @@ function renderStaffListings(role, open, now) {
     const urgent = msLeft < 3600 * 1000;
     let current;
     if (mine) {
-      current = `<span class="stf-lead">Vous menez · ${escapeHtml(formatMoney(l.currentBid))}</span><span class="stf-sub">Vous pouvez encore augmenter votre offre</span>`;
+      // Retour utilisateur (2026-09-29) : plus de « Vous pouvez encore
+      // augmenter votre offre » sous « Vous menez ».
+      current = `<span class="stf-lead">Vous menez · ${escapeHtml(formatMoney(l.currentBid))}</span>`;
     } else if (l.currentBid) {
       current = `<span class="stf-strong">${escapeHtml(formatMoney(l.currentBid))}</span><span class="stf-sub">Un autre club mène</span>`;
     } else {
