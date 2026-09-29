@@ -88,6 +88,63 @@ const MAX_BODY_BYTES = 1024 * 1024; // 1 Mo — largement suffisant pour une feu
 // répertoire — donc AUCUNE dépendance à express.static, juste `fs`/`path`.
 // ---------------------------------------------------------------------
 const ASSETS_DIR = path.join(__dirname, "..", "assets");
+
+// ---------------------------------------------------------------------
+// Compression HTTP (2026-09-29, chargement sur téléphone) : le jeu (≈2,9 Mo
+// de HTML/JS) partait sans aucune compression. Brotli si le navigateur le
+// propose, sinon gzip ; rien pour les images (déjà compressées) ni les
+// petites réponses. Le résultat des gros fichiers statiques est gardé en
+// mémoire (clé = empreinte du contenu) pour ne pas recompresser à chaque
+// visite. `res.req` donne la requête sans changer la signature des appelants.
+// ---------------------------------------------------------------------
+const zlib = require("zlib");
+const cryptoForCompression = require("crypto");
+const COMPRESSED_CACHE = new Map();
+const COMPRESSED_CACHE_MAX = 40;
+function pickEncoding(req) {
+  const ae = String((req && req.headers && req.headers["accept-encoding"]) || "");
+  if (/\bbr\b/.test(ae)) return "br";
+  if (/\bgzip\b/.test(ae)) return "gzip";
+  return null;
+}
+function compressBody(body, encoding, cacheable) {
+  if (!cacheable) {
+    return encoding === "br"
+      ? zlib.brotliCompressSync(body, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } })
+      : zlib.gzipSync(body, { level: 6 });
+  }
+  const key = encoding + ":" + cryptoForCompression.createHash("sha1").update(body).digest("hex");
+  const hit = COMPRESSED_CACHE.get(key);
+  if (hit) return hit;
+  const out = encoding === "br"
+    ? zlib.brotliCompressSync(body, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 9, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: body.length } })
+    : zlib.gzipSync(body, { level: 9 });
+  COMPRESSED_CACHE.set(key, out);
+  if (COMPRESSED_CACHE.size > COMPRESSED_CACHE_MAX) COMPRESSED_CACHE.delete(COMPRESSED_CACHE.keys().next().value);
+  return out;
+}
+// Envoie `body` (Buffer ou texte), compressé si utile. `cacheable` : contenu
+// stable (fichier), dont la version compressée peut être gardée en mémoire.
+function sendBody(res, statusCode, headers, body, cacheable = false) {
+  const buf = Buffer.isBuffer(body) ? body : Buffer.from(String(body), "utf-8");
+  const type = String(headers["Content-Type"] || "");
+  const compressible = buf.length > 1400 && /^(text\/|application\/(javascript|json|xml)|image\/svg)/.test(type);
+  const encoding = compressible ? pickEncoding(res.req) : null;
+  const out = { ...headers };
+  delete out["Content-Length"];
+  if (compressible) out["Vary"] = "Accept-Encoding";
+  if (!encoding || (res.req && res.req.method === "HEAD")) {
+    out["Content-Length"] = buf.length;
+    res.writeHead(statusCode, out);
+    res.end(buf);
+    return;
+  }
+  const zipped = compressBody(buf, encoding, cacheable);
+  out["Content-Encoding"] = encoding;
+  out["Content-Length"] = zipped.length;
+  res.writeHead(statusCode, out);
+  res.end(zipped);
+}
 // Extensions "hoop-shows" (émissions avant-match/mi-temps, voir DEV_NOTES.md
 // point 11) ajoutées au même mécanisme générique — assets/hoop-shows/ sert le
 // lecteur (showPlayer.js/.css) et la police Exo 2 auto-hébergée (fonts/*),
@@ -110,15 +167,13 @@ function serveAsset(res, pathname) {
   if (path.relative(ASSETS_DIR, resolved).startsWith("..")) { sendJson(res, 403, { error: "Chemin invalide" }); return; }
   fs.readFile(resolved, (err, data) => {
     if (err) { sendJson(res, 404, { error: "Fichier introuvable" }); return; }
-    res.writeHead(200, {
+    sendBody(res, 200, {
       "Content-Type": contentType,
-      "Content-Length": data.length,
       // Scripts et styles toujours revalidés (2026-09-26 : la nouvelle page
       // live restait invisible, l'ancien live.css/live-view.js étant gardé
       // 24 h par le navigateur) ; images et polices gardées 24 h.
       "Cache-Control": /\.(js|css)$/i.test(relative) ? "no-cache" : "public, max-age=86400",
-    });
-    res.end(data);
+    }, data, true);
   });
 }
 
@@ -219,12 +274,9 @@ function serveIndexHtml(res) {
   }
   // Vraies pubs (voir server/ads.js) : rien sans ADSENSE_CLIENT.
   html = Ads.injectHead(html, Ads.adsConfig());
-  const body = Buffer.from(html, "utf-8");
-  res.writeHead(200, {
-    "Content-Type": "text/html; charset=utf-8",
-    "Content-Length": body.length,
-  });
-  res.end(body);
+  // Même contenu pour tous les visiteurs → version compressée gardée en
+  // mémoire (sendBody, cacheable).
+  sendBody(res, 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" }, Buffer.from(html, "utf-8"), true);
 }
 
 // Page d'accueil / inscription (assets/site/index.html) — voir
@@ -240,8 +292,7 @@ function serveSiteHtml(res) {
     sendJson(res, 500, { error: `Impossible de lire la page d'accueil : ${e.message}` });
     return;
   }
-  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Content-Length": body.length, "Cache-Control": "no-cache" });
-  res.end(body);
+  sendBody(res, 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" }, body, true);
 }
 
 // ---------------------------------------------------------------------
@@ -339,12 +390,9 @@ function readJsonBody(req) {
 }
 
 function sendJson(res, statusCode, payload) {
-  const body = JSON.stringify(payload);
-  res.writeHead(statusCode, {
-    "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": Buffer.byteLength(body),
-  });
-  res.end(body);
+  // Compressé si le navigateur l'accepte (la sauvegarde d'une ligue pèse
+  // plusieurs centaines de Ko), voir sendBody.
+  sendBody(res, statusCode, { "Content-Type": "application/json; charset=utf-8" }, JSON.stringify(payload));
 }
 
 // ---------------------------------------------------------------------
@@ -407,6 +455,8 @@ async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
     found.league.nationalCupPending = cup && !found.league.cup && cup.season === (found.league.seasonNumber || 1)
       ? World.NationalCup.pendingViewFor(cup, found.leagueId, found.teamIndex) : null;
   }
+  // Barrage 7e-8e seulement s'il a un enjeu (voir World.divisionMovesFor).
+  found.league.barrageHasStakes = World.divisionMovesFor(world, found.leagueId).barrage;
   return { ok: true, league: found.league, teamIndex: found.teamIndex, isMulti: true, savePath: multiSavePath, world, leagueId: found.leagueId };
 }
 
@@ -1120,8 +1170,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const page = Site.render(route.pathname, { discordInvite: process.env.DISCORD_INVITE_URL || null });
         if (page) {
           const body = Buffer.from(page.body, "utf-8");
-          res.writeHead(page.status, { "Content-Type": page.contentType, "Content-Length": body.length, "Cache-Control": "public, max-age=600" });
-          res.end(body);
+          sendBody(res, page.status, { "Content-Type": page.contentType, "Cache-Control": "public, max-age=600" }, body, true);
           return;
         }
       }
@@ -1323,6 +1372,16 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             stats: (world.countryStats || {})[country] || null, history: ((world.history || {})[country]) || [] });
           return;
         }
+        if (route.pathname === "/api/world/managers") {
+          // Classement mondial des managers (World.managerRanking). Son propre
+          // championnat est relu à l'instant (les résumés ont jusqu'à 10 min).
+          if (world.summaries && world.summaries[ctx.leagueId]) {
+            const entry = world.leagues.find(e => e.id === ctx.leagueId);
+            if (entry) world.summaries[ctx.leagueId] = World.leagueSummary(entry, ctx.league);
+          }
+          sendJson(res, 200, { ok: true, ...World.managerRanking(world, { leagueId: ctx.leagueId, idx: ctx.teamIndex }) });
+          return;
+        }
         if (route.pathname === "/api/world/league") {
           const id = q.get("id") || ctx.leagueId;
           const entry = world.leagues.find(e => e.id === id);
@@ -1451,6 +1510,9 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
         // Enchères automatiques : plafonds des autres clubs secrets.
         MyAuctions.sanitizeAutoBids(payload.league, ctx.teamIndex);
+        // Zones du classement réellement en jeu (montée / barrage / descentes),
+        // voir World.divisionMovesFor. Absent = aucune division autour.
+        if (ctx.world) payload.league.divisionMoves = World.divisionMovesFor(ctx.world, ctx.leagueId);
         // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
         payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex);
         // Matchs amicaux : seulement les siens, sans la compo de l'adversaire.

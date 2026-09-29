@@ -33,21 +33,23 @@ if (!brand) throw new Error("❌ (setup) .sidebar-brand introuvable dans le DOM.
 const img = brand.querySelector(".brand-logo-img");
 if (!img) throw new Error("❌ .sidebar-brand devrait contenir une image .brand-logo-img (le logo fourni par l'utilisateur).");
 const src = img.getAttribute("src") || "";
-if (!src.startsWith("data:image/png;base64,")) {
-  throw new Error(`❌ Le logo devrait être intégré en data URI PNG (fichier HTML unique, pas d'asset externe), src actuel : "${src.slice(0, 40)}..."`);
+// Depuis le 2026-09-29 (chargement mobile) : fichier servi à part, plus de
+// data URI (110 Ko de moins dans la page).
+if (src !== "/assets/brand/logo-hoop-manager.png") {
+  throw new Error(`❌ Le logo devrait être le fichier /assets/brand/logo-hoop-manager.png, src actuel : "${src.slice(0, 60)}"`);
 }
-if (src.length < 10000) {
-  throw new Error(`❌ La donnée du logo semble anormalement courte (${src.length} caractères), probablement tronquée ou vide.`);
-}
-console.log(`✅ .brand-logo-img est bien présent, avec une image PNG intégrée en data URI (${Math.round(src.length / 1024)} Ko encodés).`);
+if (!fs.existsSync("assets/brand/logo-hoop-manager.png")) throw new Error("❌ Le fichier du logo est introuvable.");
+const logoRes = await fetch(new URL("assets/brand/logo-hoop-manager.png", baseUrl));
+if (logoRes.status !== 200 || !/image\/png/.test(logoRes.headers.get("content-type") || "")) throw new Error("❌ Le serveur devrait servir le logo (PNG).");
+console.log("✅ .brand-logo-img pointe vers le fichier du logo, servi par le serveur.");
 
 const mark = brand.querySelector(".brand-mark");
 const name = brand.querySelector(".brand-name");
 if (!mark || mark.textContent.trim() !== "🏀") {
   throw new Error("❌ L'ancien repère .brand-mark (🏀) devrait rester dans le DOM (repli CSS historique, même s'il n'est plus jamais affiché, voir le commentaire dédié).");
 }
-if (!name || name.textContent.trim() !== "Pull Up") {
-  throw new Error("❌ L'ancien texte .brand-name (\"Pull Up\") devrait rester dans le DOM (masqué par CSS, le logo image porte déjà le texte).");
+if (!name || name.textContent.trim() !== "Hoop Manager") {
+  throw new Error("❌ Le texte .brand-name (masqué par CSS) devrait être « Hoop Manager » (plus « Pull Up », 2026-09-29).");
 }
 console.log("✅ L'ancien repère emoji + texte reste bien présent dans le DOM (inerte, plus jamais affiché).");
 

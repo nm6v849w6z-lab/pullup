@@ -1074,7 +1074,7 @@ function rankedPositionsForSkill(skill) {
   return [...POSITIONS].sort((a, b) => {
     const diff = positionEfficiencyForSkill(skill, b) - positionEfficiencyForSkill(skill, a);
     if (diff !== 0) return diff;
-    return POSITIONS.indexOf(a) - POSITIONS.indexOf(b);
+    return trainingTieBreak(skill, a, b);
   });
 }
 
@@ -1221,11 +1221,28 @@ function positionEfficiencyForProgram(programKey, position) {
   return totalW ? sum / totalW : 100;
 }
 
+// Départage de postes à égalité d'aptitude (2026-09-29) : le tableau de
+// l'utilisateur met souvent plusieurs postes à 100 % ; le poste proposé par
+// défaut reste alors le poste « naturel » d'avant (TRAINING_HOME_POSITION :
+// Pivot pour le jeu intérieur, Arrière pour le tir à 3 points…), puis le
+// plus proche de lui, puis l'ordre M → P.
+function trainingTieBreak(key, a, b) {
+  const program = TRAINING_PROGRAMS[key];
+  const homeKey = program && program.attrs.length === 1 ? program.attrs[0].attr : key;
+  const home = TRAINING_HOME_POSITION[homeKey];
+  if (home) {
+    const h = POSITIONS.indexOf(home);
+    const d = Math.abs(POSITIONS.indexOf(a) - h) - Math.abs(POSITIONS.indexOf(b) - h);
+    if (d !== 0) return d;
+  }
+  return POSITIONS.indexOf(a) - POSITIONS.indexOf(b);
+}
+
 function rankedPositionsForProgram(programKey) {
   return [...POSITIONS].sort((a, b) => {
     const diff = positionEfficiencyForProgram(programKey, b) - positionEfficiencyForProgram(programKey, a);
     if (diff !== 0) return diff;
-    return POSITIONS.indexOf(a) - POSITIONS.indexOf(b);
+    return trainingTieBreak(programKey, a, b);
   });
 }
 
@@ -4664,6 +4681,10 @@ class Team {
     // recordOrdersHistory) : « partir d'un match précédent » dans l'onglet
     // Tactiques. Le plus récent en tête.
     this.ordersHistory = [];
+    // Rivalités et note des managers (voir recordHumanRivalry).
+    this.rivalries = {};
+    this.managerRating = null;
+    this.managerRatedGames = 0;
 
     // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
     // de FEED_CATEGORIES) : un fil par équipe, vide à la création — rempli
@@ -5261,11 +5282,17 @@ class Team {
   // League.recordPlayoffGameResult/_queuePlayoffSeriesInterview, qui passent
   // ici un instantané figé AU MOMENT de la demi-finale plutôt que de compter
   // sur ce repli automatique.
-  applyMoraleForResult(won, scoreDiff, opponentName, round, now = Date.now(), milestone = null, explicitPlayerIds = null) {
+  applyMoraleForResult(won, scoreDiff, opponentName, round, now = Date.now(), milestone = null, explicitPlayerIds = null, derby = false) {
     this.pruneExpiredInterviews(now);
     const margin = clamp(Math.abs(scoreDiff) / 40, 0, 1);
-    const delta = won ? rand(3, 6) + margin * 1.5 : -(rand(2, 5) + margin * 1.5);
-    this.recordMoraleEvent(won ? `Victoire contre ${opponentName}` : `Défaite contre ${opponentName}`, delta);
+    // Derby contre le rival du championnat (League.isDerbyMatch, 2026-09-29,
+    // « affluence et humeur ») : l'humeur bouge DERBY_MORALE_MULT fois plus
+    // fort, dans un sens comme dans l'autre.
+    const mult = derby ? DERBY_MORALE_MULT : 1;
+    const delta = (won ? rand(3, 6) + margin * 1.5 : -(rand(2, 5) + margin * 1.5)) * mult;
+    this.recordMoraleEvent(derby
+      ? (won ? `Derby gagné contre ${opponentName}` : `Derby perdu contre ${opponentName}`)
+      : (won ? `Victoire contre ${opponentName}` : `Défaite contre ${opponentName}`), delta);
     if (milestone) {
       this.pendingInterviews = this.pendingInterviews || [];
       const entry = {
@@ -6238,10 +6265,12 @@ class Team {
   // catégorie de place par catégorie de place : seule la fréquentation
   // réelle du soir (légèrement aléatoire autour de la projection) compte
   // pour la recette encaissée. Renvoie le détail par catégorie pour l'UI.
-  simulateHomeAttendance(opponentName) {
+  simulateHomeAttendance(opponentName, derby = false) {
     let totalAttendance = 0, totalRevenue = 0;
+    // Derby (voir League.isDerbyMatch) : la salle se remplit davantage.
+    const derbyBoost = derby ? DERBY_ATTENDANCE_BOOST : 1;
     const breakdown = SEAT_CATEGORIES.map(cat => {
-      const rate = clamp(this.projectedAttendanceRateFor(cat.key) * rand(0.85, 1.05), 0.05, 1);
+      const rate = clamp(this.projectedAttendanceRateFor(cat.key) * rand(0.85, 1.05) * derbyBoost, 0.05, 1);
       const capacity = this.categoryCapacity(cat.key);
       const attendance = Math.round(capacity * rate);
       const revenue = attendance * (this.ticketPrices || {})[cat.key];
@@ -6249,7 +6278,7 @@ class Team {
       totalRevenue += revenue;
       return { key: cat.key, name: cat.name, rate, capacity, attendance, revenue };
     });
-    this.recordTransaction(`Billetterie vs ${opponentName} (${totalAttendance} spect.)`, totalRevenue);
+    this.recordTransaction(`Billetterie${derby ? " (derby)" : ""} vs ${opponentName} (${totalAttendance} spect.)`, totalRevenue);
     // Historique d'affluence (voir attendanceHistory ci-dessus) : même
     // rythme que recordTransaction/recordMoraleEvent (unshift + plafond),
     // pour afficher "jusqu'à 10 matchs" sur l'onglet Salle sans redemander
@@ -9556,7 +9585,63 @@ function recordOrdersHistory(team, opponent, isHome, round, competition, now, qu
   if (team.ordersHistory.length > ORDERS_HISTORY_MAX) team.ordersHistory.length = ORDERS_HISTORY_MAX;
 }
 
+// ---------------------------------------------------------------------
+// RIVALITÉS ET NOTE DES MANAGERS (2026-09-29, retour utilisateur : « un bilan
+// face à face entre deux managers humains […] une émission Derby » et « un
+// classement mondial des managers […] contre des adversaires humains »).
+// À chaque match OFFICIEL (championnat, play-offs, barrage, Coupe, Coupe
+// nationale, Supercoupe ; jamais les amicaux, qui passent ailleurs) entre
+// deux clubs de managers humains :
+// - Team.rivalries[clé du club adverse] : bilan V/D, points pour/contre et
+//   les RIVALRY_RECENT_MAX derniers matchs ; clé = nom du club en minuscules
+//   (unique dans le monde et jamais modifié après l'inscription) ;
+// - Team.managerRating : note Elo (départ 1500, K = 24), managerRatedGames.
+// Le score vient des quarts-temps (sans le handicap de Coupe nationale).
+// Miroir identique engine.js ⇄ moteurbasket3.html.
+// ---------------------------------------------------------------------
+const RIVALRY_RECENT_MAX = 5;
+// Derby (match de championnat contre son rival, voir League.isDerbyMatch) :
+// humeur des supporters ×1,5 et affluence +15 % (plafonnée à la capacité).
+const DERBY_MORALE_MULT = 1.5;
+const DERBY_ATTENDANCE_BOOST = 1.15;
+const MANAGER_RATING_START = 1500;
+const MANAGER_RATING_K = 24;
+function rivalryKeyFor(team) { return String((team && team.name) || "").trim().toLowerCase(); }
+function rivalryBetween(team, opponent) {
+  if (!team || !opponent || !team.rivalries) return null;
+  return team.rivalries[rivalryKeyFor(opponent)] || null;
+}
+function managerRatingOf(team) { return team && typeof team.managerRating === "number" ? team.managerRating : MANAGER_RATING_START; }
+function recordHumanRivalry(home, away, competition, now, quarterScores) {
+  if (!home || !away || home === away || !home.isHuman || !away.isHuman) return;
+  if (competition === "friendly") return;
+  const sum = arr => Array.isArray(arr) ? arr.reduce((a, b) => a + (b || 0), 0) : null;
+  const qs = quarterScores || {};
+  const sh = sum(qs.home), sa = sum(qs.away);
+  if (sh == null || sa == null || sh === sa) return;
+  const one = (team, opp, pf, pa, isHome) => {
+    if (!team.rivalries || typeof team.rivalries !== "object") team.rivalries = {};
+    const key = rivalryKeyFor(opp);
+    const r = team.rivalries[key] || { name: opp.name, w: 0, l: 0, pf: 0, pa: 0, recent: [] };
+    r.name = opp.name;
+    if (pf > pa) r.w += 1; else r.l += 1;
+    r.pf += pf; r.pa += pa;
+    r.recent = [{ at: now, competition: competition || "championship", pf, pa, isHome }].concat(r.recent || []).slice(0, RIVALRY_RECENT_MAX);
+    team.rivalries[key] = r;
+  };
+  one(home, away, sh, sa, true);
+  one(away, home, sa, sh, false);
+  const ra = managerRatingOf(home), rb = managerRatingOf(away);
+  const expectedHome = 1 / (1 + Math.pow(10, (rb - ra) / 400));
+  const scoreHome = sh > sa ? 1 : 0;
+  home.managerRating = Math.round(ra + MANAGER_RATING_K * (scoreHome - expectedHome));
+  away.managerRating = Math.round(rb + MANAGER_RATING_K * ((1 - scoreHome) - (1 - expectedHome)));
+  home.managerRatedGames = (home.managerRatedGames || 0) + 1;
+  away.managerRatedGames = (away.managerRatedGames || 0) + 1;
+}
+
 function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null) {
+  recordHumanRivalry(home, away, competition, now, quarterScores);
   recordOrdersHistory(home, away, true, round, competition, now, quarterScores);
   recordOrdersHistory(away, home, false, round, competition, now, quarterScores);
   recordMatchStatsForTeam(home, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.home);
@@ -9775,6 +9860,74 @@ class League {
   }
 
   get totalRounds() { return this.schedule.length; }
+  // Rivaux du championnat (2026-09-29, retour utilisateur : « il faut qu'une
+  // équipe soit rivale avec une autre équipe du championnat (et chaque
+  // équipe doit avoir son rival) et on aura nos derbys comme ça mais deux
+  // max par saison (hors po et barrage) », « managers entre eux
+  // d'abord »). Paires FIXÉES pour une saison (this.rivalPairs.season) :
+  // - une paire de la saison précédente est gardée si ce sont toujours les
+  //   deux mêmes clubs (même nom à ces index) et qu'elle réunit deux
+  //   managers ou deux clubs de l'IA ;
+  // - les autres clubs sont réappariés : managers entre eux d'abord, puis
+  //   (s'il en reste un seul) un manager avec un club de l'IA, puis l'IA
+  //   entre elle ; ordre mélangé de façon déterministe (saison + noms).
+  // Le derby = match de CHAMPIONNAT (saison régulière) contre son rival :
+  // aller + retour, donc deux au plus par saison ; jamais en play-offs, au
+  // barrage ni en Coupe.
+  ensureRivalPairs() {
+    const season = this.seasonNumber || 1;
+    const n = this.teams.length;
+    const cur = this.rivalPairs;
+    const inRange = p => p && Number.isInteger(p.a) && Number.isInteger(p.b) && p.a >= 0 && p.b >= 0 && p.a < n && p.b < n && p.a !== p.b;
+    if (cur && cur.season === season && Array.isArray(cur.pairs) && cur.pairs.every(inRange)) {
+      // En cours de saison, un manager qui reprend un club de l'IA prend sa
+      // place telle quelle : même rival, derbys restants compris. Les noms
+      // mémorisés suivent (reprise = nouveau nom), pour que la paire soit
+      // reconnue comme « les deux mêmes clubs » à la saison suivante.
+      cur.pairs.forEach(p => { p.names = [this.teams[p.a].name, this.teams[p.b].name]; });
+      return cur;
+    }
+    const human = i => !!(this.teams[i] && this.teams[i].isHuman);
+    const sameClubs = p => inRange(p) && Array.isArray(p.names) && this.teams[p.a].name === p.names[0] && this.teams[p.b].name === p.names[1];
+    const used = new Set();
+    const pairs = [];
+    const add = (a, b) => { pairs.push({ a, b, names: [this.teams[a].name, this.teams[b].name] }); used.add(a); used.add(b); };
+    (cur && Array.isArray(cur.pairs) ? cur.pairs : []).forEach(p => {
+      if (sameClubs(p) && !used.has(p.a) && !used.has(p.b) && human(p.a) === human(p.b)) add(p.a, p.b);
+    });
+    // Mélange déterministe (même résultat sur le serveur et le navigateur).
+    let seed = season * 2654435761 >>> 0;
+    this.teams.forEach(t => { for (const ch of String(t.name || "")) seed = (Math.imul(seed ^ ch.charCodeAt(0), 16777619)) >>> 0; });
+    const rnd = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+    const free = [...Array(n).keys()].filter(i => !used.has(i));
+    const humans = shuffle(free.filter(human)), cpus = shuffle(free.filter(i => !human(i)));
+    while (humans.length >= 2) add(humans.pop(), humans.pop());
+    if (humans.length === 1 && cpus.length) {
+      const h = humans.pop();
+      // Garde son rival de l'IA de la saison précédente s'il est libre.
+      const prev = (cur && Array.isArray(cur.pairs) ? cur.pairs : []).find(p => sameClubs(p) && (p.a === h || p.b === h));
+      const other = prev ? (prev.a === h ? prev.b : prev.a) : null;
+      const k = other != null && cpus.includes(other) ? cpus.indexOf(other) : cpus.length - 1;
+      add(h, cpus.splice(k, 1)[0]);
+    }
+    while (cpus.length >= 2) add(cpus.pop(), cpus.pop());
+    this.rivalPairs = { season, pairs };
+    return this.rivalPairs;
+  }
+
+  // Index du rival de `teamIdx` cette saison (null si aucun).
+  rivalOf(teamIdx) {
+    const rp = this.ensureRivalPairs();
+    const p = rp.pairs.find(x => x.a === teamIdx || x.b === teamIdx);
+    return p ? (p.a === teamIdx ? p.b : p.a) : null;
+  }
+
+  // Match de championnat (saison régulière) entre deux rivaux = derby.
+  isDerbyMatch(homeIdx, awayIdx) {
+    return homeIdx != null && awayIdx != null && this.rivalOf(homeIdx) === awayIdx;
+  }
+
   isRegularSeasonDone() { return this.round >= this.totalRounds; }
   matchesForRound(r) { return this.schedule[r] || []; }
 
@@ -13179,6 +13332,9 @@ function serializeTeam(team) {
     plannedTactics: team.plannedTactics || {},
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
+    rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
+    managerRating: typeof team.managerRating === "number" ? team.managerRating : null,
+    managerRatedGames: team.managerRatedGames || 0,
     players: team.players.map(serializePlayerRecord),
     // Recruteur (voir Team.recruiter ci-dessus) : même forme/logique de
     // sauvegarde que trainer/videoAnalyst.
@@ -13780,6 +13936,9 @@ function teamFromSave(data) {
     ? data.tacticPresets.filter(p => p && p.orders && typeof p.name === "string").slice(0, TACTIC_PRESETS_MAX)
       .map(p => ({ name: p.name, savedAt: p.savedAt || 0, orders: tacticPresetOrdersFrom(p.orders) }))
     : [];
+  team.rivalries = data.rivalries && typeof data.rivalries === "object" && !Array.isArray(data.rivalries) ? data.rivalries : {};
+  team.managerRating = typeof data.managerRating === "number" ? data.managerRating : null;
+  team.managerRatedGames = typeof data.managerRatedGames === "number" ? data.managerRatedGames : 0;
   team.ordersHistory = Array.isArray(data.ordersHistory)
     ? data.ordersHistory.filter(h => h && h.orders).slice(0, ORDERS_HISTORY_MAX).map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) }))
     : [];
@@ -13866,6 +14025,7 @@ function serializeLeague(lg) {
     results: lg.results,
     playoffs: lg.playoffs,
     relegationBarrage: lg.relegationBarrage || null,
+    rivalPairs: lg.rivalPairs || null,
     seasonAwards: lg.seasonAwards || null,
     seasonHonoursId: lg.seasonHonoursId || null,
     allStarGame: lg.allStarGame || null,
@@ -13977,6 +14137,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.results = Array.isArray(data.results) ? data.results : [];
   lg.playoffs = data.playoffs || null;
   lg.relegationBarrage = data.relegationBarrage || null;
+  lg.rivalPairs = data.rivalPairs && Array.isArray(data.rivalPairs.pairs) ? data.rivalPairs : null;
   lg.seasonAwards = data.seasonAwards && Array.isArray(data.seasonAwards.awards) ? data.seasonAwards : null;
   lg.seasonHonoursId = typeof data.seasonHonoursId === "string" ? data.seasonHonoursId : null;
   lg.allStarGame = data.allStarGame && Array.isArray(data.allStarGame.teams) ? data.allStarGame : null;
@@ -15496,6 +15657,7 @@ return {
   PHYSIO_RECOVERY_BONUS_BY_LEVEL, PHYSIO_INJURY_RISK_MULT_BY_LEVEL,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, AUTO_BID_FIELDS, autoBidKey, transferPlayerBetweenTeams,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
+  RIVALRY_RECENT_MAX, DERBY_MORALE_MULT, DERBY_ATTENDANCE_BOOST, MANAGER_RATING_START, MANAGER_RATING_K, rivalryKeyFor, rivalryBetween, managerRatingOf, recordHumanRivalry,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,
   SEAT_CATEGORY_MAX_SEATS, SEAT_BUILD_COST_PER_SEAT, ARENA_MAX_CAPACITY, arenaLevelForCapacity, seatBuildCost,

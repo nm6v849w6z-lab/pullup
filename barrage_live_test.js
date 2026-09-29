@@ -41,6 +41,15 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (cond())
   const clock = { now: b.at - 2 * H };
   const { server, multiSavePath, baseUrl } = await startTestServer(() => clock.now);
   await store.saveMultiLeague(league, multiSavePath);
+  // Depuis le 2026-09-29, le barrage n'a lieu que s'il a un enjeu (3
+  // championnats ouverts juste en dessous) : on les déclare dans le monde.
+  {
+    const World = require("./server/world.js");
+    const world = await World.loadWorld(multiSavePath, clock.now);
+    const top = world.leagues.find(e => e.id === store.HISTORIC_LEAGUE_ID);
+    [0, 1, 2].forEach(g => world.leagues.push({ id: `fr-test-2${g}`, country: top.country, level: top.level + 1, group: top.group * 3 + g, createdAt: clock.now }));
+    await World.saveWorld(world, multiSavePath);
+  }
 
   // 1) Avant : écran de préparation « Barrage », ligne au calendrier.
   let dom = await openGame(html, `${baseUrl}?m=${t7.managerLinkToken}`, w => patchDateNow(w, () => clock.now));

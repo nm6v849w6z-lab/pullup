@@ -758,6 +758,9 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
     league.recordResult(round, m.home, m.away, scoreHome, scoreAway);
     feedRoundResults.push({ home: home.name, away: away.name, homePts: scoreHome, awayPts: scoreAway });
 
+    // Derby contre son rival du championnat (League.isDerbyMatch, saison
+    // régulière seulement) : affluence et humeur des supporters renforcées.
+    const derby = typeof league.isDerbyMatch === "function" && round < league.totalRounds && league.isDerbyMatch(m.home, m.away);
     if (home.isHuman) {
       const won = scoreHome > scoreAway;
       // `round` en 4e argument (voir Team.applyMoraleForResult côté moteur).
@@ -768,8 +771,8 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
       // server/actions.js), pour les trois journées concernées, jamais pour
       // un match de championnat ordinaire (retour utilisateur, 2026-09 :
       // interview classique d'après CHAQUE match retirée).
-      const moraleDelta = home.applyMoraleForResult(won, scoreHome - scoreAway, away.name, round, now, milestone);
-      const attendanceInfo = home.simulateHomeAttendance(away.name);
+      const moraleDelta = home.applyMoraleForResult(won, scoreHome - scoreAway, away.name, round, now, milestone, null, derby);
+      const attendanceInfo = home.simulateHomeAttendance(away.name, derby);
       userResults.push({
         teamIdx: m.home, round, isHome: true, opponent: away.name, opponentIdx: m.away,
         scoreUser: scoreHome, scoreOpponent: scoreAway, won, forfeit, moraleDelta, attendanceInfo,
@@ -789,7 +792,7 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
     }
     if (away.isHuman) {
       const won = scoreAway > scoreHome;
-      const moraleDelta = away.applyMoraleForResult(won, scoreAway - scoreHome, home.name, round, now, milestone);
+      const moraleDelta = away.applyMoraleForResult(won, scoreAway - scoreHome, home.name, round, now, milestone, null, derby);
       userResults.push({
         teamIdx: m.away, round, isHome: false, opponent: home.name, opponentIdx: m.home,
         scoreUser: scoreAway, scoreOpponent: scoreHome, won, forfeit, moraleDelta, attendanceInfo: null,

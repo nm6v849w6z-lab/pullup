@@ -85,6 +85,9 @@ function catchUpLeague(league, now) {
     // ce n'est pas une erreur, juste un no-op.
     return events;
   }
+  // Rivaux du championnat de la saison (League.ensureRivalPairs) : posés
+  // dès maintenant pour que le navigateur les reçoive avec la sauvegarde.
+  if (typeof league.ensureRivalPairs === "function") league.ensureRivalPairs();
   // Rythme hebdomadaire : la mise à jour du lundi qui suit la finale reste
   // à régler (fin de saison, voir runWeeklyEconomyTick plus bas).
   // Rythme hebdomadaire : la fin de saison, l'intersaison ET la nouvelle
@@ -243,7 +246,11 @@ function startPlayoffsPhase(league, now, events) {
     // plusieurs jours réels plus tard) soit jouée.
     // Rythme hebdomadaire : barrage EN DIRECT au premier créneau des
     // play-offs (voir stepRelegationBarrage) ; ailleurs, simulé tout de suite.
-    if (!league.relegationBarrage) {
+    // Pas de barrage sans enjeu (2026-09-29, décision utilisateur) : il n'a
+    // lieu que si au moins 3 championnats sont ouverts juste en dessous
+    // (league.barrageHasStakes, posé par server/world.js ; absent =
+    // ancienne ligue hors univers partagé, comportement d'avant).
+    if (!league.relegationBarrage && league.barrageHasStakes !== false) {
       if (league.calendarDailyAnchored && league.calendarWeeklyRhythm && typeof league.scheduleRelegationBarrage === "function") {
         league.scheduleRelegationBarrage(scheduledTimeForLeagueRound(league, league.totalRounds));
       } else {
@@ -529,6 +536,9 @@ const BARRAGE_LIVE_ROUND_OFFSET = 0; // même numéro que le 1er tour de play-of
 function barrageLiveKey(league) { return `barrage:${league.seasonNumber || 1}`; }
 function stepRelegationBarrage(league, now, events = []) {
   const b = league.relegationBarrage;
+  // Barrage programmé avant qu'on sache qu'il n'a pas d'enjeu : annulé tant
+  // qu'il n'a pas commencé.
+  if (b && b.pending && !b.started && league.barrageHasStakes === false) { league.relegationBarrage = null; return events; }
   if (!b || !b.pending || typeof b.at !== "number" || now < b.at) return events;
   const home = league.teams[b.idx7], away = league.teams[b.idx8];
   const windowEnd = b.at + MATCH_BROADCAST_DURATION_MS;

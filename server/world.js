@@ -278,6 +278,25 @@ function childrenEntries(world, entry) {
     .sort((a, b) => a.group - b.group);
 }
 
+// Ce que le classement d'un championnat met réellement en jeu (2026-09-29,
+// retour : « uniquement quand il y a une division inférieure […] le jour où
+// on ouvre à plus de monde »). Calculé à chaque lecture, jamais figé : dès
+// qu'un championnat s'ouvre juste en dessous, les zones apparaissent.
+// Même règle que computeCountryMoves : autant de descentes que de
+// championnats ouverts juste en dessous (10e, puis 9e, puis perdant du
+// barrage 7e-8e) ; le champion monte s'il existe une division au-dessus.
+function divisionMovesFor(world, leagueId) {
+  const entry = world && (world.leagues || []).find(e => e.id === leagueId);
+  if (!entry) return { promotes: false, relegations: 0, barrage: false, upperLabel: null };
+  const kids = childrenEntries(world, entry).length;
+  return {
+    promotes: entry.level > 1,
+    relegations: Math.min(kids, 3),
+    barrage: kids >= 3,
+    upperLabel: entry.level > 1 ? divisionLabel(entry.level - 1, Math.floor(entry.group / 3)) : null,
+  };
+}
+
 // Ordre de descente : 10e, 9e, puis perdant du barrage (7e-8e).
 function relegationOrder(league) {
   const table = league.standings();
@@ -492,6 +511,8 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
     for (let guard = 0; guard < 10; guard++) {
       for (const [id, lg] of leagues) {
         lg.autoNextSeason = false;
+        // Barrage 7e-8e seulement s'il a un enjeu (voir divisionMovesFor).
+        lg.barrageHasStakes = divisionMovesFor(world, id).barrage;
         useLeagueTimeZone(lg);
         (tick(lg, now) || []).forEach(ev => events.push({ leagueId: id, ...ev }));
       }
@@ -664,6 +685,35 @@ function leagueSummary(entry, league) {
     lastResults: (league.results || []).filter(r => r.round === lastRound).map(r => ({
       home: league.teams[r.home].name, away: league.teams[r.away].name, scoreHome: r.scoreHome, scoreAway: r.scoreAway,
     })),
+    // Note des managers (Engine.recordHumanRivalry) pour le classement
+    // mondial (managerRanking).
+    managers: league.teams.map((t, idx) => (t && t.isHuman ? {
+      idx, name: t.name, rating: Engine.managerRatingOf(t), games: t.managerRatedGames || 0,
+    } : null)).filter(Boolean),
+  };
+}
+
+// Classement mondial des managers (2026-09-29) : tous les clubs humains du
+// monde, d'après les résumés de championnat (rafraîchis par catchUpWorld,
+// donc à 10 min près). Seuls les managers ayant joué au moins un match
+// officiel contre un autre manager sont classés. `me` : { leagueId, idx }.
+const MANAGER_RANKING_TOP = 50;
+function managerRanking(world, me = null, limit = MANAGER_RANKING_TOP) {
+  const rows = [];
+  let mine = null;
+  Object.values((world && world.summaries) || {}).forEach(sm => {
+    (sm.managers || []).forEach(m => {
+      const row = { name: m.name, rating: m.rating, games: m.games, country: sm.country, label: sm.label, leagueId: sm.id, idx: m.idx };
+      if (me && sm.id === me.leagueId && m.idx === me.idx) mine = row;
+      if (m.games > 0) rows.push(row);
+    });
+  });
+  rows.sort((a, b) => b.rating - a.rating || b.games - a.games || a.name.localeCompare(b.name, "fr"));
+  rows.forEach((r, i) => { r.rank = i + 1; });
+  return {
+    top: rows.slice(0, limit),
+    total: rows.length,
+    me: mine ? { ...mine, rank: mine.games > 0 ? mine.rank : null } : null,
   };
 }
 
@@ -794,6 +844,8 @@ function publicCountries() {
 }
 
 module.exports = {
+  managerRanking, MANAGER_RANKING_TOP,
+  divisionMovesFor,
   WORLD_VERSION, DEFAULT_COUNTRY,
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,

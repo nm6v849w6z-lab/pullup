@@ -575,12 +575,19 @@
     const n = before.length;
     const segments = [];
 
+    // Derby entre deux managers qui se sont souvent affrontés (2026-09-29).
+    const riv = fx && input.rivalry ? input.rivalry : null;
+    const isDerby = !!(riv && riv.derby);
     segments.push({
       type: 'intro', duration: 6, label: 'Générique',
-      kicker: 'JOURNÉE ' + input.day + ' · AVANT-MATCH',
-      title: 'L’AVANT-', titleAccent: 'MATCH',
+      kicker: 'JOURNÉE ' + input.day + (isDerby ? ' · DERBY' : ' · AVANT-MATCH'),
+      title: isDerby ? 'LE ' : 'L’AVANT-', titleAccent: isDerby ? 'DERBY' : 'MATCH',
       versus: fx ? { home: H.tname(fx.homeId), away: H.tname(fx.awayId), homeId: fx.homeId, awayId: fx.awayId } : null,
-      bubble: fill('Bonsoir et bienvenue ! Journée {day} : on commence par ton match, puis on fait le tour de la ligue.', { day: input.day }),
+      bubble: isDerby
+        ? (riv.games
+          ? fill('Bonsoir et bienvenue ! Journée {day}, et ce soir c’est le derby : {n} confrontation(s) déjà entre ces deux managers.', { day: input.day, n: riv.games })
+          : fill('Bonsoir et bienvenue ! Journée {day}, et ce soir c’est le derby entre deux rivaux du championnat.', { day: input.day }))
+        : fill('Bonsoir et bienvenue ! Journée {day} : on commence par ton match, puis on fait le tour de la ligue.', { day: input.day }),
     });
 
     let lineupSeg = null, duel = null;
@@ -608,7 +615,8 @@
         } : null,
         bubble: (pos.get(home) && pos.get(away)
           ? fill('{h}, {rh}, reçoit {a}, {ra}.', { h: H.tshort(home), a: H.tshort(away), rh: ordinal(pos.get(home)), ra: ordinal(pos.get(away)) })
-          : fill('{h} reçoit {a}.', { h: H.tshort(home), a: H.tshort(away) })) + lastBubble,
+          : fill('{h} reçoit {a}.', { h: H.tshort(home), a: H.tshort(away) })) + lastBubble +
+          (riv && riv.games ? fill(' Bilan entre les deux managers : {hw} victoire(s) pour {h}, {aw} pour {a}.', { hw: riv.homeWins, aw: riv.awayWins, h: H.tshort(home), a: H.tshort(away) }) : ''),
       });
 
       const lu = input.lineups || {};
@@ -688,7 +696,7 @@
     void rnd;
     return {
       kind: 'prematch', showId, day: input.day, myTeamId: my,
-      brand: 'L’AVANT-MATCH',
+      brand: isDerby ? 'LE DERBY' : 'L’AVANT-MATCH',
       clock: { label: 'Coup d’envoi', at: input.kickoffAt || null },
       badge: 'Compos verrouillées',
       sponsor: input.sponsor || { name: 'HOOP MANAGER', badge: 'PREMIUM' },

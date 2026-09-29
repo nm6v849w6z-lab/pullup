@@ -44,6 +44,9 @@ if (!badgeAtStart.includes("1 championnat")) {
 // --- La zone de relégation/promotion doit déjà être visible dans le
 // classement consultable EN COURS de saison régulière (pas seulement à la
 // fin), pour que l'enjeu se voie match après match. ---
+// Zones affichées seulement si des championnats sont ouverts juste en
+// dessous (league.divisionMoves, 2026-09-29) : on en simule trois.
+win.eval("league.divisionMoves = { promotes: false, relegations: 3, barrage: true, upperLabel: null };");
 doc.getElementById("regenBtn").click(); // "📊 Classement"
 const zonesVisible = ["zone-promo", "zone-barrage", "zone-relegation"].every(cls =>
   doc.querySelector(`#standingsContent tr.${cls}`)

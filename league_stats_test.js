@@ -196,7 +196,13 @@ console.log("✅ La bascule Moyennes/Totaux re-trie et affiche les totaux exacts
 // Classement : 10 lignes d'équipe, séparateurs de zones, forme, colonne course.
 const teamRows = [...doc2.querySelectorAll("#standingsContent table.lg-table tbody tr[data-lg-team]")];
 if (teamRows.length !== 10) throw new Error("❌ Le classement devrait lister 10 équipes, obtenu : " + teamRows.length);
-const dividers = [...doc2.querySelectorAll("#standingsContent tr.lg-div")].map(tr => tr.textContent);
+// Sans championnat ouvert juste en dessous : ni barrage ni relégation
+// (2026-09-29) ; avec trois, les trois zones.
+win2.eval("league.divisionMoves = { promotes: false, relegations: 0, barrage: false, upperLabel: null }; renderLeagueTop();");
+let dividers = [...doc2.querySelectorAll("#standingsContent tr.lg-div")].map(tr => tr.textContent);
+if (JSON.stringify(dividers) !== JSON.stringify(["Hors play-offs"])) throw new Error("❌ Sans division inférieure, seul « Hors play-offs » attendu : " + JSON.stringify(dividers));
+win2.eval("league.divisionMoves = { promotes: false, relegations: 3, barrage: true, upperLabel: null }; renderLeagueTop();");
+dividers = [...doc2.querySelectorAll("#standingsContent tr.lg-div")].map(tr => tr.textContent);
 if (JSON.stringify(dividers) !== JSON.stringify(["Hors play-offs", "Zone de barrage", "Relégation directe"])) throw new Error("❌ Séparateurs de zones inattendus : " + JSON.stringify(dividers));
 const formCounts = teamRows.map(tr => tr.querySelectorAll(".lg-f").length);
 if (!formCounts.every(n => n === 3)) throw new Error("❌ Après 3 journées, chaque équipe devrait avoir 3 pastilles de forme, obtenu : " + JSON.stringify(formCounts));

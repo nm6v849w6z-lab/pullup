@@ -68,6 +68,14 @@ chantiers marqués « committé, à pousser » étaient en fait en prod et ont
 été retirés (l'historique Git les garde). Restent ci-dessous uniquement les
 points réellement ouverts.
 
+- **💡 Premium « Bientôt » — propositions faites le 2026-09-29, en attente du
+  choix de l'utilisateur (rien de codé)** : salle (nom de la salle, parquet
+  aux couleurs du club sur la Salle et le direct, variantes de visuel par
+  palier) ; jeunes de l'académie (apparence personnalisée, numéro de
+  maillot, « photo de signature » au passage pro).
+- **Valeurs validées (2026-09-29)** : derby = affluence ×1,15 et humeur
+  ×1,5 ; note des managers départ 1500, K = 24.
+
 - **🌐 Côté utilisateur (hébergement, services)** :
   - Google Search Console : domaine validé par TXT chez IONOS le
     2026-09-29 ; envoyer sitemap.xml, demander l'indexation de / et
@@ -118,6 +126,11 @@ points réellement ouverts.
   2026-09-29). Ne jamais y mettre les sponsors des clubs du jeu ni autre
   chose ; aujourd'hui logo Hoop Manager Premium (sponsorLogo dans
   hoopShowDressOpts) en attendant l'annonceur.
+
+- **Rappel produit — pas de coaching pendant le direct** (décision du
+  2026-09-29, « surtout pas ») : ni temps morts, ni changements, ni
+  réglages pendant un match en direct. Tout se décide dans les Ordres
+  avant le match. Ne plus le proposer.
 
 - **Rappel produit** : il n'y a PAS de carrière solo. Le jeu est toujours
   multijoueur dans l'univers partagé (une ligue peut être complétée par des
