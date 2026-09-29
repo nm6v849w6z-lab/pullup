@@ -68,7 +68,6 @@ console.log("✅ Jeune promu : marqué « formé au club » et numéroté.");
   await flush(dom);
   const card = doc.getElementById("pdpPersoCard");
   assert(card && /Numéro de maillot/.test(card.textContent) && card.querySelector("[data-pdp-look='hairStyle']"), "carte Personnalisation");
-  assert(/N° \d+/.test(doc.getElementById("playerDetailContent").textContent), "numéro sur la fiche");
   const jn = doc.querySelector("#playerDetailContent .pdp2-jersey svg .jersey-number");
   assert(jn && jn.textContent === String(win.eval("teamA.players[0].number")), "numéro floqué sur le maillot du club");
   assert(doc.querySelector("#playerDetailContent .pdp2-jersey svg path").getAttribute("fill") === win.eval("JERSEY_COLORS[teamA.jerseyColor]") || win.eval("teamA.jerseyPattern") !== "uni", "maillot aux couleurs du club");

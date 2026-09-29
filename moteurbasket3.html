@@ -2303,9 +2303,8 @@
   .pdp2-pips span{width:20px; height:8px; border-radius:2px; background:var(--line);}
   .pdp2-pips span.on{background:var(--amber);}
   #pdpSaleCard, #pdpPersoCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
-  .pdp2-jersey{flex:0 0 auto; margin-left:auto; display:flex; flex-direction:column; align-items:center; gap:2px;}
+  .pdp2-id-visual{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:10px;}
   .pdp2-jersey svg{display:block; filter:drop-shadow(0 4px 10px rgba(0,0,0,.35));}
-  .pdp2-jersey-lbl{font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--ink-dim);}
 
   @media (max-width:1180px){
     .pdp2-hero{flex-wrap:wrap;}
@@ -2319,7 +2318,7 @@
     .pdp2-hero{padding:18px 16px; gap:18px;}
     .pdp2-id{gap:14px;}
     .pdp2-avatar{width:80px; height:80px;}
-    .pdp2-jersey svg{width:76px; height:76px;}
+    .pdp2-jersey svg{width:68px; height:68px;}
     .pdp2-name{font-size:30px;}
     .pdp2-cond{flex-basis:100%; padding:0; border-right:none;}
     .pdp2-rating{flex-basis:100%; flex-direction:row; justify-content:flex-start;}
@@ -27325,7 +27324,14 @@ function renderPlayerDetail(teamIdx, playerId) {
   // == En-tête ==
   html += `<section class="pdp2-card pdp2-hero">`;
   html += `<div class="pdp2-id">` +
-    `<div class="pdp2-avatar">${playerAvatarHtml(player, team, 104)}</div>` +
+    // Maillot floqué du numéro sous l'avatar (retour utilisateur 2026-09-29 :
+    // « mets le maillot sous l'avatar, ce sera plus propre », sans libellé).
+    `<div class="pdp2-id-visual"><div class="pdp2-avatar">${playerAvatarHtml(player, team, 104)}</div>` +
+    (Number.isInteger(player.number)
+      ? `<div class="pdp2-jersey" title="Maillot n°${player.number}">` +
+        jerseySvgHtml(team.jerseyShape, team.jerseyColor, 96, "home", effectiveJerseyPattern(team), effectiveJerseyTwoTone(team), null, player.number) + `</div>`
+      : "") +
+    `</div>` +
     `<div class="pdp2-id-text">` +
     `<div class="pdp2-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>${teamLinkHtml(teamIdx, team.name)}</div>` +
     `<h3 class="pdp2-name">${nationFlagHtml(player.nationality, "nat-flag--name")}${escapeHtml(player.name)}</h3>` +
@@ -27342,15 +27348,7 @@ function renderPlayerDetail(teamIdx, playerId) {
     const wr = worldRankForPlayer(league, teamIdx, player.id);
     if (wr) html += `<span class="pdp2-chip pdp2-chip--world" title="Classement parmi tous les joueurs de la ligue">${ordinalFr(wr.rank)} mondial · ${ordinalFr(wr.posRank)} ${escapeHtml(player.position)}</span>`;
   }
-  html += `</div></div>`; // chips, id-text
-  // Numéro de maillot (affiché sur la fiche du joueur uniquement) : en grand
-  // sur le maillot domicile du club, avec ses vraies couleurs/motif.
-  if (Number.isInteger(player.number)) {
-    html += `<div class="pdp2-jersey" title="Maillot n°${player.number}">` +
-      jerseySvgHtml(team.jerseyShape, team.jerseyColor, 112, "home", effectiveJerseyPattern(team), effectiveJerseyTwoTone(team), null, player.number) +
-      `<span class="pdp2-jersey-lbl">N° ${player.number}</span></div>`;
-  }
-  html += `</div>`; // id
+  html += `</div></div></div>`; // chips, id-text, id
 
   const condValue = currentCondition(player, now, team.conditionRecoveryPerDay());
   const condBox = condValue >= 75 ? "ok" : condValue >= 60 ? "mid" : "bad";
