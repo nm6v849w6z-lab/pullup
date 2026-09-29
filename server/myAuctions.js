@@ -20,13 +20,17 @@
 // tableau de bord.
 // =====================================================================
 
+const Engine = require("../engine.js");
 const WorldMarket = require("./worldMarket.js");
 
 const STAFF_FIELDS = ["coachListings", "assistantCoachListings", "analystListings", "recruiterListings", "doctorListings", "physioListings"];
 const RECENT_CLOSED_MS = 24 * 3600 * 1000;
 
+function myAuto(l, teamIdx) {
+  return (l.autoBids || []).find(a => a.bidderIdx === teamIdx) || null;
+}
 function bidOn(l, teamIdx) {
-  return l.currentBidderIdx === teamIdx || (l.bids || []).some(b => b.bidderIdx === teamIdx);
+  return l.currentBidderIdx === teamIdx || (l.bids || []).some(b => b.bidderIdx === teamIdx) || !!myAuto(l, teamIdx);
 }
 function keep(l, teamIdx, now) {
   if (!l || !bidOn(l, teamIdx)) return false;
@@ -35,8 +39,10 @@ function keep(l, teamIdx, now) {
 // Copie envoyée au navigateur : un enchérisseur d'un autre championnat reste
 // FOREIGN_BIDDER_IDX (la copie locale n'en affiche pas le nom pour une
 // annonce où l'on est acheteur).
-function slim(l) {
+function slim(l, teamIdx) {
+  const auto = l.autoBids ? myAuto(l, teamIdx) : null;
   return {
+    myAutoMax: auto ? auto.max : (l.myAutoMax != null ? l.myAutoMax : null),
     id: l.id, status: l.status, result: l.result == null ? null : l.result, finalPrice: l.finalPrice == null ? null : l.finalPrice,
     startPrice: l.startPrice, currentBid: l.currentBid, currentBidderIdx: l.currentBidderIdx,
     currentBidderRef: l.currentBidderRef || null,
@@ -47,17 +53,38 @@ function slim(l) {
 
 function collect(league, teamIdx, now, world = null) {
   const transferListings = (league.transferListings || [])
-    .filter(l => l.sellerIdx !== teamIdx && keep(l, teamIdx, now)).map(slim);
+    .filter(l => l.sellerIdx !== teamIdx && keep(l, teamIdx, now)).map(l => slim(l, teamIdx));
   const staff = {};
-  STAFF_FIELDS.forEach(f => { staff[f] = (league[f] || []).filter(l => keep(l, teamIdx, now)).map(slim); });
+  STAFF_FIELDS.forEach(f => { staff[f] = (league[f] || []).filter(l => keep(l, teamIdx, now)).map(l => slim(l, teamIdx)); });
   let foreignIds = [];
   if (world && world.index) {
     // limit 0 : seulement les annonces où l'on a misé (voir projectForLeague).
     const proj = WorldMarket.projectForLeague(world.index, world.leagueId, teamIdx, now, 0);
-    proj.listings.forEach(l => transferListings.push(slim(l)));
+    proj.listings.forEach(l => transferListings.push(slim(l, teamIdx)));
     foreignIds = proj.listings.map(l => l.id);
   }
   return { transferListings, staff, foreignIds };
 }
 
-module.exports = { STAFF_FIELDS, collect };
+// Sauvegarde envoyée au navigateur (GET /api/save) : les plafonds
+// d'enchère automatique des autres clubs sont secrets. Copies (les annonces
+// de la charge utile sont celles de la ligue en mémoire, qui sera
+// sauvegardée) : on retire listing.autoBids et on ne garde que le plafond
+// du destinataire (myAutoMax).
+function sanitizeAutoBids(leaguePayload, teamIdx) {
+  if (!leaguePayload) return leaguePayload;
+  const myKey = Engine.autoBidKey(teamIdx, null);
+  Object.keys(Engine.AUTO_BID_FIELDS).forEach(f => {
+    if (!Array.isArray(leaguePayload[f])) return;
+    leaguePayload[f] = leaguePayload[f].map(l => {
+      if (!l || !Array.isArray(l.autoBids)) return l;
+      const { autoBids, ...rest } = l;
+      const mine = autoBids.find(a => Engine.autoBidKey(a.bidderIdx, a.bidderRef) === myKey);
+      if (mine) rest.myAutoMax = mine.max;
+      return rest;
+    });
+  });
+  return leaguePayload;
+}
+
+module.exports = { STAFF_FIELDS, collect, sanitizeAutoBids };

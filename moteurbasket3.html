@@ -1798,6 +1798,12 @@
   .mk-task{display:grid; grid-template-columns:48px minmax(0,1fr) auto auto auto; align-items:center; gap:16px; background:var(--bg); border-radius:14px; padding:12px 16px;}
   .mk-task-av{width:48px; height:48px; border-radius:12px; overflow:hidden; display:flex; align-items:flex-end; justify-content:center; background:var(--panel-2);}
   .mk-task-av--staff{align-items:center; color:var(--muted);}
+  /* Enchère automatique (voir setAutoBidFor) : état actif + bouton Arrêter. */
+  .mk-auto-on{margin-top:8px; font-size:13px; color:var(--muted);}
+  .mk-auto-on b{color:var(--ink, inherit);}
+  .mk-auto-off{margin-left:6px; background:none; border:0; padding:0; color:var(--danger); font:inherit; font-weight:700; cursor:pointer; text-decoration:underline;}
+  .stf-auto-btn{margin-left:6px; background:none; border:1px solid var(--ink-faint, #4a5d7e); color:inherit; border-radius:999px; padding:6px 12px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;}
+  .stf-auto-btn:hover{border-color:var(--amber);}
   .mk-task-t .stf-stars{font-size:12px; margin-left:4px;}
   .mk-task-t{min-width:0;}
   .mk-task-t b{display:block; font-size:16px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -9178,6 +9184,31 @@ function transferMinIncrement(amount) {
 function minNextBidFor(listing) {
   if (!listing.currentBid) return listing.startPrice;
   return listing.currentBid + transferMinIncrement(listing.currentBid);
+}
+
+// =====================================================================
+// ENCHÈRES AUTOMATIQUES (retour utilisateur 2026-09-29 : « pouvoir faire
+// les enchères en automatique : on fixe un seuil et ça enchérit jusqu'à ce
+// seuil si on se fait dépasser » — pour TOUS les clubs, pas seulement
+// Premium : réservée aux payants, ce serait un avantage sportif acheté).
+// Un club fixe un plafond secret sur une annonce (listing.autoBids :
+// [{ bidderIdx, bidderRef?, max, at }], jamais envoyé aux autres clubs, voir
+// server/myAuctions.js:sanitizeAutoBids) ; à chaque nouvelle offre (club
+// humain, CPU, autre championnat), League._applyAutoBids relance au minimum
+// nécessaire pour reprendre la tête, sans dépasser le plafond ni le budget
+// (ni l'effectif plein pour un joueur). Deux plafonds face à face se
+// règlent aussitôt, comme sur eBay : le plus haut l'emporte, au plafond de
+// l'autre + un palier (à égalité, celui qui menait garde la tête). Les
+// offres posées ainsi sont marquées `auto: true` dans listing.bids.
+// =====================================================================
+// Miroir de engine.js (marché mondial) : enchérisseur d'un autre championnat.
+const FOREIGN_BIDDER_IDX = -1;
+const AUTO_BID_FIELDS = {
+  transferListings: "player", coachListings: "staff", assistantCoachListings: "staff", analystListings: "staff",
+  recruiterListings: "staff", doctorListings: "staff", physioListings: "staff",
+};
+function autoBidKey(bidderIdx, ref) {
+  return bidderIdx === FOREIGN_BIDDER_IDX ? `w:${ref ? ref.leagueId : "?"}:${ref ? ref.idx : "?"}` : `l:${bidderIdx}`;
 }
 
 // Salaire hebdomadaire courant d'un entraîneur, en fonction de son niveau et
@@ -17417,6 +17448,97 @@ class League {
   // propre joueur), "invalid-bidder", "roster-full" (déjà au plafond
   // d'effectif), "too-low" (sous l'enchère minimale — voir minNextBidFor),
   // "insufficient-budget" (club du joueur uniquement — voir plus bas).
+  // Enchères automatiques (voir AUTO_BID_FIELDS) : plafond effectif d'une
+  // entrée (budget d'un club humain, effectif plein), null = hors jeu. Un
+  // club d'un autre championnat : plafond tel quel (budget vérifié quand il
+  // l'a fixé, puis au transfert, voir resolveForeignTransfers).
+  _autoBidCap(listing, kind, a) {
+    if (a.bidderIdx === FOREIGN_BIDDER_IDX) return a.max;
+    const team = this.teams[a.bidderIdx];
+    if (!team) return null;
+    if (kind === "player" && (a.bidderIdx === listing.sellerIdx || team.players.length >= MAX_ROSTER_SIZE)) return null;
+    return team.isHuman ? Math.min(a.max, Math.floor(team.budget)) : a.max;
+  }
+
+  _recordAutoBid(listing, kind, a, amount, now) {
+    const rounded = Math.round(amount);
+    listing.currentBid = rounded;
+    listing.currentBidderIdx = a.bidderIdx;
+    if (a.bidderIdx === FOREIGN_BIDDER_IDX) {
+      listing.currentBidderRef = { ...a.bidderRef };
+      listing.bids.push({ bidderIdx: a.bidderIdx, bidderRef: { ...a.bidderRef }, amount: rounded, at: now, auto: true });
+    } else {
+      if (kind === "player") listing.currentBidderRef = null;
+      listing.bids.push({ bidderIdx: a.bidderIdx, amount: rounded, at: now, auto: true });
+    }
+  }
+
+  // Fait jouer les plafonds après une nouvelle offre. Renvoie true si le
+  // club en tête a changé.
+  _applyAutoBids(listing, kind, now) {
+    if (!listing || !Array.isArray(listing.autoBids) || !listing.autoBids.length) return false;
+    if (listing.status !== "open" || now >= listing.closesAt) return false;
+    const keyOfLeader = () => (listing.currentBidderIdx == null ? null : autoBidKey(listing.currentBidderIdx, listing.currentBidderRef));
+    const before = keyOfLeader();
+    for (let guard = 0; guard < 20; guard++) {
+      const leaderKey = keyOfLeader();
+      const entries = listing.autoBids.map(a => ({ a, key: autoBidKey(a.bidderIdx, a.bidderRef), cap: this._autoBidCap(listing, kind, a) }))
+        .filter(e => e.cap != null && e.cap > 0);
+      const leader = entries.find(e => e.key === leaderKey) || null;
+      const minBid = minNextBidFor(listing);
+      const challengers = entries.filter(e => e.key !== leaderKey && e.cap >= minBid)
+        .sort((x, y) => y.cap - x.cap || (x.a.at || 0) - (y.a.at || 0));
+      if (!challengers.length) break;
+      const top = challengers[0];
+      if (leader && top.cap <= leader.cap) {
+        // Le plafond du club en tête tient : le challenger monte à son
+        // plafond, le club en tête répond d'un palier (sans dépasser le sien).
+        this._recordAutoBid(listing, kind, top.a, top.cap, now);
+        this._recordAutoBid(listing, kind, leader.a, Math.max(top.cap, Math.min(leader.cap, minNextBidFor(listing))), now);
+        continue;
+      }
+      // Le challenger l'emporte : le club en tête monte d'abord à son plafond.
+      if (leader && leader.cap > (listing.currentBid || 0)) this._recordAutoBid(listing, kind, leader.a, leader.cap, now);
+      const need = minNextBidFor(listing);
+      this._recordAutoBid(listing, kind, top.a, Math.min(top.cap, need), now);
+    }
+    return keyOfLeader() !== before;
+  }
+
+  // Fixe (max > 0) ou retire (max nul) le plafond d'enchère automatique d'un
+  // club sur l'annonce `listingId` du marché `field` (voir AUTO_BID_FIELDS).
+  // `foreign` = { ref: { leagueId, idx, name }, team } pour un club d'un
+  // autre championnat (marché mondial). Renvoie { ok, listing, leading } ou
+  // { ok: false, reason, minBid? } (mêmes raisons que placeBid).
+  setAutoBid(field, listingId, bidderIdx, max, now, foreign = null) {
+    const kind = AUTO_BID_FIELDS[field];
+    const listing = kind ? (this[field] || []).find(l => l.id === listingId) : null;
+    if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
+    const idx = foreign ? FOREIGN_BIDDER_IDX : bidderIdx;
+    const ref = foreign ? { leagueId: foreign.ref.leagueId, idx: foreign.ref.idx, name: foreign.ref.name || (foreign.team && foreign.team.name) } : null;
+    const team = foreign ? foreign.team : this.teams[bidderIdx];
+    if (!team) return { ok: false, reason: "invalid-bidder" };
+    const key = autoBidKey(idx, ref);
+    const others = (listing.autoBids || []).filter(a => autoBidKey(a.bidderIdx, a.bidderRef) !== key);
+    const leaderKey = listing.currentBidderIdx == null ? null : autoBidKey(listing.currentBidderIdx, listing.currentBidderRef);
+    if (!max) {
+      if (others.length) listing.autoBids = others; else delete listing.autoBids;
+      return { ok: true, listing, leading: leaderKey === key, removed: true };
+    }
+    if (typeof max !== "number" || !(max > 0)) return { ok: false, reason: "too-low", minBid: minNextBidFor(listing) };
+    if (kind === "player" && !foreign && listing.sellerIdx === bidderIdx) return { ok: false, reason: "own-listing" };
+    if (kind === "player" && team.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
+    const minMax = leaderKey === key ? (listing.currentBid || 0) : minNextBidFor(listing);
+    if (max < minMax) return { ok: false, reason: "too-low", minBid: minMax };
+    if (team.isHuman && max > team.budget) return { ok: false, reason: "insufficient-budget" };
+    const entry = { bidderIdx: idx, max: Math.round(max), at: now };
+    if (ref) entry.bidderRef = ref;
+    listing.autoBids = others.concat([entry]);
+    this._applyAutoBids(listing, kind, now);
+    const leadingNow = listing.currentBidderIdx != null && autoBidKey(listing.currentBidderIdx, listing.currentBidderRef) === key;
+    return { ok: true, listing, leading: leadingNow };
+  }
+
   placeBid(listingId, bidderIdx, amount, now) {
     const listing = this.transferListings.find(l => l.id === listingId);
     if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
@@ -17437,7 +17559,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "player", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   // Un adversaire CPU est-il intéressé par ce joueur ? Simplification :
@@ -17608,6 +17731,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "player", now);
       });
     });
 
@@ -17731,7 +17855,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "staff", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   // Résout une enchère de candidat entraîneur arrivée à échéance. La mise
@@ -17796,6 +17921,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "staff", now);
       });
     });
 
@@ -17915,7 +18041,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "staff", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   // Voir _resolveCoachListing ci-dessus pour le détail du raisonnement (la
@@ -17972,6 +18099,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "staff", now);
       });
     });
 
@@ -18063,7 +18191,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "staff", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   // Voir _resolveCoachListing pour le détail du raisonnement (la mise
@@ -18119,6 +18248,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "staff", now);
       });
     });
 
@@ -18216,7 +18346,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "staff", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   _resolveMedicalListing(role, listing, now) {
@@ -18264,6 +18395,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "staff", now);
       });
     });
 
@@ -18342,7 +18474,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "staff", now);
+    return { ok: true, listing, autoOutbid };
   }
   _resolveAssistantCoachListing(listing, now) {
     listing.status = "closed";
@@ -18379,6 +18512,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "staff", now);
       });
     });
     let openCount = listings.filter(l => l.status === "open").length;
@@ -22292,12 +22426,12 @@ function syncMarketBidToServer(listingId, amount) {
 function syncCoachBidToServer(listingId, amount) {
   if (!managerToken) return;
   try {
-    fetchApi("/api/market/coach-bid", {
+    return fetchApi("/api/market/coach-bid", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, amount }),
     })
-      .then(res => { if (!res.ok) console.warn("Enchère (entraîneur) refusée côté serveur.", res.status); })
+      .then(async res => { if (!res.ok) console.warn("Enchère (entraîneur) refusée côté serveur.", res.status); return { ok: res.ok, data: await res.json().catch(() => null) }; })
       .catch(e => console.warn("Enchère (entraîneur) : serveur indisponible :", e));
   } catch (e) {
     console.warn("Enchère (entraîneur) : serveur indisponible :", e);
@@ -22332,12 +22466,12 @@ function syncFireTrainerToServer() {
 function syncAnalystBidToServer(listingId, amount) {
   if (!managerToken) return;
   try {
-    fetchApi("/api/market/analyst-bid", {
+    return fetchApi("/api/market/analyst-bid", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, amount }),
     })
-      .then(res => { if (!res.ok) console.warn("Enchère (analyste vidéo) refusée côté serveur.", res.status); })
+      .then(async res => { if (!res.ok) console.warn("Enchère (analyste vidéo) refusée côté serveur.", res.status); return { ok: res.ok, data: await res.json().catch(() => null) }; })
       .catch(e => console.warn("Enchère (analyste vidéo) : serveur indisponible :", e));
   } catch (e) {
     console.warn("Enchère (analyste vidéo) : serveur indisponible :", e);
@@ -22362,12 +22496,12 @@ function syncFireAnalystToServer() {
 function syncRecruiterBidToServer(listingId, amount) {
   if (!managerToken) return;
   try {
-    fetchApi("/api/market/recruiter-bid", {
+    return fetchApi("/api/market/recruiter-bid", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, amount }),
     })
-      .then(res => { if (!res.ok) console.warn("Enchère (recruteur) refusée côté serveur.", res.status); })
+      .then(async res => { if (!res.ok) console.warn("Enchère (recruteur) refusée côté serveur.", res.status); return { ok: res.ok, data: await res.json().catch(() => null) }; })
       .catch(e => console.warn("Enchère (recruteur) : serveur indisponible :", e));
   } catch (e) {
     console.warn("Enchère (recruteur) : serveur indisponible :", e);
@@ -22393,12 +22527,12 @@ const MEDICAL_ROLE_NOUNS = { doctor: "médecin", physio: "kiné" };
 function syncMedicalBidToServer(role, listingId, amount) {
   if (!managerToken || !MEDICAL_ROLE_NOUNS[role]) return;
   try {
-    fetchApi(`/api/market/${role}-bid`, {
+    return fetchApi(`/api/market/${role}-bid`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, amount }),
     })
-      .then(res => { if (!res.ok) console.warn(`Enchère (${MEDICAL_ROLE_NOUNS[role]}) refusée côté serveur.`, res.status); })
+      .then(async res => { if (!res.ok) console.warn(`Enchère (${MEDICAL_ROLE_NOUNS[role]}) refusée côté serveur.`, res.status); return { ok: res.ok, data: await res.json().catch(() => null) }; })
       .catch(e => console.warn(`Enchère (${MEDICAL_ROLE_NOUNS[role]}) : serveur indisponible :`, e));
   } catch (e) {
     console.warn(`Enchère (${MEDICAL_ROLE_NOUNS[role]}) : serveur indisponible :`, e);
@@ -22410,12 +22544,12 @@ function syncMedicalBidToServer(role, listingId, amount) {
 function syncAssistantCoachBidToServer(listingId, amount) {
   if (!managerToken) return;
   try {
-    fetchApi("/api/market/assistant-bid", {
+    return fetchApi("/api/market/assistant-bid", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId, amount }),
     })
-      .then(res => { if (!res.ok) console.warn("Enchère (entraîneur adjoint) refusée côté serveur.", res.status); })
+      .then(async res => { if (!res.ok) console.warn("Enchère (entraîneur adjoint) refusée côté serveur.", res.status); return { ok: res.ok, data: await res.json().catch(() => null) }; })
       .catch(e => console.warn("Enchère (entraîneur adjoint) : serveur indisponible :", e));
   } catch (e) {
     console.warn("Enchère (entraîneur adjoint) : serveur indisponible :", e);
@@ -35715,7 +35849,10 @@ function renderStaffListings(role, open, now) {
           `<button type="button" class="stf-step" data-staff-step="${role.key}:${l.id}:100" aria-label="Augmenter l'offre de 100 €">+</button>` +
         `</div>` +
         `<button type="button" class="stf-bid-btn${mine ? " is-secondary" : ""}" data-staff-bid="${role.key}:${l.id}">${mine ? "Surenchérir" : "Enchérir"}</button>` +
-      `</div></td></tr>`;
+        `<button type="button" class="stf-auto-btn" data-staff-auto="${role.key}:${l.id}" title="Le montant saisi devient votre plafond : on enchérit pour vous, au minimum, chaque fois qu'un autre club vous dépasse.">${myAutoMaxOf(l) != null ? "Changer le plafond" : "Enchère auto"}</button>` +
+      `</div>` +
+      (myAutoMaxOf(l) != null ? autoBidStatusHtml(myAutoMaxOf(l), `data-staff-auto-off="${role.key}:${l.id}"`) : "") +
+      `</td></tr>`;
   });
   html += "</tbody></table></div>";
 
@@ -35732,7 +35869,7 @@ function renderStaffListings(role, open, now) {
 // Un seul écouteur délégué pour toute la page Staff (cartes poste, replier/
 // déplier, filtre de niveau, ±100 €, enchérir, congédier, afficher plus).
 document.getElementById("staffSection").addEventListener("click", (e) => {
-  const t = e.target.closest("[data-staff-open-role],[data-staff-toggle-role],[data-staff-specialty],[data-staff-level],[data-staff-more],[data-staff-step],[data-staff-bid],[data-staff-fire]");
+  const t = e.target.closest("[data-staff-open-role],[data-staff-toggle-role],[data-staff-specialty],[data-staff-level],[data-staff-more],[data-staff-step],[data-staff-bid],[data-staff-auto],[data-staff-auto-off],[data-staff-fire]");
   if (!t || t.disabled) return;
   const d = t.dataset;
 
@@ -35776,6 +35913,19 @@ document.getElementById("staffSection").addEventListener("click", (e) => {
     input.value = String(Math.max(min, (Math.round(Number(input.value)) || min) + Number(delta)));
     return;
   }
+  if (d.staffAuto || d.staffAutoOff) {
+    const [key, idStr] = (d.staffAuto || d.staffAutoOff).split(":");
+    const role = STAFF_ROLE_BY_KEY[key];
+    const id = Number(idStr);
+    const input = document.getElementById(`${role.inputPrefix}${id}`);
+    const max = d.staffAutoOff ? 0 : Math.round(Number(input && input.value) || 0);
+    setAutoBidFor(role.listKey, id, max).then(r => {
+      const [msg, good] = autoBidMessage(r, max);
+      staffFeedback(msg, good);
+      renderStaffPanel();
+    });
+    return;
+  }
   if (d.staffBid) {
     const [key, idStr] = d.staffBid.split(":");
     const role = STAFF_ROLE_BY_KEY[key];
@@ -35791,11 +35941,19 @@ document.getElementById("staffSection").addEventListener("click", (e) => {
         "insufficient-budget": "Budget insuffisant pour cette enchère.",
       };
       staffFeedback(reasons[res.reason] || "Enchère refusée.", false);
+    } else if (res.autoOutbid) {
+      staffFeedback("Un autre club avait une enchère automatique plus haute : vous êtes déjà dépassé.", false);
     } else {
       staffFeedback(`Enchère de ${formatMoney(amount)} enregistrée.`, true);
     }
     saveMyTeam();
-    if (res.ok) role.syncBid(id, amount);
+    if (res.ok) {
+      const sync = role.syncBid(id, amount);
+      if (sync && sync.then) sync.then(r => {
+        if (r && r.ok && r.data && r.data.autoOutbid) staffFeedback("Un autre club avait une enchère automatique plus haute : vous êtes déjà dépassé.", false);
+        if (r && r.ok) myAuctionsRefresh();
+      });
+    }
     renderStaffPanel();
     return;
   }
@@ -38822,10 +38980,13 @@ function renderMarketMine() {
     const urgent = l.closesAt - now < 3600000;
     const timer = `<span class="${urgent ? "mk-timer urgent" : ""}">clôture dans ${escapeHtml(mkTimeLeft(l.closesAt, now))}</span>`;
     let badge, amt, sub;
+    const autoMax = myAutoMaxOf(l);
     if (st === "lead") {
-      badge = `<span class="mk-badge lead">En tête</span>`; amt = formatMoney(l.currentBid); sub = "votre enchère";
+      badge = `<span class="mk-badge lead">En tête</span>`; amt = formatMoney(l.currentBid);
+      sub = autoMax != null ? `auto jusqu'à ${formatMoney(autoMax)}` : "votre enchère";
     } else if (st === "out") {
-      badge = `<span class="mk-badge out">Dépassé</span>`; amt = formatMoney(l.currentBid); sub = `relance dès ${formatMoney(minNextBidFor(l))}`;
+      badge = `<span class="mk-badge out">Dépassé</span>`; amt = formatMoney(l.currentBid);
+      sub = autoMax != null ? `plafond de ${formatMoney(autoMax)} dépassé` : `relance dès ${formatMoney(minNextBidFor(l))}`;
     } else if (l.currentBid) {
       const n = (l.bids || []).length;
       const leader = league.teams[l.currentBidderIdx];
@@ -38904,7 +39065,7 @@ function mkGotoStaff(roleKey, id) {
 // mis à jour ; les écrans Marché / Staff affichés sont redessinés si
 // quelque chose a changé et qu'on n'y est pas en train de saisir une offre.
 const MY_AUCTIONS_POLL_MS = 60 * 1000;
-const MY_AUCTION_FIELDS = ["status", "result", "finalPrice", "startPrice", "currentBid", "currentBidderIdx", "currentBidderRef", "bids", "closesAt"];
+const MY_AUCTION_FIELDS = ["status", "result", "finalPrice", "startPrice", "currentBid", "currentBidderIdx", "currentBidderRef", "bids", "closesAt", "myAutoMax"];
 function myAuctionsMerge(list, fresh) {
   let changed = false;
   (fresh || []).forEach(f => {
@@ -38962,6 +39123,72 @@ if (typeof navigator !== "undefined" && navigator.serviceWorker && navigator.ser
     const d = e.data || {};
     if (d.type === "hm-open" && typeof d.url === "string" && /#encheres$/.test(d.url) && league) { mkGotoMine("all"); myAuctionsRefresh(); }
   });
+}
+
+// Enchère automatique (retour utilisateur 2026-09-29 : « on fixe un seuil
+// et ça enchérit jusqu'à ce seuil si on se fait dépasser », pour tous les
+// clubs, voir AUTO_BID_FIELDS) : le montant saisi dans le champ d'offre
+// devient le plafond. Plafond du club sur une annonce (myAutoMax envoyé par
+// le serveur ; en solo, listing.autoBids local).
+function myAutoMaxOf(l) {
+  if (!l) return null;
+  if (l.myAutoMax != null) return l.myAutoMax;
+  const a = (l.autoBids || []).find(x => x.bidderIdx === myTeamIndex);
+  return a ? a.max : null;
+}
+async function setAutoBidFor(field, id, max) {
+  const now = Date.now();
+  if (!managerToken) {
+    const r = league.setAutoBid(field, id, myTeamIndex, max, now);
+    saveMyTeam();
+    return r.ok ? { ok: true, leading: r.leading, removed: !!r.removed } : { ok: false, reason: r.reason, minBid: r.minBid };
+  }
+  try {
+    const res = await fetchApi("/api/market/auto-bid", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ market: field, listingId: id, max }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) return { ok: false, reason: data.reason, minBid: data.minBid, error: data.error };
+    const l = (league[field] || []).find(x => x.id === id);
+    if (l && data.listing) myAuctionsMerge(league[field], [data.listing]);
+    if (l) l.myAutoMax = max || null;
+    if (data.foreign) await myAuctionsRefresh();
+    return { ok: true, leading: !!data.leading, removed: !!data.removed };
+  } catch (e) {
+    return { ok: false, reason: "network" };
+  }
+}
+function autoBidMessage(r, max) {
+  if (!r.ok) {
+    const reasons = {
+      "closed": "Cette enchère est déjà terminée.",
+      "own-listing": "Impossible d'enchérir sur votre propre annonce.",
+      "roster-full": `Effectif déjà au plafond de ${MAX_ROSTER_SIZE} joueurs.`,
+      "too-low": `Plafond trop bas : minimum ${formatMoney(r.minBid || 0)}.`,
+      "insufficient-budget": "Plafond au-delà de votre budget.",
+      "network": "Serveur indisponible, réessayez.",
+    };
+    return [reasons[r.reason] || r.error || "Enchère automatique refusée.", false];
+  }
+  if (r.removed) return ["Enchère automatique arrêtée.", true];
+  return r.leading
+    ? [`Enchère automatique jusqu'à ${formatMoney(max)} : vous êtes en tête.`, true]
+    : [`Enchère automatique enregistrée jusqu'à ${formatMoney(max)}, mais un autre club est déjà prêt à payer plus.`, false];
+}
+async function mkSetAuto(id, off) {
+  const input = document.getElementById(`bid_${id}`);
+  const max = off ? 0 : Math.round(Number(input && input.value) || 0);
+  const r = await setAutoBidFor("transferListings", id, max);
+  const [msg, good] = autoBidMessage(r, max);
+  marketFeedback(msg, good);
+  clearTimeout(marketFeedbackTimer);
+  marketFeedbackTimer = setTimeout(() => marketFeedback("", true), 5000);
+  renderMarcheSection();
+}
+// Ligne « Enchère automatique jusqu'à … · Arrêter » (Marché et Staff).
+function autoBidStatusHtml(max, offAttr) {
+  return `<div class="mk-auto-on">Enchère automatique jusqu'à <b>${escapeHtml(formatMoney(max))}</b> <button type="button" class="mk-auto-off" ${offAttr}>Arrêter</button></div>`;
 }
 
 function renderMarketFilterControls() {
@@ -39118,7 +39345,9 @@ function mkListingCardHtml(l, player, now) {
     action = `<div class="mk-bidrow">` +
         `<input type="number" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100" aria-label="Montant de l'enchère pour ${escapeHtml(player.name)}">` +
         `<button type="button" class="mk-btn mk-btn--primary" data-bid-listing="${l.id}">${st === "lead" ? "Augmenter mon enchère" : "Enchérir"}</button>` +
+        `<button type="button" class="mk-btn mk-btn--outline" data-mk-auto="${l.id}" title="Le montant saisi devient votre plafond : on enchérit pour vous, au minimum, chaque fois qu'un autre club vous dépasse.">${myAutoMaxOf(l) != null ? "Changer le plafond" : "Enchère auto"}</button>` +
       `</div>` +
+      (myAutoMaxOf(l) != null ? autoBidStatusHtml(myAutoMaxOf(l), `data-mk-auto-off="${l.id}"`) : "") +
       `<div class="mk-quick"><button type="button" data-mk-quick="${l.id}" data-v="${minBid}">Minimum</button><button type="button" data-mk-quick="${l.id}" data-v="${plus15}">+15 %</button><button type="button" data-mk-quick="${l.id}" data-v="${Math.max(minBid, value)}">Valeur estimée</button></div>` +
       `<div class="mk-hint ${over ? "warn" : ""}">${over ? `Au-delà de votre budget disponible (${formatMoney(avail)}).` : `Il vous resterait ${formatMoney(avail - minBid)} au minimum.`}</div>`;
   }
@@ -39220,6 +39449,8 @@ function mkPlaceBid(id) {
       "insufficient-budget": "Budget insuffisant pour cette enchère.",
     };
     marketFeedback(reasons[res.reason] || "Enchère refusée.", false);
+  } else if (res.autoOutbid) {
+    marketFeedback("Un autre club avait une enchère automatique plus haute : vous êtes déjà dépassé.", false);
   } else {
     marketFeedback(`Enchère de ${formatMoney(amount)} enregistrée.`, true);
   }
@@ -39229,6 +39460,16 @@ function mkPlaceBid(id) {
   saveMyTeam();
   if (res.ok) {
     const sync = syncMarketBidToServer(id, amount);
+    // Un autre club avait une enchère automatique plus haute : le serveur a
+    // déjà relancé pour lui (voir League._applyAutoBids).
+    if (sync) sync.then(r => {
+      if (r && r.ok && r.data && r.data.autoOutbid) {
+        marketFeedback("Un autre club avait une enchère automatique plus haute : vous êtes déjà dépassé.", false);
+        clearTimeout(marketFeedbackTimer);
+        marketFeedbackTimer = setTimeout(() => marketFeedback("", true), 5000);
+      }
+      if (r && r.ok) myAuctionsRefresh();
+    });
     // Annonce d'un autre championnat (marché mondial, id négatif) : l'état
     // local n'est qu'une copie, le serveur tranche (enchère dépassée entre-
     // temps…) — en cas de refus, message et rechargement de l'état.
@@ -39249,6 +39490,8 @@ document.getElementById("marcheSection").addEventListener("click", (e) => {
   if (!t) return;
   const d = t.dataset;
   if (d.bidListing) { mkPlaceBid(Number(d.bidListing)); return; }
+  if (d.mkAuto) { mkSetAuto(Number(d.mkAuto), false); return; }
+  if (d.mkAutoOff) { mkSetAuto(Number(d.mkAutoOff), true); return; }
   if (d.mkQuick) { const input = document.getElementById(`bid_${d.mkQuick}`); if (input) { input.value = d.v; input.focus(); } return; }
   if (d.mkToggle) {
     const id = Number(d.mkToggle);

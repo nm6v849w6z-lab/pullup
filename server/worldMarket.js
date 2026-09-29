@@ -47,6 +47,20 @@ function refOfBid(league, leagueId, b) {
   return t ? { leagueId, idx: b.bidderIdx, name: t.name } : null;
 }
 
+// Club en tête d'une annonce (référence mondiale), null sans offre.
+function leaderOf(lg, leagueId, l) {
+  if (l.currentBidderIdx == null) return null;
+  if (l.currentBidderIdx === FOREIGN) return { ...(l.currentBidderRef || {}) };
+  return { leagueId, idx: l.currentBidderIdx, name: (lg.teams[l.currentBidderIdx] || {}).name || "?" };
+}
+// Plafonds d'enchère automatique (voir AUTO_BID_FIELDS, engine.js) en
+// références mondiales. Gardés dans l'index (côté serveur uniquement) pour
+// que projectForLeague rende à chacun SON plafond (myAutoMax), jamais celui
+// des autres.
+function autoRefsOf(lg, leagueId, l) {
+  return (l.autoBids || []).map(a => ({ ref: a.bidderIdx === FOREIGN ? { ...(a.bidderRef || {}) } : { leagueId, idx: a.bidderIdx }, max: a.max }));
+}
+
 // Index de toutes les annonces ouvertes du monde. `prev` : index précédent
 // (garde les identifiants globaux stables) ; `leagues` : Map id → League ;
 // `labelOf(entry)` : libellé du championnat (« Division II.1 »).
@@ -66,15 +80,14 @@ function buildIndex(prev, worldLeagues, leagues, now, labelOf) {
       const key = `${e.id}:${l.id}`;
       if (!gids[key]) gids[key] = ++seq;
       alive.add(key);
-      const leader = l.currentBidderIdx == null ? null
-        : (l.currentBidderIdx === FOREIGN ? { ...(l.currentBidderRef || {}) } : { leagueId: e.id, idx: l.currentBidderIdx, name: (lg.teams[l.currentBidderIdx] || {}).name || "?" });
+      const leader = leaderOf(lg, e.id, l);
       entries.push({
         gid: gids[key], leagueId: e.id, country: e.country, label: labelOf(e), listingId: l.id,
         sellerIdx: l.sellerIdx, sellerName: seller.name, sellerHuman: !!seller.isHuman,
         player: leanPlayerRecord(player),
         startPrice: l.startPrice, currentBid: l.currentBid, currentBidder: leader,
         bids: (l.bids || []).map(b => ({ ref: refOfBid(lg, e.id, b), amount: b.amount, at: b.at })).filter(b => b.ref),
-        createdAt: l.createdAt, closesAt: l.closesAt,
+        createdAt: l.createdAt, closesAt: l.closesAt, autoRefs: autoRefsOf(lg, e.id, l),
       });
     });
   });
@@ -114,7 +127,9 @@ function projectForLeague(index, leagueId, teamIdx, now, limit = MARKET_PROJECTI
     }
     g.light.players.push(en.player);
     const localBidder = ref => (isMe(ref) ? teamIdx : (ref && ref.leagueId === leagueId ? ref.idx : FOREIGN));
+    const myAuto = (en.autoRefs || []).find(a => isMe(a.ref));
     return {
+      ...(myAuto ? { myAutoMax: myAuto.max } : {}),
       id: -en.gid, playerId: en.player.id, sellerIdx: g.localIdx,
       startPrice: en.startPrice, currentBid: en.currentBid,
       currentBidderIdx: en.currentBidder ? localBidder(en.currentBidder) : null,
@@ -165,12 +180,33 @@ async function placeForeignBid({ index, leagueId, teamIdx, team, gid, amount, no
   const res = lg.placeForeignBid(en.listingId, { leagueId, idx: teamIdx, name: team.name }, team, amount, now);
   if (!res.ok) return res;
   await saveLeague(lg);
-  const l = res.listing;
-  en.currentBid = l.currentBid;
-  en.currentBidder = { ...l.currentBidderRef };
-  en.bids = (l.bids || []).map(b => ({ ref: refOfBid(lg, en.leagueId, b), amount: b.amount, at: b.at })).filter(b => b.ref);
+  syncEntry(en, lg, res.listing);
   await saveIndex(index);
-  return { ok: true, entry: en };
+  return { ok: true, entry: en, autoOutbid: !!res.autoOutbid };
+}
+
+function syncEntry(en, lg, l) {
+  en.currentBid = l.currentBid;
+  en.currentBidder = leaderOf(lg, en.leagueId, l);
+  en.bids = (l.bids || []).map(b => ({ ref: refOfBid(lg, en.leagueId, b), amount: b.amount, at: b.at })).filter(b => b.ref);
+  en.autoRefs = autoRefsOf(lg, en.leagueId, l);
+}
+
+// Enchère automatique d'un manager sur l'annonce d'un autre championnat
+// (voir League.setAutoBid) : mêmes paramètres que placeForeignBid, `max`
+// au lieu de `amount` (0 = plafond retiré). Renvoie { ok, leading } ou
+// { ok: false, reason, minBid? }.
+async function setForeignAutoBid({ index, leagueId, teamIdx, team, gid, max, now, loadLeague, saveLeague, saveIndex }) {
+  const en = ((index && index.entries) || []).find(x => x.gid === gid);
+  if (!en || en.leagueId === leagueId) return { ok: false, reason: "closed" };
+  const lg = await loadLeague(en.leagueId);
+  if (!lg) return { ok: false, reason: "closed" };
+  const res = lg.setAutoBid("transferListings", en.listingId, null, max, now, { ref: { leagueId, idx: teamIdx, name: team.name }, team });
+  if (!res.ok) return res;
+  await saveLeague(lg);
+  syncEntry(en, lg, res.listing);
+  await saveIndex(index);
+  return { ok: true, leading: res.leading, removed: !!res.removed, entry: en };
 }
 
 // Transferts conclus avec un club d'ailleurs (toutes les ligues en main,
@@ -198,5 +234,5 @@ function resolveForeignTransfers(leagues, now, events = []) {
 
 module.exports = {
   MARKET_GUEST_SELLER_IDX, MARKET_GUEST_BIDDER_IDX, MARKET_PROJECTION_LIMIT,
-  buildIndex, nextForeignClosing, projectForLeague, projectOwnForeignBidders, placeForeignBid, resolveForeignTransfers,
+  buildIndex, nextForeignClosing, projectForLeague, projectOwnForeignBidders, placeForeignBid, setForeignAutoBid, resolveForeignTransfers,
 };

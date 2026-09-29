@@ -1669,6 +1669,29 @@ function minNextBidFor(listing) {
   return listing.currentBid + transferMinIncrement(listing.currentBid);
 }
 
+// =====================================================================
+// ENCHÈRES AUTOMATIQUES (retour utilisateur 2026-09-29 : « pouvoir faire
+// les enchères en automatique : on fixe un seuil et ça enchérit jusqu'à ce
+// seuil si on se fait dépasser » — pour TOUS les clubs, pas seulement
+// Premium : réservée aux payants, ce serait un avantage sportif acheté).
+// Un club fixe un plafond secret sur une annonce (listing.autoBids :
+// [{ bidderIdx, bidderRef?, max, at }], jamais envoyé aux autres clubs, voir
+// server/myAuctions.js:sanitizeAutoBids) ; à chaque nouvelle offre (club
+// humain, CPU, autre championnat), League._applyAutoBids relance au minimum
+// nécessaire pour reprendre la tête, sans dépasser le plafond ni le budget
+// (ni l'effectif plein pour un joueur). Deux plafonds face à face se
+// règlent aussitôt, comme sur eBay : le plus haut l'emporte, au plafond de
+// l'autre + un palier (à égalité, celui qui menait garde la tête). Les
+// offres posées ainsi sont marquées `auto: true` dans listing.bids.
+// =====================================================================
+const AUTO_BID_FIELDS = {
+  transferListings: "player", coachListings: "staff", assistantCoachListings: "staff", analystListings: "staff",
+  recruiterListings: "staff", doctorListings: "staff", physioListings: "staff",
+};
+function autoBidKey(bidderIdx, ref) {
+  return bidderIdx === FOREIGN_BIDDER_IDX ? `w:${ref ? ref.leagueId : "?"}:${ref ? ref.idx : "?"}` : `l:${bidderIdx}`;
+}
+
 // Salaire hebdomadaire courant d'un entraîneur, en fonction de son niveau et
 // du nombre de semaines déjà passées en poste (croissance composée).
 // `baseOverride` (optionnel) : salaire de départ RÉEL de CET entraîneur si
@@ -10627,6 +10650,97 @@ class League {
   // propre joueur), "invalid-bidder", "roster-full" (déjà au plafond
   // d'effectif), "too-low" (sous l'enchère minimale — voir minNextBidFor),
   // "insufficient-budget" (club du joueur uniquement — voir plus bas).
+  // Enchères automatiques (voir AUTO_BID_FIELDS) : plafond effectif d'une
+  // entrée (budget d'un club humain, effectif plein), null = hors jeu. Un
+  // club d'un autre championnat : plafond tel quel (budget vérifié quand il
+  // l'a fixé, puis au transfert, voir resolveForeignTransfers).
+  _autoBidCap(listing, kind, a) {
+    if (a.bidderIdx === FOREIGN_BIDDER_IDX) return a.max;
+    const team = this.teams[a.bidderIdx];
+    if (!team) return null;
+    if (kind === "player" && (a.bidderIdx === listing.sellerIdx || team.players.length >= MAX_ROSTER_SIZE)) return null;
+    return team.isHuman ? Math.min(a.max, Math.floor(team.budget)) : a.max;
+  }
+
+  _recordAutoBid(listing, kind, a, amount, now) {
+    const rounded = Math.round(amount);
+    listing.currentBid = rounded;
+    listing.currentBidderIdx = a.bidderIdx;
+    if (a.bidderIdx === FOREIGN_BIDDER_IDX) {
+      listing.currentBidderRef = { ...a.bidderRef };
+      listing.bids.push({ bidderIdx: a.bidderIdx, bidderRef: { ...a.bidderRef }, amount: rounded, at: now, auto: true });
+    } else {
+      if (kind === "player") listing.currentBidderRef = null;
+      listing.bids.push({ bidderIdx: a.bidderIdx, amount: rounded, at: now, auto: true });
+    }
+  }
+
+  // Fait jouer les plafonds après une nouvelle offre. Renvoie true si le
+  // club en tête a changé.
+  _applyAutoBids(listing, kind, now) {
+    if (!listing || !Array.isArray(listing.autoBids) || !listing.autoBids.length) return false;
+    if (listing.status !== "open" || now >= listing.closesAt) return false;
+    const keyOfLeader = () => (listing.currentBidderIdx == null ? null : autoBidKey(listing.currentBidderIdx, listing.currentBidderRef));
+    const before = keyOfLeader();
+    for (let guard = 0; guard < 20; guard++) {
+      const leaderKey = keyOfLeader();
+      const entries = listing.autoBids.map(a => ({ a, key: autoBidKey(a.bidderIdx, a.bidderRef), cap: this._autoBidCap(listing, kind, a) }))
+        .filter(e => e.cap != null && e.cap > 0);
+      const leader = entries.find(e => e.key === leaderKey) || null;
+      const minBid = minNextBidFor(listing);
+      const challengers = entries.filter(e => e.key !== leaderKey && e.cap >= minBid)
+        .sort((x, y) => y.cap - x.cap || (x.a.at || 0) - (y.a.at || 0));
+      if (!challengers.length) break;
+      const top = challengers[0];
+      if (leader && top.cap <= leader.cap) {
+        // Le plafond du club en tête tient : le challenger monte à son
+        // plafond, le club en tête répond d'un palier (sans dépasser le sien).
+        this._recordAutoBid(listing, kind, top.a, top.cap, now);
+        this._recordAutoBid(listing, kind, leader.a, Math.max(top.cap, Math.min(leader.cap, minNextBidFor(listing))), now);
+        continue;
+      }
+      // Le challenger l'emporte : le club en tête monte d'abord à son plafond.
+      if (leader && leader.cap > (listing.currentBid || 0)) this._recordAutoBid(listing, kind, leader.a, leader.cap, now);
+      const need = minNextBidFor(listing);
+      this._recordAutoBid(listing, kind, top.a, Math.min(top.cap, need), now);
+    }
+    return keyOfLeader() !== before;
+  }
+
+  // Fixe (max > 0) ou retire (max nul) le plafond d'enchère automatique d'un
+  // club sur l'annonce `listingId` du marché `field` (voir AUTO_BID_FIELDS).
+  // `foreign` = { ref: { leagueId, idx, name }, team } pour un club d'un
+  // autre championnat (marché mondial). Renvoie { ok, listing, leading } ou
+  // { ok: false, reason, minBid? } (mêmes raisons que placeBid).
+  setAutoBid(field, listingId, bidderIdx, max, now, foreign = null) {
+    const kind = AUTO_BID_FIELDS[field];
+    const listing = kind ? (this[field] || []).find(l => l.id === listingId) : null;
+    if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
+    const idx = foreign ? FOREIGN_BIDDER_IDX : bidderIdx;
+    const ref = foreign ? { leagueId: foreign.ref.leagueId, idx: foreign.ref.idx, name: foreign.ref.name || (foreign.team && foreign.team.name) } : null;
+    const team = foreign ? foreign.team : this.teams[bidderIdx];
+    if (!team) return { ok: false, reason: "invalid-bidder" };
+    const key = autoBidKey(idx, ref);
+    const others = (listing.autoBids || []).filter(a => autoBidKey(a.bidderIdx, a.bidderRef) !== key);
+    const leaderKey = listing.currentBidderIdx == null ? null : autoBidKey(listing.currentBidderIdx, listing.currentBidderRef);
+    if (!max) {
+      if (others.length) listing.autoBids = others; else delete listing.autoBids;
+      return { ok: true, listing, leading: leaderKey === key, removed: true };
+    }
+    if (typeof max !== "number" || !(max > 0)) return { ok: false, reason: "too-low", minBid: minNextBidFor(listing) };
+    if (kind === "player" && !foreign && listing.sellerIdx === bidderIdx) return { ok: false, reason: "own-listing" };
+    if (kind === "player" && team.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
+    const minMax = leaderKey === key ? (listing.currentBid || 0) : minNextBidFor(listing);
+    if (max < minMax) return { ok: false, reason: "too-low", minBid: minMax };
+    if (team.isHuman && max > team.budget) return { ok: false, reason: "insufficient-budget" };
+    const entry = { bidderIdx: idx, max: Math.round(max), at: now };
+    if (ref) entry.bidderRef = ref;
+    listing.autoBids = others.concat([entry]);
+    this._applyAutoBids(listing, kind, now);
+    const leadingNow = listing.currentBidderIdx != null && autoBidKey(listing.currentBidderIdx, listing.currentBidderRef) === key;
+    return { ok: true, listing, leading: leadingNow };
+  }
+
   placeBid(listingId, bidderIdx, amount, now) {
     const listing = this.transferListings.find(l => l.id === listingId);
     if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
@@ -10648,7 +10762,8 @@ class League {
     listing.currentBidderIdx = bidderIdx;
     listing.currentBidderRef = null; // marché mondial : plus d'enchérisseur d'ailleurs en tête
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "player", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   // Un adversaire CPU est-il intéressé par ce joueur ? Simplification :
@@ -10720,7 +10835,8 @@ class League {
     listing.currentBidderIdx = FOREIGN_BIDDER_IDX;
     listing.currentBidderRef = ref;
     listing.bids.push({ bidderIdx: FOREIGN_BIDDER_IDX, bidderRef: ref, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "player", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   // À appeler à intervalles réguliers côté UI (chargement de la page,
@@ -10803,6 +10919,7 @@ class League {
         listing.currentBidderIdx = idx;
         listing.currentBidderRef = null;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "player", now);
       });
     });
 
@@ -10926,7 +11043,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "staff", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   // Résout une enchère de candidat entraîneur arrivée à échéance. La mise
@@ -10990,6 +11108,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "staff", now);
       });
     });
 
@@ -11109,7 +11228,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "staff", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   // Voir _resolveCoachListing ci-dessus pour le détail du raisonnement (la
@@ -11165,6 +11285,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "staff", now);
       });
     });
 
@@ -11256,7 +11377,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "staff", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   // Voir _resolveCoachListing pour le détail du raisonnement (la mise
@@ -11311,6 +11433,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "staff", now);
       });
     });
 
@@ -11408,7 +11531,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "staff", now);
+    return { ok: true, listing, autoOutbid };
   }
 
   _resolveMedicalListing(role, listing, now) {
@@ -11456,6 +11580,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "staff", now);
       });
     });
 
@@ -11534,7 +11659,8 @@ class League {
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
     listing.bids.push({ bidderIdx, amount: rounded, at: now });
-    return { ok: true, listing };
+    const autoOutbid = this._applyAutoBids(listing, "staff", now);
+    return { ok: true, listing, autoOutbid };
   }
   _resolveAssistantCoachListing(listing, now) {
     listing.status = "closed";
@@ -11571,6 +11697,7 @@ class League {
         listing.currentBid = bidAmount;
         listing.currentBidderIdx = idx;
         listing.bids.push({ bidderIdx: idx, amount: bidAmount, at: now });
+        this._applyAutoBids(listing, "staff", now);
       });
     });
     let openCount = listings.filter(l => l.status === "open").length;
@@ -15367,7 +15494,7 @@ return {
   ASSISTANT_SPECIALTIES, ASSISTANT_WEIGHT_BY_LEVEL, ASSISTANT_BASE_SALARY, assistantAttrWeightsFor,
   MEDICAL_STAFF_ROLES, DOCTOR_INJURY_DURATION_REDUCTION_BY_LEVEL,
   PHYSIO_RECOVERY_BONUS_BY_LEVEL, PHYSIO_INJURY_RISK_MULT_BY_LEVEL,
-  MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, transferPlayerBetweenTeams,
+  MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, AUTO_BID_FIELDS, autoBidKey, transferPlayerBetweenTeams,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,

@@ -648,6 +648,32 @@ function listPlayer(team, teamIndex, league, body, now) {
 // `listingId` est un id numérique (voir uid() côté moteur) — accepté aussi
 // bien en nombre qu'en chaîne numérique (un identifiant peut voyager sous
 // l'une ou l'autre forme selon le client JSON).
+// Annonce telle qu'un club la voit : sans les plafonds d'enchère
+// automatique des autres (listing.autoBids, secrets), avec le sien
+// (myAutoMax). Voir AUTO_BID_FIELDS (engine.js).
+function viewListing(l, teamIndex) {
+  if (!l || !Array.isArray(l.autoBids)) return l;
+  const { autoBids, ...rest } = l;
+  const mine = autoBids.find(a => Engine.autoBidKey(a.bidderIdx, a.bidderRef) === Engine.autoBidKey(teamIndex, null));
+  if (mine) rest.myAutoMax = mine.max;
+  return rest;
+}
+
+// Enchère automatique (retour utilisateur 2026-09-29 : « on fixe un seuil
+// et ça enchérit jusqu'à ce seuil si on se fait dépasser », pour tous) :
+// { market: "transferListings" | "coachListings" | …, listingId, max }
+// (max 0 ou null : plafond retiré). Voir League.setAutoBid.
+function setAutoBid(team, teamIndex, league, body, now) {
+  if (!body || !Engine.AUTO_BID_FIELDS[body.market]) return fail("market invalide.");
+  if ((typeof body.listingId !== "number" && typeof body.listingId !== "string") || body.listingId === "") return fail("listingId requis.");
+  const listingId = typeof body.listingId === "string" && /^-?\d+$/.test(body.listingId) ? Number(body.listingId) : body.listingId;
+  const max = body.max == null ? 0 : body.max;
+  if (typeof max !== "number" || max < 0) return fail("max doit être un nombre positif.");
+  const result = league.setAutoBid(body.market, listingId, teamIndex, max, now);
+  if (!result.ok) return { ...fail(`Enchère automatique refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`), reason: result.reason, minBid: result.minBid || null };
+  return { ok: true, listing: viewListing(result.listing, teamIndex), leading: result.leading, removed: !!result.removed };
+}
+
 function bidOnListing(team, teamIndex, league, body, now) {
   if (!body || (typeof body.listingId !== "number" && typeof body.listingId !== "string") || body.listingId === "") {
     return fail("listingId requis.");
@@ -656,7 +682,7 @@ function bidOnListing(team, teamIndex, league, body, now) {
   if (typeof body.amount !== "number" || !(body.amount > 0)) return fail("amount doit être un nombre positif.");
   const result = league.placeBid(listingId, teamIndex, body.amount, now);
   if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
-  return { ok: true, listing: result.listing };
+  return { ok: true, listing: viewListing(result.listing, teamIndex), autoOutbid: !!result.autoOutbid };
 }
 
 // Marché des entraîneurs (voir League.placeCoachBid) : même forme que
@@ -672,7 +698,7 @@ function bidOnCoachListing(team, teamIndex, league, body, now) {
   if (typeof body.amount !== "number" || !(body.amount > 0)) return fail("amount doit être un nombre positif.");
   const result = league.placeCoachBid(listingId, teamIndex, body.amount, now);
   if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
-  return { ok: true, listing: result.listing };
+  return { ok: true, listing: viewListing(result.listing, teamIndex), autoOutbid: !!result.autoOutbid };
 }
 
 // Salle : agrandissement d'UN palier (voir Team.upgradeArena/nextArenaLevel
@@ -777,7 +803,7 @@ function bidOnAnalystListing(team, teamIndex, league, body, now) {
   if (typeof body.amount !== "number" || !(body.amount > 0)) return fail("amount doit être un nombre positif.");
   const result = league.placeAnalystBid(listingId, teamIndex, body.amount, now);
   if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
-  return { ok: true, listing: result.listing };
+  return { ok: true, listing: viewListing(result.listing, teamIndex), autoOutbid: !!result.autoOutbid };
 }
 
 // Congédiement de l'analyste vidéo — même forme que fireTrainer ci-dessus
@@ -811,7 +837,7 @@ function bidOnRecruiterListing(team, teamIndex, league, body, now) {
   if (typeof body.amount !== "number" || !(body.amount > 0)) return fail("amount doit être un nombre positif.");
   const result = league.placeRecruiterBid(listingId, teamIndex, body.amount, now);
   if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
-  return { ok: true, listing: result.listing };
+  return { ok: true, listing: viewListing(result.listing, teamIndex), autoOutbid: !!result.autoOutbid };
 }
 
 // Congédiement du recruteur — même forme que fireTrainer/fireVideoAnalyst
@@ -835,7 +861,7 @@ function makeMedicalBidAction(role) {
     if (typeof body.amount !== "number" || !(body.amount > 0)) return fail("amount doit être un nombre positif.");
     const result = league.placeMedicalBid(role, listingId, teamIndex, body.amount, now);
     if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
-    return { ok: true, listing: result.listing };
+    return { ok: true, listing: viewListing(result.listing, teamIndex), autoOutbid: !!result.autoOutbid };
   };
 }
 function makeMedicalFireAction(role, label) {
@@ -884,7 +910,7 @@ function bidOnAssistantCoachListing(team, teamIndex, league, body, now) {
   if (typeof body.amount !== "number" || !(body.amount > 0)) return fail("amount doit être un nombre positif.");
   const result = league.placeAssistantCoachBid(listingId, teamIndex, body.amount, now);
   if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
-  return { ok: true, listing: result.listing };
+  return { ok: true, listing: viewListing(result.listing, teamIndex), autoOutbid: !!result.autoOutbid };
 }
 function fireAssistantCoach(team, teamIndex, league, body, now) {
   const result = league.fireTeamAssistantCoach(teamIndex, now);
@@ -1359,7 +1385,7 @@ function submitPronostics(team, teamIndex, league, body, now) {
 
 module.exports = {
   validateOrdersSnapshot,
-  setLineup, setTactics, setTraining, setPlan, setTacticPresets, listPlayer, bidOnListing, bidOnCoachListing,
+  setLineup, setTactics, setTraining, setPlan, setTacticPresets, listPlayer, bidOnListing, bidOnCoachListing, setAutoBid, viewListing,
   upgradeArena, buildArenaSeats, setTicketPrices, upgradeFanShop, fireTrainer,
   bidOnAnalystListing, fireVideoAnalyst, runVideoSession,
   // Académie de jeunes (recruteur + centre de formation + pipeline privé de

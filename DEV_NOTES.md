@@ -43,6 +43,25 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     et au retour sur la page (myAuctionsRefresh) : met à jour les champs
     d'enchère des annonces déjà connues.
   - Test : my_auctions_test.js. RESTE : pousser.
+- **✅ COMMITTÉ, À POUSSER (2026-09-29) — Enchère automatique, pour TOUS les clubs**
+  (retour : « on fixe un seuil et ça enchérit jusqu'à ce seuil si on se fait
+  dépasser », puis « mets l'enchère auto pour tous ») — pas Premium : ce
+  serait un avantage sportif acheté. Moteur (engine.js + miroir html) :
+  AUTO_BID_FIELDS, listing.autoBids [{ bidderIdx, bidderRef?, max, at }],
+  League.setAutoBid / _applyAutoBids (appelé après CHAQUE offre : humaine,
+  CPU, autre championnat ; duel de plafonds réglé aussitôt, le plus haut
+  gagne au plafond de l'autre + un palier, égalité : celui qui menait ;
+  plafond effectif = min(plafond, budget du moment), effectif plein exclu ;
+  offres posées marquées auto: true ; place*Bid renvoient autoOutbid).
+  Serveur : POST /api/market/auto-bid { market, listingId, max } (max 0 =
+  arrêt ; id négatif = autre championnat, WorldMarket.setForeignAutoBid,
+  index : autoRefs, projectForLeague → myAutoMax) ; plafonds des autres
+  JAMAIS envoyés (MyAuctions.sanitizeAutoBids sur /api/save,
+  actions.viewListing sur les réponses d'enchère) ; notification « Plafond
+  dépassé ». Navigateur : bouton « Enchère auto » à côté de « Enchérir »
+  (marché et Staff, le montant saisi devient le plafond), état « Enchère
+  automatique jusqu'à … · Arrêter », « auto jusqu'à … » dans Mes enchères.
+  Test : auto_bid_test.js. RESTE : pousser.
 
 - **✅ COMMITTÉ, À POUSSER (2026-09-29) — Google affiche « Pull Up · Basket
   Manager »** (retour : « il faut avoir Hoop Manager »). Titre du jeu déjà

@@ -832,6 +832,8 @@ const ACTION_ROUTES = {
   "/api/market/list": actions.listPlayer,
   "/api/market/bid": actions.bidOnListing,
   "/api/market/coach-bid": actions.bidOnCoachListing,
+  // Enchère automatique (plafond), tous marchés — voir actions.setAutoBid.
+  "/api/market/auto-bid": actions.setAutoBid,
   "/api/arena": actions.upgradeArena,
   "/api/arena/build-seats": actions.buildArenaSeats,
   "/api/ticket-prices": actions.setTicketPrices,
@@ -1447,6 +1449,8 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           payload.league.transferListings = own.listings.concat(foreign.listings);
           payload.league.guestTeams = (payload.league.guestTeams || []).concat(own.guests, foreign.guests);
         }
+        // Enchères automatiques : plafonds des autres clubs secrets.
+        MyAuctions.sanitizeAutoBids(payload.league, ctx.teamIndex);
         // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
         payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex);
         // Matchs amicaux : seulement les siens, sans la compo de l'adversaire.
@@ -1937,7 +1941,34 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           const closesAt = out.entry.closesAt;
           const cur = nextWorldDeadlineAt.get(multiSavePath);
           if (cur == null || closesAt + 1000 < cur) nextWorldDeadlineAt.set(multiSavePath, closesAt + 1000);
-          sendJson(res, 200, { ok: true, foreign: true, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
+          sendJson(res, 200, { ok: true, foreign: true, autoOutbid: !!out.autoOutbid, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
+          return;
+        }
+        req.__parsedBody = body;
+      }
+      // Enchère automatique sur l'annonce d'un AUTRE championnat (id négatif).
+      if (route.pathname === "/api/market/auto-bid" && req.method === "POST") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const rawId = body && body.listingId;
+        const numId = typeof rawId === "string" && /^-?\d+$/.test(rawId) ? Number(rawId) : rawId;
+        if (ctx.world && body && body.market === "transferListings" && typeof numId === "number" && numId < 0) {
+          const max = body.max == null ? 0 : body.max;
+          if (typeof max !== "number" || max < 0) { sendJson(res, 400, { ok: false, error: "max doit être un nombre positif." }); return; }
+          const index = await store.loadWorldAuxRaw("market", multiSavePath);
+          const out = await World.WorldMarket.setForeignAutoBid({
+            index, leagueId: ctx.leagueId, teamIdx: ctx.teamIndex, team: ctx.league.teams[ctx.teamIndex], gid: -numId, max, now,
+            loadLeague: id => World.loadLeague(ctx.world, id, multiSavePath),
+            saveLeague: lg => store.saveMultiLeague(lg, multiSavePath),
+            saveIndex: ix => store.saveWorldAuxRaw("market", ix, multiSavePath),
+          });
+          if (!out.ok) { sendJson(res, 400, { ok: false, error: `Enchère automatique refusée : ${out.reason}${out.minBid ? ` (minimum ${out.minBid})` : ""}.`, reason: out.reason, minBid: out.minBid || null }); return; }
+          const closesAt = out.entry.closesAt;
+          const cur = nextWorldDeadlineAt.get(multiSavePath);
+          if (cur == null || closesAt + 1000 < cur) nextWorldDeadlineAt.set(multiSavePath, closesAt + 1000);
+          sendJson(res, 200, { ok: true, foreign: true, leading: out.leading, removed: out.removed });
           return;
         }
         req.__parsedBody = body;

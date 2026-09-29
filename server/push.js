@@ -105,9 +105,13 @@ function auctionNotes(league, teamIdx, now, opts = {}) {
         const key = `out:${field}:${l.id}:${l.bids.length}`;
         if (!seen.has(key)) {
           mark(key);
+          // Enchère automatique du club dépassée : son plafond ne suffit plus.
+          const auto = (l.autoBids || []).find(isMe);
           out.push({
-            title: `Enchère dépassée : ${what}`,
-            body: `Nouvelle offre à ${euros(l.currentBid)}, clôture dans ${leftLabel(l.closesAt - now)}. Relancez dès ${euros(Engine().minNextBidFor(l))}.`,
+            title: auto ? `Plafond dépassé : ${what}` : `Enchère dépassée : ${what}`,
+            body: auto
+              ? `Votre enchère automatique (jusqu'à ${euros(auto.max)}) ne suffit plus : offre à ${euros(l.currentBid)}, clôture dans ${leftLabel(l.closesAt - now)}.`
+              : `Nouvelle offre à ${euros(l.currentBid)}, clôture dans ${leftLabel(l.closesAt - now)}. Relancez dès ${euros(Engine().minNextBidFor(l))}.`,
             url: AUCTIONS_URL, tag: `out:${field}:${l.id}`,
           });
         }
