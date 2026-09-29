@@ -3370,6 +3370,7 @@
   }
   .ach-icon{display:grid; place-items:center; width:28px; height:28px; border-radius:8px; background:var(--line-soft); color:var(--ink-faint); flex:none;}
   .ach.on .ach-icon{background:rgba(240,162,60,.15); color:var(--amber);}
+  .team-detail-foreign{font-size:.55em; font-weight:600; color:var(--ink-dim); margin-left:10px; white-space:nowrap;}
   .lg-results{margin-top:20px;}
   .lg-res-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px;}
   .lg-res-card{background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 12px 8px; display:flex; flex-direction:column; gap:6px;}
@@ -27737,6 +27738,7 @@ function showTeamDetail(teamIdx) {
     const activeTabBtn = document.querySelector(".tab-btn.active");
     teamDetailOrigin = { pageId: currentVisiblePageId(), tabKey: activeTabBtn ? activeTabBtn.dataset.tab : null };
   }
+  teamDetailForeign = null;
   teamDetailIdx = teamIdx;
   teamDetailSubView = "apercu"; // repart toujours sur l'Aperçu à l'ouverture (même équipe ou pas)
   teamDetailEffectifView = "general";
@@ -27744,7 +27746,55 @@ function showTeamDetail(teamIdx) {
   showPage("teamDetailSection");
 }
 
+// ---------------------------------------------------------------------
+// Fiche équipe d'un club d'un AUTRE championnat (retour utilisateur
+// 2026-09-29 : « il faut pouvoir cliquer et ouvrir la page équipe des
+// équipes d'un autre championnat [...] ça ouvre l'effectif, pas la page
+// aperçu habituelle ») : le championnat du club est chargé en lecture
+// seule (GET /api/world/team-page, sans rien de privé) et la fiche équipe
+// habituelle est rendue avec lui à la place de `league` le temps du rendu
+// (withTeamDetailLeague), sans club « à soi » (myTeamIndex = -1) ni
+// scouting (aucune caractéristique révélée). Pas d'onglet Analyse (le
+// scouting ne vise que son propre championnat), pas de fiche joueur ni
+// de messagerie depuis cette fiche.
+// ---------------------------------------------------------------------
+let teamDetailForeign = null; // { league, leagueId, label } ou null
+function withTeamDetailLeague(fn) {
+  if (!teamDetailForeign) return fn();
+  const saved = { league, myTeamIndex, scouted: teamA ? teamA.scoutedAttrs : null };
+  league = teamDetailForeign.league;
+  myTeamIndex = -1;
+  if (teamA) teamA.scoutedAttrs = {};
+  try { return fn(); } finally {
+    league = saved.league;
+    myTeamIndex = saved.myTeamIndex;
+    if (teamA) teamA.scoutedAttrs = saved.scouted;
+  }
+}
+async function showForeignTeamDetail(leagueId, teamIdx) {
+  if (!leagueId || (league && league.leagueId === leagueId)) { showTeamDetail(teamIdx); return true; }
+  let data;
+  try { data = await planeteFetch(`/api/world/team-page?league=${encodeURIComponent(leagueId)}`); } catch (e) { return false; }
+  if (!data || !data.league || !data.league.teams || !data.league.teams[teamIdx]) return false;
+  if (data.mine) { showTeamDetail(teamIdx); return true; }
+  const ownTz = league ? league.timeZone : null;
+  let lg;
+  try { lg = leagueFromSave(data.league); } finally { setCalendarTimeZone(ownTz); }
+  if (currentVisiblePageId() !== "teamDetailSection") {
+    const activeTabBtn = document.querySelector(".tab-btn.active");
+    teamDetailOrigin = { pageId: currentVisiblePageId(), tabKey: activeTabBtn ? activeTabBtn.dataset.tab : null };
+  }
+  teamDetailForeign = { league: lg, leagueId, label: data.label || "" };
+  teamDetailIdx = teamIdx;
+  teamDetailSubView = "apercu";
+  teamDetailEffectifView = "general";
+  renderTeamDetail(teamIdx);
+  showPage("teamDetailSection");
+  return true;
+}
+
 function hideTeamDetail() {
+  teamDetailForeign = null;
   const origin = teamDetailOrigin || { pageId: "prepSection", tabKey: "ordres" };
   showPage(origin.pageId);
   if (origin.tabKey) setActiveTab(origin.tabKey);
@@ -27776,11 +27826,35 @@ function teamDetailSubNavHtml() {
     { key: "effectif", label: "Effectif" },
     { key: "calendrier", label: "Calendrier" },
     { key: "analyse", label: "Analyse d'équipe" },
-  ];
+  ].filter(t => !(teamDetailForeign && t.key === "analyse"));
   return `<div class="boxscore-toggle team-detail-subnav">` +
     tabs.map(t => `<button type="button" class="bs-tab${teamDetailSubView === t.key ? " active" : ""}" data-team-detail-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
     `</div>`;
 }
+// Fiche d'un club d'un autre championnat (teamDetailForeign) : les liens
+// équipe restent dans CE championnat, la feuille de match le lit aussi, et
+// les liens joueur ne mènent nulle part (fiche joueur = son championnat).
+document.getElementById("teamDetailContent").addEventListener("click", (e) => {
+  if (!teamDetailForeign) return;
+  const teamLink = e.target.closest("[data-team-idx]");
+  const playerLink = e.target.closest("[data-player-detail]");
+  const box = e.target.closest("[data-boxscore-round]");
+  if (!teamLink && !playerLink && !box) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (box) {
+    withTeamDetailLeague(() => showMatchBoxscore(
+      Number(box.dataset.boxscoreRound), box.dataset.boxscoreCompetition,
+      Number(box.dataset.boxscoreHome), Number(box.dataset.boxscoreAway)));
+  } else if (teamLink) {
+    const idx = Number(teamLink.dataset.teamIdx);
+    if (teamDetailForeign.league.teams[idx] && !teamDetailForeign.league.teams[idx].isGuest) {
+      teamDetailIdx = idx; teamDetailSubView = "apercu"; teamDetailEffectifView = "general";
+      renderTeamDetail(idx);
+      window.scrollTo(0, 0);
+    }
+  }
+}, true);
 document.getElementById("teamDetailContent").addEventListener("click", (e) => {
   const btn = e.target.closest("[data-team-detail-subview]");
   if (!btn) return;
@@ -28943,7 +29017,7 @@ function teamDetailApercuHtml(teamIdx) {
   html += `<nav class="apercu-list" aria-label="Sections de l'équipe">` +
     rowHtml("calendrier", "Résultats &amp; calendrier", resultsLines) +
     rowHtml("effectif", "Effectif", `<span>${effectifLine}</span>`) +
-    rowHtml("analyse", "Analyse d'équipe", `<span>${analyseLine}</span>`) +
+    (teamDetailForeign ? "" : rowHtml("analyse", "Analyse d'équipe", `<span>${analyseLine}</span>`)) +
     `</nav>`;
 
   // --- Pied : palmarès + dernière interview ---
@@ -28971,6 +29045,11 @@ function teamDetailApercuHtml(teamIdx) {
 // entre quatre sous-onglets (voir teamDetailSubNavHtml/teamDetailSubView),
 // chacun sa propre fonction de rendu ci-dessus.
 function renderTeamDetail(teamIdx) {
+  return withTeamDetailLeague(() => renderTeamDetailContent(teamIdx));
+}
+function renderTeamDetailContent(teamIdx) {
+  const foreign = !!teamDetailForeign;
+  if (foreign && teamDetailSubView === "analyse") teamDetailSubView = "apercu";
   const nameHeader = document.getElementById("teamDetailName");
   const holder = document.getElementById("teamDetailContent");
   const team = league.teams[teamIdx];
@@ -28979,11 +29058,12 @@ function renderTeamDetail(teamIdx) {
     holder.innerHTML = "<p class='training-empty'>Cette équipe n'existe plus.</p>";
     return;
   }
-  nameHeader.innerHTML = escapeHtml(team.name) + premiumBadgeHtml(team);
+  nameHeader.innerHTML = escapeHtml(team.name) + premiumBadgeHtml(team) +
+    (foreign ? ` <span class="team-detail-foreign">${nationFlagHtml(league.country || "fr")} ${escapeHtml(teamDetailForeign.label)}</span>` : "");
 
   let html = teamDetailSubNavHtml();
   // Messagerie : écrire au manager de ce club (ligue partagée, club humain).
-  if (msgUi.available && team.isHuman && teamIdx !== myTeamIndex) {
+  if (!foreign && msgUi.available && team.isHuman && teamIdx !== myTeamIndex) {
     html = `<div class="msg-team-cta"><button type="button" data-msg-open="${teamIdx}">Envoyer un message</button></div>` + html;
   }
   if (teamDetailSubView === "calendrier") {
@@ -29007,12 +29087,12 @@ function renderTeamDetail(teamIdx) {
   // fin de cet aller-retour réseau asynchrone plutôt qu'un délai arbitraire.
   if (teamDetailSubView === "calendrier") {
     teamCalendarApplyFilter();
-    window.__lastLiveBannerCheck = refreshTeamDetailLiveBanner(teamIdx);
+    if (!foreign) window.__lastLiveBannerCheck = refreshTeamDetailLiveBanner(teamIdx);
   }
   // Scouting Pro (voir teamDetailAnalyseHtml/refreshScoutingProPanel) :
   // uniquement pour un ADVERSAIRE (jamais sa propre équipe, qui reste sur
   // le rapport tactique gratuit seul, voir teamDetailAnalyseHtml).
-  if (teamDetailSubView === "analyse" && teamIdx !== myTeamIndex) {
+  if (!foreign && teamDetailSubView === "analyse" && teamIdx !== myTeamIndex) {
     window.__lastScoutingProCheck = refreshScoutingProPanel(teamIdx);
   }
 }
@@ -29158,6 +29238,16 @@ const PLANETE_STAT_LABELS = { pts: "Points", reb: "Rebonds", ast: "Passes", eval
 const PLANETE_CHIPS_MAX = 12;
 
 function openPlaneteAt(opts) {
+  // Un club précis : sa fiche équipe habituelle (showForeignTeamDetail),
+  // Planète Hoop sur son championnat seulement si elle est indisponible.
+  if (opts && opts.leagueId && Number.isInteger(opts.clubIdx)) {
+    showForeignTeamDetail(opts.leagueId, opts.clubIdx).then(ok => {
+      if (ok) return;
+      Object.assign(planeteState, { clubIdx: null }, opts);
+      TAB_HANDLERS.planete();
+    });
+    return;
+  }
   Object.assign(planeteState, { clubIdx: null }, opts || {});
   TAB_HANDLERS.planete();
 }
@@ -29313,7 +29403,13 @@ function planeteCountryHtml(st) {
     const l = e.target.closest("[data-ph-league]");
     if (l) { planeteState.leagueId = l.dataset.phLeague; planeteState.clubIdx = null; renderPlaneteSection(); return; }
     const cl = e.target.closest("[data-ph-club]");
-    if (cl) { planeteState.clubIdx = Number(cl.dataset.phClub); renderPlaneteSection(); return; }
+    if (cl) {
+      const idx = Number(cl.dataset.phClub);
+      const fallback = () => { planeteState.clubIdx = idx; renderPlaneteSection(); };
+      if (planeteState.leagueMine) { showTeamDetail(idx); return; }
+      showForeignTeamDetail(planeteState.leagueId, idx).then(ok => { if (!ok) fallback(); });
+      return;
+    }
     if (e.target.closest("[data-ph-close-club]")) { planeteState.clubIdx = null; planeteState.club = null; box.innerHTML = planeteHtml(); return; }
     const s = e.target.closest("[data-ph-stat]");
     if (s) { planeteState.statTab = s.dataset.phStat; box.innerHTML = planeteHtml(); }

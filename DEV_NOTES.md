@@ -124,6 +124,25 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     simulés par le serveur.
   RESTE : revue par l'utilisateur, pousser en prod.
 
+- **✅ POUSSÉ SUR LA BRANCHE claude/elegant-johnson-n0zz21 (2026-09-29),
+  à passer en prod** (`git push origin origin/claude/elegant-johnson-n0zz21:main`
+  puis `…:prod`) :
+  - Fiche joueur : numéro floqué en grand sur le maillot domicile du club
+    (jerseySvgHtml, 8e argument `number`), sous l'avatar, sans libellé ;
+    écart entre les cartes Personnalisation et Mise en vente.
+  - Ligue : « Résultats de la journée N » (lgLastRoundResultsHtml) entre le
+    classement et les leaders, score → feuille de match.
+  - Salle : carte « Votre terrain » en pleine largeur sous la grille.
+  - Inscription sur invitation : BASKET_INVITE_CODE (codes séparés par des
+    virgules ; absente = ouvert), email et 1re connexion Discord, lien
+    `/?invite=CODE` prérempli. **À régler sur Render** (prod) pour activer.
+  - Planète Hoop : un club d'un autre championnat ouvre sa fiche équipe
+    habituelle (showForeignTeamDetail, GET /api/world/team-page nettoyé :
+    jetons, push, tactiques prévues, marché, directs retirés) ; rendu avec
+    son championnat à la place de `league` (withTeamDetailLeague,
+    myTeamIndex = -1, aucun scouting) ; pas d'Analyse, pas de fiche joueur.
+    Même chemin pour la recherche du haut et les clubs invités de la Coupe.
+
 - **⏳ EN ATTENTE DE VALIDATION VISUELLE (2026-09-27) — Émissions sans
   défilement** (assets/hoop-shows/showPlayer.js/.css, stash sandbox) :
   mise à l'échelle façon TV sous 1200×720 (fit), « Ton meilleur joueur »
