@@ -62,8 +62,7 @@ const { MATCH_BROADCAST_DURATION_MS } = require("./calendar.js");
 const HALFTIME_BREAK_MS = 10 * 60 * 1000; // pause après le 2e quart-temps
 const QUARTER_BREAK_MS = 4 * 60 * 1000; // pause après le 1er et le 3e quart-temps
 const OVERTIME_BREAK_MS = 2 * 60 * 1000; // courte pause avant chaque prolongation
-const TIMEOUT_BREAK_MS = 60 * 1000; // temps mort "piquant", quelques-uns par quart-temps
-const TIMEOUTS_PER_QUARTER = 2;
+const TIMEOUT_BREAK_MS = 60 * 1000; // temps mort simulé par le moteur (voir schedulePlayback)
 
 // Rythme du jeu proprement dit (hors pauses) — retour utilisateur (2026-09) :
 // "les secondes sont très longues, 1 seconde dans le jeu est plus longue
@@ -99,23 +98,17 @@ function breakAfterQuarter(q, hasNext) {
 // `airAt` (horaire réel absolu, epoch ms) à chaque événement, et renvoie la
 // liste des pauses (mi-temps, quarts-temps, temps morts) avec leur propre
 // horaire de départ. Pur et déterministe : mêmes événements + même
-// kickoffAt => toujours le même calendrier de diffusion (aucun Math.random
-// ici).
-// `homeName`/`awayName` (retour utilisateur, 2026-09 : "dans les commentaires
-// du match, quand il y a un temps mort [...] il faudrait aussi que ça soit
-// mis dans le texte. temps mort demandé par ....") — permettent d'attribuer
-// chaque temps mort à une équipe ("Temps mort demandé par {équipe}", sans
-// emoji — retiré depuis, retour utilisateur, 2026-09 : "enlève l'emoji") au
-// lieu du texte générique d'avant. Toujours PUR/déterministe (voir le
-// commentaire de schedulePlayback plus haut, "aucun Math.random ici") :
-// l'équipe qui demande le temps mort est celle qui est MENÉE au score à cet
-// instant précis (comportement réaliste — on prend un temps mort pour
-// stopper une série adverse) ; à égalité, alterne entre domicile et
-// extérieur selon le numéro du temps mort dans le quart-temps (1er, 2e...),
-// jamais aléatoire. Par défaut ("Domicile"/"Extérieur") pour les appelants
-// qui ne connaissent pas encore les noms (anciens tests) — computeLiveMatch,
-// le seul appelant réel, passe toujours les vrais noms d'équipe.
-function schedulePlayback(events, kickoffAt, homeName = "Domicile", awayName = "Extérieur") {
+// kickoffAt => toujours le même calendrier de diffusion (aucun hasard ici).
+// Temps morts (audit moteur 2026-09-29) : ce sont désormais ceux que le
+// moteur a réellement simulés (événements `type: "timeout"`, voir
+// MatchEngine.maybeCallTimeout — 2 en 1re mi-temps, 3 en 2e, 1 par
+// prolongation, avec un vrai effet sur le jeu). Chacun devient une pause
+// d'une minute au même endroit du fil, avec le texte du moteur (« Temps mort
+// demandé par … »), l'équipe (home/away) et le nombre de temps morts qui lui
+// restent sur la période (`remaining`). Jusque-là, le serveur en plaçait 2
+// par quart-temps à intervalles réguliers, toujours pour l'équipe menée,
+// sans effet sur le match.
+function schedulePlayback(events, kickoffAt) {
   if (!events.length) {
     return { events: [], pauses: [], totalDurationMs: 0 };
   }
@@ -130,44 +123,28 @@ function schedulePlayback(events, kickoffAt, homeName = "Domicile", awayName = "
   quartersInOrder.forEach((q, qi) => {
     const quarterEvents = events.filter(ev => ev.quarter === q);
     const hasNextQuarter = qi < quartersInOrder.length - 1;
-    // Répartit les TIMEOUTS_PER_QUARTER temps morts à peu près régulièrement
-    // dans ce quart-temps (jamais sur le tout premier ou le tout dernier
-    // événement, pour ne pas les coller à une pause de quart-temps voisine).
-    // Map idxInQuarter -> son numéro d'ordre (1er/2e temps mort du
-    // quart-temps), utilisé ci-dessous pour l'alternance à égalité.
-    const timeoutOrdinalByIndex = new Map();
-    for (let t = 1; t <= TIMEOUTS_PER_QUARTER; t++) {
-      const pos = Math.round((t / (TIMEOUTS_PER_QUARTER + 1)) * (quarterEvents.length - 1));
-      if (pos > 0 && pos < quarterEvents.length - 1) timeoutOrdinalByIndex.set(pos, t);
-    }
 
     quarterEvents.forEach((ev, idxInQuarter) => {
-      scheduled.push({ ...ev, airAt: kickoffAt + cursor });
+      if (ev.type === "timeout") {
+        pauses.push({
+          kind: "timeout", team: ev.team === "A" ? "home" : "away",
+          label: ev.text, remaining: ev.remaining, quarter: ev.quarter,
+          airAt: kickoffAt + cursor, durationMs: TIMEOUT_BREAK_MS,
+        });
+        cursor += TIMEOUT_BREAK_MS;
+      } else {
+        scheduled.push({ ...ev, airAt: kickoffAt + cursor });
+      }
 
       const nextInQuarter = quarterEvents[idxInQuarter + 1];
       const deltaSec = nextInQuarter
         ? Math.max(0, clockSecondsFromStr(ev.clock) - clockSecondsFromStr(nextInQuarter.clock))
         : 0;
+      // Un temps mort n'ajoute pas de plancher : sa pause d'une minute
+      // sépare déjà les deux actions qui l'entourent.
+      if (ev.type === "timeout" && deltaSec === 0) return;
       const gapMs = Math.max(MIN_EVENT_GAP_MS, deltaSec * SECONDS_SCALE_MS);
       cursor += gapMs;
-
-      if (timeoutOrdinalByIndex.has(idxInQuarter)) {
-        const scoreNow = ev.score || { A: 0, B: 0 };
-        const ordinal = timeoutOrdinalByIndex.get(idxInQuarter);
-        let callingTeam;
-        if (scoreNow.A < scoreNow.B) callingTeam = "home";
-        else if (scoreNow.A > scoreNow.B) callingTeam = "away";
-        else callingTeam = (ordinal % 2 === 1) ? "home" : "away";
-        const callingTeamName = callingTeam === "home" ? homeName : awayName;
-        pauses.push({
-          kind: "timeout", team: callingTeam,
-          // Retour utilisateur (2026-09) : "enlève l'emoji" (sur la
-          // banderole/le fil de commentaires de temps mort).
-          label: `Temps mort demandé par ${callingTeamName}`,
-          airAt: kickoffAt + cursor, durationMs: TIMEOUT_BREAK_MS,
-        });
-        cursor += TIMEOUT_BREAK_MS;
-      }
     });
 
     const brk = breakAfterQuarter(q, hasNextQuarter);
@@ -280,7 +257,7 @@ function computeLiveMatchForTeams(Engine, home, away, round, homeIdx, awayIdx, k
   // ligue privée. Mesuré : ≈60 % de victoires à domicile entre clubs égaux.
   const engine = new Engine.MatchEngine(home, away, { homeAdvantage: true });
   const result = engine.simulate();
-  const { events, pauses, totalDurationMs } = schedulePlayback(result.events, kickoffAt, home.name, away.name);
+  const { events, pauses, totalDurationMs } = schedulePlayback(result.events, kickoffAt);
 
   return {
     round, kickoffAt, homeIdx, awayIdx, competition,
@@ -297,6 +274,8 @@ function computeLiveMatchForTeams(Engine, home, away, round, homeIdx, awayIdx, k
     // même survie à la diffusion en direct.
     quarterScores: { home: result.quarterScores.A, away: result.quarterScores.B },
     tacticsUsed,
+    // Graine du match (voir MatchEngine.simulate) : rejouer à l'identique.
+    seed: result.seed,
     events, pauses, totalDurationMs,
     boxScoreA: result.boxScoreA, boxScoreB: result.boxScoreB,
   };
@@ -412,13 +391,14 @@ function finalizeCupRound(Engine, league) {
     const key = cupLiveMatchKey(round.index, m.home, m.away);
     const live = league.liveMatches && league.liveMatches[key];
 
-    let scoreHome, scoreAway, forfeit, quarterScores, tacticsUsed;
+    let scoreHome, scoreAway, forfeit, quarterScores, tacticsUsed, seed = null;
     if (live) {
       scoreHome = live.finalScore.home;
       scoreAway = live.finalScore.away;
       forfeit = live.forfeit;
       quarterScores = live.quarterScores || null;
       tacticsUsed = live.tacticsUsed || null;
+      seed = live.seed != null ? live.seed : null;
       archiveReplay(league, key);
       delete league.liveMatches[key];
     } else {
@@ -437,6 +417,7 @@ function finalizeCupRound(Engine, league) {
       forfeit = sim.forfeit;
       quarterScores = sim.quarterScores;
       tacticsUsed = sim.tacticsUsed;
+      seed = sim.seed;
     }
     // Journal de matchs (voir finalizeRound ci-dessus pour le même principe
     // côté championnat) : un match de coupe compte aussi pour les stats de
@@ -445,7 +426,7 @@ function finalizeCupRound(Engine, league) {
     // chaque fois" — chaque match réellement simulé, coupe comprise, voir
     // recordMatchStatsAndAwardMvp/awardMatchMvp côté moteur).
     if (!forfeit) {
-      recordMatchStatsAndAwardMvp(home, away, round.index, "cup", undefined, quarterScores, tacticsUsed);
+      recordMatchStatsAndAwardMvp(home, away, round.index, "cup", undefined, quarterScores, tacticsUsed, seed);
     }
     league.recordCupMatchResult(matchIndex, scoreHome, scoreAway, forfeit);
 
@@ -559,13 +540,14 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
     const key = liveMatchKey(round, m.home, m.away);
     const live = league.liveMatches && league.liveMatches[key];
 
-    let scoreHome, scoreAway, forfeit, quarterScores, tacticsUsed;
+    let scoreHome, scoreAway, forfeit, quarterScores, tacticsUsed, seed = null;
     if (live) {
       scoreHome = live.finalScore.home;
       scoreAway = live.finalScore.away;
       forfeit = live.forfeit;
       quarterScores = live.quarterScores || null;
       tacticsUsed = live.tacticsUsed || null;
+      seed = live.seed != null ? live.seed : null;
       archiveReplay(league, key);
       delete league.liveMatches[key];
     } else {
@@ -581,6 +563,7 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
       forfeit = sim.forfeit;
       quarterScores = sim.quarterScores;
       tacticsUsed = sim.tacticsUsed;
+      seed = sim.seed;
     }
 
     // Journal de matchs (voir le même principe côté finalizeRound ci-dessous)
@@ -589,7 +572,7 @@ function finalizePlayoffRound(Engine, league, now = Date.now()) {
     // "championship" (voir le grand commentaire en tête de ce bloc) : jamais
     // un tag "playoff" séparé ici.
     if (!forfeit) {
-      recordMatchStatsAndAwardMvp(home, away, round, "championship", now, quarterScores, tacticsUsed);
+      recordMatchStatsAndAwardMvp(home, away, round, "championship", now, quarterScores, tacticsUsed, seed);
     }
 
     league.recordPlayoffGameResult(m.seriesId, m.home, m.away, scoreHome, scoreAway, now);
@@ -716,13 +699,14 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
     const key = liveMatchKey(round, m.home, m.away);
     const live = league.liveMatches && league.liveMatches[key];
 
-    let scoreHome, scoreAway, forfeit, quarterScores, tacticsUsed;
+    let scoreHome, scoreAway, forfeit, quarterScores, tacticsUsed, seed = null;
     if (live) {
       scoreHome = live.finalScore.home;
       scoreAway = live.finalScore.away;
       forfeit = live.forfeit;
       quarterScores = live.quarterScores || null;
       tacticsUsed = live.tacticsUsed || null;
+      seed = live.seed != null ? live.seed : null;
       archiveReplay(league, key);
       delete league.liveMatches[key];
     } else {
@@ -740,6 +724,7 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
       forfeit = sim.forfeit;
       quarterScores = sim.quarterScores;
       tacticsUsed = sim.tacticsUsed;
+      seed = sim.seed;
     }
 
     // Voir la déclaration de showResults plus haut — jamais pour un forfait
@@ -757,10 +742,10 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
     // matchLog pour l'affichage du score par quart-temps sur la feuille de
     // match (voir boxscoreRowsFromMatchLog/showMatchBoxscore côté client).
     if (!forfeit) {
-      recordMatchStatsAndAwardMvp(home, away, round, "championship", now, quarterScores, tacticsUsed);
+      recordMatchStatsAndAwardMvp(home, away, round, "championship", now, quarterScores, tacticsUsed, seed);
     }
 
-    league.recordResult(round, m.home, m.away, scoreHome, scoreAway);
+    league.recordResult(round, m.home, m.away, scoreHome, scoreAway, seed);
     feedRoundResults.push({ home: home.name, away: away.name, homePts: scoreHome, awayPts: scoreAway });
 
     // Derby contre son rival du championnat (League.isDerbyMatch, saison
@@ -951,6 +936,9 @@ function viewLiveMatchForTeam(league, teamIndex) {
       forfeit: entry.forfeit, finalScore: entry.finalScore,
       events: entry.events, pauses: entry.pauses, totalDurationMs: entry.totalDurationMs,
       boxScoreA: entry.boxScoreA, boxScoreB: entry.boxScoreB,
+      // Graine du match (voir computeLiveMatchForTeams) : le navigateur s'en
+      // sert pour savoir que les temps morts viennent du moteur.
+      seed: entry.seed,
     };
   }
 
@@ -988,6 +976,7 @@ function viewLiveMatchForTeam(league, teamIndex) {
     forfeit: entry.forfeit, finalScore: entry.finalScore,
     events, pauses: entry.pauses, totalDurationMs: entry.totalDurationMs,
     boxScoreA: entry.boxScoreB, boxScoreB: entry.boxScoreA,
+    seed: entry.seed,
   };
 }
 
@@ -1013,7 +1002,7 @@ function liveMatchesLiteFor(league) {
 }
 
 module.exports = {
-  HALFTIME_BREAK_MS, QUARTER_BREAK_MS, OVERTIME_BREAK_MS, TIMEOUT_BREAK_MS, TIMEOUTS_PER_QUARTER,
+  HALFTIME_BREAK_MS, QUARTER_BREAK_MS, OVERTIME_BREAK_MS, TIMEOUT_BREAK_MS,
   SECONDS_SCALE_MS, MIN_EVENT_GAP_MS,
   archiveReplay, schedulePlayback, liveMatchKey, computeLiveMatch, computeLiveMatchForTeams, ensureLiveMatchStarted, finalizeRound, viewLiveMatchForTeam,
   liveMatchesLiteFor,

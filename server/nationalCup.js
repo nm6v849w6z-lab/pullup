@@ -192,7 +192,7 @@ function step({ Engine, Calendar, LiveMatch }, cup, leagues, refLeague, now, eve
       const hasHuman = home.isHuman || away.isHuman;
       if (hasHuman && !late) {
         const live = LiveMatch.computeLiveMatchForTeams(Engine, home, away, round.index, m.home.idx, m.away.idx, kickoff, "cup");
-        m.result = { scoreHome: live.finalScore.home, scoreAway: live.finalScore.away, forfeit: live.forfeit, quarterScores: live.quarterScores, tacticsUsed: live.tacticsUsed };
+        m.result = { scoreHome: live.finalScore.home, scoreAway: live.finalScore.away, forfeit: live.forfeit, quarterScores: live.quarterScores, tacticsUsed: live.tacticsUsed, seed: live.seed };
         // Diffusion déposée dans la ligue de chaque manager concerné.
         [["home", home, m.home, away, m.away], ["away", away, m.away, home, m.home]].forEach(([side, team, ref, opp, oppRef]) => {
           if (!team.isHuman) return;
@@ -212,8 +212,8 @@ function step({ Engine, Calendar, LiveMatch }, cup, leagues, refLeague, now, eve
         });
       } else {
         const sim = Engine.simulateOrForfeit(home, away, kickoff);
-        m.result = { scoreHome: sim.scoreHome, scoreAway: sim.scoreAway, forfeit: sim.forfeit, quarterScores: sim.quarterScores || null, tacticsUsed: sim.tacticsUsed || null };
-        if (!sim.forfeit) Engine.recordMatchStatsAndAwardMvp(home, away, round.index, "cup", kickoff, m.result.quarterScores, m.result.tacticsUsed);
+        m.result = { scoreHome: sim.scoreHome, scoreAway: sim.scoreAway, forfeit: sim.forfeit, quarterScores: sim.quarterScores || null, tacticsUsed: sim.tacticsUsed || null, seed: sim.seed };
+        if (!sim.forfeit) Engine.recordMatchStatsAndAwardMvp(home, away, round.index, "cup", kickoff, m.result.quarterScores, m.result.tacticsUsed, m.result.seed);
         m.statsRecorded = true;
       }
       m.started = true;
@@ -225,7 +225,7 @@ function step({ Engine, Calendar, LiveMatch }, cup, leagues, refLeague, now, eve
       const home = teamOf(m.home), away = teamOf(m.away);
       const r = m.result;
       if (!m.statsRecorded && home && away && !r.forfeit) {
-        Engine.recordMatchStatsAndAwardMvp(home, away, round.index, "cup", kickoff, r.quarterScores, r.tacticsUsed);
+        Engine.recordMatchStatsAndAwardMvp(home, away, round.index, "cup", kickoff, r.quarterScores, r.tacticsUsed, r.seed);
       }
       m.statsRecorded = true;
       const totalHome = r.scoreHome + (r.forfeit ? 0 : m.handicap.home);
@@ -326,7 +326,7 @@ function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events 
       sc.result = { scoreHome: home ? Engine.FORFEIT_SCORE : 0, scoreAway: away ? Engine.FORFEIT_SCORE : 0, forfeit: true, quarterScores: null };
     } else if ((home.isHuman || away.isHuman) && !late) {
       const live = LiveMatch.computeLiveMatchForTeams(Engine, home, away, SUPERCUP_ROUND, sc.home.idx, sc.away.idx, sc.at, "cup");
-      sc.result = { scoreHome: live.finalScore.home, scoreAway: live.finalScore.away, forfeit: live.forfeit, quarterScores: live.quarterScores };
+      sc.result = { scoreHome: live.finalScore.home, scoreAway: live.finalScore.away, forfeit: live.forfeit, quarterScores: live.quarterScores, seed: live.seed };
       [["home", home, sc.home, away, sc.away], ["away", away, sc.away, home, sc.home]].forEach(([side, team, ref, opp, oppRef]) => {
         if (!team.isHuman) return;
         const lg = leagues.get(ref.leagueId);
@@ -345,7 +345,7 @@ function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events 
       });
     } else {
       const sim = Engine.simulateOrForfeit(home, away, sc.at);
-      sc.result = { scoreHome: sim.scoreHome, scoreAway: sim.scoreAway, forfeit: sim.forfeit, quarterScores: sim.quarterScores || null };
+      sc.result = { scoreHome: sim.scoreHome, scoreAway: sim.scoreAway, forfeit: sim.forfeit, quarterScores: sim.quarterScores || null, seed: sim.seed };
     }
     sc.started = true;
     events.push({ type: "super-cup-kickoff", country: sc.country, season: sc.season });

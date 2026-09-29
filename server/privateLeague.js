@@ -296,6 +296,7 @@ function simulatePrivateLeagueMatch(Engine, league, lp, match, now) {
     match.scoreAway = result.finalScore.B;
     match.forfeit = null;
     match.quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
+    match.seed = result.seed;
     match.boxScoreHome = compactBoxScore(result.boxScoreA);
     match.boxScoreAway = compactBoxScore(result.boxScoreB);
     return;

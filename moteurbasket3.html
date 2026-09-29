@@ -34442,8 +34442,10 @@ function hmLiveOnPause(pause) {
     const clockEl = document.getElementById("clockDisplay");
     hmLive.events.push({
       id: ++hmLive.seq, type: "timeout", team: pause.team === "home" ? 0 : pause.team === "away" ? 1 : null,
-      quarter: hmLive.quarter, clock: clockEl ? clockSecondsFromStr(clockEl.textContent) : 0,
+      quarter: pause.quarter || hmLive.quarter, clock: clockEl ? clockSecondsFromStr(clockEl.textContent) : 0,
       text: pause.label, score: null, highlight: true, toast: pause.label,
+      // Temps morts restants sur la période (moteur, depuis le 2026-09-29).
+      remaining: typeof pause.remaining === "number" ? pause.remaining : null,
     });
     hmLiveSchedule();
   } catch (e) { console.warn("hmLiveOnPause", e); }
@@ -34463,6 +34465,21 @@ function hmLiveOnTick() {
   const half = hmLiveHalftime();
   const key = (clockEl ? clockEl.textContent : "") + "|" + (half ? half.resumeIn : "");
   if (key !== hmLive.tickKey) { hmLive.tickKey = key; hmLiveSchedule(); }
+}
+
+// Pastilles de temps morts du bandeau (temps morts simulés par le moteur,
+// voir MatchEngine.maybeCallTimeout : 2 en 1re mi-temps, 3 en 2e, 1 par
+// prolongation). Un direct d'avant cette règle (ni graine ni `remaining`
+// sur ses pauses) n'affiche rien, comme avant.
+function hmLiveTimeouts(t) {
+  const pauses = (hmLive.match && hmLive.match.pauses) || [];
+  if (!pauses.some(p => p.kind === "timeout" && typeof p.remaining === "number") && hmLive.match.seed == null) return { timeoutsLeft: 0, timeoutsTotal: 0 };
+  const q = hmLive.quarter;
+  const period = x => (x <= 2 ? 1 : x <= 4 ? 2 : x);
+  const total = q <= 2 ? 2 : q <= 4 ? 3 : 1;
+  const last = hmLive.events.filter(e => e.type === "timeout" && e.team === t && period(e.quarter) === period(q)).pop();
+  const left = last && typeof last.remaining === "number" ? last.remaining : total - (last ? 1 : 0);
+  return { timeoutsLeft: Math.max(0, left), timeoutsTotal: total };
 }
 
 function hmLiveHalftime() {
@@ -34608,7 +34625,7 @@ function hmLiveBuildState() {
       score: total[t],
       quarterScores: quarterScores[t],
       teamFouls: hmLive.fouls.filter(f => f.team === t && f.quarter === hmLive.quarter).length,
-      timeoutsLeft: 0, timeoutsTotal: 0,
+      ...hmLiveTimeouts(t),
       color: dress.colors[t],
       logo: dress.logos[t],
       mine: key === "A",

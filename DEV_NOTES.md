@@ -32,6 +32,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   Jeu intérieur. Miroir engine.js ⇄ moteurbasket3.html, en.js,
   training_table_test.js.
 
+- **🟡 CODÉ, À FUSIONNER (2026-09-29) — Transmettre le club d'un bêta-testeur à un
+  remplaçant** (« j'ai des beta testers qui ne sont pas suffisamment dispo
+  donc je vais les remplacer » ; choix : club transmis tel quel, ancien
+  compte supprimé). Nouvelle route POST /api/admin/accounts/transfer-club
+  (X-Admin-Token, {club, newName?, leagueId?}) dans server/accountRoutes.js :
+  nouveau jeton/lien privé (l'ancien ne marche plus), renommage (références
+  par nom mises à jour : enchères d'ailleurs, amicaux entre ligues, coupes),
+  tutoriel d'accueil relancé, trigramme/nom de salle par défaut, compte(s)
+  de l'ancien testeur supprimé(s). Test : server/transfer_club_test.js
+  (vert, ainsi que accounts, account_security, world, inactive_manager,
+  index). Poussé sur la branche claude/upbeat-mccarthy-rarl9a. RESTE :
+  fusionner, déployer, puis appeler la route pour chaque testeur remplacé.
+
 - **🟡 CODÉ, À POUSSER (2026-09-29) — Plus de carrière solo : le jeu est
   uniquement en ligne** (retour : « le jeu n'a pas à être un jeu solo mais
   un jeu online contre d'autres managers, même seul face à 9 bots ») —
@@ -71,10 +84,45 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   50 / mi-distance 42 / 3 pts 32 %, OREB 28 %, 20 LF, domicile ≈57-63 %.
   Tests ajoutés : engine_invariants_test.js (cas limites, invariants),
   engine_balance_test.js (A–H + tactiques, seuils larges).
-  RESTE (voir le doc, section Priorités) : graine par match
-  (reproductibilité), recalibrage admin des clubs IA des ligues déjà
-  créées (toujours ≈63), rotation 25 → 15-20 changements, temps morts
-  simulés, ids de joueurs dans les événements, plancher de eff().
+  RESTE (voir le doc, section Priorités) : recalibrage admin des clubs
+  IA des ligues déjà créées (toujours ≈63), ids de joueurs dans les
+  événements, plancher de eff(), exclusions pour 5 fautes (0,05/équipe),
+  Isolation/Box and one avec une vraie star, mesure des 6 réglages
+  « confirmés », poids du Mental (Vision, Vitesse…).
+
+- **🟡 CODÉ, BRANCHE claude/vibrant-curie-xbaxxw (2026-09-29) — Moteur :
+  graine, temps morts, rotation, fins de match** (priorités 1, 4, 5, 6 de
+  l'audit) :
+  - Graine par match : tout le hasard de engine.js passe par rand01()
+    (Math.random hors match, mulberry32 pendant MatchEngine.simulate) ;
+    `seed` renvoyée par simulate()/simulateOrForfeit, stockée dans le
+    journal de match des joueurs (matchLog[].seed), league.results, les
+    directs (liveMatches[].seed, donc les replays), Coupe nationale,
+    Supercoupe, amicaux, ligues privées. Rejouer = état d'avant-match +
+    même `now` + `new MatchEngine(a, b, { homeAdvantage, seed })`. LIMITE :
+    l'état d'avant-match des équipes n'est pas stocké (il faut une
+    sauvegarde d'avant le match pour rejouer un signalement).
+  - Temps morts simulés (MatchEngine.maybeCallTimeout) : FIBA 2/3/1,
+    appelés sur série adverse de 7-0, en fin de match (menée, ballon
+    avancé ≈5 s), en fin de mi-temps (préparation) ou « tactique » (rare) ;
+    effets : fatigue −2,5 pour les 10 sur le terrain, tilt effacé,
+    combinaison préparée (tir +3 pts de %, pertes −2). ≈2,5 par équipe.
+    server/liveMatch.js : les pauses « timeout » viennent de ces
+    événements (plus de temps morts inventés), avec `remaining` ;
+    navigateur (moteurbasket3.html, hmLiveTimeouts) : pastilles du
+    bandeau alimentées.
+  - Rotation : relais du remplaçant 4-7 min, titulaire revenu rejoue
+    11-17 min → 26 → ≈20 changements/équipe, cinq majeur ≈28 min.
+  - Fin de match : l'équipe menée joue vite (7-14 s) dans les 2 dernières
+    minutes, cherche le 3 pts à −3, garde le dernier tir (≤24 s, égalité
+    ou −1 à −3), faute intentionnelle à −1/−3 seulement sous 24 s (fenêtre
+    60 s sinon), tir au buzzer < 4 s plafonné à 18 %. Prolongations ≈2 %
+    → ≈4-5 %, matchs finis à ≤3 pts ≈14 % → ≈16 %.
+  - Test : engine_seed_timeouts_test.js ; liveMatch_test.js adapté.
+  - Le moteur miroir de moteurbasket3.html (MatchEngine du navigateur)
+    n'est PAS mis à jour : le jeu est uniquement en ligne, les matchs sont
+    simulés par le serveur.
+  RESTE : revue par l'utilisateur, pousser en prod.
 
 - **⏳ EN ATTENTE DE VALIDATION VISUELLE (2026-09-27) — Émissions sans
   défilement** (assets/hoop-shows/showPlayer.js/.css, stash sandbox) :

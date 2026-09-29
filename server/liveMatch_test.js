@@ -17,7 +17,7 @@
 const Engine = require("../engine.js");
 const { MATCH_BROADCAST_DURATION_MS } = require("./calendar.js");
 const {
-  HALFTIME_BREAK_MS, QUARTER_BREAK_MS, TIMEOUT_BREAK_MS, TIMEOUTS_PER_QUARTER,
+  HALFTIME_BREAK_MS, QUARTER_BREAK_MS, TIMEOUT_BREAK_MS,
   SECONDS_SCALE_MS, MIN_EVENT_GAP_MS,
   schedulePlayback, computeLiveMatch, ensureLiveMatchStarted, finalizeRound, liveMatchKey,
 } = require("./liveMatch.js");
@@ -34,12 +34,22 @@ function fmtClock(sec) {
 // 2026-09 — qui rend le rythme proportionnel aux secondes de jeu écoulées) :
 // N événements par quart-temps, leur chrono décroissant régulièrement de
 // 10:00 à 0:00, 4 quarts-temps, pas de prolongation.
-function fakeEvents(perQuarter = 30) {
+// `timeouts` : temps morts simulés par le moteur (type "timeout", même
+// chrono que l'action qui précède), insérés après l'événement `afterIndex`
+// du quart-temps `quarter`.
+const FAKE_TIMEOUTS = [
+  { quarter: 2, afterIndex: 10, team: "A", remaining: 1 },
+  { quarter: 4, afterIndex: 20, team: "B", remaining: 2 },
+];
+function fakeEvents(perQuarter = 30, timeouts = []) {
   const events = [];
   for (let q = 1; q <= 4; q++) {
     for (let i = 0; i < perQuarter; i++) {
       const clockSec = Math.round(600 - (i * 600) / perQuarter);
       events.push({ quarter: q, clock: fmtClock(clockSec), text: `Event ${q}-${i}`, score: { A: 0, B: 0 } });
+      timeouts.filter(t => t.quarter === q && t.afterIndex === i).forEach(t => {
+        events.push({ quarter: q, clock: fmtClock(clockSec), text: `Temps mort demandé par ${t.team}`, score: { A: 0, B: 0 }, type: "timeout", team: t.team, remaining: t.remaining });
+      });
     }
   }
   return events;
@@ -76,7 +86,7 @@ const KICKOFF = Date.UTC(2026, 8, 9, 19, 0, 0); // un mercredi 19h arbitraire
 // ---------------------------------------------------------------------
 {
   const perQuarter = 30;
-  const { events, pauses, totalDurationMs } = schedulePlayback(fakeEvents(perQuarter), KICKOFF);
+  const { events, pauses, totalDurationMs } = schedulePlayback(fakeEvents(perQuarter, FAKE_TIMEOUTS), KICKOFF);
 
   const quarterBreaks = pauses.filter(p => p.kind === "quarter-break");
   const halftimes = pauses.filter(p => p.kind === "halftime");
@@ -84,7 +94,9 @@ const KICKOFF = Date.UTC(2026, 8, 9, 19, 0, 0); // un mercredi 19h arbitraire
   const pauseBudgetMs = quarterBreaks.reduce((s, p) => s + p.durationMs, 0)
     + halftimes.reduce((s, p) => s + p.durationMs, 0)
     + timeouts.reduce((s, p) => s + p.durationMs, 0);
-  const expectedTotal = expectedPlayMs(perQuarter) + pauseBudgetMs;
+  // Chaque temps mort ajoute le plancher MIN_EVENT_GAP_MS entre l'action
+  // qui le précède et lui (même chrono), en plus de sa minute de pause.
+  const expectedTotal = expectedPlayMs(perQuarter) + pauseBudgetMs + FAKE_TIMEOUTS.length * MIN_EVENT_GAP_MS;
 
   console.log(`Durée totale de la diffusion : ${(totalDurationMs / 60000).toFixed(1)} min (attendue ${(expectedTotal / 60000).toFixed(1)} min, plafond de sécurité ${MATCH_BROADCAST_DURATION_MS / 60000} min).`);
   if (totalDurationMs !== expectedTotal) {
@@ -95,15 +107,25 @@ const KICKOFF = Date.UTC(2026, 8, 9, 19, 0, 0); // un mercredi 19h arbitraire
   }
   console.log("✅ La diffusion complète dure exactement le temps de jeu proportionnel aux secondes écoulées + le budget de pauses, toujours bien en-deçà du délai de sécurité (1h30).");
 
-  // 3 pauses de quart-temps (après Q1, Q2=mi-temps, Q3) + 2 temps morts par
-  // quart-temps × 4 quarts-temps = 8 temps morts.
+  // 3 pauses de quart-temps (après Q1, Q2=mi-temps, Q3) + exactement les
+  // temps morts simulés par le moteur (plus aucun temps mort inventé).
   if (quarterBreaks.length !== 2) throw new Error(`❌ 2 pauses de quart-temps attendues (après Q1 et Q3), obtenu ${quarterBreaks.length}.`);
   if (halftimes.length !== 1) throw new Error(`❌ Exactement 1 mi-temps attendue (après Q2), obtenu ${halftimes.length}.`);
-  if (timeouts.length !== TIMEOUTS_PER_QUARTER * 4) throw new Error(`❌ ${TIMEOUTS_PER_QUARTER * 4} temps morts attendus (${TIMEOUTS_PER_QUARTER}/quart-temps × 4), obtenu ${timeouts.length}.`);
+  if (timeouts.length !== FAKE_TIMEOUTS.length) throw new Error(`❌ ${FAKE_TIMEOUTS.length} temps morts attendus (ceux du moteur), obtenu ${timeouts.length}.`);
+  if (events.some(ev => ev.type === "timeout")) throw new Error("❌ Un temps mort doit devenir une pause, pas rester un événement du fil.");
+  FAKE_TIMEOUTS.forEach((t, i) => {
+    const p = timeouts[i];
+    if (p.team !== (t.team === "A" ? "home" : "away") || p.remaining !== t.remaining || p.label !== `Temps mort demandé par ${t.team}`) {
+      throw new Error(`❌ Temps mort ${i + 1} mal repris du moteur : ${JSON.stringify(p)}`);
+    }
+  });
+  if (schedulePlayback(fakeEvents(perQuarter), KICKOFF).pauses.some(p => p.kind === "timeout")) {
+    throw new Error("❌ Sans temps mort simulé par le moteur, la diffusion ne doit plus en inventer.");
+  }
   halftimes.forEach(h => { if (h.durationMs !== HALFTIME_BREAK_MS) throw new Error("❌ La mi-temps devrait durer HALFTIME_BREAK_MS."); });
   quarterBreaks.forEach(b => { if (b.durationMs !== QUARTER_BREAK_MS) throw new Error("❌ Une pause de quart-temps devrait durer QUARTER_BREAK_MS."); });
   timeouts.forEach(t => { if (t.durationMs !== TIMEOUT_BREAK_MS) throw new Error("❌ Un temps mort devrait durer TIMEOUT_BREAK_MS."); });
-  console.log(`✅ Une vraie mi-temps (après Q2), une vraie pause après Q1 et après Q3, et ${timeouts.length} temps morts "piquants" répartis dans les quarts-temps.`);
+  console.log(`✅ Une vraie mi-temps (après Q2), une vraie pause après Q1 et après Q3, et les ${timeouts.length} temps morts simulés par le moteur (équipe, texte, temps morts restants).`);
 }
 
 // ---------------------------------------------------------------------
@@ -117,7 +139,7 @@ const KICKOFF = Date.UTC(2026, 8, 9, 19, 0, 0); // un mercredi 19h arbitraire
 // ---------------------------------------------------------------------
 {
   const perQuarter = 30;
-  const { events, pauses } = schedulePlayback(fakeEvents(perQuarter), KICKOFF);
+  const { events, pauses } = schedulePlayback(fakeEvents(perQuarter, FAKE_TIMEOUTS), KICKOFF);
   function clockSec(clockStr) {
     const [m, s] = clockStr.split(":").map(Number);
     return m * 60 + s;
