@@ -20,6 +20,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODÉ, À POUSSER (2026-09-29) — Entraînement des fondamentaux, 2e
+  passe du tableau d'aptitudes** : Passe et Création de tir sans malus de
+  poste (Pivot 80 / 75) ; DI Ailier shooteur 80, DE Ailier fort 70 ;
+  Lancer franc 100 % partout avec dilution réduite de moitié
+  (TRAINING_DILUTION_MULT_BY_PROGRAM) ; Interceptions 75 % pour AF/P ;
+  Défense polyvalente = chaque caractéristique suit sa propre ligne
+  (TRAINING_PER_ATTR_ROWS) ; « Tirs rapides » séparé en Tir rapide
+  extérieur (3 pts + dribble) / intérieur (mi-distance + jeu intérieur),
+  anciennes sauvegardes → extérieur ; Attaque du cercle = Pénétration +
+  Jeu intérieur. Miroir engine.js ⇄ moteurbasket3.html, en.js,
+  training_table_test.js.
+
 - **🟡 CODÉ, À POUSSER (2026-09-29) — Plus de carrière solo : le jeu est
   uniquement en ligne** (retour : « le jeu n'a pas à être un jeu solo mais
   un jeu online contre d'autres managers, même seul face à 9 bots ») —

@@ -8609,11 +8609,21 @@ const TRAINING_HOME_POSITION = {
 // Dilution du rendement selon le nombre de postes couverts cette semaine
 // (1 poste = plein rendement, 2 = -15%, 3 = -30%, toute l'équipe = -50%).
 const TRAINING_DILUTION_BY_POSITION_COUNT = { 1: 0, 2: 0.15, 3: 0.30, 4: 0.40, 5: 0.50 };
+// Retour utilisateur (2026-09-29) : pas de malus sur le Lancer franc « même
+// si plusieurs postes ». Supprimer toute dilution le rendait deux fois plus
+// rentable que n'importe quel autre programme sur toute l'équipe : la
+// dilution y est donc seulement réduite de moitié (−7 / −15 / −20 / −25 %).
+const TRAINING_DILUTION_MULT_BY_PROGRAM = { freeThrow: 0.5 };
+function trainingDilutionFor(programKey, positionCount) {
+  const base = TRAINING_DILUTION_BY_POSITION_COUNT[positionCount] || 0;
+  const mult = TRAINING_DILUTION_MULT_BY_PROGRAM[programKey];
+  return mult != null ? base * mult : base;
+}
 
 // Aptitude de chaque poste pour chaque entraînement des fondamentaux (retour
 // utilisateur, 2026-09-29 : tableau fourni, « reprends ces chiffres pour les
 // entraînements des fondamentaux dans le jeu »). Ordre : Meneur, Arrière,
-// Ailier shooteur, Ailier fort, Pivot. Remplace, pour ces 20 programmes, la
+// Ailier shooteur, Ailier fort, Pivot. Remplace, pour ces programmes, la
 // formule « poste de prédilection −10 % par poste d'écart »
 // (TRAINING_HOME_POSITION ne sert plus qu'aux caractéristiques hors de ce
 // tableau : synergies et adjoint). Pour un entraînement polyvalent, la ligne
@@ -8624,25 +8634,47 @@ const TRAINING_POSITION_EFFICIENCY = {
   threePoint:   [100, 100, 100,  60,  20],
   midRange:     [100, 100, 100,  80,  40],
   inside:       [ 20,  30,  50, 100, 100],
-  pass:         [100,  90,  75,  60,  40],
+  // Retours du 2026-09-29 (2e passe) : Passe et Création de tir sans malus
+  // de poste (le Pivot garde un léger malus pour que le choix du poste
+  // garde un sens) ; l'Ailier shooteur défend aussi à l'intérieur (DI 80)
+  // et, par symétrie, l'Ailier fort à l'extérieur (DE 70) ; Lancer franc
+  // sans malus de poste (sa dilution est réduite, voir
+  // TRAINING_DILUTION_MULT_BY_PROGRAM) ; Interceptions : 75 % pour les
+  // grands au lieu de 50/30.
+  pass:         [100, 100, 100, 100,  80],
   rebound:      [ 20,  30,  60, 100, 100],
   block:        [ 10,  20,  40,  90, 100],
   dribble:      [100, 100,  90,  60,  30],
-  defOutside:   [100, 100, 100,  50,  20],
-  defInside:    [ 20,  30,  50, 100, 100],
-  freeThrow:    [100, 100, 100,  80,  60],
+  defOutside:   [100, 100, 100,  70,  20],
+  defInside:    [ 20,  30,  80, 100, 100],
+  freeThrow:    [100, 100, 100, 100, 100],
   penetration:  [100, 100, 100,  60,  30],
-  shotCreation: [100, 100, 100,  60,  30],
-  steal:        [100, 100, 100,  50,  30],
-  // Entraînements polyvalents
-  outsideShot:      [100, 100, 100,  70,  30],
-  playmaking:       [100,  90,  85,  55,  25],
-  allroundDef:      [ 60,  65,  75,  90, 100],
-  quickShots:       [100, 100,  95,  75,  45],
-  creativeScoring:  [100, 100, 100,  60,  30],
-  perimeterDefense: [100, 100, 100,  45,  20],
-  rimAttack:        [100, 100, 100,  65,  40],
+  shotCreation: [100, 100, 100, 100,  75],
+  steal:        [100, 100, 100,  75,  75],
+  // Entraînements polyvalents. « Défense polyvalente » n'a volontairement
+  // PAS de ligne : chacune de ses deux caractéristiques garde sa propre
+  // ligne (DE et DI ci-dessus, voir TRAINING_PER_ATTR_ROWS).
+  outsideShot:       [100, 100, 100,  70,  30],
+  playmaking:        [100,  90,  85,  55,  25],
+  quickShotsOutside: [100, 100, 100,  55,  25],
+  quickShotsInside:  [ 40,  60,  85, 100, 100],
+  creativeScoring:   [100, 100, 100,  60,  30],
+  perimeterDefense:  [100, 100, 100,  45,  20],
+  rimAttack:         [ 80, 100, 100,  85,  50],
 };
+// Programmes polyvalents dont chaque caractéristique suit SA propre ligne
+// du tableau (retour 2026-09-29 sur la Défense polyvalente : « dur de
+// choisir qui doit prendre les % ») : un meneur progresse surtout en DE, un
+// pivot surtout en DI, l'ailier shooteur bien sur les deux.
+const TRAINING_PER_ATTR_ROWS = new Set(["allroundDef"]);
+// Aptitude d'un poste sur UNE caractéristique d'un programme : sa propre
+// ligne pour un programme de TRAINING_PER_ATTR_ROWS, sinon la ligne du
+// programme (la même pour toutes ses caractéristiques).
+function positionEfficiencyForProgramAttr(programKey, attr, position) {
+  return TRAINING_PER_ATTR_ROWS.has(programKey)
+    ? positionEfficiencyForSkill(attr, position)
+    : positionEfficiencyForProgram(programKey, position);
+}
 function tableEfficiency(key, position) {
   const row = TRAINING_POSITION_EFFICIENCY[key];
   const i = POSITIONS.indexOf(position);
@@ -8785,7 +8817,12 @@ const TRAINING_PROGRAMS = {
   // physique, non trainable directement, voir plus haut), remplacé par
   // "dribble" : un joueur qui enchaîne dribble + tirs rapides colle mieux à
   // l'intitulé qu'une simple amputation à 3 fondamentaux.
-  quickShots:  makeTrainingProgram("Tirs rapides", ["dribble", "midRange", "threePoint", "inside"]),
+  // Retour utilisateur (2026-09-29) : « Tir rapide » séparé en deux —
+  // extérieur (3 pts + dribble) et intérieur (mi-distance + jeu intérieur).
+  // Une sauvegarde encore sur l'ancien "quickShots" passe sur la version
+  // extérieure (voir teamFromSave).
+  quickShotsOutside: makeTrainingProgram("Tir rapide extérieur", ["threePoint", "dribble"]),
+  quickShotsInside:  makeTrainingProgram("Tir rapide intérieur", ["midRange", "inside"]),
   // Retour utilisateur (2026-09, une fois les 3 nouveaux fondamentaux
   // pénétration/création de tir/interception en place) : "je pense qu'on
   // pourrait créer de nouveaux entrainement combo, étant donné qu'il y a des
@@ -8799,7 +8836,10 @@ const TRAINING_PROGRAMS = {
   // dribble attire les fautes, donc les lancers francs).
   creativeScoring:  makeTrainingProgram("Scoreur créatif", ["shotCreation", "dribble"]),
   perimeterDefense: makeTrainingProgram("Défense de périmètre", ["steal", "defOutside"]),
-  rimAttack:        makeTrainingProgram("Attaque du cercle", ["penetration", "freeThrow"]),
+  // Retour 2026-09-29 : « difficile de combiner péné + LF » → Pénétration
+  // + Jeu intérieur (driver PUIS finir au cercle) ; le Lancer franc reste un
+  // programme simple.
+  rimAttack:        makeTrainingProgram("Attaque du cercle", ["penetration", "inside"]),
 };
 
 // Aptitude d'un poste pour un PROGRAMME entier = moyenne (pondérée par le
@@ -8813,14 +8853,14 @@ function positionEfficiencyForProgram(programKey, position) {
   if (!program) return 100;
   // Tableau utilisateur (voir TRAINING_POSITION_EFFICIENCY) ; la
   // moyenne ci-dessous ne sert plus qu'à un programme absent du tableau.
-  const fromTable = tableEfficiency(programKey, position);
+  const fromTable = TRAINING_PER_ATTR_ROWS.has(programKey) ? null : tableEfficiency(programKey, position);
   if (fromTable != null) return fromTable;
   let sum = 0, totalW = 0;
   program.attrs.forEach(({ attr, weight }) => {
     sum += positionEfficiencyForSkill(attr, position) * weight;
     totalW += weight;
   });
-  return totalW ? sum / totalW : 100;
+  return totalW ? Math.round(sum / totalW) : 100;
 }
 
 // Départage de postes à égalité d'aptitude (2026-09-29) : le tableau de
@@ -14334,7 +14374,7 @@ class Team {
 
   // Dilution du rendement selon le nombre de postes couverts cette semaine.
   trainingDilution() {
-    return TRAINING_DILUTION_BY_POSITION_COUNT[this.trainingPositions.length] || 0;
+    return trainingDilutionFor(this.trainingSkill, this.trainingPositions.length);
   }
 
   // Temps RÉELLEMENT joué par ce joueur, CUMULÉ sur tous les matchs du cycle
@@ -14866,7 +14906,7 @@ class Team {
         // couvrir plusieurs des postes entraînés au fil du match).
         const posEffFor = attr => {
           let sum = 0;
-          Object.entries(trainedByPosition).forEach(([pos, secs]) => { sum += positionEfficiencyForProgram(skill, pos) * secs; }); // ligne du PROGRAMME (tableau utilisateur 2026-09-29), la même pour chacune de ses caractéristiques
+          Object.entries(trainedByPosition).forEach(([pos, secs]) => { sum += positionEfficiencyForProgramAttr(skill, attr, pos) * secs; }); // ligne du PROGRAMME (tableau utilisateur 2026-09-29), sauf Défense polyvalente (ligne propre à chaque caractéristique)
           return sum / trainedSeconds;
         };
         // Poids RÉEL de chaque caractéristique du programme pour CE joueur :
@@ -20141,7 +20181,8 @@ function teamFromSave(data) {
   team.tutorialRewardsClaimed = Array.isArray(data.tutorialRewardsClaimed) ? data.tutorialRewardsClaimed : [];
   // Retour utilisateur (2026-09) : "enleve l'entrainement aucune" — voir
   // engine.js, miroir identique.
-  team.trainingSkill = (data.trainingSkill && TRAINING_PROGRAMS[data.trainingSkill]) ? data.trainingSkill : "freeThrow";
+  const savedSkill = data.trainingSkill === "quickShots" ? "quickShotsOutside" : data.trainingSkill; // « Tirs rapides » séparé en deux (2026-09-29)
+  team.trainingSkill = (savedSkill && TRAINING_PROGRAMS[savedSkill]) ? savedSkill : "freeThrow";
   team.trainingPositions = Array.isArray(data.trainingPositions) ? data.trainingPositions : [];
   if (data.trainer && TRAINER_LEVELS.includes(data.trainer.level)) {
     // baseSalary préservé explicitement (bug corrigé 2026-09 : il était
@@ -36160,7 +36201,7 @@ function updateDilutionNote() {
     tier = "none";
     text = "Aucun poste sélectionné : personne ne progresse cette semaine.";
   } else {
-    const dilution = TRAINING_DILUTION_BY_POSITION_COUNT[n] || 0;
+    const dilution = trainingDilutionFor(skill, n);
     if (dilution > 0) {
       tier = "diluted";
       text = `${n} postes couverts · rendement dilué de ${Math.round(dilution * 100)}% pour tout le monde`;
