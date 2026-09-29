@@ -36,12 +36,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   (.grid.view-2d). court2d importé avec ?v=20260929-1 dans live-view.js
   (à incrémenter s'il change). Demandé ensuite : une vidéo de démo avec le
   fil du match et la feuille de match pour vérifier la cohérence.
-  Moteur (audit + niveau IA + avantage du terrain + faute intentionnelle)
-  poussé séparément le 2026-09-29 soir — voir l'historique Git ; mesures
-  après : ≈82 pts/équipe en D1 (moyenne ≈42), FG2 52 %, FG3 37 %,
-  intérieur 55 / mi-distance 42 / 3 pts 37 %, OREB 28 %, 14-16 LF, domicile
-  ≈58-60 %. Les clubs IA des ligues DÉJÀ créées gardent leur ancien niveau
-  (≈63) — recalibrage admin non fait, à décider.
+  Moteur : deux lots poussés le 2026-09-29 soir (b3926b9 puis le lot
+  « béton ») — voir l'historique Git et le doc « Audit du moteur de match »
+  (artefact Claude Docs, rapport complet : fonctionnement, correctifs,
+  formules, réalisme, tests A–H, tactiques, hasard, priorités). Mesures
+  après : ≈82 pts/équipe en D1 (moyenne ≈42), FG2 49 %, FG3 32 %, intérieur
+  50 / mi-distance 42 / 3 pts 32 %, OREB 28 %, 20 LF, domicile ≈57-63 %.
+  Tests ajoutés : engine_invariants_test.js (cas limites, invariants),
+  engine_balance_test.js (A–H + tactiques, seuils larges).
+  RESTE (voir le doc, section Priorités) : graine par match
+  (reproductibilité), recalibrage admin des clubs IA des ligues déjà
+  créées (toujours ≈63), rotation 25 → 15-20 changements, temps morts
+  simulés, ids de joueurs dans les événements, plancher de eff().
 
 - **⏳ EN ATTENTE DE VALIDATION VISUELLE (2026-09-27) — Émissions sans
   défilement** (assets/hoop-shows/showPlayer.js/.css, stash sandbox) :

@@ -194,21 +194,21 @@ const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
   "Jeu intérieur":     { inside: .60, mid: .25, three: .15, tov: -.01, assist: 0,   tempo: -.05 },
   "Jeu extérieur":     { inside: .15, mid: .30, three: .55, tov: 0,    assist: .02, tempo: 0 },
-  "Isolation":         { inside: .30, mid: .40, three: .30, tov: .04,  assist: -.05,tempo: -.03 },
+  "Isolation":         { inside: .30, mid: .40, three: .30, tov: .02,  assist: -.05,tempo: -.03 },
   "Pick & Roll":       { inside: .40, mid: .30, three: .30, tov: 0,    assist: .05, tempo: 0 },
-  "Post-up":           { inside: .65, mid: .25, three: .10, tov: -.02, assist: -.02,tempo: -.08 },
+  "Post-up":           { inside: .60, mid: .30, three: .10, tov: 0,    assist: -.02,tempo: -.08 },
   "Jeu en pénétration":{ inside: .50, mid: .35, three: .15, tov: .03,  assist: 0,   tempo: .05, drawFoul: .04 },
   "Jeu en mouvement":  { inside: .30, mid: .30, three: .40, tov: -.01, assist: .06, tempo: .02 },
-  "Transition rapide": { inside: .45, mid: .25, three: .30, tov: .05,  assist: .02, tempo: .18 },
-  "Tirs rapides":      { inside: .20, mid: .35, three: .45, tov: .04,  assist: -.03,tempo: .12 },
+  "Transition rapide": { inside: .45, mid: .25, three: .30, tov: .02,  assist: .02, tempo: .18 },
+  "Tirs rapides":      { inside: .20, mid: .30, three: .50, tov: .02,  assist: -.03,tempo: .12 },
 };
 
 const DEFENSES = {
   "Homme à homme":   { insideDef: 0,   perimDef: 0,   pressure: 0,   fatigueCost: 0 },
-  "Zone press":      { insideDef: 0,   perimDef: .02, pressure: .09, fatigueCost: .35 },
-  "Box and one":     { insideDef: .01, perimDef: .01, pressure: .02, fatigueCost: .10, shutdownStar: true },
-  "Zone extérieure": { insideDef: -.06,perimDef: .09, pressure: .01, fatigueCost: -.05 },
-  "Zone intérieure": { insideDef: .09, perimDef: -.06,pressure: .01, fatigueCost: -.05 },
+  "Zone press":      { insideDef: -.06,perimDef: 0,   pressure: .07, fatigueCost: .35 },
+  "Box and one":     { insideDef: .01, perimDef: .01, pressure: .01, fatigueCost: .12, shutdownStar: true },
+  "Zone extérieure": { insideDef: -.08,perimDef: .07, pressure: .01, fatigueCost: -.05 },
+  "Zone intérieure": { insideDef: .10, perimDef: -.05,pressure: .01, fatigueCost: -.05 },
 };
 
 const RHYTHMS = {
@@ -217,9 +217,9 @@ const RHYTHMS = {
   // ce jour (bonus de lancers francs, tir intérieur, rebonds), le rythme
   // ramène la moyenne à ≈85-87 points par équipe pour des clubs de référence
   // (repère utilisateur : Euroleague ≈87), soit ≈75 possessions par équipe.
-  "Lent":   { possessionsPerQuarter: 37.5, fatigueMult: .85, tovMult: .92 },
+  "Lent":   { possessionsPerQuarter: 37.5, fatigueMult: .85, tovMult: .96 },
   "Normal": { possessionsPerQuarter: 41,   fatigueMult: 1,   tovMult: 1 },
-  "Rapide": { possessionsPerQuarter: 44.5, fatigueMult: 1.18,tovMult: 1.08 },
+  "Rapide": { possessionsPerQuarter: 44.5, fatigueMult: 1.18,tovMult: 1.04 },
 };
 
 // ---------------------------------------------------------------------
@@ -14817,7 +14817,10 @@ class MatchEngine {
     // Dans la dernière minute environ, une équipe menée d'un écart rattrapable
     // a intérêt à stopper le chrono plutôt que de laisser filer une possession.
     const inFoulWindow = quarter >= 4 && clock <= 50 && clock > 3;
-    const shouldFoulIntentionally = inFoulWindow && scoreDiff >= 1 && scoreDiff <= 9 && Math.random() < 0.75;
+    // Retard rattrapable seulement (audit 2026-09-29) : ≈3 points + 1 par
+    // 6 secondes restantes (mené de 9 à 50 s : oui ; mené de 9 à 10 s : non).
+    const recoverable = scoreDiff <= 3 + clock / 6;
+    const shouldFoulIntentionally = inFoulWindow && scoreDiff >= 1 && scoreDiff <= 9 && recoverable && Math.random() < 0.7;
 
     if (shouldFoulIntentionally) {
       // La faute est commise dès la remise en jeu : la possession ne dure que
@@ -14857,7 +14860,14 @@ class MatchEngine {
     const pressure = onCourtDef.reduce((s, p) => s + p.eff("defOutside") * 0.7 + p.eff("steal") * 0.3 + p.eff("anticipation") * 0.15, 0) / 5;
     // Base 0.12 → 0.135 (audit moteur 2026-09-29 : 9,5 pertes par équipe et par
     // match mesurées, contre ≈12-13 en vrai).
-    let tovChance = 0.135 + offense.tov + defense.pressure + (pressure - ballHandler.eff("dribble")) / 400;
+    // Sensibilité pression/dribble ramenée de /400 à /650 (audit moteur
+    // 2026-09-29) : 20 points d'écart valaient ±5 points de chance de perte
+    // sur une base de 13,5 % (±37 % de pertes de balle), ce qui faisait de
+    // Défense extérieure et Dribble les deux attributs de très loin les plus
+    // décisifs du jeu (+8 et +6 points d'écart au score pour +20, contre
+    // ±1-2 pour les autres). Repère réel : les meilleures et pires équipes
+    // au soin du ballon s'écartent d'environ ±20 %.
+    let tovChance = 0.135 + offense.tov + defense.pressure + (pressure - ballHandler.eff("dribble")) / 650;
     tovChance *= rhythmOff.tovMult;
     // Décision (retour utilisateur, 2026-09 : "Décision/Vision → pertes de
     // balle et passes décisives") : un porteur qui lit bien le jeu perd moins
@@ -14997,10 +15007,25 @@ class MatchEngine {
       // l'action continue directement vers le tir, dans cette même itération.
     }
 
-    const zoneRoll = Math.random();
+    // Choix de la zone : priorités offensives du coach, INFLÉCHIES par les
+    // forces réelles du cinq en jeu (audit moteur 2026-09-29 : +20 de Tir à
+    // 3 pts sur tout l'effectif ne changeait rien au VOLUME de tirs à 3 pts,
+    // seule l'adresse bougeait — un cinq de shooteurs tirait autant de loin
+    // qu'un cinq de pivots). Chaque part de zone est multipliée par
+    // 1 + (moyenne du cinq dans cette zone − moyenne des trois zones)/150 :
+    // ±10 points d'écart entre zones déplacent la répartition de ≈±7 %, la
+    // tactique du coach reste largement dominante.
+    const five = onCourtOff;
+    const zoneAvg = key => five.reduce((s, p) => s + p.eff(key), 0) / five.length;
+    const zi = zoneAvg("inside"), zm = zoneAvg("midRange"), zt = zoneAvg("threePoint");
+    const zMean = (zi + zm + zt) / 3;
+    const wIn = Math.max(0.05, offense.inside * (1 + (zi - zMean) / 150));
+    const wMid = Math.max(0.05, offense.mid * (1 + (zm - zMean) / 150));
+    const wThree = Math.max(0.05, offense.three * (1 + (zt - zMean) / 150));
+    const zoneRoll = Math.random() * (wIn + wMid + wThree);
     let zone;
-    if (zoneRoll < offense.inside) zone = "inside";
-    else if (zoneRoll < offense.inside + offense.mid) zone = "mid";
+    if (zoneRoll < wIn) zone = "inside";
+    else if (zoneRoll < wIn + wMid) zone = "mid";
     else zone = "three";
 
     const statForZone = { inside: "inside", mid: "midRange", three: "threePoint" }[zone];
@@ -15010,7 +15035,13 @@ class MatchEngine {
     // actuel inchangé.
     const clutch = quarter >= 4 && clock <= 120 && Math.abs(scoreDiff) <= 8;
     const star = this.starPlayer(offTeam);
-    const heroMult = clutch ? 1.7 : 1;
+    // « Isolation » (audit 2026-09-29 : -4,5 points, la pire priorité — plus
+    // de pertes de balle et de mi-distance sans contrepartie) : concentre
+    // désormais le tir sur la star du cinq, proportionnellement à son poids
+    // dans les priorités — profite aux équipes qui ont un vrai joueur
+    // au-dessus du lot, pénalise les autres.
+    const isoWeight = offTeam.offensivePriorities.includes("Isolation") ? 1 / offTeam.offensivePriorities.length : 0;
+    const heroMult = (clutch ? 1.7 : 1) * (1 + isoWeight * 1.2);
     // Gestion de fin de match "Adaptatif" : en garbage time (écart >= seuil, dès
     // le Q3), l'équipe qui mène (ou est menée) large ne force plus autant
     // le jeu sur sa star — MULTIPLICATEUR SÉPARÉ du hero-ball clutch
@@ -15078,7 +15109,7 @@ class MatchEngine {
 
     const defStat = zone === "inside" ? defender.eff("defInside") : defender.eff("defOutside");
     let defBoost = zone === "inside" ? defense.insideDef : defense.perimDef;
-    if (defense.shutdownStar && star && shooter.id === star.id) defBoost += 0.12;
+    if (defense.shutdownStar && star && shooter.id === star.id) defBoost += 0.10;
 
     // --- Aide défensive (Faible/Moyenne/Forte) : déplace le curseur
     // intérieur/extérieur — "Moyenne" = delta zéro, comportement actuel. ---
@@ -15240,7 +15271,7 @@ class MatchEngine {
     // près du cercle, plus contesté et plus souvent contré, finissait le
     // moins rentable des trois, et le jeu intérieur/les pivots étaient
     // pénalisés. Bases recalées (mesuré après : ≈57 / 41 / 36 %).
-    const base = { inside: 0.65, mid: 0.36, three: 0.30 }[zone];
+    const base = { inside: 0.62, mid: 0.39, three: 0.30 }[zone];
     const effStat = shooter.eff(statForZone);
     // Pente compressée sous 60 (retour utilisateur, 2026-09-26 : "relève un
     // peu les planchers, parce que ça fait plusieurs matchs moches, le but
@@ -15261,7 +15292,12 @@ class MatchEngine {
     // au sommet (1.6 vs 1.3 : 90 % de victoires, +17 pts d'écart moyen)
     // parce que création, contest, pertes de balle et rebonds continuent
     // de dépendre pleinement des attributs — seul le % brut est compressé.
-    const attrDelta = effStat >= 60 ? (effStat - 60) * 0.0018 : (effStat - 60) * 0.0016;
+    // Pentes relevées à l'audit moteur du 2026-09-29 (0,0018/0,0016 → 0,0022/
+    // 0,0019) : +20 de Tir à 3 pts ne donnait que +3 points de % — un
+    // shooteur à 90 tirait à 37 % contre 31 % pour un joueur à 45, écart trop
+    // faible pour que l'attribut compte (mesuré : aucune influence sur le
+    // résultat, contre +8 points d'écart pour +20 de Défense extérieure).
+    const attrDelta = effStat >= 60 ? (effStat - 60) * 0.0022 : (effStat - 60) * 0.0019;
     let prob = base + attrDelta + qualityMod;
     // Frein anti-blowout de base (retour utilisateur : "on a un peu trop vite
     // de gros blowout") — même deux équipes RIGOUREUSEMENT de même niveau
@@ -15511,8 +15547,16 @@ class MatchEngine {
     }
   }
 
-  applyFatigue(team, rhythmKey, seconds, quarter, clock, events) {
-    const mult = RHYTHMS[rhythmKey].fatigueMult;
+  // `rhythmKey` : rythme de CE club ; `paceMult` (optionnel) : multiplicateur
+  // de fatigue du rythme RÉEL du match, partagé par les deux équipes (audit
+  // moteur 2026-09-29 : le rythme « Rapide » ne fatiguait que celui qui le
+  // choisissait alors que les possessions, elles, étaient déjà partagées —
+  // un pur malus, -2 points d'écart mesurés ; à l'inverse la défense « Zone
+  // press » ne coûtait rien, son fatigueCost n'était jamais lu : +8 points
+  // et 77 % de victoires contre « Homme à homme »).
+  applyFatigue(team, rhythmKey, seconds, quarter, clock, events, paceMult = null) {
+    const defenseCost = (DEFENSES[team.defense] && DEFENSES[team.defense].fatigueCost) || 0;
+    const mult = (paceMult != null ? paceMult : RHYTHMS[rhythmKey].fatigueMult) * (1 + defenseCost);
     // Espace bien-être (voir Team.facilityFatigueMult/CLUB_FACILITIES) :
     // réduit l'accumulation de fatigue EN MATCH, 1 = aucun effet (aucun
     // espace bien-être construit) — n'agit jamais sur la récupération au
@@ -15698,6 +15742,11 @@ class MatchEngine {
         const rhythmDef = RHYTHMS[defTeam.rhythm];
         const avgPossessions = (rhythmOff.possessionsPerQuarter + rhythmDef.possessionsPerQuarter) / 2;
         let possessionLength = clamp(QUARTER_SECONDS / avgPossessions + rand(-3, 3), 6, 30);
+        // Tempo des priorités offensives (OFFENSE_PROFILES.tempo, jamais lu
+        // avant l'audit du 2026-09-29) : « Transition rapide » raccourcit les
+        // possessions de SON équipe, « Post-up » les allonge — à moitié de la
+        // valeur nominale pour rester en dessous de l'effet du rythme.
+        possessionLength *= 1 - (offTeam.offenseProfile().tempo || 0) * 0.5;
 
         // --- Money time : l'équipe qui mène de peu en fin de match (ou de
         // prolongation) fait tourner le chrono --- (vérifie le temps encore
@@ -15753,8 +15802,11 @@ class MatchEngine {
         score.A = this.teamA.players.reduce((s, p) => s + p.stats.pts, 0);
         score.B = this.teamB.players.reduce((s, p) => s + p.stats.pts, 0);
 
-        this.applyFatigue(this.teamA, this.teamA.rhythm, possessionLength, q, clock, events);
-        this.applyFatigue(this.teamB, this.teamB.rhythm, possessionLength, q, clock, events);
+        // Rythme réel du match = moyenne des deux rythmes (comme avgPossessions
+        // ci-dessus) : la fatigue du tempo est partagée, voir applyFatigue.
+        const paceMult = (rhythmOff.fatigueMult + rhythmDef.fatigueMult) / 2;
+        this.applyFatigue(this.teamA, this.teamA.rhythm, possessionLength, q, clock, events, paceMult);
+        this.applyFatigue(this.teamB, this.teamB.rhythm, possessionLength, q, clock, events, paceMult);
 
         this.substituteIfNeeded(this.teamA, q, clock, events);
         this.substituteIfNeeded(this.teamB, q, clock, events);
