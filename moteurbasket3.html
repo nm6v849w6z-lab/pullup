@@ -6785,6 +6785,12 @@
   #statsHebdoSection table.st-season-table th:nth-child(2), #statsHebdoSection table.st-season-table td:nth-child(2){text-align:left;}
   #statsHebdoSection table td:last-child, #statsHebdoSection table th:last-child{padding-right:16px;}
   #statsHebdoSection tr.st-row:hover td{background:var(--eff-row);}
+  /* Performances de la semaine : colonnes chiffrées de largeur égale, le
+     nom prend le reste ; dernière colonne alignée sur la marge (même
+     spécificité que la règle générale ci-dessus). */
+  #statsHebdoSection #statsHebdoContent table.st-week-table th:not(:first-child){width:6%;}
+  #statsHebdoSection #statsHebdoContent table.st-week-table td:last-child, #statsHebdoSection #statsHebdoContent table.st-week-table th:last-child{padding-right:16px;}
+  #statsHebdoSection #statsHebdoContent table.st-week-table td.strong{font-weight:700; color:var(--ink);}
   .st-sortable{cursor:pointer; user-select:none;}
   .st-sortable:hover{color:var(--ink) !important;}
   .st-sortable.is-sorted{color:var(--amber) !important;}
@@ -47223,7 +47229,7 @@ function computeWeekPlayerStats(week) {
   teamA.players.forEach(p => {
     const log = (p.matchLog || []).filter(m => m.week === week);
     if (!log.length) return;
-    const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0 };
+    const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
     log.forEach(m => { Object.keys(sum).forEach(k => { sum[k] += m[k] || 0; }); });
     rows.push({ player: p, gp: log.length, sum });
   });
@@ -47499,11 +47505,18 @@ function renderStatsHebdoSection() {
   if (!weekRows.length) {
     html += "<p class='training-empty'>Aucune performance à afficher pour cette semaine.</p>";
   } else {
-    html += "<div class='table-scroll'><table class='roster-table'><thead><tr>" +
-      "<th>Joueur</th><th>Matchs</th><th>Min</th><th>Pts</th><th>Reb</th><th>Pas</th><th>Int</th><th>Ctr</th></tr></thead><tbody>";
+    // Retour utilisateur 2026-09-30 : « trop de vide après les noms […] tu
+    // peux mettre plus de stats que ça (tirs, éval, fautes...) » : mêmes
+    // colonnes que le match par match de la fiche joueur, en totaux.
+    html += "<div class='table-scroll'><table class='roster-table st-week-table'><thead><tr>" +
+      "<th>Joueur</th><th title='Matchs joués'>MJ</th><th>Min</th><th>Pts</th><th>Reb</th><th title='Passes décisives'>Pas</th><th title='Interceptions'>Int</th><th title='Contres'>Ctr</th>" +
+      "<th title='Balles perdues'>Perte</th><th>Faute</th><th title='Tirs à 2 points réussis / tentés'>2 pts</th><th title='Tirs à 3 points réussis / tentés'>3 pts</th><th title='Lancers francs réussis / tentés'>LF</th><th title='Évaluation'>Éval</th></tr></thead><tbody>";
     weekRows.forEach(r => {
+      const t = r.sum;
       html += `<tr class="st-row"><td class="st-td-name"><span class="eff-player">${playerAvatarHtml(r.player, teamA, 24)}${playerLinkHtml(myTeamIndex, r.player.id, r.player.name)}</span></td><td>${r.gp}</td>` +
-        `<td>${r.sum.min}</td><td>${r.sum.pts}</td><td>${r.sum.reb}</td><td>${r.sum.ast}</td><td>${r.sum.stl}</td><td>${r.sum.blk}</td></tr>`;
+        `<td>${t.min}</td><td class="strong">${t.pts}</td><td>${t.reb}</td><td>${t.ast}</td><td>${t.stl}</td><td>${t.blk}</td>` +
+        `<td>${t.tov}</td><td>${t.pf}</td><td>${t.fgm2}/${t.fga2}</td><td>${t.fgm3}/${t.fga3}</td><td>${t.ftm}/${t.fta}</td>` +
+        `<td class="strong">${statEvaluation(t)}</td></tr>`;
     });
     html += "</tbody></table></div>";
   }
