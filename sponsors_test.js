@@ -110,7 +110,7 @@ const SPONSOR_ORDER = { prudent: 0, normal: 1, ambitieux: 2 };
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "sponsors").click();
   check(!doc.getElementById("sponsorsSection").classList.contains("hidden"), "onglet « Sponsors » dédié");
   const section = doc.getElementById("economieSponsors");
-  check(section && section.querySelectorAll(".spo-card").length === 3, "page Sponsors : 3 emplacements (maillot, salle, panneau publicitaire)");
+  check(section && section.querySelectorAll(".spo-card:not(.spo-history)").length === 3 && section.querySelector(".spo-grid > .spo-history"), "page Sponsors : 3 emplacements (maillot, salle, panneau publicitaire) + historique dans la grille");
   check(section.querySelectorAll(".spo-tag-ok").length === 1 && section.querySelectorAll(".spo-offer").length === 4, "un contrat en cours et 2 offres sur chacun des 2 autres emplacements");
   const contractSlot = acc.sponsorContracts[0].slot;
   if (contractSlot === "maillot") check(!!section.querySelector(".spo-jersey svg text"), "le maillot du contrat porte le nom du sponsor");
