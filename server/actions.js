@@ -475,6 +475,15 @@ function setPlan(team, teamIndex, league, body, now) {
     return fail(`Journée invalide pour une préparation à l'avance (${competition}) : ${JSON.stringify(round)}.`);
   }
   if (ordersLockedFor(league, teamIndex, competition, round, now)) return fail(ORDERS_LOCKED_ERROR);
+  // { clear: true } : retire le plan préparé pour cette journée (retour
+  // utilisateur 2026-09-30 : « Annuler » sur l'écran Ordres d'une journée
+  // qui n'avait pas de plan à l'ouverture doit revenir EXACTEMENT à cet état,
+  // sans laisser un plan « Ordres préparés » derrière lui). Sans effet si
+  // aucun plan n'existait. Les ordres en direct ne sont jamais touchés.
+  if (body.clear === true) {
+    team.clearPlanForRound(round, competition);
+    return { ok: true, round, competition, plan: null, cleared: true };
+  }
   const patchBody = body.patch;
   if (!patchBody || typeof patchBody !== "object") return fail("'patch' est requis.");
   const patch = {};

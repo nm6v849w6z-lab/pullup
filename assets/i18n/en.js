@@ -5205,7 +5205,6 @@ window.HM_I18N_EN = {
   "Poste à pourvoir": "Position to fill",
   "Aucun titulaire à ce poste": "No starter at this position",
   "{0} est blessé": "{0} is injured",
-  "Hors poste : {0} ({1})": "Out of position: {0} ({1})",
   "{0} est aussi remplaçant au poste {1}": "{0} is also the sub at {1}",
   "{0} est aussi réserviste au poste {1}": "{0} is also the reserve at {1}",
   "{0} ({1}) est plus fort que le titulaire": "{0} ({1}) is stronger than the starter",
@@ -5229,4 +5228,13 @@ window.HM_I18N_EN = {
   "Compositions figées le {0}, {1} min avant le coup d'envoi.": "Lineups lock on {0}, {1} min before tip-off.",
   "Modifications annulées.": "Changes cancelled.",
   "{0} j {1} h": "{0} d {1} h",
+  // Note par poste (2026-09-30).
+  "Hors poste : {0} ici, {1} en {2}": "Out of position: {0} here, {1} at {2}",
+  "Note du titulaire à ce poste": "Starter's rating at this position",
+  "Note à ce poste": "Rating at this position",
+  "Note au poste {0}": "Rating at {0}",
+  "Meilleur poste : {0} ({1}) · poste de carte : {2}": "Best position: {0} ({1}) · listed position: {2}",
+  "Note par poste": "Rating by position",
+  "{0} : {1} (meilleur poste)": "{0}: {1} (best position)",
+  "Ordres verrouillés : le coup d'envoi est imminent.": "Orders locked: tip-off is imminent.",
 };
