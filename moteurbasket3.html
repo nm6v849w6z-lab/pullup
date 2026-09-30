@@ -6587,6 +6587,12 @@
   /* Chat de la ligue : le pseudo de l'auteur ouvre son profil. */
   .lgc-author{background:none; border:0; padding:0; font:inherit; font-weight:800; color:var(--ink); cursor:pointer;}
   .lgc-author:hover{color:var(--amber);}
+  .pseudo-prompt{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0 0 16px; padding:10px 14px; border-radius:14px; background:var(--panel); font-size:13.5px;}
+  .pseudo-prompt-txt{flex:1 1 260px; min-width:0; color:var(--ink-dim);}
+  .pseudo-prompt-txt b{color:var(--ink); margin-right:4px;}
+  .pseudo-prompt .pz-btn{height:32px; padding:0 14px;}
+  .pseudo-prompt-later{background:none; border:0; padding:4px; font:inherit; font-size:12.5px; color:var(--ink-faint); cursor:pointer;}
+  .pseudo-prompt-later:hover{color:var(--ink);}
   .msg-conv-club{font-size:11.5px; color:var(--ink-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .msg-thread-who{display:flex; align-items:baseline; gap:8px; min-width:0; flex-wrap:wrap;}
   .msg-thread-club{background:none; border:0; padding:0; font:inherit; font-size:12.5px; color:var(--ink-faint); cursor:pointer;}
@@ -6742,6 +6748,7 @@
   .msg-dash-banner{display:flex; align-items:center; gap:12px; width:100%; margin:0 0 16px; padding:12px 16px; border-radius:12px; border:1px solid rgba(240,162,60,.45); background:rgba(240,162,60,.1); color:var(--ink); font:inherit; font-size:14px; text-align:left; cursor:pointer;}
   .msg-dash-banner:hover{background:rgba(240,162,60,.16);}
   .msg-dash-banner b{color:var(--amber);}
+  .msg-dash-club{font-size:12px; color:var(--ink-faint);}
   .msg-dash-banner .msg-dash-go{margin-left:auto; font-weight:700; color:var(--amber); white-space:nowrap;}
   #messagesSection{font-size:14px;}
   .msg-layout{display:grid; grid-template-columns:300px minmax(0,1fr); gap:16px; align-items:stretch; min-height:520px;}
@@ -7542,6 +7549,8 @@
     <div id="clubDeficitBanner"></div>
     <!-- "N nouveaux messages" (messagerie entre managers, voir msgUpdateBadge) -->
     <div id="clubMessagesBanner"></div>
+    <!-- « Choisis ton pseudo » (voir renderPseudoPrompt) : discret, jamais bloquant. -->
+    <div id="clubPseudoPrompt"></div>
     <div id="clubDashboardRoot"></div>
   </div>
 
@@ -27215,9 +27224,9 @@ function lgcRender() {
       const team = typeof idx === "number" && league && league.teams ? league.teams[idx] : null;
       html += `<div class="lgc-msg${m.mine ? " mine" : ""}${picking}" data-lgc-id="${m.id}">` +
         `<div class="lgc-by"><span class="lgc-logo">${team ? teamLogoHtml(team, 18) : ""}</span>` +
-        (m.author && m.author.name && typeof idx === "number"
-          ? `<button type="button" class="lgc-author" data-manager-profile="${idx}" data-no-i18n>${escapeHtml(m.author.name)}</button>`
-          : `<b data-no-i18n>${escapeHtml((m.author && (m.author.name || m.author.club)) || "?")}</b>`) +
+        (typeof idx === "number"
+          ? `<button type="button" class="lgc-author" data-manager-profile="${idx}">${managerLabelHtml(m.author.name, m.author.club)}</button>`
+          : `<b>${managerLabelHtml(m.author && m.author.name, (m.author && m.author.club) || "?")}</b>`) +
         `<small data-no-i18n>${escapeHtml((m.author && m.author.club) || "")}</small>` + time + `</div>` +
         `<p class="lgc-text" data-no-i18n>${escapeHtml(m.text)}</p>` + lgcReactionsHtml(m) + `</div>`;
     } else {
@@ -27620,9 +27629,16 @@ function managerAvatarHtml(team, size = 40) {
 // Nom du manager : pseudo (jamais traduit) ou « Manager de <club> » (le
 // libellé se traduit, le nom du club non).
 function managerNameInnerHtml(team) {
-  const pseudo = managerPseudoOf(team);
+  return managerLabelHtml(managerPseudoOf(team), team ? team.name : "?");
+}
+// Même libellé à partir des données STRUCTURÉES du serveur (chat, messagerie :
+// pseudo ou null + nom du club) : le repli « Manager de <club> » est un
+// nœud texte que la couche de traduction reconnaît (gabarit « Manager de
+// {0} » : « {0} manager », « Manager del {0} »), le pseudo n'est jamais
+// traduit.
+function managerLabelHtml(pseudo, clubName) {
   if (pseudo) return `<span data-no-i18n>${escapeHtml(pseudo)}</span>`;
-  return `<span>Manager de ${escapeHtml(team ? team.name : "?")}</span>`;
+  return `<span>Manager de ${escapeHtml(clubName || "?")}</span>`;
 }
 // Lien vers le profil du manager d'un club humain ("" pour un club IA).
 // `leagueId` : club d'un autre championnat.
@@ -27796,8 +27812,25 @@ function hideManagerProfile() {
   if (origin.tabKey) setActiveTab(origin.tabKey);
 }
 
+// Invitation discrète à choisir son pseudo (manager sans pseudo) sur le
+// tableau de bord ; « Plus tard » la masque pour la visite en cours.
+let pseudoPromptDismissed = false;
+function renderPseudoPrompt() {
+  const el = document.getElementById("clubPseudoPrompt");
+  if (!el) return;
+  const show = !!(managerToken && teamA && teamA.isHuman && !managerPseudoOf(teamA) && !pseudoPromptDismissed);
+  el.innerHTML = show
+    ? `<div class="pseudo-prompt">${managerAvatarHtml(teamA, 32)}<span class="pseudo-prompt-txt"><b>Choisis ton pseudo</b> <span>Les autres managers te voient pour l'instant comme « Manager de ${escapeHtml(teamA.name)} ».</span></span>` +
+      `<button type="button" class="pz-btn" data-mp-edit-pseudo>Choisir</button><button type="button" class="pseudo-prompt-later" data-pseudo-later>Plus tard</button></div>`
+    : "";
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest && e.target.closest("[data-pseudo-later]")) { pseudoPromptDismissed = true; renderPseudoPrompt(); }
+});
+
 // Avatar du manager en haut à droite (son propre profil).
 function syncTopbarManager() {
+  renderPseudoPrompt();
   const btn = document.getElementById("topbarManagerBtn");
   if (!btn) return;
   const show = !!(teamA && teamA.isHuman);
@@ -40569,8 +40602,15 @@ function showSettingsModal(tab) {
     const l = e.target.closest("[data-lang-choice]");
     if (l) {
       overlay.querySelectorAll("[data-lang-choice]").forEach(x => x.setAttribute("aria-pressed", String(x === l)));
-      if (window.hmI18n) window.hmI18n.setLang(l.dataset.langChoice);
-      else { try { localStorage.setItem("hm-lang", l.dataset.langChoice); } catch (err) { /* rien */ } location.reload(); }
+      // Langue du COMPTE (2026-09-30) : enregistrée côté serveur avant le
+      // rechargement, pour la retrouver sur tous les appareils.
+      const chosen = l.dataset.langChoice;
+      try { localStorage.setItem("hm-lang", chosen); } catch (err) { /* navigation privée */ }
+      const apply = () => {
+        if (window.hmI18n) window.hmI18n.setLang(chosen);
+        else { try { localStorage.setItem("hm-lang", chosen); } catch (err) { /* rien */ } location.reload(); }
+      };
+      window.__lastLangSave = hmSaveAccountLang(chosen).then(apply, apply);
       return;
     }
     const b = e.target.closest("[data-theme-choice]");
@@ -40750,6 +40790,41 @@ function renderHmAccountBlock() {
       feedback("Connexion Discord indisponible pour le moment.", false);
     } catch (err) { feedback("Serveur injoignable, réessaie.", false); }
   });
+}
+
+// ---------------------------------------------------------------------
+// Langue du compte (2026-09-30, retour utilisateur « corrige » : la langue
+// suit le COMPTE, pas seulement le navigateur ; voir server/accounts.js,
+// langFor). localStorage "hm-lang" reste un cache rapide (appliqué avant le
+// chargement) ; au démarrage, la langue du compte gagne (rechargement si
+// elle diffère) ; un compte sans langue adopte celle du navigateur.
+// ---------------------------------------------------------------------
+function hmCurrentLang() {
+  return window.hmI18n ? window.hmI18n.getLang() : "fr";
+}
+async function hmSaveAccountLang(lang) {
+  if (!managerToken) return false;
+  try {
+    const res = await fetchApi("/api/account/lang", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lang }) });
+    const data = await res.json().catch(() => ({}));
+    return !!(res.ok && data.persisted);
+  } catch (e) { return false; }
+}
+async function hmSyncAccountLang() {
+  if (!managerToken) return;
+  let acc = null;
+  try {
+    const res = await fetchApi("/api/account/me");
+    const data = await res.json();
+    acc = res.ok && data && data.ok ? data.account : null;
+  } catch (e) { return; }
+  if (!acc) return; // lien privé sans compte : le navigateur décide
+  const current = hmCurrentLang();
+  if (!acc.lang) { await hmSaveAccountLang(current); return; }
+  if (acc.lang !== current) {
+    if (window.hmI18n) window.hmI18n.setLang(acc.lang);
+    else { try { localStorage.setItem("hm-lang", acc.lang); } catch (e) { /* rien */ } }
+  }
 }
 
 // Pseudo du manager (2026-09-30, Paramètres › Mon compte) : le nom public
@@ -48271,12 +48346,15 @@ function msgUpdateBadge() {
   if (banner) {
     if (!unread) { banner.innerHTML = ""; return; }
     const senders = msgUi.summary.conversations.filter(c => c.unread > 0 && !c.blocked);
-    const who = senders.length === 1
-      ? `de <b data-no-i18n>${escapeHtml(senders[0].name)}</b>`
-      : `de ${senders.length} managers`;
-    const label = unread === 1 ? "1 nouveau message" : `${unread} nouveaux messages`;
-    banner.innerHTML = `<button type="button" class="msg-dash-banner" data-msg-open="${senders.length === 1 ? escapeHtml(senders[0].who) : ""}">` +
-      `<span>${label} ${who}</span><span class="msg-dash-go">Lire →</span></button>`;
+    // Expéditeur désigné comme dans la Messagerie : pseudo (ou « Manager de
+    // <club> »), le club en petit.
+    const one = senders.length === 1 ? senders[0] : null;
+    const label = unread === 1 ? "1 nouveau message de" : `${unread} nouveaux messages de`;
+    const who = one
+      ? `<b>${managerLabelHtml(one.manager, one.name)}</b> <small class="msg-dash-club" data-no-i18n>${escapeHtml(one.name)}</small>`
+      : `<span>${senders.length} managers</span>`;
+    banner.innerHTML = `<button type="button" class="msg-dash-banner" data-msg-open="${one ? escapeHtml(one.who) : ""}">` +
+      `<span><span>${label}</span> ${who}</span><span class="msg-dash-go">Lire →</span></button>`;
   }
 }
 
@@ -48381,13 +48459,13 @@ function renderMsgList() {
     const unread = c.unread > 0 && !c.blocked;
 
     return `<li><button type="button" class="msg-conv${msgUi.activeWith === c.who ? " on" : ""}${unread ? " unread" : ""}" data-msg-conv="${escapeHtml(c.who)}">` +
-      `<span class="msg-conv-top"><span class="msg-conv-name" data-no-i18n>${c.leagueId ? nationFlagHtml(String(c.leagueId).slice(0, 2)) + " " : ""}${escapeHtml(c.manager || c.name)}</span>` +
+      `<span class="msg-conv-top"><span class="msg-conv-name">${c.leagueId ? nationFlagHtml(String(c.leagueId).slice(0, 2)) + " " : ""}${managerLabelHtml(c.manager, c.name)}</span>` +
       (unread ? `<span class="sidebar-badge">${c.unread}</span>` : "") +
       `<span class="msg-conv-time">${escapeHtml(msgFormatTime(c.lastMessage.at))}</span></span>` +
       (c.blocked
         ? `<span class="msg-conv-last">Manager bloqué</span>`
         : `<span class="msg-conv-last">${c.lastMessage.mine ? "<span>Vous :</span> " : ""}<span data-no-i18n>${escapeHtml(c.lastMessage.text)}</span></span>`) +
-      (c.manager ? `<span class="msg-conv-club" data-no-i18n>${escapeHtml(c.name)}</span>` : "") +
+      `<span class="msg-conv-club" data-no-i18n>${escapeHtml(c.name)}</span>` +
     `</button></li>`;
   }).join("");
 }
@@ -48430,7 +48508,7 @@ function renderMsgThread(opts) {
   const name = t ? t.with.name : (conv || manager || { name: (localIdx != null && league && league.teams[localIdx] || {}).name || "" }).name;
   // Pseudo du correspondant (2026-09-30) : ouvre son profil ; le club reste
   // cliquable juste à côté (fiche d'équipe).
-  const who = t ? t.with.manager : ((conv || manager || {}).manager || null);
+  const who = t ? t.with.manager : ((conv || manager || {}).manager || null); // pseudo ou null
   const whoMatch = /^(?:(.+):)?(\d+)$/.exec(String(msgUi.activeWith));
   const blocked = t ? t.with.blocked : false;
 
@@ -48453,8 +48531,8 @@ function renderMsgThread(opts) {
   }
   document.getElementById("msgThreadHead").innerHTML =
     `<button type="button" class="msg-back" data-msg-back>←</button>` +
-    (who && whoMatch
-      ? `<span class="msg-thread-who"><button type="button" class="msg-thread-name" data-manager-profile="${whoMatch[2]}"${whoMatch[1] ? ` data-manager-league="${escapeHtml(whoMatch[1])}"` : ""} title="Voir le profil du manager" data-no-i18n>${escapeHtml(who)}</button>` +
+    (whoMatch && name
+      ? `<span class="msg-thread-who"><button type="button" class="msg-thread-name" data-manager-profile="${whoMatch[2]}"${whoMatch[1] ? ` data-manager-league="${escapeHtml(whoMatch[1])}"` : ""} title="Voir le profil du manager">${managerLabelHtml(who, name)}</button>` +
         `<button type="button" class="msg-thread-club" data-msg-team="${escapeHtml(msgUi.activeWith)}" title="Voir la fiche du club" data-no-i18n>${escapeHtml(name)}</button></span>`
       : `<button type="button" class="msg-thread-name" data-msg-team="${escapeHtml(msgUi.activeWith)}" title="Voir la fiche du club" data-no-i18n>${escapeHtml(name)}</button>`) +
     `<span class="msg-head-actions">` +
@@ -49581,6 +49659,7 @@ window.__gameReady = (async () => {
   }
   document.getElementById("topbarClubName").innerHTML = teamLinkHtml(myTeamIndex, teamA.name);
   syncTopbarManager();
+  window.__lastLangSync = hmSyncAccountLang();
   hmAccountHandleReturnHash();
   mkHandleAuctionsHash();
   mkUpdateBadge();

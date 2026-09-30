@@ -16,6 +16,7 @@ const { createHandler } = require("./index.js");
 const store = require("./store.js");
 const World = require("./world.js");
 const Accounts = require("./accounts.js");
+const AccountRoutes = require("./accountRoutes.js");
 
 function check(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.log("✅ " + msg); }
 
@@ -28,7 +29,7 @@ function request(server, method, urlPath, jsonBody, headers) {
     const req = http.request({ host: "127.0.0.1", port, path: urlPath, method, headers: h }, (res) => {
       let raw = "";
       res.on("data", c => { raw += c; });
-      res.on("end", () => { let body = null; try { body = JSON.parse(raw); } catch (e) { /* */ } resolve({ status: res.statusCode, body, raw }); });
+      res.on("end", () => { let body = null; try { body = JSON.parse(raw); } catch (e) { /* */ } resolve({ status: res.statusCode, body, raw, headers: res.headers }); });
     });
     req.on("error", reject);
     if (payload) req.write(payload);
@@ -118,7 +119,7 @@ async function main() {
     check(r.status === 200, "Lyon poste dans le chat");
     const msg = r.body.messages.find(m => m.kind === "user");
     check(msg.author.name === "aszat3" && msg.author.club === "Lyon", "chat : auteur = pseudo (+ club)");
-    check(r.body.managers.find(m => m.club === "Nice").name === "Manager de Nice", "chat : repli « Manager de Nice »");
+    check(r.body.managers.find(m => m.club === "Nice").name === null, "chat : sans pseudo, nom null (le navigateur compose « Manager de Nice » dans sa langue)");
     check(!leak(r.raw), "chat : ni email, ni nom Discord, ni jeton");
 
     // Messagerie : expéditeur = pseudo.
@@ -156,7 +157,53 @@ async function main() {
     check(r.status === 200 && !/discordUsername|pseudoDefaultTried/.test(JSON.stringify(r.body)), "Mon compte : vue publique inchangée (aucun champ interne)");
     const after = await store.loadMultiLeague(multiSavePath, store.HISTORIC_LEAGUE_ID);
     check(after.league.teams[M.Lyon.idx].managerPseudo === "hoop.fan_77" && after.league.teams[M.Lyon.idx].managerPseudoChangedAt === null, "pseudo par défaut = identifiant Discord (premier choix toujours libre)");
-    console.log("\n🏁 Pseudo du manager : validation, unicité mondiale, délai, confidentialité.");
+    // --- Comptes Discord d'avant le stockage de l'identifiant : jamais le nom
+    // affiché comme pseudo ; rattrapés à la prochaine connexion Discord.
+    const acc3 = await Accounts.loadAccounts(accountsPath);
+    acc3.accounts = acc3.accounts.filter(a => a.managerToken !== newToken);
+    const legacy = Accounts.createAccount(acc3, { managerToken: newToken, discordName: "Jean Legacy" }, now);
+    legacy.discordId = "5555"; legacy.pseudoDefaultTried = true;
+    await Accounts.saveAccounts(acc3, accountsPath);
+    const lg3 = await store.loadMultiLeague(multiSavePath, store.HISTORIC_LEAGUE_ID);
+    lg3.league.teams[M.Lyon.idx].managerPseudo = null;
+    await store.saveMultiLeague(lg3.league, multiSavePath);
+    await request(server, "GET", "/api/account/me", undefined, { "X-TipIn-Token": newToken });
+    const pseudoOfLyon = async () => (await store.loadMultiLeague(multiSavePath, store.HISTORIC_LEAGUE_ID)).league.teams[M.Lyon.idx].managerPseudo;
+    check(await pseudoOfLyon() === null, "ancien compte Discord (sans identifiant) : le nom affiché n'est jamais adopté");
+    process.env.DISCORD_CLIENT_ID = "123"; process.env.DISCORD_CLIENT_SECRET = "abc";
+    AccountRoutes._setFetchImplForTests(async (url) => {
+      if (url.endsWith("/oauth2/token")) return { ok: true, json: async () => ({ access_token: "AT" }) };
+      return { ok: true, json: async () => ({ id: "5555", username: "legacy_coach", global_name: "Jean Legacy" }) };
+    });
+    try {
+      const go = await request(server, "GET", "/auth/discord");
+      const st = new URL(go.headers.location).searchParams.get("state");
+      const cb = await request(server, "GET", `/auth/discord/callback?state=${st}&code=OK`, undefined, { Cookie: go.headers["set-cookie"][0].split(";")[0] });
+      check(cb.headers.location === `/?m=${newToken}`, "(préparation) reconnexion Discord");
+    } finally {
+      AccountRoutes._setFetchImplForTests(null);
+      delete process.env.DISCORD_CLIENT_ID; delete process.env.DISCORD_CLIENT_SECRET;
+    }
+    check(await pseudoOfLyon() === "legacy_coach", "reconnexion Discord : identifiant enregistré et adopté comme pseudo");
+    const acc4 = await Accounts.loadAccounts(accountsPath);
+    check(Accounts.findByManagerToken(acc4, newToken).discordUsername === "legacy_coach", "identifiant Discord désormais stocké");
+
+    // --- Langue du compte (Accounts.langFor, POST /api/account/lang).
+    check(Accounts.langFor(null) === "fr" && Accounts.langFor({ lang: "it" }) === "it" && Accounts.langFor({ lang: "de" }) === "fr", "langFor : fr par défaut, fr/en/it seulement");
+    r = await request(server, "GET", "/api/account/me", undefined, { "X-TipIn-Token": newToken });
+    check(r.body.account.lang === null, "compte sans langue : lang null (le jeu enverra celle du navigateur)");
+    r = await request(server, "POST", "/api/account/lang", { lang: "de" }, { "X-TipIn-Token": newToken });
+    check(r.status === 400, "langue inconnue refusée");
+    r = await request(server, "POST", "/api/account/lang", { lang: "it" }, { "X-TipIn-Token": newToken });
+    check(r.status === 200 && r.body.persisted === true, "langue enregistrée dans le compte");
+    r = await request(server, "GET", "/api/account/me", undefined, { "X-TipIn-Token": newToken });
+    check(r.body.account.lang === "it", "/api/account/me renvoie la langue du compte (tout appareil)");
+    check(Accounts.langFor(Accounts.findByManagerToken(await Accounts.loadAccounts(accountsPath), newToken)) === "it", "langFor(compte) pour les textes serveur (emails, push)");
+    r = await request(server, "POST", "/api/account/lang", { lang: "en" }, M.Paris.h);
+    check(r.status === 200 && r.body.persisted === false, "manager sans compte (lien privé) : rien d'enregistré, le navigateur garde son choix");
+    r = await request(server, "POST", "/api/account/lang", { lang: "en" });
+    check(r.status === 401, "sans jeton : refusé");
+    console.log("\n🏁 Pseudo du manager : validation, unicité mondiale, délai, confidentialité, langue du compte.");
   } finally {
     server.close();
   }

@@ -582,7 +582,12 @@
     if (discordPendingName) document.getElementById("dclubSub").textContent = t("dclub.sub").replace("{name}", discordPendingName);
   }
   document.querySelectorAll("[data-lang]").forEach(function (b) {
-    b.addEventListener("click", function () { lang = b.dataset.lang; store(LANG_KEY, lang); applyLang(); });
+    b.addEventListener("click", function () {
+      lang = b.dataset.lang; store(LANG_KEY, lang); applyLang();
+      // Connecté (jeton du jeu présent) : la langue est aussi celle du compte.
+      var tok = read(TOKEN_KEY);
+      if (tok) api("POST", "/api/account/lang", { lang: lang }, { "X-TipIn-Token": tok }).catch(function () {});
+    });
   });
 
   // --- Vues -----------------------------------------------------------

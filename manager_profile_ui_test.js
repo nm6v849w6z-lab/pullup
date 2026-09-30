@@ -13,6 +13,11 @@ const fs = require("fs");
 const Engine = require("./engine.js");
 const Calendar = require("./server/calendar.js");
 const store = require("./server/store.js");
+const http = require("http");
+const os = require("os");
+const path = require("path");
+const { createHandler } = require("./server/index.js");
+const Accounts = require("./server/accounts.js");
 const { startTestServer, openGame } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
@@ -52,6 +57,22 @@ async function waitFor(fn, label, tries = 200) {
     const win = dom.window, doc = win.document;
     if (win.eval("currentVisiblePageId()") === "catchupSection") doc.getElementById("catchupContinueBtn").click();
     const visible = () => win.eval("currentVisiblePageId()");
+
+    // --- Tableau de bord : bannière « nouveau message » au nom du pseudo.
+    win.eval("TAB_HANDLERS.club()");
+    await win.eval("msgRefreshSummary()");
+    const dash = await waitFor(() => doc.querySelector("#clubMessagesBanner .msg-dash-banner"), "bannière messages");
+    check(/1 nouveau message de\s*Coach_Riri/.test(dash.textContent) && dash.querySelector(".msg-dash-club").textContent === "Rennes PF", "tableau de bord : « 1 nouveau message de Coach_Riri » (club en petit)");
+    // Invitation discrète à choisir un pseudo (manager sans pseudo).
+    check(!doc.querySelector("#clubPseudoPrompt .pseudo-prompt"), "pseudo déjà choisi : pas d'invitation");
+    win.eval("teamA.managerPseudo = null; renderPseudoPrompt()");
+    const prompt = doc.querySelector("#clubPseudoPrompt .pseudo-prompt");
+    check(prompt && /Choisis ton pseudo/.test(prompt.textContent) && /Manager de Gotham PF/.test(prompt.textContent), "sans pseudo : invitation « Choisis ton pseudo » sur le tableau de bord");
+    prompt.querySelector("[data-pseudo-later]").click();
+    check(!doc.querySelector("#clubPseudoPrompt .pseudo-prompt"), "« Plus tard » : invitation masquée (jeu jamais bloqué)");
+    win.eval("teamA.managerPseudo = 'aszat'; pseudoPromptDismissed = false; renderPseudoPrompt()");
+    // Repli structuré : « Manager de <club> » composé côté navigateur.
+    check(win.eval("managerLabelHtml(null, 'Rennes PF')") === "<span>Manager de Rennes PF</span>" && /data-no-i18n/.test(win.eval("managerLabelHtml('Coach_Riri', 'Rennes PF')")), "libellé de repli traduisible, pseudo jamais traduit");
 
     // --- Avatar en haut à droite → son propre profil.
     const avatar = doc.getElementById("topbarManagerBtn");
@@ -133,6 +154,39 @@ async function waitFor(fn, label, tries = 200) {
     check(win.eval("teamA.managerPseudo") === "Batman_42" && doc.getElementById("topbarManagerBtn").textContent.trim() === "B4", "pseudo enregistré : avatar mis à jour");
     const saved = await store.loadMultiLeague(multiSavePath);
     check(saved.league.teams[iA].managerPseudo === "Batman_42", "pseudo sauvegardé côté serveur");
+
+    // --- Langue du COMPTE : appliquée au chargement sur un autre appareil ;
+    // un compte sans langue adopte celle du navigateur.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "profil-lang-"));
+    const accountsPath = path.join(dir, "accounts.json");
+    const accData = { version: Accounts.ACCOUNTS_VERSION, accounts: [] };
+    Accounts.createAccount(accData, { managerToken: tA, lang: "en" }, now);
+    Accounts.createAccount(accData, { managerToken: tB }, now);
+    await Accounts.saveAccounts(accData, accountsPath);
+    const srv2 = http.createServer(createHandler(path.join(dir, "solo.json"), Date.now, multiSavePath, accountsPath));
+    await new Promise(r => srv2.listen(0, "127.0.0.1", r));
+    const base2 = `http://127.0.0.1:${srv2.address().port}/`;
+    try {
+      let asked = null;
+      const d2 = await openGame(html, `${base2}?m=${tA}`);
+      d2.window.hmI18n = d2.window.hmI18n || { getLang: () => "fr" }; // script de langue parfois pas chargé sous charge
+      d2.window.hmI18n.setLang = l => { asked = l; };
+      await d2.window.eval("hmSyncAccountLang()");
+      check(asked === "en", "langue du compte (en) appliquée au chargement, quel que soit le navigateur");
+      d2.window.close();
+      const d3 = await openGame(html, `${base2}?m=${tB}`);
+      await d3.window.__lastLangSync;
+      const back = await Accounts.loadAccounts(accountsPath);
+      check(Accounts.findByManagerToken(back, tB).lang === "fr", "compte sans langue : adopte celle du navigateur (fr)");
+      // Paramètres › Langue : enregistrée dans le compte avant le rechargement.
+      d3.window.hmI18n = d3.window.hmI18n || { getLang: () => "fr" };
+      d3.window.hmI18n.setLang = () => {};
+      d3.window.eval(`showSettingsModal("display")`);
+      d3.window.document.querySelector('[data-lang-choice="it"]').click();
+      await d3.window.__lastLangSave;
+      check(Accounts.findByManagerToken(await Accounts.loadAccounts(accountsPath), tB).lang === "it", "Paramètres › Langue : enregistrée dans le compte");
+      d3.window.close();
+    } finally { srv2.close(); }
     console.log("\n🏁 Profil du manager et pseudo : conformes.");
   } finally { if (dom) dom.window.close(); server.close(); }
   process.exit(0);

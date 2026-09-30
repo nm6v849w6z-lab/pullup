@@ -32,9 +32,12 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const Engine = require("../engine.js");
-// Pseudo public du manager d'un club (voir Engine.managerDisplayName) :
-// affiché comme expéditeur, jamais l'email ni le nom réel.
-const managerNameOf = team => Engine.managerDisplayName(team);
+// Pseudo public du manager d'un club (voir Engine.managerPseudoOf) :
+// affiché comme expéditeur, jamais l'email ni le nom réel. `null` quand il
+// n'en a pas choisi : le navigateur compose alors « Manager de <club> »
+// dans la langue du joueur (donnée structurée : pseudo + nom du club).
+const managerNameOf = team => Engine.managerPseudoOf(team);
+const validPseudo = v => (Engine.isValidManagerPseudo(v) ? v : null);
 
 const MESSAGES_VERSION = 1;
 const REDIS_KEY = "pullup:messages";
@@ -255,7 +258,7 @@ function conversationsView(league, me, data) {
       who: local ? String(local.teamIndex) : whoOf(league.leagueId, foreign.leagueId, foreign.idx),
       leagueId: local ? null : foreign.leagueId,
       name: local ? local.team.name : foreign.name,
-      manager: local ? managerNameOf(local.team) : (foreign.manager || `Manager de ${foreign.name}`),
+      manager: local ? managerNameOf(local.team) : validPseudo(foreign.manager),
       lastMessage: { text: last.text.slice(0, 140), at: last.at, mine: last.from === me },
       unread: unreadIn(conv, me),
       blocked: isBlocked(data, me, otherOf(conv, me)),
@@ -307,7 +310,7 @@ async function resolveOther(league, me, raw, data, loadLeague, verify) {
   }
   const base = { idx: who.idx, teamIndex: null, who: whoOf(own, who.leagueId, who.idx), leagueId: who.leagueId };
   const known = contactFor(data, who.leagueId, who.idx);
-  if (known && !verify) return known.key === me ? { error: "Vous ne pouvez pas vous écrire à vous-même." } : { ...base, key: known.key, name: known.c.name, manager: known.c.manager || `Manager de ${known.c.name}` };
+  if (known && !verify) return known.key === me ? { error: "Vous ne pouvez pas vous écrire à vous-même." } : { ...base, key: known.key, name: known.c.name, manager: validPseudo(known.c.manager) };
   const lg = loadLeague ? await loadLeague(who.leagueId) : null;
   if (!lg) return { error: "Championnat introuvable." };
   const key = keyForTeamIndex(lg, who.idx);
