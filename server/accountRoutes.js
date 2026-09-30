@@ -540,7 +540,18 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       const cookies = parseCookies(req);
       const clearCookie = { "Set-Cookie": "hm_oauth=; Path=/auth/discord; Max-Age=0" };
       const saved = state ? oauthStates.get(state) : null;
-      if (!saved || cookies.hm_oauth !== state) { redirect(res, "/bienvenue#erreur=discord-expired", clearCookie); return true; }
+      // Cookie hm_oauth (anti-CSRF) : exigé pour la connexion. Pour la
+      // LIAISON (intent « link »), l'état est déjà lié côté serveur au
+      // jeton du manager qui l'a demandé (discord-link-start) ; le retour de
+      // Discord arrive souvent dans un AUTRE contexte que celui qui a posé
+      // le cookie (iPhone : l'appli Discord intercepte discord.com puis
+      // rouvre le retour dans son navigateur intégré ; appli iOS/Android :
+      // navigateur système ; PWA installée : cookies séparés de Safari), d'où
+      // la page blanche puis « expirée ». Cookie absent accepté pour la
+      // liaison seulement ; un cookie DIFFÉRENT reste refusé.
+      const cookieOk = cookies.hm_oauth === state || (saved && saved.intent === "link" && !cookies.hm_oauth);
+      if (!saved || !cookieOk) { redirect(res, "/bienvenue#erreur=discord-expired", clearCookie); return true; }
+      const otherContext = cookies.hm_oauth !== state;
       oauthStates.delete(state);
       const back = saved.intent === "link" ? "/" : "/bienvenue";
       if (!code) { redirect(res, `${back}#erreur=discord-cancelled`, clearCookie); return true; }
@@ -585,7 +596,9 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
           account.discordUsername = discordUser.username;
           await adoptDiscordPseudo(account, now);
           await Accounts.saveAccounts(data, accountsPath);
-          redirect(res, "/#compte=discord-lie", clearCookie);
+          // Autre navigateur que celui du jeu : pas de jeton ici, on
+          // l'annonce sur la page d'accueil (retour dans le jeu à faire à la main).
+          redirect(res, otherContext ? "/bienvenue#info=discord-linked" : "/#compte=discord-lie", clearCookie);
           return;
         }
         if (existing) {

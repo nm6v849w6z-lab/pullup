@@ -5428,4 +5428,6 @@ window.HM_I18N_IT = {
   "Tactique « {0} »": "Tattica «{0}»",
   "Modifier « {0} »": "Modifica «{0}»",
   "Forme physique : {0} ({1}/100)": "Forma fisica: {0} ({1}/100)",
+  "Termine la liaison dans la fenêtre Discord, puis reviens ici.": "Completa il collegamento nella finestra di Discord, poi torna qui.",
+  "Supercoupe · saison {0}": "Supercoppa · stagione {0}",
 };

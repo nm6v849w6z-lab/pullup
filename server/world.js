@@ -550,7 +550,8 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
       for (const [id, lg] of leagues) {
         lg.autoNextSeason = false;
         // Barrage 7e-8e seulement s'il a un enjeu (voir divisionMovesFor).
-        lg.barrageHasStakes = divisionMovesFor(world, id).barrage;
+        lg.divisionMoves = divisionMovesFor(world, id);
+        lg.barrageHasStakes = lg.divisionMoves.barrage;
         useLeagueTimeZone(lg);
         (tick(lg, now) || []).forEach(ev => events.push({ leagueId: id, ...ev }));
       }

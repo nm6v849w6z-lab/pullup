@@ -326,7 +326,7 @@ function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events 
       sc.result = { scoreHome: home ? Engine.FORFEIT_SCORE : 0, scoreAway: away ? Engine.FORFEIT_SCORE : 0, forfeit: true, quarterScores: null };
     } else if ((home.isHuman || away.isHuman) && !late) {
       const live = LiveMatch.computeLiveMatchForTeams(Engine, home, away, SUPERCUP_ROUND, sc.home.idx, sc.away.idx, sc.at, "cup");
-      sc.result = { scoreHome: live.finalScore.home, scoreAway: live.finalScore.away, forfeit: live.forfeit, quarterScores: live.quarterScores, seed: live.seed };
+      sc.result = { scoreHome: live.finalScore.home, scoreAway: live.finalScore.away, forfeit: live.forfeit, quarterScores: live.quarterScores, tacticsUsed: live.tacticsUsed || null, seed: live.seed };
       [["home", home, sc.home, away, sc.away], ["away", away, sc.away, home, sc.home]].forEach(([side, team, ref, opp, oppRef]) => {
         if (!team.isHuman) return;
         const lg = leagues.get(ref.leagueId);
@@ -345,13 +345,23 @@ function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events 
       });
     } else {
       const sim = Engine.simulateOrForfeit(home, away, sc.at);
-      sc.result = { scoreHome: sim.scoreHome, scoreAway: sim.scoreAway, forfeit: sim.forfeit, quarterScores: sim.quarterScores || null, seed: sim.seed };
+      sc.result = { scoreHome: sim.scoreHome, scoreAway: sim.scoreAway, forfeit: sim.forfeit, quarterScores: sim.quarterScores || null, tacticsUsed: sim.tacticsUsed || null, seed: sim.seed };
+      // Stats des joueurs (journal de matchs, feuille de match) : comme un
+      // match de Coupe, tour SUPERCUP_ROUND (libellé « Supercoupe »).
+      if (!sim.forfeit) Engine.recordMatchStatsAndAwardMvp(home, away, SUPERCUP_ROUND, "cup", sc.at, sc.result.quarterScores, sc.result.tacticsUsed, sc.result.seed);
+      sc.statsRecorded = true;
     }
     sc.started = true;
     events.push({ type: "super-cup-kickoff", country: sc.country, season: sc.season });
   }
   if (now < windowEnd) return events;
   const r = sc.result;
+  // Direct terminé : stats des joueurs enregistrées (2026-09-30, retour
+  // utilisateur : « stats des joueurs de la Supercoupe », comme la Coupe).
+  if (!sc.statsRecorded && home && away && !r.forfeit) {
+    Engine.recordMatchStatsAndAwardMvp(home, away, SUPERCUP_ROUND, "cup", sc.at, r.quarterScores, r.tacticsUsed || null, r.seed);
+  }
+  sc.statsRecorded = true;
   const totalHome = r.scoreHome + (r.forfeit ? 0 : sc.handicap.home);
   const totalAway = r.scoreAway + (r.forfeit ? 0 : sc.handicap.away);
   sc.winner = totalAway > totalHome ? "away" : "home";

@@ -50,6 +50,27 @@ console.log("✅ Serveur : zones calculées d'après les championnats ouverts ju
   const txt = dom.window.document.getElementById("standingsContent").textContent;
   assert(!/Relégation directe|Barrage de relégation/.test(txt), "aucune mention de relégation sans division inférieure");
   console.log("✅ Page Ligue : aucune zone de relégation affichée sans division inférieure.");
+  // Relégués et verdict de division (fin de saison, objectif du conseil)
+  // suivant la structure réelle (2026-09-30), côté navigateur ET moteur.
+  const store = require("./server/store.js");
+  const eng = store.createMultiManagerCareer(["Z1", "Z2"], Date.now()).league;
+  for (const [name, getRaw] of [["navigateur", s => win.eval(s)], ["moteur", s => (new Function("league", `return (${s});`))(eng)]]) {
+    const get = s => JSON.parse(JSON.stringify(getRaw(s)));
+    const set = dm => (name === "navigateur" ? win.eval(`league.divisionMoves = ${JSON.stringify(dm)}`) : (eng.divisionMoves = dm));
+    const last = get("league.standings()[league.standings().length - 1].idx"), ninth = get("league.standings()[league.standings().length - 2].idx");
+    set({ promotes: false, relegations: 0, barrage: false });
+    assert.deepStrictEqual(get("league.relegatedTeamIndexes()"), [], `${name} : aucune relégation sans division inférieure`);
+    assert.strictEqual(get(`league.divisionOutcomeForTeam(${last}).outcome`), "stay", `${name} : le 10e reste`);
+    set({ promotes: false, relegations: 1, barrage: false });
+    assert.deepStrictEqual(get("league.relegatedTeamIndexes()"), [last]);
+    set({ promotes: false, relegations: 2, barrage: false });
+    assert.deepStrictEqual(get("league.relegatedTeamIndexes()"), [last, ninth]);
+  }
+  // Écran de fin de saison sans division inférieure : ni relégation ni descente.
+  win.eval("league.divisionMoves = { promotes: false, relegations: 0, barrage: false };");
+  const endTxt = win.eval("(() => { const out = league.relegatedTeamIndexes(); return out.length; })()");
+  assert.strictEqual(endTxt, 0);
+  console.log("✅ Relégués et verdict de division suivant les divisions ouvertes (navigateur et moteur) : aucun sans division inférieure, 10e puis 9e sinon.");
   await flush(dom); win.close(); server.close();
   console.log("\n🏁 Zones du classement conformes.");
 })().catch(e => { console.error(e); process.exit(1); });

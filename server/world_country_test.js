@@ -8,6 +8,7 @@ const assert = require("assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const Engine = require("../engine.js");
 const store = require("./store.js");
 const World = require("./world.js");
 
@@ -143,6 +144,11 @@ const ok = m => console.log("✅ " + m);
     const frOpen = new Set((frLg.transferListings || []).filter(l => l.status === "open").map(l => l.playerId));
     const listedFr = frLg.teams[4].players.find(p => !frOpen.has(p.id));
     assert.ok(frLg.listPlayerForSale(4, listedFr.id, 80000, now), "annonce française");
+    // Scouting du manager : 2 caractéristiques révélées chez le club 2 ;
+    // analyste vidéo pour une séance sur le club 3.
+    frLg.teams[0].scoutedAttrs = { 2: ["pass", "rebound"] };
+    frLg.teams[0].videoAnalyst = { level: 3, weeksEmployed: 0, baseSalary: 15000 };
+    frLg.teams[0].lastVideoSessionAt = null;
     await store.saveMultiLeague(frLg, multi);
     const server = http.createServer(createHandler(path.join(dir, "solo.json"), () => now, multi));
     await new Promise(r => server.listen(0, "127.0.0.1", r));
@@ -185,15 +191,31 @@ const ok = m => console.log("✅ " + m);
       const openFr = new Set(save.league.transferListings.filter(l => l.status === "open").map(l => l.playerId));
       const HIDDEN = ["potential", "physicalPotential", "mentalPotential", "_trainProgress", "progressLog", "form", "weeksAtLowMotivation", "transferRequestActive", "retirementTalks", "pendingMatchBoost", "forSale", "salePrice"];
       others.forEach(t => t.players.forEach(p => {
-        const leak = scan(p, HIDDEN).filter(x => !(openFr.has(p.id) && x === ".potential"));
+        const leak = scan(p, [...HIDDEN, "aggressiveness"]).filter(x => !(openFr.has(p.id) && x === ".potential"));
         assert.deepStrictEqual(leak, [], `/api/save, ${t.teamName} / ${p.name} : ${leak.join(", ")}`);
-        assert.ok(p.attrs, "caractéristiques des adversaires gardées (scouting)");
+        if (openFr.has(p.id)) assert.strictEqual(Object.keys(p.attrs).length, Engine.ATTRS.length, "joueur sur le marché : toutes ses caractéristiques");
+        else assert.ok(p.attrsHidden === true, `${p.name} : attrsHidden`);
       }));
+      // Club 2 : seulement les 2 caractéristiques révélées ; club 5 (non scouté) : aucune.
+      save.league.teams[2].players.filter(p => !openFr.has(p.id)).forEach(p => assert.deepStrictEqual(Object.keys(p.attrs).sort(), ["pass", "rebound"]));
+      assert.ok(save.league.teams[2].players.every(p => p.attrs.pass === frLg.teams[2].players.find(x => x.id === p.id).attrs.pass), "valeurs révélées exactes");
+      save.league.teams[5].players.filter(p => !openFr.has(p.id)).forEach(p => assert.deepStrictEqual(p.attrs, {}));
+      // Niveau de chaque club et estimations calculés par le serveur.
+      const lvl = t => Math.round(t.players.reduce((a, p) => a + p.overall(), 0) / t.players.length);
+      save.league.teams.forEach((t, i) => { if (i !== save.myTeamIndex) assert.strictEqual(t.publicLevel, lvl(frLg.teams[i]), `niveau du club ${i}`); });
+      assert.ok(save.league.saleValuations && me.players.every(p => Object.prototype.hasOwnProperty.call(save.league.saleValuations, p.id)), "estimations de vente de ses joueurs");
+      // Séance vidéo : les valeurs révélées arrivent dans la réponse.
+      const vs = await (await fetch(`http://127.0.0.1:${server.address().port}/api/staff/video-session`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": tok }, body: JSON.stringify({ opponentIdx: 3 }) })).json();
+      assert.ok(vs.ok && vs.revealed.length > 0, JSON.stringify(vs).slice(0, 200));
+      const frNow = await World.loadLeague(world, "fr-1", multi);
+      frNow.teams[3].players.forEach(p => assert.deepStrictEqual(vs.revealedAttrs[p.id], Object.fromEntries(vs.revealed.map(k => [k, p.attrs[k]]))));
+      const save2 = await get("/api/save", tok);
+      save2.league.teams[3].players.filter(p => !openFr.has(p.id)).forEach(p => assert.deepStrictEqual(Object.keys(p.attrs).sort(), [...vs.revealed].sort()));
       assert.strictEqual(typeof save.league.teams[4].players.find(p => p.id === listedFr.id).potential, "number", "adversaire sur le marché : potentiel (palier affiché par le marché)");
       assert.ok(others.every(t => !(t.youthPlayers || []).length && !(t.youthCandidates || []).length && !Object.keys(t.scoutedAttrs || {}).length), "académie et scouting des autres clubs non envoyés");
       assert.deepStrictEqual(PublicPlayers.HIDDEN_PLAYER_FIELDS.filter(k => !HIDDEN.includes(k)), ["transferRequestQuote", "transferRequestDiscussed", "trainingSecondsPlayedByPosition"]);
     } finally { server.close(); }
-    ok("informations cachées : autre championnat (team/league/player-page) sans caractéristiques, potentiel ni traits cachés (sauf caractéristiques d'un joueur sur le marché), sans académie ni scouting des clubs ; /api/save : adversaires sans potentiel, motivation, progression ni académie");
+    ok("informations cachées : autre championnat (team/league/player-page) sans caractéristiques, potentiel ni traits cachés (sauf caractéristiques d'un joueur sur le marché), sans académie ni scouting des clubs ; /api/save : adversaires avec les seules caractéristiques révélées par le scouting (toutes pour un joueur sur le marché), niveau des clubs et estimations calculés par le serveur, séance vidéo renvoyant les valeurs révélées, sans potentiel, motivation, progression ni académie");
   }
 
   fs.rmSync(dir, { recursive: true, force: true });

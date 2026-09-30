@@ -5390,4 +5390,6 @@ window.HM_I18N_EN = {
   "Tactique « {0} »": "Tactic “{0}”",
   "Modifier « {0} »": "Edit “{0}”",
   "Forme physique : {0} ({1}/100)": "Fitness: {0} ({1}/100)",
+  "Termine la liaison dans la fenêtre Discord, puis reviens ici.": "Finish linking in the Discord window, then come back here.",
+  "Supercoupe · saison {0}": "Super Cup · season {0}",
 };

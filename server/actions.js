@@ -1416,7 +1416,10 @@ function runVideoSession(team, teamIndex, league, body, now) {
     };
     return fail(reasons[result.reason] || "Séance vidéo refusée.");
   }
-  return { ok: true, opponentIdx: result.opponentIdx, revealed: result.revealed, analystLevel: result.analystLevel };
+  // Valeurs révélées (le navigateur ne reçoit plus les caractéristiques
+  // non scoutées des adversaires, voir server/publicPlayers.js).
+  const revealedAttrs = require("./publicPlayers.js").revealedAttrsFor(league.teams[opponentIdx], result.revealed);
+  return { ok: true, opponentIdx: result.opponentIdx, revealed: result.revealed, revealedAttrs, analystLevel: result.analystLevel };
 }
 
 // Scouting Pro (retour utilisateur, 2026-09 — voir le grand commentaire en

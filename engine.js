@@ -11235,6 +11235,18 @@ class League {
   // 9e et le 10e).
   relegatedTeamIndexes() {
     const table = this.standings();
+    // Championnats par pays (server/world.js:divisionMovesFor, 2026-09-30) :
+    // autant de descentes que de championnats ouverts juste en dessous
+    // (10e, puis 9e, puis perdant du barrage) — aucune s'il n'y en a pas.
+    const dm = this.divisionMoves;
+    if (dm && typeof dm === "object") {
+      const n = Math.max(0, Math.min(3, Number(dm.relegations) || 0));
+      const out = [];
+      if (n >= 1 && table[table.length - 1]) out.push(table[table.length - 1].idx);
+      if (n >= 2 && table[table.length - 2]) out.push(table[table.length - 2].idx);
+      if (n >= 3 && this.relegationBarrage && this.relegationBarrage.loser != null) out.push(this.relegationBarrage.loser);
+      return out;
+    }
     const auto = [table[8].idx, table[9].idx]; // 9e, 10e (0-indexé : rangs 8,9)
     return this.relegationBarrage && this.relegationBarrage.loser != null ? [...auto, this.relegationBarrage.loser] : auto;
   }
@@ -11255,7 +11267,8 @@ class League {
     const fromLevel = this.divisionLevel || MAX_DIVISION_LEVEL;
     const champion = this.playoffs ? this.playoffs.champion : null;
     let outcome = "stay", toLevel = fromLevel;
-    if (champion === teamIdx && fromLevel > 1) {
+    const canPromote = this.divisionMoves && typeof this.divisionMoves === "object" ? !!this.divisionMoves.promotes : fromLevel > 1;
+    if (champion === teamIdx && fromLevel > 1 && canPromote) {
       outcome = "promoted";
       toLevel = fromLevel - 1;
     } else if (this.relegatedTeamIndexes().includes(teamIdx) && fromLevel < MAX_DIVISION_LEVEL) {
