@@ -6756,7 +6756,8 @@
   .mp-back-row{margin:0 0 14px;}
   .mp-back{background:none; border:0; padding:6px 0; font:inherit; font-size:13px; font-weight:700; color:var(--ink-dim); cursor:pointer;}
   .mp-back:hover{color:var(--ink);}
-  .mp{max-width:1180px;}
+  /* Pleine largeur (retour utilisateur 2026-09-30 : « prends pas toute la page »). */
+  .mp{max-width:none;}
   .mp-hero{display:flex; align-items:center; gap:24px; padding:28px 30px; border-radius:22px;
     background:radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--amber) 10%, var(--panel)) 0, var(--panel) 55%);}
   .mp-hero-id{min-width:0; flex:1 1 auto;}
@@ -12176,13 +12177,19 @@ const ArenaGen = (function () {
 
   // ---------------------------------------------------------------- terrain
 
-  function court(main, second, name) {
-    const z = 0.05, lines = '#fbf6ec';
-    let s = poly(rect(-16, 16, -9, 9, z), shade(main, -40), 0.7) + poly(rect(-14, 14, -7.5, 7.5, z), '#d9a35f', 0.7);
+  // `cs` (options.court) : parquet choisi dans Personnalisation (retour
+  // utilisateur 2026-09-30 : « l'image du parquet devrait bouger en même
+  // temps ») — { floor, grain, line, paint } ; sans lui, parquet clair et
+  // raquettes aux couleurs du club, comme avant.
+  function court(main, second, name, cs) {
+    const z = 0.05, lines = cs && cs.line ? cs.line : '#fbf6ec';
+    const floor = cs && cs.floor ? cs.floor : '#d9a35f', grain = cs && cs.grain ? cs.grain : '#d09a57';
+    const keyFill = cs ? (cs.paint || null) : main;
+    let s = poly(rect(-16, 16, -9, 9, z), shade(main, -40), 0.7) + poly(rect(-14, 14, -7.5, 7.5, z), floor, 0.7);
     // lames de parquet : bandes légèrement contrastées
-    for (let y = -7.5, k = 0; y < 7.5; y += 1.25, k++) if (k % 2) s += flat(rect(-14, 14, y, Math.min(7.5, y + 1.25), z), '#d09a57');
+    for (let y = -7.5, k = 0; y < 7.5; y += 1.25, k++) if (k % 2) s += flat(rect(-14, 14, y, Math.min(7.5, y + 1.25), z), grain);
     for (let x = -12.6; x < 14; x += 2.8) s += line([[x, -7.5, z], [x, 7.5, z]], 'rgba(120,70,30,0.25)', 0.4);
-    s += flat(rect(-14, -8.2, -2.45, 2.45, z), main) + flat(rect(8.2, 14, -2.45, 2.45, z), main);
+    if (keyFill) s += flat(rect(-14, -8.2, -2.45, 2.45, z), keyFill) + flat(rect(8.2, 14, -2.45, 2.45, z), keyFill);
     s += line([[-14, -7.5, z], [14, -7.5, z], [14, 7.5, z], [-14, 7.5, z], [-14, -7.5, z]], lines, 0.9) + line([[0, -7.5, z], [0, 7.5, z]], lines, 0.9);
     for (const sd of [-1, 1]) {
       const bx = sd * 14, c = sd * 12.43;
@@ -12197,7 +12204,7 @@ const ArenaGen = (function () {
       s += `<ellipse cx="${f1(r[0])}" cy="${f1(r[1])}" rx="1.7" ry="0.9" fill="none" stroke="#e0662a" stroke-width="1"/>`;
     }
     // logo central
-    s += flat(arc(0, 0, 2.4, 0, Math.PI * 2, 28, 0.06), main) + line(arc(0, 0, 2.4, 0, Math.PI * 2, 28, 0.06), lines, 0.9) +
+    s += flat(arc(0, 0, 2.4, 0, Math.PI * 2, 28, 0.06), keyFill || floor) + line(arc(0, 0, 2.4, 0, Math.PI * 2, 28, 0.06), lines, 0.9) +
       line(arc(0, 0, 1.85, 0, Math.PI * 2, 28, 0.065), second, 0.6);
     if (name) s += textOnFloor(0, 0, String(name).trim().charAt(0).toUpperCase(), 2.2, second);
     return s;
@@ -12225,6 +12232,13 @@ const ArenaGen = (function () {
     // Sponsor de la salle (retour communauté 2026-09, "pancarte salle") :
     // grand panneau sur le mur latéral, sous le bandeau vitré.
     const sponsor = options.sponsor ? String(options.sponsor).toUpperCase().slice(0, 22) : '';
+    // Panneau publicitaire sur pied devant la salle (emplacement sponsor
+    // « panneau ») : nom du sponsor, ou « ESPACE À LOUER » (billboard: "").
+    const billboard = options.billboard == null ? null : (String(options.billboard).toUpperCase().slice(0, 22) || 'ESPACE À LOUER');
+    // Sur le flanc droit de la salle, face au parking : dans la bande visible
+    // du bandeau de la page Salle (le bas de la scène y est coupé et la
+    // gauche assombrie par le titre).
+    const BBX = W / 2 + 3.2, BBY = -D / 2 + 10;
     const aspect = options.aspect || 1.9;
     const dusk = (options.mood || 'dusk') !== 'day';
     const r = rng(options.seed ?? 11);
@@ -12290,6 +12304,7 @@ const ArenaGen = (function () {
       if (x > px0 - 2 && x < px1 + 2 && y > py0 - 2 && y < py1 + 2) continue;
       if (Math.abs(x) < 16 && y > D / 2 && y < D / 2 + 16) continue;
       if (Math.abs(x) < 5 && y > D / 2) continue;
+      if (billboard && x > BBX - 3 && x < BBX + 4 && y > BBY - 8 && y < BBY + 8) continue;
       decor.push({ x, y, kind: 'tree', size, hue });
     }
     const carColors = ['#e8e6e1', '#2c2c30', '#3d5a8a', '#9a2a2a', '#c9c9c9', '#e8e6e1', '#5c6b3a'];
@@ -12301,7 +12316,21 @@ const ArenaGen = (function () {
     decor.push({ x: -11, y: D / 2 + 9, kind: 'tree', size: 2, hue: 1 }, { x: 11, y: D / 2 + 9, kind: 'tree', size: 2, hue: 1 });
     const flags = [[-9, D / 2 + 13.5, main], [-6.5, D / 2 + 13.5, second], [6.5, D / 2 + 13.5, second], [9, D / 2 + 13.5, main]];
     const behind = (o) => o.y < -D / 2 || o.x < -W / 2;
-    const drawDecor = (o) => (o.kind === 'tree' ? tree(o.x, o.y, o.size, o.hue) : o.kind === 'car' ? car(o.x, o.y, o.color) : lamp(o.x, o.y));
+    if (billboard) decor.push({ x: BBX, y: BBY, kind: 'billboard' });
+    const drawBillboard = (x, y) => {
+      // Panneau orienté vers +x (vers le parking), texte lisible sans miroir.
+      const y0 = y - 8, y1 = y + 8, z0 = 5, z1 = 12;
+      const sh = P(x + 3, y + 1, 0);
+      const empty = billboard === 'ESPACE À LOUER';
+      return `<ellipse cx="${f1(sh[0])}" cy="${f1(sh[1])}" rx="${f1(3 * K)}" ry="${f1(6 * K)}" fill="rgba(0,0,0,0.18)"/>` +
+        box(x - 0.25, x + 0.25, y - 3.5, y - 3, 0, z0, '#5b5f66', '#4a4e55', '#3b3f45', 0.5) +
+        box(x - 0.25, x + 0.25, y + 3, y + 3.5, 0, z0, '#5b5f66', '#4a4e55', '#3b3f45', 0.5) +
+        box(x - 0.5, x, y0, y1, z0, z1, '#e9e5dc', '#d8d3c8', '#c9c4b8', 0.7) +
+        poly(faceX(x + 0.01, y0 + 0.35, y1 - 0.35, z0 + 0.35, z1 - 0.35), empty ? '#6b7280' : main, 0.5) +
+        textOnFaceX(x + 0.02, y, (z0 + z1) / 2 + 1, billboard, 1.9, empty ? '#f1f1ee' : (luminance(main) > 0.6 ? '#1a1a1a' : '#ffffff'), (y1 - y0) * 1.45) +
+        (dusk ? `<ellipse cx="${f1(P(x + 2, y, z1)[0])}" cy="${f1(P(x + 2, y, z1)[1])}" rx="${f1(3 * K)}" ry="${f1(6 * K)}" fill="rgba(255,236,170,0.16)"/>` : '');
+    };
+    const drawDecor = (o) => (o.kind === 'billboard' ? drawBillboard(o.x, o.y) : o.kind === 'tree' ? tree(o.x, o.y, o.size, o.hue) : o.kind === 'car' ? car(o.x, o.y, o.color) : lamp(o.x, o.y));
     decor.sort((a, b) => a.x + a.y - (b.x + b.y));
 
     // ombres portées au sol
@@ -12330,7 +12359,7 @@ const ArenaGen = (function () {
           line([[x + 0.2, yi0 + 0.06, bot + 0.6], [x + 1.4, yi0 + 0.06, bot + 0.6]], second, 0.5);
       }
     }
-    s += court(main, second, name);
+    s += court(main, second, name, options.court || null);
     { const c = P(0, 0, 0.1); s += `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(24 * K)}" ry="${f1(13 * K)}" fill="url(#${id}l)"/>`; if (dusk) s += `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(20 * K)}" ry="${f1(11 * K)}" fill="url(#${id}l)"/>`; }
 
     // tribunes, panneaux publicitaires, bancs et table de marque, triés ensemble
@@ -17908,6 +17937,11 @@ function worldRankForPlayer(league, teamIdx, playerId) {
 const SPONSOR_SLOTS = [
   { key: "maillot", label: "Maillot", mult: 1.6 },
   { key: "salle", label: "Panneaux de salle", mult: 1.0 },
+  // Panneau publicitaire dressé devant la salle (retour utilisateur
+  // 2026-09-30 : « ajoute un panneau publicitaire hors de la salle, une
+  // pancarte, et cela créera un nouveau sponsor ») : voir ArenaGen
+  // (options.billboard). Miroir de engine.js.
+  { key: "panneau", label: "Panneau publicitaire", mult: 0.6 },
 ];
 const SPONSOR_TIERS = {
   local: { label: "Commerce local", minReputation: 0, maxDivisionLevel: 99, baseWeekly: 3000 },
@@ -17957,7 +17991,10 @@ function sponsorNameForSlot(team, slotKey) {
   const c = sponsorActiveContractForSlot(team, slotKey);
   return c ? c.sponsorName : null;
 }
-function roundToHundred(v) { return Math.max(100, Math.round(v / 100) * 100); }
+// Montants de sponsor : à la centaine, mais à la dizaine sous 1 000 € (les
+// petites primes du panneau publicitaire, 2026-09-30, finissaient
+// arrondies à la même valeur d'un profil à l'autre).
+function roundToHundred(v) { return v >= 1000 ? Math.round(v / 100) * 100 : Math.max(10, Math.round(v / 10) * 10); }
 
 // Palier d'une vague d'offres pour un emplacement : le meilleur disponible
 // le plus souvent, parfois le cran en dessous — mais le MÊME pour toutes les
@@ -45945,6 +45982,7 @@ document.addEventListener("click", async (e) => {
     const base = salleCourtDraft || normalizeCourtStyle(teamA.courtStyle) || { wood: "nuit", paint: null };
     salleCourtDraft = { ...base, ...(wood ? { wood: wood.dataset.courtWood } : { paint: paint.dataset.courtPaint || null }) };
     renderPersoCourt();
+    renderPersoArena(); // la salle dessinée suit le parquet en cours d'essai
     return;
   }
   if (e.target.closest("#persoCourtSaveBtn") && salleCourtDraft) {
@@ -45956,6 +45994,7 @@ document.addEventListener("click", async (e) => {
       teamA.courtStyle = data.courtStyle;
       salleCourtDraft = null;
       renderPersoCourt();
+      renderPersoArena();
       if (fb()) fb().textContent = "Parquet enregistré : il sera visible à votre prochain match à domicile.";
     } catch (err) {
       if (fb()) fb().textContent = err.message || "Enregistrement impossible.";
@@ -45971,6 +46010,14 @@ function arenaGenStyleOptions(team, style, base) {
   const main = style && style.main ? JERSEY_COLORS[style.main] : c1;
   const second = style && style.second ? JERSEY_COLORS[style.second] : c2;
   const out = { ...(base || {}), teamColors: [main, second] };
+  // Parquet (voir courtPreviewSvg) : brouillon en cours d'essai
+  // (base.courtStyle) ou parquet enregistré d'un club Premium.
+  const courtStyle = base && "courtStyle" in base ? base.courtStyle : (teamIsPremium(team) ? normalizeCourtStyle(team.courtStyle) : null);
+  delete out.courtStyle;
+  if (courtStyle) {
+    const w = COURT_WOODS[courtStyle.wood] || COURT_WOODS.nuit;
+    out.court = { floor: w.floor, grain: w.grain, line: w.line, paint: courtStyle.paint ? JERSEY_COLORS[courtStyle.paint] : null };
+  }
   if (style) {
     if (style.facade && style.facade !== "beton") out.facade = { front: ARENA_FACADES[style.facade].front, side: ARENA_FACADES[style.facade].side };
     if (style.roof && style.roof !== "gris") out.roof = style.roof === "club" ? main : ARENA_ROOFS[style.roof].color;
@@ -46000,7 +46047,8 @@ function renderPersoArena() {
   // couleurs du club, de jour) pour montrer ce que le Premium permet.
   const preview = premium ? cur : { main: null, second: null, facade: "brique", roof: "club", mood: "day" };
   const svg = ArenaGen.generateArena(arenaVisualCapacity(info.capacity), arenaGenStyleOptions(teamA, normalizeArenaStyle(preview) || null, {
-    attendance: 0.8, name: teamA.name, sponsor: sponsorNameForSlot(teamA, "salle"), aspect: 1.9, seed: 11,
+    attendance: 0.8, name: teamA.name, sponsor: sponsorNameForSlot(teamA, "salle"), billboard: sponsorNameForSlot(teamA, "panneau") || "", aspect: 1.9, seed: 11,
+    ...(premium && salleCourtDraft ? { courtStyle: { wood: COURT_WOODS[salleCourtDraft.wood] ? salleCourtDraft.wood : "nuit", paint: salleCourtDraft.paint && JERSEY_COLORS[salleCourtDraft.paint] ? salleCourtDraft.paint : null } } : {}),
   })).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
   let html = `<div class="pz-arena-layout"><div class="pz-arena-preview${premium ? "" : " is-locked"}" role="img" aria-label="Aperçu de la salle">${svg}` +
     (premium ? "" : `<span class="pz-arena-lock"><span class="prm-tag">Premium</span> Exemple de salle personnalisée</span>`) + `</div>`;
@@ -46090,6 +46138,7 @@ function renderSalleHero(info, stats) {
     attendance: stats.avgRate != null ? stats.avgRate : projectedRate,
     name: teamA.name,
     sponsor: sponsorNameForSlot(teamA, "salle"),
+    billboard: sponsorNameForSlot(teamA, "panneau") || "",
     aspect: 2.3,
   })).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
   visualHolder.innerHTML = `<div class="arena-card">` +
@@ -49326,7 +49375,7 @@ function renderSponsorsPanel() {
   if (!holder) return;
   const rep = typeof teamA.sponsorReputation === "number" ? teamA.sponsorReputation : SPONSOR_REPUTATION_DEFAULT;
   const offers = teamA.sponsorOffers || [];
-  let html = `<div class="spo-head"><div><p class="spo-sub">Deux emplacements : le maillot et les panneaux de la salle. Les sponsors vous approchent ; à vous d'accepter ou non. Un contrat dure une saison.</p></div>` +
+  let html = `<div class="spo-head"><div><p class="spo-sub">Trois emplacements : le maillot, les panneaux de la salle et le panneau publicitaire devant la salle. Les sponsors vous approchent ; à vous d'accepter ou non. Un contrat dure une saison.</p></div>` +
     `<div class="spo-rep"><div class="spo-rep-top"><span class="spo-kicker">Réputation sponsors</span><span class="spo-rep-num">${Math.round(rep)} <small>/ 100</small></span></div>` +
     `<div class="spo-rep-bar"><div style="width:${Math.round(rep)}%"></div></div>` +
     // Paliers réellement débloqués (réputation ET division) en ambre, les

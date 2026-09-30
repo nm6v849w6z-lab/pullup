@@ -9730,6 +9730,11 @@ function worldRankForPlayer(league, teamIdx, playerId) {
 const SPONSOR_SLOTS = [
   { key: "maillot", label: "Maillot", mult: 1.6 },
   { key: "salle", label: "Panneaux de salle", mult: 1.0 },
+  // Panneau publicitaire sur pied devant la salle (retour utilisateur
+  // 2026-09-30 : « ajoute un panneau publicitaire hors de la salle, une
+  // pancarte, et cela créera un nouveau sponsor ») : dessiné par ArenaGen
+  // (moteurbasket3.html, options.billboard). Moins payé que la salle.
+  { key: "panneau", label: "Panneau publicitaire", mult: 0.6 },
 ];
 const SPONSOR_TIERS = {
   local: { label: "Commerce local", minReputation: 0, maxDivisionLevel: 99, baseWeekly: 3000 },
@@ -9779,7 +9784,10 @@ function sponsorNameForSlot(team, slotKey) {
   const c = sponsorActiveContractForSlot(team, slotKey);
   return c ? c.sponsorName : null;
 }
-function roundToHundred(v) { return Math.max(100, Math.round(v / 100) * 100); }
+// Montants de sponsor : à la centaine, mais à la dizaine sous 1 000 € (les
+// petites primes du panneau publicitaire, 2026-09-30, finissaient
+// arrondies à la même valeur d'un profil à l'autre).
+function roundToHundred(v) { return v >= 1000 ? Math.round(v / 100) * 100 : Math.max(10, Math.round(v / 10) * 10); }
 
 // Palier d'une vague d'offres pour un emplacement : le meilleur disponible
 // le plus souvent, parfois le cran en dessous — mais le MÊME pour toutes les

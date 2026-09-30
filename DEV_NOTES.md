@@ -77,6 +77,19 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   forfait pour « pas de pivot » avec au moins 5 joueurs, validé par
   l'utilisateur). Effectif en un seul bloc.
 
+- **✅ EN PROD (2026-09-30) — panneau publicitaire, parquet dans la salle, divers** :
+  nouvel emplacement sponsor « panneau » (SPONSOR_SLOTS, mult 0.6, engine.js
+  + miroir) dessiné par ArenaGen (options.billboard, flanc droit de la salle,
+  « ESPACE À LOUER » sans contrat) ; la salle dessinée suit le parquet
+  (options.court depuis arenaGenStyleOptions : parquet Premium enregistré ou
+  brouillon de Personnalisation, re-rendu à chaque essai) ; arrondi des
+  petits montants sponsor à la dizaine ; onglet Paramètres dans la barre
+  latérale ; Analyse de mon équipe = Scouting Pro complet en Premium (sans
+  « Appliquer à mes ordres ») ; chat : équipes / joueurs / scores
+  cliquables, mention IA ; Guide et profil manager sans largeur bridée.
+  Maquette « vue quartier » (autres bâtiments du club) validée sur le
+  principe, pas encore codée.
+
 - **✅ EN PROD (2026-09-30) — Aperçu variante A, Scouting Pro pleine largeur** :
   teamDetailApercuHtml refait (bannière aux couleurs du club, 4 tuiles
   classement / bilan / points par match / manager ou renommée, prochain

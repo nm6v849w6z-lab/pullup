@@ -18,7 +18,7 @@ const expected = [
   "Compétitions: Calendrier, Ligue, Coupe, Matchs amicaux, Ligues privées",
   "Recrutement: Marché, Staff, Académie de jeunes",
   "Club: Économie, Sponsors, Salle, Supporters, Histoire du club",
-  ": Planète Hoop, Guide, Personnalisation, Premium, Discord ↗, Se déconnecter",
+  ": Planète Hoop, Guide, Personnalisation, Premium, Discord ↗, Paramètres, Se déconnecter",
 ];
 if (JSON.stringify(got) !== JSON.stringify(expected)) {
   throw new Error("❌ Barre latérale inattendue :\n" + got.join("\n") + "\n\nattendu :\n" + expected.join("\n"));
