@@ -46370,11 +46370,38 @@ function clubDistrictBuilder(team) {
     const lots = [], items = [], labels = [], frame = [];
     const win = (x0, x1, y, z0, z1) => { let s = ""; for (let x = x0 + 0.8; x < x1 - 0.8; x += 2.2) for (let z = z0 + 0.9; z < z1 - 0.6; z += 2.1) s += poly(faceY(x, x + 1.2, y + 0.02, z, z + 1.1), dusk ? "#ffd98a" : "#a9c4d8", 0.35); return s; };
     const winX = (x, y0, y1, z0, z1) => { let s = ""; for (let y = y0 + 0.8; y < y1 - 0.8; y += 2.2) for (let z = z0 + 0.9; z < z1 - 0.6; z += 2.1) s += poly(faceX(x + 0.02, y, y + 1.2, z, z + 1.1), dusk ? "#f2c877" : "#93b1c7", 0.35); return s; };
-    const bldg = (x0, x1, y0, y1, hgt, wall, roof, sign) => {
+    // Bâtiments plus détaillés (retour utilisateur 2026-09-30 : « des
+    // infrastructures un peu plus jolies quel que soit le niveau ») :
+    // parvis, haies, porte avec auvent, bandeau aux couleurs du club,
+    // enseigne sur panneau, climatiseurs sur le toit ; chaque installation
+    // a ensuite ses propres détails (vitrine, paraboles, terrains, bassin).
+    const [cA, cB] = typeof teamAvatarColors === "function" ? teamAvatarColors(team) : ["#c9582f", "#ffffff"];
+    const pave = dusk ? "#8e897d" : "#c9c3b2";
+    const pad = (x0, x1, y0, y1, m = 1.4) => flat(rect(x0 - m, x1 + m, y0 - m, y1 + m, 0.02), pave);
+    const hedge = (x0, x1, y) => box(x0, x1, y, y + 0.7, 0, 0.8, "#4d8a45", "#3f7a3a", "#326430", 0.35);
+    const ac = (x, y, z) => box(x, x + 1.3, y, y + 1, z, z + 0.7, "#c9ccd1", "#aeb2b8", "#8f949b", 0.3);
+    const signBoard = (xc, y, z, txt, bg, fg, wMax) => {
+      const w = Math.min(wMax, Math.max(3.2, txt.length * 0.62 + 1.2));
+      return poly(faceY(xc - w / 2, xc + w / 2, y + 0.04, z - 1.05, z), bg, 0.4) + textOnFaceY(xc, y + 0.07, z - 0.18, txt, 0.72, fg, w * 0.9);
+    };
+    const door = (xc, y1, w = 1.8) => poly(faceY(xc - w / 2, xc + w / 2, y1 + 0.03, 0, 2.2), dusk ? "#f6d58e" : "#35434f", 0.4) +
+      box(xc - w / 2 - 0.4, xc + w / 2 + 0.4, y1, y1 + 1.1, 2.3, 2.55, shade(cA, 10), cA, shade(cA, -25), 0.35);
+    const bldg = (x0, x1, y0, y1, hgt, wall, roof, sign, o = {}) => {
       let s = flat(rect(x0 + 0.6, x1 + hgt * 0.7, y0 + 0.3, y1 + hgt * 0.25), "rgba(0,0,0,0.2)");
-      s += box(x0, x1, y0, y1, 0, hgt, roof, wall, shade(wall, -28), 0.7) + win(x0, x1, y1, 0, hgt) + winX(x1, y0, y1, 0, hgt);
+      s += box(x0, x1, y0, y1, 0, hgt, roof, wall, shade(wall, -28), 0.7);
+      const z0 = o.glassGround ? 2.9 : 0;
+      if (o.glassGround) {
+        s += poly(faceY(x0 + 0.4, x1 - 0.4, y1 + 0.02, 0.2, 2.6), dusk ? "#f3cf86" : "#8fb3cc", 0.4) + poly(faceX(x1 + 0.02, y0 + 0.4, y1 - 0.4, 0.2, 2.6), dusk ? "#e7bf73" : "#7ea2bb", 0.4);
+        for (let x = x0 + 2.4; x < x1 - 0.8; x += 2.4) s += line([[x, y1 + 0.03, 0.2], [x, y1 + 0.03, 2.6]], shade(wall, -45), 0.35);
+      }
+      if (hgt - z0 > 1.6) s += win(x0, x1, y1, z0, hgt - 0.5) + winX(x1, y0, y1, z0, hgt - 0.5);
+      // bandeau aux couleurs du club sous l'acrotère
+      s += flat(faceY(x0, x1, y1 + 0.02, hgt - 0.45, hgt - 0.15), o.trim || cA) + flat(faceX(x1 + 0.02, y0, y1, hgt - 0.45, hgt - 0.15), shade(o.trim || cA, -18));
       s += box(x0 - 0.2, x1 + 0.2, y0 - 0.2, y1 + 0.2, hgt, hgt + 0.35, shade(roof, 12), shade(roof, -20), shade(roof, -35), 0.5);
-      if (sign) s += textOnFaceY((x0 + x1) / 2, y1 + 0.03, hgt - 0.35, sign.toUpperCase(), 1.05, dusk ? "#fff3d0" : "#2a2016", (x1 - x0) * 1.5);
+      const nAc = Math.max(1, Math.floor((x1 - x0) / 7));
+      for (let i = 0; i < nAc; i++) s += ac(x0 + 1.5 + i * 5, y0 + 1.2, hgt + 0.35);
+      if (!o.noDoor) s += door(o.doorX != null ? o.doorX : x0 + (x1 - x0) * 0.3, y1);
+      if (sign) s += signBoard(o.signX != null ? o.signX : (x0 + x1) / 2 + (x1 - x0) * 0.12, y1, Math.min(hgt - 0.6, z0 ? z0 + 1.6 : 3.8), sign.toUpperCase(), o.signBg || "#1d2330", o.signFg || "#fff3d0", (x1 - x0) * 0.6);
       return s;
     };
     const emptyLot = (x0, x1, y0, y1) => {
@@ -46395,34 +46422,103 @@ function clubDistrictBuilder(team) {
       frame.push([x0, y0, 0], [x1, y1, 0], [x0, y1, z + 3], [x1, y0, z + 3]);
     };
     const yb1 = roadY[0] - 4, xb1 = roadX[0] - 4;
-    // Boutique (0-3).
+    // Boutique (0-3) : vitrine et auvent rayé aux couleurs du club.
     { const L = lv.fanShop, w = [0, 9, 15, 22][L] || 9, d = [0, 7, 11, 16][L] || 7, hh = [0, 3.4, 5.5, 8][L] || 3.4;
-      place("fanShop", -44, -20, yb1 - 16, yb1, () => bldg(-20 - w, -20, yb1 - d, yb1, hh, "#e8d9b8", L >= 3 ? "#b8452f" : "#c9582f", L >= 2 ? "Boutique" : "Souvenirs"), hh); }
-    // Station TV (0-3) : antenne à partir du niveau 2.
-    { const L = lv.tvStation, w = [0, 10, 14, 18][L] || 10, d = [0, 8, 12, 16][L] || 8, hh = [0, 4.5, 7.5, 11][L] || 4.5;
-      const x1 = 6, x0 = x1 - w, y1 = yb1, y0 = y1 - d, ax = (x0 + x1) / 2, ay = (y0 + y1) / 2;
-      place("tvStation", -12, 6, yb1 - 16, yb1, () => bldg(x0, x1, y0, y1, hh, "#cfd4db", "#5a6472", "HMTV") +
-        (L >= 2 ? box(ax - 0.3, ax + 0.3, ay - 0.3, ay + 0.3, hh + 0.35, hh + (L >= 3 ? 10 : 6), "#cfd6e2", "#cfd6e2", "#aab4c2", 0.4) : "") +
-        (L >= 1 ? poly([[ax + 2, ay - 2, hh + 1.8], [ax + 4.4, ay - 2, hh + 1.8], [ax + 4.4, ay + 0.4, hh + 2.6], [ax + 2, ay + 0.4, hh + 2.6]], "#e6ebf2", 0.4) : ""), hh + (L >= 3 ? 10 : L >= 2 ? 6 : 2)); }
-    // Centre de formation (1-5) : terrains extérieurs à partir du niveau 3.
-    { const L = lv.trainingCenter, w = [0, 10, 14, 18, 22, 26][L] || 10, d = [0, 8, 10, 12, 15, 16][L] || 8, hh = [0, 3.5, 4.5, 6, 8, 9.5][L] || 3.5;
-      place("trainingCenter", 12, 64, yb1 - 16, yb1, () => {
-        let s = bldg(12, 12 + w, yb1 - d, yb1, hh, "#d6c3a3", "#6f5a44", L >= 4 ? "Académie" : "Formation");
-        const courts = L >= 5 ? 2 : L >= 3 ? 1 : 0;
-        for (let c = 0; c < courts; c++) {
-          const cx0 = 16 + w + c * 13, cx1 = cx0 + 11;
-          s += poly(rect(cx0, cx1, yb1 - 14, yb1, 0.03), "#b8743f", 0.5) + line([[cx0 + 5.5, yb1 - 14, 0.05], [cx0 + 5.5, yb1, 0.05]], "#fbf6ec", 0.5) +
-            line([[cx0, yb1 - 7, 0.05], [cx1, yb1 - 7, 0.05]], "#fbf6ec", 0.35);
-        }
+      place("fanShop", -44, -20, yb1 - 16, yb1, () => {
+        const x0 = -20 - w, x1 = -20, y0 = yb1 - d, y1 = yb1;
+        let s = pad(x0, x1, y0, y1) + bldg(x0, x1, y0, y1, hh, "#efe3c8", L >= 3 ? "#b8452f" : "#c9582f", L >= 2 ? "Boutique" : "Souvenirs", { glassGround: true, signBg: cA, signFg: cB, doorX: x1 - 2 });
+        // auvent rayé
+        const aw = [];
+        for (let x = x0 + 0.3, i = 0; x < x1 - 0.3; x += 1.2, i++) aw.push(poly([[x, y1, 2.95], [Math.min(x + 1.2, x1 - 0.3), y1, 2.95], [Math.min(x + 1.2, x1 - 0.3), y1 + 1.3, 2.45], [x, y1 + 1.3, 2.45]], i % 2 ? cB : cA, 0.25));
+        s += aw.join("");
+        if (L >= 2) s += hedge(x0 + 0.5, x0 + 3.5, y1 + 1.8);
+        if (L >= 3) for (let k = 0; k < 2; k++) { const fx = x0 + 1.5 + k * (w - 3); s += box(fx, fx + 0.2, y1 + 1.6, y1 + 1.8, 0, 5.5, "#dcdcdc", "#cfcfcf", "#b5b5b5", 0.3) + poly([[fx + 0.2, y1 + 1.7, 5.4], [fx + 2.4, y1 + 1.7, 5.1], [fx + 2.4, y1 + 1.7, 3.9], [fx + 0.2, y1 + 1.7, 4.2]], k ? cB : cA, 0.3); }
         return s;
       }, hh); }
-    // Musculation (0-3).
+    // Station TV (0-3) : paraboles, puis antenne en treillis rouge et blanche.
+    { const L = lv.tvStation, w = [0, 10, 14, 18][L] || 10, d = [0, 8, 12, 16][L] || 8, hh = [0, 4.5, 7.5, 11][L] || 4.5;
+      const x1 = 6, x0 = x1 - w, y1 = yb1, y0 = y1 - d, ax = x0 + w * 0.7, ay = y0 + d * 0.45;
+      const mastH = L >= 3 ? 12 : L >= 2 ? 8 : 0;
+      place("tvStation", -12, 6, yb1 - 16, yb1, () => {
+        let s = pad(x0, x1, y0, y1) + bldg(x0, x1, y0, y1, hh, "#d5dae2", "#4f5968", "HMTV", { signBg: "#b3202a", signFg: "#ffffff", glassGround: L >= 2 });
+        s += hedge(x0 + 0.5, x0 + 3, y1 + 1.8);
+        // paraboles sur le toit
+        const dishes = [[x0 + 2.2, y0 + 2.2]].concat(L >= 2 ? [[x0 + 5.2, y0 + 2.4]] : []).concat(L >= 3 ? [[x0 + 8.2, y0 + 2.6]] : []);
+        dishes.forEach(([dx, dy]) => {
+          const z = hh + 0.35, pts = [];
+          for (let t = 0; t < 12; t++) { const a = (t / 12) * Math.PI * 2; pts.push([dx + Math.cos(a) * 1.1, dy + 0.9, z + 1.4 + Math.sin(a) * 1.1]); }
+          s += box(dx - 0.15, dx + 0.15, dy + 0.6, dy + 0.9, z, z + 1.2, "#aab2bd", "#aab2bd", "#8b939e", 0.25) + poly(pts, "#eef2f6", 0.35) + flat(faceY(dx - 0.12, dx + 0.12, dy + 0.95, z + 1.3, z + 1.5), "#8b939e");
+        });
+        if (mastH) {
+          for (let z = hh + 0.35, i = 0; z < hh + mastH; z += 1.5, i++) s += box(ax - 0.35, ax + 0.35, ay - 0.35, ay + 0.35, z, Math.min(z + 1.5, hh + mastH), i % 2 ? "#f2f2f2" : "#d8342f", i % 2 ? "#e6e6e6" : "#c22b27", i % 2 ? "#c8c8c8" : "#9f2320", 0.25);
+          const tp = h.P(ax, ay, hh + mastH + 0.3);
+          s += `<circle cx="${tp[0].toFixed(1)}" cy="${tp[1].toFixed(1)}" r="1.6" fill="#ff5a4a" opacity="${dusk ? 0.5 : 0.25}"/><circle cx="${tp[0].toFixed(1)}" cy="${tp[1].toFixed(1)}" r="0.6" fill="#ff8a7a"/>`;
+        }
+        return s;
+      }, hh + (mastH || 2)); }
+    // Centre de formation (1-5) : entrée vitrée, puis terrains grillagés avec paniers.
+    { const L = lv.trainingCenter, w = [0, 10, 14, 18, 22, 26][L] || 10, d = [0, 8, 10, 12, 15, 16][L] || 8, hh = [0, 3.5, 4.5, 6, 8, 9.5][L] || 3.5;
+      place("trainingCenter", 12, 64, yb1 - 16, yb1, () => {
+        let s = pad(12, 12 + w, yb1 - d, yb1) + bldg(12, 12 + w, yb1 - d, yb1, hh, "#c9ab86", "#6f5a44", L >= 4 ? "Académie" : "Formation", { glassGround: L >= 2, signBg: cA, signFg: cB });
+        const courts = L >= 5 ? 2 : L >= 3 ? 1 : 0;
+        for (let c = 0; c < courts; c++) {
+          const cx0 = 16 + w + c * 13, cx1 = cx0 + 11, cy0 = yb1 - 14, cy1 = yb1;
+          s += poly(rect(cx0, cx1, cy0, cy1, 0.03), "#2f6f9f", 0.5) + flat(rect(cx0 + 0.6, cx1 - 0.6, cy0 + 0.6, cy1 - 0.6, 0.04), "#c47a3f") +
+            line([[cx0 + 0.6, cy0 + 7, 0.06], [cx1 - 0.6, cy0 + 7, 0.06]], "#fbf6ec", 0.35) +
+            line([[cx0 + 0.6, cy0 + 0.6, 0.06], [cx1 - 0.6, cy0 + 0.6, 0.06], [cx1 - 0.6, cy1 - 0.6, 0.06], [cx0 + 0.6, cy1 - 0.6, 0.06], [cx0 + 0.6, cy0 + 0.6, 0.06]], "#fbf6ec", 0.35);
+          // paniers aux deux bouts
+          [[cy0 + 1, 1], [cy1 - 1, -1]].forEach(([hy, dir]) => {
+            const hx = (cx0 + cx1) / 2;
+            s += box(hx - 0.12, hx + 0.12, hy - 0.12, hy + 0.12, 0, 3.2, "#9aa0a8", "#9aa0a8", "#7c828a", 0.25) +
+              poly(faceY(hx - 0.9, hx + 0.9, hy + dir * 0.3, 2.7, 3.7), "#f4f4f4", 0.3) + line([[hx - 0.3, hy + dir * 0.7, 2.9], [hx + 0.3, hy + dir * 0.7, 2.9]], "#e0662e", 0.45);
+          });
+          // grillage
+          for (let x = cx0; x <= cx1; x += 1.8) s += line([[x, cy1, 0.05], [x, cy1, 2]], "#aab0b8", 0.25);
+          s += line([[cx0, cy1, 2], [cx1, cy1, 2]], "#aab0b8", 0.3) + line([[cx1, cy0, 2], [cx1, cy1, 2]], "#aab0b8", 0.3);
+        }
+        if (L >= 2) s += hedge(12.5, 15.5, yb1 + 1.8);
+        return s;
+      }, hh); }
+    // Musculation (0-3) : grande façade vitrée éclairée, enseigne haltère.
     { const L = lv.gym, w = [0, 9, 13, 17][L] || 9, d = [0, 8, 13, 18][L] || 8, hh = [0, 3.8, 5.5, 7][L] || 3.8;
-      place("gym", xb1 - 17, xb1, -26, -6, () => bldg(xb1 - w, xb1, -6 - d, -6, hh, "#b9c2cc", L >= 3 ? "#2f8f82" : "#6c7a88", "Muscu"), hh); }
-    // Bien-être (0-3) : bassin extérieur à partir du niveau 2.
+      place("gym", xb1 - 17, xb1, -26, -6, () => {
+        const x0 = xb1 - w, x1 = xb1, y0 = -6 - d, y1 = -6;
+        let s = pad(x0, x1, y0, y1) + bldg(x0, x1, y0, y1, hh, "#aeb8c3", L >= 3 ? "#2f8f82" : "#56636f", "Muscu", { glassGround: true, trim: L >= 2 ? "#2fbf9f" : cA });
+        // haltère sur la façade latérale
+        const hz = hh - 1.3, hy = (y0 + y1) / 2;
+        s += box(x1 + 0.05, x1 + 0.25, hy - 1.2, hy + 1.2, hz - 0.12, hz + 0.12, "#e8e8e8", "#e8e8e8", "#d0d0d0", 0.25) +
+          box(x1 + 0.05, x1 + 0.35, hy - 1.5, hy - 1.0, hz - 0.6, hz + 0.6, "#2b2f35", "#2b2f35", "#1c1f24", 0.25) +
+          box(x1 + 0.05, x1 + 0.35, hy + 1.0, hy + 1.5, hz - 0.6, hz + 0.6, "#2b2f35", "#2b2f35", "#1c1f24", 0.25);
+        if (L >= 2) s += hedge(x0 + 0.5, x0 + 3.2, y1 + 1.8);
+        return s;
+      }, hh); }
+    // Bien-être (0-3) : terrasse en bois, bassin (plus grand avec le niveau), transats, parasols.
     { const L = lv.wellness, w = [0, 9, 13, 17][L] || 9, d = [0, 7, 10, 13][L] || 7, hh = [0, 2.8, 3.8, 5][L] || 2.8;
-      place("wellness", xb1 - 17, xb1, 1, 24, () => bldg(xb1 - w, xb1, 1, 1 + d, hh, "#f1ede5", "#8fb8c9", "Spa") +
-        (L >= 2 ? poly(rect(xb1 - w + 1, xb1 - 1, 3 + d, 8 + d, 0.05), "#3fa7d0", 0.5) : ""), hh); }
+      place("wellness", xb1 - 17, xb1, 1, 24, () => {
+        const x0 = xb1 - w, x1 = xb1, y0 = 1, y1 = 1 + d;
+        const deckY1 = Math.min(24, y1 + (L >= 2 ? 8 : 4.5));
+        let s = flat(rect(x0 - 0.6, x1 + 0.6, y1, deckY1, 0.02), dusk ? "#8a6a48" : "#b98d5f");
+        for (let x = x0; x < x1; x += 1.1) s += line([[x, y1, 0.03], [x, deckY1, 0.03]], dusk ? "#77593b" : "#a67b4f", 0.25);
+        s += bldg(x0, x1, y0, y1, hh, "#f4f0e8", "#7fb3c7", "Spa", { trim: "#6fb9d6", doorX: x0 + 2 });
+        const px0 = x0 + 1, px1 = x1 - (L >= 2 ? 1 : w * 0.45), py0 = y1 + 1, py1 = deckY1 - 1;
+        s += poly(rect(px0 - 0.3, px1 + 0.3, py0 - 0.3, py1 + 0.3, 0.04), "#e8e4dc", 0.35) + poly(rect(px0, px1, py0, py1, 0.06), "#3fa7d0", 0.3) +
+          flat(rect(px0 + 0.4, px1 - 0.4, py0 + 0.4, py0 + 1.2, 0.07), "rgba(255,255,255,0.25)");
+        // transats et parasols
+        const nL = L >= 3 ? 3 : L >= 2 ? 2 : 1;
+        for (let i = 0; i < nL; i++) {
+          const lx = x1 - 0.6 - (i + 1) * 1.6, ly = deckY1 - 0.4;
+          if (L < 2) break;
+          s += box(lx, lx + 0.9, ly - 1.8, ly, 0, 0.35, "#ffffff", "#e9e9e9", "#cfcfcf", 0.25);
+        }
+        if (L >= 2) {
+          const ux = x1 - 1.2, uy = y1 + 1.5;
+          s += box(ux - 0.08, ux + 0.08, uy - 0.08, uy + 0.08, 0, 2.6, "#dcdcdc", "#dcdcdc", "#bdbdbd", 0.2) +
+            poly([[ux - 1.4, uy, 2.4], [ux, uy - 1.4, 2.4], [ux + 1.4, uy, 2.4], [ux, uy + 1.4, 2.4]].map(([a, b, c]) => [a, b, c]), cA, 0.3) +
+            poly([[ux - 1.4, uy, 2.4], [ux, uy + 1.4, 2.4], [ux, uy, 3], [ux, uy, 3]], shade(cA, -20), 0.2);
+        }
+        if (L >= 3) s += hedge(x0 + 0.3, x0 + 3, deckY1 + 0.2);
+        return s;
+      }, hh); }
     return { lots, items, labels, frame };
   };
 }
