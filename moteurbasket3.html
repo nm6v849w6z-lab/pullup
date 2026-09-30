@@ -12324,12 +12324,12 @@ const ArenaGen = (function () {
     // Salle (le décor passe en dessous et à droite).
     // Format téléphone (options.compact) : quartier entier centré, sans marge
     // pour le titre (placé sous le dessin).
-    // Grand écran plus large que le dessin : la place libre passe surtout à
-    // gauche (sous le titre), le quartier reste entier (rien de rogné).
+    // Grand écran plus large que le dessin : quartier centré, entier (rien
+    // de rogné).
     if (DX && !options.compact) {
       const f = 1.15, nw = vw * f, nh = vh * f;
       const fw = (maxX - minX) * 1.1, free = nw - fw;
-      vx = (minX + maxX) / 2 - fw / 2 - free * 0.85; vy -= (nh - vh) * 0.75; vw = nw; vh = nh;
+      vx = (minX + maxX) / 2 - fw / 2 - free * 0.5; vy -= (nh - vh) * 0.75; vw = nw; vh = nh;
     }
     const inView = (x, y, pad = 30) => { const q = P(x, y, 0); return q[0] > vx - pad && q[0] < vx + vw + pad && q[1] > vy - pad && q[1] < vy + vh + pad * 2; };
 
@@ -12406,7 +12406,7 @@ const ArenaGen = (function () {
         box(x - 0.25, x + 0.25, y + 3, y + 3.5, 0, z0, '#5b5f66', '#4a4e55', '#3b3f45', 0.5) +
         box(x - 0.5, x, y0, y1, z0, z1, '#e9e5dc', '#d8d3c8', '#c9c4b8', 0.7) +
         poly(faceX(x + 0.01, y0 + 0.35, y1 - 0.35, z0 + 0.35, z1 - 0.35), empty ? '#6b7280' : main, 0.5) +
-        textOnFaceX(x + 0.02, y, (z0 + z1) / 2 + 1, billboard, 1.9, empty ? '#f1f1ee' : (luminance(main) > 0.6 ? '#1a1a1a' : '#ffffff'), (y1 - y0) * 1.45) +
+        textOnFaceX(x + 0.02, y, (z0 + z1) / 2 + 1, billboard, 1.9, empty ? '#f1f1ee' : (luminance(main) > 0.6 ? '#1a1a1a' : '#ffffff'), (y1 - y0) * 0.86) +
         (dusk ? `<ellipse cx="${f1(P(x + 2, y, z1)[0])}" cy="${f1(P(x + 2, y, z1)[1])}" rx="${f1(3 * K)}" ry="${f1(6 * K)}" fill="rgba(255,236,170,0.16)"/>` : '');
     };
     if (DX) DX.items.forEach((it) => decor.push({ ...it, kind: 'district' }));
