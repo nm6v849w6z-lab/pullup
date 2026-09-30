@@ -73,7 +73,6 @@ window.HM_I18N_EN = {
   "Uni pour un club gratuit. Les {0} autres motifs et les combinaisons de 2 couleurs sont réservés au Premium.": "Plain for a free club. The other {0} patterns and two-color combinations are Premium.",
   "Le motif « {0} » est réservé au Premium.": "The \"{0}\" pattern is Premium only.",
   "{0} · Premium": "{0} · Premium",
-  "L'image de votre club : ce que voient vos supporters, vos adversaires et le direct.": "Your club's image: what your fans, your opponents and the live game see.",
   "Sections de la personnalisation": "Personalization sections",
   "Club gratuit": "Free club",
   "Toutes les options débloquées": "All options unlocked",

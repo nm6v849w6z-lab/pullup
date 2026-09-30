@@ -111,7 +111,6 @@ window.HM_I18N_IT = {
   "Uni pour un club gratuit. Les {0} autres motifs et les combinaisons de 2 couleurs sont réservés au Premium.": "Tinta unita per un club gratuito. Gli altri {0} motivi e le combinazioni a 2 colori sono riservati al Premium.",
   "Le motif « {0} » est réservé au Premium.": "Il motivo « {0} » è riservato al Premium.",
   "{0} · Premium": "{0} · Premium",
-  "L'image de votre club : ce que voient vos supporters, vos adversaires et le direct.": "L'immagine del tuo club: ciò che vedono i tuoi tifosi, i tuoi avversari e la diretta.",
   "Sections de la personnalisation": "Sezioni della personalizzazione",
   "Club gratuit": "Club gratuito",
   "Toutes les options débloquées": "Tutte le opzioni sbloccate",
