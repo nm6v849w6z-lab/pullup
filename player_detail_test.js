@@ -64,11 +64,50 @@ console.log("✅ Fiche joueur ouverte depuis l'Effectif : caractéristiques en c
   const cells = [...doc1.querySelectorAll("#playerDetailContent .pdp2-posratings .pdp2-posrating")];
   const expected = dom1.window.eval(`(() => { const p = teamA.players.find(x => x.id === ${pid}); return { vals: POSITIONS.map(q => Math.round(positionRating(p, q))), best: bestPosition(p) }; })()`);
   if (cells.length !== 5) throw new Error(`❌ La fiche devrait afficher 5 notes par poste, obtenu ${cells.length}.`);
-  const shown = cells.map(c => Number(c.querySelector("b").textContent));
+  // Une décimale (virgule) quand les 5 notes sont égales à l'unité près.
+  const shown = cells.map(c => Math.round(Number(c.querySelector("b").textContent.replace(",", "."))));
   if (JSON.stringify(shown) !== JSON.stringify(expected.vals)) throw new Error(`❌ Notes par poste affichées ${JSON.stringify(shown)}, attendu ${JSON.stringify(expected.vals)}.`);
   const bestCells = cells.filter(c => c.classList.contains("is-best"));
   if (bestCells.length !== 1 || bestCells[0].dataset.pos !== expected.best) throw new Error("❌ Le meilleur poste devrait être le seul mis en évidence.");
   console.log("✅ Note par poste sur la fiche :", cells.map(c => c.textContent).join(" "), "— meilleur poste :", expected.best);
+}
+
+// Retour utilisateur 2026-09-30 (téléphone) : "31 aux 5 postes alors qu'il
+// est Meneur". Le badge de poste reste le poste DE CARTE ; si le meilleur
+// poste calculé diffère, la fiche l'écrit en clair (« Meilleur poste : A ») ;
+// un joueur aux notes toutes proches est dit « Polyvalent », avec une
+// décimale si les 5 notes arrondies sont égales.
+{
+  const win1 = dom1.window;
+  const pid = Number(firstPlayerLink.dataset.playerId);
+  const saved = win1.eval(`JSON.stringify(teamA.players.find(x => x.id === ${pid}).attrs)`);
+  const cardPos = win1.eval(`teamA.players.find(x => x.id === ${pid}).position`);
+  const setAttrs = js => win1.eval(`(() => { const p = teamA.players.find(x => x.id === ${pid}); ATTRS.forEach(a => { p.attrs[a] = 40; }); ${js}; showPlayerDetail(myTeamIndex, ${pid}); })()`);
+  const bestLine = () => doc1.querySelector("#playerDetailContent .pdp2-bestpos");
+  // Profil de pur Pivot sur une fiche qui n'est pas Pivot (ou de pur Meneur
+  // sur une fiche Pivot).
+  const target = cardPos === "Pivot" ? "Meneur" : "Pivot";
+  const keys = win1.eval(`Object.keys(POSITION_KEY_WEIGHTS[${JSON.stringify(target)}])`);
+  setAttrs(keys.map(k => `p.attrs.${k} = 80`).join(";"));
+  let line = bestLine();
+  if (!line || line.dataset.pdpBestpos !== target || !line.textContent.includes("Meilleur poste :") || !line.textContent.includes(win1.eval(`POS_SHORT[${JSON.stringify(target)}]`))) {
+    throw new Error(`❌ Meilleur poste (${target}) ≠ poste de carte (${cardPos}) : la fiche devrait afficher « Meilleur poste : … », obtenu « ${line && line.textContent} ».`);
+  }
+  if (doc1.querySelector("#playerDetailContent .pdp2-pos").textContent !== cardPos) throw new Error("❌ Le badge de poste doit rester le poste de carte.");
+  console.log(`✅ Meilleur poste différent du poste de carte : « ${line.textContent} » (badge : ${cardPos}).`);
+  // Spécialiste de SON poste : pas de ligne « Meilleur poste ».
+  const ownKeys = win1.eval(`Object.keys(POSITION_KEY_WEIGHTS[${JSON.stringify(cardPos)}])`);
+  setAttrs(ownKeys.map(k => `p.attrs.${k} = 80`).join(";"));
+  if (bestLine()) throw new Error(`❌ Meilleur poste = poste de carte : aucune ligne « Meilleur poste » attendue, obtenu « ${bestLine().textContent} ».`);
+  console.log("✅ Spécialiste de son poste de carte : pas de ligne « Meilleur poste ».");
+  // Polyvalent : toutes les caractéristiques égales.
+  setAttrs("");
+  line = bestLine();
+  const vals = [...doc1.querySelectorAll("#playerDetailContent .pdp2-posrating b")].map(b => b.textContent);
+  if (!line || !line.classList.contains("is-polyvalent") || !line.textContent.includes("Polyvalent")) throw new Error("❌ Notes identiques à tous les postes : « Polyvalent » attendu.");
+  if (!vals.every(v => v === "40,0") || !doc1.querySelector("#playerDetailContent .pdp2-posratings.is-decimal")) throw new Error(`❌ 5 notes égales à l'unité : affichage à une décimale attendu, obtenu ${vals.join(" ")}.`);
+  console.log("✅ Joueur polyvalent :", vals.join(" "), "—", line.textContent);
+  win1.eval(`(() => { const p = teamA.players.find(x => x.id === ${pid}); Object.assign(p.attrs, ${saved}); showPlayerDetail(myTeamIndex, ${pid}); })()`);
 }
 
 // ---------------------------------------------------------------------
@@ -132,6 +171,18 @@ if (!doc2.getElementById("playerDetailName").textContent.includes(mvpName)) {
 // Contres/Pertes/Fautes/Minutes), plus dans un tableau séparé.
 if (!detailContent.includes("3 matchs")) {
   throw new Error("❌ Après 3 journées jouées, la carte Saison de la fiche devrait afficher '3 matchs'.");
+}
+// Derniers matchs sur téléphone (retour utilisateur 2026-09-30 (téléphone) :
+// colonne ÉVAL hors écran) : la cellule Adversaire porte .opp (tronquée
+// avec « … » sous 768 px, table-layout:fixed) et le nom complet en
+// infobulle ; la règle mobile existe bien dans la feuille de style.
+{
+  const oppCells = [...doc2.querySelectorAll("#playerDetailContent table.pdp-games td.opp")];
+  if (!oppCells.length || oppCells.some(td => !td.title || td.title !== td.textContent)) throw new Error("❌ Derniers matchs : chaque cellule Adversaire devrait avoir la classe .opp et le nom complet en infobulle.");
+  if (!/@media \(max-width:768px\)\{\s*\.pdp2 table\.pdp-games\{table-layout:fixed;/.test(html) || !/\.pdp2 table\.pdp-games td\.opp\{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;\}/.test(html)) {
+    throw new Error("❌ Derniers matchs : règles mobiles (table-layout:fixed, adversaire tronqué) absentes.");
+  }
+  console.log("✅ Derniers matchs : adversaire tronquable (.opp + infobulle), tableau à largeurs fixes sur téléphone.");
 }
 // Retour utilisateur (2026-09-24) : "enleve le match par match en bas" — le
 // tableau "Match par match" (historique complet, journée par journée) a été

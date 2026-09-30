@@ -5237,6 +5237,8 @@ window.HM_I18N_EN = {
   "Meilleur poste : {0} ({1}) · poste de carte : {2}": "Best position: {0} ({1}) · listed position: {2}",
   "Note par poste": "Rating by position",
   "{0} : {1} (meilleur poste)": "{0}: {1} (best position)",
+  "Meilleur poste :": "Best position:",
+  "Polyvalent : note proche à tous les postes": "Versatile: similar rating at every position",
   "Ordres verrouillés : le coup d'envoi est imminent.": "Orders locked: tip-off is imminent.",
   // Textes vus non traduits (passage sur les onglets, ajout de l'italien, 2026-09-30).
   "Édition de la tactique": "Tactic editing",

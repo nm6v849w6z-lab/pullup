@@ -3,6 +3,10 @@
    rien ne change sur ordinateur. Les éléments ajoutés par mobile.js (barre
    d'onglets, fond du tiroir, bouton loupe) sont masqués hors mobile. */
 .m-tabbar, .m-drawer-backdrop, .m-search-toggle { display: none; }
+/* Appli installée (écran d'accueil : html.m-standalone) ou appli iOS/Android
+   (Capacitor : html.m-native), classes posées par mobile.js : pas de nom de
+   club dans l'en-tête, quelle que soit la largeur (iPad compris). */
+html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
 
 @media (max-width: 768px) {
   html { -webkit-text-size-adjust: 100%; }
@@ -39,7 +43,14 @@
     padding: calc(10px + env(safe-area-inset-top)) 14px 10px; gap: 10px; flex-wrap: nowrap;
   }
   .topbar-sub, .topbar-meta { display: none !important; }
-  .topbar-club { font-size: 16px; }
+  /* Nom du club retiré de l'en-tête (retour utilisateur 2026-09-30
+     (téléphone) : « sur l'application uniquement je retirerais le nom
+     d'équipe en haut ») : sur la fiche joueur, les flèches précédent/suivant
+     venaient se poser dessus et un nom long était coupé (« Gotham Knig… »).
+     Le nom reste sur le tableau de bord et dans le menu ; recherche,
+     flèches et « Donnez vos ordres » tiennent sur une ligne à 360 px.
+     Voir aussi html.m-standalone / html.m-native plus bas (appli). */
+  .topbar-club { display: none; }
   .topbar-right { gap: 8px; flex-wrap: nowrap; }
   .topbar-left { flex: 1 1 auto; min-width: 0; }
   .topbar-right { flex: none; }

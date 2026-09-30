@@ -139,6 +139,12 @@
     var mq = window.matchMedia ? window.matchMedia(MOBILE_QUERY) : null;
     var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
     document.documentElement.classList.toggle("m-standalone", !!standalone);
+    // Appli native (Capacitor, voir mobile-app/) : le pont Capacitor est
+    // injecté dans la page du jeu (allowNavigation) → html.m-native (retour
+    // utilisateur 2026-09-30 (téléphone), nom du club masqué dans l'en-tête).
+    var native = false;
+    try { native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); } catch (e) { native = false; }
+    document.documentElement.classList.toggle("m-native", native);
 
     // Tout changement d'onglet (barre du bas, tiroir, liens internes) ferme
     // le tiroir et la recherche, et remonte en haut de la page sur mobile.
