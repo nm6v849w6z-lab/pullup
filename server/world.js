@@ -766,7 +766,13 @@ function leagueBestGameCandidates(entry, league, cup) {
   const cupOpponent = (roundIndex, teamIdx) => {
     const round = cup && (cup.rounds || []).find(x => x.index === roundIndex);
     const m = round && round.matches.find(x => !x.bye && (isMe(x.home, teamIdx) || isMe(x.away, teamIdx)));
-    if (!m) return null;
+    if (!m) {
+      // Coupe interne du championnat (première saison du monde).
+      const lc = league.cup && Array.isArray(league.cup.rounds) ? league.cup.rounds.find(x => x.index === roundIndex) : null;
+      const im = lc && (lc.matches || []).find(x => x.home === teamIdx || x.away === teamIdx);
+      const o = im ? (im.home === teamIdx ? im.away : im.home) : null;
+      return o != null && league.teams[o] ? { name: league.teams[o].name, leagueId: entry.id, idx: o } : null;
+    }
     const ref = isMe(m.home, teamIdx) ? m.away : m.home;
     return { name: ref.name, leagueId: ref.leagueId, idx: ref.idx };
   };

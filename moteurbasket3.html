@@ -20616,11 +20616,18 @@ function serializeTeam(team) {
 }
 
 function playerFromSave(pdata) {
+  // Joueur d'un autre championnat (server/publicPlayers.js, 2026-09-30) :
+  // caractéristiques non envoyées (`attrsHidden`). Valeurs neutres ici pour
+  // que rien ne casse (jamais NaN), mais aucune note n'en est jamais tirée
+  // (computePlayerVisibility : tout reste verrouillé).
+  const hidden = !!pdata.attrsHidden || !pdata.attrs || typeof pdata.attrs !== "object";
+  const attrs = hidden ? Object.fromEntries(ATTRS.map(a => [a, 50])) : { ...pdata.attrs };
   const p = new Player({
     name: pdata.name, position: pdata.position, height: pdata.height,
-    age: pdata.age, attrs: { ...pdata.attrs }, aggressiveness: pdata.aggressiveness,
+    age: pdata.age, attrs, aggressiveness: typeof pdata.aggressiveness === "number" ? pdata.aggressiveness : 50,
     nationality: pdata.nationality,
   });
+  if (hidden) p.attrsHidden = true;
   p.number = Number.isInteger(pdata.number) && pdata.number >= 0 && pdata.number <= 99 ? pdata.number : null;
   p.look = normalizePlayerLook(pdata.look);
   p.homegrownClub = typeof pdata.homegrownClub === "string" ? pdata.homegrownClub : null;
@@ -22639,7 +22646,7 @@ function playerDeservesBetterRole(team, player) {
   const starterId = team.lineup.starters ? team.lineup.starters[pos] : null;
   if (!starterId || starterId === player.id) return false;
   const starter = team.players.find(p => p.id === starterId);
-  if (!starter) return false;
+  if (!starter || player.attrsHidden || starter.attrsHidden) return false;
   return weightedRatingForPosition(player.attrs, pos) > weightedRatingForPosition(starter.attrs, pos);
 }
 
@@ -27327,7 +27334,9 @@ function computePlayerVisibility(teamIdx, player) {
   const openListing = (league.transferListings || []).find(l => l.status === "open" && l.playerId === player.id);
   const onMarket = Boolean(openListing);
   const revealedSet = (isOwnTeam || onMarket) ? null : new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
-  const visibleAttrs = ATTRS.filter(a => isOwnTeam || onMarket || revealedSet.has(a));
+  // Caractéristiques non envoyées par le serveur (autre championnat) : rien
+  // à montrer, quoi qu'il arrive.
+  const visibleAttrs = player.attrsHidden ? [] : ATTRS.filter(a => isOwnTeam || onMarket || revealedSet.has(a));
   return {
     isOwnTeam, openListing, onMarket,
     visibleAttrs, visibleAttrsSet: new Set(visibleAttrs),

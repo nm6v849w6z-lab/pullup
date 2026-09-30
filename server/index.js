@@ -59,6 +59,7 @@ const LeagueChat = require("./leagueChat.js");
 const AccountRoutes = require("./accountRoutes.js");
 const Accounts = require("./accounts.js");
 const Push = require("./push.js");
+const PublicPlayers = require("./publicPlayers.js");
 const MyAuctions = require("./myAuctions.js");
 const WebPush = require("./webpush.js");
 const Ads = require("./ads.js");
@@ -1531,11 +1532,16 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           });
           delete out.liveMatches;
           out.liveMatch = null;
-          out.transferListings = []; out.coachListings = []; out.analystListings = []; out.recruiterListings = [];
+          out.coachListings = []; out.analystListings = []; out.recruiterListings = [];
           out.doctorListings = []; out.physioListings = []; out.assistantCoachListings = [];
           out.privateLeagues = []; out.friendlies = []; out.guestTeams = [];
           out.divisionMoves = World.divisionMovesFor(world, id);
           out.leagueId = out.leagueId || id;
+          // Rien de caché des joueurs (caractéristiques, potentiel, traits) :
+          // voir server/publicPlayers.js. Même pour son propre championnat
+          // (« mine ») : le navigateur ouvre alors ses pages habituelles.
+          PublicPlayers.sanitizeForeignLeague(out);
+          delete out.humanTransferLog;
           let player = null;
           if (route.pathname === "/api/world/player-page") {
             const teamIdx = Number(q.get("team")), playerId = Number(q.get("id"));
@@ -1651,6 +1657,11 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
         // Enchères automatiques : plafonds des autres clubs secrets.
         MyAuctions.sanitizeAutoBids(payload.league, ctx.teamIndex);
+        // Adversaires (et clubs invités) : rien de ce que le jeu ne montre
+        // jamais pour un autre club (potentiel, motivation, académie…), voir
+        // server/publicPlayers.js.
+        PublicPlayers.sanitizeOwnLeagueForViewer(payload.league, ctx.teamIndex);
+        (payload.league.guestTeams || []).forEach(g => PublicPlayers.sanitizeOwnLeagueForViewer({ teams: [g], transferListings: payload.league.transferListings }, -1));
         // Zones du classement réellement en jeu (montée / barrage / descentes),
         // voir World.divisionMovesFor. Absent = aucune division autour.
         if (ctx.world) payload.league.divisionMoves = World.divisionMovesFor(ctx.world, ctx.leagueId);
