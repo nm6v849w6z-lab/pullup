@@ -25356,6 +25356,7 @@ document.addEventListener("click", e => {
 let hmActiveTabKey = "";
 function setActiveTab(key) {
   hmActiveTabKey = key || "";
+  if (typeof syncTopbarBack === "function") { try { queueMicrotask(() => { try { syncTopbarBack(); } catch (e) { /* rien */ } }); } catch (e) { /* rien */ } }
   if (typeof hmNavSchedule === "function") hmNavSchedule();
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === key));
 }
@@ -51668,16 +51669,26 @@ window.addEventListener("popstate", (e) => {
 // « Retour » des pages de détail sur téléphone : dans la barre du haut, à
 // gauche (retour utilisateur 2026-09-30 : « en haut ici »), voir
 // syncTopbarBack (appelée par showPage).
+// Pages « principales » = les 4 onglets de la barre du bas du téléphone ;
+// toutes les autres (ouvertes depuis le menu ou un lien) ont le « Retour ».
+const NAV_MAIN_TABS = new Set(["club", "ordres", "calendrier", "economie"]);
 function syncTopbarBack(id) {
   const b = document.getElementById("topbarBackBtn");
   if (!b) return;
-  const target = NAV_BACK_BTNS[id] && id !== "managerProfileSection" ? NAV_BACK_BTNS[id] : null;
-  b.classList.toggle("hidden", !target);
-  b.dataset.target = target || "";
+  const pageId = id || hmNavCurrent().page;
+  const target = NAV_BACK_BTNS[pageId] && pageId !== "managerProfileSection" ? NAV_BACK_BTNS[pageId] : "";
+  const tab = (document.querySelector(".tab-btn.active") || {}).dataset ? document.querySelector(".tab-btn.active").dataset.tab : hmActiveTabKey;
+  const show = !!target || (!!pageId && !NAV_MAIN_TABS.has(tab || hmActiveTabKey) && pageId !== "liveSection");
+  b.classList.toggle("hidden", !show);
+  b.dataset.target = target;
 }
 document.getElementById("topbarBackBtn").addEventListener("click", (e) => {
-  const t = document.getElementById(e.currentTarget.dataset.target);
-  if (t) t.click();
+  const t = e.currentTarget.dataset.target && document.getElementById(e.currentTarget.dataset.target);
+  if (t) { t.click(); return; }
+  // Page ouverte depuis le menu : page précédente du jeu, sinon tableau de bord.
+  if (hmNav.started && hmNav.idx > 0) { try { history.back(); return; } catch (err) { /* rien */ } }
+  const home = document.querySelector('.tab-btn[data-tab="club"]');
+  if (home) home.click();
 });
 
 window.__gameReady = (async () => {
