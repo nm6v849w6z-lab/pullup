@@ -140,7 +140,7 @@
   // Bandeau façon « Prochain match » / page live : fond scindé, liserés aux
   // couleurs de maillot, écussons, noms en capitales, badge « Mon club ».
   function board(seg, D, o) {
-    const side = (t, cls) => '<div class="hs-bteam ' + cls + '">' + D.crest(t.id, 76, t.name) +
+    const side = (t, cls) => '<div class="hs-bteam ' + cls + '">' + D.crest(t.id, 66, t.name) +
       '<div class="hs-binfo"><div class="hs-bname">' + esc(t.name) + (t.isMine ? '<span class="hs-mine-badge">Mon club</span>' : '') + '</div>' +
       (o.meta ? '<div class="hs-bmeta">' + o.meta(t) + '</div>' : '') + '</div></div>';
     const lead = seg.home.score === seg.away.score ? null : seg.home.score > seg.away.score ? 'home' : 'away';
@@ -164,8 +164,8 @@
         ? '<circle class="' + cls + ' hs-made" cx="' + x + '" cy="' + y + '" r="5.5"/>'
         : '<path class="' + cls + ' hs-miss" d="M' + (x - 4) + ' ' + (y - 4) + 'l8 8M' + (+x + 4) + ' ' + (y - 4) + 'l-8 8"/>';
     }
-    return '<div class="hs-court-wrap"><svg class="hs-court" viewBox="0 0 600 300" role="img" aria-label="Carte des tirs de la 1re mi-temps">' +
-      '<g class="hs-court-lines"><rect x="1" y="1" width="598" height="298" rx="6"/><path d="M300 1V299"/>' +
+    return '<div class="hs-court-wrap"><svg class="hs-court" viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Carte des tirs de la 1re mi-temps">' +
+      '<rect class="hs-court-bg" x="0" y="0" width="600" height="300" rx="10"/><g class="hs-court-lines"><rect x="1" y="1" width="598" height="298" rx="6"/><path d="M300 1V299"/>' +
       '<rect class="hs-paint-home" x="1" y="95" width="100" height="110"/><rect class="hs-paint-away" x="499" y="95" width="100" height="110"/>' +
       '<circle cx="101" cy="150" r="34"/><circle cx="499" cy="150" r="34"/>' +
       '<path d="M1 22L92 22A146 146 0 0 1 92 278L1 278"/><path d="M599 22L508 22A146 146 0 0 0 508 278L599 278"/>' +
@@ -212,19 +212,27 @@
     (seg.subtitle ? '<div class="hs-lead">' + esc(seg.subtitle) + '</div>' : '') +
     '<div class="hs-presented"><span>PRÉSENTÉ PAR</span>' + logoBlock(ctx, true) + '</div></div>';
 
+  // Bande basse façon TV (« lower third ») : « Ton meilleur joueur » à
+  // droite du tableau des quarts, dans le bas du bandeau (retour utilisateur
+  // « Émissions sans défilement ») — libère la colonne de droite et laisse
+  // toute la hauteur restante à la carte des tirs.
+  function lowerThird(bp, D) {
+    if (!bp) return '';
+    return '<div class="hs-lower-third" data-hs-lower-third>' + D.avatar(bp.id, bp.name, 48) +
+      '<div class="hs-lt-text"><span class="hs-lt-kicker">Ton meilleur joueur</span>' +
+      '<b class="hs-lt-name">' + esc(bp.name) + '</b><span class="hs-lt-line">' + esc(bp.line) + '</span></div></div>';
+  }
+
   R.myMatch = (seg, st, ctx) => {
     const D = ctx.D;
-    const bp = seg.bestPlayer;
     return head(seg) +
-      board(seg, D, { kicker: 'Championnat · Journée ' + ctx.show.day, kickerRight: seg.home.isMine ? 'À domicile' : 'À l’extérieur', center: 'Mi-temps', period: 'Reprise au 3e quart', bottom: quarterTable(seg, D) }) +
-      '<div class="hs-grid hs-grid-court"' + D.pair(seg.home.id, seg.away.id) + '>' +
-      '<div class="hs-card"><div class="hs-row-between"><span class="hs-label">Carte des tirs · 1re mi-temps</span><span class="hs-legend"><i class="hs-lg-made"></i>réussi <i class="hs-lg-miss">✕</i>raté</span></div>' + court(seg.shots, D, seg.home.id, seg.home.name) + '</div>' +
-      '<div class="hs-col">' +
-      '<div class="hs-card"><span class="hs-label">Faits marquants</span><ul class="hs-facts">' +
+      board(seg, D, { kicker: 'Championnat · Journée ' + ctx.show.day, kickerRight: seg.home.isMine ? 'À domicile' : 'À l’extérieur', center: 'Mi-temps', period: 'Reprise au 3e quart',
+        bottom: '<div class="hs-bottom-band">' + quarterTable(seg, D) + lowerThird(seg.bestPlayer, D) + '</div>' }) +
+      '<div class="hs-grid hs-grid-court hs-fill"' + D.pair(seg.home.id, seg.away.id) + '>' +
+      '<div class="hs-card hs-court-card"><div class="hs-row-between"><span class="hs-label">Carte des tirs · 1re mi-temps</span><span class="hs-legend"><i class="hs-lg-made"></i>réussi <i class="hs-lg-miss">✕</i>raté</span></div>' + court(seg.shots, D, seg.home.id, seg.home.name) + '</div>' +
+      '<div class="hs-card hs-facts-card"><span class="hs-label">Faits marquants</span><ul class="hs-facts">' +
       seg.facts.map((f) => '<li class="hs-tone-' + esc(f.tone) + '"><span>' + esc(f.text) + '</span></li>').join('') + '</ul></div>' +
-      (bp ? '<div class="hs-card hs-best"><span class="hs-label">Ton meilleur joueur</span><div class="hs-best-row">' + D.avatar(bp.id, bp.name, 56) +
-        '<div class="hs-col-tight"><b class="hs-lg">' + esc(bp.name) + '</b><span class="hs-small hs-light">' + esc(bp.line) + '</span></div></div></div>' : '') +
-      '</div></div>';
+      '</div>';
   };
 
   R.multiplex = (seg, st, ctx) => {
@@ -260,7 +268,7 @@
       if (r.trend === 'down') return '<span class="hs-pill-sm hs-pill-bad">▼ ' + r.move + '</span>';
       return '<span class="hs-dim2">=</span>';
     };
-    return head(seg) + '<div class="hs-card hs-table"><table><thead><tr><th>#</th><th>Équipe</th><th>V</th><th>D</th><th>%</th><th class="hs-right">' + (extra ? esc(seg.extraLabel) : 'Évolution') + '</th></tr></thead><tbody>' +
+    return head(seg) + '<div class="hs-card hs-table' + (seg.rows.length > 10 ? ' hs-table-dense' : '') + '"><table><thead><tr><th>#</th><th>Équipe</th><th>V</th><th>D</th><th>%</th><th class="hs-right">' + (extra ? esc(seg.extraLabel) : 'Évolution') + '</th></tr></thead><tbody>' +
       seg.rows.map((r) => '<tr class="' + (r.mine ? 'hs-row-mine' : r.opponentToday ? 'hs-row-opp' : '') + '"><td class="hs-dim2">' + r.pos + '</td><td><span class="hs-teamcell">' + D.crest(r.teamId, 26, r.name) + '<span>' + esc(r.name) + '</span></span></td><td>' + r.w + '</td><td>' + r.l + '</td><td class="hs-dim2">' + r.pct + ' %</td><td class="hs-right">' + trend(r) + '</td></tr>').join('') +
       '</tbody></table></div>' + (seg.note ? '<div class="hs-note">' + esc(seg.note) + '</div>' : '');
   };
@@ -340,6 +348,40 @@
     versus(seg.versus, ctx.D) +
     '<button type="button" class="hs-btn-live" data-hs-action="golive">Aller au direct</button></div>';
 
+  /* ------------------------------------------------ cadre « écran TV »
+   * Retour utilisateur « Émissions sans défilement » : sous la taille de
+   * conception (DESIGN_W × DESIGN_H), la page défilait. L'émission se
+   * comporte désormais comme une image TV : la scène entière (barre du haut,
+   * rubrique, barre du bas) est dessinée à taille fixe puis réduite ou
+   * agrandie d'un bloc (transform: scale) pour tenir dans la place
+   * disponible, centrée, avec des bandes (letterbox) — jamais de barre de
+   * défilement.
+   *   scale = min(largeur dispo / DESIGN_W, hauteur dispo / DESIGN_H)
+   * Exception : téléphone en PORTRAIT étroit. Sous PORTRAIT_MIN_SCALE (0,5)
+   * les textes de 12-15 px tomberaient sous ~7 px, illisibles : on bascule
+   * alors sur une mise en page verticale dédiée (mode "portrait", pleine
+   * largeur, seule la rubrique défile verticalement, jamais la page). Seuil
+   * choisi pour qu'un iPhone en paysage (844×390 → 0,54) garde l'image TV
+   * et qu'un téléphone en portrait (390×844 → 0,33) passe en vertical. En
+   * paysage très petit (568×320 → 0,44) on garde l'image TV : la mise en
+   * page verticale y serait encore plus serrée.
+   * Plafond MAX_SCALE : sur un très grand écran on n'agrandit pas au-delà.
+   * ------------------------------------------------------------------- */
+  const DESIGN_W = 1200, DESIGN_H = 720;
+  const PORTRAIT_MIN_SCALE = 0.5;
+  const MAX_SCALE = 1.6;
+
+  function fitStage(availW, availH) {
+    const w = Math.max(0, +availW || 0), h = Math.max(0, +availH || 0);
+    // Pas de mise en page connue (jsdom, conteneur masqué) : taille de conception.
+    if (!w || !h) return { mode: 'tv', scale: 1, width: DESIGN_W, height: DESIGN_H, left: 0, top: 0 };
+    const raw = Math.min(w / DESIGN_W, h / DESIGN_H);
+    if (raw < PORTRAIT_MIN_SCALE && h > w) return { mode: 'portrait', scale: 1, width: w, height: h, left: 0, top: 0 };
+    const scale = Math.min(MAX_SCALE, raw);
+    const width = DESIGN_W * scale, height = DESIGN_H * scale;
+    return { mode: 'tv', scale, width, height, left: Math.max(0, (w - width) / 2), top: Math.max(0, (h - height) / 2) };
+  }
+
   /* -------------------------------------------------------------- montage */
 
   function mount(container, show, opts) {
@@ -358,7 +400,7 @@
     container.innerHTML = '';
     const rootEl = document.createElement('div');
     rootEl.className = 'hs-root';
-    rootEl.innerHTML =
+    rootEl.innerHTML = '<div class="hs-frame" data-hs-frame>' +
       '<header class="hs-top"><div class="hs-brand"><div class="hs-brand-title">' + esc(show.brand) + '</div><div class="hs-brand-sub" data-hs-sub></div></div>' +
       '<nav class="hs-bars" aria-label="Rubriques">' + segs.map((s, i) => '<button type="button" class="hs-barbtn" data-hs-action="go" data-i="' + i + '" aria-label="' + esc(s.label || s.title || s.type) + '"><span><i></i></span></button>').join('') + '</nav>' +
       '<div class="hs-top-right">' + (show.badge ? '<span class="hs-pill hs-pill-muted">' + ICON.lock + esc(show.badge) + '</span>' : '') +
@@ -368,8 +410,35 @@
       '<footer class="hs-bottom"><div class="hs-avatar' + (opts.presenter ? ' hs-avatar-real' : '') + '">' + (opts.presenter || AVATAR) + '</div>' +
       '<div class="hs-bubble"><b>' + esc(opts.presenterName || 'Nicolas Cosset') + ' · présentateur</b><span data-hs-bubble></span></div>' +
       '<div class="hs-presented-small"><span>Présenté par</span>' + logoBlock({ opts, sponsor }, false) + '</div>' +
-      '<div class="hs-nav"><button type="button" class="hs-btn-next" data-hs-action="next"></button></div></footer>';
+      '<div class="hs-nav"><button type="button" class="hs-btn-next" data-hs-action="next"></button></div></footer></div>';
     container.appendChild(rootEl);
+    const frame = rootEl.querySelector('[data-hs-frame]');
+
+    // Mise à l'échelle façon TV (voir fitStage) : recalculée au
+    // redimensionnement, à la rotation du téléphone et quand la barre
+    // d'adresse mobile apparaît/disparaît (visualViewport).
+    let lastFit = '';
+    function layout() {
+      if (st.destroyed) return;
+      const f = fitStage(rootEl.clientWidth, rootEl.clientHeight);
+      const key = f.mode + '|' + f.scale + '|' + f.left + '|' + f.top;
+      if (key === lastFit) return;
+      lastFit = key;
+      rootEl.setAttribute('data-hs-mode', f.mode);
+      rootEl.classList.toggle('hs-portrait', f.mode === 'portrait');
+      rootEl.style.setProperty('--hs-scale', String(Math.round(f.scale * 1000) / 1000));
+      frame.style.transform = f.mode === 'portrait' ? ''
+        : 'translate(' + Math.round(f.left) + 'px,' + Math.round(f.top) + 'px) scale(' + f.scale + ')';
+    }
+    const onResize = () => layout();
+    const win = typeof window !== 'undefined' ? window : null;
+    if (win) {
+      win.addEventListener('resize', onResize);
+      win.addEventListener('orientationchange', onResize);
+      if (win.visualViewport) win.visualViewport.addEventListener('resize', onResize);
+    }
+    const ro = win && win.ResizeObserver ? new win.ResizeObserver(onResize) : null;
+    if (ro) ro.observe(rootEl);
 
     const $ = (sel) => rootEl.querySelector(sel);
     const body = $('[data-hs-body]');
@@ -480,14 +549,25 @@
     }, 250);
 
     render();
+    layout();
 
     return {
       goTo,
-      destroy() { st.destroyed = true; clearInterval(timer); container.innerHTML = ''; },
+      destroy() {
+        st.destroyed = true; clearInterval(timer);
+        if (ro) ro.disconnect();
+        if (win) {
+          win.removeEventListener('resize', onResize);
+          win.removeEventListener('orientationchange', onResize);
+          if (win.visualViewport) win.visualViewport.removeEventListener('resize', onResize);
+        }
+        container.innerHTML = '';
+      },
+      layout,
       setLeaderboard(lb) { opts.leaderboard = lb; if (segs[st.i] && segs[st.i].type === 'pronostics') render(); },
       get index() { return st.i; },
     };
   }
 
-  root.HoopShowPlayer = { mount };
+  root.HoopShowPlayer = { mount, fitStage, DESIGN_W, DESIGN_H, PORTRAIT_MIN_SCALE, MAX_SCALE };
 })(typeof window !== 'undefined' ? window : this);
