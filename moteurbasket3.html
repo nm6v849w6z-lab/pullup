@@ -3459,6 +3459,66 @@
   .lg-shot-m{text-align:right; font-variant-numeric:tabular-nums;} .lg-shot-p{text-align:right; color:#a8a18c;}
   .lg-quote{margin:12px 0 0; font-size:13.5px; font-style:italic; line-height:1.5; color:#d9d3bf;}
 
+  /* Chat de la ligue (2026-09-30, voir renderLeagueChat) : fil public des
+     managers humains + messages automatiques (résultats, transferts,
+     classement). Peu de bordures, surfaces discrètes, un seul accent
+     (l'ambre) ; même rendu en thème sombre et clair (tokens seulement). */
+  .lg-panel.lgc{padding:16px 0 0; display:flex; flex-direction:column; min-width:0; overflow:hidden;}
+  .lgc > *{padding-left:16px; padding-right:16px;}
+  .lgc [hidden]{display:none !important;}
+  .lgc-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; padding-bottom:4px;}
+  .lgc-head h2{font-family:var(--display); font-size:20px; font-weight:800; margin:0;}
+  .lgc-meta{font-size:12px; color:var(--ink-faint); display:inline-flex; align-items:center; gap:6px;}
+  .lgc-meta::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--ok);}
+  .lgc-list{max-height:460px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; padding-top:10px; padding-bottom:8px; scrollbar-width:thin; overscroll-behavior:contain; -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 18px); mask-image:linear-gradient(to bottom, transparent 0, #000 18px);}
+  .lgc-day{align-self:center; font-size:11px; font-weight:700; color:var(--ink-faint); margin:10px 0 4px;}
+  .lgc-msg{position:relative; padding:6px 8px; margin:0 -8px; border-radius:10px;}
+  .lgc-msg:hover{background:var(--panel-2);}
+  .lgc-by{display:flex; align-items:center; gap:7px; min-width:0; font-size:13px;}
+  .lgc-by .lgc-logo{flex:none; width:18px; height:18px; line-height:0;}
+  .lgc-by .lgc-logo svg, .lgc-by .lgc-logo img{width:18px; height:18px; border-radius:50%; object-fit:cover;}
+  .lgc-by b{color:var(--ink); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+  .lgc-msg.mine .lgc-by b{color:var(--amber);}
+  .lgc-by small{font-size:12px; color:var(--ink-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+  .lgc-time{margin-left:auto; flex:none; font-size:11px; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+  .lgc-text{margin:2px 0 0 25px; font-size:14px; line-height:1.45; color:var(--ink); overflow-wrap:anywhere; white-space:pre-wrap;}
+  .lgc-sys{position:relative; margin:2px 0; padding:7px 10px; border-radius:10px; background:var(--panel-2);}
+  .lgc-sys-top{display:flex; align-items:center; gap:8px;}
+  .lgc-kind{font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--amber);}
+  .lgc-sys-text{margin:2px 0 0; font-size:13px; line-height:1.4; color:var(--ink-dim); overflow-wrap:anywhere;}
+  .lgc-sys-text b{color:var(--ink); font-weight:700;}
+  .lgc-sys-text b.me{color:var(--amber);}
+  .lgc-sys-text .lgc-score{font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink);}
+  .lgc-sys-text small{color:var(--ink-faint); font-size:12px;}
+  .lgc-reacts{display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-top:5px;}
+  .lgc-msg .lgc-reacts{margin-left:25px;}
+  .lgc-reacts:empty{display:none;}
+  .lgc-r{display:inline-flex; align-items:center; gap:4px; min-height:24px; padding:0 8px; border-radius:999px; border:1px solid transparent; background:var(--line-soft); color:var(--ink-dim); font:inherit; font-size:12px; font-variant-numeric:tabular-nums; cursor:pointer;}
+  .lgc-sys .lgc-r{background:var(--panel);}
+  .lgc-r[aria-pressed="true"]{background:rgba(240,162,60,.14); border-color:rgba(240,162,60,.55); color:var(--ink);}
+  .lgc-add{position:absolute; top:4px; right:4px; width:28px; height:24px; border-radius:8px; border:0; background:var(--panel); color:var(--ink-faint); cursor:pointer; opacity:0; display:grid; place-items:center; box-shadow:0 1px 3px rgba(0,0,0,.18);}
+  .lgc-msg:hover .lgc-add, .lgc-sys:hover .lgc-add, .lgc-add:focus-visible, .lgc-add[aria-expanded="true"]{opacity:1;}
+  @media (hover:none){ .lgc-add{opacity:.7;} .lgc-msg .lgc-time, .lgc-sys .lgc-time{margin-right:30px;} }
+  .lgc-msg:hover .lgc-time, .lgc-sys:hover .lgc-time, .lgc-msg:focus-within .lgc-time, .lgc-sys:focus-within .lgc-time, .picking .lgc-time{margin-right:30px;}
+  .lgc-msg .lgc-add{top:2px;}
+  .lgc-pick{display:flex; gap:2px; padding:3px; margin-top:5px; width:max-content; max-width:100%; flex-wrap:wrap; border-radius:999px; background:var(--panel); box-shadow:0 4px 14px -6px rgba(0,0,0,.35); border:1px solid var(--line-soft);}
+  .lgc-msg .lgc-pick{margin-left:25px;}
+  .lgc-pick button{width:32px; height:30px; border:0; border-radius:999px; background:transparent; font-size:16px; cursor:pointer; line-height:1;}
+  .lgc-pick button:hover, .lgc-pick button[aria-pressed="true"]{background:var(--panel-2);}
+  .lgc-empty{margin:8px 0; font-size:13px; color:var(--ink-faint); line-height:1.45;}
+  .lgc-note{margin:0; padding-top:10px; padding-bottom:12px; font-size:12.5px; line-height:1.45; color:var(--ink-faint); border-top:1px solid var(--line-soft);}
+  .lgc-form{display:flex; gap:8px; align-items:center; padding-top:10px; padding-bottom:12px; border-top:1px solid var(--line-soft);}
+  .lgc-sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
+  .lgc-form input{flex:1; min-width:0; height:40px; padding:0 14px; border-radius:999px; border:1px solid transparent; background:var(--panel-2); color:var(--ink); font:inherit; font-size:14px;}
+  .lgc-form input::placeholder{color:var(--ink-faint);}
+  .lgc-form input:focus{outline:none; border-color:var(--amber);}
+  .lgc-send{flex:none; width:40px; height:40px; border-radius:50%; border:0; background:var(--amber); color:var(--amber-ink); display:grid; place-items:center; cursor:pointer;}
+  .lgc-send:disabled{opacity:.45; cursor:default;}
+  .lgc-err{margin:0; padding-top:8px; font-size:12.5px; color:var(--danger);}
+  .lgc-err:empty{display:none;}
+  .lgc-count{font-size:11px; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+  .lgc-count.over{color:var(--danger);}
+
   /* Leaders de la ligue */
   .lg-leaders{margin-top:28px;}
   .lg-leaders-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;}
@@ -3496,6 +3556,7 @@
   @container lgpage (max-width:960px){
     .lg-top{grid-template-columns:minmax(0,1fr);}
     .lg-side{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start;}
+    .lg-side .lgc{grid-column:1 / -1;}
     .lg-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
   @container lgpage (max-width:640px){
@@ -3509,6 +3570,8 @@
     .lg-f{width:20px; height:20px; font-size:10.5px;} .lg-form .lg-f:nth-last-child(n+4){display:none;}
     .lg-panel{padding:14px 12px;}
     .lg-chips{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .lg-panel.lgc{padding:14px 0 0;} .lgc > *{padding-left:12px; padding-right:12px;}
+    .lgc-list{max-height:380px;}
   }
   .stats-leader-expand-btn{display:block; width:100%; margin-top:10px; background:none; border:none; border-top:1px dashed var(--line); padding-top:8px; color:var(--amber); font-size:11.5px; cursor:pointer; text-align:center;}
   .stats-leader-expand-btn:hover{text-decoration:underline;}
@@ -25713,6 +25776,11 @@ function lgLastRoundResultsHtml() {
 
 function renderLeagueTop() {
   const table = league.standings();
+  // Le chat de la ligue a son propre nœud (voir lgcMount) : mis de côté le
+  // temps de réécrire la page, puis remis en place tel quel (saisie en
+  // cours, défilement et fil conservés, aucun nouvel appel réseau).
+  const chat = document.getElementById("leagueChat");
+  if (chat) chat.remove();
   document.getElementById("standingsContent").innerHTML =
     `<div class="lg-head"><h1>Ligue</h1><span class="lg-comp">${leagueCountryHtml()} · ${escapeHtml(leagueCompetitionLabel())}</span></div>` /* "Journée N sur 18 · 10 équipes" retiré (retour utilisateur 2026-09-26) */ +
     `<div class="lg-top">` +
@@ -25722,6 +25790,7 @@ function renderLeagueTop() {
       `</section>` +
       `<div class="lg-side">${lgRaceCardHtml(table)}${lgMvpCardHtml()}</div>` +
     `</div>` + lgLastRoundResultsHtml();
+  lgcMount(chat);
 }
 
 function showStandings() {
@@ -25730,7 +25799,263 @@ function showStandings() {
   renderLeagueStatsPanel();
   showPage("standingsSection");
   setActiveTab("ligue");
+  window.__lastLeagueChat = lgcRefresh();
 }
+
+// ---------------------------------------------------------------------
+// CHAT DE LA LIGUE (2026-09-30) — retour utilisateur : le chat de
+// compétition de BuzzerBeater, « en plus moderne ». Fil public des managers
+// humains du championnat + messages automatiques du serveur (Résultat,
+// Transfert, Classement : voir server/leagueChat.js), réactions rapides.
+// Rendu dans son propre nœud #leagueChat (colonne de droite de la page
+// Ligue sur PC, sous le classement sur mobile), jamais en re-rendant toute
+// la page. Rafraîchi à l'ouverture de l'onglet puis toutes les 15 s, et
+// seulement tant que la page Ligue est affichée et l'onglet du navigateur
+// visible. Seul manager de sa ligue : lecture seule (messages automatiques)
+// avec une note. Pas de liste des managers en tête (retour utilisateur
+// 2026-09-30) : le nom de l'auteur figure sur chaque message. Les textes
+// des managers portent data-no-i18n.
+// ---------------------------------------------------------------------
+const LGC_POLL_MS = 15000;
+const LGC_KIND_LABELS = { result: "Résultat", transfer: "Transfert", standings: "Classement" };
+const lgcUi = { data: null, sig: "", sending: false, error: "", pickFor: null, loading: null };
+
+function lgcPageVisible() {
+  const el = document.getElementById("standingsSection");
+  return !!el && !el.classList.contains("hidden");
+}
+
+function lgcHolder() {
+  let el = document.getElementById("leagueChat");
+  if (el) return el;
+  el = document.createElement("section");
+  el.id = "leagueChat";
+  el.className = "lg-panel lgc";
+  el.setAttribute("aria-labelledby", "lgcTitle");
+  el.innerHTML =
+    `<div class="lgc-head"><h2 id="lgcTitle">Chat de la ligue</h2><span class="lgc-meta" id="lgcMeta" hidden></span></div>` +
+    `<div class="lgc-list" id="lgcList" role="log" aria-live="polite" aria-label="Messages du chat de la ligue"><p class="lgc-empty">Chargement du chat…</p></div>` +
+    `<p class="lgc-note" id="lgcNote" hidden></p>` +
+    `<form class="lgc-form" id="lgcForm" hidden autocomplete="off">` +
+      `<label class="lgc-sr" for="lgcInput">Message à la ligue</label>` +
+      `<input id="lgcInput" type="text" maxlength="500" placeholder="Écrire à la ligue…" enterkeyhint="send">` +
+      `<span class="lgc-count" id="lgcCount" hidden></span>` +
+      `<button type="submit" class="lgc-send" id="lgcSend" aria-label="Envoyer" disabled>` +
+        `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m12 5 7 7-7 7"/></svg>` +
+      `</button>` +
+    `</form>` +
+    `<p class="lgc-err" id="lgcErr" role="alert"></p>`;
+  return el;
+}
+
+// Place le chat dans la colonne latérale, juste après « Ta course… ».
+function lgcMount(existing) {
+  const side = document.querySelector("#standingsContent .lg-side");
+  if (!side) return;
+  const el = existing || lgcHolder();
+  const race = side.querySelector(".lg-race");
+  if (race && race.nextSibling) side.insertBefore(el, race.nextSibling);
+  else side.appendChild(el);
+  if (lgcUi.data && !existing) lgcRender();
+}
+
+async function lgcApi(method, url, body) {
+  const init = { method };
+  if (body !== undefined) { init.headers = { "Content-Type": "application/json" }; init.body = JSON.stringify(body); }
+  const res = await fetchApi(url, init);
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* réponse vide */ }
+  if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || "Serveur injoignable.");
+  return data;
+}
+
+// Re-rendu seulement si la réponse a changé (sondage toutes les 15 s).
+function lgcSetData(data) {
+  const sig = JSON.stringify(data);
+  if (sig === lgcUi.sig) return;
+  lgcUi.sig = sig;
+  lgcUi.data = data;
+  lgcRender();
+}
+
+async function lgcRefresh() {
+  if (!managerToken || !document.getElementById("leagueChat")) return;
+  if (lgcUi.loading) return lgcUi.loading;
+  lgcUi.loading = (async () => {
+    try { lgcSetData(await lgcApi("GET", "/api/league-chat")); }
+    catch (e) {
+      const list = document.getElementById("lgcList");
+      if (!lgcUi.data && list) list.innerHTML = `<p class="lgc-empty">${escapeHtml(e.message)}</p>`;
+    } finally { lgcUi.loading = null; }
+  })();
+  return lgcUi.loading;
+}
+
+// Texte d'un message automatique (noms en gras, votre club en ambre). Les
+// morceaux fixes sont des nœuds texte à part (traduits par assets/i18n).
+function lgcSystemHtml(m) {
+  const d = m.data || {};
+  const team = (name, idx) => `<b data-no-i18n${idx === myTeamIndex ? ` class="me"` : ""}>${escapeHtml(name || "?")}</b>`;
+  if (m.kind === "result") {
+    return `${team(d.winner, d.winnerIdx)} <span>bat</span> <span data-no-i18n${d.loserIdx === myTeamIndex ? ` class="me"` : ""}>${escapeHtml(d.loser || "?")}</span> ` +
+      `<span class="lgc-score">${Number(d.winnerPts) || 0}-${Number(d.loserPts) || 0}</span> <small>· J${Number(d.round) || ""}</small>`;
+  }
+  if (m.kind === "transfer") {
+    return `${team(d.buyer, d.buyerIdx)} <span>recrute</span> <b data-no-i18n>${escapeHtml(d.player || "?")}</b> ` +
+      `<small><span data-no-i18n>(${escapeHtml(d.seller || "?")})</span> · ${escapeHtml(formatMoneyCompact(d.fee || 0))}</small>`;
+  }
+  if (m.kind === "standings") {
+    const label = { leader: "prend la tête du classement", playoffs: "entre dans le top 4 (play-offs)", relegation: "tombe en zone de relégation" }[d.event] || "";
+    return `${team(d.team, d.teamIdx)} <span>${label}</span>` + (d.event === "leader" ? ` <small>· ${Number(d.points) || 0} pts</small>` : "");
+  }
+  return escapeHtml(m.text || "");
+}
+
+function lgcReactionsHtml(m) {
+  const pills = m.reactions.map(r =>
+    `<button type="button" class="lgc-r" data-lgc-react="${m.id}" data-emoji="${escapeHtml(r.emoji)}" aria-pressed="${r.mine ? "true" : "false"}" aria-label="${escapeHtml(r.emoji)} ${r.count}">` +
+    `<span aria-hidden="true">${escapeHtml(r.emoji)}</span>${r.count}</button>`).join("");
+  const open = lgcUi.pickFor === m.id;
+  const add = `<button type="button" class="lgc-add" data-lgc-pick="${m.id}" aria-expanded="${open ? "true" : "false"}" aria-label="Réagir" title="Réagir">` +
+    `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="12" r="8"/><path d="M8 14.5c.8 1 1.8 1.5 3 1.5s2.2-.5 3-1.5"/><path d="M8.5 9.5h.01M13.5 9.5h.01"/><path d="M19.5 2.5v5M17 5h5"/></svg></button>`;
+  const pick = open
+    ? `<div class="lgc-pick" role="group" aria-label="Réactions">` + (lgcUi.data.reactions || []).map(e => {
+        const mine = m.reactions.some(r => r.emoji === e && r.mine);
+        return `<button type="button" data-lgc-react="${m.id}" data-emoji="${escapeHtml(e)}" aria-pressed="${mine ? "true" : "false"}">${escapeHtml(e)}</button>`;
+      }).join("") + `</div>`
+    : "";
+  return add + `<div class="lgc-reacts">${pills}</div>` + pick;
+}
+
+function lgcRender() {
+  const data = lgcUi.data;
+  if (!data || !document.getElementById("leagueChat")) return;
+  const meta = document.getElementById("lgcMeta");
+  meta.hidden = !data.online;
+  meta.textContent = `${data.online} en ligne`;
+
+  const list = document.getElementById("lgcList");
+  const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+  const firstRender = !list.dataset.rendered;
+  let html = "";
+  let lastDay = "";
+  data.messages.forEach(m => {
+    const day = msgDayLabel(m.at);
+    if (day !== lastDay) { html += `<div class="lgc-day">${escapeHtml(day)}</div>`; lastDay = day; }
+    const time = `<time class="lgc-time" datetime="${new Date(m.at).toISOString()}">${escapeHtml(msgFormatTime(m.at))}</time>`;
+    if (m.kind === "user") {
+      const idx = m.author && m.author.teamIndex;
+      const team = typeof idx === "number" && league && league.teams ? league.teams[idx] : null;
+      html += `<div class="lgc-msg${m.mine ? " mine" : ""}${lgcUi.pickFor === m.id ? " picking" : ""}" data-lgc-id="${m.id}">` +
+        `<div class="lgc-by"><span class="lgc-logo">${team ? teamLogoHtml(team, 18) : ""}</span>` +
+        `<b data-no-i18n>${escapeHtml((m.author && m.author.club) || "?")}</b>` +
+        (m.author && m.author.name ? `<small data-no-i18n>${escapeHtml(m.author.name)}</small>` : "") + time + `</div>` +
+        `<p class="lgc-text" data-no-i18n>${escapeHtml(m.text)}</p>` + lgcReactionsHtml(m) + `</div>`;
+    } else {
+      html += `<div class="lgc-sys lgc-sys--${escapeHtml(m.kind)}${lgcUi.pickFor === m.id ? " picking" : ""}" data-lgc-id="${m.id}">` +
+        `<div class="lgc-sys-top"><span class="lgc-kind">${LGC_KIND_LABELS[m.kind] || ""}</span>${time}</div>` +
+        `<p class="lgc-sys-text">${lgcSystemHtml(m)}</p>` + lgcReactionsHtml(m) + `</div>`;
+    }
+  });
+  if (!data.messages.length) {
+    html = `<p class="lgc-empty">Aucun message pour l'instant. Les résultats, les transferts et les changements au classement s'afficheront ici.</p>`;
+  }
+  const prevTop = list.scrollTop;
+  list.innerHTML = html;
+  list.dataset.rendered = "1";
+  list.scrollTop = firstRender || nearBottom ? list.scrollHeight : prevTop;
+
+  const note = document.getElementById("lgcNote");
+  note.hidden = !!data.canPost;
+  note.textContent = data.canPost ? "" : "Vous êtes le seul manager de cette ligue pour l'instant : les autres managers apparaîtront ici dès leur arrivée.";
+  document.getElementById("lgcForm").hidden = !data.canPost;
+  const input = document.getElementById("lgcInput");
+  if (data.maxLength) input.maxLength = data.maxLength;
+  lgcUpdateCompose();
+  document.getElementById("lgcErr").textContent = lgcUi.error;
+}
+
+function lgcUpdateCompose() {
+  const input = document.getElementById("lgcInput");
+  const btn = document.getElementById("lgcSend");
+  const count = document.getElementById("lgcCount");
+  if (!input || !btn) return;
+  const len = input.value.trim().length;
+  const max = (lgcUi.data && lgcUi.data.maxLength) || 500;
+  btn.disabled = lgcUi.sending || !len || len > max;
+  if (count) {
+    count.hidden = len < max - 100;
+    count.textContent = `${len}/${max}`;
+    count.classList.toggle("over", len > max);
+  }
+}
+
+async function lgcSend() {
+  const input = document.getElementById("lgcInput");
+  const text = input ? input.value.trim() : "";
+  if (!text || lgcUi.sending) return;
+  lgcUi.sending = true;
+  lgcUi.error = "";
+  lgcUpdateCompose();
+  try {
+    const data = await lgcApi("POST", "/api/league-chat/send", { text });
+    input.value = "";
+    const list = document.getElementById("lgcList");
+    if (list) list.scrollTop = list.scrollHeight; // son propre message : toujours visible
+    lgcSetData(data);
+  } catch (e) {
+    lgcUi.error = e.message;
+  } finally {
+    lgcUi.sending = false;
+    lgcUpdateCompose();
+    const err = document.getElementById("lgcErr");
+    if (err) err.textContent = lgcUi.error;
+  }
+}
+
+async function lgcReact(id, emoji) {
+  lgcUi.pickFor = null;
+  lgcUi.error = "";
+  try {
+    lgcSetData(await lgcApi("POST", "/api/league-chat/react", { id, emoji }));
+  } catch (e) {
+    lgcUi.error = e.message;
+  }
+  lgcRender();
+}
+
+(function initLeagueChat() {
+  document.addEventListener("click", (e) => {
+    const root = e.target.closest && e.target.closest("#leagueChat");
+    if (!root) {
+      if (lgcUi.pickFor != null) { lgcUi.pickFor = null; lgcRender(); }
+      return;
+    }
+    const r = e.target.closest("[data-lgc-react]");
+    if (r) { window.__lastLeagueChat = lgcReact(Number(r.dataset.lgcReact), r.dataset.emoji); return; }
+    const p = e.target.closest("[data-lgc-pick]");
+    if (p) { const id = Number(p.dataset.lgcPick); lgcUi.pickFor = lgcUi.pickFor === id ? null : id; lgcRender(); }
+  });
+  document.addEventListener("submit", (e) => {
+    if (e.target && e.target.id === "lgcForm") { e.preventDefault(); window.__lastLeagueChat = lgcSend(); }
+  });
+  document.addEventListener("input", (e) => {
+    if (e.target && e.target.id === "lgcInput") {
+      if (lgcUi.error) { lgcUi.error = ""; document.getElementById("lgcErr").textContent = ""; }
+      lgcUpdateCompose();
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && lgcUi.pickFor != null) { lgcUi.pickFor = null; lgcRender(); }
+  });
+  const tick = () => {
+    if (!managerToken || document.visibilityState === "hidden" || !lgcPageVisible()) return;
+    if (lgcUi.sending || lgcUi.pickFor != null) return; // ne pas fermer un menu ouvert sous le doigt
+    lgcRefresh();
+  };
+  setInterval(tick, LGC_POLL_MS);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") tick(); });
+})();
 
 // ---------------------------------------------------------------------
 // Stats de la ligue + MVP de la dernière journée (retour utilisateur,

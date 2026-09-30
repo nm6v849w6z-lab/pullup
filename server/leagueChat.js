@@ -1,0 +1,342 @@
+"use strict";
+// =====================================================================
+// CHAT DE LA LIGUE (2026-09-30) — retour utilisateur : « le chat de
+// compétition de BuzzerBeater », en plus moderne. Un fil public par
+// championnat, lisible et utilisable par les seuls managers HUMAINS de ce
+// championnat (jeton X-TipIn-Token → league + teamIndex, résolus par
+// server/index.js:resolvePlayerContext : on ne peut donc lire/écrire que le
+// chat de SA ligue, par construction).
+//
+// Deux sortes de messages :
+//   - messages des managers (500 caractères max, 1 message / 3 s par
+//     manager, texte stocké brut et échappé à l'affichage) ;
+//   - messages AUTOMATIQUES, ce qui fait vivre le chat même avec peu de
+//     managers : « Résultat » (chaque match de championnat), « Transfert »
+//     (un club de la ligue achète un joueur, voir League.logTransferNews),
+//     « Classement » (un club prend la 1re place, entre dans la zone de
+//     play-offs ou de relégation). Écrits par le SERVEUR à partir de la
+//     ligue sauvegardée (league.results, league.transferNews) au moment où
+//     un manager ouvre/rafraîchit le chat — voir syncSystem : un curseur
+//     (journée déjà traitée, transferts déjà annoncés) garantit qu'un
+//     évènement n'est écrit qu'une fois, horodaté à la fin de son match
+//     (pas à l'instant de la lecture). Les résultats n'existent dans
+//     league.results qu'une fois la diffusion terminée : aucun spoiler.
+//   - réactions rapides (jeu fixe d'émojis), une par manager et par émoji,
+//     en bascule.
+//
+// Stockage SÉPARÉ de la ligue (store.loadLeagueChat/saveLeagueChat : un
+// fichier/une clé Redis par championnat) : écrire dans le chat ne réécrit
+// jamais la ligue. 200 derniers messages de managers + 200 derniers
+// messages automatiques, réactions comprises.
+//
+// Identité : empreinte du jeton manager (Messages.participantKey), jamais le
+// jeton lui-même ; le navigateur ne voit que des noms de club, des index
+// d'équipe et `mine`.
+// =====================================================================
+const store = require("./store.js");
+const Messages = require("./messages.js");
+
+const CHAT_VERSION = 1;
+const MAX_TEXT_LENGTH = 500;
+const MAX_USER_MESSAGES = 200;
+const MAX_SYSTEM_MESSAGES = 200;
+const VIEW_LIMIT = 150;
+const MIN_INTERVAL_MS = 3000;
+const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+// Premier passage sur un championnat déjà en cours : seules les 2 dernières
+// journées (et les transferts des 3 derniers jours) sont annoncées, pas
+// toute la saison d'un coup.
+const FIRST_SYNC_ROUNDS = 2;
+const FIRST_SYNC_TRANSFER_MS = 3 * 24 * 3600 * 1000;
+// Pas d'annonces « Classement » sur les toutes premières journées (le
+// classement y change à chaque match, ce serait du bruit).
+const STANDINGS_FROM_ROUND = 2;
+const PLAYOFF_SPOTS = 4;
+const REACTIONS = ["🏀", "🔥", "😂", "👏", "💪", "😭"];
+
+// ---------------------------------------------------------------------
+// Présence (« M en ligne ») : dernière requête de chaque manager, en
+// mémoire seulement (mise à jour par server/index.js à chaque requête
+// authentifiée, sans écriture disque ; un redémarrage remet à zéro).
+// ---------------------------------------------------------------------
+const presence = new Map();
+function touchPresence(token, now) {
+  if (token) presence.set(Messages.participantKey(token), now);
+}
+function isOnline(key, now) {
+  const at = presence.get(key);
+  return typeof at === "number" && now - at < ONLINE_WINDOW_MS;
+}
+
+// Anti-spam : dernier envoi par manager (mémoire).
+const lastSend = new Map();
+function _resetForTests() { lastSend.clear(); presence.clear(); }
+
+function emptyChat() {
+  return { version: CHAT_VERSION, nextId: 1, messages: [], system: [], sync: null };
+}
+function normalizeChat(data) {
+  if (!data || data.version !== CHAT_VERSION) return emptyChat();
+  data.messages = Array.isArray(data.messages) ? data.messages : [];
+  data.system = Array.isArray(data.system) ? data.system : [];
+  data.nextId = Number.isInteger(data.nextId) && data.nextId > 0 ? data.nextId : 1;
+  return data;
+}
+
+function humans(league) {
+  const out = [];
+  league.teams.forEach((t, teamIndex) => {
+    if (t && t.isHuman && t.managerLinkToken) out.push({ teamIndex, team: t, key: Messages.participantKey(t.managerLinkToken) });
+  });
+  return out;
+}
+
+// Classement après la journée `round` incluse (même règle et mêmes
+// départages que League.standings, qu'on réutilise tel quel).
+function standingsAfter(league, round) {
+  const saved = league.results;
+  try {
+    league.results = saved.filter(r => r.round <= round);
+    return league.standings();
+  } finally {
+    league.results = saved;
+  }
+}
+
+function roundComplete(league, round) {
+  const expected = (league.matchesForRound(round) || []).length;
+  if (!expected) return false;
+  return league.results.filter(r => r.round === round).length >= expected;
+}
+
+// ---------------------------------------------------------------------
+// Messages automatiques. `opts` : { now, relegations, roundEndAt(round) }.
+// Renvoie true si quelque chose a été ajouté (à sauvegarder).
+// ---------------------------------------------------------------------
+function syncSystem(chat, league, opts) {
+  const now = opts.now;
+  const season = league.seasonNumber || 1;
+  const total = typeof league.totalRounds === "number" ? league.totalRounds : (league.schedule || []).length;
+  const firstSync = !chat.sync;
+  let changed = false;
+  const push = (kind, key, data, at) => {
+    chat.system.push({ id: chat.nextId++, kind, key, at, data, reactions: {} });
+    changed = true;
+  };
+
+  if (!chat.sync || chat.sync.season !== season) {
+    let lastRound = -1;
+    if (firstSync) {
+      let done = -1;
+      while (done + 1 < total && roundComplete(league, done + 1)) done++;
+      lastRound = Math.max(-1, done - FIRST_SYNC_ROUNDS);
+    }
+    chat.sync = { season, lastRound, transfers: (chat.sync && chat.sync.transfers) || [] };
+    changed = true;
+  }
+
+  // Journées de championnat terminées depuis le dernier passage.
+  const names = league.teams.map(t => (t ? t.name : "?"));
+  for (let r = chat.sync.lastRound + 1; r < total && roundComplete(league, r); r++) {
+    let at = opts.roundEndAt(r);
+    if (typeof at !== "number" || !Number.isFinite(at) || at > now) at = now;
+    league.results.filter(x => x.round === r).forEach(x => {
+      const homeWon = x.scoreHome > x.scoreAway;
+      push("result", `res:${season}:${r}:${x.home}-${x.away}`, {
+        round: r + 1,
+        winner: homeWon ? names[x.home] : names[x.away], winnerIdx: homeWon ? x.home : x.away,
+        loser: homeWon ? names[x.away] : names[x.home], loserIdx: homeWon ? x.away : x.home,
+        winnerPts: Math.max(x.scoreHome, x.scoreAway), loserPts: Math.min(x.scoreHome, x.scoreAway),
+        home: names[x.home], away: names[x.away], scoreHome: x.scoreHome, scoreAway: x.scoreAway,
+      }, at);
+    });
+    if (r >= Math.max(1, STANDINGS_FROM_ROUND - 1)) {
+      const before = standingsAfter(league, r - 1);
+      const after = standingsAfter(league, r);
+      const posBefore = new Map(before.map((s, i) => [s.idx, i + 1]));
+      let seq = 1;
+      if (after[0] && before[0] && after[0].idx !== before[0].idx) {
+        push("standings", `st:${season}:${r}:lead`, { event: "leader", round: r + 1, team: after[0].name, teamIdx: after[0].idx, points: after[0].points }, at + seq++);
+      }
+      if (r >= STANDINGS_FROM_ROUND) {
+        const n = after.length;
+        const rel = Math.max(0, Math.min(3, opts.relegations || 0));
+        after.forEach((s, i) => {
+          const rank = i + 1, prev = posBefore.get(s.idx);
+          if (n === 10 && rank <= PLAYOFF_SPOTS && prev > PLAYOFF_SPOTS && rank !== 1) {
+            push("standings", `st:${season}:${r}:po:${s.idx}`, { event: "playoffs", round: r + 1, team: s.name, teamIdx: s.idx, rank }, at + seq++);
+          }
+          if (rel && rank > n - rel && prev <= n - rel) {
+            push("standings", `st:${season}:${r}:rel:${s.idx}`, { event: "relegation", round: r + 1, team: s.name, teamIdx: s.idx, rank }, at + seq++);
+          }
+        });
+      }
+    }
+    chat.sync.lastRound = r;
+    changed = true;
+  }
+
+  // Transferts (voir League.logTransferNews).
+  const seen = new Set(chat.sync.transfers);
+  (league.transferNews || []).forEach(t => {
+    if (!t || t.id == null || seen.has(String(t.id))) return;
+    seen.add(String(t.id));
+    chat.sync.transfers.push(String(t.id));
+    changed = true;
+    if (firstSync && now - (t.at || 0) > FIRST_SYNC_TRANSFER_MS) return;
+    push("transfer", `tr:${t.id}`, {
+      buyer: t.buyerName, buyerIdx: t.buyerIdx, seller: t.sellerName, player: t.playerName, fee: t.fee, foreign: !!t.foreign,
+    }, Math.min(now, t.at || now));
+  });
+  if (chat.sync.transfers.length > 120) chat.sync.transfers = chat.sync.transfers.slice(-120);
+
+  if (chat.system.length > MAX_SYSTEM_MESSAGES) chat.system.splice(0, chat.system.length - MAX_SYSTEM_MESSAGES);
+  return changed;
+}
+
+// Texte (français) d'un message automatique — le navigateur compose le
+// sien (montants, traduction) mais celui-ci sert de repli et aux tests.
+function systemText(m) {
+  const d = m.data || {};
+  if (m.kind === "result") return `${d.winner} bat ${d.loser} ${d.winnerPts}-${d.loserPts}`;
+  if (m.kind === "transfer") return `${d.buyer} achète ${d.player} (${d.seller})`;
+  if (m.kind === "standings") {
+    if (d.event === "leader") return `${d.team} prend la tête du classement`;
+    if (d.event === "playoffs") return `${d.team} entre dans la zone de play-offs (${d.rank}e)`;
+    if (d.event === "relegation") return `${d.team} tombe en zone de relégation (${d.rank}e)`;
+  }
+  return "";
+}
+
+function reactionsView(reactions, me) {
+  return REACTIONS.map(emoji => {
+    const list = (reactions && reactions[emoji]) || [];
+    return list.length ? { emoji, count: list.length, mine: list.includes(me) } : null;
+  }).filter(Boolean);
+}
+
+function chatView(chat, league, me, now, names) {
+  const hs = humans(league);
+  const managers = hs.map(h => ({
+    teamIndex: h.teamIndex,
+    club: h.team.name,
+    name: (names && names.get(h.key)) || null,
+    me: h.key === me,
+    online: h.key === me || isOnline(h.key, now),
+  })).sort((a, b) => (b.me - a.me) || (b.online - a.online) || a.club.localeCompare(b.club, "fr"));
+  const merged = chat.messages.concat(chat.system)
+    .sort((a, b) => a.at - b.at || a.id - b.id)
+    .slice(-VIEW_LIMIT)
+    .map(m => {
+      const base = { id: m.id, kind: m.kind, at: m.at, reactions: reactionsView(m.reactions, me) };
+      if (m.kind === "user") {
+        const author = hs.find(h => h.key === m.from);
+        return {
+          ...base, text: m.text, mine: m.from === me,
+          author: { club: author ? author.team.name : m.club, teamIndex: author ? author.teamIndex : null, name: (names && names.get(m.from)) || null },
+        };
+      }
+      return { ...base, data: m.data, text: systemText(m) };
+    });
+  return {
+    ok: true,
+    managers,
+    aiCount: league.teams.length - hs.length,
+    online: managers.filter(m => m.online).length,
+    canPost: hs.length >= 2,
+    maxLength: MAX_TEXT_LENGTH,
+    reactions: REACTIONS,
+    messages: merged,
+  };
+}
+
+// ---------------------------------------------------------------------
+// Service : chaque opération reçoit le contexte résolu par index.js
+// ({ league, teamIndex, leagueId }) et renvoie { status, body }.
+// `opts.systemOpts(ctx)` → { relegations, roundEndAt } (calendrier,
+// zones du championnat) ; `opts.managerNames()` → Map empreinte → nom
+// public du manager (pseudo Discord), facultatif.
+// ---------------------------------------------------------------------
+function createService(savePath, opts = {}) {
+  let queue = Promise.resolve();
+  const withLock = fn => { const run = queue.then(fn, fn); queue = run.catch(() => {}); return run; };
+  const load = async id => normalizeChat(await store.loadLeagueChat(id, savePath));
+  const save = (id, data) => store.saveLeagueChat(id, data, savePath);
+  const names = async () => {
+    try { return opts.managerNames ? await opts.managerNames() : null; } catch (e) { return null; }
+  };
+  const sysOpts = (ctx, now) => ({ now, relegations: 0, roundEndAt: () => now, ...(opts.systemOpts ? opts.systemOpts(ctx) : {}) });
+
+  // Lecture + messages automatiques dus (écrit seulement s'il y en a).
+  async function loadSynced(ctx, now) {
+    const id = ctx.leagueId || ctx.league.leagueId;
+    const chat = await load(id);
+    if (syncSystem(chat, ctx.league, sysOpts(ctx, now))) await save(id, chat);
+    return chat;
+  }
+
+  function meOf(ctx) {
+    const t = ctx.league.teams[ctx.teamIndex];
+    return t && t.managerLinkToken ? Messages.participantKey(t.managerLinkToken) : null;
+  }
+
+  return {
+    async view(ctx, now) {
+      const me = meOf(ctx);
+      if (!me) return { status: 403, body: { ok: false, error: "Réservé aux managers de la ligue." } };
+      const chat = await withLock(() => loadSynced(ctx, now));
+      return { status: 200, body: chatView(chat, ctx.league, me, now, await names()) };
+    },
+
+    async send(ctx, body, now) {
+      const me = meOf(ctx);
+      if (!me) return { status: 403, body: { ok: false, error: "Réservé aux managers de la ligue." } };
+      if (humans(ctx.league).length < 2) return { status: 403, body: { ok: false, error: "Vous êtes le seul manager de cette ligue pour l'instant." } };
+      const text = Messages.cleanText(body && body.text).replace(/\n+/g, " ");
+      if (!text) return { status: 400, body: { ok: false, error: "Message vide." } };
+      if (text.length > MAX_TEXT_LENGTH) return { status: 400, body: { ok: false, error: `Message trop long (${MAX_TEXT_LENGTH} caractères maximum).` } };
+      const last = lastSend.get(me);
+      if (typeof last === "number" && now - last < MIN_INTERVAL_MS) {
+        return { status: 429, body: { ok: false, error: "Doucement : un message toutes les 3 secondes." } };
+      }
+      lastSend.set(me, now);
+      const id = ctx.leagueId || ctx.league.leagueId;
+      const chat = await withLock(async () => {
+        const c = await loadSynced(ctx, now);
+        const team = ctx.league.teams[ctx.teamIndex];
+        c.messages.push({ id: c.nextId++, kind: "user", at: now, from: me, teamIdx: ctx.teamIndex, club: team.name, text, reactions: {} });
+        if (c.messages.length > MAX_USER_MESSAGES) c.messages.splice(0, c.messages.length - MAX_USER_MESSAGES);
+        await save(id, c);
+        return c;
+      });
+      return { status: 200, body: chatView(chat, ctx.league, me, now, await names()) };
+    },
+
+    async react(ctx, body, now) {
+      const me = meOf(ctx);
+      if (!me) return { status: 403, body: { ok: false, error: "Réservé aux managers de la ligue." } };
+      const emoji = body && body.emoji;
+      if (!REACTIONS.includes(emoji)) return { status: 400, body: { ok: false, error: "Réaction inconnue." } };
+      const msgId = Number(body && body.id);
+      const id = ctx.leagueId || ctx.league.leagueId;
+      const out = await withLock(async () => {
+        const c = await loadSynced(ctx, now);
+        const msg = c.messages.find(m => m.id === msgId) || c.system.find(m => m.id === msgId);
+        if (!msg) return null;
+        msg.reactions = msg.reactions || {};
+        const list = new Set(msg.reactions[emoji] || []);
+        if (list.has(me)) list.delete(me); else list.add(me);
+        if (list.size) msg.reactions[emoji] = [...list]; else delete msg.reactions[emoji];
+        await save(id, c);
+        return c;
+      });
+      if (!out) return { status: 404, body: { ok: false, error: "Message introuvable." } };
+      return { status: 200, body: chatView(out, ctx.league, me, now, await names()) };
+    },
+  };
+}
+
+module.exports = {
+  createService, syncSystem, systemText, touchPresence, _resetForTests,
+  MAX_TEXT_LENGTH, MIN_INTERVAL_MS, REACTIONS, MAX_USER_MESSAGES, MAX_SYSTEM_MESSAGES, ONLINE_WINDOW_MS,
+};
