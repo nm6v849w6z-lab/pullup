@@ -6825,8 +6825,7 @@
 
   .mp-back-row{margin:0 0 14px;}
   /* « ← Retour » en haut des pages de détail, téléphone uniquement (voir NAV_BACK_BTNS). */
-  .m-top-back{display:none;}
-  @media (max-width:768px), (max-height:520px) and (pointer:coarse){ .m-top-back{display:block; margin:0 0 12px;} }
+  .topbar-m-back{display:none !important;}
   .mp-back{background:none; border:0; padding:6px 0; font:inherit; font-size:13px; font-weight:700; color:var(--ink-dim); cursor:pointer;}
   .mp-back:hover{color:var(--ink);}
   /* Pleine largeur (retour utilisateur 2026-09-30 : « prends pas toute la page »). */
@@ -7482,6 +7481,9 @@
         <!-- Fiche joueur : "Comparer" + flèches de navigation (voir le grand
              commentaire CSS de .topbar-player-nav) — caché sauf quand la
              fiche joueur est affichée. -->
+        <!-- « Retour » dans la barre du haut, téléphone uniquement, sur les
+             pages de détail (voir NAV_BACK_BTNS / syncTopbarBack). -->
+        <button type="button" class="topbar-m-back hidden" id="topbarBackBtn" aria-label="Retour">‹ Retour</button>
         <div class="topbar-player-nav hidden" id="topbarPlayerNav">
           <button class="topbar-compare-btn" id="topbarComparePlayerBtn">⇄ Comparer</button>
           <button class="topbar-player-nav-arrow" id="topbarPlayerPrevBtn" title="Joueur précédent de l'effectif" aria-label="Joueur précédent de l'effectif">‹</button>
@@ -25192,6 +25194,7 @@ function showPage(id) {
   // showPage, pour ne rater aucun chemin d'entrée/sortie de la fiche
   // joueur (clic sur un nom de joueur n'importe où dans l'appli, "←
   // Retour", changement d'onglet direct...).
+  if (typeof syncTopbarBack === "function") { try { syncTopbarBack(id); } catch (e) { /* pas encore initialisé */ } }
   const playerNavEl = document.getElementById("topbarPlayerNav");
   if (playerNavEl) playerNavEl.classList.toggle("hidden", id !== "playerDetailSection");
   // Retour utilisateur (2026-09-25) : sur la page Ordres, le bandeau global
@@ -51662,15 +51665,19 @@ window.addEventListener("popstate", (e) => {
   hmNav.restoring = false;
   hmNav.stack[hmNav.idx] = hmNavCurrent();
 });
-// « ← Retour » en haut des pages de détail (téléphone, voir .m-top-back).
-Object.entries(NAV_BACK_BTNS).forEach(([pageId, btnId]) => {
-  const page = document.getElementById(pageId), btn = document.getElementById(btnId);
-  if (!page || !btn || pageId === "managerProfileSection") return;
-  const top = document.createElement("div");
-  top.className = "m-top-back";
-  top.innerHTML = `<button type="button" class="secondary">← Retour</button>`;
-  top.firstChild.addEventListener("click", () => btn.click());
-  page.insertBefore(top, page.firstChild);
+// « Retour » des pages de détail sur téléphone : dans la barre du haut, à
+// gauche (retour utilisateur 2026-09-30 : « en haut ici »), voir
+// syncTopbarBack (appelée par showPage).
+function syncTopbarBack(id) {
+  const b = document.getElementById("topbarBackBtn");
+  if (!b) return;
+  const target = NAV_BACK_BTNS[id] && id !== "managerProfileSection" ? NAV_BACK_BTNS[id] : null;
+  b.classList.toggle("hidden", !target);
+  b.dataset.target = target || "";
+}
+document.getElementById("topbarBackBtn").addEventListener("click", (e) => {
+  const t = document.getElementById(e.currentTarget.dataset.target);
+  if (t) t.click();
 });
 
 window.__gameReady = (async () => {
