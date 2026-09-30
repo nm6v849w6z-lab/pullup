@@ -27,6 +27,23 @@ try {
   if (starters !== 5) throw new Error(`❌ 5 titulaires attendus dans "Cinq de départ", obtenu ${starters}.`);
   console.log(`✅ Groupes : ${groups.join(" / ")} (5 titulaires).`);
 
+  // Une seule notion de meilleur poste (retour utilisateur 2026-09-30) : la
+  // flèche « → X » de la colonne Poste = bestPosition (même règle que la
+  // fiche joueur), affichée seulement quand elle diffère du poste de carte.
+  {
+    const win = dom.window;
+    const p = win.eval("teamA.players[0]");
+    win.eval(`(() => { const p = teamA.players[0]; ATTRS.forEach(a => { p.attrs[a] = 30; }); Object.keys(POSITION_KEY_WEIGHTS[p.position === "Pivot" ? "Meneur" : "Pivot"]).forEach(k => { p.attrs[k] = 31; }); renderEffectifSection(); })()`);
+    const expected = win.eval("(() => { const p = teamA.players[0]; const b = bestPosition(p); return b !== p.position ? POS_SHORT[b] : null; })()");
+    const row = [...doc.querySelectorAll("#rosterContent tr.eff-row")].find(r => Number(r.querySelector(".player-link").dataset.playerId) === p.id);
+    const arrow = row.querySelector(".eff-position");
+    if (!expected || !arrow || arrow.textContent !== `→ ${expected}`) throw new Error(`❌ Flèche de meilleur poste attendue « → ${expected} », obtenu « ${arrow && arrow.textContent} ».`);
+    const others = [...doc.querySelectorAll("#rosterContent tr.eff-row .eff-position")].length;
+    const expectedCount = win.eval("teamA.players.filter(p => bestPosition(p) !== p.position).length");
+    if (others !== expectedCount) throw new Error(`❌ ${expectedCount} flèche(s) attendue(s) (meilleur poste ≠ poste de carte), obtenu ${others}.`);
+    console.log(`✅ Flèche de meilleur poste = bestPosition (${arrow.textContent}), seulement quand il diffère du poste de carte (${others}).`);
+  }
+
   // Menu "⋯" : fermé par défaut, s'ouvre, se referme sur un clic ailleurs.
   const btn = doc.querySelector("#rosterContent [data-eff-menu]");
   const menu = doc.getElementById(`effMenu_${btn.dataset.effMenu}`);

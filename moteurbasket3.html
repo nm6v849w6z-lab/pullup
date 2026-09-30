@@ -13724,6 +13724,19 @@ function handleGameEvent(feed, event, ctx) {
       });
     }
 
+    // Changement de poste de carte (voir Team.syncCardPositions).
+    case "position_change": {
+      const sh = pos => CARD_POSITION_SHORT[pos] || pos;
+      return pushEntry(feed, {
+        key: `poschange_${event.playerId}`,
+        category: "club",
+        week: w,
+        title: `${event.playerName} joue désormais ${event.to} (note ${event.ratingTo} en ${sh(event.to)} contre ${event.ratingFrom} en ${sh(event.from)})`,
+        text: "Son poste suit désormais ses caractéristiques. Son salaire, lui, ne sera revu qu'à l'intersaison.",
+        action: { label: "Effectif", href: "/effectif" },
+      });
+    }
+
     case "injury":
       return pushEntry(feed, Object.assign({
         key: `injury_${event.playerId}`,
@@ -15941,6 +15954,12 @@ class Team {
       this.deficitWeeks = 0;
     }
 
+    // Poste de carte : suit les caractéristiques de la semaine (retour
+    // utilisateur 2026-09-30, voir syncCardPositions), AVANT l'éventuel
+    // recalcul des salaires de fin de saison ci-dessous (fait, lui, au poste
+    // de carte du moment).
+    this.syncCardPositions();
+
     this.week++;
     // Une année d'âge par SAISON (11 semaines), pas par 52 semaines
     // calendaires : voir SEASON_LENGTH_WEEKS et `opts.seasonEnd` plus haut.
@@ -16068,6 +16087,30 @@ class Team {
   // marché des transferts (comparer le salaire "juste" d'un joueur avant une
   // offre). Renvoie le détail des changements pour l'UI (qui a eu une
   // augmentation/baisse et de combien).
+  // Poste de carte qui suit les caractéristiques (voir cardPositionChangeFor
+  // et POSITION_CHANGE_MARGIN) : joueurs pro ET stagiaires de l'académie.
+  // Club humain : une nouvelle dans le fil par joueur pro concerné (jamais
+  // pour l'IA ; `opts.silent` pour la couper). Ne touche NI au salaire NI à
+  // la feuille de match. Renvoie la liste des changements.
+  syncCardPositions(opts = null) {
+    const changes = [];
+    const apply = (p, isPro) => {
+      const c = cardPositionChangeFor(p);
+      if (!c) return;
+      p.position = c.to;
+      changes.push(Object.assign({ playerId: p.id, name: p.name, pro: isPro }, c));
+    };
+    this.players.forEach(p => apply(p, true));
+    (this.youthPlayers || []).forEach(p => apply(p, false));
+    if (this.isHuman && this.feed && !(opts && opts.silent)) {
+      changes.filter(c => c.pro).forEach(c => handleGameEvent(this.feed, {
+        type: "position_change", week: this.week, playerId: c.playerId, playerName: c.name,
+        from: c.from, to: c.to, ratingFrom: Math.round(c.ratingFrom), ratingTo: Math.round(c.ratingTo),
+      }, { clubName: this.name }));
+    }
+    return changes;
+  }
+
   recalculateSalaries() {
     return this.players.map(p => {
       const before = p.salary;
@@ -16119,6 +16162,9 @@ class Team {
       attrs.forEach(a => { attrWeights[a] = 0.75; });
       p.trainWeek(attrWeights, 1);
     });
+    // Poste de carte (voir syncCardPositions) : l'IA suit la même règle,
+    // sans nouvelle.
+    this.syncCardPositions();
   }
 
   // ---------------------------------------------------------------------
@@ -16137,6 +16183,19 @@ class Team {
       const atPos = this.players.filter(p => p.position === pos).sort((a, b) => b.overall() - a.overall());
       starters[pos] = atPos[0] ? atPos[0].id : null;
       atPos.slice(1).forEach(p => { backupPositions[p.id] = [pos]; });
+    });
+    // Poste sans joueur de ce poste de carte (les postes de carte suivent
+    // les caractéristiques, retour utilisateur 2026-09-30 : un effectif peut
+    // se retrouver avec 4 Arrières et 2 Meneurs) : le mieux noté À CE POSTE
+    // (positionRating) parmi ceux qui ne sont titulaires nulle part.
+    POSITIONS.forEach(pos => {
+      if (starters[pos] != null) return;
+      const taken = new Set(Object.values(starters).filter(id => id != null));
+      const pick = this.players.filter(p => !taken.has(p.id))
+        .sort((a, b) => positionRating(b, pos) - positionRating(a, pos))[0];
+      if (!pick) return;
+      starters[pos] = pick.id;
+      delete backupPositions[pick.id];
     });
     this.lineup = { starters, backupPositions };
   }
@@ -16848,6 +16907,64 @@ function bestPosition(player) {
   return best;
 }
 
+// ---------------------------------------------------------------------
+// Poste DE CARTE qui suit les caractéristiques (retour utilisateur
+// 2026-09-30 : "Quand un joueur a son meilleur poste qui ne correspond plus
+// à la réalité, il faut le changer. La seule chose qui ne doit changer qu'à
+// l'intersaison est le salaire.").
+// - Une seule notion de « meilleur poste » : bestPosition (note par poste
+//   ci-dessus). Player.position (le poste de carte, badge partout) la suit.
+// - Hystérésis POSITION_CHANGE_MARGIN = 2 points : le poste ne change que si
+//   la note au meilleur poste dépasse d'AU MOINS 2 points celle du poste
+//   actuel (égalité ou écart de 1 : on garde le poste actuel). Revenir en
+//   arrière exige à son tour 2 points dans l'autre sens : un gain ou une
+//   perte d'1 point d'une semaine à l'autre ne fait jamais osciller le
+//   poste. 2 = l'écart médian entre postes voisins (≈ 1,8, voir
+//   position_rating_test.js) : assez pour ignorer le bruit, assez peu pour
+//   suivre une vraie évolution en quelques semaines.
+// - Quand : fin de chaque mise à jour hebdomadaire (Team.trainWeek pour les
+//   clubs humains, Team.trainWeekCPU pour l'IA) et à chaque chargement de
+//   sauvegarde (teamFromSave : migration des sauvegardes existantes, côté
+//   serveur pour TOUS les clubs de la ligue, IA comprise). À la création
+//   (voir attrsForCardPosition), le poste de carte EST déjà le meilleur.
+// - Le salaire n'est PAS touché ici : il reste celui fixé à l'intersaison
+//   (Team.recalculateSalaries, calculé au poste de carte du moment, voir
+//   levelCoefficientFor) ; Player.effectivePosition garde le poste auquel
+//   ce salaire a été calculé.
+// - Composition : les postes de la feuille de match sont des CASES
+//   (lineup.starters[poste] = id), indépendantes du poste de carte ; un
+//   titulaire qui change de poste reste titulaire de sa case (l'alerte
+//   « Hors poste » des Ordres se met à jour d'elle-même). Entraînement :
+//   il compte le temps joué À CHAQUE poste en match
+//   (trainingSecondsPlayedByPosition), pas le poste de carte — un
+//   changement en cours de semaine ne fait rien perdre.
+// ---------------------------------------------------------------------
+const POSITION_CHANGE_MARGIN = 2;
+const CARD_POSITION_SHORT = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ailier fort": "AF", "Pivot": "P" };
+// Nombre de tirages de caractéristiques tentés à la création pour que le
+// poste demandé soit bien le meilleur (sinon : poste = meilleur poste).
+const GENERATION_POSITION_TRIES = 25;
+
+// Changement de poste de carte dû (ou null) : { from, to, ratingFrom, ratingTo }.
+function cardPositionChangeFor(player) {
+  if (!player || !player.attrs || !POSITIONS.includes(player.position)) return null;
+  const best = bestPosition(player);
+  if (!best || best === player.position) return null;
+  const ratingTo = positionRating(player, best), ratingFrom = positionRating(player, player.position);
+  if (ratingTo - ratingFrom < POSITION_CHANGE_MARGIN) return null;
+  return { from: player.position, to: best, ratingFrom, ratingTo };
+}
+
+// Création d'un joueur : retire les caractéristiques (`makeAttrs`) jusqu'à ce
+// que `position` soit son meilleur poste (effectif équilibré : 3 joueurs par
+// poste restent 3 joueurs par poste) ; au pire, le poste devient le
+// meilleur poste des derniers tirages. Renvoie { attrs, position }.
+function attrsForCardPosition(position, makeAttrs) {
+  let attrs = makeAttrs();
+  for (let i = 1; i < GENERATION_POSITION_TRIES && bestPosition({ attrs, position }) !== position; i++) attrs = makeAttrs();
+  return { attrs, position: bestPosition({ attrs, position }) || position };
+}
+
 // Bonus salarial pour une caractéristique SIGNATURE exceptionnelle du poste
 // retenu (voir POSITION_ATTR_PROFILE) : ADDITIF, appliqué APRÈS le choix du
 // poste (voir levelCoefficientFor) — jamais mélangé dans une moyenne, pour
@@ -16899,8 +17016,14 @@ function peakBonusFor(attrs, position) {
 // spécialiste bien évalué à son rôle, avec une vraie caractéristique
 // signature, est mieux valorisé qu'une simple moyenne brute qui le
 // pénaliserait pour des lacunes hors-spécialité pourtant normales à son poste.
+// Poste retenu (retour utilisateur 2026-09-30 : une seule notion de poste) :
+// le poste DE CARTE du joueur quand il est fourni (il suit désormais ses
+// caractéristiques, voir cardPositionChangeFor), sinon son meilleur poste
+// (bestPosition). Appelé uniquement à la création et à l'intersaison
+// (Team.recalculateSalaries) : un changement de poste en cours de saison ne
+// touche jamais au salaire.
 function levelCoefficientFor(attrs, cardPosition) {
-  const position = inferPosition(attrs, cardPosition);
+  const position = POSITIONS.includes(cardPosition) ? cardPosition : bestPosition({ attrs });
   const coefficient = weightedRatingForPosition(attrs, position) + peakBonusFor(attrs, position);
   return { position, coefficient };
 }
@@ -16957,16 +17080,18 @@ function generateRawYouthAttrs(tier, position) {
 function generatePlayer(position, tier, usedLastNames, country = "fr") {
   const { name, nationality } = generatePlayerIdentity(null, country);
   const age = Math.round(rand(18, 33));
-  const attrs = age <= YOUNG_PROSPECT_MAX_AGE
+  // Poste de carte = meilleur poste dès la création (retour utilisateur
+  // 2026-09-30, voir attrsForCardPosition).
+  const gen = attrsForCardPosition(position, () => (age <= YOUNG_PROSPECT_MAX_AGE
     ? generateRawYouthAttrs(tier, position)
-    : generateAttrsForPosition(position, tier);
+    : generateAttrsForPosition(position, tier)));
   return new Player({
     name,
     nationality,
-    position,
-    height: heightForPosition(position),
+    position: gen.position,
+    height: heightForPosition(gen.position),
     age,
-    attrs,
+    attrs: gen.attrs,
     aggressiveness: Math.round(rand(15, 95)),
   });
 }
@@ -16992,13 +17117,14 @@ function generateTeam(name, tier = 1, country = "fr") {
 function generateRookiePlayer(position, usedLastNames = null, country = "fr") {
   const { name, nationality } = generatePlayerIdentity(null, country);
   const age = Math.round(rand(18, 33));
+  const gen = attrsForCardPosition(position, () => generateRawYouthAttrs(1, position));
   return new Player({
     name,
     nationality,
-    position,
-    height: heightForPosition(position),
+    position: gen.position,
+    height: heightForPosition(gen.position),
     age,
-    attrs: generateRawYouthAttrs(1, position),
+    attrs: gen.attrs,
     aggressiveness: Math.round(rand(15, 95)),
   });
 }
@@ -17010,13 +17136,15 @@ function generateRookiePlayer(position, usedLastNames = null, country = "fr") {
 function generateRetirementReplacement(team, position) {
   const p = generateRookiePlayer(position);
   p.age = Math.round(rand(20, 23));
-  p.attrs = generateAttrsForPosition(position, 1);
+  p.position = position;
+  p.attrs = attrsForCardPosition(position, () => generateAttrsForPosition(position, 1)).attrs;
   const target = Math.max(20, (typeof team.averageOverall === "function" ? team.averageOverall() : p.overall()) * rand(0.88, 0.98));
   for (let pass = 0; pass < 2; pass++) {
     const scale = target / Math.max(p.overall(), 1);
     ATTRS.forEach(a => { p.attrs[a] = clamp(Math.round(p.attrs[a] * scale), 1, 99); });
   }
   p.potential = clamp(Math.round(p.overall() + rand(4, 12)), 1, 99);
+  p.position = bestPosition(p) || position;
   if (typeof salaryForOverall === "function") p.salary = salaryForOverall(p.overall());
   return p;
 }
@@ -17068,11 +17196,15 @@ function generateYouthCandidate(now, recruiterLevel, country = "fr") {
     identity.nationality = country;
     identity.name = `${pick(pool.first)} ${pick(pool.last)}`;
   }
+  // Poste affiché = meilleur poste d'après ces caractéristiques (retour
+  // utilisateur 2026-09-30) : un « outil brut » tiré au hasard peut le
+  // déplacer, le libellé suit.
+  const shownPosition = bestPosition({ attrs, position }) || position;
   const candidate = new Player({
     name: identity.name,
     nationality: identity.nationality,
-    position,
-    height: heightForPosition(position),
+    position: shownPosition,
+    height: heightForPosition(shownPosition),
     age,
     attrs,
     aggressiveness: Math.round(rand(15, 95)),
@@ -21458,6 +21590,10 @@ function teamFromSave(data) {
   }
   // Numéros de maillot (voir ensureJerseyNumbers).
   ensureJerseyNumbers(team);
+  // Migration / chargement (retour utilisateur 2026-09-30) : poste de carte
+  // recalé sur les caractéristiques, pour tous les clubs (IA comprise) ;
+  // idempotent (hystérésis, voir cardPositionChangeFor). Salaire inchangé.
+  team.syncCardPositions();
   return team;
 }
 
@@ -41228,13 +41364,19 @@ function renderEffectifSection() {
     html += `<tbody class="eff-group${isStarters ? " eff-group-starters" : ""}">` +
       `<tr class="eff-group-row"><th colspan="${colCount}" scope="rowgroup"><span class="eff-group-title">${escapeHtml(group.label)}</span></th></tr>`;
     effSortPlayers(members, defaultCmp).forEach(p => {
-      const effPos = p.effectivePosition && p.effectivePosition !== p.position ? p.effectivePosition : null;
+      // Une seule notion de « meilleur poste » (retour utilisateur
+      // 2026-09-30) : la même que la fiche joueur (bestPosition). Le poste de
+      // carte la suit (Team.syncCardPositions) ; la flèche n'apparaît que
+      // dans l'entre-deux, écart encore sous POSITION_CHANGE_MARGIN.
+      const bestPos = bestPosition(p);
+      const effPos = bestPos && bestPos !== p.position ? bestPos : null;
       const posCell = effPosBadgeHtml(p.position) + (effPos
-        ? ` <span class="eff-position" title="Poste utilisé pour le salaire, d'après ses caractéristiques">→ ${POS_SHORT[effPos]}</span>`
+        ? ` <span class="eff-position" title="Meilleur poste d'après ses caractéristiques : ${escapeHtml(effPos)} (${Math.round(positionRating(p, effPos))} contre ${Math.round(positionRating(p, p.position))})">→ ${POS_SHORT[effPos]}</span>`
         : "");
-      const salaryTitle = effPos
-        ? `Calculé pour le poste ${effPos.toLowerCase()} (ses caractéristiques y sont mieux valorisées qu'à son poste de carte).`
-        : `Calculé pour son poste (${p.position.toLowerCase()}).`;
+      // Salaire : fixé à l'intersaison au poste de carte d'alors
+      // (effectivePosition), jamais recalculé en cours de saison.
+      const salaryPos = p.effectivePosition || p.position;
+      const salaryTitle = `Calculé à l'intersaison pour le poste ${salaryPos.toLowerCase()}.`;
       const isListed = listedIds.has(p.id);
       // Blessure PERSISTANTE (voir injuryCrossHtml) : ligne teintée de rouge.
       const cross = injuryCrossHtml(p, now);

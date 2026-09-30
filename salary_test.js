@@ -347,7 +347,11 @@ win2.close();
   // Confirme d'abord que la mutation est bien pertinente pour un joueur de
   // carte Arrière : appliquée à froid, elle ferait ressortir Pivot (sinon le
   // test ne prouverait rien).
-  const freshlyRecomputed = levelCoefficientFor(pivotLikeAttrs, "Arrière");
+  // Depuis 2026-09-30 (une seule notion de poste) : le meilleur poste est
+  // bestPosition ; le poste de carte le suit dès le chargement, mais le
+  // salaire (et effectivePosition, le poste auquel il a été calculé)
+  // restent figés jusqu'à l'intersaison.
+  const freshlyRecomputed = { position: E.bestPosition({ attrs: pivotLikeAttrs, position: "Arrière" }) };
   console.log("\nPoste que ces attributs donneraient s'ils étaient recalculés à chaud (carte Arrière) :", freshlyRecomputed.position);
   if (freshlyRecomputed.position === "Arrière") {
     throw new Error("❌ Le profil d'attributs choisi pour la régression devrait produire un poste différent d'Arrière, sinon le test ne prouve rien.");
