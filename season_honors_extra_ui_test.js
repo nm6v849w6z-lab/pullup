@@ -54,7 +54,7 @@ const EMOJI = /\p{Extended_Pictographic}/u;
     check(!!(aw.compareDocumentPosition(stats) & 4) && !!(stats.compareDocumentPosition(asgCard) & 4), "Ligue : récompenses, puis leaders, puis All-Star Game");
     win.eval(`teamDetailSubView = "apercu"; showTeamDetail(${iB})`);
     const prof = await waitFor(() => doc.getElementById("managerProfileCard"), "profil du manager");
-    check(/15 V – 3 D/.test(prof.textContent) && /1 \/ \d+ succès/.test(prof.textContent), "fiche d'équipe : carte compacte du manager (bilan, succès)");
+    check(/15 ?V – 3 ?D/.test(prof.textContent) && /1 \/ \d+ succès/.test(prof.textContent), "fiche d'équipe : carte compacte du manager (bilan, succès)");
     // Profil complet (2026-09-30) : saison en cours + saison archivée.
     prof.querySelector(".mp-more").click();
     const page = await waitFor(() => !doc.getElementById("managerProfileSection").classList.contains("hidden") && doc.getElementById("managerProfileContent"), "page profil");

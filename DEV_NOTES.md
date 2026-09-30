@@ -77,6 +77,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   forfait pour « pas de pivot » avec au moins 5 joueurs, validé par
   l'utilisateur). Effectif en un seul bloc.
 
+- **✅ EN PROD (2026-09-30) — Aperçu variante A, Scouting Pro pleine largeur** :
+  teamDetailApercuHtml refait (bannière aux couleurs du club, 4 tuiles
+  classement / bilan / points par match / manager ou renommée, prochain
+  match mis en avant « Contre toi », 5 derniers résultats, joueur en forme,
+  dernière interview ; CSS .ov-*). Remplace le modèle E « Aperçu en liste ».
+  #scoutingProPanel sans max-width ; « Profil et style de jeu » sur 3
+  colonnes (.sp2-grid-3, 2 sous 1500 px, 1 sous 900 px).
+
 - **✅ EN PROD (2026-09-30) — zones de tir détaillées (scouting)** : le
   moteur note l'emplacement de chaque tir parmi 12 (engine.js:shotSpotFor :
   cercle restrictif, raquette, 5 mi-distance, 5 à 3 pts), tiré selon le

@@ -1029,6 +1029,82 @@
     .apercu-foot{padding:4px 16px 0;}
     .team-apercu-jerseys{width:100%; justify-content:center;}
   }
+  /* Aperçu, variante A « bannière + tableau de bord » (2026-09-30, voir
+     teamDetailApercuHtml). */
+  .ov-banner{display:flex; align-items:center; gap:24px; padding:24px 28px; border-radius:20px; border:1px solid var(--line); margin:6px 0 16px;
+    background:linear-gradient(115deg, var(--ov-c1), var(--ov-c2) 55%, var(--panel) 85%);}
+  .ov-crest{flex:none;}
+  .ov-id{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px;}
+  .ov-kicker{font-size:11px; letter-spacing:.1em; text-transform:uppercase; font-weight:800; color:var(--ink-dim); display:flex; align-items:center; gap:6px;}
+  .ov-banner .team-apercu-name{margin:0; font-size:40px; line-height:1.05; font-weight:900;}
+  .ov-chips{display:flex; gap:8px; flex-wrap:wrap;}
+  .ov-chip{display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:999px; font-size:12.5px; color:var(--ink-dim); background:rgba(255,255,255,.06); border:1px solid var(--line);}
+  .ov-chip .stars{color:var(--amber); letter-spacing:1px;}
+  .ov-chip .manager-link, .ov-chip button{font-weight:700; color:var(--ink);}
+  .ov-own{margin:0; font-size:12.5px; color:var(--ink-dim);}
+  .ov-hot-name{display:flex; align-items:center; gap:8px; min-width:0;}
+  .ov-banner .team-apercu-jerseys{display:flex; gap:14px; flex:none;}
+  .ov-banner .jersey-mockup{gap:2px;}
+  .ov-tiles{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:16px; margin-bottom:16px;}
+  .ov-tile, .ov-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px 20px; display:flex; flex-direction:column; gap:8px; min-width:0;}
+  .ov-label{font-size:12px; letter-spacing:.08em; text-transform:uppercase; font-weight:800; color:var(--ink-dim);}
+  .ov-big{font-size:32px; font-weight:900; line-height:1; color:var(--ink);}
+  .ov-big sup{font-size:15px;}
+  .ov-big small{font-size:17px; font-weight:600; color:var(--ink-dim);}
+  .ov-stars .stars{color:var(--amber); font-size:24px; letter-spacing:2px;}
+  .ov-sub{font-size:13px; color:var(--ink-dim);}
+  .ov-pos{color:var(--ok); font-weight:800;}
+  .ov-neg{color:var(--danger); font-weight:800;}
+  .ov-tile .form-streak{gap:5px; margin-top:2px;}
+  .ov-tile .form-badge{width:24px; height:24px; font-size:12px;}
+  .ov-mgr{display:flex; align-items:center; gap:10px; min-width:0;}
+  .ov-mgr-id{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .ov-mgr-name{font-weight:800; font-size:15px; text-align:left;}
+  .ov-link{align-self:flex-start; background:none; border:0; padding:0; color:var(--amber); font:inherit; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;}
+  .ov-link:hover{text-decoration:underline;}
+  .ov-head{display:flex; justify-content:space-between; align-items:center; gap:12px;}
+  .ov-head .ov-link{align-self:auto;}
+  .ov-grid{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:16px; align-items:start;}
+  .ov-col{display:flex; flex-direction:column; gap:16px; min-width:0;}
+  .ov-next.is-me{border-color:rgba(240,162,60,.5); background:linear-gradient(135deg, rgba(240,162,60,.12), var(--panel) 60%);}
+  .ov-versus{display:flex; align-items:center; justify-content:space-between; gap:14px;}
+  .ov-side{display:flex; align-items:center; gap:12px; min-width:0; flex:1;}
+  .ov-side:last-child{flex-direction:row-reverse; text-align:right;}
+  .ov-side b{font-size:18px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .ov-mid{display:flex; flex-direction:column; align-items:center; gap:3px; flex:none; text-align:center;}
+  .ov-me{color:var(--amber); font-weight:900; font-size:13px; letter-spacing:.08em; text-transform:uppercase;}
+  .ov-vs{color:var(--ink-dim); font-weight:900; letter-spacing:.1em;}
+  .ov-results{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:10px;}
+  .ov-res{background:var(--panel-2); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:3px; min-width:0;}
+  .ov-res b{font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .ov-res .ov-sub{font-size:11.5px;}
+  .ov-score{display:flex; align-items:center; gap:6px;}
+  .ov-score .form-badge{width:20px; height:20px; font-size:11px;}
+  .ov-hot{display:flex; align-items:center; gap:14px;}
+  .ov-hot-id{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;}
+  .ov-hot-id b{font-size:16px;}
+  .ov-pos-chip{display:inline-block; padding:0 7px; border-radius:999px; border:1px solid var(--line); font-size:11.5px; color:var(--ink-dim); flex:none;}
+  .ov-hot-val{text-align:right; display:flex; flex-direction:column;}
+  .ov-hot-val b{font-size:30px; font-weight:900; color:var(--ok); line-height:1;}
+  .ov-quote{margin:0; padding-left:14px; border-left:3px solid var(--amber); font-style:italic; font-size:14.5px; color:var(--ink); line-height:1.5;}
+  .ov-quote-by{margin:0;}
+  @media(max-width:1100px){
+    .ov-tiles{grid-template-columns:repeat(2, minmax(0,1fr));}
+    .ov-grid{grid-template-columns:minmax(0,1fr);}
+  }
+  @media(max-width:680px){
+    .ov-banner{flex-wrap:wrap; padding:18px; gap:14px;}
+    .ov-banner .team-apercu-name{font-size:28px;}
+    .ov-banner .team-apercu-jerseys{width:100%; justify-content:center;}
+    .ov-tiles{gap:10px;}
+    .ov-tile{padding:14px;}
+    .ov-big{font-size:24px;}
+    .ov-results{grid-template-columns:repeat(5, 42%); overflow-x:auto; scrollbar-width:none;}
+    .ov-side, .ov-side:last-child{flex-direction:column; text-align:center; gap:6px;}
+    .ov-side b{font-size:14px; white-space:normal; overflow-wrap:anywhere;}
+    .ov-versus{gap:8px; align-items:flex-start;}
+    .ov-mid{padding-top:10px; flex:0 1 auto;}
+  }
   .team-logo-img{border-radius:50%; object-fit:cover; display:block;}
   .jersey-mockups{display:flex; gap:20px;}
   .jersey-mockup{display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;}
@@ -31405,47 +31481,80 @@ function trophiesHtml(teamIdx) {
 // forme, le palmarès et les interviews. Remplacée le 2026-09-25 par le
 // modèle E "Aperçu en liste" (voir le commentaire en tête de la fonction).
 function teamDetailApercuHtml(teamIdx) {
-  // Modèle E "Aperçu en liste" (retour utilisateur, 2026-09-25 : "code le
-  // modele e", maquette Design "Hoop Manager – Page adversaire", planche
-  // ApercuListe) : l'Aperçu devient une page d'accueil très simple — un
-  // en-tête (logo, nom, une seule ligne de résumé, maillots à droite) puis
-  // trois lignes cliquables qui mènent chacune à un sous-onglet (mêmes
-  // data-team-detail-subview que teamDetailSubNavHtml, donc gérées par le
-  // même écouteur délégué), chacune avec son résumé d'une ligne.
+  // Variante A « bannière + tableau de bord » (retour utilisateur
+  // 2026-09-30 : « propose de nouveaux visuels pour la page aperçu, je
+  // trouve qu'il y a un truc qui ne va pas » puis « La A est top code là ») :
+  // bannière aux couleurs du club (logo, nom, renommée, manager, palmarès,
+  // maillots), 4 tuiles (classement, bilan + forme, points par match,
+  // manager ou renommée), puis prochain match mis en avant, 5 derniers
+  // résultats, joueur en forme et dernière interview. Remplace le modèle E
+  // « Aperçu en liste » du 2026-09-25. Les liens « → » mènent aux
+  // sous-onglets (data-team-detail-subview, même écouteur délégué).
   const team = league.teams[teamIdx];
   const isOwnTeam = teamIdx === myTeamIndex;
+  const foreign = !!teamDetailForeign;
+  const leagueId = foreign ? teamDetailForeign.leagueId : null;
   const stars = computeClubReputationStars(team, league.divisionLevel);
   const table = league.standings();
   const rank = table.findIndex(r => r.idx === teamIdx) + 1;
   const row = table.find(r => r.idx === teamIdx);
+  const played = !!(row && row.played);
+  const trophies = team.trophies || [];
+  const link = (view, label) => `<button type="button" class="ov-link" data-team-detail-subview="${view}"><span>${label}</span> →</button>`;
+  const oppName = idx => escapeHtml(league.teams[idx] ? league.teams[idx].name : "?");
 
-  const summary = [
-    `${nationFlagHtml(league.country || "fr")} ${escapeHtml(leagueCompetitionLabel())}`,
-    row && row.played ? `${rank}${rank === 1 ? "er" : "e"} · ${row.wins}V – ${row.losses}D` : null,
-    `Renommée ${reputationStarsHtml(stars)}`,
-    `Fondé en ${team.foundedYear}`,
-  ].filter(Boolean).join(" · ");
-
-  const jerseyPattern = effectiveJerseyPattern(team);
-  const jerseyTwoTone = effectiveJerseyTwoTone(team);
-  const awayJerseyPattern = effectiveAwayJerseyPattern(team);
-  const awayJerseyTwoTone = effectiveAwayJerseyTwoTone(team);
-
-  let html = `<div class="team-apercu-top">`;
-  html += `<div class="team-apercu-crest">${teamLogoHtml(team, 88)}</div>`;
-  html += `<div class="team-apercu-id">`;
+  // --- Bannière ---
+  const c1 = JERSEY_COLORS[team.jerseyColor] || "#2a3550";
+  const c2 = JERSEY_COLORS[team.awayJerseyColor] || c1;
+  const hexA = (hex, a) => /^#[0-9a-f]{6}$/i.test(hex) ? hex + Math.round(a * 255).toString(16).padStart(2, "0") : hex;
+  const trophyText = trophies.length
+    ? `${trophies.length} titre${trophies.length > 1 ? "s" : ""} · dernier : ${escapeHtml(trophies[0].label)} (${new Date(trophies[0].at).getFullYear()})`
+    : "<span>encore vierge</span>";
+  let html = `<section class="ov-banner" style="--ov-c1:${hexA(c1, 0.38)};--ov-c2:${hexA(c2, 0.16)}">`;
+  html += `<div class="team-apercu-crest ov-crest">${teamLogoHtml(team, 96)}</div>`;
+  html += `<div class="ov-id"><span class="ov-kicker">${nationFlagHtml(league.country || "fr")} ${escapeHtml(leagueCompetitionLabel())} · Fondé en ${team.foundedYear}</span>`;
   html += `<h2 class="team-apercu-name">${escapeHtml(team.name)}</h2>`;
-  html += `<p class="team-apercu-summary">${summary}</p>`;
-  if (isOwnTeam) html += `<p class="sub">Logo et maillots modifiables dans l'onglet <button type="button" class="pz-inline-link" data-tab="personnalisation">Personnalisation</button>.</p>`;
+  html += `<div class="ov-chips"><span class="ov-chip">Renommée ${reputationStarsHtml(stars)}</span>` +
+    (team.isHuman ? `<span class="ov-chip">Manager : ${managerLinkHtml(team, teamIdx, leagueId)}</span>` : "") +
+    `<span class="ov-chip apercu-foot-trophies">Palmarès : ${trophyText}</span></div>`;
+  if (isOwnTeam) html += `<p class="sub ov-own">Logo et maillots modifiables dans l'onglet <button type="button" class="pz-inline-link" data-tab="personnalisation">Personnalisation</button>.</p>`;
   html += `</div>`;
   html += `<div class="jersey-mockups team-apercu-jerseys" aria-label="Maillots">` +
-    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 80, "home", jerseyPattern, jerseyTwoTone, sponsorNameForSlot(team, "maillot"))}<p class="sub">Domicile</p></div>` +
-    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.awayJerseyColor, 80, "away", awayJerseyPattern, awayJerseyTwoTone, sponsorNameForSlot(team, "maillot"))}<p class="sub">Extérieur</p></div>` +
-    `</div>`;
-  html += `</div>`;
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 64, "home", effectiveJerseyPattern(team), effectiveJerseyTwoTone(team), sponsorNameForSlot(team, "maillot"))}<p class="sub">Domicile</p></div>` +
+    `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.awayJerseyColor, 64, "away", effectiveAwayJerseyPattern(team), effectiveAwayJerseyTwoTone(team), sponsorNameForSlot(team, "maillot"))}<p class="sub">Extérieur</p></div>` +
+    `</div></section>`;
 
-  // --- Ligne 1 : résultats & calendrier ---
-  let lastPlayed = null, nextMatch = null, vsMe = null;
+  // --- Tuiles ---
+  const tile = (label, body) => `<div class="ov-tile"><span class="ov-label">${label}</span>${body}</div>`;
+  let tiles = "";
+  tiles += tile("Classement", played
+    ? `<div class="ov-big">${rank}<sup>${rank === 1 ? "er" : "e"}</sup> <small>/ ${table.length}</small></div><div class="ov-sub">${row.points} pts</div>`
+    : `<div class="ov-big">–</div><div class="ov-sub">Aucun match joué</div>`);
+  tiles += tile("Bilan", played
+    ? `<div class="ov-big">${row.wins} – ${row.losses}</div>${formStreakHtml(teamIdx)}`
+    : `<div class="ov-big">0 – 0</div>`);
+  if (played) {
+    const pf = row.pf / row.played, pa = row.pa / row.played, diff = pf - pa;
+    tiles += tile("Points par match", `<div class="ov-big">${pf.toFixed(1)} <small>/ ${pa.toFixed(1)}</small></div>` +
+      `<div class="ov-sub ${diff >= 0 ? "ov-pos" : "ov-neg"}"><span>Écart</span> ${diff >= 0 ? "+" : "−"}${Math.abs(diff).toFixed(1)}</div>`);
+  } else {
+    tiles += tile("Points par match", `<div class="ov-big">–</div>`);
+  }
+  if (team.isHuman) {
+    const d = managerProfileData(team, teamIdx);
+    const titles = d.titles.length + d.cups.length;
+    tiles += `<div class="ov-tile" id="managerProfileCard"><span class="ov-label">Manager</span>` +
+      `<div class="ov-mgr">${managerAvatarHtml(team, 40)}<div class="ov-mgr-id">${managerLinkHtml(team, teamIdx, leagueId, "ov-mgr-name")}` +
+      `<span class="ov-sub"><span>${d.wins}V – ${d.losses}D</span> · ${titles} <span>${titles > 1 ? "titres" : "titre"}</span> · ${d.achievements.length} / ${d.achievementsTotal} <span>succès</span></span></div></div>` +
+      `<button type="button" class="ov-link mp-more" data-manager-profile="${teamIdx}"${leagueId ? ` data-manager-league="${escapeHtml(leagueId)}"` : ""}>Voir le profil →</button></div>`;
+  } else {
+    tiles += tile("Renommée", `<div class="ov-big ov-stars">${reputationStarsHtml(stars)}</div><div class="ov-sub">Club dirigé par l'IA</div>`);
+  }
+  html += `<div class="ov-tiles">${tiles}</div>`;
+
+  // --- Matchs : prochain + 5 derniers résultats (championnat) ---
+  const results = [];
+  let nextMatch = null, vsMe = null;
   for (let r = 0; r < league.totalRounds; r++) {
     const m = league.schedule[r].find(x => x.home === teamIdx || x.away === teamIdx);
     if (!m) continue;
@@ -31454,65 +31563,58 @@ function teamDetailApercuHtml(teamIdx) {
     const res = league.results.find(x => x.round === r && (x.home === teamIdx || x.away === teamIdx));
     if (res) {
       const my = isHome ? res.scoreHome : res.scoreAway, opp = isHome ? res.scoreAway : res.scoreHome;
-      lastPlayed = { round: r, oppIdx, my, opp };
+      results.push({ round: r, oppIdx, isHome, my, opp });
     } else {
       if (!nextMatch) nextMatch = { round: r, oppIdx, isHome };
-      if (!isOwnTeam && !vsMe && oppIdx === myTeamIndex) vsMe = { round: r };
+      if (!isOwnTeam && !foreign && !vsMe && oppIdx === myTeamIndex) vsMe = { round: r };
     }
   }
-  const oppName = idx => escapeHtml(league.teams[idx] ? league.teams[idx].name : "?");
-  let resultsLines = `<span class="apercu-row-line">${formStreakHtml(teamIdx)}` +
-    (lastPlayed ? `<span class="apercu-muted">Dernier : ${lastPlayed.my > lastPlayed.opp ? "V" : "D"} ${lastPlayed.my}–${lastPlayed.opp} contre ${oppName(lastPlayed.oppIdx)} (J${lastPlayed.round + 1})</span>` : "") +
-    `</span>`;
+  let left = "";
   if (nextMatch) {
-    resultsLines += `<span class="apercu-row-line"><span>Prochain : ${oppName(nextMatch.oppIdx)} (J${nextMatch.round + 1}, ${nextMatch.isHome ? "dom." : "ext."})` +
-      (vsMe ? ` · <span class="apercu-accent">contre toi en J${vsMe.round + 1}</span>` : "") + `</span></span>`;
-  } else {
-    resultsLines += `<span class="apercu-row-line apercu-muted">Plus aucun match de championnat programmé.</span>`;
+    const againstMe = !isOwnTeam && !foreign && nextMatch.oppIdx === myTeamIndex;
+    const at = scheduledTimeForChampionshipRound(nextMatch.round);
+    const home = nextMatch.isHome ? teamIdx : nextMatch.oppIdx, away = nextMatch.isHome ? nextMatch.oppIdx : teamIdx;
+    const side = idx => `<div class="ov-side">${teamLogoHtml(league.teams[idx], 48)}<b data-no-i18n>${oppName(idx)}</b></div>`;
+    left += `<section class="ov-card ov-next${againstMe ? " is-me" : ""}"><div class="ov-head"><span class="ov-label">Prochain match · J${nextMatch.round + 1}</span>` +
+      (againstMe ? link("analyse", "Préparer le match") : link("calendrier", "Calendrier")) + `</div>` +
+      `<div class="ov-versus">${side(home)}<div class="ov-mid">` +
+      (againstMe ? `<span class="ov-me">Contre toi</span>` : `<span class="ov-vs">VS</span>`) +
+      (at ? `<span class="ov-sub">${escapeHtml(formatDateTimeFr(at))}</span>` : "") +
+      (vsMe && !againstMe ? `<span class="ov-sub apercu-accent"><span>Contre toi</span> · J${vsMe.round + 1}</span>` : "") +
+      `</div>${side(away)}</div></section>`;
   }
+  const last5 = results.slice(-5).reverse();
+  left += `<section class="ov-card"><div class="ov-head"><span class="ov-label">Derniers résultats</span>${link("calendrier", "Calendrier")}</div>` +
+    (last5.length
+      ? `<div class="ov-results">` + last5.map(r => {
+        const won = r.my > r.opp;
+        return `<div class="ov-res"><span class="ov-sub">J${r.round + 1} · ${r.isHome ? "dom." : "ext."}</span><b data-no-i18n>${oppName(r.oppIdx)}</b>` +
+          `<span class="ov-score ${won ? "ov-pos" : "ov-neg"}"><span class="form-badge ${won ? "form-win" : "form-loss"}">${won ? "V" : "D"}</span> ${r.my}–${r.opp}</span></div>`;
+      }).join("") + `</div>`
+      : `<p class="apercu-muted">Aucun match joué pour l'instant.</p>`) +
+    `</section>`;
 
-  // --- Ligne 2 : effectif (joueur en forme) ---
+  // --- Joueur en forme + dernière interview ---
+  let right = "";
   const hot = hotPlayerForTeam(teamIdx);
-  const effectifLine = hot
-    ? `En forme : <b>${escapeHtml(hot.player.name)}</b> (${POS_SHORT[hot.player.position]}) · ${hot.avg.toFixed(1)} d'efficacité sur ${hot.gamesCount === 1 ? "1 match" : `${hot.gamesCount} matchs`}`
-    : `<span class="apercu-muted">Pas encore assez de matchs pour dégager un joueur en forme.</span>`;
-
-  // --- Ligne 3 : analyse d'équipe (points marqués / encaissés) ---
-  const analyseLine = row && row.played
-    ? `${(row.pf / row.played).toFixed(1)} pts marqués · ${(row.pa / row.played).toFixed(1)} encaissés par match`
-    : `<span class="apercu-muted">Aucun match joué pour l'instant.</span>`;
-
-  // Un corps d'une seule ligne est enveloppé dans un <span> : sans ça, le
-  // flex-direction:column de .apercu-row-body empilerait chaque nœud texte
-  // et <b> sur sa propre ligne.
-  const rowHtml = (view, label, body) =>
-    `<button type="button" class="apercu-row" data-team-detail-subview="${view}">` +
-    `<span class="apercu-row-label">${label}</span>` +
-    `<span class="apercu-row-body">${body}</span>` +
-    `<span class="apercu-row-arrow" aria-hidden="true">→</span></button>`;
-
-  html += `<nav class="apercu-list" aria-label="Sections de l'équipe">` +
-    rowHtml("calendrier", "Résultats &amp; calendrier", resultsLines) +
-    rowHtml("effectif", "Effectif", `<span>${effectifLine}</span>`) +
-    (teamDetailForeign ? "" : rowHtml("analyse", "Analyse d'équipe", `<span>${analyseLine}</span>`)) +
-    `</nav>`;
-
-  // --- Pied : palmarès + dernière interview ---
-  const trophies = team.trophies || [];
-  const trophyText = trophies.length
-    ? `${trophies.length} titre${trophies.length > 1 ? "s" : ""} · dernier : ${escapeHtml(trophies[0].label)} (${new Date(trophies[0].at).getFullYear()})`
-    : "Encore vierge";
+  right += `<section class="ov-card"><div class="ov-head"><span class="ov-label">Joueur en forme</span>${link("effectif", "Effectif")}</div>` +
+    (hot
+      ? `<div class="ov-hot">${playerAvatarHtml(hot.player, team, 52)}<div class="ov-hot-id">` +
+        `<span class="ov-hot-name"><b>${foreign ? escapeHtml(hot.player.name) : playerLinkHtml(teamIdx, hot.player.id, hot.player.name)}</b><span class="ov-pos-chip">${POS_SHORT[hot.player.position]}</span></span>` +
+        `<span class="ov-sub">${hot.gamesCount === 1 ? "Dernier match" : `${hot.gamesCount} derniers matchs`}</span></div>` +
+        `<div class="ov-hot-val"><b>${hot.avg.toFixed(1)}</b><span class="ov-sub">efficacité moy.</span></div></div>`
+      : `<p class="apercu-muted">Pas encore assez de matchs pour dégager un joueur en forme.</p>`) +
+    `</section>`;
   const lastInterview = (team.moraleHistory || []).find(e => e.milestone && e.quote);
-  // Interview relue : attribuée au manager (pseudo, voir managerLinkHtml).
-  const interviewText = lastInterview
-    ? `${team.isHuman ? `${managerLinkHtml(team, teamIdx, teamDetailForeign ? teamDetailForeign.leagueId : null)} <span class="apercu-muted">a déclaré :</span> ` : ""}<span data-no-i18n>« ${escapeHtml(lastInterview.quote)} »</span> <span class="apercu-muted">(semaine ${lastInterview.week})</span>`
-    : "Aucune pour l'instant";
-  html += `<div class="apercu-foot">` +
-    `<span class="apercu-foot-trophies"><span class="apercu-foot-label">Palmarès</span>${trophyText}</span>` +
-    `<span><span class="apercu-foot-label">Interviews</span>${interviewText}</span>` +
-    `</div>`;
-  // Profil public du manager (club humain, voir managerProfileCardHtml).
-  html += managerProfileCardHtml(team, teamIdx, teamDetailForeign ? teamDetailForeign.leagueId : null);
+  right += `<section class="ov-card apercu-foot"><div class="ov-head"><span class="ov-label">Dernière interview</span>` +
+    (lastInterview ? `<span class="ov-sub"><span>Semaine</span> ${lastInterview.week}</span>` : "") + `</div>` +
+    (lastInterview
+      ? `<blockquote class="ov-quote"><span data-no-i18n>« ${escapeHtml(lastInterview.quote)} »</span></blockquote>` +
+        (team.isHuman ? `<p class="ov-sub ov-quote-by">${managerLinkHtml(team, teamIdx, leagueId)} <span>a déclaré</span></p>` : "")
+      : `<p class="apercu-muted">Aucune pour l'instant.</p>`) +
+    `</section>`;
+
+  html += `<div class="ov-grid"><div class="ov-col">${left}</div><div class="ov-col">${right}</div></div>`;
   return html;
 }
 
