@@ -1170,10 +1170,11 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
   {
     let cache = { at: 0, data: null };
     Push.setLangResolver(async team => {
-      if (!team || !team.managerLinkToken) return null;
+      if (!team) return null;
+      if (!team.managerLinkToken) return Accounts.countryLang(team.country);
       if (!cache.data || Date.now() - cache.at > 60 * 1000) cache = { at: Date.now(), data: await Accounts.loadAccounts(accountsPath) };
       const account = Accounts.findByManagerToken(cache.data, team.managerLinkToken);
-      return account ? Accounts.langFor(account) : null;
+      return Accounts.langFor(account, { country: team.country });
     });
   }
   // Messagerie : stockée à côté de la ligue partagée (voir server/messages.js).
@@ -1897,10 +1898,10 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           if (!Push.isPremium(team, now)) { sendJson(res, 403, { ok: false, code: "premium-required", error: "Les notifications sont réservées au Premium." }); return; }
           // Langue des notifications de cet appareil : préférence du compte,
           // sinon langue du jeu dans ce navigateur (`lang`), sinon
-          // Accept-Language, sinon français (server/i18n.js:langFor).
+          // Accept-Language, sinon pays du club, sinon anglais (server/i18n.js:langFor).
           let account = null;
           try { account = Accounts.findByManagerToken(await Accounts.loadAccounts(accountsPath), getManagerToken(req)); } catch (e) { /* sans compte */ }
-          const pushLang = I18n.langFor(account, I18n.hintFromRequest(req, body && body.lang));
+          const pushLang = I18n.langFor(account, I18n.hintFromRequest(req, body && body.lang), team.country);
           if (!Push.addSubscription(team, body && body.subscription, now, pushLang)) { sendJson(res, 400, { ok: false, error: "Abonnement invalide." }); return; }
         }
         await store.saveMultiLeague(ctx.league, multiSavePath);

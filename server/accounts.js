@@ -18,6 +18,7 @@
 //     discordId, discordName,       // optionnels (compte email seul)
 //     discordUsername,              // identifiant Discord (pseudo par défaut)
 //     lang,            // langue choisie ("fr" | "en" | "it", ou null) — voir langFor
+//     detectedLang,    // langue du navigateur, notée automatiquement — voir langFor
 //     managerToken,    // Team.managerLinkToken du club attribué, ou null
 //     requestedClubName,            // nom choisi à l'inscription
 //     createdAt, lastLoginAt,
@@ -158,6 +159,8 @@ function createAccount(data, fields, now) {
     // Langue du manager (2026-09-30, « la langue doit être dans le compte ») :
     // voir normalizeLang/langFor.
     lang: normalizeLang(fields.lang),
+    // Langue du navigateur, notée automatiquement (voir noteDetectedLang).
+    detectedLang: normalizeLang(fields.detectedLang),
     managerToken: fields.managerToken || null,
     requestedClubName: fields.requestedClubName || null,
     // Pays choisi à l'inscription (2026-09-28, championnats par pays).
@@ -179,16 +182,39 @@ function createAccount(data, fields, now) {
 // du navigateur.
 //
 // Textes générés par le SERVEUR qui dépendent de la langue (emails, push…) :
-// utiliser `langFor(account)` — toujours "fr", "en" ou "it" ("fr" par
-// défaut, compte absent compris). Depuis un club :
-// langFor(findByManagerToken(data, team.managerLinkToken)).
+// utiliser `langFor(account, { country, hint })` — toujours "fr", "en" ou
+// "it". Ordre (2026-09-30, retour utilisateur : « un compte qui n'a jamais
+// choisi de langue reçoit tout en français, même si son navigateur est en
+// anglais ») :
+//   1. `lang` : choix explicite du manager ;
+//   2. `detectedLang` : langue du navigateur, notée automatiquement à
+//      l'inscription, à la connexion et à l'ouverture du jeu
+//      (noteDetectedLang ; langue non prise en charge → "en") ;
+//   3. `hint` : langue de la requête en cours (Accept-Language…) ;
+//   4. langue du pays du club (`country` : fr → fr, it → it, us → en) ;
+//   5. l'anglais.
+// Depuis un club : langFor(findByManagerToken(data, team.managerLinkToken),
+// { country: team.country }).
 // ---------------------------------------------------------------------
 const ACCOUNT_LANGS = ["fr", "en", "it"];
 function normalizeLang(raw) {
   return typeof raw === "string" && ACCOUNT_LANGS.includes(raw) ? raw : null;
 }
-function langFor(account) {
-  return (account && normalizeLang(account.lang)) || "fr";
+const COUNTRY_LANGS = { fr: "fr", it: "it", us: "en" };
+function countryLang(country) {
+  return (typeof country === "string" && COUNTRY_LANGS[country]) || null;
+}
+function langFor(account, { country = null, hint = null } = {}) {
+  return (account && (normalizeLang(account.lang) || normalizeLang(account.detectedLang)))
+    || normalizeLang(hint) || countryLang(country) || "en";
+}
+// Note la langue détectée du navigateur (déjà ramenée à fr/en/it, voir
+// server/i18n.js:hintFromRequest). Renvoie true si le compte a changé.
+function noteDetectedLang(account, lang) {
+  const l = normalizeLang(lang);
+  if (!account || !l || account.detectedLang === l) return false;
+  account.detectedLang = l;
+  return true;
 }
 
 // Ce que le client a le droit de voir de son propre compte.
@@ -334,7 +360,7 @@ module.exports = {
   hashPassword, verifyPassword,
   findByEmail, findByDiscordId, findByManagerToken, findByAccountKey,
   createAccount, publicView,
-  ACCOUNT_LANGS, normalizeLang, langFor,
+  ACCOUNT_LANGS, normalizeLang, langFor, countryLang, noteDetectedLang,
   takeOverCpuClub, teamAverageOverall, generateBasicRoster,
   BASIC_PLAYER_MIN_LEVEL, BASIC_PLAYER_MAX_LEVEL,
 };

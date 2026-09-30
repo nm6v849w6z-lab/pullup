@@ -7,9 +7,9 @@
 //
 // 1) Choix de la langue (fr / en / it) :
 //    - d'un destinataire (email, notification) : langFor(account, hint) =
-//      langue du compte (Accounts.langFor) ; sans compte seulement,
-//      l'indice envoyé avec la requête (`lang` explicite du client, puis
-//      Accept-Language), sinon le français ;
+//      Accounts.langFor (choix du compte, langue détectée du navigateur,
+//      indice de la requête — `lang` explicite du client puis
+//      Accept-Language —, pays du club, sinon l'anglais) ;
 //    - d'une page publique : siteLang(req) = `?lang=`, puis le cookie
 //      « hm-lang » (posé par la page d'accueil et par le sélecteur de
 //      langue, même préférence que localStorage "hm-lang" du jeu), puis
@@ -61,12 +61,10 @@ function hintFromRequest(req, explicit) {
   return normLang(explicit) || fromAcceptLanguage(req && req.headers && req.headers["accept-language"]);
 }
 
-// Langue d'un destinataire : avec un compte, TOUJOURS sa langue
-// (Accounts.langFor : choisie dans Paramètres › Langue ou à l'inscription,
-// « fr » par défaut) ; l'indice de la requête ne sert que sans compte.
-function langFor(account, hint) {
-  if (account) return require("./accounts.js").langFor(account);
-  return normLang(hint) || "fr";
+// Langue d'un destinataire : voir Accounts.langFor (choix du compte, langue
+// détectée, puis l'indice de la requête, pays du club, anglais).
+function langFor(account, hint, country = null) {
+  return require("./accounts.js").langFor(account, { hint, country });
 }
 
 // Langue d'une page publique : ?lang=, cookie, Accept-Language, français.

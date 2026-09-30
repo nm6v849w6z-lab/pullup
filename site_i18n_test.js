@@ -49,16 +49,18 @@ function frenchBlocks(html) {
   assert.strictEqual(I18n.fromAcceptLanguage("*"), null);
   assert.strictEqual(I18n.fromAcceptLanguage(""), null);
   assert.strictEqual(I18n.langFor({ lang: "it" }, "en"), "it", "préférence du compte d'abord");
-  assert.strictEqual(I18n.langFor({}, "en"), "fr", "compte sans langue : Accounts.langFor (français), pas l'indice");
+  assert.strictEqual(I18n.langFor({}, "en"), "en", "compte sans langue : l'indice de la requête");
+  assert.strictEqual(I18n.langFor({ detectedLang: "it" }, "en"), "it", "langue détectée du navigateur avant l'indice");
+  assert.strictEqual(I18n.langFor({}, null, "it"), "it", "sinon la langue du pays du club");
   assert.strictEqual(I18n.langFor(null, "en"), "en", "sans compte : l'indice de la requête");
-  assert.strictEqual(I18n.langFor(null, null), "fr", "sinon français");
+  assert.strictEqual(I18n.langFor(null, null), "en", "sinon anglais");
   assert.strictEqual(I18n.hintFromRequest({ headers: { "accept-language": "it" } }, "en"), "en", "lang explicite avant Accept-Language");
   assert.strictEqual(I18n.hintFromRequest({ headers: { "accept-language": "it" } }, null), "it");
   assert.strictEqual(I18n.siteLang({ query: "it", cookie: "hm-lang=en", acceptLanguage: "fr" }), "it");
   assert.strictEqual(I18n.siteLang({ cookie: "a=1; hm-lang=en", acceptLanguage: "it" }), "en");
   assert.strictEqual(I18n.siteLang({ acceptLanguage: "it-CH" }), "it");
   assert.strictEqual(I18n.siteLang({}), "fr");
-  ok("langue : compte → lang explicite → Accept-Language → français ; pages : ?lang → cookie → Accept-Language");
+  ok("langue : compte → langue détectée → lang explicite / Accept-Language → pays du club → anglais ; pages : ?lang → cookie → Accept-Language");
 
   // ------------------------------------------------------------------
   // 2) Emails
@@ -104,7 +106,7 @@ function frenchBlocks(html) {
       return sent[sent.length - 1];
     };
     let m = await forgot("fr@test.fr");
-    assert.ok(/réinitialiser/.test(m.subject) && /\/bienvenue#reinit=/.test(m.text), "sans préférence ni indice : français, lien sans ?lang");
+    assert.ok(/réinitialiser/.test(m.subject) && /\/bienvenue#reinit=/.test(m.text), "sans préférence ni indice : langue du pays du club (France), lien sans ?lang");
     m = await forgot("it@test.it", { lang: "en" }, { "Accept-Language": "fr" });
     assert.ok(/reimposta/.test(m.subject) && /Ciao/.test(m.text) && /\/bienvenue\?lang=it#reinit=/.test(m.text), "compte italien : email en italien (la préférence du compte l'emporte)");
     m = await forgot("en@test.uk");
@@ -112,7 +114,7 @@ function frenchBlocks(html) {
     m = await forgot("sig@test.it", {}, { "Accept-Language": "fr" });
     assert.ok(/reimposta/.test(m.subject), "langue envoyée à l'inscription (rangée sur le compte) : italien");
     m = await forgot("old@test.it", { lang: "it" }, { "Accept-Language": "en-US,en;q=0.9" });
-    assert.ok(/réinitialiser/.test(m.subject), "compte sans langue enregistrée : Accounts.langFor → français (l'indice ne sert que sans compte)");
+    assert.ok(/reimposta/.test(m.subject), "compte sans langue enregistrée : langue de la page d'où part la demande");
     global.fetch = realFetch;
     delete process.env.RESEND_API_KEY; delete process.env.MAIL_FROM;
     const landing = fs.readFileSync("assets/site/index.html", "utf-8");

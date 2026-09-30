@@ -316,7 +316,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       if (club.code) { sendJson(res, 400, { ok: false, code: club.code }); return true; }
       await withAccounts(async data => {
         if (Accounts.findByEmail(data, email)) { sendJson(res, 409, { ok: false, code: "email-taken" }); return; }
-        const account = await registerAccount(data, { email, passwordHash: Accounts.hashPassword(pw.value), lang: b.lang, requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
+        const account = await registerAccount(data, { email, passwordHash: Accounts.hashPassword(pw.value), lang: b.lang, detectedLang: I18n.hintFromRequest(req, b.lang), requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
         recordIp(account, req, now);
         await Accounts.saveAccounts(data, accountsPath);
         sendJson(res, 200, sessionPayload(account));
@@ -338,6 +338,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         account.lastLoginAt = now;
         recordIp(account, req, now);
         if (!account.lang && Accounts.normalizeLang(b.lang)) account.lang = b.lang;
+        Accounts.noteDetectedLang(account, I18n.hintFromRequest(req, b.lang));
         if (!account.managerToken) {
           await tryAssignClub(account, multiSavePath, now);
         }
@@ -368,6 +369,9 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       await withAccounts(async data => {
         const account = Accounts.findByManagerToken(data, token);
         if (account && !(account.ipSeen || []).some(x => x.fp === ipFingerprint(req))) { recordIp(account, req, now); await Accounts.saveAccounts(data, accountsPath); }
+        // Langue du navigateur notée pour les emails et notifications
+        // (Accounts.langFor) ; sauvegarde seulement si elle change.
+        if (account && !account.lang && Accounts.noteDetectedLang(account, I18n.hintFromRequest(req))) await Accounts.saveAccounts(data, accountsPath);
         if (account && !account.pseudoDefaultTried && account.discordUsername) {
           await adoptDiscordPseudo(account, now);
           await Accounts.saveAccounts(data, accountsPath);
@@ -436,11 +440,13 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         if (!account) return;
         const raw = createPasswordReset(account, now);
         await Accounts.saveAccounts(data, accountsPath);
-        // Langue de l'email : celle du compte, sinon celle de la page d'où
-        // part la demande (`lang` envoyé par /bienvenue, puis
-        // Accept-Language), sinon le français. Le lien rouvre la page
-        // d'accueil dans la même langue.
-        lang = I18n.langFor(account, I18n.hintFromRequest(req, b.lang));
+        // Langue de l'email (Accounts.langFor) : celle du compte, sinon celle
+        // détectée de son navigateur, sinon celle de la page d'où part la
+        // demande (`lang` envoyé par /bienvenue, puis Accept-Language),
+        // sinon celle du pays de son club, sinon l'anglais. Le lien rouvre
+        // la page d'accueil dans la même langue.
+        const country = account.requestedCountry || (account.managerToken ? World.DEFAULT_COUNTRY : null);
+        lang = I18n.langFor(account, I18n.hintFromRequest(req, b.lang), country);
         link = `${originFor(req)}/bienvenue${lang === "fr" ? "" : `?lang=${lang}`}#reinit=${raw}`;
       });
       if (link) {
@@ -594,6 +600,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
           account.discordId = discordUser.id;
           account.discordName = discordUser.name;
           account.discordUsername = discordUser.username;
+          Accounts.noteDetectedLang(account, I18n.hintFromRequest(req));
           await adoptDiscordPseudo(account, now);
           await Accounts.saveAccounts(data, accountsPath);
           // Autre navigateur que celui du jeu : pas de jeton ici, on
@@ -605,6 +612,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
           existing.discordName = discordUser.name;
           existing.discordUsername = discordUser.username;
           existing.lastLoginAt = now;
+          Accounts.noteDetectedLang(existing, I18n.hintFromRequest(req));
           if (!existing.managerToken) {
             await tryAssignClub(existing, multiSavePath, now);
           }
@@ -637,7 +645,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       await withAccounts(async data => {
         let account = Accounts.findByDiscordId(data, pending.discordId);
         if (!account) {
-          account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, discordUsername: pending.discordUsername || null, lang: b.lang, requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
+          account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, discordUsername: pending.discordUsername || null, lang: b.lang, detectedLang: I18n.hintFromRequest(req, b.lang), requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
         }
         pendingDiscordSignups.delete(b.pending);
         sendJson(res, 200, sessionPayload(account));
