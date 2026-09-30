@@ -12419,7 +12419,11 @@ const ArenaGen = (function () {
       };
       lineY.forEach((c) => addRuns(true, c));
       lineX.forEach((c) => addRuns(false, c));
+      // Raccord exact au bord de l'allée d'accès de la salle (x = ±3).
+      streets.forEach((st) => { if (st.y0 > D / 2) { if (st.x1 < -3 && st.x1 > -7) st.x1 = 0; if (st.x0 > 3 && st.x0 < 7) st.x0 = 0; } });
       streets.forEach((st) => { s += flat(rect(st.x0, st.x1, st.y0, st.y1, 0.02), streetCol); });
+      // l'allée est redessinée par-dessus : les rues passent dessous, sans jour.
+      s += flat(rect(-3, 3, D / 2 + 15, R, 0.03), '#d3cec1');
       const onStreet = (x, y, m) => streets.some((st) => x > st.x0 - m && x < st.x1 + m && y > st.y0 - m && y < st.y1 + m);
       for (let gx = -W / 2 - 110; gx <= W / 2 + 110; gx += 13) for (let gy = -D / 2 - 90; gy <= D / 2 + 70; gy += 12) {
         const x = gx + (rh() - 0.5) * 3, y = gy + (rh() - 0.5) * 3, w = 5 + rh() * 3, d = 4 + rh() * 2.5, h = 2.8 + rh() * (rh() < 0.3 ? 5 : 2);
