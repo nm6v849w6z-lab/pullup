@@ -5329,4 +5329,8 @@ window.HM_I18N_EN = {
   "est champion !": "is champion!",
   "remporte le titre": "wins the title",
   "qualifié pour la finale": "through to the final",
+  // Pseudo : invitation et bannière de messages (2026-09-30)
+  "Choisis ton pseudo": "Choose your username",
+  "Les autres managers te voient pour l'instant comme « Manager de {0} ».": "Other managers currently see you as \"{0} manager\".",
+  "Choisir": "Choose",
 };

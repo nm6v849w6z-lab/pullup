@@ -5367,4 +5367,8 @@ window.HM_I18N_IT = {
   "est champion !": "è campione!",
   "remporte le titre": "vince il titolo",
   "qualifié pour la finale": "qualificato per la finale",
+  // Pseudo : invitation et bannière de messages (2026-09-30)
+  "Choisis ton pseudo": "Scegli il tuo nickname",
+  "Les autres managers te voient pour l'instant comme « Manager de {0} ».": "Gli altri manager per ora ti vedono come «Manager del {0}».",
+  "Choisir": "Scegli",
 };

@@ -247,6 +247,15 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
   // Places libres : avec les championnats par pays, un nouveau championnat
   // s'ouvre dès qu'un pays est plein — il y a donc toujours de la place tant
   // qu'un monde existe (et pas du tout sans ligue partagée).
+  // Pseudo par défaut depuis l'identifiant Discord, une seule tentative par
+  // identifiant connu (voir defaultPseudoFromDiscord).
+  async function adoptDiscordPseudo(account, now) {
+    if (!account || !account.managerToken || !account.discordUsername) return false;
+    if (account.pseudoDefaultTried === account.discordUsername) return false;
+    account.pseudoDefaultTried = account.discordUsername;
+    try { return await defaultPseudoFromDiscord(account, account.managerToken, multiSavePath, now); } catch (e) { return false; }
+  }
+
   function openSlots(multi) {
     return multi ? Math.max(1, multi.league.teams.filter(t => !t.isHuman).length) : 0;
   }
@@ -306,7 +315,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       if (club.code) { sendJson(res, 400, { ok: false, code: club.code }); return true; }
       await withAccounts(async data => {
         if (Accounts.findByEmail(data, email)) { sendJson(res, 409, { ok: false, code: "email-taken" }); return; }
-        const account = await registerAccount(data, { email, passwordHash: Accounts.hashPassword(pw.value), requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
+        const account = await registerAccount(data, { email, passwordHash: Accounts.hashPassword(pw.value), lang: b.lang, requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
         recordIp(account, req, now);
         await Accounts.saveAccounts(data, accountsPath);
         sendJson(res, 200, sessionPayload(account));
@@ -327,6 +336,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         }
         account.lastLoginAt = now;
         recordIp(account, req, now);
+        if (!account.lang && Accounts.normalizeLang(b.lang)) account.lang = b.lang;
         if (!account.managerToken) {
           await tryAssignClub(account, multiSavePath, now);
         }
@@ -358,11 +368,28 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         const account = Accounts.findByManagerToken(data, token);
         if (account && !(account.ipSeen || []).some(x => x.fp === ipFingerprint(req))) { recordIp(account, req, now); await Accounts.saveAccounts(data, accountsPath); }
         if (account && !account.pseudoDefaultTried && account.discordUsername) {
-          account.pseudoDefaultTried = true;
-          await defaultPseudoFromDiscord(account, token, multiSavePath, now);
+          await adoptDiscordPseudo(account, now);
           await Accounts.saveAccounts(data, accountsPath);
         }
         sendJson(res, 200, { ok: true, account: account ? Accounts.publicView(account) : null, discord: discordConfigured() });
+      });
+      return true;
+    }
+
+    // Langue du compte (voir Accounts.langFor) : { lang: "fr" | "en" | "it" }.
+    // Manager arrivé par un simple lien privé, sans compte : rien à
+    // enregistrer (persisted:false), le navigateur garde son choix.
+    if (p === "/api/account/lang" && req.method === "POST") {
+      const token = getManagerToken(req);
+      if (!token) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
+      const b = await body(req, res); if (!b) return true;
+      const lang = Accounts.normalizeLang(b.lang);
+      if (!lang) { sendJson(res, 400, { ok: false, code: "lang-invalid" }); return true; }
+      await withAccounts(async data => {
+        const account = Accounts.findByManagerToken(data, token);
+        if (!account) { sendJson(res, 200, { ok: true, lang, persisted: false }); return; }
+        if (account.lang !== lang) { account.lang = lang; await Accounts.saveAccounts(data, accountsPath); }
+        sendJson(res, 200, { ok: true, lang, persisted: true });
       });
       return true;
     }
@@ -552,6 +579,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
           account.discordId = discordUser.id;
           account.discordName = discordUser.name;
           account.discordUsername = discordUser.username;
+          await adoptDiscordPseudo(account, now);
           await Accounts.saveAccounts(data, accountsPath);
           redirect(res, "/#compte=discord-lie", clearCookie);
           return;
@@ -563,6 +591,9 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
           if (!existing.managerToken) {
             await tryAssignClub(existing, multiSavePath, now);
           }
+          // Comptes Discord d'avant le 2026-09-30 : l'identifiant n'était pas
+          // gardé, il l'est à cette connexion et sert de pseudo par défaut.
+          await adoptDiscordPseudo(existing, now);
           await Accounts.saveAccounts(data, accountsPath);
           redirect(res, existing.managerToken ? `/?m=${existing.managerToken}` : `/bienvenue#attente=${existing.accountKey}`, clearCookie);
           return;
@@ -589,7 +620,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       await withAccounts(async data => {
         let account = Accounts.findByDiscordId(data, pending.discordId);
         if (!account) {
-          account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, discordUsername: pending.discordUsername || null, requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
+          account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, discordUsername: pending.discordUsername || null, lang: b.lang, requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
         }
         pendingDiscordSignups.delete(b.pending);
         sendJson(res, 200, sessionPayload(account));

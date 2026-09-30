@@ -35,8 +35,9 @@
 // Identité : empreinte du jeton manager (Messages.participantKey), jamais le
 // jeton lui-même ; le navigateur ne voit que des noms de club, des index
 // d'équipe, `mine` et le PSEUDO public du manager (Team.managerPseudo, voir
-// Engine.managerDisplayName — jamais son email, son nom réel ni son nom
-// Discord ; « Manager de <club> » tant qu'il n'en a pas choisi).
+// Engine.managerPseudoOf — jamais son email, son nom réel ni son nom
+// Discord ; `null` tant qu'il n'en a pas choisi : le navigateur affiche
+// alors « Manager de <club> » dans la langue du joueur).
 // =====================================================================
 const store = require("./store.js");
 const Messages = require("./messages.js");
@@ -281,7 +282,7 @@ function chatView(chat, league, me, now) {
   const managers = hs.map(h => ({
     teamIndex: h.teamIndex,
     club: h.team.name,
-    name: Engine.managerDisplayName(h.team),
+    name: Engine.managerPseudoOf(h.team),
     me: h.key === me,
     online: h.key === me || isOnline(h.key, now),
   })).sort((a, b) => (b.me - a.me) || (b.online - a.online) || a.club.localeCompare(b.club, "fr"));
@@ -294,7 +295,7 @@ function chatView(chat, league, me, now) {
         const author = hs.find(h => h.key === m.from);
         return {
           ...base, text: m.text, mine: m.from === me,
-          author: { club: author ? author.team.name : m.club, teamIndex: author ? author.teamIndex : null, name: author ? Engine.managerDisplayName(author.team) : null },
+          author: { club: author ? author.team.name : m.club, teamIndex: author ? author.teamIndex : null, name: author ? Engine.managerPseudoOf(author.team) : null },
         };
       }
       return { ...base, data: m.data, text: systemText(m) };

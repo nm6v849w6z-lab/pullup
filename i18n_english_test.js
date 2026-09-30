@@ -43,6 +43,7 @@ async function waitFor(fn, ms = 30000) {
   let reloaded = 0;
   win.hmI18n.setLang = (l) => { win.localStorage.setItem("hm-lang", l); reloaded++; }; // jsdom ne sait pas recharger
   langs[1].click();
+  await win.__lastLangSave; // langue enregistrée dans le compte avant le rechargement
   assert(win.localStorage.getItem("hm-lang") === "en", "clic sur English : mémorisé dans le navigateur");
   assert(reloaded === 1, "changer de langue recharge la page");
   assert(langs[1].getAttribute("aria-pressed") === "true", "English coché après le clic");

@@ -83,6 +83,7 @@ function loadDict(file, name) {
   let reloaded = 0;
   win.hmI18n.setLang = (l) => { win.localStorage.setItem("hm-lang", l); reloaded++; }; // jsdom ne sait pas recharger
   itBtn.click();
+  await win.__lastLangSave; // langue enregistrée dans le compte avant le rechargement
   assert(win.localStorage.getItem("hm-lang") === "it" && reloaded === 1, "clic sur Italiano : mémorisé dans le navigateur, la page se recharge");
   assert(itBtn.getAttribute("aria-pressed") === "true", "Italiano coché après le clic");
 

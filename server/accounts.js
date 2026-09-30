@@ -17,6 +17,7 @@
 //     email, passwordHash,          // optionnels (compte Discord seul)
 //     discordId, discordName,       // optionnels (compte email seul)
 //     discordUsername,              // identifiant Discord (pseudo par défaut)
+//     lang,            // langue choisie ("fr" | "en" | "it", ou null) — voir langFor
 //     managerToken,    // Team.managerLinkToken du club attribué, ou null
 //     requestedClubName,            // nom choisi à l'inscription
 //     createdAt, lastLoginAt,
@@ -154,6 +155,9 @@ function createAccount(data, fields, now) {
     // Identifiant Discord (username, un pseudo) : seule source d'un pseudo de
     // manager par défaut (voir accountRoutes.js:defaultPseudoFromDiscord).
     discordUsername: fields.discordUsername || null,
+    // Langue du manager (2026-09-30, « la langue doit être dans le compte ») :
+    // voir normalizeLang/langFor.
+    lang: normalizeLang(fields.lang),
     managerToken: fields.managerToken || null,
     requestedClubName: fields.requestedClubName || null,
     // Pays choisi à l'inscription (2026-09-28, championnats par pays).
@@ -165,6 +169,28 @@ function createAccount(data, fields, now) {
   return account;
 }
 
+// ---------------------------------------------------------------------
+// Langue du compte (2026-09-30, retour utilisateur : la langue doit suivre
+// le COMPTE, pas seulement le navigateur). Réglée depuis Paramètres ›
+// Langue (POST /api/account/lang) ou le sélecteur de langue du site quand on
+// est connecté ; renvoyée par /api/account/me ; le jeu l'applique au
+// chargement sur n'importe quel appareil (localStorage "hm-lang" reste un
+// cache). Première connexion sans langue enregistrée : le jeu envoie celle
+// du navigateur.
+//
+// Textes générés par le SERVEUR qui dépendent de la langue (emails, push…) :
+// utiliser `langFor(account)` — toujours "fr", "en" ou "it" ("fr" par
+// défaut, compte absent compris). Depuis un club :
+// langFor(findByManagerToken(data, team.managerLinkToken)).
+// ---------------------------------------------------------------------
+const ACCOUNT_LANGS = ["fr", "en", "it"];
+function normalizeLang(raw) {
+  return typeof raw === "string" && ACCOUNT_LANGS.includes(raw) ? raw : null;
+}
+function langFor(account) {
+  return (account && normalizeLang(account.lang)) || "fr";
+}
+
 // Ce que le client a le droit de voir de son propre compte.
 function publicView(account) {
   return {
@@ -173,6 +199,7 @@ function publicView(account) {
     discordLinked: !!account.discordId,
     discordName: account.discordName || null,
     hasClub: !!account.managerToken,
+    lang: normalizeLang(account.lang),
   };
 }
 
@@ -307,6 +334,7 @@ module.exports = {
   hashPassword, verifyPassword,
   findByEmail, findByDiscordId, findByManagerToken, findByAccountKey,
   createAccount, publicView,
+  ACCOUNT_LANGS, normalizeLang, langFor,
   takeOverCpuClub, teamAverageOverall, generateBasicRoster,
   BASIC_PLAYER_MIN_LEVEL, BASIC_PLAYER_MAX_LEVEL,
 };
