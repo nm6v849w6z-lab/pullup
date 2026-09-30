@@ -2174,6 +2174,37 @@ function prestigeStars(v) { return clamp(1 + Math.floor(v / 20), 1, 5); }
 function prestigeAttendanceMult(v) { return typeof v === "number" ? 0.9 + 0.2 * clamp(v, 0, 100) / 100 : 1; }
 function prestigeShopMult(v) { return typeof v === "number" ? 0.7 + 0.7 * clamp(v, 0, 100) / 100 : 1; }
 
+// ---------------------------------------------------------------------
+// Bilan économique par poste (retour communauté 2026-09-30, « Economy weekly
+// report ») : chaque transaction est rangée dans une catégorie et cumulée
+// par semaine dans Team.financeLedger (clé « saison:semaine »), pour le
+// bilan de la page Économie (semaine en cours, précédente, saison).
+// ---------------------------------------------------------------------
+const FINANCE_CATEGORIES = [
+  { key: "tickets", dir: "in", label: "Billetterie", re: /^Billetterie/ },
+  { key: "tv", dir: "in", label: "Droits TV", re: /^Droits TV/ },
+  { key: "sponsors", dir: "in", label: "Sponsors", re: /^(Sponsor |Prime de victoire |Bonus d'objectif )/ },
+  { key: "shop", dir: "in", label: "Boutique des supporters", re: /^Recettes boutique/ },
+  { key: "tvstation", dir: "in", label: "Station TV", re: /^Recettes station TV/ },
+  { key: "prizes", dir: "in", label: "Primes (coupe, montée…)", re: /^Prime de (Coupe|Supercoupe|montée)/ },
+  { key: "sales", dir: "in", label: "Ventes de joueurs", re: /^Vente de / },
+  { key: "other_in", dir: "in", label: "Autres recettes", re: null },
+  { key: "wages", dir: "out", label: "Salaires des joueurs", re: /^Salaires des joueurs/ },
+  { key: "staff", dir: "out", label: "Salaires du staff", re: /^Salaire du staff/ },
+  { key: "academy", dir: "out", label: "Centre de formation", re: /^Salaires du centre de formation/ },
+  { key: "purchases", dir: "out", label: "Achats de joueurs", re: /^Achat de / },
+  { key: "works", dir: "out", label: "Constructions et installations", re: /^Agrandissement/ },
+  { key: "other_out", dir: "out", label: "Autres dépenses", re: null },
+];
+function financeCategoryOf(label, amount) {
+  const l = String(label || "");
+  const hit = FINANCE_CATEGORIES.find(c => c.re && c.re.test(l));
+  if (hit) return hit.key;
+  if (amount >= 0) return "other_in";
+  return / : /.test(l) ? "works" : "other_out";
+}
+const FINANCE_LEDGER_MAX = 60;
+
 function attendanceBaseForMorale(morale) {
   return clamp(0.45 + (morale / 100) * 0.5, 0.2, 0.95);
 }
@@ -5432,6 +5463,7 @@ class Team {
     // à gérer un cas manquant.
     this.facilityLevels = { tvStation: 0, gym: 0, wellness: 0 };
     this.transactions = [];
+    this.financeLedger = {}; // voir recordTransaction / FINANCE_CATEGORIES
 
     // Humeur des supporters (voir attendanceBaseForMorale / moraleForgiveness
     // / moraleLabel) : neutre au départ, évolue avec les résultats et le
@@ -5671,6 +5703,14 @@ class Team {
     this.transactions.unshift({ week: this.week, label, amount: Math.round(amount) });
     if (this.transactions.length > 40) this.transactions.length = 40;
     this.budget += amount;
+    // Cumul par poste et par semaine (voir FINANCE_CATEGORIES).
+    if (!this.financeLedger || typeof this.financeLedger !== "object") this.financeLedger = {};
+    const key = `${(this.seasonHistory || []).length + 1}:${this.week}`;
+    const cat = financeCategoryOf(label, amount);
+    const row = this.financeLedger[key] || (this.financeLedger[key] = {});
+    row[cat] = Math.round((row[cat] || 0) + amount);
+    const keys = Object.keys(this.financeLedger);
+    if (keys.length > FINANCE_LEDGER_MAX) keys.slice(0, keys.length - FINANCE_LEDGER_MAX).forEach(k => delete this.financeLedger[k]);
   }
 
   // Humeur des supporters : toute variation passe par ici, seule source de
@@ -13974,6 +14014,7 @@ function serializeTeam(team) {
     // (équipe créée avant cette fonctionnalité).
     facilityLevels: { ...(team.facilityLevels || { tvStation: 0, gym: 0, wellness: 0 }) },
     transactions: team.transactions,
+    financeLedger: team.financeLedger || {},
     fanMorale: team.fanMorale,
     prestige: typeof team.prestige === "number" ? team.prestige : null,
     moraleHistory: team.moraleHistory,
@@ -14556,6 +14597,7 @@ function teamFromSave(data) {
     });
   }
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
+  team.financeLedger = data.financeLedger && typeof data.financeLedger === "object" ? data.financeLedger : {};
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.prestige = typeof data.prestige === "number" ? clamp(data.prestige, 0, 100) : null;
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
@@ -16895,7 +16937,7 @@ return {
   MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS, midSeasonRound, milestoneTypeForRound,
   statEvaluation, PIR_TIER_THRESHOLDS, PIR_TIER_COLORS, pirTier, MVP_ATTR_BONUS, MVP_QUOTES,
   TOUR_REWARD_BY_TOPIC,
-  MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars, clubPrestigeDetail, prestigeLabel, prestigeStars, prestigeAttendanceMult, prestigeShopMult,
+  MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars, FINANCE_CATEGORIES, financeCategoryOf, clubPrestigeDetail, prestigeLabel, prestigeStars, prestigeAttendanceMult, prestigeShopMult,
   // Forme physique (voir le grand commentaire au-dessus de CONDITION_STATES) :
   CONDITION_STATES, conditionStateFor, currentCondition, conditionLossForMinutes,
   CONDITION_DAY_MS, CONDITION_RECOVERY_PER_DAY, CONDITION_RECOVERY_PER_DAY_TRAINED, conditionRestDays,
