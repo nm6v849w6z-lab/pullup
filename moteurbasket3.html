@@ -4565,8 +4565,15 @@
     /* iPhone (2026-09-28) : plein écran → réserve l'heure/la batterie en haut
        et la barre d'accueil en bas (0 hors iPhone), #hoopShowMount garde
        height:100% de ce qui reste. */
-    box-sizing:border-box; padding:env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);}
+    box-sizing:border-box; padding:env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    /* Fond des bandes « letterbox » du cadre TV (voir showPlayer.css .hs-root). */
+    background:#05080F;}
   #hoopShowSection.hidden{display:none;}
+  /* Émissions sans défilement : tant que l'émission est ouverte, la page du
+     jeu en dessous ne défile plus (le lecteur se met à l'échelle de l'écran,
+     voir fitStage dans assets/hoop-shows/showPlayer.js). */
+  html.hoop-show-open, html.hoop-show-open body{overflow:hidden; height:100%; overscroll-behavior:none;}
+  html.hoop-show-open{scrollbar-gutter:auto;} /* sinon 8 px de gouttière réservés à droite du cadre */
   /* Réutilise .scouting-ad-gray-block (retour utilisateur, Scouting Pro :
      "Pour le moment mets un écran gris avec pub") pour le placeholder de
      pub du lecteur d'émission (voir hoopShowOnAd) — même patron gris
@@ -8586,8 +8593,9 @@
      Volontairement HORS de #app-shell/.wrap/PAGE_IDS (voir le commentaire
      CSS de #hoopShowSection) : une parenthèse plein écran par-dessus toute
      l'appli plutôt qu'un onglet de plus, jamais touchée par showPage().
-     Version PC uniquement (largeur minimale ~1100px, comme le reste de
-     l'appli — voir README.md) : aucune variante mobile construite. -->
+     Cadre « écran TV » : le lecteur met toute l'émission à l'échelle de
+     l'écran (plus de défilement), mise en page verticale dédiée sur
+     téléphone en portrait (voir fitStage dans showPlayer.js). -->
 <div id="hoopShowSection" class="hidden">
   <div id="hoopShowMount" style="height:100%; overflow:hidden;"></div>
 </div>
@@ -34285,6 +34293,7 @@ async function openHoopShow(kind) {
   const mount = document.getElementById("hoopShowMount");
   if (hoopShowPlayer) { hoopShowPlayer.destroy(); hoopShowPlayer = null; }
   section.classList.remove("hidden");
+  document.documentElement.classList.add("hoop-show-open");
   hoopShowOpenKind = kind;
   hoopShowPlayer = HoopShowPlayer.mount(mount, show, Object.assign(hoopShowDressOpts(), {
     premium: teamA.hasActivePremium(Date.now()),
@@ -34426,6 +34435,7 @@ function enterPrematchLive() {
 function closeHoopShow() {
   if (hoopShowPlayer) { hoopShowPlayer.destroy(); hoopShowPlayer = null; }
   document.getElementById("hoopShowSection").classList.add("hidden");
+  document.documentElement.classList.remove("hoop-show-open");
   if (hoopShowOpenKind === "halftime") {
     hoopShowMarkHalftimeSeen();
     const oldBtn = document.getElementById("hoopShowHalftimeBtn");
