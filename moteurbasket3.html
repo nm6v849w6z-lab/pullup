@@ -12331,7 +12331,7 @@ const ArenaGen = (function () {
     if (DX && !options.compact) {
       const f = 1.15, nw = vw * f, nh = vh * f;
       const fw = (maxX - minX) * 1.1, free = nw - fw;
-      vx = (minX + maxX) / 2 - fw / 2 - free * 0.5; vy -= (nh - vh) * 0.75; vw = nw; vh = nh;
+      vx = (minX + maxX) / 2 - fw / 2 - free * 0.5 - Math.min(nw * 0.07, free * 0.45); vy -= (nh - vh) * 0.75; vw = nw; vh = nh;
     }
     const inView = (x, y, pad = 30) => { const q = P(x, y, 0); return q[0] > vx - pad && q[0] < vx + vw + pad && q[1] > vy - pad && q[1] < vy + vh + pad * 2; };
 
