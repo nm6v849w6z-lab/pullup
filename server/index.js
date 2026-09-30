@@ -1512,7 +1512,12 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // /api/world/league-page (2026-09-30) : même contenu, pour la vraie page
         // Ligue d'un autre championnat (showForeignLeague) : classement,
         // résultats, feuilles de match, leaders (matchLog), récompenses.
-        if (route.pathname === "/api/world/team-page" || route.pathname === "/api/world/league-page") {
+        // /api/world/player-page (2026-09-30, « impossible de cliquer sur le
+        // nom des joueurs ») : même contenu + le joueur demandé (?team=&id=),
+        // pour la fiche joueur habituelle en lecture seule
+        // (showForeignPlayerDetail) : caractéristiques verrouillées comme pour
+        // tout adversaire non scouté, stats de matchs publiques.
+        if (route.pathname === "/api/world/team-page" || route.pathname === "/api/world/league-page" || route.pathname === "/api/world/player-page") {
           const id = q.get("league");
           const entry = world.leagues.find(e => e.id === id);
           const lg = entry ? await World.loadLeague(world, id, multiSavePath) : null;
@@ -1531,7 +1536,15 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           out.privateLeagues = []; out.friendlies = []; out.guestTeams = [];
           out.divisionMoves = World.divisionMovesFor(world, id);
           out.leagueId = out.leagueId || id;
-          sendJson(res, 200, { ok: true, league: out, label: World.divisionLabel(entry.level, entry.group), mine: id === ctx.leagueId });
+          let player = null;
+          if (route.pathname === "/api/world/player-page") {
+            const teamIdx = Number(q.get("team")), playerId = Number(q.get("id"));
+            const team = Number.isInteger(teamIdx) ? lg.teams[teamIdx] : null;
+            const p = team && (team.players || []).find(x => x.id === playerId);
+            if (!p) { sendJson(res, 404, { ok: false, error: "Joueur introuvable." }); return; }
+            player = { teamIdx, playerId, name: p.name, teamName: team.name };
+          }
+          sendJson(res, 200, { ok: true, league: out, label: World.divisionLabel(entry.level, entry.group), mine: id === ctx.leagueId, ...(player ? { player } : {}) });
           return;
         }
         // Coupe nationale (server/nationalCup.js) : parcours du manager + tours,

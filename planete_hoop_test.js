@@ -210,6 +210,68 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
     ok("recherche de la page (clubs, managers, championnats) : un club ouvre sa fiche, un championnat sa page Ligue");
   }
 
+  // 3quater) Joueurs et adversaires cliquables (retour utilisateur
+  // 2026-09-30 : « impossible de cliquer sur le nom des joueurs ni sur les
+  // équipes contre ») : fiche joueur habituelle d'un joueur américain, en
+  // lecture seule.
+  {
+    const pdSection = doc.getElementById("playerDetailSection");
+    const pdContent = doc.getElementById("playerDetailContent");
+    win.eval(`planeteState.country = "us"; TAB_HANDLERS.planete()`);
+    await wait(() => /États-Unis/.test((box.querySelector(".pc-hero") || {}).textContent || "") && box.querySelector(".pc-stat [data-pc-player]"), "leaders américains");
+    const bestsCard = [...box.querySelectorAll(".pc-card")].find(c => c.querySelector("h3").textContent === "Meilleures performances");
+    const oppLink = [...bestsCard.querySelectorAll("small")].map(sm => [...sm.querySelectorAll("[data-pc-club]")]).find(l => l.length === 2);
+    if (!oppLink || oppLink.some(b => b.tagName !== "BUTTON")) fail("meilleures performances : club ET adversaire (« contre X ») cliquables attendus.");
+    const opp = oppLink[1];
+    const usLg = await World.loadLeague(world, "us-1", multiSavePath);
+    if (usLg.teams[Number(opp.dataset.pcIdx)].name !== opp.textContent || opp.dataset.pcClub !== "us-1") fail(`adversaire : ${opp.textContent} → ${opp.dataset.pcClub}:${opp.dataset.pcIdx}`);
+    const pBtn = box.querySelector(".pc-stat [data-pc-player]");
+    if (pBtn.tagName !== "BUTTON") fail("nom du joueur : bouton attendu (clavier).");
+    const pName = pBtn.textContent, pTeam = Number(pBtn.dataset.pcTeam), pId = Number(pBtn.dataset.pcPlayer);
+    pBtn.click();
+    await wait(() => !pdSection.classList.contains("hidden") && doc.getElementById("playerDetailName").textContent === pName, "fiche du joueur américain");
+    if (!pdContent.textContent.includes(usLg.teams[pTeam].name)) fail("son club doit figurer sur la fiche.");
+    if (pdContent.querySelector("[data-pdp-compare], [data-pdp-sell], [data-list-player-detail]")) fail("ni Comparer ni Vendre sur la fiche d'un joueur d'un autre championnat.");
+    if (!doc.getElementById("topbarComparePlayerBtn").classList.contains("hidden")) fail("bouton Comparer du haut masqué.");
+    if (!pdContent.querySelector(".pdp-pill.locked") || !pdContent.querySelector(".pdp2-ring--locked")) fail("caractéristiques et note verrouillées (joueur non scouté).");
+    if (/\/ sem\./.test(pdContent.textContent)) fail("pas de salaire pour un joueur d'un autre club.");
+    if (!/Derniers matchs/.test(pdContent.textContent)) fail("stats de matchs attendues.");
+    if (win.eval("league.leagueId") === "us-1" || win.eval("myTeamIndex") !== 0) fail("la ligue du joueur doit être restaurée après le rendu.");
+    // Son club → fiche équipe étrangère ; retour → fiche joueur → Planète Hoop.
+    pdContent.querySelector(".pdp2-id-top [data-team-idx]").click();
+    await wait(() => !tdSection.classList.contains("hidden") && tdContent.querySelector(".team-apercu-name") && tdContent.querySelector(".team-apercu-name").textContent === usLg.teams[pTeam].name, "fiche du club depuis la fiche joueur");
+    // Depuis la fiche équipe étrangère, un joueur de l'effectif → sa fiche (pas un joueur de son propre club).
+    tdContent.querySelector('.team-detail-subnav [data-team-detail-subview="effectif"]').click();
+    const rosterLink = tdContent.querySelector("[data-player-team][data-player-id], [data-player-detail]");
+    if (!rosterLink) fail("effectif de la fiche équipe étrangère : noms de joueurs cliquables attendus.");
+    {
+      const rn = rosterLink.textContent.trim();
+      rosterLink.click();
+      await wait(() => !pdSection.classList.contains("hidden") && doc.getElementById("playerDetailName").textContent === rn, "fiche joueur depuis la fiche équipe étrangère");
+      if (win.eval("playerDetailForeign && playerDetailForeign.leagueId") !== "us-1") fail("fiche joueur étrangère attendue depuis la fiche équipe étrangère.");
+    }
+    doc.getElementById("closePlayerDetailBtn").click();
+    if (win.eval("playerDetailForeign") !== null) fail("retour : fiche joueur étrangère oubliée.");
+    // Page Ligue américaine : un leader → sa fiche joueur.
+    win.eval(`showForeignLeague("us-1")`);
+    await wait(() => !stSection.classList.contains("hidden") && doc.querySelector("#leagueStatsPanel .lg-lead-id [data-player-id]"), "page Ligue américaine (leaders)");
+    const lead = doc.querySelector("#leagueStatsPanel .lg-lead-id [data-player-id]");
+    const leadName = lead.textContent;
+    lead.click();
+    await wait(() => !pdSection.classList.contains("hidden") && doc.getElementById("playerDetailName").textContent === leadName, "fiche du leader américain");
+    doc.getElementById("closePlayerDetailBtn").click();
+    await wait(() => !stSection.classList.contains("hidden"), "retour à la page Ligue américaine");
+    // Joueur de son propre championnat : sa fiche habituelle.
+    win.eval(`planeteState.country = "fr"; TAB_HANDLERS.planete()`);
+    await wait(() => /France/.test((box.querySelector(".pc-hero") || {}).textContent || "") && box.querySelector(".pc-stat [data-pc-player]"), "leaders français");
+    const own = box.querySelector('.pc-stat [data-pc-player][data-pc-league="fr-1"]');
+    own.click();
+    await wait(() => !pdSection.classList.contains("hidden") && doc.getElementById("playerDetailName").textContent === own.textContent, "fiche d'un joueur de son championnat");
+    if (win.eval("playerDetailForeign") !== null || !doc.querySelector("#playerDetailContent [data-pdp-compare]")) fail("son championnat : fiche habituelle (Comparer présent).");
+    doc.getElementById("closePlayerDetailBtn").click();
+    ok(`joueurs cliquables : ${pName} (autre championnat) → fiche joueur habituelle en lecture seule (caractéristiques verrouillées, sans Comparer/Vendre/salaire), son club et l'adversaire « contre » ouvrent la fiche équipe ; leaders de la page Ligue étrangère et effectif de la fiche équipe étrangère aussi ; joueur de son championnat → fiche habituelle`);
+  }
+
   // 3bis) Les routes ne renvoient rien de privé.
   for (const route of ["team-page", "league-page"]) {
     const tp = await win.eval(`planeteFetch("/api/world/${route}?league=us-1")`);

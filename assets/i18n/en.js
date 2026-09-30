@@ -4861,6 +4861,7 @@ window.HM_I18N_EN = {
   "Meilleurs de la saison": "Season leaders",
   "Moyennes par match de championnat, au moins la moitié des matchs de son équipe.": "Per-game league averages, at least half of the team's games played.",
   "Caractéristiques visibles uniquement quand le joueur est mis en vente sur le marché.": "Attributes are only visible when the player is listed on the transfer market.",
+  "Joueur d'un autre championnat : caractéristiques visibles seulement s'il est mis en vente sur le marché.": "Player from another league: attributes are only visible if he is listed on the transfer market.",
   "Aucun championnat à afficher.": "No league to show.",
   "Planète Hoop est indisponible pour l'instant.": "Planet Hoop is unavailable right now.",
   "Planète Hoop réunit les championnats de tous les pays : disponible en ligue partagée.": "Planet Hoop brings together the leagues of every country: available in a shared league.",

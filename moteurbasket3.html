@@ -26492,7 +26492,7 @@ document.getElementById("standingsSection").addEventListener("click", (e) => {
   if (!leagueForeign) return;
   const back = e.target.closest("[data-lg-back], #closeStandingsBtn");
   const teamLink = e.target.closest("[data-team-idx]");
-  const playerLink = e.target.closest("[data-player-team]");
+  const playerLink = e.target.closest("[data-player-team][data-player-id]");
   const box = e.target.closest("[data-boxscore-round]");
   if (!back && !teamLink && !playerLink && !box) return;
   e.preventDefault();
@@ -26505,7 +26505,11 @@ document.getElementById("standingsSection").addEventListener("click", (e) => {
       Number(box.dataset.boxscoreHome), Number(box.dataset.boxscoreAway)));
     return;
   }
-  const idx = Number(teamLink ? teamLink.dataset.teamIdx : playerLink.dataset.playerTeam);
+  if (playerLink && !teamLink) {
+    showForeignPlayerDetail(f.leagueId, Number(playerLink.dataset.playerTeam), Number(playerLink.dataset.playerId));
+    return;
+  }
+  const idx = Number(teamLink.dataset.teamIdx);
   if (Number.isInteger(idx) && f.league.teams[idx] && !f.league.teams[idx].isGuest) showForeignTeamDetail(f.leagueId, idx);
 }, true);
 
@@ -27289,6 +27293,7 @@ function nationFlagHtml(code, cls = "") {
 }
 
 function showPlayerDetail(teamIdx, playerId) {
+  playerDetailForeign = null;
   // Ne mémorise PAS playerDetailSection lui-même comme origine (au cas où
   // une fiche joueur ouvrirait un jour un lien vers une autre fiche) — reste
   // sur l'origine déjà mémorisée dans ce cas plutôt que de la perdre.
@@ -27301,6 +27306,7 @@ function showPlayerDetail(teamIdx, playerId) {
 }
 
 function hidePlayerDetail() {
+  playerDetailForeign = null;
   const origin = playerDetailOrigin || { pageId: "prepSection", tabKey: "ordres" };
   showPage(origin.pageId);
   if (origin.tabKey) setActiveTab(origin.tabKey);
@@ -27377,14 +27383,86 @@ function playerDetailRosterOrder(teamIdx) {
 // pourrait surprendre sur un effectif de 15 joueurs.
 function navigatePlayerDetail(step) {
   if (!currentPlayerDetailRef) return;
+  if (playerDetailForeign && !playerDetailForeignActive) return withPlayerForeign(() => navigatePlayerDetail(step));
   const { teamIdx, playerId } = currentPlayerDetailRef;
   const ordered = playerDetailRosterOrder(teamIdx);
   const idx = ordered.findIndex(p => p.id === playerId);
   if (idx === -1) return;
   const target = ordered[idx + step];
   if (!target) return;
+  if (playerDetailForeign) { renderPlayerDetail(teamIdx, target.id); return; }
   showPlayerDetail(teamIdx, target.id);
 }
+
+// ---------------------------------------------------------------------
+// FICHE D'UN JOUEUR D'UN AUTRE CHAMPIONNAT (retour utilisateur 2026-09-30 :
+// « impossible de cliquer sur le nom des joueurs ») : la fiche joueur
+// habituelle (renderPlayerDetail) rendue avec SON championnat à la place de
+// `league` (withPlayerForeign, même principe que la fiche équipe
+// étrangère : GET /api/world/player-page, sans rien de privé), sans club
+// « à soi » (myTeamIndex = -1) ni scouting : caractéristiques et note
+// verrouillées comme pour tout adversaire non scouté, stats de matchs
+// publiques. Pas de Comparer ni de Vendre ; son club (et les adversaires
+// des feuilles de match) ouvrent la fiche équipe étrangère.
+// ---------------------------------------------------------------------
+var playerDetailForeign = null; // { league, leagueId, label } ou null
+var playerDetailForeignActive = false;
+function withPlayerForeign(fn) {
+  if (!playerDetailForeign || playerDetailForeignActive) return fn();
+  const saved = { league, myTeamIndex, scouted: teamA ? teamA.scoutedAttrs : null };
+  league = playerDetailForeign.league;
+  myTeamIndex = -1;
+  if (teamA) teamA.scoutedAttrs = {};
+  playerDetailForeignActive = true;
+  try { return fn(); } finally {
+    playerDetailForeignActive = false;
+    league = saved.league;
+    myTeamIndex = saved.myTeamIndex;
+    if (teamA) teamA.scoutedAttrs = saved.scouted;
+  }
+}
+async function showForeignPlayerDetail(leagueId, teamIdx, playerId) {
+  if (!leagueId || (league && league.leagueId === leagueId)) { showPlayerDetail(teamIdx, playerId); return true; }
+  let data;
+  try { data = await planeteFetch(`/api/world/player-page?league=${encodeURIComponent(leagueId)}&team=${teamIdx}&id=${playerId}`); } catch (e) { return false; }
+  if (!data || !data.league || !data.league.teams) return false;
+  if (data.mine) { showPlayerDetail(teamIdx, playerId); return true; }
+  const ownTz = league ? league.timeZone : null;
+  let lg;
+  try { lg = leagueFromSave(data.league); } finally { setCalendarTimeZone(ownTz); }
+  if (currentVisiblePageId() !== "playerDetailSection") {
+    const activeTabBtn = document.querySelector(".tab-btn.active");
+    playerDetailOrigin = { pageId: currentVisiblePageId(), tabKey: activeTabBtn ? activeTabBtn.dataset.tab : null };
+  }
+  playerDetailForeign = { league: lg, leagueId, label: data.label || "" };
+  renderPlayerDetail(teamIdx, playerId);
+  showPage("playerDetailSection");
+  if (typeof window.scrollTo === "function") try { window.scrollTo(0, 0); } catch (e) { /* jsdom */ }
+  return true;
+}
+// Clics sur la fiche d'un joueur d'un autre championnat (capture : avant
+// les écouteurs habituels, qui visent son propre championnat).
+document.getElementById("playerDetailSection").addEventListener("click", (e) => {
+  if (!playerDetailForeign) return;
+  const season = e.target.closest("#playerSeasonStatsOpenBtn");
+  const box = e.target.closest("[data-boxscore-round]");
+  const playerLink = e.target.closest("[data-player-team][data-player-id]");
+  const teamLink = e.target.closest("[data-team-idx]");
+  if (!season && !box && !playerLink && !teamLink) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const f = playerDetailForeign;
+  if (season) { withPlayerForeign(() => showPlayerSeasonStatsModal(Number(season.dataset.teamIdx), Number(season.dataset.playerId))); return; }
+  if (box) {
+    withPlayerForeign(() => showMatchBoxscore(
+      Number(box.dataset.boxscoreRound), box.dataset.boxscoreCompetition,
+      Number(box.dataset.boxscoreHome), Number(box.dataset.boxscoreAway)));
+    return;
+  }
+  if (playerLink) { renderPlayerDetail(Number(playerLink.dataset.playerTeam), Number(playerLink.dataset.playerId)); return; }
+  const idx = Number(teamLink.dataset.teamIdx);
+  if (Number.isInteger(idx) && f.league.teams[idx] && !f.league.teams[idx].isGuest) showForeignTeamDetail(f.leagueId, idx);
+}, true);
 document.getElementById("topbarPlayerPrevBtn").addEventListener("click", () => navigatePlayerDetail(-1));
 document.getElementById("topbarPlayerNextBtn").addEventListener("click", () => navigatePlayerDetail(1));
 
@@ -28367,6 +28445,7 @@ document.addEventListener("click", (e) => {
 });
 
 function renderPlayerDetail(teamIdx, playerId) {
+  if (playerDetailForeign && !playerDetailForeignActive) return withPlayerForeign(() => renderPlayerDetail(teamIdx, playerId));
   const nameHeader = document.getElementById("playerDetailName");
   const holder = document.getElementById("playerDetailContent");
   const team = league.teams[teamIdx];
@@ -28382,7 +28461,7 @@ function renderPlayerDetail(teamIdx, playerId) {
   // : le bouton "Comparer" n'a alors personne de valide à comparer.
   currentPlayerDetailRef = player ? { teamIdx, playerId } : null;
   const compareBtn = document.getElementById("topbarComparePlayerBtn");
-  if (compareBtn) compareBtn.classList.toggle("hidden", !player);
+  if (compareBtn) compareBtn.classList.toggle("hidden", !player || !!playerDetailForeign);
   // Flèches précédent/suivant (voir navigatePlayerDetail/
   // playerDetailRosterOrder) : désactivées en bout d'effectif (premier
   // joueur -> pas de précédent, dernier -> pas de suivant), et les deux si
@@ -28568,7 +28647,7 @@ function renderPlayerDetail(teamIdx, playerId) {
       `<p class="pdp-locked-note pdp2-center">Pas encore assez scoutée pour une note globale.</p>`;
   }
   html += `<div class="pdp2-actions">` +
-    `<button type="button" class="pdp2-btn" data-pdp-compare>Comparer</button>`;
+    (playerDetailForeign ? "" : `<button type="button" class="pdp2-btn" data-pdp-compare>Comparer</button>`);
   if (isOwnTeam) {
     html += onMarket
       ? `<span class="pdp2-btn pdp2-btn--static">Aux enchères</span>`
@@ -28656,7 +28735,9 @@ function renderPlayerDetail(teamIdx, playerId) {
   const scouting = scoutingReportText(player, visibleAttrs);
   html += scouting
     ? `<div class="pdp-scouting"><b>Rapport de scouting</b> : ${escapeHtml(scouting)}</div>`
-    : `<div class="pdp-scouting">Pas encore assez de caractéristiques révélées pour un rapport de scouting (faites une séance vidéo pour en débloquer).</div>`;
+    : playerDetailForeign
+      ? `<div class="pdp-scouting">Joueur d'un autre championnat : caractéristiques visibles seulement s'il est mis en vente sur le marché.</div>`
+      : `<div class="pdp-scouting">Pas encore assez de caractéristiques révélées pour un rapport de scouting (faites une séance vidéo pour en débloquer).</div>`;
   html += `</section>`;
 
   // == Derniers matchs | Poste + Profils de jeu ==
@@ -29026,11 +29107,17 @@ function teamDetailSubNavHtml() {
 document.getElementById("teamDetailContent").addEventListener("click", (e) => {
   if (!teamDetailForeign) return;
   const teamLink = e.target.closest("[data-team-idx]");
-  const playerLink = e.target.closest("[data-player-detail]");
+  const playerLink = e.target.closest("[data-player-detail], [data-player-team][data-player-id]");
   const box = e.target.closest("[data-boxscore-round]");
   if (!teamLink && !playerLink && !box) return;
   e.preventDefault();
   e.stopPropagation();
+  if (playerLink && !box) {
+    const pid = Number(playerLink.dataset.playerId != null ? playerLink.dataset.playerId : playerLink.dataset.playerDetail);
+    const tIdx = Number(playerLink.dataset.playerTeam != null ? playerLink.dataset.playerTeam : teamDetailIdx);
+    showForeignPlayerDetail(teamDetailForeign.leagueId, tIdx, pid);
+    return;
+  }
   if (box) {
     withTeamDetailLeague(() => showMatchBoxscore(
       Number(box.dataset.boxscoreRound), box.dataset.boxscoreCompetition,
@@ -30674,12 +30761,12 @@ function pcClubByName(name) {
   const ref = name && planeteState.data.overview.clubs[name];
   return pcClub(name, ref && ref.leagueId, ref && ref.idx);
 }
-// Joueur : sa fiche s'il est dans son championnat, sinon texte (la fiche
-// d'un joueur d'un autre championnat n'existe pas, son club est cliquable).
+// Joueur : sa fiche joueur habituelle, lue dans SON championnat
+// (showForeignPlayerDetail, lecture seule) s'il joue ailleurs.
 function pcPlayer(r) {
   const flag = r.nationality ? nationFlagHtml(r.nationality) : "";
-  if (r.leagueId === planeteState.data.myLeagueId && r.playerId != null && Number.isInteger(r.teamIdx)) {
-    return `${flag}<button type="button" class="pc-link pc-player" data-pc-player="${r.playerId}" data-pc-team="${r.teamIdx}">${escapeHtml(r.name)}</button>`;
+  if (r.playerId != null && Number.isInteger(r.teamIdx) && r.leagueId) {
+    return `${flag}<button type="button" class="pc-link pc-player" data-pc-player="${r.playerId}" data-pc-team="${r.teamIdx}" data-pc-league="${escapeHtml(r.leagueId)}">${escapeHtml(r.name)}</button>`;
   }
   return `${flag}<span class="pc-player">${escapeHtml(r.name)}</span>`;
 }
@@ -30768,7 +30855,7 @@ function planeteLeadersHtml() {
 function planeteBestsHtml() {
   const ov = planeteState.data.overview;
   const grid = planeteStatGridHtml(ov.bests, r => r.opponent
-    ? ` · ${r.competition === "cup" ? "Coupe, " : ""}contre ${escapeHtml(r.opponent)}`
+    ? ` · ${r.competition === "cup" ? "Coupe, " : ""}contre ${pcClub(r.opponent, r.opponentLeagueId, r.opponentIdx)}`
     : (r.competition === "cup" ? " · Coupe" : ""));
   return pcSection("Meilleures performances", "En un match officiel cette saison", grid || pcEmpty("Aucun match officiel joué cette saison."));
 }
@@ -30887,7 +30974,7 @@ function planeteClosePicker(box) {
       return;
     }
     const pl = e.target.closest("[data-pc-player]");
-    if (pl) { showPlayerDetail(Number(pl.dataset.pcTeam), Number(pl.dataset.pcPlayer)); return; }
+    if (pl) { showForeignPlayerDetail(pl.dataset.pcLeague, Number(pl.dataset.pcTeam), Number(pl.dataset.pcPlayer)); return; }
   });
   box.addEventListener("input", (e) => { if (e.target.id === "planeteSearchInput") planeteSearch(e.target.value); });
   box.addEventListener("keydown", (e) => {
