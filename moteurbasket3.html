@@ -986,13 +986,17 @@
   .pz-status-pill{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-dim);}
   .pz-status-pill .prm-tag{margin-left:0;}
   .pz-status-free{font-size:13px; color:var(--ink-faint);}
-  .pz-nav{position:sticky; top:64px; z-index:5; display:flex; gap:6px; margin:18px 0 8px; padding:6px; width:max-content; max-width:100%; overflow-x:auto;
+  /* Collée juste sous le topbar réel (--topbar-h, mesuré par
+     syncTopbarHeightVar), et sous lui (z-index 4 < 5) : sur téléphone le
+     topbar est plus haut que 64 px et la barre passait par-dessus
+     (retour utilisateur 2026-09-30). */
+  .pz-nav{position:sticky; top:var(--topbar-h, 64px); z-index:4; display:flex; gap:6px; margin:18px 0 8px; padding:6px; width:max-content; max-width:100%; overflow-x:auto;
     background:color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-radius:999px;}
   .pz-nav a{flex:none; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:700; color:var(--ink-dim); text-decoration:none;}
   .pz-nav a:hover{color:var(--ink); background:var(--panel-2);}
   .pz-nav a.active{color:var(--amber); background:color-mix(in srgb, var(--amber) 13%, transparent);}
   .pz-nav a:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
-  .pz-block{padding-top:26px; scroll-margin-top:110px;}
+  .pz-block{padding-top:26px; scroll-margin-top:calc(var(--topbar-h, 64px) + 46px);}
   .pz-title{margin:0 0 14px; font-size:13px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-faint);}
   .pz-card{background:var(--panel); border-radius:20px; padding:26px 28px; min-width:0;}
   .pz-subtitle{margin:0 0 4px; font-size:18px; font-weight:800; color:var(--ink);}
@@ -1081,7 +1085,7 @@
     .pz-card{padding:20px 18px; border-radius:16px;}
     .pz-jersey{grid-template-columns:minmax(0,1fr); gap:6px;}
     .pz-jersey-stage{padding:16px 10px 10px;}
-    .pz-nav{top:56px;}
+    /* (top : --topbar-h, voir la règle de base.) */
     #persoCourtHolder .sl-court-layout{grid-template-columns:minmax(0,1fr); gap:16px;}
   }
 
