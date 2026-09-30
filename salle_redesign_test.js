@@ -151,6 +151,14 @@ for (const k of ["trainingCenter", "fanShop", "tvStation", "gym", "wellness"]) {
   if (!doc.querySelector(`#arenaVisualCard .qd-label[data-district="${k}"]`)) throw new Error(`❌ Le quartier devrait montrer l'installation ${k}.`);
 }
 if (!/à construire/.test(doc.querySelector('#arenaVisualCard .qd-label[data-district="tvStation"]').textContent)) throw new Error("❌ Une installation jamais construite devrait être marquée « à construire » dans le quartier.");
+// Téléphone : les 5 installations aussi en boutons sous le dessin.
+const chips = [...doc.querySelectorAll("#districtChips [data-district-chip]")];
+if (chips.length !== 5) throw new Error(`❌ 5 boutons d'installation attendus sous le quartier, obtenu ${chips.length}.`);
+if (!doc.querySelector('#districtChips [data-district-chip="tvStation"]').classList.contains("is-empty")) throw new Error("❌ Le bouton d'une installation jamais construite devrait être marqué vide.");
+doc.querySelector('#districtChips [data-district-chip="tvStation"]').click();
+if (!doc.getElementById("facilityModalOverlay") || doc.getElementById("facilityModalOverlay").dataset.key !== "tvStation") throw new Error("❌ Le bouton devrait ouvrir la fenêtre de l'installation.");
+win.eval("closeFacilityModal()");
+console.log("✅ Boutons des installations sous le quartier (téléphone) : 5, état vide marqué, ouvrent la fenêtre.");
 doc.querySelector('#arenaVisualCard .qd-label[data-district="gym"]').dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
 const gym = doc.querySelector('#facilityModalOverlay [data-facility-card="gym"]');
 if (!gym) throw new Error("❌ Cliquer sur la musculation devrait ouvrir sa brique.");
