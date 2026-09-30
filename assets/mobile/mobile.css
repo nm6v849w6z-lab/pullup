@@ -88,6 +88,10 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
   .topbar-m-logo img { height: 34px; width: auto; display: block; }
   .topbar:has(.topbar-live-strip:not(.hidden)) .topbar-m-logo { display: none; }
   .topbar-player-nav { order: 0; }
+  /* Page Ordres : même barre du haut que partout (logo, recherche, profil) ;
+     en défilant, la barre des onglets Composition / Attaque… reste collée en haut
+     (retour utilisateur 2026-09-30 : page « flottante » sans en-tête). */
+  .topbar.topbar-hidden-on-page { display: flex !important; }
   .m-search-toggle { order: -1; }
   /* Pages de détail : « ‹ Retour » compact à gauche, puis la recherche ;
      flèches du joueur à droite, à côté du profil (retour utilisateur
