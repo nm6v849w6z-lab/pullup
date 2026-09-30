@@ -1097,7 +1097,10 @@
     .pz-card{padding:20px 18px; border-radius:16px;}
     .pz-jersey{grid-template-columns:minmax(0,1fr); gap:6px;}
     .pz-jersey-stage{padding:16px 10px 10px;}
-    /* (top : --topbar-h, voir la règle de base.) */
+    /* Sur téléphone, la barre Identité / Maillots / Parquet n'est plus
+       collée en haut (elle passait par-dessus le topbar de l'appli iPhone,
+       retour utilisateur 2026-09-30) : elle défile avec la page. */
+    .pz-nav{position:static;}
     #persoCourtHolder .sl-court-layout{grid-template-columns:minmax(0,1fr); gap:16px;}
   }
 
@@ -25951,6 +25954,16 @@ function syncTopbarHeightVar() {
   const topbar = document.querySelector(".topbar");
   if (topbar) document.documentElement.style.setProperty("--topbar-h", `${topbar.offsetHeight}px`);
 }
+// La hauteur du topbar change APRÈS le premier rendu dans l'appli iPhone
+// (feuille mobile.css chargée ensuite, encoche : env(safe-area-inset-top)) :
+// sans ce suivi, --topbar-h restait à l'ancienne valeur et les barres
+// collées dessous (Personnalisation, Ordres) passaient par-dessus
+// (retour utilisateur 2026-09-30, capture iPhone).
+(function watchTopbarHeight() {
+  const topbar = document.querySelector(".topbar");
+  if (!topbar || typeof ResizeObserver !== "function") return;
+  new ResizeObserver(() => syncTopbarHeightVar()).observe(topbar);
+})();
 
 function renderOrdresGrid() {
   const grid = document.getElementById("prepGrid");
