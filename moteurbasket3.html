@@ -12391,6 +12391,35 @@ const ArenaGen = (function () {
     if (DX) {
       const rh = rng((options.seed ?? 11) * 7 + 3);
       const walls = ['#c9b79c', '#b8a48a', '#d6cbb8', '#a9967c', '#c4b5a5', '#9fa7ae'], roofs = ['#7a4a3a', '#5b5f66', '#6b4f3f', '#4f5a4a'];
+      // Petites rues de quartier (retour utilisateur 2026-09-30 : « ajoute
+      // des petits chemins pour les habitations ») : parallèles aux deux
+      // routes, coupées aux abords de la salle, du parking et des terrains
+      // du club, elles s'arrêtent aux routes (carrefours en T).
+      const nearSite = (x, y, m) => (x < W / 2 + 34 + m && x > -W / 2 - 8 - m && y < D / 2 + 20 + m && y > -D / 2 - 8 - m) ||
+        DX.lots.some((l) => x < l.x1 + 2 + m && x > l.x0 - 2 - m && y < l.y1 + 2 + m && y > l.y0 - 2 - m) ||
+        (billboard && x < BBX + 6 && x > BBX - 4 && y < BBY + 10 && y > BBY - 10);
+      const onRoad = (x, y, m) => (y < roadY[1] + m && y > roadY[0] - m) || (x < roadX[1] + m && x > roadX[0] - m);
+      const streetW = 1.9, streetCol = dusk ? '#9d978a' : '#c9c3b2';
+      const streets = [];
+      const lineY = [roadY[0] - 30, roadY[0] - 58, roadY[0] - 86, D / 2 + 30, D / 2 + 56];
+      const lineX = [roadX[0] - 28, roadX[0] - 56, roadX[0] - 84, W / 2 + 50, W / 2 + 78, W / 2 + 106];
+      const addRuns = (horizontal, c) => {
+        let start = null;
+        for (let t = -W / 2 - 140; t <= W / 2 + 140; t += 1) {
+          const x = horizontal ? t : c, y = horizontal ? c : t;
+          const ok = inView(x, y, 10) && !nearSite(x, y, 1) && !onRoad(x, y, 0.2);
+          if (ok && start === null) start = t;
+          if ((!ok || t + 1 > W / 2 + 140) && start !== null) {
+            const end = ok ? t : t - 1;
+            if (end - start >= 14) streets.push(horizontal ? { x0: start, x1: end, y0: c - streetW / 2, y1: c + streetW / 2 } : { x0: c - streetW / 2, x1: c + streetW / 2, y0: start, y1: end });
+            start = null;
+          }
+        }
+      };
+      lineY.forEach((c) => addRuns(true, c));
+      lineX.forEach((c) => addRuns(false, c));
+      streets.forEach((st) => { s += flat(rect(st.x0, st.x1, st.y0, st.y1, 0.02), streetCol); });
+      const onStreet = (x, y, m) => streets.some((st) => x > st.x0 - m && x < st.x1 + m && y > st.y0 - m && y < st.y1 + m);
       for (let gx = -W / 2 - 110; gx <= W / 2 + 110; gx += 13) for (let gy = -D / 2 - 90; gy <= D / 2 + 70; gy += 12) {
         const x = gx + (rh() - 0.5) * 3, y = gy + (rh() - 0.5) * 3, w = 5 + rh() * 3, d = 4 + rh() * 2.5, h = 2.8 + rh() * (rh() < 0.3 ? 5 : 2);
         const keep = rh() < 0.42, wall = walls[Math.floor(rh() * walls.length)], roof = roofs[Math.floor(rh() * roofs.length)];
@@ -12400,9 +12429,32 @@ const ArenaGen = (function () {
         if (x < roadX[1] + 4 && x + w > roadX[0] - 4) continue;
         if (DX.lots.some((l) => x < l.x1 + 5 && x + w > l.x0 - 5 && y < l.y1 + 5 && y + d > l.y0 - 5)) continue;
         if (billboard && x < BBX + 6 && x + w > BBX - 4 && y < BBY + 10 && y + d > BBY - 10) continue;
+        if (streets.some((st) => x < st.x1 + 1.5 && x + w > st.x0 - 1.5 && y < st.y1 + 1.5 && y + d > st.y0 - 1.5)) continue;
         homes.push({ x0: x, y0: y, w, d, h, wall, roof });
         decor.push({ x: x + w / 2, y: y + d / 2, kind: 'home', o: homes[homes.length - 1] });
       }
+      // Chemin d'accès de chaque maison jusqu'à la rue ou la route la plus
+      // proche (dans l'axe, s'il est court et dégagé).
+      const inHome = (x, y) => homes.some((hm) => x > hm.x0 - 0.3 && x < hm.x0 + hm.w + 0.3 && y > hm.y0 - 0.3 && y < hm.y0 + hm.d + 0.3);
+      const reach = (x, y) => onStreet(x, y, 0) || onRoad(x, y, 0);
+      homes.forEach((hm) => {
+        const cx = hm.x0 + hm.w / 2, cy = hm.y0 + hm.d / 2, best = [];
+        [[0, 1, cx, hm.y0 + hm.d], [0, -1, cx, hm.y0], [1, 0, hm.x0 + hm.w, cy], [-1, 0, hm.x0, cy]].forEach(([dx, dy, sx, sy]) => {
+          for (let k = 0.5; k <= 16; k += 0.5) {
+            const x = sx + dx * k, y = sy + dy * k;
+            if (reach(x, y)) { best.push({ dx, dy, sx, sy, k }); break; }
+            if (nearSite(x, y, 0) || inHome(x, y)) break;
+          }
+        });
+        best.sort((a, b) => a.k - b.k);
+        const b = best[0];
+        if (!b) return;
+        const ex = b.sx + b.dx * b.k, ey = b.sy + b.dy * b.k, pw = 0.55;
+        const box = b.dx ? { x0: Math.min(b.sx, ex), x1: Math.max(b.sx, ex), y0: b.sy - pw, y1: b.sy + pw } : { x0: b.sx - pw, x1: b.sx + pw, y0: Math.min(b.sy, ey), y1: Math.max(b.sy, ey) };
+        s += flat(rect(box.x0, box.x1, box.y0, box.y1, 0.02), streetCol);
+        hm.path = box;
+      });
+      homes.lanes = streets;
     }
     const TR = DX ? 120 : 60; // quartier : cadre plus large, arbres jusqu'aux bords
     for (let gx = -W / 2 - TR; gx <= W / 2 + TR; gx += 7) for (let gy = -D / 2 - TR; gy <= D / 2 + TR; gy += 7) {
@@ -12417,6 +12469,8 @@ const ArenaGen = (function () {
       if (DX && DX.lots.some((l) => x > l.x0 - 2.5 && x < l.x1 + 2.5 && y > l.y0 - 2.5 && y < l.y1 + 2.5)) continue;
       if (billboard && x > BBX - 3 && x < BBX + 4 && y > BBY - 8 && y < BBY + 8) continue;
       if (homes.some((hm) => x > hm.x0 - 2 && x < hm.x0 + hm.w + 2 && y > hm.y0 - 2 && y < hm.y0 + hm.d + 2)) continue;
+      if (homes.some((hm) => hm.path && x > hm.path.x0 - 1 && x < hm.path.x1 + 1 && y > hm.path.y0 - 1 && y < hm.path.y1 + 1)) continue;
+      if ((homes.lanes || []).some((st) => x > st.x0 - 1.2 && x < st.x1 + 1.2 && y > st.y0 - 1.2 && y < st.y1 + 1.2)) continue;
       decor.push({ x, y, kind: 'tree', size, hue });
     }
     const carColors = ['#e8e6e1', '#2c2c30', '#3d5a8a', '#9a2a2a', '#c9c9c9', '#e8e6e1', '#5c6b3a'];
@@ -12556,7 +12610,7 @@ const ArenaGen = (function () {
     // Maillots retirés (options.retired : [{ number, name }]) : bannières
     // suspendues sous la toiture du fond, face au public (retour utilisateur
     // 2026-09-30 : « intégrer le maillot retiré dans la salle »).
-    const retiredList = (options.retired || []).slice(0, 6), rk = Math.max(1, Math.min(2.2, W / 34));
+    const retiredList = (options.retired || []).slice(0, 6), rk = Math.max(1, Math.min(1.7, W / 34));
     retiredList.forEach((r, i) => {
       const bw = 3.6 * rk, gap = 4.6 * rk, bx = -((retiredList.length - 1) * gap + bw) / 2 + i * gap - W * 0.18, by = -D / 2 + ring + 0.1, zt = H + 1.6 * rk, zb = zt - 6.4 * rk;
       if (bx + bw > W / 2 - ring - 1) return;
