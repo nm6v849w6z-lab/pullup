@@ -97,9 +97,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 - **Fin de l'audit moteur (poussé le 2026-09-30)** : ids de joueurs dans
   les événements (le terrain 2D peut lire ev.shooterId…), exclusions,
   plancher de eff(), Mental, Isolation/Box and one, réglages confirmés —
-  voir l'historique Git. RESTE côté utilisateur : lancer
-  POST /api/admin/recalibrate-cpu (dryRun d'abord, puis
-  { "dryRun": false }).
+  voir l'historique Git. Recalibrage des clubs IA
+  (POST /api/admin/recalibrate-cpu) lancé en prod par l'utilisateur le
+  2026-09-30 : plus rien à faire.
 
 - **Note moteur (poussé le 2026-09-29)** : graine par match (rand01,
   `seed` dans matchLog/résultats/directs), temps morts simulés, rotation
