@@ -77,14 +77,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   forfait pour « pas de pivot » avec au moins 5 joueurs, validé par
   l'utilisateur). Effectif en un seul bloc.
 
-- **🔴 À FAIRE — caractéristiques des adversaires de SA ligue envoyées au
-  navigateur** (`/api/save`) : potentiel, motivation, académie et scouting
-  des autres clubs sont retirés (2026-09-30), mais les caractéristiques
-  brutes restent, car le niveau adverse du tableau de bord (moyenne brute),
-  le scouting progressif, Scouting Pro, le tri de l'effectif adverse et les
-  prix « joueurs similaires » du marché les calculent côté client. Il faut
-  déplacer ces calculs côté serveur ; le niveau adverse du tableau de bord
-  est une question de design (il révèle déjà une moyenne).
+- **✅ EN PROD (2026-09-30, abfa17d) — suite du jour** : /api/save n'envoie plus
+  que les caractéristiques révélées des autres clubs (niveau adverse et
+  « ventes comparables » calculés côté serveur) ; stats de la Supercoupe
+  (comptées avec la coupe) ; fin de saison / objectifs selon les vraies
+  divisions au-dessus/en dessous ; Discord sur iPhone (liaison sans cookie
+  hm_oauth acceptée pour l'intent « link », navigateur système dans
+  l'appli) — À TESTER PAR L'UTILISATEUR sur iPhone ; chat : play-offs
+  (jamais la coupe) et messages système écrits même sans lecteur ; pseudos
+  (Discord, bandeau, libellé traduit) ; langue dans le compte
+  (Accounts.langFor) ; e-mails, notifications et pages publiques en EN/IT ;
+  salle personnalisée et avatars des jeunes (Premium) ; infos joueurs et
+  comparateur dans la composition ; Hoop Show en image TV sans défilement.
 
 - **🟡 CODÉ, À POUSSER (2026-09-29) — Entraînement des fondamentaux, 2e
   passe du tableau d'aptitudes** : Passe et Création de tir sans malus de
