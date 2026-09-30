@@ -49,7 +49,7 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   if (!myRow || !/Division I/.test(myRow.textContent) || !/Votre championnat/.test(myRow.textContent) || !/En tête/.test(myRow.textContent)) fail(`son championnat dans les divisions : ${myRow && myRow.textContent}`);
   if (!/Coupe nationale/.test(box.textContent)) fail("ligne Coupe nationale absente.");
   const titles = [...box.querySelectorAll(".pc-card-head h3")].map(h => h.textContent);
-  ["Divisions et compétitions", "Leaders de la saison", "Meilleures performances", "Historique", "Titres par équipe", "Classement mondial", "Amicaux internationaux"].forEach(t => {
+  ["Divisions et compétitions", "Leaders de la saison", "Meilleures performances", "Historique", "Titres par équipe", "Classement mondial"].forEach(t => {
     if (!titles.includes(t)) fail(`bloc « ${t} » absent (${titles.join(", ")}).`);
   });
   const statBlocks = [...box.querySelectorAll(".pc-stat")];
@@ -60,6 +60,10 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   // Première saison : blocs sans données = une ligne, pas de grande carte vide.
   const histCard = [...box.querySelectorAll(".pc-card")].find(c => c.querySelector("h3").textContent === "Historique");
   if (!histCard.classList.contains("pc-card--compact") || histCard.querySelector("table")) fail("historique vide : une ligne compacte attendue.");
+  if (/Amicaux internationaux/.test(box.textContent)) fail("bloc « Amicaux internationaux » retiré (retour utilisateur).");
+  // Briques par paires : Divisions | Titres, Leaders | Classement, Performances | Historique.
+  const order = [...box.querySelectorAll(".pc-grid > .pc-card h3")].map(h => h.textContent);
+  if (order.join("|") !== "Divisions et compétitions|Titres par équipe|Leaders de la saison|Classement mondial|Meilleures performances|Historique") fail(`ordre des briques : ${order.join(" | ")}`);
   if (/Sélection nationale|U21/.test(box.textContent)) fail("pas d'équipe nationale dans le jeu : bloc à ne pas inventer.");
   ok("menu : Planète Hoop en bas ; aperçu de la France par défaut (menu déroulant des pays, carte du pays, divisions + Coupe, leaders avec contres, meilleures performances, blocs vides compacts)");
 

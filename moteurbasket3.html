@@ -1559,8 +1559,8 @@
   .pc-kpi dt{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);}
   .pc-kpi dd{margin:2px 0 0; font-size:24px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.15;}
   .pc-kpi dd small{display:block; font-size:12px; font-weight:500; color:var(--ink-dim); margin-top:1px;}
-  .pc-grid{display:grid; grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); gap:16px; align-items:start;}
-  .pc-col{display:flex; flex-direction:column; gap:16px; min-width:0;}
+  .pc-grid{display:grid; grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); gap:16px; align-items:stretch;}
+  .pc-card--history, .pc-card--compact{align-self:start;}
   .pc-card{background:var(--panel); border-radius:14px; padding:18px 20px; min-width:0;}
   .pc-card--compact{padding:14px 20px;}
   .pc-card--compact .pc-card-head{margin-bottom:4px;}
@@ -1616,7 +1616,7 @@
   .pc-val{flex:0 0 auto; font-weight:800; font-size:15px; font-variant-numeric:tabular-nums; text-align:right;}
   .pc-val small{font-weight:500; font-size:11px; color:var(--ink-faint); margin-left:3px;}
   .pc-stat li.is-first .pc-val{color:var(--amber);}
-  .pc-hist{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px 26px;}
+  .pc-hist{display:grid; grid-template-columns:1fr; gap:18px;}
   .pc-table{width:100%; border-collapse:collapse; font-size:13.5px;}
   .pc-table th{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); text-align:left; padding:0 6px 7px; border-bottom:1px solid var(--line-soft); white-space:nowrap;}
   .pc-table td{padding:8px 6px; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
@@ -1628,18 +1628,16 @@
   .pc-table tr.is-holder td:first-child, .pc-table tr.is-mine td:first-child{box-shadow:inset 3px 0 0 var(--amber); padding-left:8px;}
   .pc-table .pc-cell-sub{display:block; color:var(--ink-dim); font-size:11.5px;}
   .pc-table td .nat-flag{width:18px; height:auto; border-radius:2px; margin-right:6px; vertical-align:middle;}
-  .pc-bilan{display:flex; align-items:baseline; gap:6px; margin:0 0 8px; font-size:13px; color:var(--ink-dim);}
-  .pc-bilan b{color:var(--ink); font-size:18px; margin-right:12px; font-variant-numeric:tabular-nums;}
   .pc-rows{list-style:none; margin:0; padding:0;}
   .pc-rows li{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px;}
   .pc-rows li:last-child{border-bottom:none;}
   .pc-rows li > span{flex:1; min-width:0;}
   .pc-rows li b{font-variant-numeric:tabular-nums;}
   .pc-rows .nat-flag{width:16px; height:auto; border-radius:2px; margin-right:5px; vertical-align:-1px;}
-  @media (max-width: 1100px){ .pc-grid{grid-template-columns:1fr;} }
+  @media (max-width: 1100px){ .pc-grid{grid-template-columns:1fr;} .pc-card--history{align-self:stretch;} .pc-hist{grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px 26px;} }
   @media (max-width: 760px){
     .pc-kpis{grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px 20px; width:100%;}
-    .pc-hist, .pc-stat-grid{grid-template-columns:1fr;}
+    .pc-stat-grid, .pc-hist{grid-template-columns:1fr;}
   }
   @media (max-width: 560px){
     .pc-picker, .pc-search{flex:1 1 100%;}
@@ -29363,7 +29361,7 @@ function renderTopbarSearchResults(rawQuery) {
 // pays ou une barre de recherche », plus moderne et aéré) : carte du pays,
 // divisions et Coupe, leaders et meilleures performances de la saison,
 // titres par club, palmarès (championnat / Coupe), classement mondial des
-// managers du pays, amicaux internationaux. Données : /api/world/country
+// managers du pays. Données : /api/world/country
 // (World.countryOverview). Un championnat choisi (lien, recherche) s'ouvre
 // en sous-page : classement et derniers résultats.
 const planeteState = { country: null, leagueId: null, clubIdx: null, data: null, managers: null, league: null, leagueMine: false, club: null };
@@ -29489,16 +29487,14 @@ function planeteOverviewHtml() {
     kpi("Clubs", c.clubs) +
     kpi("Managers", c.managers, c.activeManagers != null ? `<small>${c.activeManagers} actif${c.activeManagers > 1 ? "s" : ""} sur 7 jours</small>` : "") +
     `</dl></section>`;
-  html += `<div class="pc-grid"><div class="pc-col">`;
-  html += planeteDivisionsHtml();
-  html += planeteLeadersHtml();
-  html += planeteBestsHtml();
-  html += planeteHistoryHtml();
-  html += `</div><aside class="pc-col">`;
-  html += planeteTitlesHtml();
-  html += planeteRankingHtml();
-  html += planeteFriendliesHtml();
-  html += `</aside></div>`;
+  // Briques par paires (retour utilisateur 2026-09-30 : « briques alignées
+  // en longueur ») : une ligne de grille par paire, même hauteur à gauche et
+  // à droite ; seul l'historique peut rester plus court.
+  html += `<div class="pc-grid">` +
+    planeteDivisionsHtml() + planeteTitlesHtml() +
+    planeteLeadersHtml() + planeteRankingHtml() +
+    planeteBestsHtml() + planeteHistoryHtml() +
+    `</div>`;
   return html;
 }
 
@@ -29580,7 +29576,7 @@ function planeteHistoryHtml() {
     return t + `</tbody></table></div>`;
   };
   return pcSection("Historique", "Division I et Coupe nationale",
-    `<div class="pc-hist">${col("Champions de Division I", hist, "champion", "championFinalist")}${col("Coupe nationale", hist, "cupWinner", "cupFinalist")}</div>`);
+    `<div class="pc-hist">${col("Champions de Division I", hist, "champion", "championFinalist")}${col("Coupe nationale", hist, "cupWinner", "cupFinalist")}</div>`, "pc-card--history");
 }
 
 function planeteTitlesHtml() {
@@ -29612,18 +29608,6 @@ function planeteRankingHtml() {
     body += `<p class="pc-note">Votre note : <b>${me.rating}</b>${me.rank != null ? ` · ${me.rank}e mondial` : " · classé après un premier match officiel contre un autre manager"}.</p>`;
   }
   return pcSection("Classement mondial", "Managers du pays, note Elo", body, rk.top.length ? "" : "pc-card--compact");
-}
-
-function planeteFriendliesHtml() {
-  const d = planeteState.data;
-  const fr = d.overview.friendlies;
-  if (!fr || !fr.played) return pcSection("Amicaux internationaux", "", pcEmpty("Aucun amical contre un club étranger ces 60 derniers jours."), "pc-card--compact");
-  const name = code => (d.countries.find(c => c.code === code) || { name: code }).name;
-  let body = `<p class="pc-bilan"><span>Victoires</span><b>${fr.wins}</b><span>Défaites</span><b>${fr.losses}</b></p>`;
-  body += `<ul class="pc-rows">` + fr.byCountry.map(c => `<li>${nationFlagHtml(c.country)}<span>Contre ${escapeHtml(name(c.country))}</span><b>${c.wins}-${c.losses}</b></li>`).join("") + `</ul>`;
-  body += `<h4 class="pc-mini-title">Derniers résultats</h4><ul class="pc-rows">` + fr.recent.map(m =>
-    `<li><span class="pc-match">${nationFlagHtml(m.home.country)}${pcClub(m.home.name, m.home.leagueId, m.home.idx)} – ${nationFlagHtml(m.away.country)}${pcClub(m.away.name, m.away.leagueId, m.away.idx)}</span><b>${m.scoreHome}-${m.scoreAway}</b></li>`).join("") + `</ul>`;
-  return pcSection("Amicaux internationaux", "60 derniers jours", body);
 }
 
 // Sous-page d'un championnat : classement, derniers résultats, effectif.

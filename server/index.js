@@ -1428,7 +1428,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // Aperçu d'un pays (retour utilisateur 2026-09-30, « comme l'aperçu du
         // pays de BuzzerBeater ») : carte du pays, divisions, Coupe, leaders et
         // meilleures performances de la saison, titres, palmarès, classement
-        // des managers du pays, amicaux internationaux. Voir
+        // des managers du pays. Voir
         // World.countryOverview (registre seulement, aucune ligue rechargée).
         if (route.pathname === "/api/world/country") {
           const myCountry = ctx.league.country || World.DEFAULT_COUNTRY;
@@ -1438,9 +1438,8 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             const st = (world.countryStats || {})[c.code];
             return { code: c.code, name: c.name, managers: st ? st.managers : 0, leagueCount: World.leaguesOfCountry(world, c.code).length };
           });
-          const friendlies = await store.loadWorldAuxRaw("friendlies", multiSavePath).catch(() => null);
           sendJson(res, 200, { ok: true, myCountry, myLeagueId: ctx.leagueId, myTeamIndex: ctx.teamIndex, countries,
-            overview: World.countryOverview(world, country, { myCountry, friendlies, now }) });
+            overview: World.countryOverview(world, country, { myCountry }) });
           return;
         }
         if (route.pathname === "/api/world/managers") {
