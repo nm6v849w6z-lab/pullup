@@ -3425,7 +3425,9 @@ function pickWeightedNation(nations, r) {
 }
 
 const HOME_NATIONALITY_SHARE = 0.6;
-const YOUTH_HOME_NATIONALITY_SHARE = 0.85;
+// 100 % de nationaux au centre de formation (retour utilisateur 2026-09-30,
+// « les joueurs du centre de formation doivent être à 100 % des nationaux »).
+const YOUTH_HOME_NATIONALITY_SHARE = 1;
 const FRANCE_FOREIGN_WEIGHT = 12;
 function randomNationality(homeCountry = "fr") {
   if (!homeCountry || homeCountry === "fr" || !NATION_BY_CODE[homeCountry]) {
@@ -8511,7 +8513,7 @@ function generateYouthCandidate(now, recruiterLevel, country = "fr") {
       attrs[a] = clamp(Math.round(rand(31, 40) * tier), 1, 99);
     });
   }
-  // Centre de formation : surtout des jeunes du pays du club (85 %).
+  // Centre de formation : uniquement des jeunes du pays du club.
   const identity = generatePlayerIdentity(null, country);
   if (country && NATION_BY_CODE[country] && rand01() < YOUTH_HOME_NATIONALITY_SHARE && identity.nationality !== country) {
     const pool = NAME_POOLS[NATION_BY_CODE[country].pool] || NAME_POOLS.fr;
