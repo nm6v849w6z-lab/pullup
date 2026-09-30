@@ -5991,16 +5991,14 @@
   .qd-box .sl-fac .facility-card-category{font-size:11px !important;}
   @media(max-width:760px){
     .sl-hero{min-height:0;}
-    /* Téléphone : quartier plus grand, défilement horizontal au doigt
-       (centré sur la salle à l'ouverture, voir renderSalleHero). */
-    .sl-hero.sl-hero::after{background:linear-gradient(180deg, rgba(11,17,25,0) 0, rgba(11,17,25,0) 300px, #0b1119 360px);}
-    .sl-hero .sl-hero-visual{height:360px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
-    .sl-hero-visual .arena-card, .sl-hero-visual .arena-visual-wrap{width:780px; max-width:none;}
+    /* Téléphone : quartier entier dans la largeur, sans défilement (format
+       compact d'ArenaGen, voir salleCompactView), boutons sous le titre. */
     .sl-hero-content{max-width:none;}
     .qd-hint{display:none;}
-    .sl-hero .sl-hero-visual{height:330px;}
-    .sl-hero-visual .arena-card, .sl-hero-visual .arena-visual-wrap{width:700px;}
-    .sl-hero.sl-hero::after{background:linear-gradient(180deg, rgba(11,17,25,0) 0, rgba(11,17,25,0) 280px, #0b1119 330px);}
+    .sl-hero .sl-hero-visual{height:auto; overflow:visible;}
+    .sl-hero-visual .arena-card, .sl-hero-visual .arena-visual-wrap{width:100%; height:auto;}
+    .sl-hero-visual .arena-visual-wrap svg{height:auto; aspect-ratio:1.3; display:block;}
+    .sl-hero.sl-hero::after{display:none;}
     .qd-chips{display:flex; flex-wrap:wrap; gap:6px; margin:0 16px 16px; position:relative; z-index:2;}
     .qd-chip{display:inline-flex; align-items:center; gap:7px; padding:6px 8px 6px 11px; border-radius:999px; border:1px solid rgba(240,162,60,.55);
       background:rgba(13,19,29,.9); color:var(--ink); font:600 12.5px/1.2 inherit; cursor:pointer;}
@@ -12319,7 +12317,9 @@ const ArenaGen = (function () {
     let vx = (minX + maxX) / 2 - vw / 2, vy = (minY + maxY) / 2 - vh / 2;
     // Quartier : marge en haut à gauche pour le titre du bandeau de la page
     // Salle (le décor passe en dessous et à droite).
-    if (DX) {
+    // Format téléphone (options.compact) : quartier entier centré, sans marge
+    // pour le titre (placé sous le dessin).
+    if (DX && !options.compact) {
       const f = 1.2, nw = vw * f, nh = vh * f;
       vx -= (nw - vw) * 0.8; vy -= (nh - vh) * 0.75; vw = nw; vh = nh;
     }
@@ -12598,7 +12598,18 @@ const ArenaGen = (function () {
     }
 
     // Étiquettes du quartier (nom + niveau), au-dessus de tout, cliquables.
-    if (DX) {
+    if (DX && options.compact) {
+      // Téléphone : simple pastille (niveau ou « + ») sur chaque bâtiment,
+      // les noms sont dans les boutons sous le dessin.
+      const kk = vw / 185;
+      DX.labels.forEach((l) => {
+        const q = P(l.x, l.y, l.z), badge = l.empty ? '+' : l.lvl;
+        s += `<g class="qd-label qd-pin" data-district="${l.key}" transform="translate(${f1(q[0])},${f1(q[1])}) scale(${kk.toFixed(3)})">` +
+          `<title>${esc(l.name)}${l.empty ? ' · à construire' : ''}</title>` +
+          `<circle r="6.2" fill="rgba(13,19,29,.92)" stroke="${l.empty ? '#9aa8bd' : '#f0a23c'}" stroke-width=".8"${l.empty ? ' stroke-dasharray="2 1.3"' : ''}/>` +
+          `<text y="${l.empty ? 2.4 : 1.9}" text-anchor="middle" font-size="${l.empty ? 7.5 : (badge.length > 1 ? 5 : 5.8)}" font-weight="900" fill="${l.empty ? '#c7d0dc' : '#f0a23c'}" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">${esc(badge)}</text></g>`;
+      });
+    } else if (DX) {
       const kk = vw / 520;
       DX.labels.forEach((l) => {
         const q = P(l.x, l.y, l.z);
@@ -46373,6 +46384,15 @@ function salleRetiredJerseysHtml(team) {
 }
 
 // --- Bandeau d'en-tête -------------------------------------------------
+// Téléphone : quartier entier dans la largeur (format plus haut, pastilles).
+function salleCompactView() {
+  return !!(window.matchMedia && window.matchMedia("(max-width: 760px)").matches);
+}
+if (window.matchMedia) {
+  const mq = window.matchMedia("(max-width: 760px)");
+  const onChange = () => { const sec = document.getElementById("salleSection"); if (sec && sec.offsetParent !== null && typeof renderSalleSection === "function") renderSalleSection(); };
+  if (mq.addEventListener) mq.addEventListener("change", onChange); else if (mq.addListener) mq.addListener(onChange);
+}
 function renderSalleHero(info, stats) {
   const projectedRate = teamA.projectedAttendanceRate();
   const history = teamA.attendanceHistory || [];
@@ -46387,13 +46407,12 @@ function renderSalleHero(info, stats) {
     sponsor: sponsorNameForSlot(teamA, "salle"),
     billboard: sponsorNameForSlot(teamA, "panneau") || "",
     district: clubDistrictBuilder(teamA),
-    aspect: 2.1,
+    aspect: salleCompactView() ? 1.3 : 2.1,
+    compact: salleCompactView(),
   })).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
   visualHolder.innerHTML = `<div class="arena-card">` +
     `<div class="arena-visual-wrap" role="group" aria-label="${escapeHtml(teamArenaName(teamA))}, ${info.capacity.toLocaleString("fr-FR")} places, et les installations du club">${arenaSvg}</div>` +
     `</div>` + salleRetiredJerseysHtml(teamA);
-  // Téléphone : quartier défilable, centré sur la salle au départ.
-  (window.requestAnimationFrame || setTimeout)(() => { if (visualHolder.scrollWidth > visualHolder.clientWidth) visualHolder.scrollLeft = (visualHolder.scrollWidth - visualHolder.clientWidth) / 2; });
 
   const pips = ARENA_LEVELS.map(a => `<span class="${a.level <= info.level ? "on" : ""}"></span>`).join("");
   const nm = salleNextMatchInfo();
