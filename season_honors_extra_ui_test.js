@@ -48,6 +48,10 @@ const EMOJI = /\p{Extended_Pictographic}/u;
     const asgCard = doc.getElementById("allStarCard");
     check(!!asgCard && asgCard.querySelectorAll("li").length === 20 && asgCard.textContent.includes(`${asg.teams[0].score} – ${asg.teams[1].score}`), "Ligue : All-Star Game, 10 contre 10, score");
     check(!EMOJI.test(aw.textContent + asgCard.textContent), "aucun émoji");
+    // Ordre de la page Ligue (retour utilisateur 2026-09-30) : récompenses
+    // au-dessus des leaders, All-Star Game tout en bas après les leaders.
+    const stats = doc.getElementById("leagueStatsPanel");
+    check(!!(aw.compareDocumentPosition(stats) & 4) && !!(stats.compareDocumentPosition(asgCard) & 4), "Ligue : récompenses, puis leaders, puis All-Star Game");
     win.eval(`teamDetailSubView = "apercu"; showTeamDetail(${iB})`);
     const prof = await waitFor(() => doc.getElementById("managerProfileCard"), "profil du manager");
     check(/15 V – 3 D/.test(prof.textContent) && prof.querySelectorAll("tbody tr").length === 1, "profil du manager : bilan et saisons");

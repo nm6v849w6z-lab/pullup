@@ -7098,6 +7098,9 @@
       <!-- Récompenses de la saison + All-Star Game (renderLeagueHonorsPanel). -->
       <div id="leagueHonorsPanel"></div>
       <div id="leagueStatsPanel"></div>
+      <!-- All-Star Game tout en bas, après les leaders (retour utilisateur
+           2026-09-30). -->
+      <div id="leagueAllStarPanel"></div>
       <div class="actions">
         <button class="secondary" id="closeStandingsBtn">← Retour</button>
       </div>
@@ -27109,7 +27112,11 @@ function renderLeagueHonorsPanel() {
   const key = league.seasonId || `start:${league.calendarStartAt || 0}`;
   const sa = league.seasonAwards && league.seasonAwards.seasonId === key ? league.seasonAwards : null;
   const asg = league.allStarGame && league.allStarGame.seasonId === key ? league.allStarGame : null;
-  holder.innerHTML = seasonAwardsCardHtml(sa) + allStarCardHtml(asg);
+  // Récompenses : seulement une fois décernées (seasonAwardsCardHtml vide
+  // sinon), au-dessus des leaders ; All-Star Game après les leaders.
+  holder.innerHTML = seasonAwardsCardHtml(sa);
+  const asgHolder = document.getElementById("leagueAllStarPanel");
+  if (asgHolder) asgHolder.innerHTML = allStarCardHtml(asg);
 }
 
 // ---- Fiche d'un club humain : profil public du manager ----
@@ -46853,7 +46860,8 @@ function renderHistoireSection() {
   html += `<section class="lg-panel hc-panel" id="hcHallOfFame"><div class="lg-panel-title"><h2>Hall of Fame</h2></div>${hcHallOfFameHtml(team, idx)}</section>`;
   html += `</div><div class="hc-col">`;
   html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
-  html += `<section class="lg-panel hc-panel" id="hcSeasonAwards"><div class="lg-panel-title"><h2>Récompenses de la saison</h2>${league.seasonAwards ? `<span>Saison ${league.seasonAwards.seasonNumber} · ${escapeHtml(league.seasonAwards.divisionLabel || "")}</span>` : ""}</div>${seasonAwardsHtml()}</section>`;
+  // Récompenses de la saison : uniquement sur la page Ligue (retour
+  // utilisateur 2026-09-30), voir renderLeagueHonorsPanel.
   if (team.isHuman) html += `<section class="lg-panel hc-panel" id="hcAchievements"><div class="lg-panel-title"><h2>Succès du manager</h2></div>${managerAchievementsHtml(team)}</section>`;
   html += `</div></div>`;
   holder.innerHTML = html;

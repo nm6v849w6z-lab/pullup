@@ -73,14 +73,14 @@ const H = 3600 * 1000;
   const win = dom.window, doc = win.document;
   if (win.eval("currentVisiblePageId()") === "catchupSection") doc.getElementById("catchupContinueBtn").click();
   win.eval("TAB_HANDLERS.histoire()");
-  const aw = doc.getElementById("hcSeasonAwards");
-  assert.ok(aw && aw.textContent.includes("MVP de la saison") && aw.textContent.includes(mvp.playerName));
+  // Récompenses : plus dans l'Histoire du club, uniquement sur la page Ligue.
+  assert.ok(!doc.getElementById("hcSeasonAwards"), "pas de récompenses dans l'Histoire du club");
   const ach = doc.getElementById("hcAchievements");
   assert.ok(ach && ach.querySelectorAll(".ach.on").length === lyon.achievements.length && /Première saison/.test(ach.textContent));
   win.eval(`showPlayerDetail(${mvp.teamIdx}, ${JSON.stringify(mvp.playerId)})`);
   const det = doc.getElementById("playerDetailContent") || doc.body;
   assert.ok(/Carrière/.test(det.textContent) && /Distinctions/.test(det.textContent) && /MVP de la saison/.test(det.textContent), "fiche joueur : carrière et distinctions");
-  ok("navigateur : récompenses et succès dans l'Histoire du club, carrière et distinctions sur la fiche du MVP");
+  ok("navigateur : succès dans l'Histoire du club (récompenses sur la page Ligue), carrière et distinctions sur la fiche du MVP");
   dom.window.close();
   server.close();
   console.log("\n🏁 season_awards_test.js : tout est vert");
