@@ -189,13 +189,13 @@ async function main() {
     check(Accounts.findByManagerToken(acc4, newToken).discordUsername === "legacy_coach", "identifiant Discord désormais stocké");
 
     // --- Langue du compte (Accounts.langFor, POST /api/account/lang).
-    check(Accounts.langFor(null) === "en" && Accounts.langFor({ lang: "it" }) === "it" && Accounts.langFor({ lang: "de" }) === "en", "langFor : en par défaut, fr/en/it seulement");
+    check(Accounts.langFor(null) === "en" && Accounts.langFor({ lang: "it" }) === "it" && Accounts.langFor({ lang: "de" }) === "de" && Accounts.langFor({ lang: "ja" }) === "en", "langFor : en par défaut, langues prises en charge seulement");
     check(Accounts.langFor({ detectedLang: "en" }, { country: "fr" }) === "en" && Accounts.langFor({ lang: "fr", detectedLang: "en" }) === "fr", "langFor : choix du compte, puis langue détectée du navigateur");
     check(Accounts.langFor({}, { country: "it" }) === "it" && Accounts.langFor({}, { country: "fr" }) === "fr" && Accounts.langFor({}, { country: "us" }) === "en", "langFor : sinon la langue du pays du club");
     check(Accounts.langFor({}, { hint: "it", country: "fr" }) === "it", "langFor : l'indice de la requête passe avant le pays");
     r = await request(server, "GET", "/api/account/me", undefined, { "X-TipIn-Token": newToken });
     check(r.body.account.lang === null, "compte sans langue : lang null (le jeu enverra celle du navigateur)");
-    r = await request(server, "POST", "/api/account/lang", { lang: "de" }, { "X-TipIn-Token": newToken });
+    r = await request(server, "POST", "/api/account/lang", { lang: "ja" }, { "X-TipIn-Token": newToken });
     check(r.status === 400, "langue inconnue refusée");
     r = await request(server, "POST", "/api/account/lang", { lang: "it" }, { "X-TipIn-Token": newToken });
     check(r.status === 200 && r.body.persisted === true, "langue enregistrée dans le compte");

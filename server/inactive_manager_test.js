@@ -28,7 +28,9 @@ const ok = m => console.log("✅ " + m);
   await new Promise(r => server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${server.address().port}`;
   const call = async (method, p, body, headers = {}) => {
-    const res = await fetch(base + p, { method, headers: { "Content-Type": "application/json", ...headers }, body: body ? JSON.stringify(body) : undefined });
+    // Connection: close — le rattrapage de 45 jours sur les 17 pays dure plus
+    // longtemps que le keep-alive du serveur : pas de socket réutilisée périmée.
+    const res = await fetch(base + p, { method, headers: { "Content-Type": "application/json", Connection: "close", ...headers }, body: body ? JSON.stringify(body) : undefined });
     return { status: res.status, body: await res.json().catch(() => null) };
   };
   const career = store.createMultiManagerCareer(["Lyon Absent", "Paris Absent"], clock.now - 2 * D, "Lyon Absent");
