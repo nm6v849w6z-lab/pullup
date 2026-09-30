@@ -3372,7 +3372,11 @@
   .ach.on .ach-icon{background:rgba(240,162,60,.15); color:var(--amber);}
   .team-detail-foreign{font-size:.55em; font-weight:600; color:var(--ink-dim); margin-left:10px; white-space:nowrap;}
   .lg-results{margin-top:20px;}
-  .lg-res-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px;}
+  /* Toujours sur une seule ligne (retour utilisateur 2026-09-30) : une
+     colonne par match ; si la place manque (mobile), la ligne défile
+     horizontalement plutôt que de passer à la ligne. */
+  .lg-res-grid{display:grid; grid-auto-flow:column; grid-auto-columns:minmax(180px, 1fr); gap:12px; overflow-x:auto; scroll-snap-type:x proximity; padding-bottom:4px;}
+  .lg-res-card{scroll-snap-align:start;}
   .lg-res-card{background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 12px 8px; display:flex; flex-direction:column; gap:6px;}
   .lg-res-card.mine{border-color:var(--amber);}
   .lg-res-team{display:flex; align-items:center; gap:10px; min-width:0; color:var(--ink-dim);}
