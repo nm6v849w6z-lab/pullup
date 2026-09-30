@@ -89,7 +89,7 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
     const sentAt = Date.now();
     const mine = await waitFor(() => chat.querySelector(".lgc-msg.mine"), "message affiché");
     check(mine.querySelector(".lgc-text").textContent === "Salut <img src=x onerror=alert(1)> la ligue" && !mine.querySelector("img"), "texte affiché échappé (aucune balise interprétée)");
-    check(mine.querySelector(".lgc-by b").textContent === "Alpha CHAT", "auteur : nom du club");
+    check(mine.querySelector(".lgc-by .lgc-author").textContent === "Manager de Alpha CHAT" && mine.querySelector(".lgc-by small").textContent === "Alpha CHAT", "auteur : pseudo du manager (repli « Manager de <club> »), club en petit");
     check(input.value === "", "champ vidé après l'envoi");
     check(badge(docA, "lgcOpenBadge") === "", "son propre message ne compte jamais comme non lu");
 
@@ -135,7 +135,7 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
     docB.getElementById("lgcOpenBtn").click();
     await winB.__lastLeagueChat;
     const other = docB.querySelector("#leagueChat .lgc-msg");
-    check(other && !other.classList.contains("mine") && other.querySelector(".lgc-by b").textContent === "Alpha CHAT", "B voit le message d'Alpha");
+    check(other && !other.classList.contains("mine") && other.querySelector(".lgc-by small").textContent === "Alpha CHAT", "B voit le message d'Alpha");
     check(badge(docB, "lgcOpenBadge") === "", "B a ouvert le chat : 0 non-lu");
     docB.getElementById("lgcClose").click();
     await sleep(Math.max(0, 3100 - (Date.now() - sentAt)));

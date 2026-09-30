@@ -54,7 +54,7 @@ function typeAndSend(win, doc, text) {
     winA.eval(`showTeamDetail(${iB})`);
     docA.querySelector("#teamDetailContent .msg-team-cta button").click();
     await winA.__lastMsgNav;
-    check(docA.querySelector(".msg-thread-name").textContent === "Bravo MSG", "conversation avec Bravo ouverte");
+    check(docA.querySelector(".msg-thread-club").textContent === "Bravo MSG" && docA.querySelector(".msg-thread-name").textContent === "Manager de Bravo MSG", "conversation avec Bravo ouverte (manager sans pseudo : « Manager de Bravo MSG »)");
     check(docA.getElementById("msgSendBtn").disabled, "« Envoyer » désactivé tant que le message est vide");
     await typeAndSend(winA, docA, "Salut <b>Bravo</b>, ton pivot est à vendre ?");
     const bubble = await waitFor(() => docA.querySelector(".msg-row.mine .msg-bubble"), "message affiché côté A");
@@ -97,7 +97,7 @@ function typeAndSend(win, doc, text) {
     winA.eval(`showTeamDetail(${iB})`);
     docA.querySelector("#teamDetailContent .msg-team-cta button").click();
     await winA.__lastMsgNav;
-    check(!docA.getElementById("messagesSection").classList.contains("hidden") && docA.querySelector(".msg-thread-name").textContent === "Bravo MSG", "le bouton ouvre la conversation");
+    check(!docA.getElementById("messagesSection").classList.contains("hidden") && docA.querySelector(".msg-thread-club").textContent === "Bravo MSG", "le bouton ouvre la conversation");
 
     // --- B signale puis bloque A.
     docB.querySelector(".msg-row:not(.mine) [data-msg-report]").click();

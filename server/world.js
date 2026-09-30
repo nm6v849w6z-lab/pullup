@@ -207,6 +207,22 @@ async function isClubNameTakenInWorld(world, savePath, name) {
   return false;
 }
 
+// Pseudo de manager déjà pris dans le monde (voir Engine.checkManagerPseudo) :
+// comparaison sans casse ni accents, clubs HUMAINS seulement (un club rendu
+// à l'IA libère le pseudo). `except` : { leagueId, idx } du demandeur.
+async function isManagerPseudoTakenInWorld(world, savePath, pseudo, except = null) {
+  const key = Engine.managerPseudoKey(pseudo);
+  const clash = (league, leagueId) => league.teams.some((t, idx) =>
+    t && t.isHuman && t.managerPseudo && Engine.managerPseudoKey(t.managerPseudo) === key &&
+    !(except && except.leagueId === leagueId && except.idx === idx));
+  if (!world) return false;
+  for (const entry of world.leagues) {
+    const league = await loadLeague(world, entry.id, savePath);
+    if (league && clash(league, entry.id)) return true;
+  }
+  return false;
+}
+
 // Donne un club à un nouveau manager dans `country` : reprise du club CPU le
 // plus faible du championnat le plus HAUT qui en a encore un ; si le pays
 // est plein, ouvre le championnat suivant (voir nextSlot) et y place le
@@ -438,6 +454,9 @@ function releaseClubToCpu(world, league, idx, now, reason) {
   team.isHuman = false;
   team.isAdmin = false;
   team.managerLinkToken = null;
+  // Le pseudo appartient au manager, pas au club : un club IA n'en a pas.
+  team.managerPseudo = null;
+  team.managerPseudoChangedAt = null;
   team.plannedTactics = {};
   team.ordresValidatedRound = null;
   if (typeof team.autoAssignLineup === "function") team.autoAssignLineup();
@@ -1004,7 +1023,7 @@ module.exports = {
   divisionMovesFor,
   WORLD_VERSION, DEFAULT_COUNTRY,
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
-  leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,
+  leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld, isManagerPseudoTakenInWorld,
   isOpenCountry, publicCountries,
   NationalCup, WorldMarket, WorldFriendlies, divisionLabel,
   countryOverview, countryTitles,

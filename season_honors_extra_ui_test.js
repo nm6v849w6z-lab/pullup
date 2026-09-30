@@ -54,7 +54,11 @@ const EMOJI = /\p{Extended_Pictographic}/u;
     check(!!(aw.compareDocumentPosition(stats) & 4) && !!(stats.compareDocumentPosition(asgCard) & 4), "Ligue : récompenses, puis leaders, puis All-Star Game");
     win.eval(`teamDetailSubView = "apercu"; showTeamDetail(${iB})`);
     const prof = await waitFor(() => doc.getElementById("managerProfileCard"), "profil du manager");
-    check(/15 V – 3 D/.test(prof.textContent) && prof.querySelectorAll("tbody tr").length === 1, "profil du manager : bilan et saisons");
+    check(/15 V – 3 D/.test(prof.textContent) && /1 \/ \d+ succès/.test(prof.textContent), "fiche d'équipe : carte compacte du manager (bilan, succès)");
+    // Profil complet (2026-09-30) : saison en cours + saison archivée.
+    prof.querySelector(".mp-more").click();
+    const page = await waitFor(() => !doc.getElementById("managerProfileSection").classList.contains("hidden") && doc.getElementById("managerProfileContent"), "page profil");
+    check(page.querySelectorAll(".mp-table tbody tr").length === 2 && /Saison 1/.test(page.textContent), "profil du manager : saison par saison");
     const cpu = league.teams.findIndex(t => !t.isHuman);
     win.eval(`showTeamDetail(${cpu})`);
     await sleep(50);
@@ -62,8 +66,10 @@ const EMOJI = /\p{Extended_Pictographic}/u;
     win.eval(`pendingEvents = [{ type: "all-star-game", score: [${asg.teams[0].score}, ${asg.teams[1].score}], mvp: ${JSON.stringify(asg.mvp)} }]; showCatchupSummaryIfAny();`);
     check(doc.getElementById("catchupContent").textContent.includes(asg.mvp.name), "rattrapage : carte All-Star Game");
     win.eval("TAB_HANDLERS.histoire()");
-    const ach = await waitFor(() => doc.getElementById("hcAchievements"), "succès");
-    check(!EMOJI.test(ach.textContent) && ach.querySelectorAll("svg").length > 0, "Succès du manager sans émoji (icônes SVG)");
+    check(!doc.getElementById("hcAchievements") && !/Succès du manager/.test(doc.getElementById("histoireContent").textContent), "Histoire du club : plus de succès du manager (déplacés sur son profil)");
+    win.eval(`showManagerProfile(${iB})`);
+    const ach = await waitFor(() => doc.getElementById("mpAchievements"), "succès");
+    check(!EMOJI.test(ach.textContent) && ach.querySelectorAll("svg").length > 0 && ach.querySelectorAll(".ach.on").length === 1, "Succès du manager sur son profil, sans émoji (icônes SVG)");
     console.log("\n🏁 Récompenses, All-Star Game et profil du manager affichés.");
   } finally { if (dom) dom.window.close(); server.close(); }
   process.exit(0);

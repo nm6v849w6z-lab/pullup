@@ -1885,6 +1885,49 @@ function containsBannedWord(text) {
 }
 
 // ---------------------------------------------------------------------
+// Pseudo du manager (2026-09-30, page « Profil du manager ») : le nom
+// public d'un manager humain, choisi par lui (Paramètres › Mon compte),
+// JAMAIS son email ni son nom réel. Affiché seulement sur la fiche
+// d'équipe, la messagerie, les interviews relues et le chat de la ligue
+// (pas dans les classements ni les en-têtes de match). 3 à 20 caractères
+// (lettres, chiffres, « _ », « - », « . »), unique dans tout le monde
+// (comparaison sans casse ni accents), pas d'insulte (containsBannedWord),
+// un changement tous les 30 jours — même règle que le trigramme : le
+// premier choix ne lance pas le délai. `null` = pas encore choisi :
+// affichage « Manager de <club> ». Club IA : aucun nom de manager.
+// ---------------------------------------------------------------------
+const MANAGER_PSEUDO_MIN_LENGTH = 3;
+const MANAGER_PSEUDO_MAX_LENGTH = 20;
+const MANAGER_PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 3600 * 1000;
+const MANAGER_PSEUDO_RESERVED = ["admin", "administrateur", "moderateur", "moderation", "hoopmanager", "pullup", "systeme", "system", "ia", "cpu", "support", "staff"];
+function managerPseudoKey(value) {
+  return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+function isValidManagerPseudo(value) {
+  return typeof value === "string" && value.length >= MANAGER_PSEUDO_MIN_LENGTH && value.length <= MANAGER_PSEUDO_MAX_LENGTH &&
+    /^[\p{L}\p{N}_.\-]+$/u.test(value);
+}
+// { value } si le pseudo est acceptable, sinon { error } (message français).
+function checkManagerPseudo(raw) {
+  const value = typeof raw === "string" ? raw.trim().normalize("NFC") : "";
+  if (value.length < MANAGER_PSEUDO_MIN_LENGTH || value.length > MANAGER_PSEUDO_MAX_LENGTH) return { error: `Le pseudo doit faire entre ${MANAGER_PSEUDO_MIN_LENGTH} et ${MANAGER_PSEUDO_MAX_LENGTH} caractères.` };
+  if (!isValidManagerPseudo(value)) return { error: "Le pseudo ne peut contenir que des lettres, des chiffres et les signes _ - ." };
+  if (!/[\p{L}\p{N}]/u.test(value)) return { error: "Le pseudo doit contenir au moins une lettre ou un chiffre." };
+  const key = managerPseudoKey(value);
+  if (containsBannedWord(key) || MANAGER_PSEUDO_RESERVED.includes(key.replace(/[_.\-]/g, ""))) return { error: "Ce pseudo n'est pas autorisé." };
+  return { value };
+}
+function managerPseudoOf(team) {
+  return team && team.isHuman && isValidManagerPseudo(team.managerPseudo) ? team.managerPseudo : null;
+}
+// Nom affiché du manager d'un club : son pseudo, « Manager de <club> » s'il
+// n'en a pas encore choisi, `null` pour un club IA.
+function managerDisplayName(team) {
+  if (!team || !team.isHuman) return null;
+  return managerPseudoOf(team) || `Manager de ${team.name}`;
+}
+
+// ---------------------------------------------------------------------
 // Agrandissement LIBRE de la salle (retour utilisateur, 2026-09-27 : "il faut
 // que l'on puisse ajouter librement les places dans les gradins et pas les
 // constructions par niveau", "il faut quand même plafonner le nombre de
@@ -5323,6 +5366,10 @@ class Team {
     // lisibles pour les autres managers).
     this.trigram = null;
     this.trigramChangedAt = null;
+    // Pseudo du manager (voir checkManagerPseudo) et date du dernier
+    // changement (0 = premier choix, sans délai ; null = jamais choisi).
+    this.managerPseudo = null;
+    this.managerPseudoChangedAt = null;
     // Nom de salle personnalisé (retour communauté 2026-09 : "Modifier le
     // nom de sa salle") : `null` = nom du palier ARENA_LEVELS (voir
     // teamArenaName).
@@ -13663,6 +13710,8 @@ function serializeTeam(team) {
     isPaying: !!team.isPaying,
     trigram: team.trigram || null,
     trigramChangedAt: typeof team.trigramChangedAt === "number" ? team.trigramChangedAt : null,
+    managerPseudo: team.managerPseudo || null,
+    managerPseudoChangedAt: typeof team.managerPseudoChangedAt === "number" ? team.managerPseudoChangedAt : null,
     arenaName: team.arenaName || null,
     // Premium temporaire (voir Team.premiumUntil/hasActivePremium/
     // grantTemporaryPremium plus haut, DEV_NOTES.md point 11) : DOIT survivre
@@ -14290,6 +14339,8 @@ function teamFromSave(data) {
   team.scoutingPremium = false;
   team.trigram = isValidTrigram(data.trigram) ? data.trigram : null;
   team.trigramChangedAt = typeof data.trigramChangedAt === "number" ? data.trigramChangedAt : null;
+  team.managerPseudo = isValidManagerPseudo(data.managerPseudo) ? data.managerPseudo : null;
+  team.managerPseudoChangedAt = typeof data.managerPseudoChangedAt === "number" ? data.managerPseudoChangedAt : null;
   team.arenaName = typeof data.arenaName === "string" && data.arenaName.trim() ? data.arenaName.trim().slice(0, ARENA_NAME_MAX_LENGTH) : null;
   team.premiumUntil = typeof data.premiumUntil === "number" ? data.premiumUntil : null;
   team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
@@ -16460,7 +16511,8 @@ return {
   SPONSOR_SLOTS, SPONSOR_TIERS, SPONSOR_PROFILES, SPONSOR_PROFILE_KEYS, SPONSOR_NAMES, SPONSOR_OFFER_TTL_MS, SPONSOR_OFFER_INTERVAL_MS, SPONSOR_REPUTATION_DEFAULT, SPONSOR_REPUTATION_MISS, SPONSOR_TERMINATION_WEEKS,
   sponsorTiersAvailable, sponsorActiveContractForSlot, sponsorNameForSlot, generateSponsorOffer, refreshSponsorOffers, acceptSponsorOffer, declineSponsorOffer, sponsorTerminationFee, terminateSponsorContract, collectSponsorIncome, applySponsorWinPrimes, settleSponsorsAtSeasonEnd,
   CLUB_RECORD_LABELS, cupResultForTeam, playoffResultForTeam, seasonPlayerTotalsForTeam, seasonSummaryForTeam, seasonRecordCandidatesForTeam, mergeClubRecords, liveClubRecords, liveAllTimePlayers, archiveSeasonForTeam, HALL_OF_FAME_MAX, worldPlayerRankings, worldRankForPlayer,
-  TRIGRAM_CHANGE_COOLDOWN_MS, ARENA_NAME_MAX_LENGTH, TRIGRAM_BANNED, isValidTrigram, defaultTrigramForName, teamTrigram, teamArenaName, containsBannedWord, ticketPriceComfortFactor, SEAT_CATEGORIES, seatCategoryInfo,
+  TRIGRAM_CHANGE_COOLDOWN_MS, ARENA_NAME_MAX_LENGTH, TRIGRAM_BANNED, isValidTrigram, defaultTrigramForName, teamTrigram, teamArenaName, containsBannedWord, ticketPriceComfortFactor,
+  MANAGER_PSEUDO_MIN_LENGTH, MANAGER_PSEUDO_MAX_LENGTH, MANAGER_PSEUDO_CHANGE_COOLDOWN_MS, managerPseudoKey, isValidManagerPseudo, checkManagerPseudo, managerPseudoOf, managerDisplayName, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel,
   JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, JERSEY_TWO_TONE_SETS, defaultAwayJerseyColor, MAX_TEAM_LOGO_DATA_URL_LENGTH,
   // Interviews de jalon + MVP automatique (retour utilisateur, 2026-09 : voir
