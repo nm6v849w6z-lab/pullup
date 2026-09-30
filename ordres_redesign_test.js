@@ -215,6 +215,37 @@ console.log("✅ État 'Ordres validés' après un clic sur Valider les ordres."
   console.log("✅ « Annuler » rétablit les ordres d'origine :", rhythmBefore, "/ meneur", pgBefore);
 }
 
+// 7 ter) Note PAR POSTE sur le terrain (retour utilisateur 2026-09-30 :
+// "il faudrait que le jeu calcule une note par poste") : titulaire,
+// remplaçant et réserviste notés AU POSTE de la carte ; alerte « Hors
+// poste » quand la note ici est au moins COMPO_OFF_POSITION_GAP points sous
+// celle du meilleur poste.
+{
+  const cardOf = pos => doc.querySelector(`#ordresCardCinq .cp-card[data-pos="${pos}"]`);
+  win.eval("POSITIONS").forEach(pos => {
+    const expected = win.eval(`(() => { const ids = teamA.slotPlayerIds(${JSON.stringify(pos)}); return ids.map(id => Math.round(positionRating(teamA.players.find(p => p.id === id), ${JSON.stringify(pos)}))); })()`);
+    const shown = [Number(cardOf(pos).querySelector(".cp-ovr").textContent), ...[...cardOf(pos).querySelectorAll(".cp-sub-ovr")].map(e => Number(e.textContent))];
+    if (JSON.stringify(shown) !== JSON.stringify(expected)) throw new Error(`❌ ${pos} : notes affichées ${JSON.stringify(shown)}, attendu (note au poste) ${JSON.stringify(expected)}.`);
+  });
+  console.log("✅ Cartes du terrain : notes AU POSTE pour titulaire, remplaçant et réserviste.");
+  // Un meneur de métier aligné pivot : écart assez grand pour l'alerte.
+  const off = win.eval(`(() => {
+    const p = teamA.players.slice().sort((a, b) => (positionRating(b, bestPosition(b)) - positionRating(b, "Pivot")) - (positionRating(a, bestPosition(a)) - positionRating(a, "Pivot")))[0];
+    p.attrs.pass = 95; p.attrs.dribble = 95; p.attrs.speed = 95; p.attrs.rebound = 5; p.attrs.block = 5; p.attrs.strength = 5;
+    teamA.setStarter("Pivot", p.id); renderOrdresGrid();
+    const best = bestPosition(p);
+    return { name: p.name, here: Math.round(positionRating(p, "Pivot")), there: Math.round(positionRating(p, best)), best: POS_SHORT[best] };
+  })()`);
+  const warn = [...cardOf("Pivot").querySelectorAll(".cp-warn")].map(w => w.textContent).find(t => t.startsWith("Hors poste"));
+  const expectedWarn = `Hors poste : ${off.here} ici, ${off.there} en ${off.best}`;
+  console.log("Alerte hors poste :", warn);
+  if (off.there - off.here < win.eval("COMPO_OFF_POSITION_GAP") || warn !== expectedWarn) throw new Error(`❌ Alerte hors poste attendue « ${expectedWarn} », obtenu « ${warn} ».`);
+  if (Number(cardOf("Pivot").querySelector(".cp-ovr").textContent) !== off.here) throw new Error("❌ La carte Pivot devrait afficher la note du joueur AU POSTE de pivot.");
+  const rosterRow = [...doc.querySelectorAll("#ordresCardConvocation .conv-row")].find(r => r.querySelector(".conv-name").firstChild.textContent === off.name);
+  if (Number(rosterRow.querySelector(".conv-ovr").textContent) !== off.here || rosterRow.querySelector(".conv-pos").textContent !== off.best) throw new Error("❌ Liste de l'effectif : note au poste tenu et code du meilleur poste attendus.");
+  console.log("✅ « Hors poste » piloté par l'écart avec le meilleur poste ; liste de l'effectif : note au poste tenu + meilleur poste.");
+}
+
 // 8) Plus de « Réinitialiser ma carrière » nulle part (carrière solo
 // supprimée, 2026-09-29).
 if (doc.getElementById("resetCareerLink") || doc.body.textContent.includes("Réinitialiser ma carrière")) {
