@@ -520,10 +520,17 @@
   #prepSection .prep-def-stack{display:flex; flex-direction:column; gap:22px;}
   #prepSection .prep-columns.prep-grid4{grid-template-columns:repeat(2, minmax(0, 1fr)); align-items:stretch;}
   #prepSection .prep-grid4 > *{min-width:0;}
-  #prepSection .prep-grid4 > .prep-def-stack > .ordres-card,
-  #prepSection .prep-grid4 > .lineup-minutes-host > .ordres-card{flex:1;}
-  #prepSection .prep-grid4 > .lineup-minutes-host{display:flex; flex-direction:column;}
-  @media(max-width:900px){ #prepSection .prep-columns.prep-grid4{grid-template-columns:minmax(0, 1fr);} }
+  #prepSection .prep-grid4 > .prep-col{display:flex; flex-direction:column; gap:22px; min-width:0;}
+  #prepSection .prep-col > *{min-width:0;}
+  #prepSection .prep-col > .lineup-minutes-host{display:flex; flex-direction:column;}
+  @media(max-width:900px){
+    #prepSection .prep-columns.prep-grid4{grid-template-columns:minmax(0, 1fr);}
+    #prepSection .prep-grid4 > .prep-col{display:contents;}
+    #prepSection .prep-col > #ordresCardAttaque{order:1;}
+    #prepSection .prep-col > .prep-def-stack{order:2;}
+    #prepSection .prep-col > .lineup-minutes-host{order:3;}
+    #prepSection .prep-col > .tactic-confirmee-block{order:4;}
+  }
   #prepSection .lineup-editor{margin-top:0; display:flex; flex-direction:column; gap:22px;}
   .ordres-card{
     background:var(--panel); border:none; border-radius:16px; padding:22px;
@@ -554,10 +561,7 @@
   /* Idem pour les autres briques de la grille (Attaque, et les enveloppes
      de Défense / Temps de jeu, qui sont les vrais éléments de la grille :
      sur la carte elle-même, dans une colonne flex, ça la rétrécissait). */
-  #prepSection .prep-grid4 > .ordres-card.tactic-confirmee-block,
-  #prepSection .prep-grid4 > #ordresCardAttaque,
-  #prepSection .prep-grid4 > .prep-def-stack,
-  #prepSection .prep-grid4 > .lineup-minutes-host{align-self:start;}
+  #prepSection .prep-grid4 > .prep-col{align-self:start;}
   #prepSection .ordres-settings-grid-nested.tactic-confirmee-block{padding-top:18px; border-top:1px solid var(--line-soft);}
 
   /* Boutons segmentés (réglages à 2-3 valeurs). */
@@ -35026,6 +35030,17 @@ function buildTeamPanel(team, side, opts = {}) {
   const columnsWrap = document.createElement("div");
   columnsWrap.className = "prep-columns prep-grid4";
   panel.appendChild(columnsWrap);
+  // Deux colonnes indépendantes sur ordinateur (retour utilisateur
+  // 2026-09-30 : « remonte temps de jeu vers la brique attaque ») : Attaque
+  // puis Temps de jeu à gauche, Défense puis Postes à surveiller à droite,
+  // sans trou sous Attaque quand Défense est plus haute. Sous 900 px, les
+  // colonnes s'effacent (display:contents) et `order` remet Attaque,
+  // Défense, Temps de jeu, Postes à surveiller.
+  const colLeft = document.createElement("div");
+  colLeft.className = "prep-col prep-col--left";
+  const colRight = document.createElement("div");
+  colRight.className = "prep-col prep-col--right";
+  columnsWrap.append(colLeft, colRight);
 
   const syncField = (field, value) => { if (editable && team === teamA) syncTacticsToServer({ [field]: value }); };
 
@@ -35113,7 +35128,7 @@ function buildTeamPanel(team, side, opts = {}) {
   // =================== ATTAQUE ===================
   const prioCount = makeAside();
   const attaque = makeCard("ordresCardAttaque", "Attaque", prioCount);
-  columnsWrap.appendChild(attaque);
+  colLeft.appendChild(attaque);
 
   const prioField = addField(attaque, "Priorités offensives", "ordres-field-wide");
   const tWrap = document.createElement("div");
@@ -35204,7 +35219,7 @@ function buildTeamPanel(team, side, opts = {}) {
   // face de Temps de jeu + Postes à surveiller).
   const defStack = document.createElement("div");
   defStack.className = "prep-def-stack";
-  columnsWrap.appendChild(defStack);
+  colRight.appendChild(defStack);
   defStack.appendChild(defense);
   const defenseGrid = document.createElement("div");
   defenseGrid.className = "ordres-settings-grid";
@@ -35340,8 +35355,8 @@ function buildTeamPanel(team, side, opts = {}) {
   minutesHost.className = "lineup-minutes-host";
   refreshLineupEditor = () => renderLineupEditor(team, hint, { onDirty, readonly: !editable, minutesContainer: minutesHost });
   refreshLineupEditor();
-  if (editable) columnsWrap.appendChild(minutesHost);
-  columnsWrap.appendChild(adversaires);
+  if (editable) colLeft.appendChild(minutesHost);
+  colRight.appendChild(adversaires);
 
   applyTierVisibility();
   return panel;
