@@ -551,7 +551,13 @@
   /* Hauteur à son contenu, pas étirée à celle de « Temps de jeu » (retour
      utilisateur 2026-09-30 : « je préfère avoir du vide sous la brique que
      dans la brique »). */
-  #prepSection .ordres-card.tactic-confirmee-block{align-self:start;}
+  /* Idem pour les autres briques de la grille (Attaque, et les enveloppes
+     de Défense / Temps de jeu, qui sont les vrais éléments de la grille :
+     sur la carte elle-même, dans une colonne flex, ça la rétrécissait). */
+  #prepSection .prep-grid4 > .ordres-card.tactic-confirmee-block,
+  #prepSection .prep-grid4 > #ordresCardAttaque,
+  #prepSection .prep-grid4 > .prep-def-stack,
+  #prepSection .prep-grid4 > .lineup-minutes-host{align-self:start;}
   #prepSection .ordres-settings-grid-nested.tactic-confirmee-block{padding-top:18px; border-top:1px solid var(--line-soft);}
 
   /* Boutons segmentés (réglages à 2-3 valeurs). */
