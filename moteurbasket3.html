@@ -5994,6 +5994,8 @@
     /* Téléphone : quartier entier dans la largeur, sans défilement (format
        compact d'ArenaGen, voir salleCompactView), boutons sous le titre. */
     .sl-hero-content{max-width:none;}
+    .sl-hero .sl-hero-content{padding-bottom:10px;}
+    .sl-hero-content #arenaCurrentPanel:empty{display:none;}
     .qd-hint{display:none;}
     .sl-hero .sl-hero-visual{height:auto; overflow:visible;}
     .sl-hero-visual .arena-card, .sl-hero-visual .arena-visual-wrap{width:100%; height:auto;}
@@ -12291,10 +12293,9 @@ const ArenaGen = (function () {
     // Panneau publicitaire sur pied devant la salle (emplacement sponsor
     // « panneau ») : nom du sponsor, ou « ESPACE À LOUER » (billboard: "").
     const billboard = options.billboard == null ? null : (String(options.billboard).toUpperCase().slice(0, 22) || 'ESPACE À LOUER');
-    // Sur le flanc droit de la salle, face au parking : dans la bande visible
-    // du bandeau de la page Salle (le bas de la scène y est coupé et la
-    // gauche assombrie par le titre).
-    const BBX = W / 2 + 3.2, BBY = -D / 2 + 10;
+    // Au bout du parking (côté route du fond), tourné vers +x : ne cache ni
+    // la salle ni le sponsor peint sur son flanc.
+    const BBX = W / 2 + 34, BBY = -D / 2 + 3;
     const aspect = options.aspect || 1.9;
     const dusk = (options.mood || 'dusk') !== 'day';
     const r = rng(options.seed ?? 11);
@@ -12309,6 +12310,7 @@ const ArenaGen = (function () {
     const frame = [];
     if (DX) DX.frame.forEach((q) => frame.push(P(q[0], q[1], q[2] || 0)));
     for (const x of [-W / 2, W / 2]) for (const y of [-D / 2, D / 2]) for (const z of [0, H]) frame.push(P(x, y, z));
+    if (billboard) frame.push(P(BBX + 3, BBY - 8, 12), P(BBX + 3, BBY + 8, 0));
     frame.push(P(-14, D / 2 + 14), P(14, D / 2 + 14), P(0, 0, H + (L.scoreboard ? 10 : 0)));
     let minX = Math.min(...frame.map((q) => q[0])), maxX = Math.max(...frame.map((q) => q[0]));
     let minY = Math.min(...frame.map((q) => q[1])), maxY = Math.max(...frame.map((q) => q[1]));
