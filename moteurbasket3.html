@@ -2747,8 +2747,14 @@
   .pdp2-pips span{width:20px; height:8px; border-radius:2px; background:var(--line);}
   .pdp2-pips span.on{background:var(--amber);}
   #pdpSaleCard, #pdpPersoCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
-  .pdp2-id-visual{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:10px;}
-  .pdp2-jersey svg{display:block; filter:drop-shadow(0 4px 10px rgba(0,0,0,.35));}
+  /* Maillot floqué en pastille au coin bas-droit de l'avatar (retour
+     utilisateur 2026-09-30 : empilé sous l'avatar, « sur un grand écran
+     c'est pas ouf du tout ») : le bloc identité garde la hauteur de
+     l'avatar et le nom reste aligné dessus. */
+  .pdp2-id-visual{flex:0 0 auto; position:relative;}
+  .pdp2-id:has(.pdp2-jersey){gap:34px;}
+  .pdp2-jersey{position:absolute; right:-18px; bottom:-14px;}
+  .pdp2-jersey svg{display:block; width:58px; height:58px; filter:drop-shadow(0 3px 8px rgba(0,0,0,.45));}
 
   @media (max-width:1180px){
     .pdp2-hero{flex-wrap:wrap;}
@@ -2767,7 +2773,9 @@
        2026-09-30, téléphone) : ramené à la taille du cadre. */
     .pdp2-avatar .player-avatar{width:76px !important; height:82px !important;}
     .pdp2-avatar .player-avatar svg{width:100%; height:100%;}
-    .pdp2-jersey svg{width:68px; height:68px;}
+    .pdp2-jersey{right:-14px; bottom:-12px;}
+    .pdp2-jersey svg{width:48px; height:48px;}
+    .pdp2-id:has(.pdp2-jersey){gap:26px;}
     .pdp2-name{font-size:30px;}
     .pdp2-cond{flex-basis:100%; padding:0; border-right:none;}
     .pdp2-rating{flex-basis:100%; flex-direction:row; justify-content:flex-start;}

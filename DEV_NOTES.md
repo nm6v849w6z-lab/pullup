@@ -77,6 +77,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   forfait pour « pas de pivot » avec au moins 5 joueurs, validé par
   l'utilisateur). Effectif en un seul bloc.
 
+- **✅ EN PROD (2026-09-30) — langue des e-mails/notifications, maillot** :
+  un compte sans langue choisie ne reçoit plus tout en français. Ordre
+  (server/accounts.js:langFor) : choix du compte → langue du navigateur
+  notée automatiquement (`detectedLang` : inscription, connexion, Discord,
+  ouverture du jeu) → langue de la requête → pays du club (fr/it/us→en) →
+  anglais. Fiche joueur : maillot floqué en pastille au coin de l'avatar
+  (plus empilé dessous).
+
 - **✅ EN PROD (2026-09-30, abfa17d) — suite du jour** : /api/save n'envoie plus
   que les caractéristiques révélées des autres clubs (niveau adverse et
   « ventes comparables » calculés côté serveur) ; stats de la Supercoupe
