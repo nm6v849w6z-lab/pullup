@@ -61,8 +61,13 @@ if (historyLength !== 10) throw new Error(`❌ BUG NON CORRIGÉ : l'historique d
 
 clickTab("effectif"); // force un changement d'onglet
 clickTab("salle"); // puis revient sur Salle pour re-déclencher renderSalleSection
-const lines = [...doc.querySelectorAll("#attendanceHistoryHolder .gain-line")];
-console.log("Lignes affichées :", lines.length, "(attendu 10)");
+// La carte n'affiche plus que les 2 derniers matchs (retour utilisateur
+// 2026-09-30) ; l'historique complet s'ouvre dans une fenêtre.
+const cardLines = doc.querySelectorAll("#attendanceHistoryHolder .gain-line").length;
+if (cardLines !== 2) throw new Error(`❌ La carte devrait afficher les 2 derniers matchs, obtenu ${cardLines}.`);
+const popupOf = (w, sel) => { w.eval("showAttendanceModal()"); const r = [...w.document.querySelectorAll("#attendanceAllOverlay " + sel)]; w.eval("closeAttendanceModal()"); return r; };
+const lines = popupOf(win, ".gain-line");
+console.log("Lignes affichées dans la fenêtre :", lines.length, "(attendu 10)");
 if (lines.length !== 10) throw new Error(`❌ 10 entrées en mémoire devraient produire 10 lignes affichées, obtenu ${lines.length}.`);
 console.log("Première ligne (devrait être le match le PLUS RÉCENT, vs Brest) :", lines[0].textContent.trim());
 if (!lines[0].textContent.includes("Brest")) {
@@ -83,7 +88,7 @@ console.log("✅ Historique plafonné à 10 entrées, le plus récent affiché e
 // catégorie place") sous chaque ligne, dont la somme doit retomber
 // exactement sur le total affiché sur la ligne elle-même.
 // ---------------------------------------------------------------------
-const breakdowns = [...doc.querySelectorAll("#attendanceHistoryHolder .attendance-breakdown")];
+const breakdowns = popupOf(win, ".attendance-breakdown");
 console.log("\nLignes de détail par catégorie affichées :", breakdowns.length, "(attendu 10, une par match)");
 if (breakdowns.length !== 10) throw new Error(`❌ BUG NON CORRIGÉ : chaque match de l'historique devrait afficher un détail par catégorie de place, obtenu ${breakdowns.length} sur 10.`);
 ["Gradins populaires", "Tribune couverte", "Loges VIP"].forEach(catName => {
@@ -136,7 +141,7 @@ const dom2 = await openGame(html, baseUrl);
 const doc2 = dom2.window.document;
 const win2 = dom2.window;
 [...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "salle").click();
-const linesAfterReload = [...doc2.querySelectorAll("#attendanceHistoryHolder .gain-line")];
+const linesAfterReload = popupOf(win2, ".gain-line");
 console.log("Après rechargement complet, lignes affichées :", linesAfterReload.length, "(attendu 10)");
 if (linesAfterReload.length !== 10) throw new Error(`❌ L'historique d'affluence devrait survivre à un rechargement complet de la page, obtenu ${linesAfterReload.length} lignes au lieu de 10.`);
 if (!linesAfterReload[0].textContent.includes("Brest")) {
@@ -144,7 +149,7 @@ if (!linesAfterReload[0].textContent.includes("Brest")) {
 }
 console.log("✅ L'historique d'affluence survit bien à un rechargement complet de la page, dans le bon ordre.");
 
-const breakdownsAfterReload = [...doc2.querySelectorAll("#attendanceHistoryHolder .attendance-breakdown")];
+const breakdownsAfterReload = popupOf(win2, ".attendance-breakdown");
 console.log("Détail par catégorie après rechargement :", breakdownsAfterReload.length, "(attendu 10, le détail doit survivre lui aussi)");
 if (breakdownsAfterReload.length !== 10) {
   throw new Error(`❌ BUG NON CORRIGÉ : le détail par catégorie de place devrait aussi survivre au rechargement, obtenu ${breakdownsAfterReload.length} sur 10.`);
