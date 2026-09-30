@@ -87,31 +87,37 @@ async function waitFor(fn, label, tries = 60) { for (let i = 0; i < tries; i++) 
   const token = league.teams[a].managerLinkToken;
   let dom = await openGame(html, `${baseUrl}?m=${token}`);
   let doc = dom.window.document, win = dom.window;
-  win.eval("showSettingsModal()");
+  // Onglet Personnalisation (retour utilisateur 2026-09-30) : Paramètres →
+  // Club ne garde qu'un renvoi.
+  win.eval("showSettingsModal('club')");
+  check(!doc.getElementById("clubTrigramInput") && /Personnalisation/.test(doc.getElementById("settingsClubBlock").textContent), "Paramètres → Club : simple renvoi vers Personnalisation");
+  doc.getElementById("settingsOpenPersoBtn").click();
+  check(!doc.getElementById("settingsModalOverlay") && !doc.getElementById("personnalisationSection").classList.contains("hidden"), "le bouton ouvre l'onglet Personnalisation");
   const input = await waitFor(() => doc.getElementById("clubTrigramInput"), "champ Trigramme");
   check(input.value === "BK", "le champ Trigramme affiche le sigle actuel (BK)");
   input.value = "KNG";
   doc.getElementById("clubTrigramSaveBtn").click();
-  await waitFor(() => /déjà utilisé/.test((doc.getElementById("settingsTrigramFeedback") || {}).textContent || ""), "erreur d'unicité affichée");
+  await waitFor(() => /déjà utilisé/.test((doc.getElementById("clubTrigramFeedback") || {}).textContent || ""), "erreur d'unicité affichée");
   check(true, "KNG (pris par B) : message d'erreur affiché");
   doc.getElementById("clubTrigramInput").value = "BKG";
   doc.getElementById("clubTrigramSaveBtn").click();
   await waitFor(() => win.eval("teamA.trigram") === "BKG", "trigramme appliqué côté client");
-  await waitFor(() => /BKG/.test((doc.querySelector("#settingsClubBlock svg text") || {}).textContent || ""), "logo type mis à jour dans Paramètres");
+  await waitFor(() => /BKG/.test((doc.querySelector("#persoIdentityCard .club-logo-preview svg text") || {}).textContent || ""), "logo type mis à jour dans Personnalisation");
   check(true, "le logo type affiche BKG");
   check(!doc.getElementById("clubTrigramInput").disabled, "1er changement libre : le champ reste modifiable");
   doc.getElementById("clubTrigramInput").value = "BKX";
   doc.getElementById("clubTrigramSaveBtn").click();
   await waitFor(() => win.eval("teamA.trigram") === "BKX", "2e changement appliqué côté client");
-  check(doc.getElementById("clubTrigramInput").disabled && /jour/.test(doc.getElementById("settingsClubBlock").textContent), "champ verrouillé et délai affiché après le 2e changement");
+  check(doc.getElementById("clubTrigramInput").disabled && /jour/.test(doc.getElementById("persoIdentityCard").textContent), "champ verrouillé et délai affiché après le 2e changement");
   check(!doc.getElementById("clubTrigramResetBtn").disabled, "« Par défaut » reste possible pendant le délai");
 
   doc.getElementById("salleArenaNameInput").value = "Le Chaudron";
   doc.getElementById("salleArenaNameSaveBtn").click();
   await waitFor(() => win.eval("teamA.arenaName") === "Le Chaudron", "nom de salle appliqué");
-  win.eval("closeSettingsModal(); TAB_HANDLERS.salle()");
+  check(/Le Chaudron/.test(doc.querySelector("#persoIdentityCard .pz-scorebug").textContent), "aperçu du tableau d'affichage : nom de salle à jour");
+  win.eval("TAB_HANDLERS.salle()");
   check(doc.querySelector(".sl-hero-title").textContent === "Le Chaudron", "la page Salle s'intitule « Le Chaudron »");
-  check(!doc.getElementById("salleRenameToggle") && !doc.getElementById("clubIdentityPanel"), "aucun formulaire dans la page Salle (tout est dans Paramètres)");
+  check(!doc.getElementById("salleRenameToggle") && !doc.querySelector("#salleSection #salleArenaNameInput, #salleSection #clubIdentityPanel"), "aucun formulaire dans la page Salle (tout est dans Personnalisation)");
 
   // Rechargement : tout persiste (serveur).
   dom.window.close();
