@@ -83,6 +83,23 @@ function discordConfigured() {
   return !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET);
 }
 
+// Code d'invitation (retour utilisateur 2026-09-29 : « ajoute un code
+// d'invitation sur la page d'inscription pour le moment ») : tant que
+// BASKET_INVITE_CODE est défini (plusieurs codes possibles, séparés par des
+// virgules), toute NOUVELLE inscription (email ou 1re connexion Discord)
+// doit en fournir un ; casse et espaces ignorés. Variable absente = ouvert.
+// La connexion d'un compte existant n'est jamais concernée.
+function inviteCodes() {
+  return String(process.env.BASKET_INVITE_CODE || "").split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
+}
+function inviteRequired() { return inviteCodes().length > 0; }
+function inviteCodeValid(raw) {
+  const codes = inviteCodes();
+  if (!codes.length) return true;
+  const given = String(raw || "").trim().toLowerCase();
+  return !!given && codes.some(c => c.length === given.length && crypto.timingSafeEqual(Buffer.from(c), Buffer.from(given)));
+}
+
 function isPublicSite() {
   return process.env.BASKET_PUBLIC_SITE === "1";
 }
@@ -244,6 +261,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         passwordMinLength: Accounts.PASSWORD_MIN_LENGTH,
         passwordResetByMail: Mailer.mailConfigured(),
         clubNameMaxLength: Accounts.CLUB_NAME_MAX_LENGTH,
+        inviteRequired: inviteRequired(),
       });
       return true;
     }
@@ -252,6 +270,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
     if (p === "/api/account/signup" && req.method === "POST") {
       if (rateLimited(req, now)) { sendJson(res, 429, { ok: false, code: "rate-limited" }); return true; }
       const b = await body(req, res); if (!b) return true;
+      if (!inviteCodeValid(b.inviteCode)) { sendJson(res, 403, { ok: false, code: "invite-invalid" }); return true; }
       const email = Accounts.normalizeEmail(b.email);
       if (!email) { sendJson(res, 400, { ok: false, code: "email-invalid" }); return true; }
       const pw = Accounts.validatePassword(b.password);
@@ -523,6 +542,11 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       const b = await body(req, res); if (!b) return true;
       const pending = typeof b.pending === "string" ? pendingDiscordSignups.get(b.pending) : null;
       if (!pending) { sendJson(res, 400, { ok: false, code: "discord-expired" }); return true; }
+      if (!inviteCodeValid(b.inviteCode)) {
+        // Compte Discord déjà existant (autre onglet) : pas de nouvelle inscription.
+        const known = await withAccounts(async data => !!Accounts.findByDiscordId(data, pending.discordId));
+        if (!known) { sendJson(res, 403, { ok: false, code: "invite-invalid" }); return true; }
+      }
       const club = await checkClubName(b.clubName);
       if (club.code) { sendJson(res, 400, { ok: false, code: club.code }); return true; }
       await withAccounts(async data => {

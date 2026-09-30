@@ -2302,7 +2302,9 @@
   .pdp2-pips{display:flex; gap:4px;}
   .pdp2-pips span{width:20px; height:8px; border-radius:2px; background:var(--line);}
   .pdp2-pips span.on{background:var(--amber);}
-  #pdpSaleCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
+  #pdpSaleCard, #pdpPersoCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
+  .pdp2-id-visual{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:10px;}
+  .pdp2-jersey svg{display:block; filter:drop-shadow(0 4px 10px rgba(0,0,0,.35));}
 
   @media (max-width:1180px){
     .pdp2-hero{flex-wrap:wrap;}
@@ -2316,6 +2318,7 @@
     .pdp2-hero{padding:18px 16px; gap:18px;}
     .pdp2-id{gap:14px;}
     .pdp2-avatar{width:80px; height:80px;}
+    .pdp2-jersey svg{width:68px; height:68px;}
     .pdp2-name{font-size:30px;}
     .pdp2-cond{flex-basis:100%; padding:0; border-right:none;}
     .pdp2-rating{flex-basis:100%; flex-direction:row; justify-content:flex-start;}
@@ -3367,6 +3370,20 @@
   }
   .ach-icon{display:grid; place-items:center; width:28px; height:28px; border-radius:8px; background:var(--line-soft); color:var(--ink-faint); flex:none;}
   .ach.on .ach-icon{background:rgba(240,162,60,.15); color:var(--amber);}
+  .team-detail-foreign{font-size:.55em; font-weight:600; color:var(--ink-dim); margin-left:10px; white-space:nowrap;}
+  .lg-results{margin-top:20px;}
+  .lg-res-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px;}
+  .lg-res-card{background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 12px 8px; display:flex; flex-direction:column; gap:6px;}
+  .lg-res-card.mine{border-color:var(--amber);}
+  .lg-res-team{display:flex; align-items:center; gap:10px; min-width:0; color:var(--ink-dim);}
+  .lg-res-team .lg-res-name{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px;}
+  .lg-res-team .team-link{color:inherit;}
+  .lg-res-team.won{color:var(--ink); font-weight:700;}
+  .lg-res-team.mine .lg-res-name, .lg-res-team.mine .team-link{color:var(--amber);}
+  .lg-res-pts{font-size:18px; font-variant-numeric:tabular-nums; font-weight:600;}
+  .lg-res-team.won .lg-res-pts{font-weight:800;}
+  .lg-res-box{align-self:flex-end; background:none; border:none; padding:2px 0; font-size:12px; font-weight:700; color:var(--amber); cursor:pointer;}
+  .lg-res-box:hover{text-decoration:underline;}
   .lg-panel-title{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin:0 0 12px;}
   .lg-panel-title h2{font-family:var(--display); font-size:22px; font-weight:800; margin:0;}
   .lg-panel-title span{font-size:12px; color:var(--ink-faint);}
@@ -5301,7 +5318,10 @@
   .sl-side #attendanceHistoryHolder{flex:1;}
   .sl-card{min-width:0; padding:20px; border-radius:16px; background:var(--panel); border:1px solid var(--line);}
   /* Parquet aux couleurs du club (renderSalleCourt, 2026-09-29). */
-  .sl-court-svg{width:100%; height:auto; display:block; border-radius:10px; margin-top:12px;}
+  .sl-court-card{margin-bottom:18px;}
+  .sl-court-layout{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:24px; align-items:center; margin-top:12px;}
+  .sl-court-svg{width:100%; height:auto; display:block; border-radius:10px;}
+  @media (max-width:900px){ .sl-court-layout{grid-template-columns:minmax(0,1fr); gap:12px;} }
   .sl-court-row{display:flex; flex-direction:column; gap:6px; margin-top:12px;}
   .sl-court-lbl{font-size:12px; font-weight:700; color:var(--ink-dim);}
   .sl-court-swatches{display:flex; flex-wrap:wrap; gap:6px;}
@@ -5941,7 +5961,6 @@
   .pdp-perso-fields{display:grid; grid-template-columns:repeat(2, minmax(150px, 1fr)); gap:10px 14px; flex:1 1 300px;}
   .pdp-perso-fields label{display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:700; color:var(--ink-dim);}
   .pdp-perso-actions{margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
-  .pdp2-chip--num{font-weight:800; color:var(--amber);}
   .prm-tag{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#04241f; background:var(--amber); border-radius:999px; padding:2px 8px; margin-left:6px; vertical-align:middle;}
   .linkish{background:none; border:0; padding:0; color:var(--ink-dim); text-decoration:underline; cursor:pointer; font:inherit; font-size:13px;}
   @media (max-width:560px){ .pdp-perso-fields{grid-template-columns:1fr;} }
@@ -7167,10 +7186,14 @@
         <div class="sl-side">
           <div id="salleHeroKpis"></div>
           <div class="sl-card" id="attendanceHistoryHolder"></div>
-          <!-- Parquet aux couleurs du club (Premium, 2026-09-29), voir renderSalleCourt. -->
-          <div class="sl-card" id="salleCourtHolder"></div>
         </div>
       </div>
+
+      <!-- Parquet aux couleurs du club (Premium, 2026-09-29), voir
+           renderSalleCourt : en pleine largeur sous la grille (retour
+           utilisateur 2026-09-29 : dans la colonne de droite, il étirait la
+           carte « Agrandir la salle » et laissait un grand vide). -->
+      <div class="sl-card sl-court-card" id="salleCourtHolder"></div>
 
       <div class="sl-card">
         <div class="sl-card-head">
@@ -8622,11 +8645,21 @@ const TRAINING_HOME_POSITION = {
 // Dilution du rendement selon le nombre de postes couverts cette semaine
 // (1 poste = plein rendement, 2 = -15%, 3 = -30%, toute l'équipe = -50%).
 const TRAINING_DILUTION_BY_POSITION_COUNT = { 1: 0, 2: 0.15, 3: 0.30, 4: 0.40, 5: 0.50 };
+// Retour utilisateur (2026-09-29) : pas de malus sur le Lancer franc « même
+// si plusieurs postes ». Supprimer toute dilution le rendait deux fois plus
+// rentable que n'importe quel autre programme sur toute l'équipe : la
+// dilution y est donc seulement réduite de moitié (−7 / −15 / −20 / −25 %).
+const TRAINING_DILUTION_MULT_BY_PROGRAM = { freeThrow: 0.5 };
+function trainingDilutionFor(programKey, positionCount) {
+  const base = TRAINING_DILUTION_BY_POSITION_COUNT[positionCount] || 0;
+  const mult = TRAINING_DILUTION_MULT_BY_PROGRAM[programKey];
+  return mult != null ? base * mult : base;
+}
 
 // Aptitude de chaque poste pour chaque entraînement des fondamentaux (retour
 // utilisateur, 2026-09-29 : tableau fourni, « reprends ces chiffres pour les
 // entraînements des fondamentaux dans le jeu »). Ordre : Meneur, Arrière,
-// Ailier shooteur, Ailier fort, Pivot. Remplace, pour ces 20 programmes, la
+// Ailier shooteur, Ailier fort, Pivot. Remplace, pour ces programmes, la
 // formule « poste de prédilection −10 % par poste d'écart »
 // (TRAINING_HOME_POSITION ne sert plus qu'aux caractéristiques hors de ce
 // tableau : synergies et adjoint). Pour un entraînement polyvalent, la ligne
@@ -8637,25 +8670,47 @@ const TRAINING_POSITION_EFFICIENCY = {
   threePoint:   [100, 100, 100,  60,  20],
   midRange:     [100, 100, 100,  80,  40],
   inside:       [ 20,  30,  50, 100, 100],
-  pass:         [100,  90,  75,  60,  40],
+  // Retours du 2026-09-29 (2e passe) : Passe et Création de tir sans malus
+  // de poste (le Pivot garde un léger malus pour que le choix du poste
+  // garde un sens) ; l'Ailier shooteur défend aussi à l'intérieur (DI 80)
+  // et, par symétrie, l'Ailier fort à l'extérieur (DE 70) ; Lancer franc
+  // sans malus de poste (sa dilution est réduite, voir
+  // TRAINING_DILUTION_MULT_BY_PROGRAM) ; Interceptions : 75 % pour les
+  // grands au lieu de 50/30.
+  pass:         [100, 100, 100, 100,  80],
   rebound:      [ 20,  30,  60, 100, 100],
   block:        [ 10,  20,  40,  90, 100],
   dribble:      [100, 100,  90,  60,  30],
-  defOutside:   [100, 100, 100,  50,  20],
-  defInside:    [ 20,  30,  50, 100, 100],
-  freeThrow:    [100, 100, 100,  80,  60],
+  defOutside:   [100, 100, 100,  70,  20],
+  defInside:    [ 20,  30,  80, 100, 100],
+  freeThrow:    [100, 100, 100, 100, 100],
   penetration:  [100, 100, 100,  60,  30],
-  shotCreation: [100, 100, 100,  60,  30],
-  steal:        [100, 100, 100,  50,  30],
-  // Entraînements polyvalents
-  outsideShot:      [100, 100, 100,  70,  30],
-  playmaking:       [100,  90,  85,  55,  25],
-  allroundDef:      [ 60,  65,  75,  90, 100],
-  quickShots:       [100, 100,  95,  75,  45],
-  creativeScoring:  [100, 100, 100,  60,  30],
-  perimeterDefense: [100, 100, 100,  45,  20],
-  rimAttack:        [100, 100, 100,  65,  40],
+  shotCreation: [100, 100, 100, 100,  75],
+  steal:        [100, 100, 100,  75,  75],
+  // Entraînements polyvalents. « Défense polyvalente » n'a volontairement
+  // PAS de ligne : chacune de ses deux caractéristiques garde sa propre
+  // ligne (DE et DI ci-dessus, voir TRAINING_PER_ATTR_ROWS).
+  outsideShot:       [100, 100, 100,  70,  30],
+  playmaking:        [100,  90,  85,  55,  25],
+  quickShotsOutside: [100, 100, 100,  55,  25],
+  quickShotsInside:  [ 40,  60,  85, 100, 100],
+  creativeScoring:   [100, 100, 100,  60,  30],
+  perimeterDefense:  [100, 100, 100,  45,  20],
+  rimAttack:         [ 80, 100, 100,  85,  50],
 };
+// Programmes polyvalents dont chaque caractéristique suit SA propre ligne
+// du tableau (retour 2026-09-29 sur la Défense polyvalente : « dur de
+// choisir qui doit prendre les % ») : un meneur progresse surtout en DE, un
+// pivot surtout en DI, l'ailier shooteur bien sur les deux.
+const TRAINING_PER_ATTR_ROWS = new Set(["allroundDef"]);
+// Aptitude d'un poste sur UNE caractéristique d'un programme : sa propre
+// ligne pour un programme de TRAINING_PER_ATTR_ROWS, sinon la ligne du
+// programme (la même pour toutes ses caractéristiques).
+function positionEfficiencyForProgramAttr(programKey, attr, position) {
+  return TRAINING_PER_ATTR_ROWS.has(programKey)
+    ? positionEfficiencyForSkill(attr, position)
+    : positionEfficiencyForProgram(programKey, position);
+}
 function tableEfficiency(key, position) {
   const row = TRAINING_POSITION_EFFICIENCY[key];
   const i = POSITIONS.indexOf(position);
@@ -8798,7 +8853,12 @@ const TRAINING_PROGRAMS = {
   // physique, non trainable directement, voir plus haut), remplacé par
   // "dribble" : un joueur qui enchaîne dribble + tirs rapides colle mieux à
   // l'intitulé qu'une simple amputation à 3 fondamentaux.
-  quickShots:  makeTrainingProgram("Tirs rapides", ["dribble", "midRange", "threePoint", "inside"]),
+  // Retour utilisateur (2026-09-29) : « Tir rapide » séparé en deux —
+  // extérieur (3 pts + dribble) et intérieur (mi-distance + jeu intérieur).
+  // Une sauvegarde encore sur l'ancien "quickShots" passe sur la version
+  // extérieure (voir teamFromSave).
+  quickShotsOutside: makeTrainingProgram("Tir rapide extérieur", ["threePoint", "dribble"]),
+  quickShotsInside:  makeTrainingProgram("Tir rapide intérieur", ["midRange", "inside"]),
   // Retour utilisateur (2026-09, une fois les 3 nouveaux fondamentaux
   // pénétration/création de tir/interception en place) : "je pense qu'on
   // pourrait créer de nouveaux entrainement combo, étant donné qu'il y a des
@@ -8812,7 +8872,10 @@ const TRAINING_PROGRAMS = {
   // dribble attire les fautes, donc les lancers francs).
   creativeScoring:  makeTrainingProgram("Scoreur créatif", ["shotCreation", "dribble"]),
   perimeterDefense: makeTrainingProgram("Défense de périmètre", ["steal", "defOutside"]),
-  rimAttack:        makeTrainingProgram("Attaque du cercle", ["penetration", "freeThrow"]),
+  // Retour 2026-09-29 : « difficile de combiner péné + LF » → Pénétration
+  // + Jeu intérieur (driver PUIS finir au cercle) ; le Lancer franc reste un
+  // programme simple.
+  rimAttack:        makeTrainingProgram("Attaque du cercle", ["penetration", "inside"]),
 };
 
 // Aptitude d'un poste pour un PROGRAMME entier = moyenne (pondérée par le
@@ -8826,14 +8889,14 @@ function positionEfficiencyForProgram(programKey, position) {
   if (!program) return 100;
   // Tableau utilisateur (voir TRAINING_POSITION_EFFICIENCY) ; la
   // moyenne ci-dessous ne sert plus qu'à un programme absent du tableau.
-  const fromTable = tableEfficiency(programKey, position);
+  const fromTable = TRAINING_PER_ATTR_ROWS.has(programKey) ? null : tableEfficiency(programKey, position);
   if (fromTable != null) return fromTable;
   let sum = 0, totalW = 0;
   program.attrs.forEach(({ attr, weight }) => {
     sum += positionEfficiencyForSkill(attr, position) * weight;
     totalW += weight;
   });
-  return totalW ? sum / totalW : 100;
+  return totalW ? Math.round(sum / totalW) : 100;
 }
 
 // Départage de postes à égalité d'aptitude (2026-09-29) : le tableau de
@@ -14347,7 +14410,7 @@ class Team {
 
   // Dilution du rendement selon le nombre de postes couverts cette semaine.
   trainingDilution() {
-    return TRAINING_DILUTION_BY_POSITION_COUNT[this.trainingPositions.length] || 0;
+    return trainingDilutionFor(this.trainingSkill, this.trainingPositions.length);
   }
 
   // Temps RÉELLEMENT joué par ce joueur, CUMULÉ sur tous les matchs du cycle
@@ -14879,7 +14942,7 @@ class Team {
         // couvrir plusieurs des postes entraînés au fil du match).
         const posEffFor = attr => {
           let sum = 0;
-          Object.entries(trainedByPosition).forEach(([pos, secs]) => { sum += positionEfficiencyForProgram(skill, pos) * secs; }); // ligne du PROGRAMME (tableau utilisateur 2026-09-29), la même pour chacune de ses caractéristiques
+          Object.entries(trainedByPosition).forEach(([pos, secs]) => { sum += positionEfficiencyForProgramAttr(skill, attr, pos) * secs; }); // ligne du PROGRAMME (tableau utilisateur 2026-09-29), sauf Défense polyvalente (ligne propre à chaque caractéristique)
           return sum / trainedSeconds;
         };
         // Poids RÉEL de chaque caractéristique du programme pour CE joueur :
@@ -20154,7 +20217,8 @@ function teamFromSave(data) {
   team.tutorialRewardsClaimed = Array.isArray(data.tutorialRewardsClaimed) ? data.tutorialRewardsClaimed : [];
   // Retour utilisateur (2026-09) : "enleve l'entrainement aucune" — voir
   // engine.js, miroir identique.
-  team.trainingSkill = (data.trainingSkill && TRAINING_PROGRAMS[data.trainingSkill]) ? data.trainingSkill : "freeThrow";
+  const savedSkill = data.trainingSkill === "quickShots" ? "quickShotsOutside" : data.trainingSkill; // « Tirs rapides » séparé en deux (2026-09-29)
+  team.trainingSkill = (savedSkill && TRAINING_PROGRAMS[savedSkill]) ? savedSkill : "freeThrow";
   team.trainingPositions = Array.isArray(data.trainingPositions) ? data.trainingPositions : [];
   if (data.trainer && TRAINER_LEVELS.includes(data.trainer.level)) {
     // baseSalary préservé explicitement (bug corrigé 2026-09 : il était
@@ -25614,6 +25678,34 @@ function leagueCountryHtml(lg = league) {
   return `${nationFlagHtml(code)} ${escapeHtml(nationName(code) || "France")}`;
 }
 
+// Résultats de la dernière journée de championnat jouée (retour
+// utilisateur 2026-09-29 : « il faudrait les scores de la dernière
+// journée, sous le classement mais avant les leaders de la ligue ») :
+// lus dans league.results, un score cliquable par match (feuille de match,
+// showMatchBoxscore), vainqueur en gras, votre club en ambre.
+function lgLastRoundResultsHtml() {
+  const rows = (league.results || []).filter(r => r.round < league.totalRounds);
+  if (!rows.length) return "";
+  const round = Math.max(...rows.map(r => r.round));
+  const games = rows.filter(r => r.round === round);
+  const side = (idx, pts, won) => {
+    const team = league.teams[idx];
+    return `<div class="lg-res-team${won ? " won" : ""}${idx === myTeamIndex ? " mine" : ""}">` +
+      `<span class="lg-badge">${team ? teamLogoHtml(team, 26) : ""}</span>` +
+      `<span class="lg-res-name">${team ? teamLinkHtml(idx, team.name) : "?"}</span>` +
+      `<b class="lg-res-pts">${pts}</b></div>`;
+  };
+  return `<section class="lg-panel lg-results" aria-labelledby="lgResultsTitle">` +
+    `<div class="lg-panel-title"><h2 id="lgResultsTitle">Résultats de la journée ${round + 1}</h2><span>Cliquez sur un match pour la feuille de match</span></div>` +
+    `<div class="lg-res-grid">` + games.map(r =>
+      `<div class="lg-res-card${r.home === myTeamIndex || r.away === myTeamIndex ? " mine" : ""}">` +
+        side(r.home, r.scoreHome, r.scoreHome > r.scoreAway) +
+        side(r.away, r.scoreAway, r.scoreAway > r.scoreHome) +
+        `<button type="button" class="lg-res-box" data-boxscore-round="${r.round}" data-boxscore-competition="championship" data-boxscore-home="${r.home}" data-boxscore-away="${r.away}">Feuille de match</button>` +
+      `</div>`).join("") +
+    `</div></section>`;
+}
+
 function renderLeagueTop() {
   const table = league.standings();
   document.getElementById("standingsContent").innerHTML =
@@ -25624,7 +25716,7 @@ function renderLeagueTop() {
         lgStandingsTableHtml(table) +
       `</section>` +
       `<div class="lg-side">${lgRaceCardHtml(table)}${lgMvpCardHtml()}</div>` +
-    `</div>`;
+    `</div>` + lgLastRoundResultsHtml();
 }
 
 function showStandings() {
@@ -27246,13 +27338,18 @@ function renderPlayerDetail(teamIdx, playerId) {
   // == En-tête ==
   html += `<section class="pdp2-card pdp2-hero">`;
   html += `<div class="pdp2-id">` +
-    `<div class="pdp2-avatar">${playerAvatarHtml(player, team, 104)}</div>` +
+    // Maillot floqué du numéro sous l'avatar (retour utilisateur 2026-09-29 :
+    // « mets le maillot sous l'avatar, ce sera plus propre », sans libellé).
+    `<div class="pdp2-id-visual"><div class="pdp2-avatar">${playerAvatarHtml(player, team, 104)}</div>` +
+    (Number.isInteger(player.number)
+      ? `<div class="pdp2-jersey" title="Maillot n°${player.number}">` +
+        jerseySvgHtml(team.jerseyShape, team.jerseyColor, 96, "home", effectiveJerseyPattern(team), effectiveJerseyTwoTone(team), null, player.number) + `</div>`
+      : "") +
+    `</div>` +
     `<div class="pdp2-id-text">` +
     `<div class="pdp2-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>${teamLinkHtml(teamIdx, team.name)}</div>` +
     `<h3 class="pdp2-name">${nationFlagHtml(player.nationality, "nat-flag--name")}${escapeHtml(player.name)}</h3>` +
     `<div class="pdp2-chips">` +
-    // Numéro de maillot (affiché sur la fiche du joueur uniquement).
-    (Number.isInteger(player.number) ? `<span class="pdp2-chip pdp2-chip--num">N° ${player.number}</span>` : "") +
     (nationName(player.nationality) ? `<span class="pdp2-chip">${escapeHtml(nationName(player.nationality))}</span>` : "") +
     `<span class="pdp2-chip">${player.age} ans</span>` +
     `<span class="pdp2-chip">${player.height} cm</span>` +
@@ -27654,6 +27751,7 @@ function showTeamDetail(teamIdx) {
     const activeTabBtn = document.querySelector(".tab-btn.active");
     teamDetailOrigin = { pageId: currentVisiblePageId(), tabKey: activeTabBtn ? activeTabBtn.dataset.tab : null };
   }
+  teamDetailForeign = null;
   teamDetailIdx = teamIdx;
   teamDetailSubView = "apercu"; // repart toujours sur l'Aperçu à l'ouverture (même équipe ou pas)
   teamDetailEffectifView = "general";
@@ -27661,7 +27759,55 @@ function showTeamDetail(teamIdx) {
   showPage("teamDetailSection");
 }
 
+// ---------------------------------------------------------------------
+// Fiche équipe d'un club d'un AUTRE championnat (retour utilisateur
+// 2026-09-29 : « il faut pouvoir cliquer et ouvrir la page équipe des
+// équipes d'un autre championnat [...] ça ouvre l'effectif, pas la page
+// aperçu habituelle ») : le championnat du club est chargé en lecture
+// seule (GET /api/world/team-page, sans rien de privé) et la fiche équipe
+// habituelle est rendue avec lui à la place de `league` le temps du rendu
+// (withTeamDetailLeague), sans club « à soi » (myTeamIndex = -1) ni
+// scouting (aucune caractéristique révélée). Pas d'onglet Analyse (le
+// scouting ne vise que son propre championnat), pas de fiche joueur ni
+// de messagerie depuis cette fiche.
+// ---------------------------------------------------------------------
+let teamDetailForeign = null; // { league, leagueId, label } ou null
+function withTeamDetailLeague(fn) {
+  if (!teamDetailForeign) return fn();
+  const saved = { league, myTeamIndex, scouted: teamA ? teamA.scoutedAttrs : null };
+  league = teamDetailForeign.league;
+  myTeamIndex = -1;
+  if (teamA) teamA.scoutedAttrs = {};
+  try { return fn(); } finally {
+    league = saved.league;
+    myTeamIndex = saved.myTeamIndex;
+    if (teamA) teamA.scoutedAttrs = saved.scouted;
+  }
+}
+async function showForeignTeamDetail(leagueId, teamIdx) {
+  if (!leagueId || (league && league.leagueId === leagueId)) { showTeamDetail(teamIdx); return true; }
+  let data;
+  try { data = await planeteFetch(`/api/world/team-page?league=${encodeURIComponent(leagueId)}`); } catch (e) { return false; }
+  if (!data || !data.league || !data.league.teams || !data.league.teams[teamIdx]) return false;
+  if (data.mine) { showTeamDetail(teamIdx); return true; }
+  const ownTz = league ? league.timeZone : null;
+  let lg;
+  try { lg = leagueFromSave(data.league); } finally { setCalendarTimeZone(ownTz); }
+  if (currentVisiblePageId() !== "teamDetailSection") {
+    const activeTabBtn = document.querySelector(".tab-btn.active");
+    teamDetailOrigin = { pageId: currentVisiblePageId(), tabKey: activeTabBtn ? activeTabBtn.dataset.tab : null };
+  }
+  teamDetailForeign = { league: lg, leagueId, label: data.label || "" };
+  teamDetailIdx = teamIdx;
+  teamDetailSubView = "apercu";
+  teamDetailEffectifView = "general";
+  renderTeamDetail(teamIdx);
+  showPage("teamDetailSection");
+  return true;
+}
+
 function hideTeamDetail() {
+  teamDetailForeign = null;
   const origin = teamDetailOrigin || { pageId: "prepSection", tabKey: "ordres" };
   showPage(origin.pageId);
   if (origin.tabKey) setActiveTab(origin.tabKey);
@@ -27693,11 +27839,35 @@ function teamDetailSubNavHtml() {
     { key: "effectif", label: "Effectif" },
     { key: "calendrier", label: "Calendrier" },
     { key: "analyse", label: "Analyse d'équipe" },
-  ];
+  ].filter(t => !(teamDetailForeign && t.key === "analyse"));
   return `<div class="boxscore-toggle team-detail-subnav">` +
     tabs.map(t => `<button type="button" class="bs-tab${teamDetailSubView === t.key ? " active" : ""}" data-team-detail-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
     `</div>`;
 }
+// Fiche d'un club d'un autre championnat (teamDetailForeign) : les liens
+// équipe restent dans CE championnat, la feuille de match le lit aussi, et
+// les liens joueur ne mènent nulle part (fiche joueur = son championnat).
+document.getElementById("teamDetailContent").addEventListener("click", (e) => {
+  if (!teamDetailForeign) return;
+  const teamLink = e.target.closest("[data-team-idx]");
+  const playerLink = e.target.closest("[data-player-detail]");
+  const box = e.target.closest("[data-boxscore-round]");
+  if (!teamLink && !playerLink && !box) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (box) {
+    withTeamDetailLeague(() => showMatchBoxscore(
+      Number(box.dataset.boxscoreRound), box.dataset.boxscoreCompetition,
+      Number(box.dataset.boxscoreHome), Number(box.dataset.boxscoreAway)));
+  } else if (teamLink) {
+    const idx = Number(teamLink.dataset.teamIdx);
+    if (teamDetailForeign.league.teams[idx] && !teamDetailForeign.league.teams[idx].isGuest) {
+      teamDetailIdx = idx; teamDetailSubView = "apercu"; teamDetailEffectifView = "general";
+      renderTeamDetail(idx);
+      window.scrollTo(0, 0);
+    }
+  }
+}, true);
 document.getElementById("teamDetailContent").addEventListener("click", (e) => {
   const btn = e.target.closest("[data-team-detail-subview]");
   if (!btn) return;
@@ -28463,7 +28633,7 @@ let jerseySvgUid = 0;
 // le maillot voulu et cette fonction n'a plus besoin de rien dériver.
 // `sponsor` (optionnel, retour communauté 2026-09 "image sur maillot") : nom
 // du sponsor maillot imprimé sur la poitrine, dans un cartouche clair.
-function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone, sponsor) {
+function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone, sponsor, number) {
   const color = JERSEY_COLORS[colorKey] || Object.values(JERSEY_COLORS)[0];
   const s = size || 72;
   const isAway = variant === "away";
@@ -28520,9 +28690,23 @@ function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone, sponsor
     body += `<rect x="27" y="44" width="46" height="13" rx="2.5" fill="rgba(255,255,255,.92)"/>` +
       `<text x="50" y="53.6" text-anchor="middle" font-size="8" font-weight="800" fill="#1a1200" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"${fit}>${escapeHtml(label)}</text>`;
   }
+  // Numéro floqué (fiche joueur, retour utilisateur 2026-09-29 : « on le
+  // voit à peine, il faudrait que ce soit plus gros sur un maillot de
+  // l'équipe aux bonnes couleurs ») : gros chiffres centrés sur le buste,
+  // clairs sur un maillot foncé et inversement, avec un contour pour rester
+  // lisibles sur les rayures/bandes/dégradés.
+  if (Number.isInteger(number)) {
+    const hex = /^#[0-9a-f]{6}$/i.test(primary) ? primary : "#3a3a40";
+    const lum = (0.299 * parseInt(hex.slice(1, 3), 16) + 0.587 * parseInt(hex.slice(3, 5), 16) + 0.114 * parseInt(hex.slice(5, 7), 16)) / 255;
+    const ink = lum > 0.6 ? "#14161c" : "#ffffff";
+    const edge = lum > 0.6 ? "rgba(255,255,255,.75)" : "rgba(0,0,0,.45)";
+    const y = sponsor ? 82 : 76;
+    const fs = sponsor ? 26 : 38;
+    body += `<text class="jersey-number" x="50" y="${y}" text-anchor="middle" font-size="${fs}" font-weight="900" fill="${ink}" stroke="${edge}" stroke-width="2" paint-order="stroke" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">${number}</text>`;
+  }
   const shapeLabel = shape === "B" ? "col en V à bandes" : "col rond";
   const patternLabel = patternKey === "uni" ? "" : `, ${JERSEY_PATTERN_LABELS[patternKey].toLowerCase()}`;
-  return `<svg viewBox="0 0 100 100" width="${s}" height="${s}" role="img" aria-label="Maillot ${isAway ? "extérieur" : "domicile"} ${shapeLabel}${patternLabel}${sponsor ? `, sponsor ${escapeHtml(String(sponsor))}` : ""}">` +
+  return `<svg viewBox="0 0 100 100" width="${s}" height="${s}" role="img" aria-label="Maillot ${isAway ? "extérieur" : "domicile"} ${shapeLabel}${patternLabel}${sponsor ? `, sponsor ${escapeHtml(String(sponsor))}` : ""}${Number.isInteger(number) ? `, numéro ${number}` : ""}">` +
     (defs ? `<defs>${defs}</defs>` : "") + body + `</svg>`;
 }
 
@@ -28846,7 +29030,7 @@ function teamDetailApercuHtml(teamIdx) {
   html += `<nav class="apercu-list" aria-label="Sections de l'équipe">` +
     rowHtml("calendrier", "Résultats &amp; calendrier", resultsLines) +
     rowHtml("effectif", "Effectif", `<span>${effectifLine}</span>`) +
-    rowHtml("analyse", "Analyse d'équipe", `<span>${analyseLine}</span>`) +
+    (teamDetailForeign ? "" : rowHtml("analyse", "Analyse d'équipe", `<span>${analyseLine}</span>`)) +
     `</nav>`;
 
   // --- Pied : palmarès + dernière interview ---
@@ -28874,6 +29058,11 @@ function teamDetailApercuHtml(teamIdx) {
 // entre quatre sous-onglets (voir teamDetailSubNavHtml/teamDetailSubView),
 // chacun sa propre fonction de rendu ci-dessus.
 function renderTeamDetail(teamIdx) {
+  return withTeamDetailLeague(() => renderTeamDetailContent(teamIdx));
+}
+function renderTeamDetailContent(teamIdx) {
+  const foreign = !!teamDetailForeign;
+  if (foreign && teamDetailSubView === "analyse") teamDetailSubView = "apercu";
   const nameHeader = document.getElementById("teamDetailName");
   const holder = document.getElementById("teamDetailContent");
   const team = league.teams[teamIdx];
@@ -28882,11 +29071,12 @@ function renderTeamDetail(teamIdx) {
     holder.innerHTML = "<p class='training-empty'>Cette équipe n'existe plus.</p>";
     return;
   }
-  nameHeader.innerHTML = escapeHtml(team.name) + premiumBadgeHtml(team);
+  nameHeader.innerHTML = escapeHtml(team.name) + premiumBadgeHtml(team) +
+    (foreign ? ` <span class="team-detail-foreign">${nationFlagHtml(league.country || "fr")} ${escapeHtml(teamDetailForeign.label)}</span>` : "");
 
   let html = teamDetailSubNavHtml();
   // Messagerie : écrire au manager de ce club (ligue partagée, club humain).
-  if (msgUi.available && team.isHuman && teamIdx !== myTeamIndex) {
+  if (!foreign && msgUi.available && team.isHuman && teamIdx !== myTeamIndex) {
     html = `<div class="msg-team-cta"><button type="button" data-msg-open="${teamIdx}">Envoyer un message</button></div>` + html;
   }
   if (teamDetailSubView === "calendrier") {
@@ -28910,12 +29100,12 @@ function renderTeamDetail(teamIdx) {
   // fin de cet aller-retour réseau asynchrone plutôt qu'un délai arbitraire.
   if (teamDetailSubView === "calendrier") {
     teamCalendarApplyFilter();
-    window.__lastLiveBannerCheck = refreshTeamDetailLiveBanner(teamIdx);
+    if (!foreign) window.__lastLiveBannerCheck = refreshTeamDetailLiveBanner(teamIdx);
   }
   // Scouting Pro (voir teamDetailAnalyseHtml/refreshScoutingProPanel) :
   // uniquement pour un ADVERSAIRE (jamais sa propre équipe, qui reste sur
   // le rapport tactique gratuit seul, voir teamDetailAnalyseHtml).
-  if (teamDetailSubView === "analyse" && teamIdx !== myTeamIndex) {
+  if (!foreign && teamDetailSubView === "analyse" && teamIdx !== myTeamIndex) {
     window.__lastScoutingProCheck = refreshScoutingProPanel(teamIdx);
   }
 }
@@ -29061,6 +29251,16 @@ const PLANETE_STAT_LABELS = { pts: "Points", reb: "Rebonds", ast: "Passes", eval
 const PLANETE_CHIPS_MAX = 12;
 
 function openPlaneteAt(opts) {
+  // Un club précis : sa fiche équipe habituelle (showForeignTeamDetail),
+  // Planète Hoop sur son championnat seulement si elle est indisponible.
+  if (opts && opts.leagueId && Number.isInteger(opts.clubIdx)) {
+    showForeignTeamDetail(opts.leagueId, opts.clubIdx).then(ok => {
+      if (ok) return;
+      Object.assign(planeteState, { clubIdx: null }, opts);
+      TAB_HANDLERS.planete();
+    });
+    return;
+  }
   Object.assign(planeteState, { clubIdx: null }, opts || {});
   TAB_HANDLERS.planete();
 }
@@ -29216,7 +29416,13 @@ function planeteCountryHtml(st) {
     const l = e.target.closest("[data-ph-league]");
     if (l) { planeteState.leagueId = l.dataset.phLeague; planeteState.clubIdx = null; renderPlaneteSection(); return; }
     const cl = e.target.closest("[data-ph-club]");
-    if (cl) { planeteState.clubIdx = Number(cl.dataset.phClub); renderPlaneteSection(); return; }
+    if (cl) {
+      const idx = Number(cl.dataset.phClub);
+      const fallback = () => { planeteState.clubIdx = idx; renderPlaneteSection(); };
+      if (planeteState.leagueMine) { showTeamDetail(idx); return; }
+      showForeignTeamDetail(planeteState.leagueId, idx).then(ok => { if (!ok) fallback(); });
+      return;
+    }
     if (e.target.closest("[data-ph-close-club]")) { planeteState.clubIdx = null; planeteState.club = null; box.innerHTML = planeteHtml(); return; }
     const s = e.target.closest("[data-ph-stat]");
     if (s) { planeteState.statTab = s.dataset.phStat; box.innerHTML = planeteHtml(); }
@@ -36208,7 +36414,7 @@ function updateDilutionNote() {
     tier = "none";
     text = "Aucun poste sélectionné : personne ne progresse cette semaine.";
   } else {
-    const dilution = TRAINING_DILUTION_BY_POSITION_COUNT[n] || 0;
+    const dilution = trainingDilutionFor(skill, n);
     if (dilution > 0) {
       tier = "diluted";
       text = `${n} postes couverts · rendement dilué de ${Math.round(dilution * 100)}% pour tout le monde`;
@@ -42048,8 +42254,10 @@ function renderSalleCourt() {
   const saved = normalizeCourtStyle(teamA.courtStyle) || { wood: "nuit", paint: null };
   const cur = salleCourtDraft || saved;
   let html = `<div class="sl-card-head"><div><div class="sl-eyebrow">Parquet <span class="prm-tag">Premium</span></div><h3 class="sl-card-title">Votre terrain</h3></div></div>`;
+  html += `<div class="sl-court-layout"><div class="sl-court-preview">`;
   html += courtPreviewSvg(premium ? cur : { wood: "chene", paint: teamA.jerseyColor || "rouge" });
-  html += `<p class="sub" style="margin:10px 0">${premium
+  html += `</div><div class="sl-court-controls">`;
+  html += `<p class="sub" style="margin:0 0 4px">${premium
     ? "C'est le terrain du direct quand vous recevez : vos adversaires le voient aussi."
     : "Aperçu : avec Premium, le terrain du direct prend les couleurs de votre club quand vous recevez, et vos adversaires le voient aussi."}</p>`;
   if (premium) {
@@ -42063,6 +42271,7 @@ function renderSalleCourt() {
   } else {
     html += `<button type="button" class="prm-cta" data-tab="premium">${typeof PREMIUM_LOGO_IMG !== "undefined" ? PREMIUM_LOGO_IMG : ""}<span>Passer Premium</span></button>`;
   }
+  html += `</div></div>`; // controls, layout
   holder.innerHTML = html;
 }
 document.addEventListener("click", async (e) => {
@@ -46640,6 +46849,15 @@ document.getElementById("ordresValidateBtn").addEventListener("click", validateO
 }
 
 document.getElementById("closeStandingsBtn").addEventListener("click", hideStandings);
+// Résultats de la dernière journée (lgLastRoundResultsHtml) : feuille de match.
+document.getElementById("standingsContent").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-boxscore-round]");
+  if (!btn) return;
+  showMatchBoxscore(
+    Number(btn.dataset.boxscoreRound), btn.dataset.boxscoreCompetition,
+    Number(btn.dataset.boxscoreHome), Number(btn.dataset.boxscoreAway),
+  );
+});
 
 document.getElementById("newMatchBtn").addEventListener("click", goToOrdresTab);
 // Barre du haut : raccourci "Donnez vos ordres" pour le PROCHAIN match

@@ -117,11 +117,12 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (cond())
   if (!/Lyon Coupe/.test(side.textContent) || !/Modifier les ordres/.test(side.textContent)) fail(`carte « Prochain match » : ${side.textContent.slice(0, 200)}`);
   ok(`page Coupe : onglets ${tabs.map(t => t.split(" ")[0]).join("/")}, son match en tête (niveau D.II/D.I, handicap +7), 12 exempts, prochain match contre le club invité avec ordres enregistrés`);
 
-  // 3) Clic sur le club invité → Planète Hoop, effectif de Lyon.
+  // 3) Clic sur le club invité → sa fiche équipe habituelle (Aperçu), lue
+  // dans son championnat (voir showForeignTeamDetail).
   first.querySelector('[data-team-idx="100"], [data-ncup-league="fr-1"]').click();
-  const pbox = doc.getElementById("planeteContent");
-  await wait(() => pbox.querySelector(".ph-roster-card") && /Lyon Coupe/.test(pbox.querySelector(".ph-roster-card").textContent), "fiche du club invité dans Planète Hoop");
-  ok("clic sur le club d'un autre championnat : Planète Hoop ouvre son effectif");
+  const tdName = () => doc.querySelector("#teamDetailContent .team-apercu-name");
+  await wait(() => !doc.getElementById("teamDetailSection").classList.contains("hidden") && tdName() && /Lyon Coupe/.test(tdName().textContent), "fiche équipe du club invité");
+  ok("clic sur le club d'un autre championnat : sa fiche équipe (Aperçu)");
   dom.window.close();
 
   // 4) Coup d'envoi : direct avec le club invité et le handicap au score.

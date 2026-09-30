@@ -52,18 +52,34 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   if (usCard.querySelectorAll("tbody tr").length !== 10) fail("classement américain attendu.");
   ok("changement de pays : Division I des USA affichée");
 
-  // 3) Effectif d'un club, en lecture seule.
+  // 3) Clic sur un club d'un autre championnat : sa fiche équipe habituelle
+  // (Aperçu), lue dans SON championnat, en lecture seule.
   const clubBtn = usCard.querySelector("[data-ph-club]");
   const clubName = clubBtn.textContent;
+  const clubIdx = Number(clubBtn.dataset.phClub);
   clubBtn.click();
-  await wait(() => box.querySelector(".ph-roster-card"), "effectif du club");
-  const roster = box.querySelector(".ph-roster-card");
-  if (!roster.textContent.includes(clubName)) fail("effectif du mauvais club.");
-  if (roster.querySelectorAll("tbody tr").length < 5) fail("effectif vide.");
-  if (/\b\d{2}\b.*Tir|Rebond/.test(roster.querySelector("thead").textContent)) fail("pas de caractéristiques affichées.");
-  ok(`effectif de ${clubName} en lecture seule (poste, joueur, âge, taille)`);
+  const tdSection = doc.getElementById("teamDetailSection");
+  const tdContent = doc.getElementById("teamDetailContent");
+  await wait(() => !tdSection.classList.contains("hidden") && tdContent.querySelector(".team-apercu-name"), "fiche équipe du club américain");
+  if (tdContent.querySelector(".team-apercu-name").textContent !== clubName) fail(`fiche du mauvais club : ${tdContent.querySelector(".team-apercu-name").textContent}`);
+  if (!/Division I/.test(doc.getElementById("teamDetailName").textContent)) fail("le championnat du club doit être indiqué dans l'en-tête.");
+  if (tdContent.querySelector('[data-team-detail-subview="analyse"]')) fail("pas d'Analyse d'équipe pour un club d'un autre championnat.");
+  if (win.eval("league.leagueId") === "us-1" || win.eval("myTeamIndex") !== 0) fail("la ligue du joueur doit être restaurée après le rendu.");
+  tdContent.querySelector('.team-detail-subnav [data-team-detail-subview="effectif"]').click();
+  if (!tdContent.textContent.includes(win.eval(`teamDetailForeign.league.teams[${clubIdx}].players[0].name`))) fail("effectif du club américain attendu.");
+  tdContent.querySelector('.team-detail-subnav [data-team-detail-subview="calendrier"]').click();
+  if (!tdContent.querySelector("table")) fail("calendrier du club américain attendu.");
+  doc.getElementById("closeTeamDetailBtn").click();
+  if (win.eval("teamDetailForeign") !== null) fail("retour : la fiche étrangère doit être oubliée.");
+  ok(`clic sur ${clubName} (autre championnat) : fiche équipe habituelle (Aperçu, Effectif, Calendrier), sans Analyse, ligue restaurée`);
 
-  // 4) Recherche du haut : un club américain → Planète Hoop sur son championnat.
+  // 3bis) La route ne renvoie rien de privé.
+  const tp = await win.eval(`planeteFetch("/api/world/team-page?league=us-1")`);
+  if (!tp.ok) fail(JSON.stringify(tp).slice(0,300));
+  if (tp.league.teams.some(t => t.managerLinkToken || (t.pushSubscriptions || []).length || t.plannedTactics)) fail("données privées dans /api/world/team-page.");
+  ok("/api/world/team-page : aucun jeton, abonnement ou tactique prévue");
+
+  // 4) Recherche du haut : un club américain → sa fiche équipe.
   const usLeague = await World.loadLeague(world, "us-1", multiSavePath);
   const target = usLeague.teams[3];
   win.eval(`TAB_HANDLERS.club()`);
@@ -74,12 +90,13 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   const hit = [...doc.querySelectorAll("#topbarWorldResults [data-world-club]")].find(b => b.textContent.includes(target.name));
   if (!hit) fail(`club américain « ${target.name} » introuvable dans la recherche.`);
   hit.click();
-  await wait(() => doc.getElementById("planeteSection") && !doc.getElementById("planeteSection").classList.contains("hidden") && box.querySelector(".ph-roster-card") && box.querySelector(".ph-roster-card").textContent.includes(target.name), "ouverture via la recherche");
-  if (!/États-Unis en chiffres/.test(box.textContent)) fail("la recherche doit ouvrir le bon pays.");
+  await wait(() => !tdSection.classList.contains("hidden") && tdContent.querySelector(".team-apercu-name") && tdContent.querySelector(".team-apercu-name").textContent === target.name, "ouverture via la recherche");
+  win.eval(`TAB_HANDLERS.planete()`);
+  await wait(() => /en chiffres/.test(box.textContent), "retour sur Planète Hoop");
   input.value = "Division";
   input.dispatchEvent(new win.Event("input"));
   await wait(() => doc.querySelector("#topbarWorldResults [data-world-league]"), "championnats dans la recherche");
-  ok("barre de recherche du haut : clubs et championnats du monde, un clic ouvre Planète Hoop sur le bon championnat et l'effectif du club");
+  ok("barre de recherche du haut : clubs et championnats du monde, un clic sur un club ouvre sa fiche équipe");
 
   dom.window.close();
   server.close();

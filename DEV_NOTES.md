@@ -20,6 +20,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODÉ, À POUSSER (2026-09-29) — Entraînement des fondamentaux, 2e
+  passe du tableau d'aptitudes** : Passe et Création de tir sans malus de
+  poste (Pivot 80 / 75) ; DI Ailier shooteur 80, DE Ailier fort 70 ;
+  Lancer franc 100 % partout avec dilution réduite de moitié
+  (TRAINING_DILUTION_MULT_BY_PROGRAM) ; Interceptions 75 % pour AF/P ;
+  Défense polyvalente = chaque caractéristique suit sa propre ligne
+  (TRAINING_PER_ATTR_ROWS) ; « Tirs rapides » séparé en Tir rapide
+  extérieur (3 pts + dribble) / intérieur (mi-distance + jeu intérieur),
+  anciennes sauvegardes → extérieur ; Attaque du cercle = Pénétration +
+  Jeu intérieur. Miroir engine.js ⇄ moteurbasket3.html, en.js,
+  training_table_test.js.
+
 - **🟡 CODÉ, À FUSIONNER (2026-09-29) — Transmettre le club d'un bêta-testeur à un
   remplaçant** (« j'ai des beta testers qui ne sont pas suffisamment dispo
   donc je vais les remplacer » ; choix : club transmis tel quel, ancien
@@ -106,6 +118,25 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   moteurbasket3.html n'est plus tenu à jour (matchs simulés côté serveur).
   Le terrain 2D (Mac) touchera hmLiveOnPause/hmLiveTimeouts : fusion à
   surveiller.
+
+- **✅ POUSSÉ SUR LA BRANCHE claude/elegant-johnson-n0zz21 (2026-09-29),
+  à passer en prod** (`git push origin origin/claude/elegant-johnson-n0zz21:main`
+  puis `…:prod`) :
+  - Fiche joueur : numéro floqué en grand sur le maillot domicile du club
+    (jerseySvgHtml, 8e argument `number`), sous l'avatar, sans libellé ;
+    écart entre les cartes Personnalisation et Mise en vente.
+  - Ligue : « Résultats de la journée N » (lgLastRoundResultsHtml) entre le
+    classement et les leaders, score → feuille de match.
+  - Salle : carte « Votre terrain » en pleine largeur sous la grille.
+  - Inscription sur invitation : BASKET_INVITE_CODE (codes séparés par des
+    virgules ; absente = ouvert), email et 1re connexion Discord, lien
+    `/?invite=CODE` prérempli. **À régler sur Render** (prod) pour activer.
+  - Planète Hoop : un club d'un autre championnat ouvre sa fiche équipe
+    habituelle (showForeignTeamDetail, GET /api/world/team-page nettoyé :
+    jetons, push, tactiques prévues, marché, directs retirés) ; rendu avec
+    son championnat à la place de `league` (withTeamDetailLeague,
+    myTeamIndex = -1, aucun scouting) ; pas d'Analyse, pas de fiche joueur.
+    Même chemin pour la recherche du haut et les clubs invités de la Coupe.
 
 - **⏳ EN ATTENTE DE VALIDATION VISUELLE (2026-09-27) — Émissions sans
   défilement** (assets/hoop-shows/showPlayer.js/.css, stash sandbox) :
