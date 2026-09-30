@@ -510,19 +510,17 @@
   /* Panneau : plus de cadre, ce sont les cartes qui en portent un. */
   #prepSection .team-panel.ordres-panel{background:none; border:none; border-radius:0; padding:0;}
   #prepSection .prep-columns{grid-template-columns:minmax(0, 1.15fr) minmax(0, 1fr); gap:22px;}
-  #prepSection .prep-col{display:flex; flex-direction:column; gap:22px; min-width:0;}
-  /* Deux colonnes INDÉPENDANTES (retour utilisateur 2026-09-27, maquette
-     validée : "c'est ok pour moi comme ça") — plus de rangées communes,
-     qui étiraient la plus courte des deux cartes (vide sous Pivot dans
-     Rotation, boutons de Défense qui grossissaient). Gauche : Convocation,
-     Attaque, Défense ; droite : Cinq de départ, Rotation, Temps de jeu,
-     Postes à surveiller. Chaque carte garde sa hauteur naturelle (pas de
-     grand vide dans Postes à surveiller quand les temps de jeu sont en
-     automatique, les colonnes finissent alors à des hauteurs différentes). */
-  @media(min-width:901px){
-    #prepSection .prep-columns{align-items:start;}
-  }
+  /* Sous la Composition : grille 2 × 2 à rangées alignées (retour
+     utilisateur 2026-09-30, remplace les deux colonnes indépendantes du
+     2026-09-27) — Attaque | Défense, puis Temps de jeu | Postes à
+     surveiller ; une seule colonne sous 900 px, dans le même ordre. */
   #prepSection .prep-def-stack{display:flex; flex-direction:column; gap:22px;}
+  #prepSection .prep-columns.prep-grid4{grid-template-columns:repeat(2, minmax(0, 1fr)); align-items:stretch;}
+  #prepSection .prep-grid4 > *{min-width:0;}
+  #prepSection .prep-grid4 > .prep-def-stack > .ordres-card,
+  #prepSection .prep-grid4 > .lineup-minutes-host > .ordres-card{flex:1;}
+  #prepSection .prep-grid4 > .lineup-minutes-host{display:flex; flex-direction:column;}
+  @media(max-width:900px){ #prepSection .prep-columns.prep-grid4{grid-template-columns:minmax(0, 1fr);} }
   #prepSection .lineup-editor{margin-top:0; display:flex; flex-direction:column; gap:22px;}
   .ordres-card{
     background:var(--panel); border:none; border-radius:16px; padding:22px;
@@ -627,7 +625,7 @@
   .compo-layout{display:grid; grid-template-columns:minmax(0, 1fr) 360px; gap:22px; align-items:stretch;}
   .compo-court{
     position:relative; display:grid; grid-template-columns:repeat(6, minmax(0, 1fr));
-    grid-template-areas:". . pg pg . ." "sg sg . . sf sf" ". pf pf c c .";
+    grid-template-areas:". . pg pg . ." "sg sg . . sf sf" "pf pf . . c c";
     gap:20px 14px; align-content:space-between; padding:22px 20px 26px; border-radius:14px;
     background:var(--compo-court-bg); min-height:560px; min-width:0;
   }
@@ -33937,15 +33935,13 @@ function buildTeamPanel(team, side, opts = {}) {
   const panel = document.createElement("div");
   panel.className = "team-panel ordres-panel " + side;
 
+  // Grille 2 × 2 sous la Composition (retour utilisateur 2026-09-30) :
+  // Attaque | Défense, puis Temps de jeu | Postes à surveiller, hauteurs
+  // alignées par rangée ; une seule colonne sur téléphone, dans cet ordre
+  // (celui du DOM). Plus de colonnes gauche/droite indépendantes.
   const columnsWrap = document.createElement("div");
-  columnsWrap.className = "prep-columns";
+  columnsWrap.className = "prep-columns prep-grid4";
   panel.appendChild(columnsWrap);
-  const leftCol = document.createElement("div");
-  leftCol.className = "prep-col prep-col-left";
-  columnsWrap.appendChild(leftCol);
-  const rightCol = document.createElement("div");
-  rightCol.className = "prep-col prep-col-right";
-  columnsWrap.appendChild(rightCol);
 
   const syncField = (field, value) => { if (editable && team === teamA) syncTacticsToServer({ [field]: value }); };
 
@@ -34033,7 +34029,7 @@ function buildTeamPanel(team, side, opts = {}) {
   // =================== ATTAQUE ===================
   const prioCount = makeAside();
   const attaque = makeCard("ordresCardAttaque", "Attaque", prioCount);
-  leftCol.appendChild(attaque);
+  columnsWrap.appendChild(attaque);
 
   const prioField = addField(attaque, "Priorités offensives", "ordres-field-wide");
   const tWrap = document.createElement("div");
@@ -34124,7 +34120,7 @@ function buildTeamPanel(team, side, opts = {}) {
   // face de Temps de jeu + Postes à surveiller).
   const defStack = document.createElement("div");
   defStack.className = "prep-def-stack";
-  leftCol.appendChild(defStack);
+  columnsWrap.appendChild(defStack);
   defStack.appendChild(defense);
   const defenseGrid = document.createElement("div");
   defenseGrid.className = "ordres-settings-grid";
@@ -34260,8 +34256,8 @@ function buildTeamPanel(team, side, opts = {}) {
   minutesHost.className = "lineup-minutes-host";
   refreshLineupEditor = () => renderLineupEditor(team, hint, { onDirty, readonly: !editable, minutesContainer: minutesHost });
   refreshLineupEditor();
-  if (editable) rightCol.appendChild(minutesHost);
-  rightCol.appendChild(adversaires);
+  if (editable) columnsWrap.appendChild(minutesHost);
+  columnsWrap.appendChild(adversaires);
 
   applyTierVisibility();
   return panel;
@@ -34325,13 +34321,25 @@ function compoRatingAt(p, pos) { return Math.round(positionRating(p, pos)); }
 const COMPO_POS_AREA = { "Meneur": "pg", "Arrière": "sg", "Ailier shooteur": "sf", "Ailier fort": "pf", "Pivot": "c" };
 // Demi-terrain vu de dessus, panier en bas (même sens que l'ancien terrain
 // des Ordres), traits discrets : c'est un décor, les cartes portent l'info.
-const COMPO_COURT_SVG = `<svg class="compo-court-lines" viewBox="0 0 600 470" preserveAspectRatio="none" aria-hidden="true">
-  <path d="M240 0 A60 60 0 0 0 360 0"/>
-  <path class="compo-paint" d="M240 470 L240 290 L360 290 L360 470"/>
-  <circle cx="300" cy="290" r="60"/>
-  <path d="M40 470 L40 340 A275 275 0 0 1 560 340 L560 470"/>
-  <line x1="272" y1="446" x2="328" y2="446"/>
-  <circle cx="300" cy="432" r="9"/>
+// Cotes FIBA en décimètres (retour utilisateur 2026-09-30 : "la raquette est
+// un peu étroite", "le cercle autour des lancers francs n'est pas très
+// rond") : terrain 15 m de large × 14 m (demi-terrain), raquette 4,9 m de
+// large jusqu'à la ligne des lancers francs à 5,8 m de la ligne de fond,
+// cercle des lancers francs de 1,8 m de rayon, panier à 1,575 m de la ligne
+// de fond, planche à 1,2 m, ligne à 3 points à 6,75 m du panier et à 0,9 m
+// des lignes de touche, rond central de 1,8 m. preserveAspectRatio "meet"
+// (jamais "none") : l'échelle reste la même dans les deux sens, les cercles
+// restent ronds quelle que soit la taille de la carte ; le dessin est calé
+// en bas (ligne de fond) et centré.
+const COMPO_COURT_SVG = `<svg class="compo-court-lines" viewBox="0 0 150 140" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+  <line x1="0" y1="139.5" x2="150" y2="139.5"/>
+  <path d="M57 0 A18 18 0 0 0 93 0"/>
+  <rect class="compo-paint" x="50.5" y="82" width="49" height="58"/>
+  <circle cx="75" cy="82" r="18"/>
+  <path d="M9 140 L9 110.1 A67.5 67.5 0 0 1 141 110.1 L141 140"/>
+  <path d="M62.5 124.25 A12.5 12.5 0 0 1 87.5 124.25"/>
+  <line x1="66" y1="128" x2="84" y2="128"/>
+  <circle cx="75" cy="124.25" r="2.25"/>
 </svg>`;
 
 // Nom court ("Léo Traoré" → "Traoré") pour les alertes, qui doivent tenir
