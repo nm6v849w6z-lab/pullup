@@ -24,7 +24,7 @@
   (BASKET_PUBLIC_SITE=1), tout visiteur sans jeton manager y est envoyé.
   Routes appelées : voir server/accountRoutes.js.
   Langue : même préférence que le jeu (localStorage "hm-lang"), textes
-  FR/EN dans TEXTS ci-dessous. Jeton : même clé que le jeu
+  FR/EN/IT dans TEXTS ci-dessous. Jeton : même clé que le jeu
   (MANAGER_TOKEN_STORAGE_KEY = "tipinManagerToken_v1").
 -->
 <style>
@@ -198,6 +198,7 @@
     <div class="lang" role="group" aria-label="Langue / Language">
       <button type="button" data-lang="fr" aria-pressed="true">FR</button>
       <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="it" aria-pressed="false">IT</button>
     </div>
     <button type="button" class="btn btn-ghost" id="headerLoginBtn" data-t="login.tab">Se connecter</button>
   </div>
@@ -465,6 +466,67 @@
       "field.invite": "Invitation code", "field.inviteHint": "Sign-ups are invitation-only for now.",
       "err.invite-invalid": "This invitation code isn't valid."
     },
+    it: {
+      "login.tab": "Accedi", "signup.tab": "Crea il mio club",
+      "resume.text": "Hai già effettuato l'accesso su questo browser.", "resume.go": "Torna al mio club", "resume.logout": "Esci",
+      "hero.kicker": "Gioco manageriale di basket online",
+      "hero.title": "Prendi in mano<br>il tuo <em>club</em>.",
+      "hero.lead": "Ingaggia, allena, scegli la tua tattica… poi guarda la tua squadra giocare in diretta contro gli altri manager. Gratis, nel browser, su computer e su telefono.",
+      "hero.fact1": "<b>Partite in diretta</b> a orari fissi", "hero.fact2": "<b>10 manager</b> per lega", "hero.fact3": "<b>Gratis</b>, niente da installare",
+      "signup.title": "Il tuo club ti aspetta", "signup.sub": "Scegli un nome: prendi un club della lega in corso e giochi già stasera.",
+      "discord.signup": "Registrati con Discord", "discord.login": "Accedi con Discord", "or": "oppure",
+      "field.country": "Il tuo paese", "country.fr": "Francia", "country.us": "Stati Uniti",
+      "field.countryHint": "Il tuo campionato e i suoi orari (ora di Parigi o di New York).",
+      "field.club": "Il nome del tuo club", "field.clubHint": "Da 2 a 24 caratteri. Visibile agli altri manager.",
+      "field.email": "Email", "field.password": "Password", "field.pwHint": "Almeno 8 caratteri.",
+      "pw.show": "Mostra", "pw.hide": "Nascondi",
+      "signup.submit": "Crea il mio club",
+      "legal": "La tua email (o il tuo ID Discord) serve solo per accedere al gioco. Mai venduta. <a href=\"/confidentialite\">Privacy</a>",
+      "login.title": "Bentornato", "login.sub": "Accedi per ritrovare il tuo club.", "login.submit": "Accedi",
+      "login.forgot": "Password dimenticata? Scrivici sul Discord del gioco e te la reimpostiamo.",
+      "login.forgotLink": "Password dimenticata?",
+      "forgot.title": "Password dimenticata", "forgot.sub": "Inserisci l'email del tuo account: riceverai un link per scegliere una nuova password.",
+      "forgot.submit": "Inviami il link", "forgot.back": "Torna all'accesso",
+      "forgot.sent": "Se esiste un account con questa email, gli è appena stato inviato un link (valido 1 ora). Controlla anche la cartella spam.",
+      "forgot.nomail": "L'invio di email non è ancora disponibile: scrivici sul Discord del gioco e ti mandiamo un link di reimpostazione.",
+      "reset.title": "Nuova password", "reset.sub": "Scegli la tua nuova password: accederai subito.", "reset.submit": "Salva e accedi",
+      "err.reset-expired": "Questo link è scaduto o è già stato usato. Richiedine uno nuovo.",
+      "dclub.title": "Benvenuto!", "dclub.sub": "Ciao {name}! Ultimo passo: scegli il nome del tuo club.",
+      "wait.title": "Sei in lista",
+      "wait.text": "Il tuo account è creato, ma tutti i club della lega sono occupati. Appena si libera un posto, ti viene assegnato automaticamente un club: torna su questa pagina, controlliamo a ogni visita.",
+      "wait.check": "Controlla ora", "wait.still": "Ancora tutto pieno per ora. Riprova più tardi!",
+      "disc.title": "Scopri il gioco prima di registrarti",
+      "disc1.t": "Come funziona", "disc1.p": "Il calendario, le partite in diretta, la preparazione tattica e la vita del club, spiegati nel dettaglio (in francese).",
+      "disc2.t": "La guida completa", "disc2.p": "Rosa, valutazioni, ordini, mercato, economia, vivaio: la guida del gioco, sezione per sezione (in francese).",
+      "disc3.t": "FAQ", "disc3.p": "Prezzo, orari delle partite, tempo richiesto, account: le risposte alle domande più frequenti (in francese).",
+      "nav.game": "Il gioco", "nav.guide": "Guida", "nav.about": "Chi siamo", "nav.privacy": "Privacy", "nav.legal": "Note legali",
+      "feat.title": "Un club intero da costruire", "feat.sub": "Non è solo tattica: sponsor, palazzetto, staff e giovani talenti contano quanto il tuo quintetto.",
+      "f1.t": "Partite in diretta", "f1.p": "Ogni partita è trasmessa in tempo reale: azione per azione, timeout, programmi dell'intervallo e prepartita. Puoi entrare a partita in corso, mai andare avanti veloce.",
+      "f2.t": "Una vera lega", "f2.p": "Fino a 10 manager umani nello stesso campionato, con classifica, playoff, promozioni e retrocessioni. Più una coppa pomeridiana.",
+      "f3.t": "Allenamento & tattica", "f3.p": "Scegli cosa allenare, fai crescere i tuoi giocatori, prepara in anticipo il piano di ogni partita.",
+      "f4.t": "Mercato ad aste", "f4.p": "Giocatori, allenatori, analisti, osservatori: tutto si aggiudica all'asta in tempo reale contro gli altri manager.",
+      "f5.t": "Palazzetto & finanze", "f5.p": "Amplia il palazzetto, fissa il prezzo dei biglietti, firma con gli sponsor e tieni d'occhio il budget.",
+      "f6.t": "Settore giovanile", "f6.p": "Scova talenti di 15 anni, falli crescere e costruisci la squadra che alzerà il trofeo tra qualche stagione.",
+      "com.title": "Unisciti alla community", "com.text": "Novità, aiuto tra manager, idee e segnalazioni di bug: succede tutto su Discord.", "com.btn": "Entra nel Discord",
+      "footer": "Fatto con passione per gli appassionati di basket.",
+      "err.email-invalid": "Questo indirizzo email non sembra valido.",
+      "err.password-too-short": "La tua password deve avere almeno 8 caratteri.",
+      "err.password-invalid": "Questa password non è valida.",
+      "err.club-invalid": "Nome del club: da 2 a 24 caratteri (lettere, cifre, spazi, - ' .).",
+      "err.club-taken": "Questo nome di club è già preso. Provane un altro!",
+      "err.email-taken": "Esiste già un account con questa email. Vuoi piuttosto accedere?",
+      "err.bad-credentials": "Email o password errate.",
+      "err.rate-limited": "Troppi tentativi. Aspetta qualche minuto prima di riprovare.",
+      "err.discord-expired": "L'accesso con Discord è scaduto. Riprova.",
+      "err.discord-cancelled": "Accesso con Discord annullato.",
+      "err.discord-failed": "Impossibile raggiungere Discord. Riprova tra un attimo.",
+      "err.discord-disabled": "L'accesso con Discord non è disponibile al momento.",
+      "err.network": "Impossibile raggiungere il server. Controlla la connessione e riprova.",
+      "err.generic": "Si è verificato un errore. Riprova.",
+      "err.fill": "Compila tutti i campi.",
+      "field.invite": "Codice d'invito", "field.inviteHint": "Per ora le iscrizioni sono solo su invito.",
+      "err.invite-invalid": "Questo codice d'invito non è valido."
+    },
     fr: {
       "pw.hide": "Masquer",
       "dclub.sub": "Salut {name} ! Dernière étape : choisis le nom de ton club.",
@@ -495,7 +557,11 @@
   function read(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 
   // --- Langue ---------------------------------------------------------
-  var lang = read(LANG_KEY) === "en" ? "en" : (read(LANG_KEY) === "fr" ? "fr" : ((navigator.language || "fr").slice(0, 2) === "fr" ? "fr" : "en"));
+  // Langue mémorisée (fr / en / it), sinon celle du navigateur (italien
+  // reconnu, anglais pour toute autre langue que le français).
+  var stored = read(LANG_KEY);
+  var navLang = (navigator.language || "fr").slice(0, 2);
+  var lang = /^(fr|en|it)$/.test(stored || "") ? stored : (navLang === "fr" || navLang === "it" ? navLang : "en");
   var FR_DEFAULTS = {};
   document.querySelectorAll("[data-t]").forEach(function (el) { FR_DEFAULTS[el.dataset.t] = el.textContent; });
   document.querySelectorAll("[data-t-html]").forEach(function (el) { FR_DEFAULTS[el.dataset.tHtml] = el.innerHTML; });
