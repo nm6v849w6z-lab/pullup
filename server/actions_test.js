@@ -227,6 +227,24 @@ function freshTeamAndLeague() {
   if (team.getPlanForRound(futureRound).defense !== "Homme à homme") throw new Error("❌ Le patch partiel aurait dû mettre à jour la défense.");
   console.log("✅ setPlan fusionne un patch partiel avec le plan déjà en place pour cette journée (ne remplace jamais tout le plan).");
 
+  // { clear: true } (« Annuler » de l'écran Ordres, 2026-09-30) : retire le
+  // plan de CETTE journée, sans toucher aux ordres en direct ; sans plan,
+  // c'est un no-op qui répond ok.
+  {
+    const liveDefense = team.defense;
+    const cleared = actions.setPlan(team, 0, league, { round: futureRound, clear: true });
+    if (!cleared.ok || !cleared.cleared) throw new Error("❌ setPlan { clear: true } devrait répondre ok.");
+    if (team.hasPlanForRound(futureRound)) throw new Error("❌ Le plan de la journée aurait dû être retiré.");
+    if (team.defense !== liveDefense) throw new Error("❌ Retirer un plan ne doit pas toucher aux ordres en direct.");
+    const again = actions.setPlan(team, 0, league, { round: futureRound, clear: true });
+    if (!again.ok) throw new Error("❌ Retirer un plan inexistant devrait rester un no-op ok.");
+    const badClear = actions.setPlan(team, 0, league, { round: -1, clear: true });
+    if (badClear.ok) throw new Error("❌ { clear: true } doit valider la journée comme un plan normal.");
+    // Remet le plan en place pour la suite du test.
+    actions.setPlan(team, 0, league, { round: futureRound, patch: { defense: "Homme à homme", rhythm: rhythmBefore } });
+    console.log("✅ setPlan { clear: true } retire le plan de la journée (no-op sans plan), ordres en direct intacts.");
+  }
+
   // Rejet : tactiques invalides dans le patch (même validation que setTactics) -> rien ne change.
   const planBefore = JSON.stringify(team.getPlanForRound(futureRound));
   const badTactics = actions.setPlan(team, 0, league, { round: futureRound, patch: { defense: "Zone imaginaire" } });

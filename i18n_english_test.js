@@ -87,6 +87,10 @@ async function waitFor(fn, ms = 30000) {
   assert(t("Léo Martin") === "Léo Martin", "un nom de joueur n'est pas touché");
   assert(t("Samedi 3 octobre · 15:00") === "Saturday 3 October · 15:00", "date écrite en français → anglais");
   assert(t("Léo Martin (P, 29)") === "Léo Martin (C, 29)", "« (P, 29) » → « (C, 29) »");
+  // Vue composition + note par poste (2026-09-30).
+  assert(t("Hors poste : 58 ici, 66 en PG") === "Out of position: 58 here, 66 at PG", "alerte hors poste traduite (codes de poste déjà en anglais) : " + t("Hors poste : 58 ici, 66 en PG"));
+  assert(t("Note par poste") === "Rating by position" && t("Verrouillage dans 13 h 40 min") === "Locks in 13 h 40 min" && t("Ordres verrouillés") === "Orders locked", "note par poste / pastille du verrou / ordres verrouillés traduits");
+  assert(t("Votre banc est plus fort que votre cinq majeur.") === "Your bench is stronger than your starting five.", "bilan de la composition traduit");
   const half = t("Un texte inventé et une autre phrase qui n'existe pas");
   assert(!/ and /.test(half), "pas de phrase à moitié traduite par un gabarit trop large");
 

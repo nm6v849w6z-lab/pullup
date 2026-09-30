@@ -57,6 +57,20 @@ if (!doc1.getElementById("playerDetailContent").textContent.includes("Aucun matc
 }
 console.log("✅ Fiche joueur ouverte depuis l'Effectif : caractéristiques en clair, message d'attente propre sans historique de matchs.");
 
+// Note par poste (retour utilisateur 2026-09-30, voir positionRating) : 5
+// petites valeurs sous l'anneau de la note, le meilleur poste en évidence.
+{
+  const pid = Number(firstPlayerLink.dataset.playerId);
+  const cells = [...doc1.querySelectorAll("#playerDetailContent .pdp2-posratings .pdp2-posrating")];
+  const expected = dom1.window.eval(`(() => { const p = teamA.players.find(x => x.id === ${pid}); return { vals: POSITIONS.map(q => Math.round(positionRating(p, q))), best: bestPosition(p) }; })()`);
+  if (cells.length !== 5) throw new Error(`❌ La fiche devrait afficher 5 notes par poste, obtenu ${cells.length}.`);
+  const shown = cells.map(c => Number(c.querySelector("b").textContent));
+  if (JSON.stringify(shown) !== JSON.stringify(expected.vals)) throw new Error(`❌ Notes par poste affichées ${JSON.stringify(shown)}, attendu ${JSON.stringify(expected.vals)}.`);
+  const bestCells = cells.filter(c => c.classList.contains("is-best"));
+  if (bestCells.length !== 1 || bestCells[0].dataset.pos !== expected.best) throw new Error("❌ Le meilleur poste devrait être le seul mis en évidence.");
+  console.log("✅ Note par poste sur la fiche :", cells.map(c => c.textContent).join(" "), "— meilleur poste :", expected.best);
+}
+
 // ---------------------------------------------------------------------
 // Motivation (Player.form, voir motivationBadgeHtml, retour utilisateur,
 // 2026-09 : "La motivation du joueur n'apparaît pas ?") : visible sur SA

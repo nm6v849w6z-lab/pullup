@@ -8293,6 +8293,51 @@ function inferPosition(attrs, cardPosition) {
   return bestPosition;
 }
 
+// ---------------------------------------------------------------------
+// Note PAR POSTE (retour utilisateur 2026-09-30 : "il faudrait que le jeu
+// calcule une note par poste"). Aide à la décision uniquement (écran
+// Ordres, fiche joueur) : AUCUN effet sur la simulation.
+//
+// Ce que fait réellement le moteur de match : il ne pondère PAS les
+// caractéristiques d'un joueur selon le poste qu'il occupe (un tir, un
+// rebond, une passe se résolvent avec les mêmes caractéristiques qu'il
+// soit aligné Meneur ou Pivot) et n'applique AUCUNE pénalité "hors poste".
+// Le poste joué (Player.matchPosition) ne sert qu'aux remplacements (qui
+// remplace qui, minutes visées), aux consignes « postes à surveiller »,
+// au taux de fautes (FOUL_POSITION_MULT : Pivot ×1.3, Ailier fort ×1.15)
+// et au temps de jeu par poste (entraînement). La note par poste reprend
+// donc la seule pondération par poste qui existe déjà dans le jeu :
+// weightedRatingForPosition (profil POSITION_ATTR_PROFILE, poids
+// ATTR_CATEGORY_WEIGHT : "strong" 1.5, "base" 1.0, "weak" 0.4), celle qui
+// détermine déjà le poste effectif (inferPosition), le salaire et la
+// frustration d'un remplaçant qui "mérite de jouer". Même échelle que
+// Player.overall() (moyenne de caractéristiques 1-99), bornée à 0-100.
+// ---------------------------------------------------------------------
+function positionRating(player, pos) {
+  const attrs = player && player.attrs ? player.attrs : player;
+  if (!attrs || !POSITIONS.includes(pos)) return 0;
+  return clamp(weightedRatingForPosition(attrs, pos), 0, 100);
+}
+
+// Les 5 notes d'un joueur, { poste: note }.
+function positionRatings(player) {
+  const out = {};
+  POSITIONS.forEach(pos => { out[pos] = positionRating(player, pos); });
+  return out;
+}
+
+// Poste où la note est la plus haute. À égalité (arrondie à l'unité),
+// le poste de carte du joueur l'emporte, puis l'ordre de POSITIONS.
+function bestPosition(player) {
+  const card = player && player.position;
+  let best = null, bestScore = -Infinity;
+  POSITIONS.forEach(pos => {
+    const score = Math.round(positionRating(player, pos) * 1000) / 1000;
+    if (score > bestScore || (score === bestScore && pos === card)) { bestScore = score; best = pos; }
+  });
+  return best;
+}
+
 // Bonus salarial pour une caractéristique SIGNATURE exceptionnelle du poste
 // retenu (voir POSITION_ATTR_PROFILE) : ADDITIF, appliqué APRÈS le choix du
 // poste (voir levelCoefficientFor) — jamais mélangé dans une moyenne, pour
@@ -16425,7 +16470,7 @@ return {
   POSITION_STRONG_ATTRS,
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,
   POSITION_ATTR_PROFILE, ATTR_CATEGORY_WEIGHT, weightedRatingForPosition, levelCoefficientFor,
-  CARD_POSITION_BIAS, inferPosition, SALARY_PEAK_BONUS_THRESHOLD, SALARY_PEAK_BONUS_FACTOR, SALARY_PEAK_BONUS_MAX, peakBonusFor,
+  CARD_POSITION_BIAS, inferPosition, positionRating, positionRatings, bestPosition, SALARY_PEAK_BONUS_THRESHOLD, SALARY_PEAK_BONUS_FACTOR, SALARY_PEAK_BONUS_MAX, peakBonusFor,
   trainerWeeklySalary,
   OFFENSE_PROFILES, DEFENSES, RHYTHMS,
   // Tactique confirmée (voir le grand commentaire au-dessus de
