@@ -100,7 +100,14 @@ async function waitFor(fn, label, tries = 60) {
   check(docA2.querySelectorAll(".lp-table tbody tr").length === 4, "classement à 4 équipes");
   const rows = docA2.querySelectorAll(".lp-cal-row");
   check(rows.length === 6, "calendrier « Mes matchs » : 6 journées (aller-retour à 4)");
-  check(/ven\./.test(rows[0].querySelector(".lp-cal-date").textContent) && /20:00/.test(rows[0].textContent), "J1 un vendredi à 20:00 (heure choisie)");
+  // Heure choisie = heure de Paris (le serveur planifie en Europe/Paris) ;
+  // la page l'affiche à l'heure locale du navigateur (formatCalendar*Fr),
+  // donc la vérification ne dépend plus du fuseau de la machine de test
+  // (échouait en UTC : « 18:00 » affiché pour 20:00 à Paris).
+  const j1At = domA2.window.eval("lpMyLeague().rounds[0].dueAt");
+  const parisJ1 = new Date(j1At).toLocaleString("fr-FR", { timeZone: "Europe/Paris", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  check(/ven\./.test(parisJ1) && /20:00/.test(parisJ1), `J1 un vendredi à 20:00 heure de Paris (${parisJ1})`);
+  check(rows[0].querySelector(".lp-cal-date").textContent === domA2.window.eval(`formatCalendarDayFr(${j1At})`) && rows[0].textContent.includes(domA2.window.eval(`formatCalendarTimeFr(${j1At})`)), "J1 affiché à l'heure locale du navigateur");
   docA2.querySelector("[data-lp-filter='all']").click();
   check(docA2.querySelectorAll(".lp-cal-row").length === 12, "filtre « Tous » : 12 matchs");
   check(!!docA2.querySelector(".cal-next .cal-card-kicker") && /J1/.test(docA2.querySelector(".cal-next .cal-card-kicker").textContent), "carte « Prochain match · J1 »");
@@ -114,7 +121,7 @@ async function waitFor(fn, label, tries = 60) {
     w.eval("TAB_HANDLERS.calendrier()");
     const lpRows = [...d.querySelectorAll("#calendrierContent tr.cal-row")].filter(tr => tr.querySelector(".cal-lp-badge"));
     check(lpRows.length === 6, `Calendrier : 6 lignes de ligue privée (${lpRows.length})`);
-    check(/LP J1/.test(lpRows[0].textContent) && /20:00/.test(lpRows[0].textContent) && !!lpRows[0].querySelector("[data-tab='lp']"), "ligne LP J1 à 20:00 avec bouton vers la ligue privée");
+    check(/LP J1/.test(lpRows[0].textContent) && lpRows[0].textContent.includes(domA2.window.eval(`formatCalendarTimeFr(${j1At})`)) && !!lpRows[0].querySelector("[data-tab='lp']"), "ligne LP J1 à 20:00 (heure de Paris, affichée à l'heure locale) avec bouton vers la ligue privée");
     // Match officiel du jour avant 20h00 : le prochain match reste l'officiel.
     w.eval("updateTopbar()");
     const officialFirst = !!w.eval("scheduledTimeForCurrentMatch() <= lpMyNextMatch().dueAt");
