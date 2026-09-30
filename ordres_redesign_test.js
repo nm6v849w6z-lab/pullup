@@ -26,18 +26,29 @@ const win = dom.window;
 const openOrdres = () => [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
 openOrdres();
 
-// 1) Barre d'action
+// 1) Barre d'action. Vue « composition » (retour utilisateur 2026-09-30) :
+// le bouton de validation (« Enregistrer », même #ordresValidateBtn) et
+// l'état des ordres ont quitté la barre du haut pour la barre collée en bas
+// de page (#ordresSaveBar, avec « Annuler ») ; la barre du haut garde le
+// titre, les onglets et la pastille d'échéance du verrou.
 const prep = doc.getElementById("prepSection");
 const bar = doc.getElementById("ordresActionBar");
+const saveBar = doc.getElementById("ordresSaveBar");
 const validateBtn = doc.getElementById("ordresValidateBtn");
 const grid = doc.getElementById("prepGrid");
-if (!bar || !bar.contains(validateBtn)) throw new Error("❌ Le bouton 'Valider les ordres' devrait être dans la barre d'action #ordresActionBar.");
-if (!(validateBtn.compareDocumentPosition(grid) & win.Node.DOCUMENT_POSITION_FOLLOWING)) {
-  throw new Error("❌ Le bouton 'Valider les ordres' devrait être AVANT la grille des ordres (en haut de page).");
+if (!saveBar || !saveBar.contains(validateBtn) || !saveBar.contains(doc.getElementById("ordresRevertBtn"))) throw new Error("❌ « Enregistrer » et « Annuler » devraient être dans la barre du bas #ordresSaveBar.");
+if (validateBtn.textContent.trim() !== "Enregistrer") throw new Error("❌ Le bouton principal devrait s'appeler « Enregistrer ».");
+if (!(grid.compareDocumentPosition(saveBar) & win.Node.DOCUMENT_POSITION_FOLLOWING)) {
+  throw new Error("❌ La barre d'enregistrement devrait venir APRÈS la grille des ordres (collée en bas).");
 }
+if (!/\.ordres-savebar\{[^}]*position:sticky; bottom:0/.test(html)) throw new Error("❌ La barre d'enregistrement devrait être collée en bas (position:sticky; bottom:0).");
+if (!doc.getElementById("ordresRevertBtn").disabled) throw new Error("❌ « Annuler » devrait être grisé tant que rien n'a changé.");
+const lockPill = doc.getElementById("ordresLockPill");
+console.log("Pastille du verrou :", lockPill.textContent);
+if (!bar.contains(lockPill) || !/^Verrouillage dans \d/.test(lockPill.textContent)) throw new Error("❌ La pastille « Verrouillage dans … » devrait être dans la barre du haut.");
 const tabs = [...doc.querySelectorAll("#ordresSectionTabs [data-ordres-jump]")];
 console.log("Onglets de la barre :", tabs.map(t => t.textContent.trim()).join(" | "));
-["Attaque", "Défense", "Cinq & rotation", "Adversaires"].forEach(label => {
+["Composition", "Attaque", "Défense", "Adversaires"].forEach(label => {
   if (!tabs.some(t => t.textContent.trim() === label)) throw new Error(`❌ Onglet '${label}' manquant dans la barre d'action.`);
 });
 tabs.forEach(t => {
@@ -47,7 +58,7 @@ tabs[0].click(); // ne doit pas planter sans scrollIntoView (jsdom)
 const statusText = () => doc.getElementById("ordresStatus").textContent.trim();
 console.log("État initial :", statusText());
 if (statusText() !== "Ordres pas encore validés") throw new Error(`❌ État initial attendu 'Ordres pas encore validés', obtenu '${statusText()}'.`);
-console.log("✅ Barre d'action : validation en haut, état, 4 onglets reliés à leurs cartes.");
+console.log("✅ Barres : onglets + pastille du verrou en haut, état + Annuler/Enregistrer en bas.");
 
 // 2) Carte match
 const card = doc.getElementById("ordresRoundDateTime").textContent;
@@ -81,6 +92,7 @@ const after = win.eval("teamA.offensivePriorities");
 if (after.length !== 3 || after[2] !== "Post-up") throw new Error(`❌ Ajouter 'Post-up' devrait le placer en n°3, obtenu ${JSON.stringify(after)}.`);
 console.log("✅ Priorités : numérotées dans l'ordre choisi, pool grisé à 3/3, retrait/ajout corrects :", after.join(", "));
 if (statusText() !== "Modifications à valider") throw new Error(`❌ Après un changement, l'état devrait être 'Modifications à valider', obtenu '${statusText()}'.`);
+if (doc.getElementById("ordresRevertBtn").disabled) throw new Error("❌ « Annuler » devrait s'activer après un changement.");
 console.log("✅ État après changement :", statusText());
 
 // 4) Boutons segmentés
@@ -150,8 +162,11 @@ if (!focusSel.disabled || focusSel.value !== "" || win.eval("teamA.watchAssignme
 }
 console.log("✅ Surveiller : joueur puis consigne (désactivée sans joueur), toujours stocké par poste côté moteur.");
 
-// 6) Alerte remplaçant à plusieurs postes
-const hasAlert = () => !!doc.querySelector("#ordresCardRotation .ordres-alert");
+// 6) Alerte remplaçant à plusieurs postes. Vue « composition »
+// (2026-09-30) : la carte Rotation et son bandeau .ordres-alert ont
+// disparu ; l'alerte est une pastille (.cp-warn.multi) sur la carte de
+// chaque poste concerné, et la ligne du joueur y est marquée .multi.
+const hasAlert = () => !!doc.querySelector("#ordresCardCinq .cp-warn.multi");
 win.eval(`(() => {
   const starters = new Set(Object.values(teamA.lineup.starters));
   POSITIONS.forEach(pos => teamA.players.forEach(p => { if (!starters.has(p.id)) teamA.toggleBackupPosition(p.id, pos, false); }));
@@ -167,10 +182,11 @@ const multiName = win.eval(`(() => {
   renderOrdresGrid();
   return p.name;
 })()`);
-const alertText = doc.querySelector("#ordresCardRotation .ordres-alert");
-console.log("Alerte rotation :", alertText && alertText.textContent);
-if (!alertText || !alertText.textContent.includes(multiName)) throw new Error("❌ L'alerte devrait nommer le remplaçant listé à plusieurs postes.");
-const multiChips = [...doc.querySelectorAll("#ordresCardRotation .lineup-backup-chip.multi")];
+const alertEls = [...doc.querySelectorAll("#ordresCardCinq .cp-warn.multi")];
+console.log("Alertes multi-postes :", alertEls.map(a => a.textContent).join(" | "));
+const lastName = win.eval("compoShortName")({ name: multiName });
+if (alertEls.length !== 2 || !alertEls.every(a => a.textContent.includes(lastName))) throw new Error("❌ Une pastille par poste concerné devrait nommer le remplaçant listé à plusieurs postes.");
+const multiChips = [...doc.querySelectorAll("#ordresCardCinq .cp-sub.multi")];
 if (multiChips.length !== 2) throw new Error(`❌ Ce remplaçant devrait être surligné sur ses 2 postes, obtenu ${multiChips.length}.`);
 console.log("✅ Alerte 'listé à plusieurs postes' affichée et puces surlignées.");
 
@@ -180,6 +196,24 @@ openOrdres();
 console.log("État après validation puis réouverture :", statusText());
 if (statusText() !== "Ordres validés") throw new Error(`❌ Après validation, l'état devrait être 'Ordres validés', obtenu '${statusText()}'.`);
 console.log("✅ État 'Ordres validés' après un clic sur Valider les ordres.");
+
+// 7 bis) « Annuler » (barre du bas, vue composition 2026-09-30) : revient
+// aux ordres tels qu'à l'ouverture de la journée, tactique ET composition.
+{
+  const rhythmBefore = win.eval("teamA.rhythm");
+  const pgBefore = win.eval("teamA.lineup.starters['Meneur']");
+  const other = [...doc.querySelectorAll("#ordresRhythmSelect .seg-btn")].find(b => b.dataset.value !== rhythmBefore);
+  other.dispatchEvent(new win.Event("click", { bubbles: true }));
+  const pgSel = doc.querySelector('#ordresCardCinq .cp-card[data-pos="Meneur"] select.cp-starter-select');
+  pgSel.value = "";
+  pgSel.dispatchEvent(new win.Event("change"));
+  if (win.eval("teamA.lineup.starters['Meneur']") != null) throw new Error("❌ Vider le menu du titulaire devrait libérer le poste.");
+  if (!doc.querySelector('#ordresCardCinq .cp-card[data-pos="Meneur"].is-empty')) throw new Error("❌ La carte du poste vide devrait passer en « à pourvoir ».");
+  doc.getElementById("ordresRevertBtn").click();
+  if (win.eval("teamA.rhythm") !== rhythmBefore || win.eval("teamA.lineup.starters['Meneur']") !== pgBefore) throw new Error("❌ « Annuler » devrait rétablir le rythme et le titulaire d'origine.");
+  if (statusText() === "Modifications à valider" || !doc.getElementById("ordresRevertBtn").disabled) throw new Error("❌ Après « Annuler », plus de modifications en attente.");
+  console.log("✅ « Annuler » rétablit les ordres d'origine :", rhythmBefore, "/ meneur", pgBefore);
+}
 
 // 8) Plus de « Réinitialiser ma carrière » nulle part (carrière solo
 // supprimée, 2026-09-29).

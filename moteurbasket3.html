@@ -435,14 +435,50 @@
   .ordres-status.dirty, .ordres-status.todo{color:var(--amber);}
   .ordres-status.ok{color:var(--ok);}
   .ordres-status.locked{color:var(--ink-dim);}
-  #prepSection .ordres-validate-btn{width:auto; min-height:44px; padding:0 22px; border-radius:999px; font-size:14px;}
-  #prepSection .ordres-validate-feedback{margin:0 0 12px; text-align:right; min-height:0;}
+  #prepSection .ordres-validate-btn{width:auto; min-height:44px; padding:0 24px; border-radius:999px; font-size:14px;}
+  #prepSection .ordres-validate-btn:disabled{opacity:.55; cursor:default;}
+  #prepSection .ordres-validate-feedback{margin:0; min-height:0; font-size:13px;}
   #prepSection .ordres-validate-feedback:empty{display:none;}
+  /* Pastille d'échéance du verrou (renderOrdresLockPill). */
+  .ordres-lock-pill{
+    display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border-radius:999px;
+    font-size:12.5px; font-weight:700; color:var(--ink-dim); background:var(--panel-2); white-space:nowrap;
+  }
+  .ordres-lock-pill::before{
+    content:""; width:12px; height:12px; flex:none; background:currentColor;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") center/contain no-repeat;
+            mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
+  .ordres-lock-pill.hidden{display:none;}
+  .ordres-lock-pill.is-soon{color:var(--amber);}
+  .ordres-lock-pill.is-locked{color:var(--ink);}
+  /* Barre d'enregistrement collée en bas de l'écran (vue composition,
+     2026-09-30) : état + Annuler / Enregistrer, toujours à portée. La
+     marge de droite (--float-safe-right) garde les boutons hors de portée
+     d'une bulle flottante dans le coin (assistant, aide…). */
+  .ordres-savebar{
+    --float-safe-right:84px;
+    position:sticky; bottom:0; z-index:5;
+    display:flex; align-items:center; justify-content:space-between; gap:12px 20px; flex-wrap:wrap;
+    margin:20px -28px 0; padding:12px calc(28px + var(--float-safe-right)) calc(12px + env(safe-area-inset-bottom, 0px)) 28px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    box-shadow:0 -1px 0 var(--line-soft), 0 -14px 30px -24px rgba(0,0,0,.6);
+  }
+  .osb-left{display:flex; align-items:center; gap:14px; flex-wrap:wrap; min-width:0;}
+  .osb-actions{display:flex; align-items:center; gap:10px; margin-left:auto;}
+  .osb-cancel{
+    min-height:44px; padding:0 18px; border-radius:999px; border:0; background:transparent;
+    font:inherit; font-size:14px; font-weight:700; color:var(--ink-dim); cursor:pointer;
+  }
+  .osb-cancel:hover:not(:disabled){color:var(--ink); background:var(--panel-2);}
+  .osb-cancel:disabled{opacity:.45; cursor:default;}
+  .ordres-savebar.is-dirty .ordres-status-dot{box-shadow:0 0 0 4px rgba(240,162,60,.18);}
 
   /* Carte "match" : équipes + journée à gauche, jauges à droite. */
   .ordres-match-card{
     display:grid; grid-template-columns:minmax(0, 1.3fr) minmax(0, 1fr); gap:24px;
-    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px 26px; margin-bottom:22px;
+    background:var(--panel); border:none; border-radius:16px; padding:22px 26px; margin-bottom:22px;
   }
   .omc-match{display:flex; flex-direction:column; gap:14px; min-width:0;}
   #prepSection .ordres-round-datetime{margin:0; text-align:left; color:var(--ink); font-weight:400; font-size:14px;}
@@ -468,7 +504,8 @@
   #prepSection .omc-gauges .roster-chemistry-gauge-wrap{max-width:none; flex:none; margin:0;}
   #prepSection .omc-gauges .roster-chemistry-gauge-label{font-size:13px;}
   #prepSection .omc-gauges .roster-chemistry-gauge-label span{color:var(--ink); font-weight:700;}
-  #prepSection .ordres-lock-note{max-width:none; margin:0 0 18px;}
+  #prepSection .ordres-lock-note{max-width:none; margin:0 0 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; text-align:left; font-size:13px; border:none; border-radius:12px; padding:10px 14px;}
+  #prepSection .ordres-lock-note.hidden{display:none;}
 
   /* Panneau : plus de cadre, ce sont les cartes qui en portent un. */
   #prepSection .team-panel.ordres-panel{background:none; border:none; border-radius:0; padding:0;}
@@ -485,22 +522,10 @@
   @media(min-width:901px){
     #prepSection .prep-columns{align-items:start;}
   }
-  #prepSection .conv-list{display:flex; flex-direction:column;}
   #prepSection .prep-def-stack{display:flex; flex-direction:column; gap:22px;}
-  #prepSection .conv-row{display:grid; grid-template-columns:22px 30px minmax(0,1fr) 30px auto; align-items:center; gap:8px; padding:6px 0; margin:0; border-bottom:1px solid var(--line-soft); cursor:pointer;}
-  #prepSection .conv-row:last-child{border-bottom:none;}
-  #prepSection .conv-row input{margin:0; width:16px; height:16px; accent-color:var(--amber);}
-  #prepSection .conv-pos{font-size:11px; font-weight:800; color:var(--amber);}
-  #prepSection .conv-name{font-size:13.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  #prepSection .conv-row:not(.on) .conv-name, #prepSection .conv-row:not(.on) .conv-pos{color:var(--ink-dim); font-weight:500;}
-  #prepSection .conv-ovr{font-size:12px; color:var(--ink-dim); text-align:right;}
-  #prepSection .conv-role{font-size:11.5px; color:var(--ink-dim); white-space:nowrap; text-align:right;}
-  #prepSection .conv-role.starter{color:var(--amber); font-weight:700;}
-  #prepSection .conv-role.spare{color:var(--ink);}
-  #prepSection .conv-role.off{color:var(--ink-faint, var(--ink-dim)); font-style:italic;}
   #prepSection .lineup-editor{margin-top:0; display:flex; flex-direction:column; gap:22px;}
   .ordres-card{
-    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px;
+    background:var(--panel); border:none; border-radius:16px; padding:22px;
     display:flex; flex-direction:column; gap:18px;
     scroll-margin-top:calc(var(--topbar-h, 64px) + 90px);
   }
@@ -583,45 +608,139 @@
   #prepSection .watch-row.is-empty select:first-of-type{border-style:dashed; color:var(--ink-dim);}
   #prepSection .watch-row select:disabled{opacity:.55;}
 
-  /* Cinq de départ : le terrain garde son gabarit (voir .lineup-court). */
-  #prepSection .lineup-court-wrap{margin-bottom:0;}
-  #prepSection .lineup-court{max-width:420px;
-    background:radial-gradient(ellipse 70% 45% at 50% 91%, rgba(230,168,88,.14), transparent 65%), linear-gradient(0deg, #17233a, #0f1622);}
-  #prepSection .lineup-court svg{transform:scaleY(-1);}
-  html[data-theme="light"] #prepSection .lineup-court{background:radial-gradient(ellipse 70% 45% at 50% 91%, rgba(217,128,11,.12), transparent 65%), linear-gradient(0deg, #fbf6ee, #f1e7d7);}
-  #prepSection .court-marker{width:auto;}
-  #prepSection .court-marker.cm-edge-left{transform:translate(0,-50%); align-items:flex-start;}
-  #prepSection .court-marker.cm-edge-right{transform:translate(-100%,-50%); align-items:flex-end;}
-  #prepSection .ordres-card .court-marker select{width:auto; min-width:120px; max-width:195px; min-height:34px; font-size:13px; padding:0 24px 0 10px; white-space:nowrap; text-overflow:ellipsis;}
-  @media(max-width:600px){
-    #prepSection .ordres-card .court-marker select{min-width:92px; max-width:142px; min-height:30px; font-size:11.5px; padding:0 18px 0 6px;}
+  /* =====================================================================
+     Vue « composition » (retour utilisateur 2026-09-30, maquette validée
+     d'après le nouvel écran BuzzerBeater — voir renderLineupEditor) :
+     terrain avec une carte par poste, bilan, liste compacte de l'effectif.
+     Consigne : peu de bordures, surfaces à peine différenciées, un seul
+     accent (l'action principale, « Enregistrer »), listes denses.
+     ===================================================================== */
+  #prepSection{
+    --compo-court-bg:var(--bg); --compo-court-line:rgba(154,168,189,.13); --compo-paint:rgba(154,168,189,.04);
+    --cp-bg:var(--panel-2); --cp-shadow:0 10px 24px -18px rgba(0,0,0,.8);
   }
+  html[data-theme="light"] #prepSection{
+    --compo-court-bg:#e9edf3; --compo-court-line:rgba(20,32,51,.10); --compo-paint:rgba(20,32,51,.03);
+    --cp-bg:var(--panel); --cp-shadow:0 8px 20px -14px rgba(20,32,51,.35);
+  }
+  #prepSection .compo-card{gap:16px;}
+  .compo-layout{display:grid; grid-template-columns:minmax(0, 1fr) 360px; gap:22px; align-items:stretch;}
+  .compo-court{
+    position:relative; display:grid; grid-template-columns:repeat(6, minmax(0, 1fr));
+    grid-template-areas:". . pg pg . ." "sg sg . . sf sf" ". pf pf c c .";
+    gap:20px 14px; align-content:space-between; padding:22px 20px 26px; border-radius:14px;
+    background:var(--compo-court-bg); min-height:560px; min-width:0;
+  }
+  .compo-court-lines{position:absolute; inset:0; width:100%; height:100%; fill:none; stroke:var(--compo-court-line); stroke-width:1.5; vector-effect:non-scaling-stroke; pointer-events:none;}
+  .compo-court-lines .compo-paint{fill:var(--compo-paint);}
 
-  /* Rotation : même <table> qu'avant, présentée en lignes de carte. */
-  .ordres-alert{
-    display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:10px;
-    background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.35); color:var(--amber); font-size:13px; line-height:1.4;
+  /* Carte d'un poste. */
+  .cp-card{
+    position:relative; z-index:1; min-width:0; display:flex; flex-direction:column; gap:10px;
+    background:var(--cp-bg); border-radius:14px; padding:12px 14px; box-shadow:var(--cp-shadow);
   }
-  .ordres-alert svg{flex-shrink:0; margin-top:1px;}
-  .ordres-alert span{color:var(--ink);}
-  #prepSection .lineup-table{width:100%; border-collapse:collapse; background:none; border-radius:0; overflow:visible;}
-  #prepSection .lineup-table thead{display:none;}
-  #prepSection .lineup-table td{padding:12px 0; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
-  #prepSection .lineup-table tr:last-child td{border-bottom:none;}
-  #prepSection .lineup-table .lt-pos{width:40px; font-weight:800; color:var(--amber); font-size:15px;}
-  #prepSection .lineup-table .lt-starter{width:118px; padding-right:10px; font-size:14px; font-weight:700; color:var(--ink);}
-  #prepSection .lineup-backups-list{display:flex; flex-direction:column; align-items:flex-start; gap:6px;}
-  #prepSection .lineup-chips-line{display:flex; flex-wrap:wrap; gap:6px;}
-  #prepSection .lineup-backup-chip.tribune{opacity:.5; text-decoration:line-through;}
-  #prepSection .lineup-chips-line .lineup-backup-chip{white-space:nowrap;}
-  #prepSection .lineup-backup-chip{font-size:12px; padding:4px 8px; border-color:var(--line); color:var(--ink); background:var(--panel-2); cursor:default;}
-  #prepSection .lineup-backup-chip.multi{border-color:var(--amber); color:var(--amber);}
-  #prepSection .lineup-chip-remove{min-width:20px; min-height:20px; font-size:15px;}
-  #prepSection .ordres-card .lineup-add-select{
-    display:inline-block; width:auto; max-width:110px; margin:0; min-height:30px; font-size:12.5px; padding:0 10px;
-    border:1px dashed var(--line); border-radius:999px; background:transparent; color:var(--ink-dim); cursor:pointer;
+  .cp-card.is-empty{background:transparent; box-shadow:none; outline:1.5px dashed var(--line); outline-offset:-1.5px;}
+  .cp-top{display:flex; align-items:center; gap:8px; min-width:0;}
+  .cp-posname{flex:1; min-width:0; font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cp-badge{
+    min-width:30px; height:24px; padding:0 6px; border-radius:7px; background:var(--pos-c); color:#0d131d;
+    font-size:12px; font-weight:800; letter-spacing:.02em; display:inline-flex; align-items:center; justify-content:center;
   }
-  #prepSection .lineup-reserves{margin-top:0; font-size:12.5px;}
+  .cp-who{min-width:0; margin-top:-2px;}
+  .cp-pick{position:relative; display:flex; align-items:center; gap:5px; min-width:0; margin:0; cursor:pointer; border-radius:6px;}
+  .cp-name{font-size:16px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.25;}
+  .cp-card.is-empty .cp-name{color:var(--ink-dim); font-weight:600;}
+  .cp-chevron{flex:none; font-size:11px; color:var(--ink-faint);}
+  .cp-pick:hover .cp-name{text-decoration:underline; text-decoration-color:var(--ink-faint); text-underline-offset:3px;}
+  .cp-pick:focus-within{outline:2px solid var(--amber); outline-offset:2px;}
+  #prepSection .cp-pick select.cp-starter-select{
+    position:absolute; inset:0; width:100%; height:100%; min-height:0; margin:0; padding:0; opacity:0; cursor:pointer; font-size:16px;
+  }
+  .cp-meta{display:flex; flex-wrap:wrap; gap:2px 0; margin-top:3px; font-size:12px; color:var(--ink-dim); line-height:1.3;}
+  .cp-meta > span{white-space:nowrap;}
+  .cp-meta > span + span::before{content:"·"; margin:0 6px; color:var(--ink-faint);}
+  .cp-cond.cond-great, .cp-cond.cond-good{color:var(--ink-dim);}
+  .cp-cond.cond-mid{color:var(--amber);}
+  .cp-cond.cond-low, .cp-cond.cond-critical{color:var(--danger); font-weight:700;}
+  .cp-ovr{font-size:20px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; line-height:1;}
+  .cp-bench{display:flex; flex-direction:column; gap:1px; padding-top:8px; border-top:1px solid var(--line-soft);}
+  .cp-sub{display:grid; grid-template-columns:38px minmax(0, 1fr) auto 22px 18px; align-items:center; gap:6px; min-height:26px; font-size:13px;}
+  .cp-role{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint);}
+  .cp-sub-name{min-width:0; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cp-sub-pos{margin-left:6px; font-size:10.5px; font-weight:700; color:var(--ink-faint);}
+  .cp-sub-min{font-size:11.5px; color:var(--ink-dim); white-space:nowrap;}
+  .cp-sub-ovr{text-align:right; font-weight:700; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
+  .cp-sub.tribune .cp-sub-name{color:var(--ink-faint); text-decoration:line-through;}
+  .cp-remove{
+    width:18px; height:18px; padding:0; border:0; border-radius:50%; background:none; color:var(--ink-faint);
+    font-size:15px; line-height:1; cursor:pointer; opacity:.6;
+  }
+  .cp-remove:hover, .cp-remove:focus-visible{opacity:1; color:var(--ink); background:var(--line-soft);}
+  #prepSection .ordres-card select.cp-add{
+    align-self:flex-start; width:auto; max-width:100%; min-height:26px; margin:4px 0 0; padding:0 24px 0 10px;
+    font-size:12px; font-weight:600; color:var(--ink-dim); background-color:transparent; border:1px dashed var(--line); border-radius:999px; cursor:pointer;
+  }
+  .cp-empty{font-size:12px; color:var(--ink-faint); padding:3px 0;}
+  .cp-warns{display:flex; flex-direction:column; align-items:flex-start; gap:4px;}
+  .cp-warn{
+    display:inline-flex; align-items:center; gap:6px; max-width:100%; padding:3px 8px; border-radius:6px;
+    font-size:11.5px; font-weight:600; line-height:1.3; --warn-c:var(--amber); color:var(--warn-c); background:rgba(240,162,60,.12);
+  }
+  .cp-warn::before{content:"!"; flex:none; width:13px; height:13px; border-radius:50%; background:var(--warn-c); color:var(--cp-bg); font-size:9.5px; font-weight:900; display:inline-flex; align-items:center; justify-content:center;}
+  .cp-warn.danger{--warn-c:var(--danger); background:rgba(226,105,79,.13);}
+  html[data-theme="light"] .cp-warn{--warn-c:#a85f00; background:rgba(217,128,11,.12);}
+  html[data-theme="light"] .cp-warn.danger{--warn-c:#b93d25; background:rgba(207,75,49,.1);}
+
+  /* Colonne de droite : bilan + effectif. */
+  .compo-side{display:flex; flex-direction:column; gap:20px; min-width:0;}
+  .compo-summary{background:var(--compo-court-bg); border-radius:14px; padding:16px 16px 14px;}
+  .cs-stats{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px;}
+  .cs-stat{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .cs-value{font-size:24px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; line-height:1.1;}
+  .cs-label{font-size:12px; color:var(--ink-dim);}
+  .cs-stat.is-warn .cs-value{color:var(--amber);}
+  html[data-theme="light"] .cs-stat.is-warn .cs-value{color:#a85f00;}
+  .cs-sentence{margin:12px 0 0; font-size:13px; line-height:1.45; color:var(--ink-dim);}
+  .compo-roster{display:flex; flex-direction:column; gap:6px; min-width:0;}
+  .compo-roster-head{padding:0 6px;}
+  .compo-roster-title{margin:0; font-size:15px; font-weight:800; color:var(--ink);}
+  #prepSection .conv-list{display:flex; flex-direction:column;}
+  #prepSection .conv-row{
+    display:grid; grid-template-columns:18px minmax(0, 1fr) 22px minmax(0, 112px) 22px; align-items:center; gap:8px;
+    min-height:38px; margin:0; padding:0 6px; border-radius:8px; cursor:pointer;
+  }
+  #prepSection .conv-row:hover{background:var(--compo-court-bg);}
+  #prepSection .conv-row input{margin:0; width:16px; height:16px; accent-color:var(--amber);}
+  #prepSection .conv-name{min-width:0; font-size:13.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #prepSection .conv-pos{font-size:11px; font-weight:700; color:var(--ink-faint); text-align:center;}
+  #prepSection .conv-row:not(.on) .conv-name{color:var(--ink-dim); font-weight:500;}
+  #prepSection .conv-ovr{font-size:13px; font-weight:700; color:var(--ink-dim); text-align:right; font-variant-numeric:tabular-nums;}
+  #prepSection .conv-role{display:inline-flex; align-items:center; gap:6px; min-width:0; font-size:12px; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; justify-self:end;}
+  #prepSection .conv-role::before{content:""; flex:none; width:7px; height:7px; border-radius:50%; background:var(--pos-c, transparent);}
+  #prepSection .conv-role.starter{color:var(--ink); font-weight:700;}
+  #prepSection .conv-role.sub{color:var(--ink-dim); font-weight:600;}
+  #prepSection .conv-role.reserve{color:var(--ink-dim);}
+  #prepSection .conv-role.reserve::before{background:transparent; box-shadow:inset 0 0 0 1.5px var(--pos-c);}
+  #prepSection .conv-role.spare, #prepSection .conv-role.off{color:var(--ink-faint);}
+  #prepSection .conv-role.spare::before, #prepSection .conv-role.off::before{display:none;}
+  #prepSection .conv-role.off{font-style:italic;}
+  #prepSection .team-panel.ordres-panel{display:flex; flex-direction:column; gap:22px;}
+  /* Écran moyen : le bilan et l'effectif passent sous le terrain. */
+  @media(max-width:1250px){
+    .compo-layout{grid-template-columns:1fr;}
+    .compo-side{display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.4fr); align-items:start;}
+  }
+  /* Téléphone : cartes de poste empilées (M, A, AS, AF, P), plus de dessin
+     de terrain, bilan puis effectif en dessous, sans défilement latéral. */
+  @media(max-width:700px){
+    #prepSection .compo-card{padding:16px 12px;}
+    .compo-court{grid-template-columns:minmax(0, 1fr); grid-template-areas:"pg" "sg" "sf" "pf" "c"; gap:10px; padding:10px; min-height:0;}
+    .compo-court-lines{display:none;}
+    .compo-side{grid-template-columns:minmax(0, 1fr);}
+    .cp-name{font-size:15.5px;}
+    #prepSection .conv-row{gap:8px; padding:0 4px;}
+    .ordres-savebar{--float-safe-right:0px;}
+  }
   /* Carte « Temps de jeu » : blocs par poste disposés comme sur le terrain
      (M | A, AS | AF, P centré), compacts. */
   #prepSection .pt-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:start;}
@@ -657,10 +776,10 @@
   }
   @media(max-width:900px){
     .ordres-actionbar{margin:-18px -16px 16px; padding:10px 16px;}
+    .ordres-savebar{margin-left:-16px; margin-right:-16px; padding-left:16px;}
     .ordres-settings-grid{grid-template-columns:1fr;}
     .tactic-selected{grid-template-columns:1fr;}
     .omc-team{font-size:24px;}
-    #prepSection .lineup-table .lt-starter{width:auto;}
   }
   /* Téléphone : barre d'action sur 2 lignes au plus (titre masqué, onglets
      défilants sur une seule ligne) pour ne pas manger l'écran en restant
@@ -672,7 +791,21 @@
     .oab-tabs{overflow-x:auto; scrollbar-width:none;}
     .oab-tab{white-space:nowrap; padding:6px 10px;}
     .oab-right{width:100%; justify-content:space-between; flex-wrap:nowrap;}
-    #prepSection .ordres-validate-btn{min-height:40px; padding:0 16px;}
+    .oab-right:has(.ordres-lock-pill.hidden){display:none;}
+    #prepSection .ordres-validate-btn{min-height:40px; padding:0 18px;}
+    /* Barre d'enregistrement au-dessus de la barre d'onglets du bas
+       (assets/mobile/mobile.css, .m-tabbar : 60 px + zone sûre). */
+    .ordres-savebar{
+      bottom:calc(60px + env(safe-area-inset-bottom, 0px)); margin:16px -12px 0;
+      padding:8px 12px; gap:6px 12px;
+    }
+    .osb-cancel{min-height:40px; padding:0 12px;}
+    .ordres-savebar{flex-wrap:nowrap;}
+    .osb-left{flex:1; flex-wrap:nowrap;}
+    .ordres-savebar .ordres-status{min-width:0; font-size:12.5px;}
+    .ordres-savebar .ordres-status > span:last-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+    .osb-left:has(.ordres-validate-feedback:not(:empty)) .ordres-status{display:none;}
+    .ordres-savebar .ordres-validate-feedback{min-width:0; font-size:12.5px; line-height:1.3;}
     /* Encoche / barre d'état de l'iPhone (retour utilisateur 2026-09-28,
        capture : "Tjrs ce bug" — les onglets Attaque/Défense passaient sous
        l'heure et la batterie). Sur cette page le topbar est masqué, donc
@@ -2674,7 +2807,7 @@
      mêmes cartes que les Ordres, sans ce qui dépend d'un match précis. */
   .tq-editor-bar{display:none;}
   #prepSection.tq-editing .tq-editor-bar{display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; background:var(--panel); border:1px solid var(--amber); border-radius:12px; padding:16px 18px; margin:0 0 18px;}
-  #prepSection.tq-editing :is(.ordres-match-card, #ordresPresetsBar, .oab-right, #ordresValidateFeedback, #ordresLockNote, #ordresCardAdversaires, [data-ordres-jump="ordresCardAdversaires"]){display:none !important;}
+  #prepSection.tq-editing :is(.ordres-match-card, #ordresPresetsBar, .oab-right, #ordresValidateFeedback, #ordresLockNote, #ordresSaveBar, #ordresCardAdversaires, [data-ordres-jump="ordresCardAdversaires"]){display:none !important;}
   .tq-editor-field{display:flex; flex-direction:column; gap:6px; flex:1; min-width:200px;}
   .tq-editor-field label{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim);}
   .tq-editor-field select{background:var(--panel-2); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:9px 10px; font:inherit; font-size:14px;}
@@ -6590,19 +6723,23 @@
       <div class="oab-left">
         <h1 class="oab-title">Ordres de match</h1>
         <nav class="oab-tabs" id="ordresSectionTabs" aria-label="Sections des ordres">
+          <button type="button" class="oab-tab" data-ordres-jump="ordresCardCinq">Composition</button>
           <button type="button" class="oab-tab" data-ordres-jump="ordresCardAttaque">Attaque</button>
           <button type="button" class="oab-tab" data-ordres-jump="ordresCardDefense">Défense</button>
-          <button type="button" class="oab-tab" data-ordres-jump="ordresCardCinq">Cinq &amp; rotation</button>
           <button type="button" class="oab-tab" data-ordres-jump="ordresCardMinutes">Temps de jeu</button>
           <button type="button" class="oab-tab" data-ordres-jump="ordresCardAdversaires">Adversaires</button>
         </nav>
       </div>
+      <!-- Vue « composition » (retour utilisateur 2026-09-30, maquette
+           validée inspirée du nouvel écran BuzzerBeater) : l'échéance du
+           verrou devient une petite pastille ici (#ordresLockPill, voir
+           renderOrdresLockPill) ; l'état des ordres et les boutons
+           Annuler / Enregistrer descendent dans la barre collée en bas de
+           page (#ordresSaveBar). -->
       <div class="oab-right">
-        <span class="ordres-status" id="ordresStatus" role="status"></span>
-        <button type="button" class="ordres-validate-btn" id="ordresValidateBtn">Valider les ordres</button>
+        <span class="ordres-lock-pill hidden" id="ordresLockPill" role="status"></span>
       </div>
     </div>
-    <p class="ordres-validate-feedback" id="ordresValidateFeedback" role="status"></p>
     <div class="ordres-presets" id="ordresPresetsBar" aria-label="Mes tactiques"></div>
     <div class="tq-editor-bar" id="tqEditorBar" aria-label="Édition de la tactique"></div>
     <section class="ordres-match-card" aria-label="Match à préparer">
@@ -6638,6 +6775,22 @@
       <button class="secondary" id="regenBtn">Classement</button>
     </div>
     <p class="lock-warning" id="lockWarning"></p>
+    <!-- Barre d'enregistrement collée en bas (vue composition, 2026-09-30) :
+         état des ordres (#ordresStatus, voir renderOrdresStatus), retour du
+         serveur (#ordresValidateFeedback), « Annuler » (revertOrdres :
+         revient aux ordres tels qu'à l'ouverture de cette journée) et
+         « Enregistrer » (#ordresValidateBtn, validateOrdres inchangé). Place
+         réservée à droite pour une bulle flottante (--float-safe-right). -->
+    <div class="ordres-savebar" id="ordresSaveBar">
+      <div class="osb-left">
+        <span class="ordres-status" id="ordresStatus" role="status"></span>
+        <p class="ordres-validate-feedback" id="ordresValidateFeedback" role="status"></p>
+      </div>
+      <div class="osb-actions">
+        <button type="button" class="osb-cancel" id="ordresRevertBtn">Annuler</button>
+        <button type="button" class="ordres-validate-btn" id="ordresValidateBtn">Enregistrer</button>
+      </div>
+    </div>
   </div>
 
   <div id="catchupSection" class="hidden">
@@ -7676,7 +7829,7 @@
 
       <div class="guide-entry" data-guide-id="ordres" data-guide-group="Préparer les matchs">
         <h3>Ordres et tactiques</h3>
-        <p class="training-intro">Avant chaque match, réglez trois choses pour votre équipe dans l'onglet Ordres. Tout s'enregistre automatiquement à chaque changement, et le bouton "Valider les ordres", toujours visible en haut de la page, confirme l'enregistrement. Dans le Calendrier, un match aux ordres validés affiche "Modifier vos ordres".</p>
+        <p class="training-intro">Avant chaque match, réglez trois choses pour votre équipe dans l'onglet Ordres. Tout s'enregistre automatiquement à chaque changement, et le bouton "Enregistrer", toujours visible en bas de la page, confirme l'enregistrement ("Annuler" revient aux ordres tels qu'à l'ouverture de la page). Dans le Calendrier, un match aux ordres validés affiche "Modifier vos ordres".</p>
         <p class="training-intro" style="margin-top:10px;"><b>Préparer à l'avance</b> : le sélecteur de journée en haut de l'onglet Ordres permet de régler n'importe quel match à venir, championnat ou Coupe. Quand cette journée devient le prochain match, vos ordres préparés deviennent automatiquement vos ordres actuels, et restent modifiables jusqu'au coup d'envoi. La composition est verrouillée <b>5 minutes avant le coup d'envoi</b>, au moment où commence l'émission d'avant-match.</p>
         <p class="training-intro" style="margin-top:10px;"><b>3 priorités offensives</b> : choisissez exactement 3 styles parmi les 10 proposés (Équilibrée, Jeu intérieur, Jeu extérieur, Jeu en pénétration, Pick &amp; Roll, Post-up, Isolation, Jeu en mouvement, Transition rapide, Tirs rapides). Les 3 choix se combinent à parts égales pour déterminer la répartition des tirs entre l'intérieur, la mi-distance et le 3 points, ainsi que le rythme, le taux de passes décisives et le risque de perte de balle. Un jeu intérieur ou en Post-up privilégie les tirs proches du panier ; un jeu extérieur ou des Tirs rapides misent sur le 3 points ; la Transition rapide et le Jeu en pénétration augmentent le rythme, au prix de plus de pertes de balle.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Défense</b> : un seul choix parmi 5 systèmes. Homme à homme est le réglage neutre. Zone press met la pression sur les extérieurs adverses, au prix d'une fatigue importante. Box and one colle un défenseur au meilleur joueur adverse : redoutable face à une vraie star, coûteux face à un cinq homogène (les quatre autres défendent en zone). Zone extérieure et Zone intérieure renforcent un secteur du terrain au détriment de l'autre.</p>
@@ -24777,9 +24930,96 @@ function renderOrdresStatus() {
   el.className = "ordres-status " + kind;
   el.innerHTML = `<span class="ordres-status-dot" aria-hidden="true"></span><span>${text}</span>`;
   el.title = (kind === "dirty" || kind === "todo")
-    ? "Chaque changement est déjà enregistré automatiquement. « Valider les ordres » confirme l'enregistrement auprès du serveur."
+    ? "Chaque changement est déjà enregistré automatiquement. « Enregistrer » confirme l'enregistrement auprès du serveur."
     : "";
+  // Barre du bas (vue composition, 2026-09-30) : « Annuler » n'a de sens
+  // qu'avec des modifications depuis l'ouverture de la journée ; tout est
+  // grisé quand les compositions sont verrouillées.
+  const revertBtn = document.getElementById("ordresRevertBtn");
+  if (revertBtn) revertBtn.disabled = !ordresDirty || ordresPanelLocked || !ordresBaseline;
+  const saveBar = document.getElementById("ordresSaveBar");
+  if (saveBar) saveBar.classList.toggle("is-dirty", kind === "dirty");
+  renderOrdresLockPill();
   renderOrdresPresetsBar();
+}
+
+// Pastille « Verrouillage dans 13 h 40 min » de la barre du haut (vue
+// composition, retour utilisateur 2026-09-30 : l'échéance en petite
+// pastille plutôt qu'en grand bandeau). Même règle que ordresRoundLocked :
+// verrou à T − LINEUP_LOCK_BEFORE_KICKOFF_MS du coup d'envoi de la journée
+// affichée. Une fois verrouillé, #ordresLockNote (avec le bouton de
+// l'émission d'avant-match) prend le relais, la pastille dit juste
+// « Verrouillé ». Rafraîchie chaque minute tant que la page est ouverte.
+function formatLockDelay(ms) {
+  const totalMin = Math.max(1, Math.ceil(ms / 60000));
+  const d = Math.floor(totalMin / 1440), h = Math.floor((totalMin % 1440) / 60), m = totalMin % 60;
+  if (d >= 1) return h ? `${d} j ${h} h` : `${d} j`;
+  if (h >= 1) return m ? `${h} h ${m} min` : `${h} h`;
+  return `${m} min`;
+}
+let ordresLockPillTimer = null;
+function renderOrdresLockPill(now = Date.now()) {
+  const pill = document.getElementById("ordresLockPill");
+  if (!pill) return;
+  const round = selectedOrdresRound != null ? selectedOrdresRound : (currentMatch ? currentMatch.round : null);
+  const competition = selectedOrdresCompetition || "championship";
+  let kickoffAt = null;
+  try {
+    if (round != null) kickoffAt = competition === "cup" ? scheduledTimeForCupRound(round) : scheduledTimeForChampionshipRound(round);
+  } catch (e) { kickoffAt = null; }
+  const lockAt = typeof kickoffAt === "number" ? kickoffAt - LINEUP_LOCK_BEFORE_KICKOFF_MS : null;
+  let text = "";
+  let locked = false;
+  if (ordresPanelLocked) { text = "Verrouillé"; locked = true; }
+  else if (lockAt != null && now < lockAt) text = `Verrouillage dans ${formatLockDelay(lockAt - now)}`;
+  pill.textContent = text;
+  pill.classList.toggle("hidden", !text || !!tqEdit);
+  pill.classList.toggle("is-locked", locked);
+  pill.classList.toggle("is-soon", !locked && lockAt != null && lockAt - now < 60 * 60 * 1000);
+  if (lockAt != null) pill.title = `Compositions figées le ${formatDateTimeFr(lockAt)}, ${Math.round(LINEUP_LOCK_BEFORE_KICKOFF_MS / 60000)} min avant le coup d'envoi.`;
+  if (!ordresLockPillTimer && typeof setInterval === "function") {
+    ordresLockPillTimer = setInterval(() => {
+      const prep = document.getElementById("prepSection");
+      if (prep && !prep.classList.contains("hidden")) renderOrdresLockPill();
+    }, 30000);
+  }
+}
+
+// « Annuler » de la barre du bas (vue composition, 2026-09-30) : revient
+// aux ordres tels qu'ils étaient à l'ouverture de la journée affichée
+// (instantané pris par renderOrdresGrid, voir ordresBaseline). Chaque
+// changement étant déjà enregistré au fil de l'eau (autosave inchangé),
+// annuler RÉ-ENREGISTRE l'instantané par les mêmes canaux : /api/tactics +
+// /api/lineup pour le prochain match, /api/plan pour une journée préparée
+// à l'avance. Aucun nouveau format de données.
+let ordresBaseline = null;
+function ordresOrdersSnapshot(team) {
+  const snap = { watchAssignments: (team.watchAssignments || []).map(a => ({ ...a })), lineup: JSON.parse(JSON.stringify(team.lineup)) };
+  TACTIC_PRESET_FIELDS.forEach(k => { snap[k] = Array.isArray(team[k]) ? [...team[k]] : team[k]; });
+  return snap;
+}
+function revertOrdres() {
+  const base = ordresBaseline;
+  if (!base || ordresPanelLocked || tqEdit || !ordresDirty) return;
+  const snap = JSON.parse(JSON.stringify(base.snap));
+  if (base.immediate) {
+    TACTIC_PRESET_FIELDS.forEach(k => { teamA[k] = snap[k]; });
+    teamA.watchAssignments = snap.watchAssignments;
+    teamA.lineup = snap.lineup;
+    saveMyTeam();
+    const patch = { watchAssignments: teamA.watchAssignments };
+    TACTIC_PRESET_FIELDS.forEach(k => { patch[k] = teamA[k]; });
+    syncTacticsToServer(patch);
+    syncLineupToServer();
+  } else {
+    teamA.stagePlanForRound(base.round, snap, base.competition);
+    saveMyTeam();
+    syncPlanToServer(base.round, snap, base.competition);
+  }
+  renderOrdresGrid();
+  renderOrdresRoundSelector();
+  const feedbackEl = document.getElementById("ordresValidateFeedback");
+  if (feedbackEl) { feedbackEl.textContent = "Modifications annulées."; feedbackEl.className = "ordres-validate-feedback ok"; }
 }
 
 // Onglet "Adversaires" masqué quand sa carte l'est (niveau Débutant, voir
@@ -24824,6 +25064,7 @@ function renderOrdresGrid() {
   if (prepSectionEl) prepSectionEl.classList.toggle("tq-editing", !!tqEdit);
   renderTacticEditorBar();
   if (tqEdit) {
+    ordresBaseline = null;
     grid.appendChild(buildTeamPanel(tqEdit.proxy, "a", { editable: true, onDirty: () => { tqEdit.dirty = true; } }));
     updateOrdresSectionTabs();
     return;
@@ -24883,6 +25124,7 @@ function renderOrdresGrid() {
       }
     }
     ordresPanelLocked = locked;
+    ordresBaseline = { immediate: true, round, competition, snap: ordresOrdersSnapshot(teamA) };
     grid.appendChild(buildTeamPanel(teamA, "a", {
       editable: !locked,
       opponent: opponentTeam || teamB,
@@ -24945,6 +25187,7 @@ function renderOrdresGrid() {
     lockNoteFuture.classList.toggle("hidden", !planLocked);
   }
   ordresPanelLocked = planLocked;
+  ordresBaseline = { immediate: false, round, competition, snap: ordresOrdersSnapshot(proxy) };
   grid.appendChild(buildTeamPanel(proxy, "a", { editable: !planLocked, onDirty: commit, opponent: opponentTeam }));
   renderOrdresChemistryGauge();
   renderOrdresTacticalKnowledgeGauge(proxy);
@@ -32552,68 +32795,12 @@ function buildTeamPanel(team, side, opts = {}) {
 
   // =================== CONVOCATION ===================
   // Retour utilisateur 2026-09-26 : "on pourrait ajouter un endroit où
-  // choisir les joueurs qu'on convoque au match, on le mettrait au-dessus
-  // de la brique attaque, et ça permettrait de tout aligner". 12 au
-  // maximum ; un convoqué sans rôle dépanne si besoin (voir
-  // Team.convokedIds/emergencyForSlot).
-  const convAside = makeAside();
-  const convocation = makeCard("ordresCardConvocation", "Convocation", convAside);
-  leftCol.appendChild(convocation);
-  const convList = document.createElement("div");
-  convList.className = "conv-list";
-  convocation.appendChild(convList);
+  // choisir les joueurs qu'on convoque au match". Depuis la vue
+  // « composition » (2026-09-30), la convocation est la liste compacte de
+  // l'effectif à côté du terrain (#ordresCardConvocation, voir
+  // renderLineupEditor) : même case à cocher par joueur, 12 au maximum,
+  // avec le rôle de chacun dans la composition.
   let refreshLineupEditor = () => {};
-  const paintConvocation = () => {
-    const ids = team.convokedIds();
-    const conv = new Set(ids);
-    convAside.innerHTML = `<b>${ids.length}</b> / ${CONVOCATION_MAX} convoqués`;
-    convList.innerHTML = "";
-    const posRank = p => POSITIONS.indexOf(p.position);
-    team.players.slice().sort((x, y) => (posRank(x) - posRank(y)) || (y.overall() - x.overall())).forEach(p => {
-      const row = document.createElement("label");
-      const on = conv.has(p.id);
-      row.className = "conv-row" + (on ? " on" : "");
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = on;
-      cb.disabled = !editable || (!on && ids.length >= CONVOCATION_MAX);
-      cb.setAttribute("aria-label", `Convoquer ${p.name}`);
-      cb.addEventListener("change", () => {
-        team.setConvoked(p.id, cb.checked);
-        if (team === teamA) syncLineupToServer();
-        onDirty();
-        paintConvocation();
-        refreshLineupEditor();
-      });
-      const pos = document.createElement("span");
-      pos.className = "conv-pos";
-      pos.textContent = POS_SHORT[p.position] || p.position;
-      const name = document.createElement("span");
-      name.className = "conv-name";
-      name.textContent = p.name;
-      // Ordres d'un amical (voir openFriendlyOrders) : les jeunes de
-      // l'académie sont marqués dans la convocation.
-      if ((teamA.youthPlayers || []).some(y => y.id === p.id)) {
-        const tag = document.createElement("span");
-        tag.className = "lp-tag fr-tag-youth";
-        tag.textContent = "Jeune";
-        name.appendChild(tag);
-      }
-      const ovr = document.createElement("span");
-      ovr.className = "conv-ovr";
-      ovr.textContent = Math.round(p.overall());
-      const role = document.createElement("span");
-      const starterPos = team.starterPosition(p.id);
-      const backups = (team.lineup.backupPositions[p.id] || []).filter(x => POSITIONS.includes(x));
-      if (!on) { role.className = "conv-role off"; role.textContent = "En tribune"; }
-      else if (starterPos) { role.className = "conv-role starter"; role.textContent = `Titulaire ${POS_SHORT[starterPos]}`; }
-      else if (backups.length) { role.className = "conv-role"; role.textContent = `Rotation ${backups.map(x => POS_SHORT[x]).join(" · ")}`; }
-      else { role.className = "conv-role spare"; role.textContent = "Dépanne si besoin"; }
-      row.append(cb, pos, name, ovr, role);
-      convList.appendChild(row);
-    });
-  };
-  paintConvocation();
 
   // =================== ATTAQUE ===================
   const prioCount = makeAside();
@@ -32828,27 +33015,24 @@ function buildTeamPanel(team, side, opts = {}) {
   renderWatchRows();
   paintWatchCount();
 
-  // =================== CINQ + ROTATION (colonne de droite) ===================
+  // =================== COMPOSITION (pleine largeur, en tête) ===================
+  // Vue « composition » (retour utilisateur 2026-09-30, maquette validée
+  // d'après le nouvel écran BuzzerBeater : "on peut mettre ses remplaçants
+  // et réservistes sur la même page terrain") : le terrain avec une carte
+  // par poste (titulaire, remplaçant, réserviste, alertes), le bilan et la
+  // liste compacte de l'effectif (convocation) — voir renderLineupEditor.
+  // Au-dessus des réglages tactiques, sur toute la largeur. Compositions
+  // verrouillées : la même vue en lecture seule (plus un simple texte).
   const hint = document.createElement("div");
   if (isMain) hint.id = "ordresLineupEditor"; // tutoriel d'accueil
-  if (editable) {
-    hint.className = "lineup-editor";
-    const lineupOnDirty = () => { onDirty(); paintConvocation(); };
-    refreshLineupEditor = () => renderLineupEditor(team, hint, { onDirty: lineupOnDirty });
-    refreshLineupEditor();
-  } else {
-    hint.className = "lineup-editor readonly";
-    const card = makeCard("ordresCardCinq", "Cinq de départ", makeAside("Verrouillé"));
-    const txt = document.createElement("div");
-    txt.className = "roster-hint readonly";
-    txt.innerHTML = "<b>Titulaires&nbsp;:</b> " + POSITIONS.map(pos => {
-      const p = team.players.find(x => x.id === team.lineup.starters[pos]);
-      return p ? `${escapeHtml(p.name)} (${POS_SHORT[pos]}, ${Math.round(p.overall())})` : `${POS_SHORT[pos]} –`;
-    }).join(" · ");
-    card.appendChild(txt);
-    hint.appendChild(card);
-  }
-  rightCol.appendChild(hint);
+  hint.className = "lineup-editor" + (editable ? "" : " readonly");
+  panel.insertBefore(hint, columnsWrap);
+  // Carte « Temps de jeu » : colonne de droite, sous le terrain.
+  const minutesHost = document.createElement("div");
+  minutesHost.className = "lineup-minutes-host";
+  refreshLineupEditor = () => renderLineupEditor(team, hint, { onDirty, readonly: !editable, minutesContainer: minutesHost });
+  refreshLineupEditor();
+  if (editable) rightCol.appendChild(minutesHost);
   rightCol.appendChild(adversaires);
 
   applyTierVisibility();
@@ -32872,27 +33056,131 @@ function resolvePlayerIdFromSelectValue(team, value) {
   return p ? p.id : null;
 }
 
+// ---------------------------------------------------------------------
+// Vue « composition » des Ordres (retour utilisateur 2026-09-30 : a vu le
+// nouvel écran de composition de BuzzerBeater et aime qu'"on peut mettre
+// ses remplaçants et réservistes sur la même page terrain" ; maquette
+// validée, avec la consigne générale "trop chargé, pas moderne" à éviter :
+// peu de bordures, surfaces à peine différenciées, un seul accent réservé à
+// l'action principale, listes denses plutôt que grosses cartes).
+//
+// AUCUN changement de modèle : tout est lu dans team.lineup tel quel.
+//   - Titulaire d'un poste = lineup.starters[poste] ;
+//   - Remplaçant / Réserviste = Team.slotPlayerIds(poste) après le
+//     titulaire, dans CET ordre (le 1er est "le" remplaçant : celui qui a le
+//     plus de minutes réglées, sinon le mieux noté ; le suivant est le
+//     réserviste) — exactement la règle de la carte Temps de jeu (pastilles
+//     T / R / Rés) et la limite MAX_BACKUPS_PER_POSITION (2) du moteur ;
+//   - minutes prévues = lineup.minutes[poste][id] quand le poste est réglé,
+//     sinon "Auto" (rotation automatique du moteur) ;
+//   - OVR = Player.overall() : le jeu n'a pas de note PAR POSTE (le moteur
+//     ne pénalise pas un joueur hors poste), d'où une simple alerte
+//     « Hors poste » plutôt qu'une note recalculée ;
+//   - convocation = Team.convokedIds() (liste de l'effectif).
+// ---------------------------------------------------------------------
+const COMPO_POS_COLORS = { "Meneur": "#6CC4E0", "Arrière": "#CF8BE0", "Ailier shooteur": "#EE8270", "Ailier fort": "#E6CE5A", "Pivot": "#6CCB94" };
+const COMPO_POS_AREA = { "Meneur": "pg", "Arrière": "sg", "Ailier shooteur": "sf", "Ailier fort": "pf", "Pivot": "c" };
+// Demi-terrain vu de dessus, panier en bas (même sens que l'ancien terrain
+// des Ordres), traits discrets : c'est un décor, les cartes portent l'info.
+const COMPO_COURT_SVG = `<svg class="compo-court-lines" viewBox="0 0 600 470" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M240 0 A60 60 0 0 0 360 0"/>
+  <path class="compo-paint" d="M240 470 L240 290 L360 290 L360 470"/>
+  <circle cx="300" cy="290" r="60"/>
+  <path d="M40 470 L40 340 A275 275 0 0 1 560 340 L560 470"/>
+  <line x1="272" y1="446" x2="328" y2="446"/>
+  <circle cx="300" cy="432" r="9"/>
+</svg>`;
+
+// Nom court ("Léo Traoré" → "Traoré") pour les alertes, qui doivent tenir
+// sur une ligne de carte.
+function compoShortName(p) {
+  const parts = String(p.name || "").trim().split(/\s+/);
+  return parts.length > 1 ? parts.slice(1).join(" ") : (parts[0] || "");
+}
+
+// Rôle d'un joueur à un poste : 0 = titulaire, 1 = remplaçant, 2+ =
+// réserviste (voir Team.slotPlayerIds).
+function compoRoleLabel(rank) {
+  return rank === 0 ? "Titulaire" : rank === 1 ? "Remplaçant" : "Réserviste";
+}
+
+// Photographie de la composition : qui fait quoi à chaque poste, alertes
+// par poste et bilan. Pure lecture (aucune écriture dans team.lineup).
+function compositionModel(team) {
+  const byId = new Map(team.players.map(p => [p.id, p]));
+  const convoked = new Set(team.convokedIds());
+  const slots = {};
+  POSITIONS.forEach(pos => {
+    const ids = Team.prototype.slotPlayerIds.call(team, pos).filter(id => byId.has(id));
+    const starterId = team.lineup.starters[pos];
+    const starter = starterId != null && byId.has(starterId) ? byId.get(starterId) : null;
+    const backups = ids.filter(id => id !== starterId).map(id => byId.get(id));
+    slots[pos] = { starter, backups };
+  });
+  // Rôles de chaque joueur, tous postes confondus (liste de l'effectif et
+  // alerte « aussi réserviste au poste … »).
+  const rolesOf = new Map();
+  POSITIONS.forEach(pos => {
+    const { starter, backups } = slots[pos];
+    if (starter) rolesOf.set(starter.id, [...(rolesOf.get(starter.id) || []), { pos, rank: 0 }]);
+    backups.forEach((p, i) => rolesOf.set(p.id, [...(rolesOf.get(p.id) || []), { pos, rank: i + 1 }]));
+  });
+  const warns = {};
+  let warnCount = 0;
+  POSITIONS.forEach(pos => {
+    const list = [];
+    const { starter, backups } = slots[pos];
+    if (!starter) list.push({ kind: "danger", text: "Aucun titulaire à ce poste" });
+    else {
+      if (typeof isCurrentlyInjured === "function" && isCurrentlyInjured(starter)) list.push({ kind: "danger", text: `${compoShortName(starter)} est blessé` });
+      if (starter.position !== pos) list.push({ kind: "warn", text: `Hors poste : ${starter.position} (${POS_SHORT[starter.position] || starter.position})` });
+    }
+    backups.forEach(p => {
+      (rolesOf.get(p.id) || []).filter(r => r.pos !== pos).forEach(r => {
+        list.push({ kind: "warn", multi: true, text: `${compoShortName(p)} est aussi ${compoRoleLabel(r.rank).toLowerCase()} au poste ${POS_SHORT[r.pos]}` });
+      });
+    });
+    if (starter) {
+      const best = backups.filter(p => convoked.has(p.id)).sort((a, b) => b.overall() - a.overall())[0];
+      if (best && Math.round(best.overall()) > Math.round(starter.overall())) {
+        list.push({ kind: "warn", text: `${compoShortName(best)} (${Math.round(best.overall())}) est plus fort que le titulaire` });
+      }
+    }
+    warns[pos] = list;
+    warnCount += list.length;
+  });
+  const avg = arr => arr.length ? arr.reduce((s, p) => s + p.overall(), 0) / arr.length : null;
+  const starters = POSITIONS.map(pos => slots[pos].starter).filter(Boolean);
+  const benchMap = new Map();
+  POSITIONS.forEach(pos => slots[pos].backups.forEach(p => { if (convoked.has(p.id)) benchMap.set(p.id, p); }));
+  const bench = [...benchMap.values()];
+  return { slots, rolesOf, warns, warnCount, convoked, startersAvg: avg(starters), benchAvg: avg(bench) };
+}
+
 // `opts.onDirty` : voir buildTeamPanel — même contrat, propagé ici pour que
-// l'éditeur de feuille de match fonctionne identiquement que `team` soit
-// teamA (ordres en direct) ou un proxy de plan pour une journée future.
-// Refonte 2026-09-25 : deux cartes, "Cinq de départ" (#ordresCardCinq,
-// terrain) et "Rotation" (tableau des remplaçants, même structure <table>
-// qu'avant : .lt-pos/.lt-starter/.lineup-backup-chip/.lineup-add-select,
-// sur lesquels s'appuient lineup_test.js et cup_ordres_planning_test.js).
-// Alerte (maquette, retour utilisateur 2026-09-25) quand un remplaçant est
-// listé à plusieurs postes : c'est AUTORISÉ par le moteur, mais une fois
-// entré à l'un il n'est plus disponible pour l'autre (Team.backupsForSlot
-// exclut les joueurs déjà sur le terrain), d'où un simple avertissement,
-// jamais un blocage. Pas de numérotation "ordre d'entrée" des remplaçants
-// (idée de la maquette) : le moteur fait entrer le remplaçant le MOINS
-// FATIGUÉ du poste (backupsForSlot trie par fatigue), l'ordre de la liste
-// n'a donc aucun effet et un numéro aurait induit en erreur.
+// la composition fonctionne identiquement que `team` soit teamA (ordres en
+// direct), un proxy de plan pour une journée future, une tactique en
+// édition ou les ordres d'un amical. `opts.readonly` : compositions
+// verrouillées (même vue, rien de cliquable). `opts.minutesContainer` : où
+// poser la carte Temps de jeu (colonne de droite, voir buildTeamPanel).
+// Remplace les anciennes cartes "Cinq de départ" (terrain à menus) +
+// "Rotation" (tableau des remplaçants) + "Convocation" (2026-09-25/26) :
+// mêmes actions, mêmes méthodes du moteur (setStarter, toggleBackupPosition,
+// setConvoked), une seule vue. L'alerte "remplaçant listé à plusieurs
+// postes" (autorisé par le moteur, mais une fois entré à l'un il n'est plus
+// disponible pour l'autre, voir Team.backupsForSlot) devient une pastille
+// sur chaque carte concernée.
 function renderLineupEditor(team, container, opts = {}) {
   const onDirty = opts.onDirty || (() => { updateLockAvailability(); saveMyTeam(); });
+  const editable = !opts.readonly;
+  const minutesHost = opts.minutesContainer || null;
   container.innerHTML = "";
-  const starterIds = new Set(POSITIONS.map(pos => team.lineup.starters[pos]).filter(Boolean));
-  const byOverall = team.players.slice().sort((a, b) => b.overall() - a.overall());
+  if (minutesHost) minutesHost.innerHTML = "";
   const rerender = () => { onDirty(); renderLineupEditor(team, container, opts); };
+  // Uniquement les ordres EN DIRECT de teamA — voir syncLineupToServer ; un
+  // plan préparé à l'avance (proxy, voir planProxyForRound) passe par
+  // onDirty/commit.
+  const sync = () => { if (team === teamA) syncLineupToServer(); rerender(); };
   const makeCard = (id, title, asideText) => {
     const section = document.createElement("section");
     section.className = "ordres-card" + (id ? " area-" + id : "");
@@ -32900,182 +33188,229 @@ function renderLineupEditor(team, container, opts = {}) {
     section.innerHTML = `<div class="ordres-card-head"><h2 class="ordres-card-title">${escapeHtml(title)}</h2>${asideText ? `<span class="ordres-card-aside">${escapeHtml(asideText)}</span>` : ""}</div>`;
     return section;
   };
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+  const model = compositionModel(team);
+  const starterIds = new Set(POSITIONS.map(pos => team.lineup.starters[pos]).filter(Boolean));
+  const byOverall = team.players.slice().sort((a, b) => b.overall() - a.overall());
+  const minutesAt = (pos, id) => (team.hasSlotMinutes(pos) ? Number(team.lineup.minutes[pos][id]) || 0 : null);
+  const isYouth = p => (teamA.youthPlayers || []).some(y => y.id === p.id);
 
-  // --- Carte "Cinq de départ" : les 5 titulaires, positionnés sur le terrain ---
-  const missing = POSITIONS.filter(pos => !team.lineup.starters[pos]).length;
-  const cinqCard = makeCard("ordresCardCinq", "Cinq de départ",
-    missing ? `${missing} poste${missing > 1 ? "s" : ""} à pourvoir` : "");
-  const courtWrap = document.createElement("div");
-  courtWrap.className = "lineup-court-wrap";
-  const court = document.createElement("div");
-  court.className = "lineup-court";
-  court.innerHTML = COURT_SVG;
+  const missing = POSITIONS.filter(pos => !model.slots[pos].starter).length;
+  const card = makeCard("ordresCardCinq", "Composition",
+    !editable ? "Verrouillée" : (missing ? `${missing} poste${missing > 1 ? "s" : ""} à pourvoir` : ""));
+  card.classList.add("compo-card");
+  const layout = el("div", "compo-layout");
+  card.appendChild(layout);
 
+  // --- Terrain : une carte par poste ---
+  const court = el("div", "compo-court");
+  court.innerHTML = COMPO_COURT_SVG;
   POSITIONS.forEach(pos => {
-    const starterId = team.lineup.starters[pos];
-    const marker = document.createElement("div");
-    marker.className = "court-marker" + (starterId ? "" : " incomplete");
-    const coords = COURT_MARKER_POS[pos];
-    marker.style.left = coords.left + "%";
-    // Terrain retourné (panier en bas) : meneur en haut, pivot en bas —
-    // hauteurs propres à l'écran Ordres pour que le pivot ne masque pas le
-    // panier et que les menus ne se chevauchent pas.
-    const ORDRES_TOP = { "Meneur": 17, "Arrière": 40, "Ailier shooteur": 52, "Ailier fort": 64, "Pivot": 80 };
-    marker.style.top = (ORDRES_TOP[pos] ?? (100 - coords.top)) + "%";
-    // Menus plus larges (nom complet visible) : un marqueur près d'un bord
-    // du terrain s'aligne sur ce bord au lieu d'être centré, pour ne pas
-    // être coupé par le cadre.
-    if (coords.left < 30) { marker.classList.add("cm-edge-left"); marker.style.left = Math.max(2, coords.left - 11) + "%"; }
-    else if (coords.left > 70) { marker.classList.add("cm-edge-right"); marker.style.left = Math.min(98, coords.left + 11) + "%"; }
+    const { starter, backups } = model.slots[pos];
+    const warns = model.warns[pos];
+    const cp = el("article", "cp-card" + (starter ? "" : " is-empty") + (warns.length ? " has-warn" : ""));
+    cp.dataset.pos = pos;
+    cp.style.setProperty("--pos-c", COMPO_POS_COLORS[pos]);
+    cp.style.gridArea = COMPO_POS_AREA[pos];
 
-    const label = document.createElement("div");
-    label.className = "cm-pos";
-    label.textContent = POS_SHORT[pos];
-    marker.appendChild(label);
-
-    const sel = document.createElement("select");
-    sel.setAttribute("aria-label", `Titulaire ${pos}`);
-    const noneOpt = document.createElement("option");
-    noneOpt.value = "";
-    noneOpt.textContent = "Titulaire ?";
-    sel.appendChild(noneOpt);
-    const convokedSet = new Set(team.convokedIds());
-    byOverall.filter(p => convokedSet.has(p.id) || p.id === starterId).forEach(p => {
-      const o = document.createElement("option");
-      o.value = p.id;
-      // Poste naturel affiché (retour utilisateur, 2026-09-25 : "ajoute les
-      // postes dans le menu déroulant des titulaires").
-      const elsewhere = starterIds.has(p.id) && p.id !== starterId ? " · titulaire ailleurs" : "";
-      o.textContent = `${p.name} (${POS_SHORT[p.position] || p.position})${elsewhere}`;
-      if (p.id === starterId) o.selected = true;
-      sel.appendChild(o);
-    });
-    sel.addEventListener("change", () => {
-      team.setStarter(pos, resolvePlayerIdFromSelectValue(team, sel.value));
-      // Uniquement les ordres EN DIRECT de teamA — voir syncLineupToServer ;
-      // un plan préparé à l'avance (proxy, voir planProxyForRound) n'a pas
-      // de contrepartie /api/lineup.
-      if (team === teamA) syncLineupToServer();
-      rerender();
-    });
-    marker.appendChild(sel);
-    court.appendChild(marker);
-  });
-  courtWrap.appendChild(court);
-  cinqCard.appendChild(courtWrap);
-  container.appendChild(cinqCard);
-
-  // --- Carte "Rotation" : remplaçants par poste (un même joueur peut
-  // couvrir plusieurs postes) + ligne récapitulative des réservistes ---
-  const rotationCard = makeCard("ordresCardRotation", "Rotation", "");
-  const eligibleBackups = team.players.filter(p => !starterIds.has(p.id));
-  const backupPositionsOf = (p) => (team.lineup.backupPositions[p.id] || []).filter(pos => POSITIONS.includes(pos));
-  const multi = eligibleBackups.filter(p => backupPositionsOf(p).length >= 2);
-  if (multi.length) {
-    const alertEl = document.createElement("div");
-    alertEl.className = "ordres-alert";
-    alertEl.setAttribute("role", "note");
-    const names = multi.map(p => `<b>${escapeHtml(p.name)}</b>`);
-    const who = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`;
-    const verb = names.length === 1 ? "est listé" : "sont listés";
-    alertEl.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span>${who} ${verb} à plusieurs postes. Une fois entré à l'un, un remplaçant ne peut plus couvrir l'autre.</span>`;
-    rotationCard.appendChild(alertEl);
-  }
-
-  const table = document.createElement("table");
-  table.className = "lineup-table";
-  table.innerHTML = "<thead><tr><th>Poste</th><th>Titulaire</th><th>Remplaçants</th></tr></thead>";
-  const tbody = document.createElement("tbody");
-
-  POSITIONS.forEach(pos => {
-    const starterId = team.lineup.starters[pos];
-    const starter = starterId ? team.players.find(p => p.id === starterId) : null;
-    const row = document.createElement("tr");
-
-    const posCell = document.createElement("td");
-    posCell.className = "lt-pos";
-    posCell.textContent = POS_SHORT[pos];
-    row.appendChild(posCell);
-
-    const starterCell = document.createElement("td");
-    starterCell.className = "lt-starter";
-    starterCell.textContent = starter ? starter.name : "–";
-    row.appendChild(starterCell);
-
-    const backupsCell = document.createElement("td");
-    const backupsList = document.createElement("div");
-    const chipsLine = document.createElement("div");
-    chipsLine.className = "lineup-chips-line";
-    backupsList.className = "lineup-backups-list";
-    const assignedBackups = eligibleBackups.filter(p => backupPositionsOf(p).includes(pos));
-    if (!assignedBackups.length) {
-      const none = document.createElement("span");
-      none.className = "lineup-backup-empty";
-      none.textContent = eligibleBackups.length ? "Aucun remplaçant" : "Aucun joueur disponible (tous titulaires).";
-      chipsLine.appendChild(none);
-    }
-    assignedBackups.forEach(p => {
-      const others = backupPositionsOf(p).filter(x => x !== pos);
-      const chip = document.createElement("span");
-      chip.className = "lineup-backup-chip checked" + (others.length ? " multi" : "") + (team.isConvoked(p.id) ? "" : " tribune");
-      if (!team.isConvoked(p.id)) chip.title = "Non convoqué : ne jouera pas ce match (voir Convocation).";
-      if (others.length) chip.title = `Aussi remplaçant : ${others.map(x => POS_SHORT[x]).join(", ")}`;
-      chip.appendChild(document.createTextNode(p.position === pos ? p.name : `${p.name} (${POS_SHORT[p.position]})`));
-      if (p.position !== pos) chip.title = (chip.title ? chip.title + " · " : "") + `Poste naturel : ${p.position}`;
-      const rm = document.createElement("button");
-      rm.type = "button";
-      rm.className = "lineup-chip-remove";
-      rm.textContent = "×";
-      rm.title = "Retirer";
-      rm.setAttribute("aria-label", `Retirer ${p.name} des remplaçants ${pos}`);
-      rm.addEventListener("click", () => {
-        team.toggleBackupPosition(p.id, pos, false);
-        if (team === teamA) syncLineupToServer();
-        rerender();
-      });
-      chip.appendChild(rm);
-      chipsLine.appendChild(chip);
-    });
-
-    const convokedNow = new Set(team.convokedIds());
-    const addable = eligibleBackups.filter(p => !assignedBackups.includes(p) && convokedNow.has(p.id));
-    // 3 joueurs max par poste (titulaire + remplaçant + réserviste) :
-    // plus de « + Ajouter » une fois les 2 places de remplaçant prises.
-    if (addable.length && Team.prototype.backupCountAt.call(team, pos) < MAX_BACKUPS_PER_POSITION) {
-      const addSel = document.createElement("select");
-      addSel.className = "lineup-add-select";
-      addSel.setAttribute("aria-label", `Ajouter un remplaçant ${pos}`);
-      const opt0 = document.createElement("option");
-      opt0.value = "";
-      opt0.textContent = "+ Ajouter";
-      addSel.appendChild(opt0);
-      addable.forEach(p => {
-        const o = document.createElement("option");
+    // En-tête : pastille et nom du poste, OVR du titulaire ; puis le
+    // titulaire (menu) sur toute la largeur, et sa forme / ses minutes.
+    const top = el("div", "cp-top");
+    const badge = el("span", "cp-badge", POS_SHORT[pos]);
+    badge.title = pos;
+    const ovr = el("span", "cp-ovr", starter ? String(Math.round(starter.overall())) : "–");
+    ovr.title = "Note globale du titulaire";
+    top.append(badge, el("span", "cp-posname", pos), ovr);
+    cp.appendChild(top);
+    const who = el("div", "cp-who");
+    // Le <select> du titulaire est posé, transparent, par-dessus le nom
+    // (même menu natif qu'avant, au clavier comme au doigt) : la carte
+    // affiche le nom en grand plutôt qu'un champ de formulaire.
+    const pick = el("label", "cp-pick");
+    pick.appendChild(el("span", "cp-name", starter ? starter.name : "Choisir un titulaire"));
+    if (editable) {
+      const chev = el("span", "cp-chevron", "▾");
+      chev.setAttribute("aria-hidden", "true");
+      pick.appendChild(chev);
+      const sel = document.createElement("select");
+      sel.className = "cp-starter-select";
+      sel.setAttribute("aria-label", `Titulaire ${pos}`);
+      const noneOpt = el("option", null, "Titulaire ?");
+      noneOpt.value = "";
+      sel.appendChild(noneOpt);
+      byOverall.filter(p => model.convoked.has(p.id) || (starter && p.id === starter.id)).forEach(p => {
+        // Poste naturel affiché (retour utilisateur, 2026-09-25 : "ajoute
+        // les postes dans le menu déroulant des titulaires").
+        const elsewhere = starterIds.has(p.id) && !(starter && p.id === starter.id) ? " · titulaire ailleurs" : "";
+        const o = el("option", null, `${p.name} (${POS_SHORT[p.position] || p.position}, ${Math.round(p.overall())})${elsewhere}`);
         o.value = p.id;
-        o.textContent = `${p.name} (${POS_SHORT[p.position]}, ${Math.round(p.overall())})`;
+        if (starter && p.id === starter.id) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener("change", () => {
+        team.setStarter(pos, resolvePlayerIdFromSelectValue(team, sel.value));
+        sync();
+      });
+      pick.appendChild(sel);
+    }
+    who.appendChild(pick);
+    const meta = el("div", "cp-meta");
+    if (starter) {
+      const cond = currentCondition(starter);
+      const tier = cond >= 90 ? "cond-great" : cond >= 75 ? "cond-good" : cond >= 60 ? "cond-mid" : cond >= 40 ? "cond-low" : "cond-critical";
+      const condEl = el("span", "cp-cond " + tier, conditionStateFor(cond).label);
+      condEl.title = `Forme physique : ${cond}/100`;
+      meta.appendChild(condEl);
+      const m = minutesAt(pos, starter.id);
+      const minEl = el("span", "cp-min", m != null ? `${m} min` : "Auto");
+      minEl.title = m != null ? "Temps de jeu visé (carte Temps de jeu)" : "Temps de jeu automatique (carte Temps de jeu)";
+      meta.appendChild(minEl);
+    } else {
+      meta.appendChild(el("span", null, "Poste à pourvoir"));
+    }
+    who.appendChild(meta);
+    cp.appendChild(who);
+
+    // Remplaçant puis réserviste (voir Team.slotPlayerIds).
+    const bench = el("div", "cp-bench");
+    backups.forEach((p, i) => {
+      const onBench = model.convoked.has(p.id);
+      const row = el("div", "cp-sub" + (onBench ? "" : " tribune") + ((model.rolesOf.get(p.id) || []).length > 1 ? " multi" : ""));
+      const role = el("span", "cp-role", i === 0 ? "Remp." : "Rés.");
+      role.title = compoRoleLabel(i + 1);
+      const nm = el("span", "cp-sub-name", p.name);
+      if (p.position !== pos) nm.appendChild(el("span", "cp-sub-pos", POS_SHORT[p.position] || p.position));
+      if (!onBench) nm.title = "Non convoqué : ne jouera pas ce match.";
+      const m = minutesAt(pos, p.id);
+      const min = el("span", "cp-sub-min", m != null ? `${m} min` : "");
+      const o = el("span", "cp-sub-ovr", String(Math.round(p.overall())));
+      row.append(role, nm, min, o);
+      if (editable) {
+        const rm = el("button", "cp-remove", "×");
+        rm.type = "button";
+        rm.title = "Retirer";
+        rm.setAttribute("aria-label", `Retirer ${p.name} des remplaçants ${pos}`);
+        rm.addEventListener("click", () => { team.toggleBackupPosition(p.id, pos, false); sync(); });
+        row.appendChild(rm);
+      }
+      bench.appendChild(row);
+    });
+    const addable = editable ? team.players.filter(p => !starterIds.has(p.id) && !backups.includes(p) && model.convoked.has(p.id)) : [];
+    // 3 joueurs max par poste (titulaire + remplaçant + réserviste) : plus
+    // de « + Ajouter » une fois les 2 places prises.
+    if (addable.length && Team.prototype.backupCountAt.call(team, pos) < MAX_BACKUPS_PER_POSITION) {
+      const addSel = el("select", "cp-add");
+      addSel.setAttribute("aria-label", `Ajouter un remplaçant ${pos}`);
+      const opt0 = el("option", null, backups.length ? "+ Réserviste" : "+ Remplaçant");
+      opt0.value = "";
+      addSel.appendChild(opt0);
+      addable.sort((a, b) => ((b.position === pos) - (a.position === pos)) || (b.overall() - a.overall())).forEach(p => {
+        const o = el("option", null, `${p.name} (${POS_SHORT[p.position]}, ${Math.round(p.overall())})`);
+        o.value = p.id;
         addSel.appendChild(o);
       });
       addSel.addEventListener("change", () => {
         const id = resolvePlayerIdFromSelectValue(team, addSel.value);
         if (id) team.toggleBackupPosition(id, pos, true);
-        if (team === teamA) syncLineupToServer();
-        rerender();
+        sync();
       });
-      backupsList.appendChild(chipsLine);
-      backupsList.appendChild(addSel);
+      bench.appendChild(addSel);
+    } else if (!backups.length) {
+      bench.appendChild(el("span", "cp-empty", "Aucun remplaçant"));
     }
-    if (!chipsLine.parentNode) backupsList.appendChild(chipsLine);
-    backupsCell.appendChild(backupsList);
-    row.appendChild(backupsCell);
+    cp.appendChild(bench);
 
-
-    tbody.appendChild(row);
+    if (warns.length) {
+      const w = el("div", "cp-warns");
+      warns.forEach(x => w.appendChild(el("span", "cp-warn" + (x.kind === "danger" ? " danger" : "") + (x.multi ? " multi" : ""), x.text)));
+      cp.appendChild(w);
+    }
+    court.appendChild(cp);
   });
-  table.appendChild(tbody);
-  rotationCard.appendChild(table);
+  layout.appendChild(court);
 
-  container.appendChild(rotationCard);
-  renderPlayingTimeCard(team, container, makeCard, rerender);
+  // --- Colonne : bilan + effectif (convocation) ---
+  const side = el("div", "compo-side");
+  const fmt = v => (v == null ? "–" : v.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+  const summary = el("div", "compo-summary");
+  summary.setAttribute("aria-label", "Bilan de la composition");
+  const stat = (label, value, cls) => {
+    const s = el("div", "cs-stat" + (cls ? " " + cls : ""));
+    s.append(el("span", "cs-value", value), el("span", "cs-label", label));
+    return s;
+  };
+  const stats = el("div", "cs-stats");
+  stats.append(
+    stat("Cinq majeur", fmt(model.startersAvg)),
+    stat("Banc", fmt(model.benchAvg)),
+    stat(model.warnCount > 1 ? "Alertes" : "Alerte", String(model.warnCount), model.warnCount ? "is-warn" : "is-ok"),
+  );
+  summary.appendChild(stats);
+  let sentence;
+  if (missing) sentence = "Il manque un titulaire : sans cinq complet, le match est perdu par forfait.";
+  else if (model.benchAvg != null && model.benchAvg > model.startersAvg) sentence = "Votre banc est plus fort que votre cinq majeur.";
+  else if (!model.warnCount) sentence = "Rien à signaler : chaque poste est tenu par un joueur de métier.";
+  else sentence = model.warnCount > 1 ? `${model.warnCount} points à vérifier sur le terrain.` : "Un point à vérifier sur le terrain.";
+  summary.appendChild(el("p", "cs-sentence", sentence));
+  side.appendChild(summary);
+
+  const convIds = team.convokedIds();
+  const roster = el("section", "compo-roster");
+  roster.id = "ordresCardConvocation";
+  const rHead = el("div", "ordres-card-head compo-roster-head");
+  rHead.appendChild(el("h3", "compo-roster-title", "Effectif"));
+  const rAside = el("span", "ordres-card-aside");
+  rAside.innerHTML = `<b>${convIds.length}</b> / ${CONVOCATION_MAX} convoqués`;
+  rHead.appendChild(rAside);
+  roster.appendChild(rHead);
+  const list = el("div", "conv-list");
+  const posRank = p => POSITIONS.indexOf(p.position);
+  team.players.slice().sort((x, y) => (posRank(x) - posRank(y)) || (y.overall() - x.overall())).forEach(p => {
+    const on = model.convoked.has(p.id);
+    const row = el("label", "conv-row" + (on ? " on" : ""));
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = on;
+    cb.disabled = !editable || (!on && convIds.length >= CONVOCATION_MAX);
+    cb.setAttribute("aria-label", `Convoquer ${p.name}`);
+    cb.addEventListener("change", () => {
+      team.setConvoked(p.id, cb.checked);
+      sync();
+    });
+    const name = el("span", "conv-name", p.name);
+    // Ordres d'un amical (voir openFriendlyOrders) : les jeunes de
+    // l'académie sont marqués dans la convocation.
+    if (isYouth(p)) name.appendChild(el("span", "lp-tag fr-tag-youth", "Jeune"));
+    const posEl = el("span", "conv-pos", POS_SHORT[p.position] || p.position);
+    posEl.title = p.position;
+    const roles = (model.rolesOf.get(p.id) || []).slice().sort((a, b) => a.rank - b.rank);
+    const role = el("span", "conv-role");
+    if (!on) { role.classList.add("off"); role.textContent = "En tribune"; }
+    else if (!roles.length) { role.classList.add("spare"); role.textContent = "Dépanne si besoin"; }
+    else {
+      const top = roles[0];
+      role.classList.add(top.rank === 0 ? "starter" : top.rank === 1 ? "sub" : "reserve");
+      role.style.setProperty("--pos-c", COMPO_POS_COLORS[top.pos]);
+      // Rôle principal, puis « +1 » si le joueur couvre d'autres postes
+      // (le détail complet reste dans l'infobulle) : la ligne reste courte.
+      role.textContent = `${compoRoleLabel(top.rank)} ${POS_SHORT[top.pos]}${roles.length > 1 ? ` +${roles.length - 1}` : ""}`;
+      role.title = roles.map(r => `${compoRoleLabel(r.rank)} ${POS_SHORT[r.pos]}`).join(" · ");
+    }
+    const ovr = el("span", "conv-ovr", String(Math.round(p.overall())));
+    row.append(cb, name, posEl, role, ovr);
+    list.appendChild(row);
+  });
+  roster.appendChild(list);
+  side.appendChild(roster);
+  layout.appendChild(side);
+  container.appendChild(card);
+
+  if (editable) renderPlayingTimeCard(team, minutesHost || container, makeCard, rerender);
 }
 
 // Carte « Temps de jeu » des Ordres (retours utilisateur 2026-09-26 :
@@ -46254,7 +46589,7 @@ const TOUR_STEPS = [
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresCardCinq", wide: true,
     title: "La feuille de match",
-    text: "Placez vos 5 titulaires directement sur le terrain, un par poste. Complétez vos remplaçants dans la carte Rotation juste en dessous, un même remplaçant peut couvrir plusieurs postes à la fois.",
+    text: "Chaque poste a sa carte sur le terrain : titulaire, remplaçant et réserviste. Les alertes (joueur hors poste, remplaçant plus fort que le titulaire, joueur aligné à deux postes) s'affichent directement sur la carte, et la liste de l'effectif à côté sert à convoquer les 12 joueurs du match.",
     tip: "Sans cinq titulaires complet aligné, le match est perdu par forfait (20-0) : vérifiez toujours vos disponibilités avant la date du match.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresOffTacticsGrid", wide: true,
@@ -46842,6 +47177,7 @@ function goToOrdresTab(round, competition) {
 
 document.getElementById("regenBtn").addEventListener("click", showStandings);
 document.getElementById("ordresValidateBtn").addEventListener("click", validateOrdres);
+document.getElementById("ordresRevertBtn").addEventListener("click", revertOrdres);
 // Onglets + hauteur du topbar de la barre d'action Ordres (voir renderOrdresStatus).
 {
   const tabs = document.getElementById("ordresSectionTabs");
