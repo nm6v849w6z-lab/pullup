@@ -105,6 +105,16 @@ function loadDict(file, name) {
   await sleep(150);
   const prep = d2.getElementById("prepSection");
   assert(prep && /Ordini partita/.test(prep.textContent) && !/Ordres de match/.test(prep.textContent), "page Ordres (rendue au clic) : « Ordini partita »");
+  // Éditeur de tactique (retour testeur 2026-09-30, voir i18n_english_test).
+  w2.eval("openTacticEditor(0)");
+  await sleep(150);
+  const tqBar = d2.getElementById("tqEditorBar").textContent;
+  assert(/Parti da/.test(tqBar) && /Salva la tattica/.test(tqBar) && /Imposta tutto come negli Ordini/.test(tqBar), "barre de l'éditeur de tactique en italien");
+  assert(!/Partir de|Réglages actuels|Enregistrer la tactique|Réglez tout/.test(tqBar), "plus de français dans l'éditeur de tactique (italien)");
+  assert(/Elenco compatto/.test(prep.textContent), "effectif de la composition en italien");
+  w2.eval("closeTacticEditor()");
+  tab("ordres").click();
+  await sleep(100);
   const search = d2.querySelector("input[placeholder]");
   assert(search && /Cerca/.test(search.getAttribute("placeholder")), "placeholder traduit : " + (search && search.getAttribute("placeholder")));
 

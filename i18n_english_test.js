@@ -69,6 +69,20 @@ async function waitFor(fn, ms = 30000) {
   assert(prep && /Match orders/.test(prep.textContent), "page Ordres (rendue au clic) : « Match orders »");
   assert(!/Ordres de match/.test(prep.textContent), "plus de « Ordres de match » en français");
 
+  // Effectif de la composition et éditeur de tactique (retour testeur
+  // 2026-09-30 : « PARTIR DE », « Réglages actuels », « Enregistrer la
+  // tactique » et la phrase d'aide restaient en français).
+  d2.querySelector("[data-compo-view=details]").click();
+  await sleep(100);
+  assert(/Compact list/.test(prep.textContent) && /Details/.test(prep.textContent) && /Tick two players/.test(prep.textContent), "effectif de la composition en anglais (Compact list / Details / comparaison)");
+  d2.querySelector("[data-compo-view=compact]").click();
+  w2.eval("openTacticEditor(0)");
+  await sleep(150);
+  const tqBar = d2.getElementById("tqEditorBar").textContent;
+  assert(/Start from/.test(tqBar) && /Save tactic/.test(tqBar) && /Set everything just like in Orders/.test(tqBar) && /Cancel/.test(tqBar), "barre de l'éditeur de tactique en anglais");
+  assert(!/Partir de|Réglages actuels|Enregistrer la tactique|Réglez tout/.test(tqBar), "plus de français dans l'éditeur de tactique : " + tqBar.replace(/\s+/g, " ").slice(0, 160));
+  w2.eval("closeTacticEditor()");
+
   // Attributs visibles (placeholder de la recherche du haut).
   const search = d2.querySelector("input[placeholder]");
   assert(search && !/Rechercher/.test(search.getAttribute("placeholder")), "placeholder traduit : " + (search && search.getAttribute("placeholder")));

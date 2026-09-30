@@ -258,6 +258,68 @@ console.log("✅ État 'Ordres validés' après un clic sur Valider les ordres."
   console.log(`✅ Meneur dépanné à l'arrière (${near.gap.toFixed(1)} pts d'écart < ${near.gapConst}) : pas d'alerte « Hors poste ».`);
 }
 
+// 7 quater) Infos joueurs dans l'effectif de la composition (retour
+// testeur 2026-09-30 : "I don't see the information about the players
+// (stats, fatigue) [...] easily compare the players") : forme dans la liste
+// compacte et sur le terrain, vue « Détails » (forme, évaluation, moyennes
+// de saison), colonnes triables, « Comparer » deux joueurs.
+{
+  const roster = () => doc.getElementById("ordresCardConvocation");
+  const n = win.eval("teamA.players.length");
+  const compactConds = [...roster().querySelectorAll(".conv-list .conv-row .conv-cond")];
+  if (compactConds.length !== n || !compactConds.every(c => /^Forme physique : .+ \(\d+\/100\)$/.test(c.title))) throw new Error("❌ Liste compacte : une pastille de forme (avec infobulle) par joueur attendue.");
+  const subs = doc.querySelectorAll("#ordresCardCinq .cp-sub");
+  if (!subs.length || [...subs].some(s => !s.querySelector(".cp-sub-cond[title^='Forme physique']"))) throw new Error("❌ Remplaçants/réservistes du terrain : forme attendue sur chaque ligne.");
+  // Ordre par défaut : rôle (titulaires d'abord), puis poste.
+  // (un titulaire non convoqué ne jouera pas : il est listé « En tribune ».)
+  const nStarters = win.eval("POSITIONS.filter(p => teamA.lineup.starters[p] != null && teamA.isConvoked(teamA.lineup.starters[p])).length");
+  const roleTexts = [...roster().querySelectorAll(".conv-row .conv-role")].map(r => r.textContent);
+  if (!roleTexts.slice(0, nStarters).every(t => t.startsWith("Titulaire")) || roleTexts.slice(nStarters).some(t => t.startsWith("Titulaire"))) throw new Error("❌ Ordre par défaut : les titulaires en tête, obtenu " + JSON.stringify(roleTexts));
+  console.log("✅ Forme visible (liste compacte + remplaçants du terrain), titulaires en tête de liste.");
+
+  doc.querySelector("[data-compo-view=details]").click();
+  const heads = [...roster().querySelectorAll(".compo-table thead th")].map(th => th.textContent.replace(/[▲▼]/g, "").trim()).filter(Boolean);
+  console.log("Colonnes Détails :", heads.join(" | "));
+  ["Nom", "Poste", "Note", "Rôle", "Forme", "Éval.", "MJ", "Min", "Pts", "Reb", "Pas"].forEach(h => { if (!heads.includes(h)) throw new Error(`❌ Colonne « ${h} » absente de la vue Détails.`); });
+  const trs = () => [...roster().querySelectorAll(".compo-table tbody tr.conv-row")];
+  if (trs().length !== n) throw new Error("❌ Vue Détails : une ligne par joueur attendue.");
+  if (!trs().every(tr => tr.querySelector(".eff-cond .eff-meter") && tr.querySelectorAll(".eval-square").length === 5 && tr.querySelector("input[type=checkbox]"))) throw new Error("❌ Chaque ligne : case de convocation, barre de forme et 5 carrés d'évaluation attendus.");
+  if (!trs()[0].querySelector(".player-link")) throw new Error("❌ Le nom doit ouvrir la fiche joueur (lien joueur).");
+  // Tri par Forme : décroissant, puis croissant, puis ordre par défaut.
+  const conds = () => trs().map(tr => Number(tr.querySelector(".eff-cond").title.match(/\((\d+)\/100\)/)[1]));
+  const sortBtn = () => roster().querySelector('th[data-compo-sort="condition"] .ct-sort');
+  sortBtn().click();
+  const desc = conds();
+  if (desc.some((v, i) => i && v > desc[i - 1])) throw new Error("❌ Tri Forme décroissant attendu : " + desc.join(","));
+  sortBtn().click();
+  const asc = conds();
+  if (asc.some((v, i) => i && v < asc[i - 1])) throw new Error("❌ Tri Forme croissant attendu : " + asc.join(","));
+  sortBtn().click();
+  if (win.eval("compoRosterSort.key") !== null) throw new Error("❌ 3e clic : retour à l'ordre par défaut.");
+  roster().querySelector('th[data-compo-sort="name"] .ct-sort').click();
+  const names = trs().map(tr => tr.querySelector(".conv-name").textContent.trim());
+  if (names.join("|") !== names.slice().sort((a, b) => a.localeCompare(b)).join("|")) throw new Error("❌ Tri par nom (A→Z) attendu.");
+  console.log("✅ Vue Détails : colonnes Nom/Poste/Note/Rôle/Forme/Éval./MJ/Min/Pts/Reb/Pas, tri Forme ↓ ↑ puis défaut, tri par nom.");
+  // Convocation depuis la vue Détails : même effet que la liste compacte.
+  const convBefore = win.eval("teamA.convokedIds().length");
+  const onRow = trs().find(tr => tr.classList.contains("on") && /Réserviste|Remplaçant/.test(tr.textContent));
+  const onCb = onRow.querySelector(".ct-conv input");
+  onCb.checked = false; onCb.dispatchEvent(new win.Event("change"));
+  if (win.eval("teamA.convokedIds().length") !== convBefore - 1) throw new Error("❌ Décocher la convocation dans la vue Détails devrait retirer le joueur.");
+  // Comparer : 2 cases cochées → comparateur.
+  const cmpBtn = () => doc.getElementById("compoCompareBtn");
+  if (!cmpBtn().disabled) throw new Error("❌ « Comparer » désactivé tant que deux joueurs ne sont pas cochés.");
+  [0, 1].forEach(i => { const cb = trs()[i].querySelector(".compo-compare-cb"); cb.checked = true; cb.dispatchEvent(new win.Event("change")); });
+  if (cmpBtn().disabled || !/2\/2/.test(cmpBtn().textContent)) throw new Error("❌ « Comparer (2/2) » actif avec deux joueurs cochés.");
+  const ids = win.eval("compoCompareIds.slice()");
+  cmpBtn().click();
+  if (doc.getElementById("playerCompareSection").classList.contains("hidden") || win.eval("playerCompareState.b && playerCompareState.b.playerId") !== ids[1]) throw new Error("❌ « Comparer » devrait ouvrir le comparateur sur les deux joueurs cochés.");
+  console.log("✅ Vue Détails : convocation, « Comparer » deux joueurs → comparateur.");
+  openOrdres();
+  doc.querySelector("[data-compo-view=compact]").click();
+  win.eval("compoRosterSort = { key: null, dir: -1 }");
+}
+
 // 8) Plus de « Réinitialiser ma carrière » nulle part (carrière solo
 // supprimée, 2026-09-29).
 if (doc.getElementById("resetCareerLink") || doc.body.textContent.includes("Réinitialiser ma carrière")) {
