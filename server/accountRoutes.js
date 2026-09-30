@@ -38,6 +38,7 @@ const store = require("./store.js");
 const Accounts = require("./accounts.js");
 const World = require("./world.js");
 const Mailer = require("./mailer.js");
+const I18n = require("./i18n.js");
 const Engine = require("../engine.js");
 
 // Mot de passe oublié (liste de la nuit du 2026-09-28) : lien valable 1 h,
@@ -429,18 +430,21 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       const email = Accounts.normalizeEmail(b.email);
       if (!email) { sendJson(res, 400, { ok: false, code: "email-invalid" }); return true; }
       let link = null;
+      let lang = "fr";
       await withAccounts(async data => {
         const account = Accounts.findByEmail(data, email);
         if (!account) return;
         const raw = createPasswordReset(account, now);
         await Accounts.saveAccounts(data, accountsPath);
-        link = `${originFor(req)}/bienvenue#reinit=${raw}`;
+        // Langue de l'email : celle du compte, sinon celle de la page d'où
+        // part la demande (`lang` envoyé par /bienvenue, puis
+        // Accept-Language), sinon le français. Le lien rouvre la page
+        // d'accueil dans la même langue.
+        lang = I18n.langFor(account, I18n.hintFromRequest(req, b.lang));
+        link = `${originFor(req)}/bienvenue${lang === "fr" ? "" : `?lang=${lang}`}#reinit=${raw}`;
       });
       if (link) {
-        const sent = await Mailer.sendMail({
-          to: email, subject: "Hoop Manager : réinitialiser ton mot de passe",
-          text: `Bonjour,\n\nPour choisir un nouveau mot de passe, ouvre ce lien (valable 1 heure) :\n${link}\n\nSi tu n'as rien demandé, ignore cet email : ton mot de passe ne change pas.\n\nHoop Manager`,
-        });
+        const sent = await Mailer.sendMail({ to: email, ...Mailer.compose("passwordReset", lang, { link }) });
         if (!sent.ok) console.log(`[comptes] lien de réinitialisation pour ${email} (email non envoyé : ${sent.error}) : ${link}`);
       }
       sendJson(res, 200, { ok: true, byMail: Mailer.mailConfigured() });

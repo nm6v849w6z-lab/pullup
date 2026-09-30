@@ -29,10 +29,12 @@ function isPremium(team, now) {
   return typeof team.hasActivePremium === "function" ? team.hasActivePremium(now) : !!team.isPaying;
 }
 
-function addSubscription(team, sub, now) {
+// `lang` (fr / en / it) : langue des notifications de CET appareil (celle
+// du compte, sinon celle du jeu dans ce navigateur, voir /api/push/subscribe).
+function addSubscription(team, sub, now, lang = null) {
   if (!sub || typeof sub.endpoint !== "string" || !/^https:\/\//.test(sub.endpoint) || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) return false;
   team.pushSubscriptions = (team.pushSubscriptions || []).filter(x => x.endpoint !== sub.endpoint);
-  team.pushSubscriptions.push({ endpoint: sub.endpoint, keys: { p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) }, createdAt: now });
+  team.pushSubscriptions.push({ endpoint: sub.endpoint, keys: { p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) }, createdAt: now, ...(["fr", "en", "it"].includes(lang) ? { lang } : {}) });
   team.pushSubscriptions = team.pushSubscriptions.slice(-MAX_SUBSCRIPTIONS);
   if (typeof team.pushCursor !== "number") team.pushCursor = team.feed ? (team.feed.nextId || 1) - 1 : 0;
   if (typeof team.pushSince !== "number") team.pushSince = now;
@@ -45,15 +47,128 @@ function removeSubscription(team, endpoint) {
   return team.pushSubscriptions.length !== before;
 }
 
+// Marché → rôle du staff (null : joueurs). Libellés par langue dans STAFF.
 const AUCTION_MARKETS = [
   ["transferListings", null],
-  ["coachListings", "l'entraîneur"],
-  ["assistantCoachListings", "l'entraîneur adjoint"],
-  ["analystListings", "l'analyste vidéo"],
-  ["recruiterListings", "le recruteur"],
-  ["doctorListings", "le médecin"],
-  ["physioListings", "le kiné"],
+  ["coachListings", "coach"],
+  ["assistantCoachListings", "assistant"],
+  ["analystListings", "analyst"],
+  ["recruiterListings", "recruiter"],
+  ["doctorListings", "doctor"],
+  ["physioListings", "physio"],
 ];
+
+// ---------------------------------------------------------------------
+// Textes des notifications par langue (2026-09-30 : fr / en / it). Chaque
+// note garde son texte français (title / body) et sa recette (`msg` : id +
+// paramètres) ; localizeNote la réécrit dans la langue de l'appareil
+// destinataire (langue enregistrée avec l'abonnement, voir addSubscription).
+// Les entrées du fil (blessure, arrivée…) sont traduites par le
+// dictionnaire du jeu (server/i18n.js). Vocabulaire : glossaire de
+// assets/i18n/it.js (asta, offerta, vice allenatore, osservatore…).
+// ---------------------------------------------------------------------
+const STAFF = {
+  fr: { coach: "l'entraîneur", assistant: "l'entraîneur adjoint", analyst: "l'analyste vidéo", recruiter: "le recruteur", doctor: "le médecin", physio: "le kiné" },
+  en: { coach: "the coach", assistant: "the assistant coach", analyst: "the video analyst", recruiter: "the scout", doctor: "the doctor", physio: "the physio" },
+  it: { coach: "l'allenatore", assistant: "il vice allenatore", analyst: "il video analista", recruiter: "l'osservatore", doctor: "il medico", physio: "il fisioterapista" },
+};
+const WORDS = {
+  fr: { level: "niveau", aPlayer: "un joueur", opponent: "votre adversaire", min: "min", h: "h", d: "j" },
+  en: { level: "level", aPlayer: "a player", opponent: "your opponent", min: "min", h: "h", d: "d" },
+  it: { level: "livello", aPlayer: "un giocatore", opponent: "il tuo avversario", min: "min", h: "h", d: "g" },
+};
+const MESSAGES = {
+  kickoff: {
+    fr: p => ({ title: "Votre match commence !", body: `${p.team} contre ${p.opp} : c'est parti, en direct.` }),
+    en: p => ({ title: "Your game is starting!", body: `${p.team} vs ${p.opp}: tip-off, live now.` }),
+    it: p => ({ title: "La tua partita sta per iniziare!", body: `${p.team} contro ${p.opp}: si parte, in diretta.` }),
+  },
+  autoOutbid: {
+    fr: p => ({ title: `Plafond dépassé : ${p.what}`, body: `Votre enchère automatique (jusqu'à ${p.max}) ne suffit plus : offre à ${p.bid}, clôture dans ${p.left}.` }),
+    en: p => ({ title: `Max bid exceeded: ${p.what}`, body: `Your automatic bid (up to ${p.max}) is no longer enough: the offer is at ${p.bid}, closing in ${p.left}.` }),
+    it: p => ({ title: `Tetto superato: ${p.what}`, body: `La tua offerta automatica (fino a ${p.max}) non basta più: offerta a ${p.bid}, chiusura tra ${p.left}.` }),
+  },
+  outbid: {
+    fr: p => ({ title: `Enchère dépassée : ${p.what}`, body: `Nouvelle offre à ${p.bid}, clôture dans ${p.left}. Relancez dès ${p.next}.` }),
+    en: p => ({ title: `Outbid: ${p.what}`, body: `New offer at ${p.bid}, closing in ${p.left}. Bid again from ${p.next}.` }),
+    it: p => ({ title: `Offerta superata: ${p.what}`, body: `Nuova offerta a ${p.bid}, chiusura tra ${p.left}. Rilancia da ${p.next}.` }),
+  },
+  ending: {
+    fr: p => ({ title: `Fin d'enchère dans moins d'une heure : ${p.what}`, body: p.lead ? `Vous êtes en tête à ${p.bid}.` : `Vous avez été dépassé (${p.bid}). Il est encore temps de surenchérir.` }),
+    en: p => ({ title: `Auction ends in less than an hour: ${p.what}`, body: p.lead ? `You're leading at ${p.bid}.` : `You've been outbid (${p.bid}). There's still time to raise your bid.` }),
+    it: p => ({ title: `L'asta si chiude tra meno di un'ora: ${p.what}`, body: p.lead ? `Sei in testa a ${p.bid}.` : `Sei stato superato (${p.bid}). Hai ancora tempo per rilanciare.` }),
+  },
+  cancelled: {
+    fr: p => ({ title: `Enchère annulée : ${p.what}`, body: "Budget insuffisant au moment de la clôture." }),
+    en: p => ({ title: `Auction cancelled: ${p.what}`, body: "Not enough budget when the auction closed." }),
+    it: p => ({ title: `Asta annullata: ${p.what}`, body: "Budget insufficiente al momento della chiusura." }),
+  },
+  won: {
+    fr: p => ({ title: `Enchère remportée : ${p.what}`, body: `Recruté pour ${p.price}.` }),
+    en: p => ({ title: `Auction won: ${p.what}`, body: `Signed for ${p.price}.` }),
+    it: p => ({ title: `Asta vinta: ${p.what}`, body: `Ingaggiato per ${p.price}.` }),
+  },
+  lost: {
+    fr: p => ({ title: `Enchère perdue : ${p.what}`, body: p.price ? `Parti pour ${p.price}.` : "Un autre club a remporté l'enchère." }),
+    en: p => ({ title: `Auction lost: ${p.what}`, body: p.price ? `Gone for ${p.price}.` : "Another club won the auction." }),
+    it: p => ({ title: `Asta persa: ${p.what}`, body: p.price ? `Ceduto per ${p.price}.` : "Un altro club si è aggiudicato l'asta." }),
+  },
+};
+
+// Paramètres bruts → textes dans la langue : { money: n } → montant,
+// { ms: n } → durée restante, { staff, level } / { player } → objet de
+// l'enchère ; le reste tel quel.
+function renderParams(params, lang) {
+  const out = {};
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v && typeof v === "object" && "money" in v) out[k] = v.money == null ? null : euros(v.money, lang);
+    else if (v && typeof v === "object" && "ms" in v) out[k] = leftLabel(v.ms, lang);
+    else if (v && typeof v === "object" && "staff" in v) out[k] = `${STAFF[lang][v.staff]} (${WORDS[lang].level} ${v.level})`;
+    else if (v && typeof v === "object" && "player" in v) out[k] = v.player || WORDS[lang].aPlayer;
+    else if (v && typeof v === "object" && "opp" in v) out[k] = v.opp || WORDS[lang].opponent;
+    else out[k] = v;
+  });
+  return out;
+}
+
+// Note structurée : texte français + recette pour les autres langues.
+function mkNote(id, params, extra) {
+  const fr = MESSAGES[id].fr(renderParams(params, "fr"));
+  return Object.assign({ title: fr.title, body: fr.body }, extra, { msg: { id, params } });
+}
+
+function pickLang(l) { return l === "en" || l === "it" ? l : "fr"; }
+function pickLangOrNull(l) { return l === "fr" || l === "en" || l === "it" ? l : null; }
+
+// Montants du fil (« 120 000 € ») à la façon de la langue (comme le jeu :
+// 120,000 € en anglais, 120.000 € en italien).
+function localizeAmounts(s, lang) {
+  if (lang === "fr" || typeof s !== "string") return s;
+  return s.replace(/(\d{1,3}(?:[\s  ]\d{3})+)(?=\s?€)/g, m => m.replace(/[\s  ]/g, lang === "en" ? "," : "."));
+}
+
+// Note prête à envoyer dans la langue voulue ({ title, body, url, tag }).
+function localizeNote(note, lang) {
+  lang = pickLang(lang);
+  const base = { title: note.title, body: note.body, url: note.url, tag: note.tag };
+  if (lang === "fr") return base;
+  if (note.msg && MESSAGES[note.msg.id]) return Object.assign(base, MESSAGES[note.msg.id][lang](renderParams(note.msg.params, lang)));
+  if (note.feed) {
+    const I18n = require("./i18n.js");
+    return Object.assign(base, {
+      title: localizeAmounts(I18n.translate(lang, note.title), lang),
+      body: localizeAmounts(I18n.translate(lang, note.body), lang),
+    });
+  }
+  return base;
+}
+
+// Langue d'un appareil abonné : celle enregistrée avec l'abonnement, sinon
+// celle du club (team.lang, si elle est un jour recopiée du compte), sinon
+// le français.
+function subscriptionLang(team, sub) {
+  return pickLang((sub && sub.lang) || (team && team.lang));
+}
 const AUCTION_ENDING_MS = 60 * 60 * 1000;
 const AUCTION_RESULT_WINDOW_MS = 24 * 3600 * 1000;
 const AUCTION_KEYS_KEPT = 100;
@@ -62,14 +177,16 @@ const AUCTION_KEYS_KEPT = 100;
 let engineMod = null;
 function Engine() { if (!engineMod) engineMod = require("../engine.js"); return engineMod; }
 
-function euros(n) { return `${Math.round(n || 0).toLocaleString("fr-FR")} €`; }
+const NUM_LOCALE = { fr: "fr-FR", en: "en-GB", it: "it-IT" };
+function euros(n, lang = "fr") { return `${Math.round(n || 0).toLocaleString(NUM_LOCALE[lang] || "fr-FR")} €`; }
 
-function leftLabel(ms) {
+function leftLabel(ms, lang = "fr") {
+  const w = WORDS[lang] || WORDS.fr;
   const min = Math.max(1, Math.round(ms / 60000));
-  if (min < 60) return `${min} min`;
+  if (min < 60) return `${min} ${w.min}`;
   const h = Math.round(min / 60);
-  if (h < 48) return `${h} h`;
-  return `${Math.round(h / 24)} j`;
+  if (h < 48) return `${h} ${w.h}`;
+  return `${Math.round(h / 24)} ${w.d}`;
 }
 
 // Lien des notifications d'enchère : la page Marché ouverte sur « Mes
@@ -92,7 +209,7 @@ function auctionNotes(league, teamIdx, now, opts = {}) {
     if (!l || !(l.bids || []).some(isMe)) return;
     if (l.closesAt < since) return;
     const player = !staffLabel ? playerOf(l) : null;
-    const what = staffLabel ? `${staffLabel} (niveau ${l.level})` : (player ? player.name : "un joueur");
+    const what = staffLabel ? { staff: staffLabel, level: l.level } : { player: player ? player.name : null };
     const lead = isMe({ bidderIdx: l.currentBidderIdx, bidderRef: l.currentBidderRef });
     if (l.status === "open") {
       if (l.closesAt <= now) return;
@@ -107,13 +224,10 @@ function auctionNotes(league, teamIdx, now, opts = {}) {
           mark(key);
           // Enchère automatique du club dépassée : son plafond ne suffit plus.
           const auto = (l.autoBids || []).find(isMe);
-          out.push({
-            title: auto ? `Plafond dépassé : ${what}` : `Enchère dépassée : ${what}`,
-            body: auto
-              ? `Votre enchère automatique (jusqu'à ${euros(auto.max)}) ne suffit plus : offre à ${euros(l.currentBid)}, clôture dans ${leftLabel(l.closesAt - now)}.`
-              : `Nouvelle offre à ${euros(l.currentBid)}, clôture dans ${leftLabel(l.closesAt - now)}. Relancez dès ${euros(Engine().minNextBidFor(l))}.`,
-            url: AUCTIONS_URL, tag: `out:${field}:${l.id}`,
-          });
+          const extra = { url: AUCTIONS_URL, tag: `out:${field}:${l.id}` };
+          out.push(auto
+            ? mkNote("autoOutbid", { what, max: { money: auto.max }, bid: { money: l.currentBid }, left: { ms: l.closesAt - now } }, extra)
+            : mkNote("outbid", { what, bid: { money: l.currentBid }, left: { ms: l.closesAt - now }, next: { money: Engine().minNextBidFor(l) } }, extra));
         }
       }
       if (l.closesAt - now > AUCTION_ENDING_MS) return;
@@ -121,11 +235,7 @@ function auctionNotes(league, teamIdx, now, opts = {}) {
       const key = `end:${field}:${l.id}`;
       if (seen.has(key)) return;
       mark(key);
-      out.push({
-        title: `Fin d'enchère dans moins d'une heure : ${what}`,
-        body: lead ? `Vous êtes en tête à ${euros(l.currentBid)}.` : `Vous avez été dépassé (${euros(l.currentBid)}). Il est encore temps de surenchérir.`,
-        url: AUCTIONS_URL, tag: key,
-      });
+      out.push(mkNote("ending", { what, lead: !!lead, bid: { money: l.currentBid } }, { url: AUCTIONS_URL, tag: key }));
       return;
     }
     if (now - l.closesAt > AUCTION_RESULT_WINDOW_MS) return;
@@ -135,11 +245,11 @@ function auctionNotes(league, teamIdx, now, opts = {}) {
     const won = lead && (l.result === "sold");
     if (won && !staffLabel) return; // arrivée du joueur : déjà notifiée (fil, push: true)
     if (lead && l.result === "buyer-failed") {
-      out.push({ title: `Enchère annulée : ${what}`, body: "Budget insuffisant au moment de la clôture.", url: "/", tag: key });
+      out.push(mkNote("cancelled", { what }, { url: "/", tag: key }));
     } else if (won) {
-      out.push({ title: `Enchère remportée : ${what}`, body: `Recruté pour ${euros(l.finalPrice)}.`, url: "/", tag: key });
+      out.push(mkNote("won", { what, price: { money: l.finalPrice } }, { url: "/", tag: key }));
     } else if (!lead) {
-      out.push({ title: `Enchère perdue : ${what}`, body: l.finalPrice ? `Parti pour ${euros(l.finalPrice)}.` : "Un autre club a remporté l'enchère.", url: "/", tag: key });
+      out.push(mkNote("lost", { what, price: { money: l.finalPrice ? l.finalPrice : null } }, { url: "/", tag: key }));
     }
   });
   const isLocalMe = b => b && b.bidderIdx === teamIdx;
@@ -171,28 +281,39 @@ function collect(league, teamIdx, now, opts = {}) {
     team.pushKickoffKeys = team.pushKickoffKeys.concat([key]).slice(-10);
     const oppIdx = m.homeIdx === teamIdx ? m.awayIdx : m.homeIdx;
     const opp = league.teams[oppIdx] || (m.guest && m.guest.team ? { name: m.guest.team.teamName } : null);
-    out.push({ title: "Votre match commence !", body: `${team.name} contre ${opp ? opp.name : "votre adversaire"} : c'est parti, en direct.`, url: "/", tag: `kickoff-${key}` });
+    out.push(mkNote("kickoff", { team: team.name, opp: { opp: opp ? opp.name : null } }, { url: "/", tag: `kickoff-${key}` }));
   });
   auctionNotes(league, teamIdx, now, opts).forEach(n => out.push(n));
   const cursor = typeof team.pushCursor === "number" ? team.pushCursor : 0;
   const fresh = ((team.feed && team.feed.entries) || []).filter(e => entryNumber(e) > cursor)
     .filter(e => e.push === true || /^injury_|^mkt_end_/.test(e.key || ""))
     .sort((a, b) => entryNumber(a) - entryNumber(b));
-  fresh.forEach(e => out.push({ title: e.title, body: e.text || "", url: "/", tag: e.key || e.id }));
+  fresh.forEach(e => out.push({ title: e.title, body: e.text || "", url: "/", tag: e.key || e.id, feed: true }));
   if (team.feed) team.pushCursor = (team.feed.nextId || 1) - 1;
   return out;
 }
 
-async function flushLeague(league, now, { send = WebPush.sendPush, leagueId = null, leagues = null } = {}) {
+// Langue du COMPTE du club (Accounts.langFor), fournie par le serveur
+// (server/index.js:createHandler → setLangResolver) : async team → "fr" |
+// "en" | "it" | null (club sans compte). Elle l'emporte sur la langue
+// rangée avec l'abonnement : changer de langue dans Paramètres change aussi
+// celle des notifications, sur tous les appareils.
+let langResolver = null;
+function setLangResolver(fn) { langResolver = typeof fn === "function" ? fn : null; }
+
+async function flushLeague(league, now, { send = WebPush.sendPush, leagueId = null, leagues = null, langOf = langResolver } = {}) {
   if (!WebPush.vapidConfig() || !league) return 0;
   let sent = 0;
   for (let idx = 0; idx < league.teams.length; idx++) {
     const team = league.teams[idx];
     if (!team || !team.isHuman || !(team.pushSubscriptions || []).length || !isPremium(team, now)) continue;
     const notes = collect(league, idx, now, { leagueId, leagues }).slice(-MAX_PER_FLUSH);
+    if (!notes.length) continue;
+    let accountLang = null;
+    if (langOf) { try { accountLang = pickLangOrNull(await langOf(team)); } catch (e) { /* langue de l'abonnement */ } }
     for (const note of notes) {
       for (const sub of team.pushSubscriptions.slice()) {
-        const r = await send(sub, note);
+        const r = await send(sub, localizeNote(note, accountLang || subscriptionLang(team, sub)));
         if (r.ok) sent++;
         if (r.gone) removeSubscription(team, sub.endpoint);
       }
@@ -201,4 +322,4 @@ async function flushLeague(league, now, { send = WebPush.sendPush, leagueId = nu
   return sent;
 }
 
-module.exports = { auctionNotes, MAX_SUBSCRIPTIONS, addSubscription, removeSubscription, collect, flushLeague, isPremium };
+module.exports = { localizeNote, subscriptionLang, setLangResolver, MESSAGES, auctionNotes, MAX_SUBSCRIPTIONS, addSubscription, removeSubscription, collect, flushLeague, isPremium };

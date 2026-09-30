@@ -11,10 +11,19 @@
 // Le script AdSense (server/ads.js) n'est posé QUE sur ces pages de contenu
 // (et chargé dans le jeu une fois le manager connecté), plus jamais sur
 // l'écran d'inscription ni sur la coquille du jeu.
+//
+// Langues (2026-09-30) : chaque page existe en français (adresse sans
+// paramètre), en anglais (?lang=en) et en italien (?lang=it) ; langue
+// choisie par ?lang=, puis cookie « hm-lang », puis Accept-Language (voir
+// server/i18n.js:siteLang). Textes EN / IT des pages fixes : server/
+// siteContent.js ; Guide traduit par le dictionnaire du jeu. <html lang>,
+// canonical, hreflang et sitemap.xml (xhtml:link) pour Search Console.
 // =====================================================================
 const fs = require("fs");
 const path = require("path");
 const Ads = require("./ads.js");
+const I18n = require("./i18n.js");
+const Content = require("./siteContent.js");
 
 const SITE_URL = "https://hoop-manager.com";
 const CONTACT_EMAIL = "contact@hoop-manager.com";
@@ -67,27 +76,87 @@ function guideEntries() {
     entries.push({ id, group: group.replace(/&amp;/g, "&"), title: titleMatch ? titleMatch[1].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").trim() : id, html, text });
   }
   guideCache = { mtimeMs: st.mtimeMs, entries };
+  localizedGuide = {};
   return entries;
+}
+
+// Guide en anglais / italien (2026-09-30) : chaque texte (titre, rubrique,
+// nœud de texte du HTML) passe par le dictionnaire du jeu, exactement comme
+// dans le navigateur (server/i18n.js) : toujours le même guide que le jeu,
+// jamais recopié. Un texte absent du dictionnaire reste en français
+// (site_i18n_test.js vérifie qu'il n'y en a pas).
+let localizedGuide = {};
+const decodeHtml = s => s.replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+const escText = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+function localizeHtml(lang, html) {
+  return html.replace(/(^|>)([^<]+)(?=<|$)/g, (m, open, txt) => {
+    if (!/[A-Za-zÀ-ÿ]{2,}/.test(txt)) return m;
+    const raw = decodeHtml(txt);
+    const out = I18n.translate(lang, raw);
+    return out === raw ? m : open + escText(out);
+  })
+    // Typographie anglaise / italienne : « <b>Ritmo</b> : » → « <b>Ritmo</b>: »
+    .replace(/(<\/(?:b|strong|i|em|a)>)[   ]+([:;!?])/g, "$1$2");
+}
+
+function guideEntriesFor(lang) {
+  const entries = guideEntries();
+  if (lang === "fr") return entries;
+  if (localizedGuide[lang]) return localizedGuide[lang];
+  const tr = s => I18n.translate(lang, s);
+  localizedGuide[lang] = entries.map(e => {
+    const html = localizeHtml(lang, e.html);
+    const text = decodeHtml(html.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+    return Object.assign({}, e, { title: tr(e.title), group: tr(e.group), html, text });
+  });
+  return localizedGuide[lang];
 }
 
 // ---------------------------------------------------------------------
 // Mise en page commune (mêmes couleurs et polices que /bienvenue).
 // ---------------------------------------------------------------------
-const NAV = [
-  ["/le-jeu", "Le jeu"], ["/guide", "Guide"], ["/faq", "FAQ"], ["/a-propos", "À propos"],
-];
+const NAV = ["/le-jeu", "/guide", "/faq", "/a-propos"];
+const FOOTER_NAV = ["/le-jeu", "/guide", "/faq", "/a-propos", "/contact", "/confidentialite", "/mentions-legales"];
+const LANG_NAMES = { fr: "Français", en: "English", it: "Italiano" };
 
-function layout({ pathName, title, description, body }) {
-  const nav = NAV.map(([href, label]) =>
-    `<a href="${href}"${pathName === href || (href !== "/" && pathName.startsWith(href + "/")) ? ' aria-current="page"' : ""}>${label}</a>`).join("");
+// Adresse d'une page dans une langue : le français sans paramètre (adresse
+// historique, x-default), les autres avec ?lang=en / ?lang=it — des URL
+// distinctes, que Google indexe séparément (hreflang).
+function langUrl(pathName, lang) { return lang === "fr" ? pathName : `${pathName}?lang=${lang}`; }
+
+// Liens internes d'une page anglaise / italienne : ?lang= ajouté, pour que
+// la navigation (et l'exploration de Google) reste dans la langue.
+function localizeLinks(html, lang) {
+  if (lang === "fr") return html;
+  return html.replace(/href="(\/(?:bienvenue|le-jeu|guide|faq|a-propos|contact|confidentialite|mentions-legales)(?:\/[a-z0-9-]+)?)"/g, (m, p) => `href="${p}?lang=${lang}"`);
+}
+
+function hreflangLinks(pathName) {
+  return I18n.LANGS.map(l => `<link rel="alternate" hreflang="${l}" href="${SITE_URL}${langUrl(pathName, l)}">`).join("\n") +
+    `\n<link rel="alternate" hreflang="x-default" href="${SITE_URL}${pathName}">`;
+}
+
+function layout({ pathName, title, description, body, lang = "fr", explicit = false }) {
+  const ui = Content.UI[lang];
+  const nav = NAV.map(href =>
+    `<a href="${href}"${pathName === href || (href !== "/" && pathName.startsWith(href + "/")) ? ' aria-current="page"' : ""}>${ui.nav[href]}</a>`).join("");
+  // Sélecteur de langue : ?lang= explicite (mémorisé par un cookie, voir
+  // render) — y compris ?lang=fr pour revenir au français.
+  const langs = I18n.LANGS.map(l => `<a href="${pathName}?lang=${l}" hreflang="${l}" lang="${l}" title="${LANG_NAMES[l]}"${l === lang ? ' aria-current="true"' : ""}>${l.toUpperCase()}</a>`).join("");
+  // Choix explicite (?lang=) : même préférence que le jeu et la page
+  // d'accueil (localStorage "hm-lang").
+  const remember = explicit ? `\n<script>try{localStorage.setItem("hm-lang",${JSON.stringify(lang)})}catch(e){}</script>` : "";
   const html = `<!DOCTYPE html>
-<html lang="fr">
+<html lang="${lang}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)} · Hoop Manager</title>
 <meta name="description" content="${esc(description)}">
-<link rel="canonical" href="${SITE_URL}${pathName}">
+<link rel="canonical" href="${SITE_URL}${langUrl(pathName, lang)}">
+${hreflangLinks(pathName)}
+<meta property="og:locale" content="${{ fr: "fr_FR", en: "en_GB", it: "it_IT" }[lang]}">${remember}
 <meta name="theme-color" content="#0d131d">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/mobile/favicon-32.png?v=3">
 <link rel="apple-touch-icon" href="/assets/mobile/apple-touch-icon.png?v=3">
@@ -110,6 +179,9 @@ function layout({ pathName, title, description, body }) {
   nav.top{display:flex;gap:16px;flex-wrap:wrap}
   nav.top a{color:var(--ink-dim);text-decoration:none;font-weight:500;font-size:15px}
   nav.top a[aria-current="page"],nav.top a:hover{color:var(--ink)}
+  nav.langs{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  nav.langs a{color:var(--ink-dim);text-decoration:none;font:600 12px/1 "DM Sans",sans-serif;padding:7px 10px}
+  nav.langs a[aria-current="true"]{background:var(--panel);color:var(--ink)}
   .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;font:700 15px/1 "DM Sans",sans-serif;padding:12px 16px;text-decoration:none;background:var(--amber);color:var(--amber-ink)}
   .btn:hover{background:var(--amber-hi);color:var(--amber-ink)}
   .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
@@ -146,26 +218,27 @@ function layout({ pathName, title, description, body }) {
 </head>
 <body>
 <header><div class="wrap">
-  <a class="brand" href="/bienvenue" aria-label="Hoop Manager, accueil"><img src="/assets/brand/logo-hoop-manager.png" alt="Hoop Manager"></a>
-  <nav class="top" aria-label="Navigation principale">${nav}</nav>
-  <a class="btn" href="/bienvenue">Jouer gratuitement</a>
+  <a class="brand" href="/bienvenue" aria-label="${ui.home}"><img src="/assets/brand/logo-hoop-manager.png" alt="Hoop Manager"></a>
+  <nav class="top" aria-label="${ui.mainNav}">${nav}</nav>
+  <nav class="langs" aria-label="${ui.langNav}">${langs}</nav>
+  <a class="btn" href="/bienvenue">${ui.play}</a>
 </div></header>
 <main><div class="wrap">${body}</div></main>
 <footer><div class="wrap">
   <span>© ${new Date().getFullYear()} Hoop Manager</span>
-  <nav aria-label="Pages du site">
-    <a href="/le-jeu">Le jeu</a><a href="/guide">Guide</a><a href="/faq">FAQ</a><a href="/a-propos">À propos</a>
-    <a href="/contact">Contact</a><a href="/confidentialite">Confidentialité</a><a href="/mentions-legales">Mentions légales</a>
+  <nav aria-label="${ui.siteNav}">
+    ${FOOTER_NAV.map(href => `<a href="${href}">${ui.nav[href]}</a>`).join("")}
   </nav>
 </div></footer>
 </body>
 </html>`;
   // Script AdSense seul (sans API de jeu) : pages de contenu uniquement.
-  return Ads.injectHead(html, Ads.adsConfig(), { withApi: false });
+  return Ads.injectHead(localizeLinks(html, lang), Ads.adsConfig(), { withApi: false });
 }
 
-function cta(text = "Envie de diriger ton propre club ? L'inscription prend une minute.") {
-  return `<div class="cta"><p>${text}</p><a class="btn" href="/bienvenue">Créer mon club</a></div>`;
+function cta(lang = "fr", text = null) {
+  const ui = Content.UI[lang];
+  return `<div class="cta"><p>${text || ui.cta}</p><a class="btn" href="/bienvenue">${ui.ctaBtn}</a></div>`;
 }
 
 // ---------------------------------------------------------------------
@@ -206,7 +279,8 @@ ${cta()}
   };
 }
 
-function pageGuideIndex(entries) {
+function pageGuideIndex(entries, lang = "fr") {
+  const ui = Content.UI[lang];
   const groups = [];
   entries.forEach(e => {
     let g = groups.find(x => x.name === e.group);
@@ -215,26 +289,27 @@ function pageGuideIndex(entries) {
   });
   const toc = groups.map(g => `<section><h2>${esc(g.name)}</h2><ul>${g.items.map(e => `<li><a href="/guide/${e.id}">${esc(e.title)}</a></li>`).join("")}</ul></section>`).join("");
   return {
-    title: "Guide du jeu",
-    description: "Le guide complet de Hoop Manager : premiers pas, effectif, caractéristiques, ordres et tactiques, match en direct, compétitions, marché, économie, salle et académie.",
-    body: `<div class="page"><h1>Guide du jeu</h1>
-<p class="lead">Tout ce qu'il faut savoir pour diriger ton club : de la préparation d'un match à la gestion des finances. Ce guide est le même que celui qu'on retrouve dans le jeu.</p></div>
+    title: ui.guideTitle,
+    description: ui.guideDesc,
+    body: `<div class="page"><h1>${ui.guideTitle}</h1>
+<p class="lead">${ui.guideLead}</p></div>
 <div class="guide-toc">${toc}</div>`,
   };
 }
 
-function pageGuideEntry(entries, idx) {
+function pageGuideEntry(entries, idx, lang = "fr") {
+  const ui = Content.UI[lang];
   const e = entries[idx];
   const prev = entries[idx - 1], next = entries[idx + 1];
   return {
-    title: `${e.title} · Guide`,
+    title: `${e.title} · ${ui.guideCrumb}`,
     description: e.text.slice(0, 155).replace(/\s+\S*$/, "") + "…",
     body: `<article class="page">
-<p class="crumbs"><a href="/guide">Guide</a> › ${esc(e.group)}</p>
+<p class="crumbs"><a href="/guide">${ui.guideCrumb}</a> › ${esc(e.group)}</p>
 <h1>${esc(e.title)}</h1>
 ${e.html}
 <div class="pager">${prev ? `<a class="btn btn-ghost" href="/guide/${prev.id}">← ${esc(prev.title)}</a>` : "<span></span>"}${next ? `<a class="btn btn-ghost" href="/guide/${next.id}">${esc(next.title)} →</a>` : ""}</div>
-${cta()}
+${cta(lang)}
 </article>`,
   };
 }
@@ -251,17 +326,24 @@ const FAQ = [
   ["Pourquoi y a-t-il des publicités ?", "Les publicités financent l'hébergement du jeu. Elles n'apparaissent qu'à quelques endroits précis : une courte coupure pendant les émissions d'avant-match et de mi-temps, et une publicité facultative à regarder pour débloquer un rapport de scoutisme. Elles n'interrompent jamais l'action d'un match, et les abonnés Premium n'en voient aucune."],
   ["J'ai oublié mon mot de passe, que faire ?", `Sur la page d'accueil, onglet « Se connecter », clique sur « Mot de passe oublié ? » : un lien pour en choisir un nouveau est envoyé à l'adresse de ton compte (valable 1 heure). Pas reçu ? Écris-nous sur le serveur Discord du jeu ou à <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> depuis l'adresse de ton compte.`],
   ["Comment supprimer mon compte ?", `Dans le jeu : Paramètres → Mon compte → « Supprimer mon compte ». Ton compte est effacé et ton club est confié à l'IA.`],
-  ["Comment supprimer mon compte ?", `Envoie un message à <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> depuis l'adresse de ton compte (ou sur Discord pour un compte Discord). Ton compte et les données associées seront supprimés.`],
-  ["Le jeu existe-t-il en anglais ?", "Oui, l'interface du jeu est disponible en français et en anglais."],
+  ["Le jeu existe-t-il dans d'autres langues ?", "Oui, le jeu, ce site, les emails et les notifications existent en français, en anglais et en italien. Change de langue dans les Paramètres du jeu ou avec les boutons FR / EN / IT en haut du site."],
 ];
 
-function pageFaq() {
+function faqList(items) {
+  return items.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${a}</p></details>`).join("");
+}
+
+function pageFaq(lang = "fr") {
+  if (lang !== "fr") {
+    const P = Content.PAGES[lang];
+    return P.faqPage({ list: faqList(P.faq({ CONTACT_EMAIL })), cta: () => cta(lang) });
+  }
   return {
     title: "Questions fréquentes",
     description: "Les réponses aux questions les plus fréquentes sur Hoop Manager : prix, horaires des matchs, temps de jeu, recrutement, publicité, compte.",
     body: `<div class="page"><h1>Questions fréquentes</h1>
 <p class="lead">Les réponses aux questions qu'on nous pose le plus souvent. Il te manque une réponse ? <a href="/contact">Écris-nous</a>.</p>
-${FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${a}</p></details>`).join("")}
+${faqList(FAQ)}
 ${cta()}</div>`,
   };
 }
@@ -311,7 +393,7 @@ function pageConfidentialite() {
 <ul>
 <li><b>Compte</b> : adresse email et mot de passe (conservé uniquement sous forme chiffrée, jamais en clair), ou identifiant et nom d'utilisateur Discord si vous vous inscrivez avec Discord ; nom du club choisi ; dates de création et de dernière connexion.</li>
 <li><b>Données de jeu</b> : tout ce que vous faites dans le jeu (ordres, transferts, messages envoyés aux autres managers…), nécessaire à son fonctionnement.</li>
-<li><b>Stockage local du navigateur</b> : un jeton de connexion et vos préférences (langue, thème) sont enregistrés dans votre navigateur pour vous garder connecté.</li>
+<li><b>Stockage local du navigateur</b> : un jeton de connexion et vos préférences (langue, thème) sont enregistrés dans votre navigateur pour vous garder connecté. Un cookie « hm-lang » retient la langue des pages du site.</li>
 <li><b>Journaux techniques</b> : l'hébergeur enregistre les requêtes (adresse IP, date, page demandée) pour la sécurité et le bon fonctionnement du service.</li>
 <li><b>Lutte contre la triche</b> : une empreinte chiffrée de l'adresse IP (jamais l'adresse elle-même) est gardée avec les 5 dernières connexions du compte, pour repérer les comptes multiples ; les transferts entre clubs de managers sont journalisés (prix, valeur estimée du joueur) pour repérer les ventes arrangées.</li>
 </ul>
@@ -353,39 +435,76 @@ function pageMentions() {
 // ---------------------------------------------------------------------
 // Routage
 // ---------------------------------------------------------------------
+// Pages fixes : version française (ci-dessus) ou anglaise / italienne
+// (server/siteContent.js).
 const STATIC_PAGES = {
-  "/le-jeu": pageLeJeu,
-  "/faq": pageFaq,
-  "/a-propos": pageAPropos,
-  "/confidentialite": pageConfidentialite,
-  "/mentions-legales": pageMentions,
+  "/le-jeu": [pageLeJeu, "leJeu"],
+  "/faq": [pageFaq, null],
+  "/a-propos": [pageAPropos, "aPropos"],
+  "/confidentialite": [pageConfidentialite, "confidentialite"],
+  "/mentions-legales": [pageMentions, "mentions"],
+  "/contact": [pageContact, "contact"],
 };
+
+function staticPage(p, lang, discordInvite) {
+  const [fr, key] = STATIC_PAGES[p];
+  if (!key) return fr(lang);
+  if (lang === "fr") return fr(discordInvite);
+  return Content.PAGES[lang][key]({ CONTACT_EMAIL, PUBLISHER_NAME, discordInvite, esc, cta: () => cta(lang) });
+}
 
 function allPaths() {
   return ["/bienvenue", "/le-jeu", "/guide", ...guideEntries().map(e => `/guide/${e.id}`), "/faq", "/a-propos", "/contact", "/confidentialite", "/mentions-legales"];
 }
 
-// Renvoie { status, contentType, body } ou null si la route n'est pas une
-// page publique.
-function render(pathName, { discordInvite = null } = {}) {
+// Plan du site : chaque page dans ses trois langues, chacune avec la liste
+// complète de ses variantes (xhtml:link hreflang), comme le recommande
+// Google Search Console pour un site multilingue.
+function sitemapXml() {
+  const alternates = u => I18n.LANGS.map(l => `<xhtml:link rel="alternate" hreflang="${l}" href="${SITE_URL}${langUrl(u, l)}"/>`).join("") +
+    `<xhtml:link rel="alternate" hreflang="x-default" href="${SITE_URL}${u}"/>`;
+  const urls = allPaths().map(u => I18n.LANGS.map(l => `<url><loc>${SITE_URL}${langUrl(u, l)}</loc>${alternates(u)}</url>`).join("\n")).join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls}\n</urlset>\n`;
+}
+
+// Renvoie { status, contentType, body, headers } ou null si la route n'est
+// pas une page publique. `lang` : langue de la page (server/i18n.js:siteLang,
+// français par défaut) ; `explicit` : choisie par ?lang= (mémorisée alors
+// dans le cookie « hm-lang » et dans localStorage).
+function render(pathName, { discordInvite = null, lang = "fr", explicit = false } = {}) {
+  lang = I18n.normLang(lang) || "fr";
   const p = pathName.length > 1 ? pathName.replace(/\/+$/, "") : pathName;
   let page = null;
-  if (STATIC_PAGES[p]) page = STATIC_PAGES[p]();
-  else if (p === "/contact") page = pageContact(discordInvite);
-  else if (p === "/guide") page = pageGuideIndex(guideEntries());
+  if (STATIC_PAGES[p]) page = staticPage(p, lang, discordInvite);
+  else if (p === "/guide") page = pageGuideIndex(guideEntriesFor(lang), lang);
   else if (p.startsWith("/guide/")) {
-    const entries = guideEntries();
+    const entries = guideEntriesFor(lang);
     const idx = entries.findIndex(e => `/guide/${e.id}` === p);
     if (idx < 0) return null;
-    page = pageGuideEntry(entries, idx);
+    page = pageGuideEntry(entries, idx, lang);
   } else if (p === "/robots.txt") {
     return { status: 200, contentType: "text/plain; charset=utf-8", body: `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE_URL}/sitemap.xml\n` };
   } else if (p === "/sitemap.xml") {
-    const urls = allPaths().map(u => `<url><loc>${SITE_URL}${u}</loc></url>`).join("");
-    return { status: 200, contentType: "application/xml; charset=utf-8", body: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>\n` };
+    return { status: 200, contentType: "application/xml; charset=utf-8", body: sitemapXml() };
   }
   if (!page) return null;
-  return { status: 200, contentType: "text/html; charset=utf-8", body: layout({ pathName: p, ...page }) };
+  const headers = { "Content-Language": lang, Vary: "Accept-Language, Cookie" };
+  if (explicit) headers["Set-Cookie"] = `hm-lang=${lang}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  return { status: 200, contentType: "text/html; charset=utf-8", body: layout({ pathName: p, lang, explicit, ...page }), headers, lang };
 }
 
-module.exports = { render, guideEntries, allPaths, CONTACT_EMAIL };
+// Page d'accueil (/bienvenue, assets/site/index.html, traduite par son
+// propre script) : pour les moteurs de recherche, <html lang>, titre,
+// description et adresse officielle de la version demandée par ?lang=,
+// plus les variantes hreflang.
+function localizeLanding(html, lang) {
+  lang = I18n.normLang(lang) || "fr";
+  const L = Content.LANDING[lang];
+  let out = html.replace(/<html lang="fr">/, `<html lang="${lang}">`)
+    .replace(/<title>[^<]*<\/title>/, `<title>${esc(L.title)}</title>`)
+    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${esc(L.description)}">`)
+    .replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${SITE_URL}${langUrl("/bienvenue", lang)}">\n${hreflangLinks("/bienvenue")}`);
+  return out;
+}
+
+module.exports = { render, guideEntries, guideEntriesFor, allPaths, localizeLanding, langUrl, CONTACT_EMAIL };

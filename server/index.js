@@ -58,6 +58,7 @@ const LeagueChat = require("./leagueChat.js");
 // et server/accountRoutes.js.
 const AccountRoutes = require("./accountRoutes.js");
 const Accounts = require("./accounts.js");
+const I18n = require("./i18n.js");
 const Push = require("./push.js");
 const PublicPlayers = require("./publicPlayers.js");
 const MyAuctions = require("./myAuctions.js");
@@ -135,7 +136,7 @@ function sendBody(res, statusCode, headers, body, cacheable = false) {
   const encoding = compressible ? pickEncoding(res.req) : null;
   const out = { ...headers };
   delete out["Content-Length"];
-  if (compressible) out["Vary"] = "Accept-Encoding";
+  if (compressible) out["Vary"] = out["Vary"] ? `${out["Vary"]}, Accept-Encoding` : "Accept-Encoding";
   if (!encoding || (res.req && res.req.method === "HEAD")) {
     out["Content-Length"] = buf.length;
     res.writeHead(statusCode, out);
@@ -287,12 +288,14 @@ function serveIndexHtml(res) {
 // Page d'accueil / inscription (assets/site/index.html) — voir
 // server/accountRoutes.js pour les routes qu'elle appelle.
 const SITE_HTML_PATH = path.join(ASSETS_DIR, "site", "index.html");
-function serveSiteHtml(res) {
+function serveSiteHtml(res, queryLang = null) {
   let body;
   try {
     // Plus de script AdSense ici (écran d'inscription = pas de contenu
     // d'éditeur, refus AdSense du 2026-09-28) : voir server/site.js.
-    body = fs.readFileSync(SITE_HTML_PATH);
+    // Versions EN / IT (?lang=) : <html lang>, titre, description,
+    // canonical et hreflang pour les moteurs de recherche (Site.localizeLanding).
+    body = Site.localizeLanding(fs.readFileSync(SITE_HTML_PATH, "utf-8"), I18n.normLang(queryLang) || "fr");
   } catch (e) {
     sendJson(res, 500, { error: `Impossible de lire la page d'accueil : ${e.message}` });
     return;
@@ -1161,6 +1164,18 @@ async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSav
 // injectables — indispensable pour tester ce serveur sans dépendre du vrai
 // disque/de la vraie horloge (voir server/index_test.js).
 function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, multiSavePath = store.defaultMultiLeaguePath(), accountsPath = store.defaultAccountsPath()) {
+  // Notifications dans la langue du compte du club (Accounts.langFor, voir
+  // server/push.js:setLangResolver). Comptes relus au plus une fois par
+  // minute, et seulement quand une notification part.
+  {
+    let cache = { at: 0, data: null };
+    Push.setLangResolver(async team => {
+      if (!team || !team.managerLinkToken) return null;
+      if (!cache.data || Date.now() - cache.at > 60 * 1000) cache = { at: Date.now(), data: await Accounts.loadAccounts(accountsPath) };
+      const account = Accounts.findByManagerToken(cache.data, team.managerLinkToken);
+      return account ? Accounts.langFor(account) : null;
+    });
+  }
   // Messagerie : stockée à côté de la ligue partagée (voir server/messages.js).
   // Messagerie mondiale : championnat d'un correspondant d'ailleurs, lu à la
   // demande (voir server/messages.js, resolveOther).
@@ -1253,17 +1268,23 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
 
       // Pages publiques de contenu + robots.txt/sitemap.xml (server/site.js).
       if (req.method === "GET") {
-        const page = Site.render(route.pathname, { discordInvite: process.env.DISCORD_INVITE_URL || null });
+        // Langue : ?lang=, cookie « hm-lang », Accept-Language, français
+        // (server/i18n.js:siteLang).
+        const qLang = I18n.normLang(route.searchParams.get("lang"));
+        const lang = I18n.siteLang({ query: qLang, cookie: req.headers.cookie, acceptLanguage: req.headers["accept-language"] });
+        const page = Site.render(route.pathname, { discordInvite: process.env.DISCORD_INVITE_URL || null, lang, explicit: !!qLang });
         if (page) {
           const body = Buffer.from(page.body, "utf-8");
-          sendBody(res, page.status, { "Content-Type": page.contentType, "Cache-Control": "public, max-age=600" }, body, true);
+          // Contenu qui dépend de la langue du visiteur : pas de cache partagé.
+          const cache = page.headers ? "private, max-age=600" : "public, max-age=600";
+          sendBody(res, page.status, { "Content-Type": page.contentType, "Cache-Control": cache, ...(page.headers || {}) }, body, true);
           return;
         }
       }
 
       // Page d'accueil / inscription (voir serveSiteHtml).
       if ((route.pathname === "/bienvenue" || route.pathname === "/welcome") && req.method === "GET") {
-        serveSiteHtml(res);
+        serveSiteHtml(res, route.searchParams.get("lang"));
         return;
       }
 
@@ -1858,7 +1879,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         } else {
           if (!WebPush.vapidConfig()) { sendJson(res, 400, { ok: false, code: "push-disabled", error: "Notifications indisponibles sur ce serveur." }); return; }
           if (!Push.isPremium(team, now)) { sendJson(res, 403, { ok: false, code: "premium-required", error: "Les notifications sont réservées au Premium." }); return; }
-          if (!Push.addSubscription(team, body && body.subscription, now)) { sendJson(res, 400, { ok: false, error: "Abonnement invalide." }); return; }
+          // Langue des notifications de cet appareil : préférence du compte,
+          // sinon langue du jeu dans ce navigateur (`lang`), sinon
+          // Accept-Language, sinon français (server/i18n.js:langFor).
+          let account = null;
+          try { account = Accounts.findByManagerToken(await Accounts.loadAccounts(accountsPath), getManagerToken(req)); } catch (e) { /* sans compte */ }
+          const pushLang = I18n.langFor(account, I18n.hintFromRequest(req, body && body.lang));
+          if (!Push.addSubscription(team, body && body.subscription, now, pushLang)) { sendJson(res, 400, { ok: false, error: "Abonnement invalide." }); return; }
         }
         await store.saveMultiLeague(ctx.league, multiSavePath);
         sendJson(res, 200, { ok: true, devices: (team.pushSubscriptions || []).length });

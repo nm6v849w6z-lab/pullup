@@ -41023,6 +41023,19 @@ async function hmPushCurrentSubscription() {
   if (!hmPushSupported()) return null;
   try { const reg = await navigator.serviceWorker.getRegistration("/"); return reg ? await reg.pushManager.getSubscription() : null; } catch (e) { return null; }
 }
+// Langue des notifications = langue du jeu dans ce navigateur (server/push.js
+// traduit chaque notification pour l'appareil). Changée dans Paramètres :
+// l'abonnement existant est renvoyé avec la nouvelle langue (hmPushSyncLang).
+function hmPushLang() { return (window.hmI18n && window.hmI18n.getLang && window.hmI18n.getLang()) || "fr"; }
+async function hmPushSyncLang(sub) {
+  let last = null;
+  try { last = localStorage.getItem("hm-push-lang"); } catch (e) { /* rien */ }
+  if (!sub || (last || "fr") === hmPushLang()) return;
+  try {
+    const res = await fetchApi("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub, lang: hmPushLang() }) });
+    if (res.ok) localStorage.setItem("hm-push-lang", hmPushLang());
+  } catch (e) { /* on réessaiera */ }
+}
 function hmUrlB64ToBytes(b64) {
   const pad = "=".repeat((4 - (b64.length % 4)) % 4);
   const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
@@ -41033,8 +41046,9 @@ async function hmPushEnable() {
   if (perm !== "granted") return { ok: false, text: "Notifications refusées dans le navigateur." };
   const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(() => navigator.serviceWorker.ready);
   const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: hmUrlB64ToBytes(hmPushConfig.publicKey) });
-  const res = await fetchApi("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub }) });
+  const res = await fetchApi("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub, lang: hmPushLang() }) });
   const data = await res.json().catch(() => ({}));
+  if (res.ok && data.ok) { try { localStorage.setItem("hm-push-lang", hmPushLang()); } catch (e) { /* rien */ } }
   if (!res.ok || !data.ok) return { ok: false, text: data.error || "Activation impossible." };
   return { ok: true, text: "Notifications activées sur cet appareil." };
 }
@@ -41068,7 +41082,9 @@ async function hmAccountRefresh() {
   try {
     const pc = await fetchApi("/api/push/config");
     hmPushConfig = pc.ok ? await pc.json() : null;
-    hmPushSubscribed = await hmPushCurrentSubscription() != null;
+    const curSub = await hmPushCurrentSubscription();
+    hmPushSubscribed = curSub != null;
+    if (curSub && hmPushConfig && hmPushConfig.enabled) hmPushSyncLang(curSub);
   } catch (e) { hmPushConfig = null; }
   renderHmAccountBlock();
 }

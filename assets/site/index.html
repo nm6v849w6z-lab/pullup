@@ -561,9 +561,17 @@
   // --- Langue ---------------------------------------------------------
   // Langue mémorisée (fr / en / it), sinon celle du navigateur (italien
   // reconnu, anglais pour toute autre langue que le français).
+  // ?lang=fr|en|it dans l'adresse (lien d'un email, sélecteur des pages du
+  // site, versions indexées par Google) : prioritaire et mémorisé.
+  var urlLang = null;
+  try { urlLang = new URLSearchParams(location.search).get("lang"); } catch (e) {}
+  if (/^(fr|en|it)$/.test(urlLang || "")) store(LANG_KEY, urlLang);
   var stored = read(LANG_KEY);
   var navLang = (navigator.language || "fr").slice(0, 2);
   var lang = /^(fr|en|it)$/.test(stored || "") ? stored : (navLang === "fr" || navLang === "it" ? navLang : "en");
+  // Cookie « hm-lang » : le serveur sert les pages publiques (Guide, FAQ,
+  // À propos…) dans la même langue (server/i18n.js:siteLang).
+  function langCookie() { try { document.cookie = "hm-lang=" + lang + "; path=/; max-age=31536000; SameSite=Lax"; } catch (e) {} }
   var FR_DEFAULTS = {};
   document.querySelectorAll("[data-t]").forEach(function (el) { FR_DEFAULTS[el.dataset.t] = el.textContent; });
   document.querySelectorAll("[data-t-html]").forEach(function (el) { FR_DEFAULTS[el.dataset.tHtml] = el.innerHTML; });
@@ -575,6 +583,7 @@
   }
   function applyLang() {
     document.documentElement.lang = lang;
+    langCookie();
     document.querySelectorAll("[data-t]").forEach(function (el) { el.textContent = t(el.dataset.t); });
     document.querySelectorAll("[data-t-html]").forEach(function (el) { el.innerHTML = t(el.dataset.tHtml); });
     document.querySelectorAll("[data-lang]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.lang === lang)); });
@@ -680,7 +689,7 @@
     var pw = document.getElementById("suPw").value;
     var invite = document.getElementById("suInvite").value.trim();
     if (!club || !email || !pw || (inviteNeeded() && !invite)) { showMsg(signupMsg, "fill"); return; }
-    return api("POST", "/api/account/signup", { clubName: club, email: email, password: pw, country: pickedCountry("su"), inviteCode: invite }).then(function (d) {
+    return api("POST", "/api/account/signup", { clubName: club, email: email, password: pw, country: pickedCountry("su"), inviteCode: invite, lang: lang }).then(function (d) {
       if (d.code === "email-taken") { showMsg(signupMsg, "email-taken"); document.getElementById("liEmail").value = email; return; }
       handleSession(d, signupMsg);
     });
@@ -705,7 +714,7 @@
   submitWith(document.getElementById("forgotForm"), forgotMsg, function () {
     var email = document.getElementById("fgEmail").value.trim();
     if (!email) { showMsg(forgotMsg, "fill"); return; }
-    return api("POST", "/api/account/password-forgot", { email: email }).then(function (d) {
+    return api("POST", "/api/account/password-forgot", { email: email, lang: lang }).then(function (d) {
       if (!d.ok) { showMsg(forgotMsg, d.code || "generic"); return; }
       showMsg(forgotMsg, d.byMail ? "forgot.sent" : "forgot.nomail", !!d.byMail);
     });
@@ -724,7 +733,7 @@
     var club = document.getElementById("dcClub").value.trim();
     var invite = document.getElementById("dcInvite").value.trim();
     if (!club || (inviteNeeded() && !invite)) { showMsg(dclubMsg, "fill"); return; }
-    return api("POST", "/api/account/discord-complete", { pending: discordPending, clubName: club, country: pickedCountry("dc"), inviteCode: invite }).then(function (d) {
+    return api("POST", "/api/account/discord-complete", { pending: discordPending, clubName: club, country: pickedCountry("dc"), inviteCode: invite, lang: lang }).then(function (d) {
       if (d.code === "discord-expired") { show("viewSignup"); showMsg(signupMsg, "discord-expired"); return; }
       handleSession(d, dclubMsg);
     });
