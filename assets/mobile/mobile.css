@@ -115,4 +115,13 @@
   .calendar-table td:nth-child(2) { grid-column: 1 / 3; grid-row: 3; font-size: 12.5px; color: var(--ink-faint); }
   .calendar-table td:nth-child(5) { grid-column: 3; grid-row: 2 / 4; justify-self: end; }
   .calendar-table td:nth-child(5):empty { display: none; }
+  /* Centre médical (retour utilisateur 2026-09-30) : même classe que le
+     calendrier, mais 3 colonnes (joueur, état, risque/fin) — la grille
+     ci-dessus mettait le risque en 1re ligne, au-dessus du joueur. Joueur à
+     gauche, risque à droite sur la même ligne. */
+  .calendar-table.med-table tbody tr { grid-template-columns: minmax(0, 1fr) auto; }
+  .calendar-table.med-table td.med-c-player { grid-column: 1; grid-row: 1; font-size: inherit; font-weight: inherit; color: inherit; display: block; }
+  .calendar-table.med-table td.med-c-state { grid-column: 1; grid-row: 2; }
+  .calendar-table.med-table td.med-c-state:empty { display: none; }
+  .calendar-table.med-table td.med-c-end { grid-column: 2; grid-row: 1; align-self: center; text-align: right !important; font-size: inherit; font-weight: inherit; }
 }

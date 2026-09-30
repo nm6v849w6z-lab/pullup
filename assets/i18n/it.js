@@ -4614,7 +4614,7 @@ window.HM_I18N_IT = {
   "Risque": "Rischio",
   "À risque": "A rischio",
   "Joueurs disponibles": "Giocatori disponibili",
-  "Risque pour le prochain match": "Rischio per la prossima partita",
+  "Risque de blessure au prochain match": "Rischio di infortunio nella prossima partita",
   "Indisponible": "Indisponibile",
   "Jours d'indisponibilité": "Giorni di indisponibilità",
   "Disponibles": "Disponibili",
