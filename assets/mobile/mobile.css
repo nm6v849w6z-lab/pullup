@@ -89,16 +89,8 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
   .topbar:has(.topbar-live-strip:not(.hidden)) .topbar-m-logo { display: none; }
   .topbar-player-nav { order: 0; }
   .m-search-toggle { order: -1; }
-  .topbar-m-back:not(.hidden) {
-    display: inline-flex !important; order: -2; align-items: center; height: 40px; padding: 0 12px; border-radius: 999px;
-    border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); font: 700 13px/1 inherit; cursor: pointer; white-space: nowrap;
-  }
-  /* Page de détail : le retour prend la place de la recherche. */
-  /* Fiche joueur : flèches précédent / suivant à droite, à côté du profil
-     (à gauche, « Retour » + flèches débordaient sur le logo). */
-  .topbar-player-nav:not(.hidden) { order: 5; margin-left: auto; }
-  .topbar-player-nav:not(.hidden) ~ .topbar-manager { order: 6; margin-left: 0; }
-  .topbar:has(.topbar-m-back:not(.hidden)) .m-search-toggle { display: none; }
+  /* Pas de bouton « Retour » dans la page ni dans la barre (retour utilisateur
+     2026-09-30 : place perdue) : le geste retour du navigateur suffit. */
 
   /* Pages : titre remonté et un peu plus petit (moins de place perdue). */
   .content-scroll { padding-top: 8px; }
