@@ -135,7 +135,7 @@ const SPONSOR_ORDER = { prudent: 0, normal: 1, ambitieux: 2 };
   if (hasSalle) {
     const nm = win.eval('sponsorNameForSlot(teamA, "salle")');
     check(!doc.querySelector(".sl-sponsor") && !doc.getElementById("salleHeroHead").textContent.includes(nm), "pas d'encart « Sponsor de la salle » dans le bandeau");
-    check(doc.getElementById("arenaVisualCard").innerHTML.toUpperCase().includes(nm.toUpperCase()), "panneau du sponsor dessiné dans la salle (ArenaGen)");
+    check(doc.getElementById("arenaVisualCard").textContent.toUpperCase().includes(nm.toUpperCase()), "panneau du sponsor dessiné dans la salle (ArenaGen)");
   } else {
     check(!doc.querySelector(".sl-sponsor") && !/voir les offres/.test(doc.getElementById("salleHero").textContent), "sans sponsor : aucun encart sponsor sur la Salle");
   }

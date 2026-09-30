@@ -9798,7 +9798,7 @@ function pickSponsorTier(team, divisionLevel) {
   const tiers = sponsorTiersAvailable(team, divisionLevel);
   return tiers.length > 1 && rand01() < 0.35 ? tiers[Math.max(0, tiers.length - 2)] : tiers[tiers.length - 1];
 }
-function generateSponsorOffer(team, league, slotKey, profileKey, now, tierKey = null) {
+function generateSponsorOffer(team, league, slotKey, profileKey, now, tierKey = null, sharedJitter = null) {
   const divisionLevel = league.divisionLevel || 1;
   const tier = tierKey && SPONSOR_TIERS[tierKey] ? tierKey : pickSponsorTier(team, divisionLevel);
   const slot = SPONSOR_SLOTS.find(s => s.key === slotKey);
@@ -9809,7 +9809,7 @@ function generateSponsorOffer(team, league, slotKey, profileKey, now, tierKey = 
   const baseKey = SEASON_OBJECTIVE_KEYS_ORDERED.includes(team.seasonObjective) ? team.seasonObjective : "maintien";
   const idx = clamp(SEASON_OBJECTIVE_KEYS_ORDERED.indexOf(baseKey) + profile.objectiveShift, 0, SEASON_OBJECTIVE_KEYS_ORDERED.length - 1);
   const objectiveKey = SEASON_OBJECTIVE_KEYS_ORDERED[idx];
-  const jitter = 0.9 + rand01() * 0.2;
+  const jitter = sharedJitter != null ? sharedJitter : 0.9 + rand01() * 0.2;
   const normalWeekly = SPONSOR_TIERS[tier].baseWeekly * slot.mult * sponsorDivisionFactor(divisionLevel) * jitter;
   const weekly = roundToHundred(normalWeekly * profile.fixedMult);
   const winPrime = roundToHundred(normalWeekly * SPONSOR_PRIME_BASE_RATIO * profile.primeMult);
@@ -9818,7 +9818,7 @@ function generateSponsorOffer(team, league, slotKey, profileKey, now, tierKey = 
   return {
     id: `spo_${uid()}`, sponsorName, tier, tierLabel: SPONSOR_TIERS[tier].label,
     slot: slotKey, slotLabel: slot.label, profile: profileKey, profileLabel: profile.label, quote,
-    weekly, winPrime, bonus,
+    weekly, winPrime, bonus, jitter,
     objectiveKey, objectiveTier: SEASON_OBJECTIVE_TIERS[objectiveKey], objectiveLabel: SEASON_OBJECTIVE_LABELS[objectiveKey],
     createdAt: now, expiresAt: now + SPONSOR_OFFER_TTL_MS,
   };
@@ -9844,9 +9844,12 @@ function refreshSponsorOffers(team, league, now = Date.now()) {
     // Même palier que les offres déjà présentes sur l'emplacement, sinon un
     // palier tiré une fois pour toute la vague.
     const tier = existing.length ? existing[0].tier : pickSponsorTier(team, league.divisionLevel || 1);
+    // Même variation aléatoire pour les offres d'un même emplacement : sinon
+    // une offre Prudente pouvait afficher un plus gros bonus qu'une Normale.
+    const jitter = existing.length && existing[0].jitter ? existing[0].jitter : 0.9 + rand01() * 0.2;
     for (let i = 0; i < want && candidates.length; i++) {
       const k = candidates.splice(Math.floor(rand01() * candidates.length), 1)[0];
-      const offer = generateSponsorOffer(team, league, slot.key, k, now, tier);
+      const offer = generateSponsorOffer(team, league, slot.key, k, now, tier, jitter);
       team.sponsorOffers.push(offer);
       created.push(offer);
     }
