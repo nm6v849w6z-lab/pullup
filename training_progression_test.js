@@ -226,10 +226,17 @@ function sumTrainedProgress(before, after, trainedPositions, filterFn, onlyAttrs
   if (!reportHtml.includes("aucune minute enregistrée")) {
     throw new Error("❌ Le rapport hebdomadaire devrait EXPLIQUER pourquoi un joueur concerné n'a pas progressé (aucune minute enregistrée au poste entraîné), pas rester silencieux — c'est ce silence qui donne l'impression que l'entraînement est cassé.");
   }
+  // Attendu : les joueurs du poste entraîné SANS minute sur l'ensemble du
+  // cycle (posSelected faux dans le rapport de la semaine), pas ceux à 0 au
+  // seul dernier match : un joueur ayant joué au 1er match du cycle mais pas
+  // au 2e progresse bien (le test échouait ~1 fois sur 3 pour cette raison).
+  const weekReport = Object.entries((readRawSave(savePath).team.lastTrainingReport || {}).players || {});
+  const noMinuteInCycle = weekReport.filter(([, e]) => e.skill && trainedPositions.includes(e.position) && !e.posSelected);
+  const noMinuteIds = new Set(noMinuteInCycle.map(([id]) => String(id)));
   const noteCount = (reportHtml.match(/aucune minute enregistrée/g) || []).length;
-  console.log(`Lignes d'explication "aucune minute enregistrée" : ${noteCount} (attendu ${zeroMinutePlayers.length})`);
-  if (noteCount !== zeroMinutePlayers.length) {
-    throw new Error(`❌ Chaque joueur du poste entraîné sans minutes au dernier match devrait avoir sa propre ligne d'explication (attendu ${zeroMinutePlayers.length}, obtenu ${noteCount}).`);
+  console.log(`Lignes d'explication "aucune minute enregistrée" : ${noteCount} (attendu ${noMinuteInCycle.length} joueurs sans minute sur le cycle)`);
+  if (noMinuteInCycle.length === 0 || noteCount !== noMinuteInCycle.length) {
+    throw new Error(`❌ Chaque joueur du poste entraîné sans minute sur le cycle devrait avoir sa propre ligne d'explication (attendu ${noMinuteInCycle.length}, obtenu ${noteCount}).`);
   }
   console.log("✅ Le rapport hebdomadaire explique désormais clairement, joueur par joueur, pourquoi certains n'ont pas progressé (au lieu du silence total d'avant).");
 
@@ -238,9 +245,9 @@ function sumTrainedProgress(before, after, trainedPositions, filterFn, onlyAttrs
   // jeu depuis "Entraînement des fondamentaux" — voir le commentaire de
   // sumTrainedProgress ci-dessus, ce n'est plus un bug si ces deux
   // catégories bougent un peu ici).
-  const zeroGain = sumTrainedProgress(before, after, trainedPositions, p => zeroMinutePlayers.some(z => z.id === p.id), E.FUNDAMENTAL_ATTRS);
+  const zeroGain = sumTrainedProgress(before, after, trainedPositions, p => noMinuteIds.has(String(p.id)), E.FUNDAMENTAL_ATTRS);
   console.log("Progrès des fondamentaux pour les joueurs sans minutes (attendu 0) :", zeroGain.toFixed(3));
-  if (zeroGain !== 0) throw new Error("❌ Un joueur sans la moindre minute au dernier match ne devrait avoir AUCUN gain de fondamentaux (comportement attendu, pas le bug).");
+  if (zeroGain !== 0) throw new Error("❌ Un joueur sans la moindre minute sur le cycle ne devrait avoir AUCUN gain de fondamentaux (comportement attendu, pas le bug).");
 
   // ...mais un gain bien réel pour ceux qui ont effectivement joué.
   const playedGain = sumTrainedProgress(before, after, trainedPositions, p => playedPlayers.some(z => z.id === p.id));
