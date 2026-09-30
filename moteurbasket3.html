@@ -3690,7 +3690,6 @@
   .hn-ach em{display:block; font-style:normal; font-size:11.5px; color:var(--ok); margin-top:6px;}
   .hn-bar{height:6px; border-radius:3px; background:var(--line); margin-top:8px; overflow:hidden;}
   .hn-bar i{display:block; height:100%; background:var(--amber);}
-  #hcAchievements{margin-top:18px;}
   @media (max-width:900px){
     .hn-achs{grid-template-columns:repeat(2,minmax(0,1fr));}
     .hn-five{grid-template-columns:repeat(3,minmax(0,1fr));}
@@ -6411,9 +6410,105 @@
   /* Deux colonnes indépendantes (retour utilisateur, 2026-09-26 : "c'est un
      peu vide sous palmarès") : Palmarès, Hall of Fame et Classement mondial
      empilés à gauche, Records à droite — plus de trou sous un panneau court. */
-  .hc-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:20px; align-items:start;}
-  .hc-col{display:flex; flex-direction:column; gap:20px; min-width:0;}
+  .hc-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:20px; align-items:stretch;}
+  .hc-wide{grid-column:1 / -1;}
   .hc-panel{min-width:0;}
+  /* Profil du manager (2026-09-30) — voir renderManagerProfile. Même
+     direction que Personnalisation : moderne et aéré, surfaces discrètes
+     (--panel), presque pas de bordures, un seul accent (--amber). */
+  .mp-avatar{--mp-size:40px; display:inline-grid; place-items:center; flex:none; width:var(--mp-size); height:var(--mp-size); border-radius:50%;
+    background:color-mix(in srgb, var(--amber) 16%, var(--panel-2)); color:var(--amber); font-weight:800; letter-spacing:.02em;
+    font-size:calc(var(--mp-size) * .38); line-height:1; user-select:none;}
+  .mp-link{background:none; border:0; padding:0; font:inherit; font-weight:700; color:var(--ink); cursor:pointer; text-decoration:underline; text-decoration-color:color-mix(in srgb, var(--amber) 55%, transparent); text-underline-offset:3px;}
+  .mp-link:hover{color:var(--amber);}
+  .mp-link:focus-visible, .mp-more:focus-visible, .mp-club:focus-visible, .mp-back:focus-visible, .topbar-manager:focus-visible, .lgc-author:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  button.topbar-manager{display:inline-grid; place-items:center; padding:0; border:0; background:none; border-radius:50%; cursor:pointer;}
+  button.topbar-manager.hidden{display:none;}
+  button.topbar-manager:hover .mp-avatar{box-shadow:0 0 0 2px var(--amber);}
+  .team-detail-manager{display:block; margin-top:6px; font-family:inherit; font-size:14px; font-weight:500; color:var(--ink-dim);}
+  .team-detail-manager .mp-link{font-size:14px;}
+
+  .mp-back-row{margin:0 0 14px;}
+  .mp-back{background:none; border:0; padding:6px 0; font:inherit; font-size:13px; font-weight:700; color:var(--ink-dim); cursor:pointer;}
+  .mp-back:hover{color:var(--ink);}
+  .mp{max-width:1180px;}
+  .mp-hero{display:flex; align-items:center; gap:24px; padding:28px 30px; border-radius:22px;
+    background:radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--amber) 10%, var(--panel)) 0, var(--panel) 55%);}
+  .mp-hero-id{min-width:0; flex:1 1 auto;}
+  .mp-eyebrow{display:block; font-size:12px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-faint);}
+  h2.mp-name{margin:4px 0 8px; font-family:var(--display); font-size:34px; font-weight:800; line-height:1.1; color:var(--ink); overflow-wrap:anywhere;}
+  .mp-meta{display:flex; align-items:center; gap:6px 10px; flex-wrap:wrap; font-size:14px; color:var(--ink-dim);}
+  .mp-meta .mp-dot{color:var(--ink-faint);}
+  .mp-club{display:inline-flex; align-items:center; gap:8px; padding:0; border:0; background:none; font:inherit; font-weight:700; color:var(--ink); cursor:pointer;}
+  .mp-club:hover span{color:var(--amber);}
+  .mp-club svg, .mp-club img{width:22px; height:22px; border-radius:50%; display:block;}
+  .mp-country{display:inline-flex; align-items:center; gap:6px;}
+  .mp-own-note{margin:12px 0 0; font-size:13px; color:var(--ink-faint);}
+  .mp-msg{flex:none; align-self:flex-start;}
+  .mp-block{padding-top:28px; min-width:0;}
+  .mp-title{display:flex; align-items:baseline; gap:10px; margin:0 0 14px; font-size:13px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-faint);}
+  .mp-title span{font-weight:700; letter-spacing:0; text-transform:none; color:var(--amber);}
+  .mp-kpis{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px;}
+  .mp-kpi{padding:18px 20px; border-radius:18px; background:var(--panel); min-width:0;}
+  .mp-kpi small{display:block; font-size:12px; font-weight:700; color:var(--ink-faint);}
+  .mp-kpi b{display:block; margin:6px 0 4px; font-family:var(--display); font-size:28px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mp-kpi span{display:block; font-size:12.5px; color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  #mpAchievements .ach-grid{grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:10px;}
+  #mpAchievements .ach{border:0; background:var(--panel); padding:12px 14px; border-radius:14px; opacity:.5;}
+  #mpAchievements .ach.on{opacity:1; background:color-mix(in srgb, var(--amber) 7%, var(--panel));}
+  #mpAchievements .ach > .sub{display:none;}
+  #mpAchievements > .ach-grid + .sub{display:none;}
+  .mp-split{display:grid; grid-template-columns:minmax(0, 1.5fr) minmax(0, 1fr); gap:0 24px;}
+  .mp-surface{padding:6px 18px; border-radius:18px; background:var(--panel);}
+  .mp-table-wrap{overflow-x:auto;}
+  table.mp-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  table.mp-table th{padding:12px 8px 8px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); text-align:left; white-space:nowrap;}
+  table.mp-table td{padding:10px 8px; border-top:1px solid var(--line-soft); color:var(--ink); white-space:nowrap;}
+  table.mp-table .num{text-align:right; font-variant-numeric:tabular-nums;}
+  table.mp-table tr.is-current td{color:var(--ink);}
+  .mp-tag{display:inline-block; margin-left:6px; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; color:var(--amber); background:color-mix(in srgb, var(--amber) 13%, transparent);}
+  .mp-win{font-weight:700; color:var(--amber);}
+  .mp-quotes{display:flex; flex-direction:column; gap:10px;}
+  .mp-quote{margin:0; padding:16px 18px; border-radius:18px; background:var(--panel);}
+  .mp-quote blockquote{margin:0; font-size:14px; line-height:1.55; color:var(--ink);}
+  .mp-quote figcaption{margin-top:8px; font-size:12.5px; color:var(--ink-faint);}
+  .mp-quote figcaption > span[data-no-i18n], .mp-quote figcaption > span:first-child{font-weight:700; color:var(--ink-dim);}
+  .mp-empty{margin:0; padding:16px 18px; border-radius:18px; background:var(--panel); font-size:13.5px; color:var(--ink-faint);}
+  /* Carte compacte sur la fiche d'équipe (voir managerProfileCardHtml). */
+  .mp-card{margin-top:22px; padding:20px 22px; border-radius:20px; background:var(--panel);}
+  .mp-card-head{display:flex; align-items:center; gap:14px; margin-bottom:16px;}
+  .mp-card-id{min-width:0; flex:1 1 auto;}
+  .mp-card-id small{display:block; font-size:11.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-faint);}
+  .mp-card-name{font-size:18px;}
+  .mp-more{flex:none; background:none; border:0; padding:6px 0; font:inherit; font-size:13px; font-weight:700; color:var(--amber); cursor:pointer;}
+  .mp-card .mp-kpi{background:var(--panel-2); padding:14px 16px;}
+  .mp-card .mp-kpi b{font-size:22px;}
+  .mp-card-foot{margin:12px 0 0; font-size:12.5px; color:var(--ink-faint);}
+  /* Chat de la ligue : le pseudo de l'auteur ouvre son profil. */
+  .lgc-author{background:none; border:0; padding:0; font:inherit; font-weight:800; color:var(--ink); cursor:pointer;}
+  .lgc-author:hover{color:var(--amber);}
+  .msg-conv-club{font-size:11.5px; color:var(--ink-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .msg-thread-who{display:flex; align-items:baseline; gap:8px; min-width:0; flex-wrap:wrap;}
+  .msg-thread-club{background:none; border:0; padding:0; font:inherit; font-size:12.5px; color:var(--ink-faint); cursor:pointer;}
+  .msg-thread-club:hover{color:var(--ink);}
+  .settings-pseudo-form .sl-rename-input{flex:1 1 180px;}
+  @media (max-width:980px){
+    .mp-kpis{grid-template-columns:repeat(2, minmax(0,1fr));}
+    .mp-split{grid-template-columns:1fr;}
+  }
+  @media (max-width:600px){
+    .mp-hero{flex-direction:column; align-items:flex-start; gap:16px; padding:22px 20px;}
+    .mp-hero .mp-avatar{--mp-size:72px !important;}
+    h2.mp-name{font-size:28px;}
+    .mp-kpi{padding:14px 16px;}
+    .mp-kpi b{font-size:22px;}
+    .mp-card{padding:16px;}
+    button.topbar-manager .mp-avatar{--mp-size:30px !important;}
+    #mpAchievements .ach-grid{grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px;}
+    #mpAchievements .ach{padding:10px; gap:8px;}
+    #mpAchievements .ach-txt small{display:none;}
+    #mpAchievements .ach-txt b{font-size:12.5px;}
+  }
   .hc-trophies{margin:0 0 14px;}
   .hc-table td, .hc-table th{padding:8px 6px; white-space:normal; font-size:13px;}
   .hc-table th{line-height:1.2;}
@@ -6975,6 +7070,9 @@
           <span id="topbarWeek"></span>
         </div>
         <button class="topbar-cta" id="topbarOrdersBtn">Donnez vos ordres</button>
+        <!-- Profil du manager (2026-09-30) : avatar (initiales du pseudo),
+             voir syncTopbarManager/showManagerProfile. -->
+        <button type="button" class="topbar-manager hidden" id="topbarManagerBtn" aria-label="Mon profil de manager"></button>
       </div>
     </header>
     <div class="content-scroll">
@@ -7807,6 +7905,16 @@
       <div class="actions">
         <button class="secondary" id="closeTeamDetailBtn">← Retour</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Profil du manager (2026-09-30) — voir renderManagerProfile : ouvert
+       par l'avatar en haut à droite ou par un nom de manager, pas dans la
+       barre latérale. -->
+  <div id="managerProfileSection" class="hidden">
+    <div class="section">
+      <div class="mp-back-row"><button type="button" class="mp-back" id="closeManagerProfileBtn">← Retour</button></div>
+      <div id="managerProfileContent"></div>
     </div>
   </div>
 
@@ -9898,6 +10006,49 @@ function teamArenaName(team) {
 function containsBannedWord(text) {
   const t = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return NAME_BANNED_WORDS.some(w => t.includes(w.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
+}
+
+// ---------------------------------------------------------------------
+// Pseudo du manager (2026-09-30, page « Profil du manager ») : le nom
+// public d'un manager humain, choisi par lui (Paramètres › Mon compte),
+// JAMAIS son email ni son nom réel. Affiché seulement sur la fiche
+// d'équipe, la messagerie, les interviews relues et le chat de la ligue
+// (pas dans les classements ni les en-têtes de match). 3 à 20 caractères
+// (lettres, chiffres, « _ », « - », « . »), unique dans tout le monde
+// (comparaison sans casse ni accents), pas d'insulte (containsBannedWord),
+// un changement tous les 30 jours — même règle que le trigramme : le
+// premier choix ne lance pas le délai. `null` = pas encore choisi :
+// affichage « Manager de <club> ». Club IA : aucun nom de manager.
+// ---------------------------------------------------------------------
+const MANAGER_PSEUDO_MIN_LENGTH = 3;
+const MANAGER_PSEUDO_MAX_LENGTH = 20;
+const MANAGER_PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 3600 * 1000;
+const MANAGER_PSEUDO_RESERVED = ["admin", "administrateur", "moderateur", "moderation", "hoopmanager", "pullup", "systeme", "system", "ia", "cpu", "support", "staff"];
+function managerPseudoKey(value) {
+  return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+function isValidManagerPseudo(value) {
+  return typeof value === "string" && value.length >= MANAGER_PSEUDO_MIN_LENGTH && value.length <= MANAGER_PSEUDO_MAX_LENGTH &&
+    /^[\p{L}\p{N}_.\-]+$/u.test(value);
+}
+// { value } si le pseudo est acceptable, sinon { error } (message français).
+function checkManagerPseudo(raw) {
+  const value = typeof raw === "string" ? raw.trim().normalize("NFC") : "";
+  if (value.length < MANAGER_PSEUDO_MIN_LENGTH || value.length > MANAGER_PSEUDO_MAX_LENGTH) return { error: `Le pseudo doit faire entre ${MANAGER_PSEUDO_MIN_LENGTH} et ${MANAGER_PSEUDO_MAX_LENGTH} caractères.` };
+  if (!isValidManagerPseudo(value)) return { error: "Le pseudo ne peut contenir que des lettres, des chiffres et les signes _ - ." };
+  if (!/[\p{L}\p{N}]/u.test(value)) return { error: "Le pseudo doit contenir au moins une lettre ou un chiffre." };
+  const key = managerPseudoKey(value);
+  if (containsBannedWord(key) || MANAGER_PSEUDO_RESERVED.includes(key.replace(/[_.\-]/g, ""))) return { error: "Ce pseudo n'est pas autorisé." };
+  return { value };
+}
+function managerPseudoOf(team) {
+  return team && team.isHuman && isValidManagerPseudo(team.managerPseudo) ? team.managerPseudo : null;
+}
+// Nom affiché du manager d'un club : son pseudo, « Manager de <club> » s'il
+// n'en a pas encore choisi, `null` pour un club IA.
+function managerDisplayName(team) {
+  if (!team || !team.isHuman) return null;
+  return managerPseudoOf(team) || `Manager de ${team.name}`;
 }
 
 // ---------------------------------------------------------------------
@@ -14001,6 +14152,10 @@ class Team {
     // lisibles pour les autres managers).
     this.trigram = null;
     this.trigramChangedAt = null;
+    // Pseudo du manager (voir checkManagerPseudo) et date du dernier
+    // changement (0 = premier choix, sans délai ; null = jamais choisi).
+    this.managerPseudo = null;
+    this.managerPseudoChangedAt = null;
     // Nom de salle personnalisé (retour communauté 2026-09 : "Modifier le
     // nom de sa salle") : `null` = nom du palier ARENA_LEVELS (voir
     // teamArenaName).
@@ -20541,6 +20696,8 @@ function serializeTeam(team) {
     isPaying: !!team.isPaying,
     trigram: team.trigram || null,
     trigramChangedAt: typeof team.trigramChangedAt === "number" ? team.trigramChangedAt : null,
+    managerPseudo: team.managerPseudo || null,
+    managerPseudoChangedAt: typeof team.managerPseudoChangedAt === "number" ? team.managerPseudoChangedAt : null,
     arenaName: team.arenaName || null,
     premiumUntil: typeof team.premiumUntil === "number" ? team.premiumUntil : null,
     customLogoDataUrl: team.customLogoDataUrl || null,
@@ -21061,6 +21218,8 @@ function teamFromSave(data) {
   team.scoutingPremium = false;
   team.trigram = isValidTrigram(data.trigram) ? data.trigram : null;
   team.trigramChangedAt = typeof data.trigramChangedAt === "number" ? data.trigramChangedAt : null;
+  team.managerPseudo = isValidManagerPseudo(data.managerPseudo) ? data.managerPseudo : null;
+  team.managerPseudoChangedAt = typeof data.managerPseudoChangedAt === "number" ? data.managerPseudoChangedAt : null;
   team.arenaName = typeof data.arenaName === "string" && data.arenaName.trim() ? data.arenaName.trim().slice(0, ARENA_NAME_MAX_LENGTH) : null;
   team.premiumUntil = typeof data.premiumUntil === "number" ? data.premiumUntil : null;
   team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
@@ -23978,6 +24137,9 @@ const PAGE_IDS = [
   "clubSection", "staffSection", "medicalSection", "tactiquesSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "amicauxSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
   "guideSection", "premiumSection", "planeteSection", "personnalisationSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
+  // Profil du manager (2026-09-30) : page à part, hors barre latérale (voir
+  // showManagerProfile).
+  "managerProfileSection",
 ];
 
 // Pages dont le contenu (tableau dense en colonnes) a besoin de toute la
@@ -24607,6 +24769,7 @@ function updateTopbar() {
   // utilisateur, 2026-09 : "rends cliquable le nom de sa propre équipe [...]
   // en haut").
   if (nameEl && teamA) nameEl.innerHTML = teamLinkHtml(myTeamIndex, teamA.name);
+  syncTopbarManager();
   const oppEl = document.getElementById("topbarNextOpponent");
   const weekEl = document.getElementById("topbarWeek");
   // Prochain match = match de ligue privée (voir lpNextMatchIfFirst) :
@@ -26756,8 +26919,10 @@ function lgcRender() {
       const team = typeof idx === "number" && league && league.teams ? league.teams[idx] : null;
       html += `<div class="lgc-msg${m.mine ? " mine" : ""}${picking}" data-lgc-id="${m.id}">` +
         `<div class="lgc-by"><span class="lgc-logo">${team ? teamLogoHtml(team, 18) : ""}</span>` +
-        `<b data-no-i18n>${escapeHtml((m.author && m.author.club) || "?")}</b>` +
-        (m.author && m.author.name ? `<small data-no-i18n>${escapeHtml(m.author.name)}</small>` : "") + time + `</div>` +
+        (m.author && m.author.name && typeof idx === "number"
+          ? `<button type="button" class="lgc-author" data-manager-profile="${idx}" data-no-i18n>${escapeHtml(m.author.name)}</button>`
+          : `<b data-no-i18n>${escapeHtml((m.author && (m.author.name || m.author.club)) || "?")}</b>`) +
+        `<small data-no-i18n>${escapeHtml((m.author && m.author.club) || "")}</small>` + time + `</div>` +
         `<p class="lgc-text" data-no-i18n>${escapeHtml(m.text)}</p>` + lgcReactionsHtml(m) + `</div>`;
     } else {
       html += `<div class="lgc-sys lgc-sys--${escapeHtml(m.kind)}${picking}" data-lgc-id="${m.id}">` +
@@ -27133,31 +27298,246 @@ function renderLeagueHonorsPanel() {
   if (asgHolder) asgHolder.innerHTML = allStarCardHtml(asg);
 }
 
-// ---- Fiche d'un club humain : profil public du manager ----
-function managerProfileCardHtml(team) {
-  if (!team || !team.isHuman) return "";
-  const hist = team.seasonHistory || [];
-  const trophies = team.trophies || [];
-  const wins = hist.reduce((s, h) => s + (h.wins || 0), 0), losses = hist.reduce((s, h) => s + (h.losses || 0), 0);
-  const titles = trophies.filter(t => t.type === "championship");
-  const cups = trophies.filter(t => t.type === "cup" || t.type === "national-cup");
-  const ach = (team.achievements || []).slice().sort((x, y) => (y.at || 0) - (x.at || 0));
-  const total = typeof MANAGER_ACHIEVEMENTS_CLIENT !== "undefined" ? MANAGER_ACHIEVEMENTS_CLIENT.length : ach.length;
-  const stat = (icon, label, value, sub) => `<div class="hn-award"><span class="hn-ic">${honorIconHtml(icon)}</span><div><small>${label}</small><b>${value}</b><span>${sub}</span></div></div>`;
-  let html = `<section class="lg-panel hn-panel" id="managerProfileCard"><div class="lg-panel-title"><h2>Profil du manager</h2><span>${hist.length ? `${hist.length} saison${hist.length > 1 ? "s" : ""} terminée${hist.length > 1 ? "s" : ""}` : "Première saison en cours"}</span></div>`;
-  html += `<div class="hn-awards">` +
-    stat("trophy", "Titres", titles.length, titles.length ? escapeHtml(titles[0].label || "") : "Aucun pour l'instant") +
-    stat("medal", "Coupes", cups.length, cups.length ? escapeHtml(cups[0].label || "") : "Aucune pour l'instant") +
-    stat("chart", "Bilan en carrière", `${wins} V – ${losses} D`, wins + losses ? `${Math.round(wins / (wins + losses) * 100)} % de victoires` : "Saisons terminées uniquement") +
-    stat("star", "Succès", `${ach.length} / ${total}`, ach.length ? `dernier : ${escapeHtml(ach[0].label || "")}` : "Aucun pour l'instant") +
-    `</div>`;
-  if (hist.length) {
-    html += `<div class="hn-table-wrap"><table class="hn-t"><thead><tr><th>Saison</th><th>Division</th><th class="num">Classement</th><th class="num">Bilan</th><th>Play-offs</th><th>Coupe</th></tr></thead><tbody>` +
-      hist.slice().reverse().map(s => `<tr><td>Saison ${s.seasonNo || "?"}</td><td>${escapeHtml(s.divisionName || "")}</td><td class="num">${s.rank ? ordinalFr(s.rank) : "–"}</td><td class="num">${s.wins || 0}–${s.losses || 0}</td><td>${escapeHtml(s.playoffResult || "–")}</td><td>${escapeHtml(s.cupResult || "–")}</td></tr>`).join("") +
-      `</tbody></table></div>`;
-  }
-  return html + `</section>`;
+// ---------------------------------------------------------------------
+// PROFIL DU MANAGER (2026-09-30, validé avec l'utilisateur) : pseudo, club,
+// pays, bilan (victoires/défaites en carrière, montées, titres, coupes),
+// succès du manager (déplacés depuis l'Histoire du club) et ses dernières
+// interviews. Page à part (#managerProfileSection, hors barre latérale),
+// ouverte par l'avatar en haut à droite (son propre profil) ou par un clic
+// sur le nom d'un manager (fiche d'équipe, messagerie, interviews, chat de
+// la ligue). Profils des autres managers en lecture seule, y compris ceux
+// d'un autre championnat (même source que la fiche équipe étrangère :
+// GET /api/world/team-page). Pas de « carrière / clubs dirigés » : un
+// manager crée un club et le dirige toujours.
+// Une seule source de vérité (managerProfileData) pour la page ET la carte
+// compacte de la fiche d'équipe (managerProfileCardHtml).
+// ---------------------------------------------------------------------
+function managerInitials(team) {
+  const src = managerPseudoOf(team) || (team && team.name) || "?";
+  const parts = src.split(/[\s_.\-]+/).filter(Boolean);
+  const ini = parts.length >= 2 ? parts[0][0] + parts[1][0] : (parts[0] || src).slice(0, 2);
+  return ini.toUpperCase();
 }
+function managerAvatarHtml(team, size = 40) {
+  return `<span class="mp-avatar" style="--mp-size:${size}px" aria-hidden="true" data-no-i18n>${escapeHtml(managerInitials(team))}</span>`;
+}
+// Nom du manager : pseudo (jamais traduit) ou « Manager de <club> » (le
+// libellé se traduit, le nom du club non).
+function managerNameInnerHtml(team) {
+  const pseudo = managerPseudoOf(team);
+  if (pseudo) return `<span data-no-i18n>${escapeHtml(pseudo)}</span>`;
+  return `<span>Manager de ${escapeHtml(team ? team.name : "?")}</span>`;
+}
+// Lien vers le profil du manager d'un club humain ("" pour un club IA).
+// `leagueId` : club d'un autre championnat.
+function managerLinkHtml(team, teamIdx, leagueId = null, cls = "") {
+  if (!team || !team.isHuman) return "";
+  return `<button type="button" class="mp-link${cls ? ` ${cls}` : ""}" data-manager-profile="${teamIdx}"${leagueId ? ` data-manager-league="${escapeHtml(leagueId)}"` : ""} title="Voir le profil du manager">${managerNameInnerHtml(team)}</button>`;
+}
+
+// Données du profil : tout vient du club (le manager ne change jamais de
+// club). Saison en cours comptée tant qu'elle n'est pas archivée.
+function managerProfileData(team, teamIdx, lg = league) {
+  const hist = team.seasonHistory || []; // plus récente en tête
+  const seasonKey = lg.seasonId || `start:${lg.calendarStartAt || 0}`;
+  let current = null;
+  if (team.lastArchivedSeasonId !== seasonKey) {
+    try { current = { ...seasonSummaryForTeam(lg, teamIdx, Date.now()), current: true }; } catch (e) { current = null; }
+  }
+  const rows = current ? [current, ...hist] : hist.slice();
+  const wins = rows.reduce((s, h) => s + (h.wins || 0), 0);
+  const losses = rows.reduce((s, h) => s + (h.losses || 0), 0);
+  let promotions = 0;
+  for (let i = 0; i < rows.length - 1; i++) {
+    const now = rows[i].divisionLevel, before = rows[i + 1].divisionLevel;
+    if (now && before && now < before) promotions++;
+  }
+  if (team.pendingDivisionMove && team.pendingDivisionMove.kind === "promoted") promotions++;
+  const trophies = team.trophies || [];
+  const titles = trophies.filter(t => t.type === "championship");
+  const cups = trophies.filter(t => t.type !== "championship");
+  const achievements = (team.achievements || []).slice().sort((x, y) => (y.at || 0) - (x.at || 0));
+  const interviews = (team.moraleHistory || []).filter(e => e.milestone && e.quote).slice(0, 3);
+  return {
+    team, teamIdx, pseudo: managerPseudoOf(team), rows, seasons: rows.length, archived: hist.length,
+    wins, losses, pct: wins + losses ? Math.round(wins / (wins + losses) * 100) : null,
+    promotions, titles, cups, achievements, achievementsTotal: MANAGER_ACHIEVEMENTS_CLIENT.length, interviews,
+    country: team.country || lg.country || "fr",
+  };
+}
+
+function managerSeasonsTableHtml(d) {
+  if (!d.rows.length) return `<p class="mp-empty">Aucune saison pour l'instant.</p>`;
+  return `<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Saison</th><th>Division</th><th class="num">Classement</th><th class="num">Bilan</th><th>Championnat</th><th>Coupe</th></tr></thead><tbody>` +
+    d.rows.map(s => `<tr class="${s.current ? "is-current" : ""}"><td><b>Saison ${s.seasonNo || "?"}</b>${s.current ? ` <span class="mp-tag">En cours</span>` : ""}</td>` +
+      `<td>${escapeHtml(String(s.divisionName || "–"))}</td>` +
+      `<td class="num">${s.rank ? ordinalFr(s.rank) : "–"}</td>` +
+      `<td class="num">${s.wins || 0}–${s.losses || 0}</td>` +
+      `<td>${s.champion ? `<span class="mp-win">Champion</span>` : escapeHtml(hcChampionshipLabel(s))}</td>` +
+      `<td>${s.cupWinner ? `<span class="mp-win">Vainqueur</span>` : escapeHtml(s.cupResult || "–")}</td></tr>`).join("") +
+    `</tbody></table></div>`;
+}
+
+// Interviews relues : attribuées au manager par son pseudo.
+function managerInterviewsHtml(d, limit = 3) {
+  if (!d.interviews.length) return `<p class="mp-empty">Aucune interview pour l'instant.</p>`;
+  return `<div class="mp-quotes">` + d.interviews.slice(0, limit).map(e =>
+    `<figure class="mp-quote"><blockquote data-no-i18n>« ${escapeHtml(e.quote)} »</blockquote>` +
+    `<figcaption>${managerNameInnerHtml(d.team)} <span>a déclaré</span> · <span>semaine ${escapeHtml(String(e.week))}</span></figcaption></figure>`).join("") + `</div>`;
+}
+
+function managerKpisHtml(d) {
+  const kpi = (label, value, sub) => `<div class="mp-kpi"><small>${label}</small><b>${value}</b><span>${sub}</span></div>`;
+  return `<div class="mp-kpis">` +
+    kpi("Bilan", `${d.wins} V – ${d.losses} D`, d.pct != null ? `${d.pct} % de victoires` : "Aucun match joué") +
+    kpi("Titres", d.titles.length, d.titles.length ? escapeHtml(d.titles[0].label || "") : "Aucun pour l'instant") +
+    kpi("Coupes", d.cups.length, d.cups.length ? escapeHtml(d.cups[0].label || "") : "Aucune pour l'instant") +
+    kpi("Montées", d.promotions, `${d.seasons} saison${d.seasons > 1 ? "s" : ""} à la tête du club`) +
+    `</div>`;
+}
+
+// Carte compacte de la fiche d'équipe d'un club humain (même source que la
+// page : managerProfileData), avec un lien vers le profil complet.
+function managerProfileCardHtml(team, teamIdx = league.teams.indexOf(team), leagueId = null) {
+  if (!team || !team.isHuman) return "";
+  const d = managerProfileData(team, teamIdx);
+  return `<section class="mp-card" id="managerProfileCard">` +
+    `<div class="mp-card-head">${managerAvatarHtml(team, 44)}<div class="mp-card-id"><small>Manager</small>${managerLinkHtml(team, teamIdx, leagueId, "mp-card-name")}</div>` +
+    `<button type="button" class="mp-more" data-manager-profile="${teamIdx}"${leagueId ? ` data-manager-league="${escapeHtml(leagueId)}"` : ""}>Voir le profil →</button></div>` +
+    managerKpisHtml(d) +
+    `<p class="mp-card-foot">${d.achievements.length} / ${d.achievementsTotal} succès débloqués</p>` +
+    `</section>`;
+}
+
+// État de la page : club affiché + championnat étranger éventuel
+// ({ league, leagueId, label }), et d'où revenir.
+let managerProfileState = { idx: null, foreign: null };
+let managerProfileOrigin = null;
+function withManagerProfileLeague(fn) {
+  const f = managerProfileState.foreign;
+  if (!f) return fn();
+  const saved = { league, myTeamIndex };
+  league = f.league;
+  myTeamIndex = -1;
+  try { return fn(); } finally { league = saved.league; myTeamIndex = saved.myTeamIndex; }
+}
+
+function renderManagerProfile() {
+  const holder = document.getElementById("managerProfileContent");
+  if (!holder) return;
+  withManagerProfileLeague(() => {
+    const idx = managerProfileState.idx;
+    const team = league.teams[idx];
+    const foreign = managerProfileState.foreign;
+    if (!team || !team.isHuman) {
+      holder.innerHTML = `<p class="mp-empty">Ce club n'est pas dirigé par un manager.</p>`;
+      return;
+    }
+    const own = !foreign && idx === myTeamIndex;
+    const d = managerProfileData(team, idx);
+    const division = foreign ? foreign.label : leagueCompetitionLabel();
+    const clubBtn = foreign
+      ? `<button type="button" class="mp-club" data-mp-foreign-team="${idx}">${teamLogoHtml(team, 22)}<span data-no-i18n>${escapeHtml(team.name)}</span></button>`
+      : `<button type="button" class="mp-club" data-team-idx="${idx}">${teamLogoHtml(team, 22)}<span data-no-i18n>${escapeHtml(team.name)}</span></button>`;
+    let html = `<div class="mp">`;
+    html += `<header class="mp-hero">${managerAvatarHtml(team, 96)}<div class="mp-hero-id">` +
+      `<span class="mp-eyebrow">${own ? "Mon profil de manager" : "Profil du manager"}</span>` +
+      `<h2 class="mp-name">${managerNameInnerHtml(team)}</h2>` +
+      `<div class="mp-meta">${clubBtn}<span class="mp-dot">·</span><span class="mp-country">${nationFlagHtml(d.country)} <span>${escapeHtml(nationName(d.country) || "")}</span></span>` +
+      (division ? `<span class="mp-dot">·</span><span data-no-i18n>${escapeHtml(division)}</span>` : "") + `</div>` +
+      (own ? `<p class="mp-own-note">${d.pseudo ? "Ton pseudo est visible des autres managers" : "Tu n'as pas encore choisi de pseudo"} : <button type="button" class="pz-inline-link" data-mp-edit-pseudo>${d.pseudo ? "le modifier" : "en choisir un"}</button>.</p>` : "") +
+      `</div>` +
+      (!own && msgUi.available ? `<button type="button" class="pz-btn pz-btn--ghost mp-msg" data-msg-open="${escapeHtml(foreign ? `${foreign.leagueId}:${idx}` : String(idx))}">Envoyer un message</button>` : "") +
+      `</header>`;
+    html += `<section class="mp-block"><h3 class="mp-title">Bilan</h3>${managerKpisHtml(d)}</section>`;
+    html += `<section class="mp-block" id="mpAchievements"><h3 class="mp-title">Succès <span>${d.achievements.length} / ${d.achievementsTotal}</span></h3>${managerAchievementsHtml(team)}</section>`;
+    html += `<div class="mp-split">` +
+      `<section class="mp-block"><h3 class="mp-title">Saison par saison</h3><div class="mp-surface">${managerSeasonsTableHtml(d)}</div></section>` +
+      `<section class="mp-block"><h3 class="mp-title">Dernières interviews</h3>${managerInterviewsHtml(d)}</section>` +
+      `</div>`;
+    html += `</div>`;
+    holder.innerHTML = html;
+  });
+}
+
+function managerProfileRememberOrigin() {
+  if (currentVisiblePageId() === "managerProfileSection") return;
+  const activeTabBtn = document.querySelector(".tab-btn.active");
+  managerProfileOrigin = { pageId: currentVisiblePageId(), tabKey: activeTabBtn ? activeTabBtn.dataset.tab : null };
+}
+// `foreign` : { league, leagueId, label } d'un autre championnat (déjà
+// chargé, ex. depuis une fiche équipe étrangère).
+function showManagerProfile(teamIdx, foreign = null) {
+  if (typeof lgcClose === "function") { try { lgcClose(); } catch (e) { /* chat pas initialisé */ } }
+  managerProfileRememberOrigin();
+  managerProfileState = { idx: teamIdx, foreign };
+  renderManagerProfile();
+  showPage("managerProfileSection");
+  if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+  const scroller = document.querySelector(".content-scroll");
+  if (scroller) scroller.scrollTop = 0;
+}
+async function showForeignManagerProfile(leagueId, teamIdx) {
+  if (!leagueId || (league && league.leagueId === leagueId)) { showManagerProfile(teamIdx); return true; }
+  if (teamDetailForeign && teamDetailForeign.leagueId === leagueId) {
+    showManagerProfile(teamIdx, { league: teamDetailForeign.league, leagueId, label: teamDetailForeign.label });
+    return true;
+  }
+  let data;
+  try { data = await planeteFetch(`/api/world/team-page?league=${encodeURIComponent(leagueId)}`); } catch (e) { return false; }
+  if (!data || !data.league || !data.league.teams || !data.league.teams[teamIdx]) return false;
+  if (data.mine) { showManagerProfile(teamIdx); return true; }
+  const ownTz = league ? league.timeZone : null;
+  let lg;
+  try { lg = leagueFromSave(data.league); } finally { setCalendarTimeZone(ownTz); }
+  showManagerProfile(teamIdx, { league: lg, leagueId, label: data.label || "" });
+  return true;
+}
+function hideManagerProfile() {
+  const origin = managerProfileOrigin || { pageId: "clubSection", tabKey: "club" };
+  managerProfileOrigin = null;
+  showPage(origin.pageId);
+  if (origin.tabKey) setActiveTab(origin.tabKey);
+}
+
+// Avatar du manager en haut à droite (son propre profil).
+function syncTopbarManager() {
+  const btn = document.getElementById("topbarManagerBtn");
+  if (!btn) return;
+  const show = !!(teamA && teamA.isHuman);
+  btn.classList.toggle("hidden", !show);
+  if (!show) return;
+  btn.innerHTML = managerAvatarHtml(teamA, 34);
+  const label = `Mon profil de manager (${managerDisplayName(teamA)})`;
+  btn.setAttribute("aria-label", label);
+  btn.title = label;
+}
+
+// Écouteur délégué unique : tout nom de manager cliquable
+// (data-manager-profile, + data-manager-league pour un autre championnat).
+document.addEventListener("click", (e) => {
+  if (!e.target.closest) return;
+  const link = e.target.closest("[data-manager-profile]");
+  if (link) {
+    e.preventDefault();
+    e.stopPropagation();
+    const idx = Number(link.dataset.managerProfile);
+    const lgId = link.dataset.managerLeague || null;
+    if (lgId) {
+      window.__lastManagerProfileOpen = showForeignManagerProfile(lgId, idx);
+    } else if (teamDetailForeign && link.closest("#teamDetailSection")) {
+      showManagerProfile(idx, { league: teamDetailForeign.league, leagueId: teamDetailForeign.leagueId, label: teamDetailForeign.label });
+    } else {
+      showManagerProfile(idx);
+    }
+    return;
+  }
+  if (e.target.closest("#topbarManagerBtn")) { showManagerProfile(myTeamIndex); return; }
+  if (e.target.closest("[data-mp-edit-pseudo]")) { showSettingsModal("account"); return; }
+  const ft = e.target.closest("[data-mp-foreign-team]");
+  if (ft && managerProfileState.foreign) { showForeignTeamDetail(managerProfileState.foreign.leagueId, Number(ft.dataset.mpForeignTeam)); }
+}, true);
+
 
 function renderLeagueStatsPanel() {
   if (leagueForeign && !leagueForeignActive) return withLeagueForeign(renderLeagueStatsPanel);
@@ -29082,6 +29462,7 @@ function hideTeamDetail() {
   if (origin.tabKey) setActiveTab(origin.tabKey);
 }
 document.getElementById("closeTeamDetailBtn").addEventListener("click", hideTeamDetail);
+document.getElementById("closeManagerProfileBtn").addEventListener("click", () => hideManagerProfile());
 
 // Écouteur délégué UNIQUE (même principe que les liens joueur ci-dessus) :
 // les liens équipe apparaissent dans plusieurs panneaux indépendants
@@ -30329,7 +30710,7 @@ function recentInterviewsHtml(teamIdx) {
   const entries = (team.moraleHistory || []).filter(e => e.milestone && e.quote).slice(0, 3);
   if (!entries.length) return "<p class='training-empty'>Aucune interview pour l'instant.</p>";
   return `<div class="interview-quote-list">` + entries.map(e =>
-    `<blockquote class="interview-quote">« ${escapeHtml(e.quote)} »<footer class="sub">Semaine ${e.week}</footer></blockquote>`
+    `<blockquote class="interview-quote">« ${escapeHtml(e.quote)} »<footer class="sub">${team.isHuman ? `${managerLinkHtml(team, teamIdx)} · ` : ""}Semaine ${e.week}</footer></blockquote>`
   ).join("") + `</div>`;
 }
 
@@ -30467,15 +30848,16 @@ function teamDetailApercuHtml(teamIdx) {
     ? `${trophies.length} titre${trophies.length > 1 ? "s" : ""} · dernier : ${escapeHtml(trophies[0].label)} (${new Date(trophies[0].at).getFullYear()})`
     : "Encore vierge";
   const lastInterview = (team.moraleHistory || []).find(e => e.milestone && e.quote);
+  // Interview relue : attribuée au manager (pseudo, voir managerLinkHtml).
   const interviewText = lastInterview
-    ? `« ${escapeHtml(lastInterview.quote)} » <span class="apercu-muted">(semaine ${lastInterview.week})</span>`
+    ? `${team.isHuman ? `${managerLinkHtml(team, teamIdx, teamDetailForeign ? teamDetailForeign.leagueId : null)} <span class="apercu-muted">a déclaré :</span> ` : ""}<span data-no-i18n>« ${escapeHtml(lastInterview.quote)} »</span> <span class="apercu-muted">(semaine ${lastInterview.week})</span>`
     : "Aucune pour l'instant";
   html += `<div class="apercu-foot">` +
     `<span class="apercu-foot-trophies"><span class="apercu-foot-label">Palmarès</span>${trophyText}</span>` +
     `<span><span class="apercu-foot-label">Interviews</span>${interviewText}</span>` +
     `</div>`;
   // Profil public du manager (club humain, voir managerProfileCardHtml).
-  html += managerProfileCardHtml(team);
+  html += managerProfileCardHtml(team, teamIdx, teamDetailForeign ? teamDetailForeign.leagueId : null);
   return html;
 }
 
@@ -30500,7 +30882,9 @@ function renderTeamDetailContent(teamIdx) {
     return;
   }
   nameHeader.innerHTML = escapeHtml(team.name) + premiumBadgeHtml(team) +
-    (foreign ? ` <span class="team-detail-foreign">${nationFlagHtml(league.country || "fr")} ${escapeHtml(teamDetailForeign.label)}</span>` : "");
+    (foreign ? ` <span class="team-detail-foreign">${nationFlagHtml(league.country || "fr")} ${escapeHtml(teamDetailForeign.label)}</span>` : "") +
+    // Manager du club (pseudo, 2026-09-30) : ouvre son profil. Club IA : rien.
+    (team.isHuman ? `<span class="team-detail-manager"><span>Manager :</span> ${managerLinkHtml(team, teamIdx, foreign ? teamDetailForeign.leagueId : null)}</span>` : "");
 
   let html = teamDetailSubNavHtml();
   // Messagerie : écrire au manager de ce club (ligue partagée, club humain).
@@ -39954,13 +40338,14 @@ function renderHmAccountBlock() {
   if (!block) return;
   const st = hmAccountState;
   const acc = st && st.account;
-  let html = "";
+  let html = hmPseudoSectionHtml();
   if (!st) {
     html += `<p class="settings-note">Impossible de charger ton compte pour le moment.</p>`;
     block.innerHTML = html;
+    wireHmPseudoForm();
     return;
   }
-  html += `<div class="settings-row-label">Connexion</div>`;
+  html += `<div class="settings-row-label" style="margin-top:16px">Connexion</div>`;
   if (acc && acc.email) html += `<p class="settings-account-line">Email : <b>${escapeHtml(acc.email)}</b></p>`;
   html += `<form class="settings-account-form" id="hmAccountForm" novalidate>` +
     `<input type="email" id="hmAccountEmail" class="sl-rename-input" placeholder="Email" autocomplete="email" value="${escapeHtml((acc && acc.email) || "")}" aria-label="Email">` +
@@ -39985,6 +40370,7 @@ function renderHmAccountBlock() {
     `<button type="submit" class="secondary settings-danger-btn">Supprimer définitivement</button></form>` +
     `<p class="settings-feedback" id="hmDeleteFeedback"></p></details>`;
   block.innerHTML = html;
+  wireHmPseudoForm();
 
   const feedback = (text, ok) => { const fb = document.getElementById("hmAccountFeedback"); if (fb) { fb.textContent = text; fb.style.color = ok ? "var(--ok)" : "var(--danger)"; } };
   if (hmAccountFlash) { feedback(hmAccountFlash.text, hmAccountFlash.ok); hmAccountFlash = null; }
@@ -40042,6 +40428,51 @@ function renderHmAccountBlock() {
       if (res.ok && data.url) { window.location.href = data.url; return; }
       feedback("Connexion Discord indisponible pour le moment.", false);
     } catch (err) { feedback("Serveur injoignable, réessaie.", false); }
+  });
+}
+
+// Pseudo du manager (2026-09-30, Paramètres › Mon compte) : le nom public
+// affiché sur la fiche d'équipe, la messagerie, les interviews et le chat
+// de la ligue (voir checkManagerPseudo, POST /api/manager/set-pseudo). Le
+// premier choix est libre, puis un changement tous les 30 jours.
+function hmPseudoSectionHtml() {
+  if (!teamA || !teamA.isHuman) return "";
+  const pseudo = managerPseudoOf(teamA);
+  const at = teamA.managerPseudoChangedAt;
+  const left = typeof at === "number" && at > 0 ? Math.max(0, MANAGER_PSEUDO_CHANGE_COOLDOWN_MS - (Date.now() - at)) : 0;
+  const days = Math.ceil(left / (24 * 3600 * 1000));
+  const note = left > 0
+    ? `Prochain changement possible dans ${days} jour${days > 1 ? "s" : ""}.`
+    : pseudo ? "Tu peux le changer une fois tous les 30 jours." : `Sans pseudo, tu apparais comme « Manager de ${escapeHtml(teamA.name)} ».`;
+  return `<div class="settings-row-label">Pseudo de manager</div>` +
+    `<form class="settings-account-form settings-pseudo-form" id="hmPseudoForm" novalidate>` +
+    `<input type="text" id="hmPseudoInput" class="sl-rename-input" placeholder="Ton pseudo" autocomplete="nickname" spellcheck="false" minlength="${MANAGER_PSEUDO_MIN_LENGTH}" maxlength="${MANAGER_PSEUDO_MAX_LENGTH}" value="${escapeHtml(pseudo || "")}" aria-label="Pseudo de manager"${left > 0 ? " disabled" : ""}>` +
+    `<button type="submit" class="secondary"${left > 0 ? " disabled" : ""}>${pseudo ? "Changer" : "Enregistrer"}</button></form>` +
+    `<p class="settings-note">Visible des autres managers : fiche d'équipe, messagerie, interviews et chat de la ligue. ${MANAGER_PSEUDO_MIN_LENGTH} à ${MANAGER_PSEUDO_MAX_LENGTH} caractères (lettres, chiffres, _ - .), jamais ton email ni ton vrai nom. ${note}</p>` +
+    `<p class="settings-feedback" id="hmPseudoFeedback"></p>`;
+}
+function wireHmPseudoForm() {
+  const form = document.getElementById("hmPseudoForm");
+  if (!form) return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fb = document.getElementById("hmPseudoFeedback");
+    const say = (text, ok) => { if (fb) { fb.textContent = text; fb.style.color = ok ? "var(--ok)" : "var(--danger)"; } };
+    const input = document.getElementById("hmPseudoInput");
+    const checked = checkManagerPseudo(input ? input.value : "");
+    if (checked.error) { say(checked.error, false); return; }
+    try {
+      const res = await fetchApi("/api/manager/set-pseudo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pseudo: checked.value }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) { say(data.error || "Enregistrement impossible, réessaie.", false); return; }
+      teamA.managerPseudo = data.pseudo;
+      teamA.managerPseudoChangedAt = data.pseudoChangedAt;
+      syncTopbarManager();
+      if (currentVisiblePageId() === "managerProfileSection") renderManagerProfile();
+      renderHmAccountBlock();
+      const fb2 = document.getElementById("hmPseudoFeedback");
+      if (fb2) { fb2.textContent = `Pseudo enregistré : ${data.pseudo}.`; fb2.style.color = "var(--ok)"; }
+    } catch (err) { say("Serveur injoignable, réessaie.", false); }
   });
 }
 
@@ -46959,18 +47390,17 @@ function renderHistoireSection() {
     `<div class="hc-name">${escapeHtml(team.name)}</div>` +
     `<div class="hc-sub">Fondé en ${team.foundedYear || "?"} · ${history.length} saison${history.length > 1 ? "s" : ""} archivée${history.length > 1 ? "s" : ""} · ${trophies.length} trophée${trophies.length > 1 ? "s" : ""} · ${reputationStarsHtml(stars)}</div>` +
     `</div></div>`;
-  // Deux colonnes indépendantes (voir .hc-col) : Palmarès puis Hall of Fame
-  // à gauche, Records à droite. Le Classement mondial a déménagé dans
-  // l'onglet Statistiques (retour utilisateur 2026-09-27).
-  html += `<div class="hc-grid"><div class="hc-col">`;
-  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Palmarès</h2></div>${hcPalmaresHtml(team, idx)}</section>`;
+  // Mise en page (2026-09-30, retour utilisateur : « une grande colonne
+  // vide à gauche ») : le Palmarès (tableau large, saison par saison) prend
+  // toute la largeur, puis Records et Hall of Fame côte à côte. Les succès
+  // du manager ont déménagé sur son profil (voir renderManagerProfile), les
+  // récompenses de la saison sur la page Ligue (renderLeagueHonorsPanel), le
+  // Classement mondial dans l'onglet Statistiques.
+  html += `<div class="hc-grid">`;
+  html += `<section class="lg-panel hc-panel hc-wide" id="hcPalmares"><div class="lg-panel-title"><h2>Palmarès</h2></div>${hcPalmaresHtml(team, idx)}</section>`;
+  html += `<section class="lg-panel hc-panel" id="hcRecords"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
   html += `<section class="lg-panel hc-panel" id="hcHallOfFame"><div class="lg-panel-title"><h2>Hall of Fame</h2></div>${hcHallOfFameHtml(team, idx)}</section>`;
-  html += `</div><div class="hc-col">`;
-  html += `<section class="lg-panel hc-panel"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
-  // Récompenses de la saison : uniquement sur la page Ligue (retour
-  // utilisateur 2026-09-30), voir renderLeagueHonorsPanel.
-  if (team.isHuman) html += `<section class="lg-panel hc-panel" id="hcAchievements"><div class="lg-panel-title"><h2>Succès du manager</h2></div>${managerAchievementsHtml(team)}</section>`;
-  html += `</div></div>`;
+  html += `</div>`;
   holder.innerHTML = html;
 }
 
@@ -47604,12 +48034,13 @@ function renderMsgList() {
     const unread = c.unread > 0 && !c.blocked;
 
     return `<li><button type="button" class="msg-conv${msgUi.activeWith === c.who ? " on" : ""}${unread ? " unread" : ""}" data-msg-conv="${escapeHtml(c.who)}">` +
-      `<span class="msg-conv-top"><span class="msg-conv-name" data-no-i18n>${c.leagueId ? nationFlagHtml(String(c.leagueId).slice(0, 2)) + " " : ""}${escapeHtml(c.name)}</span>` +
+      `<span class="msg-conv-top"><span class="msg-conv-name" data-no-i18n>${c.leagueId ? nationFlagHtml(String(c.leagueId).slice(0, 2)) + " " : ""}${escapeHtml(c.manager || c.name)}</span>` +
       (unread ? `<span class="sidebar-badge">${c.unread}</span>` : "") +
       `<span class="msg-conv-time">${escapeHtml(msgFormatTime(c.lastMessage.at))}</span></span>` +
       (c.blocked
         ? `<span class="msg-conv-last">Manager bloqué</span>`
         : `<span class="msg-conv-last">${c.lastMessage.mine ? "<span>Vous :</span> " : ""}<span data-no-i18n>${escapeHtml(c.lastMessage.text)}</span></span>`) +
+      (c.manager ? `<span class="msg-conv-club" data-no-i18n>${escapeHtml(c.name)}</span>` : "") +
     `</button></li>`;
   }).join("");
 }
@@ -47650,6 +48081,10 @@ function renderMsgThread(opts) {
   const manager = msgUi.summary && msgUi.summary.managers.find(m => m.who === msgUi.activeWith);
   const localIdx = /^\d+$/.test(msgUi.activeWith) ? Number(msgUi.activeWith) : null;
   const name = t ? t.with.name : (conv || manager || { name: (localIdx != null && league && league.teams[localIdx] || {}).name || "" }).name;
+  // Pseudo du correspondant (2026-09-30) : ouvre son profil ; le club reste
+  // cliquable juste à côté (fiche d'équipe).
+  const who = t ? t.with.manager : ((conv || manager || {}).manager || null);
+  const whoMatch = /^(?:(.+):)?(\d+)$/.exec(String(msgUi.activeWith));
   const blocked = t ? t.with.blocked : false;
 
   // Le fil est reconstruit à chaque rafraîchissement, mais la zone de
@@ -47671,7 +48106,10 @@ function renderMsgThread(opts) {
   }
   document.getElementById("msgThreadHead").innerHTML =
     `<button type="button" class="msg-back" data-msg-back>←</button>` +
-    `<button type="button" class="msg-thread-name" data-msg-team="${escapeHtml(msgUi.activeWith)}" title="Voir la fiche du club" data-no-i18n>${escapeHtml(name)}</button>` +
+    (who && whoMatch
+      ? `<span class="msg-thread-who"><button type="button" class="msg-thread-name" data-manager-profile="${whoMatch[2]}"${whoMatch[1] ? ` data-manager-league="${escapeHtml(whoMatch[1])}"` : ""} title="Voir le profil du manager" data-no-i18n>${escapeHtml(who)}</button>` +
+        `<button type="button" class="msg-thread-club" data-msg-team="${escapeHtml(msgUi.activeWith)}" title="Voir la fiche du club" data-no-i18n>${escapeHtml(name)}</button></span>`
+      : `<button type="button" class="msg-thread-name" data-msg-team="${escapeHtml(msgUi.activeWith)}" title="Voir la fiche du club" data-no-i18n>${escapeHtml(name)}</button>`) +
     `<span class="msg-head-actions">` +
       (msgUi.confirmBlock
         ? `<button type="button" class="msg-small-btn danger" data-msg-block="1">Confirmer le blocage</button><button type="button" class="msg-small-btn" data-msg-block-cancel>Annuler</button>`
@@ -48795,6 +49233,7 @@ window.__gameReady = (async () => {
     return;
   }
   document.getElementById("topbarClubName").innerHTML = teamLinkHtml(myTeamIndex, teamA.name);
+  syncTopbarManager();
   hmAccountHandleReturnHash();
   mkHandleAuctionsHash();
   mkUpdateBadge();

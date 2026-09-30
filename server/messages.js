@@ -31,6 +31,10 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const Engine = require("../engine.js");
+// Pseudo public du manager d'un club (voir Engine.managerDisplayName) :
+// affiché comme expéditeur, jamais l'email ni le nom réel.
+const managerNameOf = team => Engine.managerDisplayName(team);
 
 const MESSAGES_VERSION = 1;
 const REDIS_KEY = "pullup:messages";
@@ -216,11 +220,11 @@ function contactFor(data, leagueId, idx) {
   });
   return best;
 }
-function registerContact(data, key, leagueId, idx, name, now) {
+function registerContact(data, key, leagueId, idx, name, now, manager = null) {
   if (!key || !leagueId) return false;
   const cur = data.contacts[key];
-  if (cur && cur.leagueId === leagueId && cur.idx === idx && cur.name === name && now - (cur.at || 0) < 6 * 3600 * 1000) return false;
-  data.contacts[key] = { leagueId, idx, name, at: now };
+  if (cur && cur.leagueId === leagueId && cur.idx === idx && cur.name === name && (cur.manager || null) === manager && now - (cur.at || 0) < 6 * 3600 * 1000) return false;
+  data.contacts[key] = { leagueId, idx, name, manager, at: now };
   return true;
 }
 
@@ -228,7 +232,7 @@ function managerList(league, me, data) {
   const out = [];
   directory(league).forEach(({ teamIndex, team }, key) => {
     if (key === me) return;
-    out.push({ teamIndex, who: String(teamIndex), name: team.name, blocked: isBlocked(data, me, key) });
+    out.push({ teamIndex, who: String(teamIndex), name: team.name, manager: managerNameOf(team), blocked: isBlocked(data, me, key) });
   });
   return out.sort((a, b) => a.name.localeCompare(b.name, "fr"));
 }
@@ -251,6 +255,7 @@ function conversationsView(league, me, data) {
       who: local ? String(local.teamIndex) : whoOf(league.leagueId, foreign.leagueId, foreign.idx),
       leagueId: local ? null : foreign.leagueId,
       name: local ? local.team.name : foreign.name,
+      manager: local ? managerNameOf(local.team) : (foreign.manager || `Manager de ${foreign.name}`),
       lastMessage: { text: last.text.slice(0, 140), at: last.at, mine: last.from === me },
       unread: unreadIn(conv, me),
       blocked: isBlocked(data, me, otherOf(conv, me)),
@@ -275,7 +280,7 @@ function threadView(league, me, other, data) {
   const conv = data.conversations[conversationKey(me, otherKey)];
   return {
     ok: true,
-    with: { teamIndex: other.teamIndex, who: other.who, leagueId: other.leagueId || null, name: other.name, blocked: isBlocked(data, me, otherKey) },
+    with: { teamIndex: other.teamIndex, who: other.who, leagueId: other.leagueId || null, name: other.name, manager: other.manager || null, blocked: isBlocked(data, me, otherKey) },
     messages: conv ? conv.messages.map(m => ({ id: m.id, mine: m.from === me, text: m.text, at: m.at })) : [],
     // Dernier message de MOI que l'autre a déjà lu (accusé de lecture discret).
     readByOtherUntil: conv && conv.lastReadAt ? conv.lastReadAt[otherKey] || 0 : 0,
@@ -298,17 +303,17 @@ async function resolveOther(league, me, raw, data, loadLeague, verify) {
     const key = keyForTeamIndex(league, who.idx);
     if (!key) return { error: "Ce club n'est pas dirigé par un manager." };
     if (key === me) return { error: "Vous ne pouvez pas vous écrire à vous-même." };
-    return { idx: who.idx, teamIndex: who.idx, key, name: league.teams[who.idx].name, who: String(who.idx), leagueId: null };
+    return { idx: who.idx, teamIndex: who.idx, key, name: league.teams[who.idx].name, manager: managerNameOf(league.teams[who.idx]), who: String(who.idx), leagueId: null };
   }
   const base = { idx: who.idx, teamIndex: null, who: whoOf(own, who.leagueId, who.idx), leagueId: who.leagueId };
   const known = contactFor(data, who.leagueId, who.idx);
-  if (known && !verify) return known.key === me ? { error: "Vous ne pouvez pas vous écrire à vous-même." } : { ...base, key: known.key, name: known.c.name };
+  if (known && !verify) return known.key === me ? { error: "Vous ne pouvez pas vous écrire à vous-même." } : { ...base, key: known.key, name: known.c.name, manager: known.c.manager || `Manager de ${known.c.name}` };
   const lg = loadLeague ? await loadLeague(who.leagueId) : null;
   if (!lg) return { error: "Championnat introuvable." };
   const key = keyForTeamIndex(lg, who.idx);
   if (!key) return { error: "Ce club n'est pas dirigé par un manager." };
   if (key === me) return { error: "Vous ne pouvez pas vous écrire à vous-même." };
-  return { ...base, key, name: lg.teams[who.idx].name, register: true };
+  return { ...base, key, name: lg.teams[who.idx].name, manager: managerNameOf(lg.teams[who.idx]), register: true };
 }
 
 function createService(filePath, opts = {}) {
@@ -317,8 +322,9 @@ function createService(filePath, opts = {}) {
   // dans l'annuaire mondial ; écrit seulement si quelque chose a changé.
   function remember(data, league, teamIndex, me, other) {
     const now = Date.now();
-    let changed = registerContact(data, me, league.leagueId, teamIndex, league.teams[teamIndex] && league.teams[teamIndex].name, now);
-    if (other && other.register) changed = registerContact(data, other.key, other.leagueId, other.idx, other.name, now) || changed;
+    const own = league.teams[teamIndex];
+    let changed = registerContact(data, me, league.leagueId, teamIndex, own && own.name, now, own ? managerNameOf(own) : null);
+    if (other && other.register) changed = registerContact(data, other.key, other.leagueId, other.idx, other.name, now, other.manager || null) || changed;
     return changed;
   }
   // Renvoie les données à jour (une seule lecture si rien n'a changé).

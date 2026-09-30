@@ -16,6 +16,7 @@
 //                      // d'attente) — voir /api/account/status
 //     email, passwordHash,          // optionnels (compte Discord seul)
 //     discordId, discordName,       // optionnels (compte email seul)
+//     discordUsername,              // identifiant Discord (pseudo par défaut)
 //     managerToken,    // Team.managerLinkToken du club attribué, ou null
 //     requestedClubName,            // nom choisi à l'inscription
 //     createdAt, lastLoginAt,
@@ -150,6 +151,9 @@ function createAccount(data, fields, now) {
     passwordHash: fields.passwordHash || null,
     discordId: fields.discordId || null,
     discordName: fields.discordName || null,
+    // Identifiant Discord (username, un pseudo) : seule source d'un pseudo de
+    // manager par défaut (voir accountRoutes.js:defaultPseudoFromDiscord).
+    discordUsername: fields.discordUsername || null,
     managerToken: fields.managerToken || null,
     requestedClubName: fields.requestedClubName || null,
     // Pays choisi à l'inscription (2026-09-28, championnats par pays).

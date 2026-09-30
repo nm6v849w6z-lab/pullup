@@ -196,6 +196,27 @@ async function tryAssignClub(account, multiSavePath, now) {
   return true;
 }
 
+// Pseudo de manager par défaut (2026-09-30, voir Engine.checkManagerPseudo) :
+// les comptes n'ont pas d'identifiant de connexion (email ou Discord) ; seul
+// l'identifiant Discord (`username`, déjà public, jamais le nom affiché qui
+// peut être un nom réel) peut servir de pseudo — adopté UNE fois, s'il est
+// valide et libre, sans compter comme le choix du manager (le premier
+// changement reste libre). Sinon « Manager de <club> » jusqu'à ce qu'il en
+// choisisse un (Paramètres › Mon compte).
+async function defaultPseudoFromDiscord(account, token, multiSavePath, now) {
+  const checked = Engine.checkManagerPseudo(String(account.discordUsername || "").slice(0, Engine.MANAGER_PSEUDO_MAX_LENGTH));
+  if (checked.error) return false;
+  const world = await World.loadWorld(multiSavePath, now);
+  const found = world ? await World.findTeamByToken(world, token, multiSavePath) : null;
+  if (!found) return false;
+  const team = found.league.teams[found.teamIndex];
+  if (!team || !team.isHuman || team.managerPseudo) return false;
+  if (await World.isManagerPseudoTakenInWorld(world, multiSavePath, checked.value)) return false;
+  team.managerPseudo = checked.value;
+  await store.saveMultiLeague(found.league, multiSavePath);
+  return true;
+}
+
 // Met à jour le nom de toutes les références { leagueId, idx, name } à un
 // club dans `obj` (tableaux et objets simples, en profondeur). Renvoie true
 // si au moins une a changé.
@@ -336,6 +357,11 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       await withAccounts(async data => {
         const account = Accounts.findByManagerToken(data, token);
         if (account && !(account.ipSeen || []).some(x => x.fp === ipFingerprint(req))) { recordIp(account, req, now); await Accounts.saveAccounts(data, accountsPath); }
+        if (account && !account.pseudoDefaultTried && account.discordUsername) {
+          account.pseudoDefaultTried = true;
+          await defaultPseudoFromDiscord(account, token, multiSavePath, now);
+          await Accounts.saveAccounts(data, accountsPath);
+        }
         sendJson(res, 200, { ok: true, account: account ? Accounts.publicView(account) : null, discord: discordConfigured() });
       });
       return true;
@@ -507,7 +533,10 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         if (!meRes.ok) throw new Error(`users/@me HTTP ${meRes.status}`);
         const me = await meRes.json();
         if (!me || !me.id) throw new Error("réponse Discord sans id");
-        discordUser = { id: String(me.id), name: me.global_name || me.username || "Discord" };
+        // `username` : l'identifiant Discord (un pseudo, jamais un nom réel
+        // affiché) — seule source possible d'un pseudo de manager par défaut
+        // (voir defaultPseudoFromDiscord) ; `global_name` peut être un vrai nom.
+        discordUser = { id: String(me.id), name: me.global_name || me.username || "Discord", username: typeof me.username === "string" ? me.username : null };
       } catch (e) {
         console.warn("Connexion Discord échouée :", e.message);
         redirect(res, `${back}#erreur=discord-failed`, clearCookie);
@@ -522,12 +551,14 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
           const account = mine || Accounts.createAccount(data, { managerToken: saved.managerToken }, now);
           account.discordId = discordUser.id;
           account.discordName = discordUser.name;
+          account.discordUsername = discordUser.username;
           await Accounts.saveAccounts(data, accountsPath);
           redirect(res, "/#compte=discord-lie", clearCookie);
           return;
         }
         if (existing) {
           existing.discordName = discordUser.name;
+          existing.discordUsername = discordUser.username;
           existing.lastLoginAt = now;
           if (!existing.managerToken) {
             await tryAssignClub(existing, multiSavePath, now);
@@ -538,7 +569,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         }
         // Première connexion Discord : il reste à choisir un nom de club.
         const pending = randomHex(16);
-        pendingDiscordSignups.set(pending, { discordId: discordUser.id, discordName: discordUser.name, createdAt: now });
+        pendingDiscordSignups.set(pending, { discordId: discordUser.id, discordName: discordUser.name, discordUsername: discordUser.username, createdAt: now });
         redirect(res, `/bienvenue#discord=${pending}&nom=${encodeURIComponent(discordUser.name)}`, clearCookie);
       });
       return true;
@@ -558,7 +589,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       await withAccounts(async data => {
         let account = Accounts.findByDiscordId(data, pending.discordId);
         if (!account) {
-          account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
+          account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, discordUsername: pending.discordUsername || null, requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
         }
         pendingDiscordSignups.delete(b.pending);
         sendJson(res, 200, sessionPayload(account));
@@ -685,6 +716,9 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       team.trigram = null;
       team.trigramChangedAt = null;
       team.arenaName = null;
+      // Nouveau manager : le pseudo de l'ancien ne le suit pas.
+      team.managerPseudo = null;
+      team.managerPseudoChangedAt = null;
       let friendliesChanged = false;
       const dirty = new Set([league]);
       if (newName !== previousName) {

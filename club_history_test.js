@@ -143,8 +143,11 @@ function playWholeSeason(league, now) {
     && lab({ ...base, rank: 5 }) === "Milieu de tableau" && lab({ ...base, rank: 7 }) === "Barrage" && lab({ ...base, rank: 8, barrageLost: true }) === "Relégation" && lab({ ...base, rank: 10 }) === "Relégation",
     "parcours en championnat : champion, finale, play-offs, milieu de tableau, barrage, relégation");
   check(doc.querySelectorAll(".hc-table").length === 1 && !/Légendes du club/.test(txt), "plus de tableau Légendes (remplacé par le Hall of Fame)");
-  const cols = doc.querySelectorAll("#histoireContent .hc-col");
-  check(cols.length === 2 && cols[0].querySelectorAll(".lg-panel").length === 2 && /Records du club/.test(cols[1].textContent), "mise en page : Palmarès + Hall of Fame à gauche, Records à droite");
+  // Mise en page (2026-09-30, « grande colonne vide à gauche ») : Palmarès
+  // pleine largeur, puis Records et Hall of Fame côte à côte.
+  const panels = [...doc.querySelectorAll("#histoireContent .hc-grid > section")];
+  check(!doc.querySelector("#histoireContent .hc-col") && panels.length === 3 && panels[0].classList.contains("hc-wide") && /Palmarès/.test(panels[0].textContent)
+    && /Records du club/.test(panels[1].textContent) && /Hall of Fame/.test(panels[2].textContent) && !/Succès du manager/.test(txt), "mise en page : Palmarès pleine largeur, Records et Hall of Fame côte à côte, plus de succès du manager");
   check(!doc.querySelector("#histoireContent .hc-ws-row") && !/Classement mondial/.test(txt), "le Classement mondial n'est plus dans Histoire du club (déplacé dans Statistiques)");
   // Classement mondial : désormais dans l'onglet Statistiques.
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "statshebdo").click();

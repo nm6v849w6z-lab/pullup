@@ -535,6 +535,39 @@ function worldRefOf(world, leagueId, league, idx) {
   return { leagueId, idx, name: t ? t.name : "?", country: league.country || (e && e.country) || "fr", label: e ? World.divisionLabel(e.level, e.group) : "" };
 }
 
+// Pseudo du manager (voir /api/manager/set-pseudo et
+// Engine.checkManagerPseudo). Même règle de délai que le trigramme (voir
+// actions.js:setTeamTrigram) : le premier choix est libre
+// (managerPseudoChangedAt = 0), puis un changement tous les 30 jours.
+// Réponse : jamais que le pseudo et sa date, rien du compte.
+async function setManagerPseudo(ctx, body, now, multiSavePath) {
+  const team = ctx.league.teams[ctx.teamIndex];
+  if (!team || !team.isHuman) return { ok: false, status: 403, error: "Réservé aux managers." };
+  const view = () => ({ ok: true, pseudo: team.managerPseudo || null, pseudoChangedAt: typeof team.managerPseudoChangedAt === "number" ? team.managerPseudoChangedAt : null, displayName: Engine.managerDisplayName(team) });
+  const checked = Engine.checkManagerPseudo(body && body.pseudo);
+  if (checked.error) return { ok: false, code: "pseudo-invalid", error: checked.error };
+  const value = checked.value;
+  if (team.managerPseudo === value) return view();
+  const sameKey = team.managerPseudo && Engine.managerPseudoKey(team.managerPseudo) === Engine.managerPseudoKey(value);
+  const changedAt = team.managerPseudoChangedAt;
+  // Simple changement de casse/accents de son propre pseudo : toujours permis.
+  if (!sameKey && typeof changedAt === "number" && changedAt > 0 && now - changedAt < Engine.MANAGER_PSEUDO_CHANGE_COOLDOWN_MS) {
+    const days = Math.ceil((Engine.MANAGER_PSEUDO_CHANGE_COOLDOWN_MS - (now - changedAt)) / (24 * 3600 * 1000));
+    return { ok: false, status: 429, code: "pseudo-cooldown", error: `Pseudo déjà modifié récemment : prochain changement possible dans ${days} jour${days > 1 ? "s" : ""}.` };
+  }
+  const key = Engine.managerPseudoKey(value);
+  const takenHere = ctx.league.teams.some((t, i) => i !== ctx.teamIndex && t && t.isHuman && t.managerPseudo && Engine.managerPseudoKey(t.managerPseudo) === key);
+  let taken = takenHere;
+  if (!taken && ctx.world) {
+    taken = await World.isManagerPseudoTakenInWorld(ctx.world, multiSavePath, value, { leagueId: ctx.leagueId, idx: ctx.teamIndex });
+    World.useLeagueTimeZone(ctx.league);
+  }
+  if (taken) return { ok: false, status: 409, code: "pseudo-taken", error: "Ce pseudo est déjà pris par un autre manager." };
+  team.managerPseudo = value;
+  if (!sameKey) team.managerPseudoChangedAt = typeof changedAt === "number" ? now : 0;
+  return view();
+}
+
 // `async` — voir resolvePlayerContext juste au-dessus, même raison.
 async function persistContext(ctx) {
   try { await Push.flushLeague(ctx.league, Date.now()); } catch (e) { console.warn("[notifications]", e.message); }
@@ -1101,6 +1134,9 @@ async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSav
       t.trigram = prev.trigram || null;
       t.trigramChangedAt = typeof prev.trigramChangedAt === "number" ? prev.trigramChangedAt : null;
       t.arenaName = prev.arenaName || null;
+      // Le manager reste le même : son pseudo aussi.
+      t.managerPseudo = prev.managerPseudo || null;
+      t.managerPseudoChangedAt = typeof prev.managerPseudoChangedAt === "number" ? prev.managerPseudoChangedAt : null;
       // Sponsors : la réputation et l'historique suivent le club ; les
       // contrats (une saison) viennent d'être réglés, les offres repartent.
       t.sponsorReputation = typeof prev.sponsorReputation === "number" ? prev.sponsorReputation : Engine.SPONSOR_REPUTATION_DEFAULT;
@@ -1128,9 +1164,8 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
     },
   });
   // Chat de la ligue (voir server/leagueChat.js) : fin de diffusion de
-  // chaque journée (horodatage des résultats), zones du championnat, et
-  // pseudo Discord des managers (comptes relus au plus une fois par minute).
-  let namesCache = { at: 0, map: null };
+  // chaque journée (horodatage des résultats) et zones du championnat. Le
+  // nom des managers est leur pseudo (Team.managerPseudo), lu dans la ligue.
   const leagueChat = LeagueChat.createService(multiSavePath, {
     systemOpts: (ctx) => ({
       relegations: ctx.world ? World.divisionMovesFor(ctx.world, ctx.leagueId).relegations : 0,
@@ -1139,14 +1174,6 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return typeof at === "number" ? at + Calendar.MATCH_BROADCAST_DURATION_MS : null;
       },
     }),
-    managerNames: async () => {
-      if (namesCache.map && Date.now() - namesCache.at < 60 * 1000) return namesCache.map;
-      const data = await Accounts.loadAccounts(accountsPath);
-      const map = new Map();
-      data.accounts.forEach(a => { if (a.managerToken && a.discordName) map.set(Messages.participantKey(a.managerToken), String(a.discordName).slice(0, 32)); });
-      namesCache = { at: Date.now(), map };
-      return map;
-    },
   });
   const handleAccountRoutes = AccountRoutes.createAccountRouter({
     sendJson, readJsonBody, getManagerToken, originFor, isAdminAuthorized, multiSavePath, accountsPath,
@@ -1981,6 +2008,21 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
         if (!out) { sendJson(res, 404, { ok: false, error: "Route inconnue", path: route.pathname }); return; }
         sendJson(res, out.status, out.body);
+        return;
+      }
+
+      // Pseudo du manager (2026-09-30, voir Engine.checkManagerPseudo) :
+      // POST { pseudo } — unique dans TOUT le monde, d'où cette route à part
+      // (les ACTION_ROUTES ne voient que leur championnat).
+      if (route.pathname === "/api/manager/set-pseudo" && req.method === "POST") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const out = await setManagerPseudo(ctx, body, now, multiSavePath);
+        if (!out.ok) { sendJson(res, out.status || 400, { ok: false, error: out.error, code: out.code || null }); return; }
+        await persistContext(ctx);
+        sendJson(res, 200, out);
         return;
       }
 

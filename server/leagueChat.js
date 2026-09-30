@@ -34,10 +34,13 @@
 //
 // Identité : empreinte du jeton manager (Messages.participantKey), jamais le
 // jeton lui-même ; le navigateur ne voit que des noms de club, des index
-// d'équipe et `mine`.
+// d'équipe, `mine` et le PSEUDO public du manager (Team.managerPseudo, voir
+// Engine.managerDisplayName — jamais son email, son nom réel ni son nom
+// Discord ; « Manager de <club> » tant qu'il n'en a pas choisi).
 // =====================================================================
 const store = require("./store.js");
 const Messages = require("./messages.js");
+const Engine = require("../engine.js");
 
 const CHAT_VERSION = 1;
 const MAX_TEXT_LENGTH = 500;
@@ -234,12 +237,12 @@ function reactionsView(reactions, me) {
   }).filter(Boolean);
 }
 
-function chatView(chat, league, me, now, names) {
+function chatView(chat, league, me, now) {
   const hs = humans(league);
   const managers = hs.map(h => ({
     teamIndex: h.teamIndex,
     club: h.team.name,
-    name: (names && names.get(h.key)) || null,
+    name: Engine.managerDisplayName(h.team),
     me: h.key === me,
     online: h.key === me || isOnline(h.key, now),
   })).sort((a, b) => (b.me - a.me) || (b.online - a.online) || a.club.localeCompare(b.club, "fr"));
@@ -252,7 +255,7 @@ function chatView(chat, league, me, now, names) {
         const author = hs.find(h => h.key === m.from);
         return {
           ...base, text: m.text, mine: m.from === me,
-          author: { club: author ? author.team.name : m.club, teamIndex: author ? author.teamIndex : null, name: (names && names.get(m.from)) || null },
+          author: { club: author ? author.team.name : m.club, teamIndex: author ? author.teamIndex : null, name: author ? Engine.managerDisplayName(author.team) : null },
         };
       }
       return { ...base, data: m.data, text: systemText(m) };
@@ -275,17 +278,13 @@ function chatView(chat, league, me, now, names) {
 // Service : chaque opération reçoit le contexte résolu par index.js
 // ({ league, teamIndex, leagueId }) et renvoie { status, body }.
 // `opts.systemOpts(ctx)` → { relegations, roundEndAt } (calendrier,
-// zones du championnat) ; `opts.managerNames()` → Map empreinte → nom
-// public du manager (pseudo Discord), facultatif.
+// zones du championnat).
 // ---------------------------------------------------------------------
 function createService(savePath, opts = {}) {
   let queue = Promise.resolve();
   const withLock = fn => { const run = queue.then(fn, fn); queue = run.catch(() => {}); return run; };
   const load = async id => normalizeChat(await store.loadLeagueChat(id, savePath));
   const save = (id, data) => store.saveLeagueChat(id, data, savePath);
-  const names = async () => {
-    try { return opts.managerNames ? await opts.managerNames() : null; } catch (e) { return null; }
-  };
   const sysOpts = (ctx, now) => ({ now, relegations: 0, roundEndAt: () => now, ...(opts.systemOpts ? opts.systemOpts(ctx) : {}) });
 
   // Lecture + messages automatiques dus (écrit seulement s'il y en a).
@@ -309,7 +308,7 @@ function createService(savePath, opts = {}) {
       if (!me) return { status: 403, body: { ok: false, error: "Réservé aux managers de la ligue." } };
       const chat = await withLock(() => loadSynced(ctx, now));
       if (summaryOnly) return { status: 200, body: { ok: true, unreadCount: unreadCount(chat, me) } };
-      return { status: 200, body: chatView(chat, ctx.league, me, now, await names()) };
+      return { status: 200, body: chatView(chat, ctx.league, me, now) };
     },
 
     // Chat ouvert : tout ce qui a été affiché (jusqu'à `upTo`, identifiant
@@ -353,7 +352,7 @@ function createService(savePath, opts = {}) {
         await save(id, c);
         return c;
       });
-      return { status: 200, body: chatView(chat, ctx.league, me, now, await names()) };
+      return { status: 200, body: chatView(chat, ctx.league, me, now) };
     },
 
     async react(ctx, body, now) {
@@ -375,7 +374,7 @@ function createService(savePath, opts = {}) {
         return c;
       });
       if (!out) return { status: 404, body: { ok: false, error: "Message introuvable." } };
-      return { status: 200, body: chatView(out, ctx.league, me, now, await names()) };
+      return { status: 200, body: chatView(out, ctx.league, me, now) };
     },
   };
 }

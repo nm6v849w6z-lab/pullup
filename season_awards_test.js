@@ -75,12 +75,15 @@ const H = 3600 * 1000;
   win.eval("TAB_HANDLERS.histoire()");
   // Récompenses : plus dans l'Histoire du club, uniquement sur la page Ligue.
   assert.ok(!doc.getElementById("hcSeasonAwards"), "pas de récompenses dans l'Histoire du club");
-  const ach = doc.getElementById("hcAchievements");
+  assert.ok(!doc.getElementById("hcAchievements"), "succès du manager : plus dans l'Histoire du club");
+  // Succès : sur le profil du manager (2026-09-30).
+  win.eval("showManagerProfile(myTeamIndex)");
+  const ach = doc.getElementById("mpAchievements");
   assert.ok(ach && ach.querySelectorAll(".ach.on").length === lyon.achievements.length && /Première saison/.test(ach.textContent));
   win.eval(`showPlayerDetail(${mvp.teamIdx}, ${JSON.stringify(mvp.playerId)})`);
   const det = doc.getElementById("playerDetailContent") || doc.body;
   assert.ok(/Carrière/.test(det.textContent) && /Distinctions/.test(det.textContent) && /MVP de la saison/.test(det.textContent), "fiche joueur : carrière et distinctions");
-  ok("navigateur : succès dans l'Histoire du club (récompenses sur la page Ligue), carrière et distinctions sur la fiche du MVP");
+  ok("navigateur : succès sur le profil du manager (récompenses sur la page Ligue), carrière et distinctions sur la fiche du MVP");
   dom.window.close();
   server.close();
   console.log("\n🏁 season_awards_test.js : tout est vert");
