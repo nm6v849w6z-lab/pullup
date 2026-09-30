@@ -40955,7 +40955,7 @@ function dashRenderPulse(data) {
     <div class="hm-pulse__grid">
       <a class="hm-pulse__link" href="/humeur" data-dash-href="/humeur" aria-label="Supporters : ${dashEsc(s)} sur 100">${dashGauge(s, "Supporters", data.supporters.label ?? dashMoodLabel(s))}</a>
       <a class="hm-pulse__link" href="/effectif" data-dash-href="/effectif" aria-label="Alchimie : ${dashEsc(c)} sur 100">${dashGauge(c, "Alchimie", data.chemistry.label ?? dashMoodLabel(c, "chemistry"))}</a>
-      ${data.prestige ? `<button type="button" class="hm-pulse__link hm-pulse__btn" data-prestige-open aria-label="Renommée : ${dashEsc(data.prestige.value)} sur 100">${dashGauge(data.prestige.value, "Renommée", data.prestige.label, data.prestige.stars)}</button>` : ""}
+      ${data.prestige ? `<button type="button" class="hm-pulse__link hm-pulse__btn" data-prestige-open aria-label="Renommée : ${dashEsc(data.prestige.value)} sur 100">${dashGauge(data.prestige.value, "Renommée", data.prestige.label)}</button>` : ""}
     </div>
   </section>`;
 }
