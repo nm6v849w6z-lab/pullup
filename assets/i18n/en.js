@@ -2585,7 +2585,7 @@ window.HM_I18N_EN = {
   "Logo de {1}": "{1} logo",
   "Logo de {2}": "{2} logo",
   "Logo de {8}": "{8} logo",
-  "Logo et maillots modifiables dans l'onglet": "Logo and jerseys can be changed in the",
+  "Logo et maillots modifiables dans": "Logo and jerseys can be changed in",
   "long": "long",
   "Lopez": "Lopez",
   "lose": "lose",

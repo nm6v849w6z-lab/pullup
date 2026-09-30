@@ -2623,7 +2623,7 @@ window.HM_I18N_IT = {
   "Logo de {1}": "Logo di {1}",
   "Logo de {2}": "Logo di {2}",
   "Logo de {8}": "Logo di {8}",
-  "Logo et maillots modifiables dans l'onglet": "Logo e maglie modificabili nella scheda",
+  "Logo et maillots modifiables dans": "Logo e maglie modificabili in",
   "long": "long",
   "Lopez": "Lopez",
   "lose": "lose",

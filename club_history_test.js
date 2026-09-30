@@ -186,8 +186,8 @@ function playWholeSeason(league, now) {
   check(r2.status === 400, "serveur : un joueur jamais passé par le club est refusé");
   const tabSalle = [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "salle");
   tabSalle.click();
-  const banner = doc.querySelector("#arenaVisualCard .sl-retired-banner");
-  check(banner && /23/.test(banner.textContent), "maillot retiré suspendu dans le visuel de la salle");
+  const svgTxt = [...doc.querySelectorAll("#arenaVisualCard svg text")].map(t => t.textContent);
+  check(svgTxt.includes("23"), "maillot retiré suspendu dans le dessin de la salle (bannière sous la toiture)");
   r2 = await fetch(`${baseUrl}api/club/hall-of-fame/retire-jersey`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": token }, body: JSON.stringify({ playerId: pickedId, number: null }) });
   const r3 = await fetch(`${baseUrl}api/club/hall-of-fame/remove`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": token }, body: JSON.stringify({ playerId: pickedId }) });
   check(r2.status === 400 && r3.status === 404, "serveur : ni annulation du retrait ni sortie du Hall of Fame");

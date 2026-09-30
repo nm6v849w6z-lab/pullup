@@ -1066,7 +1066,7 @@
   .ov-link:hover{text-decoration:underline;}
   .ov-head{display:flex; justify-content:space-between; align-items:center; gap:12px;}
   .ov-head .ov-link{align-self:auto;}
-  .ov-grid{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:16px; align-items:start;}
+  .ov-grid{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:16px; align-items:stretch;}
   .ov-col{display:flex; flex-direction:column; gap:16px; min-width:0;}
   .ov-next.is-me{border-color:rgba(240,162,60,.5); background:linear-gradient(135deg, rgba(240,162,60,.12), var(--panel) 60%);}
   .ov-versus{display:flex; align-items:center; justify-content:space-between; gap:14px;}
@@ -2069,6 +2069,12 @@
   .topbar-search-result .tsr-name{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .topbar-search-result .tsr-meta{color:var(--ink-dim); font-size:12px; white-space:nowrap; flex:0 0 auto;}
   .topbar-search-empty, .topbar-search-more{padding:8px 10px; color:var(--ink-faint); font-size:12px;}
+  .topbar-budget{display:flex; flex-direction:column; align-items:flex-end; gap:2px; background:none; border:0; padding:0 14px 0 0; margin-right:2px; border-right:1px solid var(--line-soft); font:inherit; cursor:pointer; text-align:right;}
+  .topbar-budget small{font-size:11px; color:var(--ink-dim);}
+  .topbar-budget b{font-size:14px; font-weight:800; color:var(--ink); white-space:nowrap;}
+  .topbar-budget b.neg{color:var(--danger);}
+  .topbar-budget:empty{display:none;}
+  @media (max-width:1024px), (max-height:520px) and (pointer:coarse){ .topbar-budget{display:none;} }
   .topbar-meta{display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-size:12px; color:var(--ink-dim); text-align:right;}
   .topbar-meta .topbar-next-opp{font-weight:700; color:var(--ink);}
   button.topbar-cta{
@@ -6113,7 +6119,8 @@
   @media(min-width:1101px){
     .sl-grid > .sl-side:not(.sl-main){contain:size;}
     .sl-side #attendanceHistoryHolder{min-height:0; display:flex; flex-direction:column; overflow:hidden;}
-    .sl-side #attendanceHistoryHolder .sl-history{flex:1 1 auto; min-height:0; overflow-y:auto;}
+    /* Place réservée à la barre de défilement : elle ne recouvre plus les montants (retour utilisateur 2026-09-30). */
+    .sl-side #attendanceHistoryHolder .sl-history{flex:1 1 auto; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-gutter:stable; padding-right:6px;}
   }
   .sl-build-row{display:grid; grid-template-columns:minmax(120px,170px) minmax(0,1fr) auto; gap:14px; align-items:center; padding:8px 0; border-top:1px solid var(--line-soft);}
   .sl-build-row b{font-size:14px; color:var(--ink);}
@@ -7488,6 +7495,9 @@
           <span class="tls-team" id="tlsNameB">Rennes</span>
           <span class="tls-clock" id="tlsClock">10:00</span>
         </button>
+        <!-- Argent disponible (retour utilisateur 2026-09-30), ordinateur
+             uniquement (voir .topbar-budget, updateTopbarBudget). -->
+        <button type="button" class="topbar-budget" id="topbarBudget" data-tab="economie" title="Économie"></button>
         <div class="topbar-meta" id="topbarMetaWrap">
           <span class="topbar-next-opp" id="topbarNextOpponent"></span>
           <span id="topbarWeek"></span>
@@ -12542,6 +12552,20 @@ const ArenaGen = (function () {
     for (let x = -W / 2 + ring + 2; x < W / 2 - ring; x += 4.5) spotsBack.push([x, -D / 2 + ring]);
     for (let y = -D / 2 + ring + 4; y < D / 2 - ring; y += 4.5) spotsBack.push([-W / 2 + ring, y]);
     s += spots(spotsBack);
+
+    // Maillots retirés (options.retired : [{ number, name }]) : bannières
+    // suspendues sous la toiture du fond, face au public (retour utilisateur
+    // 2026-09-30 : « intégrer le maillot retiré dans la salle »).
+    const retiredList = (options.retired || []).slice(0, 6), rk = Math.max(1, Math.min(2.2, W / 34));
+    retiredList.forEach((r, i) => {
+      const bw = 3.6 * rk, gap = 4.6 * rk, bx = -((retiredList.length - 1) * gap + bw) / 2 + i * gap - W * 0.18, by = -D / 2 + ring + 0.1, zt = H + 1.6 * rk, zb = zt - 6.4 * rk;
+      if (bx + bw > W / 2 - ring - 1) return;
+      s += line([[bx + 0.3, by, zt + 1.4], [bx + 0.3, by, zt]], '#3a3a3e', 0.4) + line([[bx + bw - 0.3, by, zt + 1.4], [bx + bw - 0.3, by, zt]], '#3a3a3e', 0.4) +
+        poly([[bx, by, zt], [bx + bw, by, zt], [bx + bw, by, zb + 0.7 * rk], [bx + bw / 2, by, zb], [bx, by, zb + 0.7 * rk]], main, 0.45) +
+        flat(faceY(bx + 0.2 * rk, bx + bw - 0.2 * rk, by + 0.02, zt - 0.5 * rk, zt - 0.3 * rk), second) +
+        textOnFaceY(bx + bw / 2, by + 0.04, zt - 1.0 * rk, String(r.number), 2.3 * rk, second, bw * 0.9) +
+        textOnFaceY(bx + bw / 2, by + 0.04, zt - 3.8 * rk, String(r.name || '').toUpperCase().slice(0, 10), 0.62 * rk, second, bw * 0.9);
+    });
 
     // écran géant
     if (L.scoreboard) {
@@ -24138,6 +24162,7 @@ function updateLiveClockTick() {
 // ne fait plus rien ; `window.__lastSave` reste une promesse résolue pour
 // les tests (voir test_helpers.js:flush).
 function saveMyTeam() {
+  if (typeof updateTopbarBudget === "function") { try { updateTopbarBudget(); } catch (e) { /* rien */ } }
   /* plus rien : voir fetchApi (window.__lastSave) */
 }
 
@@ -25065,6 +25090,7 @@ const NARROW_PAGE_IDS = new Set([]);
 
 function showPage(id) {
   if (typeof hmNavSchedule === "function") hmNavSchedule();
+  if (typeof updateTopbarBudget === "function") { try { updateTopbarBudget(); } catch (e) { /* équipe pas encore chargée */ } }
   // Pastille « invitations à un amical » de la barre latérale (voir
   // frUpdateBadge) : recalculée à chaque changement de page.
   if (typeof frUpdateBadge === "function") { try { frUpdateBadge(); } catch (e) { /* ligue pas encore chargée */ } }
@@ -25781,7 +25807,14 @@ function describeMatchup() {
 // préparé) + contexte du prochain match (adversaire, journée). N'écrase rien
 // pendant un direct ou le récapitulatif d'absence : purement informatif, ça
 // n'a pas besoin d'être exact à la seconde près pendant ces écrans-là.
+// Argent disponible dans la barre du haut (ordinateur uniquement).
+function updateTopbarBudget() {
+  const el = document.getElementById("topbarBudget");
+  if (!el || !teamA || typeof teamA.budget !== "number") return;
+  el.innerHTML = `<small>Budget</small><b class="${teamA.budget < 0 ? "neg" : ""}">${formatMoney(teamA.budget)}</b>`;
+}
 function updateTopbar() {
+  updateTopbarBudget();
   const nameEl = document.getElementById("topbarClubName");
   // Nom du club cliquable (voir teamLinkHtml/showTeamDetail, retour
   // utilisateur, 2026-09 : "rends cliquable le nom de sa propre équipe [...]
@@ -31931,7 +31964,7 @@ function teamDetailApercuHtml(teamIdx) {
   html += `<div class="ov-chips"><span class="ov-chip">Renommée ${reputationStarsHtml(stars)}</span>` +
     (team.isHuman ? `<span class="ov-chip">Manager : ${managerLinkHtml(team, teamIdx, leagueId)}</span>` : "") +
     `<span class="ov-chip apercu-foot-trophies">Palmarès : ${trophyText}</span></div>`;
-  if (isOwnTeam) html += `<p class="sub ov-own">Logo et maillots modifiables dans l'onglet <button type="button" class="pz-inline-link" data-tab="personnalisation">Personnalisation</button>.</p>`;
+  if (isOwnTeam) html += `<p class="sub ov-own">Logo et maillots modifiables dans <button type="button" class="pz-inline-link" data-tab="personnalisation">Personnalisation</button>.</p>`;
   html += `</div>`;
   html += `<div class="jersey-mockups team-apercu-jerseys" aria-label="Maillots">` +
     `<div class="jersey-mockup">${jerseySvgHtml(team.jerseyShape, team.jerseyColor, 64, "home", effectiveJerseyPattern(team), effectiveJerseyTwoTone(team), sponsorNameForSlot(team, "maillot"))}<p class="sub">Domicile</p></div>` +
@@ -31983,22 +32016,22 @@ function teamDetailApercuHtml(teamIdx) {
       if (!isOwnTeam && !foreign && !vsMe && oppIdx === myTeamIndex) vsMe = { round: r };
     }
   }
-  let left = "";
+  const left = [];
   if (nextMatch) {
     const againstMe = !isOwnTeam && !foreign && nextMatch.oppIdx === myTeamIndex;
     const at = scheduledTimeForChampionshipRound(nextMatch.round);
     const home = nextMatch.isHome ? teamIdx : nextMatch.oppIdx, away = nextMatch.isHome ? nextMatch.oppIdx : teamIdx;
     const side = idx => `<div class="ov-side">${teamLogoHtml(league.teams[idx], 48)}<b data-no-i18n>${oppName(idx)}</b></div>`;
-    left += `<section class="ov-card ov-next${againstMe ? " is-me" : ""}"><div class="ov-head"><span class="ov-label">Prochain match · J${nextMatch.round + 1}</span>` +
+    left.push(`<section class="ov-card ov-next${againstMe ? " is-me" : ""}"><div class="ov-head"><span class="ov-label">Prochain match · J${nextMatch.round + 1}</span>` +
       (againstMe ? link("analyse", "Préparer le match") : link("calendrier", "Calendrier")) + `</div>` +
       `<div class="ov-versus">${side(home)}<div class="ov-mid">` +
       (againstMe ? `<span class="ov-me">Contre toi</span>` : `<span class="ov-vs">VS</span>`) +
       (at ? `<span class="ov-sub">${escapeHtml(formatDateTimeFr(at))}</span>` : "") +
       (vsMe && !againstMe ? `<span class="ov-sub apercu-accent"><span>Contre toi</span> · J${vsMe.round + 1}</span>` : "") +
-      `</div>${side(away)}</div></section>`;
+      `</div>${side(away)}</div></section>`);
   }
   const last5 = results.slice(-5).reverse();
-  left += `<section class="ov-card"><div class="ov-head"><span class="ov-label">Derniers résultats</span>${link("calendrier", "Calendrier")}</div>` +
+  left.push(`<section class="ov-card"><div class="ov-head"><span class="ov-label">Derniers résultats</span>${link("calendrier", "Calendrier")}</div>` +
     (last5.length
       ? `<div class="ov-results">` + last5.map(r => {
         const won = r.my > r.opp;
@@ -32006,29 +32039,33 @@ function teamDetailApercuHtml(teamIdx) {
           `<span class="ov-score ${won ? "ov-pos" : "ov-neg"}"><span class="form-badge ${won ? "form-win" : "form-loss"}">${won ? "V" : "D"}</span> ${r.my}–${r.opp}</span></div>`;
       }).join("") + `</div>`
       : `<p class="apercu-muted">Aucun match joué pour l'instant.</p>`) +
-    `</section>`;
+    `</section>`);
 
   // --- Joueur en forme + dernière interview ---
-  let right = "";
+  const right = [];
   const hot = hotPlayerForTeam(teamIdx);
-  right += `<section class="ov-card"><div class="ov-head"><span class="ov-label">Joueur en forme</span>${link("effectif", "Effectif")}</div>` +
+  right.push(`<section class="ov-card"><div class="ov-head"><span class="ov-label">Joueur en forme</span>${link("effectif", "Effectif")}</div>` +
     (hot
       ? `<div class="ov-hot">${playerAvatarHtml(hot.player, team, 52)}<div class="ov-hot-id">` +
         `<span class="ov-hot-name"><b>${foreign ? escapeHtml(hot.player.name) : playerLinkHtml(teamIdx, hot.player.id, hot.player.name)}</b><span class="ov-pos-chip">${POS_SHORT[hot.player.position]}</span></span>` +
         `<span class="ov-sub">${hot.gamesCount === 1 ? "Dernier match" : `${hot.gamesCount} derniers matchs`}</span></div>` +
         `<div class="ov-hot-val"><b>${hot.avg.toFixed(1)}</b><span class="ov-sub">efficacité moy.</span></div></div>`
       : `<p class="apercu-muted">Pas encore assez de matchs pour dégager un joueur en forme.</p>`) +
-    `</section>`;
+    `</section>`);
   const lastInterview = (team.moraleHistory || []).find(e => e.milestone && e.quote);
-  right += `<section class="ov-card apercu-foot"><div class="ov-head"><span class="ov-label">Dernière interview</span>` +
+  right.push(`<section class="ov-card apercu-foot"><div class="ov-head"><span class="ov-label">Dernière interview</span>` +
     (lastInterview ? `<span class="ov-sub"><span>Semaine</span> ${lastInterview.week}</span>` : "") + `</div>` +
     (lastInterview
       ? `<blockquote class="ov-quote"><span data-no-i18n>« ${escapeHtml(lastInterview.quote)} »</span></blockquote>` +
         (team.isHuman ? `<p class="ov-sub ov-quote-by">${managerLinkHtml(team, teamIdx, leagueId)} <span>a déclaré</span></p>` : "")
       : `<p class="apercu-muted">Aucune pour l'instant.</p>`) +
-    `</section>`;
+    `</section>`);
 
-  html += `<div class="ov-grid"><div class="ov-col">${left}</div><div class="ov-col">${right}</div></div>`;
+  // Grille 2×2 alignée ligne par ligne (retour utilisateur 2026-09-30 :
+  // « Dernière interview » décalée par rapport à « Derniers résultats »).
+  const cells = [];
+  for (let i = 0; i < Math.max(left.length, right.length); i++) cells.push(left[i] || "<div></div>", right[i] || "<div></div>");
+  html += `<div class="ov-grid">${cells.join("")}</div>`;
   return html;
 }
 
@@ -46480,18 +46517,19 @@ function renderSalleHero(info, stats) {
     sponsor: sponsorNameForSlot(teamA, "salle"),
     billboard: sponsorNameForSlot(teamA, "panneau") || "",
     district: clubDistrictBuilder(teamA),
+    retired: (teamA.hallOfFame || []).filter(h => Number.isInteger(h.retiredNumber)).sort((a, b) => a.retiredNumber - b.retiredNumber).map(h => ({ number: h.retiredNumber, name: String(h.name || "").split(" ").slice(-1)[0] })),
     aspect: salleCompactView() ? 1.3 : salleHeroAspect(visualHolder),
     compact: salleCompactView(),
     displayWidth: visualHolder.clientWidth || 0,
   })).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
   visualHolder.innerHTML = `<div class="arena-card">` +
     `<div class="arena-visual-wrap" role="group" aria-label="${escapeHtml(teamArenaName(teamA))}, ${info.capacity.toLocaleString("fr-FR")} places, et les installations du club">${arenaSvg}</div>` +
-    `</div>` + salleRetiredJerseysHtml(teamA);
+    `</div>`;
 
-  const pips = ARENA_LEVELS.map(a => `<span class="${a.level <= info.level ? "on" : ""}"></span>`).join("");
+  // Plus de badge « Niveau x / 8 » (retour utilisateur 2026-09-30 : « le
+  // niveau de la salle ne sert plus à rien »).
   const nm = salleNextMatchInfo();
   document.getElementById("salleHeroHead").innerHTML =
-    `<span class="sl-tier">Niveau ${info.level} / ${ARENA_LEVELS.length}<i>${pips}</i></span>` +
     `<h3 class="sl-hero-title">${escapeHtml(teamArenaName(teamA))}</h3>` +
     // Plus de ligne "Club · N places" sous le nom (retour utilisateur
     // 2026-09-26 : "enlève tout Gotham Knights · 8 000 places, le nombre
