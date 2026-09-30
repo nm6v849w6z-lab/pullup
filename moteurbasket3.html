@@ -12399,7 +12399,7 @@ const ArenaGen = (function () {
         DX.lots.some((l) => x < l.x1 + 2 + m && x > l.x0 - 2 - m && y < l.y1 + 2 + m && y > l.y0 - 2 - m) ||
         (billboard && x < BBX + 6 && x > BBX - 4 && y < BBY + 10 && y > BBY - 10);
       const onRoad = (x, y, m) => (y < roadY[1] + m && y > roadY[0] - m) || (x < roadX[1] + m && x > roadX[0] - m);
-      const streetW = 1.9, streetCol = dusk ? '#9d978a' : '#c9c3b2';
+      const streetW = 3.2, streetCol = dusk ? '#9d978a' : '#c9c3b2';
       const streets = [];
       const lineY = [roadY[0] - 30, roadY[0] - 58, roadY[0] - 86, D / 2 + 30, D / 2 + 56];
       const lineX = [roadX[0] - 28, roadX[0] - 56, roadX[0] - 84, W / 2 + 50, W / 2 + 78, W / 2 + 106];
@@ -12449,7 +12449,7 @@ const ArenaGen = (function () {
         best.sort((a, b) => a.k - b.k);
         const b = best[0];
         if (!b) return;
-        const ex = b.sx + b.dx * b.k, ey = b.sy + b.dy * b.k, pw = 0.55;
+        const ex = b.sx + b.dx * b.k, ey = b.sy + b.dy * b.k, pw = 0.9;
         const box = b.dx ? { x0: Math.min(b.sx, ex), x1: Math.max(b.sx, ex), y0: b.sy - pw, y1: b.sy + pw } : { x0: b.sx - pw, x1: b.sx + pw, y0: Math.min(b.sy, ey), y1: Math.max(b.sy, ey) };
         s += flat(rect(box.x0, box.x1, box.y0, box.y1, 0.02), streetCol);
         hm.path = box;
