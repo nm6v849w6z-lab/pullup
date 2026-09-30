@@ -12398,6 +12398,7 @@ const ArenaGen = (function () {
       const nearSite = (x, y, m) => (x < W / 2 + 34 + m && x > -W / 2 - 8 - m && y < D / 2 + 20 + m && y > -D / 2 - 8 - m) ||
         DX.lots.some((l) => x < l.x1 + 2 + m && x > l.x0 - 2 - m && y < l.y1 + 2 + m && y > l.y0 - 2 - m) ||
         (billboard && x < BBX + 6 && x > BBX - 4 && y < BBY + 10 && y > BBY - 10);
+      const frontAccess = (x, y) => Math.abs(x) < 9 && y > D / 2;
       const onRoad = (x, y, m) => (y < roadY[1] + m && y > roadY[0] - m) || (x < roadX[1] + m && x > roadX[0] - m);
       const streetW = 3.2, streetCol = dusk ? '#9d978a' : '#c9c3b2';
       const streets = [];
@@ -12407,7 +12408,7 @@ const ArenaGen = (function () {
         let start = null;
         for (let t = -W / 2 - 140; t <= W / 2 + 140; t += 1) {
           const x = horizontal ? t : c, y = horizontal ? c : t;
-          const ok = inView(x, y, 10) && !nearSite(x, y, 1) && !onRoad(x, y, 0.2);
+          const ok = inView(x, y, 10) && !nearSite(x, y, 1) && !onRoad(x, y, 0.2) && !frontAccess(x, y);
           if (ok && start === null) start = t;
           if ((!ok || t + 1 > W / 2 + 140) && start !== null) {
             const end = ok ? t : t - 1;
@@ -46368,8 +46369,11 @@ function clubDistrictBuilder(team) {
   return function (h) {
     const { box, poly, flat, line, rect, faceY, faceX, shade, textOnFaceY, dusk, roadX, roadY } = h;
     const lots = [], items = [], labels = [], frame = [];
-    const win = (x0, x1, y, z0, z1) => { let s = ""; for (let x = x0 + 0.8; x < x1 - 0.8; x += 2.2) for (let z = z0 + 0.9; z < z1 - 0.6; z += 2.1) s += poly(faceY(x, x + 1.2, y + 0.02, z, z + 1.1), dusk ? "#ffd98a" : "#a9c4d8", 0.35); return s; };
-    const winX = (x, y0, y1, z0, z1) => { let s = ""; for (let y = y0 + 0.8; y < y1 - 0.8; y += 2.2) for (let z = z0 + 0.9; z < z1 - 0.6; z += 2.1) s += poly(faceX(x + 0.02, y, y + 1.2, z, z + 1.1), dusk ? "#f2c877" : "#93b1c7", 0.35); return s; };
+    // Fenêtres : allumées ou non au hasard (fixe d'une visite à l'autre) le soir.
+    const lit = (a, b) => ((Math.round(a * 7.3) * 31 + Math.round(b * 5.1) * 17) % 7) > 1;
+    const win = (x0, x1, y, z0, z1) => { let s = ""; for (let x = x0 + 0.8; x < x1 - 0.8; x += 2.2) for (let z = z0 + 0.9; z < z1 - 0.6; z += 2.1) s += poly(faceY(x, x + 1.2, y + 0.02, z, z + 1.1), dusk ? (lit(x, z) ? "#ffd98a" : "#3c4550") : "#a9c4d8", 0.35); return s; };
+    const winX = (x, y0, y1, z0, z1) => { let s = ""; for (let y = y0 + 0.8; y < y1 - 0.8; y += 2.2) for (let z = z0 + 0.9; z < z1 - 0.6; z += 2.1) s += poly(faceX(x + 0.02, y, y + 1.2, z, z + 1.1), dusk ? (lit(y + 3, z) ? "#f2c877" : "#343c46") : "#93b1c7", 0.35); return s; };
+    const palm = (x, y) => { const t = h.P(x, y, 4.4); const k = h.K || 1; let s = line([[x, y, 0], [x + 0.2, y, 4.4]], "#8a6a45", 0.8); for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; s += `<path d="M${t[0].toFixed(1)} ${t[1].toFixed(1)} q ${(Math.cos(a) * 1.2 * k).toFixed(1)} ${(-1.2 * k).toFixed(1)} ${(Math.cos(a) * 2.4 * k).toFixed(1)} ${(Math.sin(a) * 0.9 * k + 0.6 * k).toFixed(1)}" stroke="#3f8f45" stroke-width="${(0.55 * k).toFixed(1)}" fill="none" stroke-linecap="round"/>`; } return s; };
     // Bâtiments plus détaillés (retour utilisateur 2026-09-30 : « des
     // infrastructures un peu plus jolies quel que soit le niveau ») :
     // parvis, haies, porte avec auvent, bandeau aux couleurs du club,
@@ -46379,6 +46383,7 @@ function clubDistrictBuilder(team) {
     const pave = dusk ? "#8e897d" : "#c9c3b2";
     const pad = (x0, x1, y0, y1, m = 1.4) => flat(rect(x0 - m, x1 + m, y0 - m, y1 + m, 0.02), pave);
     const hedge = (x0, x1, y) => box(x0, x1, y, y + 0.7, 0, 0.8, "#4d8a45", "#3f7a3a", "#326430", 0.35);
+    const solar = (x0, x1, y0, y1, z) => { let s = ""; for (let x = x0; x < x1 - 2; x += 2.6) s += poly(rect(x, x + 2.2, y0, y1, z + 0.05), "#27456b", 0.3) + line([[x + 1.1, y0, z + 0.07], [x + 1.1, y1, z + 0.07]], "#6c8bb3", 0.2); return s; };
     const ac = (x, y, z) => box(x, x + 1.3, y, y + 1, z, z + 0.7, "#c9ccd1", "#aeb2b8", "#8f949b", 0.3);
     const signBoard = (xc, y, z, txt, bg, fg, wMax) => {
       const w = Math.min(wMax, Math.max(3.2, txt.length * 0.62 + 1.2));
@@ -46418,7 +46423,7 @@ function clubDistrictBuilder(team) {
       const level = lv[key], empty = key !== "trainingCenter" && level === 0;
       items.push({ key, x: (x0 + x1) / 2, y: (y0 + y1) / 2, draw: () => (empty ? emptyLot(x0, x1, y0, y1) : draw()) });
       const z = empty ? 5 : topZ + 4;
-      labels.push({ key, x: (x0 + x1) / 2, y: (y0 + y1) / 2, z, name: names[key], lvl: empty ? "" : (key === "trainingCenter" ? `N${level}` : String(level)), empty });
+      labels.push({ key, x: (x0 + x1) / 2, y: (y0 + y1) / 2, z, name: names[key], lvl: empty ? "" : String(level), empty });
       frame.push([x0, y0, 0], [x1, y1, 0], [x0, y1, z + 3], [x1, y0, z + 3]);
     };
     const yb1 = roadY[0] - 4, xb1 = roadX[0] - 4;
@@ -46432,6 +46437,13 @@ function clubDistrictBuilder(team) {
         for (let x = x0 + 0.3, i = 0; x < x1 - 0.3; x += 1.2, i++) aw.push(poly([[x, y1, 2.95], [Math.min(x + 1.2, x1 - 0.3), y1, 2.95], [Math.min(x + 1.2, x1 - 0.3), y1 + 1.3, 2.45], [x, y1 + 1.3, 2.45]], i % 2 ? cB : cA, 0.25));
         s += aw.join("");
         if (L >= 2) s += hedge(x0 + 0.5, x0 + 3.5, y1 + 1.8);
+        // maillot géant du club sur le flanc (à partir du niveau 2)
+        if (L >= 2) {
+          const jy = (y0 + y1) / 2, jz = hh - 0.9, sc = L >= 3 ? 1.4 : 1;
+          const J = [[-1.1, 0], [-0.55, 0], [-0.3, -0.25], [0.3, -0.25], [0.55, 0], [1.1, 0], [1.1, -0.9], [0.65, -0.9], [0.65, -2.4], [-0.65, -2.4], [-0.65, -0.9], [-1.1, -0.9]];
+          s += poly(J.map(([a, b]) => [x1 + 0.06, jy + a * sc * 1.2, jz + b * sc * 1.1]), cA, 0.35) +
+            flat([[-0.65, -1.2], [0.65, -1.2], [0.65, -1.55], [-0.65, -1.55]].map(([a, b]) => [x1 + 0.08, jy + a * sc * 1.2, jz + b * sc * 1.1]), cB);
+        }
         if (L >= 3) for (let k = 0; k < 2; k++) { const fx = x0 + 1.5 + k * (w - 3); s += box(fx, fx + 0.2, y1 + 1.6, y1 + 1.8, 0, 5.5, "#dcdcdc", "#cfcfcf", "#b5b5b5", 0.3) + poly([[fx + 0.2, y1 + 1.7, 5.4], [fx + 2.4, y1 + 1.7, 5.1], [fx + 2.4, y1 + 1.7, 3.9], [fx + 0.2, y1 + 1.7, 4.2]], k ? cB : cA, 0.3); }
         return s;
       }, hh); }
@@ -46449,6 +46461,15 @@ function clubDistrictBuilder(team) {
           for (let t = 0; t < 12; t++) { const a = (t / 12) * Math.PI * 2; pts.push([dx + Math.cos(a) * 1.1, dy + 0.9, z + 1.4 + Math.sin(a) * 1.1]); }
           s += box(dx - 0.15, dx + 0.15, dy + 0.6, dy + 0.9, z, z + 1.2, "#aab2bd", "#aab2bd", "#8b939e", 0.25) + poly(pts, "#eef2f6", 0.35) + flat(faceY(dx - 0.12, dx + 0.12, dy + 0.95, z + 1.3, z + 1.5), "#8b939e");
         });
+        // camion régie devant la station (niveau 2+)
+        if (L >= 2) {
+          const vx = x0 + 1, vy = y1 + 1.6;
+          s += box(vx, vx + 4.6, vy, vy + 1.8, 0.3, 2.2, "#f2f2f2", "#e6e6e6", "#c9c9c9", 0.35) + box(vx + 4.6, vx + 5.8, vy, vy + 1.8, 0.3, 1.7, "#e6e6e6", "#b3202a", "#8f1a22", 0.35) +
+            flat(faceY(vx, vx + 4.6, vy + 1.82, 1.0, 1.4), "#b3202a") + textOnFaceY(vx + 2.3, vy + 1.85, 2.05, "HMTV", 0.55, "#b3202a", 3.8);
+          const dp = [];
+          for (let t = 0; t < 10; t++) { const a = (t / 10) * Math.PI * 2; dp.push([vx + 1.5 + Math.cos(a) * 0.7, vy + 0.9, 2.9 + Math.sin(a) * 0.7]); }
+          s += poly(dp, "#eef2f6", 0.3);
+        }
         if (mastH) {
           for (let z = hh + 0.35, i = 0; z < hh + mastH; z += 1.5, i++) s += box(ax - 0.35, ax + 0.35, ay - 0.35, ay + 0.35, z, Math.min(z + 1.5, hh + mastH), i % 2 ? "#f2f2f2" : "#d8342f", i % 2 ? "#e6e6e6" : "#c22b27", i % 2 ? "#c8c8c8" : "#9f2320", 0.25);
           const tp = h.P(ax, ay, hh + mastH + 0.3);
@@ -46472,11 +46493,14 @@ function clubDistrictBuilder(team) {
             s += box(hx - 0.12, hx + 0.12, hy - 0.12, hy + 0.12, 0, 3.2, "#9aa0a8", "#9aa0a8", "#7c828a", 0.25) +
               poly(faceY(hx - 0.9, hx + 0.9, hy + dir * 0.3, 2.7, 3.7), "#f4f4f4", 0.3) + line([[hx - 0.3, hy + dir * 0.7, 2.9], [hx + 0.3, hy + dir * 0.7, 2.9]], "#e0662e", 0.45);
           });
+          // petite tribune le long du terrain
+          for (let r = 0; r < 3; r++) s += box(cx1 + 0.4 + r * 0.7, cx1 + 1.1 + r * 0.7, cy0 + 3, cy1 - 3, 0, 0.5 + r * 0.45, "#c9ccd1", shade(cA, -5 * r), "#8f949b", 0.25);
           // grillage
           for (let x = cx0; x <= cx1; x += 1.8) s += line([[x, cy1, 0.05], [x, cy1, 2]], "#aab0b8", 0.25);
           s += line([[cx0, cy1, 2], [cx1, cy1, 2]], "#aab0b8", 0.3) + line([[cx1, cy0, 2], [cx1, cy1, 2]], "#aab0b8", 0.3);
         }
         if (L >= 2) s += hedge(12.5, 15.5, yb1 + 1.8);
+        if (L >= 4) s += solar(12 + 1.5, 12 + w - 4, yb1 - d + 3.5, yb1 - 1.5, hh + 0.36);
         return s;
       }, hh); }
     // Musculation (0-3) : grande façade vitrée éclairée, enseigne haltère.
@@ -46490,6 +46514,12 @@ function clubDistrictBuilder(team) {
           box(x1 + 0.05, x1 + 0.35, hy - 1.5, hy - 1.0, hz - 0.6, hz + 0.6, "#2b2f35", "#2b2f35", "#1c1f24", 0.25) +
           box(x1 + 0.05, x1 + 0.35, hy + 1.0, hy + 1.5, hz - 0.6, hz + 0.6, "#2b2f35", "#2b2f35", "#1c1f24", 0.25);
         if (L >= 2) s += hedge(x0 + 0.5, x0 + 3.2, y1 + 1.8);
+        // agrès de plein air (niveau 3)
+        if (L >= 3) for (let k = 0; k < 3; k++) {
+          const bx = x0 + 1.5 + k * 2.4, by = y1 + 2.4;
+          s += box(bx, bx + 0.15, by, by + 0.15, 0, 2.4, "#ccd2d8", "#ccd2d8", "#9aa2aa", 0.2) + box(bx + 1.6, bx + 1.75, by, by + 0.15, 0, 2.4, "#ccd2d8", "#ccd2d8", "#9aa2aa", 0.2) +
+            line([[bx, by + 0.08, 2.35], [bx + 1.75, by + 0.08, 2.35]], "#ccd2d8", 0.45);
+        }
         return s;
       }, hh); }
     // Bien-être (0-3) : terrasse en bois, bassin (plus grand avec le niveau), transats, parasols.
@@ -46516,7 +46546,16 @@ function clubDistrictBuilder(team) {
             poly([[ux - 1.4, uy, 2.4], [ux, uy - 1.4, 2.4], [ux + 1.4, uy, 2.4], [ux, uy + 1.4, 2.4]].map(([a, b, c]) => [a, b, c]), cA, 0.3) +
             poly([[ux - 1.4, uy, 2.4], [ux, uy + 1.4, 2.4], [ux, uy, 3], [ux, uy, 3]], shade(cA, -20), 0.2);
         }
-        if (L >= 3) s += hedge(x0 + 0.3, x0 + 3, deckY1 + 0.2);
+        // bassin éclairé le soir
+        if (dusk) s += flat(rect(px0 + 0.3, px1 - 0.3, py0 + 0.3, py1 - 0.3, 0.07), "rgba(140,230,255,0.25)");
+        // jacuzzi rond (niveau 3)
+        if (L >= 3) {
+          const jx = x0 + 2.2, jy = deckY1 - 1.8, jp = [], jw = [];
+          for (let t = 0; t < 14; t++) { const a = (t / 14) * Math.PI * 2; jp.push([jx + Math.cos(a) * 1.5, jy + Math.sin(a) * 1.5, 0.3]); jw.push([jx + Math.cos(a) * 1.15, jy + Math.sin(a) * 1.15, 0.32]); }
+          s += poly(jp, "#e8e4dc", 0.3) + poly(jw, "#58c3e6", 0.2);
+        }
+        if (L >= 2) s += palm(x0 - 0.2, deckY1 - 0.6);
+        if (L >= 3) s += palm(x0 - 0.2, y1 + 1.2) + hedge(x0 + 0.3, x0 + 3, deckY1 + 0.2);
         return s;
       }, hh); }
     return { lots, items, labels, frame };
@@ -46676,6 +46715,18 @@ function renderSalleHero(info, stats) {
     `<div class="arena-visual-wrap" role="group" aria-label="${escapeHtml(teamArenaName(teamA))}, ${info.capacity.toLocaleString("fr-FR")} places, et les installations du club">${arenaSvg}</div>` +
     `</div>`;
 
+  // Étiquettes du quartier : largeur ajustée au texte réel, nom centré.
+  visualHolder.querySelectorAll(".qd-label:not(.qd-pin)").forEach(g => {
+    const [name, badge] = g.querySelectorAll("text"), r = g.querySelector("rect");
+    if (!name || !r || typeof name.getBBox !== "function") return;
+    let tw = 0, bw = 0;
+    try { tw = name.getBBox().width; bw = badge ? badge.getBBox().width : 0; } catch (e) { return; }
+    if (!tw) return;
+    const w = tw + 12 + (badge ? bw + 9 : 0);
+    r.setAttribute("x", (-w / 2).toFixed(1)); r.setAttribute("width", w.toFixed(1));
+    name.setAttribute("x", (-w / 2 + 6 + tw / 2).toFixed(1));
+    if (badge) badge.setAttribute("x", (w / 2 - 5 - bw / 2).toFixed(1));
+  });
   // Plus de badge « Niveau x / 8 » (retour utilisateur 2026-09-30 : « le
   // niveau de la salle ne sert plus à rien »).
   const nm = salleNextMatchInfo();
@@ -47247,7 +47298,7 @@ function renderSalleFacilities() {
   const chips = document.getElementById("districtChips");
   if (chips) {
     const fl = teamA.facilityLevels || {};
-    const rows = [["trainingCenter", "Centre de formation", `N${teamA.trainingCenterLevel || 1}`], ["fanShop", "Boutique", teamA.fanShopLevel || 0],
+    const rows = [["trainingCenter", "Centre de formation", teamA.trainingCenterLevel || 1], ["fanShop", "Boutique", teamA.fanShopLevel || 0],
       ["tvStation", "Station TV", fl.tvStation || 0], ["gym", "Musculation", fl.gym || 0], ["wellness", "Bien-être", fl.wellness || 0]];
     chips.innerHTML = rows.map(([k, n, l]) => `<button type="button" class="qd-chip${l === 0 ? " is-empty" : ""}" data-district-chip="${k}">` +
       `<span>${escapeHtml(n)}</span><b>${l === 0 ? "+" : escapeHtml(String(l))}</b></button>`).join("");
