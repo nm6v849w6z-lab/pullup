@@ -8505,9 +8505,9 @@ function bestPosition(player) {
 // - Hystérésis : le poste change dès que la note au meilleur poste dépasse
 //   celle du poste actuel d'AU MOINS 1 point (POSITION_CHANGE_MARGIN) ;
 //   revenir au poste qu'on vient de quitter (Player.previousCardPosition,
-//   sauvegardé) exige 2 points (POSITION_RETURN_MARGIN), pour qu'un
-//   aller-retour d'une semaine à l'autre ne se produise pas au moindre
-//   point gagné ou perdu (règle utilisateur 2026-09-30).
+//   sauvegardé) exige aussi 1 point (POSITION_RETURN_MARGIN, réglable à
+//   part) : un aller-retour suppose que l'écart bouge d'au moins 2 points au
+//   total (règle utilisateur 2026-09-30).
 // - Quand : fin de chaque mise à jour hebdomadaire (Team.trainWeek pour les
 //   clubs humains, Team.trainWeekCPU pour l'IA) et à chaque chargement de
 //   sauvegarde (teamFromSave : migration des sauvegardes existantes, côté
@@ -8526,10 +8526,11 @@ function bestPosition(player) {
 //   changement en cours de semaine ne fait rien perdre.
 // ---------------------------------------------------------------------
 // Règle utilisateur (2026-09-30) : le poste change dès que le meilleur poste
-// dépasse le poste actuel d'AU MOINS 1 point ; revenir au poste qu'on vient
-// de quitter (previousCardPosition) en exige 2, pour éviter le va-et-vient.
+// dépasse le poste actuel d'AU MOINS 1 point, y compris pour revenir au poste
+// qu'on vient de quitter (previousCardPosition) — un aller-retour demande
+// donc que l'écart bouge d'au moins 2 points au total.
 const POSITION_CHANGE_MARGIN = 1;
-const POSITION_RETURN_MARGIN = 2;
+const POSITION_RETURN_MARGIN = 1;
 const CARD_POSITION_SHORT = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ailier fort": "AF", "Pivot": "P" };
 // Nombre de tirages de caractéristiques tentés à la création pour que le
 // poste demandé soit bien le meilleur (sinon : poste = meilleur poste).

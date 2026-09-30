@@ -7925,11 +7925,7 @@
             <div class="eff-kpi-label">Masse salariale</div>
             <div class="eff-kpi-line"><b class="eff-kpi-num" id="rosterPayrollValue"></b></div>
           </div>
-          <div class="eff-kpi-sep" aria-hidden="true"></div>
-          <div class="eff-kpi">
-            <div class="eff-kpi-label">Prochain match</div>
-            <div class="eff-kpi-line"><b class="eff-kpi-num" id="rosterNextOpponent"></b><span class="eff-kpi-unit" id="rosterNextRound"></span></div>
-          </div>
+          <!-- Repère « Prochain match » retiré (retour utilisateur 2026-09-30). -->
         </div>
       </div>
       <div id="rosterContent"></div>
@@ -16928,9 +16924,9 @@ function bestPosition(player) {
 // - Hystérésis : le poste change dès que la note au meilleur poste dépasse
 //   celle du poste actuel d'AU MOINS 1 point (POSITION_CHANGE_MARGIN) ;
 //   revenir au poste qu'on vient de quitter (Player.previousCardPosition,
-//   sauvegardé) exige 2 points (POSITION_RETURN_MARGIN), pour qu'un
-//   aller-retour d'une semaine à l'autre ne se produise pas au moindre
-//   point gagné ou perdu (règle utilisateur 2026-09-30).
+//   sauvegardé) exige aussi 1 point (POSITION_RETURN_MARGIN, réglable à
+//   part) : un aller-retour suppose que l'écart bouge d'au moins 2 points au
+//   total (règle utilisateur 2026-09-30).
 // - Quand : fin de chaque mise à jour hebdomadaire (Team.trainWeek pour les
 //   clubs humains, Team.trainWeekCPU pour l'IA) et à chaque chargement de
 //   sauvegarde (teamFromSave : migration des sauvegardes existantes, côté
@@ -16949,10 +16945,11 @@ function bestPosition(player) {
 //   changement en cours de semaine ne fait rien perdre.
 // ---------------------------------------------------------------------
 // Règle utilisateur (2026-09-30) : le poste change dès que le meilleur poste
-// dépasse le poste actuel d'AU MOINS 1 point ; revenir au poste qu'on vient
-// de quitter (previousCardPosition) en exige 2, pour éviter le va-et-vient.
+// dépasse le poste actuel d'AU MOINS 1 point, y compris pour revenir au poste
+// qu'on vient de quitter (previousCardPosition) — un aller-retour demande
+// donc que l'écart bouge d'au moins 2 points au total.
 const POSITION_CHANGE_MARGIN = 1;
-const POSITION_RETURN_MARGIN = 2;
+const POSITION_RETURN_MARGIN = 1;
 const CARD_POSITION_SHORT = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ailier fort": "AF", "Pivot": "P" };
 // Nombre de tirages de caractéristiques tentés à la création pour que le
 // poste demandé soit bien le meilleur (sinon : poste = meilleur poste).
@@ -41269,14 +41266,6 @@ function closeEffectifMenus(except) {
   });
 }
 
-// Prochain match (bandeau d'en-tête) : même source que la barre du haut
-// (currentMatch/teamB, voir updateTopbar) ; plus de n° de journée (retour
-// utilisateur 2026-09-25 : "enlève , journée 7"), seulement domicile/extérieur.
-function effNextMatchInfo() {
-  if (!currentMatch || !teamB) return { name: "—", round: "" };
-  return { name: teamB.name, round: currentMatch.isHome ? "à domicile" : "à l'extérieur" };
-}
-
 function renderEffectifHeader() {
   // Alchimie d'équipe : même mécanique de remplissage/couleur que
   // renderHumeurSection (#moraleGaugeFill), voir moraleGaugeColor.
@@ -41300,11 +41289,6 @@ function renderEffectifHeader() {
   if (subEl) subEl.textContent = `${teamA.name}, ${teamA.players.length} joueur${teamA.players.length > 1 ? "s" : ""}`;
   const payrollEl = document.getElementById("rosterPayrollValue");
   if (payrollEl) payrollEl.textContent = formatMoney(teamA.players.reduce((s, p) => s + p.salary, 0));
-  const next = effNextMatchInfo();
-  const oppEl = document.getElementById("rosterNextOpponent");
-  if (oppEl) oppEl.textContent = next.name;
-  const roundEl = document.getElementById("rosterNextRound");
-  if (roundEl) roundEl.textContent = next.round;
 }
 
 // Colonne Joueur figée des tableaux d'effectif (retour utilisateur

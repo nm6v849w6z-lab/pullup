@@ -22,11 +22,10 @@ const keys = pos => Object.keys(E.POSITION_KEY_WEIGHTS[pos]);
 const boost = (attrs, pos, delta, except) => { keys(pos).filter(k => !except || !keys(except).includes(k)).forEach(k => { attrs[k] += delta; }); return attrs; };
 
 // 1) Hystérésis (règle utilisateur 2026-09-30) : changement dès 1 point
-// d'écart, retour au poste qu'on vient de quitter à partir de 2 points.
+// d'écart, retour au poste qu'on vient de quitter dès 1 point aussi.
 {
-  assert(E.POSITION_CHANGE_MARGIN === 1 && E.POSITION_RETURN_MARGIN === 2, "marges : 1 point pour changer, 2 points pour revenir");
+  assert(E.POSITION_CHANGE_MARGIN === 1 && E.POSITION_RETURN_MARGIN === 1, "marges : 1 point pour changer, 1 point pour revenir");
   const p = { position: "Meneur", attrs: flat(30) };
-  // Monte l'Arrière petit à petit jusqu'à ce qu'il dépasse le Meneur.
   for (let i = 0; i < 40 && E.bestPosition(p) === "Meneur"; i++) boost(p.attrs, "Arrière", 1, "Meneur");
   const b1 = E.bestPosition(p);
   const r1 = E.positionRating(p, b1) - E.positionRating(p, "Meneur");
@@ -35,15 +34,13 @@ const boost = (attrs, pos, delta, except) => { keys(pos).filter(k => !except || 
   const c = E.cardPositionChangeFor(p);
   assert(c && c.from === "Meneur" && c.to !== "Meneur" && c.ratingTo - c.ratingFrom >= 1, `écart de ${(c.ratingTo - c.ratingFrom).toFixed(2)} pt (≥ 1) : Meneur → ${c && c.to}`);
   p.previousCardPosition = c.from; p.position = c.to;
-  // Retour vers le Meneur (poste qu'on vient de quitter) de 1 à 2 points :
-  // pas de retour ; au-delà de 2 points : retour.
-  for (let i = 0; i < 60 && E.positionRating(p, "Meneur") - E.positionRating(p, c.to) < 1; i++) boost(p.attrs, "Meneur", 1, c.to);
+  // Meneur repassé devant de moins d'1 point : pas de retour.
+  for (let i = 0; i < 60 && E.positionRating(p, "Meneur") <= E.positionRating(p, c.to); i++) boost(p.attrs, "Meneur", 1, c.to);
   const back = E.positionRating(p, "Meneur") - E.positionRating(p, c.to);
-  if (back < 2) assert(E.cardPositionChangeFor(p) === null, `Meneur repassé devant de ${back.toFixed(2)} pt (< 2) : le poste reste ${c.to} (pas de va-et-vient)`);
-  for (let i = 0; i < 60 && E.positionRating(p, "Meneur") - E.positionRating(p, c.to) < 2; i++) boost(p.attrs, "Meneur", 1, c.to);
+  if (back < 1) assert(E.cardPositionChangeFor(p) === null, `Meneur repassé devant de ${back.toFixed(2)} pt (< 1) : le poste reste ${c.to}`);
+  for (let i = 0; i < 60 && E.positionRating(p, "Meneur") - E.positionRating(p, c.to) < 1; i++) boost(p.attrs, "Meneur", 1, c.to);
   const c2 = E.cardPositionChangeFor(p);
-  assert(c2 && c2.to === "Meneur", `Meneur devant de ${(E.positionRating(p, "Meneur") - E.positionRating(p, c.to)).toFixed(2)} pt (≥ 2) : retour au Meneur`);
-  // Égalité parfaite : poste actuel conservé.
+  assert(c2 && c2.to === "Meneur", `Meneur devant de ${(E.positionRating(p, "Meneur") - E.positionRating(p, c.to)).toFixed(2)} pt (≥ 1) : retour au Meneur`);
   assert(E.cardPositionChangeFor({ position: "Pivot", attrs: flat(40) }) === null, "notes égales partout : poste de carte conservé");
 }
 

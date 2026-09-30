@@ -70,8 +70,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 - **✅ EN PROD (2026-09-30) — Poste de carte qui suit les caractéristiques** :
   changement dès 1 point d'écart au meilleur poste (POSITION_CHANGE_MARGIN),
-  retour au poste quitté à partir de 2 (POSITION_RETURN_MARGIN,
-  Player.previousCardPosition) ; chaque semaine + au chargement ; salaire
+  retour au poste quitté dès 1 point aussi (POSITION_RETURN_MARGIN,
+  Player.previousCardPosition, 1 point aussi, règle utilisateur) ; chaque semaine + au chargement ; salaire
   seulement à l'intersaison ; nouvelle dans le fil (clubs humains) ;
   composition automatique qui comble un poste sans joueur de carte (plus de
   forfait pour « pas de pivot » avec au moins 5 joueurs, validé par
