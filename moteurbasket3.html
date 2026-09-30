@@ -6810,6 +6810,9 @@
   .team-detail-manager .mp-link{font-size:14px;}
 
   .mp-back-row{margin:0 0 14px;}
+  /* « ← Retour » en haut des pages de détail, téléphone uniquement (voir NAV_BACK_BTNS). */
+  .m-top-back{display:none;}
+  @media (max-width:768px), (max-height:520px) and (pointer:coarse){ .m-top-back{display:block; margin:0 0 12px;} }
   .mp-back{background:none; border:0; padding:6px 0; font:inherit; font-size:13px; font-weight:700; color:var(--ink-dim); cursor:pointer;}
   .mp-back:hover{color:var(--ink);}
   /* Pleine largeur (retour utilisateur 2026-09-30 : « prends pas toute la page »). */
@@ -25029,6 +25032,7 @@ const WIDE_PAGE_IDS = new Set(PAGE_IDS);
 const NARROW_PAGE_IDS = new Set([]);
 
 function showPage(id) {
+  if (typeof hmNavSchedule === "function") hmNavSchedule();
   // Pastille « invitations à un amical » de la barre latérale (voir
   // frUpdateBadge) : recalculée à chaque changement de page.
   if (typeof frUpdateBadge === "function") { try { frUpdateBadge(); } catch (e) { /* ligue pas encore chargée */ } }
@@ -25208,6 +25212,7 @@ document.addEventListener("click", e => {
 });
 
 function setActiveTab(key) {
+  if (typeof hmNavSchedule === "function") hmNavSchedule();
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === key));
 }
 
@@ -51286,6 +51291,85 @@ document.addEventListener("visibilitychange", () => {
 // du jeu — voir les tests *_test.js, qui font tous
 // `await dom.window.__gameReady` juste après avoir construit le JSDOM.
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Navigation « retour » (retour testeur, 2026-09-30 : « I swap back my
+// browser to go back and go out from website »). Chaque changement de page
+// ou d'onglet ajoute une entrée à l'historique du navigateur : le geste ou
+// le bouton Retour du navigateur revient à la page précédente du jeu au lieu
+// de quitter le site. Une fenêtre ouverte (popup) ou le menu mobile se
+// ferment d'abord. Sur téléphone, les pages de détail ont aussi un
+// « ← Retour » en haut (plus besoin de descendre tout en bas).
+// ---------------------------------------------------------------------
+const NAV_BACK_BTNS = {
+  playerDetailSection: "closePlayerDetailBtn", teamDetailSection: "closeTeamDetailBtn",
+  playerCompareSection: "closePlayerCompareBtn", managerProfileSection: "closeManagerProfileBtn", liveSection: "newMatchBtn",
+};
+const hmNav = { started: false, restoring: false, stack: [], idx: 0 };
+function hmNavCurrent() {
+  const page = PAGE_IDS.find(id => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); }) || "";
+  const tab = document.querySelector(".tab-btn.active");
+  return { page, tab: tab ? tab.dataset.tab : "" };
+}
+function hmNavRecord() {
+  if (!hmNav.started || hmNav.restoring) return;
+  const cur = hmNavCurrent(), last = hmNav.stack[hmNav.idx];
+  if (!cur.page || (last && last.page === cur.page && last.tab === cur.tab)) return;
+  hmNav.stack.length = hmNav.idx + 1;
+  hmNav.stack.push(cur);
+  hmNav.idx = hmNav.stack.length - 1;
+  try { history.pushState({ hmNav: hmNav.idx }, ""); } catch (e) { /* rien */ }
+}
+function hmNavSchedule() {
+  if (!hmNav.started || hmNav.restoring) return;
+  (typeof queueMicrotask === "function" ? queueMicrotask : f => Promise.resolve().then(f))(hmNavRecord);
+}
+function hmNavStart() {
+  hmNav.stack = [hmNavCurrent()]; hmNav.idx = 0; hmNav.started = true;
+  try { history.replaceState({ hmNav: 0 }, ""); } catch (e) { /* rien */ }
+}
+function hmNavCloseOverlay() {
+  if (document.body.classList.contains("m-drawer-open")) { document.body.classList.remove("m-drawer-open"); return true; }
+  const overlays = [...document.querySelectorAll(".upgrade-confirm-overlay, .qd-overlay, #settingsModalOverlay")];
+  if (!overlays.length) return false;
+  overlays.forEach(o => o.remove());
+  return true;
+}
+window.addEventListener("popstate", (e) => {
+  if (!hmNav.started) return;
+  const to = e.state && typeof e.state.hmNav === "number" ? e.state.hmNav : 0;
+  // Popup ouverte : on la ferme et on reste sur la page.
+  if (to < hmNav.idx && hmNavCloseOverlay()) {
+    try { history.pushState({ hmNav: hmNav.idx }, ""); } catch (err) { /* rien */ }
+    return;
+  }
+  const target = hmNav.stack[to];
+  hmNav.idx = Math.max(0, Math.min(to, hmNav.stack.length - 1));
+  if (!target) return;
+  hmNav.restoring = true;
+  try {
+    const cur = hmNavCurrent();
+    const backBtn = NAV_BACK_BTNS[cur.page] && document.getElementById(NAV_BACK_BTNS[cur.page]);
+    if (backBtn && cur.page !== target.page) backBtn.click();
+    const now = hmNavCurrent();
+    if (now.page !== target.page || now.tab !== target.tab) {
+      const tb = target.tab && document.querySelector(`.tab-btn[data-tab="${target.tab}"]`);
+      if (tb) tb.click(); else if (target.tab && TAB_HANDLERS[target.tab]) TAB_HANDLERS[target.tab]();
+    }
+  } catch (err) { /* page impossible à restaurer : on reste où on est */ }
+  hmNav.restoring = false;
+  hmNav.stack[hmNav.idx] = hmNavCurrent();
+});
+// « ← Retour » en haut des pages de détail (téléphone, voir .m-top-back).
+Object.entries(NAV_BACK_BTNS).forEach(([pageId, btnId]) => {
+  const page = document.getElementById(pageId), btn = document.getElementById(btnId);
+  if (!page || !btn || pageId === "managerProfileSection") return;
+  const top = document.createElement("div");
+  top.className = "m-top-back";
+  top.innerHTML = `<button type="button" class="secondary">← Retour</button>`;
+  top.firstChild.addEventListener("click", () => btn.click());
+  page.insertBefore(top, page.firstChild);
+});
+
 window.__gameReady = (async () => {
   await initGame();
   if (invalidManagerLink) {
@@ -51332,6 +51416,7 @@ window.__gameReady = (async () => {
   // par enterLiveMatch().
   resetQuarterBars();
   enterNextMatchOrShowSeasonEnd({ landOnDashboard: true });
+  hmNavStart();
   // Écran de chargement (voir #bootSplash) : masqué maintenant que le
   // tableau de bord est prêt et affiché juste au-dessus. Le chemin
   // invalidManagerLink n'a pas besoin de ce masquage : showInvalidManagerLinkMessage()
