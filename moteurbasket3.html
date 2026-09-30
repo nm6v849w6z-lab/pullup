@@ -38291,7 +38291,12 @@ function trainingRulesHtml() {
   // sélecteur de l'onglet Entraînement) + "ne mets pas de chiffre dans le
   // guide par contre" : explication volontairement sans aucun chiffre ici.
   const collective = `En plus de l'entraînement des fondamentaux ci-dessus, le club peut aussi consacrer un <b>focus collectif</b> à chaque jour de repos (jour sans match officiel ni amical ; le jour d'un match ne compte jamais) : soit préparer une nouvelle tactique, soit privilégier la récupération physique de l'équipe. <b>Préparer une tactique</b> : un seul aspect précis à la fois, une priorité offensive, une défense OU un rythme (jamais plusieurs en même temps), à choisir parmi tout ce qui peut être réglé sur l'onglet <b>Ordres</b>. Chaque jour d'entraînement sur cet aspect ajoute +4 de connaissance tactique, crédités au prochain match où il est effectivement joué (voir Connaissance tactique). <b>Récupération</b> : chaque jour de repos passé en récupération ajoute 5 points de forme à tout l'effectif, en plus des 10 points par journée sans jouer.`;
-  return `<p class="training-intro">${individual}</p><p class="training-intro" style="margin-top:10px;">${collective}</p>`;
+  // Programmes spécialisés / polyvalents (retour d'un testeur 2026-09-30 :
+  // « polyvalent » n'était pas expliqué, ni combien chaque caractéristique
+  // progresse de moins). Chiffré, contrairement au focus collectif.
+  const w2 = Math.round(WEIGHT_BY_PROGRAM_SIZE[2] * 100);
+  const programs = `Deux types de programmes. Spécialisé : une seule compétence, à plein rendement. Polyvalent : deux compétences liées en même temps (par exemple Tir extérieur = Tir à mi-distance + Tir à 3 points), chacune progressant à ${w2} % du rythme d'un programme spécialisé. Au total, on progresse un peu plus (${w2 * 2} % contre 100 %), mais réparti sur deux compétences.`;
+  return `<p class="training-intro">${individual}</p><p class="training-intro" style="margin-top:10px;">${programs}</p><p class="training-intro" style="margin-top:10px;">${collective}</p>`;
 }
 
 // Retour utilisateur (2026-09) : "au dessus de ces temps de jeu, il
@@ -39264,9 +39269,12 @@ function populateTrainingSkillSelect() {
   // rendement) et les programmes composites (plusieurs caractéristiques
   // liées, rendement dilué par caractéristique — voir TRAINING_PROGRAMS).
   const pureGroup = document.createElement("optgroup");
-  pureGroup.label = "Spécialisé (1 caractéristique)";
+  pureGroup.label = "Spécialisé (1 caractéristique, plein rendement)";
   const compositeGroup = document.createElement("optgroup");
-  compositeGroup.label = "Polyvalent (plusieurs caractéristiques, effet dilué)";
+  // Rendement chiffré (retour d'un testeur 2026-09-30 : « how much less
+  // each skill is trained ») : tous les programmes polyvalents ont 2
+  // caractéristiques (WEIGHT_BY_PROGRAM_SIZE[2]).
+  compositeGroup.label = `Polyvalent (2 caractéristiques, chacune à ${Math.round(WEIGHT_BY_PROGRAM_SIZE[2] * 100)} %)`;
 
   Object.entries(TRAINING_PROGRAMS).forEach(([key, program]) => {
     const o = document.createElement("option");

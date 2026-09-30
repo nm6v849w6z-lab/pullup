@@ -309,7 +309,9 @@
     api.t = tr;
 
     var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, NOSCRIPT: 1, CODE: 1, PRE: 1 };
-    var ATTRS = ["title", "placeholder", "aria-label", "alt", "data-tip", "data-label"];
+    // "label" : libellés des <optgroup> (groupes des listes déroulantes,
+    // retour d'un testeur italien 2026-09-30 sur l'Entraînement).
+    var ATTRS = ["title", "placeholder", "aria-label", "alt", "data-tip", "data-label", "label"];
     function skipEl(el) {
       for (var e = el; e && e.nodeType === 1; e = e.parentNode) {
         if (SKIP[e.nodeName]) return true;
