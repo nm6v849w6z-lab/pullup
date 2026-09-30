@@ -20,12 +20,36 @@ try {
   if (!/€/.test(doc.getElementById("rosterPayrollValue").textContent)) throw new Error("❌ La masse salariale devrait être affichée dans l'en-tête.");
   console.log("✅ En-tête : sous-titre + masse salariale.");
 
-  // Groupes.
-  const groups = [...doc.querySelectorAll("#rosterContent .eff-group-title")].map(el => el.textContent);
-  if (groups[0] !== "Cinq de départ") throw new Error(`❌ Le premier groupe devrait être "Cinq de départ", obtenu ${groups.join(", ")}.`);
-  const starters = doc.querySelectorAll("#rosterContent .eff-group-starters tr.eff-row").length;
-  if (starters !== 5) throw new Error(`❌ 5 titulaires attendus dans "Cinq de départ", obtenu ${starters}.`);
-  console.log(`✅ Groupes : ${groups.join(" / ")} (5 titulaires).`);
+  // Un seul bloc de joueurs (retour utilisateur 2026-09-30 : plus de blocs
+  // Cinq de départ / Rotation / Réserve) : une seule liste, titulaires
+  // d'abord (dans l'ordre des postes de la feuille de match), puis rotation,
+  // puis réserve ; rôle signalé discrètement (liseré + « 5 », nom estompé).
+  {
+    const win = dom.window;
+    if (doc.querySelectorAll("#rosterContent .eff-group-row, #rosterContent .eff-group-title").length) throw new Error("❌ Plus aucune ligne de titre de groupe attendue.");
+    const bodies = doc.querySelectorAll("#rosterContent table.eff-general tbody");
+    if (bodies.length !== 1) throw new Error(`❌ Un seul bloc (tbody) de joueurs attendu, obtenu ${bodies.length}.`);
+    const rows = [...bodies[0].querySelectorAll("tr.eff-row")];
+    const ids = rows.map(r => Number(r.querySelector(".player-link").dataset.playerId));
+    const roles = ids.map(id => win.eval(`playerRoleLabel(teamA, teamA.players.find(p => p.id === ${id}))`));
+    const rank = r => ["Titulaire", "Joueur de rotation", "Réserviste"].indexOf(r);
+    if (!roles.every((r, i) => i === 0 || rank(roles[i - 1]) <= rank(r))) throw new Error(`❌ Ordre par défaut attendu : titulaires, rotation, réserve — obtenu ${roles.join(", ")}.`);
+    const starterSlots = ids.slice(0, 5).map(id => win.eval(`teamA.starterPosition(${id})`));
+    if (JSON.stringify(starterSlots) !== JSON.stringify(win.eval("POSITIONS"))) throw new Error(`❌ Titulaires attendus dans l'ordre M, A, AS, AF, P, obtenu ${starterSlots.join(", ")}.`);
+    const starters = rows.filter(r => r.classList.contains("eff-row-starter"));
+    if (starters.length !== 5 || starters.some(r => !r.querySelector(".eff-starter-mark"))) throw new Error(`❌ 5 titulaires marqués (liseré + « 5 ») attendus, obtenu ${starters.length}.`);
+    const reserves = rows.filter((r, i) => roles[i] === "Réserviste");
+    if (reserves.some(r => !r.classList.contains("eff-row-reserve"))) throw new Error("❌ Les réservistes devraient porter .eff-row-reserve.");
+    const avatarSizes = new Set(rows.map(r => r.querySelector(".player-avatar").style.width));
+    if (avatarSizes.size !== 1) throw new Error(`❌ Une seule taille d'avatar attendue, obtenu ${[...avatarSizes].join(", ")}.`);
+    console.log(`✅ Un seul bloc de ${rows.length} joueurs : ${starters.length} titulaires en tête (M→P), puis rotation, puis réserve ; avatar ${[...avatarSizes][0]}.`);
+    // Tri de colonne : s'applique à TOUTE la liste.
+    win.eval("rosterSortState.key = 'age'; rosterSortState.dir = 1; renderEffectifSection();");
+    const ages = [...doc.querySelectorAll("#rosterContent table.eff-general tr.eff-row")].map(r => Number(r.children[3].textContent));
+    if (ages.length !== rows.length || !ages.every((v, i) => i === 0 || ages[i - 1] <= v)) throw new Error(`❌ Tri par âge attendu sur toute la liste : ${ages.join(", ")}.`);
+    console.log("✅ Tri par âge appliqué à toute la liste :", ages.join(" "));
+    win.eval("rosterSortState.key = null; renderEffectifSection();");
+  }
 
   // Une seule notion de meilleur poste (retour utilisateur 2026-09-30) : la
   // flèche « → X » de la colonne Poste = bestPosition (même règle que la
@@ -98,7 +122,6 @@ try {
     [".roster-table-frozen-col table.eff-table thead th:first-child{z-index:3; background:var(--bg);}", "en-tête Nom opaque"],
     [".roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody td:first-child{background:var(--eff-row-2);}", "Caractéristiques : fond de ligne opaque"],
     [".roster-table-frozen-col .eff-general tr.eff-row.injured td:first-child{background:linear-gradient(", "blessé : teinte posée sur un fond opaque"],
-    [".roster-table-frozen-col .eff-group-title{position:sticky;", "titre de groupe (Cinq de départ) figé"],
     [".roster-table-frozen-col .eff-player .player-link{display:block; min-width:0; max-width:104px; overflow:hidden; text-overflow:ellipsis;", "téléphone : nom tronqué"],
     [".roster-table-frozen-col .eff-player .nat-flag{display:none;}", "téléphone : drapeau masqué"],
   ].forEach(([rule, what]) => { if (!css.includes(rule)) throw new Error(`❌ Règle CSS manquante (${what}) : ${rule}`); });

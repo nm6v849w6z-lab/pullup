@@ -62,22 +62,30 @@ try {
   console.log("Adversaire (Général) — colonnes triables :", sortable.join(", "));
   if (sortable.length !== headers.length) throw new Error("❌ La vue Général n'affiche que des infos publiques : tout devrait y être triable.");
   // Le tri MI-D de l'équipe précédente ne doit pas fuiter : ordre par défaut
-  // (groupes de rôle, puis poste) dans chaque groupe.
-  const groupsOk = [...table.querySelectorAll("tbody.eff-group")].every(tb => {
-    const pos = [...tb.querySelectorAll("tr.eff-row")].map(tr => tr.children[1].textContent.trim());
-    const exp = [...pos].sort((a, b) => ["M", "A", "AS", "AF", "P"].indexOf(a) - ["M", "A", "AS", "AF", "P"].indexOf(b));
-    return JSON.stringify(pos) === JSON.stringify(exp);
-  });
+  // (liste unique depuis 2026-09-30 : titulaires dans l'ordre des postes de
+  // la feuille de match, puis les autres rôles, chacun par poste).
+  if (table.querySelectorAll("tbody").length !== 1 || table.querySelector(".eff-group-row")) throw new Error("❌ Fiche équipe : un seul bloc de joueurs attendu (plus de groupes Cinq de départ / Rotation / Réserve).");
+  const groupsOk = (() => {
+    const rows = [...table.querySelectorAll("tr.eff-row")];
+    const starters = rows.filter(tr => tr.classList.contains("eff-row-starter"));
+    const others = rows.filter(tr => !tr.classList.contains("eff-row-starter"));
+    if (starters.length !== 5 || rows.indexOf(starters[4]) !== 4) return false;
+    const order = ["M", "A", "AS", "AF", "P"];
+    const reserveStart = others.findIndex(tr => tr.classList.contains("eff-row-reserve"));
+    const chunks = reserveStart < 0 ? [others] : [others.slice(0, reserveStart), others.slice(reserveStart)];
+    return chunks.every(ch => { const pos = ch.map(tr => tr.children[1].textContent.trim()); return pos.every((p, i) => i === 0 || order.indexOf(pos[i - 1]) <= order.indexOf(p)); });
+  })();
   if (!groupsOk) throw new Error("❌ Le tri MI-D choisi sur une autre équipe n'aurait jamais dû s'appliquer ici (fuite d'information).");
   console.log("✅ Adversaire : colonnes publiques triables, le tri d'une caractéristique d'une autre équipe ne fuite pas.");
 
   // Tri par taille (public).
   [...table.querySelectorAll("th[data-team-sort]")].find(th => th.dataset.teamSort === "height").click();
   table = doc.querySelector("#teamDetailContent table.roster-table");
-  const heightsOk = [...table.querySelectorAll("tbody.eff-group")].every(tb => {
-    const h = [...tb.querySelectorAll("tr.eff-row")].map(tr => parseInt(tr.children[3].textContent, 10));
-    return h.every((v, i) => i === 0 || h[i - 1] >= v);
-  });
+  // Liste unique : le tri s'applique à TOUS les joueurs.
+  const heightsOk = (() => {
+    const h = [...table.querySelectorAll("tr.eff-row")].map(tr => parseInt(tr.children[3].textContent, 10));
+    return h.length >= 12 && h.every((v, i) => i === 0 || h[i - 1] >= v);
+  })();
   if (!heightsOk) throw new Error("❌ Le tri par taille devrait fonctionner dans chaque groupe.");
   console.log("✅ Tri par taille OK sur la vue Général adverse.");
 
