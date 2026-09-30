@@ -42,14 +42,15 @@ function duplicateIds(doc) {
   const called = path => calls.some(c => c.url.includes(path));
 
   // --- 1) Barre latérale.
-  const bottom = [...doc.querySelectorAll(".sidebar-section-bottom .sidebar-link")].map(b => b.dataset.tab || b.id);
-  assert(bottom.indexOf("personnalisation") === bottom.indexOf("guide") + 1 && bottom.indexOf("premium") === bottom.indexOf("personnalisation") + 1,
-    "bouton Personnalisation juste sous Planète Hoop et Guide, avant Premium");
-  doc.querySelector('.tab-btn[data-tab="personnalisation"]').click();
+  // Plus d'onglet dans la barre latérale : petit bouton sur le tableau de
+  // bord, à côté de « Analyse de mon équipe » (2026-09-30).
+  assert(!doc.querySelector('.sidebar [data-tab="personnalisation"]'), "plus d'onglet Personnalisation dans la barre latérale");
+  const persoBtn = doc.querySelector('.hm-head [data-tab="personnalisation"]');
+  assert(persoBtn && persoBtn.previousElementSibling && persoBtn.previousElementSibling.hasAttribute("data-own-analysis"), "bouton Personnalisation à côté de « Analyse de mon équipe »");
+  persoBtn.click();
   await flush(dom);
   const section = doc.getElementById("personnalisationSection");
   assert(!section.classList.contains("hidden"), "le clic affiche la page Personnalisation");
-  assert(doc.querySelector('.tab-btn[data-tab="personnalisation"]').classList.contains("active"), "onglet actif dans la barre latérale");
   assert(section.querySelector("h2.page-title").textContent === "Personnalisation", "titre de page « Personnalisation »");
 
   // --- 2) Cartes.
@@ -135,7 +136,7 @@ function duplicateIds(doc) {
   doc.getElementById("premiumToggleBtn").click();
   await flush(dom);
   assert(win.eval("teamA.isPaying"), "(setup) club Premium");
-  doc.querySelector('.tab-btn[data-tab="personnalisation"]').click();
+  win.eval("TAB_HANDLERS.personnalisation()");
   await flush(dom);
   assert(doc.getElementById("clubLogoFileInput"), "Premium : chargement de logo proposé");
   assert(/Premium/.test(doc.getElementById("persoStatus").textContent) && !doc.querySelector('#persoStatus [data-tab="premium"]'), "Premium : statut affiché, plus de bouton « Passer Premium »");

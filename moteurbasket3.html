@@ -5945,6 +5945,9 @@
      DEV_NOTES.md) -- sans ce correctif le bouton "Donnez vos ordres"
      collerait juste apres le nom du club. */
   .hm-head__analyse-btn{margin-left:auto; display:inline-flex; align-items:center; gap:8px; white-space:nowrap;}
+  .hm-head__perso-btn{display:inline-flex; align-items:center; justify-content:center; padding:0 12px;}
+  .hm-head:has(.hm-head__perso-btn){flex-wrap:nowrap;} .hm-head__club{min-width:0; flex:0 1 auto;}
+  @media(max-width:680px){ .hm-head:has(.hm-head__perso-btn){gap:10px;} }
   @media(max-width:680px){ .hm-head__analyse-btn span{display:none;} .hm-head__analyse-btn{padding:0 12px;} }
   /* =====================================================================
      Onglet Salle — refonte visuelle (retour utilisateur, 2026-09-25 : "aide
@@ -7423,11 +7426,9 @@
            les chiffres de tous les pays, en lecture seule. -->
       <button class="tab-btn sidebar-link" data-tab="planete"><span class="sidebar-label">Planète Hoop</span></button>
       <button class="tab-btn sidebar-link" data-tab="guide"><span class="sidebar-label">Guide</span></button>
-      <!-- Personnalisation (retour utilisateur 2026-09-30 : "ajouter un
-           onglet personnalisation (terrain, nom de la salle, maillot,
-           trigramme)") : tout ce qui était éparpillé entre Paramètres,
-           la fenêtre Identité du club et la page Salle. -->
-      <button class="tab-btn sidebar-link" data-tab="personnalisation"><span class="sidebar-label">Personnalisation</span></button>
+      <!-- Personnalisation : plus d'onglet dans la barre latérale (retour
+           utilisateur 2026-09-30), petit bouton sur le tableau de bord à
+           côté de « Analyse de mon équipe » (voir dashRenderHead). -->
       <button class="tab-btn sidebar-link" data-tab="premium"><span class="sidebar-label">Premium</span></button>
       <!-- Discord de la communauté (retour utilisateur 2026-09-27 : "il
            faudrait ajouter l'onglet Discord") — lien vers l'invitation
@@ -25242,7 +25243,9 @@ document.addEventListener("click", e => {
   showSettingsModal();
 });
 
+let hmActiveTabKey = "";
 function setActiveTab(key) {
+  hmActiveTabKey = key || "";
   if (typeof hmNavSchedule === "function") hmNavSchedule();
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === key));
 }
@@ -40602,6 +40605,7 @@ function dashRenderHeader(data) {
       <div class="hm-head__meta">${dashEsc(club.division)} · Saison ${dashEsc(club.season)} · Semaine ${dashEsc(club.week)}</div>
     </div>
     <button type="button" class="hm-btn hm-btn--ghost hm-head__analyse-btn" data-own-analysis title="Comment vos adversaires vous voient"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>Analyse de mon équipe</span></button>
+    <button type="button" class="hm-btn hm-btn--ghost hm-head__perso-btn" data-tab="personnalisation" title="Personnalisation" aria-label="Personnalisation"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7H16a5 5 0 0 0 5-5C21 6.2 17 3 12 3z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg></button>
   </header>`;
 }
 
@@ -51342,7 +51346,7 @@ const hmNav = { started: false, restoring: false, stack: [], idx: 0 };
 function hmNavCurrent() {
   const page = PAGE_IDS.find(id => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); }) || "";
   const tab = document.querySelector(".tab-btn.active");
-  return { page, tab: tab ? tab.dataset.tab : "" };
+  return { page, tab: tab ? tab.dataset.tab : hmActiveTabKey };
 }
 function hmNavRecord() {
   if (!hmNav.started || hmNav.restoring) return;

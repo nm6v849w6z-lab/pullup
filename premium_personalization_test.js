@@ -75,7 +75,7 @@ console.log("✅ Jeune promu : marqué « formé au club » et numéroté.");
   assert.notStrictEqual(svgA, svgB, "l'apparence choisie change l'avatar");
   console.log("✅ Jeu : numéro et carte Personnalisation sur la fiche, avatar personnalisé.");
   // Parquet : onglet Personnalisation depuis le 2026-09-30 (plus sur la page Salle).
-  win.eval(`teamA.courtStyle = { wood: "erable", paint: "bleu" }; document.querySelector('.tab-btn[data-tab="personnalisation"]').click();`);
+  win.eval(`teamA.courtStyle = { wood: "erable", paint: "bleu" }; TAB_HANDLERS.personnalisation();`);
   await flush(dom);
   const court = doc.querySelector("#persoCourtHolder .sl-court-svg");
   assert(court && /#d9a86b/i.test(court.getAttribute("style")), "aperçu du parquet dans l'onglet Personnalisation");

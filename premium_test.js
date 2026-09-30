@@ -50,8 +50,8 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     const doc = dom.window.document;
     const win = dom.window;
     const bottom = [...doc.querySelectorAll(".sidebar-section-bottom .sidebar-link")].map(b => b.dataset.tab || b.id);
-    // Personnalisation (2026-09-30) s'intercale entre Guide et Premium.
-    check(bottom.indexOf("personnalisation") === bottom.indexOf("guide") + 1 && bottom.indexOf("premium") === bottom.indexOf("personnalisation") + 1, "onglets Personnalisation puis Premium juste sous Guide");
+    // Personnalisation (2026-09-30) : plus dans la barre latérale (bouton du tableau de bord).
+    check(bottom.indexOf("premium") === bottom.indexOf("guide") + 1, "onglet Premium juste sous Guide");
     check(!doc.getElementById("clubTogglePayingBtn") && !/Passer Pro \(test\)|Passer en payant/.test(html.replace(/\/\/.*$/gm, "")), "plus aucun autre bouton pour passer Premium");
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "premium").click();
     check(!doc.getElementById("premiumSection").classList.contains("hidden"), "la page Premium s'affiche");

@@ -73,7 +73,7 @@ assert(!actions.setPlayerLook(team, 0, league, { playerId: cand.id, look: { hair
   const realFetch = win.fetch;
   win.fetch = (input, init) => { calls.push({ url: String(input), body: init && init.body ? String(init.body) : "" }); return realFetch.call(win, input, init); };
 
-  doc.querySelector('.tab-btn[data-tab="personnalisation"]').click();
+  win.eval("TAB_HANDLERS.personnalisation()");
   await flush(dom);
   assert([...doc.querySelectorAll("[data-pz-anchor]")].map(a => a.dataset.pzAnchor).includes("persoSalle"), "sommaire : section Salle");
   const holder = doc.getElementById("persoArenaHolder");
@@ -82,7 +82,7 @@ assert(!actions.setPlayerLook(team, 0, league, { playerId: cand.id, look: { hair
   win.eval("renderPremiumSection()");
   doc.getElementById("premiumToggleBtn").click();
   await flush(dom);
-  doc.querySelector('.tab-btn[data-tab="personnalisation"]').click();
+  win.eval("TAB_HANDLERS.personnalisation()");
   await flush(dom);
   assert(holder.querySelectorAll("[data-arena-facade]").length === Object.keys(Engine.ARENA_FACADES).length && holder.querySelectorAll("[data-arena-roof]").length === Object.keys(Engine.ARENA_ROOFS).length, "Premium : façades et toits proposés");
   assert(doc.getElementById("persoArenaSaveBtn").disabled, "rien à enregistrer au départ");

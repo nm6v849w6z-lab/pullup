@@ -26,7 +26,7 @@ const doc = dom.window.document;
 const win = dom.window;
 
 function clickTab(key) {
-  const btn = [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key);
+  const btn = [...doc.querySelectorAll(".tab-btn, [data-tab]")].find(b => b.dataset.tab === key);
   if (!btn) throw new Error(`❌ Onglet introuvable : ${key}`);
   btn.click();
 }
