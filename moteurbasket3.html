@@ -12373,7 +12373,27 @@ const ArenaGen = (function () {
 
     // ---- décor : arbres, voitures, lampadaires
     const decor = [];
-    for (let gx = -W / 2 - 60; gx <= W / 2 + 60; gx += 7) for (let gy = -D / 2 - 60; gy <= D / 2 + 60; gy += 7) {
+    // Quartier : maisons et petits immeubles de voisinage dans les zones
+    // vides, loin de la salle, des routes et des installations du club.
+    const homes = [];
+    if (DX) {
+      const rh = rng((options.seed ?? 11) * 7 + 3);
+      const walls = ['#c9b79c', '#b8a48a', '#d6cbb8', '#a9967c', '#c4b5a5', '#9fa7ae'], roofs = ['#7a4a3a', '#5b5f66', '#6b4f3f', '#4f5a4a'];
+      for (let gx = -W / 2 - 110; gx <= W / 2 + 110; gx += 13) for (let gy = -D / 2 - 90; gy <= D / 2 + 70; gy += 12) {
+        const x = gx + (rh() - 0.5) * 3, y = gy + (rh() - 0.5) * 3, w = 5 + rh() * 3, d = 4 + rh() * 2.5, h = 2.8 + rh() * (rh() < 0.3 ? 5 : 2);
+        const keep = rh() < 0.42, wall = walls[Math.floor(rh() * walls.length)], roof = roofs[Math.floor(rh() * roofs.length)];
+        if (!keep || !inView(x, y, -12) || !inView(x + w, y + d, -12)) continue;
+        if (x < W / 2 + 36 && x + w > -W / 2 - 8 && y < D / 2 + 20 && y + d > -D / 2 - 8) continue;
+        if (y < roadY[1] + 4 && y + d > roadY[0] - 4) continue;
+        if (x < roadX[1] + 4 && x + w > roadX[0] - 4) continue;
+        if (DX.lots.some((l) => x < l.x1 + 5 && x + w > l.x0 - 5 && y < l.y1 + 5 && y + d > l.y0 - 5)) continue;
+        if (billboard && x < BBX + 6 && x + w > BBX - 4 && y < BBY + 10 && y + d > BBY - 10) continue;
+        homes.push({ x0: x, y0: y, w, d, h, wall, roof });
+        decor.push({ x: x + w / 2, y: y + d / 2, kind: 'home', o: homes[homes.length - 1] });
+      }
+    }
+    const TR = DX ? 120 : 60; // quartier : cadre plus large, arbres jusqu'aux bords
+    for (let gx = -W / 2 - TR; gx <= W / 2 + TR; gx += 7) for (let gy = -D / 2 - TR; gy <= D / 2 + TR; gy += 7) {
       const x = gx + (r() - 0.5) * 4, y = gy + (r() - 0.5) * 4, keep = r() < 0.55, size = 1.5 + r() * 1.1, hue = Math.floor(r() * 3);
       if (!keep || !inView(x, y)) continue;
       if (Math.abs(x) < W / 2 + 5 && Math.abs(y) < D / 2 + 5) continue;
@@ -12384,6 +12404,7 @@ const ArenaGen = (function () {
       if (Math.abs(x) < 5 && y > D / 2) continue;
       if (DX && DX.lots.some((l) => x > l.x0 - 2.5 && x < l.x1 + 2.5 && y > l.y0 - 2.5 && y < l.y1 + 2.5)) continue;
       if (billboard && x > BBX - 3 && x < BBX + 4 && y > BBY - 8 && y < BBY + 8) continue;
+      if (homes.some((hm) => x > hm.x0 - 2 && x < hm.x0 + hm.w + 2 && y > hm.y0 - 2 && y < hm.y0 + hm.d + 2)) continue;
       decor.push({ x, y, kind: 'tree', size, hue });
     }
     const carColors = ['#e8e6e1', '#2c2c30', '#3d5a8a', '#9a2a2a', '#c9c9c9', '#e8e6e1', '#5c6b3a'];
@@ -12410,7 +12431,16 @@ const ArenaGen = (function () {
         (dusk ? `<ellipse cx="${f1(P(x + 2, y, z1)[0])}" cy="${f1(P(x + 2, y, z1)[1])}" rx="${f1(3 * K)}" ry="${f1(6 * K)}" fill="rgba(255,236,170,0.16)"/>` : '');
     };
     if (DX) DX.items.forEach((it) => decor.push({ ...it, kind: 'district' }));
-    const drawDecor = (o) => (o.kind === 'district' ? `<g class="qd-bld" data-district="${o.key}">${o.draw()}</g>` : o.kind === 'billboard' ? drawBillboard(o.x, o.y) : o.kind === 'tree' ? tree(o.x, o.y, o.size, o.hue) : o.kind === 'car' ? car(o.x, o.y, o.color) : lamp(o.x, o.y));
+    const drawHome = (o) => {
+      const { x0, y0, w, d, h, wall, roof } = o;
+      let t = flat(rect(x0 + 0.5, x0 + w + h * 0.7, y0 + 0.3, y0 + d + h * 0.25), 'rgba(0,0,0,0.2)') + box(x0, x0 + w, y0, y0 + d, 0, h, roof, wall, shade(wall, -22), 0.5);
+      for (let z = 0.9; z < h - 0.8; z += 1.9) {
+        for (let xx = x0 + 0.8; xx < x0 + w - 1.2; xx += 1.8) t += poly(faceY(xx, xx + 0.8, y0 + d + 0.02, z, z + 0.8), dusk ? (((xx * 7 + z * 3) | 0) % 3 ? '#ffd98a' : '#3a3f48') : '#a9c4d8', 0.3);
+        for (let yy = y0 + 0.8; yy < y0 + d - 1.2; yy += 1.8) t += poly(faceX(x0 + w + 0.02, yy, yy + 0.8, z, z + 0.8), dusk ? (((yy * 5 + z * 3) | 0) % 3 ? '#f2c877' : '#353a42') : '#93b1c7', 0.3);
+      }
+      return t;
+    };
+    const drawDecor = (o) => (o.kind === 'home' ? drawHome(o.o) : o.kind === 'district' ? `<g class="qd-bld" data-district="${o.key}">${o.draw()}</g>` : o.kind === 'billboard' ? drawBillboard(o.x, o.y) : o.kind === 'tree' ? tree(o.x, o.y, o.size, o.hue) : o.kind === 'car' ? car(o.x, o.y, o.color) : lamp(o.x, o.y));
     decor.sort((a, b) => a.x + a.y - (b.x + b.y));
 
     // ombres portées au sol
