@@ -6266,7 +6266,7 @@
   /* Barre du bas (mobile, voir assets/mobile/mobile.js) : pastille sur
      « Menu » quand un message attend, la Messagerie étant dans le tiroir. */
   #mTabMenu{position:relative;}
-  #mTabMenu.msg-has-unread::after, #mTabMenu.lgc-has-unread::after{content:""; position:absolute; top:6px; left:calc(50% + 8px); width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 0 2px var(--panel);}
+  #mTabMenu.msg-has-unread::after{content:""; position:absolute; top:6px; left:calc(50% + 8px); width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 0 2px var(--panel);}
   @media(max-width:760px){
     .msg-layout{grid-template-columns:1fr; min-height:0;}
     .msg-layout.has-thread .msg-col-list{display:none;}
@@ -6547,7 +6547,7 @@
     <div class="sidebar-section">
       <div class="sidebar-section-label">Compétitions</div>
       <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-label">Calendrier</span></button>
-      <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-label">Ligue</span><span class="sidebar-badge sidebar-badge--alert hidden" id="ligueChatBadge" title="Nouveaux messages dans le chat de la ligue"></span></button>
+      <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-label">Ligue</span></button>
       <button class="tab-btn sidebar-link" data-tab="coupe"><span class="sidebar-label">Coupe</span></button>
       <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-label">Matchs amicaux</span><span class="sidebar-badge hidden" id="amicauxBadge"></span></button>
       <button class="tab-btn sidebar-link" data-tab="lp"><span class="sidebar-label">Ligues privées</span></button>
@@ -25817,6 +25817,7 @@ function showStandings() {
   renderLeagueStatsPanel();
   showPage("standingsSection");
   setActiveTab("ligue");
+  window.__lastLeagueChatCount = lgcRefreshCount();
 }
 
 // ---------------------------------------------------------------------
@@ -25831,15 +25832,16 @@ function showStandings() {
 // fermer, focus rendu au bouton. Pastille rouge de non-lus (messages des
 // autres managers ET messages automatiques plus récents que la dernière
 // ouverture, repère stocké côté serveur : suit le manager d'un appareil à
-// l'autre) sur ce bouton et sur l'entrée « Ligue » du menu. Sondage léger
-// (?summary=1) toutes les 45 s depuis n'importe quelle page, fil complet
-// toutes les 15 s tant que le tiroir est ouvert ; jamais onglet caché.
+// l'autre) sur ce bouton seulement (pas dans le menu). Compteur
+// (?summary=1) relu à l'ouverture de la page Ligue puis toutes les 60 s
+// tant qu'elle est affichée, fil complet toutes les 15 s tant que le
+// tiroir est ouvert ; rien depuis les autres pages, jamais onglet caché.
 // Seul manager de sa ligue : lecture seule avec une note. Pas de liste des
 // managers en tête : le nom de l'auteur figure sur chaque message. Les
 // textes des managers portent data-no-i18n.
 // ---------------------------------------------------------------------
 const LGC_POLL_MS = 15000;
-const LGC_COUNT_POLL_MS = 45000;
+const LGC_COUNT_POLL_MS = 60000;
 const LGC_KIND_LABELS = { result: "Résultat", transfer: "Transfert", standings: "Classement" };
 const lgcUi = { data: null, sig: "", sending: false, error: "", pickFor: null, loading: null, open: false, unread: 0, returnFocus: null, marking: null };
 
@@ -25853,16 +25855,12 @@ function lgcOpenButtonHtml() {
     `<span class="lgc-badge" id="lgcOpenBadge"${n ? "" : " hidden"} aria-label="${n} non lu${n > 1 ? "s" : ""}">${lgcBadgeText(n)}</span></button>`;
 }
 
-// Pastilles : bouton de la page Ligue, entrée « Ligue » du menu, point sur
-// « Menu » (barre du bas, mobile).
+// Pastille du bouton « Chat de la ligue » (page Ligue seulement — retour
+// utilisateur 2026-09-30 : pas de pastille dans le menu).
 function lgcUpdateBadges() {
   const n = lgcUi.unread;
   const b = document.getElementById("lgcOpenBadge");
   if (b) { b.hidden = !n; b.textContent = lgcBadgeText(n); b.setAttribute("aria-label", `${n} non lu${n > 1 ? "s" : ""}`); }
-  const side = document.getElementById("ligueChatBadge");
-  if (side) { side.textContent = lgcBadgeText(n); side.classList.toggle("hidden", !n); }
-  const menuBtn = document.getElementById("mTabMenu");
-  if (menuBtn) menuBtn.classList.toggle("lgc-has-unread", !!n);
 }
 
 function lgcDrawer() {
@@ -26178,22 +26176,28 @@ async function lgcReact(id, emoji) {
     }
   });
   if (!managerToken) return;
-  // Tiroir ouvert : fil complet toutes les 15 s ; sinon, juste le compteur
-  // toutes les 45 s. Jamais quand l'onglet du navigateur est caché.
+  // Tiroir ouvert : fil complet toutes les 15 s ; sinon, page Ligue
+  // affichée : juste le compteur toutes les 60 s (il est aussi relu à chaque
+  // ouverture de la page, voir showStandings). Rien depuis les autres pages
+  // ni quand l'onglet du navigateur est caché.
   let lastCountAt = 0;
   const tick = (force) => {
     if (document.visibilityState === "hidden") return;
     if (lgcUi.open) {
       if (!lgcUi.sending && lgcUi.pickFor == null) lgcRefresh(); // ne pas fermer un menu ouvert sous le doigt
-    } else if (force || Date.now() - lastCountAt >= LGC_COUNT_POLL_MS - 500) {
+    } else if (lgcPageVisible() && (force || Date.now() - lastCountAt >= LGC_COUNT_POLL_MS - 500)) {
       lastCountAt = Date.now();
       window.__lastLeagueChatCount = lgcRefreshCount();
     }
   };
   setInterval(() => tick(false), LGC_POLL_MS);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") tick(true); });
-  tick(true);
 })();
+
+function lgcPageVisible() {
+  const el = document.getElementById("standingsSection");
+  return !!el && !el.classList.contains("hidden");
+}
 
 // ---------------------------------------------------------------------
 // Stats de la ligue + MVP de la dernière journée (retour utilisateur,
