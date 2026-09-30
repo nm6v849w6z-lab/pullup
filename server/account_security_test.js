@@ -5,6 +5,8 @@
 // rendu à l'IA), anti-triche (comptes partageant une IP, transferts
 // suspects entre managers). Voir server/accountRoutes.js, server/mailer.js,
 // Accounts.suspiciousTransfers, League.logHumanTransfer.
+// Inscriptions sur invitation par défaut (voir accountRoutes.js, DEFAULT_INVITE_CODE) : ouvertes ici.
+process.env.BASKET_INVITE_CODE = "off";
 const assert = require("assert");
 const fs = require("fs");
 const os = require("os");

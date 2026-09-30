@@ -813,11 +813,16 @@
   .apercu-row-arrow{color:var(--amber); font-size:20px; text-align:right;}
   .apercu-muted{color:var(--ink-dim);}
   .apercu-accent{color:var(--amber); font-weight:700;}
-  .apercu-foot{display:flex; gap:32px; flex-wrap:wrap; padding:14px 22px 0; font-size:13px; color:var(--ink-dim);}
+  /* Palmarès / Interviews : une ligne chacun, séparées par un trait comme
+     les lignes de .apercu-list (retour utilisateur 2026-09-30 : « ajoute des
+     barres pour séparer »). */
+  .apercu-foot{display:flex; flex-direction:column; padding:4px 22px 0; font-size:13px; color:var(--ink-dim);}
+  .apercu-foot > span{padding:14px 0; border-bottom:1px solid var(--line);}
   .apercu-foot-label{font-weight:800; font-size:12px; letter-spacing:1.2px; text-transform:uppercase; margin-right:8px;}
   @media(max-width:680px){
     .apercu-row{grid-template-columns:1fr 24px; gap:8px 12px; padding:14px 16px;}
     .apercu-row-label{grid-column:1 / -1;}
+    .apercu-foot{padding:4px 16px 0;}
     .team-apercu-jerseys{width:100%; justify-content:center;}
   }
   .team-logo-img{border-radius:50%; object-fit:cover; display:block;}
@@ -29063,8 +29068,10 @@ function renderTeamDetailContent(teamIdx) {
 
   let html = teamDetailSubNavHtml();
   // Messagerie : écrire au manager de ce club (ligue partagée, club humain).
-  if (!foreign && msgUi.available && team.isHuman && teamIdx !== myTeamIndex) {
-    html = `<div class="msg-team-cta"><button type="button" data-msg-open="${teamIdx}">Envoyer un message</button></div>` + html;
+  // Mondiale (2026-09-30) : aussi vers le manager d'un autre championnat.
+  if (msgUi.available && team.isHuman && (foreign || teamIdx !== myTeamIndex)) {
+    const who = foreign ? `${teamDetailForeign.leagueId}:${teamIdx}` : String(teamIdx);
+    html = `<div class="msg-team-cta"><button type="button" data-msg-open="${escapeHtml(who)}">Envoyer un message</button></div>` + html;
   }
   if (teamDetailSubView === "calendrier") {
     // #teamDetailLiveBanner : placeholder vide au rendu synchrone, rempli
@@ -45681,7 +45688,7 @@ const MSG_REPORT_REASONS = [
 const msgUi = {
   available: false,
   summary: null,        // réponse de /api/messages/summary
-  activeWith: null,     // index d'équipe de l'interlocuteur ouvert
+  activeWith: null,     // interlocuteur ouvert : "3" (même championnat) ou "us-1:3" (autre championnat), voir server/messages.js whoOf
   thread: null,         // réponse de /api/messages/thread
   sending: false,
   notice: null,         // { err: bool, text }
@@ -45754,7 +45761,7 @@ function msgUpdateBadge() {
       ? `de <b data-no-i18n>${escapeHtml(senders[0].name)}</b>`
       : `de ${senders.length} managers`;
     const label = unread === 1 ? "1 nouveau message" : `${unread} nouveaux messages`;
-    banner.innerHTML = `<button type="button" class="msg-dash-banner" data-msg-open="${senders.length === 1 ? senders[0].teamIndex : ""}">` +
+    banner.innerHTML = `<button type="button" class="msg-dash-banner" data-msg-open="${senders.length === 1 ? escapeHtml(senders[0].who) : ""}">` +
       `<span>${label} ${who}</span><span class="msg-dash-go">Lire →</span></button>`;
   }
 }
@@ -45795,18 +45802,19 @@ async function msgMarkReadIfNeeded() {
   const theirs = t.messages.filter(m => !m.mine);
   if (!theirs.length) return;
   const lastAt = theirs[theirs.length - 1].at;
-  const conv = msgUi.summary && msgUi.summary.conversations.find(c => c.teamIndex === t.with.teamIndex);
+  const conv = msgUi.summary && msgUi.summary.conversations.find(c => c.who === t.with.who);
   if (lastAt <= msgUi.lastMarkedAt && !(conv && conv.unread)) return;
   msgUi.lastMarkedAt = lastAt;
   try {
-    const data = await msgApi("POST", "/api/messages/read", { with: t.with.teamIndex, upTo: t.messages[t.messages.length - 1].at });
+    const data = await msgApi("POST", "/api/messages/read", { with: t.with.who, upTo: t.messages[t.messages.length - 1].at });
     msgUi.summary = data;
     msgUpdateBadge();
     renderMsgList();
   } catch (e) { /* réessayé au prochain rafraîchissement */ }
 }
 
-function msgOpenConversation(teamIdx) {
+function msgOpenConversation(who) {
+  const teamIdx = String(who);
   msgUi.activeWith = teamIdx;
   msgUi.thread = null;
   msgUi.notice = null;
@@ -45821,7 +45829,7 @@ function msgOpenConversation(teamIdx) {
 function goToMessages(teamIdx) {
   showPage("messagesSection");
   setActiveTab("messages");
-  if (Number.isInteger(teamIdx)) return msgOpenConversation(teamIdx);
+  if (teamIdx != null && teamIdx !== "") return msgOpenConversation(teamIdx);
   renderMessagesSection();
   return msgRefreshSummary();
 }
@@ -45858,8 +45866,8 @@ function renderMsgList() {
   list.innerHTML = s.conversations.map(c => {
     const unread = c.unread > 0 && !c.blocked;
 
-    return `<li><button type="button" class="msg-conv${msgUi.activeWith === c.teamIndex ? " on" : ""}${unread ? " unread" : ""}" data-msg-conv="${c.teamIndex}">` +
-      `<span class="msg-conv-top"><span class="msg-conv-name" data-no-i18n>${escapeHtml(c.name)}</span>` +
+    return `<li><button type="button" class="msg-conv${msgUi.activeWith === c.who ? " on" : ""}${unread ? " unread" : ""}" data-msg-conv="${escapeHtml(c.who)}">` +
+      `<span class="msg-conv-top"><span class="msg-conv-name" data-no-i18n>${c.leagueId ? nationFlagHtml(String(c.leagueId).slice(0, 2)) + " " : ""}${escapeHtml(c.name)}</span>` +
       (unread ? `<span class="sidebar-badge">${c.unread}</span>` : "") +
       `<span class="msg-conv-time">${escapeHtml(msgFormatTime(c.lastMessage.at))}</span></span>` +
       (c.blocked
@@ -45901,9 +45909,10 @@ function renderMsgThread(opts) {
     return;
   }
   const t = msgUi.thread;
-  const conv = msgUi.summary && msgUi.summary.conversations.find(c => c.teamIndex === msgUi.activeWith);
-  const manager = msgUi.summary && msgUi.summary.managers.find(m => m.teamIndex === msgUi.activeWith);
-  const name = t ? t.with.name : (conv || manager || { name: (league && league.teams[msgUi.activeWith] || {}).name || "" }).name;
+  const conv = msgUi.summary && msgUi.summary.conversations.find(c => c.who === msgUi.activeWith);
+  const manager = msgUi.summary && msgUi.summary.managers.find(m => m.who === msgUi.activeWith);
+  const localIdx = /^\d+$/.test(msgUi.activeWith) ? Number(msgUi.activeWith) : null;
+  const name = t ? t.with.name : (conv || manager || { name: (localIdx != null && league && league.teams[localIdx] || {}).name || "" }).name;
   const blocked = t ? t.with.blocked : false;
 
   // Le fil est reconstruit à chaque rafraîchissement, mais la zone de
@@ -45925,7 +45934,7 @@ function renderMsgThread(opts) {
   }
   document.getElementById("msgThreadHead").innerHTML =
     `<button type="button" class="msg-back" data-msg-back>←</button>` +
-    `<button type="button" class="msg-thread-name" data-msg-team="${msgUi.activeWith}" title="Voir la fiche du club" data-no-i18n>${escapeHtml(name)}</button>` +
+    `<button type="button" class="msg-thread-name" data-msg-team="${escapeHtml(msgUi.activeWith)}" title="Voir la fiche du club" data-no-i18n>${escapeHtml(name)}</button>` +
     `<span class="msg-head-actions">` +
       (msgUi.confirmBlock
         ? `<button type="button" class="msg-small-btn danger" data-msg-block="1">Confirmer le blocage</button><button type="button" class="msg-small-btn" data-msg-block-cancel>Annuler</button>`
@@ -46005,7 +46014,7 @@ async function msgSetBlocked(blocked) {
   const who = msgUi.activeWith;
   msgUi.confirmBlock = false;
   try {
-    msgUi.thread = await msgApi("POST", "/api/messages/block", { teamIndex: who, blocked });
+    msgUi.thread = await msgApi("POST", "/api/messages/block", { who, blocked });
     msgUi.notice = { err: false, text: blocked ? "Manager bloqué." : "Manager débloqué." };
   } catch (e) {
     msgUi.notice = { err: true, text: e.message };
@@ -46020,7 +46029,7 @@ async function msgSendReport() {
   const reason = (document.getElementById("msgReportReason") || {}).value || "autre";
   const comment = (document.getElementById("msgReportComment") || {}).value || "";
   try {
-    const r = await msgApi("POST", "/api/messages/report", { with: t.with.teamIndex, messageId: msgUi.reportFor, reason, comment });
+    const r = await msgApi("POST", "/api/messages/report", { with: t.with.who, messageId: msgUi.reportFor, reason, comment });
     msgUi.notice = { err: false, text: r.alreadyReported ? "Vous avez déjà signalé ce message." : "Merci, le signalement a été transmis à l'organisation. Vous pouvez aussi bloquer ce manager." };
     msgUi.reportFor = null;
   } catch (e) {
@@ -46034,14 +46043,18 @@ async function msgSendReport() {
     const open = e.target.closest("[data-msg-open]");
     if (open) {
       const v = open.dataset.msgOpen;
-      window.__lastMsgNav = goToMessages(v === "" ? null : Number(v));
+      window.__lastMsgNav = goToMessages(v === "" ? null : v);
       return;
     }
     const conv = e.target.closest("[data-msg-conv]");
-    if (conv) { window.__lastMsgNav = msgOpenConversation(Number(conv.dataset.msgConv)); return; }
+    if (conv) { window.__lastMsgNav = msgOpenConversation(conv.dataset.msgConv); return; }
     if (e.target.closest("[data-msg-back]")) { msgUi.activeWith = null; msgUi.thread = null; renderMessagesSection(); return; }
     const team = e.target.closest("[data-msg-team]");
-    if (team) { showTeamDetail(Number(team.dataset.msgTeam)); return; }
+    if (team) {
+      const m = /^(.+):(\d+)$/.exec(team.dataset.msgTeam || "");
+      if (m) showForeignTeamDetail(m[1], Number(m[2])); else showTeamDetail(Number(team.dataset.msgTeam));
+      return;
+    }
     const block = e.target.closest("[data-msg-block]");
     if (block) {
       const v = block.dataset.msgBlock;

@@ -7,6 +7,13 @@
 //     (jeton X-TipIn-Token) — jamais en solo (aucun autre manager) ;
 //   - PAS de chat de ligue (Discord s'en charge) ;
 //   - PAS de notifications du jeu ici (elles restent sur le tableau de bord).
+//   - MONDIALE (retour utilisateur 2026-09-30 : « la messagerie doit être
+//     mondiale, je dois toujours pouvoir envoyer un message en allant sur le
+//     profil d'une équipe ») : un correspondant d'un autre championnat est
+//     désigné par « idChampionnat:index » (ex. "us-1:3") au lieu d'un simple
+//     index ; l'annuaire `contacts` (empreinte → championnat, index, nom),
+//     tenu à jour par chaque manager à chacun de ses appels, permet de
+//     lister ces conversations sans recharger les autres championnats.
 //
 // Stockage SÉPARÉ de la ligue (fichier `messages.json` à côté de
 // multi-league.json, ou clé Redis `pullup:messages` quand Upstash est
@@ -52,13 +59,14 @@ function conversationKey(a, b) {
 }
 
 function emptyData() {
-  return { version: MESSAGES_VERSION, conversations: {}, blocks: {}, reports: [], nextId: 1 };
+  return { version: MESSAGES_VERSION, conversations: {}, blocks: {}, reports: [], contacts: {}, nextId: 1 };
 }
 
 function normalizeData(data) {
   if (!data || data.version !== MESSAGES_VERSION || typeof data.conversations !== "object") return emptyData();
   data.blocks = data.blocks && typeof data.blocks === "object" ? data.blocks : {};
   data.reports = Array.isArray(data.reports) ? data.reports : [];
+  data.contacts = data.contacts && typeof data.contacts === "object" ? data.contacts : {};
   data.nextId = Number.isInteger(data.nextId) && data.nextId > 0 ? data.nextId : 1;
   return data;
 }
@@ -186,11 +194,41 @@ function otherOf(conv, me) {
 // Vues (lecture seule) — tout ce qui part vers le navigateur passe par
 // ici : index d'équipe et nom de club, jamais d'empreinte ni de jeton.
 // ---------------------------------------------------------------------
+// Désignation d'un correspondant côté navigateur : "3" (même championnat)
+// ou "us-1:3" (autre championnat).
+function whoOf(ownLeagueId, leagueId, idx) {
+  return !leagueId || leagueId === ownLeagueId ? String(idx) : `${leagueId}:${idx}`;
+}
+function parseWho(raw) {
+  if (typeof raw === "number") return Number.isInteger(raw) ? { leagueId: null, idx: raw } : null;
+  const str = String(raw == null ? "" : raw).trim();
+  if (/^\d+$/.test(str)) return { leagueId: null, idx: Number(str) };
+  const m = /^([A-Za-z0-9._-]{1,40}):(\d+)$/.exec(str);
+  return m ? { leagueId: m[1], idx: Number(m[2]) } : null;
+}
+// Annuaire mondial : la fiche la plus récente pour ce championnat/index
+// (un club repris par un autre manager : le nouveau s'inscrit à son 1er
+// appel, avec un horodatage plus récent).
+function contactFor(data, leagueId, idx) {
+  let best = null;
+  Object.entries(data.contacts).forEach(([key, c]) => {
+    if (c && c.leagueId === leagueId && c.idx === idx && (!best || (c.at || 0) > (best.c.at || 0))) best = { key, c };
+  });
+  return best;
+}
+function registerContact(data, key, leagueId, idx, name, now) {
+  if (!key || !leagueId) return false;
+  const cur = data.contacts[key];
+  if (cur && cur.leagueId === leagueId && cur.idx === idx && cur.name === name && now - (cur.at || 0) < 6 * 3600 * 1000) return false;
+  data.contacts[key] = { leagueId, idx, name, at: now };
+  return true;
+}
+
 function managerList(league, me, data) {
   const out = [];
   directory(league).forEach(({ teamIndex, team }, key) => {
     if (key === me) return;
-    out.push({ teamIndex, name: team.name, blocked: isBlocked(data, me, key) });
+    out.push({ teamIndex, who: String(teamIndex), name: team.name, blocked: isBlocked(data, me, key) });
   });
   return out.sort((a, b) => a.name.localeCompare(b.name, "fr"));
 }
@@ -200,12 +238,19 @@ function conversationsView(league, me, data) {
   const list = [];
   Object.values(data.conversations).forEach(conv => {
     if (!conv.participants.includes(me) || !conv.messages.length) return;
-    const other = dir.get(otherOf(conv, me));
-    if (!other) return; // ce club n'est plus tenu par un manager de la ligue
+    const otherKey = otherOf(conv, me);
+    const local = dir.get(otherKey);
+    // Autre championnat : annuaire mondial (jamais un club de SON
+    // championnat qui n'y est plus tenu par ce manager).
+    const contact = local ? null : data.contacts[otherKey];
+    const foreign = contact && contact.leagueId && contact.leagueId !== league.leagueId ? contact : null;
+    if (!local && !foreign) return; // ce club n'est plus tenu par ce manager
     const last = conv.messages[conv.messages.length - 1];
     list.push({
-      teamIndex: other.teamIndex,
-      name: other.team.name,
+      teamIndex: local ? local.teamIndex : null,
+      who: local ? String(local.teamIndex) : whoOf(league.leagueId, foreign.leagueId, foreign.idx),
+      leagueId: local ? null : foreign.leagueId,
+      name: local ? local.team.name : foreign.name,
       lastMessage: { text: last.text.slice(0, 140), at: last.at, mine: last.from === me },
       unread: unreadIn(conv, me),
       blocked: isBlocked(data, me, otherOf(conv, me)),
@@ -225,12 +270,12 @@ function summaryView(league, me, data) {
   };
 }
 
-function threadView(league, me, otherKey, otherIndex, data) {
+function threadView(league, me, other, data) {
+  const otherKey = other.key;
   const conv = data.conversations[conversationKey(me, otherKey)];
-  const team = league.teams[otherIndex];
   return {
     ok: true,
-    with: { teamIndex: otherIndex, name: team.name, blocked: isBlocked(data, me, otherKey) },
+    with: { teamIndex: other.teamIndex, who: other.who, leagueId: other.leagueId || null, name: other.name, blocked: isBlocked(data, me, otherKey) },
     messages: conv ? conv.messages.map(m => ({ id: m.id, mine: m.from === me, text: m.text, at: m.at })) : [],
     // Dernier message de MOI que l'autre a déjà lu (accusé de lecture discret).
     readByOtherUntil: conv && conv.lastReadAt ? conv.lastReadAt[otherKey] || 0 : 0,
@@ -242,36 +287,71 @@ function threadView(league, me, otherKey, otherIndex, data) {
 // (league + teamIndex du manager authentifié) et renvoie
 // { status, body } — index.js se contente d'envoyer la réponse.
 // ---------------------------------------------------------------------
-function resolveOther(league, me, rawIndex) {
-  const idx = Number(rawIndex);
-  if (!Number.isInteger(idx)) return { error: "Destinataire manquant." };
-  const key = keyForTeamIndex(league, idx);
+// `verify` : recharge le championnat de l'autre club (envoi d'un message),
+// sinon l'annuaire mondial suffit (lecture, accusés de lecture, blocage) —
+// et sert de repli s'il ne connaît pas encore ce manager.
+async function resolveOther(league, me, raw, data, loadLeague, verify) {
+  const who = parseWho(raw);
+  if (!who) return { error: "Destinataire manquant." };
+  const own = league.leagueId || null;
+  if (!who.leagueId || who.leagueId === own) {
+    const key = keyForTeamIndex(league, who.idx);
+    if (!key) return { error: "Ce club n'est pas dirigé par un manager." };
+    if (key === me) return { error: "Vous ne pouvez pas vous écrire à vous-même." };
+    return { idx: who.idx, teamIndex: who.idx, key, name: league.teams[who.idx].name, who: String(who.idx), leagueId: null };
+  }
+  const base = { idx: who.idx, teamIndex: null, who: whoOf(own, who.leagueId, who.idx), leagueId: who.leagueId };
+  const known = contactFor(data, who.leagueId, who.idx);
+  if (known && !verify) return known.key === me ? { error: "Vous ne pouvez pas vous écrire à vous-même." } : { ...base, key: known.key, name: known.c.name };
+  const lg = loadLeague ? await loadLeague(who.leagueId) : null;
+  if (!lg) return { error: "Championnat introuvable." };
+  const key = keyForTeamIndex(lg, who.idx);
   if (!key) return { error: "Ce club n'est pas dirigé par un manager." };
   if (key === me) return { error: "Vous ne pouvez pas vous écrire à vous-même." };
-  return { idx, key };
+  return { ...base, key, name: lg.teams[who.idx].name, register: true };
 }
 
-function createService(filePath) {
+function createService(filePath, opts = {}) {
+  const loadLeague = typeof opts.loadLeague === "function" ? opts.loadLeague : null;
+  // Inscrit le manager (et un correspondant d'ailleurs tout juste vérifié)
+  // dans l'annuaire mondial ; écrit seulement si quelque chose a changé.
+  function remember(data, league, teamIndex, me, other) {
+    const now = Date.now();
+    let changed = registerContact(data, me, league.leagueId, teamIndex, league.teams[teamIndex] && league.teams[teamIndex].name, now);
+    if (other && other.register) changed = registerContact(data, other.key, other.leagueId, other.idx, other.name, now) || changed;
+    return changed;
+  }
+  // Renvoie les données à jour (une seule lecture si rien n'a changé).
+  async function rememberSoon(league, teamIndex, me, other, peek) {
+    const data = peek || await loadData(filePath);
+    if (!remember(data, league, teamIndex, me, other)) return data;
+    return withLock(async () => {
+      const fresh = await loadData(filePath);
+      if (remember(fresh, league, teamIndex, me, other)) await saveData(filePath, fresh);
+      return fresh;
+    });
+  }
   return {
     filePath,
 
     async summary(league, teamIndex) {
       const me = keyForTeamIndex(league, teamIndex);
-      const data = await loadData(filePath);
+      const data = await rememberSoon(league, teamIndex, me, null);
       return { status: 200, body: summaryView(league, me, data) };
     },
 
     async thread(league, teamIndex, withIndex) {
       const me = keyForTeamIndex(league, teamIndex);
-      const other = resolveOther(league, me, withIndex);
+      const peek = await loadData(filePath);
+      const other = await resolveOther(league, me, withIndex, peek, loadLeague, false);
       if (other.error) return { status: 400, body: { ok: false, error: other.error } };
-      const data = await loadData(filePath);
-      return { status: 200, body: threadView(league, me, other.key, other.idx, data) };
+      const data = await rememberSoon(league, teamIndex, me, other, peek);
+      return { status: 200, body: threadView(league, me, other, data) };
     },
 
     async markRead(league, teamIndex, body) {
       const me = keyForTeamIndex(league, teamIndex);
-      const other = resolveOther(league, me, body && body.with);
+      const other = await resolveOther(league, me, body && body.with, await loadData(filePath), loadLeague, false);
       if (other.error) return { status: 400, body: { ok: false, error: other.error } };
       return withLock(async () => {
         const data = await loadData(filePath);
@@ -293,7 +373,7 @@ function createService(filePath) {
 
     async send(league, teamIndex, body, now) {
       const me = keyForTeamIndex(league, teamIndex);
-      const other = resolveOther(league, me, body && body.to);
+      const other = await resolveOther(league, me, body && body.to, await loadData(filePath), loadLeague, true);
       if (other.error) return { status: 400, body: { ok: false, error: other.error } };
       const text = cleanText(body && body.text);
       if (!text) return { status: 400, body: { ok: false, error: "Message vide." } };
@@ -315,14 +395,15 @@ function createService(filePath) {
         // Écrire vaut lecture de la conversation pour l'expéditeur.
         conv.lastReadAt = conv.lastReadAt || {};
         conv.lastReadAt[me] = msg.at;
+        remember(data, league, teamIndex, me, other);
         await saveData(filePath, data);
-        return { status: 200, body: threadView(league, me, other.key, other.idx, data) };
+        return { status: 200, body: threadView(league, me, other, data) };
       });
     },
 
     async setBlocked(league, teamIndex, body) {
       const me = keyForTeamIndex(league, teamIndex);
-      const other = resolveOther(league, me, body && body.teamIndex);
+      const other = await resolveOther(league, me, body && (body.who != null ? body.who : body.teamIndex), await loadData(filePath), loadLeague, false);
       if (other.error) return { status: 400, body: { ok: false, error: other.error } };
       const blocked = !!(body && body.blocked);
       return withLock(async () => {
@@ -331,13 +412,13 @@ function createService(filePath) {
         if (blocked) list.add(other.key); else list.delete(other.key);
         if (list.size) data.blocks[me] = [...list]; else delete data.blocks[me];
         await saveData(filePath, data);
-        return { status: 200, body: threadView(league, me, other.key, other.idx, data) };
+        return { status: 200, body: threadView(league, me, other, data) };
       });
     },
 
     async report(league, teamIndex, body, now) {
       const me = keyForTeamIndex(league, teamIndex);
-      const other = resolveOther(league, me, body && body.with);
+      const other = await resolveOther(league, me, body && body.with, await loadData(filePath), loadLeague, false);
       if (other.error) return { status: 400, body: { ok: false, error: other.error } };
       const reason = REPORT_REASONS.includes(body && body.reason) ? body.reason : "autre";
       const comment = cleanText(body && body.comment).slice(0, 500);
@@ -353,11 +434,11 @@ function createService(filePath) {
         data.reports.push({
           id: data.nextId++, at: now, reason, comment, status: "open",
           reporter: me, reporterTeam: league.teams[teamIndex].name,
-          reported: other.key, reportedTeam: league.teams[other.idx].name,
+          reported: other.key, reportedTeam: other.name,
           messageId: msg.id, messageText: msg.text, messageAt: msg.at,
           // Contexte pour la modération : les derniers échanges avant le message.
           context: conv.messages.filter(m => m.at <= msg.at).slice(-10).map(m => ({
-            from: m.from === me ? league.teams[teamIndex].name : league.teams[other.idx].name, text: m.text, at: m.at,
+            from: m.from === me ? league.teams[teamIndex].name : other.name, text: m.text, at: m.at,
           })),
         });
         if (data.reports.length > MAX_REPORTS_KEPT) data.reports.splice(0, data.reports.length - MAX_REPORTS_KEPT);

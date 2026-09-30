@@ -98,6 +98,39 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   await wait(() => doc.querySelector("#topbarWorldResults [data-world-league]"), "championnats dans la recherche");
   ok("barre de recherche du haut : clubs et championnats du monde, un clic sur un club ouvre sa fiche équipe");
 
+  // 5) Messagerie mondiale : écrire au manager d'un club américain depuis sa
+  // fiche équipe, il voit la conversation (nom du club français) et répond.
+  {
+    const usLg = await World.loadLeague(world, "us-1", multiSavePath);
+    const usIdx = 2;
+    usLg.teams[usIdx].isHuman = true;
+    usLg.teams[usIdx].managerLinkToken = "tok-us-manager-test";
+    await store.saveMultiLeague(usLg, multiSavePath);
+    const usName = usLg.teams[usIdx].name;
+    const api = async (method, url, body, tok) => {
+      const r = await fetch(new URL(url, baseUrl), { method, headers: { "Content-Type": "application/json", "X-TipIn-Token": tok }, body: body ? JSON.stringify(body) : undefined });
+      return r.json();
+    };
+    const ok1 = await win.eval(`showForeignTeamDetail("us-1", ${usIdx})`);
+    if (!ok1) fail("fiche du club américain (messagerie).");
+    const cta = doc.querySelector('#teamDetailContent [data-msg-open]');
+    if (!cta || cta.dataset.msgOpen !== `us-1:${usIdx}`) fail(`bouton « Envoyer un message » vers un autre championnat absent (${cta && cta.dataset.msgOpen}).`);
+    cta.click();
+    await win.eval("window.__lastMsgNav");
+    doc.getElementById("msgInput").value = "Salut depuis la France !";
+    await win.eval("msgSend()");
+    if (!/Salut depuis la France/.test(doc.getElementById("msgThreadCol").textContent)) fail("message envoyé absent du fil.");
+    const usSum = await api("GET", "/api/messages/summary", null, "tok-us-manager-test");
+    const conv = usSum.conversations && usSum.conversations[0];
+    if (!conv || conv.name !== "Lyon Planète" || conv.unread !== 1 || !/^fr-1:\d+$/.test(conv.who)) fail(`côté américain : ${JSON.stringify(usSum).slice(0, 300)}`);
+    const reply = await api("POST", "/api/messages/send", { to: conv.who, text: "Hello from the US!" }, "tok-us-manager-test");
+    if (!reply.ok) fail(`réponse refusée : ${JSON.stringify(reply)}`);
+    const frSum = await api("GET", "/api/messages/summary", null, token);
+    const back = frSum.conversations.find(c => c.who === `us-1:${usIdx}`);
+    if (!back || back.name !== usName || back.unread !== 1 || back.leagueId !== "us-1") fail(`côté français : ${JSON.stringify(frSum).slice(0, 300)}`);
+    ok(`messagerie mondiale : Lyon Planète écrit à ${usName} (autre championnat) depuis sa fiche, réponse reçue`);
+  }
+
   dom.window.close();
   server.close();
   console.log("\n🏁 planete_hoop_test.js : tout est vert");

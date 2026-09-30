@@ -1111,7 +1111,17 @@ async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSav
 // disque/de la vraie horloge (voir server/index_test.js).
 function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, multiSavePath = store.defaultMultiLeaguePath(), accountsPath = store.defaultAccountsPath()) {
   // Messagerie : stockée à côté de la ligue partagée (voir server/messages.js).
-  const messages = Messages.createService(Messages.messagesPathFor(multiSavePath));
+  // Messagerie mondiale : championnat d'un correspondant d'ailleurs, lu à la
+  // demande (voir server/messages.js, resolveOther).
+  const messages = Messages.createService(Messages.messagesPathFor(multiSavePath), {
+    loadLeague: async (id) => {
+      const world = await World.loadWorld(multiSavePath, Date.now());
+      if (!world || !world.leagues.some(e => e.id === id)) return null;
+      const lg = await World.loadLeague(world, id, multiSavePath);
+      if (lg && !lg.leagueId) lg.leagueId = id;
+      return lg;
+    },
+  });
   const handleAccountRoutes = AccountRoutes.createAccountRouter({
     sendJson, readJsonBody, getManagerToken, originFor, isAdminAuthorized, multiSavePath, accountsPath,
   });
@@ -1859,6 +1869,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       if (route.pathname.startsWith("/api/messages/")) {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        if (ctx.leagueId && !ctx.league.leagueId) ctx.league.leagueId = ctx.leagueId;
         let out = null;
         try {
           if (req.method === "GET" && route.pathname === "/api/messages/summary") {
