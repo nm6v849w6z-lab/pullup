@@ -11838,6 +11838,11 @@ function playerAvatarSvg(player, team) {
 /** [couleur principale, couleur de lisere] reelles de l'equipe pour l'avatar (voir JERSEY_COLORS/team.jerseyColor/team.awayJerseyColor). */
 function teamAvatarColors(team) {
   if (!team) return ['#3a3a40', '#55555c'];
+  // Maillot à motif (Premium) : ses deux couleurs, comme le maillot floqué
+  // affiché à côté (retour utilisateur 2026-09-30 : avatar rouge à côté d'un
+  // maillot jaune et noir). Voir jerseySvgHtml (`usesTwoTone`).
+  const twoTone = effectiveJerseyTwoTone(team);
+  if (effectiveJerseyPattern(team) !== JERSEY_PATTERNS[0] && Array.isArray(twoTone) && twoTone.length === 2) return [twoTone[0], twoTone[1]];
   return [JERSEY_COLORS[team.jerseyColor] || '#3a3a40', JERSEY_COLORS[team.awayJerseyColor] || '#55555c'];
 }
 
