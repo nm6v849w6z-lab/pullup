@@ -120,6 +120,39 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (cond())
   assert.ok((cupChampLg.teams[ww.cups.fr.champion.idx].trophies || []).some(tr => tr.type === "national-cup"), "trophée de Coupe nationale");
   ok(`fin : ${winRef.name} remporte la Supercoupe (trophée${winner.isHuman ? `, prime de ${NC.SUPERCUP_WIN_BONUS} €` : ""}), palmarès du pays mis à jour ; trophée du vainqueur de la Coupe nationale`);
 
+  // 4bis) Stats des joueurs (2026-09-30) : journal de matchs (tour
+  // SUPERCUP_ROUND, comme la Coupe) des deux côtés, feuille de match.
+  {
+    const lgA = await World.loadLeague(ww, done.away.leagueId, multiSavePath);
+    const sides = [[lgHome.teams[done.home.idx], "home"], [lgA.teams[done.away.idx], "away"]];
+    sides.forEach(([t, side]) => {
+      const entries = t.players.flatMap(p => (p.matchLog || []).filter(m => m.competition === "cup" && m.round === NC.SUPERCUP_ROUND));
+      assert.ok(entries.length >= 5, `${side} : ${entries.length} lignes de stats de Supercoupe`);
+    });
+    const pts = t => t.players.reduce((s, p) => s + (p.matchLog || []).filter(m => m.competition === "cup" && m.round === NC.SUPERCUP_ROUND).reduce((a, m) => a + (m.pts || 0), 0), 0);
+    assert.strictEqual(pts(lgHome.teams[done.home.idx]), done.result.scoreHome, "points des joueurs = score (hors handicap)");
+    assert.ok(done.statsRecorded, "stats enregistrées une seule fois");
+    // Navigateur : feuille de match depuis la carte Supercoupe (page Coupe).
+    dom = await openGame(html, `${baseUrl}?m=${token}`, w2 => patchDateNow(w2, () => clock.now));
+    win = dom.window; doc = win.document;
+    if (win.eval("currentVisiblePageId()") === "catchupSection") doc.getElementById("catchupContinueBtn").click();
+    win.eval("TAB_HANDLERS.coupe()");
+    const scoreBtn = doc.querySelector(`#coupeContent .scup-card [data-boxscore-round="${NC.SUPERCUP_ROUND}"]`);
+    assert.ok(scoreBtn, "score de la Supercoupe cliquable (feuille de match)");
+    scoreBtn.click();
+    const ov = doc.getElementById("matchBoxscoreOverlay");
+    assert.ok(ov && /Supercoupe/.test(ov.textContent) && ov.textContent.includes(sc.home.name), "feuille de match de la Supercoupe");
+    win.eval("closeMatchBoxscore()");
+    win.eval("TAB_HANDLERS.calendrier()");
+    assert.ok(doc.querySelector(`#calendrierContent [data-boxscore-round="${NC.SUPERCUP_ROUND}"]`), "calendrier : score de la Supercoupe cliquable");
+    // Fiche d'un joueur : la Supercoupe dans ses derniers matchs.
+    const star = lgHome.teams[done.home.idx].players.find(p => (p.matchLog || []).some(m => m.round === NC.SUPERCUP_ROUND));
+    win.eval(`showPlayerDetail(${done.home.idx}, ${star.id})`);
+    assert.ok(/Supercoupe/.test(doc.getElementById("playerDetailContent").textContent), "fiche joueur : ligne Supercoupe");
+    dom.window.close();
+    ok("Supercoupe : stats des joueurs dans leur journal de matchs (tour Supercoupe, comme la Coupe), feuille de match depuis la page Coupe et le calendrier, ligne sur la fiche joueur");
+  }
+
   // 5) Reprise le lundi : saison 2, la Supercoupe reste au palmarès.
   const evs = await World.catchUpWorld(multiSavePath, restart + 60 * 1000);
   assert.ok(evs.some(e => e.type === "country-new-season" && e.seasonNumber === 2));

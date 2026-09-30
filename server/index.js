@@ -1687,8 +1687,24 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // Adversaires (et clubs invités) : rien de ce que le jeu ne montre
         // jamais pour un autre club (potentiel, motivation, académie…), voir
         // server/publicPlayers.js.
-        PublicPlayers.sanitizeOwnLeagueForViewer(payload.league, ctx.teamIndex);
-        (payload.league.guestTeams || []).forEach(g => PublicPlayers.sanitizeOwnLeagueForViewer({ teams: [g], transferListings: payload.league.transferListings }, -1));
+        // Caractéristiques des adversaires : seulement celles révélées par
+        // le scouting (joueurs sur le marché : toutes) ; niveau de chaque club
+        // et estimations de vente calculés ici. Voir server/publicPlayers.js.
+        {
+          const levels = {};
+          ctx.league.teams.forEach((t, i) => { levels[i] = PublicPlayers.teamPublicLevel(t); });
+          (payload.league.guestTeams || []).forEach(g => {
+            if (!g || !g.team) return;
+            try { levels[g.localIdx] = PublicPlayers.teamPublicLevel(Engine.teamFromSave(g.team)); } catch (e) { /* invité illisible : pas de niveau */ }
+          });
+          const me = ctx.league.teams[ctx.teamIndex];
+          const valuations = {};
+          if (me) me.players.forEach(p => { valuations[p.id] = PublicPlayers.comparableSalesValuation(ctx.league, p, now); });
+          payload.league.saleValuations = valuations;
+          PublicPlayers.sanitizeOwnLeagueForViewer(payload.league, ctx.teamIndex, {
+            scouted: (me && me.scoutedAttrs) || {}, levels, attrKeys: Engine.ATTRS,
+          });
+        }
         // Zones du classement réellement en jeu (montée / barrage / descentes),
         // voir World.divisionMovesFor. Absent = aucune division autour.
         if (ctx.world) payload.league.divisionMoves = World.divisionMovesFor(ctx.world, ctx.leagueId);

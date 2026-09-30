@@ -18582,6 +18582,18 @@ class League {
   // 9e et le 10e).
   relegatedTeamIndexes() {
     const table = this.standings();
+    // Championnats par pays (server/world.js:divisionMovesFor, 2026-09-30) :
+    // autant de descentes que de championnats ouverts juste en dessous
+    // (10e, puis 9e, puis perdant du barrage) — aucune s'il n'y en a pas.
+    const dm = this.divisionMoves;
+    if (dm && typeof dm === "object") {
+      const n = Math.max(0, Math.min(3, Number(dm.relegations) || 0));
+      const out = [];
+      if (n >= 1 && table[table.length - 1]) out.push(table[table.length - 1].idx);
+      if (n >= 2 && table[table.length - 2]) out.push(table[table.length - 2].idx);
+      if (n >= 3 && this.relegationBarrage && this.relegationBarrage.loser != null) out.push(this.relegationBarrage.loser);
+      return out;
+    }
     const auto = [table[8].idx, table[9].idx]; // 9e, 10e (0-indexé : rangs 8,9)
     return this.relegationBarrage && this.relegationBarrage.loser != null ? [...auto, this.relegationBarrage.loser] : auto;
   }
@@ -18602,7 +18614,8 @@ class League {
     const fromLevel = this.divisionLevel || MAX_DIVISION_LEVEL;
     const champion = this.playoffs ? this.playoffs.champion : null;
     let outcome = "stay", toLevel = fromLevel;
-    if (champion === teamIdx && fromLevel > 1) {
+    const canPromote = this.divisionMoves && typeof this.divisionMoves === "object" ? !!this.divisionMoves.promotes : fromLevel > 1;
+    if (champion === teamIdx && fromLevel > 1 && canPromote) {
       outcome = "promoted";
       toLevel = fromLevel - 1;
     } else if (this.relegatedTeamIndexes().includes(teamIdx) && fromLevel < MAX_DIVISION_LEVEL) {
@@ -21063,14 +21076,19 @@ function playerFromSave(pdata) {
   // caractéristiques non envoyées (`attrsHidden`). Valeurs neutres ici pour
   // que rien ne casse (jamais NaN), mais aucune note n'en est jamais tirée
   // (computePlayerVisibility : tout reste verrouillé).
+  // Adversaire (server/publicPlayers.js, 2026-09-30) : seules les
+  // caractéristiques révélées par le scouting arrivent (`attrsHidden`) ;
+  // les autres prennent une valeur neutre, jamais affichée ni utilisée pour
+  // une note (computePlayerVisibility : seules les clés reçues sont visibles).
   const hidden = !!pdata.attrsHidden || !pdata.attrs || typeof pdata.attrs !== "object";
-  const attrs = hidden ? Object.fromEntries(ATTRS.map(a => [a, 50])) : { ...pdata.attrs };
+  const receivedKeys = pdata.attrs && typeof pdata.attrs === "object" ? ATTRS.filter(a => typeof pdata.attrs[a] === "number") : [];
+  const attrs = hidden ? { ...Object.fromEntries(ATTRS.map(a => [a, 50])), ...Object.fromEntries(receivedKeys.map(a => [a, pdata.attrs[a]])) } : { ...pdata.attrs };
   const p = new Player({
     name: pdata.name, position: pdata.position, height: pdata.height,
     age: pdata.age, attrs, aggressiveness: typeof pdata.aggressiveness === "number" ? pdata.aggressiveness : 50,
     nationality: pdata.nationality,
   });
-  if (hidden) p.attrsHidden = true;
+  if (hidden) { p.attrsHidden = true; p.receivedAttrKeys = receivedKeys; }
   p.number = Number.isInteger(pdata.number) && pdata.number >= 0 && pdata.number <= 99 ? pdata.number : null;
   p.look = normalizePlayerLook(pdata.look);
   p.homegrownClub = typeof pdata.homegrownClub === "string" ? pdata.homegrownClub : null;
@@ -21199,6 +21217,9 @@ function playerFromSave(pdata) {
 function teamFromSave(data) {
   const players = data.players.map(playerFromSave);
   const team = new Team({ name: data.teamName, players, country: data.country });
+  // Niveau calculé par le serveur pour un adversaire (ses caractéristiques
+  // ne sont plus envoyées, voir server/publicPlayers.js).
+  team.publicLevel = typeof data.publicLevel === "number" ? data.publicLevel : null;
   team.week = data.week || 1;
   // Identité manager (voir serializeTeam ci-dessus) : absente = sauvegarde
   // d'avant ce champ (ou équipe CPU) — `false`/`null` par défaut (déjà la
@@ -21750,6 +21771,9 @@ function installGuestTeams(lg, guests) {
 function leagueFromSave(data, userTeam = null) {
   const teams = data.teams.map((t, i) => (i === 0 && userTeam ? userTeam : teamFromSave(t)));
   const lg = new League(teams);
+  // Estimations de vente de ses joueurs, calculées par le serveur (voir
+  // comparableSalesValuation).
+  lg.saleValuations = data.saleValuations && typeof data.saleValuations === "object" ? data.saleValuations : null;
   lg.round = data.round || 0;
   lg.results = Array.isArray(data.results) ? data.results : [];
   lg.playoffs = data.playoffs || null;
@@ -28017,7 +28041,8 @@ function computePlayerVisibility(teamIdx, player) {
   const revealedSet = (isOwnTeam || onMarket) ? null : new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
   // Caractéristiques non envoyées par le serveur (autre championnat) : rien
   // à montrer, quoi qu'il arrive.
-  const visibleAttrs = player.attrsHidden ? [] : ATTRS.filter(a => isOwnTeam || onMarket || revealedSet.has(a));
+  const received = player.attrsHidden ? new Set(player.receivedAttrKeys || []) : null;
+  const visibleAttrs = ATTRS.filter(a => (isOwnTeam || onMarket || revealedSet.has(a)) && (!received || received.has(a)));
   return {
     isOwnTeam, openListing, onMarket,
     visibleAttrs, visibleAttrsSet: new Set(visibleAttrs),
@@ -28714,7 +28739,22 @@ function cupStageLabelForRoundIndex(roundIndex) {
 // dupliquer une information déjà présente ailleurs. Retrouvé ici en
 // retournant au calendrier (league.schedule) ou au tableau de coupe
 // (league.cup.rounds), exactement comme renderCalendrierSection.
+// Supercoupe (tour SUPERCUP_ROUND, 2026-09-30) : { isHome, oppName, myScore,
+// oppScore } d'après league.superCup (score handicap compris), ou null.
+function superCupLogContext(teamIdx) {
+  const sc = league.superCup;
+  if (!sc) return null;
+  const isHome = sc.home.idx === teamIdx, isAway = sc.away.idx === teamIdx;
+  if (!isHome && !isAway) return null;
+  const opp = isHome ? sc.away : sc.home;
+  const done = sc.resolved && sc.score;
+  return { isHome, oppName: opp.name, myScore: done ? (isHome ? sc.score.home : sc.score.away) : null, oppScore: done ? (isHome ? sc.score.away : sc.score.home) : null };
+}
 function opponentNameForMatchLogEntry(teamIdx, entry) {
+  if (entry.competition === "cup" && entry.round === SUPERCUP_ROUND) {
+    const c = superCupLogContext(teamIdx);
+    return c ? c.oppName : "–";
+  }
   if (entry.competition === "cup") {
     const round = league.cup && league.cup.rounds.find(r => r.index === entry.round);
     const m = round && round.matches.find(x => x.home === teamIdx || x.away === teamIdx);
@@ -28851,6 +28891,11 @@ function scoutingReportText(player, visibleAttrs) {
 // n'avait jamais eu besoin jusqu'ici. matchResultForLogEntry délègue
 // maintenant ici plutôt que de dupliquer la recherche.
 function matchContextForLogEntry(teamIdx, entry) {
+  if (entry.competition === "cup" && entry.round === SUPERCUP_ROUND) {
+    const c = superCupLogContext(teamIdx);
+    if (!c || c.myScore == null) return null;
+    return { isHome: c.isHome, myScore: c.myScore, oppScore: c.oppScore, win: c.myScore > c.oppScore };
+  }
   if (entry.competition === "cup") {
     const round = league.cup && league.cup.rounds.find(r => r.index === entry.round);
     const m = round && round.matches.find(x => x.home === teamIdx || x.away === teamIdx);
@@ -29016,6 +29061,9 @@ const MARKET_COMPARABLE_WINDOW_MS = 60 * 24 * 60 * 60 * 1000;
 // finalPrice) : on relit donc la note ACTUELLE via league.playerById, une
 // approximation faute de mieux. Renvoie null si moins de 2 comparables.
 function comparableSalesValuation(player, now = Date.now()) {
+  // Calculée par le serveur (les notes des joueurs vendus à d'autres clubs
+  // ne sont plus envoyées) ; calcul local en repli (partie hors ligne).
+  if (league.saleValuations && Object.prototype.hasOwnProperty.call(league.saleValuations, player.id)) return league.saleValuations[player.id];
   const targetOverall = player.overall();
   const comparables = (league.transferListings || [])
     .filter(l => l.result === "sold" && l.finalPrice && l.playerId !== player.id && (now - l.closesAt) <= MARKET_COMPARABLE_WINDOW_MS)
@@ -34485,6 +34533,20 @@ async function performVideoSession(opponentIdx) {
     teamA.scoutedAttrs = teamA.scoutedAttrs || {};
     teamA.scoutedAttrs[String(result.opponentIdx)] = result.revealed;
     teamA.lastVideoSessionAt = Date.now();
+    // Valeurs révélées (seules les caractéristiques scoutées arrivent du
+    // serveur, voir server/publicPlayers.js).
+    const opp = league.teams[result.opponentIdx];
+    if (opp && result.revealedAttrs) {
+      opp.players.forEach(p => {
+        const vals = result.revealedAttrs[p.id];
+        if (!vals) return;
+        Object.keys(vals).forEach(k => { if (typeof vals[k] === "number") p.attrs[k] = vals[k]; });
+        if (p.attrsHidden) {
+          p.receivedAttrKeys = ATTRS.filter(a => (p.receivedAttrKeys || []).includes(a) || typeof vals[a] === "number");
+          if (p.receivedAttrKeys.length === ATTRS.length) p.attrsHidden = false;
+        }
+      });
+    }
   }
   return result;
 }
@@ -34598,13 +34660,20 @@ function renderSeasonEnd() {
   // Ligue partagée sans pyramide de divisions (une seule ligue) : pas de
   // montée ni de descente réelles, donc ni barrage ni verdict de division
   // affichés (voir la pyramide, League.pyramid).
-  const hasDivisionMoves = !!league.pyramid;
-  const barrage = hasDivisionMoves ? league.relegationBarrage : null;
-  if (barrage) {
+  // Championnats par pays : ce qui est réellement en jeu (divisionMoves,
+  // voir leagueDivisionMoves) — ni relégation sans division en dessous, ni
+  // montée sans division au-dessus.
+  const dmEnd = league.divisionMoves ? leagueDivisionMoves() : null;
+  const hasDivisionMoves = dmEnd ? (dmEnd.promotes || dmEnd.relegations > 0) : !!league.pyramid;
+  const barrage = (dmEnd ? dmEnd.barrage : hasDivisionMoves) ? league.relegationBarrage : null;
+  if (barrage && !barrage.pending) {
     html += "<h3>Relégation</h3>";
-    if (!barrage.pending) html += `<p class="gain-note">Barrage (7e vs 8e) : ${escapeHtml(nameOf(barrage.idx7))} vs ${escapeHtml(nameOf(barrage.idx8))} (${barrage.scoreHome}-${barrage.scoreAway}) → ${escapeHtml(nameOf(barrage.winner))} maintenu(e), ${escapeHtml(nameOf(barrage.loser))} relégué(e).</p>`;
-    const relegated = league.relegatedTeamIndexes().map(nameOf);
-    html += `<p class="gain-note">Descendent en ${info.level < MAX_DIVISION_LEVEL ? escapeHtml(divisionInfo(info.level + 1).name) : "division inférieure"} : ${relegated.map(escapeHtml).join(", ")}.</p>`;
+    html += `<p class="gain-note">Barrage (7e vs 8e) : ${escapeHtml(nameOf(barrage.idx7))} vs ${escapeHtml(nameOf(barrage.idx8))} (${barrage.scoreHome}-${barrage.scoreAway}) → ${escapeHtml(nameOf(barrage.winner))} maintenu(e), ${escapeHtml(nameOf(barrage.loser))} relégué(e).</p>`;
+  }
+  const relegatedEnd = hasDivisionMoves ? league.relegatedTeamIndexes().map(nameOf) : [];
+  if (relegatedEnd.length) {
+    if (!barrage || barrage.pending) html += "<h3>Relégation</h3>";
+    html += `<p class="gain-note">Descendent en ${info.level < MAX_DIVISION_LEVEL ? escapeHtml(divisionInfo(info.level + 1).name) : "division inférieure"} : ${relegatedEnd.map(escapeHtml).join(", ")}.</p>`;
   }
 
   const outcome = league.divisionOutcomeForTeam ? league.divisionOutcomeForTeam(myTeamIndex) : league.divisionOutcomeForUserTeam();
@@ -37544,7 +37613,12 @@ function renderMatchBoxscoreTab(side) {
 // (repli : somme des quarts-temps, puis somme des points des lignes).
 function matchBoxscoreContext(round, competition, homeIdx, awayIdx, quarterScores, rowsHome, rowsAway) {
   let kicker = "", when = null, scoreHome = null, scoreAway = null;
-  if (competition === "cup" && league.cup) {
+  if (competition === "cup" && round === SUPERCUP_ROUND && league.superCup) {
+    const sc = league.superCup;
+    kicker = `Supercoupe · saison ${sc.season}`;
+    when = sc.at || null;
+    if (sc.resolved && sc.score) { scoreHome = sc.score.home; scoreAway = sc.score.away; }
+  } else if (competition === "cup" && league.cup) {
     const cupRound = league.cup.rounds.find(r => r.index === round);
     kicker = `Coupe · ${cupRound ? (CUP_STAGE_LABELS[cupRound.name] || cupRound.name) : "Tour " + (round + 1)}`;
     if (cupRound) {
@@ -39862,6 +39936,8 @@ function dashboardTeamRef(idx, team) {
 // tableau de bord (voir renderClubSection ci-dessus) et que d'autres écrans
 // (Scouting Pro) : jamais recalculée différemment d'un écran à l'autre.
 function dashboardTeamLevel(team) {
+  // Adversaire : niveau calculé par le serveur (caractéristiques non reçues).
+  if (typeof team.publicLevel === "number" && team.players.some(p => p.attrsHidden)) return team.publicLevel;
   if (!team.players.length) return 0;
   return Math.round(team.players.reduce((s, p) => s + p.overall(), 0) / team.players.length);
 }
@@ -40746,7 +40822,29 @@ function renderHmAccountBlock() {
     try {
       const res = await fetchApi("/api/account/discord-link-start", { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.url) { window.location.href = data.url; return; }
+      if (res.ok && data.url) {
+        // Appli (Capacitor) ou jeu installé sur l'écran d'accueil (iPhone) :
+        // Discord s'ouvre dans le navigateur du système (retour de Discord
+        // accepté même sans le cookie de cette fenêtre, voir
+        // server/accountRoutes.js) ; la page du jeu reste là et relit le
+        // compte en revenant au premier plan. Navigateur classique : même
+        // onglet, comme avant.
+        const standalone = !!(window.Capacitor || window.navigator.standalone ||
+          (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches));
+        if (standalone) {
+          window.open(new URL(data.url, window.location.href).href, "_blank");
+          feedback("Termine la liaison dans la fenêtre Discord, puis reviens ici.", true);
+          const back = () => {
+            if (document.visibilityState !== "visible") return;
+            document.removeEventListener("visibilitychange", back);
+            hmAccountRefresh();
+          };
+          document.addEventListener("visibilitychange", back);
+          return;
+        }
+        window.location.href = data.url;
+        return;
+      }
       feedback("Connexion Discord indisponible pour le moment.", false);
     } catch (err) { feedback("Serveur injoignable, réessaie.", false); }
   });
@@ -42835,7 +42933,9 @@ function renderCalendrierSection() {
     const isScLive = !!(league.liveMatch && league.liveMatch.competition === "cup" && league.liveMatch.round === SUPERCUP_ROUND);
     rows.push({
       competition: "cup", superCup: true, label: "Supercoupe", opponent: (league.teams[oppIdxSc] || (isHomeSc ? sc.away : sc.home)).name, opponentIdx: oppIdxSc,
-      location: isHomeSc ? "Domicile" : "Extérieur", scoreText, boxscore: null, cls,
+      location: isHomeSc ? "Domicile" : "Extérieur", scoreText, cls,
+      // Feuille de match (stats des joueurs enregistrées comme un match de Coupe).
+      boxscore: sc.resolved && league.teams[sc.home.idx] && league.teams[sc.away.idx] ? { round: SUPERCUP_ROUND, competition: "cup", homeIdx: sc.home.idx, awayIdx: sc.away.idx } : null,
       actionCell: isScLive ? `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>` : "",
       scheduledAt: sc.at, fallbackOrder: 999, isHome: isHomeSc, played: !!sc.resolved, won: cls === "result-win", lost: cls === "result-loss",
       isLive: isScLive,
@@ -43531,7 +43631,12 @@ function superCupCardHtml() {
     `<div class="cal-next-name">${ref.idx != null && league.teams[ref.idx] ? teamLinkHtml(ref.idx, ref.name) : `<button type="button" class="team-link" data-ncup-league="${escapeHtml(ref.leagueId)}" data-ncup-club="${ref.refIdx}">${escapeHtml(ref.name)}</button>`}</div>` +
     `<div class="cal-next-rank">${escapeHtml(ncupLevelTag(ref.level))}${hc ? ` · handicap +${hc}` : ""}${won ? " · vainqueur" : ""}</div></div>`;
   let middle;
-  if (sc.resolved && sc.score) middle = `<div class="cal-next-vs">${sc.score.home} - ${sc.score.away}</div>`;
+  if (sc.resolved && sc.score) {
+    const box = sc.mine && league.teams[sc.home.idx] && league.teams[sc.away.idx];
+    middle = box
+      ? `<button type="button" class="cal-next-vs calendar-score-btn" data-boxscore-round="${SUPERCUP_ROUND}" data-boxscore-competition="cup" data-boxscore-home="${sc.home.idx}" data-boxscore-away="${sc.away.idx}" title="Feuille de match">${sc.score.home} - ${sc.score.away}</button>`
+      : `<div class="cal-next-vs">${sc.score.home} - ${sc.score.away}</div>`;
+  }
   else middle = `<div class="cal-next-vs">VS</div>`;
   const isLive = !!(league.liveMatch && league.liveMatch.competition === "cup" && league.liveMatch.round === SUPERCUP_ROUND);
   const status = sc.resolved ? `Vainqueur : ${sc.winner === "away" ? sc.away.name : sc.home.name}`

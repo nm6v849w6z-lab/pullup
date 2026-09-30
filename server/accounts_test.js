@@ -317,6 +317,29 @@ async function main() {
       const st6 = new URL(go6.headers.location).searchParams.get("state");
       const cb6 = await request(server, "GET", `/auth/discord/callback?state=${st6}&code=CODE-OK`, undefined, { Cookie: go6.headers["set-cookie"][0].split(";")[0] });
       assert.ok(cb6.headers.location.includes("discord-already-linked"));
+
+      // iPhone (appli Discord / appli Hoop Manager / jeu installé) : le retour
+      // de Discord arrive dans un AUTRE navigateur, sans le cookie hm_oauth.
+      // Liaison : acceptée (état lié au jeton côté serveur), message sur la
+      // page d'accueil ; cookie différent : refusé ; connexion : refusée.
+      discordUser = { id: "8888", username: "grenoble" };
+      const sl2 = await request(server, "POST", "/api/account/discord-link-start", undefined, { "X-TipIn-Token": grenobleToken });
+      const go7 = await request(server, "GET", sl2.body.url);
+      const st7 = new URL(go7.headers.location).searchParams.get("state");
+      const bad7 = await request(server, "GET", `/auth/discord/callback?state=${st7}&code=CODE-OK`, undefined, { Cookie: "hm_oauth=autre" });
+      assert.ok(bad7.headers.location.includes("discord-expired"), "liaison : cookie différent refusé");
+      const sl3 = await request(server, "POST", "/api/account/discord-link-start", undefined, { "X-TipIn-Token": grenobleToken });
+      const go8 = await request(server, "GET", sl3.body.url);
+      const st8 = new URL(go8.headers.location).searchParams.get("state");
+      const cb8 = await request(server, "GET", `/auth/discord/callback?state=${st8}&code=CODE-OK`);
+      assert.strictEqual(cb8.headers.location, "/bienvenue#info=discord-linked", "liaison sans cookie (autre navigateur) acceptée");
+      const meG = await request(server, "GET", "/api/account/me", undefined, { "X-TipIn-Token": grenobleToken });
+      assert.strictEqual(meG.body.account.discordName, "grenoble");
+      const go9 = await request(server, "GET", "/auth/discord");
+      const st9 = new URL(go9.headers.location).searchParams.get("state");
+      const cb9 = await request(server, "GET", `/auth/discord/callback?state=${st9}&code=CODE-OK`);
+      assert.ok(cb9.headers.location.includes("discord-expired"), "connexion sans cookie : refusée (anti-CSRF)");
+      assert.ok(/SameSite=Lax/.test(go9.headers["set-cookie"][0]) && /HttpOnly/.test(go9.headers["set-cookie"][0]));
     } finally {
       server.close();
       AccountRoutes._setFetchImplForTests(null);

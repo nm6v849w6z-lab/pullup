@@ -459,6 +459,7 @@
       "err.bad-credentials": "Wrong email or password.",
       "err.rate-limited": "Too many attempts. Wait a few minutes and try again.",
       "err.discord-expired": "The Discord login expired. Please try again.",
+      "ok.discord-linked": "Discord is now linked to your club. Go back to the game (tab or app you started from) to continue.",
       "err.discord-cancelled": "Discord login cancelled.",
       "err.discord-failed": "Couldn't reach Discord. Please try again in a moment.",
       "err.discord-disabled": "Discord login isn't available right now.",
@@ -520,6 +521,7 @@
       "err.bad-credentials": "Email o password errate.",
       "err.rate-limited": "Troppi tentativi. Aspetta qualche minuto prima di riprovare.",
       "err.discord-expired": "L'accesso con Discord è scaduto. Riprova.",
+      "ok.discord-linked": "Discord è ora collegato al tuo club. Torna nel gioco (scheda o app da cui sei partito) per continuare.",
       "err.discord-cancelled": "Accesso con Discord annullato.",
       "err.discord-failed": "Impossibile raggiungere Discord. Riprova tra un attimo.",
       "err.discord-disabled": "L'accesso con Discord non è disponibile al momento.",
@@ -543,6 +545,7 @@
       "err.bad-credentials": "Email ou mot de passe incorrect.",
       "err.rate-limited": "Trop de tentatives. Attends quelques minutes avant de réessayer.",
       "err.discord-expired": "La connexion Discord a expiré. Réessaie.",
+      "ok.discord-linked": "Discord est maintenant lié à ton club. Retourne dans le jeu (onglet ou appli de départ) pour continuer.",
       "err.discord-cancelled": "Connexion Discord annulée.",
       "err.discord-failed": "Impossible de joindre Discord. Réessaie dans un instant.",
       "err.discord-disabled": "La connexion Discord n'est pas disponible pour le moment.",
@@ -791,6 +794,10 @@
     checkWaiting(false);
   } else if (frag.get("erreur")) {
     showMsg(signupMsg, frag.get("erreur"));
+  } else if (frag.get("info") === "discord-linked") {
+    // Liaison Discord terminée dans un autre navigateur (iPhone : appli
+    // Discord, appli Hoop Manager…) : voir server/accountRoutes.js.
+    showMsg(signupMsg, "ok.discord-linked", true);
   } else if (read(ACCOUNT_KEY)) {
     checkWaiting(false);
   }

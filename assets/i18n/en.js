@@ -5326,4 +5326,6 @@ window.HM_I18N_EN = {
   "Enregistrement impossible, réessaie.": "Could not save, try again.",
   "Visible des autres managers : fiche d'équipe, messagerie, interviews et chat de la ligue. 3 à 20 caractères (lettres, chiffres, _ - .), jamais ton email ni ton vrai nom. {0}": "Visible to other managers: team page, messages, interviews and league chat. 3 to 20 characters (letters, digits, _ - .), never your email or real name. {0}",
   "Mon profil de manager.": "My manager profile.",
+  "Termine la liaison dans la fenêtre Discord, puis reviens ici.": "Finish linking in the Discord window, then come back here.",
+  "Supercoupe · saison {0}": "Super Cup · season {0}",
 };
