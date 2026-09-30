@@ -50,13 +50,16 @@
   /* Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : en anglais,
      les dates et les nombres formatés par le jeu en "fr-FR" le sont dès le
      premier rendu à l'anglaise (Monday 28 September, 1,234), le reste du
-     texte étant traduit à l'affichage par i18n.js. */
+     texte étant traduit à l'affichage par i18n.js. Idem en italien
+     (it-IT : lunedì 28 settembre, 1.234). */
   (function () {
-    var en = false;
-    try { en = localStorage.getItem("hm-lang") === "en"; } catch (e) { /* navigation privée */ }
-    document.documentElement.setAttribute("lang", en ? "en" : "fr");
-    if (!en) return;
-    var fix = function (loc) { return loc === "fr-FR" || loc === "fr" ? "en-GB" : loc; };
+    var lang = "fr";
+    try { lang = localStorage.getItem("hm-lang"); } catch (e) { /* navigation privée */ }
+    if (lang !== "en" && lang !== "it") lang = "fr";
+    document.documentElement.setAttribute("lang", lang);
+    if (lang === "fr") return;
+    var target = lang === "it" ? "it-IT" : "en-GB";
+    var fix = function (loc) { return loc === "fr-FR" || loc === "fr" ? target : loc; };
     [[Date.prototype, "toLocaleDateString"], [Date.prototype, "toLocaleTimeString"], [Date.prototype, "toLocaleString"], [Number.prototype, "toLocaleString"]].forEach(function (x) {
       var orig = x[0][x[1]];
       x[0][x[1]] = function (loc, opts) { return orig.call(this, fix(loc), opts); };
@@ -6773,7 +6776,7 @@
   @media(max-width:600px){ #lpSection .lg-hide-sm, #lpSection .lp-table th:last-child, #lpSection .lp-table td:last-child{display:none;} #lpSection .lp-table td, #lpSection .lp-table th{padding-left:6px; padding-right:6px;} }
   @media(max-width:760px){ .lp-venues, .lp-members{grid-template-columns:1fr;} .lp-cal-row{grid-template-columns:30px 60px minmax(0,1fr) 70px minmax(0,1fr); gap:6px; font-size:12px;} .lp-danger{margin-left:0;} }
   /* Langue (Paramètres) : deux gros boutons, même esprit que les thèmes. */
-  .settings-lang{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
+  .settings-lang{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px;}
   .settings-lang button{display:flex; align-items:center; justify-content:center; gap:10px; padding:9px 10px; border-radius:10px; border:1.5px solid var(--line); background:var(--panel-2); color:var(--ink); font:600 14px inherit; font-family:inherit; cursor:pointer;}
   .settings-lang button:hover{border-color:var(--ink-faint);}
   .settings-lang button[aria-pressed="true"]{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
@@ -39836,7 +39839,7 @@ function showSettingsModal(tab) {
     // (data-no-i18n). Changer recharge la page (voir hmI18n.setLang).
     `<div class="settings-row-label" style="margin-top:16px;">Langue</div>` +
     `<div class="settings-lang" id="settingsLangChoices" data-no-i18n>` +
-    langOpt("fr", "FR", "Français") + langOpt("en", "EN", "English") +
+    langOpt("fr", "FR", "Français") + langOpt("en", "EN", "English") + langOpt("it", "IT", "Italiano") +
     `</div></div>` +
     `<div class="settings-panel${settingsModalTab === "club" ? "" : " hidden"}" data-settings-panel="club"><div id="settingsClubBlock">${settingsClubBlockHtml()}</div></div>` +
     (managerToken ? `<div class="settings-panel${settingsModalTab === "account" ? "" : " hidden"}" data-settings-panel="account"><div id="settingsAccountBlock"><p class="settings-note">Chargement…</p></div></div>` : "") +

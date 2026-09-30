@@ -36,7 +36,7 @@ async function waitFor(fn, ms = 30000) {
   doc.querySelector(".hm-head__settings-btn").click();
   const overlay = doc.getElementById("settingsModalOverlay");
   const langs = [...overlay.querySelectorAll("[data-lang-choice]")];
-  assert(langs.map(b => b.dataset.langChoice).join() === "fr,en", "Paramètres : choix Français / English");
+  assert(langs.map(b => b.dataset.langChoice).join() === "fr,en,it", "Paramètres : choix Français / English / Italiano");
   assert(langs[0].getAttribute("aria-pressed") === "true", "Français coché au départ");
   assert(/Français/.test(langs[0].textContent) && /English/.test(langs[1].textContent), "chaque langue écrite dans sa propre langue");
   assert(overlay.querySelector("#settingsThemeChoices"), "le choix du thème est toujours là");

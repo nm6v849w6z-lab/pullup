@@ -18,44 +18,55 @@
    La préférence vit dans CE navigateur (localStorage "hm-lang"), comme le
    thème ; changer de langue recharge la page (plus simple et plus sûr que
    de re-traduire à l'envers). Mode debug : localStorage "hm-i18n-debug" =
-   "1" → window.hmI18n.missing liste les textes français non traduits vus. */
+   "1" → window.hmI18n.missing liste les textes français non traduits vus.
+
+   Italien (2026-09-30) : même mécanique, dictionnaire assets/i18n/it.js
+   (window.HM_I18N_IT, mêmes clés que en.js ; scripts/i18n_missing.js liste
+   les clés manquantes). Les règles dédiées (dates, ordinaux, bilans V/D,
+   postes abrégés, nombres) ont leur version par langue (IT ci-dessous). */
 (function () {
   "use strict";
   var LANG_KEY = "hm-lang";
+  var LANGS = { fr: 1, en: 1, it: 1 };
+  var pick = function (l) { return LANGS[l] === 1 ? l : "fr"; };
   var lang = "fr";
-  try { lang = window.localStorage.getItem(LANG_KEY) === "en" ? "en" : "fr"; } catch (e) { /* navigation privée */ }
+  try { lang = pick(window.localStorage.getItem(LANG_KEY)); } catch (e) { /* navigation privée */ }
 
   var api = window.hmI18n = {
     lang: lang,
     getLang: function () { return lang; },
     setLang: function (l) {
-      try { window.localStorage.setItem(LANG_KEY, l === "en" ? "en" : "fr"); } catch (e) { /* rien */ }
-      if ((l === "en" ? "en" : "fr") !== lang) window.location.reload();
+      try { window.localStorage.setItem(LANG_KEY, pick(l)); } catch (e) { /* rien */ }
+      if (pick(l) !== lang) window.location.reload();
     },
     // Traduit une chaîne (renvoie la chaîne d'origine si rien ne correspond).
     t: function (s) { return s; },
     missing: null,
+    // Locale des dates / nombres pour la langue choisie.
+    locale: { fr: "fr-FR", en: "en-GB", it: "it-IT" }[lang],
   };
   try { document.documentElement.setAttribute("lang", lang); } catch (e) { /* rien */ }
-  if (lang !== "en") return;
+  if (lang === "fr") return;
+  var DICT_VAR = lang === "it" ? "HM_I18N_IT" : "HM_I18N_EN";
 
-  // Le dictionnaire (~240 Ko) n'est chargé qu'en anglais. Ce fichier est en
+  // Le dictionnaire (~240 Ko) n'est chargé que dans la langue choisie. Ce fichier est en
   // `defer` (comme showPlayer.js : un script externe bloquant retarderait le
   // dernier script inline de la page, voir le commentaire au-dessus de
   // showPlayer.js) : la page est donc déjà rendue (derrière l'écran de
   // chargement) quand on arrive ici ; start() la parcourt une fois puis
   // suit chaque changement.
-  if (window.HM_I18N_EN) start();
+  if (window[DICT_VAR]) start();
   else {
     var sc = document.createElement("script");
     var me = document.currentScript && document.currentScript.src;
-    sc.src = me ? me.replace(/i18n\.js(\?.*)?$/, "en.js$1") : "assets/i18n/en.js";
+    sc.src = me ? me.replace(/i18n\.js(\?.*)?$/, lang + ".js$1") : "assets/i18n/" + lang + ".js";
     sc.onload = start;
     (document.head || document.documentElement).appendChild(sc);
   }
 
   function start() {
-    var DICT = window.HM_I18N_EN || {};
+    var DICT = window[DICT_VAR] || {};
+    var IT = lang === "it";
     var exact = new Map();
     var patterns = [];
     var PH = /\{(\w+)\}/g;
@@ -114,12 +125,16 @@
     patterns.sort(function (a, b) { return b.litLen - a.litLen; });
 
     // Règles dédiées, là où un dictionnaire ne suffit pas.
-    var DAYS = { lundi: "Monday", mardi: "Tuesday", mercredi: "Wednesday", jeudi: "Thursday", vendredi: "Friday", samedi: "Saturday", dimanche: "Sunday",
+    var DAYS = IT ? { lundi: "lunedì", mardi: "martedì", mercredi: "mercoledì", jeudi: "giovedì", vendredi: "venerdì", samedi: "sabato", dimanche: "domenica",
+      "lun.": "lun", "mar.": "mar", "mer.": "mer", "jeu.": "gio", "ven.": "ven", "sam.": "sab", "dim.": "dom" } : { lundi: "Monday", mardi: "Tuesday", mercredi: "Wednesday", jeudi: "Thursday", vendredi: "Friday", samedi: "Saturday", dimanche: "Sunday",
       "lun.": "Mon", "mar.": "Tue", "mer.": "Wed", "jeu.": "Thu", "ven.": "Fri", "sam.": "Sat", "dim.": "Sun" };
-    var MONTHS = { janvier: "January", "février": "February", mars: "March", avril: "April", mai: "May", juin: "June", juillet: "July", "août": "August",
+    var MONTHS = IT ? { janvier: "gennaio", "février": "febbraio", mars: "marzo", avril: "aprile", mai: "maggio", juin: "giugno", juillet: "luglio", "août": "agosto",
+      septembre: "settembre", octobre: "ottobre", novembre: "novembre", "décembre": "dicembre",
+      "janv.": "gen", "févr.": "feb", "avr.": "apr", "juil.": "lug", "sept.": "set", "oct.": "ott", "nov.": "nov", "déc.": "dic" } : { janvier: "January", "février": "February", mars: "March", avril: "April", mai: "May", juin: "June", juillet: "July", "août": "August",
       septembre: "September", octobre: "October", novembre: "November", "décembre": "December",
       "janv.": "Jan", "févr.": "Feb", "avr.": "Apr", "juil.": "Jul", "sept.": "Sep", "oct.": "Oct", "nov.": "Nov", "déc.": "Dec" };
-    var DATE_WORDS = { "à": "at", "h": "h" };
+    var AT = IT ? "alle" : "at";
+    var DATE_WORDS = { "à": AT, "h": "h" };
     function dateWord(w) {
       var l = w.toLowerCase();
       var r = DAYS[l] || MONTHS[l] || DATE_WORDS[l];
@@ -127,6 +142,7 @@
       return r || null;
     }
     function ordinal(n) {
+      if (IT) return n + "º";
       var v = n % 100;
       return n + (v >= 11 && v <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
     }
@@ -140,26 +156,36 @@
           if (!/^[A-Za-zÀ-ÿ]/.test(t)) return t;
           var r = dateWord(t);
           if (!r) { ok = false; return t; }
-          if (r !== "at" && r !== "h") hasDate = true;
+          if (r !== AT && r !== "h") hasDate = true;
           return /\.$/.test(t) && !/\.$/.test(r) && !(t.toLowerCase() in DAYS) && !(t.toLowerCase() in MONTHS) ? r + "." : r;
         });
-        if (ok && hasDate) return outT.join("");
+        if (ok && hasDate) {
+          var d = outT.join("");
+          // Italien : minuscules, sauf en tête d'un texte qui en avait une.
+          if (IT && /^[A-ZÀ-Ý]/.test(core)) d = d.charAt(0).toUpperCase() + d.slice(1);
+          return d;
+        }
       }
       // Ordinaux et bilans : « 3e », « 1er », « 12V », « 4D »
       if ((m = /^(\d+)(?:e|er|re|ème|ère)$/.exec(core))) return ordinal(+m[1]);
-      if ((m = /^J(\d+)( .*)?$/.exec(core))) return "MD" + m[1] + (m[2] ? " " + (translateCore(m[2].trim(), 1) || m[2].trim()) : "");
-      if ((m = /^(\d+) ?j (\d+) ?h$/.exec(core))) return m[1] + "d " + m[2] + "h";
-      if ((m = /^(\d+)V$/.exec(core))) return m[1] + "W";
-      if ((m = /^(\d+)D$/.exec(core))) return m[1] + "L";
-      if ((m = /^(\d+)V\s*[–-]\s*(\d+)D$/.exec(core))) return m[1] + "W – " + m[2] + "L";
+      if ((m = /^J(\d+)( .*)?$/.exec(core))) return (IT ? "G" : "MD") + m[1] + (m[2] ? " " + (translateCore(m[2].trim(), 1) || m[2].trim()) : "");
+      if ((m = /^(\d+) ?j (\d+) ?h$/.exec(core))) return m[1] + (IT ? "g " : "d ") + m[2] + "h";
+      if ((m = /^(\d+)V$/.exec(core))) return m[1] + LETTERS.V;
+      if ((m = /^(\d+)D$/.exec(core))) return m[1] + LETTERS.D;
+      if ((m = /^(\d+)V\s*[–-]\s*(\d+)D$/.exec(core))) return m[1] + LETTERS.V + " – " + m[2] + LETTERS.D;
       return null;
     }
-    var POS_EN = { M: "PG", A: "SG", AS: "SF", AF: "PF", P: "C" };
+    // Postes abrégés (Italie : Playmaker, Guardia, Ala piccola, Ala grande, Centro).
+    var POS_EN = IT ? { M: "PM", A: "G", AS: "AP", AF: "AG", P: "C" } : { M: "PG", A: "SG", AS: "SF", AF: "PF", P: "C" };
+    // Lettres seules des tableaux : J(oués)/V(ictoires)/D(éfaites).
+    var LETTERS = IT ? { J: "G", V: "V", D: "S" } : { J: "GP", V: "W", D: "L" };
     var cache = new Map();
     var produced = new Set(); // textes anglais déjà écrits : ne pas les repasser
     var FRENCH = /[A-Za-zÀ-ÿ]{2,}/;
 
     function enNumber(g) {
+      // Italien : 1 234 → 1.234 ; 12,5 reste 12,5.
+      if (IT) return /^-?\d{1,3}(?: \d{3})+(?:,\d+)?$/.test(g) ? g.replace(/ /g, ".") : g;
       // 1 234 → 1,234 ; 12,5 → 12.5 (nombres seuls capturés dans un trou)
       if (/^-?\d{1,3}(?:\.\d{3})+$/.test(g)) return g.replace(/\./g, ","); // 5.000 → 5,000
       var m = /^(-?\d{1,3}(?: \d{3})*|-?\d+)(?:,(\d+))?$/.exec(g);
@@ -177,6 +203,7 @@
       return words.length >= 2 && FR_WORD.test(g) && /[a-zà-ÿ]{3}/.test(g) && lower >= 2;
     }
 
+    var LOCAL_DATE = /(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica)/i;
     function translateCore(core, depth) {
       if (cache.has(core)) return cache.get(core);
       var out = null;
@@ -194,11 +221,14 @@
           var bad = false;
           for (var k = 0; k < p.names.length; k++) {
             var g = m[k + 1];
-            var tg = depth < 3 && FRENCH.test(g) ? translateCore(norm(g), depth + 1) : null;
+            // (« 1 j 23 h » n'a pas de mot de 2 lettres mais passe par rules())
+            var tg = depth < 3 && (FRENCH.test(g) || /^\d+ ?j \d+ ?h$/.test(g.trim())) ? translateCore(norm(g), depth + 1) : null;
             // Un trou qui a capturé une vraie phrase française non traduite :
             // ce gabarit n'était pas le bon (ex. « {0} et {1} » sur un
             // paragraphe) → on ne rend pas un texte à moitié anglais.
-            if (tg === null && isProse(g)) { bad = true; break; }
+            // (sauf une date déjà formatée dans la langue cible : en italien,
+            // « venerdì 2 ottobre alle ore 05:52 » ressemble à de la prose)
+            if (tg === null && isProse(g) && !(IT && LOCAL_DATE.test(g))) { bad = true; break; }
             vals[p.names[k]] = tg !== null ? /^\s*/.exec(g)[0] + tg + /\s*$/.exec(g)[0] : enNumber(g);
           }
           if (bad) continue;
@@ -209,7 +239,8 @@
           var mm = /^([(«“"'\[•·—–-]*\s*)(.*?)(\s*[:)»”"'\].!?…·—–-]*)$/.exec(core);
           if (mm && (mm[1] || mm[3]) && mm[2] && mm[2] !== core) {
             var inner = translateCore(mm[2], depth + 1);
-            if (inner !== null) out = mm[1].replace("«", "“") + inner + mm[3].replace(/^\s+:/, ":").replace("»", "”");
+            if (inner !== null) out = IT ? mm[1] + inner + mm[3].replace(/^\s+:/, ":")
+              : mm[1].replace("«", "“") + inner + mm[3].replace(/^\s+:/, ":").replace("»", "”");
           }
         }
         // Casse : « pénétration » dans une liste → « Pénétration » du dictionnaire.
@@ -265,7 +296,7 @@
         if (missing && /[a-zà-ÿ]/i.test(core)) missing.add(core);
         return s;
       }
-      // Typographie anglaise : pas d'espace avant « : ; ! ? » ; un fragment
+      // Typographie anglaise / italienne : pas d'espace avant « : ; ! ? » ; un fragment
       // français élidé (« régler l' » + <b>Entraînement</b>) garde son espace.
       out = out.replace(/(\S)[ \u00a0\u202f]+([:;!?])(?=\s|$)/g, "$1$2");
       if (/'$/.test(core) && /[A-Za-z]$/.test(out)) out += " ";
@@ -293,13 +324,12 @@
     try {
       /* global POS_SHORT */
       if (typeof POS_SHORT === "object" && POS_SHORT) {
-        var POS_FULL = { "Meneur": "PG", "Arrière": "SG", "Ailier shooteur": "SF", "Ailier fort": "PF", "Pivot": "C" };
+        var POS_FULL = { "Meneur": POS_EN.M, "Arrière": POS_EN.A, "Ailier shooteur": POS_EN.AS, "Ailier fort": POS_EN.AF, "Pivot": POS_EN.P };
         Object.keys(POS_FULL).forEach(function (k) { POS_SHORT[k] = POS_FULL[k]; });
       }
     } catch (e) { /* page sans cette table */ }
-    // Lettres seules des tableaux : J(oués)/V(ictoires)/D(éfaites) en tête de
-    // colonne, pastilles de forme V/D ; exposant d'un rang (« 10<sup>e</sup> »).
-    var LETTERS = { J: "GP", V: "W", D: "L" };
+    // Lettres seules des tableaux (LETTERS, plus haut) en tête de colonne,
+    // pastilles de forme V/D ; exposant d'un rang (« 10<sup>e</sup> »).
     function posCell(v, p) {
       var c = v.trim();
       if (p.nodeName === "SUP" && /^(e|er|re|ère|ème)$/.test(c)) {
@@ -321,7 +351,9 @@
       if (!v) return;
       var p = node.parentNode;
       if (!p || p.nodeType !== 1) return;
-      if (v.length <= 3) { var pc = posCell(v, p); if (pc) { node.nodeValue = v.replace(v.trim(), pc); return; } }
+      // (écrire la même valeur relancerait l'observateur à l'infini : en
+      // italien, V(ictoire) reste « V »)
+      if (v.length <= 3) { var pc = posCell(v, p); if (pc) { var nv = v.replace(v.trim(), pc); if (nv !== v) node.nodeValue = nv; return; } }
       if (!FRENCH.test(v)) return;
       if (skipEl(p)) return;
       var t = tr(v);
@@ -361,8 +393,11 @@
     // feuilles de style.
     try {
       var st = document.createElement("style");
-      st.textContent = '.scouting-ad-gray-block::after{content:"Advertisement (placeholder)" !important;}' +
-        '.hm-live .tname.mine::after{content:"My club" !important;}';
+      st.textContent = IT
+        ? '.scouting-ad-gray-block::after{content:"Pubblicità (segnaposto)" !important;}' +
+          '.hm-live .tname.mine::after{content:"Il mio club" !important;}'
+        : '.scouting-ad-gray-block::after{content:"Advertisement (placeholder)" !important;}' +
+          '.hm-live .tname.mine::after{content:"My club" !important;}';
       (document.head || document.documentElement).appendChild(st);
     } catch (e) { /* rien */ }
 
