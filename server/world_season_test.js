@@ -27,7 +27,7 @@ const fmt = (ms, tz) => new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday
   career.league.calendarStartAt = Calendar.weeklyRhythmCalendarStartAt(created);
   await store.saveMultiLeague(career.league, multi);
   const w = await World.loadWorld(multi, created);
-  assert.deepStrictEqual(w.leagues.map(l => l.id).sort(), ["fr-1", "us-1"]);
+  assert.deepStrictEqual(w.leagues.map(l => l.id).sort(), ["fr-1", "it-1", "us-1"]);
   {
     const fr = await World.loadLeague(w, "fr-1", multi), us = await World.loadLeague(w, "us-1", multi);
     assert.strictEqual(fmt(us.calendarStartAt, "America/New_York"), "Tue 20:00");

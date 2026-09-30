@@ -211,11 +211,19 @@ async function isClubNameTakenInWorld(world, savePath, name) {
 // plus faible du championnat le plus HAUT qui en a encore un ; si le pays
 // est plein, ouvre le championnat suivant (voir nextSlot) et y place le
 // manager. { ok, token, leagueId, teamIndex } ou { ok:false, reason }.
+// Règle générale, tous pays (retour utilisateur 2026-09-30, Italie : « en
+// automatique plusieurs divisions quand on a plus de 10 joueurs ») : au plus
+// MAX_HUMANS_PER_LEAGUE managers par championnat ; le suivant ouvre tout de
+// suite le championnat d'en dessous (Division II.1, puis II.2…), calé sur
+// le calendrier du pays (voir createLeague) — montées/descentes à la fin de
+// la saison (computeCountryMoves).
+const MAX_HUMANS_PER_LEAGUE = 10;
 async function assignClub(world, savePath, { country, clubName, now }) {
   const code = isOpenCountry(country) ? country : DEFAULT_COUNTRY;
   for (const entry of leaguesOfCountry(world, code)) {
     const league = await loadLeague(world, entry.id, savePath);
     if (!league || !league.teams.some(t => !t.isHuman)) continue;
+    if (league.teams.filter(t => t.isHuman).length >= MAX_HUMANS_PER_LEAGUE) continue;
     const taken = Accounts.takeOverCpuClub(league, clubName);
     if (!taken.ok) continue;
     league.teams[taken.teamIndex].country = code;
@@ -941,7 +949,7 @@ function normalizeSearch(s) {
 // Raccourcis de division (retour utilisateur 2026-09-28 : « D.I » ne
 // trouvait rien) : « D1 », « D.I », « DI », « Div 2 », « D2.1 », « II.1 »,
 // « 2.1 », « D III 4 »… → { level, group|null }.
-const COUNTRY_SEARCH_ALIASES = { us: "usa us etats-unis amerique america", fr: "fra france" };
+const COUNTRY_SEARCH_ALIASES = { us: "usa us etats-unis amerique america", fr: "fra france", it: "ita italie italia italy" };
 const ROMAN = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6 };
 function parseDivisionQuery(needle) {
   const m = needle.replace(/\s+/g, " ").match(/^(?:d(?:iv(?:ision)?)?\s*\.?\s*)?(vi|v|iv|iii|ii|i|[1-6])(?:\s*[.\s-]\s*(\d{1,3}))?$/);
@@ -992,7 +1000,7 @@ function publicCountries() {
 }
 
 module.exports = {
-  managerRanking, MANAGER_RANKING_TOP,
+  managerRanking, MANAGER_RANKING_TOP, MAX_HUMANS_PER_LEAGUE,
   divisionMovesFor,
   WORLD_VERSION, DEFAULT_COUNTRY,
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,

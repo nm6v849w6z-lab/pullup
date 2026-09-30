@@ -8200,7 +8200,7 @@
 
       <div class="guide-entry" data-guide-id="planete" data-guide-group="Compétitions">
         <h3>Pays, divisions et Planète Hoop</h3>
-        <p class="training-intro">Chaque pays (France, USA) a sa pyramide : <b>Division I</b>, puis <b>II.1 à II.3</b>, <b>III.1 à III.9</b>… Un nouveau manager arrive dans la division la plus haute où il reste un club de l'IA ; quand tout est plein, le championnat suivant s'ouvre tout seul. Les matchs se jouent à 20:00 heure locale (Paris ou New York), et tous les pays suivent les mêmes semaines.</p>
+        <p class="training-intro">Chaque pays (France, USA, Italie) a sa pyramide : <b>Division I</b>, puis <b>II.1 à II.3</b>, <b>III.1 à III.9</b>… Un nouveau manager arrive dans la division la plus haute où il reste un club de l'IA ; quand tout est plein (plus de 10 managers dans un championnat), le championnat suivant s'ouvre tout seul. Les matchs se jouent à 20:00 heure locale (Paris, Rome ou New York), et tous les pays suivent les mêmes semaines.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Montées et descentes</b>, décidées le lundi d'intersaison et appliquées à la reprise : le champion des play-offs de chaque championnat monte ; en face, le 10e descend, puis le 9e, puis le perdant du barrage (7e contre 8e), autant qu'il y a de championnats ouverts juste en dessous. Une prime de montée est versée au club promu.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Planète Hoop</b> (en bas du menu) : choisissez un pays (le vôtre par défaut) pour voir ses divisions ouvertes, son palmarès et les meilleurs joueurs de la saison. Pour afficher un autre championnat ou un club, tapez son nom dans la barre de recherche du haut (« II.2 », « Division III », un nom de club…) : classement, derniers résultats et effectif en lecture seule.</p>
       </div>
@@ -42492,7 +42492,7 @@ function renderNationalCupSection(holder) {
     const cur = path.find(p => p.state === "pending" || p.state === "live") || [...path].reverse().find(p => p.round && p.m) || path[0];
     cupSelRound = cur ? cur.i : 0;
   }
-  const countryName = { fr: "France", us: "États-Unis" }[league.country] || "";
+  const countryName = { fr: "France", us: "États-Unis", it: "Italie" }[league.country] || "";
   let html = "";
   if (cup.championName) {
     const isMe = cup.champion === myTeamIndex;

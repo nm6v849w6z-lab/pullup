@@ -103,7 +103,7 @@
   .field{margin-bottom:14px}
   .lbl{display:block; font-size:13px; font-weight:600; color:var(--ink-dim); margin:0 0 6px}
   /* Choix du pays (championnats par pays, 2026-09-28). */
-  .country-pick{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .country-pick{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px}
   .country-pick button{display:flex; align-items:center; justify-content:center; gap:9px; background:var(--bg); color:var(--ink-dim); border:1px solid var(--line); border-radius:9px; font:600 15px/1 "DM Sans",sans-serif; padding:12px 10px; cursor:pointer; transition:border-color .15s, color .15s}
   .country-pick button img{width:22px; height:16.5px; border-radius:2px; box-shadow:0 0 0 1px rgba(255,255,255,.12)}
   .country-pick button[aria-checked="true"]{border-color:var(--amber); color:var(--ink); box-shadow:0 0 0 3px rgba(240,162,60,.14)}
@@ -249,8 +249,9 @@
               <div class="country-pick" role="radiogroup" data-country-pick="su">
                 <button type="button" role="radio" aria-checked="true" data-country="fr"><img src="/assets/flags/fr.png" alt=""><span data-t="country.fr">France</span></button>
                 <button type="button" role="radio" aria-checked="false" data-country="us"><img src="/assets/flags/us.png" alt=""><span data-t="country.us">États-Unis</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="it"><img src="/assets/flags/it.png" alt=""><span data-t="country.it">Italie</span></button>
               </div>
-              <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (heure de Paris ou de New York).</div></div>
+              <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (heure de Paris, de Rome ou de New York).</div></div>
             <div class="field"><label for="suClub" data-t="field.club">Nom de ton club</label>
               <input type="text" id="suClub" autocomplete="organization" maxlength="24" required placeholder="Annecy Hoops">
               <div class="hint" data-t="field.clubHint">2 à 24 caractères. Visible par les autres managers.</div></div>
@@ -325,8 +326,9 @@
               <div class="country-pick" role="radiogroup" data-country-pick="dc">
                 <button type="button" role="radio" aria-checked="true" data-country="fr"><img src="/assets/flags/fr.png" alt=""><span data-t="country.fr">France</span></button>
                 <button type="button" role="radio" aria-checked="false" data-country="us"><img src="/assets/flags/us.png" alt=""><span data-t="country.us">États-Unis</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="it"><img src="/assets/flags/it.png" alt=""><span data-t="country.it">Italie</span></button>
               </div>
-              <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (heure de Paris ou de New York).</div></div>
+              <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (heure de Paris, de Rome ou de New York).</div></div>
             <div class="field"><label for="dcClub" data-t="field.club">Nom de ton club</label>
               <input type="text" id="dcClub" maxlength="24" required>
               <div class="hint" data-t="field.clubHint">2 à 24 caractères. Visible par les autres managers.</div></div>
@@ -413,8 +415,8 @@
       "hero.fact1": "<b>Live games</b> at set times", "hero.fact2": "<b>10 managers</b> per league", "hero.fact3": "<b>Free</b>, nothing to install",
       "signup.title": "Your club awaits", "signup.sub": "Pick a name: you take over a club in the current league and play tonight.",
       "discord.signup": "Sign up with Discord", "discord.login": "Log in with Discord", "or": "or",
-      "field.country": "Your country", "country.fr": "France", "country.us": "United States",
-      "field.countryHint": "Your league and its schedule (Paris or New York time).",
+      "field.country": "Your country", "country.fr": "France", "country.us": "United States", "country.it": "Italy",
+      "field.countryHint": "Your league and its schedule (Paris, Rome or New York time).",
       "field.club": "Your club's name", "field.clubHint": "2 to 24 characters. Visible to other managers.",
       "field.email": "Email", "field.password": "Password", "field.pwHint": "At least 8 characters.",
       "pw.show": "Show", "pw.hide": "Hide",

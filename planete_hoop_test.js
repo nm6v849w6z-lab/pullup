@@ -35,7 +35,7 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   const box = doc.getElementById("planeteContent");
   await wait(() => box.querySelector(".pc-hero"), "chargement de Planète Hoop");
   const opts = [...box.querySelectorAll(".pc-picker-opt")];
-  if (opts.length !== 2) fail(`2 pays attendus dans le menu déroulant, obtenu ${opts.length}.`);
+  if (opts.length !== 3 || !opts.some(o => o.dataset.phCountry === "it" && /Italie/.test(o.textContent))) fail(`3 pays attendus dans le menu déroulant (France, États-Unis, Italie), obtenu ${opts.length}.`);
   if (!box.querySelector(".pc-picker-btn").textContent.includes("France") || !opts.find(o => o.classList.contains("active")).textContent.includes("France")) fail("son pays (France) doit être sélectionné par défaut.");
   if (!box.querySelector(".pc-picker-menu").classList.contains("hidden")) fail("menu des pays fermé au départ.");
   box.querySelector("[data-pc-picker]").click();
@@ -69,7 +69,7 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
 
   // 1bis) Route /api/world/country.
   const apiUs = await win.eval(`planeteFetch("/api/world/country?code=us")`);
-  if (apiUs.overview.country !== "us" || apiUs.overview.mine || apiUs.myCountry !== "fr" || apiUs.countries.length !== 2) fail(`/api/world/country?code=us : ${JSON.stringify(apiUs).slice(0, 200)}`);
+  if (apiUs.overview.country !== "us" || apiUs.overview.mine || apiUs.myCountry !== "fr" || apiUs.countries.length !== 3) fail(`/api/world/country?code=us : ${JSON.stringify(apiUs).slice(0, 200)}`);
   ok("/api/world/country?code=us : aperçu des USA, pays du manager rappelé");
 
   // 2) Un championnat : sous-page (classement), retour à l'aperçu.

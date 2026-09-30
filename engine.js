@@ -8578,6 +8578,11 @@ const CPU_TEAM_NAMES = ["Paris", "Marseille", "Toulouse", "Nice", "Nantes", "Str
 const WORLD_COUNTRIES = {
   fr: { code: "fr", name: "France", timeZone: "Europe/Paris" },
   us: { code: "us", name: "États-Unis", timeZone: "America/New_York" },
+  // Italie (retour utilisateur 2026-09-30 : « création de l'Italie : pour
+  // l'instant une division, mais en automatique plusieurs divisions quand on
+  // a plus de 10 joueurs ») : Division I seule au départ, la suite s'ouvre
+  // comme partout (server/world.js:assignClub/nextSlot).
+  it: { code: "it", name: "Italie", timeZone: "Europe/Rome" },
 };
 const COUNTRY_CPU_TEAM_NAMES = {
   fr: [...CPU_TEAM_NAMES, "Montpellier", "Reims", "Le Havre", "Saint-Étienne", "Toulon", "Grenoble", "Dijon",
@@ -8602,6 +8607,17 @@ const COUNTRY_CPU_TEAM_NAMES = {
     "Chattanooga", "Mobile", "Baton Rouge", "Shreveport", "Oklahoma City", "Lincoln", "Fargo", "Sioux Falls",
     "Billings", "Cheyenne", "Santa Fe", "Colorado Springs", "Scottsdale", "Durham", "Greensboro", "Akron",
     "Dayton", "Toledo", "Grand Rapids", "Flint", "Gary", "Peoria", "Springfield", "Worcester", "Burlington"],
+  it: ["Milano", "Roma", "Bologna", "Venezia", "Varese", "Cantù", "Treviso", "Sassari", "Brescia", "Trento",
+    "Pesaro", "Reggio Emilia", "Torino", "Napoli", "Firenze", "Genova", "Pistoia", "Cremona", "Trieste", "Udine",
+    "Brindisi", "Tortona", "Scafati", "Caserta", "Avellino", "Siena", "Livorno", "Verona", "Padova", "Vicenza",
+    "Bergamo", "Como", "Monza", "Pavia", "Piacenza", "Parma", "Modena", "Ferrara", "Ravenna", "Rimini",
+    "Forlì", "Imola", "Ancona", "Jesi", "Fabriano", "Chieti", "Pescara", "Teramo", "Roseto", "Rieti",
+    "Latina", "Salerno", "Bari", "Taranto", "Lecce", "Potenza", "Matera", "Cosenza", "Reggio Calabria",
+    "Catania", "Palermo", "Messina", "Trapani", "Agrigento", "Cagliari", "Olbia", "Perugia", "Terni",
+    "Arezzo", "Pisa", "Lucca", "Montecatini", "Biella", "Novara", "Alessandria", "Asti", "Cuneo", "Aosta",
+    "Bolzano", "Gorizia", "Pordenone", "Mestre", "Chiusi", "Orzinuovi", "Capo d'Orlando", "Agropoli",
+    "Legnano", "Desio", "Saronno", "Busto Arsizio", "Lodi", "Mantova", "Rovigo", "Treviglio", "Casale Monferrato",
+    "Vigevano", "Omegna", "Sanremo", "La Spezia", "Viterbo", "Frosinone", "Benevento", "Nardò"],
 };
 function countryInfo(code) {
   return WORLD_COUNTRIES[code] || WORLD_COUNTRIES.fr;
