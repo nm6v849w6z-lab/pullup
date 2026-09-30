@@ -74,18 +74,11 @@ console.log("✅ La navigation depuis le tableau de bord ouvre les vraies pages 
 clickTab("club");
 
 // ---------------------------------------------------------------------
-// Partie 3 : bouton "Identité du club" (carte retirée du tableau de bord) :
-// ouvre l'onglet Personnalisation (retour utilisateur 2026-09-30), qui
-// remplace l'ancienne fenêtre d'identité.
+// Partie 3 : plus de bouton "Identité du club" sur le tableau de bord
+// (retour utilisateur 2026-09-30 : l'onglet Personnalisation le remplace).
 // ---------------------------------------------------------------------
-const identityBtn = doc.querySelector('[data-dash-href="/parametres/identite"]');
-if (!identityBtn) throw new Error("❌ Le bouton \"Identité du club\" devrait être présent dans l'en-tête du tableau de bord.");
-identityBtn.dispatchEvent(new win.MouseEvent("click", { bubbles: true, cancelable: true }));
-const persoShown = !doc.getElementById("personnalisationSection").classList.contains("hidden");
-console.log("Onglet Personnalisation ouvert :", persoShown);
-if (!persoShown || doc.getElementById("clubIdentityModalOverlay")) throw new Error("❌ Le bouton \"Identité du club\" devrait ouvrir l'onglet Personnalisation (plus de fenêtre).");
-clickTab("club");
-console.log("✅ Le bouton \"Identité du club\" ouvre bien l'onglet Personnalisation.");
+if (doc.querySelector('[data-dash-href="/parametres/identite"], .hm-head__identity-btn')) throw new Error("❌ Le bouton \"Identité du club\" ne devrait plus être dans l'en-tête du tableau de bord.");
+console.log("✅ Plus de bouton \"Identité du club\" sur le tableau de bord.");
 
 // ---------------------------------------------------------------------
 // Partie 4 : une VRAIE interview de début de saison est déjà présente

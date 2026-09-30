@@ -5656,7 +5656,7 @@
      livrable d'origine (champ de recherche non repris, voir
      DEV_NOTES.md) -- sans ce correctif le bouton "Donnez vos ordres"
      collerait juste apres le nom du club. */
-  .hm-head__identity-btn{margin-left:auto;}
+  .hm-head__settings-btn{margin-left:auto;}
   /* =====================================================================
      Onglet Salle — refonte visuelle (retour utilisateur, 2026-09-25 : "aide
      moi à rendre cette page plus sexy", puis sur la maquette : "vas y ça me
@@ -39037,16 +39037,15 @@ function dashRenderHeader(data) {
   // rien (aucun gestionnaire, purement décoratif dans dashboard.js) — le
   // laisser aurait ajouté un contrôle mort plutôt qu'une vraie recherche,
   // hors périmètre de ce chantier.
-  // Bouton "Identité" (voir DEV_NOTES.md point 10, "Carte Identité du club
-  // retirée du tableau de bord") : ouvre l'onglet Personnalisation depuis le
-  // 2026-09-30 — voir dashResolveNavigate.
+  // Bouton « Identité du club » retiré (retour utilisateur 2026-09-30 : plus
+  // d'intérêt avec l'onglet Personnalisation) ; la route
+  // "/parametres/identite" reste gérée par dashResolveNavigate.
   return `<header class="hm-head">
     ${dashCrest(club, "sm")}
     <div class="hm-head__club">
       <div class="hm-head__name">${dashEsc(club.name)}</div>
       <div class="hm-head__meta">${dashEsc(club.division)} · Saison ${dashEsc(club.season)} · Semaine ${dashEsc(club.week)}</div>
     </div>
-    <button type="button" class="hm-btn hm-btn--ghost hm-head__identity-btn" data-dash-href="/parametres/identite">Identité du club</button>
     <button type="button" class="hm-btn hm-btn--ghost hm-head__settings-btn" data-dash-href="/parametres" aria-label="Paramètres" title="Paramètres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </header>`;
 }

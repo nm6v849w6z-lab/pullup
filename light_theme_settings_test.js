@@ -21,10 +21,8 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
 
   const clickTab = k => [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === k).click();
   clickTab("club");
-  const identity = doc.querySelector(".hm-head__identity-btn");
   const settings = doc.querySelector(".hm-head__settings-btn");
-  assert(identity && settings, "bouton Paramètres présent sur le tableau de bord");
-  assert(identity.nextElementSibling === settings, "le bouton Paramètres est juste à côté d'« Identité du club »");
+  assert(settings && !doc.querySelector(".hm-head__identity-btn"), "bouton Paramètres présent sur le tableau de bord, plus de bouton « Identité du club »");
   assert(settings.getAttribute("aria-label") === "Paramètres", "bouton Paramètres nommé pour les lecteurs d'écran");
 
   settings.click();
