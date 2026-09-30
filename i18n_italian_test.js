@@ -74,7 +74,7 @@ function loadDict(file, name) {
   await waitFor(() => win.hmI18n);
   assert(!win.HM_I18N_IT, "en français, le dictionnaire italien n'est pas téléchargé");
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "club").click();
-  doc.querySelector(".hm-head__settings-btn").click();
+  doc.querySelector("#sidebarSettingsBtn").click();
   const overlay = doc.getElementById("settingsModalOverlay");
   const langs = [...overlay.querySelectorAll("[data-lang-choice]")];
   assert(langs.map(b => b.dataset.langChoice).join() === "fr,en,it", "Paramètres : Français / English / Italiano");
@@ -176,7 +176,7 @@ function loadDict(file, name) {
 
   // Paramètres en italien : les noms de langue restent dans leur langue.
   tab("club").click();
-  d2.querySelector(".hm-head__settings-btn").click();
+  d2.querySelector("#sidebarSettingsBtn").click();
   await sleep(50);
   const ov2 = d2.getElementById("settingsModalOverlay");
   assert(/Impostazioni/.test(ov2.textContent) && /Lingua/.test(ov2.textContent), "fenêtre Paramètres en italien (Impostazioni / Lingua)");

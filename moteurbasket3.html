@@ -192,12 +192,14 @@
   #guideSection .gd-nav-btn:hover{color:var(--ink); background:var(--panel-2);}
   #guideSection .gd-nav-btn.active{color:var(--amber); background:rgba(240,162,60,.10); border-color:rgba(240,162,60,.45);}
   #guideSection .gd-nav-btn:focus-visible, #guideSection .gd-link:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
-  #guideSection .gd-body{background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; padding:20px 24px; min-width:0;}
+  /* Cadre à la largeur du texte (retour utilisateur 2026-09-30 : grand vide
+     à droite du texte sur un grand écran). */
+  #guideSection .gd-body{background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; padding:20px 28px; min-width:0; max-width:900px;}
   #guideSection .gd-body .tour-launch-btn{margin:0 0 12px;}
   #guideSection .guide-entry{border-top:none; padding:4px 0 0;}
   #guideSection .guide-entry.gd-off{display:none;}
   #guideSection .guide-entry h3{font-size:18px; color:var(--ink); margin:0 0 12px;}
-  #guideSection .guide-entry .training-intro{font-size:14px; line-height:1.6; max-width:72ch;}
+  #guideSection .guide-entry .training-intro{font-size:14.5px; line-height:1.65; max-width:none;}
   #guideSection .gd-link{background:none; border:0; padding:0; font:inherit; color:var(--amber); cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
   #guideSection .gd-table{border-collapse:separate; border-spacing:0; margin:10px 0 4px; min-width:min(520px,100%); background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; overflow:hidden; font-size:13.5px;}
   #guideSection .gd-table th{text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; padding:9px 12px; border-bottom:1px solid var(--line-soft);}
@@ -4818,8 +4820,13 @@
      zones de tir | comment ils marquent), 2 puis 1 en dessous. */
   .sp2-grid-3{display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start;}
   .sp2-grid-3 > div > :first-child{margin-top:0;}
-  @media (max-width:1500px){ .sp2-grid-3{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);} .sp2-grid-3 > div:nth-child(2){grid-column:2; grid-row:span 2;} .sp2-grid-3 > div:nth-child(3){grid-column:1;} }
-  @media (max-width:900px){ .sp2-grid-3{grid-template-columns:minmax(0,1fr);} .sp2-grid-3 > div:nth-child(n){grid-column:auto; grid-row:auto;} }
+  /* 2 colonnes : « Comment ils marquent » sur toute la largeur en dessous,
+     par type et par situation côte à côte (retour utilisateur 2026-09-30). */
+  @media (max-width:1500px){ .sp2-grid-3{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);} .sp2-grid-3 > div:nth-child(3){grid-column:1 / -1;}
+    .sp2-grid-3 .sp2-origins-cols{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:28px; align-items:start;}
+    .sp2-grid-3 .sp2-origins-sit-col > .sp2-origin-sep{display:none;} }
+  @media (max-width:900px){ .sp2-grid-3{grid-template-columns:minmax(0,1fr);} .sp2-grid-3 > div:nth-child(n){grid-column:auto; grid-row:auto;}
+    .sp2-grid-3 .sp2-origins-cols{display:block;} .sp2-grid-3 .sp2-origins-sit-col > .sp2-origin-sep{display:block;} }
   .sp2-grid-even{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:24px; align-items:start;}
   #scoutingProPanel .scouting-hero-stats{margin-top:0;}
   #scoutingProPanel .scouting-profile-grid{grid-template-columns:repeat(auto-fit, minmax(120px,1fr));}
@@ -5924,7 +5931,6 @@
      DEV_NOTES.md) -- sans ce correctif le bouton "Donnez vos ordres"
      collerait juste apres le nom du club. */
   .hm-head__analyse-btn{margin-left:auto; display:inline-flex; align-items:center; gap:8px; white-space:nowrap;}
-  .hm-head__analyse-btn + .hm-head__settings-btn{margin-left:0;}
   @media(max-width:680px){ .hm-head__analyse-btn span{display:none;} .hm-head__analyse-btn{padding:0 12px;} }
   /* =====================================================================
      Onglet Salle — refonte visuelle (retour utilisateur, 2026-09-25 : "aide
@@ -7361,6 +7367,11 @@
            DISCORD_INVITE_URL du serveur (voir /api/account/config), ouvert
            dans un nouvel onglet (flèche ↗) ; masqué si le serveur n'en a pas. -->
       <a class="tab-btn sidebar-link sidebar-external hidden" id="sidebarDiscordLink" href="#" target="_blank" rel="noopener"><span class="sidebar-label">Discord ↗</span></a>
+      <!-- Paramètres (retour utilisateur 2026-09-30 : « enlève le bouton
+           paramètres sur le tableau de bord et fais un onglet paramètres en
+           dessous de l'onglet Discord ») : ouvre la fenêtre Paramètres
+           (showSettingsModal), sans data-tab. -->
+      <button type="button" class="tab-btn sidebar-link" id="sidebarSettingsBtn"><span class="sidebar-label">Paramètres</span></button>
       <!-- Déconnexion (retour utilisateur 2026-09-27 : "il manque un bouton
            déconnexion") — sans data-tab (ce n'est pas un onglet), affichée
            seulement pour un manager connecté (voir hmLogout). -->
@@ -24973,6 +24984,13 @@ document.addEventListener("click", e => {
   if (sub) sub.click();
 });
 
+// Onglet Paramètres de la barre latérale (voir #sidebarSettingsBtn).
+document.addEventListener("click", e => {
+  if (!e.target.closest("#sidebarSettingsBtn")) return;
+  document.body.classList.remove("m-drawer-open");
+  showSettingsModal();
+});
+
 function setActiveTab(key) {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === key));
 }
@@ -31009,7 +31027,11 @@ function teamDetailAnalyseHtml(teamIdx) {
   // 2026-09-27 : "pour l'analyse de sa propre équipe c'est aussi un avantage
   // premium").
   if (isOwnTeam) {
-    if (teamIsPremium(teamA)) return tacticalReportHtml(team);
+    // Premium : même rapport complet (Scouting Pro) que pour un adversaire
+    // (retour utilisateur 2026-09-30 : « il faut le rapport complet ici pour
+    // les premium, comme si on analysait une autre équipe »), chargé par
+    // refreshScoutingProPanel ; le rapport tactique reste dessous.
+    if (teamIsPremium(teamA)) return `<div id="scoutingProPanel" class="section scouting-pro-panel"><p class="sub">Chargement…</p></div>` + tacticalReportHtml(team);
     return `<div class="section"><div class="prm-lock"><h3 style="margin:0">Comment vos adversaires vous voient</h3>` +
       `<p class="sub" style="margin:0">Vos tendances de jeu (tirs dans la raquette, à 3 points, rebonds offensifs, joueurs clés) et la défense qu'on vous conseillerait : réservé au Premium.</p>` +
       premiumLinkHtml() + `</div></div>`;
@@ -31811,9 +31833,8 @@ function renderTeamDetailContent(teamIdx) {
     if (!foreign) window.__lastLiveBannerCheck = refreshTeamDetailLiveBanner(teamIdx);
   }
   // Scouting Pro (voir teamDetailAnalyseHtml/refreshScoutingProPanel) :
-  // uniquement pour un ADVERSAIRE (jamais sa propre équipe, qui reste sur
-  // le rapport tactique gratuit seul, voir teamDetailAnalyseHtml).
-  if (!foreign && teamDetailSubView === "analyse" && teamIdx !== myTeamIndex) {
+  // pour un adversaire, et pour sa propre équipe en Premium (2026-09-30).
+  if (!foreign && teamDetailSubView === "analyse" && (teamIdx !== myTeamIndex || teamIsPremium(teamA))) {
     window.__lastScoutingProCheck = refreshScoutingProPanel(teamIdx);
   }
 }
@@ -34029,9 +34050,12 @@ function sp2PlanHtml(report, teamIdx, setup, attackTips) {
       `<div><b>${headline}</b><span>${escapeHtml(tip.advice)}</span></div>` +
       `<div class="sp2-plan-big">${tip.stat}<small>${escapeHtml(tip.statLabel)}</small></div></li>`;
   };
-  let html = `<section class="sp2-plan"><div class="sp2-plan-top"><h2>Plan de match</h2>` +
-    `<div class="sp2-apply"><span class="sub">Préremplit tes ordres avec ces consignes</span>` +
-    `<button type="button" class="primary" id="scoutingApplyOrdresBtn" data-opponent-idx="${teamIdx}"${setup || keys.length ? "" : " disabled"}>Appliquer à mes ordres</button></div></div>`;
+  // Sa propre équipe (Premium) : pas de bouton « Appliquer à mes ordres »
+  // (le plan décrit comment battre CE club, donc le sien).
+  const ownTeam = teamIdx === myTeamIndex;
+  let html = `<section class="sp2-plan"><div class="sp2-plan-top"><h2>${ownTeam ? "Comment vos adversaires peuvent vous battre" : "Plan de match"}</h2>` +
+    (ownTeam ? "" : `<div class="sp2-apply"><span class="sub">Préremplit tes ordres avec ces consignes</span>` +
+    `<button type="button" class="primary" id="scoutingApplyOrdresBtn" data-opponent-idx="${teamIdx}"${setup || keys.length ? "" : " disabled"}>Appliquer à mes ordres</button></div>`) + `</div>`;
   html += `<div id="scoutingApplyOrdresFeedback" class="sub"></div>`;
   html += `<div class="sp2-plan-cols">`;
   html += `<div class="sp2-plan-col threat"><h3>À neutraliser</h3>` +
@@ -34129,10 +34153,13 @@ function sp2ScoringOriginsHtml(team) {
     `<div class="sp2-origin-track"><span style="width:${width}%${color ? `;background:${color}` : ""}"></span></div>` +
     (r.top && r.top.pct >= 30 ? `<div class="sp2-origin-top-player">surtout ${escapeHtml(r.top.name)} (${r.top.pct}%)</div>` : "") + `</div>`;
   const maxType = Math.max(...o.byType.map(r => r.pct), 1);
-  html += `<p class="sp2-origin-block"><b>Par type de tir</b> · chaque point compté une fois (total 100 %)</p><div class="sp2-origins">` +
-    o.byType.map(r => row(r, Math.round(r.pct / maxType * 100), r.color)).join("") + `</div>`;
-  html += `<div class="sp2-origin-sep"></div><p class="sp2-origin-block"><b>Par situation</b> · une même action peut compter dans plusieurs situations</p>` +
-    `<div class="sp2-origins sp2-origins-sit">` + o.bySituation.map(r => row(r, Math.min(100, r.pct), null)).join("") + `</div>`;
+  // Deux blocs (par type / par situation) côte à côte quand la place le
+  // permet (retour utilisateur 2026-09-30, écran plus petit : « la brique
+  // par situation doit être à côté », voir .sp2-origins-cols).
+  html += `<div class="sp2-origins-cols"><div><p class="sp2-origin-block"><b>Par type de tir</b> · chaque point compté une fois (total 100 %)</p><div class="sp2-origins">` +
+    o.byType.map(r => row(r, Math.round(r.pct / maxType * 100), r.color)).join("") + `</div></div>`;
+  html += `<div class="sp2-origins-sit-col"><div class="sp2-origin-sep"></div><p class="sp2-origin-block"><b>Par situation</b> · une même action peut compter dans plusieurs situations</p>` +
+    `<div class="sp2-origins sp2-origins-sit">` + o.bySituation.map(r => row(r, Math.min(100, r.pct), null)).join("") + `</div></div></div>`;
   return html;
 }
 
@@ -40323,7 +40350,6 @@ function dashRenderHeader(data) {
       <div class="hm-head__meta">${dashEsc(club.division)} · Saison ${dashEsc(club.season)} · Semaine ${dashEsc(club.week)}</div>
     </div>
     <button type="button" class="hm-btn hm-btn--ghost hm-head__analyse-btn" data-own-analysis title="Comment vos adversaires vous voient"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>Analyse de mon équipe</span></button>
-    <button type="button" class="hm-btn hm-btn--ghost hm-head__settings-btn" data-dash-href="/parametres" aria-label="Paramètres" title="Paramètres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </header>`;
 }
 

@@ -33,7 +33,7 @@ async function waitFor(fn, ms = 30000) {
   assert(!win.HM_I18N_EN, "en français, le dictionnaire anglais n'est pas téléchargé");
 
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "club").click();
-  doc.querySelector(".hm-head__settings-btn").click();
+  doc.querySelector("#sidebarSettingsBtn").click();
   const overlay = doc.getElementById("settingsModalOverlay");
   const langs = [...overlay.querySelectorAll("[data-lang-choice]")];
   assert(langs.map(b => b.dataset.langChoice).join() === "fr,en,it", "Paramètres : choix Français / English / Italiano");
@@ -115,7 +115,7 @@ async function waitFor(fn, ms = 30000) {
 
   // Paramètres en anglais : les noms de langue ne sont pas traduits.
   tab("club").click();
-  d2.querySelector(".hm-head__settings-btn").click();
+  d2.querySelector("#sidebarSettingsBtn").click();
   await sleep(50);
   const ov2 = d2.getElementById("settingsModalOverlay");
   assert(/Settings/.test(ov2.textContent) && /Language/.test(ov2.textContent), "fenêtre Paramètres en anglais (Settings / Language)");

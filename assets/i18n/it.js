@@ -3919,6 +3919,7 @@ window.HM_I18N_IT = {
   "· dom.": "· casa",
   "· ext.": "· trasf.",
   "Analyse de mon équipe": "Analisi della mia squadra",
+  "Comment vos adversaires peuvent vous battre": "Come gli avversari possono batterti",
   "Spécialisé (1 caractéristique, plein rendement)": "Specializzato (1 caratteristica, pieno effetto)",
   "Polyvalent (2 caractéristiques, chacune à 62 %)": "Polivalente (2 caratteristiche, ciascuna al 62%)",
   "Deux types de programmes. Spécialisé : une seule compétence, à plein rendement. Polyvalent : deux compétences liées en même temps (par exemple Tir extérieur = Tir à mi-distance + Tir à 3 points), chacune progressant à 62 % du rythme d'un programme spécialisé. Au total, on progresse un peu plus (124 % contre 100 %), mais réparti sur deux compétences.": "Due tipi di programma. Specializzato: una sola abilità, a pieno effetto. Polivalente: due abilità collegate insieme (ad esempio Tiro da fuori = Tiro dalla media distanza + Tiro da 3 punti), ciascuna che progredisce al 62% del ritmo di un programma specializzato. In totale si progredisce un po' di più (124% contro 100%), ma diviso su due abilità.",

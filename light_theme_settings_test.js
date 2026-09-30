@@ -21,9 +21,11 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
 
   const clickTab = k => [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === k).click();
   clickTab("club");
-  const settings = doc.querySelector(".hm-head__settings-btn");
-  assert(settings && !doc.querySelector(".hm-head__identity-btn"), "bouton Paramètres présent sur le tableau de bord, plus de bouton « Identité du club »");
-  assert(settings.getAttribute("aria-label") === "Paramètres", "bouton Paramètres nommé pour les lecteurs d'écran");
+  const settings = doc.querySelector("#sidebarSettingsBtn");
+  // Onglet Paramètres de la barre latérale (2026-09-30), plus de bouton
+  // sur le tableau de bord.
+  assert(settings && !doc.querySelector(".hm-head__identity-btn") && !doc.querySelector(".hm-head__settings-btn"), "onglet Paramètres dans la barre latérale, plus de bouton Paramètres ni « Identité du club » sur le tableau de bord");
+  assert(settings.textContent.trim() === "Paramètres", "onglet Paramètres nommé");
 
   settings.click();
   const overlay = doc.getElementById("settingsModalOverlay");
