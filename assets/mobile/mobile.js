@@ -14,7 +14,9 @@
 (function () {
   "use strict";
 
-  var MOBILE_QUERY = "(max-width: 768px)";
+  // Portrait, ou téléphone en paysage (tactile, moins de 520 px de haut) :
+  // même requête que assets/mobile/mobile.css.
+  var MOBILE_QUERY = "(max-width: 768px), (max-height: 520px) and (pointer: coarse)";
   var TOKEN_KEY = "tipinManagerToken_v1"; // même clé que MANAGER_TOKEN_STORAGE_KEY (moteurbasket3.html)
 
   function svg(path) {

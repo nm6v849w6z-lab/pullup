@@ -8,7 +8,11 @@
    club dans l'en-tête, quelle que soit la largeur (iPad compris). */
 html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
 
-@media (max-width: 768px) {
+/* Téléphone en paysage (retour d'un testeur 2026-09-30 : « la partie
+   ordre sur tel c'est pas facile même en paysage, ça fait vachement
+   gros ») : plus de 768 px de large mais moins de 520 px de haut et
+   tactile → même couche mobile qu'en portrait (voir MOBILE_QUERY). */
+@media (max-width: 768px), (max-height: 520px) and (pointer: coarse) {
   html { -webkit-text-size-adjust: 100%; }
   body { overscroll-behavior-y: none; }
   /* iOS zoome sur tout champ texte de moins de 16px au focus : on l'en
@@ -135,4 +139,47 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
   .calendar-table.med-table td.med-c-state { grid-column: 1; grid-row: 2; }
   .calendar-table.med-table td.med-c-state:empty { display: none; }
   .calendar-table.med-table td.med-c-end { grid-column: 2; grid-row: 1; align-self: center; text-align: right !important; font-size: inherit; font-weight: inherit; }
+}
+
+/* Téléphone en paysage (moins de 520 px de haut) : chaque pixel de hauteur
+   compte. Barre d'onglets du bas plus fine (icône et libellé côte à côte),
+   en-tête des Ordres qui défile avec la page au lieu de rester collé, et
+   barre d'enregistrement juste au-dessus des onglets. */
+@media (max-height: 520px) and (pointer: coarse) {
+  .m-tabbar { padding: 2px 4px calc(2px + env(safe-area-inset-bottom)); }
+  .m-tabbar .m-tab { min-height: 38px; flex-direction: row; gap: 6px; font-size: 11.5px; padding: 2px 0; }
+  .m-tabbar .m-tab svg { width: 18px; height: 18px; }
+  .ordres-actionbar { position: static !important; flex-wrap: nowrap !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+  .ordres-actionbar .oab-left, .ordres-actionbar .oab-right { width: auto !important; }
+  .ordres-actionbar .oab-left { flex: 1; min-width: 0; }
+  #prepSection .ordres-savebar .ordres-validate-btn, .ordres-savebar .osb-cancel { min-height: 36px !important; }
+  .ordres-savebar { bottom: calc(42px + env(safe-area-inset-bottom, 0px)) !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+  .content-scroll { padding-bottom: calc(56px + env(safe-area-inset-bottom)) !important; }
+}
+
+/* Ordres sur téléphone, plus dense (même retour : « ça fait vachement
+   gros ») : en-tête du match resserré (jauges côte à côte), terrain sans
+   double cadre, cartes de poste plus compactes. */
+@media (max-width: 768px), (max-height: 520px) and (pointer: coarse) {
+  .ordres-presets { margin-bottom: 10px; gap: 6px; }
+  .ordres-match-card { padding: 14px 16px !important; gap: 12px !important; margin-bottom: 14px !important; }
+  .omc-match { gap: 8px !important; }
+  .omc-teams { margin-top: 4px !important; gap: 10px !important; }
+  .omc-team { font-size: 22px !important; }
+  #prepSection .ordres-round-selector { display: flex; align-items: center; gap: 10px; }
+  #prepSection .ordres-round-selector select { min-width: 0 !important; flex: 1; }
+  #prepSection .omc-gauges { gap: 10px !important; padding-top: 12px !important; }
+  #prepSection .omc-gauges .roster-chemistry-gauge-label { font-size: 12px !important; }
+  #prepSection .compo-card { padding: 14px 10px !important; }
+  .compo-court { padding: 0 !important; background: none !important; gap: 8px !important; }
+  .cp-card { padding: 10px 12px !important; gap: 6px !important; }
+  .cp-bench { padding-top: 5px !important; }
+  .cp-sub { min-height: 24px !important; }
+}
+@media (max-height: 520px) and (pointer: coarse) {
+  /* Paysage : postes sur deux colonnes plutôt que le dessin du terrain. */
+  .compo-court { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; grid-template-areas: "pg sg" "sf pf" "c ." !important; min-height: 0 !important; }
+  .compo-court-lines { display: none !important; }
+  .ordres-match-card { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) !important; }
+  #prepSection .omc-gauges { border-top: none !important; padding-top: 0 !important; }
 }

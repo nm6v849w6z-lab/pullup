@@ -179,7 +179,7 @@ if (!detailContent.includes("3 matchs")) {
 {
   const oppCells = [...doc2.querySelectorAll("#playerDetailContent table.pdp-games td.opp")];
   if (!oppCells.length || oppCells.some(td => !td.title || td.title !== td.textContent)) throw new Error("❌ Derniers matchs : chaque cellule Adversaire devrait avoir la classe .opp et le nom complet en infobulle.");
-  if (!/@media \(max-width:768px\)\{\s*\.pdp2 table\.pdp-games\{table-layout:fixed;/.test(html) || !/\.pdp2 table\.pdp-games td\.opp\{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;\}/.test(html)) {
+  if (!/@media ?\(max-width:768px\)(?:, \(max-height:520px\) and \(pointer:coarse\))?\{\s*\.pdp2 table\.pdp-games\{table-layout:fixed;/.test(html) || !/\.pdp2 table\.pdp-games td\.opp\{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;\}/.test(html)) {
     throw new Error("❌ Derniers matchs : règles mobiles (table-layout:fixed, adversaire tronqué) absentes.");
   }
   console.log("✅ Derniers matchs : adversaire tronquable (.opp + infobulle), tableau à largeurs fixes sur téléphone.");

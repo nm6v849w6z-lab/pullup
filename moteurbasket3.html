@@ -855,7 +855,7 @@
   /* Téléphone : barre d'action sur 2 lignes au plus (titre masqué, onglets
      défilants sur une seule ligne) pour ne pas manger l'écran en restant
      collée en haut. */
-  @media(max-width:768px){
+  @media(max-width:768px), (max-height:520px) and (pointer:coarse){
     .ordres-actionbar{gap:8px; margin-left:-12px; margin-right:-12px; padding-left:12px; padding-right:12px;} /* la page n'a que 12px de marge ici (16px débordait de 4px) */
     .oab-title{display:none;}
     .oab-left, .oab-tabs{flex-wrap:nowrap; width:100%;}
@@ -2818,7 +2818,7 @@
      Adversaire prend le reste et se tronque avec « … » (nom complet en
      infobulle), marges resserrées, badge V/D et pastille d'éval plus
      compacts. Tient dans 360 px. */
-  @media (max-width:768px){
+  @media(max-width:768px), (max-height:520px) and (pointer:coarse){
     .pdp2 table.pdp-games{table-layout:fixed; font-size:12.5px;}
     .pdp2 table.pdp-games th{padding:6px 3px; font-size:9.5px; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
     .pdp2 table.pdp-games td{padding:7px 3px;}
@@ -3587,7 +3587,7 @@
     .stf-slots > .stf-slot, .stf-slots > .stf-slot:nth-child(n+4){grid-column:auto;}
     .stf-levels__grid{grid-template-columns:repeat(3,minmax(0,1fr));}
   }
-  @media (max-width:768px){
+  @media(max-width:768px), (max-height:520px) and (pointer:coarse){
     .stf-role__head{flex-wrap:wrap; padding:16px;}
     .stf-current-holder{padding:0 16px;}
     .stf-levels{padding:14px 16px 16px;}
@@ -6425,7 +6425,7 @@
      Joueur raccourcie pour laisser voir les chiffres — avatar réduit,
      drapeau masqué, nom tronqué avec « … » (nom complet en infobulle et
      sur la fiche joueur). */
-  @media (max-width:768px){
+  @media(max-width:768px), (max-height:520px) and (pointer:coarse){
     :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table th:first-child,
     :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table td:first-child{padding-left:10px; padding-right:8px;}
     :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-general th.eff-th-name,
@@ -6487,7 +6487,7 @@
   .tde-h2h-row:last-child{border-bottom:0; padding-bottom:0;}
   .tde-h2h-label{flex:1; color:var(--ink); font-weight:600;}
   .tde-h2h-where{color:var(--ink-faint); font-size:12px; white-space:nowrap;}
-  @media(max-width:768px){
+  @media(max-width:768px), (max-height:520px) and (pointer:coarse){
     .tde-kpis .eff-kpi-sep{display:none;}
     .tde-kpis .eff-kpi{flex:1 1 45%; padding:10px 14px;}
   }
@@ -6495,7 +6495,7 @@
     .eff-table-wrap:not(.eff-table-wrap-caracs){overflow-x:auto; padding-bottom:140px; margin-bottom:-124px;}
     .eff-head{align-items:flex-start;}
   }
-  @media(max-width:768px){
+  @media(max-width:768px), (max-height:520px) and (pointer:coarse){
     .eff-kpis{width:100%; flex-direction:column;}
     .eff-kpi-chem{width:auto;}
     .eff-kpi-sep{width:auto; height:1px;}
