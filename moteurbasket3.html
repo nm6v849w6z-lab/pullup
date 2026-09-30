@@ -675,7 +675,7 @@
   .cp-cond.cond-low, .cp-cond.cond-critical{color:var(--danger); font-weight:700;}
   .cp-ovr{font-size:20px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; line-height:1;}
   .cp-bench{display:flex; flex-direction:column; gap:1px; padding-top:8px; border-top:1px solid var(--line-soft);}
-  .cp-sub{display:grid; grid-template-columns:38px minmax(0, 1fr) auto 22px 18px; align-items:center; gap:6px; min-height:26px; font-size:13px;}
+  .cp-sub{display:grid; grid-template-columns:38px minmax(0, 1fr) auto 8px 22px 18px; align-items:center; gap:6px; min-height:26px; font-size:13px;}
   .cp-role{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint);}
   .cp-sub-name{min-width:0; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .cp-sub-pos{margin-left:6px; font-size:10.5px; font-weight:700; color:var(--ink-faint);}
@@ -716,8 +716,8 @@
   .compo-roster-head{padding:0 6px;}
   .compo-roster-title{margin:0; font-size:15px; font-weight:800; color:var(--ink);}
   #prepSection .conv-list{display:flex; flex-direction:column;}
-  #prepSection .conv-row{
-    display:grid; grid-template-columns:18px minmax(0, 1fr) 22px minmax(0, 112px) 22px; align-items:center; gap:8px;
+  #prepSection .conv-list .conv-row{
+    display:grid; grid-template-columns:18px minmax(0, 1fr) 8px 22px minmax(0, 112px) 22px; align-items:center; gap:8px;
     min-height:38px; margin:0; padding:0 6px; border-radius:8px; cursor:pointer;
   }
   #prepSection .conv-row:hover{background:var(--compo-court-bg);}
@@ -735,7 +735,63 @@
   #prepSection .conv-role.spare, #prepSection .conv-role.off{color:var(--ink-faint);}
   #prepSection .conv-role.spare::before, #prepSection .conv-role.off::before{display:none;}
   #prepSection .conv-role.off{font-style:italic;}
-  #prepSection .team-panel.ordres-panel{display:flex; flex-direction:column; gap:22px;}
+  #prepSection .team-panel.ordres-panel{display:flex; flex-direction:column; gap:22px; min-width:0;}
+  /* Effectif de la composition (retour testeur 2026-09-30 : forme, stats,
+     comparaison) : pastille de forme dans la liste compacte et sur les
+     lignes remplaçant/réserviste du terrain ; bascule Liste compacte /
+     Détails ; tableau détaillé pleine largeur, colonnes triables, nom figé
+     au défilement horizontal (téléphone). */
+  .conv-cond, .cp-sub-cond{width:8px; height:8px; border-radius:50%; background:var(--ok); justify-self:center;}
+  :is(.conv-cond, .cp-sub-cond).cond-great, :is(.conv-cond, .cp-sub-cond).cond-good{background:#4fc3a1;}
+  :is(.conv-cond, .cp-sub-cond).cond-mid{background:var(--amber);}
+  :is(.conv-cond, .cp-sub-cond).cond-low, :is(.conv-cond, .cp-sub-cond).cond-critical{background:var(--danger);}
+  #prepSection .conv-name .injury-cross{margin-left:6px;}
+  #prepSection .conv-row.injured .conv-name{color:var(--danger);}
+  .compo-roster-head{flex-wrap:wrap; row-gap:8px;}
+  .compo-view-seg{display:inline-flex; gap:2px; padding:3px; margin-left:auto; border-radius:9px; background:var(--compo-court-bg);}
+  .compo-view-btn{min-height:28px; padding:0 10px; border:0; border-radius:7px; background:transparent; font:inherit; font-size:12px; font-weight:700; color:var(--ink-dim); cursor:pointer; white-space:nowrap;}
+  .compo-view-btn:hover{color:var(--ink);}
+  .compo-view-btn.active{background:var(--panel); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.25);}
+  .compo-roster .compo-roster-head .ordres-card-aside{margin-left:0;}
+  /* Vue Détails : le terrain et le bilan côte à côte, le tableau dessous. */
+  .compo-layout.is-details{grid-template-columns:minmax(0, 1fr) 300px;}
+  .compo-layout.is-details .compo-court{min-height:500px;}
+  .compo-roster.is-details{margin-top:4px;}
+  .compo-details{display:flex; flex-direction:column; gap:10px; min-width:0; max-width:100%;}
+  #prepSection .lineup-editor, #prepSection .compo-card, .compo-roster.is-details{min-width:0; max-width:100%;}
+  .compo-details-scroll{overflow-x:auto; max-width:100%; border-radius:12px; background:var(--compo-court-bg);}
+  .compo-table{width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums;}
+  .compo-table th{padding:0 8px; height:36px; text-align:left; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:var(--ink-faint); white-space:nowrap; background:var(--compo-court-bg);}
+  .compo-table td{padding:0 8px; height:40px; border-top:1px solid var(--line-soft); white-space:nowrap; vertical-align:middle; background:var(--compo-court-bg);}
+  .compo-table tr.conv-row:not(.on) td{color:var(--ink-dim);}
+  .compo-table tr.conv-row:hover td{background:var(--panel-2);}
+  .compo-table .ct-sort{padding:0; border:0; background:none; font:inherit; color:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:4px; text-transform:inherit;}
+  .compo-table th.sorted .ct-sort{color:var(--ink);}
+  .compo-table .ct-sort-dir{font-size:9px; color:var(--amber);}
+  .compo-table .ct-conv, .compo-table .ct-cmp{width:28px; text-align:center;}
+  .compo-table input[type=checkbox]{margin:0; width:16px; height:16px; accent-color:var(--amber); vertical-align:middle;}
+  .compo-table .conv-name{font-weight:600; color:var(--ink);}
+  .compo-table .conv-name .player-link{font:inherit; color:inherit;}
+  .compo-table td.ct-rating{font-weight:800; color:var(--ink);}
+  .compo-table .ct-rating{text-align:right;}
+  .compo-table .ct-num{text-align:right; color:var(--ink-dim);}
+  .compo-table .ct-main{color:var(--ink); font-weight:700;}
+  .compo-table .eff-pos{font-size:11.5px; padding:2px 6px; min-width:28px;}
+  .compo-table .conv-role{justify-self:auto;}
+  .compo-table .eval-square{width:10px; height:14px;}
+  .compo-table th.ct-num, .compo-table th.ct-gp, .compo-table th.ct-min, .compo-table th.ct-pts, .compo-table th.ct-reb, .compo-table th.ct-ast, .compo-table th.ct-rating{text-align:right;}
+  /* Nom figé (1re colonne après la case de convocation) au défilement. */
+  .compo-table .ct-conv{position:sticky; left:0; z-index:1; box-sizing:border-box; width:44px; min-width:44px; max-width:44px;}
+  .compo-table .ct-name{position:sticky; left:44px; z-index:1; max-width:210px; overflow:hidden; text-overflow:ellipsis;}
+  .compo-details-scroll.is-scrolled .ct-name{box-shadow:8px 0 10px -8px rgba(0,0,0,.55); clip-path:inset(0 -14px 0 0);}
+  .compo-compare-bar{display:flex; align-items:center; justify-content:flex-end; gap:12px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-dim);}
+  .compo-compare-btn{min-height:34px; padding:0 14px; border-radius:999px; border:1px solid var(--line); background:transparent; font:inherit; font-size:13px; font-weight:700; color:var(--ink); cursor:pointer;}
+  .compo-compare-btn:disabled{opacity:.45; cursor:default;}
+  @media(max-width:1250px){ .compo-layout.is-details{grid-template-columns:minmax(0, 1fr);} }
+  @media(max-width:700px){
+    .compo-view-seg{margin-left:0;}
+    .compo-table .ct-name{max-width:140px;}
+  }
   /* Écran moyen : le bilan et l'effectif passent sous le terrain. */
   @media(max-width:1250px){
     .compo-layout{grid-template-columns:1fr;}
@@ -5973,7 +6029,7 @@
      jamais chargée dans ce projet). Couleurs : tokens :root du jeu +
      pastilles de poste propres à cet écran.
      ===================================================================== */
-  #effectifSection, #teamDetailSection, #statsHebdoSection{--eff-row:#172031; --eff-row-2:#141c2b; --eff-sep:#222b3d; --eff-track:#243048;
+  #effectifSection, #teamDetailSection, #statsHebdoSection, #prepSection{--eff-row:#172031; --eff-row-2:#141c2b; --eff-sep:#222b3d; --eff-track:#243048;
     --eff-pos-m-bg:rgba(96,165,250,.16); --eff-pos-m:#9cc5fb;
     --eff-pos-a-bg:rgba(45,212,191,.15); --eff-pos-a:#6ee7d2;
     --eff-pos-as-bg:rgba(167,139,250,.18); --eff-pos-as:#c9bbfd;
@@ -6332,7 +6388,7 @@
     --hm-surface:#ffffff; --hm-card:#f3f5f9; --hm-border:#dbe2ec;
     --hm-text:#142033; --hm-muted:#5d6b80; --hm-faint:#7a869a; --hm-accent:#d9800b;
   }
-  html[data-theme="light"] #effectifSection, html[data-theme="light"] #teamDetailSection, html[data-theme="light"] #statsHebdoSection{
+  html[data-theme="light"] #effectifSection, html[data-theme="light"] #teamDetailSection, html[data-theme="light"] #statsHebdoSection, html[data-theme="light"] #prepSection{
     --eff-row:#f6f8fb; --eff-row-2:#ffffff; --eff-sep:#e3e8f0; --eff-track:#e3e8f0;
     --eff-pos-m-bg:rgba(59,130,246,.12); --eff-pos-m:#2563c9;
     --eff-pos-a-bg:rgba(20,184,166,.13); --eff-pos-a:#0f8a79;
@@ -35339,7 +35395,12 @@ function renderLineupEditor(team, container, opts = {}) {
       const min = el("span", "cp-sub-min", m != null ? `${m} min` : "");
       const o = el("span", "cp-sub-ovr", String(compoRatingAt(p, pos)));
       o.title = "Note à ce poste";
-      row.append(role, nm, min, o);
+      // Forme physique du remplaçant / réserviste : pastille colorée (même
+      // paliers que l'Effectif), le libellé et la valeur au survol.
+      const c = currentCondition(p);
+      const dot = el("span", "cp-sub-cond " + (c >= 90 ? "cond-great" : c >= 75 ? "cond-good" : c >= 60 ? "cond-mid" : c >= 40 ? "cond-low" : "cond-critical"));
+      dot.title = `Forme physique : ${conditionStateFor(c).label} (${c}/100)`;
+      row.append(role, nm, min, dot, o);
       if (editable) {
         const rm = el("button", "cp-remove", "×");
         rm.type = "button";
@@ -35409,63 +35470,280 @@ function renderLineupEditor(team, container, opts = {}) {
   summary.appendChild(el("p", "cs-sentence", sentence));
   side.appendChild(summary);
 
+  // --- Effectif (convocation) : liste compacte à côté du terrain, ou
+  // tableau détaillé sur toute la largeur (retour d'un testeur 2026-09-30 :
+  // "I don't see the information about the players (stats, fatigue) [...]
+  // I would like a view similar to the squad where I can easily compare
+  // the players") — voir compoRosterRowsData / compoRosterDetailsHtml.
   const convIds = team.convokedIds();
-  const roster = el("section", "compo-roster");
+  const details = compoRosterView === "details";
+  const rowsData = compoRosterRowsData(team, model);
+  const roster = el("section", "compo-roster" + (details ? " is-details" : ""));
   roster.id = "ordresCardConvocation";
   const rHead = el("div", "ordres-card-head compo-roster-head");
   rHead.appendChild(el("h3", "compo-roster-title", "Effectif"));
   const rAside = el("span", "ordres-card-aside");
   rAside.innerHTML = `<b>${convIds.length}</b> / ${CONVOCATION_MAX} convoqués`;
   rHead.appendChild(rAside);
+  const viewSeg = el("div", "compo-view-seg");
+  viewSeg.setAttribute("role", "group");
+  viewSeg.setAttribute("aria-label", "Affichage de l'effectif");
+  [["compact", "Liste compacte"], ["details", "Détails"]].forEach(([key, label]) => {
+    const b = el("button", "compo-view-btn" + (compoRosterView === key ? " active" : ""), label);
+    b.type = "button";
+    b.dataset.compoView = key;
+    b.setAttribute("aria-pressed", compoRosterView === key ? "true" : "false");
+    b.addEventListener("click", () => {
+      if (compoRosterView === key) return;
+      compoRosterView = key;
+      try { localStorage.setItem("hm-compo-roster-view", key); } catch (e) { /* navigation privée */ }
+      renderLineupEditor(team, container, opts);
+    });
+    viewSeg.appendChild(b);
+  });
+  rHead.appendChild(viewSeg);
   roster.appendChild(rHead);
-  const list = el("div", "conv-list");
-  const posRank = p => POSITIONS.indexOf(p.position);
-  team.players.slice().sort((x, y) => (posRank(x) - posRank(y)) || (y.overall() - x.overall())).forEach(p => {
-    const on = model.convoked.has(p.id);
-    const row = el("label", "conv-row" + (on ? " on" : ""));
+
+  const onConvoke = (p, checked) => { team.setConvoked(p.id, checked); sync(); };
+  const convBox = (d) => {
     const cb = document.createElement("input");
     cb.type = "checkbox";
-    cb.checked = on;
-    cb.disabled = !editable || (!on && convIds.length >= CONVOCATION_MAX);
-    cb.setAttribute("aria-label", `Convoquer ${p.name}`);
-    cb.addEventListener("change", () => {
-      team.setConvoked(p.id, cb.checked);
-      sync();
+    cb.checked = d.on;
+    cb.disabled = !editable || (!d.on && convIds.length >= CONVOCATION_MAX);
+    cb.setAttribute("aria-label", `Convoquer ${d.p.name}`);
+    cb.addEventListener("change", () => onConvoke(d.p, cb.checked));
+    return cb;
+  };
+  const sorted = compoSortRows(rowsData);
+  if (!details) {
+    const list = el("div", "conv-list");
+    sorted.forEach(d => {
+      const row = el("label", "conv-row" + (d.on ? " on" : "") + (d.injured ? " injured" : ""));
+      row.dataset.playerId = d.p.id;
+      const name = el("span", "conv-name");
+      name.appendChild(document.createTextNode(d.p.name));
+      if (d.youth) name.appendChild(el("span", "lp-tag fr-tag-youth", "Jeune"));
+      if (d.crossHtml) name.insertAdjacentHTML("beforeend", d.crossHtml);
+      const cond = el("span", "conv-cond " + d.condTier);
+      cond.title = `Forme physique : ${d.condLabel} (${d.cond}/100)`;
+      const posEl = el("span", "conv-pos", POS_SHORT[d.best] || d.best);
+      posEl.title = `Meilleur poste : ${d.best} (${compoRatingAt(d.p, d.best)}) · poste de carte : ${d.p.position}`;
+      const ovr = el("span", "conv-ovr", String(d.rating));
+      ovr.title = `Note au poste ${POS_SHORT[d.ratedPos]}`;
+      row.append(convBox(d), name, cond, posEl, compoRoleEl(d, el), ovr);
+      list.appendChild(row);
     });
-    const name = el("span", "conv-name", p.name);
-    // Ordres d'un amical (voir openFriendlyOrders) : les jeunes de
-    // l'académie sont marqués dans la convocation.
-    if (isYouth(p)) name.appendChild(el("span", "lp-tag fr-tag-youth", "Jeune"));
-    // Meilleur poste (note par poste) ; la note affichée est celle du poste
-    // tenu dans cette composition, sinon celle du meilleur poste.
-    const best = bestPosition(p);
-    const posEl = el("span", "conv-pos", POS_SHORT[best] || best);
-    posEl.title = `Meilleur poste : ${best} (${compoRatingAt(p, best)}) · poste de carte : ${p.position}`;
-    const roles = (model.rolesOf.get(p.id) || []).slice().sort((a, b) => a.rank - b.rank);
-    const role = el("span", "conv-role");
-    if (!on) { role.classList.add("off"); role.textContent = "En tribune"; }
-    else if (!roles.length) { role.classList.add("spare"); role.textContent = "Dépanne si besoin"; }
-    else {
-      const top = roles[0];
-      role.classList.add(top.rank === 0 ? "starter" : top.rank === 1 ? "sub" : "reserve");
-      role.style.setProperty("--pos-c", COMPO_POS_COLORS[top.pos]);
-      // Rôle principal, puis « +1 » si le joueur couvre d'autres postes
-      // (le détail complet reste dans l'infobulle) : la ligne reste courte.
-      role.textContent = `${compoRoleLabel(top.rank)} ${POS_SHORT[top.pos]}${roles.length > 1 ? ` +${roles.length - 1}` : ""}`;
-      role.title = roles.map(r => `${compoRoleLabel(r.rank)} ${POS_SHORT[r.pos]}`).join(" · ");
-    }
-    const ratedPos = roles.length ? roles[0].pos : best;
-    const ovr = el("span", "conv-ovr", String(compoRatingAt(p, ratedPos)));
-    ovr.title = `Note au poste ${POS_SHORT[ratedPos]}`;
-    row.append(cb, name, posEl, role, ovr);
-    list.appendChild(row);
-  });
-  roster.appendChild(list);
-  side.appendChild(roster);
-  layout.appendChild(side);
-  container.appendChild(card);
+    roster.appendChild(list);
+    side.appendChild(roster);
+    layout.appendChild(side);
+    container.appendChild(card);
+  } else {
+    layout.appendChild(side);
+    layout.classList.add("is-details");
+    card.appendChild(roster);
+    roster.appendChild(compoRosterDetailsTable(team, sorted, convBox, el, () => renderLineupEditor(team, container, opts)));
+    container.appendChild(card);
+  }
 
   if (editable) renderPlayingTimeCard(team, minutesHost || container, makeCard, rerender);
+}
+
+// ---------------------------------------------------------------------
+// Effectif de la composition (liste compacte / tableau détaillé).
+// ---------------------------------------------------------------------
+let compoRosterView = (() => { try { return localStorage.getItem("hm-compo-roster-view") === "details" ? "details" : "compact"; } catch (e) { return "compact"; } })();
+// Tri du tableau détaillé : null = ordre par défaut (rôle, puis poste).
+let compoRosterSort = { key: null, dir: -1 };
+// Joueurs cochés pour « Comparer » (2 au plus, voir openCompoCompare).
+let compoCompareIds = [];
+
+// Rang d'un rôle pour l'ordre par défaut : titulaires, remplaçants,
+// réservistes, convoqués sans rôle, puis joueurs en tribune.
+function compoRoleRank(d) {
+  if (!d.on) return 4;
+  if (!d.roles.length) return 3;
+  return d.roles[0].rank >= 2 ? 2 : d.roles[0].rank;
+}
+function compoRosterRowsData(team, model) {
+  const now = Date.now();
+  const recovery = typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
+  const youth = new Set((teamA.youthPlayers || []).map(y => y.id));
+  return team.players.map(p => {
+    const on = model.convoked.has(p.id);
+    const roles = (model.rolesOf.get(p.id) || []).slice().sort((a, b) => a.rank - b.rank);
+    const best = bestPosition(p);
+    const ratedPos = roles.length ? roles[0].pos : best;
+    const cond = currentCondition(p, now, recovery);
+    const { gp, sum } = teamDetailSeasonLine(p);
+    const recent = (p.matchLog || []).slice(-5);
+    return {
+      p, on, roles, best, ratedPos, rating: compoRatingAt(p, ratedPos), cond,
+      condLabel: conditionStateFor(cond).label,
+      condTier: cond >= 90 ? "cond-great" : cond >= 75 ? "cond-good" : cond >= 60 ? "cond-mid" : cond >= 40 ? "cond-low" : "cond-critical",
+      crossHtml: injuryCrossHtml(p, now), injured: isCurrentlyInjured(p, now), youth: youth.has(p.id),
+      gp, per: k => (gp ? sum[k] / gp : null),
+      evalAvg: recent.length ? recent.reduce((s, e) => s + statEvaluation(e), 0) / recent.length : -Infinity,
+      linkable: team.players === teamA.players || teamA.players.some(x => x.id === p.id),
+    };
+  });
+}
+const COMPO_SORT_VALUE = {
+  name: d => d.p.name,
+  pos: d => POSITIONS.indexOf(d.best),
+  rating: d => d.rating,
+  role: d => -compoRoleRank(d),
+  condition: d => d.cond,
+  evaluation: d => d.evalAvg,
+  gp: d => d.gp,
+  min: d => d.per("min") ?? -1,
+  pts: d => d.per("pts") ?? -1,
+  reb: d => d.per("reb") ?? -1,
+  ast: d => d.per("ast") ?? -1,
+};
+function compoDefaultCmp(a, b) {
+  const posOf = d => POSITIONS.indexOf(d.roles.length ? d.roles[0].pos : d.best);
+  return (compoRoleRank(a) - compoRoleRank(b)) || (posOf(a) - posOf(b)) || (b.rating - a.rating);
+}
+function compoSortRows(rows) {
+  const s = compoRosterSort;
+  const f = s.key && COMPO_SORT_VALUE[s.key];
+  if (!f) return rows.slice().sort(compoDefaultCmp);
+  return rows.slice().sort((a, b) => {
+    const va = f(a), vb = f(b);
+    const cmp = typeof va === "string" ? va.localeCompare(vb) : va - vb;
+    return (cmp * s.dir) || compoDefaultCmp(a, b);
+  });
+}
+function compoRoleEl(d, el) {
+  const role = el("span", "conv-role");
+  if (!d.on) { role.classList.add("off"); role.textContent = "En tribune"; }
+  else if (!d.roles.length) { role.classList.add("spare"); role.textContent = "Dépanne si besoin"; }
+  else {
+    const top = d.roles[0];
+    role.classList.add(top.rank === 0 ? "starter" : top.rank === 1 ? "sub" : "reserve");
+    role.style.setProperty("--pos-c", COMPO_POS_COLORS[top.pos]);
+    // Rôle principal, puis « +1 » si le joueur couvre d'autres postes (le
+    // détail complet reste dans l'infobulle) : la ligne reste courte.
+    role.textContent = `${compoRoleLabel(top.rank)} ${POS_SHORT[top.pos]}${d.roles.length > 1 ? ` +${d.roles.length - 1}` : ""}`;
+    role.title = d.roles.map(r => `${compoRoleLabel(r.rank)} ${POS_SHORT[r.pos]}`).join(" · ");
+  }
+  return role;
+}
+
+// Tableau détaillé : mêmes indicateurs que l'Effectif (forme, évaluation
+// des 5 derniers matchs, moyennes de saison), colonnes triables, première
+// colonne (nom) figée quand le tableau défile sur téléphone, et une case
+// « Comparer » par joueur (2 cochés → comparateur de joueurs).
+function compoRosterDetailsTable(team, rows, convBox, el, rerenderView) {
+  const wrap = el("div", "compo-details");
+  const fmt = v => (v == null ? "–" : v.toFixed(1).replace(".", ","));
+  const cols = [
+    ["conv", "", "Convoqué"], ["name", "Nom"], ["pos", "Poste", "Meilleur poste"], ["rating", "Note", "Note au poste tenu (sinon au meilleur poste)"],
+    ["role", "Rôle"], ["condition", "Forme"], ["evaluation", "Éval.", "Évaluation des 5 derniers matchs"],
+    ["gp", "MJ", "Matchs joués"], ["min", "Min", "Minutes par match"], ["pts", "Pts", "Points par match"],
+    ["reb", "Reb", "Rebonds par match"], ["ast", "Pas", "Passes décisives par match"], ["cmp", "", "Comparer"],
+  ];
+  const scroller = el("div", "compo-details-scroll");
+  const table = el("table", "compo-table");
+  const thead = el("thead");
+  const trh = el("tr");
+  cols.forEach(([key, label, title]) => {
+    const th = el("th", "ct-" + key);
+    if (title) th.title = title;
+    if (COMPO_SORT_VALUE[key]) {
+      const active = compoRosterSort.key === key;
+      th.classList.add("sortable-th");
+      if (active) th.classList.add("sorted");
+      th.dataset.compoSort = key;
+      th.setAttribute("aria-sort", active ? (compoRosterSort.dir === 1 ? "ascending" : "descending") : "none");
+      const b = el("button", "ct-sort", label);
+      b.type = "button";
+      if (active) b.appendChild(el("span", "ct-sort-dir", compoRosterSort.dir === 1 ? "▲" : "▼"));
+      b.addEventListener("click", () => {
+        // 1er clic : décroissant (texte : croissant), 2e : inverse, 3e :
+        // retour à l'ordre par défaut (rôle, puis poste).
+        if (compoRosterSort.key !== key) compoRosterSort = { key, dir: key === "name" || key === "pos" ? 1 : -1 };
+        else if (compoRosterSort.dir === (key === "name" || key === "pos" ? 1 : -1)) compoRosterSort = { key, dir: -compoRosterSort.dir };
+        else compoRosterSort = { key: null, dir: -1 };
+        rerenderView();
+      });
+      th.appendChild(b);
+    } else if (key === "cmp") {
+      th.appendChild(el("span", "ct-cmp-head", "⇄"));
+    }
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh);
+  table.appendChild(thead);
+  const tbody = el("tbody");
+  compoCompareIds = compoCompareIds.filter(id => rows.some(d => d.p.id === id && d.linkable));
+  rows.forEach(d => {
+    const tr = el("tr", "conv-row" + (d.on ? " on" : "") + (d.injured ? " injured" : ""));
+    tr.dataset.playerId = d.p.id;
+    const td = (cls, child) => { const c = el("td", cls); if (child != null) { if (typeof child === "string") c.innerHTML = child; else c.appendChild(child); } tr.appendChild(c); return c; };
+    td("ct-conv", convBox(d));
+    const nameCell = td("ct-name");
+    const name = el("span", "conv-name");
+    if (d.linkable) name.insertAdjacentHTML("beforeend", playerLinkHtml(myTeamIndex, d.p.id, d.p.name));
+    else name.appendChild(document.createTextNode(d.p.name));
+    if (d.youth) name.appendChild(el("span", "lp-tag fr-tag-youth", "Jeune"));
+    if (d.crossHtml) name.insertAdjacentHTML("beforeend", d.crossHtml);
+    nameCell.appendChild(name);
+    const posCell = td("ct-pos", effPosBadgeHtml(d.best));
+    posCell.classList.add("conv-pos");
+    posCell.title = `Meilleur poste : ${d.best} (${compoRatingAt(d.p, d.best)}) · poste de carte : ${d.p.position}`;
+    const r = td("ct-rating conv-ovr", String(d.rating));
+    r.title = `Note au poste ${POS_SHORT[d.ratedPos]}`;
+    td("ct-role", compoRoleEl(d, el));
+    td("ct-condition", effConditionHtml(d.p, Date.now(), typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY));
+    td("ct-evaluation", evaluationSquaresHtml(d.p));
+    td("ct-num", String(d.gp));
+    td("ct-num", fmt(d.per("min")));
+    td("ct-num ct-main", fmt(d.per("pts")));
+    td("ct-num", fmt(d.per("reb")));
+    td("ct-num", fmt(d.per("ast")));
+    const cmpCell = td("ct-cmp");
+    if (d.linkable) {
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "compo-compare-cb";
+      cb.checked = compoCompareIds.includes(d.p.id);
+      cb.setAttribute("aria-label", `Comparer ${d.p.name}`);
+      cb.addEventListener("change", () => {
+        compoCompareIds = cb.checked ? [...compoCompareIds.filter(id => id !== d.p.id), d.p.id].slice(-2) : compoCompareIds.filter(id => id !== d.p.id);
+        rerenderView();
+      });
+      cmpCell.appendChild(cb);
+    }
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  scroller.appendChild(table);
+  // Ombre de la colonne figée dès que le tableau défile (téléphone).
+  scroller.addEventListener("scroll", () => scroller.classList.toggle("is-scrolled", scroller.scrollLeft > 2), { passive: true });
+  wrap.appendChild(scroller);
+
+  const bar = el("div", "compo-compare-bar");
+  const n = compoCompareIds.length;
+  bar.appendChild(el("span", "compo-compare-hint", n === 2 ? "Deux joueurs cochés : prêts à être comparés." : "Cochez deux joueurs (⇄) pour les comparer."));
+  const btn = el("button", "compo-compare-btn", `Comparer (${n}/2)`);
+  btn.type = "button";
+  btn.id = "compoCompareBtn";
+  btn.disabled = n !== 2;
+  btn.addEventListener("click", () => openCompoCompare());
+  bar.appendChild(btn);
+  wrap.appendChild(bar);
+  return wrap;
+}
+
+// Ouvre le comparateur de joueurs (voir renderPlayerCompareView) sur les
+// deux joueurs cochés dans le tableau détaillé de la composition.
+function openCompoCompare() {
+  if (compoCompareIds.length !== 2) return;
+  const [a, b] = compoCompareIds;
+  playerCompareState = { a: { teamIdx: myTeamIndex, playerId: a }, b: { teamIdx: myTeamIndex, playerId: b } };
+  showPage("playerCompareSection");
+  renderPlayerCompareView();
 }
 
 // Carte « Temps de jeu » des Ordres (retours utilisateur 2026-09-26 :
@@ -45740,10 +46018,14 @@ const TQ_SOURCE_MATCHES = 5;
 function tqOrdersSources() {
   const out = [];
   (teamA.tacticPresets || []).forEach((p, i) => out.push({ key: "preset:" + i, label: `Tactique « ${p.name} »`, orders: p.orders }));
+  // Libellé assemblé de morceaux : chacun passe par la traduction
+  // (msgT) — la couche i18n ne sait pas traduire l'<option> entière, faite
+  // de trous (adversaire, score, date) : retour testeur 2026-09-30, textes
+  // restés en français dans l'éditeur de tactique en anglais.
   const label = (competition, round, isHome, oppName, pf, pa, at) => {
-    const comp = competition === "cup" ? "Coupe" : competition === "championship" ? `J${round + 1}` : "Match";
+    const comp = msgT(competition === "cup" ? "Coupe" : competition === "championship" ? `J${round + 1}` : "Match");
     const res = pf != null && pa != null ? ` · ${pf > pa ? "V" : pf < pa ? "D" : "N"} ${pf}-${pa}` : "";
-    return `${comp} ${isHome ? "vs" : "@"} ${oppName || "?"}${res}${at ? ` · ${formatCalendarDayFr(at)}` : ""}`;
+    return `${comp} ${isHome ? "vs" : "@"} ${oppName || "?"}${res}${at ? ` · ${msgT(formatCalendarDayFr(at))}` : ""}`;
   };
   const matches = [];
   const seen = new Set();
