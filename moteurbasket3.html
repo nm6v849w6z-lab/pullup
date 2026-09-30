@@ -2637,6 +2637,11 @@
     .pdp2-hero{padding:18px 16px; gap:18px;}
     .pdp2-id{gap:14px;}
     .pdp2-avatar{width:80px; height:80px;}
+    /* L'avatar (104 px, style en ligne de playerAvatarHtml) dépassait du
+       cadre de 80 px et la tête était coupée en haut (retour utilisateur
+       2026-09-30, téléphone) : ramené à la taille du cadre. */
+    .pdp2-avatar .player-avatar{width:76px !important; height:82px !important;}
+    .pdp2-avatar .player-avatar svg{width:100%; height:100%;}
     .pdp2-jersey svg{width:68px; height:68px;}
     .pdp2-name{font-size:30px;}
     .pdp2-cond{flex-basis:100%; padding:0; border-right:none;}
