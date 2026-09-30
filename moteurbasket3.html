@@ -4317,13 +4317,17 @@
      "si on clique sur ce bouton, on voit le cout de l'évolution et on valide
      si ok"), voir showUpgradeConfirm(). Un seul système générique réutilisé
      par les 3 points d'appel. */
+  /* Fenêtre plus haute que l'écran (téléphone) : on défile dans le fond
+     sombre, le haut n'est jamais coupé (margin:auto plutôt que centrage). */
   .upgrade-confirm-overlay{
     position:fixed; inset:0; background:rgba(6,10,16,.72); display:flex;
-    align-items:center; justify-content:center; z-index:500; padding:16px;
+    align-items:flex-start; justify-content:center; z-index:500; padding:16px;
+    padding-top:max(16px, env(safe-area-inset-top)); padding-bottom:max(16px, env(safe-area-inset-bottom));
+    overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
   }
   .upgrade-confirm-box{
     width:100%; max-width:360px; background:var(--panel); border:1px solid var(--line);
-    border-radius:var(--radius); padding:18px;
+    border-radius:var(--radius); padding:18px; margin:auto 0; flex:none;
   }
   .upgrade-confirm-box h3{margin:0 0 12px; font-size:15px; color:var(--ink);}
   .upgrade-confirm-row{
@@ -42012,7 +42016,7 @@ async function hmPushDisable() {
 }
 function hmPushSectionHtml() {
   let html = `<div class="settings-row-label" style="margin-top:16px">Notifications</div>`;
-  if (!teamIsPremium(teamA)) return html + `<p class="settings-note">Coup d'envoi de vos matchs, blessures, fins d'enchère : réservé au Premium. ${premiumLinkHtml("Passer Premium")}</p>`;
+  if (!teamIsPremium(teamA)) return html + `<p class="settings-note">Coup d'envoi de vos matchs, blessures, fins d'enchère : réservé au Premium.</p><div style="margin-top:10px">${premiumLinkHtml("Passer Premium")}</div>`;
   if (!hmPushConfig || !hmPushConfig.enabled) return html + `<p class="settings-note">Les notifications ne sont pas encore disponibles sur ce serveur.</p>`;
   if (!hmPushSupported()) return html + `<p class="settings-note">Ce navigateur ne gère pas les notifications. Sur iPhone, ajoute d'abord le jeu à l'écran d'accueil (Partager → Sur l'écran d'accueil).</p>`;
   return html + `<p class="settings-note">Coup d'envoi de vos matchs, blessures, arrivées et départs, et vos enchères (joueurs et staff) : fin dans moins d'une heure, puis remportée ou perdue.</p>` +
