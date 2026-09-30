@@ -2290,7 +2290,15 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const notify = result.notify;
         delete result.notify;
         if (notify) {
-          try { await messages.send(ctx.league, ctx.teamIndex, notify, now); } catch (e) { /* message facultatif */ }
+          try {
+            // Écrit dans la langue du compte du club destinataire.
+            if (typeof notify.textFor === "function") {
+              const lang = await Push.langForTeam(ctx.league.teams[notify.to]).catch(() => null);
+              if (lang && lang !== "fr") notify.text = notify.textFor(lang);
+              delete notify.textFor;
+            }
+            await messages.send(ctx.league, ctx.teamIndex, notify, now);
+          } catch (e) { /* message facultatif */ }
         }
         sendJson(res, 200, { ...result, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
         return;

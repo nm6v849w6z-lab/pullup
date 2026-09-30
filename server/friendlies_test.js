@@ -60,6 +60,8 @@ const d2 = F.availableDays(Engine, league, A, B, T0).find(d => d.day !== d1.day 
 r = F.proposeFriendly(Engine, league.teams[A], A, league, { opponent: B, day: d2.day, time: "18:30", venue: "away" }, T0);
 check(r.ok && r.status === "pending", "invitation à un manager humain en attente");
 check(r.notify && r.notify.to === B && /Alpha vous propose un amical/.test(r.notify.text) && /18h30/.test(r.notify.text), "message privé préparé pour le club invité");
+check(/^🏀 Friendly match invitation: Alpha invites you to a friendly on \w+ \d+ \w+ at 18:30 \(Paris time\), at your place \(Bravo\)\./.test(r.notify.textFor("en")), "message privé en anglais : " + r.notify.textFor("en"));
+check(/Invito a un'amichevole: Alpha ti propone un'amichevole .* alle 18:30 .*in casa tua \(Bravo\)/.test(r.notify.textFor("it")), "message privé en italien : " + r.notify.textFor("it"));
 const fHuman = league.friendlies.find(f => f.id === r.friendlyId);
 check(fHuman.homeIdx === B && fHuman.awayIdx === A, "« à l'extérieur » : le club invité reçoit");
 r = F.respondFriendly(Engine, league.teams[A], A, league, { id: fHuman.id, accept: true }, T0);

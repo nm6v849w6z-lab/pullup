@@ -327,6 +327,23 @@ function whenLabel(f) {
   return `${dayLabelFr(f.at)} à ${f.time.replace(":", "h")}`;
 }
 
+// Message privé d'invitation, dans la langue du destinataire (fr, en, it).
+function inviteText(lang, f, team, opp, venue) {
+  const L = lang === "en" || lang === "it" ? lang : "fr";
+  const day = new Intl.DateTimeFormat(L === "en" ? "en-GB" : L === "it" ? "it-IT" : "fr-FR", { timeZone: "Europe/Paris", weekday: "long", day: "numeric", month: "long" }).format(new Date(f.at));
+  if (L === "en") {
+    const where = venue === "home" ? `at ${team.name}` : `at your place (${opp.name})`;
+    return `🏀 Friendly match invitation: ${team.name} invites you to a friendly on ${day} at ${f.time} (Paris time), ${where}. Accept or decline from the Friendly matches tab.`;
+  }
+  if (L === "it") {
+    const where = venue === "home" ? `in casa di ${team.name}` : `in casa tua (${opp.name})`;
+    return `🏀 Invito a un'amichevole: ${team.name} ti propone un'amichevole ${day} alle ${f.time} (ora di Parigi), ${where}. Accetta o rifiuta dalla scheda Partite amichevoli.`;
+  }
+  const where = venue === "home" ? `chez ${team.name}` : `chez vous (${opp.name})`;
+  return `🏀 Invitation à un match amical : ${team.name} vous propose un amical le ${whenLabel(f)}, ${where}. ` +
+    `Acceptez ou refusez depuis l'onglet Matchs amicaux.`;
+}
+
 // --- Actions -----------------------------------------------------------------
 
 function checkLeague(league) {
@@ -377,11 +394,12 @@ function proposeFriendly(Engine, team, teamIndex, league, body, now) {
   league.friendlies.push(f);
   const out = { ok: true, friendlyId: f.id, status: f.status };
   if (humanOpp) {
-    const where = venue === "home" ? `chez ${team.name}` : `chez vous (${opp.name})`;
     out.notify = {
       to: oppIdx,
-      text: `🏀 Invitation à un match amical : ${team.name} vous propose un amical le ${whenLabel(f)}, ${where}. ` +
-        `Acceptez ou refusez depuis l'onglet Matchs amicaux.`,
+      text: inviteText("fr", f, team, opp, venue),
+      // Version dans la langue du club invité (voir server/index.js, qui la
+      // résout avec la langue de son compte avant l'envoi).
+      textFor: (lang) => inviteText(lang, f, team, opp, venue),
     };
     pushFeed(Engine, opp, `friendly_invite_${f.id}`, `Invitation à un match amical de ${team.name}`,
       `${team.name} vous propose un amical le ${whenLabel(f)}. Répondez depuis l'onglet Matchs amicaux.`);

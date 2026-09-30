@@ -300,6 +300,8 @@ function collect(league, teamIdx, now, opts = {}) {
 // celle des notifications, sur tous les appareils.
 let langResolver = null;
 function setLangResolver(fn) { langResolver = typeof fn === "function" ? fn : null; }
+// Langue du compte d'un club (même résolution que les notifications).
+async function langForTeam(team) { return langResolver && team ? langResolver(team) : null; }
 
 async function flushLeague(league, now, { send = WebPush.sendPush, leagueId = null, leagues = null, langOf = langResolver } = {}) {
   if (!WebPush.vapidConfig() || !league) return 0;
@@ -322,4 +324,4 @@ async function flushLeague(league, now, { send = WebPush.sendPush, leagueId = nu
   return sent;
 }
 
-module.exports = { localizeNote, subscriptionLang, setLangResolver, MESSAGES, auctionNotes, MAX_SUBSCRIPTIONS, addSubscription, removeSubscription, collect, flushLeague, isPremium };
+module.exports = { localizeNote, subscriptionLang, setLangResolver, langForTeam, MESSAGES, auctionNotes, MAX_SUBSCRIPTIONS, addSubscription, removeSubscription, collect, flushLeague, isPremium };
