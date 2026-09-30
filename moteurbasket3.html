@@ -1329,7 +1329,6 @@
   .ncup-lvl{display:inline-block; font-size:11px; font-weight:600; color:var(--ink-faint); margin-left:4px; white-space:nowrap;}
   .ncup-hc{display:inline-block; font-size:11px; font-weight:700; color:var(--amber); background:rgba(240,162,60,.14); border-radius:5px; padding:1px 5px; margin-left:4px;}
   .scup-card{margin:0 0 14px;}
-  .ph-sub-honour span{padding-left:12px; color:var(--ink-faint);}
   .live-handicap-note{text-align:center; font-size:12.5px; color:var(--amber); margin:4px 0 0;}
   .cp-empty{text-align:center; color:var(--ink-faint); padding:22px !important;}
   .cp-more{margin:-4px 0 14px;}
@@ -1516,41 +1515,147 @@
   }
   .topbar-search-results.hidden{display:none;}
   /* Planète Hoop (voir renderPlaneteSection). */
-  .ph-countries{display:flex; gap:10px; flex-wrap:wrap; margin:4px 0 18px;}
-  .ph-country{display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; border:1px solid var(--line-soft); background:var(--panel); color:var(--ink); cursor:pointer; font:inherit; text-align:left;}
-  .ph-country.active{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
-  .ph-country .nat-flag{width:26px; height:auto; border-radius:3px;}
-  .ph-country b{display:block; font-size:15px;}
-  .ph-country small{display:block; color:var(--ink-dim); font-size:12px;}
-  .ph-grid{display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:18px; align-items:start;}
-  @media (max-width: 900px){ .ph-grid{grid-template-columns:1fr;} }
-  .ph-card{background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; padding:18px; margin-bottom:18px;}
-  .ph-card h3{margin:0 0 10px; font-size:16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-  .ph-card h3 .nat-flag{width:22px; height:auto; border-radius:3px;}
-  .ph-sub{color:var(--ink-dim); font-size:13px; margin:-4px 0 12px;}
-  .ph-pill{display:inline-block; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:700; background:rgba(224,168,74,.15); color:var(--amber); border:1px solid rgba(224,168,74,.35);}
-  .ph-table{width:100%; border-collapse:collapse; font-size:14px;}
-  .ph-table th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); text-align:left; padding:6px 6px; border-bottom:1px solid var(--line-soft);}
-  .ph-table td{padding:7px 6px; border-bottom:1px solid var(--line-soft);}
-  .ph-table td.num, .ph-table th.num{text-align:right; font-variant-numeric:tabular-nums;}
-  .ph-table tr.mine td{background:rgba(224,168,74,.08);}
-  .ph-club{background:none; border:none; padding:0; color:var(--ink); font:inherit; cursor:pointer; text-align:left;}
-  .ph-club:hover{text-decoration:underline;}
-  .ph-club.human{font-weight:700;}
-  .ph-mgr{font-size:10.5px; color:var(--amber); margin-left:6px; font-weight:700;}
-  .ph-results{list-style:none; margin:0; padding:0;}
-  .ph-results li{display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--line-soft); font-size:14px;}
-  .ph-chips{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 12px;}
-  .ph-chip{padding:3px 10px; border-radius:999px; border:1px solid var(--line-soft); background:transparent; color:var(--ink); font:inherit; font-size:12.5px; cursor:pointer;}
-  .ph-chip.active{border-color:var(--amber); color:var(--amber);}
-  .ph-leader{display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--line-soft); font-size:14px;}
-  .ph-leader .nat-flag{width:18px; height:auto; border-radius:2px;}
-  .ph-leader .who{flex:1; min-width:0;}
-  .ph-leader.mine{background:rgba(240,162,60,.08); box-shadow:inset 3px 0 0 var(--amber); padding-left:8px;}
-  .ph-managers-me{margin-top:8px; padding-top:8px; border-top:1px dashed var(--line);}
-  .ph-leader .who small{display:block; color:var(--ink-dim); font-size:12px;}
-  .ph-leader .val{font-weight:800; font-variant-numeric:tabular-nums;}
-  .ph-roster td .nat-flag{width:18px; height:auto; border-radius:2px; margin-right:6px; vertical-align:middle;}
+  /* Planète Hoop — aperçu du pays (voir renderPlaneteSection, 2026-09-30) :
+     surfaces discrètes, peu de bordures, un seul accent (ambre). */
+  #planeteContent{--pc-hover:rgba(240,162,60,.08); --pc-mine:rgba(240,162,60,.09);}
+  .pc-toolbar{display:flex; gap:10px; align-items:stretch; margin:2px 0 16px; flex-wrap:wrap;}
+  .pc-picker{position:relative; flex:0 0 auto;}
+  .pc-picker-btn{display:flex; align-items:center; gap:10px; height:42px; padding:0 14px 0 12px; border-radius:12px; border:1px solid var(--line-soft); background:var(--panel); color:var(--ink); font:inherit; font-weight:700; font-size:15px; cursor:pointer;}
+  .pc-picker-btn:hover{border-color:var(--line);}
+  .pc-picker-btn .nat-flag{width:24px; height:auto; border-radius:3px;}
+  .pc-chev{color:var(--ink-dim); margin-left:2px;}
+  .pc-picker-menu{position:absolute; top:calc(100% + 6px); left:0; z-index:30; min-width:300px; max-width:calc(100vw - 32px); padding:6px; border-radius:12px; background:var(--panel); border:1px solid var(--line-soft); box-shadow:0 18px 40px -18px rgba(0,0,0,.55);}
+  .pc-picker-menu.hidden{display:none;}
+  .pc-picker-opt{display:flex; align-items:center; gap:10px; width:100%; padding:9px 10px; border:none; border-radius:8px; background:transparent; color:var(--ink); font:inherit; text-align:left; cursor:pointer;}
+  .pc-picker-opt:hover, .pc-picker-opt:focus-visible{background:var(--panel-2);}
+  .pc-picker-opt.active{background:var(--pc-hover);}
+  .pc-picker-opt .nat-flag{width:24px; height:auto; border-radius:3px;}
+  .pc-picker-opt span{flex:1; min-width:0;}
+  .pc-picker-opt b{display:block; font-size:14px;}
+  .pc-picker-opt small{display:block; color:var(--ink-dim); font-size:12px;}
+  .pc-picker-opt em{font-style:normal; font-size:11px; font-weight:700; color:var(--amber);}
+  .pc-search{position:relative; flex:1 1 280px; min-width:0; display:flex; align-items:center; height:42px; border-radius:12px; background:var(--panel); border:1px solid var(--line-soft);}
+  .pc-search:focus-within{border-color:var(--amber);}
+  .pc-search-icon{color:var(--ink-faint); margin:0 4px 0 12px; flex:0 0 auto;}
+  .pc-search input{flex:1; min-width:0; height:100%; border:none; background:transparent; color:var(--ink); font:inherit; font-size:14px; padding:0 12px 0 6px; outline:none;}
+  .pc-search input::placeholder{color:var(--ink-faint);}
+  .pc-search-results{position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:30; max-height:360px; overflow-y:auto; padding:6px; border-radius:12px; background:var(--panel); border:1px solid var(--line-soft); box-shadow:0 18px 40px -18px rgba(0,0,0,.55);}
+  .pc-search-results.hidden{display:none;}
+  .pc-search-group{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); padding:8px 10px 4px;}
+  .pc-search-item{display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px; border:none; border-radius:8px; background:transparent; color:var(--ink); font:inherit; font-size:14px; text-align:left; cursor:pointer;}
+  .pc-search-item:hover, .pc-search-item:focus-visible{background:var(--panel-2);}
+  .pc-search-item .nat-flag{width:20px; height:auto; border-radius:2px;}
+  .pc-search-item span{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pc-search-item small{color:var(--ink-dim); font-size:12px; white-space:nowrap;}
+  .pc-hero{display:flex; align-items:center; justify-content:space-between; gap:18px 28px; flex-wrap:wrap; padding:20px 22px; margin-bottom:16px; border-radius:16px; background:linear-gradient(120deg, var(--pc-hover), transparent 55%), var(--panel);}
+  .pc-hero-id{display:flex; align-items:center; gap:14px; min-width:0;}
+  .pc-hero .pc-hero-flag{width:52px; height:auto; border-radius:6px; box-shadow:0 0 0 1px var(--line-soft);}
+  .pc-ranking th.num:nth-child(-n+2), .pc-ranking td.num:nth-child(-n+2){width:52px;}
+  .pc-hist .pc-table th.num:first-child, .pc-hist .pc-table td.num:first-child{width:56px;}
+  .pc-hero h3{margin:0; font-size:26px; line-height:1.1; letter-spacing:-.01em;}
+  .pc-hero p{margin:4px 0 0; color:var(--ink-dim); font-size:13.5px;}
+  .pc-accent{color:var(--amber); font-weight:700;}
+  .pc-kpis{display:grid; grid-template-columns:repeat(4, auto); gap:6px 34px; margin:0;}
+  .pc-kpi dt{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);}
+  .pc-kpi dd{margin:2px 0 0; font-size:24px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.15;}
+  .pc-kpi dd small{display:block; font-size:12px; font-weight:500; color:var(--ink-dim); margin-top:1px;}
+  .pc-grid{display:grid; grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); gap:16px; align-items:start;}
+  .pc-col{display:flex; flex-direction:column; gap:16px; min-width:0;}
+  .pc-card{background:var(--panel); border-radius:14px; padding:18px 20px; min-width:0;}
+  .pc-card--compact{padding:14px 20px;}
+  .pc-card--compact .pc-card-head{margin-bottom:4px;}
+  .pc-card-head{display:flex; align-items:baseline; gap:6px 10px; flex-wrap:wrap; margin-bottom:12px;}
+  .pc-card-head h3{margin:0; font-size:16px; display:flex; align-items:center; gap:8px;}
+  .pc-card-head h3 .nat-flag{width:22px; height:auto; border-radius:3px;}
+  .pc-card-sub{color:var(--ink-dim); font-size:12.5px;}
+  .pc-card-sub--block{display:block; margin:-6px 0 12px;}
+  .pc-empty{margin:0; color:var(--ink-dim); font-size:13px;}
+  .pc-note{margin:10px 0 0; color:var(--ink-dim); font-size:12.5px;}
+  .pc-more{margin:6px 0 0; color:var(--ink-dim); font-size:12.5px;}
+  .pc-dim{color:var(--ink-faint);}
+  .pc-pill{display:inline-block; padding:1px 8px; border-radius:999px; font-size:10.5px; font-weight:700; letter-spacing:.02em; background:var(--pc-hover); color:var(--amber); white-space:nowrap; vertical-align:1px;}
+  .pc-link{background:none; border:none; padding:0; margin:0; color:inherit; font:inherit; text-align:left; cursor:pointer; overflow-wrap:anywhere;}
+  .pc-link:hover{color:var(--amber);}
+  .pc-link.is-mine, .pc-link.human{font-weight:700;}
+  .pc-mgr{font-size:10.5px; color:var(--amber); margin-left:6px; font-weight:700;}
+  .pc-cta{flex:0 0 auto; padding:6px 12px; border-radius:999px; border:1px solid var(--line-soft); background:transparent; color:var(--ink); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;}
+  .pc-cta:hover{border-color:var(--amber); color:var(--amber);}
+  .pc-back{display:inline-flex; align-items:center; gap:6px; margin:0 0 12px; padding:6px 0; border:none; background:none; color:var(--ink-dim); font:inherit; font-size:13.5px; cursor:pointer;}
+  .pc-back:hover{color:var(--amber);}
+  .pc-divs{display:flex; flex-direction:column; gap:14px;}
+  .pc-div-name{display:flex; align-items:baseline; gap:8px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-dim); margin-bottom:4px;}
+  .pc-div-name span{font-weight:500; text-transform:none; letter-spacing:0; color:var(--ink-faint);}
+  .pc-leagues{list-style:none; margin:0; padding:0;}
+  .pc-leagues li{display:grid; grid-template-columns:minmax(92px,auto) minmax(0,1fr) auto; align-items:center; gap:4px 14px; padding:9px 10px; margin:0 -10px; border-radius:10px; font-size:14px;}
+  .pc-leagues li:hover{background:var(--panel-2);}
+  .pc-leagues li.is-mine{background:var(--pc-mine);}
+  .pc-league{background:none; border:none; padding:0; color:var(--ink); font:inherit; font-weight:700; text-align:left; cursor:pointer;}
+  .pc-league:hover{color:var(--amber);}
+  .pc-league-lead{color:var(--ink-dim); font-size:13px; min-width:0;}
+  .pc-league-lead .pc-link{color:var(--ink);}
+  .pc-league-meta{color:var(--ink-faint); font-size:12px; text-align:right; white-space:nowrap;}
+  .pc-cup{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid var(--line-soft);}
+  .pc-cup + .pc-cup{margin-top:0; padding-top:10px; border-top:none;}
+  .pc-cup > div{display:flex; flex-direction:column; gap:2px; min-width:0; font-size:14px;}
+  .pc-cup > div span{color:var(--ink-dim); font-size:13px;}
+  .pc-cup > div span .pc-link{color:var(--ink);}
+  .pc-stat-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px 26px;}
+  .pc-stat h4, .pc-hist-col h4, .pc-mini-title{margin:0 0 6px; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);}
+  .pc-mini-title{margin-top:14px;}
+  .pc-stat ol{list-style:none; margin:0; padding:0;}
+  .pc-stat li{display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px;}
+  .pc-stat li:last-child{border-bottom:none;}
+  .pc-rank{width:16px; flex:0 0 auto; color:var(--ink-faint); font-size:12px; font-variant-numeric:tabular-nums; text-align:right;}
+  .pc-stat li.is-first .pc-rank{color:var(--amber); font-weight:800;}
+  .pc-who{flex:1; min-width:0; line-height:1.25;}
+  .pc-who .nat-flag{width:16px; height:auto; border-radius:2px; margin-right:6px; vertical-align:-1px;}
+  .pc-player{font-weight:600;}
+  .pc-who small{display:block; color:var(--ink-dim); font-size:12px; margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pc-who small .pc-link{color:var(--ink-dim);}
+  .pc-who small .pc-link:hover{color:var(--amber);}
+  .pc-val{flex:0 0 auto; font-weight:800; font-size:15px; font-variant-numeric:tabular-nums; text-align:right;}
+  .pc-val small{font-weight:500; font-size:11px; color:var(--ink-faint); margin-left:3px;}
+  .pc-stat li.is-first .pc-val{color:var(--amber);}
+  .pc-hist{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px 26px;}
+  .pc-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  .pc-table th{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); text-align:left; padding:0 6px 7px; border-bottom:1px solid var(--line-soft); white-space:nowrap;}
+  .pc-table td{padding:8px 6px; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
+  .pc-table tbody tr:last-child td{border-bottom:none;}
+  .pc-table th:first-child, .pc-table td:first-child{padding-left:0;}
+  .pc-table th:last-child, .pc-table td:last-child{padding-right:0;}
+  .pc-table .num{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .pc-table tr.is-mine td, .pc-table tr.is-holder td{background:var(--pc-mine);}
+  .pc-table tr.is-holder td:first-child, .pc-table tr.is-mine td:first-child{box-shadow:inset 3px 0 0 var(--amber); padding-left:8px;}
+  .pc-table .pc-cell-sub{display:block; color:var(--ink-dim); font-size:11.5px;}
+  .pc-table td .nat-flag{width:18px; height:auto; border-radius:2px; margin-right:6px; vertical-align:middle;}
+  .pc-bilan{display:flex; align-items:baseline; gap:6px; margin:0 0 8px; font-size:13px; color:var(--ink-dim);}
+  .pc-bilan b{color:var(--ink); font-size:18px; margin-right:12px; font-variant-numeric:tabular-nums;}
+  .pc-rows{list-style:none; margin:0; padding:0;}
+  .pc-rows li{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px;}
+  .pc-rows li:last-child{border-bottom:none;}
+  .pc-rows li > span{flex:1; min-width:0;}
+  .pc-rows li b{font-variant-numeric:tabular-nums;}
+  .pc-rows .nat-flag{width:16px; height:auto; border-radius:2px; margin-right:5px; vertical-align:-1px;}
+  @media (max-width: 1100px){ .pc-grid{grid-template-columns:1fr;} }
+  @media (max-width: 760px){
+    .pc-kpis{grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px 20px; width:100%;}
+    .pc-hist, .pc-stat-grid{grid-template-columns:1fr;}
+  }
+  @media (max-width: 560px){
+    .pc-picker, .pc-search{flex:1 1 100%;}
+    .pc-picker-btn{width:100%;}
+    .pc-picker-btn .pc-chev{margin-left:auto;}
+    .pc-picker-menu{right:0;}
+    .pc-hero{padding:16px;}
+    .pc-hero h3{font-size:22px;}
+    .pc-hero .pc-hero-flag{width:40px;}
+    .pc-card{padding:16px;}
+    .pc-leagues li{grid-template-columns:minmax(0,1fr) auto; }
+    .pc-leagues li .pc-league-lead{grid-column:1 / -1; grid-row:2;}
+  }
+  html[data-theme="light"] #planeteContent{--pc-hover:rgba(217,128,11,.09); --pc-mine:rgba(217,128,11,.08);}
+  html[data-theme="light"] .pc-card, html[data-theme="light"] .pc-hero{box-shadow:0 1px 2px rgba(20,32,51,.05), 0 10px 26px -20px rgba(20,32,51,.25);}
+  html[data-theme="light"] .pc-picker-menu, html[data-theme="light"] .pc-search-results{box-shadow:0 18px 40px -18px rgba(20,32,51,.35);}
   .topbar-search-group-label{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); padding:8px 10px 3px;}
   .topbar-search-result{
     display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
@@ -29253,9 +29358,19 @@ function renderTopbarSearchResults(rawQuery) {
 // meilleures stats de la saison"). Données : /api/world/* (server/world.js),
 // en lecture seule ; ligue partagée uniquement.
 // ---------------------------------------------------------------------
-const planeteState = { country: null, leagueId: null, clubIdx: null, statTab: "pts", overview: null, league: null, leagueMine: false, club: null };
-const PLANETE_STAT_LABELS = { pts: "Points", reb: "Rebonds", ast: "Passes", eval: "Évaluation" };
-const PLANETE_CHIPS_MAX = 12;
+// Aperçu du pays (retour utilisateur 2026-09-30 : « comme l'aperçu du pays
+// de BuzzerBeater », « un petit onglet déroulant en haut pour choisir le
+// pays ou une barre de recherche », plus moderne et aéré) : carte du pays,
+// divisions et Coupe, leaders et meilleures performances de la saison,
+// titres par club, palmarès (championnat / Coupe), classement mondial des
+// managers du pays, amicaux internationaux. Données : /api/world/country
+// (World.countryOverview). Un championnat choisi (lien, recherche) s'ouvre
+// en sous-page : classement et derniers résultats.
+const planeteState = { country: null, leagueId: null, clubIdx: null, data: null, managers: null, league: null, leagueMine: false, club: null };
+const PLANETE_STATS = [["pts", "Points", "pts"], ["reb", "Rebonds", "reb"], ["ast", "Passes décisives", "pd"], ["blk", "Contres", "ct"]];
+const PLANETE_TITLES_SHOWN = 10;
+const PLANETE_HISTORY_SHOWN = 12;
+const PLANETE_LEAGUES_SHOWN = 9;
 
 function openPlaneteAt(opts) {
   // Un club précis : sa fiche équipe habituelle (showForeignTeamDetail),
@@ -29282,25 +29397,22 @@ async function planeteFetch(url) {
 async function renderPlaneteSection() {
   const box = document.getElementById("planeteContent");
   if (!box) return;
-  if (!planeteState.overview) box.innerHTML = `<p class="sub">Chargement…</p>`;
+  if (!planeteState.data) box.innerHTML = `<p class="sub">Chargement…</p>`;
   try {
-    const ov = await planeteFetch(`/api/world/overview${planeteState.country ? `?country=${encodeURIComponent(planeteState.country)}` : ""}`);
-    planeteState.overview = ov;
-    planeteState.country = ov.country;
-    // Classement mondial des managers (World.managerRanking), tous pays.
-    planeteState.managers = await planeteFetch(`/api/world/managers`).catch(() => null);
-    let leagueId = planeteState.leagueId;
-    const inCountry = id => ov.stats && ov.stats.divisions.some(d => d.leagues.some(l => l.id === id));
-    if (!leagueId || !inCountry(leagueId)) {
-      leagueId = ov.country === ov.myCountry ? ov.myLeagueId : (ov.stats && ov.stats.divisions[0] ? ov.stats.divisions[0].leagues[0].id : null);
-      if (!inCountry(leagueId) && ov.stats && ov.stats.divisions[0]) leagueId = ov.stats.divisions[0].leagues[0].id;
-    }
+    const [d, mgr] = await Promise.all([
+      planeteFetch(`/api/world/country${planeteState.country ? `?code=${encodeURIComponent(planeteState.country)}` : ""}`),
+      // Classement mondial des managers (sa propre place), tous pays.
+      planeteFetch(`/api/world/managers`).catch(() => null),
+    ]);
+    planeteState.data = d;
+    planeteState.managers = mgr;
+    planeteState.country = d.overview.country;
     planeteState.league = null; planeteState.club = null;
-    if (leagueId) {
-      const lr = await planeteFetch(`/api/world/league?id=${encodeURIComponent(leagueId)}`);
+    if (planeteState.leagueId) {
+      const lr = await planeteFetch(`/api/world/league?id=${encodeURIComponent(planeteState.leagueId)}`);
       planeteState.league = lr.league; planeteState.leagueMine = !!lr.mine; planeteState.leagueId = lr.league.id;
       if (planeteState.clubIdx != null) {
-        const cr = await planeteFetch(`/api/world/club?league=${encodeURIComponent(leagueId)}&idx=${planeteState.clubIdx}`).catch(() => null);
+        const cr = await planeteFetch(`/api/world/club?league=${encodeURIComponent(planeteState.leagueId)}&idx=${planeteState.clubIdx}`).catch(() => null);
         planeteState.club = cr ? cr.club : null;
       }
     }
@@ -29313,104 +29425,282 @@ async function renderPlaneteSection() {
 }
 
 function planeteHtml() {
-  const ov = planeteState.overview;
-  const st = ov.stats;
-  let html = `<div class="ph-countries">` + ov.countries.map(c =>
-    `<button type="button" class="ph-country${c.code === ov.country ? " active" : ""}" data-ph-country="${escapeHtml(c.code)}">${nationFlagHtml(c.code)}` +
-    `<span><b>${escapeHtml(c.name)}</b><small>${c.managers} manager${c.managers > 1 ? "s" : ""} · ${c.leagueCount} championnat${c.leagueCount > 1 ? "s" : ""}</small></span></button>`).join("") + `</div>`;
-  html += `<div class="ph-grid"><div class="ph-main">${planeteLeagueHtml()}${planeteClubHtml()}</div><aside class="ph-side">${planeteManagersHtml()}${planeteCountryHtml(st)}</aside></div>`;
+  return planeteToolbarHtml() + (planeteState.league ? planeteLeagueViewHtml() : planeteOverviewHtml());
+}
+
+const PLANETE_CHEVRON = `<svg class="pc-chev" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const PLANETE_SEARCH_ICON = `<svg class="pc-search-icon" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+
+// Barre du haut : pays (menu déroulant avec drapeaux) + recherche mondiale.
+function planeteToolbarHtml() {
+  const d = planeteState.data;
+  const ov = d.overview;
+  const cur = d.countries.find(c => c.code === ov.country) || { code: ov.country, name: ov.name };
+  const opts = d.countries.map(c =>
+    `<button type="button" role="option" aria-selected="${c.code === ov.country}" class="pc-picker-opt${c.code === ov.country ? " active" : ""}" data-ph-country="${escapeHtml(c.code)}">${nationFlagHtml(c.code)}` +
+    `<span><b>${escapeHtml(c.name)}</b><small>${c.managers} manager${c.managers > 1 ? "s" : ""} · ${c.leagueCount} championnat${c.leagueCount > 1 ? "s" : ""}</small></span>` +
+    `${c.code === d.myCountry ? `<em>Votre pays</em>` : ""}</button>`).join("");
+  return `<div class="pc-toolbar">` +
+    `<div class="pc-picker"><button type="button" class="pc-picker-btn" data-pc-picker aria-haspopup="listbox" aria-expanded="false">${nationFlagHtml(cur.code)}<span class="pc-picker-name">${escapeHtml(cur.name)}</span>${PLANETE_CHEVRON}</button>` +
+    `<div class="pc-picker-menu hidden" role="listbox" aria-label="Pays">${opts}</div></div>` +
+    `<div class="pc-search">${PLANETE_SEARCH_ICON}<input type="search" id="planeteSearchInput" placeholder="Club, manager ou championnat…" autocomplete="off" aria-label="Rechercher dans le monde">` +
+    `<div class="pc-search-results hidden" id="planeteSearchResults"></div></div>` +
+    `</div>`;
+}
+
+function pcNum(v) {
+  return Number(v || 0).toLocaleString("fr-FR", { maximumFractionDigits: 1, minimumFractionDigits: Number.isInteger(v) ? 0 : 1 });
+}
+// Nom de club cliquable (fiche équipe, même d'un autre championnat).
+function pcClub(name, leagueId, idx) {
+  if (!name) return `<span class="pc-dim">—</span>`;
+  if (!leagueId || !Number.isInteger(idx)) return `<span>${escapeHtml(name)}</span>`;
+  const mine = leagueId === planeteState.data.myLeagueId && idx === planeteState.data.myTeamIndex;
+  return `<button type="button" class="pc-link${mine ? " is-mine" : ""}" data-pc-club="${escapeHtml(leagueId)}" data-pc-idx="${idx}">${escapeHtml(name)}</button>`;
+}
+function pcClubByName(name) {
+  const ref = name && planeteState.data.overview.clubs[name];
+  return pcClub(name, ref && ref.leagueId, ref && ref.idx);
+}
+// Joueur : sa fiche s'il est dans son championnat, sinon texte (la fiche
+// d'un joueur d'un autre championnat n'existe pas, son club est cliquable).
+function pcPlayer(r) {
+  const flag = r.nationality ? nationFlagHtml(r.nationality) : "";
+  if (r.leagueId === planeteState.data.myLeagueId && r.playerId != null && Number.isInteger(r.teamIdx)) {
+    return `${flag}<button type="button" class="pc-link pc-player" data-pc-player="${r.playerId}" data-pc-team="${r.teamIdx}">${escapeHtml(r.name)}</button>`;
+  }
+  return `${flag}<span class="pc-player">${escapeHtml(r.name)}</span>`;
+}
+function pcEmpty(text) { return `<p class="pc-empty">${escapeHtml(text)}</p>`; }
+function pcSection(title, sub, body, cls = "") {
+  return `<section class="pc-card${cls ? " " + cls : ""}"><header class="pc-card-head"><h3>${escapeHtml(title)}</h3>${sub ? `<span class="pc-card-sub">${escapeHtml(sub)}</span>` : ""}</header>${body}</section>`;
+}
+
+function planeteOverviewHtml() {
+  const d = planeteState.data;
+  const ov = d.overview;
+  const c = ov.card;
+  const kpi = (label, value, extra = "") => `<div class="pc-kpi"><dt>${escapeHtml(label)}</dt><dd>${value}${extra}</dd></div>`;
+  let html = `<section class="pc-hero"><div class="pc-hero-id">${nationFlagHtml(ov.country, "pc-hero-flag")}<div><h3>${escapeHtml(ov.name)}</h3>` +
+    `<p>Saison ${ov.seasonNumber}${ov.mine ? ` · <span class="pc-accent">Votre pays</span>` : ""}</p></div></div>` +
+    `<dl class="pc-kpis">` +
+    kpi("Divisions", c.divisionCount) +
+    kpi("Championnats", c.leagueCount) +
+    kpi("Clubs", c.clubs) +
+    kpi("Managers", c.managers, c.activeManagers != null ? `<small>${c.activeManagers} actif${c.activeManagers > 1 ? "s" : ""} sur 7 jours</small>` : "") +
+    `</dl></section>`;
+  html += `<div class="pc-grid"><div class="pc-col">`;
+  html += planeteDivisionsHtml();
+  html += planeteLeadersHtml();
+  html += planeteBestsHtml();
+  html += planeteHistoryHtml();
+  html += `</div><aside class="pc-col">`;
+  html += planeteTitlesHtml();
+  html += planeteRankingHtml();
+  html += planeteFriendliesHtml();
+  html += `</aside></div>`;
   return html;
+}
+
+function planeteDivisionsHtml() {
+  const d = planeteState.data;
+  const ov = d.overview;
+  let body = `<div class="pc-divs">`;
+  ov.divisions.forEach(div => {
+    body += `<div class="pc-div"><div class="pc-div-name">${escapeHtml(div.name)}<span>${div.leagues.length} championnat${div.leagues.length > 1 ? "s" : ""}</span></div><ul class="pc-leagues">`;
+    div.leagues.slice(0, PLANETE_LEAGUES_SHOWN).forEach(l => {
+      const mine = l.id === d.myLeagueId;
+      const lead = l.champion ? `Champion : ${pcClub(l.champion, null, null)}`
+        : l.leader ? `En tête : ${pcClub(l.leader.name, l.id, l.leader.idx)} <span class="pc-dim">${l.leader.wins}-${l.leader.losses}</span>` : `<span class="pc-dim">Saison pas commencée</span>`;
+      body += `<li${mine ? ` class="is-mine"` : ""}><button type="button" class="pc-league" data-ph-league="${escapeHtml(l.id)}">${escapeHtml(l.label)}</button>` +
+        `<span class="pc-league-lead">${lead}</span>` +
+        `<span class="pc-league-meta">${mine ? `<span class="pc-pill">Votre championnat</span>` : `${l.humans} manager${l.humans > 1 ? "s" : ""}`}</span></li>`;
+    });
+    body += `</ul>`;
+    if (div.leagues.length > PLANETE_LEAGUES_SHOWN) body += `<p class="pc-more">… et ${div.leagues.length - PLANETE_LEAGUES_SHOWN} autres : utilisez la recherche.</p>`;
+    body += `</div>`;
+  });
+  body += `</div>`;
+  // Coupe nationale (et Supercoupe).
+  const cup = ov.cup;
+  let cupText;
+  if (!cup) cupText = `<span class="pc-dim">Première édition la saison prochaine.</span>`;
+  else if (cup.champion) cupText = `Vainqueur ${cup.season > 0 ? `(saison ${cup.season})` : ""} : ${pcClubByName(cup.champion)}`;
+  else cupText = `${escapeHtml(cup.stage || "En cours")} · ${cup.alive} club${cup.alive > 1 ? "s" : ""} en course sur ${cup.clubs}`;
+  body += `<div class="pc-cup"><div><b>Coupe nationale</b><span>${cupText}</span></div>` +
+    (ov.mine ? `<button type="button" class="pc-cta" data-tab="coupe">Voir la Coupe</button>` : "") + `</div>`;
+  const sc = ov.superCup;
+  if (sc) {
+    body += `<div class="pc-cup"><div><b>Supercoupe</b><span>${sc.resolved
+      ? `Vainqueur (saison ${sc.season}) : ${pcClubByName(sc.winner)}`
+      : `${pcClubByName(sc.home)} – ${pcClubByName(sc.away)}, à venir`}</span></div></div>`;
+  }
+  return pcSection("Divisions et compétitions", `${ov.card.leagueCount} championnat${ov.card.leagueCount > 1 ? "s" : ""}`, body);
+}
+
+function planeteStatGridHtml(source, fmt) {
+  if (!source || PLANETE_STATS.every(([k]) => !(source[k] || []).length)) return null;
+  return `<div class="pc-stat-grid">` + PLANETE_STATS.map(([k, label, unit]) => {
+    const rows = source[k] || [];
+    return `<div class="pc-stat"><h4>${escapeHtml(label)}</h4>` + (rows.length ? `<ol>` + rows.map((r, i) =>
+      `<li${i === 0 ? ` class="is-first"` : ""}><span class="pc-rank">${i + 1}</span><span class="pc-who">${pcPlayer(r)}<small>${pcClub(r.team, r.leagueId, r.teamIdx)}${fmt(r)}</small></span>` +
+      `<span class="pc-val">${pcNum(r.value)}<small>${unit}</small></span></li>`).join("") + `</ol>` : pcEmpty("Personne pour l'instant.")) + `</div>`;
+  }).join("") + `</div>`;
+}
+
+function planeteLeadersHtml() {
+  const ov = planeteState.data.overview;
+  const grid = planeteStatGridHtml(ov.leaders, r => ` · ${escapeHtml(r.label)}`);
+  return pcSection("Leaders de la saison", "Moyennes par match de championnat", grid ||
+    pcEmpty("Pas encore assez de matchs joués (au moins la moitié des matchs de son équipe)."));
+}
+
+function planeteBestsHtml() {
+  const ov = planeteState.data.overview;
+  const grid = planeteStatGridHtml(ov.bests, r => r.opponent
+    ? ` · ${r.competition === "cup" ? "Coupe, " : ""}contre ${escapeHtml(r.opponent)}`
+    : (r.competition === "cup" ? " · Coupe" : ""));
+  return pcSection("Meilleures performances", "En un match officiel cette saison", grid || pcEmpty("Aucun match officiel joué cette saison."));
+}
+
+function planeteHistoryHtml() {
+  const ov = planeteState.data.overview;
+  const hist = ov.history || [];
+  if (!hist.length) {
+    return pcSection("Historique", "", pcEmpty(`Premier champion de Division I et premier vainqueur de la Coupe à l'issue de la saison ${ov.seasonNumber}.`), "pc-card--compact");
+  }
+  const col = (title, rows, winKey, finKey) => {
+    const list = rows.filter(h => h[winKey]).slice(0, PLANETE_HISTORY_SHOWN);
+    let t = `<div class="pc-hist-col"><h4>${escapeHtml(title)}</h4>`;
+    if (!list.length) return t + pcEmpty("Pas encore de vainqueur.") + `</div>`;
+    t += `<table class="pc-table"><thead><tr><th class="num">Saison</th><th>Vainqueur</th><th>Finaliste</th></tr></thead><tbody>`;
+    list.forEach((h, i) => {
+      t += `<tr${i === 0 ? ` class="is-holder"` : ""}><td class="num">${h.season}</td><td>${pcClubByName(h[winKey])}${i === 0 ? ` <span class="pc-pill">Tenant</span>` : ""}</td><td>${pcClubByName(h[finKey])}</td></tr>`;
+    });
+    return t + `</tbody></table></div>`;
+  };
+  return pcSection("Historique", "Division I et Coupe nationale",
+    `<div class="pc-hist">${col("Champions de Division I", hist, "champion", "championFinalist")}${col("Coupe nationale", hist, "cupWinner", "cupFinalist")}</div>`);
+}
+
+function planeteTitlesHtml() {
+  const ov = planeteState.data.overview;
+  const rows = (ov.titles || []).slice(0, PLANETE_TITLES_SHOWN);
+  if (!rows.length) return pcSection("Titres par équipe", "", pcEmpty("Aucun titre attribué pour l'instant."), "pc-card--compact");
+  let t = `<table class="pc-table pc-titles"><thead><tr><th>Club</th><th class="num" title="Champion de Division I">Ch.</th><th class="num" title="Coupe nationale">Coupe</th><th class="num" title="Supercoupe">SC</th><th class="num" title="Finales perdues">Finales</th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    const z = v => (v ? `<b>${v}</b>` : `<span class="pc-dim">0</span>`);
+    t += `<tr><td>${pcClubByName(r.name)}</td><td class="num">${z(r.championships)}</td><td class="num">${z(r.cups)}</td><td class="num">${z(r.superCups)}</td><td class="num">${r.finals ? r.finals : `<span class="pc-dim">0</span>`}</td></tr>`;
+  });
+  return pcSection("Titres par équipe", "", t + `</tbody></table>`);
+}
+
+function planeteRankingHtml() {
+  const d = planeteState.data;
+  const rk = d.overview.ranking;
+  const me = planeteState.managers && planeteState.managers.me;
+  let body;
+  if (!rk.top.length) {
+    body = pcEmpty("Aucun manager classé : il faut un premier match officiel entre deux managers.");
+  } else {
+    body = `<table class="pc-table pc-ranking"><thead><tr><th class="num" title="Rang dans le pays">Pays</th><th class="num" title="Rang mondial">Monde</th><th>Club</th><th class="num">Note</th></tr></thead><tbody>` +
+      rk.top.map(r => `<tr${me && r.leagueId === me.leagueId && r.idx === me.idx ? ` class="is-mine"` : ""}><td class="num">${r.nationalRank}</td><td class="num pc-dim">${r.worldRank}</td>` +
+        `<td>${pcClub(r.name, r.leagueId, r.idx)}<small class="pc-cell-sub">${escapeHtml(r.label)} · ${r.games} match${r.games > 1 ? "s" : ""}</small></td><td class="num"><b>${r.rating}</b></td></tr>`).join("") +
+      `</tbody></table>`;
+  }
+  if (me && d.overview.mine && !rk.top.some(r => r.leagueId === me.leagueId && r.idx === me.idx)) {
+    body += `<p class="pc-note">Votre note : <b>${me.rating}</b>${me.rank != null ? ` · ${me.rank}e mondial` : " · classé après un premier match officiel contre un autre manager"}.</p>`;
+  }
+  return pcSection("Classement mondial", "Managers du pays, note Elo", body, rk.top.length ? "" : "pc-card--compact");
+}
+
+function planeteFriendliesHtml() {
+  const d = planeteState.data;
+  const fr = d.overview.friendlies;
+  if (!fr || !fr.played) return pcSection("Amicaux internationaux", "", pcEmpty("Aucun amical contre un club étranger ces 60 derniers jours."), "pc-card--compact");
+  const name = code => (d.countries.find(c => c.code === code) || { name: code }).name;
+  let body = `<p class="pc-bilan"><span>Victoires</span><b>${fr.wins}</b><span>Défaites</span><b>${fr.losses}</b></p>`;
+  body += `<ul class="pc-rows">` + fr.byCountry.map(c => `<li>${nationFlagHtml(c.country)}<span>Contre ${escapeHtml(name(c.country))}</span><b>${c.wins}-${c.losses}</b></li>`).join("") + `</ul>`;
+  body += `<h4 class="pc-mini-title">Derniers résultats</h4><ul class="pc-rows">` + fr.recent.map(m =>
+    `<li><span class="pc-match">${nationFlagHtml(m.home.country)}${pcClub(m.home.name, m.home.leagueId, m.home.idx)} – ${nationFlagHtml(m.away.country)}${pcClub(m.away.name, m.away.leagueId, m.away.idx)}</span><b>${m.scoreHome}-${m.scoreAway}</b></li>`).join("") + `</ul>`;
+  return pcSection("Amicaux internationaux", "60 derniers jours", body);
+}
+
+// Sous-page d'un championnat : classement, derniers résultats, effectif.
+function planeteLeagueViewHtml() {
+  const ov = planeteState.data.overview;
+  return `<button type="button" class="pc-back" data-pc-back>← Aperçu du pays : ${escapeHtml(ov.name)}</button>` +
+    planeteLeagueHtml() + planeteClubHtml();
 }
 
 function planeteLeagueHtml() {
   const lg = planeteState.league;
-  if (!lg) return `<div class="ph-card"><p class="training-empty">Aucun championnat à afficher.</p></div>`;
   const myName = teamA && teamA.name;
-  let html = `<div class="ph-card"><h3>${nationFlagHtml(lg.country)}${escapeHtml(lg.label)}${planeteState.leagueMine ? ` <span class="ph-pill">Votre championnat</span>` : ""}</h3>`;
-  html += `<p class="ph-sub">Saison ${lg.seasonNumber}${lg.playoffsDone && lg.champion ? ` · Champion : ${escapeHtml(lg.champion)}` : ` · Journée ${Math.min(lg.round + 1, 18)}`} · ${lg.humans} manager${lg.humans > 1 ? "s" : ""}</p>`;
-  html += `<table class="ph-table"><thead><tr><th>#</th><th>Club</th><th class="num">J</th><th class="num">V</th><th class="num">D</th><th class="num">+/-</th></tr></thead><tbody>`;
+  let html = `<section class="pc-card"><header class="pc-card-head"><h3>${nationFlagHtml(lg.country)}${escapeHtml(lg.label)}</h3>${planeteState.leagueMine ? `<span class="pc-pill">Votre championnat</span>` : ""}</header>`;
+  html += `<p class="pc-card-sub pc-card-sub--block">Saison ${lg.seasonNumber}${lg.playoffsDone && lg.champion ? ` · Champion : ${escapeHtml(lg.champion)}` : ` · Journée ${Math.min(lg.round + 1, 18)}`} · ${lg.humans} manager${lg.humans > 1 ? "s" : ""}</p>`;
+  html += `<table class="pc-table"><thead><tr><th class="num">#</th><th>Club</th><th class="num">J</th><th class="num">V</th><th class="num">D</th><th class="num">+/-</th></tr></thead><tbody>`;
   lg.standings.forEach(r => {
     const diff = r.pf - r.pa;
-    html += `<tr${planeteState.leagueMine && r.name === myName ? ` class="mine"` : ""}><td>${r.rank}</td>` +
-      `<td><button type="button" class="ph-club${r.isHuman ? " human" : ""}" data-ph-club="${r.idx}">${escapeHtml(r.name)}</button>${r.isHuman ? `<span class="ph-mgr">Manager</span>` : ""}</td>` +
+    html += `<tr${planeteState.leagueMine && r.name === myName ? ` class="is-mine"` : ""}><td class="num">${r.rank}</td>` +
+      `<td><button type="button" class="pc-link${r.isHuman ? " human" : ""}" data-ph-club="${r.idx}">${escapeHtml(r.name)}</button>${r.isHuman ? `<span class="pc-mgr">Manager</span>` : ""}</td>` +
       `<td class="num">${r.played}</td><td class="num">${r.wins}</td><td class="num">${r.losses}</td><td class="num">${diff > 0 ? "+" : ""}${diff}</td></tr>`;
   });
   html += `</tbody></table>`;
   if (lg.lastResults && lg.lastResults.length) {
-    html += `<h3 style="margin-top:16px">Derniers résultats</h3><ul class="ph-results">` + lg.lastResults.map(r =>
+    html += `<h4 class="pc-mini-title">Derniers résultats</h4><ul class="pc-rows">` + lg.lastResults.map(r =>
       `<li><span>${escapeHtml(r.home)} – ${escapeHtml(r.away)}</span><b>${r.scoreHome}-${r.scoreAway}</b></li>`).join("") + `</ul>`;
   }
-  return html + `</div>`;
+  return html + `</section>`;
 }
 
 function planeteClubHtml() {
   const c = planeteState.club;
   if (!c) return "";
-  let html = `<div class="ph-card ph-roster-card"><h3>${escapeHtml(c.name)} <span class="ph-sub" style="margin:0">${escapeHtml(c.label)}</span>` +
-    `<button type="button" class="ph-chip" data-ph-close-club style="margin-left:auto">Fermer</button></h3>`;
-  html += `<table class="ph-table ph-roster"><thead><tr><th>Poste</th><th>Joueur</th><th class="num">Âge</th><th class="num">Taille</th></tr></thead><tbody>`;
+  let html = `<section class="pc-card"><header class="pc-card-head"><h3>${escapeHtml(c.name)}</h3><span class="pc-card-sub">${escapeHtml(c.label)}</span>` +
+    `<button type="button" class="pc-cta" data-ph-close-club style="margin-left:auto">Fermer</button></header>`;
+  html += `<table class="pc-table"><thead><tr><th>Poste</th><th>Joueur</th><th class="num">Âge</th><th class="num">Taille</th></tr></thead><tbody>`;
   c.players.forEach(p => {
     html += `<tr><td>${escapeHtml(POS_SHORT[p.position] || p.position)}</td><td>${p.nationality ? nationFlagHtml(p.nationality) : ""}${escapeHtml(p.name)}</td><td class="num">${p.age}</td><td class="num">${p.height ? p.height + " cm" : ""}</td></tr>`;
   });
-  html += `</tbody></table><p class="ph-sub" style="margin:10px 0 0">Caractéristiques visibles uniquement quand le joueur est mis en vente sur le marché.</p>`;
-  return html + `</div>`;
+  html += `</tbody></table><p class="pc-note">Caractéristiques visibles uniquement quand le joueur est mis en vente sur le marché.</p>`;
+  return html + `</section>`;
 }
 
-// Classement mondial des managers (2026-09-29) : note Elo gagnée ou perdue
-// contre d'autres managers humains en match officiel (recordHumanRivalry),
-// tous pays confondus ; 10 premiers + sa propre place.
-const PLANETE_MANAGERS_SHOWN = 10;
-function planeteManagersHtml() {
-  const mr = planeteState.managers;
-  let html = `<div class="ph-card ph-managers"><h3>Classement mondial des managers</h3>`;
-  if (!mr) return html + `<p class="ph-sub" style="margin:0">Indisponible pour l'instant.</p></div>`;
-  const row = (r, mine) => `<div class="ph-leader${mine ? " mine" : ""}"><span>${r.rank != null ? r.rank + "." : "–"}</span>${nationFlagHtml(r.country)}` +
-    `<span class="who">${escapeHtml(r.name)}<small>${escapeHtml(r.label)} · ${r.games} match${r.games > 1 ? "s" : ""}</small></span><span class="val">${r.rating}</span></div>`;
-  const me = mr.me;
-  const top = (mr.top || []).slice(0, PLANETE_MANAGERS_SHOWN);
-  html += top.length ? top.map(r => row(r, me && r.leagueId === me.leagueId && r.idx === me.idx)).join("")
-    : `<p class="ph-sub" style="margin:0">Aucun manager classé pour l'instant : il faut un premier match officiel entre deux managers.</p>`;
-  if (me && (me.rank == null || me.rank > PLANETE_MANAGERS_SHOWN)) {
-    html += `<div class="ph-managers-me">${me.rank == null
-      ? `<p class="ph-sub" style="margin:0">Votre note : <b>${me.rating}</b>. Vous serez classé après votre premier match officiel contre un autre manager.</p>`
-      : row(me, true)}</div>`;
-  }
-  html += `<p class="ph-sub" style="margin:10px 0 0">Note de départ 1500, qui monte ou descend à chaque match officiel contre un autre manager (plus l'adversaire est bien noté, plus la victoire rapporte). Les matchs contre l'IA et les amicaux ne comptent pas. ${mr.total} manager${mr.total > 1 ? "s" : ""} classé${mr.total > 1 ? "s" : ""}.</p></div>`;
-  return html;
+// Recherche de la page : même source que la barre du haut
+// (/api/world/search : championnats et clubs du monde, managers compris).
+let planeteSearchTimer = null;
+let planeteSearchSeq = 0;
+function planeteSearch(raw) {
+  clearTimeout(planeteSearchTimer);
+  const slot = document.getElementById("planeteSearchResults");
+  const q = (raw || "").trim();
+  if (!slot) return;
+  if (q.length < 2) { slot.classList.add("hidden"); slot.innerHTML = ""; return; }
+  const seq = ++planeteSearchSeq;
+  planeteSearchTimer = setTimeout(async () => {
+    let data = null;
+    try { data = await planeteFetch(`/api/world/search?q=${encodeURIComponent(q)}`); } catch (e) { return; }
+    const box = document.getElementById("planeteSearchResults");
+    if (!box || seq !== planeteSearchSeq) return;
+    let html = "";
+    if (data.leagues && data.leagues.length) {
+      html += `<div class="pc-search-group">Championnats</div>` + data.leagues.map(l =>
+        `<button type="button" class="pc-search-item" data-pc-go-league="${escapeHtml(l.id)}" data-pc-go-country="${escapeHtml(l.country)}">${nationFlagHtml(l.country)}<span>${escapeHtml(l.label)}</span><small>${l.humans} manager${l.humans > 1 ? "s" : ""}</small></button>`).join("");
+    }
+    if (data.clubs && data.clubs.length) {
+      html += `<div class="pc-search-group">Clubs et managers</div>` + data.clubs.map(c =>
+        `<button type="button" class="pc-search-item" data-pc-club="${escapeHtml(c.leagueId)}" data-pc-idx="${c.idx}">${nationFlagHtml(c.country)}<span>${escapeHtml(c.name)}</span><small>${escapeHtml(c.label)} · ${c.rank}e${c.isHuman ? " · manager" : ""}</small></button>`).join("");
+    }
+    box.innerHTML = html || `<p class="pc-empty">Aucun résultat.</p>`;
+    box.classList.remove("hidden");
+  }, 250);
 }
 
-function planeteCountryHtml(st) {
-  const ov = planeteState.overview;
-  const country = ov.countries.find(c => c.code === ov.country) || { name: ov.country };
-  let html = `<div class="ph-card"><h3>${nationFlagHtml(ov.country)}${escapeHtml(country.name)} en chiffres</h3>`;
-  if (!st) return html + `<p class="training-empty">Les chiffres arrivent dans quelques minutes.</p></div>`;
-  html += `<p class="ph-sub">Saison ${st.seasonNumber} · ${st.managers} manager${st.managers > 1 ? "s" : ""} · ${st.leagueCount} championnat${st.leagueCount > 1 ? "s" : ""}</p>`;
-  st.divisions.forEach(d => {
-    html += `<div><b>${escapeHtml(d.name)}</b><div class="ph-chips">`;
-    d.leagues.slice(0, PLANETE_CHIPS_MAX).forEach(l => {
-      html += `<button type="button" class="ph-chip${l.id === planeteState.leagueId ? " active" : ""}" data-ph-league="${escapeHtml(l.id)}">${escapeHtml(l.label)}</button>`;
-    });
-    if (d.leagues.length > PLANETE_CHIPS_MAX) html += `<span class="ph-sub" style="margin:4px 0 0">… et ${d.leagues.length - PLANETE_CHIPS_MAX} autres : utilisez la recherche en haut.</span>`;
-    html += `</div></div>`;
-  });
-  html += `</div>`;
-  html += `<div class="ph-card"><h3>Palmarès</h3>`;
-  const hist = ov.history || [];
-  html += hist.length
-    ? `<ul class="ph-results">` + hist.map(h => `<li><span>Saison ${h.season}</span><b>${escapeHtml(h.champion)}</b></li>` +
-      (h.cupWinner ? `<li class="ph-sub-honour"><span>Coupe</span><b>${escapeHtml(h.cupWinner)}</b></li>` : "") +
-      (h.superCupWinner ? `<li class="ph-sub-honour"><span>Supercoupe</span><b>${escapeHtml(h.superCupWinner)}</b></li>` : "")).join("") + `</ul>`
-    : `<p class="ph-sub" style="margin:0">Premier champion de Division I à l'issue de cette saison.</p>`;
-  html += `</div>`;
-  const tab = planeteState.statTab;
-  html += `<div class="ph-card"><h3>Meilleurs de la saison</h3><div class="ph-chips">` + Object.keys(PLANETE_STAT_LABELS).map(k =>
-    `<button type="button" class="ph-chip${k === tab ? " active" : ""}" data-ph-stat="${k}">${escapeHtml(PLANETE_STAT_LABELS[k])}</button>`).join("") + `</div>`;
-  const rows = (st.leaders && st.leaders[tab]) || [];
-  html += rows.length ? rows.map((r, i) =>
-    `<div class="ph-leader"><span>${i + 1}.</span>${r.nationality ? nationFlagHtml(r.nationality) : ""}<span class="who">${escapeHtml(r.name)}<small>${escapeHtml(r.team)} · ${escapeHtml(r.label)}</small></span><span class="val">${r.value}</span></div>`).join("")
-    : `<p class="ph-sub" style="margin:0">Pas encore assez de matchs joués.</p>`;
-  html += `<p class="ph-sub" style="margin:10px 0 0">Moyennes par match de championnat, au moins la moitié des matchs de son équipe.</p></div>`;
-  return html;
+function planeteClosePicker(box) {
+  const menu = box.querySelector(".pc-picker-menu");
+  const btn = box.querySelector("[data-pc-picker]");
+  if (menu) menu.classList.add("hidden");
+  if (btn) btn.setAttribute("aria-expanded", "false");
 }
 
 // Délégation (une seule fois) sur le conteneur de Planète Hoop.
@@ -29418,10 +29708,29 @@ function planeteCountryHtml(st) {
   const box = document.getElementById("planeteContent");
   if (!box) return;
   box.addEventListener("click", (e) => {
+    const picker = e.target.closest("[data-pc-picker]");
+    if (picker) {
+      const menu = box.querySelector(".pc-picker-menu");
+      const open = menu.classList.toggle("hidden") === false;
+      picker.setAttribute("aria-expanded", String(open));
+      return;
+    }
     const c = e.target.closest("[data-ph-country]");
-    if (c) { planeteState.country = c.dataset.phCountry; planeteState.leagueId = null; planeteState.clubIdx = null; renderPlaneteSection(); return; }
+    if (c) { planeteClosePicker(box); planeteState.country = c.dataset.phCountry; planeteState.leagueId = null; planeteState.clubIdx = null; renderPlaneteSection(); return; }
+    const go = e.target.closest("[data-pc-go-league]");
+    if (go) { planeteState.country = go.dataset.pcGoCountry; planeteState.leagueId = go.dataset.pcGoLeague; planeteState.clubIdx = null; renderPlaneteSection(); window.scrollTo(0, 0); return; }
     const l = e.target.closest("[data-ph-league]");
-    if (l) { planeteState.leagueId = l.dataset.phLeague; planeteState.clubIdx = null; renderPlaneteSection(); return; }
+    if (l) { planeteState.leagueId = l.dataset.phLeague; planeteState.clubIdx = null; renderPlaneteSection(); window.scrollTo(0, 0); return; }
+    if (e.target.closest("[data-pc-back]")) { planeteState.leagueId = null; planeteState.clubIdx = null; renderPlaneteSection(); return; }
+    const club = e.target.closest("[data-pc-club]");
+    if (club) {
+      const lid = club.dataset.pcClub, idx = Number(club.dataset.pcIdx);
+      if (lid === planeteState.data.myLeagueId) { showTeamDetail(idx); return; }
+      showForeignTeamDetail(lid, idx).then(ok => { if (!ok) { planeteState.leagueId = lid; planeteState.clubIdx = idx; renderPlaneteSection(); } });
+      return;
+    }
+    const pl = e.target.closest("[data-pc-player]");
+    if (pl) { showPlayerDetail(Number(pl.dataset.pcTeam), Number(pl.dataset.pcPlayer)); return; }
     const cl = e.target.closest("[data-ph-club]");
     if (cl) {
       const idx = Number(cl.dataset.phClub);
@@ -29431,8 +29740,20 @@ function planeteCountryHtml(st) {
       return;
     }
     if (e.target.closest("[data-ph-close-club]")) { planeteState.clubIdx = null; planeteState.club = null; box.innerHTML = planeteHtml(); return; }
-    const s = e.target.closest("[data-ph-stat]");
-    if (s) { planeteState.statTab = s.dataset.phStat; box.innerHTML = planeteHtml(); }
+  });
+  box.addEventListener("input", (e) => { if (e.target.id === "planeteSearchInput") planeteSearch(e.target.value); });
+  box.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    planeteClosePicker(box);
+    const r = document.getElementById("planeteSearchResults");
+    if (r) r.classList.add("hidden");
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".pc-picker")) planeteClosePicker(box);
+    if (!e.target.closest(".pc-search")) {
+      const r = document.getElementById("planeteSearchResults");
+      if (r) r.classList.add("hidden");
+    }
   });
 })();
 

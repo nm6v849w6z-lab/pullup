@@ -614,7 +614,7 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
         }
       }
     }
-    refreshCountrySummaries(world, country, leagues);
+    refreshCountrySummaries(world, country, leagues, now);
     worldDirty = true;
   }
   // Managers inactifs : club rendu à l'IA (voir releaseInactiveManagers).
@@ -664,8 +664,14 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
 // par catchUpWorld (et à chaque ouverture de championnat / arrivée d'un
 // manager), pour répondre sans recharger toutes les ligues.
 // ---------------------------------------------------------------------
-const LEADER_STATS = ["pts", "reb", "ast", "eval"];
+const LEADER_STATS = ["pts", "reb", "ast", "blk", "eval"];
 const LEADERS_TOP = 5;
+// Meilleures performances en un match (aperçu du pays, 2026-09-30) :
+// matchs officiels de la saison (championnat, play-offs, Coupe), jamais
+// les amicaux.
+const BEST_GAME_STATS = ["pts", "reb", "ast", "blk"];
+const BEST_GAMES_TOP = 5;
+const ACTIVE_MANAGER_MS = 7 * 24 * 3600 * 1000;
 
 function leagueSummary(entry, league) {
   const table = typeof league.standings === "function" ? league.standings() : [];
@@ -727,9 +733,9 @@ function leagueLeaderCandidates(entry, league) {
       if (!log.length) return;
       const teamGames = (league.results || []).filter(r => r.home === teamIdx || r.away === teamIdx).length;
       if (log.length < Math.max(2, Math.ceil(teamGames / 2))) return;
-      const sum = { pts: 0, reb: 0, ast: 0, eval: 0 };
-      log.forEach(m => { sum.pts += m.pts || 0; sum.reb += m.reb || 0; sum.ast += m.ast || 0; sum.eval += Engine.statEvaluation(m); });
-      const row = { name: p.name, nationality: p.nationality || null, position: p.position, team: team.name, isHuman: !!team.isHuman, leagueId: entry.id, label: divisionLabel(entry.level, entry.group), games: log.length };
+      const sum = { pts: 0, reb: 0, ast: 0, blk: 0, eval: 0 };
+      log.forEach(m => { sum.pts += m.pts || 0; sum.reb += m.reb || 0; sum.ast += m.ast || 0; sum.blk += m.blk || 0; sum.eval += Engine.statEvaluation(m); });
+      const row = { name: p.name, playerId: p.id, nationality: p.nationality || null, position: p.position, team: team.name, teamIdx, isHuman: !!team.isHuman, leagueId: entry.id, label: divisionLabel(entry.level, entry.group), games: log.length };
       LEADER_STATS.forEach(k => { row[k] = Math.round((sum[k] / log.length) * 10) / 10; });
       out.push(row);
     });
@@ -737,40 +743,91 @@ function leagueLeaderCandidates(entry, league) {
   return out;
 }
 
-function countryStats(world, country, leagues) {
+// Meilleurs matchs individuels d'une ligue : une ligne par (joueur, match)
+// avec l'adversaire quand on le retrouve (résultats du championnat, tours
+// de la Coupe nationale `cup`). Une ligne toute à zéro est ignorée.
+function leagueBestGameCandidates(entry, league, cup) {
+  const out = [];
+  const label = divisionLabel(entry.level, entry.group);
+  const byRound = new Map();
+  (league.results || []).forEach(r => {
+    byRound.set(`${r.round}|${r.home}`, r.away);
+    byRound.set(`${r.round}|${r.away}`, r.home);
+  });
+  const isMe = (ref, teamIdx) => ref && ref.leagueId === entry.id && ref.idx === teamIdx;
+  const cupOpponent = (roundIndex, teamIdx) => {
+    const round = cup && (cup.rounds || []).find(x => x.index === roundIndex);
+    const m = round && round.matches.find(x => !x.bye && (isMe(x.home, teamIdx) || isMe(x.away, teamIdx)));
+    if (!m) return null;
+    return isMe(m.home, teamIdx) ? m.away.name : m.home.name;
+  };
+  league.teams.forEach((team, teamIdx) => {
+    (team.players || []).forEach(p => {
+      (p.matchLog || []).forEach(m => {
+        const competition = m.competition || "championship";
+        if (competition === "friendly") return;
+        if (!BEST_GAME_STATS.some(k => (m[k] || 0) > 0)) return;
+        let opponent = null;
+        if (competition === "championship") {
+          const opp = byRound.get(`${m.round}|${teamIdx}`);
+          opponent = opp != null && league.teams[opp] ? league.teams[opp].name : null;
+        } else if (competition === "cup") opponent = cupOpponent(m.round, teamIdx);
+        const row = { name: p.name, playerId: p.id, nationality: p.nationality || null, team: team.name, teamIdx, isHuman: !!team.isHuman, leagueId: entry.id, label, competition, opponent };
+        BEST_GAME_STATS.forEach(k => { row[k] = m[k] || 0; });
+        out.push(row);
+      });
+    });
+  });
+  return out;
+}
+
+function countryStats(world, country, leagues, now = Date.now()) {
   const entries = leaguesOfCountry(world, country);
+  const cup = (world.cups || {})[country] || null;
   let candidates = [];
-  let managers = 0;
+  let games = [];
+  let managers = 0, clubs = 0, activeManagers = 0;
   entries.forEach(e => {
     const lg = leagues.get(e.id);
     if (!lg) return;
-    managers += lg.teams.filter(t => t.isHuman).length;
+    clubs += lg.teams.length;
+    lg.teams.forEach(t => {
+      if (!t.isHuman) return;
+      managers++;
+      if (typeof t.lastSeenAt === "number" && now - t.lastSeenAt < ACTIVE_MANAGER_MS) activeManagers++;
+    });
     candidates = candidates.concat(leagueLeaderCandidates(e, lg));
+    games = games.concat(leagueBestGameCandidates(e, lg, cup && cup.season === (lg.seasonNumber || 1) ? cup : null));
   });
   const leaders = {};
   LEADER_STATS.forEach(k => {
-    leaders[k] = candidates.slice().sort((a, b) => b[k] - a[k] || b.games - a.games).slice(0, LEADERS_TOP)
-      .map(c => ({ name: c.name, nationality: c.nationality, position: c.position, team: c.team, isHuman: c.isHuman, leagueId: c.leagueId, label: c.label, games: c.games, value: c[k] }));
+    leaders[k] = candidates.filter(c => c[k] > 0).sort((a, b) => b[k] - a[k] || b.games - a.games).slice(0, LEADERS_TOP)
+      .map(c => ({ name: c.name, playerId: c.playerId, nationality: c.nationality, position: c.position, team: c.team, teamIdx: c.teamIdx, isHuman: c.isHuman, leagueId: c.leagueId, label: c.label, games: c.games, value: c[k] }));
+  });
+  const bests = {};
+  BEST_GAME_STATS.forEach(k => {
+    bests[k] = games.filter(g => g[k] > 0).sort((a, b) => b[k] - a[k]).slice(0, BEST_GAMES_TOP)
+      .map(g => ({ name: g.name, playerId: g.playerId, nationality: g.nationality, team: g.team, teamIdx: g.teamIdx, isHuman: g.isHuman, leagueId: g.leagueId, label: g.label, competition: g.competition, opponent: g.opponent, value: g[k] }));
   });
   const divisions = [...new Set(entries.map(e => e.level))].sort((a, b) => a - b)
     .map(level => ({ level, name: Engine.divisionInfo(level).name, leagues: entries.filter(e => e.level === level).map(e => ({ id: e.id, label: divisionLabel(e.level, e.group) })) }));
   const first = leagues.get(entries[0] && entries[0].id);
-  return { country, managers, leagueCount: entries.length, divisions, leaders, seasonNumber: (first && first.seasonNumber) || 1 };
+  return { country, managers, activeManagers, clubs, leagueCount: entries.length, divisions, leaders, bests, seasonNumber: (first && first.seasonNumber) || 1 };
 }
 
 // Met à jour résumés + statistiques du pays dans le registre.
-function refreshCountrySummaries(world, country, leagues) {
+function refreshCountrySummaries(world, country, leagues, now = Date.now()) {
   world.summaries = world.summaries || {};
   world.countryStats = world.countryStats || {};
   leaguesOfCountry(world, country).forEach(e => {
     const lg = leagues.get(e.id);
     if (lg) world.summaries[e.id] = leagueSummary(e, lg);
   });
-  world.countryStats[country] = countryStats(world, country, leagues);
+  world.countryStats[country] = countryStats(world, country, leagues, now);
 }
 
-// Palmarès du pays : champion de Division I (et plus tard Coupe), noté au
-// lundi d'intersaison.
+// Palmarès du pays : champion de Division I et Coupe nationale, avec leurs
+// finalistes (depuis le 2026-09-30), noté au lundi d'intersaison.
 function recordCountryHonours(world, country, leagues) {
   const top = leaguesOfCountry(world, country)[0];
   const lg = top && leagues.get(top.id);
@@ -780,9 +837,132 @@ function recordCountryHonours(world, country, leagues) {
   const list = world.history[country] = world.history[country] || [];
   if (list.some(h => h.season === season)) return;
   const team = lg.teams[lg.playoffs.champion];
+  const fs = lg.playoffs.finalSeries;
+  const finalistIdx = fs ? (fs.idxA === lg.playoffs.champion ? fs.idxB : fs.idxA) : null;
   const cup = (world.cups || {})[country];
-  const cupWinner = cup && cup.season === season && cup.champion ? cup.champion.name : null;
-  list.unshift({ season, champion: team.name, isHuman: !!team.isHuman, cupWinner });
+  const cupDone = !!(cup && cup.season === season && cup.champion);
+  const cupFinalist = cupDone ? NationalCup.cupFinalist(cup) : null;
+  list.unshift({
+    season, champion: team.name, isHuman: !!team.isHuman,
+    championFinalist: finalistIdx != null && lg.teams[finalistIdx] ? lg.teams[finalistIdx].name : null,
+    cupWinner: cupDone ? cup.champion.name : null,
+    cupFinalist: cupFinalist ? cupFinalist.name : null,
+  });
+}
+
+// ---------------------------------------------------------------------
+// APERÇU DU PAYS (retour utilisateur 2026-09-30 : « comme l'aperçu du pays
+// de BuzzerBeater », pays choisi dans un menu déroulant ou par la
+// recherche). Tout vient du registre (résumés, statistiques du pays,
+// palmarès, Coupe, classement des managers) : aucune ligue rechargée.
+// `friendlies` : données annexes des amicaux entre championnats.
+// ---------------------------------------------------------------------
+const COUNTRY_RANKING_TOP = 10;
+const INTL_FRIENDLIES_RECENT = 5;
+
+// Titres par club d'après le palmarès : championnats de Division I,
+// Coupes, Supercoupes et finales perdues (championnat ou Coupe).
+function countryTitles(history) {
+  const byName = new Map();
+  const row = name => {
+    if (!byName.has(name)) byName.set(name, { name, championships: 0, cups: 0, superCups: 0, finals: 0 });
+    return byName.get(name);
+  };
+  (history || []).forEach(h => {
+    if (h.champion) row(h.champion).championships++;
+    if (h.cupWinner) row(h.cupWinner).cups++;
+    if (h.superCupWinner) row(h.superCupWinner).superCups++;
+    if (h.championFinalist) row(h.championFinalist).finals++;
+    if (h.cupFinalist) row(h.cupFinalist).finals++;
+  });
+  return [...byName.values()].sort((a, b) =>
+    b.championships - a.championships || b.cups - a.cups || b.superCups - a.superCups || b.finals - a.finals || a.name.localeCompare(b.name, "fr"));
+}
+
+// Amicaux entre deux pays joués (et annoncés) : bilan du pays et derniers
+// résultats. Les amicaux joués sont gardés 60 jours (server/friendlies.js).
+function internationalFriendlies(fstore, country, now = Date.now()) {
+  const Friendlies = require("./friendlies.js");
+  const played = ((fstore && fstore.list) || []).filter(f => f.status === "played" && f.result && Friendlies.isRevealed(f, now)
+    && f.home && f.away && f.home.country && f.away.country && f.home.country !== f.away.country
+    && (f.home.country === country || f.away.country === country))
+    .sort((a, b) => b.at - a.at);
+  let wins = 0, losses = 0;
+  const byCountry = new Map();
+  played.forEach(f => {
+    const side = f.home.country === country ? "home" : "away";
+    const opp = side === "home" ? f.away.country : f.home.country;
+    const mine = side === "home" ? f.result.scoreHome : f.result.scoreAway;
+    const theirs = side === "home" ? f.result.scoreAway : f.result.scoreHome;
+    const won = mine > theirs;
+    if (won) wins++; else losses++;
+    const c = byCountry.get(opp) || { country: opp, played: 0, wins: 0, losses: 0 };
+    c.played++; if (won) c.wins++; else c.losses++;
+    byCountry.set(opp, c);
+  });
+  const ref = r => ({ name: r.name, leagueId: r.leagueId, idx: r.idx, country: r.country });
+  return {
+    played: played.length, wins, losses,
+    byCountry: [...byCountry.values()].sort((a, b) => b.played - a.played),
+    recent: played.slice(0, INTL_FRIENDLIES_RECENT).map(f => ({ at: f.at, home: ref(f.home), away: ref(f.away), scoreHome: f.result.scoreHome, scoreAway: f.result.scoreAway })),
+  };
+}
+
+function countryOverview(world, country, { myCountry = null, friendlies = null, now = Date.now() } = {}) {
+  const stats = (world.countryStats || {})[country] || null;
+  const history = ((world.history || {})[country]) || [];
+  const summaries = Object.values(world.summaries || {}).filter(sm => sm.country === country);
+  // Club -> { leagueId, idx } d'aujourd'hui (un ancien champion a pu changer
+  // de division) : pour rendre chaque nom cliquable.
+  const clubs = {};
+  summaries.forEach(sm => sm.standings.forEach(r => { clubs[r.name] = { leagueId: sm.id, idx: r.idx, isHuman: r.isHuman }; }));
+  const divisions = [];
+  leaguesOfCountry(world, country).forEach(e => {
+    let d = divisions.find(x => x.level === e.level);
+    if (!d) { d = { level: e.level, name: Engine.divisionInfo(e.level).name, leagues: [] }; divisions.push(d); }
+    const sm = (world.summaries || {})[e.id];
+    const top = sm && sm.standings[0];
+    d.leagues.push({ id: e.id, label: divisionLabel(e.level, e.group), humans: sm ? sm.humans : 0,
+      leader: top && top.played ? { name: top.name, idx: top.idx, wins: top.wins, losses: top.losses } : null,
+      champion: sm && sm.playoffsDone ? sm.champion : null });
+  });
+  const cup = (world.cups || {})[country] || null;
+  let cupView = null;
+  if (cup) {
+    const pending = NationalCup.pendingRound(cup);
+    const count = r => (r ? r.matches.reduce((n, m) => n + (m.bye ? 1 : 2), 0) : 0);
+    cupView = { season: cup.season, champion: cup.champion ? cup.champion.name : null,
+      stage: pending ? NationalCup.stageLabel(pending.stageFromEnd) : null, alive: count(pending), clubs: count(cup.rounds[0]) };
+  }
+  const sc = (world.superCups || {})[country];
+  const superCup = sc && !sc.none ? { season: sc.season, home: sc.home.name, away: sc.away.name, resolved: !!sc.resolved,
+    winner: sc.resolved ? (sc.winner === "away" ? sc.away.name : sc.home.name) : null } : null;
+  // Classement mondial des managers (note Elo) : ceux de ce pays.
+  const all = managerRanking(world, null, Infinity);
+  const ranked = all.top.filter(r => r.country === country);
+  const ranking = {
+    total: ranked.length, worldTotal: all.total,
+    top: ranked.slice(0, COUNTRY_RANKING_TOP).map((r, i) => ({ nationalRank: i + 1, worldRank: r.rank, name: r.name, leagueId: r.leagueId, idx: r.idx, label: r.label, rating: r.rating, games: r.games })),
+  };
+  const pick = o => (o ? { pts: o.pts || [], reb: o.reb || [], ast: o.ast || [], blk: o.blk || [] } : null);
+  return {
+    country, name: (Engine.WORLD_COUNTRIES[country] || {}).name || country, mine: country === myCountry,
+    seasonNumber: stats ? stats.seasonNumber : 1,
+    card: {
+      divisionCount: divisions.length, leagueCount: divisions.reduce((n, d) => n + d.leagues.length, 0),
+      clubs: stats && typeof stats.clubs === "number" ? stats.clubs : summaries.reduce((n, sm) => n + sm.standings.length, 0),
+      managers: stats ? stats.managers : summaries.reduce((n, sm) => n + sm.humans, 0),
+      activeManagers: stats && typeof stats.activeManagers === "number" ? stats.activeManagers : null,
+    },
+    divisions, cup: cupView, superCup,
+    leaders: stats ? pick(stats.leaders) : null,
+    bests: stats && stats.bests ? pick(stats.bests) : null,
+    titles: countryTitles(history),
+    history,
+    ranking,
+    friendlies: internationalFriendlies(friendlies, country, now),
+    clubs,
+  };
 }
 
 // Recherche (barre du haut) : championnats (libellé, pays) et clubs de tous
@@ -851,5 +1031,6 @@ module.exports = {
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,
   isOpenCountry, publicCountries,
   NationalCup, WorldMarket, WorldFriendlies, divisionLabel,
+  countryOverview, countryTitles, internationalFriendlies,
   INACTIVE_RELEASE_DAYS, releaseClubToCpu, releaseInactiveManagers, reclaimClub, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
 };

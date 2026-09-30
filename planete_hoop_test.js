@@ -1,9 +1,9 @@
 // Planète Hoop (retour utilisateur, 2026-09-28) : page en bas du menu (avec
-// Guide et Premium) ; pays (son pays par défaut) ; le pays en chiffres
-// (divisions ouvertes, palmarès, meilleurs de la saison) ; le championnat
-// affiché (le sien par défaut, sinon celui trouvé via la barre de recherche
-// du haut) avec classement, derniers résultats et effectif d'un club en
-// lecture seule. Voir renderPlaneteSection (moteurbasket3.html),
+// Guide et Premium). Depuis le 2026-09-30, aperçu du pays à la
+// BuzzerBeater : menu déroulant des pays (le sien par défaut) + recherche,
+// carte du pays, divisions et Coupe, leaders et meilleures performances,
+// titres par club, historique, classement mondial ; un championnat s'ouvre
+// en sous-page (classement, derniers résultats). Voir renderPlaneteSection (moteurbasket3.html),
 // /api/world/* (server/index.js) et server/world.js.
 const fs = require("fs");
 const store = require("./server/store.js");
@@ -27,34 +27,95 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   const dom = await openGame(html, `${baseUrl}?m=${token}`);
   const win = dom.window, doc = win.document;
 
-  // 1) Menu : en bas, avec Guide et Premium.
+  // 1) Menu : en bas, avec Guide et Premium ; aperçu du pays (le sien).
   const bottom = doc.querySelector(".sidebar-section-bottom");
   const btn = bottom && bottom.querySelector('[data-tab="planete"]');
   if (!btn || !/Planète Hoop/.test(btn.textContent)) fail("bouton « Planète Hoop » absent du bas du menu.");
   btn.click();
   const box = doc.getElementById("planeteContent");
-  await wait(() => box.querySelector(".ph-country"), "chargement de Planète Hoop");
-  const countries = [...box.querySelectorAll(".ph-country")];
-  if (countries.length !== 2) fail(`2 pays attendus, obtenu ${countries.length}.`);
-  if (!countries.find(c => c.classList.contains("active")).textContent.includes("France")) fail("son pays (France) doit être sélectionné par défaut.");
-  const card = box.querySelector(".ph-main .ph-card");
-  if (!/Division I/.test(card.textContent) || !/Votre championnat/.test(card.textContent)) fail(`son championnat par défaut : ${card.textContent.slice(0, 120)}`);
-  if (card.querySelectorAll("tbody tr").length !== 10) fail("classement de 10 clubs attendu.");
-  const side = box.querySelector(".ph-side");
-  if (!/France en chiffres/.test(side.textContent) || !/Palmarès/.test(side.textContent) || !/Meilleurs de la saison/.test(side.textContent)) fail("bloc « le pays en chiffres » incomplet.");
-  ok("menu : Planète Hoop en bas (avec Guide/Premium) ; France par défaut, son championnat (classement de 10 clubs), le pays en chiffres (divisions, palmarès, meilleurs de la saison)");
+  await wait(() => box.querySelector(".pc-hero"), "chargement de Planète Hoop");
+  const opts = [...box.querySelectorAll(".pc-picker-opt")];
+  if (opts.length !== 2) fail(`2 pays attendus dans le menu déroulant, obtenu ${opts.length}.`);
+  if (!box.querySelector(".pc-picker-btn").textContent.includes("France") || !opts.find(o => o.classList.contains("active")).textContent.includes("France")) fail("son pays (France) doit être sélectionné par défaut.");
+  if (!box.querySelector(".pc-picker-menu").classList.contains("hidden")) fail("menu des pays fermé au départ.");
+  box.querySelector("[data-pc-picker]").click();
+  if (box.querySelector(".pc-picker-menu").classList.contains("hidden")) fail("le bouton du pays ouvre le menu déroulant.");
+  box.querySelector("[data-pc-picker]").click();
+  const hero = box.querySelector(".pc-hero");
+  const kpis = [...hero.querySelectorAll(".pc-kpi")].map(k => k.textContent);
+  if (!/France/.test(hero.textContent) || !/Votre pays/.test(hero.textContent)) fail(`carte du pays : ${hero.textContent}`);
+  if (!/Divisions\s*1/.test(kpis[0]) || !/Clubs\s*10/.test(kpis[2]) || !/Managers\s*2/.test(kpis[3])) fail(`chiffres du pays : ${kpis.join(" | ")}`);
+  const myRow = box.querySelector(".pc-leagues li.is-mine");
+  if (!myRow || !/Division I/.test(myRow.textContent) || !/Votre championnat/.test(myRow.textContent) || !/En tête/.test(myRow.textContent)) fail(`son championnat dans les divisions : ${myRow && myRow.textContent}`);
+  if (!/Coupe nationale/.test(box.textContent)) fail("ligne Coupe nationale absente.");
+  const titles = [...box.querySelectorAll(".pc-card-head h3")].map(h => h.textContent);
+  ["Divisions et compétitions", "Leaders de la saison", "Meilleures performances", "Historique", "Titres par équipe", "Classement mondial", "Amicaux internationaux"].forEach(t => {
+    if (!titles.includes(t)) fail(`bloc « ${t} » absent (${titles.join(", ")}).`);
+  });
+  const statBlocks = [...box.querySelectorAll(".pc-stat")];
+  if (statBlocks.length !== 8) fail(`4 leaders + 4 meilleures performances attendus, obtenu ${statBlocks.length}.`);
+  if (!/Contres/.test(statBlocks.map(s => s.textContent).join())) fail("leaders aux contres absents.");
+  if (!statBlocks[0].querySelector("li [data-pc-club]")) fail("le club d'un leader doit être cliquable.");
+  if (!statBlocks[0].querySelector("li [data-pc-player]") && !statBlocks[0].querySelector("li .pc-player")) fail("joueur leader absent.");
+  // Première saison : blocs sans données = une ligne, pas de grande carte vide.
+  const histCard = [...box.querySelectorAll(".pc-card")].find(c => c.querySelector("h3").textContent === "Historique");
+  if (!histCard.classList.contains("pc-card--compact") || histCard.querySelector("table")) fail("historique vide : une ligne compacte attendue.");
+  if (/Sélection nationale|U21/.test(box.textContent)) fail("pas d'équipe nationale dans le jeu : bloc à ne pas inventer.");
+  ok("menu : Planète Hoop en bas ; aperçu de la France par défaut (menu déroulant des pays, carte du pays, divisions + Coupe, leaders avec contres, meilleures performances, blocs vides compacts)");
 
-  // 2) Changer de pays : USA → sa Division I.
-  box.querySelector('[data-ph-country="us"]').click();
-  await wait(() => /États-Unis en chiffres/.test(box.textContent), "passage aux USA");
-  const usCard = box.querySelector(".ph-main .ph-card");
-  if (/Votre championnat/.test(usCard.textContent)) fail("la Division I américaine n'est pas son championnat.");
-  if (usCard.querySelectorAll("tbody tr").length !== 10) fail("classement américain attendu.");
-  ok("changement de pays : Division I des USA affichée");
+  // 1bis) Route /api/world/country.
+  const apiUs = await win.eval(`planeteFetch("/api/world/country?code=us")`);
+  if (apiUs.overview.country !== "us" || apiUs.overview.mine || apiUs.myCountry !== "fr" || apiUs.countries.length !== 2) fail(`/api/world/country?code=us : ${JSON.stringify(apiUs).slice(0, 200)}`);
+  ok("/api/world/country?code=us : aperçu des USA, pays du manager rappelé");
+
+  // 2) Un championnat : sous-page (classement), retour à l'aperçu.
+  myRow.querySelector("[data-ph-league]").click();
+  await wait(() => box.querySelector("[data-pc-back]"), "sous-page du championnat");
+  if (box.querySelectorAll("tbody tr").length !== 10 || !/Votre championnat/.test(box.textContent)) fail("classement de son championnat attendu.");
+  box.querySelector("[data-pc-back]").click();
+  await wait(() => box.querySelector(".pc-hero"), "retour à l'aperçu");
+  ok("lien vers un championnat : classement en sous-page, retour à l'aperçu du pays");
+
+  // 2bis) Palmarès semé : titres par club, historique (tenant en avant).
+  {
+    const w = await World.loadWorld(multiSavePath, now);
+    const fr1 = await World.loadLeague(w, "fr-1", multiSavePath);
+    const [a, b, c] = [fr1.teams[4].name, fr1.teams[5].name, fr1.teams[6].name];
+    w.history = { ...(w.history || {}), fr: [
+      { season: 2, champion: b, championFinalist: a, cupWinner: c, cupFinalist: a, superCupWinner: b },
+      { season: 1, champion: b, championFinalist: c, cupWinner: null },
+    ] };
+    await store.saveWorldRaw(w, multiSavePath);
+    win.eval(`renderPlaneteSection()`);
+    await wait(() => box.querySelector(".pc-hist table"), "historique semé");
+    const hist = [...box.querySelectorAll(".pc-hist-col")];
+    if (hist.length !== 2) fail("historique en deux colonnes attendu.");
+    const holder = hist[0].querySelector("tr.is-holder");
+    if (!holder || !holder.textContent.includes(b) || !/Tenant/.test(holder.textContent)) fail(`tenant du titre : ${holder && holder.textContent}`);
+    if (hist[0].querySelectorAll("tbody tr").length !== 2 || hist[1].querySelectorAll("tbody tr").length !== 1) fail("lignes de l'historique.");
+    if (!hist[1].querySelector("tr.is-holder").textContent.includes(c)) fail("tenant de la Coupe.");
+    const rows = [...box.querySelectorAll(".pc-titles tbody tr")].map(r => [...r.children].map(td => td.textContent.trim()));
+    if (rows[0][0] !== b || rows[0].slice(1).join() !== "2,0,1,0") fail(`titres par club : ${JSON.stringify(rows)}`);
+    if (!rows.find(r => r[0] === a && r[4] === "2")) fail(`finales de ${a} : ${JSON.stringify(rows)}`);
+    const link = hist[0].querySelector("tr.is-holder [data-pc-club]");
+    if (!link || link.dataset.pcClub !== "fr-1") fail("champion cliquable (fiche équipe).");
+    ok(`palmarès : titres par club (${b} : 2 titres, 1 Supercoupe ; ${a} : 2 finales), historique champion/finaliste et Coupe, tenants en avant, clubs cliquables`);
+  }
+
+  // 2ter) Changer de pays via le menu déroulant : USA.
+  box.querySelector("[data-pc-picker]").click();
+  box.querySelector('.pc-picker-opt[data-ph-country="us"]').click();
+  await wait(() => /États-Unis/.test((box.querySelector(".pc-hero") || {}).textContent || ""), "passage aux USA");
+  if (/Votre pays/.test(box.querySelector(".pc-hero").textContent)) fail("les USA ne sont pas son pays.");
+  if (box.querySelector('[data-tab="coupe"]')) fail("pas de lien vers son onglet Coupe pour un autre pays.");
+  box.querySelector('[data-ph-league="us-1"]').click();
+  await wait(() => box.querySelector("[data-pc-back]") && box.querySelectorAll("tbody tr").length === 10, "Division I des USA");
+  if (/Votre championnat/.test(box.textContent)) fail("la Division I américaine n'est pas son championnat.");
+  ok("menu déroulant : aperçu des USA puis leur Division I");
 
   // 3) Clic sur un club d'un autre championnat : sa fiche équipe habituelle
   // (Aperçu), lue dans SON championnat, en lecture seule.
-  const clubBtn = usCard.querySelector("[data-ph-club]");
+  const clubBtn = box.querySelector("[data-ph-club]");
   const clubName = clubBtn.textContent;
   const clubIdx = Number(clubBtn.dataset.phClub);
   clubBtn.click();
@@ -72,6 +133,32 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   doc.getElementById("closeTeamDetailBtn").click();
   if (win.eval("teamDetailForeign") !== null) fail("retour : la fiche étrangère doit être oubliée.");
   ok(`clic sur ${clubName} (autre championnat) : fiche équipe habituelle (Aperçu, Effectif, Calendrier), sans Analyse, ligue restaurée`);
+
+  // 3ter) Barre de recherche de la page : un club américain → sa fiche.
+  {
+    win.eval(`planeteState.leagueId = null; TAB_HANDLERS.planete()`);
+    await wait(() => box.querySelector(".pc-hero") && doc.getElementById("planeteSearchInput"), "aperçu (recherche)");
+    const usLg = await World.loadLeague(world, "us-1", multiSavePath);
+    const target = usLg.teams[5];
+    const input = doc.getElementById("planeteSearchInput");
+    input.value = target.name.slice(0, 6);
+    input.dispatchEvent(new win.Event("input", { bubbles: true }));
+    await wait(() => doc.querySelector("#planeteSearchResults [data-pc-club]"), "résultats de la recherche de la page");
+    const hit = [...doc.querySelectorAll("#planeteSearchResults [data-pc-club]")].find(b => b.textContent.includes(target.name));
+    if (!hit) fail(`club « ${target.name} » introuvable dans la recherche de la page.`);
+    hit.click();
+    await wait(() => !tdSection.classList.contains("hidden") && tdContent.querySelector(".team-apercu-name") && tdContent.querySelector(".team-apercu-name").textContent === target.name, "fiche via la recherche de la page");
+    doc.getElementById("closeTeamDetailBtn").click();
+    win.eval(`TAB_HANDLERS.planete()`);
+    await wait(() => doc.getElementById("planeteSearchInput"), "retour Planète Hoop");
+    const input2 = doc.getElementById("planeteSearchInput");
+    input2.value = "Division";
+    input2.dispatchEvent(new win.Event("input", { bubbles: true }));
+    await wait(() => doc.querySelector("#planeteSearchResults [data-pc-go-league]"), "championnats dans la recherche de la page");
+    doc.querySelector('#planeteSearchResults [data-pc-go-league="us-1"]').click();
+    await wait(() => box.querySelector("[data-pc-back]") && /États-Unis/.test(box.querySelector("[data-pc-back]").textContent), "championnat via la recherche");
+    ok("recherche de la page (clubs, managers, championnats) : un club ouvre sa fiche, un championnat sa sous-page");
+  }
 
   // 3bis) La route ne renvoie rien de privé.
   const tp = await win.eval(`planeteFetch("/api/world/team-page?league=us-1")`);
@@ -92,7 +179,7 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   hit.click();
   await wait(() => !tdSection.classList.contains("hidden") && tdContent.querySelector(".team-apercu-name") && tdContent.querySelector(".team-apercu-name").textContent === target.name, "ouverture via la recherche");
   win.eval(`TAB_HANDLERS.planete()`);
-  await wait(() => /en chiffres/.test(box.textContent), "retour sur Planète Hoop");
+  await wait(() => box.querySelector(".pc-toolbar"), "retour sur Planète Hoop");
   input.value = "Division";
   input.dispatchEvent(new win.Event("input"));
   await wait(() => doc.querySelector("#topbarWorldResults [data-world-league]"), "championnats dans la recherche");
