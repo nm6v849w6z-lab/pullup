@@ -7679,11 +7679,11 @@
         <p class="training-intro">Avant chaque match, réglez trois choses pour votre équipe dans l'onglet Ordres. Tout s'enregistre automatiquement à chaque changement, et le bouton "Valider les ordres", toujours visible en haut de la page, confirme l'enregistrement. Dans le Calendrier, un match aux ordres validés affiche "Modifier vos ordres".</p>
         <p class="training-intro" style="margin-top:10px;"><b>Préparer à l'avance</b> : le sélecteur de journée en haut de l'onglet Ordres permet de régler n'importe quel match à venir, championnat ou Coupe. Quand cette journée devient le prochain match, vos ordres préparés deviennent automatiquement vos ordres actuels, et restent modifiables jusqu'au coup d'envoi. La composition est verrouillée <b>5 minutes avant le coup d'envoi</b>, au moment où commence l'émission d'avant-match.</p>
         <p class="training-intro" style="margin-top:10px;"><b>3 priorités offensives</b> : choisissez exactement 3 styles parmi les 10 proposés (Équilibrée, Jeu intérieur, Jeu extérieur, Jeu en pénétration, Pick &amp; Roll, Post-up, Isolation, Jeu en mouvement, Transition rapide, Tirs rapides). Les 3 choix se combinent à parts égales pour déterminer la répartition des tirs entre l'intérieur, la mi-distance et le 3 points, ainsi que le rythme, le taux de passes décisives et le risque de perte de balle. Un jeu intérieur ou en Post-up privilégie les tirs proches du panier ; un jeu extérieur ou des Tirs rapides misent sur le 3 points ; la Transition rapide et le Jeu en pénétration augmentent le rythme, au prix de plus de pertes de balle.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Défense</b> : un seul choix parmi 5 systèmes. Homme à homme est le réglage neutre. Zone press met la pression sur les extérieurs adverses, au prix d'une fatigue importante. Box and one cible le meilleur joueur adverse. Zone extérieure et Zone intérieure renforcent un secteur du terrain au détriment de l'autre.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Défense</b> : un seul choix parmi 5 systèmes. Homme à homme est le réglage neutre. Zone press met la pression sur les extérieurs adverses, au prix d'une fatigue importante. Box and one colle un défenseur au meilleur joueur adverse : redoutable face à une vraie star, coûteux face à un cinq homogène (les quatre autres défendent en zone). Zone extérieure et Zone intérieure renforcent un secteur du terrain au détriment de l'autre.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Rythme</b> : Lent, Normal ou Rapide. Plus le rythme est élevé, plus il y a de possessions (donc d'occasions de marquer, des deux côtés), mais aussi plus de fatigue et de pertes de balle.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Feuille de match</b> : un titulaire par poste (5 postes obligatoires), et des remplaçants qui peuvent chacun couvrir plusieurs postes. Sans cinq complet disponible, le match est perdu par forfait (20-0).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Niveau tactique</b> : Débutant ou Confirmé, dans la carte Attaque. Ce choix ne change QUE la complexité de l'interface, jamais la façon dont un match se joue. Confirmé révèle six réglages supplémentaires : Défense sur écrans (Aucune consigne, Au-dessus, En-dessous, Switch, Prise à deux), Aide défensive (Faible, Moyenne, Forte), Gestion du post-up (Aucune consigne, Pousser vers le fond, Pousser vers le centre, Prise à deux), Close-out (Contrôlé, Agressif), Rebond offensif (Prudent, Normal, Agressif) et Surveiller (carte Adversaires : jusqu'à 3 postes adverses ciblés, chacun avec un focus précis, toujours avec une contrepartie ; la consigne vise celui qui occupe ce poste sur le terrain, titulaire ou remplaçant).</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Gestion de fin de match</b> (aux deux niveaux) : Standard garde le comportement habituel. Adaptatif ajoute un vrai garbage time dès 10 points d'écart à partir du 3e quart-temps, et accélère légèrement le rythme dans les 5 dernières minutes d'un match serré.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Gestion de fin de match</b> (aux deux niveaux) : Standard garde le comportement habituel. Adaptatif ajoute un vrai garbage time dès 10 points d'écart à partir du 3e quart-temps (au 4e quart-temps, à 18 points d'écart, les titulaires sortent pour ménager leur forme), et accélère légèrement le rythme dans les 5 dernières minutes d'un match serré.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="tactiques" data-guide-group="Préparer les matchs">
@@ -7981,21 +7981,23 @@ const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
   "Jeu intérieur":     { inside: .60, mid: .25, three: .15, tov: -.01, assist: 0,   tempo: -.05 },
   "Jeu extérieur":     { inside: .15, mid: .30, three: .55, tov: 0,    assist: .02, tempo: 0 },
-  "Isolation":         { inside: .30, mid: .40, three: .30, tov: .04,  assist: -.05,tempo: -.03 },
+  "Isolation":         { inside: .33, mid: .37, three: .30, tov: .015, assist: -.05,tempo: -.03 },
   "Pick & Roll":       { inside: .40, mid: .30, three: .30, tov: 0,    assist: .05, tempo: 0 },
-  "Post-up":           { inside: .65, mid: .25, three: .10, tov: -.02, assist: -.02,tempo: -.08 },
+  "Post-up":           { inside: .60, mid: .30, three: .10, tov: 0,    assist: -.02,tempo: -.08 },
   "Jeu en pénétration":{ inside: .50, mid: .35, three: .15, tov: .03,  assist: 0,   tempo: .05, drawFoul: .04 },
   "Jeu en mouvement":  { inside: .30, mid: .30, three: .40, tov: -.01, assist: .06, tempo: .02 },
-  "Transition rapide": { inside: .45, mid: .25, three: .30, tov: .05,  assist: .02, tempo: .18 },
-  "Tirs rapides":      { inside: .20, mid: .35, three: .45, tov: .04,  assist: -.03,tempo: .12 },
+  "Transition rapide": { inside: .45, mid: .25, three: .30, tov: .02,  assist: .02, tempo: .18 },
+  "Tirs rapides":      { inside: .20, mid: .30, three: .50, tov: .02,  assist: -.03,tempo: .12 },
 };
 
 const DEFENSES = {
   "Homme à homme":   { insideDef: 0,   perimDef: 0,   pressure: 0,   fatigueCost: 0 },
-  "Zone press":      { insideDef: 0,   perimDef: .02, pressure: .09, fatigueCost: .35 },
-  "Box and one":     { insideDef: .01, perimDef: .01, pressure: .02, fatigueCost: .10, shutdownStar: true },
-  "Zone extérieure": { insideDef: -.06,perimDef: .09, pressure: .01, fatigueCost: -.05 },
-  "Zone intérieure": { insideDef: .09, perimDef: -.06,pressure: .01, fatigueCost: -.05 },
+  "Zone press":      { insideDef: -.06,perimDef: 0,   pressure: .07, fatigueCost: .35 },
+  // Box and one (audit 2026-09-29) : gratuit face à un cinq homogène (+2 pts)
+  // — les quatre défenseurs en zone laissent désormais des trous (−0,06).
+  "Box and one":     { insideDef: -.06,perimDef: -.06,pressure: 0,   fatigueCost: .12, shutdownStar: true },
+  "Zone extérieure": { insideDef: -.08,perimDef: .07, pressure: .01, fatigueCost: -.05 },
+  "Zone intérieure": { insideDef: .10, perimDef: -.05,pressure: .01, fatigueCost: -.05 },
 };
 
 const RHYTHMS = {
@@ -8025,9 +8027,11 @@ const SCREEN_DEFENSES = {
 };
 
 const HELP_DEFENSE_LEVELS = {
-  "Faible":  { insideDef: -.045, perimDef: .035 },
+  // Recalibré le 2026-09-29 (mesuré : « Faible » gagnait partout, même
+  // face au jeu intérieur ; « Forte » n'aidait pas contre lui).
+  "Faible":  { insideDef: -.07,  perimDef: .025 },
   "Moyenne": { insideDef: 0,     perimDef: 0 },
-  "Forte":   { insideDef: .045,  perimDef: -.035 },
+  "Forte":   { insideDef: .07,   perimDef: -.03 },
 };
 
 // Retour utilisateur (2026-09) : denyThree et denyPassingLanes retirés de la
@@ -8055,26 +8059,35 @@ const WATCH_FOCUS_LABELS = {
 };
 
 const POST_DEFENSES = {
-  "Classique":              { insideDef: 0,    tovMod: 0,    assistOpenMod: 0,    foulMod: 0 },
-  "Pousser vers le fond":   { insideDef: .05,  tovMod: 0,    assistOpenMod: -.03, foulMod: .015 },
-  "Pousser vers le centre": { insideDef: .025, tovMod: 0,    assistOpenMod: .05,  foulMod: 0 },
-  "Prise à deux":           { insideDef: .11,  tovMod: .05,  assistOpenMod: .08,  foulMod: 0 },
+  "Classique":              { insideDef: 0,    tovMod: 0,    assistOpenMod: 0,    foulMod: 0,    perimLeak: 0 },
+  "Pousser vers le fond":   { insideDef: .04,  tovMod: 0,    assistOpenMod: -.03, foulMod: .015, perimLeak: .015 },
+  "Pousser vers le centre": { insideDef: .025, tovMod: 0,    assistOpenMod: .05,  foulMod: 0,    perimLeak: .01 },
+  "Prise à deux":           { insideDef: .09,  tovMod: .03,  assistOpenMod: .08,  foulMod: 0,    perimLeak: .07 },
 };
 
 const CLOSEOUT_STYLES = {
   "Contrôlé": { perimDefMod: 0,   insideMismatchMod: 0 },
-  "Agressif": { perimDefMod: .05, insideMismatchMod: 5 },
+  // Recalibré le 2026-09-29 (mesuré : gagnant partout, même face au jeu
+  // en pénétration) : la pénétration derrière la fermeture coûte plus cher.
+  "Agressif": { perimDefMod: .04, insideMismatchMod: 14 },
 };
 
 const OFF_REBOUND_STYLES = {
-  "Prudent":  { offRebWeightMod: -.22, transitionRisk: 0 },
+  // `transitionGuard` (audit 2026-09-29 : « Prudent » coûtait 2 pts sans
+  // contrepartie) : joueurs déjà repliés, moins de contre-attaques adverses
+  // après un rebond défensif.
+  "Prudent":  { offRebWeightMod: -.15, transitionRisk: 0, transitionGuard: .22 },
   "Normal":   { offRebWeightMod: 0,    transitionRisk: 0 },
   "Agressif": { offRebWeightMod: .28,  transitionRisk: .40 },
 };
 
 const ENDGAME_MANAGEMENT = {
   "Standard":  { blowoutThreshold: null, blowoutHeroMod: 0,    blowoutTovMod: 0,    closeGameTempoMod: 0 },
-  "Adaptatif": { blowoutThreshold: 10,   blowoutHeroMod: -.35, blowoutTovMod: .015, closeGameTempoMod: .10 },
+  // Audit 2026-09-29 : coûtait 1,5 pt sans contrepartie (pertes de balle en
+  // garbage time) — plus de malus de pertes ; les titulaires sont mis au
+  // repos dans un match plié (voir restStartersInBlowout), ce qui ménage
+  // leur forme physique pour les matchs suivants.
+  "Adaptatif": { blowoutThreshold: 10,   blowoutHeroMod: -.35, blowoutTovMod: 0,    closeGameTempoMod: .10, restStartersLead: 18 },
 };
 
 // Listes pratiques pour l'UI (voir buildTeamPanel) — dérivées des tables
@@ -33724,7 +33737,7 @@ function appendPauseFeedItem(pause) {
 //      changement de joueur (y compris fauté-out/blessure, pas seulement les
 //      changements volontaires — voir le grand commentaire de
 //      substituteIfNeeded côté moteur pour le correctif correspondant).
-let liveBoxScore = null; // { A: Map<nom, ligne>, B: Map<nom, ligne> }
+let liveBoxScore = null; // { A: Map<clé, ligne>, B: Map<clé, ligne> } (clé : voir liveRowKey)
 let liveBoxScoreActiveTeam = "A";
 // Joueurs actuellement SUR LE TERRAIN et depuis quand (en secondes écoulées
 // depuis le coup d'envoi, voir elapsedSecondsAt) : { A: Map<nom, depuisSec>,
@@ -33783,9 +33796,23 @@ function startingPositionFor(team, player) {
   return player.position;
 }
 
-function newLiveBoxScoreRow(name, position) {
+// Clé d'un joueur dans le box score en direct (audit moteur 2026-09-29) :
+// son id (« #123 ») — les événements du moteur portent désormais shooterId,
+// playerId… ; deux homonymes d'une même équipe ne fusionnent donc plus leurs
+// statistiques. Événement sans id (direct calculé avant ce changement) :
+// repli sur le premier joueur de ce nom dans `team`, sinon le nom lui-même.
+function liveRowKeyFor(team, name, id) {
+  if (id != null) return "#" + id;
+  const p = team && team.players && team.players.find(x => x.name === name);
+  return p ? "#" + p.id : name;
+}
+function liveRowKey(teamKeyAB, name, id) {
+  return liveRowKeyFor(teamKeyAB === "A" ? teamA : teamB, name, id);
+}
+
+function newLiveBoxScoreRow(name, position, key = name, playerId = null) {
   return {
-    name, position,
+    name, position, key, playerId,
     pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0,
     fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0,
     // Minutes jouées déjà "fermées" (intervalles terminés par une sortie du
@@ -33799,19 +33826,20 @@ function newLiveBoxScoreRow(name, position) {
 // jouées) — no-op silencieux si ce joueur n'était pas suivi comme "sur le
 // terrain" (garde-fou : un événement de changement mal formé ou un joueur
 // hors feuille de match ne doit jamais faire planter le direct).
-function closeCourtInterval(teamKeyAB, name, atSeconds) {
+function closeCourtInterval(teamKeyAB, name, atSeconds, id = null) {
   if (!liveCourtState) return;
-  const since = liveCourtState[teamKeyAB].get(name);
+  const key = liveRowKey(teamKeyAB, name, id);
+  const since = liveCourtState[teamKeyAB].get(key);
   if (since == null) return;
-  const row = liveBoxScore[teamKeyAB].get(name) || liveBoxScoreRow(teamKeyAB, name);
+  const row = liveBoxScoreRow(teamKeyAB, name, id);
   row.secondsPlayed = (row.secondsPlayed || 0) + Math.max(0, atSeconds - since);
-  liveCourtState[teamKeyAB].delete(name);
+  liveCourtState[teamKeyAB].delete(key);
 }
 // Ouvre un intervalle de jeu pour un joueur qui vient d'entrer sur le
 // terrain (voir closeCourtInterval juste au-dessus pour la fermeture).
-function openCourtInterval(teamKeyAB, name, atSeconds) {
+function openCourtInterval(teamKeyAB, name, atSeconds, id = null) {
   if (!liveCourtState) return;
-  liveCourtState[teamKeyAB].set(name, atSeconds);
+  liveCourtState[teamKeyAB].set(liveRowKey(teamKeyAB, name, id), atSeconds);
 }
 // Minutes jouées ACTUELLES d'un joueur : ses intervalles déjà fermés
 // (row.secondsPlayed) + le temps écoulé depuis le début de son intervalle en
@@ -33819,28 +33847,27 @@ function openCourtInterval(teamKeyAB, name, atSeconds) {
 // liveBoxScoreNowElapsed (le dernier repère temporel connu). Arrondi à la
 // minute la plus proche, comme la feuille finale (voir
 // recordMatchStatsForTeam côté moteur, `Math.round(p.secondsPlayed / 60)`).
-function liveMinutesFor(teamKeyAB, name) {
-  const row = liveBoxScore[teamKeyAB].get(name);
+function liveMinutesFor(teamKeyAB, key) {
+  const row = liveBoxScore[teamKeyAB].get(key);
   if (!row) return 0;
-  const openSince = liveCourtState && liveCourtState[teamKeyAB].get(name);
+  const openSince = liveCourtState && liveCourtState[teamKeyAB].get(key);
   const secondsPlayed = (row.secondsPlayed || 0) + (openSince != null ? Math.max(0, liveBoxScoreNowElapsed - openSince) : 0);
   return Math.round(secondsPlayed / 60);
 }
 
-// Retrouve (ou crée à la volée) la ligne d'un joueur nommé `name` dans
-// l'équipe `teamKeyAB` ("A"/"B") — la position vient de teamA/teamB (objets
-// globaux déjà à jour à l'entrée sur l'écran Live, voir enterLiveMatch),
-// cherchée par nom puisque les événements ne portent que des noms, jamais
-// d'id joueur structuré (voir le même choix déjà fait pour les infobulles du
-// terrain, addCourtMark/ev.shooter).
-function liveBoxScoreRow(teamKeyAB, name) {
+// Retrouve (ou crée à la volée) la ligne du joueur `name`/`id` dans
+// l'équipe `teamKeyAB` ("A"/"B") — clé : voir liveRowKey ; la position vient
+// de teamA/teamB (objets globaux déjà à jour à l'entrée sur l'écran Live,
+// voir enterLiveMatch).
+function liveBoxScoreRow(teamKeyAB, name, id = null) {
   const map = liveBoxScore[teamKeyAB];
-  let row = map.get(name);
+  const key = liveRowKey(teamKeyAB, name, id);
+  let row = map.get(key);
   if (!row) {
     const teamObj = teamKeyAB === "A" ? teamA : teamB;
-    const playerObj = teamObj && teamObj.players && teamObj.players.find(p => p.name === name);
-    row = newLiveBoxScoreRow(name, playerObj ? (playerObj.matchPosition || playerObj.position) : "");
-    map.set(name, row);
+    const playerObj = teamObj && teamObj.players && (key.startsWith("#") ? teamObj.players.find(p => "#" + p.id === key) : null);
+    row = newLiveBoxScoreRow(name, playerObj ? (playerObj.matchPosition || playerObj.position) : "", key, playerObj ? playerObj.id : null);
+    map.set(key, row);
   }
   return row;
 }
@@ -33859,9 +33886,9 @@ function resetLiveBoxScore() {
   // ouvert (ne comptera aucune minute tant qu'il n'entre pas réellement).
   [["A", teamA], ["B", teamB]].forEach(([key, team]) => {
     matchdayRosterPlayers(team).forEach(p => {
-      liveBoxScore[key].set(p.name, newLiveBoxScoreRow(p.name, startingPositionFor(team, p)));
+      liveBoxScore[key].set("#" + p.id, newLiveBoxScoreRow(p.name, startingPositionFor(team, p), "#" + p.id, p.id));
       if (team.lineup && Object.values(team.lineup.starters || {}).includes(p.id)) {
-        liveCourtState[key].set(p.name, 0);
+        liveCourtState[key].set("#" + p.id, 0);
       }
     });
   });
@@ -33892,9 +33919,9 @@ function applyLiveBoxScoreEvent(ev) {
   switch (ev.type) {
     case "shot": {
       if (!ev.shooter) break;
-      const row = liveBoxScoreRow(ev.team, ev.shooter);
+      const row = liveBoxScoreRow(ev.team, ev.shooter, ev.shooterId);
       const isThree = ev.zone === "three";
-      const shotKey = ev.team + ":" + ev.shooter;
+      const shotKey = ev.team + ":" + row.key;
       if (ev.made || ev.blocked || liveBoxScoreLastBlocked !== shotKey) {
         if (isThree) row.fga3++; else row.fga2++;
       }
@@ -33902,21 +33929,21 @@ function applyLiveBoxScoreEvent(ev) {
       if (ev.made) {
         row.pts += isThree ? 3 : 2;
         if (isThree) row.fgm3++; else row.fgm2++;
-        if (ev.assister) liveBoxScoreRow(ev.team, ev.assister).ast++;
+        if (ev.assister) liveBoxScoreRow(ev.team, ev.assister, ev.assisterId).ast++;
       } else {
         const defTeamKey = oppOfLiveTeam(ev.team);
-        if (ev.blocked && ev.blocker) liveBoxScoreRow(defTeamKey, ev.blocker).blk++;
-        if (ev.defender) liveBoxScoreRow(defTeamKey, ev.defender).pf++;
+        if (ev.blocked && ev.blocker) liveBoxScoreRow(defTeamKey, ev.blocker, ev.blockerId).blk++;
+        if (ev.defender) liveBoxScoreRow(defTeamKey, ev.defender, ev.defenderId).pf++;
       }
       break;
     }
     case "rebound": {
-      if (ev.rebounder) liveBoxScoreRow(ev.team, ev.rebounder).reb++;
+      if (ev.rebounder) liveBoxScoreRow(ev.team, ev.rebounder, ev.rebounderId).reb++;
       // Un tir manqué sans contre ni faute n'existe QUE sous la forme de cet
       // événement : la tentative du tireur (équipe en attaque) est comptée ici.
       const shooterTeam = ev.offensive ? ev.team : oppOfLiveTeam(ev.team);
-      if (ev.shooter && ev.zone && liveBoxScoreLastBlocked !== shooterTeam + ":" + ev.shooter) {
-        const shooterRow = liveBoxScoreRow(shooterTeam, ev.shooter);
+      if (ev.shooter && ev.zone && liveBoxScoreLastBlocked !== shooterTeam + ":" + liveRowKey(shooterTeam, ev.shooter, ev.shooterId)) {
+        const shooterRow = liveBoxScoreRow(shooterTeam, ev.shooter, ev.shooterId);
         if (ev.zone === "three") shooterRow.fga3++; else shooterRow.fga2++;
       }
       liveBoxScoreLastBlocked = null;
@@ -33924,19 +33951,19 @@ function applyLiveBoxScoreEvent(ev) {
     }
     case "freeThrow": {
       if (!ev.shooter) break;
-      const row = liveBoxScoreRow(ev.team, ev.shooter);
+      const row = liveBoxScoreRow(ev.team, ev.shooter, ev.shooterId);
       row.fta += ev.attempts || 0;
       row.ftm += ev.made || 0;
       row.pts += ev.made || 0;
       break;
     }
     case "turnover": {
-      if (ev.player) liveBoxScoreRow(ev.team, ev.player).tov++;
-      if (ev.stealer) liveBoxScoreRow(oppOfLiveTeam(ev.team), ev.stealer).stl++;
+      if (ev.player) liveBoxScoreRow(ev.team, ev.player, ev.playerId).tov++;
+      if (ev.stealer) liveBoxScoreRow(oppOfLiveTeam(ev.team), ev.stealer, ev.stealerId).stl++;
       break;
     }
     case "foul": {
-      if (ev.defender) liveBoxScoreRow(ev.team, ev.defender).pf++;
+      if (ev.defender) liveBoxScoreRow(ev.team, ev.defender, ev.defenderId).pf++;
       break;
     }
     // Changements de joueur (retour Discord d'Ariane, relayé par
@@ -33952,12 +33979,12 @@ function applyLiveBoxScoreEvent(ev) {
     // moteur (`onCourt` n'est mis à jour QUE là, jamais avant, voir le
     // commentaire de substituteIfNeeded).
     case "substitution": {
-      if (ev.player) closeCourtInterval(ev.team, ev.player, liveBoxScoreNowElapsed);
-      if (ev.replacement) openCourtInterval(ev.team, ev.replacement, liveBoxScoreNowElapsed);
+      if (ev.player) closeCourtInterval(ev.team, ev.player, liveBoxScoreNowElapsed, ev.playerId);
+      if (ev.replacement) openCourtInterval(ev.team, ev.replacement, liveBoxScoreNowElapsed, ev.replacementId);
       break;
     }
     case "shortHanded": {
-      if (ev.player) closeCourtInterval(ev.team, ev.player, liveBoxScoreNowElapsed);
+      if (ev.player) closeCourtInterval(ev.team, ev.player, liveBoxScoreNowElapsed, ev.playerId);
       break;
     }
     default:
@@ -34021,7 +34048,7 @@ function renderLiveBoxScore() {
     // stockées sur la ligne elle-même : un joueur encore sur le terrain doit
     // voir ses minutes progresser même sans nouvelle statistique à lui (voir
     // le "default: renderLiveBoxScore()" de applyLiveBoxScoreEvent).
-    .map(row => ({ ...row, min: liveMinutesFor(liveBoxScoreActiveTeam, row.name) }))
+    .map(row => ({ ...row, min: liveMinutesFor(liveBoxScoreActiveTeam, row.key) }))
     // Trié par minutes jouées d'abord désormais (même convention que
     // boxscoreRowsFromMatchLog, la feuille FINALE, `b.min - a.min`) —
     // logique maintenant que TOUTE la feuille de match est affichée (voir
@@ -34081,25 +34108,29 @@ function computeSpectateBoxScore(airedEvents, teamA, teamB) {
   let nowElapsed = 0;
   [["A", teamA], ["B", teamB]].forEach(([key, team]) => {
     matchdayRosterPlayers(team).forEach(p => {
-      box[key].set(p.name, newLiveBoxScoreRow(p.name, startingPositionFor(team, p)));
+      box[key].set("#" + p.id, newLiveBoxScoreRow(p.name, startingPositionFor(team, p), "#" + p.id, p.id));
       if (team.lineup && Object.values(team.lineup.starters || {}).includes(p.id)) {
-        onCourtSince[key].set(p.name, 0);
+        onCourtSince[key].set("#" + p.id, 0);
       }
     });
   });
-  function row(key, name) {
-    let r = box[key].get(name);
-    if (!r) { r = newLiveBoxScoreRow(name, ""); box[key].set(name, r); }
+  // Clé par id (voir liveRowKeyFor), repli sur le nom pour un vieux direct.
+  const rowKey = (key, name, id) => liveRowKeyFor(key === "A" ? teamA : teamB, name, id);
+  function row(key, name, id = null) {
+    const k = rowKey(key, name, id);
+    let r = box[key].get(k);
+    if (!r) { r = newLiveBoxScoreRow(name, "", k, id); box[key].set(k, r); }
     return r;
   }
-  function closeInterval(key, name, atSeconds) {
-    const since = onCourtSince[key].get(name);
+  function closeInterval(key, name, atSeconds, id = null) {
+    const k = rowKey(key, name, id);
+    const since = onCourtSince[key].get(k);
     if (since == null) return;
-    const r = row(key, name);
+    const r = row(key, name, id);
     r.secondsPlayed = (r.secondsPlayed || 0) + Math.max(0, atSeconds - since);
-    onCourtSince[key].delete(name);
+    onCourtSince[key].delete(k);
   }
-  function openInterval(key, name, atSeconds) { onCourtSince[key].set(name, atSeconds); }
+  function openInterval(key, name, atSeconds, id = null) { onCourtSince[key].set(rowKey(key, name, id), atSeconds); }
   const opp = (k) => (k === "A" ? "B" : "A");
 
   airedEvents.forEach(ev => {
@@ -34108,42 +34139,42 @@ function computeSpectateBoxScore(airedEvents, teamA, teamB) {
     switch (ev.type) {
       case "shot": {
         if (!ev.shooter) break;
-        const r = row(ev.team, ev.shooter);
+        const r = row(ev.team, ev.shooter, ev.shooterId);
         const isThree = ev.zone === "three";
         if (isThree) r.fga3++; else r.fga2++;
         if (ev.made) {
           r.pts += isThree ? 3 : 2;
           if (isThree) r.fgm3++; else r.fgm2++;
-          if (ev.assister) row(ev.team, ev.assister).ast++;
+          if (ev.assister) row(ev.team, ev.assister, ev.assisterId).ast++;
         } else {
           const defKey = opp(ev.team);
-          if (ev.blocked && ev.blocker) row(defKey, ev.blocker).blk++;
-          if (ev.defender) row(defKey, ev.defender).pf++;
+          if (ev.blocked && ev.blocker) row(defKey, ev.blocker, ev.blockerId).blk++;
+          if (ev.defender) row(defKey, ev.defender, ev.defenderId).pf++;
         }
         break;
       }
       case "rebound":
-        if (ev.rebounder) row(ev.team, ev.rebounder).reb++;
+        if (ev.rebounder) row(ev.team, ev.rebounder, ev.rebounderId).reb++;
         break;
       case "freeThrow": {
         if (!ev.shooter) break;
-        const r = row(ev.team, ev.shooter);
+        const r = row(ev.team, ev.shooter, ev.shooterId);
         r.fta += ev.attempts || 0; r.ftm += ev.made || 0; r.pts += ev.made || 0;
         break;
       }
       case "turnover":
-        if (ev.player) row(ev.team, ev.player).tov++;
-        if (ev.stealer) row(opp(ev.team), ev.stealer).stl++;
+        if (ev.player) row(ev.team, ev.player, ev.playerId).tov++;
+        if (ev.stealer) row(opp(ev.team), ev.stealer, ev.stealerId).stl++;
         break;
       case "foul":
-        if (ev.defender) row(ev.team, ev.defender).pf++;
+        if (ev.defender) row(ev.team, ev.defender, ev.defenderId).pf++;
         break;
       case "substitution":
-        if (ev.player) closeInterval(ev.team, ev.player, nowElapsed);
-        if (ev.replacement) openInterval(ev.team, ev.replacement, nowElapsed);
+        if (ev.player) closeInterval(ev.team, ev.player, nowElapsed, ev.playerId);
+        if (ev.replacement) openInterval(ev.team, ev.replacement, nowElapsed, ev.replacementId);
         break;
       case "shortHanded":
-        if (ev.player) closeInterval(ev.team, ev.player, nowElapsed);
+        if (ev.player) closeInterval(ev.team, ev.player, nowElapsed, ev.playerId);
         break;
       default:
         break;
@@ -34776,15 +34807,15 @@ function hmLiveBuildState() {
     const rows = liveBoxScore ? [...liveBoxScore[key].values()] : [];
     const teamIdx = hmLiveTeamIdx(team);
     const players = rows.map(row => {
-      const pObj = team && team.players && team.players.find(p => p.name === row.name);
-      const openSince = liveCourtState && liveCourtState[key].get(row.name);
+      const pObj = team && team.players && (row.playerId != null ? team.players.find(p => p.id === row.playerId) : team.players.find(p => p.name === row.name));
+      const openSince = liveCourtState && liveCourtState[key].get(row.key);
       const seconds = (row.secondsPlayed || 0) + (openSince != null ? Math.max(0, liveBoxScoreNowElapsed - openSince) : 0);
       return {
-        id: key + ":" + row.name, name: row.name, pos: POS_SHORT[row.position] || "",
+        id: key + ":" + row.key, name: row.name, pos: POS_SHORT[row.position] || "",
         avatar: hmLiveAvatar(pObj, team),
         link: pObj && teamIdx !== null ? { team: teamIdx, id: pObj.id } : null,
         starter: !!(pObj && starterIds.has(pObj.id)),
-        onCourt: !hmLive.final && !hmLive.match.pregame && !!(liveCourtState && liveCourtState[key].has(row.name)),
+        onCourt: !hmLive.final && !hmLive.match.pregame && !!(liveCourtState && liveCourtState[key].has(row.key)),
         seconds,
         pts: row.pts, reb: row.reb, ast: row.ast, stl: row.stl, blk: row.blk, tov: row.tov, pf: row.pf,
         fg2m: row.fgm2, fg2a: row.fga2, fg3m: row.fgm3, fg3a: row.fga3, ftm: row.ftm, fta: row.fta,
@@ -46242,7 +46273,7 @@ const TOUR_STEPS = [
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresEndgameSelect",
     title: "Gestion de fin de match",
-    text: "Ce réglage est toujours visible, quel que soit votre niveau tactique. En Adaptatif, l'équipe qui mène large lève le pied dès le 3e quart-temps, et le rythme s'accélère légèrement dans les 5 dernières minutes d'un match serré.",
+    text: "Ce réglage est toujours visible, quel que soit votre niveau tactique. En Adaptatif, l'équipe qui mène large lève le pied dès le 3e quart-temps, les titulaires sortent au 4e quart-temps à 18 points d'écart (forme ménagée), et le rythme s'accélère légèrement dans les 5 dernières minutes d'un match serré.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", target: "#ordresTierToggle",
     title: "Débutant ou confirmé",
@@ -46267,7 +46298,7 @@ const TOUR_STEPS = [
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresOffRebSelect",
     title: "Rebond offensif",
-    text: "Prudent limite les rebonds offensifs tentés, sans jamais donner de bonus de transition à l'adversaire en cas d'échec. Agressif en capte davantage, mais un échec laisse la défense adverse repartir plus vite en contre-attaque.",
+    text: "Prudent limite les rebonds offensifs tentés, mais vos joueurs se replient : l'adversaire part moins souvent en contre-attaque. Agressif en capte davantage, mais un échec laisse la défense adverse repartir plus vite en contre-attaque.",
   },
   { kind: "spotlight", topic: "Ordres", page: "ordres", reveal: "ordresConfirmedBlock", target: "#ordresWatchAssignments", wide: true,
     title: "Surveiller un joueur adverse",

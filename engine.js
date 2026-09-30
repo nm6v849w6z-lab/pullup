@@ -194,7 +194,7 @@ const OFFENSE_PROFILES = {
   "Équilibrée":        { inside: .34, mid: .33, three: .33, tov: 0,    assist: 0,   tempo: 0 },
   "Jeu intérieur":     { inside: .60, mid: .25, three: .15, tov: -.01, assist: 0,   tempo: -.05 },
   "Jeu extérieur":     { inside: .15, mid: .30, three: .55, tov: 0,    assist: .02, tempo: 0 },
-  "Isolation":         { inside: .30, mid: .40, three: .30, tov: .02,  assist: -.05,tempo: -.03 },
+  "Isolation":         { inside: .33, mid: .37, three: .30, tov: .015, assist: -.05,tempo: -.03 },
   "Pick & Roll":       { inside: .40, mid: .30, three: .30, tov: 0,    assist: .05, tempo: 0 },
   "Post-up":           { inside: .60, mid: .30, three: .10, tov: 0,    assist: -.02,tempo: -.08 },
   "Jeu en pénétration":{ inside: .50, mid: .35, three: .15, tov: .03,  assist: 0,   tempo: .05, drawFoul: .04 },
@@ -206,7 +206,9 @@ const OFFENSE_PROFILES = {
 const DEFENSES = {
   "Homme à homme":   { insideDef: 0,   perimDef: 0,   pressure: 0,   fatigueCost: 0 },
   "Zone press":      { insideDef: -.06,perimDef: 0,   pressure: .07, fatigueCost: .35 },
-  "Box and one":     { insideDef: .01, perimDef: .01, pressure: .01, fatigueCost: .12, shutdownStar: true },
+  // Box and one (audit 2026-09-29) : gratuit face à un cinq homogène (+2 pts)
+  // — les quatre défenseurs en zone laissent désormais des trous (−0,06).
+  "Box and one":     { insideDef: -.06,perimDef: -.06,pressure: 0,   fatigueCost: .12, shutdownStar: true },
   "Zone extérieure": { insideDef: -.08,perimDef: .07, pressure: .01, fatigueCost: -.05 },
   "Zone intérieure": { insideDef: .10, perimDef: -.05,pressure: .01, fatigueCost: -.05 },
 };
@@ -267,9 +269,11 @@ const SCREEN_DEFENSES = {
 // (meilleure protection du panier, mais plus de tirs à 3 points ouverts) —
 // exactement le compromis décrit par l'utilisateur.
 const HELP_DEFENSE_LEVELS = {
-  "Faible":  { insideDef: -.045, perimDef: .035 },
+  // Recalibré le 2026-09-29 (mesuré : « Faible » gagnait partout, même
+  // face au jeu intérieur ; « Forte » n'aidait pas contre lui).
+  "Faible":  { insideDef: -.07,  perimDef: .025 },
   "Moyenne": { insideDef: 0,     perimDef: 0 },
-  "Forte":   { insideDef: .045,  perimDef: -.035 },
+  "Forte":   { insideDef: .07,   perimDef: -.03 },
 };
 
 // Surveiller — jusqu'à 3 affectations { position, focus } sur Team.watchAssignments
@@ -328,11 +332,17 @@ const MAX_WATCH_ASSIGNMENTS = 3;
 
 // Gestion du post-up — s'applique aux tirs en zone "inside" uniquement.
 // "Classique" = comportement actuel (delta zéro).
+// Audit 2026-09-29 (mesuré : « Prise à deux » et « Pousser vers le fond »
+// gagnaient 2 à 3 pts même face à une équipe qui ne joue pas au poste,
+// tovMod n'était lu nulle part, assistOpenMod ne change que le crédit de la
+// passe) : `perimLeak` = défense extérieure en moins sur les tirs mi-distance
+// et à 3 pts (le défenseur qui double laisse un tireur), `tovMod` = pertes
+// de balle en plus pour l'attaque, au prorata de son jeu intérieur.
 const POST_DEFENSES = {
-  "Classique":              { insideDef: 0,    tovMod: 0,    assistOpenMod: 0,    foulMod: 0 },
-  "Pousser vers le fond":   { insideDef: .05,  tovMod: 0,    assistOpenMod: -.03, foulMod: .015 },
-  "Pousser vers le centre": { insideDef: .025, tovMod: 0,    assistOpenMod: .05,  foulMod: 0 },
-  "Prise à deux":           { insideDef: .11,  tovMod: .05,  assistOpenMod: .08,  foulMod: 0 },
+  "Classique":              { insideDef: 0,    tovMod: 0,    assistOpenMod: 0,    foulMod: 0,    perimLeak: 0 },
+  "Pousser vers le fond":   { insideDef: .04,  tovMod: 0,    assistOpenMod: -.03, foulMod: .015, perimLeak: .015 },
+  "Pousser vers le centre": { insideDef: .025, tovMod: 0,    assistOpenMod: .05,  foulMod: 0,    perimLeak: .01 },
+  "Prise à deux":           { insideDef: .09,  tovMod: .03,  assistOpenMod: .08,  foulMod: 0,    perimLeak: .07 },
 };
 
 // Close-out — "Contrôlé" = comportement actuel (delta zéro). Agressif :
@@ -342,7 +352,9 @@ const POST_DEFENSES = {
 // l'utilisateur.
 const CLOSEOUT_STYLES = {
   "Contrôlé": { perimDefMod: 0,   insideMismatchMod: 0 },
-  "Agressif": { perimDefMod: .05, insideMismatchMod: 5 },
+  // Recalibré le 2026-09-29 (mesuré : gagnant partout, même face au jeu
+  // en pénétration) : la pénétration derrière la fermeture coûte plus cher.
+  "Agressif": { perimDefMod: .04, insideMismatchMod: 14 },
 };
 
 // Rebond offensif — "Normal" = comportement actuel (delta zéro). Agressif :
@@ -353,7 +365,10 @@ const CLOSEOUT_STYLES = {
 // des contre-attaques"). Prudent : l'inverse, moins de rebonds offensifs
 // mais jamais de bonus de transition donné à l'adversaire.
 const OFF_REBOUND_STYLES = {
-  "Prudent":  { offRebWeightMod: -.22, transitionRisk: 0 },
+  // `transitionGuard` (audit 2026-09-29 : « Prudent » coûtait 2 pts sans
+  // contrepartie) : joueurs déjà repliés, moins de contre-attaques adverses
+  // après un rebond défensif.
+  "Prudent":  { offRebWeightMod: -.15, transitionRisk: 0, transitionGuard: .22 },
   "Normal":   { offRebWeightMod: 0,    transitionRisk: 0 },
   "Agressif": { offRebWeightMod: .28,  transitionRisk: .40 },
 };
@@ -373,7 +388,11 @@ const OFF_REBOUND_STYLES = {
 // minutes de match quand l'écart repasse sous les 5 points.
 const ENDGAME_MANAGEMENT = {
   "Standard":  { blowoutThreshold: null, blowoutHeroMod: 0,    blowoutTovMod: 0,    closeGameTempoMod: 0 },
-  "Adaptatif": { blowoutThreshold: 10,   blowoutHeroMod: -.35, blowoutTovMod: .015, closeGameTempoMod: .10 },
+  // Audit 2026-09-29 : coûtait 1,5 pt sans contrepartie (pertes de balle en
+  // garbage time) — plus de malus de pertes ; les titulaires sont mis au
+  // repos dans un match plié (voir restStartersInBlowout), ce qui ménage
+  // leur forme physique pour les matchs suivants.
+  "Adaptatif": { blowoutThreshold: 10,   blowoutHeroMod: -.35, blowoutTovMod: 0,    closeGameTempoMod: .10, restStartersLead: 18 },
 };
 
 // Probabilité de base de blessure, par joueur sur le terrain et par possession
@@ -3527,6 +3546,9 @@ function retirementTalkChance(player, role) {
   return clamp(chance, 0, RETIREMENT_TALK_MAX_CHANCE);
 }
 
+// Voir Player.eff : plancher du produit des facteurs de forme du moment.
+const EFF_FACTOR_FLOOR = 0.5;
+
 class Player {
   constructor({ name, position, height, age, attrs, aggressiveness, nationality }) {
     this.id = uid();
@@ -4127,7 +4149,12 @@ class Player {
   eff(stat) {
     const base = this.attrs[stat] + (this.pendingMatchBoost || 0);
     const formFactor = 0.85 + (this.form / 100) * 0.30;      // 0.85 → 1.15
-    const fatigueFactor = 1 - (this.fatigue / 100) * 0.35;   // jusqu'à -35%
+    // Concentration (audit 2026-09-29 : ne jouait que sur les lancers
+    // francs) : un joueur concentré reste lucide quand la fatigue monte —
+    // de −28 % (Concentration 100) à −42 % (Concentration 0) à fatigue
+    // maximale, −35 % à 50 comme avant.
+    const focusMult = 1.2 - ((this.attrs.focus ?? 50) / 100) * 0.4;
+    const fatigueFactor = 1 - (this.fatigue / 100) * 0.35 * focusMult;
     // Forme physique (voir CONDITION_STATES plus haut) : lit matchCondition
     // (snapshot posé par resetForMatch), jamais Player.condition directement
     // (pas encore rattrapé/perdu pour CE match tant que resetForMatch n'est
@@ -4151,7 +4178,13 @@ class Player {
     // actif en championnat, Coupe, play-offs et amicaux, plus seulement en
     // ligue privée (voir server/liveMatch.js:computeLiveMatch).
     const venueFactor = this.matchVenueFactor ?? 1;
-    return clamp(base * formFactor * fatigueFactor * conditionFactor * chemistryFactor * tacticalKnowledgeFactor * venueFactor, 1, 130);
+    // Plancher (audit 2026-09-29) : cumulés, fatigue, méforme, forme
+    // physique « épuisé », alchimie et connaissance tactique au plus bas
+    // pouvaient ramener un joueur à ≈35 % de sa valeur — des matchs
+    // grotesques pour un club mal géré. La sanction reste forte (jusqu'à
+    // −50 %), mais jamais au-delà ; les bonus ne sont pas concernés.
+    const factor = Math.max(EFF_FACTOR_FLOOR, formFactor * fatigueFactor * conditionFactor * chemistryFactor * tacticalKnowledgeFactor * venueFactor);
+    return clamp(base * factor, 1, 130);
   }
 }
 
@@ -8596,6 +8629,65 @@ const DIVISIONS = [
 const MAX_DIVISION_LEVEL = DIVISIONS.length; // 6 = division la plus basse de la pyramide
 function divisionInfo(level) {
   return DIVISIONS.find(d => d.level === level) || DIVISIONS[DIVISIONS.length - 1];
+}
+
+// ---------------------------------------------------------------------
+// RECALIBRAGE DES CLUBS DE L'IA (audit moteur 2026-09-29) : le niveau des
+// clubs IA a été abaissé à la GÉNÉRATION (DIVISIONS.tierMultiplier, 1,45 →
+// 0,92 en Division I…), mais les clubs IA des ligues déjà créées gardaient
+// leur effectif (≈63 de moyenne en Division I, contre ≈42 pour un club IA
+// généré aujourd'hui) : deux jeux différents selon la date d'inscription.
+// recalibrateCpuTeams ramène chaque club IA trop fort au niveau qu'aurait un
+// club IA généré aujourd'hui dans la même division — mêmes joueurs, mêmes
+// noms, même historique ; caractéristiques et potentiel mis à l'échelle
+// (comme le rattrapage à la hausse de Team.trainWeekCPU). Jamais un club de
+// manager, jamais à la hausse (le rattrapage hebdomadaire s'en charge).
+// ---------------------------------------------------------------------
+// Tolérance au-dessus de la cible avant de recalibrer (le hasard de la
+// génération donne déjà ±10 %).
+const CPU_RECALIBRATION_TOLERANCE = 0.08;
+const CPU_TARGET_SAMPLE_SEED = 20260929;
+const cpuTargetCache = new Map();
+// Note moyenne attendue d'un club IA généré aujourd'hui en division `level`
+// (échantillon de 24 clubs tirés avec une graine fixe : même cible à chaque
+// appel, sur tous les serveurs).
+function expectedCpuTeamOverall(level) {
+  const info = divisionInfo(level);
+  if (!cpuTargetCache.has(info.level)) {
+    const avg = withSeededRandom(CPU_TARGET_SAMPLE_SEED + info.level, () => {
+      let sum = 0;
+      for (let i = 0; i < 24; i++) sum += generateTeam("Échantillon", info.tierMultiplier * rand(0.9, 1.15)).averageOverall();
+      return sum / 24;
+    });
+    cpuTargetCache.set(info.level, avg);
+  }
+  return cpuTargetCache.get(info.level);
+}
+
+// `dryRun` : calcule le rapport sans rien modifier. Renvoie
+// { divisionLevel, target, teams: [{ idx, name, before, after, changed }] }.
+function recalibrateCpuTeams(league, { dryRun = false } = {}) {
+  const level = divisionInfo(league.divisionLevel || MAX_DIVISION_LEVEL).level;
+  const target = expectedCpuTeamOverall(level);
+  const round1 = v => Math.round(v * 10) / 10;
+  const teams = [];
+  league.teams.forEach((t, idx) => {
+    if (t.isHuman) return;
+    const before = t.averageOverall();
+    if (before <= target * (1 + CPU_RECALIBRATION_TOLERANCE)) {
+      teams.push({ idx, name: t.name, before: round1(before), after: round1(before), changed: false });
+      return;
+    }
+    const scale = target / before;
+    if (!dryRun) {
+      t.players.forEach(p => {
+        ATTRS.forEach(a => { p.attrs[a] = clamp(Math.round(p.attrs[a] * scale), 1, 99); });
+        p.potential = clamp(Math.round(p.potential * scale), 1, 99);
+      });
+    }
+    teams.push({ idx, name: t.name, before: round1(before), after: round1(dryRun ? target : t.averageOverall()), changed: true });
+  });
+  return { divisionLevel: level, target: round1(target), teams };
 }
 
 // "Renommée" du club (retour utilisateur, 2026-09 : "on pourrait ajouter les
@@ -14471,10 +14563,30 @@ const TIMEOUT_RUN_CHANCE = 0.7;
 const TIMEOUT_FATIGUE_RECOVERY = 2.5;
 const SET_PLAY_SHOT_BONUS = 0.03;
 const SET_PLAY_TOV_BONUS = 0.02;
+// Voir boxStarMalus dans playPossession.
+const BOX_AND_ONE_STAR_MALUS_PER_POINT = 0.008;
+// Voir l'Isolation dans playPossession (réussite de la star).
+const ISOLATION_STAR_BONUS_PER_POINT = 0.005;
 
 // Voir playPossession (bloc rebond) : poids commun appliqué à l'effort de
 // rebond offensif, calibré le 2026-09-28 (100 matchs simulés).
 const OFF_REBOUND_BASE_WEIGHT = 0.5;
+
+// Qui commet une faute « simple » (hors tir) : un joueur peu discipliné et
+// un intérieur (pivot, ailier fort) en commettent davantage, un joueur déjà
+// chargé de fautes lève un peu le pied. Avant l'audit 2026-09-29, seul le
+// nombre de fautes comptait (poids 6 − fautes) : les fautes se
+// répartissaient presque uniformément et un joueur n'était quasiment jamais
+// exclu (0,05 par équipe et par match, 0,1-0,2 en vrai).
+const FOUL_POSITION_MULT = { Pivot: 1.3, "Ailier fort": 1.15 };
+// Chrono du 4e quart-temps (ou d'une prolongation) à partir duquel un
+// joueur à 4 fautes revient en jeu (voir substituteIfNeeded).
+const FOUL_TROUBLE_RETURN_CLOCK = 300;
+function foulProneness(p) {
+  const base = (115 - (p.attrs.discipline ?? 50)) * (FOUL_POSITION_MULT[p.matchPosition] || 1);
+  const caution = p.fouls >= 4 ? 0.6 : p.fouls === 3 ? 0.85 : 1;
+  return Math.max(base * caution, 1);
+}
 
 class MatchEngine {
   // `options.homeAdvantage` : teamA reçoit, teamB se déplace ; +/-
@@ -14498,6 +14610,10 @@ class MatchEngine {
 
   // `meta` (optionnel) porte des champs structurés en plus du texte narratif
   // (type/team/zone/made...) — voir playPossession et consorts plus bas.
+  // Chaque joueur nommé (shooter, assister, defender, player, replacement,
+  // stealer, rebounder, blocker) est accompagné de son id (shooterId, …) :
+  // deux homonymes d'une même équipe (transfert, académie) ne se confondent
+  // plus (audit 2026-09-29) — le navigateur peut encore lire les noms.
   // Utilisé par le client pour animer une vue 2D du terrain (position du
   // ballon/marqueur) en plus du fil de texte existant, SANS toucher au
   // mécanisme de diffusion (airAt/schedulePlayback) qui se contente déjà de
@@ -14549,12 +14665,15 @@ class MatchEngine {
   transitionChanceFromSpeed(team) {
     const onCourt = team.onCourtPlayers();
     if (!onCourt.length) return 0;
-    const avgSpeed = onCourt.reduce((s, p) => s + (p.eff("speed") + p.eff("acceleration")) / 2, 0) / onCourt.length;
+    const avgSpeed = onCourt.reduce((s, p) => s + p.eff("speed") * 0.65 + p.eff("acceleration") * 0.35, 0) / onCourt.length;
     // Recalibré le 2026-09-28 (retour utilisateur : "c'est clair que le
     // chiffre de contre-attaque est un peu faible") : ~0,5 à 4 % des points
     // en transition avant, ~10 % visés désormais (100 matchs simulés) ;
     // les équipes rapides en profitent toujours davantage.
-    return clamp((avgSpeed - 50) / 250 + 0.22, 0.12, 0.40);
+    // Sensibilité portée de /250 à /100 (audit 2026-09-29 : +20 de Vitesse
+    // ne changeait rien au score) et Vitesse pondérée 0,65 contre 0,35 à
+    // l'Accélération, déjà présente dans le duel au premier pas.
+    return clamp((avgSpeed - 50) / 100 + 0.22, 0.08, 0.45);
   }
 
   matchupDefender(defTeam, offPlayer, zone) {
@@ -14578,6 +14697,7 @@ class MatchEngine {
     // Corrigé : on détermine d'abord si le joueur DOIT sortir (fauté out / blessé) ou
     // DEVRAIT sortir (fatigue / entre dans les problèmes de fautes), puis on ne touche
     // à onCourt qu'une fois qu'on sait si un remplaçant est disponible.
+    const blowoutRest = this.restStartersInBlowout(team, quarter);
     for (const p of team.onCourtPlayers()) {
       if (!p.onCourt) continue; // déjà sorti plus tôt dans cette même passe
 
@@ -14585,19 +14705,19 @@ class MatchEngine {
       // Player.returnStarterId/stintEndAt) : sans ça, un titulaire sorti pour
       // sa première pause ne revenait quasiment jamais (le remplaçant, tout
       // frais, restait jusqu'à son propre seuil de fatigue haut, ~30 min).
-      if (p.returnStarterId && p.secondsPlayed >= p.stintEndAt && !p.disqualified && !p.injured &&
+      if (!blowoutRest && p.returnStarterId && p.secondsPlayed >= p.stintEndAt && !p.disqualified && !p.injured &&
           !(p.matchPosition && team.slotMinuteShares(p.matchPosition))) {
         const starter = team.players.find(x => x.id === p.returnStarterId);
         p.returnStarterId = null;
         if (starter && !starter.onCourt && !starter.disqualified && !starter.injured && !starter.matchInjuryLocked &&
             starter.fatigue < starter.restThreshold - 15 &&
-            (starter.fouls < 4 || team.maintainDespiteFouls.has(starter.id))) {
+            (starter.fouls < 4 || (quarter >= 4 && clock <= FOUL_TROUBLE_RETURN_CLOCK) || team.maintainDespiteFouls.has(starter.id))) {
           p.onCourt = false;
           starter.onCourt = true;
           starter.matchPosition = p.matchPosition;
           starter.nextRestAt = starter.secondsPlayed + rand(660, 1020);
           starter.stintStartSecs = starter.secondsPlayed;
-          this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: starter.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: starter.name });
+          this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: starter.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, playerId: p.id, replacement: starter.name, replacementId: starter.id });
           continue;
         }
       }
@@ -14610,7 +14730,7 @@ class MatchEngine {
         // interpolé, mais jamais exposé séparément jusqu'ici — nécessaire
         // côté client pour reconstituer QUI sort à quel instant (voir
         // liveMinutesFromEvents dans moteurbasket3.html).
-        this.log(events, quarter, clock, say(PHRASES.foulOut, { player: p.name, team: team.name }), { type: "foulOut", team: this.teamKey(team), player: p.name });
+        this.log(events, quarter, clock, say(PHRASES.foulOut, { player: p.name, team: team.name }), { type: "foulOut", team: this.teamKey(team), player: p.name, playerId: p.id });
       }
 
       const mustLeave = p.disqualified || p.injured;
@@ -14636,8 +14756,13 @@ class MatchEngine {
       // Première pause planifiée dans le temps (voir Player.firstRestAt).
       const plannedFirstRest = p.isStarterThisMatch && p.secondsPlayed >= p.nextRestAt;
       const shouldRest = !mustLeave && (
+        (blowoutRest && p.isStarterThisMatch) ||
         ((p.fatigue >= fatigueThreshold || plannedFirstRest) && !team.maintainDespiteFouls.has(p.id)) ||
-        (p.fouls >= 4 && !team.maintainDespiteFouls.has(p.id))
+        // 4 fautes : mis de côté jusqu'aux 5 dernières minutes du match
+        // (FOUL_TROUBLE_RETURN_CLOCK) ; ensuite il joue, quitte à sortir
+        // pour 5 fautes (audit 2026-09-29 : 0,05 exclusion par équipe et
+        // par match, 0,1-0,2 en vrai).
+        (p.fouls >= 4 && !(quarter >= 4 && clock <= FOUL_TROUBLE_RETURN_CLOCK) && !team.maintainDespiteFouls.has(p.id))
       );
       if (!mustLeave && !shouldRest) continue;
       // Posé dès QU'une sortie a lieu pour ce joueur (fatigue, fautes, ou
@@ -14672,15 +14797,26 @@ class MatchEngine {
         // désormais systématique à chaque changement de joueur sur le
         // terrain, qui permet au client de reconstruire les minutes jouées
         // de CHAQUE joueur, remplacement obligatoire compris.
-        this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: replacement.name });
+        this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, playerId: p.id, replacement: replacement.name, replacementId: replacement.id });
       } else if (mustLeave) {
         // Banc épuisé (rare) : le joueur sort quand même, l'équipe joue en infériorité.
         p.onCourt = false;
-        this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team), player: p.name });
+        this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team), player: p.name, playerId: p.id });
       }
       // Si ce n'est qu'une question de fatigue/fautes (pas obligatoire) et qu'aucun
       // remplaçant n'est disponible, le joueur reste simplement sur le terrain.
     }
+  }
+
+  // Gestion de fin de match « Adaptatif » : au 4e quart-temps, écart d'au
+  // moins restStartersLead points (dans un sens ou dans l'autre), le coach
+  // sort ses titulaires et ne les fait plus revenir.
+  restStartersInBlowout(team, quarter) {
+    const mgmt = ENDGAME_MANAGEMENT[team.endgameManagement] || ENDGAME_MANAGEMENT.Standard;
+    if (mgmt.restStartersLead == null || quarter < 4) return false;
+    const other = team === this.teamA ? this.teamB : this.teamA;
+    const pts = t => t.players.reduce((s, p) => s + p.stats.pts, 0);
+    return Math.abs(pts(team) - pts(other)) >= mgmt.restStartersLead;
   }
 
   // Fautes d'équipe du quart-temps en cours (fautes personnelles cumulées de
@@ -14744,10 +14880,10 @@ class MatchEngine {
       replacement.onCourt = true;
       replacement.matchPosition = pos;
       replacement.stintStartSecs = replacement.secondsPlayed;
-      this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, replacement: replacement.name });
+      this.log(events, quarter, clock, say(PHRASES.substitution, { replacement: replacement.name, player: p.name, team: team.name }), { type: "substitution", team: this.teamKey(team), player: p.name, playerId: p.id, replacement: replacement.name, replacementId: replacement.id });
     } else if (mustLeave) {
       p.onCourt = false;
-      this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team), player: p.name });
+      this.log(events, quarter, clock, say(PHRASES.shortHanded, { team: team.name }), { type: "shortHanded", team: this.teamKey(team), player: p.name, playerId: p.id });
     }
   }
 
@@ -14783,7 +14919,7 @@ class MatchEngine {
     // ni dans le fil du direct ni dans la feuille de match en direct, qui se
     // reconstruit événement par événement — la feuille finale, elle, les
     // comptait, d'où un écart de tentatives entre les deux).
-    this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, made, attempts: n, possession: this.teamKey(team) });
+    this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, shooterId: shooter.id, made, attempts: n, possession: this.teamKey(team) });
     return made;
   }
 
@@ -14828,9 +14964,9 @@ class MatchEngine {
     defender.technicalFouls = (defender.technicalFouls || 0) + 1;
     if (this.shouldEjectForFouls(defender)) {
       defender.disqualified = true;
-      this.log(events, quarter, clock, say(PHRASES.technicalEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam) });
+      this.log(events, quarter, clock, say(PHRASES.technicalEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     } else {
-      this.log(events, quarter, clock, say(PHRASES.technicalFoul, { player: defender.name, team: defTeam.name }), { type: "technicalFoul", team: this.teamKey(defTeam) });
+      this.log(events, quarter, clock, say(PHRASES.technicalFoul, { player: defender.name, team: defTeam.name }), { type: "technicalFoul", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     }
     this.freeThrows(ftShooter, 1, events, quarter, clock, offTeam);
   }
@@ -14859,9 +14995,9 @@ class MatchEngine {
     defender.unsportsmanlikeFouls = (defender.unsportsmanlikeFouls || 0) + 1;
     if (this.shouldEjectForFouls(defender)) {
       defender.disqualified = true;
-      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam) });
+      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     } else {
-      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeFoul, { player: defender.name, team: defTeam.name }), { type: "unsportsmanlikeFoul", team: this.teamKey(defTeam) });
+      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeFoul, { player: defender.name, team: defTeam.name }), { type: "unsportsmanlikeFoul", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     }
     this.freeThrows(ftShooter, 2, events, quarter, clock, offTeam);
   }
@@ -14888,7 +15024,20 @@ class MatchEngine {
     // disponible, cette possession ne peut objectivement pas être jouée —
     // on la neutralise (aucun évènement, la balle change juste de main)
     // plutôt que de laisser planter toute la simulation.
-    if (!onCourtOff.length || !onCourtDef.length) return { possessionOffense: false };
+    if (!onCourtOff.length) return { possessionOffense: false };
+    // Défense sans aucun joueur (banc à 5, exclusions et blessures) : panier
+    // sans opposition — sinon plus rien ne se marquait et le match
+    // enchaînait des prolongations à 0-0 jusqu'au garde-fou (audit
+    // 2026-09-29, plus fréquent depuis que les exclusions sont réalistes).
+    if (!onCourtDef.length) {
+      const scorer = weightedPick(onCourtOff, p => p.eff("inside"));
+      scorer.stats.fga2++; scorer.stats.fgm2++; scorer.stats.pts += 2;
+      scorer.stats.paintAtt = (scorer.stats.paintAtt || 0) + 1; scorer.stats.paintMade = (scorer.stats.paintMade || 0) + 1;
+      scorer.stats.ptsPaint = (scorer.stats.ptsPaint || 0) + 2; scorer.stats.ptsSolo = (scorer.stats.ptsSolo || 0) + 2;
+      this.applyPlusMinusForPoints(offTeam, 2);
+      this.log(events, quarter, clock, say(PHRASES.madeShot.inside, { shooter: scorer.name, quality: "ouvert", team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone: "inside", made: true, shooter: scorer.name, shooterId: scorer.id, assister: null, assisterId: null, possession: this.teamKey(offTeam) });
+      return { possessionOffense: false, scored: true };
+    }
 
     // --- Tactique confirmée (voir le grand commentaire au-dessus de
     // SCREEN_DEFENSES, plus haut dans ce fichier) : lookup une fois par
@@ -14962,7 +15111,7 @@ class MatchEngine {
       // On évite si possible de faire fauter un joueur déjà proche de l'exclusion.
       const defender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
       defender.stats.pf++; defender.fouls++;
-      this.log(events, quarter, foulClock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, foulClock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
       this.freeThrows(ballHandler, 2, events, quarter, foulClock, offTeam);
       return { possessionOffense: false, scored: true, intentionalFoul: true, clockUsed };
     }
@@ -15003,12 +15152,17 @@ class MatchEngine {
     // mettre en regard du plancher/plafond 0.03-0.35 posé par le clamp plus
     // bas).
     tovChance -= (ballHandler.attrs.decision - 50) * 0.0006;
+    // Sang-froid (audit 2026-09-29 : ne jouait qu'en fin de match serrée et
+    // sur les fautes techniques) : un porteur calme garde le ballon sous
+    // pression, d'autant plus face à une défense qui presse.
+    tovChance -= (ballHandler.attrs.composure - 50) * (0.0005 + Math.max(0, defense.pressure || 0) * 0.01);
     // Défense sur écrans "Prise à deux" (double sur le porteur au screen,
     // pondéré par prWeight — voir plus haut) et garbage time "Adaptatif"
     // (imprécision des deux côtés en fin de match déséquilibrée) : ajoutés
     // avant le clamp, comme le reste des composantes de tovChance. "Standard"
     // partout => ces deux termes valent 0, tovChance inchangé.
     tovChance += (screen.tovMod || 0) * prWeight;
+    tovChance += (postD.tovMod || 0) * (offense.inside || 0);
     if (inBlowout) tovChance += endgameMgmt.blowoutTovMod;
     // Surveiller "couper les entrées de balle" (face-guard, voir
     // WATCH_FOCUS_EFFECTS) : bonus de tov CIBLÉ si le porteur actuel occupe
@@ -15053,7 +15207,7 @@ class MatchEngine {
       );
       if (rand01() < 0.55) {
         stealer.stats.stl++;
-        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, stealer: stealer.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: stealer.name, stealerId: stealer.id, possession: this.teamKey(offTeam) });
         // Contre-attaque (retour utilisateur, 2026-09 : "Vitesse/Accélération
         // → contre-attaques") : une interception donne le ballon à l'équipe
         // qui défendait, qui devient offensive à la possession suivante (voir
@@ -15067,7 +15221,7 @@ class MatchEngine {
         // de cette équipe face à une défense pas replacée).
         if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
       } else {
-        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, stealer: null, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: null, stealerId: null, possession: this.teamKey(offTeam) });
       }
       return { possessionOffense: false };
     }
@@ -15113,9 +15267,9 @@ class MatchEngine {
     const nonShootingFoulChance = 0.125;
     if (rand01() < nonShootingFoulChance) {
       const foulTarget = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass") + 1);
-      const commonFoulDefender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
+      const commonFoulDefender = weightedPick(onCourtDef, p => foulProneness(p));
       commonFoulDefender.stats.pf++; commonFoulDefender.fouls++;
-      this.log(events, quarter, clock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", team: this.teamKey(defTeam), defender: commonFoulDefender.name, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", team: this.teamKey(defTeam), defender: commonFoulDefender.name, defenderId: commonFoulDefender.id, possession: this.teamKey(offTeam) });
       this.maybeEjectForComposure(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
       this.maybeCommitUnsportsmanlikeFoul(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
       // Bonus (audit moteur 2026-09-29) : la page du direct affichait déjà
@@ -15175,8 +15329,13 @@ class MatchEngine {
     // désormais le tir sur la star du cinq, proportionnellement à son poids
     // dans les priorités — profite aux équipes qui ont un vrai joueur
     // au-dessus du lot, pénalise les autres.
-    const isoWeight = offTeam.offensivePriorities.includes("Isolation") ? 1 / offTeam.offensivePriorities.length : 0;
+    // Poids = part RÉELLE d'Isolation dans les priorités (audit 2026-09-29 :
+    // 1/3 que l'Isolation soit choisie une ou trois fois, alors que ses
+    // inconvénients, eux, s'additionnaient).
+    const isoWeight = offTeam.offensivePriorities.filter(k => k === "Isolation").length / Math.max(1, offTeam.offensivePriorities.length);
     const heroMult = (clutch ? 1.7 : 1) * (1 + isoWeight * 1.2);
+    // Box and one : la star, collée, touche moins de ballons.
+    const boxDeny = defense.shutdownStar ? 0.85 : 1;
     // Gestion de fin de match "Adaptatif" : en garbage time (écart >= seuil, dès
     // le Q3), l'équipe qui mène (ou est menée) large ne force plus autant
     // le jeu sur sa star — MULTIPLICATEUR SÉPARÉ du hero-ball clutch
@@ -15196,7 +15355,7 @@ class MatchEngine {
     // intérieure.
     const penetrationBonus = zone === "inside" ? p => 1 + p.eff("penetration") / 200 : () => 1;
     const shooter = weightedPick(onCourtOff, p =>
-      Math.pow(p.eff(statForZone), 2.1) * penetrationBonus(p) * (star && p.id === star.id ? heroMult * blowoutHeroMult : 1)
+      Math.pow(p.eff(statForZone), 2.1) * penetrationBonus(p) * (star && p.id === star.id ? heroMult * blowoutHeroMult * boxDeny : 1)
     );
     const defender = this.matchupDefender(defTeam, shooter, zone);
 
@@ -15236,7 +15395,11 @@ class MatchEngine {
     // pour ne pas invalider tout l'existant d'un coup. Diviseur ajusté pour
     // rester sur la même échelle moyenne (0-100, comme les autres `eff()`)
     // qu'avant ce correctif.
-    let creation = (shooter.eff("shotCreation") * 1.5 + shooter.eff("dribble") + shooter.eff("agility") * 0.7 + (creator ? creator.eff("pass") * 0.8 : 0)) / (creator ? 4.0 : 3.2);
+    // Vision (audit 2026-09-29 : ne pesait rien en moyenne, seulement sur le
+    // crédit de la passe décisive) : le passeur qui lit le jeu trouve un
+    // meilleur tir, et la Passe y pèse davantage (1,0 au lieu de 0,8).
+    // Diviseur ajusté pour garder la même échelle moyenne.
+    let creation = (shooter.eff("shotCreation") * 1.5 + shooter.eff("dribble") + shooter.eff("agility") * 0.7 + (creator ? creator.eff("pass") * 1.0 + creator.eff("vision") * 0.8 : 0)) / (creator ? 5.0 : 3.2);
     // Défense sur écrans : n'affecte que la fraction de possessions
     // "Pick & Roll" (prWeight) — gêne (ou pas) la création du porteur selon
     // le choix du coach défenseur. "Aucune consigne" => ballCreationMod = 0.
@@ -15244,6 +15407,8 @@ class MatchEngine {
 
     const defStat = zone === "inside" ? defender.eff("defInside") : defender.eff("defOutside");
     let defBoost = zone === "inside" ? defense.insideDef : defense.perimDef;
+    // Box and one : défenseur dédié sur la star (voir aussi boxDeny, moins
+    // de ballons, et boxStarMalus, sur la réussite même du tir).
     if (defense.shutdownStar && star && shooter.id === star.id) defBoost += 0.10;
 
     // --- Aide défensive (Faible/Moyenne/Forte) : déplace le curseur
@@ -15252,6 +15417,7 @@ class MatchEngine {
     // --- Gestion du post-up, uniquement en zone "inside" — "Classique" =
     // delta zéro. ---
     if (zone === "inside") defBoost += postD.insideDef;
+    else defBoost -= postD.perimLeak || 0;
     // --- Close-out, uniquement en zone extérieure (mid/3pts) — "Contrôlé"
     // = delta zéro. ---
     if (zone !== "inside") defBoost += closeout.perimDefMod;
@@ -15337,7 +15503,11 @@ class MatchEngine {
     // --- Rebond offensif agressif de la possession précédente : contre-
     // attaque, défense pas replacée — bonus d'ouverture ponctuel, consommé
     // une seule fois (voir transitionBoost plus haut). ---
-    const transitionOpenness = transitionBoost ? 14 : 0;
+    // Vitesse (audit 2026-09-29) : en contre-attaque, l'avance de vitesse du
+    // cinq qui attaque sur celui qui se replie ouvre (ou referme) le tir.
+    const fiveSpeed = five => five.reduce((s, p) => s + p.eff("speed"), 0) / Math.max(1, five.length);
+    const transitionSpeedEdge = transitionBoost ? fiveSpeed(onCourtOff) - fiveSpeed(onCourtDef) : 0;
+    const transitionOpenness = transitionBoost ? clamp(14 + transitionSpeedEdge * 0.5, 4, 26) : 0;
 
     const screenOpennessBonus = zone === "inside"
       ? (screen.rollOpennessMod || 0) * prWeight
@@ -15503,6 +15673,33 @@ class MatchEngine {
     // l'urgence, rarement réussi — avant l'audit 2026-09-29, une possession
     // d'une seconde valait une attaque complète.
     if (this._buzzerHeave) prob = Math.min(prob, 0.18);
+    // Box and one (audit 2026-09-29) : la star marquée de près tire moins
+    // bien, même quand son tir reste « ouvert » — un tir de star est souvent
+    // déjà au plus haut niveau d'ouverture, où un simple bonus défensif ne
+    // changeait plus rien.
+    // Gêne proportionnelle à la domination de la star sur ses coéquipiers
+    // (note générale) : forte sur un vrai leader, presque nulle sur un
+    // « meilleur joueur » à peine au-dessus des autres.
+    const starDominance = () => {
+      const mates = onCourtOff.filter(p => p.id !== star.id);
+      return star.overall() - mates.reduce((s, p) => s + p.overall(), 0) / Math.max(1, mates.length);
+    };
+    if (defense.shutdownStar && star && shooter.id === star.id) {
+      prob = clamp(prob - clamp(starDominance() * BOX_AND_ONE_STAR_MALUS_PER_POINT, 0, 0.18), 0.10, 0.75);
+    }
+    // Isolation (audit 2026-09-29, mesurée avec une vraie star : ne payait
+    // jamais) : on écarte le jeu pour laisser la star défier son défenseur —
+    // sa réussite monte en proportion de sa domination sur ses coéquipiers,
+    // dans la part d'Isolation choisie. Un cinq sans joueur au-dessus du
+    // lot n'y gagne rien et garde les inconvénients du profil (pertes de
+    // balle, mi-distance).
+    if (isoWeight > 0 && star && shooter.id === star.id) {
+      prob = clamp(prob + isoWeight * clamp(starDominance() * ISOLATION_STAR_BONUS_PER_POINT, 0, 0.12), 0.10, 0.80);
+    }
+    // Finition en contre-attaque (audit 2026-09-29) : une fois le tir
+    // « ouvert », la vitesse n'ajoutait plus rien ; le cinq le plus rapide
+    // finit désormais plus souvent son débordement (jusqu'à +10 pts de %).
+    if (transitionBoost) prob = clamp(prob + clamp(0.03 + transitionSpeedEdge * 0.003, 0, 0.10), 0.10, 0.80);
 
     // !blocked : un tir contré est toujours un tir manqué, jamais soumis au
     // tirage de réussite ci-dessus (voir `blocked` plus haut).
@@ -15577,11 +15774,11 @@ class MatchEngine {
       const creationKey = assistedBy ? "ptsAssisted" : "ptsSolo";
       shooter.stats[creationKey] = (shooter.stats[creationKey] || 0) + points;
       if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + points;
-      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, assister: assistedBy, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, shooterId: shooter.id, assister: assistedBy, assisterId: assistedBy ? assistCandidate.id : null, possession: this.teamKey(offTeam) });
 
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, 1, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
         this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
@@ -15599,11 +15796,11 @@ class MatchEngine {
       // tir raté normal.
       if (blocked) {
         defender.stats.blk++;
-        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, blocker: defender.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, shooterId: shooter.id, blocker: defender.name, blockerId: defender.id, possession: this.teamKey(offTeam) });
       }
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, defender: defender.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, shooterId: shooter.id, defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
         this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
@@ -15666,7 +15863,7 @@ class MatchEngine {
       // `defTeam` qui devient offensif à la possession suivante
       // (possessionOffense vaut `offensiveRebound`, donc false ici).
       if (!offensiveRebound) {
-        if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
+        if (rand01() < this.transitionChanceFromSpeed(defTeam) - (offRebStyle.transitionGuard || 0)) defTeam._transitionBoost = true;
       }
 
       const rebounder = weightedPick(
@@ -15679,7 +15876,7 @@ class MatchEngine {
       this.log(events, quarter, clock, say(
         offensiveRebound ? (rebounder === shooter ? PHRASES.reboundOwn : PHRASES.reboundOff) : PHRASES.reboundDef,
         { shooter: shooter.name, rebounder: rebounder.name }
-      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, rebounder: rebounder.name, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
+      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, shooterId: shooter.id, rebounder: rebounder.name, rebounderId: rebounder.id, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
       if (offensiveRebound) offTeam._secondChance = true;
       return { possessionOffense: offensiveRebound };
@@ -15780,7 +15977,7 @@ class MatchEngine {
               opponentName: opponent ? opponent.name : null,
             });
           }
-          this.log(events, quarter, clock, say(PHRASES.injury, { player: p.name, team: team.name }), { type: "injury", team: this.teamKey(team), player: p.name });
+          this.log(events, quarter, clock, say(PHRASES.injury, { player: p.name, team: team.name }), { type: "injury", team: this.teamKey(team), player: p.name, playerId: p.id });
           // Fil d'actualité (tableau de bord, voir FEED_CATEGORIES plus haut) :
           // uniquement pour une équipe humaine (`team.feed` existe pour toute
           // équipe, mais seule une équipe humaine consulte un tableau de bord).
@@ -16276,7 +16473,7 @@ return {
   // et les tests.
   FEED_CATEGORIES, FEED_MAX_ENTRIES, createFeed, serializeFeed, pushEntry, removeByKey,
   markAllRead, unreadCount, getVisibleEntries, handleGameEvent, checkThresholds, seedSeasonStart,
-  DIVISIONS, MAX_DIVISION_LEVEL, divisionInfo,
+  DIVISIONS, MAX_DIVISION_LEVEL, divisionInfo, expectedCpuTeamOverall, recalibrateCpuTeams,
 };
 
 });

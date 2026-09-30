@@ -1333,6 +1333,38 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Recalibrage des clubs de l'IA des ligues déjà créées (audit moteur
+      // 2026-09-29, voir Engine.recalibrateCpuTeams) : les clubs IA générés
+      // avant la baisse de niveau (≈63 de moyenne en Division I) sont
+      // ramenés au niveau d'un club IA généré aujourd'hui dans la même
+      // division (≈42). Body : { dryRun?: true par défaut, leagueId? } —
+      // dryRun renvoie le rapport sans rien écrire ; { "dryRun": false }
+      // applique. Idempotent : un club déjà au niveau n'est plus touché.
+      if (route.pathname === "/api/admin/recalibrate-cpu" && req.method === "POST") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const dryRun = !(body && body.dryRun === false);
+        const world = await World.loadWorld(multiSavePath, now);
+        if (!world) { sendJson(res, 404, { ok: false, error: "Aucune ligue partagée n'existe encore." }); return; }
+        const leagues = [];
+        for (const entry of world.leagues) {
+          if (body && body.leagueId && entry.id !== body.leagueId) continue;
+          const lg = await World.loadLeague(world, entry.id, multiSavePath);
+          if (!lg) continue;
+          const report = Engine.recalibrateCpuTeams(lg, { dryRun });
+          const changed = report.teams.filter(t => t.changed).length;
+          if (!dryRun && changed) {
+            await store.saveMultiLeague(lg, multiSavePath);
+            if (world.summaries) world.summaries[entry.id] = World.leagueSummary(entry, lg);
+          }
+          leagues.push({ leagueId: entry.id, label: World.divisionLabel(entry.level, entry.group), country: entry.country || null, changed, ...report });
+        }
+        if (!dryRun) await World.saveWorld(world, multiSavePath);
+        sendJson(res, 200, { ok: true, dryRun, clubsChanged: leagues.reduce((s, l) => s + l.changed, 0), leagues });
+        return;
+      }
+
       // Réinitialisation administrative de "onboardingTourCompleted" (retour
       // utilisateur Discord, 2026-09 : "Skyzer10" bloqué hors du tutoriel
       // après un aller-retour dedans, plus aucun accès au bouton "Lancer le
