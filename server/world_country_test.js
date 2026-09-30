@@ -3,7 +3,7 @@
 // l'aperçu du pays de BuzzerBeater ») : World.countryOverview et ses
 // morceaux (countryStats : leaders avec les contres + meilleures
 // performances en un match ; recordCountryHonours avec les finalistes ;
-// countryTitles ; internationalFriendlies ; classement des managers du pays).
+// countryTitles ; classement des managers du pays).
 const assert = require("assert");
 const fs = require("fs");
 const os = require("os");
@@ -62,28 +62,13 @@ const ok = m => console.log("✅ " + m);
   assert.deepStrictEqual(titles[2], { name: "C", championships: 0, cups: 0, superCups: 0, finals: 2 });
   ok("titres par club : championnats, Coupes, Supercoupes, finales perdues");
 
-  // 4) Amicaux internationaux (joués et annoncés seulement).
-  const ref = (country, name) => ({ leagueId: `${country}-1`, idx: 1, name, country, label: "Division I" });
-  const fstore = { list: [
-    { status: "played", at: now - 3 * D, home: ref("fr", "F1"), away: ref("us", "U1"), result: { scoreHome: 80, scoreAway: 70, revealAt: now - 3 * D } },
-    { status: "played", at: now - 2 * D, home: ref("us", "U2"), away: ref("fr", "F2"), result: { scoreHome: 90, scoreAway: 60, revealAt: now - 2 * D } },
-    { status: "played", at: now - 1000, home: ref("us", "U3"), away: ref("fr", "F3"), result: { scoreHome: 50, scoreAway: 60, revealAt: now + D } },
-    { status: "played", at: now - D, home: ref("fr", "F4"), away: ref("fr", "F5"), result: { scoreHome: 50, scoreAway: 60 } },
-    { status: "accepted", at: now + D, home: ref("fr", "F6"), away: ref("us", "U6") },
-  ] };
-  const intl = World.internationalFriendlies(fstore, "fr", now);
-  assert.deepStrictEqual([intl.played, intl.wins, intl.losses], [2, 1, 1]);
-  assert.deepStrictEqual(intl.byCountry, [{ country: "us", played: 2, wins: 1, losses: 1 }]);
-  assert.strictEqual(intl.recent[0].home.name, "U2", "le plus récent d'abord");
-  ok("amicaux internationaux : bilan par pays, huis clos et amicaux franco-français exclus");
-
   // 5) Aperçu complet + classement des managers du pays.
   world.summaries["fr-1"].managers.forEach(m => { m.games = 0; });
   world.summaries["fr-1"].managers[0].games = 3;
   world.summaries["fr-1"].managers[0].rating = 1540;
   world.summaries["us-1"].managers = [{ idx: 4, name: "NY Test", rating: 1600, games: 2 }];
   world.history = { fr: [{ season: 1, champion: fr1.teams[3].name, championFinalist: fr1.teams[4].name, cupWinner: null }] };
-  const ov = World.countryOverview(world, "fr", { myCountry: "fr", friendlies: fstore, now });
+  const ov = World.countryOverview(world, "fr", { myCountry: "fr" });
   assert.ok(ov.mine && ov.name === "France");
   assert.deepStrictEqual([ov.card.divisionCount, ov.card.leagueCount, ov.card.clubs, ov.card.managers], [1, 1, 10, 2]);
   assert.strictEqual(ov.divisions[0].leagues[0].id, "fr-1");
@@ -93,8 +78,8 @@ const ok = m => console.log("✅ " + m);
   assert.strictEqual(ov.titles[0].name, fr1.teams[3].name);
   assert.ok(ov.clubs[fr1.teams[3].name] && ov.clubs[fr1.teams[3].name].leagueId === "fr-1", "clubs du palmarès cliquables");
   assert.ok(ov.leaders.blk.length && ov.bests.blk.length && !ov.leaders.eval);
-  assert.strictEqual(ov.friendlies.played, 2);
-  const us = World.countryOverview(world, "us", { myCountry: "fr", now });
+  assert.ok(!("friendlies" in ov), "plus d'amicaux internationaux (retour utilisateur 2026-09-30)");
+  const us = World.countryOverview(world, "us", { myCountry: "fr" });
   assert.ok(!us.mine && us.ranking.top[0].name === "NY Test" && us.ranking.top[0].worldRank === 1);
   assert.deepStrictEqual(us.titles, []);
   ok("countryOverview : carte du pays, divisions, classement national/mondial des managers, titres, clubs cliquables");

@@ -855,10 +855,8 @@ function recordCountryHonours(world, country, leagues) {
 // de BuzzerBeater », pays choisi dans un menu déroulant ou par la
 // recherche). Tout vient du registre (résumés, statistiques du pays,
 // palmarès, Coupe, classement des managers) : aucune ligue rechargée.
-// `friendlies` : données annexes des amicaux entre championnats.
 // ---------------------------------------------------------------------
 const COUNTRY_RANKING_TOP = 10;
-const INTL_FRIENDLIES_RECENT = 5;
 
 // Titres par club d'après le palmarès : championnats de Division I,
 // Coupes, Supercoupes et finales perdues (championnat ou Coupe).
@@ -879,36 +877,7 @@ function countryTitles(history) {
     b.championships - a.championships || b.cups - a.cups || b.superCups - a.superCups || b.finals - a.finals || a.name.localeCompare(b.name, "fr"));
 }
 
-// Amicaux entre deux pays joués (et annoncés) : bilan du pays et derniers
-// résultats. Les amicaux joués sont gardés 60 jours (server/friendlies.js).
-function internationalFriendlies(fstore, country, now = Date.now()) {
-  const Friendlies = require("./friendlies.js");
-  const played = ((fstore && fstore.list) || []).filter(f => f.status === "played" && f.result && Friendlies.isRevealed(f, now)
-    && f.home && f.away && f.home.country && f.away.country && f.home.country !== f.away.country
-    && (f.home.country === country || f.away.country === country))
-    .sort((a, b) => b.at - a.at);
-  let wins = 0, losses = 0;
-  const byCountry = new Map();
-  played.forEach(f => {
-    const side = f.home.country === country ? "home" : "away";
-    const opp = side === "home" ? f.away.country : f.home.country;
-    const mine = side === "home" ? f.result.scoreHome : f.result.scoreAway;
-    const theirs = side === "home" ? f.result.scoreAway : f.result.scoreHome;
-    const won = mine > theirs;
-    if (won) wins++; else losses++;
-    const c = byCountry.get(opp) || { country: opp, played: 0, wins: 0, losses: 0 };
-    c.played++; if (won) c.wins++; else c.losses++;
-    byCountry.set(opp, c);
-  });
-  const ref = r => ({ name: r.name, leagueId: r.leagueId, idx: r.idx, country: r.country });
-  return {
-    played: played.length, wins, losses,
-    byCountry: [...byCountry.values()].sort((a, b) => b.played - a.played),
-    recent: played.slice(0, INTL_FRIENDLIES_RECENT).map(f => ({ at: f.at, home: ref(f.home), away: ref(f.away), scoreHome: f.result.scoreHome, scoreAway: f.result.scoreAway })),
-  };
-}
-
-function countryOverview(world, country, { myCountry = null, friendlies = null, now = Date.now() } = {}) {
+function countryOverview(world, country, { myCountry = null } = {}) {
   const stats = (world.countryStats || {})[country] || null;
   const history = ((world.history || {})[country]) || [];
   const summaries = Object.values(world.summaries || {}).filter(sm => sm.country === country);
@@ -960,7 +929,6 @@ function countryOverview(world, country, { myCountry = null, friendlies = null, 
     titles: countryTitles(history),
     history,
     ranking,
-    friendlies: internationalFriendlies(friendlies, country, now),
     clubs,
   };
 }
@@ -1031,6 +999,6 @@ module.exports = {
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld,
   isOpenCountry, publicCountries,
   NationalCup, WorldMarket, WorldFriendlies, divisionLabel,
-  countryOverview, countryTitles, internationalFriendlies,
+  countryOverview, countryTitles,
   INACTIVE_RELEASE_DAYS, releaseClubToCpu, releaseInactiveManagers, reclaimClub, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
 };
