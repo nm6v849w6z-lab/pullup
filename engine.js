@@ -11664,7 +11664,7 @@ class League {
     if (res.result === "sold") {
       listing.finalPrice = amount;
       if (seller.isHuman && buyer.isHuman) this.logHumanTransfer(seller.name, buyer.name, res.player, amount, now);
-      this.logTransferNews({ id: listing.id, at: now, playerName: res.player.name, buyerIdx, buyerName: buyer.name, sellerName: seller.name, fee: amount });
+      this.logTransferNews({ id: listing.id, at: now, playerName: res.player.name, playerId: res.player.id, buyerIdx, buyerName: buyer.name, buyerAi: !buyer.isHuman, sellerIdx: listing.sellerIdx, sellerName: seller.name, fee: amount });
     }
   }
 

@@ -171,6 +171,7 @@ function syncSystem(chat, league, opts) {
         loser: homeWon ? names[x.away] : names[x.home], loserIdx: homeWon ? x.away : x.home,
         winnerPts: Math.max(x.scoreHome, x.scoreAway), loserPts: Math.min(x.scoreHome, x.scoreAway),
         home: names[x.home], away: names[x.away], scoreHome: x.scoreHome, scoreAway: x.scoreAway,
+        homeIdx: x.home, awayIdx: x.away,
       }, at);
     });
     if (r >= Math.max(1, STANDINGS_FROM_ROUND - 1)) {
@@ -243,6 +244,12 @@ function syncSystem(chat, league, opts) {
     if (firstSync && now - (t.at || 0) > FIRST_SYNC_TRANSFER_MS) return;
     push("transfer", `tr:${t.id}`, {
       buyer: t.buyerName, buyerIdx: t.buyerIdx, seller: t.sellerName, player: t.playerName, fee: t.fee, foreign: !!t.foreign,
+      // Liens du chat (joueur cliquable, club vendeur) et mention « IA »
+      // (retour d'un testeur 2026-09-30 : « C'est un bot qui vient de
+      // recruter ? »). Absents des transferts d'avant.
+      ...(t.playerId != null ? { playerId: t.playerId } : {}),
+      ...(typeof t.sellerIdx === "number" && !t.foreign ? { sellerIdx: t.sellerIdx } : {}),
+      ...(typeof t.buyerAi === "boolean" ? { buyerAi: t.buyerAi } : {}),
     }, Math.min(now, t.at || now));
   });
   if (chat.sync.transfers.length > 120) chat.sync.transfers = chat.sync.transfers.slice(-120);
