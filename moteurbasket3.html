@@ -3459,18 +3459,45 @@
   .lg-shot-m{text-align:right; font-variant-numeric:tabular-nums;} .lg-shot-p{text-align:right; color:#a8a18c;}
   .lg-quote{margin:12px 0 0; font-size:13.5px; font-style:italic; line-height:1.5; color:#d9d3bf;}
 
-  /* Chat de la ligue (2026-09-30, voir renderLeagueChat) : fil public des
-     managers humains + messages automatiques (résultats, transferts,
-     classement). Peu de bordures, surfaces discrètes, un seul accent
-     (l'ambre) ; même rendu en thème sombre et clair (tokens seulement). */
-  .lg-panel.lgc{padding:16px 0 0; display:flex; flex-direction:column; min-width:0; overflow:hidden;}
-  .lgc > *{padding-left:16px; padding-right:16px;}
+  /* Chat de la ligue (2026-09-30, voir lgcOpen/lgcRender) : bouton en haut
+     à droite de la page Ligue (pastille rouge de non-lus), fil ouvert
+     PAR-DESSUS la page — tiroir à droite sur PC, plein écran sur mobile.
+     Peu de bordures, surfaces discrètes, un seul accent (l'ambre) ; même
+     rendu en thème sombre et clair (tokens seulement). */
+  .lg-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px;}
+  .lg-head-id{min-width:0;}
+  .lgc-open{flex:none; position:relative; display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 16px; margin-top:2px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:var(--ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer;}
+  .lgc-open:hover{border-color:var(--amber);}
+  .lgc-open svg{color:var(--amber);}
+  .lgc-badge{position:absolute; top:-6px; right:-6px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; background:var(--danger); color:#fff; font-size:11px; font-weight:800; line-height:20px; text-align:center; font-variant-numeric:tabular-nums; box-shadow:0 0 0 2px var(--bg, #0b1220);}
+  .lgc-badge[hidden]{display:none;}
+  html.lgc-lock, html.lgc-lock body{overflow:hidden;}
+  .lgc-drawer{position:fixed; inset:0; z-index:900; --display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-size:14px;}
+  .lgc-drawer[hidden]{display:none;}
+  .lgc-backdrop{position:absolute; inset:0; background:rgba(4,8,16,.55);}
+  html[data-theme="light"] .lgc-backdrop{background:rgba(20,32,51,.28);}
+  .lgc{position:absolute; top:0; right:0; bottom:0; width:min(420px, 100%); display:flex; flex-direction:column; min-width:0; overflow:hidden; background:var(--panel); color:var(--ink); border-left:1px solid var(--line); box-shadow:-24px 0 60px -30px rgba(0,0,0,.6); padding-top:16px; padding-bottom:env(safe-area-inset-bottom, 0px); animation:lgc-in .18s ease-out;}
+  .lgc:focus{outline:none;}
+  @keyframes lgc-in{from{transform:translateX(24px); opacity:0;} to{transform:none; opacity:1;}}
+  @media (prefers-reduced-motion: reduce){ .lgc{animation:none;} }
+  .lgc > *{padding-left:18px; padding-right:18px;}
   .lgc [hidden]{display:none !important;}
-  .lgc-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; padding-bottom:4px;}
-  .lgc-head h2{font-family:var(--display); font-size:20px; font-weight:800; margin:0;}
+  .lgc-head{display:flex; align-items:center; gap:10px; padding-bottom:6px;}
+  .lgc-head h2{font-family:var(--display); font-size:20px; font-weight:800; margin:0; color:var(--ink);}
   .lgc-meta{font-size:12px; color:var(--ink-faint); display:inline-flex; align-items:center; gap:6px;}
   .lgc-meta::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--ok);}
-  .lgc-list{max-height:460px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; padding-top:10px; padding-bottom:8px; scrollbar-width:thin; overscroll-behavior:contain; -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 18px); mask-image:linear-gradient(to bottom, transparent 0, #000 18px);}
+  .lgc-close{margin-left:auto; flex:none; width:36px; height:36px; border-radius:50%; border:0; background:var(--panel-2); color:var(--ink-dim); display:grid; place-items:center; cursor:pointer;}
+  .lgc-close:hover{color:var(--ink);}
+  .lgc button:focus-visible, .lgc-open:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  .lgc-list{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:2px; padding-top:10px; padding-bottom:8px; scrollbar-width:thin; overscroll-behavior:contain; -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 14px); mask-image:linear-gradient(to bottom, transparent 0, #000 14px);}
+  .lgc-new{display:flex; align-items:center; gap:10px; margin:8px 0 4px; font-size:11px; font-weight:800; color:var(--danger);}
+  .lgc-new::before, .lgc-new::after{content:""; flex:1; border-top:1px solid var(--danger); opacity:.5;}
+  @media (max-width:640px){
+    .lgc{width:100%; border-left:0; padding-top:max(12px, env(safe-area-inset-top, 0px));}
+    .lgc > *{padding-left:14px; padding-right:14px;}
+    .lg-head h1{font-size:32px;}
+    .lgc-open{height:36px; padding:0 12px; font-size:13px;}
+  }
   .lgc-day{align-self:center; font-size:11px; font-weight:700; color:var(--ink-faint); margin:10px 0 4px;}
   .lgc-msg{position:relative; padding:6px 8px; margin:0 -8px; border-radius:10px;}
   .lgc-msg:hover{background:var(--panel-2);}
@@ -3556,7 +3583,6 @@
   @container lgpage (max-width:960px){
     .lg-top{grid-template-columns:minmax(0,1fr);}
     .lg-side{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start;}
-    .lg-side .lgc{grid-column:1 / -1;}
     .lg-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
   @container lgpage (max-width:640px){
@@ -3570,8 +3596,6 @@
     .lg-f{width:20px; height:20px; font-size:10.5px;} .lg-form .lg-f:nth-last-child(n+4){display:none;}
     .lg-panel{padding:14px 12px;}
     .lg-chips{grid-template-columns:repeat(3,minmax(0,1fr));}
-    .lg-panel.lgc{padding:14px 0 0;} .lgc > *{padding-left:12px; padding-right:12px;}
-    .lgc-list{max-height:380px;}
   }
   .stats-leader-expand-btn{display:block; width:100%; margin-top:10px; background:none; border:none; border-top:1px dashed var(--line); padding-top:8px; color:var(--amber); font-size:11.5px; cursor:pointer; text-align:center;}
   .stats-leader-expand-btn:hover{text-decoration:underline;}
@@ -6242,7 +6266,7 @@
   /* Barre du bas (mobile, voir assets/mobile/mobile.js) : pastille sur
      « Menu » quand un message attend, la Messagerie étant dans le tiroir. */
   #mTabMenu{position:relative;}
-  #mTabMenu.msg-has-unread::after{content:""; position:absolute; top:6px; left:calc(50% + 8px); width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 0 2px var(--panel);}
+  #mTabMenu.msg-has-unread::after, #mTabMenu.lgc-has-unread::after{content:""; position:absolute; top:6px; left:calc(50% + 8px); width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 0 2px var(--panel);}
   @media(max-width:760px){
     .msg-layout{grid-template-columns:1fr; min-height:0;}
     .msg-layout.has-thread .msg-col-list{display:none;}
@@ -6523,7 +6547,7 @@
     <div class="sidebar-section">
       <div class="sidebar-section-label">Compétitions</div>
       <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-label">Calendrier</span></button>
-      <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-label">Ligue</span></button>
+      <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-label">Ligue</span><span class="sidebar-badge sidebar-badge--alert hidden" id="ligueChatBadge" title="Nouveaux messages dans le chat de la ligue"></span></button>
       <button class="tab-btn sidebar-link" data-tab="coupe"><span class="sidebar-label">Coupe</span></button>
       <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-label">Matchs amicaux</span><span class="sidebar-badge hidden" id="amicauxBadge"></span></button>
       <button class="tab-btn sidebar-link" data-tab="lp"><span class="sidebar-label">Ligues privées</span></button>
@@ -25776,13 +25800,8 @@ function lgLastRoundResultsHtml() {
 
 function renderLeagueTop() {
   const table = league.standings();
-  // Le chat de la ligue a son propre nœud (voir lgcMount) : mis de côté le
-  // temps de réécrire la page, puis remis en place tel quel (saisie en
-  // cours, défilement et fil conservés, aucun nouvel appel réseau).
-  const chat = document.getElementById("leagueChat");
-  if (chat) chat.remove();
   document.getElementById("standingsContent").innerHTML =
-    `<div class="lg-head"><h1>Ligue</h1><span class="lg-comp">${leagueCountryHtml()} · ${escapeHtml(leagueCompetitionLabel())}</span></div>` /* "Journée N sur 18 · 10 équipes" retiré (retour utilisateur 2026-09-26) */ +
+    `<div class="lg-head"><div class="lg-head-id"><h1>Ligue</h1><span class="lg-comp">${leagueCountryHtml()} · ${escapeHtml(leagueCompetitionLabel())}</span></div>${lgcOpenButtonHtml()}</div>` /* "Journée N sur 18 · 10 équipes" retiré (retour utilisateur 2026-09-26) */ +
     `<div class="lg-top">` +
       `<section class="lg-panel" aria-labelledby="lgStandingsTitle">` +
         `<div class="lg-panel-title"><h2 id="lgStandingsTitle">Classement</h2><span>Victoire 2 pts · Défaite 1 pt</span></div>` +
@@ -25790,7 +25809,6 @@ function renderLeagueTop() {
       `</section>` +
       `<div class="lg-side">${lgRaceCardHtml(table)}${lgMvpCardHtml()}</div>` +
     `</div>` + lgLastRoundResultsHtml();
-  lgcMount(chat);
 }
 
 function showStandings() {
@@ -25799,7 +25817,6 @@ function showStandings() {
   renderLeagueStatsPanel();
   showPage("standingsSection");
   setActiveTab("ligue");
-  window.__lastLeagueChat = lgcRefresh();
 }
 
 // ---------------------------------------------------------------------
@@ -25807,33 +25824,60 @@ function showStandings() {
 // compétition de BuzzerBeater, « en plus moderne ». Fil public des managers
 // humains du championnat + messages automatiques du serveur (Résultat,
 // Transfert, Classement : voir server/leagueChat.js), réactions rapides.
-// Rendu dans son propre nœud #leagueChat (colonne de droite de la page
-// Ligue sur PC, sous le classement sur mobile), jamais en re-rendant toute
-// la page. Rafraîchi à l'ouverture de l'onglet puis toutes les 15 s, et
-// seulement tant que la page Ligue est affichée et l'onglet du navigateur
-// visible. Seul manager de sa ligue : lecture seule (messages automatiques)
-// avec une note. Pas de liste des managers en tête (retour utilisateur
-// 2026-09-30) : le nom de l'auteur figure sur chaque message. Les textes
-// des managers portent data-no-i18n.
+// S'ouvre PAR-DESSUS la page (retour utilisateur 2026-09-30 : plus de
+// panneau dans la page Ligue, qui laissait un vide) depuis le bouton
+// « Chat de la ligue » en haut à droite de la page Ligue : tiroir à droite
+// sur PC, plein écran sur mobile ; ✕, Échap ou clic sur le fond pour
+// fermer, focus rendu au bouton. Pastille rouge de non-lus (messages des
+// autres managers ET messages automatiques plus récents que la dernière
+// ouverture, repère stocké côté serveur : suit le manager d'un appareil à
+// l'autre) sur ce bouton et sur l'entrée « Ligue » du menu. Sondage léger
+// (?summary=1) toutes les 45 s depuis n'importe quelle page, fil complet
+// toutes les 15 s tant que le tiroir est ouvert ; jamais onglet caché.
+// Seul manager de sa ligue : lecture seule avec une note. Pas de liste des
+// managers en tête : le nom de l'auteur figure sur chaque message. Les
+// textes des managers portent data-no-i18n.
 // ---------------------------------------------------------------------
 const LGC_POLL_MS = 15000;
+const LGC_COUNT_POLL_MS = 45000;
 const LGC_KIND_LABELS = { result: "Résultat", transfer: "Transfert", standings: "Classement" };
-const lgcUi = { data: null, sig: "", sending: false, error: "", pickFor: null, loading: null };
+const lgcUi = { data: null, sig: "", sending: false, error: "", pickFor: null, loading: null, open: false, unread: 0, returnFocus: null, marking: null };
 
-function lgcPageVisible() {
-  const el = document.getElementById("standingsSection");
-  return !!el && !el.classList.contains("hidden");
+function lgcBadgeText(n) { return n > 9 ? "9+" : String(n); }
+
+function lgcOpenButtonHtml() {
+  const n = lgcUi.unread;
+  return `<button type="button" class="lgc-open" id="lgcOpenBtn" aria-haspopup="dialog" aria-controls="leagueChatDrawer">` +
+    `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.1A8 8 0 1 1 20 12Z"/></svg>` +
+    `<span>Chat de la ligue</span>` +
+    `<span class="lgc-badge" id="lgcOpenBadge"${n ? "" : " hidden"} aria-label="${n} non lu${n > 1 ? "s" : ""}">${lgcBadgeText(n)}</span></button>`;
 }
 
-function lgcHolder() {
-  let el = document.getElementById("leagueChat");
+// Pastilles : bouton de la page Ligue, entrée « Ligue » du menu, point sur
+// « Menu » (barre du bas, mobile).
+function lgcUpdateBadges() {
+  const n = lgcUi.unread;
+  const b = document.getElementById("lgcOpenBadge");
+  if (b) { b.hidden = !n; b.textContent = lgcBadgeText(n); b.setAttribute("aria-label", `${n} non lu${n > 1 ? "s" : ""}`); }
+  const side = document.getElementById("ligueChatBadge");
+  if (side) { side.textContent = lgcBadgeText(n); side.classList.toggle("hidden", !n); }
+  const menuBtn = document.getElementById("mTabMenu");
+  if (menuBtn) menuBtn.classList.toggle("lgc-has-unread", !!n);
+}
+
+function lgcDrawer() {
+  let el = document.getElementById("leagueChatDrawer");
   if (el) return el;
-  el = document.createElement("section");
-  el.id = "leagueChat";
-  el.className = "lg-panel lgc";
-  el.setAttribute("aria-labelledby", "lgcTitle");
+  el = document.createElement("div");
+  el.id = "leagueChatDrawer";
+  el.className = "lgc-drawer";
+  el.hidden = true;
   el.innerHTML =
-    `<div class="lgc-head"><h2 id="lgcTitle">Chat de la ligue</h2><span class="lgc-meta" id="lgcMeta" hidden></span></div>` +
+    `<div class="lgc-backdrop" data-lgc-close></div>` +
+    `<section id="leagueChat" class="lgc" role="dialog" aria-modal="true" aria-labelledby="lgcTitle" tabindex="-1">` +
+    `<div class="lgc-head"><h2 id="lgcTitle">Chat de la ligue</h2><span class="lgc-meta" id="lgcMeta" hidden></span>` +
+      `<button type="button" class="lgc-close" id="lgcClose" data-lgc-close aria-label="Fermer le chat">` +
+        `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>` +
     `<div class="lgc-list" id="lgcList" role="log" aria-live="polite" aria-label="Messages du chat de la ligue"><p class="lgc-empty">Chargement du chat…</p></div>` +
     `<p class="lgc-note" id="lgcNote" hidden></p>` +
     `<form class="lgc-form" id="lgcForm" hidden autocomplete="off">` +
@@ -25844,19 +25888,10 @@ function lgcHolder() {
         `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m12 5 7 7-7 7"/></svg>` +
       `</button>` +
     `</form>` +
-    `<p class="lgc-err" id="lgcErr" role="alert"></p>`;
+    `<p class="lgc-err" id="lgcErr" role="alert"></p>` +
+    `</section>`;
+  document.body.appendChild(el);
   return el;
-}
-
-// Place le chat dans la colonne latérale, juste après « Ta course… ».
-function lgcMount(existing) {
-  const side = document.querySelector("#standingsContent .lg-side");
-  if (!side) return;
-  const el = existing || lgcHolder();
-  const race = side.querySelector(".lg-race");
-  if (race && race.nextSibling) side.insertBefore(el, race.nextSibling);
-  else side.appendChild(el);
-  if (lgcUi.data && !existing) lgcRender();
 }
 
 async function lgcApi(method, url, body) {
@@ -25871,24 +25906,89 @@ async function lgcApi(method, url, body) {
 
 // Re-rendu seulement si la réponse a changé (sondage toutes les 15 s).
 function lgcSetData(data) {
-  const sig = JSON.stringify(data);
+  lgcUi.unread = data.unreadCount || 0;
+  lgcUpdateBadges();
+  const sig = JSON.stringify({ ...data, unreadCount: 0, lastReadId: 0 });
   if (sig === lgcUi.sig) return;
   lgcUi.sig = sig;
   lgcUi.data = data;
   lgcRender();
 }
 
+// Tiroir ouvert : tout ce qui est affiché est lu (repère côté serveur).
+async function lgcMarkRead() {
+  const data = lgcUi.data;
+  if (!lgcUi.open || !data || !data.messages.length) return;
+  const upTo = Math.max(...data.messages.map(m => m.id));
+  if (upTo <= (data.lastReadId || 0) && !lgcUi.unread) return;
+  try {
+    const r = await lgcApi("POST", "/api/league-chat/read", { upTo });
+    data.lastReadId = r.lastReadId;
+    lgcUi.unread = r.unreadCount || 0;
+    lgcUpdateBadges();
+  } catch (e) { /* hors ligne : réessayé au prochain rafraîchissement */ }
+}
+
 async function lgcRefresh() {
-  if (!managerToken || !document.getElementById("leagueChat")) return;
+  if (!managerToken) return;
   if (lgcUi.loading) return lgcUi.loading;
   lgcUi.loading = (async () => {
-    try { lgcSetData(await lgcApi("GET", "/api/league-chat")); }
-    catch (e) {
+    try {
+      lgcSetData(await lgcApi("GET", "/api/league-chat"));
+      await lgcMarkRead();
+    } catch (e) {
       const list = document.getElementById("lgcList");
       if (!lgcUi.data && list) list.innerHTML = `<p class="lgc-empty">${escapeHtml(e.message)}</p>`;
     } finally { lgcUi.loading = null; }
   })();
   return lgcUi.loading;
+}
+
+// Juste le nombre de non-lus (depuis n'importe quelle page).
+async function lgcRefreshCount() {
+  if (!managerToken) return;
+  try {
+    const r = await lgcApi("GET", "/api/league-chat?summary=1");
+    lgcUi.unread = r.unreadCount || 0;
+    lgcUpdateBadges();
+  } catch (e) { /* hors ligne : dernier état connu */ }
+}
+
+function lgcOpen() {
+  const el = lgcDrawer();
+  if (lgcUi.open) return lgcUi.loading || Promise.resolve();
+  lgcUi.open = true;
+  lgcUi.returnFocus = document.activeElement;
+  el.hidden = false;
+  delete document.getElementById("lgcList").dataset.rendered; // rouvert : on repart du bas
+  document.documentElement.classList.add("lgc-lock");
+  const btn = document.getElementById("lgcOpenBtn");
+  if (btn) btn.setAttribute("aria-expanded", "true");
+  if (lgcUi.data) lgcRender();
+  lgcFocusInside();
+  return lgcRefresh().then(() => { if (lgcUi.open && !document.getElementById("leagueChat").contains(document.activeElement)) lgcFocusInside(); });
+}
+
+function lgcFocusInside() {
+  const input = document.getElementById("lgcInput");
+  const form = document.getElementById("lgcForm");
+  const target = input && form && !form.hidden ? input : document.getElementById("lgcClose");
+  try { target.focus({ preventScroll: true }); } catch (e) { target.focus(); }
+}
+
+function lgcClose() {
+  const el = document.getElementById("leagueChatDrawer");
+  if (!el || !lgcUi.open) return;
+  lgcUi.open = false;
+  lgcUi.pickFor = null;
+  el.hidden = true;
+  document.documentElement.classList.remove("lgc-lock");
+  const btn = document.getElementById("lgcOpenBtn");
+  if (btn) btn.setAttribute("aria-expanded", "false");
+  // Focus rendu à l'élément d'origine (ou au bouton s'il a été re-rendu).
+  const back = lgcUi.returnFocus && document.contains(lgcUi.returnFocus) ? lgcUi.returnFocus : btn;
+  lgcUi.returnFocus = null;
+  if (back && back.focus) back.focus();
 }
 
 // Texte d'un message automatique (noms en gras, votre club en ambre). Les
@@ -25937,22 +26037,27 @@ function lgcRender() {
   const list = document.getElementById("lgcList");
   const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
   const firstRender = !list.dataset.rendered;
+  // Séparateur « Nouveaux » avant le premier message non lu.
+  const lastRead = data.lastReadId || 0;
+  let newShown = false;
   let html = "";
   let lastDay = "";
   data.messages.forEach(m => {
     const day = msgDayLabel(m.at);
     if (day !== lastDay) { html += `<div class="lgc-day">${escapeHtml(day)}</div>`; lastDay = day; }
+    if (!newShown && lastRead && m.id > lastRead && !m.mine && data.unreadCount) { html += `<div class="lgc-new"><span>Nouveaux</span></div>`; newShown = true; }
     const time = `<time class="lgc-time" datetime="${new Date(m.at).toISOString()}">${escapeHtml(msgFormatTime(m.at))}</time>`;
+    const picking = lgcUi.pickFor === m.id ? " picking" : "";
     if (m.kind === "user") {
       const idx = m.author && m.author.teamIndex;
       const team = typeof idx === "number" && league && league.teams ? league.teams[idx] : null;
-      html += `<div class="lgc-msg${m.mine ? " mine" : ""}${lgcUi.pickFor === m.id ? " picking" : ""}" data-lgc-id="${m.id}">` +
+      html += `<div class="lgc-msg${m.mine ? " mine" : ""}${picking}" data-lgc-id="${m.id}">` +
         `<div class="lgc-by"><span class="lgc-logo">${team ? teamLogoHtml(team, 18) : ""}</span>` +
         `<b data-no-i18n>${escapeHtml((m.author && m.author.club) || "?")}</b>` +
         (m.author && m.author.name ? `<small data-no-i18n>${escapeHtml(m.author.name)}</small>` : "") + time + `</div>` +
         `<p class="lgc-text" data-no-i18n>${escapeHtml(m.text)}</p>` + lgcReactionsHtml(m) + `</div>`;
     } else {
-      html += `<div class="lgc-sys lgc-sys--${escapeHtml(m.kind)}${lgcUi.pickFor === m.id ? " picking" : ""}" data-lgc-id="${m.id}">` +
+      html += `<div class="lgc-sys lgc-sys--${escapeHtml(m.kind)}${picking}" data-lgc-id="${m.id}">` +
         `<div class="lgc-sys-top"><span class="lgc-kind">${LGC_KIND_LABELS[m.kind] || ""}</span>${time}</div>` +
         `<p class="lgc-sys-text">${lgcSystemHtml(m)}</p>` + lgcReactionsHtml(m) + `</div>`;
     }
@@ -25962,8 +26067,15 @@ function lgcRender() {
   }
   const prevTop = list.scrollTop;
   list.innerHTML = html;
-  list.dataset.rendered = "1";
-  list.scrollTop = firstRender || nearBottom ? list.scrollHeight : prevTop;
+  if (lgcUi.open) list.dataset.rendered = "1";
+  const stick = firstRender || nearBottom;
+  list.scrollTop = stick ? list.scrollHeight : prevTop;
+  // Logos chargés après coup : on reste collé en bas.
+  if (stick) {
+    const toBottom = () => { list.scrollTop = list.scrollHeight; };
+    list.querySelectorAll("img").forEach(img => { if (!img.complete) img.addEventListener("load", toBottom, { once: true }); });
+    if (window.requestAnimationFrame) window.requestAnimationFrame(toBottom);
+  }
 
   const note = document.getElementById("lgcNote");
   note.hidden = !!data.canPost;
@@ -26003,6 +26115,7 @@ async function lgcSend() {
     const list = document.getElementById("lgcList");
     if (list) list.scrollTop = list.scrollHeight; // son propre message : toujours visible
     lgcSetData(data);
+    await lgcMarkRead();
   } catch (e) {
     lgcUi.error = e.message;
   } finally {
@@ -26018,6 +26131,7 @@ async function lgcReact(id, emoji) {
   lgcUi.error = "";
   try {
     lgcSetData(await lgcApi("POST", "/api/league-chat/react", { id, emoji }));
+    await lgcMarkRead();
   } catch (e) {
     lgcUi.error = e.message;
   }
@@ -26026,15 +26140,16 @@ async function lgcReact(id, emoji) {
 
 (function initLeagueChat() {
   document.addEventListener("click", (e) => {
-    const root = e.target.closest && e.target.closest("#leagueChat");
-    if (!root) {
-      if (lgcUi.pickFor != null) { lgcUi.pickFor = null; lgcRender(); }
-      return;
-    }
+    if (!e.target.closest) return;
+    if (e.target.closest("#lgcOpenBtn")) { window.__lastLeagueChat = lgcOpen(); return; }
+    if (e.target.closest("[data-lgc-close]")) { lgcClose(); return; }
+    const root = e.target.closest("#leagueChat");
+    if (!root) return;
     const r = e.target.closest("[data-lgc-react]");
     if (r) { window.__lastLeagueChat = lgcReact(Number(r.dataset.lgcReact), r.dataset.emoji); return; }
     const p = e.target.closest("[data-lgc-pick]");
-    if (p) { const id = Number(p.dataset.lgcPick); lgcUi.pickFor = lgcUi.pickFor === id ? null : id; lgcRender(); }
+    if (p) { const id = Number(p.dataset.lgcPick); lgcUi.pickFor = lgcUi.pickFor === id ? null : id; lgcRender(); return; }
+    if (lgcUi.pickFor != null && !e.target.closest(".lgc-pick")) { lgcUi.pickFor = null; lgcRender(); }
   });
   document.addEventListener("submit", (e) => {
     if (e.target && e.target.id === "lgcForm") { e.preventDefault(); window.__lastLeagueChat = lgcSend(); }
@@ -26046,15 +26161,38 @@ async function lgcReact(id, emoji) {
     }
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && lgcUi.pickFor != null) { lgcUi.pickFor = null; lgcRender(); }
+    if (!lgcUi.open) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      if (lgcUi.pickFor != null) { lgcUi.pickFor = null; lgcRender(); } else lgcClose();
+      return;
+    }
+    // Focus gardé dans le tiroir (fenêtre modale).
+    if (e.key === "Tab") {
+      const dlg = document.getElementById("leagueChat");
+      const items = [...dlg.querySelectorAll("button:not([disabled]), input, [tabindex]:not([tabindex='-1'])")].filter(x => !x.closest("[hidden]"));
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !dlg.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (document.activeElement === last || !dlg.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+    }
   });
-  const tick = () => {
-    if (!managerToken || document.visibilityState === "hidden" || !lgcPageVisible()) return;
-    if (lgcUi.sending || lgcUi.pickFor != null) return; // ne pas fermer un menu ouvert sous le doigt
-    lgcRefresh();
+  if (!managerToken) return;
+  // Tiroir ouvert : fil complet toutes les 15 s ; sinon, juste le compteur
+  // toutes les 45 s. Jamais quand l'onglet du navigateur est caché.
+  let lastCountAt = 0;
+  const tick = (force) => {
+    if (document.visibilityState === "hidden") return;
+    if (lgcUi.open) {
+      if (!lgcUi.sending && lgcUi.pickFor == null) lgcRefresh(); // ne pas fermer un menu ouvert sous le doigt
+    } else if (force || Date.now() - lastCountAt >= LGC_COUNT_POLL_MS - 500) {
+      lastCountAt = Date.now();
+      window.__lastLeagueChatCount = lgcRefreshCount();
+    }
   };
-  setInterval(tick, LGC_POLL_MS);
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") tick(); });
+  setInterval(() => tick(false), LGC_POLL_MS);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") tick(true); });
+  tick(true);
 })();
 
 // ---------------------------------------------------------------------

@@ -130,6 +130,31 @@ async function main() {
     r = await react(M.Lyon.h, resId, "👏");
     check(r.status === 200 && r.body.messages.find(x => x.id === resId).reactions[0].emoji === "👏", "on peut réagir à un message automatique");
 
+    // --- Non-lus + repère de lecture (côté serveur, par manager).
+    const readChat = (h, upTo) => request(server, "POST", "/api/league-chat/read", upTo === undefined ? {} : { upTo }, h);
+    const summary = h => request(server, "GET", "/api/league-chat?summary=1", undefined, h);
+    r = await get(M.Paris.h);
+    const expectedParis = r.body.messages.filter(x => !(x.kind === "user" && x.mine)).length;
+    check(r.body.unreadCount === expectedParis && r.body.lastReadId === 0, `Paris : ${expectedParis} non-lus (messages des autres + automatiques, pas les siens)`);
+    let s = await summary(M.Paris.h);
+    check(s.status === 200 && s.body.unreadCount === expectedParis && !s.body.messages, "?summary=1 : juste le nombre de non-lus");
+    const lastId = Math.max(...r.body.messages.map(x => x.id)); // ids croissants, pas forcément dans l'ordre d'affichage
+    s = await readChat(M.Paris.h, lastId);
+    check(s.status === 200 && s.body.unreadCount === 0 && s.body.lastReadId === lastId, "Paris ouvre le chat : 0 non-lu");
+    s = await readChat(M.Paris.h, 1);
+    check(s.body.lastReadId === lastId, "le repère de lecture ne recule jamais");
+    now += 4000;
+    await send(M.Lyon.h, "Nouveau message de Lyon");
+    s = await summary(M.Paris.h);
+    check(s.body.unreadCount === 1, "un nouveau message de Lyon : 1 non-lu pour Paris");
+    await readChat(M.Lyon.h);
+    now += 4000;
+    await send(M.Lyon.h, "Et un autre");
+    s = await summary(M.Lyon.h);
+    check(s.body.unreadCount === 0, "ses propres messages ne comptent jamais");
+    s = await summary(M.Nice.h);
+    check(s.body.unreadCount > 0, "le repère est propre à chaque manager (Nice n'a rien lu)");
+
     // --- Cloisonnement : un manager d'un autre championnat ne voit rien.
     const world = await World.loadWorld(multiSavePath, now);
     const us = await World.assignClub(world, multiSavePath, { country: "us", clubName: "Club US", now });
@@ -150,7 +175,8 @@ async function main() {
     await new Promise(res => server2.listen(0, "127.0.0.1", res));
     try {
       r = await request(server2, "GET", "/api/league-chat", undefined, M.Paris.h);
-      check(r.body.messages.filter(x => x.kind === "user").length === 3 && r.body.messages.filter(x => x.kind === "result").length === 15, "l'historique survit au redémarrage du serveur");
+      check(r.body.messages.filter(x => x.kind === "user").length === 5 && r.body.messages.filter(x => x.kind === "result").length === 15, "l'historique survit au redémarrage du serveur");
+      check(r.body.unreadCount === 2 && r.body.lastReadId > 0, "le repère de lecture aussi (Paris : 2 non-lus)");
     } finally { server2.close(); }
 
     // --- Le chat ne réécrit jamais la ligue.

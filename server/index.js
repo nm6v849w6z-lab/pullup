@@ -1951,19 +1951,22 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
-      // Chat de la ligue (voir server/leagueChat.js) : GET le fil, POST
-      // /send { text }, POST /react { id, emoji }. Comme la messagerie, ne
+      // Chat de la ligue (voir server/leagueChat.js) : GET le fil (?summary=1
+      // : seulement le nombre de non-lus), POST /send { text }, POST /react
+      // { id, emoji }, POST /read { upTo }. Comme la messagerie, ne
       // rattrape ni ne réécrit la ligue (stockage à part).
       if (route.pathname === "/api/league-chat" || route.pathname.startsWith("/api/league-chat/")) {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
         let out = null;
         try {
-          if (req.method === "GET" && route.pathname === "/api/league-chat") out = await leagueChat.view(ctx, now);
-          else if (req.method === "POST" && (route.pathname === "/api/league-chat/send" || route.pathname === "/api/league-chat/react")) {
+          if (req.method === "GET" && route.pathname === "/api/league-chat") out = await leagueChat.view(ctx, now, route.searchParams.get("summary") === "1");
+          else if (req.method === "POST" && ["/api/league-chat/send", "/api/league-chat/react", "/api/league-chat/read"].includes(route.pathname)) {
             let body;
             try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
-            out = route.pathname === "/api/league-chat/send" ? await leagueChat.send(ctx, body, now) : await leagueChat.react(ctx, body, now);
+            if (route.pathname === "/api/league-chat/send") out = await leagueChat.send(ctx, body, now);
+            else if (route.pathname === "/api/league-chat/react") out = await leagueChat.react(ctx, body, now);
+            else out = await leagueChat.markRead(ctx, body, now);
           }
         } catch (e) {
           sendJson(res, 503, { ok: false, error: `Chat momentanément indisponible (${e.message}).` });

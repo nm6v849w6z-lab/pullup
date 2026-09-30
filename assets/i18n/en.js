@@ -5083,4 +5083,9 @@ window.HM_I18N_EN = {
   "Vous êtes le seul manager de cette ligue pour l'instant.": "You are the only manager in this league for now.",
   "Doucement : un message toutes les 3 secondes.": "Easy: one message every 3 seconds.",
   "Réaction inconnue.": "Unknown reaction.",
+  "Fermer le chat": "Close chat",
+  "Nouveaux": "New",
+  "Nouveaux messages dans le chat de la ligue": "New messages in the league chat",
+  "{0} non lu": "{0} unread",
+  "{0} non lus": "{0} unread",
 };

@@ -22,7 +22,10 @@
 //     (pas à l'instant de la lecture). Les résultats n'existent dans
 //     league.results qu'une fois la diffusion terminée : aucun spoiler.
 //   - réactions rapides (jeu fixe d'émojis), une par manager et par émoji,
-//     en bascule.
+//     en bascule ;
+//   - non-lus : repère de lecture par manager (`reads`, identifiant du
+//     dernier message vu, POST /api/league-chat/read) → `unreadCount` dans
+//     chaque réponse, ou seul avec GET ?summary=1 (pastilles du navigateur).
 //
 // Stockage SÉPARÉ de la ligue (store.loadLeagueChat/saveLeagueChat : un
 // fichier/une clé Redis par championnat) : écrire dans le chat ne réécrit
@@ -73,14 +76,30 @@ const lastSend = new Map();
 function _resetForTests() { lastSend.clear(); presence.clear(); }
 
 function emptyChat() {
-  return { version: CHAT_VERSION, nextId: 1, messages: [], system: [], sync: null };
+  return { version: CHAT_VERSION, nextId: 1, messages: [], system: [], sync: null, reads: {} };
 }
 function normalizeChat(data) {
   if (!data || data.version !== CHAT_VERSION) return emptyChat();
   data.messages = Array.isArray(data.messages) ? data.messages : [];
   data.system = Array.isArray(data.system) ? data.system : [];
   data.nextId = Number.isInteger(data.nextId) && data.nextId > 0 ? data.nextId : 1;
+  data.reads = data.reads && typeof data.reads === "object" ? data.reads : {};
   return data;
+}
+
+// Non-lus (badge du bouton « Chat de la ligue » et de l'entrée « Ligue ») :
+// messages d'autres managers ET messages automatiques plus récents que le
+// dernier message vu par ce manager. Repère = identifiant (croissant dans
+// un chat), pas l'horodatage : un message automatique peut être daté de la
+// fin d'un match plus ancien que le dernier message lu. Stocké côté
+// serveur (`reads`, par empreinte) pour suivre le manager d'un appareil à
+// l'autre. Ses propres messages ne comptent jamais.
+function unreadCount(chat, me) {
+  const lastRead = Number(chat.reads[me]) || 0;
+  let n = 0;
+  chat.messages.forEach(m => { if (m.id > lastRead && m.from !== me) n++; });
+  chat.system.forEach(m => { if (m.id > lastRead) n++; });
+  return n;
 }
 
 function humans(league) {
@@ -244,6 +263,8 @@ function chatView(chat, league, me, now, names) {
     aiCount: league.teams.length - hs.length,
     online: managers.filter(m => m.online).length,
     canPost: hs.length >= 2,
+    unreadCount: unreadCount(chat, me),
+    lastReadId: Number(chat.reads[me]) || 0,
     maxLength: MAX_TEXT_LENGTH,
     reactions: REACTIONS,
     messages: merged,
@@ -281,11 +302,34 @@ function createService(savePath, opts = {}) {
   }
 
   return {
-    async view(ctx, now) {
+    // `summaryOnly` : juste le nombre de non-lus (sondage depuis n'importe
+    // quelle page, réponse minuscule).
+    async view(ctx, now, summaryOnly = false) {
       const me = meOf(ctx);
       if (!me) return { status: 403, body: { ok: false, error: "Réservé aux managers de la ligue." } };
       const chat = await withLock(() => loadSynced(ctx, now));
+      if (summaryOnly) return { status: 200, body: { ok: true, unreadCount: unreadCount(chat, me) } };
       return { status: 200, body: chatView(chat, ctx.league, me, now, await names()) };
+    },
+
+    // Chat ouvert : tout ce qui a été affiché (jusqu'à `upTo`, identifiant
+    // du dernier message rendu) est lu. Jamais en arrière.
+    async markRead(ctx, body, now) {
+      const me = meOf(ctx);
+      if (!me) return { status: 403, body: { ok: false, error: "Réservé aux managers de la ligue." } };
+      const id = ctx.leagueId || ctx.league.leagueId;
+      const chat = await withLock(async () => {
+        const c = await loadSynced(ctx, now);
+        const maxId = c.nextId - 1;
+        const upTo = Number(body && body.upTo);
+        const target = Number.isFinite(upTo) && upTo > 0 ? Math.min(Math.floor(upTo), maxId) : maxId;
+        if (target > (Number(c.reads[me]) || 0)) {
+          c.reads[me] = target;
+          await save(id, c);
+        }
+        return c;
+      });
+      return { status: 200, body: { ok: true, unreadCount: unreadCount(chat, me), lastReadId: Number(chat.reads[me]) || 0 } };
     },
 
     async send(ctx, body, now) {
