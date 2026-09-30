@@ -53,8 +53,29 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     `/api/world/country`.
   - Ligue : résultats de la journée sur une seule ligne. Fiche joueur :
     boutons sous la note. Centre de formation 100 % national.
-  - Tests connus en échec sans rapport : private_league_ui_test.js (échoue
-    aussi avant ce lot).
+  - Suite du lot (2026-09-30) : Italie (Division I, inscription, divisions
+    automatiques au-delà de MAX_HUMANS_PER_LEAGUE = 10, tous pays) ;
+    traduction italienne (assets/i18n/it.js, `node scripts/i18n_missing.js it`
+    liste les clés manquantes après chaque ajout de texte) ; page Ligue
+    réelle des autres championnats (`/api/world/league-page`) et fiche joueur
+    étrangère (`/api/world/player-page`), filtrées par server/publicPlayers.js ;
+    Ordres en grille 2 × 2, terrain aux cotes FIBA ; All-Star Game en bas de
+    la page Ligue, récompenses retirées de l'Histoire du club ; profil du
+    manager (#managerProfileSection, avatar en haut à droite) et pseudo
+    (Team.managerPseudo, `/api/manager/set-pseudo`, Paramètres › Mon compte) ;
+    bouton « Identité du club » du tableau de bord retiré.
+  - Tests réparés : private_league_ui_test.js (dépendait du fuseau horaire),
+    visibility_refresh_test.js (pause fixe de 300 ms), world_country_test.js
+    (adversaire d'un record de coupe en 1re saison, corrigé dans world.js).
+
+- **🔴 À FAIRE — caractéristiques des adversaires de SA ligue envoyées au
+  navigateur** (`/api/save`) : potentiel, motivation, académie et scouting
+  des autres clubs sont retirés (2026-09-30), mais les caractéristiques
+  brutes restent, car le niveau adverse du tableau de bord (moyenne brute),
+  le scouting progressif, Scouting Pro, le tri de l'effectif adverse et les
+  prix « joueurs similaires » du marché les calculent côté client. Il faut
+  déplacer ces calculs côté serveur ; le niveau adverse du tableau de bord
+  est une question de design (il révèle déjà une moyenne).
 
 - **🟡 CODÉ, À POUSSER (2026-09-29) — Entraînement des fondamentaux, 2e
   passe du tableau d'aptitudes** : Passe et Création de tir sans malus de
