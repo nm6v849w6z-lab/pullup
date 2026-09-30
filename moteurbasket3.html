@@ -25155,6 +25155,17 @@ const NARROW_PAGE_IDS = new Set([]);
 
 function showPage(id) {
   if (typeof hmNavSchedule === "function") hmNavSchedule();
+  // Nouvelle page : on repart du haut (retour utilisateur 2026-09-30 : sur
+  // téléphone, une fiche joueur ouverte depuis le bas d'une liste gardait
+  // le défilement, le « ← Retour » du haut restait hors de l'écran).
+  {
+    const prev = PAGE_IDS.find(pid => { const el = document.getElementById(pid); return el && !el.classList.contains("hidden"); });
+    if (prev && prev !== id) {
+      try { if (typeof window.scrollTo === "function" && !/jsdom/i.test(navigator.userAgent)) window.scrollTo(0, 0); } catch (e) { /* rien */ }
+      const sc = document.querySelector(".content-scroll");
+      if (sc) sc.scrollTop = 0;
+    }
+  }
   if (typeof updateTopbarBudget === "function") { try { updateTopbarBudget(); } catch (e) { /* équipe pas encore chargée */ } }
   // Pastille « invitations à un amical » de la barre latérale (voir
   // frUpdateBadge) : recalculée à chaque changement de page.
