@@ -385,6 +385,35 @@ async function appendReplays(leagueId, items, savePath = defaultMultiLeaguePath(
   fs.renameSync(tmp, where.file);
 }
 
+// Chat de la ligue (server/leagueChat.js) : un bloc JSON par championnat,
+// clé "pullup:leaguechat:<id>" / fichier "<multi-league>.chat.<id>.json".
+// Contrairement aux replays, une lecture en échec LÈVE une exception : on ne
+// renvoie jamais un chat vide qui serait ensuite réécrit par-dessus
+// l'historique réel. `null` = aucun chat encore pour ce championnat.
+function leagueChatStorage(leagueId, savePath) {
+  const id = leagueId || HISTORIC_LEAGUE_ID;
+  if (!/^[a-z]{2}-[0-9](\.[0-9]{1,3})?$/.test(id)) throw new Error(`Identifiant de championnat invalide : ${id}`);
+  return { redis: `${redisPrefix()}pullup:leaguechat:${id}`, file: savePath.replace(/\.json$/, "") + `.chat.${id}.json` };
+}
+async function loadLeagueChat(leagueId, savePath = defaultMultiLeaguePath()) {
+  const where = leagueChatStorage(leagueId, savePath);
+  if (upstashConfigured()) {
+    const raw = await redisGet(where.redis);
+    return raw == null ? null : JSON.parse(raw);
+  }
+  if (!fs.existsSync(where.file)) return null;
+  return JSON.parse(fs.readFileSync(where.file, "utf-8"));
+}
+async function saveLeagueChat(leagueId, data, savePath = defaultMultiLeaguePath()) {
+  const where = leagueChatStorage(leagueId, savePath);
+  const body = JSON.stringify(data);
+  if (upstashConfigured()) { await redisSet(where.redis, body); return; }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, body, "utf-8");
+  fs.renameSync(tmp, where.file);
+}
+
 // Données annexes du monde (index du marché mondial…) : une clé/fichier par
 // nom, à côté du registre — chargées seulement quand on en a besoin.
 function worldAuxStorage(name, savePath) {
@@ -561,7 +590,7 @@ module.exports = {
   resolveManagerTeam,
   // Championnats par pays (voir server/world.js) :
   HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, stampHistoricLeague, loadWorldAuxRaw, saveWorldAuxRaw,
-  loadReplays, appendReplays, REPLAYS_MAX,
+  loadReplays, appendReplays, REPLAYS_MAX, loadLeagueChat, saveLeagueChat,
   // Comptes joueurs (voir server/accounts.js) :
   defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,
   // Backend Redis (Upstash) optionnel (voir grand commentaire dédié plus

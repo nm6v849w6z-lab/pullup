@@ -11259,7 +11259,18 @@ class League {
     if (res.result === "sold") {
       listing.finalPrice = amount;
       if (seller.isHuman && buyer.isHuman) this.logHumanTransfer(seller.name, buyer.name, res.player, amount, now);
+      this.logTransferNews({ id: listing.id, at: now, playerName: res.player.name, buyerIdx, buyerName: buyer.name, sellerName: seller.name, fee: amount });
     }
+  }
+
+  // Chat de la ligue (server/leagueChat.js) : achats conclus par un club de
+  // CETTE ligue (enchère locale, ou marché mondial — voir
+  // server/worldMarket.js:resolveForeignTransfers), 40 derniers. Lu par le
+  // serveur pour écrire les messages automatiques « Transfert ».
+  logTransferNews(entry) {
+    this.transferNews = Array.isArray(this.transferNews) ? this.transferNews : [];
+    this.transferNews.push(entry);
+    if (this.transferNews.length > 40) this.transferNews = this.transferNews.slice(-40);
   }
 
   // Anti-triche (voir /api/admin/accounts/anticheat) : ventes entre deux
@@ -14347,6 +14358,7 @@ function serializeLeague(lg) {
     seasonHonoursId: lg.seasonHonoursId || null,
     allStarGame: lg.allStarGame || null,
     humanTransferLog: Array.isArray(lg.humanTransferLog) ? lg.humanTransferLog : [],
+    transferNews: Array.isArray(lg.transferNews) ? lg.transferNews : [],
     // Coupe nationale (server/nationalCup.js) : clubs de CETTE ligue encore
     // en course et tours restants, pour les amicaux (jeudis réservés).
     nationalCupAlive: lg.nationalCupAlive || null,
@@ -14459,6 +14471,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.seasonHonoursId = typeof data.seasonHonoursId === "string" ? data.seasonHonoursId : null;
   lg.allStarGame = data.allStarGame && Array.isArray(data.allStarGame.teams) ? data.allStarGame : null;
   lg.humanTransferLog = Array.isArray(data.humanTransferLog) ? data.humanTransferLog : [];
+  lg.transferNews = Array.isArray(data.transferNews) ? data.transferNews : [];
   lg.nationalCupAlive = data.nationalCupAlive && Array.isArray(data.nationalCupAlive.teams) ? data.nationalCupAlive : null;
   // Ancienne sauvegarde sans pyramide de divisions (avant l'ajout de la
   // montée/descente) : un club "pas encore attribué" prend la place la plus

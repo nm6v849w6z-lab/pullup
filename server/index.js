@@ -52,6 +52,8 @@ const PrivateLeague = require("./privateLeague.js");
 const Friendlies = require("./friendlies.js");
 // Messagerie privée entre managers (2026-09-26) — voir server/messages.js.
 const Messages = require("./messages.js");
+// Chat de la ligue (2026-09-30) — voir server/leagueChat.js.
+const LeagueChat = require("./leagueChat.js");
 // Comptes joueurs + connexion Discord (2026-09-26) — voir server/accounts.js
 // et server/accountRoutes.js.
 const AccountRoutes = require("./accountRoutes.js");
@@ -438,6 +440,9 @@ async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
   // qui fait redémarrer toutes les ligues d'un pays ensemble.
   found.league.autoNextSeason = false;
   World.useLeagueTimeZone(found.league);
+  // Présence en mémoire pour le chat de la ligue (« N en ligne »), sans
+  // écriture disque — voir server/leagueChat.js.
+  LeagueChat.touchPresence(token, now);
   // Dernière visite du manager (managers inactifs, voir
   // World.releaseInactiveManagers) : enregistrée au plus toutes les 6 h.
   {
@@ -1120,6 +1125,27 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       const lg = await World.loadLeague(world, id, multiSavePath);
       if (lg && !lg.leagueId) lg.leagueId = id;
       return lg;
+    },
+  });
+  // Chat de la ligue (voir server/leagueChat.js) : fin de diffusion de
+  // chaque journée (horodatage des résultats), zones du championnat, et
+  // pseudo Discord des managers (comptes relus au plus une fois par minute).
+  let namesCache = { at: 0, map: null };
+  const leagueChat = LeagueChat.createService(multiSavePath, {
+    systemOpts: (ctx) => ({
+      relegations: ctx.world ? World.divisionMovesFor(ctx.world, ctx.leagueId).relegations : 0,
+      roundEndAt: (r) => {
+        const at = scheduledTimeForLeagueRound(ctx.league, r);
+        return typeof at === "number" ? at + Calendar.MATCH_BROADCAST_DURATION_MS : null;
+      },
+    }),
+    managerNames: async () => {
+      if (namesCache.map && Date.now() - namesCache.at < 60 * 1000) return namesCache.map;
+      const data = await Accounts.loadAccounts(accountsPath);
+      const map = new Map();
+      data.accounts.forEach(a => { if (a.managerToken && a.discordName) map.set(Messages.participantKey(a.managerToken), String(a.discordName).slice(0, 32)); });
+      namesCache = { at: Date.now(), map };
+      return map;
     },
   });
   const handleAccountRoutes = AccountRoutes.createAccountRouter({
@@ -1936,6 +1962,32 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           }
         } catch (e) {
           sendJson(res, 503, { ok: false, error: e.message });
+          return;
+        }
+        if (!out) { sendJson(res, 404, { ok: false, error: "Route inconnue", path: route.pathname }); return; }
+        sendJson(res, out.status, out.body);
+        return;
+      }
+
+      // Chat de la ligue (voir server/leagueChat.js) : GET le fil (?summary=1
+      // : seulement le nombre de non-lus), POST /send { text }, POST /react
+      // { id, emoji }, POST /read { upTo }. Comme la messagerie, ne
+      // rattrape ni ne réécrit la ligue (stockage à part).
+      if (route.pathname === "/api/league-chat" || route.pathname.startsWith("/api/league-chat/")) {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        let out = null;
+        try {
+          if (req.method === "GET" && route.pathname === "/api/league-chat") out = await leagueChat.view(ctx, now, route.searchParams.get("summary") === "1");
+          else if (req.method === "POST" && ["/api/league-chat/send", "/api/league-chat/react", "/api/league-chat/read"].includes(route.pathname)) {
+            let body;
+            try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+            if (route.pathname === "/api/league-chat/send") out = await leagueChat.send(ctx, body, now);
+            else if (route.pathname === "/api/league-chat/react") out = await leagueChat.react(ctx, body, now);
+            else out = await leagueChat.markRead(ctx, body, now);
+          }
+        } catch (e) {
+          sendJson(res, 503, { ok: false, error: `Chat momentanément indisponible (${e.message}).` });
           return;
         }
         if (!out) { sendJson(res, 404, { ok: false, error: "Route inconnue", path: route.pathname }); return; }
