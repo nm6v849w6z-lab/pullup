@@ -2010,7 +2010,10 @@
      chaque th (pas seulement sur la table) : un th sticky sans fond
      laisserait les lignes défiler visibles en transparence derrière son
      texte. Ciblé sur .roster-table-frozen uniquement, pas .table-scroll en
-     général (réutilisé ailleurs pour d'autres tableaux, sans ce besoin). */
+     général (réutilisé ailleurs pour d'autres tableaux, sans ce besoin).
+     Prolongé pour la PREMIÈRE COLONNE (joueur figé au défilement
+     horizontal, retour utilisateur 2026-09-30 (téléphone)) : voir
+     .roster-table-frozen-col avec les tableaux .eff-table de l'Effectif. */
   .roster-table-frozen{max-height:min(600px, 65vh); overflow-y:auto; border-radius:var(--radius);}
   /* table.roster-table a overflow:hidden (juste au-dessus) pour arrondir ses
      coins, mais un ancêtre avec overflow:hidden devient LUI le conteneur de
@@ -2543,6 +2546,13 @@
   .pdp2-posrating.is-best{background:var(--panel-2);}
   .pdp2-posrating.is-best b{color:var(--ink);}
   .pdp2-posrating.is-best small{color:var(--amber);}
+  .pdp2-posratings.is-decimal .pdp2-posrating b{font-size:12px;}
+  /* Meilleur poste calculé quand il diffère du poste de carte, ou
+     « Polyvalent » (retour utilisateur 2026-09-30 (téléphone)). */
+  .pdp2-bestpos{margin:-8px 0 0; width:100%; text-align:center; font-size:12px; color:var(--ink-dim); line-height:1.3;}
+  .pdp2-bestpos b{color:var(--amber); font-weight:800;}
+  .pdp2-bestpos i{font-style:normal; color:var(--ink-faint);}
+  .pdp2-bestpos i::before{content:"(";} .pdp2-bestpos i::after{content:")";}
   .pdp2-btn{flex:1 1 0; min-height:44px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0 10px; text-align:center; line-height:1.2;}
   .pdp2-btn:hover{border-color:var(--ink-faint);}
   .pdp2-btn--accent{background:transparent; border-color:var(--amber); color:var(--amber);}
@@ -2619,6 +2629,26 @@
   .pdp2-eval.good{background:rgba(51,180,161,.16); color:var(--ok);}
   .pdp2-eval.bad{background:rgba(226,105,79,.18); color:var(--danger);}
   .pdp2 #playerSeasonStatsOpenBtn{margin-top:12px;}
+  /* Derniers matchs sur téléphone (retour utilisateur 2026-09-30
+     (téléphone) : colonne ÉVAL hors de l'écran, toute la page débordait en
+     largeur). Largeurs fixes (table-layout:fixed) : seule la colonne
+     Adversaire prend le reste et se tronque avec « … » (nom complet en
+     infobulle), marges resserrées, badge V/D et pastille d'éval plus
+     compacts. Tient dans 360 px. */
+  @media (max-width:768px){
+    .pdp2 table.pdp-games{table-layout:fixed; font-size:12.5px;}
+    .pdp2 table.pdp-games th{padding:6px 3px; font-size:9.5px; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .pdp2 table.pdp-games td{padding:7px 3px;}
+    .pdp2 table.pdp-games tr > :first-child{width:40px; padding-left:0;}
+    .pdp2 table.pdp-games td.round{font-size:11.5px; white-space:normal; line-height:1.2; overflow-wrap:anywhere;}
+    .pdp2 table.pdp-games td.opp{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .pdp2 table.pdp-games tr > :nth-child(3){width:68px;}
+    .pdp2 table.pdp-games tr > :nth-child(n+4){width:27px;}
+    .pdp2 table.pdp-games tr > :nth-child(7){width:38px; padding-right:0;}
+    .pdp2 .pdp-res{margin-right:3px; padding:2px 4px; font-size:10px;}
+    .pdp2 .pdp2-eval{display:block; min-width:0; padding:3px 0; font-size:12px;}
+    .pdp2-spark svg{width:96px;}
+  }
 
   .pdp2-side{display:flex; flex-direction:column; gap:18px; min-width:0;}
   .pdp2-posgrid{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px;}
@@ -6135,6 +6165,58 @@
   :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr .attr-val{font-size:15px; font-weight:500;}
   :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr.eff-best{box-shadow:inset 0 0 0 1.5px rgba(244,246,250,.6);}
   :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr.eff-best .attr-val{font-weight:800;}
+  /* --- Colonne Joueur figée (retour utilisateur 2026-09-30 (téléphone) :
+     "une fois qu'on scrolle vers la droite, on ne voit plus quel joueur
+     c'est la ligne", Général ET Caractéristiques). Prolonge le mécanisme
+     .roster-table-frozen (en-tête figé, plus haut) à la PREMIÈRE COLONNE :
+     .roster-table-frozen-col sur le conteneur défilant (.eff-table-wrap)
+     rend la cellule Nom (en-tête compris) position:sticky; left:0 pendant
+     le défilement horizontal. Une cellule sticky doit être OPAQUE (sinon
+     les colonnes défilent visibles derrière le nom) : même fond que la
+     ligne dans chaque état (Cinq de départ / Rotation-Réserve, survol,
+     blessé — la teinte rouge translucide est posée PAR-DESSUS le fond de
+     ligne) et que la zone derrière l'en-tête (fond de page pour Général,
+     fond de la carte pour Caractéristiques). Ombre à droite seulement une
+     fois le tableau défilé (.is-scrolled, posée par effFrozenColSync). Le
+     titre de groupe (« Cinq de départ »…) est une cellule colspan de toute
+     la largeur : c'est son libellé qui est figé à gauche. */
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr > :first-child{position:sticky; left:0; z-index:1;}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr.eff-family-row > :first-child,
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr.eff-group-row > :first-child{position:static;}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-group-title{position:sticky; left:2px; display:inline-block;}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table thead th:first-child{z-index:3; background:var(--bg);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table thead th:first-child,
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody td:first-child{background:var(--eff-row-2);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody tr:hover td:first-child{background:#1a2333;}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-general tr.eff-row.injured td:first-child{background:linear-gradient(rgba(226,105,79,.12), rgba(226,105,79,.12)), var(--eff-row-2);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-general .eff-group-starters tr.eff-row.injured td:first-child{background:linear-gradient(rgba(226,105,79,.12), rgba(226,105,79,.12)), var(--eff-row);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row):not(.eff-group-row) > :first-child{box-shadow:8px 0 10px -8px rgba(0,0,0,.65); clip-path:inset(0 -14px 0 0);}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody tr:hover td:first-child{background:#f1f4f9;}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row):not(.eff-group-row) > :first-child{box-shadow:8px 0 10px -8px rgba(20,32,51,.22);}
+  /* Téléphone (même seuil que la barre d'onglets du bas, 768 px) : colonne
+     Joueur raccourcie pour laisser voir les chiffres — avatar réduit,
+     drapeau masqué, nom tronqué avec « … » (nom complet en infobulle et
+     sur la fiche joueur). */
+  @media (max-width:768px){
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table th:first-child,
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table td:first-child{padding-left:10px; padding-right:8px;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-general th.eff-th-name,
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-general td.eff-td-name{width:auto; min-width:0;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player{gap:6px; max-width:150px;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .nat-flag{display:none;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-avatar{width:22px !important; height:24px !important; flex:none;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-avatar svg{width:100%; height:100%;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-link{display:block; min-width:0; max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13.5px;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-general .eff-group-starters .eff-player .player-link{font-size:13.5px;}
+    /* En-tête de la page Effectif : un nom d'adversaire long (« Prochain
+       match ») élargissait toute la page. */
+    .eff-kpi-line{min-width:0; max-width:100%;}
+    .eff-kpi-line .eff-kpi-num{min-width:0; overflow:hidden; text-overflow:ellipsis;}
+    /* Onglets Général / Caractéristiques (n) / Statistiques de la fiche
+       équipe : 4 px de trop à 360 px. */
+    .eff-seg{max-width:100%; overflow-x:auto;}
+    .eff-seg-btn{padding:8px 12px; flex:none;}
+  }
 
   /* ---- Fiche équipe > Effectif / Calendrier — refonte (retour utilisateur
      2026-09-26 : "améliore les pages effectifs et calendrier des
@@ -16693,18 +16775,58 @@ function inferPosition(attrs, cardPosition) {
 // Le poste joué (Player.matchPosition) ne sert qu'aux remplacements (qui
 // remplace qui, minutes visées), aux consignes « postes à surveiller »,
 // au taux de fautes (FOUL_POSITION_MULT : Pivot ×1.3, Ailier fort ×1.15)
-// et au temps de jeu par poste (entraînement). La note par poste reprend
-// donc la seule pondération par poste qui existe déjà dans le jeu :
-// weightedRatingForPosition (profil POSITION_ATTR_PROFILE, poids
-// ATTR_CATEGORY_WEIGHT : "strong" 1.5, "base" 1.0, "weak" 0.4), celle qui
-// détermine déjà le poste effectif (inferPosition), le salaire et la
-// frustration d'un remplaçant qui "mérite de jouer". Même échelle que
-// Player.overall() (moyenne de caractéristiques 1-99), bornée à 0-100.
+// et au temps de jeu par poste (entraînement).
+//
+// Refonte (retour utilisateur 2026-09-30 (téléphone) : "31 aux 5 postes
+// alors qu'il est Meneur") : la première version reprenait
+// weightedRatingForPosition (profil strong ×1.5 / base ×1 / weak ×0.4 sur
+// les 28 caractéristiques). Trop peu discriminant pour un affichage : les
+// 10 qualités générales (mental, endurance, lancer franc…) pèsent pareil
+// partout et les poids restent proches de 1, si bien qu'un effectif à ~30
+// de moyenne ne montrait que 4-6 points entre postes opposés, 1-2 (souvent
+// 0 après arrondi) entre voisins. weightedRatingForPosition reste INCHANGÉE
+// (salaire, poste effectif, frustration du banc) : seule la note AFFICHÉE
+// change.
+//
+// Nouvelle formule, explicite :
+//   note(poste) = (1 − k) × overall + k × clés(poste),  k = 0.65
+// où overall = moyenne brute des 28 caractéristiques (Player.overall()) et
+// clés(poste) = moyenne pondérée des 5 à 9 caractéristiques qui FONT le
+// poste (POSITION_KEY_WEIGHTS ci-dessous, poids en %, total 100). Les clés
+// sont choisies d'après ce que le moteur de match leur fait réellement
+// jouer (passe/vision/décision pour le porteur, tir/création pour
+// l'arrière, 3 pts + défense extérieure pour l'ailier shooteur, mi-distance
+// + physique pour l'ailier fort, contre/rebond/défense intérieure pour le
+// pivot), et de sorte qu'un Ailier fort généré ne soit pas presque
+// toujours « meilleur Pivot » (le Pivot se distingue surtout par le
+// Contre, l'Ailier fort par la mi-distance et le physique).
+// Ordres de grandeur (effectif généré, tier 0.6, overall ~30) : un
+// spécialiste gagne 12-16 points entre son poste et le poste opposé
+// (ex : Meneur 36 / 35 / 33 / 28 / 22), 2-5 points avec un voisin ; un
+// joueur polyvalent (toutes caractéristiques égales) a la même note
+// partout, égale à son overall. Même échelle que Player.overall(), bornée
+// à 0-100.
 // ---------------------------------------------------------------------
+const POSITION_KEY_WEIGHTS = {
+  "Meneur": { pass: 22, dribble: 16, vision: 14, decision: 10, penetration: 10, speed: 8, acceleration: 8, steal: 6, threePoint: 6 },
+  "Arrière": { threePoint: 20, midRange: 16, shotCreation: 16, dribble: 12, penetration: 10, freeThrow: 8, acceleration: 6, defOutside: 6, speed: 6 },
+  "Ailier shooteur": { threePoint: 22, defOutside: 18, shotCreation: 12, midRange: 12, agility: 10, steal: 8, freeThrow: 6, anticipation: 6, vertical: 6 },
+  "Ailier fort": { rebound: 18, midRange: 18, strength: 16, power: 14, inside: 12, vertical: 8, agility: 8, defInside: 6 },
+  "Pivot": { block: 32, rebound: 20, defInside: 20, inside: 16, vertical: 12 },
+};
+// Part des caractéristiques clés du poste dans la note (le reste = overall).
+const POSITION_RATING_KEY_SHARE = 0.65;
+
 function positionRating(player, pos) {
   const attrs = player && player.attrs ? player.attrs : player;
   if (!attrs || !POSITIONS.includes(pos)) return 0;
-  return clamp(weightedRatingForPosition(attrs, pos), 0, 100);
+  const val = a => (typeof attrs[a] === "number" ? attrs[a] : 0);
+  const overall = ATTRS.reduce((s, a) => s + val(a), 0) / ATTRS.length;
+  const weights = POSITION_KEY_WEIGHTS[pos];
+  let sum = 0, totalW = 0;
+  Object.keys(weights).forEach(a => { sum += val(a) * weights[a]; totalW += weights[a]; });
+  const keys = totalW ? sum / totalW : overall;
+  return clamp((1 - POSITION_RATING_KEY_SHARE) * overall + POSITION_RATING_KEY_SHARE * keys, 0, 100);
 }
 
 // Les 5 notes d'un joueur, { poste: note }.
@@ -16714,8 +16836,8 @@ function positionRatings(player) {
   return out;
 }
 
-// Poste où la note est la plus haute. À égalité (arrondie à l'unité),
-// le poste de carte du joueur l'emporte, puis l'ordre de POSITIONS.
+// Poste où la note est la plus haute. À égalité (à 0.001 près), le poste
+// de carte du joueur l'emporte, puis l'ordre de POSITIONS.
 function bestPosition(player) {
   const card = player && player.position;
   let best = null, bestScore = -Infinity;
@@ -29042,12 +29164,28 @@ function renderPlayerDetail(teamIdx, playerId) {
     // Note par poste (retour utilisateur 2026-09-30 : "il faudrait que le
     // jeu calcule une note par poste", voir positionRating) : 5 petites
     // valeurs sous l'anneau, le meilleur poste en évidence.
+    // Retour utilisateur 2026-09-30 (téléphone) : "31 aux 5 postes alors
+    // qu'il est Meneur". Le badge de poste (en-tête) reste le poste DE
+    // CARTE ; quand le meilleur poste calculé en diffère, on le dit en
+    // clair (« Meilleur poste : A ») ; quand les 5 notes sont identiques à
+    // l'unité, on passe à une décimale pour montrer quand même l'ordre ; et
+    // un écart max-min sous PDP_POLYVALENT_SPREAD points vaut « Polyvalent ».
     const best = bestPosition(player);
-    html += `<div class="pdp2-posratings" role="list" aria-label="Note par poste" title="Note par poste">` +
+    const ratings = positionRatings(player);
+    const vals = POSITIONS.map(pos => ratings[pos]);
+    const spread = Math.max(...vals) - Math.min(...vals);
+    const allSameRounded = vals.every(v => Math.round(v) === Math.round(vals[0]));
+    const fmtRating = v => (allSameRounded ? v.toFixed(1).replace(".", ",") : String(Math.round(v)));
+    html += `<div class="pdp2-posratings${allSameRounded ? " is-decimal" : ""}" role="list" aria-label="Note par poste" title="Note par poste">` +
       POSITIONS.map(pos => {
-        const v = Math.round(positionRating(player, pos));
+        const v = fmtRating(ratings[pos]);
         return `<span class="pdp2-posrating${pos === best ? " is-best" : ""}" role="listitem" data-pos="${escapeHtml(pos)}" title="${escapeHtml(pos)} : ${v}${pos === best ? " (meilleur poste)" : ""}"><b>${v}</b><small>${escapeHtml(POS_SHORT[pos])}</small></span>`;
       }).join("") + `</div>`;
+    if (spread < PDP_POLYVALENT_SPREAD) {
+      html += `<p class="pdp2-bestpos is-polyvalent" data-pdp-bestpos="polyvalent">Polyvalent : note proche à tous les postes</p>`;
+    } else if (best !== player.position) {
+      html += `<p class="pdp2-bestpos" data-pdp-bestpos="${escapeHtml(best)}"><span>Meilleur poste :</span> <b>${escapeHtml(POS_SHORT[best])}</b> <i>${escapeHtml(best)}</i></p>`;
+    }
   } else {
     html += `<div class="pdp2-ring pdp2-ring--locked"><div class="pdp2-ring-center"><span class="pdp2-ring-q">?</span><span class="pdp2-ring-lbl">Note</span></div></div>` +
       `<p class="pdp-locked-note pdp2-center">Pas encore assez scoutée pour une note globale.</p>`;
@@ -29176,7 +29314,10 @@ function renderPlayerDetail(teamIdx, playerId) {
         : "–";
       const ev = statEvaluation(m);
       const evClass = ev >= 10 ? "good" : ev < 0 ? "bad" : "mid";
-      html += `<tr><td class="round">${escapeHtml(label)}</td><td class="strong">${escapeHtml(opponentNameForMatchLogEntry(teamIdx, m))}</td>` +
+      // Nom complet en infobulle : tronqué avec « … » sur téléphone (retour
+      // utilisateur 2026-09-30 (téléphone), voir td.opp).
+      const oppName = opponentNameForMatchLogEntry(teamIdx, m);
+      html += `<tr><td class="round">${escapeHtml(label)}</td><td class="strong opp" title="${escapeHtml(oppName)}">${escapeHtml(oppName)}</td>` +
         `<td>${resultCell}</td><td class="num strong${m.pts >= 20 ? " hot" : ""}">${m.pts}</td><td class="num">${m.reb}</td><td class="num">${m.ast}</td>` +
         `<td class="num"><span class="pdp2-eval ${evClass}">${ev > 0 ? "+" + ev : ev}</span></td></tr>`;
     });
@@ -29729,7 +29870,7 @@ function teamDetailEffectifGeneralHtml(teamIdx, team, isOwnTeam, revealedSet) {
     H("gp", "MJ", { cls: "tde-th-stat", title: "Matchs joués" }), H("pts", "Pts", { cls: "tde-th-stat", title: "Points par match" }),
     H("reb", "Reb", { cls: "tde-th-stat", title: "Rebonds par match" }), H("ast", "Pas", { cls: "tde-th-stat", title: "Passes décisives par match" }),
   ];
-  let html = `<div class="eff-table-wrap"><table class="roster-table eff-table eff-general tde-general"><thead><tr>${cols.join("")}</tr></thead>`;
+  let html = `<div class="eff-table-wrap roster-table-frozen-col"><table class="roster-table eff-table eff-general tde-general"><thead><tr>${cols.join("")}</tr></thead>`;
   const defaultCmp = (a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) ||
     teamDetailStatValue(b, "pts") - teamDetailStatValue(a, "pts");
   const fmt = v => v.toFixed(1).replace(".", ",");
@@ -29778,7 +29919,7 @@ function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
   const defaultCmp = (a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || a.name.localeCompare(b.name);
   const sorted = teamDetailSortPlayers(team.players, team, isOwnTeam, revealedSet, defaultCmp, ["name", "position", ...keys]);
 
-  let html = `<div class="eff-table-wrap eff-table-wrap-caracs"><table class="roster-table eff-table eff-caracs tde-caracs"><thead>` +
+  let html = `<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs tde-caracs"><thead>` +
     `<tr class="eff-family-row"><td colspan="2"></td>` +
     families.map(f => `<td colspan="${f.keys.length}" class="eff-family"><span>${escapeHtml(f.label)}</span></td>`).join("") + `</tr><tr>` +
     H("name", "Nom", { cls: "eff-th-name" }) + H("position", "Poste") +
@@ -29827,7 +29968,7 @@ function teamDetailEffectifStatsHtml(teamIdx, team, isOwnTeam, revealedSet) {
   ["min", "pts", "reb", "ast", "stl", "blk", "fg2", "fg3", "ft"].forEach(k => {
     leaders[k] = Math.max(...players.map(p => teamDetailStatValue(p, k)));
   });
-  let html = `<div class="eff-table-wrap eff-table-wrap-caracs"><table class="roster-table eff-table tde-stats"><thead><tr>` +
+  let html = `<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table tde-stats"><thead><tr>` +
     H("name", "Nom", { cls: "eff-th-name" }) + H("position", "Poste") +
     statCols.map(([k, l, t]) => H(k, l, { cls: "tde-th-stat", title: t, forceActive: noSortYet && k === "pts" })).join("") +
     `</tr></thead><tbody>`;
@@ -34805,14 +34946,22 @@ function resolvePlayerIdFromSelectValue(team, value) {
 // ---------------------------------------------------------------------
 const COMPO_POS_COLORS = { "Meneur": "#6CC4E0", "Arrière": "#CF8BE0", "Ailier shooteur": "#EE8270", "Ailier fort": "#E6CE5A", "Pivot": "#6CCB94" };
 // Écart (en points de note par poste) à partir duquel un joueur est signalé
-// « hors poste » : sa note ici est inférieure d'au moins 3 points à celle
-// de son meilleur poste. 3 plutôt que les 5 de l'exemple donné : sur les
-// effectifs de départ (notes autour de 30), l'écart entre le meilleur poste
-// et un poste à l'opposé (meneur aligné pivot) tourne autour de 4-6 points
-// seulement, et 1-2 entre postes voisins (meneur/arrière) — 5 ne se
-// déclenchait presque jamais, 3 signale les vrais contre-emplois sans
-// alerter sur un meneur aligné arrière.
-const COMPO_OFF_POSITION_GAP = 3;
+// « hors poste » : sa note ici est inférieure d'au moins
+// COMPO_OFF_POSITION_GAP points à celle de son meilleur poste. Re-réglé à 5
+// (retour utilisateur 2026-09-30 (téléphone), refonte de positionRating sur
+// les caractéristiques clés de chaque poste) : la note par poste est
+// désormais environ 3 fois plus étalée qu'avant — sur les effectifs de
+// départ (overall ~30), un spécialiste perd 12-16 points à l'opposé de son
+// poste (meneur aligné pivot) et 2-5 points avec un poste voisin (meneur
+// aligné arrière). L'ancien seuil de 3 alerterait sur presque chaque
+// voisin ; 5 signale les vrais contre-emplois (ailier shooteur aligné
+// ailier fort, arrière aligné pivot…) sans crier au loup pour un meneur
+// dépanné à l'arrière.
+const COMPO_OFF_POSITION_GAP = 5;
+// Fiche joueur : écart max-min (points de note par poste) sous lequel un
+// joueur est affiché « Polyvalent » plutôt qu'avec un meilleur poste (retour
+// utilisateur 2026-09-30 (téléphone)) : un spécialiste typique en a 12-16.
+const PDP_POLYVALENT_SPREAD = 2;
 // Note d'un joueur à un poste, arrondie comme partout à l'écran.
 function compoRatingAt(p, pos) { return Math.round(positionRating(p, pos)); }
 const COMPO_POS_AREA = { "Meneur": "pg", "Arrière": "sg", "Ailier shooteur": "sf", "Ailier fort": "pf", "Pivot": "c" };
@@ -40989,6 +41138,19 @@ function renderEffectifHeader() {
   if (roundEl) roundEl.textContent = next.round;
 }
 
+// Colonne Joueur figée des tableaux d'effectif (retour utilisateur
+// 2026-09-30 (téléphone), voir .roster-table-frozen-col) : ombre à droite de
+// la colonne dès que le tableau a défilé horizontalement. Un seul écouteur
+// en phase de capture (l'événement scroll ne remonte pas) pour tous les
+// tableaux, y compris ceux re-rendus par innerHTML.
+function effFrozenColSync(wrap) {
+  if (wrap && wrap.classList) wrap.classList.toggle("is-scrolled", wrap.scrollLeft > 2);
+}
+document.addEventListener("scroll", e => {
+  const el = e.target;
+  if (el && el.classList && el.classList.contains("roster-table-frozen-col")) effFrozenColSync(el);
+}, { capture: true, passive: true });
+
 function effSortPlayers(players, defaultCmp) {
   if (!rosterSortState.key) return [...players].sort(defaultCmp);
   const { key, dir } = rosterSortState;
@@ -41017,7 +41179,7 @@ function renderEffectifSection() {
     // 2026-09-25 : "enlève Cadre : meilleur de l'équipe. Cliquez une colonne
     // pour trier.").
     let html = effectifSubNavHtml();
-    html += `<div class="eff-table-wrap eff-table-wrap-caracs"><table class="roster-table eff-table eff-caracs"><thead>`;
+    html += `<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs"><thead>`;
     // Ligne de familles (Tir/Jeu/Défense/Condition) : en <td> exprès, pour
     // que `thead th` ne liste que les colonnes réelles (une par cellule de
     // ligne joueur, voir les tests de tri).
@@ -41054,7 +41216,7 @@ function renderEffectifSection() {
   const columns = ROSTER_SORT_COLUMNS.filter(c => c.key !== "role");
   const colCount = columns.length + 1;
   let html = effectifSubNavHtml() + `<div id="rosterMarketFeedback"></div>`;
-  html += `<div class="eff-table-wrap"><table class="roster-table eff-table eff-general">` +
+  html += `<div class="eff-table-wrap roster-table-frozen-col"><table class="roster-table eff-table eff-general">` +
     `<thead><tr>` +
     columns.map(c => effHeaderCellHtml(c.key, c.label, { cls: `eff-th-${c.key}` })).join("") +
     `<th class="eff-th-actions"><span class="eff-sr">Actions</span></th></tr></thead>`;

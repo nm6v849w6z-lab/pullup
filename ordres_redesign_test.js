@@ -244,6 +244,18 @@ console.log("✅ État 'Ordres validés' après un clic sur Valider les ordres."
   const rosterRow = [...doc.querySelectorAll("#ordresCardConvocation .conv-row")].find(r => r.querySelector(".conv-name").firstChild.textContent === off.name);
   if (Number(rosterRow.querySelector(".conv-ovr").textContent) !== off.here || rosterRow.querySelector(".conv-pos").textContent !== off.best) throw new Error("❌ Liste de l'effectif : note au poste tenu et code du meilleur poste attendus.");
   console.log("✅ « Hors poste » piloté par l'écart avec le meilleur poste ; liste de l'effectif : note au poste tenu + meilleur poste.");
+  // Seuil re-réglé (retour utilisateur 2026-09-30 (téléphone), refonte de
+  // positionRating, note plus étalée) : un meneur dépanné à l'arrière, à
+  // quelques points seulement de son meilleur poste, n'est PAS signalé.
+  const near = win.eval(`(() => {
+    const p = teamA.players.find(x => x.name !== ${JSON.stringify(off.name)} && !teamA.slotPlayerIds("Pivot").includes(x.id));
+    ATTRS.forEach(a => { p.attrs[a] = 30; }); p.attrs.pass = 36; p.attrs.vision = 36;
+    teamA.setStarter("Arrière", p.id); renderOrdresGrid();
+    return { best: bestPosition(p), gap: positionRating(p, bestPosition(p)) - positionRating(p, "Arrière"), gapConst: COMPO_OFF_POSITION_GAP };
+  })()`);
+  const nearWarn = [...cardOf("Arrière").querySelectorAll(".cp-warn")].map(w => w.textContent).find(t => t.startsWith("Hors poste"));
+  if (near.gapConst !== 5 || near.best !== "Meneur" || near.gap <= 0 || near.gap >= near.gapConst || nearWarn) throw new Error(`❌ Écart de voisin (${near.gap.toFixed(1)} pts, meilleur poste ${near.best}) : pas d'alerte « Hors poste » attendue (seuil ${near.gapConst}), obtenu « ${nearWarn} ».`);
+  console.log(`✅ Meneur dépanné à l'arrière (${near.gap.toFixed(1)} pts d'écart < ${near.gapConst}) : pas d'alerte « Hors poste ».`);
 }
 
 // 8) Plus de « Réinitialiser ma carrière » nulle part (carrière solo

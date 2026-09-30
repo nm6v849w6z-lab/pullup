@@ -49,6 +49,44 @@ try {
   if (colCount !== 15 || bestCount < colCount) throw new Error(`❌ 15 colonnes et au moins un "meilleur" par colonne attendus (${colCount} colonnes, ${bestCount} cadres).`);
   console.log(`✅ Caractéristiques : tri Moy. décroissant, familles, ${bestCount} cadres "meilleur" sur ${colCount} colonnes.`);
 
+  // Colonne Joueur figée au défilement horizontal (retour utilisateur
+  // 2026-09-30 (téléphone) : "une fois qu'on scrolle vers la droite, on ne
+  // voit plus quel joueur c'est la ligne"), Général ET Caractéristiques.
+  // jsdom ne calcule pas la mise en page : on vérifie le balisage (conteneur
+  // .roster-table-frozen-col, 1re cellule = Nom sur chaque ligne d'en-tête et
+  // de joueur), les règles CSS sticky + fonds opaques, et l'ombre
+  // (.is-scrolled) posée au défilement. Le rendu réel est vérifié dans
+  // Chromium (390 / 360 px).
+  const checkFrozen = label => {
+    const wrap = doc.querySelector("#rosterContent .eff-table-wrap");
+    if (!wrap || !wrap.classList.contains("roster-table-frozen-col")) throw new Error(`❌ ${label} : le conteneur du tableau devrait porter .roster-table-frozen-col.`);
+    const headRow = [...wrap.querySelectorAll("thead tr")].pop();
+    if (!headRow.firstElementChild.classList.contains("eff-th-name")) throw new Error(`❌ ${label} : la 1re colonne d'en-tête devrait être Nom.`);
+    const rows = [...wrap.querySelectorAll("tbody tr.eff-row")];
+    if (!rows.length || rows.some(r => !r.firstElementChild.classList.contains("eff-td-name") || !r.firstElementChild.querySelector(".player-link"))) throw new Error(`❌ ${label} : chaque ligne joueur devrait commencer par la cellule Nom.`);
+    wrap.scrollLeft = 120;
+    wrap.dispatchEvent(new dom.window.Event("scroll"));
+    if (!wrap.classList.contains("is-scrolled")) throw new Error(`❌ ${label} : .is-scrolled attendu après défilement horizontal.`);
+    wrap.scrollLeft = 0;
+    wrap.dispatchEvent(new dom.window.Event("scroll"));
+    if (wrap.classList.contains("is-scrolled")) throw new Error(`❌ ${label} : .is-scrolled devrait disparaître revenu à gauche.`);
+    console.log(`✅ ${label} : colonne Joueur figée (${rows.length} lignes), ombre au défilement.`);
+  };
+  checkFrozen("Caractéristiques");
+  [...doc.querySelectorAll("[data-effectif-subview]")].find(b => b.dataset.effectifSubview === "general").click();
+  checkFrozen("Général");
+  const css = html.replace(/\s+/g, " ");
+  [
+    [".roster-table-frozen-col table.eff-table tr > :first-child{position:sticky; left:0; z-index:1;}", "cellule Nom sticky left:0"],
+    [".roster-table-frozen-col table.eff-table thead th:first-child{z-index:3; background:var(--bg);}", "en-tête Nom opaque"],
+    [".roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody td:first-child{background:var(--eff-row-2);}", "Caractéristiques : fond de ligne opaque"],
+    [".roster-table-frozen-col .eff-general tr.eff-row.injured td:first-child{background:linear-gradient(", "blessé : teinte posée sur un fond opaque"],
+    [".roster-table-frozen-col .eff-group-title{position:sticky;", "titre de groupe (Cinq de départ) figé"],
+    [".roster-table-frozen-col .eff-player .player-link{display:block; min-width:0; max-width:104px; overflow:hidden; text-overflow:ellipsis;", "téléphone : nom tronqué"],
+    [".roster-table-frozen-col .eff-player .nat-flag{display:none;}", "téléphone : drapeau masqué"],
+  ].forEach(([rule, what]) => { if (!css.includes(rule)) throw new Error(`❌ Règle CSS manquante (${what}) : ${rule}`); });
+  console.log("✅ Règles CSS : sticky, fonds opaques (ligne, survol, blessé, en-tête), version téléphone raccourcie.");
+
   await flush(dom);
   dom.window.close();
   console.log("\n🏁 Refonte Effectif : tous les contrôles sont passés.");

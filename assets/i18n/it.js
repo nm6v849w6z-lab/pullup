@@ -5321,6 +5321,8 @@ window.HM_I18N_IT = {
   "Meilleur poste : {0} ({1}) · poste de carte : {2}": "Ruolo migliore: {0} ({1}) · ruolo in scheda: {2}",
   "Note par poste": "Valutazione per ruolo",
   "{0} : {1} (meilleur poste)": "{0}: {1} (ruolo migliore)",
+  "Meilleur poste :": "Ruolo migliore:",
+  "Polyvalent : note proche à tous les postes": "Polivalente: valutazione simile in ogni ruolo",
   "Ordres verrouillés : le coup d'envoi est imminent.": "Ordini bloccati: la palla a due è imminente.",
   // Profil du manager et pseudo (2026-09-30).
   "Mon profil de manager": "Il mio profilo da manager",

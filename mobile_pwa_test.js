@@ -55,6 +55,24 @@ doc.getElementById("mDrawerBackdrop").click();
 assert(!doc.body.classList.contains("m-drawer-open"), "Toucher le fond referme le tiroir");
 assert(!!doc.getElementById("mSearchToggle"), "Bouton loupe ajouté dans l'en-tête");
 
+// Nom du club retiré de l'en-tête sur téléphone et dans l'appli (retour
+// utilisateur 2026-09-30 (téléphone) : « sur l'application uniquement je
+// retirerais le nom d'équipe en haut ») : masqué sous 768 px (seuil de la
+// barre d'onglets du bas) et partout quand html porte .m-standalone (appli
+// installée) ou .m-native (Capacitor) ; gardé sur ordinateur.
+{
+  const css = fs.readFileSync(path.join("assets", "mobile", "mobile.css"), "utf-8");
+  const mobileBlock = css.slice(css.indexOf("@media (max-width: 768px)"));
+  assert(/\.topbar-club \{ display: none; \}/.test(mobileBlock), "mobile.css : nom du club masqué dans l'en-tête sous 768 px");
+  assert(/html\.m-standalone \.topbar-club, html\.m-native \.topbar-club \{ display: none; \}/.test(css.slice(0, css.indexOf("@media (max-width: 768px)"))), "mobile.css : nom du club masqué dans l'appli (m-standalone / m-native), toutes largeurs");
+  assert(!doc.documentElement.classList.contains("m-native"), "Navigateur ordinaire : pas de classe m-native");
+  const domApp = await openGame(html, baseUrl, w => { w.Capacitor = { isNativePlatform: () => true }; });
+  for (let i = 0; i < 50 && !domApp.window.document.getElementById("mTabbar"); i++) await new Promise(r => setTimeout(r, 100));
+  assert(domApp.window.document.documentElement.classList.contains("m-native"), "Appli Capacitor détectée : html.m-native posé par mobile.js");
+  await flush(domApp);
+  domApp.window.close();
+}
+
 await flush(dom);
 dom.window.close();
 server.close();

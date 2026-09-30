@@ -8362,18 +8362,58 @@ function inferPosition(attrs, cardPosition) {
 // Le poste joué (Player.matchPosition) ne sert qu'aux remplacements (qui
 // remplace qui, minutes visées), aux consignes « postes à surveiller »,
 // au taux de fautes (FOUL_POSITION_MULT : Pivot ×1.3, Ailier fort ×1.15)
-// et au temps de jeu par poste (entraînement). La note par poste reprend
-// donc la seule pondération par poste qui existe déjà dans le jeu :
-// weightedRatingForPosition (profil POSITION_ATTR_PROFILE, poids
-// ATTR_CATEGORY_WEIGHT : "strong" 1.5, "base" 1.0, "weak" 0.4), celle qui
-// détermine déjà le poste effectif (inferPosition), le salaire et la
-// frustration d'un remplaçant qui "mérite de jouer". Même échelle que
-// Player.overall() (moyenne de caractéristiques 1-99), bornée à 0-100.
+// et au temps de jeu par poste (entraînement).
+//
+// Refonte (retour utilisateur 2026-09-30 (téléphone) : "31 aux 5 postes
+// alors qu'il est Meneur") : la première version reprenait
+// weightedRatingForPosition (profil strong ×1.5 / base ×1 / weak ×0.4 sur
+// les 28 caractéristiques). Trop peu discriminant pour un affichage : les
+// 10 qualités générales (mental, endurance, lancer franc…) pèsent pareil
+// partout et les poids restent proches de 1, si bien qu'un effectif à ~30
+// de moyenne ne montrait que 4-6 points entre postes opposés, 1-2 (souvent
+// 0 après arrondi) entre voisins. weightedRatingForPosition reste INCHANGÉE
+// (salaire, poste effectif, frustration du banc) : seule la note AFFICHÉE
+// change.
+//
+// Nouvelle formule, explicite :
+//   note(poste) = (1 − k) × overall + k × clés(poste),  k = 0.65
+// où overall = moyenne brute des 28 caractéristiques (Player.overall()) et
+// clés(poste) = moyenne pondérée des 5 à 9 caractéristiques qui FONT le
+// poste (POSITION_KEY_WEIGHTS ci-dessous, poids en %, total 100). Les clés
+// sont choisies d'après ce que le moteur de match leur fait réellement
+// jouer (passe/vision/décision pour le porteur, tir/création pour
+// l'arrière, 3 pts + défense extérieure pour l'ailier shooteur, mi-distance
+// + physique pour l'ailier fort, contre/rebond/défense intérieure pour le
+// pivot), et de sorte qu'un Ailier fort généré ne soit pas presque
+// toujours « meilleur Pivot » (le Pivot se distingue surtout par le
+// Contre, l'Ailier fort par la mi-distance et le physique).
+// Ordres de grandeur (effectif généré, tier 0.6, overall ~30) : un
+// spécialiste gagne 12-16 points entre son poste et le poste opposé
+// (ex : Meneur 36 / 35 / 33 / 28 / 22), 2-5 points avec un voisin ; un
+// joueur polyvalent (toutes caractéristiques égales) a la même note
+// partout, égale à son overall. Même échelle que Player.overall(), bornée
+// à 0-100.
 // ---------------------------------------------------------------------
+const POSITION_KEY_WEIGHTS = {
+  "Meneur": { pass: 22, dribble: 16, vision: 14, decision: 10, penetration: 10, speed: 8, acceleration: 8, steal: 6, threePoint: 6 },
+  "Arrière": { threePoint: 20, midRange: 16, shotCreation: 16, dribble: 12, penetration: 10, freeThrow: 8, acceleration: 6, defOutside: 6, speed: 6 },
+  "Ailier shooteur": { threePoint: 22, defOutside: 18, shotCreation: 12, midRange: 12, agility: 10, steal: 8, freeThrow: 6, anticipation: 6, vertical: 6 },
+  "Ailier fort": { rebound: 18, midRange: 18, strength: 16, power: 14, inside: 12, vertical: 8, agility: 8, defInside: 6 },
+  "Pivot": { block: 32, rebound: 20, defInside: 20, inside: 16, vertical: 12 },
+};
+// Part des caractéristiques clés du poste dans la note (le reste = overall).
+const POSITION_RATING_KEY_SHARE = 0.65;
+
 function positionRating(player, pos) {
   const attrs = player && player.attrs ? player.attrs : player;
   if (!attrs || !POSITIONS.includes(pos)) return 0;
-  return clamp(weightedRatingForPosition(attrs, pos), 0, 100);
+  const val = a => (typeof attrs[a] === "number" ? attrs[a] : 0);
+  const overall = ATTRS.reduce((s, a) => s + val(a), 0) / ATTRS.length;
+  const weights = POSITION_KEY_WEIGHTS[pos];
+  let sum = 0, totalW = 0;
+  Object.keys(weights).forEach(a => { sum += val(a) * weights[a]; totalW += weights[a]; });
+  const keys = totalW ? sum / totalW : overall;
+  return clamp((1 - POSITION_RATING_KEY_SHARE) * overall + POSITION_RATING_KEY_SHARE * keys, 0, 100);
 }
 
 // Les 5 notes d'un joueur, { poste: note }.
@@ -8383,8 +8423,8 @@ function positionRatings(player) {
   return out;
 }
 
-// Poste où la note est la plus haute. À égalité (arrondie à l'unité),
-// le poste de carte du joueur l'emporte, puis l'ordre de POSITIONS.
+// Poste où la note est la plus haute. À égalité (à 0.001 près), le poste
+// de carte du joueur l'emporte, puis l'ordre de POSITIONS.
 function bestPosition(player) {
   const card = player && player.position;
   let best = null, bestScore = -Infinity;
@@ -16561,7 +16601,7 @@ return {
   POSITION_STRONG_ATTRS,
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,
   POSITION_ATTR_PROFILE, ATTR_CATEGORY_WEIGHT, weightedRatingForPosition, levelCoefficientFor,
-  CARD_POSITION_BIAS, inferPosition, positionRating, positionRatings, bestPosition, SALARY_PEAK_BONUS_THRESHOLD, SALARY_PEAK_BONUS_FACTOR, SALARY_PEAK_BONUS_MAX, peakBonusFor,
+  CARD_POSITION_BIAS, inferPosition, POSITION_KEY_WEIGHTS, POSITION_RATING_KEY_SHARE, positionRating, positionRatings, bestPosition, SALARY_PEAK_BONUS_THRESHOLD, SALARY_PEAK_BONUS_FACTOR, SALARY_PEAK_BONUS_MAX, peakBonusFor,
   trainerWeeklySalary,
   OFFENSE_PROFILES, DEFENSES, RHYTHMS,
   // Tactique confirmée (voir le grand commentaire au-dessus de
