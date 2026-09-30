@@ -2208,7 +2208,9 @@
   .pdp2-kv .motivation-badge{font-size:14px; padding:4px 12px;}
   .pdp2-quote{margin:0; font-size:12.5px; line-height:1.45; font-style:italic; color:var(--ink-dim); text-wrap:pretty;}
 
-  .pdp2-rating{flex:0 0 190px; display:flex; flex-direction:column; align-items:center; justify-content:space-between; gap:12px;}
+  /* Boutons collés sous la note (retour utilisateur 2026-09-30 : « un peu
+     loin de la note générale ») : bloc centré verticalement, plus étalé. */
+  .pdp2-rating{flex:0 0 190px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;}
   .pdp2-ring{position:relative; width:112px; height:112px;}
   .pdp2-ring svg{display:block;}
   .pdp2-ring--locked{border-radius:50%; border:9px solid var(--line); box-sizing:border-box;}
@@ -2217,7 +2219,7 @@
   .pdp2-ring-q{font-size:34px; font-weight:800; color:var(--ink-faint); line-height:1;}
   .pdp2-ring-lbl{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim);}
   .pdp2-actions{display:flex; gap:8px; width:100%;}
-  .pdp2-btn{flex:1 1 0; min-height:44px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0 10px;}
+  .pdp2-btn{flex:1 1 0; min-height:44px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); font:inherit; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0 10px; text-align:center; line-height:1.2;}
   .pdp2-btn:hover{border-color:var(--ink-faint);}
   .pdp2-btn--accent{background:transparent; border-color:var(--amber); color:var(--amber);}
   .pdp2-btn--accent:hover{background:rgba(240,162,60,.10); border-color:var(--amber);}
