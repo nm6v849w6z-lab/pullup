@@ -548,6 +548,10 @@
   /* Carte « Postes à surveiller » (aussi .tactic-confirmee-block) : pas de
      marge en plus de l'écart de colonne (22px), comme les autres cartes. */
   #prepSection .ordres-card.tactic-confirmee-block{margin-top:0;}
+  /* Hauteur à son contenu, pas étirée à celle de « Temps de jeu » (retour
+     utilisateur 2026-09-30 : « je préfère avoir du vide sous la brique que
+     dans la brique »). */
+  #prepSection .ordres-card.tactic-confirmee-block{align-self:start;}
   #prepSection .ordres-settings-grid-nested.tactic-confirmee-block{padding-top:18px; border-top:1px solid var(--line-soft);}
 
   /* Boutons segmentés (réglages à 2-3 valeurs). */
