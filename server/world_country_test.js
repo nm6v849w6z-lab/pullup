@@ -38,7 +38,7 @@ const ok = m => console.log("✅ " + m);
   let maxPts = 0;
   fr1.teams.forEach(t => t.players.forEach(p => (p.matchLog || []).forEach(m => { if (m.competition !== "friendly") maxPts = Math.max(maxPts, m.pts || 0); })));
   assert.strictEqual(st.bests.pts[0].value, maxPts, "record de points = vrai maximum des feuilles de match");
-  assert.ok(st.bests.pts[0].opponent && st.bests.pts[0].opponent !== st.bests.pts[0].team, "adversaire du record retrouvé");
+  { const top = st.bests.pts[0]; assert.ok(top.opponent && top.opponent !== top.team, `adversaire du record retrouvé : ${JSON.stringify(top)}`); }
   ok(`statistiques du pays : leaders pts/reb/ast/blk, record de points ${maxPts} (${st.bests.pts[0].name} contre ${st.bests.pts[0].opponent}), managers actifs`);
 
   // 2) Palmarès avec finalistes (championnat et Coupe).
@@ -103,7 +103,7 @@ const ok = m => console.log("✅ " + m);
       assert.ok(r.ok && !r.mine && r.label === "Division I" && r.league.leagueId === "us-1");
       assert.strictEqual(r.league.teams.length, 10);
       assert.ok(r.league.teams.every(t => !t.managerLinkToken && !t.plannedTactics), "ni jeton ni tactique prévue");
-      assert.ok(!r.league.liveMatches && !(r.league.transferListings || []).length, "ni directs ni marché");
+      assert.ok(!r.league.liveMatches && (r.league.transferListings || []).every(l => l.status === "open" && !l.bids.length && l.currentBidderIdx == null), "ni directs ; annonces ouvertes seulement, sans enchérisseurs");
       assert.ok(Array.isArray(r.league.results) && r.league.results.length > 0, "résultats du championnat");
       assert.ok(r.league.teams.some(t => (t.players || []).some(p => (p.matchLog || []).length)), "journaux de matchs (leaders, feuilles de match)");
       assert.deepStrictEqual(r.league.divisionMoves, World.divisionMovesFor(world, "us-1"));
@@ -116,14 +116,84 @@ const ok = m => console.log("✅ " + m);
       const pp = await get(`/api/world/player-page?league=us-1&team=3&id=${pl.id}`, tok);
       assert.ok(pp.ok && !pp.mine && pp.player.name === pl.name && pp.player.teamIdx === 3 && pp.player.playerId === pl.id);
       assert.ok(pp.league.teams.every(t => !t.managerLinkToken && !t.plannedTactics && !(t.pushSubscriptions || []).length), "ni jeton ni tactique prévue");
-      assert.ok(!pp.league.liveMatches && !(pp.league.transferListings || []).length && !(pp.league.privateLeagues || []).length);
+      assert.ok(!pp.league.liveMatches && (pp.league.transferListings || []).every(l => l.status === "open" && !l.bids.length) && !(pp.league.privateLeagues || []).length);
       assert.ok(!(await get(`/api/world/player-page?league=us-1&team=3&id=999999`, tok)).ok, "joueur inconnu refusé");
       assert.ok(!(await get(`/api/world/player-page?league=us-1&team=42&id=${pl.id}`, tok)).ok, "club inconnu refusé");
       // Meilleures performances : adversaire cliquable (championnat + club).
       const b = World.countryOverview(world, "fr", { myCountry: "fr" }).bests.pts.find(x => x.competition === "championship" && x.opponent);
       assert.ok(b && b.opponentLeagueId === "fr-1" && Number.isInteger(b.opponentIdx), "adversaire (ligue + index) des meilleures performances");
     } finally { server.close(); }
-    ok("/api/world/league-page et player-page : championnat étranger complet (résultats, journaux de matchs, zones), sans jeton, tactique, marché ni direct ; « mine » pour le sien ; joueur ou club inconnu refusé ; adversaires des meilleures performances cliquables");
+    ok("/api/world/league-page et player-page : championnat étranger complet (résultats, journaux de matchs, zones), sans jeton, tactique, enchérisseur ni direct ; « mine » pour le sien ; joueur ou club inconnu refusé ; adversaires des meilleures performances cliquables");
+  }
+
+  // 7) Informations cachées des joueurs des autres clubs (server/
+  // publicPlayers.js) : scan complet du JSON.
+  {
+    const http = require("http");
+    const { createHandler } = require("./index.js");
+    const PublicPlayers = require("./publicPlayers.js");
+    const usLg = await World.loadLeague(world, "us-1", multi);
+    const usOpen = new Set((usLg.transferListings || []).filter(l => l.status === "open").map(l => l.playerId));
+    const listedUs = usLg.teams[5].players.find(p => !usOpen.has(p.id) && !usLg.teams[5].players.slice(0, 1).includes(p));
+    assert.ok(usLg.listPlayerForSale(5, listedUs.id, 90000, now), "annonce américaine");
+    usLg.teams[6].youthPlayers = [{ ...usLg.teams[6].players[0] }];
+    usLg.teams[6].scoutedAttrs = { 1: ["pass"] };
+    await store.saveMultiLeague(usLg, multi);
+    const frLg = await World.loadLeague(world, "fr-1", multi);
+    const frOpen = new Set((frLg.transferListings || []).filter(l => l.status === "open").map(l => l.playerId));
+    const listedFr = frLg.teams[4].players.find(p => !frOpen.has(p.id));
+    assert.ok(frLg.listPlayerForSale(4, listedFr.id, 80000, now), "annonce française");
+    await store.saveMultiLeague(frLg, multi);
+    const server = http.createServer(createHandler(path.join(dir, "solo.json"), () => now, multi));
+    await new Promise(r => server.listen(0, "127.0.0.1", r));
+    const get = async (url, tok) => (await fetch(`http://127.0.0.1:${server.address().port}${url}`, { headers: { "X-TipIn-Token": tok } })).json();
+    // Chemins de toutes les clés `keys` dans l'objet.
+    const scan = (obj, keys, pathStr = "", out = []) => {
+      if (Array.isArray(obj)) obj.forEach((v, i) => scan(v, keys, `${pathStr}[${i}]`, out));
+      else if (obj && typeof obj === "object") Object.keys(obj).forEach(k => { if (keys.includes(k)) out.push(`${pathStr}.${k}`); scan(obj[k], keys, `${pathStr}.${k}`, out); });
+      return out;
+    };
+    const SECRET = ["attrs", "potential", "physicalPotential", "mentalPotential", "_trainProgress", "progressLog", "form", "weeksAtLowMotivation", "aggressiveness", "transferRequestActive", "retirementTalks", "pendingMatchBoost", "forSale", "salePrice"];
+    try {
+      const tok = career.league.teams[0].managerLinkToken;
+      for (const route of [`team-page?league=us-1`, `league-page?league=us-1`, `player-page?league=us-1&team=5&id=${usLg.teams[5].players[0].id}`]) {
+        const r = await get(`/api/world/${route}`, tok);
+        assert.ok(r.ok, route);
+        const found = scan(r, SECRET);
+        const listedIds = new Set(r.league.transferListings.map(l => l.playerId));
+        const listedPaths = [];
+        r.league.teams.forEach((t, ti) => t.players.forEach((p, pi) => { if (listedIds.has(p.id)) listedPaths.push(`.league.teams[${ti}].players[${pi}].attrs`); }));
+        const leaks = found.filter(x => !listedPaths.some(lp => x === lp || x.startsWith(lp + ".")));
+        assert.deepStrictEqual(leaks, [], `${route} : aucune information cachée (${leaks.join(", ")})`);
+        const listed = r.league.teams[5].players.find(p => p.id === listedUs.id);
+        assert.ok(listed.attrs && Object.keys(listed.attrs).length === Object.keys(listedUs.attrs).length && !listed.attrsHidden, "joueur sur le marché : caractéristiques publiques");
+        assert.ok(r.league.teams.every(t => t.players.every(p => listedIds.has(p.id) || (p.attrsHidden === true && !p.attrs))), "autres joueurs marqués attrsHidden");
+        assert.ok(!("youthPlayers" in r.league.teams[6]), "académie d'un autre club non envoyée");
+        assert.ok(!("scoutedAttrs" in r.league.teams[6]), "scouting d'un autre club non envoyé");
+        assert.ok(r.league.transferListings.some(l => l.playerId === listedUs.id) && r.league.transferListings.every(l => l.status === "open" && !l.bids.length && l.currentBidderIdx === null), "annonces ouvertes seulement, sans enchérisseurs");
+        // Ce qui reste affiché : identité, stats, salaire, forme physique.
+        const p0 = r.league.teams[1].players[0];
+        ["name", "age", "height", "nationality", "position", "salary", "condition", "matchLog", "id"].forEach(k => assert.ok(p0[k] !== undefined, `${route} : ${k} conservé`));
+      }
+      // Sa propre ligue (/api/save) : ses joueurs complets ; adversaires sans
+      // potentiel ni traits cachés (caractéristiques gardées : scouting,
+      // niveau de l'adversaire…) ; joueur sur le marché : potentiel gardé.
+      const save = await get("/api/save", tok);
+      const me = save.league.teams[save.myTeamIndex];
+      assert.ok(me.players.every(p => typeof p.potential === "number" && p.attrs && typeof p.form === "number"), "ses joueurs : tout");
+      const others = save.league.teams.filter((t, i) => i !== save.myTeamIndex);
+      const openFr = new Set(save.league.transferListings.filter(l => l.status === "open").map(l => l.playerId));
+      const HIDDEN = ["potential", "physicalPotential", "mentalPotential", "_trainProgress", "progressLog", "form", "weeksAtLowMotivation", "transferRequestActive", "retirementTalks", "pendingMatchBoost", "forSale", "salePrice"];
+      others.forEach(t => t.players.forEach(p => {
+        const leak = scan(p, HIDDEN).filter(x => !(openFr.has(p.id) && x === ".potential"));
+        assert.deepStrictEqual(leak, [], `/api/save, ${t.teamName} / ${p.name} : ${leak.join(", ")}`);
+        assert.ok(p.attrs, "caractéristiques des adversaires gardées (scouting)");
+      }));
+      assert.strictEqual(typeof save.league.teams[4].players.find(p => p.id === listedFr.id).potential, "number", "adversaire sur le marché : potentiel (palier affiché par le marché)");
+      assert.ok(others.every(t => !(t.youthPlayers || []).length && !(t.youthCandidates || []).length && !Object.keys(t.scoutedAttrs || {}).length), "académie et scouting des autres clubs non envoyés");
+      assert.deepStrictEqual(PublicPlayers.HIDDEN_PLAYER_FIELDS.filter(k => !HIDDEN.includes(k)), ["transferRequestQuote", "transferRequestDiscussed", "trainingSecondsPlayedByPosition"]);
+    } finally { server.close(); }
+    ok("informations cachées : autre championnat (team/league/player-page) sans caractéristiques, potentiel ni traits cachés (sauf caractéristiques d'un joueur sur le marché), sans académie ni scouting des clubs ; /api/save : adversaires sans potentiel, motivation, progression ni académie");
   }
 
   fs.rmSync(dir, { recursive: true, force: true });

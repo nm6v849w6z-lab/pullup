@@ -236,12 +236,21 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
     if (!pdContent.querySelector(".pdp-pill.locked") || !pdContent.querySelector(".pdp2-ring--locked")) fail("caractéristiques et note verrouillées (joueur non scouté).");
     if (/\/ sem\./.test(pdContent.textContent)) fail("pas de salaire pour un joueur d'un autre club.");
     if (!/Derniers matchs/.test(pdContent.textContent)) fail("stats de matchs attendues.");
+    if (/NaN|undefined/.test(pdContent.textContent)) fail("fiche joueur étrangère : ni NaN ni undefined (caractéristiques non envoyées).");
+    if (!win.eval(`(() => { const lg = playerDetailForeign.league; const open = new Set((lg.transferListings || []).filter(l => l.status === "open").map(l => l.playerId)); return lg.teams.every(t => t.players.every(p => p.attrsHidden || open.has(p.id))); })()`)) fail("joueurs d'un autre championnat : caractéristiques non reçues (attrsHidden), sauf joueurs sur le marché.");
     if (win.eval("league.leagueId") === "us-1" || win.eval("myTeamIndex") !== 0) fail("la ligue du joueur doit être restaurée après le rendu.");
     // Son club → fiche équipe étrangère ; retour → fiche joueur → Planète Hoop.
     pdContent.querySelector(".pdp2-id-top [data-team-idx]").click();
     await wait(() => !tdSection.classList.contains("hidden") && tdContent.querySelector(".team-apercu-name") && tdContent.querySelector(".team-apercu-name").textContent === usLg.teams[pTeam].name, "fiche du club depuis la fiche joueur");
     // Depuis la fiche équipe étrangère, un joueur de l'effectif → sa fiche (pas un joueur de son propre club).
     tdContent.querySelector('.team-detail-subnav [data-team-detail-subview="effectif"]').click();
+    const caracsBtn = tdContent.querySelector('[data-team-effectif-view="caracs"]');
+    if (caracsBtn) {
+      caracsBtn.click();
+      if (/NaN|undefined/.test(tdContent.textContent)) fail("fiche équipe étrangère (caractéristiques) : ni NaN ni undefined.");
+      tdContent.querySelector('[data-team-effectif-view="general"]').click();
+    }
+    if (/NaN|undefined/.test(tdContent.textContent)) fail("fiche équipe étrangère : ni NaN ni undefined.");
     const rosterLink = tdContent.querySelector("[data-player-team][data-player-id], [data-player-detail]");
     if (!rosterLink) fail("effectif de la fiche équipe étrangère : noms de joueurs cliquables attendus.");
     {
@@ -277,10 +286,10 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
     const tp = await win.eval(`planeteFetch("/api/world/${route}?league=us-1")`);
     if (!tp.ok) fail(JSON.stringify(tp).slice(0,300));
     if (tp.league.teams.some(t => t.managerLinkToken || (t.pushSubscriptions || []).length || t.plannedTactics || (t.tacticPresets || []).length || (t.marketWatchlist || []).length)) fail(`données privées dans /api/world/${route}.`);
-    if ((tp.league.transferListings || []).length || tp.league.liveMatches || (tp.league.privateLeagues || []).length || (tp.league.friendlies || []).length) fail(`marché/directs/ligues privées dans /api/world/${route}.`);
+    if ((tp.league.transferListings || []).some(l => l.status !== "open" || (l.bids || []).length || l.currentBidderIdx != null) || tp.league.liveMatches || (tp.league.privateLeagues || []).length || (tp.league.friendlies || []).length) fail(`enchérisseurs/directs/ligues privées dans /api/world/${route}.`);
     if (!Array.isArray(tp.league.results) || !tp.league.divisionMoves || tp.label !== "Division I" || tp.mine) fail(`/api/world/${route} : résultats, zones, libellé attendus.`);
   }
-  ok("/api/world/team-page et /api/world/league-page : aucun jeton, abonnement, tactique, marché ni direct ; résultats, zones et libellé présents");
+  ok("/api/world/team-page et /api/world/league-page : aucun jeton, abonnement, tactique, enchérisseur ni direct ; résultats, zones et libellé présents");
 
   // 4) Recherche du haut : un club américain → sa fiche équipe.
   const usLeague = await World.loadLeague(world, "us-1", multiSavePath);
