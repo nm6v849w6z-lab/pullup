@@ -40936,10 +40936,10 @@ function showPrestigeModal() {
   overlay.id = "prestigeModalOverlay";
   overlay.innerHTML = `<div class="upgrade-confirm-box pr-box" role="dialog" aria-labelledby="prestigeModalTitle">` +
     `<button type="button" class="sl-hist-close" data-prestige-close aria-label="Fermer">×</button>` +
-    `<h3 id="prestigeModalTitle"><span>Prestige</span> : ${d.value} / 100 · <span>${escapeHtml(prestigeLabel(d.value))}</span></h3>` +
+    `<h3 id="prestigeModalTitle"><span>Renommée</span> : ${d.value} / 100 · <span>${escapeHtml(prestigeLabel(d.value))}</span></h3>` +
     `<p class="pr-intro">La réputation du club auprès du public, bâtie sur les 5 dernières saisons : la division d'abord, puis le classement, les play-offs, la coupe et les montées. La saison la plus récente compte le plus. Mis à jour à chaque changement de saison.</p>` +
     `<table class="pr-table"><thead><tr><th>Saison</th><th>Résultat</th><th class="n">Note</th></tr></thead><tbody>${rows}</tbody></table>` +
-    `<div class="pr-total"><span>Prestige</span><b>${d.value}</b></div></div>`;
+    `<div class="pr-total"><span>Renommée</span><b>${d.value}</b></div></div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener("click", e => { if (e.target === overlay || e.target.closest("[data-prestige-close]")) overlay.remove(); });
 }
@@ -40955,7 +40955,7 @@ function dashRenderPulse(data) {
     <div class="hm-pulse__grid">
       <a class="hm-pulse__link" href="/humeur" data-dash-href="/humeur" aria-label="Supporters : ${dashEsc(s)} sur 100">${dashGauge(s, "Supporters", data.supporters.label ?? dashMoodLabel(s))}</a>
       <a class="hm-pulse__link" href="/effectif" data-dash-href="/effectif" aria-label="Alchimie : ${dashEsc(c)} sur 100">${dashGauge(c, "Alchimie", data.chemistry.label ?? dashMoodLabel(c, "chemistry"))}</a>
-      ${data.prestige ? `<button type="button" class="hm-pulse__link hm-pulse__btn" data-prestige-open aria-label="Prestige : ${dashEsc(data.prestige.value)} sur 100">${dashGauge(data.prestige.value, "Prestige", data.prestige.label, data.prestige.stars)}</button>` : ""}
+      ${data.prestige ? `<button type="button" class="hm-pulse__link hm-pulse__btn" data-prestige-open aria-label="Renommée : ${dashEsc(data.prestige.value)} sur 100">${dashGauge(data.prestige.value, "Renommée", data.prestige.label, data.prestige.stars)}</button>` : ""}
     </div>
   </section>`;
 }

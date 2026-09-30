@@ -39,9 +39,9 @@ const hist = [
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "effectif").click();
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "club").click();
   const labels = [...doc.querySelectorAll(".hm-pulse .hm-gauge__label .hm-strong")].map(e => e.textContent.trim());
-  check(labels.join() === "Supporters,Alchimie,Prestige", "Pouls du club : 3 jauges dont Prestige");
+  check(labels.join() === "Supporters,Alchimie,Renommée", "Pouls du club : 3 jauges dont Renommée");
   const btn = doc.querySelector("[data-prestige-open]");
-  check(btn && /Prestige : \d+ sur 100/.test(btn.getAttribute("aria-label")), "jauge Prestige cliquable");
+  check(btn && /Renommée : \d+ sur 100/.test(btn.getAttribute("aria-label")), "jauge Prestige cliquable");
   check(!/%|×|€/.test(doc.querySelector(".hm-pulse").textContent), "aucun chiffre économique affiché");
   btn.click();
   const ov = doc.getElementById("prestigeModalOverlay");
