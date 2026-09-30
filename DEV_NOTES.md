@@ -142,9 +142,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   - Ligue : « Résultats de la journée N » (lgLastRoundResultsHtml) entre le
     classement et les leaders, score → feuille de match.
   - Salle : carte « Votre terrain » en pleine largeur sous la grille.
-  - Inscription sur invitation : BASKET_INVITE_CODE (codes séparés par des
-    virgules ; absente = ouvert), email et 1re connexion Discord, lien
-    `/?invite=CODE` prérempli. **À régler sur Render** (prod) pour activer.
+  - Inscription sur invitation, code par défaut **BuzzerBeater**
+    (DEFAULT_INVITE_CODE, server/accountRoutes.js) ; BASKET_INVITE_CODE le
+    remplace (codes séparés par des virgules), `off` = ouvert ; email et 1re
+    connexion Discord, lien `/?invite=CODE` prérempli. Les tests qui
+    inscrivent des comptes posent BASKET_INVITE_CODE=off.
+  - Messagerie MONDIALE (2026-09-30) : bouton « Envoyer un message » aussi
+    sur la fiche d'un club d'un autre championnat ; correspondant désigné
+    par `who` ("3" ou "us-1:3") côté navigateur et API ; annuaire
+    `contacts` (empreinte → championnat/index/nom) dans messages.json, tenu
+    à jour à chaque appel ; l'envoi vérifie le championnat de l'autre club
+    (loadLeague). Test : planete_hoop_test.js (5).
+  - Aperçu d'une équipe : Palmarès / Interviews séparés par des traits.
   - Planète Hoop : un club d'un autre championnat ouvre sa fiche équipe
     habituelle (showForeignTeamDetail, GET /api/world/team-page nettoyé :
     jetons, push, tactiques prévues, marché, directs retirés) ; rendu avec

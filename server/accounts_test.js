@@ -11,6 +11,10 @@ const store = require("./store.js");
 const AccountRoutes = require("./accountRoutes.js");
 const Accounts = require("./accounts.js");
 
+// Inscriptions sur invitation par défaut (DEFAULT_INVITE_CODE) : ouvertes
+// pour ces tests, sauf dans le bloc qui vérifie le code lui-même.
+process.env.BASKET_INVITE_CODE = "off";
+
 function tmpDir() { return fs.mkdtempSync(path.join(os.tmpdir(), "basket-accounts-test-")); }
 
 function start(paths, nowFn) {
@@ -367,10 +371,16 @@ async function main() {
       assert.strictEqual(ok2.body.status, "active", JSON.stringify(ok2.body));
       const login = await request(server, "POST", "/api/account/login", { email: "inv@x.fr", password: "motdepasse1" });
       assert.strictEqual(login.statusCode, 200, "connexion sans code");
-      delete process.env.BASKET_INVITE_CODE;
+      process.env.BASKET_INVITE_CODE = "off";
       const cfg2 = await request(server, "GET", "/api/account/config");
       assert.strictEqual(cfg2.body.inviteRequired, false);
-    } finally { server.close(); delete process.env.BASKET_INVITE_CODE; }
+      // Sans variable : le code par défaut « BuzzerBeater ».
+      delete process.env.BASKET_INVITE_CODE;
+      const cfg3 = await request(server, "GET", "/api/account/config");
+      assert.strictEqual(cfg3.body.inviteRequired, true);
+      const def = await request(server, "POST", "/api/account/signup", { email: "inv3@x.fr", password: "motdepasse1", clubName: "Club Buzzer", inviteCode: "buzzerbeater" });
+      assert.strictEqual(def.body.status, "active", JSON.stringify(def.body));
+    } finally { server.close(); process.env.BASKET_INVITE_CODE = "off"; }
   }
 
   // 7) Préfixe de clés Redis (serveur de test partageant la base prod).

@@ -5,6 +5,8 @@
 // le récupère au retour du manager s'il est toujours à l'IA. Voir
 // server/world.js (releaseInactiveManagers, reclaimClub), server/index.js
 // (lastSeenAt, comptes) et server/accountRoutes.js (tryAssignClub).
+// Inscriptions sur invitation par défaut (voir accountRoutes.js, DEFAULT_INVITE_CODE) : ouvertes ici.
+process.env.BASKET_INVITE_CODE = "off";
 const assert = require("assert");
 const fs = require("fs");
 const os = require("os");

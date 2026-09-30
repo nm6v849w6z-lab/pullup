@@ -84,13 +84,19 @@ function discordConfigured() {
 }
 
 // Code d'invitation (retour utilisateur 2026-09-29 : « ajoute un code
-// d'invitation sur la page d'inscription pour le moment ») : tant que
-// BASKET_INVITE_CODE est défini (plusieurs codes possibles, séparés par des
-// virgules), toute NOUVELLE inscription (email ou 1re connexion Discord)
-// doit en fournir un ; casse et espaces ignorés. Variable absente = ouvert.
-// La connexion d'un compte existant n'est jamais concernée.
+// d'invitation sur la page d'inscription pour le moment », puis le
+// 2026-09-30 : « ajoute un code d'invitation sur le jeu : BuzzerBeater ») :
+// toute NOUVELLE inscription (email ou 1re connexion Discord) doit fournir
+// un code valable ; casse et espaces ignorés. Par défaut DEFAULT_INVITE_CODE ;
+// BASKET_INVITE_CODE le remplace (plusieurs codes séparés par des virgules),
+// et BASKET_INVITE_CODE=off rouvre les inscriptions à tous. La connexion
+// d'un compte existant n'est jamais concernée.
+const DEFAULT_INVITE_CODE = "BuzzerBeater";
 function inviteCodes() {
-  return String(process.env.BASKET_INVITE_CODE || "").split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
+  const raw = process.env.BASKET_INVITE_CODE;
+  const value = raw == null || raw.trim() === "" ? DEFAULT_INVITE_CODE : raw;
+  if (/^(off|aucun|none|0)$/i.test(value.trim())) return [];
+  return value.split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
 }
 function inviteRequired() { return inviteCodes().length > 0; }
 function inviteCodeValid(raw) {

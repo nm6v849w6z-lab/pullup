@@ -1,6 +1,8 @@
 // Page d'accueil (/bienvenue) : « Mot de passe oublié ? » puis lien reçu
 // (#reinit=…) → nouveau mot de passe et connexion. Voir
 // assets/site/index.html et server/accountRoutes.js.
+// Inscriptions sur invitation par défaut (voir accountRoutes.js, DEFAULT_INVITE_CODE) : ouvertes ici.
+process.env.BASKET_INVITE_CODE = "off";
 const assert = require("assert");
 const fs = require("fs");
 const os = require("os");

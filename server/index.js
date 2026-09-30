@@ -1111,7 +1111,17 @@ async function performMultiLeagueReset({ teamNames, adminTeamNameInput, multiSav
 // disque/de la vraie horloge (voir server/index_test.js).
 function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, multiSavePath = store.defaultMultiLeaguePath(), accountsPath = store.defaultAccountsPath()) {
   // Messagerie : stockée à côté de la ligue partagée (voir server/messages.js).
-  const messages = Messages.createService(Messages.messagesPathFor(multiSavePath));
+  // Messagerie mondiale : championnat d'un correspondant d'ailleurs, lu à la
+  // demande (voir server/messages.js, resolveOther).
+  const messages = Messages.createService(Messages.messagesPathFor(multiSavePath), {
+    loadLeague: async (id) => {
+      const world = await World.loadWorld(multiSavePath, Date.now());
+      if (!world || !world.leagues.some(e => e.id === id)) return null;
+      const lg = await World.loadLeague(world, id, multiSavePath);
+      if (lg && !lg.leagueId) lg.leagueId = id;
+      return lg;
+    },
+  });
   const handleAccountRoutes = AccountRoutes.createAccountRouter({
     sendJson, readJsonBody, getManagerToken, originFor, isAdminAuthorized, multiSavePath, accountsPath,
   });
@@ -1413,6 +1423,24 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           });
           sendJson(res, 200, { ok: true, myCountry, myLeagueId: ctx.leagueId, country, countries,
             stats: (world.countryStats || {})[country] || null, history: ((world.history || {})[country]) || [] });
+          return;
+        }
+        // Aperçu d'un pays (retour utilisateur 2026-09-30, « comme l'aperçu du
+        // pays de BuzzerBeater ») : carte du pays, divisions, Coupe, leaders et
+        // meilleures performances de la saison, titres, palmarès, classement
+        // des managers du pays, amicaux internationaux. Voir
+        // World.countryOverview (registre seulement, aucune ligue rechargée).
+        if (route.pathname === "/api/world/country") {
+          const myCountry = ctx.league.country || World.DEFAULT_COUNTRY;
+          const code = q.get("code") || q.get("country");
+          const country = World.isOpenCountry(code) ? code : myCountry;
+          const countries = World.publicCountries().map(c => {
+            const st = (world.countryStats || {})[c.code];
+            return { code: c.code, name: c.name, managers: st ? st.managers : 0, leagueCount: World.leaguesOfCountry(world, c.code).length };
+          });
+          const friendlies = await store.loadWorldAuxRaw("friendlies", multiSavePath).catch(() => null);
+          sendJson(res, 200, { ok: true, myCountry, myLeagueId: ctx.leagueId, myTeamIndex: ctx.teamIndex, countries,
+            overview: World.countryOverview(world, country, { myCountry, friendlies, now }) });
           return;
         }
         if (route.pathname === "/api/world/managers") {
@@ -1891,6 +1919,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       if (route.pathname.startsWith("/api/messages/")) {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        if (ctx.leagueId && !ctx.league.leagueId) ctx.league.leagueId = ctx.leagueId;
         let out = null;
         try {
           if (req.method === "GET" && route.pathname === "/api/messages/summary") {
