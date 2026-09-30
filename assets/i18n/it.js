@@ -5364,4 +5364,7 @@ window.HM_I18N_IT = {
   "Enregistrement impossible, réessaie.": "Salvataggio non riuscito, riprova.",
   "Visible des autres managers : fiche d'équipe, messagerie, interviews et chat de la ligue. 3 à 20 caractères (lettres, chiffres, _ - .), jamais ton email ni ton vrai nom. {0}": "Visibile agli altri manager: scheda squadra, messaggi, interviste e chat della lega. Da 3 a 20 caratteri (lettere, cifre, _ - .), mai la tua email né il tuo vero nome. {0}",
   "Mon profil de manager.": "Il mio profilo da manager.",
+  "est champion !": "è campione!",
+  "remporte le titre": "vince il titolo",
+  "qualifié pour la finale": "qualificato per la finale",
 };

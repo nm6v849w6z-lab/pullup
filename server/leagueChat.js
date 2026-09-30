@@ -198,6 +198,40 @@ function syncSystem(chat, league, opts) {
     changed = true;
   }
 
+  // Play-offs (demi-finales puis finale, 2 victoires ; voir
+  // League.recordPlayoffGameResult) : un message par match joué (score de
+  // la série, qualification), puis le champion. Curseur = nombre de matchs
+  // déjà annoncés par série (remis à zéro avec la saison). La Coupe, elle,
+  // n'est jamais annoncée (retour utilisateur 2026-09-30).
+  const po = league.playoffs;
+  if (po) {
+    const cur = chat.sync.playoffs || (chat.sync.playoffs = { semi0: 0, semi1: 0, final: 0, champion: false });
+    const series = [["semi0", po.series && po.series[0], "semi"], ["semi1", po.series && po.series[1], "semi"], ["final", po.finalSeries, "final"]];
+    series.forEach(([sid, se, stage]) => {
+      if (!se || !Array.isArray(se.games)) return;
+      let winsA = 0, winsB = 0;
+      se.games.forEach((g, gi) => {
+        const aWon = g.home === se.idxA ? g.scoreHome > g.scoreAway : g.scoreAway > g.scoreHome;
+        if (aWon) winsA++; else winsB++;
+        if (gi < (cur[sid] || 0)) return;
+        const homeWon = g.scoreHome > g.scoreAway;
+        const w = homeWon ? g.home : g.away, l = homeWon ? g.away : g.home;
+        const wWins = w === se.idxA ? winsA : winsB, lWins = w === se.idxA ? winsB : winsA;
+        push("playoffs", `po:${season}:${sid}:${gi}`, {
+          stage, game: gi + 1,
+          winner: names[w], winnerIdx: w, loser: names[l], loserIdx: l,
+          winnerPts: Math.max(g.scoreHome, g.scoreAway), loserPts: Math.min(g.scoreHome, g.scoreAway),
+          seriesWinner: wWins, seriesLoser: lWins, decided: wWins >= 2,
+        }, now);
+        cur[sid] = gi + 1;
+      });
+    });
+    if (po.champion != null && !cur.champion) {
+      push("playoffs", `po:${season}:champion`, { stage: "champion", team: names[po.champion], teamIdx: po.champion }, now);
+      cur.champion = true;
+    }
+  }
+
   // Transferts (voir League.logTransferNews).
   const seen = new Set(chat.sync.transfers);
   (league.transferNews || []).forEach(t => {
@@ -222,6 +256,11 @@ function systemText(m) {
   const d = m.data || {};
   if (m.kind === "result") return `${d.winner} bat ${d.loser} ${d.winnerPts}-${d.loserPts}`;
   if (m.kind === "transfer") return `${d.buyer} achète ${d.player} (${d.seller})`;
+  if (m.kind === "playoffs") {
+    if (d.stage === "champion") return `${d.team} est champion !`;
+    const stage = d.stage === "final" ? "finale" : "demi-finale";
+    return `${d.winner} bat ${d.loser} ${d.winnerPts}-${d.loserPts} (${stage}, ${d.seriesWinner}-${d.seriesLoser})`;
+  }
   if (m.kind === "standings") {
     if (d.event === "leader") return `${d.team} prend la tête du classement`;
     if (d.event === "playoffs") return `${d.team} entre dans la zone de play-offs (${d.rank}e)`;
@@ -301,6 +340,21 @@ function createService(savePath, opts = {}) {
   }
 
   return {
+    // Messages automatiques dus, sans lecteur (rattrapage de fond du monde,
+    // server/world.js:catchUpWorld, juste avant le changement de saison et
+    // après chaque passage) : plus aucun résultat perdu si personne n'ouvre
+    // le chat avant la nouvelle saison. Écrit seulement s'il y a du nouveau.
+    async flushSystem(ctx, now) {
+      if (!ctx.league.teams.some(t => t && t.isHuman)) return false;
+      const id = ctx.leagueId || ctx.league.leagueId;
+      return withLock(async () => {
+        const chat = await load(id);
+        if (!syncSystem(chat, ctx.league, sysOpts(ctx, now))) return false;
+        await save(id, chat);
+        return true;
+      });
+    },
+
     // `summaryOnly` : juste le nombre de non-lus (sondage depuis n'importe
     // quelle page, réponse minuscule).
     async view(ctx, now, summaryOnly = false) {

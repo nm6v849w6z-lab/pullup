@@ -328,6 +328,9 @@ function acquireSaveLock() {
 // sous le verrou de sauvegarde (requête avec jeton, ou minuterie de
 // startServer).
 const WORLD_CATCHUP_INTERVAL_MS = 10 * 60 * 1000;
+// Chat de la ligue de chaque fichier de ligue (voir createHandler) : le
+// rattrapage de fond y écrit les messages automatiques dus.
+const leagueChatServices = new Map();
 const lastWorldCatchUpAt = new Map();
 // Échéance de Coupe nationale (coup d'envoi du jeudi 20:00, fin de
 // diffusion) : rattrapage forcé dès qu'elle est passée, pour que le direct
@@ -340,7 +343,12 @@ async function maybeCatchUpWorld(multiSavePath, now, force = false, accountsPath
   if (!force && !due && now - last < WORLD_CATCHUP_INTERVAL_MS && now >= last) return [];
   lastWorldCatchUpAt.set(multiSavePath, now);
   try {
-    const events = await World.catchUpWorld(multiSavePath, now, { tickLeague: (lg, t) => { const evs = tick(lg, t).events; stashRecapEvents(lg, evs); return evs; } });
+    const chat = leagueChatServices.get(multiSavePath);
+    const events = await World.catchUpWorld(multiSavePath, now, {
+      tickLeague: (lg, t) => { const evs = tick(lg, t).events; stashRecapEvents(lg, evs); return evs; },
+      // Chat de la ligue : messages automatiques écrits même sans lecteur.
+      flushLeague: chat ? (id, lg, world) => chat.flushSystem({ league: lg, leagueId: id, world }, now) : null,
+    });
     nextWorldDeadlineAt.set(multiSavePath, events.nextDeadlineAt == null ? null : events.nextDeadlineAt);
     // Clubs rendus à l'IA (managers inactifs) : le compte garde la trace du
     // club pour le lui rendre s'il revient (voir World.reclaimClub).
@@ -1176,6 +1184,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       },
     }),
   });
+  leagueChatServices.set(multiSavePath, leagueChat);
   const handleAccountRoutes = AccountRoutes.createAccountRouter({
     sendJson, readJsonBody, getManagerToken, originFor, isAdminAuthorized, multiSavePath, accountsPath,
   });

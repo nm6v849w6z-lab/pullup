@@ -513,11 +513,22 @@ async function reclaimClub(world, savePath, ref, now) {
   return team.managerLinkToken;
 }
 
-async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = {}) {
+// `flushLeague(id, league, world)` (facultatif, async) : écrit les messages
+// automatiques du chat de la ligue encore dus (server/leagueChat.js) —
+// appelé juste AVANT chaque changement de saison (sinon les derniers
+// résultats et les play-offs seraient perdus, league.results étant vidé par
+// startNextSeason) puis pour chaque ligue à la fin du rattrapage.
+async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flushLeague = null } = {}) {
   const world = await loadWorld(savePath, now);
   if (!world) return [];
   const events = [];
   const tick = tickLeague || ((lg, t) => AutoSim.catchUpLeague(lg, t));
+  const flush = async (id, lg) => {
+    if (!flushLeague) return;
+    useLeagueTimeZone(lg);
+    try { await flushLeague(id, lg, world); } catch (e) { console.warn("[chat de la ligue]", e.message); }
+    useLeagueTimeZone(null);
+  };
   let worldDirty = false;
   let nextDeadlineAt = null;
   // Toutes les ligues restent en main jusqu'à la fin (transferts du marché
@@ -601,6 +612,10 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
         }
       }
       if (ecoAt == null || ecoAt > now) break;
+      // Chat de la ligue : derniers résultats, play-offs et champion écrits
+      // avant que la nouvelle saison ne vide league.results (et avant les
+      // échanges de clubs entre divisions, qui changent les index).
+      for (const [id, lg] of leagues) await flush(id, lg);
       for (const lg of all) {
         useLeagueTimeZone(lg);
         AutoSim.runWeeklyEconomyTick(lg, (lg.lastEconomyTick || 0) + 1, ecoAt, false, []);
@@ -671,6 +686,7 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
       if (at != null && at > now && (nextDeadlineAt == null || at < nextDeadlineAt)) nextDeadlineAt = at + 30 * 1000;
     }
   }
+  for (const [id, lg] of allLeagues) await flush(id, lg);
   let saved = 0;
   for (const [id, lg] of allLeagues) {
     if (leagueFingerprint(lg) === fingerprints.get(id)) continue;

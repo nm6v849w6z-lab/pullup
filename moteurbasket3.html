@@ -27006,7 +27006,7 @@ document.getElementById("standingsSection").addEventListener("click", (e) => {
 // ---------------------------------------------------------------------
 const LGC_POLL_MS = 15000;
 const LGC_COUNT_POLL_MS = 60000;
-const LGC_KIND_LABELS = { result: "Résultat", transfer: "Transfert", standings: "Classement" };
+const LGC_KIND_LABELS = { result: "Résultat", playoffs: "Play-offs", transfer: "Transfert", standings: "Classement" };
 const lgcUi = { data: null, sig: "", sending: false, error: "", pickFor: null, loading: null, open: false, unread: 0, returnFocus: null, marking: null };
 
 function lgcBadgeText(n) { return n > 9 ? "9+" : String(n); }
@@ -27161,6 +27161,16 @@ function lgcSystemHtml(m) {
   if (m.kind === "result") {
     return `${team(d.winner, d.winnerIdx)} <span>bat</span> <span data-no-i18n${d.loserIdx === myTeamIndex ? ` class="me"` : ""}>${escapeHtml(d.loser || "?")}</span> ` +
       `<span class="lgc-score">${Number(d.winnerPts) || 0}-${Number(d.loserPts) || 0}</span> <small>· J${Number(d.round) || ""}</small>`;
+  }
+  // Play-offs (jamais la Coupe) : chaque match avec le score de la série,
+  // puis le champion.
+  if (m.kind === "playoffs") {
+    if (d.stage === "champion") return `${team(d.team, d.teamIdx)} <span>est champion !</span>`;
+    const stage = d.stage === "final" ? "Finale" : "Demi-finale";
+    const series = d.decided ? (d.stage === "final" ? "remporte le titre" : "qualifié pour la finale") : "";
+    return `${team(d.winner, d.winnerIdx)} <span>bat</span> <span data-no-i18n${d.loserIdx === myTeamIndex ? ` class="me"` : ""}>${escapeHtml(d.loser || "?")}</span> ` +
+      `<span class="lgc-score">${Number(d.winnerPts) || 0}-${Number(d.loserPts) || 0}</span> ` +
+      `<small><span>${stage}</span> · ${Number(d.seriesWinner) || 0}-${Number(d.seriesLoser) || 0}${series ? ` · <span>${series}</span>` : ""}</small>`;
   }
   if (m.kind === "transfer") {
     return `${team(d.buyer, d.buyerIdx)} <span>recrute</span> <b data-no-i18n>${escapeHtml(d.player || "?")}</b> ` +
