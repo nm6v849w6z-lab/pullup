@@ -7600,6 +7600,7 @@ class Team {
     const apply = (p, isPro) => {
       const c = cardPositionChangeFor(p);
       if (!c) return;
+      p.previousCardPosition = c.from;
       p.position = c.to;
       changes.push(Object.assign({ playerId: p.id, name: p.name, pro: isPro }, c));
     };
@@ -8501,14 +8502,12 @@ function bestPosition(player) {
 // l'intersaison est le salaire.").
 // - Une seule notion de « meilleur poste » : bestPosition (note par poste
 //   ci-dessus). Player.position (le poste de carte, badge partout) la suit.
-// - Hystérésis POSITION_CHANGE_MARGIN = 2 points : le poste ne change que si
-//   la note au meilleur poste dépasse d'AU MOINS 2 points celle du poste
-//   actuel (égalité ou écart de 1 : on garde le poste actuel). Revenir en
-//   arrière exige à son tour 2 points dans l'autre sens : un gain ou une
-//   perte d'1 point d'une semaine à l'autre ne fait jamais osciller le
-//   poste. 2 = l'écart médian entre postes voisins (≈ 1,8, voir
-//   position_rating_test.js) : assez pour ignorer le bruit, assez peu pour
-//   suivre une vraie évolution en quelques semaines.
+// - Hystérésis : le poste change dès que la note au meilleur poste dépasse
+//   celle du poste actuel d'AU MOINS 1 point (POSITION_CHANGE_MARGIN) ;
+//   revenir au poste qu'on vient de quitter (Player.previousCardPosition,
+//   sauvegardé) exige 2 points (POSITION_RETURN_MARGIN), pour qu'un
+//   aller-retour d'une semaine à l'autre ne se produise pas au moindre
+//   point gagné ou perdu (règle utilisateur 2026-09-30).
 // - Quand : fin de chaque mise à jour hebdomadaire (Team.trainWeek pour les
 //   clubs humains, Team.trainWeekCPU pour l'IA) et à chaque chargement de
 //   sauvegarde (teamFromSave : migration des sauvegardes existantes, côté
@@ -8526,7 +8525,11 @@ function bestPosition(player) {
 //   (trainingSecondsPlayedByPosition), pas le poste de carte — un
 //   changement en cours de semaine ne fait rien perdre.
 // ---------------------------------------------------------------------
-const POSITION_CHANGE_MARGIN = 2;
+// Règle utilisateur (2026-09-30) : le poste change dès que le meilleur poste
+// dépasse le poste actuel d'AU MOINS 1 point ; revenir au poste qu'on vient
+// de quitter (previousCardPosition) en exige 2, pour éviter le va-et-vient.
+const POSITION_CHANGE_MARGIN = 1;
+const POSITION_RETURN_MARGIN = 2;
 const CARD_POSITION_SHORT = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ailier fort": "AF", "Pivot": "P" };
 // Nombre de tirages de caractéristiques tentés à la création pour que le
 // poste demandé soit bien le meilleur (sinon : poste = meilleur poste).
@@ -8538,7 +8541,8 @@ function cardPositionChangeFor(player) {
   const best = bestPosition(player);
   if (!best || best === player.position) return null;
   const ratingTo = positionRating(player, best), ratingFrom = positionRating(player, player.position);
-  if (ratingTo - ratingFrom < POSITION_CHANGE_MARGIN) return null;
+  const margin = best === player.previousCardPosition ? POSITION_RETURN_MARGIN : POSITION_CHANGE_MARGIN;
+  if (ratingTo - ratingFrom < margin) return null;
   return { from: player.position, to: best, ratingFrom, ratingTo };
 }
 
@@ -13545,6 +13549,7 @@ function serializePlayerRecord(p) {
     // faire "changer de poste" l'étiquette/l'infobulle du salaire affichées,
     // alors que le salaire réellement payé restait, lui, correctement figé.
     effectivePosition: p.effectivePosition,
+    previousCardPosition: p.previousCardPosition || null,
     _trainProgress: { ...p._trainProgress },
     aggressiveness: p.aggressiveness, form: p.form,
     // Forme physique (voir CONDITION_STATES/currentCondition plus haut) :
@@ -14092,6 +14097,7 @@ function playerFromSave(pdata) {
   // saison (Team.recalculateSalaries), comme n'importe quel champ manquant
   // d'une ancienne sauvegarde.
   p.effectivePosition = pdata.effectivePosition || p.effectivePosition;
+  p.previousCardPosition = pdata.previousCardPosition || null;
   if (pdata._trainProgress) p._trainProgress = { ...pdata._trainProgress };
   if (typeof pdata.form === "number") p.form = pdata.form;
   // Forme physique (voir serializePlayerRecord ci-dessus). Absent (ancienne
@@ -16737,7 +16743,7 @@ return {
   POSITION_STRONG_ATTRS,
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,
   POSITION_ATTR_PROFILE, ATTR_CATEGORY_WEIGHT, weightedRatingForPosition, levelCoefficientFor,
-  CARD_POSITION_BIAS, inferPosition, POSITION_KEY_WEIGHTS, POSITION_RATING_KEY_SHARE, positionRating, positionRatings, bestPosition, POSITION_CHANGE_MARGIN, cardPositionChangeFor, attrsForCardPosition, SALARY_PEAK_BONUS_THRESHOLD, SALARY_PEAK_BONUS_FACTOR, SALARY_PEAK_BONUS_MAX, peakBonusFor,
+  CARD_POSITION_BIAS, inferPosition, POSITION_KEY_WEIGHTS, POSITION_RATING_KEY_SHARE, positionRating, positionRatings, bestPosition, POSITION_CHANGE_MARGIN, POSITION_RETURN_MARGIN, cardPositionChangeFor, attrsForCardPosition, SALARY_PEAK_BONUS_THRESHOLD, SALARY_PEAK_BONUS_FACTOR, SALARY_PEAK_BONUS_MAX, peakBonusFor,
   trainerWeeklySalary,
   OFFENSE_PROFILES, DEFENSES, RHYTHMS,
   // Tactique confirmée (voir le grand commentaire au-dessus de

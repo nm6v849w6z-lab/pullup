@@ -68,6 +68,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     visibility_refresh_test.js (pause fixe de 300 ms), world_country_test.js
     (adversaire d'un record de coupe en 1re saison, corrigé dans world.js).
 
+- **✅ EN PROD (2026-09-30) — Poste de carte qui suit les caractéristiques** :
+  changement dès 1 point d'écart au meilleur poste (POSITION_CHANGE_MARGIN),
+  retour au poste quitté à partir de 2 (POSITION_RETURN_MARGIN,
+  Player.previousCardPosition) ; chaque semaine + au chargement ; salaire
+  seulement à l'intersaison ; nouvelle dans le fil (clubs humains) ;
+  composition automatique qui comble un poste sans joueur de carte (plus de
+  forfait pour « pas de pivot » avec au moins 5 joueurs, validé par
+  l'utilisateur). Effectif en un seul bloc.
+
 - **🔴 À FAIRE — caractéristiques des adversaires de SA ligue envoyées au
   navigateur** (`/api/save`) : potentiel, motivation, académie et scouting
   des autres clubs sont retirés (2026-09-30), mais les caractéristiques
