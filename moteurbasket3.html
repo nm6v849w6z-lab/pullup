@@ -6728,6 +6728,8 @@
      « modifie la couleur du logo pour qu'il soit plus foncé [...] on devrait
      avoir la même couleur pour le logo ») : variante recolorée du PNG. */
   html[data-theme="light"] .sidebar-brand .brand-logo-img{content:url("/assets/brand/logo-hoop-manager-clair.png");}
+  html[data-theme="light"] .topbar-m-logo img{content:url("/assets/brand/logo-hoop-manager-clair.png");}
+  .topbar-m-logo{display:none;}
 
   html[data-theme="light"] .stf-stars .off{color:#cdd5e0;}
   html[data-theme="light"] .stf-stars--all .off{color:#b9c3d3;}
@@ -7461,6 +7463,9 @@
          prochain match" — pour tous les matchs de la saison, direction
          l'onglet Calendrier, voir renderCalendrierSection). -->
     <header class="topbar">
+      <!-- Logo au centre de la barre, téléphone uniquement (voir mobile.css,
+           retour utilisateur 2026-09-30 : captures d'écran identifiables). -->
+      <button type="button" class="topbar-m-logo" data-tab="club" aria-label="Hoop Manager · Tableau de bord"><img alt="Hoop Manager" src="/assets/brand/logo-hoop-manager.png"></button>
       <div class="topbar-left">
         <span class="topbar-sub">Basket manager</span>
         <div class="topbar-club" id="topbarClubName">Club</div>

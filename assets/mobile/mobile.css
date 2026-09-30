@@ -73,6 +73,28 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
   .topbar-live-strip .tls-clock { display: none; }
   .topbar-player-nav .topbar-compare-btn { display: none; }
 
+  /* Barre du haut (retour utilisateur 2026-09-30) : recherche (et flèches
+     de la fiche joueur) à gauche, logo Hoop Manager au centre, profil à
+     droite ; plus de « Donnez vos ordres » (déjà dans la barre du bas). */
+  .topbar { position: relative; justify-content: space-between; }
+  .topbar-left { display: none; }
+  .topbar-right { flex: 1 1 auto; justify-content: flex-start; }
+  button.topbar-cta { display: none !important; }
+  .topbar-manager { margin-left: auto; }
+  .topbar-m-logo {
+    display: block; position: absolute; left: 50%; top: calc(50% + env(safe-area-inset-top) / 2); transform: translate(-50%, -50%);
+    background: none; border: 0; padding: 0; cursor: pointer; line-height: 0;
+  }
+  .topbar-m-logo img { height: 34px; width: auto; display: block; }
+  .topbar:has(.topbar-live-strip:not(.hidden)) .topbar-m-logo { display: none; }
+  .topbar-player-nav { order: 0; }
+  .m-search-toggle { order: -1; }
+
+  /* Pages : titre remonté et un peu plus petit (moins de place perdue). */
+  .content-scroll { padding-top: 8px; }
+  .wrap > [id$="Section"] > .section:first-child { margin-top: 6px; }
+  h2.page-title { font-size: 28px !important; margin-bottom: 12px !important; }
+
   /* ---- Contenu : place pour la barre du bas ---- */
   .content-scroll { padding: 14px 12px calc(88px + env(safe-area-inset-bottom)); }
 
