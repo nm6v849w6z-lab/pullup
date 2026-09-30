@@ -9729,7 +9729,7 @@ function worldRankForPlayer(league, teamIdx, playerId) {
 // ---------------------------------------------------------------------
 const SPONSOR_SLOTS = [
   { key: "maillot", label: "Maillot", mult: 1.6 },
-  { key: "salle", label: "Panneaux de salle", mult: 1.0 },
+  { key: "salle", label: "Salle", mult: 1.0 },
   // Panneau publicitaire sur pied devant la salle (retour utilisateur
   // 2026-09-30 : « ajoute un panneau publicitaire hors de la salle, une
   // pancarte, et cela créera un nouveau sponsor ») : dessiné par ArenaGen

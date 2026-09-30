@@ -131,12 +131,17 @@ console.log("Barres du graphique :", labels.join(", "));
 if (labels.length !== histLen || labels.includes("Prochain")) throw new Error("❌ Le graphique devrait avoir une barre par match joué, sans barre de prévision.");
 if (txt("#attendanceHistoryHolder").includes("Prévision")) throw new Error("❌ Plus de légende « Prévision ».");
 const lines = doc.querySelectorAll("#attendanceHistoryHolder .gain-line");
-const extra = doc.querySelectorAll("#attendanceHistoryHolder .gain-line.sl-history-extra");
-// 3 derniers matchs visibles d'emblée (retour utilisateur 2026-09-27).
-if (lines.length !== histLen || extra.length !== Math.max(0, histLen - 3)) throw new Error(`❌ Toutes les lignes devraient rester dans le DOM, les 3 derniers matchs visibles (${Math.max(0, histLen - 3)} repliées).`);
-doc.querySelector(".sl-history-toggle").click();
-if (!doc.querySelector("#attendanceHistoryHolder .sl-history--open")) throw new Error("❌ 'Voir les N matchs' devrait déplier la liste.");
-console.log("✅ Graphique (matchs joués seulement) et liste : 3 derniers visibles, reste dépliable.");
+// Carte : les 2 derniers matchs ; « Voir les N matchs précédents » ouvre une
+// fenêtre avec tout l'historique (retour utilisateur 2026-09-30).
+if (lines.length !== Math.min(2, histLen)) throw new Error(`❌ La carte devrait montrer les ${Math.min(2, histLen)} derniers matchs.`);
+if (histLen > 2) {
+  doc.querySelector(".sl-history-toggle").click();
+  const box = doc.getElementById("attendanceAllOverlay");
+  if (!box || box.querySelectorAll(".gain-line").length !== histLen) throw new Error("❌ 'Voir les N matchs précédents' devrait ouvrir une fenêtre avec tous les matchs.");
+  box.querySelector(".sl-hist-close").click();
+  if (doc.getElementById("attendanceAllOverlay")) throw new Error("❌ La fenêtre devrait se fermer.");
+}
+console.log("✅ Graphique (matchs joués seulement), 2 derniers matchs dans la carte, tous dans la fenêtre.");
 
 // --- 5. Infrastructures ---
 win.eval("teamA.facilityLevels = { tvStation: 0, gym: 2, wellness: 0 }; renderSalleSection();");
