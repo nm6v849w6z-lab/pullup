@@ -36,7 +36,7 @@ async function waitFor(fn, ms = 30000) {
   doc.querySelector("#sidebarSettingsBtn").click();
   const overlay = doc.getElementById("settingsModalOverlay");
   const langs = [...overlay.querySelectorAll("[data-lang-choice]")];
-  assert(langs.map(b => b.dataset.langChoice).join() === "fr,en,it", "Paramètres : choix Français / English / Italiano");
+  assert(langs.map(b => b.dataset.langChoice).join() === "fr,en,it,es,pt,de,pl,el,lt,zh", "Paramètres : choix des 10 langues (Français, English, Italiano, Español…)");
   assert(langs[0].getAttribute("aria-pressed") === "true", "Français coché au départ");
   assert(/Français/.test(langs[0].textContent) && /English/.test(langs[1].textContent), "chaque langue écrite dans sa propre langue");
   assert(overlay.querySelector("#settingsThemeChoices"), "le choix du thème est toujours là");

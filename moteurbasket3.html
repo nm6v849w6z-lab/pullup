@@ -55,10 +55,11 @@
   (function () {
     var lang = "fr";
     try { lang = localStorage.getItem("hm-lang"); } catch (e) { /* navigation privée */ }
-    if (lang !== "en" && lang !== "it") lang = "fr";
+    var LOCALES = { en: "en-GB", it: "it-IT", es: "es-ES", pt: "pt-BR", de: "de-DE", pl: "pl-PL", el: "el-GR", lt: "lt-LT", zh: "zh-CN" };
+    if (!LOCALES[lang]) lang = "fr";
     document.documentElement.setAttribute("lang", lang);
     if (lang === "fr") return;
-    var target = lang === "it" ? "it-IT" : "en-GB";
+    var target = LOCALES[lang];
     var fix = function (loc) { return loc === "fr-FR" || loc === "fr" ? target : loc; };
     [[Date.prototype, "toLocaleDateString"], [Date.prototype, "toLocaleTimeString"], [Date.prototype, "toLocaleString"], [Number.prototype, "toLocaleString"]].forEach(function (x) {
       var orig = x[0][x[1]];
@@ -7350,6 +7351,7 @@
   @media(max-width:760px){ .lp-venues, .lp-members{grid-template-columns:1fr;} .lp-cal-row{grid-template-columns:30px 60px minmax(0,1fr) 70px minmax(0,1fr); gap:6px; font-size:12px;} .lp-danger{margin-left:0;} }
   /* Langue (Paramètres) : deux gros boutons, même esprit que les thèmes. */
   .settings-lang{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px;}
+  @media (max-width:480px){ .settings-lang{grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;} }
   .settings-lang button{display:flex; align-items:center; justify-content:center; gap:10px; padding:9px 10px; border-radius:10px; border:1.5px solid var(--line); background:var(--panel-2); color:var(--ink); font:600 14px inherit; font-family:inherit; cursor:pointer;}
   .settings-lang button:hover{border-color:var(--ink-faint);}
   .settings-lang button[aria-pressed="true"]{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
@@ -8830,7 +8832,7 @@
 
       <div class="guide-entry" data-guide-id="planete" data-guide-group="Compétitions">
         <h3>Pays, divisions et Planète Hoop</h3>
-        <p class="training-intro">Chaque pays (France, USA, Italie) a sa pyramide : <b>Division I</b>, puis <b>II.1 à II.3</b>, <b>III.1 à III.9</b>… Un nouveau manager arrive dans la division la plus haute où il reste un club de l'IA ; quand tout est plein (plus de 10 managers dans un championnat), le championnat suivant s'ouvre tout seul. Les matchs se jouent à 20:00 heure locale (Paris, Rome ou New York), et tous les pays suivent les mêmes semaines.</p>
+        <p class="training-intro">Chaque pays a sa pyramide : <b>Division I</b>, puis <b>II.1 à II.3</b>, <b>III.1 à III.9</b>… Un nouveau manager arrive dans la division la plus haute où il reste un club de l'IA ; quand tout est plein (plus de 10 managers dans un championnat), le championnat suivant s'ouvre tout seul. Les matchs se jouent à 20:00 heure locale, et tous les pays suivent les mêmes semaines.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Montées et descentes</b>, décidées le lundi d'intersaison et appliquées à la reprise : le champion des play-offs de chaque championnat monte ; en face, le 10e descend, puis le 9e, puis le perdant du barrage (7e contre 8e), autant qu'il y a de championnats ouverts juste en dessous. Une prime de montée est versée au club promu.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Planète Hoop</b> (en bas du menu) : choisissez un pays (le vôtre par défaut) pour voir ses divisions ouvertes, son palmarès et les meilleurs joueurs de la saison. Pour afficher un autre championnat ou un club, tapez son nom dans la barre de recherche du haut (« II.2 », « Division III », un nom de club…) : classement, derniers résultats et effectif en lecture seule.</p>
       </div>
@@ -13440,6 +13442,8 @@ const NATIONS = [
   { code: "is", name: "Islande", pool: "nordic", weight: 1 },
   // Asie / Océanie
   { code: "cn", name: "Chine", pool: "chinese", weight: 4 },
+  { code: "tw", name: "Taïwan", pool: "chinese", weight: 1 },
+  { code: "hk", name: "Hong Kong", pool: "chinese", weight: 1 },
   { code: "jp", name: "Japon", pool: "japanese", weight: 3 },
   { code: "kr", name: "Corée du Sud", pool: "korean", weight: 2 },
   { code: "ph", name: "Philippines", pool: "filipino", weight: 2 },
@@ -42102,6 +42106,8 @@ function showSettingsModal(tab) {
     `<div class="settings-row-label" style="margin-top:16px;">Langue</div>` +
     `<div class="settings-lang" id="settingsLangChoices" data-no-i18n>` +
     langOpt("fr", "FR", "Français") + langOpt("en", "EN", "English") + langOpt("it", "IT", "Italiano") +
+    langOpt("es", "ES", "Español") + langOpt("pt", "PT", "Português") + langOpt("de", "DE", "Deutsch") +
+    langOpt("pl", "PL", "Polski") + langOpt("el", "EL", "Ελληνικά") + langOpt("lt", "LT", "Lietuvių") + langOpt("zh", "ZH", "中文") +
     `</div></div>` +
     `<div class="settings-panel${settingsModalTab === "club" ? "" : " hidden"}" data-settings-panel="club"><div id="settingsClubBlock">${settingsClubBlockHtml()}</div></div>` +
     (managerToken ? `<div class="settings-panel${settingsModalTab === "account" ? "" : " hidden"}" data-settings-panel="account"><div id="settingsAccountBlock"><p class="settings-note">Chargement…</p></div></div>` : "") +
@@ -45189,7 +45195,7 @@ function renderNationalCupSection(holder) {
     const cur = path.find(p => p.state === "pending" || p.state === "live") || [...path].reverse().find(p => p.round && p.m) || path[0];
     cupSelRound = cur ? cur.i : 0;
   }
-  const countryName = { fr: "France", us: "États-Unis", it: "Italie" }[league.country] || "";
+  const countryName = league.country === "us" ? "États-Unis" : (league.country ? nationName(league.country) : "");
   let html = "";
   if (cup.championName) {
     const isMe = cup.champion === myTeamIndex;

@@ -31,10 +31,10 @@ function wallClock(ms, tz) {
   const created = store.createMultiManagerCareer(["Gotham Knights", "BC Dia"], now);
   await store.saveMultiLeague(created.league, multi);
   const world = await World.loadWorld(multi, now);
-  assert.deepStrictEqual(world.leagues.map(l => l.id).sort(), ["fr-1", "it-1", "us-1"]);
+  assert.deepStrictEqual(world.leagues.map(l => l.id).sort(), Object.keys(Engine.WORLD_COUNTRIES).map(c => c + "-1").sort());
   assert.strictEqual(world.tokens[created.league.teams[0].managerLinkToken], "fr-1");
   const again = await World.loadWorld(multi, now);
-  assert.strictEqual(again.leagues.length, 3, "idempotent");
+  assert.strictEqual(again.leagues.length, Object.keys(Engine.WORLD_COUNTRIES).length, "idempotent");
   const fr = await World.loadLeague(world, "fr-1", multi);
   const us = await World.loadLeague(world, "us-1", multi);
   assert.strictEqual(fr.country, "fr"); assert.strictEqual(fr.timeZone, "Europe/Paris");

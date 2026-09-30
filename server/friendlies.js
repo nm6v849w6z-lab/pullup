@@ -327,17 +327,25 @@ function whenLabel(f) {
   return `${dayLabelFr(f.at)} à ${f.time.replace(":", "h")}`;
 }
 
-// Message privé d'invitation, dans la langue du destinataire (fr, en, it).
+// Message privé d'invitation, dans la langue du destinataire (fr, en, it,
+// es, pt, de, pl, el, lt, zh).
+const INVITE_LOCALE = { fr: "fr-FR", en: "en-GB", it: "it-IT", es: "es-ES", pt: "pt-BR", de: "de-DE", pl: "pl-PL", el: "el-GR", lt: "lt-LT", zh: "zh-CN" };
+const INVITE_TEXT = {
+  en: (d, t, team, opp, home) => `🏀 Friendly match invitation: ${team} invites you to a friendly on ${d} at ${t} (Paris time), ${home ? `at ${team}` : `at your place (${opp})`}. Accept or decline from the Friendly matches tab.`,
+  it: (d, t, team, opp, home) => `🏀 Invito a un'amichevole: ${team} ti propone un'amichevole ${d} alle ${t} (ora di Parigi), ${home ? `in casa di ${team}` : `in casa tua (${opp})`}. Accetta o rifiuta dalla scheda Partite amichevoli.`,
+  es: (d, t, team, opp, home) => `🏀 Invitación a un amistoso: ${team} te propone un amistoso el ${d} a las ${t} (hora de París), ${home ? `en casa de ${team}` : `en tu casa (${opp})`}. Acepta o rechaza desde la pestaña Partidos amistosos.`,
+  pt: (d, t, team, opp, home) => `🏀 Convite para amistoso: ${team} convida você para um amistoso marcado para ${d}, às ${t} (horário de Paris), ${home ? `na casa do ${team}` : `na sua casa (${opp})`}. Aceite ou recuse na aba Amistosos.`,
+  de: (d, t, team, opp, home) => `🏀 Einladung zu einem Freundschaftsspiel: ${team} lädt dich am ${d} um ${t} Uhr (Pariser Zeit) zu einem Freundschaftsspiel ein, ${home ? `bei ${team}` : `bei dir (${opp})`}. Nimm im Tab Freundschaftsspiele an oder lehne ab.`,
+  pl: (d, t, team, opp, home) => `🏀 Zaproszenie na mecz towarzyski: ${team} zaprasza cię na mecz towarzyski (${d}, godz. ${t} czasu paryskiego), ${home ? `u ${team}` : `u ciebie (${opp})`}. Zaakceptuj lub odrzuć w zakładce Mecze towarzyskie.`,
+  el: (d, t, team, opp, home) => `🏀 Πρόσκληση σε φιλικό: η ομάδα ${team} σε προσκαλεί σε φιλικό (${d}, ${t}, ώρα Παρισιού), ${home ? `στην έδρα της ${team}` : `στην έδρα σου (${opp})`}. Αποδέξου ή απόρριψε από την καρτέλα Φιλικοί αγώνες.`,
+  lt: (d, t, team, opp, home) => `🏀 Kvietimas į draugiškas rungtynes: ${team} kviečia tave žaisti draugiškas rungtynes (${d}, ${t} Paryžiaus laiku), ${home ? `pas ${team}` : `pas tave (${opp})`}. Priimk arba atmesk skirtuke „Draugiškos rungtynės“.`,
+  zh: (d, t, team, opp, home) => `🏀 友谊赛邀请：${team} 邀请你于${d} ${t}（巴黎时间）进行一场友谊赛，${home ? `在 ${team} 主场` : `在你的主场（${opp}）`}。请在“友谊赛”标签页中接受或拒绝。`,
+};
 function inviteText(lang, f, team, opp, venue) {
-  const L = lang === "en" || lang === "it" ? lang : "fr";
-  const day = new Intl.DateTimeFormat(L === "en" ? "en-GB" : L === "it" ? "it-IT" : "fr-FR", { timeZone: "Europe/Paris", weekday: "long", day: "numeric", month: "long" }).format(new Date(f.at));
-  if (L === "en") {
-    const where = venue === "home" ? `at ${team.name}` : `at your place (${opp.name})`;
-    return `🏀 Friendly match invitation: ${team.name} invites you to a friendly on ${day} at ${f.time} (Paris time), ${where}. Accept or decline from the Friendly matches tab.`;
-  }
-  if (L === "it") {
-    const where = venue === "home" ? `in casa di ${team.name}` : `in casa tua (${opp.name})`;
-    return `🏀 Invito a un'amichevole: ${team.name} ti propone un'amichevole ${day} alle ${f.time} (ora di Parigi), ${where}. Accetta o rifiuta dalla scheda Partite amichevoli.`;
+  const L = INVITE_TEXT[lang] ? lang : "fr";
+  if (L !== "fr") {
+    const day = new Intl.DateTimeFormat(INVITE_LOCALE[L], { timeZone: "Europe/Paris", weekday: "long", day: "numeric", month: "long" }).format(new Date(f.at));
+    return INVITE_TEXT[L](day, f.time, team.name, opp.name, venue === "home");
   }
   const where = venue === "home" ? `chez ${team.name}` : `chez vous (${opp.name})`;
   return `🏀 Invitation à un match amical : ${team.name} vous propose un amical le ${whenLabel(f)}, ${where}. ` +

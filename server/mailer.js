@@ -31,10 +31,10 @@ async function sendMail({ to, subject, text, html }) {
 }
 
 // ---------------------------------------------------------------------
-// Modèles d'emails par langue (fr / en / it, 2026-09-30). La langue est
+// Modèles d'emails par langue (fr / en / it, puis es / pt / de / pl / el / lt / zh, 2026-09-30). La langue est
 // celle du destinataire : voir server/i18n.js (langFor : préférence du
 // compte, sinon langue envoyée par le navigateur, sinon français).
-// Tutoiement comme sur le site ; en anglais / italien, même ton.
+// Tutoiement comme sur le site ; dans les autres langues, même ton (tú, você, du, ty, εσύ, tu, 你).
 // ---------------------------------------------------------------------
 const TEMPLATES = {
   passwordReset: {
@@ -49,6 +49,34 @@ const TEMPLATES = {
     it: ({ link }) => ({
       subject: "Hoop Manager: reimposta la tua password",
       text: `Ciao,\n\nPer scegliere una nuova password, apri questo link (valido 1 ora):\n${link}\n\nSe non hai chiesto nulla, ignora questa email: la tua password non cambia.\n\nHoop Manager`,
+    }),
+    es: ({ link }) => ({
+      subject: "Hoop Manager: restablece tu contraseña",
+      text: `Hola:\n\nPara elegir una nueva contraseña, abre este enlace (válido durante 1 hora):\n${link}\n\nSi no has pedido nada, ignora este correo: tu contraseña no cambia.\n\nHoop Manager`,
+    }),
+    pt: ({ link }) => ({
+      subject: "Hoop Manager: redefina sua senha",
+      text: `Olá,\n\nPara escolher uma nova senha, abra este link (válido por 1 hora):\n${link}\n\nSe você não pediu nada, ignore este e-mail: sua senha não muda.\n\nHoop Manager`,
+    }),
+    de: ({ link }) => ({
+      subject: "Hoop Manager: Passwort zurücksetzen",
+      text: `Hallo,\n\num ein neues Passwort zu wählen, öffne diesen Link (1 Stunde gültig):\n${link}\n\nWenn du nichts angefordert hast, ignoriere diese E-Mail einfach: Dein Passwort bleibt unverändert.\n\nHoop Manager`,
+    }),
+    pl: ({ link }) => ({
+      subject: "Hoop Manager: zresetuj swoje hasło",
+      text: `Cześć,\n\naby ustawić nowe hasło, otwórz ten link (ważny przez 1 godzinę):\n${link}\n\nJeśli o nic nie prosiłeś, zignoruj tę wiadomość: twoje hasło się nie zmieni.\n\nHoop Manager`,
+    }),
+    el: ({ link }) => ({
+      subject: "Hoop Manager: επαναφορά του κωδικού σου",
+      text: `Γεια σου,\n\nΓια να επιλέξεις νέο κωδικό πρόσβασης, άνοιξε αυτόν τον σύνδεσμο (ισχύει για 1 ώρα):\n${link}\n\nΑν δεν ζήτησες κάτι, αγνόησε αυτό το email: ο κωδικός σου δεν αλλάζει.\n\nHoop Manager`,
+    }),
+    lt: ({ link }) => ({
+      subject: "Hoop Manager: atkurk slaptažodį",
+      text: `Sveiki,\n\nnorėdamas pasirinkti naują slaptažodį, atidaryk šią nuorodą (galioja 1 valandą):\n${link}\n\nJei nieko neprašei, tiesiog ignoruok šį laišką: tavo slaptažodis nesikeičia.\n\nHoop Manager`,
+    }),
+    zh: ({ link }) => ({
+      subject: "Hoop Manager：重置你的密码",
+      text: `你好，\n\n要设置新密码，请打开此链接（1 小时内有效）：\n${link}\n\n如果你没有发起此请求，请忽略这封邮件：你的密码不会改变。\n\nHoop Manager`,
     }),
   },
 };

@@ -26,7 +26,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const LANGS = ["fr", "en", "it"];
+const LANGS = ["fr", "en", "it", "es", "pt", "de", "pl", "el", "lt", "zh"];
 const I18N_DIR = path.join(__dirname, "..", "assets", "i18n");
 
 function normLang(x) {

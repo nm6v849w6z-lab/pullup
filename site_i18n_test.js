@@ -44,8 +44,8 @@ function frenchBlocks(html) {
   // 1) Choix de la langue
   // ------------------------------------------------------------------
   assert.strictEqual(I18n.fromAcceptLanguage("it-IT,it;q=0.9,en;q=0.8"), "it");
-  assert.strictEqual(I18n.fromAcceptLanguage("de-DE,en;q=0.5"), "en");
-  assert.strictEqual(I18n.fromAcceptLanguage("de-DE"), "en", "langue non gérée : anglais (comme la page d'accueil)");
+  assert.strictEqual(I18n.fromAcceptLanguage("de-DE,en;q=0.5"), "de", "allemand géré depuis 2026-09-30");
+  assert.strictEqual(I18n.fromAcceptLanguage("ja-JP"), "en", "langue non gérée : anglais (comme la page d'accueil)");
   assert.strictEqual(I18n.fromAcceptLanguage("*"), null);
   assert.strictEqual(I18n.fromAcceptLanguage(""), null);
   assert.strictEqual(I18n.langFor({ lang: "it" }, "en"), "it", "préférence du compte d'abord");
@@ -71,7 +71,7 @@ function frenchBlocks(html) {
   assert.ok(/reset your password/.test(mails.en.subject) && /valid for 1 hour/.test(mails.en.text) && !/mot de passe/.test(mails.en.text));
   assert.ok(/reimposta la tua password/.test(mails.it.subject) && /valido 1 ora/.test(mails.it.text) && !/mot de passe/.test(mails.it.text));
   assert.ok(Object.values(mails).every(m => m.text.includes(link)), "le lien dans chaque langue");
-  assert.strictEqual(Mailer.compose("passwordReset", "de", { link }).subject, mails.fr.subject, "langue inconnue : français");
+  assert.strictEqual(Mailer.compose("passwordReset", "ja", { link }).subject, mails.fr.subject, "langue inconnue : français");
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "site-i18n-"));
   const paths = { solo: path.join(dir, "solo.json"), multi: path.join(dir, "multi.json"), accounts: path.join(dir, "accounts.json") };
@@ -230,6 +230,25 @@ function frenchBlocks(html) {
     const homeFr = await (await get("/bienvenue")).text();
     assert.ok(homeFr.includes('<html lang="fr">') && homeFr.includes('<link rel="canonical" href="https://hoop-manager.com/bienvenue">'), "accueil : français par défaut");
     ok("sitemap multilingue (xhtml:link) et page d'accueil indexable en 3 langues");
+
+    // Langues sans pages traduites (es, pt, de, pl, el, lt, zh) : version
+    // anglaise des pages, mais langue choisie gardée (cookie, liens,
+    // sélecteur) ; page d'accueil dans la langue.
+    for (const l of ["es", "pt", "de", "pl", "el", "lt", "zh"]) {
+      const res = await get(`/faq?lang=${l}`);
+      const html = await res.text();
+      assert.strictEqual(res.status, 200, `/faq?lang=${l}`);
+      assert.ok(html.includes('<html lang="en">') && /Frequently asked questions/.test(html), `/faq?lang=${l} : version anglaise`);
+      assert.ok(html.includes('<link rel="canonical" href="https://hoop-manager.com/faq?lang=en">'), `/faq?lang=${l} : canonical anglais`);
+      assert.ok((res.headers.get("set-cookie") || "").includes(`hm-lang=${l}`), `/faq?lang=${l} : cookie`);
+      assert.ok(html.includes(`href="/bienvenue?lang=${l}"`) && html.includes(`<a href="/faq?lang=${l}" lang="${l}"`), `/faq?lang=${l} : liens et sélecteur`);
+      const cookieGuide = await (await get("/guide/ordres", { cookie: `hm-lang=${l}` })).text();
+      assert.ok(cookieGuide.includes('<html lang="en">'), `cookie hm-lang=${l} : Guide en anglais`);
+      const h = await (await get(`/bienvenue?lang=${l}`)).text();
+      assert.ok(h.includes(`<html lang="${l}">`) && h.includes(`hreflang="${l}" href="https://hoop-manager.com/bienvenue?lang=${l}"`), `accueil ?lang=${l}`);
+    }
+    assert.ok(!sitemap.includes("/faq?lang=de") && sitemap.includes("<loc>https://hoop-manager.com/bienvenue?lang=de</loc>"), "sitemap : nouvelles langues pour l'accueil seulement");
+    ok("nouvelles langues : accueil traduit, pages de contenu servies en anglais");
   } finally {
     server.close();
   }

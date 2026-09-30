@@ -191,16 +191,18 @@ function createAccount(data, fields, now) {
 //      l'inscription, à la connexion et à l'ouverture du jeu
 //      (noteDetectedLang ; langue non prise en charge → "en") ;
 //   3. `hint` : langue de la requête en cours (Accept-Language…) ;
-//   4. langue du pays du club (`country` : fr → fr, it → it, us → en) ;
+//   4. langue du pays du club (`country` : fr → fr, it → it, us → en, voir
+//      COUNTRY_LANGS) ;
 //   5. l'anglais.
 // Depuis un club : langFor(findByManagerToken(data, team.managerLinkToken),
 // { country: team.country }).
 // ---------------------------------------------------------------------
-const ACCOUNT_LANGS = ["fr", "en", "it"];
+const ACCOUNT_LANGS = ["fr", "en", "it", "es", "pt", "de", "pl", "el", "lt", "zh"];
 function normalizeLang(raw) {
   return typeof raw === "string" && ACCOUNT_LANGS.includes(raw) ? raw : null;
 }
-const COUNTRY_LANGS = { fr: "fr", it: "it", us: "en" };
+const COUNTRY_LANGS = { fr: "fr", it: "it", us: "en", ca: "en", be: "fr", es: "es", ar: "es", pt: "pt", br: "pt",
+  de: "de", ch: "de", pl: "pl", gr: "el", lt: "lt", cn: "zh", hk: "zh", tw: "zh" };
 function countryLang(country) {
   return (typeof country === "string" && COUNTRY_LANGS[country]) || null;
 }

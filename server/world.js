@@ -994,7 +994,11 @@ function normalizeSearch(s) {
 // Raccourcis de division (retour utilisateur 2026-09-28 : « D.I » ne
 // trouvait rien) : « D1 », « D.I », « DI », « Div 2 », « D2.1 », « II.1 »,
 // « 2.1 », « D III 4 »… → { level, group|null }.
-const COUNTRY_SEARCH_ALIASES = { us: "usa us etats-unis amerique america", fr: "fra france", it: "ita italie italia italy" };
+const COUNTRY_SEARCH_ALIASES = { us: "usa us etats-unis amerique america", fr: "fra france", it: "ita italie italia italy",
+  es: "esp espagne espana spain", de: "ger deu allemagne deutschland germany", gr: "gre grece hellas ellada greece",
+  lt: "ltu lituanie lietuva lithuania", pl: "pol pologne polska poland", pt: "por portugal", be: "bel belgique belgie belgium",
+  ch: "sui suisse schweiz svizzera switzerland", br: "bra bresil brasil brazil", ar: "arg argentine argentina",
+  ca: "can canada", cn: "chn chine china zhongguo", hk: "hkg hong kong hongkong", tw: "tpe taiwan chinese taipei" };
 const ROMAN = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6 };
 function parseDivisionQuery(needle) {
   const m = needle.replace(/\s+/g, " ").match(/^(?:d(?:iv(?:ision)?)?\s*\.?\s*)?(vi|v|iv|iii|ii|i|[1-6])(?:\s*[.\s-]\s*(\d{1,3}))?$/);

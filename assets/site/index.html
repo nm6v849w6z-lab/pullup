@@ -24,7 +24,8 @@
   (BASKET_PUBLIC_SITE=1), tout visiteur sans jeton manager y est envoyé.
   Routes appelées : voir server/accountRoutes.js.
   Langue : même préférence que le jeu (localStorage "hm-lang"), textes
-  FR/EN/IT dans TEXTS ci-dessous. Jeton : même clé que le jeu
+  FR/EN/IT/ES/PT/DE/PL/EL/LT/ZH dans TEXTS ci-dessous (2026-09-30 : 7
+  nouvelles langues, 17 pays au choix à l'inscription). Jeton : même clé que le jeu
   (MANAGER_TOKEN_STORAGE_KEY = "tipinManagerToken_v1").
 -->
 <style>
@@ -52,9 +53,11 @@
   header .wrap{display:flex; align-items:center; gap:14px; height:64px}
   .brand{display:flex; align-items:center; gap:10px; text-decoration:none; margin-right:auto}
   .brand img{height:38px; width:auto; display:block}
-  .lang{display:flex; border:1px solid var(--line); border-radius:999px; overflow:hidden}
-  .lang button{background:none; border:0; color:var(--ink-dim); font:600 12px/1 "DM Sans",sans-serif; padding:7px 10px; cursor:pointer}
-  .lang button[aria-pressed="true"]{background:var(--panel-2); color:var(--ink)}
+  /* Sélecteur de langue : liste déroulante (10 langues, tient sur mobile). */
+  .lang{position:relative; display:flex; align-items:center}
+  .lang select{appearance:none; -webkit-appearance:none; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:999px; font:600 13px/1 "DM Sans",sans-serif; padding:8px 28px 8px 12px; cursor:pointer; max-width:150px}
+  .lang select:focus{outline:none; border-color:var(--amber)}
+  .lang::after{content:""; position:absolute; right:11px; top:50%; margin-top:-2px; border:4px solid transparent; border-top-color:var(--ink-dim); border-bottom:0; pointer-events:none}
   .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; border-radius:10px; border:1px solid transparent;
        font:700 15px/1 "DM Sans",sans-serif; padding:13px 18px; cursor:pointer; text-decoration:none; transition:transform .08s, background .15s, border-color .15s}
   .btn:active{transform:translateY(1px)}
@@ -103,9 +106,11 @@
   .field{margin-bottom:14px}
   .lbl{display:block; font-size:13px; font-weight:600; color:var(--ink-dim); margin:0 0 6px}
   /* Choix du pays (championnats par pays, 2026-09-28). */
-  .country-pick{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px}
-  .country-pick button{display:flex; align-items:center; justify-content:center; gap:9px; background:var(--bg); color:var(--ink-dim); border:1px solid var(--line); border-radius:9px; font:600 15px/1 "DM Sans",sans-serif; padding:12px 10px; cursor:pointer; transition:border-color .15s, color .15s}
-  .country-pick button img{width:22px; height:16.5px; border-radius:2px; box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+  /* 17 pays (2026-09-30) : grille compacte qui défile dans le formulaire. */
+  .country-pick{display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:6px; max-height:190px; overflow-y:auto; overscroll-behavior:contain; padding:4px; margin:-4px; scrollbar-width:thin; scrollbar-color:var(--line) transparent}
+  .country-pick button{display:flex; align-items:center; justify-content:flex-start; gap:8px; min-width:0; background:var(--bg); color:var(--ink-dim); border:1px solid var(--line); border-radius:8px; font:600 13px/1.15 "DM Sans",sans-serif; padding:8px 9px; text-align:left; cursor:pointer; transition:border-color .15s, color .15s}
+  .country-pick button span{min-width:0; overflow-wrap:anywhere}
+  .country-pick button img{flex:none; width:20px; height:15px; border-radius:2px; box-shadow:0 0 0 1px rgba(255,255,255,.12)}
   .country-pick button[aria-checked="true"]{border-color:var(--amber); color:var(--ink); box-shadow:0 0 0 3px rgba(240,162,60,.14)}
   input[type=text],input[type=email],input[type=password]{
     width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:9px;
@@ -195,10 +200,19 @@
 <header>
   <div class="wrap">
     <a class="brand" href="/bienvenue" aria-label="Hoop Manager"><img src="/assets/brand/logo-hoop-manager.png" alt="Hoop Manager"></a>
-    <div class="lang" role="group" aria-label="Langue / Language">
-      <button type="button" data-lang="fr" aria-pressed="true">FR</button>
-      <button type="button" data-lang="en" aria-pressed="false">EN</button>
-      <button type="button" data-lang="it" aria-pressed="false">IT</button>
+    <div class="lang">
+      <select id="langSelect" aria-label="Langue / Language">
+        <option value="fr" lang="fr">Français</option>
+        <option value="en" lang="en">English</option>
+        <option value="it" lang="it">Italiano</option>
+        <option value="es" lang="es">Español</option>
+        <option value="pt" lang="pt">Português</option>
+        <option value="de" lang="de">Deutsch</option>
+        <option value="pl" lang="pl">Polski</option>
+        <option value="el" lang="el">Ελληνικά</option>
+        <option value="lt" lang="lt">Lietuvių</option>
+        <option value="zh" lang="zh">简体中文</option>
+      </select>
     </div>
     <button type="button" class="btn btn-ghost" id="headerLoginBtn" data-t="login.tab">Se connecter</button>
   </div>
@@ -251,8 +265,22 @@
                 <button type="button" role="radio" aria-checked="true" data-country="fr"><img src="/assets/flags/fr.png" alt=""><span data-t="country.fr">France</span></button>
                 <button type="button" role="radio" aria-checked="false" data-country="us"><img src="/assets/flags/us.png" alt=""><span data-t="country.us">États-Unis</span></button>
                 <button type="button" role="radio" aria-checked="false" data-country="it"><img src="/assets/flags/it.png" alt=""><span data-t="country.it">Italie</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="de"><img src="/assets/flags/de.png" alt=""><span data-t="country.de">Allemagne</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="ar"><img src="/assets/flags/ar.png" alt=""><span data-t="country.ar">Argentine</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="be"><img src="/assets/flags/be.png" alt=""><span data-t="country.be">Belgique</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="br"><img src="/assets/flags/br.png" alt=""><span data-t="country.br">Brésil</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="ca"><img src="/assets/flags/ca.png" alt=""><span data-t="country.ca">Canada</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="cn"><img src="/assets/flags/cn.png" alt=""><span data-t="country.cn">Chine</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="es"><img src="/assets/flags/es.png" alt=""><span data-t="country.es">Espagne</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="gr"><img src="/assets/flags/gr.png" alt=""><span data-t="country.gr">Grèce</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="hk"><img src="/assets/flags/hk.png" alt=""><span data-t="country.hk">Hong Kong</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="lt"><img src="/assets/flags/lt.png" alt=""><span data-t="country.lt">Lituanie</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="pl"><img src="/assets/flags/pl.png" alt=""><span data-t="country.pl">Pologne</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="pt"><img src="/assets/flags/pt.png" alt=""><span data-t="country.pt">Portugal</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="ch"><img src="/assets/flags/ch.png" alt=""><span data-t="country.ch">Suisse</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="tw"><img src="/assets/flags/tw.png" alt=""><span data-t="country.tw">Taïwan</span></button>
               </div>
-              <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (heure de Paris, de Rome ou de New York).</div></div>
+              <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (matchs à 20:00 heure locale).</div></div>
             <div class="field"><label for="suClub" data-t="field.club">Nom de ton club</label>
               <input type="text" id="suClub" autocomplete="organization" maxlength="24" required placeholder="Annecy Hoops">
               <div class="hint" data-t="field.clubHint">2 à 24 caractères. Visible par les autres managers.</div></div>
@@ -328,8 +356,22 @@
                 <button type="button" role="radio" aria-checked="true" data-country="fr"><img src="/assets/flags/fr.png" alt=""><span data-t="country.fr">France</span></button>
                 <button type="button" role="radio" aria-checked="false" data-country="us"><img src="/assets/flags/us.png" alt=""><span data-t="country.us">États-Unis</span></button>
                 <button type="button" role="radio" aria-checked="false" data-country="it"><img src="/assets/flags/it.png" alt=""><span data-t="country.it">Italie</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="de"><img src="/assets/flags/de.png" alt=""><span data-t="country.de">Allemagne</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="ar"><img src="/assets/flags/ar.png" alt=""><span data-t="country.ar">Argentine</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="be"><img src="/assets/flags/be.png" alt=""><span data-t="country.be">Belgique</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="br"><img src="/assets/flags/br.png" alt=""><span data-t="country.br">Brésil</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="ca"><img src="/assets/flags/ca.png" alt=""><span data-t="country.ca">Canada</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="cn"><img src="/assets/flags/cn.png" alt=""><span data-t="country.cn">Chine</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="es"><img src="/assets/flags/es.png" alt=""><span data-t="country.es">Espagne</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="gr"><img src="/assets/flags/gr.png" alt=""><span data-t="country.gr">Grèce</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="hk"><img src="/assets/flags/hk.png" alt=""><span data-t="country.hk">Hong Kong</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="lt"><img src="/assets/flags/lt.png" alt=""><span data-t="country.lt">Lituanie</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="pl"><img src="/assets/flags/pl.png" alt=""><span data-t="country.pl">Pologne</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="pt"><img src="/assets/flags/pt.png" alt=""><span data-t="country.pt">Portugal</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="ch"><img src="/assets/flags/ch.png" alt=""><span data-t="country.ch">Suisse</span></button>
+                <button type="button" role="radio" aria-checked="false" data-country="tw"><img src="/assets/flags/tw.png" alt=""><span data-t="country.tw">Taïwan</span></button>
               </div>
-              <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (heure de Paris, de Rome ou de New York).</div></div>
+              <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (matchs à 20:00 heure locale).</div></div>
             <div class="field"><label for="dcClub" data-t="field.club">Nom de ton club</label>
               <input type="text" id="dcClub" maxlength="24" required>
               <div class="hint" data-t="field.clubHint">2 à 24 caractères. Visible par les autres managers.</div></div>
@@ -416,8 +458,11 @@
       "hero.fact1": "<b>Live games</b> at set times", "hero.fact2": "<b>10 managers</b> per league", "hero.fact3": "<b>Free</b>, nothing to install",
       "signup.title": "Your club awaits", "signup.sub": "Pick a name: you take over a club in the current league and play tonight.",
       "discord.signup": "Sign up with Discord", "discord.login": "Log in with Discord", "or": "or",
-      "field.country": "Your country", "country.fr": "France", "country.us": "United States", "country.it": "Italy",
-      "field.countryHint": "Your league and its schedule (Paris, Rome or New York time).",
+      "field.country": "Your country",
+      "country.fr": "France", "country.us": "United States", "country.it": "Italy", "country.de": "Germany", "country.ar": "Argentina", "country.be": "Belgium",
+      "country.br": "Brazil", "country.ca": "Canada", "country.cn": "China", "country.es": "Spain", "country.gr": "Greece", "country.hk": "Hong Kong",
+      "country.lt": "Lithuania", "country.pl": "Poland", "country.pt": "Portugal", "country.ch": "Switzerland", "country.tw": "Taiwan",
+      "field.countryHint": "Your league and its schedule (games at 8:00 pm local time).",
       "field.club": "Your club's name", "field.clubHint": "2 to 24 characters. Visible to other managers.",
       "field.email": "Email", "field.password": "Password", "field.pwHint": "At least 8 characters.",
       "pw.show": "Show", "pw.hide": "Hide",
@@ -437,9 +482,9 @@
       "wait.text": "Your account is created, but every club in the league is taken. As soon as a spot opens up, a club is assigned to you automatically: come back to this page, we check on every visit.",
       "wait.check": "Check now", "wait.still": "Still full for now. Try again later!",
       "disc.title": "Discover the game before signing up",
-      "disc1.t": "How it works", "disc1.p": "The calendar, live games, tactical preparation and club life, explained in detail (in French).",
-      "disc2.t": "The full guide", "disc2.p": "Roster, ratings, orders, market, economy, academy: the game guide, section by section (in French).",
-      "disc3.t": "FAQ", "disc3.p": "Price, match times, time commitment, account: answers to the most common questions (in French).",
+      "disc1.t": "How it works", "disc1.p": "The calendar, live games, tactical preparation and club life, explained in detail.",
+      "disc2.t": "The full guide", "disc2.p": "Roster, ratings, orders, market, economy, academy: the game guide, section by section.",
+      "disc3.t": "FAQ", "disc3.p": "Price, match times, time commitment, account: answers to the most common questions.",
       "nav.game": "The game", "nav.guide": "Guide", "nav.about": "About", "nav.privacy": "Privacy", "nav.legal": "Legal notice",
       "feat.title": "A whole club to build", "feat.sub": "It's not just tactics: sponsors, arena, staff and young talent matter as much as your starting five.",
       "f1.t": "Live games", "f1.p": "Every game is broadcast in real time: play by play, timeouts, half-time and pre-game shows. You can join mid-game, never fast-forward.",
@@ -478,8 +523,11 @@
       "hero.fact1": "<b>Partite in diretta</b> a orari fissi", "hero.fact2": "<b>10 manager</b> per lega", "hero.fact3": "<b>Gratis</b>, niente da installare",
       "signup.title": "Il tuo club ti aspetta", "signup.sub": "Scegli un nome: prendi un club della lega in corso e giochi già stasera.",
       "discord.signup": "Registrati con Discord", "discord.login": "Accedi con Discord", "or": "oppure",
-      "field.country": "Il tuo paese", "country.fr": "Francia", "country.us": "Stati Uniti",
-      "field.countryHint": "Il tuo campionato e i suoi orari (ora di Parigi o di New York).",
+      "field.country": "Il tuo paese",
+      "country.fr": "Francia", "country.us": "Stati Uniti", "country.it": "Italia", "country.de": "Germania", "country.ar": "Argentina", "country.be": "Belgio",
+      "country.br": "Brasile", "country.ca": "Canada", "country.cn": "Cina", "country.es": "Spagna", "country.gr": "Grecia", "country.hk": "Hong Kong",
+      "country.lt": "Lituania", "country.pl": "Polonia", "country.pt": "Portogallo", "country.ch": "Svizzera", "country.tw": "Taiwan",
+      "field.countryHint": "Il tuo campionato e i suoi orari (partite alle 20:00 ora locale).",
       "field.club": "Il nome del tuo club", "field.clubHint": "Da 2 a 24 caratteri. Visibile agli altri manager.",
       "field.email": "Email", "field.password": "Password", "field.pwHint": "Almeno 8 caratteri.",
       "pw.show": "Mostra", "pw.hide": "Nascondi",
@@ -499,9 +547,9 @@
       "wait.text": "Il tuo account è creato, ma tutti i club della lega sono occupati. Appena si libera un posto, ti viene assegnato automaticamente un club: torna su questa pagina, controlliamo a ogni visita.",
       "wait.check": "Controlla ora", "wait.still": "Ancora tutto pieno per ora. Riprova più tardi!",
       "disc.title": "Scopri il gioco prima di registrarti",
-      "disc1.t": "Come funziona", "disc1.p": "Il calendario, le partite in diretta, la preparazione tattica e la vita del club, spiegati nel dettaglio (in francese).",
-      "disc2.t": "La guida completa", "disc2.p": "Rosa, valutazioni, ordini, mercato, economia, vivaio: la guida del gioco, sezione per sezione (in francese).",
-      "disc3.t": "FAQ", "disc3.p": "Prezzo, orari delle partite, tempo richiesto, account: le risposte alle domande più frequenti (in francese).",
+      "disc1.t": "Come funziona", "disc1.p": "Il calendario, le partite in diretta, la preparazione tattica e la vita del club, spiegati nel dettaglio.",
+      "disc2.t": "La guida completa", "disc2.p": "Rosa, valutazioni, ordini, mercato, economia, vivaio: la guida del gioco, sezione per sezione.",
+      "disc3.t": "FAQ", "disc3.p": "Prezzo, orari delle partite, tempo richiesto, account: le risposte alle domande più frequenti.",
       "nav.game": "Il gioco", "nav.guide": "Guida", "nav.about": "Chi siamo", "nav.privacy": "Privacy", "nav.legal": "Note legali",
       "feat.title": "Un club intero da costruire", "feat.sub": "Non è solo tattica: sponsor, palazzetto, staff e giovani talenti contano quanto il tuo quintetto.",
       "f1.t": "Partite in diretta", "f1.p": "Ogni partita è trasmessa in tempo reale: azione per azione, timeout, programmi dell'intervallo e prepartita. Puoi entrare a partita in corso, mai andare avanti veloce.",
@@ -530,6 +578,461 @@
       "err.fill": "Compila tutti i campi.",
       "field.invite": "Codice d'invito", "field.inviteHint": "Per ora le iscrizioni sono solo su invito.",
       "err.invite-invalid": "Questo codice d'invito non è valido."
+    },
+    es: {
+      "login.tab": "Iniciar sesión", "signup.tab": "Crear mi club",
+      "resume.text": "Ya has iniciado sesión en este navegador.", "resume.go": "Volver a mi club", "resume.logout": "Cerrar sesión",
+      "hero.kicker": "Juego de gestión de baloncesto online",
+      "hero.title": "Toma las riendas<br>de tu <em>club</em>.",
+      "hero.lead": "Ficha, entrena, define tu táctica… y luego mira a tu equipo jugar en directo contra otros mánagers. Gratis, en el navegador, en ordenador y en móvil.",
+      "hero.fact1": "<b>Partidos en directo</b> a horas fijas", "hero.fact2": "<b>10 mánagers</b> por liga", "hero.fact3": "<b>Gratis</b>, sin instalar nada",
+      "signup.title": "Tu club te espera", "signup.sub": "Elige un nombre: te haces cargo de un club de la liga en curso y juegas esta misma noche.",
+      "discord.signup": "Regístrate con Discord", "discord.login": "Inicia sesión con Discord", "or": "o",
+      "field.country": "Tu país",
+      "country.fr": "Francia", "country.us": "Estados Unidos", "country.it": "Italia", "country.de": "Alemania", "country.ar": "Argentina", "country.be": "Bélgica",
+      "country.br": "Brasil", "country.ca": "Canadá", "country.cn": "China", "country.es": "España", "country.gr": "Grecia", "country.hk": "Hong Kong",
+      "country.lt": "Lituania", "country.pl": "Polonia", "country.pt": "Portugal", "country.ch": "Suiza", "country.tw": "Taiwán",
+      "field.countryHint": "Tu liga y sus horarios (partidos a las 20:00, hora local).",
+      "field.club": "Nombre de tu club", "field.clubHint": "De 2 a 24 caracteres. Visible para los demás mánagers.",
+      "field.email": "Email", "field.password": "Contraseña", "field.pwHint": "Mínimo 8 caracteres.",
+      "pw.show": "Ver", "pw.hide": "Ocultar",
+      "signup.submit": "Crear mi club",
+      "legal": "Tu email (o tu ID de Discord) solo sirve para iniciar sesión en el juego. Nunca se vende. <a href=\"/confidentialite\">Privacidad</a>",
+      "login.title": "Qué bueno verte de nuevo", "login.sub": "Inicia sesión para volver a tu club.", "login.submit": "Iniciar sesión",
+      "login.forgot": "¿Olvidaste tu contraseña? Escríbenos en el Discord del juego y la restablecemos.",
+      "login.forgotLink": "¿Olvidaste tu contraseña?",
+      "forgot.title": "Contraseña olvidada", "forgot.sub": "Indica el email de tu cuenta: recibirás un enlace para elegir una nueva contraseña.",
+      "forgot.submit": "Recibir el enlace", "forgot.back": "Volver al inicio de sesión",
+      "forgot.sent": "Si existe una cuenta con este email, se le acaba de enviar un enlace (válido 1 hora). Revisa también la carpeta de spam.",
+      "forgot.nomail": "El envío de emails aún no está disponible: escríbenos en el Discord del juego y te enviaremos un enlace para restablecerla.",
+      "reset.title": "Nueva contraseña", "reset.sub": "Elige tu nueva contraseña: iniciarás sesión directamente.", "reset.submit": "Guardar e iniciar sesión",
+      "err.reset-expired": "Este enlace ha caducado o ya se ha usado. Pide uno nuevo.",
+      "dclub.title": "¡Bienvenido!", "dclub.sub": "¡Hola, {name}! Último paso: elige el nombre de tu club.",
+      "wait.title": "Estás en la lista",
+      "wait.text": "Tu cuenta está creada, pero todos los clubes de la liga están ocupados. En cuanto quede una plaza libre, se te asignará un club automáticamente: vuelve a esta página, lo comprobamos en cada visita.",
+      "wait.check": "Comprobar ahora", "wait.still": "Sigue completo por ahora. ¡Vuelve a intentarlo más tarde!",
+      "disc.title": "Descubre el juego antes de registrarte",
+      "disc1.t": "Cómo funciona", "disc1.p": "El calendario, los partidos en directo, la preparación táctica y la vida del club, explicados en detalle (en inglés).",
+      "disc2.t": "La guía completa", "disc2.p": "Plantilla, atributos, órdenes, mercado, economía, cantera: la guía del juego, sección por sección (en inglés).",
+      "disc3.t": "Preguntas frecuentes", "disc3.p": "Precio, horarios de los partidos, tiempo necesario, cuenta: las respuestas a las preguntas más habituales (en inglés).",
+      "nav.game": "El juego", "nav.guide": "Guía", "nav.about": "Acerca de", "nav.privacy": "Privacidad", "nav.legal": "Aviso legal",
+      "feat.title": "Todo un club por hacer crecer", "feat.sub": "No es solo cuestión de táctica: patrocinadores, pabellón, staff y jóvenes talentos cuentan tanto como tu quinteto inicial.",
+      "f1.t": "Partidos en directo", "f1.p": "Cada partido se retransmite en tiempo real: jugada a jugada, tiempos muertos, descanso y previa. Puedes unirte con el partido empezado, pero nunca acelerarlo.",
+      "f2.t": "Una liga de verdad", "f2.p": "Hasta 10 mánagers humanos en el mismo campeonato, con clasificación, playoffs, ascensos y descensos. Y además una copa por la tarde.",
+      "f3.t": "Entrenamiento y táctica", "f3.p": "Elige qué trabajar, haz progresar a tus jugadores y prepara con antelación el plan de cada partido.",
+      "f4.t": "Mercado de subastas", "f4.p": "Jugadores, entrenadores, analistas, ojeadores: todo se puja en tiempo real contra los demás mánagers.",
+      "f5.t": "Pabellón y finanzas", "f5.p": "Amplía tu pabellón, fija el precio de las entradas, firma patrocinadores y vigila tu presupuesto.",
+      "f6.t": "Cantera", "f6.p": "Descubre joyas de 15 años, hazlas crecer y construye el equipo que levantará el trofeo dentro de unas temporadas.",
+      "com.title": "Únete a la comunidad", "com.text": "Novedades, ayuda entre mánagers, ideas y reportes de errores: todo pasa en Discord.", "com.btn": "Unirme al Discord",
+      "footer": "Hecho con pasión para los fans del baloncesto.",
+      "err.email-invalid": "Esta dirección de email no parece válida.",
+      "err.password-too-short": "Tu contraseña debe tener al menos 8 caracteres.",
+      "err.password-invalid": "Esta contraseña no es válida.",
+      "err.club-invalid": "Nombre del club: de 2 a 24 caracteres (letras, números, espacios, - ' .).",
+      "err.club-taken": "Este nombre de club ya está en uso. ¡Prueba con otro!",
+      "err.email-taken": "Ya existe una cuenta con este email. ¿Prefieres iniciar sesión?",
+      "err.bad-credentials": "Email o contraseña incorrectos.",
+      "err.rate-limited": "Demasiados intentos. Espera unos minutos antes de volver a intentarlo.",
+      "err.discord-expired": "El inicio de sesión con Discord ha caducado. Inténtalo de nuevo.",
+      "ok.discord-linked": "Discord ya está vinculado a tu club. Vuelve al juego (pestaña o app desde la que empezaste) para continuar.",
+      "err.discord-cancelled": "Inicio de sesión con Discord cancelado.",
+      "err.discord-failed": "No se pudo conectar con Discord. Inténtalo de nuevo en un momento.",
+      "err.discord-disabled": "El inicio de sesión con Discord no está disponible por ahora.",
+      "err.network": "No se puede conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
+      "err.generic": "Se ha producido un error. Inténtalo de nuevo.",
+      "err.fill": "Rellena todos los campos.",
+      "field.invite": "Código de invitación", "field.inviteHint": "Por ahora, el registro es solo por invitación.",
+      "err.invite-invalid": "Este código de invitación no es válido."
+    },
+    pt: {
+      "login.tab": "Entrar", "signup.tab": "Criar meu clube",
+      "resume.text": "Você já está conectado neste navegador.", "resume.go": "Voltar ao meu clube", "resume.logout": "Sair",
+      "hero.kicker": "Jogo de gestão de basquete online",
+      "hero.title": "Assuma o comando<br>do seu <em>clube</em>.",
+      "hero.lead": "Contrate, treine, defina sua tática… e depois assista ao seu time jogar ao vivo contra outros managers. Grátis, no navegador, no computador e no celular.",
+      "hero.fact1": "<b>Jogos ao vivo</b> em horários fixos", "hero.fact2": "<b>10 managers</b> por liga", "hero.fact3": "<b>Grátis</b>, sem instalar nada",
+      "signup.title": "Seu clube está esperando", "signup.sub": "Escolha um nome: você assume um clube da liga em andamento e já joga hoje à noite.",
+      "discord.signup": "Cadastre-se com o Discord", "discord.login": "Entre com o Discord", "or": "ou",
+      "field.country": "Seu país",
+      "country.fr": "França", "country.us": "Estados Unidos", "country.it": "Itália", "country.de": "Alemanha", "country.ar": "Argentina", "country.be": "Bélgica",
+      "country.br": "Brasil", "country.ca": "Canadá", "country.cn": "China", "country.es": "Espanha", "country.gr": "Grécia", "country.hk": "Hong Kong",
+      "country.lt": "Lituânia", "country.pl": "Polônia", "country.pt": "Portugal", "country.ch": "Suíça", "country.tw": "Taiwan",
+      "field.countryHint": "Sua liga e seus horários (jogos às 20:00, horário local).",
+      "field.club": "Nome do seu clube", "field.clubHint": "De 2 a 24 caracteres. Visível para os outros managers.",
+      "field.email": "E-mail", "field.password": "Senha", "field.pwHint": "No mínimo 8 caracteres.",
+      "pw.show": "Mostrar", "pw.hide": "Ocultar",
+      "signup.submit": "Criar meu clube",
+      "legal": "Seu e-mail (ou seu ID do Discord) serve apenas para você entrar no jogo. Nunca é vendido. <a href=\"/confidentialite\">Privacidade</a>",
+      "login.title": "Que bom te ver de novo", "login.sub": "Entre para voltar ao seu clube.", "login.submit": "Entrar",
+      "login.forgot": "Esqueceu sua senha? Fale com a gente no Discord do jogo e nós a redefinimos.",
+      "login.forgotLink": "Esqueceu sua senha?",
+      "forgot.title": "Esqueci minha senha", "forgot.sub": "Informe o e-mail da sua conta: você vai receber um link para escolher uma nova senha.",
+      "forgot.submit": "Receber o link", "forgot.back": "Voltar para o login",
+      "forgot.sent": "Se existir uma conta com este e-mail, um link acabou de ser enviado para ele (válido por 1 hora). Confira também a pasta de spam.",
+      "forgot.nomail": "O envio de e-mails ainda não está disponível: fale com a gente no Discord do jogo e enviaremos um link de redefinição.",
+      "reset.title": "Nova senha", "reset.sub": "Escolha sua nova senha: você vai entrar direto.", "reset.submit": "Salvar e entrar",
+      "err.reset-expired": "Este link expirou ou já foi usado. Peça um novo.",
+      "dclub.title": "Bem-vindo!", "dclub.sub": "Olá, {name}! Último passo: escolha o nome do seu clube.",
+      "wait.title": "Você está na lista",
+      "wait.text": "Sua conta foi criada, mas todos os clubes da liga já estão ocupados. Assim que uma vaga abrir, um clube será atribuído a você automaticamente: volte a esta página, verificamos a cada visita.",
+      "wait.check": "Verificar agora", "wait.still": "Ainda lotado por enquanto. Tente de novo mais tarde!",
+      "disc.title": "Conheça o jogo antes de se cadastrar",
+      "disc1.t": "Como funciona", "disc1.p": "O calendário, os jogos ao vivo, a preparação tática e a vida do clube, explicados em detalhes (em inglês).",
+      "disc2.t": "O guia completo", "disc2.p": "Elenco, atributos, ordens, mercado, finanças, academia: o guia do jogo, seção por seção (em inglês).",
+      "disc3.t": "Perguntas frequentes", "disc3.p": "Preço, horários dos jogos, tempo necessário, conta: as respostas às perguntas mais comuns (em inglês).",
+      "nav.game": "O jogo", "nav.guide": "Guia", "nav.about": "Sobre", "nav.privacy": "Privacidade", "nav.legal": "Aviso legal",
+      "feat.title": "Um clube inteiro para fazer crescer", "feat.sub": "Não é só tática: patrocinadores, ginásio, staff e jovens talentos contam tanto quanto seu quinteto titular.",
+      "f1.t": "Jogos ao vivo", "f1.p": "Cada jogo é transmitido em tempo real: lance a lance, pedidos de tempo, intervalo e pré-jogo. Você pode entrar com o jogo em andamento, mas nunca acelerá-lo.",
+      "f2.t": "Uma liga de verdade", "f2.p": "Até 10 managers humanos no mesmo campeonato, com classificação, playoffs, acesso e rebaixamento. E ainda uma copa à tarde.",
+      "f3.t": "Treino e tática", "f3.p": "Escolha o que treinar, faça seus jogadores evoluírem e prepare com antecedência o plano de cada jogo.",
+      "f4.t": "Mercado de leilões", "f4.p": "Jogadores, treinadores, analistas, olheiros: tudo é disputado em leilão em tempo real contra os outros managers.",
+      "f5.t": "Ginásio e finanças", "f5.p": "Amplie seu ginásio, defina o preço dos ingressos, feche com patrocinadores e fique de olho no orçamento.",
+      "f6.t": "Academia de base", "f6.p": "Descubra joias de 15 anos, faça-as crescer e monte o time que vai levantar a taça daqui a algumas temporadas.",
+      "com.title": "Entre na comunidade", "com.text": "Novidades, ajuda entre managers, ideias e relatos de bugs: tudo acontece no Discord.", "com.btn": "Entrar no Discord",
+      "footer": "Feito com paixão para os fãs de basquete.",
+      "err.email-invalid": "Este endereço de e-mail não parece válido.",
+      "err.password-too-short": "Sua senha precisa ter pelo menos 8 caracteres.",
+      "err.password-invalid": "Esta senha não é válida.",
+      "err.club-invalid": "Nome do clube: de 2 a 24 caracteres (letras, números, espaços, - ' .).",
+      "err.club-taken": "Este nome de clube já está em uso. Tente outro!",
+      "err.email-taken": "Já existe uma conta com este e-mail. Quer entrar?",
+      "err.bad-credentials": "E-mail ou senha incorretos.",
+      "err.rate-limited": "Tentativas demais. Espere alguns minutos antes de tentar de novo.",
+      "err.discord-expired": "O login com o Discord expirou. Tente de novo.",
+      "ok.discord-linked": "O Discord agora está vinculado ao seu clube. Volte ao jogo (aba ou app de onde você veio) para continuar.",
+      "err.discord-cancelled": "Login com o Discord cancelado.",
+      "err.discord-failed": "Não foi possível acessar o Discord. Tente de novo daqui a pouco.",
+      "err.discord-disabled": "O login com o Discord não está disponível no momento.",
+      "err.network": "Não foi possível acessar o servidor. Verifique sua conexão e tente de novo.",
+      "err.generic": "Ocorreu um erro. Tente de novo.",
+      "err.fill": "Preencha todos os campos.",
+      "field.invite": "Código de convite", "field.inviteHint": "Por enquanto, os cadastros são apenas por convite.",
+      "err.invite-invalid": "Este código de convite não é válido."
+    },
+    de: {
+      "login.tab": "Anmelden", "signup.tab": "Meinen Verein gründen",
+      "resume.text": "Du bist in diesem Browser bereits angemeldet.", "resume.go": "Zurück zu meinem Verein", "resume.logout": "Abmelden",
+      "hero.kicker": "Online-Basketball-Managerspiel",
+      "hero.title": "Übernimm das Kommando<br>in deinem <em>Verein</em>.",
+      "hero.lead": "Verpflichte Spieler, trainiere sie, lege deine Taktik fest… und sieh dann zu, wie dein Team live gegen andere Manager spielt. Kostenlos, im Browser, am Computer wie am Handy.",
+      "hero.fact1": "<b>Live-Spiele</b> zu festen Zeiten", "hero.fact2": "<b>10 Manager</b> pro Liga", "hero.fact3": "<b>Kostenlos</b>, ohne Installation",
+      "signup.title": "Dein Verein wartet", "signup.sub": "Wähle einen Namen: Du übernimmst einen Verein der laufenden Liga und spielst schon heute Abend.",
+      "discord.signup": "Mit Discord registrieren", "discord.login": "Mit Discord anmelden", "or": "oder",
+      "field.country": "Dein Land",
+      "country.fr": "Frankreich", "country.us": "USA", "country.it": "Italien", "country.de": "Deutschland", "country.ar": "Argentinien", "country.be": "Belgien",
+      "country.br": "Brasilien", "country.ca": "Kanada", "country.cn": "China", "country.es": "Spanien", "country.gr": "Griechenland", "country.hk": "Hongkong",
+      "country.lt": "Litauen", "country.pl": "Polen", "country.pt": "Portugal", "country.ch": "Schweiz", "country.tw": "Taiwan",
+      "field.countryHint": "Deine Liga und ihr Spielplan (Spiele um 20:00 Uhr Ortszeit).",
+      "field.club": "Name deines Vereins", "field.clubHint": "2 bis 24 Zeichen. Für andere Manager sichtbar.",
+      "field.email": "E-Mail", "field.password": "Passwort", "field.pwHint": "Mindestens 8 Zeichen.",
+      "pw.show": "Zeigen", "pw.hide": "Verbergen",
+      "signup.submit": "Meinen Verein gründen",
+      "legal": "Deine E-Mail (oder deine Discord-ID) dient nur zur Anmeldung im Spiel. Niemals verkauft. <a href=\"/confidentialite\">Datenschutz</a>",
+      "login.title": "Schön, dich wiederzusehen", "login.sub": "Melde dich an, um zu deinem Verein zurückzukehren.", "login.submit": "Anmelden",
+      "login.forgot": "Passwort vergessen? Schreib uns auf dem Discord des Spiels und wir setzen es zurück.",
+      "login.forgotLink": "Passwort vergessen?",
+      "forgot.title": "Passwort vergessen", "forgot.sub": "Gib die E-Mail-Adresse deines Kontos ein: Du erhältst einen Link, um ein neues Passwort festzulegen.",
+      "forgot.submit": "Link zusenden", "forgot.back": "Zurück zur Anmeldung",
+      "forgot.sent": "Falls ein Konto mit dieser E-Mail existiert, wurde gerade ein Link dorthin geschickt (1 Stunde gültig). Schau auch im Spam-Ordner nach.",
+      "forgot.nomail": "Der E-Mail-Versand ist noch nicht verfügbar: Schreib uns auf dem Discord des Spiels und wir schicken dir einen Link zum Zurücksetzen.",
+      "reset.title": "Neues Passwort", "reset.sub": "Wähle dein neues Passwort: Du wirst direkt angemeldet.", "reset.submit": "Speichern und anmelden",
+      "err.reset-expired": "Dieser Link ist abgelaufen oder wurde bereits verwendet. Fordere einen neuen an.",
+      "dclub.title": "Willkommen!", "dclub.sub": "Hallo {name}! Letzter Schritt: Wähle den Namen deines Vereins.",
+      "wait.title": "Du stehst auf der Liste",
+      "wait.text": "Dein Konto ist erstellt, aber alle Vereine der Liga sind bereits vergeben. Sobald ein Platz frei wird, bekommst du automatisch einen Verein: Komm auf diese Seite zurück, wir prüfen bei jedem Besuch.",
+      "wait.check": "Jetzt prüfen", "wait.still": "Im Moment noch alles voll. Versuch es später noch einmal!",
+      "disc.title": "Entdecke das Spiel vor der Anmeldung",
+      "disc1.t": "So funktioniert's", "disc1.p": "Der Spielplan, die Live-Spiele, die taktische Vorbereitung und das Vereinsleben, ausführlich erklärt (auf Englisch).",
+      "disc2.t": "Der komplette Guide", "disc2.p": "Kader, Attribute, Anweisungen, Markt, Finanzen, Akademie: der Spielguide, Abschnitt für Abschnitt (auf Englisch).",
+      "disc3.t": "Häufige Fragen", "disc3.p": "Preis, Spielzeiten, Zeitaufwand, Konto: die Antworten auf die häufigsten Fragen (auf Englisch).",
+      "nav.game": "Das Spiel", "nav.guide": "Guide", "nav.about": "Über uns", "nav.privacy": "Datenschutz", "nav.legal": "Impressum",
+      "feat.title": "Ein ganzer Verein zum Aufbauen", "feat.sub": "Es geht nicht nur um Taktik: Sponsoren, Halle, Personal und junge Talente zählen genauso viel wie deine Startfünf.",
+      "f1.t": "Live-Spiele", "f1.p": "Jedes Spiel wird in Echtzeit übertragen: Spielzug für Spielzug, Auszeiten, Halbzeit- und Vorberichte. Du kannst mitten im Spiel einsteigen, aber nie vorspulen.",
+      "f2.t": "Eine echte Liga", "f2.p": "Bis zu 10 menschliche Manager in derselben Meisterschaft, mit Tabelle, Playoffs, Auf- und Abstieg. Dazu ein Pokal am Nachmittag.",
+      "f3.t": "Training & Taktik", "f3.p": "Wähle deine Trainingsschwerpunkte, entwickle deine Spieler weiter und bereite den Matchplan jedes Spiels im Voraus vor.",
+      "f4.t": "Auktionsmarkt", "f4.p": "Spieler, Trainer, Analysten, Scouts: Alles wird in Echtzeit gegen die anderen Manager ersteigert.",
+      "f5.t": "Halle & Finanzen", "f5.p": "Baue deine Halle aus, lege die Ticketpreise fest, unterschreibe mit Sponsoren und behalte dein Budget im Blick.",
+      "f6.t": "Jugendakademie", "f6.p": "Entdecke 15-jährige Rohdiamanten, lass sie wachsen und baue das Team auf, das in ein paar Saisons den Pokal holt.",
+      "com.title": "Werde Teil der Community", "com.text": "Neuigkeiten, Hilfe unter Managern, Ideen und Fehlermeldungen: Alles passiert auf Discord.", "com.btn": "Dem Discord beitreten",
+      "footer": "Mit Leidenschaft für Basketballfans gemacht.",
+      "err.email-invalid": "Diese E-Mail-Adresse scheint nicht gültig zu sein.",
+      "err.password-too-short": "Dein Passwort muss mindestens 8 Zeichen lang sein.",
+      "err.password-invalid": "Dieses Passwort ist nicht gültig.",
+      "err.club-invalid": "Vereinsname: 2 bis 24 Zeichen (Buchstaben, Ziffern, Leerzeichen, - ' .).",
+      "err.club-taken": "Dieser Vereinsname ist schon vergeben. Probier einen anderen!",
+      "err.email-taken": "Mit dieser E-Mail gibt es bereits ein Konto. Möchtest du dich lieber anmelden?",
+      "err.bad-credentials": "E-Mail oder Passwort falsch.",
+      "err.rate-limited": "Zu viele Versuche. Warte ein paar Minuten, bevor du es erneut versuchst.",
+      "err.discord-expired": "Die Discord-Anmeldung ist abgelaufen. Versuch es noch einmal.",
+      "ok.discord-linked": "Discord ist jetzt mit deinem Verein verknüpft. Kehre zum Spiel zurück (Tab oder App, von dem du gekommen bist), um weiterzumachen.",
+      "err.discord-cancelled": "Discord-Anmeldung abgebrochen.",
+      "err.discord-failed": "Discord ist nicht erreichbar. Versuch es gleich noch einmal.",
+      "err.discord-disabled": "Die Anmeldung mit Discord ist derzeit nicht verfügbar.",
+      "err.network": "Der Server ist nicht erreichbar. Prüfe deine Verbindung und versuch es erneut.",
+      "err.generic": "Es ist ein Fehler aufgetreten. Versuch es erneut.",
+      "err.fill": "Bitte fülle alle Felder aus.",
+      "field.invite": "Einladungscode", "field.inviteHint": "Anmeldungen sind derzeit nur mit Einladung möglich.",
+      "err.invite-invalid": "Dieser Einladungscode ist nicht gültig."
+    },
+    pl: {
+      "login.tab": "Zaloguj się", "signup.tab": "Załóż klub",
+      "resume.text": "Jesteś już zalogowany w tej przeglądarce.", "resume.go": "Wróć do mojego klubu", "resume.logout": "Wyloguj się",
+      "hero.kicker": "Menedżer koszykówki online",
+      "hero.title": "Przejmij stery<br>swojego <em>klubu</em>.",
+      "hero.lead": "Kontraktuj zawodników, trenuj ich, ustal taktykę… a potem oglądaj, jak twoja drużyna gra na żywo z innymi menedżerami. Za darmo, w przeglądarce, na komputerze i na telefonie.",
+      "hero.fact1": "<b>Mecze na żywo</b> o stałych porach", "hero.fact2": "<b>10 menedżerów</b> w lidze", "hero.fact3": "<b>Za darmo</b>, bez instalacji",
+      "signup.title": "Twój klub czeka", "signup.sub": "Wybierz nazwę: przejmujesz klub w trwającej lidze i grasz już dziś wieczorem.",
+      "discord.signup": "Zarejestruj się przez Discord", "discord.login": "Zaloguj się przez Discord", "or": "lub",
+      "field.country": "Twój kraj",
+      "country.fr": "Francja", "country.us": "Stany Zjednoczone", "country.it": "Włochy", "country.de": "Niemcy", "country.ar": "Argentyna", "country.be": "Belgia",
+      "country.br": "Brazylia", "country.ca": "Kanada", "country.cn": "Chiny", "country.es": "Hiszpania", "country.gr": "Grecja", "country.hk": "Hongkong",
+      "country.lt": "Litwa", "country.pl": "Polska", "country.pt": "Portugalia", "country.ch": "Szwajcaria", "country.tw": "Tajwan",
+      "field.countryHint": "Twoja liga i jej terminarz (mecze o 20:00 czasu lokalnego).",
+      "field.club": "Nazwa twojego klubu", "field.clubHint": "Od 2 do 24 znaków. Widoczna dla innych menedżerów.",
+      "field.email": "E-mail", "field.password": "Hasło", "field.pwHint": "Co najmniej 8 znaków.",
+      "pw.show": "Pokaż", "pw.hide": "Ukryj",
+      "signup.submit": "Załóż klub",
+      "legal": "Twój e-mail (lub identyfikator Discord) służy wyłącznie do logowania w grze. Nigdy nie jest sprzedawany. <a href=\"/confidentialite\">Prywatność</a>",
+      "login.title": "Miło cię znowu widzieć", "login.sub": "Zaloguj się, aby wrócić do swojego klubu.", "login.submit": "Zaloguj się",
+      "login.forgot": "Nie pamiętasz hasła? Napisz do nas na Discordzie gry, a je zresetujemy.",
+      "login.forgotLink": "Nie pamiętasz hasła?",
+      "forgot.title": "Nie pamiętam hasła", "forgot.sub": "Podaj e-mail swojego konta: otrzymasz link do ustawienia nowego hasła.",
+      "forgot.submit": "Wyślij link", "forgot.back": "Wróć do logowania",
+      "forgot.sent": "Jeśli istnieje konto z tym adresem e-mail, właśnie wysłaliśmy na niego link (ważny 1 godzinę). Sprawdź też folder spam.",
+      "forgot.nomail": "Wysyłka e-maili nie jest jeszcze dostępna: napisz do nas na Discordzie gry, a wyślemy ci link do zresetowania hasła.",
+      "reset.title": "Nowe hasło", "reset.sub": "Wybierz nowe hasło: zostaniesz od razu zalogowany.", "reset.submit": "Zapisz i zaloguj",
+      "err.reset-expired": "Ten link wygasł lub został już użyty. Poproś o nowy.",
+      "dclub.title": "Witaj!", "dclub.sub": "Cześć, {name}! Ostatni krok: wybierz nazwę swojego klubu.",
+      "wait.title": "Jesteś na liście",
+      "wait.text": "Twoje konto zostało utworzone, ale wszystkie kluby w lidze są zajęte. Gdy tylko zwolni się miejsce, klub zostanie ci przydzielony automatycznie: wróć na tę stronę, sprawdzamy przy każdej wizycie.",
+      "wait.check": "Sprawdź teraz", "wait.still": "Na razie wciąż brak miejsc. Spróbuj ponownie później!",
+      "disc.title": "Poznaj grę przed rejestracją",
+      "disc1.t": "Jak to działa", "disc1.p": "Terminarz, mecze na żywo, przygotowanie taktyczne i życie klubu, szczegółowo wyjaśnione (po angielsku).",
+      "disc2.t": "Pełny przewodnik", "disc2.p": "Skład, atrybuty, polecenia, rynek, finanse, akademia: przewodnik po grze, sekcja po sekcji (po angielsku).",
+      "disc3.t": "Częste pytania", "disc3.p": "Cena, godziny meczów, potrzebny czas, konto: odpowiedzi na najczęściej zadawane pytania (po angielsku).",
+      "nav.game": "Gra", "nav.guide": "Przewodnik", "nav.about": "O grze", "nav.privacy": "Prywatność", "nav.legal": "Nota prawna",
+      "feat.title": "Cały klub do rozwijania", "feat.sub": "To nie tylko taktyka: sponsorzy, hala, sztab i młode talenty liczą się tak samo jak twoja pierwsza piątka.",
+      "f1.t": "Mecze na żywo", "f1.p": "Każdy mecz jest transmitowany w czasie rzeczywistym: akcja po akcji, przerwy na żądanie, studio w przerwie i przed meczem. Możesz dołączyć w trakcie meczu, ale nigdy go nie przyspieszysz.",
+      "f2.t": "Prawdziwa liga", "f2.p": "Do 10 ludzkich menedżerów w tych samych rozgrywkach, z tabelą, play-offami, awansami i spadkami. Do tego popołudniowy puchar.",
+      "f3.t": "Trening i taktyka", "f3.p": "Wybierz, nad czym pracować, rozwijaj zawodników i przygotuj z wyprzedzeniem plan na każdy mecz.",
+      "f4.t": "Rynek aukcyjny", "f4.p": "Zawodnicy, trenerzy, analitycy, skauci: o wszystko licytujesz się w czasie rzeczywistym z innymi menedżerami.",
+      "f5.t": "Hala i finanse", "f5.p": "Rozbuduj halę, ustal ceny biletów, podpisuj umowy ze sponsorami i pilnuj budżetu.",
+      "f6.t": "Akademia młodzieżowa", "f6.p": "Wyszukuj 15-letnie perełki, rozwijaj je i zbuduj drużynę, która za kilka sezonów wzniesie trofeum.",
+      "com.title": "Dołącz do społeczności", "com.text": "Nowości, pomoc między menedżerami, pomysły i zgłoszenia błędów: wszystko dzieje się na Discordzie.", "com.btn": "Dołącz do Discorda",
+      "footer": "Stworzone z pasją dla fanów koszykówki.",
+      "err.email-invalid": "Ten adres e-mail wygląda na nieprawidłowy.",
+      "err.password-too-short": "Hasło musi mieć co najmniej 8 znaków.",
+      "err.password-invalid": "To hasło jest nieprawidłowe.",
+      "err.club-invalid": "Nazwa klubu: od 2 do 24 znaków (litery, cyfry, spacje, - ' .).",
+      "err.club-taken": "Ta nazwa klubu jest już zajęta. Spróbuj innej!",
+      "err.email-taken": "Konto z tym adresem e-mail już istnieje. Może chcesz się zalogować?",
+      "err.bad-credentials": "Nieprawidłowy e-mail lub hasło.",
+      "err.rate-limited": "Zbyt wiele prób. Odczekaj kilka minut i spróbuj ponownie.",
+      "err.discord-expired": "Logowanie przez Discord wygasło. Spróbuj ponownie.",
+      "ok.discord-linked": "Discord jest teraz połączony z twoim klubem. Wróć do gry (karta lub aplikacja, z której przyszedłeś), aby kontynuować.",
+      "err.discord-cancelled": "Logowanie przez Discord anulowane.",
+      "err.discord-failed": "Nie udało się połączyć z Discordem. Spróbuj ponownie za chwilę.",
+      "err.discord-disabled": "Logowanie przez Discord jest obecnie niedostępne.",
+      "err.network": "Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie.",
+      "err.generic": "Wystąpił błąd. Spróbuj ponownie.",
+      "err.fill": "Wypełnij wszystkie pola.",
+      "field.invite": "Kod zaproszenia", "field.inviteHint": "Na razie rejestracja jest możliwa tylko z zaproszeniem.",
+      "err.invite-invalid": "Ten kod zaproszenia jest nieprawidłowy."
+    },
+    el: {
+      "login.tab": "Σύνδεση", "signup.tab": "Δημιούργησε την ομάδα σου",
+      "resume.text": "Είσαι ήδη συνδεδεμένος σε αυτόν τον browser.", "resume.go": "Επιστροφή στην ομάδα μου", "resume.logout": "Αποσύνδεση",
+      "hero.kicker": "Online παιχνίδι μάνατζερ μπάσκετ",
+      "hero.title": "Πάρε τα ηνία<br>της <em>ομάδας</em> σου.",
+      "hero.lead": "Κάνε μεταγραφές, προπόνησε, όρισε την τακτική σου… και μετά δες την ομάδα σου να παίζει ζωντανά απέναντι σε άλλους μάνατζερ. Δωρεάν, στον browser, σε υπολογιστή και κινητό.",
+      "hero.fact1": "<b>Ζωντανοί αγώνες</b> σε σταθερές ώρες", "hero.fact2": "<b>10 μάνατζερ</b> ανά λίγκα", "hero.fact3": "<b>Δωρεάν</b>, χωρίς εγκατάσταση",
+      "signup.title": "Η ομάδα σου σε περιμένει", "signup.sub": "Διάλεξε ένα όνομα: αναλαμβάνεις μια ομάδα της τρέχουσας λίγκας και παίζεις από απόψε.",
+      "discord.signup": "Εγγραφή με Discord", "discord.login": "Σύνδεση με Discord", "or": "ή",
+      "field.country": "Η χώρα σου",
+      "country.fr": "Γαλλία", "country.us": "ΗΠΑ", "country.it": "Ιταλία", "country.de": "Γερμανία", "country.ar": "Αργεντινή", "country.be": "Βέλγιο",
+      "country.br": "Βραζιλία", "country.ca": "Καναδάς", "country.cn": "Κίνα", "country.es": "Ισπανία", "country.gr": "Ελλάδα", "country.hk": "Χονγκ Κονγκ",
+      "country.lt": "Λιθουανία", "country.pl": "Πολωνία", "country.pt": "Πορτογαλία", "country.ch": "Ελβετία", "country.tw": "Ταϊβάν",
+      "field.countryHint": "Το πρωτάθλημά σου και το πρόγραμμά του (αγώνες στις 20:00 τοπική ώρα).",
+      "field.club": "Όνομα της ομάδας σου", "field.clubHint": "2 έως 24 χαρακτήρες. Ορατό στους άλλους μάνατζερ.",
+      "field.email": "Email", "field.password": "Κωδικός πρόσβασης", "field.pwHint": "Τουλάχιστον 8 χαρακτήρες.",
+      "pw.show": "Εμφάνιση", "pw.hide": "Απόκρυψη",
+      "signup.submit": "Δημιούργησε την ομάδα σου",
+      "legal": "Το email σου (ή το ID σου στο Discord) χρησιμοποιείται μόνο για τη σύνδεσή σου στο παιχνίδι. Δεν πωλείται ποτέ. <a href=\"/confidentialite\">Απόρρητο</a>",
+      "login.title": "Χαιρόμαστε που σε ξαναβλέπουμε", "login.sub": "Συνδέσου για να επιστρέψεις στην ομάδα σου.", "login.submit": "Σύνδεση",
+      "login.forgot": "Ξέχασες τον κωδικό σου; Γράψε μας στο Discord του παιχνιδιού και θα τον επαναφέρουμε.",
+      "login.forgotLink": "Ξέχασες τον κωδικό σου;",
+      "forgot.title": "Ξέχασα τον κωδικό", "forgot.sub": "Γράψε το email του λογαριασμού σου: θα λάβεις έναν σύνδεσμο για να ορίσεις νέο κωδικό.",
+      "forgot.submit": "Στείλε μου τον σύνδεσμο", "forgot.back": "Επιστροφή στη σύνδεση",
+      "forgot.sent": "Αν υπάρχει λογαριασμός με αυτό το email, μόλις του στάλθηκε ένας σύνδεσμος (ισχύει για 1 ώρα). Έλεγξε και τον φάκελο ανεπιθύμητων.",
+      "forgot.nomail": "Η αποστολή email δεν είναι ακόμη διαθέσιμη: γράψε μας στο Discord του παιχνιδιού και θα σου στείλουμε σύνδεσμο επαναφοράς.",
+      "reset.title": "Νέος κωδικός", "reset.sub": "Διάλεξε τον νέο σου κωδικό: θα συνδεθείς αμέσως.", "reset.submit": "Αποθήκευση και σύνδεση",
+      "err.reset-expired": "Αυτός ο σύνδεσμος έληξε ή έχει ήδη χρησιμοποιηθεί. Ζήτησε νέο.",
+      "dclub.title": "Καλώς ήρθες!", "dclub.sub": "Γεια σου {name}! Τελευταίο βήμα: διάλεξε το όνομα της ομάδας σου.",
+      "wait.title": "Είσαι στη λίστα",
+      "wait.text": "Ο λογαριασμός σου δημιουργήθηκε, αλλά όλες οι ομάδες της λίγκας έχουν ήδη μάνατζερ. Μόλις ελευθερωθεί μια θέση, θα σου δοθεί αυτόματα μια ομάδα: γύρνα σε αυτή τη σελίδα, ελέγχουμε σε κάθε επίσκεψη.",
+      "wait.check": "Έλεγχος τώρα", "wait.still": "Ακόμη όλα πιασμένα. Δοκίμασε ξανά αργότερα!",
+      "disc.title": "Γνώρισε το παιχνίδι πριν εγγραφείς",
+      "disc1.t": "Πώς λειτουργεί", "disc1.p": "Το πρόγραμμα, οι ζωντανοί αγώνες, η τακτική προετοιμασία και η ζωή της ομάδας, αναλυτικά (στα αγγλικά).",
+      "disc2.t": "Ο πλήρης οδηγός", "disc2.p": "Ρόστερ, χαρακτηριστικά, οδηγίες, αγορά, οικονομικά, ακαδημία: ο οδηγός του παιχνιδιού, ενότητα προς ενότητα (στα αγγλικά).",
+      "disc3.t": "Συχνές ερωτήσεις", "disc3.p": "Κόστος, ώρες αγώνων, χρόνος που χρειάζεται, λογαριασμός: οι απαντήσεις στις πιο συχνές ερωτήσεις (στα αγγλικά).",
+      "nav.game": "Το παιχνίδι", "nav.guide": "Οδηγός", "nav.about": "Σχετικά", "nav.privacy": "Απόρρητο", "nav.legal": "Νομικές πληροφορίες",
+      "feat.title": "Μια ολόκληρη ομάδα να μεγαλώσεις", "feat.sub": "Δεν είναι μόνο θέμα τακτικής: χορηγοί, γήπεδο, προσωπικό και νέα ταλέντα μετράνε όσο και η αρχική σου πεντάδα.",
+      "f1.t": "Ζωντανοί αγώνες", "f1.p": "Κάθε αγώνας μεταδίδεται σε πραγματικό χρόνο: φάση προς φάση, τάιμ άουτ, εκπομπές ημιχρόνου και προαγωνιστικές. Μπορείς να μπεις ενώ παίζεται, αλλά ποτέ να τον επιταχύνεις.",
+      "f2.t": "Μια αληθινή λίγκα", "f2.p": "Έως 10 πραγματικοί μάνατζερ στο ίδιο πρωτάθλημα, με βαθμολογία, πλέι οφ, ανόδους και υποβιβασμούς. Και ένα κύπελλο το απόγευμα.",
+      "f3.t": "Προπόνηση & τακτική", "f3.p": "Διάλεξε σε τι θα δουλέψεις, βελτίωσε τους παίκτες σου και προετοίμασε από πριν το πλάνο κάθε αγώνα.",
+      "f4.t": "Αγορά με δημοπρασίες", "f4.p": "Παίκτες, προπονητές, αναλυτές, σκάουτερ: όλα κρίνονται σε δημοπρασίες σε πραγματικό χρόνο απέναντι στους άλλους μάνατζερ.",
+      "f5.t": "Γήπεδο & οικονομικά", "f5.p": "Μεγάλωσε το γήπεδό σου, όρισε τις τιμές των εισιτηρίων, υπόγραψε με χορηγούς και πρόσεχε τον προϋπολογισμό σου.",
+      "f6.t": "Ακαδημία νέων", "f6.p": "Ανακάλυψε διαμάντια 15 ετών, βοήθησέ τα να εξελιχθούν και χτίσε την ομάδα που θα σηκώσει το τρόπαιο σε μερικές σεζόν.",
+      "com.title": "Μπες στην κοινότητα", "com.text": "Νέα, βοήθεια μεταξύ μάνατζερ, ιδέες και αναφορές σφαλμάτων: όλα γίνονται στο Discord.", "com.btn": "Μπες στο Discord",
+      "footer": "Φτιαγμένο με πάθος για τους φίλους του μπάσκετ.",
+      "err.email-invalid": "Αυτή η διεύθυνση email δεν φαίνεται έγκυρη.",
+      "err.password-too-short": "Ο κωδικός σου πρέπει να έχει τουλάχιστον 8 χαρακτήρες.",
+      "err.password-invalid": "Αυτός ο κωδικός δεν είναι έγκυρος.",
+      "err.club-invalid": "Όνομα ομάδας: 2 έως 24 χαρακτήρες (γράμματα, αριθμοί, κενά, - ' .).",
+      "err.club-taken": "Αυτό το όνομα ομάδας χρησιμοποιείται ήδη. Δοκίμασε άλλο!",
+      "err.email-taken": "Υπάρχει ήδη λογαριασμός με αυτό το email. Μήπως θέλεις να συνδεθείς;",
+      "err.bad-credentials": "Λάθος email ή κωδικός.",
+      "err.rate-limited": "Πάρα πολλές προσπάθειες. Περίμενε λίγα λεπτά πριν δοκιμάσεις ξανά.",
+      "err.discord-expired": "Η σύνδεση με Discord έληξε. Δοκίμασε ξανά.",
+      "ok.discord-linked": "Το Discord συνδέθηκε με την ομάδα σου. Γύρνα στο παιχνίδι (καρτέλα ή εφαρμογή από όπου ξεκίνησες) για να συνεχίσεις.",
+      "err.discord-cancelled": "Η σύνδεση με Discord ακυρώθηκε.",
+      "err.discord-failed": "Δεν ήταν δυνατή η σύνδεση με το Discord. Δοκίμασε ξανά σε λίγο.",
+      "err.discord-disabled": "Η σύνδεση με Discord δεν είναι διαθέσιμη αυτή τη στιγμή.",
+      "err.network": "Δεν είναι δυνατή η σύνδεση με τον διακομιστή. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.",
+      "err.generic": "Κάτι πήγε στραβά. Δοκίμασε ξανά.",
+      "err.fill": "Συμπλήρωσε όλα τα πεδία.",
+      "field.invite": "Κωδικός πρόσκλησης", "field.inviteHint": "Προς το παρόν οι εγγραφές γίνονται μόνο με πρόσκληση.",
+      "err.invite-invalid": "Αυτός ο κωδικός πρόσκλησης δεν είναι έγκυρος."
+    },
+    lt: {
+      "login.tab": "Prisijungti", "signup.tab": "Kurti savo klubą",
+      "resume.text": "Šioje naršyklėje jau esi prisijungęs.", "resume.go": "Grįžti į savo klubą", "resume.logout": "Atsijungti",
+      "hero.kicker": "Internetinis krepšinio vadybos žaidimas",
+      "hero.title": "Perimk savo<br><em>klubo</em> vairą.",
+      "hero.lead": "Pasirašyk su žaidėjais, treniruok juos, nustatyk taktiką… o tada stebėk, kaip tavo komanda tiesiogiai žaidžia prieš kitus vadybininkus. Nemokamai, naršyklėje, kompiuteryje ir telefone.",
+      "hero.fact1": "<b>Tiesioginės rungtynės</b> nustatytu laiku", "hero.fact2": "<b>10 vadybininkų</b> lygoje", "hero.fact3": "<b>Nemokamai</b>, nieko nereikia diegti",
+      "signup.title": "Tavo klubas laukia", "signup.sub": "Pasirink pavadinimą: perimsi vykstančios lygos klubą ir žaisi jau šį vakarą.",
+      "discord.signup": "Registruotis su Discord", "discord.login": "Prisijungti su Discord", "or": "arba",
+      "field.country": "Tavo šalis",
+      "country.fr": "Prancūzija", "country.us": "JAV", "country.it": "Italija", "country.de": "Vokietija", "country.ar": "Argentina", "country.be": "Belgija",
+      "country.br": "Brazilija", "country.ca": "Kanada", "country.cn": "Kinija", "country.es": "Ispanija", "country.gr": "Graikija", "country.hk": "Honkongas",
+      "country.lt": "Lietuva", "country.pl": "Lenkija", "country.pt": "Portugalija", "country.ch": "Šveicarija", "country.tw": "Taivanas",
+      "field.countryHint": "Tavo lyga ir jos tvarkaraštis (rungtynės 20:00 vietos laiku).",
+      "field.club": "Tavo klubo pavadinimas", "field.clubHint": "Nuo 2 iki 24 simbolių. Matomas kitiems vadybininkams.",
+      "field.email": "El. paštas", "field.password": "Slaptažodis", "field.pwHint": "Ne mažiau kaip 8 simboliai.",
+      "pw.show": "Rodyti", "pw.hide": "Slėpti",
+      "signup.submit": "Kurti savo klubą",
+      "legal": "Tavo el. paštas (arba Discord ID) naudojamas tik prisijungti prie žaidimo. Niekada neparduodamas. <a href=\"/confidentialite\">Privatumas</a>",
+      "login.title": "Smagu vėl tave matyti", "login.sub": "Prisijunk, kad grįžtum į savo klubą.", "login.submit": "Prisijungti",
+      "login.forgot": "Pamiršai slaptažodį? Parašyk mums žaidimo Discord serveryje ir mes jį atkursime.",
+      "login.forgotLink": "Pamiršai slaptažodį?",
+      "forgot.title": "Pamiršau slaptažodį", "forgot.sub": "Įvesk savo paskyros el. paštą: gausi nuorodą naujam slaptažodžiui nustatyti.",
+      "forgot.submit": "Gauti nuorodą", "forgot.back": "Grįžti į prisijungimą",
+      "forgot.sent": "Jei yra paskyra su šiuo el. paštu, į jį ką tik išsiųsta nuoroda (galioja 1 valandą). Patikrink ir šlamšto aplanką.",
+      "forgot.nomail": "El. laiškų siuntimas dar negalimas: parašyk mums žaidimo Discord serveryje ir atsiųsime slaptažodžio atkūrimo nuorodą.",
+      "reset.title": "Naujas slaptažodis", "reset.sub": "Pasirink naują slaptažodį: būsi iš karto prijungtas.", "reset.submit": "Išsaugoti ir prisijungti",
+      "err.reset-expired": "Ši nuoroda nebegalioja arba jau buvo panaudota. Paprašyk naujos.",
+      "dclub.title": "Sveikas atvykęs!", "dclub.sub": "Labas, {name}! Paskutinis žingsnis: pasirink savo klubo pavadinimą.",
+      "wait.title": "Tu esi sąraše",
+      "wait.text": "Tavo paskyra sukurta, tačiau visi lygos klubai jau užimti. Kai tik atsilaisvins vieta, klubas tau bus priskirtas automatiškai: grįžk į šį puslapį, tikriname kiekvieno apsilankymo metu.",
+      "wait.check": "Patikrinti dabar", "wait.still": "Kol kas vis dar pilna. Pabandyk vėliau!",
+      "disc.title": "Susipažink su žaidimu prieš registruodamasis",
+      "disc1.t": "Kaip tai veikia", "disc1.p": "Tvarkaraštis, tiesioginės rungtynės, taktinis pasiruošimas ir klubo gyvenimas, išsamiai paaiškinti (anglų kalba).",
+      "disc2.t": "Išsamus vadovas", "disc2.p": "Sudėtis, savybės, nurodymai, rinka, finansai, akademija: žaidimo vadovas, skyrius po skyriaus (anglų kalba).",
+      "disc3.t": "DUK", "disc3.p": "Kaina, rungtynių laikas, reikalingas laikas, paskyra: atsakymai į dažniausiai užduodamus klausimus (anglų kalba).",
+      "nav.game": "Žaidimas", "nav.guide": "Vadovas", "nav.about": "Apie", "nav.privacy": "Privatumas", "nav.legal": "Teisinė informacija",
+      "feat.title": "Visas klubas, kurį reikia užauginti", "feat.sub": "Svarbi ne tik taktika: rėmėjai, arena, personalas ir jauni talentai reiškia tiek pat, kiek tavo startinis penketas.",
+      "f1.t": "Tiesioginės rungtynės", "f1.p": "Kiekvienos rungtynės transliuojamos realiu laiku: ataka po atakos, minutės pertraukėlės, laidos per pertrauką ir prieš rungtynes. Gali prisijungti rungtynėms vykstant, bet niekada jų nepagreitinsi.",
+      "f2.t": "Tikra lyga", "f2.p": "Iki 10 tikrų vadybininkų tame pačiame čempionate, su turnyrine lentele, atkrintamosiomis, iškritimu ir pakilimu. Ir dar popietinė taurė.",
+      "f3.t": "Treniruotės ir taktika", "f3.p": "Pasirink, ką tobulinti, ugdyk savo žaidėjus ir iš anksto parengk kiekvienų rungtynių planą.",
+      "f4.t": "Aukcionų rinka", "f4.p": "Žaidėjai, treneriai, analitikai, skautai: dėl visko varžomasi aukcionuose realiu laiku su kitais vadybininkais.",
+      "f5.t": "Arena ir finansai", "f5.p": "Plėsk areną, nustatyk bilietų kainas, pasirašyk sutartis su rėmėjais ir sek savo biudžetą.",
+      "f6.t": "Jaunimo akademija", "f6.p": "Atrask 15-mečius talentus, užaugink juos ir sukurk komandą, kuri po kelių sezonų iškels trofėjų.",
+      "com.title": "Prisijunk prie bendruomenės", "com.text": "Naujienos, vadybininkų pagalba vieni kitiems, idėjos ir pranešimai apie klaidas: viskas vyksta Discord.", "com.btn": "Prisijungti prie Discord",
+      "footer": "Sukurta su aistra krepšinio gerbėjams.",
+      "err.email-invalid": "Šis el. pašto adresas neatrodo tinkamas.",
+      "err.password-too-short": "Slaptažodį turi sudaryti bent 8 simboliai.",
+      "err.password-invalid": "Šis slaptažodis netinkamas.",
+      "err.club-invalid": "Klubo pavadinimas: nuo 2 iki 24 simbolių (raidės, skaitmenys, tarpai, - ' .).",
+      "err.club-taken": "Šis klubo pavadinimas jau užimtas. Pabandyk kitą!",
+      "err.email-taken": "Paskyra su šiuo el. paštu jau yra. Gal nori prisijungti?",
+      "err.bad-credentials": "Neteisingas el. paštas arba slaptažodis.",
+      "err.rate-limited": "Per daug bandymų. Palauk kelias minutes ir bandyk vėl.",
+      "err.discord-expired": "Prisijungimas su Discord nebegalioja. Bandyk dar kartą.",
+      "ok.discord-linked": "Discord dabar susietas su tavo klubu. Grįžk į žaidimą (skirtuką ar programėlę, iš kurios atėjai), kad tęstum.",
+      "err.discord-cancelled": "Prisijungimas su Discord atšauktas.",
+      "err.discord-failed": "Nepavyko pasiekti Discord. Bandyk dar kartą po akimirkos.",
+      "err.discord-disabled": "Prisijungimas su Discord šiuo metu negalimas.",
+      "err.network": "Nepavyksta pasiekti serverio. Patikrink ryšį ir bandyk dar kartą.",
+      "err.generic": "Įvyko klaida. Bandyk dar kartą.",
+      "err.fill": "Užpildyk visus laukus.",
+      "field.invite": "Pakvietimo kodas", "field.inviteHint": "Kol kas registruotis galima tik su pakvietimu.",
+      "err.invite-invalid": "Šis pakvietimo kodas netinkamas."
+    },
+    zh: {
+      "login.tab": "登录", "signup.tab": "创建我的俱乐部",
+      "resume.text": "你已在此浏览器上登录。", "resume.go": "回到我的俱乐部", "resume.logout": "退出登录",
+      "hero.kicker": "在线篮球经理游戏",
+      "hero.title": "执掌你的<br><em>俱乐部</em>。",
+      "hero.lead": "签约球员、训练他们、制定战术……然后观看你的球队与其他经理实时对决。免费，浏览器即玩，电脑和手机都可以。",
+      "hero.fact1": "<b>比赛实时直播</b>，固定时间开赛", "hero.fact2": "每个联赛 <b>10 位经理</b>", "hero.fact3": "<b>免费</b>，无需安装",
+      "signup.title": "你的俱乐部在等你", "signup.sub": "起个名字：你将接手当前联赛中的一家俱乐部，今晚就能开赛。",
+      "discord.signup": "使用 Discord 注册", "discord.login": "使用 Discord 登录", "or": "或",
+      "field.country": "你的国家/地区",
+      "country.fr": "法国", "country.us": "美国", "country.it": "意大利", "country.de": "德国", "country.ar": "阿根廷", "country.be": "比利时",
+      "country.br": "巴西", "country.ca": "加拿大", "country.cn": "中国", "country.es": "西班牙", "country.gr": "希腊", "country.hk": "香港",
+      "country.lt": "立陶宛", "country.pl": "波兰", "country.pt": "葡萄牙", "country.ch": "瑞士", "country.tw": "台湾",
+      "field.countryHint": "你的联赛及其赛程（比赛于当地时间 20:00 开始）。",
+      "field.club": "俱乐部名称", "field.clubHint": "2 到 24 个字符，其他经理可见。",
+      "field.email": "邮箱", "field.password": "密码", "field.pwHint": "至少 8 个字符。",
+      "pw.show": "显示", "pw.hide": "隐藏",
+      "signup.submit": "创建我的俱乐部",
+      "legal": "你的邮箱（或 Discord ID）仅用于登录游戏，绝不出售。<a href=\"/confidentialite\">隐私</a>",
+      "login.title": "欢迎回来", "login.sub": "登录以回到你的俱乐部。", "login.submit": "登录",
+      "login.forgot": "忘记密码？在游戏的 Discord 上联系我们，我们会为你重置。",
+      "login.forgotLink": "忘记密码？",
+      "forgot.title": "忘记密码", "forgot.sub": "输入你账户的邮箱：你将收到一个设置新密码的链接。",
+      "forgot.submit": "发送链接", "forgot.back": "返回登录",
+      "forgot.sent": "如果存在使用该邮箱的账户，我们刚刚向其发送了一个链接（1 小时内有效）。也请检查垃圾邮件文件夹。",
+      "forgot.nomail": "邮件发送暂不可用：请在游戏的 Discord 上联系我们，我们会发给你重置链接。",
+      "reset.title": "新密码", "reset.sub": "设置你的新密码：设置后将直接登录。", "reset.submit": "保存并登录",
+      "err.reset-expired": "该链接已过期或已被使用。请重新申请。",
+      "dclub.title": "欢迎！", "dclub.sub": "你好，{name}！最后一步：为你的俱乐部起个名字。",
+      "wait.title": "你已在等候名单中",
+      "wait.text": "你的账户已创建，但联赛中的所有俱乐部都已有人执掌。一旦有空位，系统会自动为你分配一家俱乐部：请回到此页面，我们每次访问时都会检查。",
+      "wait.check": "立即检查", "wait.still": "目前仍然满员，请稍后再试！",
+      "disc.title": "注册前先了解游戏",
+      "disc1.t": "游戏玩法", "disc1.p": "赛程、实时比赛、战术准备和俱乐部日常，详细讲解（英文）。",
+      "disc2.t": "完整指南", "disc2.p": "阵容、能力值、指令、市场、财务、青训营：游戏指南，逐节介绍（英文）。",
+      "disc3.t": "常见问题", "disc3.p": "价格、比赛时间、所需时间、账户：最常见问题的解答（英文）。",
+      "nav.game": "游戏介绍", "nav.guide": "指南", "nav.about": "关于", "nav.privacy": "隐私", "nav.legal": "法律声明",
+      "feat.title": "打造一整个俱乐部", "feat.sub": "不只是战术：赞助商、球馆、工作人员和年轻天才，与你的首发五人同样重要。",
+      "f1.t": "实时比赛", "f1.p": "每场比赛都实时直播：逐回合解说、暂停、中场和赛前节目。你可以中途加入观看，但永远无法快进。",
+      "f2.t": "真正的联赛", "f2.p": "同一联赛中最多 10 位真人经理，有积分榜、季后赛、升级和降级。下午还有杯赛。",
+      "f3.t": "训练与战术", "f3.p": "选择训练重点，提升你的球员，提前为每场比赛制定比赛计划。",
+      "f4.t": "拍卖市场", "f4.p": "球员、教练、分析师、球探：一切都与其他经理实时竞拍。",
+      "f5.t": "球馆与财务", "f5.p": "扩建球馆，制定票价，签下赞助商，并时刻关注你的预算。",
+      "f6.t": "青训营", "f6.p": "发掘 15 岁的璞玉，培养他们成长，打造几个赛季后捧起奖杯的球队。",
+      "com.title": "加入社区", "com.text": "新闻、经理互助、建议和错误反馈：一切都在 Discord 上。", "com.btn": "加入 Discord",
+      "footer": "为篮球迷倾情打造。",
+      "err.email-invalid": "该邮箱地址似乎无效。",
+      "err.password-too-short": "密码至少需要 8 个字符。",
+      "err.password-invalid": "该密码无效。",
+      "err.club-invalid": "俱乐部名称：2 到 24 个字符（字母、数字、空格、- ' .）。",
+      "err.club-taken": "该俱乐部名称已被使用，换一个试试！",
+      "err.email-taken": "该邮箱已注册账户。要直接登录吗？",
+      "err.bad-credentials": "邮箱或密码错误。",
+      "err.rate-limited": "尝试次数过多。请等待几分钟后再试。",
+      "err.discord-expired": "Discord 登录已过期，请重试。",
+      "ok.discord-linked": "Discord 已关联到你的俱乐部。回到游戏（你出发时的标签页或应用）继续。",
+      "err.discord-cancelled": "Discord 登录已取消。",
+      "err.discord-failed": "无法连接 Discord，请稍后重试。",
+      "err.discord-disabled": "Discord 登录暂不可用。",
+      "err.network": "无法连接服务器。请检查网络连接后重试。",
+      "err.generic": "出错了，请重试。",
+      "err.fill": "请填写所有字段。",
+      "field.invite": "邀请码", "field.inviteHint": "目前仅限邀请注册。",
+      "err.invite-invalid": "该邀请码无效。"
     },
     fr: {
       "pw.hide": "Masquer",
@@ -562,18 +1065,26 @@
   function read(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 
   // --- Langue ---------------------------------------------------------
-  // Langue mémorisée (fr / en / it), sinon celle du navigateur (italien
-  // reconnu, anglais pour toute autre langue que le français).
-  // ?lang=fr|en|it dans l'adresse (lien d'un email, sélecteur des pages du
-  // site, versions indexées par Google) : prioritaire et mémorisé.
+  // Langue mémorisée, sinon celle du navigateur (première langue gérée de
+  // navigator.languages : « de-CH » → de, « zh-TW » → zh, « el-GR » → el ;
+  // anglais si aucune).
+  // ?lang=xx dans l'adresse (lien d'un email, sélecteur des pages du site,
+  // versions indexées par Google) : prioritaire et mémorisé.
+  var LANG_RE = /^(fr|en|it|es|pt|de|pl|el|lt|zh)$/;
   var urlLang = null;
   try { urlLang = new URLSearchParams(location.search).get("lang"); } catch (e) {}
-  if (/^(fr|en|it)$/.test(urlLang || "")) store(LANG_KEY, urlLang);
+  if (LANG_RE.test(urlLang || "")) store(LANG_KEY, urlLang);
   var stored = read(LANG_KEY);
-  var navLang = (navigator.language || "fr").slice(0, 2);
-  var lang = /^(fr|en|it)$/.test(stored || "") ? stored : (navLang === "fr" || navLang === "it" ? navLang : "en");
+  var navLangs = [];
+  try { navLangs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || "fr"]).map(function (l) { return String(l).toLowerCase(); }); } catch (e) { navLangs = ["fr"]; }
+  function browserLang() {
+    for (var i = 0; i < navLangs.length; i++) { var l = navLangs[i].slice(0, 2); if (LANG_RE.test(l)) return l; }
+    return "en";
+  }
+  var lang = LANG_RE.test(stored || "") ? stored : browserLang();
   // Cookie « hm-lang » : le serveur sert les pages publiques (Guide, FAQ,
   // À propos…) dans la même langue (server/i18n.js:siteLang).
+  var langSelect = document.getElementById("langSelect");
   function langCookie() { try { document.cookie = "hm-lang=" + lang + "; path=/; max-age=31536000; SameSite=Lax"; } catch (e) {} }
   var FR_DEFAULTS = {};
   document.querySelectorAll("[data-t]").forEach(function (el) { FR_DEFAULTS[el.dataset.t] = el.textContent; });
@@ -589,17 +1100,16 @@
     langCookie();
     document.querySelectorAll("[data-t]").forEach(function (el) { el.textContent = t(el.dataset.t); });
     document.querySelectorAll("[data-t-html]").forEach(function (el) { el.innerHTML = t(el.dataset.tHtml); });
-    document.querySelectorAll("[data-lang]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.lang === lang)); });
+    langSelect.value = lang;
     document.querySelectorAll(".msg").forEach(function (m) { if (m.dataset.code) showMsg(m, m.dataset.code, m.classList.contains("is-ok")); });
     if (discordPendingName) document.getElementById("dclubSub").textContent = t("dclub.sub").replace("{name}", discordPendingName);
   }
-  document.querySelectorAll("[data-lang]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      lang = b.dataset.lang; store(LANG_KEY, lang); applyLang();
-      // Connecté (jeton du jeu présent) : la langue est aussi celle du compte.
-      var tok = read(TOKEN_KEY);
-      if (tok) api("POST", "/api/account/lang", { lang: lang }, { "X-TipIn-Token": tok }).catch(function () {});
-    });
+  langSelect.addEventListener("change", function () {
+    if (!LANG_RE.test(langSelect.value)) return;
+    lang = langSelect.value; store(LANG_KEY, lang); applyLang();
+    // Connecté (jeton du jeu présent) : la langue est aussi celle du compte.
+    var tok = read(TOKEN_KEY);
+    if (tok) api("POST", "/api/account/lang", { lang: lang }, { "X-TipIn-Token": tok }).catch(function () {});
   });
 
   // --- Vues -----------------------------------------------------------
@@ -677,11 +1187,36 @@
     var on = document.querySelector('[data-country-pick="' + pre + '"] [aria-checked="true"]');
     return on ? on.getAttribute("data-country") : "fr";
   }
+  function selectCountry(group, b) {
+    group.querySelectorAll("[data-country]").forEach(function (x) { x.setAttribute("aria-checked", x === b ? "true" : "false"); });
+  }
+  // Pays proposé d'office : région du navigateur (« de-CH » → Suisse,
+  // « pt-BR » → Brésil, « zh-TW » → Taïwan), sinon pays de la langue
+  // (de → Allemagne, el → Grèce…), sinon la France. Le manager peut
+  // toujours en choisir un autre.
+  var LANG_COUNTRY = { fr: "fr", it: "it", es: "es", pt: "pt", de: "de", pl: "pl", el: "gr", lt: "lt", zh: "cn", en: "us" };
+  function guessCountry() {
+    var has = function (c) { return !!document.querySelector('[data-country="' + c + '"]'); };
+    for (var i = 0; i < navLangs.length; i++) {
+      var m = /^([a-z]{2})(?:-(?:hans-|hant-)?([a-z]{2}))?\b/.exec(navLangs[i]);
+      if (!m) continue;
+      if (m[2] && has(m[2])) return m[2];
+      if (LANG_COUNTRY[m[1]] && has(LANG_COUNTRY[m[1]])) return LANG_COUNTRY[m[1]];
+    }
+    return "fr";
+  }
+  var guessedCountry = guessCountry();
   document.querySelectorAll("[data-country-pick]").forEach(function (group) {
+    var g = group.querySelector('[data-country="' + guessedCountry + '"]');
+    if (g && guessedCountry !== "fr") {
+      selectCountry(group, g);
+      // Pays sélectionné visible dans la grille qui défile.
+      group.scrollTop = Math.max(0, g.offsetTop - group.offsetTop - 4);
+    }
     group.addEventListener("click", function (e) {
       var b = e.target.closest("[data-country]");
       if (!b) return;
-      group.querySelectorAll("[data-country]").forEach(function (x) { x.setAttribute("aria-checked", x === b ? "true" : "false"); });
+      selectCountry(group, b);
     });
   });
 

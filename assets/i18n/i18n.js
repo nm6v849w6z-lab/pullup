@@ -23,11 +23,16 @@
    Italien (2026-09-30) : même mécanique, dictionnaire assets/i18n/it.js
    (window.HM_I18N_IT, mêmes clés que en.js ; scripts/i18n_missing.js liste
    les clés manquantes). Les règles dédiées (dates, ordinaux, bilans V/D,
-   postes abrégés, nombres) ont leur version par langue (IT ci-dessous). */
+   postes abrégés, nombres) ont leur version par langue (IT ci-dessous).
+
+   Espagnol, polonais, grec, portugais (Brésil), lituanien, chinois et
+   allemand (2026-09-30, ouverture des championnats de ces pays) : même
+   mécanique, un dictionnaire par langue (HM_I18N_ES, _PL, _EL, _PT, _LT,
+   _ZH, _DE) et leurs règles dans LCONF ci-dessous. */
 (function () {
   "use strict";
   var LANG_KEY = "hm-lang";
-  var LANGS = { fr: 1, en: 1, it: 1 };
+  var LANGS = { fr: 1, en: 1, it: 1, es: 1, pt: 1, de: 1, pl: 1, el: 1, lt: 1, zh: 1 };
   var pick = function (l) { return LANGS[l] === 1 ? l : "fr"; };
   var lang = "fr";
   try { lang = pick(window.localStorage.getItem(LANG_KEY)); } catch (e) { /* navigation privée */ }
@@ -43,11 +48,69 @@
     t: function (s) { return s; },
     missing: null,
     // Locale des dates / nombres pour la langue choisie.
-    locale: { fr: "fr-FR", en: "en-GB", it: "it-IT" }[lang],
+    locale: { fr: "fr-FR", en: "en-GB", it: "it-IT", es: "es-ES", pt: "pt-BR", de: "de-DE", pl: "pl-PL", el: "el-GR", lt: "lt-LT", zh: "zh-CN" }[lang],
   };
   try { document.documentElement.setAttribute("lang", lang); } catch (e) { /* rien */ }
   if (lang === "fr") return;
-  var DICT_VAR = lang === "it" ? "HM_I18N_IT" : "HM_I18N_EN";
+  // Règles par langue (dates, ordinaux, journées « J5 », durées « 2 j 5 h »,
+  // postes abrégés, bilans J/V/D, nombres, textes posés en CSS). Jours et
+  // mois des nouvelles langues : noms usuels (génitif en grec, polonais,
+  // lituanien : « 28 września »), minuscules sauf en tête là où c'est l'usage.
+  var LCONF = {
+    en: { days: { lundi: "Monday", mardi: "Tuesday", mercredi: "Wednesday", jeudi: "Thursday", vendredi: "Friday", samedi: "Saturday", dimanche: "Sunday",
+      "lun.": "Mon", "mar.": "Tue", "mer.": "Wed", "jeu.": "Thu", "ven.": "Fri", "sam.": "Sat", "dim.": "Sun" },
+      months: { janvier: "January", "février": "February", mars: "March", avril: "April", mai: "May", juin: "June", juillet: "July", "août": "August",
+      septembre: "September", octobre: "October", novembre: "November", "décembre": "December",
+      "janv.": "Jan", "févr.": "Feb", "avr.": "Apr", "juil.": "Jul", "sept.": "Sep", "oct.": "Oct", "nov.": "Nov", "déc.": "Dec" },
+      at: "at", ord: null, md: function (n) { return "MD" + n; }, day: "d", hour: "h",
+      pos: { M: "PG", A: "SG", AS: "SF", AF: "PF", P: "C" }, letters: { J: "GP", V: "W", D: "L" }, num: "en",
+      ad: "Advertisement (placeholder)", myClub: "My club" },
+    it: { days: { lundi: "lunedì", mardi: "martedì", mercredi: "mercoledì", jeudi: "giovedì", vendredi: "venerdì", samedi: "sabato", dimanche: "domenica",
+      "lun.": "lun", "mar.": "mar", "mer.": "mer", "jeu.": "gio", "ven.": "ven", "sam.": "sab", "dim.": "dom" },
+      months: { janvier: "gennaio", "février": "febbraio", mars: "marzo", avril: "aprile", mai: "maggio", juin: "giugno", juillet: "luglio", "août": "agosto",
+      septembre: "settembre", octobre: "ottobre", novembre: "novembre", "décembre": "dicembre",
+      "janv.": "gen", "févr.": "feb", "avr.": "apr", "juil.": "lug", "sept.": "set", "oct.": "ott", "nov.": "nov", "déc.": "dic" },
+      at: "alle", ord: function (n) { return n + "º"; }, md: function (n) { return "G" + n; }, day: "g", hour: "h", lowerDates: true,
+      pos: { M: "PM", A: "G", AS: "AP", AF: "AG", P: "C" }, letters: { J: "G", V: "V", D: "S" }, num: "dot",
+      ad: "Pubblicità (segnaposto)", myClub: "Il mio club" },
+    es: { days: {"lundi":"lunes","lun.":"lun","mardi":"martes","mar.":"mar","mercredi":"miércoles","mer.":"mié","jeudi":"jueves","jeu.":"jue","vendredi":"viernes","ven.":"vie","samedi":"sábado","sam.":"sáb","dimanche":"domingo","dim.":"dom"},
+      months: {"janvier":"enero","janv.":"ene","février":"febrero","févr.":"feb","mars":"marzo","avril":"abril","avr.":"abr","mai":"mayo","juin":"junio","juillet":"julio","juil.":"jul","août":"agosto","septembre":"septiembre","sept.":"sept","octobre":"octubre","oct.":"oct","novembre":"noviembre","nov.":"nov","décembre":"diciembre","déc.":"dic"},
+      at: "a las", ord: function (n) { return n + "º"; }, md: function (n) { return "J" + n; }, day: "d", hour: "h", lowerDates: true,
+      pos: {"M":"B","A":"E","AS":"A","AF":"AP","P":"P"}, letters: {"J":"PJ","V":"G","D":"P"}, num: "dot",
+      ad: "Publicidad (espacio reservado)", myClub: "Mi club" },
+    pt: { days: {"lundi":"segunda-feira","lun.":"seg","mardi":"terça-feira","mar.":"ter","mercredi":"quarta-feira","mer.":"qua","jeudi":"quinta-feira","jeu.":"qui","vendredi":"sexta-feira","ven.":"sex","samedi":"sábado","sam.":"sáb","dimanche":"domingo","dim.":"dom"},
+      months: {"janvier":"janeiro","janv.":"jan","février":"fevereiro","févr.":"fev","mars":"março","avril":"abril","avr.":"abr","mai":"maio","juin":"junho","juillet":"julho","juil.":"jul","août":"agosto","septembre":"setembro","sept.":"set","octobre":"outubro","oct.":"out","novembre":"novembro","nov.":"nov","décembre":"dezembro","déc.":"dez"},
+      at: "às", ord: function (n) { return n + "º"; }, md: function (n) { return "R" + n; }, day: "d", hour: "h", lowerDates: true,
+      pos: {"M":"AR","A":"AA","AS":"AL","AF":"AP","P":"PI"}, letters: {"J":"J","V":"V","D":"D"}, num: "dot",
+      ad: "Publicidade (espaço reservado)", myClub: "Meu clube" },
+    de: { days: {"lundi":"Montag","lun.":"Mo","mardi":"Dienstag","mar.":"Di","mercredi":"Mittwoch","mer.":"Mi","jeudi":"Donnerstag","jeu.":"Do","vendredi":"Freitag","ven.":"Fr","samedi":"Samstag","sam.":"Sa","dimanche":"Sonntag","dim.":"So"},
+      months: {"janvier":"Januar","janv.":"Jan","février":"Februar","févr.":"Feb","mars":"März","avril":"April","avr.":"Apr","mai":"Mai","juin":"Juni","juillet":"Juli","juil.":"Juli","août":"August","septembre":"September","sept.":"Sept","octobre":"Oktober","oct.":"Okt","novembre":"November","nov.":"Nov","décembre":"Dezember","déc.":"Dez"},
+      at: "um", ord: function (n) { return n + "."; }, md: function (n) { return n + ". ST"; }, day: "T", hour: "h", lowerDates: false,
+      pos: {"M":"PG","A":"SG","AS":"SF","AF":"PF","P":"C"}, letters: {"J":"Sp","V":"S","D":"N"}, num: "dot",
+      ad: "Werbung (Platzhalter)", myClub: "Mein Verein" },
+    pl: { days: {"lundi":"poniedziałek","lun.":"pon","mardi":"wtorek","mar.":"wt","mercredi":"środa","mer.":"śr","jeudi":"czwartek","jeu.":"czw","vendredi":"piątek","ven.":"pt","samedi":"sobota","sam.":"sob","dimanche":"niedziela","dim.":"niedz"},
+      months: {"janvier":"stycznia","janv.":"sty","février":"lutego","févr.":"lut","mars":"marca","avril":"kwietnia","avr.":"kwi","mai":"maja","juin":"czerwca","juillet":"lipca","juil.":"lip","août":"sierpnia","septembre":"września","sept.":"wrz","octobre":"października","oct.":"paź","novembre":"listopada","nov.":"lis","décembre":"grudnia","déc.":"gru"},
+      at: "o", ord: function (n) { return n + "."; }, md: function (n) { return "K" + n; }, day: "d", hour: "h", lowerDates: true,
+      pos: {"M":"R","A":"RZ","AS":"NS","AF":"SS","P":"Ś"}, letters: {"J":"M","V":"Z","D":"P"}, num: "space",
+      ad: "Reklama (miejsce zarezerwowane)", myClub: "Mój klub" },
+    el: { days: {"lundi":"Δευτέρα","lun.":"Δευ","mardi":"Τρίτη","mar.":"Τρί","mercredi":"Τετάρτη","mer.":"Τετ","jeudi":"Πέμπτη","jeu.":"Πέμ","vendredi":"Παρασκευή","ven.":"Παρ","samedi":"Σάββατο","sam.":"Σάβ","dimanche":"Κυριακή","dim.":"Κυρ"},
+      months: {"janvier":"Ιανουαρίου","janv.":"Ιαν","février":"Φεβρουαρίου","févr.":"Φεβ","mars":"Μαρτίου","avril":"Απριλίου","avr.":"Απρ","mai":"Μαΐου","juin":"Ιουνίου","juillet":"Ιουλίου","juil.":"Ιουλ","août":"Αυγούστου","septembre":"Σεπτεμβρίου","sept.":"Σεπ","octobre":"Οκτωβρίου","oct.":"Οκτ","novembre":"Νοεμβρίου","nov.":"Νοε","décembre":"Δεκεμβρίου","déc.":"Δεκ"},
+      at: "στις", ord: function (n) { return n + "ος"; }, md: function (n) { return "Α" + n; }, day: "ημ", hour: "ώ", lowerDates: false,
+      pos: {"M":"PG","A":"SG","AS":"SF","AF":"PF","P":"C"}, letters: {"J":"Α","V":"Ν","D":"Η"}, num: "dot",
+      ad: "Διαφήμιση (δεσμευμένος χώρος)", myClub: "Η ομάδα μου" },
+    lt: { days: {"lundi":"pirmadienis","lun.":"pr","mardi":"antradienis","mar.":"an","mercredi":"trečiadienis","mer.":"tr","jeudi":"ketvirtadienis","jeu.":"kt","vendredi":"penktadienis","ven.":"pn","samedi":"šeštadienis","sam.":"št","dimanche":"sekmadienis","dim.":"sk"},
+      months: {"janvier":"sausio","janv.":"sausio","février":"vasario","févr.":"vasario","mars":"kovo","avril":"balandžio","avr.":"balandžio","mai":"gegužės","juin":"birželio","juillet":"liepos","juil.":"liepos","août":"rugpjūčio","septembre":"rugsėjo","sept.":"rugsėjo","octobre":"spalio","oct.":"spalio","novembre":"lapkričio","nov.":"lapkričio","décembre":"gruodžio","déc.":"gruodžio"},
+      at: "", ord: function (n) { return n + "-as"; }, md: function (n) { return n + " tur."; }, day: "d", hour: "val", lowerDates: true,
+      pos: {"M":"PG","A":"SG","AS":"SF","AF":"PF","P":"C"}, letters: {"J":"R","V":"L","D":"P"}, num: "space",
+      ad: "Reklama (rezervuota vieta)", myClub: "Mano klubas" },
+    zh: { days: {"lundi":"星期一","lun.":"周一","mardi":"星期二","mar.":"周二","mercredi":"星期三","mer.":"周三","jeudi":"星期四","jeu.":"周四","vendredi":"星期五","ven.":"周五","samedi":"星期六","sam.":"周六","dimanche":"星期日","dim.":"周日"},
+      months: {"janvier":"1月","janv.":"1月","février":"2月","févr.":"2月","mars":"3月","avril":"4月","avr.":"4月","mai":"5月","juin":"6月","juillet":"7月","juil.":"7月","août":"8月","septembre":"9月","sept.":"9月","octobre":"10月","oct.":"10月","novembre":"11月","nov.":"11月","décembre":"12月","déc.":"12月"},
+      at: "", ord: function (n) { return "第" + n; }, md: function (n) { return "第" + n + "轮"; }, day: "天", hour: "小时", lowerDates: false,
+      pos: {"M":"PG","A":"SG","AS":"SF","AF":"PF","P":"C"}, letters: {"J":"场","V":"胜","D":"负"}, num: "en",
+      ad: "广告（预留位）", myClub: "我的俱乐部" },
+  };
+
+  var DICT_VAR = "HM_I18N_" + lang.toUpperCase();
 
   // Le dictionnaire (~240 Ko) n'est chargé que dans la langue choisie. Ce fichier est en
   // `defer` (comme showPlayer.js : un script externe bloquant retarderait le
@@ -67,6 +130,8 @@
   function start() {
     var DICT = window[DICT_VAR] || {};
     var IT = lang === "it";
+    var EN = lang === "en";
+    var C = LCONF[lang] || LCONF.en;
     var exact = new Map();
     var patterns = [];
     var PH = /\{(\w+)\}/g;
@@ -125,24 +190,18 @@
     patterns.sort(function (a, b) { return b.litLen - a.litLen; });
 
     // Règles dédiées, là où un dictionnaire ne suffit pas.
-    var DAYS = IT ? { lundi: "lunedì", mardi: "martedì", mercredi: "mercoledì", jeudi: "giovedì", vendredi: "venerdì", samedi: "sabato", dimanche: "domenica",
-      "lun.": "lun", "mar.": "mar", "mer.": "mer", "jeu.": "gio", "ven.": "ven", "sam.": "sab", "dim.": "dom" } : { lundi: "Monday", mardi: "Tuesday", mercredi: "Wednesday", jeudi: "Thursday", vendredi: "Friday", samedi: "Saturday", dimanche: "Sunday",
-      "lun.": "Mon", "mar.": "Tue", "mer.": "Wed", "jeu.": "Thu", "ven.": "Fri", "sam.": "Sat", "dim.": "Sun" };
-    var MONTHS = IT ? { janvier: "gennaio", "février": "febbraio", mars: "marzo", avril: "aprile", mai: "maggio", juin: "giugno", juillet: "luglio", "août": "agosto",
-      septembre: "settembre", octobre: "ottobre", novembre: "novembre", "décembre": "dicembre",
-      "janv.": "gen", "févr.": "feb", "avr.": "apr", "juil.": "lug", "sept.": "set", "oct.": "ott", "nov.": "nov", "déc.": "dic" } : { janvier: "January", "février": "February", mars: "March", avril: "April", mai: "May", juin: "June", juillet: "July", "août": "August",
-      septembre: "September", octobre: "October", novembre: "November", "décembre": "December",
-      "janv.": "Jan", "févr.": "Feb", "avr.": "Apr", "juil.": "Jul", "sept.": "Sep", "oct.": "Oct", "nov.": "Nov", "déc.": "Dec" };
-    var AT = IT ? "alle" : "at";
+    var DAYS = C.days, MONTHS = C.months;
+    var AT = C.at;
     var DATE_WORDS = { "à": AT, "h": "h" };
     function dateWord(w) {
       var l = w.toLowerCase();
-      var r = DAYS[l] || MONTHS[l] || DATE_WORDS[l];
+      if (l in DATE_WORDS) return DATE_WORDS[l]; // "" : « à » sans équivalent (lituanien, chinois)
+      var r = DAYS[l] || MONTHS[l];
       if (!r && !/\.$/.test(l)) r = DAYS[l + "."] || MONTHS[l + "."];
       return r || null;
     }
     function ordinal(n) {
-      if (IT) return n + "º";
+      if (!EN) return C.ord(n);
       var v = n % 100;
       return n + (v >= 11 && v <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
     }
@@ -155,37 +214,40 @@
         var outT = toks.map(function (t) {
           if (!/^[A-Za-zÀ-ÿ]/.test(t)) return t;
           var r = dateWord(t);
-          if (!r) { ok = false; return t; }
+          if (r === null) { ok = false; return t; }
           if (r !== AT && r !== "h") hasDate = true;
           return /\.$/.test(t) && !/\.$/.test(r) && !(t.toLowerCase() in DAYS) && !(t.toLowerCase() in MONTHS) ? r + "." : r;
         });
         if (ok && hasDate) {
           var d = outT.join("");
           // Italien : minuscules, sauf en tête d'un texte qui en avait une.
-          if (IT && /^[A-ZÀ-Ý]/.test(core)) d = d.charAt(0).toUpperCase() + d.slice(1);
+          if (C.lowerDates && /^[A-ZÀ-Ý]/.test(core)) d = d.charAt(0).toUpperCase() + d.slice(1);
+          if (!AT) d = d.replace(/ {2,}/g, " ");
+          if (lang === "zh") d = d.replace(/(\d+) (\d+)月/g, "$2月$1日");
           return d;
         }
       }
       // Ordinaux et bilans : « 3e », « 1er », « 12V », « 4D »
       if ((m = /^(\d+)(?:e|er|re|ème|ère)$/.exec(core))) return ordinal(+m[1]);
-      if ((m = /^J(\d+)( .*)?$/.exec(core))) return (IT ? "G" : "MD") + m[1] + (m[2] ? " " + (translateCore(m[2].trim(), 1) || m[2].trim()) : "");
-      if ((m = /^(\d+) ?j (\d+) ?h$/.exec(core))) return m[1] + (IT ? "g " : "d ") + m[2] + "h";
+      if ((m = /^J(\d+)( .*)?$/.exec(core))) return C.md(m[1]) + (m[2] ? " " + (translateCore(m[2].trim(), 1) || m[2].trim()) : "");
+      if ((m = /^(\d+) ?j (\d+) ?h$/.exec(core))) return m[1] + C.day + " " + m[2] + C.hour;
       if ((m = /^(\d+)V$/.exec(core))) return m[1] + LETTERS.V;
       if ((m = /^(\d+)D$/.exec(core))) return m[1] + LETTERS.D;
       if ((m = /^(\d+)V\s*[–-]\s*(\d+)D$/.exec(core))) return m[1] + LETTERS.V + " – " + m[2] + LETTERS.D;
       return null;
     }
     // Postes abrégés (Italie : Playmaker, Guardia, Ala piccola, Ala grande, Centro).
-    var POS_EN = IT ? { M: "PM", A: "G", AS: "AP", AF: "AG", P: "C" } : { M: "PG", A: "SG", AS: "SF", AF: "PF", P: "C" };
+    var POS_EN = C.pos;
     // Lettres seules des tableaux : J(oués)/V(ictoires)/D(éfaites).
-    var LETTERS = IT ? { J: "G", V: "V", D: "S" } : { J: "GP", V: "W", D: "L" };
+    var LETTERS = C.letters;
     var cache = new Map();
     var produced = new Set(); // textes anglais déjà écrits : ne pas les repasser
     var FRENCH = /[A-Za-zÀ-ÿ]{2,}/;
 
     function enNumber(g) {
       // Italien : 1 234 → 1.234 ; 12,5 reste 12,5.
-      if (IT) return /^-?\d{1,3}(?: \d{3})+(?:,\d+)?$/.test(g) ? g.replace(/ /g, ".") : g;
+      if (C.num === "dot") return /^-?\d{1,3}(?: \d{3})+(?:,\d+)?$/.test(g) ? g.replace(/ /g, ".") : g;
+      if (C.num === "space") return g;
       // 1 234 → 1,234 ; 12,5 → 12.5 (nombres seuls capturés dans un trou)
       if (/^-?\d{1,3}(?:\.\d{3})+$/.test(g)) return g.replace(/\./g, ","); // 5.000 → 5,000
       var m = /^(-?\d{1,3}(?: \d{3})*|-?\d+)(?:,(\d+))?$/.exec(g);
@@ -203,7 +265,8 @@
       return words.length >= 2 && FR_WORD.test(g) && /[a-zà-ÿ]{3}/.test(g) && lower >= 2;
     }
 
-    var LOCAL_DATE = /(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica)/i;
+    var LOCAL_DATE = new RegExp("(" + Object.keys(MONTHS).concat(Object.keys(DAYS)).filter(function (k) { return !/\.$/.test(k); })
+      .map(function (k) { return (MONTHS[k] || DAYS[k]).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|") + ")", "i");
     function translateCore(core, depth) {
       if (cache.has(core)) return cache.get(core);
       var out = null;
@@ -228,7 +291,7 @@
             // paragraphe) → on ne rend pas un texte à moitié anglais.
             // (sauf une date déjà formatée dans la langue cible : en italien,
             // « venerdì 2 ottobre alle ore 05:52 » ressemble à de la prose)
-            if (tg === null && isProse(g) && !(IT && LOCAL_DATE.test(g))) { bad = true; break; }
+            if (tg === null && isProse(g) && !(!EN && LOCAL_DATE.test(g))) { bad = true; break; }
             vals[p.names[k]] = tg !== null ? /^\s*/.exec(g)[0] + tg + /\s*$/.exec(g)[0] : enNumber(g);
           }
           if (bad) continue;
@@ -239,7 +302,7 @@
           var mm = /^([(«“"'\[•·—–-]*\s*)(.*?)(\s*[:)»”"'\].!?…·—–-]*)$/.exec(core);
           if (mm && (mm[1] || mm[3]) && mm[2] && mm[2] !== core) {
             var inner = translateCore(mm[2], depth + 1);
-            if (inner !== null) out = IT ? mm[1] + inner + mm[3].replace(/^\s+:/, ":")
+            if (inner !== null) out = !EN ? mm[1] + inner + mm[3].replace(/^\s+:/, ":")
               : mm[1].replace("«", "“") + inner + mm[3].replace(/^\s+:/, ":").replace("»", "”");
           }
         }
@@ -395,11 +458,8 @@
     // feuilles de style.
     try {
       var st = document.createElement("style");
-      st.textContent = IT
-        ? '.scouting-ad-gray-block::after{content:"Pubblicità (segnaposto)" !important;}' +
-          '.hm-live .tname.mine::after{content:"Il mio club" !important;}'
-        : '.scouting-ad-gray-block::after{content:"Advertisement (placeholder)" !important;}' +
-          '.hm-live .tname.mine::after{content:"My club" !important;}';
+      st.textContent = '.scouting-ad-gray-block::after{content:"' + C.ad + '" !important;}' +
+        '.hm-live .tname.mine::after{content:"' + C.myClub + '" !important;}';
       (document.head || document.documentElement).appendChild(st);
     } catch (e) { /* rien */ }
 

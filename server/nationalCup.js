@@ -142,7 +142,9 @@ function withHandicap(live, handicap) {
   };
 }
 
-const COUNTRY_NAMES = { fr: "France", us: "États-Unis", it: "Italie" };
+const COUNTRY_NAMES = { fr: "France", us: "États-Unis", it: "Italie", es: "Espagne", de: "Allemagne", gr: "Grèce",
+  lt: "Lituanie", pl: "Pologne", pt: "Portugal", be: "Belgique", ch: "Suisse", br: "Brésil", ar: "Argentine",
+  ca: "Canada", cn: "Chine", hk: "Hong Kong", tw: "Taïwan" };
 function countryName(code) { return COUNTRY_NAMES[code] || String(code || "").toUpperCase(); }
 const MAX_TROPHIES = 40;
 function addTrophy(team, league, type, label, now) {

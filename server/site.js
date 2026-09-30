@@ -18,6 +18,14 @@
 // server/i18n.js:siteLang). Textes EN / IT des pages fixes : server/
 // siteContent.js ; Guide traduit par le dictionnaire du jeu. <html lang>,
 // canonical, hreflang et sitemap.xml (xhtml:link) pour Search Console.
+//
+// Nouvelles langues (2026-09-30) : es, pt, de, pl, el, lt, zh. La page
+// d'accueil (/bienvenue) est traduite dans les 10 langues ; les pages de
+// contenu (Guide, FAQ, À propos…) n'existent qu'en fr / en / it
+// (PAGE_LANGS) : pour une autre langue, on sert la version anglaise
+// (<html lang="en">, canonical vers ?lang=en), mais le sélecteur, le
+// cookie « hm-lang » et les liens internes gardent la langue choisie (le
+// bouton « Jouer » mène à l'accueil dans cette langue).
 // =====================================================================
 const fs = require("fs");
 const path = require("path");
@@ -118,7 +126,15 @@ function guideEntriesFor(lang) {
 // ---------------------------------------------------------------------
 const NAV = ["/le-jeu", "/guide", "/faq", "/a-propos"];
 const FOOTER_NAV = ["/le-jeu", "/guide", "/faq", "/a-propos", "/contact", "/confidentialite", "/mentions-legales"];
-const LANG_NAMES = { fr: "Français", en: "English", it: "Italiano" };
+const LANG_NAMES = { fr: "Français", en: "English", it: "Italiano", es: "Español", pt: "Português", de: "Deutsch", pl: "Polski", el: "Ελληνικά", lt: "Lietuvių", zh: "简体中文" };
+const OG_LOCALES = { fr: "fr_FR", en: "en_GB", it: "it_IT", es: "es_ES", pt: "pt_BR", de: "de_DE", pl: "pl_PL", el: "el_GR", lt: "lt_LT", zh: "zh_CN" };
+// Langues dans lesquelles les pages de contenu existent (server/
+// siteContent.js) ; les autres reçoivent la version anglaise.
+const PAGE_LANGS = ["fr", "en", "it"];
+function contentLang(lang) { return PAGE_LANGS.includes(lang) ? lang : "en"; }
+// Variantes d'une adresse : la page d'accueil existe dans toutes les
+// langues du site, les autres pages seulement dans PAGE_LANGS.
+function langsOf(pathName) { return pathName === "/bienvenue" ? I18n.LANGS : PAGE_LANGS; }
 
 // Adresse d'une page dans une langue : le français sans paramètre (adresse
 // historique, x-default), les autres avec ?lang=en / ?lang=it — des URL
@@ -133,30 +149,37 @@ function localizeLinks(html, lang) {
 }
 
 function hreflangLinks(pathName) {
-  return I18n.LANGS.map(l => `<link rel="alternate" hreflang="${l}" href="${SITE_URL}${langUrl(pathName, l)}">`).join("\n") +
+  return langsOf(pathName).map(l => `<link rel="alternate" hreflang="${l}" href="${SITE_URL}${langUrl(pathName, l)}">`).join("\n") +
     `\n<link rel="alternate" hreflang="x-default" href="${SITE_URL}${pathName}">`;
 }
 
 function layout({ pathName, title, description, body, lang = "fr", explicit = false }) {
-  const ui = Content.UI[lang];
+  // `lang` : langue choisie (sélecteur, cookie, liens) ; `cl` : langue du
+  // contenu servi (anglais pour une langue sans pages traduites).
+  const cl = contentLang(lang);
+  const ui = Content.UI[cl];
   const nav = NAV.map(href =>
     `<a href="${href}"${pathName === href || (href !== "/" && pathName.startsWith(href + "/")) ? ' aria-current="page"' : ""}>${ui.nav[href]}</a>`).join("");
   // Sélecteur de langue : ?lang= explicite (mémorisé par un cookie, voir
   // render) — y compris ?lang=fr pour revenir au français.
-  const langs = I18n.LANGS.map(l => `<a href="${pathName}?lang=${l}" hreflang="${l}" lang="${l}" title="${LANG_NAMES[l]}"${l === lang ? ' aria-current="true"' : ""}>${l.toUpperCase()}</a>`).join("");
+  // Dix langues : menu déroulant (<details>, sans script) pour tenir sur
+  // un téléphone.
+  const langs = `<details><summary aria-label="${esc(LANG_NAMES[lang])}">${lang.toUpperCase()}</summary><div class="langs-menu">` +
+    I18n.LANGS.map(l => `<a href="${pathName}?lang=${l}"${PAGE_LANGS.includes(l) ? ` hreflang="${l}"` : ""} lang="${l}" title="${LANG_NAMES[l]}"${l === lang ? ' aria-current="true"' : ""}><b>${l.toUpperCase()}</b> ${LANG_NAMES[l]}</a>`).join("") +
+    `</div></details>`;
   // Choix explicite (?lang=) : même préférence que le jeu et la page
   // d'accueil (localStorage "hm-lang").
   const remember = explicit ? `\n<script>try{localStorage.setItem("hm-lang",${JSON.stringify(lang)})}catch(e){}</script>` : "";
   const html = `<!DOCTYPE html>
-<html lang="${lang}">
+<html lang="${cl}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)} · Hoop Manager</title>
 <meta name="description" content="${esc(description)}">
-<link rel="canonical" href="${SITE_URL}${langUrl(pathName, lang)}">
+<link rel="canonical" href="${SITE_URL}${langUrl(pathName, cl)}">
 ${hreflangLinks(pathName)}
-<meta property="og:locale" content="${{ fr: "fr_FR", en: "en_GB", it: "it_IT" }[lang]}">${remember}
+<meta property="og:locale" content="${OG_LOCALES[cl]}">${remember}
 <meta name="theme-color" content="#0d131d">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/mobile/favicon-32.png?v=3">
 <link rel="apple-touch-icon" href="/assets/mobile/apple-touch-icon.png?v=3">
@@ -179,9 +202,15 @@ ${hreflangLinks(pathName)}
   nav.top{display:flex;gap:16px;flex-wrap:wrap}
   nav.top a{color:var(--ink-dim);text-decoration:none;font-weight:500;font-size:15px}
   nav.top a[aria-current="page"],nav.top a:hover{color:var(--ink)}
-  nav.langs{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
-  nav.langs a{color:var(--ink-dim);text-decoration:none;font:600 12px/1 "DM Sans",sans-serif;padding:7px 10px}
-  nav.langs a[aria-current="true"]{background:var(--panel);color:var(--ink)}
+  nav.langs{position:relative}
+  nav.langs details{border:1px solid var(--line);border-radius:999px;padding:0}
+  nav.langs summary{list-style:none;color:var(--ink);font:600 12px/1 "DM Sans",sans-serif;padding:8px 12px;cursor:pointer}
+  nav.langs summary::-webkit-details-marker{display:none}
+  nav.langs summary::after{content:"";display:inline-block;margin-left:6px;border:4px solid transparent;border-top-color:var(--ink-dim);border-bottom:0;vertical-align:2px}
+  nav.langs .langs-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:170px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+  nav.langs .langs-menu a{display:block;color:var(--ink-dim);text-decoration:none;font:500 14px/1.2 "DM Sans",sans-serif;padding:8px 10px;border-radius:8px}
+  nav.langs .langs-menu a b{display:inline-block;min-width:24px;font-size:11px;color:var(--ink-faint)}
+  nav.langs .langs-menu a:hover,nav.langs .langs-menu a[aria-current="true"]{background:var(--bg);color:var(--ink)}
   .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;font:700 15px/1 "DM Sans",sans-serif;padding:12px 16px;text-decoration:none;background:var(--amber);color:var(--amber-ink)}
   .btn:hover{background:var(--amber-hi);color:var(--amber-ink)}
   .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
@@ -326,7 +355,7 @@ const FAQ = [
   ["Pourquoi y a-t-il des publicités ?", "Les publicités financent l'hébergement du jeu. Elles n'apparaissent qu'à quelques endroits précis : une courte coupure pendant les émissions d'avant-match et de mi-temps, et une publicité facultative à regarder pour débloquer un rapport de scoutisme. Elles n'interrompent jamais l'action d'un match, et les abonnés Premium n'en voient aucune."],
   ["J'ai oublié mon mot de passe, que faire ?", `Sur la page d'accueil, onglet « Se connecter », clique sur « Mot de passe oublié ? » : un lien pour en choisir un nouveau est envoyé à l'adresse de ton compte (valable 1 heure). Pas reçu ? Écris-nous sur le serveur Discord du jeu ou à <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> depuis l'adresse de ton compte.`],
   ["Comment supprimer mon compte ?", `Dans le jeu : Paramètres → Mon compte → « Supprimer mon compte ». Ton compte est effacé et ton club est confié à l'IA.`],
-  ["Le jeu existe-t-il dans d'autres langues ?", "Oui, le jeu, ce site, les emails et les notifications existent en français, en anglais et en italien. Change de langue dans les Paramètres du jeu ou avec les boutons FR / EN / IT en haut du site."],
+  ["Le jeu existe-t-il dans d'autres langues ?", "Oui : le jeu, les emails et les notifications existent en français, anglais, italien, espagnol, portugais, allemand, polonais, grec, lituanien et chinois (ce site aussi, les pages longues comme celle-ci étant en anglais dans les sept dernières). Change de langue dans les Paramètres du jeu ou avec le menu des langues en haut du site."],
 ];
 
 function faqList(items) {
@@ -461,9 +490,9 @@ function allPaths() {
 // complète de ses variantes (xhtml:link hreflang), comme le recommande
 // Google Search Console pour un site multilingue.
 function sitemapXml() {
-  const alternates = u => I18n.LANGS.map(l => `<xhtml:link rel="alternate" hreflang="${l}" href="${SITE_URL}${langUrl(u, l)}"/>`).join("") +
+  const alternates = u => langsOf(u).map(l => `<xhtml:link rel="alternate" hreflang="${l}" href="${SITE_URL}${langUrl(u, l)}"/>`).join("") +
     `<xhtml:link rel="alternate" hreflang="x-default" href="${SITE_URL}${u}"/>`;
-  const urls = allPaths().map(u => I18n.LANGS.map(l => `<url><loc>${SITE_URL}${langUrl(u, l)}</loc>${alternates(u)}</url>`).join("\n")).join("\n");
+  const urls = allPaths().map(u => langsOf(u).map(l => `<url><loc>${SITE_URL}${langUrl(u, l)}</loc>${alternates(u)}</url>`).join("\n")).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls}\n</urlset>\n`;
 }
 
@@ -473,22 +502,23 @@ function sitemapXml() {
 // dans le cookie « hm-lang » et dans localStorage).
 function render(pathName, { discordInvite = null, lang = "fr", explicit = false } = {}) {
   lang = I18n.normLang(lang) || "fr";
+  const cl = contentLang(lang);
   const p = pathName.length > 1 ? pathName.replace(/\/+$/, "") : pathName;
   let page = null;
-  if (STATIC_PAGES[p]) page = staticPage(p, lang, discordInvite);
-  else if (p === "/guide") page = pageGuideIndex(guideEntriesFor(lang), lang);
+  if (STATIC_PAGES[p]) page = staticPage(p, cl, discordInvite);
+  else if (p === "/guide") page = pageGuideIndex(guideEntriesFor(cl), cl);
   else if (p.startsWith("/guide/")) {
-    const entries = guideEntriesFor(lang);
+    const entries = guideEntriesFor(cl);
     const idx = entries.findIndex(e => `/guide/${e.id}` === p);
     if (idx < 0) return null;
-    page = pageGuideEntry(entries, idx, lang);
+    page = pageGuideEntry(entries, idx, cl);
   } else if (p === "/robots.txt") {
     return { status: 200, contentType: "text/plain; charset=utf-8", body: `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE_URL}/sitemap.xml\n` };
   } else if (p === "/sitemap.xml") {
     return { status: 200, contentType: "application/xml; charset=utf-8", body: sitemapXml() };
   }
   if (!page) return null;
-  const headers = { "Content-Language": lang, Vary: "Accept-Language, Cookie" };
+  const headers = { "Content-Language": cl, Vary: "Accept-Language, Cookie" };
   if (explicit) headers["Set-Cookie"] = `hm-lang=${lang}; Path=/; Max-Age=31536000; SameSite=Lax`;
   return { status: 200, contentType: "text/html; charset=utf-8", body: layout({ pathName: p, lang, explicit, ...page }), headers, lang };
 }
@@ -499,10 +529,11 @@ function render(pathName, { discordInvite = null, lang = "fr", explicit = false 
 // plus les variantes hreflang.
 function localizeLanding(html, lang) {
   lang = I18n.normLang(lang) || "fr";
-  const L = Content.LANDING[lang];
+  const L = Content.LANDING[lang] || Content.LANDING.en;
   let out = html.replace(/<html lang="fr">/, `<html lang="${lang}">`)
     .replace(/<title>[^<]*<\/title>/, `<title>${esc(L.title)}</title>`)
     .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${esc(L.description)}">`)
+    .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${esc(L.title)}">\n<meta property="og:locale" content="${OG_LOCALES[lang]}">`)
     .replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${SITE_URL}${langUrl("/bienvenue", lang)}">\n${hreflangLinks("/bienvenue")}`);
   return out;
 }

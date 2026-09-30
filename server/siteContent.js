@@ -13,6 +13,11 @@
 //
 // Toute modification d'une page française doit être reportée ici (le test
 // site_i18n_test.js vérifie qu'aucun paragraphe français ne subsiste).
+//
+// Langues ajoutées ensuite (es, pt, de, pl, el, lt, zh, 2026-09-30) :
+// seuls LANDING (titre / description de /bienvenue) existe dans ces
+// langues ; les pages de contenu leur sont servies en anglais (voir
+// server/site.js:contentLang).
 // =====================================================================
 
 // Textes communs de la mise en page (en-tête, pied, appel à s'inscrire).
@@ -53,6 +58,13 @@ const LANDING = {
   fr: { title: "Hoop Manager · Jeu de gestion de basket en ligne", description: "Dirige ton club de basket en ligne : matchs diffusés en direct, ligue de 10 managers, entraînement, transferts aux enchères. Gratuit, dans le navigateur." },
   en: { title: "Hoop Manager · Online basketball management game", description: "Run your own basketball club online: matches broadcast live, a league of 10 managers, training, transfer auctions. Free, in your browser." },
   it: { title: "Hoop Manager · Gioco manageriale di basket online", description: "Guida il tuo club di basket online: partite trasmesse in diretta, una lega di 10 manager, allenamento, aste di mercato. Gratis, nel browser." },
+  es: { title: "Hoop Manager · Juego de gestión de baloncesto online", description: "Dirige tu club de baloncesto online: partidos retransmitidos en directo, una liga de 10 mánagers, entrenamiento, fichajes por subasta. Gratis, en el navegador." },
+  pt: { title: "Hoop Manager · Jogo de gestão de basquete online", description: "Comande seu clube de basquete online: jogos transmitidos ao vivo, uma liga de 10 managers, treinos, contratações em leilão. Grátis, no navegador." },
+  de: { title: "Hoop Manager · Online-Basketball-Managerspiel", description: "Führe deinen eigenen Basketballverein online: Spiele live übertragen, eine Liga mit 10 Managern, Training, Transfers per Auktion. Kostenlos, im Browser." },
+  pl: { title: "Hoop Manager · Menedżer koszykówki online", description: "Poprowadź swój klub koszykarski online: mecze transmitowane na żywo, liga 10 menedżerów, treningi, transfery na aukcjach. Za darmo, w przeglądarce." },
+  el: { title: "Hoop Manager · Online παιχνίδι μάνατζερ μπάσκετ", description: "Διοίκησε τη δική σου ομάδα μπάσκετ online: αγώνες σε ζωντανή μετάδοση, λίγκα 10 μάνατζερ, προπονήσεις, μεταγραφές με δημοπρασίες. Δωρεάν, στον browser." },
+  lt: { title: "Hoop Manager · Internetinis krepšinio vadybos žaidimas", description: "Vadovauk savo krepšinio klubui internete: rungtynės tiesiogiai, 10 vadybininkų lyga, treniruotės, perėjimai aukcionuose. Nemokamai, naršyklėje." },
+  zh: { title: "Hoop Manager · 在线篮球经理游戏", description: "在线经营你的篮球俱乐部：比赛实时直播，10 位经理同场竞技的联赛，训练，拍卖转会。免费，浏览器即可游玩。" },
 };
 
 // ---------------------------------------------------------------------
@@ -104,7 +116,7 @@ ${cta()}
     ["Why are there ads?", "Ads pay for the game's hosting. They only appear in a few specific places: a short break during the pre-game and halftime shows, and an optional ad you can watch to unlock a scouting report. They never interrupt the action of a match, and Premium subscribers see none at all."],
     ["I forgot my password, what should I do?", `On the home page, "Log in" tab, click "Forgot your password?": a link to choose a new one is sent to your account's address (valid for 1 hour). Didn't get it? Write to us on the game's Discord server or at <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> from your account's address.`],
     ["How do I delete my account?", "In the game: Settings → My account → \"Delete my account\". Your account is erased and your club is handed over to the AI."],
-    ["Is the game available in other languages?", "Yes, the game, this site, emails and notifications are available in French, English and Italian. Change the language in the game's Settings or with the FR / EN / IT buttons at the top of the site."],
+    ["Is the game available in other languages?", "Yes: the game, emails and notifications are available in French, English, Italian, Spanish, Portuguese, German, Polish, Greek, Lithuanian and Chinese (this site too, with long pages like this one in English for the last seven). Change the language in the game's Settings or with the language menu at the top of the site."],
   ],
   faqPage: ({ list, cta }) => ({
     title: "Frequently asked questions",
@@ -241,7 +253,7 @@ ${cta()}
     ["Perché ci sono pubblicità?", "Le pubblicità pagano l'hosting del gioco. Compaiono solo in pochi punti precisi: una breve pausa durante le trasmissioni pre-partita e dell'intervallo, e una pubblicità facoltativa da guardare per sbloccare un rapporto di scouting. Non interrompono mai l'azione di una partita, e gli abbonati Premium non ne vedono nessuna."],
     ["Ho dimenticato la password, cosa faccio?", `Nella pagina iniziale, scheda « Accedi », clicca su « Password dimenticata? »: un link per sceglierne una nuova viene inviato all'indirizzo del tuo account (valido 1 ora). Non l'hai ricevuto? Scrivici sul server Discord del gioco o a <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> dall'indirizzo del tuo account.`],
     ["Come elimino il mio account?", "Nel gioco: Impostazioni → Il mio account → « Elimina il mio account ». Il tuo account viene cancellato e il tuo club viene affidato all'IA."],
-    ["Il gioco esiste in altre lingue?", "Sì, il gioco, questo sito, le email e le notifiche sono disponibili in francese, inglese e italiano. Cambia lingua nelle Impostazioni del gioco o con i pulsanti FR / EN / IT in alto nel sito."],
+    ["Il gioco esiste in altre lingue?", "Sì: il gioco, le email e le notifiche sono disponibili in francese, inglese, italiano, spagnolo, portoghese, tedesco, polacco, greco, lituano e cinese (anche questo sito, con le pagine lunghe come questa in inglese per le ultime sette). Cambia lingua nelle Impostazioni del gioco o con il menu delle lingue in alto nel sito."],
   ],
   faqPage: ({ list, cta }) => ({
     title: "Domande frequenti",

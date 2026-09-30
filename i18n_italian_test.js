@@ -77,7 +77,7 @@ function loadDict(file, name) {
   doc.querySelector("#sidebarSettingsBtn").click();
   const overlay = doc.getElementById("settingsModalOverlay");
   const langs = [...overlay.querySelectorAll("[data-lang-choice]")];
-  assert(langs.map(b => b.dataset.langChoice).join() === "fr,en,it", "Paramètres : Français / English / Italiano");
+  assert(langs.map(b => b.dataset.langChoice).join() === "fr,en,it,es,pt,de,pl,el,lt,zh", "Paramètres : les 10 langues");
   const itBtn = langs[2];
   assert(/Italiano/.test(itBtn.textContent) && itBtn.getAttribute("lang") === "it", "« Italiano » écrit en italien (lang=it)");
   let reloaded = 0;

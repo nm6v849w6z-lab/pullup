@@ -5409,8 +5409,8 @@ window.HM_I18N_IT = {
   // Complément après fusion (2026-09-30) : composition, Italie, Planète Hoop.
   "Joueur d'un autre championnat : caractéristiques visibles seulement s'il est mis en vente sur le marché.": "Giocatore di un altro campionato: le caratteristiche sono visibili solo se viene messo in vendita sul mercato.",
   "← Planète Hoop · {0}": "← Pianeta Hoop · {0}",
-  "Chaque pays (France, USA, Italie) a sa pyramide :": "Ogni paese (Francia, USA, Italia) ha la sua piramide:",
-  "… Un nouveau manager arrive dans la division la plus haute où il reste un club de l'IA ; quand tout est plein (plus de 10 managers dans un championnat), le championnat suivant s'ouvre tout seul. Les matchs se jouent à 20:00 heure locale (Paris, Rome ou New York), et tous les pays suivent les mêmes semaines.": "… Un nuovo manager entra nella divisione più alta in cui resta un club dell'IA; quando è tutto pieno (più di 10 manager in un campionato), il campionato successivo si apre da solo. Le partite si giocano alle 20:00 ora locale (Parigi, Roma o New York) e tutti i paesi seguono le stesse settimane.",
+  "Chaque pays a sa pyramide :": "Ogni paese ha la sua piramide:",
+  "… Un nouveau manager arrive dans la division la plus haute où il reste un club de l'IA ; quand tout est plein (plus de 10 managers dans un championnat), le championnat suivant s'ouvre tout seul. Les matchs se jouent à 20:00 heure locale, et tous les pays suivent les mêmes semaines.": "… Un nuovo manager entra nella divisione più alta in cui resta un club dell'IA; quando è tutto pieno (più di 10 manager in un campionato), il campionato successivo si apre da solo. Le partite si giocano alle 20:00 ora locale e tutti i paesi seguono le stesse settimane.",
   "Hors poste : {0} ici, {1} en {2}": "Fuori ruolo: {0} qui, {1} da {2}",
   "Note du titulaire à ce poste": "Valutazione del titolare in questo ruolo",
   "Note à ce poste": "Valutazione in questo ruolo",
@@ -5492,4 +5492,6 @@ window.HM_I18N_IT = {
   "Forme physique : {0} ({1}/100)": "Forma fisica: {0} ({1}/100)",
   "Termine la liaison dans la fenêtre Discord, puis reviens ici.": "Completa il collegamento nella finestra di Discord, poi torna qui.",
   "Supercoupe · saison {0}": "Supercoppa · stagione {0}",
+  "Taïwan": "Taiwan",
+  "Hong Kong": "Hong Kong",
 };
