@@ -3880,6 +3880,7 @@ window.HM_I18N_EN = {
   "encore vierge": "none yet",
   "· dom.": "· home",
   "· ext.": "· away",
+  "Analyse de mon équipe": "My team analysis",
   "Spécialisé (1 caractéristique, plein rendement)": "Specialized (1 attribute, full effect)",
   "Polyvalent (2 caractéristiques, chacune à 62 %)": "Versatile (2 attributes, each at 62%)",
   "Deux types de programmes. Spécialisé : une seule compétence, à plein rendement. Polyvalent : deux compétences liées en même temps (par exemple Tir extérieur = Tir à mi-distance + Tir à 3 points), chacune progressant à 62 % du rythme d'un programme spécialisé. Au total, on progresse un peu plus (124 % contre 100 %), mais réparti sur deux compétences.": "Two kinds of programs. Specialized: a single skill, at full effect. Versatile: two related skills at once (for example Outside shooting = Mid-range shot + 3-point shot), each improving at 62% of the pace of a specialized program. In total you progress a bit more (124% vs 100%), but spread over two skills.",

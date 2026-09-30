@@ -1842,6 +1842,21 @@
     font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-faint);
     font-weight:700; padding:0 10px; margin:0 0 6px;
   }
+  /* Groupes repliables de la barre latérale (voir initSidebarGroups) : le
+     titre du groupe devient un bouton ; replié, seul l'onglet actif du
+     groupe reste visible, et une pastille reprend les notifications des
+     onglets masqués. */
+  button.sidebar-group-toggle{display:flex; align-items:center; gap:6px; width:100%; background:none; border:0; border-radius:6px;
+    padding:6px 10px; margin:0 0 2px; font-family:inherit; cursor:pointer; text-align:left;}
+  button.sidebar-group-toggle:hover{color:var(--ink-dim); background:var(--panel-2);}
+  .sidebar-group-name{flex:1;}
+  .sidebar-group-chev{flex:none; transition:transform .15s ease;}
+  .sidebar-group.is-collapsed .sidebar-group-chev{transform:rotate(-90deg);}
+  .sidebar-group.is-collapsed .tab-btn.sidebar-link:not(.active){display:none;}
+  .sidebar-group-badge{min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--amber); color:var(--amber-ink);
+    font-size:10px; font-weight:800; letter-spacing:0; display:inline-flex; align-items:center; justify-content:center;}
+  .sidebar-group-badge.is-alert{background:var(--danger); color:#fff;}
+  .sidebar-group-badge.hidden{display:none;}
   .tab-btn.sidebar-link{
     display:flex; align-items:center; gap:10px; width:100%; text-align:left;
     background:transparent; border:1px solid transparent; color:var(--ink-dim); font-size:13px;
@@ -5902,7 +5917,9 @@
      livrable d'origine (champ de recherche non repris, voir
      DEV_NOTES.md) -- sans ce correctif le bouton "Donnez vos ordres"
      collerait juste apres le nom du club. */
-  .hm-head__settings-btn{margin-left:auto;}
+  .hm-head__analyse-btn{margin-left:auto; display:inline-flex; align-items:center; gap:8px; white-space:nowrap;}
+  .hm-head__analyse-btn + .hm-head__settings-btn{margin-left:0;}
+  @media(max-width:680px){ .hm-head__analyse-btn span{display:none;} .hm-head__analyse-btn{padding:0 12px;} }
   /* =====================================================================
      Onglet Salle — refonte visuelle (retour utilisateur, 2026-09-25 : "aide
      moi à rendre cette page plus sexy", puis sur la maquette : "vas y ça me
@@ -7282,8 +7299,12 @@
       <!-- Messagerie privée entre managers (ligue partagée uniquement, voir msgUpdateBadge) -->
       <button class="tab-btn sidebar-link hidden" data-tab="messages" id="tabMessages"><span class="sidebar-label">Messagerie</span><span class="sidebar-badge hidden" id="messagesBadge"></span></button>
     </div>
-    <div class="sidebar-section">
-      <div class="sidebar-section-label">Équipe</div>
+    <!-- Groupes repliables (retour utilisateur 2026-09-30 : « faire des sous
+         menus dans le titre d'onglets pour réduire le nombre ? Le sous menu
+         doit rester ouvert tant qu'il n'a pas été refermé ») : voir
+         initSidebarGroups. -->
+    <div class="sidebar-section sidebar-group" data-sidebar-group="equipe">
+      <button type="button" class="sidebar-section-label sidebar-group-toggle" aria-expanded="true"><span class="sidebar-group-name">Équipe</span><span class="sidebar-group-badge hidden" aria-hidden="true"></span><svg class="sidebar-group-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <button class="tab-btn sidebar-link" data-tab="effectif"><span class="sidebar-label">Effectif</span></button>
       <button class="tab-btn sidebar-link active" data-tab="ordres" id="tabOrdres"><span class="sidebar-label">Ordres</span></button>
       <button class="tab-btn sidebar-link" data-tab="tactiques"><span class="sidebar-label">Tactiques</span></button>
@@ -7291,22 +7312,22 @@
       <button class="tab-btn sidebar-link" data-tab="medical"><span class="sidebar-label">Centre médical</span></button>
       <button class="tab-btn sidebar-link" data-tab="statshebdo"><span class="sidebar-label">Statistiques</span></button>
     </div>
-    <div class="sidebar-section">
-      <div class="sidebar-section-label">Compétitions</div>
+    <div class="sidebar-section sidebar-group" data-sidebar-group="competitions">
+      <button type="button" class="sidebar-section-label sidebar-group-toggle" aria-expanded="true"><span class="sidebar-group-name">Compétitions</span><span class="sidebar-group-badge hidden" aria-hidden="true"></span><svg class="sidebar-group-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <button class="tab-btn sidebar-link" data-tab="calendrier"><span class="sidebar-label">Calendrier</span></button>
       <button class="tab-btn sidebar-link" data-tab="ligue"><span class="sidebar-label">Ligue</span></button>
       <button class="tab-btn sidebar-link" data-tab="coupe"><span class="sidebar-label">Coupe</span></button>
       <button class="tab-btn sidebar-link" data-tab="amicaux"><span class="sidebar-label">Matchs amicaux</span><span class="sidebar-badge hidden" id="amicauxBadge"></span></button>
       <button class="tab-btn sidebar-link" data-tab="lp"><span class="sidebar-label">Ligues privées</span></button>
     </div>
-    <div class="sidebar-section">
-      <div class="sidebar-section-label">Recrutement</div>
+    <div class="sidebar-section sidebar-group" data-sidebar-group="recrutement">
+      <button type="button" class="sidebar-section-label sidebar-group-toggle" aria-expanded="true"><span class="sidebar-group-name">Recrutement</span><span class="sidebar-group-badge hidden" aria-hidden="true"></span><svg class="sidebar-group-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <button class="tab-btn sidebar-link" data-tab="marche"><span class="sidebar-label">Marché</span><span class="sidebar-badge sidebar-badge--alert hidden" id="marcheBadge" title="Enchères où vous avez été dépassé"></span></button>
       <button class="tab-btn sidebar-link" data-tab="staff"><span class="sidebar-label">Staff</span></button>
       <button class="tab-btn sidebar-link" data-tab="academie"><span class="sidebar-label">Académie de jeunes</span></button>
     </div>
-    <div class="sidebar-section">
-      <div class="sidebar-section-label">Club</div>
+    <div class="sidebar-section sidebar-group" data-sidebar-group="club">
+      <button type="button" class="sidebar-section-label sidebar-group-toggle" aria-expanded="true"><span class="sidebar-group-name">Club</span><span class="sidebar-group-badge hidden" aria-hidden="true"></span><svg class="sidebar-group-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <button class="tab-btn sidebar-link" data-tab="economie"><span class="sidebar-label">Économie</span></button>
       <button class="tab-btn sidebar-link" data-tab="sponsors"><span class="sidebar-label">Sponsors</span></button>
       <button class="tab-btn sidebar-link" data-tab="salle"><span class="sidebar-label">Salle</span></button>
@@ -24873,6 +24894,79 @@ function showPage(id) {
   }
 }
 
+// Groupes repliables de la barre latérale (retour utilisateur 2026-09-30 :
+// « faire des sous menus dans le titre d'onglets pour réduire le nombre ?
+// Le sous menu doit rester ouvert tant qu'il n'a pas été refermé ») : clic
+// sur le titre = ouvrir / refermer ; l'état de chaque groupe est gardé
+// (localStorage "hm-sidebar-groups") et ne change que par ce clic. Par
+// défaut : Équipe et Compétitions ouverts, Recrutement et Club repliés.
+// Groupe replié : l'onglet actif reste visible, et la pastille du titre
+// reprend les notifications des onglets masqués (Marché, Matchs amicaux…).
+const SIDEBAR_GROUPS_DEFAULT = { equipe: true, competitions: true, recrutement: false, club: false };
+function sidebarGroupsState() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("hm-sidebar-groups") || "{}") || {}; } catch (e) { saved = {}; }
+  return { ...SIDEBAR_GROUPS_DEFAULT, ...saved };
+}
+function updateSidebarGroupBadges() {
+  document.querySelectorAll(".sidebar-group").forEach(g => {
+    const badge = g.querySelector(".sidebar-group-badge");
+    if (!badge) return;
+    const collapsed = g.classList.contains("is-collapsed");
+    const hidden = collapsed ? [...g.querySelectorAll(".tab-btn.sidebar-link:not(.active):not(.hidden) .sidebar-badge:not(.hidden)")] : [];
+    const total = hidden.reduce((n, b) => n + (parseInt(b.textContent, 10) || 1), 0);
+    const txt = total ? String(total) : "";
+    if (badge.textContent !== txt) badge.textContent = txt;
+    if (badge.classList.contains("hidden") !== !total) badge.classList.toggle("hidden", !total);
+    const alert = hidden.some(b => b.classList.contains("sidebar-badge--alert"));
+    if (badge.classList.contains("is-alert") !== alert) badge.classList.toggle("is-alert", alert);
+  });
+}
+function applySidebarGroups() {
+  const state = sidebarGroupsState();
+  document.querySelectorAll(".sidebar-group").forEach(g => {
+    const open = state[g.dataset.sidebarGroup] !== false;
+    g.classList.toggle("is-collapsed", !open);
+    const t = g.querySelector(".sidebar-group-toggle");
+    if (t) t.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  updateSidebarGroupBadges();
+}
+function initSidebarGroups() {
+  applySidebarGroups();
+  document.addEventListener("click", e => {
+    const t = e.target.closest(".sidebar-group-toggle");
+    if (!t) return;
+    const g = t.closest(".sidebar-group");
+    const state = sidebarGroupsState();
+    state[g.dataset.sidebarGroup] = g.classList.contains("is-collapsed");
+    try { localStorage.setItem("hm-sidebar-groups", JSON.stringify(state)); } catch (err) { /* navigation privée */ }
+    applySidebarGroups();
+  });
+  // Pastilles des onglets et onglet actif qui changent : pastille du groupe
+  // recalculée.
+  const side = document.querySelector(".sidebar");
+  if (side && typeof MutationObserver === "function") {
+    // Mutations des pastilles de groupe elles-mêmes ignorées (pas de boucle).
+    new MutationObserver(list => {
+      if (list.some(m => !(m.target.closest ? m.target : m.target.parentElement).closest(".sidebar-group-badge"))) updateSidebarGroupBadges();
+    }).observe(side, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["class"] });
+  }
+}
+initSidebarGroups();
+
+// Analyse de sa propre équipe depuis le tableau de bord (retour utilisateur
+// 2026-09-30 : « ajoute l'analyse de sa propre équipe via un petit bouton en
+// haut à droite du tableau de bord ») : fiche de son club, sous-onglet
+// Analyse d'équipe (rapport complet en Premium, sinon l'écran Premium).
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-own-analysis]")) return;
+  if (typeof myTeamIndex !== "number" || myTeamIndex < 0) return;
+  showTeamDetail(myTeamIndex);
+  const sub = document.querySelector("#teamDetailContent [data-team-detail-subview='analyse']");
+  if (sub) sub.click();
+});
+
 function setActiveTab(key) {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === key));
 }
@@ -40185,6 +40279,7 @@ function dashRenderHeader(data) {
       <div class="hm-head__name">${dashEsc(club.name)}</div>
       <div class="hm-head__meta">${dashEsc(club.division)} · Saison ${dashEsc(club.season)} · Semaine ${dashEsc(club.week)}</div>
     </div>
+    <button type="button" class="hm-btn hm-btn--ghost hm-head__analyse-btn" data-own-analysis title="Comment vos adversaires vous voient"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>Analyse de mon équipe</span></button>
     <button type="button" class="hm-btn hm-btn--ghost hm-head__settings-btn" data-dash-href="/parametres" aria-label="Paramètres" title="Paramètres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </header>`;
 }
