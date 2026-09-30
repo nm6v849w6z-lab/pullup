@@ -77,6 +77,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   forfait pour « pas de pivot » avec au moins 5 joueurs, validé par
   l'utilisateur). Effectif en un seul bloc.
 
+- **✅ EN PROD (2026-09-30) — zones de tir détaillées (scouting)** : le
+  moteur note l'emplacement de chaque tir parmi 12 (engine.js:shotSpotFor :
+  cercle restrictif, raquette, 5 mi-distance, 5 à 3 pts), tiré selon le
+  poste du tireur par hash déterministe — aucun effet sur la réussite ni sur
+  le générateur du match. matchLog.spots = { clé: [tentés, réussis] },
+  agrégé par server/scouting.js:aggregateShotZones (spots, spotGames) ;
+  carte détaillée scoutingDetailedCourtSvg dans les deux rapports, repli sur
+  la carte à 3 zones tant qu'aucun match n'a d'emplacements. Aussi :
+  optgroups traduits (attribut label dans i18n.js), rendement polyvalent
+  (62 % par caractéristique) expliqué dans l'Entraînement et le Guide.
+
 - **✅ EN PROD (2026-09-30) — langue des e-mails/notifications, maillot** :
   un compte sans langue choisie ne reçoit plus tout en français. Ordre
   (server/accounts.js:langFor) : choix du compte → langue du navigateur

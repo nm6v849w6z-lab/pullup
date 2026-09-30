@@ -4719,6 +4719,7 @@
   .sp2-callouts{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin-top:8px;}
   .sp2-callouts .scouting-profile-callout-value + .scouting-profile-callout-value{margin-top:4px;}
   .sp2-court{width:100% !important; max-width:260px; margin:0 auto; display:flex; justify-content:center;}
+  .sp2-court:has(.scouting-shot-court--detail){max-width:440px;}
   /* Identité (voir sp2ProfileStyleHtml) : une bande, 5 colonnes égales. */
   .sp2-ident{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); background:var(--panel); border:1px solid var(--line); border-radius:12px; margin:8px 0 12px;}
   .sp2-ident-item{padding:10px 12px; min-width:0; border-left:1px solid var(--line);}
@@ -6779,6 +6780,14 @@
   .st-lead .hc-ws-lead{white-space:normal;}
   .st-lead-top{color:var(--amber) !important; font-weight:700;}
   /* Tableau de la saison (lignes-cartes façon Effectif) */
+  /* Carte des zones de tir détaillée (scoutingDetailedCourtSvg). */
+  .scouting-shot-court--detail{width:100%; max-width:440px; margin:0 auto;}
+  .scouting-shot-court--detail .pdp-court{width:100%;}
+  .scouting-shot-court--detail svg{display:block; width:100%; height:auto;}
+  .scouting-shot-court--detail .spc-frac{fill:var(--ink); font-weight:800;}
+  .scouting-shot-court--detail .spc-pct{fill:var(--ink-dim); font-weight:600;}
+  .scouting-shot-court--detail .spc-cut{stroke:var(--line); stroke-width:.5;}
+  .spc-caption{margin:6px 0 0; font-size:12px; color:var(--ink-dim); text-align:center;}
   .st-table-wrap{background:var(--eff-row-2); border:1px solid var(--eff-sep); border-radius:14px; padding:4px 0;}
   #statsHebdoSection table.st-season-table, #statsHebdoSection #statsHebdoContent table.roster-table{width:100%; background:transparent; border-collapse:separate; border-spacing:0; font-size:14px; box-shadow:none; border-radius:0;}
   #statsHebdoSection table.st-season-table th, #statsHebdoSection #statsHebdoContent table.roster-table th{height:40px; padding:0 10px; font-size:12px; font-weight:600; text-transform:none; letter-spacing:0; color:var(--ink-dim); background:transparent; border-bottom:1px solid var(--eff-sep); text-align:right; white-space:nowrap;}
@@ -13083,6 +13092,57 @@ function nationHash(str) {
     h = Math.imul(h, 0x01000193) >>> 0;
   }
   return h >>> 0;
+}
+
+// Emplacement précis d'un tir (retour utilisateur 2026-09-30 : « sur le
+// rapport de scouting, tu arriverais à mettre des zones de tirs plus
+// détaillées »). Le moteur choisit toujours la ZONE (raquette / mi-distance
+// / 3 pts) et la réussite comme avant ; l'emplacement dans cette zone n'est
+// qu'un lieu, tiré selon le poste du tireur (un pivot tire plus souvent du
+// coin et de la ligne de fond, un meneur du haut), SANS effet sur la
+// réussite et SANS consommer le générateur du match (hash déterministe de
+// l'instant du tir) : aucun résultat de match ne change.
+// Emplacements : ra (cercle restrictif), paint (reste de la raquette) ;
+// mi-distance mbl/mwl/mtop/mwr/mbr (fond gauche, aile gauche, haut, aile
+// droite, fond droit) ; 3 pts c3l/w3l/t3/w3r/c3r (coin gauche, aile
+// gauche, haut, aile droite, coin droit). Gauche/droite vus du tireur face
+// au panier.
+const SHOT_SPOTS = {
+  inside: ["ra", "paint"],
+  mid: ["mbl", "mwl", "mtop", "mwr", "mbr"],
+  three: ["c3l", "w3l", "t3", "w3r", "c3r"],
+};
+const SHOT_SPOT_WEIGHTS = {
+  inside: { "Pivot": [65, 35], "Ailier fort": [60, 40], default: [50, 50] },
+  mid: {
+    "Meneur": [10, 25, 30, 25, 10], "Arrière": [12, 26, 24, 26, 12], "Ailier shooteur": [16, 26, 16, 26, 16],
+    "Ailier fort": [22, 20, 16, 20, 22], "Pivot": [26, 18, 12, 18, 26], default: [16, 22, 24, 22, 16],
+  },
+  three: {
+    "Meneur": [8, 27, 30, 27, 8], "Arrière": [13, 26, 22, 26, 13], "Ailier shooteur": [20, 23, 14, 23, 20],
+    "Ailier fort": [24, 20, 12, 20, 24], "Pivot": [28, 18, 8, 18, 28], default: [16, 24, 20, 24, 16],
+  },
+};
+function shotSpotFor(zone, shooter, seedKey) {
+  const keys = SHOT_SPOTS[zone];
+  if (!keys) return null;
+  const table = SHOT_SPOT_WEIGHTS[zone];
+  const w = table[shooter && shooter.position] || table.default;
+  const total = w.reduce((s, x) => s + x, 0);
+  let h = nationHash(String(seedKey));
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
+  let r = (h / 4294967296) * total;
+  for (let i = 0; i < keys.length; i++) { r -= w[i]; if (r < 0) return keys[i]; }
+  return keys[keys.length - 1];
+}
+// Compteurs par emplacement d'un joueur pour le match : stats.spots =
+// { ra: [tentés, réussis], ... } (créé au premier tir, absent sinon).
+function recordShotSpot(stats, spot, made) {
+  if (!stats || !spot) return;
+  const all = stats.spots || (stats.spots = {});
+  const e = all[spot] || (all[spot] = [0, 0]);
+  e[0]++;
+  if (made) e[1]++;
 }
 
 // Tirage pondéré parmi `nations` avec `r` ∈ [0, 1).
@@ -22706,6 +22766,9 @@ class MatchEngine {
 
     if (zone === "three") { shooter.stats.fga3++; } else { shooter.stats.fga2++; }
     if (zone === "inside") shooter.stats.paintAtt++;
+    // Emplacement précis (voir shotSpotFor) : sans effet sur le tir.
+    const spot = shotSpotFor(zone, shooter, `${shooter.id}|${quarter}|${clock}|${events.length}`);
+    recordShotSpot(shooter.stats, spot, made);
 
     const shotLabel = zone === "three" ? "three" : zone === "mid" ? "mid" : "inside";
 
@@ -22740,7 +22803,7 @@ class MatchEngine {
       const creationKey = assistedBy ? "ptsAssisted" : "ptsSolo";
       shooter.stats[creationKey] = (shooter.stats[creationKey] || 0) + points;
       if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + points;
-      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, assister: assistedBy, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: true, shooter: shooter.name, assister: assistedBy, possession: this.teamKey(offTeam) });
 
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
@@ -22762,11 +22825,11 @@ class MatchEngine {
       // tir raté normal.
       if (blocked) {
         defender.stats.blk++;
-        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, blocker: defender.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: false, blocked: true, shooter: shooter.name, blocker: defender.name, possession: this.teamKey(offTeam) });
       }
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, defender: defender.name, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: false, shooter: shooter.name, defender: defender.name, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
         this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
@@ -22842,7 +22905,7 @@ class MatchEngine {
       this.log(events, quarter, clock, say(
         offensiveRebound ? (rebounder === shooter ? PHRASES.reboundOwn : PHRASES.reboundOff) : PHRASES.reboundDef,
         { shooter: shooter.name, rebounder: rebounder.name }
-      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, rebounder: rebounder.name, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
+      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, spot, made: false, shooter: shooter.name, rebounder: rebounder.name, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
       if (offensiveRebound) offTeam._secondChance = true;
       return { possessionOffense: offensiveRebound };
@@ -32841,8 +32904,110 @@ function scoutingShotZoneCourtSvg(z) {
 // (étiquettes déjà peintes par scoutingShotZoneCourtSvg), et la carte elle-
 // même est agrandie pour occuper l'espace libéré (voir .scouting-shot-court
 // en CSS, largeur relevée de 130px à 240px).
+// Carte détaillée (retour utilisateur 2026-09-30 : « sur le rapport de
+// scouting, tu arriverais à mettre des zones de tirs plus détaillées ») :
+// 12 emplacements notés par le moteur (Engine.shotSpotFor) — cercle
+// restrictif, raquette, 5 zones à mi-distance, 5 à 3 pts — chacune avec
+// « réussis/tentés » et le pourcentage, intensité selon la part des tirs.
+// Même repère que COURT_SVG (panier en (76,13), arc à 3 pts de rayon 67.5).
+// Découpage en secteurs d'angle autour du panier (0° = côté droit de
+// l'image, 90° = vers le haut du terrain dessiné en bas) ; gauche/droite
+// du tireur face au panier = gauche/droite de l'image.
+const SCOUTING_SPOT_SECTORS = {
+  mid: { mbr: [-90, 30], mwr: [30, 70], mtop: [70, 110], mwl: [110, 150], mbl: [150, 270] },
+  three: { c3r: [-90, 15], w3r: [15, 68], t3: [68, 112], w3l: [112, 165], c3l: [165, 270] },
+};
+const SCOUTING_SPOT_LABELS = {
+  ra: [76, 19.5], paint: [76, 40],
+  mbl: [31, 16], mwl: [43, 52], mtop: [76, 71], mwr: [109, 52], mbr: [121, 16],
+  c3l: [5.8, 16], w3l: [14, 70], t3: [76, 112], w3r: [138, 70], c3r: [144.2, 16],
+};
+function scoutingSectorPath(a0, a1) {
+  const cx = 76, cy = 13, R = 400;
+  const pts = [];
+  for (let a = a0; a < a1; a += 30) pts.push(a);
+  pts.push(a1);
+  return `M${cx},${cy} ` + pts.map(a => {
+    const r = a * Math.PI / 180;
+    return `L${(cx + R * Math.cos(r)).toFixed(1)},${(cy + R * Math.sin(r)).toFixed(1)}`;
+  }).join(" ") + " Z";
+}
+function scoutingSpotTotal(z) {
+  return z && z.spots ? Object.values(z.spots).reduce((s, e) => s + (e.attempts || 0), 0) : 0;
+}
+function scoutingDetailedCourtSvg(z) {
+  const spots = z.spots || {};
+  // Intensité relative à l'emplacement le plus utilisé (contraste lisible
+  // quelle que soit la répartition).
+  const maxAtt = Math.max(1, ...Object.values(spots).map(e => e.attempts || 0));
+  const uid = "spc" + (scoutingDetailedCourtSvg.n = (scoutingDetailedCourtSvg.n || 0) + 1);
+  const outer = "M1,1 L149,1 L149,139 L1,139 Z";
+  const threeArea = "M10,1 L10,27.2 A67.5,67.5 0 0 0 142,27.2 L142,1 Z";
+  const paint = "M51.5,1 L100.5,1 L100.5,59 L51.5,59 Z";
+  const ra = "M63.5,1 L63.5,13 A12.5,12.5 0 0 0 88.5,13 L88.5,1 Z";
+  const fillOf = key => {
+    const e = spots[key];
+    const rel = e && e.attempts ? e.attempts / maxAtt : 0;
+    return `fill="var(--court-zone-mid)" fill-opacity="${(0.06 + rel * 0.62).toFixed(2)}"`;
+  };
+  let defs = "<defs>";
+  let body = "";
+  body += `<path d="${ra}" ${fillOf("ra")}/>`;
+  body += `<path d="${paint} ${ra}" fill-rule="evenodd" ${fillOf("paint")}/>`;
+  const ring = { mid: `${threeArea} ${paint}`, three: `${outer} ${threeArea}` };
+  Object.entries(SCOUTING_SPOT_SECTORS).forEach(([zone, sectors]) => {
+    Object.entries(sectors).forEach(([key, [a0, a1]]) => {
+      defs += `<clipPath id="${uid}-${key}"><path d="${scoutingSectorPath(a0, a1)}"/></clipPath>`;
+      body += `<path d="${ring[zone]}" fill-rule="evenodd" clip-path="url(#${uid}-${key})" ${fillOf(key)}/>`;
+    });
+  });
+  // Séparations entre secteurs (traits fins, sous le tracé du terrain).
+  defs += `<clipPath id="${uid}-court"><path d="${outer} ${paint}" clip-rule="evenodd" fill-rule="evenodd"/></clipPath></defs>`;
+  const cuts = new Set();
+  Object.values(SCOUTING_SPOT_SECTORS).forEach(s => Object.values(s).forEach(([a0, a1]) => { [a0, a1].forEach(a => { if (a > -90 && a < 270) cuts.add(a); }); }));
+  let lines = "";
+  const inMid = a => Object.values(SCOUTING_SPOT_SECTORS.mid).some(([a0, a1]) => a === a0 || a === a1);
+  cuts.forEach(a => {
+    const r = a * Math.PI / 180;
+    // Trait limité à sa bande : mi-distance jusqu'à l'arc, 3 pts au-delà.
+    const [r0, r1] = inMid(a) ? [0, 67.5] : [67.5, 400];
+    lines += `<line x1="${(76 + r0 * Math.cos(r)).toFixed(1)}" y1="${(13 + r0 * Math.sin(r)).toFixed(1)}" x2="${(76 + r1 * Math.cos(r)).toFixed(1)}" y2="${(13 + r1 * Math.sin(r)).toFixed(1)}" class="spc-cut"/>`;
+  });
+  body += `<g clip-path="url(#${uid}-court)">${lines}</g>`;
+  body += `<rect class="ct-line" x="1" y="1" width="148" height="138" rx="3"/>` +
+    `<rect class="ct-line" x="51.5" y="1" width="49" height="58" fill="none"/>` +
+    `<circle class="ct-line" cx="76" cy="59" r="18"/>` +
+    `<path class="ct-line" d="M 63.5 13 A 12.5 12.5 0 0 0 88.5 13"/>` +
+    `<circle class="ct-line" cx="76" cy="13" r="1.6" fill="rgba(230,168,88,.4)"/>` +
+    `<line class="ct-line" x1="67" y1="11" x2="85" y2="11"/>` +
+    `<path class="ct-line" d="M 10 1 L 10 27.2 A 67.5 67.5 0 0 0 142 27.2 L 142 1"/>`;
+  Object.entries(SCOUTING_SPOT_LABELS).forEach(([key, [x, y]]) => {
+    const e = spots[key] || { attempts: 0, made: 0 };
+    const frac = e.attempts ? `${e.made}/${e.attempts}` : "–";
+    const pct = e.attempts ? `${Math.round(e.made / e.attempts * 100)}%` : "";
+    // Coins (bandes de 9 de large) : une seule ligne, écrite le long de la
+    // ligne de touche.
+    if (key === "c3l" || key === "c3r") {
+      const rot = key === "c3l" ? -90 : 90;
+      body += `<text x="${x}" y="${y}" transform="rotate(${rot} ${x} ${y})" text-anchor="middle" dominant-baseline="middle" font-size="5.2"><tspan class="spc-frac">${frac}</tspan>${pct ? `<tspan class="spc-pct" dx="1.5">${pct}</tspan>` : ""}</text>`;
+      return;
+    }
+    // Cercle restrictif (demi-disque de rayon 12.5) : texte plus petit pour
+    // tenir dedans.
+    const f1 = key === "ra" ? 5.4 : 6.4, f2 = key === "ra" ? 4.2 : 4.8;
+    body += `<text x="${x}" y="${y}" text-anchor="middle" class="spc-frac" font-size="${f1}">${frac}</text>`;
+    if (pct) body += `<text x="${x}" y="${y + f2 + 1}" text-anchor="middle" class="spc-pct" font-size="${f2}">${pct}</text>`;
+  });
+  return `<svg viewBox="0 0 150 140" role="img" aria-label="Zones de tir détaillées">${defs}${body}</svg>`;
+}
 function scoutingShotZoneCourtHtml(z) {
   if (!z || !z.totalAttempts) return "";
+  // Emplacements précis disponibles (matchs depuis le 2026-09-30) : carte
+  // détaillée ; sinon la carte à 3 zones.
+  if (scoutingSpotTotal(z) > 0) {
+    return `<div class="scouting-shot-court scouting-shot-court--detail"><div class="pdp-court">${scoutingDetailedCourtSvg(z)}</div>` +
+      `<p class="spc-caption">Réussis / tentés par emplacement</p></div>`;
+  }
   return scoutingShotZoneCourtSvg(z);
 }
 

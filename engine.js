@@ -3505,6 +3505,57 @@ function nationHash(str) {
   return h >>> 0;
 }
 
+// Emplacement précis d'un tir (retour utilisateur 2026-09-30 : « sur le
+// rapport de scouting, tu arriverais à mettre des zones de tirs plus
+// détaillées »). Le moteur choisit toujours la ZONE (raquette / mi-distance
+// / 3 pts) et la réussite comme avant ; l'emplacement dans cette zone n'est
+// qu'un lieu, tiré selon le poste du tireur (un pivot tire plus souvent du
+// coin et de la ligne de fond, un meneur du haut), SANS effet sur la
+// réussite et SANS consommer le générateur du match (hash déterministe de
+// l'instant du tir) : aucun résultat de match ne change.
+// Emplacements : ra (cercle restrictif), paint (reste de la raquette) ;
+// mi-distance mbl/mwl/mtop/mwr/mbr (fond gauche, aile gauche, haut, aile
+// droite, fond droit) ; 3 pts c3l/w3l/t3/w3r/c3r (coin gauche, aile
+// gauche, haut, aile droite, coin droit). Gauche/droite vus du tireur face
+// au panier.
+const SHOT_SPOTS = {
+  inside: ["ra", "paint"],
+  mid: ["mbl", "mwl", "mtop", "mwr", "mbr"],
+  three: ["c3l", "w3l", "t3", "w3r", "c3r"],
+};
+const SHOT_SPOT_WEIGHTS = {
+  inside: { "Pivot": [65, 35], "Ailier fort": [60, 40], default: [50, 50] },
+  mid: {
+    "Meneur": [10, 25, 30, 25, 10], "Arrière": [12, 26, 24, 26, 12], "Ailier shooteur": [16, 26, 16, 26, 16],
+    "Ailier fort": [22, 20, 16, 20, 22], "Pivot": [26, 18, 12, 18, 26], default: [16, 22, 24, 22, 16],
+  },
+  three: {
+    "Meneur": [8, 27, 30, 27, 8], "Arrière": [13, 26, 22, 26, 13], "Ailier shooteur": [20, 23, 14, 23, 20],
+    "Ailier fort": [24, 20, 12, 20, 24], "Pivot": [28, 18, 8, 18, 28], default: [16, 24, 20, 24, 16],
+  },
+};
+function shotSpotFor(zone, shooter, seedKey) {
+  const keys = SHOT_SPOTS[zone];
+  if (!keys) return null;
+  const table = SHOT_SPOT_WEIGHTS[zone];
+  const w = table[shooter && shooter.position] || table.default;
+  const total = w.reduce((s, x) => s + x, 0);
+  let h = nationHash(String(seedKey));
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
+  let r = (h / 4294967296) * total;
+  for (let i = 0; i < keys.length; i++) { r -= w[i]; if (r < 0) return keys[i]; }
+  return keys[keys.length - 1];
+}
+// Compteurs par emplacement d'un joueur pour le match : stats.spots =
+// { ra: [tentés, réussis], ... } (créé au premier tir, absent sinon).
+function recordShotSpot(stats, spot, made) {
+  if (!stats || !spot) return;
+  const all = stats.spots || (stats.spots = {});
+  const e = all[spot] || (all[spot] = [0, 0]);
+  e[0]++;
+  if (made) e[1]++;
+}
+
 // Tirage pondéré parmi `nations` avec `r` ∈ [0, 1).
 function pickWeightedNation(nations, r) {
   const total = nations.reduce((s, n) => s + n.weight, 0);
@@ -10107,6 +10158,9 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
         // en zone "inside". `|| 0` de rigueur pour tout matchLog déjà persisté
         // avant cette fonctionnalité (jamais lu par du code plus ancien).
         paintAtt: p.stats.paintAtt || 0, paintMade: p.stats.paintMade || 0,
+        // Tirs par emplacement précis (voir shotSpotFor), absents des matchs
+        // d'avant le 2026-09-30 : { ra: [tentés, réussis], ... }.
+        ...(p.stats.spots ? { spots: JSON.parse(JSON.stringify(p.stats.spots)) } : {}),
         // Origine des points (voir emptyStats), absente des matchs d'avant.
         ptsPaint: p.stats.ptsPaint || 0, ptsMid: p.stats.ptsMid || 0, pts3: p.stats.pts3 || 0,
         ptsSecondChance: p.stats.ptsSecondChance || 0, ptsTransition: p.stats.ptsTransition || 0,
@@ -15409,9 +15463,10 @@ class MatchEngine {
       const scorer = weightedPick(onCourtOff, p => p.eff("inside"));
       scorer.stats.fga2++; scorer.stats.fgm2++; scorer.stats.pts += 2;
       scorer.stats.paintAtt = (scorer.stats.paintAtt || 0) + 1; scorer.stats.paintMade = (scorer.stats.paintMade || 0) + 1;
+      recordShotSpot(scorer.stats, "ra", true);
       scorer.stats.ptsPaint = (scorer.stats.ptsPaint || 0) + 2; scorer.stats.ptsSolo = (scorer.stats.ptsSolo || 0) + 2;
       this.applyPlusMinusForPoints(offTeam, 2);
-      this.log(events, quarter, clock, say(PHRASES.madeShot.inside, { shooter: scorer.name, quality: "ouvert", team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone: "inside", made: true, shooter: scorer.name, shooterId: scorer.id, assister: null, assisterId: null, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.madeShot.inside, { shooter: scorer.name, quality: "ouvert", team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone: "inside", spot: "ra", made: true, shooter: scorer.name, shooterId: scorer.id, assister: null, assisterId: null, possession: this.teamKey(offTeam) });
       return { possessionOffense: false, scored: true };
     }
 
@@ -16084,6 +16139,9 @@ class MatchEngine {
 
     if (zone === "three") { shooter.stats.fga3++; } else { shooter.stats.fga2++; }
     if (zone === "inside") shooter.stats.paintAtt++;
+    // Emplacement précis (voir shotSpotFor) : sans effet sur le tir.
+    const spot = shotSpotFor(zone, shooter, `${shooter.id}|${quarter}|${clock}|${events.length}`);
+    recordShotSpot(shooter.stats, spot, made);
 
     const shotLabel = zone === "three" ? "three" : zone === "mid" ? "mid" : "inside";
 
@@ -16150,7 +16208,7 @@ class MatchEngine {
       const creationKey = assistedBy ? "ptsAssisted" : "ptsSolo";
       shooter.stats[creationKey] = (shooter.stats[creationKey] || 0) + points;
       if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + points;
-      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: true, shooter: shooter.name, shooterId: shooter.id, assister: assistedBy, assisterId: assistedBy ? assistCandidate.id : null, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: true, shooter: shooter.name, shooterId: shooter.id, assister: assistedBy, assisterId: assistedBy ? assistCandidate.id : null, possession: this.teamKey(offTeam) });
 
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
@@ -16172,11 +16230,11 @@ class MatchEngine {
       // tir raté normal.
       if (blocked) {
         defender.stats.blk++;
-        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, blocked: true, shooter: shooter.name, shooterId: shooter.id, blocker: defender.name, blockerId: defender.id, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: false, blocked: true, shooter: shooter.name, shooterId: shooter.id, blocker: defender.name, blockerId: defender.id, possession: this.teamKey(offTeam) });
       }
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, made: false, shooter: shooter.name, shooterId: shooter.id, defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: false, shooter: shooter.name, shooterId: shooter.id, defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
         this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
@@ -16252,7 +16310,7 @@ class MatchEngine {
       this.log(events, quarter, clock, say(
         offensiveRebound ? (rebounder === shooter ? PHRASES.reboundOwn : PHRASES.reboundOff) : PHRASES.reboundDef,
         { shooter: shooter.name, rebounder: rebounder.name }
-      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, made: false, shooter: shooter.name, shooterId: shooter.id, rebounder: rebounder.name, rebounderId: rebounder.id, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
+      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, spot, made: false, shooter: shooter.name, shooterId: shooter.id, rebounder: rebounder.name, rebounderId: rebounder.id, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
       if (offensiveRebound) offTeam._secondChance = true;
       return { possessionOffense: offensiveRebound };

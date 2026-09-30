@@ -3907,6 +3907,8 @@ window.HM_I18N_IT = {
   "Sous le classement : le MVP de la dernière journée et les meilleurs de la ligue par catégorie (points, rebonds, passes, interceptions, contres, évaluation), en moyennes ou en totaux. Cliquez sur n'importe quel joueur pour ouvrir sa fiche, ou sur une équipe pour ouvrir sa fiche d'équipe.": "Sotto la classifica: l'MVP dell'ultima giornata e i migliori della lega per categoria (punti, rimbalzi, assist, palle rubate, stoppate, valutazione), in medie o in totali. Clicca su qualsiasi giocatore per aprirne la scheda, o su una squadra per aprire la sua scheda squadra.",
   "Sow": "Sow",
   "Spa du club": "Spa del club",
+  "Réussis / tentés par emplacement": "Segnati / tentati per posizione",
+  "Zones de tir détaillées": "Zone di tiro dettagliate",
   "Spécialisé (1 caractéristique, plein rendement)": "Specializzato (1 caratteristica, pieno effetto)",
   "Polyvalent (2 caractéristiques, chacune à 62 %)": "Polivalente (2 caratteristiche, ciascuna al 62%)",
   "Deux types de programmes. Spécialisé : une seule compétence, à plein rendement. Polyvalent : deux compétences liées en même temps (par exemple Tir extérieur = Tir à mi-distance + Tir à 3 points), chacune progressant à 62 % du rythme d'un programme spécialisé. Au total, on progresse un peu plus (124 % contre 100 %), mais réparti sur deux compétences.": "Due tipi di programma. Specializzato: una sola abilità, a pieno effetto. Polivalente: due abilità collegate insieme (ad esempio Tiro da fuori = Tiro dalla media distanza + Tiro da 3 punti), ciascuna che progredisce al 62% del ritmo di un programma specializzato. In totale si progredisce un po' di più (124% contro 100%), ma diviso su due abilità.",

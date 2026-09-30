@@ -196,7 +196,22 @@ function aggregateShotZones(team) {
     sharePct: totalAtt > 0 ? Math.round((z[key].att / totalAtt) * 100) : null,
     fgPct: z[key].att > 0 ? Math.round((z[key].made / z[key].att) * 100) : null,
   });
-  return { inside: zoneStats("inside"), mid: zoneStats("mid"), three: zoneStats("three"), totalAttempts: totalAtt };
+  // Emplacements précis (Engine.shotSpotFor, matchs depuis le 2026-09-30) :
+  // { ra: { attempts, made }, ... } et le nombre de matchs qui les portent.
+  const spots = {};
+  const spotGames = new Set();
+  team.players.forEach(p => {
+    (p.matchLog || []).forEach(m => {
+      if (!m.spots) return;
+      spotGames.add(`${m.competition}|${m.round}`);
+      Object.entries(m.spots).forEach(([k, v]) => {
+        if (!Array.isArray(v)) return;
+        const e = spots[k] || (spots[k] = { attempts: 0, made: 0 });
+        e.attempts += v[0] || 0; e.made += v[1] || 0;
+      });
+    });
+  });
+  return { inside: zoneStats("inside"), mid: zoneStats("mid"), three: zoneStats("three"), totalAttempts: totalAtt, spots, spotGames: spotGames.size };
 }
 
 // Fréquence d'utilisation des tactiques offensive/défensive/rythme de
