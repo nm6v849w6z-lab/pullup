@@ -12545,7 +12545,7 @@ const ArenaGen = (function () {
 
     // toiture en anneau : côtés du fond (les côtés avant sont dessinés après les façades)
     const ring = L.mode === 'bowl' ? 3.6 : 2.6, roof = options.roof || '#9b968a', roofEdge = options.roof ? shade(options.roof, 38) : '#c4bfb2';
-    const spots = (a) => a.map(([x, y]) => { const q = P(x, y, H - 0.25); return `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="2.2" fill="#fff6d6" opacity="0.22"/><circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="0.8" fill="#fffbe8"/>`; }).join('');
+    const spots = (a) => a.map(([x, y]) => { const q = P(x, y, H - 0.25); return `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="1.1" fill="#fff6d6" opacity="0.22"/><circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="0.45" fill="#fffbe8"/>`; }).join('');
     s += poly(rect(-W / 2, W / 2, -D / 2, -D / 2 + ring, H), roof, 0.6) + poly(rect(-W / 2, -W / 2 + ring, -D / 2 + ring, D / 2, H), roof, 0.6) +
       line([[-W / 2 + ring, D / 2 - ring, H], [-W / 2 + ring, -D / 2 + ring, H], [W / 2 - ring, -D / 2 + ring, H]], roofEdge, 0.7);
     const spotsBack = [];
@@ -12645,7 +12645,7 @@ const ArenaGen = (function () {
       decor.filter((o) => o.kind === 'lamp').forEach((o) => {
         const gnd = P(o.x + 0.9, o.y, 0), top = P(o.x + 0.9, o.y, 6.2);
         s += `<ellipse cx="${f1(gnd[0])}" cy="${f1(gnd[1])}" rx="${f1(7 * K)}" ry="${f1(3.8 * K)}" fill="url(#${id}g)"/>` +
-          `<circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="2.6" fill="#ffd98a" opacity="0.35"/><circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="1.1" fill="#fff6d6"/>`;
+          `<circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="1.6" fill="#ffd98a" opacity="0.35"/><circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="0.6" fill="#fff6d6"/>`;
       });
       // projecteurs de toiture plus lumineux
       s += spots(spotsBack).replace(/opacity="0.22"/g, 'opacity="0.5"') + spots(spotsFront).replace(/opacity="0.22"/g, 'opacity="0.5"');
