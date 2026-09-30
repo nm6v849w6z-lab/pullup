@@ -9,7 +9,11 @@
 // 4) les règles Premium inchangées (logo, motifs, parquet) ;
 // 5) aucun doublon : plus de formulaire dans Paramètres ni sur la page
 //    Salle, aucun id en double dans la page.
+// 6) les 34 motifs de maillot (2026-09-30, façon BuzzerBeater) : rendu SVG
+//    de chacun sans erreur ni id en double, validation, grille aux couleurs
+//    du club avec cadenas pour un club gratuit.
 const fs = require("fs");
+const Engine = require("./engine.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
@@ -66,6 +70,40 @@ function duplicateIds(doc) {
   assert(!doc.querySelector("#persoCourtHolder [data-court-wood]") && doc.querySelector('#persoCourtHolder [data-tab="premium"]'), "gratuit : parquet en aperçu seul + « Passer Premium »");
   assert(doc.querySelector('#persoStatus [data-tab="premium"]'), "gratuit : bouton « Passer Premium » en tête de page");
 
+  // --- 6a) Motifs : rendu de chacun, ids uniques, listes cohérentes.
+  const patterns = win.eval("JERSEY_PATTERNS");
+  assert(patterns.length === 34 && JSON.stringify(patterns) === JSON.stringify(Engine.JERSEY_PATTERNS), "34 motifs, même liste côté client et moteur");
+  assert(patterns.every(p => typeof win.eval("JERSEY_PATTERN_LABELS")[p] === "string"), "un libellé par motif");
+  const lab = doc.createElement("div");
+  doc.body.appendChild(lab);
+  lab.innerHTML = win.eval(`[0, 1, 2].map(i => JERSEY_PATTERNS.map(p => jerseySvgHtml(i ? "B" : "A", ["rouge", "blanc", "noir"][i], 60, i ? "away" : "home", p, i === 2 ? JERSEY_TWO_TONE_SETS.bleu_jaune : null, i === 1 ? "Sponsor" : null, i ? 7 : null)).join("")).join("")`);
+  const svgs = lab.querySelectorAll("svg");
+  assert(svgs.length === 34 * 3 && !/undefined|NaN/.test(lab.innerHTML), "les 34 motifs se dessinent (3 variantes), sans valeur indéfinie");
+  const badRefs = [...lab.querySelectorAll("svg")].flatMap(svg => [...svg.outerHTML.matchAll(/url\(#([^)]+)\)/g)].map(m => m[1]).filter(id => !svg.querySelector(`[id="${id}"]`)));
+  assert(badRefs.length === 0, "chaque url(#…) pointe vers un id du même maillot " + badRefs.slice(0, 3).join(","));
+  patterns.slice(4).forEach(p => {
+    const one = win.eval(`jerseySvgHtml("A", "bleu", 60, "home", ${JSON.stringify(p)}, null)`);
+    const norm = h => h.replace(/jersey\d+/g, "J").replace(/aria-label="[^"]*"/, "");
+    if (norm(one) === norm(win.eval(`jerseySvgHtml("A", "bleu", 60, "home", "uni", null)`))) throw new Error("❌ motif sans effet : " + p);
+    if (!/<(rect|path|circle|linearGradient|radialGradient|pattern)/.test(one.replace(/<path d="M 40 8[^>]*>/g, ""))) throw new Error("❌ motif vide : " + p);
+  });
+  assert(duplicateIds(doc).length === 0, "aucun id en double avec 102 maillots sur la page");
+  lab.remove();
+
+  // --- 6b) Grille des motifs, club gratuit : cadenas, aucune requête.
+  const homeGrid = doc.querySelector('[data-pz-jersey="home"] .jersey-pattern-picker');
+  assert(homeGrid.querySelectorAll(".jersey-pattern-btn").length === 34 && homeGrid.querySelectorAll("[data-pattern-locked]").length === 33, "gratuit : 34 vignettes, 33 verrouillées (domicile)");
+  assert(doc.querySelectorAll('[data-pz-jersey="away"] [data-pattern-locked]').length === 33, "gratuit : 33 vignettes verrouillées (extérieur)");
+  assert(homeGrid.querySelectorAll(".pz-lock").length === 33, "cadenas sur chaque motif Premium");
+  const redHex = win.eval("JERSEY_COLORS[teamA.jerseyColor]");
+  assert(homeGrid.querySelector('[data-pattern-locked="bande_centrale"] > svg > path').getAttribute("fill") === redHex, "vignettes dessinées aux couleurs du club");
+  const before = calls.length, patternBefore = win.eval("teamA.jerseyPattern");
+  homeGrid.querySelector('[data-pattern-locked="nid_abeille"]').click();
+  await flush(dom);
+  const cta = doc.querySelector('[data-pz-pattern-cta="home"]');
+  assert(/Nid d'abeille/.test(cta.textContent) && cta.querySelector('[data-tab="premium"]'), "clic sur un motif verrouillé : invitation « Passer Premium »");
+  assert(calls.slice(before).every(c => !/jersey/.test(c.url)) && win.eval("teamA.jerseyPattern") === patternBefore, "aucune requête envoyée, motif inchangé");
+
   // --- 3) Actions → mêmes routes serveur.
   const trigramInput = doc.getElementById("salleArenaNameInput");
   trigramInput.value = "Le Chaudron";
@@ -107,6 +145,14 @@ function duplicateIds(doc) {
   assert(tt, "combinaison de 2 couleurs proposée pour un motif");
   tt.click();
   assert(called("/api/club/set-jersey-two-tone"), "combinaison domicile → /api/club/set-jersey-two-tone");
+  assert(doc.querySelectorAll('[data-pz-jersey="home"] [data-jersey-pattern]').length === 34 && !doc.querySelector("[data-pattern-locked]"), "Premium : les 34 motifs cliquables, plus de cadenas");
+  doc.querySelector('[data-jersey-pattern="nid_abeille"]').click();
+  assert(win.eval("teamA.jerseyPattern") === "nid_abeille" && calls.some(c => c.url.includes("/api/club/set-jersey-pattern") && c.body.includes("nid_abeille")), "nouveau motif domicile → /api/club/set-jersey-pattern");
+  assert(/nid d'abeille/.test(doc.querySelector('[data-pz-jersey="home"] .pz-jersey-stage svg').getAttribute("aria-label")), "grand aperçu redessiné avec le nouveau motif");
+  doc.querySelector('[data-away-jersey-pattern="rayons"]').click();
+  assert(win.eval("teamA.awayJerseyPattern") === "rayons" && calls.some(c => c.url.includes("/api/club/set-away-jersey-pattern") && c.body.includes("rayons")), "nouveau motif extérieur → /api/club/set-away-jersey-pattern");
+  assert(win.eval("teamA.setJerseyPattern('inconnu').ok") === false, "motif inconnu refusé");
+  doc.querySelector('[data-jersey-pattern="rayures"]').click();
   doc.querySelector('[data-away-jersey-pattern="bandes"]').click();
   assert(win.eval("teamA.awayJerseyPattern") === "bandes" && called("/api/club/set-away-jersey-pattern"), "motif extérieur → /api/club/set-away-jersey-pattern");
   doc.querySelector("[data-away-jersey-twotone]").click();
@@ -123,6 +169,11 @@ function duplicateIds(doc) {
   assert(called("/api/club/set-court-style"), "parquet → /api/club/set-court-style");
   assert(/enregistré/.test(doc.getElementById("persoCourtFeedback").textContent), "confirmation du parquet");
   assert(duplicateIds(doc).length === 0, "aucun id en double (Premium)");
+
+  // --- 6c) Premium perdu : motif conservé mais affichage retombé sur « uni ».
+  win.eval("teamA.jerseyPattern = 'chevrons'; teamA.isPaying = false;");
+  assert(win.eval("effectiveJerseyPattern(teamA)") === "uni" && win.eval("teamA.jerseyPattern") === "chevrons", "Premium perdu : affiché en uni, choix conservé pour une réactivation");
+  win.eval("teamA.isPaying = true; teamA.jerseyPattern = 'rayures';");
 
   // --- 5) Plus de doublons ailleurs.
   win.eval("showSettingsModal('club')");
