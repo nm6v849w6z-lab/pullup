@@ -767,7 +767,8 @@ function leagueBestGameCandidates(entry, league, cup) {
     const round = cup && (cup.rounds || []).find(x => x.index === roundIndex);
     const m = round && round.matches.find(x => !x.bye && (isMe(x.home, teamIdx) || isMe(x.away, teamIdx)));
     if (!m) return null;
-    return isMe(m.home, teamIdx) ? m.away.name : m.home.name;
+    const ref = isMe(m.home, teamIdx) ? m.away : m.home;
+    return { name: ref.name, leagueId: ref.leagueId, idx: ref.idx };
   };
   league.teams.forEach((team, teamIdx) => {
     (team.players || []).forEach(p => {
@@ -775,12 +776,14 @@ function leagueBestGameCandidates(entry, league, cup) {
         const competition = m.competition || "championship";
         if (competition === "friendly") return;
         if (!BEST_GAME_STATS.some(k => (m[k] || 0) > 0)) return;
-        let opponent = null;
+        // Adversaire (nom + club cliquable : { leagueId, idx }).
+        let opp = null;
         if (competition === "championship") {
-          const opp = byRound.get(`${m.round}|${teamIdx}`);
-          opponent = opp != null && league.teams[opp] ? league.teams[opp].name : null;
-        } else if (competition === "cup") opponent = cupOpponent(m.round, teamIdx);
-        const row = { name: p.name, playerId: p.id, nationality: p.nationality || null, team: team.name, teamIdx, isHuman: !!team.isHuman, leagueId: entry.id, label, competition, opponent };
+          const o = byRound.get(`${m.round}|${teamIdx}`);
+          opp = o != null && league.teams[o] ? { name: league.teams[o].name, leagueId: entry.id, idx: o } : null;
+        } else if (competition === "cup") opp = cupOpponent(m.round, teamIdx);
+        const row = { name: p.name, playerId: p.id, nationality: p.nationality || null, team: team.name, teamIdx, isHuman: !!team.isHuman, leagueId: entry.id, label, competition,
+          opponent: opp ? opp.name : null, opponentLeagueId: opp ? opp.leagueId : null, opponentIdx: opp ? opp.idx : null };
         BEST_GAME_STATS.forEach(k => { row[k] = m[k] || 0; });
         out.push(row);
       });
@@ -815,7 +818,7 @@ function countryStats(world, country, leagues, now = Date.now()) {
   const bests = {};
   BEST_GAME_STATS.forEach(k => {
     bests[k] = games.filter(g => g[k] > 0).sort((a, b) => b[k] - a[k]).slice(0, BEST_GAMES_TOP)
-      .map(g => ({ name: g.name, playerId: g.playerId, nationality: g.nationality, team: g.team, teamIdx: g.teamIdx, isHuman: g.isHuman, leagueId: g.leagueId, label: g.label, competition: g.competition, opponent: g.opponent, value: g[k] }));
+      .map(g => ({ name: g.name, playerId: g.playerId, nationality: g.nationality, team: g.team, teamIdx: g.teamIdx, isHuman: g.isHuman, leagueId: g.leagueId, label: g.label, competition: g.competition, opponent: g.opponent, opponentLeagueId: g.opponentLeagueId, opponentIdx: g.opponentIdx, value: g[k] }));
   });
   const divisions = [...new Set(entries.map(e => e.level))].sort((a, b) => a - b)
     .map(level => ({ level, name: Engine.divisionInfo(level).name, leagues: entries.filter(e => e.level === level).map(e => ({ id: e.id, label: divisionLabel(e.level, e.group) })) }));

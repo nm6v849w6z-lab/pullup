@@ -111,8 +111,19 @@ const ok = m => console.log("✅ " + m);
       assert.ok(mine.ok && mine.mine, "son propre championnat signalé (onglet Ligue habituel)");
       const missing = await get("/api/world/league-page?league=xx-9", tok);
       assert.ok(!missing.ok);
+      // /api/world/player-page : même contenu nettoyé + le joueur demandé.
+      const pl = usLg.teams[3].players[0];
+      const pp = await get(`/api/world/player-page?league=us-1&team=3&id=${pl.id}`, tok);
+      assert.ok(pp.ok && !pp.mine && pp.player.name === pl.name && pp.player.teamIdx === 3 && pp.player.playerId === pl.id);
+      assert.ok(pp.league.teams.every(t => !t.managerLinkToken && !t.plannedTactics && !(t.pushSubscriptions || []).length), "ni jeton ni tactique prévue");
+      assert.ok(!pp.league.liveMatches && !(pp.league.transferListings || []).length && !(pp.league.privateLeagues || []).length);
+      assert.ok(!(await get(`/api/world/player-page?league=us-1&team=3&id=999999`, tok)).ok, "joueur inconnu refusé");
+      assert.ok(!(await get(`/api/world/player-page?league=us-1&team=42&id=${pl.id}`, tok)).ok, "club inconnu refusé");
+      // Meilleures performances : adversaire cliquable (championnat + club).
+      const b = World.countryOverview(world, "fr", { myCountry: "fr" }).bests.pts.find(x => x.competition === "championship" && x.opponent);
+      assert.ok(b && b.opponentLeagueId === "fr-1" && Number.isInteger(b.opponentIdx), "adversaire (ligue + index) des meilleures performances");
     } finally { server.close(); }
-    ok("/api/world/league-page : championnat étranger complet (résultats, journaux de matchs, zones), sans jeton, tactique, marché ni direct ; « mine » pour le sien");
+    ok("/api/world/league-page et player-page : championnat étranger complet (résultats, journaux de matchs, zones), sans jeton, tactique, marché ni direct ; « mine » pour le sien ; joueur ou club inconnu refusé ; adversaires des meilleures performances cliquables");
   }
 
   fs.rmSync(dir, { recursive: true, force: true });
