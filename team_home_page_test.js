@@ -177,14 +177,11 @@ console.log("✅ Les interviews résolues apparaissent bien sur l'Aperçu, sous 
 // statut payant, logo personnalisé.
 // ---------------------------------------------------------------------
 clickTab("club");
-// Retour utilisateur (2026-09) : "je rajouterai une petite brique à coté de
-// dernier évènement avec un petit bouton changer l'identité [...] via une
-// petite fenetre qui s ouvre" : le panneau "Identité du club" (et son
-// #clubIdentityPanel) ne vit plus en permanence sur le tableau de bord,
-// seulement dans cette fenêtre modale une fois ouverte (voir
-// showClubIdentityModal). Reste ouverte pour tout le reste de cette partie
-// du test, donc un seul appel suffit ici.
+// L'ancienne fenêtre « Identité du club » est remplacée par l'onglet
+// Personnalisation (retour utilisateur 2026-09-30) : showClubIdentityModal
+// (nom conservé, bouton du tableau de bord) y redirige désormais.
 win.showClubIdentityModal();
+if (doc.getElementById("personnalisationSection").classList.contains("hidden")) throw new Error("❌ showClubIdentityModal devrait ouvrir l'onglet Personnalisation.");
 const shapeBBtn = doc.querySelector('[data-jersey-shape="B"]');
 if (!shapeBBtn) throw new Error("❌ (setup) Bouton de forme de maillot \"B\" introuvable sur le tableau de bord.");
 shapeBBtn.click();
@@ -206,7 +203,7 @@ console.log("Statut club avant bascule :", win.eval("teamA.isPaying"));
 if (win.eval("teamA.isPaying")) throw new Error("❌ (setup) Le club devrait démarrer gratuit.");
 if (doc.getElementById("clubLogoFileInput")) throw new Error("❌ Le champ de chargement de logo ne devrait PAS être proposé à un club gratuit.");
 // Premium (2026-09-27) : plus d'interrupteur dans l'identité du club, bouton de l'onglet Premium.
-(win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderClubIdentityPanel()"));
+(win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderPersonnalisationSection()"));
 console.log("Statut club après bascule :", win.eval("teamA.isPaying"));
 if (!win.eval("teamA.isPaying")) throw new Error("❌ Cliquer sur \"Passer en payant\" devrait passer le club en payant.");
 if (!doc.getElementById("clubLogoFileInput")) throw new Error("❌ Le champ de chargement de logo devrait apparaître une fois le club payant.");
@@ -218,8 +215,8 @@ console.log("✅ Le statut payant bascule bien et révèle le chargement de logo
 // une fois l'image prête.
 const tinyPngDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 win.eval(`teamA.setCustomLogo(${JSON.stringify(tinyPngDataUrl)});`);
-win.renderClubIdentityPanel();
-const logoImg = doc.querySelector("#clubIdentityPanel .club-logo-preview img.team-logo-img");
+win.renderPersonnalisationSection();
+const logoImg = doc.querySelector("#persoIdentityCard .club-logo-preview img.team-logo-img");
 console.log("Logo personnalisé affiché sur le tableau de bord :", !!logoImg, "| src correct :", logoImg && logoImg.src === tinyPngDataUrl);
 if (!logoImg || logoImg.src !== tinyPngDataUrl) throw new Error("❌ Le logo personnalisé chargé devrait être affiché tel quel sur le tableau de bord.");
 if (!doc.getElementById("clubLogoResetBtn")) throw new Error("❌ Le bouton \"Revenir au logo type\" devrait apparaître une fois un logo personnalisé chargé.");
@@ -228,7 +225,7 @@ console.log("✅ Le logo personnalisé s'affiche bien une fois chargé (club pay
 doc.getElementById("clubLogoResetBtn").click();
 console.log("customLogoDataUrl après \"Revenir au logo type\" :", win.eval("teamA.customLogoDataUrl"));
 if (win.eval("teamA.customLogoDataUrl") !== null) throw new Error("❌ \"Revenir au logo type\" devrait effacer customLogoDataUrl.");
-if (doc.querySelector("#clubIdentityPanel .club-logo-preview img.team-logo-img")) {
+if (doc.querySelector("#persoIdentityCard .club-logo-preview img.team-logo-img")) {
   throw new Error("❌ Après \"Revenir au logo type\", le logo affiché devrait redevenir le SVG type, plus une image.");
 }
 console.log("✅ \"Revenir au logo type\" retire bien le logo personnalisé.");
@@ -237,8 +234,8 @@ console.log("✅ \"Revenir au logo type\" retire bien le logo personnalisé.");
 // fiche équipe ET le tableau de bord (retour utilisateur : "le logo de
 // l'équipe doit être type dès lors que l'équipe ne paie pas").
 win.eval(`teamA.setCustomLogo(${JSON.stringify(tinyPngDataUrl)}); teamA.setPaying(false);`);
-win.renderClubIdentityPanel();
-if (doc.querySelector("#clubIdentityPanel .club-logo-preview img.team-logo-img")) {
+win.renderPersonnalisationSection();
+if (doc.querySelector("#persoIdentityCard .club-logo-preview img.team-logo-img")) {
   throw new Error("❌ Un club redevenu gratuit ne devrait plus afficher son logo personnalisé, même si customLogoDataUrl est encore présent.");
 }
 if (doc.getElementById("clubLogoFileInput")) throw new Error("❌ Le champ de chargement ne devrait plus être proposé une fois le club redevenu gratuit.");
@@ -254,14 +251,14 @@ console.log("✅ Repasser en club gratuit masque bien le logo personnalisé (san
 // dessins particuliers (rayure, degrade...)"). Club encore gratuit à ce
 // stade (repassé à false juste au-dessus).
 // ---------------------------------------------------------------------
-win.renderClubIdentityPanel();
+win.renderPersonnalisationSection();
 if (doc.querySelector("#clubIdentityPanel [data-jersey-pattern]")) {
   throw new Error("❌ Le sélecteur de motif de maillot ne devrait PAS être proposé à un club gratuit.");
 }
 console.log("✅ Le sélecteur de motif de maillot est bien masqué pour un club gratuit.");
 
 // Premium (2026-09-27) : plus d'interrupteur dans l'identité du club, bouton de l'onglet Premium.
-(win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderClubIdentityPanel()"));
+(win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderPersonnalisationSection()"));
 const degradeBtn = doc.querySelector('[data-jersey-pattern="degrade"]');
 if (!degradeBtn) throw new Error("❌ (setup) Bouton de motif \"degrade\" introuvable une fois le club payant.");
 degradeBtn.click();
@@ -299,14 +296,14 @@ console.log("✅ Repasser en club gratuit masque bien le motif personnalisé (sa
 // choix"). Club encore gratuit à ce stade (repassé à false juste au-dessus),
 // jerseyPattern déjà "degrade" (conservé, juste ignoré au rendu).
 // ---------------------------------------------------------------------
-win.renderClubIdentityPanel();
+win.renderPersonnalisationSection();
 if (doc.querySelector("#clubIdentityPanel [data-jersey-twotone]")) {
   throw new Error("❌ Le sélecteur de combinaison de couleurs ne devrait PAS être proposé à un club gratuit.");
 }
 console.log("✅ Le sélecteur de combinaison de couleurs est bien masqué pour un club gratuit.");
 
 // Premium (2026-09-27) : plus d'interrupteur dans l'identité du club, bouton de l'onglet Premium.
-(win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderClubIdentityPanel()"));
+(win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderPersonnalisationSection()"));
 const twoToneSets = win.eval("JERSEY_TWO_TONE_SETS");
 const twoToneKeys = Object.keys(twoToneSets);
 console.log("Combinaisons de couleurs disponibles :", twoToneKeys.length, "(mets plus de choix)");
@@ -338,7 +335,7 @@ console.log("✅ La combinaison de 2 couleurs personnalisée apparaît bien sur 
 // lui-même retombe déjà sur "uni", donc twoTone n'a de toute façon plus
 // d'effet visible tant que le club n'est pas repassé payant).
 win.eval("teamA.setPaying(false);");
-win.renderClubIdentityPanel();
+win.renderPersonnalisationSection();
 if (doc.querySelector("#clubIdentityPanel [data-jersey-twotone]")) {
   throw new Error("❌ Un club redevenu gratuit ne devrait plus proposer le sélecteur de combinaison de couleurs.");
 }

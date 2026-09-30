@@ -74,17 +74,18 @@ console.log("✅ La navigation depuis le tableau de bord ouvre les vraies pages 
 clickTab("club");
 
 // ---------------------------------------------------------------------
-// Partie 3 : bouton "Identité du club" (carte retirée du tableau de bord,
-// accès relocalisé vers la modale existante, voir DEV_NOTES.md point 10).
+// Partie 3 : bouton "Identité du club" (carte retirée du tableau de bord) :
+// ouvre l'onglet Personnalisation (retour utilisateur 2026-09-30), qui
+// remplace l'ancienne fenêtre d'identité.
 // ---------------------------------------------------------------------
 const identityBtn = doc.querySelector('[data-dash-href="/parametres/identite"]');
 if (!identityBtn) throw new Error("❌ Le bouton \"Identité du club\" devrait être présent dans l'en-tête du tableau de bord.");
 identityBtn.dispatchEvent(new win.MouseEvent("click", { bubbles: true, cancelable: true }));
-const identityOverlay = doc.getElementById("clubIdentityModalOverlay");
-console.log("Modale Identité ouverte :", !!identityOverlay);
-if (!identityOverlay) throw new Error("❌ Le bouton \"Identité du club\" devrait ouvrir la modale d'identité existante.");
-win.eval("closeClubIdentityModal()");
-console.log("✅ Le bouton \"Identité du club\" ouvre bien la modale existante (pas de nouvel écran de paramètres créé).");
+const persoShown = !doc.getElementById("personnalisationSection").classList.contains("hidden");
+console.log("Onglet Personnalisation ouvert :", persoShown);
+if (!persoShown || doc.getElementById("clubIdentityModalOverlay")) throw new Error("❌ Le bouton \"Identité du club\" devrait ouvrir l'onglet Personnalisation (plus de fenêtre).");
+clickTab("club");
+console.log("✅ Le bouton \"Identité du club\" ouvre bien l'onglet Personnalisation.");
 
 // ---------------------------------------------------------------------
 // Partie 4 : une VRAIE interview de début de saison est déjà présente

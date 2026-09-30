@@ -73,14 +73,10 @@ console.log("✅ Le maillot extérieur affiche bien SA PROPRE couleur stockée, 
 // Partie 3 : panneau "Identité du club" (tableau de bord) : sélecteur de
 // couleur extérieure indépendant, forme partagée avec le domicile.
 // ---------------------------------------------------------------------
-clickTab("club");
-// Retour utilisateur (2026-09) : "je rajouterai une petite brique à coté de
-// dernier évènement avec un petit bouton changer l'identité [...] via une
-// petite fenetre qui s ouvre" : le panneau "Identité du club" (et son
-// #clubIdentityPanel) ne vit plus en permanence sur le tableau de bord,
-// seulement dans cette fenêtre modale une fois ouverte (voir
-// showClubIdentityModal). Reste ouverte pour tout le reste de ce test.
-win.showClubIdentityModal();
+// Maillots : onglet Personnalisation (retour utilisateur 2026-09-30),
+// qui remplace l'ancienne fenêtre « Identité du club » (#clubIdentityPanel
+// y vit désormais en permanence).
+clickTab("personnalisation");
 const awayColorBtns = doc.querySelectorAll("[data-away-jersey-color]");
 console.log("Boutons de couleur extérieure trouvés :", awayColorBtns.length);
 if (awayColorBtns.length !== 8) throw new Error(`❌ Le sélecteur de couleur extérieure devrait exposer les 8 couleurs de JERSEY_COLORS, obtenu ${awayColorBtns.length}.`);
