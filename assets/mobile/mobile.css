@@ -59,8 +59,11 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
   .topbar-left { flex: 1 1 auto; min-width: 0; }
   .topbar-right { flex: none; }
   button.topbar-cta { padding: 10px 14px; font-size: 12.5px; white-space: nowrap; max-width: none; line-height: 1.1; }
-  .topbar-search { display: none; }
-  body.m-search-open .topbar-search {
+  .topbar .topbar-search { display: none; }
+  /* Recherche du 2e joueur (Comparer) : même style que la recherche du haut,
+     mais toujours visible dans la page (elle était masquée sur téléphone). */
+  #compareSearchWrap { display: block; max-width: none !important; }
+  body.m-search-open .topbar .topbar-search {
     display: block; position: absolute; left: 10px; right: 10px; top: 100%; margin-top: 8px;
     max-width: none; z-index: 30;
   }
