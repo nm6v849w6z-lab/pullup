@@ -144,7 +144,8 @@ console.log("✅ L'agrandissement de la salle (+100 places en gradins) fonctionn
 // payé pendant l'entraînement (indépendant de la fréquentation des matchs).
 // Même confirmation avant achat que l'agrandissement de la salle ci-dessus,
 // déclenchée par la flèche de la carte (pas la carte entière). ---
-const shopCardBefore = doc.querySelector("#otherFacilitiesPanel [data-fan-shop-card]");
+win.eval('showFacilityModal("fanShop")');
+const shopCardBefore = doc.querySelector("#facilityModalOverlay [data-fan-shop-card]");
 if (!shopCardBefore) throw new Error("❌ Aucune carte d'achat de boutique des supporters trouvée.");
 const budgetBeforeShop = saved.team.budget;
 const shopArrow = shopCardBefore.querySelector(".facility-upgrade-arrow");

@@ -145,11 +145,21 @@ console.log("✅ Graphique (matchs joués seulement), 2 derniers matchs dans la 
 
 // --- 5. Infrastructures ---
 win.eval("teamA.facilityLevels = { tvStation: 0, gym: 2, wellness: 0 }; renderSalleSection();");
-const gym = doc.querySelector('[data-facility-card="gym"]');
+// Quartier (2026-09-30) : les installations sont dessinées autour de la salle
+// et chaque bâtiment ouvre sa brique dans une fenêtre.
+for (const k of ["trainingCenter", "fanShop", "tvStation", "gym", "wellness"]) {
+  if (!doc.querySelector(`#arenaVisualCard .qd-label[data-district="${k}"]`)) throw new Error(`❌ Le quartier devrait montrer l'installation ${k}.`);
+}
+if (!/à construire/.test(doc.querySelector('#arenaVisualCard .qd-label[data-district="tvStation"]').textContent)) throw new Error("❌ Une installation jamais construite devrait être marquée « à construire » dans le quartier.");
+doc.querySelector('#arenaVisualCard .qd-label[data-district="gym"]').dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
+const gym = doc.querySelector('#facilityModalOverlay [data-facility-card="gym"]');
+if (!gym) throw new Error("❌ Cliquer sur la musculation devrait ouvrir sa brique.");
 if (gym.classList.contains("sl-fac--off")) throw new Error("❌ Une infrastructure construite ne devrait pas être grisée.");
 if (gym.querySelectorAll(".sl-pips span.on").length !== 2 || gym.querySelectorAll(".sl-pips span").length !== 3) throw new Error("❌ La jauge de la salle de musculation (niveau 2/3) devrait avoir 2 pastilles allumées sur 3.");
-const tv = doc.querySelector('[data-facility-card="tvStation"]');
-if (!tv.classList.contains("sl-fac--off") || !tv.querySelector(".sl-fac-why")) throw new Error("❌ Une infrastructure jamais construite devrait être marquée 'non construite' avec sa description.");
+doc.querySelector("#facilityModalOverlay .qd-close").click();
+doc.querySelector('#arenaVisualCard [data-district="tvStation"]').dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
+const tv = doc.querySelector('#facilityModalOverlay [data-facility-card="tvStation"]');
+if (!tv || !tv.classList.contains("sl-fac--off") || !tv.querySelector(".sl-fac-why")) throw new Error("❌ Une infrastructure jamais construite devrait être marquée 'non construite' avec sa description.");
 if (!tv.textContent.includes("Construire")) throw new Error("❌ Une infrastructure jamais construite devrait proposer 'Construire'.");
 if (!txt("#facilitiesCountPill").includes("/ 5 construites")) throw new Error("❌ Le compteur d'infrastructures construites devrait être affiché.");
 tv.querySelector(".facility-card-action .sl-fac-action-label").click();

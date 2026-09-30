@@ -306,32 +306,23 @@ function clickTab(key) {
 }
 
 clickTab("salle");
-const otherHolder = doc.getElementById("otherFacilitiesPanel");
-if (!otherHolder) throw new Error("❌ #otherFacilitiesPanel devrait exister sur l'onglet Salle.");
-const cardsBefore = otherHolder.querySelectorAll(".staff-hire-card");
-// 1 Centre de formation + 1 Boutique des supporters (retour utilisateur,
-// 2026-09 : "la boutique de supporters doit être avec les autres
-// infrastructures en haut") + 3 infrastructures CLUB_FACILITIES = 5.
-if (cardsBefore.length !== 5) throw new Error(`❌ La grille "Autres infrastructures" devrait afficher 5 cartes (Centre de formation + Boutique des supporters + 3 infrastructures), obtenu ${cardsBefore.length}.`);
-console.log(`✅ L'onglet Salle affiche bien la grille "Autres infrastructures" (${cardsBefore.length} cartes).`);
+// Quartier (2026-09-30) : les 5 installations sont dessinées autour de la
+// salle (étiquettes data-district) et chaque bâtiment ouvre sa brique dans
+// une fenêtre (showFacilityModal) — plus de grille « Autres infrastructures ».
+const districtKeys = [...doc.querySelectorAll("#arenaVisualCard .qd-label[data-district]")].map(e => e.dataset.district);
+if (districtKeys.length !== 5) throw new Error(`❌ Le quartier devrait montrer 5 installations, obtenu ${districtKeys.length}.`);
+console.log(`✅ Le quartier de l'onglet Salle montre bien les 5 installations (${districtKeys.join(", ")}).`);
+const cardText = k => { win.eval(`showFacilityModal(${JSON.stringify(k)})`); const t = doc.getElementById("facilityModalOverlay").textContent; win.eval("closeFacilityModal()"); return t; };
+// Chaque brique n'affiche que l'état ACTUEL de l'installation (niveau 0 :
+// nom du palier 0), jamais un aperçu du palier suivant.
+if (!cardText("tvStation").includes("Aucune station TV")) throw new Error("❌ La brique devrait afficher l'état actuel de la Station TV (\"Aucune station TV\" au niveau 0).");
+if (!cardText("gym").includes("Aucune salle de musculation")) throw new Error("❌ La brique devrait afficher l'état actuel de la Salle de musculation.");
+if (!cardText("wellness").includes("Aucun espace bien-être")) throw new Error("❌ La brique devrait afficher l'état actuel de l'Espace bien-être.");
+if (!cardText("trainingCenter").includes("Centre de formation")) throw new Error("❌ La brique du Centre de formation devrait s'ouvrir.");
+console.log("✅ Les 3 nouvelles infrastructures (état actuel, niveau 0) et le Centre de formation s'ouvrent depuis le quartier.");
+win.eval('showFacilityModal("tvStation")');
+const otherHolder = doc.getElementById("facilityModalOverlay");
 
-// Chaque carte n'affiche que l'état ACTUEL de l'infrastructure (retour
-// utilisateur, 2026-09 : "je ne veux voir que l'état actuel [...] une
-// petite flèche sur la brique pour upgrader"), jamais un aperçu du palier
-// suivant — donc au niveau 0 (rien construit), le nom affiché est celui du
-// palier 0 ("Aucune station TV", etc.), pas celui du premier palier payant.
-if (!otherHolder.textContent.includes("Aucune station TV")) throw new Error("❌ La grille devrait afficher l'état actuel de la Station TV (\"Aucune station TV\" au niveau 0).");
-if (!otherHolder.textContent.includes("Aucune salle de musculation")) throw new Error("❌ La grille devrait afficher l'état actuel de la Salle de musculation (\"Aucune salle de musculation\" au niveau 0).");
-if (!otherHolder.textContent.includes("Aucun espace bien-être")) throw new Error("❌ La grille devrait afficher l'état actuel de l'Espace bien-être (\"Aucun espace bien-être\" au niveau 0).");
-if (!otherHolder.textContent.includes("Centre de formation")) throw new Error("❌ La grille devrait mentionner le Centre de formation.");
-console.log("✅ Les 3 nouvelles infrastructures (état actuel, niveau 0) et la carte Centre de formation sont bien présentes.");
-
-// Achat de la station TV via la flèche de sa carte : ouvre d'abord une
-// confirmation (retour utilisateur, 2026-09 : "on voit le cout de
-// l'évolution et on valide si ok", voir showUpgradeConfirm — le nom du
-// PROCHAIN palier, "Studio local", apparaît dans cette confirmation, pas sur
-// la carte elle-même), puis niveau et budget mis à jour après clic sur
-// "Valider", côté client ET persisté côté serveur.
 const budgetBefore = win.eval("teamA.budget");
 const tvCard = otherHolder.querySelector('[data-facility-card="tvStation"]');
 if (!tvCard) throw new Error("❌ La carte de la Station TV (data-facility-card=\"tvStation\") devrait être présente.");

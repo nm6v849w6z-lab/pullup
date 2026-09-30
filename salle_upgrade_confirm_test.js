@@ -45,7 +45,10 @@ clickTab("salle");
 // ---------------------------------------------------------------------
 win.eval("teamA.arenaLevel = 1; teamA.facilityLevels = { tvStation: 0, gym: 0, wellness: 0 }; teamA.budget = 100000000;");
 win.eval("renderSalleSection();");
-const otherHolder = doc.getElementById("otherFacilitiesPanel");
+win.eval('showFacilityModal("gym")');
+// Les infrastructures s'ouvrent désormais depuis la vue quartier, dans une fenêtre.
+const modalFor = k => { win.eval(`showFacilityModal("${k}")`); return doc.getElementById("facilityModalOverlay"); };
+const otherHolder = modalFor("gym");
 const gymCard = otherHolder.querySelector('[data-facility-card="gym"]');
 if (!gymCard) throw new Error("❌ (setup) carte de la salle de musculation introuvable.");
 if (!gymCard.textContent.includes("Aucune salle de musculation")) {
@@ -85,7 +88,8 @@ doc.getElementById("upgradeConfirmCancel").click();
 // ---------------------------------------------------------------------
 win.eval("teamA.fanShopLevel = 0; teamA.budget = 100000000;");
 win.eval("renderSalleSection();");
-const shopCard = otherHolder.querySelector("[data-fan-shop-card]");
+win.eval('showFacilityModal("fanShop")');
+const shopCard = doc.getElementById("facilityModalOverlay").querySelector("[data-fan-shop-card]");
 if (!shopCard) throw new Error("❌ (setup) carte de la boutique des supporters introuvable.");
 if (!shopCard.textContent.includes("Aucune boutique")) {
   throw new Error("❌ Au niveau 0, la carte devrait afficher l'état actuel (\"Aucune boutique\"), pas un aperçu du premier palier payant.");
@@ -111,7 +115,7 @@ console.log("✅ Boutique des supporters : libellé \"Construire\" au niveau 0, 
 // ---------------------------------------------------------------------
 win.eval("teamA.trainingCenterLevel = 1; teamA.budget = 100000000;");
 win.eval("renderSalleSection();");
-const tcCard = otherHolder.querySelector("[data-training-center-card]");
+const tcCard = modalFor("trainingCenter").querySelector("[data-training-center-card]");
 if (!tcCard) throw new Error("❌ (setup) carte du centre de formation introuvable dans l'onglet Salle.");
 if (!tcCard.textContent.includes("Centre de formation")) throw new Error("❌ La carte devrait mentionner le Centre de formation.");
 if (!tcCard.textContent.includes(win.eval("trainingCenterInfo(1).name"))) {
@@ -137,13 +141,13 @@ console.log("✅ Centre de formation : carte état-actuel + flèche d'améliorat
 // l'état COMPLET de l'équipe, pas seulement le champ modifié). ---
 win.eval("teamA.fanShopLevel = FAN_SHOP_LEVELS[FAN_SHOP_LEVELS.length - 1].level;");
 win.eval("renderSalleSection();");
-const shopCardMax = otherHolder.querySelector("[data-fan-shop-card]");
+const shopCardMax = modalFor("fanShop").querySelector("[data-fan-shop-card]");
 if (!shopCardMax.querySelector(".facility-max-badge")) throw new Error("❌ La boutique des supporters au palier maximum devrait afficher un badge 'Max'.");
 console.log("✅ Boutique des supporters au palier maximum : badge 'Max' affiché.");
 
 win.eval("teamA.trainingCenterLevel = TRAINING_CENTER_LEVELS[TRAINING_CENTER_LEVELS.length - 1].level;");
 win.eval("renderSalleSection();");
-const tcCardMax = otherHolder.querySelector("[data-training-center-card]");
+const tcCardMax = modalFor("trainingCenter").querySelector("[data-training-center-card]");
 if (!tcCardMax.querySelector(".facility-max-badge")) throw new Error("❌ Le centre de formation au palier maximum devrait afficher un badge 'Max'.");
 console.log("✅ Centre de formation au palier maximum : badge 'Max' affiché.");
 

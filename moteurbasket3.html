@@ -5969,6 +5969,35 @@
     background:linear-gradient(90deg, #0b1119 0%, rgba(11,17,25,.93) 27%, rgba(11,17,25,.4) 50%, rgba(11,17,25,0) 68%),
                linear-gradient(0deg, rgba(11,17,25,.9) 0%, rgba(11,17,25,0) 45%);}
   .sl-hero-content{position:relative; z-index:2; display:flex; flex-direction:column; gap:14px; padding:24px 26px; width:100%; min-width:0; box-sizing:border-box;}
+  /* Quartier du club (2026-09-30) : bandeau agrandi sur toute la largeur,
+     bâtiments cliquables (voir clubDistrictBuilder / showFacilityModal). */
+  .sl-hero{min-height:560px;}
+  .sl-hero-visual{width:100%;}
+  .sl-hero::after{background:radial-gradient(ellipse 48% 46% at 0% 0%, rgba(11,17,25,.92) 0%, rgba(11,17,25,.55) 55%, rgba(11,17,25,0) 100%),
+    linear-gradient(0deg, rgba(11,17,25,.55) 0%, rgba(11,17,25,0) 18%);}
+  .sl-hero-content{pointer-events:none; width:auto; max-width:560px;}
+  .sl-hero-content > *{pointer-events:auto;}
+  .qd-bld, .qd-label{cursor:pointer;}
+  .qd-bld:hover, .qd-bld:focus{filter:brightness(1.18) drop-shadow(0 0 3px rgba(240,162,60,.7));}
+  .qd-label:hover rect{fill:rgba(240,162,60,.25);}
+  .qd-hint{position:absolute; left:18px; bottom:14px; z-index:2; display:flex; align-items:center; gap:10px; padding:6px 12px 6px 6px; border-radius:999px;
+    background:rgba(11,17,25,.78); border:1px solid var(--line); font-size:12.5px; color:var(--ink-dim); pointer-events:none;}
+  .upgrade-confirm-box.qd-box{position:relative; width:min(420px, calc(100vw - 32px)); max-width:420px; padding:18px; text-align:left;}
+  .qd-box .qd-close{position:absolute; top:10px; right:10px; z-index:1;}
+  .qd-box .facility-card{margin:0; box-shadow:none;}
+  .qd-box .facility-card.sl-fac{padding:20px; gap:12px;}
+  .qd-box .sl-fac .price{font-size:18px !important;}
+  .qd-box .sl-fac .facility-card-category{font-size:11px !important;}
+  @media(max-width:760px){
+    .sl-hero{min-height:0;}
+    /* Téléphone : quartier plus grand, défilement horizontal au doigt
+       (centré sur la salle à l'ouverture, voir renderSalleHero). */
+    .sl-hero.sl-hero::after{background:linear-gradient(180deg, rgba(11,17,25,0) 0, rgba(11,17,25,0) 300px, #0b1119 360px);}
+    .sl-hero .sl-hero-visual{height:360px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+    .sl-hero-visual .arena-card, .sl-hero-visual .arena-visual-wrap{width:780px; max-width:none;}
+    .sl-hero-content{max-width:none;}
+    .qd-hint{position:static; margin:0 16px 14px; width:max-content; max-width:calc(100% - 32px);}
+  }
   .sl-tier{display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px 9px; width:max-content; max-width:100%; padding:5px 11px; border-radius:999px;
     font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--amber);
     background:rgba(240,162,60,.12); border:1px solid rgba(240,162,60,.35);}
@@ -6160,29 +6189,29 @@
 
   /* --- Infrastructures --- */
   .facilities-grid.sl-fac-grid{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:12px;}
-  #salleSection .facility-card.sl-fac{display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:10px; min-height:0; margin:0; padding:15px;
+  :is(#salleSection, .qd-box) .facility-card.sl-fac{display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:10px; min-height:0; margin:0; padding:15px;
     text-align:left; border-radius:14px; background:var(--panel-2); border:1px solid var(--line); transition:transform .15s, border-color .15s;}
-  #salleSection .facility-card.sl-fac:hover{transform:translateY(-2px); border-color:#34466a;}
-  #salleSection .facility-card.sl-fac--off{border-style:dashed;
+  :is(#salleSection, .qd-box) .facility-card.sl-fac:hover{transform:translateY(-2px); border-color:#34466a;}
+  :is(#salleSection, .qd-box) .facility-card.sl-fac--off{border-style:dashed;
     background:repeating-linear-gradient(135deg, rgba(255,255,255,.018) 0 9px, transparent 9px 18px), var(--panel-2);}
   .sl-fac--off .sl-fac-icon{filter:grayscale(1); opacity:.55;}
   .sl-fac--off .price{color:var(--ink-dim);}
   .sl-fac-icon{margin-bottom:10px;}
-  #salleSection .sl-fac .facility-card-category{font-size:10px; letter-spacing:.07em;}
-  #salleSection .sl-fac .price{font-size:14px; font-weight:800;}
-  #salleSection .sl-fac .bonus{font-size:12px; font-weight:600; margin-top:8px;}
+  :is(#salleSection, .qd-box) .sl-fac .facility-card-category{font-size:10px; letter-spacing:.07em;}
+  :is(#salleSection, .qd-box) .sl-fac .price{font-size:14px; font-weight:800;}
+  :is(#salleSection, .qd-box) .sl-fac .bonus{font-size:12px; font-weight:600; margin-top:8px;}
   .sl-pips{display:flex; gap:4px; margin-top:9px;}
   .sl-pips span{flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,.08);}
   .sl-pips span.on{background:var(--amber);}
   .sl-fac-why{margin-top:8px; font-size:12px; line-height:1.35; color:var(--ink-dim);}
-  #salleSection .sl-fac .facility-card-action{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:10px; border-top:1px solid var(--line-soft);}
+  :is(#salleSection, .qd-box) .sl-fac .facility-card-action{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:10px; border-top:1px solid var(--line-soft);}
   /* flex:0 0 auto — sinon la règle générale .facility-card-action--btn
      (flex:1 1 100%) étire la zone et centre le bouton à une hauteur qui
      dépend du texte au-dessus : boutons décalés d'une carte à l'autre
      (retour utilisateur 2026-09-26 : "aligne tous les boutons"). */
-  #salleSection .sl-fac .facility-card-action--btn{flex:0 0 auto; border-top:0; padding-top:4px; margin-top:auto;}
-  #salleSection .sl-fac .facility-card-body{flex:0 1 auto;}
-  #salleSection .sl-fac .facility-upgrade-btn{padding:0 8px; font-size:13px; gap:4px; white-space:normal; flex-wrap:wrap; text-align:center; line-height:1.2; min-height:40px;}
+  :is(#salleSection, .qd-box) .sl-fac .facility-card-action--btn{flex:0 0 auto; border-top:0; padding-top:4px; margin-top:auto;}
+  :is(#salleSection, .qd-box) .sl-fac .facility-card-body{flex:0 1 auto;}
+  :is(#salleSection, .qd-box) .sl-fac .facility-upgrade-btn{padding:0 8px; font-size:13px; gap:4px; white-space:normal; flex-wrap:wrap; text-align:center; line-height:1.2; min-height:40px;}
   .sl-fac-action-label{font-size:12.5px; font-weight:800; color:var(--amber);}
   .sl-fac-action-label small{display:block; font-size:11px; font-weight:500; color:var(--ink-faint);}
 
@@ -8098,6 +8127,7 @@
           <div id="arenaCurrentPanel"></div>
         </div>
         <div id="salleHeroRing" class="sl-ring"></div>
+        <div class="qd-hint"><span class="sl-pill" id="facilitiesCountPill"></span><span>Cliquez sur un bâtiment pour le construire ou l'améliorer</span></div>
       </div>
 
       <div class="sl-grid">
@@ -8126,13 +8156,8 @@
            Personnalisation (retour utilisateur 2026-09-30), la page Salle
            reste compacte ("trop de vide"). -->
 
-      <div class="sl-card">
-        <div class="sl-card-head">
-          <div><div class="sl-eyebrow">Autres infrastructures</div><h3 class="sl-card-title">Développer le club</h3></div>
-          <span class="sl-pill" id="facilitiesCountPill"></span>
-        </div>
-        <div id="otherFacilitiesPanel"></div>
-      </div>
+      <!-- « Autres infrastructures » : intégrées au quartier du bandeau
+           (2026-09-30), chaque bâtiment ouvre sa brique (showFacilityModal). -->
     </div>
   </div>
 
@@ -12266,15 +12291,27 @@ const ArenaGen = (function () {
     const r = rng(options.seed ?? 11);
     const rc = rng((options.seed ?? 11) * 131 + 17);
 
+    // Quartier du club (options.district, voir clubDistrictBuilder) : les
+    // autres installations dessinées autour de la salle, derrière la route
+    // du fond et à gauche de la route latérale. Elles élargissent le cadre.
+    const DX = options.district ? options.district({ P, box, poly, flat, line, rect, faceY, faceX, shade, luminance, INK, K, textOnFaceY, textOnFaceX,
+      W, D, H, dusk, roadY: [-D / 2 - 17, -D / 2 - 9], roadX: [-W / 2 - 20, -W / 2 - 12] }) : null;
     // ---- cadrage : le bâtiment et son parvis remplissent le rectangle
     const frame = [];
+    if (DX) DX.frame.forEach((q) => frame.push(P(q[0], q[1], q[2] || 0)));
     for (const x of [-W / 2, W / 2]) for (const y of [-D / 2, D / 2]) for (const z of [0, H]) frame.push(P(x, y, z));
     frame.push(P(-14, D / 2 + 14), P(14, D / 2 + 14), P(0, 0, H + (L.scoreboard ? 10 : 0)));
     let minX = Math.min(...frame.map((q) => q[0])), maxX = Math.max(...frame.map((q) => q[0]));
     let minY = Math.min(...frame.map((q) => q[1])), maxY = Math.max(...frame.map((q) => q[1]));
     let vw = (maxX - minX) * 1.1, vh = (maxY - minY) * 1.12;
     if (vw / vh < aspect) vw = vh * aspect; else vh = vw / aspect;
-    const vx = (minX + maxX) / 2 - vw / 2, vy = (minY + maxY) / 2 - vh / 2;
+    let vx = (minX + maxX) / 2 - vw / 2, vy = (minY + maxY) / 2 - vh / 2;
+    // Quartier : marge en haut à gauche pour le titre du bandeau de la page
+    // Salle (le décor passe en dessous et à droite).
+    if (DX) {
+      const f = 1.2, nw = vw * f, nh = vh * f;
+      vx -= (nw - vw) * 0.8; vy -= (nh - vh) * 0.75; vw = nw; vh = nh;
+    }
     const inView = (x, y, pad = 30) => { const q = P(x, y, 0); return q[0] > vx - pad && q[0] < vx + vw + pad && q[1] > vy - pad && q[1] < vy + vh + pad * 2; };
 
     // ---- zones du site
@@ -12326,6 +12363,7 @@ const ArenaGen = (function () {
       if (x > px0 - 2 && x < px1 + 2 && y > py0 - 2 && y < py1 + 2) continue;
       if (Math.abs(x) < 16 && y > D / 2 && y < D / 2 + 16) continue;
       if (Math.abs(x) < 5 && y > D / 2) continue;
+      if (DX && DX.lots.some((l) => x > l.x0 - 2.5 && x < l.x1 + 2.5 && y > l.y0 - 2.5 && y < l.y1 + 2.5)) continue;
       if (billboard && x > BBX - 3 && x < BBX + 4 && y > BBY - 8 && y < BBY + 8) continue;
       decor.push({ x, y, kind: 'tree', size, hue });
     }
@@ -12352,7 +12390,8 @@ const ArenaGen = (function () {
         textOnFaceX(x + 0.02, y, (z0 + z1) / 2 + 1, billboard, 1.9, empty ? '#f1f1ee' : (luminance(main) > 0.6 ? '#1a1a1a' : '#ffffff'), (y1 - y0) * 1.45) +
         (dusk ? `<ellipse cx="${f1(P(x + 2, y, z1)[0])}" cy="${f1(P(x + 2, y, z1)[1])}" rx="${f1(3 * K)}" ry="${f1(6 * K)}" fill="rgba(255,236,170,0.16)"/>` : '');
     };
-    const drawDecor = (o) => (o.kind === 'billboard' ? drawBillboard(o.x, o.y) : o.kind === 'tree' ? tree(o.x, o.y, o.size, o.hue) : o.kind === 'car' ? car(o.x, o.y, o.color) : lamp(o.x, o.y));
+    if (DX) DX.items.forEach((it) => decor.push({ ...it, kind: 'district' }));
+    const drawDecor = (o) => (o.kind === 'district' ? `<g class="qd-bld" data-district="${o.key}">${o.draw()}</g>` : o.kind === 'billboard' ? drawBillboard(o.x, o.y) : o.kind === 'tree' ? tree(o.x, o.y, o.size, o.hue) : o.kind === 'car' ? car(o.x, o.y, o.color) : lamp(o.x, o.y));
     decor.sort((a, b) => a.x + a.y - (b.x + b.y));
 
     // ombres portées au sol
@@ -12547,6 +12586,19 @@ const ArenaGen = (function () {
         `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="url(#${id}v)"/>`;
     }
 
+    // Étiquettes du quartier (nom + niveau), au-dessus de tout, cliquables.
+    if (DX) {
+      const kk = vw / 520;
+      DX.labels.forEach((l) => {
+        const q = P(l.x, l.y, l.z);
+        const txt = esc(l.name) + (l.empty ? ' · à construire' : '');
+        const w = Math.max(txt.length * 3.3, 30) + (l.lvl ? 14 : 0) + 8;
+        s += `<g class="qd-label" data-district="${l.key}" transform="translate(${f1(q[0])},${f1(q[1])}) scale(${kk.toFixed(3)})">` +
+          `<rect x="${f1(-w / 2)}" y="-8" width="${f1(w)}" height="11" rx="5.5" fill="rgba(13,19,29,.88)" stroke="${l.empty ? '#9aa8bd' : 'rgba(240,162,60,.7)'}" stroke-width=".5"${l.empty ? ' stroke-dasharray="2 1.5"' : ''}/>` +
+          `<text x="${l.lvl ? -7 : 0}" y="0" text-anchor="middle" font-size="5" font-weight="700" fill="#eef2f7" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">${txt}</text>` +
+          (l.lvl ? `<text x="${f1(w / 2 - 7)}" y="0" text-anchor="middle" font-size="5.2" font-weight="900" fill="#f0a23c" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">${esc(l.lvl)}</text>` : '') + `</g>`;
+      });
+    }
     return `<svg viewBox="${f1(vx)} ${f1(vy)} ${f1(vw)} ${f1(vh)}" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Salle de ${L.capacity} places">${s}</svg>`;
   }
   return { arenaLayout, generateArena };
@@ -46005,6 +46057,13 @@ function renderSalleSection() {
   renderArenaBuild();
   renderAttendanceHistory();
   renderSalleFacilities();
+  // Fenêtre d'une installation ouverte (amélioration faite) : nouvelle brique.
+  const fm = document.getElementById("facilityModalOverlay");
+  if (fm && fm.dataset.key) {
+    const fresh = buildSalleFacilityCards().cards[fm.dataset.key];
+    const old = fm.querySelector(".facility-card");
+    if (fresh && old) old.replaceWith(fresh);
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -46110,6 +46169,90 @@ function arenaGenStyleOptions(team, style, base) {
     if (style.mood === "day") out.mood = "day";
   }
   return out;
+}
+
+// ---------------------------------------------------------------------
+// Quartier du club (retour utilisateur 2026-09-30 : « sur l'image de la
+// salle, possible de voir tous les autres bâtiments et évoluer au fur et à
+// mesure des améliorations ? » puis « sortir le visuel pour le mettre en
+// plus grand, et intégrer les briques des infrastructures directement dans
+// le quartier ; on cliquerait sur l'infrastructure pour ouvrir la brique »).
+// Dessiné par ArenaGen (options.district) dans le style de la salle :
+// boutique, station TV et centre de formation derrière la route du fond,
+// musculation et bien-être à gauche de la route latérale. Chaque bâtiment
+// grandit avec son niveau ; niveau 0 = terrain clôturé « À construire ».
+// ---------------------------------------------------------------------
+function clubDistrictBuilder(team) {
+  const lv = {
+    fanShop: team.fanShopLevel || 0,
+    tvStation: (team.facilityLevels && team.facilityLevels.tvStation) || 0,
+    trainingCenter: team.trainingCenterLevel || 1,
+    gym: (team.facilityLevels && team.facilityLevels.gym) || 0,
+    wellness: (team.facilityLevels && team.facilityLevels.wellness) || 0,
+  };
+  const names = {
+    fanShop: "Boutique", tvStation: "Station TV", trainingCenter: "Centre de formation", gym: "Musculation", wellness: "Bien-être",
+  };
+  return function (h) {
+    const { box, poly, flat, line, rect, faceY, faceX, shade, textOnFaceY, dusk, roadX, roadY } = h;
+    const lots = [], items = [], labels = [], frame = [];
+    const win = (x0, x1, y, z0, z1) => { let s = ""; for (let x = x0 + 0.8; x < x1 - 0.8; x += 2.2) for (let z = z0 + 0.9; z < z1 - 0.6; z += 2.1) s += poly(faceY(x, x + 1.2, y + 0.02, z, z + 1.1), dusk ? "#ffd98a" : "#a9c4d8", 0.35); return s; };
+    const winX = (x, y0, y1, z0, z1) => { let s = ""; for (let y = y0 + 0.8; y < y1 - 0.8; y += 2.2) for (let z = z0 + 0.9; z < z1 - 0.6; z += 2.1) s += poly(faceX(x + 0.02, y, y + 1.2, z, z + 1.1), dusk ? "#f2c877" : "#93b1c7", 0.35); return s; };
+    const bldg = (x0, x1, y0, y1, hgt, wall, roof, sign) => {
+      let s = flat(rect(x0 + 0.6, x1 + hgt * 0.7, y0 + 0.3, y1 + hgt * 0.25), "rgba(0,0,0,0.2)");
+      s += box(x0, x1, y0, y1, 0, hgt, roof, wall, shade(wall, -28), 0.7) + win(x0, x1, y1, 0, hgt) + winX(x1, y0, y1, 0, hgt);
+      s += box(x0 - 0.2, x1 + 0.2, y0 - 0.2, y1 + 0.2, hgt, hgt + 0.35, shade(roof, 12), shade(roof, -20), shade(roof, -35), 0.5);
+      if (sign) s += textOnFaceY((x0 + x1) / 2, y1 + 0.03, hgt - 0.35, sign.toUpperCase(), 1.05, dusk ? "#fff3d0" : "#2a2016", (x1 - x0) * 1.5);
+      return s;
+    };
+    const emptyLot = (x0, x1, y0, y1) => {
+      let s = poly(rect(x0, x1, y0, y1, 0.03), "#a58d62", 0.5) + flat(rect(x0 + 0.8, x1 - 0.8, y0 + 0.8, y1 - 0.8, 0.04), "#b39b6e");
+      for (let x = x0; x <= x1; x += 2.5) s += line([[x, y1, 0.05], [x, y1, 1.2]], "#e8e4d8", 0.5);
+      s += line([[x0, y1, 1], [x1, y1, 1]], "#e8e4d8", 0.4) + line([[x1, y0, 1], [x1, y1, 1]], "#e8e4d8", 0.4);
+      s += box(x0 + 2, x0 + 2.3, y1 - 0.5, y1 - 0.2, 0, 3.2, "#6b5a45", "#6b5a45", "#5a4a38", 0.4) + poly(faceY(x0 + 0.8, x0 + 5.8, y1 - 0.18, 2.2, 4.4), "#f4f1e8", 0.5) +
+        textOnFaceY(x0 + 3.3, y1 - 0.16, 4.1, "À CONSTRUIRE", 0.62, "#8a2a1a", 4.6);
+      return s;
+    };
+    // `draw(x0, x1, y0, y1)` dessine l'installation dans son terrain.
+    const place = (key, x0, x1, y0, y1, draw, topZ) => {
+      lots.push({ x0, x1, y0, y1 });
+      const level = lv[key], empty = key !== "trainingCenter" && level === 0;
+      items.push({ key, x: (x0 + x1) / 2, y: (y0 + y1) / 2, draw: () => (empty ? emptyLot(x0, x1, y0, y1) : draw()) });
+      const z = empty ? 5 : topZ + 4;
+      labels.push({ key, x: (x0 + x1) / 2, y: (y0 + y1) / 2, z, name: names[key], lvl: empty ? "" : (key === "trainingCenter" ? `N${level}` : String(level)), empty });
+      frame.push([x0, y0, 0], [x1, y1, 0], [x0, y1, z + 3], [x1, y0, z + 3]);
+    };
+    const yb1 = roadY[0] - 4, xb1 = roadX[0] - 4;
+    // Boutique (0-3).
+    { const L = lv.fanShop, w = [0, 9, 15, 22][L] || 9, d = [0, 7, 11, 16][L] || 7, hh = [0, 3.4, 5.5, 8][L] || 3.4;
+      place("fanShop", -44, -20, yb1 - 16, yb1, () => bldg(-20 - w, -20, yb1 - d, yb1, hh, "#e8d9b8", L >= 3 ? "#b8452f" : "#c9582f", L >= 2 ? "Boutique" : "Souvenirs"), hh); }
+    // Station TV (0-3) : antenne à partir du niveau 2.
+    { const L = lv.tvStation, w = [0, 10, 14, 18][L] || 10, d = [0, 8, 12, 16][L] || 8, hh = [0, 4.5, 7.5, 11][L] || 4.5;
+      const x1 = 6, x0 = x1 - w, y1 = yb1, y0 = y1 - d, ax = (x0 + x1) / 2, ay = (y0 + y1) / 2;
+      place("tvStation", -12, 6, yb1 - 16, yb1, () => bldg(x0, x1, y0, y1, hh, "#cfd4db", "#5a6472", "HMTV") +
+        (L >= 2 ? box(ax - 0.3, ax + 0.3, ay - 0.3, ay + 0.3, hh + 0.35, hh + (L >= 3 ? 10 : 6), "#cfd6e2", "#cfd6e2", "#aab4c2", 0.4) : "") +
+        (L >= 1 ? poly([[ax + 2, ay - 2, hh + 1.8], [ax + 4.4, ay - 2, hh + 1.8], [ax + 4.4, ay + 0.4, hh + 2.6], [ax + 2, ay + 0.4, hh + 2.6]], "#e6ebf2", 0.4) : ""), hh + (L >= 3 ? 10 : L >= 2 ? 6 : 2)); }
+    // Centre de formation (1-5) : terrains extérieurs à partir du niveau 3.
+    { const L = lv.trainingCenter, w = [0, 10, 14, 18, 22, 26][L] || 10, d = [0, 8, 10, 12, 15, 16][L] || 8, hh = [0, 3.5, 4.5, 6, 8, 9.5][L] || 3.5;
+      place("trainingCenter", 12, 64, yb1 - 16, yb1, () => {
+        let s = bldg(12, 12 + w, yb1 - d, yb1, hh, "#d6c3a3", "#6f5a44", L >= 4 ? "Académie" : "Formation");
+        const courts = L >= 5 ? 2 : L >= 3 ? 1 : 0;
+        for (let c = 0; c < courts; c++) {
+          const cx0 = 16 + w + c * 13, cx1 = cx0 + 11;
+          s += poly(rect(cx0, cx1, yb1 - 14, yb1, 0.03), "#b8743f", 0.5) + line([[cx0 + 5.5, yb1 - 14, 0.05], [cx0 + 5.5, yb1, 0.05]], "#fbf6ec", 0.5) +
+            line([[cx0, yb1 - 7, 0.05], [cx1, yb1 - 7, 0.05]], "#fbf6ec", 0.35);
+        }
+        return s;
+      }, hh); }
+    // Musculation (0-3).
+    { const L = lv.gym, w = [0, 9, 13, 17][L] || 9, d = [0, 8, 13, 18][L] || 8, hh = [0, 3.8, 5.5, 7][L] || 3.8;
+      place("gym", xb1 - 17, xb1, -26, -6, () => bldg(xb1 - w, xb1, -6 - d, -6, hh, "#b9c2cc", L >= 3 ? "#2f8f82" : "#6c7a88", "Muscu"), hh); }
+    // Bien-être (0-3) : bassin extérieur à partir du niveau 2.
+    { const L = lv.wellness, w = [0, 9, 13, 17][L] || 9, d = [0, 7, 10, 13][L] || 7, hh = [0, 2.8, 3.8, 5][L] || 2.8;
+      place("wellness", xb1 - 17, xb1, 1, 24, () => bldg(xb1 - w, xb1, 1, 1 + d, hh, "#f1ede5", "#8fb8c9", "Spa") +
+        (L >= 2 ? poly(rect(xb1 - w + 1, xb1 - 1, 3 + d, 8 + d, 0.05), "#3fa7d0", 0.5) : ""), hh); }
+    return { lots, items, labels, frame };
+  };
 }
 
 // ---------------------------------------------------------------------
@@ -46225,11 +46368,14 @@ function renderSalleHero(info, stats) {
     name: teamA.name,
     sponsor: sponsorNameForSlot(teamA, "salle"),
     billboard: sponsorNameForSlot(teamA, "panneau") || "",
-    aspect: 2.3,
+    district: clubDistrictBuilder(teamA),
+    aspect: 2.1,
   })).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
   visualHolder.innerHTML = `<div class="arena-card">` +
-    `<div class="arena-visual-wrap" role="img" aria-label="${escapeHtml(teamArenaName(teamA))}, ${info.capacity.toLocaleString("fr-FR")} places">${arenaSvg}</div>` +
+    `<div class="arena-visual-wrap" role="group" aria-label="${escapeHtml(teamArenaName(teamA))}, ${info.capacity.toLocaleString("fr-FR")} places, et les installations du club">${arenaSvg}</div>` +
     `</div>` + salleRetiredJerseysHtml(teamA);
+  // Téléphone : quartier défilable, centré sur la salle au départ.
+  (window.requestAnimationFrame || setTimeout)(() => { if (visualHolder.scrollWidth > visualHolder.clientWidth) visualHolder.scrollLeft = (visualHolder.scrollWidth - visualHolder.clientWidth) / 2; });
 
   const pips = ARENA_LEVELS.map(a => `<span class="${a.level <= info.level ? "on" : ""}"></span>`).join("");
   const nm = salleNextMatchInfo();
@@ -46655,12 +46801,12 @@ function buildSalleFacilityCard(opts) {
   return card;
 }
 
-function renderSalleFacilities() {
-  const otherHolder = document.getElementById("otherFacilitiesPanel");
-  if (!otherHolder) return;
-  otherHolder.innerHTML = "";
-  const grid = document.createElement("div");
-  grid.className = "facilities-grid sl-fac-grid";
+// Briques des installations (centre de formation, boutique, station TV,
+// musculation, bien-être), clés trainingCenter / fanShop / tvStation / gym /
+// wellness : ouvertes une à une depuis le quartier de la page Salle
+// (showFacilityModal), avec leur bouton Construire / Améliorer.
+function buildSalleFacilityCards() {
+  const cards = {};
   let built = 0, total = 0;
   const count = level => { total++; if (level > 0) built++; };
 
@@ -46668,7 +46814,7 @@ function renderSalleFacilities() {
   const tcInfo = trainingCenterInfo(teamA.trainingCenterLevel);
   const nextTc = teamA.nextTrainingCenterLevel();
   count(teamA.trainingCenterLevel);
-  grid.appendChild(buildSalleFacilityCard({
+  cards.trainingCenter = (buildSalleFacilityCard({
     dataKey: "trainingCenterCard", dataValue: "1",
     category: "Centre de formation", levelName: tcInfo.name, icon: "ball", color: "var(--seat-tribune)",
     level: teamA.trainingCenterLevel, maxLevel: TRAINING_CENTER_LEVELS[TRAINING_CENTER_LEVELS.length - 1].level,
@@ -46697,7 +46843,7 @@ function renderSalleFacilities() {
   const shopInfo = fanShopInfo(teamA.fanShopLevel);
   const nextShop = teamA.nextFanShopLevel();
   count(teamA.fanShopLevel);
-  grid.appendChild(buildSalleFacilityCard({
+  cards.fanShop = (buildSalleFacilityCard({
     dataKey: "fanShopCard", dataValue: "1",
     category: "Boutique des supporters", levelName: shopInfo.name, icon: "bag", color: "var(--seat-gradins)",
     level: teamA.fanShopLevel, maxLevel: FAN_SHOP_LEVELS[FAN_SHOP_LEVELS.length - 1].level,
@@ -46771,7 +46917,7 @@ function renderSalleFacilities() {
         },
       };
     }
-    grid.appendChild(buildSalleFacilityCard({
+    cards[key] = (buildSalleFacilityCard({
       dataKey: "facilityCard", dataValue: key,
       // Nom court pour l'espace bien-être (son cfg.name complet est trop
       // long pour la carte, voir l'ancien commentaire de renderSalleSection).
@@ -46783,10 +46929,54 @@ function renderSalleFacilities() {
     }));
   });
 
-  otherHolder.appendChild(grid);
+  return { cards, built, total };
+}
+function renderSalleFacilities() {
+  const { cards, built, total } = buildSalleFacilityCards();
+  const otherHolder = document.getElementById("otherFacilitiesPanel");
+  if (otherHolder) {
+    otherHolder.innerHTML = "";
+    const grid = document.createElement("div");
+    grid.className = "facilities-grid sl-fac-grid";
+    ["trainingCenter", "fanShop", ...Object.keys(CLUB_FACILITIES)].forEach(k => { if (cards[k]) grid.appendChild(cards[k]); });
+    otherHolder.appendChild(grid);
+  }
   const pill = document.getElementById("facilitiesCountPill");
   if (pill) pill.textContent = `${built} / ${total} construites`;
 }
+function closeFacilityModal() {
+  const o = document.getElementById("facilityModalOverlay");
+  if (o) o.remove();
+}
+function showFacilityModal(key) {
+  closeFacilityModal();
+  const { cards } = buildSalleFacilityCards();
+  const card = cards[key];
+  if (!card) return;
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay qd-overlay";
+  overlay.id = "facilityModalOverlay";
+  overlay.dataset.key = key;
+  const box = document.createElement("div");
+  box.className = "upgrade-confirm-box qd-box";
+  box.setAttribute("role", "dialog");
+  box.setAttribute("aria-modal", "true");
+  box.setAttribute("aria-label", card.querySelector(".facility-card-category") ? card.querySelector(".facility-card-category").textContent : "Installation");
+  box.innerHTML = `<button type="button" class="sl-hist-close qd-close" aria-label="Fermer">×</button>`;
+  box.appendChild(card);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", e => { if (e.target === overlay || e.target.closest(".qd-close")) closeFacilityModal(); });
+  const onKey = e => { if (e.key === "Escape" && !document.getElementById("upgradeConfirmOverlay")) { closeFacilityModal(); document.removeEventListener("keydown", onKey); } };
+  document.addEventListener("keydown", onKey);
+  const btn = box.querySelector(".qd-close");
+  if (btn) btn.focus();
+}
+// Clic (ou Entrée) sur un bâtiment ou une étiquette du quartier.
+document.addEventListener("click", e => {
+  const el = e.target.closest("#arenaVisualCard [data-district]");
+  if (el) showFacilityModal(el.dataset.district);
+});
 
 // ---------------------------------------------------------------------
 // Humeur des supporters — jauge 0-100 + effet chiffré sur l'affluence et la
@@ -50379,23 +50569,23 @@ const TOUR_STEPS = [
     text: "Trois catégories de places (gradins, tribune, loges), chacune avec son propre prix. Un prix plus élevé rapporte plus par spectateur, mais peut réduire l'affluence si les supporters jugent que ça ne vaut pas le coup.",
     tip: "Ajustez catégorie par catégorie plutôt qu'en bloc : les loges tolèrent des hausses plus fortes que les gradins.",
   },
-  { kind: "spotlight", topic: "Salle", page: "salle", target: '[data-facility-card="gym"]',
+  { kind: "spotlight", topic: "Salle", page: "salle", target: '#arenaVisualCard [data-district="gym"]',
     title: "Salle de musculation",
     text: "Réduit le risque de blessure de vos joueurs. Plusieurs paliers payants au-delà du niveau de base, chacun un cran plus efficace que le précédent.",
   },
-  { kind: "spotlight", topic: "Salle", page: "salle", target: '[data-facility-card="wellness"]',
+  { kind: "spotlight", topic: "Salle", page: "salle", target: '#arenaVisualCard [data-district="wellness"]',
     title: "Espace bien-être",
     text: "Réduit la fatigue accumulée par vos joueurs au fil des matchs et des entraînements. Même principe que la salle de musculation : plusieurs paliers payants.",
   },
-  { kind: "spotlight", topic: "Salle", page: "salle", target: '[data-facility-card="tvStation"]',
+  { kind: "spotlight", topic: "Salle", page: "salle", target: '#arenaVisualCard [data-district="tvStation"]',
     title: "Station TV",
     text: "Un revenu hebdomadaire fixe une fois construite, qui augmente à chaque palier. Un investissement unique qui rapporte ensuite semaine après semaine.",
   },
-  { kind: "spotlight", topic: "Salle", page: "salle", target: "[data-training-center-card]",
+  { kind: "spotlight", topic: "Salle", page: "salle", target: '#arenaVisualCard [data-district="trainingCenter"]',
     title: "Centre de formation",
     text: "Accélère la progression de tous vos jeunes de l'académie tant qu'ils ont moins de 18 ans. Se gère ici, mais le détail de votre académie (effectif jeunes, prospects) vit dans son propre onglet.",
   },
-  { kind: "spotlight", topic: "Salle", page: "salle", target: "[data-fan-shop-card]",
+  { kind: "spotlight", topic: "Salle", page: "salle", target: "#arenaVisualCard [data-district=\"fanShop\"]",
     title: "Boutique des supporters",
     text: "Un revenu hebdomadaire fixe une fois construite, qui augmente à chaque palier, comme la Station TV.",
     tip: "Ces infrastructures se financent chacune indépendamment : inutile d'attendre d'avoir fini d'en payer une pour commencer la suivante si le budget suit.",
