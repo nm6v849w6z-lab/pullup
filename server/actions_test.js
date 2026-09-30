@@ -1022,11 +1022,16 @@ function freshTeamAndLeague() {
   // (rayure, degrade...)") : club encore gratuit à ce stade (bascule
   // ci-dessus repassée à false) : un motif personnalisé doit être refusé,
   // "uni" doit toujours être accepté.
-  // 4 motifs (retour utilisateur, 2026-09 : "2 bandes de couleur sur les
-  // côtés" ajouté à uni/rayures/degrade).
-  if (E.JERSEY_PATTERNS.length !== 4 || E.JERSEY_PATTERNS[0] !== "uni") {
-    throw new Error(`❌ JERSEY_PATTERNS devrait exposer exactement 4 motifs, "uni" en premier, obtenu ${JSON.stringify(E.JERSEY_PATTERNS)}.`);
+  // 34 motifs (retour utilisateur 2026-09-30 : 30 motifs de plus, inspirés
+  // de l'éditeur de BuzzerBeater, après uni/rayures/degrade/bandes).
+  if (E.JERSEY_PATTERNS.length !== 34 || E.JERSEY_PATTERNS.slice(0, 4).join() !== "uni,rayures,degrade,bandes" || new Set(E.JERSEY_PATTERNS).size !== 34) {
+    throw new Error(`❌ JERSEY_PATTERNS devrait exposer 34 motifs uniques, "uni" en premier, obtenu ${JSON.stringify(E.JERSEY_PATTERNS)}.`);
   }
+  for (const p of E.JERSEY_PATTERNS.slice(1)) {
+    if (actions.setTeamJerseyPattern(team, 0, league, { pattern: p }, T0).ok) throw new Error(`❌ motif Premium « ${p} » accepté pour un club gratuit.`);
+    if (actions.setTeamAwayJerseyPattern(team, 0, league, { pattern: p }, T0).ok) throw new Error(`❌ motif extérieur Premium « ${p} » accepté pour un club gratuit.`);
+  }
+  console.log("✅ Les 33 motifs Premium sont refusés à un club gratuit (domicile et extérieur).");
   const patternRejected = actions.setTeamJerseyPattern(team, 0, league, { pattern: "rayures" }, T0);
   if (patternRejected.ok) throw new Error("❌ setTeamJerseyPattern devrait refuser un motif personnalisé pour un club gratuit.");
   console.log("✅ setTeamJerseyPattern refuse un motif personnalisé pour un club gratuit.");
@@ -1039,6 +1044,16 @@ function freshTeamAndLeague() {
   const patternAccepted = actions.setTeamJerseyPattern(team, 0, league, { pattern: "degrade" }, T0);
   if (!patternAccepted.ok || team.jerseyPattern !== "degrade") throw new Error(`❌ setTeamJerseyPattern devrait accepter un motif personnalisé pour un club payant : ${JSON.stringify(patternAccepted)}`);
   console.log("✅ setTeamJerseyPattern accepte un motif personnalisé pour un club payant.");
+  for (const p of ["nid_abeille", "chevrons", "grille_degradee"]) {
+    const r1 = actions.setTeamJerseyPattern(team, 0, league, { pattern: p }, T0);
+    const r2 = actions.setTeamAwayJerseyPattern(team, 0, league, { pattern: p }, T0);
+    if (!r1.ok || !r2.ok || team.jerseyPattern !== p || team.awayJerseyPattern !== p) throw new Error(`❌ nouveau motif « ${p} » refusé pour un club Premium.`);
+  }
+  const survived = E.leagueFromSave(JSON.parse(JSON.stringify(E.serializeLeague(league)))).teams[0];
+  if (survived.jerseyPattern !== "grille_degradee" || survived.awayJerseyPattern !== "grille_degradee") throw new Error("❌ un nouveau motif devrait survivre à la sauvegarde.");
+  actions.setTeamJerseyPattern(team, 0, league, { pattern: "degrade" }, T0);
+  actions.setTeamAwayJerseyPattern(team, 0, league, { pattern: "uni" }, T0);
+  console.log("✅ Nouveaux motifs acceptés pour un club Premium (domicile et extérieur) et conservés à la sauvegarde.");
 
   const badPattern = actions.setTeamJerseyPattern(team, 0, league, { pattern: "carreaux" }, T0);
   if (badPattern.ok) throw new Error("❌ setTeamJerseyPattern devrait rejeter un motif inconnu.");

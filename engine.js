@@ -2717,7 +2717,15 @@ const JERSEY_SHAPES = ["A", "B"];
 // effectiveJerseyPattern côté moteurbasket3.html). Le dessin réel de chaque
 // motif est purement visuel, dessiné côté client (jerseySvgHtml) : ces clés
 // ne servent qu'à valider/persister le choix.
-const JERSEY_PATTERNS = ["uni", "rayures", "degrade", "bandes"];
+// Motifs supplémentaires (retour utilisateur 2026-09-30 : « beaucoup plus
+// de motifs, inspirés du nouvel éditeur de maillots de BuzzerBeater ») :
+// 30 motifs de plus après les 4 historiques, tous Premium comme eux (seul
+// "uni" est libre, voir Team.setJerseyPattern). Dessin côté client
+// (jerseyPatternArt dans moteurbasket3.html).
+const JERSEY_PATTERNS = ["uni", "rayures", "degrade", "bandes",
+  "deux_colonnes", "colonnes_laterales", "chevrons", "bande_centrale", "bandes_horizontales", "fines_rayures", "empiecement", "degrade_diagonal", "pois", "mouchete",
+  "diagonale", "cerceaux", "degrade_lateral", "rayures_degradees", "damier", "halo", "miroir", "split_v", "pois_montants", "pois_descendants",
+  "pois_lateraux", "triangles", "grille_triangles", "zigzag", "circuit", "nid_abeille", "balayage", "eclats", "rayons", "grille_degradee"];
 
 // Combinaisons de 2 couleurs pour les motifs "rayures"/"degrade"/"bandes",
 // réservées aux clubs payants (retour utilisateur, 2026-09 : "ajoute un peu
