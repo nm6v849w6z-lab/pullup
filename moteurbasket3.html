@@ -12420,6 +12420,12 @@ const ArenaGen = (function () {
       lineY.forEach((c) => addRuns(true, c));
       lineX.forEach((c) => addRuns(false, c));
       // Raccord exact au bord de l'allée d'accès de la salle (x = ±3).
+      // Raccord exact au bitume des deux routes (pas d'arrêt sur le trottoir).
+      const snap = (v, edge) => (Math.abs(v - edge) < 4 ? edge : v);
+      streets.forEach((st) => {
+        if (st.y1 - st.y0 > st.x1 - st.x0) { st.y1 = snap(st.y1, roadY[0]); st.y0 = snap(st.y0, roadY[1]); }
+        else { st.x1 = snap(st.x1, roadX[0]); st.x0 = snap(st.x0, roadX[1]); }
+      });
       streets.forEach((st) => { if (st.y0 > D / 2) { if (st.x1 < -3 && st.x1 > -7) st.x1 = 0; if (st.x0 > 3 && st.x0 < 7) st.x0 = 0; } });
       streets.forEach((st) => { s += flat(rect(st.x0, st.x1, st.y0, st.y1, 0.02), streetCol); });
       // l'allée est redessinée par-dessus : les rues passent dessous, sans jour.
