@@ -53,7 +53,7 @@ function duplicateIds(doc) {
   assert(section.querySelector("h2.page-title").textContent === "Personnalisation", "titre de page « Personnalisation »");
 
   // --- 2) Cartes.
-  assert([...section.querySelectorAll("[data-pz-anchor]")].map(a => a.dataset.pzAnchor).join() === "persoIdentite,persoMaillots,persoParquet", "sommaire Identité · Maillots · Parquet");
+  assert([...section.querySelectorAll("[data-pz-anchor]")].map(a => a.dataset.pzAnchor).join() === "persoIdentite,persoMaillots,persoParquet,persoSalle", "sommaire Identité · Maillots · Parquet · Salle");
   const idCard = doc.getElementById("persoIdentityCard");
   assert(idCard.querySelector(".club-logo-preview svg, .club-logo-preview img") && doc.getElementById("clubTrigramInput") && doc.getElementById("salleArenaNameInput"), "carte Identité : logo, trigramme, nom de la salle");
   assert(idCard.querySelector(".pz-scorebug"), "aperçu du tableau d'affichage (trigramme + salle)");

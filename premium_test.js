@@ -56,7 +56,7 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "premium").click();
     check(!doc.getElementById("premiumSection").classList.contains("hidden"), "la page Premium s'affiche");
     const content = doc.getElementById("premiumContent");
-    check(/Gratuit/.test(content.querySelector(".prm-status").textContent) && content.querySelectorAll(".prm-perk").length === 16, "statut Gratuit et 16 avantages listés (dont parquet, apparence des jeunes, numéros de maillot)");
+    check(/Gratuit/.test(content.querySelector(".prm-status").textContent) && content.querySelectorAll(".prm-perk").length === 17 && /Salle personnalisée/.test(content.textContent) && /Avatars des jeunes/.test(content.textContent) && !content.querySelector(".prm-soon"), "statut Gratuit et 17 avantages listés (dont parquet, salle personnalisée, avatars des jeunes), plus rien en « Bientôt »");
     // Analyse de sa propre équipe : verrouillée en gratuit.
     win.showTeamDetail(win.eval("myTeamIndex"));
     win.eval('document.querySelector("[data-team-detail-subview=\'analyse\']").dispatchEvent(new Event("click", {bubbles:true}));');

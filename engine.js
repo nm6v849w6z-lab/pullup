@@ -2655,6 +2655,47 @@ function courtStyleFor(team, now = Date.now()) {
   return { wood: st.wood, floor: w.floor, grain: w.grain, line: w.line, paint: st.paint ? JERSEY_COLORS[st.paint] : null };
 }
 
+// 4) Salle personnalisée (Premium, retour utilisateur 2026-09-30 : « salle
+//    personnalisée » annoncée en « Bientôt » sur la page Premium) :
+//    Team.arenaStyle { main, second, facade, roof, mood } pour le dessin de
+//    la salle (ArenaGen) : couleurs principale/secondaire (clés de
+//    JERSEY_COLORS, null = couleurs du club), façade, toit et ambiance
+//    (soir de match / jour). null = salle par défaut. Effectif seulement si
+//    le club est Premium (arenaStyleFor), jamais effacé en repassant gratuit.
+const ARENA_FACADES = {
+  beton:      { label: "Béton clair", front: "#d8d2c5", side: "#b5afa1" },
+  brique:     { label: "Brique", front: "#b8664b", side: "#95513c" },
+  anthracite: { label: "Anthracite", front: "#4d525b", side: "#3b3f47" },
+  blanc:      { label: "Blanc", front: "#efede7", side: "#cfccc4" },
+  sable:      { label: "Sable", front: "#dcc59a", side: "#bda77c" },
+  bois:       { label: "Bardage bois", front: "#a9774b", side: "#8a603b" },
+};
+const ARENA_ROOFS = {
+  gris:   { label: "Gris", color: "#9b968a" },
+  noir:   { label: "Noir", color: "#3a3d44" },
+  blanc:  { label: "Blanc", color: "#e4e1d9" },
+  cuivre: { label: "Cuivre vert-de-gris", color: "#5f9a87" },
+  club:   { label: "Couleur du club", color: null },
+};
+const ARENA_MOODS = ["dusk", "day"];
+function normalizeArenaStyle(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const out = {
+    main: raw.main && JERSEY_COLORS[raw.main] ? raw.main : null,
+    second: raw.second && JERSEY_COLORS[raw.second] ? raw.second : null,
+    facade: ARENA_FACADES[raw.facade] ? raw.facade : "beton",
+    roof: ARENA_ROOFS[raw.roof] ? raw.roof : "gris",
+    mood: ARENA_MOODS.includes(raw.mood) ? raw.mood : "dusk",
+  };
+  if (!out.main && !out.second && out.facade === "beton" && out.roof === "gris" && out.mood === "dusk") return null;
+  return out;
+}
+// Style effectif de la salle d'un club (null = salle par défaut).
+function arenaStyleFor(team, now = Date.now()) {
+  if (!team || !team.arenaStyle || typeof team.hasActivePremium !== "function" || !team.hasActivePremium(now)) return null;
+  return normalizeArenaStyle(team.arenaStyle);
+}
+
 const PLAYER_LOOK_OPTIONS = {
   hairStyle: ["buzz", "short", "sidepart", "slick", "wavy", "long", "bun", "fade", "curlytop", "afro", "twists", "cornrows",
     "mohawk", "frohawk", "hightop", "undercut", "topknot", "waves", "buzzdesign", "bald"],
@@ -4974,6 +5015,8 @@ class Team {
     this.rivalries = {};
     // Parquet aux couleurs du club (Premium, voir courtStyleFor).
     this.courtStyle = null;
+    // Salle personnalisée (Premium, voir arenaStyleFor).
+    this.arenaStyle = null;
     this.managerRating = null;
     this.managerRatedGames = 0;
 
@@ -13951,6 +13994,7 @@ function serializeTeam(team) {
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
     rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
     courtStyle: normalizeCourtStyle(team.courtStyle),
+    arenaStyle: normalizeArenaStyle(team.arenaStyle),
     managerRating: typeof team.managerRating === "number" ? team.managerRating : null,
     managerRatedGames: team.managerRatedGames || 0,
     players: team.players.map(serializePlayerRecord),
@@ -14564,6 +14608,7 @@ function teamFromSave(data) {
     : [];
   team.rivalries = data.rivalries && typeof data.rivalries === "object" && !Array.isArray(data.rivalries) ? data.rivalries : {};
   team.courtStyle = normalizeCourtStyle(data.courtStyle);
+  team.arenaStyle = normalizeArenaStyle(data.arenaStyle);
   team.managerRating = typeof data.managerRating === "number" ? data.managerRating : null;
   team.managerRatedGames = typeof data.managerRatedGames === "number" ? data.managerRatedGames : 0;
   team.ordersHistory = Array.isArray(data.ordersHistory)
@@ -16686,7 +16731,7 @@ return {
   PHYSIO_RECOVERY_BONUS_BY_LEVEL, PHYSIO_INJURY_RISK_MULT_BY_LEVEL,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, AUTO_BID_FIELDS, autoBidKey, transferPlayerBetweenTeams,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
-  COURT_WOODS, normalizeCourtStyle, courtStyleFor, PLAYER_LOOK_OPTIONS, PLAYER_LOOK_LABELS, normalizePlayerLook, canCustomizePlayerLook, ensureJerseyNumbers,
+  COURT_WOODS, normalizeCourtStyle, courtStyleFor, ARENA_FACADES, ARENA_ROOFS, ARENA_MOODS, normalizeArenaStyle, arenaStyleFor, PLAYER_LOOK_OPTIONS, PLAYER_LOOK_LABELS, normalizePlayerLook, canCustomizePlayerLook, ensureJerseyNumbers,
   RIVALRY_RECENT_MAX, DERBY_MORALE_MULT, DERBY_ATTENDANCE_BOOST, MANAGER_RATING_START, MANAGER_RATING_K, rivalryKeyFor, rivalryBetween, managerRatingOf, recordHumanRivalry,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,

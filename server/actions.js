@@ -1334,6 +1334,19 @@ function setTeamCourtStyle(team, teamIndex, league, body, now) {
   team.courtStyle = Engine.normalizeCourtStyle(raw);
   return { ok: true, courtStyle: team.courtStyle };
 }
+// Salle personnalisée (Premium, voir arenaStyleFor dans engine.js).
+function setTeamArenaStyle(team, teamIndex, league, body, now) {
+  if (!requirePremium(team, now)) return fail("La salle personnalisée est réservée au Premium.");
+  const raw = body && body.arenaStyle;
+  const colorOk = v => v == null || v === "" || !!Engine.JERSEY_COLORS[v];
+  if (raw != null && (typeof raw !== "object" || !colorOk(raw.main) || !colorOk(raw.second) ||
+      (raw.facade != null && !Engine.ARENA_FACADES[raw.facade]) || (raw.roof != null && !Engine.ARENA_ROOFS[raw.roof]) ||
+      (raw.mood != null && !Engine.ARENA_MOODS.includes(raw.mood)))) {
+    return fail("Style de salle invalide.");
+  }
+  team.arenaStyle = Engine.normalizeArenaStyle(raw);
+  return { ok: true, arenaStyle: team.arenaStyle };
+}
 function setPlayerJerseyNumber(team, teamIndex, league, body, now) {
   if (!requirePremium(team, now)) return fail("Choisir les numéros de maillot est réservé au Premium.");
   const player = team.players.find(p => String(p.id) === String(body && body.playerId));
@@ -1442,7 +1455,7 @@ function submitPronostics(team, teamIndex, league, body, now) {
 }
 
 module.exports = {
-  setTeamCourtStyle, setPlayerJerseyNumber, setPlayerLook,
+  setTeamCourtStyle, setTeamArenaStyle, setPlayerJerseyNumber, setPlayerLook,
   validateOrdersSnapshot,
   setLineup, setTactics, setTraining, setPlan, setTacticPresets, listPlayer, sellListedPlayer, bidOnListing, bidOnCoachListing, setAutoBid, viewListing,
   upgradeArena, buildArenaSeats, setTicketPrices, upgradeFanShop, fireTrainer,
