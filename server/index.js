@@ -1509,7 +1509,10 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // Effectif, Calendrier, Analyse) en lecture seule. Rien de privé :
         // ni jetons, ni notifications, ni tactiques prévues, ni marché,
         // ni directs, ni ligues privées ou amicaux.
-        if (route.pathname === "/api/world/team-page") {
+        // /api/world/league-page (2026-09-30) : même contenu, pour la vraie page
+        // Ligue d'un autre championnat (showForeignLeague) : classement,
+        // résultats, feuilles de match, leaders (matchLog), récompenses.
+        if (route.pathname === "/api/world/team-page" || route.pathname === "/api/world/league-page") {
           const id = q.get("league");
           const entry = world.leagues.find(e => e.id === id);
           const lg = entry ? await World.loadLeague(world, id, multiSavePath) : null;

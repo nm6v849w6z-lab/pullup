@@ -3,7 +3,8 @@
 // BuzzerBeater : menu déroulant des pays (le sien par défaut) + recherche,
 // carte du pays, divisions et Coupe, leaders et meilleures performances,
 // titres par club, historique, classement mondial ; un championnat s'ouvre
-// en sous-page (classement, derniers résultats). Voir renderPlaneteSection (moteurbasket3.html),
+// sur la vraie page Ligue (la sienne : onglet Ligue ; une autre : même page
+// en lecture seule, showForeignLeague). Voir renderPlaneteSection (moteurbasket3.html),
 // /api/world/* (server/index.js) et server/world.js.
 const fs = require("fs");
 const store = require("./server/store.js");
@@ -72,13 +73,17 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   if (apiUs.overview.country !== "us" || apiUs.overview.mine || apiUs.myCountry !== "fr" || apiUs.countries.length !== 3) fail(`/api/world/country?code=us : ${JSON.stringify(apiUs).slice(0, 200)}`);
   ok("/api/world/country?code=us : aperçu des USA, pays du manager rappelé");
 
-  // 2) Un championnat : sous-page (classement), retour à l'aperçu.
+  // 2) Son propre championnat : l'onglet Ligue habituel.
+  const stSection = doc.getElementById("standingsSection");
+  const stContent = doc.getElementById("standingsContent");
   myRow.querySelector("[data-ph-league]").click();
-  await wait(() => box.querySelector("[data-pc-back]"), "sous-page du championnat");
-  if (box.querySelectorAll("tbody tr").length !== 10 || !/Votre championnat/.test(box.textContent)) fail("classement de son championnat attendu.");
-  box.querySelector("[data-pc-back]").click();
+  await wait(() => !stSection.classList.contains("hidden"), "sa page Ligue");
+  if (!doc.querySelector('.tab-btn[data-tab="ligue"]').classList.contains("active")) fail("son championnat : onglet Ligue actif.");
+  if (stContent.querySelector("[data-lg-back]") || !stContent.querySelector("#lgcOpenBtn")) fail("sa propre ligue : pas de lien retour, chat présent.");
+  if (win.eval("leagueForeign") !== null) fail("sa propre ligue : pas de mode « autre championnat ».");
+  win.eval(`TAB_HANDLERS.planete()`);
   await wait(() => box.querySelector(".pc-hero"), "retour à l'aperçu");
-  ok("lien vers un championnat : classement en sous-page, retour à l'aperçu du pays");
+  ok("son propre championnat depuis Planète Hoop : l'onglet Ligue habituel");
 
   // 2bis) Palmarès semé : titres par club, historique (tenant en avant).
   {
@@ -113,15 +118,56 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   if (/Votre pays/.test(box.querySelector(".pc-hero").textContent)) fail("les USA ne sont pas son pays.");
   if (box.querySelector('[data-tab="coupe"]')) fail("pas de lien vers son onglet Coupe pour un autre pays.");
   box.querySelector('[data-ph-league="us-1"]').click();
-  await wait(() => box.querySelector("[data-pc-back]") && box.querySelectorAll("tbody tr").length === 10, "Division I des USA");
-  if (/Votre championnat/.test(box.textContent)) fail("la Division I américaine n'est pas son championnat.");
-  ok("menu déroulant : aperçu des USA puis leur Division I");
+  await wait(() => !stSection.classList.contains("hidden") && stContent.querySelector("[data-lg-back]"), "vraie page Ligue de la Division I des USA");
+  {
+    const usLg = await World.loadLeague(world, "us-1", multiSavePath);
+    const rows = [...stContent.querySelectorAll("tbody tr")].filter(r => r.querySelector("[data-team-idx]"));
+    if (rows.length !== 10) fail(`classement complet de 10 clubs attendu, obtenu ${rows.length}.`);
+    if (!rows.some(r => r.textContent.includes(usLg.teams[0].name))) fail("clubs américains attendus dans le classement.");
+    if (stContent.querySelector(".lg-badge img, .lg-badge svg, .lg-badge span") == null) fail("logos des clubs attendus.");
+    if (!/Ligue/.test(stContent.querySelector(".lg-head h1").textContent) || !/États-Unis/.test(stContent.querySelector(".lg-comp").textContent) || !/Division I/.test(stContent.querySelector(".lg-comp").textContent)) fail(`en-tête : ${stContent.querySelector(".lg-head").textContent}`);
+    if (!/Planète Hoop · États-Unis/.test(stContent.querySelector("[data-lg-back]").textContent)) fail("lien retour « ← Planète Hoop · États-Unis ».");
+    if (stContent.querySelector("#lgcOpenBtn")) fail("pas de chat de la ligue pour un autre championnat.");
+    if (stContent.querySelector(".lg-race")) fail("pas de course aux play-offs pour un autre championnat.");
+    if (stContent.querySelector("tr.mine, .lg-res-card.mine, .lg-mine-p") || doc.querySelector("#leagueStatsPanel .lg-mine-p")) fail("aucune ligne « à soi » dans un autre championnat.");
+    if (/Tes joueurs/.test(doc.getElementById("leagueStatsPanel").textContent)) fail("pas de « Tes joueurs » dans un autre championnat.");
+    if (!/Résultats de la journée/.test(stContent.textContent) || !stContent.querySelector("[data-boxscore-round]")) fail("résultats de la dernière journée (feuilles de match) attendus.");
+    if (!doc.querySelector("#leagueStatsPanel .lg-card")) fail("leaders de la ligue attendus.");
+    if (!doc.querySelector('.tab-btn[data-tab="planete"]').classList.contains("active")) fail("onglet Planète Hoop toujours actif.");
+    if (win.eval("league.leagueId") === "us-1" || win.eval("myTeamIndex") !== 0) fail("la ligue du joueur doit être restaurée après le rendu.");
+    // Bascule Moyennes/Totaux : toujours les joueurs américains.
+    const usPlayers = new Set(usLg.teams.flatMap(t => t.players.map(p => p.name)));
+    doc.querySelector('#leagueStatsPanel [data-lg-mode="tot"]').click();
+    const leadName = doc.querySelector("#leagueStatsPanel .lg-lead-id b").textContent;
+    if (!usPlayers.has(leadName)) fail(`leaders (Totaux) : ${leadName} n'est pas un joueur américain.`);
+    doc.querySelector('#leagueStatsPanel [data-lg-mode="avg"]').click();
+    // Feuille de match lue dans CE championnat.
+    const bx = stContent.querySelector("[data-boxscore-round]");
+    const homeName = usLg.teams[Number(bx.dataset.boxscoreHome)].name;
+    bx.click();
+    await wait(() => doc.getElementById("matchBoxscoreOverlay"), "feuille de match du championnat américain");
+    if (!doc.getElementById("matchBoxscoreOverlay").textContent.includes(homeName)) fail("feuille de match : clubs américains attendus.");
+    win.eval(`closeMatchBoxscore()`);
+    win.eval(`TAB_HANDLERS.planete()`);
+    await wait(() => box.querySelector(".pc-hero"), "Planète Hoop");
+    // Retour : lien « ← Planète Hoop · États-Unis ».
+    box.querySelector('[data-ph-league="us-1"]').click();
+    await wait(() => !stSection.classList.contains("hidden") && stContent.querySelector("[data-lg-back]"), "page Ligue américaine (2)");
+    stContent.querySelector("[data-lg-back]").click();
+    await wait(() => !doc.getElementById("planeteSection").classList.contains("hidden") && /États-Unis/.test((box.querySelector(".pc-hero") || {}).textContent || ""), "retour à l'aperçu des USA");
+    // L'onglet Ligue redonne SON championnat.
+    win.eval(`TAB_HANDLERS.ligue()`);
+    if (win.eval("leagueForeign") !== null || !stContent.querySelector("#lgcOpenBtn") || stContent.querySelector("[data-lg-back]")) fail("onglet Ligue : son propre championnat.");
+    win.eval(`showForeignLeague("us-1")`);
+    await wait(() => stContent.querySelector("[data-lg-back]"), "page Ligue américaine (3)");
+  }
+  ok("menu déroulant : USA puis leur Division I sur la vraie page Ligue (classement 10 clubs, logos, résultats + feuille de match, leaders, en-tête « Ligue · États-Unis · Division I », retour Planète Hoop), sans chat, course aux play-offs ni « Tes joueurs »");
 
-  // 3) Clic sur un club d'un autre championnat : sa fiche équipe habituelle
-  // (Aperçu), lue dans SON championnat, en lecture seule.
-  const clubBtn = box.querySelector("[data-ph-club]");
+  // 3) Clic sur un club d'un autre championnat (depuis sa page Ligue) : sa
+  // fiche équipe habituelle (Aperçu), lue dans SON championnat.
+  const clubBtn = stContent.querySelector("tbody [data-team-idx]");
   const clubName = clubBtn.textContent;
-  const clubIdx = Number(clubBtn.dataset.phClub);
+  const clubIdx = Number(clubBtn.dataset.teamIdx);
   clubBtn.click();
   const tdSection = doc.getElementById("teamDetailSection");
   const tdContent = doc.getElementById("teamDetailContent");
@@ -140,7 +186,7 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
 
   // 3ter) Barre de recherche de la page : un club américain → sa fiche.
   {
-    win.eval(`planeteState.leagueId = null; TAB_HANDLERS.planete()`);
+    win.eval(`TAB_HANDLERS.planete()`);
     await wait(() => box.querySelector(".pc-hero") && doc.getElementById("planeteSearchInput"), "aperçu (recherche)");
     const usLg = await World.loadLeague(world, "us-1", multiSavePath);
     const target = usLg.teams[5];
@@ -160,15 +206,19 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
     input2.dispatchEvent(new win.Event("input", { bubbles: true }));
     await wait(() => doc.querySelector("#planeteSearchResults [data-pc-go-league]"), "championnats dans la recherche de la page");
     doc.querySelector('#planeteSearchResults [data-pc-go-league="us-1"]').click();
-    await wait(() => box.querySelector("[data-pc-back]") && /États-Unis/.test(box.querySelector("[data-pc-back]").textContent), "championnat via la recherche");
-    ok("recherche de la page (clubs, managers, championnats) : un club ouvre sa fiche, un championnat sa sous-page");
+    await wait(() => !stSection.classList.contains("hidden") && stContent.querySelector("[data-lg-back]") && /États-Unis/.test(stContent.querySelector("[data-lg-back]").textContent), "championnat via la recherche");
+    ok("recherche de la page (clubs, managers, championnats) : un club ouvre sa fiche, un championnat sa page Ligue");
   }
 
-  // 3bis) La route ne renvoie rien de privé.
-  const tp = await win.eval(`planeteFetch("/api/world/team-page?league=us-1")`);
-  if (!tp.ok) fail(JSON.stringify(tp).slice(0,300));
-  if (tp.league.teams.some(t => t.managerLinkToken || (t.pushSubscriptions || []).length || t.plannedTactics)) fail("données privées dans /api/world/team-page.");
-  ok("/api/world/team-page : aucun jeton, abonnement ou tactique prévue");
+  // 3bis) Les routes ne renvoient rien de privé.
+  for (const route of ["team-page", "league-page"]) {
+    const tp = await win.eval(`planeteFetch("/api/world/${route}?league=us-1")`);
+    if (!tp.ok) fail(JSON.stringify(tp).slice(0,300));
+    if (tp.league.teams.some(t => t.managerLinkToken || (t.pushSubscriptions || []).length || t.plannedTactics || (t.tacticPresets || []).length || (t.marketWatchlist || []).length)) fail(`données privées dans /api/world/${route}.`);
+    if ((tp.league.transferListings || []).length || tp.league.liveMatches || (tp.league.privateLeagues || []).length || (tp.league.friendlies || []).length) fail(`marché/directs/ligues privées dans /api/world/${route}.`);
+    if (!Array.isArray(tp.league.results) || !tp.league.divisionMoves || tp.label !== "Division I" || tp.mine) fail(`/api/world/${route} : résultats, zones, libellé attendus.`);
+  }
+  ok("/api/world/team-page et /api/world/league-page : aucun jeton, abonnement, tactique, marché ni direct ; résultats, zones et libellé présents");
 
   // 4) Recherche du haut : un club américain → sa fiche équipe.
   const usLeague = await World.loadLeague(world, "us-1", multiSavePath);

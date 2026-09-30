@@ -4918,7 +4918,7 @@ window.HM_I18N_EN = {
   "Rang mondial": "World rank",
   "· {0}e mondial.": "· #{0} worldwide.",
   "· classé après un premier match officiel contre un autre manager.": "· ranked after a first official game against another manager.",
-  "← Aperçu du pays : {0}": "← Country overview: {0}",
+  "← Planète Hoop · {0}": "← Planet Hoop · {0}",
   "Clubs et managers": "Clubs and managers",
   "Aucun résultat.": "No results.",
   "Pays, divisions et Planète Hoop": "Countries, divisions and Planet Hoop",

@@ -1785,8 +1785,6 @@
   .pc-mgr{font-size:10.5px; color:var(--amber); margin-left:6px; font-weight:700;}
   .pc-cta{flex:0 0 auto; padding:6px 12px; border-radius:999px; border:1px solid var(--line-soft); background:transparent; color:var(--ink); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;}
   .pc-cta:hover{border-color:var(--amber); color:var(--amber);}
-  .pc-back{display:inline-flex; align-items:center; gap:6px; margin:0 0 12px; padding:6px 0; border:none; background:none; color:var(--ink-dim); font:inherit; font-size:13.5px; cursor:pointer;}
-  .pc-back:hover{color:var(--amber);}
   .pc-divs{display:flex; flex-direction:column; gap:14px;}
   .pc-div-name{display:flex; align-items:baseline; gap:8px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-dim); margin-bottom:4px;}
   .pc-div-name span{font-weight:500; text-transform:none; letter-spacing:0; color:var(--ink-faint);}
@@ -3903,6 +3901,8 @@
   .lg-more{min-height:38px; border:0; border-radius:8px; background:var(--panel-2); color:var(--amber); font:inherit; font-size:13px; font-weight:700; cursor:pointer; margin-top:auto;}
   .lg-more:hover{background:#212d40;}
   #standingsSection button:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  #standingsSection .lg-back{display:inline-flex; align-items:center; gap:6px; margin:0 0 6px; padding:4px 0; border:none; background:none; color:var(--ink-dim); font:inherit; font-size:13.5px; cursor:pointer;}
+  #standingsSection .lg-back:hover{color:var(--amber);}
 
   @container lgpage (max-width:960px){
     .lg-top{grid-template-columns:minmax(0,1fr);}
@@ -26414,9 +26414,12 @@ function lgLastRoundResultsHtml() {
 }
 
 function renderLeagueTop() {
+  if (leagueForeign && !leagueForeignActive) return withLeagueForeign(renderLeagueTop);
   const table = league.standings();
+  const foreign = !!leagueForeign;
   document.getElementById("standingsContent").innerHTML =
-    `<div class="lg-head"><div class="lg-head-id"><h1>Ligue</h1><span class="lg-comp">${leagueCountryHtml()} · ${escapeHtml(leagueCompetitionLabel())}</span></div>${lgcOpenButtonHtml()}</div>` /* "Journée N sur 18 · 10 équipes" retiré (retour utilisateur 2026-09-26) */ +
+    (foreign ? `<button type="button" class="lg-back" data-lg-back>← Planète Hoop · ${escapeHtml(nationName(league.country || "fr") || "")}</button>` : "") +
+    `<div class="lg-head"><div class="lg-head-id"><h1>Ligue</h1><span class="lg-comp">${leagueCountryHtml()} · ${escapeHtml(leagueCompetitionLabel())}</span></div>${foreign ? "" : lgcOpenButtonHtml()}</div>` /* "Journée N sur 18 · 10 équipes" retiré (retour utilisateur 2026-09-26) */ +
     `<div class="lg-top">` +
       `<section class="lg-panel" aria-labelledby="lgStandingsTitle">` +
         `<div class="lg-panel-title"><h2 id="lgStandingsTitle">Classement</h2><span>Victoire 2 pts · Défaite 1 pt</span></div>` +
@@ -26427,6 +26430,7 @@ function renderLeagueTop() {
 }
 
 function showStandings() {
+  leagueForeign = null;
   renderLeagueTop();
   renderLeagueHonorsPanel();
   renderLeagueStatsPanel();
@@ -26434,6 +26438,75 @@ function showStandings() {
   setActiveTab("ligue");
   window.__lastLeagueChatCount = lgcRefreshCount();
 }
+
+// ---------------------------------------------------------------------
+// PAGE LIGUE D'UN AUTRE CHAMPIONNAT (retour utilisateur 2026-09-30 :
+// « quand on clique sur une page ligue d'une autre ligue, on atterrit sur
+// la vraie page ligue, comme celle qui s'affiche chez moi ») : même page
+// (renderLeagueTop / renderLeagueHonorsPanel / renderLeagueStatsPanel),
+// rendue avec ce championnat à la place de `league` (withLeagueForeign,
+// même principe que la fiche équipe étrangère : GET /api/world/team-page,
+// sans rien de privé), sans club « à soi » (myTeamIndex = -1) : ni course
+// aux play-offs, ni chat, ni « Tes joueurs ». Clubs → fiche équipe
+// étrangère ; joueurs → fiche de leur club (pas de fiche joueur hors de son
+// championnat) ; lien retour vers Planète Hoop.
+// ---------------------------------------------------------------------
+var leagueForeign = null; // { league, leagueId, label, country } ou null (var : lu dès le premier rendu)
+var leagueForeignActive = false;
+function withLeagueForeign(fn) {
+  if (!leagueForeign || leagueForeignActive) return fn();
+  const saved = { league, myTeamIndex, scouted: teamA ? teamA.scoutedAttrs : null };
+  league = leagueForeign.league;
+  myTeamIndex = -1;
+  if (teamA) teamA.scoutedAttrs = {};
+  leagueForeignActive = true;
+  try { return fn(); } finally {
+    leagueForeignActive = false;
+    league = saved.league;
+    myTeamIndex = saved.myTeamIndex;
+    if (teamA) teamA.scoutedAttrs = saved.scouted;
+  }
+}
+async function showForeignLeague(leagueId) {
+  if (!leagueId || (league && league.leagueId === leagueId)) { showStandings(); return true; }
+  let data;
+  try { data = await planeteFetch(`/api/world/league-page?league=${encodeURIComponent(leagueId)}`); } catch (e) { return false; }
+  if (!data || !data.league || !data.league.teams) return false;
+  if (data.mine) { showStandings(); return true; }
+  const ownTz = league ? league.timeZone : null;
+  let lg;
+  try { lg = leagueFromSave(data.league); } finally { setCalendarTimeZone(ownTz); }
+  leagueForeign = { league: lg, leagueId, label: data.label || "", country: lg.country || String(leagueId).slice(0, 2) };
+  renderLeagueTop();
+  renderLeagueHonorsPanel();
+  renderLeagueStatsPanel();
+  showPage("standingsSection");
+  setActiveTab("planete");
+  if (typeof window.scrollTo === "function") try { window.scrollTo(0, 0); } catch (e) { /* jsdom */ }
+  return true;
+}
+// Clics dans la page Ligue d'un autre championnat (capture : avant les
+// écouteurs habituels, qui visent son propre championnat).
+document.getElementById("standingsSection").addEventListener("click", (e) => {
+  if (!leagueForeign) return;
+  const back = e.target.closest("[data-lg-back], #closeStandingsBtn");
+  const teamLink = e.target.closest("[data-team-idx]");
+  const playerLink = e.target.closest("[data-player-team]");
+  const box = e.target.closest("[data-boxscore-round]");
+  if (!back && !teamLink && !playerLink && !box) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const f = leagueForeign;
+  if (back) { planeteState.country = f.country; TAB_HANDLERS.planete(); return; }
+  if (box) {
+    withLeagueForeign(() => showMatchBoxscore(
+      Number(box.dataset.boxscoreRound), box.dataset.boxscoreCompetition,
+      Number(box.dataset.boxscoreHome), Number(box.dataset.boxscoreAway)));
+    return;
+  }
+  const idx = Number(teamLink ? teamLink.dataset.teamIdx : playerLink.dataset.playerTeam);
+  if (Number.isInteger(idx) && f.league.teams[idx] && !f.league.teams[idx].isGuest) showForeignTeamDetail(f.leagueId, idx);
+}, true);
 
 // ---------------------------------------------------------------------
 // CHAT DE LA LIGUE (2026-09-30) — retour utilisateur : le chat de
@@ -27030,6 +27103,7 @@ function allStarCardHtml(asg) {
 }
 
 function renderLeagueHonorsPanel() {
+  if (leagueForeign && !leagueForeignActive) return withLeagueForeign(renderLeagueHonorsPanel);
   const holder = document.getElementById("leagueHonorsPanel");
   if (!holder) return;
   const key = league.seasonId || `start:${league.calendarStartAt || 0}`;
@@ -27065,6 +27139,7 @@ function managerProfileCardHtml(team) {
 }
 
 function renderLeagueStatsPanel() {
+  if (leagueForeign && !leagueForeignActive) return withLeagueForeign(renderLeagueStatsPanel);
   const holder = document.getElementById("leagueStatsPanel");
   const rows = computeSeasonPlayerStats();
   const mode = leagueStatsMode;
@@ -27073,7 +27148,7 @@ function renderLeagueStatsPanel() {
     `<button type="button" data-lg-mode="tot" aria-pressed="${mode === "tot"}">Totaux</button></div>`;
   let html = `<section class="lg-leaders" aria-labelledby="lgLeadersTitle"><div class="lg-leaders-head">` +
     `<h2 id="lgLeadersTitle">Leaders de la ligue</h2>` +
-    (rows.length ? `<div class="lg-leaders-tools"><span><i></i>Tes joueurs</span>${toggle}</div>` : "") + `</div>`;
+    (rows.length ? `<div class="lg-leaders-tools">${leagueForeign ? "" : `<span><i></i>Tes joueurs</span>`}${toggle}</div>` : "") + `</div>`;
 
   if (!rows.length) {
     html += `<p class="lg-empty lg-panel">Aucune statistique de saison disponible pour l'instant, revenez après les premiers matchs.</p></section>`;
@@ -30505,24 +30580,26 @@ function renderTopbarSearchResults(rawQuery) {
 // managers du pays. Données : /api/world/country
 // (World.countryOverview). Un championnat choisi (lien, recherche) s'ouvre
 // en sous-page : classement et derniers résultats.
-const planeteState = { country: null, leagueId: null, clubIdx: null, data: null, managers: null, league: null, leagueMine: false, club: null };
+const planeteState = { country: null, data: null, managers: null };
 const PLANETE_STATS = [["pts", "Points", "pts"], ["reb", "Rebonds", "reb"], ["ast", "Passes décisives", "pd"], ["blk", "Contres", "ct"]];
 const PLANETE_TITLES_SHOWN = 10;
 const PLANETE_HISTORY_SHOWN = 12;
 const PLANETE_LEAGUES_SHOWN = 9;
 
 function openPlaneteAt(opts) {
-  // Un club précis : sa fiche équipe habituelle (showForeignTeamDetail),
-  // Planète Hoop sur son championnat seulement si elle est indisponible.
-  if (opts && opts.leagueId && Number.isInteger(opts.clubIdx)) {
-    showForeignTeamDetail(opts.leagueId, opts.clubIdx).then(ok => {
-      if (ok) return;
-      Object.assign(planeteState, { clubIdx: null }, opts);
-      TAB_HANDLERS.planete();
-    });
+  opts = opts || {};
+  if (opts.country) planeteState.country = opts.country;
+  // Un club précis : sa fiche équipe habituelle (showForeignTeamDetail) ;
+  // un championnat : la vraie page Ligue (showForeignLeague). Aperçu du
+  // pays si l'une ou l'autre est indisponible.
+  if (opts.leagueId && Number.isInteger(opts.clubIdx)) {
+    showForeignTeamDetail(opts.leagueId, opts.clubIdx).then(ok => { if (!ok) showForeignLeague(opts.leagueId).then(ok2 => { if (!ok2) TAB_HANDLERS.planete(); }); });
     return;
   }
-  Object.assign(planeteState, { clubIdx: null }, opts || {});
+  if (opts.leagueId) {
+    showForeignLeague(opts.leagueId).then(ok => { if (!ok) TAB_HANDLERS.planete(); });
+    return;
+  }
   TAB_HANDLERS.planete();
 }
 
@@ -30546,15 +30623,6 @@ async function renderPlaneteSection() {
     planeteState.data = d;
     planeteState.managers = mgr;
     planeteState.country = d.overview.country;
-    planeteState.league = null; planeteState.club = null;
-    if (planeteState.leagueId) {
-      const lr = await planeteFetch(`/api/world/league?id=${encodeURIComponent(planeteState.leagueId)}`);
-      planeteState.league = lr.league; planeteState.leagueMine = !!lr.mine; planeteState.leagueId = lr.league.id;
-      if (planeteState.clubIdx != null) {
-        const cr = await planeteFetch(`/api/world/club?league=${encodeURIComponent(planeteState.leagueId)}&idx=${planeteState.clubIdx}`).catch(() => null);
-        planeteState.club = cr ? cr.club : null;
-      }
-    }
   } catch (e) {
     console.warn("Planète Hoop :", e);
     box.innerHTML = `<p class="training-empty">Planète Hoop est indisponible pour l'instant.</p>`;
@@ -30564,7 +30632,7 @@ async function renderPlaneteSection() {
 }
 
 function planeteHtml() {
-  return planeteToolbarHtml() + (planeteState.league ? planeteLeagueViewHtml() : planeteOverviewHtml());
+  return planeteToolbarHtml() + planeteOverviewHtml();
 }
 
 const PLANETE_CHEVRON = `<svg class="pc-chev" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -30751,46 +30819,6 @@ function planeteRankingHtml() {
   return pcSection("Classement mondial", "Managers du pays, note Elo", body, rk.top.length ? "" : "pc-card--compact");
 }
 
-// Sous-page d'un championnat : classement, derniers résultats, effectif.
-function planeteLeagueViewHtml() {
-  const ov = planeteState.data.overview;
-  return `<button type="button" class="pc-back" data-pc-back>← Aperçu du pays : ${escapeHtml(ov.name)}</button>` +
-    planeteLeagueHtml() + planeteClubHtml();
-}
-
-function planeteLeagueHtml() {
-  const lg = planeteState.league;
-  const myName = teamA && teamA.name;
-  let html = `<section class="pc-card"><header class="pc-card-head"><h3>${nationFlagHtml(lg.country)}${escapeHtml(lg.label)}</h3>${planeteState.leagueMine ? `<span class="pc-pill">Votre championnat</span>` : ""}</header>`;
-  html += `<p class="pc-card-sub pc-card-sub--block">Saison ${lg.seasonNumber}${lg.playoffsDone && lg.champion ? ` · Champion : ${escapeHtml(lg.champion)}` : ` · Journée ${Math.min(lg.round + 1, 18)}`} · ${lg.humans} manager${lg.humans > 1 ? "s" : ""}</p>`;
-  html += `<table class="pc-table"><thead><tr><th class="num">#</th><th>Club</th><th class="num">J</th><th class="num">V</th><th class="num">D</th><th class="num">+/-</th></tr></thead><tbody>`;
-  lg.standings.forEach(r => {
-    const diff = r.pf - r.pa;
-    html += `<tr${planeteState.leagueMine && r.name === myName ? ` class="is-mine"` : ""}><td class="num">${r.rank}</td>` +
-      `<td><button type="button" class="pc-link${r.isHuman ? " human" : ""}" data-ph-club="${r.idx}">${escapeHtml(r.name)}</button>${r.isHuman ? `<span class="pc-mgr">Manager</span>` : ""}</td>` +
-      `<td class="num">${r.played}</td><td class="num">${r.wins}</td><td class="num">${r.losses}</td><td class="num">${diff > 0 ? "+" : ""}${diff}</td></tr>`;
-  });
-  html += `</tbody></table>`;
-  if (lg.lastResults && lg.lastResults.length) {
-    html += `<h4 class="pc-mini-title">Derniers résultats</h4><ul class="pc-rows">` + lg.lastResults.map(r =>
-      `<li><span>${escapeHtml(r.home)} – ${escapeHtml(r.away)}</span><b>${r.scoreHome}-${r.scoreAway}</b></li>`).join("") + `</ul>`;
-  }
-  return html + `</section>`;
-}
-
-function planeteClubHtml() {
-  const c = planeteState.club;
-  if (!c) return "";
-  let html = `<section class="pc-card"><header class="pc-card-head"><h3>${escapeHtml(c.name)}</h3><span class="pc-card-sub">${escapeHtml(c.label)}</span>` +
-    `<button type="button" class="pc-cta" data-ph-close-club style="margin-left:auto">Fermer</button></header>`;
-  html += `<table class="pc-table"><thead><tr><th>Poste</th><th>Joueur</th><th class="num">Âge</th><th class="num">Taille</th></tr></thead><tbody>`;
-  c.players.forEach(p => {
-    html += `<tr><td>${escapeHtml(POS_SHORT[p.position] || p.position)}</td><td>${p.nationality ? nationFlagHtml(p.nationality) : ""}${escapeHtml(p.name)}</td><td class="num">${p.age}</td><td class="num">${p.height ? p.height + " cm" : ""}</td></tr>`;
-  });
-  html += `</tbody></table><p class="pc-note">Caractéristiques visibles uniquement quand le joueur est mis en vente sur le marché.</p>`;
-  return html + `</section>`;
-}
-
 // Recherche de la page : même source que la barre du haut
 // (/api/world/search : championnats et clubs du monde, managers compris).
 let planeteSearchTimer = null;
@@ -30841,30 +30869,20 @@ function planeteClosePicker(box) {
       return;
     }
     const c = e.target.closest("[data-ph-country]");
-    if (c) { planeteClosePicker(box); planeteState.country = c.dataset.phCountry; planeteState.leagueId = null; planeteState.clubIdx = null; renderPlaneteSection(); return; }
+    if (c) { planeteClosePicker(box); planeteState.country = c.dataset.phCountry; renderPlaneteSection(); return; }
     const go = e.target.closest("[data-pc-go-league]");
-    if (go) { planeteState.country = go.dataset.pcGoCountry; planeteState.leagueId = go.dataset.pcGoLeague; planeteState.clubIdx = null; renderPlaneteSection(); window.scrollTo(0, 0); return; }
+    if (go) { planeteState.country = go.dataset.pcGoCountry; showForeignLeague(go.dataset.pcGoLeague); return; }
     const l = e.target.closest("[data-ph-league]");
-    if (l) { planeteState.leagueId = l.dataset.phLeague; planeteState.clubIdx = null; renderPlaneteSection(); window.scrollTo(0, 0); return; }
-    if (e.target.closest("[data-pc-back]")) { planeteState.leagueId = null; planeteState.clubIdx = null; renderPlaneteSection(); return; }
+    if (l) { showForeignLeague(l.dataset.phLeague); return; }
     const club = e.target.closest("[data-pc-club]");
     if (club) {
       const lid = club.dataset.pcClub, idx = Number(club.dataset.pcIdx);
       if (lid === planeteState.data.myLeagueId) { showTeamDetail(idx); return; }
-      showForeignTeamDetail(lid, idx).then(ok => { if (!ok) { planeteState.leagueId = lid; planeteState.clubIdx = idx; renderPlaneteSection(); } });
+      showForeignTeamDetail(lid, idx);
       return;
     }
     const pl = e.target.closest("[data-pc-player]");
     if (pl) { showPlayerDetail(Number(pl.dataset.pcTeam), Number(pl.dataset.pcPlayer)); return; }
-    const cl = e.target.closest("[data-ph-club]");
-    if (cl) {
-      const idx = Number(cl.dataset.phClub);
-      const fallback = () => { planeteState.clubIdx = idx; renderPlaneteSection(); };
-      if (planeteState.leagueMine) { showTeamDetail(idx); return; }
-      showForeignTeamDetail(planeteState.leagueId, idx).then(ok => { if (!ok) fallback(); });
-      return;
-    }
-    if (e.target.closest("[data-ph-close-club]")) { planeteState.clubIdx = null; planeteState.club = null; box.innerHTML = planeteHtml(); return; }
   });
   box.addEventListener("input", (e) => { if (e.target.id === "planeteSearchInput") planeteSearch(e.target.value); });
   box.addEventListener("keydown", (e) => {

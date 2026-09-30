@@ -84,6 +84,37 @@ const ok = m => console.log("✅ " + m);
   assert.deepStrictEqual(us.titles, []);
   ok("countryOverview : carte du pays, divisions, classement national/mondial des managers, titres, clubs cliquables");
 
+  // 6) /api/world/league-page : la vraie page Ligue d'un autre championnat
+  // (même contenu que /api/world/team-page, rien de privé).
+  {
+    const http = require("http");
+    const { createHandler } = require("./index.js");
+    const usLg = await World.loadLeague(world, "us-1", multi);
+    usLg.teams[3].isHuman = true;
+    usLg.teams[3].managerLinkToken = "tok-secret-us";
+    usLg.teams[3].plannedTactics = { any: 1 };
+    await store.saveMultiLeague(usLg, multi);
+    const server = http.createServer(createHandler(path.join(dir, "solo.json"), () => now, multi));
+    await new Promise(r => server.listen(0, "127.0.0.1", r));
+    const get = async (url, tok) => (await fetch(`http://127.0.0.1:${server.address().port}${url}`, { headers: { "X-TipIn-Token": tok } })).json();
+    try {
+      const tok = career.league.teams[0].managerLinkToken;
+      const r = await get("/api/world/league-page?league=us-1", tok);
+      assert.ok(r.ok && !r.mine && r.label === "Division I" && r.league.leagueId === "us-1");
+      assert.strictEqual(r.league.teams.length, 10);
+      assert.ok(r.league.teams.every(t => !t.managerLinkToken && !t.plannedTactics), "ni jeton ni tactique prévue");
+      assert.ok(!r.league.liveMatches && !(r.league.transferListings || []).length, "ni directs ni marché");
+      assert.ok(Array.isArray(r.league.results) && r.league.results.length > 0, "résultats du championnat");
+      assert.ok(r.league.teams.some(t => (t.players || []).some(p => (p.matchLog || []).length)), "journaux de matchs (leaders, feuilles de match)");
+      assert.deepStrictEqual(r.league.divisionMoves, World.divisionMovesFor(world, "us-1"));
+      const mine = await get("/api/world/league-page?league=fr-1", tok);
+      assert.ok(mine.ok && mine.mine, "son propre championnat signalé (onglet Ligue habituel)");
+      const missing = await get("/api/world/league-page?league=xx-9", tok);
+      assert.ok(!missing.ok);
+    } finally { server.close(); }
+    ok("/api/world/league-page : championnat étranger complet (résultats, journaux de matchs, zones), sans jeton, tactique, marché ni direct ; « mine » pour le sien");
+  }
+
   fs.rmSync(dir, { recursive: true, force: true });
   console.log("\n🏁 world_country_test.js : tout est vert");
 })().catch(e => { console.error("❌", e); process.exit(1); });
