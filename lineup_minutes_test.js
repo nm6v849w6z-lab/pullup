@@ -158,7 +158,7 @@ const doc = dom.window.document;
 const win = dom.window;
 const ptRow = p => doc.querySelector(`#ordresCardMinutes .pt-block[data-pos="${p}"]`);
 assert(doc.getElementById("ordresCardMinutes"), "la carte « Temps de jeu » doit exister");
-assert(!doc.querySelector("#ordresCardRotation input[type=number]"), "la carte Rotation ne doit pas contenir de minutes");
+assert(!doc.querySelector("#ordresCardCinq input[type=number]"), "la composition (ex-carte Rotation) ne doit pas contenir de minutes");
 assert(/Automatique/.test(ptRow("Meneur").textContent), "le poste Meneur doit être en automatique au départ");
 ptRow("Meneur").querySelector(".pt-btn").click();
 const inputs = [...ptRow("Meneur").querySelectorAll("input.pt-input")];

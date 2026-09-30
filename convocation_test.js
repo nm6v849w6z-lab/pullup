@@ -80,18 +80,21 @@ const { server, savePath, baseUrl } = await startTestServer();
 const dom = await openGame(html, baseUrl);
 const doc = dom.window.document;
 const win = dom.window;
-const card = doc.getElementById("ordresCardConvocation");
-assert(card, "la carte Convocation doit exister");
-const rows = () => [...card.querySelectorAll(".conv-row")];
-assert(/12/.test(card.querySelector(".ordres-card-aside").textContent), "compteur 12 / 12 par défaut");
+// Vue « composition » (2026-09-30) : la convocation est la liste de
+// l'effectif à côté du terrain, reconstruite à chaque changement avec le
+// reste de la composition : on la relit à chaque fois.
+const convCard = () => doc.getElementById("ordresCardConvocation");
+assert(convCard(), "la carte Convocation doit exister");
+const rows = () => [...convCard().querySelectorAll(".conv-row")];
+assert(/12/.test(convCard().querySelector(".ordres-card-aside").textContent), "compteur 12 / 12 par défaut");
 const offRow = rows().find(r => !r.querySelector("input").checked);
 assert(offRow && offRow.querySelector("input").disabled, "à 12 convoqués, les autres cases sont bloquées");
 const onRow = rows().find(r => /Titulaire/.test(r.textContent));
 const onName = onRow.querySelector(".conv-name").textContent;
 onRow.querySelector("input").checked = false;
 onRow.querySelector("input").dispatchEvent(new win.Event("change"));
-assert(/11/.test(card.querySelector(".ordres-card-aside").textContent), "compteur 11 / 12 après un retrait");
-assert(doc.querySelectorAll(".court-marker.incomplete").length === 1, "le poste du titulaire retiré devient à pourvoir");
+assert(/11/.test(convCard().querySelector(".ordres-card-aside").textContent), "compteur 11 / 12 après un retrait");
+assert(doc.querySelectorAll("#ordresCardCinq .cp-card.is-empty").length === 1, "le poste du titulaire retiré devient à pourvoir");
 assert(rows().find(r => r.querySelector(".conv-name").textContent === onName && /tribune/i.test(r.textContent)), "le joueur retiré est « En tribune »");
 await flush(dom);
 const saved = readRawSave(savePath).team.lineup;

@@ -1,8 +1,11 @@
 // Vérifie la feuille de match éditable (titulaires/remplaçants) : un
 // titulaire par poste (5 minimum, sinon impossible de verrouiller le
 // match), un même remplaçant peut couvrir plusieurs postes, et tout
-// survit à une sauvegarde/rechargement. Couvre la version "terrain" de
-// l'éditeur (marqueurs positionnés + tableau des remplaçants).
+// survit à une sauvegarde/rechargement. Vue « composition » (2026-09-30) :
+// une carte par poste sur le terrain (.cp-card[data-pos]) porte le menu du
+// titulaire, le remplaçant et le réserviste (.cp-sub) et « + Remplaçant »
+// (.cp-add) — elle remplace les anciens marqueurs (.court-marker) et le
+// tableau Rotation (.lineup-table), supprimés.
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, fastForwardCalendar } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
@@ -16,17 +19,20 @@ const win = dom.window;
 
 const POS_CODE = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ailier fort": "AF", "Pivot": "P" };
 
-function courtMarkers() { return [...doc.querySelectorAll(".court-marker")]; }
-function markerByPos(pos) { return courtMarkers().find(m => m.querySelector(".cm-pos").textContent === POS_CODE[pos]); }
-function tableRows() { return [...doc.querySelectorAll(".lineup-table tbody tr")]; }
-function rowByPos(pos) { return tableRows().find(r => r.querySelector(".lt-pos").textContent === POS_CODE[pos]); }
+function courtMarkers() { return [...doc.querySelectorAll("#ordresCardCinq .cp-card")]; }
+function markerByPos(pos) { return courtMarkers().find(m => m.querySelector(".cp-badge").textContent === POS_CODE[pos]); }
+function tableRows() { return courtMarkers(); }
+function rowByPos(pos) { return markerByPos(pos); }
+// Nom du joueur d'une ligne remplaçant/réserviste (sans le poste naturel
+// affiché à côté quand il joue hors poste).
+function chipName(c) { return c.querySelector(".cp-sub-name").firstChild.textContent.trim(); }
 
 // --- Par défaut (équipe auto-générée), la feuille de match doit déjà être
 // valide (5 titulaires, un par poste) et le bouton de verrouillage actif.
 const markersInit = courtMarkers();
 console.log("Marqueurs de poste sur le terrain :", markersInit.length, "(attendu 5)");
 if (markersInit.length !== 5) throw new Error("❌ Il devrait y avoir un marqueur par poste (5) sur le terrain.");
-const incompleteAtStart = doc.querySelectorAll(".court-marker.incomplete").length;
+const incompleteAtStart = doc.querySelectorAll("#ordresCardCinq .cp-card.is-empty").length;
 console.log("Postes incomplets au départ :", incompleteAtStart, "(attendu 0)");
 // Depuis le passage au calendrier réel (tâche #21, préparation à l'avance),
 // il n'y a plus de bouton "Verrouiller" à activer/désactiver : le seul
@@ -38,7 +44,7 @@ if (lineupBlocked()) throw new Error("❌ La feuille de match devrait être joua
 
 // --- Vide le titulaire d'un poste (sélecteur sur le terrain) : la feuille
 // devient invalide, le verrouillage doit se bloquer avec un message clair.
-const meneurSelect = markerByPos("Meneur").querySelector("select");
+const meneurSelect = markerByPos("Meneur").querySelector("select.cp-starter-select");
 const previousStarterId = meneurSelect.value;
 meneurSelect.value = "";
 meneurSelect.dispatchEvent(new win.Event("change"));
@@ -48,13 +54,13 @@ console.log("Feuille de match bloquée :", lineupBlocked(), "(attendu true)");
 console.log("Message :", doc.getElementById("lockWarning").textContent);
 if (!lineupBlocked()) throw new Error("❌ La feuille de match devrait être bloquée (poste Meneur sans titulaire).");
 if (!doc.getElementById("lockWarning").textContent.includes("Meneur")) throw new Error("❌ Le message devrait mentionner le poste Meneur manquant.");
-const markerIncomplete = markerByPos("Meneur").classList.contains("incomplete");
+const markerIncomplete = markerByPos("Meneur").classList.contains("is-empty");
 console.log(`${markerIncomplete ? "✅" : "❌"} Le marqueur Meneur est visuellement signalé comme incomplet.`);
-if (!markerIncomplete) throw new Error("❌ Le marqueur du poste vide devrait porter la classe 'incomplete'.");
+if (!markerIncomplete) throw new Error("❌ La carte du poste vide devrait porter la classe 'is-empty'.");
 
 // --- Réassigne un titulaire (le DOM a été reconstruit, on requery) : le
 // verrouillage redevient possible.
-const meneurSelect2 = markerByPos("Meneur").querySelector("select");
+const meneurSelect2 = markerByPos("Meneur").querySelector("select.cp-starter-select");
 meneurSelect2.value = previousStarterId;
 meneurSelect2.dispatchEvent(new win.Event("change"));
 console.log("\nAprès réassignation du titulaire Meneur :");
@@ -64,15 +70,15 @@ if (lineupBlocked()) throw new Error("❌ La feuille de match devrait être de n
 // --- Remplaçant sur plusieurs postes : ajoute un même joueur comme
 // remplaçant Arrière ET Ailier shooteur (deux postes différents), via le
 // menu déroulant "+ Ajouter un remplaçant…" du tableau sous le terrain.
-function addSelectFor(pos) { return rowByPos(pos).querySelector(".lineup-add-select"); }
-function assignedChipsFor(pos) { return [...rowByPos(pos).querySelectorAll(".lineup-backup-chip")]; }
+function addSelectFor(pos) { return rowByPos(pos).querySelector("select.cp-add"); }
+function assignedChipsFor(pos) { return [...rowByPos(pos).querySelectorAll(".cp-sub")]; }
 
 // 3 joueurs max par poste (titulaire + 2 remplaçants, retour utilisateur
 // 2026-09-27) : l'effectif de départ remplit déjà les 2 places, donc plus
 // de « + Ajouter » ; on libère une place sur A et AS en retirant un chip.
 for (const p of ["Arrière", "Ailier shooteur"]) {
   if (assignedChipsFor(p).length >= 2 && addSelectFor(p)) throw new Error(`❌ Poste ${p} plein : « + Ajouter » ne devrait plus apparaître.`);
-  while (assignedChipsFor(p).length >= 2) assignedChipsFor(p).slice(-1)[0].querySelector(".lineup-chip-remove").click();
+  while (assignedChipsFor(p).length >= 2) assignedChipsFor(p).slice(-1)[0].querySelector(".cp-remove").click();
 }
 console.log("✅ Poste plein (2 remplaçants) : plus de « + Ajouter » ; place libérée en retirant un remplaçant.");
 const arriereAddSel = addSelectFor("Arrière");
@@ -90,17 +96,17 @@ if (!asOption) throw new Error("❌ Le même joueur devrait aussi apparaître co
 asAddSel.value = asOption.value;
 asAddSel.dispatchEvent(new win.Event("change"));
 
-const arriereChipAfter = assignedChipsFor("Arrière").find(c => c.textContent.trim().startsWith(chosenName + " ("));
-const asChipAfter = assignedChipsFor("Ailier shooteur").find(c => c.textContent.trim().startsWith(chosenName + " ("));
+const arriereChipAfter = assignedChipsFor("Arrière").find(c => chipName(c) === chosenName);
+const asChipAfter = assignedChipsFor("Ailier shooteur").find(c => chipName(c) === chosenName);
 const bothChecked = !!arriereChipAfter && !!asChipAfter;
 console.log(`${bothChecked ? "✅" : "❌"} Le même joueur est bien remplaçant sur DEUX postes simultanément (Arrière + Ailier shooteur).`);
 if (!bothChecked) throw new Error("❌ Le joueur devrait apparaître comme remplaçant assigné sur les deux postes.");
 
 // --- Un titulaire n'apparaît dans la liste des remplaçants d'AUCUN poste,
 // et la ligne "Réservistes" liste bien les joueurs ni titulaires ni remplaçants.
-const pivotStarterName = rowByPos("Pivot").querySelector(".lt-starter").textContent.trim();
+const pivotStarterName = rowByPos("Pivot").querySelector(".cp-name").textContent.trim();
 const appearsAsBackupSomewhere = tableRows().some(r =>
-  [...r.querySelectorAll(".lineup-backup-chip")].some(c => c.textContent.trim().startsWith(pivotStarterName + " ("))
+  [...r.querySelectorAll(".cp-sub")].some(c => chipName(c) === pivotStarterName)
 );
 console.log(`\n${!appearsAsBackupSomewhere ? "✅" : "❌"} Le titulaire Pivot (${pivotStarterName}) n'apparaît dans aucune liste de remplaçants.`);
 if (appearsAsBackupSomewhere) throw new Error("❌ Un titulaire ne devrait jamais apparaître comme option de remplaçant.");
@@ -123,8 +129,8 @@ const dom2 = await openGame(html, baseUrl);
 const doc2 = dom2.window.document;
 const win2 = dom2.window;
 
-const reloadedRow = [...doc2.querySelectorAll(".lineup-table tbody tr")].find(r => r.querySelector(".lt-pos").textContent === "A");
-const reloadedChip = [...reloadedRow.querySelectorAll(".lineup-backup-chip")].find(c => c.textContent.trim().startsWith(chosenName + " ("));
+const reloadedRow = doc2.querySelector('#ordresCardCinq .cp-card[data-pos="Arrière"]');
+const reloadedChip = [...reloadedRow.querySelectorAll(".cp-sub")].find(c => chipName(c) === chosenName);
 const persistedOk = !!reloadedChip;
 console.log(`${persistedOk ? "✅" : "❌"} Le remplaçant multi-postes survit au rechargement.`);
 if (!persistedOk) throw new Error("❌ L'assignation multi-postes ne survit pas au rechargement.");

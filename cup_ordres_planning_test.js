@@ -254,11 +254,13 @@ if (!prepGridBackup) throw new Error("❌ Pas de #prepGrid après re-sélection 
 // MAX_BACKUPS_PER_POSITION) : l'effectif généré a déjà 2 remplaçants Pivot,
 // donc pas de « + Ajouter » tant qu'on n'en a pas retiré un — on libère une
 // place (sur CE plan de Coupe) avant de tester l'ajout.
-const findPivotAddSelect = () => [...doc.querySelector("#prepGrid").querySelectorAll(".lineup-add-select")]
-  .find(sel => { const tr = sel.closest("tr"); return tr && tr.querySelector(".lt-pos").textContent === "P"; });
+// Vue « composition » (2026-09-30) : la ligne Pivot du tableau Rotation est
+// devenue la carte Pivot du terrain (.cp-card[data-pos="Pivot"]), avec son
+// « + Remplaçant » (select.cp-add) et ses boutons × (.cp-remove).
+const pivotCard = () => doc.querySelector('#prepGrid .cp-card[data-pos="Pivot"]');
+const findPivotAddSelect = () => pivotCard() && pivotCard().querySelector("select.cp-add");
 if (!findPivotAddSelect()) {
-  const pivotTr = [...prepGridBackup.querySelectorAll("tr")].find(tr => tr.querySelector(".lt-pos") && tr.querySelector(".lt-pos").textContent === "P");
-  const rm = pivotTr && pivotTr.querySelector(".lineup-chip-remove");
+  const rm = pivotCard() && pivotCard().querySelector(".cp-remove");
   if (!rm) throw new Error("❌ (setup) aucun remplaçant Pivot à retirer pour libérer une place.");
   rm.click();
 }
