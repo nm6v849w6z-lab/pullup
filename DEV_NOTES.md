@@ -62,7 +62,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 - **⏳ À REVOIR PAR L'UTILISATEUR AVANT PUSH (2026-09-29) — Terrain 2D animé
   du direct** (« je veux revoir avant que tu pousses quoi que ce soit »).
-  Fichiers dans le dossier Mac, PAS committés : assets/live/court2d.js
+  RANGÉ HORS DU DÉPÔT le 2026-09-30 (pour ne jamais le pousser par
+  erreur) : ~/Documents/PullUp-terrain-2d/ sur le Mac = court2d.js,
+  live_court2d_test.js, terrain-2d.patch (câblage de live-view.js,
+  live.css, moteurbasket3.html ; aussi dans git stash@{0}) et
+  archive-stash1.patch (état plus ancien). Reprise : recopier les deux
+  fichiers (assets/live/ et racine) puis `git apply --3way
+  terrain-2d.patch` — conflit attendu dans moteurbasket3.html (zone du
+  direct modifiée depuis : hmLiveTimeouts, feuille en direct par ids).
+  Contenu d'origine : assets/live/court2d.js
   (nouveau), assets/live/live-view.js, assets/live/live.css,
   live_court2d_test.js, et dans moteurbasket3.html la partie hmLiveOnEvent
   (kind/zone/made/offensive/shot/actors « clé:nom », HM_LIVE_ASSET_VERSION
