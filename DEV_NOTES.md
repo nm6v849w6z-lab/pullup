@@ -29,10 +29,32 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   montrait encore « Votre terrain » dans la colonne de droite : vérifier
   que le déploiement de la carte pleine largeur (déjà sur main/prod) est
   bien en ligne.
-- **💬 À DÉCIDER — Onglet « Personnalisation »** (idée utilisateur
-  2026-09-30) : regrouper parquet, nom de la salle, maillots, trigramme ;
-  placement évoqué : Paramètres, ou dans la barre latérale sous Planète
-  Hoop et Guide.
+- **🟡 POUSSÉ SUR claude/kind-shannon-8nx9sq (2026-09-30), à passer en
+  prod — lot « inspiré de BuzzerBeater »** :
+  - Ordres : vue « Composition » sur terrain (titulaire / remplaçant /
+    réserviste par poste, alertes, cinq vs banc, effectif compact, pastille
+    de verrouillage, barre Annuler / Enregistrer). Verrouillé = tout
+    désactivé ; « Annuler » restaure l'état d'ouverture (`/api/plan`
+    `{ clear: true }` pour retirer un plan).
+  - Note par poste : Engine.positionRating / positionRatings / bestPosition
+    (pondération weightedRatingForPosition), affichage seul. Le moteur de
+    match NE pénalise PAS le hors-poste (à décider). Seuil d'alerte
+    COMPO_OFF_POSITION_GAP = 3.
+  - Chat de la ligue (server/leagueChat.js, /api/league-chat…) : panneau
+    par-dessus la page depuis un bouton de la page Ligue, pastille de non-lus
+    sur ce bouton seulement, messages automatiques (résultats de championnat,
+    transferts, classement). Pas encore : résultats de coupe / play-offs.
+  - Onglet Personnalisation (sous Guide) : identité (logo, trigramme, nom de
+    salle), maillots, parquet ; modale d'identité, bloc Club des Paramètres
+    et carte « Votre terrain » de la Salle retirés. 34 motifs de maillot
+    (Uni gratuit, 33 Premium).
+  - Planète Hoop : aperçu du pays (sélecteur + recherche, divisions, leaders,
+    meilleures performances, titres, classement Elo, historique),
+    `/api/world/country`.
+  - Ligue : résultats de la journée sur une seule ligne. Fiche joueur :
+    boutons sous la note. Centre de formation 100 % national.
+  - Tests connus en échec sans rapport : private_league_ui_test.js (échoue
+    aussi avant ce lot).
 
 - **🟡 CODÉ, À POUSSER (2026-09-29) — Entraînement des fondamentaux, 2e
   passe du tableau d'aptitudes** : Passe et Création de tir sans malus de
