@@ -2121,6 +2121,59 @@ function facilityInfo(key, level) {
 // appelé à chaque match) et dérive lentement selon le confort tarifaire
 // moyen (Team.trainWeek, indépendamment des résultats).
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// PRESTIGE DU CLUB (retour communauté 2026-09-30 : « club prestige » qui
+// influence l'affluence et le merchandising, bâti sur les 5 dernières
+// saisons, triées par division). Note 0-100 : moyenne pondérée des 5
+// dernières saisons archivées (la plus récente pèse le plus), une saison
+// manquante (club récent) comptant pour la moyenne de la division actuelle.
+// Ne bouge donc qu'au changement de saison. Effets volontairement modérés
+// et JAMAIS affichés en chiffres (retour utilisateur) : affluence ×0,9 à
+// ×1,1, revenu de la boutique ×0,7 à ×1,4. Affiché : jauge du tableau de
+// bord + étoiles de Renommée (computeClubReputationStars).
+// ---------------------------------------------------------------------
+const PRESTIGE_WEIGHTS = [35, 25, 18, 12, 10];
+function divisionBasePrestige(level) {
+  return [78, 62, 50, 40, 31, 22][clamp((level || MAX_DIVISION_LEVEL) - 1, 0, 5)];
+}
+function seasonPrestigeNote(s, nextLevel) {
+  const level = s.divisionLevel || MAX_DIVISION_LEVEL;
+  let note = divisionBasePrestige(level);
+  const tags = [];
+  if (s.rank && s.teams > 1) note += 12 - 24 * (s.rank - 1) / (s.teams - 1);
+  if (s.playoffResult === "Champion") { note += 10; tags.push("Champion"); }
+  else if (s.playoffResult === "Finaliste") { note += 6; tags.push("Finaliste"); }
+  else if (s.playoffResult === "Demi-finaliste") { note += 3; tags.push("Demi-finale"); }
+  if (s.cupWinner) { note += 6; tags.push("Coupe"); }
+  else if (s.cupResult === "Finale") note += 3;
+  if (nextLevel && nextLevel < level) { note += 6; tags.push("Montée"); }
+  else if (nextLevel && nextLevel > level) { note -= 8; tags.push("Descente"); }
+  return { note: clamp(Math.round(note), 0, 100), tags };
+}
+function clubPrestigeDetail(team, divisionLevel) {
+  const hist = ((team && team.seasonHistory) || []).slice(0, PRESTIGE_WEIGHTS.length);
+  const base = divisionBasePrestige(divisionLevel);
+  const seasons = hist.map((s, i) => {
+    const next = i === 0 ? (divisionLevel || null) : (hist[i - 1].divisionLevel || null);
+    const r = seasonPrestigeNote(s, next);
+    return { seasonNo: s.seasonNo, divisionLevel: s.divisionLevel, divisionName: s.divisionName, rank: s.rank, teams: s.teams, note: r.note, tags: r.tags };
+  });
+  let sum = 0;
+  PRESTIGE_WEIGHTS.forEach((w, i) => { sum += w * (seasons[i] ? seasons[i].note : base); });
+  return { value: clamp(Math.round(sum / 100), 0, 100), seasons, base };
+}
+function prestigeLabel(v) {
+  if (v >= 85) return "Club légendaire";
+  if (v >= 70) return "Club prestigieux";
+  if (v >= 55) return "Club reconnu";
+  if (v >= 40) return "Club établi";
+  if (v >= 25) return "Club modeste";
+  return "Club méconnu";
+}
+function prestigeStars(v) { return clamp(1 + Math.floor(v / 20), 1, 5); }
+function prestigeAttendanceMult(v) { return typeof v === "number" ? 0.9 + 0.2 * clamp(v, 0, 100) / 100 : 1; }
+function prestigeShopMult(v) { return typeof v === "number" ? 0.7 + 0.7 * clamp(v, 0, 100) / 100 : 1; }
+
 function attendanceBaseForMorale(morale) {
   return clamp(0.45 + (morale / 100) * 0.5, 0.2, 0.95);
 }
@@ -5384,6 +5437,7 @@ class Team {
     // / moraleLabel) : neutre au départ, évolue avec les résultats et le
     // confort tarifaire — voir applyMoraleForResult et trainWeek.
     this.fanMorale = 50;
+    this.prestige = null; // voir clubPrestigeDetail (mis à jour chaque semaine par trainWeek)
     this.moraleHistory = [];
 
     // Objectif de saison fixé par le conseil d'administration (retour
@@ -6640,7 +6694,7 @@ class Team {
   projectedAttendanceRateAtPrice(categoryKey, price) {
     const forgiveness = moraleForgiveness(this.fanMorale);
     const comfort = ticketPriceComfortFactor(price / forgiveness, categoryKey);
-    return clamp(attendanceBaseForMorale(this.fanMorale) * comfort, 0.08, 0.98);
+    return clamp(attendanceBaseForMorale(this.fanMorale) * prestigeAttendanceMult(this.prestige) * comfort, 0.08, 0.98);
   }
 
   // Taux de remplissage PROJETÉ global (moyenne pondérée par la part de
@@ -7252,6 +7306,9 @@ class Team {
   // historique, tous les SEASON_LENGTH_WEEKS (carrière solo, calendrier
   // classique).
   trainWeek(divisionLevel, now, opts = null) {
+    // Prestige (voir clubPrestigeDetail) : ne change qu'avec l'histoire du
+    // club et sa division, donc en pratique à chaque changement de saison.
+    this.prestige = clubPrestigeDetail(this, divisionLevel).value;
     const skill = this.trainingSkill; // clé de TRAINING_PROGRAMS, ou null
     const program = skill ? TRAINING_PROGRAMS[skill] : null;
     const dilution = this.trainingDilution();
@@ -7464,7 +7521,7 @@ class Team {
     // upgradeFanShop — investissement unique, revenu récurrent).
     let fanShopRevenue = 0;
     if (this.fanShopLevel > 0) {
-      fanShopRevenue = fanShopInfo(this.fanShopLevel).weeklyRevenue;
+      fanShopRevenue = Math.round(fanShopInfo(this.fanShopLevel).weeklyRevenue * prestigeShopMult(this.prestige));
       this.recordTransaction(`Recettes boutique des supporters (${fanShopInfo(this.fanShopLevel).name})`, fanShopRevenue);
     }
 
@@ -9093,6 +9150,10 @@ function recalibrateCpuTeams(league, { dryRun = false } = {}) {
 // plus prestigieuse). Purement cosmétique, ne modifie jamais rien côté
 // simulation.
 function computeClubReputationStars(team, divisionLevel, now = Date.now()) {
+  // Renommée = Prestige du club (voir clubPrestigeDetail).
+  if (team && (typeof team.prestige === "number" || (team.seasonHistory || []).length)) {
+    return prestigeStars(typeof team.prestige === "number" ? team.prestige : clubPrestigeDetail(team, divisionLevel).value);
+  }
   const trophyCount = (team.trophies || []).length;
   const clubAgeYears = new Date(now).getFullYear() - (team.foundedYear || new Date(now).getFullYear());
   const divisionBonus = (MAX_DIVISION_LEVEL - (divisionLevel || MAX_DIVISION_LEVEL)) / (MAX_DIVISION_LEVEL - 1);
@@ -13914,6 +13975,7 @@ function serializeTeam(team) {
     facilityLevels: { ...(team.facilityLevels || { tvStation: 0, gym: 0, wellness: 0 }) },
     transactions: team.transactions,
     fanMorale: team.fanMorale,
+    prestige: typeof team.prestige === "number" ? team.prestige : null,
     moraleHistory: team.moraleHistory,
     // Objectif de saison du conseil d'administration (voir le grand
     // commentaire au-dessus de SEASON_OBJECTIVE_TIERS) : `null` par défaut,
@@ -14495,6 +14557,7 @@ function teamFromSave(data) {
   }
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
+  team.prestige = typeof data.prestige === "number" ? clamp(data.prestige, 0, 100) : null;
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
   // Objectif de saison du conseil d'administration (voir serializeTeam
   // ci-dessus) : `null` par défaut (constructeur), une sauvegarde d'avant
@@ -16832,7 +16895,7 @@ return {
   MILESTONE_INTERVIEW_RESPONSE_DEADLINE_MS, midSeasonRound, milestoneTypeForRound,
   statEvaluation, PIR_TIER_THRESHOLDS, PIR_TIER_COLORS, pirTier, MVP_ATTR_BONUS, MVP_QUOTES,
   TOUR_REWARD_BY_TOPIC,
-  MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars,
+  MAX_TEAM_TROPHIES, generateFoundedYear, computeClubReputationStars, clubPrestigeDetail, prestigeLabel, prestigeStars, prestigeAttendanceMult, prestigeShopMult,
   // Forme physique (voir le grand commentaire au-dessus de CONDITION_STATES) :
   CONDITION_STATES, conditionStateFor, currentCondition, conditionLossForMinutes,
   CONDITION_DAY_MS, CONDITION_RECOVERY_PER_DAY, CONDITION_RECOVERY_PER_DAY_TRAINED, conditionRestDays,

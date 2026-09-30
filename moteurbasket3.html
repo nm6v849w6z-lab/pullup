@@ -4330,6 +4330,20 @@
     border-radius:var(--radius); padding:18px; margin:auto 0; flex:none;
   }
   .upgrade-confirm-box h3{margin:0 0 12px; font-size:15px; color:var(--ink);}
+  .upgrade-confirm-box.pr-box{position:relative; max-width:540px; padding:22px;}
+  .pr-box h3{font-size:19px; margin:0 32px 6px 0;}
+  .pr-box .sl-hist-close{position:absolute; top:12px; right:12px;}
+  .pr-intro{margin:0 0 14px; color:var(--ink-dim); font-size:13px; line-height:1.45;}
+  .pr-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .pr-table th{text-align:left; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); padding:6px 4px; border-bottom:1px solid var(--line);}
+  .pr-table td{padding:9px 4px; border-bottom:1px solid var(--line-soft); color:var(--ink);}
+  .pr-table .n{text-align:right; font-weight:800;}
+  .pr-table .pr-empty{color:var(--ink-dim); text-align:center;}
+  .pr-tag{display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; font-weight:700; background:rgba(47,191,159,.15); color:var(--ok); margin-left:4px;}
+  .pr-tag.up{background:rgba(240,162,60,.15); color:var(--amber);}
+  .pr-tag.down{background:rgba(226,105,79,.15); color:var(--danger);}
+  .pr-total{display:flex; justify-content:space-between; margin-top:12px; font-weight:900; font-size:15px; color:var(--ink);}
+  .pr-total b{color:var(--amber);}
   .upgrade-confirm-row{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     font-size:13px; color:var(--ink-dim); padding:6px 0; border-bottom:1px solid var(--line-soft);
@@ -5731,7 +5745,22 @@
 
 /* ---------- Pouls du club ---------- */
 .hm-pulse { display: flex; flex-direction: column; gap: 18px; }
-.hm-pulse__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; flex: 1; }
+.hm-pulse__grid { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px; flex: 1; min-width: 0; }
+.hm-pulse__btn { all: unset; display: flex; cursor: pointer; min-width: 0; border-radius: 14px; }
+.hm-pulse__btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.hm-pulse__link { min-width: 0; }
+.hm-gauge__stars { color: var(--amber); font-size: 12px; letter-spacing: 1px; margin-top: 2px; }
+.hm-pulse .hm-gauge { justify-content: flex-start; }
+/* Trois jauges (Supporters, Alchimie, Prestige) : tiennent dans la carte
+   sur téléphone (retour utilisateur 2026-09-30). */
+@media (max-width: 520px) {
+  .hm-pulse__grid { gap: 8px; }
+  .hm-pulse .hm-gauge { padding: 12px 4px; gap: 8px; }
+  .hm-pulse .hm-gauge__ring, .hm-pulse .hm-gauge__ring svg { width: 70px; height: 70px; }
+  .hm-pulse .hm-gauge__value { font-size: 22px; }
+  .hm-pulse .hm-gauge__label .hm-strong { font-size: 13.5px; }
+  .hm-pulse .hm-gauge__label .hm-muted { font-size: 11.5px; }
+}
 .hm-pulse__link { color: inherit; text-decoration: none; display: flex; }
 .hm-gauge { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: var(--card); border-radius: 14px; padding: 16px; text-align: center; }
 .hm-pulse__link:hover .hm-gauge { background: #1A2540; }
@@ -10726,6 +10755,59 @@ function arenaImageUrl(level) {
 // appelé à chaque match) et dérive lentement selon le confort tarifaire
 // moyen (Team.trainWeek, indépendamment des résultats).
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// PRESTIGE DU CLUB (retour communauté 2026-09-30 : « club prestige » qui
+// influence l'affluence et le merchandising, bâti sur les 5 dernières
+// saisons, triées par division). Note 0-100 : moyenne pondérée des 5
+// dernières saisons archivées (la plus récente pèse le plus), une saison
+// manquante (club récent) comptant pour la moyenne de la division actuelle.
+// Ne bouge donc qu'au changement de saison. Effets volontairement modérés
+// et JAMAIS affichés en chiffres (retour utilisateur) : affluence ×0,9 à
+// ×1,1, revenu de la boutique ×0,7 à ×1,4. Affiché : jauge du tableau de
+// bord + étoiles de Renommée (computeClubReputationStars).
+// ---------------------------------------------------------------------
+const PRESTIGE_WEIGHTS = [35, 25, 18, 12, 10];
+function divisionBasePrestige(level) {
+  return [78, 62, 50, 40, 31, 22][clamp((level || MAX_DIVISION_LEVEL) - 1, 0, 5)];
+}
+function seasonPrestigeNote(s, nextLevel) {
+  const level = s.divisionLevel || MAX_DIVISION_LEVEL;
+  let note = divisionBasePrestige(level);
+  const tags = [];
+  if (s.rank && s.teams > 1) note += 12 - 24 * (s.rank - 1) / (s.teams - 1);
+  if (s.playoffResult === "Champion") { note += 10; tags.push("Champion"); }
+  else if (s.playoffResult === "Finaliste") { note += 6; tags.push("Finaliste"); }
+  else if (s.playoffResult === "Demi-finaliste") { note += 3; tags.push("Demi-finale"); }
+  if (s.cupWinner) { note += 6; tags.push("Coupe"); }
+  else if (s.cupResult === "Finale") note += 3;
+  if (nextLevel && nextLevel < level) { note += 6; tags.push("Montée"); }
+  else if (nextLevel && nextLevel > level) { note -= 8; tags.push("Descente"); }
+  return { note: clamp(Math.round(note), 0, 100), tags };
+}
+function clubPrestigeDetail(team, divisionLevel) {
+  const hist = ((team && team.seasonHistory) || []).slice(0, PRESTIGE_WEIGHTS.length);
+  const base = divisionBasePrestige(divisionLevel);
+  const seasons = hist.map((s, i) => {
+    const next = i === 0 ? (divisionLevel || null) : (hist[i - 1].divisionLevel || null);
+    const r = seasonPrestigeNote(s, next);
+    return { seasonNo: s.seasonNo, divisionLevel: s.divisionLevel, divisionName: s.divisionName, rank: s.rank, teams: s.teams, note: r.note, tags: r.tags };
+  });
+  let sum = 0;
+  PRESTIGE_WEIGHTS.forEach((w, i) => { sum += w * (seasons[i] ? seasons[i].note : base); });
+  return { value: clamp(Math.round(sum / 100), 0, 100), seasons, base };
+}
+function prestigeLabel(v) {
+  if (v >= 85) return "Club légendaire";
+  if (v >= 70) return "Club prestigieux";
+  if (v >= 55) return "Club reconnu";
+  if (v >= 40) return "Club établi";
+  if (v >= 25) return "Club modeste";
+  return "Club méconnu";
+}
+function prestigeStars(v) { return clamp(1 + Math.floor(v / 20), 1, 5); }
+function prestigeAttendanceMult(v) { return typeof v === "number" ? 0.9 + 0.2 * clamp(v, 0, 100) / 100 : 1; }
+function prestigeShopMult(v) { return typeof v === "number" ? 0.7 + 0.7 * clamp(v, 0, 100) / 100 : 1; }
+
 function attendanceBaseForMorale(morale) {
   return clamp(0.45 + (morale / 100) * 0.5, 0.2, 0.95);
 }
@@ -14867,6 +14949,7 @@ class Team {
     // / moraleLabel) : neutre au départ, évolue avec les résultats et le
     // confort tarifaire — voir applyMoraleForResult et trainWeek.
     this.fanMorale = 50;
+    this.prestige = null; // voir clubPrestigeDetail (mis à jour chaque semaine par trainWeek)
     this.moraleHistory = [];
 
     // Objectif de saison du conseil d'administration (voir engine.js,
@@ -15755,7 +15838,7 @@ class Team {
   projectedAttendanceRateAtPrice(categoryKey, price) {
     const forgiveness = moraleForgiveness(this.fanMorale);
     const comfort = ticketPriceComfortFactor(price / forgiveness, categoryKey);
-    return clamp(attendanceBaseForMorale(this.fanMorale) * comfort, 0.08, 0.98);
+    return clamp(attendanceBaseForMorale(this.fanMorale) * prestigeAttendanceMult(this.prestige) * comfort, 0.08, 0.98);
   }
 
   // Taux de remplissage PROJETÉ global (moyenne pondérée par la part de
@@ -16331,6 +16414,9 @@ class Team {
   // historique, tous les SEASON_LENGTH_WEEKS (carrière solo, calendrier
   // classique).
   trainWeek(divisionLevel, now, opts = null) {
+    // Prestige (voir clubPrestigeDetail) : ne change qu'avec l'histoire du
+    // club et sa division, donc en pratique à chaque changement de saison.
+    this.prestige = clubPrestigeDetail(this, divisionLevel).value;
     const skill = this.trainingSkill; // clé de TRAINING_PROGRAMS, ou null
     const program = skill ? TRAINING_PROGRAMS[skill] : null;
     const dilution = this.trainingDilution();
@@ -16540,7 +16626,7 @@ class Team {
     // upgradeFanShop — investissement unique, revenu récurrent).
     let fanShopRevenue = 0;
     if (this.fanShopLevel > 0) {
-      fanShopRevenue = fanShopInfo(this.fanShopLevel).weeklyRevenue;
+      fanShopRevenue = Math.round(fanShopInfo(this.fanShopLevel).weeklyRevenue * prestigeShopMult(this.prestige));
       this.recordTransaction(`Recettes boutique des supporters (${fanShopInfo(this.fanShopLevel).name})`, fanShopRevenue);
     }
 
@@ -17922,6 +18008,10 @@ function divisionInfo(level) {
 // Copie côté client de la même fonction engine.js (voir son commentaire) :
 // "renommée" du club, 1 à 5 étoiles, recalculée à l'affichage.
 function computeClubReputationStars(team, divisionLevel, now = Date.now()) {
+  // Renommée = Prestige du club (voir clubPrestigeDetail).
+  if (team && (typeof team.prestige === "number" || (team.seasonHistory || []).length)) {
+    return prestigeStars(typeof team.prestige === "number" ? team.prestige : clubPrestigeDetail(team, divisionLevel).value);
+  }
   const trophyCount = (team.trophies || []).length;
   const clubAgeYears = new Date(now).getFullYear() - (team.foundedYear || new Date(now).getFullYear());
   const divisionBonus = (MAX_DIVISION_LEVEL - (divisionLevel || MAX_DIVISION_LEVEL)) / (MAX_DIVISION_LEVEL - 1);
@@ -21572,6 +21662,7 @@ function serializeTeam(team) {
     facilityLevels: { ...(team.facilityLevels || { tvStation: 0, gym: 0, wellness: 0 }) },
     transactions: team.transactions,
     fanMorale: team.fanMorale,
+    prestige: typeof team.prestige === "number" ? team.prestige : null,
     moraleHistory: team.moraleHistory,
     // Objectif de saison du conseil d'administration (voir engine.js,
     // miroir identique).
@@ -22070,6 +22161,7 @@ function teamFromSave(data) {
   }
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
+  team.prestige = typeof data.prestige === "number" ? clamp(data.prestige, 0, 100) : null;
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
   // Objectif de saison du conseil d'administration (voir engine.js, miroir
   // identique).
@@ -40808,7 +40900,7 @@ function dashRenderTasks(data) {
   </section>`;
 }
 
-function dashGauge(value, label, sub) {
+function dashGauge(value, label, sub, stars = 0) {
   // Couleur de l'anneau ET du chiffre (moraleGaugeColor, même 4 paliers
   // rouge/orange/blanc/vert que partout ailleurs dans le jeu — Ordres,
   // Effectif, Marché, Humeur des supporters, voir
@@ -40825,9 +40917,35 @@ function dashGauge(value, label, sub) {
       <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true"><circle class="hm-gauge__track" cx="46" cy="46" r="38" fill="none" stroke="#24314B" stroke-width="8"/><circle cx="46" cy="46" r="38" fill="none" stroke="${dashEsc(valueColor)}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dashGaugeDash(value, 38)}" transform="rotate(-90 46 46)"/></svg>
       <div class="hm-gauge__value" style="color:${dashEsc(valueColor)}">${dashEsc(Math.round(value))}</div>
     </div>
-    <div class="hm-gauge__label"><div class="hm-strong">${dashEsc(label)}</div><div class="hm-muted">${dashEsc(sub)}</div></div>
+    <div class="hm-gauge__label"><div class="hm-strong">${dashEsc(label)}</div><div class="hm-muted">${dashEsc(sub)}</div>${stars ? `<div class="hm-gauge__stars" aria-hidden="true">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</div>` : ""}</div>
   </div>`;
 }
+
+// Détail du Prestige (clic sur la jauge du tableau de bord) : saisons et
+// notes, sans aucun chiffre économique (retour utilisateur 2026-09-30).
+function showPrestigeModal() {
+  const d = clubPrestigeDetail(teamA, league.divisionLevel);
+  const prev = document.getElementById("prestigeModalOverlay");
+  if (prev) prev.remove();
+  const rows = d.seasons.length
+    ? d.seasons.map(s => `<tr><td>S${escapeHtml(String(s.seasonNo || "?"))}</td><td>${escapeHtml(divisionInfo(s.divisionLevel || league.divisionLevel).name)}${s.rank ? ` · ${s.rank}${s.rank === 1 ? "re" : "e"}` : ""}` +
+        s.tags.map(t => `<span class="pr-tag${t === "Montée" ? " up" : t === "Descente" ? " down" : ""}">${escapeHtml(t)}</span>`).join("") + `</td><td class="n">${s.note}</td></tr>`).join("")
+    : `<tr><td colspan="3" class="pr-empty">Aucune saison terminée : le prestige part de la moyenne de ta division.</td></tr>`;
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay";
+  overlay.id = "prestigeModalOverlay";
+  overlay.innerHTML = `<div class="upgrade-confirm-box pr-box" role="dialog" aria-labelledby="prestigeModalTitle">` +
+    `<button type="button" class="sl-hist-close" data-prestige-close aria-label="Fermer">×</button>` +
+    `<h3 id="prestigeModalTitle"><span>Prestige</span> : ${d.value} / 100 · <span>${escapeHtml(prestigeLabel(d.value))}</span></h3>` +
+    `<p class="pr-intro">La réputation du club auprès du public, bâtie sur les 5 dernières saisons : la division d'abord, puis le classement, les play-offs, la coupe et les montées. La saison la plus récente compte le plus. Mis à jour à chaque changement de saison.</p>` +
+    `<table class="pr-table"><thead><tr><th>Saison</th><th>Résultat</th><th class="n">Note</th></tr></thead><tbody>${rows}</tbody></table>` +
+    `<div class="pr-total"><span>Prestige</span><b>${d.value}</b></div></div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", e => { if (e.target === overlay || e.target.closest("[data-prestige-close]")) overlay.remove(); });
+}
+document.addEventListener("click", e => {
+  if (e.target.closest && e.target.closest("[data-prestige-open]")) showPrestigeModal();
+});
 
 function dashRenderPulse(data) {
   const s = data.supporters.value;
@@ -40837,6 +40955,7 @@ function dashRenderPulse(data) {
     <div class="hm-pulse__grid">
       <a class="hm-pulse__link" href="/humeur" data-dash-href="/humeur" aria-label="Supporters : ${dashEsc(s)} sur 100">${dashGauge(s, "Supporters", data.supporters.label ?? dashMoodLabel(s))}</a>
       <a class="hm-pulse__link" href="/effectif" data-dash-href="/effectif" aria-label="Alchimie : ${dashEsc(c)} sur 100">${dashGauge(c, "Alchimie", data.chemistry.label ?? dashMoodLabel(c, "chemistry"))}</a>
+      ${data.prestige ? `<button type="button" class="hm-pulse__link hm-pulse__btn" data-prestige-open aria-label="Prestige : ${dashEsc(data.prestige.value)} sur 100">${dashGauge(data.prestige.value, "Prestige", data.prestige.label, data.prestige.stars)}</button>` : ""}
     </div>
   </section>`;
 }
@@ -41476,6 +41595,7 @@ function dashboardDataFromGameState() {
     },
     supporters: { value: teamA.fanMorale },
     chemistry: { value: Math.round(teamA.chemistry) },
+    prestige: (() => { const v = clubPrestigeDetail(teamA, league.divisionLevel).value; return { value: v, label: prestigeLabel(v), stars: prestigeStars(v) }; })(),
   };
 }
 
