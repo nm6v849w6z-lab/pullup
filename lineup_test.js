@@ -83,7 +83,12 @@ for (const p of ["Arrière", "Ailier shooteur"]) {
 console.log("✅ Poste plein (2 remplaçants) : plus de « + Ajouter » ; place libérée en retirant un remplaçant.");
 const arriereAddSel = addSelectFor("Arrière");
 if (!arriereAddSel || arriereAddSel.options.length < 2) throw new Error("❌ Aucun remplaçant disponible pour Arrière.");
-const firstOption = arriereAddSel.options[1];
+// Un candidat proposé AUSSI pour Ailier shooteur (les menus sont triés par
+// note au poste depuis la note par poste, 2026-09-30 : le premier candidat
+// Arrière peut déjà être remplaçant/réserviste AS, donc absent de ce menu).
+const asCandidates = new Set([...addSelectFor("Ailier shooteur").options].map(o => o.value).filter(Boolean));
+const firstOption = [...arriereAddSel.options].slice(1).find(o => asCandidates.has(o.value));
+if (!firstOption) throw new Error("❌ (setup) aucun joueur proposé à la fois pour Arrière et Ailier shooteur.");
 const chosenLabel = firstOption.textContent.replace(/\s*\(\d+\)$/, "").trim(); // enlève " (overall)" -> reste "Nom (Poste"
 const chosenName = firstOption.textContent.split(" (")[0].trim();
 arriereAddSel.value = firstOption.value;
