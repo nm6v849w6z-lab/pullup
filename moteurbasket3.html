@@ -6061,9 +6061,6 @@
   .eff-motiv.motiv-critical{--eff-c:var(--danger); color:var(--danger); font-weight:700;}
 
   /* --- Général : groupes Cinq de départ / Rotation / Réserve --- */
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-group-row th{height:auto; padding:22px 0 10px 2px; text-align:left; background:transparent; font-weight:600; color:var(--ink); text-transform:none;}
-  :is(#effectifSection, #teamDetailSection) .eff-general tbody:first-of-type tr.eff-group-row th{padding-top:6px;}
-  .eff-group-title{font-size:18px; font-weight:700; margin-right:10px;}
   /* Largeurs de colonnes (retour utilisateur 2026-09-25, 3e essai : "il y a
      bcp de vide entre potentiel et âge et entre forme et motivation, ce
      n'est pas harmonieux"). Des largeurs figées (px puis %) devaient prévoir
@@ -6118,12 +6115,16 @@
   :is(#effectifSection, #teamDetailSection) table.eff-general .eff-pot .potential-tier, :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond-label{font-size:13px; line-height:1.2;}
   :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond .eff-meter{width:60px;}
   :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
-  :is(#effectifSection, #teamDetailSection) .eff-general .eff-group-starters tr.eff-row td{height:58px; background:var(--eff-row);}
-  :is(#effectifSection, #teamDetailSection) .eff-general .eff-group-starters .eff-player .player-link{font-size:15px;}
+  /* Un seul bloc (retour utilisateur 2026-09-30) : rôle signalé
+     discrètement — liseré ambre + petit « 5 » pour le cinq de départ, nom
+     estompé pour la réserve (voir effRoleRowClass/effRoleMarkHtml). */
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row.eff-row-starter td:first-child{box-shadow:inset 3px 0 0 var(--amber);}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row.eff-row-reserve .eff-player .player-link{color:var(--ink-dim); font-weight:500;}
+  .eff-starter-mark{flex:none; display:inline-grid; place-items:center; min-width:16px; height:16px; padding:0 3px; border-radius:4px; background:rgba(240,162,60,.16); color:var(--amber); font-size:10.5px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums;}
   :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td:first-child{border-left:1px solid var(--eff-sep);}
   :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td:last-child{border-right:1px solid var(--eff-sep);}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-group-row + tr.eff-row td:first-child{border-top-left-radius:12px;}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-group-row + tr.eff-row td:last-child{border-top-right-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:first-child td:first-child{border-top-left-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:first-child td:last-child{border-top-right-radius:12px;}
   :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td{border-bottom:1px solid var(--eff-sep);}
   :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td:first-child{border-bottom-left-radius:12px;}
   :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td:last-child{border-bottom-right-radius:12px;}
@@ -6185,26 +6186,25 @@
      rend la cellule Nom (en-tête compris) position:sticky; left:0 pendant
      le défilement horizontal. Une cellule sticky doit être OPAQUE (sinon
      les colonnes défilent visibles derrière le nom) : même fond que la
-     ligne dans chaque état (Cinq de départ / Rotation-Réserve, survol,
+     ligne dans chaque état (ligne normale, survol,
      blessé — la teinte rouge translucide est posée PAR-DESSUS le fond de
      ligne) et que la zone derrière l'en-tête (fond de page pour Général,
      fond de la carte pour Caractéristiques). Ombre à droite seulement une
      fois le tableau défilé (.is-scrolled, posée par effFrozenColSync). Le
-     titre de groupe (« Cinq de départ »…) est une cellule colspan de toute
-     la largeur : c'est son libellé qui est figé à gauche. */
+     liseré ambre d'un titulaire (inset box-shadow) reste sur la cellule
+     figée. */
   :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr > :first-child{position:sticky; left:0; z-index:1;}
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr.eff-family-row > :first-child,
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr.eff-group-row > :first-child{position:static;}
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-group-title{position:sticky; left:2px; display:inline-block;}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr.eff-family-row > :first-child{position:static;}
   :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table thead th:first-child{z-index:3; background:var(--bg);}
   :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table thead th:first-child,
   :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody td:first-child{background:var(--eff-row-2);}
   :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody tr:hover td:first-child{background:#1a2333;}
   :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-general tr.eff-row.injured td:first-child{background:linear-gradient(rgba(226,105,79,.12), rgba(226,105,79,.12)), var(--eff-row-2);}
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-general .eff-group-starters tr.eff-row.injured td:first-child{background:linear-gradient(rgba(226,105,79,.12), rgba(226,105,79,.12)), var(--eff-row);}
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row):not(.eff-group-row) > :first-child{box-shadow:8px 0 10px -8px rgba(0,0,0,.65); clip-path:inset(0 -14px 0 0);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row) > :first-child{box-shadow:8px 0 10px -8px rgba(0,0,0,.65); clip-path:inset(0 -14px 0 0);}
   html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody tr:hover td:first-child{background:#f1f4f9;}
-  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row):not(.eff-group-row) > :first-child{box-shadow:8px 0 10px -8px rgba(20,32,51,.22);}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row) > :first-child{box-shadow:8px 0 10px -8px rgba(20,32,51,.22);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr.eff-row.eff-row-starter > td:first-child{box-shadow:inset 3px 0 0 var(--amber), 8px 0 10px -8px rgba(0,0,0,.65);}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr.eff-row.eff-row-starter > td:first-child{box-shadow:inset 3px 0 0 var(--amber), 8px 0 10px -8px rgba(20,32,51,.22);}
   /* Téléphone (même seuil que la barre d'onglets du bas, 768 px) : colonne
      Joueur raccourcie pour laisser voir les chiffres — avatar réduit,
      drapeau masqué, nom tronqué avec « … » (nom complet en infobulle et
@@ -6219,7 +6219,6 @@
     :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-avatar{width:22px !important; height:24px !important; flex:none;}
     :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-avatar svg{width:100%; height:100%;}
     :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-link{display:block; min-width:0; max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13.5px;}
-    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-general .eff-group-starters .eff-player .player-link{font-size:13.5px;}
     /* En-tête de la page Effectif : un nom d'adversaire long (« Prochain
        match ») élargissait toute la page. */
     .eff-kpi-line{min-width:0; max-width:100%;}
@@ -6241,7 +6240,6 @@
   .tde-kpi-link:hover{text-decoration:underline;}
   .tde-seg-count{display:inline-block; margin-left:6px; padding:0 7px; border-radius:999px; background:var(--panel-2); color:var(--ink-dim); font-size:12px; font-weight:700;}
   .eff-seg-btn.active .tde-seg-count{background:var(--amber); color:var(--amber-ink);}
-  .tde-group-count{font-size:13px; color:var(--ink-faint); font-weight:600;}
   #teamDetailSection table.eff-general th.tde-th-stat{text-align:right;}
   .tde-stat{color:var(--ink-dim);}
   .tde-stat-main{color:var(--ink); font-weight:700;}
@@ -8299,9 +8297,9 @@
 
       <div class="guide-entry" data-guide-id="effectif" data-guide-group="Mon équipe">
         <h3>Effectif &amp; feuille de match</h3>
-        <p class="training-intro">L'onglet <b>Effectif</b> affiche en tête l'alchimie, la masse salariale et le prochain match, puis vos joueurs groupés en <b>Cinq de départ</b>, <b>Rotation</b> et <b>Réserve</b>, d'après la feuille de match actuelle. Pour chacun : poste, potentiel, âge, taille, salaire, forme, motivation et évaluation des derniers matchs. Le menu <b>⋯</b> au bout de chaque ligne regroupe les actions (mettre en vente, etc.). Trois sous-onglets : Général, Caractéristiques (toutes les caracs de tous vos joueurs côte à côte, triables par colonne) et Statistiques.</p>
+        <p class="training-intro">L'onglet <b>Effectif</b> affiche en tête l'alchimie, la masse salariale et le prochain match, puis vos joueurs en une seule liste : le <b>cinq de départ</b> d'abord (liseré orange et petit « 5 »), puis la rotation, puis la réserve (nom estompé), d'après la feuille de match actuelle ; cliquez un titre de colonne pour trier toute la liste. Pour chacun : poste, potentiel, âge, taille, salaire, forme, motivation et évaluation des derniers matchs. Le menu <b>⋯</b> au bout de chaque ligne regroupe les actions (mettre en vente, etc.). Trois sous-onglets : Général, Caractéristiques (toutes les caracs de tous vos joueurs côte à côte, triables par colonne) et Statistiques.</p>
         <p class="training-intro" style="margin-top:10px;">Cliquez sur un nom pour ouvrir la <b>fiche joueur</b> : note globale en anneau, profil en radar, saison en cours, caractéristiques détaillées, derniers matchs, et les boutons <b>Comparer</b> (face à n'importe quel autre joueur ; pour un adversaire, seules ses caractéristiques révélées sont comparées) et <b>Vendre</b>.</p>
-        <p class="training-intro" style="margin-top:10px;">Les salaires (masse salariale visible sur l'onglet <b>Économie</b>) sont recalculés au début de chaque nouvelle saison, d'après le niveau de chaque joueur AU POSTE où ses caractéristiques le valorisent le mieux. Vous pouvez vendre l'intégralité de votre effectif si vous le souhaitez, mais un match sans assez de joueurs pour composer un cinq de départ est perdu par forfait (20-0).</p>
+        <p class="training-intro" style="margin-top:10px;">Le poste d'un joueur suit ses caractéristiques : dès que sa note à un autre poste dépasse nettement celle de son poste actuel, il change de poste (une nouvelle vous prévient). Les salaires (masse salariale visible sur l'onglet <b>Économie</b>), eux, ne sont recalculés qu'au début de chaque nouvelle saison, d'après le niveau de chaque joueur à son poste. Vous pouvez vendre l'intégralité de votre effectif si vous le souhaitez, mais un match sans assez de joueurs pour composer un cinq de départ est perdu par forfait (20-0).</p>
       </div>
 
       <div class="guide-entry" data-guide-id="caracs" data-guide-group="Mon équipe">
@@ -13736,6 +13734,19 @@ function handleGameEvent(feed, event, ctx) {
       });
     }
 
+    // Changement de poste de carte (voir Team.syncCardPositions).
+    case "position_change": {
+      const sh = pos => CARD_POSITION_SHORT[pos] || pos;
+      return pushEntry(feed, {
+        key: `poschange_${event.playerId}`,
+        category: "club",
+        week: w,
+        title: `${event.playerName} joue désormais ${event.to} (note ${event.ratingTo} en ${sh(event.to)} contre ${event.ratingFrom} en ${sh(event.from)})`,
+        text: "Son poste suit désormais ses caractéristiques. Son salaire, lui, ne sera revu qu'à l'intersaison.",
+        action: { label: "Effectif", href: "/effectif" },
+      });
+    }
+
     case "injury":
       return pushEntry(feed, Object.assign({
         key: `injury_${event.playerId}`,
@@ -15953,6 +15964,12 @@ class Team {
       this.deficitWeeks = 0;
     }
 
+    // Poste de carte : suit les caractéristiques de la semaine (retour
+    // utilisateur 2026-09-30, voir syncCardPositions), AVANT l'éventuel
+    // recalcul des salaires de fin de saison ci-dessous (fait, lui, au poste
+    // de carte du moment).
+    this.syncCardPositions();
+
     this.week++;
     // Une année d'âge par SAISON (11 semaines), pas par 52 semaines
     // calendaires : voir SEASON_LENGTH_WEEKS et `opts.seasonEnd` plus haut.
@@ -16080,6 +16097,30 @@ class Team {
   // marché des transferts (comparer le salaire "juste" d'un joueur avant une
   // offre). Renvoie le détail des changements pour l'UI (qui a eu une
   // augmentation/baisse et de combien).
+  // Poste de carte qui suit les caractéristiques (voir cardPositionChangeFor
+  // et POSITION_CHANGE_MARGIN) : joueurs pro ET stagiaires de l'académie.
+  // Club humain : une nouvelle dans le fil par joueur pro concerné (jamais
+  // pour l'IA ; `opts.silent` pour la couper). Ne touche NI au salaire NI à
+  // la feuille de match. Renvoie la liste des changements.
+  syncCardPositions(opts = null) {
+    const changes = [];
+    const apply = (p, isPro) => {
+      const c = cardPositionChangeFor(p);
+      if (!c) return;
+      p.position = c.to;
+      changes.push(Object.assign({ playerId: p.id, name: p.name, pro: isPro }, c));
+    };
+    this.players.forEach(p => apply(p, true));
+    (this.youthPlayers || []).forEach(p => apply(p, false));
+    if (this.isHuman && this.feed && !(opts && opts.silent)) {
+      changes.filter(c => c.pro).forEach(c => handleGameEvent(this.feed, {
+        type: "position_change", week: this.week, playerId: c.playerId, playerName: c.name,
+        from: c.from, to: c.to, ratingFrom: Math.round(c.ratingFrom), ratingTo: Math.round(c.ratingTo),
+      }, { clubName: this.name }));
+    }
+    return changes;
+  }
+
   recalculateSalaries() {
     return this.players.map(p => {
       const before = p.salary;
@@ -16131,6 +16172,9 @@ class Team {
       attrs.forEach(a => { attrWeights[a] = 0.75; });
       p.trainWeek(attrWeights, 1);
     });
+    // Poste de carte (voir syncCardPositions) : l'IA suit la même règle,
+    // sans nouvelle.
+    this.syncCardPositions();
   }
 
   // ---------------------------------------------------------------------
@@ -16149,6 +16193,19 @@ class Team {
       const atPos = this.players.filter(p => p.position === pos).sort((a, b) => b.overall() - a.overall());
       starters[pos] = atPos[0] ? atPos[0].id : null;
       atPos.slice(1).forEach(p => { backupPositions[p.id] = [pos]; });
+    });
+    // Poste sans joueur de ce poste de carte (les postes de carte suivent
+    // les caractéristiques, retour utilisateur 2026-09-30 : un effectif peut
+    // se retrouver avec 4 Arrières et 2 Meneurs) : le mieux noté À CE POSTE
+    // (positionRating) parmi ceux qui ne sont titulaires nulle part.
+    POSITIONS.forEach(pos => {
+      if (starters[pos] != null) return;
+      const taken = new Set(Object.values(starters).filter(id => id != null));
+      const pick = this.players.filter(p => !taken.has(p.id))
+        .sort((a, b) => positionRating(b, pos) - positionRating(a, pos))[0];
+      if (!pick) return;
+      starters[pos] = pick.id;
+      delete backupPositions[pick.id];
     });
     this.lineup = { starters, backupPositions };
   }
@@ -16860,6 +16917,64 @@ function bestPosition(player) {
   return best;
 }
 
+// ---------------------------------------------------------------------
+// Poste DE CARTE qui suit les caractéristiques (retour utilisateur
+// 2026-09-30 : "Quand un joueur a son meilleur poste qui ne correspond plus
+// à la réalité, il faut le changer. La seule chose qui ne doit changer qu'à
+// l'intersaison est le salaire.").
+// - Une seule notion de « meilleur poste » : bestPosition (note par poste
+//   ci-dessus). Player.position (le poste de carte, badge partout) la suit.
+// - Hystérésis POSITION_CHANGE_MARGIN = 2 points : le poste ne change que si
+//   la note au meilleur poste dépasse d'AU MOINS 2 points celle du poste
+//   actuel (égalité ou écart de 1 : on garde le poste actuel). Revenir en
+//   arrière exige à son tour 2 points dans l'autre sens : un gain ou une
+//   perte d'1 point d'une semaine à l'autre ne fait jamais osciller le
+//   poste. 2 = l'écart médian entre postes voisins (≈ 1,8, voir
+//   position_rating_test.js) : assez pour ignorer le bruit, assez peu pour
+//   suivre une vraie évolution en quelques semaines.
+// - Quand : fin de chaque mise à jour hebdomadaire (Team.trainWeek pour les
+//   clubs humains, Team.trainWeekCPU pour l'IA) et à chaque chargement de
+//   sauvegarde (teamFromSave : migration des sauvegardes existantes, côté
+//   serveur pour TOUS les clubs de la ligue, IA comprise). À la création
+//   (voir attrsForCardPosition), le poste de carte EST déjà le meilleur.
+// - Le salaire n'est PAS touché ici : il reste celui fixé à l'intersaison
+//   (Team.recalculateSalaries, calculé au poste de carte du moment, voir
+//   levelCoefficientFor) ; Player.effectivePosition garde le poste auquel
+//   ce salaire a été calculé.
+// - Composition : les postes de la feuille de match sont des CASES
+//   (lineup.starters[poste] = id), indépendantes du poste de carte ; un
+//   titulaire qui change de poste reste titulaire de sa case (l'alerte
+//   « Hors poste » des Ordres se met à jour d'elle-même). Entraînement :
+//   il compte le temps joué À CHAQUE poste en match
+//   (trainingSecondsPlayedByPosition), pas le poste de carte — un
+//   changement en cours de semaine ne fait rien perdre.
+// ---------------------------------------------------------------------
+const POSITION_CHANGE_MARGIN = 2;
+const CARD_POSITION_SHORT = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ailier fort": "AF", "Pivot": "P" };
+// Nombre de tirages de caractéristiques tentés à la création pour que le
+// poste demandé soit bien le meilleur (sinon : poste = meilleur poste).
+const GENERATION_POSITION_TRIES = 25;
+
+// Changement de poste de carte dû (ou null) : { from, to, ratingFrom, ratingTo }.
+function cardPositionChangeFor(player) {
+  if (!player || !player.attrs || !POSITIONS.includes(player.position)) return null;
+  const best = bestPosition(player);
+  if (!best || best === player.position) return null;
+  const ratingTo = positionRating(player, best), ratingFrom = positionRating(player, player.position);
+  if (ratingTo - ratingFrom < POSITION_CHANGE_MARGIN) return null;
+  return { from: player.position, to: best, ratingFrom, ratingTo };
+}
+
+// Création d'un joueur : retire les caractéristiques (`makeAttrs`) jusqu'à ce
+// que `position` soit son meilleur poste (effectif équilibré : 3 joueurs par
+// poste restent 3 joueurs par poste) ; au pire, le poste devient le
+// meilleur poste des derniers tirages. Renvoie { attrs, position }.
+function attrsForCardPosition(position, makeAttrs) {
+  let attrs = makeAttrs();
+  for (let i = 1; i < GENERATION_POSITION_TRIES && bestPosition({ attrs, position }) !== position; i++) attrs = makeAttrs();
+  return { attrs, position: bestPosition({ attrs, position }) || position };
+}
+
 // Bonus salarial pour une caractéristique SIGNATURE exceptionnelle du poste
 // retenu (voir POSITION_ATTR_PROFILE) : ADDITIF, appliqué APRÈS le choix du
 // poste (voir levelCoefficientFor) — jamais mélangé dans une moyenne, pour
@@ -16911,8 +17026,14 @@ function peakBonusFor(attrs, position) {
 // spécialiste bien évalué à son rôle, avec une vraie caractéristique
 // signature, est mieux valorisé qu'une simple moyenne brute qui le
 // pénaliserait pour des lacunes hors-spécialité pourtant normales à son poste.
+// Poste retenu (retour utilisateur 2026-09-30 : une seule notion de poste) :
+// le poste DE CARTE du joueur quand il est fourni (il suit désormais ses
+// caractéristiques, voir cardPositionChangeFor), sinon son meilleur poste
+// (bestPosition). Appelé uniquement à la création et à l'intersaison
+// (Team.recalculateSalaries) : un changement de poste en cours de saison ne
+// touche jamais au salaire.
 function levelCoefficientFor(attrs, cardPosition) {
-  const position = inferPosition(attrs, cardPosition);
+  const position = POSITIONS.includes(cardPosition) ? cardPosition : bestPosition({ attrs });
   const coefficient = weightedRatingForPosition(attrs, position) + peakBonusFor(attrs, position);
   return { position, coefficient };
 }
@@ -16969,16 +17090,18 @@ function generateRawYouthAttrs(tier, position) {
 function generatePlayer(position, tier, usedLastNames, country = "fr") {
   const { name, nationality } = generatePlayerIdentity(null, country);
   const age = Math.round(rand(18, 33));
-  const attrs = age <= YOUNG_PROSPECT_MAX_AGE
+  // Poste de carte = meilleur poste dès la création (retour utilisateur
+  // 2026-09-30, voir attrsForCardPosition).
+  const gen = attrsForCardPosition(position, () => (age <= YOUNG_PROSPECT_MAX_AGE
     ? generateRawYouthAttrs(tier, position)
-    : generateAttrsForPosition(position, tier);
+    : generateAttrsForPosition(position, tier)));
   return new Player({
     name,
     nationality,
-    position,
-    height: heightForPosition(position),
+    position: gen.position,
+    height: heightForPosition(gen.position),
     age,
-    attrs,
+    attrs: gen.attrs,
     aggressiveness: Math.round(rand(15, 95)),
   });
 }
@@ -17004,13 +17127,14 @@ function generateTeam(name, tier = 1, country = "fr") {
 function generateRookiePlayer(position, usedLastNames = null, country = "fr") {
   const { name, nationality } = generatePlayerIdentity(null, country);
   const age = Math.round(rand(18, 33));
+  const gen = attrsForCardPosition(position, () => generateRawYouthAttrs(1, position));
   return new Player({
     name,
     nationality,
-    position,
-    height: heightForPosition(position),
+    position: gen.position,
+    height: heightForPosition(gen.position),
     age,
-    attrs: generateRawYouthAttrs(1, position),
+    attrs: gen.attrs,
     aggressiveness: Math.round(rand(15, 95)),
   });
 }
@@ -17022,13 +17146,15 @@ function generateRookiePlayer(position, usedLastNames = null, country = "fr") {
 function generateRetirementReplacement(team, position) {
   const p = generateRookiePlayer(position);
   p.age = Math.round(rand(20, 23));
-  p.attrs = generateAttrsForPosition(position, 1);
+  p.position = position;
+  p.attrs = attrsForCardPosition(position, () => generateAttrsForPosition(position, 1)).attrs;
   const target = Math.max(20, (typeof team.averageOverall === "function" ? team.averageOverall() : p.overall()) * rand(0.88, 0.98));
   for (let pass = 0; pass < 2; pass++) {
     const scale = target / Math.max(p.overall(), 1);
     ATTRS.forEach(a => { p.attrs[a] = clamp(Math.round(p.attrs[a] * scale), 1, 99); });
   }
   p.potential = clamp(Math.round(p.overall() + rand(4, 12)), 1, 99);
+  p.position = bestPosition(p) || position;
   if (typeof salaryForOverall === "function") p.salary = salaryForOverall(p.overall());
   return p;
 }
@@ -17080,11 +17206,15 @@ function generateYouthCandidate(now, recruiterLevel, country = "fr") {
     identity.nationality = country;
     identity.name = `${pick(pool.first)} ${pick(pool.last)}`;
   }
+  // Poste affiché = meilleur poste d'après ces caractéristiques (retour
+  // utilisateur 2026-09-30) : un « outil brut » tiré au hasard peut le
+  // déplacer, le libellé suit.
+  const shownPosition = bestPosition({ attrs, position }) || position;
   const candidate = new Player({
     name: identity.name,
     nationality: identity.nationality,
-    position,
-    height: heightForPosition(position),
+    position: shownPosition,
+    height: heightForPosition(shownPosition),
     age,
     attrs,
     aggressiveness: Math.round(rand(15, 95)),
@@ -21470,6 +21600,10 @@ function teamFromSave(data) {
   }
   // Numéros de maillot (voir ensureJerseyNumbers).
   ensureJerseyNumbers(team);
+  // Migration / chargement (retour utilisateur 2026-09-30) : poste de carte
+  // recalé sur les caractéristiques, pour tous les clubs (IA comprise) ;
+  // idempotent (hystérésis, voir cardPositionChangeFor). Salaire inchangé.
+  team.syncCardPositions();
   return team;
 }
 
@@ -29738,8 +29872,8 @@ let teamDetailEffectifSortState = { key: null, dir: 1 };
 // sur les pages effectifs, on peut être amené à voir certaines caracs des
 // joueurs"). Même langage visuel que l'onglet Effectif du club (classes
 // .eff-*, voir renderEffectifSection) et trois vues :
-//  - Général : joueurs groupés Cinq de départ / Rotation / Réserve (voir
-//    playerRoleLabel, public), pastille de poste, âge, taille, salaire,
+//  - Général : un seul bloc de joueurs, titulaires puis rotation puis
+//    réserve (voir effRosterDefaultCmp, rôle public), pastille de poste, âge, taille, salaire,
 //    forme, évaluation des 5 derniers matchs et moyennes de saison — rien
 //    qui ne soit déjà visible sur la fiche joueur d'un adversaire ;
 //  - Caractéristiques : pour un adversaire, UNIQUEMENT les colonnes
@@ -29883,30 +30017,27 @@ function teamDetailEffectifGeneralHtml(teamIdx, team, isOwnTeam, revealedSet) {
     H("reb", "Reb", { cls: "tde-th-stat", title: "Rebonds par match" }), H("ast", "Pas", { cls: "tde-th-stat", title: "Passes décisives par match" }),
   ];
   let html = `<div class="eff-table-wrap roster-table-frozen-col"><table class="roster-table eff-table eff-general tde-general"><thead><tr>${cols.join("")}</tr></thead>`;
-  const defaultCmp = (a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) ||
-    teamDetailStatValue(b, "pts") - teamDetailStatValue(a, "pts");
+  // Un seul bloc (retour utilisateur 2026-09-30, voir effRosterDefaultCmp).
+  const defaultCmp = effRosterDefaultCmp(team, (a, b) => teamDetailStatValue(b, "pts") - teamDetailStatValue(a, "pts"));
   const fmt = v => v.toFixed(1).replace(".", ",");
-  EFF_ROLE_GROUPS.forEach(group => {
-    const members = team.players.filter(p => playerRoleLabel(team, p) === group.role);
-    if (!members.length) return;
-    const isStarters = group.role === "Titulaire";
-    html += `<tbody class="eff-group${isStarters ? " eff-group-starters" : ""}">` +
-      `<tr class="eff-group-row"><th colspan="${cols.length}" scope="rowgroup"><span class="eff-group-title">${escapeHtml(group.label)}</span><span class="tde-group-count">${members.length}</span></th></tr>`;
-    teamDetailSortPlayers(members, team, isOwnTeam, revealedSet, defaultCmp, TDE_GENERAL_KEYS).forEach(p => {
+  html += `<tbody class="eff-list">`;
+  teamDetailSortPlayers(team.players, team, isOwnTeam, revealedSet, defaultCmp, TDE_GENERAL_KEYS).forEach(p => {
+    {
+      const role = playerRoleLabel(team, p);
       const cross = injuryCrossHtml(p, now);
       const { gp, sum } = teamDetailSeasonLine(p);
       const stat = k => gp ? fmt(sum[k] / gp) : "–";
-      html += `<tr class="eff-row${cross ? " injured" : ""}">` +
-        `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, isStarters ? 30 : 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(teamIdx, p.id, p.name)}${cross || ""}${retirementBadgeHtml(p)}</span></td>` +
+      html += `<tr class="eff-row${effRoleRowClass(role)}${cross ? " injured" : ""}">` +
+        `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(teamIdx, p.id, p.name)}${effRoleMarkHtml(role)}${cross || ""}${retirementBadgeHtml(p)}</span></td>` +
         `<td>${effPosBadgeHtml(p.position)}</td>` +
         `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td><td class="eff-num">${formatMoney(p.salary)}</td>` +
         `<td class="eff-td-condition">${effConditionHtml(p, now, recovery)}</td>` +
         `<td>${evaluationSquaresHtml(p)}</td>` +
         `<td class="eff-num tde-stat">${gp}</td><td class="eff-num tde-stat tde-stat-main">${stat("pts")}</td>` +
         `<td class="eff-num tde-stat">${stat("reb")}</td><td class="eff-num tde-stat">${stat("ast")}</td></tr>`;
-    });
-    html += `</tbody>`;
+    }
   });
+  html += `</tbody>`;
   return html + `</table></div>`;
 }
 
@@ -40986,9 +41117,10 @@ function rosterHeaderCellHtml(key, label) {
 // Caractéristiques"). Même données, même tri (rosterSortState/
 // rosterSortValue), mêmes actions de marché qu'avant — seul l'habillage
 // change :
-//  - Général : joueurs GROUPÉS par rôle (Cinq de départ / Rotation /
-//    Réserve, voir playerRoleLabel — remplace l'ancienne colonne "Rôle"),
-//    tri appliqué à l'intérieur de chaque groupe ; poste en pastille
+//  - Général : un SEUL bloc de joueurs (retour utilisateur 2026-09-30 ;
+//    avant : blocs Cinq de départ / Rotation / Réserve), titulaires puis
+//    rotation puis réserve par défaut, tri de colonne sur toute la liste,
+//    rôle signalé discrètement (voir effRosterDefaultCmp) ; poste en pastille
 //    colorée, potentiel en 5 segments + nom du palier, forme en mini-barre,
 //    motivation en pastille ; les actions (fiche, mise aux enchères, vente
 //    forcée à 1 €) passent dans un menu "⋯" en bout de ligne au lieu d'une
@@ -40998,8 +41130,8 @@ function rosterHeaderCellHtml(key, label) {
 //    colonnes affichées, tri par défaut de ce sous-onglet), meilleur de
 //    l'équipe cerclé dans chaque colonne, chiffres seuls colorés au barème
 //    rouge/orange/blanc/vert (attrColorTier) sans mini-barre.
-// Les lignes joueurs portent la classe .eff-row (les lignes de titre de
-// groupe, .eff-group-row, n'en sont pas) : c'est elle que les tests comptent.
+// Les lignes joueurs portent la classe .eff-row : c'est elle que les tests
+// comptent.
 // ---------------------------------------------------------------------
 const EFF_POS_CLASS = { "Meneur": "m", "Arrière": "a", "Ailier shooteur": "as", "Ailier fort": "af", "Pivot": "p" };
 const EFF_ROLE_GROUPS = [
@@ -41007,6 +41139,25 @@ const EFF_ROLE_GROUPS = [
   { role: "Joueur de rotation", label: "Rotation" },
   { role: "Réserviste", label: "Réserve" },
 ];
+// Un seul bloc de joueurs (retour utilisateur 2026-09-30 : plus de blocs
+// séparés Cinq de départ / Rotation / Réserve), Effectif du club comme
+// fiche équipe. Ordre par défaut : les titulaires dans l'ordre des postes de
+// la feuille de match (M, A, AS, AF, P), puis la rotation, puis la réserve
+// (chacune par poste de carte, puis `tie`). Un tri de colonne s'applique à
+// toute la liste. Le rôle reste lisible, discrètement : liseré ambre + petit
+// « 5 » pour un titulaire, nom estompé pour un réserviste.
+function effRosterDefaultCmp(team, tie) {
+  const rank = p => { const i = EFF_ROLE_GROUPS.findIndex(g => g.role === playerRoleLabel(team, p)); return i < 0 ? EFF_ROLE_GROUPS.length : i; };
+  const slot = p => { const pos = typeof team.starterPosition === "function" ? team.starterPosition(p.id) : null; return pos ? POSITIONS.indexOf(pos) : POSITIONS.length; };
+  return (a, b) => rank(a) - rank(b) || slot(a) - slot(b) ||
+    POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || tie(a, b);
+}
+function effRoleRowClass(role) {
+  return role === "Titulaire" ? " eff-row-starter" : role === "Réserviste" ? " eff-row-reserve" : "";
+}
+function effRoleMarkHtml(role) {
+  return role === "Titulaire" ? `<span class="eff-starter-mark" title="Cinq de départ" aria-label="Cinq de départ">5</span>` : "";
+}
 // Regroupement des colonnes du sous-onglet Caractéristiques (maquette) : les
 // 13 FUNDAMENTAL_ATTRS répartis en 3 familles, puis les 2 moyennes.
 const EFF_ATTR_GROUPS = [
@@ -41232,21 +41383,27 @@ function renderEffectifSection() {
     `<thead><tr>` +
     columns.map(c => effHeaderCellHtml(c.key, c.label, { cls: `eff-th-${c.key}` })).join("") +
     `<th class="eff-th-actions"><span class="eff-sr">Actions</span></th></tr></thead>`;
-  const defaultCmp = (a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.overall() - a.overall();
-  EFF_ROLE_GROUPS.forEach(group => {
-    const members = teamA.players.filter(p => playerRoleLabel(teamA, p) === group.role);
-    if (!members.length) return;
-    const isStarters = group.role === "Titulaire";
-    html += `<tbody class="eff-group${isStarters ? " eff-group-starters" : ""}">` +
-      `<tr class="eff-group-row"><th colspan="${colCount}" scope="rowgroup"><span class="eff-group-title">${escapeHtml(group.label)}</span></th></tr>`;
-    effSortPlayers(members, defaultCmp).forEach(p => {
-      const effPos = p.effectivePosition && p.effectivePosition !== p.position ? p.effectivePosition : null;
+  // Un seul bloc de joueurs (retour utilisateur 2026-09-30) : ordre par
+  // défaut cinq de départ puis rotation puis réserve, tri de colonne sur
+  // toute la liste (voir effRosterDefaultCmp / effRoleMarkHtml).
+  const defaultCmp = effRosterDefaultCmp(teamA, (a, b) => b.overall() - a.overall());
+  html += `<tbody class="eff-list">`;
+  effSortPlayers(teamA.players, defaultCmp).forEach(p => {
+    {
+      const role = playerRoleLabel(teamA, p);
+      // Une seule notion de « meilleur poste » (retour utilisateur
+      // 2026-09-30) : la même que la fiche joueur (bestPosition). Le poste de
+      // carte la suit (Team.syncCardPositions) ; la flèche n'apparaît que
+      // dans l'entre-deux, écart encore sous POSITION_CHANGE_MARGIN.
+      const bestPos = bestPosition(p);
+      const effPos = bestPos && bestPos !== p.position ? bestPos : null;
       const posCell = effPosBadgeHtml(p.position) + (effPos
-        ? ` <span class="eff-position" title="Poste utilisé pour le salaire, d'après ses caractéristiques">→ ${POS_SHORT[effPos]}</span>`
+        ? ` <span class="eff-position" title="Meilleur poste d'après ses caractéristiques : ${escapeHtml(effPos)} (${Math.round(positionRating(p, effPos))} contre ${Math.round(positionRating(p, p.position))})">→ ${POS_SHORT[effPos]}</span>`
         : "");
-      const salaryTitle = effPos
-        ? `Calculé pour le poste ${effPos.toLowerCase()} (ses caractéristiques y sont mieux valorisées qu'à son poste de carte).`
-        : `Calculé pour son poste (${p.position.toLowerCase()}).`;
+      // Salaire : fixé à l'intersaison au poste de carte d'alors
+      // (effectivePosition), jamais recalculé en cours de saison.
+      const salaryPos = p.effectivePosition || p.position;
+      const salaryTitle = `Calculé à l'intersaison pour le poste ${salaryPos.toLowerCase()}.`;
       const isListed = listedIds.has(p.id);
       // Blessure PERSISTANTE (voir injuryCrossHtml) : ligne teintée de rouge.
       const cross = injuryCrossHtml(p, now);
@@ -41256,8 +41413,8 @@ function renderEffectifSection() {
         // la colonne Poste (retour utilisateur 2026-09-29 : "mettre un $ à
         // la place qui prend moins de place, mets un beau dollar").
         (isListed ? `<span class="eff-listed-coin" title="Aux enchères" aria-label="Aux enchères">$</span>` : "");
-      html += `<tr class="eff-row${cross ? " injured" : ""}">` +
-        `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, teamA, isStarters ? 30 : 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(myTeamIndex, p.id, p.name)}${badges}</span></td>` +
+      html += `<tr class="eff-row${effRoleRowClass(role)}${cross ? " injured" : ""}">` +
+        `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, teamA, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(myTeamIndex, p.id, p.name)}${effRoleMarkHtml(role)}${badges}</span></td>` +
         `<td>${posCell}</td><td>${effPotentialHtml(p)}</td>` +
         `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td>` +
         `<td class="eff-num" title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
@@ -41265,9 +41422,9 @@ function renderEffectifSection() {
         `<td>${effMotivationHtml(p)}</td>` +
         `<td>${evaluationSquaresHtml(p)}</td>` +
         `<td class="eff-td-actions">${effActionsMenuHtml(p, isListed)}</td></tr>`;
-    });
-    html += `</tbody>`;
+    }
   });
+  html += `</tbody>`;
   html += "</table></div>";
   holder.innerHTML = html;
 }
@@ -48532,7 +48689,7 @@ const TOUR_STEPS = [
     kind: "spotlight", topic: "Effectif", page: "dashboard",
     target: '.tab-btn.sidebar-link[data-tab="effectif"]', pos: "right",
     title: "Votre effectif",
-    text: "Le roster complet du club, groupé en Cinq de départ, Rotation et Réserve : poste, potentiel, âge, salaire, forme, motivation et évaluation des derniers matchs. Cliquez sur un nom pour ouvrir la fiche du joueur (caractéristiques, saison, Comparer, Vendre).",
+    text: "Le roster complet du club en une seule liste, cinq de départ en tête, puis rotation et réserve : poste, potentiel, âge, salaire, forme, motivation et évaluation des derniers matchs. Cliquez sur un nom pour ouvrir la fiche du joueur (caractéristiques, saison, Comparer, Vendre).",
     tip: "Un joueur peut couvrir plusieurs postes en tant que remplaçant, pratique en cas de blessure ou de suspension.",
   },
   // Forme physique/Motivation/Alchimie (retour utilisateur, 2026-09 :

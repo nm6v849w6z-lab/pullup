@@ -177,7 +177,10 @@ const T0 = Date.UTC(2026, 8, 7); // un lundi arbitraire, fixe pour tout le fichi
   const { team, league } = freshLeague(T0);
   // Vide complètement un poste (comme forfeit_test.js) : plus aucun joueur
   // éligible au Pivot, impossible d'aligner un cinq complet.
-  team.players = team.players.filter(p => p.position !== "Pivot");
+  // Depuis 2026-09-30, la composition automatique comble une case sans
+  // joueur de ce poste de carte par le mieux noté à ce poste (les postes de
+  // carte suivent les caractéristiques) : on ne garde que 4 joueurs.
+  team.players = team.players.filter(p => p.position !== "Pivot").slice(0, 4);
   team.autoAssignLineup();
 
   const secondMatchAt = scheduledTimeForRound(league.calendarStartAt, 1) + MATCH_BROADCAST_DURATION_MS;

@@ -19,8 +19,14 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 // dans l'effectif) puis réassigne la feuille de match — reproduit
 // exactement la situation d'un club qui a vendu tous ses joueurs à un
 // poste sur le marché des transferts.
+// Depuis 2026-09-30 (retour utilisateur : le poste de carte suit les
+// caractéristiques), la composition automatique comble une case sans
+// joueur de ce poste de carte par le mieux noté À CE POSTE (voir
+// Team.autoAssignLineup) : un club vraiment incapable d'aligner un cinq est
+// donc un club à moins de 5 joueurs — on ne garde ici que 4 joueurs, aucun
+// au poste vidé.
 function stripPosition(team, pos) {
-  team.players = team.players.filter(p => p.position !== pos);
+  team.players = team.players.filter(p => p.position !== pos).slice(0, 4);
   team.autoAssignLineup();
 }
 
