@@ -5358,6 +5358,16 @@
   #seatCategoriesHolder .sl-card-head{margin-bottom:4px;}
   #salleSection #seatCategoriesHolder .seat-category-card.sl-seat-row{padding:8px 0 10px; row-gap:4px;}
   .sl-main #arenaBuildHolder{flex:1;}
+  /* Retour utilisateur (2026-09-30, capture : grand vide sous « Construire ») :
+     la colonne de droite (chiffres clés + Affluence, jusqu'à 10 matchs une
+     fois dépliée) ne fixe plus la hauteur de la grille, c'est la colonne de
+     gauche qui la donne ; la liste d'affluence défile dans sa carte. Au-
+     dessous de 1100 px, colonnes empilées : rien ne change. */
+  @media(min-width:1101px){
+    .sl-grid > .sl-side:not(.sl-main){contain:size;}
+    .sl-side #attendanceHistoryHolder{min-height:0; display:flex; flex-direction:column; overflow:hidden;}
+    .sl-side #attendanceHistoryHolder .sl-history{flex:1 1 auto; min-height:0; overflow-y:auto;}
+  }
   .sl-build-row{display:grid; grid-template-columns:minmax(120px,170px) minmax(0,1fr) auto; gap:14px; align-items:center; padding:8px 0; border-top:1px solid var(--line-soft);}
   .sl-build-row b{font-size:14px; color:var(--ink);}
   .sl-build-row small{display:block; font-size:12px; color:var(--ink-faint);}

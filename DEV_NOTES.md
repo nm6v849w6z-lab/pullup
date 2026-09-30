@@ -20,6 +20,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 POUSSÉ SUR claude/kind-shannon-8nx9sq (2026-09-30), à passer en
+  prod — Salle, vide sous « Construire »** : au-delà de 1100 px, la colonne
+  de droite (chiffres clés + Affluence) ne fixe plus la hauteur de la grille
+  (`contain:size`), c'est la colonne de gauche qui la donne ; la liste
+  d'affluence dépliée (10 matchs) défile dans sa carte. Vérifié au
+  navigateur (colonnes 699/699 px, replié et déplié). La capture de prod
+  montrait encore « Votre terrain » dans la colonne de droite : vérifier
+  que le déploiement de la carte pleine largeur (déjà sur main/prod) est
+  bien en ligne.
+- **💬 À DÉCIDER — Onglet « Personnalisation »** (idée utilisateur
+  2026-09-30) : regrouper parquet, nom de la salle, maillots, trigramme ;
+  placement évoqué : Paramètres, ou dans la barre latérale sous Planète
+  Hoop et Guide.
+
 - **🟡 CODÉ, À POUSSER (2026-09-29) — Entraînement des fondamentaux, 2e
   passe du tableau d'aptitudes** : Passe et Création de tir sans malus de
   poste (Pivot 80 / 75) ; DI Ailier shooteur 80, DE Ailier fort 70 ;
