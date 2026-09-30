@@ -28,6 +28,19 @@ const { startTestServer, openGame, flush, readRawSave, patchDateNow } = require(
 const { scheduledTimeForRound, MATCH_BROADCAST_DURATION_MS } = require("./server/calendar.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
+// Attend qu'une condition devienne vraie (au plus `ms`) : le retour sur
+// l'onglet passe par un fetch (refreshFromServerAndReenter) dont la durée
+// varie avec la charge de la machine ; une pause fixe de 300 ms faisait
+// échouer le test environ une fois sur trois.
+async function until(cond, ms = 5000) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    if (cond()) return true;
+    await new Promise(r => setTimeout(r, 25));
+  }
+  return cond();
+}
+
 function fireVisible(doc, win) {
   Object.defineProperty(doc, "visibilityState", { value: "visible", configurable: true });
   doc.dispatchEvent(new win.Event("visibilitychange"));
@@ -81,7 +94,7 @@ function fireVisible(doc, win) {
   patchDateNow(win, () => clock.now);
 
   fireVisible(doc, win);
-  await new Promise(r => setTimeout(r, 300)); // refreshFromServerAndReenter() est asynchrone (fetch)
+  await until(() => !doc.getElementById("liveSection").classList.contains("hidden")); // refreshFromServerAndReenter() est asynchrone (fetch)
 
   const prepVisibleAfter = !doc.getElementById("prepSection").classList.contains("hidden");
   const liveVisibleAfter = !doc.getElementById("liveSection").classList.contains("hidden");
@@ -124,7 +137,7 @@ function fireVisible(doc, win) {
   clock.now = scheduledAt + 1000;
   patchDateNow(win, () => clock.now);
   fireVisible(doc, win);
-  await new Promise(r => setTimeout(r, 300));
+  await until(() => !doc.getElementById("liveSection").classList.contains("hidden"));
 
   const liveVisibleMidway = !doc.getElementById("liveSection").classList.contains("hidden");
   const statusMidway = doc.getElementById("boardStatus").textContent;
@@ -137,7 +150,7 @@ function fireVisible(doc, win) {
   // diffusion) ne se soit déclenché.
   clock.now = scheduledAt + MATCH_BROADCAST_DURATION_MS + 10000;
   fireVisible(doc, win);
-  await new Promise(r => setTimeout(r, 300));
+  await until(() => /^Terminé/.test(doc.getElementById("boardStatus").textContent));
 
   const statusAfter = doc.getElementById("boardStatus").textContent;
   const scoreA = parseInt(doc.getElementById("scoreA").textContent, 10);
