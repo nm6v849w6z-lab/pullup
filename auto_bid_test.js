@@ -5,6 +5,9 @@
 // POST /api/market/auto-bid, server/myAuctions.js:sanitizeAutoBids,
 // WorldMarket.setForeignAutoBid et le marché / la page Staff.
 const assert = require("assert");
+// Joueur pas encore en vente (les bots mettent déjà en vente leurs joueurs à
+// 50 de général ou plus).
+const freePlayerId = (lg, idx) => lg.teams[idx].players.find(p => !(lg.transferListings || []).some(l => l.status === "open" && l.playerId === p.id)).id;
 const fs = require("fs");
 const Engine = require("./engine.js");
 const store = require("./server/store.js");
@@ -119,7 +122,7 @@ const inc = n => Engine.minNextBidFor({ currentBid: n, startPrice: 0 });
   await World.catchUpWorld(multiSavePath, clock.now);
   let w = await World.loadWorld(multiSavePath, clock.now);
   const us = await World.loadLeague(w, "us-1", multiSavePath);
-  const ul = us.listPlayerForSale(5, us.teams[5].players[0].id, 2000, clock.now);
+  const ul = us.listPlayerForSale(5, freePlayerId(us, 5), 2000, clock.now);
   ul.lastCpuCheckAt = ul.closesAt; us.lastCpuListingCheckAt = clock.now;
   await store.saveMultiLeague(us, multiSavePath);
   await World.catchUpWorld(multiSavePath, clock.now + 1000);
@@ -146,7 +149,7 @@ const inc = n => Engine.minNextBidFor({ currentBid: n, startPrice: 0 });
   // 4) Navigateur : bouton « Enchère auto » (marché) et page Staff.
   {
     const pre = (await store.loadMultiLeague(multiSavePath)).league;
-    const nl = pre.listPlayerForSale(7, pre.teams[7].players[0].id, 1000, clock.now);
+    const nl = pre.listPlayerForSale(7, freePlayerId(pre, 7), 1000, clock.now);
     nl.lastCpuCheckAt = nl.closesAt;
     await store.saveMultiLeague(pre, multiSavePath);
   }

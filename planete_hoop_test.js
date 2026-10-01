@@ -248,7 +248,10 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
     if (!pdContent.textContent.includes(usLg.teams[pTeam].name)) fail("son club doit figurer sur la fiche.");
     if (pdContent.querySelector("[data-pdp-compare], [data-pdp-sell], [data-list-player-detail]")) fail("ni Comparer ni Vendre sur la fiche d'un joueur d'un autre championnat.");
     if (!doc.getElementById("topbarComparePlayerBtn").classList.contains("hidden")) fail("bouton Comparer du haut masqué.");
-    if (!pdContent.querySelector(".pdp-pill.locked") || !pdContent.querySelector(".pdp2-ring--locked")) fail("caractéristiques et note verrouillées (joueur non scouté).");
+    // Un joueur en vente (les bots vendent leurs joueurs à 50+) a ses
+    // caractéristiques visibles : la règle « verrouillé » ne vaut que hors marché.
+    const onMarket = (usLg.transferListings || []).some(l => l.status === "open" && l.playerId === pId);
+    if (!onMarket && (!pdContent.querySelector(".pdp-pill.locked") || !pdContent.querySelector(".pdp2-ring--locked"))) fail("caractéristiques et note verrouillées (joueur non scouté).");
     if (/\/ sem\./.test(pdContent.textContent)) fail("pas de salaire pour un joueur d'un autre club.");
     if (!/Derniers matchs/.test(pdContent.textContent)) fail("stats de matchs attendues.");
     if (/NaN|undefined/.test(pdContent.textContent)) fail("fiche joueur étrangère : ni NaN ni undefined (caractéristiques non envoyées).");
