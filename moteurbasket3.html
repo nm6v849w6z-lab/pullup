@@ -2404,13 +2404,15 @@
   .mk-lst-main{display:grid; grid-template-columns:minmax(0,1fr) 310px; align-items:stretch;}
   .mk-lst-prof{grid-column:1; grid-row:2; border-top:1px solid var(--line);}
   .mk-lst-deal{grid-column:2; grid-row:1 / span 2;}
+  /* Grand écran : on garde identité en haut et note dessous (retour
+     utilisateur 2026-10-01 : « beaucoup de vide à gauche et au milieu, très
+     plein à droite »), la colonne enchère s'élargit un peu. */
   @container mklist (min-width:1180px){
-    .mk-lst-main{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 310px;}
-    .mk-lst-prof{grid-column:auto; grid-row:auto; border-top:0;}
-    .mk-lst-deal{grid-column:auto; grid-row:auto;}
+    .mk-lst-main{grid-template-columns:minmax(0,1fr) 360px;}
   }
   @container mklist (max-width:700px){
     .mk-lst-main{grid-template-columns:1fr;}
+    .mk-lst .mk-grp .lbl{flex:0 0 72px;} .mk-lst .mk-bar{flex:1 1 auto; min-width:40px;}
     .mk-lst-prof, .mk-lst-deal{grid-column:1; grid-row:auto; border-left:0; border-top:1px solid var(--line);}
     .mk-lst-id, .mk-lst-prof, .mk-lst-deal{padding:18px 16px;}
     .mk-lst-foot{padding:12px 16px;}
@@ -2435,11 +2437,11 @@
   .mk-lst-prof{display:flex; gap:22px; align-items:center; padding:22px 24px; border-left:1px solid var(--line); min-width:0;}
   .mk-lst-prof .pdp2-ring{flex:none; width:104px; height:104px;}
   .mk-lst-prof .pdp2-ring .pdp-overall-num{font-size:36px;}
-  .mk-grps{flex:1 1 auto; display:flex; flex-direction:column; min-width:0; max-width:380px;}
+  .mk-grps{flex:1 1 auto; display:flex; flex-direction:column; min-width:0; max-width:640px;}
   .mk-grp{display:flex; align-items:center; gap:10px; padding:4px 0; font-size:13.5px;}
-  .mk-grp .lbl{flex:1 1 auto; color:var(--ink-dim); white-space:nowrap;}
+  .mk-grp .lbl{flex:0 0 84px; color:var(--ink-dim); white-space:nowrap;}
   .mk-grp b{min-width:26px; text-align:right; font-size:16px; font-variant-numeric:tabular-nums;}
-  .mk-bar{flex:0 0 90px; height:6px; border-radius:999px; background:var(--bg); overflow:hidden;}
+  .mk-bar{flex:1 1 auto; min-width:90px; height:6px; border-radius:999px; background:var(--bg); overflow:hidden;}
   .mk-bar span{display:block; height:100%; border-radius:999px;}
   .mk-lst-deal{display:flex; flex-direction:column; gap:12px; padding:22px 24px; border-left:1px solid var(--line); background:rgba(255,255,255,.012); min-width:0;}
   .mk-deal-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
