@@ -41,7 +41,22 @@ const wait = async (cond, what) => { for (let i = 0; i < 60; i++) { if (cond()) 
   if (!box.querySelector(".pc-picker-menu").classList.contains("hidden")) fail("menu des pays fermé au départ.");
   box.querySelector("[data-pc-picker]").click();
   if (box.querySelector(".pc-picker-menu").classList.contains("hidden")) fail("le bouton du pays ouvre le menu déroulant.");
-  box.querySelector("[data-pc-picker]").click();
+  if (opts[0].dataset.phCountry !== "fr" || !/Votre pays/.test(opts[0].textContent)) fail("« Votre pays » en tête de la liste.");
+  {
+    // Recherche dans la liste (2026-10-01) : accents/casse ignorés, noms anglais / natifs, code.
+    const filter = doc.getElementById("planeteCountryFilter");
+    const shown = q => { filter.value = q; filter.dispatchEvent(new win.Event("input", { bubbles: true })); return opts.filter(o => !o.hidden).map(o => o.dataset.phCountry); };
+    if (shown("deutsch").join() !== "de" || !shown("GERMANY").includes("de") || !shown("de").includes("de")) fail("recherche « deutsch » / « germany » / « de » → Allemagne.");
+    if (shown("etats").join() !== "us" || shown("grece").join() !== "gr") fail("recherche sans accents.");
+    if (shown("zzz").length || box.querySelector(".pc-picker-empty").hidden) fail("« Aucun pays trouvé. » quand rien ne correspond.");
+    shown("ital");
+    filter.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await wait(() => /Italie/.test((box.querySelector(".pc-hero") || {}).textContent || ""), "Entrée choisit l'Italie");
+    box.querySelector("[data-pc-picker]").click();
+    box.querySelector('.pc-picker-opt[data-ph-country="fr"]').click();
+    await wait(() => /France/.test((box.querySelector(".pc-hero") || {}).textContent || "") && box.querySelector(".pc-picker-menu"), "retour en France");
+    ok("liste des pays : « Votre pays » en tête, recherche (accents, anglais, langue du pays, code), Entrée choisit");
+  }
   const hero = box.querySelector(".pc-hero");
   const kpis = [...hero.querySelectorAll(".pc-kpi")].map(k => k.textContent);
   if (!/France/.test(hero.textContent) || !/Votre pays/.test(hero.textContent)) fail(`carte du pays : ${hero.textContent}`);

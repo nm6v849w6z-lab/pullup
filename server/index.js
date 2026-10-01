@@ -907,7 +907,7 @@ function privateLeagueAction(fn) {
   return (team, teamIndex, league, body, now) => {
     const result = fn(Engine, team, teamIndex, league, body, now);
     if (!result.ok) return result;
-    return { ...result, privateLeagues: PrivateLeague.sanitizePrivateLeaguesForViewer(league.privateLeagues, teamIndex) };
+    return { ...result, privateLeagues: PrivateLeague.sanitizePrivateLeaguesForViewer(league.privateLeagues, teamIndex, now) };
   };
 }
 
@@ -1741,7 +1741,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // voir World.divisionMovesFor. Absent = aucune division autour.
         if (ctx.world) payload.league.divisionMoves = World.divisionMovesFor(ctx.world, ctx.leagueId);
         // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
-        payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex);
+        payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex, now);
         // Matchs amicaux : seulement les siens, sans la compo de l'adversaire.
         payload.league.friendlies = Friendlies.sanitizeFriendliesForViewer(payload.league.friendlies, ctx.teamIndex, now);
         sendJson(res, 200, payload);
@@ -1909,6 +1909,43 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Direct d'un match de ligue privée (voir server/privateLeague.js,
+      // lpLiveKey) : réservé aux membres de la ligue. En cours : horaires
+      // réels (on rejoint le match là où il en est) ; terminé : « Revoir le
+      // direct », horaires recalés pour démarrer maintenant. Vu depuis son
+      // club s'il joue ce match, sinon depuis l'équipe à domicile (`watchIdx`).
+      if (route.pathname === "/api/private-league/live" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        const q = route.searchParams;
+        const lp = (ctx.league.privateLeagues || []).find(x => x.id === q.get("lp"));
+        if (!lp || !lp.teamIndices.includes(ctx.teamIndex)) { sendJson(res, 404, { ok: false, error: "Ligue privée introuvable." }); return; }
+        const roundIndex = Number(q.get("round")), home = Number(q.get("home")), away = Number(q.get("away"));
+        const round = lp.rounds[roundIndex];
+        const match = round && round.matches.find(m => m.home === home && m.away === away);
+        if (!match || !match.played || typeof match.liveUntil !== "number") { sendJson(res, 404, { ok: false, error: "Pas de direct pour ce match." }); return; }
+        const data = await store.loadReplays(ctx.leagueId, multiSavePath);
+        const suffix = PrivateLeague.lpLiveKey(lp, roundIndex, home, away);
+        const item = data.list.slice().reverse().find(x => x.key.endsWith(":" + suffix));
+        if (!item) { sendJson(res, 404, { ok: false, error: "Ce direct n'est plus disponible." }); return; }
+        const watchIdx = item.entry.homeIdx === ctx.teamIndex || item.entry.awayIdx === ctx.teamIndex ? ctx.teamIndex : item.entry.homeIdx;
+        const view = LiveMatch.viewLiveMatchForTeam({ liveMatches: { [item.key]: item.entry } }, watchIdx);
+        view.privateLeague = item.entry.privateLeague;
+        const ended = now >= match.liveUntil;
+        if (ended) {
+          const delta = now + 2000 - item.entry.kickoffAt;
+          view.kickoffAt += delta;
+          view.events = view.events.map(ev => (typeof ev.airAt === "number" ? { ...ev, airAt: ev.airAt + delta } : ev));
+          view.pauses = (view.pauses || []).map(pz => (typeof pz.airAt === "number" ? { ...pz, airAt: pz.airAt + delta } : pz));
+          view.replay = true;
+        }
+        sendJson(res, 200, { ok: true, live: view, watchIdx, mine: watchIdx === ctx.teamIndex, ended,
+          teamName: (ctx.league.teams[watchIdx] || {}).name || "", opponentName: (ctx.league.teams[view.opponentIdx] || {}).name || "" });
+        return;
+      }
+
       if (route.pathname === "/api/replay" && req.method === "GET") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
@@ -1996,6 +2033,30 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // fire-and-forget, voir le grand commentaire d'en-tête de
         // server/shows.js) pour ne pas dépendre d'une prochaine requête.
         await persistContext(ctx);
+        sendJson(res, 200, show);
+        return;
+      }
+
+      // Émissions d'un match de ligue privée (sans pronostics, voir
+      // Shows.getLpPrematchShow) : ?lp=&round=, pour son propre match.
+      if ((route.pathname === "/api/shows/lp/prematch" || route.pathname === "/api/shows/lp/halftime") && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const { changed } = tick(ctx.league, now);
+        if (changed) await persistContext(ctx);
+        const lp = (ctx.league.privateLeagues || []).find(x => x.id === route.searchParams.get("lp"));
+        const roundIndex = Number(route.searchParams.get("round"));
+        if (!lp || !lp.teamIndices.includes(ctx.teamIndex) || !lp.rounds[roundIndex]) { sendJson(res, 404, { ok: false, error: "Aucune émission disponible." }); return; }
+        const lpView = PrivateLeague.sanitizePrivateLeaguesForViewer([lp], ctx.teamIndex, now)[0];
+        let show = null;
+        if (route.pathname.endsWith("/prematch")) show = Shows.getLpPrematchShow(ctx.league, lpView, roundIndex, ctx.teamIndex, now);
+        else {
+          const data = await store.loadReplays(ctx.leagueId, multiSavePath);
+          const prefix = `lp:${lp.id}:${roundIndex}:`;
+          const entries = data.list.filter(x => x.key.includes(":" + prefix)).map(x => x.entry);
+          show = Shows.getLpHalftimeShow(ctx.league, lpView, roundIndex, ctx.teamIndex, entries, now);
+        }
+        if (!show) { sendJson(res, 404, { ok: false, error: "Émission pas encore ouverte." }); return; }
         sendJson(res, 200, show);
         return;
       }

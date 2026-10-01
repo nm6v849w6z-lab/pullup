@@ -106,12 +106,25 @@
   .field{margin-bottom:14px}
   .lbl{display:block; font-size:13px; font-weight:600; color:var(--ink-dim); margin:0 0 6px}
   /* Choix du pays (championnats par pays, 2026-09-28). */
-  /* 17 pays (2026-09-30) : grille compacte qui défile dans le formulaire. */
-  .country-pick{display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:6px; max-height:190px; overflow-y:auto; overscroll-behavior:contain; padding:4px; margin:-4px; scrollbar-width:thin; scrollbar-color:var(--line) transparent}
-  .country-pick button{display:flex; align-items:center; justify-content:flex-start; gap:8px; min-width:0; background:var(--bg); color:var(--ink-dim); border:1px solid var(--line); border-radius:8px; font:600 13px/1.15 "DM Sans",sans-serif; padding:8px 9px; text-align:left; cursor:pointer; transition:border-color .15s, color .15s}
-  .country-pick button span{min-width:0; overflow-wrap:anywhere}
-  .country-pick button img{flex:none; width:20px; height:15px; border-radius:2px; box-shadow:0 0 0 1px rgba(255,255,255,.12)}
-  .country-pick button[aria-checked="true"]{border-color:var(--amber); color:var(--ink); box-shadow:0 0 0 3px rgba(240,162,60,.14)}
+  /* 17 pays (2026-09-30) ; liste déroulante avec recherche (2026-10-01). */
+  .country-pick{position:relative}
+  .cp-btn{display:flex; align-items:center; gap:10px; width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:9px;
+    font:500 16px/1.2 "DM Sans",sans-serif; padding:12px 13px; text-align:left; cursor:pointer; transition:border-color .15s, box-shadow .15s}
+  .cp-btn:focus-visible,.country-pick.is-open .cp-btn{border-color:var(--amber); box-shadow:0 0 0 3px rgba(240,162,60,.18); outline:none}
+  .cp-btn .cp-cur{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .cp-btn svg{flex:none; width:16px; height:16px; color:var(--ink-dim); transition:transform .15s}
+  .country-pick.is-open .cp-btn svg{transform:rotate(180deg)}
+  .country-pick img{flex:none; width:22px; height:16px; border-radius:2px; box-shadow:0 0 0 1px rgba(255,255,255,.12); object-fit:cover}
+  .cp-panel{position:absolute; z-index:20; left:0; right:0; top:calc(100% + 6px); background:var(--panel-2); border:1px solid var(--line); border-radius:9px;
+    padding:6px; box-shadow:0 18px 40px -12px rgba(0,0,0,.7)}
+  .cp-panel[hidden]{display:none}
+  .cp-panel input[type=text]{padding:10px 12px}
+  .cp-list{list-style:none; margin:6px 0 0; padding:0; max-height:260px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--line) transparent}
+  .cp-list li{display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:7px; color:var(--ink-dim); font:600 14px/1.2 "DM Sans",sans-serif; cursor:pointer}
+  .cp-list li span{min-width:0; overflow-wrap:anywhere}
+  .cp-list li.is-active{background:var(--bg); color:var(--ink)}
+  .cp-list li[aria-selected="true"]{color:var(--amber)}
+  .cp-empty{padding:12px 10px; color:var(--ink-faint); font-size:14px}
   input[type=text],input[type=email],input[type=password]{
     width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:9px;
     font:500 16px/1.2 "DM Sans",sans-serif; padding:12px 13px; outline:none; transition:border-color .15s, box-shadow .15s}
@@ -260,25 +273,14 @@
             <div class="field invite-only" style="display:none"><label for="suInvite" data-t="field.invite">Code d'invitation</label>
               <input type="text" id="suInvite" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40">
               <div class="hint" data-t="field.inviteHint">Les inscriptions sont sur invitation pour le moment.</div></div>
-            <div class="field"><span class="lbl" data-t="field.country">Ton pays</span>
-              <div class="country-pick" role="radiogroup" data-country-pick="su">
-                <button type="button" role="radio" aria-checked="true" data-country="fr"><img src="/assets/flags/fr.png" alt=""><span data-t="country.fr">France</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="us"><img src="/assets/flags/us.png" alt=""><span data-t="country.us">États-Unis</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="it"><img src="/assets/flags/it.png" alt=""><span data-t="country.it">Italie</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="de"><img src="/assets/flags/de.png" alt=""><span data-t="country.de">Allemagne</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="ar"><img src="/assets/flags/ar.png" alt=""><span data-t="country.ar">Argentine</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="be"><img src="/assets/flags/be.png" alt=""><span data-t="country.be">Belgique</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="br"><img src="/assets/flags/br.png" alt=""><span data-t="country.br">Brésil</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="ca"><img src="/assets/flags/ca.png" alt=""><span data-t="country.ca">Canada</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="cn"><img src="/assets/flags/cn.png" alt=""><span data-t="country.cn">Chine</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="es"><img src="/assets/flags/es.png" alt=""><span data-t="country.es">Espagne</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="gr"><img src="/assets/flags/gr.png" alt=""><span data-t="country.gr">Grèce</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="hk"><img src="/assets/flags/hk.png" alt=""><span data-t="country.hk">Hong Kong</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="lt"><img src="/assets/flags/lt.png" alt=""><span data-t="country.lt">Lituanie</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="pl"><img src="/assets/flags/pl.png" alt=""><span data-t="country.pl">Pologne</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="pt"><img src="/assets/flags/pt.png" alt=""><span data-t="country.pt">Portugal</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="ch"><img src="/assets/flags/ch.png" alt=""><span data-t="country.ch">Suisse</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="tw"><img src="/assets/flags/tw.png" alt=""><span data-t="country.tw">Taïwan</span></button>
+            <div class="field"><span class="lbl" id="suCountryLbl" data-t="field.country">Ton pays</span>
+              <div class="country-pick" data-country-pick="su">
+                <button type="button" class="cp-btn" id="suCountryBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="suCountryLbl suCountryBtn"><img src="/assets/flags/fr.png" alt=""><span class="cp-cur">France</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                <div class="cp-panel" hidden>
+                  <input type="text" class="cp-search" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="suCountryList" autocomplete="off" spellcheck="false" placeholder="Rechercher un pays…">
+                  <ul class="cp-list" role="listbox" id="suCountryList" aria-labelledby="suCountryLbl"></ul>
+                  <div class="cp-empty" hidden data-t="country.none">Aucun pays</div>
+                </div>
               </div>
               <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (matchs à 20:00 heure locale).</div></div>
             <div class="field"><label for="suClub" data-t="field.club">Nom de ton club</label>
@@ -351,25 +353,14 @@
             <div class="field invite-only" style="display:none"><label for="dcInvite" data-t="field.invite">Code d'invitation</label>
               <input type="text" id="dcInvite" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40">
               <div class="hint" data-t="field.inviteHint">Les inscriptions sont sur invitation pour le moment.</div></div>
-            <div class="field"><span class="lbl" data-t="field.country">Ton pays</span>
-              <div class="country-pick" role="radiogroup" data-country-pick="dc">
-                <button type="button" role="radio" aria-checked="true" data-country="fr"><img src="/assets/flags/fr.png" alt=""><span data-t="country.fr">France</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="us"><img src="/assets/flags/us.png" alt=""><span data-t="country.us">États-Unis</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="it"><img src="/assets/flags/it.png" alt=""><span data-t="country.it">Italie</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="de"><img src="/assets/flags/de.png" alt=""><span data-t="country.de">Allemagne</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="ar"><img src="/assets/flags/ar.png" alt=""><span data-t="country.ar">Argentine</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="be"><img src="/assets/flags/be.png" alt=""><span data-t="country.be">Belgique</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="br"><img src="/assets/flags/br.png" alt=""><span data-t="country.br">Brésil</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="ca"><img src="/assets/flags/ca.png" alt=""><span data-t="country.ca">Canada</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="cn"><img src="/assets/flags/cn.png" alt=""><span data-t="country.cn">Chine</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="es"><img src="/assets/flags/es.png" alt=""><span data-t="country.es">Espagne</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="gr"><img src="/assets/flags/gr.png" alt=""><span data-t="country.gr">Grèce</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="hk"><img src="/assets/flags/hk.png" alt=""><span data-t="country.hk">Hong Kong</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="lt"><img src="/assets/flags/lt.png" alt=""><span data-t="country.lt">Lituanie</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="pl"><img src="/assets/flags/pl.png" alt=""><span data-t="country.pl">Pologne</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="pt"><img src="/assets/flags/pt.png" alt=""><span data-t="country.pt">Portugal</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="ch"><img src="/assets/flags/ch.png" alt=""><span data-t="country.ch">Suisse</span></button>
-                <button type="button" role="radio" aria-checked="false" data-country="tw"><img src="/assets/flags/tw.png" alt=""><span data-t="country.tw">Taïwan</span></button>
+            <div class="field"><span class="lbl" id="dcCountryLbl" data-t="field.country">Ton pays</span>
+              <div class="country-pick" data-country-pick="dc">
+                <button type="button" class="cp-btn" id="dcCountryBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="dcCountryLbl dcCountryBtn"><img src="/assets/flags/fr.png" alt=""><span class="cp-cur">France</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                <div class="cp-panel" hidden>
+                  <input type="text" class="cp-search" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="dcCountryList" autocomplete="off" spellcheck="false" placeholder="Rechercher un pays…">
+                  <ul class="cp-list" role="listbox" id="dcCountryList" aria-labelledby="dcCountryLbl"></ul>
+                  <div class="cp-empty" hidden data-t="country.none">Aucun pays</div>
+                </div>
               </div>
               <div class="hint" data-t="field.countryHint">Ton championnat et ses horaires (matchs à 20:00 heure locale).</div></div>
             <div class="field"><label for="dcClub" data-t="field.club">Nom de ton club</label>
@@ -462,6 +453,7 @@
       "country.fr": "France", "country.us": "United States", "country.it": "Italy", "country.de": "Germany", "country.ar": "Argentina", "country.be": "Belgium",
       "country.br": "Brazil", "country.ca": "Canada", "country.cn": "China", "country.es": "Spain", "country.gr": "Greece", "country.hk": "Hong Kong",
       "country.lt": "Lithuania", "country.pl": "Poland", "country.pt": "Portugal", "country.ch": "Switzerland", "country.tw": "Taiwan",
+      "country.search": "Search for a country…", "country.none": "No country found",
       "field.countryHint": "Your league and its schedule (games at 8:00 pm local time).",
       "field.club": "Your club's name", "field.clubHint": "2 to 24 characters. Visible to other managers.",
       "field.email": "Email", "field.password": "Password", "field.pwHint": "At least 8 characters.",
@@ -527,6 +519,7 @@
       "country.fr": "Francia", "country.us": "Stati Uniti", "country.it": "Italia", "country.de": "Germania", "country.ar": "Argentina", "country.be": "Belgio",
       "country.br": "Brasile", "country.ca": "Canada", "country.cn": "Cina", "country.es": "Spagna", "country.gr": "Grecia", "country.hk": "Hong Kong",
       "country.lt": "Lituania", "country.pl": "Polonia", "country.pt": "Portogallo", "country.ch": "Svizzera", "country.tw": "Taiwan",
+      "country.search": "Cerca un paese…", "country.none": "Nessun paese trovato",
       "field.countryHint": "Il tuo campionato e i suoi orari (partite alle 20:00 ora locale).",
       "field.club": "Il nome del tuo club", "field.clubHint": "Da 2 a 24 caratteri. Visibile agli altri manager.",
       "field.email": "Email", "field.password": "Password", "field.pwHint": "Almeno 8 caratteri.",
@@ -592,6 +585,7 @@
       "country.fr": "Francia", "country.us": "Estados Unidos", "country.it": "Italia", "country.de": "Alemania", "country.ar": "Argentina", "country.be": "Bélgica",
       "country.br": "Brasil", "country.ca": "Canadá", "country.cn": "China", "country.es": "España", "country.gr": "Grecia", "country.hk": "Hong Kong",
       "country.lt": "Lituania", "country.pl": "Polonia", "country.pt": "Portugal", "country.ch": "Suiza", "country.tw": "Taiwán",
+      "country.search": "Buscar un país…", "country.none": "Ningún país encontrado",
       "field.countryHint": "Tu liga y sus horarios (partidos a las 20:00, hora local).",
       "field.club": "Nombre de tu club", "field.clubHint": "De 2 a 24 caracteres. Visible para los demás mánagers.",
       "field.email": "Email", "field.password": "Contraseña", "field.pwHint": "Mínimo 8 caracteres.",
@@ -657,6 +651,7 @@
       "country.fr": "França", "country.us": "Estados Unidos", "country.it": "Itália", "country.de": "Alemanha", "country.ar": "Argentina", "country.be": "Bélgica",
       "country.br": "Brasil", "country.ca": "Canadá", "country.cn": "China", "country.es": "Espanha", "country.gr": "Grécia", "country.hk": "Hong Kong",
       "country.lt": "Lituânia", "country.pl": "Polônia", "country.pt": "Portugal", "country.ch": "Suíça", "country.tw": "Taiwan",
+      "country.search": "Pesquisar um país…", "country.none": "Nenhum país encontrado",
       "field.countryHint": "Sua liga e seus horários (jogos às 20:00, horário local).",
       "field.club": "Nome do seu clube", "field.clubHint": "De 2 a 24 caracteres. Visível para os outros managers.",
       "field.email": "E-mail", "field.password": "Senha", "field.pwHint": "No mínimo 8 caracteres.",
@@ -722,6 +717,7 @@
       "country.fr": "Frankreich", "country.us": "USA", "country.it": "Italien", "country.de": "Deutschland", "country.ar": "Argentinien", "country.be": "Belgien",
       "country.br": "Brasilien", "country.ca": "Kanada", "country.cn": "China", "country.es": "Spanien", "country.gr": "Griechenland", "country.hk": "Hongkong",
       "country.lt": "Litauen", "country.pl": "Polen", "country.pt": "Portugal", "country.ch": "Schweiz", "country.tw": "Taiwan",
+      "country.search": "Land suchen…", "country.none": "Kein Land gefunden",
       "field.countryHint": "Deine Liga und ihr Spielplan (Spiele um 20:00 Uhr Ortszeit).",
       "field.club": "Name deines Vereins", "field.clubHint": "2 bis 24 Zeichen. Für andere Manager sichtbar.",
       "field.email": "E-Mail", "field.password": "Passwort", "field.pwHint": "Mindestens 8 Zeichen.",
@@ -787,6 +783,7 @@
       "country.fr": "Francja", "country.us": "Stany Zjednoczone", "country.it": "Włochy", "country.de": "Niemcy", "country.ar": "Argentyna", "country.be": "Belgia",
       "country.br": "Brazylia", "country.ca": "Kanada", "country.cn": "Chiny", "country.es": "Hiszpania", "country.gr": "Grecja", "country.hk": "Hongkong",
       "country.lt": "Litwa", "country.pl": "Polska", "country.pt": "Portugalia", "country.ch": "Szwajcaria", "country.tw": "Tajwan",
+      "country.search": "Szukaj kraju…", "country.none": "Nie znaleziono kraju",
       "field.countryHint": "Twoja liga i jej terminarz (mecze o 20:00 czasu lokalnego).",
       "field.club": "Nazwa twojego klubu", "field.clubHint": "Od 2 do 24 znaków. Widoczna dla innych menedżerów.",
       "field.email": "E-mail", "field.password": "Hasło", "field.pwHint": "Co najmniej 8 znaków.",
@@ -852,6 +849,7 @@
       "country.fr": "Γαλλία", "country.us": "ΗΠΑ", "country.it": "Ιταλία", "country.de": "Γερμανία", "country.ar": "Αργεντινή", "country.be": "Βέλγιο",
       "country.br": "Βραζιλία", "country.ca": "Καναδάς", "country.cn": "Κίνα", "country.es": "Ισπανία", "country.gr": "Ελλάδα", "country.hk": "Χονγκ Κονγκ",
       "country.lt": "Λιθουανία", "country.pl": "Πολωνία", "country.pt": "Πορτογαλία", "country.ch": "Ελβετία", "country.tw": "Ταϊβάν",
+      "country.search": "Αναζήτηση χώρας…", "country.none": "Δεν βρέθηκε χώρα",
       "field.countryHint": "Το πρωτάθλημά σου και το πρόγραμμά του (αγώνες στις 20:00 τοπική ώρα).",
       "field.club": "Όνομα της ομάδας σου", "field.clubHint": "2 έως 24 χαρακτήρες. Ορατό στους άλλους μάνατζερ.",
       "field.email": "Email", "field.password": "Κωδικός πρόσβασης", "field.pwHint": "Τουλάχιστον 8 χαρακτήρες.",
@@ -917,6 +915,7 @@
       "country.fr": "Prancūzija", "country.us": "JAV", "country.it": "Italija", "country.de": "Vokietija", "country.ar": "Argentina", "country.be": "Belgija",
       "country.br": "Brazilija", "country.ca": "Kanada", "country.cn": "Kinija", "country.es": "Ispanija", "country.gr": "Graikija", "country.hk": "Honkongas",
       "country.lt": "Lietuva", "country.pl": "Lenkija", "country.pt": "Portugalija", "country.ch": "Šveicarija", "country.tw": "Taivanas",
+      "country.search": "Ieškoti šalies…", "country.none": "Šalis nerasta",
       "field.countryHint": "Tavo lyga ir jos tvarkaraštis (rungtynės 20:00 vietos laiku).",
       "field.club": "Tavo klubo pavadinimas", "field.clubHint": "Nuo 2 iki 24 simbolių. Matomas kitiems vadybininkams.",
       "field.email": "El. paštas", "field.password": "Slaptažodis", "field.pwHint": "Ne mažiau kaip 8 simboliai.",
@@ -982,6 +981,7 @@
       "country.fr": "法国", "country.us": "美国", "country.it": "意大利", "country.de": "德国", "country.ar": "阿根廷", "country.be": "比利时",
       "country.br": "巴西", "country.ca": "加拿大", "country.cn": "中国", "country.es": "西班牙", "country.gr": "希腊", "country.hk": "香港",
       "country.lt": "立陶宛", "country.pl": "波兰", "country.pt": "葡萄牙", "country.ch": "瑞士", "country.tw": "台湾",
+      "country.search": "搜索国家/地区…", "country.none": "未找到国家/地区",
       "field.countryHint": "你的联赛及其赛程（比赛于当地时间 20:00 开始）。",
       "field.club": "俱乐部名称", "field.clubHint": "2 到 24 个字符，其他经理可见。",
       "field.email": "邮箱", "field.password": "密码", "field.pwHint": "至少 8 个字符。",
@@ -1035,6 +1035,10 @@
       "err.invite-invalid": "该邀请码无效。"
     },
     fr: {
+      "country.fr": "France", "country.us": "États-Unis", "country.it": "Italie", "country.de": "Allemagne", "country.ar": "Argentine", "country.be": "Belgique",
+      "country.br": "Brésil", "country.ca": "Canada", "country.cn": "Chine", "country.es": "Espagne", "country.gr": "Grèce", "country.hk": "Hong Kong",
+      "country.lt": "Lituanie", "country.pl": "Pologne", "country.pt": "Portugal", "country.ch": "Suisse", "country.tw": "Taïwan",
+      "country.search": "Rechercher un pays…", "country.none": "Aucun pays",
       "pw.hide": "Masquer",
       "dclub.sub": "Salut {name} ! Dernière étape : choisis le nom de ton club.",
       "wait.still": "Toujours complet pour l'instant. Réessaie plus tard !",
@@ -1102,6 +1106,7 @@
     document.querySelectorAll("[data-t-html]").forEach(function (el) { el.innerHTML = t(el.dataset.tHtml); });
     langSelect.value = lang;
     document.querySelectorAll(".msg").forEach(function (m) { if (m.dataset.code) showMsg(m, m.dataset.code, m.classList.contains("is-ok")); });
+    renderCountryPickers();
     if (discordPendingName) document.getElementById("dclubSub").textContent = t("dclub.sub").replace("{name}", discordPendingName);
   }
   langSelect.addEventListener("change", function () {
@@ -1182,13 +1187,127 @@
     });
   }
 
-  // Choix du pays (voir .country-pick) : valeur lue au moment d'envoyer.
-  function pickedCountry(pre) {
-    var on = document.querySelector('[data-country-pick="' + pre + '"] [aria-checked="true"]');
-    return on ? on.getAttribute("data-country") : "fr";
+  // Choix du pays : liste déroulante avec recherche (2026-10-01, remplace la
+  // grille de boutons). Valeur lue au moment d'envoyer.
+  // France, États-Unis, Italie d'abord, puis les autres par nom traduit.
+  var COUNTRY_CODES = ["fr", "us", "it", "de", "ar", "be", "br", "ca", "cn", "es", "gr", "hk", "lt", "pl", "pt", "ch", "tw"];
+  var COUNTRY_TOP = ["fr", "us", "it"];
+  // Noms en plus pour la recherche (en plus des noms dans les 10 langues).
+  var COUNTRY_ALIASES = { us: "usa america amerique", be: "belgie belgien", ch: "helvetia", gr: "hellas ellada", tw: "台灣 臺灣", hk: "香港 xianggang", cn: "zhongguo prc", de: "allemagne" };
+  var countryValue = { su: "fr", dc: "fr" };
+  function normCountry(s) {
+    s = String(s || "").toLowerCase();
+    try { s = s.normalize("NFD").replace(/[̀-ͯ]/g, ""); } catch (e) {}
+    return s.trim();
   }
-  function selectCountry(group, b) {
-    group.querySelectorAll("[data-country]").forEach(function (x) { x.setAttribute("aria-checked", x === b ? "true" : "false"); });
+  var countryIndex = {};
+  COUNTRY_CODES.forEach(function (c) {
+    var names = [c, COUNTRY_ALIASES[c] || ""];
+    Object.keys(TEXTS).forEach(function (l) { if (TEXTS[l]["country." + c]) names.push(TEXTS[l]["country." + c]); });
+    countryIndex[c] = names.map(normCountry);
+  });
+  function sortedCountries() {
+    var rest = COUNTRY_CODES.filter(function (c) { return COUNTRY_TOP.indexOf(c) < 0; });
+    rest.sort(function (a, b) { return normCountry(t("country." + a)).localeCompare(normCountry(t("country." + b)), lang); });
+    return COUNTRY_TOP.concat(rest);
+  }
+  // Correspondance : code exact d'abord, puis début d'un nom, puis contenu.
+  function filterCountries(q) {
+    q = normCountry(q);
+    var list = sortedCountries();
+    if (!q) return list;
+    var rank = function (c) {
+      var names = countryIndex[c];
+      if (c === q) return 0;
+      if (names.some(function (n) { return n.split(/[\s\-\/]+/).some(function (w) { return w.indexOf(q) === 0; }); })) return 1;
+      if (names.some(function (n) { return n.indexOf(q) >= 0; })) return 2;
+      return 9;
+    };
+    var ranked = list.map(function (c, i) { return { c: c, r: rank(c), i: i }; }).filter(function (x) { return x.r < 9; });
+    ranked.sort(function (a, b) { return a.r - b.r || a.i - b.i; });
+    return ranked.map(function (x) { return x.c; });
+  }
+  function pickedCountry(pre) { return countryValue[pre] || "fr"; }
+  function countryGroup(pre) { return document.querySelector('[data-country-pick="' + pre + '"]'); }
+  function renderCountryButton(pre) {
+    var g = countryGroup(pre); if (!g) return;
+    var c = pickedCountry(pre);
+    g.dataset.value = c; // pays choisi (lu aussi par server/geoip_test.js)
+    g.querySelector(".cp-btn img").src = "/assets/flags/" + c + ".png";
+    g.querySelector(".cp-cur").textContent = t("country." + c);
+  }
+  function renderCountryList(pre, keepActive) {
+    var g = countryGroup(pre); if (!g) return;
+    var input = g.querySelector(".cp-search"), ul = g.querySelector(".cp-list");
+    var codes = filterCountries(input.value);
+    var prevActive = keepActive ? (ul.querySelector("li.is-active") || {}).dataset : null;
+    ul.innerHTML = "";
+    codes.forEach(function (c) {
+      var li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.id = pre + "-country-" + c;
+      li.dataset.country = c;
+      li.setAttribute("aria-selected", String(c === pickedCountry(pre)));
+      var img = document.createElement("img"); img.src = "/assets/flags/" + c + ".png"; img.alt = "";
+      var sp = document.createElement("span"); sp.textContent = t("country." + c);
+      li.appendChild(img); li.appendChild(sp);
+      ul.appendChild(li);
+    });
+    g.querySelector(".cp-empty").hidden = codes.length > 0;
+    // Ligne active : la première trouvée quand on tape, sinon le pays choisi.
+    var act = (prevActive && prevActive.country) || (input.value ? codes[0] : pickedCountry(pre));
+    setActiveCountry(pre, ul.querySelector('[data-country="' + act + '"]') || ul.firstElementChild);
+  }
+  function setActiveCountry(pre, li) {
+    var g = countryGroup(pre); if (!g) return;
+    var input = g.querySelector(".cp-search");
+    g.querySelectorAll(".cp-list li").forEach(function (x) { x.classList.toggle("is-active", x === li); });
+    if (li) {
+      input.setAttribute("aria-activedescendant", li.id);
+      var ul = li.parentNode;
+      if (li.offsetTop < ul.scrollTop) ul.scrollTop = li.offsetTop;
+      else if (li.offsetTop + li.offsetHeight > ul.scrollTop + ul.clientHeight) ul.scrollTop = li.offsetTop + li.offsetHeight - ul.clientHeight;
+    } else input.removeAttribute("aria-activedescendant");
+  }
+  function renderCountryPickers() {
+    ["su", "dc"].forEach(function (pre) {
+      var g = countryGroup(pre); if (!g) return;
+      g.querySelector(".cp-search").placeholder = t("country.search");
+      renderCountryButton(pre);
+      if (g.classList.contains("is-open")) renderCountryList(pre, true);
+    });
+  }
+  function setCountry(pre, code) {
+    if (COUNTRY_CODES.indexOf(code) < 0) return;
+    countryValue[pre] = code;
+    renderCountryButton(pre);
+  }
+  var touchUi = false;
+  try { touchUi = window.matchMedia("(hover: none) and (pointer: coarse)").matches; } catch (e) {}
+  function openCountry(pre) {
+    var g = countryGroup(pre); if (!g || g.classList.contains("is-open")) return;
+    document.querySelectorAll(".country-pick.is-open").forEach(function (o) { closeCountry(o.dataset.countryPick); });
+    var input = g.querySelector(".cp-search");
+    input.value = "";
+    g.classList.add("is-open");
+    g.querySelector(".cp-panel").hidden = false;
+    g.querySelector(".cp-btn").setAttribute("aria-expanded", "true");
+    renderCountryList(pre, false);
+    // Recherche directement au clavier sur ordinateur ; sur téléphone, pas
+    // de clavier qui surgit et cache la liste.
+    if (!touchUi) input.focus();
+  }
+  function closeCountry(pre, focusBtn) {
+    var g = countryGroup(pre); if (!g) return;
+    g.classList.remove("is-open");
+    g.querySelector(".cp-panel").hidden = true;
+    g.querySelector(".cp-btn").setAttribute("aria-expanded", "false");
+    if (focusBtn) g.querySelector(".cp-btn").focus();
+  }
+  function chooseCountry(pre, code) {
+    setCountry(pre, code);
+    countryTouched = true;
+    closeCountry(pre, true);
   }
   // Pays proposé d'office : région du navigateur (« de-CH » → Suisse,
   // « pt-BR » → Brésil, « zh-TW » → Taïwan), sinon pays de la langue
@@ -1196,7 +1315,7 @@
   // toujours en choisir un autre.
   var LANG_COUNTRY = { fr: "fr", it: "it", es: "es", pt: "pt", de: "de", pl: "pl", el: "gr", lt: "lt", zh: "cn", en: "us" };
   function guessCountry() {
-    var has = function (c) { return !!document.querySelector('[data-country="' + c + '"]'); };
+    var has = function (c) { return COUNTRY_CODES.indexOf(c) >= 0; };
     for (var i = 0; i < navLangs.length; i++) {
       var m = /^([a-z]{2})(?:-(?:hans-|hant-)?([a-z]{2}))?\b/.exec(navLangs[i]);
       if (!m) continue;
@@ -1207,27 +1326,50 @@
   }
   var guessedCountry = guessCountry();
   var countryTouched = false; // le manager a choisi lui-même : on ne change plus rien
-  // Pays sélectionné (et visible dans la grille qui défile) dans les deux formulaires.
+  // Pays sélectionné dans les deux formulaires.
   function preselectCountry(code) {
-    document.querySelectorAll("[data-country-pick]").forEach(function (group) {
-      var g = group.querySelector('[data-country="' + code + '"]');
-      if (!g) return;
-      selectCountry(group, g);
-      group.scrollTop = Math.max(0, g.offsetTop - group.offsetTop - 4);
-    });
+    ["su", "dc"].forEach(function (pre) { setCountry(pre, code); });
   }
-  document.querySelectorAll("[data-country-pick]").forEach(function (group) {
-    var g = group.querySelector('[data-country="' + guessedCountry + '"]');
-    if (g && guessedCountry !== "fr") {
-      selectCountry(group, g);
-      // Pays sélectionné visible dans la grille qui défile.
-      group.scrollTop = Math.max(0, g.offsetTop - group.offsetTop - 4);
-    }
-    group.addEventListener("click", function (e) {
-      var b = e.target.closest("[data-country]");
-      if (!b) return;
-      selectCountry(group, b);
-      countryTouched = true;
+  preselectCountry(guessedCountry);
+  document.querySelectorAll("[data-country-pick]").forEach(function (g) {
+    var pre = g.dataset.countryPick;
+    var btn = g.querySelector(".cp-btn"), input = g.querySelector(".cp-search"), ul = g.querySelector(".cp-list");
+    btn.addEventListener("click", function () {
+      if (g.classList.contains("is-open")) closeCountry(pre); else openCountry(pre);
+    });
+    btn.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); openCountry(pre); input.focus(); }
+    });
+    input.addEventListener("input", function () { renderCountryList(pre, false); });
+    // Clavier sur toute la liste ouverte (recherche ou ligne survolée).
+    g.querySelector(".cp-panel").addEventListener("keydown", function (e) {
+      var cur = ul.querySelector("li.is-active");
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        var next = cur ? (e.key === "ArrowDown" ? cur.nextElementSibling : cur.previousElementSibling) : ul.firstElementChild;
+        if (next) setActiveCountry(pre, next);
+      } else if (e.key === "Enter") {
+        e.preventDefault(); // pas d'envoi du formulaire
+        if (cur) chooseCountry(pre, cur.dataset.country);
+      } else if (e.key === "Escape") {
+        e.preventDefault(); closeCountry(pre, true);
+      } else if (e.key === "Tab") {
+        closeCountry(pre);
+      }
+    });
+    ul.addEventListener("mousemove", function (e) {
+      var li = e.target.closest("li[data-country]");
+      if (li && !li.classList.contains("is-active")) setActiveCountry(pre, li);
+    });
+    ul.addEventListener("click", function (e) {
+      var li = e.target.closest("li[data-country]");
+      if (li) chooseCountry(pre, li.dataset.country);
+    });
+  });
+  // Clic (ou toucher) en dehors : on referme.
+  document.addEventListener("pointerdown", function (e) {
+    document.querySelectorAll(".country-pick.is-open").forEach(function (g) {
+      if (!g.contains(e.target)) closeCountry(g.dataset.countryPick);
     });
   });
 

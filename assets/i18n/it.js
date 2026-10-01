@@ -5011,6 +5011,8 @@ window.HM_I18N_IT = {
   "{0} · {1}e": "{0} · {1}º",
   // Planète Hoop, aperçu du pays (2026-09-30).
   "Votre pays": "Il tuo paese",
+  "Rechercher un pays…": "Cerca un paese…",
+  "Aucun pays trouvé.": "Nessun paese trovato.",
   "Club, manager ou championnat…": "Club, manager o campionato…",
   "Rechercher dans le monde": "Cerca nel mondo",
   "Divisions": "Divisioni",
@@ -5121,6 +5123,7 @@ window.HM_I18N_IT = {
   "▶ Revoir le direct": "▶ Rivedi la diretta",
   "Revoir un direct est réservé au Premium.": "Rivedere una diretta è riservato al Premium.",
   "Ce direct n'est plus disponible.": "Questa diretta non è più disponibile.",
+  "Pas de direct pour ce match.": "Nessuna diretta per questa partita.",
   "Progression": "Crescita",
   "note globale par semaine": "valutazione complessiva per settimana",
   "La courbe apparaîtra après deux semaines d'entraînement.": "La curva apparirà dopo due settimane di allenamento.",

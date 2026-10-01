@@ -43,6 +43,7 @@
 // ---------------------------------------------------------------------
 
 const Calendar = require("./calendar.js");
+const { schedulePlayback } = require("./liveMatch.js");
 
 const PRIVATE_LEAGUE_SIZES = [4, 6, 8, 10]; // 4 : retour utilisateur 2026-09-26
 const PRIVATE_LEAGUE_MIN_TEAMS_TO_START = 4;
@@ -275,7 +276,25 @@ function compactBoxScore(rows) {
   }));
 }
 
-function simulatePrivateLeagueMatch(Engine, league, lp, match, now) {
+// Direct des matchs de ligue privée (retour utilisateur 2026-10-01 : « il
+// faut ajouter le live sur les matchs de ligue privée ») : le match reste
+// simulé d'un coup sur des copies (aucun effet sur les vrais clubs), mais
+// sa diffusion est calée sur le coup d'envoi de la journée (round.dueAt) et
+// rangée avec les directs à revoir (league.pendingReplays → store, clé
+// « lp:… », voir lpLiveKey et /api/private-leagues/live). Tant que la
+// diffusion n'est pas finie (match.liveUntil), le score reste caché aux
+// managers (sanitizePrivateLeaguesForViewer) et le fil d'actu attend
+// (round.feedPushed).
+function lpLiveKey(lp, roundIndex, home, away) {
+  return `lp:${lp.id}:${roundIndex}:${home}:${away}`;
+}
+
+function archivePrivateLeagueLive(league, lp, roundIndex, match, entry) {
+  if (!league.pendingReplays) Object.defineProperty(league, "pendingReplays", { value: [], writable: true, enumerable: false, configurable: true });
+  league.pendingReplays.push({ key: `${league.seasonNumber || 1}:${lpLiveKey(lp, roundIndex, match.home, match.away)}`, season: league.seasonNumber || 1, savedAt: Date.now(), entry });
+}
+
+function simulatePrivateLeagueMatch(Engine, league, lp, match, now, kickoffAt = now, roundIndex = null) {
   const homeReal = league.teams[match.home];
   const awayReal = league.teams[match.away];
   if (!homeReal || !awayReal) {
@@ -299,6 +318,19 @@ function simulatePrivateLeagueMatch(Engine, league, lp, match, now) {
     match.seed = result.seed;
     match.boxScoreHome = compactBoxScore(result.boxScoreA);
     match.boxScoreAway = compactBoxScore(result.boxScoreB);
+    if (roundIndex != null && Array.isArray(result.events) && result.events.length) {
+      const pb = schedulePlayback(result.events, kickoffAt);
+      match.kickoffAt = kickoffAt;
+      match.liveUntil = kickoffAt + pb.totalDurationMs;
+      archivePrivateLeagueLive(league, lp, roundIndex, match, {
+        round: roundIndex, kickoffAt, homeIdx: match.home, awayIdx: match.away, competition: "lp",
+        privateLeague: { id: lp.id, name: lp.name, round: roundIndex, venue: lp.venue },
+        forfeit: false, finalScore: { home: match.scoreHome, away: match.scoreAway },
+        quarterScores: match.quarterScores, seed: result.seed,
+        events: pb.events, pauses: pb.pauses, totalDurationMs: pb.totalDurationMs,
+        boxScoreA: result.boxScoreA, boxScoreB: result.boxScoreB,
+      });
+    }
     return;
   }
   match.quarterScores = null; match.boxScoreHome = null; match.boxScoreAway = null;
@@ -340,11 +372,19 @@ function catchUpPrivateLeagues(Engine, league, now) {
     lp.rounds.forEach(round => {
       if (round.dueAt > now) return;
       if (round.matches.every(m => m.played)) return;
-      round.matches.forEach(m => { if (!m.played) simulatePrivateLeagueMatch(Engine, league, lp, m, now); });
-      pushRoundFeed(Engine, league, lp, round);
+      round.matches.forEach(m => { if (!m.played) simulatePrivateLeagueMatch(Engine, league, lp, m, now, round.dueAt, round.index); });
+      round.feedPushed = false;
       played.push({ privateLeagueId: lp.id, round: round.index });
     });
-    if (lp.rounds.every(r => r.matches.every(m => m.played))) {
+    // Fil d'actu (résultat) seulement une fois la diffusion de la journée
+    // finie ; feedPushed absent = journée d'avant le direct, déjà annoncée.
+    lp.rounds.forEach(round => {
+      if (round.feedPushed !== false || !round.matches.every(m => m.played)) return;
+      if (round.matches.some(m => typeof m.liveUntil === "number" && m.liveUntil > now)) return;
+      pushRoundFeed(Engine, league, lp, round);
+      round.feedPushed = true;
+    });
+    if (lp.rounds.every(r => r.matches.every(m => m.played)) && lp.rounds.every(r => r.feedPushed !== false)) {
       lp.status = "finished";
       lp.finishedAt = now;
     }
@@ -380,13 +420,25 @@ function privateLeagueStandings(lp) {
 
 // Vue envoyée au navigateur : le code d'invitation n'est visible que des
 // membres (c'est le seul secret d'une ligue privée).
-function publicView(lp, viewerTeamIndex) {
+// Match encore en direct : score, quarts et feuilles retirés (pas de
+// spoiler, ni dans le calendrier ni au classement) ; `live: true` et
+// l'heure de fin suffisent au navigateur pour proposer « Voir le direct ».
+function publicView(lp, viewerTeamIndex, now = Date.now()) {
   const member = lp.teamIndices.includes(viewerTeamIndex);
-  return { ...lp, code: member ? lp.code : null };
+  const rounds = (lp.rounds || []).map(round => {
+    if (!round.matches.some(m => m.played && typeof m.liveUntil === "number" && m.liveUntil > now)) return round;
+    return {
+      ...round,
+      matches: round.matches.map(m => (m.played && typeof m.liveUntil === "number" && m.liveUntil > now
+        ? { ...m, played: false, live: true, scoreHome: null, scoreAway: null, quarterScores: null, boxScoreHome: null, boxScoreAway: null, forfeit: null }
+        : m)),
+    };
+  });
+  return { ...lp, rounds, code: member ? lp.code : null };
 }
 
-function sanitizePrivateLeaguesForViewer(privateLeagues, viewerTeamIndex) {
-  return (privateLeagues || []).map(lp => publicView(lp, viewerTeamIndex));
+function sanitizePrivateLeaguesForViewer(privateLeagues, viewerTeamIndex, now = Date.now()) {
+  return (privateLeagues || []).map(lp => publicView(lp, viewerTeamIndex, now));
 }
 
 module.exports = {
@@ -395,6 +447,6 @@ module.exports = {
   PRIVATE_LEAGUE_CODE_LENGTH, PRIVATE_LEAGUE_FINISHED_RETENTION_MS,
   createPrivateLeague, joinPrivateLeague, leavePrivateLeague, startPrivateLeague,
   startPrivateLeagueNow, firstPrivateLeagueSlotAfter, privateLeagueSlotForRound,
-  simulatePrivateLeagueMatch, catchUpPrivateLeagues, privateLeagueStandings,
+  simulatePrivateLeagueMatch, catchUpPrivateLeagues, privateLeagueStandings, lpLiveKey,
   activePrivateLeagueFor, sanitizePrivateLeaguesForViewer, normalizeCode, normalizeTime,
 };

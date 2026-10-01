@@ -403,6 +403,17 @@ points réellement ouverts.
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)
 
+- **Direct des ligues privées (2026-10-01)** : le match reste simulé d'un
+  coup sur des copies (server/privateLeague.js), mais sa diffusion est calée
+  sur round.dueAt (schedulePlayback) et rangée dans le store des directs à
+  revoir (clé « lp:<id>:<journée>:<dom>:<ext> », via league.pendingReplays).
+  match.liveUntil : tant qu'il n'est pas atteint, sanitizePrivateLeaguesForViewer
+  cache le score (live: true) et le fil d'actu attend (round.feedPushed).
+  Route GET /api/private-league/live (membres) : en cours = horaires réels,
+  fini = replay recalé. Émissions avant-match / mi-temps sans pronostics :
+  /api/shows/lp/prematch|halftime (Shows.getLpPrematchShow/getLpHalftimeShow).
+  Test : private_league_live_test.js.
+
 - **Pays proposé d'après l'IP (2026-10-01)** : server/geoip.js lit la table
   locale server/geodata/geoip.bin (17 pays ouverts, données NRO CC BY 4.0,
   aucun service externe) ; /api/account/config renvoie `suggestedCountry`,

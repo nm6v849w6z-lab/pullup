@@ -383,8 +383,15 @@ function topScorerMapForMatch(league, round, competition, homeIdx, awayIdx) {
   return map;
 }
 
+// Événements d'un direct déjà calculé, convertis pour showData (direct de
+// ligue privée, voir server/shows.js:getLpHalftimeShow).
+function convertEventsFor(league, rawEvents, homeIdx, awayIdx) {
+  league_teamsCache = new Map(league.teams.map((t, i) => [i, t]));
+  try { return convertEvents(rawEvents, homeIdx, awayIdx); } finally { league_teamsCache = new Map(); }
+}
+
 module.exports = {
-  matchId, POS_CODE, randomPointForZone,
+  matchId, POS_CODE, randomPointForZone, convertEventsFor, teamsMapFor, playersMapFor, startersFor, absentsFor,
   buildPrematchInput, buildHalftimeInput,
   resolveShowQuestion, topScorerMapForMatch,
   // Exportés pour les tests (vérification indépendante).

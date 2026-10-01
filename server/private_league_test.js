@@ -70,6 +70,18 @@ lp.rounds[0].matches.forEach(m => {
   check(m.played && Number.isFinite(m.scoreHome) && Number.isFinite(m.scoreAway) && m.scoreHome !== m.scoreAway, `match ${m.home}-${m.away} a un score (${m.scoreHome}-${m.scoreAway})`);
   check(!m.forfeit && Array.isArray(m.boxScoreHome) && m.boxScoreHome.length >= 5 && m.quarterScores.home.length >= 4, "feuille de match et quarts-temps stockés");
 });
+// Direct (2026-10-01) : diffusion calée sur le coup d'envoi, rangée avec
+// les directs à revoir ; score caché aux managers et fil d'actu en attente
+// tant que la diffusion n'est pas finie.
+const liveEnd = Math.max(...lp.rounds[0].matches.map(m => m.liveUntil));
+check(lp.rounds[0].matches.every(m => m.kickoffAt === friday && m.liveUntil > friday + 20 * 60 * 1000), "chaque match a son direct, du coup d'envoi (21h30) jusqu'à liveUntil");
+check(league.pendingReplays.length === 2 && league.pendingReplays.every(x => /:lp:/.test(x.key) && x.entry.events.length > 50 && x.entry.kickoffAt === friday), "directs rangés pour /api/private-league/live (clés lp:…)");
+const during = PL.sanitizePrivateLeaguesForViewer(league.privateLeagues, humans[0], friday + 5 * 60 * 1000)[0].rounds[0].matches;
+check(during.every(m => m.live && !m.played && m.scoreHome === null && m.boxScoreHome === null), "pendant le direct : score et feuille cachés (live: true)");
+check(lp.rounds[0].matches.every(m => league.teams[m.home].feed.entries.length === feedCounts[m.home]), "fil d'actu pas encore annoncé pendant le direct");
+PL.catchUpPrivateLeagues(Engine, league, liveEnd + 1000);
+const after = PL.sanitizePrivateLeaguesForViewer(league.privateLeagues, humans[0], liveEnd + 1000)[0].rounds[0].matches;
+check(after.every(m => m.played && !m.live && Number.isFinite(m.scoreHome)), "après le direct : score visible");
 const feedBumped = lp.rounds[0].matches.every(m => league.teams[m.home].feed.entries.length === feedCounts[m.home] + 1 && league.teams[m.away].feed.entries.length === feedCounts[m.away] + 1);
 check(feedBumped, "une entrée de fil d'actu par club membre");
 // Le fil d'actu est le SEUL changement autorisé : on le neutralise pour comparer.
@@ -120,7 +132,7 @@ console.log(`   (indicatif) taux de victoire du receveur : avec avantage ${(with
 }
 
 // 9. Fin de ligue + purge.
-lp.rounds.forEach(rd => PL.catchUpPrivateLeagues(Engine, league, rd.dueAt + 1000));
+lp.rounds.forEach(rd => { PL.catchUpPrivateLeagues(Engine, league, rd.dueAt + 1000); PL.catchUpPrivateLeagues(Engine, league, rd.dueAt + 3 * 3600 * 1000); });
 check(lp.status === "finished" && typeof lp.finishedAt === "number", "ligue terminée une fois toutes les journées jouées");
 check(PL.activePrivateLeagueFor(league, humans[0]) === null, "le club redevient libre");
 PL.catchUpPrivateLeagues(Engine, league, lp.finishedAt + PL.PRIVATE_LEAGUE_FINISHED_RETENTION_MS + 1);

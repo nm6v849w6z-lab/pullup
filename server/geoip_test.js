@@ -86,7 +86,7 @@ function get(server, urlPath, headers = {}) {
         const p = await ctx.newPage();
         await p.goto(`http://127.0.0.1:${port}/bienvenue`);
         await p.waitForTimeout(700);
-        const r = await p.evaluate(() => [...document.querySelectorAll('[data-country-pick] [aria-checked="true"]')].map(x => x.dataset.country));
+        const r = await p.evaluate(() => [...document.querySelectorAll('[data-country-pick]')].map(g => g.dataset.value));
         await ctx.close();
         return r;
       };

@@ -4974,6 +4974,8 @@ window.HM_I18N_EN = {
   "{0} · {1}e": "{0} · #{1}",
   // Planète Hoop, aperçu du pays (2026-09-30).
   "Votre pays": "Your country",
+  "Rechercher un pays…": "Search for a country…",
+  "Aucun pays trouvé.": "No country found.",
   "Club, manager ou championnat…": "Club, manager or league…",
   "Rechercher dans le monde": "Search the world",
   "Divisions": "Divisions",
@@ -5087,6 +5089,7 @@ window.HM_I18N_EN = {
   "▶ Revoir le direct": "▶ Replay the live broadcast",
   "Revoir un direct est réservé au Premium.": "Replaying a live broadcast is Premium only.",
   "Ce direct n'est plus disponible.": "This broadcast is no longer available.",
+  "Pas de direct pour ce match.": "No live broadcast for this match.",
   "Progression": "Progression",
   "note globale par semaine": "overall rating per week",
   "La courbe apparaîtra après deux semaines d'entraînement.": "The curve will show up after two weeks of training.",

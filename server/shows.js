@@ -136,6 +136,75 @@ function getHalftimeShow(league, teamIdx, round, now) {
   return show;
 }
 
+// --------------------------------------------------------------- ligue privée
+// Émissions avant-match et mi-temps des matchs de ligue privée (retour
+// utilisateur 2026-10-01 : « tu peux mettre l'émission d'avant match et de
+// la mi temps, mais il ne faut pas mettre les pronostics ») : mêmes
+// émissions (showData), construites sur la journée de LA LIGUE PRIVÉE
+// (ses matchs, son classement) ; segment de pronostics retiré et rien de
+// publié dans league.showsPronostics.
+function withoutPronostics(show, lpName) {
+  const out = { ...show, pronostics: null, segments: (show.segments || []).filter(s => s.type !== "pronostics") };
+  const tag = String(lpName || "Ligue privée").toUpperCase();
+  out.segments = out.segments.map(s => (typeof s.kicker === "string" && /^JOURNÉE \d+/.test(s.kicker) ? { ...s, kicker: `${tag} · ${s.kicker}` } : s));
+  if (typeof out.kicker === "string" && /^JOURNÉE \d+/.test(out.kicker)) out.kicker = `${tag} · ${out.kicker}`;
+  return out;
+}
+
+// `lpView` : la ligue privée telle que la voit ce manager à cet instant
+// (PrivateLeague.sanitizePrivateLeaguesForViewer : matchs encore en direct
+// sans score), pour un classement sans spoiler.
+function lpStandingsInput(lpView) {
+  return require("./privateLeague.js").privateLeagueStandings(lpView).map(r => ({ teamId: String(r.idx), w: r.wins, l: r.losses }));
+}
+
+function getLpPrematchShow(league, lpView, roundIndex, teamIdx, now) {
+  const round = lpView.rounds[roundIndex];
+  if (!round) return null;
+  const kickoffAt = round.dueAt;
+  if (!prematchWindowOpen(now, kickoffAt)) return null;
+  const fixtures = round.matches.filter(m => m.home >= 0 && m.away >= 0 && league.teams[m.home] && league.teams[m.away]);
+  const fx = fixtures.find(f => f.home === teamIdx || f.away === teamIdx);
+  if (!fx) return null;
+  const teamIdxs = new Set();
+  fixtures.forEach(f => { teamIdxs.add(f.home); teamIdxs.add(f.away); });
+  const form = {};
+  teamIdxs.forEach(idx => { form[String(idx)] = Adapter.formFor(league, idx, 5); });
+  const input = {
+    day: roundIndex + 1, leagueId: "lp-" + lpView.id, myTeamId: String(teamIdx),
+    teams: Adapter.teamsMapFor(league, Array.from(teamIdxs)),
+    players: Adapter.playersMapFor(league, [fx.home, fx.away]),
+    standings: lpStandingsInput(lpView),
+    fixtures: fixtures.map(f => ({ id: Adapter.matchId("lp" + roundIndex, f.home, f.away), homeId: String(f.home), awayId: String(f.away) })),
+    form, headToHead: [],
+    lineups: { [String(fx.home)]: Adapter.startersFor(league.teams[fx.home]), [String(fx.away)]: Adapter.startersFor(league.teams[fx.away]) },
+    absents: Adapter.absentsFor(league, fx.home, fx.away, kickoffAt), kickoffAt, rivalry: null,
+  };
+  return withoutPronostics(ShowData.buildPrematchShow(input), lpView.name);
+}
+
+// `entries` : directs de cette journée (store des directs, voir
+// server/privateLeague.js:archivePrivateLeagueLive).
+function getLpHalftimeShow(league, lpView, roundIndex, teamIdx, entries, now) {
+  const mine = entries.find(e => e.homeIdx === teamIdx || e.awayIdx === teamIdx);
+  const pause = mine && (mine.pauses || []).find(p => p.kind === "halftime");
+  if (!pause) return null;
+  const resumeAt = pause.airAt + pause.durationMs;
+  if (now < pause.airAt || now >= resumeAt) return null;
+  const teamIdxs = new Set();
+  const matches = entries.filter(e => !e.forfeit).map(e => {
+    teamIdxs.add(e.homeIdx); teamIdxs.add(e.awayIdx);
+    return { id: Adapter.matchId("lp" + roundIndex, e.homeIdx, e.awayIdx), homeId: String(e.homeIdx), awayId: String(e.awayIdx), events: Adapter.convertEventsFor(league, e.events, e.homeIdx, e.awayIdx) };
+  });
+  const input = {
+    day: roundIndex + 1, leagueId: "lp-" + lpView.id, myTeamId: String(teamIdx),
+    teams: Adapter.teamsMapFor(league, Array.from(teamIdxs)),
+    players: Adapter.playersMapFor(league, Array.from(teamIdxs)),
+    matches, standings: lpStandingsInput(lpView), resumeAt,
+  };
+  return withoutPronostics(ShowData.buildHalftimeShow(input), lpView.name);
+}
+
 // --------------------------------------------------------------- pronostics (lecture/écriture)
 // Envoi des réponses d'un manager — même validations que
 // server/shows/pronostics.js:submit (émission connue, pas résolue, pas
@@ -274,6 +343,7 @@ function grantSeasonPrizeSync(league, now = Date.now()) {
 }
 
 module.exports = {
+  getLpPrematchShow, getLpHalftimeShow,
   LINEUP_LOCK_BEFORE_KICKOFF_MS, SEASON_PRIZE_PREMIUM_MS,
   lineupLocked, prematchWindowOpen, currentSeasonKey,
   getPrematchShow, getHalftimeShow,

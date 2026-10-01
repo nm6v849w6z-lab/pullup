@@ -1945,6 +1945,16 @@
   .pc-chev{color:var(--ink-dim); margin-left:2px;}
   .pc-picker-menu{position:absolute; top:calc(100% + 6px); left:0; z-index:30; min-width:300px; max-width:calc(100vw - 32px); padding:6px; border-radius:12px; background:var(--panel); border:1px solid var(--line-soft); box-shadow:0 18px 40px -18px rgba(0,0,0,.55);}
   .pc-picker-menu.hidden{display:none;}
+  /* Recherche dans la liste des pays (2026-10-01, 17 pays) : liste limitée en hauteur, défilement interne. */
+  .pc-picker-menu:not(.hidden){display:flex; flex-direction:column; max-height:min(60vh, 420px);}
+  .pc-picker-filter{display:flex; align-items:center; flex:0 0 auto; height:38px; margin:0 0 6px; border-radius:9px; background:var(--bg); border:1px solid var(--line-soft);}
+  .pc-picker-filter:focus-within{border-color:var(--amber);}
+  .pc-picker-filter input{flex:1; min-width:0; height:100%; border:none; background:transparent; color:var(--ink); font:inherit; font-size:16px; padding:0 10px 0 4px; outline:none;}
+  .pc-picker-filter input::placeholder{color:var(--ink-faint);}
+  .pc-picker-list{position:relative; flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;}
+  .pc-picker-opt[hidden]{display:none;}
+  .pc-picker-opt.pc-kbd{background:var(--panel-2); box-shadow:inset 0 0 0 1px var(--line);}
+  .pc-picker-empty{padding:10px; color:var(--ink-dim); font-size:13px;}
   .pc-picker-opt{display:flex; align-items:center; gap:10px; width:100%; padding:9px 10px; border:none; border-radius:8px; background:transparent; color:var(--ink); font:inherit; text-align:left; cursor:pointer;}
   .pc-picker-opt:hover, .pc-picker-opt:focus-visible{background:var(--panel-2);}
   .pc-picker-opt.active{background:var(--pc-hover);}
@@ -7276,6 +7286,15 @@
   .lp-cal{border:1px solid var(--line); border-radius:14px; padding:18px;}
   .lp-cal-row{display:grid; grid-template-columns:40px 96px minmax(0,1fr) 92px minmax(0,1fr); gap:12px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line-soft); font-size:14px;}
   .lp-cal-row > .cal-result, .lp-cal-row > .cal-result-pending{justify-self:center;}
+  /* Direct d'un match de ligue privée (voir lpLiveBtnHtml). */
+  .lp-live-btn{display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-family:inherit; white-space:nowrap;}
+  .lp-cal-row > .lp-live{border:1px solid rgba(239,68,68,.45); background:rgba(239,68,68,.12); color:#fca5a5; border-radius:999px; padding:4px 10px; font-size:12px; font-weight:700;}
+  .lp-live-cta{border:0; background:var(--danger, #ef4444); color:#fff; border-radius:10px; padding:9px 14px; font-weight:800; font-size:13.5px; width:100%; justify-content:center;}
+  .lp-next-live{margin:10px 0 0;}
+  .lp-show-btn{width:100%;}
+  .lp-live-dot{width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 0 0 currentColor; animation:lpLivePulse 1.4s ease-out infinite; flex:none;}
+  .lp-cal-row > .lp-live .lp-live-dot{background:#ef4444;}
+  @keyframes lpLivePulse{0%{opacity:1}70%{opacity:.35}100%{opacity:1}}
   .lp-cal-row:last-child{border-bottom:none;}
   .lp-cal-row.me{background:rgba(240,162,60,.06); margin:0 -8px; padding-left:8px; padding-right:8px; border-radius:6px;}
   .lp-cal-j{font-size:11px; font-weight:700; color:var(--ink-faint);}
@@ -32666,18 +32685,62 @@ function planeteHtml() {
 const PLANETE_CHEVRON = `<svg class="pc-chev" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const PLANETE_SEARCH_ICON = `<svg class="pc-search-icon" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
 
+// Recherche dans la liste des pays (2026-10-01) : nom français, nom affiché
+// dans la langue du jeu, noms anglais / dans la langue du pays, code.
+const PLANETE_COUNTRY_ALIASES = {
+  fr: "france frankreich francia", us: "united states usa america etats-unis", it: "italy italia italien", de: "germany deutschland allemagne",
+  es: "spain espana espagne", gr: "greece hellas ellada ελλαδα", lt: "lithuania lietuva", pl: "poland polska", pt: "portugal",
+  be: "belgium belgique belgie belgien", ch: "switzerland schweiz suisse svizzera", br: "brazil brasil", ar: "argentina", ca: "canada",
+  cn: "china zhongguo 中国", hk: "hong kong 香港", tw: "taiwan 台湾 台灣",
+};
+function planeteCountryNames(c) {
+  const tr = window.hmI18n && typeof window.hmI18n.t === "function" ? window.hmI18n.t(c.name) : c.name;
+  return normalizeSearchText([c.code, c.name, tr, PLANETE_COUNTRY_ALIASES[c.code] || ""].join(" "));
+}
+// Filtre la liste ouverte ; la première ligne visible devient la ligne clavier.
+function planeteFilterCountries(box, q) {
+  const needle = normalizeSearchText(String(q || "").trim());
+  const opts = [...box.querySelectorAll(".pc-picker-opt")];
+  let first = null;
+  opts.forEach(o => {
+    const show = !needle || (o.dataset.pcNames || "").split(/\s+/).some(w => w.startsWith(needle)) || (o.dataset.pcNames || "").includes(needle);
+    o.hidden = !show;
+    if (show && !first) first = o;
+  });
+  // Code exact (« de ») : ce pays en premier choix clavier.
+  const exact = needle && opts.find(o => !o.hidden && o.dataset.phCountry === needle);
+  const empty = box.querySelector(".pc-picker-empty");
+  if (empty) empty.hidden = !!first;
+  planeteSetKbd(box, exact || (needle ? first : box.querySelector(".pc-picker-opt.active")));
+}
+function planeteSetKbd(box, opt) {
+  box.querySelectorAll(".pc-picker-opt.pc-kbd").forEach(o => o.classList.remove("pc-kbd"));
+  if (!opt) return;
+  opt.classList.add("pc-kbd");
+  const list = opt.closest(".pc-picker-list");
+  if (list) {
+    if (opt.offsetTop < list.scrollTop) list.scrollTop = opt.offsetTop;
+    else if (opt.offsetTop + opt.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = opt.offsetTop + opt.offsetHeight - list.clientHeight;
+  }
+}
+
 // Barre du haut : pays (menu déroulant avec drapeaux) + recherche mondiale.
 function planeteToolbarHtml() {
   const d = planeteState.data;
   const ov = d.overview;
   const cur = d.countries.find(c => c.code === ov.country) || { code: ov.country, name: ov.name };
-  const opts = d.countries.map(c =>
-    `<button type="button" role="option" aria-selected="${c.code === ov.country}" class="pc-picker-opt${c.code === ov.country ? " active" : ""}" data-ph-country="${escapeHtml(c.code)}">${nationFlagHtml(c.code)}` +
+  // « Votre pays » en tête, puis l'ordre du serveur.
+  const countries = d.countries.filter(c => c.code === d.myCountry).concat(d.countries.filter(c => c.code !== d.myCountry));
+  const opts = countries.map(c =>
+    `<button type="button" role="option" aria-selected="${c.code === ov.country}" class="pc-picker-opt${c.code === ov.country ? " active" : ""}" data-ph-country="${escapeHtml(c.code)}" data-pc-names="${escapeHtml(planeteCountryNames(c))}">${nationFlagHtml(c.code)}` +
     `<span><b>${escapeHtml(c.name)}</b><small>${c.managers} manager${c.managers > 1 ? "s" : ""} · ${c.leagueCount} championnat${c.leagueCount > 1 ? "s" : ""}</small></span>` +
     `${c.code === d.myCountry ? `<em>Votre pays</em>` : ""}</button>`).join("");
   return `<div class="pc-toolbar">` +
     `<div class="pc-picker"><button type="button" class="pc-picker-btn" data-pc-picker aria-haspopup="listbox" aria-expanded="false">${nationFlagHtml(cur.code)}<span class="pc-picker-name">${escapeHtml(cur.name)}</span>${PLANETE_CHEVRON}</button>` +
-    `<div class="pc-picker-menu hidden" role="listbox" aria-label="Pays">${opts}</div></div>` +
+    `<div class="pc-picker-menu hidden">` +
+    `<div class="pc-picker-filter">${PLANETE_SEARCH_ICON}<input type="search" id="planeteCountryFilter" placeholder="Rechercher un pays…" autocomplete="off" spellcheck="false" aria-label="Rechercher un pays" aria-controls="planeteCountryList"></div>` +
+    `<div class="pc-picker-list" id="planeteCountryList" role="listbox" aria-label="Pays">${opts}</div>` +
+    `<p class="pc-picker-empty" hidden>Aucun pays trouvé.</p></div></div>` +
     `<div class="pc-search">${PLANETE_SEARCH_ICON}<input type="search" id="planeteSearchInput" placeholder="Club, manager ou championnat…" autocomplete="off" aria-label="Rechercher dans le monde">` +
     `<div class="pc-search-results hidden" id="planeteSearchResults"></div></div>` +
     `</div>`;
@@ -32877,11 +32940,12 @@ function planeteSearch(raw) {
   }, 250);
 }
 
-function planeteClosePicker(box) {
+function planeteClosePicker(box, focusBtn) {
   const menu = box.querySelector(".pc-picker-menu");
   const btn = box.querySelector("[data-pc-picker]");
   if (menu) menu.classList.add("hidden");
   if (btn) btn.setAttribute("aria-expanded", "false");
+  if (focusBtn && btn) btn.focus();
 }
 
 // Délégation (une seule fois) sur le conteneur de Planète Hoop.
@@ -32894,6 +32958,15 @@ function planeteClosePicker(box) {
       const menu = box.querySelector(".pc-picker-menu");
       const open = menu.classList.toggle("hidden") === false;
       picker.setAttribute("aria-expanded", String(open));
+      if (open) {
+        const f = document.getElementById("planeteCountryFilter");
+        if (f) f.value = "";
+        planeteFilterCountries(box, "");
+        // Ordinateur : on tape directement ; écran tactile : pas de clavier
+        // qui surgit et cache la liste.
+        const touch = window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+        if (f && !touch) f.focus();
+      }
       return;
     }
     const c = e.target.closest("[data-ph-country]");
@@ -32912,10 +32985,26 @@ function planeteClosePicker(box) {
     const pl = e.target.closest("[data-pc-player]");
     if (pl) { showForeignPlayerDetail(pl.dataset.pcLeague, Number(pl.dataset.pcTeam), Number(pl.dataset.pcPlayer)); return; }
   });
-  box.addEventListener("input", (e) => { if (e.target.id === "planeteSearchInput") planeteSearch(e.target.value); });
+  box.addEventListener("input", (e) => {
+    if (e.target.id === "planeteSearchInput") planeteSearch(e.target.value);
+    if (e.target.id === "planeteCountryFilter") planeteFilterCountries(box, e.target.value);
+  });
   box.addEventListener("keydown", (e) => {
+    // Liste des pays ouverte : ↑/↓ pour se déplacer, Entrée pour choisir.
+    const menu = e.target.closest && e.target.closest(".pc-picker-menu");
+    if (menu && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter")) {
+      const vis = [...menu.querySelectorAll(".pc-picker-opt")].filter(o => !o.hidden);
+      const cur = menu.querySelector(".pc-picker-opt.pc-kbd");
+      e.preventDefault();
+      if (e.key === "Enter") { const o = cur && !cur.hidden ? cur : vis[0]; if (o) o.click(); return; }
+      const i = vis.indexOf(cur);
+      const next = e.key === "ArrowDown" ? vis[Math.min(vis.length - 1, i + 1)] : vis[Math.max(0, i - 1)];
+      planeteSetKbd(box, next);
+      return;
+    }
     if (e.key !== "Escape") return;
-    planeteClosePicker(box);
+    const wasOpen = !!box.querySelector(".pc-picker-menu:not(.hidden)");
+    planeteClosePicker(box, wasOpen && !!(e.target.closest && e.target.closest(".pc-picker")));
     const r = document.getElementById("planeteSearchResults");
     if (r) r.classList.add("hidden");
   });
@@ -35484,10 +35573,17 @@ function hoopShowMarkHalftimeSeen() {
 // toute l'appli). 404 (fenêtre pas encore ouverte côté serveur, voir
 // server/shows.js:getPrematchShow/getHalftimeShow) = silencieux, ne casse
 // jamais la navigation en cours (bouton simplement resté sans effet).
-async function openHoopShow(kind) {
+// `lp` (facultatif) : { lp, round, home, away } — émission d'un match de
+// ligue privée (sans pronostics, voir /api/shows/lp/…). Mi-temps d'un direct
+// de ligue privée : déduit du direct en cours.
+async function openHoopShow(kind, lp) {
+  if (!lp && kind === "halftime" && currentLiveMatch && currentLiveMatch.privateLeague && !currentLiveMatch.replay) {
+    const pl = currentLiveMatch.privateLeague;
+    lp = { lp: pl.id, round: pl.round, home: currentLiveMatch.isHome ? myTeamIndex : currentLiveMatch.opponentIdx, away: currentLiveMatch.isHome ? currentLiveMatch.opponentIdx : myTeamIndex };
+  }
   let show;
   try {
-    const res = await fetchApi(`/api/shows/${kind}`);
+    const res = await fetchApi(lp ? `/api/shows/lp/${kind}?lp=${encodeURIComponent(lp.lp)}&round=${lp.round}` : `/api/shows/${kind}`);
     if (!res.ok) {
       if (res.status !== 404) console.warn(`Émission Hoop Shows (${kind}) : erreur serveur ${res.status}.`);
       return;
@@ -35546,7 +35642,8 @@ async function openHoopShow(kind) {
         .catch(() => {});
     },
     onExit: closeHoopShow,
-    onGoLive: hoopShowGoLive,
+    // Ligue privée : « Voir le match » ouvre son direct (dès le coup d'envoi).
+    onGoLive: lp ? () => { closeHoopShow(); openPrivateLeagueLive(lp); } : hoopShowGoLive,
     // Reprise/coup d'envoi atteint : le direct suit déjà son propre
     // minutage indépendant (schedulePlayback côté serveur, applyTimelineItem
     // côté client) — rien à forcer ici, l'utilisateur ferme quand il veut.
@@ -38258,7 +38355,7 @@ function closeSpectateMatch() {
 async function refreshSpectateMatch() {
   if (!spectateState) return;
   try {
-    const res = await fetchApi(`/api/spectate?team=${spectateState.teamIdx}`);
+    const res = await fetchApi(spectateState.url || `/api/spectate?team=${spectateState.teamIdx}`);
     const data = await res.json();
     if (!res.ok || !data.ok) { closeSpectateMatch(); return; } // le match est probablement terminé entre-temps
     spectateState.live = data.live;
@@ -38266,26 +38363,33 @@ async function refreshSpectateMatch() {
   } catch (e) { /* pas de connexion : on garde le dernier affichage connu */ }
 }
 
-async function showSpectateMatch(teamIdx) {
+// `pre` (facultatif) : réponse déjà chargée et URL de rafraîchissement —
+// direct d'un match de ligue privée entre deux autres membres (voir
+// openPrivateLeagueLive).
+async function showSpectateMatch(teamIdx, pre) {
   closeSpectateMatch();
   let res, data;
-  try {
-    res = await fetchApi(`/api/spectate?team=${teamIdx}`);
-    data = await res.json();
-  } catch (e) { return; } // pas de connexion : on n'ouvre simplement rien.
-  if (!res.ok || !data.ok) return; // plus en direct entre-temps (finalisé) : rien à montrer.
+  if (pre && pre.data) data = pre.data;
+  else {
+    try {
+      res = await fetchApi(`/api/spectate?team=${teamIdx}`);
+      data = await res.json();
+    } catch (e) { return; } // pas de connexion : on n'ouvre simplement rien.
+    if (!res.ok || !data.ok) return; // plus en direct entre-temps (finalisé) : rien à montrer.
+  }
   const teamObj = league.teams[teamIdx];
   const opponentObj = league.teams[data.live.opponentIdx];
   if (!teamObj || !opponentObj) return;
   spectateState = {
     teamIdx, opponentIdx: data.live.opponentIdx, teamName: data.teamName, opponentName: data.opponentName,
-    teamObj, opponentObj, live: data.live, activeSide: "A", box: null,
+    teamObj, opponentObj, live: data.live, activeSide: "A", box: null, url: pre && pre.url || null,
   };
   const overlay = document.createElement("div");
   overlay.className = "upgrade-confirm-overlay spectate-overlay";
   overlay.id = "spectateOverlay";
   overlay.innerHTML = `<div class="upgrade-confirm-box spectate-box">` +
-    `<h3>🔴 En direct : ${escapeHtml(data.teamName)} - ${escapeHtml(data.opponentName)}</h3>` +
+    `<h3>${data.live && data.live.replay ? "▶ Revoir le direct" : "🔴 En direct"} : ${escapeHtml(data.teamName)} - ${escapeHtml(data.opponentName)}</h3>` +
+    (data.live && data.live.privateLeague ? `<p class="sub">Ligue privée · ${escapeHtml(data.live.privateLeague.name)} · Journée ${data.live.privateLeague.round + 1}</p>` : "") +
     `<div id="spectateStatusHolder"></div>` +
     `<div class="boxscore-toggle">` +
       `<button type="button" class="bs-tab spectate-bs-tab active" data-side="A">${escapeHtml(data.teamName)}</button>` +
@@ -38733,6 +38837,12 @@ function hmLiveMeta() {
     round = cm.competition === "cup" ? cupStageLabelForRoundIndex(cm.round) : `Journée ${cm.round + 1}/${league.totalRounds}`;
   }
   const homeTeam = m.isHome ? teamA : teamB;
+  // Direct de ligue privée (voir openPrivateLeagueLive) : ni journée de
+  // championnat ni salle (terrain neutre possible).
+  if (m.privateLeague) {
+    const neutral = m.privateLeague.venue === "neutral";
+    return { competition: `Ligue privée · ${m.privateLeague.name}`, round: `Journée ${m.privateLeague.round + 1}`, venue: neutral ? "Terrain neutre" : m.isHome ? "À domicile" : "À l'extérieur" };
+  }
   let venue = m.isHome ? "À domicile" : "À l'extérieur";
   try {
     const cap = homeTeam.arenaCapacity ? homeTeam.arenaCapacity() : arenaInfo(homeTeam.arenaLevel).capacity;
@@ -39312,7 +39422,9 @@ function openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx) {
   document.getElementById("matchBoxscoreCloseX").addEventListener("click", closeMatchBoxscore);
   overlay.querySelectorAll(".bs-tab").forEach(b => b.addEventListener("click", () => renderMatchBoxscoreTab(b.dataset.team)));
   const replayBtn = document.getElementById("matchReplayBtn");
-  if (replayBtn && ctx.replay) replayBtn.addEventListener("click", () => startMatchReplay(ctx.replay, document.getElementById("matchReplayFeedback")));
+  if (replayBtn && ctx.replay) replayBtn.addEventListener("click", () => (ctx.replay.lp
+    ? openPrivateLeagueLive(ctx.replay, document.getElementById("matchReplayFeedback"))
+    : startMatchReplay(ctx.replay, document.getElementById("matchReplayFeedback"))));
   renderMatchBoxscoreTab("A");
 }
 
@@ -44270,7 +44382,9 @@ function calendarNextMatchCardHtml(row) {
   // Bouton principal : classe DISTINCTE de .calendar-order-btn (réservée aux
   // lignes de la liste, une par journée à venir — voir calendar_test.js),
   // même délégation [data-tab]/data-round que les lignes.
-  const action = row.isLive
+  const action = row.lpLive
+    ? lpLiveBtnHtml(row.lpLive.lp, row.lpLive.round, row.lpLive.m, "cal-next-btn is-live")
+    : row.isLive
     ? `<button type="button" class="cal-next-btn is-live" data-tab="live">Voir le direct</button>`
     : row.superCup
     ? `<button type="button" class="cal-next-btn" data-tab="coupe">Voir la Supercoupe</button>`
@@ -44590,10 +44704,10 @@ function renderCalendrierSection() {
         location: lp.venue === "neutral" ? "Terrain neutre" : isHomeLp ? "Domicile" : "Extérieur",
         scoreText, boxscore: null,
         lpScore: m.played && !m.forfeit ? { id: lp.id, round: round.index, home: m.home, away: m.away } : null,
-        cls, actionCell: m.played ? "" : `<button type="button" class="calendar-order-btn calendar-lp-btn" data-tab="lp">Ligue privée</button>`,
+        cls, actionCell: m.played ? "" : m.live ? lpLiveBtnHtml(lp, round.index, m, "calendar-order-btn calendar-live-btn") : `<button type="button" class="calendar-order-btn calendar-lp-btn" data-tab="lp">Ligue privée</button>`,
         scheduledAt: round.dueAt, fallbackOrder: 100000 + round.index,
         isHome: isHomeLp, played: !!m.played, won: cls === "result-win", lost: cls === "result-loss",
-        isLive: false, alreadyOrdered: false, isPrivate: true,
+        isLive: !!m.live, lpLive: m.live ? { lp, round: round.index, m } : null, alreadyOrdered: false, isPrivate: true,
       });
     });
   });
@@ -49459,8 +49573,52 @@ function lpNextCardHtml(lp) {
     `<span class="cal-next-vs">VS</span>` +
     `<div class="cal-next-team">${away ? teamLogoHtml(away, 48) : ""}<span class="cal-next-name">${teamLinkHtml(m.away, lpTeamName(m.away))}</span><span class="cal-next-rank">${lp.venue === "neutral" ? "Neutre" : "Extérieur"}</span></div></div>` +
     `<div class="cal-next-meta"><span>${formatCalendarDayFr(next.dueAt)}</span><span class="cal-next-sep">·</span><span>${formatCalendarTimeFr(next.dueAt)}</span></div>` +
+    (m.live ? `<p class="lp-next-live">${lpLiveBtnHtml(lp, next.index, m, "lp-live-cta")}</p>` : "") +
+    // Émission d'avant-match (sans pronostics) : dès 5 min avant le coup d'envoi.
+    (Date.now() >= next.dueAt - 5 * 60 * 1000 ? `<p class="lp-next-live"><button type="button" class="secondary lp-show-btn" data-lp-show="${escapeHtml(lp.id)}" data-lp-round="${next.index}" data-lp-home="${m.home}" data-lp-away="${m.away}">Émission d'avant-match</button></p>` : "") +
     `<p class="cal-card-empty">${iAmHome && lp.venue === "home" ? "Vous recevez : avantage du terrain." : "Aucun impact sur la forme ni les finances."}</p></div>`;
 }
+
+// Direct d'un match de ligue privée (retour utilisateur 2026-10-01 : « il
+// faut ajouter le live sur les matchs de ligue privée ») : bouton commun au
+// calendrier de la ligue, à la carte « Prochain match » et au Calendrier
+// général (data-lp-live, câblé une fois au niveau du document).
+function lpLiveBtnHtml(lp, roundIndex, m, cls) {
+  return `<button type="button" class="${cls || ""} lp-live-btn" data-lp-live="${escapeHtml(lp.id)}" data-lp-round="${roundIndex}" data-lp-home="${m.home}" data-lp-away="${m.away}"><span class="lp-live-dot"></span>Voir le direct</button>`;
+}
+
+// Ouvre le direct (ou, une fois fini, le replay) d'un match de ligue privée.
+// Son propre match : l'écran Live habituel ; un match entre deux autres
+// membres : la fenêtre spectateur (voir showSpectateMatch).
+async function openPrivateLeagueLive(params, feedbackEl) {
+  const url = `/api/private-league/live?lp=${encodeURIComponent(params.lp)}&round=${params.round}&home=${params.home}&away=${params.away}`;
+  let res, data;
+  try {
+    res = await fetchApi(url);
+    data = await res.json().catch(() => ({}));
+  } catch (e) { if (feedbackEl) feedbackEl.textContent = "Serveur injoignable."; return false; }
+  if (!res.ok || !data.ok) { if (feedbackEl) feedbackEl.textContent = data.error || "Ce direct n'est plus disponible."; return false; }
+  closeMatchBoxscore();
+  if (!data.mine) { await showSpectateMatch(data.watchIdx, { data, url }); return true; }
+  teamB = league.teams[data.live.opponentIdx];
+  if (!teamB) return false;
+  enterLiveMatch(data.live);
+  const status = document.getElementById("boardStatus");
+  if (status && data.live.replay) status.dataset.replay = "1";
+  return true;
+}
+document.addEventListener("click", e => {
+  const sb = e.target.closest("[data-lp-show]");
+  if (sb) {
+    e.preventDefault(); e.stopPropagation();
+    window.__lastLpShow = openHoopShow("prematch", { lp: sb.dataset.lpShow, round: Number(sb.dataset.lpRound), home: Number(sb.dataset.lpHome), away: Number(sb.dataset.lpAway) });
+    return;
+  }
+  const b = e.target.closest("[data-lp-live]");
+  if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  window.__lastLpLive = openPrivateLeagueLive({ lp: b.dataset.lpLive, round: Number(b.dataset.lpRound), home: Number(b.dataset.lpHome), away: Number(b.dataset.lpAway) });
+}, true);
 
 function lpCalendarHtml(lp) {
   let html = `<div class="cal-card lp-cal"><div class="lp-cal-head"><span class="cal-card-kicker">Calendrier</span><span class="lp-cal-filters">` +
@@ -49480,6 +49638,8 @@ function lpCalendarHtml(lp) {
         const iWon = mine && ((m.home === myTeamIndex) === (m.scoreHome > m.scoreAway));
         const cls = mine ? (iWon ? "cal-result-win" : "cal-result-loss") : "cal-result-draw";
         mid = `<button type="button" class="cal-result ${cls} lp-score" data-lp-id="${lp.id}" data-lp-round="${round.index}" data-lp-home="${m.home}" data-lp-away="${m.away}" title="Feuille de match">${m.scoreHome} – ${m.scoreAway}</button>`;
+      } else if (m.live) {
+        mid = lpLiveBtnHtml(lp, round.index, m, "cal-result lp-live");
       } else {
         mid = `<span class="cal-result-pending">${formatCalendarTimeFr(round.dueAt)}</span>`;
       }
@@ -49512,6 +49672,8 @@ function showPrivateLeagueBoxscore(lp, roundIndex, homeIdx, awayIdx) {
     whenText: `${formatCalendarDayFr(round.dueAt)} · ${formatCalendarTimeFr(round.dueAt)}`,
     scoreHome: m.scoreHome, scoreAway: m.scoreAway,
     noteHtml: `<div class="lp-mbx-note">${m.forfeit ? "Match décidé par forfait (cinq de départ incomplet)." : "Match de ligue privée : aucun effet sur la forme, l'entraînement, les finances ni les stats de carrière."}</div>`,
+    // Direct gardé avec le match (voir /api/private-league/live) : à revoir.
+    replay: typeof m.liveUntil === "number" && !m.forfeit ? { lp: lp.id, round: roundIndex, home: homeIdx, away: awayIdx } : null,
   };
   openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx);
 }
