@@ -95,6 +95,10 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
      en défilant, la barre des onglets Composition / Attaque… reste collée en haut
      (retour utilisateur 2026-09-30 : page « flottante » sans en-tête). */
   .topbar.topbar-hidden-on-page { display: flex !important; }
+  /* Ligue d'un autre championnat (Planète Hoop) : « ← Planète Hoop · Pays »
+     fait doublon avec « ‹ Retour » de la barre du haut (retour utilisateur
+     2026-10-02). */
+  .lg-back[data-lg-back] { display: none !important; }
   /* … et du coup la barre des onglets ne réserve plus elle-même la zone de
      l'encoche dans son padding (règle prévue pour le topbar masqué,
      moteurbasket3.html) : sur iPhone elle laissait un grand vide sous le logo
