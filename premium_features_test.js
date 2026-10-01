@@ -166,6 +166,11 @@ function decrypt(body, uaEcdh, authSecret) {
       await wait(() => dO.getElementById("spectateOverlay"), "fenêtre spectateur du replay");
       assert.ok(/Revoir le direct/.test(dO.getElementById("spectateOverlay").textContent));
       assert.ok(wO.eval("spectateState && !!spectateState.timer"), "le replay avance tout seul (rendu chaque seconde)");
+      // Curseur de rediffusion (2026-10-01) : saut à la mi-match.
+      const seekO = dO.querySelector("#spectateOverlay .replay-seek input[type=range]");
+      assert.ok(seekO, "curseur de temps dans la fenêtre spectateur du replay");
+      seekO.value = String(Math.round(Number(seekO.max) / 2)); seekO.dispatchEvent(new wO.Event("change"));
+      assert.ok(wO.eval("spectateState.live.events.filter(ev => ev.airAt <= Date.now()).length") > 10, "saut dans le replay : les actions passées sont affichées");
       wO.eval("closeSpectateMatch()");
       domO.window.close();
       ok("revoir le direct d'un match d'autres clubs (Premium) : fenêtre spectateur qui avance toute seule");
@@ -182,6 +187,20 @@ function decrypt(body, uaEcdh, authSecret) {
   btn.click();
   await wait(() => win.eval("!!currentLiveMatch && currentLiveMatch.replay === true"), "direct rejoué");
   assert.strictEqual(win.eval("currentVisiblePageId()"), "liveSection");
+  {
+    // Curseur de rediffusion (2026-10-01) : uniquement en replay ; saut à
+    // la mi-match puis retour au début.
+    const seek = doc.querySelector("#liveReplaySeek input[type=range]");
+    assert.ok(seek, "curseur de temps sur le direct rejoué");
+    seek.value = String(Math.round(Number(seek.max) / 2)); seek.dispatchEvent(new win.Event("change"));
+    const mid = win.eval("Number(document.getElementById('scoreA').textContent) + Number(document.getElementById('scoreB').textContent)");
+    assert.ok(mid > 20, `saut à la mi-match : score affiché (${mid} points)`);
+    assert.ok(Math.abs(win.eval("Date.now() - currentLiveMatch.kickoffAt") - Number(seek.max) / 2) < 3000, "chronologie recalée");
+    doc.querySelector("#liveReplaySeek input[type=range]").value = "0";
+    doc.querySelector("#liveReplaySeek input[type=range]").dispatchEvent(new win.Event("change"));
+    assert.strictEqual(win.eval("Number(document.getElementById('scoreA').textContent) + Number(document.getElementById('scoreB').textContent)"), 0, "retour au début : 0-0");
+    ok("rediffusion : curseur pour avancer/reculer dans le match");
+  }
   win.eval("TAB_HANDLERS.statshebdo()");
   const adv = doc.getElementById("statsAdvancedContent");
   assert.ok(adv.querySelector(".st-adv-table") && /TS%/.test(adv.textContent));

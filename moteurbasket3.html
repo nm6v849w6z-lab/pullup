@@ -1644,6 +1644,13 @@
   .ncup-hc{display:inline-block; font-size:11px; font-weight:700; color:var(--amber); background:rgba(240,162,60,.14); border-radius:5px; padding:1px 5px; margin-left:4px;}
   .scup-card{margin:0 0 14px;}
   .live-handicap-note{text-align:center; font-size:12.5px; color:var(--amber); margin:0 0 10px;}
+  /* Rediffusion : curseur de temps (voir makeReplaySeekBar). */
+  .replay-seek{display:flex; align-items:center; gap:10px; margin:0 0 12px; padding:8px 12px; background:var(--panel); border:1px solid var(--line); border-radius:12px;}
+  .replay-seek input[type=range]{flex:1; min-width:0; accent-color:var(--amber); margin:0;}
+  .replay-seek button{flex:none; font:inherit; font-size:12.5px; font-weight:700; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); cursor:pointer;}
+  .replay-seek-pos{flex:none; min-width:92px; text-align:right; font-size:12.5px; font-weight:700; color:var(--amber); font-variant-numeric:tabular-nums;}
+  .replay-seek-tag{flex:none; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);}
+  @media (max-width:600px){ .replay-seek{flex-wrap:wrap;} .replay-seek input[type=range]{order:-1; flex-basis:100%;} .replay-seek-tag{display:none;} .replay-seek-pos{margin-left:auto;} }
   .cp-empty{text-align:center; color:var(--ink-faint); padding:22px !important;}
   .cp-more{margin:-4px 0 14px;}
 
@@ -37909,6 +37916,7 @@ function enterLiveMatch(liveMatch, opts) {
   matchResult = { boxScoreA: liveMatch.boxScoreA, boxScoreB: liveMatch.boxScoreB };
   resetPlaybackTrackers();
   hmLiveReset(liveMatch);
+  renderLiveReplaySeekBar(liveMatch);
 
   // Retour utilisateur (2026-09) : "bc dia est à l'exterieur et doit donc
   // être à droite pas à gauche" : voir .score-row.my-team-away plus haut
@@ -38702,6 +38710,7 @@ async function showSpectateMatch(teamIdx, pre) {
   overlay.innerHTML = `<div class="upgrade-confirm-box spectate-box">` +
     `<h3>${data.live && data.live.replay ? "▶ Revoir le direct" : "🔴 En direct"} : ${escapeHtml(data.teamName)} - ${escapeHtml(data.opponentName)}</h3>` +
     (data.live && data.live.privateLeague ? `<p class="sub">Ligue privée · ${escapeHtml(data.live.privateLeague.name)} · Journée ${data.live.privateLeague.round + 1}</p>` : "") +
+    `<div id="spectateSeekHolder"></div>` +
     `<div id="spectateStatusHolder"></div>` +
     `<div class="boxscore-toggle">` +
       `<button type="button" class="bs-tab spectate-bs-tab active" data-side="A">${escapeHtml(data.teamName)}</button>` +
@@ -38721,6 +38730,15 @@ async function showSpectateMatch(teamIdx, pre) {
   document.getElementById("spectateRefreshBtn").addEventListener("click", () => { window.__lastSpectateRefresh = refreshSpectateMatch(); });
   overlay.querySelectorAll(".spectate-bs-tab").forEach(b => b.addEventListener("click", () => renderSpectateBoxScoreTab(b.dataset.side)));
   renderSpectateMatch();
+  // Rediffusion : curseur de temps (voir makeReplaySeekBar).
+  if (data.live && data.live.replay && !data.live.forfeit) {
+    const st = spectateState;
+    document.getElementById("spectateSeekHolder").appendChild(makeReplaySeekBar(st.live, t => {
+      shiftReplayTimeline(st.live, t);
+      st.lastAired = -1;
+      renderSpectateMatch();
+    }));
+  }
   // Le match avance tout seul (tous les événements sont déjà là, chacun
   // avec son heure de diffusion) : nouveau rendu chaque seconde, plus
   // besoin d'« Actualiser » pour suivre un direct ou un replay.
@@ -39744,6 +39762,61 @@ async function startMatchReplay(params, feedbackEl) {
   const status = document.getElementById("boardStatus");
   if (status) status.dataset.replay = "1";
   return true;
+}
+
+// Rediffusion : curseur pour avancer ou reculer dans le match (retour
+// utilisateur 2026-10-01 : « un curseur pour modifier le temps dans le
+// match, dans un match en rediffusion uniquement »). Toute la chronologie
+// (coup d'envoi, actions, pauses) est recalée pour que « maintenant » tombe
+// au moment choisi ; l'écran est ensuite reconstruit comme à une reconnexion.
+function shiftReplayTimeline(live, targetMs) {
+  const delta = (Date.now() - targetMs) - live.kickoffAt;
+  live.kickoffAt += delta;
+  (live.events || []).forEach(ev => { if (typeof ev.airAt === "number") ev.airAt += delta; });
+  (live.pauses || []).forEach(p => { if (typeof p.airAt === "number") p.airAt += delta; });
+}
+function replayPositionLabel(live, t) {
+  const at = live.kickoffAt + t;
+  let last = null;
+  (live.events || []).forEach(ev => { if (ev.airAt <= at && (!last || ev.airAt >= last.airAt)) last = ev; });
+  if (t >= live.totalDurationMs) return "Terminé";
+  if (!last || !last.quarter) return "Avant-match";
+  const q = last.quarter > 4 ? `Prol. ${last.quarter - 4}` : `QT${last.quarter}`;
+  return last.clock ? `${q} · ${last.clock}` : q;
+}
+function makeReplaySeekBar(live, onSeek) {
+  const total = Math.max(1000, live.totalDurationMs || 0);
+  const bar = document.createElement("div");
+  bar.className = "replay-seek";
+  bar.innerHTML = `<span class="replay-seek-tag">Rediffusion</span>` +
+    `<button type="button" data-seek="-30000" aria-label="Reculer de 30 secondes">−30 s</button>` +
+    `<input type="range" min="0" max="${total}" step="1000" aria-label="Moment du match">` +
+    `<button type="button" data-seek="30000" aria-label="Avancer de 30 secondes">+30 s</button>` +
+    `<span class="replay-seek-pos"></span>`;
+  const range = bar.querySelector("input"), pos = bar.querySelector(".replay-seek-pos");
+  let dragging = false;
+  const now = () => Math.max(0, Math.min(total, Date.now() - live.kickoffAt));
+  const sync = () => { if (!dragging) { range.value = String(now()); pos.textContent = replayPositionLabel(live, now()); } };
+  const go = t => { dragging = false; onSeek(Math.max(0, Math.min(total, t))); sync(); };
+  range.addEventListener("input", () => { dragging = true; pos.textContent = replayPositionLabel(live, Number(range.value)); });
+  range.addEventListener("change", () => go(Number(range.value)));
+  bar.querySelectorAll("[data-seek]").forEach(b => b.addEventListener("click", () => go(now() + Number(b.dataset.seek))));
+  sync();
+  const timer = setInterval(() => { if (!bar.isConnected) clearInterval(timer); else sync(); }, 1000);
+  return bar;
+}
+// Curseur de l'écran du direct (son propre match revu, voir startMatchReplay).
+function renderLiveReplaySeekBar(liveMatch) {
+  const old = document.getElementById("liveReplaySeek");
+  if (old) old.remove();
+  const liveRoot = document.getElementById("hmLiveRoot");
+  if (!liveMatch || !liveMatch.replay || liveMatch.forfeit || !liveRoot) return;
+  const bar = makeReplaySeekBar(liveMatch, t => {
+    shiftReplayTimeline(liveMatch, t);
+    enterLiveMatch(liveMatch, { keepCurrentPage: true });
+  });
+  bar.id = "liveReplaySeek";
+  liveRoot.insertAdjacentElement("beforebegin", bar);
 }
 
 // Construit et affiche la fenêtre de feuille de statistiques à partir de
