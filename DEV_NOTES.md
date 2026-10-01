@@ -20,6 +20,31 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Staff v2 +
+  Marché du staff (retour utilisateur 2026-10-01 : « la page staff est fade
+  et ne ressemble pas au reste du jeu »)**. Page Staff = staff EN POSTE
+  seulement : une carte par rôle (bandeau coloré, avatar en polo aux
+  couleurs du club, étoiles, spécialité, effet en clair, salaire, hausse,
+  ancienneté, « Sans échéance », Changer / Congédier) ; poste vide = carte
+  « Poste à pourvoir » + « Recruter un … » → Marché en mode Staff filtré sur
+  le rôle (mkOpenStaffMarket). Marché : bascule Joueurs | Staff
+  (marketUi.mode ; mode Joueurs inchangé), filtres du staff (rôle,
+  spécialité, niveau et salaire en barres doubles, dans mon budget, fin
+  < 24 h, mes enchères), cartes .mk-stf, enchères inchangées (staffPlaceBid,
+  setAutoBidFor) + confirmation quand le poste est pourvu. Onglet Staff
+  déplacé dans Club sous Économie. AvatarGen : renderPolo +
+  options.outfit "polo", options.staff (ni bandeau, ni crête/durag/motifs,
+  ni tatouage/chaîne, cheveux gris avec l'âge ; tirage des joueurs
+  inchangé). Identité du staff (nom masculin des NAME_POOLS, âge 35-65,
+  visage) dérivée de `sid` : engine.js + miroir (tagStaffIdentity) passent
+  l'id de l'annonce au membre engagé et au membre congédié relisté ;
+  restauré par teamFromSave. Pas de nombre de caracs révélées pour
+  l'analyste (retour 2026-09). Traductions ×9. Tests : nouveau
+  staff_v2_ui_test.js ; adaptés medical_staff, assistant_coach,
+  client_scouting, my_auctions, auto_bid, persistence, end_to_end,
+  sidebar_order. Reste : push par l'utilisateur ; le texte du Guide sur
+  l'entraîneur dit encore « marché aux enchères (onglet Staff) ».
+
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Refonte de
   l'entraînement (spécification validée par le propriétaire, retour
   utilisateur 2026-10-01)**. engine.js (+ bloc miroir « ENTRAÎNEMENT V2 »

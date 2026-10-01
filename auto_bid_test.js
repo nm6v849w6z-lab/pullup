@@ -168,14 +168,15 @@ const inc = n => Engine.minNextBidFor({ currentBid: n, startPrice: 0 });
   doc.querySelector(`[data-mk-auto-off="${l5.id}"]`).click();
   await wait(async () => !((await store.loadMultiLeague(multiSavePath)).league.transferListings.find(x => x.id === l5.id).autoBids || []).length, "plafond retiré");
   // Staff.
-  win.eval("TAB_HANDLERS.staff(); staffUi.coach.open = true; staffUi.coach.expanded = true; renderStaffPanel();");
+  // Staff v2 (2026-10-01) : enchères staff dans le Marché, mode Staff.
+  win.eval("mkOpenStaffMarket('coach');");
   const c = win.eval("staffOpenListings(STAFF_ROLE_BY_KEY.coach).find(x => x.currentBidderIdx == null) || null");
   assert.ok(c, "un candidat entraîneur libre");
   const ci = doc.getElementById(`coachBid_${c.id}`);
   ci.value = String(c.startPrice * 2);
-  doc.querySelector(`[data-staff-auto="coach:${c.id}"]`).click();
+  doc.querySelector(`[data-mk-staff-auto="coach:${c.id}"]`).click();
   await wait(async () => { const x = (await store.loadMultiLeague(multiSavePath)).league.coachListings.find(y => y.id === c.id); return x && (x.autoBids || []).some(a => a.bidderIdx === 0 && a.max === c.startPrice * 2); }, "plafond staff enregistré");
-  await wait(() => doc.querySelector(`[data-staff-auto-off="coach:${c.id}"]`), "état « Enchère automatique » sur la ligne");
+  await wait(() => doc.querySelector(`[data-mk-staff-auto-off="coach:${c.id}"]`), "état « Enchère automatique » sur la carte");
   ok("navigateur : « Enchère auto » avec le montant saisi (marché et Staff), état affiché, « Arrêter »");
   dom.window.close();
 

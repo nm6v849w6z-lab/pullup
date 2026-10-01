@@ -112,15 +112,17 @@ const clone = lg => Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.seria
   doc.querySelector('[data-mk-mtab="staff"]').click();
   assert.strictEqual(doc.getElementById("marketMineList").querySelectorAll(".mk-task").length, 1, "onglet Staff");
   doc.querySelector(`[data-staff-goto="coach:${coach.id}"]`).click();
-  assert.strictEqual(win.eval("currentVisiblePageId()"), "staffSection");
-  assert.ok(win.eval(`staffUi.coach.open && staffUi.coach.level === ${coach.level}`));
+  // Staff v2 (2026-10-01) : les enchères staff vivent dans le Marché, mode Staff.
+  assert.strictEqual(win.eval("currentVisiblePageId()"), "marcheSection");
+  assert.ok(win.eval(`marketUi.mode === "staff" && marketUi.sRole === "coach"`));
+  assert.ok(doc.getElementById(`marketStaffCard_coach_${coach.id}`), "carte du candidat dans le Marché");
   assert.ok(doc.getElementById(`coachBid_${coach.id}`), "champ d'offre du candidat affiché");
   await wait(() => doc.activeElement && doc.activeElement.id === `coachBid_${coach.id}`, "champ d'offre sélectionné");
   // Lien de la notification.
   win.eval("TAB_HANDLERS.club()");
   win.location.hash = "#encheres";
   await wait(() => win.eval("currentVisiblePageId()") === "marcheSection", "#encheres ouvre le Marché");
-  ok("navigateur : pastille rouge sur Marché, staff dans « Mes enchères » (onglet Staff), « Relancer » → candidat sur la page Staff, tâche du tableau de bord, lien #encheres");
+  ok("navigateur : pastille rouge sur Marché, staff dans « Mes enchères » (onglet Staff), « Relancer » → candidat dans le Marché (mode Staff), tâche du tableau de bord, lien #encheres");
 
   // 4) Rafraîchissement : Lyon relance (depuis un autre appareil) → plus de pastille.
   const saved = (await store.loadMultiLeague(multiSavePath)).league;

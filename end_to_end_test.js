@@ -78,7 +78,7 @@ if (warningAfterTacticChange) throw new Error("❌ La feuille de match devrait r
 // plan individuel (l'écran le dit) ; le réglage à l'avance testé ici est
 // l'intensité de la semaine et le choix collectif d'un jour de repos.
 clickTab(doc, "entrainement");
-if (!doc.querySelector('#trainingPlansCard [data-tab="staff"]')) throw new Error("❌ Sans entraîneur, l'écran Entraînement devrait renvoyer vers le marché des entraîneurs.");
+if (!doc.querySelector('#trainingPlansCard [data-staff-market="coach"]')) throw new Error("❌ Sans entraîneur, l'écran Entraînement devrait renvoyer vers le marché des entraîneurs.");
 doc.querySelector('#collectiveTrainingConfig [data-day-option="physique"]').click();
 const plannedDay = Number(win.eval("trainingSelectedDay"));
 

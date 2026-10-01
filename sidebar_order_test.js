@@ -16,8 +16,8 @@ const expected = [
   ": Tableau de bord, Messagerie",
   "Équipe: Effectif, Ordres, Tactiques, Entraînement, Centre médical, Statistiques",
   "Compétitions: Calendrier, Ligue, Coupe, Matchs amicaux, Ligues privées",
-  "Recrutement: Marché, Staff, Académie de jeunes",
-  "Club: Économie, Sponsors, Salle, Supporters, Histoire du club",
+  "Recrutement: Marché, Académie de jeunes",
+  "Club: Économie, Staff, Sponsors, Salle, Supporters, Histoire du club",
   ": Planète Hoop, Guide, Premium, Discord ↗, Paramètres, Se déconnecter",
 ];
 if (JSON.stringify(got) !== JSON.stringify(expected)) {

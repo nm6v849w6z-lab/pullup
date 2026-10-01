@@ -3561,134 +3561,143 @@
      d'action normal, pour bien lire comme un simple "déplier" plutôt qu'une
      action sur un candidat précis. */
   .staff-listings-toggle-btn{display:block; margin:10px auto 0;}
-  /* ---- Staff : refonte 2026-09-25 (maquette Design "Hoop Manager — page
-     Staff"). Tout est préfixé .stf- et scopé sous .stf-page : rien ne
-     déborde sur les autres écrans qui réutilisent .staff-hire-grid/
-     .staff-hire-card (Salle, boutique, centre de formation). ---- */
-  .stf-page{--stf-lead:#6cb4ff; --stf-lead-bg:#10233d; --stf-display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-variant-numeric:tabular-nums; display:flex; flex-direction:column; gap:24px;}
-  .stf-page [hidden]{display:none !important;}
-  .stf-top{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
-  .stf-top__titles{display:flex; flex-direction:column; gap:6px; min-width:0; flex:1 1 360px;}
-  .stf-top__titles h2{margin:0; font-family:var(--stf-display); font-weight:800; font-size:34px; line-height:1.05; letter-spacing:-.02em; color:var(--ink);}
-  .stf-table th:last-child{text-align:right;}
-  .stf-kpis{display:flex; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
-  .stf-kpi{background:var(--panel); padding:12px 20px; display:flex; flex-direction:column; gap:2px;}
-  .stf-kpi__label{font-size:13px; color:var(--ink-dim);}
-  .stf-kpi__value{font-family:var(--stf-display); font-weight:800; font-size:24px; line-height:1.15; color:var(--ink); white-space:nowrap;}
-  .stf-kpi__value.negative{color:var(--danger);}
-  .stf-unit{font-size:14px; font-weight:500; color:var(--ink-dim);}
-  #staffFeedback:empty{display:none;}
-
-  .stf-slots{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:16px;}
-  /* 5 postes : entraîneur/analyste/recruteur sur la 1re ligne, médecin/kiné
-     sur la 2e (staff médical, 2026-09-27). */
-  .stf-slots > .stf-slot{grid-column:span 2;}
-  /* 6 postes (entraîneur adjoint compris) : 2 rangées de 3. */
-  .stf-slots > .stf-slot:nth-child(n+4){grid-column:span 2;}
-  .stf-slot{display:flex; align-items:center; gap:14px; padding:16px 18px; background:var(--panel); border:1px dashed #3a4c6a; border-radius:14px; color:var(--ink); text-align:left; font:inherit; cursor:pointer; min-width:0;}
-  .stf-slot:hover{border-color:var(--amber);}
-  .stf-slot--filled{border-style:solid; border-color:var(--line);}
-  .stf-slot__icon{width:46px; height:46px; border-radius:50%; border:2px dashed #4a5d7e; display:flex; align-items:center; justify-content:center; color:var(--ink-dim); flex-shrink:0;}
-  .stf-slot--filled .stf-slot__icon{border-style:solid; border-color:var(--amber); color:var(--amber);}
-  .stf-slot--bidding .stf-slot__icon{border-color:var(--stf-lead); color:var(--stf-lead);}
-  .stf-slot__text{display:flex; flex-direction:column; gap:2px; flex-grow:1; min-width:0;}
-  .stf-slot__role{font-weight:700; font-size:16px;}
-  .stf-slot__status{font-size:13px; color:var(--ink-dim);}
-  .stf-badge{font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px; white-space:nowrap; flex-shrink:0;}
-  .stf-badge--vacant{background:var(--amber); color:var(--amber-ink);}
-  .stf-badge--bidding{background:var(--stf-lead-bg); color:var(--stf-lead); border:1px solid var(--stf-lead);}
-  .stf-badge--filled{background:var(--panel-2); color:var(--ink); border:1px solid var(--line);}
-
-  .stf-stars{letter-spacing:1px; line-height:1; font-size:16px;}
+  /* ---- Staff v2 (retour utilisateur 2026-10-01 : « la page staff est fade
+     et ne ressemble pas au reste du jeu ») : la page ne gère plus que le
+     staff en poste, une carte par rôle (bandeau coloré du rôle, avatar en
+     polo aux couleurs du club, effet en clair, salaire, ancienneté,
+     actions) ; le recrutement passe par le Marché (mode Staff, .mk-stf).
+     Préfixe .stf- scopé sous .stf-page ; --rc = couleur du rôle. ---- */
+  .stf-stars{letter-spacing:1px; line-height:1; font-size:16px; white-space:nowrap;}
   .stf-stars .on{color:var(--amber);}
   .stf-stars .off{color:#33445f;}
-  .stf-stars--all .off{color:#4a5d7e;}
-
-  .stf-role{background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden;}
-  .stf-role__head{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:20px 24px;}
-  .stf-role__titles{display:flex; flex-direction:column; gap:4px; min-width:0;}
-  .stf-role__titles h3{margin:0; font-family:var(--stf-display); font-weight:800; font-size:22px; line-height:1.15; color:var(--ink);}
-  .stf-slot__status{display:flex; flex-wrap:wrap; align-items:center; gap:2px 8px;}
-  .stf-nowrap{white-space:nowrap;}
-  .stf-current-holder{padding:0 24px;}
-  .stf-current-holder .staff-none{margin:0 0 16px; font-size:14px;}
-  .stf-page .stf-current{margin:0 0 18px; padding:12px 16px; border-radius:12px; background:var(--panel-2); border:1px solid var(--line);}
-  .stf-page .stf-current .staff-current-info{font-size:15px; display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px;}
-  .stf-page .stf-current .staff-current-meta{flex-basis:100%; font-size:13px; color:var(--ink-dim); margin-top:0;}
-  .stf-page .staff-fire-btn{min-height:40px; padding:0 16px; font-size:14px; font-weight:600;}
-  .stf-role__body{border-top:1px solid var(--line);}
-  .stf-ghost-btn{min-height:44px; padding:0 18px; background:transparent; border:1px solid #2a3b57; border-radius:10px; color:var(--ink); font:inherit; font-weight:600; font-size:14px; cursor:pointer; white-space:nowrap;}
-  .stf-ghost-btn:hover{border-color:var(--amber);}
-
-  .stf-levels{margin:0; border:none; border-bottom:1px solid var(--line); padding:18px 24px 20px; min-width:0;}
-  .stf-levels legend{float:left; width:100%; padding:0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; font-weight:700; font-size:15px; color:var(--ink);}
-  .stf-levels__sort{font-weight:500; font-size:13px; color:var(--ink-dim);}
-  .stf-levels__grid{clear:both; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px;}
-  .stf-level{display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:12px 14px; border-radius:12px; text-align:left; color:var(--ink); background:var(--bg); border:2px solid var(--line); font:inherit; cursor:pointer; min-width:0;}
-  .stf-level:hover:not(:disabled){border-color:#3a4c6a;}
-  .stf-level.is-selected{background:#2a1f10; border-color:var(--amber);}
-  .stf-level:disabled{opacity:.45; cursor:not-allowed;}
-  .stf-level__title{font-weight:700; font-size:14px;}
-  .stf-level__meta{font-size:12px; color:var(--ink-dim);}
-  .stf-specialties__grid{grid-template-columns:repeat(5,minmax(0,1fr));}
-  .stf-specialties .stf-level{padding:10px 12px; gap:3px;}
-  .stf-spec-line{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-
-  .stf-table-wrap{overflow-x:auto;}
-  .stf-table{width:100%; border-collapse:collapse; min-width:860px;}
-  .stf-table th{text-align:left; font-weight:500; font-size:13px; color:var(--ink-dim); padding:12px 12px; white-space:nowrap;}
-  .stf-table th:first-child, .stf-table td:first-child{padding-left:24px;}
-  .stf-table th:last-child, .stf-table td:last-child{padding-right:24px;}
-  .stf-table td{padding:14px 12px; border-top:1px solid var(--line-soft); vertical-align:middle;}
-  .stf-row.is-top td{background:rgba(255,255,255,.02);}
-  .stf-row.is-leading td{background:var(--stf-lead-bg);}
-  .stf-row.is-leading td:first-child{box-shadow:inset 3px 0 0 var(--stf-lead);}
-  .stf-cell{display:flex; flex-direction:column; gap:3px;}
-  .stf-row .stf-stars{font-size:20px; letter-spacing:2px;}
-  .stf-strong{font-weight:700; font-size:16px; color:var(--ink);}
-  .stf-muted{font-weight:600; font-size:15px; color:var(--ink-dim);}
-  .stf-lead{font-weight:700; font-size:16px; color:var(--stf-lead);}
-  .stf-sub{font-size:12px; color:var(--ink-dim);}
-  .stf-specialty{display:block;}
-  .stf-specialty b{color:var(--ink); font-weight:600;}
-  .stf-time{font-weight:600; font-size:15px; color:var(--ink); white-space:nowrap;}
-  .stf-time.is-urgent{font-weight:700; color:var(--amber);}
-  .stf-offer{display:flex; align-items:center; gap:10px; justify-content:flex-end;}
-  .stf-stepper{display:flex; align-items:center; height:44px; background:var(--bg); border:1px solid #2a3b57; border-radius:10px;}
-  .stf-step{width:40px; height:42px; background:transparent; border:none; color:var(--ink); font-size:20px; cursor:pointer;}
-  .stf-step:hover{color:var(--amber);}
-  .stf-amount{width:72px; background:transparent; border:none; color:var(--ink); font:inherit; font-weight:700; font-size:15px; text-align:right; padding:0; -moz-appearance:textfield;}
-  .stf-amount::-webkit-outer-spin-button, .stf-amount::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
-  .stf-amount-unit{font-weight:700; font-size:15px; padding:0 2px 0 4px; color:var(--ink);}
-  .stf-bid-btn{min-width:118px; height:44px; border-radius:10px; background:var(--amber); border:1px solid var(--amber); color:var(--amber-ink); font:inherit; font-weight:700; font-size:14px; cursor:pointer; white-space:nowrap;}
-  .stf-bid-btn.is-secondary{background:transparent; border-color:var(--stf-lead); color:var(--stf-lead);}
-  .stf-more{display:flex; justify-content:center; padding:16px 24px 20px; border-top:1px solid var(--line-soft);}
-  .stf-page .stf-more .staff-listings-toggle-btn{margin:0;}
-  .stf-page .training-empty{padding:18px 24px; margin:0;}
-
-  @media (max-width:1100px){
-    .stf-slots{grid-template-columns:1fr;}
-    .stf-slots > .stf-slot, .stf-slots > .stf-slot:nth-child(n+4){grid-column:auto;}
-    .stf-levels__grid{grid-template-columns:repeat(3,minmax(0,1fr));}
-  }
-  @media(max-width:768px), (max-height:520px) and (pointer:coarse){
-    .stf-role__head{flex-wrap:wrap; padding:16px;}
-    .stf-current-holder{padding:0 16px;}
-    .stf-levels{padding:14px 16px 16px;}
-    .stf-levels__grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .stf-table{min-width:0;}
-    .stf-table thead{display:none;}
-    .stf-table, .stf-table tbody, .stf-table tr, .stf-table td{display:block; width:auto;}
-    .stf-table tr{border-top:1px solid var(--line); padding:12px 16px;}
-    .stf-table td, .stf-table td:first-child, .stf-table td:last-child{border:none; padding:6px 0; display:flex; justify-content:space-between; align-items:center; gap:12px;}
-    .stf-table td::before{content:attr(data-label); font-size:12px; color:var(--ink-dim);}
-    .stf-table td[data-label="Votre offre"]::before{display:none;}
-    .stf-table td .stf-cell{align-items:flex-end; text-align:right;}
-    .stf-row.is-leading td:first-child{box-shadow:none;}
-    .stf-row.is-leading{box-shadow:inset 3px 0 0 var(--stf-lead); background:var(--stf-lead-bg);}
-    .stf-offer{width:100%; justify-content:space-between;}
+  html[data-theme="light"] .stf-stars .off{color:#c9d2df;}
+  .stf-page{font-variant-numeric:tabular-nums; display:flex; flex-direction:column; gap:22px;}
+  .stf-page [hidden]{display:none !important;}
+  .stf-top{display:flex; align-items:flex-end; justify-content:space-between; gap:18px 24px; flex-wrap:wrap;}
+  .stf-top__titles{display:flex; flex-direction:column; gap:4px; min-width:0; flex:1 1 320px;}
+  .stf-eyebrow{font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--amber);}
+  .stf-top__titles h2{margin:0; font-weight:800; font-size:34px; line-height:1.05; letter-spacing:-.02em; color:var(--ink);}
+  .stf-intro{margin:4px 0 0; color:var(--ink-dim); font-size:14px;}
+  .stf-kpis{display:flex; background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; max-width:100%;}
+  .stf-kpi{padding:12px 20px; border-left:1px solid var(--line); display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .stf-kpi:first-child{border-left:0;}
+  .stf-kpi__label{font-size:12px; color:var(--ink-dim); white-space:nowrap;}
+  .stf-kpi__value{font-weight:800; font-size:22px; line-height:1.15; color:var(--ink); white-space:nowrap;}
+  .stf-kpi__value.negative{color:var(--danger);}
+  .stf-unit{font-size:13px; font-weight:500; color:var(--ink-dim);}
+  #staffFeedback:empty{display:none;}
+  .stf-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px;}
+  .stf-card{--rc:var(--amber); --rc-soft:rgba(240,162,60,.2); position:relative; background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden; display:flex; flex-direction:column; min-width:0;}
+  .stf-card.c-analyst{--rc:#7fb6ff; --rc-soft:rgba(127,182,255,.2);}
+  .stf-card.c-recruiter{--rc:#c49bff; --rc-soft:rgba(196,155,255,.2);}
+  .stf-card.c-doctor{--rc:#ff7a7f; --rc-soft:rgba(255,122,127,.2);}
+  .stf-card.c-physio{--rc:#33b4a1; --rc-soft:rgba(51,180,161,.2);}
+  .stf-card.c-assistant{--rc:#f5d65a; --rc-soft:rgba(245,214,90,.2);}
+  html[data-theme="light"] .stf-card.c-coach{--rc:#c26f05;}
+  html[data-theme="light"] .stf-card.c-analyst{--rc:#2f6fcf;}
+  html[data-theme="light"] .stf-card.c-recruiter{--rc:#7c4fd0;}
+  html[data-theme="light"] .stf-card.c-doctor{--rc:#c8384a;}
+  html[data-theme="light"] .stf-card.c-physio{--rc:#14806f;}
+  html[data-theme="light"] .stf-card.c-assistant{--rc:#9a7a00;}
+  .stf-card.is-vacant{border-style:dashed;}
+  .stf-band{display:flex; align-items:center; gap:10px; padding:12px 16px; font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--rc); background:linear-gradient(90deg, var(--rc-soft), transparent);}
+  .stf-band__ic{flex:none; width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--rc-soft);}
+  .stf-band__ic svg{width:17px; height:17px;}
+  .stf-band__role{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .stf-pill{margin-left:auto; flex:none; font-size:11px; letter-spacing:.04em; padding:3px 9px; border-radius:999px; background:rgba(0,0,0,.25); color:var(--ink); white-space:nowrap;}
+  html[data-theme="light"] .stf-pill{background:rgba(20,32,51,.08);}
+  .stf-pill.is-lead{background:rgba(51,180,161,.18); color:#5fd6ae;}
+  .stf-pill.is-out{background:rgba(226,105,79,.18); color:var(--danger);}
+  html[data-theme="light"] .stf-pill.is-lead{color:var(--ok);}
+  .stf-body{padding:16px; display:flex; flex-direction:column; gap:12px; flex:1;}
+  .stf-who{display:flex; gap:12px; align-items:center; min-width:0;}
+  .stf-who .staff-avatar{box-shadow:inset 0 0 0 2px rgba(255,255,255,.08); background:var(--panel-2);}
+  .stf-who__txt{display:flex; flex-direction:column; gap:4px; min-width:0;}
+  .stf-name{font-size:17px; font-weight:800; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .stf-who__line{display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px;}
+  .stf-who__sub{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-dim);}
+  .stf-chip{display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:999px; background:var(--panel-2); color:var(--ink-dim); white-space:nowrap;}
+  .stf-effect{background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:13px; color:var(--ink); display:flex; flex-direction:column; gap:4px;}
+  .stf-k{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint);}
+  .stf-effect ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:3px;}
+  .stf-effect li{position:relative; padding-left:12px;}
+  .stf-effect li::before{content:""; position:absolute; left:0; top:.55em; width:5px; height:5px; border-radius:50%; background:var(--rc, var(--amber));}
+  .stf-effect .stf-attrs{color:var(--ok); font-weight:700;}
+  .stf-meta{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; padding:2px 2px 0;}
+  .stf-meta > div{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .stf-meta b{font-size:14px; color:var(--ink); white-space:nowrap;}
+  .stf-meta small{font-size:11.5px; color:var(--ink-dim);}
+  .stf-meta b.is-up{color:#ff9a9f;}
+  html[data-theme="light"] .stf-meta b.is-up{color:var(--danger);}
+  .stf-strip{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-dim); padding:8px 10px; border-radius:10px; background:var(--bg);}
+  .stf-strip b{color:var(--ink);}
+  .stf-acts{display:flex; gap:8px; margin-top:auto;}
+  .stf-btn{flex:1; min-height:40px; display:inline-flex; align-items:center; justify-content:center; gap:8px; font:inherit; font-size:13.5px; font-weight:700; padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); text-align:center; cursor:pointer;}
+  .stf-btn:hover{border-color:var(--ink-faint);}
+  .stf-btn--primary{background:var(--amber); border-color:var(--amber); color:#1a1206;}
+  html[data-theme="light"] .stf-btn--primary{color:#fff;}
+  .stf-btn--primary:hover{filter:brightness(1.06); border-color:var(--amber);}
+  .stf-btn--danger{color:#ff9a9f;}
+  html[data-theme="light"] .stf-btn--danger{color:var(--danger);}
+  .stf-btn--danger:hover{border-color:var(--danger);}
+  .stf-btn--ghost{flex:none; background:transparent;}
+  .stf-vac{display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; padding:6px 0;}
+  .stf-vac__ic{width:58px; height:58px; border-radius:50%; border:2px dashed var(--line); display:flex; align-items:center; justify-content:center; color:var(--rc);}
+  .stf-vac b{color:var(--ink); font-size:15px;}
+  .stf-vac ul{margin:0; padding:0; list-style:none; font-size:12.5px; color:var(--ink-dim); display:flex; flex-direction:column; gap:3px;}
+  .stf-vac-meta{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-dim);}
+  .stf-vac-meta b{color:var(--ink);}
+  .stf-foot{display:flex; justify-content:center;}
+  @media (max-width:1100px){ .stf-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  @media (max-width:680px){
+    .stf-grid{grid-template-columns:minmax(0,1fr);}
     .stf-kpis{width:100%;}
-    .stf-kpi{flex:1;}
+    .stf-kpi{flex:1; padding:10px 12px;}
+    .stf-kpi__value{font-size:17px;}
+    .stf-kpi__label{white-space:normal;}
+    .stf-top__titles h2{font-size:28px;}
+  }
+  /* Marché — bascule Joueurs | Staff et cartes de candidats du staff
+     (2026-10-01), même famille que les annonces de joueurs (.mk-lst). */
+  .mk-ph{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;}
+  .mk-mode{display:inline-flex; padding:4px; gap:4px; background:var(--panel); border:1px solid var(--line); border-radius:14px;}
+  .mk-mode-btn{display:inline-flex; align-items:center; gap:8px; min-height:42px; padding:0 18px; border-radius:10px; border:0; background:transparent; color:var(--ink-dim); font:inherit; font-size:14.5px; font-weight:800; cursor:pointer;}
+  .mk-mode-btn svg{flex:none;}
+  .mk-mode-btn .n{font-size:12px; font-weight:700; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+  .mk-mode-btn:hover{color:var(--ink);}
+  .mk-mode-btn.on{background:var(--amber); color:#1a0f02;}
+  .mk-mode-btn.on .n{color:#1a0f02; opacity:.7;}
+  html[data-theme="light"] .mk-mode-btn.on, html[data-theme="light"] .mk-mode-btn.on .n{color:#fff;}
+  .mk-rolecells{display:flex; flex-wrap:wrap; gap:8px;}
+  .mk-rolecell{height:42px; display:inline-flex; align-items:center; gap:7px; padding:0 14px; border-radius:10px; background:var(--bg); border:1px solid transparent; color:var(--ink-dim); font:inherit; font-weight:700; font-size:13.5px; cursor:pointer; white-space:nowrap;}
+  .mk-rolecell svg{width:16px; height:16px; flex:none;}
+  .mk-rolecell .n{font-weight:600; color:var(--ink-faint); font-size:12px; font-variant-numeric:tabular-nums;}
+  .mk-rolecell.on{background:var(--amber); color:#1a0f02;}
+  .mk-rolecell.on .n{color:#1a0f02; opacity:.7;}
+  html[data-theme="light"] .mk-rolecell.on, html[data-theme="light"] .mk-rolecell.on .n{color:#fff;}
+  .mk-rolecell:disabled{opacity:.45; cursor:default;}
+  .mk-ranges.mk-ranges--two{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .mk-stf .mk-avatar{background:var(--panel-2);}
+  .mk-stf-role{display:inline-flex; align-items:center; gap:6px;}
+  .mk-stf-role svg{width:13px; height:13px;}
+  .mk-stf .mk-pname{font-size:26px;}
+  .mk-stf-prof{flex-direction:column; align-items:stretch; gap:10px;}
+  .mk-stf-effect{background:var(--bg); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; font-size:13.5px; color:var(--ink);}
+  .mk-stf-effect ul{margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:6px 18px;}
+  .mk-stf-effect li{position:relative; padding-left:12px;}
+  .mk-stf-effect li::before{content:""; position:absolute; left:0; top:.55em; width:5px; height:5px; border-radius:50%; background:var(--amber);}
+  .mk-stf-effect .stf-attrs{color:var(--ok); font-weight:700;}
+  .mk-stf-replace{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; color:var(--ink-dim);}
+  .mk-stf-confirm{display:flex; flex-direction:column; gap:10px; padding:12px 14px; border-radius:12px; border:1px solid rgba(240,162,60,.55); background:rgba(240,162,60,.08);}
+  .mk-stf-confirm p{margin:0; font-size:13.5px; color:var(--ink);}
+  .mk-stf-confirm .row{display:flex; gap:8px; flex-wrap:wrap;}
+  .mk-stf-confirm .row .mk-btn{flex:1 1 auto;}
+  @media (max-width:760px){
+    .mk-ph{align-items:stretch;}
+    .mk-mode{width:100%;}
+    .mk-mode-btn{flex:1; justify-content:center; padding:0 10px;}
+    .mk-ranges.mk-ranges--two{grid-template-columns:1fr;}
+    .mk-rolecell{flex:1 1 auto; justify-content:center; padding:0 10px;}
   }
   /* Variante pour les grilles qui n'ont jamais qu'UNE seule carte (prochain
      palier de la Salle, prochain palier de la boutique des supporters) —
@@ -7822,12 +7831,14 @@
     <div class="sidebar-section sidebar-group" data-sidebar-group="recrutement">
       <button type="button" class="sidebar-section-label sidebar-group-toggle" aria-expanded="true"><span class="sidebar-group-name">Recrutement</span><span class="sidebar-group-badge hidden" aria-hidden="true"></span><svg class="sidebar-group-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <button class="tab-btn sidebar-link" data-tab="marche"><span class="sidebar-label">Marché</span><span class="sidebar-badge sidebar-badge--alert hidden" id="marcheBadge" title="Enchères où vous avez été dépassé"></span></button>
-      <button class="tab-btn sidebar-link" data-tab="staff"><span class="sidebar-label">Staff</span></button>
       <button class="tab-btn sidebar-link" data-tab="academie"><span class="sidebar-label">Académie de jeunes</span></button>
     </div>
     <div class="sidebar-section sidebar-group" data-sidebar-group="club">
       <button type="button" class="sidebar-section-label sidebar-group-toggle" aria-expanded="true"><span class="sidebar-group-name">Club</span><span class="sidebar-group-badge hidden" aria-hidden="true"></span><svg class="sidebar-group-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <button class="tab-btn sidebar-link" data-tab="economie"><span class="sidebar-label">Économie</span></button>
+      <!-- Staff sous Économie (retour utilisateur 2026-10-01) : la page ne gère
+           plus que le staff en poste, le recrutement passe par le Marché. -->
+      <button class="tab-btn sidebar-link" data-tab="staff"><span class="sidebar-label">Staff</span></button>
       <button class="tab-btn sidebar-link" data-tab="sponsors"><span class="sidebar-label">Sponsors</span></button>
       <button class="tab-btn sidebar-link" data-tab="salle"><span class="sidebar-label">Salle</span></button>
       <button class="tab-btn sidebar-link" data-tab="humeur"><span class="sidebar-label">Supporters</span></button>
@@ -8194,109 +8205,36 @@
   </div>
 
   <div id="staffSection" class="hidden">
-    <!-- Refonte Staff (2026-09-25, maquette Design "Hoop Manager — page
-         Staff") : une seule page au lieu de 3 sections empilées. En-tête
-         avec Budget club / Salaires staff, 3 cartes "poste" (entraîneur,
-         analyste vidéo, recruteur : vacant / enchère en cours / en poste)
-         qui ouvrent la section du rôle, puis une section par rôle : membre
-         en poste (Congédier), filtre par niveau, enchères en lignes avec
-         pas de ±100 € sur l'offre. Tout le HTML dynamique est produit par
-         renderStaffPanel/renderStaffRole (voir STAFF_ROLES). Les ids
-         historiques (#staffBudget, #staffCurrent, #staffHireGrid,
-         #staffAnalystCurrent, #staffAnalystHireGrid, #staffRecruiter...)
-         sont conservés : tests et autres écrans s'y réfèrent. -->
+    <!-- Refonte Staff v2 (retour utilisateur 2026-10-01 : « la page staff est
+         fade et ne ressemble pas au reste du jeu ») : la page ne gère plus
+         que le staff EN POSTE — une carte par rôle (avatar en polo aux
+         couleurs du club, niveau, spécialité, effet en clair, salaire,
+         ancienneté, Changer / Congédier) ou une carte « Poste à pourvoir »
+         dont le bouton « Recruter » ouvre le Marché en mode Staff, filtré sur
+         ce rôle (voir mkOpenStaffMarket). Le recrutement (enchères) vit
+         désormais dans le Marché (voir renderMarketStaffListings). Tout le
+         HTML dynamique vient de renderStaffPanel/staffCardHtml (voir
+         STAFF_ROLES). Ids historiques conservés : #staffBudget,
+         #staffPayroll, #staffSlots, #staffFeedback et, dans chaque carte,
+         #staffCurrent / #staffAnalystCurrent / … (role.currentId). -->
     <div class="section stf-page">
       <div class="stf-top">
         <div class="stf-top__titles">
+          <span class="stf-eyebrow">Club</span>
           <h2 class="page-title">Staff</h2>
+          <p class="stf-intro">Six postes pour faire progresser, soigner et renseigner votre équipe.</p>
         </div>
         <div class="stf-kpis">
           <div class="stf-kpi"><span class="stf-kpi__label">Budget club</span><span class="stf-kpi__value" id="staffBudget"></span></div>
           <div class="stf-kpi"><span class="stf-kpi__label">Salaires staff</span><span class="stf-kpi__value" id="staffPayroll"></span></div>
+          <div class="stf-kpi"><span class="stf-kpi__label">Postes pourvus</span><span class="stf-kpi__value" id="staffFilled"></span></div>
         </div>
       </div>
       <div id="staffFeedback" role="status" aria-live="polite"></div>
-      <div class="stf-slots" id="staffSlots"></div>
-
-      <section class="stf-role" id="staffPanel" data-staff-role="coach" aria-labelledby="staffCoachTitle">
-        <div class="stf-role__head">
-          <div class="stf-role__titles">
-            <h3 id="staffCoachTitle">Changer d'entraîneur</h3>
-          </div>
-          <button type="button" class="stf-ghost-btn" data-staff-toggle-role="coach" aria-controls="staffCoachBody"></button>
-        </div>
-        <div id="staffCurrent" class="stf-current-holder"></div>
-        <div class="stf-role__body" id="staffCoachBody">
-          <div id="staffHireGrid"></div>
-        </div>
-      </section>
-
-      <section class="stf-role" id="staffAnalystPanel" data-staff-role="analyst" aria-labelledby="staffAnalystTitle">
-        <div class="stf-role__head">
-          <div class="stf-role__titles">
-            <h3 id="staffAnalystTitle">Changer d'analyste vidéo</h3>
-          </div>
-          <button type="button" class="stf-ghost-btn" data-staff-toggle-role="analyst" aria-controls="staffAnalystBody"></button>
-        </div>
-        <div id="staffAnalystCurrent" class="stf-current-holder"></div>
-        <div class="stf-role__body" id="staffAnalystBody">
-          <div id="staffAnalystHireGrid"></div>
-        </div>
-      </section>
-
-      <section class="stf-role" id="staffRecruiterPanel" data-staff-role="recruiter" aria-labelledby="staffRecruiterTitle">
-        <div class="stf-role__head">
-          <div class="stf-role__titles">
-            <h3 id="staffRecruiterTitle">Changer de recruteur</h3>
-          </div>
-          <button type="button" class="stf-ghost-btn" data-staff-toggle-role="recruiter" aria-controls="staffRecruiterBody"></button>
-        </div>
-        <div id="staffRecruiterCurrent" class="stf-current-holder"></div>
-        <div class="stf-role__body" id="staffRecruiterBody">
-          <div id="staffRecruiterHireGrid"></div>
-        </div>
-      </section>
-
-      <section class="stf-role" id="staffDoctorPanel" data-staff-role="doctor" aria-labelledby="staffDoctorTitle">
-        <div class="stf-role__head">
-          <div class="stf-role__titles">
-            <h3 id="staffDoctorTitle">Changer de médecin</h3>
-          </div>
-          <button type="button" class="stf-ghost-btn" data-staff-toggle-role="doctor" aria-controls="staffDoctorBody"></button>
-        </div>
-        <div id="staffDoctorCurrent" class="stf-current-holder"></div>
-        <div class="stf-role__body" id="staffDoctorBody">
-          <div id="staffDoctorHireGrid"></div>
-        </div>
-      </section>
-
-      <section class="stf-role" id="staffPhysioPanel" data-staff-role="physio" aria-labelledby="staffPhysioTitle">
-        <div class="stf-role__head">
-          <div class="stf-role__titles">
-            <h3 id="staffPhysioTitle">Changer de kiné</h3>
-          </div>
-          <button type="button" class="stf-ghost-btn" data-staff-toggle-role="physio" aria-controls="staffPhysioBody"></button>
-        </div>
-        <div id="staffPhysioCurrent" class="stf-current-holder"></div>
-        <div class="stf-role__body" id="staffPhysioBody">
-          <div id="staffPhysioHireGrid"></div>
-        </div>
-      </section>
-
-      <!-- Entraîneur adjoint (voir ASSISTANT_SPECIALTIES côté moteur) : un
-           seul par club, chaque candidat a une spécialité. -->
-      <section class="stf-role" id="staffAssistantPanel" data-staff-role="assistant" aria-labelledby="staffAssistantTitle">
-        <div class="stf-role__head">
-          <div class="stf-role__titles">
-            <h3 id="staffAssistantTitle">Engager un entraîneur adjoint</h3>
-          </div>
-          <button type="button" class="stf-ghost-btn" data-staff-toggle-role="assistant" aria-controls="staffAssistantBody"></button>
-        </div>
-        <div id="staffAssistantCurrent" class="stf-current-holder"></div>
-        <div class="stf-role__body" id="staffAssistantBody">
-          <div id="staffAssistantHireGrid"></div>
-        </div>
-      </section>
+      <div class="stf-grid" id="staffSlots"></div>
+      <div class="stf-foot">
+        <button type="button" class="stf-btn stf-btn--ghost" data-staff-recruit="all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16l-1.5 12h-13zM9 7a3 3 0 0 1 6 0"/></svg><span>Voir tout le staff sur le marché</span></button>
+      </div>
     </div>
   </div>
 
@@ -8685,6 +8623,11 @@
     <div class="section mk-page">
       <div class="mk-ph">
         <h2 class="page-title">Marché des transferts</h2>
+        <!-- Joueurs | Staff (retour utilisateur 2026-10-01) : le recrutement
+             du staff quitte la page Staff pour le Marché. Mode gardé dans
+             marketUi.mode, comme les autres réglages du marché ; voir
+             mkSetMode / renderMarketStaffListings. -->
+        <div class="mk-mode" id="marketModeToggle" role="tablist" aria-label="Type de marché"></div>
       </div>
       <div class="mk-kpis" id="marketKpis"></div>
       <section class="mk-card" aria-labelledby="marketMineTitle">
@@ -8697,6 +8640,12 @@
       <section class="mk-card" aria-labelledby="marketSearchTitle">
         <div class="mk-card-head">
           <h3 id="marketSearchTitle">Joueurs sur le marché</h3>
+          <h3 id="marketStaffSearchTitle" hidden>Staff sur le marché</h3>
+          <select class="mk-sel" id="marketStaffSort" aria-label="Trier les candidats" hidden>
+            <option value="ends">Trier par fin d'enchère</option>
+            <option value="level">Trier par niveau</option>
+            <option value="price">Trier par salaire croissant</option>
+          </select>
           <select class="mk-sel" id="marketSort" aria-label="Trier les annonces">
             <option value="ends">Trier par fin d'enchère</option>
             <option value="ovr">Trier par note</option>
@@ -8706,7 +8655,35 @@
             <option value="age">Trier par âge</option>
           </select>
         </div>
-        <div class="mk-filters">
+        <!-- Filtres du mode Staff : rôle, spécialité, niveau et salaire en
+             barres doubles (même composant .mk-range que les joueurs), dans
+             mon budget, fin d'enchère proche. -->
+        <div class="mk-filters" id="marketStaffFilters" hidden>
+          <div class="mk-frow">
+            <input class="mk-search" id="marketStaffSearch" type="search" placeholder="Rechercher un membre du staff…" aria-label="Rechercher un membre du staff" autocomplete="off">
+          </div>
+          <div class="mk-rolecells" id="marketStaffRoles" role="group" aria-label="Rôle"></div>
+          <div class="mk-frow">
+            <select class="mk-sel" id="marketStaffSpec" aria-label="Spécialité"></select>
+            <button class="mk-pchip" id="marketStaffBudgetBtn" type="button" aria-pressed="false">Dans mon budget</button>
+            <button class="mk-pchip" id="marketStaffSoonBtn" type="button" aria-pressed="false">Fin dans moins de 24 h</button>
+            <button class="mk-pchip" id="marketStaffMineBtn" type="button" aria-pressed="false">Mes enchères en cours</button>
+          </div>
+          <div class="mk-ranges mk-ranges--two">
+            <div class="mk-range" data-mk-range="slevel">
+              <div class="mk-range-head"><span class="mk-range-lbl">Niveau</span><button type="button" class="mk-range-reset" data-mk-range-reset="slevel" aria-label="Réinitialiser le niveau" title="Réinitialiser le niveau"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5M3 2.5v2.8h2.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="mk-range-val"></span></div>
+              <div class="mk-range-track"><i class="mk-range-fill"></i><input type="range" class="mk-range-in" id="marketStaffLevelMin" data-mk-range-in="slevel" data-end="min" aria-label="Niveau minimum"><input type="range" class="mk-range-in" id="marketStaffLevelMax" data-mk-range-in="slevel" data-end="max" aria-label="Niveau maximum"></div>
+              <div class="mk-range-ends"><span></span><span></span></div>
+            </div>
+            <div class="mk-range" data-mk-range="ssal">
+              <div class="mk-range-head"><span class="mk-range-lbl">Salaire</span><button type="button" class="mk-range-reset" data-mk-range-reset="ssal" aria-label="Réinitialiser le salaire" title="Réinitialiser le salaire"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5M3 2.5v2.8h2.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="mk-range-val"></span></div>
+              <div class="mk-range-track"><i class="mk-range-fill"></i><input type="range" class="mk-range-in" id="marketStaffSalMin" data-mk-range-in="ssal" data-end="min" aria-label="Salaire minimum"><input type="range" class="mk-range-in" id="marketStaffSalMax" data-mk-range-in="ssal" data-end="max" aria-label="Salaire maximum"></div>
+              <div class="mk-range-ends"><span></span><span></span></div>
+            </div>
+          </div>
+          <div class="mk-rescount" id="marketStaffResCount"></div>
+        </div>
+        <div class="mk-filters" id="marketPlayerFilters">
           <div class="mk-frow">
             <input class="mk-search" id="marketSearch" type="search" placeholder="Rechercher un joueur ou un club vendeur…" aria-label="Rechercher un joueur ou un club vendeur" autocomplete="off">
             <div class="mk-poscells" id="marketPos" role="group" aria-label="Poste"></div>
@@ -10345,6 +10322,17 @@ function heightMultiplierForProgram(programKey, height) {
 // une saison et demie pour un entraîneur de niveau intermédiaire) plutôt que
 // de garder indéfiniment le même. Congédier puis réembaucher (même niveau ou
 // un autre) réinitialise le salaire à sa valeur de départ.
+// Identité d'un membre du staff (2026-10-01, page Staff et marché du staff :
+// nom et visage générés côté client à partir de `sid`) : l'annonce gagnée
+// transmet son identité au membre engagé, et un membre congédié revient sur
+// le marché sous la même identité. Purement descriptif, aucun effet de jeu.
+function tagStaffIdentity(target, source) {
+  if (!target || !source) return target;
+  const sid = source.sid != null ? source.sid : source.id;
+  if (sid != null) target.sid = sid;
+  return target;
+}
+
 const TRAINER_LEVELS = [1, 2, 3, 4, 5];
 const TRAINER_BASE_SALARY = { 1: 800, 2: 1600, 3: 3000, 4: 5500, 5: 10000 };
 const TRAINER_WEEKLY_GROWTH = { 1: 0.010, 2: 0.016, 3: 0.024, 4: 0.034, 5: 0.046 };
@@ -12684,6 +12672,25 @@ const AvatarGen = (function () {
       `<path d="M86.5 114.5 L88.5 109.5 L91 113 L93.5 108.5 L95.5 112.6Z" fill="#f4f6fa" ${LW}/>`;
   }
 
+  // Polo à manches du staff (retour utilisateur 2026-10-01 : « un maillot à
+  // manches, pas un débardeur de basket ») : épaules couvertes, col à deux
+  // pans et patte boutonnée, liseré de la couleur secondaire du club.
+  // colors = [polo, liseré].
+  function renderPolo(colors) {
+    const [main, trim] = colors || ['#2b3446', '#8a97ab'];
+    const body = 'M0 130 L0 118 Q6 104 26 100 Q36 97 41 87 Q60 97 79 87 Q84 97 94 100 Q114 104 120 118 L120 130Z';
+    const flap = `<path d="M41 86 Q48 92 58 95 L52 104 Q44 97 39 90Z" fill="${shade(main, 14)}" ${LW}/>` +
+      `<path d="M42.5 88.5 Q49 93 56 95" stroke="${trim}" stroke-width="1.4" fill="none"/>`;
+    return `<path d="${body}" fill="${main}" ${LW}/>` +
+      `<path d="M94 100 Q114 104 120 118 L120 130 L104 130 Q103 110 90 101Z" fill="${shade(main, -22)}"/>` +
+      `<path d="M4 118 Q10 106 24 102 Q16 108 10 122Z" fill="#fff" opacity="0.08"/>` +
+      `<path d="M14 130 Q16 116 22 108 M106 130 Q104 116 98 108" stroke="${shade(main, -35)}" stroke-width="1.2" fill="none" opacity="0.7"/>` +
+      `<path d="M56 95 L64 95 L64 116 L56 116Z" fill="${shade(main, -10)}" ${LW}/>` +
+      `<circle cx="60" cy="102" r="1.3" fill="${trim}"/><circle cx="60" cy="109" r="1.3" fill="${trim}"/>` +
+      flap + mirror(flap) +
+      `<path d="M83 112 l9 -1.4 l0.6 6 l-9 1.4Z" fill="${trim}" opacity="0.85"/>`;
+  }
+
   // ---------------------------------------------------------------- apparence aléatoire
 
   /**
@@ -12737,7 +12744,33 @@ const AvatarGen = (function () {
     if (spec.headband) spec.headbandColor = r() < 0.5 ? null : pick(r, HEADBAND_COLORS);
     const mk = r();
     spec.mark = mk < 0.06 ? 'mole' : mk < 0.1 ? 'scar' : mk < 0.13 ? 'browscar' : 'none';
+    if (options.staff) applyStaffLook(spec, coily);
     return spec;
+  }
+
+  // Membre du staff (options.staff, retour utilisateur 2026-10-01) : pas de
+  // bandeau, pas de crête ni de coiffure de joueur (durag, motifs rasés),
+  // pas de tatouage de cou ni de chaîne ; davantage de cheveux gris avec
+  // l'âge. Retouches faites APRÈS le tirage complet, avec un générateur à
+  // part : l'apparence des joueurs (sans options.staff) ne bouge pas.
+  const STAFF_HAIR_COILY = ['buzz', 'buzz', 'fade', 'curlytop', 'waves', 'bald', 'bald', 'afro'];
+  const STAFF_HAIR_STRAIGHT = ['short', 'short', 'sidepart', 'sidepart', 'slick', 'buzz', 'fade', 'wavy', 'bald', 'receding', 'receding', 'undercut'];
+  const STAFF_BANNED_HAIR = ['mohawk', 'frohawk', 'buzzdesign', 'hightop', 'topknot', 'bun', 'long', 'cornrows', 'twists'];
+  function applyStaffLook(spec, coily) {
+    const r = rng((spec.seed || 1) + 9173);
+    spec.headband = false;
+    spec.headbandColor = null;
+    spec.durag = null;
+    spec.neckTattoo = 'none';
+    spec.chain = null;
+    spec.earrings = null;
+    spec.browSlit = false;
+    if (STAFF_BANNED_HAIR.includes(spec.hairStyle)) spec.hairStyle = pick(r, coily ? STAFF_HAIR_COILY : STAFF_HAIR_STRAIGHT);
+    if (spec.hairStyle === 'receding' && coily) spec.hairStyle = 'buzz';
+    const age = spec.age || 40;
+    const greyChance = age >= 55 ? 0.7 : age >= 45 ? 0.45 : age >= 38 ? 0.2 : 0;
+    if (r() < greyChance) spec.hairColor = HAIR_COLORS[8];
+    if (['long', 'bun', 'topknot'].includes(spec.hairStyle) && spec.beard === 'none') spec.beard = 'stubble';
   }
 
   // ---------------------------------------------------------------- assemblage
@@ -12748,6 +12781,8 @@ const AvatarGen = (function () {
    */
   function renderAvatar(a, options = {}) {
     const [jersey, trim] = options.teamColors || ['#3a3a40', '#55555c'];
+    // Costume (présentateur) ou polo (staff) : pas de tatouage de bras/cou ni de chaîne.
+    const dressed = options.outfit === 'suit' || options.outfit === 'polo';
     const tid = `tx${++UID}`;
     const defs = `<defs>` +
       `<pattern id="${tid}h" width="2.2" height="2.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><line x1="0" y1="0" x2="0" y2="2.2" stroke="#1a0c06" stroke-width="0.55"/></pattern>` +
@@ -12777,12 +12812,12 @@ const AvatarGen = (function () {
     if (a.mark === 'mole') mark = `<circle cx="${f1(L + 9)}" cy="72" r="0.9" fill="${shade(a.skin, -65)}"/>`;
     if (a.mark === 'scar') mark = `<path d="M${f1(L + 5)} 63 l5 4.5" stroke="${shade(a.skin, 28)}" stroke-width="1.1" stroke-linecap="round"/><path d="M${f1(L + 6)} 65.6 l1.2 -1.2 M${f1(L + 8)} 67.3 l1.2 -1.2" stroke="${shade(a.skin, -35)}" stroke-width="0.5"/>`;
     if (a.mark === 'browscar') mark = `<path d="M47.5 44.5 L46 52" stroke="${shade(a.skin, 25)}" stroke-width="1.1" stroke-linecap="round"/>`;
-    return `<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" width="100%" role="img" aria-label="Avatar du joueur">` + defs +
+    return `<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" width="100%" role="img" aria-label="${options.staff ? 'Avatar du membre du staff' : 'Avatar du joueur'}">` + defs +
       (options.background !== false ? `<rect width="120" height="130" fill="#26262a"/><circle cx="60" cy="58" r="56" fill="#2f2f34"/><rect width="120" height="130" fill="url(#${tid}bg)"/><path d="M-10 0 L38 0 L-2 130 L-50 130Z" fill="#fff" opacity="0.035"/>` : '') +
       hair.back +
-      renderShoulders(a.skin) + (options.outfit === 'suit' ? '' : renderArmTattoos(a)) + renderNeck(a.skin) + (options.outfit === 'suit' ? '' : tattoo) +
-      (a.chain && options.outfit !== 'suit' ? `<path d="M49 94 Q60 107 71 94" stroke="${a.chain}" stroke-width="1.6" fill="none"/>` : '') +
-      (options.outfit === 'suit' ? renderSuit(options.suitColors) : renderJersey(jersey, trim, a.jerseyStyle || 'round', tid)) +
+      renderShoulders(a.skin) + (dressed ? '' : renderArmTattoos(a)) + renderNeck(a.skin) + (dressed ? '' : tattoo) +
+      (a.chain && !dressed ? `<path d="M49 94 Q60 107 71 94" stroke="${a.chain}" stroke-width="1.6" fill="none"/>` : '') +
+      (options.outfit === 'suit' ? renderSuit(options.suitColors) : options.outfit === 'polo' ? renderPolo(options.suitColors || options.teamColors) : renderJersey(jersey, trim, a.jerseyStyle || 'round', tid)) +
       renderHead(a.skin, a.faceShape, { age: a.age, freckles: a.freckles, earrings: a.earrings, bald: a.hairStyle === 'bald', cleft: a.cleft, tex: tid }) +
       mark + hair.front + hairTexture(a, w, tid) + hairSheen(a, w) + headband + beard.body +
       renderBrows(a.brows, a.hairColor) +
@@ -21564,6 +21599,7 @@ class League {
       return;
     }
     buyer.hireTrainer(listing.level, amount, listing.specialty);
+    tagStaffIdentity(buyer.trainer, listing);
     // Fil d'actualité (voir MIROIR EXACT engine.js).
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
@@ -21673,7 +21709,7 @@ class League {
     team.fireTrainer();
     if (!firedTrainer) return { ok: true, relisted: false };
     const discountedStartPrice = Math.max(1, Math.round(currentSalary * 0.7));
-    this._makeCoachListing(now, firedTrainer.level, discountedStartPrice, firedTrainer.specialty);
+    tagStaffIdentity(this._makeCoachListing(now, firedTrainer.level, discountedStartPrice, firedTrainer.specialty), firedTrainer);
     return { ok: true, relisted: true };
   }
 
@@ -21743,6 +21779,7 @@ class League {
       return;
     }
     buyer.hireVideoAnalyst(listing.level, amount);
+    tagStaffIdentity(buyer.videoAnalyst, listing);
     // Fil d'actualité (voir MIROIR EXACT engine.js).
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
@@ -21825,7 +21862,7 @@ class League {
     team.fireVideoAnalyst();
     if (!firedAnalyst) return { ok: true, relisted: false };
     const discountedStartPrice = Math.max(1, Math.round(currentSalary * 0.7));
-    this._makeAnalystListing(now, firedAnalyst.level, discountedStartPrice);
+    tagStaffIdentity(this._makeAnalystListing(now, firedAnalyst.level, discountedStartPrice), firedAnalyst);
     return { ok: true, relisted: true };
   }
 
@@ -21893,6 +21930,7 @@ class League {
       return;
     }
     buyer.hireRecruiter(listing.level, amount);
+    tagStaffIdentity(buyer.recruiter, listing);
     // Fil d'actualité (voir MIROIR EXACT engine.js).
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
@@ -21969,7 +22007,7 @@ class League {
     team.fireRecruiter();
     if (!firedRecruiter) return { ok: true, relisted: false };
     const discountedStartPrice = Math.max(1, Math.round(currentSalary * 0.7));
-    this._makeRecruiterListing(now, firedRecruiter.level, discountedStartPrice);
+    tagStaffIdentity(this._makeRecruiterListing(now, firedRecruiter.level, discountedStartPrice), firedRecruiter);
     return { ok: true, relisted: true };
   }
 
@@ -22044,6 +22082,7 @@ class League {
       return;
     }
     buyer.hireMedicalStaff(role, listing.level, amount);
+    tagStaffIdentity(buyer[role], listing);
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
         type: "staff_hired", week: buyer.week,
@@ -22102,7 +22141,7 @@ class League {
     team.fireMedicalStaff(role);
     if (!fired) return { ok: true, relisted: false };
     const discountedStartPrice = Math.max(1, Math.round(currentSalary * 0.7));
-    this._makeMedicalListing(role, now, fired.level, discountedStartPrice);
+    tagStaffIdentity(this._makeMedicalListing(role, now, fired.level, discountedStartPrice), fired);
     return { ok: true, relisted: true };
   }
 
@@ -22165,6 +22204,7 @@ class League {
     const amount = listing.currentBid;
     if (!buyer || (buyer.isHuman && amount > buyer.budget)) { listing.result = "buyer-failed"; return; }
     buyer.hireAssistantCoach(listing.specialty, listing.level, amount);
+    tagStaffIdentity(buyer.assistantCoach, listing);
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
         type: "staff_hired", week: buyer.week,
@@ -22214,7 +22254,7 @@ class League {
     const currentSalary = team.assistantCoachSalary();
     team.fireAssistantCoach();
     if (!fired) return { ok: true, relisted: false };
-    this._makeAssistantCoachListing(now, fired.level, fired.specialty, Math.max(1, Math.round(currentSalary * 0.7)));
+    tagStaffIdentity(this._makeAssistantCoachListing(now, fired.level, fired.specialty, Math.max(1, Math.round(currentSalary * 0.7))), fired);
     return { ok: true, relisted: true };
   }
 
@@ -23664,6 +23704,7 @@ function teamFromSave(data) {
       weeksEmployed: data.trainer.weeksEmployed || 0,
       baseSalary: data.trainer.baseSalary != null ? data.trainer.baseSalary : (TRAINER_BASE_SALARY[data.trainer.level] || 0),
       specialty: data.trainer.specialty,
+      ...(data.trainer.sid != null ? { sid: data.trainer.sid } : {}),
     };
   }
   // Analyste vidéo — même logique de restauration que l'entraîneur
@@ -23675,6 +23716,7 @@ function teamFromSave(data) {
       level: data.videoAnalyst.level,
       weeksEmployed: data.videoAnalyst.weeksEmployed || 0,
       baseSalary: data.videoAnalyst.baseSalary != null ? data.videoAnalyst.baseSalary : (TRAINER_BASE_SALARY[data.videoAnalyst.level] || 0),
+      ...(data.videoAnalyst.sid != null ? { sid: data.videoAnalyst.sid } : {}),
     };
   }
   // Recruteur — même logique de restauration que l'entraîneur/l'analyste
@@ -23684,6 +23726,7 @@ function teamFromSave(data) {
       level: data.recruiter.level,
       weeksEmployed: data.recruiter.weeksEmployed || 0,
       baseSalary: data.recruiter.baseSalary != null ? data.recruiter.baseSalary : (TRAINER_BASE_SALARY[data.recruiter.level] || 0),
+      ...(data.recruiter.sid != null ? { sid: data.recruiter.sid } : {}),
     };
   }
   // Staff médical — même logique (absent d'une sauvegarde plus ancienne :
@@ -23695,6 +23738,7 @@ function teamFromSave(data) {
         level: m.level,
         weeksEmployed: m.weeksEmployed || 0,
         baseSalary: m.baseSalary != null ? m.baseSalary : (TRAINER_BASE_SALARY[m.level] || 0),
+        ...(m.sid != null ? { sid: m.sid } : {}),
       };
     }
   });
@@ -23707,6 +23751,7 @@ function teamFromSave(data) {
       weeksEmployed: a.weeksEmployed || 0,
       specialty: a.specialty,
       baseSalary: a.baseSalary != null ? a.baseSalary : (ASSISTANT_BASE_SALARY[a.level] || 0),
+      ...(a.sid != null ? { sid: a.sid } : {}),
     };
   }
   // Académie de jeunes (voir serializeTeam ci-dessus) : `[]`/`1` par défaut
@@ -41564,7 +41609,7 @@ function renderTrainingCoachCard() {
   if (!tr) {
     holder.innerHTML = `<div class="tm-coach warn"><span class="tm-av coach" aria-hidden="true">!</span>` +
       `<div><b>Aucun entraîneur</b><small>Sans entraîneur, les fondamentaux ne sont pas travaillés.</small></div>` +
-      `<button type="button" class="tm-btn" data-tab="staff">Engager un entraîneur</button></div>`;
+      `<button type="button" class="tm-btn" data-staff-market="coach">Engager un entraîneur</button></div>`;
     return;
   }
   const spec = COACH_SPECIALTIES[tr.specialty];
@@ -41651,7 +41696,7 @@ function renderTrainingPlans() {
     `<div><h3 id="tpFondTitle">Plans individuels</h3><span class="tm-sub">Fondamentaux · ${slots.length} joueurs suivis sur ${max}</span></div></div></div>`;
   if (!max) {
     html += `<div class="tm-empty"><span>Engagez un entraîneur pour travailler les fondamentaux : chaque entraîneur ouvre des places de plan individuel (3 au niveau 1, jusqu'à 5 au niveau 5).</span>` +
-      `<button type="button" class="tm-btn" data-tab="staff">Voir le marché des entraîneurs</button></div>` +
+      `<button type="button" class="tm-btn" data-staff-market="coach">Voir le marché des entraîneurs</button></div>` +
       `<div class="tm-note">Le collectif (tactique, récupération, physique) fonctionne sans entraîneur ; le physique et le mental évoluent normalement.</div>`;
     holder.innerHTML = html;
     return;
@@ -42222,21 +42267,12 @@ function staffFeedback(message, ok) {
   el.innerHTML = message ? `<div class="gain-line ${ok ? "gain-up" : "gain-down"}">${escapeHtml(message)}</div>` : "";
 }
 
-// Refonte Staff (2026-09-25, maquette Design "Hoop Manager — page Staff",
-// retour utilisateur : "code la page stp") : les 3 rôles de staff
-// (entraîneur, analyste vidéo, recruteur) partagent désormais UN SEUL rendu
-// (renderStaffRole) piloté par la table STAFF_ROLES ci-dessous, au lieu de 3
-// copies quasi identiques (renderCoachListings/renderAnalystListings/
-// renderRecruiterListings et leurs 3 écouteurs de clic). Le comportement
-// métier est inchangé : mêmes appels moteur (placeCoachBid/fireTeamTrainer/
-// ...), mêmes synchros serveur, mêmes messages de refus.
-//
-// Nombre d'enchères affichées d'entrée sur chaque marché (retour utilisateur,
-// 2026-09 : "montrer uniquement les 5 prochains staffs aux enchères pour
-// chaque type de staff et mettre un petit bouton pour en afficher plus") :
-// les 5 plus proches de leur clôture, le reste à la demande. État par rôle
-// (déplier les entraîneurs ne déplie pas les analystes).
-const STAFF_LISTINGS_COLLAPSED_COUNT = 5;
+// Table des 6 rôles de staff (STAFF_ROLES) : mêmes appels moteur
+// (placeCoachBid/fireTeamTrainer/...), mêmes synchros serveur, mêmes
+// messages de refus depuis la refonte de 2026-09-25. Refonte v2
+// (2026-10-01) : la page Staff n'affiche plus que le staff en poste
+// (staffCardHtml) ; les enchères se font dans le Marché, mode Staff
+// (renderMarketStaffListings).
 const STAFF_ICONS = {
   assistant: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4V3h6v1"></path><path d="M9 10h6M9 14h6M9 18h3"></path></svg>',
   coach: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20v-1a7 7 0 0 1 14 0v1"></path><circle cx="12" cy="8" r="4"></circle></svg>',
@@ -42323,330 +42359,242 @@ const STAFF_ROLES = [
     baseSalaryTable: ASSISTANT_BASE_SALARY,
   },
 ];
-// Caractéristiques d'une spécialité sur DEUX lignes au plus (retour
-// utilisateur, 2026-09-27 : "mettre Jeu intérieur, Rebond, Contre, Défense
-// intérieure sur deux lignes, comme ça on peut réduire toutes les briques"),
-// pour le filtre de spécialité du marché des adjoints.
-function assistantSpecialtyLinesHtml(spec) {
-  const labels = spec.attrs.map(a => TRAINING_LABELS[a] || a);
-  const cut = Math.ceil(labels.length / 2);
-  return [labels.slice(0, cut), labels.slice(cut)].filter(l => l.length)
-    .map(l => `<span class="stf-spec-line">${escapeHtml(l.join(", "))}</span>`).join("");
-}
 // Spécialité d'un membre du staff selon son rôle : entraîneur principal
 // (COACH_SPECIALTIES, retour utilisateur 2026-10-01) ou adjoint.
 function staffSpecialtyLabel(roleKey, specialty) {
   if (roleKey === "coach") return COACH_SPECIALTIES[specialty] ? `Spécialité ${COACH_SPECIALTIES[specialty].label}` : "";
   return ASSISTANT_SPECIALTIES[specialty] ? ASSISTANT_SPECIALTIES[specialty].label : "";
 }
-function staffSpecialtyHtml(roleKey, specialty) {
-  if (roleKey === "coach") {
-    const label = staffSpecialtyLabel(roleKey, specialty);
-    return label ? `<span class="stf-sub stf-specialty"><b>${escapeHtml(label)}</b></span>` : "";
-  }
-  return assistantSpecialtyHtml(specialty);
-}
-// Spécialité d'un entraîneur adjoint (candidat ou en poste) : libellé + caracs travaillées.
-function assistantSpecialtyHtml(specialty) {
-  const spec = ASSISTANT_SPECIALTIES[specialty];
-  if (!spec) return "";
-  return `<span class="stf-sub stf-specialty"><b>${escapeHtml(spec.label)}</b> · ${escapeHtml(spec.attrs.map(a => TRAINING_LABELS[a] || a).join(", "))}</span>`;
-}
 const STAFF_ROLE_BY_KEY = Object.fromEntries(STAFF_ROLES.map(r => [r.key, r]));
-// État d'affichage par rôle : section dépliée, filtre de niveau (0 = tous),
-// liste complète affichée ou non. Retour utilisateur (2026-09-26) : toutes
-// les sections sont repliées à l'ouverture de la page (l'entraîneur ne
-// s'ouvre plus tout seul), on ne les déplie qu'au clic.
-const staffUi = {
-  coach: { open: false, level: 0, expanded: false },
-  analyst: { open: false, level: 0, expanded: false },
-  recruiter: { open: false, level: 0, expanded: false },
-  doctor: { open: false, level: 0, expanded: false },
-  physio: { open: false, level: 0, expanded: false },
-  assistant: { open: false, level: 0, expanded: false, specialty: "" },
-};
 
 function staffStarsHtml(level) {
-  // role="img" + aria-label : le niveau n'est plus écrit en toutes lettres
-  // pour le staff en poste (retour utilisateur 2026-09-25 : "on a déjà les
-  // étoiles"), il reste lisible par les lecteurs d'écran.
+  // role="img" + aria-label : le niveau n'est pas écrit en toutes lettres
+  // (retour utilisateur 2026-09-25 : "on a déjà les étoiles"), il reste
+  // lisible par les lecteurs d'écran.
   return `<span class="stf-stars" role="img" aria-label="Niveau ${level} sur 5"><span class="on">${"★".repeat(level)}</span><span class="off">${"★".repeat(5 - level)}</span></span>`;
 }
 function staffOpenListings(role) {
   return (league[role.listKey] || []).filter(l => l.status === "open").sort((a, b) => a.closesAt - b.closesAt);
 }
 
+// ---------------------------------------------------------------------
+// Staff v2 (retour utilisateur 2026-10-01) — identité, visage et effet de
+// chaque membre du staff, partagés par la page Staff (staff en poste) et le
+// Marché en mode Staff (candidats).
+// ---------------------------------------------------------------------
+// Polo neutre des candidats (pas encore au club) ; le staff en poste porte
+// les couleurs du club (teamAvatarColors, comme les maillots des joueurs).
+const STAFF_NEUTRAL_POLO = ["#2b3446", "#8a97ab"];
+function staffHash(str) {
+  let h = 2166136261;
+  for (const ch of String(str)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+// Clé d'identité : `sid` (identité transmise par le moteur de l'annonce au
+// membre engagé, et du membre congédié à sa nouvelle annonce, voir
+// tagStaffIdentity), sinon l'id de l'annonce ; pour un membre engagé avant
+// l'ajout de `sid`, une clé stable tirée du club, du rôle et du contrat.
+function staffListingKey(l) { return l.sid != null ? l.sid : l.id; }
+function staffMemberKey(roleKey, m) {
+  return m.sid != null ? m.sid : `${teamA ? teamA.name : ""}|${roleKey}|${m.baseSalary}|${m.level}`;
+}
+// Nom (prénoms masculins des réservoirs NAME_POOLS, comme les joueurs),
+// nationalité (pays du championnat le plus souvent), âge 35-65 et graine
+// d'avatar, tous déterministes : le même membre a toujours le même visage.
+const staffIdentityCache = new Map();
+function staffIdentity(key) {
+  key = String(key);
+  if (staffIdentityCache.has(key)) return staffIdentityCache.get(key);
+  const h = staffHash(`staff|${key}`);
+  const hFirst = staffHash(`${key}|prenom`);
+  const hLast = staffHash(`${key}|nom`);
+  const home = (typeof league !== "undefined" && league && league.country) || "fr";
+  let nat = NATION_BY_CODE[home] && NAME_POOLS[NATION_BY_CODE[home].pool] ? NATION_BY_CODE[home] : NATION_BY_CODE.fr;
+  if (h % 100 >= 65) {
+    const pool = NATIONS.filter(n => NAME_POOLS[n.pool]);
+    if (pool.length) nat = pool[staffHash(`${key}|pays`) % pool.length];
+  }
+  const names = NAME_POOLS[nat.pool] || NAME_POOLS.fr;
+  const ident = {
+    name: `${names.first[hFirst % names.first.length]} ${names.last[hLast % names.last.length]}`,
+    nationality: nat.code,
+    age: 35 + (staffHash(`${key}|age`) % 31),
+    seed: (h % 2147483646) + 1,
+  };
+  staffIdentityCache.set(key, ident);
+  return ident;
+}
+// Avatar SVG (AvatarGen, polo à manches, options.staff : ni bandeau ni crête).
+function staffAvatarHtml(ident, colors, size) {
+  const h = Math.round(size * 130 / 120);
+  const svg = AvatarGen.generateAvatar(ident.seed, { outfit: "polo", staff: true, age: ident.age, suitColors: colors, teamColors: colors });
+  return `<span class="player-avatar staff-avatar" style="display:inline-block;flex:none;width:${size}px;height:${h}px;border-radius:${Math.round(size * 0.18)}px;overflow:hidden;vertical-align:middle;line-height:0">${svg}</span>`;
+}
+function staffNum(x, digits = 2) { return x.toFixed(digits).replace(".", ","); }
+function staffPct(x) { return `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.round(Math.abs(x) * 100)} %`; }
+// Effet d'un membre du staff en clair (une ligne = un texte, pour la
+// traduction), d'après les mêmes tables que le moteur.
+function staffEffectLines(roleKey, level, specialty) {
+  const lines = [];
+  if (roleKey === "coach") {
+    lines.push(`Rendement ×${staffNum(1 + (TRAINER_TRAINING_BONUS[level] || 0))}`);
+    lines.push(`${TRAINING_SLOTS_BY_COACH_LEVEL[level] || 0} places individuelles`);
+    lines.push(`Plafond de progression +${TRAINER_CEILING_BONUS[level] || 0}`);
+    const spec = {
+      offense: `${staffPct(COACH_SPECIALTY_BONUS)} sur le travail offensif`,
+      defense: `${staffPct(COACH_SPECIALTY_BONUS)} sur le travail défensif`,
+      physical: `${staffPct(COACH_PHYSICAL_DAY_BONUS)} les jours Physique`,
+      youth: `${staffPct(COACH_SPECIALTY_BONUS)} pour les ${COACH_YOUTH_MAX_AGE} ans et moins`,
+    }[specialty];
+    if (spec) lines.push(spec);
+  } else if (roleKey === "assistant") {
+    lines.push("Travail en plus chaque lundi pour tout l'effectif");
+  } else if (roleKey === "analyst") {
+    // Pas de nombre de caractéristiques révélées (retour utilisateur 2026-09 :
+    // masqué sur la page Staff et sur le marché, voir client_scouting_test).
+    lines.push("Une séance vidéo par jour sur vos adversaires");
+    lines.push("Plus il est bon, plus vous en voyez");
+  } else if (roleKey === "recruiter") {
+    lines.push(`Prospect proposé : ${Math.round((YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL[level] || 0) * 100)} % de chance par jour`);
+    lines.push(`Qualité des prospects ×${staffNum(YOUTH_QUALITY_TIER_BY_LEVEL[level] || 1)}`);
+  } else if (roleKey === "doctor") {
+    lines.push(`Blessures plus courtes : ${staffPct(-(DOCTOR_INJURY_DURATION_REDUCTION_BY_LEVEL[level] || 0))}`);
+  } else if (roleKey === "physio") {
+    lines.push(`Risque de blessure : ${staffPct((PHYSIO_INJURY_RISK_MULT_BY_LEVEL[level] || 1) - 1)}`);
+    lines.push(`+${PHYSIO_RECOVERY_BONUS_BY_LEVEL[level] || 0} de forme par jour`);
+  }
+  return lines;
+}
+function staffEffectHtml(roleKey, level, specialty) {
+  const lines = staffEffectLines(roleKey, level, specialty).map(t => `<li>${escapeHtml(t)}</li>`).join("");
+  const spec = roleKey === "assistant" && ASSISTANT_SPECIALTIES[specialty];
+  const attrs = spec ? `<span class="stf-attrs">${escapeHtml(spec.attrs.map(a => TRAINING_LABELS[a] || a).join(", "))}</span>` : "";
+  return `<ul>${lines}</ul>${attrs}`;
+}
+// Ce que le poste apporte, pour une carte « Poste à pourvoir ».
+const STAFF_ROLE_PITCH = {
+  coach: ["Plans individuels et progression des fondamentaux", "Sans entraîneur, aucun plan individuel"],
+  analyst: ["Révèle les caractéristiques de vos adversaires", "Plus il est bon, plus vous en voyez"],
+  recruiter: ["Vous propose de jeunes prospects pour l'académie", "Plus il est bon, plus ils sont nombreux et talentueux"],
+  doctor: ["Raccourcit les blessures (jusqu'à −35 %)"],
+  physio: ["Moins de blessures, meilleure récupération"],
+  assistant: ["Fait progresser tout l'effectif dans sa spécialité"],
+};
+const STAFF_RECRUIT_LABELS = {
+  coach: "Recruter un entraîneur", analyst: "Recruter un analyste vidéo", recruiter: "Recruter un recruteur",
+  doctor: "Recruter un médecin", physio: "Recruter un kiné", assistant: "Recruter un entraîneur adjoint",
+};
+const STAFF_REPLACE_LABELS = {
+  coach: "Remplacera votre entraîneur actuel", analyst: "Remplacera votre analyste vidéo actuel", recruiter: "Remplacera votre recruteur actuel",
+  doctor: "Remplacera votre médecin actuel", physio: "Remplacera votre kiné actuel", assistant: "Remplacera votre entraîneur adjoint actuel",
+};
+function staffHasMyBid(l) {
+  return l.currentBidderIdx === myTeamIndex || (l.bids || []).some(b => b.bidderIdx === myTeamIndex) || myAutoMaxOf(l) != null;
+}
+function staffCandidatesLabel(n) {
+  return n === 0 ? "Aucun candidat" : n === 1 ? "1 candidat" : `${n} candidats`;
+}
+// Icônes SVG des boutons (pas d'emoji, comme TM_ICONS de l'Entraînement).
+const STAFF_UI_ICONS = {
+  swap: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4 3 8l4 4"></path><path d="M3 8h13a4 4 0 0 1 4 4"></path><path d="m17 20 4-4-4-4"></path><path d="M21 16H8a4 4 0 0 1-4-4"></path></svg>',
+  fire: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"></circle><path d="M3 20a6 6 0 0 1 12 0"></path><path d="m17 9 4 4m0-4-4 4"></path></svg>',
+  plus: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>',
+  gavel: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 13-7.5 7.5a2.1 2.1 0 0 1-3-3L11 10"></path><path d="m16 16 6-6"></path><path d="m8 8 6-6"></path><path d="m9 7 8 8"></path><path d="M21 11 13 3"></path></svg>',
+};
+
 function renderStaffPanel() {
   const budgetEl = document.getElementById("staffBudget");
+  if (!budgetEl) return;
   budgetEl.textContent = formatMoney(teamA.budget);
   budgetEl.classList.toggle("negative", teamA.budget < 0);
   const payroll = STAFF_ROLES.reduce((sum, r) => sum + (r.member() ? r.salary() : 0), 0);
   document.getElementById("staffPayroll").innerHTML = `${escapeHtml(formatMoney(payroll))}<span class="stf-unit"> /sem.</span>`;
-
+  const filled = STAFF_ROLES.filter(r => r.member()).length;
+  document.getElementById("staffFilled").innerHTML = `${filled}<span class="stf-unit"> / ${STAFF_ROLES.length}</span>`;
   const now = Date.now();
-  document.getElementById("staffSlots").innerHTML = STAFF_ROLES.map(r => staffSlotHtml(r, now)).join("");
-  STAFF_ROLES.forEach(r => renderStaffRole(r, now));
+  document.getElementById("staffSlots").innerHTML = STAFF_ROLES.map(r => staffCardHtml(r, now)).join("");
   mkUpdateBadge();
 }
 
-// Carte "poste" en haut de page : vacant / enchère en tête / en poste.
-function staffSlotHtml(role, now) {
+// Carte d'un poste : en poste / enchère en cours / à pourvoir.
+function staffCardHtml(role, now) {
   const m = role.member();
   const open = staffOpenListings(role);
-  const leadingCount = open.filter(l => l.currentBidderIdx === myTeamIndex).length;
-  let state, status, badge;
+  const mine = open.filter(staffHasMyBid);
+  const lead = mine.filter(l => l.currentBidderIdx === myTeamIndex);
+  const state = m ? "filled" : mine.length ? "bidding" : "vacant";
+  let pill;
+  if (m) pill = `<span class="stf-pill">En poste</span>`;
+  else if (lead.length) pill = `<span class="stf-pill is-lead">Enchère en cours</span>`;
+  else if (mine.length) pill = `<span class="stf-pill is-out">Dépassé</span>`;
+  else pill = `<span class="stf-pill">Vacant</span>`;
+  const band = `<div class="stf-band"><span class="stf-band__ic" aria-hidden="true">${STAFF_ICONS[role.key]}</span>` +
+    `<span class="stf-band__role">${escapeHtml(role.label)}</span>${pill}</div>`;
+  let body;
   if (m) {
-    state = "filled"; badge = "En poste";
-    status = `${staffStarsHtml(m.level)}<span class="stf-nowrap">${escapeHtml(formatMoney(role.salary()))}/sem.</span>`;
-  } else if (leadingCount) {
-    state = "bidding"; badge = "En cours";
-    status = `Vous menez ${leadingCount} enchère${leadingCount > 1 ? "s" : ""}`;
-  } else {
-    state = "vacant"; badge = "À pourvoir";
-    status = "Poste vacant";
-  }
-  return `<button type="button" class="stf-slot stf-slot--${state}" data-staff-open-role="${role.key}">` +
-    `<span class="stf-slot__icon" aria-hidden="true">${STAFF_ICONS[role.key]}</span>` +
-    `<span class="stf-slot__text"><span class="stf-slot__role">${role.label}</span><span class="stf-slot__status">${status}</span></span>` +
-    `<span class="stf-badge stf-badge--${state}">${badge}</span></button>`;
-}
-
-function renderStaffRole(role, now) {
-  const ui = staffUi[role.key];
-  const open = staffOpenListings(role);
-
-  // Membre en poste (toujours visible, même section repliée).
-  const currentHolder = document.getElementById(role.currentId);
-  const m = role.member();
-  if (m) {
-    currentHolder.innerHTML = `<div class="staff-current stf-current">` +
-      `<div class="staff-current-info">${staffStarsHtml(m.level)} <strong>${role.label}</strong>${m.specialty ? " " + staffSpecialtyHtml(role.key, m.specialty) : ""}` +
-      `<span class="staff-current-meta">En poste depuis ${m.weeksEmployed} semaine(s) · salaire actuel : ${escapeHtml(formatMoney(role.salary()))}/semaine</span></div>` +
-      `<button type="button" class="staff-fire-btn" data-staff-fire="${role.key}">Congédier</button></div>`;
-  } else {
-    currentHolder.innerHTML = `<p class="staff-none">${role.noneText}</p>`;
-  }
-
-  // Titre de section (retour utilisateur 2026-09-26 : "Changer
-  // d'entraîneur" plutôt que "Candidats entraîneur") ; "Engager…" quand le
-  // poste est vacant.
-  const STAFF_SECTION_TITLES = {
-    coach: ["staffCoachTitle", "Changer d'entraîneur", "Engager un entraîneur"],
-    analyst: ["staffAnalystTitle", "Changer d'analyste vidéo", "Engager un analyste vidéo"],
-    recruiter: ["staffRecruiterTitle", "Changer de recruteur", "Engager un recruteur"],
-    doctor: ["staffDoctorTitle", "Changer de médecin", "Engager un médecin"],
-    physio: ["staffPhysioTitle", "Changer de kiné", "Engager un kiné"],
-    assistant: ["staffAssistantTitle", "Changer d'entraîneur adjoint", "Engager un entraîneur adjoint"],
-  };
-  const titleDef = STAFF_SECTION_TITLES[role.key];
-  const titleEl = titleDef && document.getElementById(titleDef[0]);
-  if (titleEl) titleEl.textContent = m ? titleDef[1] : titleDef[2];
-
-  // En-tête : résumé + bouton replier/déplier.
-  // Retour utilisateur (2026-09-25) : plus de phrase de description ni de
-  // résumé "N candidats · prochaine fin d'enchère" sous le titre du rôle.
-  const toggle = document.querySelector(`[data-staff-toggle-role="${role.key}"]`);
-  toggle.textContent = ui.open ? "Masquer les candidats" : "Voir les candidats";
-  toggle.setAttribute("aria-expanded", ui.open ? "true" : "false");
-  document.getElementById(role.bodyId).hidden = !ui.open;
-
-  renderStaffListings(role, open, now);
-}
-
-function renderStaffListings(role, open, now) {
-  const ui = staffUi[role.key];
-  const holder = document.getElementById(role.gridId);
-  if (!open.length) {
-    holder.innerHTML = `<p class='training-empty'>Aucun candidat ${role.noun} aux enchères pour l'instant, revenez plus tard.</p>`;
-    return;
-  }
-  // Entraîneur adjoint (retour utilisateur, 2026-09-27 : "un filtre par
-  // spécialité sur le marché des adjoints ; oui ajoute") : filtre de
-  // spécialité AVANT le filtre de niveau (les niveaux proposés et leurs prix
-  // suivent la spécialité choisie). Même repli sur "Toutes" qu'un niveau vide.
-  let specialtyHtml = "";
-  if (role.key === "assistant") {
-    if (ui.specialty && !open.some(l => l.specialty === ui.specialty)) ui.specialty = "";
-    const specBtns = ["", ...Object.keys(ASSISTANT_SPECIALTIES)].map(key => {
-      const pool = key ? open.filter(l => l.specialty === key) : open;
-      const selected = ui.specialty === key;
-      const spec = ASSISTANT_SPECIALTIES[key];
-      return `<button type="button" class="stf-level${selected ? " is-selected" : ""}" data-staff-specialty="${role.key}:${key}" aria-pressed="${selected}"${pool.length ? "" : " disabled"}>` +
-        `<span class="stf-level__title">${key ? escapeHtml(spec.label) : "Toutes"}</span>` +
-        `<span class="stf-level__meta">${key ? assistantSpecialtyLinesHtml(spec) : "Toutes les spécialités"}</span></button>`;
-    }).join("");
-    specialtyHtml = `<fieldset class="stf-levels stf-specialties"><legend><span>Quelle spécialité ?</span></legend>` +
-      `<div class="stf-levels__grid stf-specialties__grid">${specBtns}</div></fieldset>`;
-    if (ui.specialty) open = open.filter(l => l.specialty === ui.specialty);
-  }
-  // Un filtre de niveau devenu vide (enchères closes entre-temps) retombe
-  // sur "Tous" plutôt que d'afficher une liste vide.
-  if (ui.level && !open.some(l => l.level === ui.level)) ui.level = 0;
-  const filtered = ui.level ? open.filter(l => l.level === ui.level) : open;
-  const visible = ui.expanded ? filtered : filtered.slice(0, STAFF_LISTINGS_COLLAPSED_COUNT);
-
-  const levelBtns = [0, 1, 2, 3, 4, 5].map(lv => {
-    const pool = lv ? open.filter(l => l.level === lv) : open;
-    const empty = pool.length === 0;
-    const selected = ui.level === lv;
-    const minPrice = empty ? 0 : Math.min(...pool.map(l => minNextBidFor(l)));
-    const stars = lv
-      ? staffStarsHtml(lv)
-      : `<span class="stf-stars stf-stars--all" aria-hidden="true"><span class="off">★★★★★</span></span>`;
-    return `<button type="button" class="stf-level${selected ? " is-selected" : ""}" data-staff-level="${role.key}:${lv}" aria-pressed="${selected}"${empty ? " disabled" : ""}>` +
-      `${stars}<span class="stf-level__title">${lv ? `Niveau ${lv}` : "Tous"}</span>` +
-      (empty ? `<span class="stf-level__meta">Aucun candidat</span>` : "") +
-      `<span class="stf-level__meta">${empty ? "—" : `dès ${escapeHtml(formatMoney(minPrice))}`}</span></button>`;
-  }).join("");
-  // Retour utilisateur (2026-09-25) : plus aucun nombre de candidats affiché
-  // (carte poste, boutons de niveau, libellé de tri).
-  const sortLabel = "Triés par fin d'enchère";
-
-  let html = specialtyHtml + `<fieldset class="stf-levels"><legend><span>Quel niveau voulez-vous recruter ?</span><span class="stf-levels__sort">${sortLabel}</span></legend>` +
-    `<div class="stf-levels__grid">${levelBtns}</div></fieldset>`;
-
-  html += `<div class="stf-table-wrap"><table class="stf-table"><thead><tr>` +
-    `<th scope="col">Niveau</th><th scope="col">Salaire de réf.</th><th scope="col">Enchère actuelle</th><th scope="col">Fin de l'enchère</th><th scope="col">Votre offre</th>` +
-    `</tr></thead><tbody>`;
-  visible.forEach(l => {
-    const mine = l.currentBidderIdx === myTeamIndex;
-    const minBid = minNextBidFor(l);
-    const msLeft = l.closesAt - now;
-    const urgent = msLeft < 3600 * 1000;
-    let current;
-    if (mine) {
-      // Retour utilisateur (2026-09-29) : plus de « Vous pouvez encore
-      // augmenter votre offre » sous « Vous menez ».
-      current = `<span class="stf-lead">Vous menez · ${escapeHtml(formatMoney(l.currentBid))}</span>`;
-    } else if (l.currentBid) {
-      current = `<span class="stf-strong">${escapeHtml(formatMoney(l.currentBid))}</span><span class="stf-sub">Un autre club mène</span>`;
-    } else {
-      // Retour utilisateur (2026-09-25) : pas de "Mise de départ" ici, le
-      // montant est déjà dans le champ d'offre à côté du bouton Enchérir.
-      current = `<span class="stf-muted">Aucune offre</span>`;
-    }
-    html += `<tr class="stf-row${mine ? " is-leading" : ""}${l.level >= 4 ? " is-top" : ""}">` +
-      `<td data-label="Niveau"><div class="stf-cell">${staffStarsHtml(l.level)}${l.specialty ? staffSpecialtyHtml(role.key, l.specialty) : ""}</div></td>` +
-      `<td data-label="Salaire de réf."><div class="stf-cell"><span class="stf-strong">${escapeHtml(formatMoney((role.baseSalaryTable || TRAINER_BASE_SALARY)[l.level] || 0))}</span><span class="stf-sub">par semaine</span></div></td>` +
-      `<td data-label="Enchère actuelle"><div class="stf-cell">${current}</div></td>` +
-      `<td data-label="Fin de l'enchère"><div class="stf-cell"><span class="stf-time${urgent ? " is-urgent" : ""}" data-closes-at="${l.closesAt}">${escapeHtml(timeLeftLabel(l.closesAt, now))}</span>` +
-      `<span class="stf-sub">${urgent ? "Dernière heure" : "restant"}</span></div></td>` +
-      `<td data-label="Votre offre"><div class="stf-offer">` +
-        `<div class="stf-stepper">` +
-          `<button type="button" class="stf-step" data-staff-step="${role.key}:${l.id}:-100" aria-label="Baisser l'offre de 100 €">−</button>` +
-          `<input type="number" class="stf-amount" id="${role.inputPrefix}${l.id}" value="${minBid}" min="${minBid}" step="100" aria-label="Montant de l'offre en euros (minimum ${minBid})">` +
-          `<span class="stf-amount-unit" aria-hidden="true">€</span>` +
-          `<button type="button" class="stf-step" data-staff-step="${role.key}:${l.id}:100" aria-label="Augmenter l'offre de 100 €">+</button>` +
-        `</div>` +
-        `<button type="button" class="stf-bid-btn${mine ? " is-secondary" : ""}" data-staff-bid="${role.key}:${l.id}">${mine ? "Surenchérir" : "Enchérir"}</button>` +
-        `<button type="button" class="stf-auto-btn" data-staff-auto="${role.key}:${l.id}" title="Le montant saisi devient votre plafond : on enchérit pour vous, au minimum, chaque fois qu'un autre club vous dépasse.">${myAutoMaxOf(l) != null ? "Changer le plafond" : "Enchère auto"}</button>` +
+    const ident = staffIdentity(staffMemberKey(role.key, m));
+    const spec = m.specialty ? staffSpecialtyLabel(role.key, m.specialty) : "";
+    const growth = (TRAINER_WEEKLY_GROWTH[m.level] || 0) * 100;
+    const weeks = m.weeksEmployed || 0;
+    // Enchère en cours pour le remplacer (on garde le titulaire jusqu'à la clôture).
+    const pending = lead[0] || mine[0];
+    const pendingHtml = pending
+      ? `<div class="stf-strip">${pending.currentBidderIdx === myTeamIndex ? `<span class="mk-badge lead">Vous êtes en tête</span>` : `<span class="mk-badge out">Dépassé</span>`}` +
+        `<span>Remplacement en cours</span>${staffStarsHtml(pending.level)}` +
+        `<button type="button" class="mk-linkbtn amber" data-staff-goto="${role.key}:${pending.id}">Voir l'enchère</button></div>`
+      : "";
+    body = `<div class="stf-who" id="${role.currentId}">` +
+        staffAvatarHtml(ident, teamAvatarColors(teamA), 64) +
+        `<div class="staff-current-info stf-who__txt">` +
+          `<b class="stf-name" data-no-i18n>${escapeHtml(ident.name)}</b>` +
+          `<span class="stf-who__line">${staffStarsHtml(m.level)}${spec ? `<span class="stf-chip">${escapeHtml(spec)}</span>` : ""}</span>` +
+          `<span class="stf-who__sub">${nationFlagHtml(ident.nationality)}<span>${ident.age} ans</span></span>` +
+        `</div></div>` +
+      `<div class="stf-effect"><span class="stf-k">Effet</span>${staffEffectHtml(role.key, m.level, m.specialty)}</div>` +
+      `<div class="stf-meta">` +
+        `<div><span class="stf-k">Salaire</span><b>${escapeHtml(formatMoney(role.salary()))}</b><small>par semaine</small></div>` +
+        `<div><span class="stf-k">Hausse</span><b class="is-up">+${escapeHtml(staffNum(growth, 1))} %</b><small>par semaine</small></div>` +
+        `<div><span class="stf-k">En poste</span><b>${weeks} sem.</b><small>au club</small></div>` +
+        `<div><span class="stf-k">Contrat</span><b>Sans échéance</b><small>jusqu'au renvoi</small></div>` +
       `</div>` +
-      (myAutoMaxOf(l) != null ? autoBidStatusHtml(myAutoMaxOf(l), `data-staff-auto-off="${role.key}:${l.id}"`) : "") +
-      `</td></tr>`;
-  });
-  html += "</tbody></table></div>";
-
-  const rest = filtered.length - visible.length;
-  if (rest > 0) {
-    html += `<div class="stf-more"><button type="button" class="stf-ghost-btn staff-listings-toggle-btn" data-staff-more="${role.key}">` +
-      `${rest > 1 ? `Voir les ${rest} autres candidats` : "Voir l'autre candidat"}</button></div>`;
-  } else if (ui.expanded && filtered.length > STAFF_LISTINGS_COLLAPSED_COUNT) {
-    html += `<div class="stf-more"><button type="button" class="stf-ghost-btn staff-listings-toggle-btn" data-staff-more="${role.key}">Afficher moins</button></div>`;
+      pendingHtml +
+      `<div class="stf-acts">` +
+        `<button type="button" class="stf-btn" data-staff-recruit="${role.key}">${STAFF_UI_ICONS.swap}<span>Changer</span></button>` +
+        `<button type="button" class="stf-btn stf-btn--danger staff-fire-btn" data-staff-fire="${role.key}">${STAFF_UI_ICONS.fire}<span>Congédier</span></button>` +
+      `</div>`;
+  } else if (state === "bidding") {
+    const l = lead[0] || mine[0];
+    const ident = staffIdentity(staffListingKey(l));
+    const isLead = l.currentBidderIdx === myTeamIndex;
+    body = `<div class="stf-who" id="${role.currentId}">` +
+        staffAvatarHtml(ident, STAFF_NEUTRAL_POLO, 64) +
+        `<div class="stf-who__txt">` +
+          `<b class="stf-name" data-no-i18n>${escapeHtml(ident.name)}</b>` +
+          `<span class="stf-who__line">${staffStarsHtml(l.level)}${l.specialty ? `<span class="stf-chip">${escapeHtml(staffSpecialtyLabel(role.key, l.specialty))}</span>` : ""}</span>` +
+        `</div></div>` +
+      `<div class="stf-effect"><span class="stf-k">${isLead ? "Votre offre" : "Meilleure offre"}</span>` +
+        `<ul><li>${escapeHtml(`${formatMoney(l.currentBid || 0)} par semaine`)}</li><li>${escapeHtml(`Fin de l'enchère dans ${timeLeftLabel(l.closesAt, now)}`)}</li></ul></div>` +
+      `<div class="stf-acts"><button type="button" class="stf-btn${isLead ? "" : " stf-btn--primary"}" data-staff-goto="${role.key}:${l.id}">${STAFF_UI_ICONS.gavel}<span>${isLead ? "Voir l'enchère" : "Relancer"}</span></button></div>`;
+  } else {
+    const table = role.baseSalaryTable || TRAINER_BASE_SALARY;
+    const vals = Object.values(table);
+    const pitch = (STAFF_ROLE_PITCH[role.key] || []).map(t => `<li>${escapeHtml(t)}</li>`).join("");
+    body = `<div class="stf-vac" id="${role.currentId}"><span class="stf-vac__ic" aria-hidden="true">${STAFF_ICONS[role.key]}</span>` +
+        `<b class="staff-none">Poste à pourvoir</b><ul>${pitch}</ul></div>` +
+      `<div class="stf-vac-meta"><span>${escapeHtml(`De ${formatMoney(Math.min(...vals))} à ${formatMoney(Math.max(...vals))} par semaine`)}</span><span>${escapeHtml(staffCandidatesLabel(open.length))}</span></div>` +
+      `<div class="stf-acts"><button type="button" class="stf-btn stf-btn--primary" data-staff-recruit="${role.key}">${STAFF_UI_ICONS.plus}<span>${escapeHtml(STAFF_RECRUIT_LABELS[role.key])}</span></button></div>`;
   }
-  holder.innerHTML = html;
+  return `<article class="stf-card c-${role.key} is-${state}" data-staff-role="${role.key}">${band}<div class="stf-body">${body}</div></article>`;
 }
 
-// Un seul écouteur délégué pour toute la page Staff (cartes poste, replier/
-// déplier, filtre de niveau, ±100 €, enchérir, congédier, afficher plus).
+// Un seul écouteur délégué pour la page Staff : Recruter / Changer (→
+// Marché, mode Staff, filtré sur le rôle), Voir l'enchère, Congédier.
 document.getElementById("staffSection").addEventListener("click", (e) => {
-  const t = e.target.closest("[data-staff-open-role],[data-staff-toggle-role],[data-staff-specialty],[data-staff-level],[data-staff-more],[data-staff-step],[data-staff-bid],[data-staff-auto],[data-staff-auto-off],[data-staff-fire]");
+  const t = e.target.closest("[data-staff-recruit],[data-staff-goto],[data-staff-fire]");
   if (!t || t.disabled) return;
   const d = t.dataset;
-
-  if (d.staffOpenRole) {
-    staffUi[d.staffOpenRole].open = true;
-    renderStaffPanel();
-    const section = document.querySelector(`.stf-role[data-staff-role="${d.staffOpenRole}"]`);
-    if (section && section.scrollIntoView) section.scrollIntoView({ behavior: "smooth", block: "start" });
-    return;
-  }
-  if (d.staffToggleRole) {
-    staffUi[d.staffToggleRole].open = !staffUi[d.staffToggleRole].open;
-    renderStaffPanel();
-    return;
-  }
-  if (d.staffSpecialty != null) {
-    const [key, spec] = d.staffSpecialty.split(":");
-    staffUi[key].specialty = spec || "";
-    staffUi[key].level = 0;
-    staffUi[key].expanded = false;
-    renderStaffPanel();
-    return;
-  }
-  if (d.staffLevel) {
-    const [key, lv] = d.staffLevel.split(":");
-    staffUi[key].level = Number(lv);
-    staffUi[key].expanded = false;
-    renderStaffPanel();
-    return;
-  }
-  if (d.staffMore) {
-    staffUi[d.staffMore].expanded = !staffUi[d.staffMore].expanded;
-    renderStaffPanel();
-    return;
-  }
-  if (d.staffStep) {
-    const [key, id, delta] = d.staffStep.split(":");
-    const input = document.getElementById(`${STAFF_ROLE_BY_KEY[key].inputPrefix}${id}`);
-    if (!input) return;
-    const min = Number(input.min) || 0;
-    input.value = String(Math.max(min, (Math.round(Number(input.value)) || min) + Number(delta)));
-    return;
-  }
-  if (d.staffAuto || d.staffAutoOff) {
-    const [key, idStr] = (d.staffAuto || d.staffAutoOff).split(":");
-    const role = STAFF_ROLE_BY_KEY[key];
-    const id = Number(idStr);
-    const input = document.getElementById(`${role.inputPrefix}${id}`);
-    const max = d.staffAutoOff ? 0 : Math.round(Number(input && input.value) || 0);
-    setAutoBidFor(role.listKey, id, max).then(r => {
-      const [msg, good] = autoBidMessage(r, max);
-      staffFeedback(msg, good);
-      renderStaffPanel();
-    });
-    return;
-  }
-  if (d.staffBid) {
-    const [key, idStr] = d.staffBid.split(":");
-    const role = STAFF_ROLE_BY_KEY[key];
-    const id = Number(idStr);
-    const input = document.getElementById(`${role.inputPrefix}${id}`);
-    const amount = Math.round(Number(input && input.value) || 0);
-    const res = role.placeBid(id, amount, Date.now());
-    if (!res.ok) {
-      const reasons = {
-        "closed": "Cette enchère est déjà terminée.",
-        "invalid-bidder": "Enchérisseur invalide.",
-        "too-low": `Enchère trop basse, minimum ${formatMoney(res.minBid || 0)}.`,
-        "insufficient-budget": "Budget insuffisant pour cette enchère.",
-      };
-      staffFeedback(reasons[res.reason] || "Enchère refusée.", false);
-    } else if (res.autoOutbid) {
-      staffFeedback("Un autre club avait une enchère automatique plus haute : vous êtes déjà dépassé.", false);
-    } else {
-      staffFeedback(`Enchère de ${formatMoney(amount)} enregistrée.`, true);
-    }
-    saveMyTeam();
-    if (res.ok) {
-      const sync = role.syncBid(id, amount);
-      if (sync && sync.then) sync.then(r => {
-        if (r && r.ok && r.data && r.data.autoOutbid) staffFeedback("Un autre club avait une enchère automatique plus haute : vous êtes déjà dépassé.", false);
-        if (r && r.ok) myAuctionsRefresh();
-      });
-    }
-    renderStaffPanel();
-    return;
-  }
+  if (d.staffRecruit) { mkOpenStaffMarket(d.staffRecruit === "all" ? null : d.staffRecruit); return; }
+  if (d.staffGoto) { const [k, id] = d.staffGoto.split(":"); mkGotoStaff(k, Number(id)); return; }
   if (d.staffFire) {
     const role = STAFF_ROLE_BY_KEY[d.staffFire];
     const result = role.fire(Date.now());
@@ -42661,17 +42609,55 @@ document.getElementById("staffSection").addEventListener("click", (e) => {
     renderStaffPanel();
   }
 });
+// Liens « marché du staff » depuis d'autres écrans (Entraînement sans
+// entraîneur…) : data-staff-market="coach".
+document.addEventListener("click", (e) => {
+  const t = e.target.closest && e.target.closest("[data-staff-market]");
+  if (!t) return;
+  e.preventDefault();
+  mkOpenStaffMarket(t.dataset.staffMarket || null);
+});
 
-// Compte à rebours des enchères tenu à jour tant que la page Staff est
-// affichée (sans tout re-rendre : l'offre en cours de saisie est conservée).
+// Enchère sur un candidat du staff (même règles et mêmes appels moteur /
+// serveur qu'avant la refonte : placeCoachBid… puis synchro, messages de
+// refus inchangés). `say(message, ok)` affiche le retour.
+function staffPlaceBid(role, id, amount, say) {
+  const res = role.placeBid(id, amount, Date.now());
+  if (!res.ok) {
+    const reasons = {
+      "closed": "Cette enchère est déjà terminée.",
+      "invalid-bidder": "Enchérisseur invalide.",
+      "too-low": `Enchère trop basse, minimum ${formatMoney(res.minBid || 0)}.`,
+      "insufficient-budget": "Budget insuffisant pour cette enchère.",
+    };
+    say(reasons[res.reason] || "Enchère refusée.", false);
+  } else if (res.autoOutbid) {
+    say("Un autre club avait une enchère automatique plus haute : vous êtes déjà dépassé.", false);
+  } else {
+    say(`Enchère de ${formatMoney(amount)} enregistrée.`, true);
+  }
+  saveMyTeam();
+  if (res.ok) {
+    const sync = role.syncBid(id, amount);
+    if (sync && sync.then) sync.then(r => {
+      if (r && r.ok && r.data && r.data.autoOutbid) say("Un autre club avait une enchère automatique plus haute : vous êtes déjà dépassé.", false);
+      if (r && r.ok) myAuctionsRefresh();
+    });
+  }
+  return res;
+}
+
+// Compte à rebours des enchères (Marché, cartes du staff) tenu à jour sans
+// tout re-rendre : l'offre en cours de saisie est conservée.
 setInterval(() => {
-  const sec = document.getElementById("staffSection");
+  const sec = document.getElementById("marcheSection");
   if (!sec || sec.classList.contains("hidden")) return;
   const now = Date.now();
   sec.querySelectorAll("[data-closes-at]").forEach(el => {
     const closesAt = Number(el.dataset.closesAt);
     el.textContent = timeLeftLabel(closesAt, now);
-    el.classList.toggle("is-urgent", closesAt - now < 3600 * 1000);
+    const timer = el.closest(".mk-timer");
+    if (timer) timer.classList.toggle("urgent", closesAt - now < 3600 * 1000);
   });
 }, 30000);
 
@@ -45474,6 +45460,11 @@ const marketUi = {
   pos: "all", q: "", ageMin: null, ageMax: null, potMin: null, potMax: null, priceMin: null, priceMax: null, budget: false,
   deal: false, hideMine: false, origin: "all",
   sort: "ends", mineTab: "all", open: new Set(), crit: [], critOpen: false, watched: false,
+  // Mode Staff (2026-10-01) : "players" | "staff", puis filtres du staff
+  // (rôle, "rôle:spécialité", recherche, niveau 1-5, salaire, budget, fin
+  // dans moins de 24 h, mes enchères), tri, confirmation de remplacement.
+  mode: "players", sRole: "all", sSpec: "", sQ: "", sLevelMin: null, sLevelMax: null, sSalMin: null, sSalMax: null,
+  sBudget: false, sSoon: false, sMine: false, sSort: "ends", sConfirm: null,
 };
 
 function mkAvg(player, keys) { return keys.reduce((s, k) => s + player.attrs[k], 0) / keys.length; }
@@ -45598,6 +45589,7 @@ function renderMarcheSection() {
   // Sous-titre et note de bas de page retirés (retour utilisateur,
   // 2026-09-26 : "enleve: Enchères de 1 jour · le plus offrant [...]" et
   // "enleve: Le potentiel affiché n'est qu'une estimation [...]").
+  renderMarketModeToggle();
   renderMarketKpis();
   renderMarketMine();
   renderMarketCritPanel();
@@ -45606,6 +45598,7 @@ function renderMarcheSection() {
 }
 
 function renderMarketKpis() {
+  if (marketUi.mode === "staff") { renderMarketStaffKpis(); return; }
   const holder = document.getElementById("marketKpis");
   if (!holder) return;
   const now = Date.now();
@@ -45703,6 +45696,7 @@ function renderMarketMine() {
 // depuis le tableau de bord) : filtres remis à zéro, carte de l'annonce,
 // champ d'enchère sélectionné.
 function mkGotoListing(id) {
+  if (marketUi.mode !== "players") { marketUi.mode = "players"; renderMarcheSection(); }
   mkResetFilters(); renderMarketCritPanel(); renderMarketListings();
   const card = document.getElementById(`marketCard_${id}`);
   if (card && card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -45712,6 +45706,7 @@ function mkGotoListing(id) {
 // Page Marché ouverte sur « Mes enchères » (lien des notifications
 // « Tu as été dépassé », #encheres, et du tableau de bord).
 function mkGotoMine(tab) {
+  if (tab === "staff") marketUi.mode = "staff";
   TAB_HANDLERS.marche();
   marketUi.mineTab = tab || "all";
   renderMarketMine();
@@ -45720,22 +45715,19 @@ function mkGotoMine(tab) {
   if (box && box.scrollIntoView) box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// « Relancer » / « Ouvrir » sur une enchère staff de « Mes enchères » : page
-// Staff, rôle déplié et filtré sur le niveau (et la spécialité) du candidat,
-// liste complète, champ d'offre sélectionné.
+// « Relancer » / « Ouvrir » sur une enchère staff de « Mes enchères », du
+// tableau de bord ou de la page Staff : Marché en mode Staff, filtré sur le
+// rôle, carte du candidat, champ d'offre sélectionné.
 function mkGotoStaff(roleKey, id) {
   const role = STAFF_ROLE_BY_KEY[roleKey];
-  const l = role && (league[role.listKey] || []).find(x => x.id === id);
-  TAB_HANDLERS.staff();
+  marketUi.mode = "staff";
+  mkResetStaffFilters();
+  if (role) marketUi.sRole = roleKey;
+  TAB_HANDLERS.marche();
   if (!role) return;
-  const ui = staffUi[roleKey];
-  ui.open = true;
-  ui.expanded = true;
-  if (l) { ui.level = l.level || 0; if (roleKey === "assistant") ui.specialty = l.specialty || ""; }
-  renderStaffPanel();
+  const card = document.getElementById(`marketStaffCard_${roleKey}_${id}`);
+  if (card && card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "center" });
   const input = document.getElementById(`${role.inputPrefix}${id}`);
-  const target = (input && input.closest("tr")) || document.querySelector(`.stf-role[data-staff-role="${roleKey}"]`);
-  if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "center" });
   if (input) setTimeout(() => { input.focus({ preventScroll: true }); if (input.select) input.select(); }, 400);
 }
 
@@ -45972,15 +45964,18 @@ function mkRangeBounds() {
   return {
     age: ages.length ? [Math.min(...ages), Math.max(...ages)] : [16, 40],
     priceSteps: mkPriceSteps(prices),
+    staffSalSteps: mkPriceSteps(mkStaffOpenAll().map(x => minNextBidFor(x.l))),
   };
 }
 // Une barre = deux positions entières [min, max] ; toVal/toIdx convertissent.
 function mkRangeSpec(key, b) {
   if (key === "age") return { lo: "ageMin", hi: "ageMax", min: b.age[0], max: b.age[1], toVal: i => i, toIdx: v => v, fmt: v => String(v) };
   if (key === "pot") return { lo: "potMin", hi: "potMax", min: 1, max: POTENTIAL_TIERS.length, toVal: i => i, toIdx: v => v, fmt: i => POTENTIAL_TIERS[i - 1].label, words: true };
-  const st = b.priceSteps;
+  if (key === "slevel") return { lo: "sLevelMin", hi: "sLevelMax", min: 1, max: 5, toVal: i => i, toIdx: v => v, fmt: i => `${i} ★` };
+  const staffSal = key === "ssal";
+  const st = staffSal ? b.staffSalSteps : b.priceSteps;
   return {
-    lo: "priceMin", hi: "priceMax", min: 0, max: st.length - 1, toVal: i => st[i],
+    lo: staffSal ? "sSalMin" : "priceMin", hi: staffSal ? "sSalMax" : "priceMax", min: 0, max: st.length - 1, toVal: i => st[i],
     toIdx: (v, end) => {
       if (end === "min") { let i = 0; while (i + 1 < st.length && st[i + 1] <= v) i++; return i; }
       const i = st.findIndex(x => x >= v); return i === -1 ? st.length - 1 : i;
@@ -46047,6 +46042,283 @@ function mkResetRange(key) {
   marketUi[sp.lo] = null; marketUi[sp.hi] = null;
   clearTimeout(mkRangeTimer);
   renderMarketListings();
+}
+
+// ---------------------------------------------------------------------
+// Marché — mode Staff (retour utilisateur 2026-10-01 : le recrutement du
+// staff quitte la page Staff). Bascule Joueurs | Staff en haut de page,
+// filtres propres au staff (rôle, spécialité, niveau et salaire en barres
+// doubles, dans mon budget, fin proche, mes enchères), cartes de la même
+// famille que les annonces de joueurs. Mêmes enchères qu'avant (voir
+// staffPlaceBid / setAutoBidFor) ; si le poste est déjà pourvu, l'enchère
+// demande une confirmation (le gagnant remplace le titulaire).
+// ---------------------------------------------------------------------
+const MK_MODE_ICONS = {
+  players: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"></path></svg>',
+  staff: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4V3h6v1"></path><path d="M9 10h6M9 14h6M9 18h3"></path></svg>',
+};
+function mkStaffOpenAll() {
+  const out = [];
+  if (!league) return out;
+  STAFF_ROLES.forEach(role => (league[role.listKey] || []).forEach(l => { if (l.status === "open") out.push({ role, l }); }));
+  return out;
+}
+function mkStaffActive() {
+  const u = marketUi;
+  return u.sRole !== "all" || !!u.sSpec || !!u.sQ || u.sLevelMin !== null || u.sLevelMax !== null || u.sSalMin !== null || u.sSalMax !== null || u.sBudget || u.sSoon || u.sMine;
+}
+function mkResetStaffFilters() {
+  Object.assign(marketUi, { sRole: "all", sSpec: "", sQ: "", sLevelMin: null, sLevelMax: null, sSalMin: null, sSalMax: null, sBudget: false, sSoon: false, sMine: false, sConfirm: null });
+  clearTimeout(mkRangeTimer);
+  const el = document.getElementById("marketStaffSearch");
+  if (el) el.value = "";
+}
+function mkStaffFiltered() {
+  const u = marketUi;
+  const budget = mkBudget();
+  const q = normalizeSearchTextSafe(u.sQ);
+  const now = Date.now();
+  const rows = mkStaffOpenAll().filter(({ role, l }) => {
+    if (u.sRole !== "all" && role.key !== u.sRole) return false;
+    if (u.sSpec) { const [rk, sk] = u.sSpec.split(":"); if (role.key !== rk || l.specialty !== sk) return false; }
+    if (q && !normalizeSearchTextSafe(staffIdentity(staffListingKey(l)).name).includes(q)) return false;
+    if (u.sLevelMin !== null && l.level < u.sLevelMin) return false;
+    if (u.sLevelMax !== null && l.level > u.sLevelMax) return false;
+    const next = minNextBidFor(l);
+    if (u.sSalMin !== null && next < u.sSalMin) return false;
+    if (u.sSalMax !== null && next > u.sSalMax) return false;
+    if (u.sBudget && next > budget) return false;
+    if (u.sSoon && l.closesAt - now > 24 * 3600 * 1000) return false;
+    if (u.sMine && !staffHasMyBid(l)) return false;
+    return true;
+  });
+  const by = {
+    ends: (a, b) => a.l.closesAt - b.l.closesAt,
+    level: (a, b) => b.l.level - a.l.level || a.l.closesAt - b.l.closesAt,
+    price: (a, b) => minNextBidFor(a.l) - minNextBidFor(b.l) || a.l.closesAt - b.l.closesAt,
+  };
+  return rows.sort(by[u.sSort] || by.ends);
+}
+// Affiche les contrôles du mode courant (titre, tri, filtres).
+function mkApplyModeVisibility() {
+  const staff = marketUi.mode === "staff";
+  const set = (id, hidden) => { const el = document.getElementById(id); if (el) el.hidden = hidden; };
+  set("marketSearchTitle", staff); set("marketSort", staff); set("marketPlayerFilters", staff);
+  set("marketStaffSearchTitle", !staff); set("marketStaffSort", !staff); set("marketStaffFilters", !staff);
+  const page = document.querySelector("#marcheSection .mk-page");
+  if (page) page.classList.toggle("mk-page--staff", staff);
+}
+function renderMarketModeToggle() {
+  const el = document.getElementById("marketModeToggle");
+  if (!el) return;
+  const counts = { players: mkOpenListings().length, staff: mkStaffOpenAll().length };
+  el.innerHTML = [["players", "Joueurs"], ["staff", "Staff"]].map(([k, t]) => {
+    const on = marketUi.mode === k;
+    return `<button type="button" role="tab" class="mk-mode-btn${on ? " on" : ""}" aria-selected="${on}" data-mk-mode="${k}">${MK_MODE_ICONS[k]}<span>${t}</span><span class="n">${counts[k]}</span></button>`;
+  }).join("");
+}
+function mkSetMode(mode) {
+  marketUi.mode = mode === "staff" ? "staff" : "players";
+  marketUi.sConfirm = null;
+  renderMarcheSection();
+}
+// Page Marché en mode Staff, filtrée sur un rôle (bouton « Recruter » /
+// « Changer » de la page Staff, lien de l'Entraînement…).
+function mkOpenStaffMarket(roleKey) {
+  marketUi.mode = "staff";
+  mkResetStaffFilters();
+  if (roleKey && STAFF_ROLE_BY_KEY[roleKey]) marketUi.sRole = roleKey;
+  TAB_HANDLERS.marche();
+  const title = document.getElementById("marketStaffSearchTitle");
+  const box = title && title.closest("section");
+  if (box && box.scrollIntoView) box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function renderMarketStaffKpis() {
+  const holder = document.getElementById("marketKpis");
+  if (!holder) return;
+  const now = Date.now();
+  const all = mkStaffOpenAll();
+  const mine = all.filter(x => staffHasMyBid(x.l));
+  const leads = mine.filter(x => x.l.currentBidderIdx === myTeamIndex);
+  const outs = mine.length - leads.length;
+  const budget = mkBudget();
+  const payroll = STAFF_ROLES.reduce((sum, r) => sum + (r.member() ? r.salary() : 0), 0);
+  const filled = STAFF_ROLES.filter(r => r.member()).length;
+  const inBudget = all.filter(x => minNextBidFor(x.l) <= budget).length;
+  const soon = all.filter(x => x.l.closesAt - now <= 24 * 3600 * 1000).length;
+  const vacant = STAFF_ROLES.filter(r => !r.member());
+  holder.innerHTML =
+    `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Budget club</div><div class="mk-kpi-val">${formatMoney(budget)}</div>` +
+      `<div class="mk-kpi-row"><span>Salaires staff</span><b>${formatMoney(payroll)}</b></div>` +
+      `<div class="mk-kpi-row"><span>Postes pourvus</span><b>${filled} / ${STAFF_ROLES.length}</b></div></div>` +
+    `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Enchères staff</div><div class="mk-kpi-val">${leads.length} <small>en tête</small></div>` +
+      `<div class="mk-kpi-row"><span>Dépassé${outs > 1 ? "s" : ""}</span><b class="${outs ? "is-bad" : ""}">${outs}</b></div>` +
+      `<div class="mk-kpi-row"><span>Prochaine clôture</span><b>${leads.length ? escapeHtml(mkTimeLeft(Math.min(...leads.map(x => x.l.closesAt)), now)) : "—"}</b></div></div>` +
+    `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Candidats</div><div class="mk-kpi-val">${all.length}</div>` +
+      `<div class="mk-kpi-row"><span>Dans mon budget</span><b>${inBudget}</b></div>` +
+      `<div class="mk-kpi-row"><span>Fin dans moins de 24 h</span><b>${soon}</b></div></div>` +
+    `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Postes vacants</div><div class="mk-kpi-val">${vacant.length} <small>/ ${STAFF_ROLES.length}</small></div>` +
+      `<div class="mk-kpi-bar"><i style="width:${(filled / STAFF_ROLES.length * 100).toFixed(1)}%"></i></div>` +
+      (vacant.length ? vacant.slice(0, 2).map(r => `<div class="mk-kpi-row"><span>${escapeHtml(r.label)}</span><b>${escapeHtml(staffCandidatesLabel(staffOpenListings(r).length))}</b></div>`).join("")
+        : `<div class="mk-kpi-row"><span>Tous les postes sont pourvus</span></div>`) +
+    `</div>`;
+}
+function renderMarketStaffFilterControls() {
+  const all = mkStaffOpenAll();
+  const u = marketUi;
+  const rolesEl = document.getElementById("marketStaffRoles");
+  if (rolesEl) {
+    rolesEl.innerHTML = [["all", "Tous", ""], ...STAFF_ROLES.map(r => [r.key, r.label, STAFF_ICONS[r.key]])].map(([k, t, ic]) => {
+      const n = k === "all" ? all.length : all.filter(x => x.role.key === k).length;
+      const on = u.sRole === k;
+      return `<button type="button" class="mk-rolecell${on ? " on" : ""}" aria-pressed="${on}" data-mk-staff-role="${k}">${ic}<span>${escapeHtml(t)}</span><span class="n">${n}</span></button>`;
+    }).join("");
+  }
+  const specEl = document.getElementById("marketStaffSpec");
+  if (specEl) {
+    const groups = [];
+    if (u.sRole === "all" || u.sRole === "coach") groups.push(["coach", "Entraîneur", Object.entries(COACH_SPECIALTIES).map(([k, s]) => [k, s.label])]);
+    if (u.sRole === "all" || u.sRole === "assistant") groups.push(["assistant", "Entraîneur adjoint", Object.entries(ASSISTANT_SPECIALTIES).map(([k, s]) => [k, s.label])]);
+    if (u.sSpec && !groups.some(([rk]) => u.sSpec.startsWith(rk + ":"))) u.sSpec = "";
+    specEl.innerHTML = `<option value="">${groups.length ? "Toutes les spécialités" : "Sans spécialité"}</option>` +
+      groups.map(([rk, label, opts]) => `<optgroup label="${escapeHtml(label)}">${opts.map(([k, t]) => `<option value="${rk}:${k}"${u.sSpec === `${rk}:${k}` ? " selected" : ""}>${escapeHtml(t)}</option>`).join("")}</optgroup>`).join("");
+    specEl.disabled = !groups.length;
+    specEl.value = u.sSpec;
+  }
+  [["marketStaffBudgetBtn", u.sBudget], ["marketStaffSoonBtn", u.sSoon], ["marketStaffMineBtn", u.sMine]].forEach(([id, on]) => {
+    const b = document.getElementById(id);
+    if (b) { b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); }
+  });
+  const sort = document.getElementById("marketStaffSort");
+  if (sort && sort.value !== u.sSort) sort.value = u.sSort;
+  const bounds = mkRangeBounds();
+  ["slevel", "ssal"].forEach(k => mkRenderRange(k, bounds));
+}
+function mkStaffCardHtml(role, l, now) {
+  const ident = staffIdentity(staffListingKey(l));
+  const lead = l.currentBidderIdx === myTeamIndex;
+  const out = !lead && staffHasMyBid(l);
+  const minBid = minNextBidFor(l);
+  const nBids = (l.bids || []).length;
+  const growth = (TRAINER_WEEKLY_GROWTH[l.level] || 0) * 100;
+  const ref = (role.baseSalaryTable || TRAINER_BASE_SALARY)[l.level] || 0;
+  const spec = l.specialty ? staffSpecialtyLabel(role.key, l.specialty) : "";
+  const current = role.member();
+  const inputId = `${role.inputPrefix}${l.id}`;
+  const keyId = `${role.key}:${l.id}`;
+  const confirm = marketUi.sConfirm && marketUi.sConfirm.key === role.key && marketUi.sConfirm.id === l.id ? marketUi.sConfirm : null;
+  const autoMax = myAutoMaxOf(l);
+  const budget = mkBudget();
+  const urgent = l.closesAt - now < 3600000;
+  const badge = lead ? `<span class="mk-badge lead">Vous êtes en tête</span>` : out ? `<span class="mk-badge out">Dépassé</span>` : "";
+  let action;
+  if (confirm) {
+    action = `<div class="mk-stf-confirm" role="alert">` +
+      `<p><b>${escapeHtml(STAFF_REPLACE_LABELS[role.key])}</b></p>` +
+      `<p>${escapeHtml(confirm.kind === "auto" ? `Plafond de ${formatMoney(confirm.amount)} par semaine` : `Enchère de ${formatMoney(confirm.amount)} par semaine`)}</p>` +
+      `<input type="hidden" id="${inputId}" value="${confirm.amount}">` +
+      `<div class="row"><button type="button" class="mk-btn mk-btn--primary" data-mk-staff-confirm="${keyId}">Confirmer l'enchère</button>` +
+      `<button type="button" class="mk-btn mk-btn--outline" data-mk-staff-cancel="${keyId}">Annuler</button></div></div>`;
+  } else {
+    const plus10 = Math.max(minBid, Math.round(minBid * 1.1 / 100) * 100);
+    action = `<div class="mk-bidrow">` +
+        `<input type="number" id="${inputId}" value="${minBid}" min="${minBid}" step="100" aria-label="Salaire proposé par semaine">` +
+        `<button type="button" class="mk-btn mk-btn--primary" data-mk-staff-bid="${keyId}">${lead ? "Augmenter mon enchère" : "Enchérir"}</button>` +
+        `<button type="button" class="mk-btn mk-btn--outline" data-mk-staff-auto="${keyId}" title="Le montant saisi devient votre plafond : on enchérit pour vous, au minimum, chaque fois qu'un autre club vous dépasse.">${autoMax != null ? "Changer le plafond" : "Enchère auto"}</button>` +
+      `</div>` +
+      (autoMax != null ? autoBidStatusHtml(autoMax, `data-mk-staff-auto-off="${keyId}"`) : "") +
+      `<div class="mk-quick"><button type="button" data-mk-staff-quick="${inputId}" data-v="${minBid}">Minimum</button><button type="button" data-mk-staff-quick="${inputId}" data-v="${plus10}">+10 %</button></div>` +
+      `<div class="mk-hint ${minBid > budget ? "warn" : ""}">${minBid > budget ? escapeHtml(`Au-delà de votre budget disponible (${formatMoney(budget)}).`) : "Le montant remporté devient son salaire de départ."}</div>`;
+  }
+  const replace = current
+    ? `<div class="mk-stf-replace">${STAFF_UI_ICONS.swap}<span>${escapeHtml(STAFF_REPLACE_LABELS[role.key])}</span>${staffStarsHtml(current.level)}</div>`
+    : "";
+  return `<article class="mk-card mk-lst mk-stf ${lead ? "is-lead" : out ? "is-out" : ""}" data-staff-listing="${keyId}" id="marketStaffCard_${role.key}_${l.id}">` +
+    `<div class="mk-lst-main">` +
+      `<div class="mk-lst-id">` +
+        `<div class="mk-avatar">${staffAvatarHtml(ident, STAFF_NEUTRAL_POLO, 92)}</div>` +
+        `<div class="mk-id-text">` +
+          `<div class="mk-id-top"><span class="pdp2-pos mk-stf-role">${STAFF_ICONS[role.key]}<span>${escapeHtml(role.label)}</span></span></div>` +
+          `<div class="mk-pname" data-no-i18n>${escapeHtml(ident.name)}</div>` +
+          `<div class="mk-chips">` +
+            `<span class="mk-chip">${staffStarsHtml(l.level)}</span>` +
+            (spec ? `<span class="mk-chip match">${escapeHtml(spec)}</span>` : "") +
+            `<span class="mk-chip">${nationFlagHtml(ident.nationality)} <span>${ident.age} ans</span></span>` +
+            `<span class="mk-chip">Salaire de réf. : <b>${escapeHtml(formatMoney(ref))}</b> / sem.</span>` +
+            `<span class="mk-chip">Hausse : <b>+${escapeHtml(staffNum(growth, 1))} %</b> / sem.</span>` +
+          `</div>` +
+        `</div>` +
+      `</div>` +
+      `<div class="mk-lst-prof mk-stf-prof"><div class="mk-stf-effect"><span class="stf-k">Effet</span>${staffEffectHtml(role.key, l.level, l.specialty)}</div>${replace}</div>` +
+      `<div class="mk-lst-deal market-card-bid">` +
+        `<div class="mk-deal-top">` +
+          `<div class="market-card-price"><div class="mk-deal-lbl">${l.currentBid ? "Enchère actuelle" : "Salaire de départ"}</div><b class="mk-deal-price">${formatMoney(l.currentBid || l.startPrice)}</b><div class="mk-deal-sub">${nBids ? `${nBids} enchère${nBids > 1 ? "s" : ""}` : "Aucune enchère"}</div></div>` +
+          `<span class="mk-timer ${urgent ? "urgent" : ""}">${MK_CLOCK}<span data-closes-at="${l.closesAt}">${escapeHtml(mkTimeLeft(l.closesAt, now))}</span></span>` +
+        `</div>` +
+        (badge ? `<div>${badge}</div>` : "") +
+        `<div class="market-card-action">${action}</div>` +
+      `</div>` +
+    `</div>` +
+  `</article>`;
+}
+function renderMarketStaffListings() {
+  mkApplyModeVisibility();
+  renderMarketStaffFilterControls();
+  const holder = document.getElementById("marketListings");
+  if (!holder) return;
+  const now = Date.now();
+  const total = mkStaffOpenAll().length;
+  const rows = mkStaffFiltered();
+  const active = mkStaffActive();
+  const count = document.getElementById("marketStaffResCount");
+  if (count) {
+    const label = rows.length > 1 ? `${rows.length} candidats` : `${rows.length} candidat`;
+    count.innerHTML = `<span>${escapeHtml(active ? `${label} sur ${total}` : label)}</span>` +
+      (active ? `<span class="mk-rescount-actions"><button type="button" class="mk-linkbtn amber" data-mk-staff-reset>Réinitialiser les filtres</button></span>` : "");
+  }
+  if (!total) {
+    holder.innerHTML = `<div class="mk-card mk-empty">Aucun candidat aux enchères pour l'instant, revenez plus tard.</div>`;
+    return;
+  }
+  if (!rows.length) {
+    holder.innerHTML = `<div class="mk-card mk-empty">Aucun candidat ne correspond à ces filtres.</div>`;
+    return;
+  }
+  holder.innerHTML = rows.map(({ role, l }) => mkStaffCardHtml(role, l, now)).join("");
+}
+function mkStaffSay(message, ok) {
+  marketFeedback(message, ok);
+  clearTimeout(marketFeedbackTimer);
+  marketFeedbackTimer = setTimeout(() => marketFeedback("", true), 5000);
+}
+// Enchérir / Enchère auto / Arrêter sur un candidat du staff. Poste déjà
+// pourvu et première enchère sur ce candidat : confirmation d'abord.
+function mkStaffAction(kind, keyId, confirmed) {
+  const [key, idStr] = keyId.split(":");
+  const role = STAFF_ROLE_BY_KEY[key];
+  const id = Number(idStr);
+  const l = role && (league[role.listKey] || []).find(x => x.id === id);
+  if (!role || !l) return;
+  const input = document.getElementById(`${role.inputPrefix}${id}`);
+  const amount = kind === "off" ? 0 : Math.round(Number(input && input.value) || 0);
+  if (kind !== "off" && !confirmed && role.member() && !staffHasMyBid(l)) {
+    marketUi.sConfirm = { key, id, kind, amount };
+    renderMarketStaffListings();
+    const btn = document.querySelector(`[data-mk-staff-confirm="${keyId}"]`);
+    if (btn) btn.focus();
+    return;
+  }
+  marketUi.sConfirm = null;
+  if (kind === "bid") {
+    staffPlaceBid(role, id, amount, mkStaffSay);
+    renderMarcheSection();
+    return;
+  }
+  setAutoBidFor(role.listKey, id, amount).then(r => {
+    const [msg, good] = autoBidMessage(r, amount);
+    mkStaffSay(msg, good);
+    renderMarcheSection();
+  });
 }
 
 function renderMarketFilterControls() {
@@ -46286,6 +46558,8 @@ function mkListingCardHtml(l, player, now) {
 }
 
 function renderMarketListings() {
+  if (marketUi.mode === "staff") { renderMarketStaffListings(); return; }
+  mkApplyModeVisibility();
   const holder = document.getElementById("marketListings");
   if (!holder) return;
   renderMarketFilterControls();
@@ -46387,6 +46661,19 @@ document.getElementById("marcheSection").addEventListener("click", (e) => {
   const t = e.target.closest("button");
   if (!t) return;
   const d = t.dataset;
+  if (d.mkMode) { mkSetMode(d.mkMode); return; }
+  // Mode Staff.
+  if (d.mkStaffRole) { marketUi.sRole = d.mkStaffRole; marketUi.sConfirm = null; renderMarketListings(); return; }
+  if (d.mkStaffBid) { mkStaffAction("bid", d.mkStaffBid, false); return; }
+  if (d.mkStaffAuto) { mkStaffAction("auto", d.mkStaffAuto, false); return; }
+  if (d.mkStaffAutoOff) { mkStaffAction("off", d.mkStaffAutoOff, true); return; }
+  if (d.mkStaffConfirm) { const c = marketUi.sConfirm; mkStaffAction(c && c.kind === "auto" ? "auto" : "bid", d.mkStaffConfirm, true); return; }
+  if (d.mkStaffCancel) { marketUi.sConfirm = null; renderMarketListings(); return; }
+  if (d.mkStaffQuick) { const input = document.getElementById(d.mkStaffQuick); if (input) { input.value = d.v; input.focus(); } return; }
+  if (d.mkStaffReset !== undefined) { mkResetStaffFilters(); renderMarketListings(); return; }
+  if (t.id === "marketStaffBudgetBtn") { marketUi.sBudget = !marketUi.sBudget; renderMarketListings(); return; }
+  if (t.id === "marketStaffSoonBtn") { marketUi.sSoon = !marketUi.sSoon; renderMarketListings(); return; }
+  if (t.id === "marketStaffMineBtn") { marketUi.sMine = !marketUi.sMine; renderMarketListings(); return; }
   if (d.bidListing) { mkPlaceBid(Number(d.bidListing)); return; }
   if (d.mkAuto) { mkSetAuto(Number(d.mkAuto), false); return; }
   if (d.mkAutoOff) { mkSetAuto(Number(d.mkAutoOff), true); return; }
@@ -46463,6 +46750,8 @@ document.getElementById("marcheSection").addEventListener("click", (e) => {
 document.getElementById("marcheSection").addEventListener("change", (e) => {
   const el = e.target;
   if (el.id === "marketSort") { marketUi.sort = el.value; renderMarketListings(); }
+  else if (el.id === "marketStaffSort") { marketUi.sSort = el.value; renderMarketListings(); }
+  else if (el.id === "marketStaffSpec") { marketUi.sSpec = el.value; renderMarketListings(); }
   else if (el.dataset && el.dataset.mkCritKey !== undefined) {
     marketUi.crit[Number(el.dataset.mkCritKey)].key = el.value;
     renderMarketCritPanel(); renderMarketListings();
@@ -46472,6 +46761,7 @@ document.getElementById("marcheSection").addEventListener("input", (e) => {
   const el = e.target;
   const cl = v => Math.max(0, Math.min(99, Math.round(Number(v) || 0)));
   if (el.id === "marketSearch") { marketUi.q = el.value; renderMarketListings(); }
+  else if (el.id === "marketStaffSearch") { marketUi.sQ = el.value; renderMarketListings(); }
   else if (el.id === "marketOriginFilter") planeteFilterCountries(document.getElementById("marketOriginBox"), el.value);
   else if (el.dataset && el.dataset.mkRangeIn) mkRangeInput(el);
   else if (el.dataset && el.dataset.mkCritMin !== undefined) { marketUi.crit[Number(el.dataset.mkCritMin)].min = cl(el.value); renderMarketListings(); }
@@ -53636,7 +53926,7 @@ const TAB_HANDLERS = {
   economie: () => { renderEconomieSection(); showPage("economieSection"); setActiveTab("economie"); },
   sponsors: () => { renderSponsorsPanel(); showPage("sponsorsSection"); setActiveTab("sponsors"); },
   salle: () => { renderSalleSection(); showPage("salleSection"); setActiveTab("salle"); },
-  staff: () => { for (const k in staffUi) staffUi[k].open = false; refreshCoachMarket(); refreshAnalystMarket(); refreshRecruiterMarket(); refreshMedicalMarkets(); renderStaffPanel(); showPage("staffSection"); setActiveTab("staff"); },
+  staff: () => { refreshCoachMarket(); refreshAnalystMarket(); refreshRecruiterMarket(); refreshMedicalMarkets(); renderStaffPanel(); showPage("staffSection"); setActiveTab("staff"); },
   medical: () => { renderMedicalSection(); showPage("medicalSection"); setActiveTab("medical"); },
   academie: () => { renderAcademieSection(); showPage("academieSection"); setActiveTab("academie"); },
   humeur: () => { renderHumeurSection(); showPage("humeurSection"); setActiveTab("humeur"); },

@@ -1413,6 +1413,17 @@ function heightMultiplierForProgram(programKey, height) {
 // une saison et demie pour un entraîneur de niveau intermédiaire) plutôt que
 // de garder indéfiniment le même. Congédier puis réembaucher (même niveau ou
 // un autre) réinitialise le salaire à sa valeur de départ.
+// Identité d'un membre du staff (2026-10-01, page Staff et marché du staff :
+// nom et visage générés côté client à partir de `sid`) : l'annonce gagnée
+// transmet son identité au membre engagé, et un membre congédié revient sur
+// le marché sous la même identité. Purement descriptif, aucun effet de jeu.
+function tagStaffIdentity(target, source) {
+  if (!target || !source) return target;
+  const sid = source.sid != null ? source.sid : source.id;
+  if (sid != null) target.sid = sid;
+  return target;
+}
+
 const TRAINER_LEVELS = [1, 2, 3, 4, 5];
 const TRAINER_BASE_SALARY = { 1: 800, 2: 1600, 3: 3000, 4: 5500, 5: 10000 };
 const TRAINER_WEEKLY_GROWTH = { 1: 0.010, 2: 0.016, 3: 0.024, 4: 0.034, 5: 0.046 };
@@ -13813,6 +13824,7 @@ class League {
       return;
     }
     buyer.hireTrainer(listing.level, amount, listing.specialty);
+    tagStaffIdentity(buyer.trainer, listing);
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
         type: "staff_hired", week: buyer.week,
@@ -13921,7 +13933,7 @@ class League {
     team.fireTrainer();
     if (!firedTrainer) return { ok: true, relisted: false };
     const discountedStartPrice = Math.max(1, Math.round(currentSalary * 0.7));
-    this._makeCoachListing(now, firedTrainer.level, discountedStartPrice, firedTrainer.specialty);
+    tagStaffIdentity(this._makeCoachListing(now, firedTrainer.level, discountedStartPrice, firedTrainer.specialty), firedTrainer);
     return { ok: true, relisted: true };
   }
 
@@ -13991,6 +14003,7 @@ class League {
       return;
     }
     buyer.hireVideoAnalyst(listing.level, amount);
+    tagStaffIdentity(buyer.videoAnalyst, listing);
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
         type: "staff_hired", week: buyer.week,
@@ -14072,7 +14085,7 @@ class League {
     team.fireVideoAnalyst();
     if (!firedAnalyst) return { ok: true, relisted: false };
     const discountedStartPrice = Math.max(1, Math.round(currentSalary * 0.7));
-    this._makeAnalystListing(now, firedAnalyst.level, discountedStartPrice);
+    tagStaffIdentity(this._makeAnalystListing(now, firedAnalyst.level, discountedStartPrice), firedAnalyst);
     return { ok: true, relisted: true };
   }
 
@@ -14140,6 +14153,7 @@ class League {
       return;
     }
     buyer.hireRecruiter(listing.level, amount);
+    tagStaffIdentity(buyer.recruiter, listing);
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
         type: "staff_hired", week: buyer.week,
@@ -14215,7 +14229,7 @@ class League {
     team.fireRecruiter();
     if (!firedRecruiter) return { ok: true, relisted: false };
     const discountedStartPrice = Math.max(1, Math.round(currentSalary * 0.7));
-    this._makeRecruiterListing(now, firedRecruiter.level, discountedStartPrice);
+    tagStaffIdentity(this._makeRecruiterListing(now, firedRecruiter.level, discountedStartPrice), firedRecruiter);
     return { ok: true, relisted: true };
   }
 
@@ -14290,6 +14304,7 @@ class League {
       return;
     }
     buyer.hireMedicalStaff(role, listing.level, amount);
+    tagStaffIdentity(buyer[role], listing);
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
         type: "staff_hired", week: buyer.week,
@@ -14348,7 +14363,7 @@ class League {
     team.fireMedicalStaff(role);
     if (!fired) return { ok: true, relisted: false };
     const discountedStartPrice = Math.max(1, Math.round(currentSalary * 0.7));
-    this._makeMedicalListing(role, now, fired.level, discountedStartPrice);
+    tagStaffIdentity(this._makeMedicalListing(role, now, fired.level, discountedStartPrice), fired);
     return { ok: true, relisted: true };
   }
 
@@ -14411,6 +14426,7 @@ class League {
     const amount = listing.currentBid;
     if (!buyer || (buyer.isHuman && amount > buyer.budget)) { listing.result = "buyer-failed"; return; }
     buyer.hireAssistantCoach(listing.specialty, listing.level, amount);
+    tagStaffIdentity(buyer.assistantCoach, listing);
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
         type: "staff_hired", week: buyer.week,
@@ -14460,7 +14476,7 @@ class League {
     const currentSalary = team.assistantCoachSalary();
     team.fireAssistantCoach();
     if (!fired) return { ok: true, relisted: false };
-    this._makeAssistantCoachListing(now, fired.level, fired.specialty, Math.max(1, Math.round(currentSalary * 0.7)));
+    tagStaffIdentity(this._makeAssistantCoachListing(now, fired.level, fired.specialty, Math.max(1, Math.round(currentSalary * 0.7))), fired);
     return { ok: true, relisted: true };
   }
 
@@ -16320,6 +16336,7 @@ function teamFromSave(data) {
       weeksEmployed: data.trainer.weeksEmployed || 0,
       baseSalary: data.trainer.baseSalary != null ? data.trainer.baseSalary : (TRAINER_BASE_SALARY[data.trainer.level] || 0),
       specialty: data.trainer.specialty,
+      ...(data.trainer.sid != null ? { sid: data.trainer.sid } : {}),
     };
   }
   // Analyste vidéo — même logique de restauration que l'entraîneur
@@ -16331,6 +16348,7 @@ function teamFromSave(data) {
       level: data.videoAnalyst.level,
       weeksEmployed: data.videoAnalyst.weeksEmployed || 0,
       baseSalary: data.videoAnalyst.baseSalary != null ? data.videoAnalyst.baseSalary : (TRAINER_BASE_SALARY[data.videoAnalyst.level] || 0),
+      ...(data.videoAnalyst.sid != null ? { sid: data.videoAnalyst.sid } : {}),
     };
   }
   // Recruteur — même logique de restauration que l'entraîneur/l'analyste
@@ -16340,6 +16358,7 @@ function teamFromSave(data) {
       level: data.recruiter.level,
       weeksEmployed: data.recruiter.weeksEmployed || 0,
       baseSalary: data.recruiter.baseSalary != null ? data.recruiter.baseSalary : (TRAINER_BASE_SALARY[data.recruiter.level] || 0),
+      ...(data.recruiter.sid != null ? { sid: data.recruiter.sid } : {}),
     };
   }
   // Staff médical — même logique (absent d'une sauvegarde plus ancienne :
@@ -16351,6 +16370,7 @@ function teamFromSave(data) {
         level: m.level,
         weeksEmployed: m.weeksEmployed || 0,
         baseSalary: m.baseSalary != null ? m.baseSalary : (TRAINER_BASE_SALARY[m.level] || 0),
+        ...(m.sid != null ? { sid: m.sid } : {}),
       };
     }
   });
@@ -16363,6 +16383,7 @@ function teamFromSave(data) {
       weeksEmployed: a.weeksEmployed || 0,
       specialty: a.specialty,
       baseSalary: a.baseSalary != null ? a.baseSalary : (ASSISTANT_BASE_SALARY[a.level] || 0),
+      ...(a.sid != null ? { sid: a.sid } : {}),
     };
   }
   // Académie de jeunes (voir serializeTeam ci-dessus) : `[]`/`1` par défaut

@@ -123,7 +123,8 @@ check(Math.abs(tot.pass / N) < 0.5, "l'adjoint défensif ne touche pas la passe"
   check(typeof A.bidOnAssistantCoachListing === "function" && typeof A.fireAssistantCoach === "function", "actions serveur exportées");
   check(/refreshAssistantCoachMarket\(now\)/.test(auto), "marché rafraîchi à chaque passage serveur");
   const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf-8");
-  check(html.includes('id="staffAssistantPanel"') && html.includes('key: "assistant", label: "Entraîneur adjoint"'), "section Entraîneur adjoint sur la page Staff");
+  // Staff v2 (2026-10-01) : carte de poste sur la page Staff (id staffAssistantCurrent), recrutement dans le Marché.
+  check(html.includes('currentId: "staffAssistantCurrent"') && html.includes('key: "assistant", label: "Entraîneur adjoint"'), "poste Entraîneur adjoint sur la page Staff");
 }
 
 // 8) Navigateur : section Entraîneur adjoint, filtre par spécialité (retour
@@ -138,23 +139,28 @@ check(Math.abs(tot.pass / N) < 0.5, "l'adjoint défensif ne touche pas la passe"
     const dom = await openGame(html, baseUrl);
     const doc = dom.window.document;
     const win = dom.window;
+    // Staff v2 (2026-10-01) : « Recruter un entraîneur adjoint » ouvre le
+    // Marché en mode Staff, filtré sur l'adjoint ; filtre de spécialité.
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "staff").click();
-    doc.querySelector('[data-staff-toggle-role="assistant"]').click();
+    doc.querySelector('[data-staff-recruit="assistant"]').click();
     await flush(dom);
-    const specBtns = doc.querySelectorAll('#staffAssistantHireGrid [data-staff-specialty]');
-    check(specBtns.length === 5, "filtre de spécialité : Toutes + 4 spécialités");
-    const total = doc.querySelectorAll("#staffAssistantHireGrid table.stf-table tbody tr").length;
-    const target = [...specBtns].find(b => b.dataset.staffSpecialty !== "assistant:" && !b.disabled);
-    target.click();
+    const cards = () => [...doc.querySelectorAll("#marketListings .mk-stf")];
+    const total = cards().length;
+    check(total > 0 && cards().every(c => c.dataset.staffListing.startsWith("assistant:")), "Marché en mode Staff filtré sur l'entraîneur adjoint");
+    const spec = doc.getElementById("marketStaffSpec");
+    const opts = [...spec.querySelectorAll("option")].filter(o => o.value);
+    check(opts.length === 4 && opts.every(o => o.value.startsWith("assistant:")), "filtre de spécialité : les 4 spécialités d'adjoint");
+    const key = win.eval(`league.assistantCoachListings.find(l => l.status === "open").specialty`);
+    spec.value = `assistant:${key}`;
+    spec.dispatchEvent(new win.Event("change", { bubbles: true }));
     await flush(dom);
-    const key = target.dataset.staffSpecialty.split(":")[1];
-    const rows = [...doc.querySelectorAll("#staffAssistantHireGrid table.stf-table tbody tr")];
     const expected = win.eval(`league.assistantCoachListings.filter(l => l.status === "open" && l.specialty === "${key}").length`);
     const label = ASSISTANT_SPECIALTIES[key].label;
-    check(rows.length === Math.min(expected, win.eval("STAFF_LISTINGS_COLLAPSED_COUNT")) && rows.every(r => r.textContent.includes(label)), `filtre « ${label} » : seuls ses candidats sont listés`);
-    doc.querySelector('[data-staff-specialty="assistant:"]').click();
+    check(cards().length === expected && cards().every(r => r.textContent.includes(label)), `filtre « ${label} » : seuls ses candidats sont listés`);
+    spec.value = "";
+    spec.dispatchEvent(new win.Event("change", { bubbles: true }));
     await flush(dom);
-    check(doc.querySelectorAll("#staffAssistantHireGrid table.stf-table tbody tr").length === total, "« Toutes » réaffiche tous les candidats");
+    check(cards().length === total, "« Toutes les spécialités » réaffiche tous les candidats");
     dom.window.close();
   } finally {
     server.close();

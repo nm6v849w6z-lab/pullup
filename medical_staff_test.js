@@ -284,18 +284,22 @@ for (const role of ["doctor", "physio"]) {
     const win = dom.window;
     const tab = [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "staff");
     tab.click();
-    const slots = doc.querySelectorAll("#staffSlots .stf-slot");
+    // Page Staff v2 (2026-10-01) : 6 cartes de poste, recrutement dans le
+    // Marché en mode Staff (bouton « Recruter un médecin »).
+    const slots = doc.querySelectorAll("#staffSlots .stf-card");
     if (slots.length !== 6) throw new Error(`❌ L'onglet Staff devrait afficher 6 postes (trouvé ${slots.length}).`);
     if (!doc.querySelector("#staffDoctorCurrent .staff-none") || !doc.querySelector("#staffPhysioCurrent .staff-none")) {
-      throw new Error("❌ Sans staff médical, les messages 'Aucun médecin/kiné sous contrat' devraient s'afficher.");
+      throw new Error("❌ Sans staff médical, les cartes « Poste à pourvoir » du médecin et du kiné devraient s'afficher.");
     }
-    if (doc.getElementById("staffDoctorTitle").textContent !== "Engager un médecin") throw new Error("❌ Titre attendu : Engager un médecin.");
-    const rows = doc.querySelectorAll("#staffDoctorHireGrid table.stf-table tbody tr").length;
+    doc.querySelector('[data-staff-recruit="doctor"]').click();
+    if (win.eval("currentVisiblePageId()") !== "marcheSection" || win.eval("marketUi.mode") !== "staff") throw new Error("❌ « Recruter un médecin » devrait ouvrir le Marché en mode Staff.");
+    const rows = doc.querySelectorAll('#marketListings .mk-stf[data-staff-listing^="doctor:"]').length;
     const humans = win.eval("league.teams.filter(t => t.isHuman).length");
     if (rows !== 2 * humans) throw new Error(`❌ Le marché des médecins devrait proposer ${2 * humans} candidats (trouvé ${rows}).`);
+    if (doc.querySelectorAll("#marketListings .mk-stf").length !== rows) throw new Error("❌ Le marché devrait être filtré sur les médecins.");
 
-    const bidBtn = doc.querySelector('#staffDoctorHireGrid [data-staff-bid^="doctor:"]');
-    const id = Number(bidBtn.dataset.staffBid.split(":")[1]);
+    const bidBtn = doc.querySelector('#marketListings [data-mk-staff-bid^="doctor:"]');
+    const id = Number(bidBtn.dataset.mkStaffBid.split(":")[1]);
     bidBtn.click();
     await flush(dom);
     const leading = win.eval(`league.doctorListings.find(l => l.id === ${id}).currentBidderIdx === myTeamIndex`);
