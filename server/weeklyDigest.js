@@ -725,7 +725,7 @@ function renderDigest(data, lang, { gameUrl = `${siteUrl()}/`, unsubscribeUrl = 
     }
     rowsArr.push(row(`<b>${esc(S.budget)}</b>`, money(f.budget, S), { color: C.amber }));
     text.push(`== ${S.finances} ==`);
-    if (f.hasWeek) text.push(`${S.income}${CO}${signedMoney(f.income, S)}`, `${S.expenses} : ${signedMoney(f.expenses, S)}`, `${S.net} : ${signedMoney(f.net, S)}`);
+    if (f.hasWeek) text.push(`${S.income}${CO}${signedMoney(f.income, S)}`, `${S.expenses}${CO}${signedMoney(f.expenses, S)}`, `${S.net}${CO}${signedMoney(f.net, S)}`);
     text.push(`${S.budget}${CO}${money(f.budget, S)}`, "");
     blocks.push(section(S.finances, rowsTable(markRows(rowsArr))));
   }
