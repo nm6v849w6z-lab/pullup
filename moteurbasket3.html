@@ -5314,7 +5314,7 @@
   .tm-badge.grey{background:var(--panel-2); color:var(--ink-dim);}
   .tm-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:14px; min-width:0;}
   .tm-cols{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:20px; align-items:start;}
-  .tm-cols2{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px; align-items:start;}
+  .tm-col{display:flex; flex-direction:column; gap:20px; min-width:0;}
   .tm-h{display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap;}
   .tm-h-main{display:flex; gap:12px; align-items:center; min-width:0;}
   .tm-h h3{margin:0; font-size:19px; font-weight:800; color:var(--ink);}
@@ -5328,6 +5328,7 @@
   .tm-label{font-size:11.5px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:8px;}
   .tm-slots{display:flex; flex-direction:column; gap:10px;}
   .tm-slot{display:grid; grid-template-columns:auto minmax(0,1.1fr) minmax(0,1.4fr) auto auto; gap:12px; align-items:start; padding:12px 14px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; position:relative;}
+  .tm-slot > .tm-av{align-self:center;}
   .tm-av{width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; background:var(--line); color:var(--ink); flex:none; overflow:hidden;}
   .tm-av.coach{background:rgba(240,162,60,.16); color:var(--amber);}
   .tm-av.team{background:rgba(51,180,161,.14); color:var(--ok);}
@@ -5407,6 +5408,7 @@
   .tm-tier.maitrisee{background:rgba(51,180,161,.14); color:var(--ok);}
   .tm-tier.signature{background:rgba(196,155,255,.16); color:#c49bff;}
   .tm-gain{color:var(--ok); font-weight:800; font-size:12px;}
+  .tm-gain.off{color:var(--ink-dim); font-weight:600;}
   .tm-pair{display:flex; align-items:center; gap:10px; padding:11px 12px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; flex-wrap:wrap;}
   .tm-pair .lk{color:var(--ink-faint); font-size:16px;}
   .tm-pair .who{flex:1 1 110px; min-width:0;}
@@ -5418,6 +5420,7 @@
   .tm-xp-row{display:grid; grid-template-columns:minmax(0,1fr) minmax(60px,120px) 72px; gap:10px; align-items:center;}
   .tm-xp-row > span:first-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .tm-xp-row small{color:var(--ink-dim);}
+  .tm-xp-idle{font-size:12.5px; color:var(--ink-dim); line-height:1.5;}
   .tm-up{color:var(--ok);}
   .tm-flat{color:var(--amber);}
   .tm-low{color:var(--danger);}
@@ -5449,7 +5452,7 @@
   #lastTrainingReportHolder .tm-card{gap:14px;}
   #lastTrainingReportHolder .tp-hist, #lastTrainingReportHolder .tp-hist-lock{padding:0;}
   @media (max-width: 900px){
-    .tm-cols, .tm-cols2{grid-template-columns:minmax(0,1fr);}
+    .tm-cols{grid-template-columns:minmax(0,1fr);}
     .tm-slot{grid-template-columns:auto minmax(0,1fr) auto auto;}
     .tm-slot .tm-prog{grid-column:1 / -1; grid-row:2;}
     .tm-tip{right:auto; left:auto; right:0;}
@@ -8060,12 +8063,14 @@
         <div id="trainingCoachCard"></div>
       </div>
       <div class="tm-cols">
-        <section class="tm-card" id="trainingPlansCard" aria-labelledby="tpFondTitle"></section>
-        <section class="tm-card" id="collectiveTrainingConfig" aria-labelledby="tpCollTitle"></section>
-      </div>
-      <div class="tm-cols2">
-        <section class="tm-card" id="mentorshipCard" aria-labelledby="tpMentorTitle"></section>
-        <section class="tm-card" id="experienceCard" aria-labelledby="tpXpTitle"></section>
+        <div class="tm-col">
+          <section class="tm-card" id="trainingPlansCard" aria-labelledby="tpFondTitle"></section>
+          <section class="tm-card" id="mentorshipCard" aria-labelledby="tpMentorTitle"></section>
+        </div>
+        <div class="tm-col">
+          <section class="tm-card" id="collectiveTrainingConfig" aria-labelledby="tpCollTitle"></section>
+          <section class="tm-card" id="experienceCard" aria-labelledby="tpXpTitle"></section>
+        </div>
       </div>
       <div id="lastTrainingReportHolder"></div>
     </div>
@@ -41603,16 +41608,22 @@ function trainingKnowledgeHtml(days) {
   const k = teamA.tacticalKnowledge || {};
   const items = [];
   const seen = new Set();
-  const add = (cat, value, note) => {
+  const add = (cat, value, note, worked) => {
     const key = cat + ":" + value;
-    if (seen.has(key) || !k[cat] || typeof k[cat][value] !== "number") return;
+    if (!k[cat] || typeof k[cat][value] !== "number") return;
+    if (seen.has(key)) {
+      const it = items.find(x => x.cat === cat && x.value === value);
+      if (it && note) { it.days.push(note); }
+      return;
+    }
     seen.add(key);
-    items.push({ cat, value, level: k[cat][value], note });
+    items.push({ cat, value, level: k[cat][value], days: note ? [note] : [], worked: !!worked });
   };
+  // Un jour « Tactique » travaille UNE seule option : celle choisie ce jour-là.
   const planned = days.filter(d => !d.past && !d.match && !d.friendly && d.option === "tactique");
   planned.forEach(d => {
     const t = teamA.collectiveDayConfig(d.dayIndex).trainedTactics;
-    if (t) add(t.category, t.value, `travaillée ${TRAINING_DAY_LONG[d.i].toLowerCase()}`);
+    if (t) add(t.category, t.value, TRAINING_DAY_LONG[d.i].toLowerCase(), true);
   });
   (teamA.offensivePriorities || []).forEach(v => add("offense", v, null));
   add("defense", teamA.defense, null);
@@ -41620,12 +41631,12 @@ function trainingKnowledgeHtml(days) {
   return `<div class="tm-kn"><div class="tm-label">Connaissance tactique en cours</div>` + items.map(it => {
     const tier = tacticTierFor(it.level);
     const gain = Math.round(tacticDailyGainForLevel(it.level));
-    const sub = TACTIC_CATEGORY_LABELS[it.cat] + (it.note ? ` · ${it.note}` : "");
+    const sub = TACTIC_CATEGORY_LABELS[it.cat] + (it.days.length ? ` · travaillée ${it.days.join(", ")}` : "");
     return `<div class="tm-kn-row"><div>${escapeHtml(it.value)}<small>${escapeHtml(sub)}</small></div>` +
       `<div class="tm-track" title="${Math.round(it.level)}/100"><div class="tm-fill" style="width:${Math.max(3, Math.round(it.level))}%;background:var(--ok)"></div></div>` +
-      `<div class="tm-kn-right"><span class="tm-tier ${tier.key}">${escapeHtml(tier.label)}</span><span class="tm-gain">+${gain}/jour</span></div></div>`;
+      `<div class="tm-kn-right"><span class="tm-tier ${tier.key}">${escapeHtml(tier.label)}</span>${it.worked ? `<span class="tm-gain">+${gain} × ${it.days.length} j</span>` : `<span class="tm-gain off">en match</span>`}</div></div>`;
   }).join("") +
-    `<div class="tm-note">Effet en match : de −8 % (Découverte) à +8 % (Signature). Plus une tactique est neuve, plus on l'apprend vite.</div></div>`;
+    `<div class="tm-note">Chaque jour « Tactique » travaille une seule option, celle choisie pour ce jour. Les autres options progressent en les jouant en match. Effet en match : de −8 % (Découverte) à +8 % (Signature).</div></div>`;
 }
 function setCollectiveDayOption(dayIndex, option, trainedTactics) {
   const now = Date.now();
@@ -41777,7 +41788,9 @@ function addMentorship(youngId, veteranId) {
 function renderExperienceCard() {
   const holder = document.getElementById("experienceCard");
   if (!holder) return;
-  const rows = teamA.players.map(p => ({ p, secs: playerWeekSeconds(p) })).sort((a, b) => b.secs - a.secs);
+  const all = teamA.players.map(p => ({ p, secs: playerWeekSeconds(p) })).sort((a, b) => b.secs - a.secs);
+  const rows = all.filter(r => r.secs >= 60);
+  const idle = all.filter(r => r.secs < 60);
   let html = `<div class="tm-h"><div><h3 id="tpXpTitle">Expérience</h3><span class="tm-sub">Le mental progresse avec les minutes jouées</span></div></div><div class="tm-xp">`;
   rows.forEach(({ p, secs }) => {
     const mult = mentalExperienceMult(secs);
@@ -41786,7 +41799,9 @@ function renderExperienceCard() {
     html += `<div class="tm-xp-row"><span>${escapeHtml(p.name)} <small>· ${Math.round(secs / 60)} min</small></span>` +
       `<div class="tm-track"><div class="tm-fill" style="width:${Math.max(4, Math.round(x * 100))}%;background:#7fb6ff"></div></div><span class="${tier[1]}">${tier[0]}</span></div>`;
   });
-  html += `</div><div class="tm-note">Minutes de la semaine en cours (titulaire régulier ≈ 60 min).</div>`;
+  html += `</div>`;
+  if (idle.length) html += `<div class="tm-xp-idle"><span class="tm-low">Sans minutes cette semaine</span> · ${idle.map(r => escapeHtml(r.p.name)).join(", ")}</div>`;
+  html += `<div class="tm-note">Minutes de la semaine en cours (titulaire régulier ≈ 60 min).</div>`;
   holder.innerHTML = html;
 }
 
