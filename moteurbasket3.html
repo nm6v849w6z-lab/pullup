@@ -2830,6 +2830,7 @@
   .pdp-contract-sale{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; margin:18px 0 16px; align-items:stretch;}
   .pdp-contract-sale #pdpContractCard, .pdp-contract-sale #pdpSaleCard, .pdp-contract-sale #pdpPersoCard{margin-top:0; margin-bottom:0;}
   .pdp-side-col{display:flex; flex-direction:column; gap:18px; min-width:0;}
+  .pdp-contract-sale > #pdpContractCard{align-self:start;}
   .pdp-side-col > #pdpPersoCard{flex:1;}
   @media (max-width:900px){ .pdp-contract-sale{grid-template-columns:minmax(0,1fr);} }
   .pdp-contract-head{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; font-size:15px; color:var(--ink);}
@@ -31419,9 +31420,11 @@ function renderPlayerDetail(teamIdx, playerId) {
   // encapsulée dans une carte .pdp-card tout en bas, réservée à isOwnTeam.
   // Ajoute la valorisation par ventes comparables (comparableSalesValuation
   // ci-dessus) quand le joueur n'est pas déjà en vente. ----
-  // Contrat à gauche ; Mise en vente puis Personnalisation à droite, bas
-  // des deux colonnes alignés (retours utilisateur 2026-10-01).
-  if (isOwnTeam) html += `<div class="pdp-contract-sale">` + playerContractCardHtml(team, player) + `<div class="pdp-side-col">`;
+  // Mise en vente puis Personnalisation à gauche, Contrat à droite (retours
+  // utilisateur 2026-10-01) : la colonne de gauche s'étire jusqu'au bas de
+  // la carte Contrat quand celle-ci est plus haute ; la carte Contrat, elle,
+  // garde la hauteur de son contenu (pas de grand vide sans prolongation).
+  if (isOwnTeam) html += `<div class="pdp-contract-sale"><div class="pdp-side-col">`;
   if (isOwnTeam) {
     html += `<div class="pdp-card" id="pdpSaleCard"><h3>Mise en vente</h3>`;
     if (!onMarket && league.contractSaleBlocked(player)) {
@@ -31443,7 +31446,8 @@ function renderPlayerDetail(teamIdx, playerId) {
     }
     html += `<div id="playerDetailMarketFeedback"></div>`;
     html += `</div>`; // #pdpSaleCard
-    html += playerPersonalizationCardHtml(team, player) + `</div></div>`; // .pdp-side-col, .pdp-contract-sale
+    html += playerPersonalizationCardHtml(team, player) + `</div>`; // .pdp-side-col
+    html += playerContractCardHtml(team, player) + `</div>`; // .pdp-contract-sale
   }
   // Le tableau "Match par match" vivait ici (voir git blame) — retiré
   // (retour utilisateur, 2026-09-24 : "enleve le match par match en bas"),
