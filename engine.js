@@ -2188,6 +2188,7 @@ const FINANCE_CATEGORIES = [
   { key: "tvstation", dir: "in", label: "Station TV", re: /^Recettes station TV/ },
   { key: "prizes", dir: "in", label: "Primes (coupe, montée…)", re: /^Prime de (Coupe|Supercoupe|montée)/ },
   { key: "sales", dir: "in", label: "Ventes de joueurs", re: /^Vente de / },
+  { key: "subsidy", dir: "in", label: "Subvention de démarrage", re: /^Subvention de démarrage/ },
   { key: "other_in", dir: "in", label: "Autres recettes", re: null },
   { key: "wages", dir: "out", label: "Salaires des joueurs", re: /^Salaires des joueurs/ },
   { key: "staff", dir: "out", label: "Salaires du staff", re: /^Salaire du staff/ },

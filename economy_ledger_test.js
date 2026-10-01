@@ -9,7 +9,7 @@ function check(c, m) { if (!c) throw new Error("❌ " + m); console.log("✅ " +
 (async () => {
   const cat = Engine.financeCategoryOf;
   check(cat("Billetterie vs Nice (3000 spect.)", 1) === "tickets" && cat("Prime de victoire Bar", 1) === "sponsors" && cat("Salaire du staff (médecin)", -1) === "staff"
-    && cat("Station TV : Studio local", -1) === "works" && cat("Achat de X (enchères)", -1) === "purchases" && cat("Subvention de démarrage", 1) === "other_in", "catégories des transactions");
+    && cat("Station TV : Studio local", -1) === "works" && cat("Achat de X (enchères)", -1) === "purchases" && cat("Subvention de démarrage", 1) === "subsidy" && cat("Sponsor Fnac (Maillot)", 1) === "sponsors", "catégories des transactions (subvention et sponsors à part)");
   const lg = Engine.generateLeague(Engine.generateStartingRoster("X"));
   const t = lg.teams[0];
   t.week = 4; t.recordTransaction("Salaires des joueurs", -1000); t.recordTransaction("Droits TV (Division I)", 5000); t.recordTransaction("Droits TV (Division I)", 5000);
@@ -28,6 +28,8 @@ function check(c, m) { if (!c) throw new Error("❌ " + m); console.log("✅ " +
   check(/Semaine 3/.test(txt()) && /Semaine 2/.test(txt()) && /Saison/.test(txt()), "trois vues : semaine en cours, précédente, saison");
   check(/Sponsors/.test(txt()) && /Salaires des joueurs/.test(txt()) && /sem\. 2/.test(txt()), "semaine en cours comparée à la précédente");
   check(/Solde de la semaine \(en cours\) ?−20\s?000/.test(txt().replace(/\u202f|\u00a0/g," ")), "solde de la semaine en cours");
+  card.querySelector('[data-eco-ledger="prev"]').click();
+  check(/Sponsors/.test(txt()) && /Droits TV/.test(txt()) && /Boutique des supporters/.test(txt()), "semaine sans sponsor : ligne Sponsors (et Droits TV, Boutique) affichée quand même");
   card.querySelector('[data-eco-ledger="season"]').click();
   check(/Solde de la saison ?\+30\s?000/.test(txt().replace(/\u202f|\u00a0/g," ")) && /Billetterie/.test(txt()), "vue saison : cumul");
   server.close();
