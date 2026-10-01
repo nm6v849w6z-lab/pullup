@@ -39,6 +39,7 @@ function leanPlayerRecord(player) {
   const r = Engine.serializePlayerRecord(player);
   r.matchLog = [];
   r.progressLog = [];
+  r.weeklyHistory = [];
   delete r._trainProgress;
   return r;
 }

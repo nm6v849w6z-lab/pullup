@@ -34,6 +34,9 @@ const HIDDEN_PLAYER_FIELDS = [
   "retirementTalks", "pendingMatchBoost", "forSale", "salePrice", "trainingSecondsPlayedByPosition",
   // Contrats (demande du 2026-10-01) : négociations privées du club.
   "nextSalary", "lastContractOfferWeek", "raiseRequest", "raiseRequestSeason", "extensionRequestSeason",
+  // Historique hebdomadaire (permaliens, 2026-10-01) : caractéristiques
+  // semaine par semaine, donc jamais pour un autre club (même sur le marché).
+  "weeklyHistory",
 ];
 // En plus, pour un autre championnat (aucune simulation dans le navigateur).
 const FOREIGN_EXTRA_PLAYER_FIELDS = ["attrs", "aggressiveness"];

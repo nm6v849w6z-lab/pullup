@@ -254,7 +254,10 @@ opponentRow.click();
 // dans la sous-vue « Effectif ».
 const effectifSubview = doc2.querySelector('#teamDetailContent [data-team-detail-subview="effectif"]');
 if (effectifSubview) effectifSubview.click();
-const opponentPlayerLink = doc2.querySelector("#teamDetailContent .player-link");
+// Un joueur PAS en vente : une annonce ouverte rend ses caractéristiques
+// visibles (et les bots mettent en vente leurs joueurs à 50 de général ou plus).
+const opponentPlayerLink = [...doc2.querySelectorAll("#teamDetailContent .player-link")].find(a =>
+  !win2.eval(`(league.transferListings || []).some(l => l.status === "open" && String(l.playerId) === "${a.dataset.playerId}")`));
 if (!opponentPlayerLink) throw new Error("❌ (setup) la fiche équipe adverse devrait afficher des liens joueur cliquables.");
 const oppName = opponentPlayerLink.textContent;
 opponentPlayerLink.click();
