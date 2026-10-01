@@ -3885,6 +3885,7 @@ window.HM_I18N_EN = {
   "ESPACE À LOUER": "SPACE FOR RENT",
   "Favoris": "Favorites",
   "Épingler dans les favoris": "Pin to favorites",
+  "Glisser pour réordonner": "Drag to reorder",
   "Retirer des favoris": "Remove from favorites",
   "Affluence — tous les matchs à domicile": "Attendance — all home games",
   "Cliquez sur un bâtiment pour le construire ou l'améliorer": "Click a building to build or upgrade it",

@@ -3887,6 +3887,7 @@ window.HM_I18N_EL = {
   "ESPACE À LOUER": "ΧΩΡΟΣ ΠΡΟΣ ΕΝΟΙΚΙΑΣΗ",
   "Favoris": "Αγαπημένα",
   "Épingler dans les favoris": "Καρφίτσωμα στα αγαπημένα",
+  "Glisser pour réordonner": "Σύρε για αναδιάταξη",
   "Retirer des favoris": "Αφαίρεση από τα αγαπημένα",
   "Affluence — tous les matchs à domicile": "Προσέλευση — όλοι οι εντός έδρας αγώνες",
   "Cliquez sur un bâtiment pour le construire ou l'améliorer": "Κάνε κλικ σε ένα κτίριο για να το χτίσεις ή να το αναβαθμίσεις",

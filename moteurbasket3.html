@@ -1871,6 +1871,17 @@
   .sidebar-group.is-collapsed .sidebar-item:not(:has(.tab-btn.active)){display:none;}
   .sidebar-favs{display:flex; flex-direction:column; gap:2px; margin-top:6px; padding-top:6px; border-top:1px solid var(--line-soft);}
   .sidebar-favs[hidden]{display:none;}
+  /* Poignée pour réordonner les favoris (glisser, ou flèches ↑/↓ au clavier). */
+  .sidebar-fav-grip{position:absolute; right:32px; top:50%; transform:translateY(-50%); width:22px; height:24px; display:inline-flex; align-items:center; justify-content:center;
+    background:none; border:0; border-radius:6px; color:var(--ink-faint); cursor:grab; opacity:0; transition:opacity .12s ease; touch-action:none;}
+  .sidebar-favs .sidebar-item:hover .sidebar-fav-grip, .sidebar-fav-grip:focus-visible{opacity:1;}
+  .sidebar-fav-grip:hover{background:var(--panel-2); color:var(--ink);}
+  @media (pointer:coarse){ .sidebar-fav-grip{opacity:.7;} }
+  .sidebar-favs .sidebar-fav{padding-right:58px;}
+  .sidebar-favs.is-dragging .sidebar-item{transition:transform .08s ease;}
+  .sidebar-favs .sidebar-item.is-dragged{z-index:2;}
+  .sidebar-favs .sidebar-item.is-dragged .sidebar-fav{background:var(--panel-2); border-color:var(--amber); box-shadow:0 6px 16px rgba(0,0,0,.35);}
+  .sidebar-favs .sidebar-item.is-dragged .sidebar-fav-grip{opacity:1; cursor:grabbing; color:var(--amber);}
   .sidebar-favs-label{font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-faint); font-weight:700; padding:0 10px; margin:0 0 2px;}
   .tab-btn.sidebar-link{
     display:flex; align-items:center; gap:10px; width:100%; text-align:left;
@@ -25442,7 +25453,13 @@ initSidebarGroups();
 // punaise à droite de chaque onglet des groupes l'épingle sous Messagerie
 // (copie de l'onglet, même data-tab, donc même navigation) ; les groupes
 // peuvent alors rester fermés. Liste gardée dans localStorage
-// "hm-sidebar-favs", dans l'ordre d'ajout.
+// "hm-sidebar-favs", dans l'ordre d'ajout — puis dans l'ordre choisi :
+// (suggestion Discord 2026-10-01, « rearrange/move the bookmark so you can
+// have them in whatever order you want ») une poignée ⋮⋮ sur chaque favori
+// se glisse (souris ou doigt) pour le déplacer ; au clavier, ↑/↓ sur la
+// poignée.
+const SIDEBAR_GRIP_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+let sidebarFavDragging = false;
 const SIDEBAR_PIN_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg>';
 function sidebarFavs() {
   try { const v = JSON.parse(localStorage.getItem("hm-sidebar-favs") || "[]"); return Array.isArray(v) ? v.filter(k => typeof k === "string") : []; } catch (e) { return []; }
@@ -25455,7 +25472,7 @@ function sidebarGroupLink(key) {
 }
 function renderSidebarFavs() {
   const holder = document.getElementById("sidebarFavs");
-  if (!holder) return;
+  if (!holder || sidebarFavDragging) return;
   const favs = sidebarFavs().filter(k => sidebarGroupLink(k));
   const activeKey = (document.querySelector(".sidebar-group .tab-btn.active") || {}).dataset;
   let html = favs.length ? `<div class="sidebar-favs-label">Favoris</div>` : "";
@@ -25466,7 +25483,8 @@ function renderSidebarFavs() {
     const badgeHtml = badge && !badge.classList.contains("hidden") && badge.textContent.trim()
       ? `<span class="${badge.className.replace(/\bhidden\b/, "")}">${escapeHtml(badge.textContent)}</span>` : "";
     const active = activeKey && activeKey.tab === k ? " active" : "";
-    html += `<div class="sidebar-item"><button type="button" class="tab-btn sidebar-link sidebar-fav${active}" data-tab="${k}"><span class="sidebar-label">${escapeHtml(label)}</span>${badgeHtml}</button>` +
+    html += `<div class="sidebar-item" data-fav-key="${k}"><button type="button" class="tab-btn sidebar-link sidebar-fav${active}" data-tab="${k}"><span class="sidebar-label">${escapeHtml(label)}</span>${badgeHtml}</button>` +
+      (favs.length > 1 ? `<button type="button" class="sidebar-fav-grip" data-fav-grip="${k}" aria-label="Glisser pour réordonner" title="Glisser pour réordonner">${SIDEBAR_GRIP_SVG}</button>` : "") +
       `<button type="button" class="sidebar-pin" data-pin-tab="${k}" aria-pressed="true" aria-label="Retirer des favoris" title="Retirer des favoris">${SIDEBAR_PIN_SVG}</button></div>`;
   });
   if (holder.innerHTML !== html) holder.innerHTML = html;
@@ -25497,7 +25515,70 @@ function initSidebarFavs() {
     setSidebarFavs(favs.includes(k) ? favs.filter(x => x !== k) : [...favs, k]);
     renderSidebarFavs();
   });
+  initSidebarFavReorder();
   renderSidebarFavs();
+}
+// Déplace le favori `key` de `delta` places (clavier) et garde le focus sur sa poignée.
+function moveSidebarFav(key, delta) {
+  const favs = sidebarFavs();
+  const i = favs.indexOf(key), j = i + delta;
+  if (i < 0 || j < 0 || j >= favs.length) return;
+  favs.splice(j, 0, favs.splice(i, 1)[0]);
+  setSidebarFavs(favs);
+  renderSidebarFavs();
+  const g = document.querySelector(`#sidebarFavs [data-fav-grip="${key}"]`);
+  if (g) g.focus();
+}
+function initSidebarFavReorder() {
+  const holder = document.getElementById("sidebarFavs");
+  if (!holder) return;
+  holder.addEventListener("keydown", e => {
+    const grip = e.target.closest("[data-fav-grip]");
+    if (!grip || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+    e.preventDefault();
+    moveSidebarFav(grip.dataset.favGrip, e.key === "ArrowUp" ? -1 : 1);
+  });
+  // Glisser : l'élément suit le pointeur verticalement ; ses voisins
+  // changent de place dès que son centre passe le milieu de l'un d'eux.
+  holder.addEventListener("pointerdown", e => {
+    const grip = e.target.closest("[data-fav-grip]");
+    if (!grip || (e.pointerType === "mouse" && e.button !== 0)) return;
+    const item = grip.closest(".sidebar-item");
+    e.preventDefault();
+    sidebarFavDragging = true;
+    holder.classList.add("is-dragging");
+    item.classList.add("is-dragged");
+    let lastY = e.clientY, offset = 0, moved = false;
+    const onMove = ev => {
+      if (ev.pointerId !== e.pointerId) return;
+      offset += ev.clientY - lastY; lastY = ev.clientY;
+      if (Math.abs(offset) > 2) moved = true;
+      const items = [...holder.querySelectorAll(".sidebar-item")];
+      const idx = items.indexOf(item);
+      const h = item.offsetHeight + 2;
+      if (offset > h / 2 && idx < items.length - 1) { items[idx + 1].after(item); offset -= h; }
+      else if (offset < -h / 2 && idx > 0) { items[idx - 1].before(item); offset += h; }
+      item.style.transform = `translateY(${offset}px)`;
+    };
+    const onUp = ev => {
+      if (ev.pointerId !== e.pointerId) return;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      item.style.transform = "";
+      item.classList.remove("is-dragged");
+      holder.classList.remove("is-dragging");
+      sidebarFavDragging = false;
+      if (moved) setSidebarFavs([...holder.querySelectorAll(".sidebar-item[data-fav-key]")].map(x => x.dataset.favKey));
+      renderSidebarFavs();
+    };
+    // Sur window : déplacer l'élément dans la page fait perdre la capture du pointeur.
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  });
+  // La poignée ne doit pas ouvrir la page (le clic tombe à côté du lien).
+  holder.addEventListener("click", e => { if (e.target.closest("[data-fav-grip]")) { e.preventDefault(); e.stopPropagation(); } });
 }
 initSidebarFavs();
 

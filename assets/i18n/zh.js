@@ -3887,6 +3887,7 @@ window.HM_I18N_ZH = {
   "ESPACE À LOUER": "广告位招租",
   "Favoris": "收藏",
   "Épingler dans les favoris": "加入收藏",
+  "Glisser pour réordonner": "拖动以重新排序",
   "Retirer des favoris": "取消收藏",
   "Affluence — tous les matchs à domicile": "上座人数——所有主场比赛",
   "Cliquez sur un bâtiment pour le construire ou l'améliorer": "点击建筑进行建造或升级",

@@ -3887,6 +3887,7 @@ window.HM_I18N_LT = {
   "ESPACE À LOUER": "VIETA NUOMAI",
   "Favoris": "Mėgstami",
   "Épingler dans les favoris": "Prisegti prie mėgstamų",
+  "Glisser pour réordonner": "Vilk, kad pakeistum tvarką",
   "Retirer des favoris": "Pašalinti iš mėgstamų",
   "Affluence — tous les matchs à domicile": "Lankomumas — visos namų rungtynės",
   "Cliquez sur un bâtiment pour le construire ou l'améliorer": "Spustelėk pastatą, kad jį pastatytum arba patobulintum",

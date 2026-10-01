@@ -3887,6 +3887,7 @@ window.HM_I18N_PT = {
   "ESPACE À LOUER": "ESPAÇO PARA ALUGAR",
   "Favoris": "Favoritos",
   "Épingler dans les favoris": "Fixar nos favoritos",
+  "Glisser pour réordonner": "Arraste para reordenar",
   "Retirer des favoris": "Remover dos favoritos",
   "Affluence — tous les matchs à domicile": "Público — todos os jogos em casa",
   "Cliquez sur un bâtiment pour le construire ou l'améliorer": "Clique em um prédio para construí-lo ou melhorá-lo",

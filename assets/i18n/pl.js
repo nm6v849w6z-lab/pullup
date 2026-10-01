@@ -3887,6 +3887,7 @@ window.HM_I18N_PL = {
   "ESPACE À LOUER": "MIEJSCE DO WYNAJĘCIA",
   "Favoris": "Ulubione",
   "Épingler dans les favoris": "Przypnij do ulubionych",
+  "Glisser pour réordonner": "Przeciągnij, aby zmienić kolejność",
   "Retirer des favoris": "Usuń z ulubionych",
   "Affluence — tous les matchs à domicile": "Frekwencja — wszystkie mecze u siebie",
   "Cliquez sur un bâtiment pour le construire ou l'améliorer": "Kliknij budynek, by go zbudować lub rozbudować",

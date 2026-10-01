@@ -3887,6 +3887,7 @@ window.HM_I18N_DE = {
   "ESPACE À LOUER": "WERBEFLÄCHE ZU VERMIETEN",
   "Favoris": "Favoriten",
   "Épingler dans les favoris": "An Favoriten anheften",
+  "Glisser pour réordonner": "Ziehen zum Neuordnen",
   "Retirer des favoris": "Aus Favoriten entfernen",
   "Affluence — tous les matchs à domicile": "Zuschauer — alle Heimspiele",
   "Cliquez sur un bâtiment pour le construire ou l'améliorer": "Klicke auf ein Gebäude, um es zu bauen oder auszubauen",
