@@ -7128,7 +7128,9 @@
   .msg-send:disabled{opacity:.5; cursor:not-allowed;}
   .msg-count{font-size:11px; color:var(--ink-faint); padding:0 16px 8px; text-align:right; margin-top:-8px;}
   .msg-count.over{color:var(--danger);}
-  .msg-team-cta{display:flex; justify-content:flex-end; margin:-6px 0 12px;}
+  .msg-team-cta{display:flex; justify-content:flex-end; margin:0;}
+  .td-topline{display:flex; align-items:center; justify-content:space-between; gap:10px 16px; flex-wrap:wrap; margin-bottom:16px;}
+  .td-topline > .team-detail-subnav{margin:0;}
   .msg-team-cta button{background:var(--panel-2); border:1px solid rgba(240,162,60,.45); color:var(--amber); border-radius:9px; padding:8px 14px; font:inherit; font-weight:700; cursor:pointer;}
   .msg-team-cta button:hover{background:rgba(240,162,60,.12);}
   /* Barre du bas (mobile, voir assets/mobile/mobile.js) : pastille sur
@@ -32381,14 +32383,20 @@ function renderTeamDetailContent(teamIdx) {
     (foreign ? ` <span class="team-detail-foreign">${nationFlagHtml(league.country || "fr")} ${escapeHtml(teamDetailForeign.label)}</span>` : "") +
     // Manager du club (pseudo, 2026-09-30) : ouvre son profil. Club IA : rien.
     (team.isHuman ? `<span class="team-detail-manager"><span>Manager :</span> ${managerLinkHtml(team, teamIdx, foreign ? teamDetailForeign.leagueId : null)}</span>` : "");
+  // Aperçu : nom et manager déjà dans la grande carte du club juste en
+  // dessous — en-tête masqué pour remonter la page (retour utilisateur
+  // 2026-10-01). Gardé sur les autres onglets (pas de carte du club).
+  nameHeader.classList.toggle("hidden", teamDetailSubView === "apercu");
 
-  let html = teamDetailSubNavHtml();
   // Messagerie : écrire au manager de ce club (ligue partagée, club humain).
   // Mondiale (2026-09-30) : aussi vers le manager d'un autre championnat.
+  // Sur la même ligne que les onglets Aperçu / Effectif…, à droite.
+  let msgBtn = "";
   if (msgUi.available && team.isHuman && (foreign || teamIdx !== myTeamIndex)) {
     const who = foreign ? `${teamDetailForeign.leagueId}:${teamIdx}` : String(teamIdx);
-    html = `<div class="msg-team-cta"><button type="button" data-msg-open="${escapeHtml(who)}">Envoyer un message</button></div>` + html;
+    msgBtn = `<div class="msg-team-cta"><button type="button" data-msg-open="${escapeHtml(who)}">Envoyer un message</button></div>`;
   }
+  let html = `<div class="td-topline">${teamDetailSubNavHtml()}${msgBtn}</div>`;
   if (teamDetailSubView === "calendrier") {
     // #teamDetailLiveBanner : placeholder vide au rendu synchrone, rempli
     // (ou laissé vide) juste après par refreshTeamDetailLiveBanner (retour
@@ -46036,11 +46044,10 @@ function renderTrainingCenterPanel() {
   // (multiplicateur de progression) et un aperçu du palier suivant
   // (coût + multiplicateur) sans avoir à cliquer sur la flèche pour le
   // découvrir.
-  let cardBodyHtml = `<div class="price">${escapeHtml(info.name)}</div>` +
-    `<div class="bonus">Niveau ${info.level} · Progression des jeunes : x${info.growthMultiplier}</div>`;
-  if (next) {
-    cardBodyHtml += `<div class="staff-current-meta" style="margin-top:6px;">Niveau suivant : ${escapeHtml(next.name)} (${formatMoney(next.upgradeCost)}) → progression x${next.growthMultiplier}</div>`;
-  }
+  // Palier suivant retiré (retour utilisateur 2026-10-01 : déjà détaillé
+  // au clic sur « Améliorer ») ; palier actuel écrit plus gros.
+  const cardBodyHtml = `<div class="price" style="font-size:19px;">${escapeHtml(info.name)}</div>` +
+    `<div class="bonus" style="font-size:15px; margin-top:4px;">Niveau ${info.level} · Progression des jeunes : x${info.growthMultiplier}</div>`;
   cardBody.innerHTML = cardBodyHtml;
   card.appendChild(cardBody);
   const actionLine = document.createElement("div");
