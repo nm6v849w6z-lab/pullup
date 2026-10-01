@@ -7,7 +7,7 @@
 // AutoSim.runWeeklyEconomyTick), chaque manager humain qui a un compte avec
 // une adresse e-mail reçoit UN e-mail récapitulatif de sa semaine :
 //   - résultats officiels de la semaine écoulée, classement et points ;
-//   - entraînement : plus fortes progressions (Team.lastTrainingReport) ;
+//   - entraînement : joueurs entraînés aux fondamentaux (digestTrainedPlayers) ;
 //   - finances : recettes, dépenses et solde de la semaine (Team.financeLedger),
 //     budget actuel ;
 //   - marché : enchères gagnées / perdues / en cours, surenchères, ventes ;
@@ -52,7 +52,6 @@ const DIGEST_SEND_WINDOW_MS = 2 * DAY_MS;
 const DIGEST_INACTIVE_DAYS = 28;
 const SEND_BATCH_SIZE = 5;
 const SEND_BATCH_PAUSE_MS = 1500;
-const MAX_TRAINING_PLAYERS = 3;
 const MAX_NEXT_MATCHES = 4;
 const DEFAULT_SITE_URL = "https://hoop-manager.com";
 
@@ -123,7 +122,7 @@ const STRINGS = {
     standing: "Classement", standingLine: "{pos}/{n} · {points} pts ({w} V – {l} D)",
     win: "V", loss: "D", home: "dom.", away: "ext.",
     comp: { league: "Championnat", playoffs: "Play-offs", cup: "Coupe nationale" },
-    training: "Entraînement", noTraining: "Pas de progression notable cette semaine.", overall: "note globale",
+    training: "Entraînement", noTraining: "Aucun joueur entraîné aux fondamentaux cette semaine.", program: "Programme",
     finances: "Finances", income: "Recettes", expenses: "Dépenses", net: "Solde de la semaine", budget: "Budget actuel",
     market: "Marché des transferts", noMarket: "Aucune activité sur le marché cette semaine.",
     won: "Enchère remportée", lost: "Enchère perdue", ongoing: "Enchère en cours", outbid: "Tu as été surenchéri", leading: "Tu mènes", sold: "Joueur vendu", unsold: "Invendu",
@@ -148,7 +147,7 @@ const STRINGS = {
     standing: "Standings", standingLine: "{pos}/{n} · {points} pts ({w} W – {l} L)",
     win: "W", loss: "L", home: "home", away: "away",
     comp: { league: "League", playoffs: "Playoffs", cup: "National Cup" },
-    training: "Training", noTraining: "No notable progress this week.", overall: "overall",
+    training: "Training", noTraining: "No player was trained in fundamentals this week.", program: "Program",
     finances: "Finances", income: "Income", expenses: "Expenses", net: "Weekly balance", budget: "Current budget",
     market: "Transfer market", noMarket: "No market activity this week.",
     won: "Auction won", lost: "Auction lost", ongoing: "Auction in progress", outbid: "You've been outbid", leading: "You're leading", sold: "Player sold", unsold: "Unsold",
@@ -173,7 +172,7 @@ const STRINGS = {
     standing: "Classifica", standingLine: "{pos}/{n} · {points} pt ({w} V – {l} S)",
     win: "V", loss: "S", home: "casa", away: "trasf.",
     comp: { league: "Campionato", playoffs: "Play-off", cup: "Coppa nazionale" },
-    training: "Allenamento", noTraining: "Nessun progresso rilevante questa settimana.", overall: "valutazione",
+    training: "Allenamento", noTraining: "Nessun giocatore allenato nei fondamentali questa settimana.", program: "Programma",
     finances: "Finanze", income: "Entrate", expenses: "Uscite", net: "Saldo della settimana", budget: "Budget attuale",
     market: "Mercato dei trasferimenti", noMarket: "Nessuna attività sul mercato questa settimana.",
     won: "Asta vinta", lost: "Asta persa", ongoing: "Asta in corso", outbid: "Sei stato superato", leading: "Sei in testa", sold: "Giocatore venduto", unsold: "Invenduto",
@@ -198,7 +197,7 @@ const STRINGS = {
     standing: "Clasificación", standingLine: "{pos}/{n} · {points} pts ({w} V – {l} D)",
     win: "V", loss: "D", home: "local", away: "visit.",
     comp: { league: "Liga", playoffs: "Play-offs", cup: "Copa nacional" },
-    training: "Entrenamiento", noTraining: "Ningún progreso destacado esta semana.", overall: "media",
+    training: "Entrenamiento", noTraining: "Ningún jugador ha entrenado fundamentos esta semana.", program: "Programa",
     finances: "Finanzas", income: "Ingresos", expenses: "Gastos", net: "Saldo de la semana", budget: "Presupuesto actual",
     market: "Mercado de fichajes", noMarket: "Ninguna actividad en el mercado esta semana.",
     won: "Subasta ganada", lost: "Subasta perdida", ongoing: "Subasta en curso", outbid: "Te han superado la puja", leading: "Vas en cabeza", sold: "Jugador vendido", unsold: "Sin vender",
@@ -223,7 +222,7 @@ const STRINGS = {
     standing: "Classificação", standingLine: "{pos}/{n} · {points} pts ({w} V – {l} D)",
     win: "V", loss: "D", home: "casa", away: "fora",
     comp: { league: "Campeonato", playoffs: "Playoffs", cup: "Copa nacional" },
-    training: "Treino", noTraining: "Nenhuma evolução relevante esta semana.", overall: "geral",
+    training: "Treino", noTraining: "Nenhum jogador treinou fundamentos esta semana.", program: "Programa",
     finances: "Finanças", income: "Receitas", expenses: "Despesas", net: "Saldo da semana", budget: "Orçamento atual",
     market: "Mercado de transferências", noMarket: "Nenhuma atividade no mercado esta semana.",
     won: "Leilão vencido", lost: "Leilão perdido", ongoing: "Leilão em andamento", outbid: "Seu lance foi superado", leading: "Você está na frente", sold: "Jogador vendido", unsold: "Não vendido",
@@ -248,7 +247,7 @@ const STRINGS = {
     standing: "Tabelle", standingLine: "{pos}/{n} · {points} Pkt. ({w} S – {l} N)",
     win: "S", loss: "N", home: "Heim", away: "ausw.",
     comp: { league: "Liga", playoffs: "Playoffs", cup: "Landespokal" },
-    training: "Training", noTraining: "Diese Woche keine nennenswerten Fortschritte.", overall: "Gesamtwert",
+    training: "Training", noTraining: "Diese Woche wurde kein Spieler in den Grundlagen trainiert.", program: "Programm",
     finances: "Finanzen", income: "Einnahmen", expenses: "Ausgaben", net: "Wochensaldo", budget: "Aktuelles Budget",
     market: "Transfermarkt", noMarket: "Diese Woche keine Aktivität auf dem Markt.",
     won: "Auktion gewonnen", lost: "Auktion verloren", ongoing: "Laufende Auktion", outbid: "Du wurdest überboten", leading: "Du führst", sold: "Spieler verkauft", unsold: "Nicht verkauft",
@@ -273,7 +272,7 @@ const STRINGS = {
     standing: "Tabela", standingLine: "{pos}/{n} · {points} pkt ({w} W – {l} P)",
     win: "W", loss: "P", home: "dom", away: "wyjazd",
     comp: { league: "Liga", playoffs: "Play-offy", cup: "Puchar kraju" },
-    training: "Trening", noTraining: "Brak wyraźnych postępów w tym tygodniu.", overall: "ocena ogólna",
+    training: "Trening", noTraining: "W tym tygodniu żaden zawodnik nie trenował podstaw.", program: "Program",
     finances: "Finanse", income: "Przychody", expenses: "Wydatki", net: "Bilans tygodnia", budget: "Obecny budżet",
     market: "Rynek transferowy", noMarket: "Brak aktywności na rynku w tym tygodniu.",
     won: "Wygrana aukcja", lost: "Przegrana aukcja", ongoing: "Trwająca aukcja", outbid: "Twoja oferta została przebita", leading: "Prowadzisz", sold: "Zawodnik sprzedany", unsold: "Niesprzedany",
@@ -298,7 +297,7 @@ const STRINGS = {
     standing: "Βαθμολογία", standingLine: "{pos}/{n} · {points} β. ({w} Ν – {l} Η)",
     win: "Ν", loss: "Η", home: "έδρα", away: "εκτός",
     comp: { league: "Πρωτάθλημα", playoffs: "Πλέι οφ", cup: "Εθνικό Κύπελλο" },
-    training: "Προπόνηση", noTraining: "Καμία αξιοσημείωτη πρόοδος αυτή την εβδομάδα.", overall: "συνολική",
+    training: "Προπόνηση", noTraining: "Κανένας παίκτης δεν προπονήθηκε στα βασικά αυτή την εβδομάδα.", program: "Πρόγραμμα",
     finances: "Οικονομικά", income: "Έσοδα", expenses: "Έξοδα", net: "Ισοζύγιο εβδομάδας", budget: "Τρέχων προϋπολογισμός",
     market: "Μεταγραφική αγορά", noMarket: "Καμία κίνηση στην αγορά αυτή την εβδομάδα.",
     won: "Κέρδισες τη δημοπρασία", lost: "Έχασες τη δημοπρασία", ongoing: "Δημοπρασία σε εξέλιξη", outbid: "Η προσφορά σου ξεπεράστηκε", leading: "Προηγείσαι", sold: "Ο παίκτης πουλήθηκε", unsold: "Απούλητος",
@@ -323,7 +322,7 @@ const STRINGS = {
     standing: "Turnyrinė lentelė", standingLine: "{pos}/{n} · {points} tšk. ({w} P – {l} L)",
     win: "P", loss: "L", home: "namie", away: "svečiuose",
     comp: { league: "Lyga", playoffs: "Atkrintamosios", cup: "Nacionalinė taurė" },
-    training: "Treniruotės", noTraining: "Šią savaitę ryškios pažangos nėra.", overall: "bendras įvertinimas",
+    training: "Treniruotės", noTraining: "Šią savaitę nė vienas žaidėjas netreniravo pagrindų.", program: "Programa",
     finances: "Finansai", income: "Pajamos", expenses: "Išlaidos", net: "Savaitės balansas", budget: "Dabartinis biudžetas",
     market: "Perėjimų rinka", noMarket: "Šią savaitę rinkoje veiklos nebuvo.",
     won: "Aukcionas laimėtas", lost: "Aukcionas pralaimėtas", ongoing: "Vykstantis aukcionas", outbid: "Tavo statymas viršytas", leading: "Tu pirmauji", sold: "Žaidėjas parduotas", unsold: "Neparduotas",
@@ -348,7 +347,7 @@ const STRINGS = {
     standing: "排名", standingLine: "第 {pos}/{n} 名 · {points} 分（{w} 胜 – {l} 负）",
     win: "胜", loss: "负", home: "主场", away: "客场",
     comp: { league: "联赛", playoffs: "季后赛", cup: "国家杯" },
-    training: "训练", noTraining: "本周没有明显进步。", overall: "综合评分",
+    training: "训练", noTraining: "本周没有球员进行基本功训练。", program: "训练项目",
     finances: "财务", income: "收入", expenses: "支出", net: "本周结余", budget: "当前预算",
     market: "转会市场", noMarket: "本周市场没有动态。",
     won: "竞拍成功", lost: "竞拍失败", ongoing: "竞拍进行中", outbid: "你的出价已被超过", leading: "你暂时领先", sold: "球员已售出", unsold: "未售出",
@@ -423,25 +422,53 @@ function standingOf(league, teamIdx, divisionLabel) {
   return { pos: pos + 1, n: table.length, points: s.points, wins: s.wins, losses: s.losses, played: s.played, division: divisionLabel || null };
 }
 
-function trainingOf(team) {
-  const report = team.lastTrainingReport && team.lastTrainingReport.players;
-  const players = [];
-  if (report && typeof report === "object") {
-    Object.entries(report).forEach(([id, e]) => {
-      const gains = (e && Array.isArray(e.gains) ? e.gains : [])
-        .filter(g => g && typeof g.before === "number" && typeof g.after === "number" && g.after !== g.before);
-      const total = gains.reduce((a, g) => a + (g.after - g.before), 0);
-      if (total <= 0) return;
-      const p = (team.players || []).find(x => String(x.id) === String(id));
-      const log = p && Array.isArray(p.progressLog) ? p.progressLog : [];
-      const ovr = log.length >= 2 ? { before: log[log.length - 2].ovr, after: log[log.length - 1].ovr } : null;
-      players.push({ name: (e && e.name) || (p && p.name) || "?", total,
-        gains: gains.slice().sort((a, b) => (b.after - b.before) - (a.after - a.before)).map(g => ({ attr: g.attr, before: g.before, after: g.after })),
-        ovr });
+// Joueurs RÉELLEMENT entraînés aux fondamentaux la semaine écoulée (retour
+// du propriétaire 2026-10-01 : tous ceux-là et eux seuls — 1 entraîné = 1
+// ligne, 5 = 5 ; jamais la croissance naturelle du physique/mental).
+// Source actuelle : Team.lastTrainingReport (écrit par Team.trainWeek au
+// lundi) — une entrée `players[id]` existe pour CHAQUE joueur de l'effectif ;
+// seul `effectiveFocus` (= clé du programme, posé quand le joueur a joué
+// au(x) poste(s) entraîné(s), voir Team.trainingPreviewFor) avec des
+// secondes et une présence > 0 signale un vrai entraînement des
+// fondamentaux. Les gains sont filtrés sur les caractéristiques DU
+// PROGRAMME (fondamentales, Engine.FUNDAMENTAL_ATTRS) : ni les synergies, ni
+// le physique/mental. Renvoie [{ name, program, programLabel, skills:
+// [{ attr, before, after, gain }], total }] ; une caractéristique du
+// programme sans point gagné cette semaine apparaît à +0 (progression
+// fractionnaire en cours).
+// NOUVEAU SYSTÈME (plans individuels, « slots » de 0 à 5 joueurs selon
+// l'entraîneur, team.trainingPlans ou équivalent) : il suffira de remplacer
+// le choix des joueurs et de leur programme ci-dessous (une entrée par slot
+// occupé : joueur + programme du slot, gains lus dans le rapport) ; la forme
+// renvoyée et le rendu ne changent pas.
+function digestTrainedPlayers(team) {
+  const report = team && team.lastTrainingReport && team.lastTrainingReport.players;
+  if (!report || typeof report !== "object") return [];
+  const programs = Engine.TRAINING_PROGRAMS || {};
+  const fundamentals = new Set(Engine.FUNDAMENTAL_ATTRS || []);
+  const out = [];
+  Object.entries(report).forEach(([id, e]) => {
+    if (!e) return;
+    const program = e.effectiveFocus || null;
+    const def = program ? programs[program] : null;
+    if (!def || !(e.secondsPlayed > 0) || e.attendanceFactor === 0) return;
+    const p = (team.players || []).find(x => String(x.id) === String(id));
+    const attrs = (def.attrs || []).map(a => a.attr).filter(a => fundamentals.size === 0 || fundamentals.has(a));
+    const gains = Array.isArray(e.gains) ? e.gains : [];
+    const skills = attrs.map(attr => {
+      const g = gains.find(x => x && x.attr === attr && typeof x.before === "number" && typeof x.after === "number");
+      if (g) return { attr, before: g.before, after: g.after, gain: g.after - g.before };
+      const cur = p && p.attrs && typeof p.attrs[attr] === "number" ? p.attrs[attr] : null;
+      return { attr, before: cur, after: cur, gain: 0 };
     });
-  }
-  players.sort((a, b) => b.total - a.total);
-  return { players: players.slice(0, MAX_TRAINING_PLAYERS) };
+    out.push({ name: e.name || (p && p.name) || "?", program, programLabel: def.label || program, skills,
+      total: skills.reduce((a, x) => a + x.gain, 0) });
+  });
+  return out.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+}
+
+function trainingOf(team) {
+  return { players: digestTrainedPlayers(team) };
 }
 
 function financesOf(team) {
@@ -638,21 +665,21 @@ function renderDigest(data, lang, { gameUrl = `${siteUrl()}/`, unsubscribeUrl = 
     blocks.push(section(S.results, inner));
   }
 
-  // Entraînement
+  // Entraînement (fondamentaux, voir digestTrainedPlayers)
   {
     const ps = data.training.players;
     text.push(`== ${S.training} ==`);
     let inner;
     if (!ps.length) { inner = empty(S.noTraining); text.push(S.noTraining); }
     else {
+      const prog = p => I18n.translate(lang, p.programLabel || p.program || "");
+      const val = v => (v == null ? "?" : v);
       inner = rowsTable(markRows(ps.map(p => {
-        const gains = p.gains.slice(0, 3).map(g => `${esc(attrLabel(g.attr, lang))} ${g.before} → <b style="color:${C.ok}">${g.after}</b>`).join(" · ");
-        const ovr = p.ovr && typeof p.ovr.before === "number" ? `${esc(S.overall)} ${p.ovr.before} → ${p.ovr.after}` : "";
-        text.push(`- ${p.name} : ${p.gains.slice(0, 3).map(g => `${attrLabel(g.attr, lang)} ${g.before} -> ${g.after}`).join(", ")}${ovr ? ` (${S.overall} ${p.ovr.before} -> ${p.ovr.after})` : ""}`);
-        return row(`<b>${esc(p.name)}</b>${sub(gains)}`, `+${p.total}`, { color: C.ok });
+        const skills = p.skills.map(k => `${esc(attrLabel(k.attr, lang))} ${val(k.before)} → <b style="color:${k.gain > 0 ? C.ok : C.ink}">${val(k.after)}</b> <span style="color:${k.gain > 0 ? C.ok : C.faint}">(+${k.gain})</span>`).join("<br>");
+        text.push(`- ${p.name} — ${S.program} : ${prog(p)} — ${p.skills.map(k => `${attrLabel(k.attr, lang)} ${val(k.before)} -> ${val(k.after)} (+${k.gain})`).join(", ")}`);
+        return row(`<b>${esc(p.name)}</b>${sub(`${esc(S.program)} : <span style="color:${C.amber}">${esc(prog(p))}</span>`)}<div style="font:400 13px/1.5 ${FONT};color:${C.ink};margin-top:4px">${skills}</div>`,
+          `+${p.total}`, { color: p.total > 0 ? C.ok : C.dim });
       })));
-      const ovrs = ps.filter(p => p.ovr && typeof p.ovr.before === "number");
-      if (ovrs.length) inner += `<div style="margin-top:6px;font:400 12px/1.4 ${FONT};color:${C.faint}">${ovrs.map(p => `${esc(p.name)} : ${esc(S.overall)} ${p.ovr.before} → ${p.ovr.after}`).join(" · ")}</div>`;
     }
     text.push("");
     blocks.push(section(S.training, inner));
@@ -922,6 +949,6 @@ async function handleDigestRoutes(req, res, route, { accountsPath, siteLangFor =
 module.exports = {
   STRINGS, DIGEST_HOUR_PARIS, DIGEST_SEND_WINDOW_MS, DIGEST_INACTIVE_DAYS,
   parisWeekOf, isDigestDue, signDigestToken, verifyDigestToken,
-  buildDigestData, renderDigest, renderConfirmPage, prepareWeeklyDigests, sendJobs,
+  buildDigestData, digestTrainedPlayers, renderDigest, renderConfirmPage, prepareWeeklyDigests, sendJobs,
   scheduleWeeklyDigests, handleDigestRoutes, unsubscribeUrlFor, siteUrl, _resetForTests,
 };

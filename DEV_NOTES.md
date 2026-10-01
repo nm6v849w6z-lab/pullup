@@ -27,7 +27,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   sautée), un e-mail HTML + texte par manager humain ayant un compte avec
   e-mail : résultats officiels de la semaine (championnat via
   league.results, Coupe/play-offs via Team.ordersHistory), classement,
-  progressions (Team.lastTrainingReport + progressLog), bilan de la semaine
+  joueurs RÉELLEMENT entraînés aux fondamentaux (tous, et eux seuls :
+  `digestTrainedPlayers`, lit Team.lastTrainingReport.effectiveFocus,
+  programme + ses fondamentaux avant → après ; À ADAPTER aux plans
+  individuels / slots du nouvel entraînement), bilan de la semaine
   (Team.financeLedger) et budget, marché (gagnées/perdues/en cours,
   surenchéri, ventes), contrats (dernière saison sans retraite,
   raiseRequest), prochains matchs (heure de Paris), bouton vers le jeu,
