@@ -2827,6 +2827,9 @@
   /* Contrats (demande du 2026-10-01) : carte « Contrat » de la fiche joueur,
      badge « Fin de contrat », colonne de l'Effectif, carte du marché. */
   #pdpContractCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
+  .pdp-contract-sale{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; margin-top:18px; align-items:start;}
+  .pdp-contract-sale > #pdpContractCard, .pdp-contract-sale > #pdpSaleCard{margin-top:0;}
+  @media (max-width:900px){ .pdp-contract-sale{grid-template-columns:minmax(0,1fr);} }
   .pdp-contract-head{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; font-size:15px; color:var(--ink);}
   .pdp-contract-head b{font-weight:800;}
   .pdp-contract-lines{margin-top:10px; display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--ink-dim);}
@@ -2843,6 +2846,8 @@
   .pdp-contract-hint.hesitant{color:var(--amber); background:rgba(240,162,60,.12);}
   .pdp-contract-hint.risky{color:var(--danger); background:rgba(226,105,79,.14);}
   .pdp-contract-actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+  /* Effectif : badge recalé sur le texte « Fin S4 » des autres lignes (retour 2026-10-01). */
+  .eff-td-contract .contract-end-badge{margin-left:-9px;}
   .contract-end-badge{display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; background:rgba(240,162,60,.14); border:1px solid rgba(240,162,60,.45); color:var(--amber); font-size:11px; font-weight:800; letter-spacing:.02em; white-space:nowrap; vertical-align:middle; cursor:help;}
   .eff-contract{font-variant-numeric:tabular-nums; white-space:nowrap;}
   .mk-badge.mk-badge-fa{font-size:12px; padding:3px 10px; color:#7cc4ff; background:rgba(80,160,255,.14);}
@@ -7226,6 +7231,8 @@
   .prm-perk__badge{align-self:flex-start; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--amber); background:rgba(240,162,60,.12); border-radius:999px; padding:2px 8px;}
   .prm-soon{margin:0; padding-left:20px; color:var(--ink-dim); font-size:14px; line-height:1.7;}
   .prm-note{margin-top:10px;}
+  .pdp-contract-asked{margin:4px 0 10px; font-size:16px; color:var(--ink);}
+  .pdp-contract-asked b{font-size:18px;}
   .bot-badge{display:inline-flex; align-items:center; margin-left:5px; color:var(--ink-faint); vertical-align:-1px; flex:none;}
   .prm-badge{display:inline-flex; align-items:center; justify-content:center; margin-left:6px; width:18px; height:18px; border-radius:999px; font-size:11px; line-height:1; color:#1a1206; background:var(--amber); vertical-align:middle; flex:none;}
   .tp-hist{display:flex; flex-wrap:wrap; gap:6px; padding:0 20px 12px;}
@@ -31410,8 +31417,9 @@ function renderPlayerDetail(teamIdx, playerId) {
   // encapsulée dans une carte .pdp-card tout en bas, réservée à isOwnTeam.
   // Ajoute la valorisation par ventes comparables (comparableSalesValuation
   // ci-dessus) quand le joueur n'est pas déjà en vente. ----
-  if (isOwnTeam) html += playerContractCardHtml(team, player);
-  if (isOwnTeam) html += playerPersonalizationCardHtml(team, player);
+  // Contrat et Mise en vente côte à côte (retour utilisateur 2026-10-01),
+  // Personnalisation en dessous.
+  if (isOwnTeam) html += `<div class="pdp-contract-sale">` + playerContractCardHtml(team, player);
   if (isOwnTeam) {
     html += `<div class="pdp-card" id="pdpSaleCard"><h3>Mise en vente</h3>`;
     if (!onMarket && league.contractSaleBlocked(player)) {
@@ -31432,8 +31440,9 @@ function renderPlayerDetail(teamIdx, playerId) {
         `<button type="button" class="secondary" data-list-player-detail="${player.id}">Mettre aux enchères</button></p>`;
     }
     html += `<div id="playerDetailMarketFeedback"></div>`;
-    html += `</div>`;
+    html += `</div></div>`; // #pdpSaleCard, .pdp-contract-sale
   }
+  if (isOwnTeam) html += playerPersonalizationCardHtml(team, player);
   // Le tableau "Match par match" vivait ici (voir git blame) — retiré
   // (retour utilisateur, 2026-09-24 : "enleve le match par match en bas"),
   // remplacé par la fenêtre superposée "Voir toute la saison" ouverte
@@ -31497,15 +31506,13 @@ function playerContractCardHtml(team, player) {
     if (player.lastContractOfferWeek === team.week) {
       html += `<p class="sub">Il a refusé votre dernière offre cette semaine : nouvelle offre possible la semaine prochaine.</p>`;
     } else {
-      html += `<p class="sub">Salaire demandé : <b>${formatMoney(asked)}</b> / sem. Vous pouvez proposer jusqu'à 10 % de moins (${formatMoney(floor)} au minimum) : au salaire demandé, il accepte toujours ; en dessous, il peut refuser.</p>` +
+      html += `<p class="pdp-contract-asked">Salaire demandé : <b>${formatMoney(asked)}</b> / sem.</p>` +
         `<div class="pdp-contract-form">` +
         `<label>Durée<select id="pdpExtSeasons">${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === CONTRACT_DEFAULT_SEASONS ? " selected" : ""}>${n} saison${n > 1 ? "s" : ""}</option>`).join("")}</select></label>` +
         `<label>Salaire (€ / sem.)<input type="number" id="pdpExtSalary" min="${floor}" max="${asked}" step="10" value="${asked}" data-asked="${asked}"></label>` +
         `<button type="button" class="secondary" data-contract-extend="${player.id}">Proposer la prolongation</button></div>` +
-        `<div><span class="pdp-contract-hint sure" id="pdpExtHint">${escapeHtml(contractOfferHint(asked, asked).label)}</span></div>` +
-        `<p class="sub">Nouveau salaire à partir de la saison ${season + 1}. Un refus le contrarie un peu ; vous pourrez refaire une offre la semaine suivante.</p>`;
+        `<div><span class="pdp-contract-hint sure" id="pdpExtHint">${escapeHtml(contractOfferHint(asked, asked).label)}</span></div>`;
     }
-    if (league.contractSaleBlocked(player)) html += `<p class="sub">Il ne peut plus être vendu : sans prolongation, il partira libre en fin de saison.</p>`;
     html += `</div>`;
   } else if (last && player.retiringAfterSeason) {
     html += `<p class="sub">Il a annoncé sa retraite : pas de prolongation possible.</p>`;
