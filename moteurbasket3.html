@@ -12405,7 +12405,27 @@ const ArenaGen = (function () {
   // utilisateur 2026-09-30 : « l'image du parquet devrait bouger en même
   // temps ») — { floor, grain, line, paint } ; sans lui, parquet clair et
   // raquettes aux couleurs du club, comme avant.
-  function court(main, second, name, cs) {
+  // Logo du club posé à plat au rond central (retour utilisateur 2026-10-01 :
+  // « intégrer le vrai logo au milieu du parquet, même si logo premium ») :
+  // `logo` = { href } (image perso Premium, découpée en cercle) ou { svg }
+  // (logo par défaut, <svg> complet repositionné), même repère que textOnFloor.
+  function logoOnFloor(logo, r) {
+    const o = P(0, 0, 0.07);
+    const m = `matrix(${f1(0.866 * K)} ${f1(0.5 * K)} ${f1(-0.866 * K)} ${f1(0.5 * K)} ${f1(o[0])} ${f1(o[1])})`;
+    const d = (2 * r).toFixed(2), x = (-r).toFixed(2);
+    if (logo.href) {
+      const id = `arenaLogo${UID++}`;
+      return `<g transform="${m}"><clipPath id="${id}"><circle r="${r}"/></clipPath>` +
+        `<image href="${esc(logo.href)}" x="${x}" y="${x}" width="${d}" height="${d}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/></g>`;
+    }
+    // Contenu du <svg> du logo replacé dans un <g> mis à l'échelle (un <svg>
+    // imbriqué prendrait la taille CSS des svg de la page salle).
+    const src = String(logo.svg), vb = (src.match(/viewBox="[\d.\s-]+?\s([\d.]+)\s[\d.]+"/) || [])[1] || 120;
+    const inner = src.replace(/^<svg\b[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+    return `<g transform="${m}"><g transform="translate(${x} ${x}) scale(${(2 * r / vb).toFixed(4)})">${inner}</g></g>`;
+  }
+
+  function court(main, second, name, cs, logo) {
     const z = 0.05, lines = cs && cs.line ? cs.line : '#fbf6ec';
     const floor = cs && cs.floor ? cs.floor : '#d9a35f', grain = cs && cs.grain ? cs.grain : '#d09a57';
     const keyFill = cs ? (cs.paint || null) : main;
@@ -12430,7 +12450,8 @@ const ArenaGen = (function () {
     // logo central
     s += flat(arc(0, 0, 2.4, 0, Math.PI * 2, 28, 0.06), keyFill || floor) + line(arc(0, 0, 2.4, 0, Math.PI * 2, 28, 0.06), lines, 0.9) +
       line(arc(0, 0, 1.85, 0, Math.PI * 2, 28, 0.065), second, 0.6);
-    if (name) s += textOnFloor(0, 0, String(name).trim().charAt(0).toUpperCase(), 2.2, second);
+    // Logo du club : dessiné après l'éclairage du parquet (voir generateArena).
+    if (!(logo && (logo.href || logo.svg)) && name) s += textOnFloor(0, 0, String(name).trim().charAt(0).toUpperCase(), 2.2, second);
     return s;
   }
 
@@ -12441,6 +12462,7 @@ const ArenaGen = (function () {
    * options.attendance : remplissage des tribunes entre 0 et 1
    * options.name       : nom du club (initiale au rond central ; façade à défaut d'arenaName)
    * options.arenaName  : nom de la salle, écrit sur la façade
+   * options.logo       : logo du club au rond central ({ href } ou { svg })
    * options.aspect     : format du cadre, largeur / hauteur (défaut 1.9)
    * options.seed       : variante du décor (arbres, voitures)
    * options.mood       : 'dusk' (soir de match, par défaut) ou 'day'
@@ -12720,8 +12742,9 @@ const ArenaGen = (function () {
           line([[x + 0.2, yi0 + 0.06, bot + 0.6], [x + 1.4, yi0 + 0.06, bot + 0.6]], second, 0.5);
       }
     }
-    s += court(main, second, name, options.court || null);
+    s += court(main, second, name, options.court || null, options.logo || null);
     { const c = P(0, 0, 0.1); s += `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(24 * K)}" ry="${f1(13 * K)}" fill="url(#${id}l)"/>`; if (dusk) s += `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(20 * K)}" ry="${f1(11 * K)}" fill="url(#${id}l)"/>`; }
+    if (options.logo && (options.logo.href || options.logo.svg)) s += logoOnFloor(options.logo, 1.75);
 
     // tribunes, panneaux publicitaires, bancs et table de marque, triés ensemble
     const items = [];
@@ -32494,6 +32517,13 @@ function teamLogoHtml(team, size) {
 // (club payant), un <image> SVG natif fait le même travail qu'un <img> HTML,
 // découpé en cercle via <clipPath> pour rester cohérent avec le rendu rond
 // de .team-logo-img (border-radius:50%) utilisé partout ailleurs.
+// Logo du club pour le rond central de la salle (voir ArenaGen, options.logo).
+function arenaCourtLogo(team) {
+  if (!team) return null;
+  if (teamIsPremium(team) && team.customLogoDataUrl) return { href: team.customLogoDataUrl };
+  return { svg: defaultTeamLogoSvg(team, 120) };
+}
+
 function liveCourtHomeLogoSvg(team, cx, cy, r) {
   const size = r * 2;
   const x = cx - r, y = cy - r;
@@ -47373,7 +47403,7 @@ function renderPersoArena() {
   // couleurs du club, de jour) pour montrer ce que le Premium permet.
   const preview = premium ? cur : { main: null, second: null, facade: "brique", roof: "club", mood: "day" };
   const svg = ArenaGen.generateArena(arenaVisualCapacity(info.capacity), arenaGenStyleOptions(teamA, normalizeArenaStyle(preview) || null, {
-    attendance: 0.8, name: teamA.name, arenaName: teamArenaName(teamA), sponsor: sponsorNameForSlot(teamA, "salle"), billboard: sponsorNameForSlot(teamA, "panneau") || "", aspect: 1.9, seed: 11,
+    attendance: 0.8, name: teamA.name, arenaName: teamArenaName(teamA), logo: arenaCourtLogo(teamA), sponsor: sponsorNameForSlot(teamA, "salle"), billboard: sponsorNameForSlot(teamA, "panneau") || "", aspect: 1.9, seed: 11,
     sponsorStyle: sponsorArtStyle(sponsorNameForSlot(teamA, "salle")), billboardStyle: sponsorArtStyle(sponsorNameForSlot(teamA, "panneau")),
     ...(premium && salleCourtDraft ? { courtStyle: { wood: COURT_WOODS[salleCourtDraft.wood] ? salleCourtDraft.wood : "nuit", paint: salleCourtDraft.paint && JERSEY_COLORS[salleCourtDraft.paint] ? salleCourtDraft.paint : null } } : {}),
   })).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
@@ -47495,6 +47525,7 @@ function renderSalleHero(info, stats) {
     attendance: stats.avgRate != null ? stats.avgRate : projectedRate,
     name: teamA.name,
     arenaName: teamArenaName(teamA),
+    logo: arenaCourtLogo(teamA),
     sponsor: sponsorNameForSlot(teamA, "salle"),
     billboard: sponsorNameForSlot(teamA, "panneau") || "",
     sponsorStyle: sponsorArtStyle(sponsorNameForSlot(teamA, "salle")),
