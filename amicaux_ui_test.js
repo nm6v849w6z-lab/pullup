@@ -17,11 +17,16 @@ async function waitFor(fn, label, tries = 80) {
   for (let i = 0; i < tries; i++) { const v = fn(); if (v) return v; await sleep(50); }
   throw new Error("❌ délai dépassé : " + label);
 }
+// Horloge du navigateur = horloge du serveur de test (mercredi 30 septembre
+// 9h) : sinon, le soir, l'amical programmé à 18h « aujourd'hui » était déjà
+// passé côté navigateur et le test échouait selon l'heure réelle.
+let now;
+const syncClock = w => { w.Date.now = () => now; };
 function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocument.defaultView.Event("change", { bubbles: true })); }
 
 (async () => {
   // Mercredi 30 septembre 2026, 9h Paris.
-  let now = Calendar.parisEpochForLocalTime(2026, 9, 30, 9);
+  now = Calendar.parisEpochForLocalTime(2026, 9, 30, 9);
   const league = Engine.generateMultiManagerLeague(["Alpha FR", "Bravo FR"], 1, now, Calendar.dailyAnchoredCalendarConfig());
   const A = league.teams.findIndex(t => t.name === "Alpha FR");
   const B = league.teams.findIndex(t => t.name === "Bravo FR");
@@ -35,7 +40,7 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   await store.saveMultiLeague(league, multiSavePath);
 
   // --- A : page, proposition contre un CPU.
-  const domA = await openGame(html, `${baseUrl}?m=${tokens[0]}`);
+  const domA = await openGame(html, `${baseUrl}?m=${tokens[0]}`, syncClock);
   const docA = domA.window.document, winA = domA.window;
   const tab = [...docA.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "amicaux");
   tab.click();
@@ -100,7 +105,7 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   check(/En attente de réponse/.test(docA.getElementById("amicauxContent").textContent), "invitation « En attente de réponse » côté A");
 
   // --- B : pastille, message privé, acceptation.
-  const domB = await openGame(html, `${baseUrl}?m=${tokens[1]}`);
+  const domB = await openGame(html, `${baseUrl}?m=${tokens[1]}`, syncClock);
   const docB = domB.window.document, winB = domB.window;
   await waitFor(() => docB.getElementById("amicauxBadge") && !docB.getElementById("amicauxBadge").classList.contains("hidden"), "pastille d'invitation sur l'onglet");
   check(docB.getElementById("amicauxBadge").textContent === "1", "pastille « 1 » sur Matchs amicaux");
@@ -116,7 +121,7 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   // --- Le match contre le CPU se joue à l'heure dite.
   const fAt = winA.eval("league.friendlies.find(f => f.id === '" + fId + "').at");
   now = fAt + 60 * 1000;
-  const domA2b = await openGame(html, `${baseUrl}?m=${tokens[0]}`);
+  const domA2b = await openGame(html, `${baseUrl}?m=${tokens[0]}`, syncClock);
   const during = domA2b.window.eval(`league.friendlies.find(f => f.id === '${fId}')`);
   check(during.status === "accepted" && during.result === null, "huis clos : score caché côté navigateur pendant la durée d'un match");
   // Page Matchs amicaux à l'heure du match (horloge du navigateur calée
@@ -126,7 +131,7 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   check(/Résultat à venir/.test(domA2b.window.document.getElementById("amicauxContent").textContent), "« Résultat à venir » dans Derniers amicaux");
   domA2b.window.close();
   now = fAt + 91 * 60 * 1000;
-  const domA3 = await openGame(html, `${baseUrl}?m=${tokens[0]}`);
+  const domA3 = await openGame(html, `${baseUrl}?m=${tokens[0]}`, syncClock);
   const docA3 = domA3.window.document, winA3 = domA3.window;
   [...docA3.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "amicaux").click();
   const played = winA3.eval(`league.friendlies.find(f => f.id === '${fId}')`);

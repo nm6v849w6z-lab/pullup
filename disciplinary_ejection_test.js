@@ -253,34 +253,36 @@ function freshMatch(offComposure = 50, offDiscipline = 50) {
 //    en appel direct.
 // ---------------------------------------------------------------------
 (function testRealMatchSimulationTriggersEjections() {
-  const off = generateStartingRoster("Indiscipline Off");
-  const def = generateStartingRoster("Indiscipline Def");
-  def.players.forEach(p => { p.attrs.composure = 1; p.attrs.discipline = 1; });
-  off.resetForMatch(T0);
-  def.resetForMatch(T0);
-  const me = new MatchEngine(off, def);
-  const events = [];
-  // Pas d'arrêt anticipé sur la 1ère exclusion observée (essai précédent,
-  // corrigé) : une exclusion peut survenir tôt via UN SEUL des 2 mécanismes
-  // (ex : la technique atteint 2 avant que l'antisportive n'ait eu
-  // l'occasion de se produire sur ce joueur ou un autre) - s'arrêter dès la
-  // 1ère exclusion risquait de ne jamais observer l'AUTRE mécanisme et de
-  // rendre ce test flaky. On joue un nombre fixe de possessions et on vérifie
-  // les 3 signaux à la fin.
-  const N = 4000;
-  for (let i = 0; i < N; i++) {
-    me.playPossession(off, def, 1, 600, events, 0);
+  // Jusqu'à 20 matchs de 4000 possessions, avec deux nouvelles équipes à
+  // chaque fois : une fois tout le cinq exclu (souvent par les techniques
+  // d'abord), plus aucune antisportive ne peut se produire, d'où un échec
+  // aléatoire quand on se limitait à une seule série (≈ 1 fois sur 50).
+  // Chaque signal reste exigé, sur le flot normal du jeu.
+  const N = 4000, MAX_RUNS = 20;
+  let sawTechnicalFoul = false, sawUnsportsmanlikeFoul = false, sawEjection = false, ejectedNames = [], runs = 0;
+  while (runs < MAX_RUNS && !(sawTechnicalFoul && sawUnsportsmanlikeFoul && sawEjection && ejectedNames.length)) {
+    runs++;
+    const off = generateStartingRoster("Indiscipline Off");
+    const def = generateStartingRoster("Indiscipline Def");
+    def.players.forEach(p => { p.attrs.composure = 1; p.attrs.discipline = 1; });
+    off.resetForMatch(T0);
+    def.resetForMatch(T0);
+    const me = new MatchEngine(off, def);
+    const events = [];
+    for (let i = 0; i < N; i++) me.playPossession(off, def, 1, 600, events, 0);
+    sawTechnicalFoul = sawTechnicalFoul || events.some(e => e.type === "technicalFoul");
+    sawUnsportsmanlikeFoul = sawUnsportsmanlikeFoul || events.some(e => e.type === "unsportsmanlikeFoul");
+    if (events.some(e => e.type === "technicalEjection")) {
+      sawEjection = true;
+      ejectedNames = ejectedNames.concat(def.players.filter(p => p.disqualified).map(p => p.name));
+    }
   }
-  const sawTechnicalFoul = events.some(e => e.type === "technicalFoul");
-  const sawUnsportsmanlikeFoul = events.some(e => e.type === "unsportsmanlikeFoul");
-  const sawEjection = events.some(e => e.type === "technicalEjection");
-  console.log(`Sur ${N} possessions réelles (équipe Sang-froid=1/Discipline=1) : faute technique observée=${sawTechnicalFoul}, faute antisportive observée=${sawUnsportsmanlikeFoul}, exclusion observée=${sawEjection}.`);
-  if (!sawTechnicalFoul) throw new Error(`❌ Une équipe entière à Sang-froid=1 devrait finir par déclencher au moins une faute technique sur ${N} possessions.`);
-  if (!sawUnsportsmanlikeFoul) throw new Error(`❌ Une équipe entière à Discipline=1 devrait finir par déclencher au moins une faute antisportive sur ${N} possessions.`);
-  if (!sawEjection) throw new Error(`❌ Une équipe entière à Sang-froid=1 ET Discipline=1 devrait finir par déclencher au moins une exclusion sur ${N} possessions.`);
-  const ejected = def.players.filter(p => p.disqualified);
-  if (ejected.length === 0) throw new Error("❌ Au moins un joueur de l'équipe en infraction devrait être marqué disqualified après l'exclusion observée.");
-  console.log(`✅ Le mécanisme est bien atteint depuis le flot normal du jeu (playPossession), pas seulement en appel direct : ${ejected.length} joueur(s) exclu(s) (${ejected.map(p => p.name).join(", ")}).`);
+  console.log(`Sur ${runs} série(s) de ${N} possessions réelles (équipe Sang-froid=1/Discipline=1) : faute technique observée=${sawTechnicalFoul}, faute antisportive observée=${sawUnsportsmanlikeFoul}, exclusion observée=${sawEjection}.`);
+  if (!sawTechnicalFoul) throw new Error(`❌ Une équipe entière à Sang-froid=1 devrait finir par déclencher au moins une faute technique.`);
+  if (!sawUnsportsmanlikeFoul) throw new Error(`❌ Une équipe entière à Discipline=1 devrait finir par déclencher au moins une faute antisportive.`);
+  if (!sawEjection) throw new Error(`❌ Une équipe entière à Sang-froid=1 ET Discipline=1 devrait finir par déclencher au moins une exclusion.`);
+  if (ejectedNames.length === 0) throw new Error("❌ Au moins un joueur de l'équipe en infraction devrait être marqué disqualified après l'exclusion observée.");
+  console.log(`✅ Le mécanisme est bien atteint depuis le flot normal du jeu (playPossession), pas seulement en appel direct : ${ejectedNames.length} joueur(s) exclu(s) (${ejectedNames.slice(0, 5).join(", ")}).`);
 })();
 
 // ---------------------------------------------------------------------
