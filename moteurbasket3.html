@@ -32180,7 +32180,10 @@ function jerseyPatternArt(key, uid, P, S) {
       return { layer: out };
     }
     case "empiecement":
-      return { layer: `<path d="M0 0 H100 V32 Q50 44 0 32 Z" fill="${S}"/><path d="M0 34 Q50 46 100 34" fill="none" stroke="${P}" stroke-width="1.6" opacity=".6"/>` };
+      // Limite descendue sous le logo du club (retour 2026-10-01 : « il faut
+      // que le logo soit au-dessus de la couleur empiétée ») : le blason est
+      // entièrement posé sur l'empiècement, le bandeau sponsor juste dessous.
+      return { layer: `<path d="M0 0 H100 V40 Q50 46 0 40 Z" fill="${S}"/><path d="M0 42 Q50 48 100 42" fill="none" stroke="${P}" stroke-width="1.6" opacity=".6"/>` };
     case "degrade_diagonal":
       return { defs: lin("dd", 0, 0, 1, 1, [[0, P], [0.35, P], [1, S]]), fill: `url(#${uid}-dd)` };
     case "pois":
