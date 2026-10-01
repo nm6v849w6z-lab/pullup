@@ -2353,6 +2353,8 @@ window.HM_I18N_EL = {
   "Joueurs adverses à surveiller": "Αντίπαλοι παίκτες που πρέπει να προσέξεις",
   "Joueurs clés": "Βασικοί παίκτες",
   "Joueurs de {0} à surveiller": "Παίκτες της {0} που πρέπει να προσέξεις",
+  "joueur sur {0}": "παίκτης από {0}",
+  "joueurs sur {0}": "παίκτες από {0}",
   "joueurs sur le marché": "παίκτες στην αγορά",
   "Joueurs sur le marché": "Παίκτες στην αγορά",
   "Joueurs{0}": "Παίκτες{0}",

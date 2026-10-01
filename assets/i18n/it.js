@@ -2389,6 +2389,8 @@ window.HM_I18N_IT = {
   "Joueurs adverses à surveiller": "Giocatori avversari da tenere d'occhio",
   "Joueurs clés": "Giocatori chiave",
   "Joueurs de {0} à surveiller": "Giocatori di {0} da tenere d'occhio",
+  "joueur sur {0}": "giocatore su {0}",
+  "joueurs sur {0}": "giocatori su {0}",
   "joueurs sur le marché": "giocatori sul mercato",
   "Joueurs sur le marché": "Giocatori sul mercato",
   "Joueurs{0}": "Giocatori{0}",

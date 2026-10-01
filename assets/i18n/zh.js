@@ -2353,6 +2353,8 @@ window.HM_I18N_ZH = {
   "Joueurs adverses à surveiller": "需要重点关注的对手球员",
   "Joueurs clés": "核心球员",
   "Joueurs de {0} à surveiller": "{0} 需要重点关注的球员",
+  "joueur sur {0}": "名球员（共 {0} 名）",
+  "joueurs sur {0}": "名球员（共 {0} 名）",
   "joueurs sur le marché": "名球员在市场上",
   "Joueurs sur le marché": "市场上的球员",
   "Joueurs{0}": "球员{0}",

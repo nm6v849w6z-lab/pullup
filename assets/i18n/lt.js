@@ -2353,6 +2353,8 @@ window.HM_I18N_LT = {
   "Joueurs adverses à surveiller": "Stebėtini varžovų žaidėjai",
   "Joueurs clés": "Pagrindiniai žaidėjai",
   "Joueurs de {0} à surveiller": "Stebėtini {0} žaidėjai",
+  "joueur sur {0}": "žaidėjas iš {0}",
+  "joueurs sur {0}": "žaidėjai iš {0}",
   "joueurs sur le marché": "žaidėjai rinkoje",
   "Joueurs sur le marché": "Žaidėjai rinkoje",
   "Joueurs{0}": "Žaidėjai{0}",

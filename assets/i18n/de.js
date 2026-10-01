@@ -2448,6 +2448,8 @@ window.HM_I18N_DE = {
   "Joueurs adverses à surveiller": "Gegnerische Spieler im Blick",
   "Joueurs clés": "Schlüsselspieler",
   "Joueurs de {0} à surveiller": "Spieler von {0} im Blick",
+  "joueur sur {0}": "Spieler von {0}",
+  "joueurs sur {0}": "Spieler von {0}",
   "joueurs sur le marché": "Spieler auf dem Markt",
   "Joueurs sur le marché": "Spieler auf dem Markt",
   "Joueurs{0}": "Spieler{0}",

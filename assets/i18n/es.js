@@ -2353,6 +2353,8 @@ window.HM_I18N_ES = {
   "Joueurs adverses à surveiller": "Jugadores rivales a vigilar",
   "Joueurs clés": "Jugadores clave",
   "Joueurs de {0} à surveiller": "Jugadores de {0} a vigilar",
+  "joueur sur {0}": "jugador de {0}",
+  "joueurs sur {0}": "jugadores de {0}",
   "joueurs sur le marché": "jugadores en el mercado",
   "Joueurs sur le marché": "Jugadores en el mercado",
   "Joueurs{0}": "Jugadores{0}",
