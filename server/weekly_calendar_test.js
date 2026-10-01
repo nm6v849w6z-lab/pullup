@@ -315,14 +315,25 @@ function paris(ms) {
   team.trainedTactics = target;
   team.defense = target.value;
   team.updateTacticalKnowledge(Date.UTC(2026, 8, 29, 18)); // match mardi 20h
+  // Règle 2026-10-01 (retour utilisateur) : le jour « Tactique » crédite la
+  // connaissance dès qu'il est écoulé, selon son niveau ; le jour du match
+  // (jeudi, coupe) n'est jamais crédité. (Avant : +4 par jour banqué, ajouté
+  // au match.)
   team.syncCollectiveTrainingLog(Date.UTC(2026, 8, 30, 8)); // mercredi (repos)
-  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 8)); // jeudi matin, match de coupe à 20h
-  const before = team.tacticalKnowledge.defense[target.value];
-  const expectedGain = E.tacticalKnowledgeGainForStreak(1) + E.TACTICAL_KNOWLEDGE_DAILY_GAIN * 1;
+  const beforeWed = team.tacticalKnowledge.defense[target.value];
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 8)); // jeudi matin, match de coupe à 20h : mercredi écoulé
+  const afterWed = team.tacticalKnowledge.defense[target.value];
+  const wedGain = Math.round(E.tacticDailyGainForLevel(beforeWed) * 10) / 10;
+  if (Math.abs((afterWed - beforeWed) - Math.min(wedGain, 100 - beforeWed)) > 1e-6) throw new Error(`❌ Le mercredi (repos) doit être crédité : gain ${afterWed - beforeWed}, attendu ${wedGain}.`);
+  const before = afterWed;
+  const expectedGain = E.tacticalKnowledgeGainForStreak(1);
   team.tacticalKnowledgeStreaks.defense[target.value] = 0;
   team.updateTacticalKnowledge(Date.UTC(2026, 9, 1, 18));
   const gain = team.tacticalKnowledge.defense[target.value] - before;
-  if (Math.abs(gain - Math.min(expectedGain, 100 - before)) > 1e-9) throw new Error(`❌ Seul le mercredi (repos) doit compter : gain ${gain}, attendu ${expectedGain}.`);
+  if (Math.abs(gain - Math.min(expectedGain, 100 - before)) > 1e-9) throw new Error(`❌ Le match n'ajoute que sa série : gain ${gain}, attendu ${expectedGain}.`);
+  const afterMatch = team.tacticalKnowledge.defense[target.value];
+  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 2, 8)); // vendredi : le jeudi (match) ne compte pas
+  if (team.tacticalKnowledge.defense[target.value] !== afterMatch) throw new Error("❌ Le jour du match ne doit jamais être crédité comme un jour d'entraînement.");
   console.log("✅ Entraînement collectif : le jour du match ne compte pas, seuls les jours de repos.");
 })();
 
@@ -395,9 +406,9 @@ function paris(ms) {
 })();
 
 // ---------------------------------------------------------------------
-// 12) Jour d'amical (retour utilisateur, 2026-09-27) : pas un jour de repos,
-//     donc ni entraînement collectif tactique ni récupération ce jour-là ;
-//     l'aperçu de la page Entraînement ne compte pas un jour de match.
+// 12) Jour d'amical (règle modifiée, retour utilisateur 2026-10-01) : pas de
+//     tactique pour l'équipe ce jour-là ; récupération/physique pour les
+//     joueurs NON retenus pour l'amical (avant : rien pour personne).
 // ---------------------------------------------------------------------
 (function testFriendlyDayIsNotRestDay() {
   const lg = E.generateMultiManagerLeague(["A"], 1, Date.UTC(2026, 8, 27, 9), C.dailyAnchoredCalendarConfig());
@@ -407,21 +418,22 @@ function paris(ms) {
   team.collectiveTraining = "tactique";
   team.updateTacticalKnowledge(Date.UTC(2026, 8, 29, 18)); // match mardi
   team.syncCollectiveTrainingLog(Date.UTC(2026, 8, 30, 8)); // mercredi : amical à 15h
-  team.markFriendlyDay(E.parisCalendarDayIndex(Date.UTC(2026, 8, 30, 13)));
+  const friendlyDay = E.parisCalendarDayIndex(Date.UTC(2026, 8, 30, 13));
+  team.markFriendlyDay(friendlyDay, [team.players[0].id]);
+  const k0 = team.tacticalKnowledge.defense[target.value];
   team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 8)); // jeudi
-  if (team.daysTrainedForTarget(target, E.parisCalendarDayIndex(Date.UTC(2026, 9, 1, 18))) !== 0) throw new Error("❌ Un jour d'amical ne doit pas compter comme jour d'entraînement tactique.");
+  if (team.tacticalKnowledge.defense[target.value] !== k0) throw new Error("❌ Un jour d'amical ne doit pas compter comme jour d'entraînement tactique.");
   team.collectiveTraining = "recuperation";
   team.collectiveTrainingLog.forEach(e => { e.collectiveTraining = "recuperation"; });
   team.players.forEach(p => { p.condition = 50; });
   team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 9));
-  if (team.players[0].condition !== 50) throw new Error("❌ Un jour d'amical ne doit pas donner le bonus de récupération.");
+  if (team.players[0].condition !== 50) throw new Error("❌ Le joueur retenu pour l'amical ne doit pas avoir le bonus de récupération.");
+  if (team.players[1].condition !== 55) throw new Error("❌ Un joueur non retenu pour l'amical doit avoir le bonus de récupération.");
   const back = E.teamFromSave(JSON.parse(JSON.stringify(E.serializeTeam(team))));
-  if (!back.isFriendlyDay(E.parisCalendarDayIndex(Date.UTC(2026, 8, 30, 13)))) throw new Error("❌ Les jours d'amical doivent survivre à la sauvegarde.");
+  if (!back.isFriendlyDay(friendlyDay) || !(back.friendlyPlayersByDay[friendlyDay] || []).length) throw new Error("❌ Les jours d'amical (et leurs joueurs) doivent survivre à la sauvegarde.");
   const fsrc = fs.readFileSync(path.join(__dirname, "friendlies.js"), "utf-8");
-  if (!/markFriendlyDay\(friendlyDay\)/.test(fsrc)) throw new Error("❌ server/friendlies.js doit marquer le jour d'amical sur les vrais clubs.");
-  const html = fs.readFileSync(path.join(__dirname, "..", "moteurbasket3.html"), "utf-8");
-  if (!html.includes("daysTrainedForTarget(teamA.trainedTactics, matchToday ? todayIdx : null)")) throw new Error("❌ L'aperçu de la page Entraînement doit exclure un jour de match.");
-  console.log("✅ Jour d'amical : ni tactique ni récupération collective ; aperçu sans le jour de match.");
+  if (!/markFriendlyDay\(friendlyDay, shell\.players/.test(fsrc)) throw new Error("❌ server/friendlies.js doit marquer le jour d'amical (et ses joueurs) sur les vrais clubs.");
+  console.log("✅ Jour d'amical : pas de tactique ; récupération seulement pour les joueurs non retenus.");
 })();
 
 // ---------------------------------------------------------------------

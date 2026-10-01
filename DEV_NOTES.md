@@ -20,6 +20,44 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Refonte de
+  l'entraînement (spécification validée par le propriétaire, retour
+  utilisateur 2026-10-01)**. engine.js (+ bloc miroir « ENTRAÎNEMENT V2 »
+  identique dans moteurbasket3.html, vérifié par training_v2_test.js) :
+  plans individuels `Team.trainingSlots` (places : sans entraîneur 0, niv.1-2
+  → 3, niv.3-4 → 4, niv.5 → 5), taux d'entraîneur inchangés (×1,06 à ×1,30)
+  appliqués au meilleur cas d'avant (programme pur, sans dilution), plus
+  aucun effet du poste (adjoint compris), plein rendement à 30 min sur la
+  semaine (tous postes), intensité Légère/Normale/Intense (−25 % + 2/jour de
+  récupération ; +25 %, −8 de forme et 2 % de blessure par joueur en plan),
+  plafond souple (`trainingProgressRoom`, diviseur 45, échelle 8 ; académie
+  et IA gardent le diviseur 20) + bonus de plafond +2..+6, spécialités
+  (`trainer.specialty` : attaque/défense +15 %, physique +25 % sur les jours
+  Physique, jeunes +15 % ≤ 21 ans et académie ; spécialité aléatoire sur le
+  marché, déterministe pour les anciennes sauvegardes), jour « Physique »
+  (`applyPhysicalDayTo`), mental 45 % automatique + expérience (minutes de
+  la semaine, courbe quadratique), parrainage (2 duos, mental ×1,3), plan
+  collectif jour par jour (`collectiveDayPlan`, `setCollectiveDay`), gain
+  tactique selon le niveau (40 → +12 … 100 → +3, crédité dès le jour écoulé,
+  plus de bonus de jours banqués), effet en match ±8 %, jour d'amical (pas de
+  tactique ; récupération/physique pour les non-retenus,
+  `friendlyPlayersByDay`), bilan du lundi (`slots`, `advice`, `collective`)
+  et conseils, IA (`cpuTrainingSlots`, entraîneur implicite niveau 3, travail
+  de fond 0,95 calibré), migration (`migrateTrainingSlots`). Serveur :
+  /api/training (plans, intensité, parrainages, `day`) validé ;
+  friendlies.js transmet les joueurs de l'amical. Écran Entraînement refait
+  (maquette v2 + rendement % avec détail, jauge de plafond), Staff (spécialité
+  de l'entraîneur), Guide, tutoriel. Traductions ×9. Tests : nouveaux
+  training_v2_test.js et training_v2_ui_test.js ; adaptés :
+  synergy_training_test, tactical_knowledge_test (point 4),
+  training_progression_test, trained_tactic_dropdown_test,
+  training_recovery_gauge_test, persistence_test, end_to_end_test,
+  attr_color_scheme_everywhere_test, my_auctions_test, premium_test,
+  server/weekly_calendar_test (points 9 et 12). Guide « Connaissance
+  tactique » mis à jour (±8 %, gain selon le niveau). Suite complète verte
+  (italy/national_cup/world_season : lents sous charge, verts seuls).
+  Reste : push par l'utilisateur.
+
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Marché :
   pays au choix + barres âge/potentiel/prix** (retour utilisateur
   2026-10-01 : « il faut pouvoir choisir le pays de son choix (mets une

@@ -33,7 +33,7 @@ const E = require("./engine.js");
 const {
   generateStartingRoster, generateLeague, serializeTeam, teamFromSave,
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
-  TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_DAILY_GAIN,
+  TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_DAILY_GAIN, tacticDailyGainForLevel, TACTICAL_KNOWLEDGE_FLOOR,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak,
   recordMatchStatsForTeam, MatchEngine,
 } = E;
@@ -199,44 +199,60 @@ function referenceTrajectory(matches) {
 })();
 
 // ---------------------------------------------------------------------
-// 4) Bonus d'entraînement collectif "tactique" : s'ajoute PAR-DESSUS la
-//    courbe de gain, UNIQUEMENT sur l'option RÉELLEMENT jouée ce match (une
-//    préparation en avance sur une option pas encore live ne rapporte rien
-//    tant que l'ordre live n'a pas changé).
+// 4) Jour d'entraînement collectif « Tactique » (règle modifiée, retour
+//    utilisateur 2026-10-01) : le gain est crédité DÈS que le jour de repos
+//    est écoulé, selon le niveau ACTUEL de l'aspect travaillé
+//    (tacticDailyGainForLevel : 40 → +12, 60 → +9, 80 → +6, 95 → +4), qu'il
+//    soit joué en direct ou non ; plus de bonus de jours banqués au match.
+//    (Ancienne règle : +4 par jour banqué, crédité au match seulement si
+//    l'option était jouée.)
 // ---------------------------------------------------------------------
-(function testTrainingBonusOnlyOnLiveOption() {
+(function testTacticDayGainByLevel() {
   const home = generateStartingRoster("Training Bonus Live Only");
   generateLeague(home, 1, T0);
   home.defense = "Homme à homme";
   recordMatchStatsForTeam(home, 0, "championship", T0); // streak=1 -> +6
+  const round1 = x => Math.round(x * 10) / 10;
 
   home.collectiveTraining = "tactique";
   home.trainedTactics = { category: "defense", value: "Homme à homme" }; // la tactique DÉJÀ jouée
   home.syncCollectiveTrainingLog(T0 + 1 * ONE_DAY);
-  home.syncCollectiveTrainingLog(T0 + 2 * ONE_DAY);
-  recordMatchStatsForTeam(home, 1, "championship", T0 + 3 * ONE_DAY); // streak=2 -> +8, + bonus 2 jours
-
-  const expected = 56 + tacticalKnowledgeGainForStreak(2) + TACTICAL_KNOWLEDGE_DAILY_GAIN * 2;
-  if (home.tacticalKnowledge.defense["Homme à homme"] !== expected) {
-    throw new Error(`❌ Le bonus d'entraînement (2 jours banqués) devrait s'ajouter au gain de streak normal (attendu ${expected}, obtenu ${home.tacticalKnowledge.defense["Homme à homme"]}).`);
+  home.syncCollectiveTrainingLog(T0 + 2 * ONE_DAY); // jour 1 écoulé : crédité
+  const afterDay = round1(56 + tacticDailyGainForLevel(56));
+  if (home.tacticalKnowledge.defense["Homme à homme"] !== afterDay) {
+    throw new Error(`❌ Un jour « Tactique » écoulé doit créditer directement le gain du niveau actuel (attendu ${afterDay}, obtenu ${home.tacticalKnowledge.defense["Homme à homme"]}).`);
   }
-  console.log(`✅ 2 jours d'entraînement banqués sur l'option DÉJÀ jouée ajoutent +${TACTICAL_KNOWLEDGE_DAILY_GAIN * 2} par-dessus le gain de série normal (${expected}).`);
+  recordMatchStatsForTeam(home, 1, "championship", T0 + 3 * ONE_DAY); // streak=2 -> +8, plus de bonus banqué
+  const expected = afterDay + tacticalKnowledgeGainForStreak(2);
+  if (Math.abs(home.tacticalKnowledge.defense["Homme à homme"] - expected) > 1e-9) {
+    throw new Error(`❌ Le match n'ajoute plus que le gain de série (attendu ${expected}, obtenu ${home.tacticalKnowledge.defense["Homme à homme"]}).`);
+  }
+  console.log(`✅ Jour « Tactique » : +${(afterDay - 56).toFixed(1)} crédité dès le jour écoulé (niveau 56), le match n'ajoute que sa série (${expected}).`);
 
-  // Prépare maintenant une AUTRE défense, pas encore jouée en direct : elle
-  // continue de décliner NORMALEMENT (toujours délaissée, aucun rapport avec
-  // l'entraînement qui la cible), le bonus ne s'applique tout simplement
-  // pas puisqu'elle n'est pas jouée ce match.
+  // Une AUTRE défense, pas jouée en direct, progresse aussi grâce aux jours
+  // de repos, puis subit sa décroissance d'absence normale au match.
   const streaksBefore = home.tacticalKnowledgeStreaks.defense["Zone press"];
   const before = home.tacticalKnowledge.defense["Zone press"];
   home.trainedTactics = { category: "defense", value: "Zone press" };
   home.syncCollectiveTrainingLog(T0 + 4 * ONE_DAY);
   home.syncCollectiveTrainingLog(T0 + 5 * ONE_DAY);
-  recordMatchStatsForTeam(home, 2, "championship", T0 + 6 * ONE_DAY); // toujours H2H en direct
-  const expectedZonePress = before - tacticalKnowledgeLossForStreak(-streaksBefore + 1);
-  if (home.tacticalKnowledge.defense["Zone press"] !== expectedZonePress) {
-    throw new Error(`❌ Préparer une option pas encore jouée en direct ne devrait donner AUCUN bonus (elle devrait juste continuer sa décroissance normale d'absence, attendu ${expectedZonePress}, obtenu ${home.tacticalKnowledge.defense["Zone press"]}).`);
+  const trained = round1(before + tacticDailyGainForLevel(before));
+  if (home.tacticalKnowledge.defense["Zone press"] !== trained) {
+    throw new Error(`❌ L'option travaillée (pas encore jouée) doit progresser dès le jour écoulé (attendu ${trained}, obtenu ${home.tacticalKnowledge.defense["Zone press"]}).`);
   }
-  console.log("✅ Préparer une option pas encore jouée en direct n'ajoute AUCUN bonus tant que l'ordre live n'a pas effectivement changé (elle continue juste sa décroissance normale d'absence).");
+  recordMatchStatsForTeam(home, 2, "championship", T0 + 6 * ONE_DAY); // toujours H2H en direct
+  const expectedZonePress = Math.max(Math.min(trained, TACTICAL_KNOWLEDGE_FLOOR), trained - tacticalKnowledgeLossForStreak(-streaksBefore + 1));
+  if (Math.abs(home.tacticalKnowledge.defense["Zone press"] - expectedZonePress) > 1e-9) {
+    throw new Error(`❌ Au match, l'option non jouée suit sa décroissance d'absence normale (attendu ${expectedZonePress}, obtenu ${home.tacticalKnowledge.defense["Zone press"]}).`);
+  }
+  console.log("✅ Une option travaillée mais pas jouée progresse par les jours de repos, puis suit sa décroissance d'absence normale au match.");
+
+  // Courbe du gain par jour (spécification 2026-10-01).
+  [[40, 12], [60, 9], [80, 6], [95, 4], [100, 3], [20, 12]].forEach(([lvl, g]) => {
+    if (Math.abs(tacticDailyGainForLevel(lvl) - g) > 1e-9) throw new Error(`❌ tacticDailyGainForLevel(${lvl}) attendu ${g}, obtenu ${tacticDailyGainForLevel(lvl)}.`);
+  });
+  if (Math.abs(tacticDailyGainForLevel(70) - 7.5) > 1e-9) throw new Error("❌ Interpolation linéaire attendue entre 60 et 80.");
+  console.log("✅ Gain par jour : 40 → +12, 60 → +9, 80 → +6, 95 → +4, 100 → +3 (interpolation linéaire).");
 })();
 
 // ---------------------------------------------------------------------

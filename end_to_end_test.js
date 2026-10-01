@@ -74,21 +74,20 @@ uncheckedBefore[0].dispatchEvent(new win.Event("change"));
 const warningAfterTacticChange = doc.getElementById("lockWarning").textContent.trim();
 if (warningAfterTacticChange) throw new Error("❌ La feuille de match devrait rester jouable après avoir permuté une priorité offensive (toujours 3 sélectionnées) : " + warningAfterTacticChange);
 
+// Entraînement v2 (retour utilisateur 2026-10-01) : sans entraîneur, pas de
+// plan individuel (l'écran le dit) ; le réglage à l'avance testé ici est
+// l'intensité de la semaine et le choix collectif d'un jour de repos.
 clickTab(doc, "entrainement");
-const skillSel = doc.getElementById("trainingSkillSelect");
-skillSel.value = "threePoint";
-skillSel.onchange();
-// Postes : boutons à bascule depuis la refonte de la page (2026-09-25) ;
-// changer de compétence repart déjà du meilleur poste seul.
-const posBtns = [...doc.querySelectorAll("#trainingPositionsToggles .tp-pos")];
-if (posBtns.length !== 5 || posBtns.filter(b => b.getAttribute("aria-pressed") === "true").length !== 1) throw new Error("❌ Après le choix de la compétence, un seul poste devrait être sélectionné parmi 5 boutons.");
+if (!doc.querySelector('#trainingPlansCard [data-tab="staff"]')) throw new Error("❌ Sans entraîneur, l'écran Entraînement devrait renvoyer vers le marché des entraîneurs.");
+doc.querySelector('#collectiveTrainingConfig [data-day-option="physique"]').click();
+const plannedDay = Number(win.eval("trainingSelectedDay"));
 
 await flush(dom);
 let saved = readRawSave(savePath);
 console.log("\nTactiques réglées à l'avance :", saved.team.offensivePriorities);
-console.log("Entraînement réglé à l'avance :", saved.team.trainingSkill, saved.team.trainingPositions);
+console.log("Entraînement collectif réglé à l'avance :", JSON.stringify(saved.team.collectiveDayPlan));
 if (saved.team.offensivePriorities.length !== 3) throw new Error("❌ Les tactiques modifiées devraient être persistées.");
-if (saved.team.trainingSkill !== "threePoint") throw new Error("❌ Le programme d'entraînement choisi devrait être persisté.");
+if (!saved.team.collectiveDayPlan || !saved.team.collectiveDayPlan[plannedDay] || saved.team.collectiveDayPlan[plannedDay].collectiveTraining !== "physique") throw new Error("❌ Le choix collectif du jour devrait être persisté.");
 console.log("✅ Les réglages à l'avance (tactiques, entraînement) sont bien pris en compte et persistés sans action immédiate.");
 
 // ---------------------------------------------------------------------
@@ -244,10 +243,11 @@ win.close();
 const domReloaded = await openGame(html, baseUrl);
 const docReloaded = domReloaded.window.document;
 const reloaded = readRawSave(savePath);
-console.log("\nAprès rechargement complet — journée :", reloaded.league.round, "| division :", reloaded.league.divisionLevel, "| entraînement :", reloaded.team.trainingSkill, "| budget :", reloaded.team.budget);
+console.log("\nAprès rechargement complet — journée :", reloaded.league.round, "| division :", reloaded.league.divisionLevel, "| collectif :", reloaded.team.collectiveTraining, "| budget :", reloaded.team.budget);
 const persistedOk = reloaded.league.round === savedNewSeason.league.round
   && reloaded.league.divisionLevel === savedNewSeason.league.divisionLevel
-  && reloaded.team.trainingSkill === "threePoint"
+  && reloaded.team.collectiveTraining === savedNewSeason.team.collectiveTraining
+  && JSON.stringify(reloaded.team.trainingSlots) === JSON.stringify(savedNewSeason.team.trainingSlots)
   && reloaded.team.budget === savedNewSeason.team.budget;
 console.log(`${persistedOk ? "✅" : "❌"} L'ensemble de la session (calendrier, division, réglages, budget) survit au rechargement complet.`);
 if (!persistedOk) throw new Error("❌ La persistance complète a échoué après le scénario de bout en bout.");

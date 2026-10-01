@@ -53,8 +53,10 @@ function totalGrowthOver(weeks, setup) {
   const totals = totalGrowthOver(40, (team, p) => {
     ATTRS.forEach(a => p.attrs[a] = 30);
     p.potential = 70;
-    team.trainingSkill = "defOutside";
-    team.trainingPositions = [p.position];
+    // Entraînement v2 (retour utilisateur 2026-10-01) : plan individuel
+    // (entraîneur requis) au lieu du plan d'équipe par postes.
+    team.hireTrainer(1);
+    team.trainingSlots = [{ playerId: p.id, program: "defOutside" }];
     p.trainingSecondsPlayedByPosition = { [p.position]: 3000 };
   });
   console.log("Cas 1 (départs égaux) — defOutside:", totals.defOutside, "defInside:", totals.defInside, "agility:", totals.agility);
@@ -86,8 +88,10 @@ function totalGrowthOver(weeks, setup) {
     p.attrs.defOutside = 48; // proche de son propre plafond (potential + 12)
     p.attrs.defInside = 10;  // très en retard
     p.attrs.agility = 10;
-    team.trainingSkill = "defOutside";
-    team.trainingPositions = [p.position];
+    // Entraînement v2 (retour utilisateur 2026-10-01) : plan individuel
+    // (entraîneur requis) au lieu du plan d'équipe par postes.
+    team.hireTrainer(1);
+    team.trainingSlots = [{ playerId: p.id, program: "defOutside" }];
     p.trainingSecondsPlayedByPosition = { [p.position]: 3000 };
   });
   console.log("Cas 2 (defOutside déjà développé, synergies très en retard) — defOutside:", totals.defOutside, "defInside:", totals.defInside, "agility:", totals.agility);
@@ -121,8 +125,10 @@ function totalGrowthOver(weeks, setup) {
       p.attrs.defOutside = 48;
       p.attrs.defInside = 10;
       p.attrs.agility = 10;
-      team.trainingSkill = "defOutside";
-      team.trainingPositions = [p.position];
+      // Entraînement v2 (retour utilisateur 2026-10-01) : plan individuel
+      // (entraîneur requis) au lieu du plan d'équipe par postes.
+      team.hireTrainer(1);
+      team.trainingSlots = [{ playerId: p.id, program: "defOutside" }];
       p.trainingSecondsPlayedByPosition = { [p.position]: 3000 };
     });
     sumOut += totals.defOutside; sumIn += totals.defInside; sumAgi += totals.agility;

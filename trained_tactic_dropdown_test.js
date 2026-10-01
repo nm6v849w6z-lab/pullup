@@ -23,33 +23,33 @@ const win = dom.window;
 const clickTab = (key) => [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click();
 clickTab("entrainement");
 
-// --- Par défaut (collectiveTraining !== "tactique") : le picker reste
-// masqué, aucun ancien <select> ni nouveau menu ne doit être dans le DOM.
-const picker = doc.getElementById("trainedTacticsPicker");
-if (!picker) throw new Error("❌ (setup) #trainedTacticsPicker introuvable.");
-if (!picker.classList.contains("hidden")) {
-  throw new Error("❌ Le picker devrait rester masqué tant que l'entraînement collectif n'est pas \"tactique\".");
+// Entraînement v2 (retour utilisateur 2026-10-01) : le focus collectif se
+// choisit JOUR PAR JOUR dans la bande de la semaine (boutons
+// [data-day-option]) au lieu de l'ancien <select id="collectiveTrainingSelect"> ;
+// le menu de l'aspect travaillé n'apparaît que pour un jour « Tactique ».
+// La carte est re-rendue à chaque choix : les éléments sont relus par id.
+const selDay = () => Number(win.eval("trainingSelectedDay"));
+if (!Number.isFinite(selDay())) throw new Error("❌ (setup) aucun jour de repos sélectionnable dans la bande de la semaine.");
+const dayBtn = (key) => doc.querySelector(`#collectiveTrainingConfig [data-day-option="${key}"]`);
+dayBtn("recuperation").click();
+if (doc.getElementById("trainedTacticsPicker")) {
+  throw new Error("❌ Le picker devrait rester absent tant que le jour choisi n'est pas « Tactique ».");
 }
-console.log("✅ Le picker reste bien masqué hors focus \"tactique\".");
+console.log("✅ Le picker reste bien absent hors jour « Tactique ».");
 
-// --- Active le focus "tactique" pour révéler le picker.
-const collectiveSel = doc.getElementById("collectiveTrainingSelect");
-if (!collectiveSel) throw new Error("❌ (setup) #collectiveTrainingSelect introuvable.");
-collectiveSel.value = "tactique";
-collectiveSel.dispatchEvent(new win.Event("change", { bubbles: true }));
-
-if (picker.classList.contains("hidden")) {
-  throw new Error("❌ Le picker devrait apparaître une fois l'entraînement collectif réglé sur \"tactique\".");
+dayBtn("tactique").click();
+if (!doc.getElementById("trainedTacticsPicker")) {
+  throw new Error("❌ Le picker devrait apparaître une fois le jour réglé sur « Tactique ».");
 }
-console.log("✅ Le picker apparaît bien une fois le focus \"tactique\" choisi.");
+console.log("✅ Le picker apparaît bien une fois le jour « Tactique » choisi.");
 
 // --- L'ancien <select> natif ne doit plus exister du tout : remplacé par
 // le nouveau composant déclencheur + menu.
 if (doc.getElementById("trainedTacticSelect")) {
   throw new Error("❌ L'ancien <select id=\"trainedTacticSelect\"> ne devrait plus exister (remplacé par le menu personnalisé).");
 }
-const trigger = doc.getElementById("trainedTacticTrigger");
-const menu = doc.getElementById("trainedTacticMenu");
+let trigger = doc.getElementById("trainedTacticTrigger");
+let menu = doc.getElementById("trainedTacticMenu");
 if (!trigger) throw new Error("❌ #trainedTacticTrigger (bouton déclencheur) introuvable.");
 if (!menu) throw new Error("❌ #trainedTacticMenu (menu déroulant) introuvable.");
 console.log("✅ Le <select> natif est bien remplacé par le déclencheur + menu personnalisés.");
@@ -112,6 +112,8 @@ console.log("✅ Les 3 groupes (Priorité offensive/Défense/Rythme) sont bien p
 const firstOffenseOption = tacticRows.find(row => row.dataset.category === "offense");
 const chosenValue = firstOffenseOption.dataset.value;
 firstOffenseOption.click();
+trigger = doc.getElementById("trainedTacticTrigger");
+menu = doc.getElementById("trainedTacticMenu");
 
 if (!menu.classList.contains("hidden")) throw new Error("❌ Choisir une option devrait refermer le menu.");
 const triggerName = trigger.querySelector(".tto-name");
@@ -123,14 +125,14 @@ if (!trigger.querySelector(".tto-gauge-fill")) {
 }
 console.log(`✅ Choisir "${chosenValue}" referme le menu et met à jour le déclencheur (nom + jauge).`);
 
-const trainedTactics = win.eval("teamA.trainedTactics");
+const trainedTactics = win.eval(`teamA.collectiveDayConfig(${selDay()}).trainedTactics`);
 if (!trainedTactics || trainedTactics.category !== "offense" || trainedTactics.value !== chosenValue) {
-  throw new Error(`❌ teamA.trainedTactics devrait valoir {category:"offense", value:"${chosenValue}"}, obtenu ${JSON.stringify(trainedTactics)}.`);
+  throw new Error(`❌ Le plan du jour devrait viser {category:"offense", value:"${chosenValue}"}, obtenu ${JSON.stringify(trainedTactics)}.`);
 }
-console.log("✅ teamA.trainedTactics est bien mis à jour (même modèle de données qu'avant, {category, value}).");
+console.log("✅ Le plan du jour est bien mis à jour (même modèle de données qu'avant, {category, value}).");
 
 await flush(dom);
-const saved = readRawSave(savePath).team.trainedTactics;
+const saved = (readRawSave(savePath).team.collectiveDayPlan || {})[selDay()].trainedTactics;
 if (!saved || saved.category !== "offense" || saved.value !== chosenValue) {
   throw new Error(`❌ trainedTactics devrait être persisté côté serveur, obtenu ${JSON.stringify(saved)}.`);
 }
@@ -153,15 +155,15 @@ if (!doc.getElementById("trainedTacticMenu").classList.contains("hidden")) {
 }
 console.log("✅ Un clic en dehors du menu le referme bien.");
 
-// --- Revenir à "Rien de précis" efface bien teamA.trainedTactics.
+// --- Revenir à "Rien de précis" efface bien l'aspect du jour.
 doc.getElementById("trainedTacticTrigger").click();
 const noneOption = doc.querySelector('.trained-tactic-option[data-category=""]');
 noneOption.click();
-const clearedTactics = win.eval("teamA.trainedTactics");
+const clearedTactics = win.eval(`(teamA.collectiveDayPlan[${selDay()}] || {}).trainedTactics`);
 if (clearedTactics !== null) {
-  throw new Error(`❌ Choisir "Rien de précis" devrait remettre teamA.trainedTactics à null, obtenu ${JSON.stringify(clearedTactics)}.`);
+  throw new Error(`❌ Choisir "Rien de précis" devrait remettre l'aspect du jour à null, obtenu ${JSON.stringify(clearedTactics)}.`);
 }
-console.log("✅ Revenir à \"Rien de précis\" efface bien teamA.trainedTactics (null).");
+console.log("✅ Revenir à \"Rien de précis\" efface bien l'aspect travaillé du jour (null).");
 
 await flush(dom);
 await dom.window.close();

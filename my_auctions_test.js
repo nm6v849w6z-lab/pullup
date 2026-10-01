@@ -99,7 +99,8 @@ const clone = lg => Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.seria
   assert.ok(!badge.classList.contains("hidden") && badge.textContent === "1", `pastille : ${badge.className} « ${badge.textContent} »`);
   // Tableau de bord : tâche « Dépassé sur … ».
   const tasks = win.eval("dashBuildTasks(dashboardDataFromGameState())");
-  const task = tasks.find(t => /^Dépassé sur Entraîneur niveau \d$/.test(t.title));
+  // Spécialité de l'entraîneur affichée (entraînement v2, retour utilisateur 2026-10-01).
+  const task = tasks.find(t => /^Dépassé sur Entraîneur niveau \d \(Spécialité (Attaque|Défense|Physique|Jeunes)\)$/.test(t.title));
   assert.ok(task && task.cta.label === "Relancer" && task.cta.href === `/enchere/staff/coach/${coach.id}`, JSON.stringify(tasks.map(t => t.title)));
   // Mes enchères : ligne staff + ligne joueur.
   win.eval("TAB_HANDLERS.marche()");

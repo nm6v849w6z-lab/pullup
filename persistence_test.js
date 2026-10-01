@@ -65,47 +65,24 @@ win1.eval("TAB_HANDLERS.entrainement(); renderStaffPanel();");
 console.log("Staff après recrutement niveau 4 :", doc1.getElementById("staffCurrent").textContent.replace(/\s+/g, " "));
 console.log("Budget après recrutement (salaire pas encore prélevé) :", doc1.getElementById("staffBudget").textContent);
 
-// Choisit "Jeu intérieur" (inside) comme compétence de la semaine.
-const skillSel = doc1.getElementById("trainingSkillSelect");
-skillSel.value = "inside";
-skillSel.dispatchEvent(new win1.Event("change"));
-
-// Postes : 5 boutons à bascule depuis la refonte de la page (2026-09-25).
-const posBtns = (doc) => [...doc.querySelectorAll("#trainingPositionsToggles .tp-pos")];
-const pressedPositions = (doc) => posBtns(doc).filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.pos);
-console.log("Boutons de postes pour 'Jeu intérieur' :", posBtns(doc1).map(b => b.textContent));
-// Par défaut, le mieux classé seul (100 %).
-console.log("Postes sélectionnés par défaut :", pressedPositions(doc1));
-console.log("Note de dilution :", doc1.getElementById("trainingDilutionNote").textContent);
-
-// Retour utilisateur (2026-09) : la liste (voir renderTrainingList) ne
-// montre désormais QUE les joueurs ayant déjà du temps de jeu cumulé sur le
-// poste entraîné — à ce stade (semaine 1, avant tout match), elle est donc
-// normalement VIDE ("introuvable"/0 ci-dessous, pas un bug) ; les lignes
-// n'apparaîtront qu'une fois des matchs joués, vérifié plus loin.
-let rows = [...doc1.querySelectorAll(".training-row")];
-const pivotRow = rows.find(r => r.querySelector(".tr-name").textContent.includes(" P "));
-console.log("\nLigne d'un Pivot (poste concerné) :", pivotRow ? pivotRow.textContent.replace(/\s+/g, " ") : "introuvable");
-const meneurRow = rows.find(r => r.querySelector(".tr-name").textContent.includes(" M "));
-console.log("Ligne d'un Meneur (poste NON concerné) :", meneurRow ? meneurRow.textContent.replace(/\s+/g, " ") : "introuvable");
-
-// Repère les pivots pour vérifier l'effet du gabarit.
-function pivots(doc) {
-  return [...doc.querySelectorAll(".training-row")].filter(r => r.querySelector(".tr-meta").textContent.startsWith("P ·"));
-}
-console.log(`\n${pivots(doc1).length} pivots trouvés.`);
-
-// Étend à 2 postes (Pivot + Ailier fort) pour vérifier la dilution + la
-// couverture de plus de joueurs.
-// Le poste proposé par défaut est le MIEUX classé pour le programme
-// (rankedPositionsForProgram, tableau d'aptitudes de l'utilisateur du
-// 2026-09-29 : Ailier fort pour « Jeu intérieur », plus Pivot) : on coche
-// donc celui des deux qui manque, quel que soit l'ordre du tableau.
-for (const pos of ["Pivot", "Ailier fort"]) {
-  const btn = posBtns(doc1).find(b => b.dataset.pos === pos);
-  if (btn && btn.getAttribute("aria-pressed") !== "true") btn.click();
-}
-console.log("\nAprès extension à 2 postes :", pressedPositions(doc1), "| note :", doc1.getElementById("trainingDilutionNote").textContent);
+// Entraînement v2 (retour utilisateur 2026-10-01) : plans individuels au
+// lieu de « compétence + postes » — deux pivots en « Jeu intérieur »,
+// intensité Légère (pas de risque de blessure pendant le test).
+const pivotIds = win1.eval("teamA.players.filter(p => p.position === 'Pivot').map(p => String(p.id))");
+const addPlayer = (id) => {
+  const sel = doc1.getElementById("trainingAddPlayer");
+  sel.value = id;
+  sel.dispatchEvent(new win1.Event("change", { bubbles: true }));
+};
+pivotIds.slice(0, 2).forEach(addPlayer);
+doc1.querySelectorAll("[data-slot-program]").forEach(sel => {
+  sel.value = "inside";
+  sel.dispatchEvent(new win1.Event("change", { bubbles: true }));
+});
+doc1.querySelector('#trainingPlansCard [data-intensity="legere"]').click();
+const slotRows = (doc) => [...doc.querySelectorAll("#trainingPlansCard .tm-slot")];
+console.log("Plans individuels :", slotRows(doc1).map(r => r.querySelector(".tm-who b").textContent));
+console.log("Rendement affiché :", slotRows(doc1).map(r => r.querySelector(".tm-eff-btn").textContent));
 
 // --- Avance le calendrier de WEEKS semaines réelles complètes (ROUNDS
 // journées) : une seule requête au serveur rattrape tout d'un coup (matchs +
@@ -129,10 +106,10 @@ await flush(dom1);
 const saved = readRawSave(savePath);
 if (!saved.team || !saved.league) throw new Error("❌ Format de sauvegarde inattendu (attendu team + league) : " + JSON.stringify(Object.keys(saved)));
 const savedTeam = saved.team, savedLeague = saved.league;
-console.log("\nSemaine sauvegardée :", savedTeam.week, "| trainingSkill:", savedTeam.trainingSkill, "| trainingPositions:", savedTeam.trainingPositions);
+console.log("\nSemaine sauvegardée :", savedTeam.week, "| plans :", JSON.stringify(savedTeam.trainingSlots), "| intensité :", savedTeam.trainingIntensity);
 console.log("Staff sauvegardé :", savedTeam.trainer, "| budget sauvegardé :", savedTeam.budget);
-if (savedTeam.trainingSkill !== "inside") throw new Error("❌ La compétence entraînée n'a pas été sauvegardée correctement.");
-if (!Array.isArray(savedTeam.trainingPositions) || savedTeam.trainingPositions.length !== 2) throw new Error("❌ Les postes entraînés n'ont pas été sauvegardés correctement.");
+if (!Array.isArray(savedTeam.trainingSlots) || savedTeam.trainingSlots.length !== 2 || savedTeam.trainingSlots.some(sl => sl.program !== "inside")) throw new Error("❌ Les plans individuels n'ont pas été sauvegardés correctement.");
+if (savedTeam.trainingIntensity !== "legere") throw new Error("❌ L'intensité n'a pas été sauvegardée correctement.");
 if (!savedTeam.trainer || savedTeam.trainer.level !== 4 || savedTeam.trainer.weeksEmployed !== WEEKS) throw new Error("❌ Le staff (entraîneur) n'a pas été sauvegardé correctement : " + JSON.stringify(savedTeam.trainer));
 // Avec plusieurs matchs (dont potentiellement des matchs à domicile,
 // recette de billetterie à 6 chiffres) mêlés aux semaines d'entraînement, le
@@ -178,26 +155,14 @@ const journeeOk = win2.eval("currentMatch.round") === ROUNDS;
 console.log(`${journeeOk ? "✅" : "❌"} Calendrier persisté : la journée ${ROUNDS + 1} est bien proposée au rechargement (currentMatch.round = ${win2.eval("currentMatch.round")}).`);
 
 win2.eval("TAB_HANDLERS.entrainement();");
-const skillOk = doc2.getElementById("trainingSkillSelect").value === "inside";
-const posOk = pressedPositions(doc2).length === 2;
-console.log(`${skillOk ? "✅" : "❌"} Compétence entraînée persistée : "${doc2.getElementById("trainingSkillSelect").value}"`);
-console.log(`${posOk ? "✅" : "❌"} Postes entraînés persistés : "${pressedPositions(doc2).join(" + ")}"`);
-
-// Le poste vit désormais dans son propre badge .tr-pos-badge (habillage FM
-// de l'écran Entraînement), plus dans le texte de .tr-meta — voir
-// buildTrainingRow.
-// Retour utilisateur (2026-09) : "en dessous les joueurs (en ne mettant que
-// les joueurs qui ont pris du temps de jeu et qui seront entrainés [...]
-// dès 1min de jeu sur le poste)" : la liste (voir renderTrainingList) ne
-// montre plus QUE les joueurs ayant du temps de jeu cumulé sur le(s)
-// poste(s) entraîné(s) cette journée. secondsPlayed n'est pas persisté
-// entre sessions (remis à 0 à chaque rechargement, avant le prochain
-// match) : la liste doit donc être VIDE juste après un rechargement,
-// avant qu'un match n'ait été rejoué.
-const reloadedRows = [...doc2.querySelectorAll(".training-row")];
-const reloadedPivotRow = reloadedRows.find(r => r.querySelector(".tr-pos-badge") && r.querySelector(".tr-pos-badge").textContent === "P");
-const listEmptyOk = reloadedRows.length === 0 && !!doc2.querySelector("#trainingList .training-empty");
-console.log(`${listEmptyOk ? "✅" : "❌"} Liste d'entraînement vide juste après rechargement (secondsPlayed remis à 0, aucun joueur n'a "assez joué" avant le prochain match) : ${reloadedRows.length} ligne(s), pivot trouvé : ${!!reloadedPivotRow}.`);
+const reloadedSlots = slotRows(doc2);
+const skillOk = reloadedSlots.length === 2 && reloadedSlots.every(r => r.querySelector("[data-slot-program]").value === "inside");
+const posOk = !!doc2.querySelector('#trainingPlansCard [data-intensity="legere"].on');
+console.log(`${skillOk ? "✅" : "❌"} Plans individuels persistés : ${reloadedSlots.length} joueur(s) en « Jeu intérieur »`);
+console.log(`${posOk ? "✅" : "❌"} Intensité persistée (Légère)`);
+// Rendement recalculé au rechargement (minutes de la nouvelle semaine).
+const listEmptyOk = reloadedSlots.every(r => /^\d+ %$/.test(r.querySelector(".tm-eff-btn").textContent));
+console.log(`${listEmptyOk ? "✅" : "❌"} Rendement affiché pour chaque plan après rechargement.`);
 
 const staffText = doc2.getElementById("staffCurrent").textContent.replace(/\s+/g, " ");
 const budgetText = doc2.getElementById("staffBudget").textContent;
@@ -217,6 +182,6 @@ win2.close();
 server.close();
 
 if (!weekOk || !journeeOk || !skillOk || !posOk || !staffOk || !budgetOk || !listEmptyOk) process.exit(1);
-console.log("\n✅ Persistance vérifiée : semaine, calendrier/journée, compétence entraînée, postes concernés, staff et budget survivent à un rechargement complet de la page.");
+console.log("\n✅ Persistance vérifiée : semaine, calendrier/journée, plans individuels, intensité, staff et budget survivent à un rechargement complet de la page.");
 
 })().catch(e => { console.error(e); process.exit(1); });

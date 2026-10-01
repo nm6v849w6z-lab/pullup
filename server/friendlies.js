@@ -558,7 +558,9 @@ function playFriendlyMatch(Engine, homeReal, awayReal, homeSetup, awaySetup, at,
     // coquille ci-dessus est jetée.
     const friendlyDay = Engine.parisCalendarDayIndex(at);
     [[homeReal, home], [awayReal, away]].forEach(([t, shell]) => {
-      if (typeof t.markFriendlyDay === "function") t.markFriendlyDay(friendlyDay);
+      // Joueurs retenus pour l'amical : exclus de la récupération/du physique
+      // du jour, les autres en profitent (retour utilisateur 2026-10-01).
+      if (typeof t.markFriendlyDay === "function") t.markFriendlyDay(friendlyDay, shell.players.map(p => p.id));
       const secs = {};
       shell.players.forEach(p => { if (p.secondsPlayed > 0) secs[p.id] = p.secondsPlayed; });
       if (typeof t.gainTacticalKnowledgeFromFriendly === "function") t.gainTacticalKnowledgeFromFriendly(secs);

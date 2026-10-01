@@ -23,6 +23,11 @@
 // (minutes = 0, resetForMatch() remet ce compteur à zéro à chaque match) —
 // exactement le cas "silencieux" à couvrir, mais désormais dans son contexte
 // réel plutôt que provoqué artificiellement.
+// Entraînement v2 (retour utilisateur 2026-10-01) : plus de plan d'équipe
+// par postes mais des plans individuels (un joueur + un programme par place,
+// entraîneur requis) ; le « poste entraîné » de l'ancienne version devient
+// « joueur en plan », et le rapport explique le manque de minutes sur la
+// SEMAINE (30 min pour le plein rendement).
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, writeRawSave, fastForwardCalendar } = require("./test_helpers.js");
 const E = require("./engine.js");
@@ -70,26 +75,39 @@ async function snapshot(dom, savePath) {
 }
 function clickTab(doc, key) { [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click(); }
 
-function setTraining(doc, skill) {
-  clickTab(doc, "entrainement"); // populate/attache les listeners des selects (voir showTrainingSection)
-  const skillSel = doc.getElementById("trainingSkillSelect");
-  skillSel.value = skill;
-  skillSel.onchange();
-  // Postes : boutons à bascule (refonte 2026-09-25) ; changer de
-  // compétence repart déjà d'UN seul poste, le plus favorable.
-  // Un seul poste (le plus favorable à cette compétence, TOUJOURS la
-  // première option — voir trainingPositionOptionsForProgram) : c'est
-  // délibérément le réglage SANS dilution (voir
-  // TRAINING_DILUTION_BY_POSITION_COUNT, qui va jusqu'à -50% d'efficacité
-  // pour "Toute l'équipe"/5 postes) — sélectionner davantage de postes pour
-  // "élargir l'échantillon" serait contre-productif ici : ça réduirait le
-  // gain de CHAQUE joueur au lieu de simplement en ajouter d'autres, et
-  // ferait retomber le test dans le même genre de faux-négatif ponctuel
-  // qu'on cherche à éliminer (voir sumTrainedProgress ci-dessous, qui règle
-  // le vrai problème — le plafond individuel d'UN joueur sur UNE seule
-  // caractéristique — sans avoir besoin de diluer l'entraînement).
-  const on = [...doc.querySelectorAll("#trainingPositionsToggles .tp-pos[aria-pressed='true']")];
-  if (on.length !== 1) throw new Error("❌ setTraining : un seul poste devrait être sélectionné.");
+// Donne un entraîneur au club humain (sauvegarde brute, deux exemplaires :
+// voir inflateRosterWithRookies) : sans entraîneur, aucun plan individuel.
+function giveTrainer(savePath, level = 3) {
+  const saved = readRawSave(savePath);
+  const trainer = { level, weeksEmployed: 0, baseSalary: E.TRAINER_BASE_SALARY[level], specialty: "defense" };
+  saved.team.trainer = { ...trainer };
+  const humanInLeague = saved.league && (saved.league.teams || []).find(t => t.isHuman);
+  if (humanInLeague) humanInLeague.trainer = { ...trainer };
+  writeRawSave(savePath, saved);
+}
+
+// Remplit toutes les places de plan individuel depuis l'écran (sélecteur
+// « Ajouter un joueur ») avec `skill` comme programme, en privilégiant
+// `preferIds` (ordre donné) puis l'ordre du sélecteur.
+function setTraining(doc, skill, preferIds = []) {
+  clickTab(doc, "entrainement");
+  const win = doc.defaultView;
+  for (let guard = 0; guard < 10; guard++) {
+    const add = doc.getElementById("trainingAddPlayer");
+    if (!add) break;
+    const values = [...add.options].map(o => o.value).filter(Boolean);
+    const pick = preferIds.map(String).find(id => values.includes(id)) || values[0];
+    if (!pick) break;
+    add.value = pick;
+    add.dispatchEvent(new win.Event("change", { bubbles: true }));
+  }
+  doc.querySelectorAll("[data-slot-program]").forEach(sel => {
+    sel.value = skill;
+    sel.dispatchEvent(new win.Event("change", { bubbles: true }));
+  });
+  const slots = [...doc.querySelectorAll("#trainingPlansCard .tm-slot")];
+  if (!slots.length) throw new Error("❌ setTraining : aucune place de plan individuel remplie.");
+  return slots.map(el => el.dataset.slotPlayer);
 }
 
 // Somme, sur les joueurs du/des poste(s) réellement entraîné(s)
@@ -119,10 +137,10 @@ function setTraining(doc, skill) {
 // dépendent plus DU TOUT du temps de jeu (ils évoluent tout seuls, voir
 // Player.trainWeek/PHYSICAL_ATTRS/MENTAL_ATTRS) — seuls les FUNDAMENTAL_ATTRS
 // restent conditionnés aux minutes réellement jouées au poste entraîné.
-function sumTrainedProgress(before, after, trainedPositions, filterFn, onlyAttrs = null) {
+function sumTrainedProgress(before, after, trainedIds, filterFn, onlyAttrs = null) {
   let total = 0;
   after.forEach(p => {
-    if (!trainedPositions.includes(p.position)) return;
+    if (!trainedIds.includes(String(p.id))) return;
     if (filterFn && !filterFn(p)) return;
     const b = before.find(x => x.id === p.id);
     if (!b) return;
@@ -146,9 +164,17 @@ function sumTrainedProgress(before, after, trainedPositions, filterFn, onlyAttrs
 // ---------------------------------------------------------------------
 {
   let { doc, win, dom, server, savePath, baseUrl } = await loadGame();
-  setTraining(doc, "threePoint");
   await flush(dom);
-  const trainedPositions = readRawSave(savePath).team.trainingPositions;
+  win.close();
+  giveTrainer(savePath, 3);
+  dom = await openGame(html, baseUrl);
+  doc = dom.window.document;
+  win = dom.window;
+  // Titulaires d'abord : ils jouent, donc progressent.
+  const starters = Object.values(win.eval("teamA.lineup.starters")).filter(Boolean);
+  const trainedPositions = setTraining(doc, "threePoint", starters);
+  await flush(dom);
+  if (readRawSave(savePath).team.trainingSlots.length !== 4) throw new Error("❌ Entraîneur niveau 3 : 4 plans individuels attendus dans la sauvegarde.");
 
   const startAttrs = await snapshot(dom, savePath);
 
@@ -167,7 +193,7 @@ function sumTrainedProgress(before, after, trainedPositions, filterFn, onlyAttrs
 
   const totalGain = sumTrainedProgress(startAttrs, endAttrs, trainedPositions);
   console.log(`\nProgrès total (joueurs entraînés, toutes caractéristiques, fractionnaire inclus) sur 6 semaines (matchs + entraînement) : ${totalGain.toFixed(3)}`);
-  if (totalGain <= 0) throw new Error("❌ Sur 6 semaines de matchs joués et d'entraînement validé, les joueurs du poste entraîné devraient avoir progressé au total (progrès total > 0).");
+  if (totalGain <= 0) throw new Error("❌ Sur 6 semaines de matchs joués et d'entraînement validé, les joueurs en plan individuel devraient avoir progressé au total (progrès total > 0).");
   console.log("✅ L'entraînement fait bien progresser les joueurs sur plusieurs semaines de jeu normal.");
   win.close();
   server.close();
@@ -193,12 +219,15 @@ function sumTrainedProgress(before, after, trainedPositions, filterFn, onlyAttrs
   await flush(dom);
   win.close();
   inflateRosterWithRookies(savePath);
+  giveTrainer(savePath, 5);
   dom = await openGame(html, baseUrl);
   doc = dom.window.document;
   win = dom.window;
-  setTraining(doc, "threePoint");
+  // 5 places : 3 débutants surnuméraires (ne jouent jamais) + 2 titulaires.
+  const rookieIds = readRawSave(savePath).team.players.slice(-15).map(p => String(p.id));
+  const starterIds = Object.values(win.eval("teamA.lineup.starters")).filter(Boolean).map(String);
+  const trainedPositions = setTraining(doc, "threePoint", [...rookieIds.slice(0, 3), ...starterIds.slice(0, 2)]);
   await flush(dom);
-  const trainedPositions = readRawSave(savePath).team.trainingPositions;
   const before = await snapshot(dom, savePath);
 
   win.close();
@@ -215,28 +244,28 @@ function sumTrainedProgress(before, after, trainedPositions, filterFn, onlyAttrs
   const after = await snapshot(dom, savePath);
   const afterRaw = readRawSave(savePath).team.players;
 
-  const zeroMinutePlayers = afterRaw.filter(p => trainedPositions.includes(p.position) && p.secondsPlayed === 0);
-  const playedPlayers = afterRaw.filter(p => trainedPositions.includes(p.position) && p.secondsPlayed > 0);
-  console.log(`\nJoueurs du poste entraîné (${trainedPositions.join(", ")}) — sans la moindre minute au dernier match : ${zeroMinutePlayers.length} | ayant joué : ${playedPlayers.length}`);
+  const weekReport = Object.entries((readRawSave(savePath).team.lastTrainingReport || {}).players || {});
+  const zeroMinutePlayers = afterRaw.filter(p => trainedPositions.includes(String(p.id)) && weekReport.some(([id, e]) => String(id) === String(p.id) && !(e.secondsPlayed > 0)));
+  const playedPlayers = afterRaw.filter(p => trainedPositions.includes(String(p.id)) && weekReport.some(([id, e]) => String(id) === String(p.id) && e.secondsPlayed > 0));
+  console.log(`\nJoueurs en plan individuel — sans la moindre minute sur la semaine : ${zeroMinutePlayers.length} | ayant joué : ${playedPlayers.length}`);
   if (zeroMinutePlayers.length === 0) {
-    throw new Error("❌ Le scénario de test (effectif regonflé de débutants supplémentaires) devrait produire au moins un joueur du poste entraîné sans la moindre minute au dernier match.");
+    throw new Error("❌ Le scénario de test (débutants surnuméraires en plan) devrait produire au moins un joueur en plan sans la moindre minute sur la semaine.");
   }
 
-  console.log("Le rapport explique l'absence de progression :", reportHtml.includes("aucune minute enregistrée"));
-  if (!reportHtml.includes("aucune minute enregistrée")) {
-    throw new Error("❌ Le rapport hebdomadaire devrait EXPLIQUER pourquoi un joueur concerné n'a pas progressé (aucune minute enregistrée au poste entraîné), pas rester silencieux — c'est ce silence qui donne l'impression que l'entraînement est cassé.");
+  console.log("Le rapport explique l'absence de progression :", reportHtml.includes("n'a joué que 0 min"));
+  if (!reportHtml.includes("n'a joué que 0 min")) {
+    throw new Error("❌ Le rapport hebdomadaire devrait EXPLIQUER pourquoi un joueur en plan n'a pas progressé (aucune minute dans la semaine), pas rester silencieux.");
   }
   // Attendu : les joueurs du poste entraîné SANS minute sur l'ensemble du
   // cycle (posSelected faux dans le rapport de la semaine), pas ceux à 0 au
   // seul dernier match : un joueur ayant joué au 1er match du cycle mais pas
   // au 2e progresse bien (le test échouait ~1 fois sur 3 pour cette raison).
-  const weekReport = Object.entries((readRawSave(savePath).team.lastTrainingReport || {}).players || {});
-  const noMinuteInCycle = weekReport.filter(([, e]) => e.skill && trainedPositions.includes(e.position) && !e.posSelected);
+  const noMinuteInCycle = weekReport.filter(([, e]) => e.inSlot && !(e.secondsPlayed > 0));
   const noMinuteIds = new Set(noMinuteInCycle.map(([id]) => String(id)));
-  const noteCount = (reportHtml.match(/aucune minute enregistrée/g) || []).length;
-  console.log(`Lignes d'explication "aucune minute enregistrée" : ${noteCount} (attendu ${noMinuteInCycle.length} joueurs sans minute sur le cycle)`);
+  const noteCount = (reportHtml.match(/n'a joué que 0 min/g) || []).length;
+  console.log(`Lignes d'explication "n'a joué que 0 min" : ${noteCount} (attendu ${noMinuteInCycle.length} joueurs sans minute sur le cycle)`);
   if (noMinuteInCycle.length === 0 || noteCount !== noMinuteInCycle.length) {
-    throw new Error(`❌ Chaque joueur du poste entraîné sans minute sur le cycle devrait avoir sa propre ligne d'explication (attendu ${noMinuteInCycle.length}, obtenu ${noteCount}).`);
+    throw new Error(`❌ Chaque joueur en plan sans minute sur la semaine devrait avoir sa propre ligne d'explication (attendu ${noMinuteInCycle.length}, obtenu ${noteCount}).`);
   }
   console.log("✅ Le rapport hebdomadaire explique désormais clairement, joueur par joueur, pourquoi certains n'ont pas progressé (au lieu du silence total d'avant).");
 

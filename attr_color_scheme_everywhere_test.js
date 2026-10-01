@@ -276,10 +276,11 @@ const { server, savePath, baseUrl } = await startTestServer();
   // tant que l'entraînement collectif n'est pas réglé sur "tactique" (même
   // mécanique que trained_tactic_dropdown_test.js).
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "entrainement").click();
-  const collectiveSel = doc.getElementById("collectiveTrainingSelect");
-  if (!collectiveSel) throw new Error("❌ (setup) #collectiveTrainingSelect introuvable.");
-  collectiveSel.value = "tactique";
-  collectiveSel.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+  // Entraînement v2 (retour utilisateur 2026-10-01) : choix jour par jour
+  // (boutons [data-day-option]) au lieu de #collectiveTrainingSelect.
+  const tacticBtn = doc.querySelector('#collectiveTrainingConfig [data-day-option="tactique"]');
+  if (!tacticBtn) throw new Error("❌ (setup) bouton « Tactique » du jour introuvable.");
+  tacticBtn.click();
   // Le menu (#trainedTacticMenu) est construit PARESSEUSEMENT (renderMenu(),
   // voir renderTrainedTacticsPicker) : vide tant que le bouton déclencheur
   // n'a pas été cliqué au moins une fois.

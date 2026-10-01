@@ -555,18 +555,20 @@ function setPlan(team, teamIndex, league, body, now) {
   return { ok: true, round, competition, plan };
 }
 
-// Entraînement : une compétence (ou null pour arrêter) + les postes couverts
-// (voir TRAINING_DILUTION_BY_POSITION_COUNT côté moteur — 1 à 5 postes,
-// plus le nombre est grand, plus le rendement par poste est dilué). Prend
-// effet à la fin de la semaine réelle en cours (voir autoSim.js) — pas
-// besoin de cliquer "Valider la semaine", ce réglage RESTE actif tant qu'il
-// n'est pas changé.
+// Entraînement (v2, retour utilisateur 2026-10-01) : plans individuels
+// (trainingSlots), intensité, parrainages, focus collectif courant et plan
+// d'un jour de repos (`day`). Prend effet au lundi suivant (voir autoSim.js)
+// pour les fondamentaux, chaque jour de repos écoulé pour le collectif ; le
+// réglage RESTE actif tant qu'il n'est pas changé.
 function setTraining(team, teamIndex, league, body, now = Date.now()) {
   if (!body || typeof body !== "object") return fail("Réglage d'entraînement invalide.");
   // Retour utilisateur (2026-09) : "enleve l'entrainement aucune
   // (entrainement général uniquement)" — une compétence d'entraînement
   // individuel est TOUJOURS requise désormais, `null` n'est plus une valeur
   // acceptée (contrairement à avant ce correctif).
+  // trainingSkill/trainingPositions : ancien réglage par postes, conservé
+  // pour compatibilité (migration), sans effet sur l'entraînement depuis
+  // l'entraînement v2 (retour utilisateur 2026-10-01).
   if (body.trainingSkill !== undefined && !TRAINING_PROGRAMS[body.trainingSkill]) {
     return fail(`Compétence d'entraînement inconnue : ${body.trainingSkill}.`);
   }
@@ -581,62 +583,113 @@ function setTraining(team, teamIndex, league, body, now = Date.now()) {
       return fail("Un même poste ne peut pas être sélectionné deux fois pour l'entraînement.");
     }
   }
-  // Entraînement collectif (retour utilisateur, 2026-09, voir Team.
-  // collectiveTraining côté moteur) : réglage SÉPARÉ de trainingSkill/
-  // trainingPositions ci-dessus, transmis dans le même appel pour éviter un
-  // aller-retour réseau supplémentaire depuis la page Entraînement.
+  // Entraînement v2 (retour utilisateur 2026-10-01) : plans individuels,
+  // intensité, parrainages — validés côté serveur.
+  let slotsValue, mentorValue;
+  if (body.trainingSlots !== undefined) {
+    const v = Engine.sanitizeTrainingSlots(team, body.trainingSlots);
+    if (!v.ok) return fail(v.error);
+    slotsValue = v.value;
+  }
+  if (body.trainingIntensity !== undefined && !Engine.TRAINING_INTENSITIES[body.trainingIntensity]) {
+    return fail(`Intensité d'entraînement inconnue : ${body.trainingIntensity}.`);
+  }
+  if (body.mentorships !== undefined) {
+    const v = Engine.sanitizeMentorships(team, body.mentorships);
+    if (!v.ok) return fail(v.error);
+    mentorValue = v.value;
+  }
+  // Entraînement collectif : null, "tactique", "recuperation" ou "physique"
+  // (retour utilisateur 2026-10-01).
   if (body.collectiveTraining !== null && body.collectiveTraining !== undefined
-    && body.collectiveTraining !== "tactique" && body.collectiveTraining !== "recuperation") {
+    && !Engine.COLLECTIVE_DAY_OPTIONS.includes(body.collectiveTraining)) {
     return fail(`Entraînement collectif inconnu : ${body.collectiveTraining}.`);
   }
-  // Tactique précisément travaillée à l'entraînement (retour utilisateur,
-  // 2026-09, voir Team.trainedTactics côté moteur) : UN SEUL aspect à la
-  // fois depuis ce correctif ("un seul aspect et pas tous les aspects") —
+  // Tactique précisément travaillée à l'entraînement : UN SEUL aspect
   // { category, value }, category parmi offense/defense/rhythm, value une
   // priorité offensive/défense/rythme CONNUE pour cette catégorie.
+  const parseTactics = (raw) => {
+    if (raw === null) return { ok: true, value: null };
+    if (typeof raw !== "object" || !raw) return fail("trainedTactics invalide.");
+    const { category, value } = raw;
+    if (!["offense", "defense", "rhythm"].includes(category)) {
+      return fail(`trainedTactics.category invalide (attendu offense/defense/rhythm) : ${category}.`);
+    }
+    if (typeof value !== "string") return fail("trainedTactics.value doit être une chaîne.");
+    if (category === "offense" && !OFFENSE_PROFILES[value]) {
+      return fail(`Priorité offensive inconnue dans trainedTactics.value : ${value}.`);
+    }
+    if (category === "defense" && !DEFENSES[value]) {
+      return fail(`Défense inconnue dans trainedTactics.value : ${value}.`);
+    }
+    if (category === "rhythm" && !RHYTHMS[value]) {
+      return fail(`Rythme inconnu dans trainedTactics.value : ${value}.`);
+    }
+    return { ok: true, value: { category, value } };
+  };
   let trainedTacticsValue;
   if (body.trainedTactics !== undefined) {
-    const raw = body.trainedTactics;
-    if (raw === null) {
-      trainedTacticsValue = null;
-    } else {
-      if (typeof raw !== "object" || !raw) return fail("trainedTactics invalide.");
-      const { category, value } = raw;
-      if (!["offense", "defense", "rhythm"].includes(category)) {
-        return fail(`trainedTactics.category invalide (attendu offense/defense/rhythm) : ${category}.`);
-      }
-      if (typeof value !== "string") return fail("trainedTactics.value doit être une chaîne.");
-      if (category === "offense" && !OFFENSE_PROFILES[value]) {
-        return fail(`Priorité offensive inconnue dans trainedTactics.value : ${value}.`);
-      }
-      if (category === "defense" && !DEFENSES[value]) {
-        return fail(`Défense inconnue dans trainedTactics.value : ${value}.`);
-      }
-      if (category === "rhythm" && !RHYTHMS[value]) {
-        return fail(`Rythme inconnu dans trainedTactics.value : ${value}.`);
-      }
-      trainedTacticsValue = { category, value };
+    const v = parseTactics(body.trainedTactics);
+    if (!v.ok) return v;
+    trainedTacticsValue = v.value;
+  }
+  // Plan d'un jour de repos (retour utilisateur 2026-10-01) : aujourd'hui ou
+  // un jour suivant de la semaine en cours, jamais un jour de match officiel,
+  // et pas de tactique un jour d'amical.
+  let dayValue = null;
+  if (body.day !== undefined) {
+    const d = body.day;
+    if (!d || typeof d !== "object" || typeof d.dayIndex !== "number" || !Number.isFinite(d.dayIndex)) return fail("Jour invalide.");
+    const todayIndex = Engine.parisCalendarDayIndex(now);
+    const weekEnd = Engine.parisWeekStartDayIndex(todayIndex) + 6 * Engine.PARIS_DAY_MS;
+    if (d.dayIndex !== Engine.parisCalendarDayIndex(d.dayIndex + 12 * 3600 * 1000) || d.dayIndex < todayIndex || d.dayIndex > weekEnd) {
+      return fail("Seuls aujourd'hui et les jours suivants de la semaine peuvent être planifiés.");
     }
+    if (d.collectiveTraining !== null && !Engine.COLLECTIVE_DAY_OPTIONS.includes(d.collectiveTraining)) {
+      return fail(`Entraînement collectif inconnu : ${d.collectiveTraining}.`);
+    }
+    let dayTactics;
+    if (d.trainedTactics !== undefined) {
+      const v = parseTactics(d.trainedTactics);
+      if (!v.ok) return v;
+      dayTactics = v.value;
+    }
+    if (league) {
+      const Friendlies = require("./friendlies.js");
+      const key = Friendlies.dayKeyOf(d.dayIndex + 12 * 3600 * 1000);
+      if (Friendlies.officialDaysFor(Engine, league, teamIndex).has(key)) {
+        return fail("Jour de match officiel : pas d'entraînement collectif ce jour-là.");
+      }
+      if (d.collectiveTraining === "tactique" && Friendlies.friendlyDaysFor(league, teamIndex).has(key)) {
+        return fail("Jour d'amical : la tactique ne peut pas être travaillée ce jour-là.");
+      }
+    }
+    dayValue = { dayIndex: d.dayIndex, collectiveTraining: d.collectiveTraining || null, trainedTactics: dayTactics };
   }
   // Historique quotidien de l'entraînement collectif (voir Team.
   // syncCollectiveTrainingLog côté moteur) : comble d'abord tout jour
   // manqué depuis la dernière synchro avec la config ENCORE ACTUELLE (avant
-  // mutation ci-dessous), puis, une fois la nouvelle config appliquée,
-  // enregistre AUJOURD'HUI avec elle, sinon un changement de tactique
-  // entraînée EN COURS DE JOURNÉE écraserait à tort le jour en cours avec
-  // une config qui n'a été active qu'une partie de la journée.
+  // mutation ci-dessous), puis enregistre AUJOURD'HUI avec la nouvelle.
   if (team.syncCollectiveTrainingLog) team.syncCollectiveTrainingLog(now);
   if (body.trainingSkill !== undefined) team.trainingSkill = body.trainingSkill;
   if (body.trainingPositions !== undefined) team.trainingPositions = [...body.trainingPositions];
+  if (slotsValue !== undefined) team.trainingSlots = slotsValue;
+  if (body.trainingIntensity !== undefined) team.trainingIntensity = body.trainingIntensity;
+  if (mentorValue !== undefined) team.mentorships = mentorValue;
   if (body.collectiveTraining !== undefined) team.collectiveTraining = body.collectiveTraining || null;
   if (body.trainedTactics !== undefined) team.trainedTactics = trainedTacticsValue;
+  if (dayValue) team.setCollectiveDay(dayValue.dayIndex, dayValue.collectiveTraining, dayValue.trainedTactics, now);
   if (team.syncCollectiveTrainingLog) team.syncCollectiveTrainingLog(now);
   return {
     ok: true,
     trainingSkill: team.trainingSkill,
     trainingPositions: team.trainingPositions,
+    trainingSlots: team.trainingSlots,
+    trainingIntensity: team.trainingIntensity,
+    mentorships: team.mentorships,
     collectiveTraining: team.collectiveTraining,
     trainedTactics: team.trainedTactics,
+    collectiveDayPlan: team.collectiveDayPlan,
   };
 }
 

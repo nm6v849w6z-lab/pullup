@@ -1158,6 +1158,26 @@ const POSITION_STRONG_ATTRS = {
   "Pivot": ["inside", "rebound", "block", "defInside", "power", "strength", "vertical"],
 };
 
+// IA (retour utilisateur 2026-10-01, entraînement v2) : entraîneur implicite
+// d'un club IA sans entraîneur, poids du travail de fond sur les
+// caractéristiques du poste (avant : 0,75 pour tous) et choix automatique
+// des plans individuels.
+const CPU_IMPLICIT_COACH_LEVEL = 3;
+const CPU_BACKGROUND_TRAINING_WEIGHT = 0.95;
+function cpuTrainingSlots(team, count) {
+  if (!(count > 0)) return [];
+  const candidates = (team.players || []).map(p => ({
+    p, score: Math.max(p.potential - p.overall(), 0) * growthFactorForAge(p.age) + growthFactorForAge(p.age),
+  }));
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates.slice(0, count).map(({ p }) => {
+    const keys = (POSITION_STRONG_ATTRS[p.position] || []).filter(a => TRAINING_PROGRAMS[a]);
+    const pool = keys.length ? keys : Object.keys(TRAINING_PROGRAMS).filter(k => TRAINING_PROGRAMS[k].attrs.length === 1);
+    const weakest = pool.slice().sort((a, b) => p.attrs[a] - p.attrs[b])[0];
+    return { playerId: p.id, program: weakest };
+  });
+}
+
 function positionEfficiencyForSkill(skill, position) {
   const fromTable = tableEfficiency(skill, position);
   if (fromTable != null) return fromTable;
@@ -1397,6 +1417,375 @@ const TRAINER_LEVELS = [1, 2, 3, 4, 5];
 const TRAINER_BASE_SALARY = { 1: 800, 2: 1600, 3: 3000, 4: 5500, 5: 10000 };
 const TRAINER_WEEKLY_GROWTH = { 1: 0.010, 2: 0.016, 3: 0.024, 4: 0.034, 5: 0.046 };
 const TRAINER_TRAINING_BONUS = { 1: 0.06, 2: 0.12, 3: 0.18, 4: 0.24, 5: 0.30 };
+
+// ---------------------------------------------------------------------
+// ENTRAÎNEMENT V2 (retour utilisateur 2026-10-01, spécification validée) :
+// plans individuels, intensité, plafond souple, spécialités d'entraîneur,
+// jour « Physique », mental par les minutes, parrainage, gain tactique selon
+// le niveau. Bloc copie miroir IDENTIQUE engine.js ⇄ moteurbasket3.html
+// (vérifié par training_v2_mirror_test.js), du début de ce commentaire
+// jusqu'à « FIN ENTRAÎNEMENT V2 ».
+// ---------------------------------------------------------------------
+// Places de plans individuels selon le niveau de l'entraîneur (retour
+// utilisateur 2026-10-01 : sans entraîneur, aucun travail des fondamentaux).
+const TRAINING_SLOTS_BY_COACH_LEVEL = { 0: 0, 1: 3, 2: 3, 3: 4, 4: 4, 5: 5 };
+// Plafond de progression repoussé par l'entraîneur (retour utilisateur 2026-10-01).
+const TRAINER_CEILING_BONUS = { 0: 0, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6 };
+// Plafond souple (retour utilisateur 2026-10-01) : sous le plafond, marge =
+// écart / TRAINING_ROOM_DIVISOR + 0,12 ; au-delà, 0,12 × exp(écart / échelle)
+// (ralentissement progressif, plus de mur à ×0,12). Calibré par simulation.
+const TRAINING_ROOM_DIVISOR = 45;
+const TRAINING_SOFT_CEILING_SCALE = 8;
+// `divisor` : 20 pour l'académie et l'IA (calibrages d'origine conservés).
+function trainingProgressRoom(gap, divisor = TRAINING_ROOM_DIVISOR) {
+  return gap > 0 ? gap / divisor + 0.12 : 0.12 * Math.exp(gap / TRAINING_SOFT_CEILING_SCALE);
+}
+const LEGACY_TRAINING_ROOM_DIVISOR = 20;
+function trainingSlotsForTrainer(trainer) {
+  return trainer ? (TRAINING_SLOTS_BY_COACH_LEVEL[trainer.level] || 0) : 0;
+}
+function trainerCeilingBonus(trainer) {
+  return trainer ? (TRAINER_CEILING_BONUS[trainer.level] || 0) : 0;
+}
+// Taux de l'entraîneur : mêmes niveaux qu'avant (retour utilisateur
+// 2026-10-01 : « garde les mêmes niveaux qu'actuellement »).
+function trainerRateMultiplier(trainer) {
+  return trainer ? 1 + (TRAINER_TRAINING_BONUS[trainer.level] || 0) : 1;
+}
+// Plafond d'une caractéristique travaillée (poids nominal du programme, sans
+// gabarit ni minutes) : potentiel + 12 × poids + bonus de l'entraîneur.
+function trainingCeilingFor(player, programWeight, trainer) {
+  return clamp(player.potential + 12 * Math.min(programWeight, 1) + trainerCeilingBonus(trainer), 1, 99);
+}
+// Jauge de plafond : marge relative seulement, jamais le potentiel exact.
+const CEILING_ROOM_STRONG = 6;
+function ceilingRoomLevel(room) {
+  return room >= CEILING_ROOM_STRONG ? "forte" : room > 0 ? "faible" : "atteinte";
+}
+
+// Intensité de la semaine (retour utilisateur 2026-10-01).
+const TRAINING_INTENSITIES = {
+  legere: { label: "Légère", mult: 0.75, recoveryBonus: 2, conditionLoss: 0, injuryChance: 0 },
+  normale: { label: "Normale", mult: 1, recoveryBonus: 0, conditionLoss: 0, injuryChance: 0 },
+  intense: { label: "Intense", mult: 1.25, recoveryBonus: 0, conditionLoss: 8, injuryChance: 0.02 },
+};
+function trainingIntensityOf(team) {
+  return team && TRAINING_INTENSITIES[team.trainingIntensity] ? team.trainingIntensity : "normale";
+}
+
+// Spécialités d'entraîneur (retour utilisateur 2026-10-01).
+const COACH_SPECIALTIES = {
+  offense: { label: "Attaque" },
+  defense: { label: "Défense" },
+  physical: { label: "Physique" },
+  youth: { label: "Jeunes" },
+};
+const COACH_SPECIALTY_KEYS = Object.keys(COACH_SPECIALTIES);
+const COACH_SPECIALTY_BONUS = 0.15;
+const COACH_PHYSICAL_DAY_BONUS = 0.25;
+const COACH_YOUTH_MAX_AGE = 21;
+const OFFENSE_TRAINING_ATTRS = ["threePoint", "midRange", "inside", "pass", "dribble", "freeThrow", "penetration", "shotCreation"];
+const DEFENSE_TRAINING_ATTRS = ["rebound", "block", "defOutside", "defInside", "steal"];
+// "offense"/"defense" si TOUTES les caractéristiques du programme sont de
+// cette famille, sinon null.
+function trainingProgramFamily(programKey) {
+  const program = TRAINING_PROGRAMS[programKey];
+  if (!program) return null;
+  const attrs = program.attrs.map(a => a.attr);
+  if (attrs.every(a => OFFENSE_TRAINING_ATTRS.includes(a))) return "offense";
+  if (attrs.every(a => DEFENSE_TRAINING_ATTRS.includes(a))) return "defense";
+  return null;
+}
+function coachSpecialtyMultFor(trainer, programKey, player) {
+  const s = trainer && trainer.specialty;
+  if (s === "offense" || s === "defense") return trainingProgramFamily(programKey) === s ? 1 + COACH_SPECIALTY_BONUS : 1;
+  if (s === "youth") return player && player.age <= COACH_YOUTH_MAX_AGE ? 1 + COACH_SPECIALTY_BONUS : 1;
+  return 1;
+}
+// Spécialité déterministe pour un entraîneur d'une ancienne sauvegarde.
+function deterministicCoachSpecialty(seed) {
+  const s = String(seed == null ? "" : seed);
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return COACH_SPECIALTY_KEYS[h % COACH_SPECIALTY_KEYS.length];
+}
+
+// Minutes de la semaine (toutes positions confondues, retour utilisateur
+// 2026-10-01 : le poste ne compte plus). Plein rendement à 30 min sur la
+// semaine (attendanceFactorForSeconds, rampe linéaire en dessous).
+function playerWeekSeconds(player) {
+  return Object.values((player && player.trainingSecondsPlayedByPosition) || {}).reduce((s, x) => s + (Number(x) || 0), 0);
+}
+
+// Mental (retour utilisateur 2026-10-01) : la moitié environ de la
+// progression naturelle reste automatique, le reste vient de l'expérience
+// (minutes de la semaine) : titulaire ~30 min/match → comme avant,
+// remplaçant ~10 min/match → environ la moitié, joueur inutilisé → 45 %
+// (courbe quadratique : ce sont les vraies minutes qui comptent).
+const MENTAL_NATURAL_SHARE = 0.45;
+const MENTAL_XP_FULL_SECONDS = 3600; // 2 matchs × 30 min
+function mentalExperienceMult(weekSeconds) {
+  const x = clamp((weekSeconds || 0) / MENTAL_XP_FULL_SECONDS, 0, 1);
+  return MENTAL_NATURAL_SHARE + (1 - MENTAL_NATURAL_SHARE) * x * x;
+}
+// Parrainage (retour utilisateur 2026-10-01).
+const MENTORSHIP_MAX_PAIRS = 2;
+const MENTORSHIP_YOUNG_MAX_AGE = 22;
+const MENTORSHIP_VETERAN_MIN_AGE = 29;
+const MENTORSHIP_MENTAL_MULT = 1.3;
+
+// Vérifie/normalise les plans individuels envoyés par le client.
+// Renvoie { ok, value } ou { ok: false, error }.
+function sanitizeTrainingSlots(team, raw) {
+  if (!Array.isArray(raw)) return { ok: false, error: "Plans individuels invalides." };
+  const max = trainingSlotsForTrainer(team.trainer);
+  if (raw.length > max) {
+    return { ok: false, error: max ? `${max} plans individuels au plus avec votre entraîneur.` : "Engagez un entraîneur pour travailler les fondamentaux." };
+  }
+  const seen = new Set();
+  const out = [];
+  for (const s of raw) {
+    if (!s || typeof s !== "object") return { ok: false, error: "Plan individuel invalide." };
+    const player = (team.players || []).find(p => String(p.id) === String(s.playerId));
+    if (!player) return { ok: false, error: "Joueur introuvable dans votre effectif." };
+    if (!TRAINING_PROGRAMS[s.program]) return { ok: false, error: `Programme d'entraînement inconnu : ${s.program}.` };
+    if (seen.has(player.id)) return { ok: false, error: "Un joueur ne peut avoir qu'un seul plan individuel." };
+    seen.add(player.id);
+    out.push({ playerId: player.id, program: s.program });
+  }
+  return { ok: true, value: out };
+}
+// Pourquoi ce parrainage est impossible (null = possible).
+function mentorshipPairError(team, youngId, veteranId) {
+  const young = (team.players || []).find(p => String(p.id) === String(youngId));
+  const vet = (team.players || []).find(p => String(p.id) === String(veteranId));
+  if (!young || !vet) return "Joueur introuvable dans votre effectif.";
+  if (young.age > MENTORSHIP_YOUNG_MAX_AGE) return `Le filleul doit avoir ${MENTORSHIP_YOUNG_MAX_AGE} ans au plus.`;
+  if (vet.age < MENTORSHIP_VETERAN_MIN_AGE) return `Le parrain doit avoir ${MENTORSHIP_VETERAN_MIN_AGE} ans au moins.`;
+  if (young.position !== vet.position) return "Le parrain et son filleul doivent jouer au même poste.";
+  return null;
+}
+function sanitizeMentorships(team, raw) {
+  if (!Array.isArray(raw)) return { ok: false, error: "Parrainages invalides." };
+  if (raw.length > MENTORSHIP_MAX_PAIRS) return { ok: false, error: `${MENTORSHIP_MAX_PAIRS} parrainages au plus.` };
+  const seen = new Set();
+  const out = [];
+  for (const m of raw) {
+    if (!m || typeof m !== "object") return { ok: false, error: "Parrainage invalide." };
+    const err = mentorshipPairError(team, m.youngId, m.veteranId);
+    if (err) return { ok: false, error: err };
+    const young = team.players.find(p => String(p.id) === String(m.youngId));
+    const vet = team.players.find(p => String(p.id) === String(m.veteranId));
+    if (seen.has(young.id) || seen.has(vet.id)) return { ok: false, error: "Un joueur ne peut être que dans un seul parrainage." };
+    seen.add(young.id); seen.add(vet.id);
+    out.push({ youngId: young.id, veteranId: vet.id });
+  }
+  return { ok: true, value: out };
+}
+
+// Rendement (%) d'un joueur sur son plan, avec le détail affiché au survol
+// (retour utilisateur 2026-10-01 : âge, minutes, taille, entraîneur,
+// intensité, spécialité — plus aucun facteur de poste).
+function trainingEfficiencyFor(team, player, programKey) {
+  const trainer = team && team.trainer;
+  const seconds = playerWeekSeconds(player);
+  const ageMult = growthFactorForAge(player.age) / growthFactorForAge(18);
+  const attendance = attendanceFactorForSeconds(seconds);
+  const heightMult = heightMultiplierForProgram(programKey, player.height);
+  const coachMult = trainerRateMultiplier(trainer);
+  const intensity = trainingIntensityOf(team);
+  const intensityMult = TRAINING_INTENSITIES[intensity].mult;
+  const specialtyMult = coachSpecialtyMultFor(trainer, programKey, player);
+  const total = ageMult * attendance * heightMult * coachMult * intensityMult * specialtyMult;
+  return {
+    pct: Math.round(total * 100), age: player.age, ageMult, minutes: Math.round(seconds / 60), attendance,
+    height: player.height, heightMult, coachLevel: trainer ? trainer.level : 0, coachMult,
+    intensity, intensityMult, specialty: (trainer && trainer.specialty) || null, specialtyMult,
+  };
+}
+
+// Poids d'entraînement de la semaine pour un joueur en plan individuel :
+// programme × gabarit × minutes, plus synergies (inchangées). Le poste
+// n'intervient plus (retour utilisateur 2026-10-01).
+function slotTrainingWeightsFor(player, programKey) {
+  const program = TRAINING_PROGRAMS[programKey];
+  const attrWeights = {};
+  const ceilingWeights = {};
+  const synergyAttrs = new Set();
+  if (!program) return { attrWeights, ceilingWeights, synergyAttrs };
+  const attendance = attendanceFactorForSeconds(playerWeekSeconds(player));
+  program.attrs.forEach(({ attr, weight }) => {
+    attrWeights[attr] = Math.max(weight * heightMultiplierForSkill(attr, player.height) * attendance, 0);
+    ceilingWeights[attr] = weight;
+  });
+  program.attrs.forEach(({ attr }) => {
+    (TRAINING_SYNERGY[attr] || []).forEach(rel => {
+      if (attrWeights[rel]) return;
+      const derived = (attrWeights[attr] || 0) * 0.4;
+      if (derived > 0) { attrWeights[rel] = derived; synergyAttrs.add(rel); }
+    });
+  });
+  return { attrWeights, ceilingWeights, synergyAttrs };
+}
+
+// Conseil quand un joueur ne progresse plus (retour utilisateur 2026-10-01) :
+// plafond atteint sur tout le programme, ou TRAINING_STALL_WEEKS semaines
+// sans gain sur ce programme. Propose le programme simple qui a le plus de
+// marge (pondéré par le profil du poste et les liens de synergie).
+const TRAINING_STALL_WEEKS = 2;
+function trainingAdviceFor(team, player, programKey) {
+  const program = TRAINING_PROGRAMS[programKey];
+  if (!program || !player) return null;
+  const trainer = team && team.trainer;
+  const rooms = program.attrs.map(({ attr, weight }) => ({ attr, room: trainingCeilingFor(player, weight, trainer) - player.attrs[attr] }));
+  const stall = ((team && team.trainingStalls) || {})[player.id];
+  const stalled = rooms.every(r => r.room <= 0)
+    || (!!stall && stall.program === programKey && stall.weeks >= TRAINING_STALL_WEEKS);
+  if (!stalled) return null;
+  const stalledAttr = rooms.slice().sort((a, b) => a.room - b.room)[0].attr;
+  const profile = POSITION_ATTR_PROFILE[player.position] || {};
+  const tierWeight = { strong: 1.3, base: 1, weak: 0.6 };
+  const related = new Set([...(TRAINING_SYNERGY[stalledAttr] || [])]);
+  let best = null;
+  Object.entries(TRAINING_PROGRAMS).forEach(([key, prog]) => {
+    if (prog.attrs.length !== 1 || key === programKey) return;
+    const attr = prog.attrs[0].attr;
+    if (program.attrs.some(a => a.attr === attr)) return;
+    const room = trainingCeilingFor(player, 1, trainer) - player.attrs[attr];
+    if (room < CEILING_ROOM_STRONG) return;
+    const score = room * (tierWeight[profile[attr]] || 1) * (related.has(attr) ? 1.25 : 1);
+    if (!best || score > best.score) best = { key, score };
+  });
+  if (!best) return null;
+  return { playerId: player.id, fromProgram: programKey, stalledAttr, toProgram: best.key };
+}
+
+// Jour « Physique » (retour utilisateur 2026-10-01) : petit gain vers le
+// potentiel physique, surtout chez les jeunes (physicalGrowthFactorForAge).
+// Renvoie les points réellement gagnés.
+const PHYSICAL_DAY_FACTOR = 0.10;
+function applyPhysicalDayTo(player, mult = 1) {
+  const growth = physicalGrowthFactorForAge(player.age);
+  if (!(growth > 0)) return 0;
+  if (!player._trainProgress) player._trainProgress = {};
+  let points = 0;
+  PHYSICAL_ATTRS.forEach(a => {
+    const before = player.attrs[a];
+    const ceiling = (player.physicalPotential && player.physicalPotential[a]) || before;
+    const gap = ceiling - before;
+    const room = gap > 0 ? gap / 20 + 0.10 : 0.012;
+    player._trainProgress[a] = (player._trainProgress[a] || 0) + growth * room * PHYSICAL_DAY_FACTOR * mult;
+    const whole = Math.trunc(player._trainProgress[a]);
+    if (whole > 0) {
+      player._trainProgress[a] -= whole;
+      player.attrs[a] = clamp(before + whole, 1, 99);
+      points += player.attrs[a] - before;
+    }
+  });
+  return points;
+}
+
+// Gain tactique d'un jour d'entraînement « Tactique » selon le niveau ACTUEL
+// de l'option (retour utilisateur 2026-10-01 : 40 → +12, 60 → +9, 80 → +6,
+// 95 → +4, au moins +3 à 100 ; interpolation linéaire).
+const TACTIC_DAILY_GAIN_CURVE = [[40, 12], [60, 9], [80, 6], [95, 4], [100, 3]];
+function tacticDailyGainForLevel(level) {
+  const v = Number(level) || 0;
+  const c = TACTIC_DAILY_GAIN_CURVE;
+  if (v <= c[0][0]) return c[0][1];
+  for (let i = 1; i < c.length; i++) {
+    if (v <= c[i][0]) {
+      const [x0, y0] = c[i - 1], [x1, y1] = c[i];
+      return y0 + (y1 - y0) * (v - x0) / (x1 - x0);
+    }
+  }
+  return c[c.length - 1][1];
+}
+// Paliers affichés sur les jauges tactiques (retour utilisateur 2026-10-01).
+const TACTIC_TIERS = [
+  { key: "signature", min: 85, label: "Signature" },
+  { key: "maitrisee", min: 70, label: "Maîtrisée" },
+  { key: "rodage", min: 55, label: "En rodage" },
+  { key: "decouverte", min: -Infinity, label: "Découverte" },
+];
+function tacticTierFor(level) {
+  const v = Number(level) || 0;
+  return TACTIC_TIERS.find(t => v >= t.min);
+}
+// Options du plan collectif d'un jour de repos.
+const COLLECTIVE_DAY_OPTIONS = ["tactique", "recuperation", "physique"];
+const PARIS_DAY_MS = 24 * 60 * 60 * 1000;
+// Lundi (jour civil de Paris) de la semaine qui contient `dayIndex`.
+function parisWeekStartDayIndex(dayIndex) {
+  const dow = (new Date(dayIndex).getUTCDay() + 6) % 7;
+  return dayIndex - dow * PARIS_DAY_MS;
+}
+// Migration d'une ancienne sauvegarde (retour utilisateur 2026-10-01) :
+// les places disponibles reviennent aux joueurs qui ont le plus joué aux
+// anciens postes entraînés (titulaires d'abord), programme = ancien
+// trainingSkill. Sans entraîneur : aucune place.
+function migrateTrainingSlots(team) {
+  const max = trainingSlotsForTrainer(team.trainer);
+  const positions = Array.isArray(team.trainingPositions) ? team.trainingPositions : [];
+  const program = TRAINING_PROGRAMS[team.trainingSkill] ? team.trainingSkill : null;
+  if (!max || !positions.length || !program) return [];
+  const starters = (team.lineup && team.lineup.starters) || {};
+  const scored = (team.players || []).map(p => {
+    const secs = positions.reduce((sum, pos) => sum + (((p.trainingSecondsPlayedByPosition || {})[pos]) || 0), 0);
+    const starter = positions.some(pos => starters[pos] === p.id);
+    const score = secs + (starter ? 36000 : 0) + (positions.includes(p.position) ? 3600 : 0);
+    return { p, score };
+  }).filter(x => x.score > 0);
+  scored.sort((a, b) => (b.score - a.score) || (b.p.overall() - a.p.overall()));
+  return scored.slice(0, max).map(x => ({ playerId: x.p.id, program }));
+}
+// Sauvegarde / chargement de l'état d'entraînement v2 (miroir identique).
+function serializeTrainingV2State(team) {
+  return {
+    trainingSlots: (team.trainingSlots || []).map(s => ({ playerId: s.playerId, program: s.program })),
+    trainingIntensity: trainingIntensityOf(team),
+    mentorships: (team.mentorships || []).map(m => ({ youngId: m.youngId, veteranId: m.veteranId })),
+    collectiveDayPlan: JSON.parse(JSON.stringify(team.collectiveDayPlan || {})),
+    collectiveWeek: team.collectiveWeek ? JSON.parse(JSON.stringify(team.collectiveWeek)) : null,
+    trainingStalls: JSON.parse(JSON.stringify(team.trainingStalls || {})),
+    friendlyPlayersByDay: JSON.parse(JSON.stringify(team.friendlyPlayersByDay || {})),
+  };
+}
+function restoreTrainingV2State(team, data) {
+  if (team.trainer && !COACH_SPECIALTIES[team.trainer.specialty]) {
+    team.trainer.specialty = deterministicCoachSpecialty(`${team.name}|${team.trainer.level}|${team.trainer.baseSalary}`);
+  }
+  if (Array.isArray(data.trainingSlots)) {
+    team.trainingSlots = data.trainingSlots
+      .map(s => {
+        const p = s && (team.players || []).find(pl => String(pl.id) === String(s.playerId));
+        return p && TRAINING_PROGRAMS[s.program] ? { playerId: p.id, program: s.program } : null;
+      })
+      .filter(Boolean);
+  } else {
+    team.trainingSlots = migrateTrainingSlots(team);
+  }
+  team.trainingIntensity = TRAINING_INTENSITIES[data.trainingIntensity] ? data.trainingIntensity : "normale";
+  team.mentorships = Array.isArray(data.mentorships)
+    ? data.mentorships.filter(m => m && m.youngId != null && m.veteranId != null).map(m => ({ youngId: m.youngId, veteranId: m.veteranId }))
+    : [];
+  const plan = {};
+  if (data.collectiveDayPlan && typeof data.collectiveDayPlan === "object") {
+    Object.entries(data.collectiveDayPlan).forEach(([k, v]) => {
+      if (!v || !/^\d+$/.test(k)) return;
+      const tt = v.trainedTactics;
+      plan[k] = {
+        collectiveTraining: COLLECTIVE_DAY_OPTIONS.includes(v.collectiveTraining) ? v.collectiveTraining : null,
+        trainedTactics: tt && ["offense", "defense", "rhythm"].includes(tt.category) && typeof tt.value === "string" ? { category: tt.category, value: tt.value } : null,
+      };
+    });
+  }
+  team.collectiveDayPlan = plan;
+  team.collectiveWeek = data.collectiveWeek && typeof data.collectiveWeek === "object" ? JSON.parse(JSON.stringify(data.collectiveWeek)) : null;
+  team.trainingStalls = data.trainingStalls && typeof data.trainingStalls === "object" ? JSON.parse(JSON.stringify(data.trainingStalls)) : {};
+  team.friendlyPlayersByDay = data.friendlyPlayersByDay && typeof data.friendlyPlayersByDay === "object" ? JSON.parse(JSON.stringify(data.friendlyPlayersByDay)) : {};
+}
+// FIN ENTRAÎNEMENT V2
 
 // Analyste vidéo (voir Team.videoAnalyst/League.runVideoSession plus bas) —
 // nombre de caractéristiques (sur ATTRS.length = 10) révélées par séance
@@ -1640,7 +2029,7 @@ const MEDICAL_STAFF_ROLES = {
 // celui du programme sur les caractéristiques de sa spécialité, pour tous
 // les joueurs non blessés, qu'ils aient joué ou non :
 //   ASSISTANT_WEIGHT_BY_LEVEL[niveau] × WEIGHT_BY_PROGRAM_SIZE[nb de carac]
-//   × aptitude du poste du joueur × gabarit
+//   × gabarit (plus d’effet du poste, retour utilisateur 2026-10-01)
 // (mêmes tables que les programmes : moins de carac = chacune monte plus
 // vite). Multiplié ensuite par le bonus de l'entraîneur principal, comme
 // tout l'entraînement. Calibré à ~15 % d'un programme dédié par carac
@@ -1665,7 +2054,8 @@ function assistantAttrWeightsFor(assistant, player) {
   const base = (ASSISTANT_WEIGHT_BY_LEVEL[assistant.level] || 0) * (WEIGHT_BY_PROGRAM_SIZE[spec.attrs.length] || 0.3);
   const out = {};
   spec.attrs.forEach(attr => {
-    out[attr] = base * (positionEfficiencyForSkill(attr, player.position) / 100) * heightMultiplierForSkill(attr, player.height);
+    // Plus d'effet du poste (retour utilisateur 2026-10-01) : gabarit seul.
+    out[attr] = base * heightMultiplierForSkill(attr, player.height);
   });
   return out;
 }
@@ -4210,8 +4600,15 @@ class Player {
   // une par catégorie (voir le grand commentaire au-dessus de
   // PHYSICAL_ATTRS/MENTAL_ATTRS/FUNDAMENTAL_ATTRS) au lieu d'une seule
   // boucle ATTRS.forEach uniforme.
-  trainWeek(attrWeights, trainerMult = 1, synergyAttrs = null) {
+  // `opts` (retour utilisateur 2026-10-01, entraînement v2) : { ceilingBonus
+  // (plafond repoussé par l'entraîneur), ceilingWeights (poids nominal du
+  // programme pour le plafond), mentalMult (expérience/parrainage) }.
+  trainWeek(attrWeights, trainerMult = 1, synergyAttrs = null, opts = null) {
     const gains = [];
+    const ceilingBonus = (opts && opts.ceilingBonus) || 0;
+    const ceilingWeights = (opts && opts.ceilingWeights) || null;
+    const mentalMult = opts && typeof opts.mentalMult === "number" ? opts.mentalMult : 1;
+    const roomDivisor = (opts && opts.roomDivisor) || TRAINING_ROOM_DIVISOR;
     const growth = growthFactorForAge(this.age);
     const decline = declineFactorForAge(this.age);
     const physGrowth = physicalGrowthFactorForAge(this.age);
@@ -4251,9 +4648,10 @@ class Player {
         // Au-delà de son propre plafond, une caractéristique peut toujours
         // progresser, mais beaucoup plus difficilement (facteur ~1/8) —
         // jamais un mur infranchissable.
-        const ceiling = clamp(this.potential + 12 * Math.min(weight, 1), 1, 99);
+        // Plafond souple + bonus d'entraîneur (retour utilisateur 2026-10-01).
+        const ceilWeight = ceilingWeights && ceilingWeights[a] != null ? ceilingWeights[a] : weight;
+        const ceiling = clamp(this.potential + 12 * Math.min(ceilWeight, 1) + ceilingBonus, 1, 99);
         const gap = ceiling - before;
-        const beyondCeilingMult = gap > 0 ? 1 : 0.12;
         // `progressRoom` grandit avec l'écart à combler : c'est ce qui permet
         // à une caractéristique très en retard sur un potentiel élevé de
         // rattraper vite (retour utilisateur d'origine). Mais SANS
@@ -4275,14 +4673,14 @@ class Player {
         // WEIGHT_BY_PROGRAM_SIZE) ne sont eux jamais concernés : ce ne sont
         // pas des caractéristiques de synergie.
         const roomScale = (synergyAttrs && synergyAttrs.has(a)) ? clamp(weight, 0, 1) : 1;
-        const progressRoom = (Math.max(gap, 0) / 20 + 0.12) * roomScale;
+        const progressRoom = trainingProgressRoom(gap, roomDivisor) * roomScale;
         // `weight` porte déjà tout ce qui module le rendement (voir
         // Team.trainWeek) : une caractéristique NON entraînée cette semaine
         // (poids 0) ne bouge plus DU TOUT — seuls les joueurs alignés sur
         // le(s) poste(s) entraîné(s) progressent (demande explicite de
         // septembre 2026 : "pour les joueurs qui ne correspondent pas au
         // poste(s) entrainé(s) aucune caractéristique ne doit monter").
-        delta += growth * weight * progressRoom * beyondCeilingMult * rand(0.5, 1.3) * trainerMult;
+        delta += growth * weight * progressRoom * rand(0.5, 1.3) * trainerMult;
       }
       if (decline > 0) {
         // Une caractéristique entraînée cette semaine décline moins vite.
@@ -4370,7 +4768,8 @@ class Player {
       const crossWeight = clamp((attrWeights && attrWeights[a]) || 0, 0, 1);
       const roomScale = crossWeight > 0 ? crossWeight * crossWeight : 1;
       const progressRoom = (Math.max(gap, 0) / 25 + 0.08) * roomScale;
-      let delta = mentGrowth * progressRoom * beyondCeilingMult * rand(0.5, 1.3);
+      // Expérience (minutes) et parrainage (retour utilisateur 2026-10-01).
+      let delta = mentGrowth * progressRoom * beyondCeilingMult * rand(0.5, 1.3) * mentalMult;
       if (crossWeight > 0 && mentGrowth > 0) {
         delta += mentGrowth * crossWeight * 0.03 * rand(0.5, 1.3);
       }
@@ -5388,6 +5787,21 @@ class Team {
     this.trainingSkill = "freeThrow"; // une clé de TRAINING_PROGRAMS, jamais null
     this.trainingPositions = [];    // 1, 2, 3 ou 5 postes parmi POSITIONS
 
+    // Entraînement v2 (retour utilisateur 2026-10-01) : plans individuels
+    // (un joueur + un programme par place, nombre de places selon
+    // l'entraîneur, voir TRAINING_SLOTS_BY_COACH_LEVEL), intensité de la
+    // semaine, parrainages, plan collectif jour par jour, bilan collectif de
+    // la semaine en cours et semaines sans progrès (conseils).
+    // trainingSkill/trainingPositions ci-dessus ne servent plus qu'à la
+    // migration des anciennes sauvegardes.
+    this.trainingSlots = [];          // [{ playerId, program }]
+    this.trainingIntensity = "normale"; // "legere" | "normale" | "intense"
+    this.mentorships = [];            // [{ youngId, veteranId }]
+    this.collectiveDayPlan = {};      // { [dayIndex]: { collectiveTraining, trainedTactics } }
+    this.collectiveWeek = null;       // bilan collectif de la semaine en cours
+    this.trainingStalls = {};         // { [playerId]: { program, weeks } }
+    this.friendlyPlayersByDay = {};   // { [dayIndex]: [ids des joueurs alignés en amical] }
+
     // Entraînement collectif (retour utilisateur, 2026-09 : "je souhaite
     // mettre en place maintenant l'entrainement collectif [...] soit bosser
     // une nouvelle tactique [...] soit bosser la récupération") : un réglage
@@ -5402,7 +5816,7 @@ class Team {
     // porte la récupération de forme physique quotidienne à CONDITION_
     // RECOVERY_PER_DAY_TRAINED au lieu de CONDITION_RECOVERY_PER_DAY (voir
     // conditionRecoveryPerDay ci-dessous/currentCondition plus haut).
-    this.collectiveTraining = null; // null | "tactique" | "recuperation"
+    this.collectiveTraining = null; // null | "tactique" | "recuperation" | "physique" (retour utilisateur 2026-10-01)
 
     // Tactique précisément travaillée à l'entraînement (retour utilisateur,
     // 2026-09 : "il faut effectivement choisir ce qui est bossé comme
@@ -6208,38 +6622,72 @@ class Team {
     const todayIndex = parisCalendarDayIndex(now);
     if (!Array.isArray(this.collectiveTrainingLog)) this.collectiveTrainingLog = [];
     const log = this.collectiveTrainingLog;
-    const snapshotEntry = (dayIndex, collectiveTraining, trainedTactics) => ({
-      dayIndex,
-      collectiveTraining,
-      trainedTactics: trainedTactics ? { category: trainedTactics.category, value: trainedTactics.value } : null,
-    });
+    // Plan jour par jour (retour utilisateur 2026-10-01) : chaque jour prend
+    // son choix planifié, sinon le réglage courant (« à partir d'aujourd'hui »).
+    const snapshotEntry = (dayIndex) => {
+      const cfg = this.collectiveDayConfig(dayIndex);
+      return {
+        dayIndex,
+        collectiveTraining: cfg.collectiveTraining,
+        trainedTactics: cfg.trainedTactics ? { category: cfg.trainedTactics.category, value: cfg.trainedTactics.value } : null,
+      };
+    };
     const last = log.length ? log[log.length - 1] : null;
     if (last && last.dayIndex === todayIndex) {
-      // Même jour civil : dernier réglage du jour qui compte (l'utilisateur
-      // peut changer d'avis plusieurs fois dans la même journée) — remplace
-      // l'entrée existante plutôt que d'en empiler une deuxième.
-      log[log.length - 1] = snapshotEntry(todayIndex, this.collectiveTraining, this.trainedTactics);
+      // Même jour civil : dernier réglage du jour qui compte.
+      log[log.length - 1] = snapshotEntry(todayIndex);
     } else {
       if (last) {
-        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-        for (let cursor = last.dayIndex + ONE_DAY_MS; cursor < todayIndex; cursor += ONE_DAY_MS) {
-          // Comble un jour manqué (absence, gros rattrapage groupé...) avec
-          // la config qui était active à ce moment-là (celle de la DERNIÈRE
-          // entrée connue), jamais la config actuelle qui pourrait venir
-          // tout juste de changer pour AUJOURD'HUI seulement.
-          log.push(snapshotEntry(cursor, last.collectiveTraining, last.trainedTactics));
+        for (let cursor = last.dayIndex + PARIS_DAY_MS; cursor < todayIndex; cursor += PARIS_DAY_MS) {
+          // Jour manqué : son choix planifié, sinon le réglage encore actif
+          // (setTraining synchronise AVANT de modifier quoi que ce soit).
+          log.push(snapshotEntry(cursor));
         }
       }
-      log.push(snapshotEntry(todayIndex, this.collectiveTraining, this.trainedTactics));
+      log.push(snapshotEntry(todayIndex));
     }
     this.applyRestDayRecovery(todayIndex);
-    // Purge tout jour antérieur (ou identique) au début du cycle actuel
-    // (dernier match RÉELLEMENT joué, voir tacticsCycleStartDayIndex/
-    // updateTacticalKnowledge ci-dessous) : "depuis le dernier match"
-    // s'applique littéralement, et ça évite une historique illimitée.
+    // Plan des jours passés : plus utile.
+    if (this.collectiveDayPlan) {
+      Object.keys(this.collectiveDayPlan).forEach(k => { if (Number(k) < todayIndex) delete this.collectiveDayPlan[k]; });
+    }
+    // Purge tout jour antérieur (ou identique) au dernier match joué.
     if (this.tacticsCycleStartDayIndex != null) {
       this.collectiveTrainingLog = this.collectiveTrainingLog.filter(e => e.dayIndex > this.tacticsCycleStartDayIndex);
     }
+  }
+
+  // Choix collectif d'un jour (retour utilisateur 2026-10-01) : plan du jour,
+  // sinon réglage courant. { collectiveTraining, trainedTactics, planned }.
+  collectiveDayConfig(dayIndex) {
+    const p = this.collectiveDayPlan && this.collectiveDayPlan[dayIndex];
+    if (p) {
+      return {
+        collectiveTraining: p.collectiveTraining || null,
+        trainedTactics: p.trainedTactics || this.trainedTactics || null,
+        planned: true,
+      };
+    }
+    return { collectiveTraining: this.collectiveTraining || null, trainedTactics: this.trainedTactics || null, planned: false };
+  }
+
+  // Planifie le choix d'un jour de repos (aujourd'hui ou plus tard dans la
+  // semaine). Aujourd'hui devient aussi le réglage par défaut des jours
+  // suivants non planifiés. `trainedTactics` undefined = inchangé.
+  setCollectiveDay(dayIndex, collectiveTraining, trainedTactics, now = Date.now()) {
+    const todayIndex = parisCalendarDayIndex(now);
+    if (!this.collectiveDayPlan || typeof this.collectiveDayPlan !== "object") this.collectiveDayPlan = {};
+    const prev = this.collectiveDayConfig(dayIndex);
+    const tactics = trainedTactics === undefined ? prev.trainedTactics : trainedTactics;
+    const entry = {
+      collectiveTraining: collectiveTraining || null,
+      trainedTactics: tactics ? { category: tactics.category, value: tactics.value } : null,
+    };
+    if (dayIndex === todayIndex) {
+      this.collectiveTraining = entry.collectiveTraining;
+      if (trainedTactics !== undefined) this.trainedTactics = entry.trainedTactics;
+    }
+    this.collectiveDayPlan[dayIndex] = entry;
   }
 
   // Nombre de jours (depuis le dernier match, voir tacticsCycleStartDayIndex)
@@ -6268,10 +6716,18 @@ class Team {
   // l'entraînement collectif tactique ou de récupération") : le jour de
   // l'amical n'est plus un jour de repos (voir daysTrainedForTarget/
   // applyRestDayRecovery). Appelée par server/friendlies.js sur le VRAI club.
-  markFriendlyDay(dayIndex) {
+  markFriendlyDay(dayIndex, playerIds = null) {
     if (!Array.isArray(this.friendlyDayIndexes)) this.friendlyDayIndexes = [];
     if (!this.friendlyDayIndexes.includes(dayIndex)) this.friendlyDayIndexes.push(dayIndex);
     if (this.friendlyDayIndexes.length > 30) this.friendlyDayIndexes = this.friendlyDayIndexes.slice(-30);
+    // Joueurs alignés en amical : exclus de la récupération/du physique du
+    // jour (retour utilisateur 2026-10-01).
+    if (Array.isArray(playerIds)) {
+      if (!this.friendlyPlayersByDay || typeof this.friendlyPlayersByDay !== "object") this.friendlyPlayersByDay = {};
+      this.friendlyPlayersByDay[dayIndex] = playerIds.slice();
+      const keep = new Set(this.friendlyDayIndexes.map(String));
+      Object.keys(this.friendlyPlayersByDay).forEach(k => { if (!keep.has(String(k))) delete this.friendlyPlayersByDay[k]; });
+    }
   }
   isFriendlyDay(dayIndex) {
     return Array.isArray(this.friendlyDayIndexes) && this.friendlyDayIndexes.includes(dayIndex);
@@ -6322,11 +6778,72 @@ class Team {
     (this.collectiveTrainingLog || []).forEach(e => {
       if (e.recoveryApplied || e.dayIndex >= todayIndex) return;
       if (cycleStart != null && e.dayIndex <= cycleStart) return;
-      if (this.isFriendlyDay(e.dayIndex)) return;
-      if (e.collectiveTraining !== "recuperation") return;
+      const option = e.collectiveTraining;
+      if (!COLLECTIVE_DAY_OPTIONS.includes(option)) return;
+      const friendly = this.isFriendlyDay(e.dayIndex);
+      // Jour d'amical (retour utilisateur 2026-10-01) : pas de tactique pour
+      // l'équipe, récupération/physique pour les joueurs non alignés.
+      if (friendly && option === "tactique") return;
       e.recoveryApplied = true;
-      (this.players || []).forEach(p => { p.condition = clamp(p.condition + bonus, 0, 100); });
+      const week = this.ensureCollectiveWeek();
+      week.days[option] = (week.days[option] || 0) + 1;
+      week.log.push({ dayIndex: e.dayIndex, option });
+      if (option === "tactique") {
+        this.applyTacticDay(e.trainedTactics);
+        return;
+      }
+      const excluded = new Set(friendly ? (((this.friendlyPlayersByDay || {})[e.dayIndex]) || []).map(String) : []);
+      const players = (this.players || []).filter(p => !excluded.has(String(p.id)));
+      if (option === "recuperation") {
+        players.forEach(p => { p.condition = clamp(p.condition + bonus, 0, 100); });
+      } else {
+        const mult = this.trainer && this.trainer.specialty === "physical" ? 1 + COACH_PHYSICAL_DAY_BONUS : 1;
+        players.forEach(p => { week.physicalPoints += applyPhysicalDayTo(p, mult); });
+      }
     });
+  }
+
+  // Jour « Tactique » (retour utilisateur 2026-10-01) : gain immédiat sur
+  // l'aspect travaillé, selon son niveau actuel (tacticDailyGainForLevel).
+  applyTacticDay(target) {
+    if (!target) return;
+    const knowledge = this.tacticalKnowledge && this.tacticalKnowledge[target.category];
+    if (!knowledge || !(target.value in knowledge)) return;
+    const before = knowledge[target.value];
+    const after = clamp(Math.round((before + tacticDailyGainForLevel(before)) * 10) / 10, 0, 100);
+    knowledge[target.value] = after;
+    const week = this.ensureCollectiveWeek();
+    const key = `${target.category}:${target.value}`;
+    if (!week.tactics[key]) week.tactics[key] = { category: target.category, value: target.value, before, after };
+    else week.tactics[key].after = after;
+  }
+
+  // Bilan collectif de la semaine en cours (repris par le bilan du lundi).
+  ensureCollectiveWeek() {
+    if (!this.collectiveWeek || typeof this.collectiveWeek !== "object") this.collectiveWeek = { days: {}, tactics: {}, physicalPoints: 0 };
+    if (!this.collectiveWeek.days) this.collectiveWeek.days = {};
+    if (!this.collectiveWeek.tactics) this.collectiveWeek.tactics = {};
+    if (!Array.isArray(this.collectiveWeek.log)) this.collectiveWeek.log = [];
+    if (typeof this.collectiveWeek.physicalPoints !== "number") this.collectiveWeek.physicalPoints = 0;
+    return this.collectiveWeek;
+  }
+
+  // Plans individuels actifs (retour utilisateur 2026-10-01) : joueurs encore
+  // dans l'effectif, programme connu, limités aux places de l'entraîneur.
+  trainingSlotsMax() {
+    return trainingSlotsForTrainer(this.trainer);
+  }
+  activeTrainingSlots() {
+    const ids = new Set((this.players || []).map(p => String(p.id)));
+    return (this.trainingSlots || [])
+      .filter(s => s && ids.has(String(s.playerId)) && TRAINING_PROGRAMS[s.program])
+      .slice(0, this.trainingSlotsMax());
+  }
+  // Parrainages encore valides (âges, poste, effectif).
+  activeMentorships() {
+    return (this.mentorships || [])
+      .filter(m => m && !mentorshipPairError(this, m.youngId, m.veteranId))
+      .slice(0, MENTORSHIP_MAX_PAIRS);
   }
 
   // `matchDayIndex` (optionnel, voir parisCalendarDayIndex) : jour du match
@@ -6383,9 +6900,9 @@ class Team {
     // peu importe s'il a entre-temps changé ; seul le nombre de jours
     // RÉELLEMENT banqués dans collectiveTrainingLog (voir
     // daysTrainedForTarget) détermine le bonus ci-dessous.
-    const target = this.trainedTactics;
-    const daysTrained = target ? this.daysTrainedForTarget(target, parisCalendarDayIndex(now)) : 0;
-    const trainingBonus = TACTICAL_KNOWLEDGE_DAILY_GAIN * daysTrained;
+    // Le jour « Tactique » crédite désormais directement la connaissance
+    // (Team.applyTacticDay, retour utilisateur 2026-10-01) : plus de bonus
+    // de jours banqués ici.
 
     // Applique le mouvement (gain ou perte) d'UNE option précise : `cat` la
     // catégorie ("offense"/"defense"/"rhythm"), `key` la valeur précise
@@ -6402,8 +6919,7 @@ class Team {
       if (played) {
         const streak = prevStreak > 0 ? prevStreak + 1 : 1;
         streaks[key] = streak;
-        let gain = tacticalKnowledgeGainForStreak(streak);
-        if (target && target.category === cat && target.value === key) gain += trainingBonus;
+        const gain = tacticalKnowledgeGainForStreak(streak);
         knowledge[key] = clamp(knowledge[key] + gain, 0, 100);
       } else {
         const streak = prevStreak < 0 ? prevStreak - 1 : -1;
@@ -6525,7 +7041,8 @@ class Team {
     const defenseVal = this.tacticalKnowledge.defense[this.defense] ?? 50;
     const rhythmVal = this.tacticalKnowledge.rhythm[this.rhythm] ?? 50;
     const avg = (offenseAvg + defenseVal + rhythmVal) / 3;
-    return 0.94 + (avg / 100) * 0.12;
+    // ±8 % aux extrêmes (retour utilisateur 2026-10-01, avant ±6 %).
+    return 0.92 + (avg / 100) * 0.16;
   }
 
   // Taux de récupération de forme physique quotidien de ce club (retour
@@ -6537,11 +7054,10 @@ class Team {
   // bas) et par l'affichage de la forme physique côté client
   // (currentCondition).
   conditionRecoveryPerDay() {
-    // Le focus « Récupération » n'agit plus sur ce taux continu (retour
-    // utilisateur, 2026-09-27 : "uniquement les jours de repos") : ses +5
-    // sont crédités jour de repos par jour de repos, voir
-    // Team.applyRestDayRecovery (appelée par syncCollectiveTrainingLog).
-    const base = CONDITION_RECOVERY_PER_DAY;
+    // Le focus « Récupération » est crédité jour de repos par jour de repos
+    // (voir Team.applyRestDayRecovery). Intensité Légère : +2/jour (retour
+    // utilisateur 2026-10-01).
+    const base = CONDITION_RECOVERY_PER_DAY + TRAINING_INTENSITIES[trainingIntensityOf(this)].recoveryBonus;
     // Kiné (voir MEDICAL_STAFF_ROLES) : +1 à +5 par jour selon son niveau.
     return base + (this.physioRecoveryBonus ? this.physioRecoveryBonus() : 0);
   }
@@ -7119,9 +7635,15 @@ class Team {
   // mise gagnante d'une enchère (voir marché des entraîneurs plus haut dans
   // le fichier) ; par défaut (appel direct, hors enchère) le tarif fixe
   // TRAINER_BASE_SALARY[level] comme avant.
-  hireTrainer(level, baseSalary) {
+  // `specialty` (retour utilisateur 2026-10-01) : spécialité de l'annonce,
+  // sinon une spécialité déterministe.
+  hireTrainer(level, baseSalary, specialty = null) {
     if (!TRAINER_LEVELS.includes(level)) return;
-    this.trainer = { level, weeksEmployed: 0, baseSalary: baseSalary != null ? baseSalary : (TRAINER_BASE_SALARY[level] || 0) };
+    const base = baseSalary != null ? baseSalary : (TRAINER_BASE_SALARY[level] || 0);
+    this.trainer = {
+      level, weeksEmployed: 0, baseSalary: base,
+      specialty: COACH_SPECIALTIES[specialty] ? specialty : deterministicCoachSpecialty(`${this.name}|${level}|${base}`),
+    };
   }
 
   fireTrainer() {
@@ -7314,9 +7836,11 @@ class Team {
   growYouthPlayers() {
     const attrWeights = {};
     ATTRS.forEach(a => attrWeights[a] = YOUTH_BASE_TRAINING_WEIGHT);
-    const mult = this.trainingCenterGrowthMultiplier();
+    // Spécialité « Jeunes » de l'entraîneur : +15 % aussi pour l'académie
+    // (retour utilisateur 2026-10-01).
+    const mult = this.trainingCenterGrowthMultiplier() * (this.trainer && this.trainer.specialty === "youth" ? 1 + COACH_SPECIALTY_BONUS : 1);
     (this.youthPlayers || []).forEach(p => {
-      p.trainWeek(attrWeights, mult);
+      p.trainWeek(attrWeights, mult, null, { roomDivisor: LEGACY_TRAINING_ROOM_DIVISOR });
       ATTRS.forEach(a => { if (p.attrs[a] > 50) p.attrs[a] = 50; });
     });
   }
@@ -7567,11 +8091,23 @@ class Team {
     // Prestige (voir clubPrestigeDetail) : ne change qu'avec l'histoire du
     // club et sa division, donc en pratique à chaque changement de saison.
     this.prestige = clubPrestigeDetail(this, divisionLevel).value;
-    const skill = this.trainingSkill; // clé de TRAINING_PROGRAMS, ou null
-    const program = skill ? TRAINING_PROGRAMS[skill] : null;
-    const dilution = this.trainingDilution();
+    // Entraînement v2 (retour utilisateur 2026-10-01) : plans individuels
+    // (un joueur + un programme par place, voir TRAINING_SLOTS_BY_COACH_LEVEL),
+    // le poste n'intervient plus ; rendement = programme × gabarit × minutes
+    // de la semaine (30 min = plein) × entraîneur × intensité × spécialité.
+    // Les jours de repos écoulés (y compris dimanche) sont d'abord crédités.
+    if (now != null && typeof this.syncCollectiveTrainingLog === "function") this.syncCollectiveTrainingLog(now);
+    const nowMs = now != null ? now : Date.now();
     const trainerMult = this.trainerBonusMultiplier();
+    const ceilingBonus = trainerCeilingBonus(this.trainer);
+    const intensityKey = trainingIntensityOf(this);
+    const intensity = TRAINING_INTENSITIES[intensityKey];
+    const slotByPlayer = new Map(this.activeTrainingSlots().map(sl => [String(sl.playerId), sl.program]));
+    const mentoredYoung = new Set(this.activeMentorships().map(m => String(m.youngId)));
+    if (!this.trainingStalls || typeof this.trainingStalls !== "object") this.trainingStalls = {};
     const report = {};
+    const slotReport = [];
+    const advice = [];
 
     // AVANT la remise à zéro de trainingSecondsPlayedByPosition ci-dessous
     // (dans la boucle qui suit) : applyBenchFrustration a besoin du temps de
@@ -7587,104 +8123,84 @@ class Team {
     this.players.forEach(p => { if (p.retiringAfterSeason) p.retirementWeeks = (p.retirementWeeks || 0) + 1; });
 
     this.players.forEach(p => {
-      // Le focus se base sur le temps RÉELLEMENT joué aux poste(s) entraînés
-      // cette semaine (voir trainablySecondsFor) — pas sur le poste "de
-      // carte" du joueur (this.position) : un remplaçant polyvalent peut
-      // avoir été aligné, pour ce match, sur un poste différent du sien
-      // (voir Team.lineup / Player.matchPosition). Un Arrière qui a dépanné
-      // au poste de Meneur pendant 20 minutes profite donc bien d'un
-      // entraînement de Meneur sur ces 20 minutes-là, même si sa fiche
-      // affiche "Arrière" ; à l'inverse, un Meneur "de carte" resté sur le
-      // banc tout le match ne progresse pas.
-      const { byPosition: trainedByPosition, total: trainedSeconds } = this.trainablySecondsFor(p);
-      const preview = this.trainingPreviewFor(p);
-      const posSelected = preview.posSelected;
-      const effectiveFocus = posSelected ? skill : null;
-      // Ce n'est plus un seuil couperet : jouer un peu compte toujours un peu.
-      const attendanceFactor = preview.attendanceFactor;
-      let penalty = 0;
-      let positionEfficiency = null;
-      let heightMultiplier = null;
-      const attrWeights = {};
-      // Caractéristiques dont le poids ci-dessus vient UNIQUEMENT de la
-      // synergie (pas du programme choisi lui-même) — voir Player.trainWeek,
-      // qui s'en sert pour brider leur marge de progression et garantir
-      // qu'elles restent toujours à la traîne de la caractéristique
-      // réellement entraînée (voir le commentaire juste en dessous).
-      const synergyAttrs = new Set();
-
-      if (posSelected) {
-        // Aptitude de poste = moyenne des postes RÉELLEMENT joués cette
-        // semaine par ce joueur, pondérée par les minutes passées à chacun
-        // (le plus souvent un seul poste, mais un remplaçant polyvalent a pu
-        // couvrir plusieurs des postes entraînés au fil du match).
-        const posEffFor = attr => {
-          let sum = 0;
-          Object.entries(trainedByPosition).forEach(([pos, secs]) => { sum += positionEfficiencyForProgramAttr(skill, attr, pos) * secs; }); // ligne du PROGRAMME (tableau utilisateur 2026-09-29), sauf Défense polyvalente (ligne propre à chaque caractéristique)
-          return sum / trainedSeconds;
-        };
-        // Poids RÉEL de chaque caractéristique du programme pour CE joueur :
-        // poids de la caractéristique dans le programme (plein pour un
-        // programme pur, dilué pour un programme composite) × aptitude du
-        // poste réellement joué sur CETTE caractéristique précise × dilution
-        // liée au nombre de postes couverts cette semaine × gabarit ×
-        // proportion du dernier match jouée à ce(s) poste(s).
-        program.attrs.forEach(({ attr, weight }) => {
-          const posEff = posEffFor(attr);
-          const heightMult = heightMultiplierForSkill(attr, p.height);
-          const finalMult = weight * (posEff / 100) * (1 - dilution) * heightMult * attendanceFactor;
-          attrWeights[attr] = Math.max(finalMult, 0);
-        });
-        // Synergie : une caractéristique liée à une de celles entraînées
-        // progresse un peu, mais toujours moins qu'une caractéristique
-        // directement travaillée par le programme (et jamais si elle en fait
-        // déjà partie — pas de double bonus).
-        program.attrs.forEach(({ attr }) => {
-          (TRAINING_SYNERGY[attr] || []).forEach(rel => {
-            if (attrWeights[rel]) return;
-            const derived = (attrWeights[attr] || 0) * 0.4;
-            if (derived > 0) { attrWeights[rel] = derived; synergyAttrs.add(rel); }
-          });
-        });
-
-        // Valeurs "représentatives" pour l'UI (moyenne pondérée sur
-        // l'ensemble du programme et des postes réellement joués — plus
-        // lisible qu'une seule caractéristique/un seul poste isolé) : voir
-        // trainingPreviewFor, seule source de vérité pour ce calcul (aussi
-        // utilisé par l'aperçu de l'écran de préparation, avant validation).
-        positionEfficiency = preview.positionEfficiency;
-        heightMultiplier = preview.heightMultiplier;
-        penalty = 1 - preview.finalPct / 100; // peut être négatif = bonus (grand gabarit bien placé)
+      const program = slotByPlayer.get(String(p.id)) || null;
+      const weekSeconds = playerWeekSeconds(p);
+      const attendanceFactor = attendanceFactorForSeconds(weekSeconds);
+      let attrWeights = {};
+      let synergyAttrs = new Set();
+      let ceilingWeights = null;
+      let mult = trainerMult;
+      let efficiency = null;
+      if (program) {
+        ({ attrWeights, synergyAttrs, ceilingWeights } = slotTrainingWeightsFor(p, program));
+        mult = trainerMult * intensity.mult * coachSpecialtyMultFor(this.trainer, program, p);
+        efficiency = trainingEfficiencyFor(this, p, program).pct;
       }
 
       // Entraîneur adjoint (voir ASSISTANT_SPECIALTIES) : poids AJOUTÉ à celui
       // du programme, pour tout joueur non blessé, minutes jouées ou pas —
       // jamais compté comme une synergie (une carac travaillée par l'adjoint
       // garde sa marge de progression pleine, voir Player.trainWeek).
-      if (this.assistantCoach && !isCurrentlyInjured(p, now != null ? now : Date.now())) {
+      if (this.assistantCoach && !isCurrentlyInjured(p, nowMs)) {
         Object.entries(assistantAttrWeightsFor(this.assistantCoach, p)).forEach(([attr, w]) => {
           if (!(w > 0)) return;
           attrWeights[attr] = (attrWeights[attr] || 0) + w;
           synergyAttrs.delete(attr);
         });
       }
-      const gains = p.trainWeek(attrWeights, trainerMult, synergyAttrs);
+      const programAttrs = program ? TRAINING_PROGRAMS[program].attrs.map(a => a.attr) : [];
+      const before = {};
+      programAttrs.forEach(a => { before[a] = p.attrs[a]; });
+      // Mental : expérience (minutes de la semaine) et parrainage (retour
+      // utilisateur 2026-10-01).
+      const mentalMult = mentalExperienceMult(weekSeconds) * (mentoredYoung.has(String(p.id)) ? MENTORSHIP_MENTAL_MULT : 1);
+      const gains = p.trainWeek(attrWeights, mult, synergyAttrs, { ceilingBonus, ceilingWeights, mentalMult });
+
+      if (program) {
+        const changes = programAttrs.map(a => ({ attr: a, before: before[a], after: p.attrs[a] }));
+        const delta = changes.reduce((sum, c) => sum + (c.after - c.before), 0);
+        const stall = this.trainingStalls[p.id];
+        this.trainingStalls[p.id] = { program, weeks: delta > 0 ? 0 : (stall && stall.program === program ? stall.weeks + 1 : 1) };
+        // Intensité Intense : forme en baisse et petit risque de blessure
+        // pour les joueurs en plan (retour utilisateur 2026-10-01).
+        if (intensity.conditionLoss) p.condition = clamp(p.condition - intensity.conditionLoss, 0, 100);
+        let injured = false;
+        if (intensity.injuryChance && !isCurrentlyInjured(p, nowMs) && rand01() < intensity.injuryChance) {
+          const rolled = rollInjury(nowMs, this.doctorInjuryDurationMult ? this.doctorInjuryDurationMult() : 1);
+          p.injuryType = rolled.injuryType;
+          p.injuryUntil = rolled.injuryUntil;
+          injured = true;
+          const days = Math.max(1, Math.round((rolled.injuryUntil - nowMs) / CONDITION_DAY_MS));
+          this.recordInjury({ at: nowMs, playerId: p.id, playerName: p.name, injuryType: rolled.injuryType, days, opponentName: null, training: true });
+          if (this.isHuman && this.feed) {
+            handleGameEvent(this.feed, { type: "injury", week: this.week, playerId: p.id, playerName: p.name, weeks: Math.max(1, Math.round(days / 7)) }, { clubName: this.name });
+          }
+        }
+        slotReport.push({ playerId: p.id, name: p.name, program, changes, delta, efficiency, injured });
+        const tip = trainingAdviceFor(this, p, program);
+        if (tip) advice.push({ ...tip, name: p.name });
+      } else {
+        delete this.trainingStalls[p.id];
+      }
       report[p.id] = {
         name: p.name, position: p.position, height: p.height, gains,
-        skill, posSelected, effectiveFocus, penalty, attendanceFactor,
-        positionEfficiency, heightMultiplier,
-        secondsPlayed: trainedSeconds,
+        program, inSlot: !!program, attendanceFactor, efficiency, mentalMult,
+        secondsPlayed: weekSeconds,
       };
       // Retour utilisateur, 2026-09 : "quand la maj est passée, les
       // compteurs de temps de jeu sur la page entrainement doivent être
-      // remis à 0 et on doit voir les effets du dernier entrainement". Le
-      // temps cumulé de ce cycle vient d'être consommé ci-dessus (via
-      // trainablySecondsFor/report), donc repart à zéro pour le prochain
-      // cycle. `trainedSeconds`/`report[p.id]` gardent leur propre copie
-      // (déjà affectés plus haut), donc cette remise à zéro n'efface rien
-      // du rapport qui vient d'être construit.
+      // remis à 0 et on doit voir les effets du dernier entrainement".
       p.trainingSecondsPlayedByPosition = {};
     });
+    // Bilan collectif de la semaine (jours de repos crédités depuis le
+    // dernier lundi), repris par le bilan du lundi puis remis à zéro.
+    const cw = this.collectiveWeek || { days: {}, tactics: {}, physicalPoints: 0 };
+    const collective = {
+      days: { tactique: (cw.days || {}).tactique || 0, recuperation: (cw.days || {}).recuperation || 0, physique: (cw.days || {}).physique || 0 },
+      tactics: Object.values(cw.tactics || {}).map(t => ({ ...t })),
+      physicalPoints: cw.physicalPoints || 0,
+    };
+    this.collectiveWeek = null;
 
     // Académie de jeunes : progression AUTOMATIQUE des jeunes déjà signés
     // (voir Team.growYouthPlayers/youthPlayers ci-dessus) — au MÊME tick que
@@ -7976,7 +8492,7 @@ class Team {
     });
 
     const result = {
-      players: report, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid, doctorSalaryPaid, physioSalaryPaid, assistantCoachSalaryPaid,
+      players: report, slots: slotReport, advice, collective, intensity: intensityKey, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid, doctorSalaryPaid, physioSalaryPaid, assistantCoachSalaryPaid,
       playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, merchRevenue, tvStationRevenue, moraleDrift, salaryChanges,
       fanMorale: this.fanMorale, budget: this.budget, trainerMult,
       deficitAlert, forcedFireSale, deficitWeeks: this.deficitWeeks,
@@ -7993,7 +8509,13 @@ class Team {
       if (e && (e.gains || []).length) compactPlayers[id] = { name: e.name, position: e.position, gains: e.gains.map(g => ({ ...g })) };
     });
     if (!Array.isArray(this.trainingHistory)) this.trainingHistory = [];
-    this.trainingHistory.push({ week: this.week - 1, at: now != null ? now : null, players: compactPlayers });
+    this.trainingHistory.push({
+      week: this.week - 1, at: now != null ? now : null, players: compactPlayers,
+      // Bilan du lundi (entraînement v2, retour utilisateur 2026-10-01).
+      slots: slotReport.map(sl => ({ ...sl, changes: sl.changes.map(c => ({ ...c })) })),
+      advice: advice.map(a => ({ ...a })),
+      collective: JSON.parse(JSON.stringify(collective)),
+    });
     if (this.trainingHistory.length > TRAINING_HISTORY_MAX) this.trainingHistory = this.trainingHistory.slice(-TRAINING_HISTORY_MAX);
     return result;
   }
@@ -8144,7 +8666,7 @@ class Team {
   // garder un peu de texture semaine après semaine. Ne joue JAMAIS à la
   // baisse : une équipe adverse déjà au niveau ou devant n'est jamais
   // affaiblie, seulement laissée à son rendement hebdomadaire normal.
-  trainWeekCPU(overallGap = 0) {
+  trainWeekCPU(overallGap = 0, implicitCoachLevel = CPU_IMPLICIT_COACH_LEVEL) {
     if (overallGap > 6) {
       const currentAvg = this.averageOverall();
       const targetAvg = currentAvg + overallGap * 0.35;
@@ -8155,11 +8677,34 @@ class Team {
       });
     }
 
+    // Entraînement v2 (retour utilisateur 2026-10-01) : l'IA remplit ses
+    // plans individuels toute seule (jeunes à fort potentiel, compétence clé
+    // la plus faible), avec son entraîneur s'il en a un, sinon un entraîneur
+    // « implicite » (CPU_IMPLICIT_COACH_LEVEL) ; le travail de fond sur les
+    // caractéristiques du poste est conservé mais allégé
+    // (CPU_BACKGROUND_TRAINING_WEIGHT) pour garder le même niveau moyen
+    // qu'avant (calibré par simulation). Intensité normale, pas de parrainage.
+    const coach = this.trainer || { level: implicitCoachLevel };
+    this.trainingSlots = cpuTrainingSlots(this, trainingSlotsForTrainer(coach));
+    const slotByPlayer = new Map(this.trainingSlots.map(sl => [String(sl.playerId), sl.program]));
+    const ceilingBonus = trainerCeilingBonus(coach);
     this.players.forEach(p => {
-      const attrs = POSITION_STRONG_ATTRS[p.position] || [];
+      const weekSeconds = playerWeekSeconds(p);
+      const program = slotByPlayer.get(String(p.id)) || null;
       const attrWeights = {};
-      attrs.forEach(a => { attrWeights[a] = 0.75; });
-      p.trainWeek(attrWeights, 1);
+      (POSITION_STRONG_ATTRS[p.position] || []).forEach(a => { attrWeights[a] = CPU_BACKGROUND_TRAINING_WEIGHT; });
+      let synergyAttrs = null;
+      let ceilingWeights = null;
+      let mult = 1;
+      if (program) {
+        const w = slotTrainingWeightsFor(p, program);
+        Object.entries(w.attrWeights).forEach(([a, v]) => { attrWeights[a] = Math.max(attrWeights[a] || 0, v); });
+        synergyAttrs = new Set([...w.synergyAttrs].filter(a => !(POSITION_STRONG_ATTRS[p.position] || []).includes(a)));
+        ceilingWeights = w.ceilingWeights;
+        mult = trainerRateMultiplier(coach);
+      }
+      p.trainWeek(attrWeights, mult, synergyAttrs, { ceilingBonus: program ? ceilingBonus : 0, ceilingWeights, mentalMult: mentalExperienceMult(weekSeconds), roomDivisor: LEGACY_TRAINING_ROOM_DIVISOR });
+      p.trainingSecondsPlayedByPosition = {};
     });
     // Poste de carte (voir syncCardPositions) : l'IA suit la même règle,
     // sans nouvelle.
@@ -11860,7 +12405,7 @@ class League {
     this.teams.forEach(t => {
       if (t.isHuman) return;
       const gap = userAvg - t.averageOverall();
-      t.trainWeekCPU(gap);
+      t.trainWeekCPU(gap, CPU_IMPLICIT_COACH_LEVEL);
     });
   }
 
@@ -13120,8 +13665,10 @@ class League {
   // déjà atteint, réduit de 30%) ne laissent jamais diverger la FORME de
   // l'annonce (les mêmes champs, valeurs par défaut identiques) entre les
   // deux origines possibles d'un candidat.
-  _makeCoachListing(now, level, startPrice) {
+  _makeCoachListing(now, level, startPrice, specialty = null) {
     const listing = this._makeStaffListing(now, level, startPrice);
+    // Spécialité visible sur le marché (retour utilisateur 2026-10-01).
+    listing.specialty = COACH_SPECIALTIES[specialty] ? specialty : pick(COACH_SPECIALTY_KEYS);
     this.coachListings.push(listing);
     return listing;
   }
@@ -13201,7 +13748,7 @@ class League {
       listing.result = "buyer-failed";
       return;
     }
-    buyer.hireTrainer(listing.level, amount);
+    buyer.hireTrainer(listing.level, amount, listing.specialty);
     if (buyer.isHuman && buyer.feed) {
       handleGameEvent(buyer.feed, {
         type: "staff_hired", week: buyer.week,
@@ -13310,7 +13857,7 @@ class League {
     team.fireTrainer();
     if (!firedTrainer) return { ok: true, relisted: false };
     const discountedStartPrice = Math.max(1, Math.round(currentSalary * 0.7));
-    this._makeCoachListing(now, firedTrainer.level, discountedStartPrice);
+    this._makeCoachListing(now, firedTrainer.level, discountedStartPrice, firedTrainer.specialty);
     return { ok: true, relisted: true };
   }
 
@@ -15127,7 +15674,12 @@ function cloneTrainingHistory(list) {
     Object.entries(h.players || {}).forEach(([id, p]) => {
       players[id] = { name: p.name, position: p.position, gains: (p.gains || []).map(g => ({ ...g })) };
     });
-    return { week: h.week, at: typeof h.at === "number" ? h.at : null, players };
+    const out = { week: h.week, at: typeof h.at === "number" ? h.at : null, players };
+    // Bilan du lundi (entraînement v2, retour utilisateur 2026-10-01).
+    if (Array.isArray(h.slots)) out.slots = JSON.parse(JSON.stringify(h.slots));
+    if (Array.isArray(h.advice)) out.advice = JSON.parse(JSON.stringify(h.advice));
+    if (h.collective) out.collective = JSON.parse(JSON.stringify(h.collective));
+    return out;
   }).slice(-TRAINING_HISTORY_MAX);
 }
 function cloneTrainingReport(report) {
@@ -15139,6 +15691,10 @@ function cloneTrainingReport(report) {
   return {
     ...report, players,
     salaryChanges: (report.salaryChanges || []).map(c => ({ ...c })),
+    // Bilan du lundi (entraînement v2, retour utilisateur 2026-10-01).
+    ...(Array.isArray(report.slots) ? { slots: JSON.parse(JSON.stringify(report.slots)) } : {}),
+    ...(Array.isArray(report.advice) ? { advice: JSON.parse(JSON.stringify(report.advice)) } : {}),
+    ...(report.collective ? { collective: JSON.parse(JSON.stringify(report.collective)) } : {}),
   };
 }
 
@@ -15177,6 +15733,8 @@ function serializeTeam(team) {
     trainingSkill: team.trainingSkill,
     trainingPositions: [...team.trainingPositions],
     trainer: team.trainer ? { ...team.trainer } : null,
+    // Entraînement v2 (retour utilisateur 2026-10-01).
+    ...serializeTrainingV2State(team),
     // Analyste vidéo + scoutisme (voir Team.videoAnalyst/scoutedAttrs/
     // lastVideoSessionAt ci-dessus) : doivent survivre au rechargement,
     // comme le reste du staff — `scoutedAttrs` en particulier, sinon un
@@ -15657,6 +16215,7 @@ function teamFromSave(data) {
       level: data.trainer.level,
       weeksEmployed: data.trainer.weeksEmployed || 0,
       baseSalary: data.trainer.baseSalary != null ? data.trainer.baseSalary : (TRAINER_BASE_SALARY[data.trainer.level] || 0),
+      specialty: data.trainer.specialty,
     };
   }
   // Analyste vidéo — même logique de restauration que l'entraîneur
@@ -15897,7 +16456,7 @@ function teamFromSave(data) {
   // Entraînement collectif (voir serializeTeam ci-dessus). Absent (sauvegarde
   // d'avant cette fonctionnalité) : on garde null (déjà posé par le
   // constructeur, aucun focus collectif).
-  team.collectiveTraining = data.collectiveTraining === "tactique" || data.collectiveTraining === "recuperation"
+  team.collectiveTraining = COLLECTIVE_DAY_OPTIONS.includes(data.collectiveTraining)
     ? data.collectiveTraining
     : null;
   // Tactique précisément travaillée à l'entraînement (voir serializeTeam
@@ -15923,7 +16482,7 @@ function teamFromSave(data) {
       .filter(e => e && typeof e.dayIndex === "number")
       .map(e => ({
         dayIndex: e.dayIndex,
-        collectiveTraining: e.collectiveTraining === "tactique" || e.collectiveTraining === "recuperation" ? e.collectiveTraining : null,
+        collectiveTraining: COLLECTIVE_DAY_OPTIONS.includes(e.collectiveTraining) ? e.collectiveTraining : null,
         trainedTactics: (e.trainedTactics && ["offense", "defense", "rhythm"].includes(e.trainedTactics.category) && typeof e.trainedTactics.value === "string")
           ? { category: e.trainedTactics.category, value: e.trainedTactics.value }
           : null,
@@ -16075,6 +16634,10 @@ function teamFromSave(data) {
     });
     team.plannedTactics = migrated;
   }
+  // Entraînement v2 (retour utilisateur 2026-10-01) : plans individuels,
+  // intensité, parrainages, plan collectif ; migration des anciennes
+  // sauvegardes (voir migrateTrainingSlots).
+  restoreTrainingV2State(team, data);
   // Numéros de maillot (voir ensureJerseyNumbers).
   ensureJerseyNumbers(team);
   // Migration / chargement (retour utilisateur 2026-09-30) : poste de carte
@@ -16228,6 +16791,9 @@ function leagueFromSave(data, userTeam = null) {
   lg.transferListings = Array.isArray(data.transferListings) ? data.transferListings : [];
   lg.lastCpuListingCheckAt = typeof data.lastCpuListingCheckAt === "number" ? data.lastCpuListingCheckAt : null;
   lg.coachListings = Array.isArray(data.coachListings) ? data.coachListings : [];
+  // Annonce d'avant les spécialités (retour utilisateur 2026-10-01) :
+  // spécialité déterministe.
+  lg.coachListings.forEach(l => { if (l && !COACH_SPECIALTIES[l.specialty]) l.specialty = deterministicCoachSpecialty(`${l.id}|${l.level}`); });
   lg.lastCoachGenerationCheckAt = typeof data.lastCoachGenerationCheckAt === "number" ? data.lastCoachGenerationCheckAt : 0;
   lg.analystListings = Array.isArray(data.analystListings) ? data.analystListings : [];
   lg.lastAnalystGenerationCheckAt = typeof data.lastAnalystGenerationCheckAt === "number" ? data.lastAnalystGenerationCheckAt : 0;
@@ -18101,6 +18667,16 @@ return {
   TRAINING_PROGRAMS, WEIGHT_BY_PROGRAM_SIZE, positionEfficiencyForProgram, rankedPositionsForProgram,
   trainingPositionOptionsForProgram, heightMultiplierForProgram,
   TRAINER_LEVELS, TRAINER_BASE_SALARY, TRAINER_WEEKLY_GROWTH, TRAINER_TRAINING_BONUS, CLUB_STARTING_BUDGET,
+  // Entraînement v2 (retour utilisateur 2026-10-01).
+  TRAINING_SLOTS_BY_COACH_LEVEL, TRAINER_CEILING_BONUS, TRAINING_ROOM_DIVISOR, TRAINING_SOFT_CEILING_SCALE, trainingProgressRoom,
+  trainingSlotsForTrainer, trainerCeilingBonus, trainerRateMultiplier, trainingCeilingFor, ceilingRoomLevel, CEILING_ROOM_STRONG,
+  TRAINING_INTENSITIES, trainingIntensityOf, COACH_SPECIALTIES, COACH_SPECIALTY_KEYS, COACH_SPECIALTY_BONUS, COACH_PHYSICAL_DAY_BONUS,
+  COACH_YOUTH_MAX_AGE, OFFENSE_TRAINING_ATTRS, DEFENSE_TRAINING_ATTRS, trainingProgramFamily, coachSpecialtyMultFor, deterministicCoachSpecialty,
+  playerWeekSeconds, MENTAL_NATURAL_SHARE, MENTAL_XP_FULL_SECONDS, mentalExperienceMult, MENTORSHIP_MAX_PAIRS, MENTORSHIP_YOUNG_MAX_AGE,
+  MENTORSHIP_VETERAN_MIN_AGE, MENTORSHIP_MENTAL_MULT, sanitizeTrainingSlots, mentorshipPairError, sanitizeMentorships,
+  trainingEfficiencyFor, slotTrainingWeightsFor, TRAINING_STALL_WEEKS, trainingAdviceFor, PHYSICAL_DAY_FACTOR, applyPhysicalDayTo,
+  TACTIC_DAILY_GAIN_CURVE, tacticDailyGainForLevel, TACTIC_TIERS, tacticTierFor, COLLECTIVE_DAY_OPTIONS, PARIS_DAY_MS, parisWeekStartDayIndex,
+  LEGACY_TRAINING_ROOM_DIVISOR, migrateTrainingSlots, serializeTrainingV2State, restoreTrainingV2State, CPU_IMPLICIT_COACH_LEVEL, CPU_BACKGROUND_TRAINING_WEIGHT, cpuTrainingSlots,
   ANALYST_REVEAL_COUNT_BY_LEVEL,
   // Académie de jeunes (voir le grand commentaire au-dessus de MAX_YOUTH_ROSTER_SIZE) :
   MAX_YOUTH_ROSTER_SIZE, YOUTH_TRAINEE_WEEKLY_SALARY, YOUTH_CANDIDATE_QUEUE_MAX, YOUTH_CANDIDATE_EXPIRY_MS,
