@@ -2,7 +2,7 @@
 // "faisons la vivre davantage à la hausse, ça tire trop vers le bas là").
 // Voir engine.js : CHEMISTRY_MATCH_TOGETHER_GAIN/CHEMISTRY_SAME_FIVE_GAIN,
 // Team.updateChemistryAfterMatch (appelée par recordMatchStatsForTeam).
-// Vérifie : +0,5 par match joué, +0,5 de plus si même cinq de départ qu'au
+// Vérifie : +CHEMISTRY_MATCH_TOGETHER_GAIN par match joué, +1 de plus si même cinq de départ qu'au
 // match précédent, rien de plus si le cinq change, plafond 100, et
 // lastStartersKey sauvegardé/rechargé.
 const E = require("./engine.js");

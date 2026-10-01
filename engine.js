@@ -4515,8 +4515,22 @@ const CHEMISTRY_ROSTER_CHANGE_BASE = 8; // malus max, pour le tout meilleur joue
 // (voir recordMatchStatsForTeam). Doublé le 2026-09-26 ("on a une vingtaine
 // de matchs par saison, ce n'est pas assez. double tes ratios") : sur ~20
 // matchs, un effectif stable gagne ~+40, un effectif qui tourne ~+20.
-const CHEMISTRY_MATCH_TOGETHER_GAIN = 1; // par match joué
+// Retour utilisateur 2026-10-01 (« les victoires ne devraient pas impacter
+// plus la cohésion ? ») : le simple fait de jouer ensemble ne vaut plus que
+// +0,5, le RÉSULTAT devient le principal moteur (voir CHEMISTRY_WIN_GAIN…
+// et Team.applyChemistryResult).
+const CHEMISTRY_MATCH_TOGETHER_GAIN = 0.5; // par match joué
 const CHEMISTRY_SAME_FIVE_GAIN = 1; // en plus, si même cinq de départ qu'au match précédent
+// Résultat du match (officiel, jamais un amical) : victoire +2 (+3 à partir
+// de 3 victoires de suite, ce match compris), défaite −1 (−2 à partir de 3
+// défaites de suite), −1 de plus pour une défaite de plus de 20 points.
+const CHEMISTRY_WIN_GAIN = 2;
+const CHEMISTRY_WIN_STREAK_GAIN = 3;
+const CHEMISTRY_LOSS = 1;
+const CHEMISTRY_LOSS_STREAK = 2;
+const CHEMISTRY_STREAK_LENGTH = 3;
+const CHEMISTRY_BLOWOUT_MARGIN = 20;
+const CHEMISTRY_BLOWOUT_EXTRA = 1;
 
 // ---------------------------------------------------------------------
 // CONNAISSANCE TACTIQUE (retour utilisateur, 2026-09 : "sur la partie
@@ -5533,6 +5547,9 @@ class Team {
     // Cinq de départ du dernier match joué (ids triés, voir
     // updateChemistryAfterMatch) : null tant qu'aucun match n'a été joué.
     this.lastStartersKey = null;
+    // Série de résultats officiels pour l'alchimie (voir applyChemistryResult) :
+    // > 0 victoires consécutives, < 0 défaites consécutives.
+    this.chemistryResultStreak = 0;
     // Connaissance tactique (voir le grand commentaire CONNAISSANCE
     // TACTIQUE au-dessus de TACTICAL_KNOWLEDGE_GAIN_BASE plus haut) : neutre
     // au départ sur CHACUNE des 18 options possibles (10 priorités
@@ -6007,6 +6024,24 @@ class Team {
     if (key && key === this.lastStartersKey) gain += CHEMISTRY_SAME_FIVE_GAIN;
     this.lastStartersKey = key;
     this.applyChemistryDelta(gain);
+  }
+
+  // Résultat d'un match officiel (voir CHEMISTRY_WIN_GAIN plus haut) : `pf`
+  // points marqués, `pa` encaissés. Égalité impossible au basket (ignorée).
+  applyChemistryResult(pf, pa) {
+    if (!Number.isFinite(pf) || !Number.isFinite(pa) || pf === pa) return 0;
+    const prev = Number.isFinite(this.chemistryResultStreak) ? this.chemistryResultStreak : 0;
+    let delta;
+    if (pf > pa) {
+      this.chemistryResultStreak = prev > 0 ? prev + 1 : 1;
+      delta = this.chemistryResultStreak >= CHEMISTRY_STREAK_LENGTH ? CHEMISTRY_WIN_STREAK_GAIN : CHEMISTRY_WIN_GAIN;
+    } else {
+      this.chemistryResultStreak = prev < 0 ? prev - 1 : -1;
+      delta = -(-this.chemistryResultStreak >= CHEMISTRY_STREAK_LENGTH ? CHEMISTRY_LOSS_STREAK : CHEMISTRY_LOSS);
+      if (pa - pf > CHEMISTRY_BLOWOUT_MARGIN) delta -= CHEMISTRY_BLOWOUT_EXTRA;
+    }
+    this.applyChemistryDelta(delta);
+    return delta;
   }
 
   chemistryFactor() {
@@ -10984,6 +11019,16 @@ function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.
   recordOrdersHistory(away, home, false, round, competition, now, quarterScores);
   recordMatchStatsForTeam(home, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.home, seed);
   recordMatchStatsForTeam(away, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.away, seed);
+  // Alchimie selon le résultat (voir Team.applyChemistryResult) : score par
+  // quart-temps quand on l'a, sinon points des joueurs ayant joué.
+  if (competition !== "friendly") {
+    const sum = arr => Array.isArray(arr) ? arr.reduce((a, b) => a + (b || 0), 0) : null;
+    const pts = team => (team.players || []).reduce((a, p) => a + ((p.secondsPlayed > 0 && p.stats && p.stats.pts) || 0), 0);
+    const qs = quarterScores || {};
+    const sh = sum(qs.home) ?? pts(home), sa = sum(qs.away) ?? pts(away);
+    if (home.applyChemistryResult) home.applyChemistryResult(sh, sa);
+    if (away.applyChemistryResult) away.applyChemistryResult(sa, sh);
+  }
   return awardMatchMvp(home, away, round, competition, now);
 }
 
@@ -14585,6 +14630,7 @@ function serializeTeam(team) {
     // CHEMISTRY_ROSTER_CHANGE_MAX_RANK plus haut) : simple valeur 0-100.
     chemistry: team.chemistry,
     lastStartersKey: team.lastStartersKey || null,
+    chemistryResultStreak: team.chemistryResultStreak || 0,
     // Connaissance tactique (voir le grand commentaire CONNAISSANCE
     // TACTIQUE plus haut) : maîtrise PAR OPTION (10 priorités offensives, 5
     // défenses, 3 rythmes), plus la série en cours par option
@@ -15164,6 +15210,7 @@ function teamFromSave(data) {
   // constructeur (chemistry neutre à 50).
   if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, 0, 100);
   if (typeof data.lastStartersKey === "string") team.lastStartersKey = data.lastStartersKey;
+  if (Number.isFinite(data.chemistryResultStreak)) team.chemistryResultStreak = Math.trunc(data.chemistryResultStreak);
   // Connaissance tactique (voir serializeTeam ci-dessus) : PAR OPTION depuis
   // cette révision (retour utilisateur, 2026-09 : "il faudrait qu'il y ait
   // une jauge par type d'attaque, une par rythme et une par défense") —
@@ -17499,6 +17546,7 @@ return {
   // Alchimie d'équipe (voir le grand commentaire au-dessus de
   // CHEMISTRY_ROSTER_CHANGE_MAX_RANK) :
   CHEMISTRY_ROSTER_CHANGE_MAX_RANK, CHEMISTRY_ROSTER_CHANGE_BASE, CHEMISTRY_MATCH_TOGETHER_GAIN, CHEMISTRY_SAME_FIVE_GAIN,
+  CHEMISTRY_WIN_GAIN, CHEMISTRY_WIN_STREAK_GAIN, CHEMISTRY_LOSS, CHEMISTRY_LOSS_STREAK, CHEMISTRY_BLOWOUT_EXTRA,
   parisCalendarDayIndex,
   chemistryRosterImportance, rosterRankOf, chemistryLabel,
   // Connaissance tactique (voir le grand commentaire au-dessus de
