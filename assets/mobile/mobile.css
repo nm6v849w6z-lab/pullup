@@ -95,6 +95,17 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
      en défilant, la barre des onglets Composition / Attaque… reste collée en haut
      (retour utilisateur 2026-09-30 : page « flottante » sans en-tête). */
   .topbar.topbar-hidden-on-page { display: flex !important; }
+  /* … et du coup la barre des onglets ne réserve plus elle-même la zone de
+     l'encoche dans son padding (règle prévue pour le topbar masqué,
+     moteurbasket3.html) : sur iPhone elle laissait un grand vide sous le logo
+     (retour utilisateur 2026-10-01, capture). Le topbar défile avec la page ;
+     la barre se colle JUSTE sous l'encoche, et un bandeau de même couleur
+     (::before) couvre l'encoche au-dessus d'elle — caché par le topbar
+     (z-index supérieur) tant que celui-ci est encore à l'écran. */
+  .topbar.topbar-hidden-on-page ~ .content-scroll .ordres-actionbar { top: env(safe-area-inset-top, 0px); padding-top: 12px; }
+  .topbar.topbar-hidden-on-page ~ .content-scroll .ordres-actionbar::before {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: env(safe-area-inset-top, 0px); background: var(--panel);
+  }
   .m-search-toggle { order: -1; }
   /* Pages de détail : « ‹ Retour » compact à gauche, puis la recherche ;
      flèches du joueur à droite, à côté du profil (retour utilisateur
