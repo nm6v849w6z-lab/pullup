@@ -93,8 +93,6 @@ const TEMPLATE = `
   <form method="dialog" style="text-align:right"><button class="ghost">Retour au match</button></form>
 </dialog>
 
-<section class="leaders" data-ref="leaders" aria-label="Meilleurs joueurs du match"></section>
-
 <div class="grid">
   <section class="panel">
     <div class="phead">
@@ -125,6 +123,10 @@ const TEMPLATE = `
     </div>
   </section>
 </div>
+
+<!-- Meilleurs joueurs entre la carte des tirs / le fil du match et le face
+     à face (retour utilisateur 2026-10-01). -->
+<section class="leaders" data-ref="leaders" aria-label="Meilleurs joueurs du match"></section>
 
 <section class="panel section">
   <div class="phead"><h2>Face à face</h2><span class="cmp-legend" data-ref="cmpLegend"></span></div>
