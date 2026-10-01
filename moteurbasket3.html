@@ -45528,7 +45528,10 @@ function ecoBudgetChartHtml(points) {
     const last = i === n - 1, first = i === 0;
     html += `<span class="eco-chart-dot${last ? " last" : ""}" style="left:${q.x}%; top:${q.y}%" title="${escapeHtml(points[i].label)} : ${ecoMoney(points[i].value)}"></span>`;
     if (last || first || (n - 1 - i) % every === 0) {
-      const txt = last ? `${points[i].label} · ${ecoMoney(points[i].value)}` : (first ? `${points[i].label} · ${ecoMoney(points[i].value)}` : points[i].label);
+      // Étiquettes courtes (« S5 ») : les montants se chevauchaient sur
+      // téléphone (retour utilisateur 2026-10-01) ; le budget actuel est déjà
+      // en gros au-dessus, chaque point garde son montant au survol.
+      const txt = points[i].label.replace(" (en cours)", "");
       html += `<span class="eco-chart-lbl${first ? " first" : ""}${last ? " last" : ""}" style="left:${q.x}%">${escapeHtml(txt)}</span>`;
     }
   });
