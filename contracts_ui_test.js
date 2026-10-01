@@ -58,6 +58,7 @@ async function until(fn, n = 60) { for (let i = 0; i < n; i++) { if (fn()) retur
   if (!heads.some(h => /^Contrat/.test(h))) fail(`colonne « Contrat » absente : ${heads.join(" | ")}`);
   const row = [...doc.querySelectorAll("#effectifSection tr.eff-row")].find(tr => tr.textContent.includes(last.name));
   if (!row || !row.querySelector(".eff-td-contract .contract-end-badge")) fail("badge « Fin de contrat » absent de l'Effectif.");
+  if (row.querySelector(".eff-td-contract").textContent.trim() !== "Fin de saison") fail(`dernière saison : « Fin de saison » attendu, obtenu ${row.querySelector(".eff-td-contract").textContent}`);
   const row2 = [...doc.querySelectorAll("#effectifSection tr.eff-row")].find(tr => tr.textContent.includes(raiser.name));
   // Fin du contrat affichée (« Fin S3 ») plutôt que des saisons restantes.
   if (row2.querySelector(".eff-td-contract").textContent.trim() !== `Fin S${raiser.contractUntilSeason}`) fail(`fin de contrat : ${row2.querySelector(".eff-td-contract").textContent}`);

@@ -43983,7 +43983,7 @@ function contractCellHtml(p) {
   const season = league ? league.contractSeason() : 1;
   const left = contractSeasonsLeft(p, season);
   if (left == null) return `<span class="sub">–</span>`;
-  if (left <= 1) return `<span class="contract-end-badge" title="Contrat jusqu'à la saison ${p.contractUntilSeason} : dernière saison, à prolonger depuis sa fiche.">Fin S${p.contractUntilSeason}</span>`;
+  if (left <= 1) return `<span class="contract-end-badge" title="Contrat jusqu'à la saison ${p.contractUntilSeason} : dernière saison, à prolonger depuis sa fiche.">Fin de saison</span>`;
   return `<span class="eff-contract" title="Contrat jusqu'à la saison ${p.contractUntilSeason}">Fin S${p.contractUntilSeason}</span>`;
 }
 function effActionsMenuHtml(p, isListed) {
