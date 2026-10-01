@@ -105,9 +105,12 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     check(shown().length === nLocal && nLocal >= 2 && shown().every(r => r.country === win.eval("mkHomeCountry()")), "« Mon championnat » : les annonces des autres championnats disparaissent");
     btn().click(); doc.querySelector(`[data-mk-origin="${win.eval("mkHomeCountry()")}"]`).click();
     check(shown().length === byCountry(win.eval("mkHomeCountry()")) && shown().length >= nLocal, "votre pays : les annonces des championnats de votre pays");
-    const empty = ["tw", "hk", "ar", "lt", "ch", "be"].find(c => !byCountry(c));
-    btn().click(); doc.querySelector(`[data-mk-origin="${empty}"]`).click();
-    check(cards().length === 0 && /Aucun joueur/.test(doc.getElementById("marketListings").textContent), "pays sans annonce : liste vide");
+    // Annonces mondiales tirées au hasard : on prend n'importe quel pays sans annonce.
+    const empty = win.eval("MK_WORLD_COUNTRIES").find(c => !byCountry(c) && doc.querySelector(`[data-mk-origin="${c}"]`));
+    if (empty) {
+      btn().click(); doc.querySelector(`[data-mk-origin="${empty}"]`).click();
+      check(cards().length === 0 && /Aucun joueur/.test(doc.getElementById("marketListings").textContent), "pays sans annonce : liste vide");
+    }
     btn().click();
     doc.getElementById("marketOriginFilter").dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     check(menu().classList.contains("hidden"), "Échap : la liste se ferme");
@@ -142,14 +145,21 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
 
     const [rLo, rHi] = ins("price");
     const steps = win.eval("mkRangeBounds().priceSteps");
-    const maxNext = Math.max(...shown().map(r => r.next));
-    check(steps[0] === 0 && steps[1] === 100 && steps[steps.length - 1] >= maxNext && steps[steps.length - 2] < maxNext && Number(rHi.max) === steps.length - 1, "prix : échelle par paliers de 0 au prix le plus haut (arrondi)");
-    const i5k = steps.indexOf(5000);
-    slide(rHi, i5k); await settle();
-    check(shown().every(r => r.next <= 5000) && shown().length >= 2 && shown().length < total, "prix maximum 5 000 € : appliqué (prochaine enchère)");
-    check(/5 000 €/.test(range("price").querySelector(".mk-range-val").textContent.replace(/[\u00a0\u202f]/g, " ")), "prix : fourchette affichée avec le format monétaire du jeu");
-    slide(rLo, steps.indexOf(500)); await settle();
-    check(shown().every(r => r.next >= 500 && r.next <= 5000), "prix minimum + maximum");
+    const nexts = win.eval("mkOpenListings().map(l => minNextBidFor(l))");
+    const maxNext = Math.max(...nexts);
+    check(steps[0] === 0 && steps.every((v, k) => k === 0 || v > steps[k - 1]) && steps[steps.length - 1] >= maxNext && Number(rHi.max) === steps.length - 1, "prix : paliers croissants de 0 au prix le plus haut (arrondi)");
+    // Paliers répartis selon les annonces (retour 2026-10-01) : aucun
+    // intervalle ne concentre la majorité des annonces.
+    // (en prix distincts : plusieurs annonces à 1 € tombent forcément ensemble).
+    const uniq = [...new Set(nexts)];
+    const per = steps.slice(1).map((v, k) => uniq.filter(n => n > steps[k] && n <= v).length);
+    check(Math.max(...per) <= Math.max(3, Math.ceil(uniq.length * 0.35)), `prix : paliers répartis selon les annonces (max ${Math.max(...per)} / ${uniq.length} prix distincts par palier)`);
+    const iHi = Math.floor(steps.length * 0.6), iLo = Math.floor(steps.length * 0.25);
+    slide(rHi, iHi); await settle();
+    check(shown().every(r => r.next <= steps[iHi]) && shown().length >= 1 && shown().length < total, "prix maximum : appliqué (prochaine enchère)");
+    check(/€/.test(range("price").querySelector(".mk-range-val").textContent), "prix : fourchette affichée avec le format monétaire du jeu");
+    slide(rLo, iLo); await settle();
+    check(shown().every(r => r.next >= steps[iLo] && r.next <= steps[iHi]), "prix minimum + maximum");
     doc.getElementById("marketBudgetBtn").click();
     check(win.eval("marketUi.budget") && doc.getElementById("marketBudgetBtn").getAttribute("aria-pressed") === "true", "« Dans mon budget » : interrupteur");
 
@@ -159,8 +169,8 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     await win.__lastMarketAlertSync;
     const al = win.eval("JSON.stringify(teamA.marketAlerts[0])");
     const alert = JSON.parse(al);
-    check(alert.priceMin === 500 && alert.priceMax === 5000 && alert.budget === true && alert.ageMin === null, "alerte enregistrée avec les fourchettes des barres");
-    check(/Prix : 500 € à 5 000 €/.test(doc.getElementById("marketAlertsBar").textContent.replace(/[\u00a0\u202f]/g, " ")), "alerte affichée avec sa fourchette de prix");
+    check(alert.priceMin === steps[iLo] && alert.priceMax === steps[iHi] && alert.budget === true && alert.ageMin === null, "alerte enregistrée avec les fourchettes des barres");
+    check(/Prix : .+ € à .+ €/.test(doc.getElementById("marketAlertsBar").textContent.replace(/[\u00a0\u202f]/g, " ")), "alerte affichée avec sa fourchette de prix");
     doc.querySelector("[data-mk-alert-del]").click();
     await win.__lastMarketAlertSync;
     btn().click(); doc.querySelector('[data-mk-origin="it"]').click();

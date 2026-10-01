@@ -2337,8 +2337,8 @@
   .mk-crit-tag{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700; background:rgba(240,162,60,.10); color:var(--amber); border:1px solid rgba(240,162,60,.45); border-radius:999px; padding:5px 6px 5px 14px;}
   .mk-crit-tag button{background:none; border:0; color:inherit; font-size:15px; line-height:1; padding:0 6px; cursor:pointer;}
   /* Pays au choix + barres âge/potentiel/prix (retour utilisateur 2026-10-01). */
-  .mk-page{--mk-range:#4c8dff; --mk-range-soft:rgba(76,141,255,.22);}
-  html[data-theme="light"] .mk-page{--mk-range:#2563eb; --mk-range-soft:rgba(37,99,235,.18);}
+  /* Couleur des barres et du globe : orange du jeu (retour utilisateur 2026-10-01). */
+  .mk-page{--mk-range:var(--amber); --mk-range-soft:rgba(240,162,60,.25);}
   .mk-origin .pc-picker-btn{background:var(--bg); border-color:var(--line); font-size:14px; min-width:200px;}
   .mk-origin .pc-picker-btn .pc-chev{margin-left:auto;}
   .mk-origin .pc-picker-name{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -44910,29 +44910,41 @@ function mkCloseOriginPicker(focusBtn) {
   if (box) planeteClosePicker(box, focusBtn);
 }
 
-// Prix : échelle par paliers « ronds » (100, 150, 200, 250, 300, 400, 500,
-// 600, 750, 1 000 €…) pour pouvoir viser les petits prix comme les gros.
+// Prix : paliers « ronds » (100, 150, 200, 250, 300, 400, 500, 600, 750,
+// 1 000 €…) répartis d'après les prix des annonces ouvertes (retour
+// utilisateur 2026-10-01 : « pour un prix entre 50 et 500 k on est tout à
+// gauche ») : chaque palier correspond à peu près au même nombre
+// d'annonces, la barre s'étale donc là où sont les joueurs.
 const MK_PRICE_MANTISSAS = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5];
-function mkPriceSteps(maxPrice) {
+const MK_PRICE_STEP_COUNT = 24;
+function mkPriceLadder(maxPrice) {
   const steps = [0];
   for (let p = 100; p < 1e13; p *= 10) {
     for (const m of MK_PRICE_MANTISSAS) { const v = Math.round(m * p); steps.push(v); if (v >= maxPrice) return steps; }
   }
   return steps;
 }
+function mkPriceSteps(prices) {
+  const sorted = prices.filter(v => Number.isFinite(v) && v >= 0).sort((a, b) => a - b);
+  const ladder = mkPriceLadder(sorted.length ? sorted[sorted.length - 1] : 0);
+  if (sorted.length < 4) return ladder;
+  const roundUp = v => ladder.find(x => x >= v);
+  const picked = new Set([0, ladder[ladder.length - 1]]);
+  for (let k = 1; k < MK_PRICE_STEP_COUNT; k++) picked.add(roundUp(sorted[Math.min(sorted.length - 1, Math.floor((k / MK_PRICE_STEP_COUNT) * sorted.length))]));
+  return [...picked].sort((a, b) => a - b);
+}
 // Bornes des barres d'après les annonces ouvertes.
 function mkRangeBounds() {
   const open = mkOpenListings();
-  const ages = [];
-  let maxPrice = 0;
+  const ages = [], prices = [];
   open.forEach(l => {
     const p = league.playerById(l.playerId);
     if (p) ages.push(p.age);
-    maxPrice = Math.max(maxPrice, minNextBidFor(l));
+    prices.push(minNextBidFor(l));
   });
   return {
     age: ages.length ? [Math.min(...ages), Math.max(...ages)] : [16, 40],
-    priceSteps: mkPriceSteps(maxPrice),
+    priceSteps: mkPriceSteps(prices),
   };
 }
 // Une barre = deux positions entières [min, max] ; toVal/toIdx convertissent.
