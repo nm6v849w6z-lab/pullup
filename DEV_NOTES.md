@@ -20,6 +20,44 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Contrats
+  des joueurs** (conception validée par le propriétaire le 2026-10-01, puis
+  simplifiée : transferts et agents libres TOUJOURS au salaire demandé, la
+  marge de -10 % ne vaut que pour les prolongations). engine.js (+ miroir
+  moteurbasket3.html) : `contractUntilSeason` (1 à 5 saisons),
+  `askedSalary` (niveau + âge + motivation), salaire FIXE pendant le contrat
+  (`recalculateSalaries` n'applique plus que `nextSalary`), prolongation en
+  dernière saison (`Team.offerContractExtension` : durée 1-5, salaire entre
+  demandé -10 % et demandé, chance cachée selon motivation + renommée, refus
+  = motivation -3 et une offre par semaine de jeu ; nouveau salaire à partir
+  de la saison suivante), demande d'augmentation en semaine 6
+  (`League.weeklyContractsTick`, réponse sous 3 jours sinon refus, -10 de
+  motivation, jamais de demande de transfert ; IA : accordée), fin de
+  contrat au lundi de clôture (`League.processContractExpiries` : départ
+  libre, annonce « agent libre » à 1 €, mise = prime de signature débitée
+  sans contrepartie, catégorie « Primes de signature » du bilan ; ancien
+  club exclu ; invendu → club IA de la ligue, ou retraite à 33 ans et plus ;
+  IA : prolonge la plupart de ses joueurs, complète son effectif), vente
+  interdite en seconde moitié de dernière saison (`contractSaleBlocked`),
+  durée choisie avec l'enchère et l'enchère auto (`listing.contractTerms`,
+  jamais renvoyées aux autres clubs ; IA : 2 à 4 saisons), salaire demandé
+  gelé sur l'annonce, message de confirmation à l'acheteur. Migration :
+  `League.ensureContracts` (au chargement, à la création, chaque lundi) selon
+  l'âge, déterministe par id, salaire inchangé ; promotion de l'académie =
+  3 saisons. Serveur : /api/player/contract-extension,
+  /api/player/raise-response, `seasons` sur /api/market/bid et auto-bid
+  (marché mondial compris, agents libres visibles et signables d'ailleurs).
+  Client : carte « Contrat » de la fiche joueur (prolongation, augmentation),
+  colonne « Contrat » de l'Effectif, carte du marché (salaire demandé, « Fin
+  de contrat », « Agent libre », prime de signature, durée du contrat), chat
+  de la ligue. i18n : 73 textes dans les 9 dictionnaires (+ guide). Tests :
+  contracts_test.js, contracts_ui_test.js ; adaptés : server/new_season_test
+  et server/weekly_calendar_test (contrats longs pour garder l'effectif),
+  position_change_test (salaire fixé par le contrat à l'intersaison),
+  server/world_country_test (champs privés des contrats). Reste : suite
+  complète verte (239/240, engine_balance_test statistique, vert seul), committé
+  localement, à pousser.
+
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), à committer — Sponsors :
   catalogue de marques fictives avec logos générés** (proposition validée,
   « plus de sponsors », ~30 par niveau, puis noms anglais hors France).
@@ -481,6 +519,7 @@ points réellement ouverts.
   `season_objective_endreg_client_test.js`,
   `calendrier_ordres_stale_live_redirect_test.js`,
   `attr_color_scheme_everywhere_test.js`, `full_run_test.js`,
+  `engine_balance_test.js` (statistique, sous charge ; vert seul, 2026-10-01),
   `milestone_interview_and_mvp_test.js` (ajouté 2026-09-24, refonte du
   tableau de bord : variance normale de rotation sur un match simulé,
   confirmé passant seul à 3/3, sans rapport avec le tableau de bord),

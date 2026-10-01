@@ -2824,6 +2824,34 @@
   .pdp2-pips span{width:20px; height:8px; border-radius:2px; background:var(--line);}
   .pdp2-pips span.on{background:var(--amber);}
   #pdpSaleCard, #pdpPersoCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
+  /* Contrats (demande du 2026-10-01) : carte « Contrat » de la fiche joueur,
+     badge « Fin de contrat », colonne de l'Effectif, carte du marché. */
+  #pdpContractCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
+  .pdp-contract-head{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; font-size:15px; color:var(--ink);}
+  .pdp-contract-head b{font-weight:800;}
+  .pdp-contract-lines{margin-top:10px; display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--ink-dim);}
+  .pdp-contract-lines b{color:var(--ink);}
+  .pdp-contract-box{margin-top:14px; padding:14px; border-radius:12px; background:var(--bg); border:1px solid var(--line-soft);}
+  .pdp-contract-box h4{margin:0 0 10px; font-size:14px; color:var(--ink);}
+  .pdp-contract-form{display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px 14px;}
+  .pdp-contract-form label{display:flex; flex-direction:column; gap:5px; font-size:12px; color:var(--ink-dim); font-weight:600;}
+  .pdp-contract-form select, .pdp-contract-form input{height:40px; min-width:120px; padding:0 10px; border-radius:9px; border:1px solid var(--line); background:var(--panel); color:var(--ink); font:inherit; font-weight:700; font-variant-numeric:tabular-nums;}
+  .pdp-contract-form input{width:140px; text-align:right;}
+  .pdp-contract-form button{height:40px;}
+  .pdp-contract-hint{display:inline-flex; align-items:center; margin-top:10px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700;}
+  .pdp-contract-hint.sure, .pdp-contract-hint.likely{color:#5fd6ae; background:rgba(51,180,161,.12);}
+  .pdp-contract-hint.hesitant{color:var(--amber); background:rgba(240,162,60,.12);}
+  .pdp-contract-hint.risky{color:var(--danger); background:rgba(226,105,79,.14);}
+  .pdp-contract-actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+  .contract-end-badge{display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; background:rgba(240,162,60,.14); border:1px solid rgba(240,162,60,.45); color:var(--amber); font-size:11px; font-weight:800; letter-spacing:.02em; white-space:nowrap; vertical-align:middle; cursor:help;}
+  .eff-contract{font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .mk-badge.mk-badge-fa{font-size:12px; padding:3px 10px; color:#7cc4ff; background:rgba(80,160,255,.14);}
+  .mk-badge.mk-badge-contract{font-size:12px; padding:3px 10px; color:var(--amber); background:rgba(240,162,60,.12);}
+  .mk-chip.mk-chip-asked{color:var(--ink-dim);}
+  .mk-contract-row{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; font-size:12.5px; color:var(--ink-dim);}
+  .mk-contract-row label{font-weight:700; color:var(--ink);}
+  .mk-contract-row select{height:34px; padding:0 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:inherit; font-weight:700;}
+  .mk-fa-note{font-size:12.5px; color:var(--ink-dim);}
   /* Maillot floqué en pastille au coin bas-droit de l'avatar (retour
      utilisateur 2026-09-30 : empilé sous l'avatar, « sur un grand écran
      c'est pas ouf du tout ») : le bloc identité garde la hauteur de
@@ -6417,15 +6445,17 @@
      collés, grands vides ailleurs). Somme = 100 %. */
   @media (min-width:1000px){
     #effectifSection table.eff-general, #teamDetailSection table.eff-general{table-layout:fixed; width:100%;}
-    #effectifSection table.eff-general :is(th.eff-th-name){width:21%;}
+    #effectifSection table.eff-general :is(th.eff-th-name){width:19%;}
     #effectifSection table.eff-general th.eff-th-position{width:7%;}
-    #effectifSection table.eff-general th.eff-th-potential{width:11%;}
-    #effectifSection table.eff-general th.eff-th-age{width:6%;}
-    #effectifSection table.eff-general th.eff-th-height{width:8%;}
+    #effectifSection table.eff-general th.eff-th-potential{width:10%;}
+    #effectifSection table.eff-general th.eff-th-age{width:5%;}
+    #effectifSection table.eff-general th.eff-th-height{width:7%;}
     #effectifSection table.eff-general th.eff-th-salary{width:9%;}
-    #effectifSection table.eff-general th.eff-th-condition{width:12%;}
-    #effectifSection table.eff-general th.eff-th-motivation{width:11%;}
-    #effectifSection table.eff-general th.eff-th-evaluation{width:11%;}
+    /* Contrat (demande du 2026-10-01). */
+    #effectifSection table.eff-general th.eff-th-contract{width:9%;}
+    #effectifSection table.eff-general th.eff-th-condition{width:11%;}
+    #effectifSection table.eff-general th.eff-th-motivation{width:10%;}
+    #effectifSection table.eff-general th.eff-th-evaluation{width:10%;}
     #effectifSection table.eff-general th.eff-th-actions{width:48px; min-width:0;}
     #teamDetailSection table.eff-general tr:first-child > th:nth-child(1){width:22%;}
     #teamDetailSection table.eff-general tr:first-child > th:nth-child(2){width:8%;}
@@ -8652,7 +8682,7 @@
       <div class="guide-entry" data-guide-id="demarrer" data-guide-group="Bien démarrer">
         <h3>Premiers pas</h3>
         <button type="button" class="tour-launch-btn" id="tourLaunchBtn">Lancer le tutoriel d'accueil (aperçu)</button>
-        <p class="training-intro">Vous dirigez un club de basket en temps réel : les matchs se jouent tout seuls à l'heure prévue, que vous soyez connecté ou non. Une saison dure <b>11 semaines</b> : 9 semaines de championnat, deux journées par semaine le <b>mardi</b> et le <b>samedi à 20:00</b>, puis 2 semaines de <b>play-offs</b> le mardi, le jeudi et le samedi à 20:00 ; en Coupe, un tour chaque <b>jeudi à 20:00</b>. Chaque lundi à 6h (heure de Paris) a lieu la mise à jour de la semaine : salaires et recettes, et entraînement des fondamentaux. Celle qui suit la finale des play-offs clôt la saison (les joueurs prennent un an, les salaires sont recalculés, les retraités s'en vont, la forme repart à 100) et ouvre une <b>semaine d'intersaison</b> : marché ouvert et amicaux possibles, puis la saison suivante démarre toute seule, avec votre effectif. Entre deux matchs, votre travail : préparer les <b>Ordres</b>, régler l'<b>Entraînement</b>, gérer l'<b>Effectif</b> (marché, jeunes, staff) et les finances du club.</p>
+        <p class="training-intro">Vous dirigez un club de basket en temps réel : les matchs se jouent tout seuls à l'heure prévue, que vous soyez connecté ou non. Une saison dure <b>11 semaines</b> : 9 semaines de championnat, deux journées par semaine le <b>mardi</b> et le <b>samedi à 20:00</b>, puis 2 semaines de <b>play-offs</b> le mardi, le jeudi et le samedi à 20:00 ; en Coupe, un tour chaque <b>jeudi à 20:00</b>. Chaque lundi à 6h (heure de Paris) a lieu la mise à jour de la semaine : salaires et recettes, et entraînement des fondamentaux. Celle qui suit la finale des play-offs clôt la saison (les joueurs prennent un an, les joueurs en fin de contrat partent libres, les retraités s'en vont, la forme repart à 100) et ouvre une <b>semaine d'intersaison</b> : marché ouvert et amicaux possibles, puis la saison suivante démarre toute seule, avec votre effectif. Entre deux matchs, votre travail : préparer les <b>Ordres</b>, régler l'<b>Entraînement</b>, gérer l'<b>Effectif</b> (marché, jeunes, staff) et les finances du club.</p>
         <p class="training-intro" style="margin-top:10px;">La routine conseillée avant chaque match : vérifier la forme des joueurs (<button type="button" class="gd-link" data-guide-goto="forme">Forme et blessures</button>), composer le cinq et la tactique dans l'onglet Ordres, puis valider. Vous pouvez aussi préparer plusieurs journées à l'avance (voir <button type="button" class="gd-link" data-guide-goto="ordres">Ordres et tactiques</button>).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Pendant votre absence</b> : à votre retour, un récapitulatif résume ce qui s'est passé (victoires et défaites, finances de la semaine, progression des joueurs, points à savoir). Le <b>Tableau de bord</b> montre ensuite le prochain match, les actions en attente de la semaine et le pouls du club (humeur des supporters, alchimie).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Longue absence</b> : sans aucune visite pendant 45 jours, votre club est confié à l'IA (effectif, nom et palmarès conservés). Reconnectez-vous à votre compte pour le récupérer, s'il n'a pas été repris entre-temps par un autre manager ; sinon un nouveau club vous est attribué.</p>
@@ -10845,6 +10875,8 @@ const FINANCE_CATEGORIES = [
   { key: "staff", dir: "out", label: "Salaires du staff", re: /^Salaire du staff/ },
   { key: "academy", dir: "out", label: "Centre de formation", re: /^Salaires du centre de formation/ },
   { key: "purchases", dir: "out", label: "Achats de joueurs", re: /^Achat de / },
+  // Agents libres (voir engine.js, demande du 2026-10-01).
+  { key: "signing", dir: "out", label: "Primes de signature", re: /^Prime de signature/ },
   { key: "works", dir: "out", label: "Constructions et installations", re: /^Agrandissement/ },
   { key: "other_out", dir: "out", label: "Autres dépenses", re: null },
 ];
@@ -13252,6 +13284,142 @@ function salaryForOverall(overall) {
   return Math.max(SALARY_MIN, Math.round(raw));
 }
 
+// ---------------------------------------------------------------------
+// Copie miroir EXACTE de engine.js (contrats des joueurs).
+// CONTRATS DES JOUEURS (demande validée 2026-10-01 : « contrat de 1 à 5
+// saisons, salaire fixe pendant le contrat, prolongation pendant la
+// dernière saison, départ libre en fin de contrat »). Champs du joueur :
+//  - contractUntilSeason : dernière saison couverte (incluse), numéro de
+//    League.seasonNumber ; saisons restantes = contractUntilSeason -
+//    League.contractSeason() + 1. `null` = pas encore de contrat (joueur
+//    fraîchement généré, voir League.ensureContracts).
+//  - nextSalary : nouveau salaire signé (prolongation, augmentation),
+//    appliqué au passage de saison (Team.recalculateSalaries).
+//  - lastContractOfferWeek : team.week de la dernière offre refusée (une
+//    seule tentative par semaine de jeu).
+//  - raiseRequest : demande d'augmentation de mi-saison en attente.
+// Le salaire n'est plus recalculé à l'intersaison pour un joueur sous
+// contrat : il ne change qu'à la signature d'un nouveau contrat.
+// ---------------------------------------------------------------------
+const CONTRACT_MIN_SEASONS = 1;
+const CONTRACT_MAX_SEASONS = 5;
+const CONTRACT_DEFAULT_SEASONS = 3;
+// Marge de négociation d'une prolongation : jusqu'à -10 % du salaire demandé.
+const CONTRACT_NEGOTIATION_MARGIN = 0.10;
+// Chance d'acceptation d'une offre au plancher (-10 %), avant motivation/club.
+const CONTRACT_FLOOR_ACCEPT_CHANCE = 0.45;
+const CONTRACT_REFUSAL_MORALE_MALUS = 3;      // chaque refus de prolongation
+const CONTRACT_RAISE_THRESHOLD = 0.25;        // salaire demandé >= +25 % du salaire actuel
+const CONTRACT_RAISE_WEEK = 6;                // semaine de la saison où il peut la demander
+const CONTRACT_RAISE_RESPONSE_MS = 3 * 24 * 60 * 60 * 1000; // sans réponse : refus
+const CONTRACT_RAISE_REFUSED_MORALE_MALUS = 10;
+const YOUTH_PROMOTION_CONTRACT_SEASONS = 3;
+// Agents libres (fin de contrat sans prolongation) : enchère à 1 €, la mise
+// gagnante est une prime de signature payée au joueur (sort de l'économie).
+const FREE_AGENT_AUCTION_DURATION_MS = 2 * 24 * 60 * 60 * 1000;
+const FREE_AGENT_RETIRE_AGE = 33;
+const FREE_AGENT_SIGNING_LABEL = "Prime de signature";
+// Club IA : effectif minimal reconstitué après les fins de contrat.
+const CPU_MIN_ROSTER_AFTER_CONTRACTS = 10;
+
+// Hachage déterministe d'un id de joueur (répartition des contrats migrés).
+function contractHash(id) {
+  const s = String(id);
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0);
+}
+
+// Durée restante attribuée à un joueur sans contrat (migration, effectifs
+// générés), selon l'âge, déterministe par id.
+function initialContractSeasonsFor(age, id) {
+  const [lo, hi] = age <= 22 ? [3, 5] : age <= 27 ? [2, 4] : age <= 31 ? [1, 3] : [1, 2];
+  return lo + (contractHash(id) % (hi - lo + 1));
+}
+
+function contractAgeFactor(age) {
+  if (age <= 22) return 0.9;
+  if (age <= 24) return 1.0;
+  if (age <= 30) return 1.08;
+  if (age <= 32) return 1.0;
+  return 0.88;
+}
+
+// Motivation (Player.form, 0-100) : un joueur mécontent demande plus (jusqu'à
+// +10 %), un joueur très motivé un peu moins (-5 %).
+function contractMoraleFactor(form) {
+  const f = typeof form === "number" ? clamp(form, 0, 100) : 55;
+  if (f < 45) return 1 + 0.10 * (45 - f) / 45;
+  if (f >= 85) return 0.95;
+  if (f > 65) return 1 - 0.05 * (f - 65) / 20;
+  return 1;
+}
+
+// Salaire demandé (€/semaine) : niveau actuel (grille salariale, bonus de
+// pic compris), âge et motivation. Arrondi à 10 €.
+function askedSalary(player) {
+  if (!player || !player.attrs) return SALARY_MIN;
+  const level = levelCoefficientFor(player.attrs, player.position);
+  const raw = salaryForOverall(level.coefficient) * contractAgeFactor(player.age) * contractMoraleFactor(player.form);
+  return Math.max(SALARY_MIN, Math.round(raw / 10) * 10);
+}
+
+// Plancher de négociation (prolongation) : salaire demandé -10 %.
+function contractOfferFloor(asked) {
+  return Math.max(SALARY_MIN, Math.ceil(asked * (1 - CONTRACT_NEGOTIATION_MARGIN)));
+}
+
+// Chance qu'un joueur accepte une prolongation à `offered` (`asked` =
+// salaire demandé). Au salaire demandé : toujours. En dessous : décroît
+// jusqu'à ~45 % au plancher, modulée par la motivation et par la renommée
+// du club (effet jamais affiché).
+function contractAcceptanceChance(asked, offered, form, prestige) {
+  if (!(asked > 0) || offered >= asked) return 1;
+  const gap = clamp((asked - offered) / asked / CONTRACT_NEGOTIATION_MARGIN, 0, 1);
+  let chance = 1 - gap * (1 - CONTRACT_FLOOR_ACCEPT_CHANCE);
+  const f = typeof form === "number" ? clamp(form, 0, 100) : 55;
+  chance += (f - 55) / 100 * 0.2 * gap;
+  if (typeof prestige === "number") chance += (clamp(prestige, 0, 100) - 50) / 100 * 0.2 * gap;
+  return clamp(chance, 0.05, 1);
+}
+
+// Indice affiché à côté d'une offre de prolongation : fondé UNIQUEMENT sur
+// l'écart avec le salaire demandé (jamais sur la renommée du club).
+function contractOfferHint(asked, offered) {
+  if (!(asked > 0) || offered >= asked) return { key: "sure", label: "Il acceptera" };
+  const gap = (asked - offered) / asked;
+  if (gap <= 0.03) return { key: "likely", label: "Il devrait accepter" };
+  if (gap <= 0.07) return { key: "hesitant", label: "Le joueur hésite" };
+  return { key: "risky", label: "Offre risquée" };
+}
+
+// Durée de contrat valide (1 à 5 saisons), sinon `fallback`.
+function normalizeContractSeasons(v, fallback = CONTRACT_DEFAULT_SEASONS) {
+  const n = Number(v);
+  return Number.isInteger(n) && n >= CONTRACT_MIN_SEASONS && n <= CONTRACT_MAX_SEASONS ? n : fallback;
+}
+
+// Saisons restantes du contrat d'un joueur (`season` = saison de contrat
+// courante, voir League.contractSeason), `null` sans contrat.
+function contractSeasonsLeft(player, season) {
+  if (!player || typeof player.contractUntilSeason !== "number") return null;
+  return player.contractUntilSeason - (season || 1) + 1;
+}
+function isLastContractSeason(player, season) {
+  return contractSeasonsLeft(player, season) === 1;
+}
+
+// Pose un nouveau contrat (transfert, agent libre, recrue de l'IA) : salaire
+// demandé appliqué tout de suite (le club qui signe paie dès maintenant),
+// durée `seasons` à partir de la saison `season`.
+function signNewContract(player, seasons, season, salary = null) {
+  player.salary = salary != null ? salary : askedSalary(player);
+  player.contractUntilSeason = (season || 1) + normalizeContractSeasons(seasons) - 1;
+  player.nextSalary = null;
+  player.raiseRequest = null;
+  player.lastContractOfferWeek = null;
+}
+
 // Forme physique (voir engine.js, miroir identique) : champ séparé de
 // Player.form (confiance/interviews) et de Player.fatigue (énergie EN
 // MATCH, remise à 0 à chaque match) — celle-ci survit d'un match à l'autre,
@@ -14045,6 +14213,14 @@ class Player {
     this.retirementWeeks = 0;
     this.retirementTalks = [];
     this.retirementQuote = null;
+
+    // Contrat (voir engine.js, miroir identique, demande du 2026-10-01).
+    this.contractUntilSeason = null;
+    this.nextSalary = null;
+    this.lastContractOfferWeek = null;
+    this.raiseRequest = null;
+    this.raiseRequestSeason = null;
+    this.extensionRequestSeason = null;
   }
 
   // Applique une semaine d'entraînement. `attrWeights` est une map
@@ -14642,7 +14818,7 @@ function handleGameEvent(feed, event, ctx) {
         category: "club",
         week: w,
         title: `${event.playerName} joue désormais ${event.to} (note ${event.ratingTo} en ${sh(event.to)} contre ${event.ratingFrom} en ${sh(event.from)})`,
-        text: "Son poste suit désormais ses caractéristiques. Son salaire, lui, ne sera revu qu'à l'intersaison.",
+        text: "Son poste suit désormais ses caractéristiques. Son salaire, lui, reste celui de son contrat.",
         action: { label: "Effectif", href: "/effectif" },
       });
     }
@@ -16399,13 +16575,15 @@ class Team {
   // joueur est passé pro"), jamais de Date.now() implicite ici, même
   // convention que refreshMarket(now)/refreshRecruiterMarket(now) etc.
   // ci-dessus, pour rester testable de façon déterministe.
-  promoteYouthPlayer(playerId, now) {
+  // `season` : voir engine.js (contrat de 3 saisons, demande du 2026-10-01).
+  promoteYouthPlayer(playerId, now, season = null) {
     const idx = (this.youthPlayers || []).findIndex(p => p.id === playerId);
     if (idx === -1) return { ok: false, reason: "not-found" };
     if (this.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
     const [player] = this.youthPlayers.splice(idx, 1);
     this.pendingYouthDecisions = (this.pendingYouthDecisions || []).filter(id => id !== playerId);
     player.salary = salaryForOverall(player.overall());
+    if (typeof season === "number") player.contractUntilSeason = season + YOUTH_PROMOTION_CONTRACT_SEASONS - 1;
     // Club formateur (apparence personnalisable, voir canCustomizePlayerLook).
     player.homegrownClub = String(this.name || "").trim().toLowerCase();
     this.players.push(player);
@@ -17042,12 +17220,18 @@ class Team {
     return changes;
   }
 
+  // Contrats (voir engine.js, miroir identique, demande du 2026-10-01).
   recalculateSalaries() {
     return this.players.map(p => {
       const before = p.salary;
       const level = levelCoefficientFor(p.attrs, p.position);
       p.effectivePosition = level.position;
-      p.salary = salaryForOverall(level.coefficient);
+      if (typeof p.nextSalary === "number") {
+        p.salary = p.nextSalary;
+        p.nextSalary = null;
+      } else if (typeof p.contractUntilSeason !== "number") {
+        p.salary = salaryForOverall(level.coefficient);
+      }
       return { name: p.name, before, after: p.salary };
     }).filter(c => c.before !== c.after);
   }
@@ -19138,6 +19322,7 @@ class League {
     // moment d'un changement de saison) pour ne pas valoir la peine de la
     // reporter.
     this.transferListings = [];
+    this.freeAgents = [];
     this.lastCpuListingCheckAt = null;
 
     // Marché des entraîneurs (voir generateCoachCandidate/placeCoachBid/
@@ -19998,7 +20183,35 @@ class League {
         if (p) return p;
       }
     }
-    return null;
+    // Agents libres (voir engine.js, demande du 2026-10-01).
+    return this.freeAgentById(playerId);
+  }
+
+  // Contrats des joueurs : copie miroir de engine.js (lecture seule côté
+  // navigateur, les décisions sont prises par le serveur).
+  contractSeason() {
+    return (typeof this.seasonNumber === "number" ? this.seasonNumber : 1) + (this.seasonEndTickDone ? 1 : 0);
+  }
+  seasonWeek() {
+    if (this.seasonEndTickDone) return 1;
+    if (this.calendarWeeklyRhythm) return Math.min(SEASON_LENGTH_WEEKS, (this.lastEconomyTick || 0) + 1);
+    const rounds = (this.schedule && this.schedule.length) || 1;
+    if (typeof this.isRegularSeasonDone === "function" && this.isRegularSeasonDone()) return SEASON_LENGTH_WEEKS;
+    return Math.min(SEASON_LENGTH_WEEKS, Math.floor((this.round || 0) * (SEASON_LENGTH_WEEKS - 2) / rounds) + 1);
+  }
+  isSecondHalfOfSeason() {
+    return this.seasonWeek() > SEASON_LENGTH_WEEKS / 2;
+  }
+  contractSaleBlocked(player) {
+    return !!player && isLastContractSeason(player, this.contractSeason()) && this.isSecondHalfOfSeason();
+  }
+  freeAgentById(playerId) {
+    return (this.freeAgents || []).find(p => p.id === playerId) || null;
+  }
+  _isFormerClub(listing, team, idx) {
+    if (!listing || !listing.freeAgent || !team) return false;
+    if (idx != null && idx >= 0 && idx === listing.formerTeamIdx) return true;
+    return !!listing.formerTeamName && team.name === listing.formerTeamName;
   }
 
   // Met un joueur de sellerIdx aux enchères pour TRANSFER_AUCTION_DURATION_MS.
@@ -20016,10 +20229,13 @@ class League {
     const player = seller.players.find(p => p.id === playerId);
     if (!player) return null;
     if (this.transferListings.some(l => l.status === "open" && l.playerId === playerId)) return null;
+    // Contrats (voir engine.js) : dernière saison, seconde moitié → interdit.
+    if (this.contractSaleBlocked(player)) return null;
     const listing = {
       id: uid(),
       playerId,
       sellerIdx,
+      askedSalary: askedSalary(player),
       startPrice: Math.max(1, Math.round(startPrice)),
       currentBid: null,
       currentBidderIdx: null,
@@ -20061,7 +20277,7 @@ class League {
     if (a.bidderIdx === FOREIGN_BIDDER_IDX) return a.max;
     const team = this.teams[a.bidderIdx];
     if (!team) return null;
-    if (kind === "player" && (a.bidderIdx === listing.sellerIdx || team.players.length >= MAX_ROSTER_SIZE)) return null;
+    if (kind === "player" && (a.bidderIdx === listing.sellerIdx || team.players.length >= MAX_ROSTER_SIZE || this._isFormerClub(listing, team, a.bidderIdx))) return null;
     return team.isHuman ? Math.min(a.max, Math.floor(team.budget)) : a.max;
   }
 
@@ -20144,12 +20360,15 @@ class League {
     return { ok: true, listing, leading: leadingNow };
   }
 
-  placeBid(listingId, bidderIdx, amount, now) {
+  // `seasons` : durée de contrat choisie avec l'enchère (voir engine.js).
+  placeBid(listingId, bidderIdx, amount, now, seasons = null) {
     const listing = this.transferListings.find(l => l.id === listingId);
     if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
     if (listing.sellerIdx === bidderIdx) return { ok: false, reason: "own-listing" };
     const bidder = this.teams[bidderIdx];
     if (!bidder) return { ok: false, reason: "invalid-bidder" };
+    if (this._isFormerClub(listing, bidder, bidderIdx)) return { ok: false, reason: "former-club" };
+    if (seasons != null) listing.myContractSeasons = normalizeContractSeasons(seasons);
     if (bidder.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
@@ -21954,6 +22173,13 @@ function serializePlayerRecord(p) {
     retirementQuote: p.retirementQuote ?? null,
     // Garde-fou de vieillissement (voir Team.trainWeek, opts.seasonNo).
     lastAgedSeasonNo: typeof p.lastAgedSeasonNo === "number" ? p.lastAgedSeasonNo : null,
+    // Contrat (voir engine.js, miroir identique, demande du 2026-10-01).
+    contractUntilSeason: typeof p.contractUntilSeason === "number" ? p.contractUntilSeason : null,
+    nextSalary: typeof p.nextSalary === "number" ? p.nextSalary : null,
+    lastContractOfferWeek: typeof p.lastContractOfferWeek === "number" ? p.lastContractOfferWeek : null,
+    raiseRequest: p.raiseRequest ? { ...p.raiseRequest } : null,
+    raiseRequestSeason: typeof p.raiseRequestSeason === "number" ? p.raiseRequestSeason : null,
+    extensionRequestSeason: typeof p.extensionRequestSeason === "number" ? p.extensionRequestSeason : null,
   };
 }
 
@@ -22457,6 +22683,13 @@ function playerFromSave(pdata) {
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
   if (typeof pdata.retirementQuote === "string") p.retirementQuote = pdata.retirementQuote;
   if (typeof pdata.lastAgedSeasonNo === "number") p.lastAgedSeasonNo = pdata.lastAgedSeasonNo;
+  // Contrat (voir engine.js, miroir identique).
+  if (typeof pdata.contractUntilSeason === "number") p.contractUntilSeason = pdata.contractUntilSeason;
+  if (typeof pdata.nextSalary === "number") p.nextSalary = pdata.nextSalary;
+  if (typeof pdata.lastContractOfferWeek === "number") p.lastContractOfferWeek = pdata.lastContractOfferWeek;
+  if (pdata.raiseRequest && typeof pdata.raiseRequest.asked === "number") p.raiseRequest = { ...pdata.raiseRequest };
+  if (typeof pdata.raiseRequestSeason === "number") p.raiseRequestSeason = pdata.raiseRequestSeason;
+  if (typeof pdata.extensionRequestSeason === "number") p.extensionRequestSeason = pdata.extensionRequestSeason;
   return p;
 }
 
@@ -23063,6 +23296,8 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarWeeklyRhythm = !!data.calendarWeeklyRhythm;
   lg.lastEconomyTick = typeof data.lastEconomyTick === "number" ? data.lastEconomyTick : 0;
   lg.seasonEndTickDone = !!data.seasonEndTickDone;
+  // Agents libres (voir engine.js, demande du 2026-10-01).
+  lg.freeAgents = Array.isArray(data.freeAgents) ? data.freeAgents.map(pd => { try { return playerFromSave(pd); } catch (e) { return null; } }).filter(Boolean) : [];
   lg.calendarWeeklySwitch = data.calendarWeeklySwitch && typeof data.calendarWeeklySwitch.anchorAt === "number" ? { ...data.calendarWeeklySwitch } : null;
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
   lg.cup = data.cup || null;
@@ -25057,12 +25292,12 @@ async function reloadLeagueOnly() {
   } catch (e) { return false; }
 }
 
-function syncMarketBidToServer(listingId, amount) {
+function syncMarketBidToServer(listingId, amount, seasons = null) {
   try {
     return fetchApi("/api/market/bid", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ listingId, amount }),
+      body: JSON.stringify(seasons != null ? { listingId, amount, seasons } : { listingId, amount }),
     })
       .then(async res => {
         const data = await res.json().catch(() => null);
@@ -28708,7 +28943,8 @@ function lgcSystemHtml(m) {
     const player = d.playerId != null && hasTeam(d.buyerIdx)
       ? `<button type="button" class="lgc-link lgc-player" data-lgc-player="${d.buyerIdx}" data-lgc-player-id="${escapeHtml(String(d.playerId))}" data-no-i18n>${escapeHtml(d.player || "?")}</button>`
       : `<b data-no-i18n>${escapeHtml(d.player || "?")}</b>`;
-    const seller = hasTeam(d.sellerIdx)
+    // Agent libre (demande du 2026-10-01) : pas de club vendeur.
+    const seller = d.freeAgent ? `<span>(agent libre)</span>` : hasTeam(d.sellerIdx)
       ? `(<button type="button" class="lgc-link lgc-team lgc-loser" data-lgc-team="${d.sellerIdx}" data-no-i18n>${escapeHtml(d.seller || "?")}</button>)`
       : `<span data-no-i18n>(${escapeHtml(d.seller || "?")})</span>`;
     return `${team(d.buyer, d.buyerIdx)}${d.buyerAi ? ` <span class="lgc-ai" title="Club dirigé par l'IA">IA</span>` : ""} <span>recrute</span> ${player} ` +
@@ -30226,6 +30462,17 @@ async function discussTransferRequestAction(playerId) {
 // même patron que l'écouteur de #rosterContent (voir listBtn plus bas dans
 // ce fichier) pour le bouton "Mettre aux enchères" ajouté ci-dessus dans
 // renderPlayerDetail.
+// Indice de l'offre de prolongation (écart avec le salaire demandé, jamais
+// la renommée du club), mis à jour à la saisie.
+document.getElementById("playerDetailContent").addEventListener("input", (e) => {
+  if (!e.target || e.target.id !== "pdpExtSalary") return;
+  const hint = document.getElementById("pdpExtHint");
+  if (!hint) return;
+  const asked = Number(e.target.dataset.asked) || 0;
+  const h = contractOfferHint(asked, Math.round(Number(e.target.value) || 0));
+  hint.className = `pdp-contract-hint ${h.key}`;
+  hint.textContent = h.label;
+});
 document.getElementById("playerDetailContent").addEventListener("click", (e) => {
   // En-tête de la fiche (refonte 2026-09-25) : "Comparer" = même action que
   // le bouton "⇄ Comparer" de la barre du haut ; "Vendre" descend à la
@@ -30244,6 +30491,13 @@ document.getElementById("playerDetailContent").addEventListener("click", (e) => 
     return;
   }
   if (handlePlayerPersonalizationClick(e)) return;
+  // Contrats (demande du 2026-10-01).
+  const extendBtn = e.target.closest("[data-contract-extend]");
+  if (extendBtn) { contractExtensionAction(Number(extendBtn.dataset.contractExtend)); return; }
+  const raiseAcc = e.target.closest("[data-raise-accept]");
+  if (raiseAcc) { raiseResponseAction(Number(raiseAcc.dataset.raiseAccept), true); return; }
+  const raiseRef = e.target.closest("[data-raise-refuse]");
+  if (raiseRef) { raiseResponseAction(Number(raiseRef.dataset.raiseRefuse), false); return; }
   const retirementBtn = e.target.closest("[data-retirement-talk]");
   if (retirementBtn) {
     retirementTalkAction(Number(retirementBtn.dataset.retirementTalk));
@@ -30902,7 +31156,12 @@ function renderPlayerDetail(teamIdx, playerId) {
     (nationName(player.nationality) ? `<span class="pdp2-chip">${escapeHtml(nationName(player.nationality))}</span>` : "") +
     `<span class="pdp2-chip">${player.age} ans</span>` +
     `<span class="pdp2-chip">${player.height} cm</span>` +
-    `<span class="pdp2-chip">${escapeHtml(roleLabel)}</span>`;
+    `<span class="pdp2-chip">${escapeHtml(roleLabel)}</span>` +
+    // Contrat (demande du 2026-10-01) : information publique.
+    (typeof player.contractUntilSeason === "number"
+      ? `<span class="pdp2-chip pdp2-chip--contract">Contrat jusqu'à la saison ${player.contractUntilSeason}</span>` +
+        (isLastContractSeason(player, league.contractSeason()) ? `<span class="contract-end-badge" title="Dernière saison de son contrat">Dernière saison</span>` : "")
+      : "");
   if (isOwnTeam) {
     html += `<span class="pdp2-chip">Potentiel · <span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></span>` +
       `<span class="pdp2-chip">${formatMoney(player.salary)} / sem.</span>`;
@@ -31144,10 +31403,13 @@ function renderPlayerDetail(teamIdx, playerId) {
   // encapsulée dans une carte .pdp-card tout en bas, réservée à isOwnTeam.
   // Ajoute la valorisation par ventes comparables (comparableSalesValuation
   // ci-dessus) quand le joueur n'est pas déjà en vente. ----
+  if (isOwnTeam) html += playerContractCardHtml(team, player);
   if (isOwnTeam) html += playerPersonalizationCardHtml(team, player);
   if (isOwnTeam) {
     html += `<div class="pdp-card" id="pdpSaleCard"><h3>Mise en vente</h3>`;
-    if (onMarket) {
+    if (!onMarket && league.contractSaleBlocked(player)) {
+      html += `<p class="training-intro pdp-sale-blocked">${escapeHtml(CONTRACT_SALE_BLOCKED_MSG)}</p>`;
+    } else if (onMarket) {
       const bidLine = openListing.currentBid
         ? `Enchère actuelle : <b>${formatMoney(openListing.currentBid)}</b>`
         : `Aucune enchère pour l'instant (prix de départ ${formatMoney(openListing.startPrice)})`;
@@ -31183,6 +31445,139 @@ function renderPlayerDetail(teamIdx, playerId) {
 // « personnalisation » côté moteur, /api/player/set-jersey-number et
 // /api/player/set-look). Sans Premium : ce qui est possible, en aperçu.
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Fiche joueur : carte « Contrat » (demande du 2026-10-01, voir
+// CONTRACT_MIN_SEASONS côté moteur) — fin de contrat, saisons restantes,
+// nouveau salaire signé, demande d'augmentation (Accepter / Refuser) et,
+// pendant la dernière saison, offre de prolongation (durée 1 à 5 saisons,
+// salaire entre le salaire demandé -10 % et le salaire demandé). Décision
+// tirée par le serveur (/api/player/contract-extension).
+// ---------------------------------------------------------------------
+function playerContractCardHtml(team, player) {
+  const season = league.contractSeason();
+  const left = contractSeasonsLeft(player, season);
+  let html = `<div class="pdp-card pdp-contract" id="pdpContractCard"><h3>Contrat</h3>`;
+  if (left == null) {
+    html += `<p class="sub">Aucun contrat enregistré pour l'instant.</p></div>`;
+    return html;
+  }
+  const last = left <= 1;
+  html += `<div class="pdp-contract-head"><span>Contrat jusqu'à la saison <b>${player.contractUntilSeason}</b> · ${left} saison${left > 1 ? "s" : ""} restante${left > 1 ? "s" : ""}</span>` +
+    (last ? `<span class="contract-end-badge">Dernière saison</span>` : "") + `</div>`;
+  html += `<div class="pdp-contract-lines"><span>Salaire : <b>${formatMoney(player.salary)}</b> / sem., fixe jusqu'à la fin du contrat</span>`;
+  if (typeof player.nextSalary === "number") {
+    html += `<span>Nouveau salaire signé : <b>${formatMoney(player.nextSalary)}</b> / sem. à partir de la saison ${season + 1}</span>`;
+  }
+  html += `</div>`;
+  if (player.raiseRequest) {
+    html += `<div class="pdp-contract-box pdp-raise" id="pdpRaiseBox"><h4>Demande d'augmentation</h4>` +
+      `<p class="sub">${escapeHtml(player.name)} a beaucoup progressé et demande <b>${formatMoney(player.raiseRequest.asked)}</b> / sem. (contre ${formatMoney(player.salary)} aujourd'hui), à partir de la saison ${season + 1}. La durée de son contrat ne change pas. Sans réponse sous 3 jours, il le prendra comme un refus.</p>` +
+      `<div class="pdp-contract-actions"><button type="button" class="secondary" data-raise-accept="${player.id}">Accepter</button>` +
+      `<button type="button" class="secondary" data-raise-refuse="${player.id}">Refuser</button></div></div>`;
+  }
+  if (last && !player.retiringAfterSeason) {
+    const asked = askedSalary(player);
+    const floor = contractOfferFloor(asked);
+    html += `<div class="pdp-contract-box pdp-extend" id="pdpExtendBox"><h4>Prolonger</h4>`;
+    if (player.lastContractOfferWeek === team.week) {
+      html += `<p class="sub">Il a refusé votre dernière offre cette semaine : nouvelle offre possible la semaine prochaine.</p>`;
+    } else {
+      html += `<p class="sub">Salaire demandé : <b>${formatMoney(asked)}</b> / sem. Vous pouvez proposer jusqu'à 10 % de moins (${formatMoney(floor)} au minimum) : au salaire demandé, il accepte toujours ; en dessous, il peut refuser.</p>` +
+        `<div class="pdp-contract-form">` +
+        `<label>Durée<select id="pdpExtSeasons">${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === CONTRACT_DEFAULT_SEASONS ? " selected" : ""}>${n} saison${n > 1 ? "s" : ""}</option>`).join("")}</select></label>` +
+        `<label>Salaire (€ / sem.)<input type="number" id="pdpExtSalary" min="${floor}" max="${asked}" step="10" value="${asked}" data-asked="${asked}"></label>` +
+        `<button type="button" class="secondary" data-contract-extend="${player.id}">Proposer la prolongation</button></div>` +
+        `<div><span class="pdp-contract-hint sure" id="pdpExtHint">${escapeHtml(contractOfferHint(asked, asked).label)}</span></div>` +
+        `<p class="sub">Nouveau salaire à partir de la saison ${season + 1}. Un refus le contrarie un peu ; vous pourrez refaire une offre la semaine suivante.</p>`;
+    }
+    if (league.contractSaleBlocked(player)) html += `<p class="sub">Il ne peut plus être vendu : sans prolongation, il partira libre en fin de saison.</p>`;
+    html += `</div>`;
+  } else if (last && player.retiringAfterSeason) {
+    html += `<p class="sub">Il a annoncé sa retraite : pas de prolongation possible.</p>`;
+  }
+  html += `<div id="pdpContractFeedback"></div></div>`;
+  return html;
+}
+
+function pdpContractFeedback(message, ok) {
+  const el = document.getElementById("pdpContractFeedback");
+  if (el) el.innerHTML = message ? `<div class="gain-line ${ok ? "gain-up" : "gain-down"}">${escapeHtml(message)}</div>` : "";
+}
+
+// Offre de prolongation : tirage par le serveur, appliqué tel quel.
+async function contractExtensionAction(playerId) {
+  const player = teamA.players.find(p => p.id === playerId);
+  if (!player) return;
+  const seasonsEl = document.getElementById("pdpExtSeasons");
+  const salaryEl = document.getElementById("pdpExtSalary");
+  const seasons = normalizeContractSeasons(seasonsEl ? Number(seasonsEl.value) : null);
+  const salary = Math.round(Number(salaryEl && salaryEl.value) || 0);
+  const asked = askedSalary(player);
+  const floor = contractOfferFloor(asked);
+  if (!(salary >= floor && salary <= asked)) {
+    pdpContractFeedback(`Proposez un salaire entre ${formatMoney(floor)} et ${formatMoney(asked)} par semaine.`, false);
+    return;
+  }
+  let data = null;
+  try {
+    const res = await fetchApi("/api/player/contract-extension", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId, seasons, salary }),
+    });
+    data = await res.json().catch(() => null);
+    if (!res.ok || !data || !data.ok) {
+      pdpContractFeedback((data && data.error) || "Offre impossible pour l'instant.", false);
+      return;
+    }
+  } catch (e) {
+    pdpContractFeedback("Serveur indisponible, réessayez.", false);
+    return;
+  }
+  const season = league.contractSeason();
+  if (data.accepted) {
+    player.contractUntilSeason = data.untilSeason;
+    player.nextSalary = data.salary;
+    player.lastContractOfferWeek = null;
+  } else {
+    player.lastContractOfferWeek = teamA.week;
+    player.form = clamp(Math.round((player.form || 0) - CONTRACT_REFUSAL_MORALE_MALUS), 0, 100);
+  }
+  renderPlayerDetail(myTeamIndex, playerId);
+  pdpContractFeedback(data.accepted
+    ? `${player.name} accepte : prolongé jusqu'à la saison ${data.untilSeason}, ${formatMoney(data.salary)} / sem. à partir de la saison ${season + 1}.`
+    : `${player.name} refuse votre offre. Vous pourrez lui en faire une nouvelle la semaine prochaine.`, !!data.accepted);
+}
+
+// Demande d'augmentation : accepter (salaire demandé la saison suivante) ou refuser.
+async function raiseResponseAction(playerId, accept) {
+  const player = teamA.players.find(p => p.id === playerId);
+  if (!player || !player.raiseRequest) return;
+  let data = null;
+  try {
+    const res = await fetchApi("/api/player/raise-response", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId, accept }),
+    });
+    data = await res.json().catch(() => null);
+    if (!res.ok || !data || !data.ok) {
+      pdpContractFeedback((data && data.error) || "Réponse impossible pour l'instant.", false);
+      return;
+    }
+  } catch (e) {
+    pdpContractFeedback("Serveur indisponible, réessayez.", false);
+    return;
+  }
+  const season = league.contractSeason();
+  const asked = player.raiseRequest.asked;
+  player.raiseRequest = null;
+  if (accept) player.nextSalary = asked;
+  else player.form = clamp(Math.round((player.form || 0) - CONTRACT_RAISE_REFUSED_MORALE_MALUS), 0, 100);
+  renderPlayerDetail(myTeamIndex, playerId);
+  pdpContractFeedback(accept
+    ? `Augmentation accordée : ${formatMoney(asked)} / sem. à partir de la saison ${season + 1}.`
+    : `Augmentation refusée : ${player.name} est déçu.`, accept);
+}
+
 let pdpLookDraft = null; // { playerId, look } en cours d'édition
 function playerPersonalizationCardHtml(team, player) {
   const premium = teamIsPremium(team);
@@ -43354,6 +43749,8 @@ const ROSTER_SORT_COLUMNS = [
   { key: "age", label: "Âge" },
   { key: "height", label: "Taille" },
   { key: "salary", label: "Salaire/sem." },
+  // Contrat (demande du 2026-10-01) : saisons restantes, badge en dernière saison.
+  { key: "contract", label: "Contrat" },
   // Forme physique (voir CONDITION_STATES/conditionBadgeHtml plus haut).
   { key: "condition", label: "Forme" },
   // Motivation (voir Player.form/motivationBadgeHtml plus haut).
@@ -43377,6 +43774,7 @@ function rosterSortValue(p, key) {
     case "age": return p.age;
     case "height": return p.height;
     case "salary": return p.salary;
+    case "contract": { const left = contractSeasonsLeft(p, league ? league.contractSeason() : 1); return left == null ? 99 : left; }
     // Forme physique : trié sur la valeur courante rattrapée (voir
     // currentCondition), pas sur p.condition brut, pour rester cohérent
     // avec ce que la colonne affiche réellement (voir conditionBadgeHtml).
@@ -43537,11 +43935,23 @@ function effMotivationHtml(p) {
 // #listPrice_<id>/[data-list-player] qu'avant) et vente forcée à 1 € quand le
 // club est en déficit prolongé. Rendu d'avance mais `hidden` : ouvert/fermé
 // par l'écouteur délégué de #rosterContent (voir [data-eff-menu]).
+// Contrats (demande du 2026-10-01) : cellule « Contrat » de l'Effectif
+// (saisons restantes, badge en dernière saison).
+const CONTRACT_SALE_BLOCKED_MSG = "Dernière saison de contrat : il ne peut plus être vendu pendant la seconde moitié de la saison. Sans prolongation, il partira libre en fin de saison.";
+function contractCellHtml(p) {
+  const season = league ? league.contractSeason() : 1;
+  const left = contractSeasonsLeft(p, season);
+  if (left == null) return `<span class="sub">–</span>`;
+  if (left <= 1) return `<span class="contract-end-badge" title="Contrat jusqu'à la saison ${p.contractUntilSeason} : dernière saison, à prolonger depuis sa fiche.">Fin de contrat</span>`;
+  return `<span class="eff-contract" title="Contrat jusqu'à la saison ${p.contractUntilSeason}">${left} saisons</span>`;
+}
 function effActionsMenuHtml(p, isListed) {
   const name = escapeHtml(p.name);
   let body = `<button type="button" class="player-link eff-menu-item" data-player-team="${myTeamIndex}" data-player-id="${p.id}">Voir la fiche</button>`;
   if (isListed) {
     body += `<div class="eff-menu-note">Aux enchères. Suivez l'enchère dans l'onglet Marché.</div>`;
+  } else if (league && league.contractSaleBlocked(p)) {
+    body += `<div class="eff-menu-note eff-menu-blocked">${escapeHtml(CONTRACT_SALE_BLOCKED_MSG)}</div>`;
   } else {
     body += `<label class="eff-menu-label" for="listPrice_${p.id}">Mettre aux enchères</label>` +
       `<div class="eff-menu-row"><input type="number" class="market-price-input" id="listPrice_${p.id}" placeholder="Prix de départ (€)" min="1" step="100">` +
@@ -43688,10 +44098,10 @@ function renderEffectifSection() {
       const posCell = effPosBadgeHtml(p.position) + (effPos
         ? ` <span class="eff-position" title="Meilleur poste d'après ses caractéristiques : ${escapeHtml(effPos)} (${Math.round(positionRating(p, effPos))} contre ${Math.round(positionRating(p, p.position))})">→ ${POS_SHORT[effPos]}</span>`
         : "");
-      // Salaire : fixé à l'intersaison au poste de carte d'alors
-      // (effectivePosition), jamais recalculé en cours de saison.
-      const salaryPos = p.effectivePosition || p.position;
-      const salaryTitle = `Calculé à l'intersaison pour le poste ${salaryPos.toLowerCase()}.`;
+      // Salaire : fixé par le contrat (demande du 2026-10-01).
+      const salaryTitle = typeof p.nextSalary === "number"
+        ? `Fixé par son contrat. Nouveau salaire signé : ${formatMoney(p.nextSalary)} / sem. à partir de la saison prochaine.`
+        : "Fixé par son contrat jusqu'à sa fin ou sa prolongation.";
       const isListed = listedIds.has(p.id);
       // Blessure PERSISTANTE (voir injuryCrossHtml) : ligne teintée de rouge.
       const cross = injuryCrossHtml(p, now);
@@ -43706,6 +44116,7 @@ function renderEffectifSection() {
         `<td>${posCell}</td><td>${effPotentialHtml(p)}</td>` +
         `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td>` +
         `<td class="eff-num" title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
+        `<td class="eff-td-contract">${contractCellHtml(p)}</td>` +
         `<td class="eff-td-condition">${effConditionHtml(p, now, recovery)}</td>` +
         `<td>${effMotivationHtml(p)}</td>` +
         `<td>${evaluationSquaresHtml(p)}</td>` +
@@ -44232,18 +44643,19 @@ function myAutoMaxOf(l) {
   const a = (l.autoBids || []).find(x => x.bidderIdx === myTeamIndex);
   return a ? a.max : null;
 }
-async function setAutoBidFor(field, id, max) {
+async function setAutoBidFor(field, id, max, seasons = null) {
   const now = Date.now();
   try {
     const res = await fetchApi("/api/market/auto-bid", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ market: field, listingId: id, max }),
+      body: JSON.stringify(seasons != null ? { market: field, listingId: id, max, seasons } : { market: field, listingId: id, max }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) return { ok: false, reason: data.reason, minBid: data.minBid, error: data.error };
     const l = (league[field] || []).find(x => x.id === id);
     if (l && data.listing) myAuctionsMerge(league[field], [data.listing]);
     if (l) l.myAutoMax = max || null;
+    if (l && seasons != null && max) l.myContractSeasons = seasons;
     if (data.foreign) await myAuctionsRefresh();
     return { ok: true, leading: !!data.leading, removed: !!data.removed };
   } catch (e) {
@@ -44255,6 +44667,7 @@ function autoBidMessage(r, max) {
     const reasons = {
       "closed": "Cette enchère est déjà terminée.",
       "own-listing": "Impossible d'enchérir sur votre propre annonce.",
+      "former-club": "Son ancien club ne peut pas enchérir sur lui.",
       "roster-full": `Effectif déjà au plafond de ${MAX_ROSTER_SIZE} joueurs.`,
       "too-low": `Plafond trop bas : minimum ${formatMoney(r.minBid || 0)}.`,
       "insufficient-budget": "Plafond au-delà de votre budget.",
@@ -44270,7 +44683,7 @@ function autoBidMessage(r, max) {
 async function mkSetAuto(id, off) {
   const input = document.getElementById(`bid_${id}`);
   const max = off ? 0 : Math.round(Number(input && input.value) || 0);
-  const r = await setAutoBidFor("transferListings", id, max);
+  const r = await setAutoBidFor("transferListings", id, max, off ? null : mkSeasonsFor(id));
   const [msg, good] = autoBidMessage(r, max);
   marketFeedback(msg, good);
   clearTimeout(marketFeedbackTimer);
@@ -44407,8 +44820,14 @@ function mkBarHtml(value) {
 }
 
 function mkListingCardHtml(l, player, now) {
-  const seller = league.teams[l.sellerIdx];
+  // Agent libre (demande du 2026-10-01) : pas de club vendeur, la mise est
+  // une prime de signature ; l'ancien club n'a pas le droit d'enchérir.
+  const fa = !!l.freeAgent;
+  const seller = fa && !l.foreign ? null : league.teams[l.sellerIdx];
   const isMine = l.sellerIdx === myTeamIndex;
+  const formerClub = fa && teamA && ((l.formerTeamIdx != null && !l.foreign && l.formerTeamIdx === myTeamIndex) || (!!l.formerTeamName && l.formerTeamName === teamA.name));
+  const asked = typeof l.askedSalary === "number" ? l.askedSalary : askedSalary(player);
+  const lastSeason = !fa && isLastContractSeason(player, league.contractSeason());
   const st = mkStatus(l);
   const overall = Math.round(player.overall());
   const critKeys = mkCritActive().map(c => c.key);
@@ -44429,17 +44848,26 @@ function mkListingCardHtml(l, player, now) {
     action = leader
       ? `<div class="mk-hint">Meilleure offre : <b>${escapeHtml(leader.name)}</b>. La vente se conclut à la clôture.</div>`
       : `<div class="mk-hint">Aucune offre pour l'instant.</div>`;
+  } else if (formerClub) {
+    action = `<div class="mk-hint warn mk-former-club">Votre ancien joueur : son ancien club ne peut pas enchérir sur lui.</div>`;
   } else {
     const avail = mkBudget() - mkCommitted(l.id);
     const over = minBid > avail;
     const plus15 = Math.max(minBid, Math.round(minBid * 1.15 / 100) * 100);
-    action = `<div class="mk-bidrow">` +
+    // Durée du contrat choisie avec l'offre (1 à 5 saisons, 3 par défaut),
+    // signée au salaire demandé si l'enchère est remportée.
+    const curSeasons = normalizeContractSeasons(l.myContractSeasons);
+    action = `<div class="mk-contract-row"><label for="bidSeasons_${l.id}">Durée du contrat</label>` +
+        `<select id="bidSeasons_${l.id}" class="mk-seasons" data-mk-seasons="${l.id}">` +
+        [1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === curSeasons ? " selected" : ""}>${n} saison${n > 1 ? "s" : ""}</option>`).join("") +
+        `</select><span class="mk-contract-note">au salaire demandé (${escapeHtml(formatMoney(asked))} / sem.)</span></div>` +
+      `<div class="mk-bidrow">` +
         `<input type="number" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100" aria-label="Montant de l'enchère pour ${escapeHtml(player.name)}">` +
         `<button type="button" class="mk-btn mk-btn--primary" data-bid-listing="${l.id}">${st === "lead" ? "Augmenter mon enchère" : "Enchérir"}</button>` +
         `<button type="button" class="mk-btn mk-btn--outline" data-mk-auto="${l.id}" title="Le montant saisi devient votre plafond : on enchérit pour vous, au minimum, chaque fois qu'un autre club vous dépasse.">${myAutoMaxOf(l) != null ? "Changer le plafond" : "Enchère auto"}</button>` +
       `</div>` +
       (myAutoMaxOf(l) != null ? autoBidStatusHtml(myAutoMaxOf(l), `data-mk-auto-off="${l.id}"`) : "") +
-      `<div class="mk-quick"><button type="button" data-mk-quick="${l.id}" data-v="${minBid}">Minimum</button><button type="button" data-mk-quick="${l.id}" data-v="${plus15}">+15 %</button><button type="button" data-mk-quick="${l.id}" data-v="${Math.max(minBid, value)}">Valeur estimée</button></div>` +
+      `<div class="mk-quick"><button type="button" data-mk-quick="${l.id}" data-v="${minBid}">Minimum</button><button type="button" data-mk-quick="${l.id}" data-v="${plus15}">+15 %</button>${fa ? "" : `<button type="button" data-mk-quick="${l.id}" data-v="${Math.max(minBid, value)}">Valeur estimée</button>`}</div>` +
       `<div class="mk-hint ${over ? "warn" : ""}">${over ? `Au-delà de votre budget disponible (${formatMoney(avail)}).` : `Il vous resterait ${formatMoney(avail - minBid)} au minimum.`}</div>`;
   }
   const open = marketUi.open.has(l.id);
@@ -44451,15 +44879,20 @@ function mkListingCardHtml(l, player, now) {
       `<div class="mk-lst-id">` +
         `<div class="mk-avatar">${playerAvatarHtml(player, seller, 88)}</div>` +
         `<div class="mk-id-text">` +
-          `<div class="mk-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>${isMine ? "" : mkWatchBtnHtml(player)}</div>` +
-          `<div class="market-card-name mk-pname">${nationFlagHtml(player.nationality, "nat-flag--name")}${playerLinkHtml(l.sellerIdx, player.id, player.name)}</div>` +
+          `<div class="mk-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>` +
+            (fa ? `<span class="mk-badge mk-badge-fa" title="Contrat terminé : il signe librement, la mise est une prime de signature.">Agent libre</span>` : "") +
+            (lastSeason ? `<span class="mk-badge mk-badge-contract" title="Dernière saison de son contrat actuel.">Fin de contrat</span>` : "") +
+            `${isMine ? "" : mkWatchBtnHtml(player)}</div>` +
+          `<div class="market-card-name mk-pname">${nationFlagHtml(player.nationality, "nat-flag--name")}${fa && !l.foreign ? `<span data-no-i18n>${escapeHtml(player.name)}</span>` : playerLinkHtml(l.sellerIdx, player.id, player.name)}</div>` +
           `<div class="market-card-meta mk-chips">` +
             `<span class="mk-chip">${player.age} ans</span>` +
             (player.retiringAfterSeason ? `<span class="mk-chip mk-chip-retiring" title="Il a annoncé que cette saison serait sa dernière.">Dernière saison</span>` : "") +
             (player.height ? `<span class="mk-chip">${player.height} cm</span>` : "") +
             `<span class="mk-chip">Potentiel · ${potentialCell}</span>` +
-            `<span class="mk-chip">${formatMoney(player.salary)} / sem.</span>` +
-            `<span class="mk-chip">Vendeur : ${isMine ? "<b>Vous</b>" : teamLinkHtml(l.sellerIdx, seller.name)}</span>` +
+            `<span class="mk-chip mk-chip-asked" title="Salaire hebdomadaire qu'il signera avec son nouveau club">Salaire demandé : <b>${formatMoney(asked)}</b> / sem.</span>` +
+            (fa
+              ? `<span class="mk-chip">Ancien club : <span data-no-i18n>${escapeHtml(l.formerTeamName || "?")}</span></span>`
+              : `<span class="mk-chip">Vendeur : ${isMine ? "<b>Vous</b>" : teamLinkHtml(l.sellerIdx, seller.name)}</span>`) +
             (l.foreign ? `<span class="mk-chip mk-chip-origin" title="Marché mondial : club d'un autre championnat">${nationFlagHtml(l.foreign.country)} ${escapeHtml(l.foreign.label)}</span>` : "") +
             critChips +
           `</div>` +
@@ -44468,19 +44901,19 @@ function mkListingCardHtml(l, player, now) {
       `<div class="mk-lst-prof">${mkRingHtml(overall)}<div class="mk-grps" aria-label="Moyennes par famille">${grps}</div></div>` +
       `<div class="mk-lst-deal market-card-bid">` +
         `<div class="mk-deal-top">` +
-          `<div class="market-card-price"><div class="mk-deal-lbl">${l.currentBid ? "Enchère actuelle" : "Prix de départ"}</div><b class="mk-deal-price">${formatMoney(l.currentBid || l.startPrice)}</b><div class="mk-deal-sub">${nBids ? `${nBids} enchère${nBids > 1 ? "s" : ""}` : "Aucune enchère"}</div></div>` +
+          `<div class="market-card-price"><div class="mk-deal-lbl">${fa ? (l.currentBid ? "Prime de signature actuelle" : "Prime de signature (départ)") : (l.currentBid ? "Enchère actuelle" : "Prix de départ")}</div><b class="mk-deal-price">${formatMoney(l.currentBid || l.startPrice)}</b><div class="mk-deal-sub">${nBids ? `${nBids} enchère${nBids > 1 ? "s" : ""}` : "Aucune enchère"}</div></div>` +
           `<span class="mk-timer ${urgent ? "urgent" : ""}">${MK_CLOCK}${escapeHtml(mkTimeLeft(l.closesAt, now))}</span>` +
         `</div>` +
         (badge ? `<div>${badge}</div>` : "") +
-        `<div class="mk-value"><span>Valeur estimée <b>${formatMoney(value)}</b></span><span class="mk-verdict ${vc}">${vt}</span></div>` +
+        (fa ? `<div class="mk-value"><span class="mk-fa-note">Prime versée au joueur à la signature, départ à 1 €.</span></div>` : `<div class="mk-value"><span>Valeur estimée <b>${formatMoney(value)}</b></span><span class="mk-verdict ${vc}">${vt}</span></div>`) +
         `<div class="market-card-action">${action}</div>` +
       `</div>` +
     `</div>` +
     `<div class="mk-lst-foot">` +
       `<button type="button" class="mk-linkbtn" data-mk-toggle="${l.id}" aria-expanded="${open}" aria-controls="marketAttrs_${l.id}">${open ? "Masquer" : "Voir"} les ${ATTRS.length} caractéristiques ${MK_CHEV}</button>` +
       `<div class="acts">` +
-        (isMine ? "" : `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-compare="${l.id}">Comparer</button>`) +
-        `<button type="button" class="mk-btn mk-btn--accent mk-btn--sm" data-player-team="${l.sellerIdx}" data-player-id="${player.id}">Fiche joueur</button>` +
+        (isMine || (fa && !l.foreign) ? "" : `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-compare="${l.id}">Comparer</button>`) +
+        (fa && !l.foreign ? "" : `<button type="button" class="mk-btn mk-btn--accent mk-btn--sm" data-player-team="${l.sellerIdx}" data-player-id="${player.id}">Fiche joueur</button>`) +
       `</div>` +
     `</div>` +
     `<div class="mk-attrs" id="marketAttrs_${l.id}"${open ? "" : " hidden"}>${attrs}</div>` +
@@ -44526,14 +44959,21 @@ function mkResetFilters() {
 }
 
 let marketFeedbackTimer = null;
+// Durée de contrat choisie sur la carte de l'annonce (demande du 2026-10-01).
+function mkSeasonsFor(id) {
+  const sel = document.getElementById(`bidSeasons_${id}`);
+  return normalizeContractSeasons(sel ? Number(sel.value) : null);
+}
 function mkPlaceBid(id) {
   const input = document.getElementById(`bid_${id}`);
   const amount = Math.round(Number(input && input.value) || 0);
-  const res = league.placeBid(id, myTeamIndex, amount, Date.now());
+  const seasons = mkSeasonsFor(id);
+  const res = league.placeBid(id, myTeamIndex, amount, Date.now(), seasons);
   if (!res.ok) {
     const reasons = {
       "closed": "Cette enchère est déjà terminée.",
       "own-listing": "Impossible d'enchérir sur votre propre annonce.",
+      "former-club": "Son ancien club ne peut pas enchérir sur lui.",
       "invalid-bidder": "Enchérisseur invalide.",
       "roster-full": `Effectif déjà au plafond de ${MAX_ROSTER_SIZE} joueurs.`,
       "too-low": `Enchère trop basse, minimum ${formatMoney(res.minBid || 0)}.`,
@@ -44550,7 +44990,7 @@ function mkPlaceBid(id) {
   marketFeedbackTimer = setTimeout(() => marketFeedback("", true), 4000);
   saveMyTeam();
   if (res.ok) {
-    const sync = syncMarketBidToServer(id, amount);
+    const sync = syncMarketBidToServer(id, amount, seasons);
     // Un autre club avait une enchère automatique plus haute : le serveur a
     // déjà relancé pour lui (voir League._applyAutoBids).
     if (sync) sync.then(r => {
@@ -46034,6 +46474,8 @@ function ecoDescribeTransaction(label, amount) {
   if (label === "Salaires du centre de formation") return { cat: "people", title: "Salaires", detail: "· centre de formation" };
   if ((m = /^Achat de (.+?)( \(enchères\))?$/.exec(label))) return { cat: "transfer", title: `Achat de ${m[1]}`, detail: m[2] ? "· enchères" : "", tag: "Transfert" };
   if ((m = /^Vente de (.+?)( \(enchères\))?$/.exec(label))) return { cat: "transfer", title: `Vente de ${m[1]}`, detail: m[2] ? "· enchères" : "", tag: "Transfert" };
+  // Agent libre (demande du 2026-10-01) : prime payée au joueur.
+  if ((m = /^Prime de signature : (.+)$/.exec(label))) return { cat: "transfer", title: "Prime de signature", detail: `· ${m[1]}`, tag: "Agent libre" };
   // Achat d'une infrastructure ("Centre de formation : X", "Station TV : X"...).
   if (amount < 0 && (m = /^(.+?) : (.+)$/.exec(label))) return { cat: "build", title: m[1], detail: `· ${m[2]}`, tag: "Exceptionnel" };
   return { cat: "coin", title: label, detail: "" };
@@ -46577,7 +47019,7 @@ document.getElementById("academiePendingBanner").addEventListener("click", (e) =
   const releaseBtn = e.target.closest("[data-release-youth]");
   if (promoteBtn) {
     const id = Number(promoteBtn.dataset.promoteYouth);
-    const result = teamA.promoteYouthPlayer(id, Date.now());
+    const result = teamA.promoteYouthPlayer(id, Date.now(), league ? league.contractSeason() : null);
     if (result.ok) {
       saveMyTeam();
       syncPromoteYouthPlayerToServer(id);

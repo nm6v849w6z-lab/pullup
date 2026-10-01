@@ -327,7 +327,10 @@ function auctionNotes(league, teamIdx, now, opts = {}) {
     const isRemoteMe = b => !!(b && b.bidderIdx === FOREIGN && b.bidderRef && b.bidderRef.leagueId === opts.leagueId && b.bidderRef.idx === teamIdx);
     for (const [oid, olg] of opts.leagues) {
       if (oid === opts.leagueId || !olg) continue;
-      const playerOf = l => { const s = olg.teams[l.sellerIdx]; return (s && s.players.find(p => p.id === l.playerId)) || null; };
+      const playerOf = l => {
+        if (typeof olg.listingPlayer === "function") return olg.listingPlayer(l);
+        const s = olg.teams[l.sellerIdx]; return (s && s.players.find(p => p.id === l.playerId)) || null;
+      };
       scan(`world:${oid}`, null, olg.transferListings, isRemoteMe, playerOf);
     }
   }

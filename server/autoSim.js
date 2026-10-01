@@ -88,6 +88,8 @@ function catchUpLeague(league, now) {
   // Rivaux du championnat de la saison (League.ensureRivalPairs) : posés
   // dès maintenant pour que le navigateur les reçoive avec la sauvegarde.
   if (typeof league.ensureRivalPairs === "function") league.ensureRivalPairs();
+  // Demandes d'augmentation restées sans réponse (demande du 2026-10-01).
+  if (typeof league.expireRaiseRequests === "function") league.expireRaiseRequests(now);
   // Rythme hebdomadaire : la mise à jour du lundi qui suit la finale reste
   // à régler (fin de saison, voir runWeeklyEconomyTick plus bas).
   // Rythme hebdomadaire : la fin de saison, l'intersaison ET la nouvelle
@@ -436,14 +438,21 @@ function runWeeklyEconomyTick(league, tick, ecoAt, seasonEnd, events) {
   // au minimum, voir League.startIntersaison).
   let retirementsAnnounced = [];
   let bonuses = [];
+  let contractsEnded = [];
   if (seasonEnd) {
     if (typeof league.ageCpuPlayers === "function") league.ageCpuPlayers(seasonNo);
     if (typeof league.announceRetirements === "function") retirementsAnnounced = league.announceRetirements(ecoAt);
+    // Contrats arrivés à échéance (demande du 2026-10-01) : départs libres,
+    // agents libres mis aux enchères.
+    if (typeof league.processContractExpiries === "function") contractsEnded = league.processContractExpiries(ecoAt);
     if (typeof league.paySeasonEndBonuses === "function") bonuses = league.paySeasonEndBonuses(ecoAt);
     if (typeof league.startIntersaison === "function") league.startIntersaison(ecoAt);
   }
   league.lastEconomyTick = tick;
-  events.push(seasonEnd ? { type: "training", week: tick, results, seasonEnd: true, retired, retirementsAnnounced, bonuses } : { type: "training", week: tick, results });
+  // Contrats (demande du 2026-10-01) : demandes de prolongation et
+  // d'augmentation de mi-saison.
+  if (typeof league.weeklyContractsTick === "function") league.weeklyContractsTick(ecoAt);
+  events.push(seasonEnd ? { type: "training", week: tick, results, seasonEnd: true, retired, retirementsAnnounced, bonuses, contractsEnded } : { type: "training", week: tick, results });
 }
 
 function catchUpWeeklyRhythm(league, now, events) {

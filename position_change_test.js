@@ -104,8 +104,14 @@ const boost = (attrs, pos, delta, except) => { keys(pos).filter(k => !except || 
   assert(p.position === "Pivot" && p.salary === salaryBefore && p.effectivePosition === "Meneur", `semaine ordinaire : poste → Pivot, salaire inchangé (${salaryBefore} €)`);
   assert(team.feed.entries.some(e => e.key === `poschange_${p.id}`), "semaine ordinaire : nouvelle dans le fil du club humain");
   team.trainWeek(lg.divisionLevel, Date.now(), { seasonEnd: true, seasonNo: 1 });
+  // Contrats (2026-10-01) : sous contrat, le salaire reste celui du contrat ;
+  // seul le poste de calcul suit le poste de carte.
+  assert(p.effectivePosition === "Pivot" && p.salary === salaryBefore, `intersaison : salaire fixé par le contrat (${salaryBefore} €), poste de calcul Pivot`);
+  // Sans contrat (cas historique) : recalculé au nouveau poste de carte.
+  p.contractUntilSeason = null;
+  team.recalculateSalaries();
   const expected = E.salaryForOverall(E.levelCoefficientFor(p.attrs, "Pivot").coefficient);
-  assert(p.effectivePosition === "Pivot" && p.salary === expected, `intersaison : salaire recalculé au poste Pivot (${salaryBefore} → ${p.salary} €)`);
+  assert(p.salary === expected, `sans contrat : salaire recalculé au poste Pivot (${salaryBefore} → ${p.salary} €)`);
   // L'IA suit la même règle à son entraînement hebdomadaire, sans nouvelle.
   const cpu = lg.teams.find(t => !t.isHuman);
   const q = cpu.players.find(x => x.position === "Pivot");

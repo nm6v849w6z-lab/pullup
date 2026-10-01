@@ -77,8 +77,17 @@ function sanitizeAutoBids(leaguePayload, teamIdx) {
   Object.keys(Engine.AUTO_BID_FIELDS).forEach(f => {
     if (!Array.isArray(leaguePayload[f])) return;
     leaguePayload[f] = leaguePayload[f].map(l => {
-      if (!l || !Array.isArray(l.autoBids)) return l;
-      const { autoBids, ...rest } = l;
+      if (!l) return l;
+      let out = l;
+      // Durées de contrat jointes aux offres (demande du 2026-10-01) : seule
+      // la sienne est renvoyée (myContractSeasons).
+      if (l.contractTerms) {
+        const { contractTerms, ...rest } = out;
+        if (contractTerms[myKey] != null) rest.myContractSeasons = contractTerms[myKey];
+        out = rest;
+      }
+      if (!Array.isArray(out.autoBids)) return out;
+      const { autoBids, ...rest } = out;
       const mine = autoBids.find(a => Engine.autoBidKey(a.bidderIdx, a.bidderRef) === myKey);
       if (mine) rest.myAutoMax = mine.max;
       return rest;

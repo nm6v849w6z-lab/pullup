@@ -646,7 +646,13 @@ function setTraining(team, teamIndex, league, body, now = Date.now()) {
 function listPlayer(team, teamIndex, league, body, now) {
   if (!body || typeof body.playerId !== "number") return fail("playerId requis.");
   if (typeof body.price !== "number" || !(body.price > 0)) return fail("price doit être un nombre positif.");
-  if (!team.players.some(p => p.id === body.playerId)) return fail(`Joueur inconnu dans cet effectif : ${body.playerId}.`);
+  const player = team.players.find(p => p.id === body.playerId);
+  if (!player) return fail(`Joueur inconnu dans cet effectif : ${body.playerId}.`);
+  // Contrats (demande du 2026-10-01) : dernière saison de contrat, seconde
+  // moitié de saison → plus de vente possible, il partira libre.
+  if (typeof league.contractSaleBlocked === "function" && league.contractSaleBlocked(player)) {
+    return { ...fail("Ce joueur est en dernière saison de contrat : il ne peut plus être vendu pendant la seconde moitié de la saison (il partira libre s'il n'est pas prolongé)."), reason: "contract-ending" };
+  }
   const listing = league.listPlayerForSale(teamIndex, body.playerId, body.price, now);
   if (!listing) return fail("Impossible de mettre ce joueur aux enchères (déjà listé ?).");
   return { ok: true, listing };
@@ -673,6 +679,12 @@ function sellListedPlayer(team, teamIndex, league, body) {
 // automatique des autres (listing.autoBids, secrets), avec le sien
 // (myAutoMax). Voir AUTO_BID_FIELDS (engine.js).
 function viewListing(l, teamIndex) {
+  if (l && l.contractTerms) {
+    const { contractTerms, ...r } = l;
+    const k = Engine.autoBidKey(teamIndex, null);
+    if (contractTerms[k] != null) r.myContractSeasons = contractTerms[k];
+    l = r;
+  }
   if (!l || !Array.isArray(l.autoBids)) return l;
   const { autoBids, ...rest } = l;
   const mine = autoBids.find(a => Engine.autoBidKey(a.bidderIdx, a.bidderRef) === Engine.autoBidKey(teamIndex, null));
@@ -690,9 +702,18 @@ function setAutoBid(team, teamIndex, league, body, now) {
   const listingId = typeof body.listingId === "string" && /^-?\d+$/.test(body.listingId) ? Number(body.listingId) : body.listingId;
   const max = body.max == null ? 0 : body.max;
   if (typeof max !== "number" || max < 0) return fail("max doit être un nombre positif.");
-  const result = league.setAutoBid(body.market, listingId, teamIndex, max, now);
+  const seasons = contractSeasonsFromBody(body);
+  if (seasons === false) return fail("Durée de contrat invalide (1 à 5 saisons).");
+  const result = league.setAutoBid(body.market, listingId, teamIndex, max, now, null, body.market === "transferListings" ? seasons : null);
   if (!result.ok) return { ...fail(`Enchère automatique refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`), reason: result.reason, minBid: result.minBid || null };
   return { ok: true, listing: viewListing(result.listing, teamIndex), leading: result.leading, removed: !!result.removed };
+}
+
+// Durée de contrat jointe à une enchère (demande du 2026-10-01) : absente =
+// null (durée par défaut), invalide = false.
+function contractSeasonsFromBody(body) {
+  if (!body || body.seasons == null) return null;
+  return Engine.normalizeContractSeasons(body.seasons, false);
 }
 
 function bidOnListing(team, teamIndex, league, body, now) {
@@ -701,7 +722,9 @@ function bidOnListing(team, teamIndex, league, body, now) {
   }
   const listingId = typeof body.listingId === "string" && /^-?\d+$/.test(body.listingId) ? Number(body.listingId) : body.listingId;
   if (typeof body.amount !== "number" || !(body.amount > 0)) return fail("amount doit être un nombre positif.");
-  const result = league.placeBid(listingId, teamIndex, body.amount, now);
+  const seasons = contractSeasonsFromBody(body);
+  if (seasons === false) return fail("Durée de contrat invalide (1 à 5 saisons).");
+  const result = league.placeBid(listingId, teamIndex, body.amount, now, seasons);
   if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
   return { ok: true, listing: viewListing(result.listing, teamIndex), autoOutbid: !!result.autoOutbid };
 }
@@ -1016,7 +1039,7 @@ function promoteYouthPlayer(team, teamIndex, league, body, now) {
   // transmis tel quel : c'est lui qui date l'entrée d'historique ajoutée par
   // Team.promoteYouthPlayer (retour utilisateur, 2026-09 : "ajoute la date à
   // laquelle le joueur est passé pro").
-  const result = team.promoteYouthPlayer(playerId, now);
+  const result = team.promoteYouthPlayer(playerId, now, typeof league.contractSeason === "function" ? league.contractSeason() : null);
   if (!result.ok) {
     const reasons = {
       "not-found": "Jeune introuvable dans l'académie.",
@@ -1105,6 +1128,40 @@ function discussTransferRequest(team, teamIndex, league, body, now) {
     return fail(reasons[result.reason] || "Discussion refusée.");
   }
   return { ok: true, success: result.success, formBefore: result.formBefore, formAfter: result.formAfter };
+}
+
+// Contrats (demande du 2026-10-01) : offre de prolongation pendant la
+// dernière saison du contrat { playerId, seasons, salary } (voir
+// Team.offerContractExtension) — tirage côté serveur.
+function offerContractExtension(team, teamIndex, league, body, now) {
+  if (!body || (typeof body.playerId !== "number" && typeof body.playerId !== "string") || body.playerId === "") {
+    return fail("playerId requis.");
+  }
+  const playerId = typeof body.playerId === "string" && /^-?\d+$/.test(body.playerId) ? Number(body.playerId) : body.playerId;
+  const result = team.offerContractExtension(playerId, { seasons: body.seasons, salary: body.salary }, league.contractSeason(), now);
+  if (!result.ok) {
+    const reasons = {
+      "not-found": "Joueur introuvable dans cet effectif.",
+      "not-last-season": "La prolongation n'est possible que pendant la dernière saison du contrat.",
+      "already-offered": "Il a déjà refusé une offre cette semaine : réessayez la semaine prochaine.",
+      "invalid-seasons": "Durée de contrat invalide (1 à 5 saisons).",
+      "invalid-salary": "Le salaire proposé doit être compris entre le salaire demandé -10 % et le salaire demandé.",
+    };
+    return { ...fail(reasons[result.reason] || "Offre refusée."), reason: result.reason };
+  }
+  return { ok: true, accepted: result.accepted, salary: result.salary || null, untilSeason: result.untilSeason || null, asked: result.asked };
+}
+
+// Demande d'augmentation de mi-saison : { playerId, accept } (voir
+// Team.respondToRaiseRequest).
+function respondToRaiseRequest(team, teamIndex, league, body, now) {
+  if (!body || (typeof body.playerId !== "number" && typeof body.playerId !== "string") || body.playerId === "") {
+    return fail("playerId requis.");
+  }
+  const playerId = typeof body.playerId === "string" && /^-?\d+$/.test(body.playerId) ? Number(body.playerId) : body.playerId;
+  const result = team.respondToRaiseRequest(playerId, !!body.accept);
+  if (!result.ok) return fail(result.reason === "no-request" ? "Aucune demande d'augmentation en attente." : "Joueur introuvable dans cet effectif.");
+  return { ok: true, accepted: result.accepted, salary: result.salary || null };
 }
 
 // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE côté moteur, retour
@@ -1479,7 +1536,7 @@ module.exports = {
   // Demande de transfert (voir le grand commentaire au-dessus de
   // TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur) :
   discussTransferRequest,
-  talkRetirement,
+  talkRetirement, offerContractExtension, respondToRaiseRequest,
   setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
   inductHallOfFame, setRetiredJersey,
   setTeamAwayJersey, setTeamAwayJerseyPattern, setTeamAwayJerseyTwoTone,

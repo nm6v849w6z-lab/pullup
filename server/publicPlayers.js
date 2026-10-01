@@ -32,6 +32,8 @@ const HIDDEN_PLAYER_FIELDS = [
   "potential", "physicalPotential", "mentalPotential", "_trainProgress", "progressLog",
   "form", "weeksAtLowMotivation", "transferRequestActive", "transferRequestQuote", "transferRequestDiscussed",
   "retirementTalks", "pendingMatchBoost", "forSale", "salePrice", "trainingSecondsPlayedByPosition",
+  // Contrats (demande du 2026-10-01) : négociations privées du club.
+  "nextSalary", "lastContractOfferWeek", "raiseRequest", "raiseRequestSeason", "extensionRequestSeason",
 ];
 // En plus, pour un autre championnat (aucune simulation dans le navigateur).
 const FOREIGN_EXTRA_PLAYER_FIELDS = ["attrs", "aggressiveness"];
@@ -100,6 +102,9 @@ function sanitizeOwnLeagueForViewer(leagueOut, viewerIdx, opts = {}) {
     // Invité « léger » du marché mondial : ses joueurs sont en vente.
     if (g && g.light) (g.light.players || []).forEach(p => { stripFields(p, HIDDEN_PLAYER_FIELDS.filter(k => k !== "potential")); delete p.aggressiveness; });
   });
+  // Agents libres (demande du 2026-10-01) : tous aux enchères, comme un
+  // joueur sur le marché.
+  (leagueOut.freeAgents || []).forEach(p => { stripFields(p, HIDDEN_PLAYER_FIELDS.filter(k => k !== "potential")); delete p.aggressiveness; });
   return leagueOut;
 }
 
@@ -155,7 +160,8 @@ function sanitizeForeignLeague(leagueOut) {
     });
   });
   // Annonces ouvertes seulement (montant public, jamais les enchérisseurs).
-  leagueOut.transferListings = (leagueOut.transferListings || []).filter(l => l && l.status === "open").map(l => ({
+  leagueOut.freeAgents = [];
+  leagueOut.transferListings = (leagueOut.transferListings || []).filter(l => l && l.status === "open" && !l.freeAgent).map(l => ({
     id: l.id, playerId: l.playerId, sellerIdx: l.sellerIdx, startPrice: l.startPrice, currentBid: l.currentBid || null,
     currentBidderIdx: null, bids: [], createdAt: l.createdAt, closesAt: l.closesAt, status: "open", result: null, finalPrice: null,
   }));

@@ -213,7 +213,9 @@ const ok = m => console.log("✅ " + m);
       save2.league.teams[3].players.filter(p => !openFr.has(p.id)).forEach(p => assert.deepStrictEqual(Object.keys(p.attrs).sort(), [...vs.revealed].sort()));
       assert.strictEqual(typeof save.league.teams[4].players.find(p => p.id === listedFr.id).potential, "number", "adversaire sur le marché : potentiel (palier affiché par le marché)");
       assert.ok(others.every(t => !(t.youthPlayers || []).length && !(t.youthCandidates || []).length && !Object.keys(t.scoutedAttrs || {}).length), "académie et scouting des autres clubs non envoyés");
-      assert.deepStrictEqual(PublicPlayers.HIDDEN_PLAYER_FIELDS.filter(k => !HIDDEN.includes(k)), ["transferRequestQuote", "transferRequestDiscussed", "trainingSecondsPlayedByPosition"]);
+      assert.deepStrictEqual(PublicPlayers.HIDDEN_PLAYER_FIELDS.filter(k => !HIDDEN.includes(k)), ["transferRequestQuote", "transferRequestDiscussed", "trainingSecondsPlayedByPosition",
+        // Contrats (2026-10-01) : négociations privées du club.
+        "nextSalary", "lastContractOfferWeek", "raiseRequest", "raiseRequestSeason", "extensionRequestSeason"]);
     } finally { server.close(); }
     ok("informations cachées : autre championnat (team/league/player-page) sans caractéristiques, potentiel ni traits cachés (sauf caractéristiques d'un joueur sur le marché), sans académie ni scouting des clubs ; /api/save : adversaires avec les seules caractéristiques révélées par le scouting (toutes pour un joueur sur le marché), niveau des clubs et estimations calculés par le serveur, séance vidéo renvoyant les valeurs révélées, sans potentiel, motivation, progression ni académie");
   }

@@ -870,7 +870,8 @@ function buildStateSnapshot(league, teamIndex, now) {
         playerId: l.playerId,
         playerName: (league.playerById ? league.playerById(l.playerId) : null)?.name || null,
         sellerIdx: l.sellerIdx,
-        sellerName: league.teams[l.sellerIdx].name,
+        sellerName: l.freeAgent ? null : ((league.teams[l.sellerIdx] || {}).name || null),
+        freeAgent: !!l.freeAgent,
         isMine: l.sellerIdx === teamIndex,
         startPrice: l.startPrice,
         currentBid: l.currentBid,
@@ -1003,6 +1004,9 @@ const ACTION_ROUTES = {
   // Retraite : convaincre un joueur de repousser sa retraite d'un an (voir
   // server/actions.js et RETIREMENT_ANNOUNCE_CHANCE_BY_AGE côté moteur).
   "/api/player/retirement-talk": actions.talkRetirement,
+  // Contrats (demande du 2026-10-01) : prolongation et augmentation.
+  "/api/player/contract-extension": actions.offerContractExtension,
+  "/api/player/raise-response": actions.respondToRaiseRequest,
   "/api/club/set-jersey": actions.setTeamJersey,
   "/api/club/set-jersey-pattern": actions.setTeamJerseyPattern,
   "/api/club/set-jersey-two-tone": actions.setTeamJerseyTwoTone,
@@ -2278,6 +2282,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           const team = ctx.league.teams[ctx.teamIndex];
           const out = await World.WorldMarket.placeForeignBid({
             index, leagueId: ctx.leagueId, teamIdx: ctx.teamIndex, team, gid: -numId, amount: body.amount, now,
+            seasons: body.seasons == null ? null : Engine.normalizeContractSeasons(body.seasons),
             loadLeague: id => World.loadLeague(ctx.world, id, multiSavePath),
             saveLeague: lg => store.saveMultiLeague(lg, multiSavePath),
             saveIndex: ix => store.saveWorldAuxRaw("market", ix, multiSavePath),
@@ -2306,6 +2311,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           const index = await store.loadWorldAuxRaw("market", multiSavePath);
           const out = await World.WorldMarket.setForeignAutoBid({
             index, leagueId: ctx.leagueId, teamIdx: ctx.teamIndex, team: ctx.league.teams[ctx.teamIndex], gid: -numId, max, now,
+            seasons: body.seasons == null ? null : Engine.normalizeContractSeasons(body.seasons),
             loadLeague: id => World.loadLeague(ctx.world, id, multiSavePath),
             saveLeague: lg => store.saveMultiLeague(lg, multiSavePath),
             saveIndex: ix => store.saveWorldAuxRaw("market", ix, multiSavePath),

@@ -122,6 +122,9 @@ function paris(ms) {
 (function testFullSeason() {
   const now = Date.UTC(2026, 8, 27, 9);
   const lg = E.generateMultiManagerLeague(["A", "B"], 1, now, C.dailyAnchoredCalendarConfig());
+  // Contrats (2026-10-01) : longs ici (effectif conservé à la fin de saison,
+  // les fins de contrat sont testées dans contracts_test.js).
+  lg.teams.forEach(t => t.players.forEach(p => { p.contractUntilSeason = 99; }));
   const user = lg.teams.find(t => t.isHuman);
   user.hireTrainer(1, 800);
   // Journal des transactions plafonné à 40 lignes : on compte les paies au
@@ -284,6 +287,7 @@ function paris(ms) {
   const lg = E.generateMultiManagerLeague(["A", "B"], 1, created, { dailyAnchored: true });
   A.catchUpLeague(lg, at);
   E.migrateLeagueToWeeklyRhythm(lg, at);
+  lg.teams.forEach(t => t.players.forEach(p => { p.contractUntilSeason = 99; })); // contrats longs (2026-10-01)
   const user = lg.teams.find(t => t.isHuman);
   const ages0 = user.players.map(p => p.age);
   let t = at, agedBeforeEnd = false;

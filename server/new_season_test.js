@@ -24,6 +24,9 @@ const created = Date.UTC(2026, 8, 27, 9); // dimanche 27 septembre 2026
 const lg = E.generateMultiManagerLeague(["Lyon Saison", "Paris Saison"], 1, created, C.dailyAnchoredCalendarConfig());
 assert.strictEqual(lg.seasonNumber === undefined ? 1 : lg.seasonNumber, 1);
 const start1 = lg.calendarStartAt;
+// Contrats (2026-10-01) : longs ici, les fins de contrat ont leur propre
+// test (contracts_test.js) — ce test vérifie que l'effectif est conservé.
+lg.teams.forEach(t => t.players.forEach(p => { p.contractUntilSeason = 99; }));
 const human = lg.teams[0];
 const cpu = lg.teams.find(t => !t.isHuman);
 const humanIds = human.players.map(p => p.id).sort();

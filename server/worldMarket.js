@@ -30,6 +30,8 @@ const FOREIGN = Engine.FOREIGN_BIDDER_IDX;
 const MARKET_GUEST_SELLER_IDX = 1000;
 const MARKET_GUEST_BIDDER_IDX = 2000;
 const MARKET_PROJECTION_LIMIT = 150;
+// Agents libres (demande du 2026-10-01) : « vendeur » fictif dans l'index.
+const FREE_AGENT_SELLER_IDX = -2;
 
 // Joueur en vente, allégé (sans journal de matchs ni progression interne) :
 // l'index est relu à chaque chargement du jeu par tous les managers.
@@ -74,16 +76,17 @@ function buildIndex(prev, worldLeagues, leagues, now, labelOf) {
     if (!lg) return;
     (lg.transferListings || []).forEach(l => {
       if (l.status !== "open" || now >= l.closesAt) return;
-      const seller = lg.teams[l.sellerIdx];
-      const player = seller && seller.players.find(p => p.id === l.playerId);
-      if (!player) return;
+      const seller = l.freeAgent ? { name: "Agents libres", isHuman: false } : lg.teams[l.sellerIdx];
+      const player = typeof lg.listingPlayer === "function" ? lg.listingPlayer(l) : (seller && seller.players.find(p => p.id === l.playerId));
+      if (!seller || !player) return;
       const key = `${e.id}:${l.id}`;
       if (!gids[key]) gids[key] = ++seq;
       alive.add(key);
       const leader = leaderOf(lg, e.id, l);
       entries.push({
         gid: gids[key], leagueId: e.id, country: e.country, label: labelOf(e), listingId: l.id,
-        sellerIdx: l.sellerIdx, sellerName: seller.name, sellerHuman: !!seller.isHuman,
+        sellerIdx: l.freeAgent ? FREE_AGENT_SELLER_IDX : l.sellerIdx, sellerName: seller.name, sellerHuman: !!seller.isHuman,
+        freeAgent: !!l.freeAgent, formerTeamName: l.formerTeamName || null, askedSalary: typeof l.askedSalary === "number" ? l.askedSalary : null,
         player: leanPlayerRecord(player),
         startPrice: l.startPrice, currentBid: l.currentBid, currentBidder: leader,
         bids: (l.bids || []).map(b => ({ ref: refOfBid(lg, e.id, b), amount: b.amount, at: b.at })).filter(b => b.ref),
@@ -137,6 +140,8 @@ function projectForLeague(index, leagueId, teamIdx, now, limit = MARKET_PROJECTI
       bids: en.bids.map(b => ({ bidderIdx: localBidder(b.ref), amount: b.amount, at: b.at })),
       createdAt: en.createdAt, closesAt: en.closesAt, lastCpuCheckAt: en.createdAt,
       status: "open", result: null, finalPrice: null,
+      ...(en.askedSalary != null ? { askedSalary: en.askedSalary } : {}),
+      ...(en.freeAgent ? { freeAgent: true, formerTeamName: en.formerTeamName || null } : {}),
       foreign: { leagueId: en.leagueId, label: en.label, country: en.country, sellerName: en.sellerName },
     };
   });
@@ -172,12 +177,12 @@ function projectOwnForeignBidders(listings) {
 // Enchère d'un manager (ctx : sa ligue et son club) sur l'annonce d'un
 // autre championnat. `loadLeague(id)` / `saveLeague(lg)` fournis par
 // l'appelant (server/index.js). Renvoie { ok, listing? , reason?, minBid? }.
-async function placeForeignBid({ index, leagueId, teamIdx, team, gid, amount, now, loadLeague, saveLeague, saveIndex }) {
+async function placeForeignBid({ index, leagueId, teamIdx, team, gid, amount, now, loadLeague, saveLeague, saveIndex, seasons = null }) {
   const en = ((index && index.entries) || []).find(x => x.gid === gid);
   if (!en || en.leagueId === leagueId) return { ok: false, reason: "closed" };
   const lg = await loadLeague(en.leagueId);
   if (!lg) return { ok: false, reason: "closed" };
-  const res = lg.placeForeignBid(en.listingId, { leagueId, idx: teamIdx, name: team.name }, team, amount, now);
+  const res = lg.placeForeignBid(en.listingId, { leagueId, idx: teamIdx, name: team.name }, team, amount, now, seasons);
   if (!res.ok) return res;
   await saveLeague(lg);
   syncEntry(en, lg, res.listing);
@@ -196,12 +201,12 @@ function syncEntry(en, lg, l) {
 // (voir League.setAutoBid) : mêmes paramètres que placeForeignBid, `max`
 // au lieu de `amount` (0 = plafond retiré). Renvoie { ok, leading } ou
 // { ok: false, reason, minBid? }.
-async function setForeignAutoBid({ index, leagueId, teamIdx, team, gid, max, now, loadLeague, saveLeague, saveIndex }) {
+async function setForeignAutoBid({ index, leagueId, teamIdx, team, gid, max, now, loadLeague, saveLeague, saveIndex, seasons = null }) {
   const en = ((index && index.entries) || []).find(x => x.gid === gid);
   if (!en || en.leagueId === leagueId) return { ok: false, reason: "closed" };
   const lg = await loadLeague(en.leagueId);
   if (!lg) return { ok: false, reason: "closed" };
-  const res = lg.setAutoBid("transferListings", en.listingId, null, max, now, { ref: { leagueId, idx: teamIdx, name: team.name }, team });
+  const res = lg.setAutoBid("transferListings", en.listingId, null, max, now, { ref: { leagueId, idx: teamIdx, name: team.name }, team }, seasons);
   if (!res.ok) return res;
   await saveLeague(lg);
   syncEntry(en, lg, res.listing);
@@ -218,16 +223,27 @@ function resolveForeignTransfers(leagues, now, events = []) {
       const ref = l.currentBidderRef;
       const buyerLg = ref && leagues.get(ref.leagueId);
       const buyer = buyerLg && buyerLg.teams[ref.idx];
-      const seller = lg.teams[l.sellerIdx];
-      if (!buyer || buyer.name !== ref.name) { l.result = "buyer-failed"; return; }
-      const res = Engine.transferPlayerBetweenTeams(seller, buyer, l.playerId, l.currentBid, now);
+      const seller = l.freeAgent ? null : lg.teams[l.sellerIdx];
+      if (!buyer || buyer.name !== ref.name) {
+        l.result = "buyer-failed";
+        // Agent libre resté sans club : même suite qu'un invendu.
+        if (l.freeAgent && typeof lg._placeUnsoldFreeAgent === "function") lg._placeUnsoldFreeAgent(l, now);
+        return;
+      }
+      const buyerSeason = typeof buyerLg.contractSeason === "function" ? buyerLg.contractSeason() : 1;
+      // Agent libre (demande du 2026-10-01) : prime de signature, pas de vendeur.
+      const res = l.freeAgent
+        ? lg.signFreeAgentFromListing(l, buyer, buyerSeason, now)
+        : Engine.transferPlayerBetweenTeams(seller, buyer, l.playerId, l.currentBid, now);
       l.result = res.result;
+      if (l.freeAgent && res.result === "buyer-failed" && typeof lg._placeUnsoldFreeAgent === "function") lg._placeUnsoldFreeAgent(l, now);
+      if (res.result === "sold" && !l.freeAgent) lg._applyTransferContract(l, buyer, res.player, buyerSeason, now);
       if (res.result === "sold") {
         l.finalPrice = l.currentBid;
-        if (seller.isHuman && buyer.isHuman && typeof lg.logHumanTransfer === "function") lg.logHumanTransfer(seller.name, `${buyer.name} (${ref.leagueId})`, res.player, l.currentBid, now);
+        if (seller && seller.isHuman && buyer.isHuman && typeof lg.logHumanTransfer === "function") lg.logHumanTransfer(seller.name, `${buyer.name} (${ref.leagueId})`, res.player, l.currentBid, now);
         // Chat de la ligue de l'acheteur (voir League.logTransferNews).
         if (typeof buyerLg.logTransferNews === "function") {
-          buyerLg.logTransferNews({ id: `w-${l.id}`, at: now, playerName: res.player.name, playerId: res.player.id, buyerIdx: ref.idx, buyerName: buyer.name, buyerAi: !buyer.isHuman, sellerName: seller ? seller.name : "?", fee: l.currentBid, foreign: true });
+          buyerLg.logTransferNews({ id: `w-${l.id}`, at: now, playerName: res.player.name, playerId: res.player.id, buyerIdx: ref.idx, buyerName: buyer.name, buyerAi: !buyer.isHuman, sellerName: seller ? seller.name : null, fee: l.currentBid, foreign: true, ...(l.freeAgent ? { freeAgent: true } : {}) });
         }
         events.push({ type: "world-transfer", from: id, to: ref.leagueId, player: res.player.name, fee: l.currentBid });
       }
@@ -237,6 +253,6 @@ function resolveForeignTransfers(leagues, now, events = []) {
 }
 
 module.exports = {
-  MARKET_GUEST_SELLER_IDX, MARKET_GUEST_BIDDER_IDX, MARKET_PROJECTION_LIMIT,
+  FREE_AGENT_SELLER_IDX, MARKET_GUEST_SELLER_IDX, MARKET_GUEST_BIDDER_IDX, MARKET_PROJECTION_LIMIT,
   buildIndex, nextForeignClosing, projectForLeague, projectOwnForeignBidders, placeForeignBid, setForeignAutoBid, resolveForeignTransfers,
 };

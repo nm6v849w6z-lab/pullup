@@ -250,6 +250,8 @@ function syncSystem(chat, league, opts) {
       ...(t.playerId != null ? { playerId: t.playerId } : {}),
       ...(typeof t.sellerIdx === "number" && !t.foreign ? { sellerIdx: t.sellerIdx } : {}),
       ...(typeof t.buyerAi === "boolean" ? { buyerAi: t.buyerAi } : {}),
+      // Agent libre signé (demande du 2026-10-01) : pas de club vendeur.
+      ...(t.freeAgent ? { freeAgent: true } : {}),
     }, Math.min(now, t.at || now));
   });
   if (chat.sync.transfers.length > 120) chat.sync.transfers = chat.sync.transfers.slice(-120);
@@ -263,6 +265,7 @@ function syncSystem(chat, league, opts) {
 function systemText(m) {
   const d = m.data || {};
   if (m.kind === "result") return `${d.winner} bat ${d.loser} ${d.winnerPts}-${d.loserPts}`;
+  if (m.kind === "transfer" && d.freeAgent) return `${d.buyer} signe ${d.player} (agent libre)`;
   if (m.kind === "transfer") return `${d.buyer} achète ${d.player} (${d.seller})`;
   if (m.kind === "playoffs") {
     if (d.stage === "champion") return `${d.team} est champion !`;
