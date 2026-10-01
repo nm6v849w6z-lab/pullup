@@ -88,7 +88,8 @@ const D = 24 * 60 * 60 * 1000;
   } else {
     console.log("(pas de jour libre futur cette semaine : vérification de l'amical sautée)");
   }
-  assert(/Connaissance tactique en cours/.test(doc.getElementById("collectiveTrainingConfig").textContent) && !!doc.querySelector(".tm-tier") && /\+\d+\/jour/.test(doc.querySelector(".tm-gain").textContent), "jauges tactiques avec palier et gain par jour");
+  assert(/Connaissance tactique en cours/.test(doc.getElementById("collectiveTrainingConfig").textContent) && !!doc.querySelector(".tm-tier")
+    && [...doc.querySelectorAll(".tm-gain")].every(g => /^\+\d+ × \d+ j$|^en match$/.test(g.textContent)), "jauges tactiques : palier, gain sur les jours travaillés sinon « en match »");
 
   // 5) Bilan du lundi
   win.eval(`(() => {
