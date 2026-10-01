@@ -20,6 +20,23 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Marché :
+  pays au choix + barres âge/potentiel/prix** (retour utilisateur
+  2026-10-01 : « il faut pouvoir choisir le pays de son choix (mets une
+  petite recherche dans l'onglet) » et « pour l'âge, le potentiel et le
+  prix, mets un système de barres »). moteurbasket3.html : `#marketOriginBox`
+  (sélecteur à drapeaux + recherche, mêmes classes `.pc-picker*` et
+  `planeteFilterCountries` que Planète Hoop ; « Monde entier », « Mon
+  championnat », votre pays, puis les 17 pays `MK_WORLD_COUNTRIES` triés par
+  nom traduit) ; 3 cartes `.mk-range` à deux poignées (âge : bornes des
+  annonces ; potentiel : 10 paliers ; prix : paliers ronds 0/100/150/…
+  jusqu'au prix max) ; chip « Dans mon budget ». engine.js (+ miroir) :
+  alertes en fourchettes (`marketAlertRanges`, anciennes alertes converties
+  au chargement et à l'évaluation). Traductions ×9. Tests :
+  market_filters_test.js (nouveau), world_market_test.js. Aussi : « ☆ Suivre »
+  déplacé dans le pied de carte à côté de « Comparer » (bouton mk-btn,
+  market_watch_test.js). Reste : push par l'utilisateur.
+
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Contrats
   des joueurs** (conception validée par le propriétaire le 2026-10-01, puis
   simplifiée : transferts et agents libres TOUJOURS au salaire demandé, la

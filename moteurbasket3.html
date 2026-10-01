@@ -2336,6 +2336,42 @@
   .mk-crit-tags:empty{display:none;}
   .mk-crit-tag{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700; background:rgba(240,162,60,.10); color:var(--amber); border:1px solid rgba(240,162,60,.45); border-radius:999px; padding:5px 6px 5px 14px;}
   .mk-crit-tag button{background:none; border:0; color:inherit; font-size:15px; line-height:1; padding:0 6px; cursor:pointer;}
+  /* Pays au choix + barres âge/potentiel/prix (retour utilisateur 2026-10-01). */
+  .mk-page{--mk-range:#4c8dff; --mk-range-soft:rgba(76,141,255,.22);}
+  html[data-theme="light"] .mk-page{--mk-range:#2563eb; --mk-range-soft:rgba(37,99,235,.18);}
+  .mk-origin .pc-picker-btn{background:var(--bg); border-color:var(--line); font-size:14px; min-width:200px;}
+  .mk-origin .pc-picker-btn .pc-chev{margin-left:auto;}
+  .mk-origin .pc-picker-name{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mk-globe{flex:0 0 auto; color:var(--mk-range);}
+  .mk-ranges{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px;}
+  .mk-range{background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px 16px 10px; min-width:0;}
+  .mk-range-head{display:flex; align-items:center; gap:8px; min-width:0;}
+  .mk-range-lbl{font-size:13.5px; font-weight:700; color:var(--ink);}
+  .mk-range-reset{flex:0 0 auto; width:22px; height:22px; border-radius:50%; border:1px solid var(--line); background:var(--panel-2); color:var(--ink-dim); display:inline-flex; align-items:center; justify-content:center; padding:0; cursor:pointer;}
+  .mk-range-reset:hover:not(:disabled){color:var(--ink); border-color:var(--ink-faint);}
+  .mk-range-reset:disabled{opacity:.45; cursor:default;}
+  .mk-range.is-set .mk-range-reset{color:var(--mk-range); border-color:var(--mk-range);}
+  .mk-range-val{margin-left:auto; min-width:0; text-align:right; font-size:13px; font-weight:700; color:var(--ink-dim); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mk-range.is-set .mk-range-val{color:var(--ink);}
+  .mk-range-track{position:relative; height:28px; margin:6px 9px 0;}
+  .mk-range-track::before{content:""; position:absolute; left:-9px; right:-9px; top:50%; height:4px; margin-top:-2px; border-radius:2px; background:var(--line);}
+  .mk-range-fill{position:absolute; top:50%; height:4px; margin-top:-2px; border-radius:2px; background:var(--mk-range); left:var(--lo, 0%); right:calc(100% - var(--hi, 100%));}
+  .mk-range input.mk-range-in{position:absolute; left:-9px; width:calc(100% + 18px); top:0; height:100%; margin:0; background:none; -webkit-appearance:none; appearance:none; pointer-events:none; outline:none;}
+  .mk-range-in.top{z-index:2;}
+  .mk-range-in::-webkit-slider-runnable-track{height:28px; background:none; border:0;}
+  .mk-range-in::-moz-range-track{height:28px; background:none; border:0;}
+  .mk-range-in::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; box-sizing:border-box; pointer-events:auto; width:18px; height:18px; margin-top:5px; border-radius:50%; background:var(--mk-range); border:2px solid var(--panel); box-shadow:0 0 0 1px var(--mk-range); cursor:grab;}
+  .mk-range-in::-moz-range-thumb{box-sizing:border-box; pointer-events:auto; width:18px; height:18px; border-radius:50%; background:var(--mk-range); border:2px solid var(--panel); box-shadow:0 0 0 1px var(--mk-range); cursor:grab;}
+  .mk-range-in:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1px var(--mk-range), 0 0 0 5px var(--mk-range-soft);}
+  .mk-range-in:focus-visible::-moz-range-thumb{box-shadow:0 0 0 1px var(--mk-range), 0 0 0 5px var(--mk-range-soft);}
+  .mk-range-in:disabled::-webkit-slider-thumb{opacity:.5; cursor:default;}
+  .mk-range-ends{display:flex; justify-content:space-between; gap:10px; font-size:11.5px; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+  @media (max-width:760px){
+    .mk-ranges{grid-template-columns:1fr;}
+    .mk-origin{flex:1 1 100%;}
+    .mk-origin .pc-picker-btn{width:100%; min-width:0;}
+    .mk-origin .pc-picker-menu{right:0; min-width:0;}
+  }
   .mk-crit-panel{background:var(--bg); border-radius:14px; padding:16px 18px; display:flex; flex-direction:column; gap:10px;}
   .mk-crit-head{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; padding-bottom:10px; border-bottom:1px solid var(--line);}
   .mk-crit-head h4{margin:0; font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink);}
@@ -2350,7 +2386,6 @@
   .mk-linkbtn{background:none; border:0; color:var(--ink-dim); font:inherit; font-size:13.5px; font-weight:700; padding:4px 0; display:inline-flex; align-items:center; gap:6px; cursor:pointer;}
   .mk-linkbtn:hover{color:var(--ink);}
   .mk-linkbtn.amber{color:var(--amber);}
-  .mk-watch{margin-left:8px; font:inherit; font-size:12px; font-weight:700; color:var(--ink-dim); background:transparent; border:1px solid var(--line); border-radius:999px; padding:2px 10px; cursor:pointer;}
   .mk-watch.on{color:var(--amber); border-color:var(--amber); background:rgba(240,162,60,.10);}
   .mk-alerts-bar{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px;}
   .mk-alerts-lbl{font-size:13px; font-weight:700; color:var(--ink);}
@@ -8457,23 +8492,31 @@
             <input class="mk-search" id="marketSearch" type="search" placeholder="Rechercher un joueur ou un club vendeur…" aria-label="Rechercher un joueur ou un club vendeur" autocomplete="off">
             <div class="mk-poscells" id="marketPos" role="group" aria-label="Poste"></div>
           </div>
+          <!-- Pays au choix avec recherche + barres âge/potentiel/prix (retour utilisateur 2026-10-01). -->
           <div class="mk-frow">
-            <select class="mk-sel" id="marketOrigin" aria-label="Championnat du vendeur">
-              <option value="all">Monde entier</option><option value="country">Mon pays</option><option value="league">Mon championnat</option>
-            </select>
-            <select class="mk-sel" id="marketAge" aria-label="Âge">
-              <option value="all">Tous âges</option><option value="u21">21 ans et moins</option><option value="22-25">22–25 ans</option><option value="26-29">26–29 ans</option><option value="30+">30 ans et plus</option>
-            </select>
-            <select class="mk-sel" id="marketPot" aria-label="Potentiel minimum">
-              <option value="0">Tout potentiel</option><option value="30">Solide et plus</option><option value="40">Starter et plus</option><option value="50">Très bon joueur et plus</option><option value="60">Star et plus</option>
-            </select>
-            <select class="mk-sel" id="marketPrice" aria-label="Prix maximum">
-              <option value="0">Tout prix</option><option value="50000">Jusqu'à 50 000 €</option><option value="150000">Jusqu'à 150 000 €</option><option value="300000">Jusqu'à 300 000 €</option><option value="budget">Dans mon budget</option>
-            </select>
+            <div class="pc-picker mk-origin" id="marketOriginBox"></div>
             <button class="mk-pchip" id="marketCritBtn" type="button" aria-expanded="false" aria-controls="marketCritPanel"></button>
             <button class="mk-pchip" id="marketDealBtn" type="button" aria-pressed="false">Bonnes affaires</button>
+            <button class="mk-pchip" id="marketBudgetBtn" type="button" aria-pressed="false">Dans mon budget</button>
             <button class="mk-pchip" id="marketHideMineBtn" type="button" aria-pressed="false">Masquer mes annonces</button>
             <button class="mk-pchip" id="marketWatchedBtn" type="button" aria-pressed="false">★ Joueurs suivis</button>
+          </div>
+          <div class="mk-ranges">
+            <div class="mk-range" data-mk-range="age">
+              <div class="mk-range-head"><span class="mk-range-lbl" id="marketAgeLbl">Âge</span><button type="button" class="mk-range-reset" data-mk-range-reset="age" aria-label="Réinitialiser l'âge" title="Réinitialiser l'âge"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5M3 2.5v2.8h2.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="mk-range-val" id="marketAgeVal"></span></div>
+              <div class="mk-range-track"><i class="mk-range-fill"></i><input type="range" class="mk-range-in" id="marketAgeMin" data-mk-range-in="age" data-end="min" aria-label="Âge minimum"><input type="range" class="mk-range-in" id="marketAgeMax" data-mk-range-in="age" data-end="max" aria-label="Âge maximum"></div>
+              <div class="mk-range-ends"><span id="marketAgeLo"></span><span id="marketAgeHi"></span></div>
+            </div>
+            <div class="mk-range" data-mk-range="pot">
+              <div class="mk-range-head"><span class="mk-range-lbl" id="marketPotLbl">Potentiel</span><button type="button" class="mk-range-reset" data-mk-range-reset="pot" aria-label="Réinitialiser le potentiel" title="Réinitialiser le potentiel"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5M3 2.5v2.8h2.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="mk-range-val" id="marketPotVal"></span></div>
+              <div class="mk-range-track"><i class="mk-range-fill"></i><input type="range" class="mk-range-in" id="marketPotMin" data-mk-range-in="pot" data-end="min" aria-label="Potentiel minimum"><input type="range" class="mk-range-in" id="marketPotMax" data-mk-range-in="pot" data-end="max" aria-label="Potentiel maximum"></div>
+              <div class="mk-range-ends"><span id="marketPotLo"></span><span id="marketPotHi"></span></div>
+            </div>
+            <div class="mk-range" data-mk-range="price">
+              <div class="mk-range-head"><span class="mk-range-lbl" id="marketPriceLbl">Prix</span><button type="button" class="mk-range-reset" data-mk-range-reset="price" aria-label="Réinitialiser le prix" title="Réinitialiser le prix"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5M3 2.5v2.8h2.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="mk-range-val" id="marketPriceVal"></span></div>
+              <div class="mk-range-track"><i class="mk-range-fill"></i><input type="range" class="mk-range-in" id="marketPriceMin" data-mk-range-in="price" data-end="min" aria-label="Prix minimum"><input type="range" class="mk-range-in" id="marketPriceMax" data-mk-range-in="price" data-end="max" aria-label="Prix maximum"></div>
+              <div class="mk-range-ends"><span id="marketPriceLo"></span><span id="marketPriceHi"></span></div>
+            </div>
           </div>
           <div class="mk-crit-tags" id="marketCritTags"></div>
           <div class="mk-crit-panel" id="marketCritPanel" hidden></div>
@@ -8867,7 +8910,7 @@
         <p class="training-intro">Toutes les enchères en cours dans la ligue, les vôtres et celles des adversaires. Chaque enchère dure <b>1 jour réel</b>. Incrément minimum entre deux enchères : le plus grand de 1 000 € ou 20 % de l'enchère actuelle. En haut : votre budget disponible (budget moins les enchères où vous êtes en tête) et vos places libres, puis <b>Mes enchères</b> (vos achats et vos ventes en cours, les enchères où vous avez été dépassé en premier).</p>
         <p class="training-intro" style="margin-top:10px;">Recherche par poste, âge, potentiel, prix (dont "dans mon budget") et jusqu'à 5 critères de caractéristiques, avec plusieurs tris (fin d'enchère, note, potentiel, meilleure affaire, prix, âge). Chaque annonce affiche la note du joueur, ses points forts, une <b>valeur estimée</b> comparée au prix ("Bonne affaire", "Prix correct" ou "Au-dessus de sa valeur"), des montants d'enchère rapides, et un bouton <b>Comparer</b> avec votre effectif. Pour vendre l'un de vos joueurs : menu ⋯ de l'Effectif ou bouton Vendre de sa fiche. L'identité de l'enchérisseur en tête reste privée.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Suivi et alertes</b> (<button type="button" class="gd-link" data-guide-goto="premium">Premium</button>) : « Suivre » sur une annonce ajoute le joueur à votre liste de suivi (filtre « Joueurs suivis ») ; « Créer une alerte avec ces filtres » enregistre une recherche. Le fil d'actualité vous prévient quand un joueur suivi est mis en vente, quand son enchère se termine bientôt, et quand une nouvelle annonce correspond à une de vos alertes.</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Marché mondial</b> : les annonces de tous les championnats, dans tous les pays, apparaissent aussi (drapeau et division du vendeur sur la carte ; filtre « Monde entier », « Mon pays » ou « Mon championnat »). On y enchérit de la même façon ; le joueur rejoint votre club à la clôture de l'enchère. Les annonces des autres championnats se mettent à jour toutes les quelques minutes : si quelqu'un a surenchéri entre-temps, votre enchère est refusée et le prix actualisé.</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Marché mondial</b> : les annonces de tous les championnats, dans tous les pays, apparaissent aussi (drapeau et division du vendeur sur la carte ; filtre « Monde entier », « Mon championnat » ou le pays de votre choix, avec une recherche). On y enchérit de la même façon ; le joueur rejoint votre club à la clôture de l'enchère. Les annonces des autres championnats se mettent à jour toutes les quelques minutes : si quelqu'un a surenchéri entre-temps, votre enchère est refusée et le prix actualisé.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="economie" data-guide-group="Club et finances">
@@ -22225,46 +22268,86 @@ const TRAINING_HISTORY_MAX = 13;
 // ---------------------------------------------------------------------
 const MARKET_WATCHLIST_MAX = 30;
 const MARKET_ALERTS_MAX = 3;
-const MARKET_ALERT_AGES = ["all", "u21", "22-25", "26-29", "30+"];
+// Filtres en FOURCHETTES (retour utilisateur 2026-10-01 : « pour l'âge, le
+// potentiel et le prix, mets un système de barres ») : ageMin/ageMax (ans),
+// potMin/potMax (index de palier 1-10, jamais le potentiel exact), priceMin/
+// priceMax (prochaine enchère, €), budget (bool) ; null = pas de borne.
+// Les anciennes alertes (age "u21"/"22-25"/"26-29"/"30+", pot = seuil de
+// potentiel, price "budget"/montant) sont converties ici.
+const MARKET_ALERT_LEGACY_AGES = { u21: [null, 21], "22-25": [22, 25], "26-29": [26, 29], "30+": [30, null] };
 const MARKET_ALERT_ENDING_MS = 3600 * 1000;
+function marketAlertRanges(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const num = (v, lo, hi) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v))) ? null : clamp(Math.round(Number(v)), lo, hi);
+  let ageMin = num(r.ageMin, 0, 99), ageMax = num(r.ageMax, 0, 99);
+  if (ageMin === null && ageMax === null && MARKET_ALERT_LEGACY_AGES[r.age]) [ageMin, ageMax] = MARKET_ALERT_LEGACY_AGES[r.age];
+  const nTiers = POTENTIAL_TIERS.length;
+  let potMin = num(r.potMin, 1, nTiers), potMax = num(r.potMax, 1, nTiers);
+  if (potMin === null && potMax === null && Number(r.pot) > 0) potMin = potentialTierIndex(clamp(Math.round(Number(r.pot)), 0, 99));
+  let priceMin = num(r.priceMin, 0, 1e12), priceMax = num(r.priceMax, 0, 1e12);
+  if (priceMin === null && priceMax === null && r.price !== "budget" && Number(r.price) > 0) priceMax = Math.round(Number(r.price));
+  const budget = r.budget === true || r.price === "budget";
+  if (potMin === 1) potMin = null;
+  if (potMax === nTiers) potMax = null;
+  if (priceMin === 0) priceMin = null;
+  const swap = (a, b) => (a !== null && b !== null && a > b) ? [b, a] : [a, b];
+  [ageMin, ageMax] = swap(ageMin, ageMax);
+  [potMin, potMax] = swap(potMin, potMax);
+  [priceMin, priceMax] = swap(priceMin, priceMax);
+  return { ageMin, ageMax, potMin, potMax, priceMin, priceMax, budget };
+}
 function sanitizeMarketAlert(raw) {
   if (!raw || typeof raw !== "object") return null;
   const pos = raw.pos && POSITIONS.includes(raw.pos) ? raw.pos : "all";
-  const age = MARKET_ALERT_AGES.includes(raw.age) ? raw.age : "all";
-  const pot = Number.isFinite(Number(raw.pot)) ? clamp(Math.round(Number(raw.pot)), 0, 99) : 0;
-  const price = raw.price === "budget" ? "budget" : (Number(raw.price) > 0 ? String(Math.round(Number(raw.price))) : "0");
+  const rg = marketAlertRanges(raw);
   const crit = (Array.isArray(raw.crit) ? raw.crit : [])
     .filter(c => c && ATTRS.includes(c.key))
     .slice(0, 5)
     .map(c => ({ key: c.key, min: clamp(Math.round(Number(c.min) || 0), 0, 99), max: clamp(Math.round(Number(c.max) || 99), 0, 99) }));
-  if (pos === "all" && age === "all" && !pot && price === "0" && !crit.length) return null; // aucune condition : trop large
-  return { pos, age, pot, price, crit };
+  const ranged = Object.entries(rg).some(([k, v]) => k === "budget" ? v : v !== null);
+  if (pos === "all" && !ranged && !crit.length) return null; // aucune condition : trop large
+  return { pos, ...rg, crit };
 }
 function marketAlertMatches(alert, player, listing, budget = Infinity) {
   if (!alert || !player || !listing) return false;
   if (alert.pos && alert.pos !== "all" && player.position !== alert.pos) return false;
-  if (alert.age === "u21" && player.age > 21) return false;
-  if (alert.age === "22-25" && (player.age < 22 || player.age > 25)) return false;
-  if (alert.age === "26-29" && (player.age < 26 || player.age > 29)) return false;
-  if (alert.age === "30+" && player.age < 30) return false;
-  if (alert.pot && potentialTierIndex(player.potential) < potentialTierIndex(alert.pot)) return false;
+  const rg = marketAlertRanges(alert);
+  if (rg.ageMin !== null && player.age < rg.ageMin) return false;
+  if (rg.ageMax !== null && player.age > rg.ageMax) return false;
+  // Par PALIER (jamais le chiffre exact, voir POTENTIAL_TIERS).
+  const tier = potentialTierIndex(player.potential);
+  if (rg.potMin !== null && tier < rg.potMin) return false;
+  if (rg.potMax !== null && tier > rg.potMax) return false;
   const minBid = minNextBidFor(listing);
-  if (alert.price === "budget" && minBid > budget) return false;
-  if (alert.price && alert.price !== "0" && alert.price !== "budget" && minBid > Number(alert.price)) return false;
+  if (rg.budget && minBid > budget) return false;
+  if (rg.priceMin !== null && minBid < rg.priceMin) return false;
+  if (rg.priceMax !== null && minBid > rg.priceMax) return false;
   for (const c of alert.crit || []) { const v = player.attrs[c.key]; if (v < c.min || v > c.max) return false; }
   return true;
 }
-function marketAlertLabel(alert) {
-  if (!alert) return "";
-  const ages = { u21: "21 ans et moins", "22-25": "22–25 ans", "26-29": "26–29 ans", "30+": "30 ans et plus" };
+// Morceaux du libellé (affichés séparément côté page, pour la traduction).
+function marketAlertParts(alert) {
+  if (!alert) return [];
+  const rg = marketAlertRanges(alert);
+  const eur = n => `${Number(n).toLocaleString("fr-FR")} €`;
+  const tierLabel = i => POTENTIAL_TIERS[i - 1].label;
   const parts = [];
   if (alert.pos && alert.pos !== "all") parts.push(alert.pos);
-  if (ages[alert.age]) parts.push(ages[alert.age]);
-  if (alert.pot) parts.push(`${potentialTierLabel(alert.pot)} et plus`);
-  if (alert.price === "budget") parts.push("dans mon budget");
-  else if (alert.price && alert.price !== "0") parts.push(`jusqu'à ${Number(alert.price).toLocaleString("fr-FR")} €`);
+  if (rg.ageMin !== null && rg.ageMax !== null) parts.push(rg.ageMin === rg.ageMax ? `${rg.ageMin} ans` : `${rg.ageMin}–${rg.ageMax} ans`);
+  else if (rg.ageMin !== null) parts.push(`${rg.ageMin} ans et plus`);
+  else if (rg.ageMax !== null) parts.push(`${rg.ageMax} ans et moins`);
+  if (rg.potMin !== null && rg.potMax !== null) parts.push(rg.potMin === rg.potMax ? `Potentiel : ${tierLabel(rg.potMin)}` : `Potentiel : ${tierLabel(rg.potMin)} à ${tierLabel(rg.potMax)}`);
+  else if (rg.potMin !== null) parts.push(`Potentiel : ${tierLabel(rg.potMin)} et plus`);
+  else if (rg.potMax !== null) parts.push(`Potentiel : ${tierLabel(rg.potMax)} et moins`);
+  if (rg.budget) parts.push("dans mon budget");
+  if (rg.priceMin !== null && rg.priceMax !== null) parts.push(`Prix : ${eur(rg.priceMin)} à ${eur(rg.priceMax)}`);
+  else if (rg.priceMax !== null) parts.push(`Prix : jusqu'à ${eur(rg.priceMax)}`);
+  else if (rg.priceMin !== null) parts.push(`Prix : à partir de ${eur(rg.priceMin)}`);
   (alert.crit || []).forEach(c => parts.push(`${TRAINING_LABELS[c.key] || c.key} ${c.min}–${c.max}`));
-  return parts.join(" · ");
+  return parts;
+}
+function marketAlertLabel(alert) {
+  return marketAlertParts(alert).join(" · ");
 }
 
 function cloneTrainingHistory(list) {
@@ -33630,7 +33713,7 @@ function planeteFilterCountries(box, q) {
     if (show && !first) first = o;
   });
   // Code exact (« de ») : ce pays en premier choix clavier.
-  const exact = needle && opts.find(o => !o.hidden && o.dataset.phCountry === needle);
+  const exact = needle && opts.find(o => !o.hidden && (o.dataset.phCountry || o.dataset.pcCode) === needle);
   const empty = box.querySelector(".pc-picker-empty");
   if (empty) empty.hidden = !!first;
   planeteSetKbd(box, exact || (needle ? first : box.querySelector(".pc-picker-opt.active")));
@@ -44361,7 +44444,10 @@ const MK_CLOCK = `<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="t
 // État d'affichage (filtres, tri, cartes dépliées) : purement local à
 // l'écran, jamais sauvegardé — comme les tris de l'Effectif.
 const marketUi = {
-  pos: "all", q: "", age: "all", pot: 0, price: "0", deal: false, hideMine: false, origin: "all",
+  // Fourchettes âge/potentiel (palier)/prix : null = pas de borne ; origin =
+  // "all", "league" ou un code pays (retour utilisateur 2026-10-01).
+  pos: "all", q: "", ageMin: null, ageMax: null, potMin: null, potMax: null, priceMin: null, priceMax: null, budget: false,
+  deal: false, hideMine: false, origin: "all",
   sort: "ends", mineTab: "all", open: new Set(), crit: [], critOpen: false, watched: false,
 };
 
@@ -44445,14 +44531,15 @@ function mkCritActive() { return marketUi.crit.filter(c => c.key); }
 // ---------------------------------------------------------------------
 function mkWatchBtnHtml(player) {
   if (!teamIsPremium(teamA)) {
-    return `<button type="button" class="mk-watch" data-tab="premium" title="Liste de suivi : Premium">☆ Suivre</button>`;
+    return `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm mk-watch" data-tab="premium" title="Liste de suivi : Premium">☆ Suivre</button>`;
   }
   const on = teamA.isWatchingPlayer(player.id);
-  return `<button type="button" class="mk-watch${on ? " on" : ""}" data-mk-watch="${player.id}" aria-pressed="${on}" title="${on ? "Ne plus suivre" : "Suivre ce joueur (alertes dans le fil d'actualité)"}">${on ? "★ Suivi" : "☆ Suivre"}</button>`;
+  return `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm mk-watch${on ? " on" : ""}" data-mk-watch="${player.id}" aria-pressed="${on}" title="${on ? "Ne plus suivre" : "Suivre ce joueur (alertes dans le fil d'actualité)"}">${on ? "★ Suivi" : "☆ Suivre"}</button>`;
 }
 function mkCurrentAlertFilters() {
   const u = marketUi;
-  return { pos: u.pos, age: u.age, pot: u.pot, price: u.price, crit: mkCritActive().map(c => ({ key: c.key, min: c.min, max: c.max })) };
+  return { pos: u.pos, ageMin: u.ageMin, ageMax: u.ageMax, potMin: u.potMin, potMax: u.potMax, priceMin: u.priceMin, priceMax: u.priceMax, budget: u.budget,
+    crit: mkCritActive().map(c => ({ key: c.key, min: c.min, max: c.max })) };
 }
 function renderMarketAlertsBar() {
   const bar = document.getElementById("marketAlertsBar");
@@ -44461,7 +44548,7 @@ function renderMarketAlertsBar() {
   if (!teamIsPremium(teamA) || !alerts.length) { bar.innerHTML = ""; bar.hidden = true; return; }
   bar.hidden = false;
   bar.innerHTML = `<span class="mk-alerts-lbl">🔔 Mes alertes</span>` + alerts.map(a =>
-    `<span class="mk-crit-tag mk-alert-tag">${escapeHtml(marketAlertLabel(a))}<button type="button" data-mk-alert-del="${escapeHtml(a.id)}" aria-label="Supprimer cette alerte">×</button></span>`).join("");
+    `<span class="mk-crit-tag mk-alert-tag">${marketAlertParts(a).map(x => `<span>${escapeHtml(x)}</span>`).join(" · ")}<button type="button" data-mk-alert-del="${escapeHtml(a.id)}" aria-label="Supprimer cette alerte">×</button></span>`).join("");
 }
 function syncMarketWatchToServer(playerId, watch) {
   try {
@@ -44757,6 +44844,172 @@ function autoBidStatusHtml(max, offAttr) {
   return `<div class="mk-auto-on">Enchère automatique jusqu'à <b>${escapeHtml(formatMoney(max))}</b> <button type="button" class="mk-auto-off" ${offAttr}>Arrêter</button></div>`;
 }
 
+// ---------------------------------------------------------------------
+// Marché — pays au choix et barres âge / potentiel / prix (retour
+// utilisateur 2026-10-01 : « il faut pouvoir choisir le pays de son choix
+// (mets une petite recherche dans l'onglet) » et « pour l'âge, le potentiel
+// et le prix, mets un système de barres »).
+// ---------------------------------------------------------------------
+// Pays des championnats ouverts (miroir de WORLD_COUNTRIES côté moteur).
+const MK_WORLD_COUNTRIES = ["fr", "us", "it", "es", "de", "gr", "lt", "pl", "pt", "be", "ch", "br", "ar", "ca", "cn", "hk", "tw"];
+const MK_GLOBE = `<svg class="mk-globe" viewBox="0 0 24 18" width="24" height="18" aria-hidden="true"><circle cx="12" cy="9" r="7.3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.8 9h14.4M12 1.7c2.3 2 3.4 4.4 3.4 7.3s-1.1 5.3-3.4 7.3c-2.3-2-3.4-4.4-3.4-7.3s1.1-5.3 3.4-7.3z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`;
+function mkHomeCountry() { return (league && league.country) || "fr"; }
+function mkListingCountry(l) { return l.foreign && l.foreign.country ? l.foreign.country : mkHomeCountry(); }
+// Ancienne valeur « Mon pays » ("country") : le pays de son championnat.
+function mkOriginValue() { return marketUi.origin === "country" ? mkHomeCountry() : (marketUi.origin || "all"); }
+function mkTr(s) { return window.hmI18n && typeof window.hmI18n.t === "function" ? window.hmI18n.t(s) : s; }
+function mkOriginPickerHtml() {
+  const open = mkOpenListings();
+  const counts = {};
+  open.forEach(l => { const c = mkListingCountry(l); counts[c] = (counts[c] || 0) + 1; });
+  const home = mkHomeCountry();
+  const loc = (window.hmI18n && window.hmI18n.locale) || "fr-FR";
+  const others = [...new Set(MK_WORLD_COUNTRIES.concat(Object.keys(counts)))]
+    .filter(c => c !== home && NATION_BY_CODE[c])
+    .sort((a, b) => mkTr(nationName(a)).localeCompare(mkTr(nationName(b)), loc));
+  const cur = mkOriginValue();
+  const sub = n => `${n} en vente`;
+  const opt = (val, icon, name, small, names, em = "") =>
+    `<button type="button" role="option" aria-selected="${cur === val}" class="pc-picker-opt${cur === val ? " active" : ""}" data-mk-origin="${escapeHtml(val)}" data-pc-code="${escapeHtml(val)}" data-pc-names="${escapeHtml(names)}">${icon}` +
+    `<span><b>${escapeHtml(name)}</b><small>${escapeHtml(small)}</small></span>${em ? `<em>${escapeHtml(em)}</em>` : ""}</button>`;
+  const words = (...xs) => normalizeSearchText(xs.join(" "));
+  const nLeague = open.filter(l => !l.foreign).length;
+  const opts =
+    opt("all", MK_GLOBE, "Monde entier", sub(open.length), words("Monde entier", mkTr("Monde entier"), "world tout tous")) +
+    opt("league", nationFlagHtml(home), "Mon championnat", `${leagueCompetitionLabel()} · ${sub(nLeague)}`, words("Mon championnat", mkTr("Mon championnat"), "league")) +
+    [home, ...others].map(c => opt(c, nationFlagHtml(c), nationName(c), sub(counts[c] || 0), planeteCountryNames({ code: c, name: nationName(c) }), c === home ? "Votre pays" : "")).join("");
+  const curIcon = cur === "all" ? MK_GLOBE : nationFlagHtml(cur === "league" ? home : cur);
+  const curName = cur === "all" ? "Monde entier" : cur === "league" ? "Mon championnat" : (nationName(cur) || cur);
+  return `<button type="button" class="pc-picker-btn" data-mk-origin-btn aria-haspopup="listbox" aria-expanded="false" aria-label="Pays du vendeur : ${escapeHtml(curName)}">${curIcon}<span class="pc-picker-name">${escapeHtml(curName)}</span>${PLANETE_CHEVRON}</button>` +
+    `<div class="pc-picker-menu hidden">` +
+    `<div class="pc-picker-filter">${PLANETE_SEARCH_ICON}<input type="search" id="marketOriginFilter" placeholder="Rechercher un pays…" autocomplete="off" spellcheck="false" aria-label="Rechercher un pays" aria-controls="marketOriginList"></div>` +
+    `<div class="pc-picker-list" id="marketOriginList" role="listbox" aria-label="Pays du vendeur">${opts}</div>` +
+    `<p class="pc-picker-empty" hidden>Aucun pays trouvé.</p></div>`;
+}
+function mkRenderOriginPicker() {
+  const box = document.getElementById("marketOriginBox");
+  if (!box || box.querySelector(".pc-picker-menu:not(.hidden)")) return; // menu ouvert : on ne le reconstruit pas
+  box.innerHTML = mkOriginPickerHtml();
+}
+function mkToggleOriginPicker() {
+  const box = document.getElementById("marketOriginBox");
+  const menu = box && box.querySelector(".pc-picker-menu");
+  if (!menu) return;
+  if (!menu.classList.contains("hidden")) { mkCloseOriginPicker(true); return; }
+  menu.classList.remove("hidden");
+  box.querySelector("[data-mk-origin-btn]").setAttribute("aria-expanded", "true");
+  const f = document.getElementById("marketOriginFilter");
+  if (f) f.value = "";
+  planeteFilterCountries(box, "");
+  // Écran tactile : pas de clavier qui surgit (comme Planète Hoop).
+  const touch = window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+  if (f && !touch) f.focus();
+}
+function mkCloseOriginPicker(focusBtn) {
+  const box = document.getElementById("marketOriginBox");
+  if (box) planeteClosePicker(box, focusBtn);
+}
+
+// Prix : échelle par paliers « ronds » (100, 150, 200, 250, 300, 400, 500,
+// 600, 750, 1 000 €…) pour pouvoir viser les petits prix comme les gros.
+const MK_PRICE_MANTISSAS = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5];
+function mkPriceSteps(maxPrice) {
+  const steps = [0];
+  for (let p = 100; p < 1e13; p *= 10) {
+    for (const m of MK_PRICE_MANTISSAS) { const v = Math.round(m * p); steps.push(v); if (v >= maxPrice) return steps; }
+  }
+  return steps;
+}
+// Bornes des barres d'après les annonces ouvertes.
+function mkRangeBounds() {
+  const open = mkOpenListings();
+  const ages = [];
+  let maxPrice = 0;
+  open.forEach(l => {
+    const p = league.playerById(l.playerId);
+    if (p) ages.push(p.age);
+    maxPrice = Math.max(maxPrice, minNextBidFor(l));
+  });
+  return {
+    age: ages.length ? [Math.min(...ages), Math.max(...ages)] : [16, 40],
+    priceSteps: mkPriceSteps(maxPrice),
+  };
+}
+// Une barre = deux positions entières [min, max] ; toVal/toIdx convertissent.
+function mkRangeSpec(key, b) {
+  if (key === "age") return { lo: "ageMin", hi: "ageMax", min: b.age[0], max: b.age[1], toVal: i => i, toIdx: v => v, fmt: v => String(v) };
+  if (key === "pot") return { lo: "potMin", hi: "potMax", min: 1, max: POTENTIAL_TIERS.length, toVal: i => i, toIdx: v => v, fmt: i => POTENTIAL_TIERS[i - 1].label, words: true };
+  const st = b.priceSteps;
+  return {
+    lo: "priceMin", hi: "priceMax", min: 0, max: st.length - 1, toVal: i => st[i],
+    toIdx: (v, end) => {
+      if (end === "min") { let i = 0; while (i + 1 < st.length && st[i + 1] <= v) i++; return i; }
+      const i = st.findIndex(x => x >= v); return i === -1 ? st.length - 1 : i;
+    },
+    fmt: i => formatMoneyCompact(st[i]),
+  };
+}
+function mkRangesActive() {
+  const u = marketUi;
+  return u.ageMin !== null || u.ageMax !== null || u.potMin !== null || u.potMax !== null || u.priceMin !== null || u.priceMax !== null || u.budget;
+}
+// Positions affichées : la borne de l'état, ou l'extrémité si pas de borne.
+function mkRangeIdx(sp) {
+  const lo = marketUi[sp.lo], hi = marketUi[sp.hi];
+  const iHi = hi === null ? sp.max : clamp(sp.toIdx(hi, "max"), sp.min, sp.max);
+  const iLo = Math.min(iHi, lo === null ? sp.min : clamp(sp.toIdx(lo, "min"), sp.min, sp.max));
+  return [iLo, iHi];
+}
+function mkRenderRange(key, bounds) {
+  const box = document.querySelector(`.mk-range[data-mk-range="${key}"]`);
+  if (!box) return;
+  const sp = mkRangeSpec(key, bounds);
+  const [inLo, inHi] = box.querySelectorAll(".mk-range-in");
+  const [iLo, iHi] = mkRangeIdx(sp);
+  [[inLo, iLo], [inHi, iHi]].forEach(([inp, v]) => {
+    if (inp.min !== String(sp.min)) inp.min = String(sp.min);
+    if (inp.max !== String(sp.max)) inp.max = String(sp.max);
+    if (inp.value !== String(v)) inp.value = String(v);
+    inp.setAttribute("aria-valuetext", mkTr(sp.fmt(v)));
+    inp.disabled = sp.min === sp.max;
+  });
+  // Les deux poignées collées à droite : la gauche passe dessus pour rester saisissable.
+  inLo.classList.toggle("top", iLo === iHi && iLo > (sp.min + sp.max) / 2);
+  const span = Math.max(1, sp.max - sp.min);
+  box.style.setProperty("--lo", `${((iLo - sp.min) / span * 100).toFixed(2)}%`);
+  box.style.setProperty("--hi", `${((iHi - sp.min) / span * 100).toFixed(2)}%`);
+  const val = box.querySelector(".mk-range-val");
+  const t = i => `<span>${escapeHtml(sp.fmt(i))}</span>`;
+  val.innerHTML = iLo === iHi ? t(iLo) : `${t(iLo)} - ${t(iHi)}`;
+  const ends = box.querySelectorAll(".mk-range-ends span");
+  ends[0].textContent = sp.fmt(sp.min);
+  ends[1].textContent = sp.fmt(sp.max);
+  const set = marketUi[sp.lo] !== null || marketUi[sp.hi] !== null;
+  box.classList.toggle("is-set", set);
+  box.querySelector(".mk-range-reset").disabled = !set;
+}
+let mkRangeTimer = null;
+function mkRangeInput(el) {
+  const key = el.dataset.mkRangeIn;
+  const box = el.closest(".mk-range");
+  const sp = mkRangeSpec(key, mkRangeBounds());
+  const [inLo, inHi] = box.querySelectorAll(".mk-range-in");
+  let iLo = Number(inLo.value), iHi = Number(inHi.value);
+  // Les poignées ne se croisent pas.
+  if (iLo > iHi) { if (el === inLo) { iLo = iHi; inLo.value = String(iLo); } else { iHi = iLo; inHi.value = String(iHi); } }
+  marketUi[sp.lo] = iLo <= sp.min ? null : sp.toVal(iLo);
+  marketUi[sp.hi] = iHi >= sp.max ? null : sp.toVal(iHi);
+  mkRenderRange(key, mkRangeBounds());
+  clearTimeout(mkRangeTimer);
+  mkRangeTimer = setTimeout(renderMarketListings, 120);
+}
+function mkResetRange(key) {
+  const sp = mkRangeSpec(key, mkRangeBounds());
+  marketUi[sp.lo] = null; marketUi[sp.hi] = null;
+  clearTimeout(mkRangeTimer);
+  renderMarketListings();
+}
+
 function renderMarketFilterControls() {
   const open = mkOpenListings();
   const posEl = document.getElementById("marketPos");
@@ -44770,6 +45023,11 @@ function renderMarketFilterControls() {
   const deal = document.getElementById("marketDealBtn");
   const hide = document.getElementById("marketHideMineBtn");
   if (deal) { deal.classList.toggle("on", marketUi.deal); deal.setAttribute("aria-pressed", String(marketUi.deal)); }
+  const budgetBtn = document.getElementById("marketBudgetBtn");
+  if (budgetBtn) { budgetBtn.classList.toggle("on", marketUi.budget); budgetBtn.setAttribute("aria-pressed", String(marketUi.budget)); }
+  mkRenderOriginPicker();
+  const bounds = mkRangeBounds();
+  ["age", "pot", "price"].forEach(k => mkRenderRange(k, bounds));
   if (hide) { hide.classList.toggle("on", marketUi.hideMine); hide.setAttribute("aria-pressed", String(marketUi.hideMine)); }
   const watchedBtn = document.getElementById("marketWatchedBtn");
   if (watchedBtn) {
@@ -44821,25 +45079,29 @@ function mkFilteredListings() {
   const budget = mkBudget();
   const crit = mkCritActive();
   const q = normalizeSearchTextSafe(u.q);
+  const origin = mkOriginValue();
   const rows = mkOpenListings().map(l => ({ l, player: league.playerById(l.playerId) })).filter(({ l, player }) => {
     if (!player) return false;
-    // Marché mondial : annonces d'un autre championnat (l.foreign).
-    if (u.origin === "league" && l.foreign) return false;
-    if (u.origin === "country" && l.foreign && l.foreign.country !== (league.country || "fr")) return false;
+    // Marché mondial : annonces d'un autre championnat (l.foreign) ; pays au
+    // choix (retour utilisateur 2026-10-01).
+    if (origin === "league" && l.foreign) return false;
+    if (origin !== "all" && origin !== "league" && mkListingCountry(l) !== origin) return false;
     if (u.pos !== "all" && player.position !== u.pos) return false;
     if (q) {
       const seller = league.teams[l.sellerIdx];
       if (!normalizeSearchTextSafe(player.name).includes(q) && !(seller && normalizeSearchTextSafe(seller.name).includes(q))) return false;
     }
-    if (u.age === "u21" && player.age > 21) return false;
-    if (u.age === "22-25" && (player.age < 22 || player.age > 25)) return false;
-    if (u.age === "26-29" && (player.age < 26 || player.age > 29)) return false;
-    if (u.age === "30+" && player.age < 30) return false;
-    // Seuil par PALIER (jamais le chiffre exact, voir POTENTIAL_TIERS).
-    if (u.pot && potentialTierIndex(player.potential) < potentialTierIndex(u.pot)) return false;
+    if (u.ageMin !== null && player.age < u.ageMin) return false;
+    if (u.ageMax !== null && player.age > u.ageMax) return false;
+    // Fourchette de PALIERS (jamais le chiffre exact, voir POTENTIAL_TIERS).
+    const tier = potentialTierIndex(player.potential);
+    if (u.potMin !== null && tier < u.potMin) return false;
+    if (u.potMax !== null && tier > u.potMax) return false;
     const mine = l.sellerIdx === myTeamIndex;
-    if (u.price === "budget" && !mine && minNextBidFor(l) > budget - mkCommitted(l.id)) return false;
-    if (u.price !== "0" && u.price !== "budget" && minNextBidFor(l) > Number(u.price)) return false;
+    const next = minNextBidFor(l);
+    if (u.budget && !mine && next > budget - mkCommitted(l.id)) return false;
+    if (u.priceMin !== null && next < u.priceMin) return false;
+    if (u.priceMax !== null && next > u.priceMax) return false;
     if (u.deal && mkVerdict(l, player)[0] !== "good") return false;
     if (u.hideMine && mine) return false;
     if (u.watched && !(teamA.isWatchingPlayer && teamA.isWatchingPlayer(player.id))) return false;
@@ -44944,7 +45206,7 @@ function mkListingCardHtml(l, player, now) {
           `<div class="mk-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>` +
             (fa ? `<span class="mk-badge mk-badge-fa" title="Contrat terminé : il signe librement, la mise est une prime de signature.">Agent libre</span>` : "") +
             (lastSeason ? `<span class="mk-badge mk-badge-contract" title="Dernière saison de son contrat actuel.">Fin de contrat</span>` : "") +
-            `${isMine ? "" : mkWatchBtnHtml(player)}</div>` +
+            `</div>` +
           `<div class="market-card-name mk-pname">${nationFlagHtml(player.nationality, "nat-flag--name")}${fa && !l.foreign ? `<span data-no-i18n>${escapeHtml(player.name)}</span>` : playerLinkHtml(l.sellerIdx, player.id, player.name)}</div>` +
           `<div class="market-card-meta mk-chips">` +
             `<span class="mk-chip">${player.age} ans</span>` +
@@ -44974,6 +45236,8 @@ function mkListingCardHtml(l, player, now) {
     `<div class="mk-lst-foot">` +
       `<button type="button" class="mk-linkbtn" data-mk-toggle="${l.id}" aria-expanded="${open}" aria-controls="marketAttrs_${l.id}">${open ? "Masquer" : "Voir"} les ${ATTRS.length} caractéristiques ${MK_CHEV}</button>` +
       `<div class="acts">` +
+        // « Suivre » dans le pied de carte, à côté de « Comparer » (retour utilisateur 2026-10-01 : pas assez visible).
+        (isMine ? "" : mkWatchBtnHtml(player)) +
         (isMine || (fa && !l.foreign) ? "" : `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-compare="${l.id}">Comparer</button>`) +
         (fa && !l.foreign ? "" : `<button type="button" class="mk-btn mk-btn--accent mk-btn--sm" data-player-team="${l.sellerIdx}" data-player-id="${player.id}">Fiche joueur</button>`) +
       `</div>` +
@@ -44990,7 +45254,7 @@ function renderMarketListings() {
   const total = mkOpenListings().length;
   const rows = mkFilteredListings();
   const u = marketUi;
-  const active = u.pos !== "all" || u.q || u.origin !== "all" || u.age !== "all" || u.pot || u.price !== "0" || u.deal || u.hideMine || u.watched || mkCritActive().length > 0;
+  const active = u.pos !== "all" || u.q || u.origin !== "all" || mkRangesActive() || u.deal || u.hideMine || u.watched || mkCritActive().length > 0;
   const count = document.getElementById("marketResCount");
   if (count) {
     // Alertes (Premium) : enregistrer les filtres actuels (poste, âge,
@@ -45015,9 +45279,11 @@ function renderMarketListings() {
 }
 
 function mkResetFilters() {
-  Object.assign(marketUi, { pos: "all", q: "", origin: "all", age: "all", pot: 0, price: "0", deal: false, hideMine: false, watched: false, crit: [], critOpen: false });
+  Object.assign(marketUi, { pos: "all", q: "", origin: "all", ageMin: null, ageMax: null, potMin: null, potMax: null, priceMin: null, priceMax: null, budget: false,
+    deal: false, hideMine: false, watched: false, crit: [], critOpen: false });
+  clearTimeout(mkRangeTimer);
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-  set("marketSearch", ""); set("marketOrigin", "all"); set("marketAge", "all"); set("marketPot", "0"); set("marketPrice", "0");
+  set("marketSearch", "");
 }
 
 let marketFeedbackTimer = null;
@@ -45107,6 +45373,14 @@ document.getElementById("marcheSection").addEventListener("click", (e) => {
   if (d.mkGoto) { mkGotoListing(Number(d.mkGoto)); return; }
   if (d.mkPos) { marketUi.pos = d.mkPos; renderMarketListings(); return; }
   if (t.id === "marketDealBtn") { marketUi.deal = !marketUi.deal; renderMarketListings(); return; }
+  if (t.id === "marketBudgetBtn") { marketUi.budget = !marketUi.budget; renderMarketListings(); return; }
+  if (d.mkOriginBtn !== undefined) { mkToggleOriginPicker(); return; }
+  if (d.mkOrigin) {
+    marketUi.origin = d.mkOrigin; mkCloseOriginPicker(false); renderMarketListings();
+    const b = document.querySelector("[data-mk-origin-btn]"); if (b) b.focus();
+    return;
+  }
+  if (d.mkRangeReset) { mkResetRange(d.mkRangeReset); return; }
   if (t.id === "marketHideMineBtn") { marketUi.hideMine = !marketUi.hideMine; renderMarketListings(); return; }
   if (t.id === "marketWatchedBtn") {
     if (!teamIsPremium(teamA)) { TAB_HANDLERS.premium(); return; }
@@ -45150,10 +45424,6 @@ document.getElementById("marcheSection").addEventListener("click", (e) => {
 document.getElementById("marcheSection").addEventListener("change", (e) => {
   const el = e.target;
   if (el.id === "marketSort") { marketUi.sort = el.value; renderMarketListings(); }
-  else if (el.id === "marketAge") { marketUi.age = el.value; renderMarketListings(); }
-  else if (el.id === "marketOrigin") { marketUi.origin = el.value; renderMarketListings(); }
-  else if (el.id === "marketPot") { marketUi.pot = Number(el.value) || 0; renderMarketListings(); }
-  else if (el.id === "marketPrice") { marketUi.price = el.value; renderMarketListings(); }
   else if (el.dataset && el.dataset.mkCritKey !== undefined) {
     marketUi.crit[Number(el.dataset.mkCritKey)].key = el.value;
     renderMarketCritPanel(); renderMarketListings();
@@ -45163,8 +45433,28 @@ document.getElementById("marcheSection").addEventListener("input", (e) => {
   const el = e.target;
   const cl = v => Math.max(0, Math.min(99, Math.round(Number(v) || 0)));
   if (el.id === "marketSearch") { marketUi.q = el.value; renderMarketListings(); }
+  else if (el.id === "marketOriginFilter") planeteFilterCountries(document.getElementById("marketOriginBox"), el.value);
+  else if (el.dataset && el.dataset.mkRangeIn) mkRangeInput(el);
   else if (el.dataset && el.dataset.mkCritMin !== undefined) { marketUi.crit[Number(el.dataset.mkCritMin)].min = cl(el.value); renderMarketListings(); }
   else if (el.dataset && el.dataset.mkCritMax !== undefined) { marketUi.crit[Number(el.dataset.mkCritMax)].max = el.value === "" ? 99 : cl(el.value); renderMarketListings(); }
+});
+// Liste des pays (retour utilisateur 2026-10-01) : ↑/↓, Entrée, Échap, comme Planète Hoop.
+document.getElementById("marcheSection").addEventListener("keydown", (e) => {
+  const box = document.getElementById("marketOriginBox");
+  const menu = e.target.closest && e.target.closest("#marketOriginBox .pc-picker-menu");
+  if (menu && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter")) {
+    const vis = [...menu.querySelectorAll(".pc-picker-opt")].filter(o => !o.hidden);
+    const cur = menu.querySelector(".pc-picker-opt.pc-kbd");
+    e.preventDefault();
+    if (e.key === "Enter") { const o = cur && !cur.hidden ? cur : vis[0]; if (o) o.click(); return; }
+    const i = vis.indexOf(cur);
+    planeteSetKbd(box, e.key === "ArrowDown" ? vis[Math.min(vis.length - 1, i + 1)] : vis[Math.max(0, i - 1)]);
+    return;
+  }
+  if (e.key === "Escape" && box && box.querySelector(".pc-picker-menu:not(.hidden)")) mkCloseOriginPicker(!!(e.target.closest && e.target.closest("#marketOriginBox")));
+});
+document.addEventListener("click", (e) => {
+  if (!(e.target.closest && e.target.closest("#marketOriginBox"))) mkCloseOriginPicker(false);
 });
 
 // ---------------------------------------------------------------------

@@ -73,6 +73,9 @@ check(/checkMarketAlerts\(now\)/.test(fs.readFileSync("server/autoSim.js", "utf-
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "marche").click();
     await flush(dom);
     check(!!doc.querySelector('.mk-watch[data-tab="premium"]'), "gratuit : « Suivre » mène à l'onglet Premium");
+    // Pied de carte, juste à côté de « Comparer » (retour utilisateur 2026-10-01).
+    const w0 = doc.querySelector(".mk-watch");
+    check(w0.closest(".mk-lst-foot .acts") && w0.classList.contains("mk-btn") && w0.nextElementSibling && w0.nextElementSibling.dataset.mkCompare !== undefined && !doc.querySelector(".mk-id-top .mk-watch"), "« Suivre » : bouton du pied de carte, à côté de « Comparer »");
     win.eval("teamA.setPaying(true); renderMarcheSection();");
     const btn = doc.querySelector(".mk-watch[data-mk-watch]");
     btn.click();

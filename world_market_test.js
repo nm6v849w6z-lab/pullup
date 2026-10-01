@@ -71,11 +71,17 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (await c
   const card = doc.getElementById(`marketCard_${-en.gid}`);
   assert.ok(card, "carte de l'annonce américaine");
   assert.ok(card.textContent.includes(seller.name) && /Division I/.test(card.querySelector(".mk-chip-origin").textContent), "vendeur et championnat sur la carte");
-  // Filtre « Mon championnat » : l'annonce disparaît ; « Monde entier » : elle revient.
-  const origin = doc.getElementById("marketOrigin");
-  origin.value = "league"; origin.dispatchEvent(new win.Event("change", { bubbles: true }));
+  // Filtre « Mon championnat » : l'annonce disparaît ; pays « États-Unis »
+  // (choix libre, retour utilisateur 2026-10-01) : elle seule ; « Monde entier » : elle revient.
+  const pick = v => { doc.querySelector("[data-mk-origin-btn]").click(); doc.querySelector(`[data-mk-origin="${v}"]`).click(); };
+  pick("league");
   assert.ok(!doc.getElementById(`marketCard_${-en.gid}`), "masquée avec « Mon championnat »");
-  origin.value = "all"; origin.dispatchEvent(new win.Event("change", { bubbles: true }));
+  pick("us");
+  assert.ok(doc.getElementById(`marketCard_${-en.gid}`) && [...doc.querySelectorAll("#marketListings .mk-lst")].every(c => /Division/.test((c.querySelector(".mk-chip-origin") || {}).textContent || "")), "pays « us » : seules les annonces américaines");
+  assert.ok(/États-Unis/.test(doc.querySelector("[data-mk-origin-btn]").textContent), "le bouton affiche le pays choisi");
+  pick("fr");
+  assert.ok(!doc.getElementById(`marketCard_${-en.gid}`), "pays « fr » : l'annonce américaine est masquée");
+  pick("all");
   const minBid = Engine.minNextBidFor(listing);
   doc.getElementById(`bid_${-en.gid}`).value = String(minBid);
   doc.querySelector(`[data-bid-listing="${-en.gid}"]`).click();

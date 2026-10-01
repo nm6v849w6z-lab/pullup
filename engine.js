@@ -15039,46 +15039,86 @@ const PLAYER_PROGRESS_MAX = 30;
 // ---------------------------------------------------------------------
 const MARKET_WATCHLIST_MAX = 30;
 const MARKET_ALERTS_MAX = 3;
-const MARKET_ALERT_AGES = ["all", "u21", "22-25", "26-29", "30+"];
+// Filtres en FOURCHETTES (retour utilisateur 2026-10-01 : « pour l'âge, le
+// potentiel et le prix, mets un système de barres ») : ageMin/ageMax (ans),
+// potMin/potMax (index de palier 1-10, jamais le potentiel exact), priceMin/
+// priceMax (prochaine enchère, €), budget (bool) ; null = pas de borne.
+// Les anciennes alertes (age "u21"/"22-25"/"26-29"/"30+", pot = seuil de
+// potentiel, price "budget"/montant) sont converties ici.
+const MARKET_ALERT_LEGACY_AGES = { u21: [null, 21], "22-25": [22, 25], "26-29": [26, 29], "30+": [30, null] };
 const MARKET_ALERT_ENDING_MS = 3600 * 1000;
+function marketAlertRanges(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const num = (v, lo, hi) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v))) ? null : clamp(Math.round(Number(v)), lo, hi);
+  let ageMin = num(r.ageMin, 0, 99), ageMax = num(r.ageMax, 0, 99);
+  if (ageMin === null && ageMax === null && MARKET_ALERT_LEGACY_AGES[r.age]) [ageMin, ageMax] = MARKET_ALERT_LEGACY_AGES[r.age];
+  const nTiers = POTENTIAL_TIERS.length;
+  let potMin = num(r.potMin, 1, nTiers), potMax = num(r.potMax, 1, nTiers);
+  if (potMin === null && potMax === null && Number(r.pot) > 0) potMin = potentialTierIndex(clamp(Math.round(Number(r.pot)), 0, 99));
+  let priceMin = num(r.priceMin, 0, 1e12), priceMax = num(r.priceMax, 0, 1e12);
+  if (priceMin === null && priceMax === null && r.price !== "budget" && Number(r.price) > 0) priceMax = Math.round(Number(r.price));
+  const budget = r.budget === true || r.price === "budget";
+  if (potMin === 1) potMin = null;
+  if (potMax === nTiers) potMax = null;
+  if (priceMin === 0) priceMin = null;
+  const swap = (a, b) => (a !== null && b !== null && a > b) ? [b, a] : [a, b];
+  [ageMin, ageMax] = swap(ageMin, ageMax);
+  [potMin, potMax] = swap(potMin, potMax);
+  [priceMin, priceMax] = swap(priceMin, priceMax);
+  return { ageMin, ageMax, potMin, potMax, priceMin, priceMax, budget };
+}
 function sanitizeMarketAlert(raw) {
   if (!raw || typeof raw !== "object") return null;
   const pos = raw.pos && POSITIONS.includes(raw.pos) ? raw.pos : "all";
-  const age = MARKET_ALERT_AGES.includes(raw.age) ? raw.age : "all";
-  const pot = Number.isFinite(Number(raw.pot)) ? clamp(Math.round(Number(raw.pot)), 0, 99) : 0;
-  const price = raw.price === "budget" ? "budget" : (Number(raw.price) > 0 ? String(Math.round(Number(raw.price))) : "0");
+  const rg = marketAlertRanges(raw);
   const crit = (Array.isArray(raw.crit) ? raw.crit : [])
     .filter(c => c && ATTRS.includes(c.key))
     .slice(0, 5)
     .map(c => ({ key: c.key, min: clamp(Math.round(Number(c.min) || 0), 0, 99), max: clamp(Math.round(Number(c.max) || 99), 0, 99) }));
-  if (pos === "all" && age === "all" && !pot && price === "0" && !crit.length) return null; // aucune condition : trop large
-  return { pos, age, pot, price, crit };
+  const ranged = Object.entries(rg).some(([k, v]) => k === "budget" ? v : v !== null);
+  if (pos === "all" && !ranged && !crit.length) return null; // aucune condition : trop large
+  return { pos, ...rg, crit };
 }
 function marketAlertMatches(alert, player, listing, budget = Infinity) {
   if (!alert || !player || !listing) return false;
   if (alert.pos && alert.pos !== "all" && player.position !== alert.pos) return false;
-  if (alert.age === "u21" && player.age > 21) return false;
-  if (alert.age === "22-25" && (player.age < 22 || player.age > 25)) return false;
-  if (alert.age === "26-29" && (player.age < 26 || player.age > 29)) return false;
-  if (alert.age === "30+" && player.age < 30) return false;
-  if (alert.pot && potentialTierIndex(player.potential) < potentialTierIndex(alert.pot)) return false;
+  const rg = marketAlertRanges(alert);
+  if (rg.ageMin !== null && player.age < rg.ageMin) return false;
+  if (rg.ageMax !== null && player.age > rg.ageMax) return false;
+  // Par PALIER (jamais le chiffre exact, voir POTENTIAL_TIERS).
+  const tier = potentialTierIndex(player.potential);
+  if (rg.potMin !== null && tier < rg.potMin) return false;
+  if (rg.potMax !== null && tier > rg.potMax) return false;
   const minBid = minNextBidFor(listing);
-  if (alert.price === "budget" && minBid > budget) return false;
-  if (alert.price && alert.price !== "0" && alert.price !== "budget" && minBid > Number(alert.price)) return false;
+  if (rg.budget && minBid > budget) return false;
+  if (rg.priceMin !== null && minBid < rg.priceMin) return false;
+  if (rg.priceMax !== null && minBid > rg.priceMax) return false;
   for (const c of alert.crit || []) { const v = player.attrs[c.key]; if (v < c.min || v > c.max) return false; }
   return true;
 }
-function marketAlertLabel(alert) {
-  if (!alert) return "";
-  const ages = { u21: "21 ans et moins", "22-25": "22–25 ans", "26-29": "26–29 ans", "30+": "30 ans et plus" };
+// Morceaux du libellé (affichés séparément côté page, pour la traduction).
+function marketAlertParts(alert) {
+  if (!alert) return [];
+  const rg = marketAlertRanges(alert);
+  const eur = n => `${Number(n).toLocaleString("fr-FR")} €`;
+  const tierLabel = i => POTENTIAL_TIERS[i - 1].label;
   const parts = [];
   if (alert.pos && alert.pos !== "all") parts.push(alert.pos);
-  if (ages[alert.age]) parts.push(ages[alert.age]);
-  if (alert.pot) parts.push(`${potentialTierLabel(alert.pot)} et plus`);
-  if (alert.price === "budget") parts.push("dans mon budget");
-  else if (alert.price && alert.price !== "0") parts.push(`jusqu'à ${Number(alert.price).toLocaleString("fr-FR")} €`);
+  if (rg.ageMin !== null && rg.ageMax !== null) parts.push(rg.ageMin === rg.ageMax ? `${rg.ageMin} ans` : `${rg.ageMin}–${rg.ageMax} ans`);
+  else if (rg.ageMin !== null) parts.push(`${rg.ageMin} ans et plus`);
+  else if (rg.ageMax !== null) parts.push(`${rg.ageMax} ans et moins`);
+  if (rg.potMin !== null && rg.potMax !== null) parts.push(rg.potMin === rg.potMax ? `Potentiel : ${tierLabel(rg.potMin)}` : `Potentiel : ${tierLabel(rg.potMin)} à ${tierLabel(rg.potMax)}`);
+  else if (rg.potMin !== null) parts.push(`Potentiel : ${tierLabel(rg.potMin)} et plus`);
+  else if (rg.potMax !== null) parts.push(`Potentiel : ${tierLabel(rg.potMax)} et moins`);
+  if (rg.budget) parts.push("dans mon budget");
+  if (rg.priceMin !== null && rg.priceMax !== null) parts.push(`Prix : ${eur(rg.priceMin)} à ${eur(rg.priceMax)}`);
+  else if (rg.priceMax !== null) parts.push(`Prix : jusqu'à ${eur(rg.priceMax)}`);
+  else if (rg.priceMin !== null) parts.push(`Prix : à partir de ${eur(rg.priceMin)}`);
   (alert.crit || []).forEach(c => parts.push(`${TRAINING_LABELS[c.key] || c.key} ${c.min}–${c.max}`));
-  return parts.join(" · ");
+  return parts;
+}
+function marketAlertLabel(alert) {
+  return marketAlertParts(alert).join(" · ");
 }
 
 function cloneTrainingHistory(list) {
@@ -18151,7 +18191,7 @@ return {
   // Connaissance tactique (voir le grand commentaire au-dessus de
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
-  MARKET_WATCHLIST_MAX, MARKET_ALERTS_MAX, sanitizeMarketAlert, marketAlertMatches, marketAlertLabel,
+  MARKET_WATCHLIST_MAX, MARKET_ALERTS_MAX, sanitizeMarketAlert, marketAlertMatches, marketAlertLabel, marketAlertParts, marketAlertRanges,
   TRAINING_HISTORY_MAX, TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
   FRIENDLY_TACTICAL_ROLE_WEIGHTS, TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
