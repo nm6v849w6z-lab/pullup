@@ -12439,7 +12439,8 @@ const ArenaGen = (function () {
   /**
    * options.teamColors : [couleur principale, couleur secondaire]
    * options.attendance : remplissage des tribunes entre 0 et 1
-   * options.name       : nom du club (façade et rond central)
+   * options.name       : nom du club (initiale au rond central ; façade à défaut d'arenaName)
+   * options.arenaName  : nom de la salle, écrit sur la façade
    * options.aspect     : format du cadre, largeur / hauteur (défaut 1.9)
    * options.seed       : variante du décor (arbres, voitures)
    * options.mood       : 'dusk' (soir de match, par défaut) ou 'day'
@@ -12453,6 +12454,18 @@ const ArenaGen = (function () {
     const [main, second] = options.teamColors || ['#1d4fa8', '#ffffff'];
     const attendance = Math.max(0, Math.min(1, options.attendance ?? 0));
     const name = options.name ? String(options.name).toUpperCase().slice(0, 16) : '';
+    // Façade (retour utilisateur 2026-10-01 : « sur la salle, il faudrait
+    // afficher le nom de la salle et pas le nom de l'équipe ») : nom de la
+    // salle (options.arenaName, voir teamArenaName) ; le rond central garde
+    // l'initiale du club. Un nom long réduit la taille du texte plutôt que
+    // d'être tassé.
+    const facadeName = options.arenaName ? String(options.arenaName).toUpperCase().slice(0, 30) : name;
+    const facadeText = (zTop, color) => {
+      const maxW = gxFacade * 1.7;
+      const size = Math.max(0.7, Math.min(Math.min(2.2, 1.3 + H * 0.06), maxW / (facadeName.length * 0.62)));
+      return textOnFaceY(0, D / 2 + 0.05, zTop, facadeName, size, color, maxW);
+    };
+    let gxFacade = 0;
     // Sponsor de la salle (retour communauté 2026-09, "pancarte salle") :
     // grand panneau sur le mur latéral, sous le bandeau vitré.
     const sponsor = options.sponsor ? String(options.sponsor).toUpperCase().slice(0, 28) : '';
@@ -12832,7 +12845,8 @@ const ArenaGen = (function () {
       flat([[-gx + 10, D / 2, g0], [-gx + 12, D / 2, g0], [-gx + 18, D / 2, g1], [-gx + 16, D / 2, g1]], 'rgba(255,255,255,0.1)');
     for (let x = -gx + 2; x < gx; x += 2) s += line([[x, D / 2, g0], [x, D / 2, g1]], '#2c3a46', 0.4);
     for (let z = g0 + 2.4; z < g1; z += 2.4) s += line([[-gx, D / 2, z], [gx, D / 2, z]], '#2c3a46', 0.4);
-    if (name) s += textOnFaceY(0, D / 2 + 0.05, g1 - 0.4, name, Math.min(2.2, 1.3 + H * 0.06), '#ffffff', gx * 1.7);
+    gxFacade = gx;
+    if (facadeName) s += facadeText(g1 - 0.4, '#ffffff');
     // bandeau aux couleurs du club et couronnement
     s += flat(faceY(-W / 2, W / 2, D / 2, H - 0.7, H - 0.1), main) + flat(faceX(W / 2, -D / 2, D / 2, H - 0.7, H - 0.1), shade(main, -22));
     s += poly(rect(W / 2 - ring, W / 2, -D / 2, D / 2, H), roof, 0.6) + poly(rect(-W / 2, W / 2 - ring, D / 2 - ring, D / 2, H), roof, 0.6) +
@@ -12882,7 +12896,8 @@ const ArenaGen = (function () {
       // projecteurs de toiture plus lumineux
       s += spots(spotsBack).replace(/opacity="0.22"/g, 'opacity="0.5"') + spots(spotsFront).replace(/opacity="0.22"/g, 'opacity="0.5"');
       // enseigne rétroéclairée
-      if (name) s += textOnFaceY(0, D / 2 + 0.05, g1 - 0.4, name, Math.min(2.2, 1.3 + H * 0.06), '#fff3d0', gx * 1.7);
+      gxFacade = gx;
+      if (facadeName) s += facadeText(g1 - 0.4, '#fff3d0');
       // bandeau du club lumineux
       s += flat(faceY(-W / 2, W / 2, D / 2, H - 0.7, H - 0.1), shade(main, 40)) + flat(faceX(W / 2, -D / 2, D / 2, H - 0.7, H - 0.1), shade(main, 10));
       // feux des voitures
@@ -47316,7 +47331,7 @@ function renderPersoArena() {
   // couleurs du club, de jour) pour montrer ce que le Premium permet.
   const preview = premium ? cur : { main: null, second: null, facade: "brique", roof: "club", mood: "day" };
   const svg = ArenaGen.generateArena(arenaVisualCapacity(info.capacity), arenaGenStyleOptions(teamA, normalizeArenaStyle(preview) || null, {
-    attendance: 0.8, name: teamA.name, sponsor: sponsorNameForSlot(teamA, "salle"), billboard: sponsorNameForSlot(teamA, "panneau") || "", aspect: 1.9, seed: 11,
+    attendance: 0.8, name: teamA.name, arenaName: teamArenaName(teamA), sponsor: sponsorNameForSlot(teamA, "salle"), billboard: sponsorNameForSlot(teamA, "panneau") || "", aspect: 1.9, seed: 11,
     sponsorStyle: sponsorArtStyle(sponsorNameForSlot(teamA, "salle")), billboardStyle: sponsorArtStyle(sponsorNameForSlot(teamA, "panneau")),
     ...(premium && salleCourtDraft ? { courtStyle: { wood: COURT_WOODS[salleCourtDraft.wood] ? salleCourtDraft.wood : "nuit", paint: salleCourtDraft.paint && JERSEY_COLORS[salleCourtDraft.paint] ? salleCourtDraft.paint : null } } : {}),
   })).replace('<svg viewBox=', '<svg aria-hidden="true" viewBox=');
@@ -47437,6 +47452,7 @@ function renderSalleHero(info, stats) {
   const arenaSvg = ArenaGen.generateArena(arenaVisualCapacity(info.capacity), arenaGenStyleOptions(teamA, arenaStyleFor(teamA), {
     attendance: stats.avgRate != null ? stats.avgRate : projectedRate,
     name: teamA.name,
+    arenaName: teamArenaName(teamA),
     sponsor: sponsorNameForSlot(teamA, "salle"),
     billboard: sponsorNameForSlot(teamA, "panneau") || "",
     sponsorStyle: sponsorArtStyle(sponsorNameForSlot(teamA, "salle")),
