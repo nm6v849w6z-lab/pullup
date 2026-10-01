@@ -2,9 +2,11 @@
 // diffusion en direct (retour utilisateur, 2026-09 : "maintenant qu'on a des
 // logos (meme pour les joueurs non payant) ce serait pas mal si le logo
 // apparaissait au milieu du terrain [...] logo de l'équipe qui recoit
-// forcement") — voir #liveCourtHomeLogo, liveCourtHomeLogoSvg() et son
-// câblage dans enterLiveMatch (juste après resetCourtView) dans
-// moteurbasket3.html. teamLogoHtml() existant (utilisé ailleurs — tableau
+// forcement") — voir liveCourtHomeLogoSvg() et hmLiveDress().courtLogo dans
+// moteurbasket3.html : depuis le retrait de l'ancienne vue du direct
+// (2026-10-01, ancien terrain #liveCourtView/#liveCourtHomeLogo), le logo
+// est dessiné au centre de la carte des tirs de la vue live (assets/live/,
+// terrain 940×500, rond central en 470,250), qui reçoit ce SVG tel quel. teamLogoHtml() existant (utilisé ailleurs — tableau
 // de bord, fiche club) ne convenait pas telle quelle DANS le <svg> du
 // terrain (un <img> HTML n'est pas un enfant direct valide d'un <svg>) :
 // liveCourtHomeLogoSvg() en est la variante SVG-native, couvrant les deux
@@ -41,8 +43,13 @@ dom = await openGame(html, baseUrl, (window) => patchDateNow(window, () => clock
 let doc = dom.window.document;
 let win = dom.window;
 
-const courtWrap = doc.getElementById("liveCourtWrap");
-if (courtWrap.classList.contains("hidden")) throw new Error("❌ (setup) La vue de terrain devrait être visible pendant un match normal.");
+// Logo transmis à la vue live (jsdom n'exécute pas le module ES : on lit
+// l'état que l'adaptateur lui passe, voir hmLiveBuildState().courtLogo).
+function courtLogoGroup(w) {
+  const holder = w.document.createElementNS("http://www.w3.org/2000/svg", "g");
+  holder.innerHTML = w.eval("hmLiveDress().courtLogo");
+  return holder;
+}
 
 const savedMidway = readRawSave(savePath);
 const liveMatch = savedMidway.league.liveMatch;
@@ -55,12 +62,11 @@ const homeTeamName = savedMidway.league.teams[homeIdx].teamName;
 const awayTeamName = savedMidway.league.teams[liveMatch.isHome ? liveMatch.opponentIdx : myTeamIndex].teamName;
 console.log(`Match en cours — reçoit : "${homeTeamName}" (isHome=${liveMatch.isHome}), visiteur : "${awayTeamName}".`);
 
-const logoGroup = doc.getElementById("liveCourtHomeLogo");
-if (!logoGroup) throw new Error("❌ #liveCourtHomeLogo introuvable dans le terrain SVG.");
+const logoGroup = courtLogoGroup(win);
 if (logoGroup.children.length === 0) {
-  throw new Error("❌ #liveCourtHomeLogo devrait être rempli pendant la diffusion (logo de l'équipe qui reçoit).");
+  throw new Error("❌ le logo du terrain (courtLogo) devrait être rempli pendant la diffusion (logo de l'équipe qui reçoit).");
 }
-console.log("✅ #liveCourtHomeLogo est bien rempli pendant la diffusion.");
+console.log("✅ Le logo du terrain de la vue live est bien rempli pendant la diffusion.");
 
 // L'équipe reçoit étant gratuite par défaut (nouvelle partie), on attend le
 // logo TYPE (un <svg> imbriqué, avec aria-label portant son nom), pas
@@ -78,12 +84,13 @@ if (ariaLabel.includes(awayTeamName) && awayTeamName !== homeTeamName) {
 }
 console.log(`✅ Le logo type au centre du terrain correspond bien à l'équipe qui reçoit ("${homeTeamName}"), jamais à la visiteuse.`);
 
-// Positionné bien au centre du terrain (rond central : cx=500, cy=220).
+// Positionné bien au centre du terrain (rond central de la vue live :
+// cx=470, cy=250, rayon 52 → translate(418,198)).
 const g = logoGroup.querySelector("g");
 if (!g) throw new Error("❌ Le logo devrait être positionné via un <g transform=\"translate(...)\">.");
 const transform = g.getAttribute("transform") || "";
-if (!/translate\(4[68]\d,1[68]\d\)/.test(transform)) {
-  throw new Error(`❌ Le logo devrait être centré sur le rond central (cx=500,cy=220), transform obtenu : "${transform}".`);
+if (!/translate\(418,198\)/.test(transform)) {
+  throw new Error(`❌ Le logo devrait être centré sur le rond central (cx=470,cy=250), transform obtenu : "${transform}".`);
 }
 console.log("✅ Le logo est bien centré sur le rond central du terrain.");
 
@@ -121,7 +128,7 @@ dom = await openGame(html, baseUrl, (window) => patchDateNow(window, () => clock
 doc = dom.window.document;
 win = dom.window;
 
-const logoGroup2 = doc.getElementById("liveCourtHomeLogo");
+const logoGroup2 = courtLogoGroup(win);
 const imageEl2 = logoGroup2.querySelector("image");
 const nestedSvg2 = logoGroup2.querySelector("svg");
 if (!imageEl2) throw new Error("❌ Une fois l'équipe qui reçoit passée payante avec un logo personnalisé, une <image> SVG devrait apparaître au centre du terrain.");

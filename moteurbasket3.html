@@ -1268,73 +1268,6 @@
      banderole est étroite, max-width:420px ci-dessus). */
   .hoop-show-pause-btn{display:block; margin:8px auto 0; font-size:12.5px; padding:6px 12px;}
 
-  /* ---- Vue 2D du terrain (live) ----
-     Préfixe "live-" pour ne jamais entrer en collision avec .court-marker
-     (marqueurs de poste de l'éditeur de feuille de match, voir plus bas
-     .lineup-court/.court-marker — un nom de classe différent mais un
-     terrain différent, sans rapport avec cette vue de diffusion en direct).
-     Vrai terrain dessiné en SVG (raquette, ligne à 3 points, cercle central,
-     ligne médiane — voir le viewBox "0 0 1000 440" dans le HTML et
-     randomPointForZone/addCourtMark plus bas) façon "shot chart" (retour
-     utilisateur : "il faut dessiner le terrain de basket aussi (raquette,
-     3 pts...)" + "regarde comment ça marche sur buzzerbeater" — un rond par
-     tir réussi, une croix par tir raté, à l'endroit approximatif du tir),
-     plutôt qu'un simple marqueur qui se déplaçait tout seul (v1
-     précédente). Fond dégradé sombre (pas de fond vert/bois générique —
-     retour utilisateur : "le terrain est pas beau, reprend le style
-     buzzerbeater en plus moderne") reprenant les teintes déjà utilisées
-     ailleurs dans l'appli (--bg/--panel), avec une légère teinte de la
-     couleur de chaque équipe dans SA raquette, plutôt qu'une texture façon
-     parquet — plus cohérent avec le reste de l'interface, entièrement en
-     mode sombre. Pas d'étiquette de nom d'équipe superposée sur le terrain
-     (retour utilisateur : "enlève [les noms d'équipe] sur le terrain") : le
-     tableau de bord juste au-dessus suffit à identifier qui est qui, la
-     couleur des symboles (voir .lcv-mark plus bas) suffit sur le terrain
-     lui-même. Convention FIXE et documentée (pas de changement de camp à la
-     mi-temps, simplicité assumée pour cette v1) : l'équipe A (toujours le
-     club du joueur sur l'écran de diffusion en direct, voir
-     liveMatchScoreAB, ET toujours affichée à GAUCHE du tableau de bord)
-     attaque toujours le panier de GAUCHE, l'équipe B celui de DROITE — retour
-     utilisateur : "il faudrait que les shoots soient du même côté que le
-     score [...], moins compliqué à comprendre comme ça" (le côté des tirs
-     doit correspondre au côté du score, pas l'inverse). Chaque symbole
-     affiche, au survol, qui a pris le tir
-     (retour utilisateur : "sur buzzerbeater, quand on passe la souris sur
-     la croix ou rond, on voit qui a pris le tir") — voir .lcv-mark-hit
-     (zone de survol agrandie) et #liveCourtTooltip plus bas. */
-  .live-court-wrap{position:relative; margin-bottom:18px;}
-  .live-court{
-    position:relative;
-    background: radial-gradient(120% 140% at 50% 0%, #2b3550 0%, #1b2133 55%, #151a2a 100%);
-    box-shadow: inset 0 0 60px rgba(0,0,0,.35);
-    border:1px solid var(--line); border-radius:14px; overflow:hidden;
-    aspect-ratio:1000/440; max-width:100%;
-  }
-  .live-court svg{position:absolute; inset:0; width:100%; height:100%; display:block;}
-  .lcv-line{fill:none; stroke:rgba(255,255,255,.28); stroke-width:2.5; stroke-linecap:round;}
-  .lcv-line.bold{stroke:rgba(255,255,255,.42); stroke-width:3;}
-  .lcv-fill-a{fill:rgba(51,180,161,.07);}
-  .lcv-fill-b{fill:rgba(226,105,79,.07);}
-  .lcv-mark-hit{fill:transparent; cursor:pointer;} /* zone de survol agrandie, invisible */
-  .lcv-mark-o{fill:none; stroke-width:4;}
-  .lcv-mark-x{stroke-width:4; stroke-linecap:round;}
-  .lcv-mark.teamA .lcv-mark-o, .lcv-mark.teamA .lcv-mark-x{stroke:#4fd6c1;}
-  .lcv-mark.teamB .lcv-mark-o, .lcv-mark.teamB .lcv-mark-x{stroke:#ff8264;}
-  .lcv-mark:hover .lcv-mark-o, .lcv-mark:hover .lcv-mark-x{stroke-width:5.5;}
-  .live-court-tooltip{
-    position:fixed; z-index:50; pointer-events:none; display:none;
-    background:var(--panel); border:1px solid var(--line); border-radius:9px;
-    padding:7px 11px; font-size:12px; color:var(--ink); white-space:nowrap;
-    box-shadow:0 10px 26px rgba(0,0,0,.45);
-    transform:translate(-50%,-125%);
-  }
-  .live-court-tooltip.visible{display:block;}
-  .live-court-tooltip .lct-name{font-weight:700;}
-  .live-court-tooltip .lct-meta{color:var(--ink-dim); font-size:11px; margin-top:2px;}
-  .live-court-tooltip.teamA{border-left:3px solid var(--teamA);}
-  .live-court-tooltip.teamB{border-left:3px solid var(--teamB);}
-  .live-court-note{text-align:center; font-size:11px; color:var(--ink-faint); margin:6px 0 0;}
-
   .feed{
     background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
     padding:6px 0; max-height:280px; overflow-y:auto; margin-bottom:18px;
@@ -1710,7 +1643,7 @@
   .ncup-lvl{display:inline-block; font-size:11px; font-weight:600; color:var(--ink-faint); margin-left:4px; white-space:nowrap;}
   .ncup-hc{display:inline-block; font-size:11px; font-weight:700; color:var(--amber); background:rgba(240,162,60,.14); border-radius:5px; padding:1px 5px; margin-left:4px;}
   .scup-card{margin:0 0 14px;}
-  .live-handicap-note{text-align:center; font-size:12.5px; color:var(--amber); margin:4px 0 0;}
+  .live-handicap-note{text-align:center; font-size:12.5px; color:var(--amber); margin:0 0 10px;}
   .cp-empty{text-align:center; color:var(--ink-faint); padding:22px !important;}
   .cp-more{margin:-4px 0 14px;}
 
@@ -5341,7 +5274,9 @@
   @media(max-width:760px){ .wk-grid{grid-template-columns:1fr; gap:14px;} .wk-row{grid-template-columns:minmax(0,1fr) auto 78px;} }
   .eco-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px 24px; display:flex; flex-direction:column; gap:14px; min-width:0; box-sizing:border-box;}
   .eco-hero{display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:20px; margin-bottom:20px;}
-  .eco-cards{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; margin-bottom:30px;}
+  .eco-cards{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:20px; margin-bottom:30px;}
+  @media(max-width:1400px){ .eco-cards{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  .eco-sub-note{margin:0; font-size:13px; line-height:1.45; color:var(--ink-dim);}
   /* Retour utilisateur (2026-09-25, capture prod) : "fais quelque chose sur les
      polices, ça rend très moche" — la Barlow Condensed (chargée en prod)
      écrasait les chiffres ; même police système que le reste du jeu, en
@@ -6658,23 +6593,30 @@
     .eff-kpi-sep{width:auto; height:1px;}
     .eff-title h2{font-size:28px;}
   }
-  /* Nouvelle vue « Match en direct » (assets/live/, voir hmLiveReset) :
-     #hmLiveRoot n'apparaît qu'une fois le module chargé (.hm-live-on) ;
-     l'ancienne vue reste dans le DOM, mise à jour comme avant, mais masquée. */
-  #hmLiveRoot{display:none;}
-  #liveSection.hm-live-on #hmLiveRoot{display:block; margin-top:14px;}
-  #liveSection.hm-live-on > .board,
-  #liveSection.hm-live-on #pauseBanner,
-  #liveSection.hm-live-on #liveCourtWrap,
-  #liveSection.hm-live-on #feed,
-  #liveSection.hm-live-on #liveBoxscoreSection{display:none !important;}
-  /* Retour utilisateur (2026-09-26, capture du direct) : « enlève le bouton
-     retour » et « enlève le score dans la barre quand on est sur cette
-     page, ça fait doublon » — le bouton reste dans le DOM (tests, forfait
-     sans nouvelle vue), le mini-bandeau du topbar reste sur les autres
-     pages. */
-  #liveSection.hm-live-on .playback-controls{display:none;}
-  body:has(#liveSection.hm-live-on:not(.hidden)) #topbarLiveStrip{display:none !important;}
+  /* Vue « Match en direct » (assets/live/, voir hmLiveReset) : SEULE vue
+     affichée depuis le 2026-10-01 (retour utilisateur : « quand je charge
+     un live, il y a encore l'ancien format de live au début [...] on peut
+     désormais enlever l'ancien »). #liveLegacyState regroupe les anciens
+     nœuds (score, chrono, fil, box score en direct, banderole de pause...)
+     encore écrits par applyEvent & co. : simples supports d'état (lus par
+     la nouvelle vue — #clockDisplay — et par les tests JSDOM), JAMAIS
+     affichés. Tant que le module n'est pas chargé, #hmLiveRoot montre un
+     squelette (.hm-live-skel), puis un message si le chargement échoue. */
+  #liveLegacyState{display:none !important;}
+  #hmLiveRoot{display:block; margin-top:14px;}
+  .hm-live-skel{max-width:1180px; margin:0 auto; display:grid; gap:16px;}
+  .hm-live-skel-board{height:230px; border-radius:22px; background:#121B2E; border:1px solid #22304A; display:flex; align-items:center; justify-content:center; color:#93A1B8; font-size:13px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase;}
+  .hm-live-skel-row{display:grid; grid-template-columns:1.4fr 1fr; gap:16px;}
+  .hm-live-skel-row > div{height:320px; border-radius:18px; background:#0F1728; border:1px solid #1F2A40;}
+  .hm-live-skel-board, .hm-live-skel-row > div{animation:hmSkelPulse 1.4s ease-in-out infinite;}
+  @keyframes hmSkelPulse{50%{opacity:.6}}
+  @media(max-width:768px){ .hm-live-skel-row{grid-template-columns:1fr;} .hm-live-skel-board{height:180px;} }
+  .hm-live-error{max-width:1180px; margin:0 auto; padding:28px 22px; border-radius:22px; background:#121B2E; border:1px solid #22304A; color:#C4CEDD; text-align:center;}
+  .hm-live-error b{display:block; color:#E8EDF5; font-size:16px; margin-bottom:6px;}
+  /* Retour utilisateur (2026-09-26, capture du direct) : « enlève le score
+     dans la barre quand on est sur cette page, ça fait doublon » — le
+     mini-bandeau du topbar reste sur les autres pages. */
+  body:has(#liveSection:not(.hidden)) #topbarLiveStrip{display:none !important;}
   /* =====================================================================
      THÈME CLAIR (2026-09-26, retour utilisateur : « travaille sur une
      version claire du jeu », choix dans Paramètres à côté d'« Identité du
@@ -7259,6 +7201,8 @@
   .lp-actions .cal-next-btn{display:inline-block; width:auto; margin-top:0; padding:11px 22px;}
   .lp-btn:disabled{opacity:.5; cursor:not-allowed;}
   .lp-danger{margin-left:auto; color:var(--danger); border-color:var(--danger);}
+  .lp-actions-page{justify-content:center; margin-top:22px;}
+  .lp-actions-page .lp-danger{margin-left:0;}
   .lp-hint{font-size:12.5px; color:var(--ink-dim); max-width:420px; line-height:1.45;}
   .lp-premium-note{background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.45); color:var(--ink); border-radius:12px; padding:12px 16px; font-size:13.5px; margin-bottom:16px;}
   .lp-rules{margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:7px; font-size:13.5px; color:var(--ink-dim);}
@@ -7416,6 +7360,14 @@
      à spécificité égale ; defer pour la même raison que showPlayer.js. -->
 <link rel="stylesheet" href="assets/mobile/mobile.css">
 <script src="assets/mobile/mobile.js" defer></script>
+<!-- Vue « Match en direct » (assets/live/, voir hmLiveLoadModule) : style et
+     module chargés dès l'ouverture du jeu, pour que le direct s'affiche
+     tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
+     format apparaissait le temps de charger le module). Version = celle de
+     HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20260926-11">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20260926-11">
+<link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
      que showPlayer.js. -->
@@ -7743,118 +7695,58 @@
   </div>
 
   <div id="liveSection" class="hidden">
-    <!-- Tableau de score : vit désormais UNIQUEMENT dans l'onglet Live (voir
-         le nouvel onglet "Live" dans la sidebar, updateLiveTabVisibility)
-         — retour utilisateur (2026-09) : "le bandeau du match ne doit pas
-         apparaitre sur tous les onglets [...] uniquement sur l'onglet live".
-         Auparavant affiché en permanence au-dessus de TOUTES les pages
-         (Effectif, Entraînement...) car placé hors du système de pages
-         PAGE_IDS ; maintenant qu'il vit dans #liveSection, il n'apparaît
-         plus que quand cette page est active — aucun changement JS requis
-         ailleurs (enterLiveMatch/applyEvent/finishPlayback continuent de
-         cibler les mêmes ids #scoreA/#scoreB/#clockDisplay/etc.). -->
-    <div class="board">
-      <div class="board-top">
-        <span id="liveDot" class="live-dot off"></span>
-        <span id="boardStatus" class="board-status">Match non verrouillé</span>
+    <!-- Ancienne vue du direct (tableau de score, fil, box score en direct,
+         banderole de pause) : retirée de l'écran le 2026-10-01 (retour
+         utilisateur : « on peut désormais enlever l'ancien »). Ces nœuds
+         restent dans le DOM, toujours masqués (#liveLegacyState, voir CSS),
+         comme simples supports d'état : applyEvent/finishPlayback/
+         renderLiveBoxScore... y écrivent toujours, la nouvelle vue y lit le
+         chrono (#clockDisplay), syncTopbarLiveStrip y recopie scores/noms,
+         et les tests JSDOM (qui n'exécutent pas les modules ES) les lisent. -->
+    <div id="liveLegacyState" hidden aria-hidden="true">
+      <div class="board">
+        <div class="board-top">
+          <span id="liveDot" class="live-dot off"></span>
+          <span id="boardStatus" class="board-status">Match non verrouillé</span>
+        </div>
+        <div class="score-row">
+          <div class="team-block a">
+            <div class="team-name-row"><div class="team-name" id="nameA">Lyon</div><span class="poss-dot off" id="possDotA" title="A la balle"></span></div>
+            <div class="team-score" id="scoreA">0</div>
+          </div>
+          <div class="mid-col">
+            <div class="clock" id="clockDisplay">10:00</div>
+            <div class="quarter-label" id="quarterLabel">Avant-match</div>
+            <span class="shot-clock-badge off" id="shotClockDisplay">24</span>
+          </div>
+          <div class="team-block b">
+            <div class="team-name-row"><div class="team-name" id="nameB">Paris</div><span class="poss-dot off" id="possDotB" title="A la balle"></span></div>
+            <div class="team-score" id="scoreB">0</div>
+          </div>
+        </div>
+        <div class="quarter-bars" id="quarterBars"></div>
       </div>
-      <div class="score-row">
-        <div class="team-block a">
-          <div class="team-name-row"><div class="team-name" id="nameA">Lyon</div><span class="poss-dot off" id="possDotA" title="A la balle"></span></div>
-          <div class="team-score" id="scoreA">0</div>
-        </div>
-        <div class="mid-col">
-          <div class="clock" id="clockDisplay">10:00</div>
-          <div class="quarter-label" id="quarterLabel">Avant-match</div>
-          <span class="shot-clock-badge off" id="shotClockDisplay">24</span>
-        </div>
-        <div class="team-block b">
-          <div class="team-name-row"><div class="team-name" id="nameB">Paris</div><span class="poss-dot off" id="possDotB" title="A la balle"></span></div>
-          <div class="team-score" id="scoreB">0</div>
-        </div>
-      </div>
-      <div class="quarter-bars" id="quarterBars"></div>
-    </div>
-    <div class="section">
       <div class="playback-controls">
         <button class="secondary" id="newMatchBtn">← Retour</button>
       </div>
       <div class="pause-banner hidden" id="pauseBanner"></div>
+      <div class="feed" id="feed"></div>
+      <div class="section" id="liveBoxscoreSection">
+        <h3 class="training-config-title">Statistiques en direct</h3>
+        <div class="boxscore-toggle">
+          <button type="button" class="live-bs-tab active" data-live-team="A" id="liveBsTabA">Lyon</button>
+          <button type="button" class="live-bs-tab" data-live-team="B" id="liveBsTabB">Paris</button>
+        </div>
+        <div id="liveBoxscoreHolder"></div>
+      </div>
+
+    </div>
+    <div class="section">
       <p class="locked-note" id="attendanceNote"></p>
       <p class="locked-note" id="moraleNote"></p>
-      <!-- Nouvelle vue live (assets/live/live-view.js), remplie par hmLiveReset. -->
-      <div id="hmLiveRoot"></div>
-      <div class="live-court-wrap" id="liveCourtWrap">
-        <div class="live-court" id="liveCourtView">
-          <svg viewBox="0 0 1000 440" aria-hidden="true">
-            <rect class="lcv-line bold" x="20" y="20" width="960" height="400" rx="6"/>
-            <line class="lcv-line" x1="500" y1="20" x2="500" y2="420"/>
-            <circle class="lcv-line" cx="500" cy="220" r="45"/>
-            <!-- Logo de l'équipe qui REÇOIT, au milieu du terrain (retour
-                 utilisateur, 2026-09 : "maintenant qu'on a des logos (meme
-                 pour les joueurs non payant) ce serait pas mal si le logo
-                 apparaissait au milieu du terrain [...] logo de l'équipe qui
-                 recoit forcement") : rempli dynamiquement dans enterLiveMatch
-                 via liveCourtHomeLogoSvg(), teamA si liveMatch.isHome sinon
-                 teamB (mon équipe n'est pas toujours à domicile — voir
-                 liveMatchScoreAB juste au-dessus pour le même calcul). Vide
-                 par défaut (rien avant l'entrée sur un direct). -->
-            <g id="liveCourtHomeLogo"></g>
-
-            <rect class="lcv-fill-a" x="20" y="140" width="190" height="160"/>
-            <rect class="lcv-line" x="20" y="140" width="190" height="160"/>
-            <circle class="lcv-line" cx="210" cy="220" r="60"/>
-            <path class="lcv-line" d="M50,180 A40,40 0 0,1 50,260"/>
-            <circle class="lcv-line bold" cx="50" cy="220" r="6"/>
-            <line class="lcv-line bold" x1="40" y1="205" x2="40" y2="235"/>
-            <path class="lcv-line" d="M20,60 L208.2,60 A225,225 0 0,1 208.2,380 L20,380"/>
-
-            <rect class="lcv-fill-b" x="790" y="140" width="190" height="160"/>
-            <rect class="lcv-line" x="790" y="140" width="190" height="160"/>
-            <circle class="lcv-line" cx="790" cy="220" r="60"/>
-            <path class="lcv-line" d="M950,180 A40,40 0 0,0 950,260"/>
-            <circle class="lcv-line bold" cx="950" cy="220" r="6"/>
-            <line class="lcv-line bold" x1="960" y1="205" x2="960" y2="235"/>
-            <path class="lcv-line" d="M980,60 L791.8,60 A225,225 0 0,0 791.8,380 L980,380"/>
-
-            <g id="liveCourtMarks"></g>
-          </svg>
-        </div>
-        <div class="live-court-tooltip" id="liveCourtTooltip"></div>
-      </div>
-      <div class="feed" id="feed"></div>
-    </div>
-
-    <!-- Box score EN DIRECT (retour utilisateur, 2026-09 : "il n'y a pas de
-         box score en direct. il faut l'ajouter") : distinct de
-         #boxscoreSection ci-dessous (feuille de stats FINALE, affichée
-         seulement à la fin du direct/en cas de forfait, voir finishPlayback/
-         enterLiveMatch) — celle-ci se construit événement par événement
-         PENDANT la diffusion (voir applyLiveBoxScoreEvent/renderLiveBoxScore
-         plus bas), pour ne jamais montrer par avance des statistiques du
-         match qui ne sont pas encore "arrivées" à l'écran (le résultat
-         complet, boxScoreA/B, est déjà connu côté client dès l'entrée sur
-         l'écran Live — voir enterLiveMatch — puisque tout le match est
-         simulé d'un coup côté serveur puis rejoué avec des délais ; l'afficher
-         tel quel pendant la diffusion spoilerait le match). Colonnes
-         réduites par rapport à la feuille finale (pas de +/- : n'aurait pas
-         de sens à calculer en direct, voir MatchEngine.applyPlusMinusForPoints
-         côté moteur qui l'attribue déjà pendant la simulation complète) mais
-         MIN comprise depuis le 2026-09-24 (retour Discord d'Ariane, relayé
-         par l'utilisateur : "tous les joueurs [...] minutes jouées") — voir
-         le grand commentaire au-dessus de `let liveBoxScore` plus bas pour
-         le détail (toute la feuille de match pré-remplie dès le coup
-         d'envoi, minutes reconstituées depuis les événements de changement
-         de joueur, ligne de total). Masquée pendant un forfait (rien à
-         diffuser) et à la fin du direct (finishPlayback affiche alors la
-         feuille finale, complète, ci-dessous). -->
-    <div class="section" id="liveBoxscoreSection">
-      <h3 class="training-config-title">Statistiques en direct</h3>
-      <div class="boxscore-toggle">
-        <button type="button" class="live-bs-tab active" data-live-team="A" id="liveBsTabA">Lyon</button>
-        <button type="button" class="live-bs-tab" data-live-team="B" id="liveBsTabB">Paris</button>
-      </div>
-      <div id="liveBoxscoreHolder"></div>
+      <!-- Vue live (assets/live/live-view.js), remplie par hmLiveReset ;
+           squelette affiché tant que le module n'est pas chargé. -->
+      <div id="hmLiveRoot"><div class="hm-live-skel" aria-busy="true"><div class="hm-live-skel-board">Chargement du direct…</div><div class="hm-live-skel-row"><div></div><div></div></div></div></div>
     </div>
 
     <div class="section" id="boxscoreSection" style="display:none">
@@ -8195,6 +8087,14 @@
           <span class="eco-label">Droits TV</span>
           <div class="eco-num lg" id="economieTvRights"></div>
           <div id="economieTvSub" style="display:flex; flex-direction:column; gap:12px;"></div>
+        </section>
+        <!-- Produits dérivés (2026-10-01) : distincts de la Boutique, voir
+             merchandiseWeeklyRevenue (la part liée à la Renommée n'est
+             jamais détaillée, décision utilisateur). -->
+        <section class="eco-card">
+          <span class="eco-label">Produits dérivés</span>
+          <div class="eco-num lg" id="economieMerch"></div>
+          <div id="economieMerchSub" style="display:flex; flex-direction:column; gap:12px;"></div>
         </section>
       </div>
       <div class="eco-history-head">
@@ -10193,14 +10093,43 @@ const DEFICIT_GRACE_WEEKS = 2;
 // salariale (même celle, modeste, d'un effectif tout juste débutant — voir
 // generateStartingRoster) : un complément de revenu, pas de quoi financer un
 // effectif à soi seul.
+// Revalorisés le 2026-10-01 (retour utilisateur, comparaison avec
+// BuzzerBeater : « ça manque de revenu […] il faudrait revaloriser les
+// contrats tv », puis « il faut être plus généreux ») : ×4 en Division I,
+// courbe plus plate en bas de la pyramide.
 const TV_RIGHTS_WEEKLY_BY_LEVEL = {
-  1: 25000,
-  2: 12500,
-  3: 7500,
-  4: 5000,
-  5: 3750,
-  6: 2500,
+  1: 100000,
+  2: 75000,
+  3: 55000,
+  4: 40000,
+  5: 30000,
+  6: 22000,
 };
+// Ancien barème des droits TV, gardé comme simple repère d'échelle des
+// offres de sponsors (sponsorDivisionFactor) : la revalorisation des droits
+// TV ne gonfle pas les sponsors.
+const SPONSOR_DIVISION_SCALE = { 1: 25000, 2: 12500, 3: 7500, 4: 5000, 5: 3750, 6: 2500 };
+
+// Produits dérivés (même retour : « mettre en place les produits dérivés
+// (la boutique des supporters est un truc à part […], on va garder ce
+// concept aussi) ») : recette hebdomadaire selon la division, modulée par
+// l'humeur des supporters (×0,7 en colère → ×1,2 en feu) et, discrètement,
+// par la Renommée du club (×0,8 → ×1,25, effet jamais affiché).
+const MERCH_WEEKLY_BY_LEVEL = {
+  1: 40000,
+  2: 30000,
+  3: 22000,
+  4: 16000,
+  5: 12000,
+  6: 9000,
+};
+function merchMoraleMult(morale) { return 0.7 + 0.5 * clamp(typeof morale === "number" ? morale : 50, 0, 100) / 100; }
+function merchPrestigeMult(prestige) { return typeof prestige === "number" ? 0.8 + 0.45 * clamp(prestige, 0, 100) / 100 : 1; }
+function merchandiseWeeklyRevenue(team, divisionLevel) {
+  const base = MERCH_WEEKLY_BY_LEVEL[divisionLevel];
+  if (!base || !team) return 0;
+  return Math.round(base * merchMoraleMult(team.fanMorale) * merchPrestigeMult(team.prestige) / 100) * 100;
+}
 
 // ---------------------------------------------------------------------
 // Marché des transferts (retour utilisateur : "un vrai marché des transferts
@@ -10875,10 +10804,12 @@ const FINANCE_CATEGORIES = [
   { key: "tickets", dir: "in", label: "Billetterie", re: /^Billetterie/ },
   { key: "tv", dir: "in", label: "Droits TV", re: /^Droits TV/ },
   { key: "sponsors", dir: "in", label: "Sponsors", re: /^(Sponsor |Prime de victoire |Bonus d'objectif )/ },
+  { key: "merch", dir: "in", label: "Produits dérivés", re: /^Produits dérivés/ },
   { key: "shop", dir: "in", label: "Boutique des supporters", re: /^Recettes boutique/ },
   { key: "tvstation", dir: "in", label: "Station TV", re: /^Recettes station TV/ },
   { key: "prizes", dir: "in", label: "Primes (coupe, montée…)", re: /^Prime de (Coupe|Supercoupe|montée)/ },
   { key: "sales", dir: "in", label: "Ventes de joueurs", re: /^Vente de / },
+  { key: "subsidy", dir: "in", label: "Subvention de démarrage", re: /^Subvention de démarrage/ },
   { key: "other_in", dir: "in", label: "Autres recettes", re: null },
   { key: "wages", dir: "out", label: "Salaires des joueurs", re: /^Salaires des joueurs/ },
   { key: "staff", dir: "out", label: "Salaires du staff", re: /^Salaire du staff/ },
@@ -16738,6 +16669,11 @@ class Team {
       this.recordTransaction(`Droits TV (${divisionInfo(divisionLevel).name})`, tvRightsRevenue);
     }
 
+    // Produits dérivés (maillots, écharpes… : voir MERCH_WEEKLY_BY_LEVEL),
+    // à part de la Boutique des supporters (investissement du club).
+    const merchRevenue = divisionLevel ? merchandiseWeeklyRevenue(this, divisionLevel) : 0;
+    if (merchRevenue > 0) this.recordTransaction(`Produits dérivés (${divisionInfo(divisionLevel).name})`, merchRevenue);
+
     // Sponsors : fixe de chaque contrat actif, même cadence que les droits
     // TV (voir collectSponsorIncome ; la prime par victoire et le bonus
     // d'objectif tombent ailleurs : applySponsorWinPrimes /
@@ -16898,7 +16834,7 @@ class Team {
 
     const result = {
       players: report, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid, doctorSalaryPaid, physioSalaryPaid, assistantCoachSalaryPaid,
-      playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, tvStationRevenue, moraleDrift, salaryChanges,
+      playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, merchRevenue, tvStationRevenue, moraleDrift, salaryChanges,
       fanMorale: this.fanMorale, budget: this.budget, trainerMult,
       deficitAlert, forcedFireSale, deficitWeeks: this.deficitWeeks,
     };
@@ -18409,8 +18345,8 @@ const SPONSOR_HISTORY_MAX = 20;
 const SEASON_OBJECTIVE_KEYS_ORDERED = ["maintien", "milieu-tableau", "playoffs", "finale", "titre"];
 
 function sponsorDivisionFactor(divisionLevel) {
-  const top = TV_RIGHTS_WEEKLY_BY_LEVEL[1] || 25000;
-  const mine = TV_RIGHTS_WEEKLY_BY_LEVEL[divisionLevel] || Math.round(top * 0.3);
+  const top = SPONSOR_DIVISION_SCALE[1];
+  const mine = SPONSOR_DIVISION_SCALE[divisionLevel] || Math.round(top * 0.3);
   return Math.max(0.3, mine / top);
 }
 function sponsorReputationOf(team) {
@@ -32115,7 +32051,7 @@ function teamLogoHtml(team, size) {
 }
 
 // Variante SVG-native de teamLogoHtml, pour l'incruster DANS le terrain du
-// live (voir #liveCourtHomeLogo, enterLiveMatch) — retour utilisateur,
+// live (carte des tirs de la vue live, voir hmLiveDress) — retour utilisateur,
 // 2026-09 : "maintenant qu'on a des logos (meme pour les joueurs non
 // payant) ce serait pas mal si le logo apparaissait au milieu du terrain
 // [...] logo de l'équipe qui recoit forcement". teamLogoHtml() ne convient
@@ -32133,9 +32069,9 @@ function liveCourtHomeLogoSvg(team, cx, cy, r) {
   const x = cx - r, y = cy - r;
   if (teamIsPremium(team) && team.customLogoDataUrl) {
     return `<g transform="translate(${x},${y})">` +
-      `<clipPath id="liveCourtLogoClip"><circle cx="${r}" cy="${r}" r="${r}"/></clipPath>` +
+      `<clipPath id="hmLiveCourtLogoClip"><circle cx="${r}" cy="${r}" r="${r}"/></clipPath>` +
       `<image href="${team.customLogoDataUrl}" x="0" y="0" width="${size}" height="${size}" ` +
-      `preserveAspectRatio="xMidYMid slice" clip-path="url(#liveCourtLogoClip)">` +
+      `preserveAspectRatio="xMidYMid slice" clip-path="url(#hmLiveCourtLogoClip)">` +
       `<title>Logo de ${escapeHtml(team.name)}</title></image></g>`;
   }
   return `<g transform="translate(${x},${y})">${defaultTeamLogoSvg(team, size)}</g>`;
@@ -37386,31 +37322,10 @@ function clearLiveTimers() {
 // renderBoxScore), et celui des événements eux-mêmes (le serveur simule
 // TOUJOURS new MatchEngine(teamA=club du joueur, teamB=adversaire), quel que
 // soit domicile/extérieur — voir computeLiveMatch).
-// --- Vue 2D du terrain (live) — "shot chart" façon BuzzerBeater ---
-// Retour utilisateur (2026-09) : "on voit même pas les tirs pris, il faut
-// mettre une croix quand c'est raté, un rond quand c'est marqué" + "il faut
-// dessiner le terrain de basket aussi (raquette, 3 pts...)" — remplace la
-// v1 (un seul marqueur qui se déplaçait tout seul) par un vrai terrain SVG
-// (voir le <svg viewBox="0 0 1000 440"> dans le HTML : raquette, cercle de
-// lancers francs, ligne à 3 points, rond central) sur lequel s'accumule UN
-// symbole par tir tenté pendant tout le match (rond = réussi, croix = raté,
-// couleur = équipe), exactement comme le "Action-par-action" de
-// BuzzerBeater. Coordonnées dans le même repère que le viewBox : chaque
-// équipe attaque toujours le même panier sur cet écran (A à gauche, B à
-// droite — même côté que leur score respectif dans le tableau de bord,
-// voir commentaire CSS .live-court et liveMatchScoreAB ci-dessus). Position
-// volontairement approximative dans la bonne zone
-// (un peu de hasard autour d'un point plausible) : le moteur ne modélise
-// aucune coordonnée de tir réelle, seulement un type de zone catégoriel
-// ("inside"/"mid"/"three") — voir engine.js:playPossession.
-const SVG_NS = "http://www.w3.org/2000/svg";
-function svgEl(tag, attrs) {
-  const el = document.createElementNS(SVG_NS, tag);
-  Object.keys(attrs).forEach(k => el.setAttribute(k, attrs[k]));
-  return el;
-}
-
-// PRNG déterministe (mulberry32), SEEDÉ par un entier stable : BUG corrigé
+// PRNG déterministe (mulberry32), SEEDÉ par un entier stable — sert
+// aujourd'hui à hmLiveShotSpot (carte des tirs de la vue live ; l'ancien
+// terrain SVG #liveCourtView, son randomPointForZone et ses marques ont été
+// retirés le 2026-10-01 avec l'ancienne vue). Historique : BUG corrigé
 // (retour utilisateur, 2026-09 : "quand je clique sur le bouton live, à
 // gauche ou à droite, ça change l'emplacement des shoots [...] ce n'est pas
 // possible qu'il se passe ça"). Racine du problème : randomPointForZone
@@ -37432,123 +37347,6 @@ function seededRandom(seed) {
     r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
     return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-// Tire un point plausible pour la zone donnée, dans le repère du terrain
-// (panier de l'équipe A à x=50, panier de l'équipe B à x=950 — retour
-// utilisateur : "il faudrait que les shoots soient du même côté que le
-// score, [...] moins compliqué à comprendre comme ça" : l'équipe A est
-// toujours affichée à GAUCHE du tableau de bord, donc ses tirs doivent
-// apparaître à GAUCHE du terrain aussi, cf. plus haut). `seed` (voir
-// addCourtMark, qui passe ev.airAt : un entier STRICTEMENT CROISSANT et
-// donc unique par événement au sein d'un même match, voir le curseur dans
-// schedulePlayback côté server/liveMatch.js) rend ce tirage déterministe
-// (voir seededRandom ci-dessus), plus de `rand` (Math.random(), moteur
-// embarqué) ici ; `clamp` reste utilisé pour borner le résultat final.
-function randomPointForZone(team, zone, seed) {
-  const rnd = seededRandom(seed);
-  const randSeeded = (min, max) => min + rnd() * (max - min);
-  const basketX = team === "A" ? 50 : 950;
-  const dir = team === "A" ? 1 : -1; // sens vers le centre du terrain depuis le panier
-  if (zone === "inside") {
-    return { x: basketX + dir * randSeeded(15, 150), y: randSeeded(150, 290) };
-  }
-  const isThree = zone === "three";
-  const angleDeg = isThree ? randSeeded(-62, 62) : randSeeded(-65, 65);
-  const radius = isThree ? randSeeded(230, 270) : randSeeded(120, 205);
-  const angle = angleDeg * Math.PI / 180;
-  const x = basketX + dir * Math.cos(angle) * radius;
-  const y = 220 + Math.sin(angle) * radius;
-  return { x: clamp(x, 30, 970), y: clamp(y, 30, 410) };
-}
-
-// Libellé lisible d'une zone de tir, utilisé par l'infobulle ci-dessous et
-// le <title> SVG (fallback accessible/natif si l'infobulle custom ne
-// s'affiche pas, ex. lecteur d'écran).
-function zoneLabel(zone) {
-  return zone === "inside" ? "Intérieur" : zone === "mid" ? "Mi-distance" : "3 points";
-}
-
-// Ajoute un symbole au terrain pour CE tir précis (un par événement de type
-// "shot"/"rebound" porteur d'une zone — voir engine.js:log/playPossession ;
-// les autres types d'événements, fautes/remplacements/lancers francs...,
-// n'ajoutent rien). Jamais retiré en cours de match : le terrain accumule
-// tous les tirs déjà tentés, comme un vrai "shot chart".
-//
-// Chaque marque est un groupe <g class="lcv-mark teamA|teamB"> contenant :
-// - un cercle invisible plus large ("hit circle") pour une cible de survol
-//   plus confortable que le rond/croix visuel lui-même (petit sur un terrain
-//   à l'échelle) ;
-// - la forme visible (rond pour un tir réussi, croix pour un tir raté) ;
-// - un <title> SVG (infobulle native de secours) ;
-// et écoute mouseenter/mousemove/mouseleave pour piloter l'infobulle custom
-// #liveCourtTooltip (voir showCourtMarkTooltip/positionCourtMarkTooltip/
-// hideCourtMarkTooltip ci-dessous) — demande utilisateur : "sur buzzerbeater,
-// quand on passe la souris sur la croix ou rond, on voit qui a pris le tir".
-function addCourtMark(ev) {
-  if (!ev || (ev.type !== "shot" && ev.type !== "rebound") || !ev.zone) return;
-  const layer = document.getElementById("liveCourtMarks");
-  if (!layer) return;
-  // ev.airAt : voir le commentaire de randomPointForZone (seed déterministe,
-  // corrige le tir qui se déplaçait à chaque réaffichage de l'écran Live).
-  const p = randomPointForZone(ev.team, ev.zone, Math.round(ev.airAt));
-  const teamCls = ev.team === "B" ? "teamB" : "teamA";
-  const g = svgEl("g", { class: "lcv-mark " + teamCls });
-  g.appendChild(svgEl("circle", { cx: p.x, cy: p.y, r: 12, class: "lcv-mark-hit" }));
-  if (ev.made) {
-    g.appendChild(svgEl("circle", { cx: p.x, cy: p.y, r: 7, class: "lcv-mark-o" }));
-  } else {
-    g.appendChild(svgEl("line", { x1: p.x - 6, y1: p.y - 6, x2: p.x + 6, y2: p.y + 6, class: "lcv-mark-x" }));
-    g.appendChild(svgEl("line", { x1: p.x - 6, y1: p.y + 6, x2: p.x + 6, y2: p.y - 6, class: "lcv-mark-x" }));
-  }
-  const title = document.createElementNS(SVG_NS, "title");
-  title.textContent = `${ev.shooter || "Joueur inconnu"} : ${zoneLabel(ev.zone)}, ${ev.made ? "réussi" : "raté"}`;
-  g.appendChild(title);
-  g.addEventListener("mouseenter", () => showCourtMarkTooltip(ev));
-  g.addEventListener("mousemove", positionCourtMarkTooltip);
-  g.addEventListener("mouseleave", hideCourtMarkTooltip);
-  layer.appendChild(g);
-}
-
-// Affiche/positionne/masque l'infobulle custom #liveCourtTooltip (div en
-// position:fixed, cf. CSS .live-court-tooltip plus haut) au survol d'une
-// marque du terrain — bordure colorée selon l'équipe du tireur.
-function showCourtMarkTooltip(ev) {
-  const tip = document.getElementById("liveCourtTooltip");
-  if (!tip) return;
-  const isB = ev.team === "B";
-  tip.innerHTML = `<div class="lct-name">${escapeHtml(ev.shooter || "Joueur inconnu")}</div><div class="lct-meta">${escapeHtml(zoneLabel(ev.zone))} · ${ev.made ? "Réussi" : "Raté"}</div>`;
-  tip.classList.toggle("teamB", isB);
-  tip.classList.toggle("teamA", !isB);
-  tip.classList.add("visible");
-}
-function positionCourtMarkTooltip(e) {
-  const tip = document.getElementById("liveCourtTooltip");
-  if (!tip || !tip.classList.contains("visible")) return;
-  tip.style.left = e.clientX + "px";
-  tip.style.top = e.clientY + "px";
-}
-function hideCourtMarkTooltip() {
-  const tip = document.getElementById("liveCourtTooltip");
-  if (tip) tip.classList.remove("visible");
-}
-
-function clearCourtMarks() {
-  const layer = document.getElementById("liveCourtMarks");
-  if (layer) layer.innerHTML = "";
-  hideCourtMarkTooltip();
-}
-
-// Appelé à chaque entrée sur l'écran de direct (enterLiveMatch) : vide le
-// terrain des tirs d'un éventuel match précédent. Les noms des deux équipes
-// ne sont plus affichés sur le terrain lui-même (retirés à la demande de
-// l'utilisateur, "enleve paris et nice sur le terrain" — le tableau de score
-// au-dessus suffit à les identifier, et la couleur des marques suffit sur le
-// terrain).
-function resetCourtView() {
-  const wrap = document.getElementById("liveCourtWrap");
-  if (wrap) wrap.classList.remove("hidden");
-  clearCourtMarks();
 }
 
 function liveMatchScoreAB(liveMatch) {
@@ -37618,12 +37416,15 @@ function enterLiveMatch(liveMatch, opts) {
   {
     let note = document.getElementById("liveHandicapNote");
     const hc = liveMatch.handicap;
-    if (hc && (hc.mine || hc.opp) && scoreRowEl) {
+    // Juste au-dessus de la vue live (l'ancien tableau de score, où il
+    // vivait, n'est plus affiché).
+    const liveRoot = document.getElementById("hmLiveRoot");
+    if (hc && (hc.mine || hc.opp) && liveRoot) {
       if (!note) {
         note = document.createElement("div");
         note.id = "liveHandicapNote";
         note.className = "live-handicap-note";
-        scoreRowEl.insertAdjacentElement("afterend", note);
+        liveRoot.insertAdjacentElement("beforebegin", note);
       }
       note.textContent = `${liveMatch.nationalCup && liveMatch.nationalCup.superCup ? "Supercoupe" : "Coupe nationale"} · handicap : +${hc.mine || hc.opp} pour ${hc.mine ? teamA.name : teamB.name} (division inférieure), déjà au score`;
     } else if (note) {
@@ -37684,8 +37485,6 @@ function enterLiveMatch(liveMatch, opts) {
     document.getElementById("quarterLabel").textContent = "Terminé";
     document.getElementById("liveDot").classList.add("off");
     document.getElementById("boardStatus").textContent = "Terminé (forfait)";
-    const courtWrap = document.getElementById("liveCourtWrap");
-    if (courtWrap) courtWrap.classList.add("hidden"); // rien à diffuser, rien à animer
     appendFeedItem({ type: "forfeit", text: "Effectif insuffisant pour aligner un cinq de départ complet : forfait immédiat, rien à diffuser." });
     document.getElementById("liveBoxscoreSection").style.display = "none"; // rien à diffuser, rien à suivre en direct
     document.getElementById("boxscoreSection").style.display = "block";
@@ -37694,16 +37493,6 @@ function enterLiveMatch(liveMatch, opts) {
     return;
   }
 
-  resetCourtView();
-  // Logo de l'équipe qui REÇOIT au milieu du terrain (voir #liveCourtHomeLogo
-  // et liveCourtHomeLogoSvg ci-dessus) : mon équipe (teamA) n'est pas
-  // toujours à domicile, d'où liveMatch.isHome, même calcul que
-  // liveMatchScoreAB juste au-dessus dans ce fichier.
-  const homeLogoGroup = document.getElementById("liveCourtHomeLogo");
-  if (homeLogoGroup) {
-    const homeTeam = liveMatch.isHome ? teamA : teamB;
-    homeLogoGroup.innerHTML = liveCourtHomeLogoSvg(homeTeam, 500, 220, 40);
-  }
   document.getElementById("liveDot").classList.remove("off");
   document.getElementById("boardStatus").textContent = "En direct";
 
@@ -38462,7 +38251,6 @@ function applyEvent(ev) {
   document.getElementById("quarterLabel").textContent = ev.quarter > 4
     ? `Prolongation ${ev.quarter - 4}`
     : `${ev.quarter}${ev.quarter === 1 ? "er" : "e"} quart-temps`;
-  addCourtMark(ev);
   appendFeedItem(ev);
   applyLiveBoxScoreEvent(ev);
   // Retour utilisateur (2026-09) : "il n'y a plus le score en direct sur le
@@ -38584,12 +38372,16 @@ function finishPlayback() {
 // par applyLiveBoxScoreEvent) dans l'état attendu par la vue, puis appelle
 // view.update(state).
 //
-// L'ancienne vue (#liveSection .board, #liveCourtWrap, #feed,
-// #liveBoxscoreSection...) reste dans le DOM et continue d'être mise à
-// jour exactement comme avant : elle est seulement MASQUÉE par la classe
-// .hm-live-on, posée une fois le module chargé. Si le module ne se charge
-// pas (page ouverte en file://, tests JSDOM qui n'exécutent pas les modules
-// ES, fichier absent...), rien ne change : l'ancienne vue reste affichée.
+// C'est la SEULE vue du direct depuis le 2026-10-01 (retour utilisateur :
+// « quand je charge un live, il y a encore l'ancien format de live au
+// début [...] on peut désormais enlever l'ancien »). Les anciens nœuds
+// (#scoreA, #clockDisplay, #feed, #liveBoxscoreSection...) restent dans le
+// DOM, toujours masqués (#liveLegacyState), comme supports d'état. Le
+// module est préchargé dès l'ouverture du jeu (<link rel="modulepreload">
+// et hmLiveLoadModule() au démarrage) ; en attendant, #hmLiveRoot montre
+// un squelette, et un court message si le module ne se charge pas (page
+// ouverte en file://, fichier absent... — les tests JSDOM, qui n'exécutent
+// pas les modules ES, passent aussi par là).
 // Tout est protégé par try/catch : un bug ici ne doit JAMAIS casser la
 // diffusion elle-même.
 // ---------------------------------------------------------------------
@@ -38613,11 +38405,25 @@ function hmLiveLoadModule() {
       }
       return await import("./assets/live/live-view.js?v=" + HM_LIVE_ASSET_VERSION);
     })().catch(err => {
-      console.warn("Nouvelle vue live indisponible, ancienne vue conservée :", err && err.message);
+      console.warn("Vue live indisponible :", err && err.message);
       return null;
     });
   }
   return hmLiveModulePromise;
+}
+// Préchargement dès l'ouverture du jeu : le module est prêt avant le
+// premier direct (plus de squelette visible en pratique).
+try { hmLiveLoadModule(); } catch (e) { /* rien */ }
+
+// Message affiché à la place de la vue si le module n'a pas pu être chargé
+// (jamais l'ancien tableau de score).
+function hmLiveShowUnavailable(root) {
+  if (!root) return;
+  root.classList.remove("hm-live");
+  root.innerHTML = `<div class="hm-live-error" role="status"><b>Le direct n'a pas pu s'afficher</b>Rechargez la page pour réessayer.</div>`;
+}
+function hmLiveSkeletonHtml() {
+  return `<div class="hm-live-skel" aria-busy="true"><div class="hm-live-skel-board">Chargement du direct…</div><div class="hm-live-skel-row"><div></div><div></div></div></div>`;
 }
 
 // Index dans la vue : 0 = équipe à domicile (attaque le panier de droite),
@@ -38676,24 +38482,34 @@ function hmLiveReset(liveMatch) {
       pregameTimer: liveMatch.pregame ? setInterval(() => hmLiveSchedule(), 1000) : null,
     };
     if (!section) return;
-    if (liveMatch.forfeit) { section.classList.remove("hm-live-on"); return; }
+    // Forfait : rien à diffuser, la vue affiche directement le score final
+    // et le motif dans le fil (voir hmLiveBuildState) ; la feuille de
+    // statistiques (#boxscoreSection) suit en dessous.
+    if (liveMatch.forfeit) {
+      hmLive.final = true;
+      hmLive.events.push({ id: ++hmLive.seq, type: "info", team: null, quarter: 1, clock: 0, score: null, highlight: true,
+        text: "Effectif insuffisant pour aligner un cinq de départ complet : forfait immédiat, rien à diffuser." });
+    }
     if (keepView) { hmLiveSchedule(); return; }
     const state = hmLive;
+    const root = document.getElementById("hmLiveRoot");
+    // Squelette tant que le module n'a pas répondu (rien quand il est déjà
+    // chargé : la promesse est résolue au tour suivant).
+    if (root) { root.classList.remove("hm-live"); root.innerHTML = hmLiveSkeletonHtml(); }
     hmLiveLoadModule().then(mod => {
-      if (!mod || hmLive !== state) { if (!mod) section.classList.remove("hm-live-on"); return; }
-      const root = document.getElementById("hmLiveRoot");
+      if (hmLive !== state) return;
       if (!root) return;
+      if (!mod) { hmLiveShowUnavailable(root); return; }
       try {
         state.view = mod.createLiveView(root, {
           quarterLength: QUARTER_SECONDS,
           onShowHalftime: () => openHoopShow("halftime"),
           halftimeShowSeen: hoopShowHalftimeSeen,
         });
-        section.classList.add("hm-live-on");
         hmLiveRender();
       } catch (e) {
-        console.warn("Nouvelle vue live : échec de création", e);
-        section.classList.remove("hm-live-on");
+        console.warn("Vue live : échec de création", e);
+        hmLiveShowUnavailable(root);
       }
     });
   } catch (e) { console.warn("hmLiveReset", e); }
@@ -38836,7 +38652,14 @@ function hmLiveColors(homeTeam, awayTeam) {
   const away = JERSEY_COLORS[awayKey] || null;
   return [home, away && away !== home ? away : null];
 }
+// « Revoir le direct » (Premium, m.replay posé par /api/replay et le
+// replay de ligue privée) : signalé dans le bandeau, devant la compétition.
 function hmLiveMeta() {
+  const meta = hmLiveMetaBase();
+  if (meta && hmLive.match && hmLive.match.replay) meta.competition = ["Rediffusion", meta.competition].filter(Boolean).join(" · ");
+  return meta;
+}
+function hmLiveMetaBase() {
   const cm = typeof currentMatch !== "undefined" ? currentMatch : null;
   const m = hmLive.match;
   const competition = !cm ? "" : cm.seriesId === "final" ? "Finale des play-offs"
@@ -38867,8 +38690,7 @@ function hmLiveDress() {
   const awayTeam = m.isHome ? teamB : teamA;
   const d = { avatars: new Map(), logos: ["", ""], colors: hmLiveColors(homeTeam, awayTeam), courtLogo: "", meta: null };
   try { d.logos = [homeTeam, awayTeam].map(t => (t ? teamLogoHtml(t, 76) : "")); } catch (e) { /* écusson générique */ }
-  // id de clipPath renommé : l'ancienne vue (masquée) garde le sien.
-  try { d.courtLogo = homeTeam ? liveCourtHomeLogoSvg(homeTeam, 470, 250, 52).replace(/liveCourtLogoClip/g, "hmLiveCourtLogoClip") : ""; } catch (e) { /* pas de logo */ }
+  try { d.courtLogo = homeTeam ? liveCourtHomeLogoSvg(homeTeam, 470, 250, 52) : ""; } catch (e) { /* pas de logo */ }
   try { d.meta = hmLiveMeta(); } catch (e) { d.meta = null; }
   // Sponsors (voir le bloc SPONSORS côté moteur) : sponsor maillot de
   // CHAQUE club (bandeau) et sponsor salle du club qui REÇOIT (panneaux LED
@@ -45627,6 +45449,7 @@ function ecoRecurring() {
   const shop = teamA.fanShopLevel > 0 ? fanShopInfo(teamA.fanShopLevel).weeklyRevenue : 0;
   const stationLevel = (teamA.facilityLevels && teamA.facilityLevels.tvStation) || 0;
   const station = stationLevel > 0 ? (facilityInfo("tvStation", stationLevel).weeklyRevenue || 0) : 0;
+  const merch = divLevel ? merchandiseWeeklyRevenue(teamA, divLevel) : 0;
   const players = teamA.players.reduce((s, p) => s + p.salary, 0);
   const youth = (teamA.youthPlayers || []).length * YOUTH_TRAINEE_WEEKLY_SALARY;
   const payroll = [
@@ -45640,15 +45463,16 @@ function ecoRecurring() {
   ].filter(x => x.amount > 0);
   const revenueParts = [];
   if (tv) revenueParts.push("TV");
+  if (merch) revenueParts.push("produits dérivés");
   if (shop) revenueParts.push("boutique");
   if (station) revenueParts.push("station TV");
   const chargeParts = ["joueurs"];
   if (teamA.trainer || teamA.videoAnalyst || teamA.recruiter || teamA.doctor || teamA.physio) chargeParts.push("staff");
   if (youth) chargeParts.push("académie");
-  const revenue = tv + shop + station;
+  const revenue = tv + merch + shop + station;
   const charges = payroll.reduce((s, x) => s + x.amount, 0);
   const subsidyWeeksLeft = teamA.week <= STARTUP_SUBSIDY_WEEKS ? STARTUP_SUBSIDY_WEEKS - teamA.week + 1 : 0;
-  return { divLevel, tv, shop, station, stationLevel, players, payroll, revenue, charges, net: revenue - charges, revenueParts, chargeParts, subsidyWeeksLeft };
+  return { divLevel, tv, merch, shop, station, stationLevel, players, payroll, revenue, charges, net: revenue - charges, revenueParts, chargeParts, subsidyWeeksLeft };
 }
 
 // Points de la courbe du budget : solde en fin de chaque semaine présente
@@ -45926,7 +45750,11 @@ function ecoRenderLedger() {
   const cmp = ecoLedgerView === "week" && week > 1 ? ecoLedgerWeek(week - 1) : ecoLedgerView === "prev" && week > 2 ? ecoLedgerWeek(week - 2) : null;
   const signed = n => (n > 0 ? "+" : n < 0 ? "−" : "") + ecoMoney(Math.abs(n)).replace(/^[-−+]/, "");
   const col = dir => {
-    const cats = FINANCE_CATEGORIES.filter(c => c.dir === dir && ((cur[c.key] || 0) !== 0 || (cmp && (cmp[c.key] || 0) !== 0)));
+    // Recettes principales toujours listées, même à 0 (retour utilisateur
+    // 2026-10-01 : « il manque une ligne sponsors dans les revenus de la
+    // semaine ») ; les autres seulement quand il y a un montant.
+    const ALWAYS = { tickets: 1, tv: 1, sponsors: 1, merch: 1, shop: 1 };
+    const cats = FINANCE_CATEGORIES.filter(c => c.dir === dir && (ALWAYS[c.key] || (cur[c.key] || 0) !== 0 || (cmp && (cmp[c.key] || 0) !== 0)));
     const tot = o => FINANCE_CATEGORIES.filter(c => c.dir === dir).reduce((a, c) => a + ((o && o[c.key]) || 0), 0);
     const rows = cats.map(c => `<div class="wk-row"><span class="l">${escapeHtml(c.label)}</span><b class="v${(cur[c.key] || 0) === 0 ? " zero" : ""}">${signed(cur[c.key] || 0)}</b>${cmp ? `<span class="p">${signed(cmp[c.key] || 0)}</span>` : ""}</div>`).join("");
     return `<div class="wk-col wk-${dir}"><div class="wk-colhead"><span>${dir === "in" ? "Recettes" : "Dépenses"}</span>${cmp ? `<span class="wk-cmp"><span>sem. ${ecoLedgerView === "prev" ? week - 2 : week - 1}</span></span>` : ""}</div>` +
@@ -45988,6 +45816,12 @@ function renderEconomieSection() {
     ? `${ecoMoney(rec.tv)}<span class="unit">/sem.</span>`
     : "–";
   document.getElementById("economieTvSub").innerHTML = ecoTvHtml(rec);
+  const merchEl = document.getElementById("economieMerch");
+  if (merchEl) {
+    merchEl.innerHTML = rec.merch ? `${ecoMoney(rec.merch)}<span class="unit">/sem.</span>` : "–";
+    document.getElementById("economieMerchSub").innerHTML = `<span class="eco-pill-tag">Supporters : ${escapeHtml(moraleLabel(teamA.fanMorale).toLowerCase())}</span>` +
+      `<p class="eco-sub-note">Maillots, écharpes, casquettes… Plus vos supporters sont heureux, plus ils achètent.</p>`;
+  }
 
   ecoRenderHistory();
 }
@@ -46775,7 +46609,7 @@ function courtPreviewSvg(style) {
     return `<rect x="${flip ? 750 : 0}" y="170" width="190" height="160" ${ln}/><circle cx="${X(190)}" cy="250" r="60" ${ln}/>` +
       `<path d="M${X(0)} 30 L${X(141.5)} 30 A237.5 237.5 0 0 ${sw} ${X(141.5)} 470 L${X(0)} 470" ${ln}/>`;
   };
-  const logo = (() => { try { return liveCourtHomeLogoSvg(teamA, 470, 250, 52).replace(/liveCourtLogoClip/g, "persoCourtLogoClip"); } catch (e) { return ""; } })();
+  const logo = (() => { try { return liveCourtHomeLogoSvg(teamA, 470, 250, 52).replace(/hmLiveCourtLogoClip/g, "persoCourtLogoClip"); } catch (e) { return ""; } })();
   return `<svg class="sl-court-svg" viewBox="0 0 940 500" role="img" aria-label="Aperçu du parquet" style="background:${w.floor}">` +
     planks + keys + `<rect x="2" y="2" width="936" height="496" rx="4" ${ln}/><line x1="470" y1="2" x2="470" y2="498" stroke="${w.line}" stroke-width="3"/>` +
     `<circle cx="470" cy="250" r="60" ${ln}/>${half(false)}${half(true)}<g opacity=".85">${logo}</g></svg>`;
@@ -49547,15 +49381,20 @@ function lpRulesCardHtml() {
 
 function lpLobbyHtml(lp) {
   const isCreator = lp.creatorTeamIndex === myTeamIndex;
-  let html = `<div class="cal-layout lp-layout"><div class="cal-main">`;
-  html += `<div class="lp-intro"><span class="lp-kicker">Ligue privée · en attente de clubs</span><h3 class="lp-name">${escapeHtml(lp.name)}</h3>` +
+  // En-tête au-dessus des deux colonnes (comme une ligue lancée) : la
+  // colonne de droite démarre à hauteur de la première carte (retour
+  // utilisateur 2026-10-01, « les briques de droite sont trop hautes »).
+  let html = `<div class="lp-intro"><span class="lp-kicker">Ligue privée · en attente de clubs</span><h3 class="lp-name">${escapeHtml(lp.name)}</h3>` +
     `<p class="lp-lead">${lp.teamIndices.length} / ${lp.size} clubs · ${lpVenueLabel(lp.venue)} · vendredi ${lpTimeLabel(lp)} · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}</p></div>`;
+  html += `<div class="cal-layout lp-layout"><div class="cal-main">`;
   html += `<div class="lp-card"><div class="lp-card-title">Code d'invitation</div>` +
     `<div class="lp-code-row"><span class="lp-code">${escapeHtml(lp.code || "••••••")}</span><span class="lp-hint">Transmettez ce code aux managers Premium que vous voulez inviter. Ils le saisissent dans l'onglet Ligues privées.</span></div></div>`;
   html += `<div class="lp-card"><div class="lp-card-title">Clubs inscrits</div><div class="lp-members">` +
     lp.teamIndices.map(idx => { const t = league.teams[idx]; return `<div class="lp-member${idx === myTeamIndex ? " me" : ""}"><span class="lg-badge">${t ? teamLogoHtml(t, 28) : ""}</span><span>${teamLinkHtml(idx, lpTeamName(idx))}</span>${idx === lp.creatorTeamIndex ? `<span class="lp-tag">Créateur</span>` : ""}</div>`; }).join("") +
     Array.from({ length: Math.max(0, lp.size - lp.teamIndices.length) }, () => `<div class="lp-member lp-member-empty">Place libre</div>`).join("") + `</div></div>`;
-  html += `<div class="lp-actions">`;
+  // Boutons sous les deux colonnes, centrés sur la page (même retour).
+  html += `</div><aside class="cal-side">${lpRulesCardHtml()}</aside></div>`;
+  html += `<div class="lp-actions lp-actions-page">`;
   if (isCreator) {
     const can = lp.teamIndices.length >= 4;
     html += `<button type="button" class="cal-next-btn lp-btn" id="lpStartBtn" data-lp-id="${lp.id}"${can ? "" : " disabled"}>Lancer maintenant</button>` +
@@ -49564,7 +49403,7 @@ function lpLobbyHtml(lp) {
   } else {
     html += `<button type="button" class="secondary lp-btn lp-danger" id="lpLeaveBtn" data-lp-id="${lp.id}">Quitter la ligue</button>`;
   }
-  html += `</div></div><aside class="cal-side">${lpRulesCardHtml()}</aside></div>`;
+  html += `</div>`;
   return html;
 }
 

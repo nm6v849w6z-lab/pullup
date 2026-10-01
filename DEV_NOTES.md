@@ -20,6 +20,22 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), à committer — Direct :
+  plus jamais l'ancien format** (« quand je charge un live, il y a encore
+  l'ancien format de live au début [...] on peut désormais enlever
+  l'ancien »). `moteurbasket3.html` : vue live (assets/live/) affichée
+  d'emblée (live.css + modulepreload dans <head>, hmLiveLoadModule() au
+  démarrage, squelette dans #hmLiveRoot, message si le module échoue) ;
+  classe .hm-live-on supprimée ; anciens nœuds regroupés dans
+  #liveLegacyState (toujours masqué, supports d'état pour applyEvent/tests
+  JSDOM) ; ancien terrain SVG (#liveCourtView, addCourtMark,
+  randomPointForZone, infobulle, CSS .live-court/.lcv-*) retiré ; forfait
+  affiché dans la vue live ; « Rediffusion » dans le bandeau des replays ;
+  rappel du handicap de Coupe au-dessus de la vue. Tests adaptés :
+  live_court_view / live_court_shot_position_stability /
+  live_court_home_logo (vérifient hmLive.shots / hmLiveDress().courtLogo).
+  i18n : 4 nouvelles chaînes dans les 9 dictionnaires.
+
 - **🟡 POUSSÉ SUR claude/kind-shannon-8nx9sq (2026-09-30), à passer en
   prod — Salle, vide sous « Construire »** : au-delà de 1100 px, la colonne
   de droite (chiffres clés + Affluence) ne fixe plus la hauteur de la grille

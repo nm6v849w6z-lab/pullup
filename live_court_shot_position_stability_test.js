@@ -16,7 +16,13 @@
 // événement au sein d'un même match, voir schedulePlayback côté
 // server/liveMatch.js) via un PRNG déterministe (seededRandom).
 //
-// Partie 1 : vérifie DIRECTEMENT randomPointForZone/seededRandom, en
+// Depuis le 2026-10-01, l'ancien terrain SVG (randomPointForZone/
+// addCourtMark/#liveCourtMarks) a été retiré avec l'ancienne vue du direct :
+// la carte des tirs est celle de la vue live (assets/live/), dont les
+// positions sont tirées par hmLiveShotSpot (même seed ev.airAt) et gardées
+// dans hmLive.shots — c'est elle que ce test vérifie désormais.
+//
+// Partie 1 : vérifie DIRECTEMENT hmLiveShotSpot/seededRandom, en
 // isolation, sans dépendre d'un vrai match (rapide, sans ambiguïté).
 // Partie 2 : vérifie le comportement de bout en bout via une VRAIE
 // reconnexion en cours de diffusion (mêmes conditions que
@@ -35,12 +41,12 @@ const dom0 = await openGame(html, baseUrl);
 const win0 = dom0.window;
 
 // ---------------------------------------------------------------------
-// Partie 1 : seededRandom/randomPointForZone en isolation.
+// Partie 1 : seededRandom/hmLiveShotSpot en isolation.
 // ---------------------------------------------------------------------
 const samePointTwice = win0.eval(`
   JSON.stringify([
-    randomPointForZone("A", "three", 123456789),
-    randomPointForZone("A", "three", 123456789),
+    hmLiveShotSpot("three", 0, 123456789),
+    hmLiveShotSpot("three", 0, 123456789),
   ])
 `);
 const [pointFirst, pointSecond] = JSON.parse(samePointTwice);
@@ -48,9 +54,9 @@ console.log("Même seed (123456789), deux appels :", pointFirst, pointSecond);
 if (pointFirst.x !== pointSecond.x || pointFirst.y !== pointSecond.y) {
   throw new Error(`❌ BUG NON CORRIGÉ : le même seed devrait TOUJOURS produire le même point, obtenu ${JSON.stringify(pointFirst)} puis ${JSON.stringify(pointSecond)}.`);
 }
-console.log("✅ Le même seed produit toujours le même point (randomPointForZone est désormais déterministe).");
+console.log("✅ Le même seed produit toujours le même point (hmLiveShotSpot est déterministe).");
 
-const differentSeedPoint = JSON.parse(win0.eval(`JSON.stringify(randomPointForZone("A", "three", 987654321))`));
+const differentSeedPoint = JSON.parse(win0.eval(`JSON.stringify(hmLiveShotSpot("three", 0, 987654321))`));
 console.log("Seed différent (987654321) :", differentSeedPoint);
 if (differentSeedPoint.x === pointFirst.x && differentSeedPoint.y === pointFirst.y) {
   // Extrêmement improbable (pas structurellement impossible), signalé sans
@@ -87,13 +93,9 @@ clock.now = scheduledAt + Math.round(MATCH_BROADCAST_DURATION_MS / 2);
 dom = await openGame(html, baseUrl2, (window) => patchDateNow(window, () => clock.now));
 const doc = dom.window.document;
 
+// Positions des tirs de la carte de la vue live (voir hmLiveOnEvent).
 function readMarkPositions() {
-  return [...doc.querySelectorAll("#liveCourtMarks > *")].map(mark => {
-    const circle = mark.querySelector(".lcv-mark-o");
-    if (circle) return { shape: "o", x: circle.getAttribute("cx"), y: circle.getAttribute("cy") };
-    const line = mark.querySelector(".lcv-mark-x");
-    return { shape: "x", x1: line.getAttribute("x1"), y1: line.getAttribute("y1"), x2: line.getAttribute("x2"), y2: line.getAttribute("y2") };
-  });
+  return JSON.parse(dom.window.eval("JSON.stringify(hmLive.shots.map(s => ({ team: s.team, made: s.made, zone: s.zone, x: s.x, y: s.y })))"));
 }
 
 const positionsBeforeReentry = readMarkPositions();
