@@ -30465,8 +30465,8 @@ async function discussTransferRequestAction(playerId) {
 // Indice de l'offre de prolongation (écart avec le salaire demandé, jamais
 // la renommée du club), mis à jour à la saisie.
 document.getElementById("playerDetailContent").addEventListener("input", (e) => {
-  if (!e.target || e.target.id !== "pdpExtSalary") return;
-  const hint = document.getElementById("pdpExtHint");
+  if (!e.target || (e.target.id !== "pdpExtSalary" && e.target.id !== "pdpRaiseSalary")) return;
+  const hint = document.getElementById(e.target.id === "pdpExtSalary" ? "pdpExtHint" : "pdpRaiseHint");
   if (!hint) return;
   const asked = Number(e.target.dataset.asked) || 0;
   const h = contractOfferHint(asked, Math.round(Number(e.target.value) || 0));
@@ -30498,6 +30498,12 @@ document.getElementById("playerDetailContent").addEventListener("click", (e) => 
   if (raiseAcc) { raiseResponseAction(Number(raiseAcc.dataset.raiseAccept), true); return; }
   const raiseRef = e.target.closest("[data-raise-refuse]");
   if (raiseRef) { raiseResponseAction(Number(raiseRef.dataset.raiseRefuse), false); return; }
+  const raiseCounter = e.target.closest("[data-raise-counter]");
+  if (raiseCounter) {
+    const el = document.getElementById("pdpRaiseSalary");
+    raiseResponseAction(Number(raiseCounter.dataset.raiseCounter), false, Math.round(Number(el && el.value) || 0));
+    return;
+  }
   const retirementBtn = e.target.closest("[data-retirement-talk]");
   if (retirementBtn) {
     retirementTalkAction(Number(retirementBtn.dataset.retirementTalk));
@@ -31462,7 +31468,10 @@ function playerContractCardHtml(team, player) {
     return html;
   }
   const last = left <= 1;
-  html += `<div class="pdp-contract-head"><span>Contrat jusqu'à la saison <b>${player.contractUntilSeason}</b> · ${left} saison${left > 1 ? "s" : ""} restante${left > 1 ? "s" : ""}</span>` +
+  // Fin du contrat plutôt qu'un nombre de saisons restantes (retour
+  // 2026-10-01 : à mi-saison, « 3 saisons restantes » prêtait à confusion).
+  const after = left - 1;
+  html += `<div class="pdp-contract-head"><span>Contrat jusqu'à la fin de la saison <b>${player.contractUntilSeason}</b>${after > 0 ? ` · encore ${after} saison${after > 1 ? "s" : ""} après celle-ci` : ""}</span>` +
     (last ? `<span class="contract-end-badge">Dernière saison</span>` : "") + `</div>`;
   html += `<div class="pdp-contract-lines"><span>Salaire : <b>${formatMoney(player.salary)}</b> / sem., fixe jusqu'à la fin du contrat</span>`;
   if (typeof player.nextSalary === "number") {
@@ -31472,8 +31481,13 @@ function playerContractCardHtml(team, player) {
   if (player.raiseRequest) {
     html += `<div class="pdp-contract-box pdp-raise" id="pdpRaiseBox"><h4>Demande d'augmentation</h4>` +
       `<p class="sub">${escapeHtml(player.name)} a beaucoup progressé et demande <b>${formatMoney(player.raiseRequest.asked)}</b> / sem. (contre ${formatMoney(player.salary)} aujourd'hui), à partir de la saison ${season + 1}. La durée de son contrat ne change pas. Sans réponse sous 3 jours, il le prendra comme un refus.</p>` +
-      `<div class="pdp-contract-actions"><button type="button" class="secondary" data-raise-accept="${player.id}">Accepter</button>` +
-      `<button type="button" class="secondary" data-raise-refuse="${player.id}">Refuser</button></div></div>`;
+      `<div class="pdp-contract-form">` +
+      `<button type="button" class="secondary" data-raise-accept="${player.id}">Accepter (${formatMoney(player.raiseRequest.asked)})</button>` +
+      `<label>Contre-offre (€ / sem.)<input type="number" id="pdpRaiseSalary" min="${contractOfferFloor(player.raiseRequest.asked)}" max="${player.raiseRequest.asked}" step="10" value="${contractOfferFloor(player.raiseRequest.asked)}" data-asked="${player.raiseRequest.asked}"></label>` +
+      `<button type="button" class="secondary" data-raise-counter="${player.id}">Faire une contre-offre</button>` +
+      `<button type="button" class="secondary" data-raise-refuse="${player.id}">Refuser</button></div>` +
+      `<div><span class="pdp-contract-hint ${contractOfferHint(player.raiseRequest.asked, contractOfferFloor(player.raiseRequest.asked)).key}" id="pdpRaiseHint">${escapeHtml(contractOfferHint(player.raiseRequest.asked, contractOfferFloor(player.raiseRequest.asked)).label)}</span></div>` +
+      `<p class="sub">Contre-offre : jusqu'à 10 % de moins que sa demande (${formatMoney(contractOfferFloor(player.raiseRequest.asked))} au minimum). S'il la refuse, c'est comme un refus.</p></div>`;
   }
   if (last && !player.retiringAfterSeason) {
     const asked = askedSalary(player);
@@ -31548,15 +31562,20 @@ async function contractExtensionAction(playerId) {
     : `${player.name} refuse votre offre. Vous pourrez lui en faire une nouvelle la semaine prochaine.`, !!data.accepted);
 }
 
-// Demande d'augmentation : accepter (salaire demandé la saison suivante) ou refuser.
-async function raiseResponseAction(playerId, accept) {
+// Demande d'augmentation : accepter (salaire demandé la saison suivante),
+// contre-offre (`counter`, tirage par le serveur) ou refuser.
+async function raiseResponseAction(playerId, accept, counter = null) {
   const player = teamA.players.find(p => p.id === playerId);
   if (!player || !player.raiseRequest) return;
+  if (counter != null) {
+    const asked = player.raiseRequest.asked, floor = contractOfferFloor(asked);
+    if (!(counter >= floor && counter <= asked)) { pdpContractFeedback(`Contre-offre entre ${formatMoney(floor)} et ${formatMoney(asked)} / sem.`, false); return; }
+  }
   let data = null;
   try {
     const res = await fetchApi("/api/player/raise-response", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playerId, accept }),
+      body: JSON.stringify(counter != null ? { playerId, accept: false, counter } : { playerId, accept }),
     });
     data = await res.json().catch(() => null);
     if (!res.ok || !data || !data.ok) {
@@ -31570,6 +31589,15 @@ async function raiseResponseAction(playerId, accept) {
   const season = league.contractSeason();
   const asked = player.raiseRequest.asked;
   player.raiseRequest = null;
+  if (counter != null) {
+    if (data.accepted) player.nextSalary = data.salary;
+    else player.form = clamp(Math.round((player.form || 0) - CONTRACT_RAISE_REFUSED_MORALE_MALUS), 0, 100);
+    renderPlayerDetail(myTeamIndex, playerId);
+    pdpContractFeedback(data.accepted
+      ? `${player.name} accepte votre contre-offre : ${formatMoney(data.salary)} / sem. à partir de la saison ${season + 1}.`
+      : `${player.name} refuse votre contre-offre et garde son salaire actuel : il est déçu.`, !!data.accepted);
+    return;
+  }
   if (accept) player.nextSalary = asked;
   else player.form = clamp(Math.round((player.form || 0) - CONTRACT_RAISE_REFUSED_MORALE_MALUS), 0, 100);
   renderPlayerDetail(myTeamIndex, playerId);
@@ -43942,8 +43970,8 @@ function contractCellHtml(p) {
   const season = league ? league.contractSeason() : 1;
   const left = contractSeasonsLeft(p, season);
   if (left == null) return `<span class="sub">–</span>`;
-  if (left <= 1) return `<span class="contract-end-badge" title="Contrat jusqu'à la saison ${p.contractUntilSeason} : dernière saison, à prolonger depuis sa fiche.">Fin de contrat</span>`;
-  return `<span class="eff-contract" title="Contrat jusqu'à la saison ${p.contractUntilSeason}">${left} saisons</span>`;
+  if (left <= 1) return `<span class="contract-end-badge" title="Contrat jusqu'à la saison ${p.contractUntilSeason} : dernière saison, à prolonger depuis sa fiche.">Fin S${p.contractUntilSeason}</span>`;
+  return `<span class="eff-contract" title="Contrat jusqu'à la saison ${p.contractUntilSeason}">Fin S${p.contractUntilSeason}</span>`;
 }
 function effActionsMenuHtml(p, isListed) {
   const name = escapeHtml(p.name);

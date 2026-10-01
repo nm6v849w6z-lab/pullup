@@ -59,16 +59,17 @@ async function until(fn, n = 60) { for (let i = 0; i < n; i++) { if (fn()) retur
   const row = [...doc.querySelectorAll("#effectifSection tr.eff-row")].find(tr => tr.textContent.includes(last.name));
   if (!row || !row.querySelector(".eff-td-contract .contract-end-badge")) fail("badge « Fin de contrat » absent de l'Effectif.");
   const row2 = [...doc.querySelectorAll("#effectifSection tr.eff-row")].find(tr => tr.textContent.includes(raiser.name));
-  if (!/3 saisons/.test(row2.querySelector(".eff-td-contract").textContent)) fail(`saisons restantes : ${row2.querySelector(".eff-td-contract").textContent}`);
+  // Fin du contrat affichée (« Fin S3 ») plutôt que des saisons restantes.
+  if (row2.querySelector(".eff-td-contract").textContent.trim() !== `Fin S${raiser.contractUntilSeason}`) fail(`fin de contrat : ${row2.querySelector(".eff-td-contract").textContent}`);
   if (!row.querySelector(".eff-menu-blocked")) fail("menu de l'Effectif : la mise en vente devrait être bloquée.");
-  ok("Effectif : colonne « Contrat » (saisons restantes, « Fin de contrat »), mise en vente bloquée dans le menu");
+  ok("Effectif : colonne « Contrat » (fin du contrat « Fin S… », badge en dernière saison), mise en vente bloquée dans le menu");
 
   // 2) Fiche joueur : carte Contrat + offre de prolongation.
   win.eval(`showPlayerDetail(${idx}, ${JSON.stringify(last.id)})`);
   await tick();
   const card = doc.querySelector("#pdpContractCard");
   if (!card) fail("carte « Contrat » absente.");
-  if (!new RegExp(`Contrat jusqu'à la saison ${season}`).test(card.textContent) || !/Dernière saison/.test(card.textContent)) fail(`ligne de contrat : ${card.textContent}`);
+  if (!new RegExp(`Contrat jusqu'à la fin de la saison ${season}`).test(card.textContent) || !/Dernière saison/.test(card.textContent)) fail(`ligne de contrat : ${card.textContent}`);
   const sel = doc.querySelector("#pdpExtSeasons");
   const inp = doc.querySelector("#pdpExtSalary");
   if (!sel || sel.options.length !== 5 || sel.value !== "3") fail("durée : 1 à 5 saisons, 3 par défaut.");
@@ -88,7 +89,7 @@ async function until(fn, n = 60) { for (let i = 0; i < n; i++) { if (fn()) retur
   if (!await until(() => /accepte/.test((doc.querySelector("#pdpContractFeedback") || {}).textContent || ""))) fail(`retour de l'offre : ${(doc.querySelector("#pdpContractFeedback") || {}).textContent}`);
   const saved = (await store.loadMultiLeague(multiSavePath)).league.teams[idx].players.find(p => p.id === last.id);
   if (saved.contractUntilSeason !== season + 4 || saved.nextSalary !== asked) fail(`prolongation non enregistrée : ${saved.contractUntilSeason} / ${saved.nextSalary}`);
-  if (!new RegExp(`Contrat jusqu'à la saison ${season + 4}`).test(doc.querySelector("#pdpContractCard").textContent)) fail("carte non mise à jour.");
+  if (!new RegExp(`Contrat jusqu'à la fin de la saison ${season + 4}`).test(doc.querySelector("#pdpContractCard").textContent)) fail("carte non mise à jour.");
   ok("Fiche joueur : carte Contrat, offre de prolongation (1 à 5 saisons, salaire demandé -10 %), indice, vente bloquée, accord enregistré par le serveur");
 
   // 3) Demande d'augmentation : Accepter.
@@ -96,6 +97,7 @@ async function until(fn, n = 60) { for (let i = 0; i < n; i++) { if (fn()) retur
   await tick();
   const box = doc.querySelector("#pdpRaiseBox");
   if (!box || !/demande/.test(box.textContent)) fail("demande d'augmentation absente.");
+  if (!box.querySelector("[data-raise-counter]") || !box.querySelector("#pdpRaiseSalary") || !box.querySelector("[data-raise-refuse]")) fail("accepter / contre-offre / refuser attendus.");
   box.querySelector("[data-raise-accept]").click();
   if (!await until(() => /Augmentation accordée/.test((doc.querySelector("#pdpContractFeedback") || {}).textContent || ""))) fail("retour de l'augmentation.");
   const saved2 = (await store.loadMultiLeague(multiSavePath)).league.teams[idx].players.find(p => p.id === raiser.id);

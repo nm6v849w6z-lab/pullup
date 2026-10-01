@@ -8084,13 +8084,32 @@ class Team {
   // Demande d'augmentation de mi-saison (voir League.weeklyContractsTick) :
   // acceptée = salaire demandé à partir de la saison suivante, durée du
   // contrat inchangée ; refusée (ou sans réponse) = motivation en baisse,
-  // jamais de demande de transfert. Renvoie { ok, accepted, salary? } ou
-  // { ok: false, reason: "not-found" | "no-request" }.
-  respondToRaiseRequest(playerId, accept) {
+  // jamais de demande de transfert. Contre-offre (retour 2026-10-01 :
+  // « accepter au prix, faire une contre-offre, refuser ») : `counter` entre
+  // le salaire demandé -10 % et le salaire demandé, même tirage qu'une
+  // prolongation ; refusée = comme un refus. Renvoie { ok, accepted,
+  // salary?, countered? } ou { ok: false, reason: "not-found" | "no-request"
+  // | "invalid-salary" }.
+  respondToRaiseRequest(playerId, accept, counter = null, rng = Math.random) {
     const p = this.players.find(pl => pl.id === playerId);
     if (!p) return { ok: false, reason: "not-found" };
     if (!p.raiseRequest) return { ok: false, reason: "no-request" };
     const asked = p.raiseRequest.asked;
+    let countered = false;
+    if (counter != null) {
+      const salary = Math.round(Number(counter));
+      const floor = contractOfferFloor(asked);
+      if (!Number.isFinite(salary) || salary < floor || salary > asked) return { ok: false, reason: "invalid-salary", asked, floor };
+      countered = true;
+      p.raiseRequest = null;
+      if (this.feed) removeByKey(this.feed, `contract_raise_${p.id}`);
+      if (rng() < contractAcceptanceChance(asked, salary, p.form, this.prestige)) {
+        p.nextSalary = salary;
+        return { ok: true, accepted: true, salary, countered };
+      }
+      p.form = clamp(Math.round((p.form || 0) - CONTRACT_RAISE_REFUSED_MORALE_MALUS), 0, 100);
+      return { ok: true, accepted: false, countered };
+    }
     p.raiseRequest = null;
     if (this.feed) removeByKey(this.feed, `contract_raise_${p.id}`);
     if (accept) {

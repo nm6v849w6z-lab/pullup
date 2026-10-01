@@ -1152,16 +1152,21 @@ function offerContractExtension(team, teamIndex, league, body, now) {
   return { ok: true, accepted: result.accepted, salary: result.salary || null, untilSeason: result.untilSeason || null, asked: result.asked };
 }
 
-// Demande d'augmentation de mi-saison : { playerId, accept } (voir
-// Team.respondToRaiseRequest).
+// Demande d'augmentation de mi-saison : { playerId, accept, counter? }
+// (contre-offre : salaire entre le salaire demandé -10 % et le salaire
+// demandé, tirage côté serveur ; voir Team.respondToRaiseRequest).
 function respondToRaiseRequest(team, teamIndex, league, body, now) {
   if (!body || (typeof body.playerId !== "number" && typeof body.playerId !== "string") || body.playerId === "") {
     return fail("playerId requis.");
   }
   const playerId = typeof body.playerId === "string" && /^-?\d+$/.test(body.playerId) ? Number(body.playerId) : body.playerId;
-  const result = team.respondToRaiseRequest(playerId, !!body.accept);
-  if (!result.ok) return fail(result.reason === "no-request" ? "Aucune demande d'augmentation en attente." : "Joueur introuvable dans cet effectif.");
-  return { ok: true, accepted: result.accepted, salary: result.salary || null };
+  const counter = body.counter == null || body.counter === "" ? null : Number(body.counter);
+  const result = team.respondToRaiseRequest(playerId, !!body.accept, counter);
+  if (!result.ok) {
+    if (result.reason === "invalid-salary") return fail("Contre-offre hors limites (entre le salaire demandé -10 % et le salaire demandé).");
+    return fail(result.reason === "no-request" ? "Aucune demande d'augmentation en attente." : "Joueur introuvable dans cet effectif.");
+  }
+  return { ok: true, accepted: result.accepted, salary: result.salary || null, countered: !!result.countered };
 }
 
 // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE côté moteur, retour

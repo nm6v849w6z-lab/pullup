@@ -325,6 +325,19 @@ const cpuIdx = lg => lg.teams.findIndex(t => !t.isHuman);
   team.respondToRaiseRequest(b.id, false);
   assert.strictEqual(b.form, 60 - CONTRACT_RAISE_REFUSED_MORALE_MALUS);
   assert.strictEqual(b.transferRequestActive, false, "pas de demande de transfert");
+  // Contre-offre (2026-10-01) : hors limites refusée ; acceptée = salaire
+  // proposé ; refusée = comme un refus. (`c` est remis en attente après.)
+  {
+    const cReq = { ...c.raiseRequest }, cForm = c.form;
+    const floor = Math.round(cReq.asked * 0.9);
+    assert.ok(!actions.respondToRaiseRequest(team, ti, lg, { playerId: c.id, counter: floor - 100 }, T0).ok, "contre-offre trop basse refusée");
+    let rr = team.respondToRaiseRequest(c.id, false, cReq.asked - 50, () => 0);
+    assert.ok(rr.ok && rr.accepted && rr.countered && c.nextSalary === cReq.asked - 50, "contre-offre acceptée : salaire proposé la saison suivante");
+    c.nextSalary = null; c.raiseRequest = { ...cReq }; c.form = cForm;
+    rr = team.respondToRaiseRequest(c.id, false, Math.ceil(cReq.asked * 0.9 / 10) * 10, () => 0.999);
+    assert.ok(rr.ok && !rr.accepted && c.raiseRequest === null && c.form === cForm - CONTRACT_RAISE_REFUSED_MORALE_MALUS && c.nextSalary == null, "contre-offre refusée = refus");
+    c.raiseRequest = { ...cReq }; c.form = cForm;
+  }
   lg.expireRaiseRequests(T0 + CONTRACT_RAISE_RESPONSE_MS + 1);
   assert.strictEqual(c.raiseRequest, null);
   assert.strictEqual(c.form, 60 - CONTRACT_RAISE_REFUSED_MORALE_MALUS, "sans réponse = refus");
