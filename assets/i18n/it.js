@@ -5681,6 +5681,7 @@ window.HM_I18N_IT = {
   "moy. {0}": "media {0}",
   "{0} match": "{0} partita",
   "S{0} · sem. {1}": "S{0} · sett. {1}",
+  "La courbe de progression est réservée aux clubs Premium.": "Il grafico della crescita è riservato ai club Premium.",
   "La progression s'affichera au fil des semaines": "La crescita apparirà con il passare delle settimane",
   "Courbe affichée": "Curva visualizzata",
   "Fiche partagée par le manager de {0} sur Hoop Manager, le jeu de gestion de basket en ligne.": "Scheda condivisa dal manager di {0} su Hoop Manager, il gioco di gestione di basket online.",

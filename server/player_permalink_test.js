@@ -133,6 +133,7 @@ async function main() {
     });
     Engine.pushPlayerHistory(solo, 1, 1);
     star.number = 23;
+    lyon.isPaying = true; // courbe réservée aux clubs Premium
     await store.saveMultiLeague(lg, multiSavePath);
 
     // Création : jeton obligatoire, joueur de SON club uniquement.
@@ -187,6 +188,18 @@ async function main() {
     r = await request(server, "GET", `/j/${code}?lang=it`);
     check(r.raw.includes('<html lang="it"'), "?lang=it : page en italien");
 
+    // Club non Premium : pas de courbe, message Premium.
+    {
+      const w2 = await World.loadWorld(multiSavePath, now);
+      const lg2 = await World.loadLeague(w2, store.HISTORIC_LEAGUE_ID, multiSavePath);
+      lg2.teams[M.Lyon.idx].isPaying = false;
+      await store.saveMultiLeague(lg2, multiSavePath);
+      r = await request(server, "GET", `/j/${code}`);
+      check(r.status === 200 && r.raw.includes("La courbe de progression est réservée aux clubs Premium.") && !r.raw.includes('id="ppSel"') && !r.raw.includes('class="pp-line"'), "club non Premium : caractéristiques visibles, courbe réservée au Premium");
+      lg2.teams[M.Lyon.idx].isPaying = true;
+      await store.saveMultiLeague(lg2, multiSavePath);
+    }
+
     // Un seul point : message d'attente.
     r = await request(server, "POST", "/api/player/share-link", { playerId: solo.id }, M.Lyon.h);
     const soloCode = r.body.code;
@@ -220,6 +233,18 @@ async function main() {
     r = await request(server, "POST", "/api/player/share-link", { playerId: star.id }, M.Paris.h);
     check(r.status === 200 && r.body.code !== code, "le nouveau club peut créer SON propre lien (nouveau code)");
     check(moving.weeklyHistory.length === 3, "l'historique suit le joueur dans son nouveau club");
+
+    // Club rendu à l'IA (manager parti) : lien coupé.
+    {
+      r = await request(server, "POST", "/api/player/share-link", { playerId: solo.id }, M.Lyon.h);
+      const c2 = r.body.code;
+      const w3 = await World.loadWorld(multiSavePath, now);
+      const lg3 = await World.loadLeague(w3, store.HISTORIC_LEAGUE_ID, multiSavePath);
+      lg3.teams[M.Lyon.idx].isHuman = false;
+      await store.saveMultiLeague(lg3, multiSavePath);
+      r = await request(server, "GET", `/j/${c2}`);
+      check(r.status === 404 && r.raw.includes("Lien expiré ou introuvable"), "club rendu à l'IA : lien coupé (404)");
+    }
 
     // Codes inconnus / mal formés.
     for (const bad of ["/j/AAAAAAAA", "/j/xx", "/j/%E0%A4%A", "/j/"]) {

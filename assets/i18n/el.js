@@ -5618,6 +5618,7 @@ window.HM_I18N_EL = {
   "moy. {0}": "μ.ό. {0}",
   "{0} match": "{0} αγώνας",
   "S{0} · sem. {1}": "Σ{0} · εβδ. {1}",
+  "La courbe de progression est réservée aux clubs Premium.": "Η καμπύλη εξέλιξης είναι διαθέσιμη μόνο για ομάδες Premium.",
   "La progression s'affichera au fil des semaines": "Η εξέλιξη θα εμφανιστεί με το πέρασμα των εβδομάδων",
   "Courbe affichée": "Εμφανιζόμενη καμπύλη",
   "Fiche partagée par le manager de {0} sur Hoop Manager, le jeu de gestion de basket en ligne.": "Προφίλ που μοιράστηκε ο μάνατζερ της {0} στο Hoop Manager, το online παιχνίδι διαχείρισης μπάσκετ.",

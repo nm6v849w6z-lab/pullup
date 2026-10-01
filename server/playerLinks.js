@@ -55,6 +55,8 @@ function playerStillThere(league, link) {
   const player = team && (team.players || []).find(p => p.id === link.playerId);
   if (!player) return null;
   if (link.name && player.name !== link.name) return null;
+  // Club rendu à l'IA (manager parti) : le lien est coupé.
+  if (!team.isHuman) return null;
   return { team, player };
 }
 

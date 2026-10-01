@@ -5618,6 +5618,7 @@ window.HM_I18N_LT = {
   "moy. {0}": "vid. {0}",
   "{0} match": "{0} rungtynės",
   "S{0} · sem. {1}": "S{0} · sav. {1}",
+  "La courbe de progression est réservée aux clubs Premium.": "Progreso kreivė skirta tik Premium klubams.",
   "La progression s'affichera au fil des semaines": "Progresas atsiras bėgant savaitėms",
   "Courbe affichée": "Rodoma kreivė",
   "Fiche partagée par le manager de {0} sur Hoop Manager, le jeu de gestion de basket en ligne.": "Profiliu pasidalijo {0} vadybininkas Hoop Manager – internetiniame krepšinio vadybos žaidime.",

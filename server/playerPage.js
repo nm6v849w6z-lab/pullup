@@ -306,11 +306,16 @@ function renderPlayerPage({ player, team, league, divisionLabel = "", origin = "
   const options = [`<option value="overall">${esc(t("Note globale"))}</option>`]
     .concat(ATTR_GROUPS.map(([title, keys]) => `<optgroup label="${esc(t(title))}">` +
       keys.map(k => `<option value="${k}">${esc(t(labels[k] || k))}</option>`).join("") + `</optgroup>`)).join("");
-  let progressCard = `<section class="card" id="progress"><h2>${esc(t("Progression"))}` +
+  // Courbe de progression : réservée aux clubs Premium, comme dans le jeu
+  // (retour utilisateur 2026-10-01).
+  const premium = typeof team.hasActivePremium === "function" ? team.hasActivePremium(Date.now()) : !!team.isPaying;
+  let progressCard = !premium
+    ? `<section class="card" id="progress"><h2>${esc(t("Progression"))}</h2><p class="muted">${esc(t("La courbe de progression est réservée aux clubs Premium."))}</p></section>`
+    : `<section class="card" id="progress"><h2>${esc(t("Progression"))}` +
     (hist.length >= 2 ? `<select class="pp-sel" id="ppSel" aria-label="${esc(t("Courbe affichée"))}">${options}</select>` : "") + `</h2>` +
     `<div id="ppChart">${ppChartHtml(series.overall, weeks, esc(emptyMsg))}</div></section>`;
   const dataJson = JSON.stringify({ weeks, series }).replace(/</g, "\\u003c");
-  const script = hist.length >= 2
+  const script = premium && hist.length >= 2
     ? `<script>(function(){var D=${dataJson};var E=${JSON.stringify(esc(emptyMsg))};${ppChartHtml.toString()}
 var s=document.getElementById("ppSel"),c=document.getElementById("ppChart");if(!s||!c)return;
 s.addEventListener("change",function(){var v=D.series[s.value]||[];var w=[],y=[];v.forEach(function(x,i){if(typeof x==="number"){y.push(x);w.push(D.weeks[i]);}});c.innerHTML=ppChartHtml(y,w,E);});})();</script>`

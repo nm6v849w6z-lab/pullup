@@ -5618,6 +5618,7 @@ window.HM_I18N_DE = {
   "moy. {0}": "Ø {0}",
   "{0} match": "{0} Spiel",
   "S{0} · sem. {1}": "S{0} · Wo. {1}",
+  "La courbe de progression est réservée aux clubs Premium.": "Die Entwicklungskurve ist Premium-Vereinen vorbehalten.",
   "La progression s'affichera au fil des semaines": "Die Entwicklung erscheint im Laufe der Wochen",
   "Courbe affichée": "Angezeigte Kurve",
   "Fiche partagée par le manager de {0} sur Hoop Manager, le jeu de gestion de basket en ligne.": "Profil geteilt vom Manager von {0} bei Hoop Manager, dem Online-Basketball-Managerspiel.",

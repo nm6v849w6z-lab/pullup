@@ -5643,6 +5643,7 @@ window.HM_I18N_EN = {
   "moy. {0}": "avg. {0}",
   "{0} match": "{0} game",
   "S{0} · sem. {1}": "S{0} · wk {1}",
+  "La courbe de progression est réservée aux clubs Premium.": "The progression chart is reserved for Premium clubs.",
   "La progression s'affichera au fil des semaines": "Progression will show up as the weeks go by",
   "Courbe affichée": "Curve shown",
   "Fiche partagée par le manager de {0} sur Hoop Manager, le jeu de gestion de basket en ligne.": "Profile shared by the manager of {0} on Hoop Manager, the online basketball management game.",

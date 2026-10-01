@@ -5618,6 +5618,7 @@ window.HM_I18N_ZH = {
   "moy. {0}": "平均 {0}",
   "{0} match": "{0} 场",
   "S{0} · sem. {1}": "第{0}季 · 第{1}周",
+  "La courbe de progression est réservée aux clubs Premium.": "成长曲线仅限高级俱乐部查看。",
   "La progression s'affichera au fil des semaines": "成长曲线会随着时间逐周显示",
   "Courbe affichée": "显示的曲线",
   "Fiche partagée par le manager de {0} sur Hoop Manager, le jeu de gestion de basket en ligne.": "由 {0} 的经理在 Hoop Manager（在线篮球经理游戏）上分享的球员资料。",
