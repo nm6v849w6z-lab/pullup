@@ -12745,6 +12745,17 @@ const ArenaGen = (function () {
     s += court(main, second, name, options.court || null, options.logo || null);
     { const c = P(0, 0, 0.1); s += `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(24 * K)}" ry="${f1(13 * K)}" fill="url(#${id}l)"/>`; if (dusk) s += `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(20 * K)}" ry="${f1(11 * K)}" fill="url(#${id}l)"/>`; }
     if (options.logo && (options.logo.href || options.logo.svg)) s += logoOnFloor(options.logo, 1.75);
+    // Pub du sponsor salle peinte sur le parquet, comme dans le live (retour
+    // 2026-10-01 : « ajouter le sponsor parquet, comme il est mis sur le
+    // live ») : sous le rond central, côté façade, à mi-chemin de la ligne
+    // de touche ; cartouche aux couleurs de la marque, sinon « HOOP MANAGER ».
+    {
+      const ad = sponsor || 'HOOP MANAGER', ay = 4.6;
+      const size = Math.min(1.05, 10 / (ad.length * 0.62));
+      const half = ad.length * size * 0.31 + 0.6;
+      if (sponsorStyle) s += flat(rect(-half, half, ay - 0.8, ay + 0.8, 0.06), sponsorStyle.bg, 'opacity="0.85"');
+      s += `<g opacity="${sponsorStyle ? 1 : 0.7}">` + textOnFloor(0, ay, ad, f1(size), sponsorStyle ? sponsorStyle.ink : '#fbf6ec') + '</g>';
+    }
 
     // tribunes, panneaux publicitaires, bancs et table de marque, triés ensemble
     const items = [];
