@@ -13311,7 +13311,7 @@ const CONTRACT_FLOOR_ACCEPT_CHANCE = 0.45;
 const CONTRACT_REFUSAL_MORALE_MALUS = 3;      // chaque refus de prolongation
 const CONTRACT_RAISE_THRESHOLD = 0.25;        // salaire demandé >= +25 % du salaire actuel
 const CONTRACT_RAISE_WEEK = 6;                // semaine de la saison où il peut la demander
-const CONTRACT_RAISE_RESPONSE_MS = 3 * 24 * 60 * 60 * 1000; // sans réponse : refus
+const CONTRACT_RAISE_RESPONSE_MS = 7 * 24 * 60 * 60 * 1000; // sans réponse sous 1 semaine (retour 2026-10-01) : refus
 const CONTRACT_RAISE_REFUSED_MORALE_MALUS = 10;
 const YOUTH_PROMOTION_CONTRACT_SEASONS = 3;
 // Agents libres (fin de contrat sans prolongation) : enchère à 1 €, la mise
@@ -31480,14 +31480,14 @@ function playerContractCardHtml(team, player) {
   html += `</div>`;
   if (player.raiseRequest) {
     html += `<div class="pdp-contract-box pdp-raise" id="pdpRaiseBox"><h4>Demande d'augmentation</h4>` +
-      `<p class="sub">${escapeHtml(player.name)} a beaucoup progressé et demande <b>${formatMoney(player.raiseRequest.asked)}</b> / sem. (contre ${formatMoney(player.salary)} aujourd'hui), à partir de la saison ${season + 1}. La durée de son contrat ne change pas. Sans réponse sous 3 jours, il le prendra comme un refus.</p>` +
+      `<p class="sub">${escapeHtml(player.name)} a beaucoup progressé et demande <b>${formatMoney(player.raiseRequest.asked)}</b> / sem. (contre ${formatMoney(player.salary)} aujourd'hui), à partir de la saison ${season + 1}. La durée de son contrat ne change pas. Sans réponse sous 1 semaine, il le prendra comme un refus.</p>` +
       `<div class="pdp-contract-form">` +
       `<button type="button" class="secondary" data-raise-accept="${player.id}">Accepter (${formatMoney(player.raiseRequest.asked)})</button>` +
       `<label>Contre-offre (€ / sem.)<input type="number" id="pdpRaiseSalary" min="${contractOfferFloor(player.raiseRequest.asked)}" max="${player.raiseRequest.asked}" step="10" value="${contractOfferFloor(player.raiseRequest.asked)}" data-asked="${player.raiseRequest.asked}"></label>` +
       `<button type="button" class="secondary" data-raise-counter="${player.id}">Faire une contre-offre</button>` +
       `<button type="button" class="secondary" data-raise-refuse="${player.id}">Refuser</button></div>` +
       `<div><span class="pdp-contract-hint ${contractOfferHint(player.raiseRequest.asked, contractOfferFloor(player.raiseRequest.asked)).key}" id="pdpRaiseHint">${escapeHtml(contractOfferHint(player.raiseRequest.asked, contractOfferFloor(player.raiseRequest.asked)).label)}</span></div>` +
-      `<p class="sub">Contre-offre : jusqu'à 10 % de moins que sa demande (${formatMoney(contractOfferFloor(player.raiseRequest.asked))} au minimum). S'il la refuse, c'est comme un refus.</p></div>`;
+      `<p class="sub">Contre-offre : jusqu'à 10 % de moins que sa demande (${formatMoney(contractOfferFloor(player.raiseRequest.asked))} au minimum). S'il la refuse, les négociations sont terminées.</p></div>`;
   }
   if (last && !player.retiringAfterSeason) {
     const asked = askedSalary(player);
@@ -31595,7 +31595,7 @@ async function raiseResponseAction(playerId, accept, counter = null) {
     renderPlayerDetail(myTeamIndex, playerId);
     pdpContractFeedback(data.accepted
       ? `${player.name} accepte votre contre-offre : ${formatMoney(data.salary)} / sem. à partir de la saison ${season + 1}.`
-      : `${player.name} refuse votre contre-offre et garde son salaire actuel : il est déçu.`, !!data.accepted);
+      : `${player.name} refuse votre contre-offre : les négociations sont terminées, il garde son salaire actuel et il est déçu.`, !!data.accepted);
     return;
   }
   if (accept) player.nextSalary = asked;

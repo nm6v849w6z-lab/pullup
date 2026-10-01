@@ -3105,7 +3105,7 @@ const CONTRACT_FLOOR_ACCEPT_CHANCE = 0.45;
 const CONTRACT_REFUSAL_MORALE_MALUS = 3;      // chaque refus de prolongation
 const CONTRACT_RAISE_THRESHOLD = 0.25;        // salaire demandé >= +25 % du salaire actuel
 const CONTRACT_RAISE_WEEK = 6;                // semaine de la saison où il peut la demander
-const CONTRACT_RAISE_RESPONSE_MS = 3 * 24 * 60 * 60 * 1000; // sans réponse : refus
+const CONTRACT_RAISE_RESPONSE_MS = 7 * 24 * 60 * 60 * 1000; // sans réponse sous 1 semaine (retour 2026-10-01) : refus
 const CONTRACT_RAISE_REFUSED_MORALE_MALUS = 10;
 const YOUTH_PROMOTION_CONTRACT_SEASONS = 3;
 // Agents libres (fin de contrat sans prolongation) : enchère à 1 €, la mise
@@ -12592,7 +12592,7 @@ class League {
           pushEntry(team.feed, {
             key: `contract_raise_${p.id}`, category: "club", week: team.week, createdAt: now,
             title: `${p.name} demande une augmentation`,
-            text: `${p.name} a beaucoup progressé et demande ${asked.toLocaleString("fr-FR")} €/sem. (contre ${p.salary.toLocaleString("fr-FR")} €/sem. aujourd'hui), à partir de la saison prochaine. Répondez sous 3 jours sur sa fiche.`,
+            text: `${p.name} a beaucoup progressé et demande ${asked.toLocaleString("fr-FR")} €/sem. (contre ${p.salary.toLocaleString("fr-FR")} €/sem. aujourd'hui), à partir de la saison prochaine. Répondez sous 1 semaine sur sa fiche.`,
             action: { label: "Fiche joueur", href: `/joueur/${p.id}` },
           });
           sent++;
