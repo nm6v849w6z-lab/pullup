@@ -86,7 +86,9 @@ function duplicateIds(doc) {
     const one = win.eval(`jerseySvgHtml("A", "bleu", 60, "home", ${JSON.stringify(p)}, null)`);
     const norm = h => h.replace(/jersey\d+/g, "J").replace(/aria-label="[^"]*"/, "");
     if (norm(one) === norm(win.eval(`jerseySvgHtml("A", "bleu", 60, "home", "uni", null)`))) throw new Error("❌ motif sans effet : " + p);
-    if (!/<(rect|path|circle|linearGradient|radialGradient|pattern)/.test(one.replace(/<path d="M 40 8[^>]*>/g, ""))) throw new Error("❌ motif vide : " + p);
+    // Silhouette réaliste (2026-10-01) : ombrage/liserés communs à tous, on compare donc au maillot uni.
+    const count = h => (h.match(/<(rect|path|circle|linearGradient|radialGradient|pattern)/g) || []).length;
+    if (count(one) <= count(win.eval(`jerseySvgHtml("A", "bleu", 60, "home", "uni", null)`))) throw new Error("❌ motif vide : " + p);
   });
   assert(duplicateIds(doc).length === 0, "aucun id en double avec 102 maillots sur la page");
   lab.remove();
