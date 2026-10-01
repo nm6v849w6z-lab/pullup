@@ -13063,7 +13063,9 @@ class League {
         const sellable = team.players.filter(p => !this.contractSaleBlocked(p));
         if (!sellable.length) return;
         const weakest = sellable.reduce((w, p) => (p.overall() < w.overall() ? p : w), sellable[0]);
-        this.listPlayerForSale(idx, weakest.id, estimateMarketValue(weakest), now);
+        // Prix de départ à 1 € (retour utilisateur 2026-10-01 : « les bots
+        // qui vendent des joueurs doivent mettre 1 € comme prix »).
+        this.listPlayerForSale(idx, weakest.id, 1, now);
       });
     }
 

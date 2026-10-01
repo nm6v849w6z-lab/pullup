@@ -20583,7 +20583,9 @@ class League {
         if (this.transferListings.some(l => l.status === "open" && l.sellerIdx === idx)) return; // une annonce à la fois par CPU
         if (Math.random() >= TRANSFER_CPU_LIST_CHANCE) return;
         const weakest = team.players.reduce((w, p) => (p.overall() < w.overall() ? p : w), team.players[0]);
-        this.listPlayerForSale(idx, weakest.id, estimateMarketValue(weakest), now);
+        // Prix de départ à 1 € (retour utilisateur 2026-10-01 : « les bots
+        // qui vendent des joueurs doivent mettre 1 € comme prix »).
+        this.listPlayerForSale(idx, weakest.id, 1, now);
       });
     }
 

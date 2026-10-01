@@ -294,7 +294,8 @@ function makeOverpoweredPlayer(position) {
   cpuListings.forEach(l => {
     const expectedPlayer = weakestByTeam[l.sellerIdx];
     if (l.playerId !== expectedPlayer.id) throw new Error(`❌ L'équipe ${l.sellerIdx} devrait mettre aux enchères son joueur le plus faible (overall le plus bas).`);
-    if (l.startPrice !== estimateMarketValue(expectedPlayer)) throw new Error("❌ Le prix de départ d'une annonce CPU devrait être sa valeur marchande estimée.");
+    // Annonces des bots à 1 € (retour utilisateur 2026-10-01).
+    if (l.startPrice !== 1) throw new Error(`❌ Le prix de départ d'une annonce CPU devrait être 1 €, obtenu ${l.startPrice}.`);
   });
   console.log("✅ Les annonces CPU générées listent bien le joueur le plus faible de chaque équipe, au bon prix de départ.");
 }
