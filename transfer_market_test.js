@@ -16,7 +16,7 @@ const E = require("./engine.js");
 const {
   generateTeam, generateLeague, Player,
   estimateMarketValue, transferMinIncrement, minNextBidFor,
-  TRANSFER_AUCTION_DURATION_MS, TRANSFER_CPU_CHECK_INTERVAL_MS,
+  TRANSFER_AUCTION_DURATION_MS, TRANSFER_CPU_CHECK_INTERVAL_MS, CPU_STAR_SELL_OVERALL,
   TRANSFER_MIN_INCREMENT_FLAT, TRANSFER_MIN_INCREMENT_PCT, TRANSFER_CPU_BID_CHANCE,
   MAX_ROSTER_SIZE,
 } = E;
@@ -265,6 +265,9 @@ function makeOverpoweredPlayer(position) {
   const lg = freshLeague(5000000);
   const now = Date.now();
   const star = makeOverpoweredPlayer("Meneur");
+  // Juste sous CPU_STAR_SELL_OVERALL : au-delà, aucun bot n'en veut (il
+  // devrait le revendre aussitôt à 1 €).
+  for (let v = 99; v > 1 && star.overall() >= CPU_STAR_SELL_OVERALL; v--) Object.keys(star.attrs).forEach(a => { star.attrs[a] = v; });
   lg.teams[3].players[0] = star; // remplace un joueur CPU par la superstar
   const listing = lg.listPlayerForSale(3, star.id, 10000, now);
   lg.placeBid(listing.id, 0, 10000, now + 500); // enchère basse du club du joueur
@@ -284,6 +287,11 @@ function makeOverpoweredPlayer(position) {
   // première vérification.
   const lg = freshLeague();
   const now = Date.now();
+  // Aucun joueur à 50+ (ceux-là sont tous vendus à 1 €, voir
+  // cpu_star_sale_test.js) : ce test vérifie l'annonce du plus faible.
+  lg.teams.forEach(t => t.players.forEach(p => {
+    while (p.overall() >= CPU_STAR_SELL_OVERALL) Object.keys(p.attrs).forEach(a => { p.attrs[a] = Math.max(1, p.attrs[a] - 3); });
+  }));
   const weakestByTeam = lg.teams.map(t => t.players.reduce((w, p) => (p.overall() < w.overall() ? p : w), t.players[0]));
   withMockedRandom(0, () => {
     lg.refreshMarket(now + 100);

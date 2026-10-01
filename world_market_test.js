@@ -37,7 +37,10 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (await c
   let w = await World.loadWorld(multiSavePath, clock.now);
   const us = await World.loadLeague(w, "us-1", multiSavePath);
   const seller = us.teams[5];
-  const player = seller.players.reduce((b, p) => (p.overall() > b.overall() ? p : b), seller.players[0]);
+  // Meilleur joueur pas encore en vente (les bots mettent déjà en vente
+  // leurs joueurs à 50 de général ou plus).
+  const free = seller.players.filter(p => !us.transferListings.some(l => l.status === "open" && l.playerId === p.id));
+  const player = free.reduce((b, p) => (p.overall() > b.overall() ? p : b), free[0]);
   const listing = us.listPlayerForSale(5, player.id, 20000, clock.now);
   listing.lastCpuCheckAt = listing.closesAt; // pas d'enchère CPU concurrente dans ce test
   us.lastCpuListingCheckAt = clock.now;

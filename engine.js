@@ -1943,6 +1943,7 @@ const TRANSFER_MIN_INCREMENT_PCT = 0.20;
 // sur la durée d'une enchère de 3 jours.
 const TRANSFER_CPU_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const TRANSFER_CPU_LIST_CHANCE = 0.12; // par équipe CPU, par vérification
+const CPU_STAR_SELL_OVERALL = 50; // général à partir duquel un bot vend le joueur à 1 €
 const TRANSFER_CPU_BID_CHANCE = 0.35;  // par équipe CPU intéressée, par vérification
 
 // ---------------------------------------------------------------------
@@ -13458,6 +13459,9 @@ class League {
   // meilleur (overall()) que son plus faible joueur à ce poste — comme une
   // vraie équipe qui ne renforce que ce qui l'améliore.
   _cpuWantsPlayer(teamIdx, player) {
+    // Un bot ne garde aucun joueur à CPU_STAR_SELL_OVERALL ou plus (voir
+    // refreshMarket) : il n'en achète donc pas non plus.
+    if (player.overall() >= CPU_STAR_SELL_OVERALL) return false;
     const team = this.teams[teamIdx];
     const samePos = team.players.filter(p => p.position === player.position);
     if (!samePos.length) return true;
@@ -13632,6 +13636,21 @@ class League {
     // fois, au même rythme que les enchères CPU ci-dessus.
     if (now - (this.lastCpuListingCheckAt || 0) >= TRANSFER_CPU_CHECK_INTERVAL_MS) {
       this.lastCpuListingCheckAt = now;
+      // Joueurs à 50 de général ou plus détenus par un bot : tous mis en
+      // vente à 1 € (retour utilisateur 2026-10-01), sans descendre sous
+      // l'effectif minimum.
+      this.teams.forEach((team, idx) => {
+        if (team.isHuman) return;
+        const listed = new Set(this.transferListings.filter(l => l.status === "open" && l.sellerIdx === idx).map(l => String(l.playerId)));
+        let remaining = team.players.length - listed.size;
+        team.players
+          .filter(p => p.overall() >= CPU_STAR_SELL_OVERALL && !listed.has(String(p.id)) && !this.contractSaleBlocked(p))
+          .sort((a, b) => b.overall() - a.overall())
+          .forEach(p => {
+            if (remaining <= MIN_ROSTER_SIZE) return;
+            if (this.listPlayerForSale(idx, p.id, 1, now)) remaining--;
+          });
+      });
       this.teams.forEach((team, idx) => {
         if (team.isHuman) return;
         if (team.players.length <= MIN_ROSTER_SIZE) return;
@@ -18733,7 +18752,7 @@ return {
   DEFICIT_ALERT_THRESHOLD, DEFICIT_GRACE_WEEKS,
   TV_RIGHTS_WEEKLY_BY_LEVEL, MERCH_WEEKLY_BY_LEVEL, merchandiseWeeklyRevenue, SPONSOR_DIVISION_SCALE,
   TRANSFER_AUCTION_DURATION_MS, TRANSFER_MIN_INCREMENT_FLAT, TRANSFER_MIN_INCREMENT_PCT,
-  TRANSFER_CPU_CHECK_INTERVAL_MS, TRANSFER_CPU_LIST_CHANCE, TRANSFER_CPU_BID_CHANCE,
+  TRANSFER_CPU_CHECK_INTERVAL_MS, TRANSFER_CPU_LIST_CHANCE, TRANSFER_CPU_BID_CHANCE, CPU_STAR_SELL_OVERALL,
   COACH_AUCTION_DURATION_MS, COACH_MARKET_GENERATE_CHECK_INTERVAL_MS, COACH_CPU_BID_CHANCE,
   STAFF_MARKET_LISTINGS_PER_MANAGER, staffMarketMinOpenListingsFor,
   // Staff médical (voir le grand commentaire au-dessus de MEDICAL_STAFF_ROLES) :
