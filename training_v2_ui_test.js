@@ -18,7 +18,7 @@ const D = 24 * 60 * 60 * 1000;
 
   // 1) Sans entraîneur
   assert(/Aucun entraîneur/.test(doc.getElementById("trainingCoachCard").textContent), "en-tête : aucun entraîneur");
-  assert(!!doc.querySelector('#trainingPlansCard [data-tab="staff"]') && /Engagez un entraîneur/.test(doc.getElementById("trainingPlansCard").textContent), "sans entraîneur : message et lien vers le marché des entraîneurs");
+  assert(!!doc.querySelector('#trainingPlansCard [data-staff-market="coach"]') && /Engagez un entraîneur/.test(doc.getElementById("trainingPlansCard").textContent), "sans entraîneur : message et lien vers le marché des entraîneurs");
   assert(!doc.getElementById("trainingAddPlayer"), "sans entraîneur : aucune place de plan");
   assert(!!doc.querySelector('#collectiveTrainingConfig [data-day-option="tactique"]'), "le collectif reste disponible sans entraîneur");
 

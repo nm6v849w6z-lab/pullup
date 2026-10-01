@@ -42,7 +42,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   l'analyste (retour 2026-09). Traductions ×9. Tests : nouveau
   staff_v2_ui_test.js ; adaptés medical_staff, assistant_coach,
   client_scouting, my_auctions, auto_bid, persistence, end_to_end,
-  sidebar_order. Reste : push par l'utilisateur ; le texte du Guide sur
+  sidebar_order, training_v2_ui. Rebasé sur claude/kind-shannon-8nx9sq (90f45a6), 89 tests liés verts (planete_hoop_test : instable, échoue aussi sur la base). Reste : push par l'utilisateur ; le texte du Guide sur
   l'entraîneur dit encore « marché aux enchères (onglet Staff) ».
 
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Refonte de
