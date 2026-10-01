@@ -20,6 +20,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), à committer — Sponsors :
+  catalogue de marques fictives avec logos générés** (proposition validée,
+  « plus de sponsors », ~30 par niveau, puis noms anglais hors France).
+  engine.js (+ miroir moteurbasket3.html) : `SPONSOR_ICONS` (≈90 icônes
+  24×24), `SPONSOR_CATALOG` = 90 marques françaises (30/30/30, France +
+  Belgique) + 60 anglaises (20/20/20, tous les autres pays, choix par
+  `sponsorCatalogLangFor(league.country || team.country)`) ;
+  `SPONSOR_NAMES` (fr) / `SPONSOR_NAMES_EN` dérivés ; anciens noms migrés
+  au chargement (teamFromSave, `SPONSOR_LEGACY_NAMES`). Client :
+  `sponsorLogoHtml(name, {size})` (normal / compact / mark, repli
+  initiales), page Sponsors (offres, contrats, historique + secteur),
+  maillot (bandeau couleurs + icône + nom court), salle ArenaGen (mur et
+  panneau aux couleurs + icône, `logoOnFaceX`), vue live (pub au sol dans
+  un cartouche aux couleurs, `arenaSponsorStyle`, assets live en
+  v=20261001-1). i18n : anciens noms retirés des 10 dictionnaires,
+  87 secteurs ajoutés ; logos en `data-no-i18n`. Nouveau test
+  sponsor_catalog_test.js.
+
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), à committer — Direct :
   plus jamais l'ancien format** (« quand je charge un live, il y a encore
   l'ancien format de live au début [...] on peut désormais enlever

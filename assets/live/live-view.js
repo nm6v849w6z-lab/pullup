@@ -566,7 +566,11 @@ export function createLiveView(root, opts = {}) {
     // du bord » pour les pubs dans les coins). Au-delà de 18 caractères, le
     // nom passe sur 2 lignes.
     const cs = S.courtStyle || null;
-    const ledKey = (S.courtLogo || "") + "|" + (S.arenaSponsor || "") + "|" + (cs ? [cs.floor, cs.line, cs.paint].join(",") : "");
+    // Couleurs de la marque (S.arenaSponsorStyle, catalogue des sponsors) :
+    // la pub est alors peinte dans un cartouche à ses couleurs.
+    const hex = v => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+    const adStyle = S.arenaSponsor && S.arenaSponsorStyle && hex(S.arenaSponsorStyle.bg) && hex(S.arenaSponsorStyle.ink) ? S.arenaSponsorStyle : null;
+    const ledKey = (S.courtLogo || "") + "|" + (S.arenaSponsor || "") + "|" + (adStyle ? adStyle.bg + adStyle.ink : "") + "|" + (cs ? [cs.floor, cs.line, cs.paint].join(",") : "");
     if (courtLogoKey !== ledKey) {
       courtLogoKey = ledKey;
       // Parquet aux couleurs du club qui reçoit (S.courtStyle, Premium) :
@@ -580,11 +584,18 @@ export function createLiveView(root, opts = {}) {
         if (cs.paint) planks += `<rect x="0" y="170" width="190" height="160" fill="${cs.paint}" opacity=".75"/><rect x="750" y="170" width="190" height="160" fill="${cs.paint}" opacity=".75"/><circle cx="470" cy="250" r="60" fill="${cs.paint}" opacity=".65"/>`;
       }
       const lines = floorAdLines((S.arenaSponsor || "HOOP MANAGER").toUpperCase());
-      const ad = (cx, cy) => lines.map((l, i) => {
-        const y = cy + (i - (lines.length - 1) / 2) * 24 + 7;
-        const fit = l.length * 17.5 > 320 ? ` textLength="320" lengthAdjust="spacingAndGlyphs"` : "";
-        return `<text class="floor-ad" x="${cx}" y="${y}" text-anchor="middle"${fit}>${esc(l)}</text>`;
-      }).join("");
+      const ad = (cx, cy) => {
+        let plate = "";
+        if (adStyle) {
+          const w = Math.min(340, Math.max(...lines.map(l => l.length * 17.5))) + 36, h = lines.length * 24 + 18;
+          plate = `<rect class="floor-ad-plate" x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}" rx="10" fill="${adStyle.bg}" opacity=".82"/>`;
+        }
+        return plate + lines.map((l, i) => {
+          const y = cy + (i - (lines.length - 1) / 2) * 24 + 7;
+          const fit = l.length * 17.5 > 320 ? ` textLength="320" lengthAdjust="spacingAndGlyphs"` : "";
+          return `<text class="floor-ad" x="${cx}" y="${y}" text-anchor="middle"${fit}${adStyle ? ` style="fill:${adStyle.ink}"` : ""}>${esc(l)}</text>`;
+        }).join("");
+      };
       court.innerHTML = `<g class="floor">${planks}</g><g class="base">${COURT_BASE}</g><g class="ads">${ad(470, 404)}</g><g class="logo" opacity=".85">${S.courtLogo || ""}</g><g class="marks"></g>`;
     }
     court.querySelector(".marks").innerHTML = g;
