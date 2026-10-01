@@ -65,6 +65,7 @@ const MyAuctions = require("./myAuctions.js");
 const WebPush = require("./webpush.js");
 const Ads = require("./ads.js");
 const Site = require("./site.js");
+const WeeklyDigest = require("./weeklyDigest.js");
 const Engine = require("../engine.js");
 
 // MODE ACCÉLÉRÉ (tests/démo) — voir le commentaire détaillé dans
@@ -370,6 +371,11 @@ async function maybeCatchUpWorld(multiSavePath, now, force = false, accountsPath
         if (dirty) await Accounts.saveAccounts(data, accountsPath);
       } catch (e) { console.warn("[monde] mise à jour des comptes après libération de clubs échouée :", e.message); }
     }
+    // Résumé de la semaine par e-mail (server/weeklyDigest.js) : le lundi
+    // après la mise à jour hebdomadaire. Jamais attendu ici (préparé plus
+    // tard sous le verrou, envoyé hors verrou) ; ne fait rien sans
+    // fournisseur d'e-mail configuré.
+    WeeklyDigest.scheduleWeeklyDigests({ multiSavePath, accountsPath, now, acquireLock: acquireSaveLock });
     return events;
   } catch (e) {
     console.warn("[monde] rattrapage des championnats échoué :", e.message);
@@ -1299,6 +1305,12 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
 
       // Comptes joueurs + Discord (voir server/accountRoutes.js).
       if (await handleAccountRoutes(req, res, route, now)) return;
+      // Désinscription / réinscription au résumé de la semaine (lien signé
+      // de l'e-mail, voir server/weeklyDigest.js).
+      if (await WeeklyDigest.handleDigestRoutes(req, res, route, {
+        accountsPath,
+        siteLangFor: r => I18n.siteLang({ query: route.searchParams.get("lang"), cookie: r.headers.cookie, acceptLanguage: r.headers["accept-language"] }),
+      })) return;
 
       // Plus de carrière solo (2026-09-29) : sans jeton manager, seules
       // restent ouvertes /api/health, les routes admin (secret
