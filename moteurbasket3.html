@@ -7119,7 +7119,9 @@
   .mp-link:focus-visible, .mp-more:focus-visible, .mp-club:focus-visible, .mp-back:focus-visible, .topbar-manager:focus-visible, .lgc-author:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
   button.topbar-manager{display:inline-grid; place-items:center; padding:0; border:0; background:none; border-radius:50%; cursor:pointer;}
   button.topbar-manager.hidden{display:none;}
-  button.topbar-manager:hover .mp-avatar{box-shadow:0 0 0 2px var(--amber);}
+  button.topbar-manager:hover .mp-avatar, button.topbar-manager:hover .topbar-club-logo{box-shadow:0 0 0 2px var(--amber);}
+  .topbar-club-logo{display:grid; place-items:center; width:36px; height:36px; border-radius:50%;}
+  .topbar-club-logo > svg, .topbar-club-logo > img{width:100%; height:100%; display:block;}
   .team-detail-manager{display:block; margin-top:6px; font-family:inherit; font-size:14px; font-weight:500; color:var(--ink-dim);}
   .team-detail-manager .mp-link{font-size:14px;}
 
@@ -7208,6 +7210,7 @@
     .mp-kpi b{font-size:22px;}
     .mp-card{padding:16px;}
     button.topbar-manager .mp-avatar{--mp-size:30px !important;}
+    .topbar-club-logo{width:32px; height:32px;}
     #mpAchievements .ach-grid{grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px;}
     #mpAchievements .ach{padding:10px; gap:8px;}
     #mpAchievements .ach-txt small{display:none;}
@@ -30371,7 +30374,8 @@ document.addEventListener("click", (e) => {
   if (e.target.closest && e.target.closest("[data-pseudo-later]")) { pseudoPromptDismissed = true; renderPseudoPrompt(); }
 });
 
-// Avatar du manager en haut à droite (son propre profil).
+// Logo du club en haut à droite (retour utilisateur 2026-10-01), ouvre le
+// profil du manager comme avant.
 function syncTopbarManager() {
   renderPseudoPrompt();
   const btn = document.getElementById("topbarManagerBtn");
@@ -30379,7 +30383,7 @@ function syncTopbarManager() {
   const show = !!(teamA && teamA.isHuman);
   btn.classList.toggle("hidden", !show);
   if (!show) return;
-  btn.innerHTML = managerAvatarHtml(teamA, 34);
+  btn.innerHTML = `<span class="topbar-club-logo" aria-hidden="true">${teamLogoHtml(teamA, 36)}</span>`;
   const label = `Mon profil de manager (${managerDisplayName(teamA)})`;
   btn.setAttribute("aria-label", label);
   btn.title = label;

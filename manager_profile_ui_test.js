@@ -76,7 +76,7 @@ async function waitFor(fn, label, tries = 200) {
 
     // --- Avatar en haut à droite → son propre profil.
     const avatar = doc.getElementById("topbarManagerBtn");
-    check(avatar && !avatar.classList.contains("hidden") && avatar.textContent.trim() === "AS", "avatar du manager en haut à droite (initiales du pseudo)");
+    check(avatar && !avatar.classList.contains("hidden") && !!avatar.querySelector(".topbar-club-logo svg, .topbar-club-logo img") && /Mon profil de manager/.test(avatar.getAttribute("aria-label")), "logo du club en haut à droite (ouvre le profil du manager)");
     check(!doc.querySelector(".sidebar [data-tab='profil'], .sidebar #managerProfileSection"), "pas d'entrée « Profil » dans la barre latérale");
     win.eval("TAB_HANDLERS.club()");
     avatar.click();
@@ -151,7 +151,7 @@ async function waitFor(fn, label, tries = 200) {
     input.value = "Batman_42";
     doc.getElementById("hmPseudoForm").dispatchEvent(new win.Event("submit", { bubbles: true, cancelable: true }));
     await waitFor(() => /Pseudo enregistré/.test((doc.getElementById("hmPseudoFeedback") || {}).textContent || ""), "enregistré");
-    check(win.eval("teamA.managerPseudo") === "Batman_42" && doc.getElementById("topbarManagerBtn").textContent.trim() === "B4", "pseudo enregistré : avatar mis à jour");
+    check(win.eval("teamA.managerPseudo") === "Batman_42" && /Batman_42/.test(doc.getElementById("topbarManagerBtn").getAttribute("aria-label")), "pseudo enregistré : bouton du haut mis à jour");
     const saved = await store.loadMultiLeague(multiSavePath);
     check(saved.league.teams[iA].managerPseudo === "Batman_42", "pseudo sauvegardé côté serveur");
 
