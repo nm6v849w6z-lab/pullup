@@ -12324,17 +12324,62 @@ const ArenaGen = (function () {
 
   // ---------------------------------------------------------------- objets du décor
 
+  // Arbres variés et ancrés au sol (retour utilisateur 2026-10-01 : « un
+  // peu de diversité dans les formes d'arbres et réduis l'effet d'arbres
+  // qui flottent ») : 5 essences tirées d'après la position (feuillu rond,
+  // conifère, peuplier, buisson, feuillu à deux houppiers), tronc plus épais
+  // et ombre portée qui part du pied du tronc, avec une petite ombre de
+  // contact.
+  const treeKind = (x, y) => Math.abs(Math.floor(x * 7.31 + y * 13.17)) % 5;
   function treeShadow(x, y, s) {
-    const c = P(x + (2.2 + s) * SHADOW[0], y + (2.2 + s) * SHADOW[1], 0);
-    return `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(s * K * 1.15)}" ry="${f1(s * K * 0.62)}" fill="rgba(0,0,0,0.2)"/>`;
+    const k = treeKind(x, y), h = k === 3 ? 0.4 : 1.2 + s * 0.8;
+    const c = P(x + h * SHADOW[0], y + h * SHADOW[1], 0), b = P(x, y, 0);
+    const w = k === 2 ? 0.6 : k === 1 ? 0.85 : 1;
+    return `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(s * K * 1.05 * w)}" ry="${f1(s * K * 0.55 * w)}" fill="rgba(0,0,0,0.2)"/>` +
+      `<ellipse cx="${f1(b[0])}" cy="${f1(b[1])}" rx="${f1(K * 0.7)}" ry="${f1(K * 0.36)}" fill="rgba(0,0,0,0.28)"/>`;
   }
   function tree(x, y, s, hue) {
-    const t = P(x, y, 0), c = P(x, y, 2.2 + s);
-    const leaf = ['#3f7a34', '#4a8238', '#376e2f'][hue % 3];
-    return `<line x1="${f1(t[0])}" y1="${f1(t[1])}" x2="${f1(c[0])}" y2="${f1(c[1])}" stroke="#5a3d25" stroke-width="1.6"/>` +
-      `<circle cx="${f1(c[0])}" cy="${f1(c[1])}" r="${f1(s * K)}" fill="${leaf}" stroke="${INK}" stroke-width="0.8"/>` +
-      `<circle cx="${f1(c[0] + s * 0.5)}" cy="${f1(c[1] + s * 0.5)}" r="${f1(s * K * 0.55)}" fill="${shade(leaf, -18)}" opacity="0.6"/>` +
-      `<circle cx="${f1(c[0] - s * 0.6)}" cy="${f1(c[1] - s * 0.7)}" r="${f1(s * K * 0.42)}" fill="#5f9e4a"/>`;
+    const k = treeKind(x, y);
+    const leaf = ['#3f7a34', '#4a8238', '#376e2f', '#5b8a3a', '#2f6a3c'][(hue + k) % 5];
+    const light = shade(leaf, 26), dark = shade(leaf, -22);
+    const t = P(x, y, 0);
+    const trunk = (z, w) => { const c = P(x, y, z); return `<line x1="${f1(t[0])}" y1="${f1(t[1])}" x2="${f1(c[0])}" y2="${f1(c[1])}" stroke="#5a3d25" stroke-width="${w}" stroke-linecap="round"/>`; };
+    const blob = (cx, cy, r, fill, extra = '') => `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}" fill="${fill}" ${extra}/>`;
+    if (k === 1) { // conifère : trois étages en triangle
+      const conifer = shade(leaf, -14);
+      let o = trunk(1.2, 1.8);
+      for (let i = 0; i < 3; i++) {
+        const z0 = 0.9 + i * s * 0.75, z1 = z0 + s * 1.5, w = s * K * (1.05 - i * 0.24);
+        const b0 = P(x, y, z0), top = P(x, y, z1);
+        o += `<polygon points="${f1(b0[0] - w)},${f1(b0[1])} ${f1(b0[0] + w)},${f1(b0[1])} ${f1(top[0])},${f1(top[1])}" fill="${i % 2 ? shade(conifer, 8) : conifer}" stroke="${INK}" stroke-width="0.7" stroke-linejoin="round"/>` +
+          `<polygon points="${f1(b0[0] - w * 0.15)},${f1(b0[1])} ${f1(b0[0] - w * 0.75)},${f1(b0[1])} ${f1(top[0])},${f1(top[1])}" fill="${light}" opacity="0.35"/>`;
+      }
+      return o;
+    }
+    if (k === 2) { // peuplier : houppier haut et étroit
+      const c = P(x, y, 1.6 + s * 1.2), rx = s * K * 0.55, ry = s * K * 1.35;
+      return trunk(1.6, 1.6) + `<ellipse cx="${f1(c[0])}" cy="${f1(c[1])}" rx="${f1(rx)}" ry="${f1(ry)}" fill="${leaf}" stroke="${INK}" stroke-width="0.8"/>` +
+        `<ellipse cx="${f1(c[0] - rx * 0.35)}" cy="${f1(c[1] - ry * 0.3)}" rx="${f1(rx * 0.4)}" ry="${f1(ry * 0.5)}" fill="${light}" opacity="0.7"/>`;
+    }
+    if (k === 3) { // buisson : trois touffes posées au sol
+      const c = P(x, y, s * 0.55), r0 = s * K * 0.62;
+      return blob(c[0] - r0 * 0.7, c[1] + r0 * 0.15, r0 * 0.8, dark, `stroke="${INK}" stroke-width="0.7"`) +
+        blob(c[0] + r0 * 0.75, c[1] + r0 * 0.2, r0 * 0.75, leaf, `stroke="${INK}" stroke-width="0.7"`) +
+        blob(c[0], c[1] - r0 * 0.25, r0, leaf, `stroke="${INK}" stroke-width="0.7"`) +
+        blob(c[0] - r0 * 0.3, c[1] - r0 * 0.55, r0 * 0.4, light);
+    }
+    if (k === 4) { // feuillu à deux houppiers
+      const c1 = P(x - 0.5, y + 0.3, 1.9 + s * 0.8), c2 = P(x + 0.6, y - 0.3, 2.4 + s);
+      return trunk(2.2 + s * 0.6, 2) +
+        blob(c1[0], c1[1], s * K * 0.78, dark, `stroke="${INK}" stroke-width="0.8"`) +
+        blob(c2[0], c2[1], s * K * 0.9, leaf, `stroke="${INK}" stroke-width="0.8"`) +
+        blob(c2[0] - s * 0.6, c2[1] - s * 0.7, s * K * 0.36, light);
+    }
+    const c = P(x, y, 2 + s * 0.8);
+    return trunk(2 + s * 0.6, 2) +
+      blob(c[0], c[1], s * K, leaf, `stroke="${INK}" stroke-width="0.8"`) +
+      blob(c[0] + s * 0.5, c[1] + s * 0.5, s * K * 0.55, dark, 'opacity="0.6"') +
+      blob(c[0] - s * 0.6, c[1] - s * 0.7, s * K * 0.42, light);
   }
   function car(x, y, color) {
     const sh = P(x + 0.7, y + 0.25, 0);
