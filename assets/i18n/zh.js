@@ -5518,6 +5518,7 @@ window.HM_I18N_ZH = {
   "{0} accepte votre contre-offre : {1} / sem. à partir de la saison {2}.": "{0} 接受了你的还价：从第 {2} 赛季起 {1} / 周。",
   "{0} refuse votre contre-offre : les négociations sont terminées, il garde son salaire actuel et il est déçu.": "{0} 拒绝了你的还价：谈判结束，他保留当前薪水并感到失望。",
   "Contre-offre hors limites (entre le salaire demandé -10 % et le salaire demandé).": "还价超出范围（介于要求薪水 -10% 与要求薪水之间）。",
+  "Équipe gérée par l'ordinateur": "电脑托管球队",
   "Contrat jusqu'à la saison {0}": "合同至第 {0} 赛季",
   "Contrat jusqu'à la saison": "合同至赛季",
   "Dernière saison de son contrat": "合同最后一个赛季",

@@ -5518,6 +5518,7 @@ window.HM_I18N_LT = {
   "{0} accepte votre contre-offre : {1} / sem. à partir de la saison {2}.": "{0} priima jūsų priešpasiūlymą: {1} / sav. nuo {2} sezono.",
   "{0} refuse votre contre-offre : les négociations sont terminées, il garde son salaire actuel et il est déçu.": "{0} atmeta jūsų priešpasiūlymą: derybos baigtos, jis lieka su dabartiniu atlyginimu ir yra nusivylęs.",
   "Contre-offre hors limites (entre le salaire demandé -10 % et le salaire demandé).": "Priešpasiūlymas už ribų (tarp prašomo atlyginimo -10 % ir prašomo atlyginimo).",
+  "Équipe gérée par l'ordinateur": "Kompiuterio valdoma komanda",
   "Contrat jusqu'à la saison {0}": "Kontraktas iki {0} sezono",
   "Contrat jusqu'à la saison": "Kontraktas iki sezono",
   "Dernière saison de son contrat": "Paskutinis jo kontrakto sezonas",

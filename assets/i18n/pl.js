@@ -5518,6 +5518,7 @@ window.HM_I18N_PL = {
   "{0} accepte votre contre-offre : {1} / sem. à partir de la saison {2}.": "{0} przyjmuje twoją kontrofertę: {1} / tydz. od sezonu {2}.",
   "{0} refuse votre contre-offre : les négociations sont terminées, il garde son salaire actuel et il est déçu.": "{0} odrzuca twoją kontrofertę: negocjacje zakończone, zachowuje obecną pensję i jest rozczarowany.",
   "Contre-offre hors limites (entre le salaire demandé -10 % et le salaire demandé).": "Kontroferta poza zakresem (między żądaną pensją -10% a żądaną pensją).",
+  "Équipe gérée par l'ordinateur": "Drużyna sterowana przez komputer",
   "Contrat jusqu'à la saison {0}": "Kontrakt do sezonu {0}",
   "Contrat jusqu'à la saison": "Kontrakt do sezonu",
   "Dernière saison de son contrat": "Ostatni sezon jego kontraktu",

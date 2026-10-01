@@ -5518,6 +5518,7 @@ window.HM_I18N_EL = {
   "{0} accepte votre contre-offre : {1} / sem. à partir de la saison {2}.": "Ο {0} δέχεται την αντιπρότασή σου: {1} / εβδ. από τη σεζόν {2}.",
   "{0} refuse votre contre-offre : les négociations sont terminées, il garde son salaire actuel et il est déçu.": "Ο {0} απορρίπτει την αντιπρότασή σου: οι διαπραγματεύσεις τελείωσαν, κρατά τον τρέχοντα μισθό του και είναι απογοητευμένος.",
   "Contre-offre hors limites (entre le salaire demandé -10 % et le salaire demandé).": "Αντιπρόταση εκτός ορίων (μεταξύ του ζητούμενου μισθού -10% και του ζητούμενου μισθού).",
+  "Équipe gérée par l'ordinateur": "Ομάδα που ελέγχεται από τον υπολογιστή",
   "Contrat jusqu'à la saison {0}": "Συμβόλαιο έως τη σεζόν {0}",
   "Contrat jusqu'à la saison": "Συμβόλαιο έως τη σεζόν",
   "Dernière saison de son contrat": "Τελευταία σεζόν του συμβολαίου του",

@@ -5518,6 +5518,7 @@ window.HM_I18N_ES = {
   "{0} accepte votre contre-offre : {1} / sem. à partir de la saison {2}.": "{0} acepta tu contraoferta: {1} / sem. a partir de la temporada {2}.",
   "{0} refuse votre contre-offre : les négociations sont terminées, il garde son salaire actuel et il est déçu.": "{0} rechaza tu contraoferta: las negociaciones han terminado, mantiene su salario actual y está decepcionado.",
   "Contre-offre hors limites (entre le salaire demandé -10 % et le salaire demandé).": "Contraoferta fuera de límites (entre el salario pedido -10 % y el salario pedido).",
+  "Équipe gérée par l'ordinateur": "Equipo gestionado por el ordenador",
   "Contrat jusqu'à la saison {0}": "Contrato hasta la temporada {0}",
   "Contrat jusqu'à la saison": "Contrato hasta la temporada",
   "Dernière saison de son contrat": "Última temporada de su contrato",

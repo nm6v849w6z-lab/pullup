@@ -5543,6 +5543,7 @@ window.HM_I18N_EN = {
   "{0} accepte votre contre-offre : {1} / sem. à partir de la saison {2}.": "{0} accepts your counter-offer: {1} / wk from season {2}.",
   "{0} refuse votre contre-offre : les négociations sont terminées, il garde son salaire actuel et il est déçu.": "{0} turns down your counter-offer: negotiations are over, he keeps his current salary and is disappointed.",
   "Contre-offre hors limites (entre le salaire demandé -10 % et le salaire demandé).": "Counter-offer out of range (between the asking salary -10% and the asking salary).",
+  "Équipe gérée par l'ordinateur": "Computer-managed team",
   "Contrat jusqu'à la saison {0}": "Contract until season {0}",
   "Contrat jusqu'à la saison": "Contract until season",
   "Dernière saison de son contrat": "Final season of his contract",
