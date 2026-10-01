@@ -71,10 +71,12 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
   const payrollExpected = team.players.reduce((s, p) => s + p.salary, 0);
   const result = team.trainWeek(1); // Division I cette fois
   const budgetAfter = team.budget;
-  const expectedDelta = -payrollExpected + TV_RIGHTS_WEEKLY_BY_LEVEL[1];
+  // + produits dérivés (2026-10-01, voir E.merchandiseWeeklyRevenue).
+  const expectedDelta = -payrollExpected + TV_RIGHTS_WEEKLY_BY_LEVEL[1] + E.merchandiseWeeklyRevenue(team, 1);
+  if (!(result.merchRevenue > 0) || result.merchRevenue !== E.merchandiseWeeklyRevenue(team, 1)) throw new Error("❌ produits dérivés versés avec les droits TV");
   console.log(`\nBudget avant/après (Division I, hors subvention) : ${budgetBefore} → ${budgetAfter} (delta attendu : ${expectedDelta})`);
   if (Math.round(budgetAfter - budgetBefore) !== Math.round(expectedDelta)) {
-    throw new Error("❌ Le delta de budget devrait correspondre exactement à -(masse salariale) + droits TV.");
+    throw new Error("❌ Le delta de budget devrait correspondre exactement à -(masse salariale) + droits TV + produits dérivés.");
   }
   console.log("✅ Les droits TV s'ajoutent bien au budget EN PLUS de la masse salariale, pas à sa place.");
 }

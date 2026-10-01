@@ -1476,14 +1476,43 @@ const DEFICIT_GRACE_WEEKS = 2;
 // salariale (même celle, modeste, d'un effectif tout juste débutant — voir
 // generateStartingRoster) : un complément de revenu, pas de quoi financer un
 // effectif à soi seul.
+// Revalorisés le 2026-10-01 (retour utilisateur, comparaison avec
+// BuzzerBeater : « ça manque de revenu […] il faudrait revaloriser les
+// contrats tv », puis « il faut être plus généreux ») : ×4 en Division I,
+// courbe plus plate en bas de la pyramide.
 const TV_RIGHTS_WEEKLY_BY_LEVEL = {
-  1: 25000,
-  2: 12500,
-  3: 7500,
-  4: 5000,
-  5: 3750,
-  6: 2500,
+  1: 100000,
+  2: 75000,
+  3: 55000,
+  4: 40000,
+  5: 30000,
+  6: 22000,
 };
+// Ancien barème des droits TV, gardé comme simple repère d'échelle des
+// offres de sponsors (sponsorDivisionFactor) : la revalorisation des droits
+// TV ne gonfle pas les sponsors.
+const SPONSOR_DIVISION_SCALE = { 1: 25000, 2: 12500, 3: 7500, 4: 5000, 5: 3750, 6: 2500 };
+
+// Produits dérivés (même retour : « mettre en place les produits dérivés
+// (la boutique des supporters est un truc à part […], on va garder ce
+// concept aussi) ») : recette hebdomadaire selon la division, modulée par
+// l'humeur des supporters (×0,7 en colère → ×1,2 en feu) et, discrètement,
+// par la Renommée du club (×0,8 → ×1,25, effet jamais affiché).
+const MERCH_WEEKLY_BY_LEVEL = {
+  1: 40000,
+  2: 30000,
+  3: 22000,
+  4: 16000,
+  5: 12000,
+  6: 9000,
+};
+function merchMoraleMult(morale) { return 0.7 + 0.5 * clamp(typeof morale === "number" ? morale : 50, 0, 100) / 100; }
+function merchPrestigeMult(prestige) { return typeof prestige === "number" ? 0.8 + 0.45 * clamp(prestige, 0, 100) / 100 : 1; }
+function merchandiseWeeklyRevenue(team, divisionLevel) {
+  const base = MERCH_WEEKLY_BY_LEVEL[divisionLevel];
+  if (!base || !team) return 0;
+  return Math.round(base * merchMoraleMult(team.fanMorale) * merchPrestigeMult(team.prestige) / 100) * 100;
+}
 
 // ---------------------------------------------------------------------
 // Marché des transferts (retour utilisateur : "un vrai marché des transferts
@@ -2184,6 +2213,7 @@ const FINANCE_CATEGORIES = [
   { key: "tickets", dir: "in", label: "Billetterie", re: /^Billetterie/ },
   { key: "tv", dir: "in", label: "Droits TV", re: /^Droits TV/ },
   { key: "sponsors", dir: "in", label: "Sponsors", re: /^(Sponsor |Prime de victoire |Bonus d'objectif )/ },
+  { key: "merch", dir: "in", label: "Produits dérivés", re: /^Produits dérivés/ },
   { key: "shop", dir: "in", label: "Boutique des supporters", re: /^Recettes boutique/ },
   { key: "tvstation", dir: "in", label: "Station TV", re: /^Recettes station TV/ },
   { key: "prizes", dir: "in", label: "Primes (coupe, montée…)", re: /^Prime de (Coupe|Supercoupe|montée)/ },
@@ -7577,6 +7607,11 @@ class Team {
       this.recordTransaction(`Droits TV (${divisionInfo(divisionLevel).name})`, tvRightsRevenue);
     }
 
+    // Produits dérivés (maillots, écharpes… : voir MERCH_WEEKLY_BY_LEVEL),
+    // à part de la Boutique des supporters (investissement du club).
+    const merchRevenue = divisionLevel ? merchandiseWeeklyRevenue(this, divisionLevel) : 0;
+    if (merchRevenue > 0) this.recordTransaction(`Produits dérivés (${divisionInfo(divisionLevel).name})`, merchRevenue);
+
     // Sponsors : fixe de chaque contrat actif, même cadence que les droits
     // TV (voir collectSponsorIncome ; la prime par victoire et le bonus
     // d'objectif tombent ailleurs : applySponsorWinPrimes /
@@ -7757,7 +7792,7 @@ class Team {
 
     const result = {
       players: report, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid, doctorSalaryPaid, physioSalaryPaid, assistantCoachSalaryPaid,
-      playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, tvStationRevenue, moraleDrift, salaryChanges,
+      playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, merchRevenue, tvStationRevenue, moraleDrift, salaryChanges,
       fanMorale: this.fanMorale, budget: this.budget, trainerMult,
       deficitAlert, forcedFireSale, deficitWeeks: this.deficitWeeks,
     };
@@ -10059,8 +10094,8 @@ const SPONSOR_HISTORY_MAX = 20;
 const SEASON_OBJECTIVE_KEYS_ORDERED = ["maintien", "milieu-tableau", "playoffs", "finale", "titre"];
 
 function sponsorDivisionFactor(divisionLevel) {
-  const top = TV_RIGHTS_WEEKLY_BY_LEVEL[1] || 25000;
-  const mine = TV_RIGHTS_WEEKLY_BY_LEVEL[divisionLevel] || Math.round(top * 0.3);
+  const top = SPONSOR_DIVISION_SCALE[1];
+  const mine = SPONSOR_DIVISION_SCALE[divisionLevel] || Math.round(top * 0.3);
   return Math.max(0.3, mine / top);
 }
 function sponsorReputationOf(team) {
@@ -17099,7 +17134,7 @@ return {
   currentStandingsPaceObjective, seasonObjectiveMidSeasonSignal, seasonObjectiveEndOfRegularSeasonSignal,
   SEASON_OBJECTIVE_SURPRISE_PLAYOFFS_BONUS, seasonObjectiveSurprisePlayoffsBonus,
   DEFICIT_ALERT_THRESHOLD, DEFICIT_GRACE_WEEKS,
-  TV_RIGHTS_WEEKLY_BY_LEVEL,
+  TV_RIGHTS_WEEKLY_BY_LEVEL, MERCH_WEEKLY_BY_LEVEL, merchandiseWeeklyRevenue, SPONSOR_DIVISION_SCALE,
   TRANSFER_AUCTION_DURATION_MS, TRANSFER_MIN_INCREMENT_FLAT, TRANSFER_MIN_INCREMENT_PCT,
   TRANSFER_CPU_CHECK_INTERVAL_MS, TRANSFER_CPU_LIST_CHANCE, TRANSFER_CPU_BID_CHANCE,
   COACH_AUCTION_DURATION_MS, COACH_MARKET_GENERATE_CHECK_INTERVAL_MS, COACH_CPU_BID_CHANCE,
